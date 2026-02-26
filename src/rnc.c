@@ -42,10 +42,14 @@ static void v1Refill(V1Bits *bs, uint8_t nbits)
     uint8_t remaining;
 
     bs->bits >>= oldCount;                       /* shift out consumed bits */
-    newWord = (uint16_t)bs->src[0] | ((uint16_t)bs->src[1] << 8);
+    /* Asm does addq.w #4,a3 then reads -(a3) twice — net effect: advance src
+     * past the 2 bytes already in the buffer, then read the next 2 bytes LE.
+     * src must be advanced BEFORE reading. */
     bs->src += 2;
+    newWord = (uint16_t)bs->src[0] | ((uint16_t)bs->src[1] << 8);
     bs->bits = ((uint32_t)newWord << 16) | (bs->bits & 0xFFFFu);
     remaining = nbits - oldCount;                 /* bits still to consume */
+    bs->bits >>= remaining;                       /* asm: lsr.l d1,d6 after refill returns */
     bs->count = (int8_t)(16 - remaining);
 }
 
@@ -154,7 +158,10 @@ static void v1BuildTable(V1Bits *bs, uint8_t *outTab)
 
     while (curLen < 17) {
         int16_t si;
-        for (si = numSyms; si >= 0; si--) {
+        /* Asm scans forward through bitLens[0..numSyms] with d4 counting
+         * down from numSyms (dbf) and a1 advancing via (a1)+.
+         * extra = forward index (d3 - d4). */
+        for (si = 0; si <= numSyms; si++) {
             if (bitLens[si] != curLen)
                 continue;
 
@@ -165,11 +172,14 @@ static void v1BuildTable(V1Bits *bs, uint8_t *outTab)
                 wp[1] = (uint8_t)m;
             }
 
-            /* match = bit-reversed high word of codeVal, right-aligned */
+            /* match = bit-reversed high word of codeVal, right-aligned.
+             * Asm uses roxl/roxr to reverse the TOP curLen bits of the high
+             * word.  Equivalent: right-align them first, then reverse. */
             {
                 uint16_t hw = (uint16_t)(codeVal >> 16);
                 uint16_t rev = 0;
                 uint8_t j;
+                hw >>= (16 - curLen);   /* right-align top curLen bits */
                 for (j = 0; j < curLen; j++) {
                     rev = (uint16_t)(rev << 1) | (hw & 1);
                     hw >>= 1;
@@ -180,7 +190,7 @@ static void v1BuildTable(V1Bits *bs, uint8_t *outTab)
 
             /* aux data at wp + 0x40 */
             {
-                uint8_t extra = (uint8_t)(numSyms - si);
+                uint8_t extra = (uint8_t)si;    /* asm: d3 - d4 = forward index */
                 uint16_t emask = (extra > 0) ? (uint16_t)((1u << (extra - 1)) - 1) : 0;
                 wp[0x40] = curLen;
                 wp[0x41] = extra;
