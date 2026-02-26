@@ -1,0 +1,422 @@
+/* goal_scored.c — Chunk 38b: GoalScored
+ *
+ * Ported from SWOS2.s lines 12091-12366.
+ * Updates goal counters, builds scorer list sprites with names and times.
+ */
+
+#include "goal_scored.h"
+#include "game_types.h"
+
+/* ---- external asm globals ---- */
+extern uint16_t goalScored;
+extern uint16_t runSlower;
+extern uint16_t lastTeamScoredNumber;
+extern Sprite  *lastPlayerScored;
+extern uint32_t currentScorer;
+extern TeamGame        topTeamInGame;
+extern TeamGame        bottomTeamInGame;
+extern TeamGeneralInfo topTeamData;
+extern TeamGeneralInfo bottomTeamData;
+extern TeamGeneralInfo *lastTeamScored;
+extern uint16_t team1TotalGoals;
+extern uint16_t team2TotalGoals;
+extern uint16_t playingPenalties;
+extern uint16_t team1PenaltyGoals;
+extern uint16_t team2PenaltyGoals;
+extern uint16_t statsTeam1Goals;
+extern uint16_t statsTeam2Goals;
+extern uint16_t team1GoalsDigit1;
+extern uint16_t team1GoalsDigit2;
+extern uint16_t team2GoalsDigit1;
+extern uint16_t team2GoalsDigit2;
+extern uint16_t penalty;
+extern uint16_t panicReasonCode;
+extern ScorerInfo      team1Scorers[];
+extern ScorerInfo      team2Scorers[];
+extern Sprite          team1Scorer1Sprite[];
+extern Sprite          team2Scorer1Sprite[];
+extern uint16_t team1ScorerSpritesWidths[];
+extern uint16_t team2ScorerSpritesWidths[];
+extern TeamGame       *topTeamPtr;
+extern TeamGame       *bottomTeamPtr;
+extern uint16_t ingameTeamPlayerOffsets[];
+extern uint8_t  smallCharsTable[];
+extern uint8_t  gameTime[];
+
+/* ---- external functions ---- */
+extern void _PanicHaltLoop(void);
+extern void _HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex);
+extern uint16_t _Text2Sprite(uint16_t xOff, uint16_t yOff, uint16_t dstSpriteIndex,
+                             uint8_t *text, uint8_t *charsTable, uint16_t planeMask,
+                             uint16_t *outTotalWidth);
+
+/* ---- Goal time format template strings (writable) ----
+ * First 4 bytes get overwritten with game time before rendering.
+ * Indices: [0]=normal, [1]=penalty, [2]=own goal
+ */
+static char goalStr_first_normal[6]   = { '*','*','*','*', 0, 0 };
+static char goalStr_already_normal[6] = { '*','*','*','*', ',', 0 };
+static char goalStr_first_pen[10]     = { '*','*','*','*', '(','P','E','N',')', 0 };
+static char goalStr_already_pen[12]   = { '*','*','*','*', '(','P','E','N',')',',', 0, 0 };
+static char goalStr_first_og[10]      = { '*','*','*','*', '(','O','G',')', 0, 0 };
+static char goalStr_already_og[6]     = { '*','*','*','*', ',', 0 };
+
+static char *alreadyScoredTable[3] = {
+    goalStr_already_normal,     /* [0] normal */
+    goalStr_already_pen,        /* [1] penalty */
+    goalStr_already_og          /* [2] own goal */
+};
+
+static char *firstGoalScoredTable[3] = {
+    goalStr_first_normal,       /* [0] normal */
+    goalStr_first_pen,          /* [1] penalty */
+    goalStr_first_og            /* [2] own goal */
+};
+
+/* ================================================================
+ * _GoalScored
+ * (SWOS2.s line 12091)
+ *
+ * Updates goal counters and builds scorer list sprites.
+ * scoringTeam: 1 = team 1 scored, 2 = team 2 scored
+ * scorerSprite: pointer to the Sprite struct of the scorer
+ * ================================================================ */
+void __attribute__((used, externally_visible))
+_GoalScored(int16_t scoringTeam, Sprite *scorerSprite)
+{
+    TeamGame       *a2;         /* team file data: scorer's team (for player lookup) */
+    TeamGame       *a1_team;    /* team file data: opponent team (for own goal stat) */
+    ScorerInfo     *scorers;    /* a3: team1Scorers or team2Scorers */
+    Sprite         *scorerSprites; /* a4: team1Scorer1Sprite or team2Scorer1Sprite */
+    uint16_t       *sprWidths;  /* a6: scorer sprite widths array */
+    TeamGame       *inGameTeam; /* a3 temp: in-game team struct */
+    int16_t         goalType;   /* d1: 0=normal, 1=penalty, 2=own goal */
+    int16_t         scorerKey;  /* d0: shirt number (or +100 for own goal) */
+    uint16_t        d7;         /* current sprite row index */
+    int16_t         d6;         /* remaining available sprite rows */
+    int16_t         d5;         /* goal count-down for loop */
+    Sprite         *a5;         /* current scorer sprite pointer */
+    uint16_t        d4;         /* current sprite imageIndex */
+    uint16_t        xOff;       /* d1: current x offset in sprite */
+
+    /* ---- set global goal flags ---- */
+    goalScored = 1;
+    runSlower = 1;
+    lastTeamScoredNumber = (uint16_t)scoringTeam;
+    lastPlayerScored = scorerSprite;
+    currentScorer = (uint32_t)scorerSprite;
+
+    /* ---- find in-game team matching scorer's side ---- */
+    inGameTeam = &topTeamInGame;
+    if (scorerSprite->teamNumber != 1)
+        inGameTeam = &bottomTeamInGame;
+
+    /* ---- find team general info matching the in-game team ---- */
+    a2 = (TeamGame *)topTeamData.inGameTeamPtr;
+    if ((uint32_t)inGameTeam != (uint32_t)topTeamData.inGameTeamPtr)
+        a2 = (TeamGame *)bottomTeamData.inGameTeamPtr;
+
+    /* a2 should be the TeamGame that matches the scorer's side;
+     * lastTeamScored stores the TeamGeneralInfo pointer for the scoring team */
+    if (scorerSprite->teamNumber == 1)
+        lastTeamScored = &topTeamData;
+    else
+        lastTeamScored = &bottomTeamData;
+
+    /* ---- increment goal counters ---- */
+    if (scoringTeam == 2)
+        goto inc_team2;
+
+    /* team 1 */
+    if (team1TotalGoals == 99)
+        return;
+    if (playingPenalties != 0)
+        team1PenaltyGoals++;
+    else
+        team1TotalGoals++;
+    statsTeam1Goals++;
+    team1GoalsDigit2++;
+    if (team1GoalsDigit2 == 10) {
+        team1GoalsDigit1++;
+        team1GoalsDigit2 = 0;
+    }
+    goto skip_if_penalties;
+
+inc_team2:
+    if (team2TotalGoals == 99)
+        return;
+    if (playingPenalties != 0)
+        team2PenaltyGoals++;
+    else
+        team2TotalGoals++;
+    statsTeam2Goals++;
+    team2GoalsDigit2++;
+    if (team2GoalsDigit2 == 10) {
+        team2GoalsDigit1++;
+        team2GoalsDigit2 = 0;
+    }
+
+skip_if_penalties:
+    if (playingPenalties != 0)
+        return;
+
+    /* null check scorer sprite */
+    if (scorerSprite == (Sprite *)0) {
+        panicReasonCode = 9;
+        _PanicHaltLoop();
+    }
+
+    /* ---- determine goal type ---- */
+    goalType = GT_NORMAL;
+    if (scorerSprite->teamNumber != scoringTeam)
+        goalType = GT_OWN_GOAL;
+    if (penalty != 0)
+        goalType = GT_PENALTY;
+
+    /* ---- select scorer tables by team ---- */
+    if (scoringTeam == 1) {
+        scorers = team1Scorers;
+        scorerSprites = team1Scorer1Sprite;
+        sprWidths = team1ScorerSpritesWidths;
+        if (goalType == GT_OWN_GOAL)
+            goto own_goal_ptrs;
+        goto normal_ptrs;
+    } else {
+        scorers = team2Scorers;
+        scorerSprites = team2Scorer1Sprite;
+        sprWidths = team2ScorerSpritesWidths;
+        if (goalType == GT_OWN_GOAL)
+            goto normal_ptrs;
+        goto own_goal_ptrs;
+    }
+
+normal_ptrs:
+    a2 = topTeamPtr;
+    a1_team = bottomTeamPtr;
+    goto team_ptrs_done;
+
+own_goal_ptrs:
+    a2 = bottomTeamPtr;
+    a1_team = topTeamPtr;
+
+team_ptrs_done:
+    /* ---- own goal: increment own goal count and clear lastPlayerScored ---- */
+    {
+        int16_t shirtNum = scorerSprite->playerOrdinal;
+
+        if (goalType == GT_OWN_GOAL) {
+            a1_team->numOwnGoals += 1;
+            lastPlayerScored = (Sprite *)0;
+        }
+
+        /* ---- compute player data offset and update stats ---- */
+        {
+            int16_t playerIdx = shirtNum - 1;
+
+            if (goalType != GT_OWN_GOAL) {
+                a2->players[playerIdx].goalsScored += 1;
+            }
+
+            /* get the shirt number from team file data */
+            scorerKey = a2->players[playerIdx].shirtNumber;
+
+            if (goalType == GT_OWN_GOAL)
+                scorerKey += 100;
+        }
+    }
+
+    /* ---- scan scorer slots to find or create entry ---- */
+    d7 = 0;
+    {
+        int16_t slotsRemaining = 7;
+        ScorerInfo *curScorer = scorers;
+
+        while (slotsRemaining >= 0) {
+            int16_t slotKey = curScorer->shirtNum;
+
+            if (slotKey == 0) {
+                /* empty slot: initialize */
+                curScorer->numGoals = 0;
+                curScorer->numSpritesTaken = 1;
+                goto found_slot;
+            }
+
+            if (slotKey == scorerKey)
+                goto found_slot;
+
+            /* skip this scorer's sprites */
+            d7 += (uint16_t)curScorer->numSpritesTaken;
+            if (d7 >= 8)
+                return;
+
+            curScorer++;
+            slotsRemaining--;
+            continue;
+
+        found_slot:
+            scorers = curScorer;  /* update scorers to point at the matched entry */
+            break;
+        }
+
+        if (slotsRemaining < 0)
+            return;
+    }
+
+    /* ---- set up sprite pointers for this scorer ---- */
+    d6 = scorers->numSpritesTaken - 1;
+    a5 = scorerSprites + d7;
+
+    {
+        ScorerInfo *scorerInfo = scorers;  /* a1 in the time-rendering loop */
+        int16_t numGoals;
+        int16_t goalIdx;
+        uint16_t spriteOrdinal;
+        uint16_t playerDataOff;
+        uint8_t *playerName;
+        uint16_t totalWidth;
+        uint16_t overflow;
+
+        /* write scorer key */
+        scorerInfo->shirtNum = scorerKey;
+
+        /* check if already has max goals */
+        numGoals = scorerInfo->numGoals;
+        if (numGoals == 10)
+            return;
+
+        /* record this goal */
+        scorerInfo->numGoals = numGoals + 1;
+        {
+            GoalInfo *gi = &scorerInfo->goals[numGoals];
+            gi->goalType = goalType;
+
+            /* copy game time and convert digits to ASCII */
+            gi->time[0] = (int8_t)gameTime[0];
+            gi->time[1] = (int8_t)gameTime[1];
+            gi->time[2] = (int8_t)gameTime[2];
+            gi->time[3] = (int8_t)gameTime[3];
+            gi->time[1] += '0';
+            gi->time[2] += '0';
+            gi->time[3] += '0';
+        }
+
+        /* ---- load sprite graphics for current scorer sprite ---- */
+        d4 = (uint16_t)a5->imageIndex;
+        _HWSprite_LoadFromSpriteGraphics(d4);
+
+        /* ---- find player short name ---- */
+        spriteOrdinal = (uint16_t)scorerSprite->playerOrdinal;
+        playerDataOff = ingameTeamPlayerOffsets[spriteOrdinal - 1];
+        /* playerDataOff is a byte offset from TeamGame base to the PlayerInfo entry.
+         * shortName is at offset 12 within PlayerInfo, and players[] starts at offset 42
+         * in TeamGame, so we use raw byte arithmetic here (playerDataOff already includes
+         * the players[] base). We add 54 (= 42 + 12 = players[0].shortName offset). */
+        playerName = (uint8_t *)a2 + playerDataOff + 54;
+
+        /* skip initials pattern "X. " at start of name */
+        if (playerName[0] != 0 && playerName[1] != 0 &&
+            playerName[1] == '.' && playerName[2] == ' ') {
+            playerName += 3;
+        }
+
+        /* ---- render player name into sprite ---- */
+        xOff = 0;
+        overflow = _Text2Sprite(0, 0, d4, playerName, smallCharsTable, 2, &totalWidth);
+        (void)overflow;
+        xOff = totalWidth + 5;  /* space between name and goal list */
+
+        /* ---- render goal times ---- */
+        d5 = scorerInfo->numGoals - 1;
+        goalIdx = 0;
+
+    write_time_field_loop:
+        {
+            char **formatTable;
+            int16_t curGoalType;
+            char *templateStr;
+            GoalInfo *curGoal;
+
+            /* select template table based on whether this is the last goal */
+            formatTable = (d5 != 0) ? alreadyScoredTable : firstGoalScoredTable;
+
+            /* read goal type for current goal being rendered */
+            curGoal = &scorerInfo->goals[goalIdx];
+            curGoalType = curGoal->goalType;
+            templateStr = formatTable[curGoalType];
+
+            /* copy time bytes into template string's **** area */
+            templateStr[0] = curGoal->time[0];
+            templateStr[1] = curGoal->time[1];
+            templateStr[2] = curGoal->time[2];
+            templateStr[3] = curGoal->time[3];
+
+            /* skip unused first byte, then skip leading '0's */
+            {
+                uint8_t *renderStart = (uint8_t *)templateStr + 1;
+                if (*renderStart == '0') {
+                    renderStart++;
+                    if (*renderStart == '0')
+                        renderStart++;
+                }
+
+                /* render time string into sprite */
+                overflow = _Text2Sprite(xOff, 0, d4, renderStart, smallCharsTable, 2, &totalWidth);
+            }
+            xOff = totalWidth;
+
+            if (overflow == 0) {
+                /* text fits: advance to next goal */
+                goalIdx++;
+                d5--;
+                if (d5 >= 0)
+                    goto write_time_field_loop;
+
+                /* all goals rendered: save final width */
+                sprWidths[d7] = xOff;
+                return;
+            }
+
+            /* ---- overflow: need a new sprite row ---- */
+            sprWidths[d7] = xOff;
+            d7++;
+            if (d7 >= 8)
+                return;
+
+            d6--;
+            if (d6 >= 0) {
+                /* advance to existing next sprite row */
+                a5++;
+                d4 = (uint16_t)a5->imageIndex;
+            } else {
+                /* need to steal a sprite: shift rows down */
+                Sprite   *shiftSrc;
+                uint16_t *widthSrc;
+                uint16_t  lastImageIdx;
+
+                scorers->numSpritesTaken++;
+
+                /* sprites[6] = second-to-last, sprites[7] = last */
+                shiftSrc = scorerSprites + 6;   /* a2 = &sprites[6] */
+                widthSrc = sprWidths + 6;        /* a3 = &widths[6] */
+                lastImageIdx = (uint16_t)(scorerSprites + 7)->imageIndex;
+
+                /* shift imageIndex and widths one position right, from [6] down to a5 */
+                while ((uint32_t)shiftSrc > (uint32_t)a5) {
+                    (shiftSrc + 1)->imageIndex = shiftSrc->imageIndex;
+                    widthSrc[1] = widthSrc[0];
+                    shiftSrc--;
+                    widthSrc--;
+                }
+
+                a5++;
+                d4 = lastImageIdx;
+                a5->imageIndex = (int16_t)d4;
+            }
+
+            /* load sprite graphics for new row */
+            _HWSprite_LoadFromSpriteGraphics(d4);
+            xOff = 0;
+            goto write_time_field_loop;
+        }
+    }
+}

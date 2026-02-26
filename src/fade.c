@@ -1,0 +1,241 @@
+#include "fade.h"
+
+typedef unsigned char uint8_t;
+typedef unsigned long uint32_t;
+typedef short int16_t;
+
+extern volatile uint16_t fadeState;
+extern volatile uint16_t fadeCommand;
+extern volatile uint16_t fadeInitFlag;
+extern uint16_t loaderModeFlag;
+extern uint16_t paletteIndex;
+extern uint8_t copperListBuffer[];
+extern uint32_t paletteTable[];   /* array of 7 pointers to uint16_t[16] palettes */
+
+/* FadeOutToBlack (SWOS2.s line 6781)
+ *
+ * 1. If fadeInitFlag != SENTINEL, spin until fadeState != 0 (wait for fade-in to finish)
+ * 2. If fadeState == 0, return (already black/idle)
+ * 3. If fadeCommand == SENTINEL, set fadeCommand = 0xFFFF (trigger fade-out in ISR)
+ * 4. Spin until fadeState == 0 (wait for fade-out to complete)
+ */
+__attribute__((used, externally_visible))
+void _FadeOutToBlack(void)
+{
+    if (fadeInitFlag != FADE_SENTINEL)
+    {
+        while (fadeState == 0)
+        {
+            /* spin — wait for fade-in to finish */
+        }
+    }
+
+    if (fadeState == 0)
+        return;
+
+    if (fadeCommand == FADE_SENTINEL)
+        fadeCommand = 0xFFFFu;
+
+    while (fadeState != 0)
+    {
+        /* spin — wait for fade-out to complete */
+    }
+}
+
+/* FadeIn (SWOS2.s line 6760)
+ *
+ * 1. If fadeCommand != SENTINEL, spin until fadeState == 0, then call FadeOutToBlack
+ * 2. If fadeState != 0, return (already active)
+ * 3. If fadeInitFlag == SENTINEL, set fadeInitFlag = 0xFFFF (trigger fade-in in ISR)
+ * 4. Spin until fadeState != 0 (wait for fade-in to complete)
+ */
+__attribute__((used, externally_visible))
+void _FadeIn(void)
+{
+    if (fadeCommand != FADE_SENTINEL)
+    {
+        while (fadeState != 0)
+        {
+            /* spin — wait for current fade-out to complete */
+        }
+        _FadeOutToBlack();
+    }
+
+    if (fadeState != 0)
+        return;
+
+    if (fadeInitFlag == FADE_SENTINEL)
+        fadeInitFlag = 0xFFFFu;
+
+    while (fadeState == 0)
+    {
+        /* spin — wait for fade-in to complete */
+    }
+}
+
+/* FadeOutAndIn (SWOS2.s line 6801) */
+__attribute__((used, externally_visible))
+void _FadeOutAndIn(void)
+{
+    _FadeOutToBlack();
+    _FadeIn();
+}
+
+/* ================================================================
+ * Fade shift/mask lookup tables (from SWOS2.s lines 6136, 6170)
+ *
+ * Each entry is 4 bytes: [shift_amount:16][mask:16]
+ * Index = fadeLevel >> 5 (0..4 for fadeLevel 0x00..0x80)
+ * ================================================================ */
+static const uint16_t kFadeShiftMaskTable[10] = {
+    0x0004, 0x0000,   /* shift=4, mask=0x000 */
+    0x0003, 0x0111,   /* shift=3, mask=0x111 */
+    0x0002, 0x0333,   /* shift=2, mask=0x333 */
+    0x0001, 0x0777,   /* shift=1, mask=0x777 */
+    0x0000, 0x0FFF    /* shift=0, mask=0xFFF */
+};
+
+/* Loader-path variant: same structure but last entry has mask=0x0FFF → clamped below */
+static const uint16_t fadeShiftMaskTable[10] = {
+    0x0004, 0x0000,
+    0x0003, 0x0111,
+    0x0002, 0x0333,
+    0x0001, 0x0777,
+    0x0000, 0x0FFF
+};
+
+/* ================================================================
+ * ApplyFadeStep  (SWOS2.s line 6110)
+ *
+ * Applies a fade level (d2) to the palette currently selected by
+ * paletteIndex, writing results to copperListBuffer palette slots.
+ *
+ * Two paths: normal (just shift+mask) or loader (clamp blue >= 2).
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ApplyFadeStep(uint16_t fadeLevel)
+{
+    uint16_t idx;
+    uint16_t shift;
+    uint16_t mask;
+    const uint16_t *palette;
+    volatile uint16_t *palA;
+    volatile uint16_t *palB;
+    int16_t i;
+
+    idx = (fadeLevel >> 5) * 2; /* index into shift/mask pairs */
+
+    if (loaderModeFlag == 0)
+    {
+        /* Normal path */
+        shift = kFadeShiftMaskTable[idx];
+        mask  = kFadeShiftMaskTable[idx + 1];
+    }
+    else
+    {
+        /* Loader path — uses separate table + blue channel clamping */
+        shift = fadeShiftMaskTable[idx];
+        mask  = fadeShiftMaskTable[idx + 1];
+    }
+
+    palette = (const uint16_t *)paletteTable[paletteIndex];
+    palA = (volatile uint16_t *)(copperListBuffer + 0x72);
+    palB = (volatile uint16_t *)(copperListBuffer + 0xB2);
+
+    if (loaderModeFlag == 0)
+    {
+        /* Normal: shift and mask each color */
+        for (i = 15; i >= 0; i--)
+        {
+            uint16_t color = *palette++;
+            color = (color >> shift) & mask;
+            *palA = color;
+            *palB = color;
+            palA += 2;  /* stride 4 bytes */
+            palB += 2;
+        }
+    }
+    else
+    {
+        /* Loader: shift/mask, then clamp blue nibble to minimum 2 */
+        for (i = 15; i >= 0; i--)
+        {
+            uint16_t color = *palette++;
+            uint16_t blue;
+            color = (color >> shift) & mask;
+            blue = color & 0x000F;
+            if (blue < 2)
+            {
+                color = (color & 0x0FF0) | 2;
+            }
+            *palA = color;
+            *palB = color;
+            palA += 2;
+            palB += 2;
+        }
+    }
+}
+
+/* ================================================================
+ * FadeOutTick  (SWOS2.s line 6176)
+ *
+ * Called each frame from ISR. Decrements fadeCommand toward 0,
+ * applying the fade at each step. When done, sets fadeState = 0.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _FadeOutTick(void)
+{
+    uint16_t level;
+
+    if (fadeCommand == FADE_SENTINEL)
+        return;
+
+    level = fadeCommand;
+    if ((int16_t)level < 0)
+    {
+        /* First tick: start at FADE_MAX */
+        fadeCommand = FADE_MAX;
+        level = FADE_MAX;
+    }
+
+    _ApplyFadeStep(level);
+
+    fadeCommand -= FADE_STEP;
+    if ((int16_t)fadeCommand < 0)
+    {
+        fadeCommand = FADE_SENTINEL;
+        fadeState = 0;
+    }
+}
+
+/* ================================================================
+ * FadeInTick  (SWOS2.s line 6195)
+ *
+ * Called each frame from ISR. Increments fadeInitFlag toward 0x80,
+ * applying the fade at each step. When done, sets fadeState = 1.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _FadeInTick(void)
+{
+    uint16_t level;
+
+    if (fadeInitFlag == FADE_SENTINEL)
+        return;
+
+    level = fadeInitFlag;
+    if ((int16_t)level < 0)
+    {
+        /* First tick: start at 0 */
+        fadeInitFlag = 0;
+        level = 0;
+    }
+
+    _ApplyFadeStep(level);
+
+    fadeInitFlag += FADE_STEP;
+    if (fadeInitFlag > FADE_MAX)
+    {
+        fadeInitFlag = FADE_SENTINEL;
+        fadeState = 1;
+    }
+}

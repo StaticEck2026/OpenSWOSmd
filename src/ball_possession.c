@@ -1,0 +1,781 @@
+#include "ball_possession.h"
+#include "game_types.h"
+
+/* ---- External globals ---- */
+extern Sprite           ballSprite;
+extern TeamGeneralInfo  topTeamData;
+extern TeamGeneralInfo  bottomTeamData;
+
+extern int16_t  kDefaultDestinations[];     /* 8 direction deltas: dx,dy pairs */
+
+extern int16_t  gameState;
+extern int16_t  gameStatePl;
+extern uint16_t currentGameTick;
+extern uint16_t currentTick;
+extern uint16_t runSlower;
+extern uint16_t stoppageTimerTotal;
+extern int16_t  foulXCoordinate;
+extern int16_t  foulYCoordinate;
+
+/* Data tables kept in SWOS2.s */
+extern int16_t  kBallSpeedPassingIncrease[];    /* int16_t[8] */
+extern int16_t  kPassingSpeedCloserThan2500;
+extern int16_t  kPassingSpeed_2500_10000;
+extern int16_t  kPassingSpeed_10000_22500;
+extern int16_t  kPassingSpeed_22500_40000;
+extern int16_t  kPassingSpeed_40000_62500;
+extern int16_t  kPassingSpeed_62500_90000;
+extern int16_t  kPassingSpeed_90000_122500;
+extern int16_t  kPassingSpeedFurtherThan122500;
+extern int16_t  kFreePassReleasingBallSpeed;
+extern int16_t  kPlayerSpeedsGameInProgress[];  /* int16_t[8] */
+extern int16_t  kPlayerSpeedsGameStopped[];     /* int16_t[8] */
+extern int16_t  kAIFailedPassChance[];          /* int16_t[8] */
+extern int16_t  kBallSpeedDeltaWhenControlled[];/* int16_t[8] */
+extern int16_t  ballControlTurnThresholds[];    /* int16_t[8] */
+extern uint8_t  plAvgTacklingBallControlDiffChance[]; /* int8_t[8] */
+extern int16_t  kBallSpeedKicking[];            /* int16_t[8] */
+extern int16_t  kBallSpeedFinishing[];          /* int16_t[8] */
+extern int32_t  kBallKickingDeltaZ;
+extern int16_t  kBallKickingSpeed;
+extern int16_t  kInjuriesSpeedHandicap[];       /* int16_t[8] */
+extern GoalieSkill *kGoalieSkillTables[];       /* ptr[8] */
+extern uint32_t teamPlOfs24Table;               /* address used as pointer value */
+
+/* Ball dest delta tables */
+extern int16_t  kLeftThrowInBallDestDelta[];
+extern int16_t  kRightThrowInBallDestDelta[];
+extern int16_t  kPenaltyBallDestDelta[];
+extern int16_t  kUpperLeftCornerBallDestDelta[];
+extern int16_t  kUpperRightCornerBallDestDelta[];
+extern int16_t  kLowerLeftCornerBallDestDelta[];
+extern int16_t  kLowerRightCornerBallDestDelta[];
+
+/* Already-ported functions */
+/* Returns (TeamGame *) + ingameTeamPlayerOffsets[idx]: add 42 to get PlayerInfo * */
+extern uint8_t *_GetPlayerPointerFromShirtNumber(Sprite *playerSprite, TeamGeneralInfo *teamData);
+extern void _ResetBothTeamSpinTimers(void);
+extern void _PlayGoodPassSample(void);
+extern void _PlayKickSample(void);
+extern uint16_t _Rand(void);
+
+/* ================================================================
+ *  GetBallDestCoordinatesTable
+ *  Returns pointer to appropriate 8x(dx,dy) ball destination delta
+ *  table based on current game state (throw-in/penalty/corner/default).
+ * ================================================================ */
+int16_t * __attribute__((used, externally_visible))
+_GetBallDestCoordinatesTable(void)
+{
+    /* Throw-in states */
+    if (gameState >= ST_THROW_IN_FORWARD_RIGHT &&
+        gameState <= ST_THROW_IN_BACK_LEFT) {
+        if (foulXCoordinate > 336)
+            return kRightThrowInBallDestDelta;
+        return kLeftThrowInBallDestDelta;
+    }
+
+    /* Penalty states */
+    if (gameState == ST_PENALTY || gameState == ST_PENALTIES)
+        return kPenaltyBallDestDelta;
+
+    /* Corner kicks */
+    if (gameState == ST_CORNER_LEFT || gameState == ST_CORNER_RIGHT) {
+        if (foulYCoordinate > 449) {
+            /* Lower corners */
+            if (foulXCoordinate > 336)
+                return kLowerRightCornerBallDestDelta;
+            return kLowerLeftCornerBallDestDelta;
+        }
+        /* Upper corners */
+        if (foulXCoordinate > 336)
+            return kUpperRightCornerBallDestDelta;
+        return kUpperLeftCornerBallDestDelta;
+    }
+
+    /* Default: normal play */
+    return kDefaultDestinations;
+}
+
+/* ================================================================
+ *  GetClosestNonControlledPlayerInDirection
+ *  Finds the closest teammate (not controlled, not sent away, normal
+ *  state) facing approximately the given direction (within +/-16/256).
+ *  Returns pointer to closest player sprite, or NULL if none found.
+ * ================================================================ */
+Sprite * __attribute__((used, externally_visible))
+_GetClosestNonControlledPlayerInDirection(uint16_t direction, TeamGeneralInfo *team)
+{
+    Sprite    **spritesTable = team->spritesTable;
+    uint16_t   dirShifted   = direction << 5;
+    Sprite    *bestPlayer   = (Sprite *)0xFFFFFFFF;
+    uint32_t   bestDist     = 0xFFFFFFFF;
+    Sprite    *controlledPl = team->controlledPlayer;
+    int16_t    i;
+
+    for (i = 10; i >= 0; i--) {
+        Sprite *pl = spritesTable[i];
+
+        /* Skip controlled player */
+        if (pl == controlledPl)
+            goto next;
+
+        /* Skip sent-away players */
+        if (pl->sentAway != 0)
+            goto next;
+
+        /* Only PL_NORMAL */
+        if (pl->playerState != PL_NORMAL)
+            goto next;
+
+        /* Direction check: fullDirection - dirShifted must be in [240..255] or [0..16] */
+        {
+            uint8_t diff = (uint8_t)((uint16_t)pl->fullDirection - dirShifted);
+            if (diff >= 17 && diff <= 239)
+                goto next;
+        }
+
+        /* Distance check: closer than current best? */
+        {
+            uint32_t dist = (uint32_t)pl->ballDistance;
+            if (dist >= bestDist)
+                goto next;
+            bestDist  = dist;
+            bestPlayer = pl;
+        }
+next:
+        ;
+    }
+
+    return bestPlayer;
+}
+
+/* ================================================================
+ *  DoPass
+ *  Handles passing the ball: finds target player or uses default
+ *  direction, sets ball destination and speed, may botch AI passes.
+ * ================================================================ */
+void __attribute__((used, externally_visible))
+_DoPass(Sprite *player, TeamGeneralInfo *team)
+{
+    int16_t  dir = player->direction;
+    int16_t  savedDir = dir;
+    uint8_t *a4;
+    Sprite  *targetPlayer;
+    Sprite  *ball;
+    int16_t  d1;
+
+    team->controlledPlDirection = dir;
+
+    /* Save dir, call GetPlayerPointerFromShirtNumber, restore dir */
+    a4 = _GetPlayerPointerFromShirtNumber(player, team);
+
+    /* Find closest teammate in direction */
+    targetPlayer = _GetClosestNonControlledPlayerInDirection((uint16_t)savedDir, team);
+
+    if (targetPlayer == (Sprite *)0xFFFFFFFF)
+        goto pass_to_preset_direction;
+
+    /* Found a target player */
+    team->passToPlayerPtr = targetPlayer;
+    team->passingBall     = 1;
+    team->passingToPlayer = 1;
+
+    /* AI failed pass check: only during game in progress, only for CPU team */
+    if (gameStatePl == ST_GAME_IN_PROGRESS &&
+        team->playerNumber == 0) {
+        PlayerInfo *pi = (PlayerInfo *)((uint8_t *)a4 + 42);
+        int16_t passingSkill = pi->passing;
+        int16_t idx = passingSkill * 2;
+        int16_t threshold;
+        int16_t tickVal;
+
+        threshold = *(int16_t *)((uint8_t *)kAIFailedPassChance + idx);
+        tickVal = (currentGameTick & 0x1E) >> 1;
+
+        if (tickVal < threshold) {
+            /* Botch the pass: aim between ball and target */
+            ball = &ballSprite;
+            {
+                int16_t dx = targetPlayer->x.s.i - ball->x.s.i;
+                if (!((currentGameTick >> 5) & 1))  /* btst #5,currentGameTick+1 -> bne */
+                    dx >>= 1;
+                dx <<= 5;
+                dx += ball->x.s.i;
+                ball->destX = dx;
+            }
+            {
+                int16_t dy = targetPlayer->y.s.i - ball->y.s.i;
+                if ((currentGameTick >> 5) & 1)     /* btst #5,currentGameTick+1 -> beq */
+                    dy >>= 1;
+                dy <<= 5;
+                dy += ball->y.s.i;
+                ball->destY = dy;
+            }
+            goto set_pass_speed;
+        }
+    }
+
+    /* calculate_pass_to_player_delta_x_y */
+    {
+        ball = &ballSprite;
+        d1 = targetPlayer->x.s.i - ball->x.s.i;
+        {
+            int16_t d2 = targetPlayer->y.s.i - ball->y.s.i;
+
+            if (d1 == 0 && d2 == 0)
+                d1 = 1;
+
+            /* Scale deltas until ball dest is out of pitch bounds */
+            for (;;) {
+                int16_t testX = ball->x.s.i + d1;
+                if (testX < 0 || testX >= 672)
+                    break;
+                {
+                    int16_t testY = ball->y.s.i + d2;
+                    if (testY < 0 || testY >= 880)
+                        break;
+                }
+                d1 <<= 1;
+                d2 <<= 1;
+            }
+
+            ball->destX = ball->x.s.i + d1;
+            ball->destY = ball->y.s.i + d2;
+        }
+    }
+
+set_pass_speed:
+    /* Determine pass speed based on distance to target */
+    ball = &ballSprite;
+    {
+        uint32_t dist = (uint32_t)targetPlayer->ballDistance;
+        int16_t speed;
+
+        if (dist < 2500)
+            speed = kPassingSpeedCloserThan2500;
+        else if (dist < 10000)
+            speed = kPassingSpeed_2500_10000;
+        else if (dist < 22500)
+            speed = kPassingSpeed_10000_22500;
+        else if (dist < 40000)
+            speed = kPassingSpeed_22500_40000;
+        else if (dist < 62500)
+            speed = kPassingSpeed_40000_62500;
+        else if (dist < 90000)
+            speed = kPassingSpeed_62500_90000;
+        else if (dist < 122500)
+            speed = kPassingSpeed_90000_122500;
+        else
+            speed = kPassingSpeedFurtherThan122500;
+
+        /* Adjust for passing skill */
+        {
+            PlayerInfo *pi = (PlayerInfo *)((uint8_t *)a4 + 42);
+            speed += kBallSpeedPassingIncrease[pi->passing];
+        }
+        ball->speed = speed;
+    }
+    goto finalize_pass;
+
+pass_to_preset_direction:
+    {
+        int16_t *dt  = _GetBallDestCoordinatesTable();
+        int16_t  idx = savedDir * 2;  /* lsl.w #2,d7 -> 4 bytes per entry = 2 int16_t per entry */
+
+        ball = &ballSprite;
+        ball->destX = ball->x.s.i + dt[idx];
+        ball->destY = ball->y.s.i + dt[idx + 1];
+        ball->speed = kFreePassReleasingBallSpeed;
+    }
+
+finalize_pass:
+    _ResetBothTeamSpinTimers();
+
+    /* If team has player number (i.e. is human-controlled), check spin timer */
+    if (team->playerNumber != 0)
+        team->spinTimer = 0;
+
+    /* Set pass-in-progress flag (asm: move.w #1,$80(a6) -- $80 = 128 = passInProgress) */
+    team->passInProgress = 1;
+
+    /* Play pass sample only during in-progress or non-throw-in states */
+    if (gameStatePl == ST_GAME_IN_PROGRESS)
+        goto trigger_pass;
+    if (gameState >= ST_THROW_IN_FORWARD_RIGHT &&
+        gameState <= ST_THROW_IN_BACK_LEFT)
+        return;
+
+trigger_pass:
+    _PlayGoodPassSample();
+}
+
+/* ================================================================
+ *  PlayerKickingBall
+ *  Handles kicking (shooting) the ball: sets ball dest from direction
+ *  table, applies shooting/finishing skill speed bonus, plays sample.
+ * ================================================================ */
+void __attribute__((used, externally_visible))
+_PlayerKickingBall(Sprite *player, TeamGeneralInfo *team)
+{
+    int16_t  dir = player->direction;
+    int16_t *dt;
+    int16_t  idx;
+    uint8_t *a4;
+    Sprite  *ball;
+
+    /* Store direction for later shot-on-goal check */
+    team->controlledPlDirection = dir;
+
+    dt   = _GetBallDestCoordinatesTable();
+    ball = &ballSprite;
+    idx  = dir * 2; /* lsl.w #2,d0 -> 4 bytes = 2 words per direction */
+
+    ball->destX      = ball->x.s.i + dt[idx];
+    ball->destY      = ball->y.s.i + dt[idx + 1];
+    ball->speed      = kBallKickingSpeed;
+    ball->deltaZ.raw = kBallKickingDeltaZ;
+
+    _ResetBothTeamSpinTimers();
+
+    /* Check game state for shot-on-goal bonus */
+    if (gameStatePl != ST_GAME_IN_PROGRESS)
+        goto check_throw_in;
+
+    goto check_shot_on_goal;
+
+check_throw_in:
+    if (gameState >= ST_THROW_IN_FORWARD_RIGHT &&
+        gameState <= ST_THROW_IN_BACK_LEFT)
+        goto exit_kick;
+    /* Fall through to shot-on-goal check */
+
+check_shot_on_goal:
+    {
+        int16_t kickDir = team->controlledPlDirection;
+
+        if (team == &topTeamData) {
+            /* Top team shoots at bottom goal */
+            if (ball->y.s.i < 556)
+                goto not_a_shot;
+            if (kickDir != 4 && kickDir != 3 && kickDir != 5)
+                goto not_a_shot;
+        } else {
+            /* Bottom team shoots at top goal */
+            if (ball->y.s.i > 342)
+                goto not_a_shot;
+            if (kickDir != 0 && kickDir != 1 && kickDir != 7)
+                goto not_a_shot;
+        }
+
+        /* Check if ball is in shooting area (X between 241..431) */
+        if (ball->x.s.i < 241 || ball->x.s.i > 431)
+            goto its_a_long_shot;
+
+        /* Close-range finishing shot */
+        if (ball->y.s.i >= 204 && ball->y.s.i < 694)
+            goto its_a_long_shot;
+
+        /* its_a_finishing_shot */
+        a4 = _GetPlayerPointerFromShirtNumber(player, team);
+        {
+            PlayerInfo *pi = (PlayerInfo *)((uint8_t *)a4 + 42);
+            int16_t finSkill = pi->finishing;
+            int16_t bonus    = kBallSpeedFinishing[finSkill];
+            ball->speed += bonus;
+        }
+        goto not_a_shot;
+
+    its_a_long_shot:
+        a4 = _GetPlayerPointerFromShirtNumber(player, team);
+        {
+            PlayerInfo *pi = (PlayerInfo *)((uint8_t *)a4 + 42);
+            int16_t shootSkill = pi->shooting;
+            int16_t bonus      = kBallSpeedKicking[shootSkill];
+            ball->speed += bonus;
+        }
+    }
+
+not_a_shot:
+    /* Check goalkeeper/ordinal for spin timer */
+    if (player->playerOrdinal == 1) {
+        if (player->direction == 2 ||
+            player->direction == 6)
+            goto play_kick_sample;
+    }
+
+    /* Check opponent goalkeeper saved comment timer */
+    {
+        TeamGeneralInfo *oppTeam = team->opponentsTeam;
+        if (oppTeam->goalkeeperSavedCommentTimer < 0)
+            goto play_kick_sample;
+    }
+    team->spinTimer = 0;
+
+play_kick_sample:
+    team->passInProgress = 0;
+    _PlayKickSample();
+    return;
+
+exit_kick:
+    return;
+}
+
+/* ================================================================
+ *  CalculateIfPlayerWinsBall
+ *  Resolves ball possession when two players contest it, or updates
+ *  ball position when controlled by the current player.
+ *
+ *  Asm register flow for ball possession contest:
+ *    Entry: d0=dir, a1=player, a6=team ("our" team)
+ *    a0 = *(a6+0) = opponent team
+ *    FIRST GetPlayerPointerFromShirtNumber: a1=opp controlled player, a6=our team
+ *      -> cross-team read (opponent's shirt# looked up in our team's data) -- original game bug
+ *    a6 switched to opponent team
+ *    SECOND GetPlayerPointerFromShirtNumber: a1=opp controlled player, a6=opp team
+ *      -> correct read
+ *    sub.b d0,d1 -> skill difference
+ *    If diff<0: negate, switch a6 back via OPPONENTSTEAM
+ *    Random check determines which team (tracked by a6) wins the ball
+ * ================================================================ */
+void __attribute__((used, externally_visible))
+_CalculateIfPlayerWinsBall(uint16_t dir, Sprite *player, TeamGeneralInfo *team)
+{
+    Sprite *ball;
+    uint8_t *a4;
+
+    team->passInProgress = 0;
+
+    /* Check if opponent has won the ball recently */
+    {
+        TeamGeneralInfo *oppTeam = team->opponentsTeam;  /* a0 = *(a6+0) */
+
+        if (oppTeam->wonTheBallTimer != 0)
+            goto set_default_ball_target;
+
+        if (oppTeam->playerHasBall == 0)
+            goto set_default_ball_target;
+
+        if (oppTeam->currentAllowedDirection < 0)
+            goto set_default_ball_target;
+
+        /* Ball possession contest -- track a6 register explicitly */
+        {
+            TeamGeneralInfo *a6_reg = team;  /* a6 starts as our team */
+            Sprite          *oppControlled;
+            uint8_t          d1_skill, d0_skill;
+            int8_t           diff;
+
+            /* a1 = *(a0 + controlledPlayer) = opponent's controlled player */
+            oppControlled = oppTeam->controlledPlayer;
+            if (oppControlled == (Sprite *)0)
+                goto skip_possession;
+
+            /* FIRST GetPlayerPointerFromShirtNumber:
+               a1 = opponent's controlled player, a6 = our team (cross-team!) */
+            a4 = _GetPlayerPointerFromShirtNumber(oppControlled, a6_reg);
+            {
+                PlayerInfo *pi = (PlayerInfo *)((uint8_t *)a4 + 42);
+                d1_skill = (uint8_t)((pi->tackling + pi->ballControl) >> 1);
+            }
+
+            /* Switch a6 to opponent team: movea.l OPPONENTSTEAM(a6),a6 */
+            a6_reg = a6_reg->opponentsTeam;
+
+            /* a1 = *(a6 + controlledPlayer) = opponent team's controlled player */
+            {
+                Sprite *oppControlled2 = a6_reg->controlledPlayer;
+                if (oppControlled2 == (Sprite *)0)
+                    goto skip_possession;
+
+                /* SECOND GetPlayerPointerFromShirtNumber:
+                   a1 = opponent's controlled player, a6 = opponent team (correct read) */
+                a4 = _GetPlayerPointerFromShirtNumber(oppControlled2, a6_reg);
+            }
+            {
+                PlayerInfo *pi = (PlayerInfo *)((uint8_t *)a4 + 42);
+                d0_skill = (uint8_t)((pi->tackling + pi->ballControl) >> 1);
+            }
+
+            /* sub.b d0,d1; bpl calc_tackle_skill_difference */
+            diff = (int8_t)(d1_skill - d0_skill);
+            if (diff >= 0) {
+                /* a6 stays as opponent team */
+            } else {
+                diff   = -diff;  /* neg.b d1 */
+                a6_reg = a6_reg->opponentsTeam;  /* switch back */
+            }
+
+            /* Random chance based on skill difference */
+            {
+                int16_t  diff_ext = (int16_t)(int8_t)diff;  /* ext.w d1 */
+                uint16_t rnd      = _Rand() & 0x1F;
+                if (rnd < (uint8_t)plAvgTacklingBallControlDiffChance[diff_ext]) {
+                    /* bcs: award to a6_reg */
+                } else {
+                    a6_reg = a6_reg->opponentsTeam;
+                }
+            }
+
+            /* award_ball_possession */
+            a6_reg->wonTheBallTimer = 12;
+            ball = &ballSprite;
+            ball->speed = 0;
+            ball->destX = ball->x.s.i;
+            ball->destY = ball->y.s.i;
+            return;
+        }
+
+    skip_possession:
+        ;  /* Fall through to set_default_ball_target */
+    }
+
+set_default_ball_target:
+    team->controlledPlDirection = (int16_t)dir;
+    ball = &ballSprite;
+
+    /* Check if ball is rising (deltaZ > 0) -> force deltaZ to -1 */
+    if (ball->deltaZ.raw > 0)
+        ball->deltaZ.raw = -1;
+
+    /* Direction 0 special case: nudge ball X toward player */
+    if (dir == 0) {
+        int16_t dx = ball->x.s.i - player->x.s.i;
+        if (dx < 4 && dx > -4) {
+            if (dx >= 0)
+                ball->x.s.i = ball->x.s.i + 1;
+            else
+                ball->x.s.i = ball->x.s.i - 1;
+            goto calculate_ball_destination;
+        }
+    }
+
+calculate_ball_destination:
+    {
+        int16_t *defDest = kDefaultDestinations;
+        int16_t  idx     = (int16_t)dir * 2;
+
+        ball->destX = player->x.s.i + defDest[idx];
+        ball->destY = player->y.s.i + defDest[idx + 1];
+    }
+
+    /* Get player info for ball control skill */
+    a4 = _GetPlayerPointerFromShirtNumber(player, team);
+
+    /* Set ball speed: player speed + optional ball control delta */
+    {
+        int16_t speedDelta = 0;
+        if (currentTick & 2) {  /* btst #1,currentTick+1 */
+            PlayerInfo *pi  = (PlayerInfo *)((uint8_t *)a4 + 42);
+            int16_t bcSkill = pi->ballControl;
+            speedDelta = kBallSpeedDeltaWhenControlled[bcSkill];
+        }
+        speedDelta += player->speed;
+        ball->speed = speedDelta;
+    }
+
+    /* Angle boost: if fullDirection diverges from direction*32 by [64..192], add 256 to speed.
+       Asm: cmpi.b #64,d0; bge boost; cmpi.b #192,d0; bgt no_boost -> boost for [64,192] */
+    {
+        uint8_t angleDiff = (uint8_t)((uint16_t)player->fullDirection + 128);
+        uint8_t dirBase   = (uint8_t)(player->direction * 32);
+        uint8_t diff      = angleDiff - dirBase;
+        if (diff >= 64 && diff <= 192)
+            ball->speed += 256;
+    }
+
+    /* Check if player changed direction while controlling ball */
+    {
+        int16_t ctrlDir = team->controlledPlDirection;
+        if (ctrlDir == player->direction)
+            goto finalize;
+
+        /* Player is turning -- increment turn timer */
+        team->unkBallTimer = team->unkBallTimer + 1;
+
+        /* Check turn threshold based on ball control skill */
+        {
+            PlayerInfo *pi   = (PlayerInfo *)((uint8_t *)a4 + 42);
+            int16_t bcSkill  = pi->ballControl;
+            int16_t threshold = ballControlTurnThresholds[bcSkill];
+            if (threshold > team->unkBallTimer)
+                goto finalize;
+        }
+
+        /* Lost ball on turn */
+        team->wonTheBallTimer = 8;
+    }
+
+finalize:
+    _ResetBothTeamSpinTimers();
+}
+
+/* ================================================================
+ *  UpdatePlayerSpeed
+ *  Sets player speed based on skill, game state, injuries,
+ *  ball possession, and pass-to-target adjustments.
+ * ================================================================ */
+void __attribute__((used, externally_visible))
+_UpdatePlayerSpeed(Sprite *player, TeamGeneralInfo *team)
+{
+    uint8_t    *a4;
+    PlayerInfo *pi;
+    int16_t     speed;
+    int16_t     speedSkill;
+
+    /* Only for PL_NORMAL players */
+    if (player->playerState != PL_NORMAL)
+        return;
+
+    /* During game in progress, goalkeeper can only have speed if controlled */
+    if (gameStatePl == ST_GAME_IN_PROGRESS) {
+        if (player->playerOrdinal == 1) {
+            if (player != team->controlledPlayer)
+                return;
+        }
+    }
+
+    /* Look up base speed from player speed skill */
+    a4 = _GetPlayerPointerFromShirtNumber(player, team);
+    pi = (PlayerInfo *)((uint8_t *)a4 + 42);
+    speedSkill = pi->speed;
+    if (gameStatePl == ST_GAME_IN_PROGRESS)
+        speed = kPlayerSpeedsGameInProgress[speedSkill];
+    else
+        speed = kPlayerSpeedsGameStopped[speedSkill];
+    player->speed = speed;
+
+    /* RunSlower penalty: reduce by 37.5% (quarter + eighth) */
+    if (runSlower != 0) {
+        int16_t curSpeed = player->speed;
+        int16_t quarter  = curSpeed >> 2;
+        curSpeed -= quarter;
+        curSpeed -= (quarter >> 1);
+        player->speed = curSpeed;
+    }
+
+    /* Injury speed handicap (only for human or coached teams) */
+    if (team->playerNumber != 0 || team->playerCoachNumber != 0) {
+        uint8_t injuries = (uint8_t)pi->injuriesBitfield;
+        if (injuries != 0) {
+            int16_t handicapIdx = (injuries & 0xE0) >> 4;
+            int16_t handicap    = kInjuriesSpeedHandicap[handicapIdx / 2];
+            player->speed += handicap;
+        }
+    }
+
+    /* Ball possession speed penalty: 12.5% slower when has ball */
+    if (player == team->controlledPlayer) {
+        if (team->playerHasBall != 0) {
+            int16_t curSpeed = player->speed;
+            curSpeed -= (curSpeed >> 3);
+            player->speed = curSpeed;
+        }
+    }
+
+    /* Pass-to-target player speed adjustment */
+    if (team->playerNumber == 0)
+        goto no_pass_target;
+
+    if (player != team->passToPlayerPtr)
+        goto no_pass_target;
+
+    if (team->passingToPlayer == 0)
+        goto no_pass_target;
+
+    /* Check if it's a long pass or spin */
+    if (team->longPass == 0 &&
+        team->leftSpin == 0 &&
+        team->rightSpin == 0)
+        goto no_pass_target;
+
+    /* Check ball is still moving */
+    if (ballSprite.speed == 0)
+        goto no_pass_target;
+
+    /* Check if player is facing approximately same direction as ball */
+    {
+        int16_t ballDir   = ballSprite.fullDirection;
+        /* Low byte of fullDirection (big-endian low byte = value & 0xFF) */
+        int8_t  playerDir = (int8_t)(player->fullDirection & 0xFF);
+        int8_t  diff      = (int8_t)(ballDir - playerDir);
+
+        if (diff > 7 || diff < -7)
+            goto no_pass_target;
+
+        if (diff > 5 || diff < -5)
+            player->speed = 512;
+        else
+            player->speed = 256;
+    }
+
+no_pass_target:
+    /* Game state speed adjustments */
+    if (gameStatePl == ST_GAME_IN_PROGRESS)
+        goto calculate_acceleration;
+
+    if (gameState == ST_FIRST_HALF_ENDED || gameState == ST_GAME_ENDED)
+        goto reduce_speed;
+
+    if (gameState == ST_GOING_TO_HALFTIME || gameState == ST_PLAYERS_GOING_TO_SHOWER)
+        goto adjust_speed_for_stoppage;
+
+    goto calculate_acceleration;
+
+adjust_speed_for_stoppage:
+    {
+        int16_t  factor   = stoppageTimerTotal * 4;
+        if (factor > 100)
+            factor = 100;
+        {
+            uint16_t curSpeed = (uint16_t)player->speed;
+            uint32_t scaled   = (uint32_t)curSpeed * (uint16_t)factor;
+            player->speed = (int16_t)(scaled / 100);
+        }
+    }
+    goto calculate_acceleration;
+
+reduce_speed:
+    {
+        int16_t reduction = stoppageTimerTotal * 32;
+        int16_t curSpeed  = player->speed - reduction;
+        if (curSpeed < 0)
+            curSpeed = 0;
+        player->speed = curSpeed;
+    }
+
+calculate_acceleration:
+    /* Frame delay = (1280 - speed) / 128 + 6, clamped to min 6 */
+    {
+        int16_t d0 = 1280 - player->speed;
+        if (d0 < 0)
+            d0 = 0;
+        d0 >>= 7;
+        d0 += 6;
+        player->frameDelay = d0;
+    }
+}
+
+/* ================================================================
+ *  UpdatePlayerShotChanceTable
+ *  Sets team's shot chance table based on whether the controlled
+ *  player is a goalkeeper (skill-indexed) or outfield player.
+ * ================================================================ */
+void __attribute__((used, externally_visible))
+_UpdatePlayerShotChanceTable(Sprite *player, TeamGeneralInfo *team)
+{
+    uint8_t    *a4 = _GetPlayerPointerFromShirtNumber(player, team);
+    PlayerInfo *pi = (PlayerInfo *)((uint8_t *)a4 + 42);
+
+    if (pi->position != 0) {
+        /* Not a goalkeeper -- use default outfield table */
+        team->shotChanceTable = (GoalieSkill *)&teamPlOfs24Table;
+        return;
+    }
+
+    /* Goalkeeper: index by goalie skill */
+    {
+        uint16_t skill = (uint16_t)(uint8_t)pi->goalieSkill;
+        team->shotChanceTable = kGoalieSkillTables[skill];
+    }
+}

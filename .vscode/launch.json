@@ -1,0 +1,64 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "type": "amiga",
+            "request": "launch",
+            "preLaunchTask": "compile",
+            "name": "FS-UAE Debug",
+            "config": "A1200",
+            "emulatorType": "fs-uae",
+            "noExtension": true,
+            "chipmem": "2m",
+            "fastmem": "8M",
+            "program": "${workspaceFolder}/uae/dh0/data/SWOS2",
+            "kickstart": "${config:amiga.rom-paths.A1200}",
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "type": "amiga",
+            "request": "launch",
+            "preLaunchTask": "compile",
+            "name": "WinUAE Debug",
+            "config": "A1200",
+            "emulatorType": "winuae",
+            "noExtension": true,
+            "chipmem": "2m",
+            "fastmem": "8M",
+            "program": "${workspaceFolder}/uae/dh0/data/SWOS2",
+            "kickstart": "${config:amiga.rom-paths.A1200}",
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "type": "amiga",
+            "request": "launch",
+            "preLaunchTask": "compile",
+            "name": "FS-UAE Launch",
+            "config": "A1200",
+            "emulatorType": "fs-uae",
+            "noExtension": true,
+            "noDebug": true,
+            "chipmem": "2m",
+            "fastmem": "8M",
+            "program": "${workspaceFolder}/uae/dh0/data/SWOS2",
+            "kickstart": "${config:amiga.rom-paths.A1200}",
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "type": "amiga",
+            "request": "launch",
+            "preLaunchTask": "compile",
+            "name": "WinUAE Launch",
+            "config": "A1200",
+            "emulatorType": "winuae",
+            "noExtension": true,
+            "noDebug": true,
+            "chipmem": "2m",
+            "fastmem": "8M",
+            "program": "${workspaceFolder}/uae/dh0/data/SWOS2",
+            "kickstart": "${config:amiga.rom-paths.A1200}",
+            "internalConsoleOptions": "openOnSessionStart"
+        }          
+    ]
+}

@@ -1,0 +1,2275 @@
+# SWOS_C Porting Progress Log
+
+> Moved from CLAUDE.md to prevent "Prompt too long" errors.
+> This file is NOT auto-loaded into context. Read it with the Read tool when resuming a session.
+
+---
+
+## Progress Log (keep updated)
+
+Update this section every time you port a chunk. Keep it chronological.
+
+### Baseline
+- Date: 2026-02-17
+- Entrypoint: `main.c` → calls `_start` in `SWOS.c`
+- Assembly: most subroutines still in `SWOS2.s`
+
+### Chunk 0 — Boot / Startup
+- `_start` (from `start`) ported. Project compiles/links and starts from `main`.
+
+### Chunk 1 — Simple Utilities + Fade System
+- Date: 2026-02-17
+- 7 functions → `src/game_utils.c`, `src/fade.c`
+- `_AssetLoaderResetState`, `_WaitForVSync`, `_InitSkinAndDefaultPointers`, `_BuildPaletteFromColors`, `_FadeOutToBlack`, `_FadeIn`, `_FadeOutAndIn`
+
+### Chunk 1.5 — Display & Copper System
+- Date: 2026-02-17
+- 6 functions → `src/display.c`
+- `_InitDisplayAndCopper`, `_UpdatePlanePtrsAndBlitParams`, `_SwapBuffersAndCameraViewState`, `_SetCameraCoordinates`, `_DoubleBufferSwapSequence`, `_BlitterCopyPanelToScreen2`
+
+### Chunk 2 — Asset Loader, Bootstrap, Frontend (mainAsm)
+- Date: 2026-02-17
+- 10 functions → `src/asset_loader.c`, `src/loader_bootstrap.c`, `src/frontend.c`
+- `_AssetLoaderRegisterRegion`, `_AssetLoaderInitAltPathAndBanks`, `_AssetPrecacheCore`, `_AssetPrecacheOneCore`, `_AssetPrecacheMenuPack`, `_AssetPrecacheOneMenu`, `_InstallAndInitLoaderBootstrap`, `_InstallAndRunLoaderBootstrap_Op3`, `_FrontEndMainLoop`, `_mainAsm`
+- Bug fix: `loaderBankBitmap` was `uint16_t` → fixed to `uint32_t`
+
+### Chunk 3 — Loader Intro, Timer, Frontend Helpers
+- Date: 2026-02-17
+- 6 functions + 4 static helpers → `src/game_utils.c`, `src/frontend.c`, `src/loader_intro.c`
+- `_ReadTimerDelta`, `_LoadOverlayToFrontbuffer`, `_FrontEndPreLoopSetup`, `_ShowLoaderIntroSequence`
+- Code-as-data fix: `ShowLoaderIntroSequence` label → `team1Scorers`/`team2Scorers` data buffers
+- Symbol conflict: `_LoadFile` in Resload.s → renamed C bridge to `_CLoadFile`
+
+### Chunk 4 — Audio Init, Input Polling, Menu Init
+- Date: 2026-02-17
+- 5 functions → `src/audio.c`, `src/input.c`, `src/menus.c`
+- `_InitMenuMusic`, `_TryPlayMusic`, `_Player1StatusProc`, `_PrepareMenuBackground`, `_InitMainMenuStuff`
+
+### Chunk 5 — Menu/Game Init Helpers + Utilities
+- Date: 2026-02-17
+- 7 functions + 1 static → `src/game_utils.c`, `src/menus.c`
+- `_Randomize2`, `_ZeroOutStars`, `_SetDefaultOptions`, `_SetDefaultNameAndSurname`, `_InitCareerVariables`, `_InitUserTactics`, `_InitializeTacticsPositions`
+
+### Chunk 6 — Audio Beep, Loader Intro Helpers, Asset Service Wrappers
+- Date: 2026-02-17
+- 7 functions → `src/audio.c`, `src/loader_intro.c` (static), `src/asset_loader.c`
+- `_AudioBeepAllShort`, `loaderIntroEnsureMenuMusicPlaying`, `loaderIntroStopMusicAndResetAudio`, `loaderIntroLoadHeroAudioBank`, `_AssetSvcLoaderOp`, `_AssetSvcLoaderOp2`, `_AssetSvcLoaderOp3`
+
+### Chunk 7 — Asset Loading with Retry + RNC Decompression
+- Date: 2026-02-17
+- 3 functions → `src/asset_loader.c`
+- `_PlaySong`, `_AssetEnsureReadyWithRetry`, `_LoadRNCToBufferNoBlit`
+
+### Chunk 8 — Player2 Input + Audio Utilities
+- Date: 2026-02-17
+- 7 functions → `src/input.c`, `src/audio.c`
+- `_Player2StatusProc`, `_ClearAudioActiveFlag`, `_StopAudioAndClearFlags`, `_LoadSfxResources`, `_EnsureSfxLoadedAndStart`, `_StopMusic`, `_TryRestartingMusic`
+
+### Chunk 9 — Asset Cache System
+- Date: 2026-02-18
+- 5 functions + 1 static → `src/asset_loader.c`
+- `_AssetCacheFindByName`, `_AssetCacheCopyByName`, `_AssetCacheLoadFromAssetSys`, `_AssetCacheStoreFromMemory`, `assetCacheAllocInternal`
+
+### Chunk 10 — PanicHaltLoop + ProcessImageCommandStream + BlitDispatch
+- Date: 2026-02-18
+- 3 functions + 2 static → `src/panic.c`, `src/image_cmd.c`
+- `_PanicHaltLoop`, `_ProcessImageCommandStream`, `blitDispatch`
+
+### Chunk 11 — Menu System Core
+- Date: 2026-02-17
+- 11 functions → `src/menu_system.c`
+- `_CalcMenuEntryAddress`, `_SetExitMenuFlag`, `_DrawMenuPanelBackground`, `_DrawSelectedMenuItemFrame`, `_DrawMenu`, `_UpdateBlinkingMenuText`, `_MenuCheckControls`, `_MenuProc`, `_ActivateMenu`, `_ShowMenu`, `_RestorePreviousMenu`
+- Structs: `Menu` (22 bytes), `MenuEntry` (56 bytes)
+
+### Chunk 12 — UnpackMenu, DrawMenuItem, and Menu Rendering Helpers
+- Date: 2026-02-18
+- 17 functions → `src/menu_system.c`
+- `_UnpackMenu`, `_DrawMenuItem`, `_CallDrawMenuItem`, `_DrawMenuItemInnerFrame`, `_DrawMenuItemOuterFrame`, `_DrawMenuItemBackground`, `_DrawMenuItemBackgroundMasked`, `_DrawMenuBackWithCheck`, `_DrawBackAllItems`, `_GetKey`, `_BlitterCopyOverlayToScreen`, `_Int2Ascii`, `_SetCurrentEntry`, `initMenuEntry`
+- Bug fix: All asm-to-C stubs changed `move.w` → `move.l` for uint16_t params (GCC expects 32-bit stack slots)
+
+### Chunk 13 — String Utilities, DrawMenuItems Family, File I/O
+- Date: 2026-02-18
+- 14 functions → `src/string_utils.c`, `src/file_io.c`, `src/menu_system.c`
+- `_GetStringLength`, `_StringEquals`, `_StringCopy`, `_StringCopyUntilChar`, `_LoadFileEx`, `_WriteFile`, `_BlitMaskedRectAltToFront`, `_DrawMenuItemsFromList`, `_DrawMultipleItems`, `_DrawMenuItemsWaitForVSync`, `_CallDrawMultipleItems`, `_CallDrawMultipleItemsRect`
+- Symbol: `_LoadFileEx` (not `_LoadFile`) to avoid Resload.s conflict
+
+### Chunk 14 — Text Rendering + Sprite Operations
+- Date: 2026-02-18
+- 8 functions + 1 static → `src/text_render.c`, `src/sprites.c`
+- `_GetTextWidth`, `_DrawMenuText`, `_DrawMenuTextRightAligned`, `_DrawMenuTextCentered`, `blitStringToFrontBuffer`, `_CopySprite`, `_CopyWholeSprite`, `_ConvertSpriteColors`
+
+### Chunk 15 — File I/O Helpers + Competition File System
+- Date: 2026-02-18
+- 13 functions → `src/menus.c`, `src/audio.c`, `src/file_io.c`
+- `_SaveOptions`, `_RestoreOptions`, `_ShowErrorMenu`, `_CycleMenuMusic`, `_ShowFsErrorByCode`, `_SaveCompetitionFile`, `_LoadCompetitionFile`, `_LoadCareerFile`, `_SaveCareerFile`, `_LoadPresetFile`, `_SavePresetCompetitionFile`, `_LoadDIYFile`, `_SaveDIYFile`
+
+### Chunk 16 — File System Helpers, Team Loading, Continue/Abort Menu
+- Date: 2026-02-18
+- 15 functions + 2 static → `src/file_io.c`, `src/teams.c`, `src/menus.c`
+- `_FindFilesExtensionPresent`, `_ReadTacticsFile`, `_WriteTacticsFile`, `_LoadHilFile`, `_DoSaveHighlights`, `_LoadTeamFile`, `_SetTeamGlobalNumbers`, `_DoContinueAbortMenu`, `_ContinueAbortInit`, `_ContinueSelected`, `_AbortSelected`, `_ContinueInit`, `_ContinueMenuContinueSelected`
+
+### Chunk 17 — File Dialog System
+- Date: 2026-02-18
+- 8 functions + 1 no-op → `src/file_io.c`
+- `_DiskMenuRet`, `_ShowInsertDisk2Dialog`, `_Asset_PromptInsertSaveDiskDf0`, `_FormatSaveDiskMenu`, `_DeleteFileMenu`, `_ExitDisk`, `_SelectFileToSaveDialog`, `_GetFilenameAndExtension`
+
+### Chunk 18 — Blitter Operations + Text2Sprite
+- Date: 2026-02-18
+- ✅ Ported (7 functions + 4 static helpers):
+  - `_FillRectangle` (from `FillRectangle`) → `src/blitter.c` — fills rectangle with camera offset + vertical wrap
+  - `_RectRowMaskedApplyScreenOffset` (from `RectRowMaskedApplyScreenOffset`) → `src/blitter.c` — thin wrapper adding camera offsets
+  - `_BlitSpritePlanar_Word` (from `BlitSpritePlanar_Word`) → `src/blitter.c` — OR-combines 4 planes into mask, word access
+  - `_BlitSpritePlanar_Word_StridedDest` (from `BlitSpritePlanar_Word_StridedDest`) → `src/blitter.c` — strided dest variant
+  - `_BlitSpritePlanar_Long_StridedDest` (from `BlitSpritePlanar_Long_StridedDest`) → `src/blitter.c` — longword access variant
+  - `_BlitGlyphToSpriteBitmap` (from `BlitGlyphToSpriteBitmap`) → `src/blitter.c` — 4-pass blitter glyph renderer
+  - `_Text2Sprite` (from `Text2Sprite`) → `src/blitter.c` — text-to-sprite renderer
+  - `blitterSpanCoreMasked` (static) — single-plane horizontal span fill
+  - `blitterSpan4Planes` (static) — 4-plane span fill
+  - `blitterRectRowMasked` (static) — masked rectangular blit
+  - `waitBlit` (static) — blitter busy-wait helper
+- New files: `include/blitter.h`, `src/blitter.c`
+- Assembly stubs in SWOS2.s:
+  - `FillRectangle:` register-to-stack stub (d0-d4 → 5 stack params, jsr _FillRectangle)
+  - `RectRowMaskedApplyScreenOffset: rts` (dead code, 0 asm callers — C callers use _RectRowMaskedApplyScreenOffset directly)
+  - `BlitSpritePlanar_Word:` register-to-stack stub (d0 → stack, jsr _BlitSpritePlanar_Word)
+  - `BlitSpritePlanar_Word_StridedDest:` register-to-stack stub (d0 → stack)
+  - `BlitSpritePlanar_Long_StridedDest:` register-to-stack stub (d0 → stack)
+  - `BlitGlyphToSpriteBitmap:` register-to-stack stub (d0-d4 → 5 stack params, preserves embedded data labels)
+  - `Text2Sprite:` register-to-stack stub (d1,d2,d3,d4,a0,a1 → 7 stack params + outTotalWidth, returns d0 + d1=totalWidth, Z flag)
+- C-to-asm bridges removed from swos2_unit.s (2 bridges):
+  - `_CFillRectangle`, `_CRectRowMaskedApplyScreenOffset`
+- C-to-asm bridge KEPT (DrawSprite16Pixels NOT ported):
+  - `_CDrawSprite16Pixels` (3 params: sprIdx, x, y → d0, d1, d2)
+- New xref entries in swos2_unit.s: `_FillRectangle`, `_BlitSpritePlanar_Word`, `_BlitSpritePlanar_Word_StridedDest`, `_BlitSpritePlanar_Long_StridedDest`, `_BlitGlyphToSpriteBitmap`, `_Text2Sprite`
+- NOT ported (kept as asm):
+  - `DrawSprite16Pixels` — 4-line shim into `DrawSprite_entry2` (large unported sprite-to-screen blitter)
+  - `DrawSpriteCentered` — also falls through to `DrawSprite_entry2`
+  - `BlitterSpan4Planes` / `BlitterSpanCoreMasked` — asm versions neutered with `rts` (C has static replacements)
+  - `blitter_rectrow_masked` — dead code (only caller was RectRowMaskedApplyScreenOffset, now `rts`)
+- Notes:
+  - BlitGlyphToSpriteBitmap has embedded PC-relative data labels (`bltconShiftBase_glyph`, `glyphBlitPlaneMask`, `glyphHeightLinesCache`, `blitSrcA_MaskPtr_glyph`, `blitSrcB_GlyphPtr_glyph`, `dstRowBytesPerPlane`, `dstRowAdvanceBytes`) used by Loader_ReadFileChunks/Loader_WriteFileChunks via PC-relative access — these data labels are preserved after the stub
+  - `panic_bad_glyph_header` and `panic_missing_bitplanes` labels kept as dead `rts` stubs
+  - Text2Sprite asm stub uses d3 as implicit planeMask parameter (not in IDA prototype but passed through to BlitGlyphToSpriteBitmap)
+  - C callers in menu_system.c already used `_FillRectangle` and `_RectRowMaskedApplyScreenOffset` directly (no bridge name updates needed)
+- Build status: **verified** — clean build, only expected currentMenu boundary-spill warning
+
+### Chunk 19 — SFX Triggers + Crowd Chant System
+- Date: 2026-02-18
+- 30 functions → `src/sfx_crowd.c`, `include/sfx_crowd.h`
+- **Crowd management (7):**
+  - `_CrowdResetMatchState`, `_TurnCrowdChantsOn`, `_TurnCrowdChantsOff`, `_PlayCrowdChants`, `_MuteAllAudioChannelsWithDelay`, `_AudioFadeCrowdDownThenPulseMusic`, `_AudioMuteAllWithFrameRamp`
+- **SFX triggers (23):**
+  - `_PlayEnqueuedSamples`, `_PlayPenaltySample`, `_PlaySample7IfNotTraining`, `_PlaySfxSample16`, `_PlayGoodPassSample`, `_PlayKickSample`, `_GateKickSampleAndCrowd`, `_PlayRefereeWhistleSample`, `_PlayFoulWhistleSample`, `_PlayEndGameWhistleSample`, `_PlaySample1IfNotTraining`, `_PlaySample1`, `_PlaySample2IfNotTraining`, `_PlaySample4IfNotTraining`, `_PlaySample3IfNotTraining`, `_PlayMissGoalSample`, `_PlayPenalty`, `_PlayGameStateWhistleSample`, `_PlayGoalReplayBottomSample`, `_PlayGoalKickOffSample`, `_PlayCornerKickSample`, `_HandleKickSampleAndCrowd`, `_PlaySample`
+- New C-to-asm bridges in `swos2_unit.s`: `_CRand` (calls Rand, masks to byte), `_CCrowdTickJump` (d0=channel, d1=waveId)
+- Data labels kept in SWOS2.s, exported via xdef: `pendingSampleId3_4`, `crowdChantsOn`, `lastKickSampleTick`, `audioDbgFlagA`, `crowdSamples[4]`, `currentCrowdSample`, `fadeInChantTimer`, `nextChantTimer`, `fadeOutChantTimer`, `crowdChantVolume`
+- BSS globals exported: `endOfHalfWriteOnly`, `goalCounter`, `sfxQueueWriteIdx`, `crowdEventFlags`, `sfxQueueCount`, `trainingGame`, `gameState`, `patternsGoalCounter`, `showFansCounter`
+- Assembly stubs:
+  - Most functions: simple `jmp _FuncName` (no params)
+  - `GateKickSampleAndCrowd`: register-to-stack (d0, d1 → stack)
+  - `HandleKickSampleAndCrowd`: register-to-stack + `tst.w d0` after jsr (sets Z flag from C return: 0=played, non-zero=blocked)
+  - `PlaySample`: register-to-stack (d0 → stack)
+- Notes:
+  - PlayCrowdChants is a state machine: idle→fadein→playing→fadeout→cooldown
+  - audioDbgFlagA also written by unported asm (lines 5326/5330) via absolute addressing — works with xdef
+  - _CRand includes `andi.l #$FF,d0` to mask Rand's byte return value
+  - nullsub_6 left as-is (dead code, just rts)
+- Build status: **verified** — clean build, only expected currentMenu boundary-spill warning
+
+### Chunk 20 — Fade Internals, Display/Blit Helpers, Pitch Loading
+- Date: 2026-02-18
+- 11 functions → `src/fade.c`, `src/display.c`, `src/pitch.c` (new), `include/pitch.h` (new)
+- **Fade internals (3):**
+  - `_ApplyFadeStep` (from `ApplyFadeStep` + `ApplyFadeLoaderPath`) → `src/fade.c` — applies fade level to copper palette (normal + loader path with blue channel clamping)
+  - `_FadeOutTick` (from `FadeOutTick`) → `src/fade.c` — ISR-called fade-out step
+  - `_FadeInTick` (from `FadeInTick`) → `src/fade.c` — ISR-called fade-in step
+- **Display helpers (4):**
+  - `_ProcessSpriteBlitQueue` (from `ProcessSpriteBlitQueue`) → `src/display.c` — drains blitter A→D copy queue
+  - `_BlitterCopyPanelToScreen` (from `BlitterCopyPanelToScreen`) → `src/display.c` — copies overlay panel to frontbuffer
+  - `_HWSprite_LoadFromSpriteGraphics` (from `HWSprite_LoadFromSpriteGraphics`) → `src/display.c` — clears HW sprite via blitter D-only fill
+  - `_FlashColor0Delay` (from `FlashColor0Delay`) → `src/display.c` — debug color flash with delay loop
+- **Pitch loading (3+1 static):**
+  - `_LoadPitchMap` (from `LoadPitchMap`) → `src/pitch.c` — loads pitch map file by index
+  - `_FixupAndColorPitchFile` (from `FixupAndColorPitchFile`) → `src/pitch.c` — relocates pitch pointers + recolors fan sprites for both teams
+  - `_AdjustFanColor` (from `AdjustFanColor`) → `src/pitch.c` — converts planar 4-plane sprite colors via lookup table
+  - `pitchFansConvertTable` (static) — 16-entry color remap table, indices 10/11 set to team kit colors
+- New files: `include/pitch.h`, `src/pitch.c`
+- Assembly stubs in SWOS2.s:
+  - `ApplyFadeStep:` register-to-stack stub (d2 → stack, jsr _ApplyFadeStep)
+  - `FadeOutTick: jmp _FadeOutTick`
+  - `FadeInTick: jmp _FadeInTick`
+  - `ProcessSpriteBlitQueue: jmp _ProcessSpriteBlitQueue`
+  - `BlitterCopyPanelToScreen: jmp _BlitterCopyPanelToScreen`
+  - `HWSprite_LoadFromSpriteGraphics:` register-to-stack stub (d0 → stack)
+  - `FlashColor0Delay:` register-to-stack stub (d0, d1 → stack)
+  - `LoadPitchMap:` register-to-stack stub (d0 → stack)
+  - `FixupAndColorPitchFile: jmp _FixupAndColorPitchFile`
+  - `AdjustFanColor:` register-to-stack stub (a1, a0 → stack as dest, convTable)
+- New xdef entries in swos2_unit.s: `paletteTable`, `swcPitchMapFiles`, `fansSidesSwapped`, `cameraCoordinatesValid`, `topTeamInGame`, `bottomTeamInGame`
+- New xref entries in swos2_unit.s: `_ApplyFadeStep`, `_FadeOutTick`, `_FadeInTick`, `_ProcessSpriteBlitQueue`, `_BlitterCopyPanelToScreen`, `_HWSprite_LoadFromSpriteGraphics`, `_FlashColor0Delay`, `_LoadPitchMap`, `_FixupAndColorPitchFile`, `_AdjustFanColor`
+- Data: kFadeShiftMaskTable and fadeShiftMaskTable moved to static const arrays in fade.c; fadeStep replaced with #define FADE_STEP; pitchFansConvertTable moved to static array in pitch.c
+- Build status: **verified** — clean build, only expected currentMenu boundary-spill warning
+
+### Chunk 21 — Random Number System
+- Date: 2026-02-18
+- 5 functions → `src/random.c`, `include/random.h` (new files)
+- **Random functions (5):**
+  - `_Rand` (from `Rand`) → `src/random.c` — primary PRNG, XOR-table based, returns 0-255
+  - `_Rand2` (from `Rand2`) → `src/random.c` — secondary PRNG, identical algorithm, independent state
+  - `_GetRandomWord` (from `GetRandomWord`) → `src/random.c` — combines two Rand2 calls into 16-bit result
+  - `_SaveRand2State` (from `SaveRand2State`) → `src/random.c` — pushes Rand2 state (3 bytes) onto save buffer
+  - `_RestoreRand2State` (from `RestoreRand2State`) → `src/random.c` — pops Rand2 state from save buffer
+- **Also stubbed:** `Randomize2` (already ported in Chunk 5 as `_Randomize2` in game_utils.c, but asm body was never replaced — now stubbed with register-to-stack bridge)
+- New files: `include/random.h`, `src/random.c`
+- Assembly stubs in SWOS2.s:
+  - `Rand:` preserves d1/a0 (matching original), jsr _Rand
+  - `Rand2:` preserves d1/a0 (matching original), jsr _Rand2
+  - `GetRandomWord:` preserves d1, jsr _GetRandomWord
+  - `SaveRand2State:` preserves a0, jsr _SaveRand2State
+  - `RestoreRand2State:` preserves a0, jsr _RestoreRand2State
+  - `Randomize2:` preserves d0-d1/a0, pushes d0 as param, jsr _Randomize2
+- Data labels kept in SWOS2.s: `seed`, `randXorIndex`, `randXorKey` (in code section, must remain adjacent for word-write from 5 asm callers), `savedRandStatePtr`, `savedRandState` (15-byte buffer), `kRandomTable` (257 bytes, already exported)
+- New xdef entries in swos2_unit.s: `seed`, `randXorIndex`, `randXorKey`, `savedRandStatePtr`, `savedRandState`
+- New xref entries in swos2_unit.s: `_Rand`, `_Rand2`, `_GetRandomWord`, `_SaveRand2State`, `_RestoreRand2State`
+- **Cleanup:** Removed `_CRand` bridge from swos2_unit.s (no longer needed). Updated `sfx_crowd.c` to call `_Rand()` directly instead of `_CRand()`.
+- Build status: **verified** — clean build, only expected currentMenu boundary-spill warning
+
+### Chunk 22 — Simple Game State Functions
+- Date: 2026-02-18
+- 7 functions + 2 static → `src/game_state.c`, `include/game_state.h` (new files)
+- **Statistics (3):**
+  - `_ResetGoalAttempt` (from `ResetGoalAttempt`) → clears isGoalAttempt flag
+  - `_AllowStatistics` (from `AllowStatistics`) → enables stats overlay, sets timer, negates resultTimer
+  - `_StatisticsOff` (from `StatisticsOff`) → clears stats timer and overlay flags
+- **Time (1):**
+  - `_ResetTime` (from `ResetTime`) → clears game clock, resets time sprite to SPR_8_MINS
+- **Player half-tracking (2+2s):**
+  - `_BumpPlayersLastPlayedHalfAtHalfStart` (from `BumpPlayersLastPlayedHalfAtHalfStart`) → loops 11 players per team, marks half-start
+  - `_BumpPlayersLastPlayedHalfAtHalfEnd` (from `BumpPlayersLastPlayedHalfAtHalfEnd`) → loops 11 players per team, marks half-end
+  - `bumpPlayerHalfStart` (static) → per-player: if not red-carded and not already at 2, set HALFPLAYED to 1
+  - `bumpPlayerHalfEnd` (static) → per-player: if not red-carded and HALFPLAYED is 1, set to 2
+- **Team setup (1):**
+  - `_CopyPlayerNameLengths` (from `CopyPlayerNameLengths`) → copies 16 name-length entries, initializes ordinal table
+- New files: `include/game_state.h`, `src/game_state.c`
+- Assembly stubs in SWOS2.s:
+  - `ResetGoalAttempt: jmp _ResetGoalAttempt`
+  - `AllowStatistics: jmp _AllowStatistics`
+  - `StatisticsOff: jmp _StatisticsOff`
+  - `ResetTime: jmp _ResetTime`
+  - `BumpPlayersLastPlayedHalfAtHalfStart: jmp _BumpPlayersLastPlayedHalfAtHalfStart`
+  - `BumpPlayersLastPlayedHalfAtHalfEnd: jmp _BumpPlayersLastPlayedHalfAtHalfEnd`
+  - `BumpPlayerLastPlayedHalfAtHalfStart: rts` (dead code, inlined in C)
+  - `BumpPlayerLastPlayedHalfAtHalfEnd: rts` (dead code, inlined in C)
+  - `CopyPlayerNameLengths: jmp _CopyPlayerNameLengths`
+- Data labels kept in SWOS2.s: `copyTimeSprite`, `secondsSwitchAccumulator`, `gameSeconds`, `gameTime` (all in code section, used by UpdateTime which remains in asm)
+- New xdef entries in swos2_unit.s: `isGoalAttempt`, `showStats`, `overlayActiveFlag`, `statsTimer`, `resultTimer`, `showingUserStats`, `gameSeconds`, `gameTime`, `secondsSwitchAccumulator`, `copyTimeSprite`, `currentTimeSprite`, `plOrdinalsTable`, `plNamesLengthTable`, `plNamesLengthTableCopy`
+- New xref entries in swos2_unit.s: `_ResetGoalAttempt`, `_AllowStatistics`, `_StatisticsOff`, `_ResetTime`, `_BumpPlayersLastPlayedHalfAtHalfStart`, `_BumpPlayersLastPlayedHalfAtHalfEnd`, `_CopyPlayerNameLengths`
+- Notes: PLAYERINFO_STRIDE = 61 with HALFPLAYED at offset 78 (extends past nominal player size — boundary-spill pattern, intentional in original code)
+- Build status: **verified** — clean build, only expected currentMenu boundary-spill warning
+
+### Chunk 23 — Replay Menu + ClearSaveFlagForGoalSprites
+- Date: 2026-02-18
+- 5 functions → `src/replay_menu.c`, `include/replay_menu.h` (new), `src/game_state.c`
+- **Replay menu (4):**
+  - `_DrawMenuBack150x20` (from `DrawMenuBack150x20`) → `src/replay_menu.c` — draws 150x20 menu background + outer frame
+  - `_DrawReplayContinueShiningFrame` (from `DrawReplayContinueShiningFrame`) → `src/replay_menu.c` — animated shining frame around selected option
+  - `_DrawReplayOrExitMenu` (from `DrawReplayOrExitMenu`) → `src/replay_menu.c` — draws REPLAY/EXIT boxes twice (double-buffered)
+  - `_ReplayExitMenuAfterFriendly` (from `ReplayExitMenuAfterFriendly`) → `src/replay_menu.c` — post-friendly-match REPLAY/EXIT menu with event loop
+- **Goal sprites (1):**
+  - `_ClearSaveFlagForGoalSprites` (from `ClearSaveFlagForGoalSprites`) → `src/game_state.c` — sets saveSprite=1 for both goal sprites
+- New files: `include/replay_menu.h`, `src/replay_menu.c`
+- Assembly stubs in SWOS2.s:
+  - `ReplayExitMenuAfterFriendly: jmp _ReplayExitMenuAfterFriendly`
+  - `DrawReplayOrExitMenu: jmp _DrawReplayOrExitMenu`
+  - `DrawMenuBack150x20:` register-to-stack stub (d0=color, d1=x, d2=y → 3 stack params)
+  - `DrawReplayContinueShiningFrame:` register-to-stack stub (d0=x, d1=y → 2 stack params)
+  - `ClearSaveFlagForGoalSprites: jmp _ClearSaveFlagForGoalSprites`
+- Dead code after DrawMenuBack150x20 rts (lines 18370-18412) and DrawReplayContinueShiningFrame rts (lines 18444-18455) left as-is
+- New xdef entries in swos2_unit.s: `goal1TopSprite`, `goal2BottomSprite`, `replaySelected`, `aReplay`, `aExit`, `aGrafsMenubg2Ra`
+- New xref entries in swos2_unit.s: `_ClearSaveFlagForGoalSprites`, `_DrawMenuBack150x20`, `_DrawReplayContinueShiningFrame`, `_DrawReplayOrExitMenu`, `_ReplayExitMenuAfterFriendly`
+- Notes:
+  - ReplayExitMenuAfterFriendly has two loop entry points (full redraw vs wait-only); C uses `needsRedraw` flag to replicate
+  - DrawReplayOrExitMenu draws both frames with VBlank sync (double-buffered); d7 counts down from 1 to 0
+  - When no direction pressed and on EXIT, snaps back to REPLAY (original behavior)
+- Build status: **verified** — clean build, only expected currentMenu boundary-spill warning
+
+### Chunk 24 — Result Display (ResetResultSprites + ShowResult)
+- Date: 2026-02-18
+- 2 functions → `src/game_state.c`
+- **Result display (2):**
+  - `_ResetResultSprites` (from `ResetResultSprites`) → clears visibility on all result-related sprites, clears scorer data arrays
+  - `_ShowResult` (from `ShowResult`) → timer-driven result display: init phase maps magic timer values (30000/31000/32000) to countdown values, shows/hides sprites based on gameState, positions all score/team/scorer/grid sprites relative to camera, handles aggregate/total score digits for 2-leg games
+- New C-to-asm bridge in swos2_unit.s: `_CInitDisplaySprites` (calls InitDisplaySprites)
+- Assembly stubs in SWOS2.s:
+  - `ResetResultSprites: jmp _ResetResultSprites`
+  - `ShowResult: jmp _ShowResult` (dead code from old body left in place after jmp)
+- New xdef entries in swos2_unit.s (32): all result/score sprite globals, team goals digits, scorer widths, secondLeg, dontShowScorers, team1NameLength, team1/2TotalGoals
+- New xref entries in swos2_unit.s: `_ResetResultSprites`, `_ShowResult`
+- Sprite field accessor macros added: `SPR_X()`, `SPR_Y()`, `SPR_Z()`, `SPR_VIS()`, `SPR_IMG()` for cleaner code
+- Notes:
+  - ShowResult is ~385 lines of asm but mostly repetitive sprite positioning
+  - Team2 goals/total digit positioning has asymmetric X-offset logic (digit1.X = digit2.X copy, then digit2.X += offset)
+  - Scorer visibility loop breaks on either width==0 OR dontShowScorers (both jump to same exit label)
+  - Vertical offset d7 computed from scorer count, clamped to min -14 (0xFFF2)
+- Build status: **verified** — clean build, only expected currentMenu boundary-spill warning
+
+### Chunk 25 — Audio System Core
+- Date: 2026-02-18
+- 8 functions + 1 static → `src/audio.c`, `include/audio.h` (updated)
+- **Audio setup (8):**
+  - `_StopAllAudioChannels` (from `StopAllAudioChannels`) → disables all audio DMA, clears masterVolume/modeFlags
+  - `_AudioSetChannelVolume` (from `AudioSetChannelVolume`) → sets volume for one or all channels (bit 7 = all)
+  - `_AudioSetMode` (from `AudioSetMode`) → sets audio mode flags (bits 2-3 enable primary/secondary processing)
+  - `_InitAudioState` (from `InitAudioState`) → initializes audio system from bank data, relocates descriptors, inits 4 channels
+  - `_AudioApplyPresetToChannels` (from `AudioApplyPresetToChannels`) → applies 4-byte preset to all channels
+  - `_AudioChannelNoteOnOff` (from `AudioChannelNoteOnOff`) → starts/stops a note on a channel (0=stop)
+  - `_AudioDisableDMAForChannel` (from `AudioDisableDMAForChannel`) → disables DMA for a single channel
+  - `_AudioChannelQueueNextWaveIfEnabled` (from `AudioChannelQueueNextWaveIfEnabled`) → queues wave if secondary processing enabled
+- **Static helper (1):**
+  - `clearAudioChannelStruct` — zeros 176 bytes (0xB0) of channel struct
+  - Also exported as `_ClearAudioChannelStruct` for potential asm callers
+- **AudioState struct** defined in `audio.h` (46 bytes, packed, matches asm layout):
+  - songPtr, bankSectionPtrs[7], masterVolume, modeFlags, irqSubtick, toggleFlag, primaryChanEnable, secondaryChanEnable, channelVolume[4], channelChangeFlags, currentChannelIdx
+- **AudioChannel** accessed via offset macros (ACHAN_*) and CHAN_U32/U16/U8 accessors
+- **Access() inlined** as `accessRelocate()` — adds bankSectionPtrs[5] and masks to 24-bit
+- Assembly stubs in SWOS2.s:
+  - `InitAudioState:` register-to-stack stub (a0=bankBase, a1=songPtr → 2 stack params), saves all regs
+  - `ClearAudioChannelStruct:` register-to-stack stub (a0 → stack)
+  - `StopAllAudioChannels:` saves d0-d1/a0-a1, jsr _StopAllAudioChannels
+  - `AudioSetChannelVolume:` register-to-stack stub (d0=channel, d1=volume → 2 stack params)
+  - `AudioSetMode:` register-to-stack stub (d0=mode → stack)
+  - `AudioApplyPresetToChannels:` register-to-stack stub (d0=presetId → stack)
+  - `AudioChannelNoteOnOff:` register-to-stack stub (d0=channel, d1=noteId → 2 stack params)
+  - `AudioChannelStop:` dead code (`rts`)
+  - `AudioChannelQueueNextWaveIfEnabled:` register-to-stack stub (d0=channel, d1=waveId)
+- `AudioDisableDMAForChannel` asm body KEPT (used by IRQ handlers still in asm)
+- **Bridges removed from swos2_unit.s:**
+  - `_StopAudio` → replaced by direct `_StopAllAudioChannels()` calls in C
+  - `_StartMenuMusic` → replaced by direct `_InitAudioState()` calls in C
+  - `_SetVolumeOrStopChants` → replaced by direct `_AudioSetChannelVolume()` calls in C
+  - `_AudioApplyPresetToChannels` bridge → replaced by C function of same name
+  - `_CCrowdTickJump` → replaced by direct `_AudioChannelQueueNextWaveIfEnabled()` calls in C
+- **C callers updated:**
+  - `audio.c`: _StopAudio→_StopAllAudioChannels, _StartMenuMusic→_InitAudioState, _SetVolumeOrStopChants→_AudioSetChannelVolume
+  - `loader_intro.c`: same replacements
+  - `sfx_crowd.c`: _SetVolumeOrStopChants→_AudioSetChannelVolume, _CCrowdTickJump→_AudioChannelQueueNextWaveIfEnabled
+- New xdef entries in swos2_unit.s: `audioState`, `audioChannel0`, `audioChannel1`, `audioChannel2`, `audioChannel3`
+- New xref entries in swos2_unit.s: `_StopAllAudioChannels`, `_AudioSetChannelVolume`, `_AudioSetMode`, `_ClearAudioChannelStruct`, `_InitAudioState`, `_AudioApplyPresetToChannels`, `_AudioChannelNoteOnOff`, `_AudioDisableDMAForChannel`, `_AudioChannelQueueNextWaveIfEnabled`
+- Notes:
+  - AudioState structure is PC-relative data in SWOS2.s code section — stays in asm, exported via xdef
+  - IRQ handlers (AudioIRQUpdateChannels, AudioIRQServiceOneChannel, etc.) remain in asm and continue using PC-relative access
+  - Thin wrappers (StartMenuMusic→InitAudioState, StopAudio→StopAllAudioChannels, etc.) chain through stubs, adding one extra branch
+  - `clearAudioChannelStruct` uses `__attribute__((optimize("no-tree-loop-distribute-patterns")))` to prevent GCC converting loop to memset
+- Build status: **verified** — clean build, only expected currentMenu boundary-spill warning
+
+### Chunk 26 — Time & Statistics System
+- Date: 2026-02-18
+- 6 functions + 2 static → `src/game_state.c` (UpdateTime), `src/statistics.c` (new), `include/statistics.h` (new)
+- **Time management (1):**
+  - `_UpdateTime` (from `UpdateTime`) → `src/game_state.c` — core game time: BCD minute tracking, half-time/full-time/extra-time/penalty triggers, away-goals rule, time sprite building and positioning
+- **Statistics display (3+2s):**
+  - `_UpdateAndDrawStatistics` (from `UpdateAndDrawStatistics`) → `src/statistics.c` — stats overlay lifecycle: shot tracking, goal attempt detection, possession counting, user input dismissal, timer management
+  - `_DrawStatistics` (from `DrawStatistics`) → `src/statistics.c` — renders full stats UI: 11 grid rows, team names, goals/possession/attempts/on-target/corners/fouls/bookings/sendings-off
+  - `_DrawGrid` (from `DrawGrid`) → `src/statistics.c` — fills grid background using 16x16 DarkenRectangle tiles
+  - `writeStatsNumber` (static) — converts number to ASCII and draws centered
+  - `writeStatsPercent` (static) — converts number to ASCII with '%' suffix and draws centered
+- New files: `include/statistics.h`, `src/statistics.c`
+- Assembly stubs in SWOS2.s:
+  - `UpdateTime: jmp _UpdateTime` (dead code from old body left in place after jmp)
+  - `UpdateAndDrawStatistics: jmp _UpdateAndDrawStatistics` (dead code left in place — contains anti-tamper label targets)
+  - `DrawStatistics: jmp _DrawStatistics` (dead code left in place — contains anti-tamper label targets)
+  - `WriteStatsNumber: rts` (dead code, only caller was DrawStatistics now in C)
+  - `WriteStatsPercent: rts` (dead code, only caller was DrawStatistics now in C)
+  - `DrawGrid: rts` (dead code, only caller was DrawStatistics now in C)
+- New C-to-asm bridges in swos2_unit.s:
+  - `_CEndFirstHalf` (calls EndFirstHalf)
+  - `_CEndFirstExtraTime` (calls EndFirstExtraTime)
+  - `_CEndOfGame` (calls EndOfGame)
+  - `_CStartFirstExtraTime` (calls StartFirstExtraTime)
+  - `_CStartPenalties` (calls StartPenalties)
+  - `_CDarkenRectangle` (d0=sprIdx, d1=x, d2=y → calls DarkenRectangle)
+- New xdef entries in swos2_unit.s (39): timeVar, timeDelta, gameStatePl, extraTimeState, penaltiesState, endGameCounter, playing2ndGame, team1GoalsFirstLeg, team2GoalsFirstLeg, winningTeamPtr, statsTeam1GoalsCopy, statsTeam2GoalsCopy, statsTeam1Goals, statsTeam2Goals, playingPenalties, lastTeamPlayed, ballInGoalkeeperArea, strikeDestX, ballSprite, topTeamData, bottomTeamData, currentPlayerIndicatorPosition, fireBlocked, aMATCHSTATS, aPossession, aGoalAttempts, aOnTarget, aCornersWon, aFoulsConceded, aBookings, aSendingsOff, aMinus, aGoals, statsNumber, + 6 bridge xdefs
+- New xref entries in swos2_unit.s: `_UpdateTime`, `_UpdateAndDrawStatistics`, `_DrawStatistics`, `_DrawGrid`
+- Notes:
+  - UpdateTime's initial timeVar=31000 block has an unconditional `bra.w time_invisible` that makes the timer countdown dead code — translated faithfully (always sets timeVar=150, makes sprite visible)
+  - Anti-tamper check labels (`swap_to_bottom_team_goalkeeper+4`, `select_team_order_for_stats+4`, `draw_fouls_conceded_team2`) in dead code after jmp stubs must be preserved — external irqCookieObfuscated checks branch to them (never taken in normal execution)
+  - Away goals rule at minute 90 and 120: `2*thisLegGoals + firstLegGoals` compared for both teams
+  - gameTime is big-endian BCD: byte[1]=hundreds, byte[2]=tens, byte[3]=ones; compared as uint32_t for minute checks
+  - DrawStatistics uses TEAMGENERALINFO_INGAMETEAMPTR to determine team display order (topTeamData may be swapped)
+- Build status: **verified** — clean build, only expected currentMenu boundary-spill warning
+
+### Chunk 27 — Advertisement System, Game Display Sprites, Camera Movement
+- Date: 2026-02-18
+- 10 functions → `src/adverts.c`, `include/adverts.h` (new), `src/camera.c`, `include/camera.h` (new)
+- **Advertisement system (5):**
+  - `_CopyAdvertisementsData` (from `CopyAdvertisementsData`) → copies sprite graphics data pointers for 3 ad strips from offsets 0x1C4/0x1E4/0x204
+  - `_InitAdvertisements` (from `InitAdvertisements`) → clears ad state, calls SetAdvertisementsInvisible
+  - `_SetAdvertisementsVisible` (from `SetAdvertisementsVisible`) → sets visible=1 on 8 advert sprites, calls InitDisplaySprites
+  - `_SetAdvertisementsInvisible` (from `SetAdvertisementsInvisible`) → clears visible on 8 advert sprites, calls InitDisplaySprites
+  - `_ManageAdvertisements` (from `ManageAdvertisements`) → state machine for animated pitch-side ads: random selection, frame-gated animation, slide pause, teardown
+- **Game display sprites (2):**
+  - `_UpdateCornerFlagSprite` (from `UpdateCornerFlagSprite`) → positions corner flag sprite based on camera, animates via 32-entry lookup table
+  - `_SpinBig_S_Sprite` (from `SpinBig_S_Sprite`) → updates spinning S indicator: spin index advances by lastFrameTicks, pauses during subs/stats, positioned relative to camera
+- **Camera movement (3):**
+  - `_ScrollToCurrent` (from `ScrollToCurrent`) → sets cameraCoordinatesValid=1, calls ScrollXUpdateColumnsAndBlit + ScrollYUpdateRowsAndBlit
+  - `_MoveView` (from `MoveView`) → iteratively moves cameraX/cameraXMod320 toward target (wrap at 352), then cameraY/cameraYMod320 (wrap at 272), calling ScrollToCurrent each step
+  - `_InitCameraMoveView` (from `InitCameraMoveView`) → initializes camera by scrolling to (targetX,272) then (cameraX,0), then MoveView to final target
+- New files: `include/adverts.h`, `src/adverts.c`, `include/camera.h`, `src/camera.c`
+- Assembly stubs in SWOS2.s:
+  - `CopyAdvertisementsData: jmp _CopyAdvertisementsData`
+  - `InitAdvertisements: jmp _InitAdvertisements`
+  - `SetAdvertisementsVisible: jmp _SetAdvertisementsVisible`
+  - `SetAdvertisementsInvisible: jmp _SetAdvertisementsInvisible`
+  - `ManageAdvertisements: jmp _ManageAdvertisements`
+  - `UpdateCornerFlagSprite: jmp _UpdateCornerFlagSprite`
+  - `SpinBig_S_Sprite: jmp _SpinBig_S_Sprite`
+  - `ScrollToCurrent: jmp _ScrollToCurrent`
+  - `InitCameraMoveView:` register-to-stack stub (d1=targetX, d2=targetY → 2 stack params)
+  - `MoveView:` register-to-stack stub (d1=newScreenX, d2=newScreenY → 2 stack params)
+- New C-to-asm bridges in swos2_unit.s:
+  - `_CScrollXUpdateColumnsAndBlit` (calls ScrollXUpdateColumnsAndBlit, saves/restores all regs)
+  - `_CScrollYUpdateRowsAndBlit` (calls ScrollYUpdateRowsAndBlit, saves/restores all regs)
+- New xdef entries in swos2_unit.s (16): advertIndex, advertSlideTimer, currentAnimatedAdLine, advert1Pointers, advert2Pointers, advert3Pointers, blockAdvertisements, advertInGameSprites, cornerFlagSprite, cornerFlagPictureIndices, big_S_Sprite, spinBigS, bigSIndex, goalCameraMode, foulXCoordinate, frameCount, inSubstitutesMenu, subsState
+- New xref entries in swos2_unit.s (10): _CopyAdvertisementsData, _InitAdvertisements, _SetAdvertisementsVisible, _SetAdvertisementsInvisible, _ManageAdvertisements, _UpdateCornerFlagSprite, _SpinBig_S_Sprite, _InitCameraMoveView, _MoveView, _ScrollToCurrent
+- Data labels kept in SWOS2.s: advertIndex, advertSlideTimer, currentAnimatedAdLine, advert1/2/3Pointers (8 longs each), blockAdvertisements, cornerFlagPictureIndices (32 bytes), spinBigS, bigSIndex, numberBuffer (16 bytes)
+- Notes:
+  - ManageAdvertisements is a state machine: picks random ad strip (1-3 based on foulXCoordinate), animates 6 lines, pauses 40 frames, animates 7 more lines, then tears down
+  - spriteGraphicsPtr type fixed from uint32_t to uint8_t* to match other modules
+  - ScrollXUpdateColumnsAndBlit/ScrollYUpdateRowsAndBlit remain in asm (heavy blitter ops, ~170/190 lines each)
+  - MoveView calls ScrollToCurrent on every pixel step — faithfully preserving the original's behavior
+- Build status: **verified** — clean build, only expected currentMenu boundary-spill warning
+
+### Chunk 28 — Face/Color Helpers, ExtractSurname, Player Name Sprites
+- Date: 2026-02-18
+- 7 functions (5 exported + 1 static + 1 dead stub) → `src/player_sprites.c`, `include/player_sprites.h` (new)
+- **String processing (1):**
+  - `_ExtractSurname` (from `ExtractSurname`) → `src/player_sprites.c` — extracts surname from player name with 3 modes: full name if fits, "F. surname" initial mode, skip-firstname mode; uses surnameBuf
+- **Face/color helpers (4):**
+  - `_CountFaces` (from `CountFaces`) → `src/player_sprites.c` — counts face frequency across 16 players into facesFrequency[3]
+  - `_ConvertColorTableToSkinColor` (from `ConvertColorTableToSkinColor`) → `src/player_sprites.c` — applies skin/hair color conversion via pair-list lookup
+  - `_DetermineGoalieFaces` (from `DetermineGoalieFaces`) → `src/player_sprites.c` — scans team for GK face assignments, fills gkFaceToIndex/gkFaceIndices
+  - `_InitializePlayerSpriteFrameIndices` (from `InitializePlayerSpriteFrameIndices`) → `src/player_sprites.c` — sets SPRITE_FRAMEOFFSET for 11 players per team based on skin color (GK: ×0x3A, outfield: ×0x65)
+- **Player name sprites (2):**
+  - `makePlayerNameSprite` (static, from `MakePlayerNameSprite`) → `src/player_sprites.c` — builds "NN surname" sprite via Int2Ascii + ExtractSurname + Text2Sprite
+  - `_MakeSpritesFromPlayerNames` (from `MakeSpritesFromPlayerNames`) → `src/player_sprites.c` — loops 16 players × 2 teams calling makePlayerNameSprite
+- New files: `include/player_sprites.h`, `src/player_sprites.c`
+- Assembly stubs in SWOS2.s:
+  - `ExtractSurname:` register-to-stack stub (a0, d0 → stack; result: movea.l d0,a0)
+  - `CountFaces:` register-to-stack stub (a1 → stack)
+  - `ConvertColorTableToSkinColor:` register-to-stack stub (d0, a1 → stack)
+  - `DetermineGoalieFaces:` register-to-stack stub (a0, a1, a2 → stack)
+  - `InitializePlayerSpriteFrameIndices: jmp _InitializePlayerSpriteFrameIndices`
+  - `MakePlayerNameSprite: rts` (dead code, only caller also ported)
+  - `MakeSpritesFromPlayerNames:` register-to-stack stub (a5, a6 → stack)
+- New xdef entries in swos2_unit.s (13): facesFrequency, skinAndHairColorConversionTable, team1GoalieFaceToPosition, team2GoalieFaceToPosition, team1GoalieFaces, team2GoalieFaces, team2GoalieSkinType, team2ReserveGoalieSkinType, team1SpritesTable, team2SpritesTable, numberBuffer, topTeamPtr, bottomTeamPtr
+- New xref entries in swos2_unit.s (6): _ExtractSurname, _CountFaces, _ConvertColorTableToSkinColor, _DetermineGoalieFaces, _InitializePlayerSpriteFrameIndices, _MakeSpritesFromPlayerNames
+- Data labels preserved in SWOS2.s: numberBuffer (16 bytes), facesFrequency (4 bytes), team1/2PlayersColorTable, colorTableReserves, bigNumbersColorConversionTable, skinAndHairColorConversionTable, team1/2GoalieFaceToPosition, team1/2GoalieFaces, team2GoalieSkinType, team2ReserveGoalieSkinType
+- Notes:
+  - ExtractSurname has 3 modes controlled by bits 15:14 of maxLenAndFlags: no flags (try full, abbreviate if too long), bit15=force initial "F. surname", bit14=skip firstname
+  - MakePlayerNameSprite asm stub is dead (rts) since only caller MakeSpritesFromPlayerNames is also ported
+  - ConvertColorTableToSkinColor sign-extends color byte before indexing skinAndHairColorConversionTable (3 pointer entries → pair lists)
+  - InitializePlayerSpriteFrameIndices uses gkFaceToPosition lookup for goalkeeper (slot 0=main, 1=reserve), multiplier 0x3A (58); outfield uses face×0x65 (101)
+- Build status: **verified** — clean build, only expected currentMenu boundary-spill warning
+
+### Chunk 29 — ConvertColorsAndTextSprites + Game HUD
+- Date: 2026-02-18
+- 4 functions (4 exported + 2 static) → `src/color_sprites.c`, `include/color_sprites.h` (new), `src/game_hud.c`, `include/game_hud.h` (new)
+- **Color/sprite initialization (1+2s):**
+  - `_ConvertColorsAndTextSprites` (from `ConvertColorsAndTextSprites`) → `src/color_sprites.c` — master sprite color init: sets team filenames from shirt type, runs ProcessImageCommandStream, builds team name sprites via Text2Sprite, converts big number/result/reserve/player/goalkeeper sprites with team and skin color tables (12 sprite conversion loops)
+  - `convertSpriteRange` (static) — loops sprite indices calling _ConvertSpriteColors
+  - `findMostFrequentFaceAndApplyLUT` (static) — calls _CountFaces, finds most frequent face, applies skin/hair LUT from skinAndHairColorConversionTable
+- **Game HUD (3):**
+  - `_UpdateControlledPlayerNumbers` (from `UpdateControlledPlayerNumbers`) → `src/game_hud.c` — shows shirt number sprite above controlled player per team, blink when controlled==marked via currentGameTick bit 4
+  - `_MarkPlayer` (from `MarkPlayer`) → `src/game_hud.c` — shows marker sprite above marked player, alternates between top/bottom team via currentGameTick bit 4
+  - `_SetCurrentPlayerName` (from `SetCurrentPlayerName`) → `src/game_hud.c` — state machine for player name display with priority: scorer > booked > lastPlayerBeforeGoalkeeper > lastPlayerPlayed; positions in 4 screen corners based on currentPlayerIndicatorPosition; nobodysBallTimer/nobodysBallLastFrame delay logic
+- New files: `include/color_sprites.h`, `src/color_sprites.c`, `include/game_hud.h`, `src/game_hud.c`
+- Assembly stubs in SWOS2.s:
+  - `ConvertColorsAndTextSprites:` register-to-stack stub (a5=team1, a6=team2 → 2 stack params, saves d2-d7/a2-a6)
+  - `UpdateControlledPlayerNumbers: jmp _UpdateControlledPlayerNumbers`
+  - `MarkPlayer: jmp _MarkPlayer`
+  - `SetCurrentPlayerName: jmp _SetCurrentPlayerName`
+- New xdef entries in swos2_unit.s (20): team1MostFrequentFace, team2MostFrequentFace, bigNumbersColorConversionTable, colorTableReserves, team1PlayersColorTable, team2PlayersColorTable, teamFilenamesTable, nobodysBallTimer, nobodysBallLastFrame, currentScorer, lastTeamScored, lastPlayerBeforeGoalkeeper, team1CurPlayerNumSprite, team2CurPlayerNumSprite, playerMarkSprite, currentPlayerNameSprite, whichCard, bookedPlayer, lastTeamBooked, lastPlayerPlayed, team2NameLength, team1Filename, team2Filename, menuColorAndTextScript
+- New xref entries in swos2_unit.s (4): _ConvertColorsAndTextSprites, _UpdateControlledPlayerNumbers, _MarkPlayer, _SetCurrentPlayerName
+- Notes:
+  - ConvertColorsAndTextSprites has 12 distinct sprite conversion loops for team1/2 × skin0/1/2 + GK main/reserve + reserves
+  - Skin 0 and GK main sprites always converted; skin 1/2 and GK reserve only when useIndividualPlayerSkinColor != 0
+  - GK face data layout: team1GoalieFaces[0]=main, team1GoalieFaces[1]=reserve (asm label "team2GoalieFaces"); team2GoalieSkinType[0]=main, [1]=reserve
+  - SetCurrentPlayerName uses goto-based control flow faithfully matching the asm branch structure
+  - Sprite field access via byte-offset macros (SPR_W, SPR_UW, SPR_L) consistent with asm field offsets
+  - menuImageStreamBaseEnd stored as uint32_t (pointer-as-integer), cast to uint8_t* at call site
+- Build status: **verified** — clean build, only expected currentMenu boundary-spill warning
+
+### Chunk 30 — Game Init + Sprite Sort + Goal Highlight
+- Date: 2026-02-18
+- 5 functions (5 exported) → `src/game_init.c`, `include/game_init.h` (new), `src/game_state.c`, `src/sprites.c`
+- **Goal highlight (1):**
+  - `_InitCurrentGoalHighlight` (from `InitCurrentGoalHighlight`) → `src/game_state.c` — clears 19000 bytes at goalBasePtr, resets currentHilPtr/replayState/throwInDeadVar
+- **Sprite management (2):**
+  - `_SortSprites` (from `SortSprites`) → `src/sprites.c` — improved bubble sort on sortedSprites[] by SPRITE_Y, early exit on no-swaps
+  - `_InitDisplaySprites` (from `InitDisplaySprites`) → `src/sprites.c` — collects visible sprites from allSpritesArray into sortedSprites, counts into numSpritesToRender, calls SortSprites
+- **Game init (2):**
+  - `_InitTeamsData` (from `InitTeamsData`) → `src/game_init.c` — clears ~20 per-match state globals, sets gameState=ST_GAME_IN_PROGRESS, initializes topTeamData/bottomTeamData TeamGeneralInfo structs (2-iteration loop with teamPlayingUp swap)
+  - `_InitGameSaveTeams` (from `InitGameSaveTeams`) → `src/game_init.c` — copies both team in-game structs (1018 bytes each) to snapshot buffers, loads pitch map, fixup+color, ConvertColorsAndTextSprites, waits for fire release, fades out, paletteIndex=2
+- New files: `include/game_init.h`, `src/game_init.c`
+- Assembly stubs in SWOS2.s:
+  - `InitCurrentGoalHighlight: jmp _InitCurrentGoalHighlight`
+  - `SortSprites: jmp _SortSprites`
+  - `InitDisplaySprites: jmp _InitDisplaySprites`
+  - `InitTeamsData: jmp _InitTeamsData`
+  - `InitGameSaveTeams:` register-to-stack stub (a5, a6 → stack), saves d2-d7/a2-a4, falls through to InitGameRestoreTeams (preserving original bra.w *+4 fall-through behavior)
+- New xdef entries in swos2_unit.s (34): currentHilPtr, replayState, throwInDeadVar, sortedSprites, numSpritesToRender, allSpritesArray, goalScored, runSlower, playerHadBall, lastKeeperPlayed, penalty, goalOut, gameNotInProgressCounterWriteOnly, stoppageTimerTotal, stoppageTimerActive, stoppageEventTimer, inGameCounter, breakState, breakCameraMode, teamPlayingUp, topTeamPlayerNo, bottomTeamPlayerNo, topTeamCoachNo, bottomTeamCoachNo, pl1Coach, pl2Coach, team1StatsData, team2StatsData, pl1Tactics, pl2Tactics, topTeamSaved, bottomTeamSaved, pitchNumberAndType, lastTeamPlayedBeforeBreak
+- New xref entries in swos2_unit.s (5): _InitCurrentGoalHighlight, _SortSprites, _InitDisplaySprites, _InitTeamsData, _InitGameSaveTeams
+- Type consistency fixes: goalBasePtr/currentHilPtr declared as `uint8_t *` (matching game_utils.c), topTeamPtr/bottomTeamPtr as `uint8_t *` (matching player_sprites.c)
+- Notes:
+  - InitGameSaveTeams asm stub intentionally has no `rts` — falls through to InitGameRestoreTeams (which remains in asm)
+  - InitTeamsData uses WR32/WR16/WR8 macros for struct field writes (matching byte-offset layout of TeamGeneralInfo)
+  - InitCurrentGoalHighlight needs `optimize("no-tree-loop-distribute-patterns")` to prevent GCC converting 19000-byte clear loop to memset
+  - InitGameSaveTeams also uses `optimize("no-tree-loop-distribute-patterns")` for the 1018-byte copy loops
+- Build status: **verified** — clean build, only expected currentMenu boundary-spill warning
+
+### Chunk 31 — Match State Transitions + InitGameRestoreTeams
+- Date: 2026-02-18
+- 21 functions (15 exported + 6 static) → `src/match_setup.c`, `include/match_setup.h` (new)
+- **Ball/player resets (5):**
+  - `_SetBallPosition(int16_t ballX, int16_t ballY)` (from `SetBallPosition`) → stops ball, sets position to (x,y), z=0
+  - `resetPlayerPassingKicking(uint8_t *team)` (static, from `ResetPlayerPassingKicking`) → clears TGI passing/kicking fields
+  - `_ResetBothTeamsPlayerPassingKicking` (from `ResetBothTeamsPlayerPassingKicking`) → saves camera direction, resets both teams
+  - `stopPlayers(uint8_t *team)` (static, from `StopPlayers`) → for PL_NORMAL/HAPPY/SAD players not sent away, set dest=current pos
+  - `_StopAllPlayers` (from `StopAllPlayers`) → saves camera direction, stops + resets both teams
+- **Referee/patterns (2):**
+  - `_RemoveReferee` (from `RemoveReferee`) → clears refState, resets referee sprite, calls _CInitRefereeAnimationTable
+  - `_InitAnimatedPatterns` (from `InitAnimatedPatterns`) → fills 8-entry array with 0xFFFF, clears counters
+- **Player entry (1):**
+  - `_InitPlayersBeforeEnteringPitch` (from `InitPlayersBeforeEnteringPitch`) → positions 22 players using kTeamsStartingCoordinates, adds random jitter, resets sprite state, calls _CSetPlayerAnimationTable
+- **Match lifecycle (10):**
+  - `_StartingMatch` (from `StartingMatch`) → halfNumber=1, ball at (1672,449), InitTeamsData, StopAllPlayers, InitPlayersBeforeEnteringPitch
+  - `_SetCameraMovingToShowerState` (from `SetCameraMovingToShowerState`) → halfNumber=2, inverts teamPlayingUp/teamStarting
+  - `_EndFirstHalf` (from `EndFirstHalf`) → ST_FIRST_HALF_ENDED, ResetBothTeamsPlayerPassingKicking
+  - `_FirstHalfJustEnded` (from `FirstHalfJustEnded`) → ST_GOING_TO_HALFTIME, StopAllPlayers
+  - `_EndOfGame` (from `EndOfGame`) → ST_GAME_ENDED, ResetBothTeamsPlayerPassingKicking
+  - `_PlayersLeavingPitch` (from `PlayersLeavingPitch`) → ST_PLAYERS_GOING_TO_SHOWER, StopAllPlayers
+  - `_GoToHalftime` (from `GoToHalftime`) → sets ball, resultTimer=30000, timeVar=32000, ST_RESULT_ON_HALFTIME
+  - `_GameOver` (from `GameOver`) → FadeOutToBlack, ReplayUpdateCameraAndSwapBuffers, sets result display state
+  - `_StartFirstExtraTime` (from `StartFirstExtraTime`) → random teamPlayingUp/teamStarting, ST_FIRST_EXTRA_STARTING
+  - `_EndFirstExtraTime` (from `EndFirstExtraTime`) → inverts teams, ST_FIRST_EXTRA_ENDED
+- **Kickoff/penalties (2):**
+  - `_PrepareForInitialKick` (from `PrepareForInitialKick`) → ball at (336,449), sets cameraDirection/playerTurnFlags based on kickoff team
+  - `_StartPenalties` (from `StartPenalties`) → saves goals, clears penalty state, random teams, clears cards/sentaway, calls _CNextPenalty
+- **Master init (1):**
+  - `_InitGameRestoreTeams` (from `InitGameRestoreTeams`) → restores team data from snapshots, applies tactics, sets palette/pitch factors, clears per-match state, calls StartingMatch
+- **Static helpers (2):**
+  - `setBreakState()` — common pattern for game state changes (sets gameState, breakCameraMode=0xFFFF, clears timers)
+  - `clearCameraVelocity()` — zeros cameraXVelocity/cameraYVelocity
+- Static data: `kTeamsStartingCoordinates[44]` — 22 starting positions (x,y) for player entry
+- New files: `include/match_setup.h`, `src/match_setup.c`
+- Assembly stubs in SWOS2.s:
+  - `SetBallPosition:` register-to-stack stub (d1,d2 → stack params)
+  - `ResetPlayerPassingKicking: rts` (dead code, inlined in C callers)
+  - `StopPlayers: rts` (dead code, inlined in C callers)
+  - All others: `jmp _FuncName`
+- New C-to-asm bridges in swos2_unit.s:
+  - `_CSetPlayerAnimationTable` (a0=animTable, a1=spritePtr)
+  - `_CInitRefereeAnimationTable` (a1=animTable)
+  - `_CApplyTeamTactics` (a4=playerInfos)
+  - `_CNextPenalty` (no params)
+  - `_CReplayUpdateCameraAndSwapBuffers` (d1=x, d2=y)
+- Removed 5 obsolete bridges: _CEndFirstHalf, _CEndFirstExtraTime, _CEndOfGame, _CStartFirstExtraTime, _CStartPenalties (functions now ported to C, called directly from game_state.c)
+- New xdef entries in swos2_unit.s (~55): halfNumber, teamStarting, hideBall, cameraDirection, playerTurnFlags, resultTimer, ballZVelocity, ballXVelocity, ballYVelocity, refState, animatedPatternsArray, numAnimatedPatterns, etc.
+- New xref entries in swos2_unit.s (23): all ported C functions
+- game_state.c updated: replaced _CEndFirstHalf/_CEndFirstExtraTime/_CEndOfGame/_CStartFirstExtraTime/_CStartPenalties calls with direct _EndFirstHalf/_EndFirstExtraTime/_EndOfGame/_StartFirstExtraTime/_StartPenalties
+- Notes:
+  - setBreakState/clearCameraVelocity extract common match transition pattern (reduces ~100 lines of duplication)
+  - InitPlayersBeforeEnteringPitch uses kTeamsStartingCoordinates for staggered entry positions (22 x,y pairs)
+  - InitGameRestoreTeams is the master init called from InitGameSaveTeams fall-through — restores team snapshots, applies pitch physics, calls StartingMatch
+  - `bne.w *+4` in InitGameRestoreTeams asm is a no-op conditional branch (always falls through) — translated faithfully
+  - _Rand return type fixed from uint8_t to uint16_t to match random.c declaration
+- Build status: **verified** — clean build, only expected currentMenu boundary-spill warning
+- Functions ported this chunk: 21 (15 exported + 6 static)
+- **Running total: 302 functions ported (281 + 21)**
+
+### Chunk 32 — Audio IRQ Subsystem (34 functions → `src/audio_irq.c`)
+- **Scope:** Complete audio IRQ subsystem — VBlank → AudioIRQUpdateChannels → per-channel processing with dual-voice (primary "beep" + secondary "mod") architecture
+- **Exported:** `_AudioIRQUpdateChannels` (returns channelChangeFlags in d0)
+- **Static functions (33):** 6 inline HW helpers (audxBase, writeAudxPtr/Len/Per/Vol, writeDMACON) + 27 regular:
+  - Primary voice: beepVolumeEnvStop, beepVolumeEnvLoadSegment, beepVolumeEnvStep, beepVolumeLfoStep, applyBeepVolumeAndWriteAUDxVOL, beepLFOAndPitchSlide, initVolumeEnvForNote, noteOnInitChannel, selectVariant, loadAUDxPtrLenIfReloadNeeded, enableDMAIfStartFlag, runChannelScriptStep, updateBeepVoiceParams
+  - Secondary voice: volumeEnvStop, volumeEnvLoadSegment, volumeEnvStep, volumeLfoStep, applyVolumeAndWriteAUDxVOL, serviceVolume, lfoAndPitchSlide, initPitchEnv, initVolumeEnv, selectInstrument, loadAUDxPtrLenIfReloadNeeded2, enableDMAIfStartFlag2, runModCommandStream
+  - Top-level: serviceOneChannel
+- **Assembly stubs:** AudioIRQUpdateChannels forwards to `_AudioIRQUpdateChannels`; all sub-functions stubbed to `rts` (only called from within the C IRQ handler now). `AudioDisableDMAForChannel` kept intact in asm (still used by other asm callers).
+- **kAmigaNotePeriodTable** (36-entry Amiga period lookup) moved to `static const` in C — only referenced within IRQ code.
+- **Key porting notes:**
+  - 68k `muls.w` + `asr.w #6` pattern: must truncate to int16_t before shift (68k shift operates on 16-bit, not 32-bit result)
+  - masterVolume per-channel trick: ISR copies channelVolume[i] to low byte of masterVolume word (`move.b $28(a5),$21(a5)`) — big-endian low-byte write
+  - Volume clamping: negative values clamp to 0, positive >0x40 clamp to 0x40 (matching 68k `bls`/`bgt` branch pattern)
+  - Envelope state machine: states 0=inactive, 2=segment loaded, 4=attack/init, 0xFF=stopping; dispatched via `jsr locret(pc,d0.w)` jump table → C switch statements
+  - `st` instruction = set byte to 0xFF
+  - `bclr #0` = test bit 0 then clear only bit 0 (not zero the whole byte)
+  - Added missing `int8_t` typedef to `audio.h` (was absent from the type definitions)
+- **~675 lines of dead code removed** from SWOS2.s between stubs and kAmigaNotePeriodTable
+- Build status: **verified** — clean build, only pre-existing warnings
+- Functions ported this chunk: 34 (1 exported + 33 static)
+- **Running total: 336 functions ported (302 + 34)**
+
+### Chunk 33 — Player Movement + Animation (5 functions → `src/player_anim.c`)
+- **Scope:** Per-frame player sprite animation advancement, position movement with fixed-point destination clamping, and animation table setup/reset
+- **Exported (3):** `_MovePlayers`, `_SetPlayerAnimationTable`, `_SetPlayerAnimationTableAndPictureIndex`
+- **Static (2 + 1 helper):** `setNextPlayerFrame`, `movePlayer`, `clampAxis` (shared axis-clamping helper), `computeAnimSlot` (shared slot computation helper)
+- **Assembly stubs:**
+  - `MovePlayers` → `jmp _MovePlayers` (no params)
+  - `SetNextPlayerFrame` → `rts` (dead code, only caller was MovePlayers)
+  - `MovePlayer` → `rts` (dead code, only caller was MovePlayers)
+  - `SetPlayerAnimationTable` → register-to-stack stub (save d0, d2-d7/a2-a6, push a1/a0, call C, restore) — 38 asm callers
+  - `SetPlayerAnimationTableAndPictureIndex` → same stub pattern — 4 asm callers
+- **Bridge cleanup:** Removed `_CSetPlayerAnimationTable` bridge from swos2_unit.s. Updated match_setup.c to call `_SetPlayerAnimationTable` directly.
+- **New xdef in swos2_unit.s:** `lastTeamScoredNumber`, `lastPlayerScored`
+- **New xref in swos2_unit.s:** `_MovePlayers`, `_SetPlayerAnimationTable`, `_SetPlayerAnimationTableAndPictureIndex`
+- **Key porting notes:**
+  - Animation command decoding: negative frame words encode loop (-999→reset), hold (-101→step back), relative jump (≤-100), delay change (-99..-1)
+  - Goal celebration: +24 frame offset for scorer's team players facing dir 0/4 (not goalkeeper), with staggered flash pattern
+  - Fixed-point position: SPRITE_X/Y are int32_t accumulators, high word = integer part (big-endian). Clamping compares/writes integer part only.
+  - clampAxis helper avoids duplicated/error-prone clamping logic across X/Y and on-screen/off-screen paths
+  - AnimTable slot formula: `((teamIdx + gkAdj) * 8 + direction) * 4` byte offset into frame pointers at animTable+2
+  - `_SetPlayerAnimationTable` resets frame state (frameIndex=-1, timer=1, counter=0xFFFF); `_SetPlayerAnimationTableAndPictureIndex` preserves frame state and immediately updates imageIndex
+  - **Known latent bug:** match_setup.c has wrong sprite field offsets (SPRITE_X=0 should be 30, etc.) — deferred to separate fix
+- Build status: **verified** — clean build, player_anim.o linked at 0x15855, all 3 exports in map
+- Functions ported this chunk: 5 (3 exported + 2 static + 2 inline helpers)
+- **Running total: 341 functions ported (336 + 5)**
+
+### Chunk 34 — Team Kit Color Resolution System (12 functions → `src/team_colors.c`)
+- **Scope:** Kit color similarity scoring, conflict detection, and in-game team color setup
+- **Exported (9):** `_ConvertTeamColor`, `_AreBasicColorsConflicting`, `_AreShortsAndStripeColorsConflicting`, `_GetTeamKitsSimilarityFactor`, `_MeasureTeamKitsSimilarity`, `_ConvertTeamKitColors`, `_SetTeamSecondaryColors`, `_SetInGameTeamColors`, `_SetInGameTeamsPrimaryColors`
+- **Static (3):** `isSingleColorKitSimilar`, `convertTeamKitColorsWithFixedColors`, `resolveTeamKitColorConflict`
+- **Assembly stubs:**
+  - `GetTeamKitsSimilarityFactor` → register-to-stack bridge (d0-d7 → 8 long params, andi.l #$FF each)
+  - `MeasureTeamKitsSimilarity` → register-to-stack bridge (a0, a1 → 2 pointer params, restores a6=teamKitsSimilarity)
+  - `SetInGameTeamsPrimaryColors` → register-to-stack bridge (a2, a3 → 2 pointer params)
+  - `SetTeamSecondaryColors` → register-to-stack bridge (d0-d4, a1 → 6 params)
+  - 8 others → `rts` (dead code, only called from within the ported group)
+- **New xdef in swos2_unit.s:** `conflictingBasicTeamColorsTable`, `conflictingShortsTeamColorsTable`, `kitsSimilarityLookupTable`, `shirtType1`, `shirtType2`, `similarityFactor`, `teamKitsSimilarity`, `teamKitTieBreakColors`, `shirtColorTable`
+- **New xref in swos2_unit.s:** `_GetTeamKitsSimilarityFactor`, `_MeasureTeamKitsSimilarity`, `_SetInGameTeamsPrimaryColors`, `_SetTeamSecondaryColors`
+- **Key porting notes:**
+  - Similarity factor scale: HIGH (99,88,77,66) = kits are similar/conflicting; LOW (<11) = different enough to use
+  - Color conflict bitmap tables: 10×10 matrices using btst for lookup (conflictingBasicTeamColorsTable, conflictingShortsTeamColorsTable)
+  - Kit types: ORDINARY(0), COLORED_SLEEVES(1), VERTICAL_STRIPES(2), HORIZONTAL_STRIPES(3)
+  - Stripe-to-solid replacement logic in kitsSimilarityLookupTable
+  - Team file offsets (TEAMFILE_*) vs in-game offsets (TEAMGAME_*) for accessing team data
+- Build status: **verified** — clean build, team_colors.o linked at 0x16af4, all symbols in map
+- Functions ported this chunk: 12 (9 exported + 3 static)
+- **Running total: 353 functions ported (341 + 12)**
+
+### Chunk 35 — Referee System (5 functions → `src/referee.c`)
+- **Scope:** Referee activation, movement, animation, booking card display
+- **Exported (5):** `_InitRefereeAnimationTable`, `_ActivateReferee`, `_SetRefereeToLeavingState`, `_UpdateReferee`, `_UpdateBookedPlayerNumberSprite`
+- **Assembly stubs:**
+  - `ActivateReferee: jmp _ActivateReferee` (2 asm callers in TryBookingThePlayer/TrySendingOffThePlayer)
+  - `SetRefereeToLeavingState: jmp _SetRefereeToLeavingState` (safety stub, no known asm callers after port)
+  - `InitRefereeAnimationTable:` register-to-stack stub (A1 → stack, saves all regs) — still called by asm stubs of ActivateReferee/SetRefereeToLeavingState before they redirect
+  - `UpdateReferee: jmp _UpdateReferee` (1 asm caller in GameLoop)
+  - `UpdateBookedPlayerNumberSprite: jmp _UpdateBookedPlayerNumberSprite` (1 asm caller in GameLoop)
+- **New C-to-asm bridges in swos2_unit.s:**
+  - `_CCalculateDeltaXAndY` (d1=destX, d2=destY, d3=srcX, d4=srcY, d0=speed → outDeltaX, outDeltaY, outDirection via pointers)
+  - `_CSendPlayerAway` (a1=playerSprite, a6=teamData)
+- **Bridge removed:** `_CInitRefereeAnimationTable` — replaced by direct call to `_InitRefereeAnimationTable`
+- **match_setup.c updated:** `_RemoveReferee` now calls `_InitRefereeAnimationTable` directly
+- **New xdef entries in swos2_unit.s:** `bookedPlayerCardOrNumberSprite`, `refTimer`, `kRefereeSpeed`, `refComingAnimTable`, `refYellowCardAnimTable`, `refRedCardAnimTable`, `refSecondYellowAnimTable`, `yellowCardTable`, `redCardTable`, `secondYellowTable`
+- **New xref entries in swos2_unit.s:** `_InitRefereeAnimationTable`, `_ActivateReferee`, `_SetRefereeToLeavingState`, `_UpdateReferee`, `_UpdateBookedPlayerNumberSprite`
+- **Data tables kept in SWOS2.s:** `yellowCardTable` (30 bytes), `redCardTable` (30 bytes), `secondYellowTable` (46 bytes) — time-sliced card/number display LUTs; `refComingAnimTable`, `refWaitingAnimTable`, `refYellowCardAnimTable`, `refRedCardAnimTable`, `refSecondYellowAnimTable` — 8-direction animation tables
+- **Key porting notes:**
+  - UpdateReferee has 4 states: INCOMING (move to foul), WAITING_PLAYER (face direction 6), ABOUT_TO_GIVE_CARD→BOOKING (show card animation), LEAVING (move off-screen then hide)
+  - Animation frame commands: -999=restart, -101=hold, ≤-100=relative jump, -1..-99=new delay
+  - Off-screen update path: only moves position (no animation) when gameStatePl == ST_GAME_IN_PROGRESS
+  - CalculateDeltaXAndY returns fixed-point deltaX/Y (int32_t) and direction (0..255); direction mapped to 0..7 via `(d0+16)&0xFF>>5`
+  - UpdateBookedPlayerNumberSprite displays card/number alternating via LUT: entry=1→yellow card, entry=2→red card, entry>0→shirt number, entry=-1→sequence end (referee leaves), entry=0→hide
+  - SendPlayerAway expects A6=team data; in original asm A6 was implicitly preserved from earlier in the game loop; C code uses lastTeamBooked explicitly
+- Build status: **verified** — clean build, referee.c linked, all symbols in map
+- Functions ported this chunk: 5 (5 exported)
+- **Running total: 358 functions ported (353 + 5)**
+
+### Chunk 36 — PrintFormatted + InputText Family (5 functions → `src/input_text.c`)
+- Date: 2026-02-19
+- **Scope:** Format string printer and interactive text input system
+- **Exported (5):**
+  - `_PrintFormatted` (from `PrintFormatted`) → format string with %0..%6 decimal + %a/%b/%c string substitution; goto-based fall-through for digit emission matching 68k behavior
+  - `_InputText` (from `InputText`) → interactive text editor: cursor movement, insert/delete, commit/cancel; uses inMenuKeyboardBuffer as edit buffer
+  - `_InsertCharacter` (from `InsertCharacter`) → shifts bytes right in inMenuKeyboardBuffer, inserts char at position
+  - `_InputTextDeleteCharAtCursor` (from `InputTextDeleteCharAtCursor`) → shifts bytes left at cursor position
+  - `_InputTextFilterKey` (from `InputTextFilterKey`) → filters currentKey against A-Z, 0-9, allowed control keys table; allowExtraCharsFlag rejects '.' and '/' when set
+- New files: `include/input_text.h`, `src/input_text.c`
+- Assembly stubs in SWOS2.s:
+  - `PrintFormatted:` register-to-stack stub (d0-d6 zero-extended + a0-a4 → 12 stack params, saves d2-d7/a2-a6)
+  - `InputText:` register-to-stack stub (d0 zero-extended, a5 → 2 stack params, saves d2-d7/a2-a6, tst.w d0 after return for Z flag)
+  - `InsertCharacter: rts` (dead code, only callers were in InputText)
+  - `InputTextDeleteCharAtCursor: rts` (dead code, only callers were in InputText)
+  - `InputTextFilterKey: rts` (dead code, only caller was InputText)
+- Data labels preserved in SWOS2.s: `inputAllowedControlKeys` (12 bytes: allowed control key table + 0xFF terminator), `allowExtraCharsFlag` (word)
+- New xdef entries in swos2_unit.s: `inMenuKeyboardBuffer`, `deadInputTextVar`, `inputAllowedControlKeys`, `allowExtraCharsFlag`
+- New xref entries in swos2_unit.s: `_PrintFormatted`, `_InputText`
+- Key porting notes:
+  - PrintFormatted numeric conversion uses goto-based fall-through matching 68k cascade: once entering at a digit level, all lower digits are always emitted (val=100 → "100", not "1")
+  - GetStringLength stub returns a0 = buffer + len (at NUL), NOT buffer + len + 1 — critical for InsertCharacter which shifts from NUL position right
+  - InsertCharacter/InputTextDeleteCharAtCursor need `optimize("no-tree-loop-distribute-patterns")` to prevent GCC converting byte-shift loops to memmove
+  - InputText also needs the attribute since GCC may inline the helpers
+  - InputText cursor starts at NUL (buffer + len), not past it — correct for cursor display (0xFF inserted before NUL)
+  - allowExtraCharsFlag: despite name, setting it REJECTS '.' and '/' (intercepted before table scan where they'd normally match)
+- Build status: **verified** — clean build, only expected currentMenu boundary-spill warning
+- Functions ported this chunk: 5 (5 exported)
+- **Running total: 363 functions ported (358 + 5)**
+
+### Chunk 37 — Highlight/Replay Save System (16 functions → `src/highlight.c`)
+- Date: 2026-02-19
+- **Scope:** Highlight recording, replay playback, pitch selection, and replay state machine
+- **Exported (13):**
+  - `_SetPitchTypeAndNumber` (from `SetPitchTypeAndNumber`) → selects pitch type from probability tables (standard or seasonal), derives pitch number from team data or random
+  - `_CopyTeamsAndHeader` (from `CopyTeamsAndHeader`) → copies teams from hil file buffer to in-game structs, plus game name/round
+  - `_SetHilFileHeader` (from `SetHilFileHeader`) → packs in-game data into hil file buffer header
+  - `_SaveHighlightsPointers` (from `SaveHighlightsPointers`) → saves highlight buffer pointers, enables playback loop
+  - `_RestoreHighlightPointers` (from `RestoreHighlightPointers`) → restores saved pointers, disables playback
+  - `_FadeAndSaveHighlightScene` (from `FadeAndSaveHighlightScene`) → FadeOut + SaveHighlightScene + FadeIn wrapper
+  - `_SaveHighlightScene` (from `SaveHighlightScene`) → saves replay ring buffer segment to goals buffer, max 10 scenes, shifts oldest on overflow
+  - `_ThrowInDeadProc` (from `ThrowInDeadProc`) → sets throwInDeadVar = 1
+  - `_SaveCoordinatesForHighlights` (from `SaveCoordinatesForHighlights`) → encodes sprite coords / frame markers into ring buffer
+  - `_DrawReplayFrame` (from `DrawReplayFrame`) → replay frame playback state machine: camera init, sprite/frame decode, score overlay, timing
+  - `_ReplayUpdateCameraAndSwapBuffers` (from `ReplayUpdateCameraAndSwapBuffers`) → camera setup sequence for replay
+  - `_HandleInstantReplayStateSwitch` (from `HandleInstantReplayStateSwitch`) → state transitions: 0→1 (search), 2↔3 (play/pause)
+  - `_RestoreCameraPosition` (from `RestoreCameraPosition`) → restores camera after replay ends
+- **Internal (3):** `wrapPointerFwd` (ValidateHilPointerAdd), `wrapPointerBack` (ValidateHilPointerSub), `wrapHilPtr` (IncrementHilBufferPointer) — static C helpers
+- New files: `include/highlight.h`, `src/highlight.c`
+- Assembly stubs in SWOS2.s:
+  - Simple `jmp _FuncName` stubs: SetPitchTypeAndNumber, CopyTeamsAndHeader, SetHilFileHeader, SaveHighlightsPointers, RestoreHighlightPointers, FadeAndSaveHighlightScene, SaveHighlightScene, ThrowInDeadProc, DrawReplayFrame, HandleInstantReplayStateSwitch, RestoreCameraPosition
+  - Register-to-stack bridges: SaveCoordinatesForHighlights (d0=int16_t via ext.l, d4/d5=uint16_t via andi.l), ReplayUpdateCameraAndSwapBuffers (d1/d2=int16_t via ext.l)
+  - Dead `rts` stubs: IncrementHilBufferPointer, ValidateHilPointerAdd, ValidateHilPointerSub
+- Data labels preserved: pitchNumberProbabilities (16 bytes), kHilFileSig (4 bytes), dead code after ThrowInDeadProc (lines 12135-12142)
+- New C-to-asm bridges in swos2_unit.s: `_CResetAnimatedPatternsForBothTeams`, `_CDrawAnimatedPatterns`
+- Local const data in C: pitchTypeSeasonalProbs (84 bytes), pitchTypeProbs (8 bytes), pitchNumProbs (16 bytes)
+- New xdef entries (30+): numScenesInHilFile, hilSceneNumber, goIntoHighlightsLoop, savedCurrentHilPtr, savedCurrentGoalPtr, savedGoalBasePtr, savedNextGoalPtr, normalReplayRunning, savedCameraX, savedCameraY, hilLeftTeamGoals, hilRightTeamGoals, hilPitchNumber, hilTeam1Goals, hilTeam2Goals, hilMaxSubstitutes, hilGameName, hilGameRound, gameName, gameRound, gamePitchTypeOrSeason, gamePitchType, gameSeason, plgD0Param, gameMaxSubstitutes, paused, animPatternsState, currentGoalPtr, hilStartOfGoalsBuffer, inGameHilBuffer
+- Key porting notes:
+  - DrawReplayFrame uses goto-based control flow matching asm labels (sprite_decode=loc_10C494, check_next=loc_10C4D0, end_replay=loc_10C4C4, after_decode=loc_10C4E2)
+  - Sprite packing: (index << 20) | (x << 10) | y, bit 31 clear; frame markers have bit 31 set
+  - Sprite unpacking uses 68k-style lsl.l/asr.l sign extension: `(int32_t)(d0 << 12) >> 22` for 10-bit signed x
+  - SetPitchTypeAndNumber has 3 dead asm instructions at pitch_type_selected (currentGameTick masking) that are immediately overwritten in both branches — omitted in C
+  - SaveHighlightScene has dead beq branch (move.w #10,d0; beq — 10 is never 0) and dead bmi branch — omitted
+  - Busy-wait in DrawReplayFrame state 3 uses volatile pointer to prevent optimization
+  - CopyTeamsAndHeader/SetHilFileHeader need `optimize("no-tree-loop-distribute-patterns")` for byte-copy loops
+  - Existing bridge `_CReplayUpdateCameraAndSwapBuffers` still works (double-hop through asm stub)
+- Build status: **verified** — clean build
+- Functions ported this chunk: 16 (13 exported + 3 internal)
+- **Running total: 379 functions ported (363 + 16)**
+
+### Chunk 38 — Animated Patterns + GoalScored (11 functions → `src/animated_patterns.c`, `src/goal_scored.c`)
+- Date: 2026-02-19
+- **Scope:** Crowd fan animated patterns (8-state machine, tile toggling) and goal scoring system (scorer list sprites)
+- **Exported (3):**
+  - `_DrawAnimatedPatterns` (from `DrawAnimatedPatterns`) → 8-state machine for fan celebration patterns; selects random pitch tiles, toggles between static/animated variants based on game state (goal celebration phases, ball position, etc.)
+  - `_ResetAnimatedPatternsForBothTeams` (from `ResetAnimatedPatternsForBothTeams`) → resets animated pitch tiles back to static for top + bottom fan sections, clears animatedPatterns tracking array
+  - `_GoalScored` (from `GoalScored`) → updates goal counters, determines goal type (normal/penalty/own goal), builds scorer name+time string sprites with multi-row splitting
+- **Static (8):**
+  - `swapTwoRandomIndicesFromAnimPatternsTable` — shuffles two random entries in 64-byte permutation table
+  - `drawPatternFromIndex` — draws single animated tile: copies tile data to sprite 137, draws to frontbuffer + mask
+  - `resetAnimatedPatterns` — inner loop: scans pitchDatBuffer entries, forces animated (even) tiles to static (odd)
+  - `readWord`, `writeWord`, `readUWord`, `writeUWord` — struct field access helpers for GoalScored
+  - Goal format template strings (static char arrays): 6 templates for normal/penalty/own-goal with and without trailing comma
+- New files: `include/animated_patterns.h`, `src/animated_patterns.c`, `include/goal_scored.h`, `src/goal_scored.c`
+- Assembly stubs in SWOS2.s:
+  - `DrawAnimatedPatterns: jmp _DrawAnimatedPatterns` (1 asm caller in game loop)
+  - `SwapTwoRandomIndicesFromAnimPatternsTable: rts` (dead, only caller was DrawAnimatedPatterns)
+  - `ResetAnimatedPatternsForBothTeams: jmp _ResetAnimatedPatternsForBothTeams` (1 asm caller)
+  - `ResetAnimatedPatterns: rts` (dead, only caller was ResetAnimatedPatternsForBothTeams)
+  - `DrawPatternFromIndex: rts` (dead, only caller was DrawAnimatedPatterns)
+  - `GoalScored:` register-to-stack bridge (d0 via ext.l, a0 → 2 stack params, saves d2-d7/a2-a6)
+- Data labels preserved in SWOS2.s: animPatternsRandomTable (64 bytes), animatedPatterns through animPatternsState (data words), goal format strings (aAsc_0 through aAsc_2) and pointer tables (alreadyScoredTable, firstGoalScoredTable)
+- **Bridge changes:**
+  - Removed `_CResetAnimatedPatternsForBothTeams` and `_CDrawAnimatedPatterns` bridges from swos2_unit.s (functions now in C)
+  - Updated highlight.c to call `_ResetAnimatedPatternsForBothTeams` and `_DrawAnimatedPatterns` directly
+  - Reuses existing `_CDrawSprite16Pixels` bridge (from earlier chunk) for drawPatternFromIndex
+- New xdef entries in swos2_unit.s: `teamScoredGamePtr`, `animPatternsRandomTable`, `patternStatic`, `otherTeamScored`, `ingameTeamPlayerOffsets`
+- New xref entries in swos2_unit.s: `_DrawAnimatedPatterns`, `_ResetAnimatedPatternsForBothTeams`, `_GoalScored`
+- Key porting notes:
+  - Pitch tile pairs: odd index = static (fans sitting), even = animated (fans jumping). bit 7 of byte offset = bit 0 of tile index (since TILE_SIZE=128=0x80)
+  - DrawAnimatedPatterns uses `patternStatic` as animate flag: non-zero→toggle to animated, zero→toggle to static
+  - Camera Y determines fan section: <64 = top fans (sprite range +21), >=544 = bottom fans (+1071), 64-543 = no fans visible
+  - otherTeamScored suppresses animation for away team's half when camera at top
+  - GoalScored goal format templates are writable char arrays; first 4 bytes overwritten with time digits, byte 0 skipped, leading '0's trimmed
+  - Scorer list supports up to 8 sprite rows with multi-row splitting when Text2Sprite overflows
+  - Shift-down logic steals sprite slot from the bottom of the 8-sprite array when a scorer needs an extra row
+  - PLAYERINFO_SIZE + PLAYERINFO_SKIP = 61 + 0 = 61 byte stride for player records in team file data
+  - extern type fixes: `spriteGraphicsPtr` as `uint8_t *`, `topTeamPtr`/`bottomTeamPtr` as `uint8_t *`, `pitchDatBuffer` as `uint8_t[]` to match existing declarations
+- Build status: **verified** — clean build, only pre-existing warnings
+- Functions ported this chunk: 11 (3 exported + 8 static)
+- **Running total: 390 functions ported (379 + 11)**
+
+### Chunk 39 — Bench/Substitution Controls (22 functions → `src/bench_subs.c`)
+- Date: 2026-02-19
+- **Scope:** In-game bench menu system: substitution controls, formation selection, player marking, player swapping
+- **Exported (1):**
+  - `_BenchCheckControls` (from `BenchCheckControls`) → per-frame bench controls check called from GameLoop; detects double-tap direction to activate bench, dispatches to subsState handlers (0-4), handles training mode team swapping
+- **Static (21):**
+  - `leaveSubsMenu` — cleanup: clears bench state, calls _InitCurrentGoalHighlight and _CCheckIfGoalkeeperClaimedTheBall
+  - `benchMenuHandleControls` — top-level dispatcher by subsState (0=top menu, 1=select substitute, 2=formation, 3=send-off confirm, 4=mark players)
+  - `trainingSwapBenchTeams` — swaps bench/opponent teams for training mode
+  - `isThisPlayerOkToSelect` — validates bench player selection (subs count, substituted, position, cards)
+  - `firePressedInSubsMenu` — handles fire button: enters substitute selection (state 1) or marks menu (state 4)
+  - `showFormationMenu` — enters formation selection (state 2)
+  - `subsBenchOff` — returns to top-level bench view (state 0)
+  - `selectPlayerToSubstituteMenuHandler` — state 1: confirms substitution, updates sub counters
+  - `checkForThrowInAndGoalkeepersBall` — resets throw-in player state, calls CheckIfGoalkeeperClaimedTheBall
+  - `substitutePlayer` — executes substitution: swaps 61 bytes player data + 110 bytes sprite data, reinitializes sprite
+  - `state3HandleFirePress` — state 3: clears overlay on fire (dead code for send-off logic)
+  - `markPlayersMenuHandler` — state 4: toggle marked player (long fire), swap two players (fire with selection)
+  - `handleFormationMenuControls` — state 2: applies selected formation on fire
+  - `updateSubstitutePlayerIndices` — scans ordinals forward/backward for valid substitution candidates
+  - `updatePlayerToBeSubstitutedPosition` — converts ordinal to position via getBenchPlayerPointer
+  - `isPlayerOkToSubstitute` — validates candidate (cards >= 2 = OK, state 3 checks disallowSubs)
+  - `handleFormationMenuMovement` — left/right navigation through 18 formation entries (0x00-0x11)
+  - `findInitialPlayerToBeSubstituted` — priority search: exact position match > group match (DEF/MID) > first available
+  - `swapPlayerNameData` — swaps ordinals and name lengths between two player indices
+  - `getBenchPlayerPointer` — looks up player in current formation/tactics ordering, returns pointer + ordinal
+  - `checkForThrowInAndGoalkeepersBall` — resets throw-in player state
+- New files: `include/bench_subs.h`, `src/bench_subs.c`
+- Assembly stubs in SWOS2.s:
+  - `BenchCheckControls: jmp _BenchCheckControls` (1 asm caller in game loop)
+  - All 21 other functions: dead code (NO external callers confirmed)
+- New C-to-asm bridges in swos2_unit.s:
+  - `_CCheckIfGoalkeeperClaimedTheBall` (saves d2-d7/a2-a6, calls CheckIfGoalkeeperClaimedTheBall)
+- New xdef entries in swos2_unit.s (~66): benchTeam, benchTeamGame, subsTeamsSwapped, subsTrainingTopTeam, drawTrainingTopHalfOfTheBench, initialSubsState, subsDirection, subsFire, subsFireTimer, benchPlayerIndex, subsBlockFire, subsBlockDirections, subsMovementDelayTimer, subsPrevDirection, subsPrevPl1Direction, subsPrevPl2Direction, subsPl1TapCount, subsPl2TapCount, pl1BenchTimeoutCounter, pl2BenchTimeoutCounter, pl1BenchBlockWhileHoldingDirection, pl2BenchBlockWhileHoldingDirection, benchOff, waitForPlayerToGoInTimer, cameraLeavingSubsTimer, substituteInProgress, injuriesForever, bench1Called, bench2Called, benchY, opponentBenchY, plComingYTmp, plComingY, benchWriteOnly01, benchXLimit, subsMenuX, formationMenuX, plLeavingX, plComingX, benchWriteOnly02, deadBenchVar, leavingSubsMenu, subsWriteOnly, goToSubsTimer, selectedFormationEntry, plToBeSubstitutedPos, plToBeSubstitutedOrd, plToEnterGameIndex, selectedPlayerInSubs, team1NumSubs, team2NumSubs, team1GoalkeeperReplaced, team2GoalkeeperReplaced, maxSubsPerTeam, substitutedPlSprite, teamThatSubstitutes, substitutedPlX, substitutedPlY, substitutedPlDestX, substitutedPlDestY, plSubstitutedX, plSubstitutedY, positionsTable, writeOnly01
+- New xref entries in swos2_unit.s: `_BenchCheckControls`
+- Key porting notes:
+  - Double-tap detection: direction pressed within 15 frames of previous tap activates bench
+  - Training mode inverts up/down controls for top team (subsTrainingTopTeam flag)
+  - Team name bit 1 (topTeamInGame[TEAMGAME_TEAMNAME] & 2) determines bench side Y coordinates
+  - substitutePlayer and markPlayersMenuHandler use byte-by-byte swap loops needing `optimize("no-tree-loop-distribute-patterns")`
+  - benchTeam and benchTeamGame stored as uint32_t (pointer-as-integer pattern) matching asm lea/movea semantics
+  - positionsTable (18 entries × 11 bytes) maps formation index to player ordering
+  - Bug fix during port: asm line 12143 checks PLAYERNUMBER==2 (not PLAYERCOACHNUMBER) — corrected in C
+  - Dead code: state 3 (send-off confirmation) handler exists but is never reached in normal gameplay
+- Build status: **verified** — clean build, only pre-existing warnings
+- Functions ported this chunk: 22 (1 exported + 21 static)
+- **Running total: 412 functions ported (390 + 22)**
+
+### Chunk 40 — Bench/Substitution Drawing (7 functions → `src/bench_subs.c`)
+- Date: 2026-02-19
+- **Scope:** Drawing functions for bench players, coach, substitutes menu, and formation menu
+- **Exported (1):**
+  - `_DrawBenchAndSubsMenu` (from `DrawBenchAndSubsMenu`) → main drawing entry: draws bench player sprites, coach animation, selection arrow, dispatches to DrawSubstitutesMenu/DrawFormationMenu based on subsState
+- **Static (6):**
+  - `drawOpponentsBench` — draws opponent's bench (saves/restores subsState, flips drawTrainingTopHalfOfTheBench)
+  - `drawBenchPlayersAndCoach` — draws coach sprite (animated from frame tables) + up to 5 bench player sprites with kit colors, goalkeeper detection, selected/normal states
+  - `drawSubstitutesMenu` — draws substitutes selection overlay: team color extraction, title box with "SUBSTITUTES" sprite, 11 player entries + "FORMATION" entry
+  - `drawSubstitutesMenuEntry` — single entry: shadow/frame/background rectangles, face sprite (individual skin), shirt number, player name, position, card icon, injury indicator
+  - `drawFormationMenu` — draws formation menu overlay: title box with "FORMATION" sprite, 18 formation entries
+  - `drawFormationMenuEntry` — single formation entry: shadow/frame/background, centered formation name text
+- Added to existing files: `src/bench_subs.c`, `include/bench_subs.h`
+- Assembly stubs in SWOS2.s:
+  - `DrawBenchAndSubsMenu: jmp _DrawBenchAndSubsMenu` (1 asm caller at line 14262 in game loop)
+  - All 6 other functions: dead code (NO external callers)
+- New C-to-asm bridges in swos2_unit.s:
+  - `_CDrawSpriteInCameraView` (d0=sprite, d1=x, d2=y → calls DrawSpriteInCameraView)
+  - `_CDrawSpriteHotspotInCameraView` (d0=sprite, d1=x, d2=y → calls DrawSpriteHotspotInCameraView)
+- New xdef entries in swos2_unit.s: team1MostFrequentFace, team2MostFrequentFace, benchColors, subsMenuBackgroundColor, subsMenuHighlightColor, subsMenuEntryFrameColor, ourCoachFrames, opponentCoachFrames, playerFacesTable, playerNumberString, aFormation, playerPositionsStringTable, tacticsStringTable
+- New xref entries in swos2_unit.s: `_DrawBenchAndSubsMenu`
+- Key porting notes:
+  - Boundary spill fix: asm uses `lea (team2GoalkeeperReplaced),a1; move.w (a1,teamNumber*2),d3` to read team1MostFrequentFace/team2MostFrequentFace — C uses explicit variables instead of pointer arithmetic
+  - Bug fix: drawOpponentsBench condition was inverted (benchTeamGame != bottomTeamInGame selects bottomTeamInGame as opponent, not ==)
+  - Coach animation: currentGameTick & 0x1E0 >> 4 indexes into 16-entry ourCoachFrames/opponentCoachFrames tables
+  - Training top half of bench: loop iterates backward (stride -61) instead of forward (+61)
+  - benchColors extraction: finds 3 distinct colors from kit (shirt/stripe/shorts/socks), skipping colors 2 and 15 (pitch background colors)
+  - Face sprite blinks when player is marked: `frameCount & 4` == 0 suppresses face drawing
+  - Injury severity encoded in bits 7:5 of injuriesbitfield, compared with frameCount & 7 for flicker effect
+  - drawFormationMenuEntry uses tacticsStringTable for entries 0-11, teamTacticsTable for entries 12-17
+- Build status: **verified** — clean build, only pre-existing warnings
+- Functions ported this chunk: 7 (1 exported + 6 static)
+- **Running total: 419 functions ported (412 + 7)**
+
+### Chunk 41 — Game Loop + MainKeysCheck + Highlights Playback (10 functions → `src/game_loop.c`)
+- Date: 2026-02-19
+- **Scope:** Main game loop, key dispatch, highlight/replay playback loops, fake goal assignment on ESC
+- **Exported (8):**
+  - `_ViewMatchSequence` (from `ViewMatchSequence`) → loads topTeamInGame/bottomTeamInGame, calls StartMatchSequence
+  - `_ViewHighlights` (from `ViewHighlights`) → loads topTeamInGame/bottomTeamInGame, calls ViewHighLightsMain
+  - `_StartMatchSequence` (from `StartMatchSequence`) → loads SFX, sets playGame=1, calls InitGameSaveTeams then GameLoop
+  - `_GameLoop` (from `GameLoop`) → main per-frame game loop: init random scroll, VBlank sync, pause handling, gameplay update (MoveCamera/UpdateBall/MovePlayers/etc.), replay/highlight dispatch, end-of-match flow with friendly replay restart
+  - `_KeepStatisticsOnScreen` (from `KeepStatisticsOnScreen`) → spin-loop while stats overlay showing: tick wait, key dispatch, UpdateAndDrawStatistics
+  - `_ViewHighLightsMain` (from `ViewHighLightsMain`) → highlights viewer: copies teams, inits game, frame loop with highlight playback dispatch
+  - `_PlayInstantReplayLoop` (from `PlayInstantReplayLoop`) → instant replay playback: pause handling, fire-to-abort (per-player joystick detection based on teamScoredDataPtr), DrawReplayFrame, VBlank sync
+  - `_PlayHighlightsLoop` (from `PlayHighlightsLoop`) → multi-scene highlight playback: advances through scenes, fire-to-abort, scene pointer management
+- **Exported (2 additional):**
+  - `_MainKeysCheck` (from `MainKeysCheck`) → key dispatch: R=instant replay, H=normal replay, 0x88=toggle bigS, 0x87=cycle indicator, 0x89=fade+crowd, 0x10/0x11=bench, S=stats, ESC=exit with fake goals, SPACE=capture highlight, P=pause
+  - `_AssignFakeGoalsToScorers` (from `AssignFakeGoalsToScorers`) → weighted random goal assignment to player positions when ESC-aborting; uses kAbortLossScorerWeightTable + playersPositionsByTactics
+- **Static (2):**
+  - `waitVBlankSync` — VBlank sync helper: DMACON blitter wait, anti-tamper cookie check (always passes), waitingInterrupt spin-wait
+  - `pauseSpinWaitOneTick` — waits for currentTick to change (matches dbf d1 with d1=0 pattern)
+- New files: `include/game_loop.h`, `src/game_loop.c`
+- Assembly stubs in SWOS2.s:
+  - `ViewMatchSequence: jmp _ViewMatchSequence`
+  - `ViewHighlights: jmp _ViewHighlights`
+  - `StartMatchSequence:` register-to-stack stub (a5, a6 → stack, saves d2-d7/a2-a6)
+  - `GameLoop: jmp _GameLoop`
+  - `KeepStatisticsOnScreen: jmp _KeepStatisticsOnScreen`
+  - `ViewHighLightsMain:` register-to-stack stub (a5, a6 → stack, saves d2-d7/a2-a6)
+  - `PlayInstantReplayLoop: jmp _PlayInstantReplayLoop`
+  - `PlayHighlightsLoop: jmp _PlayHighlightsLoop`
+  - `MainKeysCheck:` register-to-stack stub (d0 zero-extended → stack, saves d2-d7/a2-a6)
+  - `AssignFakeGoalsToScorers:` register-to-stack stub (d0 zero-extended, d5 sign-extended → stack, saves d2-d7/a2-a6)
+- New C-to-asm bridges in swos2_unit.s:
+  - `_CMoveCamera` (calls MoveCamera, saves/restores all regs)
+  - `_CUpdateAndApplyTeamControls` (calls UpdateAndApplyTeamControls)
+  - `_CUpdateBall` (calls UpdateBall)
+  - `_CInjuryUpdateTickGuard` (calls InjuryUpdateTickGuard)
+  - `_CDoGoalkeeperSprites` (calls DoGoalkeeperSprites)
+  - `_CDrawSprites` (calls DrawSprites)
+- Data labels preserved in SWOS2.s: normalReplayRunning, instantReplayFlag, saveHighlightScene, fadeAndSaveHighlightScene, spaceReplayTimer, subsWriteOnly, playGame, playHighlightFlag, paused, overlayFlagBackup, kAbortLossScorerWeightTable (12 bytes)
+- New xdef entries in swos2_unit.s: gameCanceled, instantReplayFlag, saveHighlightScene, fadeAndSaveHighlightScene, spaceReplayTimer, overlayFlagBackup, userRequestedReplay, teamScoredDataPtr, isGameFriendly, team1NumAllowedInjuries, team2NumAllowedInjuries, kAbortLossScorerWeightTable, + 6 bridge xdefs
+- New xref entries in swos2_unit.s: _ViewMatchSequence, _ViewHighlights, _StartMatchSequence, _GameLoop, _KeepStatisticsOnScreen, _ViewHighLightsMain, _PlayInstantReplayLoop, _PlayHighlightsLoop, _MainKeysCheck, _AssignFakeGoalsToScorers
+- Key porting notes:
+  - VBlank sync anti-tamper checks: each loop has unique XOR magic + expected value; branches to dead-code labels on failure (never taken). C implementation preserves the waitingInterrupt spin-wait but skips the XOR check (always passes)
+  - GameLoop friendly replay restart: original uses `bra.w GameLoop`; C uses recursive `_GameLoop()` call
+  - PlayInstantReplayLoop fire-to-abort: complex per-player detection based on teamScoredDataPtr→PLAYERNUMBER/PLAYERCOACHNUMBER to determine which joystick to poll
+  - MainKeysCheck ESC path: determines winning team by TEAMGENERALINFO_TEAMNUMBER (offset 0x12=18, NOT playerNumber), assigns fake 5+ goals with increment loop, then calls AssignFakeGoalsToScorers
+  - AssignFakeGoalsToScorers: weighted random with 11 outfield positions (weights 35,25,20,...) + rare own-goal (>=248) + very rare goalkeeper (second random)
+  - TEAMGENERALINFO_PLAYERCOACHNUMBER is at offset 6 (not 8 as initially assumed)
+  - nullsub_2/3/4/5/8/9/10 are all no-ops — omitted in C
+  - ~700 lines of dead asm code removed from GameLoop/MainKeysCheck/replay functions
+- Build status: **verified** — clean build, only pre-existing warnings
+
+### Chunk 42 — CalculateDeltaXAndY + MoveCamera (2 functions → `src/math68k.c` + `src/move_camera.c`)
+- Date: 2026-02-19
+- **Scope:** Direction/delta vector calculation with sine/cosine lookup tables, and per-frame camera tracking logic
+- **Exported (2):**
+  - `_CalculateDeltaXAndY` (from `CalculateDeltaXAndY`) → given src/dest coords + speed, computes direction (0..255 or 0xFFFF), deltaX, deltaY using angle coefficient table + sine/cosine table. Iterative dx/dy normalization into [0..31], tangent lookup, quadrant mapping, fixed-point 16×16→32 multiplication.
+  - `_MoveCamera` (from `MoveCamera`) → per-frame camera tracking with priority system: (1) fans → no-op, (2) booking → lock on player, (3) penalties → lock on spot, (4) subs timers → bench area, (5) subs menu → goal/bench state, (6) normal game → velocity-based ball tracking with acceleration ±2 toward ±40, (7) set pieces → narrow bounds, (8) special states → fixed targets. Uses 16.16 fixed-point for smooth sub-pixel movement. Clamps camera to pitch/screen bounds.
+- New files: `include/math68k.h`, `src/math68k.c`, `src/move_camera.c`
+- Static const data moved to C:
+  - `kSineCosineTable` (257 int16_t entries — 256 sine/cosine values + pad) → static const in math68k.c
+  - `kAngleCoeficients` (1025 int16_t entries — 32×32 angle lookup + pad) → static const in math68k.c
+  - `nextCameraDirections` (16 int32_t entries — 8 direction pairs) → static const in move_camera.c
+  - `maxCameraMovement` (0x00050000) → #define in move_camera.c
+- Assembly stubs in SWOS2.s:
+  - `CalculateDeltaXAndY:` register-to-stack stub — allocates 8-byte local for outDeltaX/outDeltaY, pushes 7 args (destX, destY, srcX, srcY, speed, &outDX, &outDY), calls `_CalculateDeltaXAndY`, loads results back to d1/d2/d0, sets Z flag
+  - `MoveCamera: jmp _MoveCamera` (+ nop)
+- Data labels preserved in SWOS2.s: cameraXVelocity, cameraYVelocity (exported, used by other C code)
+- Removed bridges:
+  - `_CCalculateDeltaXAndY` bridge removed from swos2_unit.s (was 16 lines)
+  - `_CMoveCamera` bridge removed from swos2_unit.s (was 5 lines)
+- Updated callers:
+  - `referee.c`: changed from `_CCalculateDeltaXAndY` (void + output pointer for dir) to `_CalculateDeltaXAndY` (returns dir directly)
+  - `game_loop.c`: changed from `_CMoveCamera()` to `_MoveCamera()`
+- New xref entries: `_CalculateDeltaXAndY`, `_MoveCamera`
+- Removed xdef entries: `_CCalculateDeltaXAndY`, `_CMoveCamera`
+- Key porting notes:
+  - cameraX/cameraY are 32-bit fixed-point (dc.l) in memory: high word = integer, low word = fraction. Declared as int16_t in most C files (reads integer part on big-endian 68k). move_camera.c uses `__asm__("cameraX")` aliases for int32_t access.
+  - MoveCamera writes only the fractional part back, then calls SetCameraCoordinates for the integer part. The original uses `move.w d1,(cameraX+2).l` for fraction + `swap d1` for integer extraction.
+  - ~550 lines of asm code removed (CalculateDeltaXAndY body + 2 data tables + MoveCamera body + inline data)
+- **Running total: 431 functions ported (429 + 2)**
+- Build status: **verified** — clean build, only pre-existing warnings + LTO type mismatch for cameraX/cameraY (int32_t vs int16_t, safe due to function call barriers)
+
+### Chunk 43 — Ball Physics + Helpers (12 functions → `src/ball_physics.c`)
+- Date: 2026-02-19
+- **Scope:** Core ball physics simulation, goalkeeper sprite positioning, injury guard, player-ball interaction utilities
+- **Exported (10):**
+  - `_UpdateBall` (from `UpdateBall`) → ~400 lines, core ball physics: frame animation selection (static/moving), movement via CalculateDeltaXAndY, friction (ground/air constants), gravity integration, keeper-holds-ball special handling, bounce physics with configurable damping, goal area collision (upper/lower goal, crossbar, side posts), goalpost deflection with random scatter, out-of-play boundary checks (4 quadrant calls to CheckIfBallOutOfPlay), shadow sprite positioning, AI quadrant calculation for tactics
+  - `_CalculateNextBallPosition` (from `CalculateNextBallPosition`) → trajectory prediction with scaled integration loops (scale 1/2/4/8 based on ball height), writes to ballNextX/ballNextY
+  - `_DoGoalkeeperSprites` (from `DoGoalkeeperSprites`) → positions ball relative to diving goalkeeper using goalkeeperDiveBallHeights (28 entries) and kGoalKeeperClaimingBallHeight (7 entries) lookup tables
+  - `_InjuryUpdateTickGuard` (from `InjuryUpdateTickGuard`) → checks injuriesForever flag (no-op guard for injury system)
+  - `_ResetBothTeamSpinTimers` (from `ResetBothTeamSpinTimers`) → sets both team spin timers to 0xFFFF
+  - `_GetPlayerPointerFromShirtNumber` (from `GetPlayerPointerFromShirtNumber`) → looks up player info pointer from shirt ordinal via ingameTeamPlayerOffsets table
+  - `_UpdateControllingPlayer` (from `UpdateControllingPlayer`) → positions ball at player's feet using kBallPlOffsets direction table, halves deltaZ
+  - `_UpdateBallWithControllingGoalkeeper` (from `UpdateBallWithControllingGoalkeeper`) → like above but forces deltaZ negative (ball always dropping when keeper has it)
+  - `_UpdatePlayerWithBall` (from `UpdatePlayerWithBall`) → offsets player position relative to ball using kPlayerWithBallOffsets table
+  - `_SetThrowInPlayerDestinationCoordinates` (from `SetThrowInPlayerDestinationCoordinates`) → positions throw-in player 3px from ball
+- **Static helpers (2):**
+  - `reverseDestXDirection` — reflects destX around saved X position
+  - `reverseDestYDirection` — reflects destY around saved Y position
+- New files: `include/ball_physics.h`, `src/ball_physics.c`
+- Assembly stubs in SWOS2.s:
+  - `UpdateBall: jmp _UpdateBall` (body removed, ~500 lines)
+  - `ReverseDestXDirection: rts` (dead code, only caller was UpdateBall)
+  - `ReverseDestYDirection: rts` (dead code, only caller was UpdateBall)
+  - `DoGoalkeeperSprites: jmp _DoGoalkeeperSprites` (body removed, ~77 lines)
+  - `InjuryUpdateTickGuard: jmp _InjuryUpdateTickGuard`
+  - `CalculateNextBallPosition: jmp _CalculateNextBallPosition` (body removed, ~67 lines)
+  - `ResetBothTeamSpinTimers: jmp _ResetBothTeamSpinTimers`
+  - `GetPlayerPointerFromShirtNumber:` register bridge (A1,A6→stack, result D0→A4, preserves A1) — 15 active asm callers
+  - `UpdateControllingPlayer:` register bridge (A1→stack, preserves A1) — 1 active asm caller
+  - `UpdateBallWithControllingGoalkeeper:` register bridge (A1→stack, preserves A1)
+  - `UpdatePlayerWithBall:` register bridge (A1→stack, preserves A1) — 3 active asm callers
+  - `SetThrowInPlayerDestinationCoordinates:` register bridge (A1→stack, preserves A1) — 2 active asm callers
+- Data labels preserved in SWOS2.s: ballNextX, ballNextY, kBallPlOffsets (16 entries), kPlayerWithBallOffsets (16 entries)
+- New xdef entries (23): ballShadowSprite, goalie1Sprite, goalie2Sprite, ballStaticFrameIndices, ballMovingFrameIndices, kBallGroundConstant, kBallAirConstant, kGravityConstant, writeOnlyVar04, goalkeeperDiveBallHeights, kGoalKeeperClaimingBallHeight, ballNextX, ballNextY, ballXQuadrantLimits, ballYQuadrantLimits, ballQuadrantIndex, ballXQuadrantDead, ballYQuadrantDead, playerXQuadrantOffset, playerYQuadrantOffset, kBallPlOffsets, kPlayerWithBallOffsets, _CCheckIfBallOutOfPlay
+- New xref entries (10): _UpdateBall, _DoGoalkeeperSprites, _InjuryUpdateTickGuard, _CalculateNextBallPosition, _ResetBothTeamSpinTimers, _UpdateControllingPlayer, _UpdateBallWithControllingGoalkeeper, _UpdatePlayerWithBall, _SetThrowInPlayerDestinationCoordinates, _GetPlayerPointerFromShirtNumber
+- Removed bridges: _CUpdateBall, _CInjuryUpdateTickGuard, _CDoGoalkeeperSprites (from swos2_unit.s)
+- New bridge: _CCheckIfBallOutOfPlay (no params, calls asm CheckIfBallOutOfPlay — still unported)
+- Updated callers: game_loop.c changed from _CUpdateBall/_CInjuryUpdateTickGuard/_CDoGoalkeeperSprites to _UpdateBall/_InjuryUpdateTickGuard/_DoGoalkeeperSprites
+- RE bug fixed: line 9517 in SWOS2.s `move.l #(frontbufferBaseAlt+$1CAA),d3` — IDA address-as-constant bug. Real value is `0x00010002` (positive counterpart of `0xFFFEFFFE`). See Bug Log in CLAUDE.md.
+- ~650 lines of asm code removed
+- **Running total: 443 functions ported (431 + 12)**
+- Build status: **verified** — clean build, no new warnings, no unresolved symbols
+
+### Chunk 44 — Interrupt Handlers + Hardware Init (6 functions → `src/interrupts.c`)
+- Date: 2026-02-19
+- **Scope:** Interrupt service routines, hardware initialization, and interrupt vector setup
+- **Exported (4):**
+  - `_InitHardwareAtFrameStart` (from `InitHardwareAtFrameStart`) → waits for raster at top of frame (VPOSR ≤ 0x0A), disables all interrupts (INTENA/INTREQ 0x7FFF), DMA (DMACON 0x7FFF), CIA interrupts (CIAA_ICR/CIAB_ICR 0x7F), clears BPLCON0
+  - `_SetupInterrupts` (from `SetupInterrupts`) → saves old Level 3 vector to Level 1, installs Int3Handler at Level 3 (VBlank), Int5Handler at Level 5 (serial), enables INTENA 0xC824 (Master + RBF + VBlank + SOFTINT)
+  - `_Int2KeyboardHandler` (from `Int2KeyboardHandler`) → Level 2 ISR body: checks INTREQR/CIAA_ICR, calls KBHook (returns raw CIAA_SDR in d0), keyboard handshake via CIAA_CRA bit 6 + VPOSR polling delay, NOT+ROR scan code conversion, key buffer insertion (max 9), key repeat setup (keyDelay=0x800C)
+  - `_Int3TimerHandler` (from `Int3TimerHandler`) → Level 1 ISR body (deferred VBlank): display buffer swap path (UpdatePlanePtrsAndBlitParams → SwapBuffersAndCameraViewState → SetCameraCoordinates), fade ticks, audio IRQ dispatch, game tick counting (currentTick always, currentGameTick when not paused), key repeat countdown (keyDelay negative→decrement→zero triggers repeat), clears SOFTINT
+- **Kept in asm (2):**
+  - `Int3Handler` — VBlank dispatcher (6 instructions + rte): clears VBlank INTREQ, triggers SOFTINT, checks/clears int5SerialBusBufferFull
+  - `Int5Handler` — Serial port ISR (3 instructions + rte): clears serial INTREQ, sets int5SerialBusBufferFull flag
+- **Dead code stubbed (1):**
+  - `AudioDisableDMAForChannel` → `rts` (already ported to C in audio.c, no remaining asm callers)
+- New files: `include/interrupts.h`, `src/interrupts.c`
+- Assembly stubs in SWOS2.s:
+  - `Int2KeyboardHandler:` ISR wrapper (movem.l d0-d7/a0-a6 save/restore + jsr _Int2KeyboardHandler + rte)
+  - `Int3TimerHandler:` ISR wrapper (same pattern)
+  - `InitHardwareAtFrameStart: jmp _InitHardwareAtFrameStart`
+  - `SetupInterrupts: jmp _SetupInterrupts`
+  - `AudioDisableDMAForChannel: rts`
+- Inline data preserved in SWOS2.s: keyDelay (dc.w), keyCount (dc.w), keyBuffer (12 bytes), writeOnly01 (dc.w), lastVBlankServiceTick (dc.w), int5SerialBusBufferFull (dc.w)
+- New xdef entries in swos2_unit.s: keyDelay, keyIn, lastVBlankServiceTick, Int3Handler, Int5Handler, didSwapThisFrame, int5SerialBusBufferFull
+- New xref entries in swos2_unit.s: _InitHardwareAtFrameStart, _SetupInterrupts, _Int2KeyboardHandler, _Int3TimerHandler
+- Key porting notes:
+  - KBHook (Resload.s) reads CIAA_SDR, returns raw byte in d0; declared as `extern uint8_t KBHook(void)` — d0 return maps naturally to m68k ABI
+  - cameraX/cameraY are 32-bit fixed-point; `move.w (cameraX).l,d1` reads high word (integer part) on big-endian 68k; C uses `extern int16_t cameraX` which maps to the same word
+  - debugMode LINE-A trap (dc.b 0xA0, 0x00) skipped in C port (dead code in non-debug builds)
+  - Unreachable code after `bra.w return_interrupt` in Int3TimerHandler (COPER check) omitted
+  - ~120 lines of asm code removed across 4 function bodies + 1 dead code stub
+- **Running total: 449 functions ported (443 + 4 exported + 2 kept in asm)**
+- Build status: **verified** — clean build, no new unresolved symbols, all symbols correctly placed in map
+
+### Chunk 45 — RNC Decompressor Suite (9 functions → `src/rnc.c`)
+- Date: 2026-02-19
+- **Scope:** RNC ProPack v1 (Huffman) and v2 (LZ bitstream) decompression engines
+- **Exported (2):**
+  - `_RncDecompressV1` (from `RncDecompressV1`) → V1 entry with error check: calls v1DecodeBlock, panics on error codes 0/-1/-2
+  - `_RncDecompressV2` (from `RncDecompressV2` + `RncDecodeV2Body`) → V2 LZ bitstream decompressor: 8-bit shift register with carry chain, match/literal state machine
+- **Static (7):**
+  - `v1DecodeBlock` (from `RncDecodeBlock`) → V1 Huffman core: reads RNC header, handles src/dst overlap relocation, initializes 16-bit LE bitstream, main loop (build 3 tables → decode literals+matches per block)
+  - `v1ReadU32` (from `RncReadU32`) → reads 4 bytes big-endian
+  - `v1GetBits` / `v1SkipBits` (from `RncGetBits`) → extract/consume bits from V1 bitstream
+  - `v1Refill` (from `RncRefillBits`) → loads 2 bytes LE when bit buffer underflows
+  - `v1DecodeSymbol` (from `RncDecodeSymbol`) → Huffman symbol decode with extra bits
+  - `v1BuildTable` (from `RncBuildTable`) → builds Huffman decode table (mask/match + aux) from bitstream
+  - `v2Bit` — V2 bit extraction: shift d2 left, refill on zero (addx.b carry chain)
+- New files: `include/rnc.h`, `src/rnc.c`
+- Assembly stubs in SWOS2.s:
+  - `RncDecompressV1:` register-to-stack stub (a0=src, a1=dst → 2 stack params, saves d2-d7/a2-a6)
+  - `RncDecompressV2:` register-to-stack stub (a0=src, a1=dst → 2 stack params, saves d2-d7/a2-a6)
+  - `RncDecodeBlock:` dead code (`rts`) — only called by RncDecompressV1, now ported
+  - `RncDecodeSymbol`, `RncGetBits`, `RncRefillBits`, `RncReadU32`, `RncBuildTable`, `RncDecodeV2Body`: all `rts` (dead code)
+- Bridges removed from swos2_unit.s:
+  - `_CRncDecompressV1` (7 lines) — replaced by direct `_RncDecompressV1()` calls
+  - `_CRncDecompressV2` (7 lines) — replaced by direct `_RncDecompressV2()` calls
+- C callers updated:
+  - `asset_loader.c`: `_CRncDecompressV1` → `_RncDecompressV1`
+  - `file_io.c`: `_CRncDecompressV1` → `_RncDecompressV1`, `_CRncDecompressV2` → `_RncDecompressV2`
+- New xref entries in swos2_unit.s: `_RncDecompressV1`, `_RncDecompressV2`
+- Removed xdef entries from swos2_unit.s: `_CRncDecompressV1`, `_CRncDecompressV2`
+- Key porting notes:
+  - V1 bitstream: 32-bit accumulator consumed from LSB, signed byte counter for remaining bits, 2-byte LE refill from compressed stream
+  - V1 overlap handling: when dst < end_of_compressed, relocates compressed data above output end, saves/restores overwritten bytes
+  - V1 literal re-sync: after copying literal bytes, bit buffer is re-merged with peeked 2 bytes from new source position
+  - V2 bitstream: single-byte shift register (d2), MSB shifted into carry via `add.b d2,d2`; on zero (beq), refill loads next byte incorporating carry via `addx.b d2,d2`
+  - V2 init skips 2 bits from first byte (matching V1's `RncGetBits(2,2)`)
+  - V2 match copy: lsr.w #1 splits length into odd/even; d1==0 triggers RLE mode (repeat single byte)
+  - ~475 lines of asm code removed
+- Build status: **verified** — clean build, only pre-existing warnings
+- Functions ported this chunk: 9 (2 exported + 7 static)
+- **Running total: 458 functions ported (449 + 9)**
+
+### Chunk 46 — Header Subsystem (9 functions → `src/headers.c`)
+- Date: 2026-02-19
+- **Scope:** Ball heading mechanics: jump headers, lob headers, flying headers, static headers, animation table setup
+- **Exported (6):**
+  - `_SetJumpHeaderHitAnimTable` (from `SetJumpHeaderHitAnimTable`) → conditionally sets jump-header-hit animation if HEADING==0, PLAYERDOWNTIMER==40, FRAMESWITCHCOUNTER<=2, tick bit 1 set; halves player speed
+  - `_PlayerHittingJumpHeader` (from `PlayerHittingJumpHeader`) → ball contact during jump header: direction delta (mod 8) dispatch to flying/lob header, sets ball destination/speed from kDefaultDestinations + heading skill bonus, halves player speed
+  - `_SetStaticHeaderDirection` (from `SetStaticHeaderDirection`) → per-frame aim steering: adjusts player direction ±1 toward input direction during static header attempt
+  - `_PlayerHittingStaticHeader` (from `PlayerHittingStaticHeader`) → ball contact during static header: direction adjustment (1-2 steps toward input), ball speed from kStaticHeaderBaseBallSpeed + heading bonus, negates+halves deltaZ
+  - `_AttemptStaticHeader` (from `AttemptStaticHeader`) → initiates static header: sets destination, speed, PL_STATIC_HEADING state, 20-frame timer
+  - `_PlayerAttemptingJumpHeader` (from `PlayerAttemptingJumpHeader`) → initiates jump header: sets destination, speed, PL_JUMP_HEADING state, 50-frame timer
+- **Static (3):**
+  - `setPlayerJumpHeaderHitAnimationTable` — sets jumpHeaderHitAnimTable if FRAMESWITCHCOUNTER<=2
+  - `doFlyingHeader` — low jump height (0x00020000), ball speed 75%, sets hit anim
+  - `doLobHeader` — high jump height (0x00024000), ball speed ~94%, sets hit anim
+- New files: `include/headers.h`, `src/headers.c`
+- Assembly stubs in SWOS2.s:
+  - `SetJumpHeaderHitAnimTable:` register-to-stack (a1 → stack, saves d2-d7/a2-a6)
+  - `PlayerHittingJumpHeader:` register-to-stack (a1, a6 → stack, saves d2-d7/a2-a6)
+  - `SetStaticHeaderDirection:` register-to-stack (a1, a6 → stack, saves d2-d7/a2-a6)
+  - `PlayerHittingStaticHeader:` register-to-stack (a1, a6 → stack, saves d2-d7/a2-a6)
+  - `AttemptStaticHeader:` register-to-stack (d0 zero-extended, a1 → stack, saves d2-d7/a2-a6)
+  - `PlayerAttemptingJumpHeader:` register-to-stack (d0 zero-extended, a1 → stack, saves d2-d7/a2-a6)
+  - `DoFlyingHeader: rts` (dead code, only called from PlayerHittingJumpHeader)
+  - `DoLobHeader: rts` (dead code, only called from PlayerHittingJumpHeader)
+  - `SetPlayerJumpHeaderHitAnimationTable: rts` (dead code, only called from DoFlyingHeader/DoLobHeader)
+- Data labels exported via xdef in SWOS2.s: jumpHeaderHitAnimTable, jumpHeaderAttemptAnimTable, staticHeaderAttemptAnimTable, staticHeaderAimAnimTable, staticHeaderHitAnimTable, kBallJumpHeaderDeltaZ, kDefaultDestinations, kPlayerHeaderSpeedIncrease, kJumpHeaderSpeed, kHeaderLowJumpHeight, kHeaderHighJumpHeight, kStaticHeaderBaseBallSpeed, kStaticHeaderPlayerSpeed
+- Inline data preserved: kHeaderLowJumpHeight (0x00020000), kHeaderHighJumpHeight (0x00024000), kStaticHeaderBaseBallSpeed (0x0700), kStaticHeaderPlayerSpeed (0x0100)
+- Dead code after PlayerAttemptingJumpHeader rts (lines 17414-17434) removed with stub
+- New xref entries in swos2_unit.s: _SetJumpHeaderHitAnimTable, _PlayerHittingJumpHeader, _SetStaticHeaderDirection, _PlayerHittingStaticHeader, _AttemptStaticHeader, _PlayerAttemptingJumpHeader
+- Key porting notes:
+  - PlayerHittingJumpHeader direction delta dispatch: 0=keep, 1=dec, 2=flying+dec, 3=lob+dec, 4=lob+keep, 5=lob+inc, 6=flying+inc, 7=inc, no-input=flying+keep
+  - PlayerHittingStaticHeader uses offset 44 on team (SPRITE_SPEED EQU == TEAMGENERALINFO_CURRENTALLOWEDDIRECTION EQU == 44) — IDA naming collision, semantically it's the input direction
+  - Similarly offset 42 on player sprite (TEAMGENERALINFO_ALLOWEDDIRECTIONS EQU == SPRITE_DIRECTION EQU == 42) — same numeric offset, different struct
+  - kPlayerHeaderSpeedIncrease[8] is negative-to-zero: lower heading skill → bigger speed penalty
+  - AttemptStaticHeader param order: (player, dir) — note D0 is zero-extended in stub
+  - PlayerAttemptingJumpHeader param order: (dir, player) — matching original register convention
+- Build status: **verified** — clean build, only pre-existing warnings
+- Functions ported this chunk: 9 (6 exported + 3 static)
+- **Running total: 467 functions ported (458 + 9)**
+
+### Chunk 47 — Cards, Fouls & Tackle System (10 functions → `src/tackle_foul.c`)
+- Date: 2026-02-19
+- **Scope:** Tackle outcome resolution, card issuance, foul/penalty/free-kick state, goalkeeper catch, injury system
+- **Exported (10):**
+  - `_PlayerTackledTheBallWeak` (from `PlayerTackledTheBallWeak`) → weak tackle: direction adjustment via input, ball speed = 150% of halved player speed, marks good tackle if opponent far
+  - `_SetPlayerDowntimeAfterTackle` (from `SetPlayerDowntimeAfterTackle`) → looks up tackling skill from player info, selects human/computer downtime table
+  - `_PlayerTackled` (from `PlayerTackled`) → injury resolution: probability roll by game length, severity bucket cascade (7 levels), injury quota decrement, PL_TACKLED state
+  - `_TryBookingThePlayer` (from `TryBookingThePlayer`) → yellow card issuance: eligibility check (human controller, injury quota), card state LUT (normal/highlight mode), second yellow→red upgrade with stats
+  - `_TrySendingOffThePlayer` (from `TrySendingOffThePlayer`) → straight red card: eligibility check, card state via LUT or forced state 3, stats update
+  - `_SendPlayerAway` (from `SendPlayerAway`) → marks player as sent off: clears marked player if applicable, sets SPRITE_CARDS=-1, SPRITE_SENTAWAY=1, destination off-pitch
+  - `_PlayerTacklingTestFoul` (from `PlayerTacklingTestFoul`) → foul orchestrator: distance check to victim, goalkeeper exemption, pitch bounds check, PlayerTackled call, tackle quality assessment (direction diff), card probability with nearest-teammate search, dispatches to TryBooking/TrySending + TestFoulForPenalty + ActivateReferee
+  - `_GoalkeeperCaughtTheBall` (from `GoalkeeperCaughtTheBall`) → sets catching animation, speed, destination from ballNextGround coords, clamps Y to 137..761
+  - `_PlayerTackledTheBallStrong` (from `PlayerTackledTheBallStrong`) → strong tackle: direction adjustment, ball speed = 125% when PLAYERNUMBER flag set (duplicated computation faithfully), good tackle check
+  - `_TestFoulForPenaltyAndFreeKick` (from `TestFoulForPenaltyAndFreeKick`) → determines foul type: penalty area check (top/bottom team), 7 free kick quadrants with mirrored assignment, simple foul fallback, sets break/stoppage state
+- New files: `include/tackle_foul.h`, `src/tackle_foul.c`
+- Assembly stubs in SWOS2.s:
+  - `PlayerTackledTheBallWeak:` register-to-stack stub (a1, a6 → stack, saves d2-d7/a2-a6) — 1 asm caller
+  - `SetPlayerDowntimeAfterTackle:` register-to-stack stub (a1, a6 → stack) — 1 asm caller
+  - `PlayerTackledTheBallStrong:` register-to-stack stub (a1, a6 → stack) — 1 asm caller
+  - `GoalkeeperCaughtTheBall:` register-to-stack stub (a1, a6 → stack) — 1 asm caller
+  - `PlayerTacklingTestFoul:` register-to-stack stub (a1, a6 → stack) — 1 asm caller
+  - `SendPlayerAway:` register-to-stack stub (a1, a6 → stack) — called by _CSendPlayerAway bridge (now removed, referee.c calls _SendPlayerAway directly)
+  - `PlayerTackled: rts` (dead code — only caller was PlayerTacklingTestFoul)
+  - `TryBookingThePlayer: rts` (dead code — only caller was PlayerTacklingTestFoul)
+  - `TrySendingOffThePlayer: rts` (dead code — only caller was PlayerTacklingTestFoul)
+  - `TestFoulForPenaltyAndFreeKick: rts` (dead code — only callers were PlayerTacklingTestFoul)
+- Bridge removed: `_CSendPlayerAway` from swos2_unit.s (was 7 lines)
+- Updated caller: referee.c: `_CSendPlayerAway` → `_SendPlayerAway`
+- New xdef entries in swos2_unit.s (18): plgD3Param, cardsDisallowed, forceLeftTeam, nearestTeammatePtr, ballNextGroundX, ballNextYGroundY, cardAnimStatesNoFlag, cardAnimStatesWithFlag, kPlayerTacklingDownTime, kComputerTacklingDownTime, kInjuryLevels, kInjuryLevelAlreadyInjured, kInjuryRecoveryTime, kTackleInjuryProbability, kTackleInjuryProbabilityAlreadyInjured, playerTackledAnimTable, goalieCatchingBallAnimTable, kGoalkeeperCatchSpeed
+- New xref entries in swos2_unit.s (10): _PlayerTackledTheBallWeak, _SetPlayerDowntimeAfterTackle, _PlayerTackled, _TryBookingThePlayer, _TrySendingOffThePlayer, _SendPlayerAway, _PlayerTacklingTestFoul, _GoalkeeperCaughtTheBall, _PlayerTackledTheBallStrong, _TestFoulForPenaltyAndFreeKick
+- Key porting notes:
+  - PlayerTacklingTestFoul uses `cmpa.l #TEAMGENERALINFO_OPPONENTSTEAM,a2` as null check (value 0) — C uses `== (uint8_t *)TGI_OPPONENTSTEAM` (== 0)
+  - Injury severity cascade: 7 bucket levels, each subtracts threshold from random roll, adds 0x20 to severity; only upgrades existing injury (never downgrades)
+  - PlayerTackledTheBallStrong duplicates speed computation `(speed>>2)+speed` twice — faithfully reproduced (original asm writes SPRITE_SPEED(a2) twice)
+  - TestFoulForPenaltyAndFreeKick free kick quadrant assignment is mirrored for bottom team (left→right swap)
+  - `forceLeftTeam==1` overrides team to bottomTeamData in apply_break path
+  - ~800 lines of asm code removed
+- Build status: **verified** — clean build, only pre-existing warnings
+- Functions ported this chunk: 10 (10 exported)
+- **Running total: 477 functions ported (467 + 10)**
+
+### Chunk 48 — Goalkeeper Physics + Penalty System (6 functions → `src/goalkeeper.c`)
+- Date: 2026-02-19
+- Files: `src/goalkeeper.c`, `include/goalkeeper.h`
+- Functions ported:
+  - `getFramesNeededToCoverDistance` (static helper) — loop-based division for fixed-point 16.16 distance/speed
+  - `ShouldGoalkeeperDive` (A1=keeper, A2=ball, A6=team → D0=0/1) — evaluates penalty vs open play distance gates, compares ball travel frames vs keeper reach frames using skill-based dive deltas
+  - `GoalkeeperDeflectedBall` (A2=ball, A6=team) — sets deflected ball destination with random scatter, picks deflect speed (strong/medium/weak) based on goalkeeper skill table offsets $34/$36, adds random Z delta
+  - `NextPenalty` (no params) — advances penalty shootout: checks end conditions (10+ attempts, can't-catch-up), toggles teamPlayingUp/teamStarting, picks shooter from rotating index, calls EndOfGame on completion
+  - `GoalkeeperClaimedTheBall` (A1=keeper, A2=ball, A6=team) — sets keeper-holds-ball state, camera direction/turn flags, stoppage state; if keeper not diving, gives control to keeper
+  - `CheckIfGoalkeeperClaimedTheBall` (no params) — dispatcher: re-calls GoalkeeperClaimedTheBall if ST_KEEPER_HOLDS_BALL, else enters break idle state
+- Assembly stubs:
+  - Register-to-stack bridges: ShouldGoalkeeperDive (A1,A2,A6→stack, returns D0), GoalkeeperDeflectedBall (A2,A6→stack), GoalkeeperClaimedTheBall (A1,A2,A6→stack), CheckIfGoalkeeperClaimedTheBall (no params, save/restore regs), NextPenalty (no params, save/restore regs)
+  - Dead code stub: GetFramesNeededToCoverDistance (rts, all callers ported)
+- Bridges removed:
+  - `_CNextPenalty` (match_setup.c now calls `_NextPenalty` directly)
+  - `_CCheckIfGoalkeeperClaimedTheBall` (bench_subs.c now calls `_CheckIfGoalkeeperClaimedTheBall` directly)
+- xdef additions: penaltiesTimer, penaltyShooterSprite, ballDefensiveX, goalkeeperDiveAttemptCount, kKeeperPenaltySaveDistanceFar, kKeeperPenaltySaveDistanceNear, kKeeperSaveDistance, kGoalkeeperDiveDeltas, kGoalkeeperDeflectDeltaZ, kGoalkeeperStrongDeflectBallSpeed, kGoalkeeperMediumDeflectBallSpeed, kGoalkeeperWeakDeflectBallSpeed
+- Notes:
+  - GoalkeeperDeflectedBall direction condition: bottom team = index 0 (kick up), top team = index 4 (kick down)
+  - ShouldGoalkeeperDive skill index: GOALIESKILL_INDEX (offset 10) + (tick & 0x3C) >> 1 as byte offset into shot chance table
+  - NextPenalty uses bottomTeamData (set via lea) as the reference team for all setup
+  - GoalkeeperClaimedTheBall can modify team parameter via forceLeftTeam override (was why asm saved a6 in CheckIfGoalkeeperClaimedTheBall)
+- Build status: **verified** — clean build, only pre-existing warnings
+- Functions ported this chunk: 6 (5 exported + 1 static)
+- **Running total: 483 functions ported (477 + 6)**
+
+### Chunk 49 — Game Timers + Ball Out of Play (2+7s functions → `src/game_timers.c`)
+- Date: 2026-02-19
+- Files: `src/game_timers.c`, `include/game_timers.h`
+- Functions ported:
+  - `_UpdateGameTimersAndCameraBreakMode` (exported) — main per-frame timer dispatcher: penalty timer, in-game counter, stoppage timers, fire-press end-game detection, break camera mode state machine (modes 0-8)
+  - `_CheckIfBallOutOfPlay` (exported) — ball boundary detection: goal scoring (with goal counter bias system), corner kicks, goal kicks, throw-ins with zone-based direction selection
+  - `negateTimers` (static) — negates resultTimer, timeVar, statsTimer
+  - `handleEndGameTransmission` (static) — end-game state transitions after fire press
+  - `checkFirePressedForEndGame` (static) — checks fire button for end-game states
+  - `handleStoppedState` (static) — dispatches by gameState when stopped
+  - `handleBreakCameraMode` (static) — break camera mode state machine (modes 0-8)
+  - `writeRestartGlobalsAndStopPlayers` (static) — common restart cleanup (foul coords, camera dir, stop all players)
+  - `handleGoalScored` (static) — goal detection, scorer attribution, replay camera setup, goal counter bias
+- Assembly stubs:
+  - UpdateGameTimersAndCameraBreakMode: save d2-d7/a2-a6, jsr _UpdateGameTimersAndCameraBreakMode, restore, rts. Inline data labels (ballOutOfGameTimer, stoppageAuxFlag) preserved after stub.
+  - CheckIfBallOutOfPlay: jmp _CheckIfBallOutOfPlay (no register bridge needed — called only from C)
+- Bridges removed:
+  - `_CCheckIfBallOutOfPlay` in swos2_unit.s (ball_physics.c now calls `_CheckIfBallOutOfPlay` directly)
+- xdef additions: ballOutOfGameTimer, stoppageAuxFlag, statsTeam1GoalsCopy2, statsTeam2GoalsCopy2, teamNumThatScored, aboutToThrowInAnimTable, initialKickWriteOnlyTicks, deadCameraBreakVar01-04
+- Notes:
+  - GCC ICE workaround: game_timers.c compiled without LTO (-flto/-fwhole-program stripped) due to m68k-amiga-elf-gcc segfault in GIMPLE CCP pass. Added per-file Makefile rule using $(if $(filter ...)) pattern.
+  - All static helpers marked `__attribute__((noinline))` to prevent LTO from re-inlining (safety measure).
+  - handleGoalScored: opponent team (from TGI_OPPONENTSTEAM) passed to writeRestartGlobalsAndStopPlayers, not the scoring team. Camera direction d3/d4 set from opponent identity (topTeamData→4/124, else→0/199).
+  - Goal counter bias system: scoring to equalize=200+rand, first lead=300+rand, extending lead=200+rand, during penalties=just rand/2+100.
+- Build status: **verified** — clean build from scratch, no new warnings
+- Functions ported this chunk: 9 (2 exported + 7 static)
+- **Running total: 492 functions ported (483 + 9)**
+
+### Chunk 50 — Ball Possession + Pass/Kick (7 functions → `src/ball_possession.c`)
+- Date: 2026-02-19
+- Files: `src/ball_possession.c`, `include/ball_possession.h`
+- Functions ported:
+  - `_DoPass` (exported) — passing the ball: finds target player via GetClosestNonControlledPlayerInDirection, sets ball destination and speed based on distance, handles AI failed pass chance (botched passes), applies passing skill speed bonus
+  - `_PlayerKickingBall` (exported) — kicking/shooting: sets ball dest from direction table, applies kicking deltaZ, checks shot-on-goal for finishing/shooting skill bonus, handles spin timer and kick sample
+  - `_CalculateIfPlayerWinsBall` (exported) — ball possession contest: resolves 50/50 challenges via tackling+ballcontrol skill comparison with random element, or updates ball position when player has control (speed, angle boost, direction change detection)
+  - `_UpdatePlayerSpeed` (exported) — sets player speed from skill tables, applies run-slower penalty (37.5%), injury handicap, ball possession drag (12.5%), pass-to-target speed adjustment, game state speed reductions, calculates frame delay
+  - `_UpdatePlayerShotChanceTable` (exported) — sets team's shot chance table based on goalkeeper skill index or outfield player default table
+  - `_GetBallDestCoordinatesTable` (exported) — returns pointer to appropriate ball destination delta table based on game state (throw-in/penalty/corner/default)
+  - `_GetClosestNonControlledPlayerInDirection` (exported) — finds closest teammate (not controlled, not sent away, PL_NORMAL) facing approximately given direction (within ±16/256)
+- Assembly stubs:
+  - DoPass, PlayerKickingBall, UpdatePlayerSpeed, UpdatePlayerShotChanceTable: save d2-d7/a2-a6, push a1/a6 to stack, jsr C function, restore, rts
+  - CalculateIfPlayerWinsBall: same pattern plus andi.l #$FFFF,d0 for zero-extending dir parameter
+  - GetBallDestCoordinatesTable, GetClosestNonControlledPlayerInDirection: dead `rts` (only callers were DoPass/PlayerKickingBall, now ported to C)
+- xdef additions: kBallSpeedPassingIncrease, kPassingSpeedCloserThan2500..kPassingSpeedFurtherThan122500, kFreePassReleasingBallSpeed, kPlayerSpeedsGameInProgress, kPlayerSpeedsGameStopped, kAIFailedPassChance, kBallSpeedDeltaWhenControlled, ballControlTurnThresholds, plAvgTacklingBallControlDiffChance, kBallSpeedKicking, kBallSpeedFinishing, kGoalieSkillTables, teamPlOfs24Table, penaltyGoalieSkillTable, kLeftThrowInBallDestDelta, kRightThrowInBallDestDelta, kPenaltyBallDestDelta, kUpperLeft/RightCornerBallDestDelta, kLowerLeft/RightCornerBallDestDelta, kInjuriesSpeedHandicap, kBallKickingDeltaZ, kBallKickingSpeed
+- Notes:
+  - CalculateIfPlayerWinsBall has a cross-team GetPlayerPointerFromShirtNumber call (first call: a1=opponent's player, a6=our team) — this is an original game bug, faithfully reproduced
+  - Angle boost in CalculateIfPlayerWinsBall applies for diff in [64,192] inclusive (signed byte comparisons: bge #64 / bgt #192)
+  - DoPass finalize: asm `move.w #1,$80(a6)` = TGI_PASSINPROGRESS (hex $80=128), not TGI_GOALKEEPERDIVINGRIGHT (decimal 80)
+- Build status: **verified** — clean build, no new warnings
+- Functions ported this chunk: 7
+- **Running total: 499 functions ported (492 + 7)**
+
+### Chunk 51 — Sprite Draw Pipeline (12 functions → `src/sprites.c`)
+- Date: 2026-02-19
+- Files: `src/sprites.c`, `include/sprites.h`
+- Functions ported:
+  - `_DrawSpriteClipped` (exported) — main clipped sprite blitter: clips to screen bounds, applies camera offset wrapping, programs Amiga blitter for 4-plane cookie-cut or straight copy, handles circular framebuffer Y-wrap with tail blit, manages blit queue entries (mask+fb+modulo+bltsize). Two code paths: normal (4 separate plane blits) and branch_linked_planes (single interleaved blit).
+  - `_DrawSprite_entry2` (exported) — wrapper: saves/restores spriteBlitQueue around DrawSpriteClipped call, appends queue terminator
+  - `_DrawSprite16Pixels` (exported) — resolves sprite by index from spriteGraphicsPtr table, calls DrawSprite_entry2
+  - `_DrawSpriteCentered` (exported) — like DrawSprite16Pixels but adjusts x,y by sprite center offsets before drawing
+  - `_DrawSpriteInCameraView` (exported) — camera-relative sprite draw with full bounds checking (cull if off-screen)
+  - `_DrawSpriteHotspotInCameraView` (exported) — like DrawSpriteInCameraView but adjusts by hotspot (center) first
+  - `_DarkenRectangle` (exported) — resolves sprite by index, calls DrawSpriteClipped (uses branch_linked_planes path for darken overlay)
+  - `_DrawQueuedSprites` (exported) — pops sprites from main render stack, dispatches to QueueMaskedSpriteBlitClipped (players), DrawSprite_entry2 (save-sprite flag set), or DrawSpriteClipped (normal). Calls SaveCoordinatesForHighlights for highlight recording.
+  - `_RenderSpriteBandsToCopperLists` (exported) — processes plane01 and plane23 render stacks, renders sprite band entries into copper list buffers via blitter A→D copy. Programs VPOS/HPOS/CTL words for hardware sprite positioning.
+  - `renderSpriteBandPlanePair` (static) — helper for RenderSpriteBandsToCopperLists: writes copper list sprite control words and blits sprite data into copper list plane pair buffers
+  - `_BuildSpriteBandAndGeneralRenderStacks` (exported) — iterates sorted sprites, culls off-screen, distributes visible sprites into plane01 band, plane23 band, or general render stack based on occlusion buckets and Y-band tracking. Updates sprite ONSCREEN and FIELD_56 flags.
+  - `_DrawSprites` (exported) — top-level: SortSprites → BuildSpriteBandAndGeneralRenderStacks → DrawQueuedSprites → RenderSpriteBandsToCopperLists
+- Assembly stubs:
+  - DrawSpriteClipped, DrawSprite_entry2, DrawSprite16Pixels, DrawSpriteCentered: save d2-d7/a2-a6, push register args to stack, jsr C function, restore, rts
+  - DrawSpriteInCameraView, DrawSpriteHotspotInCameraView, DarkenRectangle: same pattern with uint16_t spriteIndex + int16_t x,y
+  - DrawQueuedSprites, RenderSpriteBandsToCopperLists, BuildSpriteBandAndGeneralRenderStacks, DrawSprites: save d2-d7/a2-a6, jsr C, restore, rts
+  - RenderSpriteBandPlanePair: dead `rts` (only called from C now)
+  - blitter_begin: dead `rts` (CopySprite already ported to C)
+- New C-to-asm bridge:
+  - `_CQueueMaskedSpriteBlitClipped` in swos2_unit.s: takes (sprGfx, sprStruct, x, y) from stack, loads into a0/a4/d1/d2, calls asm QueueMaskedSpriteBlitClipped
+- Bridge optimizations:
+  - `_CDrawSprite16Pixels`, `_CDrawSpriteInCameraView`, `_CDrawSpriteHotspotInCameraView`, `_CDarkenRectangle`: simplified to `jmp _CFuncName` (direct C-to-C forwarding, no register shuffle needed)
+  - `_CDrawSprites`: updated to call `_DrawSprites` directly
+- Symbols exported: renderStackPtr, renderStackBase, plane01RenderStackPtr, plane01RenderStackBase, plane23RenderStackPtr, plane23RenderStackBase, bottomCornerLeftPositions
+- Dead code removed: blitter_begin body (~140 lines), DrawSpriteClipped body (~400 lines), BuildSpriteBandAndGeneralRenderStacks body + local data (~180 lines)
+- Build status: **verified** — clean build, no new errors
+
+### Chunk 52 — AI Helper Functions (4 functions → `src/ai.c`)
+- Date: 2026-02-19
+- Files: `src/ai.c`, `include/ai.h`
+- Functions ported:
+  - `_AI_SetDirectionTowardOpponentsGoal` — sets team's allowed direction toward opposing goal based on ball X position and which half the AI attacks. Three X zones (< 300, 300-371, > 371) map to 3 direction values.
+  - `_AI_Kick` — AI kick decision. Checks opponent's controlled player facing direction vs our player direction. Triggers kick (fire + direction flags) when angle difference exceeds ±32 (more than 1 direction step apart).
+  - `_AI_DecideWhetherToTriggerFire` — checks if AI player should shoot: validates facing toward opponent's goal (directions 3/4/5 for top team, 7/0/1 for bottom), ball proximity (≤648), ball height window ([8..14] ascending, [12..20] descending). Reverse-direction computation using byte-level +128 and >>5 conversion.
+  - `_FindClosestPlayerToBallFacing` — scans all 22 players (both teams) for closest to ball facing within ±16 of target full direction. Returns Sprite* (or -1) and stores ball distance in `findClosestBallDist` global for asm stub d2 return.
+- Not ported (left in asm):
+  - `AI_ResumeGameDelay` — only 3 instructions, returns carry flag which is impractical to bridge to C.
+- Assembly stubs:
+  - AI_SetDirectionTowardOpponentsGoal: push a6, jsr, pop, rts
+  - AI_Kick: push a6/a1, jsr, pop, rts
+  - AI_DecideWhetherToTriggerFire: save d2-d7/a2-a6, push d7/a6/a5, jsr, pop, restore, tst.w d0, rts (preserves zero flag for caller)
+  - FindClosestPlayerToBallFacing: push a6/d0, jsr, pop, movea.l d0,a0, load findClosestBallDist→d2, rts
+- New globals exported from asm: aiCounter, aiAttackHalf, aiCounterWriteOnly, deadVarAlways0, playerKickerPtr
+- New C global: findClosestBallDist (int32_t, used for multi-register return from FindClosestPlayerToBallFacing)
+- Build status: **verified** — clean build, no new errors
+- Functions ported this chunk: 12
+- **Running total: 511 functions ported (499 + 12)**
+
+### Chunk 53 — Ball Prediction + Player Actions (6 functions → `src/ball_physics.c`, `src/goalkeeper.c`, `src/tackle_foul.c`, `src/player_positioning.c`)
+- **Scope:** Ball trajectory prediction, aftertouch/spin system, goalkeeper diving, player tackling, and tactical positioning
+- **Exported (6):**
+  - `_UpdateBallVariables` (ball_physics.c) — Integrates ball trajectory to predict crossing of goalkeeper Y and X positions. Samples at fixed Y windows (135/129 top, 763/769 bottom) for defensive/strike/notHigh variants.
+  - `_CalculateBallNextGroundXYPositions` (ball_physics.c) — Predicts landing position by trying decreasing Z subtraction steps (20→13), integrating until Z goes negative.
+  - `_ApplyBallAfterTouch` (ball_physics.c) — Aftertouch/spin system with kick vs pass paths. Spin from direction delta, applies kKickSpinFactor/kPassingSpinFactor tables. High kick detection at spinTimer==4. Timer increments to 10 then resets to 0xFFFF.
+  - `_GoalkeeperJumping` (goalkeeper.c) — Sets dive speed (near/far/random), low/high dive animation based on ballNotHighZ, destination from kDefaultDestinations.
+  - `_PlayerBeginTackling` (tackle_foul.c) — Sets tackle state, animation, direction, speed. Dead code: fasterTackle check always overwritten with 0xFF.
+  - `_SetPlayerWithNoBallDestination` (player_positioning.c, NEW) — Looks up team tactics table, gets position from quadrant-based positioning (35 entries per player × ballQuadrantIndex). Goalkeeper uses proportional mapping.
+- Assembly stubs: All 6 functions replaced with register-to-stack bridge stubs in SWOS2.s
+- New xdef symbols (26): ballDefensiveY/Z, ballNotHighX/Y/Z, strikeDestY/Z, ballNextZDeadVar, kHighKickDeltaZ, kHighKickBallSpeed, kNormalKickDeltaZ, kNormalKickBallSpeed, kKickSpinFactor, kPassingSpinFactor, kSpinMultiplierFactor, kGoalkeeperNearJumpSpeed, kGoalkeeperFarJumpSpeed, kGoalkeeperFarJumpSlowerSpeed, 4 goalie animation tables, plTacklingAnimTable, kPlayerTacklingSpeed, playerXQuadrantsCoordinates, playerYQuadrantCoordinates
+- Bug fix: IDA address-as-constant in UpdateBall (frontbufferBaseAlt+$1CAA → literal 0x00010002)
+- Build status: **verified** — clean build, no new errors
+- Functions ported this chunk: 6
+- **Running total: 521 functions ported (515 + 6)**
+
+### Chunk 54 — AI Main Controller (1 function → `src/ai.c`)
+- **Scope:** AI_SetControlsDirection — the main AI controller (~827 lines of asm), drives all computer-team decision-making
+- **Exported (1):**
+  - `_AI_SetControlsDirection` (ai.c) — Main AI controller for computer-controlled teams. Handles all game states: result display fire simulation, keeper/goal/throw-in/foul/penalty direction, in-play ball chasing, fire decisions based on player proximity, aftertouch spin tables, corner spin randomization.
+- Assembly stub: Register-to-stack bridge (movem.l d2-d7/a2-a6, push a6, jsr, pop, movem.l restore)
+- New xdef symbols (11): aiTurnDirection, aiResumePlayTimer, aiRand, aiRandomRotateTable, aiLeftSpinTable, aiRotateRightTable, aiLongKickTable, aiThrowInDirections, AI_maxStoppageTime, team1Computer, team2Computer
+- Key implementation notes:
+  - AI_ResumeGameDelay carry flag inlined: `cmpi.w #13,passKickTimer` → `if (passKickTimer >= 13) return`
+  - Byte-level arithmetic: `addi.b #128,d0` → `dir = (uint8_t)((uint8_t)dir + 128)` (180° flip)
+  - Uninitialized a2 on foul path: C initializes opponentControlled to NULL with guard check
+  - Dead code after unconditional branches identified and omitted
+- Build status: **verified** — clean build, only pre-existing warnings
+- Functions ported this chunk: 1
+- **Running total: 522 functions ported (521 + 1)**
+
+### Chunk 55 — UpdatePlayers (1 function → `src/update_players.c`)
+- **Scope:** UpdatePlayers — the main per-frame player update loop (~2,690 lines of asm, ~2,700 lines of C)
+- **Exported (1):**
+  - `_UpdatePlayers` (update_players.c) — Per-frame update for all 11 players on a team. Dispatches by player state: goalkeeper AI/diving/catching, controlled player direction/fire/passing/kicking, throw-in mechanics, tackle state, heading (jump/static), injury/recovery, pass receiver following, idle player positioning, booking animations, substitution flow, post-match reactions.
+- Assembly stub: Register-to-stack bridge in SWOS2.s (movem.l d2-d7/a2-a6, push a6, jsr _UpdatePlayers, pop, restore)
+- _CUpdatePlayers bridge in swos2_unit.s retired — team_control.c now calls _UpdatePlayers directly
+- New xdef symbols (39): throwInPassAnimTable, throwInKickAnimTable, plGettingYellowCardAnimTable, plGettingRedCardAnimTable, plGetting2ndYellowCardAnimTable, playerLosingReactionAnimTable, playerWinningReactionAnimTable, kGoalkeeperSpeedWhenGameStopped, kGoalkeeperGameSpeed, kGoalkeeperBurstSpeed, kGoalkeeperMoveToBallSpeed, kGoalKeeperRecoveryStepBase, kGoalKeeperRecoveryStepAlt, kGoalKeeperRecoveryStepFar, kShotAtGoalMinumumSpeed, kPlayerGroundConstant, kPlayerAirConstant, kInjuryForeverSpeed, kSubstitutedPlayerSpeed, kDefaultDestinations, kBallFriction, ballInUpperPenaltyArea, ballInLowerPenaltyArea, ballSpeed, ballSpeedAfterSave, bottomBallOutOfPlayPositions, topBallOutOfPlayPositions, goalScoredChances, kKeeperEaseBallTable, disallowedTurnFlagsCounter, deadThrowInDirectionVar, throwInPassOrKick, turnDirCopiedFromCameraCount, cameraSnapToPlayerCount, playerRunningAnimTable, plInjuredAnimTable, goalkeeperSkipFlag, _UpdatePlayers (xref)
+- Compiled without LTO (CCFLAGS_NOLTO) — added update_players.o to Makefile filter
+- Key implementation notes:
+  - goto-based state machine with 3 common exit points (snap_dest, finalize, next_player)
+  - Local static data moved from asm inline labels: prevLastPlayer, prevLastTeamPlayed, freeKickFactorsX_data, freeKickDestX_local
+  - deadVarAlways0 and playerKickerPtr kept as asm data labels (referenced from ai.c)
+  - Removed incorrect local #define constants — uses game_types.h authoritative values
+  - Cross-struct offset translations from IDA misannotations identified in previous session
+- Build status: **verified** — clean build, only pre-existing warnings
+- Functions ported this chunk: 1
+- **Running total: 523 functions ported (522 + 1)**
+
+### Chunk 56 — Scroll Blitter System (2 functions → `src/scroll_blit.c`)
+- Date: 2026-02-20
+- **Scope:** Scroll blitter system — updates frontbuffer when camera scrolls by blitting pitch tile columns (X) and rows (Y)
+- **Exported (2):**
+  - `_ScrollXUpdateColumnsAndBlit` (scroll_blit.c) — Compares cameraX vs oldCameraX; if tile boundary crossed, blits column of pitch tiles into frontbuffer (partial first tile, full tiles to SCREEN_HEIGHT, wraps to top, full tiles to cameraYMod320, partial last tile), then copies column from frontbuffer to mask buffer, ends with 1-word dummy blit
+  - `_ScrollYUpdateRowsAndBlit` (scroll_blit.c) — Compares cameraY vs oldCameraY; CPU-based row copy from pitch tile pointers into 4-plane interleaved frontbuffer with Y-wrap handling, then blitter-based mask copy in batches (max 0x400 rows per batch), with two-stream mask blit when Y-wrap occurs
+- New files: `include/scroll_blit.h`, `src/scroll_blit.c`
+- Assembly stubs in SWOS2.s:
+  - `ScrollXUpdateColumnsAndBlit: jmp _ScrollXUpdateColumnsAndBlit`
+  - `ScrollYUpdateRowsAndBlit: jmp _ScrollYUpdateRowsAndBlit`
+  - Inline data labels removed (blitWordCount, maskBlitDestPtr, maskBlitPendingBytesA, maskBlitSecondStreamPtr, maskBlitPendingBytesB) — now static C variables
+- Bridges removed from swos2_unit.s:
+  - `_CScrollXUpdateColumnsAndBlit` (6 lines: movem save/restore + jsr)
+  - `_CScrollYUpdateRowsAndBlit` (6 lines: movem save/restore + jsr)
+- Caller updated: camera.c — `_CScrollXUpdateColumnsAndBlit()` → `_ScrollXUpdateColumnsAndBlit()`, added `#include "scroll_blit.h"`
+- xref additions in swos2_unit.s: `_ScrollXUpdateColumnsAndBlit`, `_ScrollYUpdateRowsAndBlit`
+- ~365 lines of asm code removed (lines 5504-5884)
+- Build status: **verified** — clean build, only pre-existing warnings
+- Functions ported this chunk: 2
+- **Running total: 525 functions ported (523 + 2)**
+
+### Chunk 57 — Player Status & Career Team Utilities (16 functions → `src/career_status.c`)
+- Date: 2026-02-20
+- **Scope:** Player injury/card/status-bucket decay, team initialization for match, availability counting
+- **Exported (12):**
+  - `_InitInGameTeams_PlayerControlled` — Decays status buckets and cycles injury/card flags for both teams
+  - `_InitInGameTeams_WithMatchParam` — Same but loads mode from diyCompetitionStart+60 (also handles Alt variant)
+  - `_BuildCareerTeamUnavailablePlayerList` — Builds list (max 4) of injured career team players
+  - `_ClearCareerMatchPlayerStatusBucket` — Clears status bucket bits (5-7) for all career players
+  - `_ShouldApplyRandomPlayerStatusAfterSim` — Career/national tournament check for random status
+  - `_IsPlayerInjured` — Check injury/card/bucket bits with mode (-1/0/1)
+  - `_GetNumberOfSubstitutes` — Count goalkeeper-position players
+  - `_GetNumberOfSubstitutesInSelectionList` — Count goalkeepers in selection list (indices 11+)
+  - `_GetNumberOfAvailablePlayers` — Count available players, returns packed (disabled<<16)|available
+  - `_GetNumberOfAvailableSubstitutes` — Count available goalkeepers, same packed return
+  - `_GetNumberOfAvailableStartingPlayers` — Count available non-goalkeepers, same packed return
+  - `_GetAgeAdjustedPlayerFormFactor` — Age/form calculation with divisor table lookup
+- **Static helpers (3):** maybeDecayPlayerStatusBucket, maybeDecayPlayerStatusBucketForTeam, cyclePlayerStatusFlagsForTeam
+- **Dead-code stubs (3):** CyclePlayerStatusFlagsForTeam, MaybeDecayPlayerStatusBucketForTeam, MaybeDecayPlayerStatusBucket → `rts` (only called from now-C InitInGameTeams_*)
+- **Dead unlabeled variants removed (3):** btst #1,$66(a6) variants after GetNumberOfAvailableStartingPlayers
+- New files: `include/career_status.h`, `src/career_status.c`
+- New structs in game_types.h: `PlayerFile` (38 bytes), `TeamFileEx` (684 bytes)
+- Assembly stubs: register-to-stack bridges for all 12 exported functions + rts for 3 dead-code
+- xdef additions: careerTeam, currentMatchPlayers, careerNumPlayers, currentTeam, playerPositions, numPlayers, isNationalSelector, careerUnavailablePlayerList, careerUnavailablePlayerLookupTable, playerFormModifiers, diyCompetitionStart, IsMajorTournamentAllowingRandomStatus
+- xref additions: all 12 C function symbols
+- ~400+ lines of asm code removed
+- Build status: **verified** — clean build, only pre-existing warnings
+- Functions ported this chunk: 16 (12 exported + 3 static + 1 shared alias)
+- **Running total: 541 functions ported (525 + 16)**
+
+### Chunk 58 — Match Simulation System (10 functions → `src/match_sim.c`)
+- Date: 2026-02-20
+- **Scope:** "View result" match simulation — calculates simulated goals, assigns to scorers, applies player status changes
+- **Exported (6):**
+  - `_CalculateViewResult` — Main entry: computes simulated match result using skill indices, strength diff, tactic-based probability tables
+  - `_CalcTeamViewOffset` — Computes X/Y offset bias from team's global number, season, random phase; returns packed uint32_t
+  - `_ComputeOldPlayerSkillForViewResult` — Calculates weighted average skill for team, accounting for goalkeeper; writes to oldPlayerSkill
+  - `_InitPlayerRemapTableForTeam` — Assigns random status buckets to players based on availability
+  - `_ExtraTimeSecondPhaseScoring` — Second Y-offset scoring phase for extra time (separate entry from GetCachedOrCalculateExtraTimeResult)
+  - `_PenaltyShootoutScorerPair` — Picks scorer pair for penalty shootout (separate entry from GetCachedOrCalculatePenaltyShootoutResult)
+- **Static helpers (4):** ScaleViewIndexByTeamPriceRank, AssignSimulatedGoalsToScorers, ApplyRandomPlayerStatusAfterSim, BuildAvailablePlayersRemapAndMask
+- **Dead-code stubs (2):** BuildAvailablePlayersRemapAndMask → `rts`, ScaleViewIndexByTeamPriceRank → `rts` (only called from CalculateViewResult)
+- **Code-as-data preservation:** Dead code at loc_122D6A kept — bytes read as goalkeeper (role 0) row by GetPlayerPrice
+- **C-callable asm bridges (3):** `_CCalcTeamPriceRankPercentOffset`, `_CUpdatePlayerPositionAndReturnRole`, `_CCareer_ApplyPostMatchPlayerStatModsIfCareerTeam`
+- New files: `include/match_sim.h`, `src/match_sim.c`
+- xdef additions: inEditTactics, team1/2GoalCounterByPlayer, oldPlayerSkill, playerPositionsArray, viewRandomPhase, simGoalsByStrengthDiffTable, simHighGoalFallbackValues, simGoalProbByTacticPtrs, simExtraGoalProbByTacticPtrs, simGoalsByIndexDiffTable, simExtraGoalThresholdsA/B, simGoalScorerPairTable, goalScorerDistributionByBallOutTactic, kUserTeamOffsetBiasLUT, kTeamViewOffsetBaseLUT, availablePickCountByGoalsInTable, preferredTacticsSlotsByRole, candidatePlayersByGoalsInTable, playerStatusBucketThresholds, + 3 bridge xdefs
+- xref additions: 6 C function symbols
+- Bug fixed: ComputeOldPlayerSkillForViewResult goalkeeper lookup used `team + (-0x20)` (asm adjacency hack) — fixed to `currentMatchPlayers`
+- ~550 lines of asm code removed/replaced
+- Build status: **verified** — clean build, only pre-existing warnings
+- Functions ported this chunk: 10 (6 exported + 4 static)
+- **Running total: 551 functions ported (541 + 10)**
+
+### Chunk 59 — Career Finance, Chairman Warnings, Board Confidence & Reputation (27 functions → `src/career_status.c`)
+- Date: 2026-02-20
+- **Scope:** Post-match financial calculations, chairman warning state machine, board confidence scoring, career reputation bonuses, season financial initialization
+- **Exported (18):**
+  - `_ClampNewBalanceAndUpdateClubStatus` — Clamp balance to 100M, set clubBusinessActive, manage overdraftStreak
+  - `_ClearOverdraftStateIfRecovered` — Clear warning if balance positive
+  - `_IsMajorInternationalTournament` — Check current/secondary comp against 9 tournament symbols each, returns d0 + out-param context pointer
+  - `_IsMajorTournamentAllowingRandomStatus` — Wraps above, checks offset 0x44
+  - `_IsMajorTournamentAllowingSquadChanges` — Wraps above, checks offset 0x46
+  - `_IsTournamentAllowingSquadChangesIfNotCareer` — Career guard for above
+  - `_ShouldSetupPlayers` — Career+national+squad check
+  - `_UpdateCareerFinancesAfterMatch` — Dispatches by competition type, calculates gate receipts
+  - `_MaybeSackManagerAfterSeasonReview` — Random sacking based on seasonReview level
+  - `_UpdateCareerChairmanWarningsAfterMatch` — Performance/overdraft warning state machines
+  - `_UpdateCareerAfterMatch` — Orchestrator calling multiple sub-functions
+  - `_ApplyWeeklyFinancialDeductions` — Weekly wages/running costs deduction
+  - `_InitializeCareerSeasonFinancials` — Season init: team value, running costs, clear accumulators
+  - `_GetBoardConfidenceScore` — Sum of delta + 3 history slots + base score
+  - `_UpdateBoardConfidenceScore` — Add trophy/cup bonuses, clamp to 200
+  - `_PushBoardConfidenceHistory` — Shift history slots, calc new delta
+  - `_UpdateBoardConfidenceModifiers` — Check qualifying flags, tournament winners, set trophy bonus flags
+  - `_UpdateCareerReputationBonuses` — National reputation delta, club reputation from league rank + trophies
+  - `_InitializeStartingBalanceForNewSeason` — Starting balance from team value + trophy bonuses
+- **Static helpers (8):** setOverdraftWarningCooldown, setPerformanceWarningCooldown, calcLeagueMatchGateReceiptsFactor, calcCupMatchGateReceiptsFactor, calcBoardConfidenceDeltaPercent, addReputationFromBonusValueDiv4, addReputationFromBonusValueDiv8, getExpectedLeagueRankIndex
+- **Data tables moved to C static const (4):** leagueMatchReceiptsMultiplierTable, cupMatchReceiptsMultiplierTable, seasonReviewConfidenceDeltaTable, nationalSelectorSeasonReviewReputationDeltaTable
+- **Dead-code stubs (8):** SetOverdraftWarningCooldown, SetPerformanceWarningCooldown → `rts`; IsMajorInternationalTournament → `rts`; CalcBoardConfidenceDeltaPercent → `rts`; AddReputationFromBonusValueDiv4/Div8 → `rts`; GetExpectedLeagueRankIndex → `rts`
+- **Condition-flag stubs (4):** ShouldSetupPlayers, IsMajorTournamentAllowingRandomStatus, IsMajorTournamentAllowingSquadChanges, IsTournamentAllowingSquadChangesIfNotCareer → `jsr _C; tst.w d0; rts`
+- **C-callable asm bridges (9):** `_CVerifyTeamLoaded`, `_CGetTeamValueForGateReceipts`, `_CGetTeamValueBase`, `_CFindTeamInDIY`, `_CGetMoreExpensiveTeamsCount`, `_CShowChairmanMessage`, `_CAddCareerTeamPlayer`, `_CCheckPlayersLeavingComing`, `_CTeamSelectionKeyCache_GetCurrentListPtr`
+- IDA bug fix: L28446 `lea ($2DAD0).l,a0` → should reference `diyFileBufferCopy` (fixed in C port)
+- Updated `_ShouldApplyRandomPlayerStatusAfterSim` to call C `_IsMajorTournamentAllowingRandomStatus` directly
+- Fixed `PanicHaltLoop` → `_PanicHaltLoop` (correct underscore convention)
+- ~100 xdef entries added for globals, ~18 xref entries for C functions
+- ~750 lines of asm code removed/replaced
+- Build status: **verified** — clean build, only pre-existing warnings
+- Functions ported this chunk: 27 (18 exported + 8 static + 1 already-ported updated)
+- **Running total: 578 functions ported (551 + 27)**
+
+### Chunk 60 — DIY Competition Core, Player Pricing & Tournament Progression (16 functions → `src/diy_competition.c`)
+- Date: 2026-02-20
+- **Scope:** DIY competition/tournament management, player pricing utilities, team shuffling, league table sorting, bracket progression
+- **Exported (16):**
+  - `_GetAveragePlayerPrice` — Average price of 16 players in TeamFileEx, returns uint16_t
+  - `_GetLowestAndHighestPlayerPrice` — Min/max price in career team via currentMatchPlayers remap, returns packed (lowest<<16)|highest
+  - `_CountNearnessFactor` — Multiply price by nearness ratio using quadrant distance tables (6 register params)
+  - `_DIY_ShuffleTeams` — Fisher-Yates shuffle of team indices in competition slot
+  - `_DIY_SortAndShuffleTeamsByValue` — Bubble sort by descending avg player price, then shuffle within groups
+  - `_DIY_ShuffleLeagueTeamOrder` — Shuffle with synchronized indices and team offsets
+  - `_InitDIYTournament` — Initialize tournament data from 20-entry init table (6 slots × 0x76 stride)
+  - `_DIY_InitCompetitionDefaults` — Initialize league defaults, clear 64 league table stat entries, init shuffle indices
+  - `_DIY_ResetCompetitionProgressAndShuffle` — Reseed random, reset progress, clear stats, shuffle league order
+  - `_DIYTournament_RecalculateMatchesPerTeam` — Recalculate match counts per slot (cup formula vs league default), rebuild progression
+  - `_DIY_CacheSelectedTeamPointers` — Build pointer cache: store teamPtr offsets relative to &selTeamsPtr
+  - `_DIY_CountUnselectedTeams` — Count teams without bit 1 set, stores in comp+0x32E, returns count + Z flag
+  - `_DIY_SortLeagueTableByStandings` — Multi-criteria bubble sort: points > goal diff > goals scored > alphabetical
+  - `_DIY_ComputeAverageTeamStrengthTier` — Sum skill bytes across teams, compute avg and tier (clamped 0-7), returns packed (avg<<16)|tier
+  - `_DIY_InitCupBracketProgressionTable` — Build bracket progression table with month interpolation
+  - `_DIYTournament_BuildMatchesPerTeamProgressionTable` — Build per-slot matches progression with month interpolation
+- **Static helpers (2):** clearLeagueTableStats (clear 7 stat words for 64 entries × 0x12 stride), initTeamShuffleAndOffsets (init 64 indices + 0x12 offsets)
+- **Static data (1):** diyTournamentInitTable (20 uint16_t entries — team counts, cup flags, groups, teams-per-group for 6 slots)
+- **Assembly stubs in SWOS2.s:**
+  - Simple `jmp`: DIY_ShuffleLeagueTeamOrder, InitDIYTournament, DIY_InitCompetitionDefaults, DIY_ResetCompetitionProgressAndShuffle, DIYTournament_RecalculateMatchesPerTeam, DIY_CacheSelectedTeamPointers, DIY_SortLeagueTableByStandings, DIY_InitCupBracketProgressionTable, DIYTournament_BuildMatchesPerTeamProgressionTable
+  - Register bridges: GetAveragePlayerPrice (a0→stack, d0 return), GetLowestAndHighestPlayerPrice (unpack d0→d4/d5), CountNearnessFactor (d3,d6,d7,a2,a3,a4→stack, d0→d7), DIY_ShuffleTeams/DIY_SortAndShuffleTeamsByValue (a2,a3→stack), DIY_ComputeAverageTeamStrengthTier (d0,a0→stack, unpack d0→d0/d1)
+  - Z-flag stub: DIY_CountUnselectedTeams (tst.w d0 after restore)
+- **New xdef entries (8):** selTeamsPtr, selTeamNameBase, diyTeamShuffleIndices, diyTeamEntryOffsetsByIndex, diyTournamentTeamIds, quadrantDistanceFactor, aDiyTournament, aDiyLeague
+- **New xref entries (16):** All 16 ported C functions
+- **Bug fix:** DIY_CacheSelectedTeamPointers stores offsets relative to &selTeamsPtr (asm: `suba.l #selTeamsPtr,a0`), read back via selTeamNameBase in SortLeagueTableByStandings (the 5-byte difference is the team name offset)
+- **Type fix:** viewRandomPhase declared as uint8_t (was incorrectly uint16_t; asm is `ds.b $1`)
+- **New files:** `include/diy_competition.h`, `src/diy_competition.c`
+- ~800 lines of asm code removed/replaced
+- Build status: **verified** — clean build, no new warnings
+- Functions ported this chunk: 18 (16 exported + 2 static)
+- **Running total: 596 functions ported (578 + 18)**
+
+### Future Chunk Candidates
+- Sprite rendering pipeline: `DrawSprite_entry2`, `DrawSpriteClipped`, etc. (complex, ~13 functions)
+- Menu/career subsystems (~65,000+ lines)
+
+---
+
+## TODO Index (actionable backlog)
+
+### Immediate
+- [x] Chunks 0-32: All completed (see above)
+- [x] Port audio IRQ handlers (Chunk 32)
+- [x] Port scroll blitter system (ScrollXUpdateColumnsAndBlit, ScrollYUpdateRowsAndBlit) — Chunk 56
+- [x] Port player status & career team utilities — Chunk 57
+- [x] Port match simulation system — Chunk 58
+- [ ] Port DrawSprite16Pixels / DrawSpriteCentered / DrawSprite_entry2
+- [ ] Port menu callbacks and game flow handlers
+
+### Ongoing
+- [ ] Keep `SWOS2.s` shrinking as code migrates
+- [ ] Maintain buildability via stubs
+- [ ] Move shared helpers (bit operations, fixed-point, endian) into `math68k.c`
+
+### Chunk 61 — Career Init, Cup Round Strings & DIY League Scratch (10 functions)
+- Date: 2026-02-20
+- Files: `src/teams.c` (1 func), `src/diy_competition.c` (6 funcs), `src/career_init.c` (3 funcs, new file)
+- Headers: `include/teams.h`, `include/diy_competition.h`, `include/career_init.h` (new)
+- Functions ported:
+  1. `_CheckIsTeamNational` — sets isNationalTeam flag based on continent byte (teams.c)
+  2. `_GetNextCupRoundStringIndex` — cup round name index for next round (d0,d1,d2→d0)
+  3. `_GetNextCupRoundString` — cup round name string for next round (d0,d1,d2→a0)
+  4. `_GetCupRoundStringIndex` — complex cup round index with flag/stage/opt (d0-d4→d0)
+  5. `_GetCupRoundString` — cup round name string with full params (d0-d4→a0)
+  6. `_DIY_LoadLeagueScratchFromTable` — copies 2000 bytes from state table to scratch
+  7. `_DIY_SaveLeagueScratchToTable` — copies 2000 bytes from scratch to state table
+  8. `_Career_InitTransferMarketState` — clears transfer counters, 3x rand offsets (career_init.c)
+  9. `_Career_InitSeasonTransferMarketState` — season quota/limits/backlog init
+  10. `_Career_RandomizeInvitationTournamentCup` — 50% chance swap invitation→tour
+- Stubs: 1 simple jmp (CheckIsTeamNational), 4 register bridges (cup round string funcs with d0-d4→stack, a0 return via d0), 5 simple jmp (DIY load/save, career init funcs)
+- ASM lines removed: ~165 lines
+- xref entries: 10 new, xdef entries: 23 new
+- No new warnings (all pre-existing)
+
+### Chunk 62 — DIY Buffer Copy Functions (12 functions + 1 static helper → `src/diy_competition.c`)
+- Date: 2026-02-20
+- Functions: SaveDIYTournament, RestoreDIYTournament, DIY_CopyCompetitionFileBufferToDiyFileBufferCopy, DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer, DIY_CopyCompetitionFileBufferToCompetitionStart, DIY_CopyCompetitionStartToCompetitionFileBuffer, DIY_CopyCompetitionFileBufferToCompetitionStart_Alt, DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt, SaveDIYLeague, RestoreDIYLeague, DIY_SaveCompetitionFileBufferToDIYCompetition, DIY_RestoreCompetitionFileBufferFromDIYCompetition
+- Static helper: `copyWords()` — volatile uint16_t* word copy to prevent memcpy optimization
+- All 12 simple jmp stubs, ~120 lines asm removed, 12 xref entries
+- No new warnings
+
+### Chunk 63 — DIY Cup Init & Helpers (5 functions + 1 asm alias → `src/diy_competition.c`)
+- Date: 2026-02-20
+- Functions: InitDIYCup, DIY_ShuffleTeamOrderList, DIY_ShuffleTeamGridPairs, DIY_SyncProgressToDiyFileBufferCopy, DIY_ValidateLeagueScratchBuffer
+- DIY_SyncProgressToDiyFileBufferCopy_2 is identical duplicate → both stubs jmp to same C function
+- ValidateLeagueScratchBuffer: bridge stub preserves scratch registers (d0-d1/a0-a1) matching original all-reg save
+- 5 jmp stubs + 1 bridge stub, ~120 lines asm removed, 5 xref + 1 xdef (aDiyCup) entries
+- No new warnings
+
+### Chunk 64 — DIY Cup Bracket & Team Grid (5 functions + 1 static helper → `src/diy_competition.c`)
+- Date: 2026-02-20
+- Functions: DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs, DIY_ReorderTeamGridByOrderList, DIY_RecountMissingTeamsInTeamGrid, DIY_BuildTeamSelectionPointerCache, DIY_InitCupBracketState
+- Static helper: `decrementMissingIfNotLoaded()` — replaces DIY_DecrementMissingTeamCountIfNotLoaded (dead asm, stubbed as rts)
+- Temp buffers diyTeamGridRemapTemp/diyTeamGridPairSwapTemp replaced with stack arrays
+- volatile pointers used to prevent GCC memcpy/memset optimization (no libc)
+- 5 jmp stubs + 1 dead rts stub, ~200 lines asm removed, 5 xref + 1 xdef (diyCupTeamIds)
+- No new warnings
+
+### Chunk 65 — European Cup Qualification & Grid Caching (7 exported + 12 static → `src/career_eurocups.c`)
+- Date: 2026-02-20
+- New files: `include/career_eurocups.h`, `src/career_eurocups.c`
+- **Exported (7):**
+  1. `_Career_ProcessCompetitionForEuropeanCupQualification` — entry point: checks country is European, qualifies teams for Euro Cup/CWC/UEFA
+  2. `_DIY_CachePrimaryQualifiedTeamsGrid` — caches 9 league-top teams from competition file to grid
+  3. `_DIY_CacheSecondaryQualifiedTeamsGrid` — caches 3 cup-qualified teams from grid bytes
+  4. `_DIY_CacheTertiaryQualifiedTeamGrid` — caches 1 tertiary team from grid byte
+  5. `_Career_CopyEuroCupTeamGridAndTitleHolder` — copies Euro Cup title holder grid
+  6. `_Career_CopyCupWinnersCupTeamGridAndTitleHolder` — copies CWC title holder grid
+  7. `_Career_CopyUefaCupTeamGridAndTitleHolder` — copies UEFA Cup title holder grid
+- **Static (12):** isTeamInList (loc_12B1F4), appendTeamToList (loc_12B20A), tryConsumeCompetitionIdFromList, isTeamInCupWinnersCupList, isTeamInUefaCupList, clearEuropeanCupTitleHolderIfMatchTeam, appendTeamToEuroCupList, appendTeamToCupWinnersCupList, appendTeamToUefaCupList, qualifyTeamForEuroCup, qualifyTeamForCupWinnersCup, qualifyTeamsForUefaCup
+- **C-only helpers (2):** copyTeamGridWords (volatile word copy), copyTitleHolderGrid (shared title holder copy)
+- New C-to-asm bridge: `_CCareer_AppendTeamToTmdTeamPool`
+- 7 jmp stubs + 10 dead rts stubs, ~300 lines asm removed
+- 7 xref + 26 xdef entries
+- Boundary spill: UEFA qualification walks through contiguous BSS buffers
+- No new warnings
+
+### Chunk 66 — Team Cache, Save/Restore & Fixture Helpers (9 exported + 2 static → `src/career_teams.c` + `src/diy_competition.c`)
+- Date: 2026-02-20
+- New files: `include/career_teams.h`, `src/career_teams.c`
+- **career_teams.c — Exported (4):**
+  1. `_VerifyTeamLoaded` — searches team cache (currentTeam, careerTeam, selTeamsPtr) and panics if not found
+  2. `_CopySelectedTeamNumbers` — copies first word (team number) from each selected team record
+  3. `_SaveSelectedTeams` — saves 0x5582 bytes from numSelectedTeams to static backup buffer
+  4. `_RestoreSelectedTeams` — restores saved teams from backup buffer
+- **career_teams.c — Static (1):** findTeamInCache — searches currentTeam, careerTeam (with careerAutoAdvanceInProgress check), selTeamNumber, selTeamsPtr array
+- **diy_competition.c — Exported (5):**
+  1. `_DIY_RecomputeCompetitionDerivedFields` — computes groups, fixture counts, random phase, progression table, strength tier
+  2. `_DIY_GetCurrentFixtureTeamPtrs` — determines team competition record pointers for current fixture
+  3. `_DIY_AdvanceLeagueProgressAfterMatch` — updates match counters, fixture/round progression, random phase
+  4. `_DIY_GetCurrentFixtureTeamClass` — determines match class from team classes
+  5. (wrapper for getCurrentFixtureTeamPtrs via globals for asm bridge)
+- **diy_competition.c — Static (1):** getCurrentFixtureTeamPtrs — core fixture team pointer lookup logic
+- Replaced old `_CVerifyTeamLoaded` C-to-asm bridge with direct `_VerifyTeamLoaded` in career_eurocups.c, career_status.c, diy_competition.c
+- New C-to-asm bridge: `_CDIY_RecomputeCompetitionDerivedProgressionTable`
+- Global bridge vars: `fixtureTeam1CompPtr`, `fixtureTeam2CompPtr` (C-defined, asm-read)
+- 9 asm stubs (jmp/register bridges), ~200 lines asm removed
+- LTO fix: globals accessed from asm need `__attribute__((used))`
+- No new warnings beyond pre-existing
+
+### Chunk 67 — Competition Grid & Team List Utilities (7 exported + 1 career_season.c → `src/diy_competition.c` + `src/career_season.c`)
+- Date: 2026-02-20
+- New files: `include/career_season.h`, `src/career_season.c`
+- **career_season.c — Exported (1):**
+  1. `_Career_FillRandomTeamListExcludingSelected` — Fisher-Yates shuffle with selected team exclusion/injection
+- **diy_competition.c — Exported (6):**
+  1. `_DIY_BuildQualifiedTeamListFromSortedTable` — merged EC/WC variants, builds qualified team list from sorted league table
+  2. `_DIY_BuildQualifiedTeamListFromDiyFileBuffer` — builds from file buffer via byte indices
+  3. `_DIY_SyncCompetitionTeamGridOrBuildBracket` — dispatches to seeded bracket build or grid copy
+  4. `_DIY_CopyCompetitionTeamIndexTable` — copies team index words from competition data
+  5. `_DIY_ApplyPromotionRelegationWeightsToScratch` — applies weights to league scratch buffer, sets promo/relegation flags
+  6. `_DIY_UpdatePromotionRelegationScratchCounts` — updates scratch counts for promoted/relegated teams
+- New C-to-asm bridges: `_CDIY_BuildSeededBracketAndUpdateScores`, `_CDIY_CopyTeamGridFromCompToDIY` (4 pointer params each)
+- 8 asm stubs (jmp/register bridges), ~150 lines asm removed
+- New xdefs: playRelegatedAnimation, diyQualifiedTeamIndices
+- LTO fix: globals accessed from asm need `__attribute__((used))`
+- No new warnings beyond pre-existing
+
+### Chunk 68 — Career European Cup Qualification State (1 exported → `src/career_season.c`)
+- Date: 2026-02-20
+- **Exported (1):**
+  1. `_Career_PrepareEuropeanCupQualificationState` — sets up Euro Cup, CWC, and UEFA Cup team lists for qualification draws; temporarily overrides selTeamNumber from teamNoOfferAccepted; UEFA Cup has special seed bucket count loop
+- Bug fix: `_Career_FillRandomTeamListExcludingSelected` used `(uint8_t)selTeamNumber` (LSB) instead of `(uint8_t)(selTeamNumber >> 8)` (MSB = country/league index). selTeamNumber encoding is `(country << 8) | teamWithinCountry`, and 68k `move.b (selTeamNumber)` reads the MSB on big-endian. Fixed to `>> 8`.
+- 1 asm stub (jmp, no bridge needed — void function), ~80 lines asm removed
+- New xdefs: euroCupCopy, cupWinnersCupCopy, uefaCupCopy, teamNoOfferAccepted, euroCupQualGroupSeedLists_4_6_11, euroCupQualGroupSeedListsReduced_4_6_11, euroCupQualGroupSeedBuckets_15_18_22
+- Cumulative: 669 functions across 68 chunks
+
+### Chunk 69 — Team Value Utilities (4 exported → `src/teams.c`)
+- Date: 2026-02-20
+- **Exported (4):**
+  1. `_GetTeamValueBase` — table lookup: avgPrice byte → avgTeamValues[idx] → avgTeamValueBases[val]; mirrors ext.w + byte table + word table asm pattern
+  2. `_CalcGateReceiptsBaseFromTeamValue` — calls GetTeamValueBase then: base * 1000 / 768 * 1536; returns d0.w (uint16_t truncation of mulu.w result)
+  3. `_IsTeamNational` — returns 1 if not career mode, or if team's continent byte is in [80,85]; returns 0 otherwise
+  4. `_GetAveragePlayerPriceInSelectedTeams` — loops over selTeamsPtr buffer at 684-byte intervals, calls _GetAveragePlayerPrice, divides total by numSelectedTeams
+- 4 register bridge stubs (d0→stack, a1→stack patterns); ~35 lines asm replaced
+- New xdefs: avgTeamValues, avgTeamValueBases
+- Eliminates 2 C-to-asm bridge round-trips (_CGetTeamValueBase and CalcGateReceiptsBaseFromTeamValue calls from bridges now go through stubs directly)
+- Cumulative: 673 functions across 69 chunks
+
+### Chunk 70 — Player Display Value Utilities (2 exported → `src/teams.c`)
+- Date: 2026-02-20
+- **Exported (2):**
+  1. `_GetPlayerRandomNum` — deterministic player random: XORs price, position/face (masked 0xFB), two name bytes, season number, and random seed, then looks up kRandomTable[result]
+  2. `_GetDisplayedPlayerValue` — returns displayed player value (1-80). Two paths: "normal" (currentTeam/careerTeam buffers) uses GetAgeAdjustedPlayerFormFactor + avgTeamValues; "random" (other pointers) computes via avgTeamValues only (asm dead code: random delta computed but discarded by move.w d2,d0 overwrite)
+- Player data accessed via byte offsets from team entry pointer (TEAMFILE_PLAYERS=76 + PLAYERFILE_xxx offsets). GetPlayer returns base + playerIndex*38, so offsets are relative to that adjusted pointer.
+- 2 register bridge stubs (a0→stack pattern), ~65 lines asm removed
+- New xdef: displayedPlayerValueRandomDeltaTable
+- Cumulative: 675 functions across 70 chunks
+
+### Chunk 71 — Player Value Snap/Display Utilities (3 exported → `src/teams.c`)
+- Date: 2026-02-21
+- **Exported (3):**
+  1. `_InitPlayerValueDisplayStruct` — computes displayed player value, maps to sprite frame index ((val-1)/8 + 0x71), writes 4 words at dst+0x22..0x28
+  2. `_SnapToNearestAvgTeamValueBase` — scans avgTeamValueBases for nearest entry to value, rounds UP at exact midpoint (lsr.w #1 truncation)
+  3. `_SnapUpToAvgTeamValueBase` — scans avgTeamValueBases for first entry >= value
+- 3 register bridge stubs, ~30 lines asm removed
+- Cumulative: 678 functions across 71 chunks
+
+### Chunk 72 — Transfer Pool & Career Market Management (11 exported → `src/transfer_market.c`)
+- Date: 2026-02-21
+- **New module:** `transfer_market.c` / `transfer_market.h`
+- **Exported (11):**
+  1. `_GetRemainingTransferPoolSlots` — returns transferPoolSlotLimit - transferPoolSlotsUsed
+  2. `_GetRemainingOfferSwapSlots` — returns offerSwapSlotLimit - offerSwapSlotsUsed
+  3. `_RemoveTransferOfferAtIndex` — shifts transfer offer array left, decrements numOffers
+  4. `_PrunePlayerOffersAgainstRosterLimits` — two-phase pruning: (1) remove offers exceeding slot limits, (2) remove buy-only offers when roster full (>=32)
+  5. `_IsPlayerInCareerContest` — searches homeMarketPlayers for (team,player) pair, returns index or -1
+  6. `_AddPlayerToCareerContest` — appends to homeMarketPlayers (max 25), returns 0=full/1=added
+  7. `_RemovePlayerFromCareerContest` — finds and removes from homeMarketPlayers with shift-left
+  8. `_FindForeignMarketPlayer` — searches foreignMarketPlayers, returns index or -1
+  9. `_AddForeignMarketPlayer` — appends to foreignMarketPlayers (max 15), returns 0=full/1=added
+  10. `_RemoveForeignMarketPlayer` — finds and removes from foreignMarketPlayers with shift-left
+  11. `_FindPlayerInCareerOrForeignMarket` — searches both markets, returns 0=found/1=not found
+- 11 register bridge stubs. Slot getters return in d2 (not d0). Search functions return Z flag for asm callers.
+- Used `volatile uint32_t *` for entry shift loops to prevent GCC memmove optimization (no libc).
+- New xdefs: transferOfferTable, numHomeMarketPlayers, homeMarketPlayers, numForeignMarketPlayers, foreignMarketPlayers
+- ~200 lines asm removed
+- Cumulative: 689 functions across 72 chunks
+
+### Chunk 73 — Transfer Market Operations (10 exported → `src/transfer_market.c`)
+- Date: 2026-02-21
+- **Exported (10):**
+  1. `_RemovePlayerFromTransferOffers` — removes all transfer offers involving a player (primary/secondary/counter)
+  2. `_FillForeignMarketPlayersData` — copies career foreign market player data into pool database entries
+  3. `_LoadPoolplyrDat` — loads "data/poolplyr.dat" file (cached), then fills foreign market data
+  4. `_FindPoolplyrDatPlayer` — linear search through pool player database (no bounds check, assumes match exists)
+  5. `_AddCareerTeamPlayer` — selects random player from non-home team in same country, adds to home market with price filtering
+  6. `_FillCareerTeamPlayers` — populates home market with random players based on numSelectedTeams (max 25)
+  7. `_AddRandomForeignMarketPlayer` — selects random foreign pool player, 25% chance to enforce price range
+  8. `_FillForeignMarketPlayers` — populates foreign market with 8-15 random foreign players
+  9. `_UpdateHomeMarketPlayers` — randomly removes/adds home market players based on backlog
+  10. `_UpdateForeignMarketPlayers` — randomly removes/adds foreign market players based on backlog
+- 10 register bridge stubs, ~300 lines asm removed
+- New xdefs: poolPlayerStrideRef, careerForeignMarketPlayers, homeMarketRandomPickRetries, foreignMarketRandomPickRetries, aDataPoolplyrDa
+- Used volatile for FillForeignMarketPlayersData copy loop to prevent memcpy optimization
+- Cumulative: 699 functions across 73 chunks
+
+### Chunk 74 — Transfer Offer Helpers (7 exported → `src/transfer_market.c`)
+- Date: 2026-02-21
+- **Exported (7):**
+  1. `_FindTeamIdInDiyTeamsList` — searches diyTeamIdListType0/1/2 based on competitionFileBuffer value, returns 0=found/1=not found
+  2. `_IsOfferTeamPlayerPairUnique` — loops transferOfferTable checking teamId+playerIdx pair uniqueness, returns 1=unique/0=duplicate
+  3. `_IsTeamEligibleForOfferByRefSkill` — scans 16 players at 0x26 stride checking skill vs refSkill, returns 0=eligible if skill range spans refSkill
+  4. `_RemoveOfferPlayerFromMarketsAndCount` — removes player from both markets, increments selected/other team counter by country match
+  5. `_RemoveNegotiatedOfferPlayersFromMarkets` — removes primary player + optional extra player from markets
+  6. `_PickRandomEligibleExtraPlayerOrdinal` — 16 random attempts to find eligible extra player (not primary, not on transfer list, not sold, skill <= refSkill)
+  7. `_PickRandomEligibleSwapPlayerOrdinalFromTeam` — finds min/max skill in selected team, 16 random attempts to pick offering team player within skill range
+- New C-to-asm bridge: `_CGetPlayerAtIndex` in swos2_unit.s (wraps asm GetPlayerAtIndex, returns pointer via d0, stores file index in _cGetPlayerAtIndexFileIdx global)
+- Functions 6-7 return in d1 (not d0): stubs exclude d1 from save set, do `move.w d0,d1` after C call
+- RemoveOfferPlayerFromMarketsAndCount stubbed as `rts` (dead — only caller is now-C RemoveNegotiatedOfferPlayersFromMarkets)
+- All other stubs use full `d0-d7/a0-a6` save/restore (asm callers use d0/a0 after calls)
+- 7 asm stubs, ~160 lines asm removed
+- New xdefs (11): _CGetPlayerAtIndex, competitionFileBuffer, diyTeamIdListType0/1/2, numDiyTeams, teamOffering, offerPrimaryPlayerOrdinal, numExtraPlayersWanted, removedOfferPlayersFromSelectedTeamCount, removedOfferPlayersFromOtherTeamsCount
+- New xrefs (9): 7 C functions + _cGetPlayerAtIndexFileIdx + GetPlayerAtIndex
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 706 functions across 74 chunks
+
+### Chunk 75 — Transfer Market Lists, Career Finance Reset, Pool & Foreign Market Patching (9 exported + 1 static → `src/transfer_market.c`)
+- Date: 2026-02-21
+- **Exported (9):**
+  1. `_FindPlayerOnTransferMarket` — linear search playersOnTransferMarket[], returns 0=found/1=not found
+  2. `_AddPlayerToTransferMarket` — appends playerId to transfer market list (max 5)
+  3. `_RemovePlayerFromTransferMarket` — finds and removes playerId with shift-left compaction
+  4. `_CheckForTransferOffers` — searches transferOfferTable for any offer with byte 0x0D==0, returns 0=found/1=none
+  5. `_Career_CommitNewBalanceAndResetFinanceTotals` — if financeTotalsNeedResetFlag set, commits newBalance→old_balance, clears 7 financial accumulators
+  6. `_AddCareerPoolPlayer` — appends player to careerForeignMarketPlayers pool (42-byte entry: teamNum+ord+randomPhase+38 bytes player data from TEAMFILE_PLAYERS)
+  7. `_Career_PatchTeamWithForeignMarketPlayers` — iterates pool, copies player data into matching team's player slot
+  8. `_Career_ApplyForeignMarketPlayersToSelectedTeams` — applies ALL pool entries to selTeamsPtr teams
+  9. `_Career_ApplyPendingForeignMarketPlayersToSelectedTeams` — applies only non-pending (total - pending) entries
+- **Static helper (1):** applyForeignMarketPlayersToTeams — shared loop body for functions 8 and 9
+- Assembly stubs:
+  - FindPlayerOnTransferMarket: save d1-d7/a0-a6 (not d0), push d1, jsr C, restore, tst.w d0 (Z flag)
+  - AddPlayerToTransferMarket: full save, push d0, jsr C, restore
+  - RemovePlayerFromTransferMarket: full save, push d1, jsr C, restore
+  - CheckForTransferOffers: save d1-d7/a0-a6 (not d0), jsr C, restore, tst.w d0 (Z flag)
+  - Career_CommitNewBalanceAndResetFinanceTotals: simple `jmp` (void function, callers use jsr)
+  - AddCareerPoolPlayer: full save, push a0/d1/d0, jsr C, restore
+  - Career_PatchTeamWithForeignMarketPlayers: full save, push a0, jsr C, restore
+  - Career_ApplyForeignMarketPlayersToSelectedTeams: simple `jmp`
+  - Career_ApplyPendingForeignMarketPlayersToSelectedTeams: simple `jmp`
+- New xdefs (4): playersOnTransferMarket, financeTotalsNeedResetFlag, playerPurchases, playerSales
+- New xrefs (9): all 9 C function symbols
+- volatile uint16_t* used for shift loops to prevent memmove optimization
+- ~160 lines asm removed
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 716 functions across 75 chunks
+
+### Chunk 76 — Career Wage Management, DIY Fixture Advancement, Cache Insertion & Team Removal (6 exported + 1 static → career_status.c, transfer_market.c, career_teams.c)
+- Date: 2026-02-21
+- **Exported (6):**
+  1. `_DIY_AdvanceFixtureIndex` → transfer_market.c — applies pending foreign market players to selected teams for players whose randomPhase falls within [lo..hi], career mode only
+  2. `_Career_RemovePlayerFromTeamInternal` → transfer_market.c — removes player from transfer offers, then either from transfer market (own team) or from career contest + foreign market (other team)
+  3. `_TeamSelectionKeyCache_InsertSpaceSorted` → career_teams.c — sorted insertion into team selection key cache; returns insert point pointer (a4 output for asm callers); panics if overflow
+  4. `_GetAvgTeamValueBaseForCurrentPlayer` → career_status.c — calls GetPlayer + GetDisplayedPlayerValue to get displayed value, indexes into avgTeamValueBases table
+  5. `_Career_UpdatePlayerWeeklyWageCache` → career_status.c — calculates player wage (avg base, 0x9B=33% trialist, 0x9A=66% youth, scale by 1000/768*96/wageScalingDivisor), stores in weeklyWageByPlayerIndex, recalcs total
+  6. `_Career_RemovePlayerWeeklyWageAndRecalcWeeklyWages` → career_status.c — clears wage entry and recalculates total weekly wages
+- **Static helper (1):** `recalcTotalWeeklyWages` — shared recalc loop for functions 5 and 6; uses _CGetPlayerAtIndex bridge + _cGetPlayerAtIndexFileIdx
+- New C-callable bridge: `_CallGetPlayer` in swos2_unit.s — wraps asm GetPlayer(d0=team, d1=playerIdx → a0=ptr), returns pointer
+- Assembly stubs:
+  - DIY_AdvanceFixtureIndex: full save, push d7/d6, jsr C, restore
+  - Career_RemovePlayerFromTeamInternal: full save, push d1/d0, jsr C, restore
+  - TeamSelectionKeyCache_InsertSpaceSorted: save d0-d7/a0-a3/a5-a6 (NOT a4), push d5/d0, jsr C, movea.l d0,a4, restore
+  - GetAvgTeamValueBaseForCurrentPlayer: save d1-d7/a0-a6 (NOT d0), push d1/d0, jsr C, restore (d0=return value)
+  - Career_UpdatePlayerWeeklyWageCache: full save, push d1, jsr C, restore
+  - Career_RemovePlayerWeeklyWageAndRecalcWeeklyWages: full save, push d1, jsr C, restore
+- New xdefs (5): selTeamSelectedPlayerPosition, weeklyWageByPlayerIndex, teamSelectionKeyCache, teamSelectionKeyCacheCount, teamSelectionKeyCacheEnd
+- New xrefs (6): 6 C functions
+- Key insight: GetPlayer returns teamBase + d1*38; player's SOMEFLAG at offset 0x71 = TEAMFILE_PLAYERS(76) + PLAYERFILE_SOMEFLAG(37) from GetPlayer base
+- ~180 lines asm removed (shared recalc loop code removed)
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 723 functions across 76 chunks
+
+### Chunk 77 — Chairman Messages + TMD Team Pool Management (9 exported → career_status.c, career_teams.c)
+- Date: 2026-02-21
+- **Exported (9):**
+  1. `_ShowLeavingMessage` → career_status.c — sets currentMessage (national=32, club=18), calls ShowChairmanMessage
+  2. `_ShowGreetingMessage` → career_status.c — sets currentMessage (national=33, club=19), calls ShowChairmanMessage
+  3. `_ShowLastSeasonMessage` → career_status.c — sets currentMessage (national=34, club=20), calls ShowChairmanMessage
+  4. `_ShowWishYouSuccessMessage` → career_status.c — sets currentMessage (national=35, club=21), calls ShowChairmanMessage
+  5. `_ShowEnjoyLastSeasonMessage` → career_status.c — sets currentMessage (national=36, club=22), calls ShowChairmanMessage
+  6. `_ShowRetirementMessage` → career_status.c — sets currentMessage (national=37, club=23), calls ShowChairmanMessage
+  7. `_SearchTeamInTmdFile` → career_teams.c — linear search in tmdFileBuffer for team number, returns 0=found/1=not found (Z flag in asm stub)
+  8. `_Career_RemoveTeamFromTmdTeamPool` → career_teams.c — find team by number + shift-left to compact pool, decrement count
+  9. `_Career_AppendTeamToTmdTeamPool` → career_teams.c — validate not duplicate (panics 0x3443), copy 684 bytes to end of pool, increment count
+- Assembly stubs:
+  - Show*Message (6): full save d0-d7/a0-a6, jsr C, restore, rts
+  - SearchTeamInTmdFile: save d1-d7/a0-a6 (NOT d0), push d0, jsr C, tst.w d0 (Z flag), restore
+  - Career_RemoveTeamFromTmdTeamPool: full save, push d0, jsr C, restore
+  - Career_AppendTeamToTmdTeamPool: full save, push a0, jsr C, restore
+- Updated _CCareer_AppendTeamToTmdTeamPool bridge to call C directly (was calling asm)
+- New xdefs (1): tmdFileBuffer
+- New xrefs (9): 9 C functions
+- ~130 lines asm removed
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 732 functions across 77 chunks
+
+### Chunk 78 — Training Match State Management (7 exported → training_match.c)
+- Date: 2026-02-21
+- **Exported (7):**
+  1. `_TrainingMatch_SaveSelectedPlayerId` → training_match.c — saves player file index to savedPlayers at careerNumPlayers offset
+  2. `_TrainingMatch_RemoveSavedPlayerId` → training_match.c — removes player from saved array with position-aware swap logic for starting 11 replacement from subs (same position group, highest price), then shifts array and marks last slot 0xAA
+  3. `_TrainingMatch_SaveLastMatchState` → training_match.c — saves shirt numbers (via GetPlayer for 32 indices), player assignments, tactics, position, controls, coach mode
+  4. `_TrainingMatch_RestoreLastMatchState` → training_match.c — restores all saved state back
+  5. `_TrainingMatch_RestoreSavedTeamSelectionState` → training_match.c — restores team selection from training match saved data
+  6. `_TrainingMatch_SaveTeamSelectionState` → training_match.c — saves team selection for training match
+  7. `_CheckIfTeamIsChanged` → training_match.c — compares first 11 players + tactics + position, returns 0=same/1=different (Z flag stub)
+- New file: training_match.c / training_match.h
+- Assembly stubs:
+  - SaveSelectedPlayerId: full save, push d1, jsr C, restore
+  - RemoveSavedPlayerId: full save, push d1, jsr C, restore
+  - Save/Restore/RestoreSaved/SaveTeamSelection: full save, jsr C (no args), restore
+  - CheckIfTeamIsChanged: save d1-d7/a0-a6 (NOT d0), jsr C, tst.w d0 (Z flag), restore
+- New xdefs (10): trainingMatchSavedPlayers, trainingMatchSavedPlayerPos, trainingMatchSavedShirtNums, trainingMatchSavedTactics, lastMatchSavedShirtNums, lastMatchPlayers, currentTactics, lastMatchSavedPlayerPos, lastMatchSavedTeamControls, lastMatchSavedCoachOrPlayer
+- Uses _CallGetPlayer bridge (from Chunk 76) for GetPlayer calls
+- Fix: added optimize("no-tree-loop-distribute-patterns") to 4 functions to prevent GCC converting byte-copy loops to memcpy
+- ~230 lines asm removed (RemoveSavedPlayerId alone was ~70 lines)
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 739 functions across 78 chunks
+
+### Chunk 79 — Job Offer Queue Management (6 exported → job_offers.c)
+- Date: 2026-02-21
+- **Exported (6):**
+  1. `_IsOldJobOffer` → job_offers.c — linear search in jobOffers array by team number, returns 0=found/1=not found (Z flag stub)
+  2. `_GetJobOfferPtr` → job_offers.c — returns pointer to jobOffers + index * 26 (pointer-return stub via a0)
+  3. `_AddJobOffer` → job_offers.c — adds new job offer to front of newJobOffers queue, shifts existing entries right by 26 bytes (word-at-a-time backwards), max 5 offers
+  4. `_RemoveJobOffer` → job_offers.c — finds job offer by team number in newJobOffers, shifts following entries left, decrements count
+  5. `_IsNewJobOffer` → job_offers.c — linear search in newJobOffers array by team number, returns 0=found/1=not found (Z flag stub)
+  6. `_GetNewJobOfferPtr` → job_offers.c — returns pointer to newJobOffers + index * 26 (pointer-return stub via a0)
+- New file: job_offers.c / job_offers.h
+- Job offer structure: 26 bytes (teamNo:2, teamName:18, amountOffered:4, unknown:2)
+- Assembly stubs:
+  - IsOldJobOffer/IsNewJobOffer: Z flag stubs (save d1-d7/a0-a6, tst.w d0)
+  - GetJobOfferPtr/GetNewJobOfferPtr: pointer-return stubs (save d1-d7/a1-a6, movea.l d0,a0)
+  - AddJobOffer: full save, push d1 then d0, jsr C, restore
+  - RemoveJobOffer: full save, push d0, jsr C, restore
+- New xdefs (4): numJobOffers, jobOffers, numNewJobOffers, newJobOffers
+- Key detail: AddJobOffer shift uses 68k `move.w -28(a0),-(a0)` where source EA evaluates before pre-decrement → effective 26-byte rightward shift
+- ~130 lines asm removed
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 745 functions across 79 chunks
+
+### Chunk 80 — Tactics Selection + Chairman Memos + Club Business (12 exported → tactics_menu.c, chairman_memo.c)
+- Date: 2026-02-21
+- **Exported (12):**
+  1. `_User_A_Tactics` → tactics_menu.c — sets chosenTactics to 12 (USER_A), calls SetExitMenuFlag
+  2. `_User_B_Tactics` → tactics_menu.c — sets chosenTactics to 13
+  3. `_User_C_Tactics` → tactics_menu.c — sets chosenTactics to 14
+  4. `_User_D_Tactics` → tactics_menu.c — sets chosenTactics to 15
+  5. `_User_E_Tactics` → tactics_menu.c — sets chosenTactics to 16
+  6. `_User_F_Tactics` → tactics_menu.c — sets chosenTactics to 17
+  7. `_ExitChooseTacticsMenu` → tactics_menu.c — sets chosenTactics to 0xFFFF (abort), calls SetExitMenuFlag
+  8. `_ShowChairmanMessage` → chairman_memo.c — loads chairmanMemosMenu, calls ShowMenu
+  9. `_ChairmanMemosInit` → chairman_memo.c — sets fireResetFlag=1, changes title to "MEMO FROM THE PRESIDENT" if national, falls through to OnReturn
+  10. `_ChairmanMemosOnReturn` → chairman_memo.c — formats "DEAR %a %b" greeting + 2 message lines from clubMessagesTable via PrintFormatted, draws menu, waits 100 VBlanks, shows Continue button
+  11. `_ChairmanMemosContinue` → chairman_memo.c — clears currentMessage, calls SetExitMenuFlag
+  12. `_ShowClubBussinesMenu` → chairman_memo.c — clears clubBusinessActive, loads clubBusinessMenu, calls ShowMenu
+- New files: tactics_menu.c / tactics_menu.h, chairman_memo.c / chairman_memo.h
+- Assembly stubs: all 12 use full save/restore (movem.l d0-d7/a0-a6)
+- New xdefs (9): chosenTactics, chairmanMemosMenu, clubBusinessMenu, plNameForMessage, managerSexBuffer, clubMessagesTable, aMemoFromThePre, aThePresident, aDearAB_0
+- Fix: corrected clubBusinessActive type from int8_t to uint16_t in career_status.c (asm uses ds.b $2)
+- ~80 lines asm removed
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 757 functions across 80 chunks
+
+### Chunk 81 — Job Offer Utilities + ConvertPlayerDressColor (6 exported → job_offers.c, team_colors.c)
+- Date: 2026-02-21
+- **Exported (6):**
+  1. `_JobOffers_RemoveOffer` → job_offers.c — removes team from jobOffers (old) array by linear search, shifts remaining entries left word-at-a-time
+  2. `_JobOffers_MaybeExpireSomeNewOffers` → job_offers.c — iterates new offers backwards, 1/32 chance (Rand2 < 0x20) to clear amountOffered
+  3. `_JobOffers_FillMissingNewOfferTeamNames` → job_offers.c — for entries with teamName[0]==0xFF, looks up team via _CCallGetTeamPointer bridge and copies name
+  4. `_JobOffers_RemoveExpiredOffers` → job_offers.c — removes expired (amountOffered==0) from both jobOffers and newJobOffers arrays
+  5. `_JobOffers_ConvertNewOfferToOffer` → job_offers.c — finds entry in newJobOffers, copies name to fundsBuffer, removes from new, adds to old array (max 5)
+  6. `_ConvertPlayerDressColor` → team_colors.c — ext.w on color index, looks up shirtColorTable, masks to byte
+- Assembly stubs: void no-arg (3) use full save d0-d7/a0-a6; ConvertNewOfferToOffer pushes d0+d1; RemoveOffer pushes d0; ConvertPlayerDressColor saves d1-d7/a0-a6 preserving d0 return
+- New bridge: `_CCallGetTeamPointer` in swos2_unit.s — C-callable wrapper for asm GetTeamPointer (d0=teamId → a0=ptr, returns ptr in d0)
+- New xdefs (2): fundsBuffer, _CCallGetTeamPointer
+- ~120 lines asm removed
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 763 functions across 81 chunks
+
+### Chunk 82 — Edit Tactics Menu Initialization & Buffer Management (11 exported → edit_tactics.c)
+- Date: 2026-02-21
+- **Exported (11):**
+  1. `_ChooseTacticsInit` → edit_tactics.c — sets menuEntries[1..6].fg to teamTacticsUSERA-F addresses, calls CheckIsTeamNational
+  2. `_ShowStandardChooseTacticsMenu` → edit_tactics.c — stores team ptr, shows chooseTacticsMenu, if tactic chosen shows editTacticsMenu via InitLittlePlayerSprites
+  3. `_EditTacticsInit` → edit_tactics.c — sets bench player numbers, determines editTacticsNumPlayers (16 or careerNumPlayers), clears selection state, falls through to OnRestore
+  4. `_EditTacticsOnRestore` → edit_tactics.c — calls EnableOrDisablePlayerFacesItems, CopyCurrentTacticName, UpdateExtraPlayerMenuVisibility, SetBigCheckSprite
+  5. `_EnableOrDisablePlayerFacesItems` → edit_tactics.c — loops 10 player face entries (29-38), sets isDisabled based on flipOnOff
+  6. `_CopyCurrentTacticName` → edit_tactics.c — builds "EDIT TACTICS (name)" string in menuEntries[1].fg buffer
+  7. `_EditTactics_UpdateExtraPlayerMenuVisibility` → edit_tactics.c — shows/hides entries 27-28 for 17th/18th players based on editTacticsNumPlayers
+  8. `_SetBigCheckSprite` → edit_tactics.c — shows/hides check/not-check sprite on entry 0 based on oldPlayerSkill vs newPlayerSkill
+  9. `_CopyCurrentTactics` → edit_tactics.c — copies 370 bytes from teamTacticsTable[chosenTactics] to editTacticsCurrentTactics
+  10. `_ApplyCurrentEditedTactics` → edit_tactics.c — copies 370 bytes back from editTacticsCurrentTactics, calls InitializeTacticsPositions
+  11. `_SaveCurrentTactics` → edit_tactics.c — copies 370 bytes editTacticsCurrentTactics → savedCurrentTactics
+  12. `_RestoreTactics` → edit_tactics.c — copies 370 bytes savedCurrentTactics → editTacticsCurrentTactics
+- New files: edit_tactics.c / edit_tactics.h
+- Assembly stubs: all 11 use full save/restore (movem.l d0-d7/a0-a6); ShowStandardChooseTacticsMenu pushes a0 param
+- New bridges (5): _CCallSetBenchPlayersNumbers, _CCallEditTactics_CommitPlayerPositionsAndRecalcSkill, _CCallEditTacticsMenuSavePlayerPositions, _CCallInitLittlePlayerSprites, _CCallInitializeTacticsPositions
+- New xdefs (11): newPlayerSkill, savedCurrentTactics, editTacticsNumPlayers, aEditTactics, editTacticsSelectedPairSlotIndex, editTacticsSelectedPlayerMenuEntryPtr, editTacticsSelectedPlayerNameIndex, chooseTacticsMenu, editTacticsMenu + 5 bridge xdefs
+- ~170 lines asm removed
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 774 functions across 82 chunks
+
+### Chunk 83 — Mixed Edit Tactics Drawing + Import Tactics + Highlights Menu (12 exported → edit_tactics.c, highlights_menu.c)
+- Date: 2026-02-21
+- **Exported (12):**
+  1. `_DrawPlayerNamesAndFaces` → edit_tactics.c — draws menu items 11, 29-38, and 0 via CallDrawMenuItem/CallDrawMultipleItems
+  2. `_EditTacticsMenuSavePlayerPositions` → edit_tactics.c — copies newPlayerSkill to oldPlayerSkill, copies 32 bytes playerPositionsArray→oldPlayerPositionsArray, calls SetBigCheckSprite
+  3. `_EditTactics_CommitPlayerPositionsAndRecalcSkill` → edit_tactics.c — saves positions, sets teamFile flag, calls ComputeOldPlayerSkillForViewResult with tactics=0x12, restores tactics, calls SetBigCheckSprite
+  4. `_ImportTacticsInit` → edit_tactics.c — empty (rts only)
+  5. `_ImportTacticsSelectTactics` → edit_tactics.c — takes MenuEntry* param, computes ordinal diff for importMenuSelectedTactics, exits menu
+  6. `_ExitImportTactics` → edit_tactics.c — sets importMenuSelectedTactics=-1, exits menu
+  7. `_HighlightsMenuInit` → highlights_menu.c — calls HighlightsMenuCommon
+  8. `_HighlightsMenuOnReturn` → highlights_menu.c — calls HighlightsMenuCommon
+  9. `_HighlightsMenuCommon` → highlights_menu.c — enables/disables menu entries 1,3 based on hilNumGoals (0→disabled+gray, nonzero→enabled+colored)
+  10. `_ExitHighlights` → highlights_menu.c — calls SetExitMenuFlag
+  11. `_MarkSelectedTeamsTacticsChanged` → edit_tactics.c — marks careerTeam and matching selectedTeams' tactics-changed flag
+  12. `_FillSkinColorConversionTable` → edit_tactics.c — fills convertTable from skinAndHairColorConversionTable using skinColor index
+- New files: highlights_menu.c / highlights_menu.h
+- Assembly stubs: all 12 use full save/restore; ImportTacticsSelectTactics pushes a5, FillSkinColorConversionTable pushes a1+d0
+- New xdefs (2): oldPlayerPositionsArray, importMenuSelectedTactics
+- ~90 lines asm removed
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 786 functions across 83 chunks
+
+### Chunk 84 — Edit Tactics Menu Actions + RotatePlayersLeft (11 exported → edit_tactics.c, teams.c)
+- Date: 2026-02-21
+- **Exported (11):**
+  1. `_SelectCopyTactics` → edit_tactics.c — trivial: calls SetCurrentEntry(3)
+  2. `_UndoTactics` → edit_tactics.c — RestoreTactics, CallDrawMenuItem(entry 2), CommitPlayerPositionsAndRecalcSkill, DrawPlayerNamesAndFaces
+  3. `_AbortEditTactics` → edit_tactics.c — saves positions, checks tacticsChangedFlag, shows DoContinueAbortMenu if changed, exits menu
+  4. `_FlipOnOff` → edit_tactics.c — toggles flipOnOff, calls EnableOrDisablePlayerFacesItems, DrawMenu
+  5. `_ImportTactics` → edit_tactics.c — shows import menu, copies 370 position bytes from selected tactic, marks tactics changed
+  6. `_SaveAndExitEditTactics` → edit_tactics.c — complex save flow: checks changed flag, apply tactics, DoContinueAbortMenu, file dialog with .TAC extension, WriteTacticsFile
+  7. `_EditTacticsOnSelect28` → edit_tactics.c — calls RotatePlayersLeft via bridge + DrawMenuItemsWaitForVSync
+  8. `_EditTacticsAfterDrawPlayerFace` → edit_tactics.c — takes MenuEntry* param, applies row highlighting, draws entry 39
+  9. `_EditTactics28AfterDraw` → edit_tactics.c — draws menu entry 27
+  10. `_EditTactics2AfterDraw` → edit_tactics.c — calls DrawEditTacticsPitchAndPlayers via bridge
+  11. `_RotatePlayersLeft` → teams.c — rotates substitute player slots left by one position, handles currentTeam/careerTeam/other team pointers
+- Assembly stubs: all 10 edit_tactics functions use full save/restore; EditTacticsAfterDrawPlayerFace pushes a5 param; RotatePlayersLeft passes d0/a0 params
+- New bridges (3): _CCallDrawEditTacticsPitchAndPlayers, _CCallEditTactics_ApplyPlayerRowHighlighting, _CCallRotatePlayersLeft
+- New xdefs (12): tacticsChangedFlag, importTacticsMenu, editTacticsRotateRedrawList, aEditedTacticsWillBeLost, aTacticsHaveBeenChanged, aSaveEditedTact, aSave, aExit, chairmanMemosMenu + 3 bridge xdefs
+- Fix: added optimize("no-tree-loop-distribute-patterns") to RotatePlayersLeft to prevent GCC converting byte-shift loop to memmove
+- Fix: SaveAndExitEditTactics uses selectedFilename global directly (fixes latent asm stub bug where a0 return from SelectFileToSaveDialog was not preserved)
+- ~200 lines asm removed
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 797 functions across 84 chunks
+
+### Chunk 85 — Edit Tactics Pitch Coordinate + Drawing Helpers (16 exported → edit_tactics.c)
+- Date: 2026-02-21
+- **Exported (16):**
+  1. `_GetPlayerQuadrant` → edit_tactics.c — extracts x/y quadrant from tactics position byte (high/low nibble). Multi-register return (d0,d1,d2), asm body kept
+  2. `_SetPlayerQuadrant` → edit_tactics.c — encodes x/y quadrant into position byte, sets tacticsChangedFlag
+  3. `_GetBallQuadrant` → edit_tactics.c — converts ball location index to col/row via division. Multi-register return, asm body kept
+  4. `_GetBallXYPositionFromQuadrant` → edit_tactics.c — converts ball row/col to screen X/Y using lookup tables. Multi-register return, asm body kept
+  5. `_GetPlayerXYPositionFromQuadrant` → edit_tactics.c — gets player screen position; if quadrant=15x15, returns ball position. Multi-register return, asm body kept
+  6. `_EditTactics_GetDirectionDelta` → edit_tactics.c — reads direction input, returns dx/dy via lookup table. Multi-register return, asm body kept
+  7. `_GetEditTacticsItemXYPosition` → edit_tactics.c — dispatcher: ball/player position lookup by index. Multi-register return, asm body kept
+  8. `_EditTactics_TryMoveQuadrantCursor` → edit_tactics.c — attempts cursor move with bounds checking. Multi-register return, asm body kept
+  9. `_EditTactics_SetAllPlayersQuadrantForBallLoc` → edit_tactics.c — copies all 10 players' positions from one ball location to another
+  10. `_EditTactics_FlipMaybe_MirrorPlayersInArea` → edit_tactics.c — mirrors player X positions and swaps paired players using unkTable
+  11. `_EditTactics_FlipMaybe_MirrorBallArea` → edit_tactics.c — computes mirrored ball area, copies and mirrors players there
+  12. `_EditTactics_CommitDraggedPlayerPosition` → edit_tactics.c — commits dragged position with conditional mirroring for opposite sides
+  13. `_SortEditTacticsDrawOrderByY` → edit_tactics.c — bubble-sorts 12-entry draw order array by Y coordinate
+  14. `_SortPlayerAreasByY` → edit_tactics.c — bubble-sorts 35-entry player areas by Y for marked player
+  15. `_EditTacticsDrawCursor` → edit_tactics.c — draws animated cursor on pitch sprite (4-frame animation)
+  16. `_DrawPlayerDirections` → edit_tactics.c — draws direction arrows between current/previous ball locations using CalculateDeltaXAndY
+- Assembly stubs: 9 void functions get full save stubs (SetPlayerQuadrant pushes d0-d3, SetAllPlayers pushes d1/d3, MirrorPlayersInArea pushes d3, MirrorBallArea pushes d1, others are no-param); 7 multi-register return functions keep asm bodies (for asm callers) with C version comments
+- New xdefs (22): editTacticsPitchStatus, markedPlayerNumber, ballRow, ballColumn, editTacticsBallLocation, editTacticsLastBallLocation, editTacticsPlayerX, editTacticsBallRow, editTacticsBallColumn, editTacticsDisableLittlePlayersAndBallDraw, editTacticsTransitionActive, editTacticsLastTick, editTacticsPlayerPositions, editTacticsPlayerNumbers, playerAreas, ballXQuadrantCoordinates, ballYQuadrantCoordinates, xQuadrantToCoordinates, yQuadrantToCoordinates, arrowSpritesOffsets, tacticCursorFrames, editTacticsDirectionDeltaTable
+- Key design: Multi-register return functions (d1/d2 output) keep asm bodies alive for asm callers. C versions use output pointer parameters. When remaining asm callers are later ported, asm bodies become dead code.
+- ~250 lines asm code replaced with stubs + comments
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 813 functions across 85 chunks
+
+### Chunk 86 — Team Buffer + Edit Tactics Rendering (6 exported → teams.c + edit_tactics.c)
+- Date: 2026-02-21
+- **Exported (6):**
+  1. `_AddTeamToBuffer` → teams.c — copies 684-byte team record to selTeamsPtr buffer, increments numSelectedTeams, returns pointer to copy. Stub returns a0 from C d0 return.
+  2. `_FindTeam` → teams.c — searches selTeamsPtr for team by ID (first word), returns pointer + remaining count via output pointer. Panics if not found. Stub returns a0 + d2.
+  3. `_DeselectTeam` → teams.c — finds team and shifts remaining entries down, decrements numSelectedTeams
+  4. `_InitLittlePlayerSprites` → edit_tactics.c — initializes edit tactics display: clears state, copies tactics, sets up dress colors, copies/colorizes little player and goalie sprites. Replaces _CCallInitLittlePlayerSprites bridge call.
+  5. `_DrawLittlePlayersAndBall` → edit_tactics.c — draws all 12 items (ghost ball, real ball, 10 players) on edit tactics pitch with blinking for selected items based on pitchStatus, plus goalkeeper at fixed position
+  6. `_DrawEditTacticsHighlightedPlayerRoute` → edit_tactics.c — when route view active (disable flag set), draws marked player's sprite at all 35 ball area positions with shirt numbers
+- Assembly stubs: AddTeamToBuffer returns a0 (d0→a0 bridge), FindTeam returns a0+d2 (pea/temp approach), DeselectTeam/InitLittlePlayerSprites/DrawLittlePlayersAndBall/DrawEditTacticsHighlightedPlayerRoute are full-save void stubs
+- New xdefs (1): littlePlayersConvertTable
+- ~210 lines asm code replaced with stubs
+- Updated C caller: _ShowStandardChooseTacticsMenu now calls _InitLittlePlayerSprites directly (removed _CCallInitLittlePlayerSprites bridge)
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 819 functions across 86 chunks
+
+### Chunk 87 — Edit Tactics State Machine & Input (7 exported → edit_tactics.c)
+- Date: 2026-02-21
+- **Exported (7):**
+  1. `_DrawEditTacticsPitchAndPlayers` → edit_tactics.c — draws pitch background bars, tactics pitch sprite, player directions, cursor, little players/ball, and highlighted route. Replaces _CCallDrawEditTacticsPitchAndPlayers bridge.
+  2. `_HandlePlayersOrBallInEditTactics` → edit_tactics.c — expanding cone search for nearest player/ball in joystick direction. Width starts at 384, expands by 64 to 1280, then by 192 to 7680. Sets markedPlayerNumber or pitchStatus=0xFFFF on failure.
+  3. `_EditTacticsReadControls` → edit_tactics.c — state machine for pitch controls when no player marked. Handles statuses 2(idle), 3(ball-browse), 4(selected), 6(dragging). Fire press/release timing controls transitions.
+  4. `_EditTactics_HandlePitchInput` → edit_tactics.c — state machine for pitch input when player IS marked. Handles statuses 2(idle), 4(quadrant move), 5(ball area browse). Player quadrant movement with collision detection, ball area navigation with wrapping.
+  5. `_EditTacticsStatus` → edit_tactics.c — main dispatcher: initializes status, waits for fire release, delegates to HandlePitchInput or ReadControls based on markedPlayerNumber. Always draws pitch before returning. Status 0xFFFF clears transition.
+  6. `_EditTacicsMovePlayersOrBall` → edit_tactics.c — menu action: saves positions, enters status 0, redraws entry[2], sets current entry to 4
+  7. `_CopyTactics` → edit_tactics.c — menu action: changes entry[4] bg to pink, enters status 1, on exit restores to yellow-green, commits positions
+- Assembly stubs: EditTacticsStatus uses d0 param bridge (save d1-d7/a0-a6), all others full-save void stubs
+- New xdefs (2): editTacticsInputRepeatCounter, editTacticsNearestSelectPitchWidth
+- ~420 lines asm code replaced with stubs
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 826 functions across 87 chunks
+
+### Chunk 88 — Edit Tactics Player Swap, Pair Linking & Position Lookup (6 exported → edit_tactics.c)
+- Date: 2026-02-21
+- **Exported (6):**
+  1. `_GetPlayerInfoBreakPosition` → edit_tactics.c — remaps slot via formation position table, calls _CGetPlayerAtIndex. Multi-register return (asm body kept for asm callers), C version uses output pointers.
+  2. `_EditTactics_FindFreePairId` → edit_tactics.c — scans 10-byte unkTable, builds used-ID bitmask, returns first free pair ID
+  3. `_EditTactics_ClearPairId` → edit_tactics.c — sets all unkTable entries matching given pair ID to 0xFF
+  4. `_EditTactics_SwapPlayersInSlots` → edit_tactics.c — swaps two players by slot index. Handles playing/bench boundary crossings via _CGetPlayerAtIndex, swaps positions and shirt numbers
+  5. `_EditTacticsCommon` → edit_tactics.c — menu handler for pair entry selection. Links/unlinks player pairs, redraws pair entries. Uses FindFreePairId/ClearPairId.
+  6. `_EditTacticsPlayerNamesCommon` → edit_tactics.c — menu handler for player name selection. Swaps players on second click, cancels on same-player click, updates display.
+- Assembly stubs: GetPlayerInfoBreakPosition keeps asm body (multi-register return). FindFreePairId returns d0 bridge. ClearPairId takes d0 param. SwapPlayersInSlots takes d3/d4. EditTacticsCommon/PlayerNamesCommon take a5 (MenuEntry*).
+- New xdefs (2): editTacticsSelectedPlayerSlotIndex, editTacticsSelectedPairMenuEntryPtr
+- ~208 lines asm code replaced with stubs
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 832 functions across 88 chunks
+
+### Chunk 89 — LoadTactics, Stadium UI, Highlights Menu, Career Search (9 exported → edit_tactics.c + menus.c + highlights_menu.c + diy_competition.c)
+- Date: 2026-02-22
+- **Exported (9):**
+  1. `_LoadTactics` → edit_tactics.c — prompts save disk, loads .TAC file, validates extension, reads tactics, updates importMenuSelectedTactics
+  2. `_ShowStadiumInit` → menus.c — stadium menu init: loads background, sets game/round names, team names with colors, player name pointers for entries 16-31/43-58, bench visibility
+  3. `_StadiumBeforeDrawLeftTeam` → menus.c — menu beforeDraw callback for top team player entries, delegates to StadiumPlayerSpritesBeforeDraw
+  4. `_StadiumBeforeDrawRightTeam` → menus.c — menu beforeDraw callback for bottom team player entries
+  5. `_StadiumPlayerSpritesBeforeDraw` → menus.c — sets little player sprite type and color table (goalie vs outfield), fills skin color conversion
+  6. `_LoadHighlightsMenu` → highlights_menu.c — prompts disk, loads .HIL file, validates signature, copies filename
+  7. `_SaveHighlightsMenu` → highlights_menu.c — prompts disk, saves highlights with .HIL extension
+  8. `_Career_IsTeamIdNotInListOrReturnSentinel` → diy_competition.c — searches diyCupTeamIds for teamId, returns sentinel bit 16 if not found
+  9. `_Career_IsTeamIdNotInListOrReturnSentinel2` → diy_competition.c — same pattern for diyTournamentTeamIds
+- Assembly stubs: LoadTactics/ShowStadiumInit/LoadHighlightsMenu/SaveHighlightsMenu = full save void stubs. StadiumBeforeDrawLeft/Right = a5 param bridges. StadiumPlayerSpritesBeforeDraw = a5+d1 bridge. Career functions = d0/a2 bridges with btst #16,d0 for Z flag.
+- New xdefs (11): hilStarted, kHilFileSig, stadiumMenuLittlePlayer, littlePlayersColorTable, littlePlayersSpriteTable, aLoadEditedTact, aNotATacticsFil, aLoadHighlights, aSaveHighlights, aNotAHighlights, aCannotPlayOldV
+- ~220 lines asm code replaced with stubs
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 841 functions across 89 chunks
+
+### Chunk 90 — Career Competition Team Selection (12 exported → career_teams.c)
+- Date: 2026-02-22
+- **Exported (12):**
+  1. `_Career_SortTeamFilePtrsByAvgPlayerPrice` → career_teams.c — loads team file, bubble sorts by avg price (descending), random 25% adjacent swaps, copies sorted IDs
+  2. `_LoadSomeEuroCup` → career_teams.c — loads eurocup/eurocwc/uefacup TMD, appends to TMD pool, calls SetTeamGlobalNumbers
+  3. `_AppendTeamsToSelectionFromTmdOrTeamFile` → career_teams.c — finds teams by ID in TMD cache or team files, copies to selection buffer
+  4. `_Career_TryAddRandomTeamByRegionToLists` → career_teams.c (dead stub, logic inlined into fillCupTeamSelectionFromFile)
+  5. `_FatalError` → career_teams.c — panic 0x1939
+  6. `_Career_InitCompetitionTeamSelection_Dispatch` → career_teams.c — dispatches on spec[1] to one of three handlers
+  7. `_Career_InitCompetitionTeamSelectionFromTableEntrySpec` → career_teams.c — extracts team IDs from spec or loads by league
+  8. `_Career_InitCompetitionTeamSelectionFromTableHeaderSpec` → career_teams.c — extracts cup team IDs or fills with random picks + region weights
+  9. `_Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec` → career_teams.c — tournament variant
+  10-12. Three static helpers: `fillLeagueTeamSelectionFromFile`, `fillCupTeamSelectionFromFile`, `fillTournamentTeamSelectionFromFile`
+- Inline blocks ported: loc_15158E (league fill), loc_151628 (cup fill), loc_1517C2 (tournament fill) — all dead-stubbed as `rts`
+- Assembly stubs: SortTeam = d0 param bridge. LoadSomeEuroCup = a0 bridge. AppendTeams = a2/a6/d7 three-param bridge. Dispatch/EntrySpec = a0/d1 bridges. HeaderSpec/AltHeaderSpec = a0 bridges. FatalError = jmp. TryAddRandom = dead rts.
+- New xdefs (11): teamSortBuffer, teamIdSelectionProcessedFlags, euroCup, cupWinnersCup, uefaCup, careerRegionPickWeightsTable, careerRegionPickWeightsTable2, aDataEurocupTmd, aDataEurocwcTmd, aDataUefacupTmd
+- ~350 lines asm code replaced with stubs
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 853 functions across 90 chunks
+
+### Chunk 91 — Team/Player Lookup & National Selector Functions (12 exported → career_teams.c + teams.c + career_status.c)
+- Date: 2026-02-22
+- **Exported (12):**
+  1. `_GetTeamPointer` → career_teams.c — look up team by ID through cache/TMD/file, applies foreign patches
+  2. `_GetPlayer` → teams.c — player record ptr from team number + file index (teamBase + index*38)
+  3. `_GetPlayerAtIndex` → teams.c — player ptr from team number + ordinal, remaps through position tables
+  4. `_GetPlayerSlotIndexByPlayerNumber` → teams.c — reverse lookup: player number → slot index
+  5. `_GetNationalityRecordPtr` → teams.c — search nationalTeams table by team file+ordinal
+  6. `_GetNationalTeamNumber` → teams.c — search nationalTeams by nationality code, returns team number or -1
+  7. `_GetNationalTeamNumberFromTeamFileId` → teams.c — search nationalTeams by team file ID
+  8. `_GetNationalityAndTeamFile` → teams.c — returns packed (nationality<<16 | teamFileId), panics if not found
+  9. `_IsTeamCodeOkForNationalSelector` → teams.c — check season mask for team code ('P' or other)
+  10. `_IsPlayerOkForNationalSelector` → teams.c — check season masks A/B for player availability
+  11. `_CalculateStartingBalance` → career_status.c — team value * 3 * random(80-119%) * 1000
+  12. NotOkForNationalSelector — dead stub (callers ported to C), kept as `clr.w d0; rts`
+- Assembly stubs: GetTeamPointer = d0 bridge (preserves d0-d7/a1-a6). GetPlayer = d0/d1 bridge (preserves d1). GetPlayerAtIndex = d0/d1 bridge (reads _cGetPlayerAtIndexFileIdx for d1 output). GetPlayerSlotIndexByPlayerNumber = d0/d1 bridge (preserves d0/a0). National functions = standard d2-d7/a2-a6 bridges. CalculateStartingBalance = result in d1.
+- New xdefs (5): careerJobOfferMode, nationalSelectorSeasonMaskA, nationalSelectorSeasonMaskB, nationalTeams, numNationalTeams
+- ~200 lines asm code replaced with bridges
+- Fixes FindTeamInCache dead-stub bug: GetTeamPointer now calls C directly instead of dead asm FindTeamInCache
+- Build status: **verified** — clean build, only pre-existing warnings
+
+### Chunk 92 — Career Competition State & Team Selection Key Cache (12 exported → career_teams.c)
+- Date: 2026-02-22
+- **Exported (12):**
+  1. `_Career_LoadCompetitionSlotStateFromBuffer` → career_teams.c — copies competition state from buffer to active area (3 sizes by type)
+  2. `_Career_StoreCompetitionSlotStateToBuffer` → career_teams.c — reverse of Load
+  3. `_Career_CopyCompetitionFileBufferToOrFromActive` → career_teams.c — wrapper: loads from competitionFileBuffer
+  4. `_Career_CopyCompetitionContextToOrFromActive` → career_teams.c — wrapper: loads from competitionContext
+  5. `_Career_CopyTertiaryCompetitionContextToOrFromActive` → career_teams.c — wrapper: loads from tertiaryCompetitionContext
+  6. `_Career_CopyEuroCupsCompetitionContextToOrFromActive` → career_teams.c — wrapper: loads from euroCupsCompetitionContext
+  7. `_TeamSelectionKeyCache_GetListPtr` → career_teams.c — walks cache by stride to find entry at index
+  8. `_TeamSelectionKeyCache_GetListElementPtr` → career_teams.c — GetListPtr + elementIndex * 12
+  9. `_TeamSelectionKeyCache_GetCurrentListPtr` → career_teams.c — cache base + offset
+  10. `_TeamSelectionKeyCache_GetCurrentSelectedElementPtr` → career_teams.c — current entry + (byte[5]-byte[6])*12
+  11. `_Career_UpdateCareerFinishedFlag` → career_teams.c — walks remaining entries to check if career done
+  12. `_Career_AdvanceToNextTeamSelectionKeyCacheEntry` → career_teams.c — advance to next unprocessed entry, financial counters if career
+- Assembly stubs: Load/Store = a0 param bridge. Copy* = void bridge. GetListPtr/GetCurrentListPtr = returns in a0. GetListElementPtr = calls GetListPtr for a0, computes a1 in asm. GetCurrentSelectedElementPtr = returns in a1. UpdateCareerFinished/AdvanceToNext = void bridges.
+- New xdefs (5): careerFinished, careerSlotProcessingInProgress, teamSelectionKeyCacheOffset, teamSelectionKeyCacheIndex, Career_FillCurrentSeasonInfo
+- ~200 lines asm code replaced with bridges
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 865 functions across 91 chunks
+
+### Chunk 93 — Career Match Flow & Competition Slot Processing (6 exported → career_teams.c)
+- Date: 2026-02-22
+- **Exported (6):**
+  1. `_CareerPlayMatch` → career_teams.c — post-match loop: processes remaining slots until season finished
+  2. `_Career_PlayMatchMenuLoop` → career_teams.c — interactive match menu loop with slot skip/dispatch
+  3. `_Career_NextMatch` → career_teams.c — advances to next match, dispatches by slot type
+  4. `_Career_OpenCompetitionSlotMenuAndApplyChanges` → career_teams.c — opens competition menu (d2 param), updates state, rebuilds caches
+  5. `_Career_ProcessCurrentCompetitionSlotForMatch` → career_teams.c — loads slot, dispatches auto-sim by type (league/cup/hybrid)
+  6. `_Career_ProcessCurrentCompetitionSlotAfterMatch` → career_teams.c — loads slot, dispatches after-match processing by type
+- Assembly stubs: 6 bridges (5 void, 1 with d2 param). 3 new C-callable asm wrappers (_asm_ShowDiy*_Career) for menu functions that take d0=1,d1=0,d2=param.
+- New xdefs (18): careerCompetitionSlotPtrTable, careerMatchSimulatedFlag, 9 asm functions (Career_AutoSimulate*, Career_AutoPlay*, DIY_*), ShowDiyLeaguesTournamentMenu, ShowDIYCupMenuWithParams, DIY_EditCompetitionSlot, 3 _asm_* wrappers
+- ~250 lines asm code replaced with bridges
+- Build status: **verified** — clean build, only pre-existing warnings
+- Cumulative: 883 functions across 93 chunks
+
+### Chunk 94 — Career Auto-Simulate & DIY Competition Slot Advancement (8 → career_teams.c)
+- Date: 2026-02-24
+- **Exported (8):**
+  1. `_Career_AutoSimulateLeagueFixturesUntilHumanTeam` → career_teams.c — loop: simulate league fixtures until human team encountered
+  2. `_Career_AutoSimulateCupMatchesUntilHumanTeam` → career_teams.c — loop: simulate cup matches until human team encountered
+  3. `_Career_AutoSimulatePendingMatchUntilHumanTeam` → career_teams.c — dispatches to league or cup auto-simulate by slot type
+  4. `_Career_AutoPlayOrSimulateLeagueFixtureLoop` → career_teams.c — loop: play league fixtures until careerSlotProcessingInProgress set
+  5. `_Career_AutoPlayCupMatchAndAdvanceLoop` → career_teams.c — loop: play cup matches until done, then calls DIY_UpdateCompetitionProgress
+  6. `_Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot` → career_teams.c — handles hybrid competition: dispatches cup/league loop, copies progress, may advance slot
+  7. `_DIY_AdvanceToNextCompetitionSlot` → career_teams.c — advances to next competition slot, builds bracket/copies grid, loads new slot
+  8. `getCurrentMatchTeamSlots` (static) → career_teams.c — C port of DIY_GetCurrentMatchTeamSlots, computes cup match team slot pointers
+- 4 new C-callable asm bridges: `_asm_DIY_SimulateLeagueFixture`, `_asm_DIY_SimulateCupMatch`, `_asm_DIY_LoadCurrentCompetitionSlot`, `_asm_DIY_PostLoadCompetitionDispatch`
+- 7 asm forwarding stubs replacing ~105 lines of asm code
+- New xdefs: 4 asm bridges, diyMinSubstitutes; 7 xrefs for C functions
+- Build status: **verified** — clean build, exit code 0
+- Cumulative: 891 functions across 94 chunks
+
+### Chunk 95 — Post-Match Stats, Trial Players, Roster Management (13+3s → career_status.c, teams.c)
+- Date: 2026-02-24
+- **Exported to career_status.c (8):**
+  1. `_PlayerJoinedClubOnTrial` — sets plNameForMessage + currentMessage "joined on trial", calls _CShowChairmanMessage
+  2. `_TrialPlayerLeftClubMessage` — sets plNameForMessage + currentMessage "trialist left", calls _CShowChairmanMessage
+  3. `_ReservePlayerLeftClubMessage` — sets plNameForMessage + currentMessage "reserve left", calls _CShowChairmanMessage
+  4. `_Career_UpdateSinglePlayerPostMatchStats` — handles form transitions ($9B→$9A, $9A→restored, in-form +2 clamped at 100)
+  5. `_Career_ApplyPostMatchPlayerStatModsIfCareerTeam` — iterates 11 match players, applies stat mods via _Career_UpdateSinglePlayerPostMatchStats
+  6. `_AddTrialPlayer` — picks random position, delegates to _TrainingMatch_AddTrialPlayerAtPosition
+  7. `_TrainingMatch_AddTrialPlayerAtPosition` — finds unused slot, sets up trialist, inserts into currentMatchPlayers
+  8. `_CheckPlayersLeavingComing` — manages trialist/reserve arrivals and departures between matches
+- **Exported to teams.c (5+3s):**
+  1. `_SetBenchPlayersNumbers` — assigns shirt numbers 12-16 to bench player slots
+  2. `_Career_RemovePlayerFromSelectedTeamRoster` — removes player from starting/bench/reserve, finds replacement, compacts array
+  3. `_RemovePlayerFromTeam` — wrapper: calls internal remove + roster remove + dirty flag + prune offers
+  4. `findReplacementPlayerByPositionOrder` (static) — scans position range for best positional match, prefers trialists
+  5. Position search order data tables (8 arrays, replPosSearchOrderTable)
+  6. `SelectBenchReplacementForStartingPlayer` (dead stub) — only called from now-C code
+  7. `SelectReserveReplacementForBenchPlayer` (dead stub) — only called from now-C code
+  8. `FindReplacementPlayerByPositionOrder` (dead stub) — only called from now-C code
+- 3 new C-callable asm bridges: `_CCareer_GenerateTrialistForTeamPlayer`, `_CCareer_ConvertPlayerToTrialistFromName`, `_CTrainingMatch_SaveSelectedPlayerId`
+
+### Chunk 96 — DIY Competition Slot Editing & Progress (7+1s → diy_competition.c)
+- Date: 2026-02-24
+- **Exported to diy_competition.c (7+1s):**
+  1. `_DIY_EditCompetitionSlot` — routes to league/cup editor with paramA/paramB/paramC, handles career vs DIY paths
+  2. `_DIY_ReorderTeamsBySelectionFlags` — reorders teams by selection bit flags in competition context
+  3. `_DIY_UpdateCompetitionProgress` — advances competition round progress (cup bracket or league fixture)
+  4. `_DIY_RecordCupBracketProgress` — processes cup bracket results, handles second leg, qualifiers
+  5. `_DIY_UpdateCompetitionProgressOrAdvanceSlot` — dispatches by competition type (cup/league/custom)
+  6. `_DIY_RecordLeagueFixtureResultAndAdvanceProgress` — processes league fixture results, advances progress
+  7. `_DIY_RebuildCompetitionAndTeamSelectionCaches` — rebuilds team selection caches from competition context
+  8. `diy_ResetCompetitionStatsAndProgress` (static) — resets all team stats for new round
+- 3 new C-callable asm bridges: `_asm_Career_AutoAdvanceInternationalCompetitionFixtures`, `_asm_ShowDiyLeaguesTournamentMenu`, `_asm_ShowDIYCupMenuWithParams`
+- Fixed LTO type mismatch: `_AppendTeamsToSelectionFromTmdOrTeamFile` extern in diy_competition.c corrected to match actual signature
+- Fixed memset undefined: replaced byte loop with 8 explicit uint32_t stores
+- 13 asm stubs (3 forwarding, 3 dead + 7 dead helper stubs) replacing ~400 lines of asm code
+- New xdefs: removedPlayerStatAccum, plNameForMessage, 3 asm bridges; 11 xrefs for C functions
+- Build status: **verified** — clean build, exit code 0
+- Cumulative: 907 functions across 95 chunks
+
+### Phase Transitions (see CLAUDE.md "Project Phases")
+- [ ] Phase 1 complete: all subroutines ported → output `*** READY FOR TESTING PHASE! ***` and STOP
+- [ ] Phase 2: user tests game, fixes any bugs found
+- [ ] Phase 3: remove assembly code (stubs, dead floppy), keep only data in asm
+- [ ] Phase 4: gradual data migration (asm → C) in small tested batches with adjacency-aware planning
+
+---
+
+## Cumulative Function Count
+
+| Chunk | Functions | Cumulative |
+|-------|-----------|------------|
+| 0     | 1         | 1          |
+| 1     | 7         | 8          |
+| 1.5   | 6         | 14         |
+| 2     | 10        | 24         |
+| 3     | 6+4s      | 34         |
+| 4     | 5         | 39         |
+| 5     | 7+1s      | 47         |
+| 6     | 7         | 54         |
+| 7     | 3         | 57         |
+| 8     | 7         | 64         |
+| 9     | 5+1s      | 70         |
+| 10    | 3+2s      | 75         |
+| 11    | 11        | 86         |
+| 12    | 17        | 103        |
+| 13    | 14        | 117        |
+| 14    | 8+1s      | 126        |
+| 15    | 13        | 139        |
+| 16    | 15+2s     | 156        |
+| 17    | 8+1       | 165        |
+| 18    | 7+4s      | 176        |
+| 19    | 30        | 206        |
+| 20    | 11        | 217        |
+| 21    | 5         | 222        |
+| 22    | 7+2s      | 231        |
+| 23    | 5         | 236        |
+| 24    | 2         | 238        |
+| 25    | 8+1s      | 247        |
+| 26    | 4+2s      | 253        |
+| 27    | 10        | 263        |
+| 28    | 7         | 270        |
+| 29    | 5         | 275        |
+| 30    | 6         | 281        |
+| 31    | 21        | 302        |
+| 32    | 34        | 336        |
+| 33    | 5         | 341        |
+| 34    | 12        | 353        |
+| 35    | 5         | 358        |
+| 36    | 5         | 363        |
+| 37    | 16        | 379        |
+| 38    | 11        | 390        |
+| 39    | 22        | 412        |
+| 40    | 7         | 419        |
+| 41    | 10        | 429        |
+| 42    | 2         | 431        |
+| 43    | 12        | 443        |
+| 44    | 6         | 449        |
+| 45    | 9         | 458        |
+| 46    | 9         | 467        |
+| 47    | 10        | 477        |
+| 48    | 6         | 483        |
+| 49    | 2+7s      | 492        |
+| 50    | 7         | 499        |
+| 51    | 12        | 511        |
+| 52    | 4         | 515        |
+| 53    | 6         | 521        |
+| 54    | 1         | 522        |
+| 55    | 1         | 523        |
+| 56    | 2         | 525        |
+| 57    | 12+3s+1a  | 541        |
+| 58    | 6+4s      | 551        |
+| 59    | 18+8s     | 578        |
+| 60    | 16+2s     | 596        |
+| 61    | 10        | 606        |
+| 62    | 12+1s     | 619        |
+| 63    | 5+1a      | 625        |
+| 64    | 5+1s      | 631        |
+| 65    | 7+12s     | 650        |
+| 66    | 9+2s      | 661        |
+| 67    | 7         | 668        |
+| 68    | 1         | 669        |
+| 69    | 4         | 673        |
+| 70    | 2         | 675        |
+| 71    | 3         | 678        |
+| 72    | 11        | 689        |
+| 73    | 10        | 699        |
+| 74    | 7         | 706        |
+| 75    | 9+1s      | 716        |
+| 76    | 6+1s      | 723        |
+| 77    | 9         | 732        |
+| 78    | 7         | 739        |
+| 79    | 6         | 745        |
+| 80    | 12        | 757        |
+| 81    | 6         | 763        |
+| 82    | 11        | 774        |
+| 83    | 12        | 786        |
+| 84    | 11        | 797        |
+| 85    | 16        | 813        |
+| 86    | 6         | 819        |
+| 87    | 7         | 826        |
+| 88    | 6         | 832        |
+| 89    | 9         | 841        |
+| 90    | 9+3s      | 853        |
+| 91    | 12        | 865        |
+| 92    | 12        | 877        |
+| 93    | 6         | 883        |
+| 94    | 8+1s      | 891        |
+| 95    | 13+3s     | 907        |
+| 96    | 7+1s      | 915        |
+
+(s = static/internal helpers, a = alias/shared)

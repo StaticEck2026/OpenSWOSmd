@@ -1,0 +1,967 @@
+#include "file_io.h"
+#include "menus.h"
+#include "audio.h"
+#include "menu_system.h"
+#include "string_utils.h"
+#include "asset_loader.h"
+
+/* ---- External globals (all live in SWOS2.s) ---- */
+extern uint16_t assetCurrentIndex;
+extern uint32_t assetLoaderCacheFlag;
+extern uint16_t assetLoaderAltPathReady;
+extern uint32_t frontbufferBasePtr;
+extern volatile uint16_t currentGameTick;
+extern volatile uint16_t panicReasonCode;
+extern uint16_t hilNumGoals;
+extern uint8_t editTacticsCurrentTactics[];
+extern uint8_t hilFileBuffer[];
+
+/* Save file header fields (all within careerFileBuffer/competitionFileBuffer region) */
+extern uint16_t saveFileVersion;
+extern uint32_t saveFileMagic1;
+extern uint32_t saveFileMagic2;
+extern uint32_t saveFileMagic3;
+extern uint32_t saveFileAmigaType;
+extern uint8_t aCj0611143807[];   /* "CJ0611143807" magic string */
+
+/* File buffers and sizes */
+extern uint16_t careerFileBuffer;
+extern uint16_t competitionFileBuffer;
+extern uint16_t numSelectedTeams;
+extern uint16_t numDiyTeams;
+
+/* Error strings (all in SWOS2.s data section) */
+extern uint8_t aDiskWriteProte[];
+extern uint8_t aNoDiskInDrive[];
+extern uint8_t aFileNotFound[];
+extern uint8_t aDiskFull[];
+extern uint8_t aCannotFormatGa[];
+extern uint8_t aDiskError[];
+extern uint8_t aCompetitionFil[];
+extern uint8_t aCompetitionFil_0[];
+extern uint8_t aFileSavedByDif[];
+extern uint8_t aFileSavedOnDif[];
+
+/* String constants (in SWOS2.s data section) */
+extern uint8_t aContinue[];          /* "CONTINUE" */
+extern uint8_t aAbort[];             /* "ABORT" */
+
+/* Insert disk / file dialog globals */
+extern uint8_t aInsertSwosDisk_0[];  /* "\x01INSERT SWOS DISK 2 IN ANY DRIVE" */
+extern uint8_t aOk[];               /* "OK" */
+extern uint8_t aInsertGameSave[];    /* "\x01INSERT GAME SAVE DISK IN DF0:" */
+extern uint8_t aInsertBlankDis[];    /* "\x01INSERT BLANK DISK IN DF0:" */
+extern uint8_t aFormatSaveDisk[];    /* "FORMAT SAVE DISK" */
+extern uint8_t aDeleteFile[];        /* "DELETE FILE" */
+extern uint8_t aSwosu[];            /* "SWOSU" */
+extern uint8_t aSwos4Dku[];         /* "swos4.dku" */
+extern uint16_t saveFileBuffer;
+extern uint16_t menuMusic;
+
+/* File selection dialog globals */
+extern uint32_t extension;
+extern uint32_t menuTitle;           /* stored as pointer (uint32_t on 68k) */
+extern uint8_t inputSaveFilename[];
+extern uint16_t numberOfFiles;
+extern uint16_t totalNumberOfFiles;
+extern uint16_t numMatchedFiles;
+extern uint8_t foundFilenamesBuffer[];
+extern uint32_t foundFilesPtrTable[];
+extern uint32_t extensionsBuffer[];
+extern uint16_t savingFile;
+extern uint8_t selectFilesMenu[];
+extern uint8_t selectedFilename[];
+
+/* ---- External asm functions (C-callable bridges in swos2_unit.s) ---- */
+extern int16_t _CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param, void *name, void *dest, uint32_t *outFileSize);
+extern int16_t _CAssetSys_Dispatch(uint16_t opcode, uint16_t param, void *name, void *dest);
+extern void _RncDecompressV1(uint8_t *src, uint8_t *dest);
+extern void _RncDecompressV2(uint8_t *src, uint8_t *dest);
+extern int16_t _CAssetSys_DispatchWrite(uint16_t opcode, void *filename, void *src, uint32_t size);
+extern void _PanicHaltLoop(void);
+
+/* ---- External C functions (already ported) ---- */
+extern int16_t _AssetCacheCopyByName(uint8_t *name, uint8_t *dest, uint32_t *outFileSize);
+extern void _AssetCacheStoreFromMemory(uint8_t *name, uint8_t *src, uint32_t size);
+extern void _BlitterCopyOverlayToScreen(void);
+
+/* ---- Constants matching asm EQU ---- */
+#define ASSET_OP_INIT_SOURCE0       2
+#define ASSET_OP_LOAD_FILE          4
+#define ASSET_OP_INIT_SOURCE2       6
+#define ASSET_OP_RESOLVE_ASSET_LIST 8
+#define ASSET_OP_DO_CRITICAL        10
+#define ASSET_OP_OPEN_ANY_SOURCE    16
+#define FPS_50HZ                    49
+#define FILENAME_ENTRY_SIZE         32
+#define TACTICS_SIZE                370
+#define RNC_MAGIC_V1                0x524E4301u
+#define RNC_MAGIC_V2                0x524E4302u
+#define FRONTBUFFER_SIZE_TOTAL_BYTES 48048u
+
+/* ================================================================
+ * LoadFile  (SWOS2.s line 8825)
+ *
+ * Loads a file into the given buffer, using the frontbuffer as a
+ * staging area for decompression and overlay.
+ *
+ * Flow:
+ * 1. If assetCurrentIndex == 4, dispatch directly and return.
+ * 2. Otherwise, redirect load into frontbuffer:
+ *    a. Try cache first (AssetCacheCopyByName)
+ *    b. If cache miss, load from disk (AssetSys_Dispatch)
+ *    c. On disk failure, retry after 50-tick delay
+ *    d. On success, optionally store to cache
+ * 3. Check file size vs frontbuffer capacity (panic if too large)
+ * 4. Decode from frontbuffer to real dest:
+ *    - RNC v1: decompress via RncDecompressV1
+ *    - RNC v2: decompress via RncDecompressV2
+ *    - Raw: byte-copy from frontbuffer to dest
+ * 5. Restore screen overlay via BlitterCopyOverlayToScreen
+ *
+ * Asm register convention:
+ *   in:  a0 = filename, a1 = dest buffer
+ *   out: d0 = 0 (success) or non-zero (error), d1 = file size
+ *        Z flag reflects d0
+ *
+ * outFileSize: if non-NULL, receives the file size (or decompressed
+ * size for RNC files). The asm stub uses this to return d1.
+ * ================================================================ */
+__attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
+int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
+{
+    int16_t result;
+    uint32_t fileSize;
+    uint8_t *frontbuf;
+    uint32_t magic;
+    uint32_t count;
+    uint8_t *src;
+    int16_t i;
+    uint16_t tick;
+
+    fileSize = 0;
+
+    for (;;) {
+        /* Direct dispatch if assetCurrentIndex == 4 */
+        if (assetCurrentIndex == 4) {
+            result = _CAssetSys_DispatchGetSize(ASSET_OP_INIT_SOURCE0, 0, filename, dest, &fileSize);
+            if (outFileSize)
+                *outFileSize = fileSize;
+            return result;
+        }
+
+        /* Stage load through frontbuffer */
+        frontbuf = (uint8_t *)frontbufferBasePtr;
+
+        /* Try cache first */
+        if (assetLoaderCacheFlag != 0) {
+            if (_AssetCacheCopyByName(filename, frontbuf, &fileSize) == 0)
+                goto size_check_and_decode;
+        }
+
+        /* Load from disk into frontbuffer */
+        result = _CAssetSys_DispatchGetSize(ASSET_OP_INIT_SOURCE0, 0, filename, frontbuf, &fileSize);
+        if (result != 0) {
+            /* Load failed — retry if not index 4 */
+            if (assetCurrentIndex == 4) {
+                if (outFileSize)
+                    *outFileSize = fileSize;
+                return result;
+            }
+
+            /* Wait 50 ticks before retry */
+            for (i = FPS_50HZ; i >= 0; i--) {
+                tick = currentGameTick;
+                while (currentGameTick == tick) {}
+            }
+            continue; /* retry LoadFile */
+        }
+
+        /* On success, store to cache if appropriate */
+        if (assetLoaderCacheFlag != 0 && assetLoaderAltPathReady != 0) {
+            _AssetCacheStoreFromMemory(filename, frontbuf, fileSize);
+        }
+
+    size_check_and_decode:
+        /* Check file size vs frontbuffer capacity */
+        if (fileSize > FRONTBUFFER_SIZE_TOTAL_BYTES) {
+            panicReasonCode = 0xE000u;
+            _PanicHaltLoop();
+            /* never returns */
+        }
+
+        /* Read frontbuffer pointer again */
+        frontbuf = (uint8_t *)frontbufferBasePtr;
+        magic = *(uint32_t *)frontbuf;
+
+        if (magic == RNC_MAGIC_V1) {
+            /* RNC v1: decompressed size from header offset 4 */
+            fileSize = *(uint32_t *)(frontbuf + 4);
+            _RncDecompressV1(frontbuf, dest);
+        } else if (magic == RNC_MAGIC_V2) {
+            /* RNC v2: decompressed size from header offset 4 */
+            fileSize = *(uint32_t *)(frontbuf + 4);
+            _RncDecompressV2(frontbuf, dest);
+        } else {
+            /* Raw data: byte-copy from frontbuffer to dest */
+            src = frontbuf;
+            count = fileSize;
+            while (count != 0) {
+                *dest++ = *src++;
+                count--;
+            }
+        }
+
+        /* Restore screen overlay */
+        _BlitterCopyOverlayToScreen();
+
+        if (outFileSize)
+            *outFileSize = fileSize;
+        return 0;
+    }
+}
+
+/* ================================================================
+ * WriteFile  (SWOS2.s line 8925)
+ *
+ * Writes data to a file via AssetSys_Dispatch opcode 4.
+ * The dispatch function uses d1 = size, which is passed via
+ * the _CAssetSys_DispatchWrite bridge.
+ *
+ * Asm register convention:
+ *   in:  a0 = filename, a1 = src buffer, d1 = size
+ *   out: d0 = 0 (success) or non-zero (error), Z flag reflects d0
+ * ================================================================ */
+__attribute__((used, externally_visible))
+int16_t _WriteFile(uint8_t *filename, uint8_t *src, uint32_t size)
+{
+    return _CAssetSys_DispatchWrite(ASSET_OP_LOAD_FILE, filename, src, size);
+}
+
+/* ================================================================
+ * ShowFsErrorByCode  (SWOS2.s line 89147)
+ *
+ * Maps a filesystem error code to a human-readable error string
+ * and shows it in the error menu.
+ *
+ * Error codes:
+ *   0x1C   = DISK WRITE PROTECTED
+ *   0x1D   = NO DISK IN DRIVE
+ *   0xCD   = FILE NOT FOUND
+ *   0xDD   = DISK FULL
+ *   0xFF9C = CANNOT FORMAT GAME DISK
+ *   other  = DISK ERROR (default)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ShowFsErrorByCode(uint16_t errCode)
+{
+    uint8_t *msg;
+
+    if (errCode == 0x1C)
+        msg = aDiskWriteProte;
+    else if (errCode == 0x1D)
+        msg = aNoDiskInDrive;
+    else if (errCode == 0xCD)
+        msg = aFileNotFound;
+    else if (errCode == 0xDD)
+        msg = aDiskFull;
+    else if (errCode == 0xFF9C)
+        msg = aCannotFormatGa;
+    else
+        msg = aDiskError;
+
+    _ShowErrorMenu(msg);
+}
+
+/* ================================================================
+ * SaveCompetitionFile  (SWOS2.s line 121173)
+ *
+ * Sets the save file header fields: amiga type, magic bytes,
+ * and version number.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SaveCompetitionFile(void)
+{
+    uint32_t *magic = (uint32_t *)aCj0611143807;
+
+    saveFileAmigaType = 0x100000;
+    saveFileMagic1 = magic[0];
+    saveFileMagic2 = magic[1];
+    saveFileMagic3 = magic[2];
+    saveFileVersion = 0x1200;
+}
+
+/* ================================================================
+ * LoadCompetitionFile  (SWOS2.s line 121183)
+ *
+ * Validates the save file header: checks version, magic bytes,
+ * and amiga type. Shows appropriate error if validation fails.
+ *
+ * Returns: 0 = valid, 1 = invalid (with error shown)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+int16_t _LoadCompetitionFile(void)
+{
+    uint32_t *magic = (uint32_t *)aCj0611143807;
+
+    if (saveFileVersion == 0x500) {
+        _ShowErrorMenu(aCompetitionFil_0); /* "COMPETITION FILE EXPECTS NON-AGA AMIGA" */
+        return 1;
+    }
+
+    if (saveFileMagic1 != magic[0] ||
+        saveFileMagic2 != magic[1] ||
+        saveFileMagic3 != magic[2]) {
+        _ShowErrorMenu(aFileSavedByDif); /* "FILE SAVED BY DIFFERENT S.W.O.S. VERSION" */
+        return 1;
+    }
+
+    if (saveFileAmigaType != 0x100000) {
+        _ShowErrorMenu(aFileSavedOnDif); /* "FILE SAVED ON DIFFERENT AMIGA MEMORY TYPE" */
+        return 1;
+    }
+
+    return 0;
+}
+
+/* ================================================================
+ * LoadCareerFile  (SWOS2.s line 121220)
+ *
+ * Loads a career file: saves current options, loads file into
+ * careerFileBuffer, validates competition header, and cycles music.
+ * On any error, restores options and reinitializes tactics.
+ *
+ * Returns: 0 = success, 1 = error
+ * ================================================================ */
+__attribute__((used, externally_visible))
+int16_t _LoadCareerFile(uint8_t *filename)
+{
+    int16_t result;
+
+    _SaveOptions();
+
+    result = _LoadFileEx(filename, (uint8_t *)&careerFileBuffer, (uint32_t *)0);
+    if (result != 0) {
+        _ShowFsErrorByCode((uint16_t)result);
+        _RestoreOptions();
+        _InitUserTactics();
+        return 1;
+    }
+
+    if (_LoadCompetitionFile() != 0) {
+        _RestoreOptions();
+        _InitUserTactics();
+        return 1;
+    }
+
+    _CycleMenuMusic();
+    return 0;
+}
+
+/* ================================================================
+ * SaveCareerFile  (SWOS2.s line 121244)
+ *
+ * Saves the career file: sets competition header, computes file
+ * size based on numSelectedTeams, writes to disk.
+ *
+ * File size = (&numSelectedTeams - &careerFileBuffer) +
+ *             numSelectedTeams * 684 + 2
+ *
+ * Returns: 0 = success, 1 = error (after showing error menu)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+int16_t _SaveCareerFile(uint8_t *filename)
+{
+    uint32_t fileSize;
+    int16_t result;
+
+    _SaveCompetitionFile();
+
+    fileSize = (uint32_t)((uint8_t *)&numSelectedTeams - (uint8_t *)&careerFileBuffer)
+             + (uint32_t)numSelectedTeams * 684 + 2;
+
+    result = _WriteFile(filename, (uint8_t *)&careerFileBuffer, fileSize);
+    if (result != 0) {
+        _ShowFsErrorByCode((uint16_t)result);
+        return 1;
+    }
+    return 0;
+}
+
+/* ================================================================
+ * LoadPresetFile  (SWOS2.s line 121272)
+ *
+ * Loads a preset/competition file into competitionFileBuffer.
+ * Same pattern as LoadCareerFile but uses competitionFileBuffer.
+ *
+ * Returns: 0 = success, 1 = error
+ * ================================================================ */
+__attribute__((used, externally_visible))
+int16_t _LoadPresetFile(uint8_t *filename)
+{
+    int16_t result;
+
+    _SaveOptions();
+
+    result = _LoadFileEx(filename, (uint8_t *)&competitionFileBuffer, (uint32_t *)0);
+    if (result != 0) {
+        _ShowFsErrorByCode((uint16_t)result);
+        _RestoreOptions();
+        _InitUserTactics();
+        return 1;
+    }
+
+    if (_LoadCompetitionFile() != 0) {
+        _RestoreOptions();
+        _InitUserTactics();
+        return 1;
+    }
+
+    _CycleMenuMusic();
+    return 0;
+}
+
+/* ================================================================
+ * SavePresetCompetitionFile  (SWOS2.s line 121296)
+ *
+ * Saves preset/competition file from competitionFileBuffer.
+ * Uses numDiyTeams for size computation.
+ *
+ * File size = (&numSelectedTeams - &competitionFileBuffer) +
+ *             numDiyTeams * 684 + 2
+ *
+ * Returns: 0 = success, 1 = error
+ * ================================================================ */
+__attribute__((used, externally_visible))
+int16_t _SavePresetCompetitionFile(uint8_t *filename)
+{
+    uint32_t fileSize;
+    int16_t result;
+
+    _SaveCompetitionFile();
+
+    fileSize = (uint32_t)((uint8_t *)&numSelectedTeams - (uint8_t *)&competitionFileBuffer)
+             + (uint32_t)numDiyTeams * 684 + 2;
+
+    result = _WriteFile(filename, (uint8_t *)&competitionFileBuffer, fileSize);
+    if (result != 0) {
+        _ShowFsErrorByCode((uint16_t)result);
+        return 1;
+    }
+    return 0;
+}
+
+/* ================================================================
+ * LoadDIYFile  (SWOS2.s line 121322)
+ *
+ * Loads a DIY competition file into competitionFileBuffer.
+ * Identical logic to LoadPresetFile.
+ *
+ * Returns: 0 = success, 1 = error
+ * ================================================================ */
+__attribute__((used, externally_visible))
+int16_t _LoadDIYFile(uint8_t *filename)
+{
+    int16_t result;
+
+    _SaveOptions();
+
+    result = _LoadFileEx(filename, (uint8_t *)&competitionFileBuffer, (uint32_t *)0);
+    if (result != 0) {
+        _ShowFsErrorByCode((uint16_t)result);
+        _RestoreOptions();
+        _InitUserTactics();
+        return 1;
+    }
+
+    if (_LoadCompetitionFile() != 0) {
+        _RestoreOptions();
+        _InitUserTactics();
+        return 1;
+    }
+
+    _CycleMenuMusic();
+    return 0;
+}
+
+/* ================================================================
+ * SaveDIYFile  (SWOS2.s line 121344)
+ *
+ * Saves a DIY competition file from competitionFileBuffer.
+ * Identical logic to SavePresetCompetitionFile.
+ *
+ * Returns: 0 = success, 1 = error
+ * ================================================================ */
+__attribute__((used, externally_visible))
+int16_t _SaveDIYFile(uint8_t *filename)
+{
+    uint32_t fileSize;
+    int16_t result;
+
+    _SaveCompetitionFile();
+
+    fileSize = (uint32_t)((uint8_t *)&numSelectedTeams - (uint8_t *)&competitionFileBuffer)
+             + (uint32_t)numDiyTeams * 684 + 2;
+
+    result = _WriteFile(filename, (uint8_t *)&competitionFileBuffer, fileSize);
+    if (result != 0) {
+        _ShowFsErrorByCode((uint16_t)result);
+        return 1;
+    }
+    return 0;
+}
+
+/* ================================================================
+ * FindFilesExtensionPresent  (SWOS2.s line 8501)
+ *
+ * Checks if files with the given extension exist by dispatching
+ * ASSET_OP_RESOLVE_ASSET_LIST through the asset system.
+ *
+ * Asm register convention:
+ *   in:  a0 = extension string
+ *   out: d0 = result from dispatch
+ * ================================================================ */
+__attribute__((used, externally_visible))
+int16_t _FindFilesExtensionPresent(uint8_t *ext)
+{
+    return _CAssetSys_Dispatch(ASSET_OP_RESOLVE_ASSET_LIST, 0, ext, (void *)0);
+}
+
+/* ================================================================
+ * ReadTacticsFile  (SWOS2.s line 121232)
+ *
+ * Loads a tactics file into frontbuffer, copies 370 bytes to
+ * editTacticsCurrentTactics, restores screen overlay.
+ *
+ * Asm register convention:
+ *   in:  a0 = filename
+ *   out: d0 = 0 (success) or 1 (error), Z flag reflects d0
+ * ================================================================ */
+__attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
+int16_t _ReadTacticsFile(uint8_t *filename)
+{
+    int16_t result;
+    int16_t i;
+
+    result = _LoadFileEx(filename, (uint8_t *)frontbufferBasePtr, (uint32_t *)0);
+    if (result != 0) {
+        _BlitterCopyOverlayToScreen();
+        _ShowFsErrorByCode((uint16_t)result);
+        return 1;
+    }
+
+    {
+        uint8_t *src = (uint8_t *)frontbufferBasePtr;
+        uint8_t *dst = editTacticsCurrentTactics;
+        for (i = TACTICS_SIZE - 1; i >= 0; i--) {
+            *dst++ = *src++;
+        }
+    }
+
+    _BlitterCopyOverlayToScreen();
+    return 0;
+}
+
+/* ================================================================
+ * WriteTacticsFile  (SWOS2.s line 121262)
+ *
+ * Writes 370 bytes from buffer to a tactics file.
+ *
+ * Asm register convention:
+ *   in:  a0 = filename, a1 = buffer
+ *   out: d0 = 0 (success) or 1 (error), Z flag reflects d0
+ * ================================================================ */
+__attribute__((used, externally_visible))
+int16_t _WriteTacticsFile(uint8_t *filename, uint8_t *buffer)
+{
+    int16_t result;
+
+    result = _WriteFile(filename, buffer, TACTICS_SIZE);
+    if (result == 0)
+        return 0;
+
+    _ShowFsErrorByCode((uint16_t)result);
+    return 1;
+}
+
+/* ================================================================
+ * LoadHilFile  (SWOS2.s line 121273)
+ *
+ * Loads a highlights file into hilFileBuffer.
+ * On error, clears hilNumGoals and shows error.
+ *
+ * Asm register convention:
+ *   in:  a0 = filename
+ *   out: d0 = 0 (success) or 1 (error)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+int16_t _LoadHilFile(uint8_t *filename)
+{
+    int16_t result;
+
+    result = _LoadFileEx(filename, hilFileBuffer, (uint32_t *)0);
+    if (result == 0)
+        return 0;
+
+    hilNumGoals = 0;
+    _ShowFsErrorByCode((uint16_t)result);
+    return 1;
+}
+
+/* ================================================================
+ * DoSaveHighlights  (SWOS2.s line 121287)
+ *
+ * Saves highlights data. Size = hilNumGoals * 19000 + 2254 (header).
+ *
+ * Asm register convention:
+ *   in:  a0 = filename
+ *   out: d0 = 0 (success) or 1 (error)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+int16_t _DoSaveHighlights(uint8_t *filename)
+{
+    uint32_t size;
+    int16_t result;
+
+    size = (uint32_t)hilNumGoals * 19000u + 2254u;
+    result = _WriteFile(filename, hilFileBuffer, size);
+    if (result == 0)
+        return 0;
+
+    _ShowFsErrorByCode((uint16_t)result);
+    return 1;
+}
+
+/* ================================================================
+ * DiskMenuRet  (SWOS2.s line 90480)
+ *
+ * No-op callback referenced by diskMenu data (onInit/onReturn).
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DiskMenuRet(void)
+{
+}
+
+/* ================================================================
+ * ShowInsertDisk2Dialog  (SWOS2.s line 121038)
+ *
+ * Loops: tries AssetSvcLoaderOp2 to check disk readiness. If not
+ * ready, shows a "INSERT SWOS DISK 2" prompt with OK (no abort).
+ * Loops until disk is found.
+ *
+ * Asm register convention:
+ *   in:  a0 = header string (title for the prompt)
+ *   out: none (returns when disk is ready)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ShowInsertDisk2Dialog(uint8_t *header)
+{
+    for (;;) {
+        if (_AssetSvcLoaderOp2() == 0)
+            return; /* disk ready */
+        /* Show prompt — no abort button (null), always retry */
+        _DoContinueAbortMenu(header, aInsertSwosDisk_0, aOk, (uint8_t *)0, 1);
+    }
+}
+
+/* ================================================================
+ * Asset_PromptInsertSaveDiskDf0  (SWOS2.s line 121053)
+ *
+ * Prompts user to insert save disk. If user clicks OK, tries to
+ * open the save disk source. Retries on disk error, aborts if
+ * user clicks ABORT.
+ *
+ * Asm register convention:
+ *   in:  a0 = title string (displayed as prompt header)
+ *   out: d0 = 0 (disk opened successfully) or non-zero (user aborted)
+ *        Z flag reflects d0
+ * ================================================================ */
+__attribute__((used, externally_visible))
+int16_t _Asset_PromptInsertSaveDiskDf0(uint8_t *title)
+{
+    int16_t result;
+
+    for (;;) {
+        result = _DoContinueAbortMenu(title, aInsertGameSave,
+                                      aOk, (uint8_t *)aAbort, 0);
+        if (result != 0)
+            return result; /* user aborted */
+
+        result = _CAssetSys_Dispatch(ASSET_OP_OPEN_ANY_SOURCE, 0,
+                                     (void *)0, (void *)0);
+        if (result == 0)
+            return 0; /* disk opened successfully */
+        /* disk error — retry the prompt */
+    }
+}
+
+/* ================================================================
+ * FormatSaveDiskMenu  (SWOS2.s line 90593)
+ *
+ * Menu callback: prompts to insert blank disk, formats it,
+ * writes swos4.dku header, and restores music.
+ *
+ * Asm register convention:
+ *   no params, no return (menu callback)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _FormatSaveDiskMenu(void)
+{
+    int16_t result;
+
+    for (;;) {
+        result = _DoContinueAbortMenu((uint8_t *)aFormatSaveDisk,
+                                      aInsertBlankDis,
+                                      (uint8_t *)aContinue,
+                                      (uint8_t *)aAbort, 1);
+        if (result != 0)
+            return; /* user aborted */
+
+        result = _CAssetSys_Dispatch(ASSET_OP_OPEN_ANY_SOURCE, 0,
+                                     (void *)0, (void *)0);
+        if (result == 0)
+            break; /* disk ready */
+        if (result == 0x1D)
+            continue; /* no disk — retry prompt */
+        _ShowFsErrorByCode((uint16_t)result);
+        return;
+    }
+
+    /* Disk ready — format (DO_CRITICAL) */
+    _StopMusic();
+    result = _CAssetSys_Dispatch(ASSET_OP_DO_CRITICAL, 0,
+                                 (void *)aSwosu, (void *)0);
+    if (menuMusic != 0) {
+        _TryPlayMusic();
+    }
+    if (result != 0) {
+        _ShowFsErrorByCode((uint16_t)result);
+        return;
+    }
+
+    /* Load swos4.dku save file header (2 bytes) */
+    result = _CAssetSys_DispatchWrite(ASSET_OP_LOAD_FILE,
+                                      (void *)aSwos4Dku,
+                                      (void *)&saveFileBuffer, 2);
+    if (result != 0) {
+        _ShowFsErrorByCode((uint16_t)result);
+    }
+}
+
+/* ================================================================
+ * DeleteFileMenu  (SWOS2.s line 90638)
+ *
+ * Menu callback: prompts for save disk, shows file list, deletes
+ * selected file.
+ *
+ * Asm register convention:
+ *   no params, no return (menu callback)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DeleteFileMenu(void)
+{
+    int16_t result;
+
+    if (_Asset_PromptInsertSaveDiskDf0(aDeleteFile) != 0)
+        return;
+
+    if (_GetFilenameAndExtension(0, aDeleteFile, aDeleteFile) != 0)
+        return;
+
+    result = _CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE2, 0,
+                                 (void *)0, (void *)0);
+    if (result != 0) {
+        _ShowFsErrorByCode((uint16_t)result);
+    }
+}
+
+/* ================================================================
+ * ExitDisk  (SWOS2.s line 90654)
+ *
+ * Menu callback: shows insert disk 2 dialog, then exits menu.
+ *
+ * Asm register convention:
+ *   no params, no return (menu callback)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ExitDisk(void)
+{
+    _ShowInsertDisk2Dialog(aFormatSaveDisk);
+    _SetExitMenuFlag();
+}
+
+/* ================================================================
+ * SelectFileToSaveDialog  (SWOS2.s line 89141)
+ *
+ * Shows file selection dialog for saving. Scans file list from
+ * asset system, filters by known extensions (.DIY, .PRE, .SEA,
+ * .CAR, .TAC, .HIL), and shows menu for user selection.
+ *
+ * Asm register convention:
+ *   in:  d0 = filter extension (uint32_t, e.g. '.DIY' = 0x2E444959)
+ *        a0 = default filename string (copied to save dialog input)
+ *        a1 = menu title string
+ *   out: d0 = 0 (file selected) or 1 (error/no selection)
+ *        selectedFilename global contains the chosen filename
+ * ================================================================ */
+__attribute__((used, externally_visible))
+int16_t _SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename,
+                                uint8_t *menuTitleStr)
+{
+    int16_t result;
+    uint16_t count;
+    uint8_t *fileEntry;
+    uint32_t *ptrTableCursor;
+    uint32_t *extTableCursor;
+    uint8_t *scan;
+    uint32_t ext;
+    uint16_t i;
+
+    extension = filterExt;
+    menuTitle = (uint32_t)menuTitleStr;
+    _StringCopy(defaultFilename, inputSaveFilename);
+
+    result = _FindFilesExtensionPresent((uint8_t *)0);
+    if (result != 0) {
+        _ShowFsErrorByCode((uint16_t)result);
+        return 1;
+    }
+
+    totalNumberOfFiles = 0;
+    numMatchedFiles = 0;
+    count = numberOfFiles;
+
+    if (count != 0) {
+        count--;
+        fileEntry = foundFilenamesBuffer;
+        ptrTableCursor = foundFilesPtrTable;
+        extTableCursor = extensionsBuffer;
+
+        for (i = count; ; i--) {
+            /* Find the '.' in the filename */
+            scan = fileEntry;
+            while (*scan != 0x2E) /* '.' */
+                scan++;
+
+            /* Build 4-byte extension from '.' + 3 chars */
+            ext = ((uint32_t)scan[0] << 24) |
+                  ((uint32_t)scan[1] << 16) |
+                  ((uint32_t)scan[2] << 8) |
+                  (uint32_t)scan[3];
+
+            /* Check against known extensions */
+            if (ext == 0x2E444959u || /* .DIY */
+                ext == 0x2E505245u || /* .PRE */
+                ext == 0x2E534541u || /* .SEA */
+                ext == 0x2E434152u || /* .CAR */
+                ext == 0x2E544143u || /* .TAC */
+                ext == 0x2E48494Cu)   /* .HIL */
+            {
+                totalNumberOfFiles++;
+                if (ext == extension) {
+                    numMatchedFiles++;
+                    *ptrTableCursor++ = (uint32_t)fileEntry;
+                    *extTableCursor++ = ext;
+                }
+            }
+
+            fileEntry += FILENAME_ENTRY_SIZE;
+            if (i == 0) break;
+        }
+    }
+
+    savingFile = 1;
+    _ShowMenu(selectFilesMenu);
+
+    if (selectedFilename[0] != 0)
+        return 0; /* file selected */
+
+    return 1; /* no selection */
+}
+
+/* ================================================================
+ * GetFilenameAndExtension  (SWOS2.s line 89211)
+ *
+ * Shows file selection dialog for loading/opening. Similar to
+ * SelectFileToSaveDialog but adds ALL matching files (not just
+ * the filter extension), and sets savingFile=0.
+ *
+ * Asm register convention:
+ *   in:  d0 = preferred extension (uint32_t, or 0 for "all")
+ *        a0 = default filename string
+ *        a1 = menu title string
+ *   out: d0 = 0 (file selected) or 1 (error/no selection)
+ *        selectedFilename global contains the chosen filename
+ * ================================================================ */
+__attribute__((used, externally_visible))
+int16_t _GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename,
+                                 uint8_t *menuTitleStr)
+{
+    int16_t result;
+    uint16_t count;
+    uint8_t *fileEntry;
+    uint32_t *ptrTableCursor;
+    uint32_t *extTableCursor;
+    uint8_t *scan;
+    uint32_t ext;
+    uint16_t i;
+
+    extension = preferredExt;
+    menuTitle = (uint32_t)menuTitleStr;
+    _StringCopy(defaultFilename, inputSaveFilename);
+
+    result = _FindFilesExtensionPresent((uint8_t *)0);
+    if (result != 0) {
+        _ShowFsErrorByCode((uint16_t)result);
+        return 1;
+    }
+
+    totalNumberOfFiles = 0;
+    numMatchedFiles = 0;
+    count = numberOfFiles;
+
+    if (count != 0) {
+        count--;
+        fileEntry = foundFilenamesBuffer;
+        ptrTableCursor = foundFilesPtrTable;
+        extTableCursor = extensionsBuffer;
+
+        for (i = count; ; i--) {
+            /* Find the '.' in the filename */
+            scan = fileEntry;
+            while (*scan != 0x2E) /* '.' */
+                scan++;
+
+            /* Build 4-byte extension from '.' + 3 chars */
+            ext = ((uint32_t)scan[0] << 24) |
+                  ((uint32_t)scan[1] << 16) |
+                  ((uint32_t)scan[2] << 8) |
+                  (uint32_t)scan[3];
+
+            /* Check against known extensions */
+            if (ext == 0x2E444959u || /* .DIY */
+                ext == 0x2E505245u || /* .PRE */
+                ext == 0x2E534541u || /* .SEA */
+                ext == 0x2E434152u || /* .CAR */
+                ext == 0x2E544143u || /* .TAC */
+                ext == 0x2E48494Cu)   /* .HIL */
+            {
+                totalNumberOfFiles++;
+                numMatchedFiles++;
+                *ptrTableCursor++ = (uint32_t)fileEntry;
+                *extTableCursor++ = ext;
+            }
+
+            fileEntry += FILENAME_ENTRY_SIZE;
+            if (i == 0) break;
+        }
+    }
+
+    savingFile = 0;
+    _ShowMenu(selectFilesMenu);
+
+    if (selectedFilename[0] != 0)
+        return 0; /* file selected */
+
+    return 1; /* no selection */
+}
