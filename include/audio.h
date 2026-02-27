@@ -21,8 +21,13 @@ typedef long int32_t;
 #define AUD2LC_ADDR     0x00DFF0C0u
 #define AUD3LC_ADDR     0x00DFF0D0u
 
-/* ---- AudioState structure (46 bytes, matches SWOS2.s layout) ---- */
-typedef struct __attribute__((packed)) {
+/* ---- AudioState structure (46 bytes, matches SWOS2.s layout) ----
+ * Uses pragma pack(2) instead of __attribute__((packed)) so GCC
+ * generates word-sized loads/stores instead of byte-by-byte access.
+ * All fields are already at 2-byte-aligned offsets in the original
+ * asm layout, so pack(2) produces the identical memory layout. */
+#pragma pack(push, 2)
+typedef struct {
     uint8_t *songPtr;              /* +0x00 */
     uint8_t *bankSectionPtrs[7];   /* +0x04..+0x1F */
     uint16_t masterVolume;         /* +0x20 */
@@ -35,13 +40,20 @@ typedef struct __attribute__((packed)) {
     uint8_t  channelChangeFlags;   /* +0x2C */
     uint8_t  currentChannelIdx;    /* +0x2D */
 } AudioState;
+#pragma pack(pop)
 
 /* ---- AudioChannel structure (176 bytes / 0xB0, matches SWOS2.s layout) ----
  *
  * Each channel has a primary voice (PV, "beep") and a secondary voice (SV, "mod").
  * The PV and SV share the same hardware register base (hwRegBase).
- */
-typedef struct __attribute__((packed)) {
+ *
+ * Uses pragma pack(2) instead of __attribute__((packed)) so GCC
+ * generates word-sized loads/stores instead of byte-by-byte access.
+ * All uint32_t fields are at 2-byte-aligned offsets (not always
+ * 4-byte-aligned), so pack(2) preserves the identical memory layout
+ * while allowing GCC to use move.w pairs instead of 4x move.b. */
+#pragma pack(push, 2)
+typedef struct {
     /* ---- Shared ---- */
     uint32_t hwRegBase;          /* 0x00: AUDxLC hardware address */
 
@@ -126,6 +138,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  svVariantId;        /* 0xAE: current variant ID */
     uint8_t  _padAF;             /* 0xAF */
 } AudioChannel;
+#pragma pack(pop)
 
 #define AUDIO_CHANNEL_SIZE  0xB0
 

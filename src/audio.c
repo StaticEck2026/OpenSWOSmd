@@ -166,7 +166,7 @@ void _InitAudioState(uint8_t *bankBase, uint8_t *songPtr)
     int16_t i;
     uint8_t *descriptors;
     uint8_t *relocBase;
-    int32_t descriptorSize;
+    uint16_t descriptorSize;
 
     /* songPtr + 4 -> audioState.songPtr */
     audioState.songPtr = songPtr + 4;
@@ -201,7 +201,9 @@ void _InitAudioState(uint8_t *bankBase, uint8_t *songPtr)
      * Each descriptor is 0x20 bytes with 3 pointers to relocate. */
     descriptors = audioState.bankSectionPtrs[0];
     relocBase = audioState.songPtr;
-    descriptorSize = (int32_t)(*(uint32_t *)(descriptors - 4));
+    /* asm: move.l -4(a2),d1 loads 32-bit, but subi.w #$20,d1 / bne
+     * tests only the low 16 bits. Read low word of the 32-bit field. */
+    descriptorSize = (uint16_t)(*(uint32_t *)(descriptors - 4));
 
     while (descriptorSize != 0)
     {

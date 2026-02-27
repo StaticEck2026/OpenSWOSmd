@@ -228,14 +228,16 @@ static uint32_t v1DecodeBlock(uint8_t *src, uint8_t *dst)
 
     unpackSize = v1ReadU32(&hdr);     /* hdr now at src+8 */
     a6 = dst + unpackSize;
-    a3 = src + 0x0A;                  /* skip 10-byte header */
+    /* asm: lea $A(a0),a3 — a0 is at src+8 after two ReadU32 calls,
+     * so a3 = src+8+0x0A = src+0x12 (18 bytes into header) */
+    a3 = hdr + 0x0A;                  /* hdr=src+8, so a3=src+18 */
     packSize = v1ReadU32(&hdr);       /* hdr now at src+12, but unused further */
     a4 = a3 + packSize;
 
     /* ---- Overlap handling ---- */
     /* asm: clr.w -(sp)  → push 0 word (savedCount) */
     if (dst < a4) {
-        uint8_t leeway = src[8];      /* -2(a3) */
+        uint8_t leeway = *(a3 - 2);  /* asm: move.b -2(a3),d0 */
         uint8_t *endWithLeeway = a6 + leeway;
 
         if (endWithLeeway > a4) {

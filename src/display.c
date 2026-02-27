@@ -176,7 +176,8 @@ void _InitDisplayAndCopper(void)
     /* Install copper list */
     *(volatile uint32_t *)COP1LC_ADDR = (uint32_t)copperListBuffer;
 
-    /* Strobe copper to start */
+    /* Strobe copper to start — original asm does: move.w (COPJMP1).l,d0
+     * This is a pure read strobe; any access triggers copper PC reload. */
     {
         volatile uint16_t dummy = *(volatile uint16_t *)COPJMP1_ADDR;
         (void)dummy;
@@ -194,6 +195,14 @@ void _InitDisplayAndCopper(void)
     *(volatile uint16_t *)DMACON_ADDR = 0x8280u;
     /* Enable sprite DMA */
     *(volatile uint16_t *)DMACON_ADDR = 0x8220u;
+
+    /* Re-strobe copper after DMA is fully enabled.
+     * Some emulators (FS-UAE) may ignore the pre-DMA strobe,
+     * so re-trigger to ensure the copper starts from COP1LC. */
+    {
+        volatile uint16_t dummy = *(volatile uint16_t *)COPJMP1_ADDR;
+        (void)dummy;
+    }
 }
 
 /* ================================================================

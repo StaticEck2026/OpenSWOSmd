@@ -158,7 +158,13 @@ static void beepVolumeLfoStep(AudioChannel *chan)
     lfoData = (uint8_t *)lfoPtr;
     idx = chan->pvVolLfoIdx;
     sample = (int8_t)lfoData[idx];
-    mod = ((int16_t)sample * (int16_t)chan->pvCurVol) >> 7;
+    /* muls.w pvCurVol,d1 -> asr.w #7,d1: asr.w operates only on the low
+     * 16 bits of d1, so we must truncate the 32-bit product to int16_t
+     * BEFORE shifting, to match the 68k word-only shift. */
+    {
+        int16_t prod16 = (int16_t)((int16_t)sample * (int16_t)chan->pvCurVol);
+        mod = prod16 >> 7;
+    }
     chan->pvCurVol = (uint16_t)((int16_t)chan->pvCurVol + mod);
 
     idx++;
@@ -215,9 +221,13 @@ static void beepLFOAndPitchSlide(AudioChannel *chan)
         int8_t sample = (int8_t)lfoData[idx];
         int16_t mod;
 
-        /* muls + asr #7 + neg */
-        mod = (int16_t)((int16_t)sample * (int16_t)chan->pvBasePeriod);
-        mod = (int16_t)(((int32_t)mod) >> 7);
+        /* muls.w basePeriod,d1 -> asr.l #7,d1 -> neg.w d1
+         * Assembly uses full 32-bit product then shifts 32-bit,
+         * then negates only the low 16 bits. */
+        {
+            int32_t product = (int32_t)(int16_t)sample * (int32_t)(int16_t)chan->pvBasePeriod;
+            mod = (int16_t)(product >> 7);
+        }
         mod = -mod;
         /* bpl = if positive, skip halving; if negative, halve */
         if (mod < 0)
@@ -282,8 +292,9 @@ static void noteOnInitChannel(AudioChannel *chan, uint16_t amigaPeriod)
     chan->pvCurPeriod = amigaPeriod;
     chan->pvPitchslideAccum = 0;
 
-    /* a3 = bankSectionPtrs[1] + word at variantDesc+0x0C */
-    envData = audioState.bankSectionPtrs[1] + *(uint16_t *)(variantDesc + 0x0C);
+    /* a3 = bankSectionPtrs[1] + word at variantDesc+0x0C
+     * asm uses adda.w which sign-extends the 16-bit operand */
+    envData = audioState.bankSectionPtrs[1] + (int16_t)*(uint16_t *)(variantDesc + 0x0C);
     chan->pvEnvDataPtr = (uint32_t)envData;
 
     /* Init envelope: target = envData[1], delta = envData[1] - envData[0] */
@@ -524,8 +535,10 @@ fetch_cmd:
         }
         else
         {
-            /* Note byte — look up period from table */
-            uint16_t period = kAmigaNotePeriodTable[cmdByte];
+            /* Note byte — asm uses byte offset into word table:
+             * move.w (a2,d0.w),d1 — cmdByte is pre-doubled, so
+             * divide by 2 to get element index. */
+            uint16_t period = kAmigaNotePeriodTable[cmdByte >> 1];
 
             /* If secondary voice not active, init channel */
             if (chan->svWaveData == 0)
@@ -658,7 +671,11 @@ static void volumeLfoStep(AudioChannel *chan)
     lfoData = (uint8_t *)lfoPtr;
     idx = chan->svVolLfoIdx;
     sample = (int8_t)lfoData[idx];
-    mod = ((int16_t)sample * (int16_t)chan->svCurVol) >> 7;
+    /* asr.w #7: truncate product to int16_t before shift (word-only) */
+    {
+        int16_t prod16 = (int16_t)((int16_t)sample * (int16_t)chan->svCurVol);
+        mod = prod16 >> 7;
+    }
     chan->svCurVol = (uint16_t)((int16_t)chan->svCurVol + mod);
 
     idx++;
@@ -721,8 +738,12 @@ static void lfoAndPitchSlide(AudioChannel *chan)
         int8_t sample = (int8_t)lfoData[idx];
         int16_t mod;
 
-        mod = (int16_t)((int16_t)sample * (int16_t)chan->svBasePeriod);
-        mod = (int16_t)(((int32_t)mod) >> 7);
+        /* muls.w basePeriod,d1 -> asr.l #7,d1 -> neg.w d1
+         * Full 32-bit product shifted before truncating to 16 bits. */
+        {
+            int32_t product = (int32_t)(int16_t)sample * (int32_t)(int16_t)chan->svBasePeriod;
+            mod = (int16_t)(product >> 7);
+        }
         mod = -mod;
         if (mod < 0)
             mod >>= 1;
@@ -765,7 +786,8 @@ static void initPitchEnv(AudioChannel *chan, uint16_t amigaPeriod)
     chan->svCurPeriod = amigaPeriod;
     chan->svPitchslideAccum = 0;
 
-    envData = audioState.bankSectionPtrs[1] + *(uint16_t *)(variantDesc + 0x0C);
+    /* adda.w sign-extends the 16-bit operand before adding to address */
+    envData = audioState.bankSectionPtrs[1] + (int16_t)*(uint16_t *)(variantDesc + 0x0C);
     chan->svEnvDataPtr = (uint32_t)envData;
 
     chan->svEnvTarget = envData[1];
@@ -975,8 +997,9 @@ fetch_cmd:
     }
     else
     {
-        /* Note byte — look up period, init pitch envelope */
-        uint16_t period = kAmigaNotePeriodTable[cmdByte];
+        /* Note byte — asm uses byte offset into word table:
+         * move.w (a2,d0.w),d1 — cmdByte is pre-doubled */
+        uint16_t period = kAmigaNotePeriodTable[cmdByte >> 1];
         initPitchEnv(chan, period);
     }
 
