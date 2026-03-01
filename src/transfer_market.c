@@ -119,14 +119,14 @@ uint16_t _GetRemainingOfferSwapSlots(void)
  * Asm register convention:
  *   in:  d0.w = offerIndex
  * ================================================================ */
-__attribute__((used, externally_visible))
+__attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void _RemoveTransferOfferAtIndex(uint16_t offerIndex)
 {
-    int16_t remaining;
+    int32_t remaining;
     uint8_t *dst;
-    int16_t i, j;
+    int32_t i, j;
 
-    remaining = (int16_t)numOffers - (int16_t)offerIndex - 2;  /* sub.w d0,d1; subq.w #2,d1 */
+    remaining = (int16_t)((int16_t)numOffers - (int16_t)offerIndex - 2);  /* sub.w d0,d1; subq.w #2,d1 */
 
     if (remaining >= 0) {
         /* Point to the offer entry to remove */

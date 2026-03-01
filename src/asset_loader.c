@@ -24,6 +24,7 @@ extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSi
 #define ASSET_OP_SELECT_AND_OPEN    14
 #define ASSET_OP_INIT_SOURCE0       2
 #define ASSET_OP_5_THEN_MAYBE_6     12
+#define ASSET_OP_OPEN_ANY_SOURCE    16
 #define FPS_50HZ                    49
 #define RNC_MAGIC_V1                0x524E4301u
 
@@ -355,47 +356,28 @@ void _AssetLoaderRegisterRegion(uint32_t size, uint8_t *region)
 /* ================================================================
  * AssetLoaderInitAltPathAndBanks  (SWOS2.s line 10225)
  *
- * Registers memory regions for the asset cache:
- * 1. surnameBuf with size 0 (header-only placeholder)
- * 2. assetLoaderMainRegion with 195000 bytes
- * 3. Scans loaderBankBitmap for additional 512KB banks
+ * Registers memory regions for the asset cache.
+ * Original game used post-BSS free memory + bank scanner.
+ * Port: allocates cache memory at runtime via AllocMem since
+ * BSS is hunk-allocated with no guaranteed free space after it.
  * ================================================================ */
+/* Pre-allocated cache memory (set in _start before hardware takeover) */
+extern uint8_t *g_earlyAllocCacheMem;
+extern uint32_t g_earlyAllocCacheSize;
+
 __attribute__((used, externally_visible))
 void _AssetLoaderInitAltPathAndBanks(void)
 {
-    uint8_t *bankAddr;
-    uint32_t bankBits;
-    int16_t bitIdx;
-
     assetLoaderAltPathReady = 1;
     assetLoaderCacheFlag = 0;
 
     /* Register surnameBuf as placeholder (size 0 → will be skipped inside) */
     _AssetLoaderRegisterRegion(0, surnameBuf);
 
-    /* Register main region with 195000 bytes */
-    _AssetLoaderRegisterRegion(195000u, assetLoaderMainRegion);
-
-    /* Only scan banks if memory top > 1MB */
-    if (loaderMemTop <= 0x100000u)
-        return;
-
-    bankBits = loaderBankBitmap;
-    bitIdx = 1;
-    bankAddr = assetLoaderBank0Base;
-
-    while (bitIdx < 32)
+    /* Use cache memory that was pre-allocated in _start (before hardware takeover) */
+    if (g_earlyAllocCacheMem != (uint8_t *)0 && g_earlyAllocCacheSize > 0)
     {
-        if ((bankBits & (1u << bitIdx)) != 0)
-        {
-            /* Skip banks at addresses 0x100000 and 0x80000 */
-            if ((uint32_t)bankAddr != 0x100000u && (uint32_t)bankAddr != 0x80000u)
-            {
-                _AssetLoaderRegisterRegion(0x80000u, bankAddr);
-            }
-        }
-        bankAddr += 0x80000u;
-        bitIdx += 1;
+        _AssetLoaderRegisterRegion(g_earlyAllocCacheSize, g_earlyAllocCacheMem);
     }
 }
 
@@ -446,6 +428,7 @@ void _AssetPrecacheOneCore(const uint8_t *assetName)
     int16_t status;
 
     result = _AssetCacheFindByName(assetName);
+
     if (result != (int32_t)0xFFFFFFFFu)
         return; /* already cached */
 
@@ -520,6 +503,8 @@ void _AssetPrecacheMenuPack(void)
         _AssetPrecacheOneMenu(*entry);
         entry++;
     }
+
+
 }
 
 /* ================================================================

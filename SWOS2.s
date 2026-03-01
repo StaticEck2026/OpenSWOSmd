@@ -2252,7 +2252,7 @@ LEVEL_5_INTERRUPT_AUTOVECTOR            EQU $74
 LEVEL_6_INTERRUPT_AUTOVECTOR            EQU $78
 LEVEL_7_INTERRUPT_AUTOVECTOR            EQU $7C
 
-    SECTION BSSInChip,BSS,CHIP
+    SECTION BSSInChip.MEMF_CHIP,BSS,CHIP
 ; --- BSS_00 00000400-00100000 ---
 
 pitchDatBuffer:
@@ -2797,12 +2797,18 @@ inGameHilBuffer:
                                         ; Hils are stored here during the game
 BSS_00_CF13E:
                 ds.b $5582
-assetLoaderMainRegion:
-                ds.b $0                 ; no longer used
 
 stackSpace:
                 ds.b 8192
 stackTop:
+
+g_earlyAllocCacheMem:
+                ds.l 1
+g_earlyAllocCacheSize:
+                ds.l 1
+
+assetLoaderMainRegion:
+                ds.b $0                 ; zero-size anchor (cache memory allocated at runtime via AllocMem)
 
 ; ===== j_start =====
 ; prototype: void __usercall j_start()
@@ -2834,6 +2840,39 @@ loc_1000D0:
                 ;movea.l #$CC8C,sp
                 jsr     SafeStart
                 jsr     LoadDosLibrary
+
+                ; Allocate cache memory BEFORE hardware takeover (ExecBase still valid)
+                ; Try 512KB, then 256KB, then 128KB
+                move.l  4.w,a6                 ; ExecBase
+                move.l  #524288,d0             ; 512KB
+                moveq   #1,d1                  ; MEMF_PUBLIC
+                jsr     -198(a6)               ; AllocMem
+                tst.l   d0
+                beq.s   .try256k
+                move.l  d0,(g_earlyAllocCacheMem)
+                move.l  #524288,(g_earlyAllocCacheSize)
+                bra.s   .alloc_done
+.try256k:
+                move.l  4.w,a6
+                move.l  #262144,d0             ; 256KB
+                moveq   #1,d1                  ; MEMF_PUBLIC
+                jsr     -198(a6)               ; AllocMem
+                tst.l   d0
+                beq.s   .try128k
+                move.l  d0,(g_earlyAllocCacheMem)
+                move.l  #262144,(g_earlyAllocCacheSize)
+                bra.s   .alloc_done
+.try128k:
+                move.l  4.w,a6
+                move.l  #131072,d0             ; 128KB
+                moveq   #1,d1                  ; MEMF_PUBLIC
+                jsr     -198(a6)               ; AllocMem
+                tst.l   d0
+                beq.s   .alloc_done
+                move.l  d0,(g_earlyAllocCacheMem)
+                move.l  #131072,(g_earlyAllocCacheSize)
+.alloc_done:
+
                 jsr     DetachOSDisplay
                 jsr     InitHardwareAtFrameStart
                 lea     (loaderBankBitmap).l,a0
@@ -2849,8 +2888,13 @@ loc_1000F4:
                 cmpa.l  a1,a0
                 bne.s   loc_1000F4
                 move.l  #$12345678,(magicValue).l
-                move.l  #CHIPMEMSIZE,(loaderMemTop).l
-                move.l  #(CHIPBITS|FASTBITS),(loaderBankBitmap).l
+                ; Bank scan disabled: assetLoaderBank0Base address is relocated
+                ; in our build, so computed bank addresses are wrong.
+                ; Set loaderMemTop <= 0x100000 to skip bank scan in
+                ; _AssetLoaderInitAltPathAndBanks. The main region (195KB)
+                ; provides sufficient cache.
+                clr.l   (loaderMemTop)
+                clr.l   (loaderBankBitmap)
                 move.l  #FASTBITS,(loaderParam).l
                 ;move    #$2000,sr
                 move.w  #0,(COLOR00).l
@@ -4293,6 +4337,7 @@ FloppyDev_TransferWithState:
 ; ===== FloppyDev_TransferImpl =====
 ; prototype: unsigned int __usercall FloppyDev_TransferImpl@<d0>(unsigned __int16 dev@<d0>, unsigned __int16 off@<d1>, unsigned __int16 len@<d2>, unsigned __int16 mode@<d3>, const void *buf@<a0>, void *ctx@<a1>)
 FloppyDev_TransferImpl:
+                move.w  #$F,d0          ; HDD: all 4 sources available
                 rts
                 movem.l d1-d7/a0-a5,-(sp)
                 link    a6,#-$24
@@ -5450,13 +5495,7 @@ FixupAndColorPitchFile:
 
 ; ===== SetCameraCoordinates =====
 ; prototype: void __usercall SetCameraCoordinates(__int16 newX@<d1>, __int16 newY@<d2>)
-; in:
-;      D1 - new x (whole part)
-;      D2 - new y (whole part)
-; 
-; Updates *mod320 vars too.
 SetCameraCoordinates:
-                ; d1 = targetX, d2 = targetY → C stack args
                 move.l  d2,-(sp)
                 move.l  d1,-(sp)
                 jsr     _SetCameraCoordinates
@@ -6927,7 +6966,7 @@ RncDecompressV1:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; Dead code: RncDecodeBlock through RncDecodeV2Body (ported to C in rnc.c)
+; Dead code: V1 routines (ported to C in rnc.c)
 RncDecodeBlock:
                 rts
 RncDecodeSymbol:
@@ -6941,6 +6980,211 @@ RncReadU32:
 RncBuildTable:
                 rts
 RncDecodeV2Body:
+                rts
+
+; ===== Original asm V2 decompressor (temp debug) =====
+; Callable from C: void _RncDecompressV2_asm(uint8_t *src, uint8_t *dst)
+                xdef    _RncDecompressV2_asm
+_RncDecompressV2_asm:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  44+4(sp),a0         ; src (first arg)
+                move.l  44+8(sp),a1         ; dst (second arg)
+                bsr.s   RncDecodeV2Body_orig
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
+
+RncDecodeV2Body_orig:
+                movem.l d0-d2/a0-a2,-(sp)
+                lea     $12(a0),a0
+                moveq   #$FFFFFF80,d2
+                add.b   d2,d2
+                move.b  (a0)+,d2
+                addx.b  d2,d2
+                add.b   d2,d2
+                bra.w   .v2_main_entry
+.v2_refill_lit_count:
+                move.b  (a0)+,d2
+                addx.b  d2,d2
+                bra.s   .v2_after_refill_lit_count
+.v2_refill_len1:
+                move.b  (a0)+,d2
+                addx.b  d2,d2
+                bra.s   .v2_after_len1
+.v2_refill_len2:
+                move.b  (a0)+,d2
+                addx.b  d2,d2
+                bra.s   .v2_after_len2
+.v2_refill_len3:
+                move.b  (a0)+,d2
+                addx.b  d2,d2
+                bra.s   .v2_after_len3
+.v2_refill_dist1:
+                move.b  (a0)+,d2
+                addx.b  d2,d2
+                bra.s   .v2_after_dist1
+.v2_refill_dist2:
+                move.b  (a0)+,d2
+                addx.b  d2,d2
+                bra.s   .v2_after_dist2
+.v2_refill_dist3:
+                move.b  (a0)+,d2
+                addx.b  d2,d2
+                bra.s   .v2_after_dist3
+.v2_refill_dist4:
+                move.b  (a0)+,d2
+                addx.b  d2,d2
+                bra.s   .v2_after_dist4
+.v2_lit_block:
+                moveq   #3,d0
+.v2_lit_block_loop:
+                add.b   d2,d2
+                beq.s   .v2_refill_lit_count
+.v2_after_refill_lit_count:
+                addx.w  d1,d1
+                dbf     d0,.v2_lit_block_loop
+                addq.w  #2,d1
+.v2_lit_block_copy:
+                move.b  (a0)+,(a1)+
+                move.b  (a0)+,(a1)+
+                move.b  (a0)+,(a1)+
+                move.b  (a0)+,(a1)+
+                dbf     d1,.v2_lit_block_copy
+                bra.s   .v2_main_entry
+.v2_len_extend:
+                add.b   d2,d2
+                beq.s   .v2_refill_len1
+.v2_after_len1:
+                addx.w  d0,d0
+                add.b   d2,d2
+                beq.s   .v2_refill_len2
+.v2_after_len2:
+                bcc.s   .v2_dist_bit
+                subq.w  #1,d0
+                add.b   d2,d2
+                beq.s   .v2_refill_len3
+.v2_after_len3:
+                addx.w  d0,d0
+                cmpi.b  #9,d0
+                beq.s   .v2_lit_block
+.v2_dist_bit:
+                add.b   d2,d2
+                beq.s   .v2_refill_dist1
+.v2_after_dist1:
+                bcc.s   .v2_copy
+                add.b   d2,d2
+                beq.s   .v2_refill_dist2
+.v2_after_dist2:
+                addx.w  d1,d1
+                add.b   d2,d2
+                beq.s   .v2_refill_dist3
+.v2_after_dist3:
+                bcs.s   .v2_dist_high
+                tst.w   d1
+                bne.s   .v2_dist_combine
+                addq.w  #1,d1
+.v2_dist_extra:
+                add.b   d2,d2
+                beq.s   .v2_refill_dist4
+.v2_after_dist4:
+                addx.w  d1,d1
+.v2_dist_combine:
+                rol.w   #8,d1
+.v2_copy:
+                move.b  (a0)+,d1
+                movea.l a1,a2
+                suba.w  d1,a2
+                subq.w  #1,a2
+                lsr.w   #1,d0
+                bcc.s   .v2_copy_even
+                move.b  (a2)+,(a1)+
+.v2_copy_even:
+                subq.w  #1,d0
+                tst.w   d1
+                bne.s   .v2_copy_loop
+                move.b  (a2),d1
+.v2_rle_loop:
+                move.b  d1,(a1)+
+                move.b  d1,(a1)+
+                dbf     d0,.v2_rle_loop
+                bra.s   .v2_main_entry
+.v2_copy_loop:
+                move.b  (a2)+,(a1)+
+                move.b  (a2)+,(a1)+
+                dbf     d0,.v2_copy_loop
+                bra.s   .v2_main_entry
+.v2_refill_main:
+                move.b  (a0)+,d2
+                addx.b  d2,d2
+                bcs.s   .v2_match_start
+.v2_lit_single:
+                move.b  (a0)+,(a1)+
+.v2_main_entry:
+                add.b   d2,d2
+                bcs.s   .v2_main_check_z
+                move.b  (a0)+,(a1)+
+                add.b   d2,d2
+                bcc.s   .v2_lit_single
+.v2_main_check_z:
+                beq.s   .v2_refill_main
+.v2_match_start:
+                moveq   #2,d0
+                moveq   #0,d1
+                add.b   d2,d2
+                beq.s   .v2_refill_ms1
+.v2_after_ms1:
+                bcc.w   .v2_len_extend
+                add.b   d2,d2
+                beq.s   .v2_refill_ms2
+.v2_after_ms2:
+                bcc.s   .v2_copy
+                addq.w  #1,d0
+                add.b   d2,d2
+                beq.s   .v2_refill_ms3
+.v2_after_ms3:
+                bcc.s   .v2_dist_bit
+                move.b  (a0)+,d0
+                beq.s   .v2_end_check
+                addq.w  #8,d0
+                bra.s   .v2_dist_bit
+.v2_dist_high:
+                add.b   d2,d2
+                beq.s   .v2_refill_dh1
+.v2_after_dh1:
+                addx.w  d1,d1
+                ori.w   #4,d1
+                add.b   d2,d2
+                beq.s   .v2_refill_dh2
+.v2_after_dh2:
+                bcs.s   .v2_dist_combine
+                bra.s   .v2_dist_extra
+.v2_refill_ms1:
+                move.b  (a0)+,d2
+                addx.b  d2,d2
+                bra.s   .v2_after_ms1
+.v2_refill_ms2:
+                move.b  (a0)+,d2
+                addx.b  d2,d2
+                bra.s   .v2_after_ms2
+.v2_refill_ms3:
+                move.b  (a0)+,d2
+                addx.b  d2,d2
+                bra.s   .v2_after_ms3
+.v2_refill_dh1:
+                move.b  (a0)+,d2
+                addx.b  d2,d2
+                bra.s   .v2_after_dh1
+.v2_refill_dh2:
+                move.b  (a0)+,d2
+                addx.b  d2,d2
+                bra.s   .v2_after_dh2
+.v2_end_check:
+                add.b   d2,d2
+                bne.s   .v2_end_test
+                move.b  (a0)+,d2
+                addx.b  d2,d2
+.v2_end_test:
+                bcs.s   .v2_main_entry
+                movem.l (sp)+,d0-d2/a0-a2
                 rts
 
 ; ===== nullsub_5 =====
@@ -25245,6 +25489,49 @@ aStackOverflow:
                 dc.b 'STACK OVERFLOW',0,0
                 even
 
+; ===== _CallMenuCallback =====
+; C-callable wrapper: void _CallMenuCallback(void *funcPtr)
+; Saves all registers before calling the asm callback (which may clobber everything),
+; then restores them. This mirrors the original MenuProc behavior.
+; IMPORTANT: save regs FIRST with original values, then load args with +60 offset.
+; d2-d7/a2-a6 are callee-saved in GCC m68k ABI; modifying them before save would
+; corrupt the caller's state on restore.
+                xdef    _CallMenuCallback
+_CallMenuCallback:
+                movem.l d0-d7/a0-a6,-(sp)      ; save all regs (60 bytes)
+                move.l  4+60(sp),a0             ; funcPtr (sp+64)
+                jsr     (a0)
+                movem.l (sp)+,d0-d7/a0-a6       ; restore original values
+                rts
+
+; ===== _CallMenuOnSelect =====
+; C-callable wrapper: void _CallMenuOnSelect(void *funcPtr, void *selectedEntry)
+; Like _CallMenuCallback but also sets a5 = selectedEntry before calling,
+; matching the original MenuProc which kept a5 pointing to the current entry.
+                xdef    _CallMenuOnSelect
+_CallMenuOnSelect:
+                movem.l d0-d7/a0-a6,-(sp)      ; save all regs with ORIGINAL values (60 bytes)
+                move.l  4+60(sp),a0             ; funcPtr (sp+64)
+                move.l  8+60(sp),a5             ; selectedEntry (sp+68)
+                jsr     (a0)                    ; callback sees a5 = selectedEntry
+                movem.l (sp)+,d0-d7/a0-a6       ; restore ALL original values incl. a5
+                rts
+
+; ===== _CallMenuFuncWithXY =====
+; C-callable wrapper: void _CallMenuFuncWithXY(void *funcPtr, uint16_t x, uint16_t y)
+; Calls an asm callback with d1=x, d2=y (register calling convention).
+; Used for ENTRY_FUNC1 (bg) and ENTRY_FUNC2 (fg) menu callbacks.
+; GCC m68k pushes uint16_t args as 32-bit longs on the stack.
+                xdef    _CallMenuFuncWithXY
+_CallMenuFuncWithXY:
+                movem.l d0-d7/a0-a6,-(sp)      ; save all regs with ORIGINAL values (60 bytes)
+                move.l  4+60(sp),a0             ; funcPtr (sp+64)
+                move.w  10+60(sp),d1            ; x low word (sp+70)
+                move.w  14+60(sp),d2            ; y low word (sp+74)
+                jsr     (a0)                    ; callback sees d1=x, d2=y
+                movem.l (sp)+,d0-d7/a0-a6       ; restore ALL original values incl. d2
+                rts
+
 ; ===== UpdateBlinkingMenuText =====
 ; prototype: void __usercall UpdateBlinkingMenuText()
 UpdateBlinkingMenuText:
@@ -29127,7 +29414,7 @@ loc_126CFE:
                 move.w  #125,d2
 loc_126D08:
                 move.w  (team1AppPercent).l,d3
-                cmpa.l  #$BEB8,a4
+                cmpa.l  #topTeamInGame,a4
                 beq.s   loc_126D1C
                 move.w  (team2AppPercent).l,d3
 loc_126D1C:
@@ -58458,7 +58745,7 @@ loc_13A42A:
                 movea.l a6,a0
                 jsr     FormatPlayerValueOrStatusText
                 movem.l (sp)+,a0
-                move.l  #$9AC14,$26(a0)
+                move.l  #fundsBuffer,$26(a0)
 loc_13A444:
                 clr.w   4(a0)
                 move.w  #$D,d1
@@ -77818,7 +78105,7 @@ loc_145CA2:
                 movea.l a6,a0
                 jsr     FormatPlayerValueOrStatusText
                 movem.l (sp)+,a0
-                move.l  #$9AC14,$26(a0)
+                move.l  #fundsBuffer,$26(a0)
 loc_145CBC:
                 move.w  d7,$16(a0)
                 clr.w   4(a0)

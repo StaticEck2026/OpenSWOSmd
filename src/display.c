@@ -71,12 +71,26 @@ extern uint8_t *spriteGraphicsPtr;
  * Helper: write a 32-bit pointer into a copper list entry.
  * Each copper move pair is 8 bytes: [reg_hi][val_hi][reg_lo][val_lo]
  * The high 16 bits of the pointer go at offset +2, low 16 bits at +6.
+ *
+ * Uses inline asm to guarantee word-level (move.w) writes.
+ * GCC's volatile uint16_t store decomposes into byte-level move.b
+ * pairs, which is incorrect for copper list entries that may be
+ * read by DMA mid-update.
  * ================================================================ */
 static void copper_write_ptr(uint8_t *entry, uint32_t ptr)
 {
-    volatile uint16_t *e = (volatile uint16_t *)entry;
-    e[1] = (uint16_t)(ptr >> 16);   /* high word at offset +2 */
-    e[3] = (uint16_t)(ptr);         /* low word at offset +6 */
+    uint16_t hi = (uint16_t)(ptr >> 16);
+    uint16_t lo = (uint16_t)(ptr);
+    __asm__ volatile ("move.w %0,2(%1)" : : "d"(hi), "a"(entry) : "memory");
+    __asm__ volatile ("move.w %0,6(%1)" : : "d"(lo), "a"(entry) : "memory");
+}
+
+/* Helper: write a 16-bit word to a copper list buffer address.
+ * Forces a move.w instruction — GCC's volatile uint16_t store
+ * decomposes into byte-level move.b pairs. */
+static void copper_write_word(uint8_t *addr, uint16_t val)
+{
+    __asm__ volatile ("move.w %0,(%1)" : : "d"(val), "a"(addr) : "memory");
 }
 
 /* ================================================================
@@ -140,21 +154,21 @@ void _InitDisplayAndCopper(void)
 
     /* Clear palette table A (16 entries at copperListBuffer+0x72, stride 4) */
     {
-        volatile uint16_t *p = (volatile uint16_t *)(copperListBuffer + 0x72);
+        uint8_t *p = copperListBuffer + 0x72;
         for (i = 15; i >= 0; i--)
         {
-            *p = 0;
-            p += 2; /* skip 4 bytes (2 words) */
+            copper_write_word(p, 0);
+            p += 4; /* skip 4 bytes */
         }
     }
 
     /* Clear palette table B (16 entries at copperListBuffer+0xB2, stride 4) */
     {
-        volatile uint16_t *p = (volatile uint16_t *)(copperListBuffer + 0xB2);
+        uint8_t *p = copperListBuffer + 0xB2;
         for (i = 15; i >= 0; i--)
         {
-            *p = 0;
-            p += 2; /* skip 4 bytes (2 words) */
+            copper_write_word(p, 0);
+            p += 4; /* skip 4 bytes */
         }
     }
 
@@ -229,19 +243,19 @@ void _UpdatePlanePtrsAndBlitParams(void)
     if (d1 == 0)
     {
         /* Aligned case */
-        COPPER_W(0x5A) = PITCH_DEST_MOD_ALIGNED;
-        COPPER_W(0x5E) = PITCH_DEST_MOD_ALIGNED;
-        COPPER_W(0x62) = 0x0030u;
-        COPPER_W(0x4A) = 0;
+        copper_write_word(copperListBuffer + 0x5A, PITCH_DEST_MOD_ALIGNED);
+        copper_write_word(copperListBuffer + 0x5E, PITCH_DEST_MOD_ALIGNED);
+        copper_write_word(copperListBuffer + 0x62, 0x0030u);
+        copper_write_word(copperListBuffer + 0x4A, 0);
     }
     else
     {
         /* Unaligned case */
         uint16_t shift = 0x10u - d1;
-        COPPER_W(0x5A) = PITCH_DEST_MOD_UNALIGNED;
-        COPPER_W(0x5E) = PITCH_DEST_MOD_UNALIGNED;
-        COPPER_W(0x62) = 0x0028u;
-        COPPER_W(0x4A) = (uint16_t)(shift | (shift << 4));
+        copper_write_word(copperListBuffer + 0x5A, PITCH_DEST_MOD_UNALIGNED);
+        copper_write_word(copperListBuffer + 0x5E, PITCH_DEST_MOD_UNALIGNED);
+        copper_write_word(copperListBuffer + 0x62, 0x0028u);
+        copper_write_word(copperListBuffer + 0x4A, (uint16_t)(shift | (shift << 4)));
     }
 
     /* Build plane pointer tables at copper offsets 0xF4 and 0x11C */
@@ -301,14 +315,14 @@ void _UpdatePlanePtrsAndBlitParams(void)
         uint16_t lineCount = SCREEN_HEIGHT - cameraYMod320 + 0x24u;
         if (lineCount > 0xFFu)
         {
-            COPPER_W(0x114) = 0xFFE1u;
+            copper_write_word(copperListBuffer + 0x114, 0xFFE1u);
         }
         else
         {
-            COPPER_W(0x114) = 1;
+            copper_write_word(copperListBuffer + 0x114, 1);
         }
         lineCount &= 0xFFu;
-        COPPER_W(0x118) = (uint16_t)((lineCount << 8) | 1u);
+        copper_write_word(copperListBuffer + 0x118, (uint16_t)((lineCount << 8) | 1u));
     }
 }
 
@@ -447,10 +461,6 @@ void _SetCameraCoordinates(int16_t targetX, int16_t targetY)
 __attribute__((used, externally_visible))
 void _DoubleBufferSwapSequence(void)
 {
-    /* Debug assertion: #currentMenu - #currentMenu == 0, always passes.
-     * Original asm panics with code $8989 if this fails.
-     * Omitted — cannot fail. */
-
     paletteIndex = 0;
     _SetCameraCoordinates(0, 0);
     _SwapBuffersAndCameraViewState();

@@ -27,6 +27,11 @@
             "chipmem": "2m",
             "fastmem": "8M",
             "program": "${workspaceFolder}/uae/dh0/data/SWOS2",
+            "emuargs": [
+                "-s", "joyport1=kbd2",
+                "-s", "norawinput_all",
+                "-s", "norawinput_keyboard",
+            ],
             "kickstart": "${config:amiga.rom-paths.A1200}",
             "internalConsoleOptions": "openOnSessionStart"
         },

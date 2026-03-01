@@ -716,6 +716,7 @@ _StartMatchSequence(TeamGame *topTeam, TeamGame *bottomTeam)
     _EnsureSfxLoadedAndStart();
     _SetPitchTypeAndNumber();
     _InitGameSaveTeams(topTeam, bottomTeam);
+    _InitGameRestoreTeams();
     _GameLoop();
 }
 

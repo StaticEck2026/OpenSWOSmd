@@ -13,7 +13,7 @@ cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
 cpp_objects := $(addprefix obj/,$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
 c_sources := $(filter-out support/gcc8_c_support.c main.c,$(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs))))
 c_objects := $(addprefix obj/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
-s_sources := support/gcc8_a_support.s support/depacker_doynax.s
+s_sources := support/gcc8_a_support.s
 s_objects := $(addprefix obj/,$(patsubst %.s,%.o,$(notdir $(s_sources))))
 swos_asm_sources := asm/swos2_unit.s asm/resload_unit.s
 swos_asm_objects := $(addprefix obj/,$(patsubst %.s,%.o,$(notdir $(swos_asm_sources))))
@@ -37,7 +37,7 @@ else
 	SDKDIR = $(abspath $(dir $(shell which $(CC)))../m68k-amiga-elf/sys-include)
 endif
 
-CCFLAGS   = -g -MP -MMD -m68020 -Ofast -nostdlib -Wextra -Wno-unused-function -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -ffunction-sections -fdata-sections -Iinclude
+CCFLAGS   = -g -MP -MMD -m68020 -O2 -nostdlib -Wextra -Wno-unused-function -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -ffunction-sections -fdata-sections -Iinclude
 CPPFLAGS  = $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS   = -mcpu=68020 -g --register-prefix-optional -I$(SDKDIR)
 LDFLAGS   = -Wl,--emit-relocs,--no-check-sections,-e,main,-Map=$(OUT).map,-T,$(LDSCRIPT)
@@ -53,6 +53,11 @@ else
 	@mkdir -p "$(dir $@)"
 endif
 	@elf2hunk $(OUT).elf $(OUT)
+#ifdef WINDOWS
+#	@python $(CURDIR)/fix_hunk_relocs.py $(OUT).elf $(OUT)
+#else
+#	@python3 $(CURDIR)/fix_hunk_relocs.py $(OUT).elf $(OUT)
+#endif
 
 $(OUT).elf: $(objects)
 	$(info Linking $(program).elf)

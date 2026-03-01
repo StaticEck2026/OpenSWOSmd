@@ -7,7 +7,8 @@
 
 /* ---- Callback function pointer type ---- */
 typedef void (*VoidFunc)(void);
-typedef void (*VoidFuncD1D2)(uint16_t d1, uint16_t d2);
+/* VoidFuncD1D2 removed: FUNC1/FUNC2 callbacks now use _CallMenuFuncWithXY */
+
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t currentMenu[];
@@ -441,9 +442,9 @@ void _DrawMenuItem(MenuEntry *entry)
     /* Mark as drawn */
     entry->alreadyDrawn = 1;
 
-    /* Call beforeDraw callback */
+    /* Call beforeDraw callback — a5 = entry in original asm */
     if (entry->beforeDraw != 0) {
-        ((VoidFunc)entry->beforeDraw)();
+        _CallMenuOnSelect((void *)entry->beforeDraw, (void *)entry);
         if (entry->isInvisible)
             return;
     }
@@ -489,8 +490,8 @@ void _DrawMenuItem(MenuEntry *entry)
             uint16_t sprIdx = *(uint16_t *)((uint8_t *)entry + 30);
             _CDrawSprite16Pixels(sprIdx, entry->x, entry->y);
         } else if (bg == ENTRY_FUNC1) {
-            VoidFuncD1D2 func = (VoidFuncD1D2)(*(uint32_t *)((uint8_t *)entry + 30));
-            func(entry->x, entry->y);
+            /* Original asm passes x in d1, y in d2 as register params */
+            _CallMenuFuncWithXY((void *)(*(uint32_t *)((uint8_t *)entry + 30)), entry->x, entry->y);
         } else {
             panicReasonCode = 0x1209;
             _PanicHaltLoop();
@@ -583,8 +584,8 @@ void _DrawMenuItem(MenuEntry *entry)
     }
 
     if (content == ENTRY_FUNC2) {
-        VoidFuncD1D2 func = (VoidFuncD1D2)(entry->fg);
-        func(entry->x, entry->y);
+        /* Original asm passes x in d1, y in d2 as register params */
+        _CallMenuFuncWithXY((void *)entry->fg, entry->x, entry->y);
         goto post_draw_callback;
     }
 
@@ -672,7 +673,7 @@ fg_text_common:
 
 post_draw_callback:
     if (entry->afterDrawCb != 0) {
-        ((VoidFunc)entry->afterDrawCb)();
+        _CallMenuOnSelect((void *)entry->afterDrawCb, (void *)entry);
     }
 }
 
@@ -1042,7 +1043,7 @@ void _DrawMenuPanelBackground(void)
 /* ================================================================
  * DrawSelectedMenuItemFrame
  * ================================================================ */
-__attribute__((used, externally_visible))
+__attribute__((used, externally_visible, noinline))
 void _DrawSelectedMenuItemFrame(void)
 {
     Menu *menu = (Menu *)currentMenu;
@@ -1064,7 +1065,7 @@ void _DrawSelectedMenuItemFrame(void)
 /* ================================================================
  * DrawMenu
  * ================================================================ */
-__attribute__((used, externally_visible))
+__attribute__((used, externally_visible, noinline))
 void _DrawMenu(void)
 {
     Menu *menu = (Menu *)currentMenu;
@@ -1089,7 +1090,7 @@ void _DrawMenu(void)
     /* Call onDraw callback if present */
     onDrawPtr = menu->onDraw;
     if (onDrawPtr != 0) {
-        ((VoidFunc)onDrawPtr)();
+        _CallMenuCallback((void *)onDrawPtr);
     }
 
     /* Draw all entries */
@@ -1099,7 +1100,6 @@ void _DrawMenu(void)
         _DrawMenuItem(entry);
         entry = (MenuEntry *)((uint8_t *)entry + MENUENTRY_STRIDE);
     }
-
     _WaitForVSync();
     _BlitterCopyOverlayToScreen();
 }
@@ -1292,7 +1292,7 @@ void _MenuCheckControls(void)
 /* ================================================================
  * MenuProc
  * ================================================================ */
-__attribute__((used, externally_visible))
+__attribute__((used, externally_visible, noinline))
 void _MenuProc(void)
 {
     Menu *menu;
@@ -1365,7 +1365,10 @@ void _MenuProc(void)
     }
 
     controlMask = d7;
-    ((VoidFunc)onSelectPtr)();
+    /* Original asm MenuProc kept a5 = selectedEntry when calling onSelect.
+       Many callbacks (SelectTeamsCommon, SelectLeaguesCommon etc.) read a5
+       to get the entry's ordinal and string pointer. */
+    _CallMenuOnSelect((void *)onSelectPtr, (void *)selectedEntry);
 
 no_event_or_done:
     if (fire != 0)
@@ -1415,7 +1418,7 @@ no_event_or_done:
 /* ================================================================
  * ActivateMenu
  * ================================================================ */
-__attribute__((used, externally_visible))
+__attribute__((used, externally_visible, noinline))
 void _ActivateMenu(uint8_t *packedMenu)
 {
     Menu *menu;
@@ -1423,6 +1426,7 @@ void _ActivateMenu(uint8_t *packedMenu)
     uint32_t onInitPtr;
 
     currentMenuPtr = (uint32_t)packedMenu;
+
     _UnpackMenu(packedMenu, currentMenu);
 
     menu = (Menu *)currentMenu;
@@ -1435,9 +1439,8 @@ void _ActivateMenu(uint8_t *packedMenu)
 
     onInitPtr = menu->onInit;
     if (onInitPtr != 0) {
-        ((VoidFunc)onInitPtr)();
+        _CallMenuCallback((void *)onInitPtr);
     }
-
     if (exitMenu != 0)
         return;
 
@@ -1451,8 +1454,10 @@ __attribute__((used, externally_visible))
 void _ShowMenu(uint8_t *packedMenu)
 {
     Menu *menu = (Menu *)currentMenu;
-    uint32_t oldSelectedEntry = menu->selectedEntry;
-    uint32_t oldPackedMenu = currentMenuPtr;
+    /* volatile as safety: _CallMenuCallback saves/restores all regs around asm
+       callbacks, but keep volatile in case any callback path is missed. */
+    volatile uint32_t oldSelectedEntry = menu->selectedEntry;
+    volatile uint32_t oldPackedMenu = currentMenuPtr;
 
     menuStatus = 0;
     exitMenu = 0;
@@ -1488,7 +1493,7 @@ void _RestorePreviousMenu(uint32_t oldSelectedEntry, uint8_t *oldPackedMenu)
 
     afterDrawPtr = menu->afterDraw;
     if (afterDrawPtr != 0) {
-        ((VoidFunc)afterDrawPtr)();
+        _CallMenuCallback((void *)afterDrawPtr);
     }
 }
 

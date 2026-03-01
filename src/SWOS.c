@@ -45,6 +45,12 @@ extern uint16_t frontbufferBase;
 extern uint16_t frontbufferBaseAlt;
 extern uint16_t frontbufferMaskBuffer;
 
+/* Pre-allocated cache memory (defined in SWOS2.s BSS, filled before hardware takeover) */
+extern uint8_t *g_earlyAllocCacheMem;
+extern uint32_t g_earlyAllocCacheSize;
+
+extern uint8_t *_AllocMemAny(uint32_t size);
+
 SWOS_CHIP_BSS volatile uint32_t g_swos_chip_bss_anchor;
 SWOS_FAST_BSS volatile uint32_t g_swos_fast_bss_anchor;
 
@@ -78,8 +84,12 @@ __attribute__((used, externally_visible)) void _start(void)
     } while (pitch_ptr != menu_ptr);
 
     magicValue = SWOS_MAGIC_VALUE;
-    loaderMemTop = SWOS_CHIPMEMSIZE;
-    *(volatile uint32_t *)&loaderBankBitmap = (SWOS_CHIPBITS | SWOS_FASTBITS);
+    /* Bank scan disabled: assetLoaderBank0Base is in BSS (relocated),
+     * so computed bank addresses (base + N*0x80000) point to invalid memory.
+     * Set loaderMemTop = 0 to skip the bank scan in _AssetLoaderInitAltPathAndBanks.
+     * The main 195KB cache region is sufficient. */
+    loaderMemTop = 0;
+    *(volatile uint32_t *)&loaderBankBitmap = 0;
     loaderParam = SWOS_FASTBITS;
 
     *(volatile uint16_t *)COLOR00_ADDR = 0xF00u;

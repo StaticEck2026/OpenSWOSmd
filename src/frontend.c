@@ -56,6 +56,7 @@ extern int16_t _AssetSvcLoaderOp3(void);
 extern void _ProcessImageCommandStream(const uint16_t *cmdBuf, uint8_t *workBuf);
 extern void _MenuProc(void);
 extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
+extern void _DoubleBufferSwapSequence(void);
 /* _InitMenuMusic, _TryPlayMusic declared in audio.h */
 /* _PrepareMenuBackground, _InitMainMenuStuff declared in menus.h */
 
@@ -101,7 +102,7 @@ void _LoadOverlayToFrontbuffer(const uint8_t *path)
  * data structures, optionally starts music playback, and enables
  * the menu fade-in flag.
  * ================================================================ */
-__attribute__((used, externally_visible))
+__attribute__((used, externally_visible, noinline))
 void _FrontEndPreLoopSetup(void)
 {
     _InitMenuMusic();
@@ -149,7 +150,7 @@ void _mainAsm(void)
 
     /* ---- Phase 4: Loader intro ---- */
     loaderModeFlag = 1;
-    _ShowLoaderIntroSequence();
+    //_ShowLoaderIntroSequence();
     _AssetLoaderInitAltPathAndBanks();
     _AssetPrecacheCore();
     _InstallAndInitLoaderBootstrap();
@@ -209,7 +210,7 @@ void _mainAsm(void)
  * Main front-end event loop. Initializes timer and menu system,
  * then repeatedly calls MenuProc until g_quitToDos is set.
  * ================================================================ */
-__attribute__((used, externally_visible))
+__attribute__((used, externally_visible, noinline))
 void _FrontEndMainLoop(void)
 {
     _ReadTimerDelta();

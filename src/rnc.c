@@ -379,6 +379,7 @@ typedef struct {
     uint8_t  d2;
 } V2Bits;
 
+__attribute__((noinline, optimize("O1")))
 static int v2Bit(V2Bits *bs)
 {
     int carry = (bs->d2 >> 7) & 1;
@@ -394,7 +395,7 @@ static int v2Bit(V2Bits *bs)
 
 /* RncDecodeV2Body — V2 decompression engine.
  * Uses goto-based control flow matching the asm branch structure. */
-__attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
+__attribute__((used, externally_visible, noinline, optimize("O1")))
 void _RncDecompressV2(uint8_t *src, uint8_t *dst)
 {
     uint8_t *a1 = dst;

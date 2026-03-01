@@ -91,6 +91,11 @@ typedef char _menuentry_size_check[(sizeof(MenuEntry) == 56) ? 1 : -1];
 #define SPRITEGRAPHICS_PIXWIDTH   10
 #define SPRITEGRAPHICS_NLINES     12
 
+/* ---- Asm helpers (save/restore all regs around callback) ---- */
+extern void _CallMenuCallback(void *funcPtr);
+extern void _CallMenuOnSelect(void *funcPtr, void *selectedEntry);
+extern void _CallMenuFuncWithXY(void *funcPtr, uint16_t x, uint16_t y);
+
 /* ---- Ported functions ---- */
 void _MenuProc(void);
 void _ActivateMenu(uint8_t *packedMenu);

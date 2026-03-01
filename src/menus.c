@@ -220,6 +220,7 @@ void _InitializeTacticsPositions(void)
     for (formation = 0; formation < 18; formation++) {
         TeamTactics *tactics = (TeamTactics *)teamTacticsTable[formation];
         uint8_t *posArr = (uint8_t *)playersPositionsByTactics[formation];
+
         int16_t player;
 
         /* Initialize: byte 0 = 0, bytes 1-10 = player numbers */
@@ -276,6 +277,7 @@ void _InitializeTacticsPositions(void)
             } while (swapped);
         }
     }
+
 }
 
 /* ================================================================
@@ -383,7 +385,7 @@ void _PrepareMenuBackground(void)
  * sets defaults, initializes user tactics, then activates the
  * main SWOS menu.
  * ================================================================ */
-__attribute__((used, externally_visible))
+__attribute__((used, externally_visible, noinline))
 void _InitMainMenuStuff(void)
 {
     _ZeroOutStars();

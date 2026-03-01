@@ -10,8 +10,8 @@ SECTIONS
         *(data) *(DATA) *(.data) *(.data.*) *(.rodata) *(.rodata.*) *(const)
   }
 
-  BSSInChip 0x00010000 (NOLOAD) : {
-        *(BSSInChip) *(BSSInChip*)
+  BSSInChip.MEMF_CHIP 0x00010000 (NOLOAD) : {
+        *(BSSInChip.MEMF_CHIP) *(BSSInChip.MEMF_CHIP*) *(BSSInChip) *(BSSInChip*)
   }
 
   . = ALIGN(4);

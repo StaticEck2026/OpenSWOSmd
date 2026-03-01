@@ -49,6 +49,8 @@ typedef long int32_t;
 #define BLT_BLTADAT                 116
 
 /* ---- Copper list byte-offset helper ---- */
+/* NOTE: Do NOT use COPPER_W for writes — GCC decomposes volatile uint16_t
+ * stores into byte-level move.b pairs. Use copper_write_word() instead. */
 #define COPPER_W(offset) (*(volatile uint16_t *)((uint8_t *)copperListBuffer + (offset)))
 
 /* ---- Function declarations ---- */

@@ -633,7 +633,10 @@
         xdef    frontbufferMaskBuffer
         xdef    panicReasonCode
         xdef    stackTop
+        xdef    g_earlyAllocCacheMem
+        xdef    g_earlyAllocCacheSize
         xdef    _startShim
+        xdef    DoubleBufferSwapSequence
         xdef    assetLoaderCacheFlag
         xdef    assetLoaderWorkPtr
         xdef    waitingInterrupt
@@ -736,6 +739,8 @@
         xdef    _CAssetSys_Dispatch
         xdef    _CAssetSys_DispatchGetSize
         xdef    assetCurrentIndex
+        xdef    assetCurrentSourceSlot
+        xdef    assetSourceVec
         xdef    aSoundHeroSng
         xdef    aSoundHeroIns
         xdef    diyFileBufferCopy

@@ -771,11 +771,13 @@ uint16_t _GetPlayerSlotIndexByPlayerNumber(uint16_t teamNumber, uint16_t playerN
 
     if (teamNumber == selTeamNumber) {
         /* Search currentMatchPlayers for matching player number */
-        while (currentMatchPlayers[idx] != (uint8_t)playerNumber)
+        uint16_t limit = *(uint16_t *)careerNumPlayers;
+        while (currentMatchPlayers[idx] != (uint8_t)playerNumber) {
             idx++;
-        if (idx >= *(uint16_t *)careerNumPlayers) {
-            panicReasonCode = 0x2617;
-            _PanicHaltLoop();
+            if (idx >= limit) {
+                panicReasonCode = 0x2617;
+                _PanicHaltLoop();
+            }
         }
     } else {
         /* Validate input */
@@ -785,11 +787,12 @@ uint16_t _GetPlayerSlotIndexByPlayerNumber(uint16_t teamNumber, uint16_t playerN
         }
         /* Search team's player number table */
         uint8_t *teamPtr = _GetTeamPointer(teamNumber);
-        while (((TeamFile *)teamPtr)->playerNumbers[idx] != (uint8_t)playerNumber)
+        while (((TeamFile *)teamPtr)->playerNumbers[idx] != (uint8_t)playerNumber) {
             idx++;
-        if (idx >= 16) {
-            panicReasonCode = 0x2619;
-            _PanicHaltLoop();
+            if (idx >= 16) {
+                panicReasonCode = 0x2619;
+                _PanicHaltLoop();
+            }
         }
     }
 
