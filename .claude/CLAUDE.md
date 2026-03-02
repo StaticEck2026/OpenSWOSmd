@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1133 functions ported across 124 chunks.
+**Current status:** 1137 functions ported across 125 chunks.
 
-**Last completed chunk:** Chunk 124 — Competition Menu Functions (7 → menus.c): DIYCompetitionMenu, PresetCompetitionMenu, SeasonMenu, CareerMenu, StartContest, SaveContest, LoadOldCompetitionMenu.
+**Last completed chunk:** Chunk 125 — Choose/Select Team Menu Functions (4 → menus.c): ChooseCompetitionMenu, SelectTeamsForPresetCompetition, ChooseSeasonMenu, GoGetTeamsForPlay.
 
-**Next candidates:** SquadMenu (needs SelectAndShowSquadToView/loc_1391AC ported first), CareerGameListCommon (large ~440 instr), DesignDIY*SetName (a5 bridge), ChooseCompetition/ChooseSeasonMenu, Career update functions, EditTeams* callbacks.
+**Next candidates:** SquadMenu (needs SelectAndShowSquadToView/loc_1391AC ported first), CareerGameListCommon (large ~440 instr), DesignDIY* callbacks (Init/Reinit/SetName/ChooseTeams), EditTeams* callbacks, ExitOptions (large ~1600 instr).
 
 ---
 

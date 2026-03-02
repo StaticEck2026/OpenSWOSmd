@@ -123,6 +123,14 @@ void _TransfersMenu(void);
 void _ViewWorldMenu(void);
 void _jmp_SetExitMenuFlag(void);
 
+/* --- Choose/select team menu functions (Chunk 125) --- */
+void _ChooseCompetitionMenu(void);
+void _SelectTeamsForPresetCompetition(void);
+void _ChooseSeasonMenu(void);
+void _GoGetTeamsForPlay(uint8_t *gameTypeStrParam, uint8_t *playWhatStrParam,
+                        uint16_t numTeams, uint16_t showClub,
+                        uint16_t showNational, uint16_t showOrigCustom);
+
 /* --- Competition menu functions (Chunk 124) --- */
 void _DIYCompetitionMenu(void);
 void _PresetCompetitionMenu(void);

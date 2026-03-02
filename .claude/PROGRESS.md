@@ -2579,6 +2579,15 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified**
 - Cumulative: 1133 functions across 124 chunks
 
+### Chunk 125 — Choose/Select Team Menu Functions (4 → menus.c)
+- Date: 2026-03-02
+- **menus.c (4):** _ChooseCompetitionMenu, _SelectTeamsForPresetCompetition, _ChooseSeasonMenu, _GoGetTeamsForPlay
+- Key patterns: All three Choose functions set globals and call SelectTeamsFinalMenu(255) via _CSelectTeamsFinalMenu bridge. GoGetTeamsForPlay has register bridge (d0,d2,d3,d4,a0,a1 → stack params). choosingPreset data preserved between stub and ChooseSeasonMenu.
+- New asm bridge: _CSelectTeamsFinalMenu(uint16_t mode) — loads d0 from param, calls SelectTeamsFinalMenu
+- New xdefs: gameTypeStr, chooseTeamsHeader1stPart, chooseTeamsFunc, careerSquadScreenDidSelectPlayerFlag, selectTeamsNoLimit, loadTeam, showCupsAndOther, playSeason, chooseCompetitionOnly, choosingPreset, showClubTeams, showNationalTeams, showOrigCustomTeams, playWhatStr, numNeededTeams, aChooseCompetit, aChoosePresetCo, aChooseSeason, chooseTeamsMenu, SelectTeamsFinalMenu, GoGetTeamsForPlay
+- Build status: **verified**
+- Cumulative: 1137 functions across 125 chunks
+
 ### Phase Transitions (see CLAUDE.md "Project Phases")
 - [ ] Phase 1 complete: all subroutines ported → output `*** READY FOR TESTING PHASE! ***` and STOP
 - [ ] Phase 2: user tests game, fixes any bugs found
@@ -2717,5 +2726,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 122   | 15        | 1117       |
 | 123   | 9         | 1126       |
 | 124   | 7         | 1133       |
+| 125   | 4         | 1137       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

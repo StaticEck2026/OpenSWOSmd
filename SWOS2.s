@@ -63763,38 +63763,12 @@ loc_13EA08:
 ; ===== ChooseCompetitionMenu =====
 ; prototype: void __usercall ChooseCompetitionMenu()
 ChooseCompetitionMenu:
-                clr.l   (gameTypeStr).l
-                move.l  #aChooseCompetit,(chooseTeamsHeader1stPart).l ; "CHOOSE COMPETITION" ...
-                clr.l   (chooseTeamsFunc).l
-                clr.w   (careerSquadScreenDidSelectPlayerFlag).l
-                move.w  #1,(selectTeamsNoLimit).l
-                move.w  #$FFFF,(teamsType).l
-                clr.w   (loadTeam).l
-                move.w  #1,(showCupsAndOther).l
-                clr.w   (playSeason).l
-                move.w  #1,(chooseCompetitionOnly).l
-                move.b  #255,d0
-                bsr.w   SelectTeamsFinalMenu
-                rts
+                jmp     _ChooseCompetitionMenu
 
 ; ===== SelectTeamsForPresetCompetition =====
 ; prototype: void __usercall SelectTeamsForPresetCompetition()
 SelectTeamsForPresetCompetition:
-                clr.l   (gameTypeStr).l
-                move.l  #aChoosePresetCo,(chooseTeamsHeader1stPart).l ; "CHOOSE PRESET COMPETITION" ...
-                clr.l   (chooseTeamsFunc).l
-                clr.w   (careerSquadScreenDidSelectPlayerFlag).l
-                move.w  #1,(selectTeamsNoLimit).l
-                move.w  #$FFFF,(teamsType).l
-                clr.w   (loadTeam).l
-                move.w  #1,(showCupsAndOther).l
-                clr.w   (playSeason).l
-                clr.w   (chooseCompetitionOnly).l
-                move.w  #1,(choosingPreset).l
-                move.b  #255,d0
-                bsr.w   SelectTeamsFinalMenu
-                clr.w   (choosingPreset).l
-                rts
+                jmp     _SelectTeamsForPresetCompetition
 choosingPreset:
                 dc.w $0000              ; Set to true when select teams menu is used for selecting
                                         ; preset competition
@@ -63802,19 +63776,7 @@ choosingPreset:
 ; ===== ChooseSeasonMenu =====
 ; prototype: void __usercall ChooseSeasonMenu()
 ChooseSeasonMenu:
-                clr.l   (gameTypeStr).l
-                move.l  #aChooseSeason,(chooseTeamsHeader1stPart).l ; "CHOOSE SEASON" ...
-                clr.l   (chooseTeamsFunc).l
-                clr.w   (careerSquadScreenDidSelectPlayerFlag).l
-                move.w  #1,(selectTeamsNoLimit).l
-                move.w  #$FFFF,(teamsType).l
-                clr.w   (loadTeam).l
-                clr.w   (showCupsAndOther).l
-                move.w  #1,(playSeason).l
-                clr.w   (chooseCompetitionOnly).l
-                move.b  #255,d0
-                bsr.w   SelectTeamsFinalMenu
-                rts
+                jmp     _ChooseSeasonMenu
 
 ; ===== GoGetTeamsForPlay =====
 ; prototype: void __usercall GoGetTeamsForPlay(unsigned __int16 showClubTeams@<d2>, unsigned __int16 showNationalTeams@<d3>, unsigned __int16 showOrigCustomTeams@<d4>, const char *gameTypeStr@<a0>, const char *playWhatStr@<a1>, unsigned __int16 numNeededTeams@<d0>)
@@ -63828,31 +63790,16 @@ ChooseSeasonMenu:
 ; out:
 ;      global var chooseTeamsResult: 0 = nothing selected, !0 = choice made
 GoGetTeamsForPlay:
-                move.w  d2,(showClubTeams).l
-                move.w  d3,(showNationalTeams).l
-                move.w  d4,(showOrigCustomTeams).l
-                move.l  a0,(gameTypeStr).l
-                move.l  a1,(playWhatStr).l
-                clr.l   (chooseTeamsHeader1stPart).l
-                clr.w   (numSelectedTeams).l
-                move.w  d0,(numNeededTeams).l
-                clr.l   (chooseTeamsFunc).l
-                clr.w   (careerSquadScreenDidSelectPlayerFlag).l
-                clr.w   (selectTeamsNoLimit).l
-                lea     (chooseTeamsMenu).l,a6
-                jsr     ShowMenu
-                tst.w   (teamsType).l
-                bmi.s   locret_13EBA0
-                clr.w   (showCupsAndOther).l
-                move.w  #1,(loadTeam).l
-                clr.w   (showCupsAndOther).l
-                clr.w   (playSeason).l
-                clr.w   (chooseCompetitionOnly).l
-                move.b  #255,d0
-                bsr.w   SelectTeamsFinalMenu
-                lea     (0).w,a0
-                jsr     ShowInsertDisk2Dialog
-locret_13EBA0:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.w  d4,-(sp)               ; showOrigCustom
+                move.w  d3,-(sp)               ; showNational
+                move.w  d2,-(sp)               ; showClub
+                move.w  d0,-(sp)               ; numTeams
+                move.l  a1,-(sp)               ; playWhatStr
+                move.l  a0,-(sp)               ; gameTypeStr
+                jsr     _GoGetTeamsForPlay
+                lea     16(sp),sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 ; Menu_SelectTeams
 selectTeamsMenu:

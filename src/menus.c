@@ -1568,7 +1568,7 @@ extern void Career_PostMatchUpdate(void);        /* still in asm */
 extern void _CCareer_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel); /* C bridge for asm */
 extern void SeasonFinished_ComputeSeasonReview(void); /* still in asm */
 extern void SelectAndShowSquadToView(void);      /* still in asm, requires a0/a1/d0/d1 */
-extern void ChooseCompetitionMenu(void);         /* still in asm */
+extern void ChooseCompetitionMenu(void);         /* asm stub → _ChooseCompetitionMenu */
 
 /* ScrollUpInGameList — decrement currentGame/listIndex with bounds (SWOS2.s line 60083) */
 __attribute__((used, externally_visible))
@@ -2334,7 +2334,7 @@ extern int16_t _CheckContinueAbortPrompt(uint8_t *header);
 extern void _ShowDesignDIYLeagueMenu(void);
 extern void _ShowDesignDIYCupMenu(void);
 extern void _ShowDesignDIYTournamentMenu(void);
-extern void SelectTeamsForPresetCompetition(void);   /* still in asm */
+extern void SelectTeamsForPresetCompetition(void);   /* asm stub → _SelectTeamsForPresetCompetition */
 extern void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest);
 extern void _CInitDIYCompetitionFromTableEntry(void); /* bridge: reads selectedContest + contestLeagueNumber */
 extern void _CInitDIYCupFromRecord(void);             /* bridge: reads selectedContest */
@@ -2346,7 +2346,7 @@ extern void _DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t 
 extern void _DIY_RestoreCompetitionFileBufferFromDIYCompetition(void);
 extern void _DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt(void);
 extern void _DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer(void);
-extern void ChooseSeasonMenu(void);                    /* still in asm */
+extern void ChooseSeasonMenu(void);                    /* asm stub → _ChooseSeasonMenu */
 extern void _CInitNewSeason(void);                     /* bridge: reads selectedContest + contestLeagueNumber */
 extern int16_t _Asset_PromptInsertSaveDiskDf0(uint8_t *title);
 extern int16_t _SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename, uint8_t *menuTitleStr);
@@ -2764,4 +2764,116 @@ void _LoadOldCompetitionMenu(void)
 fail: /* loc_14149A */
     _ShowInsertDisk2Dialog(aLoadOldCompeti);
     _CommonMenuExit();
+}
+
+/* ==========================================================================
+ * Chunk 125 — Choose/Select Team Menu Functions
+ * (ChooseCompetitionMenu, SelectTeamsForPresetCompetition, ChooseSeasonMenu,
+ *  GoGetTeamsForPlay)
+ * ========================================================================== */
+
+extern void _CSelectTeamsFinalMenu(uint16_t mode); /* bridge: loads d0 from param, calls SelectTeamsFinalMenu */
+
+extern uint16_t teamsType;
+extern uint32_t gameTypeStr;
+extern uint32_t chooseTeamsHeader1stPart;
+extern uint32_t chooseTeamsFunc;
+extern uint16_t careerSquadScreenDidSelectPlayerFlag;
+extern uint16_t selectTeamsNoLimit;
+extern uint16_t loadTeam;
+extern uint16_t showCupsAndOther;
+extern uint16_t playSeason;
+extern uint16_t chooseCompetitionOnly;
+extern uint16_t choosingPreset;
+extern uint16_t showClubTeams;
+extern uint16_t showNationalTeams;
+extern uint16_t showOrigCustomTeams;
+extern uint32_t playWhatStr;
+extern uint16_t numNeededTeams;
+extern uint8_t  aChooseCompetit[];
+extern uint8_t  aChoosePresetCo[];
+extern uint8_t  aChooseSeason[];
+extern uint8_t  chooseTeamsMenu[];
+
+/* ChooseCompetitionMenu — choose competition setup (SWOS2.s line 63765) */
+__attribute__((used, externally_visible))
+void _ChooseCompetitionMenu(void)
+{
+    gameTypeStr = 0;
+    chooseTeamsHeader1stPart = (uint32_t)aChooseCompetit;
+    chooseTeamsFunc = 0;
+    careerSquadScreenDidSelectPlayerFlag = 0;
+    selectTeamsNoLimit = 1;
+    teamsType = 0xFFFF;
+    loadTeam = 0;
+    showCupsAndOther = 1;
+    playSeason = 0;
+    chooseCompetitionOnly = 1;
+    _CSelectTeamsFinalMenu(255);
+}
+
+/* SelectTeamsForPresetCompetition — choose preset competition (SWOS2.s line 63782) */
+__attribute__((used, externally_visible))
+void _SelectTeamsForPresetCompetition(void)
+{
+    gameTypeStr = 0;
+    chooseTeamsHeader1stPart = (uint32_t)aChoosePresetCo;
+    chooseTeamsFunc = 0;
+    careerSquadScreenDidSelectPlayerFlag = 0;
+    selectTeamsNoLimit = 1;
+    teamsType = 0xFFFF;
+    loadTeam = 0;
+    showCupsAndOther = 1;
+    playSeason = 0;
+    chooseCompetitionOnly = 0;
+    choosingPreset = 1;
+    _CSelectTeamsFinalMenu(255);
+    choosingPreset = 0;
+}
+
+/* ChooseSeasonMenu — choose season setup (SWOS2.s line 63804) */
+__attribute__((used, externally_visible))
+void _ChooseSeasonMenu(void)
+{
+    gameTypeStr = 0;
+    chooseTeamsHeader1stPart = (uint32_t)aChooseSeason;
+    chooseTeamsFunc = 0;
+    careerSquadScreenDidSelectPlayerFlag = 0;
+    selectTeamsNoLimit = 1;
+    teamsType = 0xFFFF;
+    loadTeam = 0;
+    showCupsAndOther = 0;
+    playSeason = 1;
+    chooseCompetitionOnly = 0;
+    _CSelectTeamsFinalMenu(255);
+}
+
+/* GoGetTeamsForPlay — set up team selection globals and show menu (SWOS2.s line 63830)
+ * Called from asm via register bridge (d0=numTeams, d2=showClub, d3=showNational,
+ * d4=showOrigCustom, a0=gameTypeStrParam, a1=playWhatStrParam). */
+__attribute__((used, externally_visible))
+void _GoGetTeamsForPlay(uint8_t *gameTypeStrParam, uint8_t *playWhatStrParam,
+                        uint16_t numTeams, uint16_t showClub,
+                        uint16_t showNational, uint16_t showOrigCustom)
+{
+    showClubTeams = showClub;
+    showNationalTeams = showNational;
+    showOrigCustomTeams = showOrigCustom;
+    gameTypeStr = (uint32_t)gameTypeStrParam;
+    playWhatStr = (uint32_t)playWhatStrParam;
+    chooseTeamsHeader1stPart = 0;
+    numSelectedTeams = 0;
+    numNeededTeams = numTeams;
+    chooseTeamsFunc = 0;
+    careerSquadScreenDidSelectPlayerFlag = 0;
+    selectTeamsNoLimit = 0;
+    _ShowMenu(chooseTeamsMenu);
+    if ((int16_t)teamsType < 0)
+        return;
+    showCupsAndOther = 0;
+    loadTeam = 1;
+    playSeason = 0;
+    chooseCompetitionOnly = 0;
+    _CSelectTeamsFinalMenu(255);
+    _ShowInsertDisk2Dialog((uint8_t *)0);
 }

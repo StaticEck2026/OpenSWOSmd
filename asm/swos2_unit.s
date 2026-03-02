@@ -2681,9 +2681,36 @@
         xdef    Career_PostMatchUpdate
         xdef    SeasonFinished_ComputeSeasonReview
         xdef    ChooseCompetitionMenu
-; --- Chunk 124 xdefs ---
+; --- Chunk 125 xrefs ---
+        xref    _ChooseCompetitionMenu
+        xref    _SelectTeamsForPresetCompetition
+        xref    _ChooseSeasonMenu
+        xref    _GoGetTeamsForPlay
+; --- Chunk 125 xdefs ---
+        xdef    gameTypeStr
+        xdef    chooseTeamsHeader1stPart
+        xdef    chooseTeamsFunc
+        xdef    careerSquadScreenDidSelectPlayerFlag
+        xdef    selectTeamsNoLimit
+        xdef    loadTeam
+        xdef    showCupsAndOther
+        xdef    playSeason
+        xdef    chooseCompetitionOnly
+        xdef    choosingPreset
+        xdef    showClubTeams
+        xdef    showNationalTeams
+        xdef    showOrigCustomTeams
+        xdef    playWhatStr
+        xdef    numNeededTeams
+        xdef    aChooseCompetit
+        xdef    aChoosePresetCo
+        xdef    aChooseSeason
+        xdef    chooseTeamsMenu
+        xdef    SelectTeamsFinalMenu
+        xdef    GoGetTeamsForPlay
         xdef    SelectTeamsForPresetCompetition
         xdef    ChooseSeasonMenu
+; --- Chunk 124 xdefs ---
         xdef    diyCompetitionMenu
         xdef    careerMenu
         xdef    aDiyCompetition_0
@@ -3282,5 +3309,17 @@ _CInitNewSeason:
         movea.l (selectedContest).l,a0
         move.w  (contestLeagueNumber).l,d1
         jsr     (InitNewSeason).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; --- Chunk 125 C-callable asm bridges ---
+
+; _CSelectTeamsFinalMenu(uint16_t mode) -> void
+; SelectTeamsFinalMenu expects: d0.b = mode
+        xdef    _CSelectTeamsFinalMenu
+_CSelectTeamsFinalMenu:
+        movem.l d2-d7/a2-a6,-(sp)
+        move.w  48(sp),d0              ; param: 44(saved regs) + 4(return addr) = offset 48
+        jsr     (SelectTeamsFinalMenu).l
         movem.l (sp)+,d2-d7/a2-a6
         rts
