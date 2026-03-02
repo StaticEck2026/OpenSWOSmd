@@ -2,6 +2,7 @@
 #include "game_types.h"
 #include "menu_system.h"
 #include "play_match_menu.h"
+#include "input_text.h"
 
 /* ---- External globals ---- */
 extern uint16_t showStats;
@@ -1188,5 +1189,145 @@ void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
             MenuEntry *drawStart = &menuEntries[0x498 / 56];
             _DrawMultipleItems(6, drawStart);
         }
+    }
+}
+
+
+/* ================================================================
+ * Chunk 137 — Management Record cluster
+ * ================================================================ */
+
+/* Externs for Chunk 137 */
+extern uint16_t currentSeasonNumber;
+extern uint16_t currentSeasonShowing;
+extern uint8_t  seasonInformationsArray[];
+extern uint16_t youreSacked;
+extern uint16_t gamesPlayed;
+extern uint16_t numWins;
+extern uint16_t numDrawn;
+extern uint16_t numLost;
+extern uint16_t goalsScored;
+extern uint16_t goalsTaken;
+extern uint8_t  aManagementReco[];     /* "MANAGEMENT RECORD OF %a %b" */
+extern uint8_t  aPl0W1D2L3F4A5[];     /* "PL %0    W %1    D %2    L %3    F %4  "... */
+extern uint8_t  aDash[];              /* "-" */
+extern uint8_t  managerNameBuffer[];
+extern uint8_t  managerSurnameBuffer[];
+extern uint16_t playPromotedAnimation;
+extern uint16_t playRelegatedAnimation;
+
+extern void _DrawMenu(void);
+
+
+/* ================================================================
+ * GetCurrentSeasonPointer  (SWOS2.s line 58420)
+ *
+ * Returns pointer to current season info (106 bytes each).
+ * ================================================================ */
+__attribute__((used, externally_visible))
+uint8_t *_GetCurrentSeasonPointer(void)
+{
+    uint16_t idx = currentSeasonShowing;
+    uint32_t off = (uint32_t)idx * 106;
+    return seasonInformationsArray + off;
+}
+
+
+/* ================================================================
+ * ManagementRecordInit  (SWOS2.s line 57924)
+ *
+ * Initializes the management record menu header and stats line.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ManagementRecordInit(void)
+{
+    uint8_t *dest;
+
+    currentSeasonNumber = currentSeasonShowing;
+
+    /* Format title: "MANAGEMENT RECORD OF <name> <surname>" */
+    dest = (uint8_t *)menuEntries[0].fg;
+    _PrintFormatted(aManagementReco, dest,
+                    0, 0, 0, 0, 0, 0, 0,
+                    managerNameBuffer, managerSurnameBuffer, (const uint8_t *)0);
+
+    /* Format stats line (entry at offset $380 = entry 16) */
+    {
+        MenuEntry *statsEntry = &menuEntries[0x380 / 56];
+        dest = (uint8_t *)statsEntry->fg;
+
+        if (gamesPlayed == 0)
+        {
+            _PrintFormatted(aDash, dest,
+                            0, 0, 0, 0, 0, 0, 0,
+                            (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
+        }
+        else
+        {
+            _PrintFormatted(aPl0W1D2L3F4A5, dest,
+                            gamesPlayed, numWins, numDrawn, numLost,
+                            goalsScored, goalsTaken, 0,
+                            (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
+        }
+    }
+}
+
+
+/* ================================================================
+ * ManagementArrowUpSelect  (SWOS2.s line 57954)
+ *
+ * Handler for up-arrow in management record menu.
+ * Decrements season number and redraws.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ManagementArrowUpSelect(void)
+{
+    if (currentSeasonNumber == 0)
+        return;
+    currentSeasonNumber -= 1;
+    _DrawMenu();
+}
+
+
+/* ================================================================
+ * ManagementArrowDownSelect  (SWOS2.s line 57964)
+ *
+ * Handler for down-arrow in management record menu.
+ * Increments season number (up to currentSeasonShowing) and redraws.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ManagementArrowDownSelect(void)
+{
+    if (currentSeasonShowing == currentSeasonNumber)
+        return;
+    currentSeasonNumber += 1;
+    _DrawMenu();
+}
+
+
+/* ================================================================
+ * Career_StorePromotionRelegationInSeasonInfo  (SWOS2.s line 58429)
+ *
+ * Stores promotion (3) or relegation (4) flag at offset $68 (104)
+ * in the current season info.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _Career_StorePromotionRelegationInSeasonInfo(void)
+{
+    uint8_t flag;
+
+    if (youreSacked != 0)
+        return;
+
+    if (playPromotedAnimation != 0)
+        flag = 3;
+    else if (playRelegatedAnimation != 0)
+        flag = 4;
+    else
+        return;
+
+    {
+        uint8_t *si = _GetCurrentSeasonPointer();
+        si[0x68] = flag;
     }
 }

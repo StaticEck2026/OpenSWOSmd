@@ -388,9 +388,9 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1280 functions ported across 136 chunks.
+**Current status:** 1287 functions ported across 137 chunks.
 
-**Last completed chunk:** Chunk 136 — ViewCompetitions Init/OnReturn, Career Menu Init/Finish, Nationality, SelTeamForTactics (7+1s → menus.c): ViewCompetitionsInit, ViewCompetitionsOnReturn, CareerMenuInit, CareerMenuFinish, SetNationalityField (static), ChangeNationality, SelTeamForTacticsCommon.
+**Last completed chunk:** Chunk 137 — Management Record + SelTeamForTactics Reflow (6+1s → statistics.c, menus.c): GetCurrentSeasonPointer, ManagementRecordInit, ManagementArrowUpSelect, ManagementArrowDownSelect, Career_StorePromotionRelegationInSeasonInfo, SelTeamForTactics_ReflowTeamListLayout.
 
 **Next candidates:** SelectTeamToManage/ChooseTeamAndStartCareer/LoadLiverpool (need asm bridges for register-calling ChooseTeamsDialog/InitCareer), SquadMenu (blocked by SelectAndShowSquadToView), CareerGameListCommon (~3194 lines, very large), ImportTeamsMenu, DesignDIYCup remaining.
 

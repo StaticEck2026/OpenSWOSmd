@@ -3597,3 +3597,85 @@ void _SelTeamForTacticsCommon(MenuEntry *entry)
     teamSelected = idx;
     _SetExitMenuFlag();
 }
+
+
+/* ================================================================
+ * Chunk 137 — SelTeamForTactics_ReflowTeamListLayout
+ * ================================================================ */
+
+/* Additional externs for Chunk 137 */
+extern uint16_t selTeamsColumn3;
+extern uint16_t numTeamsCountryBuffer;
+extern uint16_t selTeamsListTopY;
+extern uint16_t selTeamsListBottomY;
+
+
+/* ================================================================
+ * SelTeamForTactics_ReflowTeamListLayout  (SWOS2.s line 60065)
+ *
+ * Calculates the Y positions for the 3-column team selection list
+ * in the edit tactics team picker. Hides title if >18 teams,
+ * adjusts bottom entry if >20 teams.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SelTeamForTactics_ReflowTeamListLayout(void)
+{
+    uint16_t maxCol;
+    uint16_t topY, bottomY, totalHeight, listHeight, startY;
+    MenuEntry *e;
+    int16_t col, row;
+
+    /* Find the maximum column height */
+    maxCol = selTeamsColumn1;
+    if (selTeamsColumn2 > maxCol)
+        maxCol = selTeamsColumn2;
+    if (selTeamsColumn3 > maxCol)
+        maxCol = selTeamsColumn3;
+
+    /* If more than 20 teams, adjust bottom entry */
+    if (maxCol > 18)
+    {
+        if (maxCol > 20)
+        {
+            /* Entry at offset $EA8 = entry 67 */
+            e = &menuEntries[0xEA8 / 56];
+            e->y += 7;
+            e->dwHeight -= 7;
+        }
+        /* Hide title entry (entry 0) */
+        menuEntries[0].isInvisible = 1;
+    }
+
+    /* Calculate list top Y */
+    e = &menuEntries[0];
+    topY = e->y;
+    if (e->isInvisible == 0)
+        topY += e->dwHeight;
+    selTeamsListTopY = topY;
+
+    /* Calculate list bottom Y */
+    e = &menuEntries[0xEA8 / 56];
+    selTeamsListBottomY = e->y;
+    if (numTeamsCountryBuffer == 64)
+    {
+        selTeamsListBottomY += e->dwHeight;
+    }
+
+    /* Center the list vertically */
+    listHeight = (uint16_t)(maxCol * 9);
+    totalHeight = selTeamsListBottomY - selTeamsListTopY;
+    startY = ((totalHeight - listHeight) >> 1) + selTeamsListTopY;
+
+    /* Set Y positions for all 3 columns × 22 rows (entries starting at offset $38 = entry 1) */
+    e = &menuEntries[1];
+    for (col = 2; col >= 0; col--)
+    {
+        uint16_t y = startY;
+        for (row = 0x15; row >= 0; row--)
+        {
+            e->y = y;
+            y += 9;
+            e++;
+        }
+    }
+}

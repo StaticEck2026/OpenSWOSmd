@@ -57920,55 +57920,24 @@ managementRecordMenu:
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
 ; ===== ManagementRecordInit =====
-; prototype: void __usercall ManagementRecordInit()
+; Ported to C: _ManagementRecordInit in src/statistics.c
 ManagementRecordInit:
-                move.w  (currentSeasonShowing).l,(currentSeasonNumber).l
-                lea     (menuEntries).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                lea     (aManagementReco).l,a0 ; "MANAGEMENT RECORD OF %a %b"
-                lea     (managerNameBuffer).l,a2
-                lea     (managerSurnameBuffer).l,a3
-                jsr     PrintFormatted
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$380)).l,a4
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a4),a1
-                lea     (aDash).l,a0    ; "-"
-                move.w  (gamesPlayed).l,d0
-                beq.s   loc_13CCE8
-                move.w  (numWins).l,d1
-                move.w  (numDrawn).l,d2
-                move.w  (numLost).l,d3
-                move.w  (goalsScored).l,d4
-                move.w  (goalsTaken).l,d5
-                lea     (aPl0W1D2L3F4A5).l,a0 ; "PL %0    W %1    D %2    L %3    F %4  "...
-loc_13CCE8:
-                jsr     PrintFormatted
-                rts
+                jmp     _ManagementRecordInit
 
 ; ===== jmp_SetExitMenuFlag_3 =====
-; prototype: void jmp_SetExitMenuFlag_3(...)
+; Updated: direct jmp to C
 jmp_SetExitMenuFlag_3:
-                jmp     SetExitMenuFlag
+                jmp     _SetExitMenuFlag
 
 ; ===== ManagementArrowUpSelect =====
-; prototype: void __usercall ManagementArrowUpSelect()
+; Ported to C: _ManagementArrowUpSelect in src/statistics.c
 ManagementArrowUpSelect:
-                tst.w   (currentSeasonNumber).l
-                beq.s   locret_13CD0A
-                subq.w  #1,(currentSeasonNumber).l
-                jmp     DrawMenu
-locret_13CD0A:
-                rts
+                jmp     _ManagementArrowUpSelect
 
 ; ===== ManagementArrowDownSelect =====
-; prototype: void __usercall ManagementArrowDownSelect()
+; Ported to C: _ManagementArrowDownSelect in src/statistics.c
 ManagementArrowDownSelect:
-                move.w  (currentSeasonShowing).l,d0
-                cmp.w   (currentSeasonNumber).l,d0
-                beq.s   locret_13CD26
-                addq.w  #1,(currentSeasonNumber).l
-                jmp     DrawMenu
-locret_13CD26:
-                rts
+                jmp     _ManagementArrowDownSelect
 
 ; ===== FillManagementRecordInfo =====
 ; prototype: void __usercall FillManagementRecordInfo()
@@ -58416,30 +58385,14 @@ currentSeasonNumber:
                 dc.w $0000              ; When showing management record menu
 
 ; ===== GetCurrentSeasonPointer =====
-; prototype: SeasonInformations *__usercall GetCurrentSeasonPointer@<a0>()
+; Ported to C: _GetCurrentSeasonPointer in src/statistics.c
 GetCurrentSeasonPointer:
-                lea     (seasonInformationsArray).l,a0
-                move.w  (currentSeasonShowing).l,d0
-                mulu.w  #106,d0
-                lea     (a0,d0.w),a0
-                rts
+                jmp     _GetCurrentSeasonPointer
 
 ; ===== Career_StorePromotionRelegationInSeasonInfo =====
-; prototype: void __usercall Career_StorePromotionRelegationInSeasonInfo()
+; Ported to C: _Career_StorePromotionRelegationInSeasonInfo in src/statistics.c
 Career_StorePromotionRelegationInSeasonInfo:
-                tst.w   (youreSacked).l
-                bne.s   locret_13D34E
-                move.b  #3,d1
-                tst.w   (playPromotedAnimation).l
-                bne.s   loc_13D348
-                tst.w   (playRelegatedAnimation).l
-                beq.s   locret_13D34E
-                move.b  #4,d1
-loc_13D348:
-                bsr.s   GetCurrentSeasonPointer
-                move.b  d1,$68(a0)
-locret_13D34E:
-                rts
+                jmp     _Career_StorePromotionRelegationInSeasonInfo
 
 ; ===== Career_FillCurrentSeasonInfo =====
 ; prototype: void __usercall Career_FillCurrentSeasonInfo()
@@ -60061,61 +60014,9 @@ SelTeamForTacticsCommon:
                 rts
 
 ; ===== SelTeamForTactics_ReflowTeamListLayout =====
-; prototype: void __usercall SelTeamForTactics_ReflowTeamListLayout()
+; Ported to C: _SelTeamForTactics_ReflowTeamListLayout in src/menus.c
 SelTeamForTactics_ReflowTeamListLayout:
-                move.w  (selTeamsColumn1).l,d1
-                cmp.w   (selTeamsColumn2).l,d1
-                bhi.s   loc_13DE20
-                move.w  (selTeamsColumn2).l,d1
-loc_13DE20:
-                cmp.w   (selTeamsColumn3).l,d1
-                bhi.s   loc_13DE2E
-                move.w  (selTeamsColumn3).l,d1
-loc_13DE2E:
-                cmpi.w  #18,d1
-                bls.s   loc_13DE50
-                cmpi.w  #20,d1
-                bls.s   loc_13DE46
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$EA8)).l,a0
-                addq.w  #7,MENUENTRY_Y(a0)
-                subq.w  #7,MENUENTRY_DWHEIGHT(a0)
-loc_13DE46:
-                lea     (menuEntries).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-loc_13DE50:
-                lea     (menuEntries).l,a0
-                move.w  MENUENTRY_Y(a0),d0
-                tst.w   4(a0)
-                bne.s   loc_13DE62
-                add.w   $1A(a0),d0
-loc_13DE62:
-                move.w  d0,(selTeamsListTopY).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$EA8)).l,a0
-                move.w  MENUENTRY_Y(a0),(selTeamsListBottomY).l
-                cmpi.w  #64,(numTeamsCountryBuffer).l
-                bne.s   loc_13DE88
-                move.w  26(a0),d0
-                add.w   d0,(selTeamsListBottomY).l
-loc_13DE88:
-                move.w  d1,d0
-                mulu.w  #9,d0
-                move.w  (selTeamsListBottomY).l,d1
-                sub.w   (selTeamsListTopY).l,d1
-                sub.w   d0,d1
-                lsr.w   #1,d1
-                add.w   (selTeamsListTopY).l,d1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                move.w  #2,d2
-loc_13DEAC:
-                move.w  d1,d0
-                move.w  #$15,d3
-loc_13DEB2:
-                move.w  d0,MENUENTRY_Y(a0)
-                addi.w  #9,d0
-                lea     $38(a0),a0
-                dbf     d3,loc_13DEB2
-                dbf     d2,loc_13DEAC
-                rts
+                jmp     _SelTeamForTactics_ReflowTeamListLayout
 chooseTeamMenuName:
                 dc.l $00000000          ; Pointer to name of menu when selecting team for
                                         ; edit tactics

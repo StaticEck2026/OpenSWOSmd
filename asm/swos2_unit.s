@@ -2775,6 +2775,13 @@
         xref    _DesignDIYTournament_CacheStageSelection
         xref    _DesignDIYTournament_RedrawStageItemsFromBlock
         xref    _DIYTournament_RecalculateNumStages
+; --- Chunk 137 xrefs ---
+        xref    _ManagementRecordInit
+        xref    _ManagementArrowUpSelect
+        xref    _ManagementArrowDownSelect
+        xref    _GetCurrentSeasonPointer
+        xref    _Career_StorePromotionRelegationInSeasonInfo
+        xref    _SelTeamForTactics_ReflowTeamListLayout
 ; --- Chunk 136 xrefs ---
         xref    _ViewCompetitionsInit
         xref    _ViewCompetitionsOnReturn
@@ -2986,6 +2993,21 @@
         xdef    _CCalcTeamPriceRankPercentOffset
         xdef    _CUpdatePlayerPositionAndReturnRole
         xdef    _CCareer_ApplyPostMatchPlayerStatModsIfCareerTeam
+; --- Chunk 137 xdefs ---
+        xdef    currentSeasonNumber
+        xdef    gamesPlayed
+        xdef    numWins
+        xdef    numDrawn
+        xdef    numLost
+        xdef    goalsScored
+        xdef    goalsTaken
+        xdef    aManagementReco
+        xdef    aPl0W1D2L3F4A5
+        xdef    aDash
+        xdef    selTeamsColumn3
+        xdef    numTeamsCountryBuffer
+        xdef    selTeamsListTopY
+        xdef    selTeamsListBottomY
 ; --- Chunk 136 xdefs ---
         xdef    secondaryCompetitionName
         xdef    tertiaryCompetitionName

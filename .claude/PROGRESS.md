@@ -2692,6 +2692,15 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, no new warnings)
 - Cumulative: 1280 functions across 136 chunks
 
+### Chunk 137 — Management Record + SelTeamForTactics Reflow (6+1s → statistics.c, menus.c)
+- Date: 2026-03-02
+- Ported: GetCurrentSeasonPointer, ManagementRecordInit, ManagementArrowUpSelect, ManagementArrowDownSelect, Career_StorePromotionRelegationInSeasonInfo (→ statistics.c), SelTeamForTactics_ReflowTeamListLayout (→ menus.c)
+- jmp stubs: ManagementRecordInit, ManagementArrowUpSelect, ManagementArrowDownSelect, GetCurrentSeasonPointer, Career_StorePromotionRelegationInSeasonInfo, SelTeamForTactics_ReflowTeamListLayout
+- Stub updates: jmp_SetExitMenuFlag_3→_SetExitMenuFlag
+- New xdefs: currentSeasonNumber, gamesPlayed, numWins, numDrawn, numLost, goalsScored, goalsTaken, aManagementReco, aPl0W1D2L3F4A5, aDash, selTeamsColumn3, numTeamsCountryBuffer, selTeamsListTopY, selTeamsListBottomY
+- Build status: **verified** (clean build, no new warnings)
+- Cumulative: 1287 functions across 137 chunks
+
 ### Phase Transitions (see CLAUDE.md "Project Phases")
 - [ ] Phase 1 complete: all subroutines ported → output `*** READY FOR TESTING PHASE! ***` and STOP
 - [ ] Phase 2: user tests game, fixes any bugs found
@@ -2842,5 +2851,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 134   | 5+8s      | 1262       |
 | 135   | 9+1s      | 1272       |
 | 136   | 7+1s      | 1280       |
+| 137   | 6+1s      | 1287       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)
