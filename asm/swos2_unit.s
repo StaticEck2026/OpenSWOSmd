@@ -2767,6 +2767,39 @@
         xref    _DesignDIYTournamentOnSelect25
         xref    _DesignDIYTournamentOnSelect26
         xref    _DesignDIYTournamentOnSelect28
+; --- Chunk 129 xrefs ---
+        xref    _DesignDIYTournamentOnDraw
+        xref    _DesignDIYTournamentOnSelect23
+        xref    _DesignDIYTournamentOnSelect20
+        xref    _DesignDIYTournament_AdjustStageQualifiers
+        xref    _DesignDIYTournament_CacheStageSelection
+        xref    _DesignDIYTournament_RedrawStageItemsFromBlock
+        xref    _DIYTournament_RecalculateNumStages
+; --- Chunk 129 xdefs ---
+        xdef    diyTournamentSelectedStageIndex1Based
+        xdef    diyTournamentSelectedStagePtr
+        xdef    diyTournamentPrevValueBackup
+        xdef    a3rdPlayOff
+        xdef    aFinal_4
+        xdef    aSemiFinal
+        xdef    aQuarterFinal
+        xdef    aKnockout
+        xdef    a0GroupsOf1
+        xdef    a1GroupOf1
+        xdef    aStar
+        xdef    asc_135D9A
+        xdef    aMatchWinnersQu
+        xdef    aMatchWinnerWin
+        xdef    aMatchWinnersOn
+        xdef    aMatchWinnerOnA
+        xdef    aGroupWinnerWin
+        xdef    aTop0InGroupQua
+        xdef    aWinnersOfEachG
+        xdef    aWinnersOfEachG_0
+        xdef    aWinnersOfEachG_1
+        xdef    aTop0InEachGrou
+        xdef    aTop0InEachGrou_0
+        xdef    aTop0InEachGrou_1
 ; --- Chunk 128 xdefs ---
         xdef    DesignDIYTournamentOnDraw
         xdef    diyTournamentUseSeasonalPitchEffective

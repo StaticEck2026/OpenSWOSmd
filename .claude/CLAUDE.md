@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1185 functions ported across 128 chunks.
+**Current status:** 1195 functions ported across 129 chunks.
 
-**Last completed chunk:** Chunk 128 — DesignDIYTournament Callbacks & Helpers (17+1s → diy_competition.c): UpdateMonthPageIndices, ApplyInactiveMenuColors, UpdatePitchTypeSeasonalUI, TournamentReinit, TournamentInit, OnSelect2-28.
+**Last completed chunk:** Chunk 129 — DesignDIYTournament Remaining (8+2s → diy_competition.c): OnDraw (large), OnSelect23, OnSelect20, AdjustStageQualifiers, CacheStageSelection, RedrawStageItemsFromBlock, RecalculateNumStages, +2 static math helpers.
 
-**Next candidates:** DesignDIYTournament remaining (OnSelect20, OnSelect23, OnSelect89, OnDraw, RedrawStageItemsFromBlock), DesignDIYCup remaining (OnSelect48, OnDraw), SquadMenu, CareerGameListCommon.
+**Next candidates:** DesignDIYTournamentOnSelect89 (needs GoGetTeamsForPlay bridge), DesignDIYCup remaining (OnSelect48, OnDraw, match list functions), DesignDIYLeague callbacks, SquadMenu, CareerGameListCommon, EditTactics.
 
 ---
 

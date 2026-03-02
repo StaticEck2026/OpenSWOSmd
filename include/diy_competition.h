@@ -191,6 +191,15 @@ void _DesignDIYTournamentOnSelect25(MenuEntry *entry);
 void _DesignDIYTournamentOnSelect26(MenuEntry *entry);
 void _DesignDIYTournamentOnSelect28(MenuEntry *entry);
 
+/* ---- DesignDIYTournament Remaining (Chunk 129) ---- */
+void _DesignDIYTournamentOnDraw(void);
+void _DesignDIYTournamentOnSelect23(MenuEntry *entry);
+void _DesignDIYTournamentOnSelect20(MenuEntry *entry);
+void _DesignDIYTournament_AdjustStageQualifiers(MenuEntry *entry);
+void _DesignDIYTournament_CacheStageSelection(MenuEntry *entry);
+void _DesignDIYTournament_RedrawStageItemsFromBlock(uint8_t *blk, uint16_t count);
+void _DIYTournament_RecalculateNumStages(void);
+
 /* ---- OpenDiy* + ShowDiyCompetitionForSource (Chunk 116) ---- */
 void _ShowDiyCompetitionForSource(uint8_t *header);
 void _OpenDiyFromFile(void);

@@ -2612,6 +2612,16 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified**
 - Cumulative: 1185 functions across 128 chunks
 
+### Chunk 129 — DesignDIYTournament Remaining (8+2s → diy_competition.c)
+- Date: 2026-03-02
+- **diy_competition.c (8+2s):** _DesignDIYTournamentOnDraw (large ~275-line draw callback), _DesignDIYTournamentOnSelect23, _DesignDIYTournamentOnSelect20, _DesignDIYTournament_AdjustStageQualifiers, _DesignDIYTournament_CacheStageSelection, _DesignDIYTournament_RedrawStageItemsFromBlock, _DIYTournament_RecalculateNumStages, +2 static helpers (computeGroupLayoutForTeams, adjustGroupLayoutForMaxTeams)
+- Also stubbed: DesignDIYTournament_GetStageBlockFromMenuEntry (dead, rts), DIYTournament_ComputeGroupLayoutForTeams (dead), DIYTournament_AdjustGroupLayoutForMaxTeams (dead)
+- Bug fix: ($2A26).w in OnDraw was hardcoded absolute address for menuEntries[9] — replaced with proper symbolic reference
+- New xdefs: diyTournamentSelectedStageIndex1Based, diyTournamentSelectedStagePtr, diyTournamentPrevValueBackup, 22 string constants (a3rdPlayOff, aFinal_4, aSemiFinal, etc.)
+- Updated Chunk 128 C callers: DesignDIYTournamentOnDraw() → _DesignDIYTournamentOnDraw()
+- Build status: **verified**
+- Cumulative: 1195 functions across 129 chunks
+
 ### Phase Transitions (see CLAUDE.md "Project Phases")
 - [ ] Phase 1 complete: all subroutines ported → output `*** READY FOR TESTING PHASE! ***` and STOP
 - [ ] Phase 2: user tests game, fixes any bugs found
@@ -2754,5 +2764,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 126   | 12        | 1149       |
 | 127   | 17+1s     | 1167       |
 | 128   | 17+1s     | 1185       |
+| 129   | 8+2s      | 1195       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

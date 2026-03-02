@@ -4473,7 +4473,7 @@ void _DesignDIYCupOnSelect22(MenuEntry *entry)
 extern uint16_t diyTournamentUseSeasonalPitchEffective;
 extern uint16_t diyTournamentStartMonthPage;
 extern uint16_t diyTournamentEndMonthPage;
-extern void DesignDIYTournamentOnDraw(void);  /* still in asm */
+/* DesignDIYTournamentOnDraw now ported to C in Chunk 129 — call _DesignDIYTournamentOnDraw directly */
 
 /* Static helper: get tournament stage block pointer from menu entry ordinal.
  * Replaces asm DesignDIYTournament_GetStageBlockFromMenuEntry (returns a3).
@@ -4684,7 +4684,7 @@ void _DesignDIYTournamentOnSelect9(MenuEntry *entry)
     *field += 1;
     if (*field >= 3)
         *field = 0;
-    DesignDIYTournamentOnDraw();
+    _DesignDIYTournamentOnDraw();
     _CallDrawMenuItem(entry);
 }
 
@@ -4727,7 +4727,7 @@ void _DesignDIYTournamentOnSelect21(MenuEntry *entry)
 {
     uint8_t *stageBlock = getTournamentStageBlock(entry);
     *(uint16_t *)(stageBlock + 0x160) ^= 1;
-    DesignDIYTournamentOnDraw();
+    _DesignDIYTournamentOnDraw();
     _CallDrawMenuItem(entry);
 }
 
@@ -4740,7 +4740,7 @@ void _DesignDIYTournamentOnSelect24(MenuEntry *entry)
     *field += 1;
     if (*field == 3)
         *field = 0;
-    DesignDIYTournamentOnDraw();
+    _DesignDIYTournamentOnDraw();
     _CallDrawMenuItem(entry);
 }
 
@@ -4753,7 +4753,7 @@ void _DesignDIYTournamentOnSelect25(MenuEntry *entry)
     *field += 1;
     if (*field == 3)
         *field = 0;
-    DesignDIYTournamentOnDraw();
+    _DesignDIYTournamentOnDraw();
     _CallDrawMenuItem(entry);
 }
 
@@ -4763,7 +4763,7 @@ void _DesignDIYTournamentOnSelect26(MenuEntry *entry)
 {
     uint8_t *stageBlock = getTournamentStageBlock(entry);
     *(uint16_t *)(stageBlock + 0x168) ^= 1;
-    DesignDIYTournamentOnDraw();
+    _DesignDIYTournamentOnDraw();
     _CallDrawMenuItem(entry);
 }
 
@@ -4776,6 +4776,789 @@ void _DesignDIYTournamentOnSelect28(MenuEntry *entry)
     *field += 1;
     if (*field == 5)
         *field = 1;
-    DesignDIYTournamentOnDraw();
+    _DesignDIYTournamentOnDraw();
     _CallDrawMenuItem(entry);
+}
+
+/* ==========================================================================
+ * Chunk 129 — DesignDIYTournament Remaining Functions (8+2s functions)
+ *   OnDraw, OnSelect23, OnSelect20, AdjustStageQualifiers,
+ *   CacheStageSelection, RedrawStageItemsFromBlock,
+ *   RecalculateNumStages, +2 static math helpers
+ * ========================================================================== */
+
+/* Externs for Chunk 129 */
+extern uint16_t diyTournamentSelectedStageIndex1Based;
+extern uint32_t diyTournamentSelectedStagePtr; /* void * stored as uint32_t */
+extern uint16_t diyTournamentPrevValueBackup;
+extern uint16_t controlMask;
+
+/* String constants used by OnDraw */
+extern const uint8_t a3rdPlayOff[];      /* "3RD PLAY-OFF" */
+extern const uint8_t aFinal_4[];         /* "FINAL" */
+extern const uint8_t aSemiFinal[];       /* "SEMI-FINAL" */
+extern const uint8_t aQuarterFinal[];    /* "QUARTER-FINAL" */
+extern const uint8_t aKnockout[];        /* "KNOCKOUT" */
+extern const uint8_t a0GroupsOf1[];      /* "%0 GROUPS OF %1" */
+extern const uint8_t a1GroupOf1[];       /* "1 GROUP OF %1" */
+extern const uint8_t aStar[];            /* "*" */
+extern const uint8_t asc_135D9A[];       /* "-" */
+extern const uint8_t aMatchWinnersQu[];  /* "(MATCH WINNERS QUALIFY)" */
+extern const uint8_t aMatchWinnerWin[];  /* "(MATCH WINNER WINS TOURNAMENT)" */
+extern const uint8_t aMatchWinnersOn[];  /* "(MATCH WINNERS ON AGGREGATE QUALIFY)" */
+extern const uint8_t aMatchWinnerOnA[];  /* "(MATCH WINNER ON AGGREGATE WINS TOURNAM..." */
+extern const uint8_t aGroupWinnerWin[];  /* "(GROUP WINNER WINS TOURNAMENT)" */
+extern const uint8_t aTop0InGroupQua[];  /* "(TOP %0 IN GROUP QUALIFY)" */
+extern const uint8_t aWinnersOfEachG[];  /* "(WINNERS OF EACH GROUP QUALIFY)" */
+extern const uint8_t aWinnersOfEachG_0[];/* "(WINNERS OF EACH GROUP AND BEST RUNNER-..." */
+extern const uint8_t aWinnersOfEachG_1[];/* "(WINNERS OF EACH GROUP AND BEST %1 RUNN..." */
+extern const uint8_t aTop0InEachGrou[];  /* "(TOP %0 IN EACH GROUP QUALIFY)" */
+extern const uint8_t aTop0InEachGrou_0[];/* "(TOP %0 IN EACH GROUP AND BEST RUNNER-U..." */
+extern const uint8_t aTop0InEachGrou_1[];/* "(TOP %0 IN EACH GROUP AND BEST %1 RUNNE..." */
+
+/* --- Static helper: computeGroupLayoutForTeams (SWOS2.s line 50168) ---
+ * Asm: DIYTournament_ComputeGroupLayoutForTeams
+ * Input: candidate (d0), current (d6), stage (d7)
+ * Output: numGroups (d1), groupSize (d2), valid (d3 = 1 success, 0 fail) */
+typedef struct { uint16_t numGroups; uint16_t groupSize; int16_t valid; } GroupLayoutResult;
+
+static GroupLayoutResult computeGroupLayoutForTeams(uint16_t candidate, uint16_t current, uint16_t stage)
+{
+    GroupLayoutResult r;
+    r.numGroups = 0;
+    r.groupSize = 0;
+    r.valid = 0;
+
+    if (candidate == 0x3A || candidate == 0x3E)
+        return r; /* invalid */
+
+    if (current == 1 && candidate == 1) {
+        r.numGroups = 1;
+        r.groupSize = 1;
+        r.valid = 1;
+        return r;
+    }
+
+    if (candidate <= current)
+        return r; /* invalid: candidate must be > current */
+
+    uint16_t d2 = candidate;
+    uint16_t d1 = 0;
+    int32_t d3 = (int16_t)candidate; /* ext.l */
+
+    /* Check if candidate is even and current*2 == candidate */
+    if (!(d3 & 1)) {
+        uint16_t doubled = current << 1;
+        if (doubled == (uint16_t)d3) {
+            if (stage == 6) {
+                if ((uint16_t)d3 == 2) {
+                    r.numGroups = 0;
+                    r.groupSize = d2;
+                    r.valid = 1;
+                    return r;
+                }
+                /* fall through to search loop */
+            } else {
+                if (stage == 5 && (uint16_t)d3 > 0x30) {
+                    /* fall through to search loop */
+                } else {
+                    r.numGroups = 0;
+                    r.groupSize = d2;
+                    r.valid = 1;
+                    return r;
+                }
+            }
+        }
+    }
+
+    /* Search loop: find valid numGroups d1 that divides d3 evenly */
+    for (;;) {
+        d1++;
+        if (d1 == 9) return r; /* invalid */
+        if (d1 > current) return r; /* invalid */
+        if (stage == 6 && d1 == 2) return r; /* invalid */
+        if (d1 == (uint16_t)d3) return r; /* invalid: numGroups == total */
+        {
+            uint32_t divResult = (uint32_t)d3 / (uint32_t)d1;
+            uint32_t remainder = (uint32_t)d3 % (uint32_t)d1;
+            if (remainder != 0) continue; /* doesn't divide evenly */
+            if (divResult > 0x18) continue; /* group size > 24 */
+            d2 = (uint16_t)divResult;
+        }
+        break;
+    }
+
+    r.numGroups = d1;
+    r.groupSize = d2;
+    r.valid = 1;
+    return r;
+}
+
+/* --- Static helper: adjustGroupLayoutForMaxTeams (SWOS2.s line 50234) ---
+ * Asm: DIYTournament_AdjustGroupLayoutForMaxTeams
+ * Input: numGroups (d1), groupSize (d2), maxAllowed (d6), stage (d7)
+ * Output: adjusted numGroups (d1), groupSize (d2) */
+typedef struct { uint16_t numGroups; uint16_t groupSize; } GroupLayoutValues;
+
+static GroupLayoutValues adjustGroupLayoutForMaxTeams(uint16_t numGroups, uint16_t groupSize,
+                                                       uint16_t maxAllowed, uint16_t stage)
+{
+    GroupLayoutValues v;
+    int32_t d3;
+
+    d3 = (int32_t)(uint32_t)numGroups * (uint32_t)groupSize; /* mulu */
+
+    if (numGroups == 0) {
+        numGroups = 1;
+        d3 = (int16_t)groupSize; /* ext.l of d2 (word) */
+    } else {
+        numGroups++;
+    }
+
+    /* Search loop */
+    for (;;) {
+        if (numGroups == 9) goto fallback;
+        if (numGroups > maxAllowed) goto fallback;
+        if (stage == 6 && numGroups == 2) goto fallback;
+        if (numGroups == (uint16_t)d3) goto fallback;
+        {
+            uint32_t divResult = (uint32_t)d3 / (uint32_t)numGroups;
+            uint32_t remainder = (uint32_t)d3 % (uint32_t)numGroups;
+            if (remainder != 0) { numGroups++; continue; }
+            if (divResult > 0x18) { numGroups++; continue; }
+            groupSize = (uint16_t)divResult;
+            v.numGroups = numGroups;
+            v.groupSize = groupSize;
+            return v;
+        }
+    }
+
+fallback:
+    /* Check if d3 is even and current*2 == d3 */
+    if (!(d3 & 1)) {
+        uint16_t doubled = maxAllowed << 1;
+        if (doubled == (uint16_t)d3) {
+            /* Special cases for stage 6 and 5 */
+            if (stage == 6) {
+                if ((uint16_t)d3 != 2) {
+                    /* Reset: numGroups=1, groupSize=d3, restart */
+                    numGroups = 1;
+                    groupSize = (uint16_t)d3;
+                    goto restart_search;
+                }
+            } else if (stage == 5) {
+                if ((uint16_t)d3 > 0x30) {
+                    numGroups = 1;
+                    groupSize = (uint16_t)d3;
+                    goto restart_search;
+                }
+            }
+            /* d1=0 (no groups), d2=d3 (all in one) */
+            v.numGroups = 0;
+            v.groupSize = (uint16_t)d3;
+            return v;
+        }
+    }
+    /* Default fallback: reset to 1 group, try again */
+    numGroups = 1;
+    groupSize = (uint16_t)d3;
+restart_search:
+    /* Re-enter the search loop from the increment step */
+    for (;;) {
+        numGroups++;
+        if (numGroups == 9) break;
+        if (numGroups > maxAllowed) break;
+        if (stage == 6 && numGroups == 2) break;
+        if (numGroups == (uint16_t)d3) break;
+        {
+            uint32_t divResult = (uint32_t)d3 / (uint32_t)numGroups;
+            uint32_t remainder = (uint32_t)d3 % (uint32_t)numGroups;
+            if (remainder != 0) continue;
+            if (divResult > 0x18) continue;
+            groupSize = (uint16_t)divResult;
+            v.numGroups = numGroups;
+            v.groupSize = groupSize;
+            return v;
+        }
+    }
+    /* Should not reach here in normal operation, but safety: */
+    v.numGroups = numGroups;
+    v.groupSize = groupSize;
+    return v;
+}
+
+/* --- _DIYTournament_RecalculateNumStages (SWOS2.s line 50128) ---
+ * Counts stages until one has field +0x164 == 1 (terminal stage), max 6 */
+__attribute__((used, externally_visible))
+void _DIYTournament_RecalculateNumStages(void)
+{
+    uint8_t *a0 = diyFileBufferCopy;
+    uint16_t d0 = 1;
+    while (d0 < 6) {
+        if (*(uint16_t *)(a0 + 0x164) == 1)
+            break;
+        a0 += 0x76;
+        d0++;
+    }
+    *(uint16_t *)(diyFileBufferCopy + 0x52) = d0;
+}
+
+/* --- _DesignDIYTournament_CacheStageSelection (SWOS2.s line 49978) ---
+ * Computes stage index from menu entry ordinal and caches pointer+index */
+__attribute__((used, externally_visible))
+void _DesignDIYTournament_CacheStageSelection(MenuEntry *entry)
+{
+    int16_t d0 = (int16_t)(entry->ordinal - 0x11);
+    int32_t d0l = d0; /* ext.l */
+    uint16_t stageIdx = (uint16_t)((uint32_t)d0l / 0xC);
+    diyTournamentSelectedStageIndex1Based = stageIdx + 1;
+    uint32_t ptr = (uint32_t)(uint32_t)diyFileBufferCopy + (uint32_t)stageIdx * 0x76;
+    diyTournamentSelectedStagePtr = ptr;
+}
+
+/* --- _DesignDIYTournament_RedrawStageItemsFromBlock (SWOS2.s line 50114) ---
+ * Converts block pointer to menu entry ordinal and redraws items.
+ * blk=a0, count=d1 in asm. Computes: ordinal = ((blk-diyFileBufferCopy)/0x76)*0xC + 0x11 */
+__attribute__((used, externally_visible))
+void _DesignDIYTournament_RedrawStageItemsFromBlock(uint8_t *blk, uint16_t count)
+{
+    uint32_t offset = (uint32_t)(blk - diyFileBufferCopy);
+    uint16_t d0 = (uint16_t)(offset / 0x76);
+    d0 = d0 * 0xC;
+    d0 += 0x11;
+    MenuEntry *a0 = _CalcMenuEntryAddress(d0);
+    uint16_t numItems = count * 0xC;
+    _CallDrawMultipleItems(numItems, a0);
+}
+
+/* --- _DesignDIYTournamentOnDraw (SWOS2.s line 49699) ---
+ * Main draw callback for the tournament design menu.
+ * Iterates 6 stages, configures visibility/content of menu entries.
+ * IDA bug: ($2A26).w is menuEntries[9] (hardcoded absolute address). */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOnDraw(void)
+{
+    uint8_t *a2 = diyFileBufferCopy;
+    uint16_t numStages = *(uint16_t *)(diyFileBufferCopy + 0x52);
+    int16_t scanCount = (int16_t)numStages - 1;
+    int16_t found3rdPlayoff = 0;
+
+    /* Pre-scan: find knockout stage (isGroupStage==0) with type==2 */
+    for (int16_t i = scanCount; i >= 0; i--) {
+        if (*(uint16_t *)(a2 + 0x15E) == 0) {
+            if (*(uint16_t *)(a2 + 0x16E) == 2) {
+                found3rdPlayoff = 1;
+                break;
+            }
+        }
+        a2 += 0x76;
+    }
+
+    if (!found3rdPlayoff) {
+        /* Hide entries 9 and 8 */
+        menuEntries[9].isInvisible = 1;
+        menuEntries[8].isInvisible = 1;
+    } else {
+        /* Show entries 9 and 8. Note: asm used ($2A26).w which is menuEntries[9] */
+        a2 = diyFileBufferCopy;
+        menuEntries[9].isInvisible = 0;
+        menuEntries[8].isInvisible = 0;
+    }
+
+    /* Main loop: configure entries for each of 6 stage slots */
+    MenuEntry *a4 = &menuEntries[17]; /* menuEntries+$3B8 */
+    a2 = diyFileBufferCopy;
+    int16_t d7 = 0;
+
+    for (d7 = 0; d7 < 6; d7++) {
+        /* Check if this slot is past the last active stage */
+        if (d7 == (int16_t)numStages) {
+            if (*(uint16_t *)(a2 + 0xEC) == 2)
+                goto fill_remaining_invisible_1;
+        }
+
+        /* Entry pair: show both */
+        a4->isInvisible = 0;
+        a4++;
+        a4->isInvisible = 0;
+
+        /* Conditionally hide based on stage 5 or elimination type */
+        if (d7 == 5) {
+            a4->isInvisible = 1;
+        } else if (*(uint16_t *)(a2 + 0x162) == 2) {
+            if (*(uint16_t *)(a2 + 0x15C) == 0)
+                a4->isInvisible = 1;
+        }
+
+        /* Next entry: show, set content to numTeamsInGroup */
+        a4++;
+        a4->isInvisible = 0;
+        *(uint16_t *)&a4->fg = *(uint16_t *)(a2 + 0x162);
+
+        /* Next entry: advance */
+        a4++;
+
+        /* Check if d7 == numStages (past active stages) */
+        if (d7 == (int16_t)numStages)
+            goto fill_remaining_hidden;
+
+        /* Show entry and set stage name string */
+        a4->isInvisible = 0;
+        {
+            uint8_t *dst = (uint8_t *)(uint32_t)a4->fg;
+            if (*(uint16_t *)(a2 + 0x15E) == 0) {
+                /* Knockout stage: determine round name */
+                const uint8_t *name;
+                uint16_t val15C = *(uint16_t *)(a2 + 0x15C);
+                if (val15C != 0) {
+                    name = a3rdPlayOff; /* "3RD PLAY-OFF" */
+                } else {
+                    uint16_t val162 = *(uint16_t *)(a2 + 0x162);
+                    if (val162 == 2) {
+                        name = aFinal_4; /* "FINAL" */
+                    } else if (val162 == 4) {
+                        name = aSemiFinal; /* "SEMI-FINAL" */
+                    } else if (val162 == 8) {
+                        name = aQuarterFinal; /* "QUARTER-FINAL" */
+                    } else {
+                        name = aKnockout; /* "KNOCKOUT" */
+                    }
+                }
+                _StringCopy(name, dst);
+            } else {
+                /* Group stage: "%0 GROUPS OF %1" or "1 GROUP OF %1" */
+                uint16_t numGrp = *(uint16_t *)(a2 + 0x16A);
+                uint16_t grpSize = *(uint16_t *)(a2 + 0x16C);
+                const uint8_t *fmt;
+                if (numGrp == 1) {
+                    fmt = a1GroupOf1; /* "1 GROUP OF %1" */
+                } else {
+                    fmt = a0GroupsOf1; /* "%0 GROUPS OF %1" */
+                }
+                _PrintFormatted(fmt, dst, numGrp, grpSize, 0, 0, 0, 0, 0, 0, 0, 0);
+            }
+        }
+
+        /* Next entry: home/away star indicator */
+        a4++;
+        a4->isInvisible = 0;
+        if (*(uint16_t *)(a2 + 0x160) != 0) {
+            a4->fg = (uint32_t)(uint32_t)aStar;  /* "*" */
+        } else {
+            a4->fg = (uint32_t)(uint32_t)asc_135D9A; /* "-" */
+        }
+
+        /* Next entry: qualification description */
+        a4++;
+        a4->isInvisible = 0;
+        {
+            uint8_t *dst = (uint8_t *)(uint32_t)a4->fg;
+            if (*(uint16_t *)(a2 + 0x15E) == 0) {
+                /* Knockout qualification text */
+                uint16_t val16E = *(uint16_t *)(a2 + 0x16E);
+                if (val16E != 2) {
+                    uint16_t val164 = *(uint16_t *)(a2 + 0x164);
+                    if (val164 == 1) {
+                        _StringCopy(aMatchWinnerWin, dst); /* "(MATCH WINNER WINS TOURNAMENT)" */
+                    } else {
+                        _StringCopy(aMatchWinnersQu, dst); /* "(MATCH WINNERS QUALIFY)" */
+                    }
+                } else {
+                    uint16_t val164 = *(uint16_t *)(a2 + 0x164);
+                    if (val164 == 1) {
+                        _StringCopy(aMatchWinnerOnA, dst); /* "(MATCH WINNER ON AGGREGATE WINS TOURNAM..." */
+                    } else {
+                        _StringCopy(aMatchWinnersOn, dst); /* "(MATCH WINNERS ON AGGREGATE QUALIFY)" */
+                    }
+                }
+            } else {
+                /* Group qualification text */
+                uint16_t d2 = *(uint16_t *)(a2 + 0x16A);
+                uint16_t d0 = *(uint16_t *)(a2 + 0x164);
+                const uint8_t *fmt;
+
+                if (d0 == 1) {
+                    _StringCopy(aGroupWinnerWin, dst); /* "(GROUP WINNER WINS TOURNAMENT)" */
+                    goto after_qual_text;
+                }
+
+                if (d2 == 1) {
+                    fmt = aTop0InGroupQua; /* "(TOP %0 IN GROUP QUALIFY)" */
+                    goto print_qual;
+                }
+
+                if (d0 == d2) {
+                    _StringCopy(aWinnersOfEachG, dst); /* "(WINNERS OF EACH GROUP QUALIFY)" */
+                    goto after_qual_text;
+                }
+
+                {
+                    int32_t d0ext = (int16_t)d0; /* ext.l */
+                    uint16_t quotient = (uint16_t)((uint32_t)d0ext / (uint32_t)d2);
+                    uint16_t remainder;
+                    { uint32_t div = (uint32_t)d0ext; remainder = (uint16_t)(div % d2); }
+                    uint16_t d1 = remainder; /* swap d0 gives remainder in low word */
+
+                    if (quotient == 1) {
+                        if (d1 == 1) {
+                            _StringCopy(aWinnersOfEachG_0, dst);
+                            goto after_qual_text;
+                        }
+                        fmt = aWinnersOfEachG_1;
+                        goto print_qual;
+                    }
+
+                    if (d1 == 0) {
+                        fmt = aTop0InEachGrou;
+                        goto print_qual;
+                    }
+
+                    if (d1 == 1) {
+                        fmt = aTop0InEachGrou_0;
+                        goto print_qual;
+                    }
+
+                    fmt = aTop0InEachGrou_1;
+                }
+print_qual:
+                _PrintFormatted(fmt, dst, d0, d2, 0, 0, 0, 0, 0, 0, 0, 0);
+after_qual_text: ;
+            }
+        }
+
+        /* Next entry: knockout-specific fields (legs/scoring) */
+        a4++;
+        if (*(uint16_t *)(a2 + 0x15E) == 0) {
+            /* Knockout path: show 4 entries for legs/play/goals config */
+            a4->isInvisible = 0;
+            {
+                /* Set number value via double-indirection: fg → ptr → write */
+                uint16_t **pp = (uint16_t **)(uint32_t)a4->fg;
+                **pp = *(uint16_t *)(a2 + 0x16E);
+            }
+            a4++;
+            a4->isInvisible = 0;
+            {
+                uint16_t **pp = (uint16_t **)(uint32_t)a4->fg;
+                **pp = *(uint16_t *)(a2 + 0x170);
+            }
+            a4++;
+            a4->isInvisible = 0;
+            {
+                uint16_t **pp = (uint16_t **)(uint32_t)a4->fg;
+                **pp = *(uint16_t *)(a2 + 0x172);
+            }
+            a4++;
+            a4->isInvisible = 1; /* hide separator */
+            a4++;
+            /* Set navigation links based on ordinal */
+            {
+                uint8_t low = (uint8_t)a4->ordinal;
+                a4->upEntry = (int8_t)(low - 3);
+                if (a4->ordinal < 0x4D)
+                    a4->downEntry = (int8_t)(low + 9);
+            }
+            a4++;
+            a4->isInvisible = 1; /* hide */
+            a4++;
+        } else {
+            /* Group path: hide 3 knockout entries, show group config */
+            a4->isInvisible = 1;
+            a4++;
+            a4->isInvisible = 1;
+            a4++;
+            a4->isInvisible = 1;
+            a4++;
+            /* Show group toggle entry */
+            a4->isInvisible = 0;
+            {
+                uint16_t **pp = (uint16_t **)(uint32_t)a4->fg;
+                **pp = *(uint16_t *)(a2 + 0x168);
+            }
+            a4++;
+            /* Set navigation links */
+            {
+                uint8_t low = (uint8_t)a4->ordinal;
+                a4->upEntry = (int8_t)(low - 1);
+                a4->downEntry = (int8_t)(low - 1);
+            }
+            a4++;
+            /* Show group count entry */
+            a4->isInvisible = 0;
+            {
+                uint16_t **pp = (uint16_t **)(uint32_t)a4->fg;
+                **pp = *(uint16_t *)(a2 + 0x166);
+            }
+            a4++;
+        }
+
+        /* Advance to next stage block */
+        a2 += 0x76;
+        continue;
+
+fill_remaining_hidden:
+        /* Past active stages: hide remaining 11 entries in this slot */
+        a4 -= 3; /* back up 3 entries (lea -$38 * 3) */
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4++; /* skip one (already advanced past) */
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        goto fill_remaining_loop;
+    }
+    return;
+
+fill_remaining_invisible_1:
+    /* All entries from here until ordinal 0x59 ('Y') are hidden */
+    {
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+    }
+
+fill_remaining_loop:
+    /* Continue hiding entries until ordinal reaches 0x59 */
+    while (a4->ordinal != 0x59) {
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+        a4->isInvisible = 1;
+        a4++;
+    }
+    return;
+}
+
+/* --- _DesignDIYTournamentOnSelect23 (SWOS2.s line 49637) ---
+ * Toggle aggregate flag (+0x16E) XOR 3, then redraw stage */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOnSelect23(MenuEntry *entry)
+{
+    uint8_t *stageBlock = getTournamentStageBlock(entry);
+    *(uint16_t *)(stageBlock + 0x16E) ^= 3;
+    _DesignDIYTournamentOnDraw();
+    _DesignDIYTournament_RedrawStageItemsFromBlock(stageBlock, 1);
+    _CallDrawMultipleItems(2, &menuEntries[8]); /* menuEntries+$1C0 = entry 8 */
+}
+
+/* --- _DesignDIYTournamentOnSelect20 (SWOS2.s line 50144) ---
+ * Adjust group layout and redraw */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOnSelect20(MenuEntry *entry)
+{
+    _DesignDIYTournament_CacheStageSelection(entry);
+    uint8_t *a3 = (uint8_t *)(uint32_t)diyTournamentSelectedStagePtr;
+
+    uint16_t d1 = *(uint16_t *)(a3 + 0x16A);
+    uint16_t d2 = *(uint16_t *)(a3 + 0x16C);
+    uint16_t d6 = *(uint16_t *)(a3 + 0x164);
+
+    /* Adjust group layout for max teams */
+    uint16_t d7 = diyTournamentSelectedStageIndex1Based;
+    GroupLayoutValues v = adjustGroupLayoutForMaxTeams(d1, d2, d6, d7);
+    *(uint16_t *)(a3 + 0x15E) = v.numGroups;
+    *(uint16_t *)(a3 + 0x16A) = v.numGroups;
+    *(uint16_t *)(a3 + 0x16C) = v.groupSize;
+
+    _DesignDIYTournamentOnDraw();
+    _DesignDIYTournament_RedrawStageItemsFromBlock(a3, 1);
+    _CallDrawMultipleItems(2, &menuEntries[8]); /* menuEntries+$1C0 */
+}
+
+/* --- _DesignDIYTournament_AdjustStageQualifiers (SWOS2.s line 49992) ---
+ * Interactive callback: adjusts qualifier count for current stage via control input.
+ * Handles both first stage (numTeams) and subsequent stages (pass-through count). */
+__attribute__((used, externally_visible))
+void _DesignDIYTournament_AdjustStageQualifiers(MenuEntry *entry)
+{
+    _DesignDIYTournament_CacheStageSelection(entry);
+    uint16_t d7 = diyTournamentSelectedStageIndex1Based;
+    uint8_t *a3 = (uint8_t *)(uint32_t)diyTournamentSelectedStagePtr;
+    uint8_t *a2 = a3 - 0x76; /* previous stage */
+
+    if (d7 == 1) {
+        /* First stage: adjust numTeams at a3+0x32 */
+        diyTournamentPrevValueBackup = *(uint16_t *)(a3 + 0x32);
+
+        for (;;) {
+            uint16_t ctrl = controlMask;
+            if (ctrl == 0x81 || ctrl == 0x101) {
+                /* Right/down: increment */
+                *(uint16_t *)(a3 + 0x32) += 1;
+                if (*(uint16_t *)(a3 + 0x32) >= 0x41)
+                    goto restore_first;
+            } else if (ctrl == 0x41 || ctrl == 0x201) {
+                /* Left/up: decrement */
+                *(uint16_t *)(a3 + 0x32) -= 1;
+                if (*(uint16_t *)(a3 + 0x32) == 1)
+                    goto restore_first;
+            } else {
+                return; /* no recognized input */
+            }
+
+            /* Check if value actually changed */
+            if (*(uint16_t *)(a3 + 0x32) == diyTournamentPrevValueBackup)
+                return;
+
+            /* Compute new group layout */
+            {
+                uint16_t candidate = *(uint16_t *)(a3 + 0x32);
+                uint16_t current = *(uint16_t *)(a3 + 0x164);
+                GroupLayoutResult r = computeGroupLayoutForTeams(candidate, current, d7);
+                if (!r.valid)
+                    continue; /* try again */
+
+                *(uint16_t *)(a3 + 0x32) = candidate;
+                *(uint16_t *)(a3 + 0x162) = *(uint16_t *)(a3 + 0x32);
+                *(uint16_t *)(a3 + 0x15E) = r.numGroups;
+                *(uint16_t *)(a3 + 0x16A) = r.numGroups;
+                *(uint16_t *)(a3 + 0x16C) = r.groupSize;
+            }
+
+            _DIYTournament_RecalculateNumStages();
+            _DesignDIYTournamentOnDraw();
+
+            {
+                uint16_t redrawCount = 1;
+                _DesignDIYTournament_RedrawStageItemsFromBlock(a3, redrawCount);
+            }
+            _CallDrawMultipleItems(2, &menuEntries[8]);
+            return;
+
+restore_first:
+            *(uint16_t *)(a3 + 0x32) = diyTournamentPrevValueBackup;
+            return;
+        }
+    }
+
+    /* Subsequent stages (d7 > 1): adjust pass-through count at a2+0x164 */
+    diyTournamentPrevValueBackup = *(uint16_t *)(a2 + 0x164);
+
+    for (;;) {
+        uint16_t ctrl = controlMask;
+        if (ctrl == 0x81 || ctrl == 0x101) {
+            /* Right/down: increment */
+            *(uint16_t *)(a2 + 0x164) += 1;
+            uint16_t newVal = *(uint16_t *)(a2 + 0x164);
+            if (newVal == *(uint16_t *)(a2 + 0x162))
+                goto restore_prev;
+        } else if (ctrl == 0x41 || ctrl == 0x201) {
+            /* Left/up: decrement */
+            *(uint16_t *)(a2 + 0x164) -= 1;
+            if ((int16_t)*(uint16_t *)(a2 + 0x164) < 0)
+                goto restore_prev;
+            if (*(uint16_t *)(a2 + 0x164) < *(uint16_t *)(a2 + 0x16A))
+                goto restore_prev;
+        } else {
+            return; /* no recognized input */
+        }
+
+        /* Check if value actually changed */
+        if (*(uint16_t *)(a2 + 0x164) == diyTournamentPrevValueBackup)
+            return;
+
+        /* Compute new group layout for next stage */
+        {
+            uint16_t candidate = *(uint16_t *)(a2 + 0x164);
+            uint16_t current = *(uint16_t *)(a3 + 0x164);
+            GroupLayoutResult r = computeGroupLayoutForTeams(candidate, current, d7);
+            if (!r.valid)
+                continue; /* try again */
+
+            *(uint16_t *)(a3 + 0x15E) = r.numGroups;
+            *(uint16_t *)(a3 + 0x16A) = r.numGroups;
+            *(uint16_t *)(a3 + 0x16C) = r.groupSize;
+
+            /* Adjust previous stage's group layout if it was knockout */
+            if (*(uint16_t *)(a2 + 0x15E) == 0) {
+                uint16_t d1a = *(uint16_t *)(a2 + 0x16A);
+                uint16_t d2a = *(uint16_t *)(a2 + 0x16C);
+                uint16_t d6a = *(uint16_t *)(a2 + 0x164);
+                GroupLayoutValues v = adjustGroupLayoutForMaxTeams(d1a, d2a, d6a, d7);
+                *(uint16_t *)(a2 + 0x15E) = v.numGroups;
+                *(uint16_t *)(a2 + 0x16A) = v.numGroups;
+                *(uint16_t *)(a2 + 0x16C) = v.groupSize;
+            }
+
+            *(uint16_t *)(a2 + 0x162) = *(uint16_t *)(a2 + 0x164);
+            /* Note: asm has: move.w $164(a2),$162(a3) - but the code before already
+             * set a3 fields. Looking more carefully, this sets a3+0x162 = a2+0x164.
+             * Wait, the asm is: move.w $164(a2),$162(a3) */
+        }
+        /* Actually re-read: line 50046: move.w $164(a2),$162(a3) */
+        *(uint16_t *)(a3 + 0x162) = *(uint16_t *)(a2 + 0x164);
+
+        _DIYTournament_RecalculateNumStages();
+        _DesignDIYTournamentOnDraw();
+
+        {
+            uint16_t redrawCount = 2;
+            if (d7 != 6 && *(uint16_t *)(a3 + 0x164) == 1)
+                redrawCount = 3;
+            _DesignDIYTournament_RedrawStageItemsFromBlock(a2, redrawCount);
+        }
+        _CallDrawMultipleItems(2, &menuEntries[8]);
+        return;
+
+restore_prev:
+        *(uint16_t *)(a2 + 0x164) = diyTournamentPrevValueBackup;
+        return;
+    }
 }
