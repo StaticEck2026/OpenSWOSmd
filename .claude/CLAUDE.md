@@ -388,9 +388,9 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1262 functions ported across 134 chunks.
+**Current status:** 1272 functions ported across 135 chunks.
 
-**Last completed chunk:** Chunk 134 — Top Goal Scorers / Statistics cluster (13 → statistics.c): TopGoalScorersMenu_0, StatsHighestScorerList, CompetitionTopGoalScorersInit, TopGoalScorersInit, TopGoalScorersBeforeDrawCommon, + 8 static helpers (InitHighestScorersTable, UpdateHighestScorersMinScoreAndCount, FindReplaceableLowestScorerSlot, AddTeamScorersToHighestScorersTable, PopulateHighestScorersTableFromSelectedTeams, SortHighestScorerTable, GetScorerSurname, ShowCompetitionTopScorers).
+**Last completed chunk:** Chunk 135 — Career Over callbacks, Stats dispatchers, Select Teams callbacks (9+1s → menus.c): CareerOverFinish, CareerOverUpdateJobOffersEntry (static), JobOffersMenuRetired, ExitCareerMenu, CompetitionInfo, StatsExit, ChooseTeamsPlayGame, ExitSelectTeams, SelectTeamsCommon, SelectLeaguesCommon.
 
 **Next candidates:** ImportTeamsMenu (~57 instr), DesignDIYCup remaining (BuildMatchListEntryStrings, UpdateMenuEntriesVisibilityAndSelection, AppendTeamNameToMenuEntry), SquadMenu functions, CareerGameListCommon (~3194 lines), JobOffers cluster, EditTactics remaining.
 

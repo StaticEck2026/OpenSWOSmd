@@ -55250,17 +55250,9 @@ StatsHighestScorerList:
                 jmp     _StatsHighestScorerList
 
 ; ===== CompetitionInfo =====
-; prototype: void __usercall CompetitionInfo()
+; Ported to C: _CompetitionInfo in src/menus.c
 CompetitionInfo:
-                cmpi.w  #2,(diyCompetitionType).l
-                beq.s   loc_13AB56
-                tst.w   (diyCompetitionType).l
-                bne.s   loc_13AB52
-                jmp     ShowLeagueInfo
-loc_13AB52:
-                jmp ShowCupInfo(pc)
-loc_13AB56:
-                jmp ShowTournamentInfo(pc)
+                jmp     _CompetitionInfo
 
 ; ===== StatsViewSquads =====
 ; prototype: void __usercall StatsViewSquads(unsigned __int16 numTeams@<d0>, unsigned __int16 arg@<d1>, TeamFile *teams@<a1>)
@@ -55271,9 +55263,9 @@ StatsViewSquads:
                 jmp SelectAndShowSquadToView(pc)
 
 ; ===== StatsExit =====
-; prototype: void __usercall StatsExit()
+; Ported to C: _StatsExit in src/menus.c
 StatsExit:
-                jmp     SetExitMenuFlag
+                jmp     _StatsExit
 diyCompetitionType:
                 dc.w $0000
 diyUnknownWord_2C:
@@ -55483,177 +55475,23 @@ CareerOverInit:
                 jmp     _CareerOverInit
 
 ; ===== CareerOverFinish =====
-; prototype: __int16 __usercall CareerOverFinish@<d0>()
+; Ported to C: _CareerOverFinish in src/menus.c
 CareerOverFinish:
-                lea     (menuEntries).l,a1
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a1),a1
-                lea     (managerNameBuffer).l,a0
-                jsr     GetStringLength
-                move.w  d0,d1
-                lea     (managerSurnameBuffer).l,a0
-                jsr     GetStringLength
-                add.w   d1,d0
-                lea     (managerNameBuffer).l,a0
-                cmpi.w  #12,d0
-                bls.s   loc_13ACEC
-                tst.b   (a0)
-                beq.s   loc_13ACF6
-                move.b  (a0)+,(a1)+
-                move.b  #' ',(a1)+
-                bra.s   loc_13ACF6
-loc_13ACEC:
-                jsr     StringCopy
-                move.b  #' ',(a1)+
-loc_13ACF6:
-                lea     (managerSurnameBuffer).l,a0
-                jsr     StringCopy
-                move.w  (selTeamNumber).l,d0
-                jsr     VerifyTeamLoaded
-                lea     5(a0),a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a1
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a1),a1
-                jsr     StringCopy
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a1
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a1),a1
-                move.b  (seasonPlaying).l,d0
-                andi.w  #$FF,d0
-                addi.w  #1900,d0
-                cmpi.w  #1996,d0
-                bcc.s   loc_13AD40
-                addi.w  #100,d0
-loc_13AD40:
-                addq.w  #1,d0
-                lea     (a0EndSeason).l,a0 ; "%0 END SEASON"
-                jsr     PrintFormatted
-                bsr.w   CareerOverUpdateJobOffersEntry
-                cmpi.w  #19,(currentSeasonShowing).l
-                bne.s   loc_13AD74
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$188).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                move.l  #aRetire,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "RETIRE" ...
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$A8).l
-                rts
-loc_13AD74:
-                cmpi.w  #$FFFF,(teamNoOfferAccepted).l
-                bne.w   loc_13ADE0
-                tst.w   (youreSacked).l
-                beq.w   loc_13ADE0
-                tst.w   (numNewJobOffers).l
-                bne.s   loc_13ADE0
-                tst.w   (numJobOffers).l
-                bne.s   loc_13ADE0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$188).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$A8).l
-loc_13ADE0:
-                tst.w   (youreSacked).l
-                beq.s   locret_13AE10
-                cmpi.w  #$FFFF,(teamNoOfferAccepted).l
-                bne.s   locret_13AE10
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-locret_13AE10:
-                rts
+                jmp     _CareerOverFinish
 
 ; ===== CareerOverUpdateJobOffersEntry =====
-; prototype: __int16 __usercall CareerOverUpdateJobOffersEntry@<d0>()
+; Ported to C (static in menus.c, called from _CareerOverFinish)
 CareerOverUpdateJobOffersEntry:
-                cmpi.w  #19,(currentSeasonShowing).l
-                bne.s   loc_13AE24
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$118).l
                 rts
-loc_13AE24:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #YELLOW_GREEN_BLACK_14,d0 ; yellow-green-black
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a0
-                clr.w   MENUENTRY_ISDISABLED(a0)
-                move.w  MENUENTRY_STRINGFLAGS(a0),d1
-                bclr    #$D,d1
-                cmpi.w  #$FFFF,(teamNoOfferAccepted).l
-                bne.s   loc_13AE6C
-                tst.w   (numNewJobOffers).l
-                bne.s   loc_13AE62
-                tst.w   (numJobOffers).l
-                beq.s   loc_13AE76
-loc_13AE62:
-                bset    #$D,d1
-loc_13AE66:
-                move.w  d1,MENUENTRY_STRINGFLAGS(a0)
-                rts
-loc_13AE6C:
-                move.l  #aNewJob,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "NEW JOB" ...
-                bra.s   loc_13AE66
-loc_13AE76:
-                move.l  #aNoJobOffers,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "NO JOB OFFERS" ...
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                bra.s   loc_13AE66
 
 ; ===== ViewCompetitionsMenuRetired ===== (ported to C → _ViewCompetitionsMenuRetired)
 ViewCompetitionsMenuRetired:
                 jmp     _ViewCompetitionsMenuRetired
 
 ; ===== JobOffersMenuRetired =====
-; prototype: __int16 __usercall JobOffersMenuRetired@<d0>()
+; Ported to C: _JobOffersMenuRetired in src/menus.c
 JobOffersMenuRetired:
-                cmpi.w  #$FFFF,(teamNoOfferAccepted).l
-                bne.s   loc_13AF06
-                tst.w   (numNewJobOffers).l
-                bne.s   loc_13AEC0
-                tst.w   (numJobOffers).l
-                beq.s   locret_13AF26
-loc_13AEC0:
-                move.w  #1,(jobOffersFromRetired).l
-                lea     (jobOffersMenu).l,a6
-                jsr     ShowMenu
-                cmpi.w  #$FFFF,(teamNoOfferAccepted).l
-                bne.s   loc_13AF12
-                tst.w   (youreSacked).l
-                beq.s   loc_13AF04
-                move.w  (numNewJobOffers).l,d0
-                add.w   (numJobOffers).l,d0
-                bne.s   loc_13AF04
-                move.w  #0,d0
-                jsr     InitCareerVariables
-                jmp     SetExitMenuFlag
-loc_13AF04:
-                bra.s   loc_13AF12
-loc_13AF06:
-                lea     (gotJobOfferMenu).l,a6
-                jsr     ShowMenu
-loc_13AF12:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a0
-                tst.w   MENUENTRY_ISDISABLED(a0)
-                beq.s   locret_13AF26
-                move.w  #8,d0
-                jsr     SetCurrentEntry
-locret_13AF26:
-                rts
+                jmp     _JobOffersMenuRetired
 
 ; ===== ContinueCareer =====
 ; prototype: void __usercall ContinueCareer()
@@ -55696,20 +55534,9 @@ locret_13AFC0:
                 rts
 
 ; ===== ExitCareerMenu =====
-; prototype: void __usercall ExitCareerMenu()
+; Ported to C: _ExitCareerMenu in src/menus.c
 ExitCareerMenu:
-                cmpi.w  #$FFFF,(teamNoOfferAccepted).l
-                bne.s   loc_13AFEE
-                tst.w   (youreSacked).l
-                beq.s   loc_13AFEE
-                tst.w   (numNewJobOffers).l
-                bne.s   loc_13AFEE
-                tst.w   (numJobOffers).l
-                bne.s   loc_13AFEE
-                move.w  #0,d0
-                jsr     InitCareerVariables
-loc_13AFEE:
-                jmp     SetExitMenuFlag
+                jmp     _ExitCareerMenu
 
 ; ===== SelectTeamToManage =====
 ; prototype: __int16 __usercall SelectTeamToManage@<d0>()
@@ -62906,92 +62733,29 @@ ViewSelectedTeams:
                 jmp     _ViewSelectedTeams
 
 ; ===== ChooseTeamsPlayGame =====
-; prototype: void __usercall ChooseTeamsPlayGame()
+; Ported to C: _ChooseTeamsPlayGame in src/menus.c
 ChooseTeamsPlayGame:
-                move.w  #$FFFF,(selectedTeamIndex).l
-                move.w  #$FFFF,(selectedLeagueIndex).l
-                move.w  #1,(chooseTeamsResult).l
-                clr.w   (viewSelectedTeams).l
-                clr.w   (changeTeams).l
-                clr.w   (abortSelectTeams).l
-                clr.w   (exitSelectTeams).l
-                jmp     SetExitMenuFlag
+                jmp     _ChooseTeamsPlayGame
 
 ; ===== ExitSelectTeams =====
-; prototype: void __usercall ExitSelectTeams()
+; Ported to C: _ExitSelectTeams in src/menus.c
 ExitSelectTeams:
-                move.w  #$FFFF,(selectedTeamIndex).l
-                move.w  #$FFFF,(selectedLeagueIndex).l
-                clr.w   (chooseTeamsResult).l
-                clr.w   (viewSelectedTeams).l
-                clr.w   (changeTeams).l
-                move.w  (teamDepthLevel).l,d0
-                beq.s   loc_13F4E6
-                cmp.w   (topOfStackMark).l,d0
-                beq.s   loc_13F4E6
-                move.w  #1,(exitSelectTeams).l
-                clr.w   (abortSelectTeams).l
-                jmp     SetExitMenuFlag
-loc_13F4E6:
-                move.w  #1,(abortSelectTeams).l
-                clr.w   (exitSelectTeams).l
-                jmp     SetExitMenuFlag
+                jmp     _ExitSelectTeams
 
 ; ===== SelectTeamsCommon =====
-; prototype: void __usercall SelectTeamsCommon(struct MenuEntry *entry@<a5>)
+; Ported to C: _SelectTeamsCommon in src/menus.c (a5 bridge)
 SelectTeamsCommon:
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a5),a0
-                cmpi.b  #' ',(a0)
-                beq.w   locret_13F574
-                move.w  MENUENTRY_ORDINAL(a5),d0
-                move.w  d0,(lastSelectedTeam).l
-                subi.w  #21,d0
-                add.w   (startingTeamIndex).l,d0
-                cmpi.w  #22,d0
-                bcs.s   loc_13F53A
-                cmpi.w  #44,d0
-                bcs.s   loc_13F530
-                subi.w  #22,d0
-                add.w   (numTeamsColumn2).l,d0
-loc_13F530:
-                subi.w  #22,d0
-                add.w   (numTeamsColumn1).l,d0
-loc_13F53A:
-                move.w  d0,(selectedTeamIndex).l
-                move.w  #$FFFF,(selectedLeagueIndex).l
-                move.l  MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a5),(selectedTeamText).l
-                clr.w   (chooseTeamsResult).l
-                clr.w   (viewSelectedTeams).l
-                clr.w   (changeTeams).l
-                clr.w   (abortSelectTeams).l
-                clr.w   (exitSelectTeams).l
-                jmp     SetExitMenuFlag
-locret_13F574:
+                move.l  a5,-(sp)
+                jsr     _SelectTeamsCommon
+                addq.l  #4,sp
                 rts
 
 ; ===== SelectLeaguesCommon =====
-; prototype: void __usercall SelectLeaguesCommon(struct MenuEntry *entry@<a5>)
+; Ported to C: _SelectLeaguesCommon in src/menus.c (a5 bridge)
 SelectLeaguesCommon:
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a5),a0
-                cmpi.b  #' ',(a0)
-                beq.w   locret_13F5D2
-                move.w  MENUENTRY_ORDINAL(a5),d0
-                move.w  d0,(lastSelectedTeam).l
-                subq.w  #1,d0
-                cmpi.w  #10,d0
-                bcs.s   loc_13F598
-                subi.w  #10,d0
-loc_13F598:
-                move.w  d0,(selectedLeagueIndex).l
-                move.w  #$FFFF,(selectedTeamIndex).l
-                move.l  MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a5),(selectedTeamText).l
-                clr.w   (chooseTeamsResult).l
-                clr.w   (viewSelectedTeams).l
-                clr.w   (changeTeams).l
-                clr.w   (abortSelectTeams).l
-                clr.w   (exitSelectTeams).l
-                jmp     SetExitMenuFlag
-locret_13F5D2:
+                move.l  a5,-(sp)
+                jsr     _SelectLeaguesCommon
+                addq.l  #4,sp
                 rts
 
 ; ===== SetTeamsCoordinates =====

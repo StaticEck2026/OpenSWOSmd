@@ -2877,3 +2877,447 @@ void _GoGetTeamsForPlay(uint8_t *gameTypeStrParam, uint8_t *playWhatStrParam,
     _CSelectTeamsFinalMenu(255);
     _ShowInsertDisk2Dialog((uint8_t *)0);
 }
+
+
+/* ================================================================
+ * Chunk 135 — Career Over callbacks, Stats dispatchers,
+ *             Select Teams callbacks
+ * ================================================================ */
+
+/* Additional externs for Chunk 135 */
+extern uint8_t  gotJobOfferMenu[];
+extern uint8_t  jobOffersMenu[];
+extern uint8_t  a0EndSeason[];          /* "%0 END SEASON" */
+extern uint8_t  aRetire[];              /* "RETIRE" */
+extern uint8_t  aNewJob[];              /* "NEW JOB" */
+extern uint8_t  aNoJobOffers[];         /* "NO JOB OFFERS" */
+extern uint16_t selectedTeamIndex;
+extern uint16_t selectedLeagueIndex;
+extern uint32_t selectedTeamText;
+extern uint16_t lastSelectedTeam;
+extern uint16_t startingTeamIndex;
+extern uint16_t numTeamsColumn1;
+extern uint16_t numTeamsColumn2;
+extern uint16_t numTeamsColumn3;
+extern uint16_t teamDepthLevel;
+extern uint16_t topOfStackMark;
+extern uint16_t diyCompetitionType;
+
+extern void _ShowLeagueInfo(void);
+extern void _ShowCupInfo(void);
+extern void _ShowTournamentInfo(void);
+
+/* Already declared elsewhere in menus.c: */
+/* extern uint16_t teamNoOfferAccepted, jobOffersFromRetired; */
+/* extern uint16_t numNewJobOffers, numJobOffers, youreSacked; */
+/* extern uint16_t currentSeasonShowing, contestStarted; */
+/* extern uint8_t managerNameBuffer[], managerSurnameBuffer[], seasonPlaying; */
+/* extern uint16_t viewSelectedTeams, chooseTeamsResult, changeTeams, abortSelectTeams, exitSelectTeams; */
+
+
+/* ================================================================
+ * CareerOverUpdateJobOffersEntry  (SWOS2.s line 55578)
+ *
+ * Updates the job offers menu entry (#5 at offset $118) visibility,
+ * color, and text based on career state.
+ * ================================================================ */
+static void CareerOverUpdateJobOffersEntry(void)
+{
+    MenuEntry *e;
+
+    /* If season 19 (max), hide the entry entirely */
+    if (currentSeasonShowing == 19)
+    {
+        menuEntries[0x118 / 56].isInvisible = 1;
+        return;
+    }
+
+    /* Set entry to yellow-green-black color scheme */
+    e = &menuEntries[0x118 / 56];
+    {
+        uint16_t bg = *(uint16_t *)((uint8_t *)e + 30);  /* BG+BACKANDFRAMECOLOR at offset 30 */
+        bg = (bg & 0xFFF0) + 14;  /* YELLOW_GREEN_BLACK_14 */
+        *(uint16_t *)((uint8_t *)e + 30) = bg;
+    }
+    e->isDisabled = 0;
+
+    /* Check stringFlags bit 13 (flashing/highlight) */
+    {
+        uint16_t flags = e->stringFlags;
+        flags &= ~(1 << 13);  /* clear bit 13 */
+
+        if (teamNoOfferAccepted == 0xFFFF)
+        {
+            /* No offer accepted — check if there are any offers */
+            if (numNewJobOffers != 0 || numJobOffers != 0)
+            {
+                flags |= (1 << 13);  /* set bit 13 (flash) */
+                e->stringFlags = flags;
+                return;
+            }
+            /* No offers at all */
+            e->fg = (uint32_t)aNoJobOffers;
+            e->isDisabled = 1;
+            {
+                uint16_t bg = *(uint16_t *)((uint8_t *)e + 30);
+                bg = (bg & 0xFFF0) + 9;  /* PINK_TO_BROWN_9 */
+                *(uint16_t *)((uint8_t *)e + 30) = bg;
+            }
+            e->stringFlags = flags;
+            return;
+        }
+        else
+        {
+            /* Offer accepted — show "NEW JOB" */
+            e->fg = (uint32_t)aNewJob;
+            e->stringFlags = flags;
+            return;
+        }
+    }
+}
+
+
+/* ================================================================
+ * CareerOverFinish  (SWOS2.s line 55487)
+ *
+ * Menu finish (onReturn) callback for career over menu.
+ * Sets up manager name, team name, season year, and entry states.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _CareerOverFinish(void)
+{
+    MenuEntry *titleEntry = &menuEntries[0];
+    uint8_t *dest = (uint8_t *)titleEntry->fg;
+    uint8_t *src;
+    uint16_t nameLen, surnameLen, totalLen;
+
+    /* Build "FIRSTNAME SURNAME" or "F SURNAME" into title entry */
+    src = managerNameBuffer;
+    nameLen = _GetStringLength(src);
+    src = managerSurnameBuffer;
+    surnameLen = _GetStringLength(src);
+    totalLen = nameLen + surnameLen;
+
+    src = managerNameBuffer;
+    if (totalLen > 12)
+    {
+        /* Name too long — abbreviate first name to initial */
+        if (*src != 0)
+        {
+            *dest++ = *src++;
+            *dest++ = ' ';
+        }
+    }
+    else
+    {
+        /* Full first name fits */
+        dest = _StringCopy(src, dest);
+        *dest++ = ' ';
+    }
+
+    /* Append surname */
+    src = managerSurnameBuffer;
+    dest = _StringCopy(src, dest);
+
+    /* Set team name in entry 1 (offset $38/56 = 1) */
+    {
+        uint16_t teamNum = selTeamNumber;
+        uint8_t *teamPtr = _VerifyTeamLoaded(teamNum);
+        uint8_t *teamName = teamPtr + 5;
+        MenuEntry *e1 = &menuEntries[1];
+        dest = (uint8_t *)e1->fg;
+        _StringCopy(teamName, dest);
+    }
+
+    /* Set season year in entry 2 (offset $70/56 = 2) */
+    {
+        MenuEntry *e2 = &menuEntries[2];
+        dest = (uint8_t *)e2->fg;
+        uint16_t year = (uint16_t)seasonPlaying + 1900;
+        if (year < 1996)
+            year += 100;
+        year += 1;
+        src = a0EndSeason;
+        _PrintFormatted(src, dest, year, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    }
+
+    CareerOverUpdateJobOffersEntry();
+
+    /* Season 19: final season special handling */
+    if (currentSeasonShowing == 19)
+    {
+        menuEntries[0x188 / 56].isInvisible = 1;
+        {
+            MenuEntry *e150 = &menuEntries[0x150 / 56];
+            e150->fg = (uint32_t)aRetire;
+        }
+        menuEntries[0xA8 / 56].isInvisible = 0;
+        return;
+    }
+
+    /* Check if sacked with no offers → disable continue/save */
+    if (teamNoOfferAccepted == 0xFFFF && youreSacked != 0
+        && numNewJobOffers == 0 && numJobOffers == 0)
+    {
+        /* Disable "CONTINUE CAREER" entry (at offset $E0) */
+        {
+            MenuEntry *eE0 = &menuEntries[0xE0 / 56];
+            eE0->isDisabled = 1;
+            uint16_t bg = *(uint16_t *)((uint8_t *)eE0 + 30);
+            bg = (bg & 0xFFF0) + 9;  /* PINK_TO_BROWN_9 */
+            *(uint16_t *)((uint8_t *)eE0 + 30) = bg;
+        }
+        /* Disable "SAVE CAREER" entry (at offset $150) */
+        {
+            MenuEntry *e150 = &menuEntries[0x150 / 56];
+            e150->isDisabled = 1;
+            uint16_t bg = *(uint16_t *)((uint8_t *)e150 + 30);
+            bg = (bg & 0xFFF0) + 9;  /* PINK_TO_BROWN_9 */
+            *(uint16_t *)((uint8_t *)e150 + 30) = bg;
+        }
+        menuEntries[0x188 / 56].isInvisible = 1;
+        menuEntries[0xA8 / 56].isInvisible = 0;
+    }
+
+    /* If sacked with no accepted offer → also disable save */
+    if (youreSacked != 0 && teamNoOfferAccepted == 0xFFFF)
+    {
+        MenuEntry *e150 = &menuEntries[0x150 / 56];
+        e150->isDisabled = 1;
+        uint16_t bg = *(uint16_t *)((uint8_t *)e150 + 30);
+        bg = (bg & 0xFFF0) + 9;  /* PINK_TO_BROWN_9 */
+        *(uint16_t *)((uint8_t *)e150 + 30) = bg;
+    }
+}
+
+
+/* ================================================================
+ * JobOffersMenuRetired  (SWOS2.s line 55623)
+ *
+ * Shows job offers from the career over menu.
+ * Handles different states: new/existing offers, no offers, etc.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _JobOffersMenuRetired(void)
+{
+    if (teamNoOfferAccepted != 0xFFFF)
+    {
+        /* Already accepted an offer — show the "got job" menu */
+        _ShowMenu(gotJobOfferMenu);
+        goto update_entry;
+    }
+
+    /* Check if there are any offers to show */
+    if (numNewJobOffers == 0 && numJobOffers == 0)
+        return;
+
+    /* Show job offers */
+    jobOffersFromRetired = 1;
+    _ShowMenu(jobOffersMenu);
+
+    if (teamNoOfferAccepted == 0xFFFF)
+    {
+        /* No offer was accepted */
+        if (youreSacked != 0)
+        {
+            /* Sacked and no remaining offers → exit career */
+            uint16_t totalOffers = numNewJobOffers + numJobOffers;
+            if (totalOffers == 0)
+            {
+                _InitCareerVariables(0);
+                _SetExitMenuFlag();
+                return;
+            }
+        }
+    }
+
+update_entry:
+    /* Check if job offers entry is disabled → set current entry to 8 */
+    {
+        MenuEntry *e = &menuEntries[0x118 / 56];
+        if (e->isDisabled != 0)
+            _SetCurrentEntry(8);
+    }
+}
+
+
+/* ================================================================
+ * ExitCareerMenu  (SWOS2.s line 55700)
+ *
+ * Exit handler for the career over menu.
+ * If sacked with no offers, clears career state first.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ExitCareerMenu(void)
+{
+    if (teamNoOfferAccepted == 0xFFFF && youreSacked != 0
+        && numNewJobOffers == 0 && numJobOffers == 0)
+    {
+        _InitCareerVariables(0);
+    }
+    _SetExitMenuFlag();
+}
+
+
+/* ================================================================
+ * CompetitionInfo  (SWOS2.s line 55254)
+ *
+ * Dispatches to the correct info display based on competition type.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _CompetitionInfo(void)
+{
+    if (diyCompetitionType == 2)
+        _ShowTournamentInfo();
+    else if (diyCompetitionType != 0)
+        _ShowCupInfo();
+    else
+        _ShowLeagueInfo();
+}
+
+
+/* ================================================================
+ * StatsExit  (SWOS2.s line 55275)
+ *
+ * Trivial exit handler — just calls SetExitMenuFlag.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _StatsExit(void)
+{
+    _SetExitMenuFlag();
+}
+
+
+/* ================================================================
+ * ChooseTeamsPlayGame  (SWOS2.s line 62910)
+ *
+ * "Play Game" button handler in choose teams menu.
+ * Sets result flags and exits menu.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ChooseTeamsPlayGame(void)
+{
+    selectedTeamIndex = 0xFFFF;
+    selectedLeagueIndex = 0xFFFF;
+    chooseTeamsResult = 1;
+    viewSelectedTeams = 0;
+    changeTeams = 0;
+    abortSelectTeams = 0;
+    exitSelectTeams = 0;
+    _SetExitMenuFlag();
+}
+
+
+/* ================================================================
+ * ExitSelectTeams  (SWOS2.s line 62922)
+ *
+ * Exit/abort handler for the select teams menu.
+ * Behavior depends on teamDepthLevel vs topOfStackMark.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ExitSelectTeams(void)
+{
+    selectedTeamIndex = 0xFFFF;
+    selectedLeagueIndex = 0xFFFF;
+    chooseTeamsResult = 0;
+    viewSelectedTeams = 0;
+    changeTeams = 0;
+
+    {
+        uint16_t depth = teamDepthLevel;
+        if (depth == 0 || depth == topOfStackMark)
+        {
+            abortSelectTeams = 1;
+            exitSelectTeams = 0;
+        }
+        else
+        {
+            exitSelectTeams = 1;
+            abortSelectTeams = 0;
+        }
+    }
+    _SetExitMenuFlag();
+}
+
+
+/* ================================================================
+ * SelectTeamsCommon  (SWOS2.s line 62942)
+ *
+ * Handler for selecting a team from the 3-column list.
+ * Converts menu ordinal to team index accounting for column layout.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SelectTeamsCommon(MenuEntry *entry)
+{
+    uint8_t *namePtr = (uint8_t *)entry->fg;
+
+    /* Ignore empty (space-prefixed) entries */
+    if (*namePtr == ' ')
+        return;
+
+    {
+        uint16_t ord = entry->ordinal;
+        uint16_t idx;
+
+        lastSelectedTeam = ord;
+        idx = ord - 21 + startingTeamIndex;
+
+        /* Convert column ordinal to flat index */
+        if (idx >= 22)
+        {
+            if (idx >= 44)
+            {
+                idx -= 22;
+                idx += numTeamsColumn2;
+            }
+            idx -= 22;
+            idx += numTeamsColumn1;
+        }
+
+        selectedTeamIndex = idx;
+        selectedLeagueIndex = 0xFFFF;
+        selectedTeamText = entry->fg;
+        chooseTeamsResult = 0;
+        viewSelectedTeams = 0;
+        changeTeams = 0;
+        abortSelectTeams = 0;
+        exitSelectTeams = 0;
+        _SetExitMenuFlag();
+    }
+}
+
+
+/* ================================================================
+ * SelectLeaguesCommon  (SWOS2.s line 62974)
+ *
+ * Handler for selecting a league from the list.
+ * Converts ordinal (1-based) to league index.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SelectLeaguesCommon(MenuEntry *entry)
+{
+    uint8_t *namePtr = (uint8_t *)entry->fg;
+
+    if (*namePtr == ' ')
+        return;
+
+    {
+        uint16_t ord = entry->ordinal;
+        uint16_t idx;
+
+        lastSelectedTeam = ord;
+        idx = ord - 1;
+        if (idx >= 10)
+            idx -= 10;
+
+        selectedLeagueIndex = idx;
+        selectedTeamIndex = 0xFFFF;
+        selectedTeamText = entry->fg;
+        chooseTeamsResult = 0;
+        viewSelectedTeams = 0;
+        changeTeams = 0;
+        abortSelectTeams = 0;
+        exitSelectTeams = 0;
+        _SetExitMenuFlag();
+    }
+}

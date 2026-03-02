@@ -2775,6 +2775,16 @@
         xref    _DesignDIYTournament_CacheStageSelection
         xref    _DesignDIYTournament_RedrawStageItemsFromBlock
         xref    _DIYTournament_RecalculateNumStages
+; --- Chunk 135 xrefs ---
+        xref    _CareerOverFinish
+        xref    _JobOffersMenuRetired
+        xref    _ExitCareerMenu
+        xref    _CompetitionInfo
+        xref    _StatsExit
+        xref    _ChooseTeamsPlayGame
+        xref    _ExitSelectTeams
+        xref    _SelectTeamsCommon
+        xref    _SelectLeaguesCommon
 ; --- Chunk 134 xrefs ---
         xref    _TopGoalScorersMenu_0
         xref    _StatsHighestScorerList
@@ -2969,6 +2979,16 @@
         xdef    _CCalcTeamPriceRankPercentOffset
         xdef    _CUpdatePlayerPositionAndReturnRole
         xdef    _CCareer_ApplyPostMatchPlayerStatModsIfCareerTeam
+; --- Chunk 135 xdefs ---
+        xdef    selectedTeamIndex
+        xdef    selectedLeagueIndex
+        xdef    selectedTeamText
+        xdef    startingTeamIndex
+        xdef    numTeamsColumn1
+        xdef    numTeamsColumn2
+        xdef    numTeamsColumn3
+        xdef    diyCompetitionType
+        xdef    a0EndSeason
 
         include "../SWOS2.s"
 

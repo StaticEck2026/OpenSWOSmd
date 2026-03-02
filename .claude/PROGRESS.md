@@ -2671,6 +2671,16 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, no new warnings)
 - Cumulative: 1262 functions across 134 chunks
 
+### Chunk 135 — Career Over callbacks, Stats dispatchers, Select Teams callbacks (9+1s → menus.c)
+- Date: 2026-03-02
+- **menus.c (9+1s):** _CareerOverFinish (menu finish callback, builds manager/team/season text), static CareerOverUpdateJobOffersEntry (updates job offers entry visibility/color/text), _JobOffersMenuRetired (shows job offers from career over), _ExitCareerMenu (exit handler, clears career if sacked), _CompetitionInfo (dispatches to ShowLeagueInfo/ShowCupInfo/ShowTournamentInfo), _StatsExit (trivial SetExitMenuFlag), _ChooseTeamsPlayGame (play game button handler), _ExitSelectTeams (exit/abort based on depth level), _SelectTeamsCommon (a5 bridge, converts ordinal to team index), _SelectLeaguesCommon (a5 bridge, converts ordinal to league index)
+- Dead asm stubs: CareerOverUpdateJobOffersEntry (only called from _CareerOverFinish)
+- jmp stubs: CareerOverFinish, JobOffersMenuRetired, ExitCareerMenu, CompetitionInfo, StatsExit, ChooseTeamsPlayGame, ExitSelectTeams
+- a5 bridges: SelectTeamsCommon, SelectLeaguesCommon
+- New xdefs: selectedTeamIndex, selectedLeagueIndex, selectedTeamText, startingTeamIndex, numTeamsColumn1, numTeamsColumn2, numTeamsColumn3, diyCompetitionType, a0EndSeason
+- Build status: **verified** (clean build, no new warnings)
+- Cumulative: 1272 functions across 135 chunks
+
 ### Phase Transitions (see CLAUDE.md "Project Phases")
 - [ ] Phase 1 complete: all subroutines ported → output `*** READY FOR TESTING PHASE! ***` and STOP
 - [ ] Phase 2: user tests game, fixes any bugs found
@@ -2819,5 +2829,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 132   | 9+1s      | 1227       |
 | 133   | 17+5s     | 1249       |
 | 134   | 5+8s      | 1262       |
+| 135   | 9+1s      | 1272       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)
