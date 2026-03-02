@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1249 functions ported across 133 chunks.
+**Current status:** 1262 functions ported across 134 chunks.
 
-**Last completed chunk:** Chunk 133 — EditTeams functions (22 → edit_tactics.c): EditTeamsInit, EditTeamsUndo, EditTeamsOK, 6 kit color changers, 2 shirt type selectors, 3 text input callbacks, ChangePlayerFace, InitEditTeamsMenu, PlayersBeforeDraw, + 5 static helpers (color conversion, kit marking, player pointer).
+**Last completed chunk:** Chunk 134 — Top Goal Scorers / Statistics cluster (13 → statistics.c): TopGoalScorersMenu_0, StatsHighestScorerList, CompetitionTopGoalScorersInit, TopGoalScorersInit, TopGoalScorersBeforeDrawCommon, + 8 static helpers (InitHighestScorersTable, UpdateHighestScorersMinScoreAndCount, FindReplaceableLowestScorerSlot, AddTeamScorersToHighestScorersTable, PopulateHighestScorersTableFromSelectedTeams, SortHighestScorerTable, GetScorerSurname, ShowCompetitionTopScorers).
 
-**Next candidates:** ImportTeamsMenu (needs ChooseTeamsDialog bridge), DesignDIYCup remaining (BuildMatchListEntryStrings, UpdateMenuEntriesVisibilityAndSelection, AppendTeamNameToMenuEntry), SquadMenu functions, CareerGameListCommon, JobOffers cluster, EditTactics remaining.
+**Next candidates:** ImportTeamsMenu (~57 instr), DesignDIYCup remaining (BuildMatchListEntryStrings, UpdateMenuEntriesVisibilityAndSelection, AppendTeamNameToMenuEntry), SquadMenu functions, CareerGameListCommon (~3194 lines), JobOffers cluster, EditTactics remaining.
 
 ---
 

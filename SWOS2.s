@@ -51363,266 +51363,57 @@ saveCustomTeams:
                                         ; edited and original teams differ
 teamIsImported:
                 dc.w $0000              ; In edit custom teams menu.
+; Ported to C: ShowCompetitionTopScorers (static) in src/statistics.c
+; Dead code — only called from StatsHighestScorerList (also ported)
 loc_1382F6:
-                cmpi.w  #4,d0           ; in:
-                                        ;      D0 -
-                                        ;      A0 -> name of DIY competition
-                bne.s   loc_138300
-                move.w  #0,d0
-loc_138300:
-                movem.l d0/a0,-(sp)
-                bsr.w   InitHighestScorersTable
-                movem.l (sp)+,d0/a0
-                movem.l d0/a0,-(sp)
-                bsr.w   PopulateHighestScorersTableFromSelectedTeams
-                movem.l (sp)+,d0/a0
-                move.l  a0,(diyStatsName).l
-                bsr.w   SortHighestScorerTable
-                lea     (competitionTopGoalScorersMenu).l,a6
-                movem.l a5,-(sp)
-                jsr     ShowMenu
-                movem.l (sp)+,a5
                 rts
 
 ; ===== TopGoalScorersMenu_0 =====
 ; prototype: void __usercall TopGoalScorersMenu_0()
+; Ported to C: _TopGoalScorersMenu_0 in src/statistics.c
 TopGoalScorersMenu_0:
-                bsr.w   InitHighestScorersTable
-                move.w  #$FFFF,d0
-                bsr.w   PopulateHighestScorersTableFromSelectedTeams
-                bsr.w   SortHighestScorerTable
-                lea     (topGoalScorersMenu).l,a6
-                movem.l a5,-(sp)
-                jsr     ShowMenu
-                movem.l (sp)+,a5
-                rts
+                jmp     _TopGoalScorersMenu_0
 
 ; ===== PopulateHighestScorersTableFromSelectedTeams =====
 ; prototype: void __usercall PopulateHighestScorersTableFromSelectedTeams()
+; Ported to C: PopulateHighestScorersTableFromSelectedTeams (static) in src/statistics.c
+; Dead code — only called from now-ported C functions
 PopulateHighestScorersTableFromSelectedTeams:
-                lea     (selTeamsPtr).l,a0
-                move.w  (numSelectedTeams).l,d1
-                beq.s   locret_1383B2
-                move.w  (selTeamNumber).l,d2
-                subq.w  #1,d1
-loc_138374:
-                cmp.w   (a0),d2
-                beq.s   loc_138384
-                movem.l d0-d2/a0,-(sp)
-                bsr.w   AddTeamScorersToHighestScorersTable
-                movem.l (sp)+,d0-d2/a0
-loc_138384:
-                adda.l  #684,a0
-                dbf     d1,loc_138374
-                cmpi.w  #GAME_TYPE_CAREER,(gameType).l
-                bne.s   locret_1383B2
-                tst.w   (careerLoadedFlag).l
-                bne.s   locret_1383B2
-                lea     (careerTeam).l,a0
-                movem.l d0,-(sp)
-                bsr.w   AddTeamScorersToHighestScorersTable
-                movem.l (sp)+,d0
-locret_1383B2:
                 rts
 
 ; ===== InitHighestScorersTable =====
 ; prototype: void __usercall InitHighestScorersTable()
+; Ported to C: InitHighestScorersTable (static) in src/statistics.c
+; Dead code — only called from now-ported C functions
 InitHighestScorersTable:
-                lea     (highestScorersTable).l,a2
-                clr.w   d6
-                move.w  #14,d7          ; 15 scorers
-                clr.b   30(a2)
-                move.b  #15,$1F(a2)
-                lea     (a2),a3
-loc_1383CC:
-                move.w  d6,(a3)+
-                move.w  #$FFFF,32(a2)
-                move.b  #$FF,34(a2)
-                clr.b   35(a2)
-                addq.w  #4,d6
-                addq.l  #4,a2
-                dbf     d7,loc_1383CC
                 rts
 
 ; ===== AddTeamScorersToHighestScorersTable =====
 ; prototype: void __usercall AddTeamScorersToHighestScorersTable(__int16 statIndex@<d0>, void *team@<a0>)
+; Ported to C: AddTeamScorersToHighestScorersTable (static) in src/statistics.c
+; Dead code — only called from now-ported C functions
 AddTeamScorersToHighestScorersTable:
-                tst.w   d0
-                bpl.s   loc_13840A
-                cmpi.w  #3,(gameType).l
-                beq.s   loc_138400
-                cmpi.w  #4,(gameType).l
-                bne.s   loc_13840A
-loc_138400:
-                jsr     FindTeamIdInDiyTeamsList
-                bne.w   locret_1384C4
-loc_13840A:
-                move.w  d0,d4
-                lea     (highestScorersTable).l,a5
-                movea.l a0,a2
-                movea.l a0,a4
-                move.w  (a4),d5
-                move.b  $1E(a5),d6
-                move.w  #$F,d1
-                cmp.w   (selTeamNumber).l,d5
-                bne.s   loc_138430
-                move.w  (careerNumPlayers).l,d1
-                subq.w  #1,d1
-loc_138430:
-                clr.w   d7
-loc_138432:
-                move.w  d1,-(sp)
-                cmp.w   (selTeamNumber).l,d5
-                bne.s   loc_138448
-                move.w  d5,d0
-                jsr     GetPlayerAtIndex
-                movea.l a0,a2
-                move.w  d1,d7
-loc_138448:
-                tst.w   d4
-                bpl.s   loc_13847A
-                move.b  $6D(a2),d0
-                andi.w  #$FF,d0
-                clr.w   d1
-                move.b  $6E(a2),d1
-                add.w   d1,d0
-                move.b  $6F(a2),d1
-                add.w   d1,d0
-                move.b  $70(a2),d1
-                add.w   d1,d0
-                cmpi.w  #$FF,d0
-                bls.s   loc_138472
-                move.w  #$FF,d0
-loc_138472:
-                tst.b   d0
-                beq.w   loc_1384B6
-                bra.s   loc_138482
-loc_13847A:
-                move.b  $6D(a2,d4.w),d0
-                beq.w   loc_1384B6
-loc_138482:
-                cmp.b   d6,d0
-                bcs.w   loc_1384B6
-                bhi.w   loc_138496
-                cmpi.b  #1,4(a4)
-                beq.w   loc_1384B6
-loc_138496:
-                bsr.w   FindReplaceableLowestScorerSlot
-                move.b  d0,$23(a3)
-                move.b  d7,$22(a3)
-                move.w  d5,$20(a3)
-                cmp.b   d6,d0
-                beq.s   loc_1384B6
-                subq.b  #1,$1F(a5)
-                bne.w   loc_1384B6
-                bsr.w   UpdateHighestScorersMinScoreAndCount
-loc_1384B6:
-                move.w  (sp)+,d1
-                adda.l  #$26,a2         ; '&'
-                addq.w  #1,d7
-                dbf     d1,loc_138432
-locret_1384C4:
                 rts
 
 ; ===== UpdateHighestScorersMinScoreAndCount =====
 ; prototype: unsigned __int8 __usercall UpdateHighestScorersMinScoreAndCount@<d6>()
+; Ported to C: UpdateHighestScorersMinScoreAndCount (static) in src/statistics.c
+; Dead code — only called from now-ported C functions
 UpdateHighestScorersMinScoreAndCount:
-                movea.l a5,a0
-                move.b  #$FF,d3
-                clr.b   d1
-                move.w  #$E,d2
-loc_1384D2:
-                cmp.b   $23(a0),d3
-                bcs.s   loc_1384EA
-                cmp.b   $23(a0),d3
-                bne.s   loc_1384E2
-                addq.b  #1,d1
-                bra.s   loc_1384EA
-loc_1384E2:
-                move.b  $23(a0),d3
-                move.b  #1,d1
-loc_1384EA:
-                addq.l  #4,a0
-                dbf     d2,loc_1384D2
-                move.b  d3,$1E(a5)
-                move.b  d1,$1F(a5)
-                move.b  d3,d6
                 rts
 
 ; ===== FindReplaceableLowestScorerSlot =====
 ; prototype: void __usercall FindReplaceableLowestScorerSlot()
+; Ported to C: FindReplaceableLowestScorerSlot (static) in src/statistics.c
+; Dead code — only called from now-ported C functions
 FindReplaceableLowestScorerSlot:
-                move.w  #$E,d1
-                movea.l a5,a3
-loc_138502:
-                cmp.b   $23(a3),d6
-                bne.s   loc_138530
-                cmpi.w  #$FFFF,$20(a3)
-                beq.s   locret_138542
-                movem.w d0-d1,-(sp)
-                move.w  $20(a3),d0
-                move.b  $22(a3),d1
-                ext.w   d1
-                jsr     VerifyTeamLoaded
-                movem.w (sp)+,d0-d1
-                cmpi.b  #1,4(a0)
-                beq.s   locret_138542
-loc_138530:
-                addq.l  #4,a3
-                dbf     d1,loc_138502
-                movea.l a5,a3
-loc_138538:
-                cmp.b   $23(a3),d6
-                beq.s   locret_138542
-                addq.l  #4,a3
-                bra.s   loc_138538
-locret_138542:
                 rts
 
 ; ===== SortHighestScorerTable =====
 ; prototype: void __usercall SortHighestScorerTable()
+; Ported to C: SortHighestScorerTable (static) in src/statistics.c
+; Dead code — only called from now-ported C functions
 SortHighestScorerTable:
-                lea     (highestScorersTable).l,a5
-                movea.l a5,a3
-                lea     (a3),a3
-                move.w  #13,d7
-loc_138552:
-                move.w  d7,d6
-                movea.l a3,a2
-loc_138556:
-                movea.l a5,a0
-                move.w  (a2),d0
-                lea     (a0,d0.w),a0
-                movea.l a5,a1
-                move.w  2(a2),d0
-                lea     (a1,d0.w),a1
-                cmpi.w  #$FFFF,$20(a0)
-                beq.s   loc_13859C
-                cmpi.w  #$FFFF,$20(a1)
-                beq.s   loc_1385A6
-                move.b  35(a0),d0
-                cmp.b   35(a1),d0
-                bhi.s   loc_1385A6
-                bcs.s   loc_13859C
-                bsr.w   GetScorerSurname
-                movea.l a1,a0
-                movea.l a6,a1
-                bsr.w   GetScorerSurname
-loc_138590:
-                move.b  (a1)+,d0
-                beq.s   loc_1385A6
-                cmp.b   (a6)+,d0
-                bcs.s   loc_1385A6
-                bhi.s   loc_13859C
-                bra.s   loc_138590
-loc_13859C:
-                move.w  (a2),d0
-                move.w  2(a2),(a2)
-                move.w  d0,2(a2)
-loc_1385A6:
-                addq.l  #2,a2
-                dbf     d6,loc_138556
-                dbf     d7,loc_138552
                 rts
 
 ; ===== GetScorerSurname =====
@@ -51631,21 +51422,9 @@ loc_1385A6:
 ;      A0 = player in highest_scorers_table
 ; out:
 ;      A6 -> player surname
+; Ported to C: GetScorerSurname (static) in src/statistics.c
+; Dead code — only called from now-ported C functions
 GetScorerSurname:
-                move.w  32(a0),d0
-                move.b  34(a0),d1
-                ext.w   d1
-                jsr     GetPlayer
-                lea     PLAYERFILE_PLAYERNAME+$4C(a0),a0
-                movea.l a0,a6
-loc_1385C8:
-                tst.b   (a0)
-                beq.s   locret_1385D6
-                cmpi.b  #' ',(a0)+
-                bne.s   loc_1385C8
-                movea.l a0,a6
-                bra.s   loc_1385C8
-locret_1385D6:
                 rts
 ; Menu_CompetitionTopGoalScorers
 competitionTopGoalScorersMenu:
@@ -52403,57 +52182,9 @@ competitionTopGoalScorersMenu:
 
 ; ===== CompetitionTopGoalScorersInit =====
 ; prototype: void __usercall CompetitionTopGoalScorersInit()
+; Ported to C: _CompetitionTopGoalScorersInit in src/statistics.c
 CompetitionTopGoalScorersInit:
-                lea     (menuEntries).l,a5
-                move.l  (diyStatsName).l,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a5)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a5
-                lea     (highestScorersTable).l,a2
-                move.b  30(a2),d6
-                lea     (a2),a2
-                move.w  #14,d7          ; 15 scorers
-loc_1388E6:
-                lea     (highestScorersTable).l,a6
-                move.w  (a2)+,d0
-                lea     (a6,d0.w),a6
-                cmpi.w  #$FFFF,32(a6)
-                beq.s   loc_13896A
-                lea     56(a5),a5
-                move.w  32(a6),d0
-                jsr     GetTeamPointer
-                lea     5(a0),a3
-                move.b  34(a6),d1
-                ext.w   d1
-                jsr     GetPlayer
-                lea     PLAYERFILE_PLAYERNAME+$4C(a0),a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a5),a1
-                jsr     StringCopy
-                lea     56(a5),a5
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a5),a1
-                lea     (aLparen).l,a0  ; "("
-                jsr     StringCopy
-                movea.l a3,a0
-                jsr     StringCopy
-                lea     (aRparen).l,a0  ; ")"
-                jsr     StringCopy
-                clr.b   (a1)
-                lea     56(a5),a5
-                move.b  35(a6),d0
-                andi.w  #$FF,d0
-                move.w  d0,MENUENTRY_FG+ENTRYTYPE2UNION_NUMBER(a5)
-                lea     56(a5),a5
-                dbf     d7,loc_1388E6
-                rts
-loc_13896A:
-                move.w  #1,MENUENTRY_ISINVISIBLE(a5)
-                lea     $38(a5),a5
-                move.w  #1,MENUENTRY_ISINVISIBLE(a5)
-                lea     $38(a5),a5
-                move.w  #1,MENUENTRY_ISINVISIBLE(a5)
-                lea     $38(a5),a5
-                move.w  #1,MENUENTRY_ISINVISIBLE(a5)
-                lea     $38(a5),a5
-                dbf     d7,loc_13896A
-                rts
+                jmp     _CompetitionTopGoalScorersInit
 
 ; ===== CompetitionTopGoalScorersExit =====
 ; Ported to C: _CompetitionTopGoalScorersExit in src/menus.c
@@ -52822,135 +52553,18 @@ topGoalScorersMenu:
 
 ; ===== TopGoalScorersInit =====
 ; prototype: void __usercall TopGoalScorersInit()
+; Ported to C: _TopGoalScorersInit in src/statistics.c
 TopGoalScorersInit:
-                tst.l   (tertiaryCompetitionPtr).l
-                bne.w   loc_138B90
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$508)).l,a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$540)).l,a1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$578)).l,a2
-                move.w  $14(a1),$14(a0)
-                move.w  $14(a2),$14(a1)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a2
-                move.w  $14(a1),$14(a0)
-                move.w  $14(a2),$14(a1)
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$A8).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a0
-                move.l  #aCup_10,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "\x04C\x00U\x00P\x00 " ...
-loc_138B90:
-                tst.l   (secondaryCompetitionPtr).l
-                bne.w   locret_138BC2
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$508)).l,a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$540)).l,a1
-                move.w  MENUENTRY_X(a1),$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a1
-                move.w  MENUENTRY_X(a1),$14(a0)
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$70).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$38).l
-locret_138BC2:
-                rts
+                jmp     _TopGoalScorersInit
 
 ; ===== TopGoalScorersBeforeDrawCommon =====
 ; prototype: void __usercall TopGoalScorersBeforeDrawCommon(MenuEntry *entry@<a5>)
+; Ported to C: _TopGoalScorersBeforeDrawCommon in src/statistics.c
+; Bridge: a5 = MenuEntry* → push as parameter
 TopGoalScorersBeforeDrawCommon:
-                move.w  2(a5),d4
-                subq.w  #6,d4
-                lsl.w   #1,d4
-                move.w  $16(a5),d7
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$498)).l,a4
-                lea     (highestScorersTable).l,a2
-                move.b  30(a2),d6
-                lea     (a2),a2
-                lea     (highestScorersTable).l,a6
-                move.w  (a2,d4.w),d0
-                lea     (a6,d0.w),a6
-                cmpi.w  #$FFFF,$20(a6)
-                beq.w   loc_138CF6
-                move.w  $20(a6),d0
-                jsr     GetTeamPointer
-                lea     5(a0),a3
-                move.b  $22(a6),d1
-                ext.w   d1
-                jsr     GetPlayer
-                movea.l a0,a5
-                lea     $4F(a0),a0
-                move.w  #$15,d0
-                movem.l d7/a3-a4/a6,-(sp)
-                jsr     ExtractSurname
-                movem.l (sp)+,d7/a3-a4/a6
-                move.l  a0,$26(a4)
-                move.w  d7,$16(a4)
-                clr.w   4(a4)
-                lea     $38(a4),a4
-                movea.l $26(a4),a1
-                lea     (aLparen).l,a0  ; "("
-                jsr     StringCopy
-                movea.l a3,a0
-                jsr     StringCopy
-                lea     (aRparen).l,a0  ; ")"
-                jsr     StringCopy
-                clr.b   (a1)
-                move.w  d7,$16(a4)
-                clr.w   4(a4)
-                lea     $38(a4),a4
-                clr.w   d0
-                move.w  #1,4(a4)
-                tst.l   (secondaryCompetitionPtr).l
-                beq.s   loc_138C8C
-                move.b  $6D(a5),d0
-                move.w  d0,$26(a4)
-                move.w  d7,$16(a4)
-                clr.w   4(a4)
-loc_138C8C:
-                lea     $38(a4),a4
-                move.w  #1,4(a4)
-                tst.l   (secondaryCompetitionPtr).l
-                beq.s   loc_138CAE
-                move.b  $6E(a5),d0
-                move.w  d0,$26(a4)
-                move.w  d7,$16(a4)
-                clr.w   4(a4)
-loc_138CAE:
-                lea     $38(a4),a4
-                move.w  #1,4(a4)
-                tst.l   (tertiaryCompetitionPtr).l
-                beq.s   loc_138CD0
-                move.b  $6F(a5),d0
-                move.w  d0,$26(a4)
-                move.w  d7,$16(a4)
-                clr.w   4(a4)
-loc_138CD0:
-                lea     $38(a4),a4
-                move.b  $23(a6),d0
-                move.w  d0,$26(a4)
-                move.w  d7,$16(a4)
-                clr.w   4(a4)
-                lea     $38(a4),a4
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$498)).l,a5
-                move.w  #6,d0
-                jmp     DrawMultipleItems
-loc_138CF6:
-                move.w  #1,4(a5)
-                move.w  d7,$16(a4)
-                move.w  #1,4(a4)
-                lea     $38(a4),a4
-                move.w  d7,$16(a4)
-                move.w  #1,4(a4)
-                lea     $38(a4),a4
-                move.w  d7,$16(a4)
-                move.w  #1,4(a4)
-                lea     $38(a4),a4
-                move.w  d7,$16(a4)
-                move.w  #1,4(a4)
-                lea     $38(a4),a4
-                move.w  d7,$16(a4)
-                move.w  #1,4(a4)
-                lea     $38(a4),a4
-                move.w  d7,$16(a4)
-                move.w  #1,4(a4)
-                lea     $38(a4),a4
+                move.l  a5,-(sp)
+                jsr     _TopGoalScorersBeforeDrawCommon
+                addq.l  #4,sp
                 rts
 
 ; ===== TopGoalScorersExit =====
@@ -55631,10 +55245,9 @@ competitionStatsMenu:
 
 ; ===== StatsHighestScorerList =====
 ; prototype: void __usercall StatsHighestScorerList(__int16 mode@<d0>, const char *diyName@<a0>)
+; Ported to C: _StatsHighestScorerList in src/statistics.c
 StatsHighestScorerList:
-                movea.l (diyNameOfCompetitionPtr).l,a0
-                move.w  (diyUnknownWord_2C).l,d0
-                jmp loc_1382F6(pc)
+                jmp     _StatsHighestScorerList
 
 ; ===== CompetitionInfo =====
 ; prototype: void __usercall CompetitionInfo()

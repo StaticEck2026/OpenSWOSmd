@@ -2775,6 +2775,12 @@
         xref    _DesignDIYTournament_CacheStageSelection
         xref    _DesignDIYTournament_RedrawStageItemsFromBlock
         xref    _DIYTournament_RecalculateNumStages
+; --- Chunk 134 xrefs ---
+        xref    _TopGoalScorersMenu_0
+        xref    _StatsHighestScorerList
+        xref    _CompetitionTopGoalScorersInit
+        xref    _TopGoalScorersInit
+        xref    _TopGoalScorersBeforeDrawCommon
 ; --- Chunk 133 xrefs ---
         xref    _EditTeamsInit
         xref    _EditTeamsUndo
@@ -2882,6 +2888,16 @@
         xdef    shirtTypesTable
         xdef    shirtsIndexTable
         xdef    playerPositionsStringTable
+; --- Chunk 134 xdefs ---
+        xdef    highestScorersTable
+        xdef    diyStatsName
+        xdef    diyNameOfCompetitionPtr
+        xdef    diyUnknownWord_2C
+        xdef    competitionTopGoalScorersMenu
+        xdef    topGoalScorersMenu
+        xdef    aLparen
+        xdef    aRparen
+        xdef    aCup_10
 ; --- Chunk 132 xdefs ---
         xdef    _asm_DIY_PlayCupMatchAndAdvance
         xdef    aPlayTournament

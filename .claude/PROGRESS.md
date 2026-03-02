@@ -2661,6 +2661,16 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (warnings about selTeamsPtr size-1 extern are expected/harmless)
 - Cumulative: 1249 functions across 133 chunks
 
+### Chunk 134 — Top Goal Scorers / Statistics cluster (13 → statistics.c)
+- Date: 2026-03-02
+- **statistics.c (5+8s):** _TopGoalScorersMenu_0 (entry for career top scorers), _StatsHighestScorerList (entry from stats menu), _CompetitionTopGoalScorersInit (menu init for competition scorers), _TopGoalScorersInit (menu init for career multi-comp view), _TopGoalScorersBeforeDrawCommon (a5 bridge, per-row before-draw), static InitHighestScorersTable, static UpdateHighestScorersMinScoreAndCount, static FindReplaceableLowestScorerSlot, static AddTeamScorersToHighestScorersTable, static PopulateHighestScorersTableFromSelectedTeams, static SortHighestScorerTable, static GetScorerSurname, static ShowCompetitionTopScorers
+- Dead asm stubs: loc_1382F6 (ShowCompetitionTopScorers), PopulateHighestScorersTableFromSelectedTeams, InitHighestScorersTable, AddTeamScorersToHighestScorersTable, UpdateHighestScorersMinScoreAndCount, FindReplaceableLowestScorerSlot, SortHighestScorerTable, GetScorerSurname (all only called from now-ported C)
+- jmp stubs: TopGoalScorersMenu_0→_TopGoalScorersMenu_0, CompetitionTopGoalScorersInit→_CompetitionTopGoalScorersInit, TopGoalScorersInit→_TopGoalScorersInit, StatsHighestScorerList→_StatsHighestScorerList
+- a5 bridge: TopGoalScorersBeforeDrawCommon (push a5, jsr _TopGoalScorersBeforeDrawCommon)
+- New xdefs: highestScorersTable, diyStatsName, diyNameOfCompetitionPtr, diyUnknownWord_2C, competitionTopGoalScorersMenu, topGoalScorersMenu, aLparen, aRparen, aCup_10
+- Build status: **verified** (clean build, no new warnings)
+- Cumulative: 1262 functions across 134 chunks
+
 ### Phase Transitions (see CLAUDE.md "Project Phases")
 - [ ] Phase 1 complete: all subroutines ported → output `*** READY FOR TESTING PHASE! ***` and STOP
 - [ ] Phase 2: user tests game, fixes any bugs found
@@ -2808,5 +2818,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 131   | 12        | 1217       |
 | 132   | 9+1s      | 1227       |
 | 133   | 17+5s     | 1249       |
+| 134   | 5+8s      | 1262       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)
