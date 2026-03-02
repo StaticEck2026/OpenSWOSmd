@@ -49508,123 +49508,21 @@ diyStage6PlayCountStrTab:
                 dc.l aPlayEachTeamX3    ; "PLAY EACH TEAM X 3"
                 dc.l aPlayEachTeamX4    ; "PLAY EACH TEAM X 4"
 
-; ===== DesignDIYTournamentInit =====
-; prototype: void __usercall DesignDIYTournamentInit()
+; ===== DesignDIYTournamentInit ===== (ported to C → _DesignDIYTournamentInit)
 DesignDIYTournamentInit:
-                tst.w   (diyTournamentLookOnly).l
-                bne.s   loc_136082
-                bsr.w   DesignDIYTournament_UpdateSelectTeamsPrompt
-loc_136082:
-                bra.w   *+4
+                jmp     _DesignDIYTournamentInit
 
-; ===== DesignDIYTournamentReinit =====
-; prototype: void __usercall DesignDIYTournamentReinit()
+; ===== DesignDIYTournamentReinit ===== (ported to C → _DesignDIYTournamentReinit)
 DesignDIYTournamentReinit:
-                cmpi.w  #SEASONAL,(pitchType).l
-                beq.s   loc_1360D4
-                clr.w   (diyFileBufferCopy+DIY_COMPETITION_PITCHTYPEORSEASON).l
-                move.w  (pitchType).l,(diyFileBufferCopy+DIY_COMPETITION_PITCHTYPE).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                move.w  #1,6(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                move.w  #1,6(a0)
-loc_1360D4:
-                bsr.w   DesignDIYTournament_UpdatePitchTypeSeasonalUI
-                bsr.w   DesignDIYTournament_UpdateMonthPageIndices
-                tst.w   (diyTournamentLookOnly).l
-                bne.s   loc_13611C
-                tst.w   (diyTournamentSelectTeams).l
-                bne.s   loc_136108
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1378).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$13B0).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1420).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$13E8)).l,a0
-                addi.w  #$20,MENUENTRY_X(a0) ; ' '
-                rts
-loc_136108:
-                bsr.w   DesignDIYTournament_ApplyInactiveMenuColors
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$13B0).l
-                move.w  #$59,d0         ; 'Y'
-                jmp     SetCurrentEntry
-loc_13611C:
-                bsr.w   DesignDIYTournament_ApplyInactiveMenuColors
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1378).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$13B0).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1420).l
-                move.w  (diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$1A).l,d0
-                mulu.w  #$C,d0
-                addi.w  #$11,d0
-                jsr     CalcMenuEntryAddress
-                move.w  #$B,d1
-loc_13614A:
-                cmpi.w  #2,$1C(a0)
-                bne.s   loc_13616C
-                move.w  $1E(a0),d0
-                andi.w  #$F,d0
-                beq.s   loc_13616C
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                ori.w   #$B,d0
-                move.w  d0,$1E(a0)
-loc_13616C:
-                lea     $38(a0),a0
-                dbf     d1,loc_13614A
-                move.w  #$5B,d0         ; '['
-                jmp     SetCurrentEntry
+                jmp     _DesignDIYTournamentReinit
 
-; ===== DesignDIYTournament_UpdateMonthPageIndices =====
-; prototype: void __usercall DesignDIYTournament_UpdateMonthPageIndices()
+; ===== DesignDIYTournament_UpdateMonthPageIndices ===== (ported to C → _DesignDIYTournament_UpdateMonthPageIndices)
 DesignDIYTournament_UpdateMonthPageIndices:
-                move.b  (diyFileBufferCopy+DIY_COMPETITION_STARTMONTH).l,d0
-                cmpi.b  #$60,d0         ; '`'
-                bcs.s   loc_13618E
-                subi.b  #$60,d0         ; '`'
-loc_13618E:
-                andi.l  #$FF,d0
-                divu.w  #8,d0
-                move.w  d0,(diyTournamentStartMonthPage).l
-                move.b  (diyFileBufferCopy+DIY_COMPETITION_ENDMONTH).l,d0
-                cmpi.b  #$60,d0         ; '`'
-                bcs.s   loc_1361AE
-                subi.b  #$60,d0         ; '`'
-loc_1361AE:
-                andi.l  #$FF,d0
-                divu.w  #8,d0
-                move.w  d0,(diyTournamentEndMonthPage).l
-                bsr.w   DesignDIYTournament_UpdateTwoNumericFieldsText
-                rts
+                jmp     _DesignDIYTournament_UpdateMonthPageIndices
 
-; ===== DesignDIYTournament_ApplyInactiveMenuColors =====
-; prototype: void __usercall DesignDIYTournament_ApplyInactiveMenuColors()
+; ===== DesignDIYTournament_ApplyInactiveMenuColors ===== (ported to C → _DesignDIYTournament_ApplyInactiveMenuColors)
 DesignDIYTournament_ApplyInactiveMenuColors:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a0
-                move.w  #$56,d1         ; 'V'
-loc_1361CC:
-                cmpi.w  #2,$1C(a0)
-                bne.s   loc_1361F4
-                move.w  $1E(a0),d0
-                andi.w  #$F,d0
-                beq.s   loc_1361F4
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #9,d0
-                move.w  d0,$1E(a0)
-                move.w  #1,6(a0)
-loc_1361F4:
-                lea     $38(a0),a0
-                dbf     d1,loc_1361CC
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$70).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$38).l
-                rts
+                jmp     _DesignDIYTournament_ApplyInactiveMenuColors
 
 ; ===== DesignDIYTournamentOK ===== (ported to C → _DesignDIYTournamentOK)
 DesignDIYTournamentOK:
@@ -49632,12 +49530,12 @@ DesignDIYTournamentOK:
 DesignDIYTournamentOnSelect91:
                 jmp     SetExitMenuFlag
 
-; ===== DesignDIYTournamentOnSelect2 =====
-; prototype: void __usercall DesignDIYTournamentOnSelect2()
+; ===== DesignDIYTournamentOnSelect2 ===== (ported to C → _DesignDIYTournamentOnSelect2)
 DesignDIYTournamentOnSelect2:
-                movea.l $26(a5),a0
-                move.w  #$19,d0
-                jmp     InputText
+                move.l  a5,-(sp)
+                jsr     _DesignDIYTournamentOnSelect2
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYTournamentOnSelect89 =====
 ; prototype: void __usercall DesignDIYTournamentOnSelect89()
@@ -49670,144 +49568,69 @@ loc_136264:
                 jmp     SetExitMenuFlag
                 rts
 
-; ===== DesignDIYTournament_UpdatePitchTypeSeasonalUI =====
-; prototype: void __usercall DesignDIYTournament_UpdatePitchTypeSeasonalUI()
+; ===== DesignDIYTournament_UpdatePitchTypeSeasonalUI ===== (ported to C → _DesignDIYTournament_UpdatePitchTypeSeasonalUI)
 DesignDIYTournament_UpdatePitchTypeSeasonalUI:
-                move.w  (diyFileBufferCopy+DIY_COMPETITION_PITCHTYPEORSEASON).l,(diyTournamentUseSeasonalPitchEffective).l
-                cmpi.w  #2,(gameType).l
-                beq.s   loc_1362DA
-                cmpi.w  #3,(gameType).l
-                beq.s   loc_1362DA
-                cmpi.w  #4,(gameType).l
-                bne.s   loc_1362E2
-loc_1362DA:
-                move.w  #1,(diyTournamentUseSeasonalPitchEffective).l
-loc_1362E2:
-                tst.w   (diyTournamentUseSeasonalPitchEffective).l
-                bne.s   loc_136306
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  #1,$3C(a0)
-                move.w  #1,$74(a0)
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$E0).l
-                rts
-loc_136306:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$E0).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                clr.w   $3C(a0)
-                clr.w   $74(a0)
-                rts
+                jmp     _DesignDIYTournament_UpdatePitchTypeSeasonalUI
 
-; ===== DesignDIYTournamentOnSelect3 =====
-; prototype: void __usercall DesignDIYTournamentOnSelect3(MenuEntry *menu@<a5>)
+; ===== DesignDIYTournamentOnSelect3 ===== (ported to C → _DesignDIYTournamentOnSelect3)
 DesignDIYTournamentOnSelect3:
-                eori.w  #1,(diyFileBufferCopy+DIY_COMPETITION_PITCHTYPEORSEASON).l
-                bsr.s   DesignDIYTournament_UpdatePitchTypeSeasonalUI
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a5
-                move.w  #5,d0
-                jsr     CallDrawMultipleItems
+                move.l  a5,-(sp)
+                jsr     _DesignDIYTournamentOnSelect3
+                addq.l  #4,sp
                 rts
 
-; ===== DesignDIYTournamentOnSelect4 =====
-; prototype: void __usercall DesignDIYTournamentOnSelect4(MenuEntry *menu@<a5>)
+; ===== DesignDIYTournamentOnSelect4 ===== (ported to C → _DesignDIYTournamentOnSelect4)
 DesignDIYTournamentOnSelect4:
-                addq.w  #1,(diyFileBufferCopy+DIY_COMPETITION_PITCHTYPE).l
-                cmpi.w  #7,(diyFileBufferCopy+DIY_COMPETITION_PITCHTYPE).l
-                bne.s   loc_136350
-                move.w  #$FFFF,(diyFileBufferCopy+DIY_COMPETITION_PITCHTYPE).l
-loc_136350:
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYTournamentOnSelect4
+                addq.l  #4,sp
+                rts
 
-; ===== DesignDIYTournamentOnSelect5 =====
-; prototype: void __usercall DesignDIYTournamentOnSelect5(MenuEntry *menu@<a5>)
+; ===== DesignDIYTournamentOnSelect5 ===== (ported to C → _DesignDIYTournamentOnSelect5)
 DesignDIYTournamentOnSelect5:
-                lea     (diyFileBufferCopy).l,a0
-                addq.b  #8,diyFileBufferCopy+DIY_COMPETITION_STARTMONTH-diyFileBufferCopy(a0)
-                move.b  $38(a0),d0
-                cmpi.b  #$60,d0         ; '`'
-                bne.s   loc_136370
-                clr.b   $38(a0)
-                clr.b   d0
-loc_136370:
-                andi.l  #$FF,d0
-                divu.w  #8,d0
-                move.w  d0,(diyTournamentStartMonthPage).l
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYTournamentOnSelect5
+                addq.l  #4,sp
+                rts
 
-; ===== DesignDIYTournamentOnSelect7 =====
-; prototype: void __usercall DesignDIYTournamentOnSelect7(MenuEntry *menu@<a5>)
+; ===== DesignDIYTournamentOnSelect7 ===== (ported to C → _DesignDIYTournamentOnSelect7)
 DesignDIYTournamentOnSelect7:
-                lea     (diyFileBufferCopy).l,a0
-                addq.b  #8,diyFileBufferCopy+DIY_COMPETITION_ENDMONTH-diyFileBufferCopy(a0)
-                move.b  $39(a0),d0
-                cmpi.b  #$60,d0         ; '`'
-                bne.s   loc_1363A0
-                clr.b   $39(a0)
-                clr.b   d0
-loc_1363A0:
-                andi.l  #$FF,d0
-                divu.w  #8,d0
-                move.w  d0,(diyTournamentEndMonthPage).l
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYTournamentOnSelect7
+                addq.l  #4,sp
+                rts
 
-; ===== DesignDIYTournamentOnSelect9 =====
-; prototype: void __usercall DesignDIYTournamentOnSelect9(MenuEntry *menu@<a5>)
+; ===== DesignDIYTournamentOnSelect9 ===== (ported to C → _DesignDIYTournamentOnSelect9)
 DesignDIYTournamentOnSelect9:
-                bsr.w   DesignDIYTournament_GetStageBlockFromMenuEntry
-                addq.w  #1,$4A(a4)
-                cmpi.w  #3,$4A(a4)
-                bcs.s   loc_1363CA
-                clr.w   $4A(a4)
-loc_1363CA:
-                bsr.w   DesignDIYTournamentOnDraw
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYTournamentOnSelect9
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYTournament_UpdateTwoNumericFieldsText ===== (ported to C)
 DesignDIYTournament_UpdateTwoNumericFieldsText:
                 jmp     _DesignDIYTournament_UpdateTwoNumericFieldsText
 
-; ===== DesignDIYTournamentOnSelect11 =====
-; prototype: void __usercall DesignDIYTournamentOnSelect11(MenuEntry *menu@<a5>)
+; ===== DesignDIYTournamentOnSelect11 ===== (ported to C → _DesignDIYTournamentOnSelect11)
 DesignDIYTournamentOnSelect11:
-                move.w  (diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$14).l,d0
-                beq.s   locret_136424
-                addq.w  #1,(diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$12).l
-                cmp.w   (diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$12).l,d0
-                bcc.s   loc_13641C
-                move.w  #1,(diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$12).l
-loc_13641C:
-                bsr.s   DesignDIYTournament_UpdateTwoNumericFieldsText
-                jmp     CallDrawMenuItem
-locret_136424:
+                move.l  a5,-(sp)
+                jsr     _DesignDIYTournamentOnSelect11
+                addq.l  #4,sp
                 rts
 
-; ===== DesignDIYTournamentOnSelect13 =====
-; prototype: void __usercall DesignDIYTournamentOnSelect13(MenuEntry *menu@<a5>)
+; ===== DesignDIYTournamentOnSelect13 ===== (ported to C → _DesignDIYTournamentOnSelect13)
 DesignDIYTournamentOnSelect13:
-                addq.w  #1,(diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$14).l
-                cmpi.w  #5,(diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$14).l
-                bls.s   loc_136442
-                clr.w   (diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$14).l
-                clr.w   (diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$12).l
-loc_136442:
-                cmpi.w  #1,(diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$14).l
-                bne.s   loc_136454
-                move.w  #1,(diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$12).l
-loc_136454:
-                bsr.w   DesignDIYTournament_UpdateTwoNumericFieldsText
-                jsr     CallDrawMenuItem
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$268)).l,a5
-                jsr     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYTournamentOnSelect13
+                addq.l  #4,sp
                 rts
 
-; ===== DesignDIYTournamentOnSelect21 =====
-; prototype: void __usercall DesignDIYTournamentOnSelect21(MenuEntry *menu@<a5>)
+; ===== DesignDIYTournamentOnSelect21 ===== (ported to C → _DesignDIYTournamentOnSelect21)
 DesignDIYTournamentOnSelect21:
-                bsr.w   DesignDIYTournament_GetStageBlockFromMenuEntry
-                eori.w  #1,$160(a3)
-                bsr.w   DesignDIYTournamentOnDraw
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYTournamentOnSelect21
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYTournamentOnSelect23 =====
 ; prototype: void __usercall DesignDIYTournamentOnSelect23(MenuEntry *menu@<a5>)
@@ -49824,49 +49647,33 @@ DesignDIYTournamentOnSelect23:
                 move.w  #2,d0
                 jmp     CallDrawMultipleItems
 
-; ===== DesignDIYTournamentOnSelect24 =====
-; prototype: void __usercall DesignDIYTournamentOnSelect24(MenuEntry *menu@<a5>)
+; ===== DesignDIYTournamentOnSelect24 ===== (ported to C → _DesignDIYTournamentOnSelect24)
 DesignDIYTournamentOnSelect24:
-                bsr.w   DesignDIYTournament_GetStageBlockFromMenuEntry
-                addq.w  #1,$170(a3)
-                cmpi.w  #3,$170(a3)
-                bne.s   loc_1364C0
-                clr.w   $170(a3)
-loc_1364C0:
-                bsr.w   DesignDIYTournamentOnDraw
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYTournamentOnSelect24
+                addq.l  #4,sp
+                rts
 
-; ===== DesignDIYTournamentOnSelect25 =====
-; prototype: void __usercall DesignDIYTournamentOnSelect25(MenuEntry *menu@<a5>)
+; ===== DesignDIYTournamentOnSelect25 ===== (ported to C → _DesignDIYTournamentOnSelect25)
 DesignDIYTournamentOnSelect25:
-                bsr.w   DesignDIYTournament_GetStageBlockFromMenuEntry
-                addq.w  #1,$172(a3)
-                cmpi.w  #3,$172(a3)
-                bne.s   loc_1364DE
-                clr.w   $172(a3)
-loc_1364DE:
-                bsr.w   DesignDIYTournamentOnDraw
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYTournamentOnSelect25
+                addq.l  #4,sp
+                rts
 
-; ===== DesignDIYTournamentOnSelect26 =====
-; prototype: void __usercall DesignDIYTournamentOnSelect26(MenuEntry *menu@<a5>)
+; ===== DesignDIYTournamentOnSelect26 ===== (ported to C → _DesignDIYTournamentOnSelect26)
 DesignDIYTournamentOnSelect26:
-                bsr.w   DesignDIYTournament_GetStageBlockFromMenuEntry
-                eori.w  #1,$168(a3)
-                bsr.w   DesignDIYTournamentOnDraw
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYTournamentOnSelect26
+                addq.l  #4,sp
+                rts
 
-; ===== DesignDIYTournamentOnSelect28 =====
-; prototype: void __usercall DesignDIYTournamentOnSelect28(MenuEntry *menu@<a5>)
+; ===== DesignDIYTournamentOnSelect28 ===== (ported to C → _DesignDIYTournamentOnSelect28)
 DesignDIYTournamentOnSelect28:
-                bsr.w   DesignDIYTournament_GetStageBlockFromMenuEntry
-                addq.w  #1,$166(a3)
-                cmpi.w  #5,$166(a3)
-                bne.s   loc_136512
-                move.w  #1,$166(a3)
-loc_136512:
-                bsr.w   DesignDIYTournamentOnDraw
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYTournamentOnSelect28
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYTournament_GetStageBlockFromMenuEntry =====
 ; prototype: void *__usercall DesignDIYTournament_GetStageBlockFromMenuEntry@<a3>(MenuEntry *menu@<a5>)

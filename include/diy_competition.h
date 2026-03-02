@@ -171,6 +171,26 @@ void _DesignDIYCupOnSelect20(MenuEntry *entry);
 void _DesignDIYCupOnSelect21(MenuEntry *entry);
 void _DesignDIYCupOnSelect22(MenuEntry *entry);
 
+/* ---- DesignDIYTournament Callbacks & Helpers (Chunk 128) ---- */
+void _DesignDIYTournament_UpdateMonthPageIndices(void);
+void _DesignDIYTournament_ApplyInactiveMenuColors(void);
+void _DesignDIYTournament_UpdatePitchTypeSeasonalUI(void);
+void _DesignDIYTournamentReinit(void);
+void _DesignDIYTournamentInit(void);
+void _DesignDIYTournamentOnSelect2(MenuEntry *entry);
+void _DesignDIYTournamentOnSelect3(MenuEntry *entry);
+void _DesignDIYTournamentOnSelect4(MenuEntry *entry);
+void _DesignDIYTournamentOnSelect5(MenuEntry *entry);
+void _DesignDIYTournamentOnSelect7(MenuEntry *entry);
+void _DesignDIYTournamentOnSelect9(MenuEntry *entry);
+void _DesignDIYTournamentOnSelect11(MenuEntry *entry);
+void _DesignDIYTournamentOnSelect13(MenuEntry *entry);
+void _DesignDIYTournamentOnSelect21(MenuEntry *entry);
+void _DesignDIYTournamentOnSelect24(MenuEntry *entry);
+void _DesignDIYTournamentOnSelect25(MenuEntry *entry);
+void _DesignDIYTournamentOnSelect26(MenuEntry *entry);
+void _DesignDIYTournamentOnSelect28(MenuEntry *entry);
+
 /* ---- OpenDiy* + ShowDiyCompetitionForSource (Chunk 116) ---- */
 void _ShowDiyCompetitionForSource(uint8_t *header);
 void _OpenDiyFromFile(void);

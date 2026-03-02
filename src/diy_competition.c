@@ -4465,3 +4465,317 @@ void _DesignDIYCupOnSelect22(MenuEntry *entry)
     DesignDIYCupOnDraw();
     _CallDrawMenuItem(entry);
 }
+
+/* ==========================================================================
+ * Chunk 128 — DesignDIYTournament Callbacks & Helpers (17+1s functions)
+ * ========================================================================== */
+
+extern uint16_t diyTournamentUseSeasonalPitchEffective;
+extern uint16_t diyTournamentStartMonthPage;
+extern uint16_t diyTournamentEndMonthPage;
+extern void DesignDIYTournamentOnDraw(void);  /* still in asm */
+
+/* Static helper: get tournament stage block pointer from menu entry ordinal.
+ * Replaces asm DesignDIYTournament_GetStageBlockFromMenuEntry (returns a3).
+ * Side effect: writes stageIndex to diyFileBufferCopy[0x54]. */
+static uint8_t *getTournamentStageBlock(MenuEntry *entry)
+{
+    int16_t d0 = (int16_t)(entry->ordinal - 0x11);
+    int32_t d0l = d0;  /* ext.l */
+    uint16_t stageIdx = (uint16_t)((uint32_t)d0l / 0xC);
+    *(uint16_t *)(diyFileBufferCopy + 0x54) = stageIdx;
+    uint16_t offset = stageIdx * 0x76;
+    return diyFileBufferCopy + offset;
+}
+
+/* DesignDIYTournament_UpdateMonthPageIndices — compute month page indices (SWOS2.s line 49585) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournament_UpdateMonthPageIndices(void)
+{
+    uint8_t d0 = diyFileBufferCopy[56];  /* STARTMONTH */
+    if (d0 >= 0x60)
+        d0 -= 0x60;
+    diyTournamentStartMonthPage = (uint16_t)d0 / 8;
+
+    d0 = diyFileBufferCopy[57];  /* ENDMONTH */
+    if (d0 >= 0x60)
+        d0 -= 0x60;
+    diyTournamentEndMonthPage = (uint16_t)d0 / 8;
+
+    _DesignDIYTournament_UpdateTwoNumericFieldsText();
+}
+
+/* DesignDIYTournament_ApplyInactiveMenuColors — grey out entries for teams selection (SWOS2.s line 49607) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournament_ApplyInactiveMenuColors(void)
+{
+    MenuEntry *e = &menuEntries[2];
+    for (int16_t i = 0x56; i >= 0; i--) {  /* 87 iterations */
+        if (e->background == 2) {
+            uint16_t bgColor = *(uint16_t *)&e->bg;
+            if ((bgColor & 0xF) != 0) {
+                *(uint16_t *)&e->bg = (bgColor & 0xFFF0) | 9;  /* PINK_TO_BROWN_9 */
+                e->isDisabled = 1;
+            }
+        }
+        e++;
+    }
+    menuEntries[2].isInvisible = 1;
+    menuEntries[0].isInvisible = 1;
+    menuEntries[1].isInvisible = 0;
+}
+
+/* DesignDIYTournament_UpdatePitchTypeSeasonalUI — toggle seasonal/pitch visibility (SWOS2.s line 49675) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournament_UpdatePitchTypeSeasonalUI(void)
+{
+    diyTournamentUseSeasonalPitchEffective = *(uint16_t *)(diyFileBufferCopy + 52);
+
+    if (gameType == 2 || gameType == 3 || gameType == 4)
+        diyTournamentUseSeasonalPitchEffective = 1;
+
+    if (diyTournamentUseSeasonalPitchEffective == 0) {
+        /* Not seasonal: hide entries 5,6,7, show entry 4 */
+        menuEntries[5].isInvisible = 1;
+        menuEntries[6].isInvisible = 1;
+        menuEntries[7].isInvisible = 1;
+        menuEntries[4].isInvisible = 0;
+    } else {
+        /* Seasonal: hide entry 4, show entries 5,6,7 */
+        menuEntries[4].isInvisible = 1;
+        menuEntries[5].isInvisible = 0;
+        menuEntries[6].isInvisible = 0;
+        menuEntries[7].isInvisible = 0;
+    }
+}
+
+/* DesignDIYTournamentReinit — reinitialize tournament design menu state (SWOS2.s line 49522) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentReinit(void)
+{
+    if (pitchType != 0xFFFE) {  /* SEASONAL */
+        *(uint16_t *)(diyFileBufferCopy + 52) = 0;
+        *(uint16_t *)(diyFileBufferCopy + 54) = pitchType;
+
+        /* Grey out entry[3] */
+        uint16_t *bgColor3 = (uint16_t *)&menuEntries[3].bg;
+        *bgColor3 = (*bgColor3 & 0xFFF0) | 9;
+        menuEntries[3].isDisabled = 1;
+
+        /* Grey out entry[4] */
+        uint16_t *bgColor4 = (uint16_t *)&menuEntries[4].bg;
+        *bgColor4 = (*bgColor4 & 0xFFF0) | 9;
+        menuEntries[4].isDisabled = 1;
+    }
+
+    _DesignDIYTournament_UpdatePitchTypeSeasonalUI();
+    _DesignDIYTournament_UpdateMonthPageIndices();
+
+    if (diyTournamentLookOnly != 0) {
+        /* Look-only mode */
+        _DesignDIYTournament_ApplyInactiveMenuColors();
+        menuEntries[89].isInvisible = 1;
+        menuEntries[90].isInvisible = 1;
+        menuEntries[92].isInvisible = 1;
+
+        /* Color entries for current stage block */
+        uint16_t val = *(uint16_t *)(diyFileBufferCopy + 0x54);
+        uint16_t startIdx = val * 0xC + 0x11;
+        MenuEntry *e = _CalcMenuEntryAddress(startIdx);
+        for (int16_t i = 0xB; i >= 0; i--) {  /* 12 iterations */
+            if (e->background == 2) {
+                uint16_t bgColor = *(uint16_t *)&e->bg;
+                if ((bgColor & 0xF) != 0) {
+                    *(uint16_t *)&e->bg = (bgColor & 0xFFF0) | 0xB;
+                }
+            }
+            e++;
+        }
+        _SetCurrentEntry(0x5B);
+    } else if (diyTournamentSelectTeams != 0) {
+        /* Select teams mode */
+        _DesignDIYTournament_ApplyInactiveMenuColors();
+        menuEntries[90].isInvisible = 1;
+        _SetCurrentEntry(0x59);
+    } else {
+        /* Normal edit mode */
+        menuEntries[89].isInvisible = 1;
+        menuEntries[90].isInvisible = 0;
+        menuEntries[92].isInvisible = 1;
+        menuEntries[91].x += 0x20;
+    }
+}
+
+/* DesignDIYTournamentInit — init tournament design menu (SWOS2.s line 49513)
+ * Falls through to DesignDIYTournamentReinit. */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentInit(void)
+{
+    if (diyTournamentLookOnly == 0)
+        _DesignDIYTournament_UpdateSelectTeamsPrompt();
+    _DesignDIYTournamentReinit();
+}
+
+/* DesignDIYTournamentOnSelect2 — input text for tournament name (SWOS2.s line 49637) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOnSelect2(MenuEntry *entry)
+{
+    uint8_t *str = (uint8_t *)entry->fg;
+    _InputText(0x19, str);
+}
+
+/* DesignDIYTournamentOnSelect3 — toggle pitch type / season (SWOS2.s line 49704) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOnSelect3(MenuEntry *entry)
+{
+    (void)entry;
+    *(uint16_t *)(diyFileBufferCopy + 52) ^= 1;
+    _DesignDIYTournament_UpdatePitchTypeSeasonalUI();
+    _CallDrawMultipleItems(5, &menuEntries[3]);
+}
+
+/* DesignDIYTournamentOnSelect4 — cycle pitch type 0-6, wraps to 0xFFFF (SWOS2.s line 49714) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOnSelect4(MenuEntry *entry)
+{
+    uint16_t *pt = (uint16_t *)(diyFileBufferCopy + 54);
+    *pt += 1;
+    if (*pt == 7)
+        *pt = 0xFFFF;
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYTournamentOnSelect5 — cycle start month (SWOS2.s line 49724) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOnSelect5(MenuEntry *entry)
+{
+    uint8_t *monthByte = &diyFileBufferCopy[56];
+    *monthByte += 8;
+    uint8_t val = *monthByte;
+    if (val == 0x60) {
+        *monthByte = 0;
+        val = 0;
+    }
+    diyTournamentStartMonthPage = (uint16_t)val / 8;
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYTournamentOnSelect7 — cycle end month (SWOS2.s line 49740) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOnSelect7(MenuEntry *entry)
+{
+    uint8_t *monthByte = &diyFileBufferCopy[57];
+    *monthByte += 8;
+    uint8_t val = *monthByte;
+    if (val == 0x60) {
+        *monthByte = 0;
+        val = 0;
+    }
+    diyTournamentEndMonthPage = (uint16_t)val / 8;
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYTournamentOnSelect9 — cycle field at base+0x4A (SWOS2.s line 49756) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOnSelect9(MenuEntry *entry)
+{
+    getTournamentStageBlock(entry);  /* side effect: sets stageIndex at 0x54 */
+    uint16_t *field = (uint16_t *)(diyFileBufferCopy + 0x4A);
+    *field += 1;
+    if (*field >= 3)
+        *field = 0;
+    DesignDIYTournamentOnDraw();
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYTournamentOnSelect11 — cycle min substitutes per team (SWOS2.s line 49772) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOnSelect11(MenuEntry *entry)
+{
+    uint16_t maxVal = *(uint16_t *)(diyFileBufferCopy + 78);  /* FIELD_3A + $14 */
+    if (maxVal == 0)
+        return;
+    uint16_t *curVal = (uint16_t *)(diyFileBufferCopy + 76);  /* FIELD_3A + $12 */
+    *curVal += 1;
+    if (*curVal > maxVal)
+        *curVal = 1;
+    _DesignDIYTournament_UpdateTwoNumericFieldsText();
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYTournamentOnSelect13 — cycle num games per team 0-5 (SWOS2.s line 49787) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOnSelect13(MenuEntry *entry)
+{
+    uint16_t *field14 = (uint16_t *)(diyFileBufferCopy + 78);
+    uint16_t *field12 = (uint16_t *)(diyFileBufferCopy + 76);
+    *field14 += 1;
+    if (*field14 > 5) {
+        *field14 = 0;
+        *field12 = 0;
+    }
+    if (*field14 == 1)
+        *field12 = 1;
+    _DesignDIYTournament_UpdateTwoNumericFieldsText();
+    _CallDrawMenuItem(entry);
+    _CallDrawMenuItem(&menuEntries[11]);  /* redraw companion entry */
+}
+
+/* DesignDIYTournamentOnSelect21 — toggle stage field at +0x160 (SWOS2.s line 49806) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOnSelect21(MenuEntry *entry)
+{
+    uint8_t *stageBlock = getTournamentStageBlock(entry);
+    *(uint16_t *)(stageBlock + 0x160) ^= 1;
+    DesignDIYTournamentOnDraw();
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYTournamentOnSelect24 — cycle stage qualifiers 0-2 at +0x170 (SWOS2.s line 49829) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOnSelect24(MenuEntry *entry)
+{
+    uint8_t *stageBlock = getTournamentStageBlock(entry);
+    uint16_t *field = (uint16_t *)(stageBlock + 0x170);
+    *field += 1;
+    if (*field == 3)
+        *field = 0;
+    DesignDIYTournamentOnDraw();
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYTournamentOnSelect25 — cycle stage byes 0-2 at +0x172 (SWOS2.s line 49841) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOnSelect25(MenuEntry *entry)
+{
+    uint8_t *stageBlock = getTournamentStageBlock(entry);
+    uint16_t *field = (uint16_t *)(stageBlock + 0x172);
+    *field += 1;
+    if (*field == 3)
+        *field = 0;
+    DesignDIYTournamentOnDraw();
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYTournamentOnSelect26 — toggle stage field at +0x168 (SWOS2.s line 49853) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOnSelect26(MenuEntry *entry)
+{
+    uint8_t *stageBlock = getTournamentStageBlock(entry);
+    *(uint16_t *)(stageBlock + 0x168) ^= 1;
+    DesignDIYTournamentOnDraw();
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYTournamentOnSelect28 — cycle stage count 1-4 at +0x166 (SWOS2.s line 49861) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOnSelect28(MenuEntry *entry)
+{
+    uint8_t *stageBlock = getTournamentStageBlock(entry);
+    uint16_t *field = (uint16_t *)(stageBlock + 0x166);
+    *field += 1;
+    if (*field == 5)
+        *field = 1;
+    DesignDIYTournamentOnDraw();
+    _CallDrawMenuItem(entry);
+}

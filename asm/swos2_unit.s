@@ -2748,6 +2748,30 @@
         xref    _DesignDIYCupOnSelect20
         xref    _DesignDIYCupOnSelect21
         xref    _DesignDIYCupOnSelect22
+; --- Chunk 128 xrefs ---
+        xref    _DesignDIYTournament_UpdateMonthPageIndices
+        xref    _DesignDIYTournament_ApplyInactiveMenuColors
+        xref    _DesignDIYTournament_UpdatePitchTypeSeasonalUI
+        xref    _DesignDIYTournamentReinit
+        xref    _DesignDIYTournamentInit
+        xref    _DesignDIYTournamentOnSelect2
+        xref    _DesignDIYTournamentOnSelect3
+        xref    _DesignDIYTournamentOnSelect4
+        xref    _DesignDIYTournamentOnSelect5
+        xref    _DesignDIYTournamentOnSelect7
+        xref    _DesignDIYTournamentOnSelect9
+        xref    _DesignDIYTournamentOnSelect11
+        xref    _DesignDIYTournamentOnSelect13
+        xref    _DesignDIYTournamentOnSelect21
+        xref    _DesignDIYTournamentOnSelect24
+        xref    _DesignDIYTournamentOnSelect25
+        xref    _DesignDIYTournamentOnSelect26
+        xref    _DesignDIYTournamentOnSelect28
+; --- Chunk 128 xdefs ---
+        xdef    DesignDIYTournamentOnDraw
+        xdef    diyTournamentUseSeasonalPitchEffective
+        xdef    diyTournamentStartMonthPage
+        xdef    diyTournamentEndMonthPage
 ; --- Chunk 127 xdefs ---
         xdef    DesignDIYCupOnDraw
         xdef    diyCupPitchTypeOrSeasonSelection

@@ -2604,6 +2604,14 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified**
 - Cumulative: 1167 functions across 127 chunks
 
+### Chunk 128 — DesignDIYTournament Callbacks & Helpers (17+1s → diy_competition.c)
+- Date: 2026-03-02
+- **diy_competition.c (17+1s):** _DesignDIYTournament_UpdateMonthPageIndices, _DesignDIYTournament_ApplyInactiveMenuColors, _DesignDIYTournament_UpdatePitchTypeSeasonalUI, _DesignDIYTournamentReinit, _DesignDIYTournamentInit, _DesignDIYTournamentOnSelect2, _DesignDIYTournamentOnSelect3, _DesignDIYTournamentOnSelect4, _DesignDIYTournamentOnSelect5, _DesignDIYTournamentOnSelect7, _DesignDIYTournamentOnSelect9, _DesignDIYTournamentOnSelect11, _DesignDIYTournamentOnSelect13, _DesignDIYTournamentOnSelect21, _DesignDIYTournamentOnSelect24, _DesignDIYTournamentOnSelect25, _DesignDIYTournamentOnSelect26, _DesignDIYTournamentOnSelect28, +1 static (getTournamentStageBlock)
+- Key patterns: Tournament uses diyFileBufferCopy (vs Cup's diyCompetitionStart). Stage blocks at stageIndex*0x76 offset. Reinit uses entry indices 89,90,91,92. ApplyInactiveMenuColors loops 87 entries. GetStageBlockFromMenuEntry left in asm (still called by unported OnSelect23).
+- New xdefs: DesignDIYTournamentOnDraw, diyTournamentUseSeasonalPitchEffective, diyTournamentStartMonthPage, diyTournamentEndMonthPage
+- Build status: **verified**
+- Cumulative: 1185 functions across 128 chunks
+
 ### Phase Transitions (see CLAUDE.md "Project Phases")
 - [ ] Phase 1 complete: all subroutines ported → output `*** READY FOR TESTING PHASE! ***` and STOP
 - [ ] Phase 2: user tests game, fixes any bugs found
@@ -2745,5 +2753,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 125   | 4         | 1137       |
 | 126   | 12        | 1149       |
 | 127   | 17+1s     | 1167       |
+| 128   | 17+1s     | 1185       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)
