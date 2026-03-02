@@ -68,7 +68,6 @@ extern void _CDIY_RecomputeCompetitionDerivedProgressionTable(void);
 /* ---- ASM functions still in asm (called via bridge) ---- */
 extern void _asm_ShowDiyLeaguesTournamentMenu(uint16_t d0, uint16_t d1, uint16_t d2);
 extern void _asm_ShowDIYCupMenuWithParams(uint16_t d0, uint16_t d1, uint16_t d2);
-extern void _asm_DIY_LoadCurrentCompetitionSlot(void);
 extern void _asm_Career_AutoAdvanceInternationalCompetitionFixtures(void);
 
 extern void _SetExitMenuFlag(void);
@@ -6325,4 +6324,256 @@ void _DIYCupOnSelect17(void)
     diyCupMatchListScrollIndex++;
     DesignDIYCup_BuildMatchListEntryStrings();
     _DrawMenu();
+}
+
+/* ==========================================================================
+ * Chunk 132 — DIYLeagueChangePitchTypeOrSeason, DIYCupOnSelect1/3-8/Common,
+ *             DesignDIYTournamentOnSelect89 (10 functions)
+ * ========================================================================== */
+
+extern uint16_t _asm_DIY_PlayCupMatchAndAdvance(uint16_t mode);
+extern uint8_t aPlayTournament[]; /* "PLAY TOURNAMENT" */
+
+/* DIYLeagueChangePitchTypeOrSeason — toggle pitchTypeOrSeason, redraw (SWOS2.s line 41373) */
+__attribute__((used, externally_visible))
+void _DIYLeagueChangePitchTypeOrSeason(void)
+{
+    *(uint16_t *)(diyCompetitionStart + 52) ^= 1; /* eori.w #1 */
+    _DIYSetMonthsOrPitchTypeEntries();
+    _CallDrawMultipleItems(5, &menuEntries[8]); /* entries 8-12 */
+}
+
+/* DIYCupOnSelectCommon — play cup match and update state (SWOS2.s line 46119)
+ * Called from DIYCupOnSelect3-8 with mode parameter. */
+static void DIYCupOnSelectCommonC(uint16_t mode)
+{
+    uint16_t result = _asm_DIY_PlayCupMatchAndAdvance(mode);
+    if (result != 0)
+        return;
+
+    /* Match results already stored in globals by bridge */
+    diyCupMenuArg0Copy = 0xFFFF;
+
+    uint8_t *a0 = diyCompetitionStart;
+    uint16_t off54 = *(uint16_t *)(a0 + 0x54);  /* hasReplays? */
+
+    if (off54 == 0)
+        goto state_check;
+
+    if (*(uint16_t *)(a0 + 0x48) != 0) {  /* field_3A+$E */
+        if (diyCupMenuArg0 != 0)
+            goto state6;
+        goto state_check_replays;
+    }
+
+    /* off48 == 0 */
+state_check_replays:
+    if (*(uint16_t *)(a0 + 0x14A) != 0)
+        goto check_32E;
+    if (*(uint16_t *)(a0 + 0x14C) != 2)
+        goto check_32E;
+    if (diyCupMenuArg0 != 0)
+        goto state6;
+    *(uint16_t *)(a0 + 0x4A) = 1;
+    goto state_check;
+
+check_32E:
+    if (*(uint16_t *)(a0 + 0x32E) != 0)
+        goto check_32E_nonzero;
+
+    if (*(uint16_t *)(diyCompetitionStart + 72) != 0) {  /* FIELD_3A+$E */
+        /* state 5 */
+        *(uint16_t *)(a0 + 0x4A) = 5;
+        if (*(uint16_t *)(a0 + 0x48) == 2)
+            goto final_draw;
+        goto state_check;
+    }
+
+    if (*(uint16_t *)(a0 + 0x330) != 0)
+        goto state_check_finished;
+
+    {
+        uint16_t roundIdx = *(uint16_t *)(a0 + 0x58);
+        if (roundIdx + 1 == *(uint16_t *)(a0 + 0x5A))
+            goto state_check_finished;
+    }
+    goto state2;
+
+check_32E_nonzero:
+    if (*(uint16_t *)(a0 + 0x330) != 0)
+        goto state3;
+    if (*(uint16_t *)(diyCompetitionStart + 72) != 0)  /* FIELD_3A+$E */
+        goto state3;
+    {
+        uint16_t roundIdx = *(uint16_t *)(a0 + 0x58);
+        if (roundIdx + 1 != *(uint16_t *)(a0 + 0x5A))
+            goto state2;
+    }
+    if (diyCupMenuArg0 != 0)
+        goto state6;
+
+state3:
+    *(uint16_t *)(a0 + 0x4A) = 3;
+    goto state_check;
+
+state2:
+    *(uint16_t *)(a0 + 0x4A) = 2;
+    goto state_check;
+
+state_check_finished:
+    if (diyCupMenuArg0 != 0)
+        goto state6;
+    *(uint16_t *)(a0 + 0x4A) = 4;
+    goto state_check;
+
+state6:
+    *(uint16_t *)(a0 + 0x4A) = 6;
+    goto state_check;
+
+state_check:
+    if (*(uint16_t *)(a0 + 0x56) != 0)
+        *(uint16_t *)(a0 + 0x4A) = 6;
+
+final_draw:
+    _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries();
+    _DesignDIYCup_UpdateMatchListScrollAndRebuildStrings();
+    DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection();
+    DesignDIYCup_BuildMatchListEntryStrings();
+    _DrawMenu();
+}
+
+/* DIYCupOnSelect3 — cup round select callback (SWOS2.s line 46078) */
+__attribute__((used, externally_visible))
+void _DIYCupOnSelect3(MenuEntry *entry)
+{
+    *(uint16_t *)(diyCompetitionStart + 62) = entry->ordinal; /* FIELD_3A+4 */
+    DIYCupOnSelectCommonC(2);
+}
+
+/* DIYCupOnSelect4 — cup round select callback (SWOS2.s line 46085) */
+__attribute__((used, externally_visible))
+void _DIYCupOnSelect4(MenuEntry *entry)
+{
+    *(uint16_t *)(diyCompetitionStart + 62) = entry->ordinal;
+    DIYCupOnSelectCommonC(3);
+}
+
+/* DIYCupOnSelect5 — cup round select callback (SWOS2.s line 46092) */
+__attribute__((used, externally_visible))
+void _DIYCupOnSelect5(MenuEntry *entry)
+{
+    *(uint16_t *)(diyCompetitionStart + 62) = entry->ordinal;
+    DIYCupOnSelectCommonC(0);
+}
+
+/* DIYCupOnSelect6 — cup round select callback (SWOS2.s line 46099) */
+__attribute__((used, externally_visible))
+void _DIYCupOnSelect6(MenuEntry *entry)
+{
+    *(uint16_t *)(diyCompetitionStart + 66) = entry->ordinal; /* FIELD_3A+8 */
+    DIYCupOnSelectCommonC(1);
+}
+
+/* DIYCupOnSelect7 — cup round select callback (SWOS2.s line 46106) */
+__attribute__((used, externally_visible))
+void _DIYCupOnSelect7(MenuEntry *entry)
+{
+    *(uint16_t *)(diyCompetitionStart + 66) = entry->ordinal;
+    DIYCupOnSelectCommonC(3);
+}
+
+/* DIYCupOnSelect8 — cup round select callback (SWOS2.s line 46113) */
+__attribute__((used, externally_visible))
+void _DIYCupOnSelect8(MenuEntry *entry)
+{
+    *(uint16_t *)(diyCompetitionStart + 66) = entry->ordinal;
+    DIYCupOnSelectCommonC(0);
+}
+
+/* DIYCupOnSelect1 — cup state dispatch (SWOS2.s line 45634) */
+__attribute__((used, externally_visible))
+void _DIYCupOnSelect1(void)
+{
+    uint8_t *a0 = diyCompetitionStart;
+    uint16_t state;
+
+    diyCupMatchListDrawModeFlag = 0;
+    state = *(uint16_t *)(a0 + 0x4A);
+
+    switch (state) {
+    case 1:
+        *(uint16_t *)(a0 + 0x4A) = 0;
+        _DIY_UpdateCompetitionProgress();
+        break;
+
+    case 2:
+        diyCupMatchListDrawModeFlag = 1;
+        _DesignDIYCup_UpdateRoundOptionsVisibility();
+        if (diyCupMenuArg0 != 0) {
+            *(uint16_t *)(a0 + 0x4A) = 6;
+        } else if (*(uint16_t *)(a0 + 0x32E) != 0) {
+            *(uint16_t *)(a0 + 0x4A) = 3;
+        } else {
+            *(uint16_t *)(a0 + 0x4A) = 4;
+        }
+        break;
+
+    case 3:
+        *(uint16_t *)(a0 + 0x4A) = 0;
+        _DIY_UpdateCompetitionProgress();
+        break;
+
+    case 4:
+        *(uint16_t *)(a0 + 0x4A) = 0;
+        _DIY_UpdateCompetitionProgress();
+        break;
+
+    case 5:
+        *(uint16_t *)(a0 + 2) = 2;
+        _SetExitMenuFlag();
+        return;
+
+    default:
+        /* State >= 6 or 0: loc_134806 path */
+        diyCupMenuArg0Copy = 1;
+        _DesignDIYCup_UpdateMatchListAndRedrawIfNeeded();
+        _DesignDIYCup_DrawCurrentMatchTeamEntries();
+        /* loc_134C96 */
+        DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection();
+        _CallDrawMultipleItems(8, &menuEntries[1]);
+        return;
+    }
+
+    /* Common path for cases 1-4: loc_13481A */
+    _DesignDIYCup_BuildMenuTitleString();
+    _DesignDIYCup_HideCurrentMatchTeamEntries();
+    diyCupMatchListScrollIndex = 0;
+    DesignDIYCup_BuildMatchListEntryStrings();
+    DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection();
+    _DrawMenu();
+}
+
+/* DesignDIYTournamentOnSelect89 — choose teams & play tournament (SWOS2.s line 48984) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOnSelect89(void)
+{
+    uint16_t numTeams = *(uint16_t *)(diyFileBufferCopy + 50); /* NUMTEAMS */
+    uint8_t *teamListPtr = diyFileBufferCopy + 4; /* FIELD_2 + 2 */
+
+    _GoGetTeamsForPlay(teamListPtr, aPlayTournament, numTeams, 1, 1, 1);
+
+    if (chooseTeamsResult == 0) {
+        _SetExitMenuFlag();
+        return;
+    }
+
+    _InitCareerVariables(1);
+    _CopySelectedTeamNumbers(numTeams, (uint8_t *)diyTournamentTeamIds);
+    /* nullsub_12 — no-op */
+    _DIYTournament_RecalculateMatchesPerTeam();
+    _DIY_LoadCurrentCompetitionSlot();
+    _InitTeams();
+    _DIY_EditCompetitionSlot(0, 0, 0);
+    _RestoreDIYTournament();
+    _SetExitMenuFlag();
 }

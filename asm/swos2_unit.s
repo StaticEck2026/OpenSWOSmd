@@ -2775,6 +2775,34 @@
         xref    _DesignDIYTournament_CacheStageSelection
         xref    _DesignDIYTournament_RedrawStageItemsFromBlock
         xref    _DIYTournament_RecalculateNumStages
+; --- Chunk 133 xrefs ---
+        xref    _EditTeamsInit
+        xref    _EditTeamsUndo
+        xref    _EditTeamsOK
+        xref    _EditTeamsChangeShirtsPrimary
+        xref    _EditTeamsChangeShirtsSecondary
+        xref    _EditTeamsChangeShortsPrimary
+        xref    _EditTeamsChangeShortsSecondary
+        xref    _EditTeamsChangeSocksPrimary
+        xref    _EditTeamsChangeSocksSecondary
+        xref    _EditTeamsSelectPrimaryShirtType
+        xref    _EditTeamsSelectSecondaryShirtType
+        xref    _EditTeamsChangePlayerName
+        xref    _EditTeamsSelectTeamName
+        xref    _EditTeamsSelectCoachName
+        xref    _EditTeamsChangePlayerFace
+        xref    _InitEditTeamsMenu
+        xref    _EditTeamsPlayersBeforeDraw
+; --- Chunk 132 xrefs ---
+        xref    _DIYLeagueChangePitchTypeOrSeason
+        xref    _DIYCupOnSelect1
+        xref    _DIYCupOnSelect3
+        xref    _DIYCupOnSelect4
+        xref    _DIYCupOnSelect5
+        xref    _DIYCupOnSelect6
+        xref    _DIYCupOnSelect7
+        xref    _DIYCupOnSelect8
+        xref    _DesignDIYTournamentOnSelect89
 ; --- Chunk 131 xrefs ---
         xref    _DIYSetMonthsOrPitchTypeEntries
         xref    _DIYLeagueSetVariousFields
@@ -2840,6 +2868,23 @@
         xdef    aTeamsRelegated_0
         xdef    DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection
         xdef    MenuCheckControls
+; --- Chunk 133 xdefs ---
+        xdef    editTeamsSelectedTeam
+        xdef    saveCustomTeams
+        xdef    teamIsImported
+        xdef    kTeamColorsTable
+        xdef    editTeamsPrimaryShirtColTable
+        xdef    editTeamsShortsColTable
+        xdef    editTeamsSocksColTable
+        xdef    editTeamsSecondaryShirtColTable
+        xdef    editTeamsSecondaryShortsColTable
+        xdef    editTeamsSecondarySocksColTable
+        xdef    shirtTypesTable
+        xdef    shirtsIndexTable
+        xdef    playerPositionsStringTable
+; --- Chunk 132 xdefs ---
+        xdef    _asm_DIY_PlayCupMatchAndAdvance
+        xdef    aPlayTournament
 ; --- Chunk 129 xdefs ---
         xdef    diyTournamentSelectedStageIndex1Based
         xdef    diyTournamentSelectedStagePtr

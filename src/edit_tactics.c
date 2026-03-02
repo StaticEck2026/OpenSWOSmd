@@ -46,6 +46,7 @@
 #include "panic.h"
 #include "sprites.h"
 #include "team_colors.h"
+#include "input_text.h"
 
 /* ---- Menu entries (defined in asm) ---- */
 extern MenuEntry menuEntries[];
@@ -2324,12 +2325,493 @@ end:
  * Chunk 117: EditTeamsFinish
  * ================================================================ */
 
-extern void InitEditTeamsMenu(void);  /* still in asm */
+/* ================================================================
+ * Chunk 133: EditTeams functions
+ * ================================================================ */
 
-/* EditTeamsFinish — reinit edit teams menu after undo/load (SWOS2.s line 52977) */
+/* --- Externs for EditTeams --- */
+extern uint8_t *editTeamsSelectedTeam;   /* pointer to source team data */
+extern uint16_t saveCustomTeams;
+extern uint16_t teamIsImported;
+extern uint16_t controlMask;
+extern uint16_t kTeamColorsTable[];      /* 10 word entries */
+extern uint16_t editTeamsPrimaryShirtColTable[];   /* 16 word color table */
+extern uint16_t editTeamsShortsColTable[];          /* 16 word color table + at +0x16 */
+extern uint16_t editTeamsSocksColTable[];           /* 16 word color table + at +0x16 */
+extern uint16_t editTeamsSecondaryShirtColTable[];  /* 16 word color table */
+extern uint16_t editTeamsSecondaryShortsColTable[]; /* 16 word color table + at +0x16 */
+extern uint16_t editTeamsSecondarySocksColTable[];  /* 16 word color table + at +0x16 */
+extern uint16_t shirtTypesTable[];       /* 4 entries of 8 words each (4 shirt types) */
+extern uint16_t shirtsIndexTable[];      /* 8 word entries (byte offsets into color table) */
+extern uint32_t playerPositionsStringTable[];       /* 8 string pointers */
+
+/* EditTeamsGetPlayerPointer — return pointer to player N in selTeamsPtr */
+static uint8_t *EditTeamsGetPlayerPointerC(MenuEntry *entry)
+{
+    uint16_t idx = entry->ordinal - 23;
+    return &selTeamsPtr + idx * 38;
+}
+
+/* PrimaryKitColorConversion — build primary shirt/shorts/socks color tables */
+static void PrimaryKitColorConversionC(void)
+{
+    uint8_t *team = &selTeamsPtr;
+    uint16_t *colTable = editTeamsPrimaryShirtColTable;
+    uint16_t stripesCol = kTeamColorsTable[team[27]];  /* prStripesColor */
+    uint16_t basicCol = kTeamColorsTable[team[28]];    /* prBasicColor */
+    uint16_t *types = &shirtTypesTable[team[26] * 8];  /* prShirtType * 8 words */
+    uint16_t *indices = shirtsIndexTable;
+
+    for (int16_t i = 7; i >= 0; i--) {
+        uint16_t idx = *indices++;
+        if (*types++ == 2)
+            colTable[idx / 2] = basicCol;
+        else
+            colTable[idx / 2] = stripesCol;
+    }
+
+    /* Shorts */
+    uint16_t shortsCol = kTeamColorsTable[team[29]];  /* prShortsColor */
+    ((uint16_t *)((uint8_t *)editTeamsShortsColTable + 0x16))[0] = shortsCol;
+
+    /* Socks */
+    uint16_t socksCol = kTeamColorsTable[team[30]];   /* prSocksColor */
+    ((uint16_t *)((uint8_t *)editTeamsSocksColTable + 0x16))[0] = socksCol;
+}
+
+/* SecondaryKitColorConversion — build secondary shirt/shorts/socks color tables */
+static void SecondaryKitColorConversionC(void)
+{
+    uint8_t *team = &selTeamsPtr;
+    uint16_t *colTable = editTeamsSecondaryShirtColTable;
+    uint16_t stripesCol = kTeamColorsTable[team[32]];  /* secStripesColor */
+    uint16_t basicCol = kTeamColorsTable[team[33]];    /* secBasicColor */
+    uint16_t *types = &shirtTypesTable[team[31] * 8];  /* secShirtType * 8 words */
+    uint16_t *indices = shirtsIndexTable;
+
+    for (int16_t i = 7; i >= 0; i--) {
+        uint16_t idx = *indices++;
+        if (*types++ == 2)
+            colTable[idx / 2] = basicCol;
+        else
+            colTable[idx / 2] = stripesCol;
+    }
+
+    /* Shorts */
+    uint16_t shortsCol = kTeamColorsTable[team[34]];  /* secShortsColor */
+    ((uint16_t *)((uint8_t *)editTeamsSecondaryShortsColTable + 0x16))[0] = shortsCol;
+
+    /* Socks */
+    uint16_t socksCol = kTeamColorsTable[team[35]];   /* secSocksColor */
+    ((uint16_t *)((uint8_t *)editTeamsSecondarySocksColTable + 0x16))[0] = socksCol;
+}
+
+/* MarkFirstKitShirt — highlight selected primary shirt type in menu */
+static void MarkFirstKitShirtC(void)
+{
+    uint8_t *team = &selTeamsPtr;
+    MenuEntry *e = &menuEntries[0x348 / 56]; /* menuEntries + $348 / 56 = entry 15 */
+    uint8_t shirtType = team[26]; /* prShirtType */
+
+    for (int16_t i = 3; i >= 0; i--) {
+        *(uint16_t *)&e->bg = 9;  /* PINK_TO_BROWN_9 */
+        if ((uint8_t)i == shirtType)
+            *(uint16_t *)&e->bg = 10;  /* RED_10 */
+        e = (MenuEntry *)((uint8_t *)e - 56);
+    }
+}
+
+/* MarkSecondKitShirt — highlight selected secondary shirt type in menu */
+static void MarkSecondKitShirtC(void)
+{
+    uint8_t *team = &selTeamsPtr;
+    MenuEntry *e = &menuEntries[0x428 / 56]; /* entry 19 */
+    uint8_t shirtType = team[31]; /* secShirtType */
+
+    for (int16_t i = 3; i >= 0; i--) {
+        *(uint16_t *)&e->bg = 9;  /* PINK_TO_BROWN_9 */
+        if ((uint8_t)i == shirtType)
+            *(uint16_t *)&e->bg = 10;  /* RED_10 */
+        e = (MenuEntry *)((uint8_t *)e - 56);
+    }
+}
+
+/* EditTeamsInit — copy team to edit buffer, clear import flag */
+__attribute__((used, externally_visible))
+void _EditTeamsInit(void)
+{
+    uint16_t *src = (uint16_t *)editTeamsSelectedTeam;
+    uint16_t *dst = (uint16_t *)&selTeamsPtr;
+    for (int16_t i = 341; i >= 0; i--)
+        *dst++ = *src++;
+    teamIsImported = 0;
+    _EditTeamsFinish();
+}
+
+/* EditTeamsFinish — reinit edit teams menu after undo/load */
 __attribute__((used, externally_visible))
 void _EditTeamsFinish(void)
 {
-    InitEditTeamsMenu();
+    _InitEditTeamsMenu();
     /* nullsub_16 was called here in asm — it's just rts, so omitted */
+}
+
+/* EditTeamsUndo — restore team from original, reinit menu */
+__attribute__((used, externally_visible))
+void _EditTeamsUndo(void)
+{
+    teamIsImported = 0;
+    uint16_t *src = (uint16_t *)editTeamsSelectedTeam;
+    uint16_t *dst = (uint16_t *)&selTeamsPtr;
+    for (int16_t i = 341; i >= 0; i--)
+        *dst++ = *src++;
+    _InitEditTeamsMenu();
+    _DrawMenu();
+}
+
+/* EditTeamsOK — save edited team if changed */
+__attribute__((used, externally_visible))
+void _EditTeamsOK(void)
+{
+    uint16_t *src = (uint16_t *)editTeamsSelectedTeam;
+    uint16_t *cmp = (uint16_t *)&selTeamsPtr;
+
+    for (int16_t i = 341; i >= 0; i--) {
+        if (*src++ != *cmp++) {
+            /* Teams differ — save changes */
+            saveCustomTeams = 1;
+            uint16_t *dst = (uint16_t *)editTeamsSelectedTeam;
+            uint16_t *from = (uint16_t *)&selTeamsPtr;
+            for (int16_t j = 341; j >= 0; j--)
+                *dst++ = *from++;
+            _SetExitMenuFlag();
+            return;
+        }
+    }
+    /* No changes */
+    _SetExitMenuFlag();
+}
+
+/* EditTeamsChangeShirtsPrimary — change primary shirt color on joystick input */
+__attribute__((used, externally_visible))
+void _EditTeamsChangeShirtsPrimary(void)
+{
+    uint8_t *team = &selTeamsPtr;
+    uint8_t d0;
+
+    if (controlMask == 0x41) {          /* left+fire */
+        d0 = team[27];  /* prStripesColor */
+        d0 = (d0 == 0) ? 9 : d0 - 1;
+        team[27] = d0;
+    } else if (controlMask == 0x81) {   /* right+fire */
+        d0 = team[27];
+        d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
+        team[27] = d0;
+    } else if (controlMask == 0x101) {  /* up+fire */
+        if (team[26] == 0) {  /* SHIRT_ORDINARY */
+            d0 = team[27];
+            d0 = (d0 == 0) ? 9 : d0 - 1;
+            team[27] = d0;
+        } else {
+            d0 = team[28];  /* prBasicColor */
+            d0 = (d0 == 0) ? 9 : d0 - 1;
+            team[28] = d0;
+        }
+    } else if (controlMask == 0x201) {  /* down+fire */
+        if (team[26] == 0) {  /* SHIRT_ORDINARY */
+            d0 = team[27];
+            d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
+            team[27] = d0;
+        } else {
+            d0 = team[28];
+            d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
+            team[28] = d0;
+        }
+    } else {
+        return;
+    }
+
+    PrimaryKitColorConversionC();
+    /* nullsub_16 */
+    _CallDrawMultipleItems(1, &menuEntries[0x118 / 56]);
+}
+
+/* EditTeamsChangeShirtsSecondary — change secondary shirt color on joystick input */
+__attribute__((used, externally_visible))
+void _EditTeamsChangeShirtsSecondary(void)
+{
+    uint8_t *team = &selTeamsPtr;
+    uint8_t d0;
+
+    if (controlMask == 0x41) {          /* left+fire */
+        d0 = team[32];  /* secStripesColor */
+        d0 = (d0 == 0) ? 9 : d0 - 1;
+        team[32] = d0;
+    } else if (controlMask == 0x81) {   /* right+fire */
+        d0 = team[32];
+        d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
+        team[32] = d0;
+    } else if (controlMask == 0x101) {  /* up+fire */
+        if (team[31] == 0) {
+            d0 = team[32];
+            d0 = (d0 == 0) ? 9 : d0 - 1;
+            team[32] = d0;
+        } else {
+            d0 = team[33];  /* secBasicColor */
+            d0 = (d0 == 0) ? 9 : d0 - 1;
+            team[33] = d0;
+        }
+    } else if (controlMask == 0x201) {  /* down+fire */
+        if (team[31] == 0) {
+            d0 = team[32];
+            d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
+            team[32] = d0;
+        } else {
+            d0 = team[33];
+            d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
+            team[33] = d0;
+        }
+    } else {
+        return;
+    }
+
+    SecondaryKitColorConversionC();
+    /* nullsub_16 */
+    _CallDrawMultipleItems(1, &menuEntries[0x1F8 / 56]);
+}
+
+/* EditTeamsChangeShortsPrimary — change primary shorts color */
+__attribute__((used, externally_visible))
+void _EditTeamsChangeShortsPrimary(void)
+{
+    uint8_t *team = &selTeamsPtr;
+    uint8_t d0 = team[29]; /* prShortsColor */
+
+    if (controlMask == 0x41 || controlMask == 0x101) {
+        d0 = (d0 == 0) ? 9 : d0 - 1;
+    } else if (controlMask == 0x81 || controlMask == 0x201) {
+        d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
+    } else {
+        return;
+    }
+
+    team[29] = d0;
+    PrimaryKitColorConversionC();
+    /* nullsub_16 */
+    _CallDrawMultipleItems(1, &menuEntries[0x150 / 56]);
+}
+
+/* EditTeamsChangeShortsSecondary — change secondary shorts color */
+__attribute__((used, externally_visible))
+void _EditTeamsChangeShortsSecondary(void)
+{
+    uint8_t *team = &selTeamsPtr;
+    uint8_t d0 = team[34]; /* secShortsColor */
+
+    if (controlMask == 0x41 || controlMask == 0x101) {
+        d0 = (d0 == 0) ? 9 : d0 - 1;
+    } else if (controlMask == 0x81 || controlMask == 0x201) {
+        d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
+    } else {
+        return;
+    }
+
+    team[34] = d0;
+    SecondaryKitColorConversionC();
+    /* nullsub_16 */
+    _CallDrawMultipleItems(1, &menuEntries[0x230 / 56]);
+}
+
+/* EditTeamsChangeSocksPrimary — change primary socks color */
+__attribute__((used, externally_visible))
+void _EditTeamsChangeSocksPrimary(void)
+{
+    uint8_t *team = &selTeamsPtr;
+    uint8_t d0 = team[30]; /* prSocksColor */
+
+    if (controlMask == 0x41 || controlMask == 0x101) {
+        d0 = (d0 == 0) ? 9 : d0 - 1;
+    } else if (controlMask == 0x81 || controlMask == 0x201) {
+        d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
+    } else {
+        return;
+    }
+
+    team[30] = d0;
+    PrimaryKitColorConversionC();
+    _CallDrawMultipleItems(1, &menuEntries[0x188 / 56]);
+}
+
+/* EditTeamsChangeSocksSecondary — change secondary socks color */
+__attribute__((used, externally_visible))
+void _EditTeamsChangeSocksSecondary(void)
+{
+    uint8_t *team = &selTeamsPtr;
+    uint8_t d0 = team[35]; /* secSocksColor */
+
+    if (controlMask == 0x41 || controlMask == 0x101) {
+        d0 = (d0 == 0) ? 9 : d0 - 1;
+    } else if (controlMask == 0x81 || controlMask == 0x201) {
+        d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
+    } else {
+        return;
+    }
+
+    team[35] = d0;
+    SecondaryKitColorConversionC();
+    _CallDrawMultipleItems(1, &menuEntries[0x268 / 56]);
+}
+
+/* EditTeamsSelectPrimaryShirtType — set primary shirt type from menu ordinal */
+__attribute__((used, externally_visible))
+void _EditTeamsSelectPrimaryShirtType(MenuEntry *entry)
+{
+    uint8_t *team = &selTeamsPtr;
+    team[26] = (uint8_t)(entry->ordinal - 12); /* prShirtType */
+    MarkFirstKitShirtC();
+    PrimaryKitColorConversionC();
+    /* nullsub_16 */
+    _CallDrawMultipleItems(4, &menuEntries[0x2A0 / 56]);
+    _CallDrawMultipleItems(1, &menuEntries[0x118 / 56]);
+}
+
+/* EditTeamsSelectSecondaryShirtType — set secondary shirt type from menu ordinal */
+__attribute__((used, externally_visible))
+void _EditTeamsSelectSecondaryShirtType(MenuEntry *entry)
+{
+    uint8_t *team = &selTeamsPtr;
+    team[31] = (uint8_t)(entry->ordinal - 16); /* secShirtType */
+    MarkSecondKitShirtC();
+    SecondaryKitColorConversionC();
+    /* nullsub_16 */
+    _CallDrawMultipleItems(4, &menuEntries[0x380 / 56]);
+    _CallDrawMultipleItems(1, &menuEntries[0x1F8 / 56]);
+}
+
+/* EditTeamsChangePlayerName — edit player name via text input */
+__attribute__((used, externally_visible))
+void _EditTeamsChangePlayerName(MenuEntry *entry)
+{
+    _InputText(23, (uint8_t *)entry);
+}
+
+/* EditTeamsSelectTeamName — edit team name via text input */
+__attribute__((used, externally_visible))
+void _EditTeamsSelectTeamName(MenuEntry *entry)
+{
+    _InputText(17, (uint8_t *)entry);
+}
+
+/* EditTeamsSelectCoachName — edit coach name via text input */
+__attribute__((used, externally_visible))
+void _EditTeamsSelectCoachName(MenuEntry *entry)
+{
+    _InputText(23, (uint8_t *)entry);
+}
+
+/* EditTeamsChangePlayerFace — cycle through player face sprites */
+__attribute__((used, externally_visible))
+void _EditTeamsChangePlayerFace(MenuEntry *entry)
+{
+    uint8_t *player = EditTeamsGetPlayerPointerC(entry);
+    uint8_t posAndFace = player[76 + 26]; /* PLAYERFILE_POSITIONANDFACE + 0x4C */
+    uint16_t faceIdx = (posAndFace & 0x18) >> 3;
+
+    faceIdx++;
+    if (faceIdx == 3)
+        faceIdx = 0;
+
+    player[76 + 26] = (posAndFace & 0xE7) | (uint8_t)(faceIdx << 3);
+
+    /* Update menu entry sprite to show new face */
+    *(uint16_t *)&entry->fg = (uint16_t)(faceIdx + 186);  /* SPR_PL_FACE_WHITE_GUY */
+    _CallDrawMenuItem(entry);
+}
+
+/* InitEditTeamsMenu — set player faces, names, kit colors in menu */
+__attribute__((used, externally_visible))
+void _InitEditTeamsMenu(void)
+{
+    /* Show/hide import entry based on teamIsImported */
+    menuEntries[0x460 / 56].isInvisible = 0;
+    if (teamIsImported != 0)
+        menuEntries[0x460 / 56].isInvisible = 1;
+
+    uint8_t *team = &selTeamsPtr;
+
+    /* Team name → entry 0 */
+    menuEntries[0].fg = (uint32_t)(uint8_t *)(team + 5);
+
+    /* Coach name → entry at offset 0xA8 */
+    menuEntries[0xA8 / 56].fg = (uint32_t)(uint8_t *)(team + 36);
+
+    PrimaryKitColorConversionC();
+    SecondaryKitColorConversionC();
+    MarkFirstKitShirtC();
+    MarkSecondKitShirtC();
+
+    /* Set player faces and names */
+    MenuEntry *faceEntry = &menuEntries[0x508 / 56];
+    MenuEntry *nameEntry = &menuEntries[0x888 / 56];
+    uint8_t *playerPtr = team;
+
+    for (int16_t i = 15; i >= 0; i--) {
+        uint8_t posAndFace = playerPtr[76 + 26];  /* PLAYERFILE_POSITIONANDFACE + 0x4C */
+        uint16_t faceIdx = (posAndFace & 0x18) >> 3;
+        *(uint16_t *)&faceEntry->fg = (uint16_t)(faceIdx + 186);  /* SPR_PL_FACE_WHITE_GUY */
+        faceEntry = (MenuEntry *)((uint8_t *)faceEntry + 56);
+
+        nameEntry->fg = (uint32_t)(uint8_t *)(playerPtr + 76 + 3);  /* PLAYERFILE_PLAYERNAME + 0x4C */
+        nameEntry = (MenuEntry *)((uint8_t *)nameEntry + 56);
+
+        playerPtr += 38;
+    }
+}
+
+/* EditTeamsPlayersBeforeDraw — set up per-player overlay entries before draw */
+__attribute__((used, externally_visible))
+void _EditTeamsPlayersBeforeDraw(MenuEntry *entry)
+{
+    uint16_t playerIdx = entry->ordinal - 23;
+    uint8_t *team = &selTeamsPtr;
+    uint8_t *playerPtr = team + playerIdx * 38;
+
+    uint8_t posAndFace = playerPtr[76 + 26];  /* PLAYERFILE_POSITIONANDFACE */
+    int16_t y = entry->y;
+
+    MenuEntry *e = &menuEntries[0xC08 / 56];
+
+    /* Player number (shirt number byte at offset 78 relative to player start = team + playerIdx*38 + 78) */
+    uint8_t shirtNum = playerPtr[78];
+    *(uint16_t *)&e->fg = (uint16_t)shirtNum;
+    e->y = y;
+    e = (MenuEntry *)((uint8_t *)e + 56);
+
+    /* Second entry — just set y */
+    e->y = y;
+    e = (MenuEntry *)((uint8_t *)e + 56);
+
+    /* Position string */
+    uint8_t posField = playerPtr[102];  /* offset 76+26 = 102, PLAYERFILE_POSITIONANDFACE */
+    uint16_t posIdx = (posField & 0xE0) >> 3;  /* extract top 3 bits, shift to word index */
+    e->fg = playerPositionsStringTable[posIdx / 4];
+    e->y = y;
+    e = (MenuEntry *)((uint8_t *)e + 56);
+
+    /* Hidden entries */
+    e->isInvisible = 1;
+    e->y = y;
+    e = (MenuEntry *)((uint8_t *)e + 56);
+
+    e->isInvisible = 1;
+    e->y = y;
+    e = (MenuEntry *)((uint8_t *)e + 56);
+
+    e->isInvisible = 1;
+    e->isInvisible = 1;  /* written twice in asm */
+    e->y = y;
+    e = (MenuEntry *)((uint8_t *)e + 56);
+
+    /* Draw all 6 entries */
+    _DrawMultipleItems(6, &menuEntries[0xC08 / 56]);
 }

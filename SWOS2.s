@@ -35217,6 +35217,20 @@ _asm_DIY_SimulateCupMatch:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
+; uint16_t _asm_DIY_PlayCupMatchAndAdvance(uint16_t mode)
+; Calls DIY_PlayCupMatchAndAdvance with d7=mode, returns d0 status.
+; Stores multi-reg results (a1,a2,d1,d2) to globals for C caller.
+_asm_DIY_PlayCupMatchAndAdvance:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  44(sp),d7       ; 1st C arg → d7
+                jsr     DIY_PlayCupMatchAndAdvance
+                move.l  a1,(diyCupLastMatchTeam1Ptr).l
+                move.l  a2,(diyCupLastMatchTeam2Ptr).l
+                move.w  d1,(diyCupLastMatchScoreTeam1).l
+                move.w  d2,(diyCupLastMatchScoreTeam2).l
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
+
 ; void _asm_DIY_LoadCurrentCompetitionSlot(void)
 _asm_DIY_LoadCurrentCompetitionSlot:
                 movem.l d2-d7/a2-a6,-(sp)
@@ -41371,12 +41385,7 @@ DIYSetMonthsOrPitchTypeEntries:
 ; ===== DIYLeagueChangePitchTypeOrSeason =====
 ; prototype: void __usercall DIYLeagueChangePitchTypeOrSeason()
 DIYLeagueChangePitchTypeOrSeason:
-                eori.w  #1,(diyCompetitionStart+DIY_COMPETITION_PITCHTYPEORSEASON).l
-                bsr.s   DIYSetMonthsOrPitchTypeEntries
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a5
-                move.w  #5,d0
-                jsr     CallDrawMultipleItems
-                rts
+                jmp     _DIYLeagueChangePitchTypeOrSeason
 
 ; ===== DesignDIYLeagueChangePitchType =====
 ; prototype: void __usercall DesignDIYLeagueChangePitchType(struct MenuEntry *entry@<a5>)
@@ -45632,63 +45641,7 @@ DIYCupOnSelect17:
 ; ===== DIYCupOnSelect1 =====
 ; prototype: void __usercall DIYCupOnSelect1()
 DIYCupOnSelect1:
-                lea     (diyCompetitionStart).l,a0
-                clr.w   (diyCupMatchListDrawModeFlag).l
-                cmpi.w  #1,$4A(a0)
-                beq.s   loc_134796
-                cmpi.w  #2,$4A(a0)
-                beq.s   loc_1347A4
-                cmpi.w  #3,$4A(a0)
-                beq.s   loc_1347DE
-                cmpi.w  #4,$4A(a0)
-                beq.s   loc_1347EC
-                cmpi.w  #5,$4A(a0)
-                beq.s   loc_1347FA
-                bra.s   loc_134806
-loc_134796:
-                move.w  #0,$4A(a0)
-                jsr     DIY_UpdateCompetitionProgress
-                bra.s   loc_13481A
-loc_1347A4:
-                move.w  #1,(diyCupMatchListDrawModeFlag).l
-                movem.l a0,-(sp)
-                bsr.w   DesignDIYCup_UpdateRoundOptionsVisibility
-                movem.l (sp)+,a0
-                tst.w   (diyCupMenuArg0).l
-                beq.s   loc_1347C8
-                move.w  #6,$4A(a0)
-                bra.s   loc_13481A
-loc_1347C8:
-                tst.w   $32E(a0)
-                beq.s   loc_1347D6
-                move.w  #3,$4A(a0)
-                bra.s   loc_13481A
-loc_1347D6:
-                move.w  #4,$4A(a0)
-                bra.s   loc_13481A
-loc_1347DE:
-                move.w  #0,$4A(a0)
-                jsr     DIY_UpdateCompetitionProgress
-                bra.s   loc_13481A
-loc_1347EC:
-                move.w  #0,$4A(a0)
-                jsr     DIY_UpdateCompetitionProgress
-                bra.s   loc_13481A
-loc_1347FA:
-                move.w  #2,2(a0)
-                jmp     SetExitMenuFlag
-loc_134806:
-                move.w  #1,(diyCupMenuArg0Copy).l
-                bsr.w   DesignDIYCup_UpdateMatchListAndRedrawIfNeeded
-                bsr.w   DesignDIYCup_DrawCurrentMatchTeamEntries
-                bra.w   loc_134C96
-loc_13481A:
-                bsr.w   DesignDIYCup_BuildMenuTitleString
-                bsr.w   DesignDIYCup_HideCurrentMatchTeamEntries
-                clr.w   (diyCupMatchListScrollIndex).l
-                bsr.w   DesignDIYCup_BuildMatchListEntryStrings
-                bsr.w   DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection
-                jmp     DrawMenu
+                jmp     _DIYCupOnSelect1
 
 ; ===== DesignDIYCup_DrawCurrentMatchTeamEntries ===== (ported to C)
 DesignDIYCup_DrawCurrentMatchTeamEntries:
@@ -46073,125 +46026,50 @@ loc_134ED8:
 locret_134EF8:
                 rts
 
-; ===== DIYCupOnSelect3 =====
-; prototype: void __usercall DIYCupOnSelect3(struct MenuEntry *entry@<a5>)
+; ===== DIYCupOnSelect3 ===== (ported to C → _DIYCupOnSelect3)
 DIYCupOnSelect3:
-                move.w  2(a5),(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+4).l
-                move.w  #2,d7
-                bra.s   DIYCupOnSelectCommon
+                move.l  a5,-(sp)
+                jsr     _DIYCupOnSelect3
+                addq.l  #4,sp
+                rts
 
-; ===== DIYCupOnSelect4 =====
-; prototype: void __usercall DIYCupOnSelect4(struct MenuEntry *entry@<a5>)
+; ===== DIYCupOnSelect4 ===== (ported to C → _DIYCupOnSelect4)
 DIYCupOnSelect4:
-                move.w  2(a5),(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+4).l
-                move.w  #3,d7
-                bra.s   DIYCupOnSelectCommon
+                move.l  a5,-(sp)
+                jsr     _DIYCupOnSelect4
+                addq.l  #4,sp
+                rts
 
-; ===== DIYCupOnSelect5 =====
-; prototype: void __usercall DIYCupOnSelect5(struct MenuEntry *entry@<a5>)
+; ===== DIYCupOnSelect5 ===== (ported to C → _DIYCupOnSelect5)
 DIYCupOnSelect5:
-                move.w  2(a5),(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+4).l
-                clr.w   d7
-                bra.s   DIYCupOnSelectCommon
+                move.l  a5,-(sp)
+                jsr     _DIYCupOnSelect5
+                addq.l  #4,sp
+                rts
 
-; ===== DIYCupOnSelect6 =====
-; prototype: void __usercall DIYCupOnSelect6(struct MenuEntry *entry@<a5>)
+; ===== DIYCupOnSelect6 ===== (ported to C → _DIYCupOnSelect6)
 DIYCupOnSelect6:
-                move.w  2(a5),(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+8).l
-                move.w  #1,d7
-                bra.s   DIYCupOnSelectCommon
+                move.l  a5,-(sp)
+                jsr     _DIYCupOnSelect6
+                addq.l  #4,sp
+                rts
 
-; ===== DIYCupOnSelect7 =====
-; prototype: void __usercall DIYCupOnSelect7(struct MenuEntry *entry@<a5>)
+; ===== DIYCupOnSelect7 ===== (ported to C → _DIYCupOnSelect7)
 DIYCupOnSelect7:
-                move.w  2(a5),(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+8).l
-                move.w  #3,d7
-                bra.s   DIYCupOnSelectCommon
+                move.l  a5,-(sp)
+                jsr     _DIYCupOnSelect7
+                addq.l  #4,sp
+                rts
 
-; ===== DIYCupOnSelect8 =====
-; prototype: void __usercall DIYCupOnSelect8(struct MenuEntry *entry@<a5>)
+; ===== DIYCupOnSelect8 ===== (ported to C → _DIYCupOnSelect8)
 DIYCupOnSelect8:
-                move.w  MENUENTRY_ORDINAL(a5),(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+8).l
-                clr.w   d7
+                move.l  a5,-(sp)
+                jsr     _DIYCupOnSelect8
+                addq.l  #4,sp
+                rts
 
-; ===== DIYCupOnSelectCommon =====
-; prototype: void __usercall DIYCupOnSelectCommon()
+; ===== DIYCupOnSelectCommon ===== (dead — only called from now-ported OnSelect3-8)
 DIYCupOnSelectCommon:
-                jsr     DIY_PlayCupMatchAndAdvance
-                bne.w   locret_13504A
-                move.l  a1,(diyCupLastMatchTeam1Ptr).l
-                move.l  a2,(diyCupLastMatchTeam2Ptr).l
-                move.w  d1,(diyCupLastMatchScoreTeam1).l
-                move.w  d2,(diyCupLastMatchScoreTeam2).l
-                move.w  #$FFFF,(diyCupMenuArg0Copy).l
-                lea     (diyCompetitionStart).l,a0
-                tst.w   $54(a0)
-                beq.w   loc_135028
-                tst.w   $48(a0)
-                beq.s   loc_134F90
-                tst.w   (diyCupMenuArg0).l
-                bne.w   loc_135012
-loc_134F90:
-                tst.w   $14A(a0)
-                bne.s   loc_134FAE
-                cmpi.w  #2,$14C(a0)
-                bne.s   loc_134FAE
-                tst.w   (diyCupMenuArg0).l
-                bne.s   loc_135012
-                move.w  #1,$4A(a0)
-                bra.s   loc_135028
-loc_134FAE:
-                tst.w   $32E(a0)
-                bne.s   loc_134FD0
-                tst.w   (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+$E).l
-                bne.s   loc_13501A
-                tst.w   $330(a0)
-                bne.s   loc_135002
-                move.w  $58(a0),d0
-                addq.w  #1,d0
-                cmp.w   $5A(a0),d0
-                beq.s   loc_135002
-                bra.s   loc_134FFA
-loc_134FD0:
-                tst.w   $330(a0)
-                bne.s   loc_134FF2
-                tst.w   (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+$E).l
-                bne.s   loc_134FF2
-                move.w  $58(a0),d0
-                addq.w  #1,d0
-                cmp.w   $5A(a0),d0
-                bne.s   loc_134FFA
-                tst.w   (diyCupMenuArg0).l
-                bne.s   loc_135012
-loc_134FF2:
-                move.w  #3,$4A(a0)
-                bra.s   loc_135028
-loc_134FFA:
-                move.w  #2,$4A(a0)
-                bra.s   loc_135028
-loc_135002:
-                tst.w   (diyCupMenuArg0).l
-                bne.s   loc_135012
-                move.w  #4,$4A(a0)
-                bra.s   loc_135028
-loc_135012:
-                move.w  #6,$4A(a0)
-                bra.s   loc_135028
-loc_13501A:
-                move.w  #5,$4A(a0)
-                cmpi.w  #2,$48(a0)
-                bne.s   loc_135034
-loc_135028:
-                tst.w   $56(a0)
-                beq.s   loc_135034
-                move.w  #6,$4A(a0)
-loc_135034:
-                bsr.w   DesignDIYCup_UpdateCurrentMatchResultHeaderEntries
-                bsr.w   DesignDIYCup_UpdateMatchListScrollAndRebuildStrings
-                bsr.w   DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection
-                bsr.w   DesignDIYCup_BuildMatchListEntryStrings
-                jmp     DrawMenu
-locret_13504A:
                 rts
 
 ; ===== DesignDIYCup_UpdateCurrentMatchResultHeaderEntries =====
@@ -48982,33 +48860,7 @@ DesignDIYTournamentOnSelect2:
 ; ===== DesignDIYTournamentOnSelect89 =====
 ; prototype: void __usercall DesignDIYTournamentOnSelect89()
 DesignDIYTournamentOnSelect89:
-                move.w  (diyFileBufferCopy+DIY_COMPETITION_NUMTEAMS).l,d0
-                lea     ((diyFileBufferCopy+DIY_COMPETITION_FIELD_2+2)).l,a0
-                lea     (aPlayTournament).l,a1 ; "PLAY TOURNAMENT"
-                move.w  #1,d2
-                move.w  #1,d3
-                move.w  #1,d4
-                jsr     GoGetTeamsForPlay
-                tst.w   (chooseTeamsResult).l
-                bne.w   loc_136264
-                bra.s   DesignDIYTournamentOnSelect91
-loc_136264:
-                move.w  #1,d0
-                jsr     InitCareerVariables
-                lea     (diyTournamentTeamIds).l,a0
-                move.w  (diyFileBufferCopy+DIY_COMPETITION_NUMTEAMS).l,d0
-                jsr     CopySelectedTeamNumbers
-                jsr     nullsub_12
-                jsr     DIYTournament_RecalculateMatchesPerTeam
-                jsr     DIY_LoadCurrentCompetitionSlot
-                jsr     InitTeams
-                clr.w   d0
-                clr.w   d1
-                clr.w   d2
-                jsr     DIY_EditCompetitionSlot
-                jsr     RestoreDIYTournament
-                jmp     SetExitMenuFlag
-                rts
+                jmp     _DesignDIYTournamentOnSelect89
 
 ; ===== DesignDIYTournament_UpdatePitchTypeSeasonalUI ===== (ported to C → _DesignDIYTournament_UpdatePitchTypeSeasonalUI)
 DesignDIYTournament_UpdatePitchTypeSeasonalUI:
@@ -51289,16 +51141,8 @@ shirtsIndexTable:
 ; ===== EditTeamsInit =====
 ; prototype: void __usercall EditTeamsInit()
 EditTeamsInit:
-                movea.l (editTeamsSelectedTeam).l,a0
-                lea     (selTeamsPtr).l,a1
-                move.w  #341,d0
-loc_137B56:
-                move.w  (a0)+,(a1)+
-                dbf     d0,loc_137B56
-                clr.w   (teamIsImported).l
+                jmp     _EditTeamsInit
 
-; ===== EditTeamsFinish =====
-; prototype: void __usercall EditTeamsFinish()
 ; ===== EditTeamsFinish ===== (ported to C → _EditTeamsFinish)
 EditTeamsFinish:
                 jmp     _EditTeamsFinish
@@ -51368,366 +51212,88 @@ loc_137C38:
 ; prototype: void __usercall EditTeamsUndo()
 ; Restore team currently editing.
 EditTeamsUndo:
-                clr.w   (teamIsImported).l
-                movea.l (editTeamsSelectedTeam).l,a0
-                lea     (selTeamsPtr).l,a1
-                move.w  #341,d0
-loc_137C58:
-                move.w  (a0)+,(a1)+
-                dbf     d0,loc_137C58
-                bsr.w   InitEditTeamsMenu
-                jmp     DrawMenu
+                jmp     _EditTeamsUndo
 
 ; ===== EditTeamsOK =====
 ; prototype: void __usercall EditTeamsOK()
 EditTeamsOK:
-                movea.l (editTeamsSelectedTeam).l,a0
-                lea     (selTeamsPtr).l,a1
-                move.w  #341,d1
-loc_137C78:
-                move.w  (a0)+,d0
-                cmp.w   (a1)+,d0
-                bne.s   loc_137C88
-                dbf     d1,loc_137C78
-                jmp     SetExitMenuFlag
-loc_137C88:
-                move.w  #1,(saveCustomTeams).l
-                movea.l (editTeamsSelectedTeam).l,a1
-                lea     (selTeamsPtr).l,a0
-                move.w  #341,d0
-loc_137CA0:
-                move.w  (a0)+,(a1)+
-                dbf     d0,loc_137CA0
-                jmp     SetExitMenuFlag
+                jmp     _EditTeamsOK
 
 ; ===== EditTeamsChangeShirtsPrimary =====
 ; prototype: void __usercall EditTeamsChangeShirtsPrimary()
 EditTeamsChangeShirtsPrimary:
-                lea     (selTeamsPtr).l,a6
-                cmpi.w  #$81,(controlMask).l ; right + fire
-                beq.s   loc_137CEC
-                cmpi.w  #$201,(controlMask).l ; down + fire
-                beq.s   loc_137D12
-                cmpi.w  #$101,(controlMask).l ; up + fire
-                beq.s   loc_137CFC
-                cmpi.w  #$41,(controlMask).l ; 'A'; left + fire
-                                        ; left + fire
-                beq.s   loc_137CDE
-                bra.w   locret_137D4A
-loc_137CDE:
-                move.b  TEAMFILE_PRSTRIPESCOLOR(a6),d0
-                subq.b  #1,d0
-                bpl.s   loc_137D2A
-                move.b  #9,d0
-                bra.s   loc_137D2A
-loc_137CEC:
-                move.b  TEAMFILE_PRSTRIPESCOLOR(a6),d0
-                addq.b  #1,d0
-                cmpi.b  #10,d0
-                bne.s   loc_137D2A
-                clr.b   d0
-                bra.s   loc_137D2A
-loc_137CFC:
-                cmpi.b  #SHIRT_ORDINARY,TEAMFILE_PRSHIRTTYPE(a6)
-                beq.s   loc_137CDE
-                move.b  TEAMFILE_PRBASICCOLOR(a6),d0
-                subq.b  #1,d0
-                bpl.s   loc_137D30
-                move.b  #9,d0
-                bra.s   loc_137D30
-loc_137D12:
-                cmpi.b  #SHIRT_ORDINARY,TEAMFILE_PRSHIRTTYPE(a6)
-                beq.s   loc_137CEC
-                move.b  TEAMFILE_PRBASICCOLOR(a6),d0
-                addq.b  #1,d0
-                cmpi.b  #$A,d0
-                bne.s   loc_137D30
-                clr.b   d0
-                bra.s   loc_137D30
-loc_137D2A:
-                move.b  d0,TEAMFILE_PRSTRIPESCOLOR(a6)
-                bra.s   loc_137D34
-loc_137D30:
-                move.b  d0,TEAMFILE_PRBASICCOLOR(a6)
-loc_137D34:
-                bsr.w   PrimaryKitColorConversion
-                bsr.w   nullsub_16
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a5
-                move.w  #1,d0
-                jmp     CallDrawMultipleItems
-locret_137D4A:
-                rts
+                jmp     _EditTeamsChangeShirtsPrimary
 
 ; ===== EditTeamsChangeShirtsSecondary =====
 ; prototype: void __usercall EditTeamsChangeShirtsSecondary()
 EditTeamsChangeShirtsSecondary:
-                lea     (selTeamsPtr).l,a6
-                cmpi.w  #$81,(controlMask).l ; fire + right
-                beq.s   loc_137D8C
-                cmpi.w  #$201,(controlMask).l ; fire + down
-                beq.s   loc_137DB2
-                cmpi.w  #$101,(controlMask).l ; fire + up
-                beq.s   loc_137D9C
-                cmpi.w  #$41,(controlMask).l ; 'A'; fire + left
-                                        ; fire + left
-                beq.s   loc_137D7E
-                bra.w   locret_137DEA
-loc_137D7E:
-                move.b  TEAMFILE_SECSTRIPESCOLOR(a6),d0
-                subq.b  #1,d0
-                bpl.s   loc_137DCA
-                move.b  #9,d0
-                bra.s   loc_137DCA
-loc_137D8C:
-                move.b  TEAMFILE_SECSTRIPESCOLOR(a6),d0
-                addq.b  #1,d0
-                cmpi.b  #10,d0
-                bne.s   loc_137DCA
-                clr.b   d0
-                bra.s   loc_137DCA
-loc_137D9C:
-                cmpi.b  #0,TEAMFILE_SECSHIRTTPE(a6)
-                beq.s   loc_137D7E
-                move.b  TEAMFILE_SECBASICCOLOR(a6),d0
-                subq.b  #1,d0
-                bpl.s   loc_137DD0
-                move.b  #9,d0
-                bra.s   loc_137DD0
-loc_137DB2:
-                cmpi.b  #0,TEAMFILE_SECSHIRTTPE(a6)
-                beq.s   loc_137D8C
-                move.b  TEAMFILE_SECBASICCOLOR(a6),d0
-                addq.b  #1,d0
-                cmpi.b  #10,d0
-                bne.s   loc_137DD0
-                clr.b   d0
-                bra.s   loc_137DD0
-loc_137DCA:
-                move.b  d0,TEAMFILE_SECSTRIPESCOLOR(a6)
-                bra.s   loc_137DD4
-loc_137DD0:
-                move.b  d0,TEAMFILE_SECBASICCOLOR(a6)
-loc_137DD4:
-                bsr.w   SecondaryKitColorConversion
-                bsr.w   nullsub_16
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1F8)).l,a5
-                move.w  #1,d0
-                jmp     CallDrawMultipleItems
-locret_137DEA:
-                rts
+                jmp     _EditTeamsChangeShirtsSecondary
 
 ; ===== EditTeamsChangeShortsPrimary =====
 ; prototype: void __usercall EditTeamsChangeShortsPrimary()
 EditTeamsChangeShortsPrimary:
-                lea     (selTeamsPtr).l,a6
-                move.b  TEAMFILE_PRSHORTSCOLOR(a6),d0
-                cmpi.w  #$41,(controlMask).l ; 'A'; fire + left
-                                        ; fire + left
-                beq.s   loc_137E22
-                cmpi.w  #$101,(controlMask).l ; fire + up
-                beq.s   loc_137E22
-                cmpi.w  #$81,(controlMask).l ; fire + right
-                beq.s   loc_137E2C
-                cmpi.w  #$201,(controlMask).l ; fire + down
-                beq.s   loc_137E2C
-                bra.w   locret_137E50
-loc_137E22:
-                subq.b  #1,d0
-                bpl.s   loc_137E36
-                move.b  #9,d0
-                bra.s   loc_137E36
-loc_137E2C:
-                addq.b  #1,d0
-                cmpi.b  #10,d0
-                bne.s   loc_137E36
-                clr.b   d0
-loc_137E36:
-                move.b  d0,TEAMFILE_PRSHORTSCOLOR(a6)
-                bsr.w   PrimaryKitColorConversion
-                bsr.w   nullsub_16
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a5
-                move.w  #1,d0
-                jmp     CallDrawMultipleItems
-locret_137E50:
-                rts
+                jmp     _EditTeamsChangeShortsPrimary
 
 ; ===== EditTeamsChangeShortsSecondary =====
 ; prototype: void __usercall EditTeamsChangeShortsSecondary()
 EditTeamsChangeShortsSecondary:
-                lea     (selTeamsPtr).l,a6
-                move.b  TEAMFILE_SECSHORTSCOLOR(a6),d0
-                cmpi.w  #$41,(controlMask).l ; 'A'; fire + left
-                                        ; fire + left
-                beq.s   loc_137E88
-                cmpi.w  #$101,(controlMask).l ; up + left
-                beq.s   loc_137E88
-                cmpi.w  #$81,(controlMask).l ; fire + right
-                beq.s   loc_137E92
-                cmpi.w  #$201,(controlMask).l ; fire + down
-                beq.s   loc_137E92
-                bra.w   locret_137EB6
-loc_137E88:
-                subq.b  #1,d0
-                bpl.s   loc_137E9C
-                move.b  #9,d0
-                bra.s   loc_137E9C
-loc_137E92:
-                addq.b  #1,d0
-                cmpi.b  #10,d0
-                bne.s   loc_137E9C
-                clr.b   d0
-loc_137E9C:
-                move.b  d0,TEAMFILE_SECSHORTSCOLOR(a6)
-                bsr.w   SecondaryKitColorConversion
-                bsr.w   nullsub_16
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$230)).l,a5
-                move.w  #1,d0
-                jmp     CallDrawMultipleItems
-locret_137EB6:
-                rts
+                jmp     _EditTeamsChangeShortsSecondary
 
 ; ===== EditTeamsChangeSocksPrimary =====
 ; prototype: void __usercall EditTeamsChangeSocksPrimary()
 EditTeamsChangeSocksPrimary:
-                lea     (selTeamsPtr).l,a6
-                move.b  selTeamSocksColor-selTeamsPtr(a6),d0
-                cmpi.w  #$41,(controlMask).l ; 'A'; fire + left
-                                        ; fire + left
-                beq.s   loc_137EEE
-                cmpi.w  #$101,(controlMask).l ; fire + up
-                beq.s   loc_137EEE
-                cmpi.w  #$81,(controlMask).l ; fire + right
-                beq.s   loc_137EF8
-                cmpi.w  #$201,(controlMask).l ; fire + down
-                beq.s   loc_137EF8
-                bra.w   locret_137F18
-loc_137EEE:
-                subq.b  #1,d0
-                bpl.s   loc_137F02
-                move.b  #9,d0
-                bra.s   loc_137F02
-loc_137EF8:
-                addq.b  #1,d0
-                cmpi.b  #10,d0
-                bne.s   loc_137F02
-                clr.b   d0
-loc_137F02:
-                move.b  d0,TEAMFILE_PRSOCKSCOLOR(a6)
-                bsr.w   PrimaryKitColorConversion
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a5
-                move.w  #1,d0
-                jmp     CallDrawMultipleItems
-locret_137F18:
-                rts
+                jmp     _EditTeamsChangeSocksPrimary
 
 ; ===== EditTeamsChangeSocksSecondary =====
 ; prototype: void __usercall EditTeamsChangeSocksSecondary()
 EditTeamsChangeSocksSecondary:
-                lea     (selTeamsPtr).l,a6
-                move.b  TEAMFILE_SECSOCKSCOLOR(a6),d0
-                cmpi.w  #$41,(controlMask).l ; 'A'; fire + left
-                                        ; fire + left
-                beq.s   loc_137F50
-                cmpi.w  #$101,(controlMask).l ; fire + up
-                beq.s   loc_137F50
-                cmpi.w  #$81,(controlMask).l ; fire + right
-                beq.s   loc_137F5A
-                cmpi.w  #$201,(controlMask).l ; fire + down
-                beq.s   loc_137F5A
-                bra.w   locret_137F7A
-loc_137F50:
-                subq.b  #1,d0
-                bpl.s   loc_137F64
-                move.b  #9,d0
-                bra.s   loc_137F64
-loc_137F5A:
-                addq.b  #1,d0
-                cmpi.b  #10,d0
-                bne.s   loc_137F64
-                clr.b   d0
-loc_137F64:
-                move.b  d0,TEAMFILE_SECSOCKSCOLOR(a6)
-                bsr.w   SecondaryKitColorConversion
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$268)).l,a5
-                move.w  #1,d0
-                jmp     CallDrawMultipleItems
-locret_137F7A:
-                rts
+                jmp     _EditTeamsChangeSocksSecondary
 
 ; ===== EditTeamsSelectPrimaryShirtType =====
 ; prototype: void __usercall EditTeamsSelectPrimaryShirtType(MenuEntry *menu@<a5>)
 EditTeamsSelectPrimaryShirtType:
-                lea     (selTeamsPtr).l,a6
-                move.w  2(a5),d0
-                subi.w  #12,d0
-                move.b  d0,TEAMFILE_PRSHIRTTYPE(a6)
-                bsr.w   MarkFirstKitShirt
-                bsr.w   PrimaryKitColorConversion
-                bsr.w   nullsub_16
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2A0)).l,a5
-                move.w  #4,d0
-                jsr     CallDrawMultipleItems
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a5
-                move.w  #1,d0
-                jmp     CallDrawMultipleItems
+                move.l  a5,-(sp)
+                jsr     _EditTeamsSelectPrimaryShirtType
+                addq.l  #4,sp
+                rts
 
 ; ===== EditTeamsSelectSecondaryShirtType =====
 ; prototype: void __usercall EditTeamsSelectSecondaryShirtType(MenuEntry *menu@<a5>)
 EditTeamsSelectSecondaryShirtType:
-                lea     (selTeamsPtr).l,a6
-                move.w  2(a5),d0
-                subi.w  #16,d0
-                move.b  d0,31(a6)
-                bsr.w   MarkSecondKitShirt
-                bsr.w   SecondaryKitColorConversion
-                bsr.w   nullsub_16
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$380)).l,a5
-                move.w  #4,d0
-                jsr     CallDrawMultipleItems
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1F8)).l,a5
-                move.w  #1,d0
-                jmp     CallDrawMultipleItems
+                move.l  a5,-(sp)
+                jsr     _EditTeamsSelectSecondaryShirtType
+                addq.l  #4,sp
+                rts
 
 ; ===== EditTeamsChangePlayerName =====
 ; prototype: void __usercall EditTeamsChangePlayerName(MenuEntry *menu@<a5>)
 EditTeamsChangePlayerName:
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a5),a0
-                move.w  #23,d0          ; player name - max 22 characters + null
-                jmp     InputText
+                move.l  a5,-(sp)
+                jsr     _EditTeamsChangePlayerName
+                addq.l  #4,sp
+                rts
 
-; ===== EditTeamsSelectTeamName =====
-; prototype: void __usercall EditTeamsSelectTeamName(MenuEntry *menu@<a5>)
+; ===== EditTeamsSelectTeamName ===== (ported to C → _EditTeamsSelectTeamName)
 EditTeamsSelectTeamName:
-                movea.l 38(a5),a0
-                move.w  #17,d0          ; team name = 16 characters + null
-                jmp     InputText
+                move.l  a5,-(sp)
+                jsr     _EditTeamsSelectTeamName
+                addq.l  #4,sp
+                rts
 
-; ===== EditTeamsSelectCoachName =====
-; prototype: void __usercall EditTeamsSelectCoachName(MenuEntry *menu@<a5>)
+; ===== EditTeamsSelectCoachName ===== (ported to C → _EditTeamsSelectCoachName)
 EditTeamsSelectCoachName:
-                movea.l 38(a5),a0
-                move.w  #23,d0          ; coach name = max 22 chars. + null character
-                jmp     InputText
+                move.l  a5,-(sp)
+                jsr     _EditTeamsSelectCoachName
+                addq.l  #4,sp
+                rts
 
 ; ===== EditTeamsChangePlayerFace =====
 ; prototype: void __usercall EditTeamsChangePlayerFace(MenuEntry *menu@<a5>)
 EditTeamsChangePlayerFace:
-                bsr.w   EditTeamsGetPlayerPointer
-                move.b  PLAYERFILE_POSITIONANDFACE+$4C(a0),d0
-                andi.w  #$18,d0         ; extract bits 3 and 4 - player face index
-                lsr.w   #3,d0           ; player face index
-                addq.w  #1,d0           ; increase face index
-                cmpi.w  #3,d0
-                bne.s   loc_138032
-                clr.w   d0
-loc_138032:
-                move.w  d0,d1
-                andi.b  #$E7,PLAYERFILE_POSITIONANDFACE+$4C(a0)
-                lsl.b   #3,d0           ; set new face index bits into position
-                add.b   d0,PLAYERFILE_POSITIONANDFACE+$4C(a0)
-                addi.w  #SPR_PL_FACE_WHITE_GUY,d1
-                move.w  d1,MENUENTRY_FG+ENTRYTYPE2UNION_SPRITE2(a5)
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _EditTeamsChangePlayerFace
+                addq.l  #4,sp
+                rts
 
 ; ===== InitEditTeamsMenu =====
 ; prototype: void __usercall InitEditTeamsMenu()
@@ -51738,172 +51304,26 @@ loc_138032:
 ; Also do some kind of color conversion.
 ; Reads all from edit teams selected team.
 InitEditTeamsMenu:
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$460).l
-                tst.w   (teamIsImported).l
-                beq.s   loc_138060
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$460).l
-loc_138060:
-                lea     (selTeamsPtr).l,a6
-                lea     (menuEntries).l,a0
-                lea     5(a6),a2
-                move.l  a2,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                lea     36(a6),a2
-                move.l  a2,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0)
-                bsr.w   PrimaryKitColorConversion
-                bsr.w   SecondaryKitColorConversion
-                bsr.w   MarkFirstKitShirt
-                bsr.w   MarkSecondKitShirt
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$508)).l,a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$888)).l,a1
-                move.w  #$F,d7
-loc_13809A:
-                move.b  PLAYERFILE_POSITIONANDFACE+$4C(a6),d0
-                andi.w  #$18,d0
-                lsr.w   #3,d0
-                addi.w  #SPR_PL_FACE_WHITE_GUY,d0
-                move.w  d0,38(a0)
-                lea     56(a0),a0
-                lea     PLAYERFILE_PLAYERNAME+$4C(a6),a2
-                move.l  a2,38(a1)
-                lea     56(a1),a1
-                adda.l  #38,a6
-                dbf     d7,loc_13809A
-                rts
+                jmp     _InitEditTeamsMenu
 
 ; ===== EditTeamsPlayersBeforeDraw =====
 ; prototype: void __usercall EditTeamsPlayersBeforeDraw(MenuEntry *menu@<a5>)
 EditTeamsPlayersBeforeDraw:
-                move.w  MENUENTRY_ORDINAL(a5),d0
-                subi.w  #23,d0          ; 23 = start of player faces
-                mulu.w  #38,d0
-                lea     (selTeamsPtr).l,a6
-                adda.l  d0,a6
-                move.b  TEAMFILE_PLAYERS+PLAYERFILE_POSITIONANDFACE(a6),d6
-                move.w  MENUENTRY_Y(a5),d7
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$C08)).l,a0
-                clr.w   d0
-                move.b  78(a6),d0
-                move.w  d0,MENUENTRY_FG+ENTRYTYPE2UNION_NUMBER(a0)
-                move.w  d7,MENUENTRY_Y(a0)
-                lea     56(a0),a0
-                move.w  d7,MENUENTRY_Y(a0)
-                lea     56(a0),a0
-                lea     (playerPositionsStringTable).l,a2
-                move.b  102(a6),d0
-                andi.w  #$E0,d0
-                lsr.w   #3,d0
-                move.l  (a2,d0.w),MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0)
-                move.w  d7,MENUENTRY_Y(a0)
-                lea     56(a0),a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  d7,MENUENTRY_Y(a0)
-                lea     56(a0),a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  d7,MENUENTRY_Y(a0)
-                lea     56(a0),a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  d7,MENUENTRY_Y(a0)
-                lea     56(a0),a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$C08)).l,a5
-                move.w  #6,d0
-                jmp     DrawMultipleItems
+                move.l  a5,-(sp)
+                jsr     _EditTeamsPlayersBeforeDraw
+                addq.l  #4,sp
+                rts
 
 ; ===== PrimaryKitColorConversion =====
 ; prototype: void __usercall PrimaryKitColorConversion()
 PrimaryKitColorConversion:
-                lea     (selTeamsPtr).l,a6
-                lea     editTeamsPrimaryShirtColTable(pc),a2
-                lea     (kTeamColorsTable).l,a3
-                clr.w   d1
-                move.b  TEAMFILE_PRSTRIPESCOLOR(a6),d1
-                lsl.w   #1,d1
-                move.w  (a3,d1.w),d1
-                clr.w   d2
-                move.b  TEAMFILE_PRBASICCOLOR(a6),d2
-                lsl.w   #1,d2
-                move.w  (a3,d2.w),d2
-                lea     shirtTypesTable(pc),a3
-                clr.w   d0
-                move.b  TEAMFILE_PRSHIRTTYPE(a6),d0
-                lsl.w   #4,d0
-                lea     (a3,d0.w),a3
-                lea     shirtsIndexTable(pc),a4
-                move.w  #7,d3
-loc_13819E:
-                move.w  (a4)+,d0
-                cmpi.w  #2,(a3)+
-                beq.s   loc_1381AC
-                move.w  d1,(a2,d0.w)
-                bra.s   loc_1381B0
-loc_1381AC:
-                move.w  d2,(a2,d0.w)
-loc_1381B0:
-                dbf     d3,loc_13819E
-                lea     editTeamsShortsColTable(pc),a2
-                lea     (kTeamColorsTable).l,a3
-                clr.w   d0
-                move.b  TEAMFILE_PRSHORTSCOLOR(a6),d0
-                lsl.w   #1,d0
-                move.w  (a3,d0.w),d0
-                move.w  d0,(editTeamsShortsColTable+$16).l
-                lea     editTeamsSocksColTable(pc),a2
-                lea     (kTeamColorsTable).l,a3
-                clr.w   d0
-                move.b  TEAMFILE_PRSOCKSCOLOR(a6),d0
-                lsl.w   #1,d0
-                move.w  (a3,d0.w),d0
-                move.w  d0,(editTeamsSocksColTable+$16).l
-                rts
+                rts     ; dead — now called only from C
 
 ; ===== SecondaryKitColorConversion =====
 ; prototype: void __usercall SecondaryKitColorConversion()
 ; [edit teams menu function]
 SecondaryKitColorConversion:
-                lea     (selTeamsPtr).l,a6
-                lea     editTeamsSecondaryShirtColTable(pc),a2
-                lea     (kTeamColorsTable).l,a3
-                clr.w   d1
-                move.b  TEAMFILE_SECSTRIPESCOLOR(a6),d1
-                lsl.w   #1,d1
-                move.w  (a3,d1.w),d1
-                clr.w   d2
-                move.b  TEAMFILE_SECBASICCOLOR(a6),d2
-                lsl.w   #1,d2
-                move.w  (a3,d2.w),d2
-                lea     shirtTypesTable(pc),a3
-                clr.w   d0
-                move.b  TEAMFILE_SECSHIRTTPE(a6),d0
-                lsl.w   #4,d0
-                lea     (a3,d0.w),a3
-                lea     shirtsIndexTable(pc),a4
-                move.w  #7,d3
-loc_13822E:
-                move.w  (a4)+,d0
-                cmpi.w  #2,(a3)+
-                beq.s   loc_13823C
-                move.w  d1,(a2,d0.w)
-                bra.s   loc_138240
-loc_13823C:
-                move.w  d2,(a2,d0.w)
-loc_138240:
-                dbf     d3,loc_13822E
-                lea     editTeamsSecondaryShortsColTable(pc),a2
-                lea     (kTeamColorsTable).l,a3
-                clr.w   d0
-                move.b  TEAMFILE_SECSHORTSCOLOR(a6),d0
-                lsl.w   #1,d0
-                move.w  (a3,d0.w),d0
-                move.w  d0,(editTeamsSecondaryShortsColTable+$16).l
-                lea     editTeamsSecondarySocksColTable(pc),a2
-                lea     (kTeamColorsTable).l,a3
-                clr.w   d0
-                move.b  TEAMFILE_SECSOCKSCOLOR(a6),d0
-                lsl.w   #1,d0
-                move.w  (a3,d0.w),d0
-                move.w  d0,(editTeamsSecondarySocksColTable+$16).l
-                rts
+                rts     ; dead — now called only from C
 
 ; ===== MarkFirstKitShirt =====
 ; prototype: void __usercall MarkFirstKitShirt()
@@ -51911,19 +51331,7 @@ loc_138240:
 ; In edit menu team colors in red shirt corresponding
 ; to selected team settings, for the first (upper) kit.
 MarkFirstKitShirt:
-                lea     (selTeamsPtr).l,a6
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$348)).l,a0
-                move.b  TEAMFILE_PRSHIRTTYPE(a6),d0
-                move.w  #3,d1
-loc_138290:
-                move.w  #PINK_TO_BROWN_9,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                cmp.b   d1,d0
-                bne.s   loc_1382A0
-                move.w  #RED_10,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-loc_1382A0:
-                lea     -56(a0),a0
-                dbf     d1,loc_138290
-                rts
+                rts     ; dead — now called only from C
 
 ; ===== MarkSecondKitShirt =====
 ; prototype: void __usercall MarkSecondKitShirt()
@@ -51931,19 +51339,7 @@ loc_1382A0:
 ; In edit menu team colors in red shirt corresponding
 ; to selected team settings, for the second (lower) kit.
 MarkSecondKitShirt:
-                lea     (selTeamsPtr).l,a6
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$428)).l,a0
-                move.b  TEAMFILE_SECSHIRTTPE(a6),d0
-                move.w  #3,d1
-loc_1382BC:
-                move.w  #PINK_TO_BROWN_9,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                cmp.b   d1,d0
-                bne.s   loc_1382CC
-                move.w  #RED_10,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-loc_1382CC:
-                lea     -56(a0),a0
-                dbf     d1,loc_1382BC
-                rts
+                rts     ; dead — now called only from C
 
 ; ===== EditTeamsGetPlayerPointer =====
 ; prototype: PlayerFile *__usercall EditTeamsGetPlayerPointer@<a0>(MenuEntry *entry@<a5>)
@@ -51951,12 +51347,7 @@ loc_1382CC:
 ; out:
 ;     A0 -> currently selected player
 EditTeamsGetPlayerPointer:
-                move.w  MENUENTRY_ORDINAL(a5),d0
-                subi.w  #23,d0
-                mulu.w  #38,d0
-                lea     (selTeamsPtr).l,a0
-                adda.l  d0,a0
-                rts
+                rts     ; dead — now called only from C
 
 ; ===== nullsub_16 =====
 ; prototype: void nullsub_16(...)

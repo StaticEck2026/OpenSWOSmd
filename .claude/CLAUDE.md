@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1217 functions ported across 131 chunks.
+**Current status:** 1249 functions ported across 133 chunks.
 
-**Last completed chunk:** Chunk 131 — DesignDIYLeague remaining + DIYCup menu helpers (12 → diy_competition.c): DIYSetMonthsOrPitchTypeEntries, DIYLeagueSetVariousFields, DIYLeagueOKSelected, DesignDIYLeagueUpdatePromotionRelegationText, DesignDIYLeagueFinish, DesignDIYLeagueChooseTeams, ShowDIYCupMenuWithParams, DIYCupFinish, DIYCupInit, DIYCupOnSelect10, DIYCupOnSelect16, DIYCupOnSelect17.
+**Last completed chunk:** Chunk 133 — EditTeams functions (22 → edit_tactics.c): EditTeamsInit, EditTeamsUndo, EditTeamsOK, 6 kit color changers, 2 shirt type selectors, 3 text input callbacks, ChangePlayerFace, InitEditTeamsMenu, PlayersBeforeDraw, + 5 static helpers (color conversion, kit marking, player pointer).
 
-**Next candidates:** DIYCupOnSelect3-8 + DIYCupOnSelectCommon (need DIY_PlayCupMatchAndAdvance bridge), DesignDIYCup remaining (BuildMatchListEntryStrings ~164 instr, UpdateMenuEntriesVisibilityAndSelection ~260 instr, AppendTeamNameToMenuEntry), SquadMenu, CareerGameListCommon, EditTactics.
+**Next candidates:** ImportTeamsMenu (needs ChooseTeamsDialog bridge), DesignDIYCup remaining (BuildMatchListEntryStrings, UpdateMenuEntriesVisibilityAndSelection, AppendTeamNameToMenuEntry), SquadMenu functions, CareerGameListCommon, JobOffers cluster, EditTactics remaining.
 
 ---
 

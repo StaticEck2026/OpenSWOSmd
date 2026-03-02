@@ -226,6 +226,17 @@ void _DIYCupOnSelect10(void);
 void _DIYCupOnSelect16(void);
 void _DIYCupOnSelect17(void);
 
+/* ---- DIYCup/League/Tournament select callbacks (Chunk 132) ---- */
+void _DIYLeagueChangePitchTypeOrSeason(void);
+void _DIYCupOnSelect1(void);
+void _DIYCupOnSelect3(MenuEntry *entry);
+void _DIYCupOnSelect4(MenuEntry *entry);
+void _DIYCupOnSelect5(MenuEntry *entry);
+void _DIYCupOnSelect6(MenuEntry *entry);
+void _DIYCupOnSelect7(MenuEntry *entry);
+void _DIYCupOnSelect8(MenuEntry *entry);
+void _DesignDIYTournamentOnSelect89(void);
+
 /* ---- OpenDiy* + ShowDiyCompetitionForSource (Chunk 116) ---- */
 void _ShowDiyCompetitionForSource(uint8_t *header);
 void _OpenDiyFromFile(void);

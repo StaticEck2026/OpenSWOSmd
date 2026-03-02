@@ -2643,6 +2643,24 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified**
 - Cumulative: 1217 functions across 131 chunks
 
+### Chunk 132 — DIYCup/League/Tournament select callbacks (10 → diy_competition.c)
+- Date: 2026-03-02
+- **diy_competition.c (9+1s):** _DIYLeagueChangePitchTypeOrSeason (toggle pitchTypeOrSeason, redraw), _DIYCupOnSelect1 (cup state dispatch switch on offset 0x4A), _DIYCupOnSelect3 (ordinal→offset 62, mode=2), _DIYCupOnSelect4 (ordinal→offset 62, mode=3), _DIYCupOnSelect5 (ordinal→offset 62, mode=0), _DIYCupOnSelect6 (ordinal→offset 66, mode=1), _DIYCupOnSelect7 (ordinal→offset 66, mode=3), _DIYCupOnSelect8 (ordinal→offset 66, mode=0), _DesignDIYTournamentOnSelect89 (choose teams & play tournament), static DIYCupOnSelectCommonC (play cup match, update state machine)
+- Created _asm_DIY_PlayCupMatchAndAdvance bridge: stores a1/a2/d1/d2 to diyCupLastMatch* globals, returns d0
+- DIYCupOnSelect3-8 each set a field then call DIYCupOnSelectCommonC; asm DIYCupOnSelectCommon stubbed as rts (dead)
+- loc_134C96 inlined into DIYCupOnSelect1 default case
+- New xdefs: _asm_DIY_PlayCupMatchAndAdvance, aPlayTournament
+- Build status: **verified**
+- Cumulative: 1227 functions across 132 chunks
+
+### Chunk 133 — EditTeams functions (22 → edit_tactics.c)
+- Date: 2026-03-02
+- **edit_tactics.c (17+5s):** _EditTeamsInit (copy team to edit buffer), _EditTeamsFinish (updated to call _InitEditTeamsMenu), _EditTeamsUndo (restore team, reinit), _EditTeamsOK (save if changed), _EditTeamsChangeShirtsPrimary, _EditTeamsChangeShirtsSecondary, _EditTeamsChangeShortsPrimary, _EditTeamsChangeShortsSecondary, _EditTeamsChangeSocksPrimary, _EditTeamsChangeSocksSecondary, _EditTeamsSelectPrimaryShirtType (a5 bridge), _EditTeamsSelectSecondaryShirtType (a5 bridge), _EditTeamsChangePlayerName (a5 bridge), _EditTeamsSelectTeamName (a5 bridge), _EditTeamsSelectCoachName (a5 bridge), _EditTeamsChangePlayerFace (a5 bridge), _InitEditTeamsMenu (set player faces/names/kit colors), _EditTeamsPlayersBeforeDraw (a5 bridge), static PrimaryKitColorConversionC, static SecondaryKitColorConversionC, static MarkFirstKitShirtC, static MarkSecondKitShirtC, static EditTeamsGetPlayerPointerC
+- Dead asm stubs: PrimaryKitColorConversion, SecondaryKitColorConversion, MarkFirstKitShirt, MarkSecondKitShirt, EditTeamsGetPlayerPointer (only called from now-ported C functions)
+- New xdefs: editTeamsSelectedTeam, saveCustomTeams, teamIsImported, kTeamColorsTable, editTeamsPrimaryShirtColTable, editTeamsShortsColTable, editTeamsSocksColTable, editTeamsSecondaryShirtColTable, editTeamsSecondaryShortsColTable, editTeamsSecondarySocksColTable, shirtTypesTable, shirtsIndexTable, playerPositionsStringTable
+- Build status: **verified** (warnings about selTeamsPtr size-1 extern are expected/harmless)
+- Cumulative: 1249 functions across 133 chunks
+
 ### Phase Transitions (see CLAUDE.md "Project Phases")
 - [ ] Phase 1 complete: all subroutines ported → output `*** READY FOR TESTING PHASE! ***` and STOP
 - [ ] Phase 2: user tests game, fixes any bugs found
@@ -2788,5 +2806,7 @@ Update this section every time you port a chunk. Keep it chronological.
 | 129   | 8+2s      | 1195       |
 | 130   | 10        | 1205       |
 | 131   | 12        | 1217       |
+| 132   | 9+1s      | 1227       |
+| 133   | 17+5s     | 1249       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

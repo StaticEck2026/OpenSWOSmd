@@ -106,3 +106,22 @@ void _LoadTactics(void);
 
 /* --- Edit Teams (Chunk 117) --- */
 void _EditTeamsFinish(void);
+
+/* --- Edit Teams (Chunk 133) --- */
+void _EditTeamsInit(void);
+void _EditTeamsUndo(void);
+void _EditTeamsOK(void);
+void _EditTeamsChangeShirtsPrimary(void);
+void _EditTeamsChangeShirtsSecondary(void);
+void _EditTeamsChangeShortsPrimary(void);
+void _EditTeamsChangeShortsSecondary(void);
+void _EditTeamsChangeSocksPrimary(void);
+void _EditTeamsChangeSocksSecondary(void);
+void _EditTeamsSelectPrimaryShirtType(MenuEntry *entry);
+void _EditTeamsSelectSecondaryShirtType(MenuEntry *entry);
+void _EditTeamsChangePlayerName(MenuEntry *entry);
+void _EditTeamsSelectTeamName(MenuEntry *entry);
+void _EditTeamsSelectCoachName(MenuEntry *entry);
+void _EditTeamsChangePlayerFace(MenuEntry *entry);
+void _InitEditTeamsMenu(void);
+void _EditTeamsPlayersBeforeDraw(MenuEntry *entry);
