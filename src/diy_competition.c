@@ -10,6 +10,7 @@
 #include "panic.h"
 #include "menu_system.h"
 #include "text_render.h"
+#include "input_text.h"
 
 /* ---- Constants ---- */
 #define DIY_CUP                         1
@@ -4013,4 +4014,454 @@ void _DesignDIYTournament_UpdateSelectTeamsPrompt(void)
     uint8_t *str = (uint8_t *)menuEntries[92].fg;
     uint16_t numTeams = *(uint16_t *)(diyFileBufferCopy + 50);
     _PrintFormatted(aSelect0Teams, str, numTeams, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/* ==========================================================================
+ * Chunk 126 — DesignDIYLeague Change Callbacks
+ * ========================================================================== */
+
+extern uint16_t diyLeagueStartingMonth;
+extern uint16_t diyLeagueEndingMonth;
+extern uint16_t diyLeagueMinSubstitutes;
+extern uint16_t diyLeagueMaxSubstitutes;
+extern uint8_t  aX0[];             /* "X %0" */
+extern void DesignDIYLeagueFinish(void);  /* still in asm, called by Init fallthrough */
+
+/* DesignDIYLeagueInit — init league design menu (SWOS2.s line 41323)
+ * Falls through to DesignDIYLeagueFinish in original asm. */
+__attribute__((used, externally_visible))
+void _DesignDIYLeagueInit(void)
+{
+    if (diyLeagueSelectTeams != 0)
+        _SetNumberOfTeamsToSelect();
+    DesignDIYLeagueFinish();
+}
+
+/* DesignDIYLeagueSetName — input text for league name (SWOS2.s line 41484) */
+__attribute__((used, externally_visible))
+void _DesignDIYLeagueSetName(MenuEntry *entry)
+{
+    uint8_t *str = (uint8_t *)entry->fg;
+    _InputText(25, str);
+}
+
+/* DesignDIYLeagueChangePitchType — cycle pitch type (SWOS2.s line 41557) */
+__attribute__((used, externally_visible))
+void _DesignDIYLeagueChangePitchType(MenuEntry *entry)
+{
+    uint16_t *pitchTypeField = (uint16_t *)(diyCompetitionStart + 54);
+    *pitchTypeField += 1;
+    if (*pitchTypeField == 7)
+        *pitchTypeField = 0xFFFF;
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYLeagueChangeStartMonth — cycle start month (SWOS2.s line 41567) */
+__attribute__((used, externally_visible))
+void _DesignDIYLeagueChangeStartMonth(MenuEntry *entry)
+{
+    uint8_t *monthByte = &diyCompetitionStart[56]; /* DIYLEAGUE_STARTINGMONTH */
+    *monthByte += 8;
+    uint8_t val = *monthByte;
+    if (val == 96) {
+        *monthByte = 0;
+        val = 0;
+    }
+    diyLeagueStartingMonth = (uint16_t)val / 8;
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYLeagueChangeEndMonth — cycle end month (SWOS2.s line 41583) */
+__attribute__((used, externally_visible))
+void _DesignDIYLeagueChangeEndMonth(MenuEntry *entry)
+{
+    uint8_t *monthByte = &diyCompetitionStart[57]; /* DIYLEAGUE_ENDINGMONTH */
+    *monthByte += 8;
+    uint8_t val = *monthByte;
+    if (val == 96) {
+        *monthByte = 0;
+        val = 0;
+    }
+    diyLeagueEndingMonth = (uint16_t)val / 8;
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYLeagueChangeNumberOfTeams — cycle num teams 2-24 (SWOS2.s line 41599) */
+__attribute__((used, externally_visible))
+void _DesignDIYLeagueChangeNumberOfTeams(MenuEntry *entry)
+{
+    uint16_t *numTeams = (uint16_t *)(diyCompetitionStart + 50);
+    *numTeams += 1;
+    if (*numTeams >= 25)
+        *numTeams = 2;
+    *(uint16_t *)&entry->fg = *numTeams;  /* write number to entry's fg union */
+    _CallDrawMenuItem(entry);
+}
+
+/* SetPlayEachTeamString — format "X N" string into entry (SWOS2.s line 41622) */
+__attribute__((used, externally_visible))
+void _SetPlayEachTeamString(MenuEntry *entry)
+{
+    uint16_t playEach = *(uint16_t *)(diyCompetitionStart + 94);
+    uint8_t *out = (uint8_t *)entry->fg;
+    _PrintFormatted(aX0, out, playEach, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/* DesignDIYLeagueChangePlayEachTeam — cycle play each team 1-10 (SWOS2.s line 41611) */
+__attribute__((used, externally_visible))
+void _DesignDIYLeagueChangePlayEachTeam(MenuEntry *entry)
+{
+    uint16_t *playEach = (uint16_t *)(diyCompetitionStart + 94);
+    *playEach += 1;
+    if (*playEach == 11)
+        *playEach = 1;
+    _SetPlayEachTeamString(entry);
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYLeagueChangeNumPointsForWin — toggle 2/3 points (SWOS2.s line 41631) */
+__attribute__((used, externally_visible))
+void _DesignDIYLeagueChangeNumPointsForWin(MenuEntry *entry)
+{
+    uint16_t *pts = (uint16_t *)diyPointsForAWin;
+    *pts ^= 1;
+    *(uint16_t *)&entry->fg = *pts;
+    _CallDrawMenuItem(entry);
+}
+
+/* ConvertMinMaxSubstitutesNumbers — format min/max substitutes into menu strings (SWOS2.s line 41638) */
+__attribute__((used, externally_visible))
+void _ConvertMinMaxSubstitutesNumbers(void)
+{
+    uint8_t *minStr = (uint8_t *)menuEntries[16].fg;
+    _Int2Ascii(diyLeagueMinSubstitutes, minStr);
+    uint8_t *maxStr = (uint8_t *)menuEntries[17].fg;
+    _Int2Ascii(diyLeagueMaxSubstitutes, maxStr);
+}
+
+/* DesignDIYLeagueChangeMinSubstitutes — cycle min subs 1..max (SWOS2.s line 41651) */
+__attribute__((used, externally_visible))
+void _DesignDIYLeagueChangeMinSubstitutes(MenuEntry *entry)
+{
+    if (diyLeagueMaxSubstitutes == 0)
+        return;
+    diyLeagueMinSubstitutes += 1;
+    if (diyLeagueMinSubstitutes > diyLeagueMaxSubstitutes)
+        diyLeagueMinSubstitutes = 1;
+    _ConvertMinMaxSubstitutesNumbers();
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYLeagueChangeMaxSubstitutes — cycle max subs 0-5, adjust min (SWOS2.s line 41666) */
+__attribute__((used, externally_visible))
+void _DesignDIYLeagueChangeMaxSubstitutes(MenuEntry *entry)
+{
+    diyLeagueMaxSubstitutes += 1;
+    if (diyLeagueMaxSubstitutes > 5) {
+        diyLeagueMaxSubstitutes = 0;
+        diyLeagueMinSubstitutes = 0;
+    }
+    if (diyLeagueMaxSubstitutes == 1)
+        diyLeagueMinSubstitutes = 1;
+    _ConvertMinMaxSubstitutesNumbers();
+    _CallDrawMenuItem(entry);
+    _CallDrawMenuItem(&menuEntries[16]);  /* also redraw min substitutes entry */
+}
+
+/* ==========================================================================
+ * Chunk 127 — DesignDIYCup Callbacks & Helpers (18 functions)
+ * ========================================================================== */
+
+extern uint16_t pitchType;
+extern uint16_t diyCupPitchTypeOrSeasonSelection;
+extern uint16_t diyCupStartMonthIndex;
+extern uint16_t diyCupEndMonthIndex;
+extern void DesignDIYCupOnDraw(void);  /* still in asm */
+
+/* Static helper: compute round word offset from menu entry ordinal.
+ * Replaces asm DesignDIYCup_GetRoundIndexFromMenuEntry which returned d1 and a0. */
+static uint16_t getCupRoundWordOffset(MenuEntry *entry)
+{
+    int16_t d0 = (int16_t)(entry->ordinal - 0x12);
+    int32_t d0l = d0;  /* ext.l */
+    uint16_t roundIdx = (uint16_t)((uint32_t)d0l / 5);
+    return roundIdx * 2;  /* lsl.w #1 */
+}
+
+/* DesignDIYCup_UpdateStartEndMonthIndices — compute month indices from byte fields (SWOS2.s line 44688) */
+__attribute__((used, externally_visible))
+void _DesignDIYCup_UpdateStartEndMonthIndices(void)
+{
+    uint8_t d0 = diyCompetitionStart[56];  /* STARTMONTH */
+    if (d0 >= 96)
+        d0 -= 96;
+    diyCupStartMonthIndex = (uint16_t)d0 / 8;
+
+    d0 = diyCompetitionStart[57];  /* ENDMONTH */
+    if (d0 >= 0x60)
+        d0 -= 0x60;
+    diyCupEndMonthIndex = (uint16_t)d0 / 8;
+
+    _DesignDIYCup_UpdateMinSubstitutesAndPointsStrings();
+}
+
+/* DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility — toggle seasonal/pitch UI (SWOS2.s line 44776) */
+__attribute__((used, externally_visible))
+void _DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility(void)
+{
+    diyCupPitchTypeOrSeasonSelection = *(uint16_t *)(diyCompetitionStart + 52);
+
+    if (gameType == 2 || gameType == 3 || gameType == 4)
+        diyCupPitchTypeOrSeasonSelection = 1;
+
+    if (diyCupPitchTypeOrSeasonSelection == 0) {
+        /* Not seasonal: hide entries 5,6,7, show entry 4 */
+        menuEntries[5].isInvisible = 1;
+        menuEntries[6].isInvisible = 1;
+        menuEntries[7].isInvisible = 1;
+        menuEntries[4].isInvisible = 0;
+    } else {
+        /* Seasonal: hide entry 4, show entries 5,6,7 */
+        menuEntries[4].isInvisible = 1;
+        menuEntries[5].isInvisible = 0;
+        menuEntries[6].isInvisible = 0;
+        menuEntries[7].isInvisible = 0;
+    }
+}
+
+/* DesignDIYCup_SetupTeamsSelectionUI — grey out editable entries for teams selection (SWOS2.s line 44711) */
+__attribute__((used, externally_visible))
+void _DesignDIYCup_SetupTeamsSelectionUI(void)
+{
+    MenuEntry *e = &menuEntries[2];
+    for (int16_t i = 0x2D; i >= 0; i--) {
+        if (e->background == 2) {  /* ENTRY_FRAME_AND_BACK_COLOR */
+            uint16_t bgColor = *(uint16_t *)&e->bg;
+            if ((bgColor & 0xF) != 0) {
+                *(uint16_t *)&e->bg = (bgColor & 0xFFF0) | 9;  /* PINK_TO_BROWN_9 */
+                e->isDisabled = 1;
+            }
+        }
+        e++;
+    }
+    menuEntries[2].isInvisible = 1;
+    menuEntries[0].isInvisible = 1;
+    menuEntries[1].isInvisible = 0;
+}
+
+/* DesignDIYCupReinit — reinitialize cup design menu state (SWOS2.s line 44632) */
+__attribute__((used, externally_visible))
+void _DesignDIYCupReinit(void)
+{
+    if (pitchType != 0xFFFE) {  /* SEASONAL = 65534 = 0xFFFE */
+        /* Non-seasonal: clear pitchTypeOrSeason, copy global pitchType */
+        *(uint16_t *)(diyCompetitionStart + 52) = 0;
+        *(uint16_t *)(diyCompetitionStart + 54) = pitchType;
+
+        /* Grey out entry[3] */
+        uint16_t *bgColor3 = (uint16_t *)&menuEntries[3].bg;
+        *bgColor3 = (*bgColor3 & 0xFFF0) | 9;  /* PINK_TO_BROWN_9 */
+        menuEntries[3].isDisabled = 1;
+
+        /* Grey out entry[4] */
+        uint16_t *bgColor4 = (uint16_t *)&menuEntries[4].bg;
+        *bgColor4 = (*bgColor4 & 0xFFF0) | 9;
+        menuEntries[4].isDisabled = 1;
+    }
+
+    _DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility();
+    _DesignDIYCup_UpdateStartEndMonthIndices();
+
+    if (diyCupLookOnly != 0) {
+        /* Look-only mode */
+        _DesignDIYCup_SetupTeamsSelectionUI();
+        menuEntries[48].isInvisible = 1;
+        menuEntries[49].isInvisible = 1;
+        menuEntries[51].isInvisible = 1;
+
+        /* Color entries for current round */
+        uint16_t val = *(uint16_t *)(diyCompetitionStart + 0x58);
+        uint16_t startIdx = val * 5 + 0x12;
+        MenuEntry *e = _CalcMenuEntryAddress(startIdx);
+        for (int16_t i = 4; i >= 0; i--) {
+            uint16_t *bgColor = (uint16_t *)&e->bg;
+            *bgColor = (*bgColor & 0xFFF0) | 0xB;
+            e++;
+        }
+        _SetCurrentEntry(0x32);
+    } else if (diyCupSelectTeams != 0) {
+        /* Select teams mode */
+        _DesignDIYCup_SetupTeamsSelectionUI();
+        menuEntries[49].isInvisible = 1;
+        _SetCurrentEntry(0x30);
+    } else {
+        /* Normal edit mode */
+        menuEntries[48].isInvisible = 1;
+        menuEntries[49].isInvisible = 0;
+        menuEntries[51].isInvisible = 1;
+    }
+}
+
+/* DesignDIYCupInit — init cup design menu (SWOS2.s line 44623)
+ * Falls through to DesignDIYCupReinit in original asm. */
+__attribute__((used, externally_visible))
+void _DesignDIYCupInit(void)
+{
+    if (diyCupSelectTeams != 0)
+        _DesignDIYCup_UpdateSelectTeamsPrompt();
+    _DesignDIYCupReinit();
+}
+
+/* DesignDIYCupOnSelect2 — input text for cup name (SWOS2.s line 44741) */
+__attribute__((used, externally_visible))
+void _DesignDIYCupOnSelect2(MenuEntry *entry)
+{
+    uint8_t *str = (uint8_t *)entry->fg;
+    _InputText(0x19, str);
+}
+
+/* DesignDIYCupOnSelect3 — toggle pitch type / season selection (SWOS2.s line 44805) */
+__attribute__((used, externally_visible))
+void _DesignDIYCupOnSelect3(MenuEntry *entry)
+{
+    (void)entry;
+    *(uint16_t *)(diyCompetitionStart + 52) ^= 1;
+    _DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility();
+    _CallDrawMultipleItems(5, &menuEntries[3]);
+}
+
+/* DesignDIYCupOnSelect4 — cycle pitch type 0-6, wraps to 0xFFFF (SWOS2.s line 44815) */
+__attribute__((used, externally_visible))
+void _DesignDIYCupOnSelect4(MenuEntry *entry)
+{
+    uint16_t *pt = (uint16_t *)(diyCompetitionStart + 54);
+    *pt += 1;
+    if (*pt == 7)
+        *pt = 0xFFFF;
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYCupOnSelect5 — cycle start month (SWOS2.s line 44825) */
+__attribute__((used, externally_visible))
+void _DesignDIYCupOnSelect5(MenuEntry *entry)
+{
+    uint8_t *monthByte = &diyCompetitionStart[56];
+    *monthByte += 8;
+    uint8_t val = *monthByte;
+    if (val == 0x60) {
+        *monthByte = 0;
+        val = 0;
+    }
+    diyCupStartMonthIndex = (uint16_t)val / 8;
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYCupOnSelect7 — cycle end month (SWOS2.s line 44841) */
+__attribute__((used, externally_visible))
+void _DesignDIYCupOnSelect7(MenuEntry *entry)
+{
+    uint8_t *monthByte = &diyCompetitionStart[57];
+    *monthByte += 8;
+    uint8_t val = *monthByte;
+    if (val == 0x60) {
+        *monthByte = 0;
+        val = 0;
+    }
+    diyCupEndMonthIndex = (uint16_t)val / 8;
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYCupOnSelect9 — cycle play-each-team count 0-2 (SWOS2.s line 44857) */
+__attribute__((used, externally_visible))
+void _DesignDIYCupOnSelect9(MenuEntry *entry)
+{
+    uint16_t *playEach = (uint16_t *)(diyCompetitionStart + 0x5E);
+    *playEach += 1;
+    if (*playEach >= 3)
+        *playEach = 0;
+    DesignDIYCupOnDraw();
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYCupOnSelect11 — cycle number of rounds 1-6 (SWOS2.s line 44869) */
+__attribute__((used, externally_visible))
+void _DesignDIYCupOnSelect11(MenuEntry *entry)
+{
+    (void)entry;
+    uint16_t *numRounds = (uint16_t *)(diyCompetitionStart + 0x5A);
+    *numRounds += 1;
+    if (*numRounds >= 7)
+        *numRounds = 1;
+    uint16_t r = *numRounds;
+    *(uint16_t *)(diyCompetitionStart + 0x32) = (uint16_t)(1 << r);
+    DesignDIYCupOnDraw();
+    _DrawMenu();
+}
+
+/* DesignDIYCupOnSelect13 — cycle min substitutes (SWOS2.s line 44889) */
+__attribute__((used, externally_visible))
+void _DesignDIYCupOnSelect13(MenuEntry *entry)
+{
+    uint16_t points = *(uint16_t *)diyPointsForAWin;
+    if (points == 0)
+        return;
+    diyMinSubstitutes += 1;
+    if (diyMinSubstitutes > points)
+        diyMinSubstitutes = 1;
+    _DesignDIYCup_UpdateMinSubstitutesAndPointsStrings();
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYCupOnSelect15 — cycle points for a win 0-5 (SWOS2.s line 44904) */
+__attribute__((used, externally_visible))
+void _DesignDIYCupOnSelect15(MenuEntry *entry)
+{
+    uint16_t *pts = (uint16_t *)diyPointsForAWin;
+    *pts += 1;
+    if (*pts > 5) {
+        *pts = 0;
+        diyMinSubstitutes = 0;
+    }
+    if (*pts == 1)
+        diyMinSubstitutes = 1;
+    _DesignDIYCup_UpdateMinSubstitutesAndPointsStrings();
+    _CallDrawMenuItem(entry);
+    _CallDrawMenuItem(&menuEntries[13]);  /* also redraw min substitutes entry */
+}
+
+/* DesignDIYCupOnSelect20 — XOR round type (SWOS2.s line 44923) */
+__attribute__((used, externally_visible))
+void _DesignDIYCupOnSelect20(MenuEntry *entry)
+{
+    uint16_t wordOff = getCupRoundWordOffset(entry);
+    *(uint16_t *)(diyCompetitionStart + 0x66 + wordOff) ^= 3;
+    DesignDIYCupOnDraw();
+    _CallDrawMenuItem(entry);
+    _CallDrawMultipleItems(2, &menuEntries[8]);
+}
+
+/* DesignDIYCupOnSelect21 — cycle qualifiers per round 0-2 (SWOS2.s line 44934) */
+__attribute__((used, externally_visible))
+void _DesignDIYCupOnSelect21(MenuEntry *entry)
+{
+    uint16_t wordOff = getCupRoundWordOffset(entry);
+    uint16_t *field = (uint16_t *)(diyCompetitionStart + 0x72 + wordOff);
+    *field += 1;
+    if (*field == 3)
+        *field = 0;
+    DesignDIYCupOnDraw();
+    _CallDrawMenuItem(entry);
+}
+
+/* DesignDIYCupOnSelect22 — cycle byes per round 0-2 (SWOS2.s line 44946) */
+__attribute__((used, externally_visible))
+void _DesignDIYCupOnSelect22(MenuEntry *entry)
+{
+    uint16_t wordOff = getCupRoundWordOffset(entry);
+    uint16_t *field = (uint16_t *)(diyCompetitionStart + 0x7E + wordOff);
+    *field += 1;
+    if (*field == 3)
+        *field = 0;
+    DesignDIYCupOnDraw();
+    _CallDrawMenuItem(entry);
 }

@@ -2588,6 +2588,22 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified**
 - Cumulative: 1137 functions across 125 chunks
 
+### Chunk 126 — DesignDIYLeague Change Callbacks (12 → diy_competition.c)
+- Date: 2026-03-02
+- **diy_competition.c (12):** _DesignDIYLeagueInit, _DesignDIYLeagueSetName, _DesignDIYLeagueChangePitchType, _DesignDIYLeagueChangeStartMonth, _DesignDIYLeagueChangeEndMonth, _DesignDIYLeagueChangeNumberOfTeams, _SetPlayEachTeamString, _DesignDIYLeagueChangePlayEachTeam, _DesignDIYLeagueChangeNumPointsForWin, _ConvertMinMaxSubstitutesNumbers, _DesignDIYLeagueChangeMinSubstitutes, _DesignDIYLeagueChangeMaxSubstitutes
+- Key patterns: All callbacks use a5 bridges (MenuEntry* passed as param). Functions ending with `jmp CallDrawMenuItem` call _CallDrawMenuItem(entry) in C. Init falls through to DesignDIYLeagueFinish (still asm). Month fields are bytes (0-95, step 8, wrap at 96, divide by 8 for index).
+- New xdefs: DesignDIYLeagueFinish, diyLeagueStartingMonth, diyLeagueEndingMonth, diyLeagueMinSubstitutes, diyLeagueMaxSubstitutes, aX0
+- Build status: **verified**
+- Cumulative: 1149 functions across 126 chunks
+
+### Chunk 127 — DesignDIYCup Callbacks & Helpers (17+1s → diy_competition.c)
+- Date: 2026-03-02
+- **diy_competition.c (17+1s):** _DesignDIYCup_UpdateStartEndMonthIndices, _DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility, _DesignDIYCup_SetupTeamsSelectionUI, _DesignDIYCupReinit, _DesignDIYCupInit, _DesignDIYCupOnSelect2, _DesignDIYCupOnSelect3, _DesignDIYCupOnSelect4, _DesignDIYCupOnSelect5, _DesignDIYCupOnSelect7, _DesignDIYCupOnSelect9, _DesignDIYCupOnSelect11, _DesignDIYCupOnSelect13, _DesignDIYCupOnSelect15, _DesignDIYCupOnSelect20, _DesignDIYCupOnSelect21, _DesignDIYCupOnSelect22, +1 static (getCupRoundWordOffset)
+- Key patterns: MenuEntry struct fields (bg at offset 30 as uint16_t* for color, background=28, isDisabled=6, isInvisible=4). CupReinit has 3 branches (normal/selectTeams/lookOnly). GetRoundIndex computes (ordinal-18)/5 for round word offset. DesignDIYCupOnDraw remains in asm.
+- New xdefs: DesignDIYCupOnDraw, diyCupPitchTypeOrSeasonSelection, diyCupStartMonthIndex, diyCupEndMonthIndex
+- Build status: **verified**
+- Cumulative: 1167 functions across 127 chunks
+
 ### Phase Transitions (see CLAUDE.md "Project Phases")
 - [ ] Phase 1 complete: all subroutines ported → output `*** READY FOR TESTING PHASE! ***` and STOP
 - [ ] Phase 2: user tests game, fixes any bugs found
@@ -2727,5 +2743,7 @@ Update this section every time you port a chunk. Keep it chronological.
 | 123   | 9         | 1126       |
 | 124   | 7         | 1133       |
 | 125   | 4         | 1137       |
+| 126   | 12        | 1149       |
+| 127   | 17+1s     | 1167       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

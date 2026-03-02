@@ -137,6 +137,40 @@ void _DesignDIYTournamentOK(void);
 void _DesignDIYTournament_UpdateTwoNumericFieldsText(void);
 void _DesignDIYTournament_UpdateSelectTeamsPrompt(void);
 
+/* ---- DesignDIYLeague Change Callbacks (Chunk 126) ---- */
+#include "menu_system.h"
+void _DesignDIYLeagueInit(void);
+void _DesignDIYLeagueSetName(MenuEntry *entry);
+void _DesignDIYLeagueChangePitchType(MenuEntry *entry);
+void _DesignDIYLeagueChangeStartMonth(MenuEntry *entry);
+void _DesignDIYLeagueChangeEndMonth(MenuEntry *entry);
+void _DesignDIYLeagueChangeNumberOfTeams(MenuEntry *entry);
+void _SetPlayEachTeamString(MenuEntry *entry);
+void _DesignDIYLeagueChangePlayEachTeam(MenuEntry *entry);
+void _DesignDIYLeagueChangeNumPointsForWin(MenuEntry *entry);
+void _ConvertMinMaxSubstitutesNumbers(void);
+void _DesignDIYLeagueChangeMinSubstitutes(MenuEntry *entry);
+void _DesignDIYLeagueChangeMaxSubstitutes(MenuEntry *entry);
+
+/* ---- DesignDIYCup Callbacks & Helpers (Chunk 127) ---- */
+void _DesignDIYCup_UpdateStartEndMonthIndices(void);
+void _DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility(void);
+void _DesignDIYCup_SetupTeamsSelectionUI(void);
+void _DesignDIYCupReinit(void);
+void _DesignDIYCupInit(void);
+void _DesignDIYCupOnSelect2(MenuEntry *entry);
+void _DesignDIYCupOnSelect3(MenuEntry *entry);
+void _DesignDIYCupOnSelect4(MenuEntry *entry);
+void _DesignDIYCupOnSelect5(MenuEntry *entry);
+void _DesignDIYCupOnSelect7(MenuEntry *entry);
+void _DesignDIYCupOnSelect9(MenuEntry *entry);
+void _DesignDIYCupOnSelect11(MenuEntry *entry);
+void _DesignDIYCupOnSelect13(MenuEntry *entry);
+void _DesignDIYCupOnSelect15(MenuEntry *entry);
+void _DesignDIYCupOnSelect20(MenuEntry *entry);
+void _DesignDIYCupOnSelect21(MenuEntry *entry);
+void _DesignDIYCupOnSelect22(MenuEntry *entry);
+
 /* ---- OpenDiy* + ShowDiyCompetitionForSource (Chunk 116) ---- */
 void _ShowDiyCompetitionForSource(uint8_t *header);
 void _OpenDiyFromFile(void);

@@ -2710,6 +2710,49 @@
         xdef    GoGetTeamsForPlay
         xdef    SelectTeamsForPresetCompetition
         xdef    ChooseSeasonMenu
+; --- Chunk 126 xrefs ---
+        xref    _DesignDIYLeagueInit
+        xref    _DesignDIYLeagueSetName
+        xref    _DesignDIYLeagueChangePitchType
+        xref    _DesignDIYLeagueChangeStartMonth
+        xref    _DesignDIYLeagueChangeEndMonth
+        xref    _DesignDIYLeagueChangeNumberOfTeams
+        xref    _SetPlayEachTeamString
+        xref    _DesignDIYLeagueChangePlayEachTeam
+        xref    _DesignDIYLeagueChangeNumPointsForWin
+        xref    _ConvertMinMaxSubstitutesNumbers
+        xref    _DesignDIYLeagueChangeMinSubstitutes
+        xref    _DesignDIYLeagueChangeMaxSubstitutes
+; --- Chunk 126 xdefs ---
+        xdef    DesignDIYLeagueFinish
+        xdef    diyLeagueStartingMonth
+        xdef    diyLeagueEndingMonth
+        xdef    diyLeagueMinSubstitutes
+        xdef    diyLeagueMaxSubstitutes
+        xdef    aX0
+; --- Chunk 127 xrefs ---
+        xref    _DesignDIYCup_UpdateStartEndMonthIndices
+        xref    _DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility
+        xref    _DesignDIYCup_SetupTeamsSelectionUI
+        xref    _DesignDIYCupReinit
+        xref    _DesignDIYCupInit
+        xref    _DesignDIYCupOnSelect2
+        xref    _DesignDIYCupOnSelect3
+        xref    _DesignDIYCupOnSelect4
+        xref    _DesignDIYCupOnSelect5
+        xref    _DesignDIYCupOnSelect7
+        xref    _DesignDIYCupOnSelect9
+        xref    _DesignDIYCupOnSelect11
+        xref    _DesignDIYCupOnSelect13
+        xref    _DesignDIYCupOnSelect15
+        xref    _DesignDIYCupOnSelect20
+        xref    _DesignDIYCupOnSelect21
+        xref    _DesignDIYCupOnSelect22
+; --- Chunk 127 xdefs ---
+        xdef    DesignDIYCupOnDraw
+        xdef    diyCupPitchTypeOrSeasonSelection
+        xdef    diyCupStartMonthIndex
+        xdef    diyCupEndMonthIndex
 ; --- Chunk 124 xdefs ---
         xdef    diyCompetitionMenu
         xdef    careerMenu

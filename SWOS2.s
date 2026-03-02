@@ -41321,11 +41321,7 @@ asc_131FF2:
 ; ===== DesignDIYLeagueInit =====
 ; prototype: void __usercall DesignDIYLeagueInit()
 DesignDIYLeagueInit:
-                tst.w   (diyLeagueSelectTeams).l
-                beq.s   loc_132000
-                bsr.w   SetNumberOfTeamsToSelect
-loc_132000:
-                bra.w   *+4
+                jmp     _DesignDIYLeagueInit
 
 ; ===== DesignDIYLeagueFinish =====
 ; prototype: void __usercall DesignDIYLeagueFinish()
@@ -41482,9 +41478,10 @@ jmp_SetExitMenuFlag_6:
 ; ===== DesignDIYLeagueSetName =====
 ; prototype: void __usercall DesignDIYLeagueSetName(struct MenuEntry *entry@<a5>)
 DesignDIYLeagueSetName:
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a5),a0
-                move.w  #25,d0
-                jmp     InputText
+                move.l  a5,-(sp)
+                jsr     _DesignDIYLeagueSetName
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYLeagueChooseTeams =====
 ; prototype: void __usercall DesignDIYLeagueChooseTeams()
@@ -41555,129 +41552,78 @@ DIYLeagueChangePitchTypeOrSeason:
 ; ===== DesignDIYLeagueChangePitchType =====
 ; prototype: void __usercall DesignDIYLeagueChangePitchType(struct MenuEntry *entry@<a5>)
 DesignDIYLeagueChangePitchType:
-                addq.w  #1,(diyCompetitionStart+DIY_COMPETITION_PITCHTYPE).l
-                cmpi.w  #7,(diyCompetitionStart+DIY_COMPETITION_PITCHTYPE).l
-                bne.s   loc_132328
-                move.w  #$FFFF,(diyCompetitionStart+DIY_COMPETITION_PITCHTYPE).l
-loc_132328:
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYLeagueChangePitchType
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYLeagueChangeStartMonth =====
 ; prototype: __int16 DesignDIYLeagueChangeStartMonth()
 DesignDIYLeagueChangeStartMonth:
-                lea     (diyCompetitionStart).l,a0
-                addq.b  #8,DIYLEAGUE_STARTINGMONTH(a0)
-                move.b  DIYLEAGUE_STARTINGMONTH(a0),d0
-                cmpi.b  #96,d0
-                bne.s   loc_132348
-                clr.b   DIYLEAGUE_STARTINGMONTH(a0)
-                clr.b   d0
-loc_132348:
-                andi.l  #$FF,d0
-                divu.w  #8,d0
-                move.w  d0,(diyLeagueStartingMonth).l
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYLeagueChangeStartMonth
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYLeagueChangeEndMonth =====
 ; prototype: void __usercall DesignDIYLeagueChangeEndMonth(struct MenuEntry *entry@<a5>)
 DesignDIYLeagueChangeEndMonth:
-                lea     (diyCompetitionStart).l,a0
-                addq.b  #8,DIYLEAGUE_ENDINGMONTH(a0)
-                move.b  DIYLEAGUE_ENDINGMONTH(a0),d0
-                cmpi.b  #96,d0
-                bne.s   loc_132378
-                clr.b   DIYLEAGUE_ENDINGMONTH(a0)
-                clr.b   d0
-loc_132378:
-                andi.l  #$FF,d0
-                divu.w  #8,d0
-                move.w  d0,(diyLeagueEndingMonth).l
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYLeagueChangeEndMonth
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYLeagueChangeNumberOfTeams =====
 ; prototype: void __usercall DesignDIYLeagueChangeNumberOfTeams(struct MenuEntry *entry@<a5>)
 DesignDIYLeagueChangeNumberOfTeams:
-                move.w  (diyCompetitionStart+DIY_COMPETITION_NUMTEAMS).l,d0
-                addq.w  #1,(diyCompetitionStart+DIY_COMPETITION_NUMTEAMS).l
-                cmpi.w  #25,(diyCompetitionStart+DIY_COMPETITION_NUMTEAMS).l
-                bcs.s   loc_1323AC
-                move.w  #2,(diyCompetitionStart+DIY_COMPETITION_NUMTEAMS).l
-loc_1323AC:
-                move.w  (diyCompetitionStart+DIY_COMPETITION_NUMTEAMS).l,MENUENTRY_FG+ENTRYTYPE2UNION_NUMBER(a5)
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYLeagueChangeNumberOfTeams
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYLeagueChangePlayEachTeam =====
 ; prototype: void __usercall DesignDIYLeagueChangePlayEachTeam(struct MenuEntry *entry@<a5>)
 DesignDIYLeagueChangePlayEachTeam:
-                addq.w  #1,(diyCompetitionStart+DIY_COMPETITION_PLAYEACHTEAM).l
-                cmpi.w  #11,(diyCompetitionStart+DIY_COMPETITION_PLAYEACHTEAM).l
-                bne.s   loc_1323D2
-                move.w  #1,(diyCompetitionStart+DIY_COMPETITION_PLAYEACHTEAM).l
-loc_1323D2:
-                bsr.w   SetPlayEachTeamString
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYLeagueChangePlayEachTeam
+                addq.l  #4,sp
+                rts
 
 ; ===== SetPlayEachTeamString =====
 ; prototype: void __usercall SetPlayEachTeamString(struct MenuEntry *entry@<a5>)
 SetPlayEachTeamString:
-                move.w  (diyCompetitionStart+DIY_COMPETITION_PLAYEACHTEAM).l,d0
-                lea     (aX0).l,a0      ; "X %0"
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a5),a1
-                jsr     PrintFormatted
+                move.l  a5,-(sp)
+                jsr     _SetPlayEachTeamString
+                addq.l  #4,sp
                 rts
 
 ; ===== DesignDIYLeagueChangeNumPointsForWin =====
 ; prototype: void __usercall DesignDIYLeagueChangeNumPointsForWin(struct MenuEntry *entry@<a5>)
 DesignDIYLeagueChangeNumPointsForWin:
-                eori.w  #1,(diyPointsForAWin).l
-                move.w  (diyPointsForAWin).l,MENUENTRY_FG+ENTRYTYPE2UNION_NUMBER(a5)
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYLeagueChangeNumPointsForWin
+                addq.l  #4,sp
+                rts
 
 ; ===== ConvertMinMaxSubstitutesNumbers =====
 ; prototype: void __usercall ConvertMinMaxSubstitutesNumbers()
 ConvertMinMaxSubstitutesNumbers:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$380)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                move.w  (diyLeagueMinSubstitutes).l,d0
-                jsr     Int2Ascii
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3B8)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                move.w  (diyLeagueMaxSubstitutes).l,d0
-                jsr     Int2Ascii
-                rts
+                jmp     _ConvertMinMaxSubstitutesNumbers
 
 ; ===== DesignDIYLeagueChangeMinSubstitutes =====
 ; prototype: void __usercall DesignDIYLeagueChangeMinSubstitutes(struct MenuEntry *entry@<a5>)
 DesignDIYLeagueChangeMinSubstitutes:
-                move.w  (diyLeagueMaxSubstitutes).l,d0
-                beq.s   locret_13245A
-                addq.w  #1,(diyLeagueMinSubstitutes).l
-                cmp.w   (diyLeagueMinSubstitutes).l,d0
-                bcc.s   loc_132452
-                move.w  #1,(diyLeagueMinSubstitutes).l
-loc_132452:
-                bsr.s   ConvertMinMaxSubstitutesNumbers
-                jmp     CallDrawMenuItem
-locret_13245A:
+                move.l  a5,-(sp)
+                jsr     _DesignDIYLeagueChangeMinSubstitutes
+                addq.l  #4,sp
                 rts
 
 ; ===== DesignDIYLeagueChangeMaxSubstitutes =====
 ; prototype: void __usercall DesignDIYLeagueChangeMaxSubstitutes(struct MenuEntry *entry@<a5>)
 DesignDIYLeagueChangeMaxSubstitutes:
-                addq.w  #1,(diyLeagueMaxSubstitutes).l
-                cmpi.w  #5,(diyLeagueMaxSubstitutes).l
-                bls.s   loc_132478
-                clr.w   (diyLeagueMaxSubstitutes).l
-                clr.w   (diyLeagueMinSubstitutes).l
-loc_132478:
-                cmpi.w  #1,(diyLeagueMaxSubstitutes).l
-                bne.s   loc_13248A
-                move.w  #1,(diyLeagueMinSubstitutes).l
-loc_13248A:
-                bsr.w   ConvertMinMaxSubstitutesNumbers
-                jsr     CallDrawMenuItem
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$380)).l,a5
-                jsr     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYLeagueChangeMaxSubstitutes
+                addq.l  #4,sp
                 rts
 
 ; ===== SetNumberOfTeamsToSelect ===== (ported to C → _SetNumberOfTeamsToSelect)
@@ -44675,114 +44621,24 @@ aHyphen:
 ; ===== DesignDIYCupInit =====
 ; prototype: void __usercall DesignDIYCupInit()
 DesignDIYCupInit:
-                tst.w   (diyCupSelectTeams).l
-                beq.s   loc_133AFE
-                bsr.w   DesignDIYCup_UpdateSelectTeamsPrompt
-loc_133AFE:
-                bra.w   *+4
+                jmp     _DesignDIYCupInit
 
 ; ===== DesignDIYCupReinit =====
 ; prototype: void __usercall DesignDIYCupReinit()
 DesignDIYCupReinit:
-                cmpi.w  #SEASONAL,(pitchType).l
-                beq.s   loc_133B50
-                clr.w   (diyCompetitionStart+DIY_COMPETITION_PITCHTYPEORSEASON).l
-                move.w  (pitchType).l,(diyCompetitionStart+DIY_COMPETITION_PITCHTYPE).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                move.w  #1,6(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                move.w  #1,6(a0)
-loc_133B50:
-                bsr.w   DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility
-                bsr.w   DesignDIYCup_UpdateStartEndMonthIndices
-                tst.w   (diyCupLookOnly).l
-                bne.s   loc_133B8E
-                tst.w   (diyCupSelectTeams).l
-                bne.s   loc_133B7A
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$A80).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$AB8).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$B28).l
-                rts
-loc_133B7A:
-                bsr.w   DesignDIYCup_SetupTeamsSelectionUI
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$AB8).l
-                move.w  #$30,d0         ; '0'
-                jmp     SetCurrentEntry
-loc_133B8E:
-                bsr.w   DesignDIYCup_SetupTeamsSelectionUI
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$A80).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$AB8).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$B28).l
-                move.w  (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+$1E).l,d0
-                mulu.w  #5,d0
-                addi.w  #$12,d0
-                jsr     CalcMenuEntryAddress
-                move.w  #4,d1
-loc_133BBC:
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                ori.w   #$B,d0
-                move.w  d0,$1E(a0)
-                lea     $38(a0),a0
-                dbf     d1,loc_133BBC
-                move.w  #$32,d0         ; '2'
-                jmp     SetCurrentEntry
+                jmp     _DesignDIYCupReinit
 
 ; ===== DesignDIYCup_UpdateStartEndMonthIndices =====
 ; prototype: void __usercall DesignDIYCup_UpdateStartEndMonthIndices()
 ; dos: cseg_44F40
 DesignDIYCup_UpdateStartEndMonthIndices:
-                move.b  (diyCompetitionStart+DIY_COMPETITION_STARTMONTH).l,d0
-                cmpi.b  #96,d0
-                bcs.s   loc_133BEE
-                subi.b  #96,d0
-loc_133BEE:
-                andi.l  #$FF,d0
-                divu.w  #8,d0
-                move.w  d0,(diyCupStartMonthIndex).l
-                move.b  (diyCompetitionStart+DIY_COMPETITION_ENDMONTH).l,d0
-                cmpi.b  #$60,d0         ; '`'
-                bcs.s   loc_133C0E
-                subi.b  #$60,d0         ; '`'
-loc_133C0E:
-                andi.l  #$FF,d0
-                divu.w  #8,d0
-                move.w  d0,(diyCupEndMonthIndex).l
-                bsr.w   DesignDIYCup_UpdateMinSubstitutesAndPointsStrings
-                rts
+                jmp     _DesignDIYCup_UpdateStartEndMonthIndices
 
 ; ===== DesignDIYCup_SetupTeamsSelectionUI =====
 ; prototype: void __usercall DesignDIYCup_SetupTeamsSelectionUI()
 ; dos: cseg_44FE8
 DesignDIYCup_SetupTeamsSelectionUI:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a0
-                move.w  #$2D,d1         ; '-'
-loc_133C2C:
-                cmpi.w  #2,$1C(a0)
-                bne.s   loc_133C54
-                move.w  $1E(a0),d0
-                andi.w  #$F,d0
-                beq.s   loc_133C54
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #9,d0
-                move.w  d0,$1E(a0)
-                move.w  #1,6(a0)
-loc_133C54:
-                lea     $38(a0),a0
-                dbf     d1,loc_133C2C
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$70).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$38).l
-                rts
+                jmp     _DesignDIYCup_SetupTeamsSelectionUI
 
 ; ===== DesignDIYCupOK ===== (ported to C → _DesignDIYCupOK)
 DesignDIYCupOK:
@@ -44793,9 +44649,10 @@ jmp_SetExitMenuFlag_4:
 ; ===== DesignDIYCupOnSelect2 =====
 ; prototype: void __usercall DesignDIYCupOnSelect2(struct MenuEntry *entry@<a5>)
 DesignDIYCupOnSelect2:
-                movea.l $26(a5),a0
-                move.w  #$19,d0
-                jmp     InputText
+                move.l  a5,-(sp)
+                jsr     _DesignDIYCupOnSelect2
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYCupOnSelect48 =====
 ; prototype: void __usercall DesignDIYCupOnSelect48()
@@ -44828,111 +44685,55 @@ DesignDIYCupOnSelect48:
 ; ===== DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility =====
 ; prototype: void __usercall DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility()
 DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility:
-                move.w  (diyCompetitionStart+DIY_COMPETITION_PITCHTYPEORSEASON).l,(diyCupPitchTypeOrSeasonSelection).l
-                cmpi.w  #2,(gameType).l
-                beq.s   loc_133D2E
-                cmpi.w  #3,(gameType).l
-                beq.s   loc_133D2E
-                cmpi.w  #4,(gameType).l
-                bne.s   loc_133D36
-loc_133D2E:
-                move.w  #1,(diyCupPitchTypeOrSeasonSelection).l
-loc_133D36:
-                tst.w   (diyCupPitchTypeOrSeasonSelection).l
-                bne.s   loc_133D5A
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  #1,$3C(a0)
-                move.w  #1,$74(a0)
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$E0).l
-                rts
-loc_133D5A:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$E0).l
-                lea     ($2946).w,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                clr.w   $3C(a0)
-                clr.w   $74(a0)
-                rts
+                jmp     _DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility
 
 ; ===== DesignDIYCupOnSelect3 =====
 ; prototype: void __usercall DesignDIYCupOnSelect3(struct MenuEntry *entry@<a5>)
 DesignDIYCupOnSelect3:
-                eori.w  #1,(diyCompetitionStart+DIY_COMPETITION_PITCHTYPEORSEASON).l
-                bsr.s   DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a5
-                move.w  #5,d0
-                jsr     CallDrawMultipleItems
+                move.l  a5,-(sp)
+                jsr     _DesignDIYCupOnSelect3
+                addq.l  #4,sp
                 rts
 
 ; ===== DesignDIYCupOnSelect4 =====
 ; prototype: void __usercall DesignDIYCupOnSelect4(struct MenuEntry *entry@<a5>)
 DesignDIYCupOnSelect4:
-                addq.w  #1,(diyCompetitionStart+DIY_COMPETITION_PITCHTYPE).l
-                cmpi.w  #7,(diyCompetitionStart+DIY_COMPETITION_PITCHTYPE).l
-                bne.s   loc_133DA4
-                move.w  #$FFFF,(diyCompetitionStart+DIY_COMPETITION_PITCHTYPE).l
-loc_133DA4:
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYCupOnSelect4
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYCupOnSelect5 =====
 ; prototype: void __usercall DesignDIYCupOnSelect5(struct MenuEntry *entry@<a5>)
 DesignDIYCupOnSelect5:
-                lea     (diyCompetitionStart).l,a0
-                addq.b  #8,DIY_COMPETITION_STARTMONTH(a0)
-                move.b  $38(a0),d0
-                cmpi.b  #$60,d0         ; '`'
-                bne.s   loc_133DC4
-                clr.b   $38(a0)
-                clr.b   d0
-loc_133DC4:
-                andi.l  #$FF,d0
-                divu.w  #8,d0
-                move.w  d0,(diyCupStartMonthIndex).l
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYCupOnSelect5
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYCupOnSelect7 =====
 ; prototype: void __usercall DesignDIYCupOnSelect7(struct MenuEntry *entry@<a5>)
 DesignDIYCupOnSelect7:
-                lea     (diyCompetitionStart).l,a0
-                addq.b  #8,DIY_COMPETITION_ENDMONTH(a0)
-                move.b  $39(a0),d0
-                cmpi.b  #$60,d0         ; '`'
-                bne.s   loc_133DF4
-                clr.b   $39(a0)
-                clr.b   d0
-loc_133DF4:
-                andi.l  #$FF,d0
-                divu.w  #8,d0
-                move.w  d0,(diyCupEndMonthIndex).l
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYCupOnSelect7
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYCupOnSelect9 =====
 ; prototype: void __usercall DesignDIYCupOnSelect9(struct MenuEntry *entry@<a5>)
 DesignDIYCupOnSelect9:
-                lea     (diyCompetitionStart).l,a0
-                addq.w  #1,DIY_COMPETITION_PLAYEACHTEAM(a0)
-                cmpi.w  #3,$5E(a0)
-                bcs.s   loc_133E20
-                clr.w   $5E(a0)
-loc_133E20:
-                bsr.w   DesignDIYCupOnDraw
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYCupOnSelect9
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYCupOnSelect11 =====
 ; prototype: void __usercall DesignDIYCupOnSelect11(struct MenuEntry *entry@<a5>)
 DesignDIYCupOnSelect11:
-                lea     (diyCompetitionStart).l,a0
-                addq.w  #1,DIY_COMPETITION_FIELD_3A+$20(a0)
-                cmpi.w  #7,$5A(a0)
-                bcs.s   loc_133E42
-                move.w  #1,$5A(a0)
-loc_133E42:
-                move.w  $5A(a0),d1
-                move.w  #1,d0
-                lsl.w   d1,d0
-                move.w  d0,$32(a0)
-                bsr.w   DesignDIYCupOnDraw
-                jmp     DrawMenu
+                move.l  a5,-(sp)
+                jsr     _DesignDIYCupOnSelect11
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYCup_UpdateMinSubstitutesAndPointsStrings ===== (ported to C)
 DesignDIYCup_UpdateMinSubstitutesAndPointsStrings:
@@ -44941,83 +44742,47 @@ DesignDIYCup_UpdateMinSubstitutesAndPointsStrings:
 ; ===== DesignDIYCupOnSelect13 =====
 ; prototype: void __usercall DesignDIYCupOnSelect13(struct MenuEntry *entry@<a5>)
 DesignDIYCupOnSelect13:
-                move.w  (diyPointsForAWin).l,d0
-                beq.s   locret_133EAA
-                addq.w  #1,(diyMinSubstitutes).l
-                cmp.w   (diyMinSubstitutes).l,d0
-                bcc.s   loc_133EA2
-                move.w  #1,(diyMinSubstitutes).l
-loc_133EA2:
-                bsr.s   DesignDIYCup_UpdateMinSubstitutesAndPointsStrings
-                jmp     CallDrawMenuItem
-locret_133EAA:
+                move.l  a5,-(sp)
+                jsr     _DesignDIYCupOnSelect13
+                addq.l  #4,sp
                 rts
 
 ; ===== DesignDIYCupOnSelect15 =====
 ; prototype: void __usercall DesignDIYCupOnSelect15(struct MenuEntry *entry@<a5>)
 DesignDIYCupOnSelect15:
-                addq.w  #1,(diyPointsForAWin).l
-                cmpi.w  #5,(diyPointsForAWin).l
-                bls.s   loc_133EC8
-                clr.w   (diyPointsForAWin).l
-                clr.w   (diyMinSubstitutes).l
-loc_133EC8:
-                cmpi.w  #1,(diyPointsForAWin).l
-                bne.s   loc_133EDA
-                move.w  #1,(diyMinSubstitutes).l
-loc_133EDA:
-                bsr.w   DesignDIYCup_UpdateMinSubstitutesAndPointsStrings
-                jsr     CallDrawMenuItem
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2D8)).l,a5
-                jsr     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYCupOnSelect15
+                addq.l  #4,sp
                 rts
 
 ; ===== DesignDIYCupOnSelect20 =====
 ; prototype: void __usercall DesignDIYCupOnSelect20(struct MenuEntry *entry@<a5>)
 DesignDIYCupOnSelect20:
-                bsr.w   DesignDIYCup_GetRoundIndexFromMenuEntry
-                eori.w  #3,$66(a0,d1.w)
-                bsr.w   DesignDIYCupOnDraw
-                jsr     CallDrawMenuItem
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a5
-                move.w  #2,d0
-                jmp     CallDrawMultipleItems
+                move.l  a5,-(sp)
+                jsr     _DesignDIYCupOnSelect20
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYCupOnSelect21 =====
 ; prototype: void __usercall DesignDIYCupOnSelect21(struct MenuEntry *entry@<a5>)
 DesignDIYCupOnSelect21:
-                bsr.w   DesignDIYCup_GetRoundIndexFromMenuEntry
-                addq.w  #1,$72(a0,d1.w)
-                cmpi.w  #3,$72(a0,d1.w)
-                bne.s   loc_133F26
-                clr.w   $72(a0,d1.w)
-loc_133F26:
-                bsr.w   DesignDIYCupOnDraw
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYCupOnSelect21
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYCupOnSelect22 =====
 ; prototype: void __usercall DesignDIYCupOnSelect22(struct MenuEntry *entry@<a5>)
 DesignDIYCupOnSelect22:
-                bsr.w   DesignDIYCup_GetRoundIndexFromMenuEntry
-                addq.w  #1,$7E(a0,d1.w)
-                cmpi.w  #3,$7E(a0,d1.w)
-                bne.s   loc_133F44
-                clr.w   $7E(a0,d1.w)
-loc_133F44:
-                bsr.w   DesignDIYCupOnDraw
-                jmp     CallDrawMenuItem
+                move.l  a5,-(sp)
+                jsr     _DesignDIYCupOnSelect22
+                addq.l  #4,sp
+                rts
 
 ; ===== DesignDIYCup_GetRoundIndexFromMenuEntry =====
 ; prototype: void __usercall DesignDIYCup_GetRoundIndexFromMenuEntry(struct MenuEntry *entry@<a5>)
 DesignDIYCup_GetRoundIndexFromMenuEntry:
-                move.w  2(a5),d0
-                subi.w  #$12,d0
-                ext.l   d0
-                divu.w  #5,d0
-                move.w  d0,d1
-                lsl.w   #1,d1
-                lea     (diyCompetitionStart).l,a0
-                rts
+                rts                     ; only called from now-ported C code
 
 ; ===== DesignDIYCup_UpdateSelectTeamsPrompt ===== (ported to C)
 DesignDIYCup_UpdateSelectTeamsPrompt:
