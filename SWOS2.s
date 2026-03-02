@@ -55838,83 +55838,27 @@ offsetCoachOrPlayer:
                 dc.l aPlayerCoach_0     ; "PLAYER-COACH"
 
 ; ===== CareerMenuInit =====
-; prototype: void __usercall CareerMenuInit()
+; Ported to C: _CareerMenuInit in src/menus.c
 CareerMenuInit:
-                jsr     SetDefaultNameAndSurname
+                jmp     _CareerMenuInit
 
 ; ===== CareerMenuFinish =====
-; prototype: void __usercall CareerMenuFinish()
+; Ported to C: _CareerMenuFinish in src/menus.c
 CareerMenuFinish:
-                bsr.w   CheckSex
-                bsr.w   SetPlayerCoachFieldColor
-                move.b  (plNationality).l,d0
-                lea     nationalityOrdinalsArray(pc),a0
-                clr.w   d1
-loc_13B1C0:
-                cmp.b   (a0)+,d0
-                beq.s   loc_13B1C8
-                addq.b  #1,d1
-                bra.s   loc_13B1C0
-loc_13B1C8:
-                move.b  d1,(nationalityOrdinal).l
-                bsr.w   SetNationalityField
-                rts
+                jmp     _CareerMenuFinish
 
 ; ===== SetNationalityField =====
-; prototype: void __usercall SetNationalityField()
-; Set nationality field when starting career.
+; Ported to C (static in menus.c, called from _CareerMenuFinish and _ChangeNationality)
 SetNationalityField:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                move.b  (plNationality).l,d0
-                cmpi.b  #$FF,d0
-                beq.s   loc_13B206
-                andi.w  #$FF,d0
-                move.w  d0,d1
-                add.w   d1,d0
-                add.w   d1,d0
-                lea     (shortCountryNames).l,a0 ; "ALBAUTBELBULCROCYPTCHDENENGESTFARFINFRA"...
-                lea     (a0,d0.w),a0
-                move.b  (a0)+,(a1)+
-                move.b  (a0)+,(a1)+
-                move.b  (a0)+,(a1)+
-                clr.b   (a1)
                 rts
-loc_13B206:
-                lea     (aOther).l,a0   ; "OTHER"
-                jmp     StringCopy
 
 ; ===== ChangeNationality =====
-; prototype: void __usercall ChangeNationality()
+; Ported to C: _ChangeNationality in src/menus.c (a5 bridge)
 ChangeNationality:
-                cmpi.w  #$81,(controlMask).l
-                beq.w   loc_13B250
-                cmpi.w  #$101,(controlMask).l
-                beq.w   loc_13B250
-                cmpi.w  #$41,(controlMask).l ; 'A'
-                beq.s   loc_13B240
-                cmpi.w  #$201,(controlMask).l
-                beq.s   loc_13B240
+                move.l  a5,-(sp)
+                jsr     _ChangeNationality
+                addq.l  #4,sp
                 rts
-loc_13B240:
-                move.b  (nationalityOrdinal).l,d0
-                subq.b  #1,d0
-                bpl.s   loc_13B260
-                move.b  #63,d0
-                bra.s   loc_13B260
-loc_13B250:
-                move.b  (nationalityOrdinal).l,d0
-                addq.b  #1,d0
-                cmpi.b  #64,d0
-                bne.s   loc_13B260
-                clr.b   d0
-loc_13B260:
-                move.b  d0,(nationalityOrdinal).l
-                ext.w   d0
-                lea     nationalityOrdinalsArray(pc),a0
-                move.b  (a0,d0.w),(plNationality).l
-                bsr.w   SetNationalityField
-                jmp     CallDrawMenuItem
 
 ; ===== SetPlayerCoachFieldColor =====
 ; prototype: void __usercall SetPlayerCoachFieldColor()
@@ -55995,9 +55939,9 @@ CoachOrPlayerCoach:
                 rts
 
 ; ===== j_SetExitMenuFlag2 =====
-; prototype: void __usercall j_SetExitMenuFlag2()
+; Updated: direct jmp to C
 j_SetExitMenuFlag2:
-                jmp     SetExitMenuFlag
+                jmp     _SetExitMenuFlag
 nationalityOrdinal:
                 dc.b $00
 pad_13B35F:
@@ -56205,103 +56149,14 @@ viewCompetitionsMenu:
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
 ; ===== ViewCompetitionsInit =====
-; prototype: void __usercall ViewCompetitionsInit()
+; Ported to C: _ViewCompetitionsInit in src/menus.c
 ViewCompetitionsInit:
-                cmpi.l  #tourCopy,(currentCompetitionPtr).l
-                beq.s   loc_13B470
-                cmpi.l  #friendlyCopy,(currentCompetitionPtr).l
-                bne.s   ViewCompetitionsOnReturn
-loc_13B470:
-                move.w  #5,d0
-                jsr     SetCurrentEntry
-                tst.w   (isNationalSelector).l
-                bne.s   loc_13B48A
-                tst.w   (teamSelectionKeyCacheIndex).l
-                bne.s   ViewCompetitionsOnReturn
-loc_13B48A:
-                move.w  #7,d0
-                jsr     SetCurrentEntry
+                jmp     _ViewCompetitionsInit
 
 ; ===== ViewCompetitionsOnReturn =====
-; prototype: void ViewCompetitionsOnReturn(...)
+; Ported to C: _ViewCompetitionsOnReturn in src/menus.c
 ViewCompetitionsOnReturn:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                move.l  #diyPresetNameOfCompetition,$26(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a0
-                move.l  #secondaryCompetitionName,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                move.l  #tertiaryCompetitionName,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                move.l  #quaternaryCompetitionName,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0)
-                cmpi.l  #tourCopy,(currentCompetitionPtr).l
-                beq.s   loc_13B4DC
-                cmpi.l  #friendlyCopy,(currentCompetitionPtr).l
-                bne.s   loc_13B50E
-loc_13B4DC:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$38).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a2
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a3
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a4
-                move.w  $16(a3),$16(a4)
-                move.w  $16(a2),$16(a3)
-                move.w  $16(a1),$16(a2)
-                move.w  $16(a0),$16(a1)
-loc_13B50E:
-                tst.l   (secondaryCompetitionPtr).l
-                bne.s   loc_13B540
-loc_13B516:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a2
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a3
-                move.w  $16(a2),$16(a3)
-                move.w  $16(a1),$16(a2)
-                move.w  $16(a0),$16(a1)
-                bra.s   loc_13B558
-loc_13B540:
-                cmpi.l  #friendlyCopy,(secondaryCompetitionPtr).l
-                beq.s   loc_13B516
-                cmpi.l  #tourCopy,(secondaryCompetitionPtr).l
-                beq.s   loc_13B516
-loc_13B558:
-                tst.l   (tertiaryCompetitionPtr).l
-                bne.w   loc_13B582
-loc_13B562:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a2
-                move.w  $16(a1),$16(a2)
-                move.w  $16(a0),$16(a1)
-                bra.s   loc_13B59A
-loc_13B582:
-                cmpi.l  #friendlyCopy,(tertiaryCompetitionPtr).l
-                beq.s   loc_13B562
-                cmpi.l  #tourCopy,(tertiaryCompetitionPtr).l
-                beq.s   loc_13B562
-loc_13B59A:
-                tst.l   (quaternaryCompetitionPtr).l
-                bne.w   loc_13B5B8
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a1
-                move.w  $16(a0),$16(a1)
-loc_13B5B8:
-                tst.w   (isNationalSelector).l
-                bne.s   loc_13B5C8
-                tst.w   (teamSelectionKeyCacheIndex).l
-                bne.s   loc_13B5CE
-loc_13B5C8:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$118).l
-loc_13B5CE:
-                cmpi.w  #4,(gameType).l
-                beq.s   locret_13B5DE
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$150).l
-locret_13B5DE:
-                rts
+                jmp     _ViewCompetitionsOnReturn
 
 ; ===== OpenDiyFromFile ===== (ported to C → _OpenDiyFromFile)
 OpenDiyFromFile:
@@ -56330,18 +56185,18 @@ ShowDiyCompetitionForSource:
                 rts
 
 ; ===== TopGoalScorersMenu =====
-; prototype: void TopGoalScorersMenu(...)
+; Updated: direct jmp to C
 TopGoalScorersMenu:
-                jmp TopGoalScorersMenu_0(pc)
+                jmp     _TopGoalScorersMenu_0
 
 ; ===== ManagementRecordMenu ===== (ported to C → _ManagementRecordMenu)
 ManagementRecordMenu:
                 jmp     _ManagementRecordMenu
 
 ; ===== jmp_SetExitMenuFlag_2 =====
-; prototype: void __usercall jmp_SetExitMenuFlag_2()
+; Updated: direct jmp to C
 jmp_SetExitMenuFlag_2:
-                jmp     SetExitMenuFlag
+                jmp     _SetExitMenuFlag
 ; Menu_Contest
 contestMenu:
                 ; Menu_Contest
@@ -60198,22 +60053,12 @@ SelTeamForTacticsExit:
                 jmp     _SelTeamForTacticsExit
 
 ; ===== SelTeamForTacticsCommon =====
-; prototype: void __usercall SelTeamForTacticsCommon(struct MenuEntry *entry@<a5>)
+; Ported to C: _SelTeamForTacticsCommon in src/menus.c (a5 bridge)
 SelTeamForTacticsCommon:
-                move.w  MENUENTRY_ORDINAL(a5),d0
-                subq.w  #1,d0
-                cmpi.w  #22,d0
-                bcs.s   loc_13DE00
-                cmpi.w  #44,d0
-                bcs.s   loc_13DDF6
-                subi.w  #22,d0
-                add.w   (selTeamsColumn2).l,d0
-loc_13DDF6:
-                subi.w  #22,d0
-                add.w   (selTeamsColumn1).l,d0
-loc_13DE00:
-                move.w  d0,(teamSelected).l
-                jmp     SetExitMenuFlag
+                move.l  a5,-(sp)
+                jsr     _SelTeamForTacticsCommon
+                addq.l  #4,sp
+                rts
 
 ; ===== SelTeamForTactics_ReflowTeamListLayout =====
 ; prototype: void __usercall SelTeamForTactics_ReflowTeamListLayout()

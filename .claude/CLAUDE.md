@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1272 functions ported across 135 chunks.
+**Current status:** 1280 functions ported across 136 chunks.
 
-**Last completed chunk:** Chunk 135 — Career Over callbacks, Stats dispatchers, Select Teams callbacks (9+1s → menus.c): CareerOverFinish, CareerOverUpdateJobOffersEntry (static), JobOffersMenuRetired, ExitCareerMenu, CompetitionInfo, StatsExit, ChooseTeamsPlayGame, ExitSelectTeams, SelectTeamsCommon, SelectLeaguesCommon.
+**Last completed chunk:** Chunk 136 — ViewCompetitions Init/OnReturn, Career Menu Init/Finish, Nationality, SelTeamForTactics (7+1s → menus.c): ViewCompetitionsInit, ViewCompetitionsOnReturn, CareerMenuInit, CareerMenuFinish, SetNationalityField (static), ChangeNationality, SelTeamForTacticsCommon.
 
-**Next candidates:** ImportTeamsMenu (~57 instr), DesignDIYCup remaining (BuildMatchListEntryStrings, UpdateMenuEntriesVisibilityAndSelection, AppendTeamNameToMenuEntry), SquadMenu functions, CareerGameListCommon (~3194 lines), JobOffers cluster, EditTactics remaining.
+**Next candidates:** SelectTeamToManage/ChooseTeamAndStartCareer/LoadLiverpool (need asm bridges for register-calling ChooseTeamsDialog/InitCareer), SquadMenu (blocked by SelectAndShowSquadToView), CareerGameListCommon (~3194 lines, very large), ImportTeamsMenu, DesignDIYCup remaining.
 
 ---
 

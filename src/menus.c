@@ -3321,3 +3321,279 @@ void _SelectLeaguesCommon(MenuEntry *entry)
         _SetExitMenuFlag();
     }
 }
+
+
+/* ================================================================
+ * Chunk 136 — ViewCompetitions Init/OnReturn, Career Menu Init/Finish,
+ *             Nationality handlers, SelTeamForTactics
+ * ================================================================ */
+
+/* Additional externs for Chunk 136 */
+extern uint32_t currentCompetitionPtr;
+extern uint8_t  tourCopy[];
+extern uint8_t  friendlyCopy[];
+extern uint32_t secondaryCompetitionPtr;
+extern uint32_t tertiaryCompetitionPtr;
+extern uint32_t quaternaryCompetitionPtr;
+extern uint8_t  diyPresetNameOfCompetition[];
+extern uint8_t  secondaryCompetitionName[];
+extern uint8_t  tertiaryCompetitionName[];
+extern uint8_t  quaternaryCompetitionName[];
+extern uint8_t  plNationality;
+extern uint8_t  nationalityOrdinal;
+extern uint8_t  nationalityOrdinalsArray[];
+extern uint8_t  shortCountryNames[];
+extern uint8_t  aOther[];               /* "OTHER" */
+extern uint16_t controlMask;
+extern uint16_t selTeamsColumn1;
+extern uint16_t selTeamsColumn2;
+extern uint16_t teamSelected;
+
+extern void _SetDefaultNameAndSurname(void);
+extern void _CheckSex(void);
+extern void _SetPlayerCoachFieldColor(void);
+
+
+/* ================================================================
+ * SetNationalityField  (SWOS2.s line 55866)
+ *
+ * Sets the nationality 3-char code in the career menu entry.
+ * Entry 7 (offset $188/56) fg string pointer is the destination.
+ * ================================================================ */
+static void SetNationalityField(void)
+{
+    MenuEntry *e = &menuEntries[0x188 / 56];
+    uint8_t *dest = (uint8_t *)e->fg;
+    uint8_t nat = plNationality;
+
+    if (nat == 0xFF)
+    {
+        /* Unknown nationality — write "OTHER" */
+        _StringCopy(aOther, dest);
+        return;
+    }
+
+    /* Copy 3-char country code from table */
+    {
+        uint16_t idx = (uint16_t)nat;
+        uint16_t off = idx * 3;
+        uint8_t *src = shortCountryNames + off;
+        dest[0] = src[0];
+        dest[1] = src[1];
+        dest[2] = src[2];
+        dest[3] = 0;
+    }
+}
+
+
+/* ================================================================
+ * ViewCompetitionsOnReturn  (SWOS2.s line 56227)
+ *
+ * Called when the ViewCompetitions menu is restored.
+ * Sets up competition name text pointers and shuffles Y coordinates
+ * when hiding unavailable competition slots.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ViewCompetitionsOnReturn(void)
+{
+    /* Set text pointers for competition name entries */
+    menuEntries[1].fg = (uint32_t)diyPresetNameOfCompetition;
+    menuEntries[2].fg = (uint32_t)secondaryCompetitionName;
+    menuEntries[3].fg = (uint32_t)tertiaryCompetitionName;
+    menuEntries[4].fg = (uint32_t)quaternaryCompetitionName;
+
+    /* If primary competition is tour/friendly, hide entry 1 and shift Y coords up */
+    if (currentCompetitionPtr == (uint32_t)tourCopy
+        || currentCompetitionPtr == (uint32_t)friendlyCopy)
+    {
+        menuEntries[1].isInvisible = 1;
+        /* Shift Y coordinates: 5←4, 4←3, 3←2, 2←1 */
+        menuEntries[5].y = menuEntries[4].y;
+        menuEntries[4].y = menuEntries[3].y;
+        menuEntries[3].y = menuEntries[2].y;
+        menuEntries[2].y = menuEntries[1].y;
+    }
+
+    /* If secondary competition is null/tour/friendly, hide entry 2 and shift */
+    if (secondaryCompetitionPtr == 0
+        || secondaryCompetitionPtr == (uint32_t)friendlyCopy
+        || secondaryCompetitionPtr == (uint32_t)tourCopy)
+    {
+        menuEntries[2].isInvisible = 1;
+        /* Shift Y coordinates: 5←4, 4←3, 3←2 */
+        menuEntries[5].y = menuEntries[4].y;
+        menuEntries[4].y = menuEntries[3].y;
+        menuEntries[3].y = menuEntries[2].y;
+    }
+
+    /* If tertiary competition is null/tour/friendly, hide entry 3 and shift */
+    if (tertiaryCompetitionPtr == 0
+        || tertiaryCompetitionPtr == (uint32_t)friendlyCopy
+        || tertiaryCompetitionPtr == (uint32_t)tourCopy)
+    {
+        menuEntries[3].isInvisible = 1;
+        /* Shift Y coordinates: 5←4, 4←3 */
+        menuEntries[5].y = menuEntries[4].y;
+        menuEntries[4].y = menuEntries[3].y;
+    }
+
+    /* If quaternary competition is null, hide entry 4 and shift */
+    if (quaternaryCompetitionPtr == 0)
+    {
+        menuEntries[4].isInvisible = 1;
+        menuEntries[5].y = menuEntries[4].y;
+    }
+
+    /* Hide "Top Goal Scorers" entry (5) if national selector or has team selection cache */
+    if (isNationalSelector != 0 || teamSelectionKeyCacheIndex != 0)
+    {
+        menuEntries[5].isInvisible = 1;
+    }
+
+    /* Hide "Squad" entry (6) if not SEASON game type (4) */
+    if (gameType != 4)
+    {
+        menuEntries[6].isInvisible = 1;
+    }
+}
+
+
+/* ================================================================
+ * ViewCompetitionsInit  (SWOS2.s line 56209)
+ *
+ * Initializes the ViewCompetitions menu — sets starting entry based
+ * on whether current competition is tour/friendly.
+ * Falls through to ViewCompetitionsOnReturn.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ViewCompetitionsInit(void)
+{
+    if (currentCompetitionPtr == (uint32_t)tourCopy
+        || currentCompetitionPtr == (uint32_t)friendlyCopy)
+    {
+        _SetCurrentEntry(5);
+
+        if (isNationalSelector != 0 || teamSelectionKeyCacheIndex != 0)
+        {
+            _SetCurrentEntry(7);
+        }
+    }
+
+    _ViewCompetitionsOnReturn();
+}
+
+
+/* ================================================================
+ * CareerMenuFinish  (SWOS2.s line 55847)
+ *
+ * OnReturn callback for the career menu. Updates sex, player-coach
+ * field color, and nationality display.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _CareerMenuFinish(void)
+{
+    uint8_t nat;
+    uint8_t *table;
+    uint8_t idx;
+
+    _CheckSex();
+    _SetPlayerCoachFieldColor();
+
+    /* Find nationalityOrdinal for the current plNationality */
+    nat = plNationality;
+    table = nationalityOrdinalsArray;
+    idx = 0;
+    while (*table != nat)
+    {
+        table++;
+        idx++;
+    }
+    nationalityOrdinal = idx;
+
+    SetNationalityField();
+}
+
+
+/* ================================================================
+ * CareerMenuInit  (SWOS2.s line 55842)
+ *
+ * OnInit callback for the career menu.
+ * Calls SetDefaultNameAndSurname, then falls through to CareerMenuFinish.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _CareerMenuInit(void)
+{
+    _SetDefaultNameAndSurname();
+    _CareerMenuFinish();
+}
+
+
+/* ================================================================
+ * ChangeNationality  (SWOS2.s line 55889)
+ *
+ * Menu callback for left/right on the nationality field.
+ * Cycles through nationalities and redraws.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ChangeNationality(MenuEntry *entry)
+{
+    uint16_t ctrl = controlMask;
+    int8_t ord;
+
+    /* Right or Down → increment */
+    if (ctrl == 0x81 || ctrl == 0x101)
+    {
+        ord = (int8_t)nationalityOrdinal;
+        ord++;
+        if (ord == 64)
+            ord = 0;
+    }
+    /* Left or Up → decrement */
+    else if (ctrl == 0x41 || ctrl == 0x201)
+    {
+        ord = (int8_t)nationalityOrdinal;
+        ord--;
+        if (ord < 0)
+            ord = 63;
+    }
+    else
+    {
+        return;
+    }
+
+    nationalityOrdinal = (uint8_t)ord;
+    {
+        int16_t idx = (int16_t)(int8_t)ord;  /* ext.w d0 */
+        plNationality = nationalityOrdinalsArray[idx];
+    }
+    SetNationalityField();
+    _CallDrawMenuItem(entry);
+}
+
+
+/* ================================================================
+ * SelTeamForTacticsCommon  (SWOS2.s line 60202)
+ *
+ * Handler for selecting a team from the tactics team selection list.
+ * Converts menu ordinal to flat team index via column layout.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SelTeamForTacticsCommon(MenuEntry *entry)
+{
+    uint16_t idx = entry->ordinal;
+    idx -= 1;
+
+    if (idx >= 22)
+    {
+        if (idx >= 44)
+        {
+            idx -= 22;
+            idx += selTeamsColumn2;
+        }
+        idx -= 22;
+        idx += selTeamsColumn1;
+    }
+
+    teamSelected = idx;
+    _SetExitMenuFlag();
+}

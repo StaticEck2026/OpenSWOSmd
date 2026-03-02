@@ -2681,6 +2681,17 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, no new warnings)
 - Cumulative: 1272 functions across 135 chunks
 
+### Chunk 136 — ViewCompetitions Init/OnReturn, Career Menu Init/Finish, Nationality, SelTeamForTactics (7+1s → menus.c)
+- Date: 2026-03-02
+- **menus.c (7+1s):** _ViewCompetitionsInit (sets starting entry for tour/friendly, falls through to OnReturn), _ViewCompetitionsOnReturn (complex visibility: hides unavailable competition slots, shuffles Y coordinates), _CareerMenuInit (calls SetDefaultNameAndSurname + CareerMenuFinish), _CareerMenuFinish (updates sex/coach color/nationality display), static SetNationalityField (writes 3-char country code to menu entry), _ChangeNationality (a5 bridge, cycles nationality ordinal on left/right input), _SelTeamForTacticsCommon (a5 bridge, ordinal→index via column layout)
+- Dead asm stubs: SetNationalityField (only called from now-ported C)
+- jmp stubs: ViewCompetitionsInit, ViewCompetitionsOnReturn, CareerMenuInit, CareerMenuFinish
+- a5 bridges: ChangeNationality, SelTeamForTacticsCommon
+- Stub updates: jmp_SetExitMenuFlag_2→_SetExitMenuFlag, j_SetExitMenuFlag2→_SetExitMenuFlag, TopGoalScorersMenu→_TopGoalScorersMenu_0
+- New xdefs: secondaryCompetitionName, tertiaryCompetitionName, quaternaryCompetitionName, nationalityOrdinalsArray, nationalityOrdinal, shortCountryNames, aOther, selTeamsColumn1, selTeamsColumn2
+- Build status: **verified** (clean build, no new warnings)
+- Cumulative: 1280 functions across 136 chunks
+
 ### Phase Transitions (see CLAUDE.md "Project Phases")
 - [ ] Phase 1 complete: all subroutines ported → output `*** READY FOR TESTING PHASE! ***` and STOP
 - [ ] Phase 2: user tests game, fixes any bugs found
@@ -2830,5 +2841,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 133   | 17+5s     | 1249       |
 | 134   | 5+8s      | 1262       |
 | 135   | 9+1s      | 1272       |
+| 136   | 7+1s      | 1280       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

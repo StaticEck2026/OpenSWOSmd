@@ -2775,6 +2775,13 @@
         xref    _DesignDIYTournament_CacheStageSelection
         xref    _DesignDIYTournament_RedrawStageItemsFromBlock
         xref    _DIYTournament_RecalculateNumStages
+; --- Chunk 136 xrefs ---
+        xref    _ViewCompetitionsInit
+        xref    _ViewCompetitionsOnReturn
+        xref    _CareerMenuInit
+        xref    _CareerMenuFinish
+        xref    _ChangeNationality
+        xref    _SelTeamForTacticsCommon
 ; --- Chunk 135 xrefs ---
         xref    _CareerOverFinish
         xref    _JobOffersMenuRetired
@@ -2979,6 +2986,16 @@
         xdef    _CCalcTeamPriceRankPercentOffset
         xdef    _CUpdatePlayerPositionAndReturnRole
         xdef    _CCareer_ApplyPostMatchPlayerStatModsIfCareerTeam
+; --- Chunk 136 xdefs ---
+        xdef    secondaryCompetitionName
+        xdef    tertiaryCompetitionName
+        xdef    quaternaryCompetitionName
+        xdef    nationalityOrdinalsArray
+        xdef    nationalityOrdinal
+        xdef    shortCountryNames
+        xdef    aOther
+        xdef    selTeamsColumn1
+        xdef    selTeamsColumn2
 ; --- Chunk 135 xdefs ---
         xdef    selectedTeamIndex
         xdef    selectedLeagueIndex
