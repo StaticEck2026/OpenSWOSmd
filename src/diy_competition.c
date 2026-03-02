@@ -4025,7 +4025,7 @@ extern uint16_t diyLeagueEndingMonth;
 extern uint16_t diyLeagueMinSubstitutes;
 extern uint16_t diyLeagueMaxSubstitutes;
 extern uint8_t  aX0[];             /* "X %0" */
-extern void DesignDIYLeagueFinish(void);  /* still in asm, called by Init fallthrough */
+/* DesignDIYLeagueFinish now ported — call C version directly */
 
 /* DesignDIYLeagueInit — init league design menu (SWOS2.s line 41323)
  * Falls through to DesignDIYLeagueFinish in original asm. */
@@ -4034,7 +4034,7 @@ void _DesignDIYLeagueInit(void)
 {
     if (diyLeagueSelectTeams != 0)
         _SetNumberOfTeamsToSelect();
-    DesignDIYLeagueFinish();
+    _DesignDIYLeagueFinish();
 }
 
 /* DesignDIYLeagueSetName — input text for league name (SWOS2.s line 41484) */
@@ -5981,4 +5981,348 @@ void _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries(void)
     /* Entry 15: team 2 score */
     *(uint16_t *)&e->fg = score2;
     e->isInvisible = 0;
+}
+
+/* ==========================================================================
+ * Chunk 131 — DesignDIYLeague remaining + DIYCup menu helpers (12 functions)
+ * ========================================================================== */
+
+extern uint16_t diyPitchTypeOrSeason_1;
+extern uint8_t diyCupMenu[];
+extern uint16_t writeOnlyVar01;
+extern uint8_t aPlayLeague[];       /* "PLAY LEAGUE" */
+extern uint8_t aWinnerQualifie[];   /* "WINNER QUALIFIES" */
+extern uint8_t aTop0Qualify[];      /* "TOP %0 QUALIFY" */
+extern uint8_t aTeamsPromoted0[];   /* "TEAMS PROMOTED  %0" */
+extern uint8_t aTeamsPromoted0_0[]; /* "TEAMS PROMOTED  %0   TEAMS IN PLAYOFFS ..." */
+extern uint8_t aTeamsRelegated[];   /* "TEAMS RELEGATED  %0" */
+extern uint8_t aTeamsRelegated_0[]; /* "TEAMS RELEGATED  %0   TEAMS IN PLAYOFFS..." */
+extern void DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection(void);
+
+/* DIYSetMonthsOrPitchTypeEntries — toggle pitch type / month entry visibility (SWOS2.s line 41515) */
+__attribute__((used, externally_visible))
+void _DIYSetMonthsOrPitchTypeEntries(void)
+{
+    diyPitchTypeOrSeason_1 = *(uint16_t *)(diyCompetitionStart + 52); /* PITCHTYPEORSEASON */
+
+    if (gameType == 2 || gameType == 3 || gameType == 4) /* PRESET_COMP, SEASON, CAREER */
+        diyPitchTypeOrSeason_1 = 1;
+
+    if (diyPitchTypeOrSeason_1 == 0) {
+        /* Hide month entries 10-12, show pitch type entry 9 */
+        menuEntries[10].isInvisible = 1;
+        menuEntries[11].isInvisible = 1;
+        menuEntries[12].isInvisible = 1;
+        menuEntries[9].isInvisible = 0;
+    } else {
+        /* Show month entries 10-12, hide pitch type entry 9 */
+        menuEntries[9].isInvisible = 1;
+        menuEntries[10].isInvisible = 0;
+        menuEntries[11].isInvisible = 0;
+        menuEntries[12].isInvisible = 0;
+    }
+}
+
+/* DIYLeagueSetVariousFields — compute month indices, set numeric menu fields (SWOS2.s line 41422) */
+__attribute__((used, externally_visible))
+void _DIYLeagueSetVariousFields(void)
+{
+    /* Start month: byte at offset 56, wrap at 96, divide by 8 */
+    uint8_t startVal = diyCompetitionStart[56];
+    if (startVal >= 96)
+        startVal -= 96;
+    diyLeagueStartingMonth = (uint16_t)startVal / 8;
+
+    /* End month: byte at offset 57 */
+    uint8_t endVal = diyCompetitionStart[57];
+    if (endVal >= 96)
+        endVal -= 96;
+    diyLeagueEndingMonth = (uint16_t)endVal / 8;
+
+    /* Entry 13: number of teams */
+    *(uint16_t *)&menuEntries[13].fg = *(uint16_t *)(diyCompetitionStart + 50);
+
+    /* Entry 14: play-each-team string */
+    _SetPlayEachTeamString(&menuEntries[14]);
+
+    /* Entry 15: points for a win */
+    *(uint16_t *)&menuEntries[15].fg = *(uint16_t *)diyPointsForAWin;
+
+    _ConvertMinMaxSubstitutesNumbers();
+}
+
+/* DIYLeagueOKSelected — gray out entries 3-19, hide/show OK/cancel (SWOS2.s line 41450) */
+__attribute__((used, externally_visible))
+void _DIYLeagueOKSelected(void)
+{
+    MenuEntry *e = &menuEntries[3];
+    for (int16_t i = 0x10; i >= 0; i--) { /* 17 iterations: entries 3..19 */
+        if (e->background == 2) {
+            uint16_t bgVal = *(uint16_t *)&e->bg;
+            if ((bgVal & 0xF) != 0) {
+                bgVal = (bgVal & 0xFFF0) + 9; /* PINK_TO_BROWN_9 */
+                *(uint16_t *)&e->bg = bgVal;
+                e->isDisabled = 1;
+            }
+        }
+        e++;
+    }
+    menuEntries[2].isInvisible = 1;
+    menuEntries[0].isInvisible = 1;
+    menuEntries[1].isInvisible = 0;
+}
+
+/* DesignDIYLeagueUpdatePromotionRelegationText — format promotion/relegation text (SWOS2.s line 41373) */
+__attribute__((used, externally_visible))
+void _DesignDIYLeagueUpdatePromotionRelegationText(void)
+{
+    uint8_t *a6 = diyCompetitionStart;
+    MenuEntry *e18 = &menuEntries[18];
+    uint8_t *outBuf18 = (uint8_t *)(uint32_t)e18->fg;
+
+    uint8_t compType = a6[302]; /* offset $12E */
+
+    if (compType >= 80 && compType <= 85) {
+        /* Winner/qualifier format */
+        uint16_t numQualify = *(uint16_t *)(a6 + 84);
+        if (numQualify == 1)
+            _PrintFormatted(aWinnerQualifie, outBuf18, numQualify, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        else
+            _PrintFormatted(aTop0Qualify, outBuf18, numQualify, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        e18->isInvisible = 0;
+    } else {
+        /* Promoted format */
+        uint16_t numPromoted = *(uint16_t *)(a6 + 84);
+        uint16_t numPlayoffs = *(uint16_t *)(a6 + 86);
+        if (numPlayoffs != 0) {
+            _PrintFormatted(aTeamsPromoted0_0, outBuf18, numPromoted, numPlayoffs, 0, 0, 0, 0, 0, 0, 0, 0);
+            e18->isInvisible = 0;
+        } else if (numPromoted != 0) {
+            _PrintFormatted(aTeamsPromoted0, outBuf18, numPromoted, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+            e18->isInvisible = 0;
+        } else {
+            /* Both 0: move relegated text up to promoted position */
+            menuEntries[19].y = e18->y;
+        }
+    }
+
+    /* Relegated section */
+    MenuEntry *e19 = &menuEntries[19];
+    uint8_t *outBuf19 = (uint8_t *)(uint32_t)e19->fg;
+    uint16_t numRelegated = *(uint16_t *)(a6 + 88);
+    uint16_t numRelPlayoffs = *(uint16_t *)(a6 + 90);
+
+    if (numRelPlayoffs != 0) {
+        _PrintFormatted(aTeamsRelegated_0, outBuf19, numRelegated, numRelPlayoffs, 0, 0, 0, 0, 0, 0, 0, 0);
+        e19->isInvisible = 0;
+    } else if (numRelegated != 0) {
+        _PrintFormatted(aTeamsRelegated, outBuf19, numRelegated, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        e19->isInvisible = 0;
+    }
+    /* else: both 0, entry stays hidden */
+}
+
+/* DesignDIYLeagueFinish — menu onReturn for league design (SWOS2.s line 41328) */
+__attribute__((used, externally_visible))
+void _DesignDIYLeagueFinish(void)
+{
+    if (pitchType != 0xFFFE) { /* not SEASONAL */
+        *(uint16_t *)(diyCompetitionStart + 52) = 0; /* pitchTypeOrSeason = 0 */
+        *(uint16_t *)(diyCompetitionStart + 54) = pitchType; /* pitchType */
+
+        /* Disable and gray out entry 8 */
+        MenuEntry *e8 = &menuEntries[8];
+        uint16_t bg8 = *(uint16_t *)&e8->bg;
+        bg8 = (bg8 & 0xFFF0) + 9; /* PINK_TO_BROWN_9 */
+        *(uint16_t *)&e8->bg = bg8;
+        e8->isDisabled = 1;
+
+        /* Disable and gray out entry 9 */
+        MenuEntry *e9 = &menuEntries[9];
+        uint16_t bg9 = *(uint16_t *)&e9->bg;
+        bg9 = (bg9 & 0xFFF0) + 9;
+        *(uint16_t *)&e9->bg = bg9;
+        e9->isDisabled = 1;
+    }
+
+    _DIYSetMonthsOrPitchTypeEntries();
+    _DIYLeagueSetVariousFields();
+
+    if (diyLeagueLookOnly != 0) {
+        _DesignDIYLeagueUpdatePromotionRelegationText();
+        _DIYLeagueOKSelected();
+        menuEntries[20].isInvisible = 1;
+        menuEntries[21].isInvisible = 1;
+        menuEntries[23].isInvisible = 1;
+        _SetCurrentEntry(0x16); /* 22 */
+        return;
+    }
+
+    if (diyLeagueSelectTeams != 0) {
+        _DIYLeagueOKSelected();
+        menuEntries[21].isInvisible = 1;
+        _SetCurrentEntry(20);
+        return;
+    }
+
+    /* Default view */
+    menuEntries[20].isInvisible = 1;
+    menuEntries[21].isInvisible = 0;
+    menuEntries[23].isInvisible = 1;
+}
+
+/* DesignDIYLeagueChooseTeams — choose teams, start league play (SWOS2.s line 41488) */
+__attribute__((used, externally_visible))
+void _DesignDIYLeagueChooseTeams(void)
+{
+    uint16_t numTeams = *(uint16_t *)(diyCompetitionStart + 50);
+    uint8_t *teamListPtr = diyCompetitionStart + 4; /* FIELD_2 + 2 */
+
+    _GoGetTeamsForPlay(teamListPtr, aPlayLeague, numTeams, 1, 1, 1);
+
+    if (chooseTeamsResult == 0) {
+        _SetExitMenuFlag();
+        return;
+    }
+
+    _InitCareerVariables(1);
+    _CopySelectedTeamNumbers(numTeams, (uint8_t *)diyLeagueTeamIds);
+    _DIY_RecomputeCompetitionDerivedFields();
+    _DIY_ShuffleLeagueTeamOrder();
+    _InitTeams();
+    _asm_ShowDiyLeaguesTournamentMenu(0, 0, 0);
+    _RestoreDIYLeague();
+    _SetExitMenuFlag();
+}
+
+/* ShowDIYCupMenuWithParams — store params, show cup menu (SWOS2.s line 43290) */
+__attribute__((used, externally_visible))
+void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2)
+{
+    writeOnlyVar01 = 1;
+    diyCupMenuArg0 = arg0;
+    diyCupMenuArg0Copy = arg0;
+    diyCupMenuArg1 = arg1;
+    diyCupMenuArg2 = arg2;
+
+    if (seasonUpdateInProgress != 0) {
+        do {
+            MenuCheckControls();
+        } while (fire != 0);
+    }
+
+    _ShowMenu(diyCupMenu);
+    writeOnlyVar01 = 0;
+}
+
+/* DIYCupFinish — finalize cup menu display (SWOS2.s line 45807) */
+__attribute__((used, externally_visible))
+void _DIYCupFinish(void)
+{
+    uint16_t off74 = *(uint16_t *)(diyCompetitionStart + 74); /* FIELD_3A+$10 */
+
+    if (off74 == 6 || diyCupMenuArg0Copy == 0) {
+        _DesignDIYCup_HideCurrentMatchTeamEntries();
+    } else if ((int16_t)diyCupMenuArg0Copy < 0) {
+        _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries();
+    } else {
+        _DesignDIYCup_UpdateCurrentMatchTeamEntryStrings();
+    }
+
+    _DesignDIYCup_UpdateRoundOptionsVisibility();
+    DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection();
+    DesignDIYCup_BuildMatchListEntryStrings();
+    _DesignDIYCup_UpdateMatchListScrollAndRebuildStrings();
+    _DesignDIYCup_BuildMenuTitleString();
+}
+
+/* DIYCupInit — init cup menu state, then fall through to finish (SWOS2.s line 45770) */
+__attribute__((used, externally_visible))
+void _DIYCupInit(void)
+{
+    diyCupMatchListScrollIndex = 0;
+
+    if (diyCupMenuArg0 != 0) {
+        *(uint16_t *)(diyCompetitionStart + 74) = 0; /* FIELD_3A+$10 */
+        if (*(uint16_t *)(diyCompetitionStart + 84) != 0) { /* FIELD_3A+$1A */
+            *(uint16_t *)(diyCompetitionStart + 74) = 6;
+            diyCupMenuArg0Copy = 0;
+        }
+    }
+
+    if (*(uint16_t *)(diyCompetitionStart + 86) != 0) { /* FIELD_3A+$1C */
+        if (*(uint16_t *)(diyCompetitionStart + 72) == 0) { /* FIELD_3A+$E */
+            diyCupMenuArg0Copy = 0;
+            *(uint16_t *)(diyCompetitionStart + 74) = 6;
+        }
+    }
+
+    if (diyCupMenuArg1 != 0) {
+        diyCupMenuArg0Copy = 0;
+        _SetCurrentEntry(10);
+    }
+
+    *(uint16_t *)(diyCompetitionStart + 2) = 1; /* FIELD_2 */
+    diyCupMatchListDrawModeFlag = 0;
+
+    if (seasonUpdateInProgress != 0) {
+        diyCupMenuArg0Copy = 0;
+        _SetCurrentEntry(0x42); /* 66 */
+        menuEntries[9].isInvisible = 1;
+        menuEntries[10].isInvisible = 1;
+    }
+
+    /* Original asm falls through to DIYCupFinish via bra.w *+4 */
+    _DIYCupFinish();
+}
+
+/* DIYCupOnSelect10 — cup select/play callback (SWOS2.s line 45845) */
+__attribute__((used, externally_visible))
+void _DIYCupOnSelect10(void)
+{
+    uint8_t *a0 = diyCompetitionStart;
+    uint16_t off72 = *(uint16_t *)(a0 + 72);  /* FIELD_3A+$E */
+    uint16_t off86 = *(uint16_t *)(a0 + 86);  /* FIELD_3A+$1C */
+
+    if (off72 != 0) {
+        if (!(off72 == 2 && off86 != 0)) {
+            /* off72 != 0 and not the (==2 && has replays) exit-only case */
+            *(uint16_t *)(a0 + 72) = 0xFFFF;
+        }
+    } else {
+        /* off72 == 0 */
+        if (off86 != 0)
+            *(uint16_t *)(a0 + 2) = 2;
+        /* else: both 0, just exit */
+    }
+    _SetExitMenuFlag();
+}
+
+/* DIYCupOnSelect16 — scroll match list up (SWOS2.s line 45878) */
+__attribute__((used, externally_visible))
+void _DIYCupOnSelect16(void)
+{
+    if (diyCupMatchListScrollIndex == 0)
+        return;
+    diyCupMatchListScrollIndex--;
+    DesignDIYCup_BuildMatchListEntryStrings();
+    _DrawMenu();
+}
+
+/* DIYCupOnSelect17 — scroll match list down (SWOS2.s line 45889) */
+__attribute__((used, externally_visible))
+void _DIYCupOnSelect17(void)
+{
+    uint16_t d0 = diyCupMatchListScrollIndex + 6;
+    uint16_t d1 = *(uint16_t *)(diyCompetitionStart + 82); /* FIELD_3A+$18 */
+
+    if (diyCupMatchListDrawModeFlag != 0)
+        d1 >>= 1;
+
+    if (d0 >= d1)
+        return;
+
+    diyCupMatchListScrollIndex++;
+    DesignDIYCup_BuildMatchListEntryStrings();
+    _DrawMenu();
 }

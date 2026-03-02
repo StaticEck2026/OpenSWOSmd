@@ -2633,6 +2633,16 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified**
 - Cumulative: 1205 functions across 130 chunks
 
+### Chunk 131 — DesignDIYLeague remaining + DIYCup menu helpers (12 → diy_competition.c)
+- Date: 2026-03-02
+- **diy_competition.c (12):** _DIYSetMonthsOrPitchTypeEntries (toggle pitch/month visibility), _DIYLeagueSetVariousFields (month indices, numeric fields), _DIYLeagueOKSelected (gray out entries 3-19), _DesignDIYLeagueUpdatePromotionRelegationText (format promoted/relegated text with PrintFormatted), _DesignDIYLeagueFinish (menu onReturn for league design), _DesignDIYLeagueChooseTeams (choose teams, start league play), _ShowDIYCupMenuWithParams (store params, show cup menu), _DIYCupFinish (finalize cup display), _DIYCupInit (init cup menu, falls through to Finish), _DIYCupOnSelect10 (cup play/exit callback), _DIYCupOnSelect16 (scroll up), _DIYCupOnSelect17 (scroll down)
+- ShowDIYCupMenuWithParams uses register bridge stub (d0/d1/d2 → stack params)
+- DIYCupInit falls through to DIYCupFinish (bra.w *+4 = no-op), ported as explicit call to _DIYCupFinish()
+- Updated DesignDIYLeagueInit to call _DesignDIYLeagueFinish() directly instead of asm DesignDIYLeagueFinish()
+- New xdefs: diyPitchTypeOrSeason_1, diyCupMenu, writeOnlyVar01, aPlayLeague, aWinnerQualifie, aTop0Qualify, aTeamsPromoted0, aTeamsPromoted0_0, aTeamsRelegated, aTeamsRelegated_0, DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection, MenuCheckControls
+- Build status: **verified**
+- Cumulative: 1217 functions across 131 chunks
+
 ### Phase Transitions (see CLAUDE.md "Project Phases")
 - [ ] Phase 1 complete: all subroutines ported → output `*** READY FOR TESTING PHASE! ***` and STOP
 - [ ] Phase 2: user tests game, fixes any bugs found
@@ -2776,5 +2786,7 @@ Update this section every time you port a chunk. Keep it chronological.
 | 127   | 17+1s     | 1167       |
 | 128   | 17+1s     | 1185       |
 | 129   | 8+2s      | 1195       |
+| 130   | 10        | 1205       |
+| 131   | 12        | 1217       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

@@ -2775,6 +2775,19 @@
         xref    _DesignDIYTournament_CacheStageSelection
         xref    _DesignDIYTournament_RedrawStageItemsFromBlock
         xref    _DIYTournament_RecalculateNumStages
+; --- Chunk 131 xrefs ---
+        xref    _DIYSetMonthsOrPitchTypeEntries
+        xref    _DIYLeagueSetVariousFields
+        xref    _DIYLeagueOKSelected
+        xref    _DesignDIYLeagueUpdatePromotionRelegationText
+        xref    _DesignDIYLeagueFinish
+        xref    _DesignDIYLeagueChooseTeams
+        xref    _ShowDIYCupMenuWithParams
+        xref    _DIYCupFinish
+        xref    _DIYCupInit
+        xref    _DIYCupOnSelect10
+        xref    _DIYCupOnSelect16
+        xref    _DIYCupOnSelect17
 ; --- Chunk 130 xrefs ---
         xref    _DesignDIYCupOnDraw
         xref    _DesignDIYCupOnSelect48
@@ -2814,6 +2827,19 @@
         xdef    seasonUpdateInProgress
         xdef    fire
         xdef    DesignDIYCup_BuildMatchListEntryStrings
+; --- Chunk 131 xdefs ---
+        xdef    diyPitchTypeOrSeason_1
+        xdef    diyCupMenu
+        xdef    writeOnlyVar01
+        xdef    aPlayLeague
+        xdef    aWinnerQualifie
+        xdef    aTop0Qualify
+        xdef    aTeamsPromoted0
+        xdef    aTeamsPromoted0_0
+        xdef    aTeamsRelegated
+        xdef    aTeamsRelegated_0
+        xdef    DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection
+        xdef    MenuCheckControls
 ; --- Chunk 129 xdefs ---
         xdef    diyTournamentSelectedStageIndex1Based
         xdef    diyTournamentSelectedStagePtr

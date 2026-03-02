@@ -212,6 +212,20 @@ int16_t _DesignDIYCup_UpdateMatchListScrollAndRebuildStrings(void);
 void _DesignDIYCup_UpdateMatchListAndRedrawIfNeeded(void);
 void _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries(void);
 
+/* ---- DesignDIYLeague remaining + DIYCup menu helpers (Chunk 131) ---- */
+void _DIYSetMonthsOrPitchTypeEntries(void);
+void _DIYLeagueSetVariousFields(void);
+void _DIYLeagueOKSelected(void);
+void _DesignDIYLeagueUpdatePromotionRelegationText(void);
+void _DesignDIYLeagueFinish(void);
+void _DesignDIYLeagueChooseTeams(void);
+void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
+void _DIYCupFinish(void);
+void _DIYCupInit(void);
+void _DIYCupOnSelect10(void);
+void _DIYCupOnSelect16(void);
+void _DIYCupOnSelect17(void);
+
 /* ---- OpenDiy* + ShowDiyCompetitionForSource (Chunk 116) ---- */
 void _ShowDiyCompetitionForSource(uint8_t *header);
 void _OpenDiyFromFile(void);

@@ -41326,148 +41326,23 @@ DesignDIYLeagueInit:
 ; ===== DesignDIYLeagueFinish =====
 ; prototype: void __usercall DesignDIYLeagueFinish()
 DesignDIYLeagueFinish:
-                cmpi.w  #SEASONAL,(pitchType).l
-                beq.s   loc_132052
-                clr.w   (diyCompetitionStart+DIY_COMPETITION_PITCHTYPEORSEASON).l
-                move.w  (pitchType).l,(diyCompetitionStart+DIY_COMPETITION_PITCHTYPE).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1F8)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-loc_132052:
-                bsr.w   DIYSetMonthsOrPitchTypeEntries
-                bsr.w   DIYLeagueSetVariousFields
-                tst.w   (diyLeagueLookOnly).l
-                bne.s   loc_132090
-                tst.w   (diyLeagueSelectTeams).l
-                bne.s   loc_13207C
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$460).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$498).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$508).l
-                rts
-loc_13207C:
-                bsr.w   DIYLeagueOKSelected
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$498).l
-                move.w  #20,d0
-                jmp     SetCurrentEntry
-loc_132090:
-                bsr.w   DesignDIYLeagueUpdatePromotionRelegationText
-                bsr.w   DIYLeagueOKSelected
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$460).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$498).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$508).l
-                move.w  #$16,d0
-                jmp     SetCurrentEntry
+                jmp     _DesignDIYLeagueFinish
 
 ; ===== DesignDIYLeagueUpdatePromotionRelegationText =====
 ; prototype: void __usercall DesignDIYLeagueUpdatePromotionRelegationText()
 ; DOS: cseg_47981
 DesignDIYLeagueUpdatePromotionRelegationText:
-                lea     (diyCompetitionStart).l,a6
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3F0)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                move.b  $12E(a6),d0
-                cmpi.b  #80,d0
-                bcs.s   loc_1320EA
-                cmpi.b  #85,d0
-                bhi.s   loc_1320EA
-                move.w  84(a6),d0
-                lea     (aWinnerQualifie).l,a0 ; "WINNER QUALIFIES"
-                cmpi.w  #1,d0
-                beq.s   loc_132104
-                lea     (aTop0Qualify).l,a0 ; "TOP %0 QUALIFY"
-                bra.s   loc_132104
-loc_1320EA:
-                lea     (aTeamsPromoted0_0).l,a0 ; "TEAMS PROMOTED  %0   TEAMS IN PLAYOFFS "...
-                move.w  84(a6),d0
-                move.w  86(a6),d1
-                bne.s   loc_132104
-                tst.w   d0
-                beq.s   loc_132110
-                lea     (aTeamsPromoted0).l,a0 ; "TEAMS PROMOTED  %0"
-loc_132104:
-                jsr     PrintFormatted
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$3F0).l
-                bra.s   loc_13211E
-loc_132110:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3F0)).l,a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$428)).l,a1
-                move.w  22(a0),MENUENTRY_Y(a1)
-loc_13211E:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$428)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                lea     (aTeamsRelegated_0).l,a0 ; "TEAMS RELEGATED  %0   TEAMS IN PLAYOFFS"...
-                move.w  88(a6),d0
-                move.w  90(a6),d1
-                bne.s   loc_132140
-                tst.w   d0
-                beq.s   locret_13214A
-                lea     (aTeamsRelegated).l,a0 ; "TEAMS RELEGATED  %0"
-loc_132140:
-                jsr     PrintFormatted
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$428).l
-locret_13214A:
-                rts
+                jmp     _DesignDIYLeagueUpdatePromotionRelegationText
 
 ; ===== DIYLeagueSetVariousFields =====
 ; prototype: void __usercall DIYLeagueSetVariousFields()
 DIYLeagueSetVariousFields:
-                move.b  (diyCompetitionStart+DIY_COMPETITION_STARTMONTH).l,d0
-                cmpi.b  #96,d0
-                bcs.s   loc_13215C
-                subi.b  #96,d0
-loc_13215C:
-                andi.l  #$FF,d0
-                divu.w  #8,d0
-                move.w  d0,(diyLeagueStartingMonth).l
-                move.b  (diyCompetitionStart+DIY_COMPETITION_ENDMONTH).l,d0
-                cmpi.b  #96,d0
-                bcs.s   loc_13217C
-                subi.b  #96,d0
-loc_13217C:
-                andi.l  #$FF,d0
-                divu.w  #8,d0
-                move.w  d0,(diyLeagueEndingMonth).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2D8)).l,a0
-                move.w  (diyCompetitionStart+DIY_COMPETITION_NUMTEAMS).l,MENUENTRY_FG+ENTRYTYPE2UNION_NUMBER(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$310)).l,a5
-                bsr.w   SetPlayEachTeamString
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$348)).l,a0
-                move.w  (diyPointsForAWin).l,MENUENTRY_FG+ENTRYTYPE2UNION_NUMBER(a0)
-                bsr.w   ConvertMinMaxSubstitutesNumbers
-                rts
+                jmp     _DIYLeagueSetVariousFields
 
 ; ===== DIYLeagueOKSelected =====
 ; prototype: void __usercall DIYLeagueOKSelected()
 DIYLeagueOKSelected:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                move.w  #$10,d1
-loc_1321BA:
-                cmpi.w  #2,$1C(a0)
-                bne.s   loc_1321E2
-                move.w  $1E(a0),d0
-                andi.w  #$F,d0
-                beq.s   loc_1321E2
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #9,d0
-                move.w  d0,$1E(a0)
-                move.w  #1,6(a0)
-loc_1321E2:
-                lea     $38(a0),a0
-                dbf     d1,loc_1321BA
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$70).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$38).l
-                rts
+                jmp     _DIYLeagueOKSelected
 
 ; ===== DesignDIYLeagueOK ===== (ported to C → _DesignDIYLeagueOK)
 DesignDIYLeagueOK:
@@ -41486,58 +41361,12 @@ DesignDIYLeagueSetName:
 ; ===== DesignDIYLeagueChooseTeams =====
 ; prototype: void __usercall DesignDIYLeagueChooseTeams()
 DesignDIYLeagueChooseTeams:
-                move.w  (diyCompetitionStart+DIY_COMPETITION_NUMTEAMS).l,d0
-                lea     ((diyCompetitionStart+DIY_COMPETITION_FIELD_2+2)).l,a0
-                lea     (aPlayLeague).l,a1 ; "PLAY LEAGUE"
-                move.w  #1,d2
-                move.w  #1,d3
-                move.w  #1,d4
-                jsr     GoGetTeamsForPlay
-                tst.w   (chooseTeamsResult).l
-                beq.s   jmp_SetExitMenuFlag_6
-                move.w  #1,d0
-                jsr     InitCareerVariables
-                lea     (diyLeagueTeamIds).l,a0
-                move.w  (diyCompetitionStart+DIY_COMPETITION_NUMTEAMS).l,d0
-                jsr CopySelectedTeamNumbers(pc)
-                bsr.w   DIY_RecomputeCompetitionDerivedFields
-                bsr.w   DIY_ShuffleLeagueTeamOrder
-                jsr     InitTeams
-                clr.w   d0
-                clr.w   d1
-                clr.w   d2
-                bsr.w   ShowDiyLeaguesTournamentMenu
-                bsr.w   RestoreDIYLeague
-                jmp     SetExitMenuFlag
+                jmp     _DesignDIYLeagueChooseTeams
 
 ; ===== DIYSetMonthsOrPitchTypeEntries =====
 ; prototype: void __usercall DIYSetMonthsOrPitchTypeEntries()
 DIYSetMonthsOrPitchTypeEntries:
-                move.w  (diyCompetitionStart+DIY_COMPETITION_PITCHTYPEORSEASON).l,(diyPitchTypeOrSeason_1).l
-                cmpi.w  #GAME_TYPE_PRESET_COMPETITION,(gameType).l
-                beq.s   loc_1322B2
-                cmpi.w  #GAME_TYPE_SEASON,(gameType).l
-                beq.s   loc_1322B2
-                cmpi.w  #GAME_TYPE_CAREER,(gameType).l
-                bne.s   loc_1322BA
-loc_1322B2:
-                move.w  #1,(diyPitchTypeOrSeason_1).l
-loc_1322BA:
-                tst.w   (diyPitchTypeOrSeason_1).l
-                bne.s   loc_1322DE
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$230)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  #1,MENUENTRY_ISINVISIBLE+$38(a0)
-                move.w  #1,MENUENTRY_ISINVISIBLE+$70(a0)
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$1F8).l
-                rts
-loc_1322DE:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1F8).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$230)).l,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                clr.w   MENUENTRY_ISINVISIBLE+$38(a0)
-                clr.w   MENUENTRY_ISINVISIBLE+$70(a0)
-                rts
+                jmp     _DIYSetMonthsOrPitchTypeEntries
 
 ; ===== DIYLeagueChangePitchTypeOrSeason =====
 ; prototype: void __usercall DIYLeagueChangePitchTypeOrSeason()
@@ -43288,21 +43117,13 @@ ShowCupInfo:
 ; ===== ShowDIYCupMenuWithParams =====
 ; prototype: void __usercall ShowDIYCupMenuWithParams(__int16 a0@<d0>, __int16 a1@<d1>, __int16 a2@<d2>)
 ShowDIYCupMenuWithParams:
-                move.w  #1,(writeOnlyVar01).l
-                move.w  d0,(diyCupMenuArg0).l
-                move.w  d0,(diyCupMenuArg0Copy).l
-                move.w  d1,(diyCupMenuArg1).l
-                move.w  d2,(diyCupMenuArg2).l
-                tst.w   (seasonUpdateInProgress).l
-                beq.s   loc_13339E
-loc_133390:
-                jsr     MenuCheckControls
-                tst.w   (fire).l
-                bne.s   loc_133390
-loc_13339E:
-                lea     (diyCupMenu).l,a6
-                jsr     ShowMenu
-                clr.w   (writeOnlyVar01).l
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  d2,-(sp)
+                move.l  d1,-(sp)
+                move.l  d0,-(sp)
+                jsr     _ShowDIYCupMenuWithParams
+                lea     12(sp),sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 ; Menu_DesignDIYCup
 designDiyCupMenu:
@@ -45768,64 +45589,12 @@ diyCupMenu:
 ; ===== DIYCupInit =====
 ; prototype: void __usercall DIYCupInit()
 DIYCupInit:
-                clr.w   (diyCupMatchListScrollIndex).l
-                tst.w   (diyCupMenuArg0).l
-                beq.s   loc_1344D6
-                move.w  #0,(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+$10).l
-                tst.w   (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+$1A).l
-                beq.s   loc_1344D6
-                move.w  #6,(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+$10).l
-                clr.w   (diyCupMenuArg0Copy).l
-loc_1344D6:
-                tst.w   (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+$1C).l
-                beq.s   loc_1344F4
-                tst.w   (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+$E).l
-                bne.s   loc_1344F4
-                clr.w   (diyCupMenuArg0Copy).l
-                move.w  #6,(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+$10).l
-loc_1344F4:
-                tst.w   (diyCupMenuArg1).l
-                beq.s   loc_13450C
-                clr.w   (diyCupMenuArg0Copy).l
-                move.w  #$A,d0
-                jsr     SetCurrentEntry
-loc_13450C:
-                move.w  #1,(diyCompetitionStart+DIY_COMPETITION_FIELD_2).l
-                clr.w   (diyCupMatchListDrawModeFlag).l
-                tst.w   (seasonUpdateInProgress).l
-                beq.s   loc_13453E
-                clr.w   (diyCupMenuArg0Copy).l
-                move.w  #$42,d0         ; 'B'
-                jsr     SetCurrentEntry
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1F8).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$230).l
-loc_13453E:
-                bra.w   *+4
+                jmp     _DIYCupInit
 
 ; ===== DIYCupFinish =====
 ; prototype: void __usercall DIYCupFinish()
 DIYCupFinish:
-                cmpi.w  #6,(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+$10).l
-                beq.s   loc_13456A
-                tst.w   (diyCupMenuArg0Copy).l
-                beq.s   loc_13456A
-                tst.w   (diyCupMenuArg0Copy).l
-                beq.s   loc_13456A
-                bmi.s   loc_134564
-                bsr.w   DesignDIYCup_UpdateCurrentMatchTeamEntryStrings
-                bra.s   loc_13456E
-loc_134564:
-                bsr.w   DesignDIYCup_UpdateCurrentMatchResultHeaderEntries
-                bra.s   loc_13456E
-loc_13456A:
-                bsr.w   DesignDIYCup_HideCurrentMatchTeamEntries
-loc_13456E:
-                bsr.w   DesignDIYCup_UpdateRoundOptionsVisibility
-                bsr.w   DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection
-                bsr.w   DesignDIYCup_BuildMatchListEntryStrings
-                bsr.w   DesignDIYCup_UpdateMatchListScrollAndRebuildStrings
-                bsr.w   DesignDIYCup_BuildMenuTitleString
-                rts
+                jmp     _DIYCupFinish
 
 ; ===== jmp_SetExitMenuFlag_5 =====
 ; prototype: void __usercall jmp_SetExitMenuFlag_5()
@@ -45843,30 +45612,7 @@ DesignDIYCup_BuildMenuTitleString:
 ; ===== DIYCupOnSelect10 =====
 ; prototype: void __usercall DIYCupOnSelect10()
 DIYCupOnSelect10:
-                lea     (diyCompetitionStart).l,a0
-                tst.w   DIY_COMPETITION_FIELD_3A+$E(a0)
-                beq.s   loc_1346F6
-                cmpi.w  #2,$48(a0)
-                bne.s   loc_1346E4
-                tst.w   $56(a0)
-                beq.s   loc_1346E4
-                tst.w   (diyCupMenuArg1).l
-                bne.s   loc_1346F0
-                bra.s   loc_1346F0
-loc_1346E4:
-                tst.w   $48(a0)
-                beq.s   loc_1346F0
-                move.w  #$FFFF,$48(a0)
-loc_1346F0:
-                jmp     SetExitMenuFlag
-loc_1346F6:
-                tst.w   $56(a0)
-                beq.s   loc_1346E4
-                move.w  #2,2(a0)
-                tst.w   (diyCupMenuArg1).l
-                bne.w   *+4
-loc_13470C:
-                jmp     SetExitMenuFlag
+                jmp     _DIYCupOnSelect10
 
 ; ===== DIYCupOnSelect9 =====
 ; prototype: void __usercall DIYCupOnSelect9()
@@ -45876,31 +45622,12 @@ DIYCupOnSelect9:
 ; ===== DIYCupOnSelect16 =====
 ; prototype: void __usercall DIYCupOnSelect16()
 DIYCupOnSelect16:
-                tst.w   (diyCupMatchListScrollIndex).l
-                beq.s   locret_134730
-                subq.w  #1,(diyCupMatchListScrollIndex).l
-                bsr.w   DesignDIYCup_BuildMatchListEntryStrings
-                jmp     DrawMenu
-locret_134730:
-                rts
+                jmp     _DIYCupOnSelect16
 
 ; ===== DIYCupOnSelect17 =====
 ; prototype: void __usercall DIYCupOnSelect17()
 DIYCupOnSelect17:
-                move.w  (diyCupMatchListScrollIndex).l,d0
-                addq.w  #6,d0
-                move.w  (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+$18).l,d1
-                tst.w   (diyCupMatchListDrawModeFlag).l
-                beq.s   loc_13474A
-                lsr.w   #1,d1
-loc_13474A:
-                cmp.w   d1,d0
-                bcc.s   locret_13475E
-                addq.w  #1,(diyCupMatchListScrollIndex).l
-                bsr.w   DesignDIYCup_BuildMatchListEntryStrings
-                jmp     DrawMenu
-locret_13475E:
-                rts
+                jmp     _DIYCupOnSelect17
 
 ; ===== DIYCupOnSelect1 =====
 ; prototype: void __usercall DIYCupOnSelect1()

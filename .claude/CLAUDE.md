@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1205 functions ported across 130 chunks.
+**Current status:** 1217 functions ported across 131 chunks.
 
-**Last completed chunk:** Chunk 130 — DesignDIYCup Draw & Cup Menu Helpers (10 → diy_competition.c): OnDraw, OnSelect48, UpdateRoundOptionsVisibility, BuildMenuTitleString, UpdateCurrentMatchTeamEntryStrings, DrawCurrentMatchTeamEntries, HideCurrentMatchTeamEntries, UpdateMatchListScrollAndRebuildStrings, UpdateMatchListAndRedrawIfNeeded, UpdateCurrentMatchResultHeaderEntries.
+**Last completed chunk:** Chunk 131 — DesignDIYLeague remaining + DIYCup menu helpers (12 → diy_competition.c): DIYSetMonthsOrPitchTypeEntries, DIYLeagueSetVariousFields, DIYLeagueOKSelected, DesignDIYLeagueUpdatePromotionRelegationText, DesignDIYLeagueFinish, DesignDIYLeagueChooseTeams, ShowDIYCupMenuWithParams, DIYCupFinish, DIYCupInit, DIYCupOnSelect10, DIYCupOnSelect16, DIYCupOnSelect17.
 
-**Next candidates:** DesignDIYCup remaining large functions (BuildMatchListEntryStrings ~164 instr, UpdateMenuEntriesVisibilityAndSelection ~260 instr, AppendTeamNameToMenuEntry, AppendOrTeamNameToMenuEntry), DesignDIYLeague (Finish, ChooseTeams), DIYCupFinish, SquadMenu, CareerGameListCommon, EditTactics.
+**Next candidates:** DIYCupOnSelect3-8 + DIYCupOnSelectCommon (need DIY_PlayCupMatchAndAdvance bridge), DesignDIYCup remaining (BuildMatchListEntryStrings ~164 instr, UpdateMenuEntriesVisibilityAndSelection ~260 instr, AppendTeamNameToMenuEntry), SquadMenu, CareerGameListCommon, EditTactics.
 
 ---
 
