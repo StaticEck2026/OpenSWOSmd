@@ -4,7 +4,10 @@
  */
 
 #include "game_types.h"
+#include "menu_system.h"
+#include "input_text.h"
 #include "random.h"
+#include "string_utils.h"
 
 /* ---- External globals (all in SWOS2.s BSS) ---- */
 extern uint16_t numPlayersOnTransferMarket;
@@ -36,6 +39,14 @@ extern uint16_t removedOfferPlayersFromOtherTeamsCount;
 extern uint32_t careerCupPickList;
 extern uint8_t invitationTournamentCopy[];
 extern uint8_t tourCopy[];
+
+/* Globals for manager setup menu (Chunk 110) */
+extern MenuEntry menuEntries[];
+extern uint16_t coachOrPlayer;
+extern uint16_t mrOrMs;
+extern uint8_t managerSexBuffer[];
+extern uint8_t aMr[];           /* "MR" */
+extern uint8_t aMs[];           /* "MS" */
 
 /* ================================================================
  * Career_InitTransferMarketState  (SWOS2.s line 72836)
@@ -115,4 +126,81 @@ void _Career_RandomizeInvitationTournamentCup(void)
                 pickList[i] = (uint32_t)tourCopy;
         }
     }
+}
+
+/* ================================================================
+ * Manager setup menu callbacks (Chunk 110)
+ * Asm: SetPlayerCoachFieldColor, CheckSex, ChangeSex,
+ *      SetName, SetSurname, CoachOrPlayerCoach
+ * ================================================================ */
+
+/* SetPlayerCoachFieldColor: update background color palette index
+ * for menu entry 9 based on coachOrPlayer toggle.
+ * The low nibble of the bg high word holds the color palette index. */
+__attribute__((used, externally_visible))
+void _SetPlayerCoachFieldColor(void)
+{
+    /* menuEntries + 0x1F8 = &menuEntries[9] (0x1F8 / 56 = 9)
+     * bg field at offset 30 — access high word via byte pointer to avoid
+     * packed struct alignment warning */
+    uint8_t *base = (uint8_t *)&menuEntries[9];
+    uint16_t val;
+
+    /* Read high word of bg (offset 30, big-endian) */
+    val = *(uint16_t *)(base + 30);
+    val = (val & 0xFFF0) + 13; /* BRIGHT_BLUE_TO_BLUE_13 */
+    *(uint16_t *)(base + 30) = val;
+
+    if (coachOrPlayer != 0) {
+        /* Override: blue to purple (11) */
+        val = *(uint16_t *)(base + 30);
+        val = (val & 0xFFF0) + 11; /* BLUE_TO_PURPLE_11 */
+        *(uint16_t *)(base + 30) = val;
+    }
+}
+
+/* CheckSex: copy "MR" or "MS" to managerSexBuffer based on mrOrMs toggle */
+__attribute__((used, externally_visible))
+void _CheckSex(void)
+{
+    uint8_t *src = aMr;
+    if (mrOrMs != 0)
+        src = aMs;
+    _StringCopy(src, managerSexBuffer);
+}
+
+/* ChangeSex: toggle mrOrMs, update sex string, redraw current menu item.
+ * entry = a5 from menu system (current MenuEntry). */
+__attribute__((used, externally_visible))
+void _ChangeSex(MenuEntry *entry)
+{
+    mrOrMs ^= 1;
+    _CheckSex();
+    _CallDrawMenuItem(entry);
+}
+
+/* SetName: start text input for first name field (max 9 chars).
+ * entry = a5 from menu system; fg field holds pointer to text buffer. */
+__attribute__((used, externally_visible))
+void _SetName(MenuEntry *entry)
+{
+    _InputText(9, (uint8_t *)entry->fg);
+}
+
+/* SetSurname: start text input for surname field (max 13 chars).
+ * entry = a5 from menu system; fg field holds pointer to text buffer. */
+__attribute__((used, externally_visible))
+void _SetSurname(MenuEntry *entry)
+{
+    _InputText(13, (uint8_t *)entry->fg);
+}
+
+/* CoachOrPlayerCoach: toggle coach/player-coach mode, update color, redraw.
+ * entry = a5 from menu system (current MenuEntry). */
+__attribute__((used, externally_visible))
+void _CoachOrPlayerCoach(MenuEntry *entry)
+{
+    coachOrPlayer ^= 1;
+    _SetPlayerCoachFieldColor();
+    _CallDrawMenuItem(entry);
 }

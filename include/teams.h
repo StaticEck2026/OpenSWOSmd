@@ -46,6 +46,27 @@ void _SetBenchPlayersNumbers(uint8_t *teamPtr);
 void _Career_RemovePlayerFromSelectedTeamRoster(uint16_t index);
 void _RemovePlayerFromTeam(uint16_t playerOrd);
 
+/* ---- Team selection menu callbacks (Chunks 107-108) ---- */
+void _DeselectAllTeams(void);
+void _ChangeTeams(void);
+void _AbortChooseTeamsFriendly(void);
+void _ChooseTeamsFriendlyOnSelect76(void);
+void _ViewSelected(void);
+void _ExitChooseTeams2(void);
+void _ChooseTeamsPlayMatchSelected(void);
+
+/* ---- Team navigation stack & contest checking (Chunk 109) ---- */
+uint8_t *_GetCountryName(uint16_t countryId);
+void _PushContinent(uint16_t countryId);
+uint16_t _PopContinent(void);
+void _SetSelectedTeamsStackTop(void);
+void _PushLastSelectedTeam(void);
+void _GetSelectedTeamsStackTop(void);
+void _MarkSelectedTeamsStackLocation(void);
+void _IsContestContinentalCup(void);
+uint16_t _IsClubTeamsContest(uint32_t contest);
+void _SetTeamsTypeForSelectedContest(void);
+
 /* ---- National team selector utilities (Chunk 91) ---- */
 uint8_t *_GetNationalityRecordPtr(uint16_t teamFileAndOrdinal);
 int16_t _GetNationalTeamNumber(uint16_t nationality);

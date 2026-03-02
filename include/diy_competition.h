@@ -100,3 +100,46 @@ void _DIY_RecordCupBracketProgress(void);
 void _DIY_UpdateCompetitionProgressOrAdvanceSlot(uint8_t *blk);
 void _DIY_RecordLeagueFixtureResultAndAdvanceProgress(void);
 void _DIY_RebuildCompetitionAndTeamSelectionCaches(void);
+
+/* --- Chunk 97: DIY Competition Setup Functions --- */
+void _DIY_LoadCurrentCompetitionSlot(void);
+void _DIY_ResetAndLoadCurrentCompetitionSlot(void);
+void _DIY_InitCupFromTeamGridAndValidateTeams(void);
+void _DIY_ShuffleTeamsAndBuildCompTeamList(uint8_t *diy, uint8_t *slot,
+                                            uint8_t *comp, uint8_t *comp5);
+void _DIY_BuildTeamGridAndIndexMaps(uint8_t *diy, uint8_t *slot,
+                                     uint8_t *comp4, uint8_t *comp);
+void _DIY_CopyTeamGridFromCompToDIY(uint8_t *diy, uint8_t *slot,
+                                     uint8_t *comp, uint8_t *comp5);
+void _DIY_BuildSeededBracketAndUpdateScores(uint8_t *diy, uint8_t *slot,
+                                             uint8_t *comp4, uint8_t *comp);
+void _DIY_AdjustWorldCupBracketScores(uint8_t *diy, uint8_t *slot, uint8_t *comp);
+
+/* ---- DIY selection menu callbacks (Chunk 108) ---- */
+void _SelectDiyLeagueMenu(void);
+void _SelectDiyCupMenu(void);
+void _SelectDiyTournamentMenu(void);
+void _SelectDiyExitMenu(void);
+
+/* ---- DIY Design Menu functions (Chunk 120) ---- */
+void _ShowDesignDIYLeagueMenu(void);
+void _ShowLeagueInfo(void);
+void _DesignDIYLeagueOK(void);
+void _SetNumberOfTeamsToSelect(void);
+void _ShowDesignDIYCupMenu(void);
+void _ShowCupInfo(void);
+void _DesignDIYCupOK(void);
+void _DesignDIYCup_UpdateMinSubstitutesAndPointsStrings(void);
+void _DesignDIYCup_UpdateSelectTeamsPrompt(void);
+void _ShowDesignDIYTournamentMenu(void);
+void _ShowTournamentInfo(void);
+void _DesignDIYTournamentOK(void);
+void _DesignDIYTournament_UpdateTwoNumericFieldsText(void);
+void _DesignDIYTournament_UpdateSelectTeamsPrompt(void);
+
+/* ---- OpenDiy* + ShowDiyCompetitionForSource (Chunk 116) ---- */
+void _ShowDiyCompetitionForSource(uint8_t *header);
+void _OpenDiyFromFile(void);
+void _OpenDiyPreset1(void);
+void _OpenDiyPreset2(void);
+void _OpenDiyPreset3(void);

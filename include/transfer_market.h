@@ -68,4 +68,20 @@ void _Career_ApplyPendingForeignMarketPlayersToSelectedTeams(void);
 void _DIY_AdvanceFixtureIndex(uint16_t lo, uint16_t hi);
 void _Career_RemovePlayerFromTeamInternal(uint16_t teamNumber, uint16_t playerOrd);
 
+/* ---- Transfer/Offer menu callbacks (Chunk 113) ---- */
+void _TransferPlayerOnSelect10(void);
+void _TransferPlayerOnSelect11(void);
+void _TransferPlayerOnSelect12(void);
+void _AcceptOffer(void);
+void _RejectOffer(void);
+void _AskForMore(void);
+void _ConsiderOffer(void);
+void _ThirdPartyOfferMenuExit(void);
+
+/* --- Transfer menu helpers (Chunk 117) --- */
+void _TransferMenuSetBankState(void);
+void _BuyPlayerInit(void);
+void _TransferMarketFinish(void);
+void _ShowDomesticPlayerMarket(void);
+
 #endif

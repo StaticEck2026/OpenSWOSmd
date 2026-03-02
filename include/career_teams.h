@@ -64,3 +64,8 @@ void _Career_AutoPlayOrSimulateLeagueFixtureLoop(void);
 void _Career_AutoPlayCupMatchAndAdvanceLoop(void);
 void _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot(void);
 void _DIY_AdvanceToNextCompetitionSlot(void);
+
+/* --- NationalTeamAddPlayer callbacks (Chunk 108) --- */
+void _NationalTeamAddPlayerHomeOnSelect(void);
+void _NationalTeamAddPlayerAbroadOnSelect(void);
+void _NationalTeamAddPlayerExit(void);

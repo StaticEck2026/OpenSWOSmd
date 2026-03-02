@@ -75,3 +75,10 @@ void _ShowLastSeasonMessage(void);
 void _ShowWishYouSuccessMessage(void);
 void _ShowEnjoyLastSeasonMessage(void);
 void _ShowRetirementMessage(void);
+
+/* --- Club Business & Season Finance Init (Chunk 101) --- */
+void _ClubBusinessInit(void);
+void _Career_InitializeNewSeasonFinances(void);
+
+/* --- Career retirement (Chunk 119) --- */
+void _Career_HandleRetirement(void);

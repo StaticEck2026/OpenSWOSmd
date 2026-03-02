@@ -8,6 +8,8 @@
 #include "string_utils.h"
 #include "random.h"
 #include "panic.h"
+#include "menu_system.h"
+#include "text_render.h"
 
 /* ---- Constants ---- */
 #define DIY_CUP                         1
@@ -38,6 +40,9 @@ extern uint8_t aDiyTournament[];  /* "DIY TOURNAMENT" */
 extern uint8_t aDiyLeague[];      /* "DIY LEAGUE" */
 extern uint8_t aDiyCup[];         /* "DIY CUP" */
 
+/* ASM globals for DIY selection menu (Chunk 108) */
+extern uint16_t diySelected;
+
 /* ASM globals for validation */
 extern volatile uint16_t panicReasonCode;
 extern uint16_t teamsLoaded;
@@ -48,6 +53,9 @@ extern uint32_t cupRoundStringTable[];
 extern uint8_t diyLeagueSeasonStateTable[];
 extern uint8_t diyLeagueScratchBuffer[];
 extern uint8_t competitionFileBuffer[];
+extern uint8_t competitionContext[];
+extern uint8_t tertiaryCompetitionContext[];
+extern uint8_t euroCupsCompetitionContext[];
 
 /* ASM globals for cup bracket */
 extern uint16_t diyCupTeamIds[];
@@ -61,6 +69,8 @@ extern void _asm_ShowDiyLeaguesTournamentMenu(uint16_t d0, uint16_t d1, uint16_t
 extern void _asm_ShowDIYCupMenuWithParams(uint16_t d0, uint16_t d1, uint16_t d2);
 extern void _asm_DIY_LoadCurrentCompetitionSlot(void);
 extern void _asm_Career_AutoAdvanceInternationalCompetitionFixtures(void);
+
+extern void _SetExitMenuFlag(void);
 
 /* ---- C functions from other modules ---- */
 extern void _DIY_AdvanceToNextCompetitionSlot(void);
@@ -1822,11 +1832,6 @@ void _DIY_BuildQualifiedTeamListFromDiyFileBuffer(uint16_t count, uint8_t *out)
  * Both asm functions take a2, a3, a4, a5 as params.
  *
  * ================================================================ */
-extern void _CDIY_BuildSeededBracketAndUpdateScores(uint8_t *a2, uint8_t *a3,
-                                                     uint8_t *a4, uint8_t *a5);
-extern void _CDIY_CopyTeamGridFromCompToDIY(uint8_t *a2, uint8_t *a3,
-                                             uint8_t *a4, uint8_t *a5);
-
 __attribute__((used, externally_visible))
 void _DIY_SyncCompetitionTeamGridOrBuildBracket(void)
 {
@@ -1837,9 +1842,9 @@ void _DIY_SyncCompetitionTeamGridOrBuildBracket(void)
     uint8_t *a5 = (uint8_t *)(DIY_Competition *)diyCompetitionStart;
 
     if (*(uint16_t *)(a3 + 0x15E) != 0) {  /* extended */
-        _CDIY_BuildSeededBracketAndUpdateScores(a2, a3, a4, a5);
+        _DIY_BuildSeededBracketAndUpdateScores(a2, a3, a4, a5);
     } else {
-        _CDIY_CopyTeamGridFromCompToDIY(a2, a3, a4, a5);
+        _DIY_CopyTeamGridFromCompToDIY(a2, a3, a4, a5);
     }
 }
 
@@ -2868,4 +2873,1144 @@ void _DIY_RebuildCompetitionAndTeamSelectionCaches(void)
     diyCompSlotStateA = primaryCompSlotStateA;
     diyCompSlotStateB = primaryCompSlotStateB;
     diyCompSlotStateC = primaryCompSlotStateC;
+}
+
+/* ================================================================
+ * Chunk 97 — DIY Competition Setup Functions
+ * ================================================================ */
+
+/* ASM data tables in SWOS2.s */
+extern uint8_t diyShuffleOrder8Teams[];    /* 8 bytes: {1,4,5,0,2,7,6,3} */
+extern uint8_t diyShuffleOrder4Teams[];    /* 4 bytes: {0,3,1,2} */
+extern uint8_t diyTournamentShuffleOrder8[]; /* 8 bytes: {6,1,5,4,2,3,7,0} */
+extern uint8_t diyLeagueTeamShuffleMap[];   /* 16 bytes: signed index map */
+extern uint8_t diyGroupPatternLookup[];     /* 76 bytes: bitmask→division ordering */
+extern uint8_t diyTeamShuffleScratch[];     /* 64 bytes: scratch buffer */
+
+/* sub_129960 in asm — its machine code bytes {0x02,0x01,0x00,0x00} are used
+ * as a 4-byte shuffle order table for 4-team comp-specific lists (3-group case).
+ * We define the actual data here. */
+static const uint8_t diyCompSpecificShuffle4[4] = {0x02, 0x01, 0x00, 0x00};
+
+/* ================================================================
+ * DIY_BuildCompSpecificTeamShuffle — reorder teams for comp-specific
+ * bracket seeding (shuffle variant used by BuildTeamGridAndIndexMaps)
+ *
+ * asm: a2=diy buffer. Writes to diyTeamShuffleScratch.
+ * ================================================================ */
+static void buildCompSpecificTeamShuffle(uint8_t *diy)
+{
+    uint16_t field54 = *(uint16_t *)(diy + 0x54);
+    uint8_t *src = diy + 0x5A;
+    uint8_t *dst = diyTeamShuffleScratch;
+
+    if (field54 == 0) {
+        /* Case 0: copy 16 teams straight */
+        for (int16_t i = 15; i >= 0; i--)
+            *dst++ = *src++;
+    } else if (field54 == 1) {
+        /* Case 1: 8 teams, use diyShuffleOrder8Teams */
+        for (int16_t i = 0; i < 8; i++) {
+            uint16_t idx = (uint8_t)diyShuffleOrder8Teams[i];
+            *dst++ = src[idx];
+        }
+    } else if (field54 == 2) {
+        /* Case 2: 4 teams, use diyShuffleOrder4Teams */
+        for (int16_t i = 0; i < 4; i++) {
+            uint16_t idx = (uint8_t)diyShuffleOrder4Teams[i];
+            *dst++ = src[idx];
+        }
+    } else {
+        /* Case 3+: 2 teams, copy first word */
+        *(uint16_t *)dst = *(uint16_t *)src;
+    }
+}
+
+/* ================================================================
+ * DIY_BuildCompSpecificTeamList — reorder teams for comp-specific
+ * bracket seeding (list variant used by ShuffleTeamsAndBuildCompTeamList)
+ *
+ * asm: a2=diy buffer. Writes to diyTeamShuffleScratch.
+ * ================================================================ */
+static void buildCompSpecificTeamList(uint8_t *diy)
+{
+    uint16_t field54 = *(uint16_t *)(diy + 0x54);
+    uint8_t *src = diy + 0x5A;
+    uint8_t *dst = diyTeamShuffleScratch;
+
+    if (field54 == 0) {
+        /* Case 0: copy 24 teams straight */
+        for (int16_t i = 23; i >= 0; i--)
+            *dst++ = *src++;
+    } else if (field54 == 1) {
+        /* Case 1: 16-team league pattern with group lookup */
+        uint8_t *groupMap = diy + 0x11A;
+        uint8_t *divTable = diy + 0x66;
+        uint16_t d1 = 0;
+        int16_t d2 = 3;
+        /* Build group bitmask from first 4 division entries */
+        for (; d2 >= 0; d2--) {
+            uint16_t idx = (uint8_t)(*divTable++);
+            uint8_t grp = groupMap[idx];
+            int16_t grpExt = (int8_t)grp;
+            d1 |= (1 << grpExt);
+        }
+        /* Search diyGroupPatternLookup for matching bitmask */
+        uint8_t *lookup = diyGroupPatternLookup;
+        for (;;) {
+            if ((int8_t)*lookup < 0) {
+                /* End of table — panic */
+                panicReasonCode = 0x8034;
+                extern void _PanicHaltLoop(void);
+                _PanicHaltLoop();
+            }
+            if (*lookup == (uint8_t)d1) {
+                lookup++; /* skip matched byte */
+                break;
+            }
+            lookup += 5; /* skip bitmask + 4 order bytes */
+        }
+        /* Build shuffled list using diyLeagueTeamShuffleMap + pattern lookup */
+        uint8_t *teamSrc = diy + 0x5A;
+        dst = diyTeamShuffleScratch;
+        uint8_t *map = diyLeagueTeamShuffleMap;
+        for (int16_t i = 15; i >= 0; i--) {
+            int8_t mapVal = (int8_t)*map++;
+            uint16_t idx;
+            if (mapVal < 0) {
+                /* Negative: read from pattern lookup, add 12 */
+                idx = (uint8_t)(*lookup++) + 12;
+            } else {
+                idx = (uint8_t)mapVal;
+            }
+            *dst++ = teamSrc[(int16_t)(int8_t)idx];
+        }
+    } else if (field54 == 2) {
+        /* Case 2: 8-team tournament shuffle */
+        for (int16_t i = 0; i < 8; i++) {
+            uint16_t idx = (uint8_t)diyTournamentShuffleOrder8[i];
+            *dst++ = src[idx];
+        }
+    } else if (field54 == 3) {
+        /* Case 3: 4-team pattern using sub_129960 bytes as data */
+        for (int16_t i = 0; i < 4; i++) {
+            uint16_t idx = diyCompSpecificShuffle4[i];
+            *dst++ = src[idx];
+        }
+    } else {
+        /* Case 4+: 2 teams, copy first word */
+        *(uint16_t *)dst = *(uint16_t *)src;
+    }
+}
+
+/* ================================================================
+ * DIY_AdjustWorldCupBracketScores — adjust seeding scores for
+ * World Cup format
+ *
+ * asm: a2=diy, a3=slot, a5=comp (diyCompetitionStart)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIY_AdjustWorldCupBracketScores(uint8_t *diy, uint8_t *slot, uint8_t *comp)
+{
+    if (*(uint16_t *)(diy + 0x54) != 0)
+        return;
+
+    uint16_t field164 = *(uint16_t *)(slot + 0x164);
+    int32_t d3ext = (int16_t)field164;
+    uint16_t teamsPerGroup = *(uint16_t *)(slot + 0x16A);
+    uint16_t quotient = (uint16_t)((uint32_t)(uint16_t)d3ext / teamsPerGroup);
+
+    uint16_t *tableOffsets = (uint16_t *)(comp + 0x6E);
+    int16_t d4 = 0x2328;
+    int16_t d1 = 0;
+
+    uint16_t numGroups = *(uint16_t *)(comp + 0x50);
+    uint16_t teamsInGroup = *(uint16_t *)(comp + 0x52);
+
+    for (; d1 < (int16_t)numGroups; d1++) {
+        int16_t d2 = 0;
+        uint16_t *a1 = tableOffsets;
+        for (; d2 < (int16_t)teamsInGroup; d2++) {
+            uint16_t offset = *a1++;
+            if (d2 == quotient) {
+                /* Exact match: bonus 1000 */
+                *(uint16_t *)(comp + offset + 0x2C4) += 0x3E8;
+            } else if (d2 < quotient) {
+                /* Below quotient: decreasing bonus */
+                *(uint16_t *)(comp + offset + 0x2C4) += (uint16_t)d4;
+                d4 -= 100;
+            }
+            /* d2 > quotient: no bonus */
+        }
+        tableOffsets += teamsInGroup;
+    }
+
+    /* Reset to 1 group, all teams in single group */
+    *(uint16_t *)(comp + 0x50) = 1;
+    *(uint16_t *)(comp + 0x52) = *(uint16_t *)(comp + 0x32);
+
+    /* Sort by standings */
+    _DIY_SortLeagueTableByStandings();
+
+    /* Apply group position bonuses */
+    uint8_t *groupMap = diy + 0x11A;
+    int16_t d2count = 3;
+    uint16_t *a1sorted = (uint16_t *)(comp + 0x86);
+
+    for (; d2count >= 0; d2count--) {
+        uint16_t offset = *a1sorted++;
+        uint8_t *entry = comp + offset;
+        int32_t offExt = (int32_t)offset;
+        uint16_t entryIdx = (uint16_t)((uint32_t)(uint16_t)offExt / 0x12);
+        int8_t grpVal = (int8_t)groupMap[entryIdx];
+        int16_t grpExt = (int16_t)grpVal;
+        int16_t bonus = (6 - grpExt) * 100;
+        *(uint16_t *)(entry + 0x2C4) += (uint16_t)bonus;
+    }
+
+    /* Sort again */
+    _DIY_SortLeagueTableByStandings();
+}
+
+/* ================================================================
+ * DIY_BuildSeededBracketAndUpdateScores — build seeded bracket with
+ * scoring for team strength and group position
+ *
+ * asm: a2=diy, a3=slot, a4=comp(unused in body), a5=comp
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIY_BuildSeededBracketAndUpdateScores(uint8_t *diy, uint8_t *slot,
+                                             uint8_t *comp4, uint8_t *comp)
+{
+    (void)comp4; /* a4 not used in this function's body */
+
+    /* Check if world cup competition */
+    uint8_t compNum = diy[0x2E];
+    if (compNum == worldCup[0]) {
+        _DIY_AdjustWorldCupBracketScores(diy, slot, comp);
+        goto copy_back;
+    }
+
+    {
+        uint16_t field164 = *(uint16_t *)(slot + 0x164);
+        int32_t d3ext = (int16_t)field164;
+        uint16_t teamsPerGroup = *(uint16_t *)(slot + 0x16A);
+        uint16_t d3quot = (uint16_t)((uint32_t)(uint16_t)d3ext / teamsPerGroup);
+        uint16_t d3rem;
+        {
+            int32_t fullDiv = (int32_t)(int16_t)field164;
+            uint16_t q = (uint16_t)((uint32_t)(uint16_t)fullDiv / teamsPerGroup);
+            d3rem = (uint16_t)((uint32_t)(uint16_t)fullDiv % teamsPerGroup);
+            d3quot = q;
+        }
+
+        uint16_t *tableOffsets = (uint16_t *)(comp + 0x6E);
+        int16_t d5 = 0x7D00;
+        uint16_t numGroups = *(uint16_t *)(comp + 0x50);
+        uint16_t teamsInGroup = *(uint16_t *)(comp + 0x52);
+
+        for (int16_t d1 = (int16_t)numGroups - 1; d1 >= 0; d1--) {
+            int16_t d4 = d5;
+            int16_t d2 = 0;
+            for (; d2 < (int16_t)teamsInGroup; d2++) {
+                uint16_t offset = *tableOffsets++;
+                if (d2 == d3quot) {
+                    /* Exact match: bonus 2000 */
+                    *(uint16_t *)(comp + offset + 0x2C4) += 0x7D0;
+                } else if (d2 < d3quot) {
+                    /* Below: decreasing bonus */
+                    *(uint16_t *)(comp + offset + 0x2C4) += (uint16_t)d4;
+                    d4 -= 0x3E8;
+                }
+                /* Above: no bonus */
+            }
+            d5 -= 100;
+        }
+
+        /* Reset to 1 group, all teams */
+        *(uint16_t *)(comp + 0x50) = 1;
+        *(uint16_t *)(comp + 0x52) = *(uint16_t *)(comp + 0x32);
+
+        /* Sort */
+        _DIY_SortLeagueTableByStandings();
+
+        /* Apply group-position bonuses if there's a remainder */
+        uint8_t *groupMap = diy + 0x11A;
+        if (d3rem != 0) {
+            uint16_t skipEntries = d3quot * teamsPerGroup;
+            uint16_t *a1 = (uint16_t *)(comp + 0x6E) + skipEntries;
+            uint16_t entryStride = 0x12 * *(uint16_t *)(slot + 0x16C);
+
+            for (int16_t i = (int16_t)d3rem - 1; i >= 0; i--) {
+                uint16_t offset = *a1++;
+                uint8_t *entry = comp + offset;
+                int32_t offExt = (int32_t)offset;
+                uint16_t entryIdx = (uint16_t)((uint32_t)(uint16_t)offExt / 0x12);
+                int8_t grpVal = (int8_t)groupMap[entryIdx];
+                int16_t grpExt = (int16_t)grpVal;
+                int16_t bonus = (8 - grpExt) * 25;
+                *(uint16_t *)(entry + 0x2C4) += (uint16_t)bonus;
+            }
+
+            /* Sort again */
+            _DIY_SortLeagueTableByStandings();
+        }
+    }
+
+copy_back:
+    {
+        /* Copy sorted offsets to team order, then to team list */
+        uint16_t *sortedOffsets = (uint16_t *)(comp + 0x6E);
+        uint8_t *teamOrder = comp + 0xEE;
+        uint16_t numTeams = *(uint16_t *)(comp + 0x32);
+
+        for (int16_t i = (int16_t)numTeams - 1; i >= 0; i--) {
+            uint16_t offset = *sortedOffsets++;
+            int32_t offExt = (int32_t)offset;
+            uint8_t idx = (uint8_t)((uint32_t)(uint16_t)offExt / 0x12);
+            *teamOrder++ = idx;
+        }
+
+        /* Copy team order to diy team list */
+        uint8_t *orderSrc = comp + 0xEE;
+        uint8_t *diyDst = diy + 0x5A;
+        for (int16_t i = (int16_t)numTeams - 1; i >= 0; i--)
+            *diyDst++ = *orderSrc++;
+
+        /* Check if pair swap needed */
+        uint16_t legs = *(uint16_t *)(slot + 0x164);
+        if (legs == 1) return;
+        if (*(uint16_t *)(slot + 0x1D2) == 0) return;
+
+        /* Swap first pair in diy team list */
+        uint8_t *pairStart = diy + 0x5A;
+        uint8_t tmp = pairStart[0];
+        pairStart[0] = pairStart[1];
+        pairStart[1] = tmp;
+    }
+}
+
+/* ================================================================
+ * DIY_CopyTeamGridFromCompToDIY — copy team grid from comp to diy
+ * after applying home/away swap flags and world cup adjustments
+ *
+ * asm: a2=diy, a3=slot, a4=comp(diyCompetitionStart), a5=unused
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIY_CopyTeamGridFromCompToDIY(uint8_t *diy, uint8_t *slot,
+                                     uint8_t *comp, uint8_t *comp5)
+{
+    (void)comp5;
+
+    uint16_t legs = *(uint16_t *)(slot + 0x164);
+    uint16_t field58 = *(uint16_t *)(diy + 0x58);
+
+    if (!(legs == 1 && field58 == 0)) {
+        _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
+
+        /* Check if pair swap needed */
+        uint16_t is15C = *(uint16_t *)(slot + 0x15C);
+        if (is15C != 0) {
+            goto do_pair_swap;
+        }
+        if (legs == 1) goto check_worldcup;
+        if (*(uint16_t *)(slot + 0x1D2) == 0) goto check_worldcup;
+
+    do_pair_swap:
+        {
+            uint8_t *grid = comp + 0x2CE;
+            uint8_t tmp = grid[0];
+            grid[0] = grid[1];
+            grid[1] = tmp;
+        }
+    }
+
+check_worldcup:
+    {
+        uint8_t compNum = diy[0x2E];
+        if (compNum == worldCup[0]) {
+            _DIY_AdjustWorldCupBracketScores(diy, slot, comp);
+        }
+    }
+
+    /* Copy team grid from comp to diy */
+    {
+        uint8_t *gridSrc = comp + 0x2CE;
+        uint8_t *gridDst = diy + 0x5A;
+        uint16_t count = *(uint16_t *)(comp + 0x32);
+        if (*(uint16_t *)(slot + 0x15C) != 0)
+            count <<= 1;
+        for (int16_t i = (int16_t)count - 1; i >= 0; i--)
+            *gridDst++ = *gridSrc++;
+    }
+}
+
+/* ================================================================
+ * DIY_BuildTeamGridAndIndexMaps — build team grid with seeded ordering,
+ * then build team index and group maps
+ *
+ * asm: a2=diy, a3=slot, a4=unused, a5=comp(diyCompetitionStart)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIY_BuildTeamGridAndIndexMaps(uint8_t *diy, uint8_t *slot,
+                                     uint8_t *comp4, uint8_t *comp)
+{
+    (void)comp4;
+
+    uint8_t compNum = diy[0x2E];
+
+    /* Check for world cup — use comp-specific list directly */
+    if (compNum == worldCup[0]) {
+        buildCompSpecificTeamList(diy);
+        goto copy_and_index;
+    }
+
+    /* Check for European championships — use comp-specific shuffle */
+    if (compNum == europeanChampionships[0] ||
+        compNum == europeanChampionships2[0]) {
+        buildCompSpecificTeamShuffle(diy);
+        goto copy_and_index;
+    }
+
+    /* Standard path */
+    {
+        uint16_t field54 = *(uint16_t *)(diy + 0x54);
+        uint16_t field50 = *(uint16_t *)(diy + 0x50);
+
+        if (field54 == 0 && field50 == 0)
+            goto build_index_maps;
+
+        uint16_t seedingType = *(uint16_t *)(slot + 0x160);
+        if (seedingType == 0) {
+            _DIY_ShuffleTeams(diy, slot);
+            goto build_index_maps;
+        }
+
+        /* Seeded bracket */
+        int16_t d5 = -1;
+        if (field54 != 0 && *(uint16_t *)(slot + 0xE8) != 0) {
+            d5 = 0;
+        } else {
+            _DIY_SortAndShuffleTeamsByValue(diy, slot);
+        }
+
+        /* Interleave teams into groups */
+        {
+            uint8_t *srcTeams = diy + 0x5A;
+            uint8_t *dst = diyTeamShuffleScratch;
+
+            if (d5 >= 0) {
+                d5 = *(int16_t *)(slot + 0xF4);
+            }
+
+            uint16_t numGroupSlots = *(uint16_t *)(slot + 0x16C);
+            uint16_t numGroups = *(uint16_t *)(slot + 0x16A);
+            uint16_t numTeams = *(uint16_t *)(slot + 0x162);
+
+            int16_t d4 = 0;
+            int16_t d1 = 0;
+
+            for (int16_t g = (int16_t)numGroupSlots - 1; g >= 0; g--) {
+                if (d5 >= 0 && d4 == 0) {
+                    d1 += (int16_t)numGroupSlots;
+                }
+
+                for (int16_t grp = (int16_t)numGroups - 1; grp >= 0; grp--) {
+                    /* Wrap d1 if it exceeds numTeams */
+                    while (d1 >= (int16_t)numTeams)
+                        d1 -= (int16_t)numTeams;
+
+                    dst[d1] = *srcTeams++;
+                    d4++;
+                    if (d4 == d5)
+                        d4 = 0;
+                    d1 += (int16_t)numGroupSlots;
+                }
+                d1++;  /* asm: addq.w #1,d1 after inner loop */
+            }
+        }
+
+    copy_and_index:
+        /* Copy scratch back to diy team list */
+        {
+            uint8_t *src = diyTeamShuffleScratch;
+            uint8_t *dst = diy + 0x5A;
+            uint16_t numTeams = *(uint16_t *)(slot + 0x162);
+            for (int16_t i = (int16_t)numTeams - 1; i >= 0; i--)
+                *dst++ = *src++;
+        }
+    }
+
+build_index_maps:
+    {
+        /* Build team order and offset maps */
+        uint8_t *teamList = diy + 0x5A;
+        uint8_t *teamOrder = comp + 0xEE;
+        uint16_t *teamOffsets = (uint16_t *)(comp + 0x6E);
+        uint16_t numTeams = *(uint16_t *)(slot + 0x162);
+
+        for (int16_t i = (int16_t)numTeams - 1; i >= 0; i--) {
+            uint8_t idx = *teamList++;
+            *teamOrder++ = idx;
+            int16_t idxExt = (int8_t)idx;
+            *teamOffsets++ = (uint16_t)(idxExt * 0x12);
+        }
+
+        /* Build group map: for each team, store which group slot it's in */
+        teamList = diy + 0x5A;
+        uint8_t *groupMap = diy + 0x11A;
+        uint16_t numGroupSlots = *(uint16_t *)(slot + 0x16C);
+        uint16_t numGroups = *(uint16_t *)(slot + 0x16A);
+
+        uint8_t grpIdx = 0;
+        for (uint16_t g = 0; g < numGroups; g++) {
+            for (int16_t s = (int16_t)numGroupSlots - 1; s >= 0; s--) {
+                uint16_t teamIdx = (uint8_t)*teamList++;
+                groupMap[teamIdx] = grpIdx;
+            }
+            grpIdx++;
+        }
+    }
+}
+
+/* ================================================================
+ * DIY_ShuffleTeamsAndBuildCompTeamList — shuffle or seed teams, then
+ * copy to competition team list and verify all loaded
+ *
+ * asm: a2=diy, a3=slot, a4=comp(diyCompetitionStart), a5=unused
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIY_ShuffleTeamsAndBuildCompTeamList(uint8_t *diy, uint8_t *slot,
+                                            uint8_t *comp, uint8_t *comp5)
+{
+    (void)comp5;
+
+    uint8_t compNum = diy[0x2E];
+
+    /* Check for world cup — use comp-specific list */
+    if (compNum == worldCup[0]) {
+        buildCompSpecificTeamList(diy);
+        goto copy_to_comp;
+    }
+
+    /* Check for European championships — use comp-specific shuffle */
+    if (compNum == europeanChampionships[0] ||
+        compNum == europeanChampionships2[0]) {
+        buildCompSpecificTeamShuffle(diy);
+        goto copy_to_comp;
+    }
+
+    /* Standard shuffle path */
+    {
+        uint16_t field54 = *(uint16_t *)(diy + 0x54);
+        uint16_t field50 = *(uint16_t *)(diy + 0x50);
+
+        if (field54 != 0 || field50 != 0) {
+            uint16_t seedingType = *(uint16_t *)(slot + 0x160);
+            if (seedingType == 0) {
+                _DIY_ShuffleTeams(diy, slot);
+                goto build_comp_list;
+            }
+
+            /* Seeded: check if sort needed */
+            if (field54 != 0) {
+                if (*(uint16_t *)(slot + 0xE8) != 0 || *(uint16_t *)(slot + 0xEA) != 0)
+                    goto after_sort;
+            }
+            _DIY_SortAndShuffleTeamsByValue(diy, slot);
+
+        after_sort:
+            /* Random home/away swap for each pair */
+            {
+                uint8_t *teamList = diy + 0x5A;
+                uint16_t numTeams = *(uint16_t *)(slot + 0x162);
+                uint8_t *lo = teamList;
+                uint8_t *hi = teamList + numTeams;
+                uint8_t *dst = diyTeamShuffleScratch;
+                int16_t pairs = (int16_t)(numTeams >> 1) - 1;
+
+                for (; pairs >= 0; pairs--) {
+                    uint16_t r = _Rand2();
+                    if (r & 1) {
+                        *dst++ = *--hi;
+                        *dst++ = *lo++;
+                    } else {
+                        *dst++ = *lo++;
+                        *dst++ = *--hi;
+                    }
+                }
+            }
+
+        copy_to_comp:
+            /* Copy from scratch to diy team list */
+            {
+                uint8_t *src = diyTeamShuffleScratch;
+                uint8_t *dst = diy + 0x5A;
+                uint16_t numTeams = *(uint16_t *)(slot + 0x162);
+                for (int16_t i = (int16_t)numTeams - 1; i >= 0; i--)
+                    *dst++ = *src++;
+            }
+        }
+    }
+
+build_comp_list:
+    {
+        /* Copy team list to competition order list */
+        uint8_t *teamList = diy + 0x5A;
+        uint8_t *compOrder = comp + 0x2CE;
+        uint16_t numTeams = *(uint16_t *)(slot + 0x162);
+        uint16_t copyCount = numTeams;
+
+        if (*(uint16_t *)(slot + 0x15C) != 0)
+            copyCount <<= 1;
+
+        for (int16_t i = (int16_t)copyCount - 1; i >= 0; i--)
+            *compOrder++ = *teamList++;
+
+        /* Verify all teams loaded and count missing */
+        uint16_t *teamIds = (uint16_t *)(diy + 0x9A);
+        *(uint16_t *)(diy + 0x48) = 0;
+        teamList = diy + 0x5A;
+        int16_t count = (int16_t)copyCount - 1;
+
+        for (; count >= 0; count--) {
+            uint16_t idx = (uint8_t)*teamList++;
+            uint16_t teamNum = teamIds[idx];
+            uint8_t *teamPtr = _VerifyTeamLoaded(teamNum);
+            if (teamPtr[4] != 1) {
+                *(uint16_t *)(diy + 0x48) += 1;
+            }
+        }
+    }
+}
+
+/* ================================================================
+ * DIY_LoadCurrentCompetitionSlot — load competition data from file
+ * buffer slot into active competition structure
+ *
+ * asm: operates on diyFileBufferCopy + diyCompetitionStart
+ * ================================================================ */
+__attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
+void _DIY_LoadCurrentCompetitionSlot(void)
+{
+    uint8_t *a2 = diyFileBufferCopy;
+    uint8_t *a3 = a2;
+    uint16_t slotIdx = *(uint16_t *)(a2 + 58 + 0x1A);  /* DIY_COMPETITION_FIELD_3A + 0x1A */
+    a3 += (uint32_t)slotIdx * 118;
+
+    uint8_t *a4 = diyCompetitionStart;
+    uint8_t *a5 = diyCompetitionStart;
+
+    /* Clear the "done loading" flag */
+    *(uint16_t *)(a2 + 58 + 0x1C) = 0;
+
+    /* Check if this is a league (slot field 0x15E != 0) */
+    if (*(uint16_t *)(a3 + 0x15E) != 0) {
+        /* League path — init defaults, then fill from file buffer */
+        _DIY_InitCompetitionDefaults();
+
+        *(uint16_t *)(a5 + 58 + 0x0E) = 1;
+
+        /* Copy match/score fields */
+        *(uint16_t *)(a5 + 58 + 0x0A) = *(uint16_t *)(a2 + 58 + 0x0A);
+        *(uint16_t *)(a5 + 58 + 0x0C) = *(uint16_t *)(a2 + 58 + 0x0C);
+
+        /* Copy competition name */
+        _StringCopy((char *)(a2 + 2 + 2), (char *)(a5 + 2 + 2));
+
+        *(uint16_t *)(a5 + 58 + 0x10) = *(uint16_t *)(a2 + 58 + 0x1A);
+        *(uint16_t *)(a5 + 58 + 0x12) = *(uint16_t *)(a2 + 58 + 0x18);
+        *(uint16_t *)(a5 + 2 + 0x2A) = *(uint16_t *)(a2 + 2 + 0x2A);
+
+        /* Num teams */
+        *(uint16_t *)(a5 + 50) = *(uint16_t *)(a3 + 0x162);  /* DIY_COMPETITION_NUMTEAMS */
+
+        /* League-specific size/progress */
+        *(uint16_t *)(a5 + 58 + 0x16) = *(uint16_t *)(a3 + 362);
+        uint16_t d0field = *(uint16_t *)(a3 + 0x164);
+        int32_t d0ext = (int16_t)d0field;
+        uint16_t divisor = *(uint16_t *)(a3 + 0x16A);
+        uint16_t quotient = (uint16_t)((uint32_t)(uint16_t)d0ext / divisor);
+        uint16_t remainder = (uint16_t)((uint32_t)(uint16_t)d0ext % divisor);
+
+        *(uint16_t *)(a5 + 58 + 0x1A) = quotient;
+        if (remainder != 0) {
+            *(uint16_t *)(a5 + 58 + 0x1C) = 1;
+        }
+
+        /* Copy team ID table */
+        {
+            uint16_t *src = (uint16_t *)(a2 + 0x9A);
+            uint16_t *dst = (uint16_t *)(a5 + 2 + 0x12C);
+            uint16_t count = *(uint16_t *)(a2 + 50);  /* numTeams from diyFileBufferCopy */
+            for (int16_t i = (int16_t)count - 1; i >= 0; i--)
+                *dst++ = *src++;
+        }
+
+        /* Build team grid and index maps */
+        _DIY_BuildTeamGridAndIndexMaps(a2, a3, a5, a5);
+
+        /* Play each team & start month */
+        *(uint16_t *)(a5 + 94) = *(uint16_t *)(a3 + 358);   /* PLAYEACHTEAM */
+        a5[56] = (uint8_t)*(uint16_t *)(a3 + 374);           /* STARTMONTH */
+
+        /* Recompute derived fields */
+        _DIY_RecomputeCompetitionDerivedFields();
+
+        /* Copy additional config fields */
+        a5[2 + 0x2E] = a2[2 + 0x2E];
+        a5[2 + 0x2F] = a2[2 + 0x2F];
+        *(uint16_t *)(a5 + 52) = *(uint16_t *)(a2 + 52);    /* PITCHTYPEORSEASON */
+        *(uint16_t *)(a5 + 54) = *(uint16_t *)(a2 + 54);    /* PITCHTYPE */
+        a5[56] = a2[56];                                       /* STARTMONTH */
+        a5[57] = a2[57];                                       /* ENDMONTH */
+        *(uint16_t *)(a5 + 58 + 2) = *(uint16_t *)(a2 + 58 + 2);
+
+        /* Extended fields from slot */
+        *(uint16_t *)(a5 + 2 + 0x60) = *(uint16_t *)(a3 + 0x168);
+        *(uint16_t *)(a5 + 2 + 0x62) = *(uint16_t *)(a2 + 58 + 0x12);
+        *(uint16_t *)(a5 + 2 + 0x64) = *(uint16_t *)(a2 + 58 + 0x14);
+
+        /* Copy progression month bytes */
+        {
+            uint8_t *src = (uint8_t *)(a3 + 374);
+            uint8_t *dst = (uint8_t *)(a5 + 58 + 0x194);
+            uint16_t count = *(uint16_t *)(a3 + 372);
+            for (int16_t i = (int16_t)count - 1; i >= 0; i--)
+                *dst++ = *src++;
+        }
+
+        a5[2 + 0x2C] = a2[2 + 0x2C];
+        *(uint16_t *)(a5 + 58 + 0x14) = *(uint16_t *)(a2 + 50);
+    } else {
+        /* Cup path — init DIY cup, then fill from file buffer */
+        _InitDIYCup();
+
+        *(uint16_t *)(a4 + 0x48) = 1;
+
+        /* Copy match/score fields */
+        *(uint16_t *)(a4 + 58 + 0x0A) = *(uint16_t *)(a2 + 58 + 0x0A);
+        *(uint16_t *)(a4 + 58 + 0x0C) = *(uint16_t *)(a2 + 58 + 0x0C);
+
+        /* Copy competition name */
+        _StringCopy((char *)(a2 + 4), (char *)(a4 + 4));
+
+        *(uint16_t *)(a4 + 0x5A) = 1;
+        *(uint16_t *)(a4 + 2 + 0x2A) = *(uint16_t *)(a2 + 2 + 0x2A);
+
+        /* Cup-specific fields from slot */
+        *(uint16_t *)(a4 + 50) = *(uint16_t *)(a3 + 0x162);   /* numTeams */
+        *(uint16_t *)(a4 + 2 + 0x64) = *(uint16_t *)(a3 + 0x16E);
+        *(uint16_t *)(a4 + 2 + 0x70) = *(uint16_t *)(a3 + 0x170);
+        *(uint16_t *)(a4 + 2 + 0x7C) = *(uint16_t *)(a3 + 0x172);
+
+        /* Copy team grid from file buffer */
+        {
+            uint16_t *src = (uint16_t *)(a2 + 58 + 0x60);
+            uint16_t *dst = (uint16_t *)(a4 + 2 + 0x24C);
+            uint16_t count = *(uint16_t *)(a2 + 50);
+            for (int16_t i = (int16_t)count - 1; i >= 0; i--)
+                *dst++ = *src++;
+        }
+
+        /* Shuffle teams and build comp team list */
+        _DIY_ShuffleTeamsAndBuildCompTeamList(a2, a3, a4, a5);
+
+        /* Start month */
+        a4[56] = (uint8_t)*(uint16_t *)(a3 + 0x176);
+
+        /* Init cup bracket state */
+        _DIY_InitCupBracketState();
+
+        /* Copy additional config fields */
+        *(uint16_t *)(a4 + 58 + 0x12) = *(uint16_t *)(a2 + 58 + 0x0E);
+        a4[2 + 0x2E] = a2[2 + 0x2E];
+        a4[2 + 0x2F] = a2[2 + 0x2F];
+        *(uint16_t *)(a4 + 52) = *(uint16_t *)(a2 + 52);    /* PITCHTYPEORSEASON */
+        *(uint16_t *)(a4 + 54) = *(uint16_t *)(a2 + 54);    /* PITCHTYPE */
+        a4[56] = a2[56];                                       /* STARTMONTH */
+        a4[57] = a2[57];                                       /* ENDMONTH */
+        *(uint16_t *)(a4 + 58 + 2) = *(uint16_t *)(a2 + 58 + 2);
+
+        /* Cup bracket fields */
+        *(uint16_t *)(a4 + 94) = *(uint16_t *)(a2 + 58 + 0x10);   /* PLAYEACHTEAM */
+        *(uint16_t *)(a4 + 96) = *(uint16_t *)(a2 + 58 + 0x12);   /* DIY_COMPETITION_SIZE */
+        *(uint16_t *)(a4 + 2 + 0x60) = *(uint16_t *)(a2 + 58 + 0x14);
+
+        /* Copy progression month bytes */
+        {
+            uint8_t *src = (uint8_t *)(a3 + 0x176);
+            uint8_t *dst = (uint8_t *)(a4 + 56 + 0x300);
+            uint16_t count = *(uint16_t *)(a3 + 0x174);
+            *(uint16_t *)(a4 + 52 + 0x300) = count;
+            for (int16_t i = (int16_t)count - 1; i >= 0; i--)
+                *dst++ = *src++;
+        }
+
+        a4[2 + 0x2C] = a2[2 + 0x2C];
+        *(uint16_t *)(a4 + 58 + 0x14) = *(uint16_t *)(a2 + 50);
+    }
+}
+
+/* ================================================================
+ * DIY_ResetAndLoadCurrentCompetitionSlot — reset competition state,
+ * seed random, initialize team order, and load slot
+ * ================================================================ */
+__attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
+void _DIY_ResetAndLoadCurrentCompetitionSlot(void)
+{
+    /* Reseed random from current tick */
+    randomSeed = currentTick;
+    newRandomSeedCopy = (uint8_t)(currentTick >> 8);
+
+    /* Clear flags in diyFileBufferCopy */
+    *(uint16_t *)(diyFileBufferCopy + 58 + 0x1E) = 0;
+    *(uint16_t *)(diyFileBufferCopy + 58 + 0x1A) = 0;
+
+    /* Clear diyCompetitionStart field_2 (twice in asm, replicated) */
+    *(uint16_t *)(diyCompetitionStart + 2) = 0;
+    *(uint16_t *)(diyCompetitionStart + 2) = 0;
+
+    /* Clear more flags */
+    *(uint16_t *)(diyFileBufferCopy + 58 + 0x0A) = 0;
+    *(uint16_t *)(diyFileBufferCopy + 58 + 0x0C) = 0;
+
+    /* Set initial values */
+    *(uint16_t *)(diyFileBufferCopy + 58) = (uint16_t)0xFFFF;
+    *(uint16_t *)(diyFileBufferCopy + 2) = 1;
+
+    /* Initialize 64-byte sequential team order */
+    {
+        uint8_t *dst = diyFileBufferCopy + 58 + 0x20;
+        uint8_t val = 0;
+        for (int16_t i = 63; i >= 0; i--)
+            *dst++ = val++;
+    }
+
+    /* Load the competition slot */
+    _DIY_LoadCurrentCompetitionSlot();
+}
+
+/* ================================================================
+ * DIY_InitCupFromTeamGridAndValidateTeams — initialize cup from
+ * team grid, seed random, validate all teams loaded
+ * ================================================================ */
+__attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
+void _DIY_InitCupFromTeamGridAndValidateTeams(void)
+{
+    /* Reseed random from current tick */
+    randomSeed = currentTick;
+    newRandomSeedCopy = (uint8_t)(currentTick >> 8);
+
+    uint8_t *a2 = diyCompetitionStart;
+
+    /* Clear various fields */
+    *(uint16_t *)(a2 + 0x44) = 0;
+    *(uint16_t *)(a2 + 0x46) = 0;
+    *(uint16_t *)(a2 + 0x3A) = (uint16_t)0xFFFF;
+    *(uint16_t *)(a2 + 0x4A) = 0;
+
+    /* halfTeams = numTeams / 2 */
+    uint16_t numTeams = *(uint16_t *)(a2 + 0x32);
+    uint16_t half = numTeams >> 1;
+    *(uint16_t *)(a2 + 0x50) = half;
+    *(uint16_t *)(a2 + 0x52) = half;
+
+    /* Clear more fields */
+    *(uint16_t *)(a2 + 0x64) = 0;
+    *(uint16_t *)(a2 + 0x54) = 0;
+    *(uint16_t *)(a2 + 0x58) = 0;
+    *(uint16_t *)(a2 + 0x56) = 0;
+    *(uint16_t *)(a2 + 0x14A) = 0;
+
+    /* Set current round match count from table */
+    uint16_t roundIdx = *(uint16_t *)(a2 + 0x58);
+    *(uint16_t *)(a2 + 0x14C) = *(uint16_t *)(a2 + 0x66 + roundIdx * 2);
+
+    /* Check for single-team round: if halfTeams==1 and matchCount!=2, clear matchCount */
+    if (*(uint16_t *)(a2 + 0x50) == 1) {
+        if (*(uint16_t *)(a2 + 0x14C) != 2) {
+            *(uint16_t *)(a2 + 0x14C) = 0;
+        }
+    }
+
+    /* Clear more state */
+    *(uint16_t *)(a2 + 0x330) = 0;
+    *(uint16_t *)(a2 + 0x32E) = 0;
+    *(uint16_t *)(a2 + 0x336) = 0;
+    *(uint16_t *)(a2 + 0x332) = 0;
+
+    /* Initialize 64-byte sequential team order at 0x2CE */
+    {
+        uint8_t *dst = a2 + 0x2CE;
+        uint8_t val = 0;
+        for (int16_t i = 63; i >= 0; i--)
+            *dst++ = val++;
+    }
+
+    /* Initialize 32-byte zero array at 0x8A */
+    {
+        uint8_t val = 0;
+        uint8_t *dst = a2 + 0x8A;
+        for (int16_t i = 31; i >= 0; i--)
+            *dst++ = val;
+    }
+
+    /* Set random phase from start month */
+    a2[0x2F] = a2[0x38];
+    viewRandomPhase = a2[0x2F];
+
+    /* Count missing teams */
+    *(uint16_t *)(a2 + 0x4C) = 0;
+    uint8_t *orderList = a2 + 0x2CE;
+    uint16_t *teamGrid = (uint16_t *)(a2 + 0x24E);
+
+    for (int16_t i = (int16_t)numTeams - 1; i >= 0; i--) {
+        uint16_t idx = (uint8_t)*orderList++;
+        uint16_t teamNum = teamGrid[idx];
+        uint8_t *teamPtr = _VerifyTeamLoaded(teamNum);
+        if (teamPtr[4] != 1) {
+            *(uint16_t *)(a2 + 0x4C) += 1;
+        }
+    }
+
+    /* Shuffle team grid pairs */
+    _DIY_ShuffleTeamGridPairs();
+}
+
+/* ================================================================
+ * SelectDiy* menu callbacks (Chunk 108)
+ * Set diySelected to the chosen competition type, then exit menu.
+ * Asm: SelectDiyLeagueMenu, SelectDiyCupMenu, SelectDiyTournamentMenu,
+ *      SelectDiyExitMenu
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SelectDiyLeagueMenu(void)
+{
+    diySelected = 0;
+    _SetExitMenuFlag();
+}
+
+__attribute__((used, externally_visible))
+void _SelectDiyCupMenu(void)
+{
+    diySelected = 1;
+    _SetExitMenuFlag();
+}
+
+__attribute__((used, externally_visible))
+void _SelectDiyTournamentMenu(void)
+{
+    diySelected = 2;
+    _SetExitMenuFlag();
+}
+
+__attribute__((used, externally_visible))
+void _SelectDiyExitMenu(void)
+{
+    diySelected = 0xFFFF;
+    _SetExitMenuFlag();
+}
+
+/* ================================================================
+ * Chunk 116: OpenDiy* + ShowDiyCompetitionForSource
+ * ================================================================ */
+
+/* ShowDiyCompetitionForSource — loads competition state from buffer,
+ * shows the appropriate menu based on type (league=0, cup=1, tournament=else),
+ * then stores state back. (SWOS2.s line 59179) */
+__attribute__((used, externally_visible))
+void _ShowDiyCompetitionForSource(uint8_t *header)
+{
+    _Career_LoadCompetitionSlotStateFromBuffer(header);
+    uint16_t type = *(uint16_t *)header;
+
+    if (type == 0) {
+        _asm_ShowDiyLeaguesTournamentMenu(1, 1, 0);
+    } else if (type == 1) {
+        _asm_ShowDIYCupMenuWithParams(1, 1, 0);
+    } else {
+        _DIY_EditCompetitionSlot(1, 1, 0);
+    }
+
+    _Career_StoreCompetitionSlotStateToBuffer(header);
+}
+
+/* OpenDiyFromFile — open DIY from competitionFileBuffer (SWOS2.s line 59155) */
+__attribute__((used, externally_visible))
+void _OpenDiyFromFile(void)
+{
+    _ShowDiyCompetitionForSource(competitionFileBuffer);
+}
+
+/* OpenDiyPreset1 — open DIY from competitionContext (SWOS2.s line 59161) */
+__attribute__((used, externally_visible))
+void _OpenDiyPreset1(void)
+{
+    _ShowDiyCompetitionForSource(competitionContext);
+}
+
+/* OpenDiyPreset2 — open DIY from tertiaryCompetitionContext (SWOS2.s line 59167) */
+__attribute__((used, externally_visible))
+void _OpenDiyPreset2(void)
+{
+    _ShowDiyCompetitionForSource(tertiaryCompetitionContext);
+}
+
+/* OpenDiyPreset3 — open DIY from euroCupsCompetitionContext (SWOS2.s line 59173) */
+__attribute__((used, externally_visible))
+void _OpenDiyPreset3(void)
+{
+    _ShowDiyCompetitionForSource(euroCupsCompetitionContext);
+}
+
+/* ================================================================
+ * Chunk 120: DIY Design Menu functions
+ * ================================================================ */
+
+extern MenuEntry menuEntries[];
+extern uint16_t diyLeagueLookOnly;
+extern uint16_t diyLeagueSelectTeams;
+extern uint8_t designDiyLeagueMenu[];
+extern uint16_t diyCupLookOnly;
+extern uint16_t diyCupSelectTeams;
+extern uint8_t designDiyCupMenu[];
+extern uint16_t diyTournamentLookOnly;
+extern uint16_t diyTournamentSelectTeams;
+extern uint8_t designDiyTournamentMenu[];
+extern uint16_t diyMinSubstitutes;
+extern uint8_t aSelect0Teams[];   /* "SELECT %0 TEAMS" */
+
+extern void _PrintFormatted(const uint8_t *fmt, uint8_t *out,
+                     uint16_t n0, uint16_t n1, uint16_t n2, uint16_t n3,
+                     uint16_t n4, uint16_t n5, uint16_t n6,
+                     const uint8_t *strA, const uint8_t *strB, const uint8_t *strC);
+
+/* ShowDesignDIYLeagueMenu — save, init defaults, show league design menu (SWOS2.s line 40734) */
+__attribute__((used, externally_visible))
+void _ShowDesignDIYLeagueMenu(void)
+{
+    _SaveDIYLeague();
+    _DIY_InitCompetitionDefaults();
+    diyLeagueLookOnly = 0;
+    diyLeagueSelectTeams = 0;
+    _ShowMenu(designDiyLeagueMenu);
+}
+
+/* ShowLeagueInfo — view-only league design menu (SWOS2.s line 40744) */
+__attribute__((used, externally_visible))
+void _ShowLeagueInfo(void)
+{
+    diyLeagueLookOnly = 1;
+    diyLeagueSelectTeams = 0;
+    _ShowMenu(designDiyLeagueMenu);
+}
+
+/* DesignDIYLeagueOK — set select teams flag, activate league menu (SWOS2.s line 41488) */
+__attribute__((used, externally_visible))
+void _DesignDIYLeagueOK(void)
+{
+    diyLeagueSelectTeams = 1;
+    _ActivateMenu(designDiyLeagueMenu);
+}
+
+/* SetNumberOfTeamsToSelect — format "SELECT N TEAMS" for league design (SWOS2.s line 41698) */
+__attribute__((used, externally_visible))
+void _SetNumberOfTeamsToSelect(void)
+{
+    uint8_t *str = (uint8_t *)menuEntries[23].fg;
+    uint16_t numTeams = *(uint16_t *)(diyCompetitionStart + 50);
+    _PrintFormatted(aSelect0Teams, str, numTeams, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/* ShowDesignDIYCupMenu — copy buffer, init cup, show cup design menu (SWOS2.s line 43355) */
+__attribute__((used, externally_visible))
+void _ShowDesignDIYCupMenu(void)
+{
+    _DIY_CopyCompetitionFileBufferToCompetitionStart();
+    _InitDIYCup();
+    diyCupLookOnly = 0;
+    diyCupSelectTeams = 0;
+    _ShowMenu(designDiyCupMenu);
+}
+
+/* ShowCupInfo — view-only cup design menu (SWOS2.s line 43365) */
+__attribute__((used, externally_visible))
+void _ShowCupInfo(void)
+{
+    diyCupLookOnly = 1;
+    diyCupSelectTeams = 0;
+    _ShowMenu(designDiyCupMenu);
+}
+
+/* DesignDIYCupOK — set select teams flag, activate cup menu (SWOS2.s line 44818) */
+__attribute__((used, externally_visible))
+void _DesignDIYCupOK(void)
+{
+    diyCupSelectTeams = 1;
+    _ActivateMenu(designDiyCupMenu);
+}
+
+/* DesignDIYCup_UpdateMinSubstitutesAndPointsStrings — format min subs + points (SWOS2.s line 44971) */
+__attribute__((used, externally_visible))
+void _DesignDIYCup_UpdateMinSubstitutesAndPointsStrings(void)
+{
+    _Int2Ascii(diyMinSubstitutes, (uint8_t *)menuEntries[13].fg);
+    _Int2Ascii(*(uint16_t *)diyPointsForAWin, (uint8_t *)menuEntries[15].fg);
+}
+
+/* DesignDIYCup_UpdateSelectTeamsPrompt — format "SELECT N TEAMS" for cup (SWOS2.s line 45065) */
+__attribute__((used, externally_visible))
+void _DesignDIYCup_UpdateSelectTeamsPrompt(void)
+{
+    uint8_t *str = (uint8_t *)menuEntries[51].fg;
+    uint16_t numTeams = *(uint16_t *)(diyCompetitionStart + 50);
+    _PrintFormatted(aSelect0Teams, str, numTeams, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/* ShowDesignDIYTournamentMenu — save, init tournament, show menu (SWOS2.s line 47530) */
+__attribute__((used, externally_visible))
+void _ShowDesignDIYTournamentMenu(void)
+{
+    _SaveDIYTournament();
+    _InitDIYTournament();
+    diyTournamentLookOnly = 0;
+    diyTournamentSelectTeams = 0;
+    _ShowMenu(designDiyTournamentMenu);
+}
+
+/* ShowTournamentInfo — view-only tournament design menu (SWOS2.s line 47540) */
+__attribute__((used, externally_visible))
+void _ShowTournamentInfo(void)
+{
+    diyTournamentLookOnly = 1;
+    diyTournamentSelectTeams = 0;
+    _ShowMenu(designDiyTournamentMenu);
+}
+
+/* DesignDIYTournamentOK — set select teams flag, activate tournament menu (SWOS2.s line 49923) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournamentOK(void)
+{
+    diyTournamentSelectTeams = 1;
+    _ActivateMenu(designDiyTournamentMenu);
+}
+
+/* DesignDIYTournament_UpdateTwoNumericFieldsText — format two fields (SWOS2.s line 50063) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournament_UpdateTwoNumericFieldsText(void)
+{
+    /* Entry 11: diyFileBufferCopy[58+18] = diyFileBufferCopy[76] */
+    _Int2Ascii(*(uint16_t *)(diyFileBufferCopy + 76), (uint8_t *)menuEntries[11].fg);
+    /* Entry 13: diyFileBufferCopy[58+20] = diyFileBufferCopy[78] */
+    _Int2Ascii(*(uint16_t *)(diyFileBufferCopy + 78), (uint8_t *)menuEntries[13].fg);
+}
+
+/* DesignDIYTournament_UpdateSelectTeamsPrompt — format "SELECT N TEAMS" for tournament (SWOS2.s line 50192) */
+__attribute__((used, externally_visible))
+void _DesignDIYTournament_UpdateSelectTeamsPrompt(void)
+{
+    uint8_t *str = (uint8_t *)menuEntries[92].fg;
+    uint16_t numTeams = *(uint16_t *)(diyFileBufferCopy + 50);
+    _PrintFormatted(aSelect0Teams, str, numTeams, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }

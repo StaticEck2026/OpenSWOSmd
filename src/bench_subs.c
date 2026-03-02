@@ -2067,3 +2067,29 @@ static void drawFormationMenuEntry(uint8_t *charsTable, uint16_t y, uint16_t ent
         _DrawMenuTextCentered(tx, y, 2, textStr, charsTable);
     }
 }
+
+/* ================================================================
+ * Chunk 117: ShowFormationMenu + SubsBenchOff
+ * ================================================================ */
+
+/* ShowFormationMenu — set state to show formation selection overlay (SWOS2.s line 10015) */
+__attribute__((used, externally_visible))
+void _ShowFormationMenu(void)
+{
+    subsState = 2;
+    subsBlockFire = 1;
+    overlayActiveFlag = 1;
+    TeamGeneralInfo *team = (TeamGeneralInfo *)benchTeam;
+    selectedFormationEntry = (uint16_t)team->tactics;
+}
+
+/* SubsBenchOff — dismiss bench/subs overlay (SWOS2.s line 10025) */
+__attribute__((used, externally_visible))
+void _SubsBenchOff(void)
+{
+    subsState = 0;
+    subsBlockDirections = 1;
+    subsBlockFire = 1;
+    overlayActiveFlag = 0;
+    subsWriteOnly = 2;
+}

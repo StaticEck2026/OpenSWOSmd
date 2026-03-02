@@ -12,6 +12,9 @@
 #define CN_EUROPE   80
 #define CN_OCEANIA  85
 
+/* ---- External functions ---- */
+extern void _SetExitMenuFlag(void);
+
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint16_t teamsLoaded;
 extern uint8_t lastLoadedExtNumber;
@@ -58,6 +61,31 @@ extern uint32_t nationalSelectorSeasonMaskA;
 extern uint32_t nationalSelectorSeasonMaskB;
 extern uint8_t nationalTeams[];
 extern uint16_t numNationalTeams;
+
+/* Globals for team selection menu (Chunks 107-109) */
+extern uint16_t changeTeams;
+extern uint16_t chooseTeamsResult;
+extern uint16_t viewSelectedTeams;
+extern uint16_t abortSelectTeams;
+extern uint16_t exitSelectTeams;
+extern int16_t  topOfStackMark;
+
+/* Globals for team navigation stack (Chunk 109) */
+extern uint32_t countriesTable[];
+extern uint8_t *curCountryStr;
+extern uint8_t *countryStackPtr;
+extern uint16_t teamDepthLevel;
+extern uint16_t selectedTeamsStack[];
+extern uint16_t lastSelectedTeam;
+extern uint16_t prevSelectedTeamEntry;
+extern uint16_t isCountryNumber;
+extern uint16_t gotCountryName;
+extern uint16_t numberOfLeagues;
+extern uint16_t isContestContinentalCup;
+extern uint32_t continentalCups[];
+extern uint32_t selectedContest;
+extern uint16_t teamsType;
+extern uint32_t nationalTeamCompetitionsAndQualifications[];
 
 /* ================================================================
  * SetTeamGlobalNumbers  (SWOS2.s line 112842)
@@ -1234,4 +1262,258 @@ void _RemovePlayerFromTeam(uint16_t playerOrd)
     _Career_RemovePlayerFromSelectedTeamRoster(playerOrd);
     ((TeamFile *)careerTeam)->someFlag = 1;
     _PrunePlayerOffersAgainstRosterLimits();
+}
+
+/* ================================================================
+ * _DeselectAllTeams (Chunk 107)
+ * Removes all selectable teams from the selected teams buffer.
+ * Teams with teamControls != 0 are skipped (not deselected).
+ * Asm: DeselectAllTeams
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DeselectAllTeams(void)
+{
+    uint8_t *ptr = &selTeamsPtr;
+    if (numSelectedTeams == 0)
+        return;
+
+    uint16_t idx = 0;
+    while (idx < numSelectedTeams) {
+        if (((TeamFile *)ptr)->teamControls == 0) {
+            /* DeselectTeam removes this entry and shifts the rest down,
+             * so don't advance the pointer or index. */
+            _DeselectTeam(ptr);
+        } else {
+            ptr += sizeof(TeamFileEx);  /* 684 bytes */
+            idx++;
+        }
+    }
+}
+
+/* ================================================================
+ * _ChangeTeams (Chunk 107)
+ * Menu callback: deselect all teams, flag "change teams", exit menu.
+ * Asm: ChangeTeams
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ChangeTeams(void)
+{
+    _DeselectAllTeams();
+    changeTeams = 1;
+    chooseTeamsResult = 0;
+    viewSelectedTeams = 0;
+    abortSelectTeams = 0;
+    exitSelectTeams = 0;
+    _SetExitMenuFlag();
+}
+
+/* ================================================================
+ * _AbortChooseTeamsFriendly (Chunk 107)
+ * Menu callback: deselect all, flag abort, exit menu.
+ * Asm: AbortChooseTeamsFriendly
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _AbortChooseTeamsFriendly(void)
+{
+    _DeselectAllTeams();
+    abortSelectTeams = 1;
+    changeTeams = 0;
+    chooseTeamsResult = 0;
+    viewSelectedTeams = 0;
+    exitSelectTeams = 0;
+    _SetExitMenuFlag();
+}
+
+/* ================================================================
+ * _ChooseTeamsFriendlyOnSelect76 (Chunk 107)
+ * Menu callback: deselect all, flag result chosen, exit menu.
+ * Asm: ChooseTeamsFriendlyOnSelect76
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ChooseTeamsFriendlyOnSelect76(void)
+{
+    _DeselectAllTeams();
+    chooseTeamsResult = 1;
+    changeTeams = 0;
+    viewSelectedTeams = 0;
+    abortSelectTeams = 0;
+    exitSelectTeams = 0;
+    _SetExitMenuFlag();
+}
+
+/* ================================================================
+ * _ViewSelected (Chunk 108)
+ * Menu callback: flag "view selected teams", clear others, exit menu.
+ * Asm: ViewSelected
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ViewSelected(void)
+{
+    viewSelectedTeams = 1;
+    chooseTeamsResult = 0;
+    changeTeams = 0;
+    abortSelectTeams = 0;
+    exitSelectTeams = 0;
+    _SetExitMenuFlag();
+}
+
+/* ================================================================
+ * _ExitChooseTeams2 (Chunk 108)
+ * Menu callback: exit team selection. If topOfStackMark >= 0, sets
+ * exitSelectTeams=1; otherwise sets abortSelectTeams=1.
+ * Asm: ExitChooseTeams2
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ExitChooseTeams2(void)
+{
+    chooseTeamsResult = 0;
+    viewSelectedTeams = 0;
+    changeTeams = 0;
+    if (topOfStackMark >= 0) {
+        exitSelectTeams = 1;
+        abortSelectTeams = 0;
+    } else {
+        abortSelectTeams = 1;
+        exitSelectTeams = 0;
+    }
+    _SetExitMenuFlag();
+}
+
+/* ================================================================
+ * _ChooseTeamsPlayMatchSelected (Chunk 108)
+ * Menu callback: flag "play match selected", clear others, exit menu.
+ * Asm: ChooseTeamsPlayMatchSelected
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ChooseTeamsPlayMatchSelected(void)
+{
+    chooseTeamsResult = 1;
+    viewSelectedTeams = 0;
+    changeTeams = 0;
+    abortSelectTeams = 0;
+    exitSelectTeams = 0;
+    _SetExitMenuFlag();
+}
+
+/* ================================================================
+ * Team navigation stack & contest checking (Chunk 109)
+ * Asm: GetCountryName, PushContinent, PopContinent,
+ *      SetSelectedTeamsStackTop, PushLastSelectedTeam,
+ *      GetSelectedTeamsStackTop, MarkSelectedTeamsStackLocation,
+ *      IsContestContinentalCup, SetTeamsTypeForSelectedContest,
+ *      IsClubTeamsContest
+ * ================================================================ */
+
+/* GetCountryName: look up country name from countriesTable.
+ * countriesTable[d0] is a pointer to a length-prefixed string; skip byte 0. */
+__attribute__((used, externally_visible))
+uint8_t *_GetCountryName(uint16_t countryId)
+{
+    uint8_t *entry = (uint8_t *)countriesTable[countryId];
+    uint8_t *name = entry + 1;  /* skip length byte */
+    curCountryStr = name;
+    return name;
+}
+
+/* PushContinent: push country id onto continent stack */
+__attribute__((used, externally_visible))
+void _PushContinent(uint16_t countryId)
+{
+    uint8_t *ptr = countryStackPtr;
+    *ptr++ = (uint8_t)countryId;
+    countryStackPtr = ptr;
+    teamDepthLevel++;
+}
+
+/* PopContinent: pop country id from continent stack */
+__attribute__((used, externally_visible))
+uint16_t _PopContinent(void)
+{
+    uint8_t *ptr = countryStackPtr;
+    ptr--;
+    uint8_t val = *ptr;
+    *ptr = CN_OCEANIA;  /* sentinel value */
+    countryStackPtr = ptr;
+    teamDepthLevel--;
+    return (uint16_t)val;
+}
+
+/* SetSelectedTeamsStackTop: write -1 at current depth in selectedTeamsStack */
+__attribute__((used, externally_visible))
+void _SetSelectedTeamsStackTop(void)
+{
+    selectedTeamsStack[teamDepthLevel] = 0xFFFF;
+}
+
+/* PushLastSelectedTeam: store lastSelectedTeam at current depth */
+__attribute__((used, externally_visible))
+void _PushLastSelectedTeam(void)
+{
+    selectedTeamsStack[teamDepthLevel] = lastSelectedTeam;
+}
+
+/* GetSelectedTeamsStackTop: read from stack into prevSelectedTeamEntry */
+__attribute__((used, externally_visible))
+void _GetSelectedTeamsStackTop(void)
+{
+    prevSelectedTeamEntry = selectedTeamsStack[teamDepthLevel];
+}
+
+/* MarkSelectedTeamsStackLocation: set topOfStackMark based on state flags */
+__attribute__((used, externally_visible))
+void _MarkSelectedTeamsStackLocation(void)
+{
+    topOfStackMark = (int16_t)teamDepthLevel;
+
+    if (isCountryNumber != 0)
+        topOfStackMark--;
+
+    if (gotCountryName != 0 && numberOfLeagues == 1) {
+        topOfStackMark = -1;
+        return;
+    }
+
+    if (isContestContinentalCup != 0) {
+        topOfStackMark = -1;
+    }
+}
+
+/* IsContestContinentalCup: check if selectedContest is in continentalCups list */
+__attribute__((used, externally_visible))
+void _IsContestContinentalCup(void)
+{
+    uint32_t *ptr = continentalCups;
+    for (;;) {
+        uint32_t entry = *ptr++;
+        if (entry == 0xFFFFFFFF)
+            return;
+        if (entry == selectedContest) {
+            isContestContinentalCup = 1;
+            return;
+        }
+    }
+}
+
+/* IsClubTeamsContest: check if contest is in nationalTeamCompetitionsAndQualifications.
+ * Returns 0 if found (national team contest), 1 if not found (club teams contest). */
+__attribute__((used, externally_visible))
+uint16_t _IsClubTeamsContest(uint32_t contest)
+{
+    uint32_t *ptr = nationalTeamCompetitionsAndQualifications;
+    /* Asm: cmpi.w #$FFFF,(a0) checks high word; terminator is 0xFFFFFFFF */
+    while (*ptr != 0xFFFFFFFF) {
+        if (*ptr == contest)
+            return 0;
+        ptr++;
+    }
+    return 1;
+}
+
+/* SetTeamsTypeForSelectedContest: set teamsType based on contest type */
+__attribute__((used, externally_visible))
+void _SetTeamsTypeForSelectedContest(void)
+{
+    teamsType = 1;
+    if (_IsClubTeamsContest(selectedContest) == 0)
+        teamsType = 0;
 }

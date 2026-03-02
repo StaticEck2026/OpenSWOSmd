@@ -20,6 +20,7 @@ extern void _PanicHaltLoop(void) __attribute__((noreturn));
 #define NUM_PLANES_SHIFT 2
 #define FB_BLT_MOD_AFTER_1_WORD 174
 
+
 /* ---- Amiga hardware registers ---- */
 #define CUSTOM_BASE         0x00DFF000u
 #define DMACONR_ADDR        0x00DFF002u
@@ -58,6 +59,9 @@ extern void _PanicHaltLoop(void) __attribute__((noreturn));
 static void waitBlit(void)
 {
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
+    /* First read: dummy read to prime Agnus pipeline (matches asm pattern) */
+    (void)(*(volatile uint8_t *)DMACONR_ADDR);
+    /* Second read: actual busy-wait loop */
     while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT))
         ;
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
@@ -129,6 +133,7 @@ static void blitterSpanCoreMasked(uint8_t *plane, uint16_t xBit, uint16_t width,
         d5 = BLTCON0_USEA_USED_LF_F0;
         d6 = BLTCON0_USED_LF_00;
     }
+    (void)custom_unused;
 
     /* ---- Left edge ---- */
     if (xBit != 0) {
@@ -144,7 +149,10 @@ static void blitterSpanCoreMasked(uint8_t *plane, uint16_t xBit, uint16_t width,
             width -= d0;
         }
 
-        /* Blit left edge (1 word wide, height rows) */
+        /* Left edge: 1-word masked blit
+           NOTE: Known artifact — SET case (BLTBDAT with USEB=0) produces
+           colored blocks at the left edge. Root cause unknown — generated
+           code matches original asm exactly. To be investigated later. */
         waitBlit();
         *(volatile uint16_t *)(custom + BLTAFWM_OFF) = d7;
         *(volatile uint16_t *)(custom + BLTALWM_OFF) = d7;

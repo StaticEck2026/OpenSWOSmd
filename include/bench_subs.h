@@ -15,4 +15,8 @@ void _BenchCheckControls(void);
  */
 void _DrawBenchAndSubsMenu(void);
 
+/* --- Chunk 117: Formation/bench state --- */
+void _ShowFormationMenu(void);
+void _SubsBenchOff(void);
+
 #endif

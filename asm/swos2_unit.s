@@ -2042,6 +2042,198 @@
         xdef    _asm_ShowDiyLeaguesTournamentMenu_Career
         xdef    _asm_ShowDIYCupMenuWithParams_Career
         xdef    _asm_DIY_EditCompetitionSlot_Career
+        ; Chunk 97: C functions called from asm stubs
+        xref    _DIY_LoadCurrentCompetitionSlot
+        xref    _DIY_ResetAndLoadCurrentCompetitionSlot
+        xref    _DIY_InitCupFromTeamGridAndValidateTeams
+        xref    _DIY_ShuffleTeamsAndBuildCompTeamList
+        xref    _DIY_BuildTeamGridAndIndexMaps
+        xref    _DIY_CopyTeamGridFromCompToDIY
+        xref    _DIY_BuildSeededBracketAndUpdateScores
+        xref    _DIY_AdjustWorldCupBracketScores
+        ; Chunk 98: C functions called from asm stubs (play_match_menu.c)
+        xref    _PlayMatchMenuInit
+        xref    _PlayMatchMenuReinit
+        xref    _SetCurrentSelectedPlayerIndexPointer
+        xref    _OnSwapPlayer
+        xref    _PlayMatchMenuSwapPlayers
+        xref    _HandleSquadSwapSelectionToggle
+        xref    _PlayMatchChangeTactics
+        xref    _ExitPlayMatch
+        xref    _PlayMatchSelected
+        xref    _EditTacticsInPlayMatchMenu
+        xref    _ViewOpponentsSelect
+        xref    _ReturnFromViewOpponent
+        xref    _PlayMatchOnSelect30
+        xref    _PlayMatch30AfterDraw
+        xref    _UpdateTeamCheckmark
+        xref    _SetGameStartButtonText
+        xref    _ShowOrHidePlayMatchButton
+        xref    _SetUpTacticsButtons
+        xref    _SetPlayerSurnamesOnSidePitch
+        xref    _ShowUseMatchTeamIfTraining
+        xref    _SetVariableButtons
+        xref    _DrawPlayerEntries
+        xref    _RedrawPlayerNames
+        xref    _UpdateLittleCheckmark
+        xref    _SavePositionsAndUpdateLittleCheckmark
+        xref    _UpdateCheckMarkSprite
+        xref    _UseMatchTeamSelect
+        xref    _TogglePlayerCoach
+        xref    _GetPlayerPosition
+        ; Chunk 98: data accessed from C
+        xdef    showingCpuTeams
+        xdef    squadChangesAllowed
+        xdef    playMatchTeam1Ptr
+        xdef    playMatchTeam2Ptr
+        xdef    maxSubstitutesEntries
+        xdef    pmMenuNumPlayers
+        xdef    numPlayersToShowInMenu
+        xdef    viewingOpponentTeam
+        xdef    is_A_team
+        xdef    selectedPlayerPosition
+        xdef    selectedPlayerTacticsPosition
+        xdef    pmSelectedPlayerEntry
+        xdef    playMatchControlFlags
+        xdef    playerNumThatStarted
+        xdef    playMatchExcludeFlags
+        xdef    playMatchButtonVisibilityState
+        xdef    careerTeamCoachOnly
+        xdef    isFirstPlayerChoosingTeam
+        xdef    currentSelectedPlayerIndexPtr
+        xdef    currentTeamSelectedPlayerPosition
+        xdef    team1SelectedPlayerIndex
+        xdef    team2SelectedPlayerIndex
+        xdef    aViewResult
+        xdef    aPlayCoachMatch
+        xdef    aCoachMatch
+        xdef    aViewMatch
+        xdef    aViewOppo
+        xdef    aViewTeam
+        xdef    aViewOtherTeam
+        xdef    aViewATeam
+        xdef    aViewBTeam
+        xdef    aCoach_1
+        xdef    aPlayer_1
+        xdef    teamAName
+        xdef    teamBName
+        xdef    sidePitchSurnamePositionsTable
+        xdef    playMatchRedrawList
+        xdef    togglePlayerCoachRedrawItemList
+        xdef    exitGameFlag
+        ; Chunk 98: C-callable asm bridges
+        xdef    _CFormTopSkillsString
+        xdef    _CFormatPlayerValueOrStatusText
+        xdef    _CSetSquadMenuEntryStatusSprite
+        xdef    _CTrainingMatch_BuildCurrentTeamFromCareerTeam
+        xdef    _CTrainingMatch_ApplyUseMatchTeamAndSwapSubs
+        ; Chunk 99: C functions called from asm stubs (job_offers.c)
+        xref    _GotJobOfferInit
+        xref    _GotJobOfferFinish
+        xref    _AcceptJobOffer
+        xref    _j_SetExitMenuFlag_14
+        xref    _RejectJobOffer
+        xref    _ViewFutureTeam
+        xref    _ViewFutureTeamLeague
+        xref    _ConsiderJobOffer
+        ; Chunk 99: data accessed from C
+        xdef    jobOffersFromRetired
+        xdef    jobOfferOrdinal
+        xdef    oldJobOfferOrdinal
+        xdef    teamNoOfferingJob
+        xdef    teamOfferingJobPtr
+        xdef    jobOfferFunds
+        xdef    viewFutureTeamModeFlag
+        xdef    competitionsTable
+        xdef    seasonInformationsArray
+        xdef    teamFundsAccepted
+        xdef    aRetire
+        xdef    aInternationalJ
+        xdef    aNewJob
+        xdef    aDearAB
+        xdef    aWeHereAtAWould
+        xdef    aCoachingJobAtO
+        xdef    aWeCanOfferYouA
+        xdef    aWeHopeToBeAble
+        xdef    aInTheRegionOfA
+        xdef    aWeLookForwardT_1
+        xdef    aTheMembersOfTh
+        xdef    aOfAWouldLikeTo
+        xdef    aAsCoachOfTheNa
+        xdef    aWeCanPromiseYo
+        xdef    aAnAnnuallyRevi
+        xdef    aWeLookForwardT
+        xdef    aWeHereAtAAreDe
+        xdef    aHaveAcceptedTh
+        xdef    aFromTheStartOf_0
+        xdef    aWeHopeToBeAble_0
+        xdef    aInTheRegionOfA_0
+        xdef    aAndWeLookForwa
+        xdef    aTheMembersOfTh_0
+        xdef    aOfAAreDelighte
+        xdef    aAcceptedThePos
+        xdef    aFromTheStartOf
+        xdef    aWeLookForwardT_0
+        ; Chunk 99: C-callable asm bridges
+        xdef    _CInt2Pounds
+        xdef    _CShowSquad
+        xdef    _CCareer_ViewOrEditCompetitionSlot
+        ; Chunk 100: C functions (string_utils.c)
+        xref    _Int2Pounds
+        xref    _Int2PoundsSigned
+        xref    _WriteAccountBalance
+        xref    _GetBankBalance
+        xref    _PrepareMenuForFadeIn
+        ; Chunk 100: data accessed from C
+        xdef    aPound
+        xdef    nullString_0
+        xdef    aBank
+        ; Chunk 104: C functions (game_init.c)
+        xref    _InitInGameTeamStructure
+        ; Chunk 104: data accessed from C
+        xdef    avgSelectedTeamsPlayerPrice
+        xdef    team1AppPercent
+        xdef    team2AppPercent
+        ; Chunk 103: C functions (game_init.c)
+        xref    _UpdatePlayerInjuries
+        xref    _AccumulateMatchGoalsIntoTeamFile
+        xref    _SetPlayerNameAndFace
+        xref    _InitInGamePlayer
+        xref    _ApplyPlayerStatusAfterSim
+        xref    _UpdateCareerPlayerStatsAfterMatch
+        ; Chunk 102: C functions (match_sim.c)
+        xref    _InitTeams
+        xref    _PlayFriendly
+        xref    _CheckContinueAbortPrompt
+        ; Chunk 102: data accessed from C
+        xdef    aDiyCompetitionPrompt
+        xdef    aPresetCompetitionPrompt
+        xdef    aSeasonPrompt
+        xdef    aCareerPrompt
+        ; Chunk 102: C-callable asm bridges
+        xdef    _CInitAndPlayGame
+        ; Chunk 101: C functions (career_status.c)
+        xref    _ClubBusinessInit
+        xref    _Career_InitializeNewSeasonFinances
+        ; Chunk 101: data accessed from C
+        xdef    contractNegotiationActive
+        xdef    sensisoftPlcSponsorshipFactor
+        xdef    sensisoftPlcSponsorship
+        xdef    additionalInvestments
+        xdef    aTotalLoss
+        xdef    aBalanceAtStart
+        xdef    aBalanceAtEndOf
+        xdef    aSponsorshipFor
+        xdef    aSeasonFromSens
+        xdef    aAdditionalInve
+        ; Chunk 97: data accessed from C
+        xdef    diyTeamShuffleScratch
+        xdef    diyShuffleOrder8Teams
+        xdef    diyShuffleOrder4Teams
+        xdef    diyTournamentShuffleOrder8
+        xdef    diyLeagueTeamShuffleMap
+        xdef    diyGroupPatternLookup
+        xdef    worldCup
         ; Chunk 96: data accessed from C
         xdef    diyCompetitionPtr
         xdef    diyCompetitionTablePtr
@@ -2166,6 +2358,259 @@
         xdef    preferredTacticsSlotsByRole
         xdef    candidatePlayersByGoalsInTable
         xdef    playerStatusBucketThresholds
+; --- Chunk 105: Skill adjustment & team tactics (match_sim.c) ---
+        xref    _ApplyTeamTactics
+        xdef    _CGetPlayerPrice
+        xdef    gameTeam1
+        xdef    gameTeam2
+; --- Chunk 106: BuildMatchResultString (match_sim.c) ---
+        xref    _BuildMatchResultString
+; --- Chunk 107: Team selection callbacks (teams.c) ---
+        xref    _DeselectAllTeams
+        xref    _ChangeTeams
+        xref    _AbortChooseTeamsFriendly
+        xref    _ChooseTeamsFriendlyOnSelect76
+        xdef    changeTeams
+        xdef    chooseTeamsResult
+        xdef    viewSelectedTeams
+        xdef    abortSelectTeams
+        xdef    exitSelectTeams
+; --- Chunk 108: Menu callbacks (teams.c, diy_competition.c, career_teams.c) ---
+        xref    _ViewSelected
+        xref    _ExitChooseTeams2
+        xref    _ChooseTeamsPlayMatchSelected
+        xref    _SelectDiyLeagueMenu
+        xref    _SelectDiyCupMenu
+        xref    _SelectDiyTournamentMenu
+        xref    _SelectDiyExitMenu
+        xref    _NationalTeamAddPlayerHomeOnSelect
+        xref    _NationalTeamAddPlayerAbroadOnSelect
+        xref    _NationalTeamAddPlayerExit
+        xdef    topOfStackMark
+        xdef    diySelected
+        xdef    careerNationalTeamAddPlayerType
+; --- Chunk 109: Team navigation stack & contest checking (teams.c) ---
+        xref    _GetCountryName
+        xref    _PushContinent
+        xref    _PopContinent
+        xref    _SetSelectedTeamsStackTop
+        xref    _PushLastSelectedTeam
+        xref    _GetSelectedTeamsStackTop
+        xref    _MarkSelectedTeamsStackLocation
+        xref    _IsContestContinentalCup
+        xref    _IsClubTeamsContest
+        xref    _SetTeamsTypeForSelectedContest
+        xdef    countriesTable
+        xdef    curCountryStr
+        xdef    countryStackPtr
+        xdef    teamDepthLevel
+        xdef    selectedTeamsStack
+        xdef    lastSelectedTeam
+        xdef    prevSelectedTeamEntry
+        xdef    isCountryNumber
+        xdef    gotCountryName
+        xdef    numberOfLeagues
+        xdef    isContestContinentalCup
+        xdef    continentalCups
+        xdef    selectedContest
+        xdef    teamsType
+        xdef    nationalTeamCompetitionsAndQualifications
+; --- Chunk 110: Manager setup callbacks (career_init.c) ---
+        xref    _SetPlayerCoachFieldColor
+        xref    _CheckSex
+        xref    _ChangeSex
+        xref    _SetName
+        xref    _SetSurname
+        xref    _CoachOrPlayerCoach
+        xdef    coachOrPlayer
+        xdef    mrOrMs
+        xdef    managerSexBuffer
+        xdef    aMr
+        xdef    aMs
+        xdef    resultString
+        xdef    a1stLeg01
+        xdef    aAWin23OnAgg
+        xdef    aAWin23OnAggAET
+        xdef    a23OnAggAWinOnA_0
+        xdef    a23OnAggAWinOnA
+        xdef    a23OnAggAWin01O
+        xdef    a23OnAggAWin01O_0
+        xdef    a23OnAgg
+        xdef    aReplay_0
+        xdef    aAET
+        xdef    aAET90Mins23
+        xdef    aAETReplay
+        xdef    aAET90Mins23Rep
+        xdef    aAWin01OnPensAE
+        xdef    aAWin01OnPensAE_1
+        xdef    aAWin01OnPensAE_3
+        xdef    aAWin01OnPensAE_5
+        xdef    aAWin01OnPens
+        xdef    aAWin01OnPensRe
+; --- Chunk 111: Squad menu callbacks (menus.c) ---
+        xref    _SelectTraining
+        xref    _SelectGoals
+        xref    _SquadOnSelect11
+        xref    _SquadOnSelect45
+        xref    _Squad45AfterDraw
+        xdef    PlayTrainingGame
+        xdef    SquadMenuSavePlayerPositions
+        xdef    SquadUpdateMenuState
+        xdef    squadMenu
+        xdef    squadPrevSelectedPlayerIndex
+        xdef    isSquadViewMode
+        xdef    squadTeamFilePtr
+; --- Chunk 112: Squad operations (menus.c) ---
+        xref    _UpdateBigCheckMark
+        xref    _SquadRedrawPlayerListAndCheckMark
+        xref    _SquadMenuSavePlayerPositions
+        xref    _SquadCommitPositionsAndUpdateSkill
+        xdef    teamSkillDiffAfterChange
+; --- Chunk 113: Options + Transfer callbacks (menus.c, transfer_market.c) ---
+        xref    _OptionsMenuBeforeDraw
+        xref    _ChangePitchType
+        xref    _ChangeGameLength
+        xref    _ChangeAutoReplays
+        xref    _ChangeAllPlTeamsEqual
+        xref    _ChangeAutoSaveHighlights
+        xref    _ChangeMenuMusic
+        xref    _TransferPlayerOnSelect10
+        xref    _TransferPlayerOnSelect11
+        xref    _TransferPlayerOnSelect12
+        xref    _AcceptOffer
+        xref    _RejectOffer
+        xref    _AskForMore
+        xref    _ConsiderOffer
+        xref    _ThirdPartyOfferMenuExit
+        xdef    showPrereleaseCounter
+        xdef    transferPlayerMenuResult
+        xdef    thirdPartyOfferResult
+; --- Chunk 114: Simple menu exit/draw callbacks (menus.c) ---
+        xref    _CompetitionTopGoalScorersExit
+        xref    _TopGoalScorersExit
+        xref    _BuyPlayerExit
+        xref    _ViewSquadExitContinue
+        xref    _ViewSquad21AfterDraw
+        xref    _SelectNationalTeamExit
+        xref    _SelectNationalTeam25AfterDraw
+        xref    _SelTeamForTacticsExit
+        xref    _AbortSaveFile
+        xdef    viewSquadSelectedPlayer
+        xdef    selectNationalTeamMenuResult
+        xdef    teamSelected
+        xdef    selectedFilename
+; --- Chunk 115: CareerOver + ViewSquad + National (menus.c) ---
+        xref    _CareerOverInit
+        xref    _ViewSquadOnSelect21
+        xref    _SelectNationalTeamOnSelect25
+        xdef    squadTeamPtr
+; --- Chunk 116: OpenDiy* + Menu Navigation + Job Offers ---
+        xref    _OpenDiyFromFile
+        xref    _OpenDiyPreset1
+        xref    _OpenDiyPreset2
+        xref    _OpenDiyPreset3
+        xref    _ShowDiyCompetitionForSource
+        xref    _ManagementRecordMenu
+        xref    _ViewCompetitionsMenuRetired
+        xref    _SWOSMainMenuInit
+        xref    _JobOffersFinish
+        xref    _JobOffersCommon
+        xref    _OldJobOffersCommon
+        xref    _JobOffersExit
+        xref    _JobOffers_UpdateMenuEntryLayout
+        xdef    managementRecordMenu
+        xdef    viewCompetitionsMenu
+        xdef    gotJobOfferMenu
+        xdef    selectedOldJobOfferOrdinal
+        xdef    CommonMenuExit
+; --- Chunk 117: Simple standalone functions ---
+        xref    _ShowFormationMenu
+        xref    _SubsBenchOff
+        xref    _TransferMenuSetBankState
+        xref    _BuyPlayerInit
+        xref    _TransferMarketFinish
+        xref    _EditTeamsFinish
+        xdef    InitEditTeamsMenu
+        xdef    CheckNumPlayersOnTransferMarket
+        xdef    CheckIfPlayerSelected
+        xdef    EnableDisableOffers
+; --- Chunk 118: CommonMenuExit ---
+        xref    _CommonMenuExit
+        xdef    diyPresetNameOfCompetition
+        xdef    aContinueA
+        xdef    aReplayA
+        xdef    aSaveA
+        xdef    aSeason_1
+        xdef    aCareer_1
+        xdef    saveFileTitle
+; --- Chunk 119: Menu callbacks + ShowFriendlyMenu + ShowSelectRepresentationMenu + Career_HandleRetirement ---
+        xref    _FriendlyMenu
+        xref    _EditCustomTeamMenu
+        xref    _EditTacticsMenu
+        xref    _HighlightsMenu
+        xref    _OptionsMenuSelected
+        xref    _SaveDiskFilingMenu
+        xref    _ShowFriendlyMenu
+        xref    _ShowSelectRepresentationMenu
+        xref    _Career_HandleRetirement
+        xdef    Friendly
+        xdef    EditCustomTeam
+        xdef    EditTactics
+        xdef    highlightsMenu
+        xdef    optionsMenu
+        xdef    diskMenu
+        xdef    friendlyGameMenu
+        xdef    pitchTypeOrSeason
+        xdef    friendlyPitchType
+        xdef    friendlySeason
+        xdef    minSubstitutes
+        xdef    maxSubstitutes
+        xdef    friendlyOk
+        xdef    selectNationalTeamMenu
+        xdef    retired
+        xdef    Career_MaybeGenerateJobOffer
+; --- Chunk 120: DIY Design Menu functions + SetSelectTwoTeamsText ---
+        xref    _ShowDesignDIYLeagueMenu
+        xref    _ShowLeagueInfo
+        xref    _DesignDIYLeagueOK
+        xref    _SetNumberOfTeamsToSelect
+        xref    _ShowDesignDIYCupMenu
+        xref    _ShowCupInfo
+        xref    _DesignDIYCupOK
+        xref    _DesignDIYCup_UpdateMinSubstitutesAndPointsStrings
+        xref    _DesignDIYCup_UpdateSelectTeamsPrompt
+        xref    _ShowDesignDIYTournamentMenu
+        xref    _ShowTournamentInfo
+        xref    _DesignDIYTournamentOK
+        xref    _DesignDIYTournament_UpdateTwoNumericFieldsText
+        xref    _DesignDIYTournament_UpdateSelectTeamsPrompt
+        xref    _SetSelectTwoTeamsText
+        xdef    diyLeagueLookOnly
+        xdef    diyLeagueSelectTeams
+        xdef    designDiyLeagueMenu
+        xdef    diyCupLookOnly
+        xdef    diyCupSelectTeams
+        xdef    designDiyCupMenu
+        xdef    diyTournamentLookOnly
+        xdef    diyTournamentSelectTeams
+        xdef    designDiyTournamentMenu
+        xdef    aSelect0Teams
+; --- Chunk 121: FriendlyOK, ViewSelectedTeams, ShowDomesticPlayerMarket, ContestMenuScroll ---
+        xref    _FriendlyOK
+        xref    _ViewSelectedTeams
+        xref    _ShowDomesticPlayerMarket
+        xref    _ContestMenuScrollUp
+        xref    _ContestMenuScrollDown
+        xdef    viewSelectedTeams
+        xdef    chooseTeamsResult
+        xdef    changeTeams
+        xdef    abortSelectTeams
+        xdef    exitSelectTeams
+        xdef    showDomesticPlayerMarket
+        xdef    showPlayerMarketMenu
+        xdef    ScrollUpInGameList
+        xdef    ScrollDownInGameList
+        xdef    BuildGameListArrayFromTeamSelectionKeyCache
 ; --- Chunk 60 xdefs ---
         xdef    selTeamsPtr
         xdef    selTeamNameBase
@@ -2320,6 +2765,18 @@ _CUpdatePlayerPositionAndReturnRole:
         clr.w   d1                     ; clear lower word of d1
         andi.l  #$FFFF,d0              ; mask d0 to 16-bit
         or.l    d1,d0                  ; combine: (role << 16) | position
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; _CGetPlayerPrice(uint8_t *teamFile, uint8_t *playerBase, uint16_t playerNumber) -> int16_t
+; asm GetPlayerPrice: a0=teamFile, a1=playerBase, d7=playerNumber, returns d7=price
+_CGetPlayerPrice:
+        movem.l d2-d7/a2-a6,-(sp)
+        movea.l 48(sp),a0              ; teamFile
+        movea.l 52(sp),a1              ; playerBase
+        move.w  56(sp),d7              ; playerNumber
+        jsr     GetPlayerPrice
+        move.w  d7,d0                  ; return value in d0
         movem.l (sp)+,d2-d7/a2-a6
         rts
 
@@ -2594,5 +3051,106 @@ _CCallRotatePlayersLeft:
         movea.l 48(sp),a0
         move.w  52(sp),d0
         jsr     RotatePlayersLeft
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; --- Chunk 98: C-callable asm bridges for play_match_menu.c ---
+
+; _CFormTopSkillsString(uint8_t *dst, uint8_t *player) -> void
+; asm: a1=dst, a6=player (player base - 0x4C)
+; player arg is the player record pointer (at +0x4C from team entry)
+_CFormTopSkillsString:
+        movem.l d2-d7/a2-a6,-(sp)
+        movea.l 48(sp),a1       ; dst
+        movea.l 52(sp),a6       ; player ptr (at +0x4C offset)
+        lea     -$4C(a6),a6    ; FormTopSkillsString expects a6 = player base
+        jsr     (FormTopSkillsString).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; _CFormatPlayerValueOrStatusText(uint8_t *dst, uint8_t *player) -> void
+; asm: a1=dst, a0=player base (at +0x4C offset)
+_CFormatPlayerValueOrStatusText:
+        movem.l d2-d7/a2-a6,-(sp)
+        movea.l 48(sp),a1       ; dst
+        movea.l 52(sp),a0       ; player ptr
+        lea     -$4C(a0),a0    ; FormatPlayerValueOrStatusText expects base
+        jsr     (FormatPlayerValueOrStatusText).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; _CSetSquadMenuEntryStatusSprite(MenuEntry *entry, uint8_t *player, int16_t excludeFlags, uint16_t fileIdx) -> void
+; asm: a0=entry (offset from bgEntry), a6=player base, d0=excludeFlags, d1=fileIdx
+_CSetSquadMenuEntryStatusSprite:
+        movem.l d2-d7/a2-a6,-(sp)
+        movea.l 48(sp),a0       ; entry (MenuEntry ptr for status sprite)
+        movea.l 52(sp),a6       ; player ptr
+        lea     -$4C(a6),a6    ; expects base of player entry
+        move.w  56(sp),d0       ; excludeFlags
+        move.w  58(sp),d1       ; fileIdx
+        jsr     (SetSquadMenuEntryStatusSprite).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; _CTrainingMatch_BuildCurrentTeamFromCareerTeam() -> void
+_CTrainingMatch_BuildCurrentTeamFromCareerTeam:
+        movem.l d2-d7/a2-a6,-(sp)
+        jsr     (TrainingMatch_BuildCurrentTeamFromCareerTeam).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; _CTrainingMatch_ApplyUseMatchTeamAndSwapSubs() -> void
+_CTrainingMatch_ApplyUseMatchTeamAndSwapSubs:
+        movem.l d2-d7/a2-a6,-(sp)
+        jsr     (TrainingMatch_ApplyUseMatchTeamAndSwapSubs).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; --- Chunk 99 C-callable asm bridges ---
+; _CInt2Pounds(uint32_t value, uint8_t *dst)
+; Int2Pounds expects: d0.l=value, a1=dst
+_CInt2Pounds:
+        movem.l d2-d7/a2-a6,-(sp)
+        move.l  4+44(sp),d0            ; value
+        movea.l 8+44(sp),a1            ; dst
+        jsr     (Int2Pounds).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; _CShowSquad(uint8_t *team, uint8_t *title, uint32_t maskLo, uint32_t maskHi, int16_t arg2, int16_t arg3)
+; ShowSquad expects: a0=team, a1=title, d0.l=maskLo, d1.l=maskHi, d2.w=arg2, d3.w=arg3
+; int16_t promoted to 32-bit on stack; big-endian => low word at offset+2
+_CShowSquad:
+        movem.l d2-d7/a2-a6,-(sp)
+        movea.l 4+44(sp),a0            ; team
+        movea.l 8+44(sp),a1            ; title
+        move.l  12+44(sp),d0           ; maskLo
+        move.l  16+44(sp),d1           ; maskHi
+        move.w  22+44(sp),d2           ; arg2 (low word of 32-bit slot at offset 20)
+        move.w  26+44(sp),d3           ; arg3 (low word of 32-bit slot at offset 24)
+        jsr     (ShowSquad).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; _CCareer_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel)
+; Career_ViewOrEditCompetitionSlot expects: a0=comp, d0.w=sel
+; uint16_t promoted to 32-bit on stack; big-endian => low word at offset+2
+_CCareer_ViewOrEditCompetitionSlot:
+        movem.l d2-d7/a2-a6,-(sp)
+        movea.l 4+44(sp),a0            ; comp
+        move.w  10+44(sp),d0           ; sel (low word of 32-bit slot at offset 8)
+        jsr     (Career_ViewOrEditCompetitionSlot).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; --- Chunk 102 C-callable asm bridges ---
+
+; _CInitAndPlayGame(uint8_t *team1, uint8_t *team2) -> void
+; InitAndPlayGame expects: a1=team1, a2=team2
+_CInitAndPlayGame:
+        movem.l d2-d7/a2-a6,-(sp)
+        movea.l 4+44(sp),a1            ; team1
+        movea.l 8+44(sp),a2            ; team2
+        jsr     (InitAndPlayGame).l
         movem.l (sp)+,d2-d7/a2-a6
         rts

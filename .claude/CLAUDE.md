@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 915 functions ported across 96 chunks.
+**Current status:** 1102 functions ported across 121 chunks.
 
-**Last completed chunk:** Chunk 96 — DIY Competition Slot Editing & Progress (7+1s → diy_competition.c): DIY_EditCompetitionSlot, DIY_ReorderTeamsBySelectionFlags, DIY_UpdateCompetitionProgress, DIY_RecordCupBracketProgress, DIY_UpdateCompetitionProgressOrAdvanceSlot, DIY_RecordLeagueFixtureResultAndAdvanceProgress, DIY_RebuildCompetitionAndTeamSelectionCaches, diy_ResetCompetitionStatsAndProgress (static). 3 new C-callable asm bridges.
+**Last completed chunk:** Chunk 121 — FriendlyOK + ViewSelectedTeams + ShowDomesticPlayerMarket + ContestMenuScroll (5 → menus.c, transfer_market.c).
 
-**Next candidates:** DIY_InitCupFromTeamGridAndValidateTeams, DIY_ResetAndLoadCurrentCompetitionSlot, remaining unported functions.
+**Next candidates:** DIYCompetitionMenu (has branches), DesignDIY*SetName (a5 bridge), ChooseCompetition/Season/Preset menu family, Career update functions, EditTeams* callbacks, Contest menu helpers.
 
 ---
 

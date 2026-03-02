@@ -47,6 +47,10 @@ extern uint8_t aDataEurocupTmd[];     /* "data/eurocup.tmd" */
 extern uint8_t aDataEurocwcTmd[];     /* "data/eurocwc.tmd" */
 extern uint8_t aDataUefacupTmd[];     /* "data/uefacup.tmd" */
 
+/* Globals for NationalTeamAddPlayer callbacks (Chunk 108) */
+extern uint16_t careerNationalTeamAddPlayerType;
+extern void _SetExitMenuFlag(void);
+
 /* ================================================================
  * findTeamInCache — look up a team number in the team cache.
  * Asm: FindTeamInCache
@@ -1353,10 +1357,10 @@ extern void _asm_DIY_LoadCurrentCompetitionSlot(void);
 extern void _asm_DIY_PostLoadCompetitionDispatch(void);
 extern uint16_t diyMinSubstitutes;
 
-/* C bridges for bracket/team grid functions (called from DIY_AdvanceToNextCompetitionSlot) */
-extern void _CDIY_BuildSeededBracketAndUpdateScores(uint8_t *a2, uint8_t *a3,
+/* C functions for bracket/team grid (called from DIY_AdvanceToNextCompetitionSlot) */
+extern void _DIY_BuildSeededBracketAndUpdateScores(uint8_t *a2, uint8_t *a3,
                                                      uint8_t *a4, uint8_t *a5);
-extern void _CDIY_CopyTeamGridFromCompToDIY(uint8_t *a2, uint8_t *a3,
+extern void _DIY_CopyTeamGridFromCompToDIY(uint8_t *a2, uint8_t *a3,
                                               uint8_t *a4, uint8_t *a5);
 
 /* Already-ported C functions used here */
@@ -1838,10 +1842,10 @@ void _DIY_AdvanceToNextCompetitionSlot(void)
 
     if (*(uint16_t *)(slot + 0x15E) != 0) {
         /* League type: build seeded bracket */
-        _CDIY_BuildSeededBracketAndUpdateScores(buf, slot, comp, comp);
+        _DIY_BuildSeededBracketAndUpdateScores(buf, slot, comp, comp);
     } else {
         /* Cup type: copy team grid */
-        _CDIY_CopyTeamGridFromCompToDIY(buf, slot, comp, comp);
+        _DIY_CopyTeamGridFromCompToDIY(buf, slot, comp, comp);
     }
 
     /* Increment current slot index */
@@ -1856,4 +1860,31 @@ void _DIY_AdvanceToNextCompetitionSlot(void)
     /* Career modes: additional post-load processing */
     if (gameType == 4 || gameType == 3)
         _asm_DIY_PostLoadCompetitionDispatch();
+}
+
+/* ================================================================
+ * NationalTeamAddPlayer menu callbacks (Chunk 108)
+ * Set careerNationalTeamAddPlayerType and exit menu.
+ * Asm: NationalTeamAddPlayerHomeOnSelect, NationalTeamAddPlayerAbroadOnSelect,
+ *      NationalTeamAddPlayerExit
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _NationalTeamAddPlayerHomeOnSelect(void)
+{
+    careerNationalTeamAddPlayerType = 0;
+    _SetExitMenuFlag();
+}
+
+__attribute__((used, externally_visible))
+void _NationalTeamAddPlayerAbroadOnSelect(void)
+{
+    careerNationalTeamAddPlayerType = 1;
+    _SetExitMenuFlag();
+}
+
+__attribute__((used, externally_visible))
+void _NationalTeamAddPlayerExit(void)
+{
+    careerNationalTeamAddPlayerType = 0xFFFF;
+    _SetExitMenuFlag();
 }

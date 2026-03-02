@@ -22,3 +22,23 @@ void _ExtraTimeSecondPhaseScoring(uint16_t *outD3, uint16_t *outD4);
 
 /* Penalty shootout scorer pair — called from GetCachedOrCalculatePenaltyShootoutResult */
 void _PenaltyShootoutScorerPair(int16_t *outD5, uint16_t *outD6);
+
+/* --- Team init & play (Chunk 102) --- */
+void _InitTeams(void);
+void _PlayFriendly(void);
+int16_t _CheckContinueAbortPrompt(uint8_t *header);
+
+/* --- Skill adjustment & team tactics (Chunk 105) --- */
+uint16_t _ScaleSkill(uint16_t skill, int16_t factor, TeamGame *teamGame);
+int16_t _GetPlayerPricePercentageChange(int16_t factor, uint8_t *teamFile,
+                                        uint16_t callerD0);
+void _AdjustPlayerSkills(uint16_t playerIdx, uint8_t *teamFile,
+                         uint8_t *oppTeamFile, TeamGame *teamGame,
+                         uint8_t *playerBase, PlayerInfo *pi,
+                         uint16_t callerD0);
+void _ApplyTeamTactics(TeamGame *teamGame);
+
+/* --- BuildMatchResultString (Chunk 106) --- */
+uint8_t *_BuildMatchResultString(uint16_t control, uint16_t leg2, uint16_t leg1,
+                                  uint16_t pens, uint8_t *teamA, uint8_t *teamB,
+                                  uint16_t flags);

@@ -2161,6 +2161,397 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** — clean build, exit code 0
 - Cumulative: 907 functions across 95 chunks
 
+### Chunk 97 — DIY Competition Setup Functions (8+2s → diy_competition.c)
+- Date: 2026-03-01
+- **Exported to diy_competition.c (8):**
+  1. `_DIY_LoadCurrentCompetitionSlot` — loads competition data from file buffer slot into active competition structure (league or cup path)
+  2. `_DIY_ResetAndLoadCurrentCompetitionSlot` — resets competition state, seeds random, initializes team order, loads slot
+  3. `_DIY_InitCupFromTeamGridAndValidateTeams` — initializes cup from team grid, validates all teams loaded, shuffles pairs
+  4. `_DIY_ShuffleTeamsAndBuildCompTeamList` — shuffles/seeds teams then copies to competition team list, verifies loaded
+  5. `_DIY_BuildTeamGridAndIndexMaps` — builds team grid with seeded ordering, then builds team index and group maps
+  6. `_DIY_CopyTeamGridFromCompToDIY` — copies team grid from comp to diy after home/away swap and world cup adjustments
+  7. `_DIY_BuildSeededBracketAndUpdateScores` — builds seeded bracket with scoring for team strength and group position
+  8. `_DIY_AdjustWorldCupBracketScores` — adjusts seeding scores for World Cup format
+- **Static helpers (2):** buildCompSpecificTeamShuffle (bracket seeding shuffle variant), buildCompSpecificTeamList (bracket seeding list variant)
+- **Static data (1):** diyCompSpecificShuffle4 — 4-byte shuffle order extracted from sub_129960 machine code bytes
+- Assembly stubs:
+  - `DIY_LoadCurrentCompetitionSlot`: save-all bridge (movem.l d0-d7/a0-a6)
+  - `DIY_ResetAndLoadCurrentCompetitionSlot`: jmp stub
+  - `DIY_InitCupFromTeamGridAndValidateTeams`: jmp stub
+  - `DIY_ShuffleTeamsAndBuildCompTeamList`: register bridge (a2,a3,a4→stack)
+  - `DIY_BuildTeamGridAndIndexMaps`: register bridge (a2,a3,a5→stack)
+  - `DIY_CopyTeamGridFromCompToDIY`: register bridge (a2,a3,a4→stack)
+  - `DIY_BuildSeededBracketAndUpdateScores`: register bridge (a2,a3,a4,a5→stack)
+  - `DIY_AdjustWorldCupBracketScores`: register bridge (a2,a3,a5→stack)
+  - `DIY_BuildCompSpecificTeamShuffle`: rts (dead, callers now in C)
+  - `DIY_BuildCompSpecificTeamList`: rts (dead, callers now in C)
+- Removed C-to-asm bridges: `_CDIY_BuildSeededBracketAndUpdateScores`, `_CDIY_CopyTeamGridFromCompToDIY` — callers in diy_competition.c and career_teams.c updated to call C functions directly
+- New xdefs: diyTeamShuffleScratch, diyShuffleOrder8Teams, diyShuffleOrder4Teams, diyTournamentShuffleOrder8, diyLeagueTeamShuffleMap, diyGroupPatternLookup, worldCup
+- New xrefs: 8 C functions
+- Data labels preserved: diyTeamShuffleScratch (64 bytes), diyShuffleOrder8Teams (8 bytes), diyShuffleOrder4Teams (4 bytes), diyLeagueTeamShuffleMap (16 bytes), diyGroupPatternLookup (76 bytes), diyTournamentShuffleOrder8 (8 bytes), sub_129960 code bytes (kept as asm)
+- Build status: **verified** — clean build, exit code 0
+- Cumulative: 925 functions across 97 chunks
+
+### Chunk 98 — Play Match Menu Functions (29+1s → play_match_menu.c)
+- Date: 2026-03-01
+- **New module:** `src/play_match_menu.c` + `include/play_match_menu.h`
+- **Exported functions (29):**
+  1. `_GetPlayerPosition` — reverse lookup: given team + player file index, return position slot
+  2. `_SetCurrentSelectedPlayerIndexPointer` — determine which player index pointer to use based on isFirstPlayerChoosingTeam/viewingOpponentTeam
+  3. `_UpdateCheckMarkSprite` — compare line-up skills, show big check/X mark
+  4. `_UpdateLittleCheckmark` — copy positions array and update check mark
+  5. `_SavePositionsAndUpdateLittleCheckmark` — save positions, set team changed flag, compute old skill
+  6. `_SetGameStartButtonText` — set play/view/coach match button text and color
+  7. `_ShowUseMatchTeamIfTraining` — show/hide use match team button for training games
+  8. `_ShowOrHidePlayMatchButton` — complex visibility logic for play match button
+  9. `_UpdateTeamCheckmark` — show/hide blinking checkmark next to selected player
+  10. `_SetUpTacticsButtons` — set colors/disabled state of 18 tactics buttons
+  11. `_SetPlayerSurnamesOnSidePitch` — draw player surnames on side pitch diagram
+  12. `_SetVariableButtons` — set view opponent/team buttons, coach/player label, team name, etc.
+  13. `_PlayMatchMenuReinit` — reinitialize menu on return (set player count, hide extra entries)
+  14. `_PlayMatchMenuInit` — full menu initialization (IRQ check, clear flags, set CPU teams flag)
+  15. `_OnSwapPlayer` — handle player swap on fire press (CPU or player team paths)
+  16. `_PlayMatchMenuSwapPlayers` — swap two players in squad (positions, shirts, match players)
+  17. `_HandleSquadSwapSelectionToggle` — handle long fire selection toggle for squad management
+  18. `_PlayMatchChangeTactics` — change tactics when tactics button pressed
+  19. `_ExitPlayMatch` — set exit flag, clear player flags, set isCareer
+  20. `_PlayMatchSelected` — handle play match button press (set playerNumThatStarted, exit menu)
+  21. `_EditTacticsInPlayMatchMenu` — open tactics editor from play match menu
+  22. `_ViewOpponentsSelect` — toggle between viewing own team and opponent/training B team
+  23. `_ReturnFromViewOpponent` — return from viewing opponent
+  24. `_PlayMatchOnSelect30` — rotate players left, redraw entries
+  25. `_PlayMatch30AfterDraw` — draw entry after play match 30 draw
+  26. `_RedrawPlayerNames` — redraw 11 player entries plus first entry
+  27. `_UseMatchTeamSelect` — restore match team for training, rebuild team state
+  28. `_TogglePlayerCoach` — toggle player/coach mode for career or regular game
+  29. `_DrawPlayerEntries` — comprehensive player row rendering (colors, status, names, skills, values)
+- **Static helper (1):** GetPlayerPosition wrapper logic (inline in _GetPlayerPosition)
+- **C-callable asm bridges (5):** _CFormTopSkillsString, _CFormatPlayerValueOrStatusText, _CSetSquadMenuEntryStatusSprite, _CTrainingMatch_BuildCurrentTeamFromCareerTeam, _CTrainingMatch_ApplyUseMatchTeamAndSwapSubs
+- Assembly stubs: all 29 functions replaced with movem.l save/restore + jsr bridges; PlayMatchMenuSwapPlayers as dead rts stub (only called from C)
+- New xdefs: exitGameFlag + all chunk 98 data symbols
+- New xrefs: 29 C functions + 5 C-callable bridges
+- Fix: exitGameFlag was missing from xdef, causing link error
+- Fix: selTeamsPtr extern changed from `uint8_t` to `uint8_t[]` to fix overflow warning
+- Build status: **verified** — clean build, links successfully
+- Cumulative: 954 functions across 98 chunks
+
+### Chunk 99 — Job Offers Menu Functions (8 → job_offers.c)
+- Date: 2026-03-01
+- **Extended module:** `src/job_offers.c` + `include/job_offers.h`
+- **Exported functions (8):**
+  1. `_GotJobOfferInit` — initialize job offer menu: set up teamNoOfferingJob, jobOfferFunds, call GotJobOfferFinish
+  2. `_GotJobOfferFinish` — set up job offer display text (new offer vs accepted, domestic vs international)
+  3. `_AcceptJobOffer` — accept a job offer: set teamNoOfferAccepted/teamFundsAccepted, clear offer queues, update season
+  4. `_j_SetExitMenuFlag_14` — tail-call to SetExitMenuFlag
+  5. `_RejectJobOffer` — reject current job offer: remove from appropriate queue
+  6. `_ViewFutureTeam` — show future team squad via ShowSquad
+  7. `_ViewFutureTeamLeague` — show future team's league competition slot
+  8. `_ConsiderJobOffer` — convert new offer to old offer, exit menu
+- **Static helpers (2):** `printToEntry` (format string into menu entry text), `getCurrentSeasonPointer` (compute season info pointer)
+- **C-callable asm bridges (3):** `_CInt2Pounds`, `_CShowSquad`, `_CCareer_ViewOrEditCompetitionSlot`
+- Assembly stubs: all 8 functions replaced with movem.l save/restore + jsr bridges
+- New xdefs: jobOffersFromRetired, jobOfferOrdinal, oldJobOfferOrdinal, teamNoOfferingJob, teamOfferingJobPtr, jobOfferFunds, viewFutureTeamModeFlag, competitionsTable, seasonInformationsArray, teamFundsAccepted, 27 string constants
+- New xrefs: 8 C functions + 3 C-callable bridges
+- Fix: ViewFutureTeam changed from string literal "VIEW TEAM" to extern aViewTeam
+- Build status: **verified** — clean build, links successfully
+- Cumulative: 962 functions across 99 chunks
+
+### Chunk 100 — Number Formatting & Menu Utility (6 → string_utils.c)
+- Date: 2026-03-01
+- **Extended module:** `src/string_utils.c` + `include/string_utils.h`
+- **Exported functions (5):**
+  1. `_Int2Pounds` — format unsigned value as "£123,456"
+  2. `_Int2PoundsSigned` — format signed value as "- £123,456" or "£123,456"
+  3. `_WriteAccountBalance` — format signed value with +/- prefix: "+ £123" or "- £123"
+  4. `_GetBankBalance` — format bank balance as "BANK  £123,456"
+  5. `_PrepareMenuForFadeIn` — prepare menu for fade-in transition
+- **Static helpers (1):** `int2StrWithCommas` — format number with comma separators (e.g. 1,234,567)
+- Assembly stubs: all 5 functions replaced with register bridges (d0/a1 → stack params)
+- Note: `Int2StrWithCommas`, `Int2AsciiLessThan100Check`, `Int2AsciiSaveD0` are now dead code (only called by old `Int2Pounds` body)
+- New xdefs: aPound, nullString_0, aBank
+- Fix: added `int32_t` typedef to string_utils.h
+- Build status: **verified** — clean build, links successfully
+- Cumulative: 968 functions across 100 chunks
+
+### Chunk 101 — ClubBusinessInit & Career Season Finance Init (2+3s → career_status.c)
+- Date: 2026-03-01
+- **Extended module:** `src/career_status.c` + `include/career_status.h`
+- **Exported functions (2):**
+  1. `_ClubBusinessInit` — initializes Club Business menu display (3 paths: contract negotiation active, not staying in old club, staying in old club with sponsorship)
+  2. `_Career_InitializeNewSeasonFinances` — recalculates wages, resets accumulators, handles sponsorship randomization and competition bonuses
+- **Static helpers (3):** `computeTotalProfitLoss`, `formatNewBalanceEntry`, `bgColor_cs`/`setBgColor_cs` (inlines)
+- Assembly stubs: both functions replaced with save-all forwarding stubs
+- New xdefs: contractNegotiationActive, sensisoftPlcSponsorshipFactor, sensisoftPlcSponsorship, additionalInvestments, aTotalLoss, aBalanceAtStart, aBalanceAtEndOf, aSponsorshipFor, aSeasonFromSens, aAdditionalInve
+- Added includes: menu_system.h, string_utils.h to career_status.c
+- Build status: **verified** — clean build, links successfully
+- Cumulative: 970 functions across 101 chunks
+
+### Chunk 102 — Match Team Init & Play (3+1s → match_sim.c)
+- Date: 2026-03-01
+- **Extended module:** `src/match_sim.c` + `include/match_sim.h`
+- **Exported functions (3):**
+  1. `_InitTeams` — initializes all selected teams (clears cards, injuries, goal stats); also inits career team with 32 players if applicable
+  2. `_PlayFriendly` — sets up team pointers and calls InitAndPlayGame for a friendly match
+  3. `_CheckContinueAbortPrompt` — shows continue/abort prompt based on gameType, returns 0 (abort) or non-zero (continue)
+- **Static helpers (1):** `teamInit` — per-team player field reset loop
+- Assembly stubs: 3 functions replaced with forwarding stubs, TeamInit made dead (`rts`)
+- New C-callable bridge: `_CInitAndPlayGame` (a1=team1, a2=team2)
+- New xdefs: aDiyCompetitionPrompt, aPresetCompetitionPrompt, aSeasonPrompt, aCareerPrompt
+
+### Chunk 103 — Game Init Player Utilities (6+2d → game_init.c)
+- Date: 2026-03-01
+- **Extended module:** `src/game_init.c` + `include/game_init.h`
+- **Exported functions (6):**
+  1. `_UpdatePlayerInjuries` — copies injury bitfield from in-game PlayerInfo back to PlayerFile for non-computer teams
+  2. `_AccumulateMatchGoalsIntoTeamFile` — adds own-goals count to TeamFile, accumulates per-player goals into goalStats
+  3. `_SetPlayerNameAndFace` — copies full player name and extracts face index from PlayerFile to PlayerInfo
+  4. `_InitInGamePlayer` — full player init: short name, face, position, substitution status, cards, injuries, shirt number
+  5. `_ApplyPlayerStatusAfterSim` — applies card/injury effects from in-game state back to PlayerFile after simulated match
+  6. `_UpdateCareerPlayerStatsAfterMatch` — calls Career_UpdateSinglePlayerPostMatchStats for each player who played full match
+- **Dead code stubbed (2):** `sub_11FBF6` (hex long formatter, never called), `PanicLookupMessagePtr` (hex word formatter, already ported as static in panic.c)
+- Assembly stubs: 6 functions replaced with register-passing bridges, 2 dead functions stubbed to `rts`
+- Key pattern: PlayerInfoHeader uses 42-byte prefix before PlayerInfo fields; bridge stubs add `lea PLAYERINFOHEADER_SUBSTITUTED(a6),a0` to pass adjusted PlayerInfo pointer
+
+### Chunk 104 — InitInGameTeamStructure (1 → game_init.c)
+- Date: 2026-03-01
+- **Extended module:** `src/game_init.c` + `include/game_init.h`
+- **Exported functions (1):**
+  1. `_InitInGameTeamStructure` — full team game structure initialization: computes price %, loops 16 players calling GetPlayerAtIndex, InitInGamePlayer, GetPlayerInfoBreakPosition, SetPlayerNameAndFace, clears skill fields, copies team name
+- Assembly stub: register-passing bridge (a2=TeamFile*, a4=TeamGame*, a6=int16_t* avgPricePct)
+- New xdefs: avgSelectedTeamsPlayerPrice, team1AppPercent, team2AppPercent
+- Build status: **verified** — clean build, links successfully
+- Cumulative: 973 functions across 102 chunks
+
+### Chunk 105 — Skill Adjustment & Team Tactics (4 exported + 3 dead → match_sim.c)
+- Date: 2026-03-01
+- **Extended module:** `src/match_sim.c` + `include/match_sim.h`
+- **Exported functions (4):**
+  1. `_ScaleSkill` — scales raw 0-7 skill nibble by factor × team appearance percentage, with random fractional rounding
+  2. `_GetPlayerPricePercentageChange` — adds per-player random (d0 from caller), price rank offset, and [-12,+11] random to price change factor; skips adjustments for friendly or player+coach teams
+  3. `_AdjustPlayerSkills` — full player skill adjustment: calculates price factor (goalkeeper=file price, field player=GetPlayerPrice), percentage vs file price, bottom-team penalty, scales 7 skills via ScaleSkill, computes goalie skill with team-control-based clamping
+  4. `_ApplyTeamTactics` — loops 11 starting players: temporarily overrides tactics byte, gets player file via GetPlayer, saves/restores random state, seeds per-player random, calls AdjustPlayerSkills
+- **Dead code stubbed (3):** `AdjustPlayerSkills` (asm), `GetPlayerPricePercentageChange` (asm), `ScaleSkill` (asm) — all only called from ApplyTeamTactics which is now ported
+- Assembly stubs:
+  - `ApplyTeamTactics`: save-all bridge pushing a4 (TeamGame*) → _ApplyTeamTactics
+  - 3 dead functions stubbed to `rts`
+- New C-callable bridge: `_CGetPlayerPrice` (a0=teamFile, a1=playerBase, d7=playerNumber → d7=price, returned via d0)
+- New xdefs: gameTeam1, gameTeam2, _CGetPlayerPrice
+- New xrefs: _ApplyTeamTactics
+- Key porting discovery: asm d0 register carries GetPlayerRandomNum^gameRandValue from ApplyTeamTactics through to GetPlayerPricePercentageChange as an intentional additional random factor (Ghidra confirmed as `unaff_D0w`). Passed explicitly as `callerD0` parameter in C.
+- Build status: **verified** — clean build, links successfully
+- Cumulative: 986 functions across 105 chunks
+
+### Chunk 106 — BuildMatchResultString (1 → match_sim.c)
+- Date: 2026-03-01
+- **Extended module:** `src/match_sim.c` + `include/match_sim.h`
+- **Exported functions (1):**
+  1. `_BuildMatchResultString` — formats match result string from scores/flags. Selects from 19 format strings based on bit flags (two-leg aggregate, extra time, penalties, away goals, replay). Supports dual format strings (wide/narrow) via control parameter that skips past first null terminator.
+- Assembly bridge: saves d0-d7/a1-a6, pushes 7 args (control/d0, leg2/d4, leg1/d5, pens/d6, teamA/a1, teamB/a2, flags/d7), returns via a0=d0
+- New xdefs: resultString, 19 format string labels (a1stLeg01, aAWin23OnAgg, etc.)
+- Build status: **verified**
+- Cumulative: 987 functions across 106 chunks
+
+### Chunk 107 — Team Selection Callbacks (4 → teams.c)
+- Date: 2026-03-01
+- **Extended module:** `src/teams.c` + `include/teams.h`
+- **Exported functions (4):**
+  1. `_DeselectAllTeams` — loops selected teams, deselects those with teamControls==0
+  2. `_ChangeTeams` — deselects all, sets changeTeams=1, clears others, exits menu
+  3. `_AbortChooseTeamsFriendly` — deselects all, sets abortSelectTeams=1, exits menu
+  4. `_ChooseTeamsFriendlyOnSelect76` — deselects all, sets chooseTeamsResult=1, exits menu
+- Assembly stubs: DeselectAllTeams=save-all bridge, 3 callbacks=jmp to C
+- New xdefs: changeTeams, chooseTeamsResult, viewSelectedTeams, abortSelectTeams, exitSelectTeams
+- Build status: **verified**
+- Cumulative: 991 functions across 107 chunks
+
+### Chunk 108 — Menu Callbacks Batch (10 → teams.c, diy_competition.c, career_teams.c)
+- Date: 2026-03-01
+- **Exported functions (10):**
+  - teams.c (3): `_ViewSelected`, `_ExitChooseTeams2`, `_ChooseTeamsPlayMatchSelected`
+  - diy_competition.c (4): `_SelectDiyLeagueMenu`, `_SelectDiyCupMenu`, `_SelectDiyTournamentMenu`, `_SelectDiyExitMenu`
+  - career_teams.c (3): `_NationalTeamAddPlayerHomeOnSelect`, `_NationalTeamAddPlayerAbroadOnSelect`, `_NationalTeamAddPlayerExit`
+- All are simple flag-setters + _SetExitMenuFlag() calls
+- New xdefs: topOfStackMark, diySelected, careerNationalTeamAddPlayerType
+- Build status: **verified**
+- Cumulative: 1001 functions across 108 chunks
+
+### Chunk 109 — Team Navigation Stack & Contest Checking (10 → teams.c)
+- Date: 2026-03-01
+- **Extended module:** `src/teams.c` + `include/teams.h`
+- **Exported functions (10):**
+  1. `_GetCountryName` — looks up country name from countriesTable, skips length byte
+  2. `_PushContinent` — pushes country id onto continent navigation stack
+  3. `_PopContinent` — pops country id, writes CN_OCEANIA sentinel
+  4. `_SetSelectedTeamsStackTop` — writes 0xFFFF at current depth
+  5. `_PushLastSelectedTeam` — stores lastSelectedTeam at current depth
+  6. `_GetSelectedTeamsStackTop` — reads stack into prevSelectedTeamEntry
+  7. `_MarkSelectedTeamsStackLocation` — sets topOfStackMark based on isCountryNumber, gotCountryName, numberOfLeagues, isContestContinentalCup
+  8. `_IsContestContinentalCup` — checks selectedContest against continentalCups table
+  9. `_IsClubTeamsContest` — linear search in nationalTeamCompetitionsAndQualifications; returns 0=national, 1=club
+  10. `_SetTeamsTypeForSelectedContest` — sets teamsType based on IsClubTeamsContest result
+- Assembly bridges: register bridges for param/return conversion; IsClubTeamsContest bridge includes `tst.w d0` for Z flag
+- New xdefs: countriesTable, curCountryStr, countryStackPtr, teamDepthLevel, selectedTeamsStack, lastSelectedTeam, prevSelectedTeamEntry, isCountryNumber, gotCountryName, numberOfLeagues, isContestContinentalCup, continentalCups, selectedContest, teamsType, nationalTeamCompetitionsAndQualifications
+- Build status: **verified**
+- Cumulative: 1011 functions across 109 chunks
+
+### Chunk 110 — Manager Setup Menu Callbacks (6 → career_init.c)
+- Date: 2026-03-01
+- **Extended module:** `src/career_init.c` + `include/career_init.h`
+- **Exported functions (6):**
+  1. `_SetPlayerCoachFieldColor` — updates bg color palette index for menu entry 9 based on coachOrPlayer toggle
+  2. `_CheckSex` — copies "MR" or "MS" to managerSexBuffer based on mrOrMs
+  3. `_ChangeSex` — toggles mrOrMs, calls CheckSex, redraws current menu item
+  4. `_SetName` — starts text input for first name (max 9 chars), uses entry->fg
+  5. `_SetSurname` — starts text input for surname (max 13 chars), uses entry->fg
+  6. `_CoachOrPlayerCoach` — toggles coachOrPlayer, updates color, redraws menu item
+- Assembly bridges: save-all + push a5 (MenuEntry*) for callbacks that need current entry
+- New xdefs: coachOrPlayer, mrOrMs, managerSexBuffer, aMr, aMs
+- Build status: **verified**
+- Cumulative: 1017 functions across 110 chunks
+
+### Chunk 111 — Squad Menu Callbacks (5 → menus.c)
+- Date: 2026-03-01
+- **Extended module:** `src/menus.c` + `include/menus.h`
+- **Exported functions (5):**
+  1. `_SelectTraining` — calls PlayTrainingGame, reactivates squadMenu, sets entry 9
+  2. `_SelectGoals` — enters goals/clubs view mode, saves positions, updates menu state
+  3. `_SquadOnSelect11` — returns from goals view to normal squad view
+  4. `_SquadOnSelect45` — rotates players left by 5, redraws items 23,44
+  5. `_Squad45AfterDraw` — draws menu entry 44
+- Assembly stubs: simple `jmp _CFunc` for all
+- New xdefs: PlayTrainingGame, SquadMenuSavePlayerPositions, SquadUpdateMenuState, squadMenu, squadPrevSelectedPlayerIndex, isSquadViewMode, squadTeamFilePtr
+- Build status: **verified**
+- Cumulative: 1022 functions across 111 chunks
+
+### Chunk 112 — Squad Operations (4 → menus.c)
+- Date: 2026-03-01
+- **Extended module:** `src/menus.c` + `include/menus.h`
+- **Exported functions (4):**
+  1. `_UpdateBigCheckMark` — updates check mark sprite on entry 1 based on skill diff
+  2. `_SquadRedrawPlayerListAndCheckMark` — redraws entries 28-38 and entry 1
+  3. `_SquadMenuSavePlayerPositions` — copies positions array + calls UpdateBigCheckMark
+  4. `_SquadCommitPositionsAndUpdateSkill` — copies positions, marks team file, computes skill
+- Note: Used volatile byte copy to prevent GCC from emitting memcpy (no libc)
+- Assembly bridge: SquadMenuSavePlayerPositions preserves all regs (movem save/restore)
+- New xdefs: teamSkillDiffAfterChange
+- Build status: **verified**
+- Cumulative: 1026 functions across 112 chunks
+
+### Chunk 113 — Options + Transfer Menu Callbacks (15 → menus.c, transfer_market.c)
+- Date: 2026-03-01
+- **Options callbacks in menus.c (7):**
+  1. `_OptionsMenuBeforeDraw` — clears showPrereleaseCounter
+  2. `_ChangePitchType` — cycles pitchType (0-6, then 0xFFFE/RANDOM)
+  3. `_ChangeGameLength` — cycles gameLength (0-3)
+  4. `_ChangeAutoReplays` — toggles autoReplays
+  5. `_ChangeAllPlTeamsEqual` — toggles allPlayerTeamsEqual
+  6. `_ChangeAutoSaveHighlights` — toggles autoSaveHighlights
+  7. `_ChangeMenuMusic` — toggles menuMusic, restarts music
+- **Transfer callbacks in transfer_market.c (8):**
+  1. `_TransferPlayerOnSelect10` — reject transfer (0xFFFF)
+  2. `_TransferPlayerOnSelect11` — accept transfer (0)
+  3. `_TransferPlayerOnSelect12` — counter-offer (1)
+  4. `_AcceptOffer` — accept third-party offer (1)
+  5. `_RejectOffer` — reject third-party offer (2)
+  6. `_AskForMore` — negotiate offer (3)
+  7. `_ConsiderOffer` — consider offer (0)
+  8. `_ThirdPartyOfferMenuExit` — exit offer menu (0)
+- Assembly bridges: options use `move.l a5,-(sp); jsr; addq.l #4,sp; rts` (pass MenuEntry*), transfer use `jmp`
+- New xdefs: showPrereleaseCounter, transferPlayerMenuResult, thirdPartyOfferResult
+- Build status: **verified**
+- Cumulative: 1041 functions across 113 chunks
+
+### Chunk 114 — Simple Menu Exit/Draw Callbacks (9 → menus.c)
+- Date: 2026-03-01
+- 9 trivial menu callbacks:
+  1. `_CompetitionTopGoalScorersExit` — SetExitMenuFlag
+  2. `_TopGoalScorersExit` — SetExitMenuFlag
+  3. `_BuyPlayerExit` — SetExitMenuFlag
+  4. `_ViewSquadExitContinue` — viewSquadSelectedPlayer=0xFFFF, SetExitMenuFlag
+  5. `_ViewSquad21AfterDraw` — DrawMenuItem(&menuEntries[20])
+  6. `_SelectNationalTeamExit` — selectNationalTeamMenuResult=0xFFFF, SetExitMenuFlag
+  7. `_SelectNationalTeam25AfterDraw` — DrawMenuItem(&menuEntries[24])
+  8. `_SelTeamForTacticsExit` — teamSelected=0xFFFF, SetExitMenuFlag
+  9. `_AbortSaveFile` — selectedFilename[0]=0, SetExitMenuFlag
+- Assembly stubs: all `jmp _CFunc`
+- New xdefs: viewSquadSelectedPlayer, selectNationalTeamMenuResult, teamSelected, selectedFilename
+- Build status: **verified**
+- Cumulative: 1050 functions across 114 chunks
+
+### Chunk 115 — CareerOver + ViewSquad + National Callbacks (3 → menus.c)
+- Date: 2026-03-01
+- 3 functions:
+  1. `_CareerOverInit` — conditional SetCurrentEntry based on currentSeasonShowing, numNewJobOffers, numJobOffers, youreSacked
+  2. `_ViewSquadOnSelect21` — RotatePlayersLeft + DrawMenuItem(&menuEntries[20])
+  3. `_SelectNationalTeamOnSelect25` — RotatePlayersLeft(careerTeam, 5) + DrawMenuItem(&menuEntries[24])
+- Assembly stubs: all `jmp _CFunc`
+- New xdefs: squadTeamPtr
+- Build status: **verified**
+- Cumulative: 1053 functions across 115 chunks
+
+### Chunk 116 — OpenDiy* + Menu Navigation + Job Offers (13 → diy_competition.c, menus.c, job_offers.c)
+- Date: 2026-03-01
+- **diy_competition.c (5):** _ShowDiyCompetitionForSource, _OpenDiyFromFile, _OpenDiyPreset1, _OpenDiyPreset2, _OpenDiyPreset3
+- **menus.c (3):** _SWOSMainMenuInit, _ManagementRecordMenu, _ViewCompetitionsMenuRetired
+- **job_offers.c (5):** _JobOffers_UpdateMenuEntryLayout, _JobOffersFinish, _JobOffersCommon, _OldJobOffersCommon, _JobOffersExit
+- ShowDiyCompetitionForSource bridge: push a0, call C, clean stack (asm callers pass ptr in a0)
+- JobOffersCommon/OldJobOffersCommon bridges: push a5 (MenuEntry*) on stack
+- Build status: **verified**
+- Cumulative: 1066 functions across 116 chunks
+
+### Chunk 117 — Simple Standalone Functions (6 → bench_subs.c, transfer_market.c, edit_tactics.c)
+- Date: 2026-03-01
+- **bench_subs.c (2):** _ShowFormationMenu (set bench state globals), _SubsBenchOff (clear bench state)
+- **transfer_market.c (3):** _TransferMenuSetBankState (get bank balance to entry 1), _BuyPlayerInit (same), _TransferMarketFinish (refresh all transfer menu state)
+- **edit_tactics.c (1):** _EditTeamsFinish (call InitEditTeamsMenu, skip nullsub_16)
+- All stubs: `jmp _CFunc`
+- New xdefs: InitEditTeamsMenu, CheckNumPlayersOnTransferMarket, CheckIfPlayerSelected, EnableDisableOffers
+- Build status: **verified**
+- Cumulative: 1072 functions across 117 chunks
+
+### Chunk 118 — CommonMenuExit (1 → menus.c)
+- Date: 2026-03-01
+- **menus.c (1):** _CommonMenuExit — critical menu init function used by ~20 callers
+  - Switches on gameType (0=none, 1=DIY, 2=preset, 3=season, 4=career)
+  - No competition: hides entries 11/12, copies y from 11 to 13
+  - Active: formats "CONTINUE %a"/"REPLAY %a" into entry 11 fg, "SAVE %a" into saveFileTitle
+  - Uses _PrintFormatted with %a string substitution
+- Stub: `jmp _CommonMenuExit`
+- New xdefs: diyPresetNameOfCompetition, aContinueA, aReplayA, aSaveA, aSeason_1, aCareer_1, saveFileTitle
+- Build status: **verified**
+- Cumulative: 1073 functions across 118 chunks
+
+### Chunk 119 — Menu Callbacks + ShowFriendlyMenu + ShowSelectRepresentationMenu + Career_HandleRetirement (9 → menus.c, career_status.c)
+- Date: 2026-03-01
+- **menus.c (8):** _FriendlyMenu (seed RNG + Friendly + CommonMenuExit), _EditCustomTeamMenu, _EditTacticsMenu, _HighlightsMenu, _OptionsMenuSelected, _SaveDiskFilingMenu (all simple: call function + CommonMenuExit), _ShowFriendlyMenu (init friendly defaults + ShowMenu), _ShowSelectRepresentationMenu (returns d0)
+- **career_status.c (1):** _Career_HandleRetirement (retired=1, 5 career update calls)
+- All stubs: `jmp _CFunc` (ShowSelectRepresentationMenu returns d0 via GCC convention)
+- Seed fix: `seed` + `randXorIndex` split into two byte writes (big-endian word write)
+- New xdefs: Friendly, EditCustomTeam, EditTactics, highlightsMenu, optionsMenu, diskMenu, friendlyGameMenu, pitchTypeOrSeason, friendlyPitchType, friendlySeason, minSubstitutes, maxSubstitutes, friendlyOk, selectNationalTeamMenu, retired, Career_MaybeGenerateJobOffer
+- Build status: **verified**
+- Cumulative: 1082 functions across 119 chunks
+
+### Chunk 120 — DIY Design Menu Functions + SetSelectTwoTeamsText (15 → diy_competition.c, menus.c)
+- Date: 2026-03-01
+- **diy_competition.c (14):**
+  - League: _ShowDesignDIYLeagueMenu (save + init + show), _ShowLeagueInfo (view-only), _DesignDIYLeagueOK (set flag + activate), _SetNumberOfTeamsToSelect (PrintFormatted "SELECT N TEAMS" entry 23)
+  - Cup: _ShowDesignDIYCupMenu (copy buffer + init + show), _ShowCupInfo (view-only), _DesignDIYCupOK (set flag + activate), _DesignDIYCup_UpdateMinSubstitutesAndPointsStrings (Int2Ascii entries 13/15), _DesignDIYCup_UpdateSelectTeamsPrompt (PrintFormatted entry 51)
+  - Tournament: _ShowDesignDIYTournamentMenu (save + init + show), _ShowTournamentInfo (view-only), _DesignDIYTournamentOK (set flag + activate), _DesignDIYTournament_UpdateTwoNumericFieldsText (Int2Ascii entries 11/13 from diyFileBufferCopy), _DesignDIYTournament_UpdateSelectTeamsPrompt (PrintFormatted entry 92)
+- **menus.c (1):** _SetSelectTwoTeamsText (PrintFormatted "SELECT 2 TEAMS" entry 10)
+- All stubs: `jmp _CFunc`
+- New xdefs: diyLeagueLookOnly, diyLeagueSelectTeams, designDiyLeagueMenu, diyCupLookOnly, diyCupSelectTeams, designDiyCupMenu, diyTournamentLookOnly, diyTournamentSelectTeams, designDiyTournamentMenu, aSelect0Teams
+- Build status: **verified**
+- Cumulative: 1097 functions across 120 chunks
+
+### Chunk 121 — FriendlyOK + ViewSelectedTeams + ShowDomesticPlayerMarket + ContestMenuScroll (5 → menus.c, transfer_market.c)
+- Date: 2026-03-01
+- **menus.c (4):** _FriendlyOK (set flag + ActivateMenu), _ViewSelectedTeams (set flag + clear 4 globals + SetExitMenuFlag), _ContestMenuScrollUp (scroll + rebuild + redraw 15), _ContestMenuScrollDown (same)
+- **transfer_market.c (1):** _ShowDomesticPlayerMarket (update home market + show menu)
+- All stubs: `jmp _CFunc`
+- New xdefs: viewSelectedTeams, chooseTeamsResult, changeTeams, abortSelectTeams, exitSelectTeams, showDomesticPlayerMarket, showPlayerMarketMenu, ScrollUpInGameList, ScrollDownInGameList, BuildGameListArrayFromTeamSelectionKeyCache
+- Build status: **verified**
+- Cumulative: 1102 functions across 121 chunks
+
 ### Phase Transitions (see CLAUDE.md "Project Phases")
 - [ ] Phase 1 complete: all subroutines ported → output `*** READY FOR TESTING PHASE! ***` and STOP
 - [ ] Phase 2: user tests game, fixes any bugs found
@@ -2271,5 +2662,30 @@ Update this section every time you port a chunk. Keep it chronological.
 | 94    | 8+1s      | 891        |
 | 95    | 13+3s     | 907        |
 | 96    | 7+1s      | 915        |
+| 97    | 8+2s      | 925        |
+| 98    | 29+1s     | 954        |
+| 99    | 8         | 962        |
+| 100   | 5+1s      | 968        |
+| 101   | 2+3s      | 970        |
+| 102   | 3+1s      | 973        |
+| 103   | 6+2d      | 981        |
+| 104   | 1         | 982        |
+| 105   | 4+3d      | 986        |
+| 106   | 1         | 987        |
+| 107   | 4         | 991        |
+| 108   | 10        | 1001       |
+| 109   | 10        | 1011       |
+| 110   | 6         | 1017       |
+| 111   | 5         | 1022       |
+| 112   | 4         | 1026       |
+| 113   | 15        | 1041       |
+| 114   | 9         | 1050       |
+| 115   | 3         | 1053       |
+| 116   | 13        | 1066       |
+| 117   | 6         | 1072       |
+| 118   | 1         | 1073       |
+| 119   | 9         | 1082       |
+| 120   | 15        | 1097       |
+| 121   | 5         | 1102       |
 
-(s = static/internal helpers, a = alias/shared)
+(s = static/internal helpers, a = alias/shared, d = dead code stubbed)

@@ -1,5 +1,6 @@
 #include "transfer_market.h"
 #include "game_types.h"
+#include "menu_system.h"
 
 /* Transfer offer entry size: 14 bytes ($E) */
 #define OFFER_ENTRY_SIZE    14
@@ -1509,4 +1510,123 @@ void _Career_RemovePlayerFromTeamInternal(uint16_t teamNumber, uint16_t playerOr
         _RemovePlayerFromCareerContest(teamNumber, playerOrd);
         _RemoveForeignMarketPlayer(teamNumber, playerOrd);
     }
+}
+
+/* ================================================================
+ * Transfer/Offer menu callbacks (Chunk 113, SWOS2.s lines 71942-72592)
+ * ================================================================ */
+
+extern uint16_t transferPlayerMenuResult;
+extern uint16_t thirdPartyOfferResult;
+
+/* TransferPlayerOnSelect10: reject transfer (0xFFFF) */
+__attribute__((used, externally_visible))
+void _TransferPlayerOnSelect10(void)
+{
+    transferPlayerMenuResult = 0xFFFF;
+    _SetExitMenuFlag();
+}
+
+/* TransferPlayerOnSelect11: accept transfer (0) */
+__attribute__((used, externally_visible))
+void _TransferPlayerOnSelect11(void)
+{
+    transferPlayerMenuResult = 0;
+    _SetExitMenuFlag();
+}
+
+/* TransferPlayerOnSelect12: counter-offer transfer (1) */
+__attribute__((used, externally_visible))
+void _TransferPlayerOnSelect12(void)
+{
+    transferPlayerMenuResult = 1;
+    _SetExitMenuFlag();
+}
+
+/* AcceptOffer: accept third-party offer (1) */
+__attribute__((used, externally_visible))
+void _AcceptOffer(void)
+{
+    thirdPartyOfferResult = 1;
+    _SetExitMenuFlag();
+}
+
+/* RejectOffer: reject third-party offer (2) */
+__attribute__((used, externally_visible))
+void _RejectOffer(void)
+{
+    thirdPartyOfferResult = 2;
+    _SetExitMenuFlag();
+}
+
+/* AskForMore: negotiate third-party offer (3) */
+__attribute__((used, externally_visible))
+void _AskForMore(void)
+{
+    thirdPartyOfferResult = 3;
+    _SetExitMenuFlag();
+}
+
+/* ConsiderOffer: consider third-party offer (0) */
+__attribute__((used, externally_visible))
+void _ConsiderOffer(void)
+{
+    thirdPartyOfferResult = 0;
+    _SetExitMenuFlag();
+}
+
+/* ThirdPartyOfferMenuExit: exit offer menu (0) */
+__attribute__((used, externally_visible))
+void _ThirdPartyOfferMenuExit(void)
+{
+    thirdPartyOfferResult = 0;
+    _SetExitMenuFlag();
+}
+
+/* ================================================================
+ * Chunk 117: Transfer Menu Helpers
+ * ================================================================ */
+
+extern MenuEntry menuEntries[];
+extern void _GetBankBalance(uint8_t *dst);
+extern void CheckNumPlayersOnTransferMarket(void);  /* still in asm */
+extern void CheckIfPlayerSelected(void);             /* still in asm */
+extern void EnableDisableOffers(void);               /* still in asm */
+
+/* TransferMenuSetBankState — write bank balance to entry 1's string (SWOS2.s line 76190) */
+__attribute__((used, externally_visible))
+void _TransferMenuSetBankState(void)
+{
+    uint8_t *str = (uint8_t *)menuEntries[1].fg;
+    _GetBankBalance(str);
+}
+
+/* BuyPlayerInit — write bank balance to entry 1's string (SWOS2.s line 75647) */
+__attribute__((used, externally_visible))
+void _BuyPlayerInit(void)
+{
+    uint8_t *str = (uint8_t *)menuEntries[1].fg;
+    _GetBankBalance(str);
+}
+
+/* TransferMarketFinish — refresh all transfer menu state (SWOS2.s line 76181) */
+__attribute__((used, externally_visible))
+void _TransferMarketFinish(void)
+{
+    _TransferMenuSetBankState();
+    CheckNumPlayersOnTransferMarket();
+    CheckIfPlayerSelected();
+    EnableDisableOffers();
+}
+
+/* ShowDomesticPlayerMarket — update home market, show market menu (SWOS2.s line 70638) */
+extern uint16_t showDomesticPlayerMarket;
+extern uint8_t showPlayerMarketMenu[];
+
+__attribute__((used, externally_visible))
+void _ShowDomesticPlayerMarket(void)
+{
+    _UpdateHomeMarketPlayers();
+    showDomesticPlayerMarket = 1;
+    _ShowMenu(showPlayerMarketMenu);
 }

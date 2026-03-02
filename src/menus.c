@@ -6,6 +6,8 @@
 #include "string_utils.h"
 #include "text_render.h"
 #include "edit_tactics.h"
+#include "teams.h"
+#include "audio.h"
 
 /* ---- Constants ---- */
 #define GAME_TYPE_NO_GAME 0
@@ -818,4 +820,663 @@ void _StadiumBeforeDrawRightTeam(void *entryPtr)
     MenuEntry *entry = (MenuEntry *)entryPtr;
     uint16_t playerIndex = entry->ordinal - 32;
     _StadiumPlayerSpritesBeforeDraw(&bottomTeamInGame, playerIndex);
+}
+
+/* ================================================================
+ * Squad menu callbacks (Chunk 111, SWOS2.s lines 56661-56711)
+ * ================================================================ */
+
+/* ---- External asm functions (not yet ported) ---- */
+extern void PlayTrainingGame(void);
+extern void SquadMenuSavePlayerPositions(void);
+extern void SquadUpdateMenuState(void);
+
+/* ---- External asm data ---- */
+extern uint8_t squadMenu[];
+extern uint16_t squadPrevSelectedPlayerIndex;
+extern uint16_t isSquadViewMode;
+extern uint32_t squadTeamFilePtr;
+
+/* ================================================================
+ * SelectTraining  (SWOS2.s line 56661)
+ *
+ * Starts training match, then re-activates squad menu at entry 9.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SelectTraining(void)
+{
+    PlayTrainingGame();
+    _ActivateMenu(squadMenu);
+    _SetCurrentEntry(9);
+}
+
+/* ================================================================
+ * SelectGoals  (SWOS2.s line 56671)
+ *
+ * Switches squad view to goals/clubs mode. Saves positions,
+ * sets view mode to 1, updates menu state, selects entry 11.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SelectGoals(void)
+{
+    squadPrevSelectedPlayerIndex = 0xFFFF;
+    SquadMenuSavePlayerPositions();
+    isSquadViewMode = 1;
+    SquadUpdateMenuState();
+    _SetCurrentEntry(11);
+    _DrawMenu();
+}
+
+/* ================================================================
+ * SquadOnSelect11  (SWOS2.s line 56682)
+ *
+ * Returns from goals/clubs view to normal squad view.
+ * Clears view mode, updates menu state, selects entry 8.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SquadOnSelect11(void)
+{
+    isSquadViewMode = 0;
+    SquadUpdateMenuState();
+    _SetCurrentEntry(8);
+    _DrawMenu();
+}
+
+/* ================================================================
+ * SquadOnSelect45  (SWOS2.s line 56696)
+ *
+ * Rotates players left by 5 positions and redraws items 23, 44.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SquadOnSelect45(void)
+{
+    static const int16_t squad45Items[] = { 23, 44, -1 };
+    _RotatePlayersLeft((uint8_t *)squadTeamFilePtr, 5);
+    _DrawMenuItemsWaitForVSync(squad45Items);
+}
+
+/* ================================================================
+ * Squad45AfterDraw  (SWOS2.s line 56709)
+ *
+ * Draws menu entry 44 (0x9A0 / 56 = 44).
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _Squad45AfterDraw(void)
+{
+    _DrawMenuItem(&menuEntries[44]);
+}
+
+/* ================================================================
+ * Squad operations (Chunk 112, SWOS2.s lines 57494-57562)
+ * ================================================================ */
+
+#define SPR_CHECK_BIG       206
+#define SPR_NOT_CHECK_BIG   207
+
+extern uint16_t oldPlayerSkill;
+extern uint16_t newPlayerSkill;
+extern uint8_t playerPositionsArray[];
+extern uint8_t oldPlayerPositionsArray[];
+extern uint16_t teamSkillDiffAfterChange;
+
+/* ================================================================
+ * UpdateBigCheckMark  (SWOS2.s line 57537)
+ *
+ * Updates the big check mark sprite on menu entry 1 (offset 0x38)
+ * based on skill difference after formation change.
+ * - If teamSkillDiffAfterChange >= 0: hide the check mark
+ * - If old > new skill: show green check (SPR_CHECK_BIG)
+ * - If old < new skill: show red X (SPR_NOT_CHECK_BIG)
+ * - If equal: return (no change)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _UpdateBigCheckMark(void)
+{
+    MenuEntry *entry = &menuEntries[1]; /* menuEntries + 0x38 */
+    uint8_t *base = (uint8_t *)entry;
+
+    entry->isInvisible = 1;
+
+    if ((int16_t)teamSkillDiffAfterChange >= 0)
+        return;
+
+    uint16_t flags = entry->stringFlags;
+    flags &= ~(1 << 13); /* bclr #13 */
+    entry->stringFlags = flags;
+
+    if (oldPlayerSkill > newPlayerSkill) {
+        /* Skill decreased: show check mark */
+        *(uint16_t *)(base + 38) = SPR_CHECK_BIG;
+    } else if (oldPlayerSkill < newPlayerSkill) {
+        /* Skill increased: show not-check mark */
+        *(uint16_t *)(base + 38) = SPR_NOT_CHECK_BIG;
+    } else {
+        /* Equal: no mark shown */
+        return;
+    }
+
+    flags = entry->stringFlags;
+    flags |= (1 << 13); /* bset #13 */
+    entry->stringFlags = flags;
+    entry->isInvisible = 0;
+}
+
+/* ================================================================
+ * SquadRedrawPlayerListAndCheckMark  (SWOS2.s line 57496)
+ *
+ * Redraws entries 28..38 (0x620/56=28, count=11) and entry 1
+ * (0x38/56=1).
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SquadRedrawPlayerListAndCheckMark(void)
+{
+    _CallDrawMultipleItems(11, &menuEntries[28]);
+    _CallDrawMenuItem(&menuEntries[1]);
+}
+
+/* ================================================================
+ * SquadMenuSavePlayerPositions  (SWOS2.s line 57506)
+ *
+ * Copies newPlayerSkill → oldPlayerSkill,
+ * copies 32 bytes from playerPositionsArray → oldPlayerPositionsArray,
+ * then calls UpdateBigCheckMark.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SquadMenuSavePlayerPositions(void)
+{
+    volatile uint8_t *dst = (volatile uint8_t *)oldPlayerPositionsArray;
+    volatile uint8_t *src = (volatile uint8_t *)playerPositionsArray;
+    int16_t i;
+    newPlayerSkill = oldPlayerSkill;
+    for (i = 0; i < 32; i++)
+        dst[i] = src[i];
+    _UpdateBigCheckMark();
+}
+
+/* ================================================================
+ * SquadCommitPositionsAndUpdateSkill  (SWOS2.s line 57521)
+ *
+ * Same copy as SquadMenuSavePlayerPositions, then marks team file
+ * byte 0x3B as 1, calls ComputeOldPlayerSkillForViewResult(team, 5),
+ * and falls through to UpdateBigCheckMark.
+ * ================================================================ */
+extern uint16_t _ComputeOldPlayerSkillForViewResult(uint8_t *team, uint16_t goalsCount);
+
+__attribute__((used, externally_visible))
+void _SquadCommitPositionsAndUpdateSkill(void)
+{
+    volatile uint8_t *dst = (volatile uint8_t *)oldPlayerPositionsArray;
+    volatile uint8_t *src = (volatile uint8_t *)playerPositionsArray;
+    int16_t i;
+    newPlayerSkill = oldPlayerSkill;
+    for (i = 0; i < 32; i++)
+        dst[i] = src[i];
+
+    uint8_t *teamFile = (uint8_t *)squadTeamFilePtr;
+    teamFile[0x3B] = 1;
+
+    _ComputeOldPlayerSkillForViewResult(teamFile, 5);
+    _UpdateBigCheckMark();
+}
+
+/* ================================================================
+ * Options menu callbacks (Chunk 113, SWOS2.s lines 47471-47518)
+ * ================================================================ */
+
+extern uint16_t showPrereleaseCounter;
+
+/* OptionsMenuBeforeDraw: clears prerelease counter on menu entry */
+__attribute__((used, externally_visible))
+void _OptionsMenuBeforeDraw(void)
+{
+    showPrereleaseCounter = 0;
+}
+
+/* ChangePitchType: cycle pitchType 0→1→2→3→4→5→6→0xFFFE→0→... */
+__attribute__((used, externally_visible))
+void _ChangePitchType(MenuEntry *entry)
+{
+    pitchType++;
+    if (pitchType == 7)
+        pitchType = 0xFFFE; /* RANDOM */
+    _CallDrawMenuItem(entry);
+}
+
+/* ChangeGameLength: cycle gameLength 0→1→2→3→0→... */
+__attribute__((used, externally_visible))
+void _ChangeGameLength(MenuEntry *entry)
+{
+    gameLength++;
+    if (gameLength == 4)
+        gameLength = 0;
+    _CallDrawMenuItem(entry);
+}
+
+/* ChangeAutoReplays: toggle autoReplays */
+__attribute__((used, externally_visible))
+void _ChangeAutoReplays(MenuEntry *entry)
+{
+    autoReplays ^= 1;
+    _CallDrawMenuItem(entry);
+}
+
+/* ChangeAllPlTeamsEqual: toggle allPlayerTeamsEqual */
+__attribute__((used, externally_visible))
+void _ChangeAllPlTeamsEqual(MenuEntry *entry)
+{
+    allPlayerTeamsEqual ^= 1;
+    _CallDrawMenuItem(entry);
+}
+
+/* ChangeAutoSaveHighlights: toggle autoSaveHighlights */
+__attribute__((used, externally_visible))
+void _ChangeAutoSaveHighlights(MenuEntry *entry)
+{
+    autoSaveHighlights ^= 1;
+    _CallDrawMenuItem(entry);
+}
+
+/* ChangeMenuMusic: toggle menuMusic, restart music, redraw */
+__attribute__((used, externally_visible))
+void _ChangeMenuMusic(MenuEntry *entry)
+{
+    menuMusic ^= 1;
+    _TryRestartingMusic();
+    _CallDrawMenuItem(entry);
+}
+
+/* ================================================================
+ * Simple menu exit/draw callbacks (Chunk 114)
+ * ================================================================ */
+
+extern uint16_t viewSquadSelectedPlayer;
+extern uint16_t selectNationalTeamMenuResult;
+extern uint16_t teamSelected;
+extern uint8_t selectedFilename[];
+
+/* CompetitionTopGoalScorersExit (line 54745): trivial exit */
+__attribute__((used, externally_visible))
+void _CompetitionTopGoalScorersExit(void)
+{
+    _SetExitMenuFlag();
+}
+
+/* TopGoalScorersExit (line 55243): trivial exit */
+__attribute__((used, externally_visible))
+void _TopGoalScorersExit(void)
+{
+    _SetExitMenuFlag();
+}
+
+/* BuyPlayerExit (line 75812): trivial exit */
+__attribute__((used, externally_visible))
+void _BuyPlayerExit(void)
+{
+    _SetExitMenuFlag();
+}
+
+/* ViewSquadExitContinue (line 73991): set no-selection, exit */
+__attribute__((used, externally_visible))
+void _ViewSquadExitContinue(void)
+{
+    viewSquadSelectedPlayer = 0xFFFF;
+    _SetExitMenuFlag();
+}
+
+/* ViewSquad21AfterDraw (line 74007): draw entry 20 (0x460/56=20) */
+__attribute__((used, externally_visible))
+void _ViewSquad21AfterDraw(void)
+{
+    _DrawMenuItem(&menuEntries[20]);
+}
+
+/* SelectNationalTeamExit (line 78585): set no-selection, exit */
+__attribute__((used, externally_visible))
+void _SelectNationalTeamExit(void)
+{
+    selectNationalTeamMenuResult = 0xFFFF;
+    _SetExitMenuFlag();
+}
+
+/* SelectNationalTeam25AfterDraw (line 78612): draw entry 24 (0x540/56=24) */
+__attribute__((used, externally_visible))
+void _SelectNationalTeam25AfterDraw(void)
+{
+    _DrawMenuItem(&menuEntries[24]);
+}
+
+/* SelTeamForTacticsExit (line 63673): set no-team, exit */
+__attribute__((used, externally_visible))
+void _SelTeamForTacticsExit(void)
+{
+    teamSelected = 0xFFFF;
+    _SetExitMenuFlag();
+}
+
+/* AbortSaveFile (line 68003): clear filename, exit */
+__attribute__((used, externally_visible))
+void _AbortSaveFile(void)
+{
+    selectedFilename[0] = 0;
+    _SetExitMenuFlag();
+}
+
+/* ================================================================
+ * CareerOver + ViewSquad + National team callbacks (Chunk 115)
+ * ================================================================ */
+
+extern uint16_t currentSeasonShowing;
+extern uint16_t numNewJobOffers;
+extern uint16_t numJobOffers;
+extern uint16_t youreSacked;
+extern uint32_t squadTeamPtr;
+extern uint8_t careerTeam[];
+
+/* CareerOverInit (line 58154): set default menu entry based on career state */
+__attribute__((used, externally_visible))
+void _CareerOverInit(void)
+{
+    if (currentSeasonShowing == 0x13) {
+        _SetCurrentEntry(6);
+        return;
+    }
+    if (numNewJobOffers != 0 || numJobOffers != 0) {
+        _SetCurrentEntry(5);
+        return;
+    }
+    if (youreSacked != 0) {
+        _SetCurrentEntry(8);
+    }
+}
+
+/* ViewSquadOnSelect21 (line 73995): rotate players and redraw entry 20 */
+__attribute__((used, externally_visible))
+void _ViewSquadOnSelect21(void)
+{
+    _RotatePlayersLeft((uint8_t *)squadTeamPtr, 5);
+    _CallDrawMenuItem(&menuEntries[20]);
+}
+
+/* SelectNationalTeamOnSelect25 (line 78600): rotate career team and redraw entry 24 */
+__attribute__((used, externally_visible))
+void _SelectNationalTeamOnSelect25(void)
+{
+    _RotatePlayersLeft(careerTeam, 5);
+    _CallDrawMenuItem(&menuEntries[24]);
+}
+
+/* ================================================================
+ * Chunk 116: Menu Navigation Callbacks
+ * ================================================================ */
+
+/* CommonMenuExit is now ported as _CommonMenuExit below */
+extern void Career_FillCurrentSeasonInfo(void);  /* still in asm */
+extern uint8_t managementRecordMenu[];
+extern uint8_t viewCompetitionsMenu[];
+
+/* SWOSMainMenuInit — calls CommonMenuExit on main menu init (SWOS2.s line 68835) */
+__attribute__((used, externally_visible))
+void _SWOSMainMenuInit(void)
+{
+    _CommonMenuExit();
+}
+
+/* ManagementRecordMenu — show management record menu (SWOS2.s line 59220) */
+__attribute__((used, externally_visible))
+void _ManagementRecordMenu(void)
+{
+    if (youreSacked == 0) {
+        Career_FillCurrentSeasonInfo();
+    }
+    _ShowMenu(managementRecordMenu);
+}
+
+/* ViewCompetitionsMenuRetired — show view competitions menu (SWOS2.s line 58291) */
+__attribute__((used, externally_visible))
+void _ViewCompetitionsMenuRetired(void)
+{
+    _ShowMenu(viewCompetitionsMenu);
+}
+
+/* ================================================================
+ * Chunk 118: CommonMenuExit
+ * ================================================================ */
+
+#define GAME_TYPE_DIY_COMPETITION    1
+#define GAME_TYPE_PRESET_COMPETITION 2
+#define GAME_TYPE_SEASON             3
+#define GAME_TYPE_CAREER             4
+
+extern uint16_t competitionOver;
+extern uint8_t diyPresetNameOfCompetition[];
+extern uint8_t aContinueA[];  /* "CONTINUE %a" */
+extern uint8_t aReplayA[];    /* "REPLAY %a" */
+extern uint8_t aSaveA[];      /* "SAVE %a" */
+extern uint8_t aSeason_1[];   /* "SEASON" */
+extern uint8_t aCareer_1[];   /* "CAREER" */
+extern uint8_t saveFileTitle[];
+
+extern void _PrintFormatted(const uint8_t *fmt, uint8_t *out,
+                     uint16_t n0, uint16_t n1, uint16_t n2, uint16_t n3,
+                     uint16_t n4, uint16_t n5, uint16_t n6,
+                     const uint8_t *strA, const uint8_t *strB, const uint8_t *strC);
+
+/* CommonMenuExit — set CONTINUE/REPLAY/SAVE entries on main menu return (SWOS2.s line 68793) */
+__attribute__((used, externally_visible))
+void _CommonMenuExit(void)
+{
+    uint8_t *nameStr;
+    uint8_t *fmtStr;
+
+    if (gameType == GAME_TYPE_DIY_COMPETITION) {
+        nameStr = diyPresetNameOfCompetition;
+        if (competitionOver == 1)
+            fmtStr = aContinueA;
+        else
+            fmtStr = aReplayA;
+    } else if (gameType == GAME_TYPE_PRESET_COMPETITION) {
+        nameStr = diyPresetNameOfCompetition;
+        if (competitionOver == 1)
+            fmtStr = aContinueA;
+        else
+            fmtStr = aReplayA;
+    } else if (gameType == GAME_TYPE_SEASON) {
+        nameStr = aSeason_1;
+        fmtStr = aContinueA;
+    } else if (gameType == GAME_TYPE_CAREER) {
+        nameStr = aCareer_1;
+        fmtStr = aContinueA;
+    } else {
+        /* No active competition — hide CONTINUE and SAVE entries */
+        menuEntries[12].isInvisible = 1;
+        menuEntries[11].isInvisible = 1;
+        /* Copy y from entry 11 to entry 13 */
+        menuEntries[13].y = menuEntries[11].y;
+        return;
+    }
+
+    /* Format "CONTINUE %a" or "REPLAY %a" into entry 11's string */
+    uint8_t *dst = (uint8_t *)menuEntries[11].fg;
+    _PrintFormatted(fmtStr, dst, 0, 0, 0, 0, 0, 0, 0, nameStr, 0, 0);
+
+    /* Format "SAVE %a" into saveFileTitle */
+    _PrintFormatted(aSaveA, saveFileTitle, 0, 0, 0, 0, 0, 0, 0, nameStr, 0, 0);
+
+    /* Show both entries */
+    menuEntries[12].isInvisible = 0;
+    menuEntries[11].isInvisible = 0;
+}
+
+/* ================================================================
+ * Chunk 119: Menu callbacks + ShowFriendlyMenu + ShowSelectRepresentationMenu
+ * ================================================================ */
+
+/* RANDOM/SEASONAL constants for ShowFriendlyMenu */
+#define RANDOM_PITCH     0xFFFF
+#define SEASON_SEP       7
+
+extern uint8_t seed;              /* adjacent to randXorIndex — word write seeds both */
+extern uint8_t randXorIndex;      /* adjacent byte after seed */
+extern uint16_t diySelected;
+extern uint8_t diyCompetitionMenu[];
+extern uint8_t highlightsMenu[];
+extern uint8_t optionsMenu[];
+extern uint8_t diskMenu[];
+extern uint8_t friendlyGameMenu[];
+extern uint16_t pitchTypeOrSeason;
+extern uint16_t friendlyPitchType;
+extern uint16_t friendlySeason;
+extern uint16_t minSubstitutes;
+extern uint16_t maxSubstitutes;
+extern uint16_t friendlyOk;
+extern uint16_t selectNationalTeamMenuResult;
+extern uint8_t selectNationalTeamMenu[];
+
+extern void Friendly(void);
+extern void EditCustomTeam(void);
+extern void EditTactics(void);
+extern void CheckContinueAbortPrompt(void);   /* sets Z flag — but called via asm bridge */
+extern void ShowDesignDIYLeagueMenu(void);
+extern void ShowDesignDIYCupMenu(void);
+extern void ShowDesignDIYTournamentMenu(void);
+
+/* FriendlyMenu — seed RNG, run Friendly, then update main menu (SWOS2.s line 68796) */
+__attribute__((used, externally_visible))
+void _FriendlyMenu(void)
+{
+    /* move.w (currentTick),(seed) — seeds both seed (high byte) + randXorIndex (low byte) */
+    seed = (uint8_t)(currentTick >> 8);
+    randXorIndex = (uint8_t)(currentTick & 0xFF);
+    Friendly();
+    _CommonMenuExit();
+}
+
+/* DIYCompetitionMenu — seed RNG, prompt, show DIY menu, dispatch design (SWOS2.s line 68803)
+ * Note: CheckContinueAbortPrompt returns result via Z flag — need asm bridge */
+
+/* EditCustomTeamMenu — edit custom teams, then update main menu (SWOS2.s line 69279) */
+__attribute__((used, externally_visible))
+void _EditCustomTeamMenu(void)
+{
+    EditCustomTeam();
+    _CommonMenuExit();
+}
+
+/* EditTacticsMenu — edit tactics, then update main menu (SWOS2.s line 69285) */
+__attribute__((used, externally_visible))
+void _EditTacticsMenu(void)
+{
+    EditTactics();
+    _CommonMenuExit();
+}
+
+/* HighlightsMenu — show highlights menu, then update main menu (SWOS2.s line 69291) */
+__attribute__((used, externally_visible))
+void _HighlightsMenu(void)
+{
+    _ShowMenu(highlightsMenu);
+    _CommonMenuExit();
+}
+
+/* OptionsMenuSelected — show options menu, then update main menu (SWOS2.s line 69298) */
+__attribute__((used, externally_visible))
+void _OptionsMenuSelected(void)
+{
+    _ShowMenu(optionsMenu);
+    _CommonMenuExit();
+}
+
+/* SaveDiskFilingMenu — show disk filing menu, then update main menu (SWOS2.s line 69305) */
+__attribute__((used, externally_visible))
+void _SaveDiskFilingMenu(void)
+{
+    _ShowMenu(diskMenu);
+    _CommonMenuExit();
+}
+
+/* ShowFriendlyMenu — init friendly defaults, show menu (SWOS2.s line 50946) */
+__attribute__((used, externally_visible))
+void _ShowFriendlyMenu(void)
+{
+    inFriendlyMenu = 1;
+    pitchTypeOrSeason = 0;
+    friendlyPitchType = RANDOM_PITCH;
+    friendlySeason = SEASON_SEP;
+    minSubstitutes = 2;
+    maxSubstitutes = 5;
+    friendlyOk = 0;
+    _ShowMenu(friendlyGameMenu);
+    inFriendlyMenu = 0;
+}
+
+/* ShowSelectRepresentationMenu — show national team selection, return result (SWOS2.s line 77663) */
+__attribute__((used, externally_visible))
+uint16_t _ShowSelectRepresentationMenu(void)
+{
+    _ShowMenu(selectNationalTeamMenu);
+    return selectNationalTeamMenuResult;
+}
+
+/* SetSelectTwoTeamsText — format "SELECT 2 TEAMS" for friendly menu (SWOS2.s line 51415) */
+extern uint8_t aSelect0Teams[];   /* "SELECT %0 TEAMS" */
+
+__attribute__((used, externally_visible))
+void _SetSelectTwoTeamsText(void)
+{
+    uint8_t *str = (uint8_t *)menuEntries[10].fg;
+    _PrintFormatted(aSelect0Teams, str, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/* ================================================================
+ * Chunk 121: FriendlyOK, ViewSelectedTeams, ShowDomesticPlayerMarket,
+ *            ContestMenuScrollUp, ContestMenuScrollDown
+ * ================================================================ */
+
+extern uint16_t viewSelectedTeams;
+extern uint16_t chooseTeamsResult;
+extern uint16_t changeTeams;
+extern uint16_t abortSelectTeams;
+extern uint16_t exitSelectTeams;
+
+extern void ScrollUpInGameList(void);
+extern void ScrollDownInGameList(void);
+extern void BuildGameListArrayFromTeamSelectionKeyCache(void);
+extern void _CallDrawMultipleItemsRect(uint16_t count, MenuEntry *firstEntry);
+
+/* FriendlyOK — set friendly ok flag, activate friendly menu (SWOS2.s line 51240) */
+__attribute__((used, externally_visible))
+void _FriendlyOK(void)
+{
+    friendlyOk = 1;
+    _ActivateMenu(friendlyGameMenu);
+}
+
+/* ViewSelectedTeams — set view flag, clear results, exit menu (SWOS2.s line 66094) */
+__attribute__((used, externally_visible))
+void _ViewSelectedTeams(void)
+{
+    viewSelectedTeams = 1;
+    chooseTeamsResult = 0;
+    changeTeams = 0;
+    abortSelectTeams = 0;
+    exitSelectTeams = 0;
+    _SetExitMenuFlag();
+}
+
+/* ContestMenuScrollUp — scroll up, rebuild, redraw 15 entries (SWOS2.s line 60082) */
+__attribute__((used, externally_visible))
+void _ContestMenuScrollUp(void)
+{
+    ScrollUpInGameList();
+    BuildGameListArrayFromTeamSelectionKeyCache();
+    _CallDrawMultipleItemsRect(15, &menuEntries[18]);
+}
+
+/* ContestMenuScrollDown — scroll down, rebuild, redraw 15 entries (SWOS2.s line 60114) */
+__attribute__((used, externally_visible))
+void _ContestMenuScrollDown(void)
+{
+    ScrollDownInGameList();
+    BuildGameListArrayFromTeamSelectionKeyCache();
+    _CallDrawMultipleItemsRect(15, &menuEntries[18]);
 }

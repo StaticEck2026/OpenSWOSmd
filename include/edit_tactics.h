@@ -103,3 +103,6 @@ void _EditTacticsPlayerNamesCommon(MenuEntry *cur);
 
 /* --- Load tactics file (Chunk 89) --- */
 void _LoadTactics(void);
+
+/* --- Edit Teams (Chunk 117) --- */
+void _EditTeamsFinish(void);

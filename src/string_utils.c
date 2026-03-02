@@ -1,4 +1,14 @@
 #include "string_utils.h"
+#include "menu_system.h"   /* _Int2Ascii */
+
+/* Prevent GCC from converting byte loops to memcpy/memset (no libc) */
+#pragma GCC optimize("no-tree-loop-distribute-patterns")
+
+/* ASM externs for number formatting */
+extern uint8_t aPound[];       /* "£" (0x9C, 0x00) */
+extern uint8_t nullString_0[]; /* "" (0x00) */
+extern uint8_t aBank[];        /* "BANK" */
+extern int32_t newBalance;
 
 /* ================================================================
  * GetStringLength  (SWOS2.s line 40972)
@@ -95,4 +105,152 @@ uint8_t *_StringCopyUntilChar(const uint8_t *src, uint8_t *dst, uint8_t stopChar
         src++;
         dst++;
     }
+}
+
+/* ================================================================
+ * Chunk 100: Number formatting & menu utility functions
+ * ================================================================ */
+
+/* ================================================================
+ * Int2StrWithCommas  (SWOS2.s line 29627)
+ *
+ * Formats an unsigned 32-bit integer into a string with comma
+ * separators (e.g. 1,234,567). Writes into buffer at *dst and
+ * returns pointer past the last character written.
+ * ================================================================ */
+static uint8_t *int2StrWithCommas(uint32_t val, uint8_t *dst)
+{
+    if (val < 1000) {
+        /* Simple case: no commas needed */
+        _Int2Ascii((uint16_t)val, dst);
+        while (*dst) dst++;
+        return dst;
+    }
+
+    if (val >= 1000000) {
+        /* >= 1M: format as X,XXX,XXX */
+        uint32_t d1 = val;
+        uint32_t high = (val >> 4) / 62500;  /* millions part */
+        _Int2Ascii((uint16_t)high, dst);
+        while (*dst) dst++;
+        *dst++ = ',';
+
+        /* Compute remainder: val - (high * 62500 << 4) */
+        uint32_t remainder = d1 - (high * 62500 << 4);
+
+        /* Thousands part */
+        uint16_t thousands = (uint16_t)(remainder / 1000);
+        /* Pad to 3 digits */
+        if (thousands < 100) *dst++ = '0';
+        if (thousands < 10) *dst++ = '0';
+        _Int2Ascii(thousands, dst);
+        while (*dst) dst++;
+        *dst++ = ',';
+
+        /* Units part */
+        uint16_t units = (uint16_t)(remainder % 1000);
+        if (units < 100) *dst++ = '0';
+        if (units < 10) *dst++ = '0';
+        _Int2Ascii(units, dst);
+        while (*dst) dst++;
+        return dst;
+    }
+
+    /* 1000-999999: format as X,XXX or XX,XXX or XXX,XXX */
+    uint16_t high = (uint16_t)(val / 1000);
+    _Int2Ascii(high, dst);
+    while (*dst) dst++;
+    *dst++ = ',';
+
+    uint16_t low = (uint16_t)(val % 1000);
+    if (low < 100) *dst++ = '0';
+    if (low < 10) *dst++ = '0';
+    _Int2Ascii(low, dst);
+    while (*dst) dst++;
+    return dst;
+}
+
+/* ================================================================
+ * Int2Pounds  (SWOS2.s line 29691)
+ *
+ * Formats an unsigned value as "£123,456".
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _Int2Pounds(uint32_t pounds, uint8_t *dst)
+{
+    /* nullsub_11 is a no-op */
+    /* Copy pound sign "£" */
+    dst = _StringCopy(aPound, dst);
+    /* Format number with commas */
+    dst = int2StrWithCommas(pounds, dst);
+    /* Copy null string (null terminator) */
+    _StringCopy(nullString_0, dst);
+}
+
+/* ================================================================
+ * Int2PoundsSigned  (SWOS2.s line 29706)
+ *
+ * Formats a signed value as "£123" or "- £123".
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _Int2PoundsSigned(int32_t pounds, uint8_t *dst)
+{
+    if (pounds < 0) {
+        *dst++ = '-';
+        *dst++ = ' ';
+        pounds = -pounds;
+    }
+    _Int2Pounds((uint32_t)pounds, dst);
+}
+
+/* ================================================================
+ * WriteAccountBalance  (SWOS2.s line 29719)
+ *
+ * Formats a signed value as "+ £123" or "- £123" or just "£0".
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _WriteAccountBalance(int32_t delta, uint8_t *dst)
+{
+    if (delta > 0) {
+        *dst++ = '+';
+        *dst++ = ' ';
+    } else if (delta < 0) {
+        *dst++ = '-';
+        *dst++ = ' ';
+        delta = -delta;
+    }
+    _Int2Pounds((uint32_t)delta, dst);
+}
+
+/* ================================================================
+ * GetBankBalance  (SWOS2.s line 29676)
+ *
+ * Formats the current bank balance as "BANK  £123,456".
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _GetBankBalance(uint8_t *dst)
+{
+    dst = _StringCopy(aBank, dst);
+    *dst++ = ' ';
+    *dst++ = ' ';
+    _Int2PoundsSigned(newBalance, dst);
+}
+
+/* ================================================================
+ * PrepareMenuForFadeIn  (SWOS2.s line 25608)
+ *
+ * Prepares the menu for a fade-in transition.
+ * ================================================================ */
+extern void _DoubleBufferSwapSequence(void);
+extern void _PrepareMenuBackground(void);
+extern void _DrawMenu(void);
+extern uint16_t menuFade;
+
+__attribute__((used, externally_visible))
+void _PrepareMenuForFadeIn(void)
+{
+    _DoubleBufferSwapSequence();
+    _PrepareMenuBackground();
+    _DrawMenu();
+    menuFade = 1;
 }

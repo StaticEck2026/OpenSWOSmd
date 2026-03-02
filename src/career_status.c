@@ -25,6 +25,8 @@
 
 #include "career_status.h"
 #include "game_types.h"
+#include "menu_system.h"
+#include "string_utils.h"
 
 /* ---- Assembly externs (functions still in asm) ---- */
 extern uint16_t _Rand(void);
@@ -2639,4 +2641,395 @@ void _CheckPlayersLeavingComing(void)
             return;  /* Only one removal per call */
         }
     }
+}
+
+/* ================================================================
+ * Chunk 101: Club Business Init & Career Season Finance Init
+ * ================================================================ */
+
+/* Additional externs needed for Chunk 101 */
+extern MenuEntry menuEntries[];
+extern int32_t playerSales;
+extern int32_t playerPurchases;
+extern uint16_t contractNegotiationActive;
+extern uint16_t sensisoftPlcSponsorshipFactor;
+extern int32_t sensisoftPlcSponsorship;
+extern uint16_t additionalInvestments;
+extern uint16_t financeTotalsNeedResetFlag;
+extern uint8_t aTotalLoss[];
+extern uint8_t aBalanceAtStart[];
+extern uint8_t aBalanceAtEndOf[];
+extern uint8_t aSponsorshipFor[];
+extern uint8_t aSeasonFromSens[];
+extern uint8_t aAdditionalInve[];
+
+/* Already-ported C functions used by Chunk 101 */
+extern uint16_t _GetTeamValueBase(uint16_t avgPrice);
+
+/* Helper: menu entry from byte offset */
+#define ME(off) menuEntries[(off) / 56]
+#define MEP(off) (&menuEntries[(off) / 56])
+
+/* Helper: access bg as the high 16 bits (big-endian BACKANDFRAMECOLOR) */
+static inline uint16_t bgColor_cs(MenuEntry *e) { return *(uint16_t *)&e->bg; }
+static inline void setBgColor_cs(MenuEntry *e, uint16_t v) { *(uint16_t *)&e->bg = v; }
+
+/* Compute total profit/loss from all financial components */
+static inline int32_t computeTotalProfitLoss(void) {
+    int32_t total = startingBalanceCopy;
+    total += competitionBonuses;
+    total += gateReceipts;
+    total += playerSales;
+    total -= playerPurchases;
+    total -= playerWagesBill;
+    total -= generalRunningCosts;
+    return total;
+}
+
+/* Common: format new balance entry with color/flag adjustments if negative */
+static void formatNewBalanceEntry(MenuEntry *e, int32_t balance) {
+    if (balance < 0) {
+        /* Set blinking flag (bit 13 of stringFlags) */
+        e->stringFlags |= (1 << 13);
+        /* Change color to RED_12 */
+        uint16_t bg = bgColor_cs(e);
+        bg = (bg & 0xFFF0) | 12;
+        setBgColor_cs(e, bg);
+    }
+    _Int2PoundsSigned(balance, (uint8_t *)e->fg);
+}
+
+/* ================================================================
+ * ClubBusinessInit  (SWOS2.s line 83165)
+ *
+ * Initializes the Club Business menu display. Three paths:
+ * 1) contractNegotiationActive → full financial summary
+ * 2) !stayingInOldClub → abbreviated (no gate receipts/costs)
+ * 3) stayingInOldClub → extended with sponsorship info
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ClubBusinessInit(void)
+{
+    if (contractNegotiationActive) {
+        /* ---- Path 1: Full financial summary ---- */
+        /* Old balance */
+        _Int2PoundsSigned(old_balance, (uint8_t *)MEP(0x2A0)->fg);
+        /* Gate receipts */
+        _WriteAccountBalance(gateReceipts, (uint8_t *)MEP(0x310)->fg);
+        /* General running costs (negated) */
+        _WriteAccountBalance(-generalRunningCosts, (uint8_t *)MEP(0x348)->fg);
+        /* Player sales */
+        _WriteAccountBalance(playerSales, (uint8_t *)MEP(0x3B8)->fg);
+        /* Player purchases (negated) */
+        _WriteAccountBalance(-playerPurchases, (uint8_t *)MEP(0x3F0)->fg);
+        /* Player wages bill (negated) */
+        _WriteAccountBalance(-playerWagesBill, (uint8_t *)MEP(0x428)->fg);
+
+        /* Compute total profit/loss */
+        int32_t total = computeTotalProfitLoss();
+        if (total < 0) {
+            MEP(0x230)->fg = (uint32_t)aTotalLoss;
+        }
+
+        /* Write total */
+        _WriteAccountBalance(total, (uint8_t *)MEP(0x460)->fg);
+
+        /* New balance with red color if negative */
+        formatNewBalanceEntry(MEP(0x498), newBalance);
+        return;
+    }
+
+    if (!stayingInOldClub) {
+        /* ---- Path 2: Abbreviated summary (no gate receipts etc.) ---- */
+        MenuEntry *e70 = MEP(0x70);
+        e70->y += 30;
+        e70->fg = (uint32_t)aBalanceAtStart;
+
+        MenuEntry *e2A0 = MEP(0x2A0);
+        e2A0->y += 30;
+        _Int2PoundsSigned(old_balance, (uint8_t *)e2A0->fg);
+
+        /* Hide entries: E0, 118, 310, 348 */
+        ME(0xE0).isInvisible = 1;
+        ME(0x118).isInvisible = 1;
+        ME(0x310).isInvisible = 1;
+        ME(0x348).isInvisible = 1;
+
+        /* Player sales & purchases */
+        _WriteAccountBalance(playerSales, (uint8_t *)MEP(0x3B8)->fg);
+        _WriteAccountBalance(-playerPurchases, (uint8_t *)MEP(0x3F0)->fg);
+
+        /* Hide: 1F8, 428 */
+        ME(0x1F8).isInvisible = 1;
+        ME(0x428).isInvisible = 1;
+
+        /* Adjust Y positions */
+        MEP(0x230)->y -= 15;
+
+        /* Compute total */
+        int32_t total = computeTotalProfitLoss();
+        if (total < 0) {
+            MEP(0x230)->fg = (uint32_t)aTotalLoss;
+        }
+
+        /* Write total */
+        MEP(0x460)->y -= 15;
+        _WriteAccountBalance(total, (uint8_t *)MEP(0x460)->fg);
+
+        MEP(0x268)->y -= 15;
+
+        /* New balance with color adjustments */
+        MenuEntry *e498 = MEP(0x498);
+        e498->y -= 15;
+        formatNewBalanceEntry(e498, newBalance);
+        return;
+    }
+
+    /* ---- Path 3: Extended with sponsorship ---- */
+    if (sensisoftPlcSponsorshipFactor) {
+        /* Shift entries 0x70..0x70+9*56 up by 13 each */
+        MenuEntry *e = MEP(0x70);
+        for (int16_t i = 9; i >= 0; i--) {
+            e->y -= 13;
+            e++;
+        }
+        e = MEP(0x2A0);
+        for (int16_t i = 9; i >= 0; i--) {
+            e->y -= 13;
+            e++;
+        }
+    }
+
+    /* Set "BALANCE AT END OF LAST SEASON:" */
+    MenuEntry *e70 = MEP(0x70);
+    e70->fg = (uint32_t)aBalanceAtEndOf;
+    e70->y += 5;
+
+    MenuEntry *e2A0 = MEP(0x2A0);
+    e2A0->y += 5;
+    _Int2PoundsSigned(old_balance, (uint8_t *)e2A0->fg);
+
+    /* Show entries: A8, 2D8 */
+    ME(0xA8).isInvisible = 0;
+    ME(0x2D8).isInvisible = 0;
+
+    /* Competition bonuses */
+    _WriteAccountBalance(competitionBonuses, (uint8_t *)MEP(0x2D8)->fg);
+
+    /* Shift entries E0..E0+7*56 down by 15 */
+    {
+        MenuEntry *e = MEP(0xE0);
+        for (int16_t i = 7; i >= 0; i--) {
+            e->y += 15;
+            e++;
+        }
+    }
+    {
+        MenuEntry *e = MEP(0x310);
+        for (int16_t i = 7; i >= 0; i--) {
+            e->y += 15;
+            e++;
+        }
+    }
+
+    /* Set sponsorship text */
+    MenuEntry *eE0 = MEP(0xE0);
+    eE0->fg = (uint32_t)aSponsorshipFor;
+    eE0->y += 5;
+
+    MEP(0x118)->fg = (uint32_t)aSeasonFromSens;
+
+    /* Starting balance copy */
+    MEP(0x310)->y += 10;
+    ME(0x348).isInvisible = 1;
+    _WriteAccountBalance(startingBalanceCopy, (uint8_t *)MEP(0x310)->fg);
+
+    if (sensisoftPlcSponsorshipFactor) {
+        /* Show sponsorship entries */
+        ME(0x150).isInvisible = 0;
+        ME(0x380).isInvisible = 0;
+        _WriteAccountBalance(sensisoftPlcSponsorship, (uint8_t *)MEP(0x380)->fg);
+
+        if (additionalInvestments) {
+            MEP(0x150)->fg = (uint32_t)aAdditionalInve;
+        }
+
+        /* Shift entries 188..188+4*56 down by 15 */
+        {
+            MenuEntry *e = MEP(0x188);
+            for (int16_t i = 4; i >= 0; i--) {
+                e->y += 15;
+                e++;
+            }
+        }
+        {
+            MenuEntry *e = MEP(0x3B8);
+            for (int16_t i = 4; i >= 0; i--) {
+                e->y += 15;
+                e++;
+            }
+        }
+    }
+
+    /* Player sales & purchases */
+    _WriteAccountBalance(playerSales, (uint8_t *)MEP(0x3B8)->fg);
+    _WriteAccountBalance(-playerPurchases, (uint8_t *)MEP(0x3F0)->fg);
+
+    /* Hide: 1F8, 428 */
+    ME(0x1F8).isInvisible = 1;
+    ME(0x428).isInvisible = 1;
+
+    /* Adjust and compute total */
+    MEP(0x230)->y -= 15;
+
+    int32_t total = computeTotalProfitLoss();
+    if (total < 0) {
+        MEP(0x230)->fg = (uint32_t)aTotalLoss;
+    }
+
+    MEP(0x460)->y -= 15;
+    _WriteAccountBalance(total, (uint8_t *)MEP(0x460)->fg);
+
+    MEP(0x268)->y -= 15;
+
+    MenuEntry *e498 = MEP(0x498);
+    e498->y -= 15;
+    formatNewBalanceEntry(e498, newBalance);
+}
+
+/* ================================================================
+ * Career_InitializeNewSeasonFinances  (SWOS2.s line 83433)
+ *
+ * Initializes financial state for a new season: recalculates wages,
+ * resets accumulators, handles sponsorship and competition bonuses.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _Career_InitializeNewSeasonFinances(void)
+{
+    /* Recalculate all player wages */
+    for (int16_t i = (int16_t)(careerNumPlayers - 1); i >= 0; i--) {
+        _CGetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+        _Career_UpdatePlayerWeeklyWageCache((uint16_t)i);
+    }
+
+    /* Transfer newBalance → old_balance and clear accumulators */
+    old_balance = newBalance;
+    playerPurchases = 0;
+    playerSales = 0;
+    playerWagesBill = 0;
+    generalRunningCosts = 0;
+    gateReceipts = 0;
+    sensisoftPlcSponsorship = 0;
+
+    if (stayingInOldClub) {
+        additionalInvestments = 0;
+        uint16_t d7 = sensisoftPlcSponsorshipFactor;
+
+        if (d7 == 0) {
+            /* 1/8 chance of getting sponsorship */
+            if (_Rand2() >= 0x20) {
+                goto skipSponsorship;
+            }
+            d7 = 0x10;
+            additionalInvestments = 1;
+        }
+
+        /* Random sponsorship level: 1..32, capped at d7 */
+        {
+            uint16_t rnd = _Rand2();
+            rnd = (rnd & 0x1F) + 1;
+            sensisoftPlcSponsorshipFactor = 0;
+            if (rnd > d7) {
+                goto skipSponsorship;
+            }
+            sensisoftPlcSponsorshipFactor = rnd;
+            d7 = rnd;
+        }
+
+        /* Calculate sponsorship amount based on team value */
+        {
+            _VerifyTeamLoaded(selTeamNumber);
+            uint16_t avgPrice = _GetAveragePlayerPrice((uint8_t *)&careerTeam);
+            uint32_t d0 = (uint32_t)_GetTeamValueBase(avgPrice);
+            d0 = d0 * d7;
+
+            if (d0 > 10000) {
+                d0 = 10000;
+                uint16_t rnd = _Rand2() & 0xF;
+                rnd = rnd * 100;
+                d0 = 10000 - rnd;
+            }
+
+            d0 = d0 * 1000;
+            sensisoftPlcSponsorship = (int32_t)d0;
+            newBalance += (int32_t)d0;
+        }
+    }
+
+skipSponsorship:
+    /* Competition bonuses */
+    competitionBonuses = 0;
+
+    if (stayingInOldClub && quaternaryCompetitionPtr != 0) {
+        int16_t bonus = (int8_t)majorTrophyOrCupBonusValue;
+        uint32_t d0;
+
+        if (euroCupSlotIndex == 1) {
+            d0 = (uint32_t)((uint16_t)bonus) * 62644;
+        } else if (euroCupSlotIndex == 2) {
+            d0 = (uint32_t)((uint16_t)bonus) * 41668;
+            d0 <<= 1;
+        } else {
+            d0 = (uint32_t)((uint16_t)(bonus << 1)) * 50011;
+        }
+
+        d0 = (d0 / 1000) * 1000;
+        competitionBonuses += (int32_t)d0;
+    }
+
+    if (stayingInOldClub) {
+        int16_t bonus = (int8_t)majorTrophyBonusValue;
+        uint32_t d0;
+
+        if (currentDivisionIndex == 0) {
+            d0 = (uint32_t)((uint16_t)(bonus << 1)) * 0x84D0;
+        } else if (currentDivisionIndex == 1) {
+            d0 = (uint32_t)((uint16_t)bonus) * 0x7E61;
+        } else if (currentDivisionIndex == 2) {
+            d0 = (uint32_t)((uint16_t)bonus) * 16667;
+        } else {
+            d0 = (uint32_t)((uint16_t)bonus) * 11112;
+        }
+
+        d0 = (d0 / 1000) * 1000;
+        competitionBonuses += (int32_t)d0;
+    }
+
+    /* Apply competition bonuses and starting balance */
+    newBalance += competitionBonuses;
+    startingBalanceCopy = startingBalance;
+    newBalance += startingBalanceCopy;
+
+    financeTotalsNeedResetFlag = 1;
+    clubBusinessActive = 0;
+}
+
+/* ================================================================
+ * Career_HandleRetirement  (SWOS2.s line 36190)
+ *
+ * Sets retired flag, then runs end-of-season career updates:
+ * board confidence modifiers/score, reputation, job offers, history.
+ * ================================================================ */
+extern uint16_t retired;
+extern void Career_MaybeGenerateJobOffer(void);
+
+__attribute__((used, externally_visible))
+void _Career_HandleRetirement(void)
+{
+    retired = 1;
+    _UpdateBoardConfidenceModifiers();
+    _UpdateCareerReputationBonuses();
+    _UpdateBoardConfidenceScore();
+    Career_MaybeGenerateJobOffer();
+    _PushBoardConfidenceHistory();
 }

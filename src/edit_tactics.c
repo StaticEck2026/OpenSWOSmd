@@ -2319,3 +2319,17 @@ cleanup:
 end:
     _SetExitMenuFlag();
 }
+
+/* ================================================================
+ * Chunk 117: EditTeamsFinish
+ * ================================================================ */
+
+extern void InitEditTeamsMenu(void);  /* still in asm */
+
+/* EditTeamsFinish — reinit edit teams menu after undo/load (SWOS2.s line 52977) */
+__attribute__((used, externally_visible))
+void _EditTeamsFinish(void)
+{
+    InitEditTeamsMenu();
+    /* nullsub_16 was called here in asm — it's just rts, so omitted */
+}
