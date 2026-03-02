@@ -2622,6 +2622,17 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified**
 - Cumulative: 1195 functions across 129 chunks
 
+### Chunk 130 — DesignDIYCup Draw & Cup Menu Helpers (10 → diy_competition.c)
+- Date: 2026-03-02
+- **diy_competition.c (10):** _DesignDIYCupOnDraw (iterates cup rounds, configures menu entries), _DesignDIYCupOnSelect48 (play cup callback), _DesignDIYCup_UpdateRoundOptionsVisibility, _DesignDIYCup_BuildMenuTitleString (complex string builder with replay/leg suffixes), _DesignDIYCup_UpdateCurrentMatchTeamEntryStrings (inlines DIY_GetCurrentMatchTeamSlots), _DesignDIYCup_DrawCurrentMatchTeamEntries, _DesignDIYCup_HideCurrentMatchTeamEntries, _DesignDIYCup_UpdateMatchListScrollAndRebuildStrings (scroll clamping with Z-flag return), _DesignDIYCup_UpdateMatchListAndRedrawIfNeeded, _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries
+- UpdateMatchListScrollAndRebuildStrings uses special asm bridge (saves regs, calls C, tst.w d0, rts) to preserve Z-flag semantics for asm callers
+- Bug fix: ($2A96).w in UpdateCurrentMatchResultHeaderEntries was hardcoded absolute address — should be menuEntries[11]
+- Updated Chunk 127 C callers: DesignDIYCupOnDraw() → _DesignDIYCupOnDraw()
+- New xdefs: diyCupMatchListScrollIndex, diyCupMenuArg0Copy, diyCupMenuArg1, diyCupMenuArg0, diyCupMenuArg2, diyCupMatchTeamNamePtr1/2, diyCupMatchListDrawModeFlag, diyCupLastMatchTeam1/2Ptr, diyCupLastMatchScoreTeam1/2, aV, aMinus, aOr, aDraw, aReplay, aReplays, a1stLeg, a2ndLeg, aPlayCup, rndStringTable, replayStringTable, chooseTeamsResult, seasonUpdateInProgress, fire, DesignDIYCup_BuildMatchListEntryStrings
+- Deferred: AppendOrTeamNameToMenuEntry, AppendTeamNameToMenuEntry (register-param functions called from unported BuildMatchListEntryStrings), BuildMatchListEntryStrings (~164 instr), UpdateMenuEntriesVisibilityAndSelection (~260 instr)
+- Build status: **verified**
+- Cumulative: 1205 functions across 130 chunks
+
 ### Phase Transitions (see CLAUDE.md "Project Phases")
 - [ ] Phase 1 complete: all subroutines ported → output `*** READY FOR TESTING PHASE! ***` and STOP
 - [ ] Phase 2: user tests game, fixes any bugs found

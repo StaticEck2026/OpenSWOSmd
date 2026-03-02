@@ -200,6 +200,18 @@ void _DesignDIYTournament_CacheStageSelection(MenuEntry *entry);
 void _DesignDIYTournament_RedrawStageItemsFromBlock(uint8_t *blk, uint16_t count);
 void _DIYTournament_RecalculateNumStages(void);
 
+/* ---- DesignDIYCup Draw & Helpers (Chunk 130) ---- */
+void _DesignDIYCupOnDraw(void);
+void _DesignDIYCupOnSelect48(void);
+void _DesignDIYCup_UpdateRoundOptionsVisibility(void);
+void _DesignDIYCup_BuildMenuTitleString(void);
+void _DesignDIYCup_UpdateCurrentMatchTeamEntryStrings(void);
+void _DesignDIYCup_DrawCurrentMatchTeamEntries(void);
+void _DesignDIYCup_HideCurrentMatchTeamEntries(void);
+int16_t _DesignDIYCup_UpdateMatchListScrollAndRebuildStrings(void);
+void _DesignDIYCup_UpdateMatchListAndRedrawIfNeeded(void);
+void _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries(void);
+
 /* ---- OpenDiy* + ShowDiyCompetitionForSource (Chunk 116) ---- */
 void _ShowDiyCompetitionForSource(uint8_t *header);
 void _OpenDiyFromFile(void);

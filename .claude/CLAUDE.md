@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1195 functions ported across 129 chunks.
+**Current status:** 1205 functions ported across 130 chunks.
 
-**Last completed chunk:** Chunk 129 — DesignDIYTournament Remaining (8+2s → diy_competition.c): OnDraw (large), OnSelect23, OnSelect20, AdjustStageQualifiers, CacheStageSelection, RedrawStageItemsFromBlock, RecalculateNumStages, +2 static math helpers.
+**Last completed chunk:** Chunk 130 — DesignDIYCup Draw & Cup Menu Helpers (10 → diy_competition.c): OnDraw, OnSelect48, UpdateRoundOptionsVisibility, BuildMenuTitleString, UpdateCurrentMatchTeamEntryStrings, DrawCurrentMatchTeamEntries, HideCurrentMatchTeamEntries, UpdateMatchListScrollAndRebuildStrings, UpdateMatchListAndRedrawIfNeeded, UpdateCurrentMatchResultHeaderEntries.
 
-**Next candidates:** DesignDIYTournamentOnSelect89 (needs GoGetTeamsForPlay bridge), DesignDIYCup remaining (OnSelect48, OnDraw, match list functions), DesignDIYLeague callbacks, SquadMenu, CareerGameListCommon, EditTactics.
+**Next candidates:** DesignDIYCup remaining large functions (BuildMatchListEntryStrings ~164 instr, UpdateMenuEntriesVisibilityAndSelection ~260 instr, AppendTeamNameToMenuEntry, AppendOrTeamNameToMenuEntry), DesignDIYLeague (Finish, ChooseTeams), DIYCupFinish, SquadMenu, CareerGameListCommon, EditTactics.
 
 ---
 

@@ -2775,6 +2775,45 @@
         xref    _DesignDIYTournament_CacheStageSelection
         xref    _DesignDIYTournament_RedrawStageItemsFromBlock
         xref    _DIYTournament_RecalculateNumStages
+; --- Chunk 130 xrefs ---
+        xref    _DesignDIYCupOnDraw
+        xref    _DesignDIYCupOnSelect48
+        xref    _DesignDIYCup_UpdateRoundOptionsVisibility
+        xref    _DesignDIYCup_BuildMenuTitleString
+        xref    _DesignDIYCup_UpdateCurrentMatchTeamEntryStrings
+        xref    _DesignDIYCup_DrawCurrentMatchTeamEntries
+        xref    _DesignDIYCup_HideCurrentMatchTeamEntries
+        xref    _DesignDIYCup_UpdateMatchListScrollAndRebuildStrings
+        xref    _DesignDIYCup_UpdateMatchListAndRedrawIfNeeded
+        xref    _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries
+; --- Chunk 130 xdefs ---
+        xdef    diyCupMatchListScrollIndex
+        xdef    diyCupMenuArg0Copy
+        xdef    diyCupMenuArg1
+        xdef    diyCupMenuArg0
+        xdef    diyCupMenuArg2
+        xdef    diyCupMatchTeamNamePtr1
+        xdef    diyCupMatchTeamNamePtr2
+        xdef    diyCupMatchListDrawModeFlag
+        xdef    diyCupLastMatchTeam1Ptr
+        xdef    diyCupLastMatchTeam2Ptr
+        xdef    diyCupLastMatchScoreTeam1
+        xdef    diyCupLastMatchScoreTeam2
+        xdef    aV
+        xdef    aMinus
+        xdef    aOr
+        xdef    aDraw
+        xdef    aReplay
+        xdef    aReplays
+        xdef    a1stLeg
+        xdef    a2ndLeg
+        xdef    aPlayCup
+        xdef    rndStringTable
+        xdef    replayStringTable
+        xdef    chooseTeamsResult
+        xdef    seasonUpdateInProgress
+        xdef    fire
+        xdef    DesignDIYCup_BuildMatchListEntryStrings
 ; --- Chunk 129 xdefs ---
         xdef    diyTournamentSelectedStageIndex1Based
         xdef    diyTournamentSelectedStagePtr
