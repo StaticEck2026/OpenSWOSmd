@@ -2552,6 +2552,33 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified**
 - Cumulative: 1102 functions across 121 chunks
 
+### Chunk 122 — Contest Menu Helpers (15 → menus.c)
+- Date: 2026-03-01
+- **menus.c (15):** _ScrollUpInGameList, _ScrollDownInGameList, _RestoreContestScrollPosition, _SelectActiveContestAndRound, _CheckClubBusiness, _CheckJobOffers, _ContestMenuOnReturn_SetButtonsAndDefaultSelection (a5 bridge), _SeasonLowerButtons, _CheckTransfers, _BuildGameListArrayFromTeamSelectionKeyCache, _PrintNameAndSeason, _SetNationalSelectorButtons, _ContestSetButtons, _ContestMenuInit (tamper check), _ContestMenuOnReturn
+- Key patterns: menuEntries[N] indexed access (entries 0-18), color manipulation (bg & 0xFFF0 + constant), stringFlags bit 13 (blinking), teamSelectionKeyCache entry parsing (offset 2=size, 5=numGames, 6=remaining), gameListArray 14-pair building, irqCookieObfuscated XOR tamper check
+- IDA artifact: ($297E).w → menuEntries[6] (CLUB BUSINESS entry)
+- All stubs: `jmp _CFunc` (ContestMenuOnReturn_SetButtonsAndDefaultSelection uses a5 bridge)
+- New externs: teamSelectionKeyCacheEnd, contestEntryHeight, gameListY, etc.
+- Build status: **verified**
+- Cumulative: 1117 functions across 122 chunks
+
+### Chunk 123 — Contest Menu Action Handlers (9 → menus.c)
+- Date: 2026-03-01
+- **menus.c (9):** _PlayMatchMenu (a5 bridge), _NextMatch (a5 bridge), _ViewCompetitionsMenu, _ClubBusinessMenu, _JobOffersMenu, _SeasonFinished, _TransfersMenu, _ViewWorldMenu, _jmp_SetExitMenuFlag
+- Key patterns: PlayMatchMenu/NextMatch use a5 bridges (caller's MenuEntry passed as param for ContestMenuOnReturn_SetButtonsAndDefaultSelection), ActivateMenu(contestMenu) pattern, Career_PostMatchUpdate still in asm
+- Skipped: SquadMenu (complex pc-relative jumps to internal asm labels loc_1391AC/SelectAndShowSquadToView)
+- New xdefs: Career_PostMatchUpdate, SeasonFinished_ComputeSeasonReview, ChooseCompetitionMenu
+- Build status: **verified**
+- Cumulative: 1126 functions across 123 chunks
+
+### Chunk 124 — Competition Menu Functions (7 → menus.c)
+- Date: 2026-03-01
+- **menus.c (7):** _DIYCompetitionMenu, _PresetCompetitionMenu, _SeasonMenu, _CareerMenu, _StartContest, _SaveContest, _LoadOldCompetitionMenu
+- Key patterns: Large dispatcher in StartContest (DIY/preset/season/career × over/not-over × league/cup/tournament), asm bridges for register-param functions (_CInitDIYCompetitionFromTableEntry, _CInitDIYCupFromRecord, _CInitDIYLeagueFromRecord, _CInitNewSeason), word write to seed for seeding both seed+randXorIndex
+- New xdefs: SelectTeamsForPresetCompetition, ChooseSeasonMenu, diyCompetitionMenu, careerMenu, aDiyCompetition_0, aPresetCompetit_0, aSeason_1, aCareer_1, aLoadOldCompeti, aNotACompetitio, saveFileTitle
+- Build status: **verified**
+- Cumulative: 1133 functions across 124 chunks
+
 ### Phase Transitions (see CLAUDE.md "Project Phases")
 - [ ] Phase 1 complete: all subroutines ported → output `*** READY FOR TESTING PHASE! ***` and STOP
 - [ ] Phase 2: user tests game, fixes any bugs found
@@ -2687,5 +2714,8 @@ Update this section every time you port a chunk. Keep it chronological.
 | 119   | 9         | 1082       |
 | 120   | 15        | 1097       |
 | 121   | 5         | 1102       |
+| 122   | 15        | 1117       |
+| 123   | 9         | 1126       |
+| 124   | 7         | 1133       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

@@ -8,6 +8,7 @@
 #include "edit_tactics.h"
 #include "teams.h"
 #include "audio.h"
+#include "chairman_memo.h"
 
 /* ---- Constants ---- */
 #define GAME_TYPE_NO_GAME 0
@@ -1438,9 +1439,6 @@ extern uint16_t changeTeams;
 extern uint16_t abortSelectTeams;
 extern uint16_t exitSelectTeams;
 
-extern void ScrollUpInGameList(void);
-extern void ScrollDownInGameList(void);
-extern void BuildGameListArrayFromTeamSelectionKeyCache(void);
 extern void _CallDrawMultipleItemsRect(uint16_t count, MenuEntry *firstEntry);
 
 /* FriendlyOK — set friendly ok flag, activate friendly menu (SWOS2.s line 51240) */
@@ -1467,8 +1465,8 @@ void _ViewSelectedTeams(void)
 __attribute__((used, externally_visible))
 void _ContestMenuScrollUp(void)
 {
-    ScrollUpInGameList();
-    BuildGameListArrayFromTeamSelectionKeyCache();
+    _ScrollUpInGameList();
+    _BuildGameListArrayFromTeamSelectionKeyCache();
     _CallDrawMultipleItemsRect(15, &menuEntries[18]);
 }
 
@@ -1476,7 +1474,1294 @@ void _ContestMenuScrollUp(void)
 __attribute__((used, externally_visible))
 void _ContestMenuScrollDown(void)
 {
-    ScrollDownInGameList();
-    BuildGameListArrayFromTeamSelectionKeyCache();
+    _ScrollDownInGameList();
+    _BuildGameListArrayFromTeamSelectionKeyCache();
     _CallDrawMultipleItemsRect(15, &menuEntries[18]);
+}
+
+/* ================================================================
+ * Chunk 122: Contest Menu Helpers
+ * ================================================================ */
+
+/* Color constants for menu entry background manipulation */
+#define COLOR_ORANGE_TO_BROWN_4    4
+#define COLOR_PINK_TO_BROWN_7      7
+#define COLOR_BLUE_TO_BLACK_8      8
+#define COLOR_PINK_TO_BROWN_9      9
+#define COLOR_BLUE_TO_PURPLE_11   11
+
+/* Chairman message IDs */
+#define NO_MORE_TIME_TO_NEGOTIATE  3
+
+/* ---- External globals (contest/career state) ---- */
+extern uint16_t teamSelectionKeyCache_ListIndex;
+extern uint16_t currentGame;
+extern uint16_t teamSelectionKeyCache_ListCount;
+extern uint16_t teamSelectionKeyCacheCount;
+extern uint16_t teamSelectionKeyCacheIndex;
+extern uint16_t teamSelectionKeyCacheEnd;
+extern int16_t  savedContestListIndex;
+extern int16_t  savedContestGameOffset;
+extern uint32_t savedContestEntryPtr;
+extern uint32_t savedContestRoundPtr;
+extern uint16_t gameListY;
+extern uint16_t contestEntryHeight;
+extern uint32_t gameListArray[];       /* 14 × 2 uint32_t entries = 112 bytes */
+extern uint16_t columnMarker;
+extern uint16_t cglmVar3;
+extern uint16_t seasonFinished;
+extern uint16_t careerFinished;
+extern uint16_t retired;
+extern uint16_t clubBusinessActive;
+extern uint16_t timeToNegotiate;
+extern uint16_t teamNoOfferAccepted;
+extern uint16_t jobOffersFromRetired;
+extern uint16_t seasonNumberOfSquads;
+extern uint16_t isNationalSelector;
+extern uint16_t careerNumPlayers;
+extern uint32_t irqCookieObfuscated;
+extern uint8_t  managerNameBuffer[];
+extern uint8_t  managerSurnameBuffer[];
+extern uint8_t  seasonPlaying;
+extern uint16_t selTeamNumber;
+extern uint8_t  teamSelectionKeyCache[];
+extern uint16_t numOffers;
+extern uint16_t currentMessage;
+extern uint16_t primaryCompSquadViewParam;
+extern uint16_t seasonSquadTeamNumbers[];
+extern uint32_t selectedContest;
+extern uint16_t contestLeagueNumber;
+
+/* String constants */
+extern uint8_t aPlayMatch[];        /* "PLAY MATCH" */
+extern uint8_t aFinishSeason[];     /* "FINISH SEASON" */
+extern uint8_t aNextMatch[];        /* "NEXT MATCH" */
+extern uint8_t aSquads[];           /* "SQUADS" */
+extern uint8_t aNoOffers[];         /* "NO OFFERS" */
+extern uint8_t aNewJob[];           /* "NEW JOB" */
+extern uint8_t aNoJobOffers[];      /* "NO JOB OFFERS" */
+extern uint8_t aSquadSelected[];    /* "SQUAD SELECTED" */
+extern uint8_t aChangeSquad[];      /* "CHANGE SQUAD" */
+extern uint8_t aSelectSquad[];      /* "SELECT SQUAD" */
+extern uint8_t a01Season[];         /* "%0/%1 SEASON" */
+extern uint8_t a001Season[];        /* "%0/0%1 SEASON" */
+extern uint8_t aSquad[];            /* "SQUAD" */
+
+/* Menu packed data (still in asm) */
+extern uint8_t contestMenu[];
+extern uint8_t careerOverMenu[];
+extern uint8_t jobOffersMenu[];
+extern uint8_t gotJobOfferMenu[];
+extern uint8_t transferMarketMenu[];
+
+/* Functions (asm or already ported) */
+extern uint8_t *_TeamSelectionKeyCache_GetListPtr(uint16_t listIndex);
+extern uint8_t *_TeamSelectionKeyCache_GetListElementPtr(uint16_t listIndex, uint16_t elementIndex);
+extern uint8_t *_TeamSelectionKeyCache_GetCurrentListPtr(void);
+extern uint8_t *_VerifyTeamLoaded(uint16_t teamNum);
+extern uint16_t _GetStringLength(const uint8_t *str);
+extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
+extern int16_t  _CheckForTransferOffers(void);
+extern uint16_t _IsTournamentAllowingSquadChangesIfNotCareer(void);
+extern void _DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
+extern void Career_PostMatchUpdate(void);        /* still in asm */
+extern void _CCareer_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel); /* C bridge for asm */
+extern void SeasonFinished_ComputeSeasonReview(void); /* still in asm */
+extern void SelectAndShowSquadToView(void);      /* still in asm, requires a0/a1/d0/d1 */
+extern void ChooseCompetitionMenu(void);         /* still in asm */
+
+/* ScrollUpInGameList — decrement currentGame/listIndex with bounds (SWOS2.s line 60083) */
+__attribute__((used, externally_visible))
+void _ScrollUpInGameList(void)
+{
+    int16_t game = (int16_t)currentGame - 1;
+    if (game >= 0) {
+        currentGame = (uint16_t)game;
+        return;
+    }
+    /* currentGame underflowed, try moving to previous list entry */
+    int16_t idx = (int16_t)teamSelectionKeyCache_ListIndex - 1;
+    if (idx < 0) {
+        teamSelectionKeyCache_ListIndex = 0;
+        currentGame = 0;
+        return;
+    }
+    teamSelectionKeyCache_ListIndex = (uint16_t)idx;
+    uint8_t *entry = _TeamSelectionKeyCache_GetListPtr((uint16_t)idx);
+    int8_t numGames = *(int8_t *)(entry + 5);
+    int16_t newGame;
+    if (numGames == 0)
+        newGame = 0;
+    else
+        newGame = numGames - 1;
+    currentGame = (uint16_t)newGame;
+}
+
+/* ScrollDownInGameList — increment currentGame/listIndex with bounds (SWOS2.s line 60109) */
+__attribute__((used, externally_visible))
+void _ScrollDownInGameList(void)
+{
+    uint8_t *entry = _TeamSelectionKeyCache_GetListPtr(teamSelectionKeyCache_ListIndex);
+    uint8_t numGames = *(uint8_t *)(entry + 5);
+    if (numGames != 0) {
+        uint16_t next = currentGame + 1;
+        if ((uint8_t)next != numGames) {
+            currentGame = next;
+            return;
+        }
+    }
+    /* Move to next list entry */
+    uint16_t nextIdx = teamSelectionKeyCache_ListIndex + 1;
+    if (nextIdx == teamSelectionKeyCache_ListCount)
+        return;
+    teamSelectionKeyCache_ListIndex = nextIdx;
+    currentGame = 0;
+}
+
+/* RestoreContestScrollPosition — restore saved scroll pos (SWOS2.s line 60132) */
+__attribute__((used, externally_visible))
+void _RestoreContestScrollPosition(void)
+{
+    teamSelectionKeyCache_ListIndex = (uint16_t)savedContestListIndex;
+    if (savedContestListIndex >= 0) {
+        currentGame = (uint16_t)savedContestGameOffset;
+    } else {
+        teamSelectionKeyCache_ListIndex = teamSelectionKeyCacheIndex;
+        currentGame = 0;
+        _ScrollUpInGameList();
+    }
+    /* Scroll up 3 extra times to show context */
+    _ScrollUpInGameList();
+    _ScrollUpInGameList();
+    _ScrollUpInGameList();
+}
+
+/* SelectActiveContestAndRound — find current active contest entry (SWOS2.s line 60149) */
+__attribute__((used, externally_visible))
+void _SelectActiveContestAndRound(void)
+{
+    if (gameType != GAME_TYPE_CAREER) {
+        /* DIY/preset/season without squads */
+        if (seasonNumberOfSquads == 0) {
+            if (seasonFinished != 0)
+                goto setInvalid;
+            uint8_t *a0 = _TeamSelectionKeyCache_GetCurrentListPtr();
+            savedContestListIndex = (int16_t)teamSelectionKeyCacheIndex;
+            savedContestEntryPtr = (uint32_t)a0;
+            savedContestGameOffset = 0;
+            savedContestRoundPtr = (uint32_t)a0;
+            return;
+        }
+    }
+    /* Career mode (or season with squads) */
+    if (careerFinished != 0)
+        goto setInvalid;
+    {
+        uint8_t *a0 = _TeamSelectionKeyCache_GetCurrentListPtr();
+        uint8_t *base = teamSelectionKeyCache;
+        uint16_t d0 = teamSelectionKeyCacheIndex;
+        for (;;) {
+            uint8_t numGames = *(uint8_t *)(a0 + 5);
+            uint8_t remaining = *(uint8_t *)(a0 + 6);
+            if (numGames != 0 && remaining != 0) {
+                savedContestListIndex = (int16_t)d0;
+                savedContestEntryPtr = (uint32_t)a0;
+                int16_t gameOff = (int16_t)numGames - (int16_t)remaining;
+                savedContestGameOffset = gameOff;
+                uint32_t byteOff = (uint16_t)gameOff * 12u;
+                savedContestRoundPtr = (uint32_t)(a0 + byteOff);
+                return;
+            }
+            d0++;
+            a0 += *(uint16_t *)(a0 + 2); /* advance by entry size */
+            if (d0 == teamSelectionKeyCacheCount)
+                break;
+        }
+    }
+setInvalid:
+    savedContestListIndex = -1;
+    savedContestEntryPtr = 0xFFFFFFFF;
+}
+
+/* CheckClubBusiness — toggle blinking on CLUB BUSINESS entry (SWOS2.s line 60196)
+ * Note: asm used absolute address ($297E).w which was entry 6 in original binary.
+ * We use menuEntries[6] instead. */
+__attribute__((used, externally_visible))
+void _CheckClubBusiness(void)
+{
+    if (gameType != GAME_TYPE_CAREER)
+        return;
+    MenuEntry *entry = &menuEntries[6];
+    uint16_t flags = entry->stringFlags;
+    if (clubBusinessActive != 0)
+        flags |= (1 << 13);
+    else
+        flags &= ~(1 << 13);
+    entry->stringFlags = flags;
+}
+
+/* CheckJobOffers — update JOB OFFERS entry state (SWOS2.s line 60214) */
+__attribute__((used, externally_visible))
+void _CheckJobOffers(void)
+{
+    if (gameType != GAME_TYPE_CAREER)
+        return;
+    MenuEntry *entry = &menuEntries[5]; /* JOB OFFERS entry */
+    /* Reset background color */
+    entry->bg = (entry->bg & 0xFFF0) + COLOR_BLUE_TO_PURPLE_11;
+    entry->isDisabled = 0;
+    uint16_t flags = entry->stringFlags;
+    flags &= ~(1 << 13);
+
+    if (teamNoOfferAccepted != 0xFFFF) {
+        /* Got an accepted offer — show "NEW JOB" */
+        entry->fg = (uint32_t)aNewJob;
+        entry->stringFlags = flags;
+        return;
+    }
+    if (numNewJobOffers != 0) {
+        /* New offers available — set blinking */
+        flags |= (1 << 13);
+        entry->stringFlags = flags;
+        return;
+    }
+    if (numJobOffers != 0) {
+        /* Old offers still available */
+        entry->stringFlags = flags;
+        return;
+    }
+    /* No offers at all */
+    entry->fg = (uint32_t)aNoJobOffers;
+    entry->isDisabled = 1;
+    entry->bg = (entry->bg & 0xFFF0) + COLOR_PINK_TO_BROWN_7;
+    entry->stringFlags = flags;
+}
+
+/* ContestMenuOnReturn_SetButtonsAndDefaultSelection (SWOS2.s line 60254) */
+__attribute__((used, externally_visible))
+void _ContestMenuOnReturn_SetButtonsAndDefaultSelection(MenuEntry *a5)
+{
+    _ContestSetButtons();
+    uint16_t ord = *(uint16_t *)((uint8_t *)a5 + 2); /* a5->ordinal at offset 2 */
+    if (ord == 0x0D || ord == 0x0A) {
+        if (seasonFinished != 0) {
+            _SetCurrentEntry(7);
+        }
+    }
+}
+
+/* SeasonLowerButtons — reposition season lower buttons (SWOS2.s line 60346) */
+__attribute__((used, externally_visible))
+void _SeasonLowerButtons(void)
+{
+    MenuEntry *entry13 = &menuEntries[13];
+    MenuEntry *entry14 = &menuEntries[14];
+    MenuEntry *entry15 = &menuEntries[15];
+    entry14->y = entry13->y;
+    entry15->y = entry13->y + 13;
+    menuEntries[13].isInvisible = 1;
+}
+
+/* CheckTransfers — update TRANSFERS entry state (SWOS2.s line 60358) */
+__attribute__((used, externally_visible))
+void _CheckTransfers(void)
+{
+    if (gameType != GAME_TYPE_CAREER)
+        return;
+
+    if (isNationalSelector != 0) {
+        if (_IsTournamentAllowingSquadChangesIfNotCareer() != 0)
+            goto disableEntry;
+    } else {
+        if (teamSelectionKeyCacheEnd != 0)
+            goto disableEntry;
+    }
+
+    /* Enable transfers entry */
+    {
+        MenuEntry *entry = &menuEntries[4];
+        entry->bg = (entry->bg & 0xFFF0) + COLOR_BLUE_TO_BLACK_8;
+        entry->isDisabled = 0;
+        if (timeToNegotiate != 0) {
+            if (_CheckForTransferOffers() == 0) {
+                /* Has pending offers — set blinking */
+                uint16_t flags = entry->stringFlags;
+                flags |= (1 << 13);
+                entry->stringFlags = flags;
+            }
+        }
+    }
+    goto clearBlink;
+
+disableEntry:
+    {
+        MenuEntry *entry = &menuEntries[4];
+        entry->bg = (entry->bg & 0xFFF0) + COLOR_PINK_TO_BROWN_9;
+        entry->isDisabled = 1;
+    }
+clearBlink:
+    {
+        MenuEntry *entry = &menuEntries[4];
+        uint16_t flags = entry->stringFlags;
+        flags &= ~(1 << 13);
+        entry->stringFlags = flags;
+    }
+}
+
+/* BuildGameListArrayFromTeamSelectionKeyCache (SWOS2.s line 60406) */
+__attribute__((used, externally_visible))
+void _BuildGameListArrayFromTeamSelectionKeyCache(void)
+{
+    uint8_t *elemPtr;
+    /* Get list element pointer: a0=list entry, a1=element within it */
+    /* The asm calls TeamSelectionKeyCache_GetListElementPtr which returns a0 (list) via a0, a1 via a1.
+       In C, the function returns a1 but we also need a0. Use the list ptr function. */
+    uint16_t listIdx = teamSelectionKeyCache_ListIndex;
+    uint16_t gameIdx = currentGame;
+    uint8_t *listEntry = _TeamSelectionKeyCache_GetListPtr(listIdx);
+    uint8_t *gameEntry = listEntry + gameIdx * 12;
+
+    uint32_t *out = gameListArray;
+    uint16_t remaining = 14; /* 0xD + 1 = 14 entries (dbf counts from 13) */
+
+    for (;;) {
+        if (listIdx == teamSelectionKeyCache_ListCount) {
+            /* Fill remaining slots with NULL */
+            while (remaining > 0) {
+                *out++ = 0;
+                *out++ = 0;
+                remaining--;
+            }
+            return;
+        }
+        for (;;) {
+            *out++ = (uint32_t)listEntry;
+            *out++ = (uint32_t)gameEntry;
+            uint8_t numGames = *(uint8_t *)(listEntry + 5);
+            if (numGames == 0)
+                break;
+            gameIdx++;
+            if ((uint8_t)gameIdx == numGames)
+                break;
+            gameEntry += 12;
+            remaining--;
+            if (remaining == 0)
+                return;
+        }
+        /* Move to next list entry */
+        listIdx++;
+        gameIdx = 0;
+        listEntry += *(uint16_t *)(listEntry + 2);
+        gameEntry = listEntry;
+        remaining--;
+        if (remaining == 0)
+            return;
+    }
+}
+
+/* PrintNameAndSeason — show manager name, team, and season year (SWOS2.s line 60445) */
+__attribute__((used, externally_visible))
+void _PrintNameAndSeason(void)
+{
+    if (gameType != GAME_TYPE_CAREER) {
+        menuEntries[0].isInvisible = 1;
+        /* 60/56 = entry offset 60 relative to entry 0 = entry1.isInvisible (offset 4 of entry 1 = byte 60 from start) */
+        /* Actually: offset 60 from menuEntries[0] = menuEntries[1].isInvisible (entry 1, byte 56+4=60) */
+        menuEntries[1].isInvisible = 1;
+        /* offset 116 from menuEntries[0] = menuEntries[2].isInvisible (entry 2, byte 112+4=116) */
+        menuEntries[2].isInvisible = 1;
+        return;
+    }
+    menuEntries[0].isInvisible = 0;
+    menuEntries[1].isInvisible = 0;
+    menuEntries[2].isInvisible = 0;
+    menuEntries[3].isInvisible = 1;  /* $A8 / 56 = 3, offset from base $A8 = 168 = 3*56=168, field offset 4 → isInvisible */
+
+    /* Build manager name string into entry 0's string buffer */
+    uint8_t *dst = (uint8_t *)menuEntries[0].fg;
+    uint16_t nameLen = _GetStringLength(managerNameBuffer);
+    uint16_t surnameLen = _GetStringLength(managerSurnameBuffer);
+    uint16_t totalLen = nameLen + surnameLen;
+    uint8_t *src = managerNameBuffer;
+
+    if (totalLen > 12) {
+        /* Name too long — abbreviate first name to initial */
+        if (src[0] != 0) {
+            *dst++ = src[0];
+            *dst++ = ' ';
+        }
+    } else {
+        dst = _StringCopy(src, dst);
+        *dst++ = ' ';
+    }
+    _StringCopy(managerSurnameBuffer, dst);
+
+    /* Set team name in entry 1 */
+    uint8_t *teamData = _VerifyTeamLoaded(selTeamNumber);
+    uint8_t *teamName = teamData + 5;
+    uint8_t *entry1Str = (uint8_t *)menuEntries[1].fg;
+    _StringCopy(teamName, entry1Str);
+
+    /* Set season year in entry 2 */
+    uint8_t *entry2Str = (uint8_t *)menuEntries[2].fg;
+    uint16_t year = (uint16_t)(seasonPlaying & 0xFF);
+    uint16_t d1 = year;
+    year += 1900;
+    if (year < 1996)
+        year += 100;
+    d1 += 1;
+    if (d1 >= 100)
+        d1 -= 100;
+    uint8_t *fmt;
+    if (d1 >= 10)
+        fmt = a01Season;    /* "%0/%1 SEASON" */
+    else
+        fmt = a001Season;   /* "%0/0%1 SEASON" */
+    _PrintFormatted(fmt, entry2Str, year, d1, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/* SetNationalSelectorButtons — configure national team selector buttons (SWOS2.s line 60517) */
+__attribute__((used, externally_visible))
+void _SetNationalSelectorButtons(void)
+{
+    if (gameType != GAME_TYPE_CAREER)
+        return;
+    if (isNationalSelector == 0)
+        return;
+
+    /* Set transfers/squad entry text */
+    MenuEntry *transfersEntry = &menuEntries[4]; /* TRANSFERS */
+    transfersEntry->fg = (uint32_t)aSquadSelected;
+
+    if (_IsTournamentAllowingSquadChangesIfNotCareer() == 0) {
+        transfersEntry->fg = (uint32_t)aChangeSquad;
+        if (careerNumPlayers != 20)
+            transfersEntry->fg = (uint32_t)aSelectSquad;
+    }
+
+    /* Entry 12 (national selector actions) */
+    MenuEntry *entry12 = &menuEntries[12];
+    entry12->bg = (entry12->bg & 0xFFF0) + COLOR_ORANGE_TO_BROWN_4;
+    entry12->isDisabled = 0;
+
+    if (_IsTournamentAllowingSquadChangesIfNotCareer() != 0) {
+        entry12->bg = (entry12->bg & 0xFFF0) + COLOR_PINK_TO_BROWN_9;
+        entry12->isDisabled = 1;
+    }
+
+    /* Hide entry 6 (CLUB BUSINESS) for national selector */
+    menuEntries[6].isInvisible = 1;
+
+    if (careerNumPlayers == 20)
+        return;
+
+    /* Not enough players — disable most entries */
+    MenuEntry *entry8 = &menuEntries[8];  /* SQUAD */
+    entry8->bg = (entry8->bg & 0xFFF0) + COLOR_PINK_TO_BROWN_9;
+    entry8->isDisabled = 1;
+
+    MenuEntry *entry7 = &menuEntries[7];  /* PLAY MATCH */
+    entry7->bg = (entry7->bg & 0xFFF0) + COLOR_PINK_TO_BROWN_9;
+    entry7->isDisabled = 1;
+
+    MenuEntry *entry10 = &menuEntries[10]; /* NEXT MATCH */
+    entry10->bg = (entry10->bg & 0xFFF0) + COLOR_PINK_TO_BROWN_9;
+    entry10->isDisabled = 1;
+
+    MenuEntry *entry11 = &menuEntries[11]; /* VIEW COMPETITIONS */
+    entry11->bg = (entry11->bg & 0xFFF0) + COLOR_PINK_TO_BROWN_9;
+    entry11->isDisabled = 1;
+
+    entry12->bg = (entry12->bg & 0xFFF0) + COLOR_PINK_TO_BROWN_9;
+    entry12->isDisabled = 1;
+}
+
+/* ContestSetButtons — set play/finish/next match button states (SWOS2.s line 60270) */
+__attribute__((used, externally_visible))
+void _ContestSetButtons(void)
+{
+    MenuEntry *entry7 = &menuEntries[7]; /* PLAY MATCH */
+    entry7->fg = (uint32_t)aPlayMatch;
+    entry7->stringFlags &= ~(1 << 13); /* clear blinking */
+
+    if (gameType == GAME_TYPE_SEASON) {
+        /* Season mode */
+        MenuEntry *entry13 = &menuEntries[13];
+        entry13->bg = (entry13->bg & 0xFFF0) + COLOR_ORANGE_TO_BROWN_4;
+        entry13->isDisabled = 0;
+        if (seasonNumberOfSquads == 0) {
+            entry7->fg = (uint32_t)aNextMatch;
+            _SeasonLowerButtons();
+            if (seasonFinished != 0)
+                goto setFinishSeason;
+            return;
+        }
+        if (seasonFinished != 0)
+            goto lowerAndFinish;
+        if (careerFinished != 0)
+            goto setFinishSeason;
+        return;
+    }
+
+    /* Career mode */
+    if (seasonFinished != 0)
+        goto careerFinished_label;
+
+    /* Season not finished */
+    menuEntries[10].isInvisible = 0;
+    {
+        MenuEntry *entry10 = &menuEntries[10];
+        entry10->bg = (entry10->bg & 0xFFF0) + COLOR_ORANGE_TO_BROWN_4;
+    }
+    if (careerFinished != 0) {
+        entry7->fg = (uint32_t)aFinishSeason;
+        return;
+    }
+    /* Check if match available — set blinking if so */
+    if (isNationalSelector != 0)
+        return;
+    if (teamSelectionKeyCacheEnd == 0)
+        return;
+    entry7->stringFlags |= (1 << 13);
+    return;
+
+careerFinished_label:
+    entry7->fg = (uint32_t)aFinishSeason;
+    {
+        MenuEntry *entry10 = &menuEntries[10];
+        entry10->bg = (entry10->bg & 0xFFF0) + COLOR_PINK_TO_BROWN_9;
+        entry10->isDisabled = 1;
+    }
+    return;
+
+lowerAndFinish:
+    _SeasonLowerButtons();
+setFinishSeason:
+    entry7->fg = (uint32_t)aFinishSeason;
+}
+
+/* ContestMenuInit — init callback for contest menu (SWOS2.s line 59786) */
+__attribute__((used, externally_visible))
+void _ContestMenuInit(void)
+{
+    /* Tamper check: irqCookieObfuscated XOR 0xCFD1F861 must equal 0x1786 */
+    uint32_t cookie = irqCookieObfuscated ^ 0xCFD1F861;
+    if (cookie != 0x1786)
+        return; /* tamper detected — skip init (menu will be broken) */
+
+    if (retired != 0) {
+        _ActivateMenu(careerOverMenu);
+        return;
+    }
+
+    _ContestSetButtons();
+    _ContestMenuOnReturn();
+
+    if (gameType != GAME_TYPE_CAREER)
+        return;
+    if (isNationalSelector == 0)
+        return;
+    if (careerNumPlayers == 0x14)
+        return;
+    _SetCurrentEntry(4);
+}
+
+/* ContestMenuOnReturn — after-draw callback for contest menu (SWOS2.s line 59811) */
+__attribute__((used, externally_visible))
+void _ContestMenuOnReturn(void)
+{
+    if (gameType == GAME_TYPE_SEASON) {
+        /* Season mode: hide career-only entries, show season-only entries */
+        menuEntries[10].isInvisible = 1;  /* NEXT MATCH (career) */
+        menuEntries[13].isInvisible = 0;  /* VIEW COMPETITIONS (season) */
+        menuEntries[11].isInvisible = 1;  /* VIEW COMPETITIONS (career) */
+        menuEntries[14].isInvisible = 0;  /* EXIT (season) */
+        menuEntries[9].isInvisible = 1;   /* EXIT (career) */
+        menuEntries[15].isInvisible = 0;  /* SCROLL arrows (season) */
+
+        /* Adjust entry heights */
+        menuEntries[7].dwHeight -= 1;
+        menuEntries[8].dwHeight -= 1;
+
+        /* If only 1 squad, change "SQUAD" text to "SQUADS" */
+        if (seasonNumberOfSquads == 1) {
+            menuEntries[8].fg = (uint32_t)aSquads;
+        }
+
+        /* Hide career-specific entries */
+        menuEntries[4].isInvisible = 1;   /* TRANSFERS */
+        menuEntries[12].isInvisible = 1;  /* national selector */
+        menuEntries[6].isInvisible = 1;   /* CLUB BUSINESS */
+        menuEntries[5].isInvisible = 1;   /* JOB OFFERS */
+        /* fall through to career setup (shared code for game list) */
+    } else if (gameType != GAME_TYPE_CAREER) {
+        return;
+    }
+
+    /* Career/Season common: set up game list area */
+    MenuEntry *entry18 = &menuEntries[18];
+    gameListY = entry18->y + 2;
+    contestEntryHeight = entry18->dwHeight - 4;
+
+    _PrintNameAndSeason();
+    /* ContestMenuOnReturn_NoOp() — no-op, skip */
+
+    teamSelectionKeyCache_ListIndex = 0;
+    currentGame = 0;
+    teamSelectionKeyCache_ListCount = teamSelectionKeyCacheCount;
+
+    _SelectActiveContestAndRound();
+    _RestoreContestScrollPosition();
+    _BuildGameListArrayFromTeamSelectionKeyCache();
+    _ContestSetButtons();
+    _CheckTransfers();
+    _CheckClubBusiness();
+    _CheckJobOffers();
+    _SetNationalSelectorButtons();
+}
+
+/* ==========================================================================
+ * Chunk 123 — Contest Menu Action Handlers
+ * (PlayMatchMenu, NextMatch, ViewCompetitionsMenu, ClubBusinessMenu,
+ *  JobOffersMenu, SeasonFinished, TransfersMenu, ViewWorldMenu,
+ *  jmp_SetExitMenuFlag)
+ * ========================================================================== */
+
+extern void _CareerPlayMatch(void);
+extern void _Career_PlayMatchMenuLoop(void);
+extern void _UpdateCareerAfterMatch(void);
+extern void _Career_NextMatch(void);
+extern void _MaybeSackManagerAfterSeasonReview(void);
+extern void _Career_HandleRetirement(void);
+extern void _ShowClubBussinesMenu(void);
+
+/* Forward declarations for functions in this chunk */
+void _NextMatch(MenuEntry *callerEntry);
+void _SeasonFinished(void);
+
+/* PlayMatchMenu — contest PLAY MATCH action (SWOS2.s line 59796)
+ * Called as menu onSelect callback; a5 = caller's entry.
+ * Asm bridge passes a5 as parameter. */
+__attribute__((used, externally_visible))
+void _PlayMatchMenu(MenuEntry *callerEntry)
+{
+    if (seasonFinished != 0) {
+        _SeasonFinished();
+        return;
+    }
+
+    if (gameType != GAME_TYPE_CAREER) {
+        if (seasonNumberOfSquads == 0) {
+            _NextMatch(callerEntry);
+            return;
+        }
+    }
+
+    if (careerFinished != 0) {
+        _CareerPlayMatch();
+        _SeasonFinished();
+        return;
+    }
+
+    _Career_PlayMatchMenuLoop();
+
+    if (gameType != GAME_TYPE_SEASON) {
+        _UpdateCareerAfterMatch();
+        if (youreSacked != 0) {
+            Career_PostMatchUpdate();
+            _ActivateMenu(contestMenu);
+            return;
+        }
+        _CheckClubBusiness();
+    }
+
+    /* loc_13BB64 */
+    _TeamSelectionKeyCache_GetCurrentListPtr();
+    _SelectActiveContestAndRound();
+    _ContestMenuOnReturn_SetButtonsAndDefaultSelection(callerEntry);
+    _RestoreContestScrollPosition();
+    _BuildGameListArrayFromTeamSelectionKeyCache();
+    _CheckTransfers();
+    /* ContestMenuOnReturn_NoOp() — no-op, skip */
+
+    if (careerFinished != 0 || seasonFinished != 0) {
+        fireResetFlag = 1;
+    }
+}
+
+/* NextMatch — NEXT MATCH action for season mode (SWOS2.s line 59845)
+ * Asm bridge passes a5 as parameter. */
+__attribute__((used, externally_visible))
+void _NextMatch(MenuEntry *callerEntry)
+{
+    _Career_NextMatch();
+
+    if (gameType != GAME_TYPE_SEASON) {
+        _UpdateCareerAfterMatch();
+        if (youreSacked != 0) {
+            Career_PostMatchUpdate();
+            _ActivateMenu(contestMenu);
+            return;
+        }
+        _CheckClubBusiness();
+    }
+
+    /* loc_13BBE6 */
+    _TeamSelectionKeyCache_GetCurrentListPtr();
+    _ContestMenuOnReturn_SetButtonsAndDefaultSelection(callerEntry);
+    _SelectActiveContestAndRound();
+    _RestoreContestScrollPosition();
+    _BuildGameListArrayFromTeamSelectionKeyCache();
+    _CheckTransfers();
+    /* ContestMenuOnReturn_NoOp() — no-op, skip */
+
+    if (careerFinished != 0 || seasonFinished != 0) {
+        fireResetFlag = 1;
+    }
+}
+
+/* ViewCompetitionsMenu — show competitions viewer (SWOS2.s line 59880) */
+__attribute__((used, externally_visible))
+void _ViewCompetitionsMenu(void)
+{
+    _ShowMenu(viewCompetitionsMenu);
+    _TeamSelectionKeyCache_GetCurrentListPtr();
+    _ContestSetButtons();
+    _CheckTransfers();
+    /* ContestMenuOnReturn_NoOp — no-op, skip */
+}
+
+/* ClubBusinessMenu — show club business (SWOS2.s line 59925) */
+__attribute__((used, externally_visible))
+void _ClubBusinessMenu(void)
+{
+    _ShowClubBussinesMenu();
+}
+
+/* JobOffersMenu — show job offers (SWOS2.s line 59930) */
+__attribute__((used, externally_visible))
+void _JobOffersMenu(void)
+{
+    if (teamNoOfferAccepted == 0xFFFF) {
+        /* No offer accepted yet */
+        if (numNewJobOffers == 0 && numJobOffers == 0)
+            return;
+
+        jobOffersFromRetired = 0;
+        _ShowMenu(jobOffersMenu);
+    } else {
+        /* Already have an accepted offer */
+        _ShowMenu(gotJobOfferMenu);
+    }
+
+    /* After either menu, check if entry 5 is disabled */
+    MenuEntry *entry5 = &menuEntries[5];
+    if (entry5->isDisabled != 0) {
+        _SetCurrentEntry(7);
+    }
+}
+
+/* SeasonFinished — handle end of season (SWOS2.s line 59956) */
+__attribute__((used, externally_visible))
+void _SeasonFinished(void)
+{
+    if (gameType != GAME_TYPE_CAREER) {
+        _InitCareerVariables(0);
+        _SetExitMenuFlag();
+        return;
+    }
+
+    /* Career mode */
+    if (isNationalSelector != 0) {
+        SeasonFinished_ComputeSeasonReview();
+        _MaybeSackManagerAfterSeasonReview();
+        if (youreSacked != 0) {
+            Career_PostMatchUpdate();
+            _ActivateMenu(contestMenu);
+            return;
+        }
+    }
+
+    /* loc_13BD4C */
+    _Career_HandleRetirement();
+    _ActivateMenu(contestMenu);
+}
+
+/* TransfersMenu — show transfers or national team selection (SWOS2.s line 59981) */
+__attribute__((used, externally_visible))
+void _TransfersMenu(void)
+{
+    if (isNationalSelector != 0) {
+        _ShowSelectRepresentationMenu();
+        return;
+    }
+
+    if (timeToNegotiate == 0) {
+        currentMessage = NO_MORE_TIME_TO_NEGOTIATE;
+        _ShowChairmanMessage();
+        return;
+    }
+
+    _ShowMenu(transferMarketMenu);
+}
+
+/* ViewWorldMenu — view world competitions (SWOS2.s line 59996) */
+__attribute__((used, externally_visible))
+void _ViewWorldMenu(void)
+{
+    ChooseCompetitionMenu();
+    if (chooseTeamsResult == 0)
+        return;
+
+    _CCareer_ViewOrEditCompetitionSlot((uint8_t *)selectedContest, contestLeagueNumber);
+    _ContestMenuOnReturn();
+}
+
+/* jmp_SetExitMenuFlag — trivial wrapper (SWOS2.s line 60009) */
+__attribute__((used, externally_visible))
+void _jmp_SetExitMenuFlag(void)
+{
+    _SetExitMenuFlag();
+}
+
+/* ==========================================================================
+ * Chunk 124 — Competition Menu Functions
+ * (DIYCompetitionMenu, PresetCompetitionMenu, SeasonMenu, CareerMenu,
+ *  StartContest, SaveContest, LoadOldCompetitionMenu)
+ * ========================================================================== */
+
+extern int16_t _CheckContinueAbortPrompt(uint8_t *header);
+extern void _ShowDesignDIYLeagueMenu(void);
+extern void _ShowDesignDIYCupMenu(void);
+extern void _ShowDesignDIYTournamentMenu(void);
+extern void SelectTeamsForPresetCompetition(void);   /* still in asm */
+extern void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest);
+extern void _CInitDIYCompetitionFromTableEntry(void); /* bridge: reads selectedContest + contestLeagueNumber */
+extern void _CInitDIYCupFromRecord(void);             /* bridge: reads selectedContest */
+extern void _CInitDIYLeagueFromRecord(void);           /* bridge: reads selectedContest */
+extern void _InitTeams(void);
+extern void _asm_ShowDiyLeaguesTournamentMenu(uint16_t d0, uint16_t d1, uint16_t d2);
+extern void _asm_ShowDIYCupMenuWithParams(uint16_t d0, uint16_t d1, uint16_t d2);
+extern void _DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC);
+extern void _DIY_RestoreCompetitionFileBufferFromDIYCompetition(void);
+extern void _DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt(void);
+extern void _DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer(void);
+extern void ChooseSeasonMenu(void);                    /* still in asm */
+extern void _CInitNewSeason(void);                     /* bridge: reads selectedContest + contestLeagueNumber */
+extern int16_t _Asset_PromptInsertSaveDiskDf0(uint8_t *title);
+extern int16_t _SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename, uint8_t *menuTitleStr);
+extern int16_t _GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename, uint8_t *menuTitleStr);
+extern void _ShowInsertDisk2Dialog(uint8_t *header);
+extern int16_t _SaveDIYFile(uint8_t *filename);
+extern int16_t _SavePresetCompetitionFile(uint8_t *filename);
+extern int16_t _SaveCareerFile(uint8_t *filename);
+extern int16_t _LoadDIYFile(uint8_t *filename);
+extern int16_t _LoadPresetFile(uint8_t *filename);
+extern int16_t _LoadCareerFile(uint8_t *filename);
+extern void _SaveDIYTournament(void);
+extern void _RestoreDIYTournament(void);
+extern void _SaveDIYLeague(void);
+extern void _RestoreDIYLeague(void);
+extern void _DIY_CopyCompetitionFileBufferToCompetitionStart(void);
+extern void _DIY_CopyCompetitionStartToCompetitionFileBuffer(void);
+extern void _DIY_SaveCompetitionFileBufferToDIYCompetition(void);
+extern void _DIY_CopyCompetitionFileBufferToDiyFileBufferCopy(void);
+extern void _DIY_CopyCompetitionFileBufferToCompetitionStart_Alt(void);
+extern void _DIY_ResetAndLoadCurrentCompetitionSlot(void);
+extern void _DIY_InitCupFromTeamGridAndValidateTeams(void);
+extern void _DIY_ResetCompetitionProgressAndShuffle(void);
+
+extern uint16_t diySelected;
+extern uint8_t  competitionFileBuffer[];
+extern uint8_t  diyCompetitionMenu[];
+extern uint8_t  careerMenu[];
+extern uint8_t  aDiyCompetition_0[];
+extern uint8_t  aPresetCompetit_0[];
+extern uint8_t  aSeason_1[];
+extern uint8_t  aCareer_1[];
+extern uint8_t  aLoadOldCompeti[];
+extern uint8_t  aNotACompetitio[];
+extern uint8_t  competitionFilename[];
+extern uint8_t  selectedFilename[];
+extern uint32_t extension;
+extern uint16_t diyLeagueTeamIds[];
+extern uint16_t diyCupTeamIds[];
+extern uint16_t diyTournamentTeamIds[];
+extern uint8_t  saveFileTitle[];
+
+/* DIYCompetitionMenu — DIY competition type selection (SWOS2.s line 68119) */
+__attribute__((used, externally_visible))
+void _DIYCompetitionMenu(void)
+{
+    *(volatile uint16_t *)(volatile void *)&seed = currentTick;  /* word write seeds both seed and adjacent randXorIndex */
+    if (_CheckContinueAbortPrompt(aDiyCompetition_0) != 0)
+        goto exit;
+
+    _ShowMenu(diyCompetitionMenu);
+    if ((int16_t)diySelected < 0)
+        goto exit;
+
+    if (diySelected == 0) {
+        _ShowDesignDIYLeagueMenu();
+    } else if (diySelected == 1) {
+        _ShowDesignDIYCupMenu();
+    } else {
+        _ShowDesignDIYTournamentMenu();
+    }
+
+    if (gameType != GAME_TYPE_NO_GAME) {
+        _SetCurrentEntry(11);
+    }
+
+exit:
+    _CommonMenuExit();
+}
+
+/* PresetCompetitionMenu — preset competition setup (SWOS2.s line 68149) */
+__attribute__((used, externally_visible))
+void _PresetCompetitionMenu(void)
+{
+    *(volatile uint16_t *)(volatile void *)&seed = currentTick;  /* word write seeds both seed and adjacent randXorIndex */
+    if (_CheckContinueAbortPrompt(aPresetCompetit_0) != 0) {
+        _CommonMenuExit();
+        return;
+    }
+
+    SelectTeamsForPresetCompetition();
+    if (chooseTeamsResult == 0) {
+        _CommonMenuExit();
+        return;
+    }
+
+    _InitCareerVariables(2);
+    uint8_t *contest = (uint8_t *)selectedContest;
+    uint8_t compType = contest[1];
+
+    if (compType == 0) {
+        /* League */
+        _CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyLeagueTeamIds);
+        _CInitDIYCompetitionFromTableEntry();  /* bridge reads selectedContest + contestLeagueNumber */
+        _InitTeams();
+        _asm_ShowDiyLeaguesTournamentMenu(0, 0, 0);
+        _DIY_RestoreCompetitionFileBufferFromDIYCompetition();
+        _CommonMenuExit();
+    } else if (compType == 1) {
+        /* Cup */
+        _CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyCupTeamIds);
+        _CInitDIYCupFromRecord();  /* bridge reads selectedContest */
+        _InitTeams();
+        _asm_ShowDIYCupMenuWithParams(0, 0, 0);
+        _DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt();
+        _CommonMenuExit();
+    } else {
+        /* Tournament */
+        _CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyTournamentTeamIds);
+        _CInitDIYLeagueFromRecord();  /* bridge reads selectedContest */
+        _InitTeams();
+        _DIY_EditCompetitionSlot(0, 0, 0);
+        _DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer();
+    }
+
+    _CommonMenuExit();
+    if (gameType != GAME_TYPE_NO_GAME) {
+        _SetCurrentEntry(11);
+    }
+}
+
+/* SeasonMenu — season mode setup (SWOS2.s line 68221) */
+__attribute__((used, externally_visible))
+void _SeasonMenu(void)
+{
+    *(volatile uint16_t *)(volatile void *)&seed = currentTick;  /* word write seeds both seed and adjacent randXorIndex */
+    if (_CheckContinueAbortPrompt(aSeason_1) != 0) {
+        _CommonMenuExit();
+        return;
+    }
+
+    ChooseSeasonMenu();
+    if (chooseTeamsResult == 0) {
+        _CommonMenuExit();
+        return;
+    }
+
+    _InitCareerVariables(3);
+    _CInitNewSeason();  /* bridge reads selectedContest + contestLeagueNumber */
+    _ShowMenu(contestMenu);
+    _CommonMenuExit();
+    if (gameType != GAME_TYPE_NO_GAME) {
+        _SetCurrentEntry(11);
+    }
+}
+
+/* CareerMenu — career mode menu (SWOS2.s line 68250) */
+__attribute__((used, externally_visible))
+void _CareerMenu(void)
+{
+    *(volatile uint16_t *)(volatile void *)&seed = currentTick;  /* word write seeds both seed and adjacent randXorIndex */
+    if (_CheckContinueAbortPrompt(aCareer_1) != 0) {
+        _CommonMenuExit();
+        return;
+    }
+
+    _ShowMenu(careerMenu);
+    _CommonMenuExit();
+    if (gameType != GAME_TYPE_NO_GAME) {
+        _SetCurrentEntry(11);
+    }
+    _CommonMenuExit();
+}
+
+/* StartContest — start or resume contest based on game type (SWOS2.s line 68268)
+ * Large dispatcher with branches for DIY, preset, season, career modes,
+ * and sub-branches for league/cup/tournament and new/in-progress states. */
+__attribute__((used, externally_visible))
+void _StartContest(void)
+{
+    contestStarted = 0;
+    uint16_t gt = gameType;
+
+    if (gt == GAME_TYPE_DIY_COMPETITION) {
+        if (competitionOver == 1)
+            goto diy_over;      /* loc_140FDC */
+        goto diy_not_over;      /* loc_1410E4 */
+    } else if (gt == GAME_TYPE_PRESET_COMPETITION) {
+        if (competitionOver == 1)
+            goto preset_over;   /* loc_141050 */
+        goto preset_not_over;   /* loc_14117C */
+    } else if (gt == GAME_TYPE_SEASON) {
+        /* loc_1410C0 */
+        _ShowMenu(contestMenu);
+        _CommonMenuExit();
+        goto final_check;
+    } else {
+        /* loc_1410D2 — career */
+        _ShowMenu(contestMenu);
+        _CommonMenuExit();
+        goto final_check;
+    }
+
+diy_over: /* loc_140FDC — DIY competition over */
+    {
+        uint16_t ct = *(uint16_t *)competitionFileBuffer;
+        if (ct == 0) {
+            /* League: loc_141030 */
+            _SaveDIYLeague();
+            _asm_ShowDiyLeaguesTournamentMenu(0, 0, 0);
+            _RestoreDIYLeague();
+            _CommonMenuExit();
+            goto final_check;
+        } else if (ct == 1) {
+            /* Cup: loc_141010 */
+            _DIY_CopyCompetitionFileBufferToCompetitionStart();
+            _asm_ShowDIYCupMenuWithParams(0, 0, 0);
+            _DIY_CopyCompetitionStartToCompetitionFileBuffer();
+            _CommonMenuExit();
+            goto final_check;
+        } else {
+            /* Tournament */
+            _SaveDIYTournament();
+            _DIY_EditCompetitionSlot(0, 0, 0);
+            _RestoreDIYTournament();
+            _CommonMenuExit();
+            goto final_check;
+        }
+    }
+
+preset_over: /* loc_141050 — preset competition over */
+    {
+        uint16_t ct = *(uint16_t *)competitionFileBuffer;
+        if (ct == 0) {
+            /* League: loc_1410A0 */
+            _DIY_SaveCompetitionFileBufferToDIYCompetition();
+            _asm_ShowDiyLeaguesTournamentMenu(0, 0, 0);
+            _DIY_RestoreCompetitionFileBufferFromDIYCompetition();
+            _CommonMenuExit();
+            goto final_check;
+        } else if (ct == 1) {
+            /* Cup: loc_141080 */
+            _DIY_CopyCompetitionFileBufferToCompetitionStart_Alt();
+            _asm_ShowDIYCupMenuWithParams(0, 0, 0);
+            _DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt();
+            _CommonMenuExit();
+            goto final_check;
+        } else {
+            /* Tournament */
+            _DIY_CopyCompetitionFileBufferToDiyFileBufferCopy();
+            _DIY_EditCompetitionSlot(0, 0, 0);
+            _DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer();
+            _CommonMenuExit();
+            goto final_check;
+        }
+    }
+
+diy_not_over: /* loc_1410E4 — DIY not over yet */
+    {
+        uint16_t ct = *(uint16_t *)competitionFileBuffer;
+        if (ct == 0) {
+            /* League: loc_141150 */
+            _SaveDIYLeague();
+            _InitTeams();
+            _DIY_ResetCompetitionProgressAndShuffle();
+            _asm_ShowDiyLeaguesTournamentMenu(0, 0, 0);
+            _RestoreDIYLeague();
+            _CommonMenuExit();
+            goto final_check;
+        } else if (ct == 1) {
+            /* Cup: loc_141124 */
+            _DIY_CopyCompetitionFileBufferToCompetitionStart();
+            _InitTeams();
+            _DIY_InitCupFromTeamGridAndValidateTeams();
+            _asm_ShowDIYCupMenuWithParams(0, 0, 0);
+            _DIY_CopyCompetitionStartToCompetitionFileBuffer();
+            _CommonMenuExit();
+            goto final_check;
+        } else {
+            /* Tournament */
+            _SaveDIYTournament();
+            _InitTeams();
+            _DIY_ResetAndLoadCurrentCompetitionSlot();
+            _DIY_EditCompetitionSlot(0, 0, 0);
+            _RestoreDIYTournament();
+            _CommonMenuExit();
+            goto final_check;
+        }
+    }
+
+preset_not_over: /* loc_14117C — preset not over yet */
+    {
+        uint16_t ct = *(uint16_t *)competitionFileBuffer;
+        if (ct == 0) {
+            /* League: loc_1411E4 */
+            _DIY_SaveCompetitionFileBufferToDIYCompetition();
+            _InitTeams();
+            _DIY_ResetCompetitionProgressAndShuffle();
+            _asm_ShowDiyLeaguesTournamentMenu(0, 0, 0);
+            _DIY_RestoreCompetitionFileBufferFromDIYCompetition();
+            _CommonMenuExit();
+            goto final_check;
+        } else if (ct == 1) {
+            /* Cup: loc_1411B8 */
+            _DIY_CopyCompetitionFileBufferToCompetitionStart_Alt();
+            _InitTeams();
+            _DIY_InitCupFromTeamGridAndValidateTeams();
+            _asm_ShowDIYCupMenuWithParams(0, 0, 0);
+            _DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt();
+            _CommonMenuExit();
+            goto final_check;
+        } else {
+            /* Tournament */
+            _DIY_CopyCompetitionFileBufferToDiyFileBufferCopy();
+            _InitTeams();
+            _DIY_ResetAndLoadCurrentCompetitionSlot();
+            _DIY_EditCompetitionSlot(0, 0, 0);
+            _DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer();
+            _CommonMenuExit();
+            goto final_check;
+        }
+    }
+
+final_check: /* loc_141210 */
+    _CommonMenuExit();
+    if (gameType == GAME_TYPE_NO_GAME) {
+        _SetCurrentEntry(13);
+    }
+}
+
+/* SaveContest — save competition to disk (SWOS2.s line 68443) */
+__attribute__((used, externally_visible))
+void _SaveContest(void)
+{
+    if (_Asset_PromptInsertSaveDiskDf0(saveFileTitle) != 0)
+        goto cleanup;
+
+    {
+        uint16_t gt = gameType;
+        uint32_t ext;
+        int16_t result;
+
+        if (gt == GAME_TYPE_DIY_COMPETITION) {
+            ext = 0x2E444959; /* '.DIY' */
+        } else if (gt == GAME_TYPE_PRESET_COMPETITION) {
+            ext = 0x2E505245; /* '.PRE' */
+        } else if (gt == GAME_TYPE_SEASON) {
+            ext = 0x2E534541; /* '.SEA' */
+        } else {
+            ext = 0x2E434152; /* '.CAR' */
+        }
+
+        if (_SelectFileToSaveDialog(ext, competitionFilename, saveFileTitle) != 0)
+            goto done;
+
+        if (gt == GAME_TYPE_DIY_COMPETITION) {
+            result = _SaveDIYFile(selectedFilename);
+        } else if (gt == GAME_TYPE_PRESET_COMPETITION) {
+            result = _SavePresetCompetitionFile(selectedFilename);
+        } else if (gt == GAME_TYPE_SEASON) {
+            result = _SaveCareerFile(selectedFilename);   /* j_SaveCareerFile -> SaveCareerFile */
+        } else {
+            result = _SaveCareerFile(selectedFilename);
+        }
+
+        if (result != 0)
+            goto done;
+
+        contestStarted = 1;
+        _StringCopy(selectedFilename, competitionFilename);
+    }
+
+done:
+    _ShowInsertDisk2Dialog(saveFileTitle);
+cleanup:
+    _CommonMenuExit();
+}
+
+/* LoadOldCompetitionMenu — load competition from disk (SWOS2.s line 68524) */
+__attribute__((used, externally_visible))
+void _LoadOldCompetitionMenu(void)
+{
+    if (_CheckContinueAbortPrompt(aLoadOldCompeti) != 0) {
+        _CommonMenuExit();
+        return;
+    }
+
+    if (_Asset_PromptInsertSaveDiskDf0(aLoadOldCompeti) != 0) {
+        _CommonMenuExit();
+        return;
+    }
+
+    if (_GetFilenameAndExtension(0, aLoadOldCompeti, aLoadOldCompeti) != 0)
+        goto fail;
+
+    {
+        int16_t result;
+        if (extension == 0x2E444959) {          /* '.DIY' */
+            result = _LoadDIYFile(selectedFilename);
+        } else if (extension == 0x2E505245) {   /* '.PRE' */
+            result = _LoadPresetFile(selectedFilename);
+        } else if (extension == 0x2E534541) {   /* '.SEA' */
+            result = _LoadCareerFile(selectedFilename);  /* j_LoadCareerFile */
+        } else if (extension == 0x2E434152) {   /* '.CAR' */
+            result = _LoadCareerFile(selectedFilename);
+        } else {
+            _ShowErrorMenu(aNotACompetitio);
+            goto fail;
+        }
+
+        if (result != 0) {
+            _InitCareerVariables(0);
+            goto fail;
+        }
+
+        _StringCopy(selectedFilename, competitionFilename);
+    }
+
+    /* Success path: loc_14147C */
+    _ShowInsertDisk2Dialog(aLoadOldCompeti);
+    _CommonMenuExit();
+    _StartContest();
+    return;
+
+fail: /* loc_14149A */
+    _ShowInsertDisk2Dialog(aLoadOldCompeti);
+    _CommonMenuExit();
 }

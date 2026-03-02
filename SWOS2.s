@@ -59784,171 +59784,33 @@ contestMenu:
 ; ===== ContestMenuInit =====
 ; prototype: void __usercall ContestMenuInit()
 ContestMenuInit:
-                move.l  (irqCookieObfuscated).l,d0
-                eori.l  #$CFD1F861,d0
-                cmpi.l  #$1786,d0
-                bne.w   loc_13D15C
-                tst.w   (retired).l
-                beq.s   loc_13B9EC
-                lea     careerOverMenu(pc),a6
-                jmp     ActivateMenu
-loc_13B9EC:
-                bsr.w   ContestSetButtons
-                bsr.w   ContestMenuOnReturn
-                cmpi.w  #GAME_TYPE_CAREER,(gameType).l
-                bne.s   locret_13BA1A
-                tst.w   (isNationalSelector).l
-                beq.s   locret_13BA1A
-                cmpi.w  #$14,(careerNumPlayers).l
-                beq.s   locret_13BA1A
-                move.w  #4,d0
-                jsr     SetCurrentEntry
-locret_13BA1A:
-                rts
+                jmp     _ContestMenuInit
 
 ; ===== ContestMenuOnReturn =====
 ; prototype: void __usercall ContestMenuOnReturn()
 ContestMenuOnReturn:
-                cmpi.w  #GAME_TYPE_SEASON,(gameType).l
-                beq.s   loc_13BA34
-                cmpi.w  #GAME_TYPE_CAREER,(gameType).l
-                beq.w   loc_13BA90
-                rts
-loc_13BA34:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$230).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$2D8).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$268).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$310).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1F8).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$348).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a0
-                subq.w  #1,MENUENTRY_DWHEIGHT(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a0
-                subq.w  #1,MENUENTRY_DWHEIGHT(a0)
-                cmpi.w  #1,(seasonNumberOfSquads).l
-                beq.s   loc_13BA78
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a0
-                move.l  #aSquads,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "SQUADS" ...
-loc_13BA78:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$E0).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$2A0).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$150).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$118).l
-loc_13BA90:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3F0)).l,a0
-                move.w  MENUENTRY_Y(a0),(gameListY).l
-                addq.w  #2,(gameListY).l
-                move.w  MENUENTRY_DWHEIGHT(a0),(contestEntryHeight).l
-                subq.w  #4,(contestEntryHeight).l
-                bsr.w   PrintNameAndSeason
-                bsr.w   ContestMenuOnReturn_NoOp
-                clr.w   (teamSelectionKeyCache_ListIndex).l
-                clr.w   (currentGame).l
-                move.w  (teamSelectionKeyCacheCount).l,d0
-                move.w  d0,(teamSelectionKeyCache_ListCount).l
-                bsr.w   SelectActiveContestAndRound
-                bsr.w   RestoreContestScrollPosition
-                bsr.w   BuildGameListArrayFromTeamSelectionKeyCache
-                bsr.w   ContestSetButtons
-                bsr.w   CheckTransfers
-                bsr.w   CheckClubBusiness
-                bsr.w   CheckJobOffers
-                bsr.w   SetNationalSelectorButtons
-                rts
+                jmp     _ContestMenuOnReturn
 
 ; ===== PlayMatchMenu =====
 ; prototype: void __usercall PlayMatchMenu()
 PlayMatchMenu:
-                tst.w   (seasonFinished).l
-                bne.w   SeasonFinished
-                cmpi.w  #GAME_TYPE_CAREER,(gameType).l
-                beq.s   loc_13BB10
-                tst.w   (seasonNumberOfSquads).l
-                beq.w   NextMatch
-loc_13BB10:
-                tst.w   (careerFinished).l
-                beq.s   loc_13BB22
-                jsr     CareerPlayMatch
-                bra.w   SeasonFinished
-loc_13BB22:
-                movem.l a5,-(sp)
-                jsr     Career_PlayMatchMenuLoop
-                movem.l (sp)+,a5
-                cmpi.w  #GAME_TYPE_SEASON,(gameType).l
-                beq.s   loc_13BB64
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     UpdateCareerAfterMatch
-                movem.l (sp)+,d0-d7/a0-a6
-                tst.w   (youreSacked).l
-                beq.s   loc_13BB60
-                jsr     Career_PostMatchUpdate
-                lea     contestMenu(pc),a6
-                jmp     ActivateMenu
-loc_13BB60:
-                bsr.w   CheckClubBusiness
-loc_13BB64:
-                jsr     TeamSelectionKeyCache_GetCurrentListPtr
-                movem.l a5,-(sp)
-                bsr.w   SelectActiveContestAndRound
-                movem.l (sp)+,a5
-                bsr.w   ContestMenuOnReturn_SetButtonsAndDefaultSelection
-                bsr.w   RestoreContestScrollPosition
-                bsr.w   BuildGameListArrayFromTeamSelectionKeyCache
-                bsr.w   CheckTransfers
-                bsr.w   ContestMenuOnReturn_NoOp
-                tst.w   (careerFinished).l
-                bne.s   loc_13BB9A
-                tst.w   (seasonFinished).l
-                beq.s   locret_13BBA2
-loc_13BB9A:
-                move.w  #1,(fireResetFlag).l
-locret_13BBA2:
+                move.l  a5,-(sp)
+                jsr     _PlayMatchMenu
+                addq.l  #4,sp
                 rts
 
 ; ===== NextMatch =====
 ; prototype: void __usercall NextMatch()
 NextMatch:
-                movem.l a5,-(sp)
-                jsr     Career_NextMatch
-                movem.l (sp)+,a5
-                cmpi.w  #GAME_TYPE_SEASON,(gameType).l
-                beq.s   loc_13BBE6
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     UpdateCareerAfterMatch
-                movem.l (sp)+,d0-d7/a0-a6
-                tst.w   (youreSacked).l
-                beq.s   loc_13BBE2
-                jsr     Career_PostMatchUpdate
-                lea     contestMenu(pc),a6
-                jmp     ActivateMenu
-loc_13BBE2:
-                bsr.w   CheckClubBusiness
-loc_13BBE6:
-                jsr     TeamSelectionKeyCache_GetCurrentListPtr
-                bsr.w   ContestMenuOnReturn_SetButtonsAndDefaultSelection
-                bsr.w   SelectActiveContestAndRound
-                bsr.w   RestoreContestScrollPosition
-                bsr.w   BuildGameListArrayFromTeamSelectionKeyCache
-                bsr.w   CheckTransfers
-                bsr.w   ContestMenuOnReturn_NoOp
-                tst.w   (careerFinished).l
-                bne.s   loc_13BC14
-                tst.w   (seasonFinished).l
-                beq.s   locret_13BC1C
-loc_13BC14:
-                move.w  #1,(fireResetFlag).l
-locret_13BC1C:
+                move.l  a5,-(sp)
+                jsr     _NextMatch
+                addq.l  #4,sp
                 rts
 
 ; ===== ViewCompetitionsMenu =====
 ; prototype: void __usercall ViewCompetitionsMenu()
 ViewCompetitionsMenu:
-                lea     viewCompetitionsMenu(pc),a6
-                jsr     ShowMenu
-                jsr     TeamSelectionKeyCache_GetCurrentListPtr
-                bsr.w   ContestSetButtons
-                bsr.w   CheckTransfers
-                bra.w   ContestMenuOnReturn_NoOp
+                jmp     _ViewCompetitionsMenu
 
 ; ===== SquadMenu =====
 ; prototype: unsigned __int16 __usercall SquadMenu@<d0>()
@@ -59988,275 +59850,74 @@ loc_13BC9E:
 ; ===== ClubBusinessMenu =====
 ; prototype: void __usercall ClubBusinessMenu()
 ClubBusinessMenu:
-                jmp     ShowClubBussinesMenu
+                jmp     _ClubBusinessMenu
 
 ; ===== JobOffersMenu =====
 ; prototype: void __usercall JobOffersMenu()
 JobOffersMenu:
-                cmpi.w  #$FFFF,(teamNoOfferAccepted).l
-                bne.s   loc_13BCE4
-                tst.w   (numNewJobOffers).l
-                bne.s   loc_13BCD0
-                tst.w   (numJobOffers).l
-                beq.s   locret_13BD04
-loc_13BCD0:
-                clr.w   (jobOffersFromRetired).l
-                lea     (jobOffersMenu).l,a6
-                jsr     ShowMenu
-                bra.s   loc_13BCF0
-loc_13BCE4:
-                lea     (gotJobOfferMenu).l,a6
-                jsr     ShowMenu
-loc_13BCF0:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a0
-                tst.w   MENUENTRY_ISDISABLED(a0)
-                beq.s   locret_13BD04
-                move.w  #7,d0
-                jsr     SetCurrentEntry
-locret_13BD04:
-                rts
+                jmp     _JobOffersMenu
 
 ; ===== SeasonFinished =====
 ; prototype: void __usercall SeasonFinished()
 SeasonFinished:
-                cmpi.w  #GAME_TYPE_CAREER,(gameType).l
-                beq.s   loc_13BD20
-                move.w  #0,d0
-                jsr     InitCareerVariables
-                jmp     SetExitMenuFlag
-loc_13BD20:
-                tst.w   (isNationalSelector).l
-                beq.s   loc_13BD4C
-                jsr     SeasonFinished_ComputeSeasonReview
-                jsr     MaybeSackManagerAfterSeasonReview
-                tst.w   (youreSacked).l
-                beq.s   loc_13BD4C
-                jsr     Career_PostMatchUpdate
-                lea     contestMenu(pc),a6
-                jmp     ActivateMenu
-loc_13BD4C:
-                movem.l a5,-(sp)
-                jsr     Career_HandleRetirement
-                movem.l (sp)+,a5
-                lea     contestMenu(pc),a6
-                jmp     ActivateMenu
+                jmp     _SeasonFinished
 
 ; ===== TransfersMenu =====
 ; prototype: void __usercall TransfersMenu()
 TransfersMenu:
-                tst.w   (isNationalSelector).l
-                beq.s   loc_13BD72
-                jmp     ShowSelectRepresentationMenu
-loc_13BD72:
-                tst.w   (timeToNegotiate).l
-                bne.s   loc_13BD88
-                move.w  #NO_MORE_TIME_TO_NEGOTIATE,(currentMessage).l
-                jmp     ShowChairmanMessage
-loc_13BD88:
-                lea     (transferMarketMenu).l,a6
-                jmp     ShowMenu
+                jmp     _TransfersMenu
 
 ; ===== ViewWorldMenu =====
 ; prototype: void __usercall ViewWorldMenu()
 ViewWorldMenu:
-                jsr     ChooseCompetitionMenu
-                tst.w   (chooseTeamsResult).l
-                beq.w   locret_13BDBA
-                movea.l (selectedContest).l,a0
-                move.w  (contestLeagueNumber).l,d0
-                jsr     Career_ViewOrEditCompetitionSlot
-                bsr.w   ContestMenuOnReturn
-locret_13BDBA:
-                rts
+                jmp     _ViewWorldMenu
 
 ; ===== jmp_SetExitMenuFlag =====
 ; prototype: void __usercall jmp_SetExitMenuFlag()
 jmp_SetExitMenuFlag:
-                jmp     SetExitMenuFlag
+                jmp     _jmp_SetExitMenuFlag
 
 ; ===== ContestMenuScrollUp ===== (ported to C → _ContestMenuScrollUp)
 ContestMenuScrollUp:
                 jmp     _ContestMenuScrollUp
 
-; ===== ScrollUpInGameList =====
-; prototype: void __usercall ScrollUpInGameList()
+; ===== ScrollUpInGameList ===== (ported to C → _ScrollUpInGameList)
 ScrollUpInGameList:
-                subq.w  #1,(currentGame).l
-                bpl.s   locret_13BE14
-                subq.w  #1,(teamSelectionKeyCache_ListIndex).l
-                bpl.s   loc_13BDF8
-                clr.w   (teamSelectionKeyCache_ListIndex).l
-                clr.w   (currentGame).l
-                bra.s   locret_13BE14
-loc_13BDF8:
-                move.w  (teamSelectionKeyCache_ListIndex).l,d0
-                jsr     TeamSelectionKeyCache_GetListPtr
-                move.b  5(a0),d0
-                ext.w   d0
-                beq.s   loc_13BE0E
-                subq.w  #1,d0
-loc_13BE0E:
-                move.w  d0,(currentGame).l
-locret_13BE14:
-                rts
+                jmp     _ScrollUpInGameList
 
 ; ===== ContestMenuScrollDown ===== (ported to C → _ContestMenuScrollDown)
 ContestMenuScrollDown:
                 jmp     _ContestMenuScrollDown
 
-; ===== ScrollDownInGameList =====
-; prototype: void __usercall ScrollDownInGameList()
+; ===== ScrollDownInGameList ===== (ported to C → _ScrollDownInGameList)
 ScrollDownInGameList:
-                move.w  (teamSelectionKeyCache_ListIndex).l,d0
-                jsr     TeamSelectionKeyCache_GetListPtr
-                tst.b   5(a0)
-                beq.s   loc_13BE56
-                move.w  (currentGame).l,d0
-                addq.w  #1,d0
-                cmp.b   5(a0),d0
-                beq.s   loc_13BE56
-                move.w  d0,(currentGame).l
-                bra.s   locret_13BE72
-loc_13BE56:
-                move.w  (teamSelectionKeyCache_ListIndex).l,d0
-                addq.w  #1,d0
-                cmp.w   (teamSelectionKeyCache_ListCount).l,d0
-                beq.s   locret_13BE72
-                move.w  d0,(teamSelectionKeyCache_ListIndex).l
-                clr.w   (currentGame).l
-locret_13BE72:
-                rts
+                jmp     _ScrollDownInGameList
 
 ; ===== RestoreContestScrollPosition =====
-; prototype: void __usercall RestoreContestScrollPosition()
+; prototype: void __usercall RestoreContestScrollPosition() (ported to C → _RestoreContestScrollPosition)
 RestoreContestScrollPosition:
-                move.w  (savedContestListIndex).l,(teamSelectionKeyCache_ListIndex).l
-                bpl.s   loc_13BE96
-                move.w  (teamSelectionKeyCacheIndex).l,(teamSelectionKeyCache_ListIndex).l
-                clr.w   (currentGame).l
-                bsr.w   ScrollUpInGameList
-                bra.s   loc_13BEA0
-loc_13BE96:
-                move.w  (savedContestGameOffset).l,(currentGame).l
-loc_13BEA0:
-                bsr.w   ScrollUpInGameList
-                bsr.w   ScrollUpInGameList
-                bsr.w   ScrollUpInGameList
-                rts
+                jmp     _RestoreContestScrollPosition
 
-; ===== SelectActiveContestAndRound =====
-; prototype: void __usercall SelectActiveContestAndRound()
+; ===== SelectActiveContestAndRound ===== (ported to C → _SelectActiveContestAndRound)
 SelectActiveContestAndRound:
-                cmpi.w  #4,(gameType).l
-                beq.s   loc_13BEF0
-                tst.w   (seasonNumberOfSquads).l
-                bne.s   loc_13BEF0
-                tst.w   (seasonFinished).l
-                bne.w   loc_13BF4E
-                jsr     TeamSelectionKeyCache_GetCurrentListPtr
-                move.w  (teamSelectionKeyCacheIndex).l,d0
-                move.w  d0,(savedContestListIndex).l
-                move.l  a0,(savedContestEntryPtr).l
-                clr.w   (savedContestGameOffset).l
-                move.l  a0,(savedContestRoundPtr).l
-                rts
-loc_13BEF0:
-                tst.w   (careerFinished).l
-                bne.s   loc_13BF4E
-                jsr     TeamSelectionKeyCache_GetCurrentListPtr
-                lea     (teamSelectionKeyCache).l,a6
-                move.w  (teamSelectionKeyCacheIndex).l,d0
-loc_13BF0A:
-                tst.b   5(a0)
-                beq.s   loc_13BF40
-                tst.b   6(a0)
-                beq.s   loc_13BF40
-                move.w  d0,(savedContestListIndex).l
-                move.l  a0,(savedContestEntryPtr).l
-                move.b  5(a0),d0
-                sub.b   6(a0),d0
-                ext.w   d0
-                move.w  d0,(savedContestGameOffset).l
-                mulu.w  #$C,d0
-                adda.l  d0,a0
-                move.l  a0,(savedContestRoundPtr).l
-                rts
-loc_13BF40:
-                addq.w  #1,d0
-                adda.w  2(a0),a0
-                cmp.w   (teamSelectionKeyCacheCount).l,d0
-                bne.s   loc_13BF0A
-loc_13BF4E:
-                move.w  #$FFFF,(savedContestListIndex).l
-                move.l  #$FFFFFFFF,(savedContestEntryPtr).l
-                rts
+                jmp     _SelectActiveContestAndRound
 
-; ===== CheckClubBusiness =====
-; prototype: void __usercall CheckClubBusiness()
+; ===== CheckClubBusiness ===== (ported to C → _CheckClubBusiness)
+; Note: asm used absolute address ($297E).w which was entry 6 in original binary
 CheckClubBusiness:
-                cmpi.w  #GAME_TYPE_CAREER,(gameType).l
-                bne.s   locret_13BF8A
-                lea     ($297E).w,a0
-                move.w  MENUENTRY_STRINGFLAGS(a0),d0
-                tst.w   (clubBusinessActive).l
-                bne.s   loc_13BF82
-                bclr    #$D,d0
-                bra.s   loc_13BF86
-loc_13BF82:
-                bset    #$D,d0
-loc_13BF86:
-                move.w  d0,MENUENTRY_STRINGFLAGS(a0)
-locret_13BF8A:
-                rts
+                jmp     _CheckClubBusiness
 
-; ===== CheckJobOffers =====
-; prototype: void __usercall CheckJobOffers()
+; ===== CheckJobOffers ===== (ported to C → _CheckJobOffers)
 CheckJobOffers:
-                cmpi.w  #GAME_TYPE_CAREER,(gameType).l
-                bne.s   locret_13BFDE
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #BLUE_TO_PURPLE_11,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a0
-                clr.w   MENUENTRY_ISDISABLED(a0)
-                move.w  MENUENTRY_STRINGFLAGS(a0),d1
-                bclr    #$D,d1
-                cmpi.w  #$FFFF,(teamNoOfferAccepted).l
-                bne.s   loc_13BFE0
-                tst.w   (numNewJobOffers).l
-                bne.s   loc_13BFD6
-                tst.w   (numJobOffers).l
-                beq.s   loc_13BFEA
-                rts
-loc_13BFD6:
-                bset    #$D,d1
-loc_13BFDA:
-                move.w  d1,MENUENTRY_STRINGFLAGS(a0)
-locret_13BFDE:
-                rts
-loc_13BFE0:
-                move.l  #aNewJob,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "NEW JOB" ...
-                bra.s   loc_13BFDA
-loc_13BFEA:
-                move.l  #aNoJobOffers,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "NO JOB OFFERS" ...
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addq.w  #PINK_TO_BROWN_7,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                bra.s   loc_13BFDA
+                jmp     _CheckJobOffers
 
-; ===== ContestMenuOnReturn_SetButtonsAndDefaultSelection =====
-; prototype: void __usercall ContestMenuOnReturn_SetButtonsAndDefaultSelection(void *a5@<a5>)
+; ===== ContestMenuOnReturn_SetButtonsAndDefaultSelection ===== (ported to C → _ContestMenuOnReturn_SetButtonsAndDefaultSelection)
 ContestMenuOnReturn_SetButtonsAndDefaultSelection:
-                bsr.w   ContestSetButtons
-                cmpi.w  #$D,2(a5)
-                beq.s   loc_13C020
-                cmpi.w  #$A,2(a5)
-                bne.s   locret_13C032
+                move.l  a5,-(sp)
+                jsr     _ContestMenuOnReturn_SetButtonsAndDefaultSelection
+                addq.l  #4,sp
+                rts
+                ; === dead code below (old body) ===
 loc_13C020:
                 tst.w   (seasonFinished).l
                 beq.s   locret_13C032
@@ -60265,9 +59926,10 @@ loc_13C020:
 locret_13C032:
                 rts
 
-; ===== ContestSetButtons =====
-; prototype: void __usercall ContestSetButtons()
+; ===== ContestSetButtons ===== (ported to C → _ContestSetButtons)
 ContestSetButtons:
+                jmp     _ContestSetButtons
+                ; === dead code below (old body) ===
                 lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a0
                 move.l  #aPlayMatch,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "PLAY MATCH" ...
                 move.w  MENUENTRY_STRINGFLAGS(a0),d0
@@ -60339,173 +60001,22 @@ loc_13C130:
                 move.l  #aFinishSeason,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "FINISH SEASON" ...
                 rts
 
-; ===== SeasonLowerButtons =====
-; prototype: void __usercall SeasonLowerButtons()
-; Set "view competitions" and lower "next match" buttons
-; lower in line with "exit" and make upper "next match" invisible
+; ===== SeasonLowerButtons ===== (ported to C → _SeasonLowerButtons)
 SeasonLowerButtons:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2D8)).l,a1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$310)).l,a0
-                move.w  MENUENTRY_Y(a1),MENUENTRY_Y(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$348)).l,a0
-                move.w  MENUENTRY_Y(a1),MENUENTRY_Y(a0)
-                addi.w  #13,MENUENTRY_Y(a0)
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$2D8).l
-                rts
+                jmp     _SeasonLowerButtons
 
-; ===== CheckTransfers =====
-; prototype: void __usercall CheckTransfers()
+; ===== CheckTransfers ===== (ported to C → _CheckTransfers)
 CheckTransfers:
-                cmpi.w  #GAME_TYPE_CAREER,(gameType).l
-                bne.s   locret_13C1C8
-                tst.w   (isNationalSelector).l
-                beq.s   loc_13C180
-                jsr     IsTournamentAllowingSquadChangesIfNotCareer
-                bne.s   loc_13C1CA
-                bra.s   loc_13C188
-loc_13C180:
-                tst.w   (teamSelectionKeyCacheEnd).l
-                bne.s   loc_13C1CA
-loc_13C188:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addq.w  #BLUE_TO_BLACK_8,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                clr.w   MENUENTRY_ISDISABLED(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                tst.w   (timeToNegotiate).l
-                beq.s   loc_13C1E8
-                movem.l a0,-(sp)
-                bsr.w   CheckForTransferOffers
-                movem.l (sp)+,a0
-                bne.s   loc_13C1E8
-                move.w  MENUENTRY_STRINGFLAGS(a0),d0
-                bset    #$D,d0
-                move.w  d0,MENUENTRY_STRINGFLAGS(a0)
-locret_13C1C8:
-                rts
-loc_13C1CA:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                move.w  MENUENTRY_BG(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-loc_13C1E8:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                move.w  MENUENTRY_STRINGFLAGS(a0),d0
-                bclr    #$D,d0
-                move.w  d0,MENUENTRY_STRINGFLAGS(a0)
-                rts
+                jmp     _CheckTransfers
 
-; ===== BuildGameListArrayFromTeamSelectionKeyCache =====
-; prototype: void __usercall BuildGameListArrayFromTeamSelectionKeyCache()
+; ===== BuildGameListArrayFromTeamSelectionKeyCache ===== (ported to C → _BuildGameListArrayFromTeamSelectionKeyCache)
 BuildGameListArrayFromTeamSelectionKeyCache:
-                move.w  (teamSelectionKeyCache_ListIndex).l,d0
-                move.w  (currentGame).l,d1
-                jsr     TeamSelectionKeyCache_GetListElementPtr
-                movea.l a0,a6
-                movea.l a1,a4
-                lea     (gameListArray).l,a3
-                move.w  (teamSelectionKeyCache_ListIndex).l,d6
-                move.w  (currentGame).l,d7
-                move.w  #$D,d5
-loc_13C226:
-                cmp.w   (teamSelectionKeyCache_ListCount).l,d6
-                beq.w   loc_13C25E
-loc_13C230:
-                move.l  a6,(a3)+
-                move.l  a4,(a3)+
-                tst.b   5(a6)
-                beq.s   loc_13C24E
-                addq.w  #1,d7
-                cmp.b   5(a6),d7
-                beq.s   loc_13C24E
-                adda.l  #$C,a4
-                dbf     d5,loc_13C230
-                rts
-loc_13C24E:
-                addq.w  #1,d6
-                clr.w   d7
-                adda.w  2(a6),a6
-                movea.l a6,a4
-                dbf     d5,loc_13C226
-                rts
-loc_13C25E:
-                clr.l   (a3)+
-                clr.l   (a3)+
-                dbf     d5,loc_13C25E
-                rts
+                jmp     _BuildGameListArrayFromTeamSelectionKeyCache
 
 ; ===== PrintNameAndSeason =====
 ; prototype: void __usercall PrintNameAndSeason()
 PrintNameAndSeason:
-                cmpi.w  #GAME_TYPE_CAREER,(gameType).l
-                beq.s   loc_13C28A
-                lea     (menuEntries).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  #1,60(a0)
-                move.w  #1,116(a0)
-                rts
-loc_13C28A:
-                lea     (menuEntries).l,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                clr.w   60(a0)
-                clr.w   116(a0)
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$A8).l
-                lea     (menuEntries).l,a1
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a1),a1
-                lea     (managerNameBuffer).l,a0
-                jsr     GetStringLength
-                move.w  d0,d1
-                lea     (managerSurnameBuffer).l,a0
-                jsr     GetStringLength
-                add.w   d1,d0
-                lea     (managerNameBuffer).l,a0
-                cmpi.w  #12,d0
-                bls.s   loc_13C2DC
-                tst.b   (a0)
-                beq.s   loc_13C2E6
-                move.b  (a0)+,(a1)+
-                move.b  #' ',(a1)+
-                bra.s   loc_13C2E6
-loc_13C2DC:
-                jsr     StringCopy
-                move.b  #' ',(a1)+
-loc_13C2E6:
-                lea     (managerSurnameBuffer).l,a0
-                jsr     StringCopy
-                move.w  (selTeamNumber).l,d0
-                jsr     VerifyTeamLoaded
-                lea     5(a0),a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a1
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a1),a1
-                jsr     StringCopy
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a1
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a1),a1
-                move.b  (seasonPlaying).l,d0
-                andi.w  #$FF,d0
-                move.w  d0,d1
-                addi.w  #1900,d0
-                cmpi.w  #1996,d0
-                bcc.s   loc_13C332
-                addi.w  #100,d0
-loc_13C332:
-                addq.w  #1,d1
-                cmpi.w  #100,d1
-                bcs.s   loc_13C33E
-                subi.w  #100,d1
-loc_13C33E:
-                cmpi.w  #10,d1
-                bcs.s   loc_13C350
-                lea     (a01Season).l,a0 ; "%0/%1 SEASON"
-                jmp     PrintFormatted
-loc_13C350:
-                lea     (a001Season).l,a0 ; "%0/0%1 SEASON"
-                jmp     PrintFormatted
+                jmp     _PrintNameAndSeason
 
 ; ===== ContestMenuOnReturn_NoOp =====
 ; prototype: void ContestMenuOnReturn_NoOp(...)
@@ -60515,78 +60026,7 @@ ContestMenuOnReturn_NoOp:
 ; ===== SetNationalSelectorButtons =====
 ; prototype: void __usercall SetNationalSelectorButtons()
 SetNationalSelectorButtons:
-                cmpi.w  #GAME_TYPE_CAREER,(gameType).l
-                bne.w   locret_13C492
-                tst.w   (isNationalSelector).l
-                beq.w   locret_13C492
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                move.l  #aSquadSelected,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "SQUAD SELECTED" ...
-                movem.l a0,-(sp)
-                jsr     IsTournamentAllowingSquadChangesIfNotCareer
-                movem.l (sp)+,a0
-                bne.s   loc_13C3AA
-                move.l  #aChangeSquad,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "CHANGE SQUAD" ...
-                cmpi.w  #20,(careerNumPlayers).l
-                beq.s   loc_13C3AA
-                move.l  #aSelectSquad,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "SELECT SQUAD" ...
-loc_13C3AA:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2A0)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addq.w  #ORANGE_TO_BROWN_4,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2A0)).l,a0
-                clr.w   MENUENTRY_ISDISABLED(a0)
-                jsr     IsTournamentAllowingSquadChangesIfNotCareer
-                beq.s   loc_13C3EA
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2A0)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2A0)).l,a0
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-loc_13C3EA:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$150).l
-                cmpi.w  #$14,(careerNumPlayers).l
-                beq.w   locret_13C492
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a0
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a0
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$230)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$230)).l,a0
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$268)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$268)).l,a0
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2A0)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2A0)).l,a0
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-locret_13C492:
-                rts
+                jmp     _SetNationalSelectorButtons
 
 ; ===== CareerGameListCommon =====
 ; prototype: void __usercall CareerGameListCommon(struct MenuEntry *item@<a5>)
@@ -68677,478 +68117,37 @@ FriendlyMenu:
 ; ===== DIYCompetitionMenu =====
 ; prototype: void __usercall DIYCompetitionMenu()
 DIYCompetitionMenu:
-                move.w  (currentTick).l,(seed).l
-                lea     (aDiyCompetition_0).l,a0 ; "DIY COMPETITION"
-                jsr     CheckContinueAbortPrompt
-                bne.s   loc_140DD8
-                lea     (diyCompetitionMenu).l,a6
-                jsr     ShowMenu
-                tst.w   (diySelected).l
-                bmi.s   loc_140DD8
-                tst.w   (diySelected).l
-                beq.s   loc_140DBE
-                cmpi.w  #1,(diySelected).l
-                beq.s   loc_140DB6
-                jsr     ShowDesignDIYTournamentMenu
-                bra.s   loc_140DC4
-loc_140DB6:
-                jsr     ShowDesignDIYCupMenu
-                bra.s   loc_140DC4
-loc_140DBE:
-                jsr     ShowDesignDIYLeagueMenu
-loc_140DC4:
-                cmpi.w  #0,(gameType).l
-                beq.s   loc_140DD8
-                move.w  #$B,d0
-                jsr     SetCurrentEntry
-loc_140DD8:
-                bra.w   CommonMenuExit
+                jmp     _DIYCompetitionMenu
 
 ; ===== PresetCompetitionMenu =====
 ; prototype: void __usercall PresetCompetitionMenu()
 PresetCompetitionMenu:
-                move.w  (currentTick).l,(seed).l
-                lea     (aPresetCompetit_0).l,a0 ; "PRESET COMPETITION"
-                jsr     CheckContinueAbortPrompt
-                bne.s   loc_140E00
-                jsr SelectTeamsForPresetCompetition(pc)
-                tst.w   (chooseTeamsResult).l
-                bne.s   loc_140E06
-loc_140E00:
-                bsr.w   CommonMenuExit
-locret_140E04:
-                rts
-loc_140E06:
-                move.w  #2,d0
-                jsr     InitCareerVariables
-                movea.l selectedContest(pc),a6
-                cmpi.b  #0,1(a6)
-                beq.s   loc_140E26
-                cmpi.b  #1,1(a6)
-                beq.s   loc_140E64
-                bra.s   loc_140E9E
-loc_140E26:
-                lea     (diyLeagueTeamIds).l,a0
-                move.w  (numSelectedTeams).l,d0
-                jsr     CopySelectedTeamNumbers
-                movea.l selectedContest(pc),a0
-                move.w  contestLeagueNumber(pc),d0
-                jsr     InitDIYCompetitionFromTableEntry
-                jsr     InitTeams
-                clr.w   d0
-                clr.w   d1
-                clr.w   d2
-                jsr     ShowDiyLeaguesTournamentMenu
-                jsr     DIY_RestoreCompetitionFileBufferFromDIYCompetition
-                bsr.w   CommonMenuExit
-                bra.s   loc_140ED2
-loc_140E64:
-                lea     (diyCupTeamIds).l,a0
-                move.w  (numSelectedTeams).l,d0
-                jsr     CopySelectedTeamNumbers
-                movea.l selectedContest(pc),a0
-                jsr     InitDIYCupFromRecord
-                jsr     InitTeams
-                clr.w   d0
-                clr.w   d1
-                clr.w   d2
-                jsr     ShowDIYCupMenuWithParams
-                jsr     DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt
-                bsr.w   CommonMenuExit
-                bra.s   loc_140ED2
-loc_140E9E:
-                lea     (diyTournamentTeamIds).l,a0
-                move.w  (numSelectedTeams).l,d0
-                jsr     CopySelectedTeamNumbers
-                movea.l selectedContest(pc),a0
-                jsr     InitDIYLeagueFromRecord
-                jsr     InitTeams
-                clr.w   d0
-                clr.w   d1
-                clr.w   d2
-                jsr     DIY_EditCompetitionSlot
-                jsr     DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer
-loc_140ED2:
-                bsr.w   CommonMenuExit
-                cmpi.w  #0,(gameType).l
-                beq.w   locret_140E04
-                move.w  #$B,d0
-                jsr     SetCurrentEntry
-                rts
+                jmp     _PresetCompetitionMenu
 
 ; ===== SeasonMenu =====
 ; prototype: void __usercall SeasonMenu()
 SeasonMenu:
-                move.w  (currentTick).l,(seed).l
-                lea     (aSeason_1).l,a0 ; "SEASON"
-                jsr     CheckContinueAbortPrompt
-                bne.s   loc_140F12
-                jsr ChooseSeasonMenu(pc)
-                tst.w   (chooseTeamsResult).l
-                bne.s   loc_140F18
-loc_140F12:
-                bra.w   CommonMenuExit
-locret_140F16:
-                rts
-loc_140F18:
-                move.w  #3,d0
-                jsr     InitCareerVariables
-                movea.l selectedContest(pc),a0
-                move.w  contestLeagueNumber(pc),d1
-                jsr     InitNewSeason
-                lea     contestMenu(pc),a6
-                jsr     ShowMenu
-                bsr.w   CommonMenuExit
-                cmpi.w  #0,(gameType).l
-                beq.s   locret_140F16
-                move.w  #11,d0
-                jsr     SetCurrentEntry
-                rts
+                jmp     _SeasonMenu
 
 ; ===== CareerMenu =====
 ; prototype: void __usercall CareerMenu()
 CareerMenu:
-                move.w  (currentTick).l,(seed).l
-                lea     (aCareer_1).l,a0 ; "CAREER"
-                jsr     CheckContinueAbortPrompt
-                bne.s   loc_140F8E
-                lea     careerMenu(pc),a6
-                jsr     ShowMenu
-                bsr.w   CommonMenuExit
-                cmpi.w  #GAME_TYPE_NO_GAME,(gameType).l
-                beq.s   loc_140F8E
-                move.w  #11,d0          ; continue career
-                jsr     SetCurrentEntry
-loc_140F8E:
-                bra.w   CommonMenuExit
-                jmp     SetExitMenuFlag
+                jmp     _CareerMenu
 
 ; ===== StartContest =====
 ; prototype: void __usercall StartContest()
 StartContest:
-                clr.w   (contestStarted).l
-                move.w  (gameType).l,d0
-                cmpi.w  #GAME_TYPE_DIY_COMPETITION,d0
-                beq.s   loc_140FBE
-                cmpi.w  #GAME_TYPE_PRESET_COMPETITION,d0
-                beq.w   loc_140FCC
-                cmpi.w  #GAME_TYPE_SEASON,d0
-                beq.w   loc_1410C0
-                bra.w   loc_1410D2
-loc_140FBE:
-                cmpi.w  #1,(competitionOver).l
-                beq.s   loc_140FDC
-                bra.w   loc_1410E4
-loc_140FCC:
-                cmpi.w  #1,(competitionOver).l
-                beq.w   loc_141050
-                bra.w   loc_14117C
-loc_140FDC:
-                tst.w   (competitionFileBuffer).l
-                beq.w   loc_141030
-                cmpi.w  #1,(competitionFileBuffer).l
-                beq.s   loc_141010
-                jsr     SaveDIYTournament
-                clr.w   d0
-                clr.w   d1
-                clr.w   d2
-                jsr     DIY_EditCompetitionSlot
-                jsr     RestoreDIYTournament
-                bsr.w   CommonMenuExit
-                bra.w   loc_141210
-loc_141010:
-                jsr     DIY_CopyCompetitionFileBufferToCompetitionStart
-                clr.w   d0
-                clr.w   d1
-                clr.w   d2
-                jsr     ShowDIYCupMenuWithParams
-                jsr     DIY_CopyCompetitionStartToCompetitionFileBuffer
-                bsr.w   CommonMenuExit
-                bra.w   loc_141210
-loc_141030:
-                jsr     SaveDIYLeague
-                clr.w   d0
-                clr.w   d1
-                clr.w   d2
-                jsr     ShowDiyLeaguesTournamentMenu
-                jsr     RestoreDIYLeague
-                bsr.w   CommonMenuExit
-                bra.w   loc_141210
-loc_141050:
-                move.w  (competitionFileBuffer).l,d0
-                beq.w   loc_1410A0
-                cmpi.w  #1,d0
-                beq.s   loc_141080
-                jsr     DIY_CopyCompetitionFileBufferToDiyFileBufferCopy
-                clr.w   d0
-                clr.w   d1
-                clr.w   d2
-                jsr     DIY_EditCompetitionSlot
-                jsr     DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer
-                bsr.w   CommonMenuExit
-                bra.w   loc_141210
-loc_141080:
-                jsr     DIY_CopyCompetitionFileBufferToCompetitionStart_Alt
-                clr.w   d0
-                clr.w   d1
-                clr.w   d2
-                jsr     ShowDIYCupMenuWithParams
-                jsr     DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt
-                bsr.w   CommonMenuExit
-                bra.w   loc_141210
-loc_1410A0:
-                jsr     DIY_SaveCompetitionFileBufferToDIYCompetition
-                clr.w   d0
-                clr.w   d1
-                clr.w   d2
-                jsr     ShowDiyLeaguesTournamentMenu
-                jsr     DIY_RestoreCompetitionFileBufferFromDIYCompetition
-                bsr.w   CommonMenuExit
-                bra.w   loc_141210
-loc_1410C0:
-                lea     contestMenu(pc),a6
-                jsr     ShowMenu
-                bsr.w   CommonMenuExit
-                bra.w   loc_141210
-loc_1410D2:
-                lea     contestMenu(pc),a6
-                jsr     ShowMenu
-                bsr.w   CommonMenuExit
-                bra.w   loc_141210
-loc_1410E4:
-                tst.w   (competitionFileBuffer).l
-                beq.w   loc_141150
-                cmpi.w  #1,(competitionFileBuffer).l
-                beq.s   loc_141124
-                jsr     SaveDIYTournament
-                jsr     InitTeams
-                jsr     DIY_ResetAndLoadCurrentCompetitionSlot
-                clr.w   d0
-                clr.w   d1
-                clr.w   d2
-                jsr     DIY_EditCompetitionSlot
-                jsr     RestoreDIYTournament
-                bsr.w   CommonMenuExit
-                bra.w   loc_141210
-loc_141124:
-                jsr     DIY_CopyCompetitionFileBufferToCompetitionStart
-                jsr     InitTeams
-                jsr     DIY_InitCupFromTeamGridAndValidateTeams
-                clr.w   d0
-                clr.w   d1
-                clr.w   d2
-                jsr     ShowDIYCupMenuWithParams
-                jsr     DIY_CopyCompetitionStartToCompetitionFileBuffer
-                bsr.w   CommonMenuExit
-                bra.w   loc_141210
-loc_141150:
-                jsr     SaveDIYLeague
-                jsr     InitTeams
-                jsr     DIY_ResetCompetitionProgressAndShuffle
-                clr.w   d0
-                clr.w   d1
-                clr.w   d2
-                jsr     ShowDiyLeaguesTournamentMenu
-                jsr     RestoreDIYLeague
-                bsr.w   CommonMenuExit
-                bra.w   loc_141210
-loc_14117C:
-                move.w  (competitionFileBuffer).l,d0
-                beq.w   loc_1411E4
-                cmpi.w  #1,d0
-                beq.s   loc_1411B8
-                jsr     DIY_CopyCompetitionFileBufferToDiyFileBufferCopy
-                jsr     InitTeams
-                jsr     DIY_ResetAndLoadCurrentCompetitionSlot
-                clr.w   d0
-                clr.w   d1
-                clr.w   d2
-                jsr     DIY_EditCompetitionSlot
-                jsr     DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer
-                bsr.w   CommonMenuExit
-                bra.w   loc_141210
-loc_1411B8:
-                jsr     DIY_CopyCompetitionFileBufferToCompetitionStart_Alt
-                jsr     InitTeams
-                jsr     DIY_InitCupFromTeamGridAndValidateTeams
-                clr.w   d0
-                clr.w   d1
-                clr.w   d2
-                jsr     ShowDIYCupMenuWithParams
-                jsr     DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt
-                bsr.w   CommonMenuExit
-                bra.w   loc_141210
-loc_1411E4:
-                jsr     DIY_SaveCompetitionFileBufferToDIYCompetition
-                jsr     InitTeams
-                jsr     DIY_ResetCompetitionProgressAndShuffle
-                clr.w   d0
-                clr.w   d1
-                clr.w   d2
-                jsr     ShowDiyLeaguesTournamentMenu
-                jsr     DIY_RestoreCompetitionFileBufferFromDIYCompetition
-                bsr.w   CommonMenuExit
-                bra.w   *+4
-loc_141210:
-                bsr.w   CommonMenuExit
-                cmpi.w  #GAME_TYPE_NO_GAME,(gameType).l
-                bne.s   locret_141228
-                move.w  #13,d0
-                jsr     SetCurrentEntry
-locret_141228:
-                rts
+                jmp     _StartContest
 
 ; ===== SaveContest =====
 ; prototype: void __usercall SaveContest()
 SaveContest:
-                lea     (saveFileTitle).l,a0
-                jsr     Asset_PromptInsertSaveDiskDf0
-                bne.w   loc_141388
-                move.w  (gameType).l,d0
-                cmpi.w  #GAME_TYPE_DIY_COMPETITION,d0
-                beq.s   loc_14125A
-                cmpi.w  #GAME_TYPE_PRESET_COMPETITION,d0
-                beq.w   loc_1412A2
-                cmpi.w  #GAME_TYPE_SEASON,d0
-                beq.w   loc_1412EC
-                bra.w   loc_141334
-loc_14125A:
-                move.l  #'.DIY',d0
-                lea     (competitionFilename).l,a0
-                lea     (saveFileTitle).l,a1
-                jsr SelectFileToSaveDialog(pc)
-                bne.w   loc_14137C
-                move.b  #1,d0
-                movem.l a0,-(sp)
-                jsr     SaveDIYFile
-                movem.l (sp)+,a0
-                bne.w   loc_14137C
-                move.w  #1,(contestStarted).l
-                lea     (competitionFilename).l,a1
-                jsr     StringCopy
-                bra.w   loc_14137C
-loc_1412A2:
-                move.l  #$2E505245,d0
-                lea     (competitionFilename).l,a0
-                lea     (saveFileTitle).l,a1
-                jsr SelectFileToSaveDialog(pc)
-                bne.w   loc_14137C
-                move.b  #2,d0
-                movem.l a0,-(sp)
-                jsr     SavePresetCompetitionFile
-                movem.l (sp)+,a0
-                bne.w   loc_14137C
-                move.w  #1,(contestStarted).l
-                lea     (competitionFilename).l,a1
-                jsr     StringCopy
-                bra.w   loc_14137C
-                rts
-loc_1412EC:
-                lea     (competitionFilename).l,a0
-                move.l  #$2E534541,d0
-                lea     (saveFileTitle).l,a1
-                jsr SelectFileToSaveDialog(pc)
-                bne.w   loc_14137C
-                move.b  #3,d0
-                movem.l a0,-(sp)
-                jsr     j_SaveCareerFile
-                movem.l (sp)+,a0
-                bne.w   loc_14137C
-                move.w  #1,(contestStarted).l
-                lea     (competitionFilename).l,a1
-                jsr     StringCopy
-                bra.w   loc_14137C
-loc_141334:
-                lea     (competitionFilename).l,a0
-                move.l  #$2E434152,d0
-                lea     (saveFileTitle).l,a1
-                jsr SelectFileToSaveDialog(pc)
-                bne.w   loc_14137C
-                move.b  #4,d0
-                movem.l a0,-(sp)
-                jsr     SaveCareerFile
-                movem.l (sp)+,a0
-                bne.w   loc_14137C
-                move.w  #1,(contestStarted).l
-                lea     (competitionFilename).l,a1
-                jsr     StringCopy
-                bra.w   *+4
-loc_14137C:
-                lea     (saveFileTitle).l,a0
-                jsr     ShowInsertDisk2Dialog
-loc_141388:
-                bra.w   CommonMenuExit
+                jmp     _SaveContest
 
 ; ===== LoadOldCompetitionMenu =====
 ; prototype: void __usercall LoadOldCompetitionMenu()
 LoadOldCompetitionMenu:
-                lea     (aLoadOldCompeti).l,a0 ; "LOAD OLD COMPETITION"
-                jsr     CheckContinueAbortPrompt
-                bne.w   loc_141410
-                lea     (aLoadOldCompeti).l,a0 ; "LOAD OLD COMPETITION"
-                jsr     Asset_PromptInsertSaveDiskDf0
-                bne.w   loc_141410
-                lea     (aLoadOldCompeti).l,a1 ; "LOAD OLD COMPETITION"
-                jsr GetFilenameAndExtension(pc)
-                bne.w   loc_14149A
-                cmpi.l  #'.DIY',d1
-                beq.s   loc_1413EE
-                cmpi.l  #'.PRE',d1
-                beq.w   loc_141416
-                cmpi.l  #'.SEA',d1
-                beq.w   loc_141438
-                cmpi.l  #'.CAR',d1
-                beq.w   loc_14145A
-                lea     (aNotACompetitio).l,a0 ; "NOT A COMPETITION FILE"
-                jsr ShowErrorMenu(pc)
-                bra.w   loc_14149A
-loc_1413EE:
-                movem.l a0,-(sp)
-                jsr     LoadDIYFile
-                movem.l (sp)+,a0
-                bne.w   loc_141490
-                lea     (competitionFilename).l,a1
-                jsr     StringCopy
-                bra.w   loc_14147C
-loc_141410:
-                bsr.w   CommonMenuExit
-                rts
-loc_141416:
-                movem.l a0,-(sp)
-                jsr     LoadPresetFile
-                movem.l (sp)+,a0
-                bne.w   loc_141490
-                lea     (competitionFilename).l,a1
-                jsr     StringCopy
-                bra.w   loc_14147C
-loc_141438:
-                movem.l a0,-(sp)
-                jsr     j_LoadCareerFile
-                movem.l (sp)+,a0
-                bne.w   loc_141490
-                lea     (competitionFilename).l,a1
-                jsr     StringCopy
-                bra.w   loc_14147C
-loc_14145A:
-                movem.l a0,-(sp)
-                jsr     LoadCareerFile
-                movem.l (sp)+,a0
-                bne.w   loc_141490
-                lea     (competitionFilename).l,a1
-                jsr     StringCopy
-                bra.w   *+4
-loc_14147C:
-                lea     (aLoadOldCompeti).l,a0 ; "LOAD OLD COMPETITION"
-                jsr     ShowInsertDisk2Dialog
-                bsr.w   CommonMenuExit
-                bra.w   StartContest
-loc_141490:
-                move.w  #0,d0
-                jsr     InitCareerVariables
-loc_14149A:
-                lea     (aLoadOldCompeti).l,a0 ; "LOAD OLD COMPETITION"
-                jsr     ShowInsertDisk2Dialog
-                bra.w   CommonMenuExit
+                jmp     _LoadOldCompetitionMenu
 
 ; ===== EditCustomTeamMenu ===== (ported to C → _EditCustomTeamMenu)
 EditCustomTeamMenu:

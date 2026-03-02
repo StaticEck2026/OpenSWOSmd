@@ -2611,6 +2611,88 @@
         xdef    ScrollUpInGameList
         xdef    ScrollDownInGameList
         xdef    BuildGameListArrayFromTeamSelectionKeyCache
+; --- Chunk 122: Contest Menu Helpers ---
+        xref    _ScrollUpInGameList
+        xref    _ScrollDownInGameList
+        xref    _RestoreContestScrollPosition
+        xref    _SelectActiveContestAndRound
+        xref    _CheckClubBusiness
+        xref    _CheckJobOffers
+        xref    _ContestMenuOnReturn_SetButtonsAndDefaultSelection
+        xref    _SeasonLowerButtons
+        xref    _CheckTransfers
+        xref    _BuildGameListArrayFromTeamSelectionKeyCache
+        xref    _PrintNameAndSeason
+        xref    _SetNationalSelectorButtons
+        xref    _ContestSetButtons
+        xref    _ContestMenuInit
+        xref    _ContestMenuOnReturn
+; --- Chunk 123 xrefs ---
+        xref    _PlayMatchMenu
+        xref    _NextMatch
+        xref    _ViewCompetitionsMenu
+        xref    _ClubBusinessMenu
+        xref    _JobOffersMenu
+        xref    _SeasonFinished
+        xref    _TransfersMenu
+        xref    _ViewWorldMenu
+        xref    _jmp_SetExitMenuFlag
+; --- Chunk 124 xrefs ---
+        xref    _DIYCompetitionMenu
+        xref    _PresetCompetitionMenu
+        xref    _SeasonMenu
+        xref    _CareerMenu
+        xref    _StartContest
+        xref    _SaveContest
+        xref    _LoadOldCompetitionMenu
+        xdef    teamSelectionKeyCache_ListIndex
+        xdef    currentGame
+        xdef    teamSelectionKeyCache_ListCount
+        xdef    savedContestListIndex
+        xdef    savedContestGameOffset
+        xdef    savedContestEntryPtr
+        xdef    savedContestRoundPtr
+        xdef    gameListY
+        xdef    contestEntryHeight
+        xdef    gameListArray
+        xdef    columnMarker
+        xdef    cglmVar3
+        xdef    seasonNumberOfSquads
+        xdef    primaryCompSquadViewParam
+        xdef    seasonSquadTeamNumbers
+        xdef    contestLeagueNumber
+        xdef    contestMenu
+        xdef    careerOverMenu
+        xdef    jobOffersMenu
+        xdef    transferMarketMenu
+        xdef    a01Season
+        xdef    a001Season
+        xdef    aSquads
+        xdef    aNoOffers
+        xdef    aNoJobOffers
+        xdef    aSquadSelected
+        xdef    aChangeSquad
+        xdef    aSelectSquad
+        xdef    aPlayMatch
+        xdef    aFinishSeason
+        xdef    aNextMatch
+        xdef    aSquad
+; --- Chunk 123 xdefs ---
+        xdef    Career_PostMatchUpdate
+        xdef    SeasonFinished_ComputeSeasonReview
+        xdef    ChooseCompetitionMenu
+; --- Chunk 124 xdefs ---
+        xdef    SelectTeamsForPresetCompetition
+        xdef    ChooseSeasonMenu
+        xdef    diyCompetitionMenu
+        xdef    careerMenu
+        xdef    aDiyCompetition_0
+        xdef    aPresetCompetit_0
+        xdef    aSeason_1
+        xdef    aCareer_1
+        xdef    aLoadOldCompeti
+        xdef    aNotACompetitio
+        xdef    saveFileTitle
 ; --- Chunk 60 xdefs ---
         xdef    selTeamsPtr
         xdef    selTeamNameBase
@@ -3152,5 +3234,53 @@ _CInitAndPlayGame:
         movea.l 4+44(sp),a1            ; team1
         movea.l 8+44(sp),a2            ; team2
         jsr     (InitAndPlayGame).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; --- Chunk 124 C-callable asm bridges ---
+
+; _CInitDIYCompetitionFromTableEntry(void) -> void
+; Reads selectedContest and contestLeagueNumber from globals
+; InitDIYCompetitionFromTableEntry expects: a0=contest, d0.w=leagueNumber
+        xdef    _CInitDIYCompetitionFromTableEntry
+_CInitDIYCompetitionFromTableEntry:
+        movem.l d2-d7/a2-a6,-(sp)
+        movea.l (selectedContest).l,a0
+        move.w  (contestLeagueNumber).l,d0
+        jsr     (InitDIYCompetitionFromTableEntry).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; _CInitDIYCupFromRecord(void) -> void
+; Reads selectedContest from global
+; InitDIYCupFromRecord expects: a0=contest
+        xdef    _CInitDIYCupFromRecord
+_CInitDIYCupFromRecord:
+        movem.l d2-d7/a2-a6,-(sp)
+        movea.l (selectedContest).l,a0
+        jsr     (InitDIYCupFromRecord).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; _CInitDIYLeagueFromRecord(void) -> void
+; Reads selectedContest from global
+; InitDIYLeagueFromRecord expects: a0=contest
+        xdef    _CInitDIYLeagueFromRecord
+_CInitDIYLeagueFromRecord:
+        movem.l d2-d7/a2-a6,-(sp)
+        movea.l (selectedContest).l,a0
+        jsr     (InitDIYLeagueFromRecord).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; _CInitNewSeason(void) -> void
+; Reads selectedContest and contestLeagueNumber from globals
+; InitNewSeason expects: a0=contest, d1.w=leagueNumber
+        xdef    _CInitNewSeason
+_CInitNewSeason:
+        movem.l d2-d7/a2-a6,-(sp)
+        movea.l (selectedContest).l,a0
+        move.w  (contestLeagueNumber).l,d1
+        jsr     (InitNewSeason).l
         movem.l (sp)+,d2-d7/a2-a6
         rts

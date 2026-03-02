@@ -95,4 +95,41 @@ void _ViewSelectedTeams(void);
 void _ContestMenuScrollUp(void);
 void _ContestMenuScrollDown(void);
 
+/* --- Contest menu helpers (Chunk 122) --- */
+void _ScrollUpInGameList(void);
+void _ScrollDownInGameList(void);
+void _RestoreContestScrollPosition(void);
+void _SelectActiveContestAndRound(void);
+void _CheckClubBusiness(void);
+void _CheckJobOffers(void);
+void _ContestMenuOnReturn_SetButtonsAndDefaultSelection(MenuEntry *a5);
+void _SeasonLowerButtons(void);
+void _CheckTransfers(void);
+void _BuildGameListArrayFromTeamSelectionKeyCache(void);
+void _PrintNameAndSeason(void);
+void _SetNationalSelectorButtons(void);
+void _ContestSetButtons(void);
+void _ContestMenuInit(void);
+void _ContestMenuOnReturn(void);
+
+/* --- Contest menu action handlers (Chunk 123) --- */
+void _PlayMatchMenu(MenuEntry *callerEntry);
+void _NextMatch(MenuEntry *callerEntry);
+void _ViewCompetitionsMenu(void);
+void _ClubBusinessMenu(void);
+void _JobOffersMenu(void);
+void _SeasonFinished(void);
+void _TransfersMenu(void);
+void _ViewWorldMenu(void);
+void _jmp_SetExitMenuFlag(void);
+
+/* --- Competition menu functions (Chunk 124) --- */
+void _DIYCompetitionMenu(void);
+void _PresetCompetitionMenu(void);
+void _SeasonMenu(void);
+void _CareerMenu(void);
+void _StartContest(void);
+void _SaveContest(void);
+void _LoadOldCompetitionMenu(void);
+
 #endif
