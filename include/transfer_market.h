@@ -84,5 +84,7 @@ void _BuyPlayerInit(void);
 void _TransferMarketFinish(void);
 void _ShowDomesticPlayerMarket(void);
 void _ViewDomesticPlayerMarket(void);
+void _ShowForeignPlayerMarket(void);
+void _ViewForeignPlayerMarket(void);
 
 #endif

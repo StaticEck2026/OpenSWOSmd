@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1313 functions ported across 143 chunks.
+**Current status:** 1315 functions ported across 144 chunks.
 
-**Last completed chunk:** Chunk 143 — ExitOptions + SetSquadMenuEntryStatusSprite + SetSquadMenuEntryStatusSprite_AfterSim (3 → menus.c).
+**Last completed chunk:** Chunk 144 — ShowForeignPlayerMarket + ViewForeignPlayerMarket (2 → transfer_market.c).
 
-**Next candidates:** GetCompetitionAbbrevStr (returns in a2, needs special bridge), DesignDIYCup helpers (AppendTeamName etc.), ShowForeignPlayerMarket (unblocks ViewForeignPlayerMarket), Career_AdvanceToNextSeason_UpdateCompetitions/ContinueCareerNextSeason.
+**Next candidates:** GetCompetitionAbbrevStr (returns in a2, needs special bridge), DesignDIYCup helpers (AppendTeamName etc.), PlayerOffersUpdateOfferAmountText, IsTeamIdForSelectedTeam, Career_AdvanceToNextSeason_UpdateCompetitions/ContinueCareerNextSeason.
 
 ---
 

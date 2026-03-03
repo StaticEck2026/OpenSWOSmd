@@ -2703,6 +2703,17 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, no new warnings)
 - Cumulative: 1303 functions across 140 chunks
 
+### Chunk 144 — ShowForeignPlayerMarket + ViewForeignPlayerMarket (2 → transfer_market.c)
+- Date: 2026-03-02
+- Ported:
+  1. ShowForeignPlayerMarket (→transfer_market.c) — loads pool player data, optionally adds random foreign market player (if removedOfferPlayersFromOtherTeamsCount > 0), updates foreign market players, shows player market menu
+  2. ViewForeignPlayerMarket (→transfer_market.c) — calls ShowForeignPlayerMarket then duplicate transferCompleted check (preserved from original)
+- Stubs: both simple jmp stubs
+- New xrefs: _ShowForeignPlayerMarket, _ViewForeignPlayerMarket
+- Key notes: Same duplicate transferCompleted check pattern as ViewDomesticPlayerMarket. showDomesticPlayerMarket set to 0 before showing menu.
+- Build status: **verified** (clean build, only pre-existing warnings)
+- Cumulative: 1315 functions across 144 chunks
+
 ### Chunk 143 — ExitOptions + SetSquadMenuEntryStatusSprite + SetSquadMenuEntryStatusSprite_AfterSim (3 → menus.c)
 - Date: 2026-03-02
 - Ported:
@@ -2921,5 +2932,9 @@ Update this section every time you port a chunk. Keep it chronological.
 | 138   | 1+3s      | 1291       |
 | 139   | 7         | 1298       |
 | 140   | 4+1s      | 1303       |
+| 141   | 3         | 1306       |
+| 142   | 4         | 1310       |
+| 143   | 3         | 1313       |
+| 144   | 2         | 1315       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

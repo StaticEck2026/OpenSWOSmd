@@ -2807,6 +2807,9 @@
         xref    _ExitOptions
         xref    _SetSquadMenuEntryStatusSprite
         xref    _SetSquadMenuEntryStatusSprite_AfterSim
+; --- Chunk 144 xrefs ---
+        xref    _ShowForeignPlayerMarket
+        xref    _ViewForeignPlayerMarket
 ; --- Chunk 138 xrefs ---
         xref    _FillManagementRecordInfo
 ; --- Chunk 137 xrefs ---

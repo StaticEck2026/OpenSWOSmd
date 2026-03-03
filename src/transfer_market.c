@@ -1650,3 +1650,35 @@ void _ViewDomesticPlayerMarket(void)
         return;
     }
 }
+
+/* ---- Chunk 144: ShowForeignPlayerMarket ---- */
+/* SWOS2.s line 66050 — load pool data, maybe add random player, show foreign market menu */
+__attribute__((used, externally_visible))
+void _ShowForeignPlayerMarket(void)
+{
+    _LoadPoolplyrDat();
+    if (removedOfferPlayersFromOtherTeamsCount != 0) {
+        removedOfferPlayersFromOtherTeamsCount--;
+        _AddRandomForeignMarketPlayer();
+    }
+    _UpdateForeignMarketPlayers();
+    showDomesticPlayerMarket = 0;
+    _ShowMenu(showPlayerMarketMenu);
+}
+
+/* ---- Chunk 144: ViewForeignPlayerMarket ---- */
+/* SWOS2.s line 70889 — show foreign market, check if transfer completed */
+__attribute__((used, externally_visible))
+void _ViewForeignPlayerMarket(void)
+{
+    _ShowForeignPlayerMarket();
+    /* Original asm has duplicate check — preserve as-is */
+    if (transferCompleted != 0) {
+        _BuyPlayerExit();
+        return;
+    }
+    if (transferCompleted != 0) {
+        _BuyPlayerExit();
+        return;
+    }
+}

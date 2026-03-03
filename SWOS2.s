@@ -66047,19 +66047,9 @@ ShowDomesticPlayerMarket:
 
 ; ===== ShowForeignPlayerMarket =====
 ; prototype: void __usercall ShowForeignPlayerMarket()
+; ===== ShowForeignPlayerMarket ===== (ported to C → _ShowForeignPlayerMarket)
 ShowForeignPlayerMarket:
-                bsr.w   LoadPoolplyrDat
-                tst.w   (removedOfferPlayersFromOtherTeamsCount).l
-                beq.s   loc_142ECA
-                subq.w  #1,(removedOfferPlayersFromOtherTeamsCount).l
-                movem.l d7,-(sp)
-                jsr AddRandomForeignMarketPlayer(pc)
-                movem.l (sp)+,d7
-loc_142ECA:
-                bsr.w   UpdateForeignMarketPlayers
-                clr.w   (showDomesticPlayerMarket).l
-                lea     (showPlayerMarketMenu).l,a6
-                jmp     ShowMenu
+                jmp     _ShowForeignPlayerMarket
 ; Menu_Offers
 offersMenu:
                 ; Menu_Offers
@@ -70886,13 +70876,9 @@ ViewDomesticPlayerMarket:
 
 ; ===== ViewForeignPlayerMarket =====
 ; prototype: void __usercall ViewForeignPlayerMarket()
+; ===== ViewForeignPlayerMarket ===== (ported to C → _ViewForeignPlayerMarket)
 ViewForeignPlayerMarket:
-                jsr ShowForeignPlayerMarket(pc)
-                tst.w   (transferCompleted).l
-                bne.w   BuyPlayerExit
-                tst.w   (transferCompleted).l
-                bne.w   BuyPlayerExit
-                rts
+                jmp     _ViewForeignPlayerMarket
 
 ; ===== BuyOtherDomesticPlayer =====
 ; prototype: void __usercall BuyOtherDomesticPlayer()
