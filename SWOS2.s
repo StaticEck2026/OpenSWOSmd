@@ -57940,23 +57940,9 @@ ManagementArrowDownSelect:
                 jmp     _ManagementArrowDownSelect
 
 ; ===== FillManagementRecordInfo =====
-; prototype: void __usercall FillManagementRecordInfo()
+; Ported to C: _FillManagementRecordInfo in src/statistics.c
 FillManagementRecordInfo:
-                move.w  (currentSeasonNumber).l,d0
-                mulu.w  #106,d0
-                lea     (seasonInformationsArray).l,a6
-                lea     (a6,d0.w),a6
-                bsr.w   SetTrophySprites
-                move.w  (currentSeasonNumber).l,d6
-                move.w  #55,d5
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a4
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a4),a1
-                move.w  (currentSeasonNumber).l,d0
-                addq.w  #1,d0
-                move.w  (currentSeasonNumber).l,d1
-                move.w  d1,d2
-                addi.w  #1996,d1
-                addi.w  #97,d2
+                jmp     _FillManagementRecordInfo
                 cmpi.w  #$64,d2         ; 'd'
                 bcs.s   loc_13CD74
                 subi.w  #$64,d2         ; 'd'
@@ -58158,6 +58144,7 @@ locret_13D020:
 ;   a6 = SeasonInfo* (base for the season’s stats)
 ;   d5 = running Y (advanced by this routine)
 RenderCompLine:
+                rts     ; dead — only called from FillManagementRecordInfo (now in C)
                 movea.l a0,a2
                 cmpa.l  #0,a0
                 beq.w   locret_13D242
@@ -58322,6 +58309,7 @@ locret_13D242:
 ; out:
 ;      A0 -> first unknown string (management record for ...)
 SetTrophySprites:
+                rts     ; dead — only called from FillManagementRecordInfo (now in C)
                 lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3B8)).l,a0
                 move.w  #1,MENUENTRY_ISINVISIBLE(a0)
                 move.w  #1,MENUENTRY_ISINVISIBLE+$38(a0)
@@ -58362,6 +58350,7 @@ locret_13D2B4:
 ;      D6 - trophy index
 ;      A1 - entry whose sprite needs to be filled
 SetTrophySprite:
+                rts     ; dead — only called from SetTrophySprites (now in C)
                 lea     (trophySprites).l,a2
                 move.w  d6,d0
                 lsl.w   #1,d0

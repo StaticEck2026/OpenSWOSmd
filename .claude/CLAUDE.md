@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1287 functions ported across 137 chunks.
+**Current status:** 1291 functions ported across 138 chunks.
 
-**Last completed chunk:** Chunk 137 — Management Record + SelTeamForTactics Reflow (6+1s → statistics.c, menus.c): GetCurrentSeasonPointer, ManagementRecordInit, ManagementArrowUpSelect, ManagementArrowDownSelect, Career_StorePromotionRelegationInSeasonInfo, SelTeamForTactics_ReflowTeamListLayout.
+**Last completed chunk:** Chunk 138 — FillManagementRecordInfo + helpers (1+3s → statistics.c): FillManagementRecordInfo, SetTrophySprites_Internal, SetTrophySprite_Internal, RenderCompLine_Internal.
 
-**Next candidates:** SelectTeamToManage/ChooseTeamAndStartCareer/LoadLiverpool (need asm bridges for register-calling ChooseTeamsDialog/InitCareer), SquadMenu (blocked by SelectAndShowSquadToView), CareerGameListCommon (~3194 lines, very large), ImportTeamsMenu, DesignDIYCup remaining.
+**Next candidates:** SelectTeamToManage/ChooseTeamAndStartCareer/LoadLiverpool (need asm bridges for register-calling ChooseTeamsDialog/InitCareer), SaveCareer, ImportTeamsMenu, SquadMenu (blocked by SelectAndShowSquadToView), CareerGameListCommon (~3194 lines, very large), DesignDIYCup remaining.
 
 ---
 

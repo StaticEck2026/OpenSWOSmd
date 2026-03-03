@@ -472,7 +472,7 @@ extern uint8_t  topGoalScorersMenu[];
 
 /* ---- External functions ---- */
 extern void _ShowMenu(uint8_t *menu);
-extern void _StringCopy(uint8_t *src, uint8_t **dest);
+extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
 extern uint8_t *_GetTeamPointer(uint16_t teamNumber);
 extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
 extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
@@ -971,7 +971,7 @@ void _CompetitionTopGoalScorersInit(void)
             {
                 uint8_t *src = playerPtr + 0x4F;  /* 0x4C + 3 = playerName */
                 uint8_t *d = dest;
-                _StringCopy(src, &d);
+                d = _StringCopy(src, d);
             }
 
             /* Entry 2: "(teamname)" */
@@ -979,9 +979,9 @@ void _CompetitionTopGoalScorersInit(void)
             dest = (uint8_t *)a5->fg;
             {
                 uint8_t *d = dest;
-                _StringCopy(aLparen, &d);
-                _StringCopy(teamName, &d);
-                _StringCopy(aRparen, &d);
+                d = _StringCopy(aLparen, d);
+                d = _StringCopy(teamName, d);
+                d = _StringCopy(aRparen, d);
                 *d = 0;
             }
 
@@ -1131,9 +1131,9 @@ void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         dest = (uint8_t *)a4->fg;
         {
             uint8_t *d = dest;
-            _StringCopy(aLparen, &d);
-            _StringCopy(teamName, &d);
-            _StringCopy(aRparen, &d);
+            d = _StringCopy(aLparen, d);
+            d = _StringCopy(teamName, d);
+            d = _StringCopy(aRparen, d);
             *d = 0;
         }
         a4->y = yCoord;
@@ -1329,5 +1329,594 @@ void _Career_StorePromotionRelegationInSeasonInfo(void)
     {
         uint8_t *si = _GetCurrentSeasonPointer();
         si[0x68] = flag;
+    }
+}
+
+
+/* ================================================================
+ * Chunk 138 — FillManagementRecordInfo + helpers
+ * ================================================================ */
+
+/* --- String externs for Chunk 138 --- */
+extern uint8_t aFriendly[];          /* "FRIENDLY" */
+extern uint8_t aFriendlies[];        /* "FRIENDLIES" */
+extern uint8_t aWon0Drawn1Lost[];    /* "WON %0  DRAWN %1  LOST %2" */
+extern uint8_t aEuropeanTour[];      /* "EUROPEAN TOUR" */
+extern uint8_t aOceaniaTour[];       /* "OCEANIA TOUR" */
+extern uint8_t aWinners[];           /* "WINNERS" */
+extern uint8_t aRunnerUp[];          /* "RUNNER-UP" */
+extern uint8_t aFinalist[];          /* "FINALIST" */
+extern uint8_t aReachedSemiFin[];    /* "REACHED SEMI-FINAL" */
+extern uint8_t aReachedQuarter[];    /* "REACHED QUARTER-FINAL" */
+extern uint8_t aThirdPlace[];        /* "THIRD PLACE" */
+extern uint8_t aFourthPlace[];       /* "FOURTH PLACE" */
+extern uint8_t aStillInCompeti[];    /* "STILL IN COMPETITION" */
+extern uint8_t aKnockedOutInRo[];    /* "KNOCKED OUT IN ROUND %0" */
+extern uint8_t aPosition0[];         /* "POSITION: %0" */
+extern uint8_t aQualified[];         /* "(QUALIFIED)" */
+extern uint8_t aNotQualified[];      /* "(NOT QUALIFIED)" */
+extern uint8_t aPromoted[];          /* "(PROMOTED)" */
+extern uint8_t aRelegated[];         /* "(RELEGATED)" */
+extern uint8_t a12Season[];          /* "%1/%2 SEASON" */
+extern uint8_t a102Season[];         /* "%1/0%2 SEASON" */
+extern uint8_t aNational[];          /* "NATIONAL" */
+extern uint8_t aA[];                 /* "(%a)" */
+extern uint8_t aA0[];                /* "%a  %0" */
+extern uint8_t aSeasonSTopScor[];    /* "SEASON'S TOP SCORER" */
+extern uint8_t aSeasonSTopScor_0[];  /* "SEASON'S TOP SCORERS" */
+extern uint8_t aResigned[];          /* "- RESIGNED -" */
+extern uint8_t aRetired[];           /* "- RETIRED -" */
+extern uint32_t countriesTable[];
+extern uint16_t trophySprites[];
+
+/* SeasonInformations struct field offsets (from SWOS2.s EQUs) */
+#define SI_CLUBNO                0   /* uint16_t */
+#define SI_CLUBNAME              2   /* char[18] */
+#define SI_TROPHYFLAGS          20   /* uint16_t */
+#define SI_LEAGUESTRPTR         22   /* uint32_t (ptr) */
+#define SI_STRPTR1              26   /* uint32_t (ptr) */
+#define SI_STRPTR2              30   /* uint32_t (ptr) */
+#define SI_STRPTR3              34   /* uint32_t (ptr) */
+#define SI_BESTSCORERNUMGOALS   38   /* uint16_t */
+#define SI_BESTSCORERNAME       40   /* char[23] */
+#define SI_2NDSCORERNAME        63   /* char[23] */
+#define SI_COMP1RESULT          86   /* int8_t */
+#define SI_COMP2RESULT          87   /* int8_t */
+#define SI_COMP3RESULT          88   /* int8_t */
+#define SI_COMP4RESULT          89   /* int8_t */
+#define SI_TOTALGOALSSCORED     90   /* uint16_t */
+#define SI_TOTALGOALSTAKEN      92   /* uint16_t */
+#define SI_TOTALGAMES           94   /* uint8_t */
+#define SI_TOTALWINS            95   /* uint8_t */
+#define SI_TOTALDRAWN           96   /* uint8_t */
+#define SI_TOTALLOST            97   /* uint8_t */
+#define SI_FRIENDLYWINS         98   /* uint8_t */
+#define SI_FRIENDLYDRAWS        99   /* uint8_t */
+#define SI_FRIENDLYLOST        100   /* uint8_t */
+#define SI_TOURWINS            101   /* uint8_t */
+#define SI_TOURDRAWS           102   /* uint8_t */
+#define SI_TOURLOST            103   /* uint8_t */
+#define SI_TOURNAMENTSTATUS    104   /* uint8_t */
+#define SI_MANAGERSTATUS       105   /* int8_t */
+
+#define CN_EUROPE   80
+#define CN_OCEANIA  85
+
+
+/* ================================================================
+ * SetTrophySprite  (SWOS2.s line 58364)
+ *
+ * Sets sprite ID for one trophy slot, makes it visible, advances
+ * slot pointer, and shifts all 4 trophy X positions left by 10.
+ * ================================================================ */
+static MenuEntry *SetTrophySprite_Internal(uint16_t trophyIndex, MenuEntry *slot)
+{
+    MenuEntry *base = &menuEntries[17]; /* entry at $3B8/56 = 17 */
+
+    /* Set sprite ID in high word of fg (68k big-endian: move.w to offset 38) */
+    *(uint16_t *)&slot->fg = trophySprites[trophyIndex];
+
+    /* Make this slot visible */
+    slot->isInvisible = 0;
+
+    /* Advance to next slot */
+    slot++;
+
+    /* Shift all 4 trophy slot X positions left by 10 */
+    base[0].x -= 10;
+    base[1].x -= 10;
+    base[2].x -= 10;
+    base[3].x -= 10;
+
+    return slot;
+}
+
+
+/* ================================================================
+ * SetTrophySprites  (SWOS2.s line 58324)
+ *
+ * Initialize trophy slot entries and populate from season info flags.
+ * ================================================================ */
+static void SetTrophySprites_Internal(uint8_t *si)
+{
+    MenuEntry *base = &menuEntries[17]; /* entry at $3B8/56 = 17 */
+    uint16_t d0;
+    uint16_t flags;
+    uint16_t bit;
+    MenuEntry *slot;
+
+    /* Set all 4 trophy slots invisible */
+    base[0].isInvisible = 1;
+    base[1].isInvisible = 1;
+    base[2].isInvisible = 1;
+    base[3].isInvisible = 1;
+
+    /* Set X positions starting at 176, spaced 20 apart */
+    d0 = 176;
+    base[0].x = d0; d0 += 20;
+    base[1].x = d0; d0 += 20;
+    base[2].x = d0; d0 += 20;
+    base[3].x = d0;
+
+    /* Read trophy flags (word at offset 20) */
+    flags = *(uint16_t *)(si + SI_TROPHYFLAGS);
+    if (flags == 0)
+        return;
+
+    /* Loop through bits 0-9, set sprite for each trophy */
+    slot = &menuEntries[17];
+    for (bit = 0; bit < 10; bit++)
+    {
+        if (flags & (1 << bit))
+        {
+            slot = SetTrophySprite_Internal(bit, slot);
+        }
+    }
+}
+
+
+/* ================================================================
+ * RenderCompLine  (SWOS2.s line 58160)
+ *
+ * Render one competition result block (2-3 lines) in the
+ * management record menu. Modifies the running Y position.
+ * ================================================================ */
+static void RenderCompLine_Internal(const uint8_t *compName, int8_t resultCodeByte,
+                                    uint8_t qualFlag, uint8_t *si, uint16_t *pY)
+{
+    const uint8_t *origCompName = compName;
+    MenuEntry *entry7;
+    MenuEntry *entry8;
+    uint8_t *dest;
+    int16_t resultCode;
+    const uint8_t *fmt;
+    uint16_t n0 = 0, n1 = 0, n2 = 0;
+    uint16_t colorBits;
+
+    if (compName == (const uint8_t *)0)
+        return;
+
+    /* Entry 7 = competition name line */
+    entry7 = &menuEntries[7]; /* $188/56 = 7 */
+    entry7->y = *pY;
+
+    /* Change "FRIENDLY" to "FRIENDLIES" for the header */
+    if (compName == aFriendly)
+        compName = aFriendlies;
+
+    /* Copy competition name to entry 7's string buffer */
+    dest = (uint8_t *)entry7->fg;
+    _StringCopy(compName, dest);
+
+    /* Sign-extend result code byte to word */
+    resultCode = (int16_t)resultCodeByte;
+
+    /* Entry 8 = result/status line */
+    entry8 = &menuEntries[8]; /* $1C0/56 = 8 */
+    entry8->y = *pY;
+
+    /* Set color to 2 (clear low nibble, set to 2) */
+    entry8->stringFlags = (entry8->stringFlags & 0xFFF0) | 2;
+
+    /* Default format = dash */
+    fmt = aDash;
+
+    if (resultCode == 0)
+    {
+        /* No result — just print dash */
+        goto do_print;
+    }
+
+    /* --- FRIENDLY path --- */
+    if (origCompName == aFriendly)
+    {
+        n0 = (uint16_t)(int16_t)(int8_t)si[SI_FRIENDLYWINS];
+        n1 = (uint16_t)(int16_t)(int8_t)si[SI_FRIENDLYDRAWS];
+        n2 = (uint16_t)(int16_t)(int8_t)si[SI_FRIENDLYLOST];
+        fmt = aDash;
+        if (n0 != 0 || n1 != 0 || n2 != 0)
+            fmt = aWon0Drawn1Lost;
+        goto do_print;
+    }
+
+    /* --- TOUR path (European Tour .. Oceania Tour) --- */
+    if (origCompName >= aEuropeanTour && origCompName <= aOceaniaTour)
+    {
+        n0 = (uint16_t)(int16_t)(int8_t)si[SI_TOURWINS];
+        n1 = (uint16_t)(int16_t)(int8_t)si[SI_TOURDRAWS];
+        n2 = (uint16_t)(int16_t)(int8_t)si[SI_TOURLOST];
+        fmt = aDash;
+        if (n0 != 0 || n1 != 0 || n2 != 0)
+            fmt = aWon0Drawn1Lost;
+        goto do_print;
+    }
+
+    /* --- League/Cup result codes --- */
+    if (resultCode == 1)
+    {
+        /* WINNERS — set color to 15 (yellow/gold) */
+        entry8->stringFlags = (entry8->stringFlags & 0xFFF0) | 0xF;
+    }
+
+    fmt = aWinners;
+    if (resultCode == 1)         goto do_print;
+    fmt = aRunnerUp;
+    if (resultCode == 2)         goto do_print;
+    fmt = aFinalist;
+    if (resultCode == -100)      goto do_print;
+    fmt = aReachedSemiFin;
+    if (resultCode == -101)      goto do_print;
+    fmt = aReachedQuarter;
+    if (resultCode == -102)      goto do_print;
+    fmt = aThirdPlace;
+    if (resultCode == -103)      goto do_print;
+    fmt = aFourthPlace;
+    if (resultCode == -105)      goto do_print;
+    fmt = aStillInCompeti;
+    if (resultCode == -104)      goto do_print;
+    fmt = aDash;
+    if (resultCode == -106)      goto do_print;
+
+    if (resultCode >= 0)
+    {
+        /* Positive position */
+        fmt = aPosition0;
+        n0 = (uint16_t)resultCode;
+        goto do_print;
+    }
+
+    if (resultCode > -110)
+    {
+        /* Negative position (unknown code): display as positive */
+        fmt = aPosition0;
+        n0 = (uint16_t)(-resultCode);
+        goto do_print;
+    }
+
+    /* Knocked out in round N (resultCode <= -110) */
+    {
+        int16_t round = resultCode + 110;
+        n0 = (uint16_t)(-round);
+        fmt = aKnockedOutInRo;
+    }
+
+do_print:
+    /* Print result to entry 8's string buffer */
+    dest = (uint8_t *)entry8->fg;
+    _PrintFormatted(fmt, dest,
+                    n0, n1, n2, 0, 0, 0, 0,
+                    (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
+
+    /* Draw 2 entries (entry 7 and entry 8) */
+    _DrawMultipleItems(2, &menuEntries[7]);
+
+    *pY += 10;
+
+    /* --- Qualification/promotion line --- */
+    if (qualFlag == 0)
+        return;
+
+    entry8 = &menuEntries[8];
+    entry8->y = *pY;
+
+    /* Clear output buffer first byte */
+    dest = (uint8_t *)entry8->fg;
+    *dest = 0;
+
+    if (qualFlag == 1)
+    {
+        fmt = aQualified;
+        colorBits = 6;
+    }
+    else if (qualFlag == 2)
+    {
+        fmt = aNotQualified;
+        colorBits = 10;
+    }
+    else if (qualFlag == 3)
+    {
+        fmt = aPromoted;
+        colorBits = 6;
+    }
+    else
+    {
+        fmt = aRelegated;
+        colorBits = 10;
+    }
+
+    _StringCopy(fmt, dest);
+    entry8->stringFlags = (entry8->stringFlags & 0xFFF0) | colorBits;
+
+    /* Draw 2 entries again (with qualification text) */
+    _DrawMultipleItems(2, &menuEntries[7]);
+
+    *pY += 10;
+}
+
+
+/* ================================================================
+ * FillManagementRecordInfo  (SWOS2.s line 57944)
+ *
+ * Populate the entire management record menu with season statistics,
+ * competition results, top scorer, manager status, and trophies.
+ * Called as a menu beforeDraw callback.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _FillManagementRecordInfo(void)
+{
+    uint8_t *si;
+    uint16_t d5;
+    MenuEntry *entry;
+    uint8_t *dest;
+    uint16_t yearLo;
+
+    /* Compute season info pointer */
+    {
+        uint32_t off = (uint32_t)currentSeasonNumber * 106;
+        si = seasonInformationsArray + off;
+    }
+
+    /* Initialize trophy sprites */
+    SetTrophySprites_Internal(si);
+
+    d5 = 55; /* starting Y */
+
+    /* --- Season title line (entry 6) --- */
+    entry = &menuEntries[6]; /* $150/56 = 6 */
+    dest = (uint8_t *)entry->fg;
+    {
+        uint16_t seasonNum = currentSeasonNumber;
+        uint16_t d0 = seasonNum + 1;
+        uint16_t d1 = seasonNum + 1996;
+        uint16_t d2 = seasonNum + 97;
+        const uint8_t *fmt;
+
+        if (d2 >= 100)
+            d2 -= 100;
+
+        if (d2 >= 10)
+            fmt = a12Season;     /* "%1/%2 SEASON" */
+        else
+            fmt = a102Season;    /* "%1/0%2 SEASON" */
+
+        _PrintFormatted(fmt, dest,
+                        d0, d1, d2, 0, 0, 0, 0,
+                        (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
+    }
+    entry->y = d5;
+    d5 += 15;
+
+    /* --- Club name line (entry 4) --- */
+    entry = &menuEntries[4]; /* $E0/56 = 4 */
+    dest = (uint8_t *)entry->fg;
+    _StringCopy(si + SI_CLUBNAME, dest);
+    entry->y = d5;
+    d5 += 10;
+
+    /* --- Country line (entry 5) --- */
+    entry = &menuEntries[5]; /* $118/56 = 5 */
+    dest = (uint8_t *)entry->fg;
+    {
+        uint8_t countryCode = si[SI_CLUBNO];
+        const uint8_t *countryStr;
+
+        if (countryCode >= CN_EUROPE && countryCode <= CN_OCEANIA)
+        {
+            countryStr = aNational;
+        }
+        else
+        {
+            const uint8_t *cPtr = (const uint8_t *)(countriesTable[countryCode]);
+            countryStr = cPtr + 1; /* skip first byte */
+        }
+
+        _PrintFormatted(aA, dest,
+                        0, 0, 0, 0, 0, 0, 0,
+                        countryStr, (const uint8_t *)0, (const uint8_t *)0);
+    }
+    entry->y = d5;
+    d5 += 17;
+
+    /* --- Competition results (4 lines) --- */
+    {
+        const uint8_t *comp1 = *(const uint8_t **)(si + SI_LEAGUESTRPTR);
+        RenderCompLine_Internal(comp1, (int8_t)si[SI_COMP1RESULT],
+                                si[SI_TOURNAMENTSTATUS], si, &d5);
+    }
+    {
+        const uint8_t *comp2 = *(const uint8_t **)(si + SI_STRPTR1);
+        RenderCompLine_Internal(comp2, (int8_t)si[SI_COMP2RESULT], 0, si, &d5);
+    }
+    {
+        const uint8_t *comp3 = *(const uint8_t **)(si + SI_STRPTR2);
+        RenderCompLine_Internal(comp3, (int8_t)si[SI_COMP3RESULT], 0, si, &d5);
+    }
+    {
+        const uint8_t *comp4 = *(const uint8_t **)(si + SI_STRPTR3);
+        RenderCompLine_Internal(comp4, (int8_t)si[SI_COMP4RESULT], 0, si, &d5);
+    }
+
+    d5 += 8;
+
+    /* --- Overall stats header (entry 10) --- */
+    entry = &menuEntries[10]; /* $230/56 = 10 */
+    entry->y = d5;
+    d5 += 9;
+
+    /* --- Overall stats line (entry 11) --- */
+    entry = &menuEntries[11]; /* $268/56 = 11 */
+    dest = (uint8_t *)entry->fg;
+
+    if (si[SI_BESTSCORERNAME] == 0)
+    {
+        /* No scorer name — show dash */
+        _StringCopy(aDash, dest);
+    }
+    else
+    {
+        uint16_t savedY = d5;
+        uint16_t totalGames = (uint16_t)si[SI_TOTALGAMES];
+        const uint8_t *fmt;
+
+        if (totalGames == 0)
+        {
+            fmt = aDash;
+            _PrintFormatted(fmt, dest,
+                            0, 0, 0, 0, 0, 0, 0,
+                            (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
+        }
+        else
+        {
+            uint16_t tw = (uint16_t)si[SI_TOTALWINS];
+            uint16_t td = (uint16_t)si[SI_TOTALDRAWN];
+            uint16_t tl = (uint16_t)si[SI_TOTALLOST];
+            uint16_t gs = *(uint16_t *)(si + SI_TOTALGOALSSCORED);
+            uint16_t gt = *(uint16_t *)(si + SI_TOTALGOALSTAKEN);
+            _PrintFormatted(aPl0W1D2L3F4A5, dest,
+                            totalGames, tw, td, tl, gs, gt, 0,
+                            (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
+        }
+        d5 = savedY;
+    }
+
+    entry->y = d5;
+
+    /* Draw overall stats block (entries 10-11) */
+    _DrawMultipleItems(2, &menuEntries[10]);
+
+    d5 += 13;
+
+    /* --- Manager status (entry 9) --- */
+    menuEntries[9].isInvisible = 1;
+
+    if ((int8_t)si[SI_MANAGERSTATUS] != 0)
+    {
+        uint16_t color;
+        int8_t status = (int8_t)si[SI_MANAGERSTATUS];
+
+        menuEntries[9].isInvisible = 0;
+        entry = &menuEntries[9]; /* $1F8/56 = 9 */
+        entry->y = d5;
+
+        color = 10;
+        if (status >= 0)
+        {
+            /* Not sacked — check resigned/retired */
+            color = 6;
+            entry->fg = (uint32_t)aResigned;
+            if (status != 1)
+            {
+                color = 15;
+                entry->fg = (uint32_t)aRetired;
+            }
+        }
+
+        /* Update stringFlags: set color and bit 13 */
+        {
+            uint16_t sf = entry->stringFlags;
+            sf = (sf & 0xFFF0) | color;
+            sf |= (1 << 13);
+            entry->stringFlags = sf;
+        }
+
+        /* Draw manager status entry */
+        _DrawMultipleItems(1, &menuEntries[9]);
+    }
+
+    d5 += 13;
+
+    /* --- Top scorer header (entry 12) --- */
+    entry = &menuEntries[12]; /* $2A0/56 = 12 */
+    entry->fg = (uint32_t)aSeasonSTopScor; /* "SEASON'S TOP SCORER" */
+
+    if (si[SI_BESTSCORERNAME] != 0 && si[SI_2NDSCORERNAME] != 0)
+    {
+        entry->fg = (uint32_t)aSeasonSTopScor_0; /* "SEASON'S TOP SCORERS" */
+    }
+
+    entry->y = d5;
+    d5 += 10;
+
+    /* --- Top scorer line 1 (entry 13) --- */
+    entry = &menuEntries[13]; /* $2D8/56 = 13 */
+    dest = (uint8_t *)entry->fg;
+
+    {
+        uint16_t numGoals = *(uint16_t *)(si + SI_BESTSCORERNUMGOALS);
+
+        if (numGoals == 0 || si[SI_BESTSCORERNAME] == 0)
+        {
+            _StringCopy(aDash, dest);
+        }
+        else
+        {
+            const uint8_t *scorerName = si + SI_BESTSCORERNAME;
+            _PrintFormatted(aA0, dest,
+                            numGoals, 0, 0, 0, 0, 0, 0,
+                            scorerName, (const uint8_t *)0, (const uint8_t *)0);
+        }
+    }
+
+    entry->y = d5;
+
+    /* Draw top scorer block (entries 12-13) */
+    _DrawMultipleItems(2, &menuEntries[12]);
+
+    d5 += 8;
+
+    /* --- Top scorer line 2 / second scorer (entry 14) --- */
+    menuEntries[14].isInvisible = 1; /* $310/56 = 14 */
+
+    if (si[SI_BESTSCORERNAME] != 0 && si[SI_2NDSCORERNAME] != 0)
+    {
+        uint16_t numGoals;
+
+        menuEntries[14].isInvisible = 0;
+        entry = &menuEntries[14];
+        dest = (uint8_t *)entry->fg;
+
+        numGoals = *(uint16_t *)(si + SI_BESTSCORERNUMGOALS);
+
+        _PrintFormatted(aA0, dest,
+                        numGoals, 0, 0, 0, 0, 0, 0,
+                        si + SI_2NDSCORERNAME, (const uint8_t *)0, (const uint8_t *)0);
+
+        entry->y = d5;
+
+        _DrawMultipleItems(1, &menuEntries[14]);
+
+        d5 += 10;
+    }
+
+    d5 += 4;
+    d5 = 36; /* override — fixed Y for trophy row */
+
+    /* --- Trophy Y positions (entries 17-20) --- */
+    if (*(uint16_t *)(si + SI_TROPHYFLAGS) != 0)
+    {
+        menuEntries[17].y = d5;
+        menuEntries[18].y = d5;
+        menuEntries[19].y = d5;
+        menuEntries[20].y = d5;
     }
 }

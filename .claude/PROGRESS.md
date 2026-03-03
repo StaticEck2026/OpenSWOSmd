@@ -2692,6 +2692,16 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, no new warnings)
 - Cumulative: 1280 functions across 136 chunks
 
+### Chunk 138 — FillManagementRecordInfo + helpers (1+3s → statistics.c)
+- Date: 2026-03-02
+- Ported: FillManagementRecordInfo (exported), SetTrophySprites_Internal (static), SetTrophySprite_Internal (static), RenderCompLine_Internal (static) — all to statistics.c
+- jmp stub: FillManagementRecordInfo
+- Dead asm stubs: RenderCompLine→rts, SetTrophySprites→rts, SetTrophySprite→rts (only called from now-C FillManagementRecordInfo)
+- Fixed: _StringCopy local extern in statistics.c (was wrong pointer-to-pointer signature, fixed to match header)
+- New xdefs: aFriendlies, aWon0Drawn1Lost, aEuropeanTour, aOceaniaTour, aWinners, aRunnerUp, aFinalist, aReachedSemiFin, aReachedQuarter, aThirdPlace, aFourthPlace, aStillInCompeti, aKnockedOutInRo, aPosition0, aQualified, aNotQualified, aPromoted, aRelegated, a12Season, a102Season, aNational, aA, aA0, aSeasonSTopScor, aSeasonSTopScor_0, aRetired, trophySprites
+- Build status: **verified** (clean build, no new warnings)
+- Cumulative: 1291 functions across 138 chunks
+
 ### Chunk 137 — Management Record + SelTeamForTactics Reflow (6+1s → statistics.c, menus.c)
 - Date: 2026-03-02
 - Ported: GetCurrentSeasonPointer, ManagementRecordInit, ManagementArrowUpSelect, ManagementArrowDownSelect, Career_StorePromotionRelegationInSeasonInfo (→ statistics.c), SelTeamForTactics_ReflowTeamListLayout (→ menus.c)
@@ -2852,5 +2862,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 135   | 9+1s      | 1272       |
 | 136   | 7+1s      | 1280       |
 | 137   | 6+1s      | 1287       |
+| 138   | 1+3s      | 1291       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

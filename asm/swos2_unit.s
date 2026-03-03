@@ -2775,6 +2775,8 @@
         xref    _DesignDIYTournament_CacheStageSelection
         xref    _DesignDIYTournament_RedrawStageItemsFromBlock
         xref    _DIYTournament_RecalculateNumStages
+; --- Chunk 138 xrefs ---
+        xref    _FillManagementRecordInfo
 ; --- Chunk 137 xrefs ---
         xref    _ManagementRecordInit
         xref    _ManagementArrowUpSelect
@@ -2993,6 +2995,34 @@
         xdef    _CCalcTeamPriceRankPercentOffset
         xdef    _CUpdatePlayerPositionAndReturnRole
         xdef    _CCareer_ApplyPostMatchPlayerStatModsIfCareerTeam
+; --- Chunk 138 xdefs ---
+        xdef    aFriendlies
+        xdef    aWon0Drawn1Lost
+        xdef    aEuropeanTour
+        xdef    aOceaniaTour
+        xdef    aWinners
+        xdef    aRunnerUp
+        xdef    aFinalist
+        xdef    aReachedSemiFin
+        xdef    aReachedQuarter
+        xdef    aThirdPlace
+        xdef    aFourthPlace
+        xdef    aStillInCompeti
+        xdef    aKnockedOutInRo
+        xdef    aPosition0
+        xdef    aQualified
+        xdef    aNotQualified
+        xdef    aPromoted
+        xdef    aRelegated
+        xdef    a12Season
+        xdef    a102Season
+        xdef    aNational
+        xdef    aA
+        xdef    aA0
+        xdef    aSeasonSTopScor
+        xdef    aSeasonSTopScor_0
+        xdef    aRetired
+        xdef    trophySprites
 ; --- Chunk 137 xdefs ---
         xdef    currentSeasonNumber
         xdef    gamesPlayed
