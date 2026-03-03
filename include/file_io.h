@@ -1,6 +1,8 @@
 #ifndef FILE_IO_H
 #define FILE_IO_H
 
+#include "menu_system.h"
+
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned long uint32_t;
@@ -36,5 +38,8 @@ int16_t _GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename
 void _SelectFilenameToSaveAndExit(void);
 void _AddExtension(uint8_t *filename);
 void _RepositionSelectFileEntries(void);
+
+/* ---- SelectFilesInputSaveFilenameOnSelect (Chunk 142) ---- */
+void _SelectFilesInputSaveFilenameOnSelect(MenuEntry *entry);
 
 #endif

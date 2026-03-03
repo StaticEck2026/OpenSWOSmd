@@ -3922,3 +3922,173 @@ void _SetMenuEntryPlayerFace(MenuEntry *entry, uint8_t *teamData) {
     d0 += SPR_PL_FACE_WHITE_GUY;
     *(uint16_t *)&entry->fg = d0;
 }
+
+/* ---- Chunk 142: SaveCareer ---- */
+/* SWOS2.s line 55472 — save career to disk */
+__attribute__((used, externally_visible))
+void _SaveCareer(void)
+{
+    uint8_t *title = (uint8_t *)"SAVE CAREER";
+
+    if (_Asset_PromptInsertSaveDiskDf0(title) != 0)
+        return;
+
+    if (_SelectFileToSaveDialog(0x2E434152, competitionFilename, title) != 0)
+        goto show_insert;
+
+    if (_SaveCareerFile(selectedFilename) != 0)
+        goto show_insert;
+
+    contestStarted = 1;
+    _StringCopy(selectedFilename, competitionFilename);
+
+show_insert:
+    _ShowInsertDisk2Dialog(title);
+}
+
+/* ---- Chunk 143: ExitOptions ---- */
+/* SWOS2.s line 46546 — options menu exit callback with prerelease easter egg */
+/* showPrereleaseCounter declared extern at line 1027 (asm variable at SWOS2.s:46562) */
+
+__attribute__((used, externally_visible))
+void _ExitOptions(void)
+{
+    if (controlMask == 0x20) {
+        _SetExitMenuFlag();
+        return;
+    }
+    if (controlMask == 0x30) {
+        showPrereleaseCounter++;
+        if (showPrereleaseCounter == 15) {
+            menuEntries[14].isInvisible = 0;
+            _CallDrawMenuItem(&menuEntries[14]);
+        }
+    }
+}
+
+/* ---- Chunk 143: SetSquadMenuEntryStatusSprite ---- */
+/* SWOS2.s line 54885 — set player status sprite on squad menu entry */
+/* Writes sprite ID to high word of entry->fg based on player injury/status bits.
+   flag==0: during-match status bits (mask 0x1C), flag!=0: after-match bits (mask 0x03) */
+extern uint16_t _ShouldApplyRandomPlayerStatusAfterSim(void);
+
+__attribute__((used, externally_visible))
+void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, uint8_t *player, uint16_t flag)
+{
+    uint16_t d1 = player[0x66] & 0x18;
+    d1 >>= 3; /* face index 0-3 */
+    uint16_t d2, d3;
+    uint16_t sprite;
+
+    if (flag == 0) {
+        /* Path 0: during-match status */
+        d2 = player[0x67] & 0x1C;
+        d3 = player[0x67] & 0xE0;
+
+        if (d2 == 0) {
+            if (d3 == 0) {
+                *(uint16_t *)&entry->fg = d1 + 0xBA;
+                return;
+            }
+            if (d3 == 0x20) {
+                *(uint16_t *)&entry->fg = d1 + 0x99;
+                return;
+            }
+            goto injury_0;
+        }
+        /* d2 != 0 */
+        if (d3 == 0 || d3 == 0x20) {
+            sprite = (d2 - 4) / 4 + 0x91;
+            goto write_fg_bg_0;
+        }
+        if (d2 == 4) {
+            goto injury_0;
+        }
+        {
+            uint16_t c0 = (d2 - 8) >> 2;
+            uint16_t c1 = (d3 - 0x40) >> 5;
+            if (c0 >= c1) {
+                sprite = (d2 - 4) / 4 + 0x91;
+                goto write_fg_bg_0;
+            }
+        }
+    injury_0:
+        if (player >= careerTeam && player < (uint8_t *)&careerNumPlayers) {
+            if (_ShouldApplyRandomPlayerStatusAfterSim() == 0) {
+                sprite = 0x98;
+                goto write_fg_bg_0;
+            }
+        }
+        sprite = (d3 - 0x40) / 32 + 0x9C;
+    write_fg_bg_0:
+        *(uint16_t *)&entry->fg = sprite;
+        *(uint16_t *)&entry->bg &= 0xFFF0;
+        return;
+    }
+
+    /* Path 1: after-match status (flag != 0) */
+    d2 = player[0x67] & 0x03;
+    d3 = player[0x67] & 0xE0;
+
+    if (d2 == 0) {
+        if (d3 == 0) {
+            *(uint16_t *)&entry->fg = d1 + 0xBA;
+            return;
+        }
+        if (d3 == 0x20) {
+            *(uint16_t *)&entry->fg = d1 + 0x99;
+            return;
+        }
+        goto injury_1;
+    }
+    /* d2 != 0 */
+    if (d3 == 0 || d3 == 0x20) {
+        sprite = d2 - 1 + 0x92;
+        goto write_fg_bg_1;
+    }
+    {
+        uint16_t c0 = d2 - 1;
+        uint16_t c1 = (d3 - 0x40) >> 5;
+        if (c0 >= c1) {
+            sprite = d2 - 1 + 0x92;
+            goto write_fg_bg_1;
+        }
+    }
+injury_1:
+    if (player >= careerTeam && player < (uint8_t *)&careerNumPlayers) {
+        if (_ShouldApplyRandomPlayerStatusAfterSim() == 0) {
+            sprite = 0x98;
+            goto write_fg_bg_1;
+        }
+    }
+    sprite = (d3 - 0x40) / 32 + 0x9C;
+write_fg_bg_1:
+    *(uint16_t *)&entry->fg = sprite;
+    *(uint16_t *)&entry->bg &= 0xFFF0;
+}
+
+/* ---- Chunk 143: SetSquadMenuEntryStatusSprite_AfterSim ---- */
+/* SWOS2.s line 55022 — after-sim variant: check random status first */
+__attribute__((used, externally_visible))
+void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, uint8_t *player)
+{
+    if (_ShouldApplyRandomPlayerStatusAfterSim() == 0) {
+        _SetSquadMenuEntryStatusSprite(entry, player, 0);
+        return;
+    }
+    /* After sim path — extract face and status for sprite */
+    uint16_t d1 = player[0x66] & 0x18;
+    d1 >>= 3;
+    uint16_t d3 = player[0x67] & 0xE0;
+
+    if (d3 == 0) {
+        *(uint16_t *)&entry->fg = d1 + 0xBA;
+        return;
+    }
+    if (d3 == 0x20) {
+        *(uint16_t *)&entry->fg = d1 + 0x99;
+        return;
+    }
+    /* Injured */
+    *(uint16_t *)&entry->fg = (d3 - 0x40) / 32 + 0x9C;
+}

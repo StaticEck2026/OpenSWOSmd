@@ -2798,6 +2798,15 @@
         xref    _SetupDIYCompetitionStatsMenu
         xref    _SelFilesDrawItemDescription
         xref    _SetMenuEntryPlayerFace
+; --- Chunk 142 xrefs ---
+        xref    _StringCopyUntilChar
+        xref    _SaveCareer
+        xref    _SelectFilesInputSaveFilenameOnSelect
+        xref    _ViewDomesticPlayerMarket
+; --- Chunk 143 xrefs ---
+        xref    _ExitOptions
+        xref    _SetSquadMenuEntryStatusSprite
+        xref    _SetSquadMenuEntryStatusSprite_AfterSim
 ; --- Chunk 138 xrefs ---
         xref    _FillManagementRecordInfo
 ; --- Chunk 137 xrefs ---
@@ -3089,6 +3098,8 @@
         xdef    diyNumberOfTeams
         xdef    diyTeamsBufferPtr
         xdef    competitionStatsMenu
+; --- Chunk 142 xdefs ---
+        xdef    transferCompleted
         xdef    a0EndSeason
 
         include "../SWOS2.s"

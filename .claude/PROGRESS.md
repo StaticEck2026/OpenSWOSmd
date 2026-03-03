@@ -2703,6 +2703,32 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, no new warnings)
 - Cumulative: 1303 functions across 140 chunks
 
+### Chunk 143 — ExitOptions + SetSquadMenuEntryStatusSprite + SetSquadMenuEntryStatusSprite_AfterSim (3 → menus.c)
+- Date: 2026-03-02
+- Ported:
+  1. ExitOptions (→menus.c) — options menu exit with prerelease easter egg counter (if controlMask==0x30, count to 15 to reveal hidden menu entry 14)
+  2. SetSquadMenuEntryStatusSprite (→menus.c) — sets player status sprite ID in fg high word based on injury/status bits; two paths (flag==0 vs !=0) with different bit masks; also clears bg low nibble on some exits
+  3. SetSquadMenuEntryStatusSprite_AfterSim (→menus.c) — after-sim variant: calls ShouldApplyRandomPlayerStatusAfterSim first, delegates to SetSquadMenuEntryStatusSprite(flag=0) or computes simpler sprite
+- Stubs: ExitOptions (jmp), SetSquadMenuEntryStatusSprite (d0/a6/a0→stack bridge), SetSquadMenuEntryStatusSprite_AfterSim (a6/a0→stack bridge)
+- New xrefs: _ExitOptions, _SetSquadMenuEntryStatusSprite, _SetSquadMenuEntryStatusSprite_AfterSim
+- Key notes: showPrereleaseCounter is asm variable (already xdef'd from Chunk 113), shared between _OptionsMenuBeforeDraw and _ExitOptions. Player address range check: careerTeam <= player < &careerNumPlayers.
+- Build status: **verified** (clean build, only pre-existing warnings)
+- Cumulative: 1313 functions across 143 chunks
+
+### Chunk 142 — StringCopyUntilChar bridge + SaveCareer + SelectFilesInputSaveFilenameOnSelect + ViewDomesticPlayerMarket (4 → string_utils.c bridge, menus.c, file_io.c, transfer_market.c)
+- Date: 2026-03-02
+- Ported:
+  1. StringCopyUntilChar — asm bridge to existing _StringCopyUntilChar in string_utils.c (a0/a1/d0→stack)
+  2. SaveCareer (→menus.c) — save career file dialog: prompt insert disk, select file, save, copy filename
+  3. SelectFilesInputSaveFilenameOnSelect (→file_io.c) — handle save filename input in file selection; checks max 45 files, InputText, AddExtension tail-call, or restore default name
+  4. ViewDomesticPlayerMarket (→transfer_market.c) — show domestic market + duplicate transferCompleted check (preserved)
+- Stubs: SaveCareer (jmp), ViewDomesticPlayerMarket (jmp), SelectFilesInputSaveFilenameOnSelect (a5→stack bridge), StringCopyUntilChar (a0/a1/d0→stack bridge)
+- New xdefs: transferCompleted
+- New xrefs: _StringCopyUntilChar, _SaveCareer, _SelectFilesInputSaveFilenameOnSelect, _ViewDomesticPlayerMarket
+- Key notes: SaveCareer uses selectedFilename global directly (a0 undefined after SelectFileToSaveDialog C bridge); both success and error paths call ShowInsertDisk2Dialog. SelectFilesInputSaveFilenameOnSelect preserves exact == 45 check (not >=). ViewDomesticPlayerMarket has duplicate transferCompleted check — likely original bug, preserved.
+- Build status: **verified** (clean build, only pre-existing warnings)
+- Cumulative: 1310 functions across 142 chunks
+
 ### Chunk 141 — DIY Stats Menu + File Type Description + Player Face Entry (3 → diy_competition.c, file_io.c, menus.c)
 - Date: 2026-03-02
 - Ported: SetupDIYCompetitionStatsMenu (→diy_competition.c), SelFilesDrawItemDescription (→file_io.c), SetMenuEntryPlayerFace (→menus.c)

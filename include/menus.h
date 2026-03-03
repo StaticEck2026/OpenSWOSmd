@@ -153,4 +153,12 @@ void _SetCountryNames(void);
 #include "menu_system.h"
 void _SetMenuEntryPlayerFace(MenuEntry *entry, uint8_t *teamData);
 
+/* --- SaveCareer (Chunk 142) --- */
+void _SaveCareer(void);
+
+/* --- ExitOptions + SquadMenuStatusSprite (Chunk 143) --- */
+void _ExitOptions(void);
+void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, uint8_t *player, uint16_t flag);
+void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, uint8_t *player);
+
 #endif

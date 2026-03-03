@@ -1,6 +1,7 @@
 #include "transfer_market.h"
 #include "game_types.h"
 #include "menu_system.h"
+#include "menus.h"
 
 /* Transfer offer entry size: 14 bytes ($E) */
 #define OFFER_ENTRY_SIZE    14
@@ -1629,4 +1630,23 @@ void _ShowDomesticPlayerMarket(void)
     _UpdateHomeMarketPlayers();
     showDomesticPlayerMarket = 1;
     _ShowMenu(showPlayerMarketMenu);
+}
+
+/* ---- Chunk 142: ViewDomesticPlayerMarket ---- */
+/* SWOS2.s line 71089 — show domestic market, check if transfer completed */
+extern uint16_t transferCompleted;
+
+__attribute__((used, externally_visible))
+void _ViewDomesticPlayerMarket(void)
+{
+    _ShowDomesticPlayerMarket();
+    /* Original asm has duplicate check — preserve as-is */
+    if (transferCompleted != 0) {
+        _BuyPlayerExit();
+        return;
+    }
+    if (transferCompleted != 0) {
+        _BuyPlayerExit();
+        return;
+    }
 }

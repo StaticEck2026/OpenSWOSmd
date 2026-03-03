@@ -4,6 +4,7 @@
 #include "menu_system.h"
 #include "string_utils.h"
 #include "asset_loader.h"
+#include "input_text.h"
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint16_t assetCurrentIndex;
@@ -1114,4 +1115,41 @@ void _SelFilesDrawItemDescription(MenuEntry *entry) {
     descEntry->isInvisible = 0;
     _DrawMenuItem(descEntry);
     descEntry->isInvisible = 1;
+}
+
+/* ---- Chunk 142: SelectFilesInputSaveFilenameOnSelect ---- */
+/* SWOS2.s line 63964 — handle save filename input in file selection dialog */
+extern uint16_t allowExtraCharsFlag;
+
+__attribute__((used, externally_visible))
+void _SelectFilesInputSaveFilenameOnSelect(MenuEntry *entry)
+{
+    if (totalNumberOfFiles == 45) {
+        _ShowErrorMenu((uint8_t *)"CAN ONLY SAVE MAXIMUM 45 FILES ON DISK");
+        return;
+    }
+
+    uint8_t *filename = (uint8_t *)entry->fg;
+    allowExtraCharsFlag = 1;
+    uint16_t result = _InputText(9, (uint8_t *)entry);
+    allowExtraCharsFlag = 0;
+
+    if (result != 0)
+        return;
+
+    /* Check if string has any non-space characters */
+    uint8_t *p = filename;
+    while (*p != 0) {
+        if (*p != 0x20) {
+            _AddExtension(filename);
+            return;
+        }
+        p++;
+    }
+
+    /* All spaces or empty — restore default name from inputSaveFilename */
+    MenuEntry *entry48 = &menuEntries[48];
+    uint8_t *dst = (uint8_t *)entry48->fg;
+    _StringCopyUntilChar(inputSaveFilename, dst, '.');
+    _CallDrawMenuItem(entry48);
 }

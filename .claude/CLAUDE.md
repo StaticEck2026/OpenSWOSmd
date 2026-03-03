@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1306 functions ported across 141 chunks.
+**Current status:** 1313 functions ported across 143 chunks.
 
-**Last completed chunk:** Chunk 141 — DIY Stats Menu + File Type Description + Player Face Entry (3 → diy_competition.c, file_io.c, menus.c): SetupDIYCompetitionStatsMenu, SelFilesDrawItemDescription, SetMenuEntryPlayerFace.
+**Last completed chunk:** Chunk 143 — ExitOptions + SetSquadMenuEntryStatusSprite + SetSquadMenuEntryStatusSprite_AfterSim (3 → menus.c).
 
-**Next candidates:** GetCompetitionAbbrevStr (register-return a2, tricky bridge), Career_FillCurrentSeasonInfo + EncodeCompetitionPositionForSeasonInfo, ChooseTeamsDialog, InitCareer, SelectFilesInputSaveFilenameOnSelect.
+**Next candidates:** GetCompetitionAbbrevStr (returns in a2, needs special bridge), DesignDIYCup helpers (AppendTeamName etc.), ShowForeignPlayerMarket (unblocks ViewForeignPlayerMarket), Career_AdvanceToNextSeason_UpdateCompetitions/ContinueCareerNextSeason.
 
 ---
 

@@ -83,5 +83,6 @@ void _TransferMenuSetBankState(void);
 void _BuyPlayerInit(void);
 void _TransferMarketFinish(void);
 void _ShowDomesticPlayerMarket(void);
+void _ViewDomesticPlayerMarket(void);
 
 #endif

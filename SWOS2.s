@@ -25840,16 +25840,15 @@ StringCopy:
 ; in:  A0 -> src string
 ;      A1 -> dst string
 ;      D0 = char
+; ===== StringCopyUntilChar ===== (ported to C → _StringCopyUntilChar)
+; in: a0=src, a1=dst, d0.b=stopChar
 StringCopyUntilChar:
-                cmp.b   (a0),d0
-                beq.s   loc_120CB2
-                move.b  (a0)+,(a1)+
-                bne.s   StringCopyUntilChar
-                subq.l  #1,a1
-                rts
-loc_120CB2:
-                clr.b   (a1)
-                subq.l  #1,a0
+                andi.l  #$FF,d0
+                move.l  d0,-(sp)
+                move.l  a1,-(sp)
+                move.l  a0,-(sp)
+                jsr     _StringCopyUntilChar
+                lea     12(sp),sp
                 rts
 
 ; ===== PrintFormatted =====
@@ -46544,22 +46543,9 @@ ChangeMenuMusic:
 
 ; ===== ExitOptions =====
 ; prototype: void __usercall ExitOptions()
+; ===== ExitOptions ===== (ported to C → _ExitOptions)
 ExitOptions:
-                cmpi.w  #$20,(controlMask).l ; ' '
-                beq.s   loc_1353F2
-                cmpi.w  #$30,(controlMask).l ; '0'
-                bne.w   locret_1353F8
-                addq.w  #1,(showPrereleaseCounter).l
-                cmpi.w  #15,(showPrereleaseCounter).l
-                bne.w   locret_1353F8
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$310).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$310)).l,a5
-                jsr     CallDrawMenuItem
-                rts
-loc_1353F2:
-                jmp     SetExitMenuFlag
-locret_1353F8:
-                rts
+                jmp     _ExitOptions
 showPrereleaseCounter:
                 dc.w $0000
 
@@ -54883,172 +54869,26 @@ RotatePlayersLeft:
 
 ; ===== SetSquadMenuEntryStatusSprite =====
 ; prototype: void __usercall SetSquadMenuEntryStatusSprite(__int16 rowMode@<d0>, MenuEntry *entry@<a0>, PlayerFile *player@<a6>)
+; ===== SetSquadMenuEntryStatusSprite ===== (ported to C → _SetSquadMenuEntryStatusSprite)
+; in: a0=MenuEntry*, a6=player data, d0=flag
 SetSquadMenuEntryStatusSprite:
-                tst.w   d0
-                bne.w   loc_13A800
-                move.b  $66(a6),d1
-                andi.w  #$18,d1
-                lsr.w   #3,d1
-                move.b  $67(a6),d2
-                andi.w  #$1C,d2
-                move.b  $67(a6),d3
-                andi.w  #$E0,d3
-                cmpi.w  #0,d2
-                bne.s   loc_13A77C
-                cmpi.w  #0,d3
-                beq.s   loc_13A7E0
-                cmpi.w  #$20,d3         ; ' '
-                beq.s   loc_13A7CC
-                bra.s   loc_13A7A0
-loc_13A77C:
-                cmpi.w  #0,d3
-                beq.s   loc_13A7D4
-                cmpi.w  #$20,d3         ; ' '
-                beq.s   loc_13A7D4
-                cmpi.w  #4,d2
-                beq.s   loc_13A7A0
-                move.w  d2,d0
-                subq.w  #8,d0
-                lsr.w   #2,d0
-                move.w  d3,d1
-                subi.w  #$40,d1         ; '@'
-                lsr.w   #5,d1
-                cmp.w   d1,d0
-                bcc.s   loc_13A7D4
-loc_13A7A0:
-                cmpa.l  #careerTeam,a6
-                bcs.s   loc_13A7BE
-                cmpa.l  #careerNumPlayers,a6
-                bcc.s   loc_13A7BE
-                jsr     ShouldApplyRandomPlayerStatusAfterSim
-                bne.s   loc_13A7BE
-                move.w  #$98,d0
-                bra.s   loc_13A7E8
-loc_13A7BE:
-                move.w  d3,d0
-                subi.w  #$40,d0         ; '@'
-                lsr.w   #5,d0
-                addi.w  #$9C,d0
-                bra.s   loc_13A7E8
-loc_13A7CC:
-                move.w  d1,d0
-                addi.w  #$99,d0
-                bra.s   loc_13A7FA
-loc_13A7D4:
-                move.w  d2,d0
-                subq.w  #4,d0
-                lsr.w   #2,d0
-                addi.w  #$91,d0
-                bra.s   loc_13A7E8
-loc_13A7E0:
-                move.w  d1,d0
-                addi.w  #$BA,d0
-                bra.s   loc_13A7FA
-loc_13A7E8:
-                move.w  d0,$26(a0)
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                move.w  d0,$1E(a0)
-                rts
-loc_13A7FA:
-                move.w  d0,$26(a0)
-                rts
-loc_13A800:
-                move.b  $66(a6),d1
-                andi.w  #$18,d1
-                lsr.w   #3,d1
-                move.b  $67(a6),d2
-                andi.w  #3,d2
-                move.b  $67(a6),d3
-                andi.w  #$E0,d3
-                cmpi.w  #0,d2
-                bne.s   loc_13A82E
-                cmpi.w  #0,d3
-                beq.s   loc_13A888
-                cmpi.w  #$20,d3         ; ' '
-                beq.s   loc_13A876
-                bra.s   loc_13A84A
-loc_13A82E:
-                cmpi.w  #0,d3
-                beq.s   loc_13A87E
-                cmpi.w  #$20,d3         ; ' '
-                beq.s   loc_13A87E
-                move.w  d2,d0
-                subq.w  #1,d0
-                move.w  d3,d1
-                subi.w  #$40,d1         ; '@'
-                lsr.w   #5,d1
-                cmp.w   d1,d0
-                bcc.s   loc_13A87E
-loc_13A84A:
-                cmpa.l  #careerTeam,a6
-                bcs.s   loc_13A868
-                cmpa.l  #careerNumPlayers,a6
-                bcc.s   loc_13A868
-                jsr     ShouldApplyRandomPlayerStatusAfterSim
-                bne.s   loc_13A868
-                move.w  #$98,d0
-                bra.s   loc_13A890
-loc_13A868:
-                move.w  d3,d0
-                subi.w  #$40,d0         ; '@'
-                lsr.w   #5,d0
-                addi.w  #$9C,d0
-                bra.s   loc_13A890
-loc_13A876:
-                move.w  d1,d0
-                addi.w  #$99,d0
-                bra.s   loc_13A8A2
-loc_13A87E:
-                move.w  d2,d0
-                subq.w  #1,d0
-                addi.w  #$92,d0
-                bra.s   loc_13A890
-loc_13A888:
-                move.w  d1,d0
-                addi.w  #$BA,d0
-                bra.s   loc_13A8A2
-loc_13A890:
-                move.w  d0,$26(a0)
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                move.w  d0,$1E(a0)
-                rts
-loc_13A8A2:
-                move.w  d0,$26(a0)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)
+                move.l  a6,-(sp)
+                move.l  a0,-(sp)
+                jsr     _SetSquadMenuEntryStatusSprite
+                lea     12(sp),sp
                 rts
 
 ; ===== SetSquadMenuEntryStatusSprite_AfterSim =====
 ; prototype: void __usercall SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry@<a0>, PlayerFile *player@<a6>)
+; ===== SetSquadMenuEntryStatusSprite_AfterSim ===== (ported to C → _SetSquadMenuEntryStatusSprite_AfterSim)
+; in: a0=MenuEntry*, a6=player data
 SetSquadMenuEntryStatusSprite_AfterSim:
-                jsr     ShouldApplyRandomPlayerStatusAfterSim
-                bne.s   loc_13A8B6
-                clr.w   d0
-                bra.w   SetSquadMenuEntryStatusSprite
-loc_13A8B6:
-                move.b  $66(a6),d1
-                andi.w  #$18,d1
-                lsr.w   #3,d1
-                move.b  $67(a6),d3
-                andi.w  #$E0,d3
-                cmpi.w  #0,d3
-                bne.s   loc_13A8D6
-                move.w  d1,d0
-                addi.w  #$BA,d0
-                bra.s   loc_13A8F0
-loc_13A8D6:
-                cmpi.w  #$20,d3         ; ' '
-                bne.s   loc_13A8E4
-                move.w  d1,d0
-                addi.w  #$99,d0
-                bra.s   loc_13A8F0
-loc_13A8E4:
-                move.w  d3,d0
-                subi.w  #$40,d0         ; '@'
-                lsr.w   #5,d0
-                addi.w  #$9C,d0
-loc_13A8F0:
-                move.w  d0,$26(a0)
+                move.l  a6,-(sp)
+                move.l  a0,-(sp)
+                jsr     _SetSquadMenuEntryStatusSprite_AfterSim
+                addq.l  #8,sp
                 rts
 
 ; ===== SetMenuEntryPlayerFace =====
@@ -55469,29 +55309,9 @@ loc_13AF48:
 
 ; ===== SaveCareer =====
 ; prototype: __int16 __usercall SaveCareer@<d0>()
+; ===== SaveCareer ===== (ported to C → _SaveCareer)
 SaveCareer:
-                lea     (aSaveCareer).l,a0 ; "SAVE CAREER"
-                jsr     Asset_PromptInsertSaveDiskDf0
-                bne.w   locret_13AFC0
-                lea     (competitionFilename).l,a0
-                move.l  #'.CAR',d0
-                lea     (aSaveCareer).l,a1 ; "SAVE CAREER"
-                jsr     SelectFileToSaveDialog
-                bne.w   loc_13AFB4
-                move.b  #4,d0
-                movem.l a0,-(sp)
-                jsr     SaveCareerFile
-                movem.l (sp)+,a0
-                bne.w   loc_13AFB4
-                move.w  #1,(contestStarted).l
-                lea     (competitionFilename).l,a1
-                jsr     StringCopy
-                bra.w   *+4
-loc_13AFB4:
-                lea     (aSaveCareer).l,a0 ; "SAVE CAREER"
-                jsr     ShowInsertDisk2Dialog
-locret_13AFC0:
-                rts
+                jmp     _SaveCareer
 
 ; ===== ExitCareerMenu =====
 ; Ported to C: _ExitCareerMenu in src/menus.c
@@ -63961,37 +63781,11 @@ AbortSaveFile:
 
 ; ===== SelectFilesInputSaveFilenameOnSelect =====
 ; prototype: void __usercall SelectFilesInputSaveFilenameOnSelect(struct MenuEntry *entry@<a5>)
+; ===== SelectFilesInputSaveFilenameOnSelect ===== (ported to C → _SelectFilesInputSaveFilenameOnSelect)
 SelectFilesInputSaveFilenameOnSelect:
-                cmpi.w  #45,(totalNumberOfFiles).l
-                bne.s   loc_14044E
-                lea     (aCanOnlySaveMax).l,a0 ; "CAN ONLY SAVE MAXIMUM 45 FILES ON DISK"
-                jmp     ShowErrorMenu
-loc_14044E:
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a5),a0
-                move.w  #9,d0
-                move.w  #1,(allowExtraCharsFlag).l
-                movem.l a0,-(sp)
-                jsr     InputText
-                movem.l (sp)+,a0
-                clr.w   (allowExtraCharsFlag).l
-                tst.w   d0
-                bne.s   locret_1404A8
-                movea.l a0,a1
-loc_140478:
-                tst.b   (a1)
-                beq.s   loc_140486
-                cmpi.b  #$20,(a1)+      ; ' '
-                bne.w   AddExtension
-                bra.s   loc_140478
-loc_140486:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A80)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                lea     (inputSaveFilename).l,a0
-                move.b  #46,d0
-                jsr     StringCopyUntilChar
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A80)).l,a5
-                jsr     CallDrawMenuItem
-locret_1404A8:
+                move.l  a5,-(sp)
+                jsr     _SelectFilesInputSaveFilenameOnSelect
+                addq.l  #4,sp
                 rts
 
 ; ===== SelFilesOnSelectCommon =====
@@ -71086,13 +70880,9 @@ BuyPlayerInit:
 
 ; ===== ViewDomesticPlayerMarket =====
 ; prototype: void __usercall ViewDomesticPlayerMarket()
+; ===== ViewDomesticPlayerMarket ===== (ported to C → _ViewDomesticPlayerMarket)
 ViewDomesticPlayerMarket:
-                jsr ShowDomesticPlayerMarket(pc)
-                tst.w   (transferCompleted).l
-                bne.w   BuyPlayerExit
-                tst.w   (transferCompleted).l
-                bne.w   BuyPlayerExit
-                rts
+                jmp     _ViewDomesticPlayerMarket
 
 ; ===== ViewForeignPlayerMarket =====
 ; prototype: void __usercall ViewForeignPlayerMarket()
