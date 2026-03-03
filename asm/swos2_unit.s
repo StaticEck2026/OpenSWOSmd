@@ -2988,6 +2988,16 @@
         xref    _DesignDIYCup_UpdateMatchListScrollAndRebuildStrings
         xref    _DesignDIYCup_UpdateMatchListAndRedrawIfNeeded
         xref    _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries
+; --- Chunk 161 xrefs ---
+        xref    _ShowSeasonOpinion
+        xref    _ShowHighlights
+        xref    _ShowMatchSequence
+        xref    _ViewHighlightsSaveCurrentMenu
+        xref    _JmpShowHighlights
+        xref    _ViewOffersMenu
+; --- Chunk 161 xdefs ---
+        xdef    stadiumMenu
+        xdef    offersMenu
 ; --- Chunk 130 xdefs ---
         xdef    diyCupMatchListScrollIndex
         xdef    diyCupMenuArg0Copy

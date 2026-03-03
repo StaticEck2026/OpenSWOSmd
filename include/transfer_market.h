@@ -101,4 +101,7 @@ void _ProcessOfferExpiryCountdown(void);
 void _BuyOtherPlayersInit(void);
 void _BuyOtherPlayersFinish(void);
 
+/* --- View Offers menu (Chunk 161) --- */
+void _ViewOffersMenu(void);
+
 #endif

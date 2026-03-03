@@ -11,6 +11,8 @@
 extern uint16_t selTeamNumber;
 extern uint16_t isNationalSelector;
 extern uint16_t teamNoOfferAccepted;
+extern uint16_t seasonReview;
+extern uint16_t currentMessage;
 
 extern uint8_t euroCupCopy[];
 extern uint8_t cupWinnersCupCopy[];
@@ -290,4 +292,38 @@ uint8_t *_GetCompetitionAbbrevStr(uint8_t *competition)
     panicReasonCode = 0x2184;
     _PanicHaltLoop();
     return (uint8_t *)"FR"; /* unreachable */
+}
+
+/* ================================================================
+ * Chunk 161: ShowSeasonOpinion  (SWOS2.s line 35922)
+ *
+ * Maps the season review score (0-4+) to a chairman message constant
+ * and calls ShowChairmanMessage.
+ * ================================================================ */
+extern void _ShowChairmanMessage(void);
+
+#define EXCELLENT_JOB_THIS_SEASON   27
+#define GOOD_SEASON                 28
+#define UP_AND_DOWN_SEASON2         29
+#define NOT_A_VERY_GOOD_SEASON2     30
+#define VERY_DISSAPOINTING_SEASON   31
+
+__attribute__((used, externally_visible))
+void _ShowSeasonOpinion(void)
+{
+    uint16_t d6 = seasonReview;
+    uint16_t msg;
+    if (d6 >= 4)
+        msg = VERY_DISSAPOINTING_SEASON;
+    else if (d6 == 3)
+        msg = NOT_A_VERY_GOOD_SEASON2;
+    else if (d6 == 2)
+        msg = UP_AND_DOWN_SEASON2;
+    else if (d6 == 1)
+        msg = GOOD_SEASON;
+    else
+        msg = EXCELLENT_JOB_THIS_SEASON;
+
+    currentMessage = msg;
+    _ShowChairmanMessage();
 }

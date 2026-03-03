@@ -29832,66 +29832,17 @@ exitGameFlag:
 ; ===== ShowHighlights =====
 ; prototype: void __usercall ShowHighlights()
 ShowHighlights:
-                move.w  #1,(hilStarted).l
-                move.w  (hilMaxSubstitutes).l,(gameMaxSubstitutes).l
-                clr.w   (teamsLoaded).l
-                clr.w   (poolplyrLoaded).l
-                jsr     CopyTeamsAndHeader
-                tst.w   (menuMusic).l
-                beq.s   loc_1284B8
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     StopMusic
-                movem.l (sp)+,d0-d7/a0-a6
-loc_1284B8:
-                movem.l d0-d7/a0-a6,-(sp)
-                lea     (stadiumMenu).l,a6
-                jsr ShowMenu(pc)
-                movem.l (sp)+,d0-d7/a0-a6
-                clr.w   (deadVarAlways0).l
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   ViewHighlightsSaveCurrentMenu
-                movem.l (sp)+,d0-d7/a0-a6
-                jsr     InitMenuMusic
-                tst.w   (menuMusic).l
-                beq.s   loc_1284F0
-                jsr     TryPlayMusic
-loc_1284F0:
-                movem.l d1-d2,-(sp)
-                jsr PrepareMenuForFadeIn(pc)
-                movem.l (sp)+,d1-d2
-                rts
+                jmp     _ShowHighlights
 
 ; ===== ShowMatchSequence =====
 ; prototype: void __usercall ShowMatchSequence()
 ShowMatchSequence:
-                lea     (currentMenu).l,a0
-                move.l  MENU_SELECTEDENTRY(a0),-(sp)
-                move.l  (currentMenuPtr).l,-(sp)
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     ViewMatchSequence
-                movem.l (sp)+,d0-d7/a0-a6
-                move.w  #1,(menuStatus).l
-                clr.w   (exitMenu).l
-                movea.l (sp)+,a6
-                movea.l (sp)+,a5
-                bsr.w   RestorePreviousMenu
-                rts
+                jmp     _ShowMatchSequence
 
 ; ===== ViewHighlightsSaveCurrentMenu =====
 ; prototype: void __usercall ViewHighlightsSaveCurrentMenu()
 ViewHighlightsSaveCurrentMenu:
-                lea     (currentMenu).l,a0
-                move.l  MENU_SELECTEDENTRY(a0),-(sp)
-                move.l  (currentMenuPtr).l,-(sp)
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     ViewHighlights
-                movem.l (sp)+,d0-d7/a0-a6
-                move.w  #1,(menuStatus).l
-                clr.w   (exitMenu).l
-                movea.l (sp)+,a6
-                movea.l (sp)+,a5
-                bsr.w   RestorePreviousMenu
-                rts
+                jmp     _ViewHighlightsSaveCurrentMenu
 
 ; ===== InitializeInGameTeamsAndStartGame =====
 ; prototype: void __usercall InitializeInGameTeamsAndStartGame(__int16 randomizePitch@<d0>, __int16 minSubs@<d1>, __int16 maxSubs@<d2>, __int16 paramD3@<d3>, __int16 paramD7@<d7>, struct TeamFile *team1@<a1>, struct TeamFile *team2@<a2>)
@@ -35920,31 +35871,7 @@ loc_12F31E:
 ; ===== ShowSeasonOpinion =====
 ; prototype: void __usercall ShowSeasonOpinion()
 ShowSeasonOpinion:
-                move.w  (seasonReview).l,d6
-                cmpi.w  #4,d6
-                bcc.s   loc_12F360
-                cmpi.w  #3,d6
-                beq.s   loc_12F35A
-                cmpi.w  #2,d6
-                beq.s   loc_12F354
-                cmpi.w  #1,d6
-                beq.s   loc_12F34E
-                move.w  #EXCELLENT_JOB_THIS_SEASON,d0
-                bra.s   loc_12F364
-loc_12F34E:
-                move.w  #GOOD_SEASON,d0
-                bra.s   loc_12F364
-loc_12F354:
-                move.w  #UP_AND_DOWN_SEASON2,d0
-                bra.s   loc_12F364
-loc_12F35A:
-                move.w  #NOT_A_VERY_GOOD_SEASON2,d0
-                bra.s   loc_12F364
-loc_12F360:
-                move.w  #VERY_DISSAPOINTING_SEASON,d0
-loc_12F364:
-                move.w  d0,(currentMessage).l
-                jmp     ShowChairmanMessage
+                jmp     _ShowSeasonOpinion
 
 ; ===== SeasonFinished_ComputeSeasonReview =====
 ; prototype: void __usercall SeasonFinished_ComputeSeasonReview()
@@ -70066,19 +69993,7 @@ locret_14589E:
 ; ===== ViewOffersMenu =====
 ; prototype: void __usercall ViewOffersMenu()
 ViewOffersMenu:
-                lea     offersMenu(pc),a6
-                jsr     ShowMenu
-                tst.w   (transferCompleted).l
-                beq.s   loc_1458B8
-                jmp     SetExitMenuFlag
-loc_1458B8:
-                tst.w   (numOffers).l
-                bne.s   locret_1458D0
-                move.w  #6,d0
-                jsr     SetCurrentEntry
-                jmp     DrawMenu
-locret_1458D0:
-                rts
+                jmp     _ViewOffersMenu
 
 ; ===== GiveFreeTransfer =====
 ; prototype: void __usercall GiveFreeTransfer()
@@ -79451,7 +79366,7 @@ HighlightsMenuCommon:
 ; ===== JmpShowHighlights =====
 ; prototype: void __usercall JmpShowHighlights()
 JmpShowHighlights:
-                jmp     ShowHighlights
+                jmp     _JmpShowHighlights
 
 ; ===== LoadHighlightsMenu =====
 ; Ported to C: _LoadHighlightsMenu in src/highlights_menu.c

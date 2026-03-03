@@ -1890,3 +1890,26 @@ void _BuyOtherPlayersInit(void)
     _BuyOtherPlayersFinish();
 }
 
+/* ================================================================
+ * Chunk 161: ViewOffersMenu  (SWOS2.s line 70107)
+ *
+ * Shows the offers menu. If a transfer was completed, exits menu.
+ * Otherwise if no offers exist, jumps to entry 6 and redraws.
+ * ================================================================ */
+extern uint16_t transferCompleted;
+extern uint8_t offersMenu[];
+
+__attribute__((used, externally_visible))
+void _ViewOffersMenu(void)
+{
+    _ShowMenu(offersMenu);
+    if (transferCompleted != 0) {
+        _SetExitMenuFlag();
+        return;
+    }
+    if (numOffers == 0) {
+        _SetCurrentEntry(6);
+        _DrawMenu();
+    }
+}
+

@@ -2831,6 +2831,44 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1380 functions across 155 chunks
 
+### Chunk 156–159 — (Previous session, context lost)
+- Date: 2026-03-02
+- Note: These chunks were completed in the previous session which ran out of context.
+  The session summary reported 1393 functions across 159 chunks at session end.
+  Exact chunk details were lost due to context overflow.
+- Cumulative: 1393 functions across 159 chunks
+
+### Chunk 160 — Dead Code Stubs (bench drawing + string utils)
+- Date: 2026-03-02
+- Stubbed (dead code — only called from already-ported C functions):
+  1. DrawOpponentsBench (rts — called from static drawOpponentsBench in bench_subs.c)
+  2. DrawBenchPlayersAndCoach (rts — called from static drawBenchPlayersAndCoach in bench_subs.c)
+  3. DrawSubstitutesMenu (rts — called from static drawSubstitutesMenu in bench_subs.c)
+  4. DrawSubstitutesMenuEntry (rts — called from static drawSubstitutesMenuEntry in bench_subs.c)
+  5. DrawFormationMenu (rts — called from static drawFormationMenu in bench_subs.c)
+  6. DrawFormationMenuEntry (rts — called from static drawFormationMenuEntry in bench_subs.c)
+  7. Int2StrWithCommas (rts — called from static int2StrWithCommas in string_utils.c)
+  8. Int2AsciiLessThan100Check (rts — shared label with above)
+  9. Int2AsciiSaveD0 (rts — shared label with above)
+- Build status: **verified**
+- Cumulative: 1393 functions across 160 chunks (no new C code, dead code cleanup)
+
+### Chunk 161 — Show/View Menu Utilities (6 → career_season.c, highlights_menu.c, transfer_market.c)
+- Date: 2026-03-02
+- Ported:
+  1. ShowSeasonOpinion (→career_season.c) — maps seasonReview 0-4+ to chairman message constants, calls ShowChairmanMessage
+  2. ShowHighlights (→highlights_menu.c) — sets hilStarted, copies subs limits, loads teams, shows stadiumMenu, plays highlights via viewAndRestoreMenu helper, restores music
+  3. ShowMatchSequence (→highlights_menu.c) — viewAndRestoreMenu(_ViewMatchSequence)
+  4. ViewHighlightsSaveCurrentMenu (→highlights_menu.c) — viewAndRestoreMenu(_ViewHighlights)
+  5. JmpShowHighlights (→highlights_menu.c) — trivial forwarder to _ShowHighlights
+  6. ViewOffersMenu (→transfer_market.c) — shows offersMenu, handles transferCompleted/no offers
+- Static helper: viewAndRestoreMenu() in highlights_menu.c (saves/restores menu state around view calls)
+- Stubs: all 6 as jmp _FuncName
+- New xrefs: _ShowSeasonOpinion, _ShowHighlights, _ShowMatchSequence, _ViewHighlightsSaveCurrentMenu, _JmpShowHighlights, _ViewOffersMenu
+- New xdefs: stadiumMenu, offersMenu
+- Build status: **verified** (clean build)
+- Cumulative: 1399 functions across 161 chunks
+
 ### Chunk 147 — BuyOtherPlayers Init/Finish + Pitch/Season Menu Callbacks (5 → transfer_market.c, menus.c)
 - Date: 2026-03-02
 - Ported:

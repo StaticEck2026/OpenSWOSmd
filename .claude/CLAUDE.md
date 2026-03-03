@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1380 functions ported across 155 chunks.
+**Current status:** 1399 functions ported across 161 chunks.
 
-**Last completed chunk:** Chunk 155 — HandleFormationMenuMovement + SwapPlayerNameData (2 → bench_subs.c).
+**Last completed chunk:** Chunk 161 — Show/View Menu Utilities (6 → career_season.c, highlights_menu.c, transfer_market.c).
 
-**Next candidates:** SelectAndShowSquadToView, SquadMenu, ChooseTeamForEditTactics (68+ instr), CareerGameListCommon (large ~364 instr), remaining DIY/career/transfer functions.
+**Next candidates:** Career system functions (~69), Teams/Squad (~40), Transfer Market remaining (~20), DIY Competition (~24), Asset/File I/O (~20), Training Match (~9), Edit Tactics (~4), Job Offers (~5), misc menu utilities.
 
 ---
 

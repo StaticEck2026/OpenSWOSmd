@@ -10,3 +10,9 @@ void _ExitHighlights(void);
 /* --- Highlights file load/save (Chunk 89) --- */
 void _LoadHighlightsMenu(void);
 void _SaveHighlightsMenu(void);
+
+/* --- Chunk 161: Show/view highlights --- */
+void _ShowHighlights(void);
+void _ShowMatchSequence(void);
+void _ViewHighlightsSaveCurrentMenu(void);
+void _JmpShowHighlights(void);

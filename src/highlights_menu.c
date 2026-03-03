@@ -169,3 +169,113 @@ void _SaveHighlightsMenu(void)
 cleanup:
     _ShowInsertDisk2Dialog(aSaveHighlights);
 }
+
+/* ================================================================
+ * Chunk 161: ShowHighlights, ShowMatchSequence,
+ *            ViewHighlightsSaveCurrentMenu, JmpShowHighlights
+ * ================================================================ */
+extern uint16_t hilStarted;
+extern uint16_t hilMaxSubstitutes;
+extern uint16_t gameMaxSubstitutes;
+extern uint16_t teamsLoaded;
+extern uint16_t poolplyrLoaded;
+extern uint16_t menuMusic;
+extern uint16_t deadVarAlways0;
+extern uint16_t menuStatus;
+extern uint16_t exitMenu;
+extern uint32_t currentMenuPtr;
+extern uint8_t  currentMenu[];
+
+extern void _CopyTeamsAndHeader(void);
+extern void _StopMusic(void);
+extern void _InitMenuMusic(void);
+extern void _TryPlayMusic(void);
+extern void _PrepareMenuForFadeIn(void);
+extern void _ViewMatchSequence(void);
+extern void _ViewHighlights(void);
+
+/* These are menu structs defined in assembly as labels */
+extern uint8_t stadiumMenu[];
+
+/* ================================================================
+ * viewAndRestoreMenu — helper for ShowHighlights/ShowMatchSequence
+ *
+ * Saves current menu state, calls a view function, then restores
+ * the previous menu. Pattern used by both ShowHighlights and
+ * ShowMatchSequence in the original asm.
+ * ================================================================ */
+static void viewAndRestoreMenu(void (*viewFunc)(void))
+{
+    Menu *menu = (Menu *)currentMenu;
+    uint32_t savedSelectedEntry = menu->selectedEntry;
+    uint32_t savedMenuPtr = currentMenuPtr;
+
+    viewFunc();
+
+    menuStatus = 1;
+    exitMenu = 0;
+    _RestorePreviousMenu(savedSelectedEntry, (uint8_t *)savedMenuPtr);
+}
+
+/* ================================================================
+ * ShowHighlights  (SWOS2.s line 29873)
+ *
+ * Starts highlight replay: loads teams, shows stadium menu,
+ * plays highlights, and restores menu music.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ShowHighlights(void)
+{
+    hilStarted = 1;
+    gameMaxSubstitutes = hilMaxSubstitutes;
+    teamsLoaded = 0;
+    poolplyrLoaded = 0;
+    _CopyTeamsAndHeader();
+
+    if (menuMusic != 0)
+        _StopMusic();
+
+    _ShowMenu(stadiumMenu);
+    deadVarAlways0 = 0;
+
+    viewAndRestoreMenu(_ViewHighlights);
+
+    _InitMenuMusic();
+    if (menuMusic != 0)
+        _TryPlayMusic();
+
+    _PrepareMenuForFadeIn();
+}
+
+/* ================================================================
+ * ShowMatchSequence  (SWOS2.s line 29905)
+ *
+ * Saves current menu, plays match sequence, restores menu.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ShowMatchSequence(void)
+{
+    viewAndRestoreMenu(_ViewMatchSequence);
+}
+
+/* ================================================================
+ * ViewHighlightsSaveCurrentMenu  (SWOS2.s line 29921)
+ *
+ * Saves current menu, views all highlights, restores menu.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ViewHighlightsSaveCurrentMenu(void)
+{
+    viewAndRestoreMenu(_ViewHighlights);
+}
+
+/* ================================================================
+ * JmpShowHighlights  (SWOS2.s line 79492)
+ *
+ * Trivial forwarder to ShowHighlights.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _JmpShowHighlights(void)
+{
+    _ShowHighlights();
+}

@@ -11,3 +11,6 @@ void _Career_PrepareEuropeanCupQualificationState(void);
 
 /* --- Competition abbreviation (Chunk 145) --- */
 uint8_t *_GetCompetitionAbbrevStr(uint8_t *competition);
+
+/* --- Chunk 161: Season opinion --- */
+void _ShowSeasonOpinion(void);
