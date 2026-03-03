@@ -2868,6 +2868,10 @@
 ; --- Chunk 155 xrefs ---
         xref    _HandleFormationMenuMovement
         xref    _SwapPlayerNameData
+; --- Chunk 156 xrefs ---
+        xref    _TrainingSwapBenchTeams
+        xref    _LeaveSubsMenu
+        xref    _CheckForThrowInAndGoalkeepersBall
 ; --- Chunk 144 xrefs ---
 ; --- Chunk 147 xrefs ---
         xref    _BuyOtherPlayersInit

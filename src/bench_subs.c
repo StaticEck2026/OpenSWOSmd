@@ -18,6 +18,9 @@
 
 #include "bench_subs.h"
 #include "game_types.h"
+#include "game_state.h"
+#include "goalkeeper.h"
+#include "player_anim.h"
 
 /* ---- external asm globals ---- */
 extern uint16_t inSubstitutesMenu;
@@ -2310,4 +2313,86 @@ void _SwapPlayerNameData(uint16_t enterIndex, uint16_t leaveIndex)
     tmp = nameLens[enterIndex];
     nameLens[enterIndex] = nameLens[leaveIndex];
     nameLens[leaveIndex] = tmp;
+}
+
+/* ================================================================
+ * Chunk 156: TrainingSwapBenchTeams + LeaveSubsMenu +
+ *            CheckForThrowInAndGoalkeepersBall
+ * ================================================================ */
+
+/* ---- TrainingSwapBenchTeams  (SWOS2.s line 9907) ----
+ * Swaps the active bench team during a training match.
+ * Toggles swap flags, swaps Y positions, switches to opponent team,
+ * and updates benchTeamGame pointer.
+ */
+__attribute__((used, externally_visible))
+void _TrainingSwapBenchTeams(void)
+{
+    subsTeamsSwapped ^= 1;
+    subsTrainingTopTeam ^= 1;
+
+    /* Swap bench Y positions */
+    uint16_t tmp = benchY;
+    benchY = opponentBenchY;
+    opponentBenchY = tmp;
+
+    /* Switch to opponent team */
+    TeamGeneralInfo *team = (TeamGeneralInfo *)benchTeam;
+    team = team->opponentsTeam;
+    benchTeam = (uint32_t)team;
+
+    /* Set benchTeamGame based on team number */
+    TeamGame *gamePtr = topTeamPtr;
+    if (team->teamNumber == 2)
+        gamePtr = bottomTeamPtr;
+    benchTeamGame = (uint32_t)gamePtr;
+}
+
+/* ---- LeaveSubsMenu  (SWOS2.s line 9787) ----
+ * Clean exit from substitution menu. Resets all subs-related state,
+ * re-initializes goal highlight, triggers bench-off camera transition.
+ * Falls through to loc_10CF6E which clears deadBenchVar.
+ */
+__attribute__((used, externally_visible))
+void _LeaveSubsMenu(void)
+{
+    _InitCurrentGoalHighlight();
+    benchOff = 1;
+    cameraLeavingSubsTimer = 50;
+    leavingSubsMenu = 1;
+    _CheckIfGoalkeeperClaimedTheBall();
+    bench1Called = 0;
+    bench2Called = 0;
+    inSubstitutesMenu = 0;
+    subsTeamsSwapped = 0;
+    overlayActiveFlag = 0;
+    writeOnly01 = 1;
+    subsState = 0;
+    plToBeSubstitutedPos = 0xFFFF;
+    pl1BenchTimeoutCounter = 0;
+    pl2BenchTimeoutCounter = 0;
+    subsPrevPl1Direction = 0xFFFF;
+    subsPrevPl2Direction = 0xFFFF;
+    subsPl1TapCount = 0;
+    subsPl2TapCount = 0;
+    subsWriteOnly = 2;
+    deadBenchVar = 0;  /* from loc_10CF6E tail */
+}
+
+/* ---- CheckForThrowInAndGoalkeepersBall  (SWOS2.s line 10068) ----
+ * End-of-break handler: if the controlled player was in throw-in state,
+ * transition them back to normal. Then check if goalkeeper claimed ball.
+ */
+__attribute__((used, externally_visible))
+void _CheckForThrowInAndGoalkeepersBall(void)
+{
+    Sprite *player = lastTeamPlayedBeforeBreak->controlledPlayer;
+    if (player != 0) {
+        if (player->playerState == PL_THROW_IN) {
+            hideBall = 0;
+            player->playerState = PL_NORMAL;
+            _SetPlayerAnimationTable(playerNormalStandingAnimTable, player);
+        }
+    }
+    _CheckIfGoalkeeperClaimedTheBall();
 }

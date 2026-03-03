@@ -31,4 +31,9 @@ void _FindInitialPlayerToBeSubstituted(void);
 void _HandleFormationMenuMovement(void);
 void _SwapPlayerNameData(uint16_t enterIndex, uint16_t leaveIndex);
 
+/* --- Chunk 156: Training swap, leave subs, throw-in/keeper check --- */
+void _TrainingSwapBenchTeams(void);
+void _LeaveSubsMenu(void);
+void _CheckForThrowInAndGoalkeepersBall(void);
+
 #endif

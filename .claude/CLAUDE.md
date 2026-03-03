@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1376 functions ported across 153 chunks.
+**Current status:** 1380 functions ported across 155 chunks.
 
-**Last completed chunk:** Chunk 153 — ShowDiyLeaguesTournamentMenu + GetBenchPlayerPointer + UpdatePlayerToBeSubstitutedPosition (3 functions → diy_competition.c, bench_subs.c).
+**Last completed chunk:** Chunk 155 — HandleFormationMenuMovement + SwapPlayerNameData (2 → bench_subs.c).
 
-**Next candidates:** SelectAndShowSquadToView, SquadMenu, CareerGameListCommon (large ~364 instr), remaining bench/subs area (FindInitialPlayerToBeSubstituted, IsPlayerOkToSubstitute), DIY competition functions, transfer/career functions.
+**Next candidates:** SelectAndShowSquadToView, SquadMenu, ChooseTeamForEditTactics (68+ instr), CareerGameListCommon (large ~364 instr), remaining DIY/career/transfer functions.
 
 ---
 

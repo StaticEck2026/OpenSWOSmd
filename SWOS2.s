@@ -9785,27 +9785,7 @@ loc_10CF6E:
                 clr.w   (deadBenchVar).l
                 rts
 LeaveSubsMenu:
-                jsr InitCurrentGoalHighlight(pc)
-                move.w  #1,(benchOff).l
-                move.w  #50,(cameraLeavingSubsTimer).l
-                move.w  #1,(leavingSubsMenu).l
-                jsr     CheckIfGoalkeeperClaimedTheBall
-                clr.w   (bench1Called).l
-                clr.w   (bench2Called).l
-                clr.w   (inSubstitutesMenu).l
-                clr.w   (subsTeamsSwapped).l
-                clr.w   (overlayActiveFlag).l
-                move.w  #1,(writeOnly01).l
-                clr.w   (subsState).l
-                move.w  #$FFFF,(plToBeSubstitutedPos).l
-                clr.w   (pl1BenchTimeoutCounter).l
-                clr.w   (pl2BenchTimeoutCounter).l
-                move.w  #$FFFF,(subsPrevPl1Direction).l
-                move.w  #$FFFF,(subsPrevPl2Direction).l
-                clr.w   (subsPl1TapCount).l
-                clr.w   (subsPl2TapCount).l
-                move.w  #2,(subsWriteOnly).l
-                bra.w   loc_10CF6E
+                jmp     _LeaveSubsMenu
 
 ; ===== BenchMenuHandleControls =====
 ; prototype: void __usercall BenchMenuHandleControls()
@@ -9905,21 +9885,7 @@ loc_10D146:
 ; ===== TrainingSwapBenchTeams =====
 ; prototype: void __usercall TrainingSwapBenchTeams()
 TrainingSwapBenchTeams:
-                eori.w  #1,(subsTeamsSwapped).l
-                eori.w  #1,(subsTrainingTopTeam).l
-                move.w  (benchY).l,d0
-                move.w  (opponentBenchY).l,(benchY).l
-                move.w  d0,(opponentBenchY).l
-                movea.l (benchTeam).l,a6
-                movea.l TEAMGENERALINFO_OPPONENTSTEAM(a6),a6
-                move.l  a6,(benchTeam).l
-                movea.l (topTeamPtr).l,a0
-                cmpi.w  #2,TEAMGENERALINFO_TEAMNUMBER(a6)
-                bne.s   loc_10D1A4
-                movea.l (bottomTeamPtr).l,a0
-loc_10D1A4:
-                move.l  a0,(benchTeamGame).l
-                rts
+                jmp     _TrainingSwapBenchTeams
 
 ; ===== IsThisPlayerOkToSelect =====
 ; prototype: signed __int16 __usercall IsThisPlayerOkToSelect@<d0>()
@@ -10066,19 +10032,7 @@ post_sub_counters_return:
 ; ===== CheckForThrowInAndGoalkeepersBall =====
 ; prototype: void __usercall CheckForThrowInAndGoalkeepersBall()
 CheckForThrowInAndGoalkeepersBall:
-                movea.l (lastTeamPlayedBeforeBreak).l,a0
-                movea.l TEAMGENERALINFO_CONTROLLEDPLAYER(a0),a1
-                cmpa.l  #0,a1
-                beq.w   loc_10D43C
-                cmpi.b  #PL_THROW_IN,SPRITE_PLAYERSTATE(a1)
-                bne.w   loc_10D43C
-                clr.w   (hideBall).l
-                move.b  #PL_NORMAL,SPRITE_PLAYERSTATE(a1)
-                lea     (playerNormalStandingAnimTable).l,a0
-                jsr SetPlayerAnimationTable(pc)
-loc_10D43C:
-                jsr     CheckIfGoalkeeperClaimedTheBall
-                bra.w   _10CF6C_exit_rts
+                jmp     _CheckForThrowInAndGoalkeepersBall
 
 ; ===== SubstitutePlayer =====
 ; prototype: void __usercall SubstitutePlayer()

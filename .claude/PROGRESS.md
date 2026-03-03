@@ -2821,6 +2821,16 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1378 functions across 154 chunks
 
+### Chunk 155 — HandleFormationMenuMovement + SwapPlayerNameData (2 → bench_subs.c)
+- Date: 2026-03-02
+- Ported:
+  1. HandleFormationMenuMovement (→bench_subs.c) — handles left/right (cycle selectedFormationEntry 0-17), up/down (call SubsBenchOff to exit)
+  2. SwapPlayerNameData (→bench_subs.c) — swaps entries in plOrdinalsTable and plNamesLengthTableCopy; offsets +16 for bottom team
+- Stubs: HandleFormationMenuMovement (jmp), SwapPlayerNameData (register bridge d6/d7→stack)
+- New xrefs: _HandleFormationMenuMovement, _SwapPlayerNameData
+- Build status: **verified** (clean build)
+- Cumulative: 1380 functions across 155 chunks
+
 ### Chunk 147 — BuyOtherPlayers Init/Finish + Pitch/Season Menu Callbacks (5 → transfer_market.c, menus.c)
 - Date: 2026-03-02
 - Ported:
@@ -3106,5 +3116,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 152   | 8         | 1373       |
 | 153   | 3         | 1376       |
 | 154   | 2         | 1378       |
+| 155   | 2         | 1380       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)
