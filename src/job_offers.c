@@ -754,3 +754,186 @@ void _JobOffersExit(void)
     _JobOffers_RemoveExpiredOffers();
     _SetExitMenuFlag();
 }
+
+/* ================================================================
+ * Chunk 169 — JobOffersInit, JobOffers_DrawOldOfferLine,
+ *             JobOffersAfterDrawCommon
+ * ================================================================ */
+
+extern uint32_t irqCookieObfuscated;
+extern uint8_t aInternationalJ_0[];  /* "INTERNATIONAL JOB OFFER FROM %a" */
+extern uint8_t aJobOfferFromA[];     /* "JOB OFFER FROM %a" */
+extern uint8_t aJobOfferFromAW[];    /* "JOB OFFER FROM %a WITHDRAWN" */
+
+/* ================================================================
+ * JobOffersInit  (SWOS2.s line 72959)
+ *
+ * Menu init callback for the job offers menu.
+ * Does an anti-piracy cookie check (always passes in HDD version),
+ * fills missing team names, resets selected ordinal, and falls
+ * through to JobOffersFinish.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _JobOffersInit(void)
+{
+    /* Anti-piracy check: irqCookieObfuscated XOR 0xCFD1F80D must equal 0x17EA */
+    uint32_t d0 = irqCookieObfuscated ^ 0xCFD1F80Du;
+    if (d0 != 0x17EA)
+        return;  /* In original asm this would crash; safe no-op here */
+
+    _JobOffers_FillMissingNewOfferTeamNames();
+    selectedOldJobOfferOrdinal = 0xFFFF;
+
+    /* Fall through to JobOffersFinish */
+    _JobOffersFinish();
+}
+
+/* ================================================================
+ * JobOffers_DrawOldOfferLine  (SWOS2.s line 73003)
+ *
+ * After-draw callback for old job offer entries.
+ * Calculates offer index from ordinal difference, formats offer
+ * text, sets color highlighting for selected/withdrawn offers.
+ *
+ * in: a5 = current menu entry
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _JobOffers_DrawOldOfferLine(void *entryPtr)
+{
+    MenuEntry *a5 = (MenuEntry *)entryPtr;
+    a5->isDisabled = 1;
+
+    /* d7 = a5->ordinal - entries[7].ordinal (entry 7 = 0x188/0x38) */
+    int16_t d7 = (int16_t)a5->ordinal - (int16_t)menuEntries[7].ordinal;
+
+    if ((uint16_t)d7 >= numJobOffers)
+        return;
+
+    a5->isDisabled = 0;
+
+    /* Show entries 13 and 14 */
+    menuEntries[13].isInvisible = 0;
+    menuEntries[14].isInvisible = 0;
+
+    /* d5 = highlight color (0 = normal, 0xD = selected) */
+    uint16_t d5 = 0;
+    if ((uint16_t)d7 == selectedOldJobOfferOrdinal)
+        d5 = 0xD;
+
+    /* Apply d5 to bg color bits (low 4) of entries 13 and 14 */
+    {
+        uint32_t bg13 = menuEntries[13].bg;
+        menuEntries[13].bg = (bg13 & 0xFFF0FFFF) | ((uint32_t)d5 << 16);
+    }
+    {
+        uint32_t bg14 = menuEntries[14].bg;
+        menuEntries[14].bg = (bg14 & 0xFFF0FFFF) | ((uint32_t)d5 << 16);
+    }
+
+    /* Entry 13 (a3): set stringFlags base, y, number */
+    MenuEntry *a3 = &menuEntries[13];
+    uint16_t d3 = a3->stringFlags & 0xFFF0;
+    a3->y = a5->y;
+    a3->fg = (uint32_t)(d7 + 1);
+
+    /* Entry 14 (a4): set stringFlags base, y, get dest buffer */
+    MenuEntry *a4 = &menuEntries[14];
+    uint16_t d4 = a4->stringFlags & 0xFFF0;
+    a4->y = a5->y;
+    uint8_t *destBuf = (uint8_t *)a4->fg;
+
+    /* Get offer and format text */
+    JobOffer *offer = _GetJobOfferPtr((uint16_t)d7);
+    uint8_t *teamName = offer->teamName;
+
+    uint8_t *fmtStr;
+    if (offer->amountOffered == 0xFFFFFFFF)
+        fmtStr = aInternationalJ_0;  /* "INTERNATIONAL JOB OFFER FROM %a" */
+    else
+        fmtStr = aJobOfferFromA;     /* "JOB OFFER FROM %a" */
+
+    /* If withdrawn (funds == 0), use withdrawn text and color 6 */
+    if (offer->amountOffered == 0) {
+        fmtStr = aJobOfferFromAW;    /* "JOB OFFER FROM %a WITHDRAWN" */
+        d3 |= 6;
+        d4 |= 6;
+        a5->isDisabled = 1;
+    }
+
+    _PrintFormatted(fmtStr, destBuf, 0, 0, 0, 0, 0, 0, 0,
+                    teamName, 0, 0);
+
+    a3->stringFlags = d3;
+    a4->stringFlags = d4;
+
+    /* Draw entries 13-14 */
+    _DrawMultipleItems(2, &menuEntries[13]);
+}
+
+/* ================================================================
+ * JobOffersAfterDrawCommon  (SWOS2.s line 73070)
+ *
+ * After-draw callback for new job offer entries.
+ * Similar to DrawOldOfferLine but operates on new offers queue
+ * and uses entries 11-12.
+ *
+ * in: a5 = current menu entry
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _JobOffersAfterDrawCommon(void *entryPtr)
+{
+    MenuEntry *a5 = (MenuEntry *)entryPtr;
+    a5->isDisabled = 1;
+
+    /* d7 = a5->ordinal - entries[1].ordinal (entry 1 = 0x38/0x38) */
+    int16_t d7 = (int16_t)a5->ordinal - (int16_t)menuEntries[1].ordinal;
+
+    if ((uint16_t)d7 >= numNewJobOffers)
+        return;
+
+    a5->isDisabled = 0;
+
+    /* Show entries 11 and 12 */
+    menuEntries[11].isInvisible = 0;
+    menuEntries[12].isInvisible = 0;
+
+    /* Entry 11 (a3): set stringFlags base, y, number */
+    MenuEntry *a3 = &menuEntries[11];
+    uint16_t d3 = a3->stringFlags & 0xFFF0;
+    a3->y = a5->y;
+    uint16_t numVal = (uint16_t)d7 + 1;
+    a3->fg = (uint32_t)numVal;
+
+    /* Entry 12 (a4): set stringFlags base, y, get dest buffer */
+    MenuEntry *a4 = &menuEntries[12];
+    uint16_t d4 = a4->stringFlags & 0xFFF0;
+    a4->y = a5->y;
+    uint8_t *destBuf = (uint8_t *)a4->fg;
+
+    /* Get offer and format text */
+    JobOffer *offer = _GetNewJobOfferPtr((uint16_t)d7);
+    uint8_t *teamName = offer->teamName;
+
+    uint8_t *fmtStr;
+    if (offer->amountOffered == 0xFFFFFFFF)
+        fmtStr = aInternationalJ_0;  /* "INTERNATIONAL JOB OFFER FROM %a" */
+    else
+        fmtStr = aJobOfferFromA;     /* "JOB OFFER FROM %a" */
+
+    /* If withdrawn (funds == 0), use withdrawn text and color 6 */
+    if (offer->amountOffered == 0) {
+        fmtStr = aJobOfferFromAW;    /* "JOB OFFER FROM %a WITHDRAWN" */
+        d3 |= 6;
+        d4 |= 6;
+        a5->isDisabled = 1;
+    }
+
+    _PrintFormatted(fmtStr, destBuf, 0, 0, 0, 0, 0, 0, 0,
+                    teamName, 0, 0);
+
+    a3->stringFlags = d3;
+    a4->stringFlags = d4;
+
+    /* Draw entries 11-12 */
+    _DrawMultipleItems(2, &menuEntries[11]);
+}

@@ -3064,6 +3064,14 @@
         xdef    aWeHereAtAWithd
         xdef    aOfferOn
         xdef    aFromAInExchang
+; --- Chunk 169 xrefs ---
+        xref    _JobOffersInit
+        xref    _JobOffers_DrawOldOfferLine
+        xref    _JobOffersAfterDrawCommon
+; --- Chunk 169 xdefs ---
+        xdef    aInternationalJ_0
+        xdef    aJobOfferFromA
+        xdef    aJobOfferFromAW
 ; --- Chunk 168 xrefs ---
         xref    _OffersAfterDrawCommon
 ; --- Chunk 168 xdefs ---

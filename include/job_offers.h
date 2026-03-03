@@ -30,6 +30,11 @@ void _ViewFutureTeam(void);
 void _ViewFutureTeamLeague(void);
 void _ConsiderJobOffer(void);
 
+/* --- JobOffersInit, DrawOldOfferLine, AfterDrawCommon (Chunk 169) --- */
+void _JobOffersInit(void);
+void _JobOffers_DrawOldOfferLine(void *entryPtr);
+void _JobOffersAfterDrawCommon(void *entryPtr);
+
 /* --- Job offers menu layout/exit (Chunk 116) --- */
 void _JobOffers_UpdateMenuEntryLayout(void);
 void _JobOffersFinish(void);

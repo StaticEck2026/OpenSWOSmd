@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1451 functions ported across 168 chunks.
+**Current status:** 1454 functions ported across 169 chunks.
 
-**Last completed chunk:** Chunk 168 — OffersAfterDrawCommon (1 → transfer_market.c): after-draw callback for offers view menu, formats offer text with line wrapping.
+**Last completed chunk:** Chunk 169 — JobOffers Init/DrawOld/AfterDraw (3 → job_offers.c): JobOffersInit, JobOffers_DrawOldOfferLine, JobOffersAfterDrawCommon.
 
-**Next candidates:** ChooseTeamsDialog/SelectTeams family (~10), SquadInit/Finish/AfterDraw (~10), Career season info (~2), EditTactics helpers (~10), DIY cup menu functions (~4), Job offers (~6), National team selection (~8), misc.
+**Next candidates:** ChooseTeamsDialog/SelectTeams family (~10), SquadInit/Finish/AfterDraw (~10), Career season info (~2), EditTactics helpers (~10), DIY cup menu functions (~4), National team selection (~8), misc.
 
 ---
 

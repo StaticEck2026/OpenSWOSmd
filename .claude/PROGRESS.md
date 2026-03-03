@@ -2969,6 +2969,18 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, only pre-existing warnings)
 - Cumulative: 1450 functions across 167 chunks
 
+### Chunk 169 — JobOffers Init/DrawOld/AfterDraw (3 → job_offers.c)
+- Date: 2026-03-03
+- Ported:
+  1. JobOffersInit (→job_offers.c) — menu init callback; anti-piracy cookie check, fills missing team names, resets selectedOldJobOfferOrdinal, falls through to JobOffersFinish
+  2. JobOffers_DrawOldOfferLine (→job_offers.c) — after-draw callback for old offer entries; formats "JOB OFFER FROM %a" / "INTERNATIONAL" / "WITHDRAWN" text, highlights selected offer, draws entries 13-14
+  3. JobOffersAfterDrawCommon (→job_offers.c) — after-draw callback for new offer entries; same format logic, draws entries 11-12
+- Stubs: JobOffersInit (no-param bridge), DrawOldOfferLine + AfterDrawCommon (a5 bridges)
+- New xrefs: _JobOffersInit, _JobOffers_DrawOldOfferLine, _JobOffersAfterDrawCommon
+- New xdefs: aInternationalJ_0, aJobOfferFromA, aJobOfferFromAW
+- Build status: **verified** (clean build)
+- Cumulative: 1454 functions across 169 chunks
+
 ### Chunk 168 — OffersAfterDrawCommon (1 → transfer_market.c)
 - Date: 2026-03-03
 - Ported:

@@ -72955,15 +72955,12 @@ jobOffersMenu:
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
 ; ===== JobOffersInit =====
-; prototype: void __usercall JobOffersInit()
+; Ported to C: _JobOffersInit in src/job_offers.c
 JobOffersInit:
-                move.l  (irqCookieObfuscated).l,d0
-                eori.l  #$CFD1F80D,d0
-                cmpi.l  #$17EA,d0
-                bne.w   chooseTacticsMenu+MENU_CHOOSETACTICS_ENTRY4+MENUENTRY_BYTE_NAV_COLORS_TEXTPTR_ONSELECT_ONSELECT+MENUCMD_ONSELECT_FUNCPTR+2
-                jsr JobOffers_FillMissingNewOfferTeamNames(pc)
-                move.w  #$FFFF,(selectedOldJobOfferOrdinal).l
-                bra.w   *+4
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _JobOffersInit
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== JobOffersFinish ===== (ported to C → _JobOffersFinish)
 JobOffersFinish:
@@ -72998,123 +72995,23 @@ JobOffers_UpdateMenuEntryLayout:
                 jmp     _JobOffers_UpdateMenuEntryLayout
 
 ; ===== JobOffers_DrawOldOfferLine =====
-; prototype: void __usercall JobOffers_DrawOldOfferLine(struct MenuEntry *entry@<a5>)
-; dos: cseg_6087D
+; Ported to C: _JobOffers_DrawOldOfferLine in src/job_offers.c
 JobOffers_DrawOldOfferLine:
-                move.w  #1,MENUENTRY_ISDISABLED(a5)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a0
-                move.w  2(a5),d7
-                sub.w   2(a0),d7
-                cmp.w   (numJobOffers).l,d7
-                bcc.w   locret_14A11A
-                clr.w   6(a5)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$348)).l,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                clr.w   $3C(a0)
-                clr.w   d1
-                cmp.w   (selectedOldJobOfferOrdinal).l,d7
-                bne.s   loc_14A06C
-                move.w  #$D,d5
-loc_14A06C:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$348)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                or.w    d5,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     $38(a0),a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                or.w    d5,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$348)).l,a3
-                move.w  MENUENTRY_STRINGFLAGS(a3),d3
-                andi.w  #$FFF0,d3
-                move.w  $16(a5),$16(a3)
-                move.w  d7,d0
-                addq.w  #1,d0
-                move.w  d0,$26(a3)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$380)).l,a4
-                move.w  MENUENTRY_STRINGFLAGS(a4),d4
-                andi.w  #$FFF0,d4
-                move.w  $16(a5),$16(a4)
-                movea.l $26(a4),a1
-                move.w  d7,d0
-                bsr.w   GetJobOfferPtr
-                movea.l a0,a6
-                lea     2(a6),a2
-                cmpi.l  #$FFFFFFFF,$14(a6)
-                bne.s   loc_14A0DE
-                lea     (aInternationalJ_0).l,a0 ; "INTERNATIONAL JOB OFFER FROM %a"
-                bra.s   loc_14A0E4
-loc_14A0DE:
-                lea     (aJobOfferFromA).l,a0 ; "JOB OFFER FROM %a"
-loc_14A0E4:
-                tst.l   $14(a6)
-                bne.s   loc_14A0FE
-                lea     (aJobOfferFromAW).l,a0 ; "JOB OFFER FROM %a WITHDRAWN"
-                ori.w   #6,d3
-                ori.w   #6,d4
-                move.w  #1,6(a5)
-loc_14A0FE:
-                jsr     PrintFormatted
-                move.w  d3,$24(a3)
-                move.w  d4,$24(a4)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$348)).l,a5
-                move.w  #2,d0
-                jsr     DrawMultipleItems
-locret_14A11A:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _JobOffers_DrawOldOfferLine
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== JobOffersAfterDrawCommon =====
-; prototype: void __usercall JobOffersAfterDrawCommon(struct MenuEntry *entry@<a5>)
+; Ported to C: _JobOffersAfterDrawCommon in src/job_offers.c
 JobOffersAfterDrawCommon:
-                move.w  #1,MENUENTRY_ISDISABLED(a5)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                move.w  MENUENTRY_ORDINAL(a5),d7
-                sub.w   MENUENTRY_ORDINAL(a0),d7
-                cmp.w   (numNewJobOffers).l,d7
-                bcc.w   locret_14A1D2
-                clr.w   6(a5)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2D8)).l,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                clr.w   MENUENTRY_ISINVISIBLE+$38(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2D8)).l,a3
-                move.w  MENUENTRY_STRINGFLAGS(a3),d3
-                andi.w  #$FFF0,d3
-                move.w  MENUENTRY_Y(a5),MENUENTRY_Y(a3)
-                move.w  d7,d0
-                addq.w  #1,d0
-                move.w  d0,MENUENTRY_FG+ENTRYTYPE2UNION_NUMBER(a3)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$310)).l,a4
-                move.w  MENUENTRY_STRINGFLAGS(a4),d4
-                andi.w  #$FFF0,d4
-                move.w  MENUENTRY_Y(a5),MENUENTRY_Y(a4)
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a4),a1
-                move.w  d7,d0
-                bsr.w   GetNewJobOfferPtr
-                movea.l a0,a6
-                lea     2(a6),a2
-                cmpi.l  #$FFFFFFFF,20(a6)
-                bne.s   loc_14A196
-                lea     (aInternationalJ_0).l,a0 ; "INTERNATIONAL JOB OFFER FROM %a"
-                bra.s   loc_14A19C
-loc_14A196:
-                lea     (aJobOfferFromA).l,a0 ; "JOB OFFER FROM %a"
-loc_14A19C:
-                tst.l   20(a6)
-                bne.s   loc_14A1B6
-                lea     (aJobOfferFromAW).l,a0 ; "JOB OFFER FROM %a WITHDRAWN"
-                ori.w   #6,d3
-                ori.w   #6,d4
-                move.w  #1,MENUENTRY_ISDISABLED(a5)
-loc_14A1B6:
-                jsr     PrintFormatted
-                move.w  d3,MENUENTRY_STRINGFLAGS(a3)
-                move.w  d4,MENUENTRY_STRINGFLAGS(a4)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2D8)).l,a5
-                move.w  #2,d0
-                jsr     DrawMultipleItems
-locret_14A1D2:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _JobOffersAfterDrawCommon
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 pad_14A1D4:
                 dc.b 0,0
