@@ -152,4 +152,15 @@ void _PlayerOffersAdjustOfferAmount(void);
 void _TransferPlayerInit(void *entry);
 void _ThirdPartyOfferMenuInit(void *entry);
 
+/* --- Career Transfer Accept + Trialist System (Chunk 167) --- */
+void _Career_BuildForeignMarketPoolFromSelectedTeam(void);
+void _Career_TransferPlayerAndAddReplacedToMarketPool(uint16_t sourceTeam, uint16_t playerOrd);
+void _Career_AcceptOffer_SellPlayer(void);
+void _Career_AcceptOffer_BuyPlayer(void);
+void _Career_RemovePlayerAndAddAsTrialist(uint16_t sourceTeam, uint16_t playerOrd);
+void _Career_GenerateTrialistForTeamPlayer(uint16_t playerIndex);
+void _Career_ConvertPlayerToTrialistFromName(uint16_t sourceTeam, uint16_t playerOrd);
+void _TrainingMatch_AddTrialPlayerToSelectedTeam(uint16_t role);
+void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16_t baseCount, uint8_t *teamPtr);
+
 #endif

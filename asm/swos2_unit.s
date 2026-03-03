@@ -3025,6 +3025,25 @@
         xref    _ViewSquadInit
         xref    _ViewSquadCommon
         xref    _ViewSquadAfterDrawCommon
+; --- Chunk 167 xrefs ---
+        xref    _Career_BuildForeignMarketPoolFromSelectedTeam
+        xref    _Career_TransferPlayerAndAddReplacedToMarketPool
+        xref    _Career_AcceptOffer_SellPlayer
+        xref    _Career_AcceptOffer_BuyPlayer
+        xref    _Career_RemovePlayerAndAddAsTrialist
+        xref    _Career_GenerateTrialistForTeamPlayer
+        xref    _Career_ConvertPlayerToTrialistFromName
+        xref    _TrainingMatch_AddTrialPlayerToSelectedTeam
+        xref    _TrainingMatch_AdjustSelectedTeamRosterForTrialists
+; --- Chunk 167 xdefs ---
+        xdef    tempTeamBuffer
+        xdef    selTeamPlayerIndices
+        xdef    transferReplacementPriorityTable
+        xdef    trialistNameBuffer
+        xdef    trialistNameBufTerminator
+        xdef    trialistSkillDistribution
+        xdef    trialistSkillTemplates
+        xdef    trialistSkillBitMasks
 ; --- Chunk 166 xrefs ---
         xref    _TransferPlayerInit
         xref    _ThirdPartyOfferMenuInit

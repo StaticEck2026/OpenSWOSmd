@@ -3264,3 +3264,951 @@ void _ThirdPartyOfferMenuInit(void *entryPtr)
     }
 }
 
+/* ================================================================
+ * Chunk 167 — Career Transfer Accept + Trialist System
+ * 12 functions from SWOS2.s lines 63218-64296.
+ * ================================================================ */
+
+/* ---- Additional externs for Chunk 167 ---- */
+extern uint8_t  tempTeamBuffer[];          /* 0x2AC-byte team buffer */
+extern uint8_t  selTeamPlayerIndices[];    /* 16-byte player index mapping */
+extern uint32_t transferReplacementPriorityTable[]; /* 8 pointers to priority lists */
+extern uint16_t currentMessage;
+extern uint16_t trainingGame;
+extern uint16_t careerFileBuffer;          /* count of teams in TMD pool */
+extern uint8_t  tmdFileBuffer;             /* start of TMD team pool */
+extern uint8_t  trialistNameBuffer[];      /* 23-byte trialist name buffer */
+extern uint8_t  trialistNameBufTerminator; /* sentinel byte */
+extern uint8_t  trialistSkillDistribution[];   /* 20 bytes cumulative prob weights */
+extern uint8_t  trialistSkillTemplates[];  /* 512 bytes packed skill nibbles */
+extern uint8_t  trialistSkillBitMasks[];   /* 32 bytes skill bit masks per position */
+extern uint8_t  currentMatchPlayers[];     /* player ordinal mapping */
+extern uint16_t panicReasonCode;
+
+extern void _ClampNewBalanceAndUpdateClubStatus(void);
+extern void _ClearOverdraftStateIfRecovered(void);
+extern uint8_t *_GetTeamPointer(uint16_t teamNumber);
+extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
+extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+extern void _Career_RemovePlayerFromTeamInternal(uint16_t teamNumber, uint16_t playerOrd);
+extern void _AddCareerPoolPlayer(uint16_t teamNumber, uint16_t playerOrdinal, uint8_t *teamFilePtr);
+extern void _Career_RemovePlayerFromSelectedTeamRoster(uint16_t playerIndex);
+extern void _SetBenchPlayersNumbers(uint8_t *teamPtr);
+extern void _TrainingMatch_SaveSelectedPlayerId(uint16_t value);
+extern void _Career_UpdatePlayerWeeklyWageCache(uint16_t playerIndex);
+extern int16_t _SearchTeamInTmdFile(uint16_t teamNumber);
+extern void _Career_RemoveTeamFromTmdTeamPool(uint16_t teamNumber);
+extern void _Career_AppendTeamToTmdTeamPool(uint8_t *teamData);
+extern uint16_t _GetAveragePlayerPrice(uint8_t *team);
+extern void _Career_CommitNewBalanceAndResetFinanceTotals(void);
+extern uint32_t _GetNumberOfAvailableSubstitutes(uint8_t *team, int16_t flag);
+extern uint32_t _GetNumberOfAvailableStartingPlayers(uint8_t *team, int16_t flag);
+extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
+extern void _PanicHaltLoop(void);
+
+/* Player data offset from GetPlayer result to actual PlayerFile fields */
+#define PF_OFF 76  /* sizeof(TeamFile) */
+
+/* ================================================================
+ * Career_BuildForeignMarketPoolFromSelectedTeam  (SWOS2.s line 63218)
+ *
+ * Copies careerTeam to tempTeamBuffer, then rearranges players
+ * according to selTeamPlayerIndices, copies back, updates
+ * currentMatchPlayers and careerNumPlayers, clears player flags,
+ * adds all 16 players to career pool, and optionally updates TMD.
+ * ================================================================ */
+__attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
+void _Career_BuildForeignMarketPoolFromSelectedTeam(void)
+{
+    uint8_t *src, *dst;
+    int16_t i, j;
+
+    /* Copy careerTeam (0x2AC bytes) to tempTeamBuffer */
+    src = (uint8_t *)&careerTeam;
+    dst = tempTeamBuffer;
+    for (i = 0x2AB; i >= 0; i--)
+        *dst++ = *src++;
+
+    /* Rearrange players: for each ordinal 0-15, get the player data from
+       selTeamPlayerIndices[ordinal] and copy 0x26 bytes of player data */
+    uint8_t *indices = selTeamPlayerIndices;
+    for (i = 0; i < 16; i++) {
+        uint8_t *playerSrc = _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+        playerSrc += PF_OFF;  /* point to actual PlayerFile data */
+
+        uint8_t idx = *indices++;
+        uint16_t off = (uint16_t)((int8_t)idx) * 0x26;  /* ext.w d0; mulu.w #$26,d0 */
+        uint8_t *playerDst = tempTeamBuffer + PF_OFF + off;
+
+        for (j = 0x25; j >= 0; j--)
+            *playerDst++ = *playerSrc++;
+    }
+
+    /* Copy tempTeamBuffer back to careerTeam */
+    src = tempTeamBuffer;
+    dst = (uint8_t *)&careerTeam;
+    for (i = 0x2AB; i >= 0; i--)
+        *dst++ = *src++;
+
+    /* Copy selTeamPlayerIndices to currentMatchPlayers */
+    src = selTeamPlayerIndices;
+    dst = currentMatchPlayers;
+    for (i = 0xF; i >= 0; i--)
+        *dst++ = *src++;
+
+    careerNumPlayers = 16;
+
+    /* Clear flags on all 16 players and add to career pool */
+    for (i = 15; i >= 0; i--) {
+        uint8_t *p = _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+        PlayerFile *pf = (PlayerFile *)(p + PF_OFF);
+        pf->positionAndFace &= ~0x02;  /* bclr #1 */
+        pf->cardsInjuries = 0;
+        pf->positionAndFace &= ~0x01;  /* bclr #0 */
+        pf->someFlag = 0;
+        _AddCareerPoolPlayer(selTeamNumber, (uint16_t)i, p);
+    }
+
+    /* If team found in TMD file, remove and re-add with updated data */
+    if (_SearchTeamInTmdFile(selTeamNumber) == 0) {
+        _Career_RemoveTeamFromTmdTeamPool(selTeamNumber);
+        _Career_AppendTeamToTmdTeamPool((uint8_t *)&careerTeam);
+    }
+}
+
+/* ================================================================
+ * Career_TransferPlayerAndAddReplacedToMarketPool  (SWOS2.s line 63534)
+ *
+ * Removes player d1 from selTeam. Finds lowest-price player of same
+ * position group from team d0 to replace, copies player data over,
+ * clears stats, and adds replaced player to career pool.
+ *
+ * in:  d0 = source team number, d1 = player ordinal to transfer
+ * ================================================================ */
+__attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
+void _Career_TransferPlayerAndAddReplacedToMarketPool(uint16_t sourceTeam, uint16_t playerOrd)
+{
+    uint16_t savedOrd = playerOrd;
+    uint16_t d6 = sourceTeam;
+
+    /* Remove player from selected team's internal roster */
+    _Career_RemovePlayerFromTeamInternal(selTeamNumber, playerOrd);
+
+    /* Get the player being transferred (from selected team) */
+    uint8_t *transferredBase = _GetPlayer(selTeamNumber, 0);
+    PlayerFile *transferredPf = (PlayerFile *)(transferredBase + PF_OFF);
+
+    /* Get position group (bits 7-5 of positionAndFace) */
+    uint16_t posGroup = ((uint16_t)transferredPf->positionAndFace & 0xE0) >> 3;
+    /* posGroup is now index*4 into the priority table (lsr.w #3) */
+
+    uint8_t *priorityList = (uint8_t *)transferReplacementPriorityTable[posGroup >> 2];
+
+    /* Get source team pointer */
+    uint8_t *teamPtr = _GetTeamPointer(d6);
+
+    while (1) {
+        uint8_t targetRole = *priorityList++;
+        if ((int8_t)targetRole < 0) {
+            /* No replacement found — panic */
+            panicReasonCode = 0x7272;
+            _PanicHaltLoop();
+            return;
+        }
+
+        /* Search team for lowest-priced player of this role */
+        uint8_t *bestPlayer = 0;
+        uint16_t bestOrdinal = 0;
+        uint8_t bestPrice = 0xFF;
+
+        uint8_t *scanPtr = teamPtr;
+        for (uint16_t slot = 0; slot < 16; slot++) {
+            PlayerFile *pf = (PlayerFile *)(scanPtr + PF_OFF);
+            uint16_t role = ((uint16_t)pf->positionAndFace & 0xE0) >> 5;
+            if (role == targetRole) {
+                if (pf->price < bestPrice) {
+                    bestOrdinal = slot;
+                    bestPrice = pf->price;
+                    bestPlayer = scanPtr;
+                }
+            }
+            scanPtr += 0x26;  /* lea $26(a0),a0 — advance by PlayerFile size */
+        }
+
+        if (bestPrice == 0xFF)
+            continue;  /* no match for this role, try next priority */
+
+        /* Found a replacement — copy player data (0x26 bytes from offset 0x4C) */
+        uint8_t *srcData = transferredBase + PF_OFF;
+        uint8_t *dstData = bestPlayer + PF_OFF;
+
+        /* Save shirt numbers before copy */
+        uint8_t srcShirt = *(transferredBase + 0x4E);
+        uint8_t dstShirt = *(bestPlayer + 0x4E);
+
+        /* Copy 0x26 bytes (19 words) of player data */
+        uint8_t *s = srcData;
+        uint8_t *d = dstData;
+        for (int16_t k = 0x12; k >= 0; k--) {
+            *(uint16_t *)d = *(uint16_t *)s;
+            s += 2;
+            d += 2;
+        }
+
+        /* Restore shirt numbers */
+        *(transferredBase + 0x4E) = srcShirt;
+        *(bestPlayer + 0x4E) = dstShirt;
+
+        /* Mark replacement as trialist and clear flags */
+        PlayerFile *bestPf = (PlayerFile *)(bestPlayer + PF_OFF);
+        bestPf->positionAndFace |= 0x04;   /* bset #2 */
+        bestPf->positionAndFace &= ~0x01;  /* bclr #0 */
+        bestPf->someFlag = 0;
+        bestPf->goalStats[0] = 0;
+        bestPf->goalStats[1] = 0;
+        bestPf->goalStats[2] = 0;
+        bestPf->goalStats[3] = 0;
+
+        /* Remove from source team and add to career pool */
+        _Career_RemovePlayerFromTeamInternal(d6, bestOrdinal);
+        _AddCareerPoolPlayer(d6, bestOrdinal, bestPlayer);
+        offerSwapSlotsUsed++;
+
+        /* Remove from selected team roster */
+        _Career_RemovePlayerFromSelectedTeamRoster(savedOrd);
+        return;
+    }
+}
+
+/* ================================================================
+ * Career_AcceptOffer_SellPlayer  (SWOS2.s line 63408)
+ *
+ * Handles accepting a sell offer: adds sale amount to balance,
+ * processes swap/extra players, flags teams as changed.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _Career_AcceptOffer_SellPlayer(void)
+{
+    _Career_CommitNewBalanceAndResetFinanceTotals();
+
+    uint32_t saleAmount = (uint32_t)offerAmount * 1000;
+    newBalance += (int32_t)saleAmount;
+    playerSales += (int32_t)saleAmount;
+
+    _ClampNewBalanceAndUpdateClubStatus();
+    _ClearOverdraftStateIfRecovered();
+
+    if ((int16_t)offerSwapPlayerOrdinal >= 0) {
+        /* Swap player: remove from offering team as trialist, transfer primary */
+        _Career_RemovePlayerAndAddAsTrialist(teamOffering, offerSwapPlayerOrdinal);
+        _Career_TransferPlayerAndAddReplacedToMarketPool(teamOffering, offerPrimaryPlayerOrdinal);
+    } else {
+        /* No swap: just transfer the primary player */
+        _Career_TransferPlayerAndAddReplacedToMarketPool(teamOffering, offerPrimaryPlayerOrdinal);
+    }
+
+    /* Handle extra player */
+    if ((int16_t)numExtraPlayersWanted < 0) {
+        /* Extra player wanted by us (numExtraPlayersWanted < 0) */
+        if ((int16_t)offerExtraPlayerOrdinal >= 0) {
+            _Career_RemovePlayerAndAddAsTrialist(teamOffering, offerExtraPlayerOrdinal);
+        }
+    } else {
+        /* Extra player offered by them (numExtraPlayersWanted >= 0) */
+        if ((int16_t)offerExtraPlayerOrdinal >= 0) {
+            _Career_RemovePlayerAndAddAsTrialist(teamOffering, offerExtraPlayerOrdinal);
+            _Career_TransferPlayerAndAddReplacedToMarketPool(teamOffering, numExtraPlayersWanted);
+        } else {
+            _Career_TransferPlayerAndAddReplacedToMarketPool(teamOffering, numExtraPlayersWanted);
+        }
+    }
+
+    /* Flag both teams as changed */
+    uint8_t *tp = _GetTeamPointer(teamOffering);
+    ((TeamFile *)tp)->someFlag = 1;
+    careerTeam[59] = 1;  /* TEAMFILE_SOMEFLAG = offset 59 */
+
+    _PrunePlayerOffersAgainstRosterLimits();
+
+    if (_GetRemainingOfferSwapSlots() == 0) {
+        numOffers = 0;
+        currentMessage = 4;
+        _ShowChairmanMessage();
+    }
+}
+
+/* ================================================================
+ * Career_AcceptOffer_BuyPlayer  (SWOS2.s line 63474)
+ *
+ * Handles accepting a buy offer: subtracts purchase amount from
+ * balance, processes swap/extra players, flags teams as changed.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _Career_AcceptOffer_BuyPlayer(void)
+{
+    _Career_CommitNewBalanceAndResetFinanceTotals();
+
+    uint32_t purchaseAmount = (uint32_t)offerAmount * 1000;
+    newBalance -= (int32_t)purchaseAmount;
+    playerPurchases += (int32_t)purchaseAmount;
+
+    _ClampNewBalanceAndUpdateClubStatus();
+    _ClearOverdraftStateIfRecovered();
+
+    if ((int16_t)offerSwapPlayerOrdinal >= 0) {
+        /* Swap: remove primary as trialist, transfer swap player */
+        _Career_RemovePlayerAndAddAsTrialist(teamOffering, offerPrimaryPlayerOrdinal);
+        _Career_TransferPlayerAndAddReplacedToMarketPool(teamOffering, offerSwapPlayerOrdinal);
+    } else {
+        /* No swap: remove primary as trialist */
+        _Career_RemovePlayerAndAddAsTrialist(teamOffering, offerPrimaryPlayerOrdinal);
+    }
+
+    /* Handle extra player */
+    if ((int16_t)numExtraPlayersWanted < 0) {
+        /* Extra player wanted by us */
+        if ((int16_t)offerExtraPlayerOrdinal >= 0) {
+            _Career_TransferPlayerAndAddReplacedToMarketPool(teamOffering, offerExtraPlayerOrdinal);
+        }
+    } else {
+        /* Extra player offered by them */
+        if ((int16_t)offerExtraPlayerOrdinal >= 0) {
+            _Career_RemovePlayerAndAddAsTrialist(teamOffering, numExtraPlayersWanted);
+            _Career_TransferPlayerAndAddReplacedToMarketPool(teamOffering, offerExtraPlayerOrdinal);
+        } else {
+            _Career_RemovePlayerAndAddAsTrialist(teamOffering, numExtraPlayersWanted);
+        }
+    }
+
+    /* Flag both teams as changed */
+    uint8_t *tp = _GetTeamPointer(teamOffering);
+    ((TeamFile *)tp)->someFlag = 1;
+    careerTeam[59] = 1;  /* TEAMFILE_SOMEFLAG = offset 59 */
+
+    _PrunePlayerOffersAgainstRosterLimits();
+}
+
+/* ================================================================
+ * Career_RemovePlayerAndAddAsTrialist  (SWOS2.s line 63815)
+ *
+ * Removes player from source team, finds free slot in
+ * currentMatchPlayers, saves player ID, copies player data,
+ * inserts into roster at correct position, and converts to trialist.
+ *
+ * in: d0 = source team, d1 = player ordinal
+ * ================================================================ */
+__attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
+void _Career_RemovePlayerAndAddAsTrialist(uint16_t sourceTeam, uint16_t playerOrd)
+{
+    uint16_t savedTeam = sourceTeam;
+    uint16_t savedOrd = playerOrd;
+
+    /* Remove from source team */
+    _Career_RemovePlayerFromTeamInternal(sourceTeam, playerOrd);
+
+    /* Get the source player data */
+    uint8_t *srcBase = _GetPlayer(sourceTeam, 0);
+    PlayerFile *srcPf = (PlayerFile *)(srcBase + PF_OFF);
+
+    /* Find a free slot index not used in currentMatchPlayers */
+    uint16_t freeSlot = 0;
+    while (1) {
+        int16_t found = 0;
+        int16_t numPl = (int16_t)careerNumPlayers - 1;
+        while (numPl >= 0) {
+            if (currentMatchPlayers[numPl] == (uint8_t)freeSlot) {
+                freeSlot++;
+                found = 1;
+                break;
+            }
+            numPl--;
+        }
+        if (!found)
+            break;
+    }
+
+    /* Get the destination slot in selected team */
+    uint8_t *dstBase = _GetPlayer(selTeamNumber, 0);
+    _TrainingMatch_SaveSelectedPlayerId(freeSlot);
+
+    /* Mark source player as trialist */
+    srcPf->positionAndFace |= 0x04;  /* bset #2 */
+    srcPf->goalStats[0] = 0;
+    srcPf->goalStats[1] = 0;
+    srcPf->goalStats[2] = 0;
+    srcPf->goalStats[3] = 0;
+
+    /* Copy player data (0x26 bytes = 19 words from offset 0x4C) */
+    uint8_t *s = srcBase + PF_OFF;
+    uint8_t *d = dstBase + PF_OFF;
+    for (int16_t k = 0x12; k >= 0; k--) {
+        *(uint16_t *)d = *(uint16_t *)s;
+        s += 2;
+        d += 2;
+    }
+
+    /* Determine insertion position in currentMatchPlayers:
+       competitionFileBuffer[0] == 2 ? use offset 0x4E : offset 0x66 */
+    uint16_t *compBuf = (uint16_t *)&competitionFileBuffer;
+    uint16_t insertPos;
+    if (compBuf[0] == 2) {
+        insertPos = compBuf[0x4E / 2];  /* 0x4E = offset 78 from competitionFileBuffer start */
+    } else {
+        insertPos = compBuf[0x66 / 2];  /* 0x66 = offset 102 */
+    }
+    insertPos += 11;  /* addi.w #$B,d2 */
+
+    /* Shift currentMatchPlayers entries right to make room */
+    uint8_t *cmp = currentMatchPlayers;
+    uint16_t numPl = careerNumPlayers;
+    uint8_t *insertPtr = cmp + numPl;  /* end of array */
+    int16_t shiftCount = (int16_t)(numPl - insertPos);
+    if (shiftCount > 0) {
+        shiftCount--;
+        while (shiftCount >= 0) {
+            *insertPtr = *(insertPtr - 1);  /* move.b -1(a0),(a0) */
+            insertPtr--;
+            shiftCount--;
+        }
+    }
+    /* Insert the new player at the insertion point */
+    *insertPtr = (uint8_t)freeSlot;
+
+    /* Set bench player numbers */
+    _SetBenchPlayersNumbers((uint8_t *)&careerTeam);
+
+    careerNumPlayers++;
+    _Career_UpdatePlayerWeeklyWageCache(freeSlot);
+
+    /* Convert player to trialist using source name */
+    _Career_ConvertPlayerToTrialistFromName(savedTeam, savedOrd);
+}
+
+/* ================================================================
+ * PickRandomTeamRecordAvoidingTeam  (SWOS2.s line 64261)
+ *
+ * Picks a random team from TMD file or selected teams, avoiding
+ * team with matching countryNumber (d7) or globalTeamNumber (d6).
+ *
+ * in:  d6 = team number to avoid (word), d7 = team byte to avoid
+ * out: a0 = pointer to team record
+ * ================================================================ */
+static uint8_t *pickRandomTeamRecordAvoidingTeam(uint16_t avoidTeamWord, uint8_t avoidTeamByte)
+{
+    uint8_t *result;
+    uint16_t retries = 100;
+
+    while (1) {
+        /* Try TMD file first if non-empty */
+        if (careerFileBuffer != 0) {
+            uint16_t r = _Rand2();
+            uint32_t idx = (uint32_t)r * (uint32_t)careerFileBuffer;
+            idx >>= 8;
+            idx *= 0x2AC;
+            result = &tmdFileBuffer + idx;
+
+            if (*(uint16_t *)result != avoidTeamWord) {
+                if (*result != avoidTeamByte)
+                    return result;
+            }
+            if (retries == 0)
+                return result;
+        }
+
+        /* Try selected teams */
+        uint16_t r = _Rand2();
+        uint32_t idx = (uint32_t)r * (uint32_t)numSelectedTeams;
+        idx >>= 8;
+        idx *= 0x2AC;
+        result = &selTeamsPtr + idx;
+
+        if (*(uint16_t *)result != avoidTeamWord) {
+            if (*result != avoidTeamByte)
+                return result;
+        }
+        if (retries == 0)
+            return result;
+
+        retries--;
+    }
+}
+
+/* ================================================================
+ * Career_PickRandomTrialistOriginValue  (SWOS2.s line 64205)
+ *
+ * Picks a random player name from a random team to use as
+ * trialist name. Builds name by taking last word(s) from player
+ * surname. Also returns nationality and position flags.
+ *
+ * in:  d0 = avoidTeamByte (country), d3 = avoidTeamWord (team#)
+ * out: d0 = nationality byte, d3 = position flags (bits 3-4),
+ *      a2 = pointer to trialistNameBuffer
+ * ================================================================ */
+static uint32_t pickRandomTrialistOriginValue(uint8_t avoidTeamByte, uint16_t avoidTeamWord)
+{
+    uint8_t nationality;
+    uint8_t posFlags;
+
+restart:;
+    uint8_t *nameDst = trialistNameBuffer;
+
+    /* Pick random team, then random player from it */
+    uint8_t *team = pickRandomTeamRecordAvoidingTeam(avoidTeamWord, avoidTeamByte);
+    uint16_t r = _Rand2();
+    uint16_t playerIdx = (r & 0xF) * 0x26;
+    uint8_t *playerBase = team + playerIdx;
+    nationality = *(playerBase + 0x4C);   /* nationality */
+    posFlags = *(playerBase + 0x66) & 0x18; /* position flags bits 3-4 */
+    uint8_t *name = playerBase + 0x4F;     /* player name */
+
+    /* Copy characters from name to trialistNameBuffer */
+    while (*name != 0) {
+        if (*name == ' ')
+            goto handleSpace;
+        *nameDst++ = *name++;
+        if (nameDst >= &trialistNameBufTerminator)
+            goto restart;
+        continue;
+
+    handleSpace:
+        /* On space: pick a new random team/player, take last word of their surname */
+        team = pickRandomTeamRecordAvoidingTeam(avoidTeamWord, avoidTeamByte);
+        r = _Rand2();
+        playerIdx = (r & 0xF) * 0x26;
+        playerBase = team + playerIdx;
+        nationality = *(playerBase + 0x4C);
+        posFlags = *(playerBase + 0x66) & 0x18;
+        name = playerBase + 0x4F;
+
+        /* Find end of name string */
+        uint8_t *nameEnd = name;
+        while (*nameEnd != 0)
+            nameEnd++;
+
+        /* Walk back to find last space */
+        uint8_t *scan = nameEnd;
+        while (scan > name) {
+            if (*(scan - 1) == ' ') {
+                /* Found space — copy from here to end */
+                break;
+            }
+            scan--;
+        }
+        if (scan == name)
+            goto restart;  /* no space found, retry */
+
+        /* Copy from last word to end */
+        while (*scan != 0) {
+            *nameDst++ = *scan++;
+            if (nameDst >= &trialistNameBufTerminator)
+                goto restart;
+        }
+        break;
+    }
+
+    *nameDst = 0;  /* null-terminate */
+
+    /* Return packed result: nationality in low byte, posFlags in bits 8-12 */
+    return ((uint32_t)posFlags << 8) | (uint32_t)nationality;
+}
+
+/* ================================================================
+ * Career_GenerateTrialistForTeamPlayer  (SWOS2.s line 63941)
+ *
+ * Generates trialist data for a player slot. Picks random origin,
+ * copies name, clears stats, marks as trialist.
+ *
+ * in: d1 = player file index
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _Career_GenerateTrialistForTeamPlayer(uint16_t playerIndex)
+{
+    uint16_t d4 = selTeamNumber;
+    uint16_t d5 = selTeamNumber;
+    uint16_t d6 = playerIndex;
+
+    uint8_t *base = _GetPlayer(selTeamNumber, 0);
+    PlayerFile *pf = (PlayerFile *)(base + PF_OFF);
+
+    uint8_t avoidByte = (uint8_t)selTeamNumber;
+    uint16_t avoidWord = selTeamNumber;
+
+    uint32_t result = pickRandomTrialistOriginValue(avoidByte, avoidWord);
+    uint8_t nationality = (uint8_t)(result & 0xFF);
+    uint8_t posFlags = (uint8_t)((result >> 8) & 0xFF);
+
+    pf->nationality = (int8_t)nationality;
+
+    uint8_t posAndFace = pf->positionAndFace;
+    posAndFace &= 0xE7;  /* andi.b #$E7 — clear bits 3-4 */
+    posAndFace |= posFlags;
+    pf->positionAndFace = posAndFace;
+
+    /* Copy name from trialistNameBuffer */
+    _StringCopy(trialistNameBuffer, (uint8_t *)pf->playerName);
+
+    /* Clear stats */
+    pf->goalStats[0] = 0;
+    pf->goalStats[1] = 0;
+    pf->goalStats[2] = 0;
+    pf->goalStats[3] = 0;
+    pf->cardsInjuries = 0;
+    *(uint32_t *)&pf->passing = 0;  /* clr.l $68(a3) — clear 4 bytes at once */
+    pf->price = 0;
+
+    /* Mark as trialist (bit 1) */
+    pf->positionAndFace |= 0x02;  /* bset #1 */
+    pf->someFlag = 0;
+}
+
+/* ================================================================
+ * Career_InitTrialistAttributes  (SWOS2.s line 64019)
+ *
+ * Computes skill attributes for a trialist based on team average
+ * and random distribution. Uses trialistSkillTemplates for the
+ * final skill assignment.
+ *
+ * in: a3 = player pointer (to TeamFileEx base, player at +0x4C)
+ *     d5 = source team number
+ * ================================================================ */
+static void careerInitTrialistAttributes(PlayerFile *pf, uint16_t sourceTeam)
+{
+    /* Save current player data to tempTeamBuffer */
+    uint8_t *src = (uint8_t *)pf;
+    uint8_t *dst = tempTeamBuffer;
+    for (int16_t i = 0x25; i >= 0; i--)
+        *dst++ = *src++;
+
+    /* Calculate average price of players with same position (or all if same team) */
+    uint16_t numPl = careerNumPlayers;
+    if (sourceTeam != selTeamNumber)
+        numPl = 16;
+
+    int16_t iter = (int16_t)numPl - 1;
+    uint16_t totalPrice = 0;
+    uint16_t count = 0;
+    uint16_t posGroup = ((uint16_t)pf->positionAndFace & 0xE0) >> 5;
+
+    while (iter >= 0) {
+        uint8_t *p = _GetPlayerAtIndex(sourceTeam, (uint16_t)iter);
+        PlayerFile *ppf = (PlayerFile *)(p + PF_OFF);
+
+        if (sourceTeam == selTeamNumber) {
+            /* Same team: count all players */
+            totalPrice += (uint8_t)ppf->price;
+            count++;
+        } else {
+            /* Different team: only count same position group */
+            uint16_t pg = ((uint16_t)ppf->positionAndFace & 0xE0) >> 5;
+            if (pg == posGroup) {
+                totalPrice += (uint8_t)ppf->price;
+                count++;
+            }
+        }
+        iter--;
+    }
+
+    /* Calculate skill level: avg/3, clamped to 0-15 */
+    int32_t avgPrice = (int32_t)(int16_t)totalPrice;  /* ext.l d2 */
+    uint16_t skillLevel = (uint16_t)(avgPrice / count);
+    skillLevel = skillLevel / 3;
+    if (skillLevel > 15)
+        skillLevel = 15;
+
+    if (sourceTeam != selTeamNumber) {
+        /* Foreign team: add random -1 to +2 adjustment */
+        uint16_t r = _Rand2();
+        int16_t adj = (int16_t)(r & 3) - 1;
+        skillLevel = (uint16_t)((int16_t)skillLevel + adj);
+    } else {
+        /* Same team: pick random team, random player, use their price */
+        uint8_t *randomTeam;
+        do {
+            uint16_t r = _Rand2();
+            uint32_t tidx = (uint32_t)r * (uint32_t)numSelectedTeams;
+            tidx >>= 8;
+            tidx *= 0x2AC;
+            randomTeam = &selTeamsPtr + tidx;
+        } while ((uint8_t)selTeamNumber == *randomTeam);
+
+        uint16_t r = _Rand2();
+        uint16_t pidx = (r & 0xF) * 0x26;
+        uint8_t *rp = randomTeam + pidx;
+        int16_t rpPrice = (int8_t)*(rp + 0x6C);  /* price, sign-extended */
+
+        /* Random skill distribution lookup */
+        r = _Rand2();
+        uint16_t roll = (uint16_t)((uint32_t)r * 100) >> 8;
+        int16_t adjust = -90;  /* 0xFFA6 as int16_t */
+        uint8_t *distrib = trialistSkillDistribution;
+        while (roll >= *distrib) {
+            roll -= *distrib;
+            distrib++;
+            adjust += 10;
+        }
+
+        /* Get average player price for career team */
+        uint16_t avgTeamPrice = _GetAveragePlayerPrice((uint8_t *)&careerTeam);
+        int16_t factor = (int16_t)(avgTeamPrice * 2) + adjust;
+        if (factor < 0 || factor > 100)
+            factor -= adjust;
+
+        /* Scale skill by price ratio */
+        uint32_t scaled = (uint32_t)((uint16_t)factor) * (uint16_t)rpPrice;
+        skillLevel = (uint16_t)(scaled / 100);
+        skillLevel = skillLevel / 3;
+    }
+
+    /* Clamp to 0-15 */
+    if ((int16_t)skillLevel < 0)
+        skillLevel = 0;
+    else if (skillLevel > 15)
+        skillLevel = 15;
+
+    /* Look up skill template */
+    uint16_t templateOffset = skillLevel << 5;  /* 32 bytes per level */
+    uint8_t *tmpl = trialistSkillTemplates + templateOffset;
+
+    uint16_t posIdx = ((uint16_t)pf->positionAndFace & 0xE0) >> 5;
+    uint16_t posOff = posIdx << 2;
+    uint32_t skills = *(uint32_t *)(tmpl + posOff);
+    uint32_t masks = *(uint32_t *)(trialistSkillBitMasks + posOff);
+
+    /* Restore saved player data from tempTeamBuffer */
+    src = tempTeamBuffer;
+    dst = (uint8_t *)pf;
+    for (int16_t i = 0x25; i >= 0; i--)
+        *dst++ = *src++;
+
+    if (posIdx == 0) {
+        /* Goalkeeper: just set price, clear skills */
+        pf->price = (int8_t)(skills & 0xFF);
+        *(uint32_t *)&pf->passing = 0;
+        return;
+    }
+
+    /* Set skills with bit masks */
+    *(uint32_t *)&pf->passing = skills | masks;
+
+    /* Calculate total skill (sum of all nibbles) for price */
+    uint8_t totalSkill = 0;
+    for (int16_t i = 6; i >= 0; i--) {
+        totalSkill += (uint8_t)(skills & 0xF);
+        skills >>= 4;
+    }
+    pf->price = (int8_t)totalSkill;
+}
+
+/* ================================================================
+ * Career_ConvertPlayerToTrialistFromName  (SWOS2.s line 63975)
+ *
+ * Converts a player from another team to a trialist using their name.
+ * Unlike Career_GenerateTrialistForTeamPlayer, this uses the source
+ * team's country byte for origin instead of selTeamNumber.
+ *
+ * in: d0 = source team, d1 = player ordinal
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _Career_ConvertPlayerToTrialistFromName(uint16_t sourceTeam, uint16_t playerOrd)
+{
+    uint16_t d5 = sourceTeam;
+    uint16_t d6 = playerOrd;
+
+    uint8_t *base = _GetPlayer(sourceTeam, 0);
+    PlayerFile *pf = (PlayerFile *)(base + PF_OFF);
+
+    /* Use high byte of team number for avoid byte, full word for avoid word */
+    uint8_t avoidByte = (uint8_t)(sourceTeam >> 8);
+    uint16_t avoidWord = sourceTeam;
+
+    uint32_t result = pickRandomTrialistOriginValue(avoidByte, avoidWord);
+    uint8_t nationality = (uint8_t)(result & 0xFF);
+    uint8_t posFlags = (uint8_t)((result >> 8) & 0xFF);
+
+    pf->nationality = (int8_t)nationality;
+
+    uint8_t posAndFace = pf->positionAndFace;
+    posAndFace &= 0xE7;
+    posAndFace |= posFlags;
+    pf->positionAndFace = posAndFace;
+
+    /* Copy name from trialistNameBuffer */
+    _StringCopy(trialistNameBuffer, (uint8_t *)pf->playerName);
+
+    /* Clear stats */
+    pf->goalStats[0] = 0;
+    pf->goalStats[1] = 0;
+    pf->goalStats[2] = 0;
+    pf->goalStats[3] = 0;
+    pf->cardsInjuries = 0;
+
+    /* Init skill attributes */
+    careerInitTrialistAttributes(pf, d5);
+
+    if (d5 == selTeamNumber) {
+        /* Same team: set as goalkeeper sub and clear trialist/other flags */
+        pf->someFlag = (int8_t)0x9B;
+        pf->positionAndFace &= ~0x02;  /* bclr #1 */
+        pf->positionAndFace &= ~0x04;  /* bclr #2 */
+        pf->positionAndFace &= ~0x01;  /* bclr #0 */
+    } else {
+        /* Different team: add to career pool */
+        _AddCareerPoolPlayer(d5, d6, base);
+        transferPoolSlotsUsed++;
+    }
+}
+
+/* ================================================================
+ * TrainingMatch_AddTrialPlayerToSelectedTeam  (SWOS2.s line 63782)
+ *
+ * Adds a trial player to the selected team roster. Finds a free
+ * slot index, marks player as trialist with specified role.
+ *
+ * in: d0 = role (0=GK, 1-7=field positions)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _TrainingMatch_AddTrialPlayerToSelectedTeam(uint16_t role)
+{
+    /* Find a free slot index not used in currentMatchPlayers */
+    uint16_t freeSlot = 0;
+    while (1) {
+        int16_t found = 0;
+        int16_t numPl = (int16_t)careerNumPlayers - 1;
+        while (numPl >= 0) {
+            if (currentMatchPlayers[numPl] == (uint8_t)freeSlot) {
+                freeSlot++;
+                found = 1;
+                break;
+            }
+            numPl--;
+        }
+        if (!found)
+            break;
+    }
+
+    /* Get player slot and set it up */
+    uint8_t *base = _GetPlayer(selTeamNumber, 0);
+    _TrainingMatch_SaveSelectedPlayerId(freeSlot);
+
+    PlayerFile *pf = (PlayerFile *)(base + PF_OFF);
+    pf->positionAndFace |= 0x04;  /* bset #2 — mark as trialist */
+    pf->shirtNumber = 0x10;       /* shirt number 16 */
+
+    /* Set position/role: lsl.w #5,d7; move.b d7,$66(a3) */
+    pf->positionAndFace = (uint8_t)(role << 5);  /* this overwrites — matches asm: move.b d7,$66 */
+
+    /* Generate trialist attributes */
+    _Career_GenerateTrialistForTeamPlayer(freeSlot);
+
+    /* Add to currentMatchPlayers */
+    currentMatchPlayers[careerNumPlayers] = (uint8_t)freeSlot;
+    careerNumPlayers++;
+
+    _Career_UpdatePlayerWeeklyWageCache(freeSlot);
+}
+
+/* ================================================================
+ * TrainingMatch_AdjustSelectedTeamRosterForTrialists  (SWOS2.s line 63660)
+ *
+ * Adjusts the selected team roster for training match by removing
+ * excess goalkeepers/subs and adding trial players to fill gaps.
+ *
+ * in: d0 = team number, d1 = base count, a0 = team pointer
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16_t baseCount, uint8_t *teamPtr)
+{
+    if (isNationalSelector != 0)
+        return;
+
+    if (trainingGame != 0)
+        baseCount <<= 1;  /* lsl.w #1,d1 */
+
+    uint16_t d4 = teamNum;
+    uint16_t d5 = baseCount;
+
+    if (trainingGame == 0) {
+        /* Non-training: remove excess goalkeepers if more than 2 subs */
+        uint32_t subsResult = _GetNumberOfAvailableSubstitutes(teamPtr, 0);
+        uint16_t subs = (uint16_t)(subsResult & 0xFFFF);
+        if (subs > 2) {
+            int16_t d2 = (int16_t)careerNumPlayers - 1;
+            while (d2 >= 0) {
+                uint8_t *p = _GetPlayerAtIndex(selTeamNumber, (uint16_t)d2);
+                PlayerFile *pf = (PlayerFile *)(p + PF_OFF);
+                uint16_t pos = ((uint16_t)pf->positionAndFace & 0xE0) >> 5;
+                if (pos != 0) {
+                    /* Not GK — check if trialist (bit 1 of positionAndFace) */
+                    if (pf->positionAndFace & 0x02)
+                        goto removeAndRecheck1;
+                }
+                d2--;
+                continue;
+            removeAndRecheck1:
+                _Career_RemovePlayerFromSelectedTeamRoster((uint16_t)d2);
+                break;
+            }
+        }
+
+        /* Remove excess starting players if more than 16 */
+        uint32_t startResult = _GetNumberOfAvailableStartingPlayers(teamPtr, 0);
+        uint16_t starters = (uint16_t)(startResult & 0xFFFF);
+        if (starters > 16) {
+            int16_t d2 = (int16_t)careerNumPlayers - 1;
+            while (d2 >= 0) {
+                uint8_t *p = _GetPlayerAtIndex(selTeamNumber, (uint16_t)d2);
+                PlayerFile *pf = (PlayerFile *)(p + PF_OFF);
+                uint16_t pos = ((uint16_t)pf->positionAndFace & 0xE0) >> 5;
+                if (pos == 0) {
+                    /* GK — skip */
+                    d2--;
+                    continue;
+                }
+                if (pf->positionAndFace & 0x02)
+                    goto removeAndRecheck2;
+                d2--;
+                continue;
+            removeAndRecheck2:
+                _Career_RemovePlayerFromSelectedTeamRoster((uint16_t)d2);
+                break;
+            }
+        }
+    }
+
+    /* Add trial GK if needed: ensure at least 2 goalkeeper subs */
+    while (careerNumPlayers < 30) {
+        uint32_t subsResult = _GetNumberOfAvailableSubstitutes(teamPtr, 0);
+        uint16_t subs = (uint16_t)(subsResult & 0xFFFF);
+        if (subs >= 2)
+            break;
+        if (subs == 0) {
+            _TrainingMatch_AddTrialPlayerToSelectedTeam(0);  /* add GK */
+            continue;
+        }
+        /* subs == 1: check if baseCount-11 is within [0..2] (skip adding if bench has room) */
+        int16_t benchCheck = (int16_t)d5 - 11;
+        if ((uint16_t)benchCheck <= 2)
+            break;
+        _TrainingMatch_AddTrialPlayerToSelectedTeam(0);
+    }
+
+    /* Add trial field players if needed: fill to required starter count */
+    while (careerNumPlayers < 30) {
+        uint32_t startResult = _GetNumberOfAvailableStartingPlayers(teamPtr, 0);
+        uint16_t starters = (uint16_t)(startResult & 0xFFFF);
+
+        uint16_t required = 11;
+        if (trainingGame != 0)
+            required = 22;
+        required += d5 - 2;
+
+        if ((int16_t)starters >= (int16_t)required)
+            break;
+
+        /* Add random field player (role 1-7) */
+        uint16_t r = _Rand2();
+        uint16_t role = (uint16_t)(((uint32_t)r * 7) >> 8) + 1;
+        _TrainingMatch_AddTrialPlayerToSelectedTeam(role);
+    }
+}
+

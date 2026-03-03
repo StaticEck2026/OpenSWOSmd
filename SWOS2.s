@@ -63216,64 +63216,9 @@ transferCompleted:
 ; ===== Career_BuildForeignMarketPoolFromSelectedTeam =====
 ; prototype: void __usercall Career_BuildForeignMarketPoolFromSelectedTeam()
 Career_BuildForeignMarketPoolFromSelectedTeam:
-                lea     (careerTeam).l,a0
-                lea     (tempTeamBuffer).l,a1
-                move.w  #$2AB,d0
-loc_141556:
-                move.b  (a0)+,(a1)+
-                dbf     d0,loc_141556
-                lea     (selTeamPlayerIndices).l,a2
-                clr.w   d1
-loc_141564:
-                move.w  (selTeamNumber).l,d0
-                movem.l d1,-(sp)
-                jsr     GetPlayerAtIndex
-                movem.l (sp)+,d1
-                lea     $4C(a0),a0
-                move.b  (a2)+,d0
-                ext.w   d0
-                mulu.w  #$26,d0         ; '&'
-                lea     (tempTeamBuffer+TEAMFILE_PLAYERS).l,a1
-                lea     (a1,d0.w),a1
-                move.w  #$25,d0         ; '%'
-loc_141592:
-                move.b  (a0)+,(a1)+
-                dbf     d0,loc_141592
-                addq.w  #1,d1
-                cmpi.w  #$10,d1
-                bne.s   loc_141564
-                lea     (tempTeamBuffer).l,a0
-                lea     (careerTeam).l,a1
-                move.w  #$2AB,d0
-loc_1415B0:
-                move.b  (a0)+,(a1)+
-                dbf     d0,loc_1415B0
-                lea     (selTeamPlayerIndices).l,a0
-                lea     (currentMatchPlayers).l,a1
-                move.w  #$F,d0
-loc_1415C6:
-                move.b  (a0)+,(a1)+
-                dbf     d0,loc_1415C6
-                move.w  #$10,(careerNumPlayers).l
-                move.w  #$F,d2
-loc_1415D8:
-                move.w  (selTeamNumber).l,d0
-                move.w  d2,d1
-                bsr.w   GetPlayerAtIndex
-                bclr    #1,$66(a0)
-                clr.b   $67(a0)
-                bclr    #0,$66(a0)
-                clr.b   $71(a0)
-                jsr     AddCareerPoolPlayer
-                dbf     d2,loc_1415D8
-                move.w  (selTeamNumber).l,d0
-                jsr     SearchTeamInTmdFile
-                bne.s   locret_141628
-                move.w  (selTeamNumber).l,d0
-                jsr     Career_RemoveTeamFromTmdTeamPool
-                lea     (careerTeam).l,a0
-                jsr     Career_AppendTeamToTmdTeamPool
-locret_141628:
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _Career_BuildForeignMarketPoolFromSelectedTeam
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== AddCareerPoolPlayer =====
@@ -63406,204 +63351,31 @@ RemovePlayerFromTeam:
 ; ===== Career_AcceptOffer_SellPlayer =====
 ; prototype: void __usercall Career_AcceptOffer_SellPlayer()
 Career_AcceptOffer_SellPlayer:
-                jsr     Career_CommitNewBalanceAndResetFinanceTotals
-                move.w  offerAmount(pc),d0
-                mulu.w  #$3E8,d0
-                add.l   d0,(newBalance).l
-                add.l   d0,(playerSales).l
-                jsr     ClampNewBalanceAndUpdateClubStatus
-                jsr     ClearOverdraftStateIfRecovered
-                tst.w   (offerSwapPlayerOrdinal).l
-                bmi.s   loc_141A4E
-                move.w  teamOffering(pc),d0
-                move.w  offerSwapPlayerOrdinal(pc),d1
-                move.w  offerPrimaryPlayerOrdinal(pc),d2
-                move.w  teamOffering(pc),d0
-                move.w  offerSwapPlayerOrdinal(pc),d1
-                bsr.w   Career_RemovePlayerAndAddAsTrialist
-                move.w  teamOffering(pc),d0
-                move.w  offerPrimaryPlayerOrdinal(pc),d1
-                bsr.w   Career_TransferPlayerAndAddReplacedToMarketPool
-                bra.s   loc_141A5A
-loc_141A4E:
-                move.w  teamOffering(pc),d0
-                move.w  offerPrimaryPlayerOrdinal(pc),d1
-                bsr.w   Career_TransferPlayerAndAddReplacedToMarketPool
-loc_141A5A:
-                tst.w   (numExtraPlayersWanted).l
-                bpl.s   loc_141A7C
-                tst.w   (offerExtraPlayerOrdinal).l
-                bmi.w   loc_141AB6
-                move.w  teamOffering(pc),d0
-                move.w  offerExtraPlayerOrdinal(pc),d1
-                bsr.w   Career_RemovePlayerAndAddAsTrialist
-                bra.w   loc_141AB6
-loc_141A7C:
-                tst.w   (offerExtraPlayerOrdinal).l
-                bmi.s   loc_141AAA
-                move.w  teamOffering(pc),d0
-                move.w  offerExtraPlayerOrdinal(pc),d1
-                move.w  numExtraPlayersWanted(pc),d2
-                move.w  teamOffering(pc),d0
-                move.w  offerExtraPlayerOrdinal(pc),d1
-                bsr.w   Career_RemovePlayerAndAddAsTrialist
-                move.w  teamOffering(pc),d0
-                move.w  numExtraPlayersWanted(pc),d1
-                bsr.w   Career_TransferPlayerAndAddReplacedToMarketPool
-                bra.s   loc_141AB6
-loc_141AAA:
-                move.w  teamOffering(pc),d0
-                move.w  numExtraPlayersWanted(pc),d1
-                bsr.w   Career_TransferPlayerAndAddReplacedToMarketPool
-loc_141AB6:
-                move.w  teamOffering(pc),d0
-                bsr.w   GetTeamPointer
-                move.b  #1,$3B(a0)
-                move.b  #1,(careerTeam+TEAMFILEEX_TEAM+TEAMFILE_SOMEFLAG).l
-                bsr.w   PrunePlayerOffersAgainstRosterLimits
-                bsr.w   GetRemainingOfferSwapSlots
-                bne.s   locret_141AEA
-                clr.w   (numOffers).l
-                move.w  #4,(currentMessage).l
-                jsr     ShowChairmanMessage
-locret_141AEA:
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _Career_AcceptOffer_SellPlayer
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== Career_AcceptOffer_BuyPlayer =====
 ; prototype: void __usercall Career_AcceptOffer_BuyPlayer()
 Career_AcceptOffer_BuyPlayer:
-                jsr     Career_CommitNewBalanceAndResetFinanceTotals
-                move.w  offerAmount(pc),d0
-                mulu.w  #$3E8,d0
-                sub.l   d0,(newBalance).l
-                add.l   d0,(playerPurchases).l
-                jsr     ClampNewBalanceAndUpdateClubStatus
-                jsr     ClearOverdraftStateIfRecovered
-                tst.w   (offerSwapPlayerOrdinal).l
-                bmi.s   loc_141B40
-                move.w  teamOffering(pc),d0
-                move.w  offerPrimaryPlayerOrdinal(pc),d1
-                move.w  offerSwapPlayerOrdinal(pc),d2
-                move.w  teamOffering(pc),d0
-                move.w  offerPrimaryPlayerOrdinal(pc),d1
-                bsr.w   Career_RemovePlayerAndAddAsTrialist
-                move.w  teamOffering(pc),d0
-                move.w  offerSwapPlayerOrdinal(pc),d1
-                bsr.w   Career_TransferPlayerAndAddReplacedToMarketPool
-                bra.s   loc_141B4C
-loc_141B40:
-                move.w  teamOffering(pc),d0
-                move.w  offerPrimaryPlayerOrdinal(pc),d1
-                bsr.w   Career_RemovePlayerAndAddAsTrialist
-loc_141B4C:
-                tst.w   (numExtraPlayersWanted).l
-                bpl.s   loc_141B6E
-                tst.w   (offerExtraPlayerOrdinal).l
-                bmi.w   loc_141BA8
-                move.w  teamOffering(pc),d0
-                move.w  offerExtraPlayerOrdinal(pc),d1
-                bsr.w   Career_TransferPlayerAndAddReplacedToMarketPool
-                bra.w   loc_141BA8
-loc_141B6E:
-                tst.w   (offerExtraPlayerOrdinal).l
-                bmi.s   loc_141B9C
-                move.w  teamOffering(pc),d0
-                move.w  numExtraPlayersWanted(pc),d1
-                move.w  offerExtraPlayerOrdinal(pc),d2
-                move.w  teamOffering(pc),d0
-                move.w  numExtraPlayersWanted(pc),d1
-                bsr.w   Career_RemovePlayerAndAddAsTrialist
-                move.w  teamOffering(pc),d0
-                move.w  offerExtraPlayerOrdinal(pc),d1
-                bsr.w   Career_TransferPlayerAndAddReplacedToMarketPool
-                bra.s   loc_141BA8
-loc_141B9C:
-                move.w  teamOffering(pc),d0
-                move.w  numExtraPlayersWanted(pc),d1
-                bsr.w   Career_RemovePlayerAndAddAsTrialist
-loc_141BA8:
-                move.w  teamOffering(pc),d0
-                bsr.w   GetTeamPointer
-                move.b  #1,$3B(a0)
-                move.b  #1,(careerTeam+TEAMFILEEX_TEAM+TEAMFILE_SOMEFLAG).l
-                bsr.w   PrunePlayerOffersAgainstRosterLimits
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _Career_AcceptOffer_BuyPlayer
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== Career_TransferPlayerAndAddReplacedToMarketPool =====
 ; prototype: void __usercall Career_TransferPlayerAndAddReplacedToMarketPool(unsigned __int16 team@<d0>, unsigned __int16 arg@<d1>)
 Career_TransferPlayerAndAddReplacedToMarketPool:
-                movem.w d1,-(sp)
-                move.w  d0,d6
-                move.w  (selTeamNumber).l,d0
-                bsr.w   Career_RemovePlayerFromTeamInternal
-                move.w  (selTeamNumber).l,d0
-                bsr.w   GetPlayer
-                movea.l a0,a2
-                move.b  $66(a2),d0
-                andi.w  #$E0,d0
-                lsr.w   #3,d0
-                lea     (transferReplacementPriorityTable).l,a5
-                movea.l (a5,d0.w),a5
-                move.w  d6,d0
-                bsr.w   GetTeamPointer
-                movea.l a0,a4
-loc_141BFC:
-                move.b  (a5)+,d4
-                bmi.w   loc_141CA2
-                movea.l a4,a0
-                move.b  #$FF,d3
-                clr.w   d2
-loc_141C0A:
-                move.b  $66(a0),d0
-                andi.w  #$E0,d0
-                lsr.w   #5,d0
-                cmp.b   d0,d4
-                bne.s   loc_141C26
-                cmp.b   $6C(a0),d3
-                bcs.s   loc_141C26
-                move.w  d2,d1
-                move.b  $6C(a0),d3
-                movea.l a0,a3
-loc_141C26:
-                lea     $26(a0),a0
-                addq.w  #1,d2
-                cmpi.w  #$10,d2
-                bne.s   loc_141C0A
-                cmpi.b  #$FF,d3
-                beq.s   loc_141BFC
-                movea.l a2,a0
-                movea.l a3,a1
-                move.b  $4E(a2),d2
-                move.b  $4E(a3),d3
-                lea     $4C(a0),a0
-                lea     $4C(a1),a1
-                move.w  #$12,d0
-loc_141C50:
-                move.w  (a0)+,(a1)+
-                dbf     d0,loc_141C50
-                move.b  d2,$4E(a2)
-                move.b  d3,$4E(a3)
-                bset    #2,$66(a3)
-                bclr    #0,$66(a3)
-                clr.b   $71(a3)
-                clr.b   $6D(a3)
-                clr.b   $6E(a3)
-                clr.b   $6F(a3)
-                clr.b   $70(a3)
-                move.w  d6,d0
-                movem.l a3,-(sp)
-                bsr.w   Career_RemovePlayerFromTeamInternal
-                movem.l (sp)+,a3
-                move.w  d6,d0
-                movea.l a3,a0
-                bsr.w   AddCareerPoolPlayer
-                addq.w  #1,(offerSwapSlotsUsed).l
-                move.w  (sp)+,d1
-                bsr.w   Career_RemovePlayerFromSelectedTeamRoster
+                movem.l d0-d7/a0-a6,-(sp)
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)
+                jsr     _Career_TransferPlayerAndAddReplacedToMarketPool
+                addq.l  #8,sp
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
-loc_141CA2:
-                move.w  #$7272,(panicReasonCode).l
-                jsr     PanicHaltLoop
 ; unsigned __int8 (*[8])[9]
 transferReplacementPriorityTable:
                 ; unsigned __int8 (*[8])[9]
@@ -63658,220 +63430,39 @@ SetBenchPlayersNumbers:
 ;      D1 -
 ;      A0 -> team
 TrainingMatch_AdjustSelectedTeamRosterForTrialists:
-                tst.w   (isNationalSelector).l
-                bne.w   locret_141EA6
-                tst.w   (trainingGame).l
-                beq.s   loc_141D50
-                lsl.w   #1,d1
-loc_141D50:
-                movea.l a0,a6
-                move.w  d0,d4
-                move.w  d1,d5
-                tst.w   (trainingGame).l
-                bne.w   loc_141E12
-                move.w  d4,d0
-                clr.w   d1
-                movea.l a6,a0
-                movem.l d4-d5/a6,-(sp)
-                jsr     GetNumberOfAvailableSubstitutes
-                movem.l (sp)+,d4-d5/a6
-                cmpi.w  #2,d7
-                bls.s   loc_141DBA
-                move.w  (careerNumPlayers).l,d2
-                subq.w  #1,d2
-loc_141D82:
-                move.w  (selTeamNumber).l,d0
-                move.w  d2,d1
-                jsr     GetPlayerAtIndex
-                move.b  $66(a0),d0
-                andi.w  #$E0,d0
-                lsr.w   #5,d0
-                cmpi.w  #0,d0
-                bne.s   loc_141DA8
-                btst    #1,$66(a0)
-                bne.s   loc_141DAE
-loc_141DA8:
-                subq.w  #1,d2
-                bpl.s   loc_141D82
-                bra.s   loc_141DBA
-loc_141DAE:
-                movem.l d4-d5/a6,-(sp)
-                bsr.w   Career_RemovePlayerFromSelectedTeamRoster
-                movem.l (sp)+,d4-d5/a6
-loc_141DBA:
-                move.w  d4,d0
-                movea.l a6,a0
-                movem.l d4-d5/a6,-(sp)
-                jsr     GetNumberOfAvailableStartingPlayers
-                movem.l (sp)+,d4-d5/a6
-                cmpi.w  #$10,d7
-                bls.s   loc_141E12
-                move.w  (careerNumPlayers).l,d2
-                subq.w  #1,d2
-loc_141DDA:
-                move.w  (selTeamNumber).l,d0
-                move.w  d2,d1
-                jsr     GetPlayerAtIndex
-                move.b  $66(a0),d0
-                andi.w  #$E0,d0
-                lsr.w   #5,d0
-                cmpi.w  #0,d0
-                beq.s   loc_141E00
-                btst    #1,$66(a0)
-                bne.s   loc_141E06
-loc_141E00:
-                subq.w  #1,d2
-                bpl.s   loc_141DDA
-                bra.s   loc_141E12
-loc_141E06:
-                movem.l d4-d5/a6,-(sp)
-                bsr.w   Career_RemovePlayerFromSelectedTeamRoster
-                movem.l (sp)+,d4-d5/a6
-loc_141E12:
-                cmpi.w  #$1E,(careerNumPlayers).l
-                bcc.s   loc_141E56
-                move.w  d4,d0
-                movea.l a6,a0
-                movem.l d4-d5/a6,-(sp)
-                jsr     GetNumberOfAvailableSubstitutes
-                movem.l (sp)+,d4-d5/a6
-                cmpi.w  #2,d7
-                bcc.s   loc_141E56
-                tst.w   d7
-                beq.s   loc_141E44
-                move.w  d5,d1
-                subi.w  #$B,d1
-                cmpi.w  #2,d1
-                bls.s   loc_141E56
-loc_141E44:
-                move.w  #0,d0
-                movem.l d4-d5/a6,-(sp)
-                bsr.w   TrainingMatch_AddTrialPlayerToSelectedTeam
-                movem.l (sp)+,d4-d5/a6
-                bra.s   loc_141E12
-loc_141E56:
-                cmpi.w  #$1E,(careerNumPlayers).l
-                bcc.s   locret_141EA6
-                move.w  d4,d0
-                movea.l a6,a0
-                movem.l d4-d5/a6,-(sp)
-                jsr     GetNumberOfAvailableStartingPlayers
-                movem.l (sp)+,d4-d5/a6
-                move.w  #$B,d0
-                tst.w   (trainingGame).l
-                beq.s   loc_141E82
-                move.w  #$16,d0
-loc_141E82:
-                add.w   d5,d0
-                subq.w  #2,d0
-                cmp.w   d0,d7
-                bge.s   locret_141EA6
-                jsr     Rand2
-                mulu.w  #7,d0
-                lsr.w   #8,d0
-                addq.w  #1,d0
-                movem.l d4-d5/a6,-(sp)
-                bsr.w   TrainingMatch_AddTrialPlayerToSelectedTeam
-                movem.l (sp)+,d4-d5/a6
-                bra.s   loc_141E56
-locret_141EA6:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a0,-(sp)
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)
+                jsr     _TrainingMatch_AdjustSelectedTeamRosterForTrialists
+                lea     12(sp),sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== TrainingMatch_AddTrialPlayerToSelectedTeam =====
 ; prototype: void __usercall TrainingMatch_AddTrialPlayerToSelectedTeam(unsigned __int16 slotOrRole@<d0>)
 TrainingMatch_AddTrialPlayerToSelectedTeam:
-                move.w  d0,d7
-                lea     (currentMatchPlayers).l,a0
-                clr.w   d1
-loc_141EB2:
-                move.w  (careerNumPlayers).l,d0
-                subq.w  #1,d0
-loc_141EBA:
-                cmp.b   (a0,d0.w),d1
-                bne.s   loc_141EC4
-                addq.w  #1,d1
-                bra.s   loc_141EB2
-loc_141EC4:
-                dbf     d0,loc_141EBA
-                move.w  (selTeamNumber).l,d0
-                bsr.w   GetPlayer
-                jsr     TrainingMatch_SaveSelectedPlayerId
-                bset    #2,$66(a0)
-                move.b  #$10,$4E(a0)
-                lsl.w   #5,d7
-                move.b  d7,$66(a0)
-                movem.l d1,-(sp)
-                bsr.w   Career_GenerateTrialistForTeamPlayer
-                movem.l (sp)+,d1
-                lea     (currentMatchPlayers).l,a0
-                move.w  (careerNumPlayers).l,d0
-                move.b  d1,(a0,d0.w)
-                addq.w  #1,(careerNumPlayers).l
-                jsr     Career_UpdatePlayerWeeklyWageCache
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)
+                jsr     _TrainingMatch_AddTrialPlayerToSelectedTeam
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== Career_RemovePlayerAndAddAsTrialist =====
 ; prototype: void __usercall Career_RemovePlayerAndAddAsTrialist(unsigned __int16 team@<d0>, unsigned __int16 playerIndex@<d1>)
 Career_RemovePlayerAndAddAsTrialist:
-                movem.w d0-d1,-(sp)
-                bsr.w   Career_RemovePlayerFromTeamInternal
-                bsr.w   GetPlayer
-                movea.l a0,a1
-                lea     (currentMatchPlayers).l,a0
-                clr.w   d1
-loc_141F2A:
-                move.w  (careerNumPlayers).l,d0
-                subq.w  #1,d0
-loc_141F32:
-                cmp.b   (a0,d0.w),d1
-                bne.s   loc_141F3C
-                addq.w  #1,d1
-                bra.s   loc_141F2A
-loc_141F3C:
-                dbf     d0,loc_141F32
-                move.w  (selTeamNumber).l,d0
-                bsr.w   GetPlayer
-                jsr     TrainingMatch_SaveSelectedPlayerId
-                bset    #2,$66(a1)
-                clr.b   $6D(a1)
-                clr.b   $6E(a1)
-                clr.b   $6F(a1)
-                clr.b   $70(a1)
-                lea     $4C(a0),a0
-                lea     $4C(a1),a1
-                move.w  #$12,d0
-loc_141F72:
-                move.w  (a1)+,(a0)+
-                dbf     d0,loc_141F72
-                lea     (competitionFileBuffer).l,a0
-                cmpi.w  #2,(a0)
-                beq.s   loc_141F8A
-                move.w  $66(a0),d2
-                bra.s   loc_141F8E
-loc_141F8A:
-                move.w  $4E(a0),d2
-loc_141F8E:
-                addi.w  #$B,d2
-                lea     (currentMatchPlayers).l,a0
-                move.w  (careerNumPlayers).l,d0
-                lea     (a0,d0.w),a0
-                sub.w   d2,d0
-                beq.s   loc_141FB2
-                subq.w  #1,d0
-loc_141FA8:
-                move.b  -1(a0),(a0)
-                subq.l  #1,a0
-                dbf     d0,loc_141FA8
-loc_141FB2:
-                move.b  d1,(a0)
-                lea     (careerTeam).l,a0
-                movem.l d1,-(sp)
-                bsr.w   SetBenchPlayersNumbers
-                movem.l (sp)+,d1
-                addq.w  #1,(careerNumPlayers).l
-                jsr     Career_UpdatePlayerWeeklyWageCache
-                movem.w (sp)+,d0-d1
-                bsr.w   Career_ConvertPlayerToTrialistFromName
+                movem.l d0-d7/a0-a6,-(sp)
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)
+                jsr     _Career_RemovePlayerAndAddAsTrialist
+                addq.l  #8,sp
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
 ; ===== Career_RemovePlayerFromSelectedTeamRoster =====
@@ -63939,223 +63530,32 @@ replPosSearchOrderAtt:
 ; ===== Career_GenerateTrialistForTeamPlayer =====
 ; prototype: void __usercall Career_GenerateTrialistForTeamPlayer(unsigned __int16 playerIndex@<d1>, const char *srcName@<a2>)
 Career_GenerateTrialistForTeamPlayer:
-                move.w  (selTeamNumber).l,d0
-                move.w  d0,d4
-                move.w  d0,d5
-                move.w  d1,d6
-                bsr.w   GetPlayer
-                movea.l a0,a1
-                move.b  (selTeamNumber).l,d0
-                move.w  (selTeamNumber).l,d3
-                movem.l d6-d7/a0-a1,-(sp)
-                bsr.w   Career_PickRandomTrialistOriginValue
-                movem.l (sp)+,d6-d7/a0-a1
-                move.b  d0,$4C(a1)
-                move.b  $66(a1),d0
-                andi.b  #$E7,d0
-                or.b    d3,d0
-                move.b  d0,$66(a1)
-                movea.l a1,a3
-                movea.l a2,a0
-                lea     $4F(a1),a1
-                jsr     StringCopy
-                clr.b   $6D(a3)
-                clr.b   $6E(a3)
-                clr.b   $6F(a3)
-                clr.b   $70(a3)
-                clr.b   $67(a3)
-                clr.l   $68(a3)
-                clr.b   $6C(a3)
-                bset    #1,$66(a3)
-                clr.b   $71(a3)
+                movem.l d0-d7/a0-a6,-(sp)
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)
+                jsr     _Career_GenerateTrialistForTeamPlayer
+                addq.l  #4,sp
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
 ; ===== Career_ConvertPlayerToTrialistFromName =====
 ; prototype: void __usercall Career_ConvertPlayerToTrialistFromName(unsigned __int16 team@<d0>, unsigned __int16 playerIndex@<d1>, const char *srcName@<a2>)
 Career_ConvertPlayerToTrialistFromName:
-                move.w  d0,d4
-                move.w  d0,d5
-                move.w  d1,d6
-                bsr.w   GetPlayer
-                movea.l a0,a1
-                move.w  d4,d0
-                lsr.w   #8,d0
-                move.w  d4,d3
-                movem.l d6-d7/a0-a1,-(sp)
-                bsr.w   Career_PickRandomTrialistOriginValue
-                movem.l (sp)+,d6-d7/a0-a1
-                move.b  d0,$4C(a1)
-                move.b  $66(a1),d0
-                andi.b  #$E7,d0
-                or.b    d3,d0
-                move.b  d0,$66(a1)
-                movea.l a1,a3
-                movea.l a2,a0
-                lea     $4F(a1),a1
-                jsr     StringCopy
-                clr.b   $6D(a3)
-                clr.b   $6E(a3)
-                clr.b   $6F(a3)
-                clr.b   $70(a3)
-                clr.b   $67(a3)
-                bsr.w   Career_InitTrialistAttributes
-                cmp.w   (selTeamNumber).l,d5
-                beq.s   loc_142366
-                move.w  d5,d0
-                move.w  d6,d1
-                movea.l a3,a0
-                bsr.w   AddCareerPoolPlayer
-                addq.w  #1,(transferPoolSlotsUsed).l
-                rts
-loc_142366:
-                move.b  #$9B,$71(a3)
-                bclr    #1,$66(a3)
-                bclr    #2,$66(a3)
-                bclr    #0,$66(a3)
+                movem.l d0-d7/a0-a6,-(sp)
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)
+                jsr     _Career_ConvertPlayerToTrialistFromName
+                addq.l  #8,sp
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
 ; ===== Career_InitTrialistAttributes =====
 ; prototype: void __usercall Career_InitTrialistAttributes(void *player@<a3>, unsigned __int16 team@<d5>)
+; Career_InitTrialistAttributes — now handled internally by _Career_ConvertPlayerToTrialistFromName
+; Dead code — no external callers remain
 Career_InitTrialistAttributes:
-                lea     $4C(a3),a0
-                lea     (tempTeamBuffer).l,a1
-                move.w  #$25,d3         ; '%'
-loc_14238E:
-                move.b  (a0)+,(a1)+
-                dbf     d3,loc_14238E
-                move.w  (careerNumPlayers).l,d1
-                cmp.w   (selTeamNumber).l,d5
-                beq.s   loc_1423A6
-                move.w  #$10,d1
-loc_1423A6:
-                subq.w  #1,d1
-                clr.w   d2
-                clr.w   d3
-                move.b  $66(a3),d4
-                andi.w  #$E0,d4
-                lsr.w   #5,d4
-loc_1423B6:
-                move.w  d5,d0
-                movem.l d1,-(sp)
-                bsr.w   GetPlayerAtIndex
-                movem.l (sp)+,d1
-                cmp.w   (selTeamNumber).l,d5
-                beq.s   loc_1423DA
-                move.b  $66(a0),d0
-                andi.w  #$E0,d0
-                lsr.w   #5,d0
-                cmp.b   d0,d4
-                bne.s   loc_1423E6
-loc_1423DA:
-                move.b  $6C(a0),d0
-                andi.w  #$FF,d0
-                add.w   d0,d2
-                addq.w  #1,d3
-loc_1423E6:
-                dbf     d1,loc_1423B6
-                ext.l   d2
-                divu.w  d3,d2
-                ext.l   d2
-                divu.w  #3,d2
-                cmpi.w  #$F,d2
-                bls.s   loc_1423FE
-                move.w  #$F,d2
-loc_1423FE:
-                cmp.w   (selTeamNumber).l,d5
-                beq.s   loc_142418
-                jsr     Rand2
-                andi.w  #3,d0
-                subq.w  #1,d0
-                add.w   d0,d2
-                bra.w   loc_1424A6
-loc_142418:
-                jsr     Rand2
-                mulu.w  (numSelectedTeams).l,d0
-                lsr.w   #8,d0
-                mulu.w  #$2AC,d0
-                lea     (selTeamsPtr).l,a0
-                adda.l  d0,a0
-                move.b  (selTeamNumber).l,d0
-                cmp.b   (a0),d0
-                bne.s   loc_142418
-                jsr     Rand2
-                andi.w  #$F,d0
-                mulu.w  #$26,d0         ; '&'
-                lea     (a0,d0.w),a0
-                move.b  $6C(a0),d2
-                ext.w   d2
-                jsr     Rand2
-                mulu.w  #$64,d0         ; 'd'
-                lsr.w   #8,d0
-                lea     (trialistSkillDistribution).l,a0
-                move.w  #$FFA6,d1
-loc_14246A:
-                cmp.b   (a0)+,d0
-                bcs.s   loc_142478
-                sub.b   -1(a0),d0
-                addi.w  #$A,d1
-                bra.s   loc_14246A
-loc_142478:
-                lea     (careerTeam).l,a0
-                movem.l d1-d2,-(sp)
-                jsr     GetAveragePlayerPrice
-                movem.l (sp)+,d1-d2
-                lsl.w   #1,d0
-                add.w   d1,d0
-                bmi.s   loc_142498
-                cmpi.w  #$64,d0         ; 'd'
-                ble.s   loc_14249A
-loc_142498:
-                sub.w   d1,d0
-loc_14249A:
-                mulu.w  d0,d2
-                divu.w  #$64,d2         ; 'd'
-                ext.l   d2
-                divu.w  #3,d2
-loc_1424A6:
-                tst.w   d2
-                bpl.s   loc_1424AE
-                clr.w   d2
-                bra.s   loc_1424B8
-loc_1424AE:
-                cmpi.w  #$F,d2
-                bls.s   loc_1424B8
-                move.w  #$F,d2
-loc_1424B8:
-                lsl.w   #5,d2
-                lea     (trialistSkillTemplates).l,a0
-                lea     (a0,d2.w),a0
-                move.b  $66(a3),d2
-                andi.w  #$E0,d2
-                lsr.w   #5,d2
-                move.w  d2,d1
-                lsl.w   #2,d1
-                move.l  (a0,d1.w),d0
-                lea     (trialistSkillBitMasks).l,a0
-                move.l  (a0,d1.w),d1
-                lea     $4C(a3),a0
-                lea     (tempTeamBuffer).l,a1
-                move.w  #$25,d3         ; '%'
-loc_1424EE:
-                move.b  (a1)+,(a0)+
-                dbf     d3,loc_1424EE
-                cmpi.b  #0,d2
-                bne.s   loc_142504
-                move.b  d0,$6C(a3)
-                clr.l   $68(a3)
-                rts
-loc_142504:
-                move.l  d0,$68(a3)
-                or.l    d1,$68(a3)
-                move.w  #6,d3
-                clr.b   d1
-loc_142512:
-                move.b  d0,d2
-                andi.b  #$F,d2
-                add.b   d2,d1
-                lsr.l   #4,d0
-                dbf     d3,loc_142512
-                move.b  d1,$6C(a3)
                 rts
 ; unsigned __int8[20]
 trialistSkillDistribution:
@@ -64202,97 +63602,14 @@ trialistSkillTemplates:
 
 ; ===== Career_PickRandomTrialistOriginValue =====
 ; prototype: char *__usercall Career_PickRandomTrialistOriginValue@<a2>(unsigned __int8 avoidTeamByte@<d0>, unsigned __int16 avoidTeamWord@<d3>)
+; Career_PickRandomTrialistOriginValue — now handled internally by _Career_GenerateTrialistForTeamPlayer / _Career_ConvertPlayerToTrialistFromName
+; Dead code — no external callers remain
 Career_PickRandomTrialistOriginValue:
-                move.w  d0,d7
-                move.w  d3,d6
-loc_14275E:
-                lea     (trialistNameBuffer).l,a2
-                bsr.w   PickRandomTeamRecordAvoidingTeam
-                jsr     Rand2
-                andi.w  #$F,d0
-                mulu.w  #$26,d0         ; '&'
-                lea     (a0,d0.w),a0
-                move.b  $4C(a0),d0
-                move.b  $66(a0),d3
-                andi.b  #$18,d3
-                lea     $4F(a0),a0
-loc_14278A:
-                tst.b   (a0)
-                beq.s   loc_1427E8
-                cmpi.b  #$20,(a0)       ; ' '
-                beq.s   loc_1427A0
-                move.b  (a0)+,(a2)+
-                cmpa.l  #trialistNameBufTerminator,a2
-                beq.s   loc_14275E
-                bra.s   loc_14278A
-loc_1427A0:
-                bsr.w   PickRandomTeamRecordAvoidingTeam
-                jsr     Rand2
-                andi.w  #$F,d0
-                mulu.w  #$26,d0         ; '&'
-                lea     (a0,d0.w),a0
-                move.b  $4C(a0),d0
-                move.b  $66(a0),d3
-                andi.b  #$18,d3
-                lea     $4F(a0),a0
-                movea.l a0,a1
-loc_1427C8:
-                tst.b   (a0)+
-                bne.s   loc_1427C8
-loc_1427CC:
-                cmpa.l  a0,a1
-                beq.s   loc_14275E
-                cmpi.b  #$20,-(a0)      ; ' '
-                bne.s   loc_1427CC
-loc_1427D6:
-                tst.b   (a0)
-                beq.s   loc_1427E8
-                move.b  (a0)+,(a2)+
-                cmpa.l  #trialistNameBufTerminator,a2
-                beq.w   loc_14275E
-                bra.s   loc_1427D6
-loc_1427E8:
-                clr.b   (a2)
-                lea     (trialistNameBuffer).l,a2
                 rts
 
-; ===== PickRandomTeamRecordAvoidingTeam =====
-; prototype: void *__usercall PickRandomTeamRecordAvoidingTeam@<a0>(unsigned __int16 avoidTeamWord@<d6>, unsigned __int8 avoidTeamByte@<d7>)
+; PickRandomTeamRecordAvoidingTeam — now static in transfer_market.c
+; Dead code — no external callers remain
 PickRandomTeamRecordAvoidingTeam:
-                move.w  #$64,d1         ; 'd'
-loc_1427F6:
-                tst.w   (careerFileBuffer).l
-                beq.s   loc_142824
-                jsr     Rand2
-                mulu.w  (careerFileBuffer).l,d0
-                lsr.l   #8,d0
-                mulu.w  #$2AC,d0
-                lea     (tmdFileBuffer).l,a0
-                adda.l  d0,a0
-                cmp.w   (a0),d6
-                beq.s   loc_142820
-                cmp.b   (a0),d7
-                beq.s   locret_14284E
-loc_142820:
-                tst.w   d1
-                beq.s   locret_14284E
-loc_142824:
-                jsr     Rand2
-                mulu.w  (numSelectedTeams).l,d0
-                lsr.l   #8,d0
-                mulu.w  #$2AC,d0
-                lea     (selTeamsPtr).l,a0
-                adda.l  d0,a0
-                cmp.w   (a0),d6
-                beq.s   loc_142846
-                cmp.b   (a0),d7
-                beq.s   locret_14284E
-loc_142846:
-                tst.w   d1
-                beq.s   locret_14284E
-                subq.w  #1,d1
-                bra.s   loc_1427F6
-locret_14284E:
                 rts
 ; char[23]
 trialistNameBuffer:

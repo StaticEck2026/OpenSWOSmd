@@ -2946,6 +2946,29 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1436 functions across 165 chunks
 
+### Chunk 167 — Career Transfer Accept + Trialist System (9 exported + 3 static → transfer_market.c)
+- Date: 2026-03-03
+- Ported:
+  1. Career_BuildForeignMarketPoolFromSelectedTeam (→transfer_market.c) — rearranges careerTeam players by selTeamPlayerIndices, adds all 16 to pool, updates TMD
+  2. Career_TransferPlayerAndAddReplacedToMarketPool (→transfer_market.c) — finds lowest-price player of matching position in source team, copies player data over, adds replaced player to career pool
+  3. Career_AcceptOffer_SellPlayer (→transfer_market.c) — handles sell offer: adds sale amount, processes swap/extra, flags teams changed
+  4. Career_AcceptOffer_BuyPlayer (→transfer_market.c) — handles buy offer: subtracts purchase amount, processes swap/extra
+  5. Career_RemovePlayerAndAddAsTrialist (→transfer_market.c) — removes from source team, finds free slot, inserts into roster at correct position, converts to trialist
+  6. Career_GenerateTrialistForTeamPlayer (→transfer_market.c) — picks random origin, copies name, clears stats, marks as trialist
+  7. Career_ConvertPlayerToTrialistFromName (→transfer_market.c) — converts player from another team to trialist using source team's country byte
+  8. TrainingMatch_AddTrialPlayerToSelectedTeam (→transfer_market.c) — finds free slot, marks as trialist with specified role
+  9. TrainingMatch_AdjustSelectedTeamRosterForTrialists (→transfer_market.c) — removes excess GK/subs, adds trial players to fill gaps
+- Static helpers:
+  - pickRandomTeamRecordAvoidingTeam() — picks random team from TMD/selected teams avoiding specified team
+  - pickRandomTrialistOriginValue() — picks random player name parts for trialist surname
+  - careerInitTrialistAttributes() — computes skill attributes from team average and random distribution
+- Dead code stubs: Career_InitTrialistAttributes, Career_PickRandomTrialistOriginValue, PickRandomTeamRecordAvoidingTeam (all called only from now-ported C)
+- Stubs: Career_BuildForeignMarketPoolFromSelectedTeam (no-param bridge), Career_AcceptOffer_SellPlayer/BuyPlayer (no-param bridge), Career_TransferPlayerAndAddReplacedToMarketPool (d0,d1 bridge), Career_RemovePlayerAndAddAsTrialist (d0,d1 bridge), Career_GenerateTrialistForTeamPlayer (d1 bridge), Career_ConvertPlayerToTrialistFromName (d0,d1 bridge), TrainingMatch_AddTrialPlayerToSelectedTeam (d0 bridge), TrainingMatch_AdjustSelectedTeamRosterForTrialists (d0,d1,a0 bridge)
+- New xrefs: 9 (all exported functions above)
+- New xdefs: tempTeamBuffer, selTeamPlayerIndices, transferReplacementPriorityTable, trialistNameBuffer, trialistNameBufTerminator, trialistSkillDistribution, trialistSkillTemplates, trialistSkillBitMasks
+- Build status: **verified** (clean build, only pre-existing warnings)
+- Cumulative: 1450 functions across 167 chunks
+
 ### Chunk 166 — TransferPlayerInit + ThirdPartyOfferMenuInit (2 → transfer_market.c)
 - Date: 2026-03-03
 - Ported:
@@ -3251,5 +3274,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 164   | 5         | 1425       |
 | 165   | 11+1s     | 1436       |
 | 166   | 2         | 1438       |
+| 167   | 9+3s      | 1450       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)
