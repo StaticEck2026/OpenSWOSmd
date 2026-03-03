@@ -125,3 +125,6 @@ void _EditTeamsSelectCoachName(MenuEntry *entry);
 void _EditTeamsChangePlayerFace(MenuEntry *entry);
 void _InitEditTeamsMenu(void);
 void _EditTeamsPlayersBeforeDraw(MenuEntry *entry);
+
+/* --- EditTeamsCallback (Chunk 148) --- */
+void _EditTeamsCallback(uint8_t *team);

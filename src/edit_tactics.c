@@ -2815,3 +2815,20 @@ void _EditTeamsPlayersBeforeDraw(MenuEntry *entry)
     /* Draw all 6 entries */
     _DrawMultipleItems(6, &menuEntries[0xC08 / 56]);
 }
+
+/* ================================================================
+ * Chunk 148: EditTeamsCallback
+ * ================================================================ */
+
+extern uint8_t editTeamsMenu[];
+extern void _ShowMenu(uint8_t *menu);
+
+/* EditTeamsCallback: called when a team is selected from team selection.
+ * Stores team pointer, then shows the edit teams sub-menu.
+ * a0 = selected team pointer. */
+__attribute__((used, externally_visible))
+void _EditTeamsCallback(uint8_t *team)
+{
+    editTeamsSelectedTeam = team;
+    _ShowMenu(editTeamsMenu);
+}

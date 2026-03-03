@@ -69,3 +69,7 @@ void _DIY_AdvanceToNextCompetitionSlot(void);
 void _NationalTeamAddPlayerHomeOnSelect(void);
 void _NationalTeamAddPlayerAbroadOnSelect(void);
 void _NationalTeamAddPlayerExit(void);
+
+/* --- National team menu update helpers (Chunk 148) --- */
+void _Career_UpdateNationalTeamMenuEntries(void);
+void _Career_UpdateRemovePlayersMenuEntry(void);

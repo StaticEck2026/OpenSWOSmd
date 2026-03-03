@@ -6605,3 +6605,131 @@ void _SetupDIYCompetitionStatsMenu(void) {
 
     _ShowMenu(competitionStatsMenu);
 }
+
+/* ================================================================
+ * Chunk 148: ChooseTeamsSetHeader, CheckNumTeamsAllowed, Bureaucracy
+ * ================================================================ */
+
+extern uint32_t chooseTeamsHeader1stPart;  /* pointer to header prefix string (or 0) */
+extern uint32_t gameTypeStr;               /* pointer to game type string (or 0) */
+extern uint8_t *curCountryStr;
+extern uint16_t selectTeamsNoLimit;
+extern uint16_t numNeededTeams;
+extern uint32_t playWhatStr;               /* pointer to "play what" string */
+extern uint8_t aChooseTeamsFor[];          /* "CHOOSE TEAMS FOR " */
+extern uint8_t aChangeTeamsFor[];          /* "CHANGE TEAMS FOR " */
+extern uint8_t aSelect1MoreTea[];          /* "SELECT 1 MORE TEAM" */
+extern uint8_t aSelect0MoreTea[];          /* "SELECT %0 MORE TEAMS" */
+extern uint8_t aSelect1LessTea[];          /* "SELECT 1 LESS TEAM" */
+extern uint8_t aSelect0LessTea[];          /* "SELECT %0 LESS TEAMS" */
+extern uint8_t aError[];                   /* "ERROR" */
+extern int16_t bureaucracyMenuItems[];     /* {58, 57, 55, 0, -1} */
+
+extern MenuEntry menuEntries[];
+extern void _PrintFormatted(const uint8_t *fmt, uint8_t *out,
+                            uint16_t n0, uint16_t n1, uint16_t n2, uint16_t n3,
+                            uint16_t n4, uint16_t n5, uint16_t n6,
+                            const uint8_t *strA, const uint8_t *strB, const uint8_t *strC);
+extern uint16_t _GetStringLength(const uint8_t *str);
+extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
+extern void _DrawMenuItemsWaitForVSync(const int16_t *items);
+
+/* ChooseTeamsSetHeader: build "CHOOSE/CHANGE TEAMS FOR <type> - <country>"
+ * header string in menuEntries[0].fg. */
+__attribute__((used, externally_visible))
+void _ChooseTeamsSetHeader(void)
+{
+    uint8_t *dst = (uint8_t *)menuEntries[0].fg;
+    uint8_t *headerPrefix = (uint8_t *)chooseTeamsHeader1stPart;
+
+    if (headerPrefix == 0) {
+        headerPrefix = aChooseTeamsFor;
+        if (numSelectedTeams == numNeededTeams) {
+            headerPrefix = aChangeTeamsFor;
+        }
+    }
+    dst = _StringCopy(headerPrefix, dst);
+
+    uint8_t *gameType = (uint8_t *)gameTypeStr;
+    if (gameType != 0) {
+        dst = _StringCopy(gameType, dst);
+    }
+
+    /* Append " - <country>" if total length <= 47 (0x2F) */
+    uint16_t headerLen = _GetStringLength((uint8_t *)menuEntries[0].fg);
+    uint16_t countryLen = _GetStringLength(curCountryStr);
+    if ((uint16_t)(headerLen + countryLen) <= 0x2F) {
+        *dst++ = ' ';
+        *dst++ = '-';
+        *dst++ = ' ';
+        _StringCopy(curCountryStr, dst);
+    }
+}
+
+/* CheckNumTeamsAllowed: update menu entry visibility and status text
+ * based on numSelectedTeams vs numNeededTeams. */
+__attribute__((used, externally_visible))
+void _CheckNumTeamsAllowed(void)
+{
+    if (selectTeamsNoLimit != 0) {
+        /* No limit mode: hide play, status, and info entries */
+        menuEntries[57].isInvisible = 1;
+        menuEntries[58].isInvisible = 1;
+        menuEntries[55].isInvisible = 1;
+        return;
+    }
+
+    if (numSelectedTeams == numNeededTeams) {
+        /* Exact match: show play button, hide status text */
+        menuEntries[57].isInvisible = 0;
+        menuEntries[58].isInvisible = 1;
+        menuEntries[57].content = 2;
+        menuEntries[57].fg = playWhatStr;
+    } else {
+        /* Mismatch: hide play button, show status text */
+        menuEntries[57].isInvisible = 1;
+        menuEntries[58].isInvisible = 0;
+    }
+
+    /* Show entry 55 (unless no teams selected at all) */
+    menuEntries[55].isInvisible = 0;
+    if (numSelectedTeams == 0)
+        menuEntries[55].isInvisible = 1;
+
+    /* Build status text in entry 58's fg buffer */
+    uint8_t *statusDst = (uint8_t *)menuEntries[58].fg;
+    int16_t diff = (int16_t)numSelectedTeams - (int16_t)numNeededTeams;
+
+    if (diff == 0) {
+        /* Equal — write "ERROR" (entry is hidden anyway) */
+        _StringCopy(aError, statusDst);
+    } else if (diff < 0) {
+        /* Need more teams */
+        uint16_t needed = (uint16_t)(-diff);
+        if (needed == 1) {
+            _StringCopy(aSelect1MoreTea, statusDst);
+        } else {
+            _PrintFormatted(aSelect0MoreTea, statusDst,
+                            needed, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        }
+    } else {
+        /* Too many teams */
+        uint16_t excess = (uint16_t)diff;
+        if (excess == 1) {
+            _StringCopy(aSelect1LessTea, statusDst);
+        } else {
+            _PrintFormatted(aSelect0LessTea, statusDst,
+                            excess, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        }
+    }
+}
+
+/* Bureaucracy: update header and team count status, then redraw items.
+ * Saves/restores a5 (menu entry pointer) around calls. */
+__attribute__((used, externally_visible))
+void _Bureaucracy(void)
+{
+    _ChooseTeamsSetHeader();
+    _CheckNumTeamsAllowed();
+    _DrawMenuItemsWaitForVSync(bureaucracyMenuItems);
+}

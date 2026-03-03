@@ -246,3 +246,8 @@ void _OpenDiyFromFile(void);
 void _OpenDiyPreset1(void);
 void _OpenDiyPreset2(void);
 void _OpenDiyPreset3(void);
+
+/* --- Choose teams helpers (Chunk 148) --- */
+void _ChooseTeamsSetHeader(void);
+void _CheckNumTeamsAllowed(void);
+void _Bureaucracy(void);

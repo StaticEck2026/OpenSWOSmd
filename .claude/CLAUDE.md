@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1327 functions ported across 147 chunks.
+**Current status:** 1335 functions ported across 148 chunks.
 
-**Last completed chunk:** Chunk 147 — BuyOtherPlayers Init/Finish + Pitch/Season Menu Callbacks (5 → transfer_market.c, menus.c).
+**Last completed chunk:** Chunk 148 — EditTeamsCallback + Career/Team Selection Helpers (8 → edit_tactics.c, career_init.c, career_teams.c, diy_competition.c).
 
-**Next candidates:** DIY League Design callbacks (DesignDIYLeague*), Career_BuildForeignMarketPoolFromSelectedTeam, PlayerOffersAdjustOfferAmount (~80 instr), EvaluateTransferOfferNegotiation, CreateRandomTransferOfferForPlayer (large).
+**Next candidates:** GetCachedOrCalculate*Result (3 multi-register-return cache wrappers), Career_RebuildInternationalPlayerSelectionMasks, SelectNationalTeamAbort, ApplyOfferDemandMultipliersForSwapAndExtraPlayers, ContinueCareer, various large unported functions.
 
 ---
 

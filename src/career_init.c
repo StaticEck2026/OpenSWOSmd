@@ -204,3 +204,40 @@ void _CoachOrPlayerCoach(MenuEntry *entry)
     _SetPlayerCoachFieldColor();
     _CallDrawMenuItem(entry);
 }
+
+/* ================================================================
+ * Chunk 148: ChooseTeamAndStartCareer, LoadLiverpool
+ * ================================================================ */
+
+extern uint8_t contestMenu[];
+extern void _ActivateMenu(uint8_t *menu);
+extern void _SetExitMenuFlag(void);
+
+/* C→asm bridges (defined in SWOS2.s) */
+extern uint8_t *_CSelectTeamToManage(void);
+extern uint16_t _cSelectTeamToManageResult;
+extern void _CInitCareer(uint16_t teamNo);
+
+/* ChooseTeamAndStartCareer: let user pick a team, then start career.
+ * Called as menu onSelect callback. */
+__attribute__((used, externally_visible))
+void _ChooseTeamAndStartCareer(void)
+{
+    uint8_t *team = _CSelectTeamToManage();
+    if (team == 0) {
+        _SetExitMenuFlag();
+        return;
+    }
+    _CInitCareer(_cSelectTeamToManageResult);
+    _ActivateMenu(contestMenu);
+}
+
+/* LoadLiverpool: debug/cheat — start career with Liverpool (team 0x811).
+ * Called as menu onSelect callback. */
+__attribute__((used, externally_visible))
+void _LoadLiverpool(void)
+{
+    coachOrPlayer = 1;
+    _CInitCareer(0x811);
+    _ActivateMenu(contestMenu);
+}

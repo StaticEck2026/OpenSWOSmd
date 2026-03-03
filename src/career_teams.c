@@ -1888,3 +1888,107 @@ void _NationalTeamAddPlayerExit(void)
     careerNationalTeamAddPlayerType = 0xFFFF;
     _SetExitMenuFlag();
 }
+
+/* ================================================================
+ * Chunk 148: Career_UpdateNationalTeamMenuEntries,
+ *            Career_UpdateRemovePlayersMenuEntry
+ * ================================================================ */
+
+extern uint16_t careerNumPlayers;
+extern uint16_t careerNationalTeamHasPendingAddPlayer;
+extern uint32_t careerIntlPlayersRemoveMask;
+extern MenuEntry menuEntries[];
+extern uint8_t aASquad[];              /* "%a SQUAD" */
+extern uint8_t aSelect1MoreInt[];      /* "SELECT 1 MORE INTERNATIONAL SQUAD PLAYE..." */
+extern uint8_t aSelect0MoreInt[];      /* "SELECT %0 MORE INTERNATIONAL SQUAD PLAY..." */
+extern uint8_t aRemovePlayer[];        /* "REMOVE PLAYER" */
+extern uint8_t aRemovePlayers[];       /* "REMOVE PLAYERS" */
+
+extern void _PrintFormatted(const uint8_t *fmt, uint8_t *out,
+                            uint16_t n0, uint16_t n1, uint16_t n2, uint16_t n3,
+                            uint16_t n4, uint16_t n5, uint16_t n6,
+                            const uint8_t *strA, const uint8_t *strB, const uint8_t *strC);
+extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
+
+/* Career_UpdateNationalTeamMenuEntries: update visibility of national team
+ * squad menu entries based on careerNumPlayers and pending add state. */
+__attribute__((used, externally_visible))
+void _Career_UpdateNationalTeamMenuEntries(void)
+{
+    /* Initially hide entries 24 and 25 */
+    menuEntries[24].isInvisible = 1;
+    menuEntries[25].isInvisible = 1;
+
+    /* Show entry 24 if careerNumPlayers > 16, entry 25 if > 17 */
+    if (careerNumPlayers > 0x10) {
+        menuEntries[24].isInvisible = 0;
+        if (careerNumPlayers > 0x11) {
+            menuEntries[25].isInvisible = 0;
+        }
+    }
+
+    /* Format "%a SQUAD" with team name into entry 0 */
+    _PrintFormatted(aASquad, (uint8_t *)menuEntries[0].fg,
+                    0, 0, 0, 0, 0, 0, 0,
+                    (const uint8_t *)&careerTeam.team.teamName[0], 0, 0);
+
+    /* Default state: show entry 4, hide entry 5, show entry 3, hide entry 2 */
+    menuEntries[4].isInvisible = 0;
+    menuEntries[5].isInvisible = 1;
+    menuEntries[3].isInvisible = 0;
+    menuEntries[2].isInvisible = 1;
+    menuEntries[0].y = 0x1A;
+
+    if (careerNationalTeamHasPendingAddPlayer != 0) {
+        /* Pending add: hide entry 4, show entry 5, hide entry 3, show entry 2 */
+        menuEntries[4].isInvisible = 1;
+        menuEntries[5].isInvisible = 0;
+        menuEntries[3].isInvisible = 1;
+        menuEntries[2].isInvisible = 0;
+        menuEntries[0].y = 0x12;
+    }
+
+    /* Entry 1: "SELECT X MORE INTERNATIONAL SQUAD PLAYERS" */
+    menuEntries[1].isInvisible = 1;
+    if (careerNationalTeamHasPendingAddPlayer == 0 && careerNumPlayers != 0x14) {
+        menuEntries[1].isInvisible = 0;
+        uint8_t *dst = (uint8_t *)menuEntries[1].fg;
+        uint16_t remaining = 0x14 - careerNumPlayers;
+        if (remaining == 1) {
+            _StringCopy(aSelect1MoreInt, dst);
+        } else {
+            _PrintFormatted(aSelect0MoreInt, dst,
+                            remaining, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        }
+    }
+}
+
+/* Career_UpdateRemovePlayersMenuEntry: show/hide "REMOVE PLAYER(S)" entry
+ * based on careerIntlPlayersRemoveMask bit count. */
+__attribute__((used, externally_visible))
+void _Career_UpdateRemovePlayersMenuEntry(void)
+{
+    menuEntries[6].isInvisible = 1;
+
+    if (careerNationalTeamHasPendingAddPlayer != 0)
+        return;
+
+    if (careerIntlPlayersRemoveMask == 0)
+        return;
+
+    menuEntries[6].isInvisible = 0;
+
+    /* Count bits set in mask */
+    uint32_t mask = careerIntlPlayersRemoveMask;
+    uint16_t count = 0;
+    int16_t bit;
+    for (bit = 31; bit >= 0; bit--) {
+        if (mask & (1UL << bit))
+            count++;
+    }
+
+    menuEntries[6].fg = (uint32_t)aRemovePlayer;   /* singular */
+    if (count != 1) {
+        menuEntries[6].fg = (uint32_t)aRemovePlayers;  /* plural */
+    }
+}

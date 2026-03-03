@@ -2703,6 +2703,25 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, no new warnings)
 - Cumulative: 1303 functions across 140 chunks
 
+### Chunk 148 — EditTeamsCallback + Career/Team Selection Helpers (8 → edit_tactics.c, career_init.c, career_teams.c, diy_competition.c)
+- Date: 2026-03-02
+- Ported:
+  1. EditTeamsCallback (→edit_tactics.c) — store team pointer, show edit teams menu
+  2. ChooseTeamAndStartCareer (→career_init.c) — call SelectTeamToManage, if selected call InitCareer, activate contestMenu
+  3. LoadLiverpool (→career_init.c) — set coachOrPlayer=1, call InitCareer(0x811), activate contestMenu
+  4. Career_UpdateNationalTeamMenuEntries (→career_teams.c) — update visibility of national team squad menu entries based on careerNumPlayers and pending add state; format "%a SQUAD" header
+  5. Career_UpdateRemovePlayersMenuEntry (→career_teams.c) — show/hide "REMOVE PLAYER(S)" entry based on careerIntlPlayersRemoveMask bit count
+  6. ChooseTeamsSetHeader (→diy_competition.c) — build "CHOOSE/CHANGE TEAMS FOR <type> - <country>" header string
+  7. CheckNumTeamsAllowed (→diy_competition.c) — update menu entry visibility/status text based on numSelectedTeams vs numNeededTeams
+  8. Bureaucracy (→diy_competition.c) — call ChooseTeamsSetHeader + CheckNumTeamsAllowed + DrawMenuItemsWaitForVSync
+- Stubs: EditTeamsCallback (a0→stack bridge + locret_1373A6 preserved), ChooseTeamAndStartCareer (jmp), LoadLiverpool (jmp), Career_UpdateNationalTeamMenuEntries (jmp), Career_UpdateRemovePlayersMenuEntry (jmp), ChooseTeamsSetHeader (jmp), CheckNumTeamsAllowed (jmp), Bureaucracy (jmp)
+- New C→asm bridges: _CSelectTeamToManage (returns a0 as ptr, stores d0 in global), _CInitCareer (uint16_t teamNo→d0)
+- Bug fix: Fixed _CCreateRandomTransferOfferForPlayer bridge offset (60→64, accounting for return address)
+- New xrefs: _EditTeamsCallback, _ChooseTeamAndStartCareer, _LoadLiverpool, _Career_UpdateNationalTeamMenuEntries, _Career_UpdateRemovePlayersMenuEntry, _ChooseTeamsSetHeader, _CheckNumTeamsAllowed, _Bureaucracy
+- New xdefs: editTeamsMenu, chooseTeamsHeader1stPart, gameTypeStr, selectTeamsNoLimit, numNeededTeams, playWhatStr, aChooseTeamsFor, aChangeTeamsFor, aSelect1MoreTea, aSelect0MoreTea, aSelect1LessTea, aSelect0LessTea, aError, bureaucracyMenuItems, careerNationalTeamHasPendingAddPlayer, careerIntlPlayersRemoveMask, aASquad, aSelect1MoreInt, aSelect0MoreInt, aRemovePlayer, aRemovePlayers
+- Build status: **verified** (clean build)
+- Cumulative: 1335 functions across 148 chunks
+
 ### Chunk 147 — BuyOtherPlayers Init/Finish + Pitch/Season Menu Callbacks (5 → transfer_market.c, menus.c)
 - Date: 2026-03-02
 - Ported:

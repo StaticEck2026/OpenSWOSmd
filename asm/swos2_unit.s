@@ -2807,6 +2807,15 @@
         xref    _ExitOptions
         xref    _SetSquadMenuEntryStatusSprite
         xref    _SetSquadMenuEntryStatusSprite_AfterSim
+; --- Chunk 148 xrefs ---
+        xref    _EditTeamsCallback
+        xref    _ChooseTeamAndStartCareer
+        xref    _LoadLiverpool
+        xref    _Career_UpdateNationalTeamMenuEntries
+        xref    _Career_UpdateRemovePlayersMenuEntry
+        xref    _ChooseTeamsSetHeader
+        xref    _CheckNumTeamsAllowed
+        xref    _Bureaucracy
 ; --- Chunk 144 xrefs ---
 ; --- Chunk 147 xrefs ---
         xref    _BuyOtherPlayersInit
@@ -3117,6 +3126,28 @@
         xdef    diyNumberOfTeams
         xdef    diyTeamsBufferPtr
         xdef    competitionStatsMenu
+; --- Chunk 148 xdefs ---
+        xdef    editTeamsMenu
+        xdef    chooseTeamsHeader1stPart
+        xdef    gameTypeStr
+        xdef    selectTeamsNoLimit
+        xdef    numNeededTeams
+        xdef    playWhatStr
+        xdef    aChooseTeamsFor
+        xdef    aChangeTeamsFor
+        xdef    aSelect1MoreTea
+        xdef    aSelect0MoreTea
+        xdef    aSelect1LessTea
+        xdef    aSelect0LessTea
+        xdef    aError
+        xdef    bureaucracyMenuItems
+        xdef    careerNationalTeamHasPendingAddPlayer
+        xdef    careerIntlPlayersRemoveMask
+        xdef    aASquad
+        xdef    aSelect1MoreInt
+        xdef    aSelect0MoreInt
+        xdef    aRemovePlayer
+        xdef    aRemovePlayers
 ; --- Chunk 147 xdefs ---
         xdef    buyOtherPlayersTeamPtr
         xdef    buyOtherPlayersTitlePtr

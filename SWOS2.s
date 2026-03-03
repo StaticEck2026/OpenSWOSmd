@@ -38802,115 +38802,21 @@ loc_130EDC:
 locret_130EE6:
                 rts
 
-; ===== ChooseTeamsSetHeader =====
-; prototype: void __usercall ChooseTeamsSetHeader()
+; ===== ChooseTeamsSetHeader ===== (ported to C → _ChooseTeamsSetHeader in diy_competition.c)
 ChooseTeamsSetHeader:
-                lea     (menuEntries).l,a2
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a2),a1
-                movea.l (chooseTeamsHeader1stPart).l,a0
-                cmpa.l  #0,a0
-                bne.s   loc_130F18
-                lea     (aChooseTeamsFor).l,a0 ; "CHOOSE TEAMS FOR "
-                move.w  (numSelectedTeams).l,d0
-                cmp.w   (numNeededTeams).l,d0
-                bne.s   loc_130F18
-                lea     (aChangeTeamsFor).l,a0 ; "CHANGE TEAMS FOR "
-loc_130F18:
-                jsr     StringCopy
-                movea.l (gameTypeStr).l,a0
-                cmpa.l  #0,a0
-                beq.s   loc_130F32
-                jsr     StringCopy
-loc_130F32:
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a2),a0
-                jsr     GetStringLength
-                move.w  d0,d1
-                movea.l (curCountryStr).l,a0
-                jsr     GetStringLength
-                add.w   d0,d1
-                cmpi.w  #'/',d1
-                bhi.s   locret_130F6A
-                move.b  #' ',(a1)+
-                move.b  #'-',(a1)+
-                move.b  #' ',(a1)+
-                movea.l (curCountryStr).l,a0
-                jsr     StringCopy
-locret_130F6A:
-                rts
+                jmp     _ChooseTeamsSetHeader
 
-; ===== Bureaucracy =====
-; prototype: void __usercall Bureaucracy()
+; ===== Bureaucracy ===== (ported to C → _Bureaucracy in diy_competition.c)
 Bureaucracy:
-                move.l  a5,-(sp)
-                bsr.w   ChooseTeamsSetHeader
-                bsr.w   CheckNumTeamsAllowed
-                lea     (bureaucracyMenuItems).l,a0
-                jsr     DrawMenuItemsWaitForVSync
-                movea.l (sp)+,a5
-                rts
+                jmp     _Bureaucracy
 ; __int16[5]
 bureaucracyMenuItems:
                 ; __int16[5]
                 dc.w 58,57,55,0,-1      ; Array of menu item indices (58, 57, 55, 0, -1) for the Bureaucracy menu screen.
 
-; ===== CheckNumTeamsAllowed =====
-; prototype: void __usercall CheckNumTeamsAllowed()
+; ===== CheckNumTeamsAllowed ===== (ported to C → _CheckNumTeamsAllowed in diy_competition.c)
 CheckNumTeamsAllowed:
-                tst.w   (selectTeamsNoLimit).l
-                beq.s   loc_130FB8
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$C78)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$CB0)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$C08)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                rts
-loc_130FB8:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$C78)).l,a5
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$CB0)).l,a4
-                move.w  (numSelectedTeams).l,d0
-                cmp.w   (numNeededTeams).l,d0
-                beq.s   loc_130FDA
-                move.w  #1,4(a5)
-                clr.w   4(a4)
-                bra.s   loc_130FF2
-loc_130FDA:
-                clr.w   4(a5)
-                move.w  #1,4(a4)
-                move.w  #2,34(a5)
-                move.l  (playWhatStr).l,38(a5)
-loc_130FF2:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$C08)).l,a5
-                clr.w   MENUENTRY_ISINVISIBLE(a5)
-                tst.w   (numSelectedTeams).l
-                bne.s   loc_131008
-                move.w  #1,4(a5)
-loc_131008:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$CB0)).l,a5
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a5),a1
-                move.w  (numSelectedTeams).l,d0
-                sub.w   (numNeededTeams).l,d0
-                beq.s   loc_131050
-                bpl.s   loc_131036
-                neg.w   d0
-                lea     (aSelect1MoreTea).l,a0 ; "SELECT 1 MORE TEAM"
-                cmpi.w  #1,d0
-                beq.s   loc_131056
-                lea     (aSelect0MoreTea).l,a0 ; "SELECT %0 MORE TEAMS"
-                bra.s   loc_131048
-loc_131036:
-                lea     (aSelect1LessTea).l,a0 ; "SELECT 1 LESS TEAM"
-                cmpi.w  #1,d0
-                beq.s   loc_131056
-                lea     (aSelect0LessTea).l,a0 ; "SELECT %0 LESS TEAMS"
-loc_131048:
-                jsr     PrintFormatted
-                rts
-loc_131050:
-                lea     (aError).l,a0   ; "ERROR"
-loc_131056:
-                jsr     StringCopy
-                rts
+                jmp     _CheckNumTeamsAllowed
 
 ; ===== ChooseTeamsFriendly_UpdateMenuEntryYLayout =====
 ; prototype: void __usercall ChooseTeamsFriendly_UpdateMenuEntryYLayout()
@@ -49682,15 +49588,12 @@ loc_137376:
                 lea     (aEditCustomTeam).l,a0 ; "EDIT CUSTOM TEAMS"
                 jmp     ShowInsertDisk2Dialog
 
-; ===== EditTeamsCallback =====
-; prototype: void __usercall EditTeamsCallback(TeamFile *team@<a0>)
+; ===== EditTeamsCallback ===== (ported to C → _EditTeamsCallback in edit_tactics.c)
+; Bridge: a0→stack param
 EditTeamsCallback:
-                movea.l a0,a5
-                move.l  a0,(editTeamsSelectedTeam).l
-                lea     (editTeamsMenu).l,a6
-                movem.l a5,-(sp)
-                jsr     ShowMenu
-                movem.l (sp)+,a5
+                move.l  a0,-(sp)
+                jsr     _EditTeamsCallback
+                addq.l  #4,sp
 locret_1373A6:
                 rts
 ; Menu_EditTeams
@@ -55587,26 +55490,37 @@ SetPlayerCoachFieldColor:
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
 
-; ===== ChooseTeamAndStartCareer =====
-; prototype: void __usercall ChooseTeamAndStartCareer()
+; ===== ChooseTeamAndStartCareer ===== (ported to C → _ChooseTeamAndStartCareer in career_init.c)
 ChooseTeamAndStartCareer:
-                jsr SelectTeamToManage(pc)
-                cmpa.l  #0,a0
-                beq.w   j_SetExitMenuFlag2
-                jsr     InitCareer
-                lea     (contestMenu).l,a6
-                jmp     ActivateMenu
-                rts
+                jmp     _ChooseTeamAndStartCareer
 
-; ===== LoadLiverpool =====
-; prototype: void __usercall LoadLiverpool()
+; ===== LoadLiverpool ===== (ported to C → _LoadLiverpool in career_init.c)
 LoadLiverpool:
-                clr.w   (coachOrPlayer).l
-                move.w  #1,(coachOrPlayer).l
-                move.w  #$811,d0
+                jmp     _LoadLiverpool
+
+; ===== C→asm bridge: _CSelectTeamToManage =====
+; Calls SelectTeamToManage, returns a0 as C return value,
+; stores d0 (team number) in _cSelectTeamToManageResult.
+                xdef    _CSelectTeamToManage
+                xdef    _cSelectTeamToManageResult
+_CSelectTeamToManage:
+                movem.l d1-d7/a1-a6,-(sp)
+                bsr.w   SelectTeamToManage
+                move.w  d0,(_cSelectTeamToManageResult).l
+                move.l  a0,d0           ; C return = team pointer
+                movem.l (sp)+,d1-d7/a1-a6
+                rts
+_cSelectTeamToManageResult:
+                dc.w    0
+
+; ===== C→asm bridge: _CInitCareer =====
+; Takes uint16_t teamNo from stack, calls InitCareer with d0=teamNo.
+                xdef    _CInitCareer
+_CInitCareer:
+                movem.l d0-d7/a0-a6,-(sp)
+                move.w  66(sp),d0       ; first C param low word (15*4 + 4 ret = 64, +2 for high word = 66)
                 jsr     InitCareer
-                lea     (contestMenu).l,a6
-                jmp     ActivateMenu
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
 ; ===== ChangeSex =====
@@ -71706,7 +71620,7 @@ locret_145DEE:
 ; C-callable bridge: uint16_t playerIndex → d1 for CreateRandomTransferOfferForPlayer
 _CCreateRandomTransferOfferForPlayer:
                 movem.l d0-d7/a0-a6,-(sp)
-                move.l  60(sp),d1       ; first C param (after 15 regs * 4 = 60 bytes)
+                move.l  64(sp),d1       ; first C param (15 regs * 4 + 4 ret addr = 64)
                 bsr.s   CreateRandomTransferOfferForPlayer
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
@@ -73368,56 +73282,9 @@ SelectNationalTeamFinish:
                 bsr.w   Career_UpdateRemovePlayersMenuEntry
                 rts
 
-; ===== Career_UpdateNationalTeamMenuEntries =====
-; prototype: void __usercall Career_UpdateNationalTeamMenuEntries()
+; ===== Career_UpdateNationalTeamMenuEntries ===== (ported to C → _Career_UpdateNationalTeamMenuEntries in career_teams.c)
 Career_UpdateNationalTeamMenuEntries:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$540).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$578).l
-                cmpi.w  #$10,(careerNumPlayers).l
-                bls.s   loc_146FFC
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$540).l
-                cmpi.w  #$11,(careerNumPlayers).l
-                bls.s   loc_146FFC
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$578).l
-loc_146FFC:
-                lea     (menuEntries).l,a0
-                movea.l MENUENTRY_FG(a0),a1
-                lea     (aASquad).l,a0  ; "%a SQUAD"
-                lea     (careerTeam+TEAMFILEEX_TEAM+TEAMFILE_TEAMNAME).l,a2
-                jsr     PrintFormatted
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$E0).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$118).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$A8).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$70).l
-                lea     (menuEntries).l,a0
-                move.w  #$1A,MENUENTRY_Y(a0)
-                tst.w   (careerNationalTeamHasPendingAddPlayer).l
-                beq.s   loc_14705A
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$E0).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$118).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$A8).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$70).l
-                lea     (menuEntries).l,a0
-                move.w  #$12,MENUENTRY_Y(a0)
-loc_14705A:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$38).l
-                tst.w   (careerNationalTeamHasPendingAddPlayer).l
-                bne.w   locret_1470A2
-                cmpi.w  #$14,(careerNumPlayers).l
-                beq.s   locret_1470A2
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$38).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                lea     (aSelect1MoreInt).l,a0 ; "SELECT 1 MORE INTERNATIONAL SQUAD PLAYE"...
-                move.w  #$14,d0
-                sub.w   (careerNumPlayers).l,d0
-                cmpi.w  #1,d0
-                beq.s   loc_14709C
-                lea     (aSelect0MoreInt).l,a0 ; "SELECT %0 MORE INTERNATIONAL SQUAD PLAY"...
-loc_14709C:
-                jsr     PrintFormatted
-locret_1470A2:
-                rts
+                jmp     _Career_UpdateNationalTeamMenuEntries
 
 ; ===== Career_RebuildInternationalPlayerSelectionMasks =====
 ; prototype: void __usercall Career_RebuildInternationalPlayerSelectionMasks()
@@ -73458,31 +73325,9 @@ loc_1470FA:
                 move.l  d5,(careerIntlPlayersWrongTypeMask).l
                 rts
 
-; ===== Career_UpdateRemovePlayersMenuEntry =====
-; prototype: void __usercall Career_UpdateRemovePlayersMenuEntry()
+; ===== Career_UpdateRemovePlayersMenuEntry ===== (ported to C → _Career_UpdateRemovePlayersMenuEntry in career_teams.c)
 Career_UpdateRemovePlayersMenuEntry:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$150).l
-                tst.w   (careerNationalTeamHasPendingAddPlayer).l
-                bne.s   locret_147156
-                move.l  (careerIntlPlayersRemoveMask).l,d0
-                beq.s   locret_147156
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$150).l
-                move.l  (careerIntlPlayersRemoveMask).l,d0
-                clr.w   d2
-                move.w  #$1F,d1
-loc_147132:
-                btst    d1,d0
-                beq.s   loc_147138
-                addq.w  #1,d2
-loc_147138:
-                dbf     d1,loc_147132
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                move.l  #aRemovePlayer,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "REMOVE PLAYER" ...
-                cmpi.w  #1,d2
-                beq.s   locret_147156
-                move.l  #aRemovePlayers,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "REMOVE PLAYERS" ...
-locret_147156:
-                rts
+                jmp     _Career_UpdateRemovePlayersMenuEntry
 
 ; ===== NationalTeamAddPlayer =====
 ; prototype: void __usercall NationalTeamAddPlayer()

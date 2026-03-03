@@ -14,3 +14,7 @@ void _ChangeSex(MenuEntry *entry);
 void _SetName(MenuEntry *entry);
 void _SetSurname(MenuEntry *entry);
 void _CoachOrPlayerCoach(MenuEntry *entry);
+
+/* --- ChooseTeamAndStartCareer, LoadLiverpool (Chunk 148) --- */
+void _ChooseTeamAndStartCareer(void);
+void _LoadLiverpool(void);
