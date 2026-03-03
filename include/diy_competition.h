@@ -269,3 +269,13 @@ void _DIYLeagueTournament_SetupCurrentFixtureTeamNames(void);
 void _DIYLeagueTournament_DrawPlayMatchAndFixtureHeader(void);
 void _DIYLeagueTournamentNextMatch(void);
 void _DIYLeagueTournamentInit(void);
+
+/* --- DIY League/Tournament Match Callbacks & Visibility (Chunk 152) --- */
+void _DIYLeagueTournamentMatch(MenuEntry *entry);
+void _DIYLeagueTournamentOnSelect4(MenuEntry *entry);
+void _DIYLeagueTournamentResult(MenuEntry *entry);
+void _DIYLeagueTournamentViewMatch(MenuEntry *entry);
+void _DIYLeagueTournamentViewHighlights(MenuEntry *entry);
+void _DIYLeagueTournamentViewResult(MenuEntry *entry);
+void _DIYLeagueTournamentMatchCommon(uint16_t action);
+void _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus(void);

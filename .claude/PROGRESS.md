@@ -2780,6 +2780,24 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, only pre-existing warnings)
 - Cumulative: 1365 functions across 151 chunks
 
+### Chunk 152 — DIY League/Tournament Match Callbacks & Visibility (8 → diy_competition.c)
+- Date: 2026-03-02
+- Ported:
+  1. DIYLeagueTournamentMatch (→diy_competition.c) — callback: stores ordinal to field3A+4, calls MatchCommon(2)
+  2. DIYLeagueTournamentOnSelect4 (→diy_competition.c) — callback: stores ordinal, calls MatchCommon(3)
+  3. DIYLeagueTournamentResult (→diy_competition.c) — callback: stores ordinal, calls MatchCommon(0)
+  4. DIYLeagueTournamentViewMatch (→diy_competition.c) — callback: stores ordinal to field3A+8, calls MatchCommon(1)
+  5. DIYLeagueTournamentViewHighlights (→diy_competition.c) — callback: stores ordinal, calls MatchCommon(3)
+  6. DIYLeagueTournamentViewResult (→diy_competition.c) — callback: stores ordinal, calls MatchCommon(0)
+  7. DIYLeagueTournamentMatchCommon (→diy_competition.c) — plays league fixture, updates state, sorts table, redraws
+  8. DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus (→diy_competition.c) — complex visibility/focus management for 8+ menu entries
+- Stubs: 6 register bridges (a5→stack), 2 jmp stubs
+- New asm bridge: _asm_DIY_PlayOrSimulateLeagueFixture — stores multi-reg returns (a1,a2,d1,d2) to globals
+- New xrefs: _DIYLeagueTournamentMatch, _DIYLeagueTournamentOnSelect4, _DIYLeagueTournamentResult, _DIYLeagueTournamentViewMatch, _DIYLeagueTournamentViewHighlights, _DIYLeagueTournamentViewResult, _DIYLeagueTournamentMatchCommon, _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus
+- New xdefs: _asm_DIY_PlayOrSimulateLeagueFixture, diyTournamentType
+- Build status: **verified** (clean build, only pre-existing warnings)
+- Cumulative: 1373 functions across 152 chunks
+
 ### Chunk 147 — BuyOtherPlayers Init/Finish + Pitch/Season Menu Callbacks (5 → transfer_market.c, menus.c)
 - Date: 2026-03-02
 - Ported:
@@ -3062,5 +3080,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 149   | 10        | 1345       |
 | 150   | 13        | 1358       |
 | 151   | 7         | 1365       |
+| 152   | 8         | 1373       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

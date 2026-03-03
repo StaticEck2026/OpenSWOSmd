@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1365 functions ported across 151 chunks.
+**Current status:** 1373 functions ported across 152 chunks.
 
-**Last completed chunk:** Chunk 151 — Utility Functions & Competition Init (7 → teams.c, play_match_menu.c, career_teams.c, diy_competition.c, career_init.c): FormatPlayerValueOrStatusText, FormTopSkillsString, GetTeamLeague, IsNationalTeamCompetitionOrQualification, InitCompetitionTeamSelection* (3 variants).
+**Last completed chunk:** Chunk 152 — DIY League/Tournament Match Callbacks & Visibility (8 → diy_competition.c): 6 match callbacks + MatchCommon + UpdateMenuEntryVisibilityAndFocus.
 
-**Next candidates:** Remaining ~36 unported functions — DIYLeagueTournamentMatchCommon, Match/ViewMatch callbacks, SquadMenu family, CareerGameListCommon, EditTeams callbacks, Career update functions.
+**Next candidates:** DIYLeagueTournamentOnRestore, DIYLeagueTournament16BeforeDraw, ShowDiyLeaguesTournamentMenu, Int2StrWithCommas/Int2Ascii*, WriteStatsNumber, AI_ResumeGameDelay, remaining career/transfer/squad functions.
 
 ---
 

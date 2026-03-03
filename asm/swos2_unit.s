@@ -2849,6 +2849,15 @@
         xref    _InitCompetitionTeamSelectionFromTableEntry
         xref    _InitCompetitionTeamSelectionFromTableHeader
         xref    _InitCompetitionTeamSelectionFromAltTableHeader
+; --- Chunk 152 xrefs ---
+        xref    _DIYLeagueTournamentMatch
+        xref    _DIYLeagueTournamentOnSelect4
+        xref    _DIYLeagueTournamentResult
+        xref    _DIYLeagueTournamentViewMatch
+        xref    _DIYLeagueTournamentViewHighlights
+        xref    _DIYLeagueTournamentViewResult
+        xref    _DIYLeagueTournamentMatchCommon
+        xref    _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus
 ; --- Chunk 144 xrefs ---
 ; --- Chunk 147 xrefs ---
         xref    _BuyOtherPlayersInit
@@ -3017,6 +3026,9 @@
         xdef    aLparen
         xdef    aRparen
         xdef    aCup_10
+; --- Chunk 152 xdefs ---
+        xdef    _asm_DIY_PlayOrSimulateLeagueFixture
+        xdef    diyTournamentType
 ; --- Chunk 132 xdefs ---
         xdef    _asm_DIY_PlayCupMatchAndAdvance
         xdef    aPlayTournament

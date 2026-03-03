@@ -6766,8 +6766,9 @@ extern void _SetupDIYCompetitionStatsMenu(void);
 extern void _DrawMenu(void);
 extern void _CallDrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
 
-/* Asm functions not yet ported */
-extern void DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus(void);
+/* Forward declarations for Chunk 152 functions */
+void _DIYLeagueTournamentMatchCommon(uint16_t action);
+void _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus(void);
 
 /* ================================================================
  * jmp_SetExitMenuFlag_7  (SWOS2.s line 42414)
@@ -7057,7 +7058,7 @@ void _DIYLeagueTournamentNextMatch(void)
     _DIYLeagueTournament_DrawPlayMatchAndFixtureHeader();
 
     /* loc_132E24 tail: update visibility and draw entries */
-    DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus();
+    _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus();
     _CallDrawMultipleItems(8, &menuEntries[1]);  /* 0x38/56=1, draw 8 entries */
 }
 
@@ -7133,3 +7134,273 @@ uint16_t _IsNationalTeamCompetitionOrQualification(uint32_t key)
 /* InitCompetitionFromRecord dispatches to InitDIY*FromRecord functions which
  * are still in asm with register-based calling (d0=index, a0=rec).
  * Must stay in asm until its callees are ported. */
+
+/* ================================================================
+ * Chunk 152 — DIY League/Tournament Match Callbacks & Visibility
+ * ================================================================ */
+
+extern uint16_t diyTournamentType;
+extern uint16_t diyHasGroups;
+extern uint16_t careerLoadedFlag;
+extern uint16_t fireResetFlag;
+extern uint16_t highlightedLeagueTeamId;
+
+/* C-callable asm bridge — calls DIY_PlayOrSimulateLeagueFixture with d7=mode,
+ * stores multi-register results to diyLeft/RightTeamPtr/Result globals.
+ * Returns d0 (0 = success, non-zero = exit/cancel). */
+extern uint16_t _asm_DIY_PlayOrSimulateLeagueFixture(uint16_t mode);
+
+extern void _SetCurrentEntry(uint16_t index);
+
+/* ================================================================
+ * DIYLeagueTournamentMatch  (SWOS2.s line 42381)
+ *
+ * Menu callback (a5=entry). Stores ordinal to field3A+4, calls
+ * MatchCommon with action=2 (play match).
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournamentMatch(MenuEntry *entry)
+{
+    *(uint16_t *)&diyCompetitionStart[0x3A + 4] = entry->ordinal;
+    _DIYLeagueTournamentMatchCommon(2);
+}
+
+/* ================================================================
+ * DIYLeagueTournamentOnSelect4  (SWOS2.s line 42388)
+ *
+ * Menu callback. Stores ordinal to field3A+4, calls MatchCommon
+ * with action=3 (view highlights from match list).
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournamentOnSelect4(MenuEntry *entry)
+{
+    *(uint16_t *)&diyCompetitionStart[0x3A + 4] = entry->ordinal;
+    _DIYLeagueTournamentMatchCommon(3);
+}
+
+/* ================================================================
+ * DIYLeagueTournamentResult  (SWOS2.s line 42395)
+ *
+ * Menu callback. Stores ordinal to field3A+4, calls MatchCommon
+ * with action=0 (show result/simulate).
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournamentResult(MenuEntry *entry)
+{
+    *(uint16_t *)&diyCompetitionStart[0x3A + 4] = entry->ordinal;
+    _DIYLeagueTournamentMatchCommon(0);
+}
+
+/* ================================================================
+ * DIYLeagueTournamentViewMatch  (SWOS2.s line 42402)
+ *
+ * Menu callback. Stores ordinal to field3A+8, calls MatchCommon
+ * with action=1 (view match replay).
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournamentViewMatch(MenuEntry *entry)
+{
+    *(uint16_t *)&diyCompetitionStart[0x3A + 8] = entry->ordinal;
+    _DIYLeagueTournamentMatchCommon(1);
+}
+
+/* ================================================================
+ * DIYLeagueTournamentViewHighlights  (SWOS2.s line 42409)
+ *
+ * Menu callback. Stores ordinal to field3A+8, calls MatchCommon
+ * with action=3 (view highlights).
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournamentViewHighlights(MenuEntry *entry)
+{
+    *(uint16_t *)&diyCompetitionStart[0x3A + 8] = entry->ordinal;
+    _DIYLeagueTournamentMatchCommon(3);
+}
+
+/* ================================================================
+ * DIYLeagueTournamentViewResult  (SWOS2.s line 42416)
+ *
+ * Menu callback. Stores ordinal to field3A+8, calls MatchCommon
+ * with action=0 (view result).
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournamentViewResult(MenuEntry *entry)
+{
+    *(uint16_t *)&diyCompetitionStart[0x3A + 8] = entry->ordinal;
+    _DIYLeagueTournamentMatchCommon(0);
+}
+
+/* ================================================================
+ * DIYLeagueTournamentMatchCommon  (SWOS2.s line 42422)
+ *
+ * Common match handler. Calls DIY_PlayOrSimulateLeagueFixture,
+ * updates view state, sorts league table, redraws menu.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournamentMatchCommon(uint16_t action)
+{
+    uint16_t result = _asm_DIY_PlayOrSimulateLeagueFixture(action);
+    if (result != 0)
+        return;
+
+    _DIYLeagueTournament_UpdateViewOptionsAvailability();
+    diyFixtureViewMode = 0xFFFF;   /* -1 = show results */
+    /* nullsub_15 omitted (no-op) */
+
+    /* diyLeftTeamPtr/diyRightTeamPtr/diyLeftTeamResult/diyRightTeamResult
+     * already populated by the asm bridge */
+
+    uint16_t setAllPlayed = 0;
+
+    if (diyHasGroups != 0) {
+        /* With groups: move separator entry x to 0x97 */
+        menuEntries[10].x = 0x97;  /* entry at $230/56 = 10 */
+        setAllPlayed = 1;
+    } else {
+        uint8_t *a0 = diyCompetitionStart;
+        if (diyTournamentType != 0) {
+            /* Tournament: check field $1C0 */
+            if (*(int16_t *)&a0[0x1C0] != 0)
+                setAllPlayed = 1;
+            /* else fall through to league check */
+        }
+        if (!setAllPlayed) {
+            /* League check: if field $60 != 0 OR field $48 == 1 → not all played */
+            if (*(int16_t *)&a0[0x60] == 0 && *(int16_t *)&a0[0x48] != 1)
+                setAllPlayed = 1;
+        }
+    }
+
+    if (setAllPlayed)
+        diyAllMatchesPlayed = 1;
+
+    _DIY_SortLeagueTableByStandings();
+    _DIYSetTeamNamesAndResults();
+    _DIYLeagueTournament_EnsureCurrentFixtureVisible();
+    _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus();
+    _DrawMenu();
+}
+
+/* ================================================================
+ * DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus
+ * (SWOS2.s line 42486)
+ *
+ * Controls which menu entries are visible/hidden and sets the
+ * current selected entry based on view mode and game state.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus(void)
+{
+    /* If view-only mode, hide entries 1-8 (action buttons) */
+    if (diyTournamentViewOnly != 0) {
+        menuEntries[1].isInvisible = 1;
+        menuEntries[2].isInvisible = 1;
+        menuEntries[3].isInvisible = 1;
+        menuEntries[4].isInvisible = 1;
+        menuEntries[5].isInvisible = 1;
+        menuEntries[6].isInvisible = 1;
+        menuEntries[7].isInvisible = 1;
+        menuEntries[8].isInvisible = 1;
+        return;
+    }
+
+    uint8_t *a1 = diyCompetitionStart;
+
+    if (diyAllMatchesPlayed != 0) {
+        /* All matches played */
+        if (diyTournamentType == 0)
+            fireResetFlag = 1;
+
+        /* Hide entries 1, 3-8 */
+        menuEntries[1].isInvisible = 1;
+        menuEntries[3].isInvisible = 1;
+        menuEntries[4].isInvisible = 1;
+        menuEntries[5].isInvisible = 1;
+        menuEntries[6].isInvisible = 1;
+        menuEntries[7].isInvisible = 1;
+        menuEntries[8].isInvisible = 1;
+
+        _SetCurrentEntry(10);
+        return;
+    }
+
+    /* Not all played — check field $60 */
+    if (*(int16_t *)&a1[0x60] != 0) {
+        /* field $60 != 0 — check fixture view mode */
+        if ((int16_t)diyFixtureViewMode <= 0)
+            goto show_next_match;
+        /* diyFixtureViewMode > 0 — show match view options */
+        goto show_match_view;
+    }
+
+    /* field $60 == 0 — show "NEXT ROUND" */
+    fireResetFlag = 1;
+    menuEntries[1].fg = (uint32_t)aNextRound;
+    goto show_next_button;
+
+show_next_match:
+    menuEntries[1].fg = (uint32_t)aNextMatch;
+
+show_next_button:
+    /* Show entry 1, hide entries 3-8 */
+    menuEntries[1].isInvisible = 0;
+    menuEntries[3].isInvisible = 1;
+    menuEntries[4].isInvisible = 1;
+    menuEntries[5].isInvisible = 1;
+    menuEntries[6].isInvisible = 1;
+    menuEntries[7].isInvisible = 1;
+    menuEntries[8].isInvisible = 1;
+
+    if (diyInitFocusOverride != 0) {
+        diyInitFocusOverride = 0;
+        _SetCurrentEntry(10);
+        return;
+    }
+    _SetCurrentEntry(1);
+    return;
+
+show_match_view:
+    /* Hide entry 1 */
+    menuEntries[1].isInvisible = 1;
+
+    {
+        uint16_t teamClass = _DIY_GetCurrentFixtureTeamClass();
+        if (teamClass == 0 || teamClass == 1) {
+            /* Both teams computer-controlled — show VIEW options (6,8), hide 7 */
+            menuEntries[6].isInvisible = 0;
+            menuEntries[7].isInvisible = 0;  /* cleared then re-set below */
+            menuEntries[8].isInvisible = 0;
+            menuEntries[7].isInvisible = 1;  /* net: entry 7 hidden */
+
+            /* Hide entries 3-5 (MATCH options) */
+            menuEntries[3].isInvisible = 1;
+            menuEntries[4].isInvisible = 1;
+            menuEntries[5].isInvisible = 1;
+
+            /* Career mode check: hide entry 6 if career */
+            if (careerLoadedFlag != 0) {
+                menuEntries[6].isInvisible = 1;
+                /* Copy x from entry 6 to entry 8, set entry 8 width */
+                menuEntries[8].x = menuEntries[6].x;
+                menuEntries[8].dwWidth = 0xCA;
+            }
+
+            _SetCurrentEntry(*(uint16_t *)&diyCompetitionStart[0x3A + 8]);
+            return;
+        }
+
+        /* Human team involved — show PLAY options (entries 3,5), hide entry 4 */
+        menuEntries[3].isInvisible = 0;
+        menuEntries[4].isInvisible = 0;  /* cleared then re-set below */
+        menuEntries[5].isInvisible = 0;
+        menuEntries[4].isInvisible = 1;  /* net: entry 4 hidden */
+
+        /* Hide entries 6-8 (VIEW options) */
+        menuEntries[6].isInvisible = 1;
+        menuEntries[7].isInvisible = 1;
+        menuEntries[8].isInvisible = 1;
+
+        _SetCurrentEntry(*(uint16_t *)&diyCompetitionStart[0x3A + 4]);
+        return;
+    }
+}

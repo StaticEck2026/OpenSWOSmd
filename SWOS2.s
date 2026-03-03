@@ -35184,6 +35184,20 @@ _asm_DIY_SimulateLeagueFixture:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
+; uint16_t _asm_DIY_PlayOrSimulateLeagueFixture(uint16_t mode)
+; Calls DIY_PlayOrSimulateLeagueFixture with d7=mode, returns d0 status.
+; Stores multi-reg results (a1,a2,d1,d2) to globals for C caller.
+_asm_DIY_PlayOrSimulateLeagueFixture:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  44(sp),d7       ; 1st C arg → d7
+                jsr     DIY_PlayOrSimulateLeagueFixture
+                move.l  a1,(diyLeftTeamPtr).l
+                move.l  a2,(diyRightTeamPtr).l
+                move.w  d1,(diyLeftTeamResult).l
+                move.w  d2,(diyRightTeamResult).l
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
+
 ; uint16_t _asm_DIY_SimulateCupMatch(void)
 ; Calls DIY_PlayCupMatchAndAdvance with d7=0 (simulate mode)
 _asm_DIY_SimulateCupMatch:
@@ -42376,89 +42390,63 @@ DIYLeagueTournamentExit:
 DIYLeagueTournament_UpdateViewOptionsAvailability:
                 jmp     _DIYLeagueTournament_UpdateViewOptionsAvailability
 
-; ===== DIYLeagueTournamentMatch =====
-; prototype: void __usercall DIYLeagueTournamentMatch(struct MenuEntry *entry@<a5>)
+; ===== DIYLeagueTournamentMatch ===== (ported to C → _DIYLeagueTournamentMatch)
 DIYLeagueTournamentMatch:
-                move.w  MENUENTRY_ORDINAL(a5),(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+4).l
-                move.w  #2,d7
-                bra.s   DIYLeagueTournamentMatchCommon
-
-; ===== DIYLeagueTournamentOnSelect4 =====
-; prototype: void __usercall DIYLeagueTournamentOnSelect4(struct MenuEntry *entry@<a5>)
-DIYLeagueTournamentOnSelect4:
-                move.w  MENUENTRY_ORDINAL(a5),(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+4).l
-                move.w  #3,d7
-                bra.s   DIYLeagueTournamentMatchCommon
-
-; ===== DIYLeagueTournamentResult =====
-; prototype: void __usercall DIYLeagueTournamentResult(struct MenuEntry *entry@<a5>)
-DIYLeagueTournamentResult:
-                move.w  MENUENTRY_ORDINAL(a5),(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+4).l
-                clr.w   d7
-                bra.s   DIYLeagueTournamentMatchCommon
-
-; ===== DIYLeagueTournamentViewMatch =====
-; prototype: void __usercall DIYLeagueTournamentViewMatch(struct MenuEntry *entry@<a5>)
-DIYLeagueTournamentViewMatch:
-                move.w  MENUENTRY_ORDINAL(a5),(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+8).l
-                move.w  #1,d7
-                bra.s   DIYLeagueTournamentMatchCommon
-
-; ===== DIYLeagueTournamentViewHighlights =====
-; prototype: void __usercall DIYLeagueTournamentViewHighlights(struct MenuEntry *entry@<a5>)
-DIYLeagueTournamentViewHighlights:
-                move.w  MENUENTRY_ORDINAL(a5),(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+8).l
-                move.w  #3,d7
-                bra.s   DIYLeagueTournamentMatchCommon
-
-; ===== DIYLeagueTournamentViewResult =====
-; prototype: void __usercall DIYLeagueTournamentViewResult(struct MenuEntry *entry@<a5>)
-DIYLeagueTournamentViewResult:
-                move.w  MENUENTRY_ORDINAL(a5),(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+8).l
-                clr.w   d7
-
-; ===== DIYLeagueTournamentMatchCommon =====
-; prototype: void __usercall DIYLeagueTournamentMatchCommon(unsigned __int16 action@<d7>)
-DIYLeagueTournamentMatchCommon:
-                bsr.w   DIY_PlayOrSimulateLeagueFixture
-                bne.w   locret_132D0C
-                bsr.w   DIYLeagueTournament_UpdateViewOptionsAvailability
-                move.w  #$FFFF,(diyFixtureViewMode).l
-                movem.l d7,-(sp)
-                bsr.w   nullsub_15
-                movem.l (sp)+,d7
-                move.l  a1,(diyLeftTeamPtr).l
-                move.l  a2,(diyRightTeamPtr).l
-                move.w  d1,(diyLeftTeamResult).l
-                move.w  d2,(diyRightTeamResult).l
-                tst.w   (diyHasGroups).l
-                beq.s   loc_132CC4
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$230)).l,a0
-                move.w  #$97,MENUENTRY_X(a0)
-                bra.s   loc_132CE6
-loc_132CC4:
-                lea     (diyCompetitionStart).l,a0
-                tst.w   (diyTournamentType).l
-                beq.s   loc_132CD8
-                tst.w   448(a0)
-                bne.s   loc_132CE6
-loc_132CD8:
-                tst.w   96(a0)
-                bne.s   loc_132CEE
-                cmpi.w  #1,$48(a0)
-                beq.s   loc_132CEE
-loc_132CE6:
-                move.w  #1,(diyAllMatchesPlayed).l
-loc_132CEE:
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   DIY_SortLeagueTableByStandings
-                movem.l (sp)+,d0-d7/a0-a6
-                bsr.w   DIYSetTeamNamesAndResults
-                bsr.w   DIYLeagueTournament_EnsureCurrentFixtureVisible
-                bsr.w   DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus
-                jmp     DrawMenu
-locret_132D0C:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _DIYLeagueTournamentMatch
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
+
+; ===== DIYLeagueTournamentOnSelect4 ===== (ported to C → _DIYLeagueTournamentOnSelect4)
+DIYLeagueTournamentOnSelect4:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _DIYLeagueTournamentOnSelect4
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
+
+; ===== DIYLeagueTournamentResult ===== (ported to C → _DIYLeagueTournamentResult)
+DIYLeagueTournamentResult:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _DIYLeagueTournamentResult
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
+
+; ===== DIYLeagueTournamentViewMatch ===== (ported to C → _DIYLeagueTournamentViewMatch)
+DIYLeagueTournamentViewMatch:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _DIYLeagueTournamentViewMatch
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
+
+; ===== DIYLeagueTournamentViewHighlights ===== (ported to C → _DIYLeagueTournamentViewHighlights)
+DIYLeagueTournamentViewHighlights:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _DIYLeagueTournamentViewHighlights
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
+
+; ===== DIYLeagueTournamentViewResult ===== (ported to C → _DIYLeagueTournamentViewResult)
+DIYLeagueTournamentViewResult:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _DIYLeagueTournamentViewResult
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
+
+; ===== DIYLeagueTournamentMatchCommon ===== (ported to C → _DIYLeagueTournamentMatchCommon)
+DIYLeagueTournamentMatchCommon:
+                jmp     _DIYLeagueTournamentMatchCommon
 
 ; ===== DIYSetTeamNamesAndResults ===== (ported to C → _DIYSetTeamNamesAndResults)
 DIYSetTeamNamesAndResults:
@@ -42481,113 +42469,9 @@ loc_132E24:
                 move.w  #8,d0
                 jmp     CallDrawMultipleItems
 
-; ===== DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus =====
-; prototype: void __usercall DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus()
+; ===== DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus ===== (ported to C)
 DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus:
-                tst.w   (diyTournamentViewOnly).l
-                beq.s   loc_132E74
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  #1,$3C(a0)
-                move.w  #1,$74(a0)
-                move.w  #1,$AC(a0)
-                move.w  #1,$E4(a0)
-                move.w  #1,$11C(a0)
-                move.w  #1,$154(a0)
-                move.w  #1,$18C(a0)
-                rts
-loc_132E74:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                lea     (diyCompetitionStart).l,a1
-                tst.w   (diyAllMatchesPlayed).l
-                beq.s   loc_132ED6
-                tst.w   (diyTournamentType).l
-                bne.s   loc_132E96
-                move.w  #1,(fireResetFlag).l
-loc_132E96:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  #1,$3C(a0)
-                move.w  #1,$74(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  #1,$3C(a0)
-                move.w  #1,$74(a0)
-                move.w  #$A,d0
-                jmp     SetCurrentEntry
-loc_132ED6:
-                tst.w   $60(a1)
-                beq.s   loc_132EE8
-                tst.w   (diyFixtureViewMode).l
-                ble.s   loc_132EFA
-                bra.w   loc_132F58
-loc_132EE8:
-                move.w  #1,(fireResetFlag).l
-                move.l  #aNextRound,$26(a0) ; "NEXT ROUND"
-                bra.s   loc_132F02
-loc_132EFA:
-                move.l  #aNextMatch,$26(a0) ; "NEXT MATCH"
-loc_132F02:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  #1,$3C(a0)
-                move.w  #1,$74(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  #1,$3C(a0)
-                move.w  #1,$74(a0)
-                tst.w   (diyInitFocusOverride).l
-                beq.s   loc_132F4E
-                clr.w   (diyInitFocusOverride).l
-                move.w  #$A,d0
-                jmp     SetCurrentEntry
-loc_132F4E:
-                move.w  #1,d0
-                jmp     SetCurrentEntry
-loc_132F58:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                jsr     DIY_GetCurrentFixtureTeamClass
-                tst.w   d0
-                beq.w   loc_132FAC
-                cmpi.w  #1,d0
-                beq.w   loc_132FAC
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                clr.w   $3C(a0)
-                clr.w   $74(a0)
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$E0).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  #1,$3C(a0)
-                move.w  #1,$74(a0)
-                move.w  (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+4).l,d0
-                bra.w   loc_133000
-loc_132FAC:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                clr.w   $3C(a0)
-                clr.w   $74(a0)
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$188).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  #1,$3C(a0)
-                move.w  #1,$74(a0)
-                tst.w   (careerLoadedFlag).l
-                beq.s   loc_132FFA
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$150).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a1
-                move.w  $14(a0),MENUENTRY_X(a1)
-                move.w  #$CA,$18(a1)
-loc_132FFA:
-                move.w  (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+8).l,d0
-loc_133000:
-                jmp     SetCurrentEntry
+                jmp     _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus
 
 ; ===== DIYLeagueTournament16BeforeDraw =====
 ; prototype: void __usercall DIYLeagueTournament16BeforeDraw(struct MenuEntry *entry@<a5>)
