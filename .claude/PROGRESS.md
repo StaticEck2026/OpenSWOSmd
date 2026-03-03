@@ -2811,6 +2811,16 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1376 functions across 153 chunks
 
+### Chunk 154 — IsPlayerOkToSubstitute + FindInitialPlayerToBeSubstituted (2 → bench_subs.c)
+- Date: 2026-03-02
+- Ported:
+  1. IsPlayerOkToSubstitute (→bench_subs.c) — checks if highlighted player can be substituted based on subsState, cards, and disallow-subs flag. Returns 0=can substitute, 1=skip
+  2. FindInitialPlayerToBeSubstituted (→bench_subs.c) — searches all 11 bench positions for matching player position: exact > group (DEF/RB/LB or MID/RW/LW) > first available. Sets plToBeSubstitutedOrd and plToBeSubstitutedPos
+- Stubs: IsPlayerOkToSubstitute (register bridge with tst.w d0 for Z flag), FindInitialPlayerToBeSubstituted (jmp)
+- New xrefs: _IsPlayerOkToSubstitute, _FindInitialPlayerToBeSubstituted
+- Build status: **verified** (clean build)
+- Cumulative: 1378 functions across 154 chunks
+
 ### Chunk 147 — BuyOtherPlayers Init/Finish + Pitch/Season Menu Callbacks (5 → transfer_market.c, menus.c)
 - Date: 2026-03-02
 - Ported:
@@ -3095,5 +3105,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 151   | 7         | 1365       |
 | 152   | 8         | 1373       |
 | 153   | 3         | 1376       |
+| 154   | 2         | 1378       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

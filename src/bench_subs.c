@@ -2136,3 +2136,178 @@ void _UpdatePlayerToBeSubstitutedPosition(void)
 {
     plToBeSubstitutedPos = _GetBenchPlayerPointer(plToBeSubstitutedOrd);
 }
+
+/* ================================================================
+ * IsPlayerOkToSubstitute  (SWOS2.s line 10359)
+ *
+ * Checks if the currently highlighted player can be substituted.
+ * Returns: 1 = ok to substitute, 0 = do not substitute.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+uint16_t _IsPlayerOkToSubstitute(void)
+{
+    if (subsState == 4) {
+        /* In state 4, only ordinal 0 (goalkeeper) is ok */
+        if (plToBeSubstitutedOrd == 0)
+            return 1;
+        return 0;
+    }
+
+    /* Check candidate player's status */
+    uint16_t offset = ingameTeamPlayerOffsets[plToBeSubstitutedPos];
+    PlayerInfo *pi = piFromOffset((TeamGame *)benchTeamGame, offset);
+
+    /* Red-carded player (numYellowCards >= 2) — ok to sub off */
+    if ((uint8_t)pi->numYellowCards >= 2)
+        return 1;
+
+    /* In state 3, check disallow subs flag (bit 7 of field_B) */
+    if (subsState == 3) {
+        if ((int8_t)pi->field_B < 0)
+            return 1;
+    }
+
+    return 0;
+}
+
+/* ================================================================
+ * FindInitialPlayerToBeSubstituted  (SWOS2.s line 10425)
+ *
+ * Searches the team for a player matching the position of the player
+ * about to enter the game. Priority: exact match > group match > first
+ * available. Sets plToBeSubstitutedOrd and plToBeSubstitutedPos.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _FindInitialPlayerToBeSubstituted(void)
+{
+    TeamGame *tg = (TeamGame *)benchTeamGame;
+
+    /* Get position of the player entering the game */
+    uint16_t enterOff = ingameTeamPlayerOffsets[plToEnterGameIndex];
+    int8_t targetPos = piFromOffset(tg, enterOff)->position;
+
+    int16_t firstAvailable = -1;   /* d6 */
+    int16_t exactMatch = -1;       /* d5 */
+    int16_t groupMatch = -1;       /* d4 */
+
+    for (uint16_t i = 0; i < 11; i++) {
+        _GetBenchPlayerPointer(i);
+        PlayerInfo *pi = (PlayerInfo *)(benchPlayerResultA0 + 42);
+
+        /* Skip red-carded players */
+        if ((uint8_t)pi->numYellowCards >= 2)
+            continue;
+
+        /* Record first available (if not yet found) */
+        if (firstAvailable < 0)
+            firstAvailable = (int16_t)i;
+
+        /* Group match check (only if no group match found yet) */
+        if (groupMatch < 0) {
+            int8_t pp = pi->position;
+
+            if (targetPos == POS_DEFENDER || targetPos == POS_RIGHT_BACK || targetPos == POS_LEFT_BACK) {
+                /* Defender group: target is DEF/RB/LB */
+                if (pp == POS_DEFENDER || pp == POS_RIGHT_BACK || pp == POS_LEFT_BACK)
+                    groupMatch = (int16_t)i;
+            } else if (targetPos == POS_MIDFIELDER || targetPos == POS_RIGHT_WING || targetPos == POS_LEFT_WING) {
+                /* Midfielder group: target is MID/RW/LW */
+                if (pp == POS_MIDFIELDER || pp == POS_RIGHT_WING || pp == POS_LEFT_WING)
+                    groupMatch = (int16_t)i;
+            }
+        }
+
+        /* Exact position match (only if no exact match found yet) */
+        if (exactMatch < 0) {
+            if (pi->position == targetPos)
+                exactMatch = (int16_t)i;
+        }
+    }
+
+    /* Pick best match: exact > group > first available */
+    int16_t selected;
+    if (exactMatch >= 0)
+        selected = exactMatch;
+    else if (groupMatch >= 0)
+        selected = groupMatch;
+    else
+        selected = firstAvailable;
+
+    plToBeSubstitutedOrd = (uint16_t)selected;
+    plToBeSubstitutedPos = _GetBenchPlayerPointer((uint16_t)selected);
+}
+
+/* ================================================================
+ * HandleFormationMenuMovement  (SWOS2.s line 10368)
+ *
+ * Handles left/right/up/down input while in the formation menu.
+ * Left/right cycle through selectedFormationEntry (0-17).
+ * Up/down call SubsBenchOff to exit.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _HandleFormationMenuMovement(void)
+{
+    uint16_t dir = subsDirection;
+
+    if (dir == 0) {
+        /* Left press */
+        subsBlockDirections = 1;
+        if ((int16_t)selectedFormationEntry >= 0) {
+            if (selectedFormationEntry == 0)
+                return;
+            selectedFormationEntry--;
+            return;
+        }
+        selectedFormationEntry = 7;
+        return;
+    }
+
+    if (dir == 4) {
+        /* Right press */
+        subsBlockDirections = 1;
+        if ((int16_t)selectedFormationEntry >= 0) {
+            if (selectedFormationEntry == 0x11)
+                return;
+            selectedFormationEntry++;
+            return;
+        }
+        selectedFormationEntry = 0;
+        return;
+    }
+
+    if (dir == 2 || dir == 6) {
+        /* Up or down press — exit formation menu */
+        _SubsBenchOff();
+        return;
+    }
+
+    /* Other directions: do nothing */
+}
+
+/* ================================================================
+ * SwapPlayerNameData  (SWOS2.s line 10416)
+ *
+ * Swaps two entries in the plOrdinalsTable and plNamesLengthTableCopy
+ * arrays. If the bench team is the bottom team, uses offset +16.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SwapPlayerNameData(uint16_t enterIndex, uint16_t leaveIndex)
+{
+    uint8_t *ordinals = (uint8_t *)&plOrdinalsTable;
+    uint8_t *nameLens = (uint8_t *)&plNamesLengthTableCopy;
+
+    if (benchTeamGame != (uint32_t)&topTeamInGame) {
+        ordinals += 16;
+        nameLens += 16;
+    }
+
+    /* Swap ordinals */
+    uint8_t tmp = ordinals[enterIndex];
+    ordinals[enterIndex] = ordinals[leaveIndex];
+    ordinals[leaveIndex] = tmp;
+
+    /* Swap name lengths */
+    tmp = nameLens[enterIndex];
+    nameLens[enterIndex] = nameLens[leaveIndex];
+    nameLens[leaveIndex] = tmp;
+}

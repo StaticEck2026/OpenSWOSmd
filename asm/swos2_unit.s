@@ -2862,6 +2862,12 @@
         xref    _ShowDiyLeaguesTournamentMenu
         xref    _GetBenchPlayerPointer
         xref    _UpdatePlayerToBeSubstitutedPosition
+; --- Chunk 154 xrefs ---
+        xref    _IsPlayerOkToSubstitute
+        xref    _FindInitialPlayerToBeSubstituted
+; --- Chunk 155 xrefs ---
+        xref    _HandleFormationMenuMovement
+        xref    _SwapPlayerNameData
 ; --- Chunk 144 xrefs ---
 ; --- Chunk 147 xrefs ---
         xref    _BuyOtherPlayersInit

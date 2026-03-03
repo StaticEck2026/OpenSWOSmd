@@ -23,4 +23,12 @@ void _SubsBenchOff(void);
 uint16_t _GetBenchPlayerPointer(uint16_t index);
 void _UpdatePlayerToBeSubstitutedPosition(void);
 
+/* --- Chunk 154: Substitution eligibility & initial selection --- */
+uint16_t _IsPlayerOkToSubstitute(void);
+void _FindInitialPlayerToBeSubstituted(void);
+
+/* --- Chunk 155: Formation movement & player data swap --- */
+void _HandleFormationMenuMovement(void);
+void _SwapPlayerNameData(uint16_t enterIndex, uint16_t leaveIndex);
+
 #endif

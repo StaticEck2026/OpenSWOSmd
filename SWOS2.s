@@ -10357,64 +10357,16 @@ UpdatePlayerToBeSubstitutedPosition:
 ;      zero flag set, D0 = 0 : ok to substitute
 ;      zero flag clear, D0 = 1 : do not substitute
 IsPlayerOkToSubstitute:
-                cmpi.w  #4,(subsState).l
-                bne.s   check_candidate_status_flags
-                tst.w   (plToBeSubstitutedOrd).l
-                beq.s   return_ok
-                bra.s   return_not_ok
-check_candidate_status_flags:
-                movea.l (benchTeamGame).l,a0
-                lea     (ingameTeamPlayerOffsets).l,a1
-                move.w  (plToBeSubstitutedPos).l,d0
-                lsl.w   #1,d0
-                move.w  (a1,d0.w),d0
-                lea     (a0,d0.w),a0
-                cmpi.b  #2,PLAYERINFOHEADER_CARDS(a0)
-                bcc.s   return_ok
-                cmpi.w  #3,(subsState).l
-                bne.s   return_not_ok
-                tst.b   PLAYERINFOHEADER_DISALLOWSUBS(a0)
-                bmi.s   return_ok
-return_not_ok:
-                clr.w   d0
-                rts
-return_ok:
-                move.w  #1,d0
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _IsPlayerOkToSubstitute
+                movem.l (sp)+,d2-d7/a2-a6
+                tst.w   d0              ; set Z flag for callers
                 rts
 
 ; ===== HandleFormationMenuMovement =====
 ; prototype: void __usercall HandleFormationMenuMovement()
 HandleFormationMenuMovement:
-                move.w  (subsDirection).l,d7
-                beq.s   formation_left_press_init
-                cmpi.w  #4,d7
-                beq.s   formation_right_press_init
-                cmpi.w  #2,d7
-                beq.w   SubsBenchOff
-                cmpi.w  #6,d7
-                beq.w   SubsBenchOff
-                bra.w   _10CF6C_exit_rts
-formation_right_press_init:
-                move.w  #1,(subsBlockDirections).l
-                tst.w   (selectedFormationEntry).l
-                bpl.s   formation_increment_selection
-                clr.w   (selectedFormationEntry).l
-                bra.w   _10CF6C_exit_rts
-formation_increment_selection:
-                cmpi.w  #$11,(selectedFormationEntry).l
-                beq.w   _10CF6C_exit_rts
-                addq.w  #1,(selectedFormationEntry).l
-                bra.w   _10CF6C_exit_rts
-formation_left_press_init:
-                move.w  #1,(subsBlockDirections).l
-                tst.w   (selectedFormationEntry).l
-                bpl.s   formation_decrement_selection
-                move.w  #7,(selectedFormationEntry).l
-                bra.w   _10CF6C_exit_rts
-formation_decrement_selection:
-                beq.w   _10CF6C_exit_rts
-                subq.w  #1,(selectedFormationEntry).l
-                bra.w   _10CF6C_exit_rts
+                jmp     _HandleFormationMenuMovement
 
 ; ===== FindInitialPlayerToBeSubstituted =====
 ; prototype: void __usercall FindInitialPlayerToBeSubstituted()
@@ -10423,82 +10375,7 @@ formation_decrement_selection:
 ; approximate match, then just use first one available.
 ; This data will be used to mark the initial player when substitutes menu opens up for the first time.
 FindInitialPlayerToBeSubstituted:
-                movea.l (benchTeamGame).l,a0
-                lea     (ingameTeamPlayerOffsets).l,a1
-                move.w  (plToEnterGameIndex).l,d0
-                lsl.w   #1,d0
-                move.w  (a1,d0.w),d0
-                move.b  PLAYERINFOHEADER_POSITION(a0,d0.w),d7
-                move.w  #$FFFF,d6
-                move.w  #$FFFF,d5
-                move.w  #$FFFF,d4
-                movea.l (benchTeamGame).l,a0
-                lea     (ingameTeamPlayerOffsets).l,a1
-                move.w  (plToEnterGameIndex).l,d0
-                lsl.w   #1,d0
-                move.w  (a1,d0.w),d0
-                move.b  PLAYERINFOHEADER_POSITION(a0,d0.w),d7
-                clr.w   d1
-scan_starters_loop:
-                move.w  d1,d0
-                bsr.w   GetBenchPlayerPointer
-                cmpi.b  #2,PLAYERINFOHEADER_CARDS(a0)
-                bcc.s   advance_next_starter
-                tst.w   d6
-                bpl.s   try_group_match_if_needed
-                move.w  d1,d6
-try_group_match_if_needed:
-                tst.w   d4
-                bpl.s   try_exact_pos_match_if_needed
-                cmpi.b  #POS_DEFENDER,d7
-                beq.s   group_def_back_check
-                cmpi.b  #POS_RIGHT_BACK,d7
-                beq.s   group_def_back_check
-                cmpi.b  #POS_LEFT_BACK,d7
-                beq.s   group_def_back_check
-                cmpi.b  #POS_MIDFIELDER,d7
-                beq.s   group_mid_wing_check
-                cmpi.b  #POS_RIGHT_WING,d7
-                beq.s   group_mid_wing_check
-                cmpi.b  #POS_LEFT_WING,d7
-                bne.s   try_exact_pos_match_if_needed
-group_mid_wing_check:
-                cmpi.b  #POS_MIDFIELDER,PLAYERINFOHEADER_POSITION(a0)
-                beq.s   record_group_fallback
-                cmpi.b  #POS_RIGHT_WING,PLAYERINFOHEADER_POSITION(a0)
-                beq.s   record_group_fallback
-                cmpi.b  #POS_LEFT_WING,PLAYERINFOHEADER_POSITION(a0)
-                beq.s   record_group_fallback
-                bra.s   try_exact_pos_match_if_needed
-group_def_back_check:
-                cmpi.b  #POS_DEFENDER,PLAYERINFOHEADER_POSITION(a0)
-                beq.s   record_group_fallback
-                cmpi.b  #POS_RIGHT_BACK,PLAYERINFOHEADER_POSITION(a0)
-                beq.s   record_group_fallback
-                cmpi.b  #POS_LEFT_BACK,PLAYERINFOHEADER_POSITION(a0)
-                bne.s   try_exact_pos_match_if_needed
-record_group_fallback:
-                move.w  d1,d4           ; D4 = approximate match
-try_exact_pos_match_if_needed:
-                tst.w   d5
-                bpl.s   advance_next_starter
-                cmp.b   PLAYERINFOHEADER_POSITION(a0),d7
-                bne.s   advance_next_starter
-                move.w  d1,d5           ; D5 = exact match
-advance_next_starter:
-                addq.w  #1,d1
-                cmpi.w  #11,d1
-                bne.w   scan_starters_loop
-                move.w  d5,d0
-                bpl.s   commit_selection_and_lookup
-                move.w  d4,d0
-                bpl.s   commit_selection_and_lookup
-                move.w  d6,d0
-commit_selection_and_lookup:
-                move.w  d0,(plToBeSubstitutedOrd).l
-                bsr.w   GetBenchPlayerPointer
-                move.w  d0,(plToBeSubstitutedPos).l
-                rts
+                jmp     _FindInitialPlayerToBeSubstituted
 
 ; ===== SwapPlayerNameData =====
 ; prototype: void __usercall SwapPlayerNameData(__int16 enterIndex@<d6>, __int16 leaveIndex@<d7>)
@@ -10508,19 +10385,12 @@ commit_selection_and_lookup:
 ; 
 ; Swap name lengths and ordinals of players.
 SwapPlayerNameData:
-                lea     (plOrdinalsTable).l,a0
-                lea     (plNamesLengthTableCopy).l,a1
-                cmpi.l  #topTeamInGame,(benchTeamGame).l
-                beq.s   swap_name_offset_and_length
-                lea     16(a0),a0
-                lea     16(a1),a1
-swap_name_offset_and_length:
-                move.b  (a0,d6.w),d0
-                move.b  (a0,d7.w),(a0,d6.w)
-                move.b  d0,(a0,d7.w)
-                move.b  (a1,d6.w),d0
-                move.b  (a1,d7.w),(a1,d6.w)
-                move.b  d0,(a1,d7.w)
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  d7,-(sp)        ; 2nd arg: leaveIndex
+                move.l  d6,-(sp)        ; 1st arg: enterIndex
+                jsr     _SwapPlayerNameData
+                addq.l  #8,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== DrawBenchAndSubsMenu =====
