@@ -2909,6 +2909,21 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1420 functions across 163 chunks
 
+### Chunk 164 — ShowSquad + Squad Callers + OffersInit (5 → menus.c, transfer_market.c)
+- Date: 2026-03-03
+- Ported:
+  1. ShowSquad (→menus.c) — core squad viewer: stores 6 register params to globals, calls ShowMenu(viewSquadMenu), returns selectedPlayer
+  2. ShowSquadWithFlags (→shares asm bridge with ShowSquad) — variant that sets viewSquadFlags from d4 before common body
+  3. ThirdPartyOfferViewSquad (→transfer_market.c) — builds transfer market player bitset, calls _ShowSquad
+  4. BuyPlayerViewSquad (→transfer_market.c) — identical to ThirdPartyOfferViewSquad
+  5. OffersInit (→transfer_market.c) — empty init callback (original was just rts)
+- Static helper: showSquadWithTransferMarketMask() in transfer_market.c (shared by ThirdPartyOfferViewSquad and BuyPlayerViewSquad)
+- Stubs: ShowSquad as 6-param register bridge (a0,a1,d0,d1,d2,d3→stack, returns d0+d3), ShowSquadWithFlags shares bridge, 3 jmp stubs
+- New xrefs: _ShowSquad, _ThirdPartyOfferViewSquad, _BuyPlayerViewSquad, _OffersInit
+- New xdefs: viewSquadMenu, aViewSquad, careerTeam
+- Build status: **verified** (clean build)
+- Cumulative: 1425 functions across 164 chunks
+
 ### Chunk 147 — BuyOtherPlayers Init/Finish + Pitch/Season Menu Callbacks (5 → transfer_market.c, menus.c)
 - Date: 2026-03-02
 - Ported:
@@ -3200,5 +3215,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 161   | 6         | 1399       |
 | 162   | 8         | 1407       |
 | 163   | 13        | 1420       |
+| 164   | 5         | 1425       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

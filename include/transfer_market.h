@@ -130,4 +130,9 @@ void _PlayerMarketResetListState(void);
 void _BuyOtherPlayersCommon(void *entry);
 void _BuyOtherPlayersAfterDrawCommon(void *entry);
 
+/* --- ShowSquad callers + OffersInit (Chunk 164) --- */
+void _ThirdPartyOfferViewSquad(void);
+void _BuyPlayerViewSquad(void);
+void _OffersInit(void);
+
 #endif

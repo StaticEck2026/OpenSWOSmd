@@ -3025,6 +3025,15 @@
         xref    _ViewSquadInit
         xref    _ViewSquadCommon
         xref    _ViewSquadAfterDrawCommon
+; --- Chunk 164 xrefs ---
+        xref    _ShowSquad
+        xref    _ThirdPartyOfferViewSquad
+        xref    _BuyPlayerViewSquad
+        xref    _OffersInit
+; --- Chunk 164 xdefs ---
+        xdef    viewSquadMenu
+        xdef    aViewSquad
+        xdef    careerTeam
 ; --- Chunk 163 xdefs ---
         xdef    playerOffersMenu
         xdef    aPlayersOnForei

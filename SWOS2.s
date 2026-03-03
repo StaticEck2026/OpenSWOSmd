@@ -64814,7 +64814,7 @@ offersMenu:
 ; ===== OffersInit =====
 ; prototype: void __usercall OffersInit()
 OffersInit:
-                rts
+                jmp     _OffersInit
 
 ; ===== OffersCommon =====
 ; prototype: void __usercall OffersCommon(MenuEntry *entry@<a5>)
@@ -66269,23 +66269,7 @@ locret_143D6C:
 ; ===== ThirdPartyOfferViewSquad =====
 ; prototype: void __usercall ThirdPartyOfferViewSquad(MenuEntry *entry@<a5>)
 ThirdPartyOfferViewSquad:
-                lea     (careerTeam).l,a0
-                lea     (aViewSquad).l,a1 ; "VIEW SQUAD"
-                clr.l   d0
-                lea     (playersOnTransferMarket).l,a2
-                move.w  (numPlayersOnTransferMarket).l,d2
-                beq.s   loc_143D94
-                subq.w  #1,d2
-loc_143D8C:
-                move.w  (a2)+,d1
-                bset    d1,d0
-                dbf     d2,loc_143D8C
-loc_143D94:
-                clr.l   d1
-                move.w  #1,d2
-                move.w  #$FFFF,d3
-                move.w  #$FFFF,d4
-                jmp     ShowSquad
+                jmp     _ThirdPartyOfferViewSquad
 
 ; ===== AcceptOffer =====
 ; Ported to C: _AcceptOffer in src/transfer_market.c
@@ -67076,20 +67060,23 @@ loc_14446E:
 ShowSquad:
                 clr.l   (viewSquadFlags).l
 loc_14449C:
-                move.l  a0,(squadTeamPtr).l
-                move.l  a1,(viewSquadTitle).l
-                move.l  d0,(viewSquadMaskLo).l
-                move.l  d1,(viewSquadMaskHi).l
-                move.w  d2,(viewSquadArg2).l
-                move.w  d3,(viewSquadArg3).l
-                lea     (viewSquadMenu).l,a6
-                jsr     ShowMenu
+                movem.l d2/d4-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d3
+                move.l  d3,-(sp)
+                andi.l  #$FFFF,d2
+                move.l  d2,-(sp)
+                move.l  d1,-(sp)
+                move.l  d0,-(sp)
+                move.l  a1,-(sp)
+                move.l  a0,-(sp)
+                jsr     _ShowSquad
+                lea     24(sp),sp
+                movem.l (sp)+,d2/d4-d7/a2-a6
                 move.w  (viewSquadSelectedTeam).l,d3
-                move.w  (viewSquadSelectedPlayer).l,d0
                 rts
 
 ; ===== ShowSquadWithFlags =====
-; prototype: __int16 __usercall ShowSquadWithFlags@<d0>(unsigned __int32 flags@<d4>, TeamFile *team@<a0>, const char *title@<a1>, unsigned __int32 maskLo@<d0>, unsigned __int32 maskHi@<d1>, __int16 arg2@<d2>, __int16 arg3@<d3>)
+; Ported to C: _ShowSquad in src/menus.c (variant sets viewSquadFlags from d4)
 ShowSquadWithFlags:
                 move.l  d4,(viewSquadFlags).l
                 bra.s   loc_14449C
@@ -69287,23 +69274,7 @@ locret_14554A:
 ; ===== BuyPlayerViewSquad =====
 ; prototype: __int16 __usercall BuyPlayerViewSquad@<d0>()
 BuyPlayerViewSquad:
-                lea     (careerTeam).l,a0
-                lea     (aViewSquad).l,a1 ; "VIEW SQUAD"
-                clr.l   d0
-                lea     (playersOnTransferMarket).l,a2
-                move.w  (numPlayersOnTransferMarket).l,d2
-                beq.s   loc_145572
-                subq.w  #1,d2
-loc_14556A:
-                move.w  (a2)+,d1
-                bset    d1,d0
-                dbf     d2,loc_14556A
-loc_145572:
-                clr.l   d1
-                move.w  #1,d2
-                move.w  #$FFFF,d3
-                move.w  #$FFFF,d4
-                jmp ShowSquad(pc)
+                jmp     _BuyPlayerViewSquad
 
 ; ===== BuyPlayerExit =====
 ; Ported to C: _BuyPlayerExit in src/menus.c

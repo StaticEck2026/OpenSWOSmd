@@ -177,6 +177,10 @@ void _MinSubstitutes(void);
 void _MaxSubstitutes(void);
 void _RandomlySwapTeams(void);
 
+/* --- ShowSquad (Chunk 164) --- */
+int16_t _ShowSquad(uint8_t *teamPtr, uint8_t *title, uint32_t maskLo,
+                    uint32_t maskHi, uint16_t arg2, uint16_t arg3);
+
 /* --- ViewSquad Init/Common/AfterDraw (Chunk 163) --- */
 void _ViewSquadInit(void);
 void _ViewSquadCommon(void *entry);

@@ -2581,3 +2581,46 @@ void _BuyOtherPlayersAfterDrawCommon(void *entryPtr)
     _DrawMultipleItems(12, &menuEntries[19]);
 }
 
+/* =============================================================== */
+/* Chunk 164: ShowSquad callers + OffersInit                       */
+/* =============================================================== */
+
+extern uint8_t careerTeam[];
+extern uint8_t aViewSquad[];
+extern int16_t _ShowSquad(uint8_t *teamPtr, uint8_t *title, uint32_t maskLo,
+                           uint32_t maskHi, uint16_t arg2, uint16_t arg3);
+
+/* Helper: build bitmask of players on transfer market, then show squad */
+static void showSquadWithTransferMarketMask(void)
+{
+    uint32_t mask = 0;
+    uint16_t n = numPlayersOnTransferMarket;
+    if (n) {
+        uint16_t i;
+        for (i = 0; i < n; i++)
+            mask |= (1u << playersOnTransferMarket[i]);
+    }
+    _ShowSquad(careerTeam, aViewSquad, mask, 0, 1, 0xFFFF);
+}
+
+/* ThirdPartyOfferViewSquad (Chunk 164) */
+__attribute__((used, externally_visible))
+void _ThirdPartyOfferViewSquad(void)
+{
+    showSquadWithTransferMarketMask();
+}
+
+/* BuyPlayerViewSquad (Chunk 164) */
+__attribute__((used, externally_visible))
+void _BuyPlayerViewSquad(void)
+{
+    showSquadWithTransferMarketMask();
+}
+
+/* OffersInit (Chunk 164) — empty init callback */
+__attribute__((used, externally_visible))
+void _OffersInit(void)
+{
+    /* Original asm is just rts */
+}
+

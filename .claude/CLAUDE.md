@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1420 functions ported across 163 chunks.
+**Current status:** 1425 functions ported across 164 chunks.
 
-**Last completed chunk:** Chunk 163 — Transfer/Squad/PlayerMarket Helpers (13 → transfer_market.c, menus.c): BuildTransferPlayerMenuEntry, TransferMarketAfterDrawCommon, ShowPlayerOfferMenuForPlayer, ShowPlayerMarketInit, ShowPlayerMarket, PlayerMarketUpdateFilterMenuEntryState, PlayerMarketUpdateMoreListLabel, PlayerMarketResetListState, BuyOtherPlayersCommon, BuyOtherPlayersAfterDrawCommon, ViewSquadInit, ViewSquadCommon, ViewSquadAfterDrawCommon.
+**Last completed chunk:** Chunk 164 — ShowSquad + Squad Callers + OffersInit (5 → menus.c, transfer_market.c): ShowSquad, ShowSquadWithFlags, ThirdPartyOfferViewSquad, BuyPlayerViewSquad, OffersInit.
 
-**Next candidates:** Career system functions (~69), Teams/Squad (~30), Transfer Market remaining (~15), DIY Competition (~24), Asset/File I/O (~20), Training Match (~9), Edit Tactics (~4), Job Offers (~5), misc menu utilities.
+**Next candidates:** OffersCommon, PlayerOffers* callbacks, ChooseTeamsDialog, BuyOtherDomestic/ForeignPlayer, Career system (~69), DIY Competition (~24), Asset/File I/O (~20), Training Match (~9), misc.
 
 ---
 

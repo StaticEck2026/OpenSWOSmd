@@ -4440,3 +4440,29 @@ void _ViewSquadAfterDrawCommon(void *entryPtr)
                                    (int16_t)d6, style, 0);
     _DrawMultipleItems(12, &menuEntries[23]);
 }
+
+/* ================================================================
+ * Chunk 164: ShowSquad / ShowSquadWithFlags
+ * ================================================================ */
+
+extern uint8_t viewSquadMenu[];
+
+/* ShowSquad (Chunk 164)
+ * Core squad viewing function: stores params to globals, shows viewSquadMenu,
+ * returns selected player ordinal. viewSquadFlags is NOT cleared here —
+ * the asm bridge for ShowSquad clears it, ShowSquadWithFlags sets it from d4.
+ * Asm: a0=teamPtr, a1=title, d0=maskLo, d1=maskHi, d2=arg2, d3=arg3
+ * Returns: d0 = viewSquadSelectedPlayer, d3 = viewSquadSelectedTeam */
+__attribute__((used, externally_visible))
+int16_t _ShowSquad(uint8_t *teamPtr, uint8_t *title, uint32_t maskLo,
+                    uint32_t maskHi, uint16_t arg2, uint16_t arg3)
+{
+    squadTeamPtr = (uint32_t)teamPtr;
+    viewSquadTitle = (uint32_t)title;
+    viewSquadMaskLo = maskLo;
+    viewSquadMaskHi = maskHi;
+    viewSquadArg2 = arg2;
+    viewSquadArg3 = arg3;
+    _ShowMenu(viewSquadMenu);
+    return (int16_t)viewSquadSelectedPlayer;
+}
