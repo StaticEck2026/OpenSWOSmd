@@ -8,3 +8,6 @@ void _Career_FillRandomTeamListExcludingSelected(uint16_t excludeCount,
 
 /* --- European Cup Qualification State --- */
 void _Career_PrepareEuropeanCupQualificationState(void);
+
+/* --- Competition abbreviation (Chunk 145) --- */
+uint8_t *_GetCompetitionAbbrevStr(uint8_t *competition);

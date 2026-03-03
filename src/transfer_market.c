@@ -2,6 +2,9 @@
 #include "game_types.h"
 #include "menu_system.h"
 #include "menus.h"
+#include "string_utils.h"
+#include "career_teams.h"
+#include "input_text.h"
 
 /* Transfer offer entry size: 14 bytes ($E) */
 #define OFFER_ENTRY_SIZE    14
@@ -58,6 +61,9 @@ extern uint16_t numDiyTeams;
 extern uint16_t teamOffering;
 extern uint16_t offerPrimaryPlayerOrdinal;
 extern int16_t  numExtraPlayersWanted;
+extern int16_t  offerSwapPlayerOrdinal;
+extern int16_t  offerExtraPlayerOrdinal;
+extern uint16_t offerAmount;
 extern uint16_t removedOfferPlayersFromSelectedTeamCount;
 extern uint16_t removedOfferPlayersFromOtherTeamsCount;
 
@@ -1682,3 +1688,95 @@ void _ViewForeignPlayerMarket(void)
         return;
     }
 }
+
+/* ---- Chunk 145: PlayerOffersUpdateOfferAmountText ---- */
+/* SWOS2.s line 68515 — format offer amount * 1000 into menu entry 9's text string */
+__attribute__((used, externally_visible))
+void _PlayerOffersUpdateOfferAmountText(void)
+{
+    MenuEntry *entry = &menuEntries[9]; /* 0x1F8 / 56 = 9 */
+    uint8_t *dst = (uint8_t *)entry->fg;
+    uint32_t amount = (uint32_t)offerAmount * 1000;
+    _Int2Pounds(amount, dst);
+}
+
+/* ---- Chunk 145: UpdatePlayerOfferMenuIndicators ---- */
+/* SWOS2.s line 68243 — update +/- indicators and visibility for offer menu entries */
+__attribute__((used, externally_visible))
+void _UpdatePlayerOfferMenuIndicators(void)
+{
+    extern uint8_t aPlus[];   /* "+" */
+    extern uint8_t aMinus[];  /* "-" */
+
+    /* Entry 8 (0x1C0/56): toggle +/- based on numExtraPlayersWanted sign */
+    MenuEntry *entry8 = &menuEntries[8];
+    entry8->fg = (uint32_t)aPlus;
+    if (numExtraPlayersWanted >= 0) {
+        entry8->fg = (uint32_t)aMinus;
+    }
+
+    /* Entries 10,11 (0x230/56, 0x268/56): toggle +/- based on swap/extra player state */
+    MenuEntry *entry10 = &menuEntries[10];
+    MenuEntry *entry11 = &menuEntries[11];
+    entry10->fg = (uint32_t)aPlus;
+    entry11->fg = (uint32_t)aPlus;
+    if (offerSwapPlayerOrdinal >= 0) {
+        entry10->fg = (uint32_t)aMinus;
+        if (offerExtraPlayerOrdinal >= 0) {
+            entry11->fg = (uint32_t)aMinus;
+        }
+    }
+
+    /* Entry 5 (0x118/56): hide if numExtraPlayersWanted < 0 */
+    menuEntries[5].isInvisible = 1;
+    if (numExtraPlayersWanted >= 0) {
+        menuEntries[5].isInvisible = 0;
+    }
+
+    /* Entries 6,11 (0x150/56, 0x268/56): hide if offerSwapPlayerOrdinal < 0 */
+    menuEntries[6].isInvisible = 1;
+    menuEntries[11].isInvisible = 1;
+    if (offerSwapPlayerOrdinal >= 0) {
+        menuEntries[6].isInvisible = 0;
+        menuEntries[11].isInvisible = 0;
+    }
+
+    /* Entry 7 (0x188/56): hide if offerExtraPlayerOrdinal < 0 */
+    menuEntries[7].isInvisible = 1;
+    if (offerExtraPlayerOrdinal >= 0) {
+        menuEntries[7].isInvisible = 0;
+    }
+}
+
+/* ---- Chunk 145: PlayerOffersInit ---- */
+/* SWOS2.s line 68219 — initialize player offers menu: amount text, bank balance,
+ * team names in formatted strings, update indicators */
+__attribute__((used, externally_visible))
+void _PlayerOffersInit(void)
+{
+    _PlayerOffersUpdateOfferAmountText();
+
+    /* Entry 1 (0x38/56): bank balance text */
+    MenuEntry *entry1 = &menuEntries[1];
+    uint8_t *bankDst = (uint8_t *)entry1->fg;
+    _GetBankBalance(bankDst);
+
+    /* Entry 3 (0xA8/56): "WE HERE AT %a WISH TO BUY" with our team name */
+    uint8_t *ourTeam = _GetTeamPointer(selTeamNumber);
+    uint8_t *ourName = ourTeam + 5;
+    MenuEntry *entry3 = &menuEntries[3];
+    uint8_t *dst3 = (uint8_t *)entry3->fg;
+    _PrintFormatted((const uint8_t *)"WE HERE AT %a WISH TO BUY", dst3,
+                    0, 0, 0, 0, 0, 0, 0, ourName, 0, 0);
+
+    /* Entry 4 (0xE0/56): "FROM %a IN EXCHANGE FOR" with offering team name */
+    uint8_t *offeringTeam = _GetTeamPointer(teamOffering);
+    uint8_t *offeringName = offeringTeam + 5;
+    MenuEntry *entry4 = &menuEntries[4];
+    uint8_t *dst4 = (uint8_t *)entry4->fg;
+    _PrintFormatted((const uint8_t *)"FROM %a IN EXCHANGE FOR", dst4,
+                    0, 0, 0, 0, 0, 0, 0, offeringName, 0, 0);
+
+    _UpdatePlayerOfferMenuIndicators();
+}
+

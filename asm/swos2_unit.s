@@ -2808,6 +2808,12 @@
         xref    _SetSquadMenuEntryStatusSprite
         xref    _SetSquadMenuEntryStatusSprite_AfterSim
 ; --- Chunk 144 xrefs ---
+; --- Chunk 145 xrefs ---
+        xref    _PlayerOffersUpdateOfferAmountText
+        xref    _UpdatePlayerOfferMenuIndicators
+        xref    _PlayerOffersInit
+        xref    _GetCompetitionAbbrevStr
+; --- Chunk 144 xrefs ---
         xref    _ShowForeignPlayerMarket
         xref    _ViewForeignPlayerMarket
 ; --- Chunk 138 xrefs ---
@@ -3101,6 +3107,11 @@
         xdef    diyNumberOfTeams
         xdef    diyTeamsBufferPtr
         xdef    competitionStatsMenu
+; --- Chunk 145 xdefs ---
+        xdef    offerSwapPlayerOrdinal
+        xdef    offerExtraPlayerOrdinal
+        xdef    offerAmount
+        xdef    aPlus
 ; --- Chunk 142 xdefs ---
         xdef    transferCompleted
         xdef    a0EndSeason

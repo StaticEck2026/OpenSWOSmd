@@ -2703,6 +2703,20 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, no new warnings)
 - Cumulative: 1303 functions across 140 chunks
 
+### Chunk 145 — Player Offers Menu Helpers + GetCompetitionAbbrevStr (4 exported + 1 dead → transfer_market.c, career_season.c)
+- Date: 2026-03-02
+- Ported:
+  1. PlayerOffersUpdateOfferAmountText (→transfer_market.c) — format offerAmount * 1000 into menu entry 9's text string via Int2Pounds
+  2. UpdatePlayerOfferMenuIndicators (→transfer_market.c) — toggle +/- string and isInvisible for entries 5-11 based on numExtraPlayersWanted, offerSwapPlayerOrdinal, offerExtraPlayerOrdinal signs
+  3. PlayerOffersInit (→transfer_market.c) — init player offers menu: bank balance, two PrintFormatted team name strings, calls above two functions
+  4. GetCompetitionAbbrevStr (→career_season.c) — returns abbreviation string ("FR","WC","WCQ","EC","ECQ","NAC","CA","ANC","AC","OC","TNM","TR") by comparing competition pointer against known buffer addresses
+- Dead code: IsTeamIdForSelectedTeam — no callers found, stubbed as rts
+- Stubs: PlayerOffersUpdateOfferAmountText (jmp), UpdatePlayerOfferMenuIndicators (jmp), PlayerOffersInit (jmp), GetCompetitionAbbrevStr (bridge: a1→stack, d0→a2)
+- New xrefs: _PlayerOffersUpdateOfferAmountText, _UpdatePlayerOfferMenuIndicators, _PlayerOffersInit, _GetCompetitionAbbrevStr
+- New xdefs: offerSwapPlayerOrdinal, offerExtraPlayerOrdinal, offerAmount, aPlus
+- Build status: **verified** (clean build, only pre-existing warnings)
+- Cumulative: 1319 functions across 145 chunks
+
 ### Chunk 144 — ShowForeignPlayerMarket + ViewForeignPlayerMarket (2 → transfer_market.c)
 - Date: 2026-03-02
 - Ported:
@@ -2936,5 +2950,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 142   | 4         | 1310       |
 | 143   | 3         | 1313       |
 | 144   | 2         | 1315       |
+| 145   | 4+1d      | 1319       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

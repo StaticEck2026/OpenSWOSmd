@@ -232,3 +232,62 @@ void _Career_PrepareEuropeanCupQualificationState(void)
     isNationalSelector = savedIsNational;
     selTeamNumber = savedSelTeam;
 }
+
+/* ---- Chunk 145: GetCompetitionAbbrevStr ---- */
+/* SWOS2.s line 54905 — returns abbreviation string for a competition pointer.
+ * Compares pointer values against known competition buffer addresses. */
+
+extern uint8_t friendlyCopy[];
+extern uint8_t worldCup2Copy[];
+extern uint8_t worldCupQualifyingGroup1Copy[];
+extern uint8_t oceaniaWorldCupQualificationCopy[];
+extern uint8_t europeanChampionships2Copy[];
+extern uint8_t ecQualifyingGroup1Copy[];
+extern uint8_t ecQualifyingGroup8Copy[];
+extern uint8_t northAmericanCupCopy[];
+extern uint8_t copaAmericaCopy[];
+extern uint8_t africanNationsCupCopy[];
+extern uint8_t asianCupCopy[];
+extern uint8_t oceaniaCupCopy[];
+extern uint8_t invitationTournamentCopy[];
+extern uint8_t tourCopy[];
+
+extern uint16_t panicReasonCode;
+extern void _PanicHaltLoop(void);
+
+__attribute__((used, externally_visible))
+uint8_t *_GetCompetitionAbbrevStr(uint8_t *competition)
+{
+    if (competition == 0)
+        return (uint8_t *)"FR";
+    if (competition == friendlyCopy)
+        return (uint8_t *)"FR";
+    if (competition == worldCup2Copy)
+        return (uint8_t *)"WC";
+    if (competition >= worldCupQualifyingGroup1Copy &&
+        competition <= oceaniaWorldCupQualificationCopy)
+        return (uint8_t *)"WCQ";
+    if (competition == europeanChampionships2Copy)
+        return (uint8_t *)"EC";
+    if (competition >= ecQualifyingGroup1Copy &&
+        competition <= ecQualifyingGroup8Copy)
+        return (uint8_t *)"ECQ";
+    if (competition == northAmericanCupCopy)
+        return (uint8_t *)"NAC";
+    if (competition == copaAmericaCopy)
+        return (uint8_t *)"CA";
+    if (competition == africanNationsCupCopy)
+        return (uint8_t *)"ANC";
+    if (competition == asianCupCopy)
+        return (uint8_t *)"AC";
+    if (competition == oceaniaCupCopy)
+        return (uint8_t *)"OC";
+    if (competition == invitationTournamentCopy)
+        return (uint8_t *)"TNM";
+    if (competition == tourCopy)
+        return (uint8_t *)"TR";
+
+    panicReasonCode = 0x2184;
+    _PanicHaltLoop();
+    return (uint8_t *)"FR"; /* unreachable */
+}

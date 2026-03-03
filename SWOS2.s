@@ -54901,56 +54901,15 @@ SetMenuEntryPlayerFace:
                 rts
 
 ; ===== GetCompetitionAbbrevStr =====
-; prototype: const char *__usercall GetCompetitionAbbrevStr@<a2>(const void *competition@<a1>)
+; Ported to C: _GetCompetitionAbbrevStr in src/career_season.c
+; Bridge: a1=competition → C param, returns a2=abbrev string from C return (d0)
 GetCompetitionAbbrevStr:
-                lea     (aFr).l,a2      ; "FR"
-                cmpa.l  #0,a1
-                beq.w   locret_13A9E8
-                lea     (aFr).l,a2      ; "FR"
-                cmpa.l  #friendlyCopy,a1
-                beq.w   locret_13A9E8
-                lea     (aWc).l,a2      ; "WC"
-                cmpa.l  #worldCup2Copy,a1
-                beq.w   locret_13A9E8
-                lea     (aWcq).l,a2     ; "WCQ"
-                cmpa.l  #worldCupQualifyingGroup1Copy,a1
-                bcs.s   loc_13A952
-                cmpa.l  #oceaniaWorldCupQualificationCopy,a1
-                bls.w   locret_13A9E8
-loc_13A952:
-                lea     (aEc).l,a2      ; "EC"
-                cmpa.l  #europeanChampionships2Copy,a1
-                beq.w   locret_13A9E8
-                lea     (aEcq).l,a2     ; "ECQ"
-                cmpa.l  #ecQualifyingGroup1Copy,a1
-                bcs.s   loc_13A978
-                cmpa.l  #ecQualifyingGroup8Copy,a1
-                bls.s   locret_13A9E8
-loc_13A978:
-                lea     (aNac).l,a2     ; "NAC"
-                cmpa.l  #northAmericanCupCopy,a1
-                beq.s   locret_13A9E8
-                lea     (aCa).l,a2      ; "CA"
-                cmpa.l  #copaAmericaCopy,a1
-                beq.s   locret_13A9E8
-                lea     (aAnc).l,a2     ; "ANC"
-                cmpa.l  #africanNationsCupCopy,a1
-                beq.s   locret_13A9E8
-                lea     (aAc).l,a2      ; "AC"
-                cmpa.l  #asianCupCopy,a1
-                beq.s   locret_13A9E8
-                lea     (aOc).l,a2      ; "OC"
-                cmpa.l  #oceaniaCupCopy,a1
-                beq.s   locret_13A9E8
-                lea     (aTnm).l,a2     ; "TNM"
-                cmpa.l  #invitationTournamentCopy,a1
-                beq.s   locret_13A9E8
-                lea     (aTr).l,a2      ; "TR"
-                cmpa.l  #tourCopy,a1
-                beq.s   locret_13A9E8
-                move.w  #$2184,(panicReasonCode).l
-                jsr     PanicHaltLoop
-locret_13A9E8:
+                movem.l d0-d1/a0,-(sp)
+                move.l  a1,-(sp)
+                jsr     _GetCompetitionAbbrevStr
+                addq.l  #4,sp
+                movea.l d0,a2
+                movem.l (sp)+,d0-d1/a0
                 rts
 
 ; ===== SetupDIYCompetitionStatsMenu =====
@@ -68215,67 +68174,14 @@ playerOffersMenu:
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
 ; ===== PlayerOffersInit =====
-; prototype: void __usercall PlayerOffersInit(MenuEntry *entry@<a5>)
+; Ported to C: _PlayerOffersInit in src/transfer_market.c
 PlayerOffersInit:
-                bsr.w   PlayerOffersUpdateOfferAmountText
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                jsr     GetBankBalance
-                move.w  (selTeamNumber).l,d0
-                bsr.w   GetTeamPointer
-                lea     5(a0),a2
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                lea     (aWeHereAtAWishT).l,a0 ; "WE HERE AT %a WISH TO BUY"
-                jsr     PrintFormatted
-                move.w  teamOffering(pc),d0
-                bsr.w   GetTeamPointer
-                lea     5(a0),a2
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                lea     (aFromAInExchang).l,a0 ; "FROM %a IN EXCHANGE FOR"
-                jsr     PrintFormatted
-                bsr.w   UpdatePlayerOfferMenuIndicators
-                rts
+                jmp     _PlayerOffersInit
 
 ; ===== UpdatePlayerOfferMenuIndicators =====
-; prototype: void __usercall UpdatePlayerOfferMenuIndicators()
+; Ported to C: _UpdatePlayerOfferMenuIndicators in src/transfer_market.c
 UpdatePlayerOfferMenuIndicators:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a0
-                move.l  #aPlus,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "+" ...
-                tst.w   (numExtraPlayersWanted).l
-                bmi.s   loc_1440CE
-                move.l  #aMinus,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "-" ...
-loc_1440CE:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$230)).l,a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$268)).l,a1
-                move.l  #aPlus,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "+" ...
-                move.l  #aPlus,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a1) ; "+" ...
-                tst.w   (offerSwapPlayerOrdinal).l
-                bmi.s   loc_144106
-                move.l  #aMinus,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "-" ...
-                tst.w   (offerExtraPlayerOrdinal).l
-                bmi.s   loc_144106
-                move.l  #aMinus,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a1) ; "-" ...
-loc_144106:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$118).l
-                tst.w   (numExtraPlayersWanted).l
-                bmi.s   loc_144118
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$118).l
-loc_144118:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$150).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$268).l
-                tst.w   (offerSwapPlayerOrdinal).l
-                bmi.s   loc_144134
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$150).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$268).l
-loc_144134:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$188).l
-                tst.w   (offerExtraPlayerOrdinal).l
-                bmi.s   locret_144146
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$188).l
-locret_144146:
-                rts
+                jmp     _UpdatePlayerOfferMenuIndicators
 
 ; ===== PlayerOffersOnSelect8 =====
 ; prototype: void __usercall PlayerOffersOnSelect8(MenuEntry *entry@<a5>)
@@ -68511,13 +68417,9 @@ loc_14440E:
                 jmp     CallDrawMenuItem
 
 ; ===== PlayerOffersUpdateOfferAmountText =====
-; prototype: void __usercall PlayerOffersUpdateOfferAmountText()
+; Ported to C: _PlayerOffersUpdateOfferAmountText in src/transfer_market.c
 PlayerOffersUpdateOfferAmountText:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1F8)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                move.w  offerAmount(pc),d0
-                mulu.w  #$3E8,d0
-                jmp     Int2Pounds
+                jmp     _PlayerOffersUpdateOfferAmountText
 
 ; ===== PlayerOffersOnSelect13 =====
 ; prototype: void __usercall PlayerOffersOnSelect13(MenuEntry *entry@<a5>)
@@ -71644,12 +71546,8 @@ playerSelected:
                 dc.w $0000
 
 ; ===== IsTeamIdForSelectedTeam =====
-; prototype: void IsTeamIdForSelectedTeam(...)
+; Dead code — no callers found in asm or C. Stubbed.
 IsTeamIdForSelectedTeam:
-                movem.w d0-d1,-(sp)
-                lsr.w   #8,d0
-                cmp.b   (selTeamNumber).l,d0
-                movem.w (sp)+,d0-d1
                 rts
 
 ; ===== FindTeamIdInDiyTeamsList =====

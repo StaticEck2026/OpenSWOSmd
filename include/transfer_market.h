@@ -87,4 +87,9 @@ void _ViewDomesticPlayerMarket(void);
 void _ShowForeignPlayerMarket(void);
 void _ViewForeignPlayerMarket(void);
 
+/* --- Player offer menu helpers (Chunk 145) --- */
+void _PlayerOffersUpdateOfferAmountText(void);
+void _UpdatePlayerOfferMenuIndicators(void);
+void _PlayerOffersInit(void);
+
 #endif
