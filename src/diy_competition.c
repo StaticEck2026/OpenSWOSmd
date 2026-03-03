@@ -6577,3 +6577,31 @@ void _DesignDIYTournamentOnSelect89(void)
     _RestoreDIYTournament();
     _SetExitMenuFlag();
 }
+
+/* ---- Chunk 141: SetupDIYCompetitionStatsMenu ---- */
+extern uint16_t diyUnknownWord_2C;
+extern uint16_t diyNumberOfTeams;
+extern uint32_t diyNameOfCompetitionPtr;
+extern uint32_t diyTeamsBufferPtr;
+extern uint16_t diyCompetitionType;
+extern uint8_t competitionStatsMenu[];
+
+__attribute__((used, externally_visible))
+void _SetupDIYCompetitionStatsMenu(void) {
+    uint8_t *a0 = diyCompetitionStart;
+    uint16_t isCup = (*(uint16_t *)a0 == DIY_CUP);
+
+    diyUnknownWord_2C = *(uint16_t *)(a0 + 44);
+    diyNumberOfTeams = *(uint16_t *)(a0 + 50);
+    if (*(uint16_t *)(a0 + 72))
+        diyNumberOfTeams = *(uint16_t *)(a0 + 78);
+
+    diyNameOfCompetitionPtr = (uint32_t)(a0 + 4);
+    diyTeamsBufferPtr = (uint32_t)(a0 + (isCup ? 590 : 302));
+    diyCompetitionType = isCup ? 1 : 0;
+
+    if (*(uint16_t *)(a0 + 72))
+        diyCompetitionType = 2;
+
+    _ShowMenu(competitionStatsMenu);
+}

@@ -3908,3 +3908,17 @@ next_entry:
         d6++;
     }
 }
+
+/* ---- Chunk 141: SetMenuEntryPlayerFace ---- */
+#define TEAMFILE_PLAYERS           76
+#define PLAYERFILE_POSITIONANDFACE 26
+#define SPR_PL_FACE_WHITE_GUY     186
+
+__attribute__((used, externally_visible))
+void _SetMenuEntryPlayerFace(MenuEntry *entry, uint8_t *teamData) {
+    uint16_t d0 = teamData[TEAMFILE_PLAYERS + PLAYERFILE_POSITIONANDFACE];
+    d0 &= 0x18;
+    d0 >>= 3;
+    d0 += SPR_PL_FACE_WHITE_GUY;
+    *(uint16_t *)&entry->fg = d0;
+}

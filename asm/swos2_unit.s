@@ -2794,6 +2794,10 @@
         xref    _AddExtension
         xref    _SelFilesOnSelectCommon
         xref    _RepositionSelectFileEntries
+; --- Chunk 141 xrefs ---
+        xref    _SetupDIYCompetitionStatsMenu
+        xref    _SelFilesDrawItemDescription
+        xref    _SetMenuEntryPlayerFace
 ; --- Chunk 138 xrefs ---
         xref    _FillManagementRecordInfo
 ; --- Chunk 137 xrefs ---
@@ -3082,6 +3086,9 @@
         xdef    numTeamsColumn2
         xdef    numTeamsColumn3
         xdef    diyCompetitionType
+        xdef    diyNumberOfTeams
+        xdef    diyTeamsBufferPtr
+        xdef    competitionStatsMenu
         xdef    a0EndSeason
 
         include "../SWOS2.s"

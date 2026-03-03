@@ -1075,3 +1075,43 @@ void _RepositionSelectFileEntries(void) {
         }
     }
 }
+
+/* ---- Chunk 141: SelFilesDrawItemDescription ---- */
+
+__attribute__((used, externally_visible))
+void _SelFilesDrawItemDescription(MenuEntry *entry) {
+    uint16_t idx = entry->ordinal;
+    idx -= 1;
+    if (idx >= 30) {
+        idx -= 15;
+        idx += selFilesColumn2NumItems;
+    }
+    if (idx >= 15) {
+        idx -= 15;
+        idx += selFilesColumn1NumItems;
+    }
+
+    uint32_t ext = extensionsBuffer[idx];
+    MenuEntry *descEntry = &menuEntries[46];
+
+    const uint8_t *descStr;
+    if (ext == 0x2E444959)       /* '.DIY' */
+        descStr = (const uint8_t *)"DIY";
+    else if (ext == 0x2E505245)  /* '.PRE' */
+        descStr = (const uint8_t *)"PRESET";
+    else if (ext == 0x2E534541)  /* '.SEA' */
+        descStr = (const uint8_t *)"SEASON";
+    else if (ext == 0x2E434152)  /* '.CAR' */
+        descStr = (const uint8_t *)"CAREER";
+    else if (ext == 0x2E544143)  /* '.TAC' */
+        descStr = (const uint8_t *)"TACT";
+    else
+        descStr = (const uint8_t *)"HIGH";
+
+    descEntry->fg = (uint32_t)descStr;
+    descEntry->x = entry->x + 0x39;
+    descEntry->y = entry->y;
+    descEntry->isInvisible = 0;
+    _DrawMenuItem(descEntry);
+    descEntry->isInvisible = 1;
+}

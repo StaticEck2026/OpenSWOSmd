@@ -149,4 +149,8 @@ void _ExitChooseTeams(void);
 void _SetLeagueNames(void);
 void _SetCountryNames(void);
 
+/* ---- Menu Entry Utilities (Chunk 141) ---- */
+#include "menu_system.h"
+void _SetMenuEntryPlayerFace(MenuEntry *entry, uint8_t *teamData);
+
 #endif

@@ -55052,16 +55052,12 @@ loc_13A8F0:
                 rts
 
 ; ===== SetMenuEntryPlayerFace =====
-; prototype: void __usercall SetMenuEntryPlayerFace(MenuEntry *entry@<a0>, PlayerFile *player@<a6>)
-; in:
-;      A0 -> menu entry to set sprite
-;      A6 -> team header + player offset
+; Ported to C: _SetMenuEntryPlayerFace in src/menus.c
 SetMenuEntryPlayerFace:
-                move.b  TEAMFILE_PLAYERS+PLAYERFILE_POSITIONANDFACE(a6),d0
-                andi.w  #$18,d0
-                lsr.w   #3,d0
-                addi.w  #SPR_PL_FACE_WHITE_GUY,d0
-                move.w  d0,MENUENTRY_FG+ENTRYTYPE2UNION_SPRITE2(a0)
+                move.l  a6,-(sp)
+                move.l  a0,-(sp)
+                jsr     _SetMenuEntryPlayerFace
+                addq.l  #8,sp
                 rts
 
 ; ===== GetCompetitionAbbrevStr =====
@@ -55118,45 +55114,9 @@ locret_13A9E8:
                 rts
 
 ; ===== SetupDIYCompetitionStatsMenu =====
-; prototype: __int16 __usercall SetupDIYCompetitionStatsMenu@<d0>()
+; Ported to C: _SetupDIYCompetitionStatsMenu in src/diy_competition.c
 SetupDIYCompetitionStatsMenu:
-                lea     (diyCompetitionStart).l,a0
-                cmpi.w  #DIY_CUP,(a0)
-                beq.s   loc_13AA36
-                move.w  44(a0),(diyUnknownWord_2C).l
-                move.w  50(a0),(diyNumberOfTeams).l
-                tst.w   72(a0)
-                beq.s   loc_13AA14
-                move.w  78(a0),(diyNumberOfTeams).l
-loc_13AA14:
-                lea     4(a0),a1
-                move.l  a1,(diyNameOfCompetitionPtr).l
-                lea     302(a0),a1
-                move.l  a1,(diyTeamsBufferPtr).l
-                clr.w   (diyCompetitionType).l
-                tst.w   72(a0)
-                bne.s   loc_13AA78
-                bra.s   loc_13AA80
-loc_13AA36:
-                move.w  44(a0),(diyUnknownWord_2C).l
-                move.w  50(a0),(diyNumberOfTeams).l
-                tst.w   72(a0)
-                beq.s   loc_13AA54
-                move.w  78(a0),(diyNumberOfTeams).l
-loc_13AA54:
-                lea     4(a0),a1
-                move.l  a1,(diyNameOfCompetitionPtr).l
-                lea     590(a0),a1
-                move.l  a1,(diyTeamsBufferPtr).l
-                move.w  #1,(diyCompetitionType).l
-                tst.w   72(a0)
-                bne.s   loc_13AA78
-                bra.s   loc_13AA80
-loc_13AA78:
-                move.w  #2,(diyCompetitionType).l
-loc_13AA80:
-                lea     (competitionStatsMenu).l,a6
-                jmp     ShowMenu
+                jmp     _SetupDIYCompetitionStatsMenu
 competitionStatsMenu:
                 dc.l $00000000          ; On init function
                 dc.l $00000000          ; on return function
@@ -63982,49 +63942,11 @@ locret_140374:
                 rts
 
 ; ===== SelFilesDrawItemDescription =====
-; prototype: void __usercall SelFilesDrawItemDescription(struct MenuEntry *cur@<a5>)
+; Ported to C: _SelFilesDrawItemDescription in src/file_io.c
 SelFilesDrawItemDescription:
-                move.w  2(a5),d0
-                subq.w  #1,d0
-                cmpi.w  #$F,d0
-                bcs.s   loc_14039C
-                cmpi.w  #$1E,d0
-                bcs.s   loc_140392
-                subi.w  #$F,d0
-                add.w   (selFilesColumn2NumItems).l,d0
-loc_140392:
-                subi.w  #$F,d0
-                add.w   (selFilesColumn1NumItems).l,d0
-loc_14039C:
-                lsl.w   #2,d0
-                lea     (extensionsBuffer).l,a0
-                move.l  (a0,d0.w),d1
-                movea.l a5,a1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A10)).l,a5
-                lea     (aDiy).l,a0     ; "DIY"
-                cmpi.l  #'.DIY',d1
-                beq.s   loc_1403FA
-                lea     (aPreset).l,a0  ; "PRESET"
-                cmpi.l  #'.PRE',d1
-                beq.s   loc_1403FA
-                lea     (aSeason_0).l,a0 ; "SEASON"
-                cmpi.l  #'.SEA',d1
-                beq.s   loc_1403FA
-                lea     (aCareer_0).l,a0 ; "CAREER"
-                cmpi.l  #'.CAR',d1
-                beq.s   loc_1403FA
-                lea     (aTact).l,a0    ; "TACT"
-                cmpi.l  #'.TAC',d1
-                beq.s   loc_1403FA
-                lea     (aHigh).l,a0    ; "HIGH"
-loc_1403FA:
-                move.l  a0,$26(a5)
-                move.w  $14(a1),$14(a5)
-                addi.w  #$39,$14(a5)    ; '9'
-                move.w  $16(a1),$16(a5)
-                clr.w   4(a5)
-                jsr     DrawMenuItem
-                move.w  #1,4(a5)
+                move.l  a5,-(sp)
+                jsr     _SelFilesDrawItemDescription
+                addq.l  #4,sp
                 rts
 
 ; ===== SelectFilenameToSaveAndExit =====

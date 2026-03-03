@@ -237,6 +237,9 @@ void _DIYCupOnSelect7(MenuEntry *entry);
 void _DIYCupOnSelect8(MenuEntry *entry);
 void _DesignDIYTournamentOnSelect89(void);
 
+/* ---- DIY Competition Stats Menu (Chunk 141) ---- */
+void _SetupDIYCompetitionStatsMenu(void);
+
 /* ---- OpenDiy* + ShowDiyCompetitionForSource (Chunk 116) ---- */
 void _ShowDiyCompetitionForSource(uint8_t *header);
 void _OpenDiyFromFile(void);

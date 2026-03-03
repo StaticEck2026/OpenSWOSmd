@@ -2703,6 +2703,16 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, no new warnings)
 - Cumulative: 1303 functions across 140 chunks
 
+### Chunk 141 — DIY Stats Menu + File Type Description + Player Face Entry (3 → diy_competition.c, file_io.c, menus.c)
+- Date: 2026-03-02
+- Ported: SetupDIYCompetitionStatsMenu (→diy_competition.c), SelFilesDrawItemDescription (→file_io.c), SetMenuEntryPlayerFace (→menus.c)
+- jmp stub: SetupDIYCompetitionStatsMenu
+- Register bridges: SelFilesDrawItemDescription (a5→stack), SetMenuEntryPlayerFace (a0,a6→stack)
+- New xdefs: diyNumberOfTeams, diyTeamsBufferPtr, competitionStatsMenu
+- Key notes: SelFilesDrawItemDescription uses C string literals ("DIY","PRESET",etc.) instead of asm strings. SetMenuEntryPlayerFace extracts face bits 3-4 from TEAMFILE_PLAYERS+PLAYERFILE_POSITIONANDFACE and adds SPR_PL_FACE_WHITE_GUY(186).
+- Build status: **verified** (clean build, no new warnings)
+- Cumulative: 1306 functions across 141 chunks
+
 ### Chunk 139 — Team Selection Type Handlers + League/Country Names (7 → menus.c)
 - Date: 2026-03-02
 - Ported: ClubTeams, NationalTeams, OriginalCustomTeams, EditedCustomTeams, ExitChooseTeams, SetLeagueNames, SetCountryNames — all to menus.c

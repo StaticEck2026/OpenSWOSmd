@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1303 functions ported across 140 chunks.
+**Current status:** 1306 functions ported across 141 chunks.
 
-**Last completed chunk:** Chunk 140 — File Selection Helpers (4+1s → file_io.c): SelectFilenameToSaveAndExit, AddExtension, SelFilesOnSelectCommon, RepositionSelectFileEntries, CopyFilenameExtensionAndSetExitMenuFlag(static).
+**Last completed chunk:** Chunk 141 — DIY Stats Menu + File Type Description + Player Face Entry (3 → diy_competition.c, file_io.c, menus.c): SetupDIYCompetitionStatsMenu, SelFilesDrawItemDescription, SetMenuEntryPlayerFace.
 
-**Next candidates:** GetCompetitionAbbrevStr, SetupDIYCompetitionStatsMenu, Career_FillCurrentSeasonInfo + EncodeCompetitionPositionForSeasonInfo, ChooseTeamsDialog, InitCareer.
+**Next candidates:** GetCompetitionAbbrevStr (register-return a2, tricky bridge), Career_FillCurrentSeasonInfo + EncodeCompetitionPositionForSeasonInfo, ChooseTeamsDialog, InitCareer, SelectFilesInputSaveFilenameOnSelect.
 
 ---
 
