@@ -1913,3 +1913,671 @@ void _ViewOffersMenu(void)
     }
 }
 
+/* ================================================================
+ * Chunk 162: Transfer Market Menu Helpers
+ *
+ * CheckNumPlayersOnTransferMarket, CheckIfPlayerSelected,
+ * EnableDisableOffers, TransferMarketInit, BuyPlayerMenu,
+ * GiveFreeTransfer, TakeOffMarketMenu, TransferMarketCommon
+ * ================================================================ */
+
+extern uint16_t playerSelected;
+extern uint16_t currentMessage;
+extern uint8_t  buyPlayerMenu[];
+extern uint8_t  buyPlayerRedrawList[];
+extern uint8_t  aNoOffers[];
+extern uint16_t selTeamNumber;
+
+/* Menu entry offset constants for the transfer market menu entries.
+ * These correspond to menuEntries[N] where N = byteOffset / sizeof(MenuEntry).
+ * sizeof(MenuEntry) = 0x38 = 56 bytes.
+ * MENUENTRY_ISINVISIBLE is at offset 4 within each entry.
+ * MENUENTRY_ISDISABLED is at offset 6 within each entry.
+ * MENUENTRY_BG + ENTRYTYPE1UNION_BACKANDFRAMECOLOR is at offset 0x1E within each entry.
+ * MENUENTRY_STRINGFLAGS is at offset 0x24 within each entry.
+ */
+
+/* Menu entry indices derived from byte offsets:
+ * 0xE0  / 0x38 = 4  (menuEntries[4])
+ * 0x118 / 0x38 = 5  (menuEntries[5])  — offset 0x118 is entry 5 base + 0
+ * 0x188 / 0x38 = 7  (menuEntries[7])  — offset 0x188 is entry 7 base - 0x08...
+ * Actually: MENUENTRY_ISINVISIBLE + 0xE0 means base + 0xE0 + 4.
+ * The MENUENTRY_ALREADYDRAWN offsets add 8 to make entry-relative offsets.
+ * menuEntries + MENUENTRY_ALREADYDRAWN + X = &menuEntries[0].alreadyDrawn + X
+ * MENUENTRY_ALREADYDRAWN = 8, so the real byte offset is 8 + X.
+ * Entry N starts at N * 0x38.
+ *
+ * 0xE0:  (8 + 0xE0) = 0xE8. 0xE8 / 0x38 = 4 remainder 0x18. entry 4.
+ * 0x1C0: (8 + 0x1C0) = 0x1C8. 0x1C8 / 0x38 = 8 remainder 0. entry 8.
+ * 0x118: (8 + 0x118) = 0x120. 0x120 / 0x38 = 5 remainder 0x18. entry 5 + MENUENTRY_ISINVISIBLE(4) at 0x11C?
+ *
+ * Actually the asm uses:
+ *   menuEntries+MENUENTRY_ISINVISIBLE+$E0  — this means address of menuEntries + 4 + 0xE0 = menuEntries + 0xE4
+ *   0xE4 / 0x38 = 4.06... That's entry 4 at offset 0xE4 - 4*0x38 = 0xE4 - 0xE0 = 4 = MENUENTRY_ISINVISIBLE. Correct!
+ *
+ *   menuEntries+MENUENTRY_ISINVISIBLE+$1C0 = menuEntries + 4 + 0x1C0 = menuEntries + 0x1C4
+ *   0x1C4 / 0x38 = 8.06... Entry 8 at offset 0x1C4 - 8*0x38 = 0x1C4 - 0x1C0 = 4 = MENUENTRY_ISINVISIBLE. Correct!
+ *
+ *   menuEntries+MENUENTRY_ISINVISIBLE+$118 = menuEntries + 4 + 0x118 = menuEntries + 0x11C
+ *   0x11C / 0x38 = 5.07... Entry 5 at offset 0x11C - 5*0x38 = 0x11C - 0x118 = 4 = MENUENTRY_ISINVISIBLE. Correct!
+ *
+ *   menuEntries+MENUENTRY_ISINVISIBLE+$188 = menuEntries + 4 + 0x188 = menuEntries + 0x18C
+ *   0x18C / 0x38 = 7.07... Entry 7 at offset 0x18C - 7*0x38 = 0x18C - 0x188 = 4 = MENUENTRY_ISINVISIBLE. Correct!
+ */
+
+/* Chairman message constants */
+#define CLUB_UNWILLING_TO_PURCHASE_PLAYERS  1
+
+/* Color constants */
+#define PINK_TO_BROWN_9  9
+
+extern void _RemovePlayerFromTeam(uint16_t playerOrdinal);
+extern void _ShowChairmanMessage(void);
+
+/* ================================================================
+ * CheckNumPlayersOnTransferMarket  (SWOS2.s line 70068)
+ *
+ * If 5 players on market, hide "put on market" entry (4).
+ * If 0 players, hide "take off market" entry (8).
+ * ================================================================ */
+static void checkNumPlayersOnTransferMarket(void)
+{
+    if (numPlayersOnTransferMarket >= 5) {
+        menuEntries[4].isInvisible = 1;
+    } else {
+        menuEntries[4].isInvisible = 0;
+    }
+    if (numPlayersOnTransferMarket == 0) {
+        menuEntries[8].isInvisible = 1;
+    }
+}
+
+__attribute__((used, externally_visible))
+void _CheckNumPlayersOnTransferMarket(void)
+{
+    checkNumPlayersOnTransferMarket();
+}
+
+/* ================================================================
+ * CheckIfPlayerSelected  (SWOS2.s line 70084)
+ *
+ * If no player selected (playerSelected < 0), hide entries 5 and 7.
+ * Otherwise show them.
+ * ================================================================ */
+static void checkIfPlayerSelected(void)
+{
+    if ((int16_t)playerSelected < 0) {
+        menuEntries[5].isInvisible = 1;
+        menuEntries[7].isInvisible = 1;
+    } else {
+        menuEntries[5].isInvisible = 0;
+        menuEntries[7].isInvisible = 0;
+    }
+}
+
+__attribute__((used, externally_visible))
+void _CheckIfPlayerSelected(void)
+{
+    checkIfPlayerSelected();
+}
+
+/* ================================================================
+ * EnableDisableOffers  (SWOS2.s line 70097)
+ *
+ * Checks for transfer offers and enables/disables the offers menu
+ * entry accordingly. If no offers, shows "NO OFFERS" text, disables
+ * entry, and grays it out.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _EnableDisableOffers(void)
+{
+    /* Entry at offset 0xA8: (8 + 0xA8) = 0xB0 / 0x38 = 3.14... entry 3 */
+    MenuEntry *entry = &menuEntries[3];
+
+    if (_CheckForTransferOffers() == 0) {
+        /* No offers eligible — set bit 13 of stringFlags */
+        entry->stringFlags |= (1 << 13);
+    }
+
+    if (numOffers == 0) {
+        entry->fg = (uint32_t)aNoOffers;
+        entry->isDisabled = 1;
+        uint16_t color = *(uint16_t *)&entry->bg;
+        color = (color & 0xFFF0) + PINK_TO_BROWN_9;
+        *(uint16_t *)&entry->bg = color;
+    }
+}
+
+/* ================================================================
+ * TransferMarketInit  (SWOS2.s line 69899)
+ *
+ * Initializes the transfer market menu: clears transferCompleted,
+ * resets playerSelected, checks players on market and offers.
+ * If no offers, sets current entry to 3.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _TransferMarketInit(void)
+{
+    transferCompleted = 0;
+    playerSelected = 0xFFFF;
+    checkNumPlayersOnTransferMarket();
+    if (_CheckForTransferOffers() == 0) {
+        _SetCurrentEntry(3);
+    }
+    _TransferMarketFinish();
+}
+
+/* ================================================================
+ * BuyPlayerMenu  (SWOS2.s line 69923)
+ *
+ * Checks if team has room (>= 2 remaining slots). If not, shows
+ * chairman message. Otherwise shows buy player menu. If transfer
+ * completed, exits menu.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _BuyPlayerMenu(void)
+{
+    uint16_t slots = _GetRemainingTransferPoolSlots();
+    if (slots < 2) {
+        currentMessage = CLUB_UNWILLING_TO_PURCHASE_PLAYERS;
+        _ShowChairmanMessage();
+        return;
+    }
+    transferCompleted = 0;
+    _ShowMenu(buyPlayerMenu);
+    if (transferCompleted == 1) {
+        _SetExitMenuFlag();
+    }
+}
+
+/* ================================================================
+ * GiveFreeTransfer  (SWOS2.s line 70000)
+ *
+ * Removes the selected player from the team, resets selection,
+ * updates menu state.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _GiveFreeTransfer(void)
+{
+    uint16_t idx = playerSelected;
+    uint16_t playerOrd = playersOnTransferMarket[idx];
+    _RemovePlayerFromTeam(playerOrd);
+    playerSelected = 0xFFFF;
+    checkNumPlayersOnTransferMarket();
+    checkIfPlayerSelected();
+    _EnableDisableOffers();
+    _SetCurrentEntry(6);
+    _DrawMenu();
+}
+
+/* ================================================================
+ * TakeOffMarketMenu  (SWOS2.s line 70022)
+ *
+ * Removes the selected player from the transfer market list,
+ * resets selection, updates menu state.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _TakeOffMarketMenu(void)
+{
+    uint16_t idx = playerSelected;
+    uint16_t playerOrd = playersOnTransferMarket[idx];
+    _RemovePlayerFromTransferMarket(playerOrd);
+    playerSelected = 0xFFFF;
+    checkNumPlayersOnTransferMarket();
+    checkIfPlayerSelected();
+    _SetCurrentEntry(6);
+    _DrawMenu();
+}
+
+/* ================================================================
+ * TransferMarketCommon  (SWOS2.s line 70037)
+ *
+ * Menu common handler (called with a5=current MenuEntry).
+ * Computes player index from entry ordinal, toggles selection,
+ * redraws old and new entries, updates button visibility.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _TransferMarketCommon(void *entryPtr)
+{
+    MenuEntry *entry = (MenuEntry *)entryPtr;
+    /* Compute relative index: entry ordinal minus base entry ordinal */
+    /* Base entry is at menuEntries + MENUENTRY_ALREADYDRAWN + 0x1F8
+     * = entry (8+0x1F8)/0x38 = 0x200/0x38 = 9.14... = entry 9 */
+    uint16_t d7 = entry->ordinal - menuEntries[9].ordinal;
+    if (d7 == playerSelected)
+        d7 = 0xFFFF;
+
+    uint16_t oldSel = playerSelected;
+    playerSelected = d7;
+
+    /* If old selection was valid, redraw that entry */
+    if ((int16_t)oldSel >= 0) {
+        uint16_t entryIdx = oldSel + 9;
+        MenuEntry *oldEntry = _CalcMenuEntryAddress(entryIdx);
+        _CallDrawMenuItem(oldEntry);
+    }
+
+    /* Redraw current entry */
+    _CallDrawMenuItem(entry);
+    checkIfPlayerSelected();
+
+    /* Redraw specific entries from buyPlayerRedrawList */
+    _DrawMenuItemsWaitForVSync((int16_t *)buyPlayerRedrawList);
+}
+
+/* ================================================================
+ * Chunk 163: BuildTransferPlayerMenuEntry + callers
+ *
+ * BuildTransferPlayerMenuEntry, TransferMarketAfterDrawCommon,
+ * ShowPlayerMarketInit, PlayerMarketResetListState,
+ * BuyOtherPlayersCommon, BuyOtherPlayersAfterDrawCommon,
+ * ViewSquadInit, ViewSquadCommon, ViewSquadAfterDrawCommon,
+ * BuyOtherDomesticPlayer, BuyOtherForeignPlayer, BuyPlayerViewSquad
+ * ================================================================ */
+
+extern uint8_t  fundsBuffer[];
+extern uint32_t playerPositionsStringTable[];
+extern uint8_t  shortCountryNames[];
+extern uint16_t isNationalSelector;
+extern uint16_t viewFutureTeamModeFlag;
+
+extern uint8_t *_ExtractSurname(uint8_t *name, uint16_t maxLenAndFlags);
+extern void _FormTopSkillsString(uint8_t *dst, uint8_t *playerBase);
+extern void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, uint8_t *player);
+extern void _InitPlayerValueDisplayStruct(uint8_t *playerEntry, uint8_t *dst);
+extern void _FormatPlayerValueOrStatusText(uint8_t *base, uint8_t *dst);
+
+/* ================================================================
+ * BuildTransferPlayerMenuEntry  (SWOS2.s line 70078)
+ *
+ * Populates 12 consecutive menu entries for a transfer player row.
+ * If player is NULL, hides all 12 entries.
+ * If player name starts with 0xFF, hides entries 2-11.
+ *
+ * Entries layout:
+ *  0: Color/style row header
+ *  1: Player number
+ *  2: Status sprite
+ *  3: Surname
+ *  4: Extra string (club name in parentheses)
+ *  5: Position
+ *  6: Top skills
+ *  7-9: Padding (invisible)
+ * 10: Country code
+ * 11: Value/status text
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
+                                    uint16_t y, int16_t idx,
+                                    uint16_t style, uint8_t *extra)
+{
+    MenuEntry *a0 = (MenuEntry *)itemPtr;
+
+    if (player == 0) {
+        /* NULL player: hide all 12 entries */
+        int16_t count = 11;
+        do {
+            a0->isInvisible = 1;
+            a0->y = y;
+            a0++;
+        } while (--count >= 0);
+        return;
+    }
+
+    /* Entry 0: Style/color row header */
+    {
+        uint16_t color = *(uint16_t *)&a0->bg;
+        color = (color & 0xFFF0) | style;
+        *(uint16_t *)&a0->bg = color;
+    }
+    a0->y = y;
+    a0->isInvisible = 0;
+    a0++;
+
+    /* Entry 1: Player number */
+    a0->y = y;
+    a0->isInvisible = 1;
+    a0->fg = (uint32_t)idx;
+    if (idx >= 0)
+        a0->isInvisible = 0;
+    a0++;
+
+    /* Check if player name byte is 0xFF (empty/skip) */
+    if (player[0x4F] == 0xFF) {
+        int16_t count = 9;
+        do {
+            a0->isInvisible = 1;
+            a0->y = y;
+            a0++;
+        } while (--count >= 0);
+        return;
+    }
+
+    /* Entry 2: Status sprite */
+    _SetSquadMenuEntryStatusSprite_AfterSim(a0, player);
+    a0->y = y;
+    a0->isInvisible = 0;
+    a0++;
+
+    /* Entry 3: Surname */
+    {
+        uint16_t maxNameLen = 0x10;
+        if (extra != 0) {
+            uint16_t extraLen = _GetStringLength(extra);
+            maxNameLen = 0x10 - extraLen;
+        }
+        uint16_t extractParam = 0x0D + maxNameLen;
+        uint8_t *nameResult = _ExtractSurname(player + 0x4F, extractParam);
+        a0->fg = (uint32_t)nameResult;
+        a0->y = y;
+        a0->isInvisible = 0;
+        a0++;
+    }
+
+    /* Entry 4: Extra string (club name in parentheses) */
+    a0->isInvisible = 1;
+    if (extra != 0) {
+        uint8_t *dst = (uint8_t *)a0->fg;
+        *dst++ = '(';
+        _StringCopy(extra, dst);
+        /* StringCopy returns end pointer — need to find end of string */
+        while (*dst != 0) dst++;
+        *dst++ = ')';
+        *dst = 0;
+        a0->isInvisible = 0;
+    }
+    a0->y = y;
+    a0++;
+
+    /* Entry 5: Position */
+    {
+        uint16_t posIdx = (player[0x66] & 0xE0) >> 3;
+        a0->fg = playerPositionsStringTable[posIdx / 4];
+    }
+    a0->y = y;
+    a0->isInvisible = 0;
+    a0++;
+
+    /* Entry 6: Top skills */
+    _FormTopSkillsString((uint8_t *)a0->fg, player);
+    a0->y = y;
+    a0->isInvisible = 0;
+    a0++;
+
+    /* Entry 7: invisible padding */
+    a0->isInvisible = 1;
+    a0->y = y;
+    a0++;
+
+    /* Entry 8: invisible padding */
+    a0->isInvisible = 1;
+    a0->y = y;
+    a0++;
+
+    /* Entry 9: invisible padding */
+    a0->isInvisible = 1;
+    a0->y = y;
+    a0++;
+
+    /* Entry 10: Country code "(ABC)" */
+    {
+        uint8_t *dst = (uint8_t *)a0->fg;
+        uint16_t countryIdx = player[0x4C] & 0xFF;
+        uint16_t offset = countryIdx * 3;
+        uint8_t *src = shortCountryNames + offset;
+        *dst++ = '(';
+        *dst++ = src[0];
+        *dst++ = src[1];
+        *dst++ = src[2];
+        *dst++ = ')';
+        *dst = 0;
+    }
+    a0->y = y;
+    a0->isInvisible = 0;
+    a0++;
+
+    /* Entry 11: Value/status text */
+    if (isNationalSelector != 0 && viewFutureTeamModeFlag == 0) {
+        _InitPlayerValueDisplayStruct(player, (uint8_t *)a0);
+    } else {
+        _FormatPlayerValueOrStatusText(player, fundsBuffer);
+        a0->fg = (uint32_t)fundsBuffer;
+    }
+    a0->y = y;
+    a0->isInvisible = 0;
+
+    /* Set status color in stringFlags */
+    {
+        uint16_t colorBits = 0xD;
+        if (player[0x71] == 0x9B) {
+            /* keep 0xD */
+        } else if (player[0x71] == 0x9A) {
+            colorBits = 1;
+        } else if (player[0x66] & 0x02) {
+            colorBits = 0xF;
+        } else {
+            colorBits = 2;
+        }
+        uint16_t flags = a0->stringFlags;
+        flags = (flags & 0xFFF0) | colorBits;
+        a0->stringFlags = flags;
+    }
+}
+
+/* ================================================================
+ * TransferMarketAfterDrawCommon  (SWOS2.s line 70024)
+ *
+ * AfterDraw callback for transfer market menu rows (a5=entry).
+ * Computes player index from entry ordinal offset, gets player
+ * data, calls BuildTransferPlayerMenuEntry, then DrawMultipleItems.
+ * ================================================================ */
+extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerOrdinal);
+
+__attribute__((used, externally_visible))
+void _TransferMarketAfterDrawCommon(void *entryPtr)
+{
+    MenuEntry *entry = (MenuEntry *)entryPtr;
+    /* Base entry is menuEntries[9] */
+    uint16_t d6 = entry->ordinal - menuEntries[9].ordinal;
+    uint8_t *player;
+
+    if (d6 >= numPlayersOnTransferMarket) {
+        /* Out of bounds — disable this entry, use NULL player */
+        entry->isDisabled = 1;
+        player = 0;
+    } else {
+        /* Valid player index */
+        entry->isDisabled = 0;
+        uint16_t style = 0;
+        if (d6 == playerSelected)
+            style = 0xD;
+
+        uint16_t playerOrd = playersOnTransferMarket[d6];
+        player = _GetPlayer(selTeamNumber, playerOrd);
+        d6++;   /* 1-based index for display */
+
+        uint16_t yCoord = entry->y;
+        _BuildTransferPlayerMenuEntry(&menuEntries[14], player, yCoord,
+                                       (int16_t)d6, style, 0);
+        /* Draw 12 entries starting from menuEntries[14] */
+        _DrawMultipleItems(12, &menuEntries[14]);
+        return;
+    }
+
+    /* NULL player path */
+    uint16_t yCoord = entry->y;
+    _BuildTransferPlayerMenuEntry(&menuEntries[14], player, yCoord,
+                                   (int16_t)d6, 0, 0);
+    _DrawMultipleItems(12, &menuEntries[14]);
+}
+
+/* =============================================================== */
+/* Chunk 163 continued: ShowPlayerOfferMenuForPlayer, player market */
+/*                      helpers, BuyOtherPlayers common             */
+/* =============================================================== */
+
+extern uint8_t playerOffersMenu[];
+extern uint8_t aPlayersOnForei[];
+extern uint8_t aPlayersOnDomes[];
+extern uint8_t aMore[];
+extern uint8_t aList[];
+extern uint16_t playerMarketFilterPosition;
+extern uint16_t playerMarketFilterRatingIndex;
+extern uint16_t playerMarketFilterAgeGroup;
+extern uint16_t playerMarketFilterCountry;
+extern uint16_t playerMarketTotalMatchCount;
+extern uint16_t playerMarketVisibleItemCount;
+extern uint16_t playerMarketListScrollOffset;
+
+extern uint8_t *_GetTeamPointer(uint16_t teamId);
+extern uint16_t _GetAvgTeamValueBaseForCurrentPlayer(uint16_t teamNumber, uint16_t playerIndex);
+extern void _ShowMenu(uint8_t *packedMenu);
+extern void _DrawMenu(void);
+extern void _SetCurrentEntry(uint16_t entryIndex);
+extern void _SetExitMenuFlag(void);
+extern uint8_t *_GetPlayerInfoBreakPosition(uint8_t *teamPtr, uint16_t requestedSlot,
+                                              uint16_t *outSlot, uint16_t *outPlayerIndex);
+
+/* ShowPlayerOfferMenuForPlayer (Chunk 163)
+ * d0 = teamNumber, d1 = playerOrdinal */
+__attribute__((used, externally_visible))
+void _ShowPlayerOfferMenuForPlayer(uint16_t teamNumber, uint16_t playerOrdinal)
+{
+    uint8_t *teamPtr = _GetTeamPointer(teamNumber);
+    teamOffering = *(uint16_t *)teamPtr;
+    offerPrimaryPlayerOrdinal = playerOrdinal;
+    numExtraPlayersWanted = (int16_t)-1;
+    offerSwapPlayerOrdinal = (int16_t)-1;
+    offerExtraPlayerOrdinal = (int16_t)-1;
+
+    uint16_t avgValue = _GetAvgTeamValueBaseForCurrentPlayer(teamOffering, offerPrimaryPlayerOrdinal);
+    uint32_t total = (uint32_t)avgValue * 1000;
+    if ((int32_t)total <= newBalance) {
+        offerAmount = avgValue;
+    } else {
+        int32_t bal = newBalance;
+        if (bal < 0)
+            bal = 0;
+        offerAmount = (uint16_t)((uint32_t)bal / 1000);
+    }
+    _ShowMenu(playerOffersMenu);
+}
+
+/* ShowPlayerMarketInit (Chunk 163) */
+__attribute__((used, externally_visible))
+void _ShowPlayerMarketInit(void)
+{
+    playerMarketFilterPosition = 0xFFFF;
+    playerMarketFilterRatingIndex = 0xFFFF;
+    playerMarketFilterAgeGroup = 0xFFFF;
+    playerMarketFilterCountry = 6;
+    playerMarketTotalMatchCount = 0;
+    playerMarketVisibleItemCount = 0;
+    playerMarketListScrollOffset = 0;
+}
+
+/* PlayerMarketUpdateFilterMenuEntryState (Chunk 163)
+ * Updates menuEntries[6] color and disabled state based on position filter. */
+__attribute__((used, externally_visible))
+void _PlayerMarketUpdateFilterMenuEntryState(void)
+{
+    MenuEntry *entry = &menuEntries[6]; /* 0x150/56 = 6 */
+    uint16_t *bgColor = (uint16_t *)&entry->bg;
+
+    if (playerMarketFilterPosition != 0) {
+        /* Active: bright blue, enabled */
+        *bgColor = (*bgColor & 0xFFF0) | 13; /* BRIGHT_BLUE_TO_BLUE_13 */
+        entry->isDisabled = 0;
+    } else {
+        /* Inactive: pink/brown, disabled */
+        *bgColor = (*bgColor & 0xFFF0) | 9; /* PINK_TO_BROWN_9 */
+        entry->isDisabled = 1;
+    }
+}
+
+/* ShowPlayerMarket (Chunk 163) */
+__attribute__((used, externally_visible))
+void _ShowPlayerMarket(void)
+{
+    uint8_t *title;
+    if (showDomesticPlayerMarket)
+        title = aPlayersOnDomes;
+    else
+        title = aPlayersOnForei;
+
+    menuEntries[0].fg = (uint32_t)title;
+    uint8_t *balanceBuf = (uint8_t *)menuEntries[1].fg;
+    _GetBankBalance(balanceBuf);
+    _PlayerMarketUpdateFilterMenuEntryState();
+}
+
+/* PlayerMarketUpdateMoreListLabel (Chunk 163)
+ * Sets menuEntries[7].fg to "MORE" or "LIST" based on scroll state. */
+__attribute__((used, externally_visible))
+void _PlayerMarketUpdateMoreListLabel(void)
+{
+    uint16_t total = playerMarketTotalMatchCount;
+    MenuEntry *entry = &menuEntries[7]; /* 0x188/56 = 7 */
+    uint16_t offset = playerMarketListScrollOffset + 10;
+    if (offset < total)
+        entry->fg = (uint32_t)aMore;
+    else
+        entry->fg = (uint32_t)aList;
+}
+
+/* PlayerMarketResetListState (Chunk 163) */
+__attribute__((used, externally_visible))
+void _PlayerMarketResetListState(void)
+{
+    if (playerMarketTotalMatchCount == 0)
+        return;
+    playerMarketTotalMatchCount = 0;
+    playerMarketVisibleItemCount = 0;
+    playerMarketListScrollOffset = 0;
+    _PlayerMarketUpdateMoreListLabel();
+    _DrawMenu();
+}
+
+/* BuyOtherPlayersCommon (Chunk 163)
+ * a5 = current menu entry (register bridge) */
+__attribute__((used, externally_visible))
+void _BuyOtherPlayersCommon(void *entryPtr)
+{
+    MenuEntry *a5 = (MenuEntry *)entryPtr;
+    MenuEntry *entry3 = &menuEntries[3]; /* 0xA8/56 = 3 */
+    uint16_t relIdx = a5->ordinal - entry3->ordinal;
+
+    uint16_t outSlot, outPlayerIndex;
+    _GetPlayerInfoBreakPosition((uint8_t *)buyOtherPlayersTeamPtr, relIdx, &outSlot, &outPlayerIndex);
+
+    _ShowPlayerOfferMenuForPlayer(teamOffering, outPlayerIndex);
+
+    if (transferCompleted) {
+        _SetExitMenuFlag();
+        return;
+    }
+    _SetCurrentEntry(2);
+    _DrawMenu();
+}
+
+/* BuyOtherPlayersAfterDrawCommon (Chunk 163)
+ * a5 = current menu entry (register bridge) */
+__attribute__((used, externally_visible))
+void _BuyOtherPlayersAfterDrawCommon(void *entryPtr)
+{
+    MenuEntry *a5 = (MenuEntry *)entryPtr;
+    MenuEntry *entry3 = &menuEntries[3]; /* 0xA8/56 = 3 */
+    uint16_t d6 = a5->ordinal - entry3->ordinal;
+    uint16_t d1 = d6;
+    d6++;
+
+    uint16_t outSlot, outPlayerIndex;
+    uint8_t *player = _GetPlayerInfoBreakPosition((uint8_t *)buyOtherPlayersTeamPtr,
+                                                    d1, &outSlot, &outPlayerIndex);
+
+    uint16_t yCoord = a5->y;
+    _BuildTransferPlayerMenuEntry(&menuEntries[19], player, yCoord,
+                                   (int16_t)d6, 0, 0);
+    _DrawMultipleItems(12, &menuEntries[19]);
+}
+

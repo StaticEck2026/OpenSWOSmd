@@ -177,4 +177,9 @@ void _MinSubstitutes(void);
 void _MaxSubstitutes(void);
 void _RandomlySwapTeams(void);
 
+/* --- ViewSquad Init/Common/AfterDraw (Chunk 163) --- */
+void _ViewSquadInit(void);
+void _ViewSquadCommon(void *entry);
+void _ViewSquadAfterDrawCommon(void *entry);
+
 #endif

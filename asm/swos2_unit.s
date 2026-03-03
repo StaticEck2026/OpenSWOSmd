@@ -2998,6 +2998,53 @@
 ; --- Chunk 161 xdefs ---
         xdef    stadiumMenu
         xdef    offersMenu
+; --- Chunk 162 xrefs ---
+        xref    _CheckNumPlayersOnTransferMarket
+        xref    _CheckIfPlayerSelected
+        xref    _EnableDisableOffers
+        xref    _TransferMarketInit
+        xref    _BuyPlayerMenu
+        xref    _GiveFreeTransfer
+        xref    _TakeOffMarketMenu
+        xref    _TransferMarketCommon
+; --- Chunk 162 xdefs ---
+        xdef    playerSelected
+        xdef    buyPlayerMenu
+        xdef    buyPlayerRedrawList
+; --- Chunk 163 xrefs ---
+        xref    _BuildTransferPlayerMenuEntry
+        xref    _TransferMarketAfterDrawCommon
+        xref    _ShowPlayerOfferMenuForPlayer
+        xref    _ShowPlayerMarketInit
+        xref    _ShowPlayerMarket
+        xref    _PlayerMarketUpdateFilterMenuEntryState
+        xref    _PlayerMarketUpdateMoreListLabel
+        xref    _PlayerMarketResetListState
+        xref    _BuyOtherPlayersCommon
+        xref    _BuyOtherPlayersAfterDrawCommon
+        xref    _ViewSquadInit
+        xref    _ViewSquadCommon
+        xref    _ViewSquadAfterDrawCommon
+; --- Chunk 163 xdefs ---
+        xdef    playerOffersMenu
+        xdef    aPlayersOnForei
+        xdef    aPlayersOnDomes
+        xdef    aMore
+        xdef    aList
+        xdef    playerMarketFilterPosition
+        xdef    playerMarketFilterRatingIndex
+        xdef    playerMarketFilterAgeGroup
+        xdef    playerMarketFilterCountry
+        xdef    playerMarketTotalMatchCount
+        xdef    playerMarketVisibleItemCount
+        xdef    playerMarketListScrollOffset
+        xdef    viewSquadTitle
+        xdef    viewSquadFlags
+        xdef    viewSquadMaskLo
+        xdef    viewSquadMaskHi
+        xdef    viewSquadArg2
+        xdef    viewSquadArg3
+        xdef    viewSquadSelectedTeam
 ; --- Chunk 130 xdefs ---
         xdef    diyCupMatchListScrollIndex
         xdef    diyCupMenuArg0Copy

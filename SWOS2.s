@@ -64332,28 +64332,15 @@ PrunePlayerOffersAgainstRosterLimits:
 ; ===== ShowPlayerOfferMenuForPlayer =====
 ; prototype: void __usercall ShowPlayerOfferMenuForPlayer(unsigned __int16 teamNumber@<d0>, unsigned __int16 playerOrdinal@<d1>)
 ShowPlayerOfferMenuForPlayer:
-                bsr.w   GetTeamPointer
-                move.w  (a0),(teamOffering).l
-                move.w  d1,(offerPrimaryPlayerOrdinal).l
-                move.w  #$FFFF,(numExtraPlayersWanted).l
-                move.w  #$FFFF,(offerSwapPlayerOrdinal).l
-                move.w  #$FFFF,(offerExtraPlayerOrdinal).l
-                move.w  teamOffering(pc),d0
-                move.w  offerPrimaryPlayerOrdinal(pc),d1
-                bsr.w   GetAvgTeamValueBaseForCurrentPlayer
-                move.w  d0,d1
-                mulu.w  #$3E8,d1
-                cmp.l   (newBalance).l,d1
-                ble.s   loc_142976
-                move.l  (newBalance).l,d0
-                bpl.s   loc_142972
-                clr.l   d0
-loc_142972:
-                divu.w  #$3E8,d0
-loc_142976:
-                move.w  d0,(offerAmount).l
-                lea     (playerOffersMenu).l,a6
-                jmp     ShowMenu
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)
+                jsr     _ShowPlayerOfferMenuForPlayer
+                addq.l  #8,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== CheckForTransferOffers =====
 ; prototype: __int16 __usercall CheckForTransferOffers@<d0>()
@@ -67629,45 +67616,7 @@ viewSquadMenu:
 ; ===== ViewSquadInit =====
 ; prototype: void __usercall ViewSquadInit()
 ViewSquadInit:
-                move.w  (selTeamNumber).l,d0
-                cmpi.w  #$FFFF,d0
-                beq.s   loc_14478A
-                movea.l (squadTeamPtr).l,a0
-                cmp.w   (a0),d0
-                bne.s   loc_14478A
-                cmpi.w  #16,(careerNumPlayers).l
-                beq.s   loc_14478A
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$460).l
-                cmpi.w  #17,(careerNumPlayers).l
-                bls.s   loc_14478A
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$498).l
-loc_14478A:
-                lea     (menuEntries).l,a0
-                move.l  (viewSquadTitle).l,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                movea.l (squadTeamPtr).l,a1
-                lea     5(a1),a1
-                move.l  a1,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0)
-                tst.w   (viewSquadArg2).l
-                beq.s   loc_1447C4
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$70).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$A8).l
-                move.w  #3,d0
-                jsr     SetCurrentEntry
-loc_1447C4:
-                move.w  (viewSquadArg3).l,d1
-                bmi.s   locret_1447E8
-                move.w  d1,d0
-                cmpi.w  #16,d0
-                bcs.s   loc_1447E0
-                move.w  #20,d0
-                jsr     SetCurrentEntry
-                rts
-loc_1447E0:
-                addq.w  #4,d0
-                jsr     SetCurrentEntry
-locret_1447E8:
-                rts
+                jmp     _ViewSquadInit
 
 ; ===== ViewSquadExitContinue =====
 ; prototype: void __usercall ViewSquadExitContinue()
@@ -67688,60 +67637,22 @@ ViewSquad21AfterDraw:
 ; ===== ViewSquadCommon =====
 ; prototype: void __usercall ViewSquadCommon()
 ViewSquadCommon:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                move.w  2(a5),d1
-                sub.w   2(a0),d1
-                move.w  d1,(viewSquadSelectedTeam).l
-                movea.l (squadTeamPtr).l,a0
-                jsr     GetPlayerInfoBreakPosition
-                move.w  d1,(viewSquadSelectedPlayer).l
-                jmp     SetExitMenuFlag
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _ViewSquadCommon
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== ViewSquadAfterDrawCommon =====
 ; prototype: __int16 __usercall ViewSquadAfterDrawCommon@<d0>()
 ViewSquadAfterDrawCommon:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                move.w  2(a5),d6
-                sub.w   2(a0),d6
-                move.w  d6,d1
-                addq.w  #1,d6
-                cmpi.w  #$10,d1
-                bne.s   loc_144862
-                move.w  #$FFFF,d6
-loc_144862:
-                movea.l (squadTeamPtr).l,a0
-                jsr     GetPlayerInfoBreakPosition
-                movea.l a0,a6
-                clr.w   d5
-                clr.w   6(a5)
-                move.l  (viewSquadMaskLo).l,d0
-                btst    d1,d0
-                beq.s   loc_14488A
-                move.w  #1,6(a5)
-                move.w  #9,d5
-loc_14488A:
-                move.l  (viewSquadFlags).l,d0
-                btst    d1,d0
-                beq.s   loc_14489E
-                move.w  #1,6(a5)
-                move.w  #1,d5
-loc_14489E:
-                move.l  (viewSquadMaskHi).l,d0
-                btst    d1,d0
-                beq.s   loc_1448AC
-                move.w  #$D,d5
-loc_1448AC:
-                tst.w   (viewSquadArg2).l
-                beq.s   loc_1448BA
-                move.w  #1,6(a5)
-loc_1448BA:
-                movea.l #0,a4
-                move.w  $16(a5),d7
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$508)).l,a0
-                bsr.w   BuildTransferPlayerMenuEntry
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$508)).l,a5
-                move.w  #$C,d0
-                jmp     DrawMultipleItems
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _ViewSquadAfterDrawCommon
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 ; TeamFile *
 squadTeamPtr:
                 dc.l $00000000
@@ -68216,40 +68127,22 @@ j_SetExitMenuFlag_10:
 ; ===== BuyOtherPlayersCommon =====
 ; prototype: __int16 __usercall BuyOtherPlayersCommon@<d0>()
 BuyOtherPlayersCommon:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                move.w  2(a5),d1
-                sub.w   2(a0),d1
-                movea.l (buyOtherPlayersTeamPtr).l,a0
-                jsr     GetPlayerInfoBreakPosition
-                move.w  teamOffering(pc),d0
-                jsr ShowPlayerOfferMenuForPlayer(pc)
-                tst.w   (transferCompleted).l
-                beq.s   loc_144B6A
-                jmp     SetExitMenuFlag
-loc_144B6A:
-                move.w  #2,d0
-                jsr     SetCurrentEntry
-                jmp     DrawMenu
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _BuyOtherPlayersCommon
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== BuyOtherPlayersAfterDrawCommon =====
 ; prototype: __int16 __usercall BuyOtherPlayersAfterDrawCommon@<d0>()
 BuyOtherPlayersAfterDrawCommon:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                move.w  2(a5),d6
-                sub.w   2(a0),d6
-                move.w  d6,d1
-                addq.w  #1,d6
-                movea.l (buyOtherPlayersTeamPtr).l,a0
-                jsr     GetPlayerInfoBreakPosition
-                movea.l a0,a6
-                clr.w   d5
-                movea.l #0,a4
-                move.w  $16(a5),d7
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$428)).l,a0
-                bsr.w   BuildTransferPlayerMenuEntry
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$428)).l,a5
-                move.w  #$C,d0
-                jmp     DrawMultipleItems
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _BuyOtherPlayersAfterDrawCommon
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 ; char *
 buyOtherPlayersTitlePtr:
                 dc.l $00000000          ; Pointer to title string for buy other domestic/foreign player menu.
@@ -68803,30 +68696,12 @@ positionGroupAttacker:
 ; ===== ShowPlayerMarketInit =====
 ; prototype: void __usercall ShowPlayerMarketInit()
 ShowPlayerMarketInit:
-                move.w  #$FFFF,(playerMarketFilterPosition).l
-                move.w  #$FFFF,(playerMarketFilterRatingIndex).l
-                move.w  #$FFFF,(playerMarketFilterAgeGroup).l
-                move.w  #6,(playerMarketFilterCountry).l
-                clr.w   (playerMarketTotalMatchCount).l
-                clr.w   (playerMarketVisibleItemCount).l
-                clr.w   (playerMarketListScrollOffset).l
-                bra.w   *+4
+                jmp     _ShowPlayerMarketInit
 
 ; ===== ShowPlayerMarket =====
-; prototype: void __usercall ShowPlayerMarket()
+; Ported to C: _ShowPlayerMarket in src/transfer_market.c
 ShowPlayerMarket:
-                lea     (aPlayersOnForei).l,a1 ; "PLAYERS ON FOREIGN MARKET"
-                tst.w   (showDomesticPlayerMarket).l
-                beq.s   loc_144EE0
-                lea     (aPlayersOnDomes).l,a1 ; "PLAYERS ON DOMESTIC MARKET"
-loc_144EE0:
-                lea     (menuEntries).l,a0
-                move.l  a1,menuEntries+MENUENTRY_FG-menuEntries(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                jsr     GetBankBalance
-                bsr.w   PlayerMarketUpdateFilterMenuEntryState
-                rts
+                jmp     _ShowPlayerMarket
 loc_144EFC:
                 addq.w  #1,(playerMarketFilterPosition).l
                 cmpi.w  #4,(playerMarketFilterPosition).l
@@ -68890,17 +68765,7 @@ loc_144FCA:
 ; ===== PlayerMarketUpdateMoreListLabel =====
 ; prototype: void __usercall PlayerMarketUpdateMoreListLabel()
 PlayerMarketUpdateMoreListLabel:
-                move.w  (playerMarketTotalMatchCount).l,d1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a0
-                move.w  (playerMarketListScrollOffset).l,d0
-                addi.w  #$A,d0
-                cmp.w   d1,d0
-                bcc.s   loc_145000
-                move.l  #aMore,$26(a0)  ; "MORE"
-                rts
-loc_145000:
-                move.l  #aList,$26(a0)  ; "LIST"
-                rts
+                jmp     _PlayerMarketUpdateMoreListLabel
 loc_14500A:
                 lea     (careerTeam).l,a0
                 lea     (aViewSquad).l,a1 ; "VIEW SQUAD"
@@ -68925,15 +68790,7 @@ loc_145042:
 ; ===== PlayerMarketResetListState =====
 ; prototype: void __usercall PlayerMarketResetListState()
 PlayerMarketResetListState:
-                tst.w   (playerMarketTotalMatchCount).l
-                beq.s   locret_14506C
-                clr.w   (playerMarketTotalMatchCount).l
-                clr.w   (playerMarketVisibleItemCount).l
-                clr.w   (playerMarketListScrollOffset).l
-                bsr.w   PlayerMarketUpdateMoreListLabel
-                jmp     DrawMenu
-locret_14506C:
-                rts
+                jmp     _PlayerMarketResetListState
 loc_14506E:
                 bsr.w   PlayerMarketUpdateFilterMenuEntryState
                 lea     (filterMenuRedrawList).l,a0
@@ -68946,25 +68803,7 @@ filterMenuRedrawList:
 ; ===== PlayerMarketUpdateFilterMenuEntryState =====
 ; prototype: void __usercall PlayerMarketUpdateFilterMenuEntryState()
 PlayerMarketUpdateFilterMenuEntryState:
-                tst.w   (playerMarketFilterPosition).l
-                beq.s   loc_1450AA
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #BRIGHT_BLUE_TO_BLUE_13,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                clr.w   MENUENTRY_ISDISABLED(a0)
-                rts
-loc_1450AA:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-                rts
+                jmp     _PlayerMarketUpdateFilterMenuEntryState
 loc_1450CA:
                 lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$230)).l,a0
                 move.w  2(a5),d0
@@ -69897,14 +69736,7 @@ transferMarketMenu:
 ; ===== TransferMarketInit =====
 ; prototype: void __usercall TransferMarketInit()
 TransferMarketInit:
-                clr.w   (transferCompleted).l
-                move.w  #$FFFF,(playerSelected).l
-                bsr.w   CheckNumPlayersOnTransferMarket
-                bsr.w   CheckForTransferOffers
-                bne.s   TransferMarketFinish
-                move.w  #3,d0
-                jsr     SetCurrentEntry
-                bra.w   *+4
+                jmp     _TransferMarketInit
 
 ; ===== TransferMarketFinish =====
 ; prototype: void __usercall TransferMarketFinish()
@@ -69921,20 +69753,7 @@ TransferMenuSetBankState:
 ; ===== BuyPlayerMenu =====
 ; prototype: void __usercall BuyPlayerMenu()
 BuyPlayerMenu:
-                bsr.w   GetRemainingTransferPoolSlots
-                cmpi.w  #2,d2
-                bcc.s   loc_1457E4
-                move.w  #CLUB_UNWILLING_TO_PURCHASE_PLAYERS,(currentMessage).l
-                jmp     ShowChairmanMessage
-loc_1457E4:
-                clr.w   (transferCompleted).l
-                lea     buyPlayerMenu(pc),a6
-                jsr     ShowMenu
-                cmpi.w  #1,(transferCompleted).l
-                beq.s   loc_145800
-                rts
-loc_145800:
-                jmp     SetExitMenuFlag
+                jmp     _BuyPlayerMenu
 
 ; ===== PutPlayerOnMarketMenu =====
 ; prototype: void __usercall PutPlayerOnMarketMenu()
@@ -69998,19 +69817,7 @@ ViewOffersMenu:
 ; ===== GiveFreeTransfer =====
 ; prototype: void __usercall GiveFreeTransfer()
 GiveFreeTransfer:
-                move.w  (playerSelected).l,d1
-                lea     (playersOnTransferMarket).l,a0
-                lsl.w   #1,d1
-                move.w  (a0,d1.w),d1
-                bsr.w   RemovePlayerFromTeam
-                move.w  #$FFFF,(playerSelected).l
-                bsr.w   CheckNumPlayersOnTransferMarket
-                bsr.w   CheckIfPlayerSelected
-                bsr.w   EnableDisableOffers
-                move.w  #6,d0
-                jsr     SetCurrentEntry
-                jmp     DrawMenu
-                rts
+                jmp     _GiveFreeTransfer
 
 ; ===== jmp_SetExitMenuFlag_8 =====
 ; prototype: void __usercall jmp_SetExitMenuFlag_8()
@@ -70020,43 +69827,16 @@ jmp_SetExitMenuFlag_8:
 ; ===== TakeOffMarketMenu =====
 ; prototype: void __usercall TakeOffMarketMenu()
 TakeOffMarketMenu:
-                move.w  (playerSelected).l,d1
-                lea     (playersOnTransferMarket).l,a0
-                lsl.w   #1,d1
-                move.w  (a0,d1.w),d1
-                bsr.w   RemovePlayerFromTransferMarket
-                move.w  #$FFFF,(playerSelected).l
-                bsr.w   CheckNumPlayersOnTransferMarket
-                bsr.w   CheckIfPlayerSelected
-                move.w  #6,d0
-                jsr     SetCurrentEntry
-                jmp     DrawMenu
+                jmp     _TakeOffMarketMenu
 
 ; ===== TransferMarketCommon =====
 ; prototype: void __usercall TransferMarketCommon()
 TransferMarketCommon:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1F8)).l,a0
-                move.w  2(a5),d7
-                sub.w   2(a0),d7
-                cmp.w   (playerSelected).l,d7
-                bne.s   loc_145962
-                move.w  #$FFFF,d7
-loc_145962:
-                move.w  (playerSelected).l,d0
-                move.w  d7,(playerSelected).l
-                tst.w   d0
-                bmi.s   loc_145988
-                addi.w  #9,d0
-                jsr     CalcMenuEntryAddress
+                movem.l d2-d7/a2-a6,-(sp)
                 move.l  a5,-(sp)
-                movea.l a0,a5
-                jsr     CallDrawMenuItem
-                movea.l (sp)+,a5
-loc_145988:
-                jsr     CallDrawMenuItem
-                bsr.w   CheckIfPlayerSelected
-                lea     (buyPlayerRedrawList).l,a0
-                jsr     DrawMenuItemsWaitForVSync
+                jsr     _TransferMarketCommon
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 ; __int16[3]
 buyPlayerRedrawList:
@@ -70066,88 +69846,27 @@ buyPlayerRedrawList:
 ; ===== CheckNumPlayersOnTransferMarket =====
 ; prototype: void __usercall CheckNumPlayersOnTransferMarket()
 CheckNumPlayersOnTransferMarket:
-                cmpi.w  #5,(numPlayersOnTransferMarket).l
-                bne.s   loc_1459B8
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$E0).l
-                bra.s   loc_1459BC
-loc_1459B8:
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$E0).l
-loc_1459BC:
-                tst.w   (numPlayersOnTransferMarket).l
-                bne.s   locret_1459CA
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1C0).l
-locret_1459CA:
-                rts
+                jmp     _CheckNumPlayersOnTransferMarket
 
 ; ===== CheckIfPlayerSelected =====
 ; prototype: void __usercall CheckIfPlayerSelected()
 CheckIfPlayerSelected:
-                tst.w   (playerSelected).l
-                bmi.s   loc_1459DE
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$118).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$188).l
-                rts
-loc_1459DE:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$118).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$188).l
-                rts
+                jmp     _CheckIfPlayerSelected
 
 ; ===== EnableDisableOffers =====
 ; prototype: void __usercall EnableDisableOffers()
 EnableDisableOffers:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a1
-                bsr.w   CheckForTransferOffers
-                bne.s   loc_145A02
-                move.w  MENUENTRY_STRINGFLAGS(a1),d0
-                bset    #$D,d0
-                move.w  d0,MENUENTRY_STRINGFLAGS(a1)
-loc_145A02:
-                tst.w   (numOffers).l
-                bne.s   locret_145A2C
-                move.l  #aNoOffers,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a1) ; "NO OFFERS" ...
-                move.w  #1,MENUENTRY_ISDISABLED(a1)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-locret_145A2C:
-                rts
+                jmp     _EnableDisableOffers
 
 ; ===== TransferMarketAfterDrawCommon =====
 ; prototype: void __usercall TransferMarketAfterDrawCommon()
 TransferMarketAfterDrawCommon:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1F8)).l,a0
-                move.w  2(a5),d6
-                sub.w   2(a0),d6
-                cmp.w   (numPlayersOnTransferMarket).l,d6
-                bcs.s   loc_145A50
-                move.w  #1,6(a5)
-                movea.l #0,a6
-                bra.s   loc_145A80
-loc_145A50:
-                clr.w   6(a5)
-                clr.w   d5
-                cmp.w   (playerSelected).l,d6
-                bne.s   loc_145A62
-                move.w  #$D,d5
-loc_145A62:
-                lea     (playersOnTransferMarket).l,a0
-                lsl.w   #1,d6
-                move.w  (a0,d6.w),d1
-                lsr.w   #1,d6
-                move.w  (selTeamNumber).l,d0
-                jsr     GetPlayer
-                movea.l a0,a6
-                addq.w  #1,d6
-loc_145A80:
-                move.w  $16(a5),d7
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$310)).l,a0
-                movea.l #0,a4
-                bsr.w   BuildTransferPlayerMenuEntry
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$310)).l,a5
-                move.w  #$C,d0
-                jmp     DrawMultipleItems
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _TransferMarketAfterDrawCommon
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 playerSelected:
                 dc.w $0000
 
@@ -70171,150 +69890,20 @@ FindTeamIdInDiyTeamsList:
 ; ===== BuildTransferPlayerMenuEntry =====
 ; prototype: void __usercall BuildTransferPlayerMenuEntry(struct MenuEntry *item@<a0>, void *player@<a6>, unsigned __int16 y@<d7>, unsigned __int16 idx@<d6>, unsigned __int16 style@<d5>, const char *extra@<a4>)
 BuildTransferPlayerMenuEntry:
-                cmpa.l  #0,a6
-                beq.w   loc_145D00
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                or.w    d5,d0
-                move.w  d0,$1E(a0)
-                move.w  d7,$16(a0)
-                clr.w   4(a0)
-                lea     $38(a0),a0
-                move.w  d7,$16(a0)
-                move.w  #1,4(a0)
-                move.w  d6,$26(a0)
-                bmi.s   loc_145B3A
-                clr.w   4(a0)
-loc_145B3A:
-                lea     $38(a0),a0
-                cmpi.b  #$FF,$4F(a6)
-                bne.s   loc_145B4E
-                move.w  #9,d0
-                bra.w   loc_145D04
-loc_145B4E:
-                move.b  $66(a6),d6
-                jsr     SetSquadMenuEntryStatusSprite_AfterSim
-                move.w  d7,$16(a0)
-                clr.w   4(a0)
-                lea     $38(a0),a0
-                movea.l a0,a2
-                move.w  #$10,d1
-                cmpa.l  #0,a4
-                beq.s   loc_145B80
-                movea.l a4,a0
-                jsr     GetStringLength
-                move.w  #$10,d1
-                sub.w   d0,d1
-loc_145B80:
-                move.w  #$D,d0
-                add.w   d1,d0
-                lea     $4F(a6),a0
-                movem.l d6-d7/a2/a4/a6,-(sp)
-                jsr     ExtractSurname
-                movem.l (sp)+,d6-d7/a2/a4/a6
-                exg     a0,a2
-                move.l  a2,$26(a0)
-                move.w  d7,$16(a0)
-                clr.w   4(a0)
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                cmpa.l  #0,a4
-                beq.s   loc_145BD6
-                movea.l $26(a0),a1
-                move.b  #$28,(a1)+      ; '('
-                movea.l a0,a2
-                movea.l a4,a0
-                jsr     StringCopy
-                movea.l a2,a0
-                move.b  #$29,(a1)+      ; ')'
-                clr.b   (a1)
-                clr.w   4(a0)
-loc_145BD6:
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                lea     (playerPositionsStringTable).l,a2
-                move.b  $66(a6),d0
-                andi.w  #$E0,d0
-                lsr.w   #3,d0
-                move.l  (a2,d0.w),$26(a0)
-                move.w  d7,$16(a0)
-                clr.w   4(a0)
-                lea     $38(a0),a0
-                movea.l $26(a0),a1
-                jsr     FormTopSkillsString
-                move.w  d7,$16(a0)
-                clr.w   4(a0)
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                move.w  #1,4(a0)
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                movea.l $26(a0),a1
-                move.b  $4C(a6),d0
-                andi.w  #$FF,d0
-                move.w  d0,d1
-                add.w   d1,d0
-                add.w   d1,d0
-                lea     (shortCountryNames).l,a2 ; "ALBAUTBELBULCROCYPTCHDENENGESTFARFINFRA"...
-                lea     (a2,d0.w),a2
-                move.b  #$28,(a1)+      ; '('
-                move.b  (a2)+,(a1)+
-                move.b  (a2)+,(a1)+
-                move.b  (a2)+,(a1)+
-                move.b  #$29,(a1)+      ; ')'
-                clr.b   (a1)
-                move.w  d7,$16(a0)
-                clr.w   4(a0)
-                lea     $38(a0),a0
-                movem.l a0,-(sp)
-                tst.w   (isNationalSelector).l
-                beq.s   loc_145CA2
-                tst.w   (viewFutureTeamModeFlag).l
-                bne.s   loc_145CA2
-                movea.l a0,a1
-                movea.l a6,a0
-                jsr     InitPlayerValueDisplayStruct
-                movem.l (sp)+,a0
-                bra.s   loc_145CBC
-loc_145CA2:
-                lea     (fundsBuffer).l,a1
-                movea.l a6,a0
-                jsr     FormatPlayerValueOrStatusText
-                movem.l (sp)+,a0
-                move.l  #fundsBuffer,$26(a0)
-loc_145CBC:
-                move.w  d7,$16(a0)
-                clr.w   4(a0)
-                move.w  #$D,d1
-                cmpi.b  #$9B,$71(a6)
-                beq.s   loc_145CEC
-                move.w  #1,d1
-                cmpi.b  #$9A,$71(a6)
-                beq.s   loc_145CEC
-                move.w  #2,d1
-                btst    #1,$66(a6)
-                beq.s   loc_145CEC
-                move.w  #$F,d1
-loc_145CEC:
-                move.w  $24(a0),d0
-                andi.w  #$FFF0,d0
-                or.w    d1,d0
-                move.w  d0,$24(a0)
-                lea     $38(a0),a0
-                rts
-loc_145D00:
-                move.w  #$B,d0
-loc_145D04:
-                move.w  #1,4(a0)
-                move.w  d7,$16(a0)
-                adda.l  #$38,a0         ; '8'
-                dbf     d0,loc_145D04
+; Register bridge: a0=item, a6=player, d7=y, d6=idx, d5=style, a4=extra
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a4,-(sp)        ; extra
+                andi.l  #$FFFF,d5
+                move.l  d5,-(sp)        ; style
+                andi.l  #$FFFF,d6
+                move.l  d6,-(sp)        ; idx (sign-extended to 32-bit)
+                andi.l  #$FFFF,d7
+                move.l  d7,-(sp)        ; y
+                move.l  a6,-(sp)        ; player
+                move.l  a0,-(sp)        ; item
+                jsr     _BuildTransferPlayerMenuEntry
+                lea     24(sp),sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 viewFutureTeamModeFlag:
                 dc.w $0000

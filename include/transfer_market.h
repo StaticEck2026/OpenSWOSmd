@@ -104,4 +104,30 @@ void _BuyOtherPlayersFinish(void);
 /* --- View Offers menu (Chunk 161) --- */
 void _ViewOffersMenu(void);
 
+/* --- Transfer Market menu helpers (Chunk 162) --- */
+void _CheckNumPlayersOnTransferMarket(void);
+void _CheckIfPlayerSelected(void);
+void _EnableDisableOffers(void);
+void _TransferMarketInit(void);
+void _BuyPlayerMenu(void);
+void _GiveFreeTransfer(void);
+void _TakeOffMarketMenu(void);
+void _TransferMarketCommon(void *entry);
+
+/* --- BuildTransferPlayerMenuEntry (Chunk 163) --- */
+void _BuildTransferPlayerMenuEntry(void *item, uint8_t *player,
+                                    uint16_t y, int16_t idx,
+                                    uint16_t style, uint8_t *extra);
+void _TransferMarketAfterDrawCommon(void *entry);
+
+/* --- ShowPlayerOfferMenuForPlayer + market helpers (Chunk 163 cont.) --- */
+void _ShowPlayerOfferMenuForPlayer(uint16_t teamNumber, uint16_t playerOrdinal);
+void _ShowPlayerMarketInit(void);
+void _ShowPlayerMarket(void);
+void _PlayerMarketUpdateFilterMenuEntryState(void);
+void _PlayerMarketUpdateMoreListLabel(void);
+void _PlayerMarketResetListState(void);
+void _BuyOtherPlayersCommon(void *entry);
+void _BuyOtherPlayersAfterDrawCommon(void *entry);
+
 #endif

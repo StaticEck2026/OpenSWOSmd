@@ -4315,3 +4315,128 @@ void _RandomlySwapTeams(void)
         b[i] = tmp;
     }
 }
+
+/* ================================================================
+ * Chunk 163: ViewSquad Init/Common/AfterDraw
+ * ================================================================ */
+
+extern uint32_t viewSquadTitle;
+extern uint32_t viewSquadFlags;
+extern uint32_t viewSquadMaskLo;
+extern uint32_t viewSquadMaskHi;
+extern uint16_t viewSquadArg2;
+extern uint16_t viewSquadArg3;
+extern uint16_t viewSquadSelectedTeam;
+
+extern uint8_t *_GetPlayerInfoBreakPosition(uint8_t *teamPtr, uint16_t requestedSlot,
+                                              uint16_t *outSlot, uint16_t *outPlayerIndex);
+extern void _BuildTransferPlayerMenuEntry(void *item, uint8_t *player,
+                                           uint16_t y, int16_t idx,
+                                           uint16_t style, uint8_t *extra);
+
+/* ViewSquadInit (Chunk 163)
+ * Initializes view squad menu: shows/hides entries based on roster size,
+ * sets title/team name, handles pre-selection. */
+__attribute__((used, externally_visible))
+void _ViewSquadInit(void)
+{
+    uint16_t teamNum = selTeamNumber;
+    if (teamNum != 0xFFFF) {
+        uint8_t *teamPtr = (uint8_t *)squadTeamPtr;
+        if (teamNum == *(uint16_t *)teamPtr) {
+            if (careerNumPlayers != 16) {
+                goto skipEntryShow;
+            }
+            menuEntries[20].isInvisible = 0; /* 0x460/56 = 20 */
+            if (careerNumPlayers > 17) {
+                menuEntries[21].isInvisible = 0; /* 0x498/56 = 21 */
+            }
+        }
+    }
+skipEntryShow:
+
+    menuEntries[0].fg = viewSquadTitle;
+    uint8_t *teamPtr2 = (uint8_t *)squadTeamPtr;
+    menuEntries[1].fg = (uint32_t)(teamPtr2 + 5);
+
+    if (viewSquadArg2) {
+        menuEntries[2].isInvisible = 1;  /* 0x70/56 = 2 */
+        menuEntries[3].isInvisible = 0;  /* 0xA8/56 = 3 */
+        _SetCurrentEntry(3);
+    }
+
+    int16_t arg3 = (int16_t)viewSquadArg3;
+    if (arg3 < 0)
+        return;
+
+    if ((uint16_t)arg3 < 16) {
+        _SetCurrentEntry((uint16_t)arg3 + 4);
+    } else {
+        _SetCurrentEntry(20);
+    }
+}
+
+/* ViewSquadCommon (Chunk 163)
+ * a5 = current menu entry. Computes selected player/team, exits menu. */
+__attribute__((used, externally_visible))
+void _ViewSquadCommon(void *entryPtr)
+{
+    MenuEntry *a5 = (MenuEntry *)entryPtr;
+    MenuEntry *entry4 = &menuEntries[4]; /* 0xE0/56 = 4 */
+    uint16_t relIdx = a5->ordinal - entry4->ordinal;
+    viewSquadSelectedTeam = relIdx;
+
+    uint16_t outSlot, outPlayerIndex;
+    _GetPlayerInfoBreakPosition((uint8_t *)squadTeamPtr, relIdx,
+                                 &outSlot, &outPlayerIndex);
+    viewSquadSelectedPlayer = outPlayerIndex;
+    _SetExitMenuFlag();
+}
+
+/* ViewSquadAfterDrawCommon (Chunk 163)
+ * a5 = current menu entry. Draws transfer-style player entry with
+ * selection/flag masks overlaid. */
+__attribute__((used, externally_visible))
+void _ViewSquadAfterDrawCommon(void *entryPtr)
+{
+    MenuEntry *a5 = (MenuEntry *)entryPtr;
+    MenuEntry *entry4 = &menuEntries[4]; /* 0xE0/56 = 4 */
+    uint16_t d6 = a5->ordinal - entry4->ordinal;
+    uint16_t d1 = d6;
+    d6++;
+
+    /* Special case: slot 16 (entry index 16 relative) → set d6 = 0xFFFF */
+    if (d1 == 0x10)
+        d6 = 0xFFFF;
+
+    uint16_t outSlot, outPlayerIndex;
+    uint8_t *player = _GetPlayerInfoBreakPosition(
+        (uint8_t *)squadTeamPtr, d1, &outSlot, &outPlayerIndex);
+
+    uint16_t style = 0;
+    a5->isDisabled = 0;
+
+    /* Check viewSquadMaskLo */
+    if (viewSquadMaskLo & (1u << d1)) {
+        a5->isDisabled = 1;
+        style = 9;
+    }
+    /* Check viewSquadFlags — overrides maskLo */
+    if (viewSquadFlags & (1u << d1)) {
+        a5->isDisabled = 1;
+        style = 1;
+    }
+    /* Check viewSquadMaskHi */
+    if (viewSquadMaskHi & (1u << d1)) {
+        style = 0xD;
+    }
+    /* viewSquadArg2 forces disabled */
+    if (viewSquadArg2) {
+        a5->isDisabled = 1;
+    }
+
+    uint16_t yCoord = a5->y;
+    _BuildTransferPlayerMenuEntry(&menuEntries[23], player, yCoord,
+                                   (int16_t)d6, style, 0);
+    _DrawMultipleItems(12, &menuEntries[23]);
+}

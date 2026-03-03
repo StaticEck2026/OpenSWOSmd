@@ -2869,6 +2869,46 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1399 functions across 161 chunks
 
+### Chunk 162 — Transfer Market Menu Helpers (8 → transfer_market.c)
+- Date: 2026-03-02
+- Ported:
+  1. CheckNumPlayersOnTransferMarket (→transfer_market.c) — hides/shows menu entries based on transfer market count (5 max, 0 min)
+  2. CheckIfPlayerSelected (→transfer_market.c) — shows/hides entries 5,7 based on playerSelected state
+  3. EnableDisableOffers (→transfer_market.c) — checks for transfer offers, disables/grays out entry 3 if no offers
+  4. TransferMarketInit (→transfer_market.c) — clears state, calls CheckNum/CheckOffers, falls through to TransferMarketFinish
+  5. BuyPlayerMenu (→transfer_market.c) — checks slots >= 2, shows buy player menu, exits if transfer completed
+  6. GiveFreeTransfer (→transfer_market.c) — removes selected player from team, resets selection
+  7. TakeOffMarketMenu (→transfer_market.c) — removes selected player from transfer market list
+  8. TransferMarketCommon (→transfer_market.c) — toggles player selection, redraws entries (a5 register bridge)
+- Static helpers: checkNumPlayersOnTransferMarket(), checkIfPlayerSelected() (used internally by multiple functions)
+- Stubs: 5 as jmp, TransferMarketCommon as register bridge (a5→stack), 2 as jmp
+- New xrefs: 8 C functions
+- New xdefs: playerSelected, buyPlayerMenu, buyPlayerRedrawList
+- Build status: **verified** (clean build, only pre-existing warnings)
+- Cumulative: 1407 functions across 162 chunks
+
+### Chunk 163 — Transfer/Squad/PlayerMarket Helpers (13 → transfer_market.c, menus.c)
+- Date: 2026-03-02
+- Ported:
+  1. BuildTransferPlayerMenuEntry (→transfer_market.c) — populates 12 consecutive MenuEntry structs for a transfer player row (6-param register bridge: a0,a6,d7,d6,d5,a4)
+  2. TransferMarketAfterDrawCommon (→transfer_market.c) — computes player index from entry ordinal, calls BuildTransferPlayerMenuEntry + DrawMultipleItems (a5 bridge)
+  3. ShowPlayerOfferMenuForPlayer (→transfer_market.c) — init offer state, compute affordable amount, show playerOffersMenu (d0+d1 bridge)
+  4. ShowPlayerMarketInit (→transfer_market.c) — reset 7 filter/list variables
+  5. ShowPlayerMarket (→transfer_market.c) — set title string, update balance, call PlayerMarketUpdateFilterMenuEntryState
+  6. PlayerMarketUpdateFilterMenuEntryState (→transfer_market.c) — update menuEntries[6] color and disabled state based on position filter
+  7. PlayerMarketUpdateMoreListLabel (→transfer_market.c) — set menuEntries[7].fg to "MORE" or "LIST" based on scroll state
+  8. PlayerMarketResetListState (→transfer_market.c) — clear list state, update label, redraw menu
+  9. BuyOtherPlayersCommon (→transfer_market.c) — get player from team, show offer menu (a5 bridge)
+  10. BuyOtherPlayersAfterDrawCommon (→transfer_market.c) — get player, call BuildTransferPlayerMenuEntry at menuEntries[19] (a5 bridge)
+  11. ViewSquadInit (→menus.c) — init view squad menu: show/hide entries based on roster size, set title/team name, handle pre-selection
+  12. ViewSquadCommon (→menus.c) — compute selected player/team from entry ordinal, exit menu (a5 bridge)
+  13. ViewSquadAfterDrawCommon (→menus.c) — draw player entry with selection/flag masks overlaid (a5 bridge)
+- Stubs: 5 jmp, 6 register bridges (3×a5, 1×d0+d1, 1×6-param, 1×a5)
+- New xrefs: 13 C functions
+- New xdefs: playerOffersMenu, aPlayersOnForei, aPlayersOnDomes, aMore, aList, playerMarketFilter*, playerMarketTotal*, playerMarketVisible*, playerMarketList*, viewSquadTitle, viewSquadFlags, viewSquadMask*, viewSquadArg*, viewSquadSelectedTeam
+- Build status: **verified** (clean build)
+- Cumulative: 1420 functions across 163 chunks
+
 ### Chunk 147 — BuyOtherPlayers Init/Finish + Pitch/Season Menu Callbacks (5 → transfer_market.c, menus.c)
 - Date: 2026-03-02
 - Ported:
@@ -3155,5 +3195,10 @@ Update this section every time you port a chunk. Keep it chronological.
 | 153   | 3         | 1376       |
 | 154   | 2         | 1378       |
 | 155   | 2         | 1380       |
+| 156-159 | 13      | 1393       |
+| 160   | 0d        | 1393       |
+| 161   | 6         | 1399       |
+| 162   | 8         | 1407       |
+| 163   | 13        | 1420       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)
