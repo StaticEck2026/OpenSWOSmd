@@ -71,6 +71,12 @@ extern uint32_t extensionsBuffer[];
 extern uint16_t savingFile;
 extern uint8_t selectFilesMenu[];
 extern uint8_t selectedFilename[];
+extern uint16_t selFilesColumn1NumItems;
+extern uint16_t selFilesColumn2NumItems;
+extern uint16_t selFilesColumn3NumItems;
+extern uint16_t selFilesColumnStartY;
+extern uint16_t selFilesColumnEndY;
+extern MenuEntry menuEntries[];
 
 /* ---- External asm functions (C-callable bridges in swos2_unit.s) ---- */
 extern int16_t _CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param, void *name, void *dest, uint32_t *outFileSize);
@@ -964,4 +970,108 @@ int16_t _GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename
         return 0; /* file selected */
 
     return 1; /* no selection */
+}
+
+/* ---- Chunk 140: File Selection Helpers ---- */
+
+/* Extern: string copy utility */
+extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
+
+/* Copy filename to selectedFilename, extract 3-char extension into packed uint32_t,
+   and signal menu exit. Extension is packed as: '.', c1, c2, c3 (big-endian). */
+static void _CopyFilenameExtensionAndSetExitMenuFlag(uint8_t *filename) {
+    _StringCopy(filename, selectedFilename);
+    /* Scan for '.' in the copied filename */
+    uint8_t *p = selectedFilename;
+    while (*p++ != '.')
+        ;
+    /* Build packed 4-byte extension: '.', char1, char2, char3 */
+    uint32_t ext = '.';
+    ext = (ext << 8) | *p++;
+    ext = (ext << 8) | *p++;
+    ext = (ext << 8) | *p++;
+    extension = ext;
+    _SetExitMenuFlag();
+}
+
+/* Menu callback: select the save filename and exit the menu. */
+__attribute__((used, externally_visible))
+void _SelectFilenameToSaveAndExit(void) {
+    _CopyFilenameExtensionAndSetExitMenuFlag(inputSaveFilename);
+}
+
+/* Append the stored extension to filename, copy to selectedFilename, and signal menu exit.
+   Called from asm SelectFilesInputSaveFilenameOnSelect when user enters a name. */
+__attribute__((used, externally_visible))
+void _AddExtension(uint8_t *filename) {
+    uint8_t *p = _StringCopy(filename, selectedFilename);
+    /* _StringCopy returns pointer to null terminator; overwrite with extension bytes */
+    uint8_t *ext = (uint8_t *)&extension;
+    *p++ = ext[0]; /* '.' */
+    *p++ = ext[1];
+    *p++ = ext[2];
+    *p++ = ext[3];
+    *p = 0;
+    _SetExitMenuFlag();
+}
+
+/* Menu onSelect callback: compute file index from entry ordinal (3-column layout)
+   and select that file. */
+__attribute__((used, externally_visible))
+void _SelFilesOnSelectCommon(MenuEntry *entry) {
+    uint16_t idx = entry->ordinal;
+    idx -= 1;
+    if (idx >= 30) {
+        idx -= 15;
+        idx += selFilesColumn2NumItems;
+    }
+    if (idx >= 15) {
+        idx -= 15;
+        idx += selFilesColumn1NumItems;
+    }
+    uint8_t *filename = (uint8_t *)foundFilesPtrTable[idx];
+    _CopyFilenameExtensionAndSetExitMenuFlag(filename);
+}
+
+/* Reposition file list menu entries: find max column height, center vertically,
+   and assign Y positions for 3 columns × 15 entries each. */
+__attribute__((used, externally_visible))
+void _RepositionSelectFileEntries(void) {
+    /* Find maximum items across all 3 columns */
+    uint16_t maxItems = selFilesColumn1NumItems;
+    if (selFilesColumn2NumItems > maxItems)
+        maxItems = selFilesColumn2NumItems;
+    if (selFilesColumn3NumItems > maxItems)
+        maxItems = selFilesColumn3NumItems;
+
+    /* Column start Y: entry[0].y, plus height if entry[0] is visible */
+    uint16_t startY = menuEntries[0].y;
+    if (!menuEntries[0].isInvisible)
+        startY += menuEntries[0].dwHeight;
+    selFilesColumnStartY = startY;
+
+    /* Column end Y: from entry[48] if saving, entry[50] otherwise */
+    if (savingFile)
+        selFilesColumnEndY = menuEntries[48].y;
+    else
+        selFilesColumnEndY = menuEntries[50].y;
+
+    /* Calculate centered Y start */
+    uint16_t totalHeight = maxItems * 9;
+    uint16_t availableHeight = selFilesColumnEndY - selFilesColumnStartY;
+    uint16_t yOffset = (uint16_t)(availableHeight - totalHeight) >> 1;
+    uint16_t colStartY = selFilesColumnStartY + yOffset;
+
+    /* Position entries: 3 columns × 15 entries, starting at menuEntries[1] */
+    MenuEntry *e = &menuEntries[1];
+    uint16_t col;
+    for (col = 0; col < 3; col++) {
+        uint16_t y = colStartY;
+        uint16_t row;
+        for (row = 0; row < 15; row++) {
+            e->y = y;
+            y += 9;
+            e++;
+        }
+    }
 }

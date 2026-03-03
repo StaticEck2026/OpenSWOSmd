@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1298 functions ported across 139 chunks.
+**Current status:** 1303 functions ported across 140 chunks.
 
-**Last completed chunk:** Chunk 139 — Team Selection Type Handlers + League/Country Names (7 → menus.c): ClubTeams, NationalTeams, OriginalCustomTeams, EditedCustomTeams, ExitChooseTeams, SetLeagueNames, SetCountryNames.
+**Last completed chunk:** Chunk 140 — File Selection Helpers (4+1s → file_io.c): SelectFilenameToSaveAndExit, AddExtension, SelFilesOnSelectCommon, RepositionSelectFileEntries, CopyFilenameExtensionAndSetExitMenuFlag(static).
 
-**Next candidates:** Simple flag-setters (SelectFilenameToSaveAndExit, StatsViewSquads, SetMenuEntryPlayerFace), file selection functions, Career_FillCurrentSeasonInfo + EncodeCompetitionPositionForSeasonInfo, ChooseTeamsDialog, InitCareer.
+**Next candidates:** GetCompetitionAbbrevStr, SetupDIYCompetitionStatsMenu, Career_FillCurrentSeasonInfo + EncodeCompetitionPositionForSeasonInfo, ChooseTeamsDialog, InitCareer.
 
 ---
 

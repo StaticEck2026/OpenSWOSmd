@@ -64028,10 +64028,9 @@ loc_1403FA:
                 rts
 
 ; ===== SelectFilenameToSaveAndExit =====
-; prototype: void __usercall SelectFilenameToSaveAndExit()
+; Ported to C: _SelectFilenameToSaveAndExit in src/file_io.c
 SelectFilenameToSaveAndExit:
-                lea     (inputSaveFilename).l,a0
-                bra.w   CopyFilenameExtensionAndSetExitMenuFlag
+                jmp     _SelectFilenameToSaveAndExit
 
 ; ===== AbortSaveFile =====
 ; Ported to C: _AbortSaveFile in src/menus.c
@@ -64074,104 +64073,34 @@ locret_1404A8:
                 rts
 
 ; ===== SelFilesOnSelectCommon =====
-; prototype: void __usercall SelFilesOnSelectCommon(struct MenuEntry *entry@<a5>)
+; Ported to C: _SelFilesOnSelectCommon in src/file_io.c
 SelFilesOnSelectCommon:
-                move.w  MENUENTRY_ORDINAL(a5),d0
-                subq.w  #1,d0
-                cmpi.w  #15,d0
-                bcs.s   loc_1404D0
-                cmpi.w  #30,d0
-                bcs.s   loc_1404C6
-                subi.w  #15,d0
-                add.w   (selFilesColumn2NumItems).l,d0
-loc_1404C6:
-                subi.w  #$F,d0
-                add.w   (selFilesColumn1NumItems).l,d0
-loc_1404D0:
-                lsl.w   #2,d0
-                lea     (foundFilesPtrTable).l,a0
-                movea.l (a0,d0.w),a0
-                bra.w   CopyFilenameExtensionAndSetExitMenuFlag
+                move.l  a5,-(sp)
+                jsr     _SelFilesOnSelectCommon
+                addq.l  #4,sp
+                rts
 
 ; ===== RepositionSelectFileEntries =====
-; prototype: void __usercall RepositionSelectFileEntries()
+; Ported to C: _RepositionSelectFileEntries in src/file_io.c
 RepositionSelectFileEntries:
-                move.w  (selFilesColumn1NumItems).l,d1
-                cmp.w   (selFilesColumn2NumItems).l,d1
-                bhi.s   loc_1404F4
-                move.w  (selFilesColumn2NumItems).l,d1
-loc_1404F4:
-                cmp.w   (selFilesColumn3NumItems).l,d1
-                bhi.s   loc_140502
-                move.w  (selFilesColumn3NumItems).l,d1
-loc_140502:
-                lea     (menuEntries).l,a0
-                move.w  MENUENTRY_Y(a0),d0
-                tst.w   MENUENTRY_ISINVISIBLE(a0)
-                bne.s   loc_140514
-                add.w   MENUENTRY_DWHEIGHT(a0),d0
-loc_140514:
-                move.w  d0,(selFilesColumnStartY).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A80)).l,a0
-                tst.w   (savingFile).l
-                bne.s   loc_14052A
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$AF0)).l,a0
-loc_14052A:
-                move.w  MENUENTRY_Y(a0),(selFilesColumnEndY).l
-                move.w  d1,d0
-                mulu.w  #9,d0
-                move.w  (selFilesColumnEndY).l,d1
-                sub.w   (selFilesColumnStartY).l,d1
-                sub.w   d0,d1
-                lsr.w   #1,d1
-                add.w   (selFilesColumnStartY).l,d1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                move.w  #2,d2
-loc_140556:
-                move.w  d1,d0
-                move.w  #14,d3
-loc_14055C:
-                move.w  d0,MENUENTRY_Y(a0)
-                addi.w  #9,d0
-                lea     MENUENTRY_SIZE+MENUENTRY_ALREADYDRAWN(a0),a0
-                dbf     d3,loc_14055C
-                dbf     d2,loc_140556
+                movem.l d0-d7/a0-a6,-(sp)
+                jsr     _RepositionSelectFileEntries
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
 ; ===== CopyFilenameExtensionAndSetExitMenuFlag =====
-; prototype: void __usercall CopyFilenameExtensionAndSetExitMenuFlag(const char *selectedFilename@<a0>)
-; in:
-;     A0 -> selected filename
+; Ported to C: static _CopyFilenameExtensionAndSetExitMenuFlag in src/file_io.c
+; Dead code — all asm callers ported. Keep stub for safety.
 CopyFilenameExtensionAndSetExitMenuFlag:
-                lea     (selectedFilename).l,a1
-                jsr     StringCopy
-                lea     (selectedFilename).l,a0
-loc_140584:
-                cmpi.b  #'.',(a0)+
-                bne.s   loc_140584
-                move.w  #2,d1
-                moveq   #'.',d0
-loc_140590:
-                lsl.l   #8,d0
-                move.b  (a0)+,d0
-                dbf     d1,loc_140590
-                move.l  d0,(extension).l
-                jmp     SetExitMenuFlag
+                rts
 
 ; ===== AddExtension =====
-; prototype: void __usercall AddExtension(const char *filename@<a0>)
-; in:
-;     A0 -> filename string
+; Ported to C: _AddExtension in src/file_io.c
 AddExtension:
-                lea     (selectedFilename).l,a1
-                jsr     StringCopy
-                lea     (extension).l,a0
-                move.b  (a0)+,(a1)+
-                move.b  (a0)+,(a1)+
-                move.b  (a0)+,(a1)+
-                move.b  (a0)+,(a1)+
-                clr.b   (a1)
-                jmp     SetExitMenuFlag
+                move.l  a0,-(sp)
+                jsr     _AddExtension
+                addq.l  #4,sp
+                rts
 totalNumberOfFiles:
                 dc.w $0000              ; Total number of files in game directory
 savingFile:

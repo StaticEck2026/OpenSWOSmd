@@ -32,4 +32,9 @@ void _ExitDisk(void);
 int16_t _SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename, uint8_t *menuTitleStr);
 int16_t _GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename, uint8_t *menuTitleStr);
 
+/* ---- File Selection Helpers (Chunk 140) ---- */
+void _SelectFilenameToSaveAndExit(void);
+void _AddExtension(uint8_t *filename);
+void _RepositionSelectFileEntries(void);
+
 #endif

@@ -1002,6 +1002,12 @@
         xdef    savingFile
         xdef    selectFilesMenu
         xdef    selectedFilename
+; --- Chunk 140 xdefs ---
+        xdef    selFilesColumn1NumItems
+        xdef    selFilesColumn2NumItems
+        xdef    selFilesColumn3NumItems
+        xdef    selFilesColumnStartY
+        xdef    selFilesColumnEndY
         xdef    pendingSampleId3_4
         xdef    crowdChantsOn
         xdef    lastKickSampleTick
@@ -2783,6 +2789,11 @@
         xref    _ExitChooseTeams
         xref    _SetLeagueNames
         xref    _SetCountryNames
+; --- Chunk 140 xrefs ---
+        xref    _SelectFilenameToSaveAndExit
+        xref    _AddExtension
+        xref    _SelFilesOnSelectCommon
+        xref    _RepositionSelectFileEntries
 ; --- Chunk 138 xrefs ---
         xref    _FillManagementRecordInfo
 ; --- Chunk 137 xrefs ---

@@ -2692,6 +2692,17 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, no new warnings)
 - Cumulative: 1280 functions across 136 chunks
 
+### Chunk 140 — File Selection Helpers (4+1s → file_io.c)
+- Date: 2026-03-02
+- Ported: SelectFilenameToSaveAndExit, AddExtension, SelFilesOnSelectCommon, RepositionSelectFileEntries (exported), CopyFilenameExtensionAndSetExitMenuFlag (static)
+- jmp stubs: SelectFilenameToSaveAndExit
+- Register bridges: SelFilesOnSelectCommon (a5→stack), AddExtension (a0→stack), RepositionSelectFileEntries (save/restore all)
+- Dead asm stub: CopyFilenameExtensionAndSetExitMenuFlag→rts (all asm callers ported)
+- New xdefs: selFilesColumn1NumItems, selFilesColumn2NumItems, selFilesColumn3NumItems, selFilesColumnStartY, selFilesColumnEndY
+- Key note: asm StringCopy stub sets a1=d0 (return from _StringCopy), so a1 points AT null (not past it). AddExtension correctly overwrites null with extension.
+- Build status: **verified** (clean build, no new warnings)
+- Cumulative: 1303 functions across 140 chunks
+
 ### Chunk 139 — Team Selection Type Handlers + League/Country Names (7 → menus.c)
 - Date: 2026-03-02
 - Ported: ClubTeams, NationalTeams, OriginalCustomTeams, EditedCustomTeams, ExitChooseTeams, SetLeagueNames, SetCountryNames — all to menus.c
@@ -2873,5 +2884,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 137   | 6+1s      | 1287       |
 | 138   | 1+3s      | 1291       |
 | 139   | 7         | 1298       |
+| 140   | 4+1s      | 1303       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)
