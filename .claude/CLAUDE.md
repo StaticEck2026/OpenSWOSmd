@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1319 functions ported across 145 chunks.
+**Current status:** 1322 functions ported across 146 chunks.
 
-**Last completed chunk:** Chunk 145 — Player Offers Menu Helpers + GetCompetitionAbbrevStr (4+1d → transfer_market.c, career_season.c).
+**Last completed chunk:** Chunk 146 — Offer Expiry + Random Transfer Offers (3 → transfer_market.c).
 
-**Next candidates:** DesignDIYCup helpers (AppendTeamName etc.), ProcessOfferExpiryCountdown + UpdateAndExpireTransferOffers, PlayerOffersOnSelect8/10, PlayerOffersAfterDrawCommon, Career update functions.
+**Next candidates:** CreateRandomTransferOfferForPlayer (large, ~100 instr), PlayerOffersOnSelect8/10/12 + PlayerOffersAdjustOfferAmount + PlayerOffersAfterDrawCommon, EvaluateTransferOfferNegotiation, Career_AcceptOffer_BuyPlayer, BuildTransferPlayerMenuEntry.
 
 ---
 

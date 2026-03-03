@@ -92,4 +92,9 @@ void _PlayerOffersUpdateOfferAmountText(void);
 void _UpdatePlayerOfferMenuIndicators(void);
 void _PlayerOffersInit(void);
 
+/* --- Offer expiry & random offers (Chunk 146) --- */
+void _GenerateRandomTransferOffers(void);
+void _UpdateAndExpireTransferOffers(void);
+void _ProcessOfferExpiryCountdown(void);
+
 #endif

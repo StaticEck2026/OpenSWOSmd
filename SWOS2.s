@@ -71714,80 +71714,29 @@ viewFutureTeamModeFlag:
                 dc.w $0000
 
 ; ===== ProcessOfferExpiryCountdown =====
-; prototype: void __usercall ProcessOfferExpiryCountdown()
+; Ported to C: _ProcessOfferExpiryCountdown in src/transfer_market.c
 ProcessOfferExpiryCountdown:
-                tst.w   (isNationalSelector).l
-                bne.w   locret_145DEE
-                tst.w   (offerExpiryIterationsRemaining).l
-                beq.w   locret_145DEE
-                subq.w  #1,(offerExpiryIterationsRemaining).l
-                bsr.s   UpdateAndExpireTransferOffers
-                bra.s   ProcessOfferExpiryCountdown
+                jmp     _ProcessOfferExpiryCountdown
 
 ; ===== UpdateAndExpireTransferOffers =====
-; prototype: void __usercall UpdateAndExpireTransferOffers()
+; Ported to C: _UpdateAndExpireTransferOffers in src/transfer_market.c
 UpdateAndExpireTransferOffers:
-                bsr.w   GetRemainingOfferSwapSlots
-                beq.w   locret_145DEE
-                tst.w   (numOffers).l
-                beq.s   loc_145D6E
-                lea     (transferOfferTable).l,a1
-                clr.w   d2
-loc_145D52:
-                subq.b  #1,$C(a1)
-                bne.s   loc_145D60
-                move.w  d2,d0
-                bsr.w   RemoveTransferOfferAtIndex
-                bra.s   loc_145D66
-loc_145D60:
-                lea     $E(a1),a1
-                addq.w  #1,d2
-loc_145D66:
-                cmp.w   (numOffers).l,d2
-                bne.s   loc_145D52
-loc_145D6E:
-                bsr.w   *+4
+                jmp     _UpdateAndExpireTransferOffers
 
 ; ===== GenerateRandomTransferOffers =====
-; prototype: void __usercall GenerateRandomTransferOffers()
+; Ported to C: _GenerateRandomTransferOffers in src/transfer_market.c
 GenerateRandomTransferOffers:
-                jsr     Rand2
-                mulu.w  (careerNumPlayers).l,d0
-                lsr.w   #8,d0
-                move.w  d0,d7
-                move.w  (careerNumPlayers).l,d6
-                subq.w  #1,d6
-loc_145D8A:
-                cmpi.w  #5,(numOffers).l
-                beq.w   locret_145DEE
-                move.w  (selTeamNumber).l,d0
-                move.w  d7,d1
-                bsr.w   GetPlayerAtIndex
-                btst    #1,$66(a0)
-                bne.s   loc_145DDE
-                cmpi.b  #$9B,$71(a0)
-                beq.s   loc_145DDE
-                cmpi.b  #$9A,$71(a0)
-                beq.s   loc_145DDE
-                move.w  #1,d3
-                bsr.w   FindPlayerOnTransferMarket
-                bne.s   loc_145DC8
-                move.w  #$B,d3
-loc_145DC8:
-                jsr     Rand2
-                cmp.w   d3,d0
-                bcc.s   loc_145DDE
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   CreateRandomTransferOfferForPlayer
-                movem.l (sp)+,d0-d7/a0-a6
-loc_145DDE:
-                addq.w  #1,d7
-                cmp.w   (careerNumPlayers).l,d7
-                bne.s   loc_145DEA
-                clr.w   d7
-loc_145DEA:
-                dbf     d6,loc_145D8A
+                jmp     _GenerateRandomTransferOffers
 locret_145DEE:
+                rts
+
+; ===== _CCreateRandomTransferOfferForPlayer =====
+; C-callable bridge: uint16_t playerIndex → d1 for CreateRandomTransferOfferForPlayer
+_CCreateRandomTransferOfferForPlayer:
+                movem.l d0-d7/a0-a6,-(sp)
+                move.l  60(sp),d1       ; first C param (after 15 regs * 4 = 60 bytes)
+                bsr.s   CreateRandomTransferOfferForPlayer
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
 ; ===== CreateRandomTransferOfferForPlayer =====

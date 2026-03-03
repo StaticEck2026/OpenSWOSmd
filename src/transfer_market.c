@@ -5,6 +5,7 @@
 #include "string_utils.h"
 #include "career_teams.h"
 #include "input_text.h"
+#include "teams.h"
 
 /* Transfer offer entry size: 14 bytes ($E) */
 #define OFFER_ENTRY_SIZE    14
@@ -83,6 +84,7 @@ extern int32_t  competitionBonuses;
 extern uint16_t pendingForeignPlayerCount;
 extern uint8_t  lastLoadedExtNumber;
 extern uint8_t  viewRandomPhase;
+extern uint16_t offerExpiryIterationsRemaining;
 
 /* C-callable bridge for asm GetPlayerAtIndex (in swos2_unit.s) */
 extern uint8_t *_CGetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
@@ -1778,5 +1780,91 @@ void _PlayerOffersInit(void)
                     0, 0, 0, 0, 0, 0, 0, offeringName, 0, 0);
 
     _UpdatePlayerOfferMenuIndicators();
+}
+
+/* ---- Chunk 146: GenerateRandomTransferOffers ---- */
+/* SWOS2.s line 71753 — loop through career players starting at random offset,
+ * try to create transfer offers for eligible players. */
+
+/* C-callable bridge for CreateRandomTransferOfferForPlayer (still in asm) */
+extern void _CCreateRandomTransferOfferForPlayer(uint16_t playerIndex);
+
+__attribute__((used, externally_visible))
+void _GenerateRandomTransferOffers(void)
+{
+    uint16_t startIdx = _Rand2();
+    startIdx = (uint16_t)((uint32_t)startIdx * careerNumPlayers >> 8);
+    uint16_t idx = startIdx;
+    int16_t count = careerNumPlayers - 1;
+
+    while (count >= 0) {
+        if (numOffers == 5)
+            return;
+
+        uint8_t *player = _GetPlayerAtIndex(selTeamNumber, idx);
+        /* Check bit 1 of player[0x66] — skip if set */
+        if (!(player[0x66] & 0x02)) {
+            /* Skip players with status 0x9B or 0x9A at offset 0x71 */
+            if (player[0x71] != 0x9B && player[0x71] != 0x9A) {
+                uint16_t threshold = 1;
+                /* _cGetPlayerAtIndexFileIdx holds the file index from last GetPlayerAtIndex call */
+                if (_FindPlayerOnTransferMarket(_cGetPlayerAtIndexFileIdx) == 0) {
+                    threshold = 11;
+                }
+                uint16_t roll = _Rand2();
+                if (roll < threshold) {
+                    _CCreateRandomTransferOfferForPlayer(_cGetPlayerAtIndexFileIdx);
+                }
+            }
+        }
+
+        idx++;
+        if (idx == careerNumPlayers)
+            idx = 0;
+        count--;
+    }
+}
+
+/* ---- Chunk 146: UpdateAndExpireTransferOffers ---- */
+/* SWOS2.s line 71727 — decrement offer expiry counters, remove expired offers,
+ * then generate new random offers. */
+__attribute__((used, externally_visible))
+void _UpdateAndExpireTransferOffers(void)
+{
+    if (_GetRemainingOfferSwapSlots() == 0)
+        return;
+
+    if (numOffers != 0) {
+        uint8_t *entry = transferOfferTable;
+        uint16_t i = 0;
+
+        while (i < numOffers) {
+            entry[0x0C]--;  /* decrement expiry counter at offset $C */
+            if (entry[0x0C] == 0) {
+                _RemoveTransferOfferAtIndex(i);
+                /* Don't advance — entry shifted down */
+            } else {
+                entry += OFFER_ENTRY_SIZE;
+                i++;
+            }
+        }
+    }
+
+    _GenerateRandomTransferOffers();
+}
+
+/* ---- Chunk 146: ProcessOfferExpiryCountdown ---- */
+/* SWOS2.s line 71716 — iterative loop: while offerExpiryIterationsRemaining > 0,
+ * decrement and call UpdateAndExpireTransferOffers. Skip if national selector. */
+__attribute__((used, externally_visible))
+void _ProcessOfferExpiryCountdown(void)
+{
+    if (isNationalSelector != 0)
+        return;
+
+    while (offerExpiryIterationsRemaining != 0) {
+        offerExpiryIterationsRemaining--;
+        _UpdateAndExpireTransferOffers();
+    }
 }
 

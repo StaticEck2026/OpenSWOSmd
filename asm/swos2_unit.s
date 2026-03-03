@@ -2808,6 +2808,10 @@
         xref    _SetSquadMenuEntryStatusSprite
         xref    _SetSquadMenuEntryStatusSprite_AfterSim
 ; --- Chunk 144 xrefs ---
+; --- Chunk 146 xrefs ---
+        xref    _ProcessOfferExpiryCountdown
+        xref    _UpdateAndExpireTransferOffers
+        xref    _GenerateRandomTransferOffers
 ; --- Chunk 145 xrefs ---
         xref    _PlayerOffersUpdateOfferAmountText
         xref    _UpdatePlayerOfferMenuIndicators
@@ -3107,6 +3111,8 @@
         xdef    diyNumberOfTeams
         xdef    diyTeamsBufferPtr
         xdef    competitionStatsMenu
+; --- Chunk 146 xdefs ---
+        xdef    _CCreateRandomTransferOfferForPlayer
 ; --- Chunk 145 xdefs ---
         xdef    offerSwapPlayerOrdinal
         xdef    offerExtraPlayerOrdinal

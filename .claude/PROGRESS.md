@@ -2703,6 +2703,20 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, no new warnings)
 - Cumulative: 1303 functions across 140 chunks
 
+### Chunk 146 — Offer Expiry + Random Transfer Offers (3 → transfer_market.c)
+- Date: 2026-03-02
+- Ported:
+  1. ProcessOfferExpiryCountdown (→transfer_market.c) — loop: skip if national selector, decrement offerExpiryIterationsRemaining, call UpdateAndExpireTransferOffers each iteration
+  2. UpdateAndExpireTransferOffers (→transfer_market.c) — decrement expiry counters in transferOfferTable, remove expired offers, then generate random offers
+  3. GenerateRandomTransferOffers (→transfer_market.c) — loop through careerNumPlayers starting at random offset, skip players with bit 0x02 at offset 0x66 or status 0x9A/0x9B at 0x71, roll random chance based on whether player is on transfer market, call CreateRandomTransferOfferForPlayer
+- Stubs: all 3 simple jmp stubs
+- New asm bridge: _CCreateRandomTransferOfferForPlayer (C→asm, puts param in d1, saves/restores all regs)
+- New xrefs: _ProcessOfferExpiryCountdown, _UpdateAndExpireTransferOffers, _GenerateRandomTransferOffers
+- New xdefs: _CCreateRandomTransferOfferForPlayer
+- Key notes: GenerateRandomTransferOffers uses _cGetPlayerAtIndexFileIdx (set by GetPlayerAtIndex bridge) to pass file index to FindPlayerOnTransferMarket and CreateRandomTransferOfferForPlayer. UpdateAndExpireTransferOffers originally fell through to GenerateRandomTransferOffers via `bsr.w *+4`; now directly calls it.
+- Build status: **verified** (clean build, only pre-existing warnings)
+- Cumulative: 1322 functions across 146 chunks
+
 ### Chunk 145 — Player Offers Menu Helpers + GetCompetitionAbbrevStr (4 exported + 1 dead → transfer_market.c, career_season.c)
 - Date: 2026-03-02
 - Ported:
@@ -2951,5 +2965,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 143   | 3         | 1313       |
 | 144   | 2         | 1315       |
 | 145   | 4+1d      | 1319       |
+| 146   | 3         | 1322       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)
