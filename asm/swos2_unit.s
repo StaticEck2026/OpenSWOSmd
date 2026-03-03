@@ -2775,6 +2775,14 @@
         xref    _DesignDIYTournament_CacheStageSelection
         xref    _DesignDIYTournament_RedrawStageItemsFromBlock
         xref    _DIYTournament_RecalculateNumStages
+; --- Chunk 139 xrefs ---
+        xref    _ClubTeams
+        xref    _NationalTeams
+        xref    _OriginalCustomTeams
+        xref    _EditedCustomTeams
+        xref    _ExitChooseTeams
+        xref    _SetLeagueNames
+        xref    _SetCountryNames
 ; --- Chunk 138 xrefs ---
         xref    _FillManagementRecordInfo
 ; --- Chunk 137 xrefs ---
@@ -2995,6 +3003,12 @@
         xdef    _CCalcTeamPriceRankPercentOffset
         xdef    _CUpdatePlayerPositionAndReturnRole
         xdef    _CCareer_ApplyPostMatchPlayerStatModsIfCareerTeam
+; --- Chunk 139 xdefs ---
+        xdef    numLeaguesInCountry
+        xdef    teamNames
+        xdef    chooseTeamsNumTeams
+        xdef    countryNames
+        xdef    teamsLowerBound
 ; --- Chunk 138 xdefs ---
         xdef    aFriendlies
         xdef    aWon0Drawn1Lost

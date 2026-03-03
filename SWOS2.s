@@ -62385,83 +62385,13 @@ loc_13F35A:
 ; ===== SetLeagueNames =====
 ; prototype: void __usercall SetLeagueNames()
 SetLeagueNames:
-                tst.w   (numLeaguesInCountry).l
-                beq.s   locret_13F3A2
-                lea     (teamNames).l,a1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                tst.w   (chooseTeamsNumTeams).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$268)).l,a0
-                move.w  (numLeaguesInCountry).l,d7
-                subq.w  #1,d7
-loc_13F382:
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                move.l  (a1)+,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0)
-                movea.l MENUENTRY_FG(a0),a2
-                cmpi.b  #'.',(a2)
-                bne.s   loc_13F39A
-                move.w  #PINK_TO_BROWN_7,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-loc_13F39A:
-                lea     56(a0),a0
-                dbf     d7,loc_13F382
-locret_13F3A2:
-                rts
+                jmp     _SetLeagueNames
 
 ; ===== SetCountryNames =====
 ; prototype: void __usercall SetCountryNames()
 ; Also make non showing team entries invisible.
 SetCountryNames:
-                lea     (countryNames).l,a1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$498)).l,a2
-                move.w  (startingTeamIndex).l,d6
-loc_13F3B4:
-                move.w  #1,MENUENTRY_ISINVISIBLE(a2)
-                cmp.w   (chooseTeamsNumTeams).l,d6
-                bcc.w   loc_13F430
-                move.w  (teamsLowerBound).l,d2
-loc_13F3CA:
-                move.w  d2,d1
-                move.w  MENUENTRY_ORDINAL(a2),d0
-                subi.w  #21,d0
-                ext.l   d0
-                divu.w  #22,d0
-                bne.s   loc_13F3E4
-                add.w   (numTeamsColumn1).l,d1
-                bra.s   loc_13F3FA
-loc_13F3E4:
-                cmpi.w  #1,d0
-                bne.s   loc_13F3F2
-                add.w   (numTeamsColumn2).l,d1
-                bra.s   loc_13F3FA
-loc_13F3F2:
-                move.w  d2,d1
-                add.w   (numTeamsColumn3).l,d1
-loc_13F3FA:
-                swap    d0
-                cmp.w   d2,d0
-                bcs.s   loc_13F404
-                cmp.w   d1,d0
-                bcs.s   loc_13F418
-loc_13F404:
-                lea     56(a2),a2
-                cmpi.w  #87,MENUENTRY_ORDINAL(a2)
-                beq.s   locret_13F442
-                move.w  #1,MENUENTRY_ISINVISIBLE(a2)
-                bra.s   loc_13F3CA
-loc_13F418:
-                clr.w   4(a2)
-                move.l  (a1)+,MENUENTRY_FG(a2)
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a2),a0
-                cmpi.b  #'.',(a0)
-                bne.s   loc_13F430
-                move.w  #PINK_TO_BROWN_7,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a2)
-loc_13F430:
-                lea     56(a2),a2
-                cmpi.w  #87,MENUENTRY_ORDINAL(a2)
-                beq.s   locret_13F442
-                addq.w  #1,d6
-                bra.w   loc_13F3B4
-locret_13F442:
-                rts
+                jmp     _SetCountryNames
 
 ; ===== ViewSelectedTeams ===== (ported to C → _ViewSelectedTeams)
 ViewSelectedTeams:
@@ -62993,58 +62923,27 @@ locret_13FB20:
 ; ===== ClubTeams =====
 ; prototype: void __usercall ClubTeams()
 ClubTeams:
-                move.w  #CLUB_TEAMS,(teamsType).l
-                clr.w   (chooseTeamsResult).l
-                clr.w   (viewSelectedTeams).l
-                clr.w   (changeTeams).l
-                clr.w   (abortSelectTeams).l
-                clr.w   (exitSelectTeams).l
-                jmp     SetExitMenuFlag
+                jmp     _ClubTeams
 
 ; ===== NationalTeams =====
 ; prototype: void __usercall NationalTeams()
 NationalTeams:
-                clr.w   (teamsType).l
-                clr.w   (chooseTeamsResult).l
-                clr.w   (viewSelectedTeams).l
-                clr.w   (changeTeams).l
-                clr.w   (abortSelectTeams).l
-                clr.w   (exitSelectTeams).l
-                jmp     SetExitMenuFlag
-                rts
+                jmp     _NationalTeams
 
 ; ===== OriginalCustomTeams =====
 ; prototype: void __usercall OriginalCustomTeams()
 OriginalCustomTeams:
-                move.w  #ORIGINAL_CUSTOM_TEAMS,(teamsType).l
-                clr.w   (chooseTeamsResult).l
-                clr.w   (viewSelectedTeams).l
-                clr.w   (changeTeams).l
-                clr.w   (abortSelectTeams).l
-                clr.w   (exitSelectTeams).l
-                jmp     SetExitMenuFlag
+                jmp     _OriginalCustomTeams
 
 ; ===== EditedCustomTeams =====
 ; prototype: void __usercall EditedCustomTeams()
 EditedCustomTeams:
-                move.w  #EDITED_CUSTOM_TEAMS,(teamsType).l
-                clr.w   (chooseTeamsResult).l
-                clr.w   (viewSelectedTeams).l
-                clr.w   (changeTeams).l
-                clr.w   (abortSelectTeams).l
-                clr.w   (exitSelectTeams).l
-                jmp     SetExitMenuFlag
+                jmp     _EditedCustomTeams
 
 ; ===== ExitChooseTeams =====
 ; prototype: void __usercall ExitChooseTeams()
 ExitChooseTeams:
-                move.w  #$FFFF,(teamsType).l
-                clr.w   (chooseTeamsResult).l
-                clr.w   (viewSelectedTeams).l
-                clr.w   (changeTeams).l
-                move.w  #1,(abortSelectTeams).l
-                clr.w   (exitSelectTeams).l
-                jmp     SetExitMenuFlag
+                jmp     _ExitChooseTeams
 
 ; ===== ShowFsErrorByCode =====
 ; Ported to C: _ShowFsErrorByCode in src/file_io.c

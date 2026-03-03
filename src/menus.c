@@ -3679,3 +3679,232 @@ void _SelTeamForTactics_ReflowTeamListLayout(void)
         }
     }
 }
+
+
+/* ================================================================
+ * Chunk 139 — Team Selection Type Handlers + League/Country Names
+ * ================================================================ */
+
+/* Externs for Chunk 139 */
+extern uint16_t teamsType;
+extern uint16_t chooseTeamsResult;
+extern uint16_t viewSelectedTeams;
+extern uint16_t changeTeams;
+extern uint16_t abortSelectTeams;
+extern uint16_t exitSelectTeams;
+extern uint16_t numLeaguesInCountry;
+extern uint32_t teamNames[];          /* array of string pointers */
+extern uint16_t chooseTeamsNumTeams;
+extern uint32_t countryNames[];       /* array of string pointers */
+extern uint16_t teamsLowerBound;
+
+extern void _SetExitMenuFlag(void);
+
+/* Constants */
+#define CLUB_TEAMS             1
+#define ORIGINAL_CUSTOM_TEAMS  2
+#define EDITED_CUSTOM_TEAMS    3
+#define PINK_TO_BROWN_7        7
+
+
+/* ================================================================
+ * ClubTeams  (SWOS2.s line 62995)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ClubTeams(void)
+{
+    teamsType = CLUB_TEAMS;
+    chooseTeamsResult = 0;
+    viewSelectedTeams = 0;
+    changeTeams = 0;
+    abortSelectTeams = 0;
+    exitSelectTeams = 0;
+    _SetExitMenuFlag();
+}
+
+
+/* ================================================================
+ * NationalTeams  (SWOS2.s line 63006)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _NationalTeams(void)
+{
+    teamsType = 0;
+    chooseTeamsResult = 0;
+    viewSelectedTeams = 0;
+    changeTeams = 0;
+    abortSelectTeams = 0;
+    exitSelectTeams = 0;
+    _SetExitMenuFlag();
+}
+
+
+/* ================================================================
+ * OriginalCustomTeams  (SWOS2.s line 63018)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _OriginalCustomTeams(void)
+{
+    teamsType = ORIGINAL_CUSTOM_TEAMS;
+    chooseTeamsResult = 0;
+    viewSelectedTeams = 0;
+    changeTeams = 0;
+    abortSelectTeams = 0;
+    exitSelectTeams = 0;
+    _SetExitMenuFlag();
+}
+
+
+/* ================================================================
+ * EditedCustomTeams  (SWOS2.s line 63029)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _EditedCustomTeams(void)
+{
+    teamsType = EDITED_CUSTOM_TEAMS;
+    chooseTeamsResult = 0;
+    viewSelectedTeams = 0;
+    changeTeams = 0;
+    abortSelectTeams = 0;
+    exitSelectTeams = 0;
+    _SetExitMenuFlag();
+}
+
+
+/* ================================================================
+ * ExitChooseTeams  (SWOS2.s line 63040)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _ExitChooseTeams(void)
+{
+    teamsType = 0xFFFF;
+    chooseTeamsResult = 0;
+    viewSelectedTeams = 0;
+    changeTeams = 0;
+    abortSelectTeams = 1;
+    exitSelectTeams = 0;
+    _SetExitMenuFlag();
+}
+
+
+/* ================================================================
+ * SetLeagueNames  (SWOS2.s line 62387)
+ *
+ * Populates menu entries for league names in team selection.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SetLeagueNames(void)
+{
+    MenuEntry *e;
+    uint32_t *names;
+    int16_t count;
+
+    if (numLeaguesInCountry == 0)
+        return;
+
+    names = teamNames;
+    /* Entry at $268/56 = 11 (the first lea at $38 is dead code in asm) */
+    e = &menuEntries[11];
+
+    count = (int16_t)numLeaguesInCountry - 1;
+
+    do {
+        e->isInvisible = 0;
+        e->fg = *names++;
+
+        /* If name starts with '.', set special background color */
+        {
+            const uint8_t *str = (const uint8_t *)e->fg;
+            if (*str == '.')
+            {
+                /* Write PINK_TO_BROWN_7 to high word of bg (68k move.w to bg offset) */
+                *(uint16_t *)&e->bg = PINK_TO_BROWN_7;
+            }
+        }
+
+        e++;
+    } while (--count >= 0);
+}
+
+
+/* ================================================================
+ * SetCountryNames  (SWOS2.s line 62412)
+ *
+ * Populates menu entries for country team names in team selection.
+ * Handles column-based layout and makes non-showing entries invisible.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SetCountryNames(void)
+{
+    uint32_t *names = countryNames;
+    MenuEntry *e = &menuEntries[21]; /* $498/56 = 21 */
+    uint16_t d6 = startingTeamIndex;
+
+    for (;;)
+    {
+        e->isInvisible = 1;
+
+        if (d6 >= chooseTeamsNumTeams)
+            goto next_entry;
+
+        {
+            uint16_t lower = teamsLowerBound;
+
+            for (;;)
+            {
+                uint16_t d1 = lower;
+                uint16_t ord = e->ordinal;
+                uint16_t d0_q, d0_r;
+
+                /* (ordinal - 21) / 22 → quotient in low word, remainder in high word after swap */
+                {
+                    uint32_t divResult = (uint32_t)(ord - 21) / 22;
+                    uint32_t modResult = (uint32_t)(ord - 21) % 22;
+                    d0_q = (uint16_t)divResult;
+                    d0_r = (uint16_t)modResult;
+                }
+
+                if (d0_q == 0)
+                    d1 += numTeamsColumn1;
+                else if (d0_q == 1)
+                    d1 += numTeamsColumn2;
+                else
+                {
+                    d1 = lower;
+                    d1 += numTeamsColumn3;
+                }
+
+                /* Check if remainder (row) is within [lower, d1) */
+                if (d0_r >= lower && d0_r < d1)
+                {
+                    /* Show this entry */
+                    e->isInvisible = 0;
+                    e->fg = *names++;
+
+                    /* If name starts with '.', set special background color */
+                    {
+                        const uint8_t *str = (const uint8_t *)e->fg;
+                        if (*str == '.')
+                        {
+                            *(uint16_t *)&e->bg = PINK_TO_BROWN_7;
+                        }
+                    }
+                    break; /* goto next_entry */
+                }
+
+                /* Skip entry — make next entry invisible and continue */
+                e++;
+                if (e->ordinal == 87)
+                    return;
+                e->isInvisible = 1;
+                /* Continue inner loop with same lower bound */
+            }
+        }
+
+next_entry:
+        e++;
+        if (e->ordinal == 87)
+            return;
+        d6++;
+    }
+}

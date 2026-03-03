@@ -140,4 +140,13 @@ void _StartContest(void);
 void _SaveContest(void);
 void _LoadOldCompetitionMenu(void);
 
+/* Chunk 139 — Team selection type handlers */
+void _ClubTeams(void);
+void _NationalTeams(void);
+void _OriginalCustomTeams(void);
+void _EditedCustomTeams(void);
+void _ExitChooseTeams(void);
+void _SetLeagueNames(void);
+void _SetCountryNames(void);
+
 #endif

@@ -2692,6 +2692,15 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, no new warnings)
 - Cumulative: 1280 functions across 136 chunks
 
+### Chunk 139 — Team Selection Type Handlers + League/Country Names (7 → menus.c)
+- Date: 2026-03-02
+- Ported: ClubTeams, NationalTeams, OriginalCustomTeams, EditedCustomTeams, ExitChooseTeams, SetLeagueNames, SetCountryNames — all to menus.c
+- jmp stubs: all 7 functions
+- New xdefs: numLeaguesInCountry, teamNames, chooseTeamsNumTeams, countryNames, teamsLowerBound
+- Key notes: SetLeagueNames has dead code (first lea+tst overwritten by second lea), SetCountryNames uses 68k divu column layout
+- Build status: **verified** (clean build, no new warnings from menus.c)
+- Cumulative: 1298 functions across 139 chunks
+
 ### Chunk 138 — FillManagementRecordInfo + helpers (1+3s → statistics.c)
 - Date: 2026-03-02
 - Ported: FillManagementRecordInfo (exported), SetTrophySprites_Internal (static), SetTrophySprite_Internal (static), RenderCompLine_Internal (static) — all to statistics.c
@@ -2863,5 +2872,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 136   | 7+1s      | 1280       |
 | 137   | 6+1s      | 1287       |
 | 138   | 1+3s      | 1291       |
+| 139   | 7         | 1298       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

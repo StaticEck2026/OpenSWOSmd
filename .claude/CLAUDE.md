@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1291 functions ported across 138 chunks.
+**Current status:** 1298 functions ported across 139 chunks.
 
-**Last completed chunk:** Chunk 138 — FillManagementRecordInfo + helpers (1+3s → statistics.c): FillManagementRecordInfo, SetTrophySprites_Internal, SetTrophySprite_Internal, RenderCompLine_Internal.
+**Last completed chunk:** Chunk 139 — Team Selection Type Handlers + League/Country Names (7 → menus.c): ClubTeams, NationalTeams, OriginalCustomTeams, EditedCustomTeams, ExitChooseTeams, SetLeagueNames, SetCountryNames.
 
-**Next candidates:** SelectTeamToManage/ChooseTeamAndStartCareer/LoadLiverpool (need asm bridges for register-calling ChooseTeamsDialog/InitCareer), SaveCareer, ImportTeamsMenu, SquadMenu (blocked by SelectAndShowSquadToView), CareerGameListCommon (~3194 lines, very large), DesignDIYCup remaining.
+**Next candidates:** Simple flag-setters (SelectFilenameToSaveAndExit, StatsViewSquads, SetMenuEntryPlayerFace), file selection functions, Career_FillCurrentSeasonInfo + EncodeCompetitionPositionForSeasonInfo, ChooseTeamsDialog, InitCareer.
 
 ---
 
