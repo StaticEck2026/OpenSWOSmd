@@ -10349,10 +10349,7 @@ dec_ord_scan_backward:
 ; ===== UpdatePlayerToBeSubstitutedPosition =====
 ; prototype: void __usercall UpdatePlayerToBeSubstitutedPosition()
 UpdatePlayerToBeSubstitutedPosition:
-                move.w  (plToBeSubstitutedOrd).l,d0
-                bsr.w   GetBenchPlayerPointer
-                move.w  d0,(plToBeSubstitutedPos).l
-                rts
+                jmp     _UpdatePlayerToBeSubstitutedPosition
 
 ; ===== IsPlayerOkToSubstitute =====
 ; prototype: unsigned __int16 __usercall IsPlayerOkToSubstitute@<d0>()
@@ -11313,24 +11310,14 @@ opponentCoachFrames:
 ;      
 ; Get in-game player pointer given his index, based on current tactics.
 GetBenchPlayerPointer:
-                move.w  d1,-(sp)
-                move.w  (pl1Tactics).l,d1
-                movea.l (benchTeam).l,a0
-                cmpi.w  #1,TEAMGENERALINFO_TEAMNUMBER(a0)
-                beq.s   select_formation_order
-                move.w  (pl2Tactics).l,d1
-select_formation_order:
-                lsl.w   #2,d1
-                lea     (positionsTable).l,a0
-                movea.l (a0,d1.w),a0
-                move.b  (a0,d0.w),d0
-                subq.b  #1,d0
-                lea     (ingameTeamPlayerOffsets).l,a0
-                move.w  d0,d1
-                lsl.w   #1,d1
-                move.w  (a0,d1.w),d1
-                movea.l (benchTeamGame).l,a0
-                lea     (a0,d1.w),a0
+                move.w  d1,-(sp)                ; callers expect d1 preserved
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)                ; push index
+                jsr     _GetBenchPlayerPointer
+                addq.l  #4,sp
+                movea.l (benchPlayerResultA0).l,a0
+                movem.l (sp)+,d2-d7/a2-a6
                 move.w  (sp)+,d1
                 rts
 pad_10E512:
@@ -40650,22 +40637,13 @@ ShowLeagueInfo:
 ; ===== ShowDiyLeaguesTournamentMenu =====
 ; prototype: void __usercall ShowDiyLeaguesTournamentMenu(__int16 arg0@<d0>, __int16 arg1@<d1>, __int16 arg2@<d2>)
 ShowDiyLeaguesTournamentMenu:
-                move.w  #1,(writeOnlyVar01).l
-                move.w  d0,(diyTournamentType).l
-                move.w  d0,(diyFixtureViewMode).l
-                move.w  d1,(diyTournamentViewOnly).l
-                move.w  d2,(diyInitFocusOverride).l
-                bsr.w   DIY_SortLeagueTableByStandings
-                tst.w   (seasonUpdateInProgress).l
-                beq.s   loc_131CE0
-loc_131CD2:
-                jsr     MenuCheckControls
-                tst.w   (fire).l
-                bne.s   loc_131CD2
-loc_131CE0:
-                lea     (diyLeagueTournamentMenu).l,a6
-                jsr     ShowMenu
-                clr.w   (writeOnlyVar01).l
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  d2,-(sp)        ; 3rd arg: focusOverride
+                move.l  d1,-(sp)        ; 2nd arg: viewOnly
+                move.l  d0,-(sp)        ; 1st arg: type
+                jsr     _ShowDiyLeaguesTournamentMenu
+                lea     12(sp),sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 ; Menu_DesignDIYLeague
 designDiyLeagueMenu:

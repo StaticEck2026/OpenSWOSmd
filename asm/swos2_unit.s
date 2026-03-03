@@ -2858,6 +2858,10 @@
         xref    _DIYLeagueTournamentViewResult
         xref    _DIYLeagueTournamentMatchCommon
         xref    _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus
+; --- Chunk 153 xrefs ---
+        xref    _ShowDiyLeaguesTournamentMenu
+        xref    _GetBenchPlayerPointer
+        xref    _UpdatePlayerToBeSubstitutedPosition
 ; --- Chunk 144 xrefs ---
 ; --- Chunk 147 xrefs ---
         xref    _BuyOtherPlayersInit
@@ -3026,6 +3030,9 @@
         xdef    aLparen
         xdef    aRparen
         xdef    aCup_10
+; --- Chunk 153 xdefs ---
+        xdef    benchPlayerResultA0
+        xdef    diyLeagueTournamentMenu
 ; --- Chunk 152 xdefs ---
         xdef    _asm_DIY_PlayOrSimulateLeagueFixture
         xdef    diyTournamentType

@@ -279,3 +279,6 @@ void _DIYLeagueTournamentViewHighlights(MenuEntry *entry);
 void _DIYLeagueTournamentViewResult(MenuEntry *entry);
 void _DIYLeagueTournamentMatchCommon(uint16_t action);
 void _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus(void);
+
+/* --- ShowDiyLeaguesTournamentMenu (Chunk 153) --- */
+void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);

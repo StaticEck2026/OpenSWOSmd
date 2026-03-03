@@ -19,4 +19,8 @@ void _DrawBenchAndSubsMenu(void);
 void _ShowFormationMenu(void);
 void _SubsBenchOff(void);
 
+/* --- Chunk 153: Bench player pointer lookup --- */
+uint16_t _GetBenchPlayerPointer(uint16_t index);
+void _UpdatePlayerToBeSubstitutedPosition(void);
+
 #endif

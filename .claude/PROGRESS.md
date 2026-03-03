@@ -2798,6 +2798,19 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, only pre-existing warnings)
 - Cumulative: 1373 functions across 152 chunks
 
+### Chunk 153 — ShowDiyLeaguesTournamentMenu + GetBenchPlayerPointer (3 → diy_competition.c, bench_subs.c)
+- Date: 2026-03-02
+- Ported:
+  1. ShowDiyLeaguesTournamentMenu (→diy_competition.c) — sets diyTournamentType/diyFixtureViewMode/etc, sorts league table, waits for fire release if seasonUpdateInProgress, calls ShowMenu
+  2. GetBenchPlayerPointer (→bench_subs.c) — maps bench index (0-10) to in-game player pointer using tactics formation table; returns ordinal, stores pointer in benchPlayerResultA0
+  3. UpdatePlayerToBeSubstitutedPosition (→bench_subs.c) — reads plToBeSubstitutedOrd, calls GetBenchPlayerPointer, stores ordinal to plToBeSubstitutedPos
+- Stubs: ShowDiyLeaguesTournamentMenu (register bridge d0/d1/d2→stack), GetBenchPlayerPointer (register bridge d0→stack, a0←global, d1 preserved), UpdatePlayerToBeSubstitutedPosition (jmp)
+- C caller updates: replaced _asm_ShowDiyLeaguesTournamentMenu → _ShowDiyLeaguesTournamentMenu in menus.c, diy_competition.c; replaced _asm_ShowDiyLeaguesTournamentMenu_Career(d2) → _ShowDiyLeaguesTournamentMenu(1,0,d2) in career_teams.c
+- New xrefs: _ShowDiyLeaguesTournamentMenu, _GetBenchPlayerPointer, _UpdatePlayerToBeSubstitutedPosition
+- New xdefs: benchPlayerResultA0, diyLeagueTournamentMenu
+- Build status: **verified** (clean build)
+- Cumulative: 1376 functions across 153 chunks
+
 ### Chunk 147 — BuyOtherPlayers Init/Finish + Pitch/Season Menu Callbacks (5 → transfer_market.c, menus.c)
 - Date: 2026-03-02
 - Ported:
@@ -3081,5 +3094,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 150   | 13        | 1358       |
 | 151   | 7         | 1365       |
 | 152   | 8         | 1373       |
+| 153   | 3         | 1376       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

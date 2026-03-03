@@ -2340,7 +2340,7 @@ extern void _CInitDIYCompetitionFromTableEntry(void); /* bridge: reads selectedC
 extern void _CInitDIYCupFromRecord(void);             /* bridge: reads selectedContest */
 extern void _CInitDIYLeagueFromRecord(void);           /* bridge: reads selectedContest */
 extern void _InitTeams(void);
-extern void _asm_ShowDiyLeaguesTournamentMenu(uint16_t d0, uint16_t d1, uint16_t d2);
+extern void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
 extern void _asm_ShowDIYCupMenuWithParams(uint16_t d0, uint16_t d1, uint16_t d2);
 extern void _DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC);
 extern void _DIY_RestoreCompetitionFileBufferFromDIYCompetition(void);
@@ -2442,7 +2442,7 @@ void _PresetCompetitionMenu(void)
         _CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyLeagueTeamIds);
         _CInitDIYCompetitionFromTableEntry();  /* bridge reads selectedContest + contestLeagueNumber */
         _InitTeams();
-        _asm_ShowDiyLeaguesTournamentMenu(0, 0, 0);
+        _ShowDiyLeaguesTournamentMenu(0, 0, 0);
         _DIY_RestoreCompetitionFileBufferFromDIYCompetition();
         _CommonMenuExit();
     } else if (compType == 1) {
@@ -2546,7 +2546,7 @@ diy_over: /* loc_140FDC — DIY competition over */
         if (ct == 0) {
             /* League: loc_141030 */
             _SaveDIYLeague();
-            _asm_ShowDiyLeaguesTournamentMenu(0, 0, 0);
+            _ShowDiyLeaguesTournamentMenu(0, 0, 0);
             _RestoreDIYLeague();
             _CommonMenuExit();
             goto final_check;
@@ -2573,7 +2573,7 @@ preset_over: /* loc_141050 — preset competition over */
         if (ct == 0) {
             /* League: loc_1410A0 */
             _DIY_SaveCompetitionFileBufferToDIYCompetition();
-            _asm_ShowDiyLeaguesTournamentMenu(0, 0, 0);
+            _ShowDiyLeaguesTournamentMenu(0, 0, 0);
             _DIY_RestoreCompetitionFileBufferFromDIYCompetition();
             _CommonMenuExit();
             goto final_check;
@@ -2602,7 +2602,7 @@ diy_not_over: /* loc_1410E4 — DIY not over yet */
             _SaveDIYLeague();
             _InitTeams();
             _DIY_ResetCompetitionProgressAndShuffle();
-            _asm_ShowDiyLeaguesTournamentMenu(0, 0, 0);
+            _ShowDiyLeaguesTournamentMenu(0, 0, 0);
             _RestoreDIYLeague();
             _CommonMenuExit();
             goto final_check;
@@ -2635,7 +2635,7 @@ preset_not_over: /* loc_14117C — preset not over yet */
             _DIY_SaveCompetitionFileBufferToDIYCompetition();
             _InitTeams();
             _DIY_ResetCompetitionProgressAndShuffle();
-            _asm_ShowDiyLeaguesTournamentMenu(0, 0, 0);
+            _ShowDiyLeaguesTournamentMenu(0, 0, 0);
             _DIY_RestoreCompetitionFileBufferFromDIYCompetition();
             _CommonMenuExit();
             goto final_check;

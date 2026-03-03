@@ -2093,3 +2093,46 @@ void _SubsBenchOff(void)
     overlayActiveFlag = 0;
     subsWriteOnly = 2;
 }
+
+/* ================================================================
+ * Chunk 153: GetBenchPlayerPointer  (SWOS2.s line 11315)
+ *
+ * Maps a bench player index (0-10) to an in-game player pointer.
+ * Uses the current tactics to select the formation position table,
+ * looks up the player ordinal, then computes the offset into the
+ * team's in-game player data.
+ *
+ * Returns: ordinal (uint16_t), stores pointer in benchPlayerResultA0
+ * ================================================================ */
+
+/* Result pointer for asm bridge (asm reads this into A0) */
+uint8_t *benchPlayerResultA0;
+
+__attribute__((used, externally_visible))
+uint16_t _GetBenchPlayerPointer(uint16_t index)
+{
+    uint16_t tactics = pl1Tactics;
+    TeamGeneralInfo *team = (TeamGeneralInfo *)benchTeam;
+    if (team->teamNumber != 1)
+        tactics = pl2Tactics;
+
+    uint8_t *posTable = (uint8_t *)positionsTable[tactics];
+    uint16_t ordinal = (uint16_t)posTable[index] - 1;
+
+    uint16_t offset = ingameTeamPlayerOffsets[ordinal];
+    benchPlayerResultA0 = (uint8_t *)benchTeamGame + offset;
+
+    return ordinal;
+}
+
+/* ================================================================
+ * UpdatePlayerToBeSubstitutedPosition  (SWOS2.s line 10351)
+ *
+ * Reads plToBeSubstitutedOrd, calls GetBenchPlayerPointer to get
+ * the position ordinal, and stores result in plToBeSubstitutedPos.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _UpdatePlayerToBeSubstitutedPosition(void)
+{
+    plToBeSubstitutedPos = _GetBenchPlayerPointer(plToBeSubstitutedOrd);
+}

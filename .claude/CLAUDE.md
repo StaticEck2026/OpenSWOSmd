@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1373 functions ported across 152 chunks.
+**Current status:** 1376 functions ported across 153 chunks.
 
-**Last completed chunk:** Chunk 152 — DIY League/Tournament Match Callbacks & Visibility (8 → diy_competition.c): 6 match callbacks + MatchCommon + UpdateMenuEntryVisibilityAndFocus.
+**Last completed chunk:** Chunk 153 — ShowDiyLeaguesTournamentMenu + GetBenchPlayerPointer + UpdatePlayerToBeSubstitutedPosition (3 functions → diy_competition.c, bench_subs.c).
 
-**Next candidates:** DIYLeagueTournamentOnRestore, DIYLeagueTournament16BeforeDraw, ShowDiyLeaguesTournamentMenu, Int2StrWithCommas/Int2Ascii*, WriteStatsNumber, AI_ResumeGameDelay, remaining career/transfer/squad functions.
+**Next candidates:** SelectAndShowSquadToView, SquadMenu, CareerGameListCommon (large ~364 instr), remaining bench/subs area (FindInitialPlayerToBeSubstituted, IsPlayerOkToSubstitute), DIY competition functions, transfer/career functions.
 
 ---
 

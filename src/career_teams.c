@@ -1348,7 +1348,7 @@ extern void DIY_RebuildCompetitionAndTeamSelectionCaches(void);
 extern void DIY_UpdateCompetitionProgress(void);
 
 /* C-callable asm wrappers for menu functions (take d2 param) */
-extern void _asm_ShowDiyLeaguesTournamentMenu_Career(uint16_t d2);
+extern void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
 extern void _asm_ShowDIYCupMenuWithParams_Career(uint16_t d2);
 extern void _asm_DIY_EditCompetitionSlot_Career(uint16_t d2);
 
@@ -1479,7 +1479,7 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
             _DIY_AdvanceToNextCompetitionSlot();
     } else {
         /* League */
-        _asm_ShowDiyLeaguesTournamentMenu_Career(d2);
+        _ShowDiyLeaguesTournamentMenu(1, 0, d2);
     }
 
     _Career_StoreCompetitionSlotStateToBuffer(slotPtr);

@@ -66,7 +66,7 @@ extern uint8_t *_VerifyTeamLoaded(uint16_t teamNum);
 extern void _CDIY_RecomputeCompetitionDerivedProgressionTable(void);
 
 /* ---- ASM functions still in asm (called via bridge) ---- */
-extern void _asm_ShowDiyLeaguesTournamentMenu(uint16_t d0, uint16_t d1, uint16_t d2);
+/* _ShowDiyLeaguesTournamentMenu now ported to C — declared in diy_competition.h */
 extern void _asm_ShowDIYCupMenuWithParams(uint16_t d0, uint16_t d1, uint16_t d2);
 extern void _asm_Career_AutoAdvanceInternationalCompetitionFixtures(void);
 
@@ -2166,7 +2166,7 @@ restart_loop:
     comp->progressField8 = bufCopy->progressField8;  /* field_3A+8 */
 
     /* Call ShowDiyLeaguesTournamentMenu */
-    _asm_ShowDiyLeaguesTournamentMenu(editA, editB, editC);
+    _ShowDiyLeaguesTournamentMenu(editA, editB, editC);
 
     /* Copy results back */
     bufCopy->resultCode = comp->resultCode;
@@ -3826,7 +3826,7 @@ void _ShowDiyCompetitionForSource(uint8_t *header)
     uint16_t type = *(uint16_t *)header;
 
     if (type == 0) {
-        _asm_ShowDiyLeaguesTournamentMenu(1, 1, 0);
+        _ShowDiyLeaguesTournamentMenu(1, 1, 0);
     } else if (type == 1) {
         _asm_ShowDIYCupMenuWithParams(1, 1, 0);
     } else {
@@ -6189,7 +6189,7 @@ void _DesignDIYLeagueChooseTeams(void)
     _DIY_RecomputeCompetitionDerivedFields();
     _DIY_ShuffleLeagueTeamOrder();
     _InitTeams();
-    _asm_ShowDiyLeaguesTournamentMenu(0, 0, 0);
+    _ShowDiyLeaguesTournamentMenu(0, 0, 0);
     _RestoreDIYLeague();
     _SetExitMenuFlag();
 }
@@ -7403,4 +7403,34 @@ show_match_view:
         _SetCurrentEntry(*(uint16_t *)&diyCompetitionStart[0x3A + 4]);
         return;
     }
+}
+
+/* ================================================================
+ * Chunk 153: ShowDiyLeaguesTournamentMenu  (SWOS2.s line 40652)
+ *
+ * Sets up DIY league/tournament globals, sorts league table,
+ * waits for fire release if season update in progress, then
+ * displays the diyLeagueTournamentMenu.
+ * ================================================================ */
+
+extern uint8_t diyLeagueTournamentMenu[];
+
+__attribute__((used, externally_visible))
+void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride)
+{
+    writeOnlyVar01 = 1;
+    diyTournamentType = type;
+    diyFixtureViewMode = type;
+    diyTournamentViewOnly = viewOnly;
+    diyInitFocusOverride = focusOverride;
+    _DIY_SortLeagueTableByStandings();
+
+    if (seasonUpdateInProgress != 0) {
+        do {
+            _MenuCheckControls();
+        } while (fire != 0);
+    }
+
+    _ShowMenu((uint8_t *)&diyLeagueTournamentMenu);
+    writeOnlyVar01 = 0;
 }
