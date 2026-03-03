@@ -2703,6 +2703,20 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, no new warnings)
 - Cumulative: 1303 functions across 140 chunks
 
+### Chunk 147 — BuyOtherPlayers Init/Finish + Pitch/Season Menu Callbacks (5 → transfer_market.c, menus.c)
+- Date: 2026-03-02
+- Ported:
+  1. BuyOtherPlayersInit (→transfer_market.c) — get team pointer from teamOffering, store in buyOtherPlayersTeamPtr, fall through to Finish
+  2. BuyOtherPlayersFinish (→transfer_market.c) — set menu entry 0 title and entry 1 team name from stored pointers
+  3. PitchTypeOrSeasonProc (→menus.c) — toggle pitchTypeOrSeason, update table pointer, redraw 2 entries
+  4. SetFriendlyPitchOrSeason (→menus.c) — set menu entry 4's fg to friendlyPitchTypeTable or friendly_season_table
+  5. FriendlyPitchTypeProc (→menus.c) — cycle pitch type (0-6→RANDOM) or season (0-11), redraw entry
+- Stubs: BuyOtherPlayersInit (jmp), BuyOtherPlayersFinish (jmp), PitchTypeOrSeasonProc (jmp), SetFriendlyPitchOrSeason (jmp), FriendlyPitchTypeProc (a5→stack bridge)
+- New xrefs: _BuyOtherPlayersInit, _BuyOtherPlayersFinish, _PitchTypeOrSeasonProc, _SetFriendlyPitchOrSeason, _FriendlyPitchTypeProc
+- New xdefs: buyOtherPlayersTeamPtr, buyOtherPlayersTitlePtr, friendlyPitchTypeTable, friendly_season_table
+- Build status: **verified** (clean build, only pre-existing warnings)
+- Cumulative: 1327 functions across 147 chunks
+
 ### Chunk 146 — Offer Expiry + Random Transfer Offers (3 → transfer_market.c)
 - Date: 2026-03-02
 - Ported:
@@ -2966,5 +2980,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 144   | 2         | 1315       |
 | 145   | 4+1d      | 1319       |
 | 146   | 3         | 1322       |
+| 147   | 5         | 1327       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

@@ -97,4 +97,8 @@ void _GenerateRandomTransferOffers(void);
 void _UpdateAndExpireTransferOffers(void);
 void _ProcessOfferExpiryCountdown(void);
 
+/* --- Buy Other Players menu (Chunk 147) --- */
+void _BuyOtherPlayersInit(void);
+void _BuyOtherPlayersFinish(void);
+
 #endif

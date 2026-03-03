@@ -161,4 +161,9 @@ void _ExitOptions(void);
 void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, uint8_t *player, uint16_t flag);
 void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, uint8_t *player);
 
+/* --- Friendly pitch/season menu callbacks (Chunk 147) --- */
+void _SetFriendlyPitchOrSeason(void);
+void _PitchTypeOrSeasonProc(void);
+void _FriendlyPitchTypeProc(MenuEntry *entry);
+
 #endif

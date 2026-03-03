@@ -1868,3 +1868,25 @@ void _ProcessOfferExpiryCountdown(void)
     }
 }
 
+/* ---- Chunk 147: BuyOtherPlayersInit + BuyOtherPlayersFinish ---- */
+/* SWOS2.s line 69577/69584 — init/return callbacks for Buy Other Players menu */
+extern uint8_t *buyOtherPlayersTeamPtr;
+extern uint8_t *buyOtherPlayersTitlePtr;
+
+/* BuyOtherPlayersFinish: set menu entry 0 title and entry 1 team name */
+__attribute__((used, externally_visible))
+void _BuyOtherPlayersFinish(void)
+{
+    menuEntries[0].fg = (uint32_t)buyOtherPlayersTitlePtr;
+    uint8_t *teamName = buyOtherPlayersTeamPtr + 5;
+    menuEntries[1].fg = (uint32_t)teamName;
+}
+
+/* BuyOtherPlayersInit: get team pointer from teamOffering, store it, then finish */
+__attribute__((used, externally_visible))
+void _BuyOtherPlayersInit(void)
+{
+    buyOtherPlayersTeamPtr = _GetTeamPointer(teamOffering);
+    _BuyOtherPlayersFinish();
+}
+

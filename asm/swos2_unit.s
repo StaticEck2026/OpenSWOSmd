@@ -2808,6 +2808,12 @@
         xref    _SetSquadMenuEntryStatusSprite
         xref    _SetSquadMenuEntryStatusSprite_AfterSim
 ; --- Chunk 144 xrefs ---
+; --- Chunk 147 xrefs ---
+        xref    _BuyOtherPlayersInit
+        xref    _BuyOtherPlayersFinish
+        xref    _PitchTypeOrSeasonProc
+        xref    _SetFriendlyPitchOrSeason
+        xref    _FriendlyPitchTypeProc
 ; --- Chunk 146 xrefs ---
         xref    _ProcessOfferExpiryCountdown
         xref    _UpdateAndExpireTransferOffers
@@ -3111,6 +3117,11 @@
         xdef    diyNumberOfTeams
         xdef    diyTeamsBufferPtr
         xdef    competitionStatsMenu
+; --- Chunk 147 xdefs ---
+        xdef    buyOtherPlayersTeamPtr
+        xdef    buyOtherPlayersTitlePtr
+        xdef    friendlyPitchTypeTable
+        xdef    friendly_season_table
 ; --- Chunk 146 xdefs ---
         xdef    _CCreateRandomTransferOfferForPlayer
 ; --- Chunk 145 xdefs ---

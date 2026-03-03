@@ -4092,3 +4092,45 @@ void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, uint8_t *player)
     /* Injured */
     *(uint16_t *)&entry->fg = (d3 - 0x40) / 32 + 0x9C;
 }
+
+/* ---- Chunk 147: SetFriendlyPitchOrSeason ---- */
+/* SWOS2.s line 49546 — set menu entry 4's fg to pitch type or season string table pointer */
+extern uint8_t friendlyPitchTypeTable[];
+extern uint8_t friendly_season_table[];
+
+__attribute__((used, externally_visible))
+void _SetFriendlyPitchOrSeason(void)
+{
+    uint8_t *table = friendlyPitchTypeTable;
+    if (pitchTypeOrSeason != 0)
+        table = friendly_season_table;
+    menuEntries[4].fg = (uint32_t)table;  /* 0xE0 / 56 = 4 */
+}
+
+/* ---- Chunk 147: PitchTypeOrSeasonProc ---- */
+/* SWOS2.s line 49537 — toggle pitch/season mode, update display, redraw entries */
+__attribute__((used, externally_visible))
+void _PitchTypeOrSeasonProc(void)
+{
+    pitchTypeOrSeason ^= 1;
+    _SetFriendlyPitchOrSeason();
+    _CallDrawMultipleItems(2, &menuEntries[3]); /* 0xA8/56=3, count=2 */
+}
+
+/* ---- Chunk 147: FriendlyPitchTypeProc ---- */
+/* SWOS2.s line 49558 — cycle pitch type (0-6, wrap to RANDOM=0xFFFF) or season (0-11).
+ * Called as menu entry callback with a5=entry; redraws current entry after update. */
+__attribute__((used, externally_visible))
+void _FriendlyPitchTypeProc(MenuEntry *entry)
+{
+    if (pitchTypeOrSeason == 0) {
+        friendlyPitchType++;
+        if (friendlyPitchType == 7)
+            friendlyPitchType = 0xFFFF; /* RANDOM */
+    } else {
+        friendlySeason++;
+        if (friendlySeason >= 12)
+            friendlySeason = 0;
+    }
+    _CallDrawMenuItem(entry);
+}

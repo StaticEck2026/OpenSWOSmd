@@ -49533,43 +49533,23 @@ ChooseTeamsMenu:
                 jmp     SetExitMenuFlag
 
 ; ===== PitchTypeOrSeasonProc =====
-; prototype: void __usercall PitchTypeOrSeasonProc()
+; Ported to C: _PitchTypeOrSeasonProc in src/menus.c
 PitchTypeOrSeasonProc:
-                eori.w  #1,(pitchTypeOrSeason).l
-                bsr.w   SetFriendlyPitchOrSeason
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a5
-                move.w  #2,d0
-                jmp     CallDrawMultipleItems
+                jmp     _PitchTypeOrSeasonProc
 
 ; ===== SetFriendlyPitchOrSeason =====
-; prototype: void __usercall SetFriendlyPitchOrSeason()
+; Ported to C: _SetFriendlyPitchOrSeason in src/menus.c
 SetFriendlyPitchOrSeason:
-                lea     friendlyPitchTypeTable(pc),a0
-                tst.w   (pitchTypeOrSeason).l
-                beq.s   loc_1371DA
-                lea     friendly_season_table(pc),a0
-loc_1371DA:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a1
-                move.l  a0,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a1)
-                rts
+                jmp     _SetFriendlyPitchOrSeason
 
 ; ===== FriendlyPitchTypeProc =====
-; prototype: void __usercall FriendlyPitchTypeProc(MenuEntry *menu@<a5>)
+; Ported to C: _FriendlyPitchTypeProc in src/menus.c
+; Bridge: a5=MenuEntry* → C param
 FriendlyPitchTypeProc:
-                tst.w   (pitchTypeOrSeason).l
-                bne.s   loc_13720A
-                addq.w  #1,(friendlyPitchType).l
-                cmpi.w  #7,(friendlyPitchType).l
-                bne.s   loc_137204
-                move.w  #RANDOM,(friendlyPitchType).l
-loc_137204:
-                jmp     CallDrawMenuItem
-loc_13720A:
-                addq.w  #1,(friendlySeason).l
-                cmpi.w  #12,(friendlySeason).l
-                bcs.s   loc_137204
-                clr.w   (friendlySeason).l
-                bra.s   loc_137204
+                move.l  a5,-(sp)
+                jsr     _FriendlyPitchTypeProc
+                addq.l  #4,sp
+                rts
 
 ; ===== MinSubstitutes =====
 ; prototype: void __usercall MinSubstitutes(MenuEntry *menu@<a5>)
@@ -69573,22 +69553,14 @@ buyOtherPlayersMenu:
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
 ; ===== BuyOtherPlayersInit =====
-; prototype: void __usercall BuyOtherPlayersInit()
+; Ported to C: _BuyOtherPlayersInit in src/transfer_market.c
 BuyOtherPlayersInit:
-                move.w  teamOffering(pc),d0
-                bsr.w   GetTeamPointer
-                move.l  a0,(buyOtherPlayersTeamPtr).l
+                jmp     _BuyOtherPlayersInit
 
 ; ===== BuyOtherPlayersFinish =====
-; prototype: void __usercall BuyOtherPlayersFinish()
+; Ported to C: _BuyOtherPlayersFinish in src/transfer_market.c
 BuyOtherPlayersFinish:
-                lea     (menuEntries).l,a0
-                move.l  (buyOtherPlayersTitlePtr).l,$26(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                movea.l (buyOtherPlayersTeamPtr).l,a1
-                lea     5(a1),a1
-                move.l  a1,$26(a0)
-                rts
+                jmp     _BuyOtherPlayersFinish
 
 ; ===== j_SetExitMenuFlag_10 =====
 ; prototype: void __usercall j_SetExitMenuFlag_10()
