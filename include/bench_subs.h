@@ -36,4 +36,20 @@ void _TrainingSwapBenchTeams(void);
 void _LeaveSubsMenu(void);
 void _CheckForThrowInAndGoalkeepersBall(void);
 
+/* --- Chunk 157: Bench menu handlers & substitute scanning --- */
+int16_t _IsThisPlayerOkToSelect(void);
+void _FirePressedInSubsMenu(void);
+void _HandleFormationMenuControls(void);
+void _UpdateSubstitutePlayerIndices(void);
+void _CallUpdateSubstitutePlayerIndices(void);
+void _state3_handle_fire_press(void);
+
+/* --- Chunk 158: Substitution confirm, execution & mark/swap --- */
+void _SelectPlayerToSubstituteMenuHandler(void);
+void _SubstitutePlayer(void);
+void _MarkPlayersMenuHandler(void);
+
+/* --- Chunk 159: Main bench menu dispatcher --- */
+void _BenchMenuHandleControls(void);
+
 #endif

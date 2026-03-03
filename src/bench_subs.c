@@ -20,7 +20,9 @@
 #include "game_types.h"
 #include "game_state.h"
 #include "goalkeeper.h"
+#include "match_sim.h"
 #include "player_anim.h"
+#include "player_sprites.h"
 
 /* ---- external asm globals ---- */
 extern uint16_t inSubstitutesMenu;
@@ -2395,4 +2397,513 @@ void _CheckForThrowInAndGoalkeepersBall(void)
         }
     }
     _CheckIfGoalkeeperClaimedTheBall();
+}
+
+/* ================================================================
+ * Chunk 157: IsThisPlayerOkToSelect + FirePressedInSubsMenu +
+ *            HandleFormationMenuControls + UpdateSubstitutePlayerIndices +
+ *            CallUpdateSubstitutePlayerIndices + state3_handle_fire_press
+ * ================================================================ */
+
+/* ---- IsThisPlayerOkToSelect  (SWOS2.s line 9896) ----
+ * Checks if the bench player at benchPlayerIndex is valid for selection.
+ * Returns 0 = OK, -1 = not OK. Caller checks sign flag (bmi).
+ */
+__attribute__((used, externally_visible))
+int16_t _IsThisPlayerOkToSelect(void)
+{
+    uint16_t numSubs = team1NumSubs;
+    TeamGeneralInfo *team = (TeamGeneralInfo *)benchTeam;
+    if (team->teamNumber != 1)
+        numSubs = team2NumSubs;
+
+    /* Max substitutions reached? */
+    if (numSubs == maxSubsPerTeam)
+        return -1;
+
+    /* Compute player data pointer: (benchPlayerIndex + 10) * 61 */
+    uint16_t playerIdx = benchPlayerIndex + 10;
+    uint32_t offset = (uint32_t)playerIdx * PLAYERINFO_SIZE;
+    PlayerInfo *pi = (PlayerInfo *)((uint8_t *)benchTeamGame + offset + 42);
+
+    /* Already substituted? (pi->skip repurposed as substitution flag) */
+    if (pi->skip != 0)
+        return -1;
+
+    /* Inactive player? (negative position) */
+    if (pi->position < 0)
+        return -1;
+
+    /* Red card or worse? */
+    if ((uint8_t)pi->numYellowCards >= 2)
+        return -1;
+
+    return 0;
+}
+
+/* ---- FirePressedInSubsMenu  (SWOS2.s line 9938) ----
+ * Handles fire button press in bench menu (subsState == 0).
+ * benchPlayerIndex == 0: enters mark-players mode (state 4).
+ * benchPlayerIndex >= 1: starts substitution (state 1).
+ */
+__attribute__((used, externally_visible))
+void _FirePressedInSubsMenu(void)
+{
+    uint16_t idx = benchPlayerIndex;
+
+    if (idx == 0) {
+        /* Mark players mode */
+        selectedPlayerInSubs = 0xFFFF;
+        subsState = 4;
+        subsBlockFire = 1;
+        overlayActiveFlag = 1;
+        plToBeSubstitutedOrd = 0xFFFF;
+        plToBeSubstitutedPos = 0xFFFF;
+        selectedPlayerInSubs = 0xFFFF;
+        return;
+    }
+
+    /* Check if bench player is valid for substitution */
+    uint16_t ordinal = idx + 10;
+    uint16_t offset = ingameTeamPlayerOffsets[ordinal];
+    PlayerInfo *pi = piFromOffset((TeamGame *)benchTeamGame, offset);
+
+    /* Inactive player? */
+    if (pi->position < 0)
+        return;
+
+    /* Red card? */
+    if ((uint8_t)pi->numYellowCards >= 2)
+        return;
+
+    /* Start substitution process */
+    subsState = 1;
+    subsBlockFire = 1;
+    overlayActiveFlag = 1;
+    plToEnterGameIndex = idx + 10;
+
+    if (gameMaxSubstitutes > 5 && plToEnterGameIndex == 11) {
+        plToBeSubstitutedPos = 0;
+        return;
+    }
+
+    _FindInitialPlayerToBeSubstituted();
+}
+
+/* ---- HandleFormationMenuControls  (SWOS2.s line 10216) ----
+ * Handles controls while in formation selection menu (subsState == 2).
+ * Fire applies the selected formation; otherwise delegates to movement.
+ */
+__attribute__((used, externally_visible))
+void _HandleFormationMenuControls(void)
+{
+    if (subsFire == 0) {
+        /* No fire — handle movement */
+        _HandleFormationMenuMovement();
+        return;
+    }
+
+    /* Fire pressed — apply selected formation */
+    overlayActiveFlag = 0;
+    TeamGeneralInfo *team = (TeamGeneralInfo *)benchTeam;
+    team->tactics = (int16_t)selectedFormationEntry;
+
+    if (team->teamNumber == 1)
+        pl1Tactics = selectedFormationEntry;
+    else
+        pl2Tactics = selectedFormationEntry;
+
+    _ApplyTeamTactics((TeamGame *)benchTeamGame);
+    _SubsBenchOff();
+}
+
+/* ---- UpdateSubstitutePlayerIndices  (SWOS2.s line 10243) ----
+ * Cycles through substitute candidates based on direction input.
+ * Direction 0 = previous, 4 = next, 2/6 = exit bench.
+ * Scans forward/backward with wrap-around to find valid candidates.
+ */
+__attribute__((used, externally_visible))
+void _UpdateSubstitutePlayerIndices(void)
+{
+    uint16_t dir = subsDirection;
+
+    /* Left/right = exit bench */
+    if (dir == 2 || dir == 6) {
+        _SubsBenchOff();
+        return;
+    }
+
+    /* Guard: not state 4, entering player 11 with <=5 max subs */
+    if (subsState != 4) {
+        if (plToEnterGameIndex == 11 && gameMaxSubstitutes <= 5)
+            return;
+    }
+
+    dir = subsDirection;
+    if (dir == 4)
+        goto select_next;
+    if (dir == 0)
+        goto select_prev;
+    return;
+
+select_next:
+    subsBlockDirections = 1;
+    if (subsState == 4 && (int16_t)plToBeSubstitutedOrd < 0) {
+        plToBeSubstitutedOrd = 1;
+        _UpdatePlayerToBeSubstitutedPosition();
+        return;
+    }
+    if (plToBeSubstitutedOrd == 10)
+        return;
+    goto inc_forward;
+
+select_prev:
+    subsBlockDirections = 1;
+    if (subsState == 4) {
+        if ((int16_t)plToBeSubstitutedOrd < 0)
+            return;
+        if (plToBeSubstitutedOrd == 1) {
+            plToBeSubstitutedOrd = 0xFFFF;
+            plToBeSubstitutedPos = 0xFFFF;
+            return;
+        }
+    }
+    if (plToBeSubstitutedOrd == 0)
+        return;
+    goto dec_backward;
+
+inc_forward:
+    plToBeSubstitutedOrd++;
+    if (plToBeSubstitutedOrd == 11)
+        goto dec_backward;
+    _UpdatePlayerToBeSubstitutedPosition();
+    if (_IsPlayerOkToSubstitute() != 0)
+        goto inc_forward;
+    return;
+
+dec_backward:
+    plToBeSubstitutedOrd--;
+    if ((int16_t)plToBeSubstitutedOrd < 0)
+        goto inc_forward;
+    _UpdatePlayerToBeSubstitutedPosition();
+    if (_IsPlayerOkToSubstitute() != 0)
+        goto dec_backward;
+}
+
+/* ---- CallUpdateSubstitutePlayerIndices  (SWOS2.s line 10083) ----
+ * Thin wrapper that calls UpdateSubstitutePlayerIndices.
+ */
+__attribute__((used, externally_visible))
+void _CallUpdateSubstitutePlayerIndices(void)
+{
+    _UpdateSubstitutePlayerIndices();
+}
+
+/* ---- state3_handle_fire_press  (SWOS2.s line 10089) ----
+ * Handles fire button in subsState == 3 (substitute confirmation).
+ * Fire pressed: clears overlay and exits.
+ * Fire not pressed: delegates to UpdateSubstitutePlayerIndices.
+ * Note: dead code after bra.w in original asm is omitted.
+ */
+__attribute__((used, externally_visible))
+void _state3_handle_fire_press(void)
+{
+    if (subsFire != 0) {
+        overlayActiveFlag = 0;
+        return;
+    }
+    _UpdateSubstitutePlayerIndices();
+}
+
+/* ================================================================
+ * Chunk 158: SelectPlayerToSubstituteMenuHandler + SubstitutePlayer +
+ *            MarkPlayersMenuHandler
+ * ================================================================ */
+
+/* ---- SelectPlayerToSubstituteMenuHandler  (SWOS2.s line 9922) ----
+ * Handles fire button in subsState == 1 (player selected for substitution).
+ * Fire: confirms substitution — increments sub counters, sets up sprite
+ * animation for the leaving player, records positions.
+ * No fire: delegates to CallUpdateSubstitutePlayerIndices.
+ */
+__attribute__((used, externally_visible))
+void _SelectPlayerToSubstituteMenuHandler(void)
+{
+    if (subsFire == 0) {
+        _CallUpdateSubstitutePlayerIndices();
+        return;
+    }
+
+    overlayActiveFlag = 0;
+    substituteInProgress = 1;
+
+    /* Increment substitution counters for the correct team */
+    TeamGeneralInfo *team = (TeamGeneralInfo *)benchTeam;
+    if (team->teamNumber == 1) {
+        team1NumSubs++;
+        if (plToEnterGameIndex == 11)
+            team1GoalkeeperReplaced++;
+    } else {
+        team2NumSubs++;
+        if (plToEnterGameIndex == 11)
+            team2GoalkeeperReplaced++;
+    }
+
+    subsBlockFire = 1;
+    subsState = 0;
+    subsWriteOnly = 2;
+
+    /* Set up substitution sprite and animation data */
+    uint16_t pos = plToBeSubstitutedPos;
+    teamThatSubstitutes = benchTeam;
+    Sprite **table = team->spritesTable;
+    Sprite *sprite = table[pos];
+    substitutedPlSprite = (uint32_t)sprite;
+    sprite->cards = 0;
+    substitutedPlX = sprite->x.s.i;
+    substitutedPlY = sprite->y.s.i;
+    substitutedPlDestX = plLeavingX;
+    substitutedPlDestY = plComingYTmp;
+    plSubstitutedX = 39;
+    plSubstitutedY = 449;
+}
+
+/* ---- SubstitutePlayer  (SWOS2.s line 9968) ----
+ * Performs the actual player substitution:
+ *   - Clears injury/sent-away on the leaving player's sprite
+ *   - Updates marked player tracking
+ *   - Swaps name/ordinal data between the two players
+ *   - Marks leaving player's position as inactive (0xFF)
+ *   - Byte-swaps 61 bytes of PlayerInfo between the two slots
+ *   - Rebuilds sprite frame indices, re-applies tactics
+ *   - Leaves the subs menu
+ */
+__attribute__((used, externally_visible))
+void _SubstitutePlayer(void)
+{
+    Sprite *sprite = (Sprite *)substitutedPlSprite;
+    sprite->injuryLevel = 0;
+    sprite->sentAway = 0;
+
+    uint16_t leaving = plToBeSubstitutedPos;  /* d7 — on-field player going off */
+    uint16_t entering = plToEnterGameIndex;   /* d6 — bench player coming on */
+    TeamGame *tg = (TeamGame *)benchTeamGame;
+
+    /* Update marked player tracking */
+    if (tg->markedPlayer == (int16_t)leaving)
+        tg->markedPlayer = -1;
+    if (tg->markedPlayer == (int16_t)entering) {
+        tg->markedPlayer = -1;
+        if (leaving != 0)
+            tg->markedPlayer = (int16_t)leaving;
+    }
+
+    _SwapPlayerNameData(entering, leaving);
+
+    /* Look up raw byte offsets */
+    uint16_t enterOff = ingameTeamPlayerOffsets[entering];
+    uint16_t leaveOff = ingameTeamPlayerOffsets[leaving];
+
+    /* Mark leaving player's position as inactive before swap */
+    uint8_t *base = (uint8_t *)tg;
+    base[leaveOff + 46] = 0xFF;  /* PLAYERINFOHEADER_POSITION */
+
+    /* Swap 61 bytes of PlayerInfo data (offset 42 from player block start) */
+    uint8_t *pE = base + enterOff + 42;
+    uint8_t *pL = base + leaveOff + 42;
+    for (int16_t i = 0; i < 61; i++) {
+        uint8_t tmp = pE[i];
+        pE[i] = pL[i];
+        pL[i] = tmp;
+    }
+
+    _InitializePlayerSpriteFrameIndices();
+    _ApplyTeamTactics((TeamGame *)benchTeamGame);
+    waitForPlayerToGoInTimer = 100;
+    subsBlockFire = 1;
+    _LeaveSubsMenu();
+}
+
+/* ---- MarkPlayersMenuHandler  (SWOS2.s line 10022) ----
+ * Handles controls in subsState == 4 (mark/swap players mode).
+ *
+ * Fire hold (8 frames) on valid player: toggles mark on that player.
+ * Fire press with negative ord: enters formation menu.
+ * Fire with two selected players: swaps their positions, data, and sprites.
+ * No fire: delegates to UpdateSubstitutePlayerIndices.
+ */
+__attribute__((used, externally_visible))
+void _MarkPlayersMenuHandler(void)
+{
+    /* Check if current player can be marked (no red card) and fire held long enough */
+    uint16_t offset = ingameTeamPlayerOffsets[plToBeSubstitutedPos];
+    PlayerInfo *pi = piFromOffset((TeamGame *)benchTeamGame, offset);
+    TeamGame *tg = (TeamGame *)benchTeamGame;
+
+    if ((uint8_t)pi->numYellowCards < 2 && subsFireTimer == 8) {
+        /* Toggle mark on current player */
+        uint16_t pos = plToBeSubstitutedPos;
+        if (tg->markedPlayer == (int16_t)pos)
+            pos = 0xFFFF;  /* unmark */
+        tg->markedPlayer = (int16_t)pos;
+        selectedPlayerInSubs = 0xFFFF;
+        return;
+    }
+
+    /* Fire not pressed — delegate to movement/scanning */
+    if (subsFire == 0) {
+        _UpdateSubstitutePlayerIndices();
+        return;
+    }
+
+    /* Fire pressed with negative ord → formation menu */
+    if ((int16_t)plToBeSubstitutedOrd < 0) {
+        subsWriteOnly = 2;
+        _ShowFormationMenu();
+        return;
+    }
+
+    /* Ord == 0 → exit */
+    if (plToBeSubstitutedOrd == 0)
+        return;
+
+    /* No player selected yet? */
+    if ((int16_t)selectedPlayerInSubs < 0) {
+        /* First fire press → select current player */
+        if (subsFireTimer == 1)
+            selectedPlayerInSubs = plToBeSubstitutedPos;
+        return;
+    }
+
+    /* Same player selected again? */
+    if (selectedPlayerInSubs == plToBeSubstitutedPos) {
+        /* Deselect on short press */
+        if (subsFireTimer == 1)
+            selectedPlayerInSubs = 0xFFFF;
+        return;
+    }
+
+    /* Two different players selected — swap them */
+    uint16_t player1 = selectedPlayerInSubs;    /* d7 — first selected */
+    uint16_t player2 = plToBeSubstitutedPos;    /* d6 — second selected */
+
+    /* Update marked player to follow the swap */
+    if (tg->markedPlayer == (int16_t)player2) {
+        tg->markedPlayer = (int16_t)player1;
+    } else if (tg->markedPlayer == (int16_t)player1) {
+        tg->markedPlayer = (int16_t)player2;
+    }
+
+    _SwapPlayerNameData(player2, player1);
+
+    /* Swap PlayerInfo data (61 bytes) */
+    uint16_t off1 = ingameTeamPlayerOffsets[player2];
+    uint16_t off2 = ingameTeamPlayerOffsets[player1];
+    uint8_t *base = (uint8_t *)tg;
+    uint8_t *p1 = base + off1 + 42;
+    uint8_t *p2 = base + off2 + 42;
+    for (int16_t i = 0; i < 61; i++) {
+        uint8_t tmp = p1[i];
+        p1[i] = p2[i];
+        p2[i] = tmp;
+    }
+
+    /* Swap Sprite data (110 bytes, preserving playerOrdinal) */
+    TeamGeneralInfo *benchTm = (TeamGeneralInfo *)benchTeam;
+    Sprite *sprite1 = benchTm->spritesTable[player2];
+    Sprite *sprite2 = benchTm->spritesTable[player1];
+    uint8_t *s1 = (uint8_t *)sprite1;
+    uint8_t *s2 = (uint8_t *)sprite2;
+    for (int16_t i = 0; i < 110; i++) {
+        uint8_t tmp = s1[i];
+        s1[i] = s2[i];
+        s2[i] = tmp;
+    }
+    /* Restore playerOrdinal — each sprite keeps its own ordinal */
+    int16_t tmpOrd = sprite1->playerOrdinal;
+    sprite1->playerOrdinal = sprite2->playerOrdinal;
+    sprite2->playerOrdinal = tmpOrd;
+
+    _InitializePlayerSpriteFrameIndices();
+    _ApplyTeamTactics((TeamGame *)benchTeamGame);
+    selectedPlayerInSubs = 0xFFFF;
+    overlayActiveFlag = 0;
+    _SubsBenchOff();
+}
+
+/* ================================================================
+ * Chunk 159: BenchMenuHandleControls
+ * ================================================================ */
+
+/* ---- BenchMenuHandleControls  (SWOS2.s line 9792) ----
+ * Main per-frame dispatcher for all bench menu controls.
+ * Routes to state-specific handlers based on subsState.
+ * In idle state (0): handles direction, fire, training team swap.
+ */
+__attribute__((used, externally_visible))
+void _BenchMenuHandleControls(void)
+{
+    if (substituteInProgress != 0)
+        return;
+
+    /* Dispatch based on current subs menu state */
+    if (subsState != 0) {
+        if (subsState == 1) { _SelectPlayerToSubstituteMenuHandler(); return; }
+        if (subsState == 3) { _state3_handle_fire_press(); return; }
+        if (subsState == 2) { _HandleFormationMenuControls(); return; }
+        if (subsState == 4) { _MarkPlayersMenuHandler(); return; }
+        return;
+    }
+
+    /* subsState == 0: bench idle — check if bench was dismissed */
+    if (benchTeam == (uint32_t)&topTeamData) {
+        if (bench1Called != 0) { _LeaveSubsMenu(); return; }
+    } else {
+        if (bench2Called != 0) { _LeaveSubsMenu(); return; }
+    }
+
+    uint16_t dir = subsDirection;
+
+    /* Training top-team reverses up/down direction mapping */
+    if (trainingGame != 0 && subsTrainingTopTeam != 0) {
+        if (dir == 0) goto handle_inc;
+        if (dir == 4) goto handle_dec;
+    } else {
+        if (dir == 0) goto handle_dec;
+        if (dir == 4) goto handle_inc;
+    }
+
+    /* Left/right = leave, fire = start substitution */
+    if (dir == 2 || dir == 6) { _LeaveSubsMenu(); return; }
+    if (subsFire != 0) { _FirePressedInSubsMenu(); return; }
+    return;
+
+handle_inc:
+    /* Scroll up in bench list (increment benchPlayerIndex) */
+    if (gameState == ST_KEEPER_HOLDS_BALL) return;
+    subsBlockDirections = 1;
+    if (benchPlayerIndex == 5) return;  /* already at max */
+    goto inc_scan;
+
+inc_scan:
+    benchPlayerIndex++;
+    if (benchPlayerIndex == 6) goto dec_scan;  /* wrap around */
+    if (_IsThisPlayerOkToSelect() < 0) goto inc_scan;
+    return;
+
+handle_dec:
+    /* Scroll down in bench list (decrement benchPlayerIndex) */
+    if (trainingGame == 0 || benchPlayerIndex != 0) {
+        if (gameState == ST_KEEPER_HOLDS_BALL) return;
+    }
+    subsBlockDirections = 1;
+    if (benchPlayerIndex != 0) goto dec_scan;
+    /* At index 0 in training: swap teams */
+    if (trainingGame != 0) _TrainingSwapBenchTeams();
+    return;
+
+dec_scan:
+    benchPlayerIndex--;
+    if (benchPlayerIndex == 0) return;
+    if (_IsThisPlayerOkToSelect() < 0) goto dec_scan;
 }

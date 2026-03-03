@@ -9790,97 +9790,7 @@ LeaveSubsMenu:
 ; ===== BenchMenuHandleControls =====
 ; prototype: void __usercall BenchMenuHandleControls()
 BenchMenuHandleControls:
-                tst.w   (substituteInProgress).l
-                beq.s   loc_10D00C
-                bra.w   _10CF6C_exit_rts
-loc_10D00C:
-                tst.w   (subsState).l
-                beq.s   loc_10D046
-                cmpi.w  #1,(subsState).l
-                beq.w   SelectPlayerToSubstituteMenuHandler
-                cmpi.w  #3,(subsState).l
-                beq.w   state3_handle_fire_press
-                cmpi.w  #2,(subsState).l
-                beq.w   HandleFormationMenuControls
-                cmpi.w  #4,(subsState).l
-                beq.w   MarkPlayersMenuHandler
-                rts
-loc_10D046:
-                movea.l (benchTeam).l,a0
-                cmpa.l  #topTeamData,a0
-                bne.s   loc_10D060
-                tst.w   (bench1Called).l
-                bne.w   LeaveSubsMenu
-                bra.s   loc_10D06A
-loc_10D060:
-                tst.w   (bench2Called).l
-                bne.w   LeaveSubsMenu
-loc_10D06A:
-                move.w  (subsDirection).l,d0
-                tst.w   (trainingGame).l
-                beq.s   loc_10D08C
-                tst.w   (subsTrainingTopTeam).l
-                beq.s   loc_10D08C
-                tst.w   d0
-                beq.s   loc_10D0B4
-                cmpi.w  #4,d0
-                beq.s   loc_10D0FC
-                bra.s   loc_10D096
-loc_10D08C:
-                tst.w   d0
-                beq.s   loc_10D0FC
-                cmpi.w  #4,d0
-                beq.s   loc_10D0B4
-loc_10D096:
-                cmpi.w  #2,d0
-                beq.w   LeaveSubsMenu
-                cmpi.w  #6,d0
-                beq.w   LeaveSubsMenu
-                tst.b   (subsFire).l
-                bne.w   FirePressedInSubsMenu
-                bra.w   _10CF6C_exit_rts
-loc_10D0B4:
-                cmpi.w  #ST_KEEPER_HOLDS_BALL,(gameState).l
-                beq.w   _10CF6C_exit_rts
-                move.w  #1,(subsBlockDirections).l
-                cmpi.w  #5,(benchPlayerIndex).l
-                bne.s   loc_10D0E0
-                bra.w   _10CF6C_exit_rts
-                clr.w   (benchPlayerIndex).l
-                bra.w   _10CF6C_exit_rts
-loc_10D0E0:
-                addq.w  #1,(benchPlayerIndex).l
-                cmpi.w  #6,(benchPlayerIndex).l
-                beq.w   loc_10D146
-                bsr.w   IsThisPlayerOkToSelect
-                bmi.s   loc_10D0E0
-                bra.w   _10CF6C_exit_rts
-loc_10D0FC:
-                tst.w   (trainingGame).l
-                beq.s   loc_10D10C
-                tst.w   (benchPlayerIndex).l
-                beq.s   loc_10D118
-loc_10D10C:
-                cmpi.w  #ST_KEEPER_HOLDS_BALL,(gameState).l
-                beq.w   _10CF6C_exit_rts
-loc_10D118:
-                move.w  #1,(subsBlockDirections).l
-                tst.w   (benchPlayerIndex).l
-                bne.s   loc_10D146
-                tst.w   (trainingGame).l
-                beq.s   loc_10D134
-                bsr.w   TrainingSwapBenchTeams
-loc_10D134:
-                bra.w   _10CF6C_exit_rts
-                move.w  #6,(benchPlayerIndex).l
-                bra.s   loc_10D146
-                bra.w   _10CF6C_exit_rts
-loc_10D146:
-                subq.w  #1,(benchPlayerIndex).l
-                beq.w   _10CF6C_exit_rts
-                bsr.w   IsThisPlayerOkToSelect
-                bmi.s   loc_10D146
-                bra.w   _10CF6C_exit_rts
+                jmp     _BenchMenuHandleControls
 
 ; ===== TrainingSwapBenchTeams =====
 ; prototype: void __usercall TrainingSwapBenchTeams()
@@ -9894,87 +9804,16 @@ TrainingSwapBenchTeams:
 ; 
 ; Checks if bench player at benchPlayerIndex is OK to select in bench.
 IsThisPlayerOkToSelect:
-                move.w  (team1NumSubs).l,d0
-                move.w  (team1GoalkeeperReplaced).l,d1
-                movea.l (benchTeam).l,a0
-                cmpi.w  #1,TEAMGENERALINFO_TEAMNUMBER(a0)
-                beq.s   loc_10D1D2
-                move.w  (team2NumSubs).l,d0
-                move.w  (team2GoalkeeperReplaced).l,d1
-loc_10D1D2:
-                cmp.w   (maxSubsPerTeam).l,d0
-                beq.s   loc_10D1FE
-                bra.s   loc_10D204
-                cmpi.w  #2,(maxSubsPerTeam).l
-                bls.s   loc_10D204
-                addq.w  #1,d0
-                cmp.w   (maxSubsPerTeam).l,d0
-                bne.s   loc_10D204
-                tst.w   d1
-                bne.s   loc_10D204
-                cmpi.w  #1,(benchPlayerIndex).l
-                beq.s   loc_10D204
-loc_10D1FE:
-                move.w  #$FFFF,d0
-                bra.s   locret_10D230
-loc_10D204:
-                move.w  (benchPlayerIndex).l,d0
-                addi.w  #$A,d0
-                mulu.w  #PLAYERINFO_SIZE+PLAYERINFO_SKIP,d0
-                movea.l (benchTeamGame).l,a0
-                adda.l  d0,a0
-                tst.b   PLAYERINFOHEADER_SUBSTITUTED(a0)
-                bne.s   loc_10D1FE
-                tst.b   PLAYERINFOHEADER_POSITION(a0)
-                bmi.s   locret_10D230
-                cmpi.b  #2,PLAYERINFOHEADER_CARDS(a0)
-                bcc.s   loc_10D1FE
-                clr.w   d0
-locret_10D230:
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _IsThisPlayerOkToSelect
+                movem.l (sp)+,d2-d7/a2-a6
+                tst.w   d0
                 rts
 
 ; ===== FirePressedInSubsMenu =====
 ; prototype: void __usercall FirePressedInSubsMenu()
 FirePressedInSubsMenu:
-                move.w  (benchPlayerIndex).l,d0
-                beq.w   loc_10D2B8
-                subq.w  #1,d0
-                bmi.w   _10CF6C_exit_rts
-                lea     (ingameTeamPlayerOffsets).l,a0
-                addi.w  #11,d0
-                lsl.w   #1,d0
-                move.w  (a0,d0.w),d0
-                movea.l (benchTeamGame).l,a0
-                lea     (a0,d0.w),a0
-                tst.b   PLAYERINFOHEADER_POSITION(a0)
-                bmi.w   _10CF6C_exit_rts
-                cmpi.b  #2,PLAYERINFOHEADER_CARDS(a0)
-                bcc.w   _10CF6C_exit_rts
-                move.w  #1,(subsState).l
-                move.w  #1,(subsBlockFire).l
-                move.w  #1,(overlayActiveFlag).l
-                move.w  (benchPlayerIndex).l,d0
-                addi.w  #10,d0
-                move.w  d0,(plToEnterGameIndex).l
-                cmpi.w  #5,(gameMaxSubstitutes).l
-                bls.s   loc_10D2B2
-                cmpi.w  #11,(plToEnterGameIndex).l
-                bne.s   loc_10D2B2
-                clr.w   (plToBeSubstitutedPos).l
-                rts
-loc_10D2B2:
-                bsr.w   FindInitialPlayerToBeSubstituted
-                rts
-loc_10D2B8:
-                move.w  #$FFFF,(selectedPlayerInSubs).l
-                move.w  #4,(subsState).l
-                move.w  #1,(subsBlockFire).l
-                move.w  #1,(overlayActiveFlag).l
-                move.w  #1,d0
-                move.w  #$FFFF,(plToBeSubstitutedOrd).l
-                move.w  #$FFFF,(plToBeSubstitutedPos).l
-                move.w  #$FFFF,(selectedPlayerInSubs).l
-                rts
+                jmp     _FirePressedInSubsMenu
 
 ; ===== ShowFormationMenu =====
 ; prototype: void __usercall ShowFormationMenu()
@@ -9991,43 +9830,7 @@ SubsBenchOff:
 ; ===== SelectPlayerToSubstituteMenuHandler =====
 ; prototype: void __usercall SelectPlayerToSubstituteMenuHandler()
 SelectPlayerToSubstituteMenuHandler:
-                tst.b   (subsFire).l
-                beq.w   CallUpdateSubstitutePlayerIndices
-                clr.w   (overlayActiveFlag).l
-                move.w  #1,(substituteInProgress).l
-                move.l  a2,-(sp)
-                lea     (team1NumSubs).l,a0
-                lea     (team1GoalkeeperReplaced).l,a2
-                movea.l (benchTeam).l,a1
-                cmpi.w  #1,TEAMGENERALINFO_TEAMNUMBER(a1)
-                beq.s   increment_sub_counters
-                lea     (team2NumSubs).l,a0
-                lea     (team2GoalkeeperReplaced).l,a2
-increment_sub_counters:
-                addq.w  #1,(a0)
-                cmpi.w  #11,(plToEnterGameIndex).l
-                bne.s   post_sub_counters_return
-                addq.w  #1,(a2)
-post_sub_counters_return:
-                movea.l (sp)+,a2
-                move.w  #1,(subsBlockFire).l
-                clr.w   (subsState).l
-                move.w  #2,(subsWriteOnly).l
-                move.w  (plToBeSubstitutedPos).l,d0
-                lsl.w   #2,d0
-                movea.l (benchTeam).l,a0
-                move.l  a0,(teamThatSubstitutes).l
-                movea.l TEAMGENERALINFO_SPRITESTABLE(a0),a0
-                movea.l (a0,d0.w),a0
-                move.l  a0,(substitutedPlSprite).l
-                clr.w   SPRITE_CARDS(a0)
-                move.w  SPRITE_X(a0),(substitutedPlX).l
-                move.w  SPRITE_Y(a0),(substitutedPlY).l
-                move.w  (plLeavingX).l,(substitutedPlDestX).l
-                move.w  (plComingYTmp).l,(substitutedPlDestY).l
-                move.w  #39,(plSubstitutedX).l
-                move.w  #449,(plSubstitutedY).l
-                bra.w   _10CF6C_exit_rts
+                jmp     _SelectPlayerToSubstituteMenuHandler
 
 ; ===== CheckForThrowInAndGoalkeepersBall =====
 ; prototype: void __usercall CheckForThrowInAndGoalkeepersBall()
@@ -10037,268 +9840,32 @@ CheckForThrowInAndGoalkeepersBall:
 ; ===== SubstitutePlayer =====
 ; prototype: void __usercall SubstitutePlayer()
 SubstitutePlayer:
-                movea.l (substitutedPlSprite).l,a0
-                clr.w   SPRITE_INJURYLEVEL(a0)
-                clr.w   SPRITE_SENTAWAY(a0)
-                move.w  (plToBeSubstitutedPos).l,d7
-                move.w  (plToEnterGameIndex).l,d6
-                movea.l (benchTeamGame).l,a0
-                cmp.w   TEAMGAME_MARKEDPLAYER(a0),d7 ; reset marked player if that's the player going out
-                bne.s   loc_10D472
-                move.w  #$FFFF,TEAMGAME_MARKEDPLAYER(a0)
-loc_10D472:
-                cmp.w   TEAMGAME_MARKEDPLAYER(a0),d6
-                bne.s   loc_10D486
-                move.w  #$FFFF,TEAMGAME_MARKEDPLAYER(a0)
-                tst.w   d7
-                beq.s   loc_10D486
-                move.w  d7,TEAMGAME_MARKEDPLAYER(a0)
-loc_10D486:
-                bsr.w   SwapPlayerNameData
-                lea     (ingameTeamPlayerOffsets).l,a0
-                lsl.w   #1,d6
-                lsl.w   #1,d7
-                move.w  (a0,d6.w),d6
-                move.w  (a0,d7.w),d7
-                movea.l (benchTeamGame).l,a0
-                move.b  #$FF,PLAYERINFOHEADER_POSITION(a0,d7.w)
-                move.w  #60,d1          ; sizeof(GamePlayer) - 1
-loc_10D4AC:
-                move.b  TEAMGAME_PLAYERS+PLAYERINFO_SKIP(a0,d6.w),d0 ; 42 = sizeof(TeamGameHeader)
-                move.b  TEAMGAME_PLAYERS+PLAYERINFO_SKIP(a0,d7.w),TEAMGAME_PLAYERS+PLAYERINFO_SKIP(a0,d6.w)
-                move.b  d0,TEAMGAME_PLAYERS+PLAYERINFO_SKIP(a0,d7.w)
-                addq.l  #1,a0
-                dbf     d1,loc_10D4AC
-                bsr.w   InitializePlayerSpriteFrameIndices
-                movea.l (benchTeamGame).l,a4
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     ApplyTeamTactics
-                movem.l (sp)+,d0-d7/a0-a6
-                move.w  #100,(waitForPlayerToGoInTimer).l
-                move.w  #1,(subsBlockFire).l
-                bra.w   LeaveSubsMenu
+                jmp     _SubstitutePlayer
 
 ; ===== CallUpdateSubstitutePlayerIndices =====
 ; prototype: void __usercall CallUpdateSubstitutePlayerIndices()
 CallUpdateSubstitutePlayerIndices:
-                bsr.w   UpdateSubstitutePlayerIndices
-                bra.w   _10CF6C_exit_rts
+                jmp     _CallUpdateSubstitutePlayerIndices
 
 ; ===== state3_handle_fire_press =====
 ; prototype: void __usercall state3_handle_fire_press()
 state3_handle_fire_press:
-                tst.b   (subsFire).l
-                beq.w   loc_10D534
-                clr.w   (overlayActiveFlag).l
-                bra.w   _10CF6C_exit_rts
-                move.w  #1,(subsBlockFire).l
-                move.w  (plToBeSubstitutedPos).l,d0
-                lsl.w   #2,d0
-                movea.l (benchTeam).l,a0
-                movea.l TEAMGENERALINFO_SPRITESTABLE(a0),a0
-                movea.l (a0,d0.w),a0
-                movea.l (benchTeam).l,a6
-                bsr.w   nullsub_20
-                bra.w   LeaveSubsMenu
-loc_10D534:
-                bsr.w   UpdateSubstitutePlayerIndices
-                bra.w   _10CF6C_exit_rts
+                jmp     _state3_handle_fire_press
 
 ; ===== MarkPlayersMenuHandler =====
 ; prototype: void __usercall MarkPlayersMenuHandler()
 MarkPlayersMenuHandler:
-                movea.l (benchTeamGame).l,a0
-                lea     (ingameTeamPlayerOffsets).l,a1
-                move.w  (plToBeSubstitutedPos).l,d0
-                lsl.w   #1,d0
-                move.w  (a1,d0.w),d0
-                lea     (a0,d0.w),a0
-                cmpi.b  #2,PLAYERINFOHEADER_CARDS(a0)
-                bcc.s   loc_10D590
-                cmpi.w  #8,(subsFireTimer).l
-                bne.s   loc_10D590
-                movea.l (benchTeamGame).l,a0
-                move.w  (plToBeSubstitutedPos).l,d0
-                cmp.w   TEAMGAME_MARKEDPLAYER(a0),d0
-                bne.s   loc_10D580
-                move.w  #$FFFF,d0
-loc_10D580:
-                move.w  d0,TEAMGAME_MARKEDPLAYER(a0)
-                move.w  #$FFFF,(selectedPlayerInSubs).l
-                bra.w   _10CF6C_exit_rts
-loc_10D590:
-                tst.b   (subsFire).l
-                beq.w   loc_10D6D8
-                tst.w   (plToBeSubstitutedOrd).l
-                bpl.s   loc_10D5AE
-                move.w  #2,(subsWriteOnly).l
-                bra.w   ShowFormationMenu
-loc_10D5AE:
-                tst.w   (plToBeSubstitutedOrd).l
-                beq.w   _10CF6C_exit_rts
-                tst.w   (selectedPlayerInSubs).l
-                bmi.w   loc_10D6C0
-                move.w  (selectedPlayerInSubs).l,d0
-                cmp.w   (plToBeSubstitutedPos).l,d0
-                bne.s   loc_10D5E6
-                cmpi.w  #1,(subsFireTimer).l
-                bne.w   _10CF6C_exit_rts
-                move.w  #$FFFF,(selectedPlayerInSubs).l
-                rts
-loc_10D5E6:
-                move.w  (selectedPlayerInSubs).l,d7
-                move.w  (plToBeSubstitutedPos).l,d6
-                movea.l (benchTeamGame).l,a0
-                move.w  d7,d0
-                cmp.w   TEAMGAME_MARKEDPLAYER(a0),d6
-                beq.s   loc_10D608
-                move.w  d6,d0
-                cmp.w   TEAMGAME_MARKEDPLAYER(a0),d7
-                bne.s   loc_10D60C
-loc_10D608:
-                move.w  d0,TEAMGAME_MARKEDPLAYER(a0)
-loc_10D60C:
-                bsr.w   SwapPlayerNameData
-                lea     (ingameTeamPlayerOffsets).l,a0
-                lsl.w   #1,d6
-                lsl.w   #1,d7
-                move.w  (a0,d6.w),d6
-                move.w  (a0,d7.w),d7
-                movea.l (benchTeamGame).l,a0
-                move.w  #60,d1          ; sizeof(PlayerInfo) - 1
-loc_10D62C:
-                move.b  PLAYERINFOHEADER_SUBSTITUTED(a0,d6.w),d0
-                move.b  PLAYERINFOHEADER_SUBSTITUTED(a0,d7.w),PLAYERINFOHEADER_SUBSTITUTED(a0,d6.w)
-                move.b  d0,PLAYERINFOHEADER_SUBSTITUTED(a0,d7.w)
-                addq.l  #1,a0
-                dbf     d1,loc_10D62C
-                move.w  (selectedPlayerInSubs).l,d7
-                move.w  (plToBeSubstitutedPos).l,d6
-                move.w  d6,d0
-                lsl.w   #2,d0
-                movea.l (benchTeam).l,a0 ; A0 -> player1 sprite
-                movea.l TEAMGENERALINFO_SPRITESTABLE(a0),a0
-                movea.l (a0,d0.w),a0
-                move.w  d7,d0
-                lsl.w   #2,d0
-                movea.l (benchTeam).l,a1
-                movea.l TEAMGENERALINFO_SPRITESTABLE(a1),a1
-                movea.l (a1,d0.w),a1    ; A1 -> player2 sprite
-                move.w  #109,d1         ; sizeof(Sprite) - 1
-loc_10D674:
-                move.b  (a0,d1.w),d0
-                move.b  (a1,d1.w),(a0,d1.w)
-                move.b  d0,(a1,d1.w)
-                dbf     d1,loc_10D674
-                move.w  SPRITE_PLAYERORDINAL(a0),d0
-                move.w  SPRITE_PLAYERORDINAL(a1),SPRITE_PLAYERORDINAL(a0)
-                move.w  d0,SPRITE_PLAYERORDINAL(a1) ; preserve original player ordinals
-                bsr.w   InitializePlayerSpriteFrameIndices
-                movea.l (benchTeamGame).l,a4
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     ApplyTeamTactics
-                movem.l (sp)+,d0-d7/a0-a6
-                move.w  #$FFFF,(selectedPlayerInSubs).l
-                clr.w   (overlayActiveFlag).l
-                bra.w   SubsBenchOff
-                rts
-loc_10D6C0:
-                cmpi.w  #1,(subsFireTimer).l
-                bne.w   _10CF6C_exit_rts
-                move.w  (plToBeSubstitutedPos).l,(selectedPlayerInSubs).l
-                rts
-loc_10D6D8:
-                bsr.w   UpdateSubstitutePlayerIndices
-                bra.w   _10CF6C_exit_rts
+                jmp     _MarkPlayersMenuHandler
 
 ; ===== HandleFormationMenuControls =====
 ; prototype: void __usercall HandleFormationMenuControls()
 HandleFormationMenuControls:
-                tst.b   (subsFire).l
-                beq.w   loc_10D74A
-                clr.w   (overlayActiveFlag).l
-                movea.l (benchTeam).l,a0
-                move.w  (selectedFormationEntry).l,TEAMGENERALINFO_TACTICS(a0)
-                cmpi.w  #1,TEAMGENERALINFO_TEAMNUMBER(a0)
-                bne.s   loc_10D728
-                move.w  (selectedFormationEntry).l,(pl1Tactics).l
-                movea.l (benchTeamGame).l,a4
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     ApplyTeamTactics
-                movem.l (sp)+,d0-d7/a0-a6
-                bra.w   SubsBenchOff
-loc_10D728:
-                move.w  (selectedFormationEntry).l,(pl2Tactics).l
-                movea.l (benchTeamGame).l,a4
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     ApplyTeamTactics
-                movem.l (sp)+,d0-d7/a0-a6
-                bra.w   SubsBenchOff
-loc_10D74A:
-                bsr.w   HandleFormationMenuMovement
-                bra.w   _10CF6C_exit_rts
+                jmp     _HandleFormationMenuControls
 
 ; ===== UpdateSubstitutePlayerIndices =====
 ; prototype: void __usercall UpdateSubstitutePlayerIndices()
 UpdateSubstitutePlayerIndices:
-                move.w  (subsDirection).l,d7
-                cmpi.w  #2,d7
-                beq.w   SubsBenchOff
-                cmpi.w  #6,d7
-                beq.w   SubsBenchOff
-                cmpi.w  #4,(subsState).l
-                beq.s   dispatch_by_direction
-                cmpi.w  #11,(plToEnterGameIndex).l
-                bne.s   dispatch_by_direction
-                cmpi.w  #5,(gameMaxSubstitutes).l
-                bhi.w   _10CF6C_exit_rts
-dispatch_by_direction:
-                move.w  (subsDirection).l,d7
-                beq.s   select_prev_candidate_start
-                cmpi.w  #4,d7
-                beq.s   select_next_candidate_start
-                bra.w   _10CF6C_exit_rts
-select_next_candidate_start:
-                move.w  #1,(subsBlockDirections).l
-                cmpi.w  #4,(subsState).l
-                bne.s   next_guard_or_limit_check
-                tst.w   (plToBeSubstitutedOrd).l
-                bpl.s   next_guard_or_limit_check
-                move.w  #1,(plToBeSubstitutedOrd).l
-                bsr.w   UpdatePlayerToBeSubstitutedPosition
-                bra.w   _10CF6C_exit_rts
-next_guard_or_limit_check:
-                cmpi.w  #10,(plToBeSubstitutedOrd).l
-                beq.w   _10CF6C_exit_rts
-inc_ord_scan_forward:
-                addq.w  #1,(plToBeSubstitutedOrd).l
-                cmpi.w  #11,(plToBeSubstitutedOrd).l
-                beq.s   dec_ord_scan_backward
-                bsr.w   UpdatePlayerToBeSubstitutedPosition
-                bsr.w   IsPlayerOkToSubstitute
-                bne.s   inc_ord_scan_forward
-                bra.w   _10CF6C_exit_rts
-select_prev_candidate_start:
-                move.w  #1,(subsBlockDirections).l
-                cmpi.w  #4,(subsState).l
-                bne.s   prev_guard_at_start
-                tst.w   (plToBeSubstitutedOrd).l
-                bmi.w   _10CF6C_exit_rts
-                cmpi.w  #1,(plToBeSubstitutedOrd).l
-                bne.s   prev_guard_at_start
-                move.w  #$FFFF,(plToBeSubstitutedOrd).l
-                move.w  #$FFFF,(plToBeSubstitutedPos).l
-                bra.w   _10CF6C_exit_rts
-prev_guard_at_start:
-                tst.w   (plToBeSubstitutedOrd).l
-                beq.w   _10CF6C_exit_rts
-dec_ord_scan_backward:
-                subq.w  #1,(plToBeSubstitutedOrd).l
-                bmi.s   inc_ord_scan_forward
-                bsr.w   UpdatePlayerToBeSubstitutedPosition
-                bsr.w   IsPlayerOkToSubstitute
-                bne.s   dec_ord_scan_backward
-                bra.w   _10CF6C_exit_rts
+                jmp     _UpdateSubstitutePlayerIndices
 
 ; ===== UpdatePlayerToBeSubstitutedPosition =====
 ; prototype: void __usercall UpdatePlayerToBeSubstitutedPosition()
@@ -10431,21 +9998,7 @@ loc_10DB56:
 ; ===== DrawOpponentsBench =====
 ; prototype: void __usercall DrawOpponentsBench()
 DrawOpponentsBench:
-                move.w  (benchXLimit).l,d1
-                move.w  (opponentBenchY).l,d2
-                lea     (topTeamInGame).l,a0
-                cmpi.l  #bottomTeamInGame,(benchTeamGame).l
-                beq.s   loc_10DBAC
-                lea     (bottomTeamInGame).l,a0
-loc_10DBAC:
-                movea.l (benchTeam).l,a1
-                movea.l 0(a1),a1
-                move.w  (subsState).l,-(sp)
-                move.w  #$FFFF,(subsState).l
-                move.w  (subsTrainingTopTeam).l,(drawTrainingTopHalfOfTheBench).l
-                eori.w  #1,(drawTrainingTopHalfOfTheBench).l
-                bsr.w   DrawBenchPlayersAndCoach
-                move.w  (sp)+,(subsState).l
+; Ported to C as static drawOpponentsBench() in bench_subs.c (dead code — called only from ported DrawBenchAndSubsMenu)
                 rts
 
 ; ===== DrawBenchPlayersAndCoach =====
@@ -10458,6 +10011,8 @@ loc_10DBAC:
 ; 
 ; Draws all bench sprites.
 DrawBenchPlayersAndCoach:
+; Ported to C as static drawBenchPlayersAndCoach() in bench_subs.c (dead code)
+                rts
                 clr.w   d5
                 clr.w   d6
                 cmpi.w  #1,TEAMGENERALINFO_TEAMNUMBER(a1)
@@ -10605,6 +10160,8 @@ loc_10DDA0:
 ; prototype: void __usercall DrawSubstitutesMenu()
 ; Expecting deltaColor to be set to 16.
 DrawSubstitutesMenu:
+; Ported to C as static drawSubstitutesMenu() in bench_subs.c (dead code)
+                rts
                 movea.l (benchTeamGame).l,a0
                 lea     (benchColors).l,a1
                 move.w  TEAMGAME_PRSHIRTCOL(a0),(a1)+
@@ -10758,6 +10315,8 @@ locret_10DFA4:
 ;      A2 -> current team (game)
 ;      A4 -> in-game team player offsets
 DrawSubstitutesMenuEntry:
+; Ported to C as static drawSubstitutesMenuEntry() in bench_subs.c (dead code)
+                rts
                 movem.l d2/d4,-(sp)
                 move.w  (subsMenuX).l,d0
                 sub.w   (cameraX).l,d0
@@ -10949,6 +10508,8 @@ locret_10E262:
 ; ===== DrawFormationMenu =====
 ; prototype: void __usercall DrawFormationMenu()
 DrawFormationMenu:
+; Ported to C as static drawFormationMenu() in bench_subs.c (dead code)
+                rts
                 movea.l (benchTeamGame).l,a0
                 lea     (benchColors).l,a1
                 move.w  TEAMGAME_PRSHIRTCOL(a0),(a1)+
@@ -11050,6 +10611,8 @@ loc_10E392:
 ;      D7 - entry index
 ;      A1 -> chars table
 DrawFormationMenuEntry:
+; Ported to C as static drawFormationMenuEntry() in bench_subs.c (dead code)
+                rts
                 movem.l d2/d4,-(sp)
                 move.w  (formationMenuX).l,d0
                 sub.w   (cameraX).l,d0
@@ -29177,48 +28740,9 @@ nullsub_11:
 ; ===== Int2StrWithCommas =====
 ; prototype: void __usercall Int2StrWithCommas(unsigned int value@<d0>, char *dst@<a1>)
 Int2StrWithCommas:
-                cmpi.l  #1000,d0
-                bcs.s   Int2AsciiSaveD0
-                cmpi.l  #1000000,d0
-                bcs.s   loc_127382
-                tst.l   d0
-                beq.s   Int2AsciiSaveD0
-                move.l  d0,d1
-                lsr.l   #4,d0
-                divu.w  #62500,d0
-                bsr.s   Int2AsciiSaveD0
-                move.b  #',',(a1)+
-                mulu.w  #62500,d0
-                lsl.l   #4,d0
-                sub.l   d0,d1
-                move.l  d1,d0
-                divu.w  #1000,d0
-                bsr.s   Int2AsciiLessThan100Check
-                move.b  #',',(a1)+
-                swap    d0
-                bra.s   Int2AsciiLessThan100Check
-loc_127382:
-                divu.w  #1000,d0
-                bsr.s   Int2AsciiSaveD0
-                move.b  #',',(a1)+
-                swap    d0
-
-; ===== Int2AsciiLessThan100Check =====
-; prototype: void __usercall Int2AsciiLessThan100Check(unsigned __int16 v@<d0>, char *dst@<a1>)
+; Ported to C as static int2StrWithCommas() in string_utils.c (dead code — no asm callers)
 Int2AsciiLessThan100Check:
-                cmpi.w  #100,d0
-                bcc.s   Int2AsciiSaveD0
-                move.b  #'0',(a1)+
-                cmpi.w  #10,d0
-                bcc.s   Int2AsciiSaveD0
-                move.b  #'0',(a1)+
-
-; ===== Int2AsciiSaveD0 =====
-; prototype: void __usercall Int2AsciiSaveD0(unsigned int v@<d0>, char *dst@<a1>)
 Int2AsciiSaveD0:
-                movem.l d0,-(sp)
-                jsr Int2Ascii(pc)
-                movem.l (sp)+,d0
                 rts
 
 ; ===== GetBankBalance =====

@@ -2872,6 +2872,19 @@
         xref    _TrainingSwapBenchTeams
         xref    _LeaveSubsMenu
         xref    _CheckForThrowInAndGoalkeepersBall
+; --- Chunk 157 xrefs ---
+        xref    _IsThisPlayerOkToSelect
+        xref    _FirePressedInSubsMenu
+        xref    _HandleFormationMenuControls
+        xref    _UpdateSubstitutePlayerIndices
+        xref    _CallUpdateSubstitutePlayerIndices
+        xref    _state3_handle_fire_press
+; --- Chunk 158 xrefs ---
+        xref    _SelectPlayerToSubstituteMenuHandler
+        xref    _SubstitutePlayer
+        xref    _MarkPlayersMenuHandler
+; --- Chunk 159 xrefs ---
+        xref    _BenchMenuHandleControls
 ; --- Chunk 144 xrefs ---
 ; --- Chunk 147 xrefs ---
         xref    _BuyOtherPlayersInit
