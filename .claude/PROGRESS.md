@@ -2924,6 +2924,28 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1425 functions across 164 chunks
 
+### Chunk 165 — AfterDrawCommon variants + OffersCommon + PlayerOffers callbacks (11 → transfer_market.c)
+- Date: 2026-03-03
+- Ported:
+  1. TransferPlayerAfterDrawCommon (→transfer_market.c) — shared helper: base=entries[13], target=entries[17], teamOffering for d7<2
+  2. ThirdPartyOfferMenuAfterDrawCommon (→transfer_market.c) — shared helper: base=entries[15], target=entries[19], selTeamNumber for d7<2 (reversed)
+  3. PlayerOffersAfterDrawCommon (→transfer_market.c) — shared helper: base=entries[14], target=entries[18], teamOffering for d7<2
+  4. j_SetExitMenuFlag_11 (→transfer_market.c) — forwards to _SetExitMenuFlag
+  5. PlayerOffersOnSelect13 (→transfer_market.c) — forwards to _SetExitMenuFlag
+  6. OffersCommon (→transfer_market.c) — main offer negotiation loop with ShowMenu + accept/reject/ask-for-more logic
+  7. PlayerOffersOnSelect8 (→transfer_market.c) — squad selection for main player to buy
+  8. PlayerOffersOnSelect10 (→transfer_market.c) — squad selection for swap player
+  9. PlayerOffersOnSelect11 (→transfer_market.c) — squad selection for extra swap player
+  10. PlayerOffersOnSelect12 (→transfer_market.c) — confirm offer, evaluate negotiation
+  11. PlayerOffersAdjustOfferAmount (→transfer_market.c) — input handler for offer amount (step-based increment/decrement)
+- Static helper: offerAfterDrawCommonShared() — consolidates 3 near-identical AfterDrawCommon functions
+- Key pattern: contiguous offer ordinals (offerPrimaryPlayerOrdinal thru offerExtraPlayerOrdinal) accessed as int16_t array
+- Stubs: 3 a5 register bridges (AfterDrawCommon), 1 a5 bridge (OffersCommon), 4 no-param bridges (OnSelect8/10/11/12), 1 no-param bridge (AdjustOfferAmount), 2 jmp stubs
+- New xrefs: _TransferPlayerAfterDrawCommon, _ThirdPartyOfferMenuAfterDrawCommon, _PlayerOffersAfterDrawCommon, _j_SetExitMenuFlag_11, _PlayerOffersOnSelect13, _OffersCommon, _PlayerOffersOnSelect8, _PlayerOffersOnSelect10, _PlayerOffersOnSelect11, _PlayerOffersOnSelect12, _PlayerOffersAdjustOfferAmount
+- New xdefs: offerStatus, thirdPartyOfferResult, thirdPartyOfferMenu, teamWillingToSellOrExchange, transferPlayerMenuResult, lastOfferPrimaryPlayerOrdinal, lastOfferExtraPlayersWanted, lastOfferSwapPlayerOrdinal, lastOfferExtraPlayerOrdinal, offerNegotiationAttemptCount, aSelectPlayerTo, aSelectPlayerTo_0, playerTransferMenu, sellExchangeStrings, sellExchangeResponseStrings, Career_AcceptOffer_SellPlayer, Career_AcceptOffer_BuyPlayer, EvaluateTransferOfferNegotiation
+- Build status: **verified** (clean build)
+- Cumulative: 1436 functions across 165 chunks
+
 ### Chunk 147 — BuyOtherPlayers Init/Finish + Pitch/Season Menu Callbacks (5 → transfer_market.c, menus.c)
 - Date: 2026-03-02
 - Ported:
@@ -3216,5 +3238,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 162   | 8         | 1407       |
 | 163   | 13        | 1420       |
 | 164   | 5         | 1425       |
+| 165   | 11+1s     | 1436       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

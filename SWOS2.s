@@ -64817,103 +64817,19 @@ OffersInit:
                 jmp     _OffersInit
 
 ; ===== OffersCommon =====
-; prototype: void __usercall OffersCommon(MenuEntry *entry@<a5>)
+; Ported to C: _OffersCommon in src/transfer_market.c
 OffersCommon:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a0
-                move.w  MENUENTRY_ORDINAL(a5),d7
-                sub.w   MENUENTRY_ORDINAL(a0),d7
-loc_142FE2:
-                lea     (transferOfferTable).l,a5
-                move.w  d7,d0
-                mulu.w  #$E,d0
-                lea     (a5,d0.w),a5
-                move.w  #3,d0
-                cmpi.w  #$FFFE,8(a5)
-                beq.s   loc_143018
-                move.w  #2,d0
-                cmpi.w  #$FFFF,$A(a5)
-                beq.s   loc_143018
-                move.w  #1,d0
-                cmpi.w  #$FFFF,8(a5)
-                beq.s   loc_143018
-                clr.w   d0
-loc_143018:
-                move.w  d0,(offerStatus).l
-                move.w  (a5),(teamOffering).l
-                move.w  6(a5),(offerAmount).l
-                move.b  2(a5),d0
-                ext.w   d0
-                move.w  d0,(offerPrimaryPlayerOrdinal).l
-                move.b  3(a5),d0
-                ext.w   d0
-                move.w  d0,(numExtraPlayersWanted).l
-                move.b  4(a5),d0
-                ext.w   d0
-                move.w  d0,(offerSwapPlayerOrdinal).l
-                move.b  5(a5),d0
-                ext.w   d0
-                move.w  d0,(offerExtraPlayerOrdinal).l
-                lea     (thirdPartyOfferMenu).l,a6
-                movem.l d7/a5,-(sp)
-                jsr     ShowMenu
-                movem.l (sp)+,d7/a5
-                move.w  (thirdPartyOfferResult).l,d0
-                tst.w   d0
-                beq.w   loc_143116
-                cmpi.w  #1,d0
-                beq.w   loc_1430FC
-                cmpi.w  #2,d0
-                beq.w   loc_14311E
-                tst.w   8(a5)
-                beq.s   loc_1430C8
-                cmpi.w  #$FFFF,8(a5)
-                beq.s   loc_1430AA
-                move.w  8(a5),6(a5)
-                move.w  #$FFFF,8(a5)
-                bra.w   loc_142FE2
-loc_1430AA:
-                tst.w   $A(a5)
-                beq.s   loc_1430C8
-                cmpi.w  #$FFFF,$A(a5)
-                beq.s   loc_1430C8
-                move.w  $A(a5),6(a5)
-                move.w  #$FFFF,$A(a5)
-                bra.w   loc_142FE2
-loc_1430C8:
-                jsr     Rand2
-                btst    #0,d0
-                beq.s   loc_1430DE
-                move.w  #$FFFE,8(a5)
-                bra.w   loc_142FE2
-loc_1430DE:
-                move.w  #$FFFF,(offerStatus).l
-                lea     (thirdPartyOfferMenu).l,a6
-                movem.l d7,-(sp)
-                jsr     ShowMenu
-                movem.l (sp)+,d7
-                bra.s   loc_14311E
-loc_1430FC:
-                bsr.w   Career_AcceptOffer_SellPlayer
-                subq.w  #1,(timeToNegotiate).l
-                move.w  #1,(transferCompleted).l
-                jmp     SetExitMenuFlag
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _OffersCommon
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
-loc_143116:
-                move.b  #1,$D(a5)
-                rts
-loc_14311E:
-                move.w  d7,d0
-                bsr.w   RemoveTransferOfferAtIndex
-                tst.w   (numOffers).l
-                beq.w   j_SetExitMenuFlag_11
-                move.w  #1,d0
-                jsr     SetCurrentEntry
-                jmp     DrawMenu
 
 ; ===== j_SetExitMenuFlag_11 =====
-; prototype: void j_SetExitMenuFlag_11(...)
+; Ported to C: _j_SetExitMenuFlag_11 in src/transfer_market.c
 j_SetExitMenuFlag_11:
-                jmp     SetExitMenuFlag
+                jmp     _j_SetExitMenuFlag_11
 
 ; ===== OffersAfterDrawCommon =====
 ; prototype: void __usercall OffersAfterDrawCommon(MenuEntry *entry@<a5>)
@@ -65682,33 +65598,14 @@ TransferPlayerOnSelect12:
                 jmp     _TransferPlayerOnSelect12
 
 ; ===== TransferPlayerAfterDrawCommon =====
-; prototype: void __usercall TransferPlayerAfterDrawCommon(MenuEntry *entry@<a5>)
+; Ported to C: _TransferPlayerAfterDrawCommon in src/transfer_market.c
 TransferPlayerAfterDrawCommon:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2D8)).l,a0
-                move.w  2(a5),d7
-                sub.w   2(a0),d7
-                move.w  teamOffering(pc),d0
-                cmpi.w  #2,d7
-                bcs.s   loc_14394E
-                move.w  (selTeamNumber).l,d0
-loc_14394E:
-                lsl.w   #1,d7
-                movea.l #0,a6
-                lea     offerPrimaryPlayerOrdinal(pc),a0
-                move.w  (a0,d7.w),d1
-                bmi.s   loc_143966
-                bsr.w   GetPlayer
-                movea.l a0,a6
-loc_143966:
-                move.w  $16(a5),d7
-                movea.l #0,a4
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3B8)).l,a0
-                move.w  #$D,d5
-                move.w  #$FFFF,d6
-                bsr.w   BuildTransferPlayerMenuEntry
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3B8)).l,a5
-                move.w  #$C,d0
-                jmp     DrawMultipleItems
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _TransferPlayerAfterDrawCommon
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 teamWillingToSellOrExchange:
                 dc.w $0000              ; True if team is willing to sell/exchange player
 transferPlayerMenuResult:
@@ -66297,33 +66194,14 @@ ThirdPartyOfferMenuExit:
                 jmp     _ThirdPartyOfferMenuExit
 
 ; ===== ThirdPartyOfferMenuAfterDrawCommon =====
-; prototype: void __usercall ThirdPartyOfferMenuAfterDrawCommon(MenuEntry *entry@<a5>)
+; Ported to C: _ThirdPartyOfferMenuAfterDrawCommon in src/transfer_market.c
 ThirdPartyOfferMenuAfterDrawCommon:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$348)).l,a0
-                move.w  2(a5),d7
-                sub.w   2(a0),d7
-                move.w  (selTeamNumber).l,d0
-                cmpi.w  #2,d7
-                bcs.s   loc_143E06
-                move.w  teamOffering(pc),d0
-loc_143E06:
-                lsl.w   #1,d7
-                movea.l #0,a6
-                lea     offerPrimaryPlayerOrdinal(pc),a0
-                move.w  (a0,d7.w),d1
-                bmi.s   loc_143E1E
-                bsr.w   GetPlayer
-                movea.l a0,a6
-loc_143E1E:
-                move.w  $16(a5),d7
-                movea.l #0,a4
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$428)).l,a0
-                move.w  #$D,d5
-                move.w  #$FFFF,d6
-                bsr.w   BuildTransferPlayerMenuEntry
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$428)).l,a5
-                move.w  #$C,d0
-                jmp     DrawMultipleItems
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _ThirdPartyOfferMenuAfterDrawCommon
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 offerStatus:
                 dc.w $0000              ; -1 = No offer
                                         ; 0 = we want to buy player
@@ -66781,237 +66659,44 @@ UpdatePlayerOfferMenuIndicators:
                 jmp     _UpdatePlayerOfferMenuIndicators
 
 ; ===== PlayerOffersOnSelect8 =====
-; prototype: void __usercall PlayerOffersOnSelect8(MenuEntry *entry@<a5>)
+; Ported to C: _PlayerOffersOnSelect8 in src/transfer_market.c
 PlayerOffersOnSelect8:
-                move.w  teamOffering(pc),d0
-                bsr.w   GetTeamPointer
-                lea     (aSelectPlayerTo).l,a1 ; "SELECT PLAYER TO MAKE OFFER ON"
-                clr.l   d0
-                clr.l   d1
-                move.w  offerPrimaryPlayerOrdinal(pc),d2
-                bset    d2,d0
-                move.w  numExtraPlayersWanted(pc),d2
-                bmi.s   loc_144170
-                move.w  #$FFFF,(numExtraPlayersWanted).l
-                bra.s   loc_144186
-loc_144170:
-                clr.w   d2
-                move.w  #$FFFF,d3
-                move.w  #$FFFF,d4
-                bsr.w   ShowSquad
-                bmi.s   loc_144186
-                move.w  d0,(numExtraPlayersWanted).l
-loc_144186:
-                bsr.w   UpdatePlayerOfferMenuIndicators
-                jmp     DrawMenu
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _PlayerOffersOnSelect8
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== PlayerOffersOnSelect10 =====
-; prototype: void __usercall PlayerOffersOnSelect10(MenuEntry *entry@<a5>)
+; Ported to C: _PlayerOffersOnSelect10 in src/transfer_market.c
 PlayerOffersOnSelect10:
-                lea     (aSelectPlayerTo_0).l,a1 ; "SELECT PLAYER TO EXCHANGE"
-                move.w  offerSwapPlayerOrdinal(pc),d2
-                bmi.s   loc_1441AE
-                move.w  offerExtraPlayerOrdinal(pc),(offerSwapPlayerOrdinal).l
-                move.w  #$FFFF,(offerExtraPlayerOrdinal).l
-                bra.s   loc_144208
-loc_1441AE:
-                clr.l   d7
-                move.w  (careerNumPlayers).l,d2
-                subq.w  #1,d2
-loc_1441B8:
-                move.w  (selTeamNumber).l,d0
-                move.w  d2,d1
-                jsr     GetPlayerAtIndex
-                cmpi.b  #$9B,$71(a0)
-                beq.s   loc_1441DE
-                cmpi.b  #$9A,$71(a0)
-                beq.s   loc_1441DE
-                btst    #1,$66(a0)
-                beq.s   loc_1441E0
-loc_1441DE:
-                bset    d1,d7
-loc_1441E0:
-                dbf     d2,loc_1441B8
-                move.w  (selTeamNumber).l,d0
-                bsr.w   GetTeamPointer
-                move.l  d7,d0
-                clr.l   d1
-                clr.w   d2
-                move.w  #$FFFF,d3
-                move.w  #$FFFF,d4
-                bsr.w   ShowSquad
-                bmi.s   loc_144208
-                move.w  d0,(offerSwapPlayerOrdinal).l
-loc_144208:
-                bsr.w   UpdatePlayerOfferMenuIndicators
-                jmp     DrawMenu
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _PlayerOffersOnSelect10
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== PlayerOffersOnSelect11 =====
-; prototype: void __usercall PlayerOffersOnSelect11(MenuEntry *entry@<a5>)
+; Ported to C: _PlayerOffersOnSelect11 in src/transfer_market.c
 PlayerOffersOnSelect11:
-                lea     (aSelectPlayerTo_0).l,a1 ; "SELECT PLAYER TO EXCHANGE"
-                clr.l   d7
-                move.w  offerSwapPlayerOrdinal(pc),d2
-                bset    d2,d7
-                move.w  offerExtraPlayerOrdinal(pc),d2
-                bmi.s   loc_144230
-                move.w  #$FFFF,(offerExtraPlayerOrdinal).l
-                bra.s   loc_144288
-loc_144230:
-                move.w  (careerNumPlayers).l,d2
-                subq.w  #1,d2
-loc_144238:
-                move.w  (selTeamNumber).l,d0
-                move.w  d2,d1
-                jsr     GetPlayerAtIndex
-                cmpi.b  #$9B,$71(a0)
-                beq.s   loc_14425E
-                cmpi.b  #$9A,$71(a0)
-                beq.s   loc_14425E
-                btst    #1,$66(a0)
-                beq.s   loc_144260
-loc_14425E:
-                bset    d1,d7
-loc_144260:
-                dbf     d2,loc_144238
-                move.w  (selTeamNumber).l,d0
-                bsr.w   GetTeamPointer
-                move.l  d7,d0
-                clr.l   d1
-                clr.w   d2
-                move.w  #$FFFF,d3
-                move.w  #$FFFF,d4
-                bsr.w   ShowSquad
-                bmi.s   loc_144288
-                move.w  d0,(offerExtraPlayerOrdinal).l
-loc_144288:
-                bsr.w   UpdatePlayerOfferMenuIndicators
-                jmp     DrawMenu
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _PlayerOffersOnSelect11
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== PlayerOffersOnSelect12 =====
-; prototype: void __usercall PlayerOffersOnSelect12(MenuEntry *entry@<a5>)
+; Ported to C: _PlayerOffersOnSelect12 in src/transfer_market.c
 PlayerOffersOnSelect12:
-                move.w  offerPrimaryPlayerOrdinal(pc),d0
-                cmp.w   (lastOfferPrimaryPlayerOrdinal).l,d0
-                bne.s   loc_1442C2
-                move.w  numExtraPlayersWanted(pc),d0
-                cmp.w   (lastOfferExtraPlayersWanted).l,d0
-                bne.s   loc_1442C2
-                move.w  offerSwapPlayerOrdinal(pc),d0
-                cmp.w   (lastOfferSwapPlayerOrdinal).l,d0
-                bne.s   loc_1442C2
-                move.w  offerExtraPlayerOrdinal(pc),d0
-                cmp.w   (lastOfferExtraPlayerOrdinal).l,d0
-                beq.s   loc_1442EE
-loc_1442C2:
-                clr.w   (offerNegotiationAttemptCount).l
-                subq.w  #1,(timeToNegotiate).l
-                move.w  offerPrimaryPlayerOrdinal(pc),(lastOfferPrimaryPlayerOrdinal).l
-                move.w  numExtraPlayersWanted(pc),(lastOfferExtraPlayersWanted).l
-                move.w  offerSwapPlayerOrdinal(pc),(lastOfferSwapPlayerOrdinal).l
-                move.w  offerExtraPlayerOrdinal(pc),(lastOfferExtraPlayerOrdinal).l
-loc_1442EE:
-                addq.w  #1,(offerNegotiationAttemptCount).l
-                bsr.w   EvaluateTransferOfferNegotiation
-                tst.w   d0
-                bmi.s   loc_144310
-                beq.s   loc_14430A
-                bsr.w   Career_AcceptOffer_BuyPlayer
-                move.w  #1,(transferCompleted).l
-loc_14430A:
-                jmp     SetExitMenuFlag
-loc_144310:
-                move.w  #9,d0
-                jsr     SetCurrentEntry
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _PlayerOffersOnSelect12
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== PlayerOffersAdjustOfferAmount =====
-; prototype: void __usercall PlayerOffersAdjustOfferAmount(MenuEntry *entry@<a5>)
+; Ported to C: _PlayerOffersAdjustOfferAmount in src/transfer_market.c
 PlayerOffersAdjustOfferAmount:
-                move.w  offerAmount(pc),d1
-                move.l  (newBalance).l,d2
-                bpl.s   loc_14432A
-                clr.l   d2
-loc_14432A:
-                divu.w  #$3E8,d2
-                cmpi.w  #$81,(controlMask).l
-                beq.w   loc_1443BC
-                cmpi.w  #$101,(controlMask).l
-                beq.w   loc_1443BC
-                cmpi.w  #$41,(controlMask).l ; 'A'
-                beq.s   loc_14435C
-                cmpi.w  #$201,(controlMask).l
-                beq.s   loc_14435C
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _PlayerOffersAdjustOfferAmount
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
-loc_14435C:
-                move.w  #5,d0
-                cmpi.w  #$64,d1         ; 'd'
-                bls.s   loc_14439C
-                move.w  #$A,d0
-                cmpi.w  #$C8,d1
-                bls.s   loc_14439C
-                move.w  #$19,d0
-                cmpi.w  #$12C,d1
-                bls.s   loc_14439C
-                move.w  #$32,d0         ; '2'
-                cmpi.w  #$3E8,d1
-                bls.s   loc_14439C
-                move.w  #$64,d0         ; 'd'
-                cmpi.w  #$7D0,d1
-                bls.s   loc_14439C
-                move.w  #$FA,d0
-                cmpi.w  #$BB8,d1
-                bls.s   loc_14439C
-                move.w  #$1F4,d0
-loc_14439C:
-                cmp.w   d2,d1
-                bne.s   loc_1443B4
-                move.w  d2,d3
-                andi.l  #$FFFF,d3
-                divu.w  d0,d3
-                mulu.w  d0,d3
-                cmp.w   d1,d3
-                beq.s   loc_1443B4
-                move.w  d3,d1
-                bra.s   loc_14440E
-loc_1443B4:
-                sub.w   d0,d1
-                bcc.s   loc_14440E
-                clr.w   d1
-                bra.s   loc_14440E
-loc_1443BC:
-                move.w  #5,d0
-                cmpi.w  #$64,d1         ; 'd'
-                bcs.s   loc_1443FC
-                move.w  #$A,d0
-                cmpi.w  #$C8,d1
-                bcs.s   loc_1443FC
-                move.w  #$19,d0
-                cmpi.w  #$12C,d1
-                bcs.s   loc_1443FC
-                move.w  #$32,d0         ; '2'
-                cmpi.w  #$3E8,d1
-                bcs.s   loc_1443FC
-                move.w  #$64,d0         ; 'd'
-                cmpi.w  #$7D0,d1
-                bcs.s   loc_1443FC
-                move.w  #$FA,d0
-                cmpi.w  #$BB8,d1
-                bcs.s   loc_1443FC
-                move.w  #$1F4,d0
-loc_1443FC:
-                add.w   d0,d1
-                cmpi.w  #$C350,d1
-                bls.s   loc_144408
-                move.w  #$C350,d1
-loc_144408:
-                cmp.w   d2,d1
-                bls.s   loc_14440E
-                move.w  d2,d1
-loc_14440E:
-                move.w  d1,(offerAmount).l
-                bsr.w   PlayerOffersUpdateOfferAmountText
-                jmp     CallDrawMenuItem
 
 ; ===== PlayerOffersUpdateOfferAmountText =====
 ; Ported to C: _PlayerOffersUpdateOfferAmountText in src/transfer_market.c
@@ -67019,38 +66704,19 @@ PlayerOffersUpdateOfferAmountText:
                 jmp     _PlayerOffersUpdateOfferAmountText
 
 ; ===== PlayerOffersOnSelect13 =====
-; prototype: void __usercall PlayerOffersOnSelect13(MenuEntry *entry@<a5>)
+; Ported to C: _PlayerOffersOnSelect13 in src/transfer_market.c
 PlayerOffersOnSelect13:
-                jmp     SetExitMenuFlag
+                jmp     _PlayerOffersOnSelect13
 
 ; ===== PlayerOffersAfterDrawCommon =====
-; prototype: void __usercall PlayerOffersAfterDrawCommon(MenuEntry *entry@<a5>)
+; Ported to C: _PlayerOffersAfterDrawCommon in src/transfer_market.c
 PlayerOffersAfterDrawCommon:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$310)).l,a0
-                move.w  2(a5),d7
-                sub.w   2(a0),d7
-                move.w  teamOffering(pc),d0
-                cmpi.w  #2,d7
-                bcs.s   loc_144456
-                move.w  (selTeamNumber).l,d0
-loc_144456:
-                lsl.w   #1,d7
-                movea.l #0,a6
-                lea     offerPrimaryPlayerOrdinal(pc),a0
-                move.w  (a0,d7.w),d1
-                bmi.s   loc_14446E
-                bsr.w   GetPlayer
-                movea.l a0,a6
-loc_14446E:
-                move.w  $16(a5),d7
-                movea.l #0,a4
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3F0)).l,a0
-                move.w  #$D,d5
-                move.w  #$FFFF,d6
-                bsr.w   BuildTransferPlayerMenuEntry
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3F0)).l,a5
-                move.w  #$C,d0
-                jmp     DrawMultipleItems
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _PlayerOffersAfterDrawCommon
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== ShowSquad =====
 ; prototype: __int16 __usercall ShowSquad@<d0>(TeamFile *team@<a0>, const char *title@<a1>, unsigned __int32 maskLo@<d0>, unsigned __int32 maskHi@<d1>, __int16 arg2@<d2>, __int16 arg3@<d3>)

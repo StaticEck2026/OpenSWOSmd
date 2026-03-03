@@ -2624,3 +2624,408 @@ void _OffersInit(void)
     /* Original asm is just rts */
 }
 
+/* =============================================================== */
+/* Chunk 165: AfterDrawCommon variants + OffersCommon + PlayerOffers*/
+/*            callbacks + TransferPlayerInit + ThirdPartyOfferInit  */
+/* =============================================================== */
+
+extern uint16_t offerStatus;
+extern uint16_t timeToNegotiate;
+extern uint16_t lastOfferPrimaryPlayerOrdinal;
+extern uint16_t lastOfferExtraPlayersWanted;
+extern uint16_t lastOfferSwapPlayerOrdinal;
+extern uint16_t lastOfferExtraPlayerOrdinal;
+extern uint16_t offerNegotiationAttemptCount;
+extern uint16_t controlMask;
+extern uint8_t thirdPartyOfferMenu[];
+extern uint8_t aSelectPlayerTo[];
+extern uint8_t aSelectPlayerTo_0[];
+
+extern void _DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
+extern void _CallDrawMenuItem(MenuEntry *entry);
+extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+extern void Career_AcceptOffer_SellPlayer(void);
+extern void Career_AcceptOffer_BuyPlayer(void);
+extern int16_t EvaluateTransferOfferNegotiation(void);
+
+/*
+ * Shared helper: three AfterDrawCommon variants use the same pattern.
+ * baseEntryIdx: the menu entry index for the base (ordinal origin)
+ * targetEntryIdx: the menu entry index for the target draw
+ * reverseTeam: if 0, d7<2 → teamOffering, else selTeamNumber;
+ *              if 1, d7<2 → selTeamNumber, else teamOffering (ThirdPartyOffer)
+ */
+static void offerAfterDrawCommonShared(MenuEntry *a5,
+                                        uint16_t baseEntryIdx,
+                                        uint16_t targetEntryIdx,
+                                        uint16_t reverseTeam)
+{
+    MenuEntry *baseEntry = &menuEntries[baseEntryIdx];
+    int16_t d7 = a5->ordinal - baseEntry->ordinal;
+
+    uint16_t teamId;
+    if (d7 < 2) {
+        teamId = reverseTeam ? selTeamNumber : teamOffering;
+    } else {
+        teamId = reverseTeam ? teamOffering : selTeamNumber;
+    }
+
+    /* Access contiguous offer ordinals as array:
+       offerPrimaryPlayerOrdinal, numExtraPlayersWanted,
+       offerSwapPlayerOrdinal, offerExtraPlayerOrdinal */
+    int16_t *ordinals = (int16_t *)&offerPrimaryPlayerOrdinal;
+    int16_t playerOrd = ordinals[d7];
+
+    uint8_t *playerData = (uint8_t *)0;  /* NULL = no player */
+    if (playerOrd >= 0) {
+        playerData = _GetPlayer(teamId, playerOrd);
+    }
+
+    uint16_t yCoord = a5->y;
+    MenuEntry *targetEntry = &menuEntries[targetEntryIdx];
+    _BuildTransferPlayerMenuEntry(targetEntry, playerData, yCoord,
+                                   (int16_t)0xFFFF, 0xD, (uint8_t *)0);
+    _DrawMultipleItems(12, targetEntry);
+}
+
+/* TransferPlayerAfterDrawCommon: base=13, target=17, teamOffering for d7<2 */
+__attribute__((used, externally_visible))
+void _TransferPlayerAfterDrawCommon(void *entryPtr)
+{
+    MenuEntry *a5 = (MenuEntry *)entryPtr;
+    offerAfterDrawCommonShared(a5, 13, 17, 0);
+}
+
+/* ThirdPartyOfferMenuAfterDrawCommon: base=15, target=19, selTeamNumber for d7<2 (reversed) */
+__attribute__((used, externally_visible))
+void _ThirdPartyOfferMenuAfterDrawCommon(void *entryPtr)
+{
+    MenuEntry *a5 = (MenuEntry *)entryPtr;
+    offerAfterDrawCommonShared(a5, 15, 19, 1);
+}
+
+/* PlayerOffersAfterDrawCommon: base=14, target=18, teamOffering for d7<2 */
+__attribute__((used, externally_visible))
+void _PlayerOffersAfterDrawCommon(void *entryPtr)
+{
+    MenuEntry *a5 = (MenuEntry *)entryPtr;
+    offerAfterDrawCommonShared(a5, 14, 18, 0);
+}
+
+/* j_SetExitMenuFlag_11: just forwards to SetExitMenuFlag */
+__attribute__((used, externally_visible))
+void _j_SetExitMenuFlag_11(void)
+{
+    _SetExitMenuFlag();
+}
+
+/* PlayerOffersOnSelect13: just forwards to SetExitMenuFlag */
+__attribute__((used, externally_visible))
+void _PlayerOffersOnSelect13(void)
+{
+    _SetExitMenuFlag();
+}
+
+/* OffersCommon (Chunk 165) - main offer negotiation loop */
+__attribute__((used, externally_visible))
+void _OffersCommon(void *entryPtr)
+{
+    MenuEntry *a5 = (MenuEntry *)entryPtr;
+    MenuEntry *baseEntry = &menuEntries[2];  /* menuEntries + 0x70/0x38 = entry 2 */
+    int16_t d7 = a5->ordinal - baseEntry->ordinal;
+
+restart:;
+    /* Index into transferOfferTable: each entry is 14 bytes */
+    uint8_t *offerEntry = &transferOfferTable[(uint16_t)d7 * OFFER_ENTRY_SIZE];
+
+    /* Determine offer status from the offer entry fields at offsets 8 and 10 */
+    uint16_t status = 3;
+    if (*(int16_t *)(offerEntry + 8) == (int16_t)0xFFFE) {
+        /* status stays 3 */
+    } else {
+        status = 2;
+        if (*(int16_t *)(offerEntry + 10) == (int16_t)0xFFFF) {
+            /* status stays 2 */
+        } else {
+            status = 1;
+            if (*(int16_t *)(offerEntry + 8) == (int16_t)0xFFFF) {
+                /* status stays 1 */
+            } else {
+                status = 0;
+            }
+        }
+    }
+
+    offerStatus = status;
+    teamOffering = *(uint16_t *)(offerEntry + 0);
+    offerAmount = *(uint16_t *)(offerEntry + 6);
+
+    /* Extract signed byte fields and sign-extend to word */
+    offerPrimaryPlayerOrdinal = (uint16_t)(int16_t)(int8_t)offerEntry[2];
+    numExtraPlayersWanted = (int16_t)(int8_t)offerEntry[3];
+    offerSwapPlayerOrdinal = (int16_t)(int8_t)offerEntry[4];
+    offerExtraPlayerOrdinal = (int16_t)(int8_t)offerEntry[5];
+
+    _ShowMenu(thirdPartyOfferMenu);
+
+    uint16_t result = thirdPartyOfferResult;
+    if (result == 0) {
+        /* Consider: mark this offer as "seen" */
+        offerEntry[13] = 1;
+        return;
+    }
+    if (result == 1) {
+        /* Accept */
+        Career_AcceptOffer_SellPlayer();
+        timeToNegotiate--;
+        transferCompleted = 1;
+        _SetExitMenuFlag();
+        return;
+    }
+    if (result == 2) {
+        /* Reject: remove the offer */
+        goto removeOffer;
+    }
+
+    /* result == 3: Ask for more */
+    /* Check if offer can be improved */
+    if (*(int16_t *)(offerEntry + 8) != 0) {
+        if (*(int16_t *)(offerEntry + 8) == (int16_t)0xFFFF) {
+            /* First counter exhausted, try second */
+            if (*(int16_t *)(offerEntry + 10) != 0 &&
+                *(int16_t *)(offerEntry + 10) != (int16_t)0xFFFF) {
+                *(uint16_t *)(offerEntry + 6) = *(uint16_t *)(offerEntry + 10);
+                *(int16_t *)(offerEntry + 10) = (int16_t)0xFFFF;
+                goto restart;
+            }
+            /* Fall through to random reject/withdraw */
+        } else {
+            /* Use first counter amount */
+            *(uint16_t *)(offerEntry + 6) = *(uint16_t *)(offerEntry + 8);
+            *(int16_t *)(offerEntry + 8) = (int16_t)0xFFFF;
+            goto restart;
+        }
+    }
+
+    /* Random: 50% chance to refuse further, 50% to withdraw */
+    {
+        uint16_t r = _Rand2();
+        if (r & 1) {
+            /* Refuse to further improve */
+            *(int16_t *)(offerEntry + 8) = (int16_t)0xFFFE;
+            goto restart;
+        }
+    }
+
+    /* Withdraw offer */
+    offerStatus = 0xFFFF;
+    _ShowMenu(thirdPartyOfferMenu);
+    /* Fall through to removeOffer */
+
+removeOffer:
+    _RemoveTransferOfferAtIndex(d7);
+    if (numOffers == 0) {
+        _SetExitMenuFlag();
+        return;
+    }
+    _SetCurrentEntry(1);
+    _DrawMenu();
+}
+
+/* PlayerOffersOnSelect8 (Chunk 165) - select main player to buy */
+__attribute__((used, externally_visible))
+void _PlayerOffersOnSelect8(void)
+{
+    uint8_t *teamPtr = _GetTeamPointer(teamOffering);
+    uint8_t *title = aSelectPlayerTo;  /* "SELECT PLAYER TO MAKE OFFER ON" */
+    uint32_t maskLo = 0;
+    uint32_t maskHi = 0;
+    uint16_t d2 = (uint16_t)offerPrimaryPlayerOrdinal;
+
+    /* Set bit for the primary player ordinal */
+    maskLo |= (1u << d2);
+
+    if (numExtraPlayersWanted >= 0) {
+        /* Extra player slot occupied: clear it */
+        numExtraPlayersWanted = -1;
+    } else {
+        /* Show squad to pick a player */
+        int16_t result = _ShowSquad(teamPtr, title, maskLo, maskHi,
+                                     0, 0xFFFF);
+        if (result >= 0) {
+            numExtraPlayersWanted = result;
+        }
+    }
+
+    _UpdatePlayerOfferMenuIndicators();
+    _DrawMenu();
+}
+
+/* PlayerOffersOnSelect10 (Chunk 165) - select swap player */
+__attribute__((used, externally_visible))
+void _PlayerOffersOnSelect10(void)
+{
+    if (offerSwapPlayerOrdinal >= 0) {
+        /* Already have a swap player: shift extra into swap, clear extra */
+        offerSwapPlayerOrdinal = offerExtraPlayerOrdinal;
+        offerExtraPlayerOrdinal = -1;
+    } else {
+        /* Build mask of ineligible players (goalies, injured, on transfer list) */
+        uint32_t d7mask = 0;
+        int16_t i = careerNumPlayers - 1;
+        while (i >= 0) {
+            uint8_t *player = _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+            /* Check if player position is GK (0x9B) or substitute GK (0x9A) */
+            if (player[0x71] == 0x9B || player[0x71] == 0x9A) {
+                d7mask |= (1u << i);
+            } else if (player[0x66] & 0x02) {
+                /* bit 1 of byte at offset 0x66: some status flag */
+                d7mask |= (1u << i);
+            }
+            i--;
+        }
+
+        uint8_t *teamPtr = _GetTeamPointer(selTeamNumber);
+        int16_t result = _ShowSquad(teamPtr, aSelectPlayerTo_0,
+                                     d7mask, 0, 0, 0xFFFF);
+        if (result >= 0) {
+            offerSwapPlayerOrdinal = result;
+        }
+    }
+
+    _UpdatePlayerOfferMenuIndicators();
+    _DrawMenu();
+}
+
+/* PlayerOffersOnSelect11 (Chunk 165) - select extra swap player */
+__attribute__((used, externally_visible))
+void _PlayerOffersOnSelect11(void)
+{
+    uint32_t d7mask = 0;
+    /* Mark the current swap player as ineligible */
+    if (offerSwapPlayerOrdinal >= 0) {
+        d7mask |= (1u << (uint16_t)offerSwapPlayerOrdinal);
+    }
+
+    if (offerExtraPlayerOrdinal >= 0) {
+        /* Already have an extra player: clear it */
+        offerExtraPlayerOrdinal = -1;
+    } else {
+        /* Build mask of ineligible players */
+        int16_t i = careerNumPlayers - 1;
+        while (i >= 0) {
+            uint8_t *player = _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+            if (player[0x71] == 0x9B || player[0x71] == 0x9A) {
+                d7mask |= (1u << i);
+            } else if (player[0x66] & 0x02) {
+                d7mask |= (1u << i);
+            }
+            i--;
+        }
+
+        uint8_t *teamPtr = _GetTeamPointer(selTeamNumber);
+        int16_t result = _ShowSquad(teamPtr, aSelectPlayerTo_0,
+                                     d7mask, 0, 0, 0xFFFF);
+        if (result >= 0) {
+            offerExtraPlayerOrdinal = result;
+        }
+    }
+
+    _UpdatePlayerOfferMenuIndicators();
+    _DrawMenu();
+}
+
+/* PlayerOffersOnSelect12 (Chunk 165) - confirm offer */
+__attribute__((used, externally_visible))
+void _PlayerOffersOnSelect12(void)
+{
+    /* Check if offer parameters changed from last time */
+    if (offerPrimaryPlayerOrdinal != lastOfferPrimaryPlayerOrdinal ||
+        (uint16_t)numExtraPlayersWanted != lastOfferExtraPlayersWanted ||
+        (uint16_t)offerSwapPlayerOrdinal != lastOfferSwapPlayerOrdinal ||
+        (uint16_t)offerExtraPlayerOrdinal != lastOfferExtraPlayerOrdinal) {
+
+        offerNegotiationAttemptCount = 0;
+        timeToNegotiate--;
+        lastOfferPrimaryPlayerOrdinal = offerPrimaryPlayerOrdinal;
+        lastOfferExtraPlayersWanted = (uint16_t)numExtraPlayersWanted;
+        lastOfferSwapPlayerOrdinal = (uint16_t)offerSwapPlayerOrdinal;
+        lastOfferExtraPlayerOrdinal = (uint16_t)offerExtraPlayerOrdinal;
+    }
+
+    offerNegotiationAttemptCount++;
+    int16_t result = EvaluateTransferOfferNegotiation();
+    if (result < 0) {
+        /* Rejected: set current entry to 9 */
+        _SetCurrentEntry(9);
+        return;
+    }
+    if (result > 0) {
+        /* Accepted: finalize the purchase */
+        Career_AcceptOffer_BuyPlayer();
+        transferCompleted = 1;
+    }
+    /* result == 0 or > 0: exit menu */
+    _SetExitMenuFlag();
+}
+
+/* PlayerOffersAdjustOfferAmount (Chunk 165) - input handler for offer amount */
+__attribute__((used, externally_visible))
+void _PlayerOffersAdjustOfferAmount(void)
+{
+    uint16_t amount = offerAmount;
+    int32_t bal = newBalance;
+    if (bal < 0)
+        bal = 0;
+    uint16_t maxAmount = (uint16_t)((uint32_t)bal / 1000u);
+
+    /* Determine direction from controlMask */
+    if (controlMask == 0x81 || controlMask == 0x101) {
+        /* Right/increase */
+        uint16_t step = 5;
+        if (amount >= 100) step = 10;
+        if (amount >= 200) step = 25;
+        if (amount >= 300) step = 50;
+        if (amount >= 1000) step = 100;
+        if (amount >= 2000) step = 250;
+        if (amount >= 3000) step = 500;
+
+        amount += step;
+        if (amount > 50000)
+            amount = 50000;
+        if (amount > maxAmount)
+            amount = maxAmount;
+    } else if (controlMask == 0x41 || controlMask == 0x201) {
+        /* Left/decrease */
+        uint16_t step = 5;
+        if (amount > 100) step = 10;
+        if (amount > 200) step = 25;
+        if (amount > 300) step = 50;
+        if (amount > 1000) step = 100;
+        if (amount > 2000) step = 250;
+        if (amount > 3000) step = 500;
+
+        /* Special case: if amount == maxAmount, snap to grid */
+        if (amount == maxAmount) {
+            uint32_t snapped = ((uint32_t)maxAmount / step) * step;
+            if ((uint16_t)snapped != amount) {
+                amount = (uint16_t)snapped;
+                goto done;
+            }
+        }
+
+        if (amount >= step)
+            amount -= step;
+        else
+            amount = 0;
+    } else {
+        return;
+    }
+
+done:
+    offerAmount = amount;
+    _PlayerOffersUpdateOfferAmountText();
+    _CallDrawMenuItem(&menuEntries[9]);
+}
+
+

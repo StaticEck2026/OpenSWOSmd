@@ -135,4 +135,17 @@ void _ThirdPartyOfferViewSquad(void);
 void _BuyPlayerViewSquad(void);
 void _OffersInit(void);
 
+/* --- AfterDrawCommon + OffersCommon + PlayerOffers callbacks (Chunk 165) --- */
+void _TransferPlayerAfterDrawCommon(void *entry);
+void _ThirdPartyOfferMenuAfterDrawCommon(void *entry);
+void _PlayerOffersAfterDrawCommon(void *entry);
+void _j_SetExitMenuFlag_11(void);
+void _PlayerOffersOnSelect13(void);
+void _OffersCommon(void *entry);
+void _PlayerOffersOnSelect8(void);
+void _PlayerOffersOnSelect10(void);
+void _PlayerOffersOnSelect11(void);
+void _PlayerOffersOnSelect12(void);
+void _PlayerOffersAdjustOfferAmount(void);
+
 #endif

@@ -3025,6 +3025,37 @@
         xref    _ViewSquadInit
         xref    _ViewSquadCommon
         xref    _ViewSquadAfterDrawCommon
+; --- Chunk 165 xrefs ---
+        xref    _TransferPlayerAfterDrawCommon
+        xref    _ThirdPartyOfferMenuAfterDrawCommon
+        xref    _PlayerOffersAfterDrawCommon
+        xref    _j_SetExitMenuFlag_11
+        xref    _PlayerOffersOnSelect13
+        xref    _OffersCommon
+        xref    _PlayerOffersOnSelect8
+        xref    _PlayerOffersOnSelect10
+        xref    _PlayerOffersOnSelect11
+        xref    _PlayerOffersOnSelect12
+        xref    _PlayerOffersAdjustOfferAmount
+; --- Chunk 165 xdefs ---
+        xdef    offerStatus
+        xdef    thirdPartyOfferResult
+        xdef    thirdPartyOfferMenu
+        xdef    teamWillingToSellOrExchange
+        xdef    transferPlayerMenuResult
+        xdef    lastOfferPrimaryPlayerOrdinal
+        xdef    lastOfferExtraPlayersWanted
+        xdef    lastOfferSwapPlayerOrdinal
+        xdef    lastOfferExtraPlayerOrdinal
+        xdef    offerNegotiationAttemptCount
+        xdef    aSelectPlayerTo
+        xdef    aSelectPlayerTo_0
+        xdef    playerTransferMenu
+        xdef    sellExchangeStrings
+        xdef    sellExchangeResponseStrings
+        xdef    Career_AcceptOffer_SellPlayer
+        xdef    Career_AcceptOffer_BuyPlayer
+        xdef    EvaluateTransferOfferNegotiation
 ; --- Chunk 164 xrefs ---
         xref    _ShowSquad
         xref    _ThirdPartyOfferViewSquad
