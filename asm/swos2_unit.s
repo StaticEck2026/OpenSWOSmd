@@ -3069,6 +3069,12 @@
         xref    _Career_ContinueToNextSeasonInitTeamAndFunds
         xref    _Career_UpdateLastNationalityCall
         xref    _Career_CopyUnavailablePlayerToCareerTeamSlot
+; --- Chunk 172 xrefs ---
+        xref    _InitializeNewSeason_BuildTeamBudgetRankTable
+        xref    _Career_InitInternationalSquadAndLookupTablesForNewSeason
+; --- Chunk 172 xdefs ---
+        xdef    teamBudgetRankTable
+        xdef    careerDefaultInternationalSquadSlotsTable
 ; --- Chunk 171 xrefs ---
         xref    _GetPlayerPositionFromCurrent
         xref    _Career_RemoveInternationalPlayersByMask

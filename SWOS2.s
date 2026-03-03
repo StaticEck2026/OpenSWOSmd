@@ -35652,34 +35652,9 @@ loc_12F16C:
 
 ; ===== InitializeNewSeason_BuildTeamBudgetRankTable =====
 ; prototype: void __usercall InitializeNewSeason_BuildTeamBudgetRankTable()
+; Chunk 172: ported to C (_InitializeNewSeason_BuildTeamBudgetRankTable)
 InitializeNewSeason_BuildTeamBudgetRankTable:
-                lea     (competitionFileBuffer).l,a6
-                move.w  $32(a6),d6
-                lea     $12E(a6),a5
-                lea     $EE(a6),a4
-                cmpi.w  #0,(a6)
-                beq.s   loc_12F1B6
-                lea     $24E(a6),a5
-                lea     $2CE(a6),a4
-                cmpi.w  #1,(a6)
-                beq.s   loc_12F1B6
-                lea     $9A(a6),a5
-                lea     $5A(a6),a4
-loc_12F1B6:
-                lea     (teamBudgetRankTable).l,a3
-                subq.w  #1,d6
-loc_12F1BE:
-                move.b  (a4)+,d1
-                ext.w   d1
-                lsl.w   #1,d1
-                move.w  (a5,d1.w),d0
-                movem.l d1/d6/a5,-(sp)
-                bsr.w   GetMoreExpensiveTeamsCount
-                movem.l (sp)+,d1/d6/a5
-                lsr.w   #1,d1
-                move.b  d2,(a3,d1.w)
-                dbf     d6,loc_12F1BE
-                rts
+                jmp     _InitializeNewSeason_BuildTeamBudgetRankTable
 
 ; ===== ShowChairmanOpinionAboutTheSeason =====
 ; prototype: void __usercall ShowChairmanOpinionAboutTheSeason()
@@ -69357,39 +69332,14 @@ GetPlayerPositionFromCurrent:
 
 ; ===== Career_InitInternationalSquadAndLookupTablesForNewSeason =====
 ; prototype: void __usercall Career_InitInternationalSquadAndLookupTablesForNewSeason(void *teamPtr@<a0>)
+; Chunk 172: ported to C (_Career_InitInternationalSquadAndLookupTablesForNewSeason)
+; in: a0 = teamPtr (dead parameter but passed for ABI compat)
 Career_InitInternationalSquadAndLookupTablesForNewSeason:
-                move.b  $4E(a0),d0
-                lea     (careerDefaultInternationalSquadSlotsTable).l,a3
-                lea     (careerUnavailablePlayerLookupTable).l,a1
-                lea     (currentMatchPlayers).l,a2
-                clr.w   d1
-loc_146C42:
-                move.w  #$FFFF,(a1)
-                lea     4(a1),a1
-                move.b  d1,(a2)+
-                move.w  (selTeamNumber).l,d0
-                bsr.w   GetPlayer
-                move.b  #$FF,$4F(a0)
-                cmpi.w  #$B,d1
-                bcc.s   loc_146C66
-                move.b  (a3)+,$4E(a0)
-loc_146C66:
-                move.b  $66(a0),d0
-                andi.w  #$FF1F,d0
-                tst.w   d1
-                beq.s   loc_146C7E
-                cmpi.w  #$B,d1
-                beq.s   loc_146C7E
-                ori.b   #$60,d0         ; '`'
-                bra.s   loc_146C82
-loc_146C7E:
-                ori.b   #0,d0
-loc_146C82:
-                move.b  d0,$66(a0)
-                addq.w  #1,d1
-                cmpi.w  #$14,d1
-                bne.s   loc_146C42
-                clr.w   (careerNumPlayers).l
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a0,-(sp)
+                jsr     _Career_InitInternationalSquadAndLookupTablesForNewSeason
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== careerDefaultInternationalSquadSlotsTable =====

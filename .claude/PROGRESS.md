@@ -2969,6 +2969,17 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, only pre-existing warnings)
 - Cumulative: 1450 functions across 167 chunks
 
+### Chunk 172 — Budget Rank Table & International Squad Init (2 → diy_competition.c, career_teams.c)
+- Date: 2026-03-03
+- Ported:
+  1. InitializeNewSeason_BuildTeamBudgetRankTable (→diy_competition.c) — builds per-team budget rank table for current competition. Selects index table and team ID array by competition type (league:238/302, cup:718/590, tournament:90/154). For each team, looks up team ID via sign-extended index, calls GetMoreExpensiveTeamsCount, stores count in teamBudgetRankTable.
+  2. Career_InitInternationalSquadAndLookupTablesForNewSeason (→career_teams.c) — initializes 20 international player slots: clears lookup table entries to 0xFFFF, sets currentMatchPlayers[i]=i, calls GetPlayer for each slot, marks player[0x4F]=0xFF, assigns default positions from careerDefaultInternationalSquadSlotsTable for first 11 slots, modifies player[0x66] bits 5-6 (set for slots 1-10, 12-19; clear for 0, 11), resets careerNumPlayers to 0.
+- Stubs: InitializeNewSeason_BuildTeamBudgetRankTable (jmp, void→void), Career_InitInternationalSquadAndLookupTablesForNewSeason (a0 register bridge)
+- New xrefs: _InitializeNewSeason_BuildTeamBudgetRankTable, _Career_InitInternationalSquadAndLookupTablesForNewSeason
+- New xdefs: teamBudgetRankTable, careerDefaultInternationalSquadSlotsTable
+- Build status: **verified** (clean build, only pre-existing warnings)
+- Cumulative: 1463 functions across 172 chunks
+
 ### Chunk 171 — Player Position Lookup, Remove International Players, Expensive Teams Count (3 → career_teams.c, diy_competition.c)
 - Date: 2026-03-03
 - Ported:
@@ -3326,5 +3337,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 169   | 3         | 1454       |
 | 170   | 4         | 1458       |
 | 171   | 3         | 1461       |
+| 172   | 2         | 1463       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

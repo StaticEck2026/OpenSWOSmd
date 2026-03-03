@@ -7436,6 +7436,51 @@ void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t fo
 }
 
 /* ================================================================
+ * InitializeNewSeason_BuildTeamBudgetRankTable  (SWOS2.s line 35655)
+ *
+ * Builds a per-team "budget rank" table for the current competition.
+ * For each team in the competition, looks up the team ID via an
+ * index table, then counts how many teams have higher average player
+ * prices. Stores the result in teamBudgetRankTable[].
+ *
+ * Selects team ID array and index table based on competition type:
+ *   league:     teamIds=302, indexTable=238
+ *   cup:        teamIds=590, indexTable=718
+ *   tournament: teamIds=154, indexTable=90
+ *
+ * Asm: no params (uses competitionFileBuffer global)
+ * ================================================================ */
+extern uint8_t teamBudgetRankTable[];
+
+__attribute__((used, externally_visible))
+void _InitializeNewSeason_BuildTeamBudgetRankTable(void)
+{
+    uint8_t *comp = competitionFileBuffer;
+    uint16_t numTeams = *(uint16_t *)(comp + 50);  /* DIY_COMPETITION_NUMTEAMS */
+    uint16_t compType = *(uint16_t *)comp;
+    uint16_t *teamIdArray;
+    int8_t *indexTable;
+
+    if (compType == 0) {        /* DIY_LEAGUE */
+        teamIdArray = (uint16_t *)(comp + 302);
+        indexTable = (int8_t *)(comp + 238);
+    } else if (compType == 1) { /* DIY_CUP */
+        teamIdArray = (uint16_t *)(comp + 590);
+        indexTable = (int8_t *)(comp + 718);
+    } else {                    /* DIY_TOURNAMENT */
+        teamIdArray = (uint16_t *)(comp + 154);
+        indexTable = (int8_t *)(comp + 90);
+    }
+
+    for (uint16_t i = 0; i < numTeams; i++) {
+        int16_t idx = (int16_t)(int8_t)indexTable[i];  /* sign-extend byte to word */
+        uint16_t teamNo = teamIdArray[idx];
+        uint16_t rank = _GetMoreExpensiveTeamsCount(teamNo, comp);
+        teamBudgetRankTable[idx] = (uint8_t)rank;
+    }
+}
+
+/* ================================================================
  * GetMoreExpensiveTeamsCount  (SWOS2.s line 35620)
  *
  * Counts how many teams in a DIY competition have a higher average

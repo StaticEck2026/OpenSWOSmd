@@ -2153,3 +2153,64 @@ void _Career_RemoveInternationalPlayersByMask(uint32_t removeMask)
         slot += 0x26;  /* advance to next 38-byte player slot */
     }
 }
+
+/* ================================================================
+ * Career_InitInternationalSquadAndLookupTablesForNewSeason
+ *                                              (SWOS2.s line 69360)
+ *
+ * Initializes the 20 international player slots for a new career
+ * season. For each slot:
+ *   - Clears the lookup table entry to 0xFFFF
+ *   - Sets currentMatchPlayers[slot] = slot
+ *   - Gets the player via GetPlayer(selTeamNumber, slot)
+ *   - Marks player[0x4F] = 0xFF (removed)
+ *   - For slots 0-10: assigns default position from
+ *     careerDefaultInternationalSquadSlotsTable to player[0x4E]
+ *   - Modifies player[0x66]: clears bits 5-7, then sets bits 5-6
+ *     for all slots except 0 and 11
+ * Finally resets careerNumPlayers to 0.
+ *
+ * Asm: in a0 = teamPtr (unused/dead parameter)
+ * ================================================================ */
+extern uint8_t careerDefaultInternationalSquadSlotsTable[];
+extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
+
+__attribute__((used, externally_visible))
+void _Career_InitInternationalSquadAndLookupTablesForNewSeason(uint8_t *teamPtr)
+{
+    (void)teamPtr;  /* dead parameter in original asm */
+
+    uint8_t *squadSlots = careerDefaultInternationalSquadSlotsTable;
+    uint16_t squadSlotIdx = 0;
+
+    for (uint16_t i = 0; i < 20; i++) {
+        /* Clear lookup table entry (word at offset i*4) */
+        *(uint16_t *)(careerUnavailablePlayerLookupTable + i * 4) = 0xFFFF;
+
+        /* Set currentMatchPlayers[i] = i */
+        currentMatchPlayers[i] = (uint8_t)i;
+
+        /* Get player pointer for this slot */
+        uint8_t *player = _GetPlayer(selTeamNumber, i);
+
+        /* Mark player as removed */
+        player[0x4F] = 0xFF;
+
+        /* For first 11 slots, assign default position from table */
+        if (i < 11) {
+            player[0x4E] = squadSlots[squadSlotIdx++];
+        }
+
+        /* Modify player byte at offset 0x66:
+         * Clear bits 5-7 (andi.w #$FF1F clears bits 5-7 of low byte)
+         * Then set bits 5-6 (0x60) for all slots except 0 and 11 */
+        uint8_t val = player[0x66];
+        val &= 0x1F;
+        if (i != 0 && i != 11) {
+            val |= 0x60;
+        }
+        player[0x66] = val;
+    }
+
+    careerNumPlayers = 0;
+}

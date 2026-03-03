@@ -84,3 +84,6 @@ void _Career_CopyUnavailablePlayerToCareerTeamSlot(uint8_t *srcPlayer, uint8_t *
 /* --- GetPlayerPositionFromCurrent / Career_RemoveInternationalPlayersByMask (Chunk 171) --- */
 uint16_t _GetPlayerPositionFromCurrent(uint16_t playerIndex);
 void _Career_RemoveInternationalPlayersByMask(uint32_t removeMask);
+
+/* --- Career_InitInternationalSquadAndLookupTablesForNewSeason (Chunk 172) --- */
+void _Career_InitInternationalSquadAndLookupTablesForNewSeason(uint8_t *teamPtr);
