@@ -6733,3 +6733,368 @@ void _Bureaucracy(void)
     _CheckNumTeamsAllowed();
     _DrawMenuItemsWaitForVSync(bureaucracyMenuItems);
 }
+
+
+/* ================================================================
+ * Chunk 150 — DIY League/Tournament Menu Helpers (13 functions)
+ * ================================================================ */
+
+extern uint16_t currentDiyLine;
+extern uint16_t diyAllMatchesPlayed;
+extern uint16_t diyFixtureViewMode;
+extern uint16_t diyTournamentViewOnly;
+extern uint16_t diyLeagueTournament_viewOptionsAvailable;
+extern uint16_t diyMinSubstitutes;
+extern uint16_t seasonUpdateInProgress;
+extern uint32_t diyLeftTeamPtr;
+extern uint32_t diyRightTeamPtr;
+extern uint16_t diyLeftTeamResult;
+extern uint16_t diyRightTeamResult;
+extern uint16_t numDiyResults;
+/* diyLeagueTeamIds already declared above as uint16_t[] */
+extern uint16_t diyLeagueTotalMatches;
+extern uint16_t diyLeagueMatchProgress;
+extern uint16_t diyInitFocusOverride;
+
+extern uint8_t aPlayMatch[];       /* "PLAY MATCH" */
+extern uint8_t aV[];               /* "V" */
+extern uint8_t aMinus[];           /* "-" */
+extern uint8_t aNextRound[];       /* "NEXT ROUND" */
+extern uint8_t aNextMatch[];       /* "NEXT MATCH" */
+
+extern void _SetupDIYCompetitionStatsMenu(void);
+extern void _DrawMenu(void);
+extern void _CallDrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
+
+/* Asm functions not yet ported */
+extern void DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus(void);
+
+/* ================================================================
+ * jmp_SetExitMenuFlag_7  (SWOS2.s line 42414)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _jmp_SetExitMenuFlag_7(void)
+{
+    _SetExitMenuFlag();
+}
+
+/* ================================================================
+ * DIYLeagueTournamentStats  (SWOS2.s line 42419)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournamentStats(void)
+{
+    _SetupDIYCompetitionStatsMenu();
+}
+
+/* ================================================================
+ * DIYLeagueTournamentExit  (SWOS2.s line 42424)
+ *
+ * Handles exit from DIY league/tournament menu with various guards.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournamentExit(void)
+{
+    uint8_t *a0 = diyCompetitionStart;
+    int16_t field48 = *(int16_t *)&a0[0x48];   /* hasGroups */
+    int16_t field60 = *(int16_t *)&a0[0x60];
+
+    if (field48 == 0) {
+        /* field48 == 0 path */
+        if (field60 != 0)
+            goto set_ff_and_exit;
+        *(int16_t *)&a0[2] = 2;    /* competitionType area */
+        if (diyTournamentViewOnly != 0) {
+            /* fall through to exit */
+        }
+        _SetExitMenuFlag();
+        return;
+    }
+
+    if (field48 == 2 && field60 == 0) {
+        if (diyTournamentViewOnly != 0) {
+            /* fall through */
+        }
+        _SetExitMenuFlag();
+        return;
+    }
+
+set_ff_and_exit:
+    if (field48 != 0) {
+        *(int16_t *)&a0[0x48] = (int16_t)0xFFFF;
+    }
+    _SetExitMenuFlag();
+}
+
+/* ================================================================
+ * DIYLeagueTournament_UpdateViewOptionsAvailability  (SWOS2.s line 42452)
+ *
+ * Sets diyLeagueTournament_viewOptionsAvailable to 1 if
+ * enough matches played (>=75% or group stage) and gameType==4.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournament_UpdateViewOptionsAvailability(void)
+{
+    diyLeagueTournament_viewOptionsAvailable = 0;
+
+    /* Check if in group stage (hasGroups field at $3A+$E = $48) */
+    if (*(int16_t *)&diyCompetitionStart[0x48] != 0) {
+        diyLeagueTournament_viewOptionsAvailable = 1;
+        return;
+    }
+
+    if (gameType != 4)
+        return;
+
+    uint8_t teamIdByte = diyLeagueTeamIds[0];
+    if (teamIdByte >= 0x50 && teamIdByte <= 0x55) {
+        /* Group stage range ('P'..'U') → view available */
+        diyLeagueTournament_viewOptionsAvailable = 1;
+        return;
+    }
+
+    /* Check if 75% of matches played */
+    uint16_t threshold = (uint16_t)((uint16_t)(diyLeagueTotalMatches * 3) >> 2);
+    if (diyLeagueMatchProgress >= threshold) {
+        diyLeagueTournament_viewOptionsAvailable = 1;
+    }
+}
+
+/* ================================================================
+ * DIYSetTeamNamesAndResults  (SWOS2.s line 42560)
+ *
+ * Populates 5 consecutive menu entries (starting at 11, 0x268/56)
+ * with separator, left team name, right team name, left score, right score.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYSetTeamNamesAndResults(void)
+{
+    uint8_t *a1 = (uint8_t *)diyLeftTeamPtr;
+    uint8_t *a2 = (uint8_t *)diyRightTeamPtr;
+    uint16_t d1 = diyLeftTeamResult;
+    uint16_t d2 = diyRightTeamResult;
+
+    MenuEntry *e = &menuEntries[11];  /* 0x268/56=11 */
+    e->isInvisible = 0;
+    e->fg = (uint32_t)aMinus;         /* "-" */
+
+    e++;  /* entry 12 */
+    e->isInvisible = 0;
+    e->fg = (uint32_t)(a1 + 5);       /* TEAMFILE_TEAMNAME = 5 */
+
+    e++;  /* entry 13 */
+    e->isInvisible = 0;
+    e->fg = (uint32_t)(a2 + 5);       /* TEAMFILE_TEAMNAME = 5 */
+
+    e++;  /* entry 14 */
+    e->isInvisible = 0;
+    *(uint16_t *)&e->fg = d1;         /* left score as 16-bit value in fg field */
+
+    e++;  /* entry 15 */
+    e->isInvisible = 0;
+    *(uint16_t *)&e->fg = d2;         /* right score */
+}
+
+/* ================================================================
+ * DIYLeagueTournament_EnsureCurrentFixtureVisible  (SWOS2.s line 42960)
+ *
+ * Adjusts currentDiyLine so the current fixture index is within
+ * the visible scroll window. Returns nonzero if scroll changed.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+uint16_t _DIYLeagueTournament_EnsureCurrentFixtureVisible(void)
+{
+    uint16_t targetLine = 0;
+
+    if (diyFixtureViewMode != 0) {
+        /* field_3A + $22 = offset 0x5C = subRoundCounter */
+        targetLine = *(uint16_t *)&diyCompetitionStart[0x5C];
+        if (diyFixtureViewMode != 1) {
+            if ((int16_t)(targetLine - 1) >= 0) {
+                targetLine--;
+            } else {
+                /* Wrap: use totalRounds-1 from field_3A+$16 = offset 0x50 */
+                targetLine = *(uint16_t *)&diyCompetitionStart[0x50] - 1;
+            }
+        }
+    }
+
+    uint16_t changed = 0;
+
+    /* Scroll up while target is above visible area */
+    while (targetLine < currentDiyLine) {
+        currentDiyLine--;
+        changed = 1;
+    }
+
+    /* Scroll down while target is below visible area */
+    for (;;) {
+        uint16_t visibleEnd = currentDiyLine + numDiyResults;
+        if (targetLine < visibleEnd)
+            break;
+        currentDiyLine++;
+        changed = 1;
+    }
+
+    return changed;
+}
+
+/* ================================================================
+ * DIYLeagueTournament_ScrollFixtureListToCurrentFixture  (SWOS2.s line 42951)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournament_ScrollFixtureListToCurrentFixture(void)
+{
+    if (_DIYLeagueTournament_EnsureCurrentFixtureVisible() != 0) {
+        _DrawMenu();
+    }
+}
+
+/* ================================================================
+ * DIYLeagueTournamentScrollUp  (SWOS2.s line 42922)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournamentScrollUp(void)
+{
+    if (currentDiyLine == 0) return;
+    currentDiyLine--;
+    /* nullsub_15 omitted (no-op) */
+    _DrawMenu();
+}
+
+/* ================================================================
+ * DIYLeagueTournamentScrollDown  (SWOS2.s line 42933)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournamentScrollDown(void)
+{
+    uint16_t bottom = currentDiyLine + numDiyResults;
+    /* field_3A + $16 = offset 0x50 = halfTeams (total fixture lines) */
+    if (bottom >= *(uint16_t *)&diyCompetitionStart[0x50])
+        return;
+    currentDiyLine++;
+    /* nullsub_15 omitted (no-op) */
+    _DrawMenu();
+}
+
+/* ================================================================
+ * DIYLeagueTournament_SetupCurrentFixtureTeamNames  (SWOS2.s line 42615)
+ *
+ * Gets current fixture team pointers and fills 5 menu entries:
+ * "V" separator, left team name, right team name, 2 invisible entries.
+ * ================================================================ */
+extern uint8_t selTeamNameBase;
+
+__attribute__((used, externally_visible))
+void _DIYLeagueTournament_SetupCurrentFixtureTeamNames(void)
+{
+    _DIY_GetCurrentFixtureTeamPtrs();
+
+    /* _DIY_GetCurrentFixtureTeamPtrs stores results in fixtureTeam1CompPtr/fixtureTeam2CompPtr */
+    uint8_t *team1 = fixtureTeam1CompPtr;
+    uint8_t *team2 = fixtureTeam2CompPtr;
+
+    MenuEntry *e = &menuEntries[11];  /* 0x268/56=11 */
+    e->isInvisible = 0;
+    e->fg = (uint32_t)aV;             /* "V" */
+
+    e++;  /* entry 12 */
+    e->isInvisible = 0;
+    /* a1=$2B4(team1) → pointer at offset 0x2B4, add selTeamNameBase */
+    {
+        uint32_t nameOff = *(uint32_t *)(team1 + 0x2B4);
+        e->fg = (uint32_t)(&selTeamNameBase + nameOff);
+    }
+
+    e++;  /* entry 13 */
+    e->isInvisible = 0;
+    {
+        uint32_t nameOff = *(uint32_t *)(team2 + 0x2B4);
+        e->fg = (uint32_t)(&selTeamNameBase + nameOff);
+    }
+
+    e++;  /* entry 14 — invisible */
+    e->isInvisible = 1;
+
+    e++;  /* entry 15 — invisible */
+    e->isInvisible = 1;
+}
+
+/* ================================================================
+ * DIYLeagueTournament_DrawPlayMatchAndFixtureHeader  (SWOS2.s line 42604)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournament_DrawPlayMatchAndFixtureHeader(void)
+{
+    _DIYLeagueTournament_SetupCurrentFixtureTeamNames();
+
+    MenuEntry *e1 = &menuEntries[1];  /* 0x38/56=1 */
+    e1->fg = (uint32_t)aPlayMatch;    /* "PLAY MATCH" */
+    _CallDrawMenuItem(e1);
+
+    _CallDrawMultipleItems(5, &menuEntries[11]);  /* 0x268/56=11, draw 5 entries */
+}
+
+/* ================================================================
+ * DIYLeagueTournamentNextMatch  (SWOS2.s line 42586)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournamentNextMatch(void)
+{
+    uint8_t *a0 = diyCompetitionStart;
+    int16_t field60 = *(int16_t *)&a0[0x60];
+
+    if (field60 == 0) {
+        *(int16_t *)&a0[2] = 2;
+        _SetExitMenuFlag();
+        return;
+    }
+
+    if (diyFixtureViewMode == 1) return;
+
+    diyFixtureViewMode = 1;
+    _DIYLeagueTournament_ScrollFixtureListToCurrentFixture();
+    _DIYLeagueTournament_DrawPlayMatchAndFixtureHeader();
+
+    /* loc_132E24 tail: update visibility and draw entries */
+    DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus();
+    _CallDrawMultipleItems(8, &menuEntries[1]);  /* 0x38/56=1, draw 8 entries */
+}
+
+/* ================================================================
+ * DIYLeagueTournamentInit  (SWOS2.s line 42219)
+ *
+ * Initialize DIY league/tournament menu state.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournamentInit(void)
+{
+    currentDiyLine = 0;
+    diyAllMatchesPlayed = 0;
+    _DIYLeagueTournament_UpdateViewOptionsAvailability();
+
+    if (diyMinSubstitutes == 0) {
+        /* Check hasGroups (field_3A+$E = 0x48) */
+        if (*(int16_t *)&diyCompetitionStart[0x48] == 0) {
+            diyAllMatchesPlayed = 1;
+            diyFixtureViewMode = 0;
+        }
+    }
+
+    if (diyTournamentViewOnly != 0) {
+        diyFixtureViewMode = 0;
+        _SetCurrentEntry(10);
+    }
+
+    /* diyCompetitionStart+DIY_COMPETITION_FIELD_2 = offset 2 */
+    *(uint16_t *)&diyCompetitionStart[2] = 1;
+
+    if (seasonUpdateInProgress != 0) {
+        diyFixtureViewMode = 0;
+        _SetCurrentEntry(42);
+        menuEntries[9].isInvisible = 1;    /* 0x1F8/56=9 */
+        menuEntries[10].isInvisible = 1;   /* 0x230/56=10 */
+    }
+    /* Fall through (bra.w *+4 → FriendlyMenuReinit, but in context this is
+     * actually a bra to the next instruction = fall-through/nop) */
+}

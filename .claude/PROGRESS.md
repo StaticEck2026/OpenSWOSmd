@@ -2742,6 +2742,28 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, no new errors)
 - Cumulative: 1345 functions across 149 chunks
 
+### Chunk 150 — DIY League/Tournament Menu Helpers (13 → diy_competition.c)
+- Date: 2026-03-02
+- Ported:
+  1. jmp_SetExitMenuFlag_7 (→diy_competition.c) — thin wrapper calling _SetExitMenuFlag
+  2. DIYLeagueTournamentStats (→diy_competition.c) — calls _SetupDIYCompetitionStatsMenu
+  3. DIYLeagueTournamentExit (→diy_competition.c) — complex guard logic on hasGroups($48) and field at $60
+  4. DIYLeagueTournament_UpdateViewOptionsAvailability (→diy_competition.c) — sets flag based on match progress ≥75% or group stage
+  5. DIYSetTeamNamesAndResults (→diy_competition.c) — populates 5 menu entries (11-15): separator, team names, scores
+  6. DIYLeagueTournament_EnsureCurrentFixtureVisible (→diy_competition.c) — adjusts currentDiyLine for scroll window, returns uint16_t
+  7. DIYLeagueTournament_ScrollFixtureListToCurrentFixture (→diy_competition.c) — calls EnsureCurrentFixtureVisible, redraws if changed
+  8. DIYLeagueTournamentScrollUp (→diy_competition.c) — decrements currentDiyLine, calls DrawMenu
+  9. DIYLeagueTournamentScrollDown (→diy_competition.c) — increments currentDiyLine with bounds check
+  10. DIYLeagueTournament_SetupCurrentFixtureTeamNames (→diy_competition.c) — gets fixture team ptrs, fills menu entries with team names
+  11. DIYLeagueTournament_DrawPlayMatchAndFixtureHeader (→diy_competition.c) — sets "PLAY MATCH" text, draws entries
+  12. DIYLeagueTournamentNextMatch (→diy_competition.c) — checks progress, sets fixture view mode, calls scroll/draw/update
+  13. DIYLeagueTournamentInit (→diy_competition.c) — initializes currentDiyLine, view options, focus entries
+- Stubs: all 13 simple jmp stubs
+- New xrefs: _jmp_SetExitMenuFlag_7, _DIYLeagueTournamentStats, _DIYLeagueTournamentExit, _DIYLeagueTournament_UpdateViewOptionsAvailability, _DIYSetTeamNamesAndResults, _DIYLeagueTournamentScrollUp, _DIYLeagueTournamentScrollDown, _DIYLeagueTournament_ScrollFixtureListToCurrentFixture, _DIYLeagueTournament_EnsureCurrentFixtureVisible, _DIYLeagueTournament_SetupCurrentFixtureTeamNames, _DIYLeagueTournament_DrawPlayMatchAndFixtureHeader, _DIYLeagueTournamentNextMatch, _DIYLeagueTournamentInit
+- New xdefs: currentDiyLine, diyAllMatchesPlayed, diyFixtureViewMode, diyTournamentViewOnly, diyLeagueTournament_viewOptionsAvailable, diyLeftTeamPtr, diyRightTeamPtr, diyLeftTeamResult, diyRightTeamResult, numDiyResults, diyLeagueTotalMatches, diyLeagueMatchProgress, diyInitFocusOverride, DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus, aNextRound
+- Build status: **verified** (clean build, only pre-existing warnings)
+- Cumulative: 1358 functions across 150 chunks
+
 ### Chunk 147 — BuyOtherPlayers Init/Finish + Pitch/Season Menu Callbacks (5 → transfer_market.c, menus.c)
 - Date: 2026-03-02
 - Ported:
@@ -3020,5 +3042,8 @@ Update this section every time you port a chunk. Keep it chronological.
 | 145   | 4+1d      | 1319       |
 | 146   | 3         | 1322       |
 | 147   | 5         | 1327       |
+| 148   | 8         | 1335       |
+| 149   | 10        | 1345       |
+| 150   | 13        | 1358       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

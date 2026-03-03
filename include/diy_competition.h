@@ -251,3 +251,18 @@ void _OpenDiyPreset3(void);
 void _ChooseTeamsSetHeader(void);
 void _CheckNumTeamsAllowed(void);
 void _Bureaucracy(void);
+
+/* --- DIY League/Tournament Menu (Chunk 150) --- */
+void _jmp_SetExitMenuFlag_7(void);
+void _DIYLeagueTournamentStats(void);
+void _DIYLeagueTournamentExit(void);
+void _DIYLeagueTournament_UpdateViewOptionsAvailability(void);
+void _DIYSetTeamNamesAndResults(void);
+void _DIYLeagueTournamentScrollUp(void);
+void _DIYLeagueTournamentScrollDown(void);
+void _DIYLeagueTournament_ScrollFixtureListToCurrentFixture(void);
+uint16_t _DIYLeagueTournament_EnsureCurrentFixtureVisible(void);
+void _DIYLeagueTournament_SetupCurrentFixtureTeamNames(void);
+void _DIYLeagueTournament_DrawPlayMatchAndFixtureHeader(void);
+void _DIYLeagueTournamentNextMatch(void);
+void _DIYLeagueTournamentInit(void);

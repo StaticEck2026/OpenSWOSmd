@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1345 functions ported across 149 chunks.
+**Current status:** 1358 functions ported across 150 chunks.
 
-**Last completed chunk:** Chunk 149 — Friendly Menu Cluster + ContinueCareer (10 → menus.c, career_init.c): Friendly/ContestInProgress, DrawNumbersOfSubstitutes, DisableEntries, FriendlyMenuInit, FriendlyMenuReinit, ChooseTeamsMenu, MinSubstitutes, MaxSubstitutes, RandomlySwapTeams, ContinueCareer.
+**Last completed chunk:** Chunk 150 — DIY League/Tournament Menu Helpers (13 → diy_competition.c): jmp_SetExitMenuFlag_7, DIYLeagueTournamentStats, DIYLeagueTournamentExit, DIYLeagueTournament_UpdateViewOptionsAvailability, DIYSetTeamNamesAndResults, scroll/fixture helpers, DIYLeagueTournamentNextMatch, DIYLeagueTournamentInit.
 
-**Next candidates:** GetCachedOrCalculate*Result (3 multi-register-return cache wrappers), Career_RebuildInternationalPlayerSelectionMasks, SelectNationalTeamAbort, ApplyOfferDemandMultipliersForSwapAndExtraPlayers (dead code — stub as rts), various large unported functions.
+**Next candidates:** DIYLeagueTournamentMatchCommon + Match/ViewMatch callbacks, DIYLeagueTournamentOnRestore, DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus, Career season functions, remaining unported clusters.
 
 ---
 

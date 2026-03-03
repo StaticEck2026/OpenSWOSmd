@@ -2827,6 +2827,20 @@
         xref    _MaxSubstitutes
         xref    _RandomlySwapTeams
         xref    _ContinueCareer
+; --- Chunk 150 xrefs ---
+        xref    _jmp_SetExitMenuFlag_7
+        xref    _DIYLeagueTournamentStats
+        xref    _DIYLeagueTournamentExit
+        xref    _DIYLeagueTournament_UpdateViewOptionsAvailability
+        xref    _DIYSetTeamNamesAndResults
+        xref    _DIYLeagueTournamentScrollUp
+        xref    _DIYLeagueTournamentScrollDown
+        xref    _DIYLeagueTournament_ScrollFixtureListToCurrentFixture
+        xref    _DIYLeagueTournament_EnsureCurrentFixtureVisible
+        xref    _DIYLeagueTournament_SetupCurrentFixtureTeamNames
+        xref    _DIYLeagueTournament_DrawPlayMatchAndFixtureHeader
+        xref    _DIYLeagueTournamentNextMatch
+        xref    _DIYLeagueTournamentInit
 ; --- Chunk 144 xrefs ---
 ; --- Chunk 147 xrefs ---
         xref    _BuyOtherPlayersInit
@@ -3159,6 +3173,22 @@
         xdef    aSelect0MoreInt
         xdef    aRemovePlayer
         xdef    aRemovePlayers
+; --- Chunk 150 xdefs ---
+        xdef    currentDiyLine
+        xdef    diyAllMatchesPlayed
+        xdef    diyFixtureViewMode
+        xdef    diyTournamentViewOnly
+        xdef    diyLeagueTournament_viewOptionsAvailable
+        xdef    diyLeftTeamPtr
+        xdef    diyRightTeamPtr
+        xdef    diyLeftTeamResult
+        xdef    diyRightTeamResult
+        xdef    numDiyResults
+        xdef    diyLeagueTotalMatches
+        xdef    diyLeagueMatchProgress
+        xdef    diyInitFocusOverride
+        xdef    DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus
+        xdef    aNextRound
 ; --- Chunk 149 xdefs ---
         xdef    aFriendly_1
         xdef    aPlayFriendly
