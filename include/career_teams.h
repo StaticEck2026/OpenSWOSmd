@@ -76,3 +76,7 @@ void _NationalTeamAddPlayerExit(void);
 /* --- National team menu update helpers (Chunk 148) --- */
 void _Career_UpdateNationalTeamMenuEntries(void);
 void _Career_UpdateRemovePlayersMenuEntry(void);
+
+/* --- Career_CopyUnavailablePlayerToCareerTeamSlot (Chunk 170) --- */
+void _Career_CopyUnavailablePlayerToCareerTeamSlot(uint8_t *srcPlayer, uint8_t *dstTeam,
+    uint8_t *srcName, uint16_t srcTeamNumber, uint16_t srcPlayerIndex, uint16_t dstSlotIndex);

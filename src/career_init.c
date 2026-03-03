@@ -48,6 +48,22 @@ extern uint8_t managerSexBuffer[];
 extern uint8_t aMr[];           /* "MR" */
 extern uint8_t aMs[];           /* "MS" */
 
+/* Globals for Career_InitializeSelectedTeamAndStartingBalance (Chunk 170) */
+extern int32_t  startingBalance;
+extern uint16_t teamNoOfferAccepted;
+extern uint16_t stayingInOldClub;
+extern uint16_t careerTeamLeague;
+extern uint16_t selTeamNumber;
+extern TeamFileEx careerTeam;
+extern uint8_t  selTeamsPtr;     /* start of selected teams buffer (boundary spill) */
+extern uint8_t  currentMatchPlayers[];
+extern uint16_t teamsLoaded;
+extern int32_t  newBalance;
+extern uint16_t careerNumPlayers;
+extern uint16_t sensisoftPlcSponsorshipFactor;
+extern uint16_t additionalInvestments;
+extern uint16_t isNationalSelector;
+
 /* ================================================================
  * Career_InitTransferMarketState  (SWOS2.s line 72836)
  *
@@ -323,4 +339,99 @@ uint16_t _InitCompetitionTeamSelectionFromAltTableHeader(uint8_t *base)
 
     numNeededTeams = (int8_t)base[0xF];
     return 0;
+}
+
+/* ================================================================
+ * Career_InitializeSelectedTeamAndStartingBalance (SWOS2.s line 34621)
+ *
+ * Sets up the career team data by copying the selected team's file
+ * data to both careerTeam and selTeamsPtr buffers, sets the
+ * coach/player control byte, copies player order to currentMatchPlayers,
+ * and initializes financial globals.
+ *
+ * Asm: d0=teamNumber (uint16), d1=startingBalance (int32)
+ * ================================================================ */
+extern int16_t _GetTeamLeague(uint16_t teamNumber);
+extern uint8_t *_GetTeamPointer(uint16_t teamId);
+
+__attribute__((used, externally_visible))
+void _Career_InitializeSelectedTeamAndStartingBalance(uint16_t teamNumber, int32_t balance)
+{
+    startingBalance = balance;
+    teamNoOfferAccepted = 0xFFFF;
+    stayingInOldClub = 0xFFFF;
+    numSelectedTeams = 0;
+
+    /* Get team league for career tracking */
+    careerTeamLeague = (uint16_t)_GetTeamLeague(teamNumber);
+
+    /* Get pointer to team file data and copy to both buffers */
+    uint8_t *teamPtr = _GetTeamPointer(teamNumber);
+    selTeamNumber = teamNumber;
+
+    /* Copy 342 words (684 bytes = one TeamFileEx) to both careerTeam and selTeamsPtr */
+    uint16_t *src = (uint16_t *)teamPtr;
+    uint16_t *dst1 = (uint16_t *)&careerTeam;
+    uint16_t *dst2 = (uint16_t *)&selTeamsPtr;
+    for (int16_t i = 341; i >= 0; i--) {
+        *dst1++ = *src;
+        *dst2++ = *src++;
+    }
+
+    numSelectedTeams = 1;
+
+    /* Set teamNameControl byte (offset 4) based on coach-or-player setting:
+     * 2 = coach only, 3 = player-coach */
+    uint8_t controlByte = (coachOrPlayer != 0) ? 2 : 3;
+    ((uint8_t *)&careerTeam)[4] = controlByte;
+    ((uint8_t *)&selTeamsPtr)[4] = controlByte;
+
+    /* Copy 16 bytes of playerOrder (offset 60 in TeamFile) to currentMatchPlayers */
+    teamPtr = _GetTeamPointer(selTeamNumber);
+    uint8_t *playerOrderSrc = teamPtr + 60;
+    for (int16_t i = 15; i >= 0; i--) {
+        currentMatchPlayers[i] = playerOrderSrc[i];
+    }
+
+    careerNumPlayers = 16;
+    teamsLoaded = 0;
+    newBalance = 0;
+    sensisoftPlcSponsorshipFactor = 0;
+    additionalInvestments = 0;
+}
+
+/* ================================================================
+ * Career_ContinueToNextSeasonInitTeamAndFunds (SWOS2.s line 72514)
+ *
+ * Prepares for a new career season: clears transfer market, increments
+ * season counter, optionally rebuilds foreign market pool, applies a
+ * random ±jitter (80-104%) to the base funds, then initializes the
+ * team with the adjusted balance.
+ *
+ * Asm: d0=teamNumber (uint16), d1=baseFunds (uint32)
+ * ================================================================ */
+extern void _Career_BuildForeignMarketPoolFromSelectedTeam(void);
+extern uint16_t _Rand2(void);
+
+__attribute__((used, externally_visible))
+void _Career_ContinueToNextSeasonInitTeamAndFunds(uint16_t teamNumber, uint32_t baseFunds)
+{
+    numPlayersOnTransferMarket = 0;
+    careerSeasonsCompleted++;
+
+    if (isNationalSelector == 0) {
+        _Career_BuildForeignMarketPoolFromSelectedTeam();
+    }
+
+    /* Apply random jitter to funds: 80-104% of original
+     * Formula: ((baseFunds / 1000) * (80 + rand25pct)) / 100 * 1000
+     * where rand25pct = (Rand2() * 25) >> 8 = 0..24 */
+    uint16_t fundsDiv = (uint16_t)(baseFunds / 1000);
+    uint16_t rand = _Rand2();
+    uint16_t jitterPct = ((rand * 25) >> 8) + 80;
+    uint32_t adjusted = (uint32_t)fundsDiv * (uint32_t)jitterPct;
+    uint16_t adjustedDiv = (uint16_t)(adjusted / 100);
+    uint32_t finalFunds = (uint32_t)adjustedDiv * 1000;
+
+    _Career_InitializeSelectedTeamAndStartingBalance(teamNumber, (int32_t)finalFunds);
 }

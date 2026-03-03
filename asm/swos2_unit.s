@@ -3064,6 +3064,15 @@
         xdef    aWeHereAtAWithd
         xdef    aOfferOn
         xdef    aFromAInExchang
+; --- Chunk 170 xrefs ---
+        xref    _Career_InitializeSelectedTeamAndStartingBalance
+        xref    _Career_ContinueToNextSeasonInitTeamAndFunds
+        xref    _Career_UpdateLastNationalityCall
+        xref    _Career_CopyUnavailablePlayerToCareerTeamSlot
+; --- Chunk 170 xdefs ---
+        xdef    careerUnavailablePlayerNames
+        xdef    lastNationalityCall
+        xdef    careerTeamLeague
 ; --- Chunk 169 xrefs ---
         xref    _JobOffersInit
         xref    _JobOffers_DrawOldOfferLine

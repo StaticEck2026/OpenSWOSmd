@@ -327,3 +327,48 @@ void _ShowSeasonOpinion(void)
     currentMessage = msg;
     _ShowChairmanMessage();
 }
+
+/* ================================================================
+ * Career_UpdateLastNationalityCall (SWOS2.s line 35081)
+ *
+ * Determines which national team the current player's nationality
+ * maps to, and stores it in lastNationalityCall (or 0xFFFF if the
+ * player's national team IS the selected team, or if not found).
+ *
+ * Returns the value stored in lastNationalityCall.
+ * ================================================================ */
+extern uint8_t  plNationality;
+extern uint16_t lastNationalityCall;
+extern int16_t _GetNationalTeamNumber(uint16_t nationality);
+extern int16_t _GetNationalTeamNumberFromTeamFileId(uint16_t teamFileId);
+
+__attribute__((used, externally_visible))
+uint16_t _Career_UpdateLastNationalityCall(void)
+{
+    int16_t d0;
+    uint8_t nat = plNationality;
+
+    if (nat != 0xFF) {
+        d0 = _GetNationalTeamNumber((uint16_t)nat);
+        if (d0 != (int16_t)0xFFFF)
+            goto check_self;
+    }
+
+    /* Nationality not found or is 0xFF — try team file ID fallback */
+    d0 = (int16_t)0xFFFF;
+    if (isNationalSelector != 0)
+        goto check_self;
+
+    /* move.b (selTeamNumber).l,d0 — reads high byte on big-endian 68k.
+     * This extracts the team file ID (country file index) from selTeamNumber. */
+    d0 = _GetNationalTeamNumberFromTeamFileId(selTeamNumber >> 8);
+
+check_self:
+    /* If the national team IS the selected team, set to 0xFFFF (no call-up) */
+    if ((uint16_t)d0 == selTeamNumber) {
+        d0 = (int16_t)0xFFFF;
+    }
+
+    lastNationalityCall = (uint16_t)d0;
+    return (uint16_t)d0;
+}

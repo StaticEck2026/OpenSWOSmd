@@ -2024,3 +2024,57 @@ int16_t _GetTeamLeague(uint16_t teamNumber)
 
     return (int8_t)p[TEAMFILE_LEAGUE];
 }
+
+/* ================================================================
+ * Career_CopyUnavailablePlayerToCareerTeamSlot (SWOS2.s line 69229)
+ *
+ * Copies an international player from another team into a career
+ * team's "unavailable" slot. Updates the name table, lookup table,
+ * copies 38 bytes of player data (preserving one control byte),
+ * clears status bytes, and refreshes bench player numbers.
+ *
+ * Asm: a0=srcPlayer, a1=dstTeam, a2=srcName,
+ *      d2=srcTeamNumber, d1=srcPlayerIndex, d3=dstSlotIndex
+ * ================================================================ */
+extern uint8_t careerUnavailablePlayerNames[];
+extern uint8_t careerUnavailablePlayerLookupTable[];
+
+extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
+extern void _SetBenchPlayersNumbers(uint8_t *teamPtr);
+
+__attribute__((used, externally_visible))
+void _Career_CopyUnavailablePlayerToCareerTeamSlot(uint8_t *srcPlayer, uint8_t *dstTeam,
+    uint8_t *srcName, uint16_t srcTeamNumber, uint16_t srcPlayerIndex, uint16_t dstSlotIndex)
+{
+    /* Copy player name to careerUnavailablePlayerNames (17-byte entries) */
+    uint8_t *namesDst = careerUnavailablePlayerNames + (uint16_t)(dstSlotIndex * 17);
+    _StringCopy(srcName, namesDst);
+
+    /* Store team number and player index in lookup table (4-byte entries) */
+    uint16_t offset = (uint16_t)(dstSlotIndex << 2);
+    *(uint16_t *)(careerUnavailablePlayerLookupTable + offset) = srcTeamNumber;
+    *(uint16_t *)(careerUnavailablePlayerLookupTable + offset + 2) = srcPlayerIndex;
+
+    /* Save byte at dstTeam+0x4E before overwriting with player data copy */
+    uint8_t savedByte = dstTeam[0x4E];
+
+    /* Copy 19 words (38 bytes) from srcPlayer+0x4C to dstTeam+0x4C
+     * (one PlayerFile entry worth of data) */
+    uint16_t *src = (uint16_t *)(srcPlayer + 0x4C);
+    uint16_t *dst = (uint16_t *)(dstTeam + 0x4C);
+    for (int16_t i = 0x12; i >= 0; i--) {
+        *dst++ = *src++;
+    }
+
+    /* Restore saved byte (control byte preserved across copy) */
+    dstTeam[0x4E] = savedByte;
+
+    /* Clear player status bytes */
+    dstTeam[0x6D] = 0;
+    dstTeam[0x6E] = 0;
+    dstTeam[0x6F] = 0;
+    dstTeam[0x70] = 0;
+
+    /* Update bench player numbers for the career team */
+    _SetBenchPlayersNumbers((uint8_t *)&careerTeam);
+}

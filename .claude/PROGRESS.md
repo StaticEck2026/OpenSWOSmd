@@ -2969,6 +2969,19 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, only pre-existing warnings)
 - Cumulative: 1450 functions across 167 chunks
 
+### Chunk 170 — Career Init & National Team Helpers (4 → career_init.c, career_season.c, career_teams.c)
+- Date: 2026-03-03
+- Ported:
+  1. Career_InitializeSelectedTeamAndStartingBalance (→career_init.c) — sets starting balance, copies 684 bytes of team data to both careerTeam and selTeamsPtr, sets coach/player control byte, copies playerOrder to currentMatchPlayers, initializes financial globals
+  2. Career_ContinueToNextSeasonInitTeamAndFunds (→career_init.c) — clears transfer market, increments season counter, optionally rebuilds foreign market pool, applies 80-104% random jitter to funds, tail-calls InitializeSelectedTeamAndStartingBalance
+  3. Career_UpdateLastNationalityCall (→career_season.c) — determines national team for player's nationality via GetNationalTeamNumber/GetNationalTeamNumberFromTeamFileId, stores in lastNationalityCall (0xFFFF if same as selected team)
+  4. Career_CopyUnavailablePlayerToCareerTeamSlot (→career_teams.c) — copies international player to career team's unavailable slot: name to careerUnavailablePlayerNames (17-byte entries), team/player index to lookup table (4-byte entries), copies 38 bytes of player data preserving control byte, clears status bytes, calls SetBenchPlayersNumbers
+- Stubs: Career_InitializeSelectedTeamAndStartingBalance + Career_ContinueToNextSeasonInitTeamAndFunds (d0,d1 register bridges), Career_UpdateLastNationalityCall (jmp), Career_CopyUnavailablePlayerToCareerTeamSlot (a0,a1,a2,d2,d1,d3 register bridge)
+- New xrefs: _Career_InitializeSelectedTeamAndStartingBalance, _Career_ContinueToNextSeasonInitTeamAndFunds, _Career_UpdateLastNationalityCall, _Career_CopyUnavailablePlayerToCareerTeamSlot
+- New xdefs: careerUnavailablePlayerNames, lastNationalityCall, careerTeamLeague
+- Build status: **verified** (clean build, only pre-existing warnings)
+- Cumulative: 1458 functions across 170 chunks
+
 ### Chunk 169 — JobOffers Init/DrawOld/AfterDraw (3 → job_offers.c)
 - Date: 2026-03-03
 - Ported:
@@ -3297,5 +3310,8 @@ Update this section every time you port a chunk. Keep it chronological.
 | 165   | 11+1s     | 1436       |
 | 166   | 2         | 1438       |
 | 167   | 9+3s      | 1450       |
+| 168   | 1         | 1451       |
+| 169   | 3         | 1454       |
+| 170   | 4         | 1458       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

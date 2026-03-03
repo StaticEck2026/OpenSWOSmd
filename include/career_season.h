@@ -14,3 +14,6 @@ uint8_t *_GetCompetitionAbbrevStr(uint8_t *competition);
 
 /* --- Chunk 161: Season opinion --- */
 void _ShowSeasonOpinion(void);
+
+/* --- Career_UpdateLastNationalityCall (Chunk 170) --- */
+uint16_t _Career_UpdateLastNationalityCall(void);

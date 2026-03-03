@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1454 functions ported across 169 chunks.
+**Current status:** 1458 functions ported across 170 chunks.
 
-**Last completed chunk:** Chunk 169 — JobOffers Init/DrawOld/AfterDraw (3 → job_offers.c): JobOffersInit, JobOffers_DrawOldOfferLine, JobOffersAfterDrawCommon.
+**Last completed chunk:** Chunk 170 — Career Init & National Team Helpers (4 → career_init.c, career_season.c, career_teams.c): Career_InitializeSelectedTeamAndStartingBalance, Career_ContinueToNextSeasonInitTeamAndFunds, Career_UpdateLastNationalityCall, Career_CopyUnavailablePlayerToCareerTeamSlot.
 
-**Next candidates:** ChooseTeamsDialog/SelectTeams family (~10), SquadInit/Finish/AfterDraw (~10), Career season info (~2), EditTactics helpers (~10), DIY cup menu functions (~4), National team selection (~8), misc.
+**Next candidates:** ChooseTeamsDialog/SelectTeams family (~10), SquadInit/Finish/AfterDraw (~10), SelectNationalTeam group (~8, now partially unblocked), Career_MaybeGenerateJobOffer (~1 large), ChooseTeamForEditTactics (~1), FindTeamInDIY (~1 large), misc.
 
 ---
 

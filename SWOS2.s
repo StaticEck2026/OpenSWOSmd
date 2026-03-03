@@ -34613,55 +34613,15 @@ Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot:
                 jmp     _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot
 
 ; ===== Career_InitializeSelectedTeamAndStartingBalance =====
-; prototype: char Career_InitializeSelectedTeamAndStartingBalance()
-; in:
-;      D0 - selected team number
-;      D1 - starting balance
-; dos: cseg_5DB56
+; Ported to C: _Career_InitializeSelectedTeamAndStartingBalance in src/career_init.c
+; in: D0 = teamNumber, D1 = startingBalance
 Career_InitializeSelectedTeamAndStartingBalance:
-                move.w  d0,d7
-                move.l  d1,(startingBalance).l
-                move.w  #$FFFF,(teamNoOfferAccepted).l
-                move.w  #$FFFF,(stayingInOldClub).l
-                clr.w   (numSelectedTeams).l
-                movem.l d0-d7/a0-a6,-(sp)
-                move.w  d7,d0
-                movem.l d1-d7/a0-a6,-(sp)
-                jsr     GetTeamLeague
-                movem.l (sp)+,d1-d7/a0-a6
-                move.w  d0,(careerTeamLeague).l
-                movem.l (sp)+,d0-d7/a0-a6
-                move.w  d7,d0
-                jsr     GetTeamPointer
-                move.w  d7,(selTeamNumber).l
-                lea     (careerTeam).l,a1
-                lea     (selTeamsPtr).l,a2
-                move.w  #341,d0
-loc_12E07E:
-                move.w  (a0),(a1)+
-                move.w  (a0)+,(a2)+
-                dbf     d0,loc_12E07E
-                move.w  #1,(numSelectedTeams).l
-                move.b  #2,d0
-                tst.w   (coachOrPlayer).l
-                bne.s   loc_12E09E
-                move.b  #3,d0
-loc_12E09E:
-                move.b  d0,-680(a1)
-                move.b  d0,-680(a2)
-                move.w  (selTeamNumber).l,d0
-                jsr     GetTeamPointer
-                lea     60(a0),a0
-                lea     (currentMatchPlayers).l,a1
-                move.w  #15,d0
-loc_12E0C0:
-                move.b  (a0)+,(a1)+
-                dbf     d0,loc_12E0C0
-                move.w  #16,(careerNumPlayers).l
-                clr.w   (teamsLoaded).l
-                clr.l   (newBalance).l
-                clr.w   (sensisoftPlcSponsorshipFactor).l
-                clr.w   (additionalInvestments).l
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  d1,-(sp)
+                move.w  d0,-(sp)
+                jsr     _Career_InitializeSelectedTeamAndStartingBalance
+                lea     6(sp),sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== InitCareer =====
@@ -35077,27 +35037,9 @@ loc_12E804:
                 rts
 
 ; ===== Career_UpdateLastNationalityCall =====
-; prototype: unsigned __int16 __usercall Career_UpdateLastNationalityCall@<d0>()
+; Ported to C: _Career_UpdateLastNationalityCall in src/career_season.c
 Career_UpdateLastNationalityCall:
-                move.b  (plNationality).l,d0
-                cmpi.b  #$FF,d0
-                beq.s   loc_12E86A
-                jsr     GetNationalTeamNumber
-                cmpi.w  #$FFFF,d0
-                bne.s   loc_12E882
-loc_12E86A:
-                move.w  #$FFFF,d0
-                tst.w   (isNationalSelector).l
-                bne.s   loc_12E882
-                move.b  (selTeamNumber).l,d0
-                jsr     GetNationalTeamNumberFromTeamFileId
-loc_12E882:
-                cmp.w   (selTeamNumber).l,d0
-                bne.s   loc_12E88E
-                move.w  #$FFFF,d0
-loc_12E88E:
-                move.w  d0,(lastNationalityCall).l
-                rts
+                jmp     _Career_UpdateLastNationalityCall
 ; char (*[6])[20]
 careerTeamFlagsByRegionTable:
                 ; char (*[6])[20]
@@ -69225,37 +69167,19 @@ GetTeamLeague:
                 rts
 
 ; ===== Career_CopyUnavailablePlayerToCareerTeamSlot =====
-; prototype: void __usercall Career_CopyUnavailablePlayerToCareerTeamSlot(void *srcPlayer@<a0>, void *dstTeam@<a1>, const char *srcName@<a2>, unsigned __int16 srcTeamNumber@<d2>, unsigned __int16 srcPlayerIndex@<d1>, unsigned __int16 dstSlotIndex@<d3>)
+; Ported to C: _Career_CopyUnavailablePlayerToCareerTeamSlot in src/career_teams.c
+; in: A0=srcPlayer, A1=dstTeam, A2=srcName, D2=srcTeamNumber, D1=srcPlayerIndex, D3=dstSlotIndex
 Career_CopyUnavailablePlayerToCareerTeamSlot:
-                movem.l a0-a1,-(sp)
-                move.w  d3,d0
-                mulu.w  #$11,d0
-                lea     (careerUnavailablePlayerNames).l,a1
-                lea     (a1,d0.w),a1
-                movea.l a2,a0
-                jsr     StringCopy
-                movem.l (sp)+,a0-a1
-                lea     (careerUnavailablePlayerLookupTable).l,a2
-                lsl.w   #2,d3
-                move.w  d2,(a2,d3.w)
-                move.w  d1,2(a2,d3.w)
-                move.b  $4E(a1),-(sp)
-                lea     $4C(a0),a0
-                lea     $4C(a1),a1
-                move.w  #$12,d0
-loc_146964:
-                move.w  (a0)+,(a1)+
-                dbf     d0,loc_146964
-                lea     -$72(a1),a1
-                move.b  (sp)+,$4E(a1)
-                clr.b   $6D(a1)
-                clr.b   $6E(a1)
-                clr.b   $6F(a1)
-                clr.b   $70(a1)
-                lea     (careerTeam).l,a0
-                movem.l d1,-(sp)
-                bsr.w   SetBenchPlayersNumbers
-                movem.l (sp)+,d1
+                movem.l d2-d7/a2-a6,-(sp)
+                move.w  d3,-(sp)
+                move.w  d1,-(sp)
+                move.w  d2,-(sp)
+                move.l  a2,-(sp)
+                move.l  a1,-(sp)
+                move.l  a0,-(sp)
+                jsr     _Career_CopyUnavailablePlayerToCareerTeamSlot
+                lea     18(sp),sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== Career_ShowAddInternationalPlayerDialog =====
@@ -72509,28 +72433,16 @@ nationalTeams:
                 dc.b $00,$00,$00,$01
 
 ; ===== Career_ContinueToNextSeasonInitTeamAndFunds =====
-; prototype: void __usercall Career_ContinueToNextSeasonInitTeamAndFunds(unsigned __int16 teamNumber@<d0>, unsigned __int32 baseFunds@<d1>)
-; dos: cseg_942F2
+; Ported to C: _Career_ContinueToNextSeasonInitTeamAndFunds in src/career_init.c
+; in: D0 = teamNumber, D1 = baseFunds
 Career_ContinueToNextSeasonInitTeamAndFunds:
-                clr.w   (numPlayersOnTransferMarket).l
-                addq.w  #1,(careerSeasonsCompleted).l
-                move.w  d0,d7
-                tst.w   (isNationalSelector).l
-                bne.s   loc_149B04
-                movem.l d1/d7,-(sp)
-                jsr     Career_BuildForeignMarketPoolFromSelectedTeam
-                movem.l (sp)+,d1/d7
-loc_149B04:
-                divu.w  #1000,d1
-                jsr     Rand2
-                mulu.w  #25,d0
-                lsr.w   #8,d0
-                addi.w  #$50,d0         ; 'P'
-                mulu.w  d0,d1
-                divu.w  #100,d1
-                mulu.w  #1000,d1
-                move.w  d7,d0
-                jmp     Career_InitializeSelectedTeamAndStartingBalance
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  d1,-(sp)
+                move.w  d0,-(sp)
+                jsr     _Career_ContinueToNextSeasonInitTeamAndFunds
+                lea     6(sp),sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== JobOffers_MaybeExpireSomeNewOffers =====
 ; Ported to C: _JobOffers_MaybeExpireSomeNewOffers in src/job_offers.c

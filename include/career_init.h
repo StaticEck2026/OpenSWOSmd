@@ -26,3 +26,7 @@ void _ContinueCareer(void);
 uint16_t _InitCompetitionTeamSelectionFromTableEntry(uint16_t idx, uint8_t *base);
 uint16_t _InitCompetitionTeamSelectionFromTableHeader(uint8_t *base);
 uint16_t _InitCompetitionTeamSelectionFromAltTableHeader(uint8_t *base);
+
+/* --- Career_InitializeSelectedTeamAndStartingBalance, Career_ContinueToNextSeasonInitTeamAndFunds (Chunk 170) --- */
+void _Career_InitializeSelectedTeamAndStartingBalance(uint16_t teamNumber, int32_t balance);
+void _Career_ContinueToNextSeasonInitTeamAndFunds(uint16_t teamNumber, uint32_t baseFunds);
