@@ -166,4 +166,15 @@ void _SetFriendlyPitchOrSeason(void);
 void _PitchTypeOrSeasonProc(void);
 void _FriendlyPitchTypeProc(MenuEntry *entry);
 
+/* --- Friendly menu cluster + RandomlySwapTeams (Chunk 149) --- */
+void _Friendly(void);
+void _DrawNumbersOfSubstitutes(void);
+void _DisableEntries(void);
+void _FriendlyMenuInit(void);
+void _FriendlyMenuReinit(void);
+void _ChooseTeamsMenu(void);
+void _MinSubstitutes(void);
+void _MaxSubstitutes(void);
+void _RandomlySwapTeams(void);
+
 #endif

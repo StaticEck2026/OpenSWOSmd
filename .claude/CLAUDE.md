@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1335 functions ported across 148 chunks.
+**Current status:** 1345 functions ported across 149 chunks.
 
-**Last completed chunk:** Chunk 148 — EditTeamsCallback + Career/Team Selection Helpers (8 → edit_tactics.c, career_init.c, career_teams.c, diy_competition.c).
+**Last completed chunk:** Chunk 149 — Friendly Menu Cluster + ContinueCareer (10 → menus.c, career_init.c): Friendly/ContestInProgress, DrawNumbersOfSubstitutes, DisableEntries, FriendlyMenuInit, FriendlyMenuReinit, ChooseTeamsMenu, MinSubstitutes, MaxSubstitutes, RandomlySwapTeams, ContinueCareer.
 
-**Next candidates:** GetCachedOrCalculate*Result (3 multi-register-return cache wrappers), Career_RebuildInternationalPlayerSelectionMasks, SelectNationalTeamAbort, ApplyOfferDemandMultipliersForSwapAndExtraPlayers, ContinueCareer, various large unported functions.
+**Next candidates:** GetCachedOrCalculate*Result (3 multi-register-return cache wrappers), Career_RebuildInternationalPlayerSelectionMasks, SelectNationalTeamAbort, ApplyOfferDemandMultipliersForSwapAndExtraPlayers (dead code — stub as rts), various large unported functions.
 
 ---
 

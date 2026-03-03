@@ -18,3 +18,6 @@ void _CoachOrPlayerCoach(MenuEntry *entry);
 /* --- ChooseTeamAndStartCareer, LoadLiverpool (Chunk 148) --- */
 void _ChooseTeamAndStartCareer(void);
 void _LoadLiverpool(void);
+
+/* --- ContinueCareer (Chunk 149) --- */
+void _ContinueCareer(void);

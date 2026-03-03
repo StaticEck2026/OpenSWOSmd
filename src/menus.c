@@ -4134,3 +4134,184 @@ void _FriendlyPitchTypeProc(MenuEntry *entry)
     }
     _CallDrawMenuItem(entry);
 }
+
+/* ================================================================
+ * Chunk 149: Friendly menu cluster
+ * ================================================================ */
+
+#define GAME_TYPE_NO_GAME  0
+#define SEASONAL           0xFFFE
+#define PINK_TO_BROWN_9    9
+#define ENTRY_FRAME_AND_BACK_COLOR 2
+
+extern uint16_t gameType;
+extern uint8_t selTeamsPtr;
+extern void _SaveSelectedTeams(void);
+extern void _RestoreSelectedTeams(void);
+extern void _ShowFriendlyMenu(void);
+extern void _SetSelectTwoTeamsText(void);
+extern void _Int2Ascii(uint16_t value, uint8_t *outBuf);
+extern void _GoGetTeamsForPlay(uint8_t *gameTypeStr, uint8_t *playWhatStr,
+                               uint16_t numTeams, uint16_t showClub,
+                               uint16_t showNational, uint16_t showCustom);
+extern void _InitTeams(void);
+extern void _PlayFriendly(void);
+extern uint16_t _Rand2(void);
+extern void _SetCurrentEntry(uint16_t entry);
+
+extern uint8_t aFriendly_1[];       /* "FRIENDLY" */
+extern uint8_t aPlayFriendly[];     /* "PLAY FRIENDLY" */
+extern uint16_t friendlyOk;
+extern uint16_t minSubstitutes;
+extern uint16_t maxSubstitutes;
+
+/* Friendly: if no game in progress → show friendly menu, else ContestInProgress. */
+__attribute__((used, externally_visible))
+void _Friendly(void)
+{
+    if (gameType == GAME_TYPE_NO_GAME) {
+        _ShowFriendlyMenu();
+        return;
+    }
+    /* ContestInProgress: save state, show friendly, restore */
+    _SaveSelectedTeams();
+    uint16_t savedGameType = gameType;
+    uint16_t savedSelTeam = selTeamNumber;
+    selTeamNumber = 0xFFFF;
+    gameType = GAME_TYPE_NO_GAME;
+    _ShowFriendlyMenu();
+    selTeamNumber = savedSelTeam;
+    gameType = savedGameType;
+    _RestoreSelectedTeams();
+}
+
+/* DrawNumbersOfSubstitutes: write min/max sub counts to menu entries. */
+__attribute__((used, externally_visible))
+void _DrawNumbersOfSubstitutes(void)
+{
+    _Int2Ascii(minSubstitutes, (uint8_t *)menuEntries[5].fg);   /* 0x118/56=5 */
+    _Int2Ascii(maxSubstitutes, (uint8_t *)menuEntries[6].fg);   /* 0x150/56=6 */
+    _SetFriendlyPitchOrSeason();
+}
+
+/* DisableEntries: disable entries 1-6 that have frame+back background. */
+__attribute__((used, externally_visible))
+void _DisableEntries(void)
+{
+    int16_t i;
+    for (i = 0; i < 6; i++) {
+        MenuEntry *e = &menuEntries[1 + i];  /* 0x38/56=1, loop 6 */
+        if (e->background == ENTRY_FRAME_AND_BACK_COLOR) {
+            uint16_t bgVal = *(uint16_t *)&e->bg;
+            if ((bgVal & 0x0F) != 0) {
+                bgVal = (bgVal & 0xFFF0) + PINK_TO_BROWN_9;
+                *(uint16_t *)&e->bg = bgVal;
+                e->isDisabled = 1;
+            }
+        }
+    }
+}
+
+/* FriendlyMenuInit: init friendly menu — set header text if OK, fall through to Reinit. */
+__attribute__((used, externally_visible))
+void _FriendlyMenuInit(void)
+{
+    if (friendlyOk != 0)
+        _SetSelectTwoTeamsText();
+    _FriendlyMenuReinit();
+}
+
+/* FriendlyMenuReinit: update pitch/season display state and menu entry visibility. */
+__attribute__((used, externally_visible))
+void _FriendlyMenuReinit(void)
+{
+    if (pitchType != SEASONAL) {
+        pitchTypeOrSeason = 0;
+        friendlyPitchType = pitchType;
+        /* Disable entry 3 (pitch/season toggle) */
+        MenuEntry *e3 = &menuEntries[3];  /* 0xA8/56=3 */
+        uint16_t bg3 = *(uint16_t *)&e3->bg;
+        bg3 = (bg3 & 0xFFF0) + PINK_TO_BROWN_9;
+        *(uint16_t *)&e3->bg = bg3;
+        e3->isDisabled = 1;
+        /* Disable entry 4 */
+        MenuEntry *e4 = &menuEntries[4];  /* 0xE0/56=4 */
+        uint16_t bg4 = *(uint16_t *)&e4->bg;
+        bg4 = (bg4 & 0xFFF0) + PINK_TO_BROWN_9;
+        *(uint16_t *)&e4->bg = bg4;
+        e4->isDisabled = 1;
+    }
+
+    _DrawNumbersOfSubstitutes();
+
+    if (friendlyOk == 0) {
+        menuEntries[7].isInvisible = 1;   /* 0x188/56=7 */
+        menuEntries[8].isInvisible = 0;   /* 0x1C0/56=8 */
+        menuEntries[10].isInvisible = 1;  /* 0x230/56=10 */
+        return;
+    }
+
+    _DisableEntries();
+    menuEntries[8].isInvisible = 1;       /* 0x1C0/56=8 */
+    _SetCurrentEntry(7);
+}
+
+/* ChooseTeamsMenu: set up friendly team selection. */
+__attribute__((used, externally_visible))
+void _ChooseTeamsMenu(void)
+{
+    _GoGetTeamsForPlay(aFriendly_1, aPlayFriendly, 2, 1, 1, 1);
+    if (chooseTeamsResult == 0) {
+        _SetExitMenuFlag();
+        return;
+    }
+    _RandomlySwapTeams();
+    _InitTeams();
+    _PlayFriendly();
+    _SetExitMenuFlag();
+}
+
+/* MinSubstitutes: increment minSubstitutes with wraparound to 1. */
+__attribute__((used, externally_visible))
+void _MinSubstitutes(void)
+{
+    if (maxSubstitutes == 0) return;
+    minSubstitutes++;
+    if (minSubstitutes > maxSubstitutes)
+        minSubstitutes = 1;
+    _DrawNumbersOfSubstitutes();
+    _CallDrawMenuItem(&menuEntries[5]);   /* 0x118/56=5 */
+}
+
+/* MaxSubstitutes: increment maxSubstitutes (0-5), enforce minSubstitutes >= 1. */
+__attribute__((used, externally_visible))
+void _MaxSubstitutes(void)
+{
+    maxSubstitutes++;
+    if (maxSubstitutes > 5) {
+        maxSubstitutes = 0;
+        minSubstitutes = 0;
+    }
+    if (maxSubstitutes == 1)
+        minSubstitutes = 1;
+    _DrawNumbersOfSubstitutes();
+    _CallDrawMenuItem(&menuEntries[6]);   /* 0x150/56=6 */
+    _CallDrawMenuItem(&menuEntries[5]);   /* 0x118/56=5 */
+}
+
+/* RandomlySwapTeams: 50% chance to swap team 1 and team 2 in selTeamsPtr. */
+__attribute__((used, externally_visible))
+void _RandomlySwapTeams(void)
+{
+    uint16_t r = _Rand2();
+    if (!(r & 1)) return;
+    /* Swap 684 bytes (TEAMFILE_SIZE) between team 0 and team 1 */
+    uint16_t *a = (uint16_t *)&selTeamsPtr;
+    uint16_t *b = (uint16_t *)(&selTeamsPtr + 684);
+    int16_t i;
+    for (i = 0; i < 342; i++) {
+        uint16_t tmp = a[i];
+        a[i] = b[i];
+        b[i] = tmp;
+    }
+}

@@ -49033,28 +49033,16 @@ pad_136DFA:
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0,0,0,0,0
 
-; ===== Friendly =====
-; prototype: void __usercall Friendly()
+; ===== Friendly ===== (ported to C → _Friendly, includes ContestInProgress)
 Friendly:
-                cmpi.w  #GAME_TYPE_NO_GAME,(gameType).l
-                bne.s   ContestInProgress
+                jmp     _Friendly
 
 ; ===== ShowFriendlyMenu ===== (ported to C → _ShowFriendlyMenu)
 ShowFriendlyMenu:
                 jmp     _ShowFriendlyMenu
 
-; ===== ContestInProgress =====
-; prototype: void __usercall ContestInProgress()
+; ===== ContestInProgress ===== (merged into _Friendly)
 ContestInProgress:
-                jsr     SaveSelectedTeams
-                move.w  (gameType).l,-(sp)
-                move.w  (selTeamNumber).l,-(sp)
-                move.w  #$FFFF,(selTeamNumber).l
-                move.w  #GAME_TYPE_NO_GAME,(gameType).l
-                bsr.s   ShowFriendlyMenu
-                move.w  (sp)+,(selTeamNumber).l
-                move.w  (sp)+,(gameType).l
-                jmp     RestoreSelectedTeams
 ; Menu_FriendlyGame
 friendlyGameMenu:
                 ; Menu_FriendlyGame
@@ -49338,82 +49326,21 @@ friendly_season_table:
                 dc.l aNov               ; "NOV"
                 dc.l aDec               ; "DEC"
 
-; ===== FriendlyMenuInit =====
-; prototype: void __usercall FriendlyMenuInit()
+; ===== FriendlyMenuInit ===== (ported to C → _FriendlyMenuInit)
 FriendlyMenuInit:
-                tst.w   (friendlyOk).l
-                beq.s   loc_13706C
-                bsr.w   SetSelectTwoTeamsText
-loc_13706C:
-                bra.w   *+4
+                jmp     _FriendlyMenuInit
 
-; ===== FriendlyMenuReinit =====
-; prototype: void __usercall FriendlyMenuReinit()
+; ===== FriendlyMenuReinit ===== (ported to C → _FriendlyMenuReinit)
 FriendlyMenuReinit:
-                cmpi.w  #SEASONAL,(pitchType).l
-                beq.s   loc_1370BE
-                clr.w   (pitchTypeOrSeason).l
-                move.w  (pitchType).l,(friendlyPitchType).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-loc_1370BE:
-                bsr.w   DrawNumbersOfSubstitutes
-                tst.w   (friendlyOk).l
-                bne.s   loc_1370DC
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$188).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$1C0).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$230).l
-                rts
-loc_1370DC:
-                bsr.w   DisableEntries
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1C0).l
-                move.w  #7,d0
-                jmp     SetCurrentEntry
+                jmp     _FriendlyMenuReinit
 
-; ===== DrawNumbersOfSubstitutes =====
-; prototype: void __usercall DrawNumbersOfSubstitutes()
+; ===== DrawNumbersOfSubstitutes ===== (ported to C → _DrawNumbersOfSubstitutes)
 DrawNumbersOfSubstitutes:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                move.w  (minSubstitutes).l,d0
-                jsr     Int2Ascii
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                move.w  (maxSubstitutes).l,d0
-                jsr     Int2Ascii
-                bsr.w   SetFriendlyPitchOrSeason
-                rts
+                jmp     _DrawNumbersOfSubstitutes
 
-; ===== DisableEntries =====
-; prototype: void __usercall DisableEntries()
+; ===== DisableEntries ===== (ported to C → _DisableEntries)
 DisableEntries:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                move.w  #5,d1
-loc_137126:
-                cmpi.w  #ENTRY_FRAME_AND_BACK_COLOR,MENUENTRY_BACKGROUND(a0)
-                bne.s   loc_13714E
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #YELLOW_GREEN_BLACK_15,d0
-                beq.s   loc_13714E
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                move.w  #1,6(a0)
-loc_13714E:
-                lea     56(a0),a0
-                dbf     d1,loc_137126
-                rts
+                jmp     _DisableEntries
 
 ; ===== FriendlyOK ===== (ported to C → _FriendlyOK)
 FriendlyOK:
@@ -49421,22 +49348,9 @@ FriendlyOK:
 jmpSetExitMenuFlag:
                 jmp     SetExitMenuFlag
 
-; ===== ChooseTeamsMenu =====
-; prototype: void __usercall ChooseTeamsMenu()
+; ===== ChooseTeamsMenu ===== (ported to C → _ChooseTeamsMenu)
 ChooseTeamsMenu:
-                move.w  #2,d0
-                lea     (aFriendly_1).l,a0 ; "FRIENDLY"
-                lea     (aPlayFriendly).l,a1 ; "PLAY FRIENDLY"
-                move.w  #1,d2           ; show club teams
-                move.w  #1,d3           ; show national teams
-                move.w  #1,d4           ; show original custom steams
-                jsr     GoGetTeamsForPlay
-                tst.w   (chooseTeamsResult).l
-                beq.s   jmpSetExitMenuFlag
-                bsr.w   RandomlySwapTeams
-                jsr     InitTeams
-                jsr     PlayFriendly
-                jmp     SetExitMenuFlag
+                jmp     _ChooseTeamsMenu
 
 ; ===== PitchTypeOrSeasonProc =====
 ; Ported to C: _PitchTypeOrSeasonProc in src/menus.c
@@ -49457,60 +49371,21 @@ FriendlyPitchTypeProc:
                 addq.l  #4,sp
                 rts
 
-; ===== MinSubstitutes =====
-; prototype: void __usercall MinSubstitutes(MenuEntry *menu@<a5>)
+; ===== MinSubstitutes ===== (ported to C → _MinSubstitutes)
 MinSubstitutes:
-                move.w  (maxSubstitutes).l,d0
-                beq.s   locret_13724A
-                addq.w  #1,(minSubstitutes).l
-                cmp.w   (minSubstitutes).l,d0
-                bcc.s   loc_137240
-                move.w  #1,(minSubstitutes).l
-loc_137240:
-                bsr.w   DrawNumbersOfSubstitutes
-                jmp     CallDrawMenuItem
-locret_13724A:
-                rts
+                jmp     _MinSubstitutes
 
-; ===== MaxSubstitutes =====
-; prototype: void __usercall MaxSubstitutes(MenuEntry *menu@<a5>)
+; ===== MaxSubstitutes ===== (ported to C → _MaxSubstitutes)
 MaxSubstitutes:
-                addq.w  #1,(maxSubstitutes).l
-                cmpi.w  #5,(maxSubstitutes).l
-                bls.s   loc_137268
-                clr.w   (maxSubstitutes).l
-                clr.w   (minSubstitutes).l
-loc_137268:
-                cmpi.w  #1,(maxSubstitutes).l
-                bne.s   loc_13727A
-                move.w  #1,(minSubstitutes).l
-loc_13727A:
-                bsr.w   DrawNumbersOfSubstitutes
-                jsr     CallDrawMenuItem
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a5
-                jsr     CallDrawMenuItem
-                rts
+                jmp     _MaxSubstitutes
 
 ; ===== SetSelectTwoTeamsText ===== (ported to C → _SetSelectTwoTeamsText)
 SetSelectTwoTeamsText:
                 jmp     _SetSelectTwoTeamsText
 
-; ===== RandomlySwapTeams =====
-; prototype: void __usercall RandomlySwapTeams()
+; ===== RandomlySwapTeams ===== (ported to C → _RandomlySwapTeams)
 RandomlySwapTeams:
-                jsr     Rand2
-                btst    #0,d0
-                beq.s   locret_1372CE
-                lea     (selTeamsPtr).l,a0
-                lea     TEAMFILE_SIZE+TEAMFILE_COUNTRYNUMBER(a0),a1
-                move.w  #341,d1
-loc_1372C4:
-                move.w  (a0),d0
-                move.w  (a1),(a0)+
-                move.w  d0,(a1)+
-                dbf     d1,loc_1372C4
-locret_1372CE:
-                rts
+                jmp     _RandomlySwapTeams
 friendlyOk:
                 dc.w $0000              ; Initialised to 0
                                         ; set to 1 when ok is selected in friendly game menu
@@ -55135,19 +55010,9 @@ ViewCompetitionsMenuRetired:
 JobOffersMenuRetired:
                 jmp     _JobOffersMenuRetired
 
-; ===== ContinueCareer =====
-; prototype: void __usercall ContinueCareer()
+; ===== ContinueCareer ===== (ported to C → _ContinueCareer)
 ContinueCareer:
-                cmpi.w  #19,(currentSeasonShowing).l
-                bne.s   loc_13AF48
-                jsr     ShowRetirementMessage
-                move.w  #0,d0
-                jsr     InitCareerVariables
-                jmp     SetExitMenuFlag
-loc_13AF48:
-                jsr     ContinueCareerNextSeason
-                lea     (contestMenu).l,a6
-                jmp     ActivateMenu
+                jmp     _ContinueCareer
 
 ; ===== SaveCareer =====
 ; prototype: __int16 __usercall SaveCareer@<d0>()

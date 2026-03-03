@@ -2816,6 +2816,17 @@
         xref    _ChooseTeamsSetHeader
         xref    _CheckNumTeamsAllowed
         xref    _Bureaucracy
+; --- Chunk 149 xrefs ---
+        xref    _Friendly
+        xref    _FriendlyMenuInit
+        xref    _FriendlyMenuReinit
+        xref    _DrawNumbersOfSubstitutes
+        xref    _DisableEntries
+        xref    _ChooseTeamsMenu
+        xref    _MinSubstitutes
+        xref    _MaxSubstitutes
+        xref    _RandomlySwapTeams
+        xref    _ContinueCareer
 ; --- Chunk 144 xrefs ---
 ; --- Chunk 147 xrefs ---
         xref    _BuyOtherPlayersInit
@@ -3148,6 +3159,10 @@
         xdef    aSelect0MoreInt
         xdef    aRemovePlayer
         xdef    aRemovePlayers
+; --- Chunk 149 xdefs ---
+        xdef    aFriendly_1
+        xdef    aPlayFriendly
+        xdef    ContinueCareerNextSeason
 ; --- Chunk 147 xdefs ---
         xdef    buyOtherPlayersTeamPtr
         xdef    buyOtherPlayersTitlePtr

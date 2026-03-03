@@ -241,3 +241,27 @@ void _LoadLiverpool(void)
     _CInitCareer(0x811);
     _ActivateMenu(contestMenu);
 }
+
+/* ================================================================
+ * Chunk 149: ContinueCareer  (SWOS2.s line 55140)
+ *
+ * If season == 19, show retirement message + reset career variables.
+ * Otherwise advance to next season and re-activate contest menu.
+ * ================================================================ */
+
+extern void _ShowRetirementMessage(void);
+extern void _InitCareerVariables(uint16_t gameTypeParam);
+extern void ContinueCareerNextSeason(void);  /* still in asm */
+
+__attribute__((used, externally_visible))
+void _ContinueCareer(void)
+{
+    if (currentSeasonShowing == 19) {
+        _ShowRetirementMessage();
+        _InitCareerVariables(0);
+        _SetExitMenuFlag();
+    } else {
+        ContinueCareerNextSeason();
+        _ActivateMenu(contestMenu);
+    }
+}

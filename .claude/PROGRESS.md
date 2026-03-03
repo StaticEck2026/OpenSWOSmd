@@ -2722,6 +2722,26 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1335 functions across 148 chunks
 
+### Chunk 149 — Friendly Menu Cluster + ContinueCareer (10 → menus.c, career_init.c)
+- Date: 2026-03-02
+- Ported:
+  1. Friendly (→menus.c) — if no game in progress show friendly menu; else ContestInProgress (save/restore gameType+selTeamNumber around ShowFriendlyMenu)
+  2. DrawNumbersOfSubstitutes (→menus.c) — write min/max sub counts to menu entries 5,6 via Int2Ascii, call SetFriendlyPitchOrSeason
+  3. DisableEntries (→menus.c) — disable entries 1-6 that have frame+back background and non-zero low nibble
+  4. FriendlyMenuInit (→menus.c) — set header text if friendlyOk, call FriendlyMenuReinit
+  5. FriendlyMenuReinit (→menus.c) — disable pitch/season entries when pitchType!=SEASONAL, update sub counts, toggle visibility based on friendlyOk
+  6. ChooseTeamsMenu (→menus.c) — set up friendly 2-team selection, random swap, init teams, play
+  7. MinSubstitutes (→menus.c) — increment minSubstitutes with wraparound to 1, redraw entry
+  8. MaxSubstitutes (→menus.c) — increment maxSubstitutes 0-5, enforce minSubstitutes>=1, redraw entries
+  9. RandomlySwapTeams (→menus.c) — 50% chance swap 684 bytes between team 0 and team 1 at selTeamsPtr
+  10. ContinueCareer (→career_init.c) — if season==19 show retirement+reset; else advance season+activate contest menu
+- Stubs: Friendly (jmp), FriendlyMenuInit (jmp), FriendlyMenuReinit (jmp), DrawNumbersOfSubstitutes (jmp), DisableEntries (jmp), ChooseTeamsMenu (jmp), MinSubstitutes (jmp), MaxSubstitutes (jmp), RandomlySwapTeams (jmp), ContinueCareer (jmp)
+- ContestInProgress merged into _Friendly (label preserved for safety)
+- New xrefs: _Friendly, _FriendlyMenuInit, _FriendlyMenuReinit, _DrawNumbersOfSubstitutes, _DisableEntries, _ChooseTeamsMenu, _MinSubstitutes, _MaxSubstitutes, _RandomlySwapTeams, _ContinueCareer
+- New xdefs: aFriendly_1, aPlayFriendly, ContinueCareerNextSeason
+- Build status: **verified** (clean build, no new errors)
+- Cumulative: 1345 functions across 149 chunks
+
 ### Chunk 147 — BuyOtherPlayers Init/Finish + Pitch/Season Menu Callbacks (5 → transfer_market.c, menus.c)
 - Date: 2026-03-02
 - Ported:
