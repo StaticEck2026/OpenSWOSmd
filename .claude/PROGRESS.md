@@ -2969,6 +2969,18 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, only pre-existing warnings)
 - Cumulative: 1450 functions across 167 chunks
 
+### Chunk 171 — Player Position Lookup, Remove International Players, Expensive Teams Count (3 → career_teams.c, diy_competition.c)
+- Date: 2026-03-03
+- Ported:
+  1. GetPlayerPositionFromCurrent (→career_teams.c) — searches currentMatchPlayers[0..19] for a player index, returns position. Panics (0x5771) if not found.
+  2. Career_RemoveInternationalPlayersByMask (→career_teams.c) — iterates 20 international player slots (38-byte stride from careerTeam). For each bit set in removeMask: clears lookup table entry, finds position in currentMatchPlayers, shifts entries down for positions >= 16 (rotating removed player to end), marks slot 0x4F as 0xFF, decrements careerNumPlayers.
+  3. GetMoreExpensiveTeamsCount (→diy_competition.c) — counts DIY competition teams with higher average player price than given team. Selects team ID array offset by competition type (league:302, cup:590, tournament:154).
+- Stubs: GetPlayerPositionFromCurrent (d1→stack, return d0→d1), Career_RemoveInternationalPlayersByMask (d0.l register bridge), GetMoreExpensiveTeamsCount (d0+a6→stack, return d0→d2)
+- Note: Career_RemoveInternationalPlayersByMask shift loop uses volatile to prevent GCC memmove optimization
+- New xrefs: _GetPlayerPositionFromCurrent, _Career_RemoveInternationalPlayersByMask, _GetMoreExpensiveTeamsCount
+- Build status: **verified** (clean build)
+- Cumulative: 1461 functions across 171 chunks
+
 ### Chunk 170 — Career Init & National Team Helpers (4 → career_init.c, career_season.c, career_teams.c)
 - Date: 2026-03-03
 - Ported:
@@ -3313,5 +3325,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 168   | 1         | 1451       |
 | 169   | 3         | 1454       |
 | 170   | 4         | 1458       |
+| 171   | 3         | 1461       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

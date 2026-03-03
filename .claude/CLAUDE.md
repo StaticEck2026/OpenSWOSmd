@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1458 functions ported across 170 chunks.
+**Current status:** 1461 functions ported across 171 chunks.
 
-**Last completed chunk:** Chunk 170 — Career Init & National Team Helpers (4 → career_init.c, career_season.c, career_teams.c): Career_InitializeSelectedTeamAndStartingBalance, Career_ContinueToNextSeasonInitTeamAndFunds, Career_UpdateLastNationalityCall, Career_CopyUnavailablePlayerToCareerTeamSlot.
+**Last completed chunk:** Chunk 171 — Player Position Lookup, Remove Intl Players, Expensive Teams Count (3 → career_teams.c, diy_competition.c): GetPlayerPositionFromCurrent, Career_RemoveInternationalPlayersByMask, GetMoreExpensiveTeamsCount.
 
-**Next candidates:** ChooseTeamsDialog/SelectTeams family (~10), SquadInit/Finish/AfterDraw (~10), SelectNationalTeam group (~8, now partially unblocked), Career_MaybeGenerateJobOffer (~1 large), ChooseTeamForEditTactics (~1), FindTeamInDIY (~1 large), misc.
+**Next candidates:** FindTeamInDIY (~180 instr), GetMoreExpensiveTeamsCountWrapper (already just a register adapter, could stub as dead), ChooseTeamsDialog/SelectTeams family (~10), SquadInit/Finish/AfterDraw (~10), SelectNationalTeam group (~8), Career_MaybeGenerateJobOffer (~310 instr), ChooseTeamForEditTactics (~1).
 
 ---
 

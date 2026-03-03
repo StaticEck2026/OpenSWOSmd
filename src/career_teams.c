@@ -2078,3 +2078,78 @@ void _Career_CopyUnavailablePlayerToCareerTeamSlot(uint8_t *srcPlayer, uint8_t *
     /* Update bench player numbers for the career team */
     _SetBenchPlayersNumbers((uint8_t *)&careerTeam);
 }
+
+/* ================================================================
+ * GetPlayerPositionFromCurrent  (SWOS2.s line 69400)
+ *
+ * Searches currentMatchPlayers[0..19] for the given player index.
+ * Returns the position (0-based index) where found.
+ * Panics (code 0x5771) if the player is not found.
+ *
+ * Asm: in d1 = playerIndex, out d1 = position
+ * ================================================================ */
+extern uint8_t currentMatchPlayers[];
+
+__attribute__((used, externally_visible))
+uint16_t _GetPlayerPositionFromCurrent(uint16_t playerIndex)
+{
+    for (uint16_t i = 0; i < 20; i++) {
+        if (currentMatchPlayers[i] == (uint8_t)playerIndex)
+            return i;
+    }
+    panicReasonCode = 0x5771;
+    _PanicHaltLoop();
+    /* not reached */
+}
+
+/* ================================================================
+ * Career_RemoveInternationalPlayersByMask  (SWOS2.s line 69359)
+ *
+ * Iterates over 20 international player slots in careerTeam (38
+ * bytes per slot). For each bit set in removeMask:
+ *   - Clears the lookup table entry (word at slot*4) to 0xFFFF
+ *   - Finds the player's position in currentMatchPlayers
+ *   - If position >= 16: shifts array entries to remove the player
+ *     from that position, rotating them to position 19
+ *   - Marks the player as removed (0xFF at offset 0x4F in slot)
+ *   - Decrements careerNumPlayers
+ *
+ * Asm: in d0 = removeMask (32-bit)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _Career_RemoveInternationalPlayersByMask(uint32_t removeMask)
+{
+    uint8_t *slot = (uint8_t *)&careerTeam;
+
+    for (uint16_t i = 0; i < 20; i++) {
+        if (removeMask & (1 << i)) {
+            /* Clear lookup table entry (word at offset i*4) */
+            *(uint16_t *)(careerUnavailablePlayerLookupTable + (uint16_t)(i << 2)) = 0xFFFF;
+
+            /* Find position of this player slot in currentMatchPlayers */
+            uint16_t pos = _GetPlayerPositionFromCurrent(i);
+
+            if (pos >= 16) {
+                /* Shift currentMatchPlayers entries down from pos+1,
+                 * rotating the removed entry to the end (position 19).
+                 * Use volatile to prevent GCC from optimizing to memmove. */
+                volatile uint8_t *mp = &currentMatchPlayers[pos];
+                int16_t count = 18 - (int16_t)pos;
+                if (count >= 0) {
+                    uint8_t saved = *mp;
+                    do {
+                        *mp = *(mp + 1);
+                        mp++;
+                        count--;
+                    } while (count >= 0);
+                    *mp = saved;
+                }
+            }
+
+            /* Mark player as removed */
+            slot[0x4F] = 0xFF;
+            careerNumPlayers--;
+        }
+        slot += 0x26;  /* advance to next 38-byte player slot */
+    }
+}

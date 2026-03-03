@@ -35617,35 +35617,14 @@ findTeamInDIY_SuppressSideEffectsFlag:
 
 ; ===== GetMoreExpensiveTeamsCount =====
 ; prototype: unsigned __int16 __usercall GetMoreExpensiveTeamsCount@<d2>(unsigned __int16 teamNo@<d0>, DIY_Competition *comp@<a6>)
+; Chunk 171: ported to C (_GetMoreExpensiveTeamsCount)
+; in: d0 = teamNo, a6 = comp pointer; out: d2 = count
 GetMoreExpensiveTeamsCount:
-                move.w  d0,d7
-                move.w  DIY_COMPETITION_NUMTEAMS(a6),d6
-                lea     302(a6),a5
-                cmpi.w  #DIY_LEAGUE,(a6)
-                beq.s   loc_12F10E
-                lea     590(a6),a5
-                cmpi.w  #DIY_CUP,(a6)
-                beq.s   loc_12F10E
-                lea     154(a6),a5
-loc_12F10E:
-                move.w  d7,d0
-                jsr VerifyTeamLoaded(pc)
-                jsr     GetAveragePlayerPrice
-                move.w  d0,d5
-                clr.w   d3
-                subq.w  #1,d6
-loc_12F120:
-                move.w  (a5)+,d0
-                cmp.w   d7,d0
-                beq.s   loc_12F136
-                jsr VerifyTeamLoaded(pc)
-                jsr     GetAveragePlayerPrice
-                cmp.w   d5,d0
-                bls.s   loc_12F136
-                addq.w  #1,d3
-loc_12F136:
-                dbf     d6,loc_12F120
-                move.w  d3,d2
+                move.l  a6,-(sp)
+                move.w  d0,-(sp)
+                jsr     _GetMoreExpensiveTeamsCount
+                lea     6(sp),sp
+                move.w  d0,d2
                 rts
                 lea     (competitionFileBuffer).l,a6
                 move.w  $32(a6),d6
@@ -69356,60 +69335,24 @@ careerAddIntlPlayerSelectedSrcPlayerNamePtr:
 
 ; ===== Career_RemoveInternationalPlayersByMask =====
 ; prototype: void __usercall Career_RemoveInternationalPlayersByMask(unsigned int removeMask@<d0>)
+; Chunk 171: ported to C (_Career_RemoveInternationalPlayersByMask)
 Career_RemoveInternationalPlayersByMask:
-                move.l  d0,d3
-                clr.w   d2
-                lea     (careerUnavailablePlayerLookupTable).l,a2
-                lea     (careerTeam).l,a0
-loc_146BA8:
-                btst    d2,d3
-                beq.s   loc_146BF4
-                move.w  d2,d0
-                lsl.w   #2,d0
-                move.w  #$FFFF,(a2,d0.w)
-                move.w  (selTeamNumber).l,d0
-                move.w  d2,d1
-                bsr.w   GetPlayerPositionFromCurrent
-                cmpi.w  #$10,d1
-                bcs.s   loc_146BE8
-                lea     (currentMatchPlayers).l,a1
-                lea     (a1,d1.w),a1
-                move.w  #$14,d0
-                sub.w   d1,d0
-                subq.w  #2,d0
-                bmi.s   loc_146BE8
-                move.b  (a1),-(sp)
-loc_146BDE:
-                move.b  1(a1),(a1)+
-                dbf     d0,loc_146BDE
-                move.b  (sp)+,(a1)
-loc_146BE8:
-                move.b  #$FF,$4F(a0)
-                subq.w  #1,(careerNumPlayers).l
-loc_146BF4:
-                lea     $26(a0),a0
-                addq.w  #1,d2
-                cmpi.w  #$14,d2
-                bne.s   loc_146BA8
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  d0,-(sp)
+                jsr     _Career_RemoveInternationalPlayersByMask
+                lea     4(sp),sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== GetPlayerPositionFromCurrent =====
 ; prototype: unsigned __int16 __usercall GetPlayerPositionFromCurrent@<d1>(unsigned __int16 playerIndex@<d1>)
-; in:
-;     D1 - player index
+; Chunk 171: ported to C (_GetPlayerPositionFromCurrent)
+; in: d1 = playerIndex, out: d1 = position
 GetPlayerPositionFromCurrent:
-                lea     (currentMatchPlayers).l,a1
-                move.w  d1,d0
-                clr.w   d1
-loc_146C0C:
-                cmp.b   (a1,d1.w),d0
-                beq.s   locret_146C28
-                addq.w  #1,d1
-                cmpi.w  #20,d1
-                bne.s   loc_146C0C
-                move.w  #$5771,(panicReasonCode).l
-                jsr     PanicHaltLoop
-locret_146C28:
+                move.w  d1,-(sp)
+                jsr     _GetPlayerPositionFromCurrent
+                addq.l  #2,sp
+                move.w  d0,d1
                 rts
 
 ; ===== Career_InitInternationalSquadAndLookupTablesForNewSeason =====

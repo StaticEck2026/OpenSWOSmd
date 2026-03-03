@@ -3069,6 +3069,10 @@
         xref    _Career_ContinueToNextSeasonInitTeamAndFunds
         xref    _Career_UpdateLastNationalityCall
         xref    _Career_CopyUnavailablePlayerToCareerTeamSlot
+; --- Chunk 171 xrefs ---
+        xref    _GetPlayerPositionFromCurrent
+        xref    _Career_RemoveInternationalPlayersByMask
+        xref    _GetMoreExpensiveTeamsCount
 ; --- Chunk 170 xdefs ---
         xdef    careerUnavailablePlayerNames
         xdef    lastNationalityCall

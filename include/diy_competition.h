@@ -282,3 +282,6 @@ void _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus(void);
 
 /* --- ShowDiyLeaguesTournamentMenu (Chunk 153) --- */
 void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
+
+/* --- GetMoreExpensiveTeamsCount (Chunk 171) --- */
+uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, uint8_t *comp);

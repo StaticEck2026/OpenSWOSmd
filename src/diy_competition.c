@@ -7434,3 +7434,48 @@ void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t fo
     _ShowMenu((uint8_t *)&diyLeagueTournamentMenu);
     writeOnlyVar01 = 0;
 }
+
+/* ================================================================
+ * GetMoreExpensiveTeamsCount  (SWOS2.s line 35620)
+ *
+ * Counts how many teams in a DIY competition have a higher average
+ * player price than the given team. Selects the appropriate team ID
+ * array based on competition type: league (offset 302), cup (offset
+ * 590), or tournament (offset 154).
+ *
+ * Asm: in d0 = teamNo, a6 = competition pointer; out d2 = count
+ * ================================================================ */
+extern uint16_t _GetAveragePlayerPrice(uint8_t *team);
+
+__attribute__((used, externally_visible))
+uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, uint8_t *comp)
+{
+    uint16_t numTeams = *(uint16_t *)(comp + 50);  /* DIY_COMPETITION_NUMTEAMS */
+    uint16_t compType = *(uint16_t *)comp;
+    uint16_t *teamIds;
+
+    if (compType == 0) {        /* DIY_LEAGUE */
+        teamIds = (uint16_t *)(comp + 302);
+    } else if (compType == 1) { /* DIY_CUP */
+        teamIds = (uint16_t *)(comp + 590);
+    } else {                    /* DIY_TOURNAMENT */
+        teamIds = (uint16_t *)(comp + 154);
+    }
+
+    /* Get our team's average player price */
+    uint8_t *myTeam = _VerifyTeamLoaded(teamNo);
+    uint16_t myPrice = _GetAveragePlayerPrice(myTeam);
+
+    /* Count teams with higher average price */
+    uint16_t count = 0;
+    for (uint16_t i = 0; i < numTeams; i++) {
+        uint16_t otherId = teamIds[i];
+        if (otherId == teamNo)
+            continue;
+        uint8_t *otherTeam = _VerifyTeamLoaded(otherId);
+        uint16_t otherPrice = _GetAveragePlayerPrice(otherTeam);
+        if (otherPrice > myPrice)
+            count++;
+    }
+    return count;
+}

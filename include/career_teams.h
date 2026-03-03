@@ -80,3 +80,7 @@ void _Career_UpdateRemovePlayersMenuEntry(void);
 /* --- Career_CopyUnavailablePlayerToCareerTeamSlot (Chunk 170) --- */
 void _Career_CopyUnavailablePlayerToCareerTeamSlot(uint8_t *srcPlayer, uint8_t *dstTeam,
     uint8_t *srcName, uint16_t srcTeamNumber, uint16_t srcPlayerIndex, uint16_t dstSlotIndex);
+
+/* --- GetPlayerPositionFromCurrent / Career_RemoveInternationalPlayersByMask (Chunk 171) --- */
+uint16_t _GetPlayerPositionFromCurrent(uint16_t playerIndex);
+void _Career_RemoveInternationalPlayersByMask(uint32_t removeMask);
