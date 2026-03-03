@@ -2969,6 +2969,16 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, only pre-existing warnings)
 - Cumulative: 1450 functions across 167 chunks
 
+### Chunk 168 — OffersAfterDrawCommon (1 → transfer_market.c)
+- Date: 2026-03-03
+- Ported:
+  1. OffersAfterDrawCommon (→transfer_market.c) — after-draw callback for offers view menu. Calculates offer index from current entry ordinal minus entry[2] ordinal. Sets y-positions and visibility for entries 7-10. Looks up offer in transferOfferTable. Selects format strings based on offer type (normal/improved/further improved × single/two player × offer/exchange). Formats player names via PrintFormatted. Handles text wrapping (single line if ≤47 chars, otherwise split into two lines). Draws entries 7-10 via DrawMultipleItems.
+- Stubs: a5 register bridge (movem.l d2-d7/a2-a6,-(sp); move.l a5,-(sp); jsr _OffersAfterDrawCommon; addq.l #4,sp; movem.l (sp)+,...; rts)
+- New xrefs: _OffersAfterDrawCommon
+- New xdefs: offerFmtSinglePlayer, offerFmtTwoPlayers, exchangeFmtSinglePlayer, exchangeFmtTwoPlayers, offerFmtLine1a, offerFmtLine2a, offerFmtLine1b, offerFmtLine2b, exchangeFmtLine1a, exchangeFmtLine2a, exchangeFmtLine1b, exchangeFmtLine2b, aAOfferForB, aAOfferForBAndC, aAExchangeOffer, aAExchangeOffer_0, aAExchangeOffer_1, aAExchangeOffer_2, aAOfferFor, aAOfferFor_0, aB, aB_0, aB_1, aB_2, aB_3, aBAndC, aBAndC_0, aBAndC_1, aBAndC_2, aBAndC_3, aBAndC_4, aAImprovedOffer, aAImprovedOffer_0, aAImprovedOffer_1, aAImprovedOffer_2, aAImprovedExcha, aAImprovedExcha_0, aAImprovedExcha_1, aAImprovedExcha_2, aAFurtherImprov, aAFurtherImprov_0, aAFurtherImprov_1, aAFurtherImprov_2, aAFurtherImprov_3, aAFurtherImprov_4, aAFurtherImprov_5, aAFurtherImprov_6, aOfferForB
+- Build status: **verified** (clean build, only pre-existing warnings)
+- Cumulative: 1451 functions across 168 chunks
+
 ### Chunk 166 — TransferPlayerInit + ThirdPartyOfferMenuInit (2 → transfer_market.c)
 - Date: 2026-03-03
 - Ported:

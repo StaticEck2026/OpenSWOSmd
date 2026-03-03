@@ -3265,6 +3265,258 @@ void _ThirdPartyOfferMenuInit(void *entryPtr)
 }
 
 /* ================================================================
+ * Chunk 168 — OffersAfterDrawCommon
+ * ================================================================ */
+
+/* Format string pointer globals (BSS in asm — 12 pointers) */
+extern uint32_t offerFmtSinglePlayer;
+extern uint32_t offerFmtTwoPlayers;
+extern uint32_t exchangeFmtSinglePlayer;
+extern uint32_t exchangeFmtTwoPlayers;
+extern uint32_t offerFmtLine1a;
+extern uint32_t offerFmtLine2a;
+extern uint32_t offerFmtLine1b;
+extern uint32_t offerFmtLine2b;
+extern uint32_t exchangeFmtLine1a;
+extern uint32_t exchangeFmtLine2a;
+extern uint32_t exchangeFmtLine1b;
+extern uint32_t exchangeFmtLine2b;
+
+/* Format string labels */
+extern uint8_t aAOfferForB[];
+extern uint8_t aAOfferForBAndC[];
+extern uint8_t aAExchangeOffer[];
+extern uint8_t aAExchangeOffer_0[];
+extern uint8_t aAOfferFor[];
+extern uint8_t aB[];
+extern uint8_t aAOfferFor_0[];
+extern uint8_t aBAndC[];
+extern uint8_t aAExchangeOffer_1[];
+extern uint8_t aB_0[];
+extern uint8_t aAExchangeOffer_2[];
+extern uint8_t aBAndC_0[];
+extern uint8_t aAFurtherImprov[];
+extern uint8_t aAFurtherImprov_0[];
+extern uint8_t aAFurtherImprov_1[];
+extern uint8_t aAFurtherImprov_2[];
+extern uint8_t aAFurtherImprov_3[];
+extern uint8_t aB_3[];
+extern uint8_t aAFurtherImprov_4[];
+extern uint8_t aBAndC_3[];
+extern uint8_t aAFurtherImprov_5[];
+extern uint8_t aOfferForB[];
+extern uint8_t aAFurtherImprov_6[];
+extern uint8_t aBAndC_4[];
+extern uint8_t aAImprovedOffer[];
+extern uint8_t aAImprovedOffer_0[];
+extern uint8_t aAImprovedExcha[];
+extern uint8_t aAImprovedExcha_0[];
+extern uint8_t aAImprovedOffer_1[];
+extern uint8_t aB_1[];
+extern uint8_t aAImprovedOffer_2[];
+extern uint8_t aBAndC_1[];
+extern uint8_t aAImprovedExcha_1[];
+extern uint8_t aB_2[];
+extern uint8_t aAImprovedExcha_2[];
+extern uint8_t aBAndC_2[];
+
+extern uint8_t fundsBuffer[];
+extern uint16_t _GetStringLength(const uint8_t *str);
+
+/* ================================================================
+ * OffersAfterDrawCommon  (SWOS2.s line 64153)
+ *
+ * After-draw callback for the offers view menu. Lays out offer
+ * text entries dynamically, selects format strings based on
+ * offer type (normal/improved/further improved, single/two players,
+ * offer/exchange), formats player names, and handles text wrapping.
+ *
+ * in: a5 = current menu entry
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _OffersAfterDrawCommon(void *entryPtr)
+{
+    MenuEntry *a5 = (MenuEntry *)entryPtr;
+
+    /* Calculate offer index: d7 = a5->ordinal - entries[2].ordinal */
+    int16_t d7 = (int16_t)a5->ordinal - (int16_t)menuEntries[2].ordinal;
+
+    /* Set y-positions and make entries 7-10 invisible (initially) */
+    menuEntries[7].y = a5->y;
+    menuEntries[7].isInvisible = 1;
+
+    menuEntries[8].y = a5->y + 2;
+    menuEntries[8].isInvisible = 1;
+
+    menuEntries[9].y = a5->y + 11;
+    menuEntries[9].isInvisible = 1;
+
+    menuEntries[10].y = a5->y + 7;
+    menuEntries[10].isInvisible = 1;
+
+    /* Store offer index+1 in entry 10's fg field (stringFlags offset 0x26) */
+    menuEntries[10].fg = (uint32_t)(d7 + 1);
+
+    /* Mark current entry as disabled */
+    a5->isDisabled = 1;
+
+    /* If d7 >= numOffers, skip offer rendering */
+    if ((uint16_t)d7 >= numOffers)
+        goto drawAndReturn;
+
+    /* Point to the offer in transferOfferTable */
+    uint8_t *offer = transferOfferTable + (uint16_t)d7 * OFFER_ENTRY_SIZE;
+
+    a5->isDisabled = 0;
+    menuEntries[7].isInvisible = 0;
+    menuEntries[8].isInvisible = 0;
+    menuEntries[9].isInvisible = 0;
+    menuEntries[10].isInvisible = 0;
+
+    /* Set color based on offer byte 0xD (expired flag) */
+    uint16_t colorBits = 0;
+    if (offer[0xD] != 0)
+        colorBits = 6;
+
+    /* Apply color to stringFlags of entries 7-10 (low 4 bits) */
+    for (int i = 0; i < 4; i++) {
+        MenuEntry *e = &menuEntries[7 + i];
+        uint16_t sf = e->stringFlags;
+        sf = (sf & 0xFFF0) | colorBits;
+        e->stringFlags = sf;
+    }
+
+    /* Reset entry 7's y to match a5's y */
+    menuEntries[7].y = a5->y;
+
+    /* Set up format string pointers: default (normal offer) */
+    offerFmtSinglePlayer   = (uint32_t)aAOfferForB;
+    offerFmtTwoPlayers     = (uint32_t)aAOfferForBAndC;
+    exchangeFmtSinglePlayer = (uint32_t)aAExchangeOffer;
+    exchangeFmtTwoPlayers   = (uint32_t)aAExchangeOffer_0;
+    offerFmtLine1a          = (uint32_t)aAOfferFor;
+    offerFmtLine2a          = (uint32_t)aB;
+    offerFmtLine1b          = (uint32_t)aAOfferFor_0;
+    offerFmtLine2b          = (uint32_t)aBAndC;
+    exchangeFmtLine1a       = (uint32_t)aAExchangeOffer_1;
+    exchangeFmtLine2a       = (uint32_t)aB_0;
+    exchangeFmtLine1b       = (uint32_t)aAExchangeOffer_2;
+    exchangeFmtLine2b       = (uint32_t)aBAndC_0;
+
+    /* Check for "further improved" (offer[0xA] == 0xFFFF) */
+    if (*(uint16_t *)(offer + 0xA) == 0xFFFF) {
+        offerFmtSinglePlayer   = (uint32_t)aAFurtherImprov;
+        offerFmtTwoPlayers     = (uint32_t)aAFurtherImprov_0;
+        exchangeFmtSinglePlayer = (uint32_t)aAFurtherImprov_1;
+        exchangeFmtTwoPlayers   = (uint32_t)aAFurtherImprov_2;
+        offerFmtLine1a          = (uint32_t)aAFurtherImprov_3;
+        offerFmtLine2a          = (uint32_t)aB_3;
+        offerFmtLine1b          = (uint32_t)aAFurtherImprov_4;
+        offerFmtLine2b          = (uint32_t)aBAndC_3;
+        exchangeFmtLine1a       = (uint32_t)aAFurtherImprov_5;
+        exchangeFmtLine2a       = (uint32_t)aOfferForB;
+        exchangeFmtLine1b       = (uint32_t)aAFurtherImprov_6;
+        exchangeFmtLine2b       = (uint32_t)aBAndC_4;
+    }
+    /* Check for "improved" (offer[8] == 0xFFFF) */
+    else if (*(uint16_t *)(offer + 8) == 0xFFFF) {
+        offerFmtSinglePlayer   = (uint32_t)aAImprovedOffer;
+        offerFmtTwoPlayers     = (uint32_t)aAImprovedOffer_0;
+        exchangeFmtSinglePlayer = (uint32_t)aAImprovedExcha;
+        exchangeFmtTwoPlayers   = (uint32_t)aAImprovedExcha_0;
+        offerFmtLine1a          = (uint32_t)aAImprovedOffer_1;
+        offerFmtLine2a          = (uint32_t)aB_1;
+        offerFmtLine1b          = (uint32_t)aAImprovedOffer_2;
+        offerFmtLine2b          = (uint32_t)aBAndC_1;
+        exchangeFmtLine1a       = (uint32_t)aAImprovedExcha_1;
+        exchangeFmtLine2a       = (uint32_t)aB_2;
+        exchangeFmtLine1b       = (uint32_t)aAImprovedExcha_2;
+        exchangeFmtLine2b       = (uint32_t)aBAndC_2;
+    }
+
+    /* Get team name pointer (offset 5 from team data = teamName field) */
+    uint8_t *teamPtr = _GetTeamPointer(*(uint16_t *)offer);
+    uint8_t *teamName = teamPtr + 5;  /* TEAMFILE_TEAMNAME_OFFSET */
+
+    /* Determine format string and player names based on offer type */
+    uint8_t *fmtStr;
+    uint8_t *playerNameA;
+    uint8_t *playerNameB = 0;
+
+    if ((int8_t)offer[3] < 0) {
+        /* Single player (offer[3] < 0) */
+        fmtStr = (uint8_t *)offerFmtSinglePlayer;
+        if ((int8_t)offer[4] >= 0)
+            fmtStr = (uint8_t *)exchangeFmtSinglePlayer;
+
+        uint8_t *p = _GetPlayer(selTeamNumber, (uint16_t)(int8_t)offer[2]);
+        playerNameA = p + 0x4F;  /* player name */
+    } else {
+        /* Two players (offer[3] >= 0) */
+        fmtStr = (uint8_t *)offerFmtTwoPlayers;
+        if ((int8_t)offer[4] >= 0)
+            fmtStr = (uint8_t *)exchangeFmtTwoPlayers;
+
+        uint8_t *p1 = _GetPlayer(selTeamNumber, (uint16_t)(int8_t)offer[2]);
+        playerNameA = p1 + 0x4F;
+
+        uint8_t *p2 = _GetPlayer(selTeamNumber, (uint16_t)(int8_t)offer[3]);
+        playerNameB = p2 + 0x4F;
+    }
+
+    /* Format the offer text into fundsBuffer using PrintFormatted
+     * a0=fmt, a1=dest(fundsBuffer), a2=teamName, a3=playerNameA, a4=playerNameB */
+    _PrintFormatted(fmtStr, fundsBuffer, 0, 0, 0, 0, 0, 0, 0,
+                    teamName, playerNameA, playerNameB);
+
+    /* Check if formatted text fits on one line (<=47 chars) */
+    uint16_t len = _GetStringLength(fundsBuffer);
+    if (len <= 47) {
+        /* Single line: copy to entry 8's fg string, adjust y */
+        menuEntries[8].y += 5;
+        uint8_t *dst8 = (uint8_t *)menuEntries[8].fg;
+        _StringCopy(fundsBuffer, dst8);
+
+        /* Clear entry 9's string */
+        uint8_t *dst9 = (uint8_t *)menuEntries[9].fg;
+        *dst9 = 0;
+    } else {
+        /* Two lines: determine which format variant was used */
+        uint8_t *line1Fmt;
+        uint8_t *line2Fmt;
+        uint8_t *dst8str = (uint8_t *)menuEntries[8].fg;
+        uint8_t *dst9str = (uint8_t *)menuEntries[9].fg;
+
+        if (fmtStr == (uint8_t *)offerFmtTwoPlayers) {
+            line1Fmt = (uint8_t *)offerFmtLine1b;
+            line2Fmt = (uint8_t *)offerFmtLine2b;
+        } else if (fmtStr == (uint8_t *)exchangeFmtSinglePlayer) {
+            line1Fmt = (uint8_t *)exchangeFmtLine1a;
+            line2Fmt = (uint8_t *)exchangeFmtLine2a;
+        } else if (fmtStr == (uint8_t *)exchangeFmtTwoPlayers) {
+            line1Fmt = (uint8_t *)exchangeFmtLine1b;
+            line2Fmt = (uint8_t *)exchangeFmtLine2b;
+        } else {
+            /* Default: single-player offer */
+            line1Fmt = (uint8_t *)offerFmtLine1a;
+            line2Fmt = (uint8_t *)offerFmtLine2a;
+        }
+
+        /* Format line 1 into entry 8's string */
+        _PrintFormatted(line1Fmt, dst8str, 0, 0, 0, 0, 0, 0, 0,
+                        teamName, playerNameA, playerNameB);
+
+        /* Format line 2 into entry 9's string */
+        _PrintFormatted(line2Fmt, dst9str, 0, 0, 0, 0, 0, 0, 0,
+                        teamName, playerNameA, playerNameB);
+    }
+
+drawAndReturn:
+    /* Draw entries 7-10 (4 entries starting from entry 7) */
+    _DrawMultipleItems(4, &menuEntries[7]);
+}
+
+/* ================================================================
  * Chunk 167 — Career Transfer Accept + Trialist System
  * 12 functions from SWOS2.s lines 63218-64296.
  * ================================================================ */

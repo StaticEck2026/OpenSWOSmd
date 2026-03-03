@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1450 functions ported across 167 chunks.
+**Current status:** 1451 functions ported across 168 chunks.
 
-**Last completed chunk:** Chunk 167 — Career Transfer Accept + Trialist System (9+3s → transfer_market.c): Career_BuildForeignMarketPoolFromSelectedTeam, Career_TransferPlayerAndAddReplacedToMarketPool, Career_AcceptOffer_SellPlayer/BuyPlayer, Career_RemovePlayerAndAddAsTrialist, Career_GenerateTrialistForTeamPlayer, Career_ConvertPlayerToTrialistFromName, TrainingMatch_AddTrialPlayerToSelectedTeam, TrainingMatch_AdjustSelectedTeamRosterForTrialists.
+**Last completed chunk:** Chunk 168 — OffersAfterDrawCommon (1 → transfer_market.c): after-draw callback for offers view menu, formats offer text with line wrapping.
 
-**Next candidates:** OffersAfterDrawCommon, ChooseTeamsDialog/SelectTeams family, SquadInit/Finish/AfterDraw, Career season info, EditTactics helpers, DIY cup menu functions, Job offers, misc.
+**Next candidates:** ChooseTeamsDialog/SelectTeams family (~10), SquadInit/Finish/AfterDraw (~10), Career season info (~2), EditTactics helpers (~10), DIY cup menu functions (~4), Job offers (~6), National team selection (~8), misc.
 
 ---
 

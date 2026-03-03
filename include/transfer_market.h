@@ -152,6 +152,9 @@ void _PlayerOffersAdjustOfferAmount(void);
 void _TransferPlayerInit(void *entry);
 void _ThirdPartyOfferMenuInit(void *entry);
 
+/* --- OffersAfterDrawCommon (Chunk 168) --- */
+void _OffersAfterDrawCommon(void *entryPtr);
+
 /* --- Career Transfer Accept + Trialist System (Chunk 167) --- */
 void _Career_BuildForeignMarketPoolFromSelectedTeam(void);
 void _Career_TransferPlayerAndAddReplacedToMarketPool(uint16_t sourceTeam, uint16_t playerOrd);

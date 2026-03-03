@@ -3064,6 +3064,57 @@
         xdef    aWeHereAtAWithd
         xdef    aOfferOn
         xdef    aFromAInExchang
+; --- Chunk 168 xrefs ---
+        xref    _OffersAfterDrawCommon
+; --- Chunk 168 xdefs ---
+        xdef    offerFmtSinglePlayer
+        xdef    offerFmtTwoPlayers
+        xdef    exchangeFmtSinglePlayer
+        xdef    exchangeFmtTwoPlayers
+        xdef    offerFmtLine1a
+        xdef    offerFmtLine2a
+        xdef    offerFmtLine1b
+        xdef    offerFmtLine2b
+        xdef    exchangeFmtLine1a
+        xdef    exchangeFmtLine2a
+        xdef    exchangeFmtLine1b
+        xdef    exchangeFmtLine2b
+        xdef    aAOfferForB
+        xdef    aAOfferForBAndC
+        xdef    aAExchangeOffer
+        xdef    aAExchangeOffer_0
+        xdef    aAExchangeOffer_1
+        xdef    aAExchangeOffer_2
+        xdef    aAOfferFor
+        xdef    aAOfferFor_0
+        xdef    aB
+        xdef    aB_0
+        xdef    aB_1
+        xdef    aB_2
+        xdef    aB_3
+        xdef    aBAndC
+        xdef    aBAndC_0
+        xdef    aBAndC_1
+        xdef    aBAndC_2
+        xdef    aBAndC_3
+        xdef    aBAndC_4
+        xdef    aAImprovedOffer
+        xdef    aAImprovedOffer_0
+        xdef    aAImprovedOffer_1
+        xdef    aAImprovedOffer_2
+        xdef    aAImprovedExcha
+        xdef    aAImprovedExcha_0
+        xdef    aAImprovedExcha_1
+        xdef    aAImprovedExcha_2
+        xdef    aAFurtherImprov
+        xdef    aAFurtherImprov_0
+        xdef    aAFurtherImprov_1
+        xdef    aAFurtherImprov_2
+        xdef    aAFurtherImprov_3
+        xdef    aAFurtherImprov_4
+        xdef    aAFurtherImprov_5
+        xdef    aAFurtherImprov_6
+        xdef    aOfferForB
 ; --- Chunk 165 xrefs ---
         xref    _TransferPlayerAfterDrawCommon
         xref    _ThirdPartyOfferMenuAfterDrawCommon
