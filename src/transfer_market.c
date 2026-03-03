@@ -3028,4 +3028,239 @@ done:
     _CallDrawMenuItem(&menuEntries[9]);
 }
 
+/* =============================================================== */
+/* Chunk 166: TransferPlayerInit + ThirdPartyOfferMenuInit          */
+/* =============================================================== */
+
+extern int16_t  teamWillingToSellOrExchange;
+extern uint8_t  managerSexBuffer[];
+extern uint8_t  managerSurnameBuffer[];
+extern uint32_t sellExchangeStrings[];
+extern uint32_t sellExchangeResponseStrings[];
+extern uint8_t  aDearAB[];
+extern uint8_t  aInADealWithAFo[];
+extern uint8_t  aUnlessTheOffer[];
+extern uint8_t  aWeHereAtAWould[];
+extern uint8_t  fundsBuffer[];
+extern uint8_t  aWeHereAtAWishT[];
+extern uint8_t  aWeHereAtAWishT_0[];
+extern uint8_t  aOurOfferToBuy[];
+extern uint8_t  aWeHereAtAWishT_1[];
+extern uint8_t  aImproveOurOffe[];
+extern uint8_t  aWeHereAtARefus[];
+extern uint8_t  aImproveOnOurOf[];
+extern uint8_t  aWeHereAtAWithd[];
+extern uint8_t  aOfferOn[];
+extern uint8_t  aFromAInExchang[];
+
+extern void _PrintFormatted(const uint8_t *fmt, uint8_t *out,
+                            uint16_t n0, uint16_t n1, uint16_t n2, uint16_t n3,
+                            uint16_t n4, uint16_t n5, uint16_t n6,
+                            const uint8_t *strA, const uint8_t *strB, const uint8_t *strC);
+extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
+extern void _Int2Pounds(uint32_t pounds, uint8_t *dst);
+extern uint16_t _GetStringLength(const uint8_t *str);
+
+#define TEAMFILE_TEAMNAME_OFFSET 5
+
+/* TransferPlayerInit (Chunk 166) — init for playerTransferMenu */
+__attribute__((used, externally_visible))
+void _TransferPlayerInit(void *entryPtr)
+{
+    (void)entryPtr;
+
+    /* Handle menu entry visibility based on teamWillingToSellOrExchange */
+    if (teamWillingToSellOrExchange >= 1 && teamWillingToSellOrExchange <= 4) {
+        /* Willing to sell/exchange: hide entry 10, shift entry 11 left */
+        menuEntries[10].isInvisible = 1;
+        menuEntries[11].x -= 0x3C;
+    } else if (teamWillingToSellOrExchange == 0) {
+        /* Not willing at all: hide 10+11, show 12, select entry 12 */
+        menuEntries[10].isInvisible = 1;
+        menuEntries[11].isInvisible = 1;
+        menuEntries[12].isInvisible = 0;
+        _SetCurrentEntry(12);
+    }
+
+    /* Format "DEAR %a %b" into entry 1 */
+    _PrintFormatted(aDearAB, (uint8_t *)menuEntries[1].fg,
+                    0, 0, 0, 0, 0, 0, 0,
+                    managerSexBuffer, managerSurnameBuffer, 0);
+
+    /* Select appropriate sell/exchange string from table */
+    uint32_t *strPair = sellExchangeStrings;
+    if (teamWillingToSellOrExchange != 0)
+        strPair += 2;  /* advance by 8 bytes = 2 longs */
+    if (offerSwapPlayerOrdinal >= 0)
+        strPair += 1;  /* advance by 4 bytes = 1 long */
+
+    /* Get offering team name and format into entry 2 */
+    uint8_t *teamPtr = _GetTeamPointer(teamOffering);
+    uint8_t *teamName = teamPtr + TEAMFILE_TEAMNAME_OFFSET;
+    _PrintFormatted((const uint8_t *)(uint32_t)*strPair,
+                    (uint8_t *)menuEntries[2].fg,
+                    0, 0, 0, 0, 0, 0, 0,
+                    teamName, 0, 0);
+
+    /* Get our team name and format "IN A DEAL WITH %a FOR" into entry 3 */
+    teamPtr = _GetTeamPointer(selTeamNumber);
+    teamName = teamPtr + TEAMFILE_TEAMNAME_OFFSET;
+    _PrintFormatted(aInADealWithAFo, (uint8_t *)menuEntries[3].fg,
+                    0, 0, 0, 0, 0, 0, 0,
+                    teamName, 0, 0);
+
+    int16_t twse = teamWillingToSellOrExchange;
+    if (twse < 0) {
+        /* Negative: team wants more money. Amount = -twse * 1000 */
+        uint16_t amountNeeded = (uint16_t)(-twse);
+        _Int2Pounds((uint32_t)amountNeeded * 1000, fundsBuffer);
+
+        /* Show entry 4: "UNLESS THE OFFER IS RAISED BY %a" */
+        menuEntries[4].isInvisible = 0;
+        _PrintFormatted(aUnlessTheOffer, (uint8_t *)menuEntries[4].fg,
+                        0, 0, 0, 0, 0, 0, 0,
+                        fundsBuffer, 0, 0);
+
+        /* Show entry 5: "WE HERE AT %a WOULD LIKE TO OFFER..." */
+        menuEntries[5].isInvisible = 0;
+        _PrintFormatted(aWeHereAtAWould, (uint8_t *)menuEntries[5].fg,
+                        0, 0, 0, 0, 0, 0, 0,
+                        fundsBuffer, 0, 0);
+    } else {
+        /* Non-negative: use response string lookup table */
+        uint32_t *respPair = sellExchangeResponseStrings + (twse * 2);
+        if (*respPair != 0) {
+            menuEntries[4].isInvisible = 0;
+            _StringCopy((const uint8_t *)(uint32_t)*respPair,
+                        (uint8_t *)menuEntries[4].fg);
+        }
+        if (*(respPair + 1) != 0) {
+            menuEntries[5].isInvisible = 0;
+            _StringCopy((const uint8_t *)(uint32_t)*(respPair + 1),
+                        (uint8_t *)menuEntries[5].fg);
+        }
+    }
+
+    /* Format offer amount into entry 9's fg string buffer */
+    _Int2Pounds((uint32_t)offerAmount * 1000,
+                (uint8_t *)menuEntries[9].fg);
+
+    /* Entry 6 (plus marker): visible only if numExtraPlayersWanted >= 0 */
+    menuEntries[6].isInvisible = 1;
+    if (numExtraPlayersWanted >= 0)
+        menuEntries[6].isInvisible = 0;
+
+    /* Entry 7 (swap player plus): visible only if offerSwapPlayerOrdinal >= 0 */
+    menuEntries[7].isInvisible = 1;
+    if (offerSwapPlayerOrdinal >= 0)
+        menuEntries[7].isInvisible = 0;
+
+    /* Entry 8 (extra player plus): visible only if offerExtraPlayerOrdinal >= 0 */
+    menuEntries[8].isInvisible = 1;
+    if (offerExtraPlayerOrdinal >= 0)
+        menuEntries[8].isInvisible = 0;
+}
+
+/* ThirdPartyOfferMenuInit (Chunk 166) — init for thirdPartyOfferMenu */
+__attribute__((used, externally_visible))
+void _ThirdPartyOfferMenuInit(void *entryPtr)
+{
+    (void)entryPtr;
+
+    /* Format offer amount into entry 8's fg string buffer */
+    _Int2Pounds((uint32_t)offerAmount * 1000,
+                (uint8_t *)menuEntries[8].fg);
+
+    /* "DEAR %a %b" into entry 1 */
+    _PrintFormatted(aDearAB, (uint8_t *)menuEntries[1].fg,
+                    0, 0, 0, 0, 0, 0, 0,
+                    managerSexBuffer, managerSurnameBuffer, 0);
+
+    /* Get offering team name */
+    uint8_t *teamPtr = _GetTeamPointer(teamOffering);
+    uint8_t *teamName = teamPtr + TEAMFILE_TEAMNAME_OFFSET;
+
+    if (offerStatus == 0) {
+        /* "WE HERE AT %a WISH TO BUY" into entry 2 */
+        _PrintFormatted(aWeHereAtAWishT, (uint8_t *)menuEntries[2].fg,
+                        0, 0, 0, 0, 0, 0, 0,
+                        teamName, 0, 0);
+    } else {
+        /* Improved/further/refused/withdrawn offer — entry 2 adjusted */
+        menuEntries[2].y -= 8;
+
+        const uint8_t *fmtLine1;
+        const uint8_t *fmtLine2;
+        if (offerStatus == 1) {
+            fmtLine1 = aWeHereAtAWishT_0;  /* "WE HERE AT %a WISH TO IMPROVE" */
+            fmtLine2 = aOurOfferToBuy;      /* "OUR OFFER TO BUY" */
+        } else if (offerStatus == 2) {
+            fmtLine1 = aWeHereAtAWishT_1;  /* "WE HERE AT %a WISH TO FURTHER" */
+            fmtLine2 = aImproveOurOffe;    /* "IMPROVE OUR OFFER TO BUY" */
+        } else if (offerStatus == 3) {
+            fmtLine1 = aWeHereAtARefus;    /* "WE HERE AT %a REFUSE TO FURTHER" */
+            fmtLine2 = aImproveOnOurOf;    /* "IMPROVE ON OUR OFFER TO BUY" */
+        } else {
+            fmtLine1 = aWeHereAtAWithd;    /* "WE HERE AT %a WITHDRAW OUR" */
+            fmtLine2 = aOfferOn;           /* "OFFER ON" */
+        }
+
+        _PrintFormatted(fmtLine1, (uint8_t *)menuEntries[2].fg,
+                        0, 0, 0, 0, 0, 0, 0,
+                        teamName, 0, 0);
+
+        /* Show entry 3 with line 2 text */
+        menuEntries[3].isInvisible = 0;
+        _PrintFormatted(fmtLine2, (uint8_t *)menuEntries[3].fg,
+                        0, 0, 0, 0, 0, 0, 0,
+                        teamName, 0, 0);
+
+        /* Shift entry 1 up by 8 */
+        menuEntries[1].y -= 8;
+    }
+
+    /* "FROM %a IN EXCHANGE FOR" into entry 4 */
+    teamPtr = _GetTeamPointer(selTeamNumber);
+    teamName = teamPtr + TEAMFILE_TEAMNAME_OFFSET;
+    _PrintFormatted(aFromAInExchang, (uint8_t *)menuEntries[4].fg,
+                    0, 0, 0, 0, 0, 0, 0,
+                    teamName, 0, 0);
+
+    /* Entry 5: visible only if numExtraPlayersWanted >= 0 */
+    menuEntries[5].isInvisible = 1;
+    if (numExtraPlayersWanted >= 0)
+        menuEntries[5].isInvisible = 0;
+
+    /* Entry 6: visible only if offerSwapPlayerOrdinal >= 0 */
+    menuEntries[6].isInvisible = 1;
+    if (offerSwapPlayerOrdinal >= 0)
+        menuEntries[6].isInvisible = 0;
+
+    /* Entry 7: visible only if offerExtraPlayerOrdinal >= 0 */
+    menuEntries[7].isInvisible = 1;
+    if (offerExtraPlayerOrdinal >= 0)
+        menuEntries[7].isInvisible = 0;
+
+    /* Handle offerStatus < 0 (negative): withdrawn offer — hide most entries */
+    if ((int16_t)offerStatus < 0) {
+        menuEntries[4].isInvisible = 1;
+        menuEntries[8].isInvisible = 1;
+        menuEntries[17].isInvisible = 1;
+        menuEntries[18].isInvisible = 1;
+        menuEntries[6].isInvisible = 1;
+        menuEntries[7].isInvisible = 1;
+        menuEntries[13].isInvisible = 1;
+        menuEntries[9].isInvisible = 1;
+        menuEntries[14].isInvisible = 0;
+        _SetCurrentEntry(14);
+    }
+
+    /* Handle offerStatus == 3: refuse to improve further — hide askForMore, widen accept/reject */
+    if (offerStatus == 3) {
+        menuEntries[11].isInvisible = 1;
+        menuEntries[10].dwWidth += 0x32;
+        menuEntries[12].x -= 0x33;
+        menuEntries[12].dwWidth += 0x33;
+    }
+}
 

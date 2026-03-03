@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1436 functions ported across 165 chunks.
+**Current status:** 1438 functions ported across 166 chunks.
 
-**Last completed chunk:** Chunk 165 — AfterDrawCommon variants + OffersCommon + PlayerOffers callbacks (11 → transfer_market.c): TransferPlayerAfterDrawCommon, ThirdPartyOfferMenuAfterDrawCommon, PlayerOffersAfterDrawCommon, j_SetExitMenuFlag_11, PlayerOffersOnSelect13, OffersCommon, PlayerOffersOnSelect8/10/11/12, PlayerOffersAdjustOfferAmount.
+**Last completed chunk:** Chunk 166 — TransferPlayerInit + ThirdPartyOfferMenuInit (2 → transfer_market.c).
 
-**Next candidates:** TransferPlayerInit, ThirdPartyOfferMenuInit, OffersAfterDrawCommon, ChooseTeamsDialog, Career system (~69), DIY Competition (~24), Asset/File I/O (~20), Training Match (~9), misc.
+**Next candidates:** OffersAfterDrawCommon, ChooseTeamsDialog, Career system, DIY Competition, Asset/File I/O, Training Match, misc remaining functions.
 
 ---
 

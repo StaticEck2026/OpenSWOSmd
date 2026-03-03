@@ -148,4 +148,8 @@ void _PlayerOffersOnSelect11(void);
 void _PlayerOffersOnSelect12(void);
 void _PlayerOffersAdjustOfferAmount(void);
 
+/* --- TransferPlayerInit + ThirdPartyOfferMenuInit (Chunk 166) --- */
+void _TransferPlayerInit(void *entry);
+void _ThirdPartyOfferMenuInit(void *entry);
+
 #endif

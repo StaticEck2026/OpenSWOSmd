@@ -2946,6 +2946,17 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1436 functions across 165 chunks
 
+### Chunk 166 — TransferPlayerInit + ThirdPartyOfferMenuInit (2 → transfer_market.c)
+- Date: 2026-03-03
+- Ported:
+  1. TransferPlayerInit (→transfer_market.c) — init callback for playerTransferMenu; handles teamWillingToSellOrExchange visibility logic, formats "DEAR %a %b", selects sell/exchange strings from table, formats team names
+  2. ThirdPartyOfferMenuInit (→transfer_market.c) — init callback for thirdPartyOfferMenu; formats offer amount, "DEAR %a %b", handles offerStatus 0-4 with different text lines, manages entry visibility
+- Stubs: both a5 register bridges (movem.l d2-d7/a2-a6,-(sp); move.l a5,-(sp); jsr _Func; addq.l #4,sp; movem.l (sp)+,...; rts)
+- New xrefs: _TransferPlayerInit, _ThirdPartyOfferMenuInit
+- New xdefs: managerSexBuffer, managerSurnameBuffer, aDearAB, aInADealWithAFo, aUnlessTheOffer, aWeHereAtAWould, aWeHereAtAWishT, aWeHereAtAWishT_0, aOurOfferToBuy, aWeHereAtAWishT_1, aImproveOurOffe, aWeHereAtARefus, aImproveOnOurOf, aWeHereAtAWithd, aOfferOn, aFromAInExchang
+- Build status: **verified** (clean build)
+- Cumulative: 1438 functions across 166 chunks
+
 ### Chunk 147 — BuyOtherPlayers Init/Finish + Pitch/Season Menu Callbacks (5 → transfer_market.c, menus.c)
 - Date: 2026-03-02
 - Ported:
@@ -3239,5 +3250,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 163   | 13        | 1420       |
 | 164   | 5         | 1425       |
 | 165   | 11+1s     | 1436       |
+| 166   | 2         | 1438       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

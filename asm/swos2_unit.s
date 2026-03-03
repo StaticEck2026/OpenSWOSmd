@@ -3025,6 +3025,26 @@
         xref    _ViewSquadInit
         xref    _ViewSquadCommon
         xref    _ViewSquadAfterDrawCommon
+; --- Chunk 166 xrefs ---
+        xref    _TransferPlayerInit
+        xref    _ThirdPartyOfferMenuInit
+; --- Chunk 166 xdefs ---
+        xdef    managerSexBuffer
+        xdef    managerSurnameBuffer
+        xdef    aDearAB
+        xdef    aInADealWithAFo
+        xdef    aUnlessTheOffer
+        xdef    aWeHereAtAWould
+        xdef    aWeHereAtAWishT
+        xdef    aWeHereAtAWishT_0
+        xdef    aOurOfferToBuy
+        xdef    aWeHereAtAWishT_1
+        xdef    aImproveOurOffe
+        xdef    aWeHereAtARefus
+        xdef    aImproveOnOurOf
+        xdef    aWeHereAtAWithd
+        xdef    aOfferOn
+        xdef    aFromAInExchang
 ; --- Chunk 165 xrefs ---
         xref    _TransferPlayerAfterDrawCommon
         xref    _ThirdPartyOfferMenuAfterDrawCommon

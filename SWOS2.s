@@ -65473,113 +65473,13 @@ sellExchangeResponseStrings:
                 dc.l aFavourableOffe    ; element[11]
 
 ; ===== TransferPlayerInit =====
-; prototype: void __usercall TransferPlayerInit(MenuEntry *entry@<a5>)
+; Ported to C: _TransferPlayerInit in src/transfer_market.c
 TransferPlayerInit:
-                cmpi.w  #1,(teamWillingToSellOrExchange).l
-                bcs.s   loc_14378E
-                cmpi.w  #4,(teamWillingToSellOrExchange).l
-                bhi.s   loc_14378E
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$230).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$268)).l,a0
-                subi.w  #$3C,MENUENTRY_X(a0) ; '<'
-                bra.s   loc_1437B0
-loc_14378E:
-                tst.w   (teamWillingToSellOrExchange).l
-                bne.s   loc_1437B0
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$230).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$268).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$2A0).l
-                move.w  #$C,d0
-                jsr     SetCurrentEntry
-loc_1437B0:
-                lea     (managerSexBuffer).l,a2
-                lea     (managerSurnameBuffer).l,a3
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                lea     (aDearAB).l,a0  ; "DEAR %a %b"
-                jsr     PrintFormatted
-                lea     sellExchangeStrings(pc),a4
-                tst.w   (teamWillingToSellOrExchange).l
-                beq.s   loc_1437DE
-                addq.l  #8,a4
-loc_1437DE:
-                tst.w   (offerSwapPlayerOrdinal).l
-                bmi.s   loc_1437E8
-                addq.l  #4,a4
-loc_1437E8:
-                move.w  teamOffering(pc),d0
-                bsr.w   GetTeamPointer
-                lea     5(a0),a2
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                movea.l (a4),a0
-                jsr     PrintFormatted
-                move.w  (selTeamNumber).l,d0
-                bsr.w   GetTeamPointer
-                lea     5(a0),a2
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                lea     (aInADealWithAFo).l,a0 ; "IN A DEAL WITH %a FOR"
-                jsr     PrintFormatted
-                move.w  (teamWillingToSellOrExchange).l,d0
-                bpl.s   loc_14387E
-                neg.w   d0
-                lea     (fundsBuffer).l,a1
-                mulu.w  #$3E8,d0
-                jsr     Int2Pounds
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                movea.l $26(a0),a1
-                lea     (fundsBuffer).l,a2
-                lea     (aUnlessTheOffer).l,a0 ; "UNLESS THE OFFER IS RAISED BY %a"
-                jsr     PrintFormatted
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                movea.l $26(a0),a1
-                lea     (fundsBuffer).l,a2
-                lea     (aWeHereAtAWould).l,a0 ; "\x00WE HERE AT %a WOULD LIKE TO OFFER Y"...
-                jsr     PrintFormatted
-                bra.s   loc_1438BC
-loc_14387E:
-                lea     sellExchangeResponseStrings(pc),a4
-                lsl.w   #3,d0
-                lea     (a4,d0.w),a4
-                tst.l   (a4)
-                beq.s   loc_1438A0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                movea.l $26(a0),a1
-                movea.l (a4),a0
-                jsr     StringCopy
-loc_1438A0:
-                tst.l   4(a4)
-                beq.s   loc_1438BC
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                movea.l $26(a0),a1
-                movea.l 4(a4),a0
-                jsr     StringCopy
-loc_1438BC:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1F8)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                move.w  offerAmount(pc),d0
-                mulu.w  #$3E8,d0
-                jsr     Int2Pounds
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$150).l
-                tst.w   (numExtraPlayersWanted).l
-                bmi.s   loc_1438E4
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$150).l
-loc_1438E4:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$188).l
-                tst.w   (offerSwapPlayerOrdinal).l
-                bmi.s   loc_1438F6
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$188).l
-loc_1438F6:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1C0).l
-                tst.w   (offerExtraPlayerOrdinal).l
-                bmi.s   locret_143908
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$1C0).l
-locret_143908:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _TransferPlayerInit
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== TransferPlayerOnSelect10 =====
@@ -66062,105 +65962,13 @@ thirdPartyOfferMenu:
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
 ; ===== ThirdPartyOfferMenuInit =====
-; prototype: void __usercall ThirdPartyOfferMenuInit(MenuEntry *entry@<a5>)
+; Ported to C: _ThirdPartyOfferMenuInit in src/transfer_market.c
 ThirdPartyOfferMenuInit:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                move.w  offerAmount(pc),d0
-                mulu.w  #1000,d0
-                jsr     Int2Pounds
-                lea     (managerSexBuffer).l,a2
-                lea     (managerSurnameBuffer).l,a3
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                lea     (aDearAB).l,a0  ; "DEAR %a %b"
-                jsr     PrintFormatted
-                move.w  teamOffering(pc),d0
-                bsr.w   GetTeamPointer
-                lea     TEAMFILE_TEAMNAME(a0),a2
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                tst.w   (offerStatus).l
-                bne.s   loc_143C14
-                lea     (aWeHereAtAWishT).l,a0 ; "WE HERE AT %a WISH TO BUY"
-                jsr     PrintFormatted
-                bra.w   loc_143C90
-loc_143C14:
-                subq.w  #8,MENUENTRY_Y(a0)
-                lea     (aWeHereAtAWishT_0).l,a0 ; "WE HERE AT %a WISH TO IMPROVE"
-                lea     (aOurOfferToBuy).l,a3 ; "OUR OFFER TO BUY"
-                cmpi.w  #1,(offerStatus).l
-                beq.s   loc_143C66
-                lea     (aWeHereAtAWishT_1).l,a0 ; "WE HERE AT %a WISH TO FURTHER"
-                lea     (aImproveOurOffe).l,a3 ; "IMPROVE OUR OFFER TO BUY"
-                cmpi.w  #2,(offerStatus).l
-                beq.s   loc_143C66
-                lea     (aWeHereAtARefus).l,a0 ; "WE HERE AT %a REFUSE TO FURTHER"
-                lea     (aImproveOnOurOf).l,a3 ; "IMPROVE ON OUR OFFER TO BUY"
-                cmpi.w  #3,(offerStatus).l
-                beq.s   loc_143C66
-                lea     (aWeHereAtAWithd).l,a0 ; "WE HERE AT %a WITHDRAW OUR"
-                lea     (aOfferOn).l,a3 ; "OFFER ON"
-loc_143C66:
-                movem.l a2,-(sp)
-                jsr     PrintFormatted
-                movem.l (sp)+,a2
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                movea.l a3,a0
-                jsr     PrintFormatted
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                subq.w  #8,MENUENTRY_Y(a0)
-loc_143C90:
-                move.w  (selTeamNumber).l,d0
-                bsr.w   GetTeamPointer
-                lea     TEAMFILE_TEAMNAME(a0),a2
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                lea     (aFromAInExchang).l,a0 ; "FROM %a IN EXCHANGE FOR"
-                jsr     PrintFormatted
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$118).l
-                tst.w   (numExtraPlayersWanted).l
-                bmi.s   loc_143CC4
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$118).l
-loc_143CC4:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$150).l
-                tst.w   (offerSwapPlayerOrdinal).l
-                bmi.s   loc_143CD6
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$150).l
-loc_143CD6:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$188).l
-                tst.w   (offerExtraPlayerOrdinal).l
-                bmi.s   loc_143CE8
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$188).l
-loc_143CE8:
-                tst.w   (offerStatus).l
-                bpl.w   loc_143D42
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$E0).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1C0).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$3B8).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$3F0).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$150).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$188).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$230).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$2A0).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$268).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$2D8).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1F8).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$310).l
-                move.w  #$E,d0
-                jsr     SetCurrentEntry
-loc_143D42:
-                cmpi.w  #3,(offerStatus).l
-                bne.s   locret_143D6C
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$268).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$230)).l,a0
-                addi.w  #$32,MENUENTRY_DWWIDTH(a0) ; '2'
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2A0)).l,a0
-                subi.w  #$33,MENUENTRY_X(a0) ; '3'
-                addi.w  #$33,MENUENTRY_DWWIDTH(a0) ; '3'
-locret_143D6C:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _ThirdPartyOfferMenuInit
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== ThirdPartyOfferViewSquad =====
