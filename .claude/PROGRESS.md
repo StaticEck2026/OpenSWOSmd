@@ -2969,6 +2969,16 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, only pre-existing warnings)
 - Cumulative: 1450 functions across 167 chunks
 
+### Chunk 173 — FindTeamInDIY (1 → diy_competition.c)
+- Date: 2026-03-03
+- Ported:
+  1. FindTeamInDIY (→diy_competition.c) — complex team lookup across 3 competition types (~85 instr). League: searches via index table at offset 110 using divu #18 for position mapping. Cup: searches via byte index at offset 718, with group stage handling (slots 0-1 map directly), bracket processing (find largest power-of-2 bracket position), or pre-knockout return. Tournament: searches byte index at offset 90, can redirect to secondary competition (+0x420) in group stage mode (CUP or LEAGUE search), with stage-walk loop for knockout positioning and optional rank-based adjustment via GetMoreExpensiveTeamsCount. Sets globals diyFoundTeamIndex, diyCompHasGroupStage (0xFF00/0 big-endian word pattern from seq/sne). Panics (0x6006) if not found and not national selector.
+- Stubs: FindTeamInDIY (d0+a6 register bridge → d1 return). Updated _CFindTeamInDIY to simple jmp alias (avoids double bridge).
+- New xrefs: _FindTeamInDIY
+- New xdefs: diyFoundTeamIndex, findTeamInDIY_SuppressSideEffectsFlag
+- Build status: **verified** (clean build, only pre-existing warnings)
+- Cumulative: 1464 functions across 173 chunks
+
 ### Chunk 172 — Budget Rank Table & International Squad Init (2 → diy_competition.c, career_teams.c)
 - Date: 2026-03-03
 - Ported:
@@ -3338,5 +3348,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 170   | 4         | 1458       |
 | 171   | 3         | 1461       |
 | 172   | 2         | 1463       |
+| 173   | 1         | 1464       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

@@ -35448,152 +35448,16 @@ loc_12EF24:
 ;     A6 -> DIY competition
 ; out:
 ;     D1 -  index of that team in DIY competition, or -1 if not found
+; Chunk 173: ported to C (_FindTeamInDIY)
+; in: d0 = teamNo, a6 = comp pointer; out: d1 = index (or 0xFFFF)
 FindTeamInDIY:
-                clr.w   (diyFoundTeamIndex).l
-                clr.w   (diyCompHasGroupStage).l
-                move.w  d0,d7
-                move.w  DIY_COMPETITION_NUMTEAMS(a6),d6
-                cmpi.w  #DIY_CUP,(a6)
-                beq.s   loc_12EF88
-                cmpi.w  #DIY_TOURNAMENT,(a6)
-                beq.w   loc_12F002
-                tst.w   96(a6)
-                seq     (diyCompHasGroupStage).l
-loc_12EF62:
-                lea     302(a6),a0
-                move.w  #$FFFE,d1
-loc_12EF6A:
-                subq.w  #1,d6
-                bmi.w   loc_12F0BC
-                addq.w  #2,d1
-                move.w  110(a6,d1.w),d0
-                ext.l   d0
-                divu.w  #18,d0
-                lsl.w   #1,d0
-                cmp.w   (a0,d0.w),d7
-                bne.s   loc_12EF6A
-                lsr.w   #1,d1
-                rts
-loc_12EF88:
-                tst.w   86(a6)
-                sne     (diyCompHasGroupStage).l
-loc_12EF92:
-                lea     590(a6),a0
-                lea     718(a6),a1
-                move.w  #$FFFF,d1
-loc_12EF9E:
-                subq.w  #1,d6
-                bmi.w   loc_12F0BC
-                addq.w  #1,d1
-                move.b  (a1,d1.w),d0
-                ext.w   d0
-                lsl.w   #1,d0
-                cmp.w   (a0,d0.w),d7
-                bne.s   loc_12EF9E
-                tst.w   86(a6)
-                beq.s   loc_12EFD0
-                cmpi.w  #2,d1
-                bcc.s   loc_12EFD0
-                clr.w   d1
-                cmp.w   58(a6),d7
-                beq.w   locret_12F0BA
-                move.w  #1,d1
-                rts
-loc_12EFD0:
-                move.w  80(a6),d0
-                lsl.w   #1,d0
-                cmp.w   d0,d1
-                bcc.s   loc_12EFE2
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a6,-(sp)
+                move.w  d0,-(sp)
+                jsr     _FindTeamInDIY
+                lea     6(sp),sp
                 move.w  d0,d1
-                lsr.w   #1,d1
-                subq.w  #1,d1
-                rts
-loc_12EFE2:
-                move.w  #1,(diyFoundTeamIndex).l
-                move.w  d1,d0
-                move.w  #$20,d1         ; ' '
-loc_12EFF0:
-                cmp.w   d1,d0
-                bcc.s   loc_12EFF8
-                lsr.w   #1,d1
-                bra.s   loc_12EFF0
-loc_12EFF8:
-                move.w  d1,d0
-                lsr.w   #1,d0
-                add.w   d0,d1
-                subq.w  #1,d1
-                rts
-loc_12F002:
-                tst.w   $58(a6)
-                sne     (diyCompHasGroupStage).l
-                lea     $9A(a6),a0
-                lea     $5A(a6),a1
-                move.w  #$FFFF,d1
-loc_12F018:
-                subq.w  #1,d6
-                bmi.w   loc_12F0BC
-                addq.w  #1,d1
-                move.b  (a1,d1.w),d0
-                ext.w   d0
-                lsl.w   #1,d0
-                cmp.w   (a0,d0.w),d7
-                bne.s   loc_12F018
-                move.w  $54(a6),d0
-                mulu.w  #$76,d0         ; 'v'
-                lea     (a6,d0.w),a0
-                tst.w   $58(a6)
-                beq.s   loc_12F05A
-                cmp.w   $162(a0),d1
-                bcc.s   loc_12F05A
-                lea     $420(a6),a6
-                move.w  $32(a6),d6
-                tst.w   $15E(a0)
-                beq.w   loc_12EF92
-                bra.w   loc_12EF62
-loc_12F05A:
-                cmp.w   $162(a0),d1
-                bcc.s   loc_12F06A
-                move.w  $162(a0),d1
-                lsr.w   #1,d1
-                subq.w  #1,d1
-                rts
-loc_12F06A:
-                move.w  #1,(diyFoundTeamIndex).l
-                tst.w   $15A(a6)
-                beq.w   loc_12F086
-                cmpi.w  #3,d1
-                beq.s   locret_12F0BA
-                cmpi.w  #4,d1
-                beq.s   locret_12F0BA
-loc_12F086:
-                move.w  d1,d0
-                movea.l a6,a0
-loc_12F08A:
-                lea     118(a0),a0
-                move.w  $162(a0),d1
-                cmp.w   d1,d0
-                bcs.s   loc_12F08A
-                move.w  $EC(a0),d0
-                tst.w   (findTeamInDIY_SuppressSideEffectsFlag).l
-                beq.s   loc_12F0B2
-                bsr.w   GetMoreExpensiveTeamsCountWrapper
-                cmp.w   d1,d6
-                bcs.s   loc_12F0B2
-                cmp.w   d0,d6
-                bcc.s   loc_12F0B2
-                move.w  d6,d1
-                rts
-loc_12F0B2:
-                sub.w   d1,d0
-                lsr.w   #1,d0
-                add.w   d0,d1
-                subq.w  #1,d1
-locret_12F0BA:
-                rts
-loc_12F0BC:
-                tst.w   (isNationalSelector).l
-                beq.s   loc_12F0DC
-                move.w  #$FFFF,d1
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== GetMoreExpensiveTeamsCountWrapper =====

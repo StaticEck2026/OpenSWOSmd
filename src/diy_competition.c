@@ -7436,6 +7436,188 @@ void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t fo
 }
 
 /* ================================================================
+ * FindTeamInDIY  (SWOS2.s line 35451)
+ *
+ * Finds a team in a DIY competition, returning its position/rank
+ * index. Handles leagues, cups, and tournaments (including group
+ * stage sub-competitions for cups/tournaments).
+ *
+ * The function modifies globals diyFoundTeamIndex and
+ * diyCompHasGroupStage. For tournaments with a group stage, it can
+ * recurse into a secondary competition (comp + 0x420) and search
+ * there using either the cup or league path.
+ *
+ * Uses seq/sne on big-endian word globals: writes 0xFF to high byte
+ * of diyCompHasGroupStage, modeled as 0xFF00 in C for correctness.
+ *
+ * Asm: in d0 = teamNo, a6 = comp; out d1 = index (or 0xFFFF)
+ * ================================================================ */
+extern uint16_t diyFoundTeamIndex;
+extern uint16_t diyCompHasGroupStage;
+extern uint16_t findTeamInDIY_SuppressSideEffectsFlag;
+extern uint16_t isNationalSelector;
+
+__attribute__((used, externally_visible))
+uint16_t _FindTeamInDIY(uint16_t teamNo, uint8_t *comp)
+{
+    diyFoundTeamIndex = 0;
+    diyCompHasGroupStage = 0;
+
+    uint16_t numTeams = *(uint16_t *)(comp + 50);
+    uint16_t compType = *(uint16_t *)comp;
+
+    if (compType == 1)    /* DIY_CUP */
+        goto cup_entry;
+    if (compType == 2)    /* DIY_TOURNAMENT */
+        goto tournament_entry;
+
+    /* --- LEAGUE path --- */
+    /* seq: set high byte to 0xFF if comp[96] == 0 */
+    diyCompHasGroupStage = (*(uint16_t *)(comp + 96) == 0) ? 0xFF00 : 0;
+
+league_search:
+    {
+        uint16_t *leagueTeamIds = (uint16_t *)(comp + 302);
+        int16_t d1 = -2;
+        uint16_t rem = numTeams;
+        while (rem-- > 0) {
+            d1 += 2;
+            int16_t rawIdx = *(int16_t *)(comp + 110 + d1);
+            uint16_t teamIdx = (uint16_t)((uint32_t)(int32_t)rawIdx / 18u);
+            if (leagueTeamIds[teamIdx] == teamNo)
+                return (uint16_t)(d1 >> 1);
+        }
+        goto not_found;
+    }
+
+cup_entry:
+    /* sne: set high byte to 0xFF if comp[86] != 0 */
+    diyCompHasGroupStage = (*(uint16_t *)(comp + 86) != 0) ? 0xFF00 : 0;
+
+cup_search:
+    {
+        uint16_t *cupTeamIds = (uint16_t *)(comp + 590);
+        int8_t *cupIndexTable = (int8_t *)(comp + 718);
+        int16_t d1 = -1;
+        uint16_t rem = numTeams;
+        while (rem-- > 0) {
+            d1++;
+            int16_t idx = (int16_t)(int8_t)cupIndexTable[d1];
+            if (cupTeamIds[idx] == teamNo) {
+                /* Found in cup — post-processing */
+                if (*(uint16_t *)(comp + 86) != 0 && (uint16_t)d1 < 2) {
+                    /* Group stage, position 0 or 1 */
+                    if (teamNo == *(uint16_t *)(comp + 58))
+                        return 0;
+                    return 1;
+                }
+                goto cup_bracket;
+            }
+        }
+        goto not_found;
+
+    cup_bracket:
+        {
+            uint16_t roundVal = *(uint16_t *)(comp + 80);
+            uint16_t doubled = roundVal << 1;
+            if ((uint16_t)d1 < doubled) {
+                /* Before knockout rounds: return roundVal - 1 */
+                return roundVal - 1;
+            }
+            /* In knockout rounds */
+            diyFoundTeamIndex = 1;
+            uint16_t pos = (uint16_t)d1;
+            uint16_t bracket = 32;
+            while (pos < bracket)
+                bracket >>= 1;
+            /* bracket is largest power of 2 <= pos */
+            return bracket + (bracket >> 1) - 1;
+        }
+    }
+
+tournament_entry:
+    {
+        /* sne: set high byte to 0xFF if comp[88] != 0 */
+        diyCompHasGroupStage = (*(uint16_t *)(comp + 88) != 0) ? 0xFF00 : 0;
+
+        uint16_t *tournTeamIds = (uint16_t *)(comp + 154);
+        int8_t *tournIndexTable = (int8_t *)(comp + 90);
+        int16_t d1 = -1;
+        uint16_t rem = numTeams;
+        while (rem-- > 0) {
+            d1++;
+            int16_t idx = (int16_t)(int8_t)tournIndexTable[d1];
+            if (tournTeamIds[idx] == teamNo) {
+                /* Found in tournament */
+                uint16_t stageConfig = *(uint16_t *)(comp + 84);
+                uint16_t stageOffset = stageConfig * 118;
+                uint8_t *stagePtr = comp + stageOffset;
+
+                if (*(uint16_t *)(comp + 88) != 0) {
+                    /* Has group stage */
+                    uint16_t threshold = *(uint16_t *)(stagePtr + 0x162);
+                    if ((uint16_t)d1 < threshold) {
+                        /* Team is in group stage — switch to secondary competition */
+                        comp += 0x420;
+                        numTeams = *(uint16_t *)(comp + 50);
+                        if (*(uint16_t *)(stagePtr + 0x15E) == 0)
+                            goto cup_search;
+                        else
+                            goto league_search;
+                    }
+                }
+
+                goto tournament_post;
+
+            tournament_post:
+                {
+                    uint16_t threshold = *(uint16_t *)(stagePtr + 0x162);
+                    if ((uint16_t)d1 < threshold) {
+                        return threshold / 2 - 1;
+                    }
+
+                    diyFoundTeamIndex = 1;
+
+                    if (*(uint16_t *)(comp + 0x15A) != 0) {
+                        if ((uint16_t)d1 == 3 || (uint16_t)d1 == 4)
+                            return (uint16_t)d1;
+                    }
+
+                    /* Walk through stage blocks to find which stage the team is in */
+                    uint16_t pos = (uint16_t)d1;
+                    uint8_t *sp = comp;
+                    uint16_t stageThreshold;
+                    do {
+                        sp += 118;
+                        stageThreshold = *(uint16_t *)(sp + 0x162);
+                    } while (pos < stageThreshold);
+
+                    uint16_t stageNumTeams = *(uint16_t *)(sp + 0xEC);
+
+                    if (findTeamInDIY_SuppressSideEffectsFlag != 0) {
+                        uint16_t rank = _GetMoreExpensiveTeamsCount(teamNo, comp);
+                        if (rank >= stageThreshold && rank < stageNumTeams) {
+                            return rank;
+                        }
+                    }
+
+                    /* Default: midpoint between stageThreshold and stageNumTeams */
+                    return stageThreshold + (stageNumTeams - stageThreshold) / 2 - 1;
+                }
+            }
+        }
+        goto not_found;
+    }
+
+not_found:
+    if (isNationalSelector != 0)
+        return 0xFFFF;
+    panicReasonCode = 0x6006;
+    _PanicHaltLoop();
+    /* not reached */
+}
+
+/* ================================================================
  * InitializeNewSeason_BuildTeamBudgetRankTable  (SWOS2.s line 35655)
  *
  * Builds a per-team "budget rank" table for the current competition.

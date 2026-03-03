@@ -3069,6 +3069,11 @@
         xref    _Career_ContinueToNextSeasonInitTeamAndFunds
         xref    _Career_UpdateLastNationalityCall
         xref    _Career_CopyUnavailablePlayerToCareerTeamSlot
+; --- Chunk 173 xrefs ---
+        xref    _FindTeamInDIY
+; --- Chunk 173 xdefs ---
+        xdef    diyFoundTeamIndex
+        xdef    findTeamInDIY_SuppressSideEffectsFlag
 ; --- Chunk 172 xrefs ---
         xref    _InitializeNewSeason_BuildTeamBudgetRankTable
         xref    _Career_InitInternationalSquadAndLookupTablesForNewSeason
@@ -3673,17 +3678,10 @@ _CGetTeamValueBase:
         movem.l (sp)+,d2-d7/a2-a6
         rts
 
-; _CFindTeamInDIY(uint16_t teamNum, uint8_t *compBuf) -> uint16_t (rank in d1, returned as d0)
-; asm: d0=teamNum, a6=compBuf, returns d1=rank
+; _CFindTeamInDIY: now just forwards to _FindTeamInDIY (both are C-ABI)
         xdef    _CFindTeamInDIY
 _CFindTeamInDIY:
-        movem.l d2-d7/a2-a6,-(sp)
-        move.w  48(sp),d0              ; teamNum
-        movea.l 52(sp),a6             ; compBuf
-        jsr     FindTeamInDIY
-        move.w  d1,d0                  ; return rank in d0
-        movem.l (sp)+,d2-d7/a2-a6
-        rts
+        jmp     _FindTeamInDIY
 
 ; _CGetMoreExpensiveTeamsCount(uint16_t teamNum, uint8_t *compBuf) -> uint16_t (d2 returned as d0)
 ; asm: d0=teamNum, a6=compBuf, returns d2

@@ -288,3 +288,6 @@ uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, uint8_t *comp);
 
 /* --- InitializeNewSeason_BuildTeamBudgetRankTable (Chunk 172) --- */
 void _InitializeNewSeason_BuildTeamBudgetRankTable(void);
+
+/* --- FindTeamInDIY (Chunk 173) --- */
+uint16_t _FindTeamInDIY(uint16_t teamNo, uint8_t *comp);
