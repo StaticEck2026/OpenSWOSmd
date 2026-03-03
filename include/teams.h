@@ -36,6 +36,9 @@ uint8_t *_AddTeamToBuffer(uint8_t *team);
 uint8_t *_FindTeam(uint8_t *teamToFind, uint16_t *outRemainingCount);
 void _DeselectTeam(uint8_t *teamToRemove);
 
+/* ---- Player value/status text formatting (Chunk 151) ---- */
+void _FormatPlayerValueOrStatusText(uint8_t *base, uint8_t *dst);
+
 /* ---- Player record lookup (Chunk 91) ---- */
 uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
 uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);

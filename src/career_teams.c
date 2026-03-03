@@ -37,6 +37,8 @@ extern uint16_t diyLeagueTeamIds[];
 extern uint16_t diyCupTeamIds[];
 extern uint16_t diyTournamentTeamIds[];
 extern uint16_t careerLoadedFlag;
+extern uint16_t teamsLoaded;
+extern uint16_t skipLeagueNumbers;
 extern uint16_t gameType;
 extern uint8_t euroCup[];
 extern uint8_t cupWinnersCup[];
@@ -1991,4 +1993,34 @@ void _Career_UpdateRemovePlayersMenuEntry(void)
     if (count != 1) {
         menuEntries[6].fg = (uint32_t)aRemovePlayers;  /* plural */
     }
+}
+
+/* ================================================================
+ * Chunk 151: GetTeamLeague
+ *
+ * in: d0 = team number (high byte = file ext, low byte = team id)
+ * out: d0.w = league number (signed)
+ *
+ * Loads the team file, scans for matching team number in the
+ * teamFileBuffer, returns the league byte from that team record.
+ * ================================================================ */
+#define TEAMFILE_LEAGUE 25
+#define TEAMFILE_RECORD_SIZE 684
+
+__attribute__((used, externally_visible))
+int16_t _GetTeamLeague(uint16_t teamNumber)
+{
+    uint16_t extNumber = teamNumber >> 8;
+    teamsLoaded = 0;
+    skipLeagueNumbers = 1;
+    _LoadTeamFile(extNumber);
+    skipLeagueNumbers = 0;
+    teamsLoaded = 0;
+
+    /* Scan teamFileBuffer+2 for matching team number */
+    uint8_t *p = &teamFileBuffer + 2;
+    while (*(uint16_t *)p != teamNumber)
+        p += TEAMFILE_RECORD_SIZE;
+
+    return (int8_t)p[TEAMFILE_LEAGUE];
 }

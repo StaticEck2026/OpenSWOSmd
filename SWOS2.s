@@ -28769,26 +28769,15 @@ InitPlayerValueDisplayStruct:
 ; ===== FormatPlayerValueOrStatusText =====
 ; prototype: void __usercall FormatPlayerValueOrStatusText(void *src@<a0>, char *dst@<a1>)
 FormatPlayerValueOrStatusText:
-                cmpi.b  #$9B,$71(a0)
-                bne.s   loc_126516
-                lea     (aTrial).l,a0   ; "TRIAL"
-                jmp StringCopy(pc)
-loc_126516:
-                cmpi.b  #$9A,$71(a0)
-                bne.s   loc_126528
-                lea     (aRes).l,a0     ; "RES"
-                jmp StringCopy(pc)
-loc_126528:
-                btst    #1,$66(a0)
-                beq.s   loc_12653A
-                lea     (aLoan).l,a0    ; "LOAN"
-                jmp StringCopy(pc)
-loc_12653A:
-                bsr.w   GetDisplayedPlayerValue
-                lsl.w   #1,d0
-                lea     (avgTeamValueBases).l,a0
-                move.w  (a0,d0.w),d0
-                bra.w   loc_127414
+; Ported to C: _FormatPlayerValueOrStatusText in src/teams.c
+; Bridge: a0=base, a1=dst → C params
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a1,-(sp)
+                move.l  a0,-(sp)
+                jsr     _FormatPlayerValueOrStatusText
+                addq.l  #8,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 pad_12654E:
                 dc.b $00,$00
 
@@ -29512,18 +29501,17 @@ loc_12746E:
 
 ; ===== InitCompetitionTeamSelectionFromTableEntry =====
 ; prototype: unsigned __int16 __usercall InitCompetitionTeamSelectionFromTableEntry@<d0>(unsigned __int16 idx@<d0>, void *base@<a0>)
+; Ported to C: _InitCompetitionTeamSelectionFromTableEntry in career_init.c
+; Bridge: d0=idx, a0=base → C params, returns d0=0
 InitCompetitionTeamSelectionFromTableEntry:
-                clr.w   (careerFileBuffer).l
-                movem.l d0/a0,-(sp)
-                jsr     LoadSomeEuroCup
-                movem.l (sp)+,d0/a0
-                clr.w   (numSelectedTeams).l
-                move.w  d0,d1
-                movem.l d1/a0,-(sp)
-                jsr     Career_InitCompetitionTeamSelectionFromTableEntrySpec
-                movem.l (sp)+,d1/a0
-                mulu.w  #6,d1
-                move.b  $D(a0,d1.w),d0
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a0,-(sp)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)
+                jsr     _InitCompetitionTeamSelectionFromTableEntry
+                addq.l  #8,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
                 ext.w   d0
                 move.w  d0,(numNeededTeams).l
                 clr.w   d0
@@ -29531,50 +29519,39 @@ InitCompetitionTeamSelectionFromTableEntry:
 
 ; ===== InitCompetitionTeamSelectionFromTableHeader =====
 ; prototype: unsigned __int16 __usercall InitCompetitionTeamSelectionFromTableHeader@<d0>(void *base@<a0>)
+; Ported to C: _InitCompetitionTeamSelectionFromTableHeader in career_init.c
+; Bridge: a0=base → C param, returns d0=0
 InitCompetitionTeamSelectionFromTableHeader:
-                clr.w   (careerFileBuffer).l
-                movem.l a0,-(sp)
-                jsr     LoadSomeEuroCup
-                movem.l (sp)+,a0
-                clr.w   (numSelectedTeams).l
-                movem.l a0,-(sp)
-                jsr     Career_InitCompetitionTeamSelectionFromTableHeaderSpec
-                movem.l (sp)+,a0
-                move.b  $A(a0),d0
-                ext.w   d0
-                move.w  d0,(numNeededTeams).l
-                clr.w   d0
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a0,-(sp)
+                jsr     _InitCompetitionTeamSelectionFromTableHeader
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== InitCompetitionTeamSelectionFromAltTableHeader =====
 ; prototype: unsigned __int16 __usercall InitCompetitionTeamSelectionFromAltTableHeader@<d0>(void *base@<a0>)
+; Ported to C: _InitCompetitionTeamSelectionFromAltTableHeader in career_init.c
+; Bridge: a0=base → C param, returns d0=0
 InitCompetitionTeamSelectionFromAltTableHeader:
-                clr.w   (careerFileBuffer).l
-                movem.l a0,-(sp)
-                jsr     LoadSomeEuroCup
-                movem.l (sp)+,a0
-                clr.w   (numSelectedTeams).l
-                movem.l a0,-(sp)
-                jsr     Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec
-                movem.l (sp)+,a0
-                move.b  $F(a0),d0
-                ext.w   d0
-                move.w  d0,(numNeededTeams).l
-                clr.w   d0
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a0,-(sp)
+                jsr     _InitCompetitionTeamSelectionFromAltTableHeader
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== IsNationalTeamCompetitionOrQualification =====
 ; prototype: unsigned __int16 __usercall IsNationalTeamCompetitionOrQualification@<d0>(const void *key@<a5>)
+; Ported to C: _IsNationalTeamCompetitionOrQualification in diy_competition.c
+; Bridge: a5=key → C param. Returns d0=0 if found (Z set), d0=1 if not found (Z clear).
 IsNationalTeamCompetitionOrQualification:
-                lea     (nationalTeamCompetitionsAndQualifications1).l,a0
-loc_127526:
-                cmpi.l  #$FFFFFFFF,(a0)
-                beq.s   loc_127534
-                cmpa.l  (a0)+,a5
-                bne.s   loc_127526
-                rts
-loc_127534:
-                move.w  #1,d0
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _IsNationalTeamCompetitionOrQualification
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                tst.w   d0
                 rts
 
 ; ===== InitCompetitionFromRecord =====
@@ -52141,77 +52118,14 @@ diyStatsName:
 ;     A6 -> player (file) + header
 ; 
 ; Form that weird 3-letter string that comes after player name in play match menu.
+; Ported to C: _FormTopSkillsString in src/play_match_menu.c
+; Bridge: a1=dst, a6=playerBase → C params
 FormTopSkillsString:
                 movem.l d0-d7/a0-a6,-(sp)
-                move.b  PLAYERFILE_POSITIONANDFACE+$4C(a6),d0
-                andi.w  #%11100000,d0
-                lsr.w   #5,d0
-                cmpi.w  #0,d0
-                beq.w   loc_138E10
-                subq.w  #1,d0
-                lsl.w   #2,d0
-                lea     (topSkillLettersEven).l,a2
-                lea     (topSkillBitRotEven).l,a3
-                move.b  PLAYERFILE_PRICE+$4C(a6),d1
-                move.b  PLAYERFILE_PLAYERNAME+$4C(a6),d2
-                eor.b   d2,d1
-                move.b  PLAYERFILE_PLAYERNAME+$4D(a6),d2
-                eor.b   d2,d1
-                btst    #0,d1
-                beq.s   loc_138DA4
-                lea     (topSkillLettersOdd).l,a2
-                lea     (topSkillBitRotOdd).l,a3
-loc_138DA4:
-                movea.l (a2,d0.w),a2
-                movea.l (a3,d0.w),a3
-                move.b  #$FF,d1
-                move.b  #$FF,d2
-                move.b  #$FF,d3
-                move.l  PLAYERFILE_PASSING+$4C(a6),d7
-                lsl.l   #4,d7
-                move.w  #6,d4
-loc_138DC2:
-                clr.w   d5
-                move.b  (a3)+,d5
-                move.l  d7,d0
-                rol.l   d5,d0
-                andi.w  #7,d0
-                cmp.b   d0,d1
-                bge.s   loc_138DE0
-                move.l  d2,d3
-                move.l  d1,d2
-                move.b  d0,d1
-                swap    d1
-                move.b  (a2),d1
-                swap    d1
-                bra.s   loc_138DFC
-loc_138DE0:
-                cmp.b   d0,d2
-                bge.s   loc_138DF0
-                move.l  d2,d3
-                move.b  d0,d2
-                swap    d2
-                move.b  (a2),d2
-                swap    d2
-                bra.s   loc_138DFC
-loc_138DF0:
-                cmp.b   d0,d3
-                bge.s   loc_138DFC
-                move.b  d0,d3
-                swap    d3
-                move.b  (a2),d3
-                swap    d3
-loc_138DFC:
-                lea     1(a2),a2
-                dbf     d4,loc_138DC2
-                swap    d1
-                move.b  d1,(a1)+
-                swap    d2
-                move.b  d2,(a1)+
-                swap    d3
-                move.b  d3,(a1)+
-loc_138E10:
-                clr.b   (a1)
+                move.l  a6,-(sp)
+                move.l  a1,-(sp)
+                jsr     _FormTopSkillsString
+                addq.l  #8,sp
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
 topSkillLettersEven:
@@ -72012,25 +71926,15 @@ loc_1468D4:
 ;      D0 - selected team number
 ; out:
 ;      D0 - selected team league
+; Ported to C: _GetTeamLeague in src/career_teams.c
+; Bridge: d0=teamNumber → C param, returns d0.w=league
 GetTeamLeague:
-                movem.l d1-d2,-(sp)
-                move.w  d0,d2
-                lsr.w   #8,d0
-                clr.w   (teamsLoaded).l
-                move.w  #1,(skipLeagueNumbers).l
-                jsr     LoadTeamFile
-                clr.w   (skipLeagueNumbers).l
-                clr.w   (teamsLoaded).l
-                lea     ((teamFileBuffer+2)).l,a0
-loc_14690E:
-                cmp.w   (a0),d2
-                beq.s   loc_146918
-                lea     684(a0),a0
-                bra.s   loc_14690E
-loc_146918:
-                move.b  TEAMFILE_LEAGUE(a0),d0
-                ext.w   d0
-                movem.l (sp)+,d1-d2
+                movem.l d1-d7/a0-a6,-(sp)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)
+                jsr     _GetTeamLeague
+                addq.l  #4,sp
+                movem.l (sp)+,d1-d7/a0-a6
                 rts
 
 ; ===== Career_CopyUnavailablePlayerToCareerTeamSlot =====

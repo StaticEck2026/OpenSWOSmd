@@ -265,3 +265,62 @@ void _ContinueCareer(void)
         _ActivateMenu(contestMenu);
     }
 }
+
+/* ================================================================
+ * Chunk 151: InitCompetitionTeamSelection functions
+ *
+ * These initialize team selection state for career competition setup.
+ * They all follow a similar pattern:
+ *   1. Clear careerFileBuffer
+ *   2. Call LoadSomeEuroCup
+ *   3. Clear numSelectedTeams
+ *   4. Call Career_InitCompetitionTeamSelectionFrom*Spec
+ *   5. Read numNeededTeams from the competition record
+ *   6. Return 0
+ * ================================================================ */
+extern uint16_t numSelectedTeams;
+extern uint16_t careerFileBuffer;
+extern uint16_t numNeededTeams;
+
+extern void _LoadSomeEuroCup(uint8_t *whichCup);
+extern void _Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *base, uint16_t idx);
+extern void _Career_InitCompetitionTeamSelectionFromTableHeaderSpec(uint8_t *base);
+extern void _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(uint8_t *base);
+
+__attribute__((used, externally_visible))
+uint16_t _InitCompetitionTeamSelectionFromTableEntry(uint16_t idx, uint8_t *base)
+{
+    careerFileBuffer = 0;
+    _LoadSomeEuroCup(base);
+    numSelectedTeams = 0;
+    _Career_InitCompetitionTeamSelectionFromTableEntrySpec(base, idx);
+
+    /* numNeededTeams = record byte at offset 0xD in idx'th 6-byte entry */
+    uint16_t offset = idx * 6;
+    numNeededTeams = (int8_t)base[0xD + offset];
+    return 0;
+}
+
+__attribute__((used, externally_visible))
+uint16_t _InitCompetitionTeamSelectionFromTableHeader(uint8_t *base)
+{
+    careerFileBuffer = 0;
+    _LoadSomeEuroCup(base);
+    numSelectedTeams = 0;
+    _Career_InitCompetitionTeamSelectionFromTableHeaderSpec(base);
+
+    numNeededTeams = (int8_t)base[0xA];
+    return 0;
+}
+
+__attribute__((used, externally_visible))
+uint16_t _InitCompetitionTeamSelectionFromAltTableHeader(uint8_t *base)
+{
+    careerFileBuffer = 0;
+    _LoadSomeEuroCup(base);
+    numSelectedTeams = 0;
+    _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(base);
+
+    numNeededTeams = (int8_t)base[0xF];
+    return 0;
+}

@@ -2764,6 +2764,22 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, only pre-existing warnings)
 - Cumulative: 1358 functions across 150 chunks
 
+### Chunk 151 — Utility Functions & Competition Init (7 → teams.c, play_match_menu.c, career_teams.c, diy_competition.c, career_init.c)
+- Date: 2026-03-02
+- Ported:
+  1. FormatPlayerValueOrStatusText (→teams.c) — formats player value/status as text (TRIAL/RES/LOAN/price XK/XM/X.YM)
+  2. FormTopSkillsString (→play_match_menu.c) — builds 3-letter skill abbreviation from player data
+  3. GetTeamLeague (→career_teams.c) — loads team file, scans for team number, returns league byte
+  4. IsNationalTeamCompetitionOrQualification (→diy_competition.c) — scans competition list, returns 0 (found) or 1 (not found)
+  5. InitCompetitionTeamSelectionFromTableEntry (→career_init.c) — init team selection from table entry spec
+  6. InitCompetitionTeamSelectionFromTableHeader (→career_init.c) — init team selection from table header spec
+  7. InitCompetitionTeamSelectionFromAltTableHeader (→career_init.c) — init team selection from alt table header spec
+- Stubs: all 7 register bridge stubs (FormatPlayerValueOrStatusText: a0,a1→stack; FormTopSkillsString: a1,a6→stack; GetTeamLeague: d0→stack; IsNationalTeamCompetitionOrQualification: a5→stack with tst.w d0; InitCompetitionTeamSelection*: d0,a0→stack or a0→stack)
+- New xrefs: _FormatPlayerValueOrStatusText, _FormTopSkillsString, _GetTeamLeague, _IsNationalTeamCompetitionOrQualification, _InitCompetitionTeamSelectionFromTableEntry, _InitCompetitionTeamSelectionFromTableHeader, _InitCompetitionTeamSelectionFromAltTableHeader
+- New xdefs: nationalTeamCompetitionsAndQualifications1, topSkillLettersEven, topSkillLettersOdd, topSkillBitRotEven, topSkillBitRotOdd, aTrial, aRes, aLoan, a01m, a0m, a1k
+- Build status: **verified** (clean build, only pre-existing warnings)
+- Cumulative: 1365 functions across 151 chunks
+
 ### Chunk 147 — BuyOtherPlayers Init/Finish + Pitch/Season Menu Callbacks (5 → transfer_market.c, menus.c)
 - Date: 2026-03-02
 - Ported:
@@ -3045,5 +3061,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 148   | 8         | 1335       |
 | 149   | 10        | 1345       |
 | 150   | 13        | 1358       |
+| 151   | 7         | 1365       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

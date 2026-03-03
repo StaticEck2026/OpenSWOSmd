@@ -2841,6 +2841,14 @@
         xref    _DIYLeagueTournament_DrawPlayMatchAndFixtureHeader
         xref    _DIYLeagueTournamentNextMatch
         xref    _DIYLeagueTournamentInit
+; --- Chunk 151 xrefs ---
+        xref    _FormatPlayerValueOrStatusText
+        xref    _FormTopSkillsString
+        xref    _GetTeamLeague
+        xref    _IsNationalTeamCompetitionOrQualification
+        xref    _InitCompetitionTeamSelectionFromTableEntry
+        xref    _InitCompetitionTeamSelectionFromTableHeader
+        xref    _InitCompetitionTeamSelectionFromAltTableHeader
 ; --- Chunk 144 xrefs ---
 ; --- Chunk 147 xrefs ---
         xref    _BuyOtherPlayersInit
@@ -3189,6 +3197,18 @@
         xdef    diyInitFocusOverride
         xdef    DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus
         xdef    aNextRound
+; --- Chunk 151 xdefs ---
+        xdef    nationalTeamCompetitionsAndQualifications1
+        xdef    topSkillLettersEven
+        xdef    topSkillLettersOdd
+        xdef    topSkillBitRotEven
+        xdef    topSkillBitRotOdd
+        xdef    aTrial
+        xdef    aRes
+        xdef    aLoan
+        xdef    a01m
+        xdef    a0m
+        xdef    a1k
 ; --- Chunk 149 xdefs ---
         xdef    aFriendly_1
         xdef    aPlayFriendly

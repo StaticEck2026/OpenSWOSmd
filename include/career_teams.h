@@ -2,6 +2,9 @@
 #pragma once
 #include "game_types.h"
 
+/* --- Team league lookup (Chunk 151) --- */
+int16_t _GetTeamLeague(uint16_t teamNumber);
+
 /* --- Team lookup --- */
 uint8_t *_GetTeamPointer(uint16_t teamId);
 uint8_t *_VerifyTeamLoaded(uint16_t teamNum);

@@ -3,6 +3,7 @@
 #include "file_io.h"
 #include "menus.h"
 #include "string_utils.h"
+#include "input_text.h"
 #include "panic.h"
 #include "diy_competition.h"
 #include "career_status.h"
@@ -1516,4 +1517,73 @@ void _SetTeamsTypeForSelectedContest(void)
     teamsType = 1;
     if (_IsClubTeamsContest(selectedContest) == 0)
         teamsType = 0;
+}
+
+/* ================================================================
+ * Chunk 151: FormatPlayerValueOrStatusText
+ *
+ * in: a0 = team entry base (player data at +0x4C)
+ *     a1 = destination buffer
+ *
+ * Checks player status byte at offset 0x71 from base:
+ *   0x9B -> "TRIAL"
+ *   0x9A -> "RES"
+ * Then checks flag byte at offset 0x66, bit 1:
+ *   set -> "LOAN"
+ * Otherwise: format as monetary value (K or M).
+ * ================================================================ */
+extern const char aTrial[];     /* "TRIAL" */
+extern const char aRes[];       /* "RES" */
+extern const char aLoan[];      /* "LOAN" */
+extern const char a01m[];       /* "\x9C%0.%1M" */
+extern const char a0m[];        /* "\x9C%0M" */
+extern const char a1k[];        /* "\x9C%1K" */
+
+__attribute__((used, externally_visible))
+void _FormatPlayerValueOrStatusText(uint8_t *base, uint8_t *dst)
+{
+    /* Check status byte at offset 0x71 */
+    if (base[0x71] == 0x9B) {
+        _StringCopy((const uint8_t *)aTrial, dst);
+        return;
+    }
+    if (base[0x71] == 0x9A) {
+        _StringCopy((const uint8_t *)aRes, dst);
+        return;
+    }
+    /* Check loan flag at offset 0x66, bit 1 */
+    if (base[0x66] & 0x02) {
+        _StringCopy((const uint8_t *)aLoan, dst);
+        return;
+    }
+
+    /* Normal player: get displayed value, look up base price */
+    uint16_t displayedVal = _GetDisplayedPlayerValue(base);
+    uint16_t price = avgTeamValueBases[displayedVal];
+
+    /* loc_127414: format value as currency string.
+     * price is in thousands of pounds. Split into millions and sub-millions. */
+    uint16_t millions = price / 1000;
+    uint16_t subK = price % 1000;
+
+    if (millions == 0) {
+        /* Less than 1M: format as "XK" — %1=price */
+        _PrintFormatted((const uint8_t *)a1k, dst, 0, price, 0, 0, 0, 0, 0, 0, 0, 0);
+    } else if (subK == 0) {
+        /* Exact millions: format as "XM" — %0=millions */
+        _PrintFormatted((const uint8_t *)a0m, dst, millions, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    } else {
+        /* Millions with decimal: check precision needed */
+        uint16_t tens = subK / 10;      /* 2 most significant digits */
+        uint16_t hundreds = tens / 10;   /* most significant digit */
+        uint16_t tensRemainder = tens % 10;
+
+        if (tensRemainder != 0) {
+            /* Two decimal places: "X.YZM" — %0=millions, %1=tens */
+            _PrintFormatted((const uint8_t *)a01m, dst, millions, tens, 0, 0, 0, 0, 0, 0, 0, 0);
+        } else {
+            /* One decimal place: "X.YM" — %0=millions, %1=hundreds */
+            _PrintFormatted((const uint8_t *)a01m, dst, millions, hundreds, 0, 0, 0, 0, 0, 0, 0, 0);
+        }
+    }
 }

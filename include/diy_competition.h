@@ -2,6 +2,9 @@
 #pragma once
 #include "game_types.h"
 
+/* --- National team competition check (Chunk 151) --- */
+uint16_t _IsNationalTeamCompetitionOrQualification(uint32_t key);
+
 /* --- Player Price Utilities --- */
 uint16_t _GetAveragePlayerPrice(uint8_t *team);
 uint32_t _GetLowestAndHighestPlayerPrice(void);

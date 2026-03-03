@@ -21,3 +21,8 @@ void _LoadLiverpool(void);
 
 /* --- ContinueCareer (Chunk 149) --- */
 void _ContinueCareer(void);
+
+/* --- InitCompetitionTeamSelection* (Chunk 151) --- */
+uint16_t _InitCompetitionTeamSelectionFromTableEntry(uint16_t idx, uint8_t *base);
+uint16_t _InitCompetitionTeamSelectionFromTableHeader(uint8_t *base);
+uint16_t _InitCompetitionTeamSelectionFromAltTableHeader(uint8_t *base);

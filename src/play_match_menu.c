@@ -1227,3 +1227,97 @@ void _DrawPlayerEntries(MenuEntry *a5) {
 
     _DrawMultipleItems(6, MEP(0x6C8));
 }
+
+/* ================================================================
+ * Chunk 151: FormTopSkillsString
+ *
+ * Forms the 3-letter skill abbreviation string shown after a player's
+ * name in the play match menu (e.g., "TSP", "HCF").
+ *
+ * in:  a1 = destination buffer (must hold 4 bytes)
+ *      a6 = player base (team entry pointer, player data at +0x4C)
+ *
+ * The algorithm:
+ * - Get position group (bits 7-5 of POSITIONANDFACE field)
+ * - Select even/odd skill letter and bit-rotation tables based on
+ *   XOR of price and first two name bytes (bit 0)
+ * - Extract 7 skill values (3-bit each) from PASSING longword via
+ *   rotating by amounts from the bit-rotation table
+ * - Pick the top 3 skill values and output their corresponding letters
+ * ================================================================ */
+#define PLAYERFILE_POSITIONANDFACE_OFF  0   /* relative to player data at +0x4C */
+#define PLAYERFILE_PRICE_OFF            (-1) /* relative to player data at +0x4C; price is at +0x4B */
+#define PLAYERFILE_PLAYERNAME_OFF       0    /* at +0x4C */
+#define PLAYERFILE_PASSING_OFF          7    /* at +0x53 = PASSING longword */
+
+extern uint32_t topSkillLettersEven[];  /* 7 pointers to letter strings */
+extern uint32_t topSkillLettersOdd[];
+extern uint32_t topSkillBitRotEven[];   /* 7 pointers to byte arrays */
+extern uint32_t topSkillBitRotOdd[];
+
+__attribute__((used, externally_visible))
+void _FormTopSkillsString(uint8_t *dst, uint8_t *playerBase)
+{
+    /* playerBase = a6 in asm, which points to team entry start.
+     * Player file data is at playerBase + 0x4C. */
+    uint8_t *pf = playerBase + 0x4C;
+
+    uint16_t posGroup = (pf[0] & 0xE0) >> 5;  /* bits 7-5 of POSITIONANDFACE */
+    if (posGroup == 0) {
+        /* Goalkeeper or position 0: no skill string */
+        *dst = 0;
+        return;
+    }
+    posGroup -= 1;  /* 0-based index into tables (0-6) */
+
+    /* Determine even/odd variant from XOR of price and name bytes */
+    uint8_t price = playerBase[0x4B];   /* PLAYERFILE_PRICE, 1 byte before +0x4C */
+    uint8_t name0 = pf[0];             /* first byte of player name at +0x4C */
+    uint8_t name1 = pf[1];             /* second byte at +0x4D */
+    uint8_t xorVal = price ^ name0 ^ name1;
+
+    const uint8_t *letters;
+    const uint8_t *bitRot;
+
+    if (xorVal & 1) {
+        letters = (const uint8_t *)topSkillLettersOdd[posGroup];
+        bitRot = (const uint8_t *)topSkillBitRotOdd[posGroup];
+    } else {
+        letters = (const uint8_t *)topSkillLettersEven[posGroup];
+        bitRot = (const uint8_t *)topSkillBitRotEven[posGroup];
+    }
+
+    /* Get PASSING longword at +0x53 (7 bytes into player data) and shift left 4 */
+    uint32_t d7 = *(uint32_t *)(pf + 7);
+    d7 <<= 4;
+
+    /* Find top 3 skill values. Each skill is extracted as 3 bits after
+     * rotating d7 left by the amount from bitRot[]. */
+    int16_t best1 = -1, best2 = -1, best3 = -1;   /* skill values */
+    uint8_t let1 = 0, let2 = 0, let3 = 0;          /* corresponding letters */
+
+    for (int16_t i = 0; i < 7; i++) {
+        uint8_t rot = bitRot[i];
+        uint32_t rotated = (d7 << rot) | (d7 >> (32 - rot));
+        uint8_t skillVal = (uint8_t)(rotated & 7);
+
+        if ((int8_t)skillVal > (int8_t)best1) {
+            best3 = best2; let3 = let2;
+            best2 = best1; let2 = let1;
+            best1 = skillVal;
+            let1 = letters[i];
+        } else if ((int8_t)skillVal > (int8_t)best2) {
+            best3 = best2; let3 = let2;
+            best2 = skillVal;
+            let2 = letters[i];
+        } else if ((int8_t)skillVal > (int8_t)best3) {
+            best3 = skillVal;
+            let3 = letters[i];
+        }
+    }
+
+    *dst++ = let1;
+    *dst++ = let2;
+    *dst++ = let3;
+    *dst = 0;
+}

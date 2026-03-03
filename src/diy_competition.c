@@ -7098,3 +7098,38 @@ void _DIYLeagueTournamentInit(void)
     /* Fall through (bra.w *+4 → FriendlyMenuReinit, but in context this is
      * actually a bra to the next instruction = fall-through/nop) */
 }
+
+/* ================================================================
+ * Chunk 151: IsNationalTeamCompetitionOrQualification
+ *
+ * Scans nationalTeamCompetitionsAndQualifications1 list for a match.
+ * Returns 0 if found (is national), 1 if not found.
+ *
+ * In asm, returns via Z flag: Z=set if found, Z=clear if not found.
+ * ================================================================ */
+extern uint32_t nationalTeamCompetitionsAndQualifications1[];
+
+__attribute__((used, externally_visible))
+uint16_t _IsNationalTeamCompetitionOrQualification(uint32_t key)
+{
+    uint32_t *p = nationalTeamCompetitionsAndQualifications1;
+    while (*p != 0xFFFFFFFF) {
+        if (*p == key)
+            return 0;  /* found — is national */
+        p++;
+    }
+    return 1;  /* not found — not national */
+}
+
+/* ================================================================
+ * Chunk 151: InitCompetitionFromRecord
+ *
+ * Dispatcher: checks record type byte at offset 1 and calls the
+ * appropriate init function.
+ *   type 0 → InitDIYCompetitionFromTableEntry
+ *   type 1 → InitDIYCupFromRecord
+ *   else   → InitDIYLeagueFromRecord
+ * ================================================================ */
+/* InitCompetitionFromRecord dispatches to InitDIY*FromRecord functions which
+ * are still in asm with register-based calling (d0=index, a0=rec).
+ * Must stay in asm until its callees are ported. */
