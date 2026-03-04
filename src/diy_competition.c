@@ -8507,3 +8507,359 @@ done:
     isCareer = 0;
     return 0;
 }
+
+/* ========================================================================
+ * Chunk 193 — DIY_PlayCupMatchAndAdvance, DIY_PlayOrSimulateLeagueFixture
+ * ======================================================================== */
+
+/* Externs for Chunk 193 */
+extern uint16_t careerMatchSimulatedFlag;
+
+/* DIY_PlayCupMatchAndAdvance
+ *
+ * Orchestrates a complete DIY cup match: routes to play/sim path based on mode,
+ * calls ProcessDIYKnockoutMatchResultAndCareerUpdates for result processing,
+ * updates competition state (match results, goals, penalties, indices),
+ * advances to next round when all matches complete, handles two-leg logic,
+ * and updates career stats if applicable.
+ *
+ * Params: allowSquadChanges (d6 — implicit), mode (d7)
+ * Returns 0 on success (Z=1), nonzero on cancel (Z=0).
+ */
+__attribute__((used, externally_visible))
+uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
+    uint8_t *base = diyCompetitionStart;
+
+    /* Set progressFieldA = 1 (offset 0x3A + 0xA = 0x44) */
+    *(uint16_t *)(base + 0x44) = 1;
+
+    _DIY_SyncProgressToDiyFileBufferCopy();
+
+    /* Get current match team slots → team pointers */
+    uint8_t *slot1, *slot2;
+    _DIY_GetCurrentMatchTeamSlots(&slot1, &slot2);
+
+    TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + *(uint32_t *)(slot1 + 0x344));
+    TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + *(uint32_t *)(slot2 + 0x344));
+
+    /* Route match based on mode */
+    if (mode == 0) {
+        /* Sim path: check if any team is human/coach (teamControls == 2 or 3) */
+        uint8_t ctrl1 = *((uint8_t *)team1 + 4); /* teamControls byte */
+        uint8_t ctrl2 = *((uint8_t *)team2 + 4);
+        if (ctrl1 == 2 || ctrl2 == 2 || ctrl1 == 3 || ctrl2 == 3) {
+            /* At least one human/coach team — show SetupPlayers with no squad changes */
+            _SetupPlayers(team1, team2, *(int16_t *)diyPointsForAWin,
+                          *(int16_t *)(base + 0x3C), 0, 0);
+            if (exitGameFlag != 0)
+                return 1;
+        }
+        /* Play sim match */
+        _InitInGameTeams_WithMatchParam((uint8_t *)team1, (uint8_t *)team2);
+    } else if (mode == 1) {
+        if (_PlayDIYCupFixtureAndCacheResult(team1, team2, allowSquadChanges, 0) != 0)
+            return 1;
+    } else if (mode == 3) {
+        if (_PlayDIYCupFixtureAndCacheResult(team1, team2, allowSquadChanges, 1) != 0)
+            return 1;
+    } else {
+        /* mode==2 or other */
+        if (_PlayDIYCupFixtureAndCacheResult(team1, team2, allowSquadChanges, 0) != 0)
+            return 1;
+    }
+
+    /* === Post-match processing === */
+
+    /* Load first-leg goals (d5/d6) if two-leg enabled */
+    uint16_t firstLeg1 = 0, firstLeg2 = 0;
+    if (*(uint16_t *)(base + 0x14A) != 0) {
+        uint16_t mIdx = *(uint16_t *)(base + 0x64);
+        uint8_t *goalsTable = base + 0x14E;
+        firstLeg1 = goalsTable[mIdx * 2];
+        firstLeg2 = goalsTable[mIdx * 2 + 1];
+    }
+
+    /* Process knockout match result → d4/d5/d6/d7 */
+    uint16_t packedGoals, packedAggregate, packedPenalty, resultFlags;
+    _ProcessDIYKnockoutMatchResultAndCareerUpdates(team1, team2, firstLeg1, firstLeg2,
+        &packedGoals, &packedAggregate, &packedPenalty, &resultFlags);
+
+    uint8_t *a3 = base;
+
+    /* Store result flags byte at base + 0x8A + matchIndex */
+    uint16_t matchIdx = *(uint16_t *)(a3 + 0x64);
+    *(uint8_t *)(a3 + 0x8A + matchIdx) = (uint8_t)resultFlags;
+
+    /* Store packed goals at base + 0xCA + matchIndex*2 */
+    uint16_t mIdx2 = matchIdx * 2;
+    *(uint16_t *)(a3 + 0xCA + mIdx2) = packedGoals;
+
+    /* If field14A == 0, store aggregate at base + 0x14E + matchIndex*2 */
+    if (*(uint16_t *)(a3 + 0x14A) == 0) {
+        *(uint16_t *)(a3 + 0x14E + mIdx2) = packedAggregate;
+    }
+
+    /* Store penalty at base + 0x1CE + matchIndex*2 */
+    *(uint16_t *)(a3 + 0x1CE + mIdx2) = packedPenalty;
+
+    /* Increment match counter */
+    *(uint16_t *)(a3 + 0x332) += 1;
+
+    /* Check if career team was in this match */
+    if (team1 == &careerTeam || team2 == &careerTeam) {
+        *(uint16_t *)(a3 + 0x46) = 1;  /* progressFieldC */
+        careerMatchSimulatedFlag = 1;
+    }
+
+    _DIY_SyncProgressToDiyFileBufferCopy();
+
+    /* Advance match index */
+    *(uint16_t *)(a3 + 0x64) += 1;
+    *(uint16_t *)(a3 + 0x54) = 0; /* clear currentRound flag */
+
+    uint16_t newMatchIdx = *(uint16_t *)(a3 + 0x64);
+    uint16_t totalRounds = *(uint16_t *)(a3 + 0x52);
+
+    if (newMatchIdx == totalRounds) {
+        /* All matches in this round completed */
+        *(uint16_t *)(a3 + 0x54) = 1;
+        *(uint16_t *)(a3 + 0x64) = 0; /* reset matchIndex */
+
+        /* Update viewRandomPhase for next round from month table */
+        uint8_t *monthTable = a3 + 0x338;
+        uint16_t curMonthIdx = *(uint16_t *)(a3 + 0x336);
+        uint16_t totalMonths = *(uint16_t *)(a3 + 0x334);
+        if (curMonthIdx + 1 != totalMonths) {
+            a3[0x2F] = monthTable[curMonthIdx + 1];
+            viewRandomPhase = a3[0x2F];
+        }
+    }
+
+    /* Career stat updates if applicable */
+    if (careerLoadedFlag == 0 && (gameType == 4 || gameType == 3)) {
+        _Career_UpdateStatsAfterMatch((uint8_t *)team1, (uint8_t *)team2,
+            1, packedGoals, packedAggregate, packedPenalty, resultFlags);
+    }
+
+    /* Check if round is complete */
+    if (*(uint16_t *)(a3 + 0x54) == 0)
+        return 0;
+
+    /* Two-leg check: if 2-leg format and first leg wasn't played yet, stop */
+    if (*(uint16_t *)(a3 + 0x14C) == 2) {
+        if (*(uint16_t *)(a3 + 0x14A) != 1)
+            return 0;
+    }
+
+    /* Round complete — determine next action */
+    if (*(uint16_t *)(a3 + 0x48) != 0)
+        goto final_or_groups; /* hasGroups → skip to final/groups handler */
+
+    /* Non-groups: check if more rounds remain */
+    {
+        uint16_t curExit = *(uint16_t *)(a3 + 0x58);
+        if (curExit + 1 != *(uint16_t *)(a3 + 0x5A)) {
+            /* More rounds: recount, check unselected, shuffle */
+            _DIY_RecountMissingTeamsInTeamGrid();
+            _DIY_CountUnselectedTeams();
+            if (*(uint16_t *)(a3 + 0x330) == 0)
+                _DIY_ShuffleTeamOrderList();
+            return 0;
+        }
+    }
+
+final_or_groups:
+    /* Final round or groups completion handler */
+    _DIY_RecountMissingTeamsInTeamGrid();
+    if (_DIY_CountUnselectedTeams() != 0)
+        return 0;
+
+    /* All teams accounted for — competition/stage finished */
+    *(uint16_t *)(a3 + 0x56) = 1; /* finishedFlag = 1 */
+
+    if (*(uint16_t *)(a3 + 0x48) != 0) {
+        /* Has groups: check if this groups stage is done */
+        uint16_t bufCopyCurRound = *(uint16_t *)(diyFileBufferCopy + 0x54);
+        uint16_t bufCopyTotalRounds = *(uint16_t *)(diyFileBufferCopy + 0x52);
+        if (bufCopyCurRound + 1 != bufCopyTotalRounds)
+            return 0; /* groups stage not done yet */
+    }
+
+    /* Determine competition winner from grid bracket */
+    {
+        int8_t slotIdx = (int8_t)a3[0x2CE]; /* first grid slot */
+        if (a3[0x8A] & 0x01)  /* bit 0 of match result flags[0] */
+            slotIdx = (int8_t)a3[0x2CF]; /* second grid slot */
+        int16_t slotWord = (int16_t)slotIdx;
+        *(int16_t *)(a3 + 0x3A) = *(int16_t *)(a3 + 0x24E + slotWord * 2); /* resultCode */
+    }
+
+    return 0;
+}
+
+/* DIY_PlayOrSimulateLeagueFixture
+ *
+ * Orchestrates a complete DIY league match: routes to play/sim path based on
+ * selector, calls ProcessDIYLeagueMatchResultAndCareerUpdates, advances league
+ * progress, updates league table (wins/draws/losses/goals/points), sorts
+ * standings, and processes promotions/relegations.
+ *
+ * Params: allowSquadChanges (d6 — implicit), selector (d7)
+ * Returns 0 on success (Z=1), nonzero on cancel (Z=0).
+ */
+__attribute__((used, externally_visible))
+uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t selector) {
+    uint8_t *base = diyCompetitionStart;
+
+    /* Set progressFieldA = 1 (offset 0x3A + 0xA = 0x44) */
+    *(uint16_t *)(base + 0x44) = 1;
+
+    _DIY_SyncProgressToDiyFileBufferCopy();
+
+    /* Get current fixture team comp pointers */
+    _DIY_GetCurrentFixtureTeamPtrs();
+    uint8_t *compPtr1 = fixtureTeam1CompPtr;
+    uint8_t *compPtr2 = fixtureTeam2CompPtr;
+
+    /* Build team file pointers from comp ptr offsets */
+    TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + *(uint32_t *)(compPtr1 + 0x2B4));
+    TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + *(uint32_t *)(compPtr2 + 0x2B4));
+
+    /* Route match based on selector */
+    if (selector == 0) {
+        /* Sim path: check if any team is human/coach (teamControls == 2 or 3) */
+        uint8_t ctrl1 = *((uint8_t *)team1 + 4);
+        uint8_t ctrl2 = *((uint8_t *)team2 + 4);
+        if (ctrl1 == 2 || ctrl2 == 2 || ctrl1 == 3 || ctrl2 == 3) {
+            /* At least one human/coach team — show SetupPlayers */
+            _SetupPlayers(team1, team2, (int16_t)diyLeagueMaxSubstitutes,
+                          *(int16_t *)(base + 0x3C), 0, 0);
+            if (exitGameFlag != 0)
+                return 1;
+        }
+        /* Sim match */
+        _InitInGameTeams_WithMatchParam((uint8_t *)team1, (uint8_t *)team2);
+    } else if (selector == 1) {
+        if (_PlayDIYLeagueMatchAndCacheResult(team1, team2, allowSquadChanges, 0) != 0)
+            return 1;
+    } else if (selector == 3) {
+        if (_PlayDIYLeagueMatchAndCacheResult(team1, team2, allowSquadChanges, 1) != 0)
+            return 1;
+    } else {
+        /* selector==2: explicitly set allowSquadChanges=1, mode=0 */
+        if (_PlayDIYLeagueMatchAndCacheResult(team1, team2, 1, 0) != 0)
+            return 1;
+    }
+
+    /* === Post-match processing === */
+
+    /* Get match results */
+    uint16_t goals1, goals2, flags;
+    _ProcessDIYLeagueMatchResultAndCareerUpdates(team1, team2, &goals1, &goals2, &flags);
+
+    /* Advance league progress using comp pointers */
+    _DIY_AdvanceLeagueProgressAfterMatch(compPtr1, compPtr2);
+
+    /* Check if career team was in this match */
+    if (team1 == &careerTeam || team2 == &careerTeam) {
+        *(uint16_t *)(base + 0x46) = 1;  /* progressFieldC */
+        careerMatchSimulatedFlag = 1;
+    }
+
+    _DIY_SyncProgressToDiyFileBufferCopy();
+
+    /* Career stat updates if applicable */
+    if (careerLoadedFlag == 0 && (gameType == 4 || gameType == 3)) {
+        uint16_t packedGoals = (goals1 << 8) + goals2;
+        _Career_UpdateStatsAfterMatch((uint8_t *)team1, (uint8_t *)team2,
+            0, packedGoals, 0, 0, flags);
+    }
+
+    /* Increment total match counter (base + 0x3A + 0x184 = base + 0x1BE) */
+    *(uint16_t *)(base + 0x1BE) += 1;
+
+    /* League table updates */
+    uint16_t d1 = goals1, d2 = goals2;
+    if (d1 != d2) {
+        if (d1 > d2) {
+            /* Team 1 wins */
+            *(uint16_t *)(compPtr1 + 0x2BA) += 1; /* wins */
+            *(uint16_t *)(compPtr2 + 0x2BE) += 1; /* losses */
+            *(uint16_t *)(compPtr1 + 0x2C4) += *(uint16_t *)(base + 0x62); /* points += pointsForAWin */
+        } else {
+            /* Team 2 wins */
+            *(uint16_t *)(compPtr1 + 0x2BE) += 1; /* losses */
+            *(uint16_t *)(compPtr2 + 0x2BA) += 1; /* wins */
+            *(uint16_t *)(compPtr2 + 0x2C4) += *(uint16_t *)(base + 0x62); /* points += pointsForAWin */
+        }
+    } else {
+        /* Draw */
+        *(uint16_t *)(compPtr1 + 0x2BC) += 1; /* draws */
+        *(uint16_t *)(compPtr2 + 0x2BC) += 1; /* draws */
+        *(uint16_t *)(compPtr1 + 0x2C4) += 1; /* points += 1 */
+        *(uint16_t *)(compPtr2 + 0x2C4) += 1; /* points += 1 */
+    }
+
+    /* Goals always update */
+    *(uint16_t *)(compPtr1 + 0x2C0) += d1; /* goalsFor */
+    *(uint16_t *)(compPtr1 + 0x2C2) += d2; /* goalsAgainst */
+    *(uint16_t *)(compPtr2 + 0x2C0) += d2; /* goalsFor */
+    *(uint16_t *)(compPtr2 + 0x2C2) += d1; /* goalsAgainst */
+
+    /* Sort standings and process promotions/relegations if diyMinSubstitutes == 0 */
+    if (diyMinSubstitutes == 0) {
+        _DIY_SortLeagueTableByStandings();
+
+        uint8_t *a5 = diyCompetitionStart;
+        uint16_t *standingsLookup = (uint16_t *)(a5 + 0x12E); /* standings lookup table */
+        uint16_t *promRelOutput = (uint16_t *)(a5 + 0x1AE);   /* promotions/relegations output */
+
+        /* Determine winner */
+        int16_t doWinner = 1;
+        if (*(uint16_t *)(a5 + 0x48) != 0) {
+            /* Has groups — only determine winner if all group rounds done */
+            uint16_t bufCopyCurRound = *(uint16_t *)(diyFileBufferCopy + 0x54);
+            if (bufCopyCurRound + 1 != *(uint16_t *)(diyFileBufferCopy + 0x52))
+                doWinner = 0;
+        }
+        if (doWinner) {
+            int16_t ranking = *(int16_t *)(a5 + 0x6E);
+            uint16_t idx = (uint16_t)((uint32_t)(uint16_t)ranking / 18);
+            *(int16_t *)(a5 + 0x3A) = (int16_t)standingsLookup[idx];
+        }
+
+        /* Process promotions */
+        {
+            uint16_t numPromotions = *(uint16_t *)(a5 + 0x56);
+            if (numPromotions != 0) {
+                int16_t *rankings = (int16_t *)(a5 + 0x6E);
+                uint16_t promOffset = *(uint16_t *)(a5 + 0x54);
+                int16_t *src = rankings + promOffset;
+                for (uint16_t i = 0; i < numPromotions; i++) {
+                    int16_t rank = *src++;
+                    uint16_t lookupIdx = (uint16_t)((uint32_t)(uint16_t)rank / 18);
+                    *promRelOutput++ = standingsLookup[lookupIdx];
+                }
+            }
+        }
+
+        /* Process relegations */
+        {
+            uint16_t numRelegations = *(uint16_t *)(a5 + 0x5A);
+            if (numRelegations != 0) {
+                int16_t *rankings = (int16_t *)(a5 + 0x6E);
+                uint16_t totalEntries = *(uint16_t *)(a5 + 0x32);
+                uint16_t field58 = *(uint16_t *)(a5 + 0x58);
+                uint16_t relOffset = totalEntries - field58 - numRelegations;
+                int16_t *src = rankings + relOffset;
+                for (uint16_t i = 0; i < numRelegations; i++) {
+                    int16_t rank = *src++;
+                    uint16_t lookupIdx = (uint16_t)((uint32_t)(uint16_t)rank / 18);
+                    *promRelOutput++ = standingsLookup[lookupIdx];
+                }
+            }
+        }
+    }
+
+    return 0;
+}

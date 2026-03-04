@@ -29956,193 +29956,19 @@ DIY_CompareCurrentMatchTeamCategories:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== DIY_PlayCupMatchAndAdvance =====
+; ===== DIY_PlayCupMatchAndAdvance ===== (ported to C → _DIY_PlayCupMatchAndAdvance)
 ; prototype: void __usercall DIY_PlayCupMatchAndAdvance(unsigned __int16 mode@<d7>)
+; d6=allowSquadChanges (implicit), d7=mode → C params
 DIY_PlayCupMatchAndAdvance:
-                move.w  #1,(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+$A).l
-                bsr.w   DIY_SyncProgressToDiyFileBufferCopy
-                bsr.s   DIY_GetCurrentMatchTeamSlots
-                movea.l $344(a1),a1
-                adda.l  #selTeamsPtr,a1
-                movea.l $344(a2),a2
-                adda.l  #selTeamsPtr,a2
-                tst.w   d7
-                beq.s   loc_12A630
-                cmpi.w  #1,d7
-                beq.s   loc_12A624
-                cmpi.w  #3,d7
-                beq.s   loc_12A616
-                clr.w   d7
-                bsr.w   PlayDIYCupFixtureAndCacheResult
-                bne.w   locret_12A848
-                bra.s   loc_12A676
-loc_12A616:
-                move.w  #1,d7
-                bsr.w   PlayDIYCupFixtureAndCacheResult
-                bne.w   locret_12A848
-                bra.s   loc_12A676
-loc_12A624:
-                clr.w   d7
-                bsr.w   PlayDIYCupFixtureAndCacheResult
-                bne.w   locret_12A848
-                bra.s   loc_12A676
-loc_12A630:
-                cmpi.b  #2,4(a1)
-                beq.s   loc_12A650
-                cmpi.b  #2,4(a2)
-                beq.s   loc_12A650
-                cmpi.b  #3,4(a1)
-                beq.s   loc_12A650
-                cmpi.b  #3,4(a2)
-                bne.s   loc_12A66C
-loc_12A650:
-                move.w  (diyPointsForAWin).l,d1
-                move.w  (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+2).l,d2
-                clr.w   d6
-                bsr.w   SetupPlayers
-                tst.w   (exitGameFlag).l
-                bne.w   locret_12A848
-loc_12A66C:
-                jsr     InitInGameTeams_WithMatchParam_Alt
-                bra.w   *+4
-loc_12A676:
-                lea     (diyCompetitionStart).l,a0
-                tst.w   DIY_COMPETITION_FIELD_2+$148(a0)
-                beq.s   loc_12A698
-                move.w  $64(a0),d0
-                lsl.w   #1,d0
-                lea     $14E(a0),a0
-                clr.w   d5
-                clr.w   d6
-                move.b  (a0,d0.w),d5
-                move.b  1(a0,d0.w),d6
-loc_12A698:
-                movem.l a1-a2,-(sp)
-                bsr.w   ProcessDIYKnockoutMatchResultAndCareerUpdates
-                movem.l (sp)+,a1-a2
-                move.w  (diyCompetitionStart+DIY_COMPETITION_FIELD_2+$2A).l,d0
-                move.w  d4,d1
-                lsr.w   #8,d1
-                move.w  d4,d2
-                andi.w  #$FF,d2
-                lea     (diyCompetitionStart).l,a3
-                lea     DIY_COMPETITION_FIELD_2+$88(a3),a0
-                move.w  $64(a3),d0
-                lea     (a0,d0.w),a0
-                move.b  d7,(a0)
-                move.w  $64(a3),d0
-                lsl.w   #1,d0
-                lea     $CA(a3),a0
-                lea     (a0,d0.w),a0
-                move.w  d4,(a0)
-                tst.w   $14A(a3)
-                bne.s   loc_12A6E8
-                lea     $14E(a3),a0
-                lea     (a0,d0.w),a0
-                move.w  d5,(a0)
-loc_12A6E8:
-                lea     $1CE(a3),a0
-                lea     (a0,d0.w),a0
-                move.w  d6,(a0)
-                move.w  d4,d1
-                lsr.w   #8,d1
-                move.w  d4,d2
-                andi.w  #$FF,d2
-                addq.w  #1,$332(a3)
-                cmpa.l  #careerTeam,a1
-                beq.s   loc_12A710
-                cmpa.l  #careerTeam,a2
-                bne.s   loc_12A71E
-loc_12A710:
-                move.w  #1,$46(a3)
-                move.w  #1,(careerMatchSimulatedFlag).l
-loc_12A71E:
-                bsr.w   DIY_SyncProgressToDiyFileBufferCopy
-                addq.w  #1,$64(a3)
-                clr.w   $54(a3)
-                move.w  $64(a3),d0
-                cmp.w   $52(a3),d0
-                bne.s   loc_12A75C
-                move.w  #1,$54(a3)
-                clr.w   $64(a3)
-                lea     $338(a3),a0
-                move.w  $336(a3),d0
-                addq.w  #1,d0
-                cmp.w   $334(a3),d0
-                beq.s   loc_12A75C
-                move.b  (a0,d0.w),$2F(a3)
-                move.b  $2F(a3),(viewRandomPhase).l
-loc_12A75C:
-                tst.w   (careerLoadedFlag).l
-                bne.s   loc_12A788
-                cmpi.w  #4,(gameType).l
-                beq.s   loc_12A778
-                cmpi.w  #3,(gameType).l
-                bne.s   loc_12A788
-loc_12A778:
-                move.w  #1,d0
-                movem.l d1-d2/a1-a5,-(sp)
-                bsr.w   Career_UpdateStatsAfterMatch
-                movem.l (sp)+,d1-d2/a1-a5
-loc_12A788:
-                tst.w   $54(a3)
-                beq.w   loc_12A846
-                cmpi.w  #2,$14C(a3)
-                bne.s   loc_12A7A2
-                cmpi.w  #1,$14A(a3)
-                bne.w   loc_12A846
-loc_12A7A2:
-                tst.w   $48(a3)
-                bne.s   loc_12A7E0
-                move.w  $58(a3),d0
-                addq.w  #1,d0
-                cmp.w   $5A(a3),d0
-                beq.s   loc_12A7E0
-                movem.l d1-d2/a1-a3,-(sp)
-                bsr.w   DIY_RecountMissingTeamsInTeamGrid
-                movem.l (sp)+,d1-d2/a1-a3
-                movem.l d1-d2/a1-a3,-(sp)
-                bsr.w   DIY_CountUnselectedTeams
-                movem.l (sp)+,d1-d2/a1-a3
-                tst.w   $330(a3)
-                bne.s   loc_12A846
-                movem.l d1-d2/a1-a3,-(sp)
-                bsr.w   DIY_ShuffleTeamOrderList
-                movem.l (sp)+,d1-d2/a1-a3
-                bra.s   loc_12A846
-loc_12A7E0:
-                movem.l d1-d2/a1-a3,-(sp)
-                bsr.w   DIY_RecountMissingTeamsInTeamGrid
-                movem.l (sp)+,d1-d2/a1-a3
-                movem.l d1-d2/a1-a3,-(sp)
-                bsr.w   DIY_CountUnselectedTeams
-                movem.l (sp)+,d1-d2/a1-a3
-                bne.s   loc_12A846
-                move.w  #1,$56(a3)
-                tst.w   $48(a3)
-                beq.s   loc_12A816
-                move.w  (diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$1A).l,d0
-                addq.w  #1,d0
-                cmp.w   (diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$18).l,d0
-                bne.s   loc_12A834
-loc_12A816:
-                move.b  $2CE(a3),d0
-                btst    #0,$8A(a3)
-                beq.s   loc_12A826
-                move.b  $2CF(a3),d0
-loc_12A826:
-                ext.w   d0
-                lsl.w   #1,d0
-                lea     $24E(a3),a0
-                move.w  (a0,d0.w),$3A(a3)
-loc_12A834:
-                tst.w   $48(a3)
-                beq.w   loc_12A846
-                cmpi.w  #2,$48(a3)
-                bne.w   *+4
-loc_12A846:
-                clr.w   d0
-locret_12A848:
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d7
+                move.l  d7,-(sp)        ; mode
+                andi.l  #$FFFF,d6
+                move.l  d6,-(sp)        ; allowSquadChanges
+                jsr     _DIY_PlayCupMatchAndAdvance
+                addq.l  #8,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                tst.w   d0
                 rts
 
 ; ===== DIY_SyncProgressToDiyFileBufferCopy =====
@@ -30265,179 +30091,19 @@ DIY_AdvanceLeagueProgressAfterMatch:
 DIY_GetCurrentFixtureTeamClass:
                 jmp     _DIY_GetCurrentFixtureTeamClass
 
-; ===== DIY_PlayOrSimulateLeagueFixture =====
+; ===== DIY_PlayOrSimulateLeagueFixture ===== (ported to C → _DIY_PlayOrSimulateLeagueFixture)
 ; prototype: __int16 __usercall DIY_PlayOrSimulateLeagueFixture@<d0>(__int16 selector@<d7>)
+; d6=allowSquadChanges (implicit), d7=selector → C params
 DIY_PlayOrSimulateLeagueFixture:
-                move.w  #1,(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+$A).l
-                bsr.w   DIY_SyncProgressToDiyFileBufferCopy_2
-                bsr.w   DIY_GetCurrentFixtureTeamPtrs
-                movea.l a1,a3
-                movea.l a2,a4
-                movea.l $2B4(a1),a1
-                adda.l  #selTeamsPtr,a1
-                movea.l $2B4(a2),a2
-                adda.l  #selTeamsPtr,a2
-                tst.w   d7
-                beq.s   loc_12AE24
-                cmpi.w  #1,d7
-                beq.s   loc_12AE18
-                cmpi.w  #3,d7
-                beq.s   loc_12AE0A
-                clr.w   d7
-                move.w  #1,d6
-                bsr.w   PlayDIYLeagueMatchAndCacheResult
-                bne.w   locret_12AFEC
-                bra.s   loc_12AE6A
-loc_12AE0A:
-                move.w  #1,d7
-                bsr.w   PlayDIYLeagueMatchAndCacheResult
-                bne.w   locret_12AFEC
-                bra.s   loc_12AE6A
-loc_12AE18:
-                clr.w   d7
-                bsr.w   PlayDIYLeagueMatchAndCacheResult
-                bne.w   locret_12AFEC
-                bra.s   loc_12AE6A
-loc_12AE24:
-                cmpi.b  #2,4(a1)
-                beq.s   loc_12AE44
-                cmpi.b  #2,4(a2)
-                beq.s   loc_12AE44
-                cmpi.b  #3,4(a1)
-                beq.s   loc_12AE44
-                cmpi.b  #3,4(a2)
-                bne.s   loc_12AE60
-loc_12AE44:
-                move.w  (diyLeagueMaxSubstitutes).l,d1
-                move.w  (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+2).l,d2
-                clr.w   d6
-                bsr.w   SetupPlayers
-                tst.w   (exitGameFlag).l
-                bne.w   locret_12AFEC
-loc_12AE60:
-                jsr     InitInGameTeams_WithMatchParam
-                bra.w   *+4
-loc_12AE6A:
-                movem.l a1-a4,-(sp)
-                bsr.w   ProcessDIYLeagueMatchResultAndCareerUpdates
-                movem.l (sp)+,a1-a4
-                movem.l d1-d2/d7/a1-a2,-(sp)
-                movea.l a3,a1
-                movea.l a4,a2
-                bsr.w   DIY_AdvanceLeagueProgressAfterMatch
-                movem.l (sp)+,d1-d2/d7/a1-a2
-                cmpa.l  #careerTeam,a1
-                beq.s   loc_12AE96
-                cmpa.l  #careerTeam,a2
-                bne.s   loc_12AEA6
-loc_12AE96:
-                move.w  #1,(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+$C).l
-                move.w  #1,(careerMatchSimulatedFlag).l
-loc_12AEA6:
-                bsr.w   DIY_SyncProgressToDiyFileBufferCopy_2
-                move.w  (diyCompetitionStart+DIY_COMPETITION_FIELD_2+$2A).l,d0
-                tst.w   (careerLoadedFlag).l
-                bne.s   loc_12AEE2
-                cmpi.w  #4,(gameType).l
-                beq.s   loc_12AECC
-                cmpi.w  #3,(gameType).l
-                bne.s   loc_12AEE2
-loc_12AECC:
-                move.w  d1,d4
-                lsl.w   #8,d4
-                add.w   d2,d4
-                move.w  #0,d0
-                movem.l d1-d2/a1-a4,-(sp)
-                bsr.w   Career_UpdateStatsAfterMatch
-                movem.l (sp)+,d1-d2/a1-a4
-loc_12AEE2:
-                lea     (diyCompetitionStart).l,a0
-                addq.w  #1,DIY_COMPETITION_FIELD_3A+$184(a0)
-                cmp.w   d2,d1
-                beq.s   loc_12AF16
-                bcs.s   loc_12AF04
-                addq.w  #1,$2BA(a3)
-                addq.w  #1,$2BE(a4)
-                move.w  $62(a0),d0
-                add.w   d0,$2C4(a3)
-                bra.s   loc_12AF26
-loc_12AF04:
-                addq.w  #1,$2BE(a3)
-                addq.w  #1,$2BA(a4)
-                move.w  $62(a0),d0
-                add.w   d0,$2C4(a4)
-                bra.s   loc_12AF26
-loc_12AF16:
-                addq.w  #1,$2BC(a3)
-                addq.w  #1,$2BC(a4)
-                addq.w  #1,$2C4(a3)
-                addq.w  #1,$2C4(a4)
-loc_12AF26:
-                add.w   d1,$2C0(a3)
-                add.w   d2,$2C2(a3)
-                add.w   d2,$2C0(a4)
-                add.w   d1,$2C2(a4)
-                tst.w   (diyMinSubstitutes).l
-                bne.w   loc_12AFEA
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   DIY_SortLeagueTableByStandings
-                lea     (diyCompetitionStart).l,a5
-                lea     $12E(a5),a2
-                lea     $1AE(a5),a3
-                tst.w   $48(a5)
-                beq.s   loc_12AF6C
-                move.w  (diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$1A).l,d0
-                addq.w  #1,d0
-                cmp.w   (diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$18).l,d0
-                bne.s   loc_12AF7E
-loc_12AF6C:
-                move.w  $6E(a5),d0
-                ext.l   d0
-                divu.w  #$12,d0
-                lsl.w   #1,d0
-                move.w  (a2,d0.w),$3A(a5)
-loc_12AF7E:
-                tst.w   $48(a5)
-                beq.w   loc_12AF90
-                cmpi.w  #2,$48(a5)
-                bne.w   *+4
-loc_12AF90:
-                move.w  $56(a5),d1
-                beq.s   loc_12AFB8
-                lea     $6E(a5),a1
-                move.w  $54(a5),d0
-                lsl.w   #1,d0
-                lea     (a1,d0.w),a1
-                subq.w  #1,d1
-loc_12AFA6:
-                move.w  (a1)+,d0
-                ext.l   d0
-                divu.w  #$12,d0
-                lsl.w   #1,d0
-                move.w  (a2,d0.w),(a3)+
-                dbf     d1,loc_12AFA6
-loc_12AFB8:
-                move.w  $5A(a5),d1
-                beq.s   loc_12AFE6
-                lea     $6E(a5),a1
-                move.w  $32(a5),d0
-                sub.w   $58(a5),d0
-                sub.w   d1,d0
-                lsl.w   #1,d0
-                lea     (a1,d0.w),a1
-                subq.w  #1,d1
-loc_12AFD4:
-                move.w  (a1)+,d0
-                ext.l   d0
-                divu.w  #$12,d0
-                lsl.w   #1,d0
-                move.w  (a2,d0.w),(a3)+
-                dbf     d1,loc_12AFD4
-loc_12AFE6:
-                movem.l (sp)+,d0-d7/a0-a6
-loc_12AFEA:
-                clr.w   d0
-locret_12AFEC:
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d7
+                move.l  d7,-(sp)        ; selector
+                andi.l  #$FFFF,d6
+                move.l  d6,-(sp)        ; allowSquadChanges
+                jsr     _DIY_PlayOrSimulateLeagueFixture
+                addq.l  #8,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                tst.w   d0
                 rts
 
 ; ===== DIY_SyncProgressToDiyFileBufferCopy_2 =====

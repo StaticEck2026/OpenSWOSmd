@@ -1621,6 +1621,10 @@
         xref    _PlayDIYLeagueMatchAndCacheResult
         xref    _PlayDIYCupFixtureAndCacheResult
 
+        ; Chunk 193 xrefs
+        xref    _DIY_PlayCupMatchAndAdvance
+        xref    _DIY_PlayOrSimulateLeagueFixture
+
         ; Chunk 91 xrefs
         xref    _GetTeamPointer
         xref    _GetPlayer

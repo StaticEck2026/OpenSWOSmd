@@ -3080,6 +3080,15 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, map confirmed at 0x00154256 / 0x0015439e)
 - Cumulative: 1507 functions across 190 chunks
 
+### Chunk 193 — DIY_PlayCupMatchAndAdvance + DIY_PlayOrSimulateLeagueFixture (2 → diy_competition.c)
+- Date: 2026-03-02
+- Ported:
+  1. DIY_PlayCupMatchAndAdvance (→diy_competition.c) — ~190 instr. Full DIY cup match orchestration: mode routing (0=sim, 1/2=play mode 0, 3=play mode 1), calls SetupPlayers for sim path with human teams, PlayDIYCupFixtureAndCacheResult for play paths. Post-match: loads first-leg goals, ProcessDIYKnockoutMatchResultAndCareerUpdates, stores results/goals/penalties to competition tables. Round advancement with match counter, month table viewRandomPhase update. Career stat update (compType=1). Two-leg check, round completion with groups/non-groups paths, team shuffle, competition finish with grid bracket winner determination.
+  2. DIY_PlayOrSimulateLeagueFixture (→diy_competition.c) — ~175 instr. Full DIY league match orchestration: similar mode routing, uses DIY_GetCurrentFixtureTeamPtrs + fixtureTeam1CompPtr/fixtureTeam2CompPtr globals for comp pointer tracking. Post-match: ProcessDIYLeagueMatchResultAndCareerUpdates, DIY_AdvanceLeagueProgressAfterMatch. League table updates: wins/draws/losses (offsets 0x2BA/0x2BC/0x2BE), goals for/against (0x2C0/0x2C2), points (0x2C4) with pointsForAWin from base+0x62. Career stat update (compType=0, packedGoals only, 0 for aggregate/penalty). Standings sort when diyMinSubstitutes==0, promotions processing with divu.w #$12 ranking→standings lookup, relegations processing.
+- Asm→C bridges: DIY_PlayCupMatchAndAdvance (d6/d7 → stack, Z flag return via tst.w d0), DIY_PlayOrSimulateLeagueFixture (d6/d7 → stack, Z flag return)
+- Build status: **verified** (clean build)
+- Cumulative: 1515 functions across 193 chunks
+
 ### Chunk 192 — PlayDIYLeagueMatchAndCacheResult + PlayDIYCupFixtureAndCacheResult (2 → diy_competition.c)
 - Date: 2026-03-02
 - Ported:

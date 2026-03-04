@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1513 functions ported across 192 chunks.
+**Current status:** 1515 functions ported across 193 chunks.
 
-**Last completed chunk:** Chunk 192 — PlayDIYLeagueMatchAndCacheResult + PlayDIYCupFixtureAndCacheResult (2 → diy_competition.c): DIY match play functions with SetupPlayers calls, game parameter setup, InitializeInGameTeamsAndStartGame via C→asm bridge, result caching (goals, extra time, penalties). Z flag return via tst.w d0 in bridge.
+**Last completed chunk:** Chunk 193 — DIY_PlayCupMatchAndAdvance + DIY_PlayOrSimulateLeagueFixture (2 → diy_competition.c): Full cup/league match orchestration with mode routing, result processing, competition table updates, league standings, career stats, promotions/relegations.
 
-**Next candidates:** DIY_PlayCupMatchAndAdvance, DIY_PlayOrSimulateLeagueFixture, Career_AutoAdvanceLeagueFixtures, InitDIYLeagueFromRecord, CareerGameListCommon (~440 instr), SquadMenu (needs SelectAndShowSquadToView).
+**Next candidates:** Career_AutoAdvanceLeagueFixtures (~88 instr), InitDIYLeagueFromRecord (~170 instr), CareerGameListCommon (~440 instr), SquadMenu (needs SelectAndShowSquadToView), remaining DIY/career functions.
 
 ---
 
