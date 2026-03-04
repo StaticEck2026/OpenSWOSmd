@@ -3027,7 +3027,7 @@ skipSponsorship:
  * ================================================================ */
 extern uint16_t retired;
 extern void Career_MaybeGenerateJobOffer(void);
-extern void Career_FillCurrentSeasonInfo(void);
+extern void _Career_FillCurrentSeasonInfo(void);
 extern void _CCareer_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr);
 extern uint16_t numJobOffers;
 extern uint16_t numNewJobOffers;
@@ -3055,7 +3055,7 @@ __attribute__((used, externally_visible))
 void _Career_PostMatchUpdate(void)
 {
     /* Fill current season info (preserves all regs in asm) */
-    Career_FillCurrentSeasonInfo();
+    _Career_FillCurrentSeasonInfo();
 
     /* Remove expired job offers */
     _JobOffers_RemoveExpiredOffers();

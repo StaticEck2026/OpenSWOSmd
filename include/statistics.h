@@ -19,6 +19,7 @@ void _ManagementRecordInit(void);
 void _ManagementArrowUpSelect(void);
 void _ManagementArrowDownSelect(void);
 void _Career_StorePromotionRelegationInSeasonInfo(void);
+void _Career_FillCurrentSeasonInfo(void);
 void _FillManagementRecordInfo(void);
 
 /* Top Goal Scorers — Chunk 134 */

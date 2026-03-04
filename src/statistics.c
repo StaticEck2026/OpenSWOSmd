@@ -1333,6 +1333,385 @@ void _Career_StorePromotionRelegationInSeasonInfo(void)
 }
 
 
+/* SeasonInformations struct field offsets (from SWOS2.s EQUs) */
+#define SI_CLUBNO                0   /* uint16_t */
+#define SI_CLUBNAME              2   /* char[18] */
+#define SI_TROPHYFLAGS          20   /* uint16_t */
+#define SI_LEAGUESTRPTR         22   /* uint32_t (ptr) */
+#define SI_STRPTR1              26   /* uint32_t (ptr) */
+#define SI_STRPTR2              30   /* uint32_t (ptr) */
+#define SI_STRPTR3              34   /* uint32_t (ptr) */
+#define SI_BESTSCORERNUMGOALS   38   /* uint16_t */
+#define SI_BESTSCORERNAME       40   /* char[23] */
+#define SI_2NDSCORERNAME        63   /* char[23] */
+#define SI_COMP1RESULT          86   /* int8_t */
+#define SI_COMP2RESULT          87   /* int8_t */
+#define SI_COMP3RESULT          88   /* int8_t */
+#define SI_COMP4RESULT          89   /* int8_t */
+#define SI_TOTALGOALSSCORED     90   /* uint16_t */
+#define SI_TOTALGOALSTAKEN      92   /* uint16_t */
+#define SI_TOTALGAMES           94   /* uint8_t */
+#define SI_TOTALWINS            95   /* uint8_t */
+#define SI_TOTALDRAWN           96   /* uint8_t */
+#define SI_TOTALLOST            97   /* uint8_t */
+#define SI_FRIENDLYWINS         98   /* uint8_t */
+#define SI_FRIENDLYDRAWS        99   /* uint8_t */
+#define SI_FRIENDLYLOST        100   /* uint8_t */
+#define SI_TOURWINS            101   /* uint8_t */
+#define SI_TOURDRAWS           102   /* uint8_t */
+#define SI_TOURLOST            103   /* uint8_t */
+#define SI_TOURNAMENTSTATUS    104   /* uint8_t */
+#define SI_MANAGERSTATUS       105   /* int8_t */
+
+/* ================================================================
+ * Chunk 199 — Career_FillCurrentSeasonInfo + EncodeCompetitionPositionForSeasonInfo
+ * ================================================================ */
+
+/* ---- Externs for Chunk 199 ---- */
+extern uint16_t wonWorldCup;
+extern uint16_t wonContinentalCup;
+extern uint16_t majorTrophyBonusActive;
+extern uint16_t cupBonus2Active;
+extern uint16_t cupBonus1Active;
+extern uint16_t playWinCupAnimation;
+extern uint16_t currentDivisionIndex;
+extern uint16_t minorTrophyBonusActive;
+extern uint16_t leagueTitleBonusActive;
+extern uint16_t wonInvitationTournament;
+extern uint16_t seasonFinished;
+extern uint16_t boardConfidenceMod0;
+extern uint16_t boardConfidenceMod1;
+extern uint16_t boardConfidenceMod2;
+extern uint16_t boardConfidenceMod3;
+extern uint16_t boardConfidenceValue0;
+extern uint16_t boardConfidenceValue1;
+extern uint16_t boardConfidenceMod4;
+extern uint16_t boardConfidenceMod5;
+extern uint16_t boardConfidenceMod6;
+extern uint16_t boardConfidenceMod7;
+extern uint16_t boardConfidenceMod8;
+extern uint16_t boardConfidenceMod9;
+extern uint32_t currentCompetitionPtr;
+extern uint32_t secondaryCompetitionPtr;
+extern uint32_t tertiaryCompetitionPtr;
+extern uint32_t quaternaryCompetitionPtr;
+extern uint32_t competitionFileBuffer;
+extern uint32_t competitionContext;
+extern uint32_t tertiaryCompetitionContext;
+extern uint32_t euroCupsCompetitionContext;
+extern uint16_t qualifyingStage1PendingFlag0;
+extern uint16_t qualifyingStage1PendingFlag1;
+extern uint16_t qualifyingStage2PendingFlag0;
+extern uint16_t qualifyingStage2PendingFlag1;
+extern uint16_t diyFoundTeamIndex;
+extern uint8_t  aSeveral[];             /* "SEVERAL" */
+extern uint8_t  worldCupQualifyingGroup1Copy[];
+extern uint8_t  oceaniaWorldCupQualificationCopy[];
+extern uint8_t  ecQualifyingGroup1Copy[];
+extern uint8_t  ecQualifyingGroup8Copy[];
+
+extern void _UpdateBoardConfidenceModifiers(void);
+extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
+extern uint16_t _FindTeamInDIY(uint16_t teamNo, DIY_Competition *comp);
+
+
+/* ================================================================
+ * EncodeCompetitionPositionForSeasonInfo  (SWOS2.s line 53266)
+ *
+ * Encodes team's position in a competition into a season info byte.
+ * Three paths based on competition type (byte at compBuf+1):
+ *   Type 0 (league): checks qualifying flags, may negate position
+ *   Type 1 (cup):    bracket tree search for round reached
+ *   Type 2+ (tourn): iterates groups to find position
+ *
+ * Takes: position from FindTeamInDIY (d1), compBuf (a6), compDef (a4)
+ * Returns: encoded position (int16_t)
+ * ================================================================ */
+static int16_t EncodeCompetitionPositionForSeasonInfo_impl(
+    int16_t pos, uint8_t *compBuf, uint8_t *compDef)
+{
+    int16_t d1 = pos + 1;
+    uint8_t type = compBuf[1]; /* low byte of competitionType (big-endian int16) */
+
+    if (type == 0) {
+        /* --- League path --- */
+        if (*(int16_t *)(compBuf + 0x44) == 0)
+            return -106;   /* league not started/invalid */
+
+        /* Check if compDef is a World Cup qualifying group */
+        if ((uint32_t)compDef >= (uint32_t)worldCupQualifyingGroup1Copy &&
+            (uint32_t)compDef <= (uint32_t)oceaniaWorldCupQualificationCopy)
+            goto negate;
+
+        /* Check if compDef is a European Championship qualifying group */
+        if ((uint32_t)compDef >= (uint32_t)ecQualifyingGroup1Copy &&
+            (uint32_t)compDef <= (uint32_t)ecQualifyingGroup8Copy)
+            goto negate;
+
+        /* Check finished flag at offset 0x60 */
+        if (*(int16_t *)(compBuf + 0x60) == 0)
+            return d1;     /* not finished, return position as-is */
+
+    negate:
+        return -d1;
+    }
+
+    if (type == 1) {
+        /* --- Cup path --- */
+        if (*(int16_t *)(compBuf + 0x56) == 0) {
+            /* Cup not finished — check if team is still in it */
+            _FindTeamInDIY(selTeamNumber, (DIY_Competition *)compBuf);
+            if (diyFoundTeamIndex == 0)
+                return -104;   /* team not found in cup */
+        }
+
+        if (d1 == 1) return d1;       /* winner */
+        if (d1 == 2) return -100;      /* finalist */
+        if (d1 <= 4) return -101;      /* semi-final */
+        if (d1 <= 8) return -102;      /* quarter-final */
+
+        /* Beyond 8: binary tree bracket position.
+         * Asm: d2=-1, d0=numTeams; do { d2++; d0>>=1; } while d1<d0 */
+        {
+            int16_t d2 = -1;
+            uint16_t d0 = *(uint16_t *)(compBuf + 0x32);
+            do {
+                d2++;
+                d0 >>= 1;
+            } while ((uint16_t)d1 < d0);
+
+            d1 = *(int16_t *)(compBuf + 0x5C); /* starting round */
+            d1 += d2;
+            return -(d1 + 110);
+        }
+    }
+
+    /* --- Tournament/Groups path (type >= 2) --- */
+    if (*(int16_t *)(compBuf + 0x58) == 0) {
+        /* Tournament not finished — check if team is still in it */
+        _FindTeamInDIY(selTeamNumber, (DIY_Competition *)compBuf);
+        if (diyFoundTeamIndex == 0)
+            return -104;   /* team not found */
+    }
+
+    if (d1 == 1) return d1;   /* winner */
+
+    /* Check playoff groups special cases */
+    if (d1 == 3 && *(int16_t *)(compBuf + 0x15A) != 0)
+        return -103;   /* third place in playoff */
+    if (d1 == 4 && *(int16_t *)(compBuf + 0x15A) != 0)
+        return -105;   /* fourth place in playoff */
+
+    /* Iterate through groups to find which group the position falls into.
+     * Groups are 0x76 (118) bytes each, starting at compBuf.
+     * Loop: advance through groups while d1 <= group[d2].teamCount at +0x162 */
+    {
+        int16_t d2 = 0;
+        uint8_t *a0 = compBuf - 0x76; /* before first group */
+        int16_t numGroups = *(int16_t *)(compBuf + 0x52);
+
+        for (;;) {
+            a0 += 0x76;           /* advance to next group */
+            d2++;
+            if ((uint16_t)d2 > (uint16_t)numGroups)
+                break;            /* past all groups */
+            if ((uint16_t)d1 > *(uint16_t *)(a0 + 0x162))
+                break;            /* pos exceeds this group's team count */
+        }
+
+        a0 -= 0x76;              /* back up to previous group */
+
+        if (*(int16_t *)(a0 + 0x15E) != 0) {
+            /* League-type group */
+            if ((uint16_t)d2 > (uint16_t)numGroups)
+                return d1;        /* past all groups, return position as-is */
+            /* Fall through to position encoding */
+        } else {
+            /* Cup-type group: check team counts for special returns */
+            int16_t groupTeams = *(int16_t *)(a0 + 0x162);
+            if (groupTeams == 2) return -100;
+            if (groupTeams == 4) return -101;
+            if (groupTeams == 8) return -102;
+            /* Fall through to position encoding */
+        }
+
+        d2--;
+        return -(d2 + 110);
+    }
+}
+
+
+/* ================================================================
+ * Career_FillCurrentSeasonInfo  (SWOS2.s line 53078)
+ *
+ * Fills the current season's management record with:
+ * - Trophy flags (10 booleans packed into uint16)
+ * - Board confidence modifiers/values
+ * - Best skilled player(s) name and skill sum
+ * - Competition position results (primary/secondary/tertiary/quaternary)
+ * - Qualifying stage status
+ * - Manager status (sacked/season finished)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _Career_FillCurrentSeasonInfo(void)
+{
+    uint8_t *a5;
+    uint16_t d0;
+    int16_t d1;
+
+    if (gameType != 4)
+        return;
+
+    _UpdateBoardConfidenceModifiers();
+    a5 = _GetCurrentSeasonPointer();
+
+    /* --- Build trophy flags word --- */
+    d0 = 0;
+    if (wonWorldCup != 0)              d0 |= (1 << 0);
+    if (wonContinentalCup != 0)        d0 |= (1 << 1);
+    if (majorTrophyBonusActive != 0)   d0 |= (1 << 2);
+    if (cupBonus2Active != 0)          d0 |= (1 << 3);
+    if (cupBonus1Active != 0)          d0 |= (1 << 4);
+    if (playWinCupAnimation != 0) {
+        if (currentDivisionIndex == 0)
+            d0 |= (1 << 5);
+        else
+            d0 |= (1 << 6);
+    }
+    if (minorTrophyBonusActive != 0)   d0 |= (1 << 7);
+    if (leagueTitleBonusActive != 0)   d0 |= (1 << 8);
+    if (wonInvitationTournament != 0)  d0 |= (1 << 9);
+
+    *(uint16_t *)(a5 + SI_TROPHYFLAGS) = d0;
+
+    /* --- Manager status for final season / sacked --- */
+    if (currentSeasonShowing == 0x13 && seasonFinished != 0)
+        a5[SI_MANAGERSTATUS] = 2;
+    if (youreSacked != 0)
+        a5[SI_MANAGERSTATUS] = 0xFF;
+
+    /* --- Board confidence modifiers and values --- */
+    a5[SI_TOTALGAMES]       = (uint8_t)boardConfidenceMod0;
+    a5[SI_TOTALWINS]        = (uint8_t)boardConfidenceMod1;
+    a5[SI_TOTALDRAWN]       = (uint8_t)boardConfidenceMod2;
+    a5[SI_TOTALLOST]        = (uint8_t)boardConfidenceMod3;
+    *(uint16_t *)(a5 + SI_TOTALGOALSSCORED) = boardConfidenceValue0;
+    *(uint16_t *)(a5 + SI_TOTALGOALSTAKEN)  = boardConfidenceValue1;
+    a5[SI_FRIENDLYWINS]     = (uint8_t)boardConfidenceMod4;
+    a5[SI_FRIENDLYDRAWS]    = (uint8_t)boardConfidenceMod5;
+    a5[SI_FRIENDLYLOST]     = (uint8_t)boardConfidenceMod6;
+    a5[SI_TOURWINS]         = (uint8_t)boardConfidenceMod7;
+    a5[SI_TOURDRAWS]        = (uint8_t)boardConfidenceMod8;
+    a5[SI_TOURLOST]         = (uint8_t)boardConfidenceMod9;
+
+    /* --- Find best-skilled player(s) --- */
+    {
+        uint16_t bestSkill = 0;   /* d3 */
+        uint16_t bestCount = 0;   /* d4 */
+        uint8_t *bestPlayer = 0;  /* a1 */
+        uint8_t *best2nd = 0;     /* a2 */
+        int16_t i = (int16_t)careerNumPlayers - 1;
+
+        while (i >= 0) {
+            uint8_t *player = _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+            uint16_t skill = (uint16_t)player[0x6D] + (uint16_t)player[0x6E]
+                           + (uint16_t)player[0x6F] + (uint16_t)player[0x70];
+
+            if (skill > bestSkill) {
+                bestCount = 1;
+                bestSkill = skill;
+                bestPlayer = player;
+            } else if (skill == bestSkill) {
+                bestCount++;
+                best2nd = bestPlayer;
+                bestPlayer = player;
+            }
+            i--;
+        }
+
+        *(uint16_t *)(a5 + SI_BESTSCORERNUMGOALS) = bestSkill;
+
+        if (bestCount == 1) {
+            _StringCopy(bestPlayer + 0x4F, a5 + SI_BESTSCORERNAME);
+            a5[SI_2NDSCORERNAME] = 0;
+        } else if (bestCount == 2) {
+            _StringCopy(bestPlayer + 0x4F, a5 + SI_BESTSCORERNAME);
+            _StringCopy(best2nd + 0x4F, a5 + SI_2NDSCORERNAME);
+        } else {
+            /* 3+ players tied: "SEVERAL" */
+            _StringCopy(aSeveral, a5 + SI_BESTSCORERNAME);
+            a5[SI_2NDSCORERNAME] = 0;
+        }
+    }
+
+    /* --- Competition position results --- */
+    a5[SI_TOURNAMENTSTATUS] = 0;
+
+    /* Primary competition */
+    {
+        d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
+                                      (DIY_Competition *)&competitionFileBuffer);
+        uint8_t *compDef = (uint8_t *)(uint32_t)currentCompetitionPtr;
+
+        if (d1 >= 0) {
+            d1 = EncodeCompetitionPositionForSeasonInfo_impl(
+                d1, (uint8_t *)&competitionFileBuffer, compDef);
+            a5[SI_COMP1RESULT] = (uint8_t)d1;
+
+            /* Check qualifying stage status */
+            if (((uint32_t)compDef >= (uint32_t)worldCupQualifyingGroup1Copy &&
+                 (uint32_t)compDef <= (uint32_t)oceaniaWorldCupQualificationCopy) ||
+                ((uint32_t)compDef >= (uint32_t)ecQualifyingGroup1Copy &&
+                 (uint32_t)compDef <= (uint32_t)ecQualifyingGroup8Copy))
+            {
+                a5[SI_TOURNAMENTSTATUS] = 1;
+                if (qualifyingStage1PendingFlag0 == 0 &&
+                    qualifyingStage1PendingFlag1 == 0)
+                {
+                    a5[SI_TOURNAMENTSTATUS] = 2;
+                    if (qualifyingStage2PendingFlag0 == 0 &&
+                        qualifyingStage2PendingFlag1 == 0)
+                    {
+                        a5[SI_TOURNAMENTSTATUS] = 0;
+                    }
+                }
+            }
+        }
+    }
+
+    /* Secondary competition */
+    if (*(uint32_t *)(a5 + SI_STRPTR1) != 0) {
+        d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
+                                      (DIY_Competition *)&competitionContext);
+        uint8_t *compDef = (uint8_t *)(uint32_t)secondaryCompetitionPtr;
+        d1 = EncodeCompetitionPositionForSeasonInfo_impl(
+            d1, (uint8_t *)&competitionContext, compDef);
+        a5[SI_COMP2RESULT] = (uint8_t)d1;
+    }
+
+    /* Tertiary competition */
+    if (*(uint32_t *)(a5 + SI_STRPTR2) != 0) {
+        d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
+                                      (DIY_Competition *)&tertiaryCompetitionContext);
+        uint8_t *compDef = (uint8_t *)(uint32_t)tertiaryCompetitionPtr;
+        d1 = EncodeCompetitionPositionForSeasonInfo_impl(
+            d1, (uint8_t *)&tertiaryCompetitionContext, compDef);
+        a5[SI_COMP3RESULT] = (uint8_t)d1;
+    }
+
+    /* Quaternary competition */
+    if (*(uint32_t *)(a5 + SI_STRPTR3) != 0) {
+        d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
+                                      (DIY_Competition *)&euroCupsCompetitionContext);
+        uint8_t *compDef = (uint8_t *)(uint32_t)quaternaryCompetitionPtr;
+        d1 = EncodeCompetitionPositionForSeasonInfo_impl(
+            d1, (uint8_t *)&euroCupsCompetitionContext, compDef);
+        a5[SI_COMP4RESULT] = (uint8_t)d1;
+    }
+}
+
+
 /* ================================================================
  * Chunk 138 — FillManagementRecordInfo + helpers
  * ================================================================ */
@@ -1368,36 +1747,6 @@ extern uint8_t aResigned[];          /* "- RESIGNED -" */
 extern uint8_t aRetired[];           /* "- RETIRED -" */
 extern uint32_t countriesTable[];
 extern uint16_t trophySprites[];
-
-/* SeasonInformations struct field offsets (from SWOS2.s EQUs) */
-#define SI_CLUBNO                0   /* uint16_t */
-#define SI_CLUBNAME              2   /* char[18] */
-#define SI_TROPHYFLAGS          20   /* uint16_t */
-#define SI_LEAGUESTRPTR         22   /* uint32_t (ptr) */
-#define SI_STRPTR1              26   /* uint32_t (ptr) */
-#define SI_STRPTR2              30   /* uint32_t (ptr) */
-#define SI_STRPTR3              34   /* uint32_t (ptr) */
-#define SI_BESTSCORERNUMGOALS   38   /* uint16_t */
-#define SI_BESTSCORERNAME       40   /* char[23] */
-#define SI_2NDSCORERNAME        63   /* char[23] */
-#define SI_COMP1RESULT          86   /* int8_t */
-#define SI_COMP2RESULT          87   /* int8_t */
-#define SI_COMP3RESULT          88   /* int8_t */
-#define SI_COMP4RESULT          89   /* int8_t */
-#define SI_TOTALGOALSSCORED     90   /* uint16_t */
-#define SI_TOTALGOALSTAKEN      92   /* uint16_t */
-#define SI_TOTALGAMES           94   /* uint8_t */
-#define SI_TOTALWINS            95   /* uint8_t */
-#define SI_TOTALDRAWN           96   /* uint8_t */
-#define SI_TOTALLOST            97   /* uint8_t */
-#define SI_FRIENDLYWINS         98   /* uint8_t */
-#define SI_FRIENDLYDRAWS        99   /* uint8_t */
-#define SI_FRIENDLYLOST        100   /* uint8_t */
-#define SI_TOURWINS            101   /* uint8_t */
-#define SI_TOURDRAWS           102   /* uint8_t */
-#define SI_TOURLOST            103   /* uint8_t */
-#define SI_TOURNAMENTSTATUS    104   /* uint8_t */
-#define SI_MANAGERSTATUS       105   /* int8_t */
 
 #define CN_EUROPE   80
 #define CN_OCEANIA  85

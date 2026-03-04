@@ -1066,7 +1066,7 @@ extern uint16_t foreignMarketUpdateBacklog;
 extern uint16_t offerExpiryIterationsRemaining;
 
 extern void _ApplyWeeklyFinancialDeductions(void);
-extern void Career_FillCurrentSeasonInfo(void); /* still in asm */
+extern void _Career_FillCurrentSeasonInfo(void);
 
 /* ================================================================
  * _Career_LoadCompetitionSlotStateFromBuffer  (SWOS2.s line 36092)
@@ -1319,7 +1319,7 @@ void _Career_AdvanceToNextTeamSelectionKeyCacheEntry(void)
         if (d0 == teamSelectionKeyCacheCount) {
             seasonFinished = 1;
             careerFinished = 1;
-            Career_FillCurrentSeasonInfo();
+            _Career_FillCurrentSeasonInfo();
             return;
         }
         ptr += *(uint16_t *)(ptr + 2);

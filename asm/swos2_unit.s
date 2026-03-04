@@ -3100,6 +3100,7 @@
         xref    _ManagementArrowDownSelect
         xref    _GetCurrentSeasonPointer
         xref    _Career_StorePromotionRelegationInSeasonInfo
+        xref    _Career_FillCurrentSeasonInfo
         xref    _SelTeamForTactics_ReflowTeamListLayout
 ; --- Chunk 136 xrefs ---
         xref    _ViewCompetitionsInit
@@ -3583,6 +3584,7 @@
         xdef    aWon0Drawn1Lost
         xdef    aEuropeanTour
         xdef    aOceaniaTour
+        xdef    aSeveral
         xdef    aWinners
         xdef    aRunnerUp
         xdef    aFinalist

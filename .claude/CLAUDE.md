@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1533 functions ported across 198 chunks.
+**Current status:** 1535 functions ported across 199 chunks.
 
-**Last completed chunk:** Chunk 198 — Career_ViewOrEditCompetitionSlot (1 → career_init.c).
+**Last completed chunk:** Chunk 199 — Career_FillCurrentSeasonInfo + EncodeCompetitionPositionForSeasonInfo (2 → statistics.c).
 
-**Next candidates:** Career_FillCurrentSeasonInfo (~190 instr), EncodeCompetitionPositionForSeasonInfo (~130 instr), SelectTeamsFinalMenu (~550 instr), Career_MaybeGenerateJobOffer (~310 instr), ChooseTeamForEditTactics (~300 instr).
+**Next candidates:** SelectTeamsFinalMenu (~550 instr), Career_MaybeGenerateJobOffer (~310 instr), ChooseTeamForEditTactics (~300 instr).
 
 ---
 

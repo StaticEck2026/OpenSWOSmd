@@ -1211,7 +1211,7 @@ void _SelectNationalTeamOnSelect25(void)
  * ================================================================ */
 
 /* CommonMenuExit is now ported as _CommonMenuExit below */
-extern void Career_FillCurrentSeasonInfo(void);  /* still in asm */
+extern void _Career_FillCurrentSeasonInfo(void);
 extern uint8_t managementRecordMenu[];
 extern uint8_t viewCompetitionsMenu[];
 
@@ -1227,7 +1227,7 @@ __attribute__((used, externally_visible))
 void _ManagementRecordMenu(void)
 {
     if (youreSacked == 0) {
-        Career_FillCurrentSeasonInfo();
+        _Career_FillCurrentSeasonInfo();
     }
     _ShowMenu(managementRecordMenu);
 }

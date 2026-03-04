@@ -3118,6 +3118,18 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1533 functions across 198 chunks
 
+### Chunk 199 — Career_FillCurrentSeasonInfo + EncodeCompetitionPositionForSeasonInfo (2 → statistics.c)
+- Date: 2026-03-02
+- Ported:
+  1. Career_FillCurrentSeasonInfo (→statistics.c) — ~190 instr. Fills season management record: builds trophy flags word (10 booleans), stores board confidence modifiers/values, iterates players to find best-skilled (sums 4 skill bytes at offsets 0x6D-0x70 from GetPlayerAtIndex result), copies best/2nd player names (offset 0x4F), calls FindTeamInDIY + EncodeCompetitionPositionForSeasonInfo for primary/secondary/tertiary/quaternary competitions, handles qualifying stage detection.
+  2. EncodeCompetitionPositionForSeasonInfo (→statistics.c, static helper) — ~130 instr. Encodes team's competition position into season info byte. Three paths by comp type: league (checks qualifying flags, may negate), cup (bracket search via binary halving of numTeams), tournament (iterates 0x76-byte groups to find position boundary). Returns encoded int16_t (-100=finalist, -101=semi, -102=quarter, -103/-104/-105/-106=special cases).
+- Asm→C bridge: Career_FillCurrentSeasonInfo (simple jsr with save/restore). EncodeCompetitionPositionForSeasonInfo stubbed as rts (only called from Career_FillCurrentSeasonInfo).
+- Updated C callers (career_status.c, career_teams.c, menus.c) to call _Career_FillCurrentSeasonInfo directly.
+- Moved SI_ season info defines earlier in statistics.c for visibility.
+- Added xdef: aSeveral
+- Build status: **verified** (clean build)
+- Cumulative: 1535 functions across 199 chunks
+
 ### Chunk 195 — Career_AutoAdvanceCompetitionSlots (1 → career_status.c)
 - Date: 2026-03-02
 - Ported:
@@ -3612,5 +3624,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 196   | 4+2d      | 1526       |
 | 197   | 6         | 1532       |
 | 198   | 1         | 1533       |
+| 199   | 1+1s      | 1535       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)
