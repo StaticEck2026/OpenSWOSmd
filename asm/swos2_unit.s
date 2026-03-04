@@ -1631,6 +1631,13 @@
         xref    _Career_AutoAdvanceCupMatches
         xref    _Career_AutoAdvanceCompetitionSlots
 
+        ; Chunk 198 xrefs
+        xref    _Career_ViewOrEditCompetitionSlot
+        xdef    europeanChampionships
+        xdef    europeanChampionships2Copy
+        xdef    worldCup
+        xdef    worldCup2Copy
+
         ; Chunk 197 xrefs
         xref    _InitCareer
         xref    _InitializeNewSeason

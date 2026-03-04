@@ -3109,6 +3109,15 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1532 functions across 197 chunks
 
+### Chunk 198 — Career_ViewOrEditCompetitionSlot (1 → career_init.c)
+- Date: 2026-03-02
+- Ported:
+  1. Career_ViewOrEditCompetitionSlot (→career_init.c) — ~76 instr. Maps competition pointer to its career copy via careerContests table (10-byte stride loop), applies special europeanChampionships/worldCup → 2Copy replacements, finds which competition slot (0-4) owns the competition, then dispatches: league→ShowDiyLeaguesTournamentMenu, cup→ShowDIYCupMenuWithParams, edit→DIY_EditCompetitionSlot, or auto-advance for slots not matching current.
+- Asm→C bridge: Career_ViewOrEditCompetitionSlot (a0+d0 params)
+- Added xdefs: europeanChampionships, europeanChampionships2Copy, worldCup, worldCup2Copy
+- Build status: **verified** (clean build)
+- Cumulative: 1533 functions across 198 chunks
+
 ### Chunk 195 — Career_AutoAdvanceCompetitionSlots (1 → career_status.c)
 - Date: 2026-03-02
 - Ported:
@@ -3602,5 +3611,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 195   | 1         | 1520       |
 | 196   | 4+2d      | 1526       |
 | 197   | 6         | 1532       |
+| 198   | 1         | 1533       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

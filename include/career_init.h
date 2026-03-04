@@ -39,3 +39,6 @@ void _InitializeNewSeason(void);
 void _InitNewSeason(uint8_t *src, uint16_t divisionIndex);
 uint16_t _Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t euroCupIndex);
 void _DIY_SelectCompetitionSlot4FromCurrentDivision(void);
+
+/* --- Chunk 198: Career_ViewOrEditCompetitionSlot --- */
+void _Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel);

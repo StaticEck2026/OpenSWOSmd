@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1532 functions ported across 197 chunks.
+**Current status:** 1533 functions ported across 198 chunks.
 
-**Last completed chunk:** Chunk 197 — InitCareer + InitializeNewSeason family (6 → career_init.c): InitCareer, ContinueCareerNextSeason, Career_SelectEuroCupSlotIfTeamParticipates, DIY_SelectCompetitionSlot4FromCurrentDivision, InitializeNewSeason, InitNewSeason.
+**Last completed chunk:** Chunk 198 — Career_ViewOrEditCompetitionSlot (1 → career_init.c).
 
-**Next candidates:** Career_ViewOrEditCompetitionSlot (~30 instr), CareerGameListCommon (~385 instr), remaining DIY/career functions, contest menu family, EditTeams* callbacks.
+**Next candidates:** Career_FillCurrentSeasonInfo (~190 instr), EncodeCompetitionPositionForSeasonInfo (~130 instr), SelectTeamsFinalMenu (~550 instr), Career_MaybeGenerateJobOffer (~310 instr), ChooseTeamForEditTactics (~300 instr).
 
 ---
 

@@ -1217,3 +1217,105 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
     viewRandomPhase = careerJobOfferPhaseBias;
     _InitTeams();
 }
+
+/* ================================================================
+ * Chunk 198: Career_ViewOrEditCompetitionSlot  (SWOS2.s line 32242)
+ *
+ * Views or edits a competition slot: maps the competition pointer
+ * to its career copy via careerContests table, handles special
+ * europeanChampionships/worldCup replacements, then determines which
+ * slot owns the competition and shows appropriate menu.
+ * If the competition isn't in any active slot, auto-advances it.
+ *
+ * in:  a0 = competition pointer, d0 = divisionIndex/selection
+ * ================================================================ */
+extern uint8_t europeanChampionships[];
+extern uint8_t europeanChampionships2Copy[];
+extern uint8_t worldCup[];
+extern uint8_t worldCup2Copy[];
+/* nationalTeamCompetitionsAndQualifications1+0x96 effectively points
+ * 6 bytes before careerContests[0] — the loop skips 6 bytes then reads
+ * 4 bytes per iteration, matching the 10-byte careerContests entries. */
+
+extern void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
+extern void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
+extern void _DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC);
+extern void _SaveSelectedTeams(void);
+extern void _RestoreSelectedTeams(void);
+extern void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
+extern void _Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record, uint16_t index);
+extern void _Career_AutoAdvanceCupCompetitionFromRecord(uint8_t *record);
+extern void _Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record);
+
+__attribute__((used, externally_visible))
+void _Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel)
+{
+    /* Step 1: Map competition pointer to its career copy via careerContests table.
+     * Each careerContests entry is {uint32_t src, uint32_t dest, uint16_t len} = 10 bytes.
+     * We search for comp in the src field and replace with dest. */
+    uint8_t *tbl = careerContests;
+    for (;;) {
+        uint32_t src = *(uint32_t *)tbl;
+        if (src == 0xFFFFFFFF)
+            break;
+        if (src == (uint32_t)comp) {
+            comp = *(uint8_t **)(tbl + 4);
+            break;
+        }
+        tbl += 10;
+    }
+
+    /* Step 2: Special replacements for europeanChampionships and worldCup */
+    if (comp == europeanChampionships)
+        comp = europeanChampionships2Copy;
+    if (comp == worldCup)
+        comp = worldCup2Copy;
+
+    /* Step 3: Find which slot owns this competition */
+    uint8_t *slotCtx = (uint8_t *)&competitionFileBuffer;
+
+    if (comp == (uint8_t *)currentCompetitionPtr) {
+        if (sel == currentDivisionIndex)
+            goto found_slot;
+    }
+
+    slotCtx = (uint8_t *)&competitionContext;
+    if (comp == (uint8_t *)secondaryCompetitionPtr)
+        goto found_slot;
+
+    slotCtx = (uint8_t *)&tertiaryCompetitionContext;
+    if (comp == (uint8_t *)tertiaryCompetitionPtr)
+        goto found_slot;
+
+    slotCtx = (uint8_t *)&euroCupsCompetitionContext;
+    if (comp == (uint8_t *)quaternaryCompetitionPtr)
+        goto found_slot;
+
+    /* Not in any active slot — auto-advance this external competition */
+    _SaveSelectedTeams();
+    {
+        uint8_t compType = comp[1];
+        if (compType == 1) {
+            _Career_AutoAdvanceCupCompetitionFromRecord(comp);
+        } else if (compType == 2) {
+            _Career_AutoAdvanceLeagueCompetitionFromRecord(comp);
+        } else {
+            _Career_AutoAdvanceInternationalCompetitionFixtures(comp, sel);
+        }
+    }
+    _RestoreSelectedTeams();
+    return;
+
+found_slot:
+    _Career_LoadCompetitionSlotStateFromBuffer(slotCtx);
+    {
+        uint8_t compType = slotCtx[1];
+        if (compType == 1) {
+            _ShowDIYCupMenuWithParams(1, 1, 0);
+        } else if (compType == 2) {
+            _DIY_EditCompetitionSlot(1, 1, 0);
+        } else {
+            _ShowDiyLeaguesTournamentMenu(1, 1, 0);
+        }
+    }
+}

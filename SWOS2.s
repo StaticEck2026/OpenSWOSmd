@@ -32238,8 +32238,18 @@ loc_12E9D0:
                 rts
 
 ; ===== Career_ViewOrEditCompetitionSlot =====
-; prototype: void __usercall Career_ViewOrEditCompetitionSlot(void *comp@<a0>, unsigned __int16 sel@<d0>)
+; Ported to C: _Career_ViewOrEditCompetitionSlot in career_init.c (Chunk 198)
+; in: a0 = competition pointer, d0 = selection/divisionIndex
 Career_ViewOrEditCompetitionSlot:
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)
+                move.l  a0,-(sp)
+                jsr     _Career_ViewOrEditCompetitionSlot
+                addq.l  #8,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
+                ; === dead code below (old body) ===
                 lea     ((nationalTeamCompetitionsAndQualifications1+$96)).l,a2
 loc_12E9E6:
                 lea     6(a2),a2
