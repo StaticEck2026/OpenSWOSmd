@@ -4,9 +4,16 @@
  */
 
 #include "career_season.h"
+#include "career_eurocups.h"
+#include "career_init.h"
+#include "career_status.h"
+#include "career_teams.h"
 #include "diy_competition.h"
 #include "game_types.h"
+#include "job_offers.h"
+#include "panic.h"
 #include "random.h"
+#include "transfer_market.h"
 
 /* ---- ASM externs ---- */
 extern uint16_t selTeamNumber;
@@ -624,4 +631,626 @@ void _ShowChairmanOpinionAboutTheSeason(void)
 
     currentMessage = msg;
     _ShowChairmanMessage();
+}
+
+/* ---- Chunk 181: BeginContractNegotiationSequence ---- */
+
+extern uint16_t contractNegotiationActive;
+extern uint16_t timeToNegotiate;
+extern uint16_t lastOfferPrimaryPlayerOrdinal;
+extern uint16_t offerNegotiationAttemptCount;
+extern uint16_t financeTotalsNeedResetFlag;
+
+extern void _CCareer_MaybeGenerateJobOffer(void);
+
+/* BeginContractNegotiationSequence (SWOS2.s line 28035)
+ * Called after a career match to begin contract negotiation phase.
+ * Sets up negotiation globals, commits finances, processes offer expiry,
+ * and potentially generates a new job offer.
+ * a0=ctx (diyCompetitionStart), a1=team ptr passed through to UpdateCareerFinancesAfterMatch. */
+__attribute__((used, externally_visible))
+void _BeginContractNegotiationSequence(uint8_t *ctx, uint8_t *team)
+{
+    contractNegotiationActive = 1;
+    timeToNegotiate = 2;
+    lastOfferPrimaryPlayerOrdinal = 0xFFFF;
+    offerNegotiationAttemptCount = 0;
+    _Career_CommitNewBalanceAndResetFinanceTotals();
+    financeTotalsNeedResetFlag = 1;
+    _UpdateCareerFinancesAfterMatch(ctx, team);
+    _ProcessOfferExpiryCountdown();
+    _JobOffers_MaybeExpireSomeNewOffers();
+    _CCareer_MaybeGenerateJobOffer();
+}
+
+/* ---- Chunk 182: Competition Season Processing ---- */
+
+extern uint32_t secondaryCompetitionPtr;
+extern uint32_t tertiaryCompetitionPtr;
+
+extern uint32_t competitionsTable[];
+extern uint16_t cachedTertiaryQualifiedTeamId;
+extern uint16_t panicReasonCode;
+extern uint8_t currentCompetitionId;
+
+extern void _CCareer_ProcessPrimaryCompetitionForNextSeason(uint8_t *competition);
+
+/* Career_ProcessSecondaryCompetitionForNextSeason (SWOS2.s line 31973)
+ * Process secondary competition for next season: if active, edit interactively;
+ * otherwise auto-advance as cup and cache qualified grid. */
+__attribute__((used, externally_visible))
+void _Career_ProcessSecondaryCompetitionForNextSeason(uint8_t *competition)
+{
+    if (competition[1] != 1) {
+        panicReasonCode = 0x3003;
+        _PanicHaltLoop();
+        return;
+    }
+    if ((uint32_t)competition == secondaryCompetitionPtr) {
+        _RestoreSelectedTeams();
+        _Career_CopyCompetitionContextToOrFromActive();
+        _ShowDIYCupMenuWithParams(1, 1, 0);
+        _DIY_CacheSecondaryQualifiedTeamsGrid();
+        _SaveSelectedTeams();
+    } else {
+        _Career_AutoAdvanceCupCompetitionFromRecord(competition);
+        _DIY_CacheSecondaryQualifiedTeamsGrid();
+    }
+}
+
+/* Career_ProcessTertiaryCompetitionForNextSeason (SWOS2.s line 32000)
+ * Same pattern for tertiary competition. */
+__attribute__((used, externally_visible))
+void _Career_ProcessTertiaryCompetitionForNextSeason(uint8_t *competition)
+{
+    if (competition[1] != 1) {
+        panicReasonCode = 0x3003;
+        _PanicHaltLoop();
+        return;
+    }
+    if ((uint32_t)competition == tertiaryCompetitionPtr) {
+        _RestoreSelectedTeams();
+        _Career_CopyTertiaryCompetitionContextToOrFromActive();
+        _ShowDIYCupMenuWithParams(1, 1, 0);
+        _DIY_CacheTertiaryQualifiedTeamGrid();
+        _SaveSelectedTeams();
+    } else {
+        _Career_AutoAdvanceCupCompetitionFromRecord(competition);
+        _DIY_CacheTertiaryQualifiedTeamGrid();
+    }
+}
+
+/* Career_ProcessCompetitionForNextSeason (SWOS2.s line 31908)
+ * Main dispatcher: processes primary, secondary, tertiary competitions.
+ * d0 = competition ID. */
+__attribute__((used, externally_visible))
+void _Career_ProcessCompetitionForNextSeason(uint16_t compId)
+{
+    currentCompetitionId = (uint8_t)compId;
+    cachedTertiaryQualifiedTeamId = 0xFFFF;
+
+    uint32_t *tableEntry = (uint32_t *)competitionsTable[compId & 0xFF];
+
+    /* Entry layout: [0]=primary ptr, [1]=skip, [2]=secondary ptr, [3]=tertiary ptr */
+    uint8_t *primary = (uint8_t *)tableEntry[0];
+    _CCareer_ProcessPrimaryCompetitionForNextSeason(primary);
+
+    uint8_t *secondary = (uint8_t *)tableEntry[2];
+    if ((uint32_t)secondary != 0xFFFFFFFF) {
+        _Career_ProcessSecondaryCompetitionForNextSeason(secondary);
+
+        uint8_t *tertiary = (uint8_t *)tableEntry[3];
+        if ((uint32_t)tertiary != 0xFFFFFFFF) {
+            _Career_ProcessTertiaryCompetitionForNextSeason(tertiary);
+        }
+    }
+
+    _DIY_ValidateLeagueScratchBuffer();
+}
+
+/* ================================================================
+ * Chunk 185: Career Cup Pick List System (SWOS2.s lines 32019-33004)
+ *
+ * 13 functions: pickRandomNationalTeamId, fillWorldCupQualifyingGroupTeams,
+ * setupWorldCupQualifyingGroups, setCupPickListCommon (helper for 5 regions),
+ * setCupPickList_Europe, setupFriendlyCupTeams, setupInvitationTournamentTeams,
+ * setupTourCupTeams, _Career_SetCupPickList_ForSelectedRegion (exported).
+ * ================================================================ */
+
+/* --- Additional externs for Chunk 185 --- */
+extern uint8_t someTeamFlags;
+extern uint16_t qualifyingStage1PendingFlag0;
+extern uint16_t qualifyingStage1PendingFlag1;
+extern uint16_t worldCupHostTeam;
+extern uint16_t worldCupQualifyingTeam;
+extern uint16_t euroChampionshipQualTeam;
+extern uint16_t natTeamsRandLimit2;
+extern uint8_t nationalTeams[];
+extern uint32_t careerCupPickList[];
+extern uint8_t careerTeam[];
+
+/* Competition qualification copies */
+extern uint8_t worldCupQualifyingGroup8Copy[];
+extern uint8_t northAmericaWorldCupQualificationCopy[];
+extern uint8_t southAmericaWorldCupQualificationCopy[];
+extern uint8_t africaWorldCupQualificationCopy[];
+extern uint8_t asiaWorldCupQualificationCopy[];
+
+/* Cup pick list data arrays (stay in asm, contain relocatable pointers) */
+extern uint32_t cupPickOceaniaWorldCupFriendly[];
+extern uint32_t cupPickOceaniaWorldCupInvite[];
+extern uint32_t cupPickOceaniaOceaniaCupFinalist[];
+extern uint32_t cupPickOceaniaOceaniaCupNonFinalist[];
+extern uint32_t cupPickOceaniaOceaniaCupFriendly[];
+extern uint32_t cupPickOceaniaInviteFriendly[];
+
+extern uint32_t cupPickNAmericaWorldCupFriendly[];
+extern uint32_t cupPickNAmericaWorldCupInvite[];
+extern uint32_t cupPickNAmericaNaCupFinalist[];
+extern uint32_t cupPickNAmericaNaCupNonFinalist[];
+extern uint32_t cupPickNAmericaNaCupFriendly[];
+extern uint32_t cupPickNAmericaInviteFriendly[];
+
+extern uint32_t cupPickAsiaWorldCupFriendly[];
+extern uint32_t cupPickAsiaWorldCupInvite[];
+extern uint32_t cupPickAsiaAsianCupFinalist[];
+extern uint32_t cupPickAsiaAsianCupNonFinalist[];
+extern uint32_t cupPickAsiaAsianCupFriendly[];
+extern uint32_t cupPickAsiaInviteFriendly[];
+
+extern uint32_t cupPickAfricaWorldCupFriendly[];
+extern uint32_t cupPickAfricaWorldCupInvite[];
+extern uint32_t cupPickAfricaAfricanCupFinalist[];
+extern uint32_t cupPickAfricaAfricanCupNonFinalist[];
+extern uint32_t cupPickAfricaAfricanCupFriendly[];
+extern uint32_t cupPickAfricaInviteFriendly[];
+
+extern uint32_t cupPickSAmericaWorldCupFriendly[];
+extern uint32_t cupPickSAmericaWorldCupInvite[];
+extern uint32_t cupPickSAmericaCopaAmericaFinalist[];
+extern uint32_t cupPickSAmericaCopaAmericaNonFinalist[];
+extern uint32_t cupPickSAmericaCopaAmericaFriendly[];
+extern uint32_t cupPickSAmericaInviteFriendly[];
+
+extern uint32_t cupPickListEuropeWorldCupFriendly[];
+extern uint32_t cupPickLisEuropeWorldCupInviteFriendly[];
+extern uint32_t cupPickLisEuropeEuroChampsFriendly[];
+extern uint32_t cupPickListEuropeEuroChampsInviteFriendly[];
+extern uint32_t cupPickListEuropeInviteTournamentFriendly[];
+extern uint32_t cupPickEuropeNoCupFriendly[];
+extern uint32_t cupPickEuropeNoCupFriendlyAlt[];
+extern uint32_t cupPickListEuropeInviteTournamentFriendlyAlt[];
+
+extern uint32_t ecQualifyingGroupsTable[];
+extern uint32_t worldCupQualifyingGroupsTable[];
+extern uint32_t tourStringTable[];
+
+/* Forward declarations */
+static void setupWorldCupQualifyingGroups(uint16_t **teamListPtr);
+
+/* ---- pickRandomNationalTeamId (SWOS2.s line 32962) ----
+ * Picks a random national team, optionally filtered by region and price.
+ * Retries up to 100 times with price filtering, then continues without.
+ * Ensures no duplicates against the current list. */
+static uint16_t pickRandomNationalTeamId(uint16_t minPrice, uint16_t maxPrice,
+                                          uint8_t regionFilter,
+                                          uint16_t *currentList, uint16_t countSoFar)
+{
+    int16_t retries = 99;
+    for (;;) {
+        uint16_t r = _Rand();
+        uint32_t idx = (uint32_t)r * natTeamsRandLimit2;
+        idx >>= 8;
+        uint8_t *entry = nationalTeams + (uint16_t)(idx * 6);
+        uint16_t teamId = *(uint16_t *)entry;
+
+        if (regionFilter != 0) {
+            if ((uint8_t)(teamId >> 8) != regionFilter)
+                continue;
+        }
+        if (teamId == selTeamNumber)
+            continue;
+
+        if (retries >= 0) {
+            uint16_t price = *(uint16_t *)(entry + 4);
+            if (price < minPrice || price > maxPrice) {
+                retries--;
+                continue;
+            }
+        }
+
+        if (countSoFar == 0)
+            return teamId;
+
+        int16_t dup = 0;
+        uint16_t *p = currentList;
+        for (uint16_t i = countSoFar; i > 0; i--) {
+            if (*p++ == teamId) { dup = 1; break; }
+        }
+        if (!dup)
+            return teamId;
+
+        if (retries >= 0)
+            retries--;
+    }
+}
+
+/* ---- fillWorldCupQualifyingGroupTeams (SWOS2.s line 32761) ----
+ * Fills a world cup qualifying group with teams from the sorted list.
+ * Places the player's team if their region matches. */
+static void fillWorldCupQualifyingGroupTeams(uint8_t regionCode, uint8_t *group,
+                                              uint16_t **teamListPtr)
+{
+    _Career_SortTeamFilePtrsByAvgPlayerPrice(regionCode);
+    uint8_t *origGroup = group;
+    uint8_t compType = group[1];
+    int16_t teamCount;
+
+    if (compType == 0) {
+        teamCount = (int8_t)group[0xD];
+    } else if (compType == 2) {
+        teamCount = (int8_t)group[0xF];
+    } else {
+        panicReasonCode = 0x7623;
+        _PanicHaltLoop();
+        return;
+    }
+
+    uint8_t hdrSize = group[7];
+    uint16_t *teamSlots = (uint16_t *)(group + 7 + (hdrSize & 0xFF));
+
+    uint16_t firstTeam;
+    if (selTeamNumber != worldCupHostTeam &&
+        selTeamNumber != worldCupQualifyingTeam &&
+        (uint8_t)(selTeamNumber >> 8) == regionCode) {
+        careerCupPickList[0] = (uint32_t)origGroup;
+        firstTeam = selTeamNumber;
+    } else {
+        do {
+            firstTeam = *(*teamListPtr)++;
+        } while (firstTeam == selTeamNumber ||
+                 firstTeam == worldCupHostTeam ||
+                 firstTeam == worldCupQualifyingTeam);
+    }
+
+    *teamSlots++ = firstTeam;
+    for (int16_t i = teamCount - 1; i > 0; i--) {
+        uint16_t teamId;
+        do {
+            teamId = *(*teamListPtr)++;
+        } while (teamId == selTeamNumber ||
+                 teamId == worldCupHostTeam ||
+                 teamId == worldCupQualifyingTeam);
+        *teamSlots++ = teamId;
+    }
+}
+
+/* ---- setupWorldCupQualifyingGroups (SWOS2.s line 32649) ----
+ * Sets up all world cup qualifying groups: 8 European groups (column-major fill),
+ * then 5 continental groups. Only runs during continental cup year (bit 6). */
+static void setupWorldCupQualifyingGroups(uint16_t **teamListPtr)
+{
+    if (!(someTeamFlags & 0x40))
+        return;
+
+    /* Calculate group 8 team count based on European host/qualifying */
+    int16_t d5 = 6;
+    int skipQualCheck = 0;
+    if ((uint8_t)(worldCupHostTeam >> 8) == 0x50) {
+        d5--;
+        if (worldCupHostTeam == worldCupQualifyingTeam)
+            skipQualCheck = 1;
+    }
+    if (!skipQualCheck && (uint8_t)(worldCupQualifyingTeam >> 8) == 0x50)
+        d5--;
+    if (d5 & 1)
+        d5--;
+    worldCupQualifyingGroup8Copy[0xD] = (uint8_t)d5;
+
+    _Career_SortTeamFilePtrsByAvgPlayerPrice(0x50);
+    uint16_t randOff = _Rand2() & 0x1C;
+    uint8_t *selectedGroup = (uint8_t *)worldCupQualifyingGroupsTable[randOff >> 2];
+    int16_t slotsRemaining = 0x30 - 6 + d5;
+    d5 <<= 1;
+    int16_t colOffset = 0;
+
+    for (;;) {
+        for (int16_t g = 0; g < 8; g++) {
+            uint8_t *group = (uint8_t *)worldCupQualifyingGroupsTable[g];
+            uint8_t hdrSize = group[7];
+            uint16_t *slot = (uint16_t *)(group + 7 + (hdrSize & 0xFF) + colOffset);
+
+            uint16_t teamId;
+            if (colOffset == 0 && group == selectedGroup &&
+                selTeamNumber != worldCupHostTeam &&
+                selTeamNumber != worldCupQualifyingTeam &&
+                (uint8_t)(selTeamNumber >> 8) == 0x50) {
+                careerCupPickList[0] = (uint32_t)group;
+                teamId = selTeamNumber;
+            } else {
+                if (group == worldCupQualifyingGroup8Copy && colOffset >= d5)
+                    continue;
+                do {
+                    teamId = *(*teamListPtr)++;
+                } while (teamId == selTeamNumber);
+            }
+
+            while (teamId == worldCupHostTeam || teamId == worldCupQualifyingTeam) {
+                do {
+                    teamId = *(*teamListPtr)++;
+                } while (teamId == selTeamNumber);
+            }
+
+            *slot = teamId;
+            if (--slotsRemaining == 0)
+                goto wc_groups_done;
+        }
+        colOffset += 2;
+    }
+
+wc_groups_done:
+    fillWorldCupQualifyingGroupTeams(0x53, northAmericaWorldCupQualificationCopy, teamListPtr);
+    fillWorldCupQualifyingGroupTeams(0x52, southAmericaWorldCupQualificationCopy, teamListPtr);
+    fillWorldCupQualifyingGroupTeams(0x51, africaWorldCupQualificationCopy, teamListPtr);
+    fillWorldCupQualifyingGroupTeams(0x54, asiaWorldCupQualificationCopy, teamListPtr);
+
+    /* Oceania: adjust team count based on Oceanian host/qualifying */
+    uint8_t oceaniaCount = 4;
+    int skipOceaniaQual = 0;
+    if ((uint8_t)(worldCupHostTeam >> 8) == 0x55) {
+        oceaniaCount--;
+        if (worldCupHostTeam == worldCupQualifyingTeam)
+            skipOceaniaQual = 1;
+    }
+    if (!skipOceaniaQual && (uint8_t)(worldCupQualifyingTeam >> 8) == 0x55)
+        oceaniaCount--;
+    if (oceaniaCount & 1)
+        oceaniaCount--;
+    oceaniaWorldCupQualificationCopy[0xD] = oceaniaCount;
+    fillWorldCupQualifyingGroupTeams(0x55, oceaniaWorldCupQualificationCopy, teamListPtr);
+}
+
+/* ---- setCupPickListCommon (helper for 5 simple regional functions) ----
+ * Implements the identical cup pick list selection logic used by Oceania,
+ * NorthAmerica, Asia, Africa, and SouthAmerica. */
+static void setCupPickListCommon(uint32_t *worldCupFriendly, uint32_t *worldCupInvite,
+                                  uint32_t *cupFinalist, uint32_t *cupNonFinalist,
+                                  uint32_t *cupFriendly, uint32_t *inviteFriendly,
+                                  uint16_t **teamListPtr)
+{
+    uint32_t *src = worldCupFriendly;
+    if (someTeamFlags & 0x80) {
+        if (qualifyingStage1PendingFlag0 == 0)
+            src = worldCupInvite;
+    } else if (someTeamFlags & 0x40) {
+        src = cupFinalist;
+        if (selTeamNumber != worldCupHostTeam && selTeamNumber != worldCupQualifyingTeam)
+            src = cupNonFinalist;
+    } else {
+        src = cupFriendly;
+        if (!(someTeamFlags & 0x02)) {
+            if (someTeamFlags != 0) {
+                panicReasonCode = 0x3775;
+                _PanicHaltLoop();
+                return;
+            }
+            src = inviteFriendly;
+        }
+    }
+
+    careerCupPickList[0] = src[0];
+    careerCupPickList[1] = src[1];
+    careerCupPickList[2] = src[2];
+    careerCupPickList[3] = src[3];
+    careerCupPickList[4] = src[4];
+
+    _Career_RandomizeInvitationTournamentCup();
+    setupWorldCupQualifyingGroups(teamListPtr);
+}
+
+/* ---- setCupPickList_Europe (SWOS2.s line 32469) ----
+ * Europe has a different flag structure and includes EC group filling. */
+static void setCupPickList_Europe(uint16_t **teamListPtr)
+{
+    uint32_t *src;
+    if (someTeamFlags & 0x80) {
+        src = cupPickListEuropeWorldCupFriendly;
+        if (qualifyingStage1PendingFlag0 == 0)
+            src = cupPickLisEuropeWorldCupInviteFriendly;
+    } else if (someTeamFlags & 0x02) {
+        src = cupPickLisEuropeEuroChampsFriendly;
+        if (qualifyingStage1PendingFlag1 == 0)
+            src = cupPickListEuropeEuroChampsInviteFriendly;
+    } else if (someTeamFlags & 0x40) {
+        src = cupPickListEuropeInviteTournamentFriendlyAlt;
+        if (selTeamNumber != worldCupHostTeam && selTeamNumber != worldCupQualifyingTeam)
+            src = cupPickEuropeNoCupFriendlyAlt;
+    } else if (someTeamFlags & 0x01) {
+        src = cupPickListEuropeInviteTournamentFriendly;
+        if (selTeamNumber != euroChampionshipQualTeam)
+            src = cupPickEuropeNoCupFriendly;
+    } else {
+        panicReasonCode = 0x3775;
+        _PanicHaltLoop();
+        return;
+    }
+
+    careerCupPickList[0] = src[0];
+    careerCupPickList[1] = src[1];
+    careerCupPickList[2] = src[2];
+    careerCupPickList[3] = src[3];
+    careerCupPickList[4] = src[4];
+
+    _Career_RandomizeInvitationTournamentCup();
+    setupWorldCupQualifyingGroups(teamListPtr);
+
+    /* EC group filling (only during EC qualifying year, bit 0) */
+    if (!(someTeamFlags & 0x01))
+        return;
+
+    _Career_SortTeamFilePtrsByAvgPlayerPrice(0x50);
+    uint16_t randIdx = (uint16_t)((uint32_t)_Rand2() * 7 >> 8);
+    uint8_t *selectedGroup = (uint8_t *)ecQualifyingGroupsTable[randIdx];
+    int16_t slotsRemaining = 0x2E; /* 46 */
+    int16_t colOffset = 0;
+
+    for (;;) {
+        for (int16_t g = 0; g < 8; g++) {
+            uint8_t *group = (uint8_t *)ecQualifyingGroupsTable[g];
+            uint8_t hdrSize = group[7];
+            uint16_t *slot = (uint16_t *)(group + 7 + (hdrSize & 0xFF) + colOffset);
+
+            uint16_t teamId;
+            int readFromList = 1;
+            if (colOffset == 0 && group == selectedGroup) {
+                if (selTeamNumber != euroChampionshipQualTeam) {
+                    careerCupPickList[0] = (uint32_t)group;
+                    teamId = selTeamNumber;
+                    readFromList = 0;
+                }
+            }
+
+            if (readFromList) {
+                if (group == ecQualifyingGroup8Copy && (uint16_t)colOffset >= 8)
+                    continue;
+                do {
+                    teamId = *(*teamListPtr)++;
+                } while (teamId == selTeamNumber);
+            }
+
+            while (teamId == euroChampionshipQualTeam) {
+                do {
+                    teamId = *(*teamListPtr)++;
+                } while (teamId == selTeamNumber);
+            }
+
+            *slot = teamId;
+            if (--slotsRemaining == 0)
+                return;
+        }
+        colOffset += 2;
+    }
+}
+
+/* ---- setupFriendlyCupTeams (SWOS2.s line 32860) ----
+ * Fills the friendly competition team list with teams of similar strength. */
+static void setupFriendlyCupTeams(void)
+{
+    uint16_t avgPrice = _GetAveragePlayerPrice(careerTeam);
+    uint16_t minPrice = (uint16_t)((uint32_t)avgPrice * 75 / 100);
+    uint16_t maxPrice = (uint16_t)((uint32_t)avgPrice * 125 / 100);
+
+    uint8_t *comp = friendlyCopy;
+    int16_t teamCount = (int8_t)comp[0xD];
+    uint8_t hdrSize = comp[7];
+    uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF));
+    uint16_t *listBase = teamList;
+
+    *teamList++ = selTeamNumber;
+    uint16_t countSoFar = 1;
+
+    for (int16_t i = teamCount - 2; i >= 0; i--) {
+        uint16_t teamId = pickRandomNationalTeamId(minPrice, maxPrice, 0, listBase, countSoFar);
+        *teamList++ = teamId;
+        countSoFar++;
+    }
+}
+
+/* ---- setupInvitationTournamentTeams (SWOS2.s line 32889) ----
+ * Fills the invitation tournament team list (same pattern as friendly). */
+static void setupInvitationTournamentTeams(void)
+{
+    uint16_t avgPrice = _GetAveragePlayerPrice(careerTeam);
+    uint16_t minPrice = (uint16_t)((uint32_t)avgPrice * 75 / 100);
+    uint16_t maxPrice = (uint16_t)((uint32_t)avgPrice * 125 / 100);
+
+    uint8_t *comp = invitationTournamentCopy;
+    int16_t teamCount = (int8_t)comp[0xD];
+    uint8_t hdrSize = comp[7];
+    uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF));
+    uint16_t *listBase = teamList;
+
+    *teamList++ = selTeamNumber;
+    uint16_t countSoFar = 1;
+
+    for (int16_t i = teamCount - 2; i >= 0; i--) {
+        uint16_t teamId = pickRandomNationalTeamId(minPrice, maxPrice, 0, listBase, countSoFar);
+        *teamList++ = teamId;
+        countSoFar++;
+    }
+}
+
+/* ---- setupTourCupTeams (SWOS2.s line 32918) ----
+ * Sets up the tour cup with a random region's teams. */
+static void setupTourCupTeams(void)
+{
+    uint16_t randRegion = (uint16_t)((uint32_t)_Rand() * 6 >> 8);
+    uint8_t regionCode = (uint8_t)(randRegion + 0x50);
+
+    uint8_t *tour = tourCopy;
+    int8_t nameOff = (int8_t)tour[5];
+    *(uint32_t *)(tour + 5 + nameOff) = tourStringTable[randRegion];
+
+    int16_t teamCount = (int8_t)tour[0xD];
+    uint8_t hdrSize = tour[7];
+    uint16_t *teamList = (uint16_t *)(tour + 7 + (hdrSize & 0xFF));
+    uint16_t *listBase = teamList;
+
+    *teamList++ = selTeamNumber;
+    uint16_t countSoFar = 1;
+
+    for (int16_t i = teamCount - 2; i >= 0; i--) {
+        uint16_t teamId = pickRandomNationalTeamId(0, 0x31, regionCode, listBase, countSoFar);
+        *teamList++ = teamId;
+        countSoFar++;
+    }
+}
+
+/* ---- Career_SetCupPickList_ForSelectedRegion (SWOS2.s line 32820) ----
+ * Dispatches to the regional cup pick list function based on team region,
+ * then sets up friendly, invitation tournament, and tour cup teams. */
+__attribute__((used, externally_visible))
+void _Career_SetCupPickList_ForSelectedRegion(uint16_t *teamList)
+{
+    uint8_t region = (uint8_t)(selTeamNumber >> 8);
+    uint16_t **tlp = &teamList;
+
+    switch (region) {
+    case 0x50: /* Europe */
+        setCupPickList_Europe(tlp);
+        break;
+    case 0x52: /* South America */
+        setCupPickListCommon(cupPickSAmericaWorldCupFriendly, cupPickSAmericaWorldCupInvite,
+            cupPickSAmericaCopaAmericaFinalist, cupPickSAmericaCopaAmericaNonFinalist,
+            cupPickSAmericaCopaAmericaFriendly, cupPickSAmericaInviteFriendly, tlp);
+        break;
+    case 0x51: /* Africa */
+        setCupPickListCommon(cupPickAfricaWorldCupFriendly, cupPickAfricaWorldCupInvite,
+            cupPickAfricaAfricanCupFinalist, cupPickAfricaAfricanCupNonFinalist,
+            cupPickAfricaAfricanCupFriendly, cupPickAfricaInviteFriendly, tlp);
+        break;
+    case 0x54: /* Asia */
+        setCupPickListCommon(cupPickAsiaWorldCupFriendly, cupPickAsiaWorldCupInvite,
+            cupPickAsiaAsianCupFinalist, cupPickAsiaAsianCupNonFinalist,
+            cupPickAsiaAsianCupFriendly, cupPickAsiaInviteFriendly, tlp);
+        break;
+    case 0x53: /* North America */
+        setCupPickListCommon(cupPickNAmericaWorldCupFriendly, cupPickNAmericaWorldCupInvite,
+            cupPickNAmericaNaCupFinalist, cupPickNAmericaNaCupNonFinalist,
+            cupPickNAmericaNaCupFriendly, cupPickNAmericaInviteFriendly, tlp);
+        break;
+    case 0x55: /* Oceania */
+        setCupPickListCommon(cupPickOceaniaWorldCupFriendly, cupPickOceaniaWorldCupInvite,
+            cupPickOceaniaOceaniaCupFinalist, cupPickOceaniaOceaniaCupNonFinalist,
+            cupPickOceaniaOceaniaCupFriendly, cupPickOceaniaInviteFriendly, tlp);
+        break;
+    default:
+        panicReasonCode = 0x4434;
+        _PanicHaltLoop();
+        return;
+    }
+
+    setupFriendlyCupTeams();
+    setupInvitationTournamentTeams();
+    setupTourCupTeams();
 }

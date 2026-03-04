@@ -25500,47 +25500,14 @@ kTeamColorsTable:
                 dc.b 0,1,0,2,0,3,0,6,0,10,0,11,0,12,0,13
                 dc.b 0,14,0,15
 
-; ===== CalcTeamPriceRankPercentOffset =====
-; prototype: __int16 __usercall CalcTeamPriceRankPercentOffset@<d0>(void *ctx@<a0>, TeamFile *team@<a1>)
+; ===== CalcTeamPriceRankPercentOffset ===== (ported to C → _CalcTeamPriceRankPercentOffset)
 CalcTeamPriceRankPercentOffset:
-                cmpi.w  #0,(a0)
-                bne.s   loc_1216EE
-                cmpi.b  #1,4(a1)
-                beq.s   loc_12169C
-                cmpi.w  #$A,$2B8(a0)
-                bcs.s   loc_1216EE
-                bra.s   loc_1216A4
-loc_12169C:
-                cmpi.w  #3,$2B8(a0)
-                bcs.s   loc_1216EE
-loc_1216A4:
-                movea.l a0,a6
-                move.w  (a1),d0
-                movem.l d0/d2-d7/a0-a6,-(sp)
-                jsr     FindTeamInDIY
-                movem.l (sp)+,d0/d2-d7/a0-a6
-                movem.l d0-d1/d3-d7/a0-a6,-(sp)
-                jsr     GetMoreExpensiveTeamsCount
-                movem.l (sp)+,d0-d1/d3-d7/a0-a6
-                sub.w   d1,d2
-                muls.w  #$64,d2         ; 'd'
-                move.w  $32(a0),d0
-                subq.w  #1,d0
-                beq.s   loc_1216EE
-                divs.w  d0,d2
-                cmpi.w  #$32,d2         ; '2'
-                ble.s   loc_1216DE
-                move.w  #$32,d2         ; '2'
-loc_1216DE:
-                cmpi.w  #$FFCE,d2
-                bge.s   loc_1216E8
-                move.w  #$FFCE,d2
-loc_1216E8:
-                asr.w   #1,d2
-                move.w  d2,d0
-                rts
-loc_1216EE:
-                clr.w   d0
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a1,-(sp)
+                move.l  a0,-(sp)
+                jsr     _CalcTeamPriceRankPercentOffset
+                addq.l  #8,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== AssignFakeGoalsToScorers =====
@@ -28065,19 +28032,15 @@ GetExpectedLeagueRankIndex:
 
 ; ===== BeginContractNegotiationSequence =====
 ; prototype: void __usercall BeginContractNegotiationSequence()
+; ===== BeginContractNegotiationSequence ===== (ported to C → _BeginContractNegotiationSequence)
+; in: a0=ctx (diyCompetitionStart), a1=team ptr
 BeginContractNegotiationSequence:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.w  #1,(contractNegotiationActive).l
-                move.w  #2,(timeToNegotiate).l
-                move.w  #$FFFF,(lastOfferPrimaryPlayerOrdinal).l
-                clr.w   (offerNegotiationAttemptCount).l
-                jsr     Career_CommitNewBalanceAndResetFinanceTotals
-                move.w  #1,(financeTotalsNeedResetFlag).l
-                bsr.w   UpdateCareerFinancesAfterMatch
-                jsr     ProcessOfferExpiryCountdown
-                jsr     JobOffers_MaybeExpireSomeNewOffers
-                jsr     Career_MaybeGenerateJobOffer
-                movem.l (sp)+,d0-d7/a0-a6
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a1,-(sp)
+                move.l  a0,-(sp)
+                jsr     _BeginContractNegotiationSequence
+                addq.l  #8,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== GetLowestAndHighestPlayerPrice =====
@@ -28889,14 +28852,16 @@ IsNationalTeamCompetitionOrQualification:
                 tst.w   d0
                 rts
 
-; ===== InitCompetitionFromRecord =====
-; prototype: void __usercall InitCompetitionFromRecord(unsigned __int16 index@<d0>, const void *rec@<a0>)
+; ===== InitCompetitionFromRecord ===== (ported to C → _InitCompetitionFromRecord)
 InitCompetitionFromRecord:
-                cmpi.b  #0,1(a0)
-                beq.w   InitDIYCompetitionFromTableEntry
-                cmpi.b  #1,1(a0)
-                beq.w   InitDIYCupFromRecord
-                bra.w   InitDIYLeagueFromRecord
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a0,-(sp)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)
+                jsr     _InitCompetitionFromRecord
+                addq.l  #8,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== InitDIYCompetitionFromTableEntry =====
 ; prototype: void __usercall InitDIYCompetitionFromTableEntry(unsigned __int16 idx@<d0>, const void *table@<a0>)
@@ -31542,115 +31507,30 @@ DIY_CacheTertiaryQualifiedTeamGrid:
 
 ; ===== Career_DrawEuropeanCupTeamsAndCopyGrids =====
 ; prototype: void __usercall Career_DrawEuropeanCupTeamsAndCopyGrids()
+; ===== Career_DrawEuropeanCupTeamsAndCopyGrids ===== (ported to C)
 Career_DrawEuropeanCupTeamsAndCopyGrids:
-                move.w  euroCupTitleHolderTeamId(pc),d2
-                lea     (euroCupTitleHolderGrid).l,a3
-                movea.l euroCupTeamListPtr(pc),a2
-                move.w  euroCupQualifiedTeamCount(pc),d3
-                bsr.w   Career_DrawRandomTeamFromPoolAndCopyGrid
-                move.w  cupWinnersCupTitleHolderTeamId(pc),d2
-                lea     (cupWinnersCupTitleHolderGrid).l,a3
-                movea.l cupWinnersCupTeamListPtr(pc),a2
-                move.w  cupWinnersCupQualifiedTeamCount(pc),d3
-                bsr.w   Career_DrawRandomTeamFromPoolAndCopyGrid
-                move.w  uefaCupTitleHolderTeamId(pc),d2
-                lea     (uefaCupTitleHolderGrid).l,a3
-                movea.l uefaCupTeamListPtr(pc),a2
-                move.w  uefaCupQualifiedTeamCount(pc),d3
+                movem.l d0-d7/a0-a6,-(sp)
+                jsr     _Career_DrawEuropeanCupTeamsAndCopyGrids
+                movem.l (sp)+,d0-d7/a0-a6
+                rts
 
-; ===== Career_DrawRandomTeamFromPoolAndCopyGrid =====
-; prototype: void __usercall Career_DrawRandomTeamFromPoolAndCopyGrid(unsigned __int16 team@<d2>, void *dst@<a3>, void *table@<a2>, unsigned __int16 factor@<d3>)
+; ===== Career_DrawRandomTeamFromPoolAndCopyGrid ===== (ported as static in career_eurocups.c)
+; Callers should use Career_DrawEuropeanCupTeamsAndCopyGrids instead.
 Career_DrawRandomTeamFromPoolAndCopyGrid:
-                cmpi.w  #$FFFF,d2
-                beq.w   locret_12B3B4
-                move.w  d2,d4
-                lsr.w   #8,d4
-loc_12B352:
-                jsr     Rand2
-                mulu.w  d3,d0
-                lsr.w   #8,d0
-                lsl.w   #1,d0
-                move.w  (a2,d0.w),d1
-                lsr.w   #8,d1
-                cmp.b   d4,d1
-                beq.s   loc_12B352
-                cmpi.w  #$FFFF,(teamNoOfferAccepted).l
-                beq.s   loc_12B37C
-                cmp.b   (teamNoOfferAccepted).l,d1
-                beq.s   loc_12B352
-                bra.s   loc_12B384
-loc_12B37C:
-                cmp.b   (selTeamNumber).l,d1
-                beq.s   loc_12B352
-loc_12B384:
-                lea     (a2,d0.w),a2
-                move.w  (a2),d0
-                move.w  d2,(a2)
-                move.w  (careerFileBuffer).l,-(sp)
-                bsr.w   Career_RemoveTeamFromTmdTeamPool
-                movea.l a3,a0
-                bsr.w   Career_AppendTeamToTmdTeamPool
-                move.w  (sp)+,d0
-                cmp.w   (careerFileBuffer).l,d0
-                beq.s   locret_12B3B4
-                move.w  #$8997,(panicReasonCode).l
-                jsr     PanicHaltLoop
-locret_12B3B4:
                 rts
 
 ; ===== Career_UpdateEuropeanChampionshipCompetitions =====
 ; prototype: void __usercall Career_UpdateEuropeanChampionshipCompetitions()
+; ===== Career_UpdateEuropeanChampionshipCompetitions ===== (ported to C)
 Career_UpdateEuropeanChampionshipCompetitions:
-                btst    #0,(someTeamFlags).l
-                beq.w   locret_12B432
-                lea     (europeanChampionships2Copy).l,a5
-                move.b  7(a5),d0
-                andi.w  #$FF,d0
-                lea     7(a5,d0.w),a5
-                move.w  (euroChampionshipQualTeam).l,(a5)+
-                move.w  #2,d7
-                lea     (ecQualifyingGroup1Copy).l,a4
-                bsr.w   Career_UpdateEuropeanChampionshipCompetitionSlot
-                lea     (ecQualifyingGroup2Copy).l,a4
-                bsr.w   Career_UpdateEuropeanChampionshipCompetitionSlot
-                lea     (ecQualifyingGroup3Copy).l,a4
-                bsr.w   Career_UpdateEuropeanChampionshipCompetitionSlot
-                lea     (ecQualifyingGroup4Copy).l,a4
-                bsr.w   Career_UpdateEuropeanChampionshipCompetitionSlot
-                lea     (ecQualifyingGroup5Copy).l,a4
-                bsr.w   Career_UpdateEuropeanChampionshipCompetitionSlot
-                lea     (ecQualifyingGroup6Copy).l,a4
-                bsr.w   Career_UpdateEuropeanChampionshipCompetitionSlot
-                lea     (ecQualifyingGroup7Copy).l,a4
-                bsr.w   Career_UpdateEuropeanChampionshipCompetitionSlot
-                move.w  #1,d7
-                lea     (ecQualifyingGroup8Copy).l,a4
-                bsr.w   Career_UpdateEuropeanChampionshipCompetitionSlot
-locret_12B432:
+                movem.l d0-d7/a0-a6,-(sp)
+                jsr     _Career_UpdateEuropeanChampionshipCompetitions
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
-; ===== Career_UpdateEuropeanChampionshipCompetitionSlot =====
-; prototype: void __usercall Career_UpdateEuropeanChampionshipCompetitionSlot(void *competition@<a4>, unsigned __int16 count@<d7>, void *out@<a5>)
+; ===== Career_UpdateEuropeanChampionshipCompetitionSlot ===== (inlined into C)
 Career_UpdateEuropeanChampionshipCompetitionSlot:
-                cmpa.l  (currentCompetitionPtr).l,a4
-                bne.s   loc_12B466
-                jsr RestoreSelectedTeams(pc)
-                bsr.w   Career_CopyCompetitionFileBufferToOrFromActive
-                move.w  #1,d0
-                move.w  #1,d1
-                clr.w   d2
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     ShowDiyLeaguesTournamentMenu
-                movem.l (sp)+,d0-d7/a0-a6
-                bsr.w   DIY_BuildQualifiedTeamListFromSortedTable_EC
-                jsr SaveSelectedTeams(pc)
                 rts
-loc_12B466:
-                movea.l a4,a0
-                clr.w   d0
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     Career_AutoAdvanceInternationalCompetitionFixtures
-                movem.l (sp)+,d0-d7/a0-a6
 
 ; ===== DIY_BuildQualifiedTeamListFromSortedTable_EC ===== (ported to C → _DIY_BuildQualifiedTeamListFromSortedTable)
 DIY_BuildQualifiedTeamListFromSortedTable_EC:
@@ -31665,94 +31545,18 @@ DIY_BuildQualifiedTeamListFromSortedTable_EC:
 
 ; ===== Career_UpdateWorldCupCompetitions =====
 ; prototype: void __usercall Career_UpdateWorldCupCompetitions()
+; ===== Career_UpdateWorldCupCompetitions ===== (ported to C)
 Career_UpdateWorldCupCompetitions:
-                btst    #7,(someTeamFlags).l
-                beq.w   loc_12B4C0
-                move.w  (primaryCompWinnerTeam).l,(worldCupHostTeam).l
-loc_12B4C0:
-                btst    #6,(someTeamFlags).l
-                beq.w   locret_12B57E
-                lea     (worldCup2Copy).l,a5
-                move.b  7(a5),d0
-                andi.w  #$FF,d0
-                lea     7(a5,d0.w),a5
-                move.w  (worldCupHostTeam).l,(a5)+
-                move.w  #2,d7
-                lea     (worldCupQualifyingGroup1Copy).l,a4
-                bsr.w   Career_UpdateWorldCupCompetitionSlot
-                lea     (worldCupQualifyingGroup2Copy).l,a4
-                bsr.w   Career_UpdateWorldCupCompetitionSlot
-                lea     (worldCupQualifyingGroup3Copy).l,a4
-                bsr.w   Career_UpdateWorldCupCompetitionSlot
-                lea     (worldCupQualifyingGroup4Copy).l,a4
-                bsr.w   Career_UpdateWorldCupCompetitionSlot
-                lea     (worldCupQualifyingGroup5Copy).l,a4
-                bsr.w   Career_UpdateWorldCupCompetitionSlot
-                lea     (worldCupQualifyingGroup6Copy).l,a4
-                bsr.w   Career_UpdateWorldCupCompetitionSlot
-                lea     (worldCupQualifyingGroup7Copy).l,a4
-                bsr.w   Career_UpdateWorldCupCompetitionSlot
-                lea     (worldCupQualifyingGroup8Copy).l,a4
-                bsr.w   Career_UpdateWorldCupCompetitionSlot
-                move.w  #3,d7
-                lea     (northAmericaWorldCupQualificationCopy).l,a4
-                bsr.w   Career_UpdateWorldCupCompetitionSlot
-                move.w  #4,d7
-                lea     (southAmericaWorldCupQualificationCopy).l,a4
-                bsr.w   Career_UpdateWorldCupCompetitionSlot
-                move.w  #5,d7
-                lea     (africaWorldCupQualificationCopy).l,a4
-                bsr.w   Career_UpdateWorldCupCompetitionSlot
-                move.w  #2,d7
-                lea     (asiaWorldCupQualificationCopy).l,a4
-                bsr.w   Career_UpdateWorldCupCompetitionSlot
-                move.w  #1,d7
-                lea     (oceaniaWorldCupQualificationCopy).l,a4
-                bsr.w   Career_UpdateWorldCupCompetitionSlot
-locret_12B57E:
+                movem.l d0-d7/a0-a6,-(sp)
+                jsr     _Career_UpdateWorldCupCompetitions
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
 ; ===== Career_UpdateWorldCupCompetitionSlot =====
 ; prototype: void __usercall Career_UpdateWorldCupCompetitionSlot(void *competition@<a4>, unsigned __int16 count@<d7>, void *out@<a5>)
+; ===== Career_UpdateWorldCupCompetitionSlot ===== (inlined into C)
 Career_UpdateWorldCupCompetitionSlot:
-                cmpa.l  (currentCompetitionPtr).l,a4
-                bne.s   loc_12B5E8
-                jsr RestoreSelectedTeams(pc)
-                cmpi.b  #2,1(a4)
-                beq.s   loc_12B5C4
-                cmpi.b  #0,1(a4)
-                bne.w   loc_12B6AC
-                bsr.w   Career_CopyCompetitionFileBufferToOrFromActive
-                move.w  #1,d0
-                move.w  #1,d1
-                clr.w   d2
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     ShowDiyLeaguesTournamentMenu
-                movem.l (sp)+,d0-d7/a0-a6
-                bsr.w   DIY_BuildQualifiedTeamListFromSortedTable_WC
-                jsr SaveSelectedTeams(pc)
                 rts
-loc_12B5C4:
-                bsr.w   Career_CopyCompetitionFileBufferToOrFromActive
-                move.w  #1,d0
-                move.w  #1,d1
-                clr.w   d2
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr DIY_EditCompetitionSlot(pc)
-                movem.l (sp)+,d0-d7/a0-a6
-                bsr.w   DIY_BuildQualifiedTeamListFromDiyFileBuffer
-                jsr SaveSelectedTeams(pc)
-                rts
-loc_12B5E8:
-                movea.l a4,a0
-                cmpi.b  #2,1(a4)
-                beq.s   loc_12B63E
-                cmpi.b  #0,1(a4)
-                bne.w   loc_12B6BA
-                clr.w   d0
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     Career_AutoAdvanceInternationalCompetitionFixtures
-                movem.l (sp)+,d0-d7/a0-a6
 
 ; ===== DIY_BuildQualifiedTeamListFromSortedTable_WC ===== (ported to C → _DIY_BuildQualifiedTeamListFromSortedTable)
 DIY_BuildQualifiedTeamListFromSortedTable_WC:
@@ -31792,26 +31596,12 @@ loc_12B6BA:
 
 ; ===== Career_UpdateEuroCupCompetitionSlot =====
 ; prototype: void __usercall Career_UpdateEuroCupCompetitionSlot()
+; ===== Career_UpdateEuroCupCompetitionSlot ===== (ported to C → _Career_UpdateEuroCupCompetitionSlot)
 Career_UpdateEuroCupCompetitionSlot:
-                lea     (euroCupCopy).l,a4
-                cmpa.l  (quaternaryCompetitionPtr).l,a4
-                bne.s   loc_12B6FE
-                jsr RestoreSelectedTeams(pc)
-                bsr.w   Career_CopyEuroCupsCompetitionContextToOrFromActive
-                move.w  #1,d0
-                move.w  #1,d1
-                clr.w   d2
                 movem.l d0-d7/a0-a6,-(sp)
-                jsr DIY_EditCompetitionSlot(pc)
+                jsr     _Career_UpdateEuroCupCompetitionSlot
                 movem.l (sp)+,d0-d7/a0-a6
-                bsr.w   Career_CopyEuroCupTeamGridAndTitleHolder
-                jsr SaveSelectedTeams(pc)
                 rts
-loc_12B6FE:
-                movea.l a4,a0
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     Career_AutoAdvanceLeagueCompetitionFromRecord
-                movem.l (sp)+,d0-d7/a0-a6
 
 ; ===== Career_CopyEuroCupTeamGridAndTitleHolder =====
 ; prototype: void __usercall Career_CopyEuroCupTeamGridAndTitleHolder()
@@ -31820,26 +31610,12 @@ Career_CopyEuroCupTeamGridAndTitleHolder:
 
 ; ===== Career_UpdateCupWinnersCupCompetitionSlot =====
 ; prototype: void __usercall Career_UpdateCupWinnersCupCompetitionSlot()
+; ===== Career_UpdateCupWinnersCupCompetitionSlot ===== (ported to C → _Career_UpdateCupWinnersCupCompetitionSlot)
 Career_UpdateCupWinnersCupCompetitionSlot:
-                lea     (cupWinnersCupCopy).l,a4
-                cmpa.l  (quaternaryCompetitionPtr).l,a4
-                bne.s   loc_12B784
-                jsr RestoreSelectedTeams(pc)
-                bsr.w   Career_CopyEuroCupsCompetitionContextToOrFromActive
-                move.w  #1,d0
-                move.w  #1,d1
-                clr.w   d2
                 movem.l d0-d7/a0-a6,-(sp)
-                jsr     ShowDIYCupMenuWithParams
+                jsr     _Career_UpdateCupWinnersCupCompetitionSlot
                 movem.l (sp)+,d0-d7/a0-a6
-                bsr.w   Career_CopyCupWinnersCupTeamGridAndTitleHolder
-                jsr SaveSelectedTeams(pc)
                 rts
-loc_12B784:
-                movea.l a4,a0
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     Career_AutoAdvanceCupCompetitionFromRecord
-                movem.l (sp)+,d0-d7/a0-a6
 
 ; ===== Career_CopyCupWinnersCupTeamGridAndTitleHolder =====
 ; prototype: void __usercall Career_CopyCupWinnersCupTeamGridAndTitleHolder()
@@ -31848,26 +31624,12 @@ Career_CopyCupWinnersCupTeamGridAndTitleHolder:
 
 ; ===== Career_UpdateUefaCupCompetitionSlot =====
 ; prototype: void __usercall Career_UpdateUefaCupCompetitionSlot()
+; ===== Career_UpdateUefaCupCompetitionSlot ===== (ported to C → _Career_UpdateUefaCupCompetitionSlot)
 Career_UpdateUefaCupCompetitionSlot:
-                lea     (uefaCupCopy).l,a4
-                cmpa.l  (quaternaryCompetitionPtr).l,a4
-                bne.s   loc_12B80A
-                jsr RestoreSelectedTeams(pc)
-                bsr.w   Career_CopyEuroCupsCompetitionContextToOrFromActive
-                move.w  #1,d0
-                move.w  #1,d1
-                clr.w   d2
                 movem.l d0-d7/a0-a6,-(sp)
-                jsr     ShowDIYCupMenuWithParams
+                jsr     _Career_UpdateUefaCupCompetitionSlot
                 movem.l (sp)+,d0-d7/a0-a6
-                bsr.w   Career_CopyUefaCupTeamGridAndTitleHolder
-                jsr SaveSelectedTeams(pc)
                 rts
-loc_12B80A:
-                movea.l a4,a0
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     Career_AutoAdvanceCupCompetitionFromRecord
-                movem.l (sp)+,d0-d7/a0-a6
 
 ; ===== Career_CopyUefaCupTeamGridAndTitleHolder =====
 ; prototype: void __usercall Career_CopyUefaCupTeamGridAndTitleHolder()
@@ -31984,26 +31746,15 @@ loc_12BC38:
 
 ; ===== Career_ProcessCompetitionForNextSeason =====
 ; prototype: void __usercall Career_ProcessCompetitionForNextSeason(unsigned __int8 comp@<d0>)
+; ===== Career_ProcessCompetitionForNextSeason ===== (ported to C)
+; in: d0.b = competition ID
 Career_ProcessCompetitionForNextSeason:
-                move.b  d0,(currentCompetitionId).l
-                move.w  #$FFFF,(cachedTertiaryQualifiedTeamId).l
-                lea     (competitionsTable).l,a5
-                andi.w  #$FF,d0
-                lsl.w   #2,d0
-                movea.l (a5,d0.w),a5
-                movea.l (a5)+,a4
-                bsr.w   Career_ProcessPrimaryCompetitionForNextSeason
-                lea     4(a5),a5
-                movea.l (a5)+,a4
-                cmpa.l  #$FFFFFFFF,a4
-                beq.s   loc_12BC8A
-                bsr.w   Career_ProcessSecondaryCompetitionForNextSeason
-                movea.l (a5)+,a4
-                cmpa.l  #$FFFFFFFF,a4
-                beq.s   loc_12BC8A
-                bsr.w   Career_ProcessTertiaryCompetitionForNextSeason
-loc_12BC8A:
-                bsr.w   DIY_ValidateLeagueScratchBuffer
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FF,d0
+                move.l  d0,-(sp)
+                jsr     _Career_ProcessCompetitionForNextSeason
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== nullsub_13 =====
@@ -32047,56 +31798,26 @@ loc_12BCD0:
 
 ; ===== Career_ProcessSecondaryCompetitionForNextSeason =====
 ; prototype: void __usercall Career_ProcessSecondaryCompetitionForNextSeason(void *competition@<a4>)
+; ===== Career_ProcessSecondaryCompetitionForNextSeason ===== (ported to C)
+; in: a4 = competition record ptr
 Career_ProcessSecondaryCompetitionForNextSeason:
-                cmpi.b  #1,1(a4)
-                bne.s   loc_12BCD0
-                cmpa.l  (secondaryCompetitionPtr).l,a4
-                bne.s   loc_12BD20
-                jsr RestoreSelectedTeams(pc)
-                bsr.w   Career_CopyCompetitionContextToOrFromActive
-                move.w  #1,d0
-                move.w  #1,d1
-                clr.w   d2
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     ShowDIYCupMenuWithParams
-                movem.l (sp)+,d0-d7/a0-a6
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr DIY_CacheSecondaryQualifiedTeamsGrid(pc)
-                movem.l (sp)+,d0-d7/a0-a6
-                jsr SaveSelectedTeams(pc)
-                rts
-loc_12BD20:
-                bsr.s   DIY_LoadCompetitionForQualifiedTeamsGrid
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr DIY_CacheSecondaryQualifiedTeamsGrid(pc)
-                movem.l (sp)+,d0-d7/a0-a6
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a4,-(sp)
+                jsr     _Career_ProcessSecondaryCompetitionForNextSeason
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== Career_ProcessTertiaryCompetitionForNextSeason =====
 ; prototype: void __usercall Career_ProcessTertiaryCompetitionForNextSeason(void *competition@<a4>)
+; ===== Career_ProcessTertiaryCompetitionForNextSeason ===== (ported to C)
+; in: a4 = competition record ptr
 Career_ProcessTertiaryCompetitionForNextSeason:
-                cmpi.b  #1,1(a4)
-                bne.s   loc_12BCD0
-                cmpa.l  (tertiaryCompetitionPtr).l,a4
-                bne.s   loc_12BD72
-                jsr RestoreSelectedTeams(pc)
-                bsr.w   Career_CopyTertiaryCompetitionContextToOrFromActive
-                move.w  #1,d0
-                move.w  #1,d1
-                clr.w   d2
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     ShowDIYCupMenuWithParams
-                movem.l (sp)+,d0-d7/a0-a6
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr DIY_CacheTertiaryQualifiedTeamGrid(pc)
-                movem.l (sp)+,d0-d7/a0-a6
-                jsr SaveSelectedTeams(pc)
-                rts
-loc_12BD72:
-                bsr.w   DIY_LoadCompetitionForQualifiedTeamsGrid
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr DIY_CacheTertiaryQualifiedTeamGrid(pc)
-                movem.l (sp)+,d0-d7/a0-a6
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a4,-(sp)
+                jsr     _Career_ProcessTertiaryCompetitionForNextSeason
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== Career_ProcessPrimaryCompetitionForNextSeason =====
@@ -32295,45 +32016,9 @@ DIY_ValidateLeagueScratchBuffer:
 
 ; ===== Career_SetCupPickList_Oceania =====
 ; prototype: void __usercall Career_SetCupPickList_Oceania()
+; ===== Career_SetCupPickList_Oceania ===== (ported to C, dead)
 Career_SetCupPickList_Oceania:
-                lea     (cupPickOceaniaWorldCupFriendly).l,a0
-                btst    #7,(someTeamFlags).l
-                beq.s   loc_12C180
-                tst.w   (qualifyingStage1PendingFlag0).l
-                bne.w   loc_12C1CC
-                lea     (cupPickOceaniaWorldCupInvite).l,a0
-                bra.s   loc_12C1CC
-loc_12C180:
-                btst    #6,(someTeamFlags).l
-                beq.s   loc_12C1AE
-                move.w  (selTeamNumber).l,d0
-                lea     (cupPickOceaniaOceaniaCupFinalist).l,a0
-                cmp.w   (worldCupHostTeam).l,d0
-                beq.s   loc_12C1CC
-                cmp.w   (worldCupQualifyingTeam).l,d0
-                beq.s   loc_12C1CC
-                lea     (cupPickOceaniaOceaniaCupNonFinalist).l,a0
-                bra.s   loc_12C1CC
-loc_12C1AE:
-                lea     (cupPickOceaniaOceaniaCupFriendly).l,a0
-                btst    #1,(someTeamFlags).l
-                bne.s   loc_12C1CC
-                tst.b   (someTeamFlags).l
-                bne.s   loc_12C1E6
-                lea     (cupPickOceaniaInviteFriendly).l,a0
-loc_12C1CC:
-                lea     (careerCupPickList).l,a1
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                bsr.w   Career_RandomizeInvitationTournamentCup
-                bsr.w   Career_SetupWorldCupQualifyingGroups
                 rts
-loc_12C1E6:
-                move.w  #$3775,(panicReasonCode).l
-                jsr     PanicHaltLoop
 ; CompetitionCup *[5]
 cupPickOceaniaInviteFriendly:
                 ; CompetitionCup *[5]
@@ -32385,45 +32070,9 @@ cupPickOceaniaOceaniaCupFinalist:
 
 ; ===== Career_SetCupPickList_NorthAmerica =====
 ; prototype: void __usercall Career_SetCupPickList_NorthAmerica()
+; ===== Career_SetCupPickList_NorthAmerica ===== (ported to C, dead)
 Career_SetCupPickList_NorthAmerica:
-                lea     (cupPickNAmericaWorldCupFriendly).l,a0
-                btst    #7,(someTeamFlags).l
-                beq.s   loc_12C28E
-                tst.w   (qualifyingStage1PendingFlag0).l
-                bne.w   loc_12C2DA
-                lea     (cupPickNAmericaWorldCupInvite).l,a0
-                bra.s   loc_12C2DA
-loc_12C28E:
-                btst    #6,(someTeamFlags).l
-                beq.s   loc_12C2BC
-                move.w  (selTeamNumber).l,d0
-                lea     (cupPickNAmericaNaCupFinalist).l,a0
-                cmp.w   (worldCupHostTeam).l,d0
-                beq.s   loc_12C2DA
-                cmp.w   (worldCupQualifyingTeam).l,d0
-                beq.s   loc_12C2DA
-                lea     (cupPickNAmericaNaCupNonFinalist).l,a0
-                bra.s   loc_12C2DA
-loc_12C2BC:
-                lea     (cupPickNAmericaNaCupFriendly).l,a0
-                btst    #1,(someTeamFlags).l
-                bne.s   loc_12C2DA
-                tst.b   (someTeamFlags).l
-                bne.s   loc_12C2F4
-                lea     (cupPickNAmericaInviteFriendly).l,a0
-loc_12C2DA:
-                lea     (careerCupPickList).l,a1
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                bsr.w   Career_RandomizeInvitationTournamentCup
-                bsr.w   Career_SetupWorldCupQualifyingGroups
                 rts
-loc_12C2F4:
-                move.w  #$3775,(panicReasonCode).l
-                jsr     PanicHaltLoop
 ; CompetitionCup *[5]
 cupPickNAmericaInviteFriendly:
                 ; CompetitionCup *[5]
@@ -32473,47 +32122,9 @@ cupPickNAmericaNaCupFinalist:
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
 
-; ===== Career_SetCupPickList_Asia =====
-; prototype: void __usercall Career_SetCupPickList_Asia()
+; ===== Career_SetCupPickList_Asia ===== (ported to C, dead)
 Career_SetCupPickList_Asia:
-                lea     (cupPickAsiaWorldCupFriendly).l,a0
-                btst    #7,(someTeamFlags).l
-                beq.s   loc_12C39C
-                tst.w   (qualifyingStage1PendingFlag0).l
-                bne.w   loc_12C3E8
-                lea     (cupPickAsiaWorldCupInvite).l,a0
-                bra.s   loc_12C3E8
-loc_12C39C:
-                btst    #6,(someTeamFlags).l
-                beq.s   loc_12C3CA
-                move.w  (selTeamNumber).l,d0
-                lea     (cupPickAsiaAsianCupFinalist).l,a0
-                cmp.w   (worldCupHostTeam).l,d0
-                beq.s   loc_12C3E8
-                cmp.w   (worldCupQualifyingTeam).l,d0
-                beq.s   loc_12C3E8
-                lea     (cupPickAsiaAsianCupNonFinalist).l,a0
-                bra.s   loc_12C3E8
-loc_12C3CA:
-                lea     (cupPickAsiaAsianCupFriendly).l,a0
-                btst    #1,(someTeamFlags).l
-                bne.s   loc_12C3E8
-                tst.b   (someTeamFlags).l
-                bne.s   loc_12C402
-                lea     (cupPickAsiaInviteFriendly).l,a0
-loc_12C3E8:
-                lea     (careerCupPickList).l,a1
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                bsr.w   Career_RandomizeInvitationTournamentCup
-                bsr.w   Career_SetupWorldCupQualifyingGroups
                 rts
-loc_12C402:
-                move.w  #$3775,(panicReasonCode).l
-                jsr     PanicHaltLoop
 ; CompetitionCup *[5]
 cupPickAsiaInviteFriendly:
                 ; CompetitionCup *[5]
@@ -32563,47 +32174,9 @@ cupPickAsiaAsianCupFinalist:
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
 
-; ===== Career_SetCupPickList_Africa =====
-; prototype: void __usercall Career_SetCupPickList_Africa()
+; ===== Career_SetCupPickList_Africa ===== (ported to C, dead)
 Career_SetCupPickList_Africa:
-                lea     (cupPickAfricaWorldCupFriendly).l,a0
-                btst    #7,(someTeamFlags).l
-                beq.s   loc_12C4AA
-                tst.w   (qualifyingStage1PendingFlag0).l
-                bne.w   loc_12C4F6
-                lea     (cupPickAfricaWorldCupInvite).l,a0
-                bra.s   loc_12C4F6
-loc_12C4AA:
-                btst    #6,(someTeamFlags).l
-                beq.s   loc_12C4D8
-                move.w  (selTeamNumber).l,d0
-                lea     (cupPickAfricaAfricanCupFinalist).l,a0
-                cmp.w   (worldCupHostTeam).l,d0
-                beq.s   loc_12C4F6
-                cmp.w   (worldCupQualifyingTeam).l,d0
-                beq.s   loc_12C4F6
-                lea     (cupPickAfricaAfricanCupNonFinalist).l,a0
-                bra.s   loc_12C4F6
-loc_12C4D8:
-                lea     (cupPickAfricaAfricanCupFriendly).l,a0
-                btst    #1,(someTeamFlags).l
-                bne.s   loc_12C4F6
-                tst.b   (someTeamFlags).l
-                bne.s   loc_12C510
-                lea     (cupPickAfricaInviteFriendly).l,a0
-loc_12C4F6:
-                lea     (careerCupPickList).l,a1
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                bsr.w   Career_RandomizeInvitationTournamentCup
-                bsr.w   Career_SetupWorldCupQualifyingGroups
                 rts
-loc_12C510:
-                move.w  #$3775,(panicReasonCode).l
-                jsr     PanicHaltLoop
 ; CompetitionCup *[5]
 cupPickAfricaInviteFriendly:
                 ; CompetitionCup *[5]
@@ -32653,47 +32226,9 @@ cupPickAfricaAfricanCupFinalist:
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
 
-; ===== Career_SetCupPickList_SouthAmerica =====
-; prototype: void __usercall Career_SetCupPickList_SouthAmerica()
+; ===== Career_SetCupPickList_SouthAmerica ===== (ported to C, dead)
 Career_SetCupPickList_SouthAmerica:
-                lea     (cupPickSAmericaWorldCupFriendly).l,a0
-                btst    #7,(someTeamFlags).l
-                beq.s   loc_12C5B8
-                tst.w   (qualifyingStage1PendingFlag0).l
-                bne.w   loc_12C604
-                lea     (cupPickSAmericaWorldCupInvite).l,a0
-                bra.s   loc_12C604
-loc_12C5B8:
-                btst    #6,(someTeamFlags).l
-                beq.s   loc_12C5E6
-                move.w  (selTeamNumber).l,d0
-                lea     (cupPickSAmericaCopaAmericaFinalist).l,a0
-                cmp.w   (worldCupHostTeam).l,d0
-                beq.s   loc_12C604
-                cmp.w   (worldCupQualifyingTeam).l,d0
-                beq.s   loc_12C604
-                lea     (cupPickSAmericaCopaAmericaNonFinalist).l,a0
-                bra.s   loc_12C604
-loc_12C5E6:
-                lea     (cupPickSAmericaCopaAmericaFriendly).l,a0
-                btst    #1,(someTeamFlags).l
-                bne.s   loc_12C604
-                tst.b   (someTeamFlags).l
-                bne.s   loc_12C61E
-                lea     (cupPickSAmericaInviteFriendly).l,a0
-loc_12C604:
-                lea     (careerCupPickList).l,a1
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                bsr.w   Career_RandomizeInvitationTournamentCup
-                bsr.w   Career_SetupWorldCupQualifyingGroups
                 rts
-loc_12C61E:
-                move.w  #$3775,(panicReasonCode).l
-                jsr     PanicHaltLoop
 ; CompetitionCup *[5]
 cupPickSAmericaInviteFriendly:
                 ; CompetitionCup *[5]
@@ -32743,106 +32278,9 @@ cupPickSAmericaCopaAmericaFinalist:
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
 
-; ===== Career_SetCupPickList_Europe =====
-; prototype: void __usercall Career_SetCupPickList_Europe(const unsigned __int16 *teamList@<a6>)
+; ===== Career_SetCupPickList_Europe ===== (ported to C, dead)
 Career_SetCupPickList_Europe:
-                lea     (cupPickListEuropeWorldCupFriendly).l,a0
-                btst    #7,(someTeamFlags).l
-                beq.s   loc_12C6C8
-                tst.w   (qualifyingStage1PendingFlag0).l
-                bne.w   loc_12C73E
-                lea     (cupPickLisEuropeWorldCupInviteFriendly).l,a0
-                bra.w   loc_12C73E
-loc_12C6C8:
-                lea     (cupPickLisEuropeEuroChampsFriendly).l,a0
-                btst    #1,(someTeamFlags).l
-                beq.s   loc_12C6EA
-                tst.w   (qualifyingStage1PendingFlag1).l
-                bne.w   loc_12C73E
-                lea     (cupPickListEuropeEuroChampsInviteFriendly).l,a0
-                bra.s   loc_12C73E
-loc_12C6EA:
-                btst    #6,(someTeamFlags).l
-                beq.s   loc_12C718
-                move.w  (selTeamNumber).l,d0
-                lea     (cupPickListEuropeInviteTournamentFriendlyAlt).l,a0
-                cmp.w   (worldCupHostTeam).l,d0
-                beq.s   loc_12C73E
-                cmp.w   (worldCupQualifyingTeam).l,d0
-                beq.s   loc_12C73E
-                lea     (cupPickEuropeNoCupFriendlyAlt).l,a0
-                bra.s   loc_12C73E
-loc_12C718:
-                btst    #0,(someTeamFlags).l
-                beq.w   loc_12C7F4
-                lea     (cupPickListEuropeInviteTournamentFriendly).l,a0
-                move.w  (selTeamNumber).l,d0
-                cmp.w   (euroChampionshipQualTeam).l,d0
-                beq.s   loc_12C73E
-                lea     (cupPickEuropeNoCupFriendly).l,a0
-loc_12C73E:
-                lea     (careerCupPickList).l,a1
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                move.l  (a0)+,(a1)+
-                bsr.w   Career_RandomizeInvitationTournamentCup
-                bsr.w   Career_SetupWorldCupQualifyingGroups
-                btst    #0,(someTeamFlags).l
-                beq.w   locret_12C7F2
-                move.b  #$50,d0         ; 'P'
-                jsr     Career_SortTeamFilePtrsByAvgPlayerPrice
-                jsr     Rand2
-                mulu.w  #7,d0
-                lsr.w   #8,d0
-                lsl.w   #2,d0
-                lea     (ecQualifyingGroupsTable).l,a2
-                movea.l (a2,d0.w),a2
-                move.w  #$2E,d2         ; '.'
-                clr.w   d3
-loc_12C78A:
-                lea     (ecQualifyingGroupsTable).l,a4
-                move.w  #7,d4
-loc_12C794:
-                movea.l (a4)+,a3
-                move.b  7(a3),d0
-                andi.w  #$FF,d0
-                lea     7(a3,d0.w),a5
-                lea     (a5,d3.w),a5
-                tst.w   d3
-                bne.s   loc_12C7C4
-                cmpa.l  a2,a3
-                bne.s   loc_12C7C4
-                move.w  (selTeamNumber).l,d0
-                cmp.w   (euroChampionshipQualTeam).l,d0
-                beq.s   loc_12C7C4
-                move.l  a3,(careerCupPickList).l
-                bra.s   loc_12C7DC
-loc_12C7C4:
-                cmpa.l  #ecQualifyingGroup8Copy,a3
-                bne.s   loc_12C7D2
-                cmpi.w  #8,d3
-                bcc.s   loc_12C7EA
-loc_12C7D2:
-                move.w  (a6)+,d0
-                cmp.w   (selTeamNumber).l,d0
-                beq.s   loc_12C7D2
-loc_12C7DC:
-                cmp.w   (euroChampionshipQualTeam).l,d0
-                beq.s   loc_12C7D2
-                move.w  d0,(a5)+
-                subq.w  #1,d2
-                beq.s   locret_12C7F2
-loc_12C7EA:
-                dbf     d4,loc_12C794
-                addq.w  #2,d3
-                bra.s   loc_12C78A
-locret_12C7F2:
                 rts
-loc_12C7F4:
-                move.w  #$3775,(panicReasonCode).l
-                jsr     PanicHaltLoop
 ; CompetitionCup *[8]
 ecQualifyingGroupsTable:
                 ; CompetitionCup *[8]
@@ -32923,164 +32361,12 @@ cupPickListEuropeInviteTournamentFriendlyAlt:
 Career_RandomizeInvitationTournamentCup:
                 jmp     _Career_RandomizeInvitationTournamentCup
 
-; ===== Career_SetupWorldCupQualifyingGroups =====
-; prototype: void __usercall Career_SetupWorldCupQualifyingGroups(const unsigned __int16 *teamList@<a6>)
+; ===== Career_SetupWorldCupQualifyingGroups ===== (ported to C, dead)
 Career_SetupWorldCupQualifyingGroups:
-                btst    #6,(someTeamFlags).l
-                beq.w   locret_12CA58
-                move.w  #6,d5
-                cmpi.b  #$50,(worldCupHostTeam).l ; 'P'
-                bne.s   loc_12C918
-                subq.w  #1,d5
-                move.w  (worldCupHostTeam).l,d1
-                cmp.w   (worldCupQualifyingTeam).l,d1
-                beq.s   loc_12C924
-loc_12C918:
-                cmpi.b  #$50,(worldCupQualifyingTeam).l ; 'P'
-                bne.s   loc_12C924
-                subq.w  #1,d5
-loc_12C924:
-                btst    #0,d5
-                beq.s   loc_12C92C
-                subq.w  #1,d5
-loc_12C92C:
-                move.b  d5,(worldCupQualifyingGroup8Copy+COMPETITIONCUP_6_2_12_COMP+COMPETITIONCUP_FIRSTROUNDNO).l
-                move.b  #$50,d0         ; 'P'
-                jsr     Career_SortTeamFilePtrsByAvgPlayerPrice
-                jsr     Rand2
-                andi.w  #$1C,d0
-                lea     (worldCupQualifyingGroupsTable).l,a2
-                movea.l (a2,d0.w),a2
-                move.w  #$30,d2         ; '0'
-                subq.w  #6,d2
-                add.w   d5,d2
-                lsl.w   #1,d5
-                clr.w   d3
-loc_12C95C:
-                lea     (worldCupQualifyingGroupsTable).l,a4
-                move.w  #7,d4
-loc_12C966:
-                movea.l (a4)+,a3
-                move.b  7(a3),d0
-                andi.w  #$FF,d0
-                lea     7(a3,d0.w),a5
-                lea     (a5,d3.w),a5
-                tst.w   d3
-                bne.s   loc_12C9A8
-                cmpa.l  a2,a3
-                bne.s   loc_12C9A8
-                move.w  (selTeamNumber).l,d0
-                cmp.w   (worldCupHostTeam).l,d0
-                beq.s   loc_12C9A8
-                cmp.w   (worldCupQualifyingTeam).l,d0
-                beq.s   loc_12C9A8
-                cmpi.b  #$50,(selTeamNumber).l ; 'P'
-                bne.s   loc_12C9A8
-                move.l  a3,(careerCupPickList).l
-                bra.s   loc_12C9BE
-loc_12C9A8:
-                cmpa.l  #worldCupQualifyingGroup8Copy,a3
-                bne.s   loc_12C9B4
-                cmp.w   d5,d3
-                bcc.s   loc_12C9D4
-loc_12C9B4:
-                move.w  (a6)+,d0
-                cmp.w   (selTeamNumber).l,d0
-                beq.s   loc_12C9B4
-loc_12C9BE:
-                cmp.w   (worldCupHostTeam).l,d0
-                beq.s   loc_12C9B4
-                cmp.w   (worldCupQualifyingTeam).l,d0
-                beq.s   loc_12C9B4
-                move.w  d0,(a5)+
-                subq.w  #1,d2
-                beq.s   loc_12C9DC
-loc_12C9D4:
-                dbf     d4,loc_12C966
-                addq.w  #2,d3
-                bra.s   loc_12C95C
-loc_12C9DC:
-                lea     (northAmericaWorldCupQualificationCopy).l,a5
-                move.b  #$53,d0         ; 'S'
-                bsr.w   Career_FillWorldCupQualifyingGroupTeams
-                lea     (southAmericaWorldCupQualificationCopy).l,a5
-                move.b  #$52,d0         ; 'R'
-                bsr.w   Career_FillWorldCupQualifyingGroupTeams
-                lea     (africaWorldCupQualificationCopy).l,a5
-                move.b  #$51,d0         ; 'Q'
-                bsr.w   Career_FillWorldCupQualifyingGroupTeams
-                lea     (asiaWorldCupQualificationCopy).l,a5
-                move.b  #$54,d0         ; 'T'
-                bsr.w   Career_FillWorldCupQualifyingGroupTeams
-                lea     (oceaniaWorldCupQualificationCopy).l,a5
-                move.b  #4,d0
-                cmpi.b  #$55,(worldCupHostTeam).l ; 'U'
-                bne.s   loc_12CA38
-                subq.b  #1,d0
-                move.w  (worldCupHostTeam).l,d1
-                cmp.w   (worldCupQualifyingTeam).l,d1
-                beq.s   loc_12CA44
-loc_12CA38:
-                cmpi.b  #$55,(worldCupQualifyingTeam).l ; 'U'
-                bne.s   loc_12CA44
-                subq.b  #1,d0
-loc_12CA44:
-                btst    #0,d0
-                beq.s   loc_12CA4C
-                subq.w  #1,d0
-loc_12CA4C:
-                move.b  d0,$D(a5)
-                move.b  #$55,d0         ; 'U'
-                bsr.w   Career_FillWorldCupQualifyingGroupTeams
-locret_12CA58:
                 rts
 
-; ===== Career_FillWorldCupQualifyingGroupTeams =====
-; prototype: void __usercall Career_FillWorldCupQualifyingGroupTeams(unsigned __int8 regionCode@<d0>, void *group@<a5>, const unsigned __int16 *teamList@<a6>)
+; ===== Career_FillWorldCupQualifyingGroupTeams ===== (ported to C, dead)
 Career_FillWorldCupQualifyingGroupTeams:
-                move.b  d0,d6
-                jsr     Career_SortTeamFilePtrsByAvgPlayerPrice
-                movea.l a5,a3
-                cmpi.b  #0,1(a5)
-                beq.s   loc_12CA82
-                cmpi.b  #2,1(a5)
-                beq.s   loc_12CA94
-                move.w  #$7623,(panicReasonCode).l
-                jsr     PanicHaltLoop
-loc_12CA82:
-                move.b  $D(a5),d1
-                move.b  7(a5),d0
-                andi.w  #$FF,d0
-                lea     7(a5,d0.w),a5
-                bra.s   loc_12CAA4
-loc_12CA94:
-                move.b  $F(a5),d1
-                move.b  7(a5),d0
-                andi.w  #$FF,d0
-                lea     7(a5,d0.w),a5
-loc_12CAA4:
-                ext.w   d1
-                subq.w  #1,d1
-                move.w  (selTeamNumber).l,d0
-                cmp.w   (worldCupHostTeam).l,d0
-                beq.s   loc_12CACE
-                cmp.w   (worldCupQualifyingTeam).l,d0
-                beq.s   loc_12CACE
-                cmp.b   (selTeamNumber).l,d6
-                bne.s   loc_12CACE
-                move.l  a3,(careerCupPickList).l
-                bra.s   loc_12CAE8
-loc_12CACE:
-                move.w  (a6)+,d0
-                cmp.w   (selTeamNumber).l,d0
-                beq.s   loc_12CACE
-                cmp.w   (worldCupHostTeam).l,d0
-                beq.s   loc_12CACE
-                cmp.w   (worldCupQualifyingTeam).l,d0
-                beq.s   loc_12CACE
-loc_12CAE8:
-                move.w  d0,(a5)+
-                dbf     d1,loc_12CACE
                 rts
 ; CompetitionCup *[8]
 worldCupQualifyingGroupsTable:
@@ -33094,137 +32380,26 @@ worldCupQualifyingGroupsTable:
                 dc.l worldCupQualifyingGroup7Copy ; element[6]
                 dc.l worldCupQualifyingGroup8Copy ; element[7]
 
-; ===== Career_SetCupPickList_ForSelectedRegion =====
-; prototype: void __usercall Career_SetCupPickList_ForSelectedRegion()
+; ===== Career_SetCupPickList_ForSelectedRegion ===== (ported to C → _Career_SetCupPickList_ForSelectedRegion)
+; in: a6 = sorted team list pointer
 Career_SetCupPickList_ForSelectedRegion:
-                cmpi.b  #$50,(selTeamNumber).l ; 'P'
-                beq.s   loc_12CB5A
-                cmpi.b  #$52,(selTeamNumber).l ; 'R'
-                beq.s   loc_12CB60
-                cmpi.b  #$51,(selTeamNumber).l ; 'Q'
-                beq.s   loc_12CB66
-                cmpi.b  #$54,(selTeamNumber).l ; 'T'
-                beq.s   loc_12CB6C
-                cmpi.b  #$53,(selTeamNumber).l ; 'S'
-                beq.s   loc_12CB72
-                cmpi.b  #$55,(selTeamNumber).l ; 'U'
-                beq.s   loc_12CB78
-                move.w  #$4434,(panicReasonCode).l
-                jsr     PanicHaltLoop
-loc_12CB5A:
-                bsr.w   Career_SetCupPickList_Europe
-                bra.s   loc_12CB7C
-loc_12CB60:
-                bsr.w   Career_SetCupPickList_SouthAmerica
-                bra.s   loc_12CB7C
-loc_12CB66:
-                bsr.w   Career_SetCupPickList_Africa
-                bra.s   loc_12CB7C
-loc_12CB6C:
-                bsr.w   Career_SetCupPickList_Asia
-                bra.s   loc_12CB7C
-loc_12CB72:
-                bsr.w   Career_SetCupPickList_NorthAmerica
-                bra.s   loc_12CB7C
-loc_12CB78:
-                bsr.w   Career_SetCupPickList_Oceania
-loc_12CB7C:
-                bsr.w   Career_SetupFriendlyCupTeams
-                bsr.w   Career_SetupInvitationTournamentTeams
-                bsr.w   Career_SetupTourCupTeams
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a6,-(sp)
+                jsr     _Career_SetCupPickList_ForSelectedRegion
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== Career_SetupFriendlyCupTeams =====
-; prototype: void __usercall Career_SetupFriendlyCupTeams()
+; ===== Career_SetupFriendlyCupTeams ===== (ported to C, dead — only called from ported dispatcher)
 Career_SetupFriendlyCupTeams:
-                lea     (careerTeam).l,a0
-                jsr GetAveragePlayerPrice(pc)
-                move.w  d0,d6
-                mulu.w  #$4B,d6         ; 'K'
-                divu.w  #$64,d6         ; 'd'
-                move.w  d0,d7
-                mulu.w  #$7D,d7         ; '}'
-                divu.w  #$64,d7         ; 'd'
-                lea     (friendlyCopy).l,a1
-                move.b  $D(a1),d4
-                ext.w   d4
-                move.b  7(a1),d0
-                andi.w  #$FF,d0
-                lea     7(a1,d0.w),a1
-                movea.l a1,a2
-                move.w  (selTeamNumber).l,(a1)+
-                move.w  #1,d5
-                subq.w  #2,d4
-                clr.w   d3
-loc_12CBD0:
-                bsr.w   Career_PickRandomNationalTeamId
-                move.w  d0,(a1)+
-                addq.w  #1,d5
-                dbf     d4,loc_12CBD0
                 rts
 
-; ===== Career_SetupInvitationTournamentTeams =====
-; prototype: void __usercall Career_SetupInvitationTournamentTeams()
+; ===== Career_SetupInvitationTournamentTeams ===== (ported to C, dead)
 Career_SetupInvitationTournamentTeams:
-                lea     (careerTeam).l,a0
-                jsr GetAveragePlayerPrice(pc)
-                move.w  d0,d6
-                mulu.w  #$4B,d6         ; 'K'
-                divu.w  #$64,d6         ; 'd'
-                move.w  d0,d7
-                mulu.w  #$7D,d7         ; '}'
-                divu.w  #$64,d7         ; 'd'
-                lea     (invitationTournamentCopy).l,a1
-                move.b  $D(a1),d4
-                ext.w   d4
-                move.b  7(a1),d0
-                andi.w  #$FF,d0
-                lea     7(a1,d0.w),a1
-                movea.l a1,a2
-                move.w  (selTeamNumber).l,(a1)+
-                move.w  #1,d5
-                subq.w  #2,d4
-                clr.w   d3
-loc_12CC24:
-                bsr.w   Career_PickRandomNationalTeamId
-                move.w  d0,(a1)+
-                addq.w  #1,d5
-                dbf     d4,loc_12CC24
                 rts
 
-; ===== Career_SetupTourCupTeams =====
-; prototype: void __usercall Career_SetupTourCupTeams()
+; ===== Career_SetupTourCupTeams ===== (ported to C, dead)
 Career_SetupTourCupTeams:
-                jsr     Rand
-                mulu.w  #6,d0
-                lsr.w   #8,d0
-                lea     (tourStringTable).l,a2
-                lsl.w   #2,d0
-                movea.l (a2,d0.w),a2
-                lsr.w   #2,d0
-                addi.w  #$50,d0         ; 'P'
-                move.w  d0,d3
-                clr.w   d6
-                move.w  #$31,d7         ; '1'
-                lea     (tourCopy).l,a1
-                move.b  5(a1),d0
-                ext.w   d0
-                lea     5(a1,d0.w),a0
-                move.l  a2,(a0)
-                move.b  $D(a1),d4
-                ext.w   d4
-                move.b  7(a1),d0
-                andi.w  #$FF,d0
-                lea     7(a1,d0.w),a1
-                movea.l a1,a2
-                move.w  (selTeamNumber).l,(a1)+
-                move.w  #1,d5
-                subq.w  #2,d4
-loc_12CC8A:
-                bsr.w   Career_PickRandomNationalTeamId
-                move.w  d0,(a1)+
-                addq.w  #1,d5
-                dbf     d4,loc_12CC8A
                 rts
 ; char *[6]
 tourStringTable:
@@ -33236,50 +32411,8 @@ tourStringTable:
                 dc.l aAsianTour         ; element[4]
                 dc.l aOceaniaTour       ; element[5]
 
-; ===== Career_PickRandomNationalTeamId =====
-; prototype: unsigned __int16 __usercall Career_PickRandomNationalTeamId@<d0>(unsigned __int16 minValue@<d6>, unsigned __int16 maxValue@<d7>, unsigned __int8 regionFilter@<d3>, const unsigned __int16 *currentListBase@<a2>, unsigned __int16 countSoFar@<d5>)
+; ===== Career_PickRandomNationalTeamId ===== (ported to C, dead — only called from ported functions)
 Career_PickRandomNationalTeamId:
-                move.w  #$63,d2         ; 'c'
-loc_12CCB4:
-                jsr     Rand
-                mulu.w  (natTeamsRandLimit2).l,d0
-                lsr.l   #8,d0
-                mulu.w  #6,d0
-                lea     (nationalTeams).l,a0
-                lea     (a0,d0.w),a0
-                move.w  (a0),d0
-                tst.w   d3
-                beq.s   loc_12CCDE
-                move.w  d0,d1
-                lsr.w   #8,d1
-                cmp.b   d1,d3
-                bne.s   loc_12CCB4
-loc_12CCDE:
-                cmp.w   (selTeamNumber).l,d0
-                beq.s   loc_12CCB4
-                tst.w   d2
-                bmi.s   loc_12CCF6
-                move.w  4(a0),d1
-                cmp.w   d6,d1
-                bcs.s   loc_12CD08
-                cmp.w   d7,d1
-                bhi.s   loc_12CD08
-loc_12CCF6:
-                move.w  d5,d1
-                beq.s   locret_12CD12
-                movea.l a2,a0
-                subq.w  #1,d1
-loc_12CCFE:
-                cmp.w   (a0)+,d0
-                beq.s   loc_12CD08
-                dbf     d1,loc_12CCFE
-                rts
-loc_12CD08:
-                tst.w   d2
-                bmi.s   loc_12CCB4
-                dbf     d2,loc_12CCB4
-                bra.s   loc_12CCB4
-locret_12CD12:
                 rts
 
 ; ===== DIY_SelectCompetitionSlot4FromCurrentDivision =====
@@ -35203,42 +34336,14 @@ loc_12EACA:
 loc_12EACE:
                 jmp RestoreSelectedTeams(pc)
 
-; ===== Career_AutoAdvanceInternationalCompetitionFixtures =====
-; prototype: void __usercall Career_AutoAdvanceInternationalCompetitionFixtures(void *contest@<a0>)
+; ===== Career_AutoAdvanceInternationalCompetitionFixtures ===== (ported to C → _Career_AutoAdvanceInternationalCompetitionFixtures)
 Career_AutoAdvanceInternationalCompetitionFixtures:
-                move.w  #1,(careerLoadedFlag).l
-                tst.w   (seasonUpdateInProgress).l
-                bne.s   loc_12EAF2
-                tst.w   (internationalAutoAdvanceFlag).l
-                bne.s   loc_12EAF2
-                move.w  #1,(teamSelectionKeyCacheEnd).l
-loc_12EAF2:
-                clr.w   (teamsLoaded).l
-                jsr     SaveRand2State
-                move.w  (viewRandomPhase).l,-(sp)
-                move.w  d0,d1
-                move.b  (a0),d0
-                lsl.w   #8,d0
-                move.b  (seasonPlaying).l,d0
-                jsr     Randomize2
-                clr.w   (numSelectedTeams).l
-                movem.l d1/a0,-(sp)
-                jsr     Career_InitCompetitionTeamSelectionFromTableEntrySpec
-                movem.l (sp)+,d1/a0
-                movem.l d1/a0,-(sp)
-                jsr     Career_ApplyPendingForeignMarketPlayersToSelectedTeams
-                movem.l (sp)+,d1/a0
-                move.w  d1,d0
-                movem.l a0,-(sp)
-                jsr InitDIYCompetitionFromTableEntry(pc)
-                movem.l (sp)+,a0
-                movem.l a0,-(sp)
-                jsr InitTeams(pc)
-                movem.l (sp)+,a0
-                bsr.w   Career_AutoAdvanceLeagueFixtures
-                move.w  (sp)+,(viewRandomPhase).l
-                jsr     RestoreRand2State
-                clr.w   (careerLoadedFlag).l
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a0,-(sp)
+                move.l  d0,-(sp)
+                jsr     _Career_AutoAdvanceInternationalCompetitionFixtures
+                addq.l  #8,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== Career_AutoAdvanceCupCompetitionFromRecord =====
@@ -35326,14 +34431,8 @@ FindTeamInDIY:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== GetMoreExpensiveTeamsCountWrapper =====
-; prototype: unsigned __int16 __usercall GetMoreExpensiveTeamsCountWrapper@<d6>(unsigned __int16 teamNo@<d7>, DIY_Competition *comp@<a6>)
+; ===== GetMoreExpensiveTeamsCountWrapper ===== (dead code — no callers)
 GetMoreExpensiveTeamsCountWrapper:
-                movem.l d0-d5/d7-a6,-(sp)
-                move.w  d7,d0
-                bsr.w   GetMoreExpensiveTeamsCount
-                move.w  d2,d6
-                movem.l (sp)+,d0-d5/d7-a6
                 rts
 loc_12F0DC:
                 move.w  #$6006,(panicReasonCode).l

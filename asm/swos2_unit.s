@@ -1547,8 +1547,32 @@
         xref    _FatalError
         xref    _Career_InitCompetitionTeamSelection_Dispatch
         xref    _Career_InitCompetitionTeamSelectionFromTableEntrySpec
+        xref    _Career_AutoAdvanceInternationalCompetitionFixtures
+        xref    _CalcTeamPriceRankPercentOffset
+        xref    _InitCompetitionFromRecord
         xref    _Career_InitCompetitionTeamSelectionFromTableHeaderSpec
         xref    _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec
+
+        ; Chunk 181 xrefs
+        xref    _BeginContractNegotiationSequence
+        xref    _Career_UpdateEuroCupCompetitionSlot
+        xref    _Career_UpdateCupWinnersCupCompetitionSlot
+        xref    _Career_UpdateUefaCupCompetitionSlot
+
+        ; Chunk 182 xrefs
+        xref    _Career_ProcessSecondaryCompetitionForNextSeason
+        xref    _Career_ProcessTertiaryCompetitionForNextSeason
+        xref    _Career_ProcessCompetitionForNextSeason
+
+        ; Chunk 183 xrefs
+        xref    _Career_DrawEuropeanCupTeamsAndCopyGrids
+
+        ; Chunk 184 xrefs
+        xref    _Career_UpdateEuropeanChampionshipCompetitions
+        xref    _Career_UpdateWorldCupCompetitions
+
+        ; Chunk 185 xrefs
+        xref    _Career_SetCupPickList_ForSelectedRegion
 
         ; Chunk 91 xrefs
         xref    _GetTeamPointer
@@ -1966,8 +1990,20 @@
         xdef    tourCopy
         xdef    friendlyCopy
         xdef    worldCupQualifyingGroup1Copy
+        xdef    worldCupQualifyingGroup2Copy
+        xdef    worldCupQualifyingGroup3Copy
+        xdef    worldCupQualifyingGroup4Copy
+        xdef    worldCupQualifyingGroup5Copy
+        xdef    worldCupQualifyingGroup6Copy
+        xdef    worldCupQualifyingGroup7Copy
         xdef    worldCupQualifyingGroup8Copy
         xdef    ecQualifyingGroup1Copy
+        xdef    ecQualifyingGroup2Copy
+        xdef    ecQualifyingGroup3Copy
+        xdef    ecQualifyingGroup4Copy
+        xdef    ecQualifyingGroup5Copy
+        xdef    ecQualifyingGroup6Copy
+        xdef    ecQualifyingGroup7Copy
         xdef    ecQualifyingGroup8Copy
         xdef    northAmericaWorldCupQualificationCopy
         xdef    southAmericaWorldCupQualificationCopy
@@ -2289,6 +2325,55 @@
         xdef    minorTrophyBonusValue
         xdef    leagueTitleBonusValue
         xdef    majorTrophyOrCupBonusValue
+; --- Chunk 185 globals ---
+        xdef    natTeamsRandLimit2
+        xdef    ecQualifyingGroupsTable
+        xdef    worldCupQualifyingGroupsTable
+        xdef    tourStringTable
+        ; Oceania cup pick arrays
+        xdef    cupPickOceaniaInviteFriendly
+        xdef    cupPickOceaniaOceaniaCupFriendly
+        xdef    cupPickOceaniaWorldCupFriendly
+        xdef    cupPickOceaniaWorldCupInvite
+        xdef    cupPickOceaniaOceaniaCupNonFinalist
+        xdef    cupPickOceaniaOceaniaCupFinalist
+        ; NorthAmerica cup pick arrays
+        xdef    cupPickNAmericaInviteFriendly
+        xdef    cupPickNAmericaNaCupFriendly
+        xdef    cupPickNAmericaWorldCupFriendly
+        xdef    cupPickNAmericaWorldCupInvite
+        xdef    cupPickNAmericaNaCupNonFinalist
+        xdef    cupPickNAmericaNaCupFinalist
+        ; Asia cup pick arrays
+        xdef    cupPickAsiaInviteFriendly
+        xdef    cupPickAsiaAsianCupFriendly
+        xdef    cupPickAsiaWorldCupFriendly
+        xdef    cupPickAsiaWorldCupInvite
+        xdef    cupPickAsiaAsianCupNonFinalist
+        xdef    cupPickAsiaAsianCupFinalist
+        ; Africa cup pick arrays
+        xdef    cupPickAfricaInviteFriendly
+        xdef    cupPickAfricaAfricanCupFriendly
+        xdef    cupPickAfricaWorldCupFriendly
+        xdef    cupPickAfricaWorldCupInvite
+        xdef    cupPickAfricaAfricanCupNonFinalist
+        xdef    cupPickAfricaAfricanCupFinalist
+        ; SouthAmerica cup pick arrays
+        xdef    cupPickSAmericaInviteFriendly
+        xdef    cupPickSAmericaCopaAmericaFriendly
+        xdef    cupPickSAmericaWorldCupFriendly
+        xdef    cupPickSAmericaWorldCupInvite
+        xdef    cupPickSAmericaCopaAmericaNonFinalist
+        xdef    cupPickSAmericaCopaAmericaFinalist
+        ; Europe cup pick arrays
+        xdef    cupPickEuropeNoCupFriendly
+        xdef    cupPickListEuropeInviteTournamentFriendly
+        xdef    cupPickLisEuropeEuroChampsFriendly
+        xdef    cupPickListEuropeEuroChampsInviteFriendly
+        xdef    cupPickListEuropeWorldCupFriendly
+        xdef    cupPickLisEuropeWorldCupInviteFriendly
+        xdef    cupPickEuropeNoCupFriendlyAlt
+        xdef    cupPickListEuropeInviteTournamentFriendlyAlt
 ; --- Chunk 61 globals ---
         xdef    careerCupPickList
         xdef    cupRoundStringTable
@@ -3624,15 +3709,9 @@ _CDrawSprites:
 
 ; --- match_sim.c C-callable bridges ---
 
-; _CCalcTeamPriceRankPercentOffset(uint8_t *ctx, uint8_t *team) -> int16_t
-; asm CalcTeamPriceRankPercentOffset: a0=ctx, a1=team, returns d0
+; _CCalcTeamPriceRankPercentOffset — now forwards to C impl
 _CCalcTeamPriceRankPercentOffset:
-        movem.l d2-d7/a2-a6,-(sp)
-        movea.l 48(sp),a0              ; ctx
-        movea.l 52(sp),a1              ; team
-        jsr     CalcTeamPriceRankPercentOffset
-        movem.l (sp)+,d2-d7/a2-a6
-        rts
+        jmp     _CalcTeamPriceRankPercentOffset
 
 ; _CUpdatePlayerPositionAndReturnRole(uint8_t *team, uint16_t playerIdx) -> uint32_t
 ; asm: a0=team, d7=playerIdx, returns d0=position, d1=role
@@ -4106,6 +4185,17 @@ _CInitDIYLeagueFromRecordParam:
         movem.l (sp)+,d2-d7/a2-a6
         rts
 
+; _CInitDIYCompetitionFromTableEntryParam(uint16_t index, uint8_t *record) -> void
+; InitDIYCompetitionFromTableEntry expects: a0=contest, d0.w=leagueNumber
+        xdef    _CInitDIYCompetitionFromTableEntryParam
+_CInitDIYCompetitionFromTableEntryParam:
+        movem.l d2-d7/a2-a6,-(sp)
+        move.w  48(sp),d0              ; param1: index (44 saved + 4 ret = 48)
+        movea.l 50(sp),a0              ; param2: record (48 + 2 = 50)
+        jsr     (InitDIYCompetitionFromTableEntry).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
 ; _CSelectTeamsFinalMenu(uint16_t mode) -> void
 ; SelectTeamsFinalMenu expects: d0.b = mode
         xdef    _CSelectTeamsFinalMenu
@@ -4113,5 +4203,24 @@ _CSelectTeamsFinalMenu:
         movem.l d2-d7/a2-a6,-(sp)
         move.w  48(sp),d0              ; param: 44(saved regs) + 4(return addr) = offset 48
         jsr     (SelectTeamsFinalMenu).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; _CCareer_MaybeGenerateJobOffer() -> void
+; C-callable wrapper for Career_MaybeGenerateJobOffer (still in assembly)
+        xdef    _CCareer_MaybeGenerateJobOffer
+_CCareer_MaybeGenerateJobOffer:
+        movem.l d2-d7/a2-a6,-(sp)
+        jsr     (Career_MaybeGenerateJobOffer).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; _CCareer_ProcessPrimaryCompetitionForNextSeason(uint8_t *competition) -> void
+; C-callable wrapper — sets a4 from stack param, calls asm Career_ProcessPrimaryCompetitionForNextSeason
+        xdef    _CCareer_ProcessPrimaryCompetitionForNextSeason
+_CCareer_ProcessPrimaryCompetitionForNextSeason:
+        movem.l d2-d7/a2-a6,-(sp)
+        movea.l 48(sp),a4              ; param: 44(saved) + 4(ret) = 48
+        jsr     (Career_ProcessPrimaryCompetitionForNextSeason).l
         movem.l (sp)+,d2-d7/a2-a6
         rts

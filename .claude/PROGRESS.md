@@ -3018,6 +3018,25 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1480 functions across 179 chunks
 
+### Chunk 185 — Career Cup Pick List System (13 → career_season.c)
+- Date: 2026-03-02
+- Ported:
+  1. pickRandomNationalTeamId (static) — picks random national team ID with region/price filtering and duplicate checking. Uses natTeamsRandLimit2, nationalTeams (6-byte entries). 100-attempt price filtering, then unlimited without price check.
+  2. fillWorldCupQualifyingGroupTeams (static) — fills WC qualifying group from sorted team list. Handles league (type 0, offset 0xD) and cup (type 2, offset 0xF) competition formats. Places player's team if region matches.
+  3. setupWorldCupQualifyingGroups (static) — only runs if someTeamFlags bit 6 set. Calculates group 8 size from European host/qualifying team count. Column-major fill of 8 European WC qualifying groups, then 5 continental qualification groups (NA, SA, Africa, Asia, Oceania with special count adjustment).
+  4. setCupPickListCommon (static) — shared helper for 5 simple regional functions (Oceania, NorthAmerica, Asia, Africa, SouthAmerica). Selects cup pick list based on someTeamFlags bits, copies 5 uint32_t values to careerCupPickList.
+  5. setCupPickList_Europe (static) — Europe-specific variant with EC championship (bit 1) and EC qualifying (bit 0) flag checks. After standard cup pick list copy, does EC qualifying group column-major fill if bit 0 set: 8 EC groups, 46 total slots, group 8 limited to 4 teams.
+  6. setupFriendlyCupTeams (static) — fills friendly competition team list using pickRandomNationalTeamId with price range [avgPrice*75/100, avgPrice*125/100].
+  7. setupInvitationTournamentTeams (static) — fills invitation tournament team list similarly.
+  8. setupTourCupTeams (static) — fills tour cup using random region with price range [0, 0x31].
+  9. _Career_SetCupPickList_ForSelectedRegion (exported) — main dispatcher: switches on (selTeamNumber >> 8) region code, calls appropriate regional/setup functions.
+  10-13. Career_SetCupPickList_Oceania/NorthAmerica/Asia/Africa/SouthAmerica/Europe (6 regional functions → inlined via setCupPickListCommon + setCupPickList_Europe helpers, assembly bodies replaced with rts)
+- Stubs: Career_SetCupPickList_ForSelectedRegion (register bridge, push a6), 6 regional + 3 setup + PickRandomNationalTeamId + SetupWorldCupQualifyingGroups + FillWorldCupQualifyingGroupTeams (all rts, dead)
+- New xrefs: _Career_SetCupPickList_ForSelectedRegion
+- New xdefs: natTeamsRandLimit2, ecQualifyingGroupsTable, worldCupQualifyingGroupsTable, tourStringTable, 38 cupPick* arrays (6 per region × 5 regions + 8 Europe)
+- Build status: **verified** (clean build, map confirmed)
+- Cumulative: 1493 functions across 185 chunks
+
 ### Chunk 178 — CheckNumberOfTeams (1 → menus.c)
 - Date: 2026-03-02
 - Ported:

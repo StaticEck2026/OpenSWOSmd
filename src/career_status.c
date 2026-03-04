@@ -3151,7 +3151,7 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
 extern uint16_t careerLoadedFlag;
 extern uint16_t internationalAutoAdvanceFlag;
 extern uint16_t teamSelectionKeyCacheEnd;
-/* viewRandomPhase already declared at line 177 as uint8_t */
+/* viewRandomPhase already declared above as uint8_t */
 extern uint8_t  seasonPlaying;
 extern uint8_t  englishCup[];
 extern uint8_t  englishCup_1[];
@@ -3166,7 +3166,9 @@ extern void _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(uint8_t *
 extern void _Career_ApplyPendingForeignMarketPlayersToSelectedTeams(void);
 extern void _CInitDIYCupFromRecordParam(uint8_t *record);
 extern void _CInitDIYLeagueFromRecordParam(uint8_t *record);
+extern void _CInitDIYCompetitionFromTableEntryParam(uint16_t index, uint8_t *record);
 extern void _InitTeams(void);
+extern void _Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *record, uint16_t index);
 
 /* Career_AutoAdvanceCupCompetitionFromRecord (SWOS2.s line 35246)
  * Auto-advances a cup competition: initializes team selection from record,
@@ -3235,6 +3237,37 @@ void _Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record)
     _CInitDIYLeagueFromRecordParam(record);
     _InitTeams();
     Career_AutoAdvanceCompetitionSlots();
+
+    viewRandomPhase = savedViewRandom;
+    seasonPlaying = savedSeasonPlaying;
+    _RestoreRand2State();
+    careerLoadedFlag = 0;
+}
+
+/* Career_AutoAdvanceInternationalCompetitionFixtures (SWOS2.s line 35208)
+ * Auto-advances an international competition: initializes team selection from
+ * table entry spec, loads competition from table entry, runs league fixture
+ * advancement, then restores RNG state.
+ * a0 = competition record pointer, d0 = table index. */
+__attribute__((used, externally_visible))
+void _Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record, uint16_t index)
+{
+    careerLoadedFlag = 1;
+    if (seasonUpdateInProgress == 0 && internationalAutoAdvanceFlag == 0)
+        teamSelectionKeyCacheEnd = 1;
+    teamsLoaded = 0;
+    _SaveRand2State();
+    uint8_t savedViewRandom = viewRandomPhase;
+    uint8_t savedSeasonPlaying = seasonPlaying;
+
+    uint16_t seed = ((uint16_t)record[0] << 8) | (uint16_t)seasonPlaying;
+    _Randomize2(seed);
+    numSelectedTeams = 0;
+    _Career_InitCompetitionTeamSelectionFromTableEntrySpec(record, index);
+    _Career_ApplyPendingForeignMarketPlayersToSelectedTeams();
+    _CInitDIYCompetitionFromTableEntryParam(index, record);
+    _InitTeams();
+    Career_AutoAdvanceLeagueFixtures();
 
     viewRandomPhase = savedViewRandom;
     seasonPlaying = savedSeasonPlaying;

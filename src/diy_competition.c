@@ -7131,9 +7131,21 @@ uint16_t _IsNationalTeamCompetitionOrQualification(uint32_t key)
  *   type 1 → InitDIYCupFromRecord
  *   else   → InitDIYLeagueFromRecord
  * ================================================================ */
-/* InitCompetitionFromRecord dispatches to InitDIY*FromRecord functions which
- * are still in asm with register-based calling (d0=index, a0=rec).
- * Must stay in asm until its callees are ported. */
+extern void _CInitDIYCompetitionFromTableEntryParam(uint16_t index, uint8_t *record);
+extern void _CInitDIYCupFromRecordParam(uint8_t *record);
+extern void _CInitDIYLeagueFromRecordParam(uint8_t *record);
+
+__attribute__((used, externally_visible))
+void _InitCompetitionFromRecord(uint16_t index, uint8_t *record)
+{
+    uint8_t type = record[1];
+    if (type == 0)
+        _CInitDIYCompetitionFromTableEntryParam(index, record);
+    else if (type == 1)
+        _CInitDIYCupFromRecordParam(record);
+    else
+        _CInitDIYLeagueFromRecordParam(record);
+}
 
 /* ================================================================
  * Chunk 152 — DIY League/Tournament Match Callbacks & Visibility

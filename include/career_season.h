@@ -21,3 +21,14 @@ uint16_t _Career_UpdateLastNationalityCall(void);
 /* --- Chunk 174: Season Review functions --- */
 void _SeasonFinished_ComputeSeasonReview(void);
 void _ShowChairmanOpinionAboutTheSeason(void);
+
+/* --- Chunk 181: Contract Negotiation --- */
+void _BeginContractNegotiationSequence(uint8_t *ctx, uint8_t *team);
+
+/* --- Chunk 182: Competition Season Processing --- */
+void _Career_ProcessSecondaryCompetitionForNextSeason(uint8_t *competition);
+void _Career_ProcessTertiaryCompetitionForNextSeason(uint8_t *competition);
+void _Career_ProcessCompetitionForNextSeason(uint16_t compId);
+
+/* --- Chunk 185: Cup Pick List System --- */
+void _Career_SetCupPickList_ForSelectedRegion(uint16_t *teamList);

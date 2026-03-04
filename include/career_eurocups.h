@@ -14,3 +14,15 @@ void _Career_CopyUefaCupTeamGridAndTitleHolder(void);
 
 /* --- European Cup Qualification --- */
 void _Career_ProcessCompetitionForEuropeanCupQualification(void);
+
+/* --- Euro Cup Slot Updates (Chunk 181) --- */
+void _Career_UpdateEuroCupCompetitionSlot(void);
+void _Career_UpdateCupWinnersCupCompetitionSlot(void);
+void _Career_UpdateUefaCupCompetitionSlot(void);
+
+/* --- European Cup Team Draw (Chunk 183) --- */
+void _Career_DrawEuropeanCupTeamsAndCopyGrids(void);
+
+/* --- Championship/World Cup Updates (Chunk 184) --- */
+void _Career_UpdateEuropeanChampionshipCompetitions(void);
+void _Career_UpdateWorldCupCompetitions(void);

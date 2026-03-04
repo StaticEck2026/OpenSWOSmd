@@ -90,3 +90,4 @@ void _Career_PostMatchUpdate(void);
 void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr);
 void _Career_AutoAdvanceCupCompetitionFromRecord(uint8_t *record);
 void _Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record);
+void _Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record, uint16_t index);

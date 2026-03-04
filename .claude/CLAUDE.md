@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1480 functions ported across 179 chunks.
+**Current status:** 1493 functions ported across 185 chunks.
 
-**Last completed chunk:** Chunk 179 — Career Auto-Advance Chain (3 → career_status.c): Career_AutoAdvanceCompetitionAndPersistSlotState, Career_AutoAdvanceCupCompetitionFromRecord, Career_AutoAdvanceLeagueCompetitionFromRecord.
+**Last completed chunk:** Chunk 185 — Career Cup Pick List System (13 → career_season.c): Career_SetCupPickList_ForSelectedRegion (dispatcher), 5 regional setCupPickList functions (Oceania/NorthAmerica/Asia/Africa/SouthAmerica via common helper), setCupPickList_Europe, setupFriendlyCupTeams, setupInvitationTournamentTeams, setupTourCupTeams, pickRandomNationalTeamId, setupWorldCupQualifyingGroups, fillWorldCupQualifyingGroupTeams.
 
-**Next candidates:** Career_AutoAdvanceInternationalCompetitionFixtures, Career_SetCurrentCompetitionSlot chain, Career_FillCurrentSeasonInfo + EncodeCompetitionPositionForSeasonInfo, InitializeNewSeason, ContinueCareerNextSeason.
+**Next candidates:** Remaining unported career functions, SquadMenu (needs SelectAndShowSquadToView ported first), CareerGameListCommon (~440 instr), DIYCompetitionMenu, ChooseCompetition/Season/Preset menu family, EditTeams* callbacks.
 
 ---
 

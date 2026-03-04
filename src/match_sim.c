@@ -7,8 +7,9 @@
  * ScaleSkill, GetPlayerPricePercentageChange, AdjustPlayerSkills,
  * ApplyTeamTactics.
  *
- * CalcTeamPriceRankPercentOffset and UpdatePlayerPositionAndReturnRole
- * remain in assembly with C-callable bridges.
+ * CalcTeamPriceRankPercentOffset.
+ *
+ * UpdatePlayerPositionAndReturnRole remains in assembly with C-callable bridge.
  */
 
 #include "match_sim.h"
@@ -26,8 +27,11 @@ extern uint16_t _Rand2(void);
 extern void Career_ApplyPostMatchPlayerStatModsIfCareerTeam(void);
 extern uint16_t _ShouldApplyRandomPlayerStatusAfterSim(void);
 
+/* C functions (defined in diy_competition.c) */
+extern uint16_t _FindTeamInDIY(uint16_t teamNo, uint8_t *comp);
+extern uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, uint8_t *comp);
+
 /* C-callable bridges to asm functions (defined in swos2_unit.s) */
-extern int16_t _CCalcTeamPriceRankPercentOffset(uint8_t *ctx, uint8_t *team);
 extern uint32_t _CUpdatePlayerPositionAndReturnRole(uint8_t *team, uint16_t playerIdx);
 extern void _CCareer_ApplyPostMatchPlayerStatModsIfCareerTeam(uint8_t *team, uint8_t *remap);
 
@@ -229,7 +233,7 @@ uint32_t _CalcTeamViewOffset(uint8_t *team) {
  * out: scaled value (0..31)
  * ================================================================ */
 static uint16_t ScaleViewIndexByTeamPriceRank(uint16_t value, uint8_t *team) {
-    int16_t pctOff = _CCalcTeamPriceRankPercentOffset(viewResultCtx, team);
+    int16_t pctOff = _CalcTeamPriceRankPercentOffset(viewResultCtx, team);
     uint16_t factor = (uint16_t)(pctOff + 100);
     uint32_t result = (uint32_t)value * (uint32_t)factor;
     result /= 100;
@@ -1276,7 +1280,7 @@ int16_t _GetPlayerPricePercentageChange(int16_t factor, uint8_t *teamFile,
             d4 += (int16_t)callerD0;
 
             /* Add price rank offset */
-            int16_t pctOff = _CCalcTeamPriceRankPercentOffset(diyCompetitionStart, teamFile);
+            int16_t pctOff = _CalcTeamPriceRankPercentOffset(diyCompetitionStart, teamFile);
             d4 += pctOff;
         }
     }
@@ -1679,4 +1683,48 @@ uint8_t *_BuildMatchResultString(uint16_t control, uint16_t leg2, uint16_t leg1,
                     winnerName, 0, 0);
 
     return resultString;
+}
+
+/* CalcTeamPriceRankPercentOffset (SWOS2.s line 25505)
+ * Calculates a price-rank percentage offset for a team in a competition.
+ * Used by view-result scaling to bias scores based on team expensiveness.
+ * a0 = competition context, a1 = team file pointer.
+ * Returns half of the clamped [-50, +50] percentage offset. */
+__attribute__((used, externally_visible))
+int16_t _CalcTeamPriceRankPercentOffset(uint8_t *ctx, uint8_t *team)
+{
+    /* ctx[0] must be 0 (competition type check) */
+    if (*(int16_t *)ctx != 0)
+        return 0;
+
+    /* Check minimum number of entries at ctx+0x2B8 */
+    uint16_t numEntries = *(uint16_t *)(ctx + 0x2B8);
+    if (team[4] == 1) {
+        /* Cup: need at least 3 entries */
+        if (numEntries < 3)
+            return 0;
+    } else {
+        /* League: need at least 10 entries */
+        if (numEntries < 10)
+            return 0;
+    }
+
+    uint16_t teamNum = *(uint16_t *)team;
+    uint16_t teamIndex = _FindTeamInDIY(teamNum, ctx);
+    uint16_t expensiveCount = _GetMoreExpensiveTeamsCount(teamNum, ctx);
+
+    int16_t diff = (int16_t)(expensiveCount - teamIndex);
+    int32_t scaled = (int32_t)diff * 100;
+
+    int16_t totalTeams = *(int16_t *)(ctx + 0x32);
+    int16_t divisor = totalTeams - 1;
+    if (divisor == 0)
+        return 0;
+
+    int16_t pct = (int16_t)(scaled / (int32_t)divisor);
+
+    if (pct > 50) pct = 50;
+    if (pct < -50) pct = -50;
+
+    return pct >> 1;
 }
