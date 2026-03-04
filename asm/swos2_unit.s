@@ -825,6 +825,7 @@
         xdef    gameType
         xdef    contestStarted
         xdef    careerAutoAdvanceInProgress
+        xdef    careerLastMatchIndexByCompetitionSlot
         xdef    careerLoadedFlag
         xdef    selTeamNumber
         xdef    currentTeamNumber
@@ -1624,6 +1625,10 @@
         ; Chunk 193 xrefs
         xref    _DIY_PlayCupMatchAndAdvance
         xref    _DIY_PlayOrSimulateLeagueFixture
+
+        ; Chunk 194 xrefs
+        xref    _Career_AutoAdvanceLeagueFixtures
+        xref    _Career_AutoAdvanceCupMatches
 
         ; Chunk 91 xrefs
         xref    _GetTeamPointer

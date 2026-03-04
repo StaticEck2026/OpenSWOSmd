@@ -31605,216 +31605,28 @@ Career_UpdateStatsAfterMatch:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== Career_AutoAdvanceLeagueFixtures =====
+; ===== Career_AutoAdvanceLeagueFixtures ===== (ported to C → _Career_AutoAdvanceLeagueFixtures)
 ; prototype: void __usercall Career_AutoAdvanceLeagueFixtures()
 Career_AutoAdvanceLeagueFixtures:
-                tst.w   (careerAutoAdvanceInProgress).l
-                bne.s   loc_12D6C6
-                tst.w   (seasonUpdateInProgress).l
-                bne.s   loc_12D6C6
-                tst.w   (internationalAutoAdvanceFlag).l
-                bne.s   loc_12D6C6
-                tst.w   (seasonFinished).l
-                beq.s   loc_12D6D0
-loc_12D6C6:
-                move.b  #$FF,d0
-                move.b  #$FF,d1
-                bra.s   loc_12D6F6
-loc_12D6D0:
-                bsr.w   TeamSelectionKeyCache_GetCurrentListPtr
-                move.b  1(a0),d0
-                move.w  (teamSelectionKeyCacheIndex).l,d1
-                addq.w  #1,d1
-                cmp.w   (teamSelectionKeyCacheCount).l,d1
-                beq.s   loc_12D6F2
-                adda.w  2(a0),a0
-                move.b  1(a0),d1
-                bra.s   loc_12D6F6
-loc_12D6F2:
-                move.b  #$FF,d1
-loc_12D6F6:
-                lea     (diyCompetitionStart).l,a0
-                lea     (careerLastMatchIndexByCompetitionSlot).l,a1
-                move.b  $2E(a0),d2
-                andi.w  #$FF,d2
-                lea     (a1,d2.w),a1
-                move.b  (a1),d2
-                move.b  #0,d6
-                bsr.w   DIY_AdvanceLeagueFixtureIndex
-loc_12D718:
-                cmp.b   $2F(a0),d0
-                bls.s   loc_12D74E
-                clr.w   d7
-                movem.l d0-d2/d6/a0-a1,-(sp)
-                jsr DIY_PlayOrSimulateLeagueFixture(pc)
-                movem.l (sp)+,d0-d2/d6/a0-a1
-                tst.w   $1C0(a0)
-                beq.s   loc_12D718
-                tst.w   $60(a0)
-                beq.s   loc_12D73E
-                bsr.w   DIY_AdvanceLeagueFixtureIndex
-                bra.s   loc_12D718
-loc_12D73E:
-                tst.w   $48(a0)
-                beq.s   loc_12D754
-                cmpi.w  #2,$48(a0)
-                beq.s   loc_12D754
-locret_12D74C:
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _Career_AutoAdvanceLeagueFixtures
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
-loc_12D74E:
-                cmp.b   $2F(a0),d1
-                bhi.s   loc_12D774
-loc_12D754:
-                tst.w   (internationalAutoAdvanceFlag).l
-                bne.s   locret_12D74C
-                tst.w   (careerAutoAdvanceInProgress).l
-                bne.s   locret_12D74C
-loc_12D764:
-                move.w  #1,d0
-                move.w  #1,d1
-                clr.w   d2
-                jmp     ShowDiyLeaguesTournamentMenu
-loc_12D774:
-                cmp.b   $2F(a0),d2
-                bne.s   loc_12D790
-loc_12D77A:
-                clr.w   d7
-                movem.l d0-d2/a0-a1,-(sp)
-                jsr DIY_PlayOrSimulateLeagueFixture(pc)
-                movem.l (sp)+,d0-d2/a0-a1
-                tst.w   $1C0(a0)
-                beq.s   loc_12D77A
-                bra.s   loc_12D754
-loc_12D790:
-                move.b  $2F(a0),(a1)
-                cmpi.w  #$FFFF,(highlightedLeagueTeamId).l
-                bne.s   loc_12D764
-                move.w  #1,d0
-                clr.w   d1
-                clr.w   d2
-                jmp     ShowDiyLeaguesTournamentMenu
 
-; ===== DIY_AdvanceLeagueFixtureIndex =====
-; prototype: void __usercall DIY_AdvanceLeagueFixtureIndex()
+; ===== DIY_AdvanceLeagueFixtureIndex ===== (dead — only caller ported to C)
 DIY_AdvanceLeagueFixtureIndex:
-                move.b  $2F(a0),d7
-                movem.l d0-d2/d7-a1,-(sp)
-                jsr     DIY_AdvanceFixtureIndex
-                movem.l (sp)+,d0-d2/d7-a1
-                move.b  d7,d6
-                addq.b  #1,d6
                 rts
 
-; ===== Career_AutoAdvanceCupMatches =====
+; ===== Career_AutoAdvanceCupMatches ===== (ported to C → _Career_AutoAdvanceCupMatches)
 ; prototype: void __usercall Career_AutoAdvanceCupMatches()
 Career_AutoAdvanceCupMatches:
-                tst.w   (careerAutoAdvanceInProgress).l
-                bne.s   loc_12D7E4
-                tst.w   (seasonUpdateInProgress).l
-                bne.s   loc_12D7E4
-                tst.w   (internationalAutoAdvanceFlag).l
-                bne.s   loc_12D7E4
-                tst.w   (seasonFinished).l
-                beq.s   loc_12D7EE
-loc_12D7E4:
-                move.b  #$FF,d0
-                move.b  #$FF,d1
-                bra.s   loc_12D814
-loc_12D7EE:
-                bsr.w   TeamSelectionKeyCache_GetCurrentListPtr
-                move.b  1(a0),d0
-                move.w  (teamSelectionKeyCacheIndex).l,d1
-                addq.w  #1,d1
-                cmp.w   (teamSelectionKeyCacheCount).l,d1
-                beq.s   loc_12D810
-                adda.w  2(a0),a0
-                move.b  1(a0),d1
-                bra.s   loc_12D814
-loc_12D810:
-                move.b  #$FF,d1
-loc_12D814:
-                lea     (diyCompetitionStart).l,a0
-                lea     (careerLastMatchIndexByCompetitionSlot).l,a1
-                move.b  $2E(a0),d2
-                andi.w  #$FF,d2
-                lea     (a1,d2.w),a1
-                move.b  (a1),d2
-                move.b  #0,d6
-                bsr.w   DIY_AdvanceCupFixtureIndex
-                cmp.b   $2F(a0),d0
-                bls.s   loc_12D87E
-loc_12D83C:
-                clr.w   d7
-                movem.l d0-d2/d6/a0-a1,-(sp)
-                jsr DIY_PlayCupMatchAndAdvance(pc)
-                movem.l (sp)+,d0-d2/d6/a0-a1
-                tst.w   $54(a0)
-                beq.s   loc_12D83C
-                tst.w   $56(a0)
-                bne.s   loc_12D86E
-                cmp.b   $2F(a0),d0
-                bls.s   loc_12D87E
-                movem.l d0-d2/d6/a0-a1,-(sp)
-                jsr DIY_UpdateCompetitionProgress(pc)
-                movem.l (sp)+,d0-d2/d6/a0-a1
-                bsr.w   DIY_AdvanceCupFixtureIndex
-                bra.s   loc_12D83C
-loc_12D86E:
-                tst.w   $48(a0)
-                beq.s   loc_12D884
-                cmpi.w  #2,$48(a0)
-                beq.s   loc_12D884
-locret_12D87C:
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _Career_AutoAdvanceCupMatches
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
-loc_12D87E:
-                cmp.b   $2F(a0),d1
-                bhi.s   loc_12D8A4
-loc_12D884:
-                tst.w   (internationalAutoAdvanceFlag).l
-                bne.s   locret_12D87C
-                tst.w   (careerAutoAdvanceInProgress).l
-                bne.s   locret_12D87C
-loc_12D894:
-                move.w  #1,d0
-                move.w  #1,d1
-                clr.w   d2
-                jmp     ShowDIYCupMenuWithParams
-loc_12D8A4:
-                tst.w   $54(a0)
-                beq.s   loc_12D8BA
-                movem.l d0-d2/d6/a0-a1,-(sp)
-                jsr DIY_UpdateCompetitionProgress(pc)
-                movem.l (sp)+,d0-d2/d6/a0-a1
-                bsr.w   DIY_AdvanceCupFixtureIndex
-loc_12D8BA:
-                cmp.b   $2F(a0),d2
-                bne.s   loc_12D8D6
-loc_12D8C0:
-                clr.w   d7
-                movem.l d0-d2/d6/a0-a1,-(sp)
-                jsr DIY_PlayCupMatchAndAdvance(pc)
-                movem.l (sp)+,d0-d2/d6/a0-a1
-                tst.w   $54(a0)
-                beq.s   loc_12D8C0
-                bra.s   loc_12D884
-loc_12D8D6:
-                move.b  $2F(a0),(a1)
-                cmpi.w  #$FFFF,(highlightedLeagueTeamId).l
-                bne.s   loc_12D894
-                move.w  #1,d0
-                clr.w   d1
-                clr.w   d2
-                jmp     ShowDIYCupMenuWithParams
 
-; ===== DIY_AdvanceCupFixtureIndex =====
-; prototype: void __usercall DIY_AdvanceCupFixtureIndex()
+; ===== DIY_AdvanceCupFixtureIndex ===== (dead — only caller ported to C)
 DIY_AdvanceCupFixtureIndex:
-                move.b  #0,d6
-                move.b  $2F(a0),d7
-                movem.l d0-d2/d7-a1,-(sp)
-                jsr     DIY_AdvanceFixtureIndex
-                movem.l (sp)+,d0-d2/d7-a1
-                move.b  d7,d6
                 addq.b  #1,d6
                 rts
 

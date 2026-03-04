@@ -3107,8 +3107,6 @@ void _Career_PostMatchUpdate(void)
 /* --- Chunk 179: Career Auto-Advance Chain --- */
 
 extern uint16_t careerAutoAdvanceInProgress;
-extern void Career_AutoAdvanceLeagueFixtures(void);
-extern void Career_AutoAdvanceCupMatches(void);
 extern void Career_AutoAdvanceCompetitionSlots(void);
 
 /* Career_AutoAdvanceCompetitionAndPersistSlotState (SWOS2.s line 35559)
@@ -3137,11 +3135,11 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
     /* Dispatch by competition type (byte at offset 1) */
     uint8_t compType = ctx[1];
     if (compType == 1) {
-        Career_AutoAdvanceCupMatches();
+        _Career_AutoAdvanceCupMatches();
     } else if (compType == 2) {
         Career_AutoAdvanceCompetitionSlots();
     } else {
-        Career_AutoAdvanceLeagueFixtures();
+        _Career_AutoAdvanceLeagueFixtures();
     }
 
     _Career_StoreCompetitionSlotStateToBuffer(ctx);
@@ -3204,7 +3202,7 @@ void _Career_AutoAdvanceCupCompetitionFromRecord(uint8_t *record)
     _Career_ApplyPendingForeignMarketPlayersToSelectedTeams();
     _CInitDIYCupFromRecordParam(record);
     _InitTeams();
-    Career_AutoAdvanceCupMatches();
+    _Career_AutoAdvanceCupMatches();
 
     viewRandomPhase = savedViewRandom;
     seasonPlaying = savedSeasonPlaying;
@@ -3267,7 +3265,7 @@ void _Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record, uint16
     _Career_ApplyPendingForeignMarketPlayersToSelectedTeams();
     _CInitDIYCompetitionFromTableEntryParam(index, record);
     _InitTeams();
-    Career_AutoAdvanceLeagueFixtures();
+    _Career_AutoAdvanceLeagueFixtures();
 
     viewRandomPhase = savedViewRandom;
     seasonPlaying = savedSeasonPlaying;
@@ -3637,5 +3635,236 @@ skipStats:
         careerSlotProcessingInProgress = diyLeagueCurrentSlot;
     } else {
         careerSlotProcessingInProgress = *(uint16_t *)(diyCompetitionStart + 0x54);
+    }
+}
+
+/* ========================================================================
+ * Chunk 194 — Career_AutoAdvanceLeagueFixtures, Career_AutoAdvanceCupMatches
+ * ======================================================================== */
+
+extern uint8_t careerLastMatchIndexByCompetitionSlot[];
+extern uint16_t highlightedLeagueTeamId;
+extern uint16_t teamSelectionKeyCacheIndex;
+extern uint16_t teamSelectionKeyCacheCount;
+
+/* Forward declarations for Chunk 194 dependencies */
+extern uint8_t *_TeamSelectionKeyCache_GetCurrentListPtr(void);
+extern void _DIY_AdvanceFixtureIndex(uint16_t lo, uint16_t hi);
+extern uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t selector);
+extern uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode);
+extern void _DIY_UpdateCompetitionProgress(void);
+extern void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
+extern void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
+
+/* Career_AutoAdvanceLeagueFixtures (SWOS2.s line 31608)
+ *
+ * Auto-simulates all league fixtures for the current competition up to the
+ * current game phase. Checks guard flags first, then loops simming matches
+ * until the competition phase catches up with the current/next cache phase.
+ * When done, optionally shows the league/tournament menu.
+ */
+__attribute__((used, externally_visible))
+void _Career_AutoAdvanceLeagueFixtures(void)
+{
+    uint8_t currentPhase, nextPhase;
+
+    /* Guard checks — if any is active, skip with phases = 0xFF */
+    if (careerAutoAdvanceInProgress != 0 || seasonUpdateInProgress != 0 ||
+        internationalAutoAdvanceFlag != 0 || seasonFinished != 0) {
+        currentPhase = 0xFF;
+        nextPhase = 0xFF;
+    } else {
+        /* Get phase bytes from TeamSelectionKeyCache */
+        uint8_t *cacheEntry = _TeamSelectionKeyCache_GetCurrentListPtr();
+        currentPhase = cacheEntry[1];
+        uint16_t nextIdx = teamSelectionKeyCacheIndex + 1;
+        if (nextIdx == teamSelectionKeyCacheCount) {
+            nextPhase = 0xFF;
+        } else {
+            uint16_t entrySize = *(uint16_t *)(cacheEntry + 2);
+            nextPhase = *(cacheEntry + entrySize + 1);
+        }
+    }
+
+    uint8_t *base = diyCompetitionStart;
+    uint8_t *lastMatchSlots = careerLastMatchIndexByCompetitionSlot;
+    uint8_t slotIdx = base[0x2E];
+    uint8_t *lastMatchPtr = lastMatchSlots + (uint16_t)slotIdx;
+    uint8_t lastMatch = *lastMatchPtr;
+
+    /* Inline DIY_AdvanceLeagueFixtureIndex: advance fixture and set d6 */
+    uint8_t viewRP = base[0x2F];
+    _DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
+    /* d6 tracking not needed — sim path (selector=0) ignores allowSquadChanges */
+
+    /* Main simulation loop */
+main_loop:
+    if (currentPhase <= base[0x2F])
+        goto check_next_phase;
+
+    /* Sim league fixtures until phase catches up */
+    _DIY_PlayOrSimulateLeagueFixture(0, 0); /* allowSquadChanges=0, selector=0 (sim) */
+
+    if (*(uint16_t *)(base + 0x1C0) == 0)
+        goto main_loop; /* more matches pending in current fixture set */
+
+    if (*(uint16_t *)(base + 0x60) != 0) {
+        /* Advance fixture index and continue */
+        viewRP = base[0x2F];
+        _DIY_AdvanceFixtureIndex((uint16_t)(viewRP + 1), (uint16_t)viewRP);
+        goto main_loop;
+    }
+
+    /* Check groups type */
+    if (*(uint16_t *)(base + 0x48) == 0)
+        goto show_menu_check;
+    if (*(uint16_t *)(base + 0x48) == 2)
+        goto show_menu_check;
+    return; /* groups type 1/3 — return silently */
+
+check_next_phase:
+    if (nextPhase > base[0x2F])
+        goto catch_up_phase;
+
+show_menu_check:
+    if (internationalAutoAdvanceFlag != 0)
+        return;
+    if (careerAutoAdvanceInProgress != 0)
+        return;
+
+    /* Show league menu */
+    if (highlightedLeagueTeamId == 0xFFFF) {
+        _ShowDiyLeaguesTournamentMenu(1, 0, 0);
+    } else {
+        _ShowDiyLeaguesTournamentMenu(1, 1, 0);
+    }
+    return;
+
+catch_up_phase:
+    /* Check if lastMatch matches current viewRandomPhase */
+    if (lastMatch == base[0x2F]) {
+        /* Catch-up loop: sim until 0x1C0 != 0 */
+        do {
+            _DIY_PlayOrSimulateLeagueFixture(0, 0);
+        } while (*(uint16_t *)(base + 0x1C0) == 0);
+        goto show_menu_check;
+    }
+
+    /* Store current viewRandomPhase as last match index */
+    *lastMatchPtr = base[0x2F];
+    if (highlightedLeagueTeamId != 0xFFFF) {
+        _ShowDiyLeaguesTournamentMenu(1, 1, 0);
+    } else {
+        _ShowDiyLeaguesTournamentMenu(1, 0, 0);
+    }
+}
+
+/* Career_AutoAdvanceCupMatches (SWOS2.s line 31708)
+ *
+ * Auto-simulates all cup matches for the current competition up to the
+ * current game phase. Similar to league version but uses cup-specific
+ * functions and checks roundComplete (0x54) and finishedFlag (0x56).
+ */
+__attribute__((used, externally_visible))
+void _Career_AutoAdvanceCupMatches(void)
+{
+    uint8_t currentPhase, nextPhase;
+
+    /* Guard checks */
+    if (careerAutoAdvanceInProgress != 0 || seasonUpdateInProgress != 0 ||
+        internationalAutoAdvanceFlag != 0 || seasonFinished != 0) {
+        currentPhase = 0xFF;
+        nextPhase = 0xFF;
+    } else {
+        uint8_t *cacheEntry = _TeamSelectionKeyCache_GetCurrentListPtr();
+        currentPhase = cacheEntry[1];
+        uint16_t nextIdx = teamSelectionKeyCacheIndex + 1;
+        if (nextIdx == teamSelectionKeyCacheCount) {
+            nextPhase = 0xFF;
+        } else {
+            uint16_t entrySize = *(uint16_t *)(cacheEntry + 2);
+            nextPhase = *(cacheEntry + entrySize + 1);
+        }
+    }
+
+    uint8_t *base = diyCompetitionStart;
+    uint8_t *lastMatchSlots = careerLastMatchIndexByCompetitionSlot;
+    uint8_t slotIdx = base[0x2E];
+    uint8_t *lastMatchPtr = lastMatchSlots + (uint16_t)slotIdx;
+    uint8_t lastMatch = *lastMatchPtr;
+
+    /* Inline DIY_AdvanceCupFixtureIndex */
+    uint8_t viewRP = base[0x2F];
+    _DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
+
+    /* First check: if currentPhase <= viewRandomPhase, skip main loop */
+    if (currentPhase <= base[0x2F])
+        goto check_next_phase_cup;
+
+    /* Main cup sim loop */
+cup_main_loop:
+    _DIY_PlayCupMatchAndAdvance(0, 0); /* allowSquadChanges=0, mode=0 (sim) */
+
+    if (*(uint16_t *)(base + 0x54) == 0)
+        goto cup_main_loop; /* roundComplete == 0, keep going */
+
+    if (*(uint16_t *)(base + 0x56) != 0)
+        goto cup_finished; /* finishedFlag != 0 */
+
+    if (currentPhase <= base[0x2F])
+        goto check_next_phase_cup;
+
+    /* Update competition progress and advance fixture */
+    _DIY_UpdateCompetitionProgress();
+    viewRP = base[0x2F];
+    _DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
+    goto cup_main_loop;
+
+cup_finished:
+    if (*(uint16_t *)(base + 0x48) == 0)
+        goto cup_show_menu_check;
+    if (*(uint16_t *)(base + 0x48) == 2)
+        goto cup_show_menu_check;
+    return; /* groups type 1/3 — return silently */
+
+check_next_phase_cup:
+    if (nextPhase > base[0x2F])
+        goto cup_catch_up;
+
+cup_show_menu_check:
+    if (internationalAutoAdvanceFlag != 0)
+        return;
+    if (careerAutoAdvanceInProgress != 0)
+        return;
+
+    if (highlightedLeagueTeamId == 0xFFFF) {
+        _ShowDIYCupMenuWithParams(1, 0, 0);
+    } else {
+        _ShowDIYCupMenuWithParams(1, 1, 0);
+    }
+    return;
+
+cup_catch_up:
+    /* If roundComplete, update progress and advance fixture */
+    if (*(uint16_t *)(base + 0x54) != 0) {
+        _DIY_UpdateCompetitionProgress();
+        viewRP = base[0x2F];
+        _DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
+    }
+
+    if (lastMatch == base[0x2F]) {
+        /* Catch-up loop */
+        do {
+            _DIY_PlayCupMatchAndAdvance(0, 0);
+        } while (*(uint16_t *)(base + 0x54) == 0);
+        goto cup_show_menu_check;
+    }
+
+    /* Store current viewRandomPhase as last match index */
+    *lastMatchPtr = base[0x2F];
+    if (highlightedLeagueTeamId != 0xFFFF) {
+        _ShowDIYCupMenuWithParams(1, 1, 0);
+    } else {
+        _ShowDIYCupMenuWithParams(1, 0, 0);
     }
 }

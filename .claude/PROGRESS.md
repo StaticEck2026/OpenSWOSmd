@@ -3080,6 +3080,19 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, map confirmed at 0x00154256 / 0x0015439e)
 - Cumulative: 1507 functions across 190 chunks
 
+### Chunk 194 — Career_AutoAdvanceLeagueFixtures + Career_AutoAdvanceCupMatches (2+2 → career_status.c)
+- Date: 2026-03-02
+- Ported:
+  1. Career_AutoAdvanceLeagueFixtures (→career_status.c) — ~88 instr. Auto-simulates all league fixtures up to current game phase. Guard checks (careerAutoAdvanceInProgress/seasonUpdateInProgress/internationalAutoAdvanceFlag/seasonFinished), TeamSelectionKeyCache phase lookup, main sim loop calling _DIY_PlayOrSimulateLeagueFixture(0,0), fixture advance via _DIY_AdvanceFixtureIndex, catch-up loop, groups type check, ShowDiyLeaguesTournamentMenu tail calls.
+  2. Career_AutoAdvanceCupMatches (→career_status.c) — ~98 instr. Same pattern for cup matches. Uses _DIY_PlayCupMatchAndAdvance(0,0), checks roundComplete(0x54)/finishedFlag(0x56), calls _DIY_UpdateCompetitionProgress between rounds, ShowDIYCupMenuWithParams tail calls.
+  3. DIY_AdvanceLeagueFixtureIndex — stubbed as rts (dead, only caller ported)
+  4. DIY_AdvanceCupFixtureIndex — stubbed as rts (dead, only caller ported)
+- Asm→C bridges: Career_AutoAdvanceLeagueFixtures (simple jsr), Career_AutoAdvanceCupMatches (simple jsr)
+- Added xdef for careerLastMatchIndexByCompetitionSlot
+- Updated C call sites in career_status.c from asm extern to C function calls
+- Build status: **verified** (clean build)
+- Cumulative: 1519 functions across 194 chunks
+
 ### Chunk 193 — DIY_PlayCupMatchAndAdvance + DIY_PlayOrSimulateLeagueFixture (2 → diy_competition.c)
 - Date: 2026-03-02
 - Ported:
