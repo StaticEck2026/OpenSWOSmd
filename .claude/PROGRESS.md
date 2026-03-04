@@ -3051,6 +3051,20 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1496 functions across 186 chunks
 
+### Chunk 187 — GetPlayerPrice + UpdatePlayerPositionAndReturnRole (4 → match_sim.c)
+- Date: 2026-03-02
+- Ported:
+  1. sub_120A10 (dead code, stubbed as rts) — unreferenced function, never called
+  2. sub_120B0A (dead code, stubbed as rts) — unreferenced function, never called
+  3. GetPlayerPrice (→match_sim.c) — ~120 instr. Calculates player's effective price/skill based on 35 pitch quadrants, 7 skills per quadrant with position-weighted ponders, distance factor matrix, nearness factor, and player density at quadrant. Uses code-as-data pattern: GK skill row is 35 bytes of machine code before skillsPerQuadrant (accessed via skillsPerQuadrant - 35 in C). Returns clamped price index (0-49) with file price table lookup for increase.
+  4. UpdatePlayerPositionAndReturnRole (→match_sim.c) — ~90 instr. Maps player index to slot via currentMatchPlayers (career team) or playerNumbers (other teams), computes effective price via GetPlayerPrice for outfield players, handles GK/sub slots specially, checks sold/injury status for human teams. Returns packed (role << 16) | position.
+- Stubs: sub_120A10 (rts), sub_120B0A (rts), UpdatePlayerPositionAndReturnRole (rts, dead — only called from C bridge), GetPlayerPrice (rts, dead code body preserved for code-as-data bytes)
+- Bridges updated: _CGetPlayerPrice → jmp _GetPlayerPrice, _CUpdatePlayerPositionAndReturnRole → jmp _UpdatePlayerPositionAndReturnRole
+- New xrefs: _GetPlayerPrice, _UpdatePlayerPositionAndReturnRole
+- New xdefs: skillsPerQuadrant, priceSkillPonders, quadrantCoordinatesToBallQuadrant, skillValuePonders, plPricesIncreaseTable, plPositions, totalSkillsFactorSum, numPlayersAtQuadrant
+- Build status: **verified** (clean build, map confirmed)
+- Cumulative: 1500 functions across 187 chunks
+
 ### Chunk 178 — CheckNumberOfTeams (1 → menus.c)
 - Date: 2026-03-02
 - Ported:
@@ -3456,5 +3470,9 @@ Update this section every time you port a chunk. Keep it chronological.
 | 177   | 1         | 1476       |
 | 178   | 1         | 1477       |
 | 179   | 3         | 1480       |
+| 180-184 | —       | —          |
+| 185   | 13        | 1493       |
+| 186   | 3         | 1496       |
+| 187   | 2+2d      | 1500       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

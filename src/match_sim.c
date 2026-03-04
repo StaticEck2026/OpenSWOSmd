@@ -32,7 +32,8 @@ extern uint16_t _FindTeamInDIY(uint16_t teamNo, uint8_t *comp);
 extern uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, uint8_t *comp);
 
 /* C-callable bridges to asm functions (defined in swos2_unit.s) */
-extern uint32_t _CUpdatePlayerPositionAndReturnRole(uint8_t *team, uint16_t playerIdx);
+/* Forward declaration: _UpdatePlayerPositionAndReturnRole (Chunk 187) */
+uint32_t _UpdatePlayerPositionAndReturnRole(uint8_t *team, uint16_t playerIdx);
 extern void _CCareer_ApplyPostMatchPlayerStatModsIfCareerTeam(uint8_t *team, uint8_t *remap);
 
 /* GetNumberOfAvailable* — return packed: d6 in low word, d7 in upper bits */
@@ -104,8 +105,8 @@ extern uint8_t  aAWin01OnPensRe[];
  * (originally a dc.w in asm right after the function) */
 static uint16_t buildMatchResultStringControl;
 
-/* C-callable bridge for GetPlayerPrice (asm, Chunk 105) */
-extern int16_t _CGetPlayerPrice(uint8_t *teamFile, uint8_t *playerBase, uint16_t playerNumber);
+/* Forward declaration: _GetPlayerPrice (Chunk 187) */
+int16_t _GetPlayerPrice(uint8_t *teamFile, uint8_t *playerBase, uint16_t playerNumber);
 
 /* Extern globals for Chunk 105 */
 extern uint16_t pl1Tactics;
@@ -727,7 +728,7 @@ uint16_t _ComputeOldPlayerSkillForViewResult(uint8_t *team, uint16_t goalsCount)
 
         for (; d3 >= 0; d3--) {
             /* Call UpdatePlayerPositionAndReturnRole */
-            uint32_t res = _CUpdatePlayerPositionAndReturnRole(team, d7);
+            uint32_t res = _UpdatePlayerPositionAndReturnRole(team, d7);
             uint16_t posValue = (uint16_t)(res & 0xFFFF);       /* d0 = position value */
             uint16_t roleValue = (uint16_t)((res >> 16) & 0xFFFF); /* d1 = role */
 
@@ -753,7 +754,7 @@ uint16_t _ComputeOldPlayerSkillForViewResult(uint8_t *team, uint16_t goalsCount)
     /* Second pass: iterate all 11 outfield players (indices 0..10) */
     uint16_t d7;
     for (d7 = 0; d7 < 11; d7++) {
-        uint32_t res = _CUpdatePlayerPositionAndReturnRole(team, d7);
+        uint32_t res = _UpdatePlayerPositionAndReturnRole(team, d7);
         uint16_t posValue = (uint16_t)(res & 0xFFFF);
         uint16_t roleValue = (uint16_t)((res >> 16) & 0xFFFF);
 
@@ -1324,7 +1325,7 @@ void _AdjustPlayerSkills(uint16_t playerIdx, uint8_t *teamFile,
         d4 = (int16_t)(int8_t)pf->price;
     } else {
         /* Field player: calculate price via GetPlayerPrice */
-        d4 = _CGetPlayerPrice(teamFile, playerBase, playerIdx);
+        d4 = _GetPlayerPrice(teamFile, playerBase, playerIdx);
     }
 
     /* Compute percentage: (calculatedPrice * 100) / filePrice */
@@ -1727,4 +1728,301 @@ int16_t _CalcTeamPriceRankPercentOffset(uint8_t *ctx, uint8_t *team)
     if (pct < -50) pct = -50;
 
     return pct >> 1;
+}
+
+/* ================================================================
+ * Chunk 187 — GetPlayerPrice + UpdatePlayerPositionAndReturnRole
+ *
+ * GetPlayerPrice: computes a player's effective price based on
+ * skills, tactics position, and distance weighting across all 35
+ * pitch quadrants.
+ *
+ * UpdatePlayerPositionAndReturnRole: determines a player's effective
+ * position/role value and stores it in playerPositionsArray.
+ * Returns packed (role << 16) | position.
+ * ================================================================ */
+
+/* ASM data externs for Chunk 187 */
+extern uint8_t skillsPerQuadrant[];          /* 7×35 skill table (positions 1-7); GK row is 35 bytes before */
+extern uint32_t priceSkillPonders[];         /* 35 longwords: packed skill ponders per quadrant */
+extern uint8_t quadrantCoordinatesToBallQuadrant[]; /* 240 bytes: coordinate->quadrant map */
+extern uint8_t quadrantDistanceFactor[];     /* 35×35 distance factor matrix */
+extern uint8_t skillValuePonders[];          /* 8 bytes: skill value multipliers */
+extern uint8_t plPricesIncreaseTable[];      /* 50 bytes: price increase lookup */
+extern uint32_t teamTacticsTable[];          /* 19 pointers to tactics data */
+extern uint32_t plPositions;                 /* pointer storage for current tactics base */
+extern uint16_t totalSkillsFactorSum;        /* accumulator for skill factor sum */
+extern uint16_t numPlayersAtQuadrant;        /* count of players sharing a quadrant */
+extern uint8_t currentMatchPlayers[];
+extern uint8_t playerPositionsArray[];
+extern uint16_t inEditTactics;
+extern uint16_t _IsPlayerInjured(uint8_t *playerBase, int16_t mode);
+extern uint16_t _CountNearnessFactor(uint16_t curBallQuadrant, uint16_t dstBallQuadrant,
+                                     uint16_t price, const uint8_t *curQuadDistFactor,
+                                     const uint8_t *playerPositions, const uint8_t *coordToQuad);
+
+/* _GetPlayerPrice (SWOS2.s line 27392)
+ *
+ * Calculates a player's effective price based on skills, tactical position,
+ * and distance weighting across 35 pitch quadrants.
+ *
+ * Parameters:
+ *   teamFile     - pointer to TeamFile/TeamFileEx (a0 in asm)
+ *   playerBase   - teamFile + playerSlot * 38 (a1 in asm)
+ *   playerNumber - 1-based player number (d7 in asm), always >= 1
+ *
+ * Returns: price value (d7 in asm) as int16_t
+ */
+__attribute__((used, externally_visible))
+int16_t _GetPlayerPrice(uint8_t *teamFile, uint8_t *playerBase, uint16_t playerNumber)
+{
+    /* Player data is at playerBase + TEAMFILE_PLAYERS (76) */
+    uint8_t *plData = playerBase + 76;
+
+    /* Position type (0-7) from top 3 bits of positionAndFace */
+    uint16_t position = (plData[26] & 0xE0) >> 5;
+
+    /* Skill weights for this position.
+     * Position 0 (GK) reads from dead code bytes 35 bytes before skillsPerQuadrant.
+     * Asm: lea loc_122D6A+1(d0.w),a5 where d0 = position * 35.
+     * loc_122D6A+1 is exactly skillsPerQuadrant - 35. */
+    const uint8_t *skillsPerQ = skillsPerQuadrant - 35 + position * 35;
+
+    /* Player skills packed: 4 bytes starting at passing (offset 28).
+     * Big-endian: passing, shootingHeading, tacklingBallControl, speedFinishing */
+    uint32_t d5 = ((uint32_t)plData[28] << 24) | ((uint32_t)plData[29] << 16) |
+                  ((uint32_t)plData[30] << 8) | plData[31];
+    d5 &= 0x07777777;   /* mask to 3 bits per nibble */
+    d5 += 0x01111111;   /* add 1 to each nibble (range: 1-8) */
+
+    /* Get tactics table for this team */
+    int16_t tacticsIdx = (int8_t)teamFile[24]; /* team->tactics, sign-extended */
+    uint8_t *tacticsData = (uint8_t *)teamTacticsTable[tacticsIdx] + 9;
+    plPositions = (uint32_t)tacticsData;
+
+    /* Player's position data in tactics table (0-based from playerNumber) */
+    uint16_t plNum0 = playerNumber - 1;
+    uint8_t *playerTactics = tacticsData + plNum0 * 35;
+
+    /* Distance factor pointer starts at last row (row 34) */
+    const uint8_t *distFactor = quadrantDistanceFactor + 34 * 35;
+
+    totalSkillsFactorSum = 0;
+
+    /* Main loop: iterate over 35 quadrant positions */
+    for (int16_t d3 = 34; d3 >= 0; d3--) {
+        uint16_t quadPrice = 0;
+
+        /* Map position to ball quadrant */
+        uint16_t ballQ = playerTactics[d3];
+        ballQ = quadrantCoordinatesToBallQuadrant[ballQ];
+
+        /* Count players at same quadrant (human teams only) */
+        if (teamFile[4] != 1 /* TEAM_COMPUTER */) {
+            numPlayersAtQuadrant = 1;
+            if (d3 >= 5 && d3 < 30 && d3 != 7) {
+                uint8_t *tacticsBase = (uint8_t *)plPositions;
+                uint16_t count = 0;
+                for (int16_t i = 9; i >= 0; i--) {
+                    uint16_t q = tacticsBase[d3];
+                    q = quadrantCoordinatesToBallQuadrant[q];
+                    if ((uint8_t)q == (uint8_t)ballQ)
+                        count++;
+                    tacticsBase += 35;
+                }
+                numPlayersAtQuadrant = count;
+            }
+        }
+
+        /* Get packed skill ponder for this ball quadrant */
+        uint32_t ponderPacked = priceSkillPonders[ballQ];
+
+        /* Inner loop: 7 skills */
+        uint32_t skillsCopy = d5;
+        for (int16_t k = 6; k >= 0; k--) {
+            uint16_t skill = skillsCopy & 0xF;
+            uint16_t ponder = ponderPacked & 0xF;
+            if (ponder != 0) {
+                ponder = skillValuePonders[ponder];
+                quadPrice += skill * ponder;
+            }
+            skillsCopy >>= 4;
+            ponderPacked >>= 4;
+        }
+
+        /* Apply position skill weight */
+        quadPrice >>= 1;
+        uint16_t weight = (int8_t)skillsPerQ[ballQ];  /* ext.w from byte */
+        uint32_t temp = (uint32_t)quadPrice * (uint16_t)weight;
+        uint16_t tempLow = (uint16_t)temp; /* mulu.w produces 32-bit, next mulu uses low 16 */
+
+        /* Apply distance factor */
+        uint16_t dist = distFactor[ballQ];
+        uint32_t temp2 = (uint32_t)tempLow * dist;
+        temp2 >>= 3;
+
+        /* Divide by number of players at quadrant (human only, >1) */
+        if (teamFile[4] != 1) {
+            uint16_t n = numPlayersAtQuadrant - 1;
+            if (n != 0)
+                temp2 = temp2 / n;  /* divu.w: 32/16 */
+        }
+
+        uint16_t d7val = (uint16_t)temp2;
+
+        /* Apply nearness factor (human teams only) */
+        if (teamFile[4] != 1) {
+            d7val = _CountNearnessFactor(d3, ballQ, d7val,
+                                         distFactor, playerTactics,
+                                         quadrantCoordinatesToBallQuadrant);
+        }
+
+        totalSkillsFactorSum += d7val;
+        distFactor -= 35;
+    }
+
+    /* Compute final price index */
+    int16_t result = (int16_t)totalSkillsFactorSum;
+    /* ext.l + divu.w #350 → unsigned division of signed-extended 32-bit value */
+    int32_t extended = (int32_t)result;
+    uint16_t priceIdx = (uint16_t)((uint32_t)extended / 350);
+    priceIdx -= 8;
+
+    /* Clamp to 0..49 */
+    if ((int16_t)priceIdx < 0)
+        priceIdx = 0;
+    else if (priceIdx > 49)
+        priceIdx = 49;
+
+    /* Compare computed price index vs file price (byte-level operations).
+     * sub.b: d0.b = (uint8_t)priceIdx - mem.b, sets flags on byte result.
+     * bmi: branch if signed byte result < 0. */
+    uint8_t filePriceByte = plData[32];  /* PLAYERFILE_PRICE raw byte */
+    uint8_t priceIdxLow = (uint8_t)priceIdx;
+    int8_t byteDiff = (int8_t)(priceIdxLow - filePriceByte);
+
+    if (byteDiff < 0) {
+        /* File price > computed: return priceIdx as-is */
+        return priceIdx;
+    }
+
+    /* Price increase: d0.w = unsigned byte diff (high byte was 0) */
+    uint16_t diffIdx = (uint8_t)(priceIdxLow - filePriceByte);
+    /* move.b table[diff],d7 + add.b filePrice,d7 → byte operations */
+    uint8_t increase = plPricesIncreaseTable[diffIdx];
+    return (int16_t)(uint8_t)(increase + filePriceByte);
+}
+
+/* _UpdatePlayerPositionAndReturnRole (SWOS2.s line 26116)
+ *
+ * Determines a player's effective position value and role.
+ * For career team: reads slot mapping from currentMatchPlayers[].
+ * For other teams: reads from team->playerNumbers[].
+ *
+ * The function updates playerPositionsArray[] and writes the
+ * position value back to the player's field_1 byte.
+ *
+ * Parameters:
+ *   team      - pointer to TeamFile/TeamFileEx (a0 in asm)
+ *   playerIdx - player index (d7 in asm)
+ *
+ * Returns: packed uint32_t with (role << 16) | (position & 0xFFFF)
+ *          where role = position type (0-7) from positionAndFace top bits
+ *          and position = the effective price/skill value for this player
+ */
+__attribute__((used, externally_visible))
+uint32_t _UpdatePlayerPositionAndReturnRole(uint8_t *team, uint16_t playerIdx)
+{
+    /* Get player slot index based on whether this is the career team */
+    int16_t slotIdx;
+    if (team == (uint8_t *)&careerTeam) {
+        /* Career team: slot comes from currentMatchPlayers array (at careerTeam - 0x20) */
+        slotIdx = (int8_t)currentMatchPlayers[playerIdx];
+    } else {
+        /* Other teams: slot from team->playerNumbers (offset 60 = 0x3C) */
+        slotIdx = (int8_t)team[60 + playerIdx];
+    }
+
+    int16_t d6 = slotIdx;  /* save slot for playerPositionsArray indexing */
+
+    /* Compute player base: team + slot * PLAYERFILE_SIZE (38) */
+    uint8_t *playerBase = team + (uint16_t)((uint16_t)slotIdx * 38);
+    /* Player data at playerBase + TEAMFILE_PLAYERS (76) */
+    uint8_t *plData = playerBase + 76;
+
+    /* Check someFlag (offset 0x3B = 59 from team) */
+    if (team[59] == 0) {
+        /* Simple path: return field_1 as position, store in array */
+        int16_t pos = (int8_t)plData[1];  /* PLAYERFILE_FIELD_1 */
+        uint16_t role = (plData[26] & 0xE0) >> 5;  /* PLAYERFILE_POSITIONANDFACE */
+        playerPositionsArray[d6] = (uint8_t)pos;
+        /* Return with role in high word, position in low word */
+        return ((uint32_t)role << 16) | ((uint16_t)pos & 0xFFFF);
+    }
+
+    /* Complex path: someFlag != 0 */
+    uint16_t posType = (plData[26] & 0xE0) >> 5;  /* position type (0-7) */
+    int16_t d7val;
+
+    if (playerIdx == 0) {
+        /* Goalkeeper slot */
+        if (posType == 0) {
+            /* GK in GK slot: use file price, sign-extended */
+            d7val = (int8_t)plData[32];  /* PLAYERFILE_PRICE */
+        } else {
+            /* Non-GK in GK slot: price = 0 */
+            d7val = 0;
+            goto storeResult;
+        }
+    } else if (playerIdx < 11) {
+        /* Outfield player (index 1-10) */
+        if (posType == 0) {
+            /* GK in outfield slot: price = 0 */
+            d7val = 0;
+            goto storeResult;
+        } else {
+            /* Outfield player in outfield slot: calculate full price */
+            d7val = _GetPlayerPrice(team, playerBase, playerIdx);
+        }
+    } else {
+        /* Substitute (index >= 11) */
+        if (posType == 0) {
+            /* GK substitute: use file price, sign-extended */
+            d7val = (int8_t)plData[32];
+        } else {
+            /* Outfield substitute: use file price, sign-extended */
+            d7val = (int8_t)plData[32];
+        }
+    }
+
+    /* Ensure minimum price of 1 */
+    if (d7val == 0)
+        d7val = 1;
+
+    /* Computer-controlled teams skip injury/sold checks */
+    if (team[4] != 1 /* TEAM_COMPUTER */) {
+        /* Check if player is "sold" (bit 1 of positionAndFace) */
+        if (plData[26] & 0x02) {
+            d7val = 1;  /* sold player = minimum price */
+        }
+
+        /* Check if player is injured.
+         * Asm does exg a0,a1 so IsPlayerInjured gets a0=playerBase (team+slot*38) */
+        if (_IsPlayerInjured(playerBase, (int16_t)inEditTactics)) {
+            d7val = 0;  /* injured = price 0 */
+        }
+    }
+
+storeResult:
+    /* Store position value */
+    {
+        uint16_t posVal = (uint16_t)(int16_t)d7val;
+        plData[1] = (uint8_t)posVal;  /* PLAYERFILE_FIELD_1 */
+        playerPositionsArray[d6] = (uint8_t)posVal;
+
+        /* Get role from positionAndFace */
+        uint16_t role = (plData[26] & 0xE0) >> 5;
+
+        return ((uint32_t)role << 16) | (posVal & 0xFFFF);
+    }
 }

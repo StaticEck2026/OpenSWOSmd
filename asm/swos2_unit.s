@@ -1576,6 +1576,9 @@
 
         ; Chunk 186 xrefs
         xref    _Career_AdvanceToNextSeason_UpdateCompetitions
+; --- Chunk 187 xrefs ---
+        xref    _GetPlayerPrice
+        xref    _UpdatePlayerPositionAndReturnRole
 
         ; Chunk 91 xrefs
         xref    _GetTeamPointer
@@ -3459,6 +3462,15 @@
         xdef    aDataEurocwcTmd
         xdef    aDataUefacupTmd
         xdef    quadrantDistanceFactor
+; --- Chunk 187 xdefs ---
+        xdef    skillsPerQuadrant
+        xdef    priceSkillPonders
+        xdef    quadrantCoordinatesToBallQuadrant
+        xdef    skillValuePonders
+        xdef    plPricesIncreaseTable
+        xdef    plPositions
+        xdef    totalSkillsFactorSum
+        xdef    numPlayersAtQuadrant
         xdef    aDiyTournament
         xdef    aDiyLeague
         xdef    aDiyCup
@@ -3718,32 +3730,13 @@ _CDrawSprites:
 _CCalcTeamPriceRankPercentOffset:
         jmp     _CalcTeamPriceRankPercentOffset
 
-; _CUpdatePlayerPositionAndReturnRole(uint8_t *team, uint16_t playerIdx) -> uint32_t
-; asm: a0=team, d7=playerIdx, returns d0=position, d1=role
-; C return: (role << 16) | (position & 0xFFFF)
+; _CUpdatePlayerPositionAndReturnRole → now calls C directly (Chunk 187)
 _CUpdatePlayerPositionAndReturnRole:
-        movem.l d2-d7/a2-a6,-(sp)
-        movea.l 48(sp),a0              ; team
-        move.w  52(sp),d7              ; playerIdx
-        jsr     UpdatePlayerPositionAndReturnRole
-        swap    d1                     ; d1 (role) -> upper word
-        clr.w   d1                     ; clear lower word of d1
-        andi.l  #$FFFF,d0              ; mask d0 to 16-bit
-        or.l    d1,d0                  ; combine: (role << 16) | position
-        movem.l (sp)+,d2-d7/a2-a6
-        rts
+        jmp     _UpdatePlayerPositionAndReturnRole
 
-; _CGetPlayerPrice(uint8_t *teamFile, uint8_t *playerBase, uint16_t playerNumber) -> int16_t
-; asm GetPlayerPrice: a0=teamFile, a1=playerBase, d7=playerNumber, returns d7=price
+; _CGetPlayerPrice → now calls C directly (Chunk 187)
 _CGetPlayerPrice:
-        movem.l d2-d7/a2-a6,-(sp)
-        movea.l 48(sp),a0              ; teamFile
-        movea.l 52(sp),a1              ; playerBase
-        move.w  56(sp),d7              ; playerNumber
-        jsr     GetPlayerPrice
-        move.w  d7,d0                  ; return value in d0
-        movem.l (sp)+,d2-d7/a2-a6
-        rts
+        jmp     _GetPlayerPrice
 
 ; _CCareer_ApplyPostMatchPlayerStatModsIfCareerTeam(uint8_t *team, uint8_t *remap)
 ; Now calls C _Career_ApplyPostMatchPlayerStatModsIfCareerTeam directly (Chunk 95)

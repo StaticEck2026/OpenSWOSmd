@@ -41,6 +41,10 @@ void _ApplyTeamTactics(TeamGame *teamGame);
 /* --- CalcTeamPriceRankPercentOffset (Chunk 180) --- */
 int16_t _CalcTeamPriceRankPercentOffset(uint8_t *ctx, uint8_t *team);
 
+/* --- GetPlayerPrice + UpdatePlayerPositionAndReturnRole (Chunk 187) --- */
+int16_t _GetPlayerPrice(uint8_t *teamFile, uint8_t *playerBase, uint16_t playerNumber);
+uint32_t _UpdatePlayerPositionAndReturnRole(uint8_t *team, uint16_t playerIdx);
+
 /* --- BuildMatchResultString (Chunk 106) --- */
 uint8_t *_BuildMatchResultString(uint16_t control, uint16_t leg2, uint16_t leg1,
                                   uint16_t pens, uint8_t *teamA, uint8_t *teamB,

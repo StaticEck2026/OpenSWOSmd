@@ -24994,16 +24994,9 @@ nullsub_1:
                 rts
 
 ; ===== sub_120A10 =====
-; prototype: void sub_120A10(...)
+; Dead code — unreferenced function, stubbed in Chunk 187
 sub_120A10:
-                move.w  $14(a5),d1
-                move.w  $16(a5),d2
-                move.w  $18(a5),d3
-                move.w  $1A(a5),d4
-                move.w  (currentGameTick).l,d0
-                lsr.w   #2,d0
-                andi.w  #$F,d0
-                bra.w   DrawMenuItemInnerFrame
+                rts
 
 ; ===== DrawMenuItemOuterFrame =====
 ; prototype: void __usercall DrawMenuItemOuterFrame(unsigned __int16 color@<d0>, unsigned __int16 x@<d1>, unsigned __int16 y@<d2>, unsigned __int16 width@<d3>, unsigned __int16 height@<d4>)
@@ -25051,15 +25044,9 @@ DrawMenuItemInnerFrame:
                 rts
 
 ; ===== sub_120B0A =====
-; prototype: void sub_120B0A(...)
+; Dead code — unreferenced function, stubbed in Chunk 187
 sub_120B0A:
-                move.w  d3,d5
-                lsr.w   #1,d5
-                sub.w   d5,d1
-                move.w  d4,d5
-                lsr.w   #1,d5
-                sub.w   d5,d2
-                bra.w   *+4
+                rts
 
 ; ===== DrawMenuItemBackground =====
 ; prototype: void __usercall DrawMenuItemBackground(unsigned __int16 color@<d0>, unsigned __int16 x@<d1>, unsigned __int16 y@<d2>, unsigned __int16 width@<d3>, unsigned __int16 height@<d4>)
@@ -26112,98 +26099,9 @@ playersPositionsByTactics:
                 dc.l tacticsPositionUSERF ; element[17]
 
 ; ===== UpdatePlayerPositionAndReturnRole =====
-; prototype: unsigned __int16 __usercall UpdatePlayerPositionAndReturnRole@<d0>(TeamFile *team@<a0>, unsigned __int16 playerIndex@<d7>)
+; Ported to C: _UpdatePlayerPositionAndReturnRole (match_sim.c, Chunk 187)
+; Dead — only called from C bridge _CUpdatePlayerPositionAndReturnRole
 UpdatePlayerPositionAndReturnRole:
-                cmpa.l  #careerTeam,a0
-                bne.s   loc_122BF2
-                move.b  -$20(a0,d7.w),d0
-                bra.s   loc_122BF6
-loc_122BF2:
-                move.b  $3C(a0,d7.w),d0
-loc_122BF6:
-                ext.w   d0
-                move.w  d0,d6
-                mulu.w  #$26,d0         ; '&'
-                lea     (a0,d0.w),a1
-                tst.b   $3B(a0)
-                bne.s   loc_122C24
-                move.b  $4D(a1),d0
-                ext.w   d0
-                move.b  $66(a1),d1
-                andi.w  #$E0,d1
-                lsr.w   #5,d1
-                lea     (playerPositionsArray).l,a2
-                move.b  d0,(a2,d6.w)
-                rts
-loc_122C24:
-                move.b  $66(a1),d0
-                andi.w  #$E0,d0
-                lsr.w   #5,d0
-                tst.w   d7
-                bne.s   loc_122C3A
-                cmpi.b  #0,d0
-                beq.s   loc_122C50
-                bra.s   loc_122C48
-loc_122C3A:
-                cmpi.w  #$B,d7
-                bcc.s   loc_122C60
-                cmpi.b  #0,d0
-                beq.s   loc_122C58
-                bra.s   loc_122C76
-loc_122C48:
-                move.b  $6C(a1),d7
-                clr.w   d7
-                bra.s   loc_122CB8
-loc_122C50:
-                move.b  $6C(a1),d7
-                ext.w   d7
-                bra.s   loc_122C82
-loc_122C58:
-                move.b  $6C(a1),d7
-                clr.w   d7
-                bra.s   loc_122CB8
-loc_122C60:
-                cmpi.b  #0,d0
-                beq.s   loc_122C6E
-                move.b  $6C(a1),d7
-                ext.w   d7
-                bra.s   loc_122C82
-loc_122C6E:
-                move.b  $6C(a1),d7
-                ext.w   d7
-                bra.s   loc_122C82
-loc_122C76:
-                movem.l d6,-(sp)
-                bsr.w   GetPlayerPrice
-                movem.l (sp)+,d6
-loc_122C82:
-                tst.w   d7
-                bne.s   loc_122C8A
-                move.w  #1,d7
-loc_122C8A:
-                cmpi.b  #1,4(a0)
-                beq.s   loc_122CB8
-                btst    #1,$66(a1)
-                beq.s   loc_122C9E
-                move.w  #1,d7
-loc_122C9E:
-                exg     a0,a1
-                move.w  inEditTactics(pc),d0
-                movem.l d1,-(sp)
-                jsr     IsPlayerInjured
-                movem.l (sp)+,d1
-                beq.s   loc_122CB6
-                clr.w   d7
-loc_122CB6:
-                exg     a0,a1
-loc_122CB8:
-                move.w  d7,d0
-                move.b  d0,$4D(a1)
-                lea     (playerPositionsArray).l,a2
-                move.b  d0,(a2,d6.w)
-                move.b  $66(a1),d1
-                andi.w  #$E0,d1
-                lsr.w   #5,d1
                 rts
 
 ; ===== ComputeOldPlayerSkillForViewResult =====
@@ -27388,8 +27286,11 @@ teamTacticsTable:
 ; out:
 ;      D7 - player price
 ;      
-; Calculate and return player's price. Deduce tactics from player's team.
+; Ported to C: _GetPlayerPrice (match_sim.c, Chunk 187)
+; Dead — only called from now-ported UpdatePlayerPositionAndReturnRole
 GetPlayerPrice:
+                rts
+                ; === dead code below (old body) ===
                 move.l  a1,-(sp)
                 move.b  PLAYERFILE_POSITIONANDFACE+$4C(a1),d0
                 andi.w  #$E0,d0
