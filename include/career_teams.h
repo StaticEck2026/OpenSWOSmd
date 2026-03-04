@@ -87,3 +87,6 @@ void _Career_RemoveInternationalPlayersByMask(uint32_t removeMask);
 
 /* --- Career_InitInternationalSquadAndLookupTablesForNewSeason (Chunk 172) --- */
 void _Career_InitInternationalSquadAndLookupTablesForNewSeason(uint8_t *teamPtr);
+
+/* --- TeamSelectionKeyCache builders (Chunk 196) --- */
+void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk);

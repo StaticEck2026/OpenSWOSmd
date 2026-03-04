@@ -1631,6 +1631,10 @@
         xref    _Career_AutoAdvanceCupMatches
         xref    _Career_AutoAdvanceCompetitionSlots
 
+        ; Chunk 196 xrefs
+        xref    _Career_SetCurrentCompetitionSlot
+        xref    _TeamSelectionKeyCache_BuildFromCompetitionBlock
+
         ; Chunk 91 xrefs
         xref    _GetTeamPointer
         xref    _GetPlayer

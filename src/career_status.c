@@ -3915,3 +3915,150 @@ restart:
             goto restart; /* more slots remain */
     }
 }
+
+
+/* ================================================================
+ * Chunk 196 — Career_SetCurrentCompetitionSlot
+ * ================================================================ */
+
+extern uint8_t *careerCompetitionSlotPtrTable[];
+extern uint16_t isNationalSelector;
+extern uint16_t diyCupTeamIds[];
+extern uint16_t diyLeagueTeamIds[];
+extern uint16_t diyTournamentTeamIds[];
+extern void _Career_ApplyForeignMarketPlayersToSelectedTeams(void);
+extern void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest);
+extern void _InitCompetitionFromRecord(uint16_t index, uint8_t *record);
+extern void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
+extern void _Career_StoreCompetitionSlotStateToBuffer(uint8_t *dst);
+extern void _Career_InitCompetitionTeamSelection_Dispatch(uint8_t *spec, uint16_t idx);
+extern void _DIY_UpdateCompetitionProgressOrAdvanceSlot(uint8_t *blk);
+extern void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk);
+
+/* ================================================================
+ * _Career_SetCurrentCompetitionSlot
+ * (SWOS2.s line 31086)
+ *
+ * Sets up a competition slot for career mode:
+ * 1) Stores comp pointer in currentCompetitionPtr[slot]
+ * 2) Loads slot state from buffer, writes slot index to state
+ * 3) Validates comp type byte against slot index (panics on mismatch)
+ * 4) For slot 4 (DIY): fills diyCupTeamIds with career team id
+ * 5) For other slots with hasSelectedTeams: copies team selections
+ * 6) For other slots without: dispatches team selection + foreign market
+ * 7) Initializes competition from record, stores state, builds key cache
+ * 8) Unless slot 4: loads state again and updates competition progress
+ *
+ * Parameters:
+ *   comp — pointer to competition data (a0)
+ *   slot — competition slot index 0-4 (d0)
+ *   divisionIndex — division index passed through to InitCompetitionFromRecord (d1, hidden param)
+ *   hasSelectedTeams — flag indicating teams are pre-selected (d2)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _Career_SetCurrentCompetitionSlot(uint8_t *comp, uint16_t slot, uint16_t divisionIndex, uint16_t hasSelectedTeams)
+{
+    /* Store comp pointer in the currentCompetitionPtr array */
+    uint32_t *compPtrArray = &currentCompetitionPtr;
+    compPtrArray[slot] = (uint32_t)comp;
+
+    /* Get the slot state pointer from careerCompetitionSlotPtrTable */
+    uint8_t *slotState = careerCompetitionSlotPtrTable[slot];
+    *(uint16_t *)(slotState + 0x2C) = slot;
+
+    /* Load competition slot state from buffer */
+    /* asm: exg a0,a1 → a0=slotState for the call, then exg back */
+    _Career_LoadCompetitionSlotStateFromBuffer(slotState);
+
+    /* Validate comp type vs slot — panic if mismatch */
+    uint8_t compType = comp[1];  /* 1(a0) */
+    if (slot == 0) {
+        /* Slot 0: compType must NOT be 1 (if comp[1]==1 → panic, else fall through to validated) */
+        if (compType == 1)
+            goto panic_mismatch;
+        goto validated;
+    } else if (slot == 4) {
+        /* Slot 4: compType must be 1 (bne → panic) */
+        if (compType != 1)
+            goto panic_mismatch;
+        goto validated;
+    } else if (slot == 3) {
+        goto validated;
+    } else {
+        /* Slots 1, 2: check isNationalSelector */
+        if (isNationalSelector) {
+            if (compType == 0 || compType == 2)
+                goto validated;
+        }
+        /* Default: compType must be 1 */
+        if (compType != 1)
+            goto panic_mismatch;
+        goto validated;
+    }
+
+panic_mismatch:
+    panicReasonCode = 0x4459;  /* 'DY' */
+    _PanicHaltLoop();
+
+validated:
+    /* Slot 4 special case: fill diyCupTeamIds with career team id */
+    if (slot == 4) {
+        uint16_t teamId = *(uint16_t *)&careerTeam;  /* countryNumber + teamOrdinal packed */
+        int16_t count = (int16_t)(int8_t)comp[0xA];  /* move.b $A(a0),d3 / ext.w d3 */
+        int16_t i = count - 1;
+        while (i >= 0) {
+            diyCupTeamIds[i] = teamId;
+            i--;
+        }
+        goto init_competition;
+    }
+
+    /* Non-slot-4: handle team selection */
+    if (hasSelectedTeams) {
+        /* Copy team numbers from selection to appropriate team ID list */
+        uint8_t compTypeByte = comp[1];
+        uint16_t *teamIdList;
+        if (compTypeByte == 0) {
+            teamIdList = diyLeagueTeamIds;
+        } else if (compTypeByte == 1) {
+            teamIdList = diyCupTeamIds;
+        } else {
+            teamIdList = diyTournamentTeamIds;
+        }
+        _CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)teamIdList);
+    } else {
+        /* Initialize team selection from competition spec
+         * asm: jsr Career_InitCompetitionTeamSelection_Dispatch with d1=divisionIndex, a0=comp */
+        _Career_InitCompetitionTeamSelection_Dispatch(comp, divisionIndex);
+        _Career_ApplyForeignMarketPlayersToSelectedTeams();
+    }
+
+init_competition:
+    /* Initialize competition from record — original asm does exg d0,d1 to pass
+     * divisionIndex (originally in d1) as the first param to InitCompetitionFromRecord,
+     * then exg back to restore d0=slot */
+    _InitCompetitionFromRecord(divisionIndex, comp);
+
+    /* Store slot index to both diyFileBufferCopy and diyCompetitionStart */
+    *(uint16_t *)(diyFileBufferCopy + 2 + 0x2A) = slot;
+    *(uint16_t *)(diyCompetitionStart + 2 + 0x2A) = slot;
+
+    /* Write comp type to slot state header */
+    uint8_t compTypeByte2 = comp[1];
+    int16_t typeWord = (int16_t)(int8_t)compTypeByte2;  /* ext.w d3 */
+    *(uint16_t *)slotState = (uint16_t)typeWord;
+
+    /* Store competition slot state to buffer */
+    _Career_StoreCompetitionSlotStateToBuffer(slotState);
+
+    /* Build team selection key cache */
+    _TeamSelectionKeyCache_BuildFromCompetitionBlock(slotState);
+
+    /* Slot 4 doesn't do the final load+progress step */
+    if (slot == 4)
+        return;
+
+    /* Reload state and update competition progress */
+    _Career_LoadCompetitionSlotStateFromBuffer(slotState);
+    _DIY_UpdateCompetitionProgressOrAdvanceSlot(slotState);
+}

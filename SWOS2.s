@@ -31081,294 +31081,39 @@ TeamSelectionKeyCache_InsertSpaceSorted:
                 movem.l (sp)+,d0-d7/a0-a3/a5-a6
                 rts
 
-; ===== Career_SetCurrentCompetitionSlot =====
-; prototype: void __usercall Career_SetCurrentCompetitionSlot(void *comp@<a0>, unsigned __int16 slot@<d0>, unsigned __int16 hasSelectedTeams@<d2>)
+; ===== Career_SetCurrentCompetitionSlot ===== (ported to C → _Career_SetCurrentCompetitionSlot)
+; prototype: void __usercall Career_SetCurrentCompetitionSlot(void *comp@<a0>, unsigned __int16 slot@<d0>, unsigned __int16 divIdx@<d1>, unsigned __int16 hasSelectedTeams@<d2>)
+; d1 is a hidden param: division index passed through to InitCompetitionFromRecord
 Career_SetCurrentCompetitionSlot:
-                lea     (currentCompetitionPtr).l,a1
-                lsl.w   #2,d0
-                move.l  a0,(a1,d0.w)
-                lea     (careerCompetitionSlotPtrTable).l,a1
-                movea.l (a1,d0.w),a1
-                lsr.w   #2,d0
-                move.w  d0,$2C(a1)
-                exg     a0,a1
-                movem.l d0-d2/a0-a2,-(sp)
-                bsr.w   Career_LoadCompetitionSlotStateFromBuffer
-                movem.l (sp)+,d0-d2/a0-a2
-                exg     a0,a1
-                cmpi.w  #0,d0
-                beq.s   loc_12CF46
-                cmpi.w  #4,d0
-                beq.s   loc_12CF3A
-                cmpi.w  #3,d0
-                beq.s   loc_12CF50
-                tst.w   (isNationalSelector).l
-                beq.s   loc_12CF2E
-                cmpi.b  #0,1(a0)
-                beq.s   loc_12CF50
-                cmpi.b  #2,1(a0)
-                beq.s   loc_12CF50
-loc_12CF2E:
-                cmpi.b  #1,1(a0)
-                bne.w   loc_12D01E
-                bra.s   loc_12CF50
-loc_12CF3A:
-                cmpi.b  #1,1(a0)
-                bne.w   loc_12D01E
-                bra.s   loc_12CF50
-loc_12CF46:
-                cmpi.b  #1,1(a0)
-                beq.w   loc_12D01E
-loc_12CF50:
-                cmpi.w  #4,d0
-                bne.s   loc_12CF70
-                lea     (diyCupTeamIds).l,a3
-                move.b  $A(a0),d3
-                ext.w   d3
-                subq.w  #1,d3
-loc_12CF64:
-                move.w  (careerTeam+TEAMFILEEX_TEAM+TEAMFILE_COUNTRYNUMBER).l,(a3)+
-                dbf     d3,loc_12CF64
-                bra.s   loc_12CFC8
-loc_12CF70:
-                tst.w   d2
-                beq.s   loc_12CFAC
-                move.b  1(a0),d3
-                lea     (diyLeagueTeamIds).l,a3
-                cmpi.b  #0,d3
-                beq.s   loc_12CF96
-                lea     (diyCupTeamIds).l,a3
-                cmpi.b  #1,d3
-                beq.s   loc_12CF96
-                lea     (diyTournamentTeamIds).l,a3
-loc_12CF96:
-                movem.l d0/a0,-(sp)
-                move.w  (numSelectedTeams).l,d0
-                movea.l a3,a0
-                jsr CopySelectedTeamNumbers(pc)
-                movem.l (sp)+,d0/a0
-                bra.s   loc_12CFC8
-loc_12CFAC:
-                movem.l d0-d2/a0-a1,-(sp)
-                jsr     Career_InitCompetitionTeamSelection_Dispatch
-                movem.l (sp)+,d0-d2/a0-a1
-                movem.l d0-d2/a0-a1,-(sp)
-                jsr     Career_ApplyForeignMarketPlayersToSelectedTeams
-                movem.l (sp)+,d0-d2/a0-a1
-loc_12CFC8:
-                exg     d0,d1
-                movem.l d0-d2/a0-a1,-(sp)
-                bsr.w   InitCompetitionFromRecord
-                movem.l (sp)+,d0-d2/a0-a1
-                exg     d0,d1
-                move.w  d0,(diyFileBufferCopy+DIY_COMPETITION_FIELD_2+$2A).l
-                move.w  d0,(diyCompetitionStart+DIY_COMPETITION_FIELD_2+$2A).l
-                move.b  1(a0),d3
-                ext.w   d3
-                move.w  d3,(a1)
-                movea.l a1,a0
-                movem.l d0/d2/a0,-(sp)
-                bsr.w   Career_StoreCompetitionSlotStateToBuffer
-                movem.l (sp)+,d0/d2/a0
-                movem.l d0/d2/a0,-(sp)
-                bsr.w   TeamSelectionKeyCache_BuildFromCompetitionBlock
-                movem.l (sp)+,d0/d2/a0
-                cmpi.w  #4,d0
-                beq.s   locret_12D01C
-                movem.l d0/d2/a0,-(sp)
-                bsr.w   Career_LoadCompetitionSlotStateFromBuffer
-                movem.l (sp)+,d0/d2/a0
-                bsr.w   DIY_UpdateCompetitionProgressOrAdvanceSlot
-locret_12D01C:
+                movem.l d1-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d2
+                move.l  d2,-(sp)
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)
+                move.l  a0,-(sp)
+                jsr     _Career_SetCurrentCompetitionSlot
+                lea     16(sp),sp
+                movem.l (sp)+,d1-d7/a2-a6
                 rts
-loc_12D01E:
-                move.w  #$4459,(panicReasonCode).l
-                jsr     PanicHaltLoop
 
-; ===== TeamSelectionKeyCache_BuildFromCompetitionBlock =====
+; ===== TeamSelectionKeyCache_BuildFromCompetitionBlock ===== (ported to C → _TeamSelectionKeyCache_BuildFromCompetitionBlock)
 ; prototype: void __usercall TeamSelectionKeyCache_BuildFromCompetitionBlock(void *blk@<a0>)
 TeamSelectionKeyCache_BuildFromCompetitionBlock:
-                cmpi.w  #0,(a0)
-                beq.w   loc_12D040
-                cmpi.w  #1,(a0)
-                beq.w   loc_12D0A4
-                bra.w   loc_12D170
-loc_12D040:
-                movea.l a0,a6
-                cmpi.w  #4,(gameType).l
-                bne.s   loc_12D052
-                move.w  #$16,d5
-                bra.s   loc_12D06A
-loc_12D052:
-                move.w  $32(a6),d5
-                lsr.w   #1,d5
-                cmpi.w  #$18,d5
-                bls.s   loc_12D062
-                move.w  #$18,d5
-loc_12D062:
-                mulu.w  #$C,d5
-                addi.w  #$A,d5
-loc_12D06A:
-                lea     $1CE(a6),a5
-                move.w  $1C4(a6),d7
-                subq.w  #1,d7
-loc_12D074:
-                move.b  (a5),d0
-                bsr.w   TeamSelectionKeyCache_InsertSpaceSorted
-                addq.w  #1,(teamSelectionKeyCacheCount).l
-                move.b  (a5)+,1(a4)
-                move.w  $2C(a6),d0
-                move.b  d0,(a4)
-                move.w  d5,2(a4)
-                clr.b   4(a4)
-                clr.b   5(a4)
-                clr.b   6(a4)
-                adda.w  2(a4),a4
-                dbf     d7,loc_12D074
-                rts
-loc_12D0A4:
-                movea.l a0,a6
-                move.w  $2C(a6),d4
-                lea     $338(a6),a5
-                movea.l a6,a3
-                clr.w   d3
-                move.w  $5A(a6),d7
-                move.w  $32(a6),d6
-loc_12D0BA:
-                lsr.w   #1,d6
-                cmpi.w  #4,(gameType).l
-                bne.s   loc_12D0CC
-                move.w  #$16,d5
-                bra.s   loc_12D0E0
-loc_12D0CC:
-                move.w  d6,d5
-                cmpi.w  #$18,d5
-                bls.s   loc_12D0D8
-                move.w  #$18,d5
-loc_12D0D8:
-                mulu.w  #$C,d5
-                addi.w  #$A,d5
-loc_12D0E0:
-                bsr.w   TeamSelectionKeyCache_AddNextRoundCupEntry
-                cmpi.w  #2,$66(a3)
-                beq.s   loc_12D114
-                move.b  #0,8(a4)
-                adda.w  2(a4),a4
-                cmpi.w  #1,$7E(a3)
-                beq.s   loc_12D12C
-                bsr.w   TeamSelectionKeyCache_AddNextRoundCupEntry
-                move.b  #3,8(a4)
-                move.b  #1,4(a4)
-                adda.w  2(a4),a4
-                bra.s   loc_12D12C
-loc_12D114:
-                move.b  #1,8(a4)
-                adda.w  2(a4),a4
-                bsr.w   TeamSelectionKeyCache_AddNextRoundCupEntry
-                move.b  #2,8(a4)
-                adda.w  2(a4),a4
-loc_12D12C:
-                lea     2(a3),a3
-                addq.w  #1,d3
-                cmp.w   d7,d3
-                bne.s   loc_12D0BA
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a0,-(sp)
+                jsr     _TeamSelectionKeyCache_BuildFromCompetitionBlock
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== TeamSelectionKeyCache_AddNextRoundCupEntry =====
-; prototype: void __usercall TeamSelectionKeyCache_AddNextRoundCupEntry(unsigned __int8 *out@<a4>, const unsigned __int8 *src@<a5>, unsigned __int16 idx@<d3>, unsigned __int16 total@<d7>, unsigned __int16 teamId@<d4>, unsigned __int16 slotLen@<d5>, void *base@<a6>)
+; ===== TeamSelectionKeyCache_AddNextRoundCupEntry ===== (dead — only caller ported to C)
 TeamSelectionKeyCache_AddNextRoundCupEntry:
-                move.b  (a5),d0
-                bsr.w   TeamSelectionKeyCache_InsertSpaceSorted
-                addq.w  #1,(teamSelectionKeyCacheCount).l
-                move.b  (a5)+,1(a4)
-                move.w  d3,d0
-                move.w  d7,d1
-                move.w  $5C(a6),d2
-                jsr GetNextCupRoundStringIndex(pc)
-                move.b  d0,9(a4)
-                move.b  d3,7(a4)
-                move.b  d4,(a4)
-                move.w  d5,2(a4)
-                clr.b   4(a4)
-                clr.b   5(a4)
-                clr.b   6(a4)
-                rts
-loc_12D170:
-                movea.l a0,a6
-                move.w  $15A(a6),d4
-                move.w  $2C(a6),d2
-                lea     (teamSelectionKeyCache).l,a4
-                move.w  $52(a6),d7
-                clr.w   d3
-loc_12D186:
-                cmpi.w  #4,(gameType).l
-                bne.s   loc_12D196
-                move.w  #$16,d5
-                bra.s   loc_12D1AE
-loc_12D196:
-                move.w  $162(a6),d5
-                lsr.w   #1,d5
-                cmpi.w  #$18,d5
-                bls.s   loc_12D1A6
-                move.w  #$18,d5
-loc_12D1A6:
-                mulu.w  #$C,d5
-                addi.w  #$A,d5
-loc_12D1AE:
-                lea     $176(a6),a5
-                tst.w   $15E(a6)
-                bne.s   loc_12D1F6
-                bsr.w   TeamSelectionKeyCache_AddCupEntry
-                cmpi.w  #2,$16E(a6)
-                beq.s   loc_12D1E4
-                move.b  #0,8(a4)
-                cmpi.w  #1,$172(a6)
-                beq.s   loc_12D20E
-                bsr.w   TeamSelectionKeyCache_AddCupEntry
-                move.b  #3,8(a4)
-                move.b  #1,4(a4)
-                bra.s   loc_12D20E
-loc_12D1E4:
-                move.b  #1,8(a4)
-                bsr.w   TeamSelectionKeyCache_AddCupEntry
-                move.b  #2,8(a4)
-                bra.s   loc_12D20E
-loc_12D1F6:
-                move.w  $174(a6),d6
-                subq.w  #1,d6
-loc_12D1FC:
-                bsr.w   TeamSelectionKeyCache_AddCupEntry
-                move.b  #0,8(a4)
-                adda.w  2(a4),a4
-                dbf     d6,loc_12D1FC
-loc_12D20E:
-                lea     $76(a6),a6
-                addq.w  #1,d3
-                cmp.w   d7,d3
-                bne.w   loc_12D186
                 rts
 
-; ===== TeamSelectionKeyCache_AddCupEntry =====
-; prototype: void __usercall TeamSelectionKeyCache_AddCupEntry(unsigned __int8 *out@<a4>, const unsigned __int8 *src@<a5>, unsigned __int16 team@<d2>, unsigned __int16 round@<d3>, unsigned __int16 total@<d7>, unsigned __int16 slotLen@<d5>, void *base@<a6>)
+; ===== TeamSelectionKeyCache_AddCupEntry ===== (dead — only caller ported to C)
 TeamSelectionKeyCache_AddCupEntry:
-                move.b  (a5),d0
-                bsr.w   TeamSelectionKeyCache_InsertSpaceSorted
-                addq.w  #1,(teamSelectionKeyCacheCount).l
-                move.b  (a5)+,1(a4)
-                movem.w d2-d3,-(sp)
-                move.w  d3,d0
-                move.w  $15E(a6),d1
-                move.w  d7,d2
-                move.w  $162(a6),d3
-                jsr GetCupRoundStringIndex(pc)
-                movem.w (sp)+,d2-d3
-                move.b  d0,9(a4)
-                move.b  d3,7(a4)
-                move.b  d2,(a4)
-                move.w  d5,2(a4)
-                clr.b   4(a4)
-                clr.b   5(a4)
-                clr.b   6(a4)
                 rts
 
 ; ===== DIY_UpdateCompetitionProgressOrAdvanceSlot ===== (ported to C)

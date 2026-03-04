@@ -3080,6 +3080,20 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, map confirmed at 0x00154256 / 0x0015439e)
 - Cumulative: 1507 functions across 190 chunks
 
+### Chunk 196 — Career_SetCurrentCompetitionSlot + TeamSelectionKeyCache builders (4+2d → career_status.c/career_teams.c)
+- Date: 2026-03-02
+- Ported:
+  1. Career_SetCurrentCompetitionSlot (→career_status.c) — ~88 instr. Sets up a competition slot: stores comp in currentCompetitionPtr[slot], loads slot state, validates comp type byte vs slot (slot 0 rejects type 1, slot 4 requires type 1, slot 3 always valid, slots 1-2 accept type 1 or national types 0/2), fills diyCupTeamIds for slot 4, copies team selections or dispatches Career_InitCompetitionTeamSelection_Dispatch, calls InitCompetitionFromRecord, stores state, builds TeamSelectionKeyCache. Hidden d1 parameter (divisionIndex) passed through to InitCompetitionFromRecord and Career_InitCompetitionTeamSelection_Dispatch.
+  2. TeamSelectionKeyCache_BuildFromCompetitionBlock (→career_teams.c) — ~72 instr. Builds team selection key cache from competition block. Dispatches based on block type: 0=league (sorted insert per team), 1=cup (per-round entries with two-leg/replay handling, separate roundPtr advancing by 2 per round), 2+=multi-slot (per-slot entries with cup or league sub-types, GetCupRoundStringIndex with opt parameter from base+0x15A).
+  3. addNextRoundCupEntry (static, →career_teams.c) — ~16 instr. Cup entry builder for type 1 competitions.
+  4. addCupEntry (static, →career_teams.c) — ~19 instr. Cup entry builder for type 2+ competitions with 5th opt parameter passed through to GetCupRoundStringIndex.
+  5. TeamSelectionKeyCache_AddNextRoundCupEntry — stubbed as rts (dead, only caller ported)
+  6. TeamSelectionKeyCache_AddCupEntry — stubbed as rts (dead, only caller ported)
+- Asm→C bridges: Career_SetCurrentCompetitionSlot (4 params: a0, d0, d1, d2; saves d1-d7/a2-a6 to preserve d1 for subsequent callers), TeamSelectionKeyCache_BuildFromCompetitionBlock (a0 param)
+- Key findings: d1 is a hidden parameter (divisionIndex) to Career_SetCurrentCompetitionSlot, used by InitCompetitionFromRecord and Career_InitCompetitionTeamSelection_Dispatch. Type 1 cup path uses separate roundPtr (a3) vs constant base (a6) for per-round flag lookups. Type 2+ multi-slot path reads opt from base+0x15A for GetCupRoundStringIndex 5th param.
+- Build status: **verified** (clean build)
+- Cumulative: 1526 functions across 196 chunks
+
 ### Chunk 195 — Career_AutoAdvanceCompetitionSlots (1 → career_status.c)
 - Date: 2026-03-02
 - Ported:
@@ -3571,5 +3585,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 193   | 2         | 1515       |
 | 194   | 2+2d      | 1519       |
 | 195   | 1         | 1520       |
+| 196   | 4+2d      | 1526       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

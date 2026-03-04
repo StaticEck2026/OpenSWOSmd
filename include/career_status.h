@@ -97,6 +97,9 @@ void _Career_AutoAdvanceLeagueFixtures(void);
 void _Career_AutoAdvanceCupMatches(void);
 void _Career_AutoAdvanceCompetitionSlots(void);
 
+/* --- Career_SetCurrentCompetitionSlot (Chunk 196) --- */
+void _Career_SetCurrentCompetitionSlot(uint8_t *comp, uint16_t slot, uint16_t divisionIndex, uint16_t hasSelectedTeams);
+
 /* --- Career player form update (Chunk 188) --- */
 void _UpdateCareerPlayersFormAfterMatch(uint8_t *compCtx, uint8_t *team1, uint8_t *team2,
                                          uint16_t team1Goals, uint16_t team2Goals);
