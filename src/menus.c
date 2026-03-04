@@ -828,7 +828,7 @@ void _StadiumBeforeDrawRightTeam(void *entryPtr)
  * ================================================================ */
 
 /* ---- External asm functions (not yet ported) ---- */
-extern void PlayTrainingGame(void);
+extern void _PlayTrainingGame(void);
 extern void SquadMenuSavePlayerPositions(void);
 extern void SquadUpdateMenuState(void);
 
@@ -846,7 +846,7 @@ extern uint32_t squadTeamFilePtr;
 __attribute__((used, externally_visible))
 void _SelectTraining(void)
 {
-    PlayTrainingGame();
+    _PlayTrainingGame();
     _ActivateMenu(squadMenu);
     _SetCurrentEntry(9);
 }

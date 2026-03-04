@@ -32766,31 +32766,11 @@ CheckIfTeamIsChanged:
                 movem.l (sp)+,d1-d7/a0-a6
                 rts
 
-; ===== PlayTrainingGame =====
-; prototype: char PlayTrainingGame()
+; ===== PlayTrainingGame ===== (ported to C → _PlayTrainingGame)
 PlayTrainingGame:
-                move.w  #1,(trainingGame).l
-                lea     (careerTeam).l,a0
-                move.w  #1,d0
-                move.w  #2,d1
-                jsr     TrainingMatch_AdjustSelectedTeamRosterForTrialists
-                bsr.w   TrainingMatch_SaveLastMatchState
-                bsr.w   TrainingMatch_RestoreSavedTeamSelectionState
-                bsr.w   TrainingMatch_BuildCurrentTeamFromCareerTeam
-                clr.w   (pitchTypeOrSeason).l
-                move.w  #RANDOM,(friendlyPitchType).l
-                move.w  #8,(friendlySeason).l
-                move.w  #2,(minSubstitutes).l
-                move.w  #2,(maxSubstitutes).l
-                lea     (careerTeam).l,a1
-                lea     (currentTeam).l,a2
-                movem.l a6,-(sp)
-                jsr     InitAndPlayGame
-                movem.l (sp)+,a6
-                move.w  #$FFFF,(currentTeamNumber).l
-                clr.w   (trainingGame).l
-                bsr.w   TrainingMatch_SaveTeamSelectionState
-                bsr.w   TrainingMatch_RestoreLastMatchState
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _PlayTrainingGame
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 trainingGame:
                 dc.w $0000
@@ -32801,174 +32781,12 @@ teamBName:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $00
 
-; ===== TrainingMatch_BuildCurrentTeamFromCareerTeam =====
-; prototype: char TrainingMatch_BuildCurrentTeamFromCareerTeam()
-; dos: cseg_64161
+; ===== TrainingMatch_BuildCurrentTeamFromCareerTeam ===== (ported to C → _TrainingMatch_BuildCurrentTeamFromCareerTeam)
 TrainingMatch_BuildCurrentTeamFromCareerTeam:
                 movem.l d0-d7/a0-a6,-(sp)
-                move.w  #$FFFF,(currentTeamSelectedPlayerPosition).l
-                lea     (careerTeam).l,a5
-                lea     (currentTeam).l,a6
-                move.b  (currentTeam+TEAMFILEEX_TEAM+TEAMFILE_TACTICS).l,-(sp)
-                movea.l a5,a0
-                movea.l a6,a1
-                move.w  #$4B,d0         ; 'K'
-loc_12FFDE:
-                move.b  (a0)+,(a1)+
-                dbf     d0,loc_12FFDE
-                move.b  (sp)+,(currentTeam+TEAMFILEEX_TEAM+TEAMFILE_TACTICS).l
-                lea     (playerPositions).l,a4
-                clr.w   (numPlayers).l
-                lea     $4C(a6),a1
-                clr.w   d6
-                move.w  (careerNumPlayers).l,d7
-                subq.w  #1,d7
-loc_130004:
-                move.w  (selTeamNumber).l,d0
-                move.w  d7,d1
-                movem.l d1,-(sp)
-                jsr     GetPlayerAtIndex
-                movem.l (sp)+,d1
-                clr.w   d0
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     IsPlayerInjured
-                movem.l (sp)+,d0-d7/a0-a6
-                bne.s   loc_130044
-                lea     $4C(a0),a0
-                move.w  #$25,d0         ; '%'
-loc_130034:
-                move.b  (a0)+,(a1)+
-                dbf     d0,loc_130034
-                move.b  d6,(a4)+
-                addq.w  #1,(numPlayers).l
-                addq.w  #1,d6
-loc_130044:
-                subq.w  #1,d7
-                cmpi.w  #$D,d7
-                bcc.s   loc_130004
-                move.b  #$99,1(a6)
-                move.b  #1,4(a6)
-                move.w  (a6),(currentTeamNumber).l
-                move.b  $18(a6),d0
-                ext.w   d0
-                lsl.w   #2,d0
-                lea     (teamTacticsTable).l,a0
-                movea.l (a0,d0.w),a0
-                move.b  $171(a0),d0
-                ext.w   d0
-                lsl.w   #2,d0
-                lea     (tacticPosMapPtrs).l,a3
-                movea.l (a3,d0.w),a3
-                lea     (playerPositions).l,a4
-                clr.l   d7
-                clr.w   d4
-loc_13008C:
-                clr.w   d6
-loc_13008E:
-                btst    d6,d7
-                bne.w   loc_130150
-                move.b  (a3,d6.w),d0
-                ext.w   d0
-                lsl.w   #2,d0
-                lea     (trainingPosOrderTables).l,a2
-                movea.l (a2,d0.w),a2
-                move.b  (a2,d4.w),d5
-                bmi.w   loc_1301DC
-                move.w  (numPlayers).l,d1
-                subq.w  #1,d1
-                move.b  #$FF,d2
-                movea.l #0,a5
-loc_1300C0:
-                btst    d1,d7
-                bne.s   loc_13012E
-                move.w  (currentTeamNumber).l,d0
-                movem.l d1,-(sp)
-                jsr     GetPlayerAtIndex
-                movem.l (sp)+,d1
-                move.b  $66(a0),d0
-                andi.w  #$E0,d0
-                lsr.w   #5,d0
-                cmp.b   d0,d5
-                bne.s   loc_13012E
-                cmpa.l  #0,a5
-                beq.s   loc_130120
-                cmpi.b  #$9B,$71(a0)
-                beq.s   loc_1300FE
-                cmpi.b  #$9A,$71(a0)
-                bne.s   loc_130110
-loc_1300FE:
-                cmpi.b  #$9B,$71(a5)
-                beq.s   loc_130120
-                cmpi.b  #$9A,$71(a5)
-                beq.s   loc_130120
-                bra.s   loc_13012E
-loc_130110:
-                cmpi.b  #$9B,$71(a5)
-                beq.s   loc_130126
-                cmpi.b  #$9A,$71(a5)
-                beq.s   loc_130126
-loc_130120:
-                cmp.b   $6C(a0),d2
-                bgt.s   loc_13012E
-loc_130126:
-                move.b  d1,d3
-                move.b  $6C(a0),d2
-                movea.l a0,a5
-loc_13012E:
-                dbf     d1,loc_1300C0
-                tst.b   d2
-                bmi.s   loc_130150
-                ext.w   d3
-                move.b  (a4,d3.w),d0
-                move.b  (a4,d6.w),(a4,d3.w)
-                move.b  d0,(a4,d6.w)
-                bset    d6,d7
-                cmpi.l  #$7FF,d7
-                beq.s   loc_130160
-loc_130150:
-                addq.w  #1,d6
-                cmpi.w  #$B,d6
-                bne.w   loc_13008E
-                addq.w  #1,d4
-                bra.w   loc_13008C
-loc_130160:
-                move.w  #$C,d1
-loc_130164:
-                move.w  (currentTeamNumber).l,d0
-                movem.l d1,-(sp)
-                jsr     GetPlayerAtIndex
-                movem.l (sp)+,d1
-                move.b  d1,$4E(a0)
-                addq.b  #1,$4E(a0)
-                dbf     d1,loc_130164
-                lea     (careerTeam+TEAMFILEEX_TEAM+TEAMFILE_TEAMNAME).l,a0
-                lea     teamAName(pc),a1
-                jsr     StringCopy
-                lea     teamAName(pc),a0
-                jsr     GetStringLength
-                cmpi.w  #$E,d0
-                bls.s   loc_1301B8
-                cmpi.w  #$10,d0
-                beq.s   loc_1301B0
-                lea     -2(a0),a0
-                bra.s   loc_1301B4
-loc_1301B0:
-                lea     -3(a0),a0
-loc_1301B4:
-                move.b  #$2E,(a0)+      ; '.'
-loc_1301B8:
-                move.b  #$20,(a0)+      ; ' '
-                move.b  #$41,(a0)+      ; 'A'
-                clr.b   (a0)
-                lea     teamAName(pc),a0
-                lea     teamBName(pc),a1
-                jsr     StringCopy
-                move.b  #$42,-1(a1)     ; 'B'
+                jsr     _TrainingMatch_BuildCurrentTeamFromCareerTeam
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
-loc_1301DC:
-                move.w  #$2323,(panicReasonCode).l
-                jsr     PanicHaltLoop
 ; unsigned __int8 (*[8])[9]
 trainingPosOrderTables:
                 ; unsigned __int8 (*[8])[9]

@@ -15,3 +15,7 @@ int16_t _CheckIfTeamIsChanged(void);
 void _TrainingMatch_ApplyUseMatchTeamAndSwapSubs(void);
 void _TrainingMatch_TryAddTrialPlayerAtPosition(uint16_t position);
 void _TrainingMatch_AddTrialPlayersForNewSeason(void);
+
+/* --- Chunk 200: PlayTrainingGame + BuildCurrentTeam --- */
+void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void);
+void _PlayTrainingGame(void);

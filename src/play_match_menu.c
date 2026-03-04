@@ -132,7 +132,7 @@ extern void _TrainingMatch_RestoreSavedTeamSelectionState(void);
 extern void _CFormTopSkillsString(uint8_t *dst, uint8_t *player);
 extern void _CFormatPlayerValueOrStatusText(uint8_t *dst, uint8_t *player);
 extern void _CSetSquadMenuEntryStatusSprite(MenuEntry *entry, uint8_t *player, int16_t excludeFlags, uint16_t fileIdx);
-extern void _CTrainingMatch_BuildCurrentTeamFromCareerTeam(void);
+extern void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void);
 extern void _CTrainingMatch_ApplyUseMatchTeamAndSwapSubs(void);
 
 /* ---- Helper: menu entry from byte offset ---- */
@@ -845,7 +845,7 @@ secondarySwap:
         uint16_t lim = 11 + maxSubstitutesEntries;
         if ((d1 < (int16_t)lim && d2 >= (int16_t)lim) ||
             (d1 >= (int16_t)lim && d2 < (int16_t)lim))
-            _CTrainingMatch_BuildCurrentTeamFromCareerTeam();
+            _TrainingMatch_BuildCurrentTeamFromCareerTeam();
     }
 }
 
@@ -1027,7 +1027,7 @@ void _UseMatchTeamSelect(void) {
     currentTeam[TEAMFILE_TACTICS] = saved;
     _TrainingMatch_RestoreSavedTeamSelectionState();
     _SetBenchPlayersNumbers((uint8_t *)&careerTeam);
-    _CTrainingMatch_BuildCurrentTeamFromCareerTeam();
+    _TrainingMatch_BuildCurrentTeamFromCareerTeam();
     selectedPlayerPosition = -1;
     _SavePositionsAndUpdateLittleCheckmark();
     _UpdateLittleCheckmark();

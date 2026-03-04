@@ -863,6 +863,8 @@
         xdef    aUSER_F
         xdef    playersPositionsByTactics
         xdef    teamTacticsTable
+        xdef    tacticPosMapPtrs
+        xdef    trainingPosOrderTables
         xdef    tacticsPositionDefensiveness
         xdef    pl2Right
         xdef    pl2Left
@@ -2647,6 +2649,8 @@
         xref    _SquadOnSelect11
         xref    _SquadOnSelect45
         xref    _Squad45AfterDraw
+        xref    _PlayTrainingGame
+        xref    _TrainingMatch_BuildCurrentTeamFromCareerTeam
         xdef    PlayTrainingGame
         xdef    SquadMenuSavePlayerPositions
         xdef    SquadUpdateMenuState

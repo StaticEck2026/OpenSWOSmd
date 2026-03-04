@@ -3125,6 +3125,15 @@ Update this section every time you port a chunk. Keep it chronological.
   2. EncodeCompetitionPositionForSeasonInfo (→statistics.c, static helper) — ~130 instr. Encodes team's competition position into season info byte. Three paths by comp type: league (checks qualifying flags, may negate), cup (bracket search via binary halving of numTeams), tournament (iterates 0x76-byte groups to find position boundary). Returns encoded int16_t (-100=finalist, -101=semi, -102=quarter, -103/-104/-105/-106=special cases).
 - Asm→C bridge: Career_FillCurrentSeasonInfo (simple jsr with save/restore). EncodeCompetitionPositionForSeasonInfo stubbed as rts (only called from Career_FillCurrentSeasonInfo).
 - Updated C callers (career_status.c, career_teams.c, menus.c) to call _Career_FillCurrentSeasonInfo directly.
+
+### Chunk 200 — PlayTrainingGame + TrainingMatch_BuildCurrentTeamFromCareerTeam (2 → training_match.c)
+- Date: 2026-03-02
+- Ported:
+  1. TrainingMatch_BuildCurrentTeamFromCareerTeam (→training_match.c) — ~160 instr. Builds training match team from career team: copies 76-byte header preserving tactics, copies non-injured player data (38 bytes each), assigns players to tactical positions via trainingPosOrderTables/tacticPosMapPtrs with trialist-deprioritization logic, assigns shirt numbers 1-13, builds team A/B names with truncation for long names.
+  2. PlayTrainingGame (→training_match.c) — ~24 instr. Launches training match: adjusts roster for trialists, saves/restores match state, builds current team, sets friendly parameters (random pitch, season 8, 2 subs), calls InitAndPlayGame, cleans up.
+- Asm→C bridges: PlayTrainingGame (save d2-d7/a2-a6, jsr, restore). TrainingMatch_BuildCurrentTeamFromCareerTeam (save d0-d7/a0-a6, jsr, restore).
+- Updated C callers: menus.c (PlayTrainingGame → _PlayTrainingGame), play_match_menu.c (_CTrainingMatch_BuildCurrentTeamFromCareerTeam → _TrainingMatch_BuildCurrentTeamFromCareerTeam).
+- Added xdefs: tacticPosMapPtrs, trainingPosOrderTables in swos2_unit.s.
 - Moved SI_ season info defines earlier in statistics.c for visibility.
 - Added xdef: aSeveral
 - Build status: **verified** (clean build)
@@ -3625,5 +3634,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 197   | 6         | 1532       |
 | 198   | 1         | 1533       |
 | 199   | 1+1s      | 1535       |
+| 200   | 2         | 1537       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

@@ -134,6 +134,22 @@ All game struct definitions live in **`include/game_types.h`**: `Sprite`, `TeamG
 
 **Do NOT use byte-offset macros** like `RD16(ptr, SPRITE_X)`, `WR16(ptr, offset, val)`, `*(int16_t *)(ptr + 30)`, `TG_W(team, TEAMGAME_PRSHIRTTYPE)`, etc. These were fully removed from the codebase.
 
+### Capitalized offsets in SWOS2.s indicate struct fields
+
+When `SWOS2.s` uses capitalized EQU offsets like `TEAMFILE_TACTICS`, `TEAMFILEEX_TEAM`, `PLAYERFILE_SOMEFLAG`, etc., these correspond to **struct definitions in `data/SWOS2_IDA.h`**. Always look up the struct in `SWOS2_IDA.h` and use the matching C struct from `game_types.h` instead of raw byte offsets.
+
+Additionally, **function prototypes in the asm comments** (e.g., `; prototype: void __usercall Foo(PlayerFile *player@<a0>)`) indicate the types of parameters — use those struct types in the C port.
+
+**Example:** If asm does `move.b $66(a0),d0` and the prototype says `a0` is a player pointer from `GetPlayerAtIndex`, use:
+```c
+PlayerFile *pf = (PlayerFile *)(playerBase + 76);
+uint8_t val = pf->positionAndFace;
+```
+NOT:
+```c
+uint8_t val = playerBase[0x66];
+```
+
 ---
 
 ## Reference Materials
