@@ -3065,6 +3065,16 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, map confirmed)
 - Cumulative: 1500 functions across 187 chunks
 
+### Chunk 189 — Career_UpdateStatsAfterMatch (1 → career_status.c)
+- Date: 2026-03-02
+- Ported:
+  1. Career_UpdateStatsAfterMatch (→career_status.c) — ~120 instr. Updates board confidence modifiers (mod0-9), win/loss/draw/goals stats, checks international tournament (aEuropeanTour..aOceaniaTour address range), stores match results (goals/aggregate/penalty) to competition slot record, sets careerSlotProcessingInProgress.
+- Stubs: Career_UpdateStatsAfterMatch → register bridge (a1=team1, a2=team2, d0=compType, d4=packedGoals, d5=aggregate, d6=penalty, d7=flags)
+- New xrefs: _Career_UpdateStatsAfterMatch
+- New xdefs: boardConfidenceMod0-9, boardConfidenceValue0-1, diyLeagueCurrentSlot
+- Build status: **verified** (clean build, map confirmed)
+- Cumulative: 1502 functions across 189 chunks
+
 ### Chunk 188 — UpdateCareerPlayersFormAfterMatch (1 → career_status.c)
 - Date: 2026-03-02
 - Ported:

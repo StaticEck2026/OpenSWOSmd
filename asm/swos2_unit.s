@@ -1586,6 +1586,21 @@
         xdef    team2GoalCounterByPlayer
         xdef    avgPlayerPriceHalfClamped
         xdef    playerFormDeltaRandomTable
+; Chunk 189 — Career_UpdateStatsAfterMatch
+        xref    _Career_UpdateStatsAfterMatch
+        xdef    boardConfidenceMod0
+        xdef    boardConfidenceMod1
+        xdef    boardConfidenceMod2
+        xdef    boardConfidenceMod3
+        xdef    boardConfidenceMod4
+        xdef    boardConfidenceMod5
+        xdef    boardConfidenceMod6
+        xdef    boardConfidenceMod7
+        xdef    boardConfidenceMod8
+        xdef    boardConfidenceMod9
+        xdef    boardConfidenceValue0
+        xdef    boardConfidenceValue1
+        xdef    diyLeagueCurrentSlot
 
         ; Chunk 91 xrefs
         xref    _GetTeamPointer

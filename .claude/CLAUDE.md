@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1500 functions ported across 187 chunks.
+**Current status:** 1502 functions ported across 189 chunks.
 
-**Last completed chunk:** Chunk 187 — GetPlayerPrice + UpdatePlayerPositionAndReturnRole (4 → match_sim.c): sub_120A10 (dead), sub_120B0A (dead), GetPlayerPrice, UpdatePlayerPositionAndReturnRole.
+**Last completed chunk:** Chunk 189 — Career_UpdateStatsAfterMatch (1 → career_status.c): updates board confidence, win/loss/draw stats, stores match results.
 
-**Next candidates:** UpdateCareerPlayersFormAfterMatch (~200 instr), Career_UpdateStatsAfterMatch (~120 instr), DIY_PlayCupMatchAndAdvance (~80 instr), DIY_PlayOrSimulateLeagueFixture (~80 instr), ProcessDIYLeagueMatchResultAndCareerUpdates, ProcessDIYKnockoutMatchResultAndCareerUpdates, InitAndPlayGame, SetupPlayers, PlayDIYCupFixtureAndCacheResult, PlayDIYLeagueMatchAndCacheResult, InitDIYLeagueFromRecord, DIY menu callbacks.
+**Next candidates:** ProcessDIYLeagueMatchResultAndCareerUpdates (~60 instr), ProcessDIYKnockoutMatchResultAndCareerUpdates (~190 instr), GetCachedOrCalculateViewResult/ExtraTimeResult/PenaltyShootoutResult, DIY_PlayCupMatchAndAdvance, DIY_PlayOrSimulateLeagueFixture, InitAndPlayGame, SetupPlayers, PlayDIYCupFixtureAndCacheResult, PlayDIYLeagueMatchAndCacheResult, InitDIYLeagueFromRecord, DIY menu callbacks, Career_AutoAdvanceLeagueFixtures.
 
 ---
 

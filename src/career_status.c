@@ -3474,3 +3474,168 @@ nextPlayer:
         ;
     }
 }
+
+/* ===================================================================
+ * Chunk 189: Career_UpdateStatsAfterMatch  (SWOS2.s line 32584)
+ *
+ * Updates board confidence modifiers, win/loss/draw/goals stats,
+ * and stores match result into the competition slot record.
+ *
+ * ASM register inputs:
+ *   a1 = team1 ptr, a2 = team2 ptr
+ *   d0 = competition type (0=league, non-zero=cup)
+ *   d4 = packed goals (team1<<8 | team2)
+ *   d5 = aggregate score (word)
+ *   d6 = penalty score packed (team1<<8 | team2)
+ *   d7 = flags (bit 3 = went to penalties; low byte stored to result)
+ * =================================================================== */
+extern uint16_t boardConfidenceMod0;
+extern uint16_t boardConfidenceMod1;
+extern uint16_t boardConfidenceMod2;
+extern uint16_t boardConfidenceMod3;
+extern uint16_t boardConfidenceMod4;
+extern uint16_t boardConfidenceMod5;
+extern uint16_t boardConfidenceMod6;
+extern uint16_t boardConfidenceMod7;
+extern uint16_t boardConfidenceMod8;
+extern uint16_t boardConfidenceMod9;
+extern uint16_t boardConfidenceValue0;
+extern uint16_t boardConfidenceValue1;
+extern uint16_t gamesPlayed;
+extern uint16_t numWins;
+extern uint16_t numDrawn;
+extern uint16_t numLost;
+extern uint16_t goalsScored;
+extern uint16_t goalsTaken;
+extern uint16_t diyHasGroups;
+extern uint16_t diyLeagueCurrentSlot;
+extern uint16_t careerSlotProcessingInProgress;
+extern uint32_t aEuropeanTour;  /* string label — used as address boundary */
+extern uint32_t aOceaniaTour;   /* string label — used as address boundary */
+
+__attribute__((used, externally_visible))
+void _Career_UpdateStatsAfterMatch(uint8_t *team1, uint8_t *team2, uint16_t compType,
+                                    uint16_t packedGoals, uint16_t aggregate,
+                                    uint16_t penalty, uint16_t flags)
+{
+    teamSelectionKeyCacheEnd = 1;
+
+    if (youreSacked)
+        goto skipStats;
+
+    /* Determine which team is the career team and assign goals accordingly */
+    uint8_t team1Goals = (uint8_t)(packedGoals >> 8);
+    uint8_t team2Goals = (uint8_t)(packedGoals & 0xFF);
+    uint8_t team1Pen = (uint8_t)(penalty >> 8);
+    uint8_t team2Pen = (uint8_t)(penalty & 0xFF);
+
+    int16_t result;  /* 1=win, -1=loss, 0=draw */
+
+    if (team1 == (uint8_t *)&careerTeam) {
+        /* Career team is team1: career goals = high byte, opponent = low byte */
+        boardConfidenceMod0++;
+        gamesPlayed++;
+        boardConfidenceValue0 += team1Goals;
+        goalsScored += team1Goals;
+        boardConfidenceValue1 += team2Goals;
+        goalsTaken += team2Goals;
+
+        if (team1Goals > team2Goals) {
+            result = 1;  /* Win */
+        } else if (team1Goals < team2Goals) {
+            result = -1;  /* Loss */
+        } else {
+            /* Scores equal — check penalties */
+            if (!(flags & 8)) {
+                result = 0;  /* Draw (no penalties) */
+            } else if (team1Pen > team2Pen) {
+                result = 1;  /* Win on penalties */
+            } else {
+                result = -1;  /* Loss on penalties */
+            }
+        }
+    } else if (team2 == (uint8_t *)&careerTeam) {
+        /* Career team is team2: career goals = low byte, opponent = high byte */
+        boardConfidenceMod0++;
+        gamesPlayed++;
+        boardConfidenceValue1 += team1Goals;
+        goalsTaken += team1Goals;
+        boardConfidenceValue0 += team2Goals;
+        goalsScored += team2Goals;
+
+        if (team1Goals < team2Goals) {
+            result = 1;  /* Win (opponent < career) */
+        } else if (team1Goals > team2Goals) {
+            result = -1;  /* Loss (opponent > career) */
+        } else {
+            /* Scores equal — check penalties */
+            if (!(flags & 8)) {
+                result = 0;  /* Draw */
+            } else if (team1Pen > team2Pen) {
+                result = -1;  /* Loss on penalties (opponent won) */
+            } else {
+                result = 1;  /* Win on penalties */
+            }
+        }
+    } else {
+        /* Neither team is career team — skip stats */
+        goto skipStats;
+    }
+
+    /* Apply result to confidence modifiers and stat counters */
+    if (result > 0) {
+        /* Win */
+        boardConfidenceMod1++;
+        numWins++;
+        if (compType == 0) {
+            uint32_t tourPtr = *(uint32_t *)(diyCompetitionStart + 0x28);
+            if (tourPtr >= (uint32_t)&aEuropeanTour && tourPtr <= (uint32_t)&aOceaniaTour) {
+                boardConfidenceMod7++;
+            } else if (diyHasGroups) {
+                boardConfidenceMod4++;
+            }
+        }
+    } else if (result < 0) {
+        /* Loss */
+        boardConfidenceMod3++;
+        numLost++;
+        if (compType == 0) {
+            uint32_t tourPtr = *(uint32_t *)(diyCompetitionStart + 0x28);
+            if (tourPtr >= (uint32_t)&aEuropeanTour && tourPtr <= (uint32_t)&aOceaniaTour) {
+                boardConfidenceMod9++;
+            } else if (diyHasGroups) {
+                boardConfidenceMod6++;
+            }
+        }
+    } else {
+        /* Draw */
+        boardConfidenceMod2++;
+        numDrawn++;
+        if (compType == 0) {
+            uint32_t tourPtr = *(uint32_t *)(diyCompetitionStart + 0x28);
+            if (tourPtr >= (uint32_t)&aEuropeanTour && tourPtr <= (uint32_t)&aOceaniaTour) {
+                boardConfidenceMod8++;
+            } else if (diyHasGroups) {
+                boardConfidenceMod5++;
+            }
+        }
+    }
+
+skipStats:
+    /* Store match result into competition slot record */
+    if (team1[4] != 1 || team2[4] != 1) {
+        uint8_t *elem = _TeamSelectionKeyCache_GetCurrentSelectedElementPtr();
+        *(uint8_t *)(elem + 6) -= 1;
+        team1[0x0B] = (uint8_t)flags;
+        *(uint16_t *)(team1 + 0x10) = packedGoals;
+        *(uint16_t *)(team1 + 0x12) = aggregate;
+        *(uint16_t *)(team1 + 0x14) = penalty;
+    }
+
+    /* Set career slot processing variable */
+    if (compType == 0) {
+        careerSlotProcessingInProgress = diyLeagueCurrentSlot;
+    } else {
+        careerSlotProcessingInProgress = *(uint16_t *)(diyCompetitionStart + 0x54);
+    }
+}

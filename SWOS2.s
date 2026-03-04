@@ -32579,130 +32579,25 @@ loc_12D4B0:
 locret_12D4D8:
                 rts
 
-; ===== Career_UpdateStatsAfterMatch =====
-; prototype: void __usercall Career_UpdateStatsAfterMatch()
+; ===== Career_UpdateStatsAfterMatch ===== (ported to C → _Career_UpdateStatsAfterMatch)
+; Register bridge: a1=team1, a2=team2, d0=compType, d4=packedGoals, d5=aggregate, d6=penalty, d7=flags
 Career_UpdateStatsAfterMatch:
-                move.w  #1,(teamSelectionKeyCacheEnd).l
-                tst.w   (youreSacked).l
-                bne.w   loc_12D65A
-                cmpa.l  #careerTeam,a1
-                beq.w   loc_12D594
-                cmpa.l  #careerTeam,a2
-                bne.w   loc_12D65A
-                addq.w  #1,(boardConfidenceMod0).l
-                addq.w  #1,(gamesPlayed).l
-                move.w  d4,d1
-                lsr.w   #8,d1
-                add.w   d1,(boardConfidenceValue1).l
-                add.w   d1,(goalsTaken).l
-                move.w  d4,d1
-                andi.w  #$FF,d1
-                add.w   d1,(boardConfidenceValue0).l
-                add.w   d1,(goalsScored).l
-                move.w  d4,d1
-                lsr.w   #8,d1
-                cmp.b   d4,d1
-                bcs.s   loc_12D54C
-                bhi.w   loc_12D5DC
-                btst    #3,d7
-                beq.w   loc_12D61C
-                move.w  d6,d1
-                lsr.w   #8,d1
-                cmp.b   d6,d1
-                bhi.w   loc_12D5DC
-loc_12D54C:
-                addq.w  #1,(boardConfidenceMod1).l
-                addq.w  #1,(numWins).l
-                tst.w   d0
-                bne.w   loc_12D65A
-                cmpi.l  #aEuropeanTour,(diyCompetitionStart+DIY_COMPETITION_FIELD_2+$26).l ; "EUROPEAN TOUR" ...
-                bcs.s   loc_12D576
-                cmpi.l  #aOceaniaTour,(diyCompetitionStart+DIY_COMPETITION_FIELD_2+$26).l ; "OCEANIA TOUR" ...
-                bls.s   loc_12D58A
-loc_12D576:
-                tst.w   (diyHasGroups).l
-                beq.w   loc_12D65A
-                addq.w  #1,(boardConfidenceMod4).l
-                bra.w   loc_12D65A
-loc_12D58A:
-                addq.w  #1,(boardConfidenceMod7).l
-                bra.w   loc_12D65A
-loc_12D594:
-                addq.w  #1,(boardConfidenceMod0).l
-                addq.w  #1,(gamesPlayed).l
-                move.w  d4,d1
-                lsr.w   #8,d1
-                add.w   d1,(boardConfidenceValue0).l
-                add.w   d1,(goalsScored).l
-                move.w  d4,d1
-                andi.w  #$FF,d1
-                add.w   d1,(boardConfidenceValue1).l
-                add.w   d1,(goalsTaken).l
-                move.w  d4,d1
-                lsr.w   #8,d1
-                cmp.b   d4,d1
-                bcs.s   loc_12D5DC
-                bhi.s   loc_12D54C
-                btst    #3,d7
-                beq.s   loc_12D61C
-                move.w  d6,d1
-                lsr.w   #8,d1
-                cmp.b   d6,d1
-                bhi.w   loc_12D54C
-loc_12D5DC:
-                addq.w  #1,(boardConfidenceMod3).l
-                addq.w  #1,(numLost).l
-                tst.w   d0
-                bne.s   loc_12D65A
-                cmpi.l  #aEuropeanTour,(diyCompetitionStart+DIY_COMPETITION_FIELD_2+$26).l ; "EUROPEAN TOUR" ...
-                bcs.s   loc_12D604
-                cmpi.l  #aOceaniaTour,(diyCompetitionStart+DIY_COMPETITION_FIELD_2+$26).l ; "OCEANIA TOUR" ...
-                bls.s   loc_12D614
-loc_12D604:
-                tst.w   (diyHasGroups).l
-                beq.s   loc_12D65A
-                addq.w  #1,(boardConfidenceMod6).l
-                bra.s   loc_12D65A
-loc_12D614:
-                addq.w  #1,(boardConfidenceMod9).l
-                bra.s   loc_12D65A
-loc_12D61C:
-                addq.w  #1,(boardConfidenceMod2).l
-                addq.w  #1,(numDrawn).l
-                tst.w   d0
-                bne.s   loc_12D65A
-                cmpi.l  #aEuropeanTour,(diyCompetitionStart+DIY_COMPETITION_FIELD_2+$26).l ; "EUROPEAN TOUR" ...
-                bcs.s   loc_12D644
-                cmpi.l  #aOceaniaTour,(diyCompetitionStart+DIY_COMPETITION_FIELD_2+$26).l ; "OCEANIA TOUR" ...
-                bls.s   loc_12D654
-loc_12D644:
-                tst.w   (diyHasGroups).l
-                beq.s   loc_12D65A
-                addq.w  #1,(boardConfidenceMod5).l
-                bra.s   loc_12D65A
-loc_12D654:
-                addq.w  #1,(boardConfidenceMod8).l
-loc_12D65A:
-                cmpi.b  #1,4(a1)
-                bne.s   loc_12D66A
-                cmpi.b  #1,4(a2)
-                beq.s   loc_12D68A
-loc_12D66A:
-                movem.l d0,-(sp)
-                bsr.w   TeamSelectionKeyCache_GetCurrentSelectedElementPtr
-                movem.l (sp)+,d0
-                subq.b  #1,6(a0)
-                move.b  d7,$B(a1)
-                move.w  d4,$10(a1)
-                move.w  d5,$12(a1)
-                move.w  d6,$14(a1)
-loc_12D68A:
-                tst.w   d0
-                bne.s   loc_12D69A
-                move.w  (diyLeagueCurrentSlot).l,(careerSlotProcessingInProgress).l
-                rts
-loc_12D69A:
-                move.w  (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+$1A).l,(careerSlotProcessingInProgress).l
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d7
+                move.l  d7,-(sp)
+                andi.l  #$FFFF,d6
+                move.l  d6,-(sp)
+                andi.l  #$FFFF,d5
+                move.l  d5,-(sp)
+                andi.l  #$FFFF,d4
+                move.l  d4,-(sp)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)
+                move.l  a2,-(sp)
+                move.l  a1,-(sp)
+                jsr     _Career_UpdateStatsAfterMatch
+                lea     28(sp),sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== Career_AutoAdvanceLeagueFixtures =====

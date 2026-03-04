@@ -95,3 +95,8 @@ void _Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record, uint16
 /* --- Career player form update (Chunk 188) --- */
 void _UpdateCareerPlayersFormAfterMatch(uint8_t *compCtx, uint8_t *team1, uint8_t *team2,
                                          uint16_t team1Goals, uint16_t team2Goals);
+
+/* --- Career stats update after match (Chunk 189) --- */
+void _Career_UpdateStatsAfterMatch(uint8_t *team1, uint8_t *team2, uint16_t compType,
+                                    uint16_t packedGoals, uint16_t aggregate,
+                                    uint16_t penalty, uint16_t flags);
