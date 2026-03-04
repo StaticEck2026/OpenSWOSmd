@@ -11,6 +11,9 @@
 #include "menu_system.h"
 #include "text_render.h"
 #include "input_text.h"
+#include "match_sim.h"
+#include "career_status.h"
+#include "career_season.h"
 
 /* ---- Constants ---- */
 #define DIY_CUP                         1
@@ -7757,4 +7760,347 @@ void _DIY_RecomputeCompetitionDerivedProgressionTable(void)
         uint16_t val = (i * range) / divisor;
         out[i] = (uint8_t)(val + startVal);
     }
+}
+
+/* ===================================================================
+ * Chunk 190: GetCachedOrCalculateViewResult,
+ *            GetCachedOrCalculateExtraTimeResult,
+ *            GetCachedOrCalculatePenaltyShootoutResult,
+ *            ProcessDIYLeagueMatchResultAndCareerUpdates,
+ *            ProcessDIYKnockoutMatchResultAndCareerUpdates
+ *
+ * Match result processing for DIY competitions: cache-checked result
+ * calculation, career stat updates, and loss flag determination.
+ * =================================================================== */
+extern int16_t cachedViewResultTeam1Goals;
+extern int16_t cachedViewResultTeam2Goals;
+extern int16_t cachedExtraTimeTeam1Goals;
+extern int16_t cachedExtraTimeTeam2Goals;
+extern int16_t cachedPenaltyShootoutTeam1Score;
+extern int16_t cachedPenaltyShootoutTeam2Score;
+extern uint16_t careerTeamLostMatch;
+extern uint16_t careerAutoAdvanceInProgress;
+extern TeamFileEx careerTeam;
+
+/* Cache-checked result functions — static, called only from Process* below */
+static void getCachedOrCalcViewResult(TeamFileEx *team1, TeamFileEx *team2,
+    uint8_t *ctx, uint16_t modeFlag, uint16_t goalsIn1, uint16_t goalsIn2, uint16_t statCol,
+    uint16_t *outGoals1, uint16_t *outGoals2)
+{
+    team1->team.andWith0xFE &= ~1;  /* bclr #0,$17(a1) */
+    team2->team.andWith0xFE &= ~1;  /* bclr #0,$17(a2) */
+    if (cachedViewResultTeam1Goals >= 0) {
+        *outGoals1 = (uint16_t)cachedViewResultTeam1Goals;
+        *outGoals2 = (uint16_t)cachedViewResultTeam2Goals;
+        cachedViewResultTeam1Goals = -1;
+        return;
+    }
+    _CalculateViewResult(ctx, modeFlag, goalsIn1, goalsIn2, statCol,
+                         (uint8_t *)team1, (uint8_t *)team2, outGoals1, outGoals2);
+}
+
+static void getCachedOrCalcExtraTimeResult(uint16_t *outD3, uint16_t *outD4)
+{
+    if (cachedExtraTimeTeam1Goals >= 0) {
+        *outD3 = (uint16_t)cachedExtraTimeTeam1Goals;
+        *outD4 = (uint16_t)cachedExtraTimeTeam2Goals;
+        cachedExtraTimeTeam1Goals = -1;
+        return;
+    }
+    _ExtraTimeSecondPhaseScoring(outD3, outD4);
+}
+
+static void getCachedOrCalcPenaltyResult(int16_t *outD5, uint16_t *outD6)
+{
+    if (cachedPenaltyShootoutTeam1Score >= 0) {
+        *outD5 = cachedPenaltyShootoutTeam1Score;
+        *outD6 = (uint16_t)cachedPenaltyShootoutTeam2Score;
+        cachedPenaltyShootoutTeam1Score = -1;
+        return;
+    }
+    _PenaltyShootoutScorerPair(outD5, outD6);
+}
+
+/* Determine d7 flags and careerTeamLostMatch from match result.
+ * Shared logic between league and knockout process functions. */
+static void updateCareerAfterResult(TeamFileEx *team1, TeamFileEx *team2,
+    uint16_t d1, uint16_t d2, uint16_t d7)
+{
+    if (careerAutoAdvanceInProgress)
+        return;
+    if (team1 != &careerTeam && team2 != &careerTeam)
+        return;
+
+    /* Update player form: a0=diyCompetitionStart, a1=team1, a2=team2, d1=goals1, d2=goals2 */
+    _UpdateCareerPlayersFormAfterMatch(diyCompetitionStart, (uint8_t *)team1, (uint8_t *)team2, d1, d2);
+
+    /* Begin contract negotiation: a0=diyCompetitionStart, a1=team1 */
+    _BeginContractNegotiationSequence(diyCompetitionStart, (uint8_t *)team1);
+
+    careerTeamLostMatch = 0;
+
+    /* Check if result was decisive (bit 1 set = not a draw) */
+    if (!(d7 & 2))
+        return;
+
+    /* Determine if career team lost (faithfully reproduces asm logic) */
+    if (team1 == &careerTeam) {
+        /* Career is team1: bit 0 set (team2 higher) → return, else set flag */
+        if (d7 & 1)
+            return;
+    } else {
+        /* Career is team2: bit 0 set (team2 higher) → set flag, else return */
+        if (!(d7 & 1))
+            return;
+    }
+    careerTeamLostMatch = 1;
+}
+
+__attribute__((used, externally_visible))
+void _ProcessDIYLeagueMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileEx *team2,
+    uint16_t *outGoals1, uint16_t *outGoals2, uint16_t *outFlags)
+{
+    /* d0: seq from playEachTeam comparison — 0xFF if playEachTeam==1, else 0x00 */
+    uint16_t modeFlag = 0;
+    if (*(uint16_t *)(diyCompetitionStart + 94) == 1)  /* DIY_COMPETITION_PLAYEACHTEAM = 94 */
+        modeFlag = 0x00FF;  /* seq sets byte to 0xFF, high byte stays 0 */
+
+    uint8_t *ctx = diyCompetitionStart;
+    uint16_t goalsIn1 = *(uint16_t *)(ctx + 0x64);
+    uint16_t goalsIn2 = *(uint16_t *)(ctx + 0x66);
+    uint16_t statCol  = *(uint16_t *)(ctx + 0x2C);
+
+    uint16_t d1, d2;
+    getCachedOrCalcViewResult(team1, team2, ctx, modeFlag, goalsIn1, goalsIn2, statCol, &d1, &d2);
+
+    /* Build flags byte d7 */
+    uint16_t d7 = 0;
+    if (d1 == d2) {
+        /* Draw: bit 7 set, bit 1 clear */
+        d7 = 0x80;
+    } else {
+        /* cmp.b d1,d2: compare low bytes — for small goal counts this is same as word */
+        if ((uint8_t)d2 > (uint8_t)d1)
+            d7 |= 1;   /* bit 0: team2 scored more */
+        d7 |= 0x82;    /* bits 7 and 1 set */
+    }
+
+    /* Career updates (form, contract negotiation, loss flag) */
+    updateCareerAfterResult(team1, team2, d1, d2, d7);
+
+    *outGoals1 = d1;
+    *outGoals2 = d2;
+    *outFlags = d7;
+}
+
+__attribute__((used, externally_visible))
+void _ProcessDIYKnockoutMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileEx *team2,
+    uint16_t inFirstLegTeam1, uint16_t inFirstLegTeam2,
+    uint16_t *outPackedGoals, uint16_t *outPackedAggregate,
+    uint16_t *outPackedPenalty, uint16_t *outFlags)
+{
+    uint8_t *a6 = diyCompetitionStart;
+    uint16_t slotIdx = *(uint16_t *)(a6 + 0x58);
+    uint8_t *a5 = a6 + (slotIdx << 1);
+
+    uint16_t d7 = 0;
+    uint16_t d1 = 0, d2 = 0;   /* this match goals */
+    uint16_t d3 = 0, d4 = 0;   /* aggregate or temp */
+    uint16_t d5 = inFirstLegTeam1, d6 = inFirstLegTeam2;  /* first-leg or penalty */
+
+    if (*(uint16_t *)(a6 + 0x330) != 0)
+        goto singleLegWithBit6;
+
+    if (*(uint16_t *)(a6 + 0x14C) != 2)
+        goto singleLeg;
+
+    if (*(uint16_t *)(a6 + 0x14A) != 0)
+        goto returnLeg;
+
+    /* === First leg of two ($14A==0) === */
+    {
+        uint8_t *ctx = diyCompetitionStart;
+        getCachedOrCalcViewResult(team1, team2, ctx, 0,
+            *(uint16_t *)(ctx + 0x60), *(uint16_t *)(ctx + 0x62),
+            *(uint16_t *)(ctx + 0x2C), &d1, &d2);
+    }
+    if (d1 == d2)
+        goto drawResult;
+    goto finalizeResult;
+
+returnLeg:
+    /* === Return leg ($14A!=0) === */
+    d7 |= 0x20;  /* bset #5 */
+    {
+        uint8_t *ctx = diyCompetitionStart;
+        getCachedOrCalcViewResult(team1, team2, ctx, 0,
+            *(uint16_t *)(ctx + 0x60), *(uint16_t *)(ctx + 0x62),
+            *(uint16_t *)(ctx + 0x2C), &d1, &d2);
+    }
+    d3 = d1 + d5;  /* aggregate team1 */
+    d4 = d2 + d6;  /* aggregate team2 */
+    if (d3 != d4)
+        goto aggregateNotEqual;
+
+    /* Aggregate tied — check away goals rule */
+    if (*(uint16_t *)(a6 + 0x5E) != 1)
+        goto returnLegExtraTime;
+    if (d2 == d5)
+        goto returnLegExtraTime;
+    d7 |= 0x10;  /* bset #4: decided by away goals */
+    if (d2 > d5)
+        goto team2WinsReturnLeg;
+    goto team1WinsReturnLeg;
+
+returnLegExtraTime:
+    /* Check if extra time is enabled */
+    if (*(uint16_t *)(a5 + 0x72) == 0)
+        goto returnLegCheckPenalties;
+    if (*(uint16_t *)(a5 + 0x72) != 1)
+        goto returnLegCheckPenalties;
+
+    d7 |= 4;  /* bset #2: went to extra time */
+    {
+        uint16_t et1, et2;
+        getCachedOrCalcExtraTimeResult(&et1, &et2);
+        d1 += et1;  /* total this-leg team1 */
+        d2 += et2;  /* total this-leg team2 */
+    }
+    d3 = d1 + d5;  /* new aggregate team1 */
+    d4 = d2 + d6;  /* new aggregate team2 */
+    if (d3 != d4)
+        goto aggregateNotEqual;
+
+    /* Still tied — check away goals in extra time */
+    if (*(uint16_t *)(a6 + 0x5E) == 0)
+        goto returnLegExtraTimeTied;
+    if (d2 == d5)
+        goto returnLegExtraTimeTied;
+    d7 |= 0x10;
+    if (d2 > d5)
+        goto team2WinsReturnLeg;
+    goto team1WinsReturnLeg;
+
+returnLegExtraTimeTied:
+    d3 = d5;
+    d4 = d6;
+    goto returnLegCheckPenalties;
+
+aggregateNotEqual:
+    /* cmp.b d3,d4 — compare low bytes of aggregate */
+    if ((uint8_t)d4 > (uint8_t)d3)
+        goto team2WinsReturnLeg;
+team1WinsReturnLeg:
+    d3 = d5; d4 = d6;
+    goto team1WinsFinal;
+team2WinsReturnLeg:
+    d3 = d5; d4 = d6;
+    goto team2WinsFinal;
+
+singleLegWithBit6:
+    d7 |= 0x40;  /* bset #6 */
+singleLeg:
+    d7 &= ~0x20;  /* bclr #5 */
+    {
+        uint16_t mode = 0;
+        if (*(uint16_t *)(a6 + 0x14C) == 0)
+            mode = 0x00FF;  /* seq d0 */
+        uint8_t *ctx = diyCompetitionStart;
+        getCachedOrCalcViewResult(team1, team2, ctx, mode,
+            *(uint16_t *)(ctx + 0x60), *(uint16_t *)(ctx + 0x62),
+            *(uint16_t *)(ctx + 0x2C), &d1, &d2);
+    }
+    if (d1 != d2)
+        goto finalizeResult;
+
+    d3 = d1;
+    d4 = d2;
+
+    /* Check extra time */
+    if (*(uint16_t *)(a5 + 0x72) == 0)
+        goto checkPenalties;
+    if (*(uint16_t *)(a5 + 0x72) == 1)
+        goto singleExtraTime;
+    if (*(uint16_t *)(a6 + 0x330) == 0)
+        goto checkPenalties;
+
+singleExtraTime:
+    d7 |= 4;  /* bset #2 */
+    {
+        uint16_t et1, et2;
+        getCachedOrCalcExtraTimeResult(&et1, &et2);
+        /* ASM: exg d1,d3; exg d2,d4; add d3,d1; add d4,d2
+         * Effect: d1 = et1 + view1, d2 = et2 + view2 */
+        d1 += et1;
+        d2 += et2;
+    }
+    if (d1 != d2)
+        goto finalizeResult;
+
+checkPenalties:
+    if (*(uint16_t *)(a5 + 0x7E) == 0)
+        goto drawResult;
+    if (*(uint16_t *)(a5 + 0x7E) == 1)
+        goto doPenalties;
+    if (*(uint16_t *)(a6 + 0x330) == 0)
+        goto drawResult;
+
+doPenalties:
+    d7 |= 8;  /* bset #3 */
+    {
+        int16_t pen1;
+        uint16_t pen2;
+        getCachedOrCalcPenaltyResult(&pen1, &pen2);
+        d5 = (uint16_t)pen1;
+        d6 = pen2;
+    }
+    if ((uint8_t)d6 > (uint8_t)d5)
+        goto team2WinsFinal;
+    goto team1WinsFinal;
+
+returnLegCheckPenalties:
+    if (*(uint16_t *)(a5 + 0x7E) == 0)
+        goto drawResult;
+    if (*(uint16_t *)(a5 + 0x7E) == 1)
+        goto doPenaltiesReturnLeg;
+    if (*(uint16_t *)(a6 + 0x330) == 0)
+        goto drawResult;
+
+doPenaltiesReturnLeg:
+    d7 |= 8;
+    {
+        int16_t pen1;
+        uint16_t pen2;
+        getCachedOrCalcPenaltyResult(&pen1, &pen2);
+        d5 = (uint16_t)pen1;
+        d6 = pen2;
+    }
+    if ((uint8_t)d6 > (uint8_t)d5)
+        goto team2WinsFinal;
+    goto team1WinsFinal;
+
+drawResult:
+    d7 |= 0x80;
+    d7 &= ~2;
+    goto careerUpdate;
+
+finalizeResult:
+    if ((uint8_t)d2 > (uint8_t)d1)
+        goto team2WinsFinal;
+team1WinsFinal:
+    d7 &= ~1;
+    goto setDecisive;
+team2WinsFinal:
+    d7 |= 1;
+setDecisive:
+    d7 |= 0x82;
+
+careerUpdate:
+    updateCareerAfterResult(team1, team2, d1, d2, d7);
+
+    /* Pack results: d6=(d5<<8)+d6, d4=(d3<<8)+d4, d5=d4, d4=(d1<<8)+d2 */
+    *outPackedPenalty = (d5 << 8) + d6;
+    *outPackedAggregate = (d3 << 8) + d4;
+    *outPackedGoals = (d1 << 8) + d2;
+    *outFlags = d7;
 }

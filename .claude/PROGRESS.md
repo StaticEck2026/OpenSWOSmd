@@ -3065,6 +3065,21 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, map confirmed)
 - Cumulative: 1500 functions across 187 chunks
 
+### Chunk 190 — Match Result Processing (5 → diy_competition.c)
+- Date: 2026-03-02
+- Ported:
+  1. GetCachedOrCalculateViewResult (→static getCachedOrCalcViewResult in diy_competition.c) — ~12 instr. Checks cached view result; if cached, returns from cache and invalidates; otherwise calls _CalculateViewResult.
+  2. GetCachedOrCalculateExtraTimeResult (→static getCachedOrCalcExtraTimeResult) — ~8 instr. Same cache pattern for extra time scoring.
+  3. GetCachedOrCalculatePenaltyShootoutResult (→static getCachedOrCalcPenaltyResult) — ~8 instr. Same cache pattern for penalty shootout.
+  4. ProcessDIYLeagueMatchResultAndCareerUpdates (→_ProcessDIYLeagueMatchResultAndCareerUpdates) — ~60 instr. Processes DIY league match: gets view result, builds flags byte (draw/win/loss bits), updates career form/contract/loss flag. Returns d1=goals1, d2=goals2, d7=flags.
+  5. ProcessDIYKnockoutMatchResultAndCareerUpdates (→_ProcessDIYKnockoutMatchResultAndCareerUpdates) — ~190 instr. Processes DIY knockout match: first leg, return leg (aggregate, away goals, extra time, penalties), single leg paths. Returns d4=packedGoals, d5=packedAggregate, d6=packedPenalty, d7=flags.
+- Parameters: TeamFileEx* for team1/team2 (struct-typed, not uint8_t*)
+- Stubs: ProcessDIYLeague* → output-pointer bridge (3 outputs via stack); ProcessDIYKnockout* → output-pointer bridge (4 outputs via stack, d5/d6 inputs); GetCachedOrCalculate* → rts (dead code)
+- New xrefs: _ProcessDIYLeagueMatchResultAndCareerUpdates, _ProcessDIYKnockoutMatchResultAndCareerUpdates
+- New xdefs: cachedViewResultTeam1Goals, cachedViewResultTeam2Goals, cachedExtraTimeTeam1Goals, cachedExtraTimeTeam2Goals, cachedPenaltyShootoutTeam1Score, cachedPenaltyShootoutTeam2Score
+- Build status: **verified** (clean build, map confirmed at 0x00154256 / 0x0015439e)
+- Cumulative: 1507 functions across 190 chunks
+
 ### Chunk 189 — Career_UpdateStatsAfterMatch (1 → career_status.c)
 - Date: 2026-03-02
 - Ported:

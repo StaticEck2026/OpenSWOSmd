@@ -27915,276 +27915,51 @@ loc_126744:
                 divu.w  #$27,d0         ; '''
                 rts
 
-; ===== ProcessDIYLeagueMatchResultAndCareerUpdates =====
-; prototype: void __usercall ProcessDIYLeagueMatchResultAndCareerUpdates(void *team1@<a1>, void *team2@<a2>)
+; ===== ProcessDIYLeagueMatchResultAndCareerUpdates ===== (ported to C → _ProcessDIYLeagueMatchResultAndCareerUpdates in diy_competition.c)
+; Input: a1=team1, a2=team2  Output: d1=goals1, d2=goals2, d7=flags
 ProcessDIYLeagueMatchResultAndCareerUpdates:
-                clr.w   d0
-                cmpi.w  #1,(diyCompetitionStart+DIY_COMPETITION_PLAYEACHTEAM).l
-                seq     d0
-                lea     (diyCompetitionStart).l,a0
-                move.w  $64(a0),d1
-                move.w  $66(a0),d2
-                move.w  $2C(a0),d3
-                movem.l a1-a2,-(sp)
-                bsr.w   GetCachedOrCalculateViewResult
-                movem.l (sp)+,a1-a2
-                clr.b   d7
-                cmp.w   d1,d2
-                bne.s   loc_1267A0
-                bset    #7,d7
-                bclr    #1,d7
-                bra.s   loc_1267B6
-loc_1267A0:
-                cmp.b   d1,d2
-                bhi.s   loc_1267AA
-                bclr    #0,d7
-                bra.s   loc_1267AE
-loc_1267AA:
-                bset    #0,d7
-loc_1267AE:
-                bset    #7,d7
-                bset    #1,d7
-loc_1267B6:
-                tst.w   (careerAutoAdvanceInProgress).l
-                bne.s   locret_12681C
-                cmpa.l  #careerTeam,a1
-                beq.s   loc_1267CE
-                cmpa.l  #careerTeam,a2
-                bne.s   locret_12681C
-loc_1267CE:
-                lea     (diyCompetitionStart).l,a0
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   UpdateCareerPlayersFormAfterMatch
-                movem.l (sp)+,d0-d7/a0-a6
-                lea     (diyCompetitionStart).l,a0
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   BeginContractNegotiationSequence
-                movem.l (sp)+,d0-d7/a0-a6
-                clr.w   (careerTeamLostMatch).l
-                btst    #1,d7
-                beq.s   locret_12681C
-                cmpa.l  #careerTeam,a1
-                beq.s   loc_12680E
-                btst    #0,d7
-                bne.s   loc_126814
-                bra.s   locret_12681C
-loc_12680E:
-                btst    #0,d7
-                bne.s   locret_12681C
-loc_126814:
-                move.w  #1,(careerTeamLostMatch).l
-locret_12681C:
+                subq.l  #8,sp           ; output space: outGoals1(2) + outGoals2(2) + outFlags(2) + pad(2)
+                move.l  sp,a0           ; a0 = output area base
+                pea     4(a0)           ; &outFlags
+                pea     2(a0)           ; &outGoals2
+                move.l  a0,-(sp)        ; &outGoals1
+                move.l  a2,-(sp)        ; team2
+                move.l  a1,-(sp)        ; team1
+                jsr     _ProcessDIYLeagueMatchResultAndCareerUpdates
+                lea     20(sp),sp       ; clean 5 args
+                move.w  (sp),d1         ; outGoals1
+                move.w  2(sp),d2        ; outGoals2
+                move.w  4(sp),d7        ; outFlags
+                addq.l  #8,sp           ; clean output space
                 rts
 
-; ===== ProcessDIYKnockoutMatchResultAndCareerUpdates =====
-; prototype: void __usercall ProcessDIYKnockoutMatchResultAndCareerUpdates(void *team1@<a1>, void *team2@<a2>)
+; ===== ProcessDIYKnockoutMatchResultAndCareerUpdates ===== (ported to C → _ProcessDIYKnockoutMatchResultAndCareerUpdates in diy_competition.c)
+; Input: a1=team1, a2=team2, d5=firstLegTeam1, d6=firstLegTeam2
+; Output: d4=packedGoals, d5=packedAggregate, d6=packedPenalty, d7=flags
 ProcessDIYKnockoutMatchResultAndCareerUpdates:
-                lea     (diyCompetitionStart).l,a6
-                move.w  $58(a6),d0
-                lsl.w   #1,d0
-                lea     (a6,d0.w),a5
-                clr.w   d7
-                tst.w   $330(a6)
-                bne.w   loc_12692C
-                cmpi.w  #2,$14C(a6)
-                bne.w   loc_126930
-                tst.w   $14A(a6)
-                bne.s   loc_126876
-                bclr    #5,d7
-                clr.w   d0
-                lea     (diyCompetitionStart).l,a0
-                move.w  $60(a0),d1
-                move.w  $62(a0),d2
-                move.w  $2C(a0),d3
-                movem.l d5-d7/a1-a2/a5-a6,-(sp)
-                bsr.w   GetCachedOrCalculateViewResult
-                movem.l (sp)+,d5-d7/a1-a2/a5-a6
-                cmp.w   d1,d2
-                beq.w   loc_1269BC
-                bra.w   loc_1269C6
-loc_126876:
-                bset    #5,d7
-                clr.w   d0
-                lea     (diyCompetitionStart).l,a0
-                move.w  $60(a0),d1
-                move.w  $62(a0),d2
-                move.w  $2C(a0),d3
-                movem.l d5-d7/a1-a2/a5-a6,-(sp)
-                bsr.w   GetCachedOrCalculateViewResult
-                movem.l (sp)+,d5-d7/a1-a2/a5-a6
-                move.w  d1,d3
-                move.w  d2,d4
-                add.w   d5,d3
-                add.w   d6,d4
-                cmp.w   d3,d4
-                bne.w   loc_126918
-                cmpi.w  #1,$5E(a6)
-                bne.s   loc_1268C4
-                cmp.w   d5,d2
-                beq.s   loc_1268C4
-                bset    #4,d7
-                cmp.w   d5,d2
-                beq.s   loc_1268C4
-                bhi.w   loc_126924
-                bra.w   loc_12691C
-loc_1268C4:
-                tst.w   $72(a5)
-                beq.w   loc_126992
-                cmpi.w  #1,$72(a5)
-                bne.w   loc_126992
-                bset    #2,d7
-                movem.l d1-d2/d5-d7/a1-a2/a5-a6,-(sp)
-                bsr.w   GetCachedOrCalculateExtraTimeResult
-                movem.l (sp)+,d1-d2/d5-d7/a1-a2/a5-a6
-                add.w   d3,d1
-                add.w   d4,d2
-                move.w  d1,d3
-                move.w  d2,d4
-                add.w   d5,d3
-                add.w   d6,d4
-                cmp.w   d3,d4
-                bne.w   loc_126918
-                tst.w   $5E(a6)
-                beq.s   loc_126910
-                cmp.w   d5,d2
-                beq.s   loc_126910
-                bset    #4,d7
-                cmp.w   d5,d2
-                bhi.w   loc_126924
-                bra.w   loc_12691C
-loc_126910:
-                move.w  d5,d3
-                move.w  d6,d4
-                bra.w   loc_126992
-loc_126918:
-                cmp.b   d3,d4
-                bhi.s   loc_126924
-loc_12691C:
-                move.w  d5,d3
-                move.w  d6,d4
-                bra.w   loc_1269CA
-loc_126924:
-                move.w  d5,d3
-                move.w  d6,d4
-                bra.w   loc_1269D0
-loc_12692C:
-                bset    #6,d7
-loc_126930:
-                bclr    #5,d7
-                clr.w   d0
-                tst.w   $14C(a6)
-                seq     d0
-                lea     (diyCompetitionStart).l,a0
-                move.w  $60(a0),d1
-                move.w  $62(a0),d2
-                move.w  $2C(a0),d3
-                movem.l d5-d7/a1-a2/a5-a6,-(sp)
-                bsr.w   GetCachedOrCalculateViewResult
-                movem.l (sp)+,d5-d7/a1-a2/a5-a6
-                cmp.w   d1,d2
-                bne.s   loc_1269C6
-                move.w  d1,d3
-                move.w  d2,d4
-                tst.w   $72(a5)
-                beq.s   loc_126992
-                cmpi.w  #1,$72(a5)
-                beq.s   loc_126976
-                tst.w   $330(a6)
-                beq.s   loc_126992
-loc_126976:
-                bset    #2,d7
-                movem.l d1-d2/d5-d7/a1-a2/a5-a6,-(sp)
-                bsr.w   GetCachedOrCalculateExtraTimeResult
-                movem.l (sp)+,d1-d2/d5-d7/a1-a2/a5-a6
-                exg     d1,d3
-                exg     d2,d4
-                add.w   d3,d1
-                add.w   d4,d2
-                cmp.w   d1,d2
-                bne.s   loc_1269C6
-loc_126992:
-                tst.w   $7E(a5)
-                beq.s   loc_1269BC
-                cmpi.w  #1,$7E(a5)
-                beq.s   loc_1269A6
-                tst.w   $330(a6)
-                beq.s   loc_1269BC
-loc_1269A6:
-                bset    #3,d7
-                movem.l d1-d4/d7/a1-a2/a5-a6,-(sp)
-                bsr.w   GetCachedOrCalculatePenaltyShootoutResult
-                movem.l (sp)+,d1-d4/d7/a1-a2/a5-a6
-                cmp.b   d5,d6
-                bhi.s   loc_1269D0
-                bra.s   loc_1269CA
-loc_1269BC:
-                bset    #7,d7
-                bclr    #1,d7
-                bra.s   loc_1269DC
-loc_1269C6:
-                cmp.b   d1,d2
-                bhi.s   loc_1269D0
-loc_1269CA:
-                bclr    #0,d7
-                bra.s   loc_1269D4
-loc_1269D0:
-                bset    #0,d7
-loc_1269D4:
-                bset    #7,d7
-                bset    #1,d7
-loc_1269DC:
-                tst.w   (careerAutoAdvanceInProgress).l
-                bne.s   loc_126A42
-                cmpa.l  #careerTeam,a1
-                beq.s   loc_1269F4
-                cmpa.l  #careerTeam,a2
-                bne.s   loc_126A42
-loc_1269F4:
-                lea     (diyCompetitionStart).l,a0
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   UpdateCareerPlayersFormAfterMatch
-                movem.l (sp)+,d0-d7/a0-a6
-                lea     (diyCompetitionStart).l,a0
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   BeginContractNegotiationSequence
-                movem.l (sp)+,d0-d7/a0-a6
-                clr.w   (careerTeamLostMatch).l
-                btst    #1,d7
-                beq.s   loc_126A42
-                cmpa.l  #careerTeam,a1
-                beq.s   loc_126A34
-                btst    #0,d7
-                bne.s   loc_126A3A
-                bra.s   loc_126A42
-loc_126A34:
-                btst    #0,d7
-                bne.s   loc_126A42
-loc_126A3A:
-                move.w  #1,(careerTeamLostMatch).l
-loc_126A42:
-                lsl.w   #8,d5
-                add.w   d5,d6
-                lsl.w   #8,d3
-                add.w   d3,d4
-                move.w  d4,d5
-                lsl.w   #8,d1
-                add.w   d1,d2
-                move.w  d2,d4
+                subq.l  #8,sp           ; output space: 4 × uint16_t
+                move.l  sp,a0           ; a0 = output area base
+                pea     6(a0)           ; &outFlags
+                pea     4(a0)           ; &outPackedPenalty
+                pea     2(a0)           ; &outPackedAggregate
+                move.l  a0,-(sp)        ; &outPackedGoals
+                andi.l  #$FFFF,d6
+                move.l  d6,-(sp)        ; inFirstLegTeam2
+                andi.l  #$FFFF,d5
+                move.l  d5,-(sp)        ; inFirstLegTeam1
+                move.l  a2,-(sp)        ; team2
+                move.l  a1,-(sp)        ; team1
+                jsr     _ProcessDIYKnockoutMatchResultAndCareerUpdates
+                lea     32(sp),sp       ; clean 8 args
+                move.w  (sp),d4         ; outPackedGoals
+                move.w  2(sp),d5        ; outPackedAggregate
+                move.w  4(sp),d6        ; outPackedPenalty
+                move.w  6(sp),d7        ; outFlags
+                addq.l  #8,sp           ; clean output space
                 rts
 
-; ===== GetCachedOrCalculateViewResult =====
-; prototype: void __usercall GetCachedOrCalculateViewResult(void *team1@<a1>, void *team2@<a2>)
+; ===== GetCachedOrCalculateViewResult ===== (dead — only called from Process* above, now in C)
 GetCachedOrCalculateViewResult:
-                bclr    #0,$17(a1)
-                bclr    #0,$17(a2)
-                tst.w   (cachedViewResultTeam1Goals).l
-                bmi.s   loc_126A7E
-                move.w  (cachedViewResultTeam1Goals).l,d1
-                move.w  (cachedViewResultTeam2Goals).l,d2
-                move.w  #$FFFF,(cachedViewResultTeam1Goals).l
-                rts
-loc_126A7E:
-                bsr.w   CalculateViewResult
                 rts
 cachedViewResultTeam1Goals:
                 dc.w -1
@@ -28201,29 +27976,13 @@ cachedPenaltyShootoutTeam2Score:
 pad_126A90:
                 dc.b $00,$00,$00,$00
 
-; ===== GetCachedOrCalculateExtraTimeResult =====
-; prototype: void __usercall GetCachedOrCalculateExtraTimeResult()
+; ===== GetCachedOrCalculateExtraTimeResult ===== (dead — only called from Process* above, now in C)
 GetCachedOrCalculateExtraTimeResult:
-                tst.w   (cachedExtraTimeTeam1Goals).l
-                bmi.s   loc_126AAE
-                move.w  cachedExtraTimeTeam1Goals(pc),d3
-                move.w  cachedExtraTimeTeam2Goals(pc),d4
-                move.w  #$FFFF,(cachedExtraTimeTeam1Goals).l
                 rts
-loc_126AAE:
-                bra.w   loc_121E56
 
-; ===== GetCachedOrCalculatePenaltyShootoutResult =====
-; prototype: void __usercall GetCachedOrCalculatePenaltyShootoutResult()
+; ===== GetCachedOrCalculatePenaltyShootoutResult ===== (dead — only called from Process* above, now in C)
 GetCachedOrCalculatePenaltyShootoutResult:
-                tst.w   (cachedPenaltyShootoutTeam1Score).l
-                bmi.s   loc_126ACC
-                move.w  cachedPenaltyShootoutTeam1Score(pc),d5
-                move.w  cachedPenaltyShootoutTeam2Score(pc),d6
-                move.w  #$FFFF,(cachedPenaltyShootoutTeam1Score).l
                 rts
-loc_126ACC:
-                bra.w   loc_121FCE
 
 ; ===== ApplyTeamTactics ===== (ported to C → _ApplyTeamTactics in match_sim.c)
 ; prototype: void __usercall ApplyTeamTactics(void *teamGame@<a4>)

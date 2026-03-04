@@ -1588,6 +1588,15 @@
         xdef    playerFormDeltaRandomTable
 ; Chunk 189 — Career_UpdateStatsAfterMatch
         xref    _Career_UpdateStatsAfterMatch
+; Chunk 190 — Match Result Processing
+        xref    _ProcessDIYLeagueMatchResultAndCareerUpdates
+        xref    _ProcessDIYKnockoutMatchResultAndCareerUpdates
+        xdef    cachedViewResultTeam1Goals
+        xdef    cachedViewResultTeam2Goals
+        xdef    cachedExtraTimeTeam1Goals
+        xdef    cachedExtraTimeTeam2Goals
+        xdef    cachedPenaltyShootoutTeam1Score
+        xdef    cachedPenaltyShootoutTeam2Score
         xdef    boardConfidenceMod0
         xdef    boardConfidenceMod1
         xdef    boardConfidenceMod2

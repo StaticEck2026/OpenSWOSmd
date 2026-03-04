@@ -295,3 +295,11 @@ uint16_t _FindTeamInDIY(uint16_t teamNo, uint8_t *comp);
 
 /* --- DIY_RecomputeCompetitionDerivedProgressionTable (Chunk 175) --- */
 void _DIY_RecomputeCompetitionDerivedProgressionTable(void);
+
+/* --- Match Result Processing (Chunk 190) --- */
+void _ProcessDIYLeagueMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileEx *team2,
+    uint16_t *outGoals1, uint16_t *outGoals2, uint16_t *outFlags);
+void _ProcessDIYKnockoutMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileEx *team2,
+    uint16_t inFirstLegTeam1, uint16_t inFirstLegTeam2,
+    uint16_t *outPackedGoals, uint16_t *outPackedAggregate,
+    uint16_t *outPackedPenalty, uint16_t *outFlags);
