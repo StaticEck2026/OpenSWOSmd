@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1493 functions ported across 185 chunks.
+**Current status:** 1496 functions ported across 186 chunks.
 
-**Last completed chunk:** Chunk 185 — Career Cup Pick List System (13 → career_season.c): Career_SetCupPickList_ForSelectedRegion (dispatcher), 5 regional setCupPickList functions (Oceania/NorthAmerica/Asia/Africa/SouthAmerica via common helper), setCupPickList_Europe, setupFriendlyCupTeams, setupInvitationTournamentTeams, setupTourCupTeams, pickRandomNationalTeamId, setupWorldCupQualifyingGroups, fillWorldCupQualifyingGroupTeams.
+**Last completed chunk:** Chunk 186 — Career Season Update Functions (3 → career_season.c): Career_AdvanceToNextSeason_UpdateCompetitions, Career_ProcessPrimaryCompetitionForNextSeason, Career_ProcessDiyLeagueQualificationEntry.
 
-**Next candidates:** Remaining unported career functions, SquadMenu (needs SelectAndShowSquadToView ported first), CareerGameListCommon (~440 instr), DIYCompetitionMenu, ChooseCompetition/Season/Preset menu family, EditTeams* callbacks.
+**Next candidates:** GetPlayerPrice (~170 instr), UpdateCareerPlayersFormAfterMatch (~200 instr), ProcessDIYLeagueMatchResultAndCareerUpdates, ProcessDIYKnockoutMatchResultAndCareerUpdates, InitAndPlayGame, PlayDIYCupFixtureAndCacheResult, PlayDIYLeagueMatchAndCacheResult, SetupPlayers, InitDIYLeagueFromRecord, Career_UpdateStatsAfterMatch, sub_120A10, sub_120B0A, DIY menu callbacks.
 
 ---
 

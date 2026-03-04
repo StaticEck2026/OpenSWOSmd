@@ -3037,6 +3037,20 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, map confirmed)
 - Cumulative: 1493 functions across 185 chunks
 
+### Chunk 186 — Career Season Update Functions (3 → career_season.c)
+- Date: 2026-03-02
+- Ported:
+  1. Career_AdvanceToNextSeason_UpdateCompetitions (→career_season.c) — Main season transition: loads league scratch, clears promotion/relegation flags, prepares Euro cup qualification, updates all cup slots, processes all competitions via careerCompetitionIdRemapTable, draws European cup teams, validates team counts.
+  2. Career_ProcessPrimaryCompetitionForNextSeason (→career_season.c, static) — Processes primary competition: league (type 0) loops through divisions with interactive/auto-advance paths, fills qualified team indices, processes qualification entries; cup (type 2) edits slot or auto-advances.
+  3. Career_ProcessDiyLeagueQualificationEntry (→career_season.c, static) — Processes a single DIY league qualification entry: interactive path for player's competition (ShowDIYCupMenuWithParams), auto-fill path for other competitions (fills team data from diyQualifiedTeamIndices, auto-advances cup).
+- Stubs: Career_AdvanceToNextSeason_UpdateCompetitions (register bridge jsr), Career_ProcessPrimaryCompetitionForNextSeason (rts, dead), Career_ProcessDiyLeagueQualificationEntry (rts, dead)
+- Eliminated wrapper: _CCareer_ProcessPrimaryCompetitionForNextSeason now dead — replaced with direct call to static processPrimaryCompetitionForNextSeason
+- New xrefs: _Career_AdvanceToNextSeason_UpdateCompetitions
+- New xdefs: careerCompetitionIdRemapTable
+- Bug fix: Cup path was calling Career_AutoAdvanceCupCompetitionFromRecord but assembly calls Career_AutoAdvanceLeagueCompetitionFromRecord — corrected.
+- Build status: **verified** (clean build)
+- Cumulative: 1496 functions across 186 chunks
+
 ### Chunk 178 — CheckNumberOfTeams (1 → menus.c)
 - Date: 2026-03-02
 - Ported:

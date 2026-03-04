@@ -32,3 +32,6 @@ void _Career_ProcessCompetitionForNextSeason(uint16_t compId);
 
 /* --- Chunk 185: Cup Pick List System --- */
 void _Career_SetCupPickList_ForSelectedRegion(uint16_t *teamList);
+
+/* --- Chunk 186: Season Update Functions --- */
+void _Career_AdvanceToNextSeason_UpdateCompetitions(void);

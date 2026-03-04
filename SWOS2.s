@@ -31681,68 +31681,12 @@ AppendTeamToUefaCupList:
                 lea     uefaCupQualifiedTeamCount(pc),a3
                 bra.w   loc_12B218
 
-; ===== Career_AdvanceToNextSeason_UpdateCompetitions =====
-; prototype: void __usercall Career_AdvanceToNextSeason_UpdateCompetitions()
+; ===== Career_AdvanceToNextSeason_UpdateCompetitions ===== (ported to C → _Career_AdvanceToNextSeason_UpdateCompetitions)
 Career_AdvanceToNextSeason_UpdateCompetitions:
-                bsr.w   DIY_LoadLeagueScratchFromTable
-                clr.w   (playPromotedAnimation).l
-                clr.w   (playRelegatedAnimation).l
-                bsr.w   Career_PrepareEuropeanCupQualificationState
-                jsr SaveSelectedTeams(pc)
-                move.w  #1,(seasonUpdateInProgress).l
-                tst.w   (isNationalSelector).l
-                beq.s   loc_12BB92
-                cmpi.b  #$50,(selTeamNumber).l ; 'P'
-                bne.s   loc_12BB8E
-                bsr.w   Career_UpdateEuropeanChampionshipCompetitions
-loc_12BB8E:
-                bsr.w   Career_UpdateWorldCupCompetitions
-loc_12BB92:
-                bsr.w   Career_UpdateEuroCupCompetitionSlot
-                bsr.w   Career_UpdateCupWinnersCupCompetitionSlot
-                bsr.w   Career_UpdateUefaCupCompetitionSlot
-                clr.w   (careerFileBuffer).l
-                tst.w   (isNationalSelector).l
-                bne.s   loc_12BBBA
-                move.b  (selTeamNumber).l,d0
-                bsr.w   Career_ProcessCompetitionForNextSeason
-                bsr.w   Career_ProcessCompetitionForEuropeanCupQualification
-loc_12BBBA:
-                lea     (careerCompetitionIdRemapTable).l,a6
-loc_12BBC0:
-                move.b  (a6)+,d0
-                cmpi.b  #$FF,d0
-                beq.s   loc_12BBE2
-                tst.w   (isNationalSelector).l
-                bne.s   loc_12BBD8
-                cmp.b   (selTeamNumber).l,d0
-                beq.s   loc_12BBC0
-loc_12BBD8:
-                bsr.w   Career_ProcessCompetitionForNextSeason
-                bsr.w   Career_ProcessCompetitionForEuropeanCupQualification
-                bra.s   loc_12BBC0
-loc_12BBE2:
-                cmpi.w  #$50,(careerFileBuffer).l ; 'P'
-                bne.s   loc_12BC38
-                bsr.w   Career_DrawEuropeanCupTeamsAndCopyGrids
-                clr.w   (seasonUpdateInProgress).l
-                jsr RestoreSelectedTeams(pc)
-                cmpi.w  #$10,(euroCupQualifiedTeamCount).l
-                bne.s   loc_12BC2A
-                cmpi.w  #$20,(cupWinnersCupQualifiedTeamCount).l ; ' '
-                bne.s   loc_12BC2A
-                cmpi.w  #$20,(uefaCupQualifiedTeamCount).l ; ' '
-                bne.s   loc_12BC2A
-                cmpi.w  #CN_EUROPE,(careerFileBuffer).l
-                bne.s   loc_12BC2A
-                jsr     Career_StorePromotionRelegationInSeasonInfo
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _Career_AdvanceToNextSeason_UpdateCompetitions
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
-loc_12BC2A:
-                move.w  #$8998,(panicReasonCode).l
-                jsr     PanicHaltLoop
-loc_12BC38:
-                move.w  #$8999,(panicReasonCode).l
-                jsr     PanicHaltLoop
 
 ; ===== Career_ProcessCompetitionForNextSeason =====
 ; prototype: void __usercall Career_ProcessCompetitionForNextSeason(unsigned __int8 comp@<d0>)
@@ -31820,73 +31764,8 @@ Career_ProcessTertiaryCompetitionForNextSeason:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== Career_ProcessPrimaryCompetitionForNextSeason =====
-; prototype: void __usercall Career_ProcessPrimaryCompetitionForNextSeason(void *competition@<a4>)
+; ===== Career_ProcessPrimaryCompetitionForNextSeason ===== (ported to C, dead)
 Career_ProcessPrimaryCompetitionForNextSeason:
-                cmpi.b  #0,1(a4)
-                beq.s   loc_12BDC8
-                cmpi.b  #2,1(a4)
-                bne.w   loc_12BCD0
-                cmpa.l  (currentCompetitionPtr).l,a4
-                bne.s   loc_12BDC2
-                jsr RestoreSelectedTeams(pc)
-                bsr.w   Career_CopyCompetitionFileBufferToOrFromActive
-                move.w  #1,d0
-                move.w  #1,d1
-                clr.w   d2
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr DIY_EditCompetitionSlot(pc)
-                movem.l (sp)+,d0-d7/a0-a6
-                jsr SaveSelectedTeams(pc)
-                rts
-loc_12BDC2:
-                bsr.w   DIY_EditCompetitionSlotForCompetition
-                rts
-loc_12BDC8:
-                lea     diyQualifiedTeamIndices(pc),a3
-                clr.w   d7
-loc_12BDCE:
-                cmpa.l  (currentCompetitionPtr).l,a4
-                bne.s   loc_12BE14
-                cmp.w   (currentDivisionIndex).l,d7
-                bne.s   loc_12BE14
-                jsr RestoreSelectedTeams(pc)
-                bsr.w   Career_CopyCompetitionFileBufferToOrFromActive
-                move.w  #1,d0
-                move.w  #1,d1
-                clr.w   d2
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     ShowDiyLeaguesTournamentMenu
-                movem.l (sp)+,d0-d7/a0-a6
-                tst.w   d7
-                bne.s   loc_12BE0E
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr DIY_CachePrimaryQualifiedTeamsGrid(pc)
-                movem.l (sp)+,d0-d7/a0-a6
-loc_12BE0E:
-                jsr SaveSelectedTeams(pc)
-                bra.s   loc_12BE28
-loc_12BE14:
-                bsr.w   DIY_LoadCompetitionDivisionForGrid
-                tst.w   d7
-                bne.s   loc_12BE28
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr DIY_CachePrimaryQualifiedTeamsGrid(pc)
-                movem.l (sp)+,d0-d7/a0-a6
-loc_12BE28:
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   DIY_UpdatePromotionRelegationScratchCounts
-                movem.l (sp)+,d0-d7/a0-a6
-                bsr.w   DIY_CopyCompetitionTeamIndexTable
-                addq.w  #1,d7
-                cmp.b   9(a4),d7
-                bne.s   loc_12BDCE
-                clr.w   d7
-loc_12BE42:
-                bsr.w   Career_ProcessDiyLeagueQualificationEntry
-                addq.w  #1,d7
-                cmp.b   9(a4),d7
-                bne.s   loc_12BE42
                 rts
 
 ; ===== DIY_CopyCompetitionTeamIndexTable ===== (ported to C → _DIY_CopyCompetitionTeamIndexTable)
@@ -31898,76 +31777,8 @@ DIY_CopyCompetitionTeamIndexTable:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== Career_ProcessDiyLeagueQualificationEntry =====
-; prototype: void __usercall Career_ProcessDiyLeagueQualificationEntry(unsigned __int16 index@<d7>, void *competition@<a4>)
+; ===== Career_ProcessDiyLeagueQualificationEntry ===== (ported to C, dead)
 Career_ProcessDiyLeagueQualificationEntry:
-                move.w  d7,d0
-                mulu.w  #6,d0
-                lea     (a4,d0.w),a2
-                move.b  $12(a2),d0
-                beq.w   locret_12BF5A
-                move.w  d7,d1
-                addq.w  #1,d1
-                cmp.b   9(a4),d1
-                beq.s   loc_12BE96
-                move.b  $18(a2),d1
-                addq.b  #6,d1
-                cmp.b   d1,d0
-                beq.w   locret_12BF5A
-loc_12BE96:
-                andi.w  #$FF,d0
-                lea     $12(a2,d0.w),a2
-                movea.l (a2)+,a1
-                lea     4(a2),a2
-                tst.w   (youreSacked).l
-                bne.w   loc_12BEF2
-                cmpa.l  (diyCompetitionPtr).l,a1
-                bne.s   loc_12BEF2
-                move.b  $A(a1),d0
-                ext.w   d0
-                lsl.w   #1,d0
-                lea     (a2,d0.w),a2
-                jsr RestoreSelectedTeams(pc)
-                lea     (diyCompetitionContext).l,a0
-                bsr.w   Career_LoadCompetitionSlotStateFromBuffer
-                move.w  #1,d0
-                move.w  #1,d1
-                clr.w   d2
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     ShowDIYCupMenuWithParams
-                movem.l (sp)+,d0-d7/a0-a6
-                bsr.w   DIY_ApplyPromotionRelegationWeightsToScratch
-                jsr SaveSelectedTeams(pc)
-                rts
-loc_12BEF2:
-                move.w  (selTeamNumber).l,-(sp)
-                move.b  (careerTeam+TEAMFILEEX_TEAM+TEAMFILE_TEAMCONTROLS).l,d0
-                move.w  d0,-(sp)
-                move.w  #$FFFF,(selTeamNumber).l
-                move.b  #1,(careerTeam+TEAMFILEEX_TEAM+TEAMFILE_TEAMCONTROLS).l
-                move.b  7(a1),d0
-                beq.w   loc_12BCD0
-                andi.w  #$FF,d0
-                lea     7(a1,d0.w),a0
-                move.b  $A(a1),d1
-                ext.w   d1
-                subq.w  #1,d1
-loc_12BF28:
-                move.w  (a2)+,d0
-                lsl.w   #1,d0
-                lea     diyQualifiedTeamIndices(pc),a3
-                move.w  (a3,d0.w),(a0)+
-                dbf     d1,loc_12BF28
-                exg     a1,a4
-                movem.l a1,-(sp)
-                bsr.w   DIY_LoadCompetitionForQualifiedTeamsGrid
-                movem.l (sp)+,a1
-                exg     a1,a4
-                bsr.w   DIY_ApplyPromotionRelegationWeightsToScratch
-                move.w  (sp)+,d0
-                move.b  d0,(careerTeam+TEAMFILEEX_TEAM+TEAMFILE_TEAMCONTROLS).l
-                move.w  (sp)+,(selTeamNumber).l
-locret_12BF5A:
                 rts
 
 ; ===== DIY_ApplyPromotionRelegationWeightsToScratch ===== (ported to C → _DIY_ApplyPromotionRelegationWeightsToScratch)

@@ -1574,6 +1574,9 @@
         ; Chunk 185 xrefs
         xref    _Career_SetCupPickList_ForSelectedRegion
 
+        ; Chunk 186 xrefs
+        xref    _Career_AdvanceToNextSeason_UpdateCompetitions
+
         ; Chunk 91 xrefs
         xref    _GetTeamPointer
         xref    _GetPlayer
@@ -2325,6 +2328,8 @@
         xdef    minorTrophyBonusValue
         xdef    leagueTitleBonusValue
         xdef    majorTrophyOrCupBonusValue
+; --- Chunk 186 globals ---
+        xdef    careerCompetitionIdRemapTable
 ; --- Chunk 185 globals ---
         xdef    natTeamsRandLimit2
         xdef    ecQualifyingGroupsTable

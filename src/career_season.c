@@ -13,6 +13,7 @@
 #include "job_offers.h"
 #include "panic.h"
 #include "random.h"
+#include "statistics.h"
 #include "transfer_market.h"
 
 /* ---- ASM externs ---- */
@@ -673,7 +674,8 @@ extern uint16_t cachedTertiaryQualifiedTeamId;
 extern uint16_t panicReasonCode;
 extern uint8_t currentCompetitionId;
 
-extern void _CCareer_ProcessPrimaryCompetitionForNextSeason(uint8_t *competition);
+/* Forward declaration for static function defined in Chunk 186 below */
+static void processPrimaryCompetitionForNextSeason(uint8_t *competition);
 
 /* Career_ProcessSecondaryCompetitionForNextSeason (SWOS2.s line 31973)
  * Process secondary competition for next season: if active, edit interactively;
@@ -733,7 +735,7 @@ void _Career_ProcessCompetitionForNextSeason(uint16_t compId)
 
     /* Entry layout: [0]=primary ptr, [1]=skip, [2]=secondary ptr, [3]=tertiary ptr */
     uint8_t *primary = (uint8_t *)tableEntry[0];
-    _CCareer_ProcessPrimaryCompetitionForNextSeason(primary);
+    processPrimaryCompetitionForNextSeason(primary);
 
     uint8_t *secondary = (uint8_t *)tableEntry[2];
     if ((uint32_t)secondary != 0xFFFFFFFF) {
@@ -1253,4 +1255,227 @@ void _Career_SetCupPickList_ForSelectedRegion(uint16_t *teamList)
     setupFriendlyCupTeams();
     setupInvitationTournamentTeams();
     setupTourCupTeams();
+}
+
+/* ====================================================================
+ * Chunk 186: Career Season Update Functions
+ * ===================================================================*/
+
+/* ---- ASM externs for Chunk 186 ---- */
+extern uint16_t playPromotedAnimation;
+extern uint16_t playRelegatedAnimation;
+extern uint16_t seasonUpdateInProgress;
+extern uint16_t careerFileBuffer;
+extern uint16_t euroCupQualifiedTeamCount;
+extern uint16_t cupWinnersCupQualifiedTeamCount;
+extern uint16_t uefaCupQualifiedTeamCount;
+extern uint8_t careerCompetitionIdRemapTable[];
+extern uint16_t diyQualifiedTeamIndices[];
+extern uint16_t currentDivisionIndex;
+extern uint16_t youreSacked;
+extern uint32_t diyCompetitionPtr;
+extern uint8_t diyCompetitionContext[];
+
+/* ---- Career_ProcessDiyLeagueQualificationEntry ----
+ * (SWOS2.s line 31903)
+ * Processes a single DIY league qualification entry during season transition.
+ * index d7 selects which division qualification entry to process.
+ * competition a4 is the competition record. */
+static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competition)
+{
+    uint8_t *a2 = competition + index * 6;
+    uint8_t d0 = a2[0x12];
+
+    if (d0 == 0)
+        return;
+
+    /* Check if this is the last division OR if the offset matches the next
+     * division's offset + 6. If neither, skip processing. */
+    uint16_t nextDiv = index + 1;
+    if ((uint8_t)nextDiv != competition[9]) {
+        uint8_t d1 = a2[0x18] + 6;
+        if (d0 == d1)
+            return;
+    }
+
+    /* Advance past qualification header */
+    a2 = a2 + 0x12 + d0;
+
+    /* Read competition pointer from qualification data */
+    uint8_t *qualComp = *(uint8_t **)a2;
+    a2 += 4;
+    /* Skip 4-byte gap */
+    a2 += 4;
+
+    if (!youreSacked && (uint32_t)qualComp == diyCompetitionPtr) {
+        /* Player's competition — interactive processing */
+        int8_t teamCount = *(int8_t *)(qualComp + 0xA);
+        a2 += (int16_t)teamCount * 2;
+
+        _RestoreSelectedTeams();
+        _Career_LoadCompetitionSlotStateFromBuffer(diyCompetitionContext);
+        _ShowDIYCupMenuWithParams(1, 1, 0);
+        _DIY_ApplyPromotionRelegationWeightsToScratch(a2);
+        _SaveSelectedTeams();
+    } else {
+        /* Not player's competition — auto-fill teams from qualification indices */
+        uint16_t savedSelTeam = selTeamNumber;
+        uint8_t savedCtrl = careerTeam[4]; /* TEAMFILEEX_TEAM(0) + TEAMFILE_TEAMCONTROLS(4) */
+
+        selTeamNumber = 0xFFFF;
+        careerTeam[4] = 1;
+
+        uint8_t nameOff = qualComp[7];
+        if (nameOff == 0) {
+            panicReasonCode = 0x3003;
+            _PanicHaltLoop();
+            return;
+        }
+        uint8_t *teamData = qualComp + 7 + nameOff;
+
+        int8_t count = *(int8_t *)(qualComp + 0xA);
+        int16_t cnt = (int16_t)count - 1;
+
+        for (int16_t i = cnt; i >= 0; i--) {
+            uint16_t qIdx = *(uint16_t *)a2;
+            a2 += 2;
+            *(uint16_t *)teamData = diyQualifiedTeamIndices[qIdx];
+            teamData += 2;
+        }
+
+        /* Auto-advance this competition via cup competition path */
+        _Career_AutoAdvanceCupCompetitionFromRecord(qualComp);
+        _DIY_ApplyPromotionRelegationWeightsToScratch(a2);
+
+        careerTeam[4] = savedCtrl;
+        selTeamNumber = savedSelTeam;
+    }
+}
+
+/* ---- Career_ProcessPrimaryCompetitionForNextSeason ----
+ * (SWOS2.s line 31825)
+ * Processes the primary competition for the next season.
+ * Handles league (type 0) and cup (type 2) competitions differently. */
+static void processPrimaryCompetitionForNextSeason(uint8_t *competition)
+{
+    uint8_t compType = competition[1];
+
+    if (compType == 2) {
+        /* Cup competition */
+        if ((uint32_t)competition == currentCompetitionPtr) {
+            _RestoreSelectedTeams();
+            _Career_CopyCompetitionFileBufferToOrFromActive();
+            _DIY_EditCompetitionSlot(1, 1, 0);
+            _SaveSelectedTeams();
+        } else {
+            /* Auto-advance via league competition record path
+             * (asm calls Career_AutoAdvanceLeagueCompetitionFromRecord even for cups) */
+            _Career_AutoAdvanceLeagueCompetitionFromRecord(competition);
+        }
+        return;
+    }
+
+    if (compType != 0) {
+        /* Unknown type → panic */
+        panicReasonCode = 0x3003;
+        _PanicHaltLoop();
+        return;
+    }
+
+    /* League competition — loop through all divisions */
+    uint8_t numDivisions = competition[9];
+    uint16_t d7;
+
+    for (d7 = 0; d7 < numDivisions; d7++) {
+        if ((uint32_t)competition == currentCompetitionPtr &&
+            d7 == currentDivisionIndex) {
+            /* Player's current division — interactive */
+            _RestoreSelectedTeams();
+            _Career_CopyCompetitionFileBufferToOrFromActive();
+            _ShowDiyLeaguesTournamentMenu(1, 1, 0);
+            if (d7 == 0)
+                _DIY_CachePrimaryQualifiedTeamsGrid();
+            _SaveSelectedTeams();
+        } else {
+            /* Other division — auto-advance */
+            _Career_AutoAdvanceInternationalCompetitionFixtures(competition, d7);
+            if (d7 == 0)
+                _DIY_CachePrimaryQualifiedTeamsGrid();
+        }
+        _DIY_UpdatePromotionRelegationScratchCounts();
+        _DIY_CopyCompetitionTeamIndexTable((uint8_t *)diyQualifiedTeamIndices);
+    }
+
+    /* Process qualification entries for all divisions */
+    for (d7 = 0; d7 < numDivisions; d7++) {
+        processDiyLeagueQualificationEntry(d7, competition);
+    }
+}
+
+/* ---- Career_AdvanceToNextSeason_UpdateCompetitions ----
+ * (SWOS2.s line 31686)
+ * Main season transition function. Updates all competition slots,
+ * processes next season, and handles European cup draws. */
+__attribute__((used, externally_visible))
+void _Career_AdvanceToNextSeason_UpdateCompetitions(void)
+{
+    _DIY_LoadLeagueScratchFromTable();
+
+    playPromotedAnimation = 0;
+    playRelegatedAnimation = 0;
+
+    _Career_PrepareEuropeanCupQualificationState();
+    _SaveSelectedTeams();
+
+    seasonUpdateInProgress = 1;
+
+    if (isNationalSelector) {
+        if ((uint8_t)(selTeamNumber >> 8) == 0x50)
+            _Career_UpdateEuropeanChampionshipCompetitions();
+        _Career_UpdateWorldCupCompetitions();
+    }
+
+    _Career_UpdateEuroCupCompetitionSlot();
+    _Career_UpdateCupWinnersCupCompetitionSlot();
+    _Career_UpdateUefaCupCompetitionSlot();
+
+    careerFileBuffer = 0;
+
+    if (!isNationalSelector) {
+        uint16_t compId = (uint8_t)(selTeamNumber >> 8);
+        _Career_ProcessCompetitionForNextSeason(compId);
+        _Career_ProcessCompetitionForEuropeanCupQualification();
+    }
+
+    /* Loop through all competition IDs in the remap table */
+    uint8_t *remapPtr = careerCompetitionIdRemapTable;
+    for (;;) {
+        uint8_t compByte = *remapPtr++;
+        if (compByte == 0xFF)
+            break;
+        if (!isNationalSelector && compByte == (uint8_t)(selTeamNumber >> 8))
+            continue;
+        _Career_ProcessCompetitionForNextSeason((uint16_t)compByte);
+        _Career_ProcessCompetitionForEuropeanCupQualification();
+    }
+
+    if (careerFileBuffer == 0x50) {
+        _Career_DrawEuropeanCupTeamsAndCopyGrids();
+        seasonUpdateInProgress = 0;
+        _RestoreSelectedTeams();
+
+        if (euroCupQualifiedTeamCount == 16 &&
+            cupWinnersCupQualifiedTeamCount == 32 &&
+            uefaCupQualifiedTeamCount == 32 &&
+            careerFileBuffer == 0x50) {
+            _Career_StorePromotionRelegationInSeasonInfo();
+            return;
+        }
+        panicReasonCode = 0x8998;
+        _PanicHaltLoop();
+        return;
+    }
+
+    panicReasonCode = 0x8999;
+    _PanicHaltLoop();
 }
