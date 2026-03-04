@@ -3094,6 +3094,21 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1526 functions across 196 chunks
 
+### Chunk 197 — InitCareer + InitializeNewSeason family (6 → career_init.c)
+- Date: 2026-03-02
+- Ported:
+  1. InitCareer (→career_init.c) — ~86 instr. Initializes new career: clears 2000 bytes of diyLeagueSeasonStateTable, clears ~40 career globals (board confidence, stats, bonuses, flags), calls Career_InitTransferMarketState/InitCareerVariables(4)/CalculateStartingBalance/Career_InitializeSelectedTeamAndStartingBalance, copies careerContests table entries, sets all 4 comp slot states to {3,2,8}, calls InitializeNewSeason.
+  2. ContinueCareerNextSeason (→career_init.c) — ~14 instr. If teamNoOfferAccepted != 0xFFFF: optionally show leaving message, update competitions, init team with new funds. Otherwise: show chairman opinion, update competitions, recalculate balance. Both paths call InitializeNewSeason.
+  3. Career_SelectEuroCupSlotIfTeamParticipates (→career_init.c) — ~35 instr. Checks if selTeamNumber is in euro cup team list. If found, sets up quaternary slot (3) for euro cup. Returns 0 if participating, 1 if not.
+  4. DIY_SelectCompetitionSlot4FromCurrentDivision (→career_init.c) — ~20 instr. If primary comp is league type, checks for linked DIY competition and sets up slot 4.
+  5. InitializeNewSeason (→career_init.c) — ~247 instr. Large function: increments season, clears board confidence modifiers, inits season info struct, determines national vs club team, sets up competition slots 0-4 (primary/secondary/tertiary via competitionsTable or careerCupPickList, quaternary via euro cups, slot 4 via DIY), builds team budget rank table, computes wageScalingDivisor from key cache walk, copies manager name, fills market players, inits finances, shows chairman message, adds trial players for new season.
+  6. InitNewSeason (→career_init.c) — ~65 instr. Simplified new season init for job changes: sets up competition slots from competitionsTable, counts non-computer squads, inits teams.
+- Asm→C bridges: InitCareer (d0 param), InitializeNewSeason (no params), ContinueCareerNextSeason (no params), Career_SelectEuroCupSlotIfTeamParticipates (a0+d7, returns d0 with tst), DIY_SelectCompetitionSlot4FromCurrentDivision (no params), InitNewSeason (a0+d1 params)
+- Updated _ChooseTeamAndStartCareer and _LoadLiverpool to call _InitCareer directly (removed _CInitCareer dependency)
+- Key fixes: CalculateStartingBalance returns balance (don't discard return value), volatile loops to prevent memset optimization, 23 new xdefs for asm globals
+- Build status: **verified** (clean build)
+- Cumulative: 1532 functions across 197 chunks
+
 ### Chunk 195 — Career_AutoAdvanceCompetitionSlots (1 → career_status.c)
 - Date: 2026-03-02
 - Ported:
@@ -3586,5 +3601,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 194   | 2+2d      | 1519       |
 | 195   | 1         | 1520       |
 | 196   | 4+2d      | 1526       |
+| 197   | 6         | 1532       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

@@ -30,3 +30,12 @@ uint16_t _InitCompetitionTeamSelectionFromAltTableHeader(uint8_t *base);
 /* --- Career_InitializeSelectedTeamAndStartingBalance, Career_ContinueToNextSeasonInitTeamAndFunds (Chunk 170) --- */
 void _Career_InitializeSelectedTeamAndStartingBalance(uint16_t teamNumber, int32_t balance);
 void _Career_ContinueToNextSeasonInitTeamAndFunds(uint16_t teamNumber, uint32_t baseFunds);
+
+/* --- Chunk 197: InitCareer, ContinueCareerNextSeason, InitializeNewSeason, InitNewSeason,
+ *     Career_SelectEuroCupSlotIfTeamParticipates, DIY_SelectCompetitionSlot4FromCurrentDivision --- */
+void _InitCareer(uint16_t teamNo);
+void _ContinueCareerNextSeason(void);
+void _InitializeNewSeason(void);
+void _InitNewSeason(uint8_t *src, uint16_t divisionIndex);
+uint16_t _Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t euroCupIndex);
+void _DIY_SelectCompetitionSlot4FromCurrentDivision(void);

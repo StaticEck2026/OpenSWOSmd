@@ -1631,6 +1631,39 @@
         xref    _Career_AutoAdvanceCupMatches
         xref    _Career_AutoAdvanceCompetitionSlots
 
+        ; Chunk 197 xrefs
+        xref    _InitCareer
+        xref    _InitializeNewSeason
+        xref    _ContinueCareerNextSeason
+        xref    _Career_SelectEuroCupSlotIfTeamParticipates
+        xref    _DIY_SelectCompetitionSlot4FromCurrentDivision
+        xref    _InitNewSeason
+
+        ; Chunk 197 xdefs (globals referenced from C)
+        xdef    secondaryCompSlotStateA
+        xdef    secondaryCompSlotStateB
+        xdef    secondaryCompSlotStateC
+        xdef    tertiaryCompSlotStateA
+        xdef    tertiaryCompSlotStateB
+        xdef    tertiaryCompSlotStateC
+        xdef    quaternaryCompSlotStateA
+        xdef    quaternaryCompSlotStateB
+        xdef    quaternaryCompSlotStateC
+        xdef    quaternaryCompStringOffset
+        xdef    primaryCompStringOffset
+        xdef    secondaryCompStringOffset
+        xdef    tertiaryCompStringOffset
+        xdef    careerTeamFlagsByRegionTable
+        xdef    nationalTeamNationality
+        xdef    nationalTeamFileId
+        xdef    nationalTeamFileCode
+        xdef    seasonCycleNationalFlagsA
+        xdef    seasonCycleNationalFlagsB
+        xdef    leagueFirstRoundNumber
+        xdef    sameNationalCallFlag
+        xdef    previousBoardConfidence
+        xdef    careerContests
+
         ; Chunk 196 xrefs
         xref    _Career_SetCurrentCompetitionSlot
         xref    _TeamSelectionKeyCache_BuildFromCompetitionBlock

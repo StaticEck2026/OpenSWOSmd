@@ -30969,23 +30969,12 @@ Career_PickRandomNationalTeamId:
 
 ; ===== DIY_SelectCompetitionSlot4FromCurrentDivision =====
 ; prototype: void __usercall DIY_SelectCompetitionSlot4FromCurrentDivision()
+; ===== DIY_SelectCompetitionSlot4FromCurrentDivision =====
+; Ported to C: _DIY_SelectCompetitionSlot4FromCurrentDivision in career_init.c (Chunk 197)
 DIY_SelectCompetitionSlot4FromCurrentDivision:
-                movea.l (currentCompetitionPtr).l,a1
-                cmpi.b  #0,1(a1)
-                bne.s   locret_12CD50
-                move.w  (currentDivisionIndex).l,d0
-                mulu.w  #6,d0
-                lea     (a1,d0.w),a1
-                move.b  $12(a1),d0
-                beq.s   locret_12CD50
-                andi.w  #$FF,d0
-                lea     $12(a1,d0.w),a1
-                movea.l (a1)+,a0
-                move.l  (a1),(diyCompetitionTablePtr).l
-                move.w  #4,d0
-                clr.w   d2
-                bsr.w   Career_SetCurrentCompetitionSlot
-locret_12CD50:
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _DIY_SelectCompetitionSlot4FromCurrentDivision
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== DIY_RebuildCompetitionAndTeamSelectionCaches ===== (ported to C)
@@ -31716,10 +31705,17 @@ Career_InitializeSelectedTeamAndStartingBalance:
                 rts
 
 ; ===== InitCareer =====
-; prototype: void __usercall InitCareer(unsigned __int16 teamNo@<d0>)
-; in:
-;      D0 - selected team country number
+; Ported to C: _InitCareer in career_init.c (Chunk 197)
+; in: d0 = teamNo
 InitCareer:
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)
+                jsr     _InitCareer
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
+                ; === dead code below (old body) ===
                 move.w  d0,d7
                 move.w  #20994,(worldCupHostTeam).l
                 lea     (diyLeagueSeasonStateTable).l,a0
@@ -31814,8 +31810,13 @@ loc_12E252:
                 rts
 
 ; ===== InitializeNewSeason =====
-; prototype: char InitializeNewSeason()
+; Ported to C: _InitializeNewSeason in career_init.c (Chunk 197)
 InitializeNewSeason:
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _InitializeNewSeason
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
+                ; === dead code below (old body) ===
                 clr.w   (teamsLoaded).l
                 addq.w  #1,(currentSeasonShowing).l
                 cmpi.w  #20,(currentSeasonShowing).l
@@ -32083,8 +32084,19 @@ locret_12E7BE:
                 rts
 
 ; ===== Career_SelectEuroCupSlotIfTeamParticipates =====
-; prototype: unsigned __int16 __usercall Career_SelectEuroCupSlotIfTeamParticipates@<d0>(void *ptr@<a0>)
+; Ported to C: _Career_SelectEuroCupSlotIfTeamParticipates in career_init.c (Chunk 197)
+; in: a0 = cupCopy, d7 = euroCupIndex; out: d0 = 0 if participating, 1 if not
 Career_SelectEuroCupSlotIfTeamParticipates:
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d7
+                move.l  d7,-(sp)
+                move.l  a0,-(sp)
+                jsr     _Career_SelectEuroCupSlotIfTeamParticipates
+                addq.l  #8,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                tst.w   d0
+                rts
+                ; === dead code below (old body) ===
                 move.b  7(a0),d0
                 andi.w  #$FF,d0
                 lea     7(a0,d0.w),a1
@@ -32142,10 +32154,18 @@ careerTeamFlagsByRegionTable:
                 dc.l careerTeamFlagsBySeason1 ; element[5]
 
 ; ===== InitNewSeason =====
-; prototype: void __usercall InitNewSeason(void *src@<a0>, unsigned __int16 arg@<d1>)
-; in:
-;    A0 ->
+; Ported to C: _InitNewSeason in career_init.c (Chunk 197)
+; in: a0 = src comp record, d1 = divisionIndex
 InitNewSeason:
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)
+                move.l  a0,-(sp)
+                jsr     _InitNewSeason
+                addq.l  #8,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
+                ; === dead code below (old body) ===
                 clr.w   (retired).l
                 move.b  2(a0),d7
                 move.w  d1,(currentDivisionIndex).l
@@ -32352,23 +32372,13 @@ Career_HandleRetirement:
 
 ; ===== ContinueCareerNextSeason =====
 ; prototype: char __usercall ContinueCareerNextSeason@<d0>()
+; ===== ContinueCareerNextSeason =====
+; Ported to C: _ContinueCareerNextSeason in career_init.c (Chunk 197)
 ContinueCareerNextSeason:
-                cmpi.w  #$FFFF,(teamNoOfferAccepted).l
-                beq.s   loc_12EF24
-                tst.w   (youreSacked).l
-                bne.s   loc_12EF0A
-                bsr.w   ShowLeavingMessage
-loc_12EF0A:
-                bsr.w   Career_AdvanceToNextSeason_UpdateCompetitions
-                move.w  (teamNoOfferAccepted).l,d0
-                move.l  (teamFundsAccepted).l,d1
-                jsr     Career_ContinueToNextSeasonInitTeamAndFunds
-                jmp InitializeNewSeason(pc)
-loc_12EF24:
-                jsr     ShowChairmanOpinionAboutTheSeason
-                bsr.w   Career_AdvanceToNextSeason_UpdateCompetitions
-                jsr     InitializeStartingBalanceForNewSeason
-                jmp InitializeNewSeason(pc)
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _ContinueCareerNextSeason
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== FindTeamInDIY =====
 ; prototype: unsigned __int16 FindTeamInDIY()

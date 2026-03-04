@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1526 functions ported across 196 chunks.
+**Current status:** 1532 functions ported across 197 chunks.
 
-**Last completed chunk:** Chunk 196 — Career_SetCurrentCompetitionSlot + TeamSelectionKeyCache builders (4+2d → career_status.c/career_teams.c): Competition slot setup, key cache building for league/cup/multi-slot types.
+**Last completed chunk:** Chunk 197 — InitCareer + InitializeNewSeason family (6 → career_init.c): InitCareer, ContinueCareerNextSeason, Career_SelectEuroCupSlotIfTeamParticipates, DIY_SelectCompetitionSlot4FromCurrentDivision, InitializeNewSeason, InitNewSeason.
 
-**Next candidates:** InitCareer (~86 instr), InitializeNewSeason (~247 instr), InitNewSeason (~65 instr), Career_SelectEuroCupSlotIfTeamParticipates (~35 instr), ContinueCareerNextSeason (14 instr), CareerGameListCommon (~385 instr), remaining DIY/career functions.
+**Next candidates:** Career_ViewOrEditCompetitionSlot (~30 instr), CareerGameListCommon (~385 instr), remaining DIY/career functions, contest menu family, EditTeams* callbacks.
 
 ---
 
