@@ -3080,6 +3080,19 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, map confirmed at 0x00154256 / 0x0015439e)
 - Cumulative: 1507 functions across 190 chunks
 
+### Chunk 191 — DIY Match Team Slots + SetupPlayers + InitAndPlayGame (4 → diy_competition.c, game_init.c)
+- Date: 2026-03-02
+- Ported:
+  1. DIY_GetCurrentMatchTeamSlots (→diy_competition.c) — 17 instr. Reads current match index from diyCompetitionStart+0x64, looks up team slot indices in grid pairs table at +0x2CE, returns two slot base pointers (base + slotIdx * 4).
+  2. DIY_CompareCurrentMatchTeamCategories (→diy_competition.c) — 22 instr. Calls DIY_GetCurrentMatchTeamSlots, loads team pointers from slot +0x344 (selTeamsPtr-relative), compares teamControls. Returns: same → that type; one is COMPUTER → other's type; otherwise → 2.
+  3. SetupPlayers (→game_init.c) — 112 instr. Pre-match player setup. Shows ShowPlayMatchMenu for each human player, handles career team remap, coach mode, player/coach number assignment. Uses TeamFileEx* for team params. Calls _ShouldSetupPlayers, _InitPlayerRemapTableForTeam, _CShowPlayMatchMenu (C→asm bridge).
+  4. InitAndPlayGame (→game_init.c) — 43 instr. Friendly/training match entry point. Calls _SetupPlayers, copies game name ("TRAINING"/"FRIENDLY"), sets pitch/season/goals params, calls _CInitializeInGameTeamsAndStartGame (C→asm bridge).
+- New C→asm bridges: _CShowPlayMatchMenu (7 reg params), _CInitializeInGameTeamsAndStartGame (7 reg params) in swos2_unit.s
+- Asm→C bridges: SetupPlayers (d1/d2/d6/d7/a1/a2 → stack), InitAndPlayGame (a1/a2 → stack), DIY_GetCurrentMatchTeamSlots (output a1/a2 via stack), DIY_CompareCurrentMatchTeamCategories (result d0)
+- New xdefs: aTraining
+- Build status: **verified** (clean build)
+- Cumulative: 1511 functions across 191 chunks
+
 ### Chunk 189 — Career_UpdateStatsAfterMatch (1 → career_status.c)
 - Date: 2026-03-02
 - Ported:
@@ -3510,5 +3523,8 @@ Update this section every time you port a chunk. Keep it chronological.
 | 186   | 3         | 1496       |
 | 187   | 2+2d      | 1500       |
 | 188   | 1         | 1501       |
+| 189   | 1         | 1502       |
+| 190   | 5+3s      | 1507       |
+| 191   | 4         | 1511       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

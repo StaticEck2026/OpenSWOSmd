@@ -1,5 +1,7 @@
 #include "game_init.h"
 #include "game_types.h"
+#include "play_match_menu.h"
+#include "string_utils.h"
 
 /* ---- External globals (in SWOS2.s code/BSS sections) ---- */
 extern uint32_t currentScorer;
@@ -635,4 +637,216 @@ void _InitInGameTeamStructure(uint8_t *teamFileBase, TeamGame *tg,
         nameSource = (uint8_t *)tf->teamName;
     }
     _StringCopy(nameSource, (uint8_t *)tg->teamName);
+}
+
+/* ========================================================================
+ * Chunk 191 — SetupPlayers, InitAndPlayGame
+ * ======================================================================== */
+
+/* Externs for Chunk 191 */
+extern uint16_t careerTeamCoachOnly;
+extern uint16_t isCareer;
+extern uint16_t exitGameFlag;
+extern uint16_t twoPlayers;
+extern uint16_t gameCanceled;
+extern uint16_t maxSubstitutes;
+extern uint16_t minSubstitutes;
+extern uint8_t  gameName[];
+extern uint8_t  gameRound;
+extern uint16_t pitchTypeOrSeason;
+extern uint16_t gamePitchTypeOrSeason;
+extern uint16_t friendlySeason;
+extern uint16_t gameSeason;
+extern uint16_t friendlyPitchType;
+extern uint16_t gamePitchType;
+extern uint16_t team1GoalsFirstLeg;
+extern uint16_t team2GoalsFirstLeg;
+extern int16_t  extraTimeState;
+extern int16_t  penaltiesState;
+extern uint16_t secondLeg;
+extern uint16_t playing2ndGame;
+extern uint16_t isGameFriendly;
+extern uint8_t  aTraining[];
+extern uint8_t  aFriendly_1[];
+
+/* C→asm bridges for register-convention functions */
+extern uint16_t _CShowPlayMatchMenu(int16_t controlFlags, int16_t maxSubs,
+    int16_t excludeFlags, int16_t isFirstPlayer, int16_t squadChanges,
+    uint8_t *team1, uint8_t *team2);
+extern void _CInitializeInGameTeamsAndStartGame(int16_t randomizePitch,
+    int16_t minSubs, int16_t maxSubs, int16_t paramD3, int16_t paramD7,
+    uint8_t *team1, uint8_t *team2);
+
+extern uint16_t _ShouldSetupPlayers(void);
+extern void _InitPlayerRemapTableForTeam(uint8_t *team, uint8_t *remapTable);
+
+/* SetupPlayers
+ *
+ * Shows play match menu for one or both human players before a match.
+ * Handles career team remap, coach mode, and player/coach number assignment.
+ *
+ * Parameters:
+ *   team1, team2      — TeamFileEx pointers (asm a1, a2)
+ *   maxSubs           — max substitutes (asm d1)
+ *   excludeFlags      — passed through to ShowPlayMatchMenu d2
+ *   allowSquadChanges — enable squad changes in menu (asm d6)
+ *   mode              — mode flag (asm d7); 0 = normal, non-zero = skip player assignment
+ */
+__attribute__((used, externally_visible))
+void _SetupPlayers(TeamFileEx *team1, TeamFileEx *team2, int16_t maxSubs,
+                   int16_t excludeFlags, int16_t allowSquadChanges, int16_t mode) {
+    uint16_t d0 = 0;
+
+    careerTeamCoachOnly = 0;
+
+    /* Career team remap check */
+    if (isCareer == 0) {
+        if (team1 == &careerTeam || team2 == &careerTeam) {
+            if (_ShouldSetupPlayers() == 0) {
+                _InitPlayerRemapTableForTeam((uint8_t *)&careerTeam, (uint8_t *)0);
+            }
+        }
+    }
+
+    isCareer = 0;
+    exitGameFlag = 0;
+    team1SelectedPlayerIndex = 0xFFFF;
+    team2SelectedPlayerIndex = 0xFFFF;
+
+    if (team1->team.teamControls != TEAM_COMPUTER &&
+        team2->team.teamControls != TEAM_COMPUTER) {
+        twoPlayers = 1;
+    }
+
+    /* Set pl1Coach: seq sets high byte to 0xFF → word = 0xFF00 */
+    pl1Coach = 0;
+    if (team1->team.teamControls == TEAM_COACH)
+        *(uint8_t *)&pl1Coach = 0xFF;
+
+    topTeamPlayerNo = 0;
+    topTeamCoachNo = 0;
+
+    /* Skip first menu only if team1 is computer and team2 is not.
+     * If both are computer, still show the menu (computer vs computer viewing). */
+    if (team1->team.teamControls == TEAM_COMPUTER &&
+        team2->team.teamControls != TEAM_COMPUTER)
+        goto setup_team2;
+
+    /* Show play match menu for first player */
+    d0 = _CShowPlayMatchMenu(3, maxSubs, excludeFlags, 1, allowSquadChanges,
+                              (uint8_t *)team1, (uint8_t *)team2);
+
+    if (exitGameFlag != 0) goto cancelled;
+
+    if (careerTeamCoachOnly != 0) {
+        pl1Coach = 0;
+        topTeamPlayerNo = 0;
+        topTeamCoachNo = 0;
+    }
+
+    if (team1->team.teamControls != TEAM_COMPUTER && mode == 0) {
+        if (team1->team.teamControls == TEAM_COACH) {
+            topTeamCoachNo = d0;
+        } else {
+            topTeamPlayerNo = d0;
+        }
+    }
+
+setup_team2:
+    /* Set pl2Coach: seq pattern same as pl1Coach */
+    pl2Coach = 0;
+    if (team2->team.teamControls == TEAM_COACH)
+        *(uint8_t *)&pl2Coach = 0xFF;
+
+    bottomTeamPlayerNo = 0;
+    bottomTeamCoachNo = 0;
+
+    if (team2->team.teamControls == TEAM_COMPUTER)
+        goto set_tactics;
+
+    if (careerTeamCoachOnly != 0)
+        goto skip_second_menu;
+
+    /* Calculate exclude flags for second player:
+     * d0 = (topTeamPlayerNo | topTeamCoachNo) ^ 3 */
+    d0 = (topTeamPlayerNo | topTeamCoachNo) ^ 3;
+
+    /* Show second player menu with teams swapped (team2 as first, team1 as second) */
+    d0 = _CShowPlayMatchMenu(d0, maxSubs, excludeFlags, 0, allowSquadChanges,
+                              (uint8_t *)team2, (uint8_t *)team1);
+
+    if (exitGameFlag != 0) goto cancelled;
+
+    if (mode != 0)
+        goto set_tactics_swapped;
+
+skip_second_menu:
+    if (team2->team.teamControls == TEAM_COACH) {
+        bottomTeamCoachNo = d0;
+    } else {
+        bottomTeamPlayerNo = d0;
+    }
+
+set_tactics:
+    pl1Tactics = (int16_t)(int8_t)team1->team.tactics;
+    pl2Tactics = (int16_t)(int8_t)team2->team.tactics;
+    return;
+
+set_tactics_swapped:
+    /* When mode != 0, teams stay swapped (exg a1,a2 not undone) */
+    pl1Tactics = (int16_t)(int8_t)team2->team.tactics;
+    pl2Tactics = (int16_t)(int8_t)team1->team.tactics;
+    return;
+
+cancelled:
+    gameCanceled = 1;
+    isCareer = 0;
+    if (team1 == &careerTeam || team2 == &careerTeam) {
+        isCareer = 1;
+    }
+}
+
+/* InitAndPlayGame
+ *
+ * Entry point for friendly/training matches. Calls SetupPlayers for player
+ * configuration, then sets up game parameters and calls
+ * InitializeInGameTeamsAndStartGame.
+ *
+ * Parameters:
+ *   team1, team2 — TeamFileEx pointers (asm a1, a2)
+ */
+__attribute__((used, externally_visible))
+void _InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2) {
+    /* SetupPlayers: mode=0, maxSubs=maxSubstitutes, excludeFlags=1, allowSquadChanges=1 */
+    _SetupPlayers(team1, team2, (int16_t)maxSubstitutes, 1, 1, 0);
+
+    if (exitGameFlag != 0)
+        goto done;
+
+    /* Set game name */
+    if (trainingGame != 0) {
+        _StringCopy(aTraining, gameName);
+    } else {
+        _StringCopy(aFriendly_1, gameName);
+    }
+    gameRound = 0;
+
+    /* Set game parameters */
+    gamePitchTypeOrSeason = pitchTypeOrSeason;
+    gameSeason = friendlySeason;
+    gamePitchType = friendlyPitchType;
+    team1GoalsFirstLeg = 0;
+    team2GoalsFirstLeg = 0;
+    extraTimeState = 0;
+    penaltiesState = 0;
+    secondLeg = 0;
+    playing2ndGame = 0;
+    isGameFriendly = 1;
+
+    /* d0=1, d1=minSubs, d2=maxSubs, d3=0, d7=-1, a1=team1, a2=team2 */
+    _CInitializeInGameTeamsAndStartGame(1, (int16_t)minSubstitutes,
+        (int16_t)maxSubstitutes, 0, -1, (uint8_t *)team1, (uint8_t *)team2);
+
+done:
+    isCareer = 0;
 }

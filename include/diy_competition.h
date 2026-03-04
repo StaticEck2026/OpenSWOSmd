@@ -285,16 +285,20 @@ void _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus(void);
 void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
 
 /* --- GetMoreExpensiveTeamsCount (Chunk 171) --- */
-uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, uint8_t *comp);
+uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, DIY_Competition *comp);
 
 /* --- InitializeNewSeason_BuildTeamBudgetRankTable (Chunk 172) --- */
 void _InitializeNewSeason_BuildTeamBudgetRankTable(void);
 
 /* --- FindTeamInDIY (Chunk 173) --- */
-uint16_t _FindTeamInDIY(uint16_t teamNo, uint8_t *comp);
+uint16_t _FindTeamInDIY(uint16_t teamNo, DIY_Competition *comp);
 
 /* --- DIY_RecomputeCompetitionDerivedProgressionTable (Chunk 175) --- */
 void _DIY_RecomputeCompetitionDerivedProgressionTable(void);
+
+/* --- DIY_GetCurrentMatchTeamSlots, DIY_CompareCurrentMatchTeamCategories (Chunk 191) --- */
+void _DIY_GetCurrentMatchTeamSlots(uint8_t **outSlot1, uint8_t **outSlot2);
+uint16_t _DIY_CompareCurrentMatchTeamCategories(void);
 
 /* --- Match Result Processing (Chunk 190) --- */
 void _ProcessDIYLeagueMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileEx *team2,

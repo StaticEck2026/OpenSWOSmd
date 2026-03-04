@@ -28823,53 +28823,15 @@ BuildMatchResultString:
                 movem.l (sp)+,d0-d7/a1-a6
                 rts
 
-; ===== InitAndPlayGame =====
-; prototype: void __usercall InitAndPlayGame(struct TeamFile *team1@<a1>, struct TeamFile *team2@<a2>)
-; in:
-;      A1 -> team1 (file)
-;      A2 -> team2
+; ===== InitAndPlayGame ===== (ported to C → _InitAndPlayGame)
+; Bridge: a1=team1, a2=team2 → C
 InitAndPlayGame:
-                movem.l d0-d7/a0-a6,-(sp)
-                clr.w   d7
-                move.w  (maxSubstitutes).l,d1
-                move.w  #1,d2
-                move.w  #1,d6
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   SetupPlayers
-                movem.l (sp)+,d0-d7/a0-a6
-                tst.w   (exitGameFlag).l
-                bne.w   loc_127DFE
-                move.l  a1,-(sp)
-                lea     (aTraining).l,a0 ; "TRAINING"
-                tst.w   (trainingGame).l
-                bne.s   loc_127D80
-                lea     (aFriendly_1).l,a0 ; "FRIENDLY"
-loc_127D80:
-                lea     (gameName).l,a1
-                jsr StringCopy(pc)
-                clr.b   (gameRound).l
-                movea.l (sp)+,a1
-                move.w  (pitchTypeOrSeason).l,(gamePitchTypeOrSeason).l
-                move.w  (friendlySeason).l,(gameSeason).l
-                move.w  (friendlyPitchType).l,(gamePitchType).l
-                clr.w   (team1GoalsFirstLeg).l
-                clr.w   (team2GoalsFirstLeg).l
-                clr.w   (extraTimeState).l
-                clr.w   (penaltiesState).l
-                clr.w   (secondLeg).l
-                clr.w   (playing2ndGame).l
-                move.w  #1,(isGameFriendly).l
-                movea.l a0,a4
-                movea.l #0,a5
-                move.w  #$FFFF,d7
-                move.w  #1,d0
-                move.w  (minSubstitutes).l,d1
-                move.w  (maxSubstitutes).l,d2
-                clr.w   d3
-                bsr.w   InitializeInGameTeamsAndStartGame
-loc_127DFE:
-                clr.w   (isCareer).l
-                movem.l (sp)+,d0-d7/a0-a6
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a2,-(sp)        ; team2
+                move.l  a1,-(sp)        ; team1
+                jsr     _InitAndPlayGame
+                addq.l  #8,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== PlayDIYCupFixtureAndCacheResult =====
@@ -29166,125 +29128,23 @@ loc_1282C2:
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
 
-; ===== SetupPlayers =====
-; prototype: void __usercall SetupPlayers(struct TeamFile *team1@<a1>, struct TeamFile *team2@<a2>)
-; in:
-;      D1 - max substitutes
-;      D6 - allow squad changes
-;      D7 -
-;      A1 -> team1
-;      A2 -> team2
-; 
-; Shows play match menu for one or both players.
+; ===== SetupPlayers ===== (ported to C → _SetupPlayers)
+; Bridge: a1=team1, a2=team2, d1=maxSubs, d2=excludeFlags, d6=allowSquadChanges, d7=mode → C
 SetupPlayers:
-                clr.w   (careerTeamCoachOnly).l
-                tst.w   (isCareer).l
-                bne.s   loc_128304
-                cmpa.l  #careerTeam,a1
-                beq.s   loc_1282E6
-                cmpa.l  #careerTeam,a2
-                bne.s   loc_128304
-loc_1282E6:
-                jsr ShouldSetupPlayers(pc)
-                bne.s   loc_128304
-                movem.l d0-d7/a0-a6,-(sp)
-                lea     (careerTeam).l,a0
-                movea.l #0,a1
-                bsr.w   InitPlayerRemapTableForTeam
-                movem.l (sp)+,d0-d7/a0-a6
-loc_128304:
-                clr.w   (isCareer).l
-                clr.w   (exitGameFlag).l
-                move.w  #$FFFF,(team1SelectedPlayerIndex).l
-                move.w  #$FFFF,(team2SelectedPlayerIndex).l
-                cmpi.b  #TEAM_COMPUTER,TEAMFILE_TEAMCONTROLS(a1)
-                beq.s   loc_128338
-                cmpi.b  #TEAM_COMPUTER,TEAMFILE_TEAMCONTROLS(a2)
-                beq.s   loc_128338
-                move.w  #1,(twoPlayers).l
-loc_128338:
-                clr.w   (pl1Coach).l
-                cmpi.b  #TEAM_COACH,TEAMFILE_TEAMCONTROLS(a1)
-                seq     (pl1Coach).l
-                clr.w   (topTeamPlayerNo).l
-                clr.w   (topTeamCoachNo).l
-                cmpi.b  #TEAM_COMPUTER,TEAMFILE_TEAMCONTROLS(a1)
-                bne.s   loc_128366
-                cmpi.b  #TEAM_COMPUTER,TEAMFILE_TEAMCONTROLS(a2)
-                bne.s   loc_1283C2
-loc_128366:
-                move.w  #3,d0
-                move.w  #1,d5
-                movem.l d1-d7/a0-a6,-(sp)
-                jsr     ShowPlayMatchMenu
-                movem.l (sp)+,d1-d7/a0-a6
-                tst.w   (exitGameFlag).l
-                bne.w   loc_128454
-                tst.w   (careerTeamCoachOnly).l
-                beq.s   loc_1283A0
-                clr.w   (pl1Coach).l
-                clr.w   (topTeamPlayerNo).l
-                clr.w   (topTeamCoachNo).l
-loc_1283A0:
-                cmpi.b  #TEAM_COMPUTER,TEAMFILE_TEAMCONTROLS(a1)
-                beq.s   loc_1283C2
-                tst.w   d7
-                bne.s   loc_1283C2
-                cmpi.b  #TEAM_COACH,TEAMFILE_TEAMCONTROLS(a1)
-                bne.s   loc_1283BC
-                move.w  d0,(topTeamCoachNo).l
-                bra.s   loc_1283C2
-loc_1283BC:
-                move.w  d0,(topTeamPlayerNo).l
-loc_1283C2:
-                clr.w   (pl2Coach).l
-                cmpi.b  #TEAM_COACH,TEAMFILE_TEAMCONTROLS(a2)
-                seq     (pl2Coach).l
-                clr.w   (bottomTeamPlayerNo).l
-                clr.w   (bottomTeamCoachNo).l
-                cmpi.b  #TEAM_COMPUTER,TEAMFILE_TEAMCONTROLS(a2)
-                beq.s   loc_12843A
-                tst.w   (careerTeamCoachOnly).l
-                bne.s   loc_128424
-                movea.l a2,a0
-                move.w  (topTeamPlayerNo).l,d0
-                or.w    (topTeamCoachNo).l,d0
-                eori.w  #3,d0
-                exg     a1,a2
-                clr.w   d5
-                movem.l d1-d7/a0-a6,-(sp)
-                jsr     ShowPlayMatchMenu
-                movem.l (sp)+,d1-d7/a0-a6
-                tst.w   (exitGameFlag).l
-                bne.w   loc_128454
-                tst.w   d7
-                bne.s   loc_12843A
-                exg     a1,a2
-loc_128424:
-                cmpi.b  #TEAM_COACH,TEAMFILE_TEAMCONTROLS(a2)
-                bne.s   loc_128434
-                move.w  d0,(bottomTeamCoachNo).l
-                bra.s   loc_12843A
-loc_128434:
-                move.w  d0,(bottomTeamPlayerNo).l
-loc_12843A:
-                move.b  TEAMFILE_TACTICS(a1),d1
-                move.b  TEAMFILE_TACTICS(a2),d2
-                ext.w   d1
-                move.w  d1,(pl1Tactics).l
-                ext.w   d2
-                move.w  d2,(pl2Tactics).l
-                rts
-loc_128454:
-                move.w  #1,(gameCanceled).l
-                clr.w   (isCareer).l
-                cmpa.l  #careerTeam,a1
-                beq.s   loc_128472
-                cmpa.l  #careerTeam,a2
-                bne.s   locret_12847A
-loc_128472:
-                move.w  #1,(isCareer).l
-locret_12847A:
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d7
+                move.l  d7,-(sp)        ; mode
+                andi.l  #$FFFF,d6
+                move.l  d6,-(sp)        ; allowSquadChanges
+                andi.l  #$FFFF,d2
+                move.l  d2,-(sp)        ; excludeFlags
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)        ; maxSubs
+                move.l  a2,-(sp)        ; team2
+                move.l  a1,-(sp)        ; team1
+                jsr     _SetupPlayers
+                lea     24(sp),sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 exitGameFlag:
                 dc.w $0000              ; Must be zero in order to start the game, if 1 SetupPlayers bails
@@ -30335,45 +30195,25 @@ DIY_DecrementMissingTeamCountIfNotLoaded:
 DIY_ShuffleTeamGridPairs:
                 jmp     _DIY_ShuffleTeamGridPairs
 
-; ===== DIY_GetCurrentMatchTeamSlots =====
-; prototype: void __usercall DIY_GetCurrentMatchTeamSlots()
+; ===== DIY_GetCurrentMatchTeamSlots ===== (ported to C → _DIY_GetCurrentMatchTeamSlots)
+; Bridge: outputs a1, a2 (slot pointers)
 DIY_GetCurrentMatchTeamSlots:
-                lea     (diyCompetitionStart).l,a1
-                movea.l a1,a2
-                move.w  $64(a1),d0
-                lsl.w   #1,d0
-                lea     $2CE(a1),a0
-                move.b  (a0,d0.w),d1
-                ext.w   d1
-                mulu.w  #4,d1
-                adda.l  d1,a1
-                move.b  1(a0,d0.w),d1
-                ext.w   d1
-                mulu.w  #4,d1
-                adda.l  d1,a2
+                subq.l  #8,sp           ; space for 2 pointers
+                move.l  sp,a0
+                pea     4(a0)           ; &outSlot2
+                move.l  a0,-(sp)        ; &outSlot1
+                jsr     _DIY_GetCurrentMatchTeamSlots
+                addq.l  #8,sp           ; clean args
+                movea.l (sp)+,a1        ; outSlot1
+                movea.l (sp)+,a2        ; outSlot2
                 rts
 
-; ===== DIY_CompareCurrentMatchTeamCategories =====
-; prototype: unsigned __int16 __usercall DIY_CompareCurrentMatchTeamCategories@<d0>()
+; ===== DIY_CompareCurrentMatchTeamCategories ===== (ported to C → _DIY_CompareCurrentMatchTeamCategories)
+; Bridge: returns d0
 DIY_CompareCurrentMatchTeamCategories:
-                bsr.s   DIY_GetCurrentMatchTeamSlots
-                movea.l $344(a1),a1
-                adda.l  #selTeamsPtr,a1
-                move.b  4(a1),d0
-                movea.l $344(a2),a2
-                adda.l  #selTeamsPtr,a2
-                move.b  4(a2),d1
-                ext.w   d0
-                ext.w   d1
-                cmp.w   d0,d1
-                beq.s   locret_12A5D6
-                cmpi.w  #1,d1
-                beq.s   locret_12A5D6
-                exg     d0,d1
-                cmpi.w  #1,d1
-                beq.s   locret_12A5D6
-                move.w  #2,d0
-locret_12A5D6:
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _DIY_CompareCurrentMatchTeamCategories
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== DIY_PlayCupMatchAndAdvance =====

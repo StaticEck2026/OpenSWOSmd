@@ -28,8 +28,8 @@ extern void Career_ApplyPostMatchPlayerStatModsIfCareerTeam(void);
 extern uint16_t _ShouldApplyRandomPlayerStatusAfterSim(void);
 
 /* C functions (defined in diy_competition.c) */
-extern uint16_t _FindTeamInDIY(uint16_t teamNo, uint8_t *comp);
-extern uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, uint8_t *comp);
+extern uint16_t _FindTeamInDIY(uint16_t teamNo, DIY_Competition *comp);
+extern uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, DIY_Competition *comp);
 
 /* C-callable bridges to asm functions (defined in swos2_unit.s) */
 /* Forward declaration: _UpdatePlayerPositionAndReturnRole (Chunk 187) */
@@ -1711,8 +1711,8 @@ int16_t _CalcTeamPriceRankPercentOffset(uint8_t *ctx, uint8_t *team)
     }
 
     uint16_t teamNum = *(uint16_t *)team;
-    uint16_t teamIndex = _FindTeamInDIY(teamNum, ctx);
-    uint16_t expensiveCount = _GetMoreExpensiveTeamsCount(teamNum, ctx);
+    uint16_t teamIndex = _FindTeamInDIY(teamNum, (DIY_Competition *)ctx);
+    uint16_t expensiveCount = _GetMoreExpensiveTeamsCount(teamNum, (DIY_Competition *)ctx);
 
     int16_t diff = (int16_t)(expensiveCount - teamIndex);
     int32_t scaled = (int32_t)diff * 100;

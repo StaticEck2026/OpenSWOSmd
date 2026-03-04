@@ -7473,13 +7473,16 @@ extern uint16_t findTeamInDIY_SuppressSideEffectsFlag;
 extern uint16_t isNationalSelector;
 
 __attribute__((used, externally_visible))
-uint16_t _FindTeamInDIY(uint16_t teamNo, uint8_t *comp)
+uint16_t _FindTeamInDIY(uint16_t teamNo, DIY_Competition *comp)
 {
+    /* Extended area raw pointer — offsets beyond 0x60 are not in DIY_Competition struct */
+    uint8_t *raw = (uint8_t *)comp;
+
     diyFoundTeamIndex = 0;
     diyCompHasGroupStage = 0;
 
-    uint16_t numTeams = *(uint16_t *)(comp + 50);
-    uint16_t compType = *(uint16_t *)comp;
+    uint16_t numTeams = (uint16_t)comp->numTeams;
+    uint16_t compType = (uint16_t)comp->competitionType;
 
     if (compType == 1)    /* DIY_CUP */
         goto cup_entry;
@@ -7487,17 +7490,17 @@ uint16_t _FindTeamInDIY(uint16_t teamNo, uint8_t *comp)
         goto tournament_entry;
 
     /* --- LEAGUE path --- */
-    /* seq: set high byte to 0xFF if comp[96] == 0 */
-    diyCompHasGroupStage = (*(uint16_t *)(comp + 96) == 0) ? 0xFF00 : 0;
+    /* seq: set high byte to 0xFF if extended[0x60] == 0 */
+    diyCompHasGroupStage = (*(uint16_t *)(raw + 96) == 0) ? 0xFF00 : 0;
 
 league_search:
     {
-        uint16_t *leagueTeamIds = (uint16_t *)(comp + 302);
+        uint16_t *leagueTeamIds = (uint16_t *)(raw + 302);
         int16_t d1 = -2;
         uint16_t rem = numTeams;
         while (rem-- > 0) {
             d1 += 2;
-            int16_t rawIdx = *(int16_t *)(comp + 110 + d1);
+            int16_t rawIdx = *(int16_t *)(raw + 110 + d1);
             uint16_t teamIdx = (uint16_t)((uint32_t)(int32_t)rawIdx / 18u);
             if (leagueTeamIds[teamIdx] == teamNo)
                 return (uint16_t)(d1 >> 1);
@@ -7506,13 +7509,13 @@ league_search:
     }
 
 cup_entry:
-    /* sne: set high byte to 0xFF if comp[86] != 0 */
-    diyCompHasGroupStage = (*(uint16_t *)(comp + 86) != 0) ? 0xFF00 : 0;
+    /* sne: set high byte to 0xFF if finishedFlag != 0 */
+    diyCompHasGroupStage = (comp->finishedFlag != 0) ? 0xFF00 : 0;
 
 cup_search:
     {
-        uint16_t *cupTeamIds = (uint16_t *)(comp + 590);
-        int8_t *cupIndexTable = (int8_t *)(comp + 718);
+        uint16_t *cupTeamIds = (uint16_t *)(raw + 590);
+        int8_t *cupIndexTable = (int8_t *)(raw + 718);
         int16_t d1 = -1;
         uint16_t rem = numTeams;
         while (rem-- > 0) {
@@ -7520,9 +7523,9 @@ cup_search:
             int16_t idx = (int16_t)(int8_t)cupIndexTable[d1];
             if (cupTeamIds[idx] == teamNo) {
                 /* Found in cup — post-processing */
-                if (*(uint16_t *)(comp + 86) != 0 && (uint16_t)d1 < 2) {
+                if (comp->finishedFlag != 0 && (uint16_t)d1 < 2) {
                     /* Group stage, position 0 or 1 */
-                    if (teamNo == *(uint16_t *)(comp + 58))
+                    if (teamNo == (uint16_t)comp->resultCode)
                         return 0;
                     return 1;
                 }
@@ -7533,7 +7536,7 @@ cup_search:
 
     cup_bracket:
         {
-            uint16_t roundVal = *(uint16_t *)(comp + 80);
+            uint16_t roundVal = (uint16_t)comp->halfTeams;
             uint16_t doubled = roundVal << 1;
             if ((uint16_t)d1 < doubled) {
                 /* Before knockout rounds: return roundVal - 1 */
@@ -7552,11 +7555,11 @@ cup_search:
 
 tournament_entry:
     {
-        /* sne: set high byte to 0xFF if comp[88] != 0 */
-        diyCompHasGroupStage = (*(uint16_t *)(comp + 88) != 0) ? 0xFF00 : 0;
+        /* sne: set high byte to 0xFF if exitFlag != 0 */
+        diyCompHasGroupStage = (comp->exitFlag != 0) ? 0xFF00 : 0;
 
-        uint16_t *tournTeamIds = (uint16_t *)(comp + 154);
-        int8_t *tournIndexTable = (int8_t *)(comp + 90);
+        uint16_t *tournTeamIds = (uint16_t *)(raw + 154);
+        int8_t *tournIndexTable = (int8_t *)(raw + 90);
         int16_t d1 = -1;
         uint16_t rem = numTeams;
         while (rem-- > 0) {
@@ -7564,17 +7567,18 @@ tournament_entry:
             int16_t idx = (int16_t)(int8_t)tournIndexTable[d1];
             if (tournTeamIds[idx] == teamNo) {
                 /* Found in tournament */
-                uint16_t stageConfig = *(uint16_t *)(comp + 84);
+                uint16_t stageConfig = (uint16_t)comp->currentRound;
                 uint16_t stageOffset = stageConfig * 118;
-                uint8_t *stagePtr = comp + stageOffset;
+                uint8_t *stagePtr = raw + stageOffset;
 
-                if (*(uint16_t *)(comp + 88) != 0) {
+                if (comp->exitFlag != 0) {
                     /* Has group stage */
                     uint16_t threshold = *(uint16_t *)(stagePtr + 0x162);
                     if ((uint16_t)d1 < threshold) {
                         /* Team is in group stage — switch to secondary competition */
-                        comp += 0x420;
-                        numTeams = *(uint16_t *)(comp + 50);
+                        raw += 0x420;
+                        comp = (DIY_Competition *)raw;
+                        numTeams = (uint16_t)comp->numTeams;
                         if (*(uint16_t *)(stagePtr + 0x15E) == 0)
                             goto cup_search;
                         else
@@ -7593,14 +7597,14 @@ tournament_entry:
 
                     diyFoundTeamIndex = 1;
 
-                    if (*(uint16_t *)(comp + 0x15A) != 0) {
+                    if (*(uint16_t *)(raw + 0x15A) != 0) {
                         if ((uint16_t)d1 == 3 || (uint16_t)d1 == 4)
                             return (uint16_t)d1;
                     }
 
                     /* Walk through stage blocks to find which stage the team is in */
                     uint16_t pos = (uint16_t)d1;
-                    uint8_t *sp = comp;
+                    uint8_t *sp = raw;
                     uint16_t stageThreshold;
                     do {
                         sp += 118;
@@ -7610,7 +7614,7 @@ tournament_entry:
                     uint16_t stageNumTeams = *(uint16_t *)(sp + 0xEC);
 
                     if (findTeamInDIY_SuppressSideEffectsFlag != 0) {
-                        uint16_t rank = _GetMoreExpensiveTeamsCount(teamNo, comp);
+                        uint16_t rank = _GetMoreExpensiveTeamsCount(teamNo, (DIY_Competition *)raw);
                         if (rank >= stageThreshold && rank < stageNumTeams) {
                             return rank;
                         }
@@ -7652,21 +7656,22 @@ extern uint8_t teamBudgetRankTable[];
 __attribute__((used, externally_visible))
 void _InitializeNewSeason_BuildTeamBudgetRankTable(void)
 {
-    uint8_t *comp = competitionFileBuffer;
-    uint16_t numTeams = *(uint16_t *)(comp + 50);  /* DIY_COMPETITION_NUMTEAMS */
-    uint16_t compType = *(uint16_t *)comp;
+    DIY_Competition *comp = (DIY_Competition *)competitionFileBuffer;
+    uint8_t *raw = competitionFileBuffer;
+    uint16_t numTeams = (uint16_t)comp->numTeams;
+    uint16_t compType = (uint16_t)comp->competitionType;
     uint16_t *teamIdArray;
     int8_t *indexTable;
 
     if (compType == 0) {        /* DIY_LEAGUE */
-        teamIdArray = (uint16_t *)(comp + 302);
-        indexTable = (int8_t *)(comp + 238);
+        teamIdArray = (uint16_t *)(raw + 302);
+        indexTable = (int8_t *)(raw + 238);
     } else if (compType == 1) { /* DIY_CUP */
-        teamIdArray = (uint16_t *)(comp + 590);
-        indexTable = (int8_t *)(comp + 718);
+        teamIdArray = (uint16_t *)(raw + 590);
+        indexTable = (int8_t *)(raw + 718);
     } else {                    /* DIY_TOURNAMENT */
-        teamIdArray = (uint16_t *)(comp + 154);
-        indexTable = (int8_t *)(comp + 90);
+        teamIdArray = (uint16_t *)(raw + 154);
+        indexTable = (int8_t *)(raw + 90);
     }
 
     for (uint16_t i = 0; i < numTeams; i++) {
@@ -7690,18 +7695,19 @@ void _InitializeNewSeason_BuildTeamBudgetRankTable(void)
 extern uint16_t _GetAveragePlayerPrice(uint8_t *team);
 
 __attribute__((used, externally_visible))
-uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, uint8_t *comp)
+uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, DIY_Competition *comp)
 {
-    uint16_t numTeams = *(uint16_t *)(comp + 50);  /* DIY_COMPETITION_NUMTEAMS */
-    uint16_t compType = *(uint16_t *)comp;
+    uint8_t *raw = (uint8_t *)comp;
+    uint16_t numTeams = (uint16_t)comp->numTeams;
+    uint16_t compType = (uint16_t)comp->competitionType;
     uint16_t *teamIds;
 
     if (compType == 0) {        /* DIY_LEAGUE */
-        teamIds = (uint16_t *)(comp + 302);
+        teamIds = (uint16_t *)(raw + 302);
     } else if (compType == 1) { /* DIY_CUP */
-        teamIds = (uint16_t *)(comp + 590);
+        teamIds = (uint16_t *)(raw + 590);
     } else {                    /* DIY_TOURNAMENT */
-        teamIds = (uint16_t *)(comp + 154);
+        teamIds = (uint16_t *)(raw + 154);
     }
 
     /* Get our team's average player price */
@@ -7784,7 +7790,7 @@ extern TeamFileEx careerTeam;
 
 /* Cache-checked result functions — static, called only from Process* below */
 static void getCachedOrCalcViewResult(TeamFileEx *team1, TeamFileEx *team2,
-    uint8_t *ctx, uint16_t modeFlag, uint16_t goalsIn1, uint16_t goalsIn2, uint16_t statCol,
+    uint8_t *comp, uint16_t modeFlag, uint16_t goalsIn1, uint16_t goalsIn2, uint16_t statCol,
     uint16_t *outGoals1, uint16_t *outGoals2)
 {
     team1->team.andWith0xFE &= ~1;  /* bclr #0,$17(a1) */
@@ -7795,7 +7801,7 @@ static void getCachedOrCalcViewResult(TeamFileEx *team1, TeamFileEx *team2,
         cachedViewResultTeam1Goals = -1;
         return;
     }
-    _CalculateViewResult(ctx, modeFlag, goalsIn1, goalsIn2, statCol,
+    _CalculateViewResult(comp, modeFlag, goalsIn1, goalsIn2, statCol,
                          (uint8_t *)team1, (uint8_t *)team2, outGoals1, outGoals2);
 }
 
@@ -7860,18 +7866,20 @@ __attribute__((used, externally_visible))
 void _ProcessDIYLeagueMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileEx *team2,
     uint16_t *outGoals1, uint16_t *outGoals2, uint16_t *outFlags)
 {
+    DIY_Competition *diy = (DIY_Competition *)diyCompetitionStart;
+    uint8_t *comp = diyCompetitionStart;
+
     /* d0: seq from playEachTeam comparison — 0xFF if playEachTeam==1, else 0x00 */
     uint16_t modeFlag = 0;
-    if (*(uint16_t *)(diyCompetitionStart + 94) == 1)  /* DIY_COMPETITION_PLAYEACHTEAM = 94 */
+    if (diy->playEachTeam == 1)
         modeFlag = 0x00FF;  /* seq sets byte to 0xFF, high byte stays 0 */
 
-    uint8_t *ctx = diyCompetitionStart;
-    uint16_t goalsIn1 = *(uint16_t *)(ctx + 0x64);
-    uint16_t goalsIn2 = *(uint16_t *)(ctx + 0x66);
-    uint16_t statCol  = *(uint16_t *)(ctx + 0x2C);
+    uint16_t goalsIn1 = *(uint16_t *)(comp + 0x64);  /* extended area */
+    uint16_t goalsIn2 = *(uint16_t *)(comp + 0x66);  /* extended area */
+    uint16_t statCol  = *(uint16_t *)(comp + 0x2C);  /* compId+field_2D as word */
 
     uint16_t d1, d2;
-    getCachedOrCalcViewResult(team1, team2, ctx, modeFlag, goalsIn1, goalsIn2, statCol, &d1, &d2);
+    getCachedOrCalcViewResult(team1, team2, comp, modeFlag, goalsIn1, goalsIn2, statCol, &d1, &d2);
 
     /* Build flags byte d7 */
     uint16_t d7 = 0;
@@ -7899,30 +7907,31 @@ void _ProcessDIYKnockoutMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileE
     uint16_t *outPackedGoals, uint16_t *outPackedAggregate,
     uint16_t *outPackedPenalty, uint16_t *outFlags)
 {
-    uint8_t *a6 = diyCompetitionStart;
-    uint16_t slotIdx = *(uint16_t *)(a6 + 0x58);
-    uint8_t *a5 = a6 + (slotIdx << 1);
+    DIY_Competition *diy = (DIY_Competition *)diyCompetitionStart;
+    uint8_t *raw = diyCompetitionStart;
+    uint16_t slotIdx = (uint16_t)diy->exitFlag;
+    uint8_t *a5 = raw + (slotIdx << 1);
 
     uint16_t d7 = 0;
     uint16_t d1 = 0, d2 = 0;   /* this match goals */
     uint16_t d3 = 0, d4 = 0;   /* aggregate or temp */
     uint16_t d5 = inFirstLegTeam1, d6 = inFirstLegTeam2;  /* first-leg or penalty */
 
-    if (*(uint16_t *)(a6 + 0x330) != 0)
+    if (*(uint16_t *)(raw + 0x330) != 0)
         goto singleLegWithBit6;
 
-    if (*(uint16_t *)(a6 + 0x14C) != 2)
+    if (*(uint16_t *)(raw + 0x14C) != 2)
         goto singleLeg;
 
-    if (*(uint16_t *)(a6 + 0x14A) != 0)
+    if (*(uint16_t *)(raw + 0x14A) != 0)
         goto returnLeg;
 
     /* === First leg of two ($14A==0) === */
     {
-        uint8_t *ctx = diyCompetitionStart;
-        getCachedOrCalcViewResult(team1, team2, ctx, 0,
-            *(uint16_t *)(ctx + 0x60), *(uint16_t *)(ctx + 0x62),
-            *(uint16_t *)(ctx + 0x2C), &d1, &d2);
+        uint8_t *comp = diyCompetitionStart;
+        getCachedOrCalcViewResult(team1, team2, comp, 0,
+            *(uint16_t *)(comp + 0x60), *(uint16_t *)(comp + 0x62),
+            *(uint16_t *)(comp + 0x2C), &d1, &d2);
     }
     if (d1 == d2)
         goto drawResult;
@@ -7932,10 +7941,10 @@ returnLeg:
     /* === Return leg ($14A!=0) === */
     d7 |= 0x20;  /* bset #5 */
     {
-        uint8_t *ctx = diyCompetitionStart;
-        getCachedOrCalcViewResult(team1, team2, ctx, 0,
-            *(uint16_t *)(ctx + 0x60), *(uint16_t *)(ctx + 0x62),
-            *(uint16_t *)(ctx + 0x2C), &d1, &d2);
+        uint8_t *comp = diyCompetitionStart;
+        getCachedOrCalcViewResult(team1, team2, comp, 0,
+            *(uint16_t *)(comp + 0x60), *(uint16_t *)(comp + 0x62),
+            *(uint16_t *)(comp + 0x2C), &d1, &d2);
     }
     d3 = d1 + d5;  /* aggregate team1 */
     d4 = d2 + d6;  /* aggregate team2 */
@@ -7943,7 +7952,7 @@ returnLeg:
         goto aggregateNotEqual;
 
     /* Aggregate tied — check away goals rule */
-    if (*(uint16_t *)(a6 + 0x5E) != 1)
+    if ((uint16_t)diy->playEachTeam != 1)
         goto returnLegExtraTime;
     if (d2 == d5)
         goto returnLegExtraTime;
@@ -7972,7 +7981,7 @@ returnLegExtraTime:
         goto aggregateNotEqual;
 
     /* Still tied — check away goals in extra time */
-    if (*(uint16_t *)(a6 + 0x5E) == 0)
+    if ((uint16_t)diy->playEachTeam == 0)
         goto returnLegExtraTimeTied;
     if (d2 == d5)
         goto returnLegExtraTimeTied;
@@ -8003,12 +8012,12 @@ singleLeg:
     d7 &= ~0x20;  /* bclr #5 */
     {
         uint16_t mode = 0;
-        if (*(uint16_t *)(a6 + 0x14C) == 0)
+        if (*(uint16_t *)(raw + 0x14C) == 0)
             mode = 0x00FF;  /* seq d0 */
-        uint8_t *ctx = diyCompetitionStart;
-        getCachedOrCalcViewResult(team1, team2, ctx, mode,
-            *(uint16_t *)(ctx + 0x60), *(uint16_t *)(ctx + 0x62),
-            *(uint16_t *)(ctx + 0x2C), &d1, &d2);
+        uint8_t *comp = diyCompetitionStart;
+        getCachedOrCalcViewResult(team1, team2, comp, mode,
+            *(uint16_t *)(comp + 0x60), *(uint16_t *)(comp + 0x62),
+            *(uint16_t *)(comp + 0x2C), &d1, &d2);
     }
     if (d1 != d2)
         goto finalizeResult;
@@ -8021,7 +8030,7 @@ singleLeg:
         goto checkPenalties;
     if (*(uint16_t *)(a5 + 0x72) == 1)
         goto singleExtraTime;
-    if (*(uint16_t *)(a6 + 0x330) == 0)
+    if (*(uint16_t *)(raw + 0x330) == 0)
         goto checkPenalties;
 
 singleExtraTime:
@@ -8042,7 +8051,7 @@ checkPenalties:
         goto drawResult;
     if (*(uint16_t *)(a5 + 0x7E) == 1)
         goto doPenalties;
-    if (*(uint16_t *)(a6 + 0x330) == 0)
+    if (*(uint16_t *)(raw + 0x330) == 0)
         goto drawResult;
 
 doPenalties:
@@ -8063,7 +8072,7 @@ returnLegCheckPenalties:
         goto drawResult;
     if (*(uint16_t *)(a5 + 0x7E) == 1)
         goto doPenaltiesReturnLeg;
-    if (*(uint16_t *)(a6 + 0x330) == 0)
+    if (*(uint16_t *)(raw + 0x330) == 0)
         goto drawResult;
 
 doPenaltiesReturnLeg:
@@ -8103,4 +8112,60 @@ careerUpdate:
     *outPackedAggregate = (d3 << 8) + d4;
     *outPackedGoals = (d1 << 8) + d2;
     *outFlags = d7;
+}
+
+/* ========================================================================
+ * Chunk 191 — DIY_GetCurrentMatchTeamSlots, DIY_CompareCurrentMatchTeamCategories
+ * ======================================================================== */
+
+/* DIY_GetCurrentMatchTeamSlots
+ *
+ * Reads the current match index from diyCompetitionStart + 0x64, looks up two
+ * team slot indices in the team grid pairs table at offset 0x2CE, and returns
+ * two pointers: base + slotIdx * 4 for each slot.
+ *
+ * Original asm returns a1, a2 as the two slot pointers.
+ */
+__attribute__((used, externally_visible))
+void _DIY_GetCurrentMatchTeamSlots(uint8_t **outSlot1, uint8_t **outSlot2) {
+    uint8_t *base = diyCompetitionStart;
+    uint16_t matchIdx = *(uint16_t *)(base + 0x64);
+    uint8_t *grid = base + 0x2CE;
+
+    int8_t slot1 = (int8_t)grid[matchIdx * 2];
+    int8_t slot2 = (int8_t)grid[matchIdx * 2 + 1];
+
+    *outSlot1 = base + (int16_t)slot1 * 4;
+    *outSlot2 = base + (int16_t)slot2 * 4;
+}
+
+/* DIY_CompareCurrentMatchTeamCategories
+ *
+ * Calls DIY_GetCurrentMatchTeamSlots, then loads the team pointer from each
+ * slot (offset 0x344, selTeamsPtr-relative), and compares teamControls (offset 4).
+ *
+ * Returns:
+ *   - If both teams have the same control type → return that type
+ *   - If one is TEAM_COMPUTER (1) → return the other's type
+ *   - Otherwise → return 2
+ */
+__attribute__((used, externally_visible))
+uint16_t _DIY_CompareCurrentMatchTeamCategories(void) {
+    uint8_t *slot1, *slot2;
+    _DIY_GetCurrentMatchTeamSlots(&slot1, &slot2);
+
+    /* Load team pointer from slot: offset 0x344 is selTeamsPtr-relative */
+    TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + *(uint32_t *)(slot1 + 0x344));
+    TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + *(uint32_t *)(slot2 + 0x344));
+
+    int16_t ctrl1 = (int16_t)(int8_t)team1->team.teamControls;
+    int16_t ctrl2 = (int16_t)(int8_t)team2->team.teamControls;
+
+    if (ctrl1 == ctrl2)
+        return (uint16_t)ctrl1;
+    if (ctrl2 == 1) /* TEAM_COMPUTER */
+        return (uint16_t)ctrl1;
+    if (ctrl1 == 1) /* TEAM_COMPUTER */
+        return (uint16_t)ctrl2;
+    return 2;
 }

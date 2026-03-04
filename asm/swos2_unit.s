@@ -1610,6 +1610,12 @@
         xdef    boardConfidenceValue0
         xdef    boardConfidenceValue1
         xdef    diyLeagueCurrentSlot
+; Chunk 191 — DIY_GetCurrentMatchTeamSlots, DIY_CompareCurrentMatchTeamCategories, SetupPlayers, InitAndPlayGame
+        xref    _DIY_GetCurrentMatchTeamSlots
+        xref    _DIY_CompareCurrentMatchTeamCategories
+        xref    _SetupPlayers
+        xref    _InitAndPlayGame
+        xdef    aTraining
 
         ; Chunk 91 xrefs
         xref    _GetTeamPointer
@@ -4251,5 +4257,47 @@ _CCareer_ProcessPrimaryCompetitionForNextSeason:
         movem.l d2-d7/a2-a6,-(sp)
         movea.l 48(sp),a4              ; param: 44(saved) + 4(ret) = 48
         jsr     (Career_ProcessPrimaryCompetitionForNextSeason).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; ===== C→asm bridge: _CShowPlayMatchMenu =====
+; uint16_t _CShowPlayMatchMenu(int16_t controlFlags, int16_t maxSubs,
+;     int16_t excludeFlags, int16_t isFirstPlayer, int16_t squadChanges,
+;     uint8_t *team1, uint8_t *team2)
+; Loads C params into d0, d1, d2, d5, d6, a1, a2 and calls ShowPlayMatchMenu.
+        xdef    _CShowPlayMatchMenu
+_CShowPlayMatchMenu:
+        movem.l d2-d7/a2-a6,-(sp)      ; save 11 regs = 44 bytes
+        ; Stack: sp+0=saved, sp+44=return_addr, sp+48=controlFlags, sp+52=maxSubs,
+        ;        sp+56=excludeFlags, sp+60=isFirstPlayer, sp+64=squadChanges,
+        ;        sp+68=team1, sp+72=team2
+        move.l  48(sp),d0               ; controlFlags
+        move.l  52(sp),d1               ; maxSubs
+        move.l  56(sp),d2               ; excludeFlags
+        move.l  60(sp),d5               ; isFirstPlayer
+        move.l  64(sp),d6               ; squadChanges
+        movea.l 68(sp),a1               ; team1
+        movea.l 72(sp),a2               ; team2
+        jsr     (ShowPlayMatchMenu).l
+        ext.l   d0                      ; sign-extend return to 32-bit
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; ===== C→asm bridge: _CInitializeInGameTeamsAndStartGame =====
+; void _CInitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
+;     int16_t maxSubs, int16_t paramD3, int16_t paramD7,
+;     uint8_t *team1, uint8_t *team2)
+; Loads C params into d0, d1, d2, d3, d7, a1, a2 and calls InitializeInGameTeamsAndStartGame.
+        xdef    _CInitializeInGameTeamsAndStartGame
+_CInitializeInGameTeamsAndStartGame:
+        movem.l d2-d7/a2-a6,-(sp)      ; save 11 regs = 44 bytes
+        move.l  48(sp),d0               ; randomizePitch
+        move.l  52(sp),d1               ; minSubs
+        move.l  56(sp),d2               ; maxSubs
+        move.l  60(sp),d3               ; paramD3
+        move.l  64(sp),d7               ; paramD7
+        movea.l 68(sp),a1               ; team1
+        movea.l 72(sp),a2               ; team2
+        jsr     (InitializeInGameTeamsAndStartGame).l
         movem.l (sp)+,d2-d7/a2-a6
         rts

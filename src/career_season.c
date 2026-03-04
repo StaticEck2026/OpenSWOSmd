@@ -451,13 +451,13 @@ static void adjustWeightsForCompetition(uint8_t *compPtr, uint16_t *weightAccum,
 static int16_t computeCategoryForCompetition(uint8_t *comp)
 {
     findTeamInDIY_SuppressSideEffectsFlag = 1;
-    int16_t position = (int16_t)_FindTeamInDIY(selTeamNumber, comp);
+    int16_t position = (int16_t)_FindTeamInDIY(selTeamNumber, (DIY_Competition *)comp);
     findTeamInDIY_SuppressSideEffectsFlag = 0;
 
     if (position < 0)
         return -1;
 
-    uint16_t rank = _GetMoreExpensiveTeamsCount(selTeamNumber, comp);
+    uint16_t rank = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIY_Competition *)comp);
     uint16_t numTeams = *(uint16_t *)(comp + 50);
 
     /* ratio = (rank - position) * 100 / numTeams (signed) */
@@ -563,8 +563,8 @@ void _ShowChairmanOpinionAboutTheSeason(void)
 
     /* --- Compute category for primary competition (inline) --- */
     uint8_t *comp = competitionFileBuffer;
-    int16_t position = (int16_t)_FindTeamInDIY(selTeamNumber, comp);
-    uint16_t rank = _GetMoreExpensiveTeamsCount(selTeamNumber, comp);
+    int16_t position = (int16_t)_FindTeamInDIY(selTeamNumber, (DIY_Competition *)comp);
+    uint16_t rank = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIY_Competition *)comp);
     uint16_t numTeams = *(uint16_t *)(comp + 50);
 
     int32_t product = (int32_t)(int16_t)((int16_t)rank - position) * 100;
@@ -594,21 +594,21 @@ void _ShowChairmanOpinionAboutTheSeason(void)
 
     /* Secondary competition: top-2 finish → -2 */
     if (secondaryCompetitionPtr != 0) {
-        int16_t pos2 = (int16_t)_FindTeamInDIY(selTeamNumber, competitionContext);
+        int16_t pos2 = (int16_t)_FindTeamInDIY(selTeamNumber, (DIY_Competition *)competitionContext);
         if ((uint16_t)pos2 < 2)
             d7 -= 2;
     }
 
     /* Tertiary competition: top-2 finish → -2 */
     if (tertiaryCompetitionPtr != 0) {
-        int16_t pos3 = (int16_t)_FindTeamInDIY(selTeamNumber, tertiaryCompetitionContext);
+        int16_t pos3 = (int16_t)_FindTeamInDIY(selTeamNumber, (DIY_Competition *)tertiaryCompetitionContext);
         if ((uint16_t)pos3 < 2)
             d7 -= 2;
     }
 
     /* Quaternary competition (Euro cups): top-2 finish → -3 */
     if (quaternaryCompetitionPtr != 0) {
-        int16_t pos4 = (int16_t)_FindTeamInDIY(selTeamNumber, euroCupsCompetitionContext);
+        int16_t pos4 = (int16_t)_FindTeamInDIY(selTeamNumber, (DIY_Competition *)euroCupsCompetitionContext);
         if ((uint16_t)pos4 < 2)
             d7 -= 3;
     }
