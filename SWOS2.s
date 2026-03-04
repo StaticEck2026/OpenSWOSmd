@@ -67668,56 +67668,7 @@ BuyPlayerMenu:
 ; ===== PutPlayerOnMarketMenu =====
 ; prototype: void __usercall PutPlayerOnMarketMenu()
 PutPlayerOnMarketMenu:
-                move.w  #$FFFF,d3
-                move.w  #$FFFF,d4
-loc_14580E:
-                clr.l   d7
-                move.w  (careerNumPlayers).l,d2
-                subq.w  #1,d2
-loc_145818:
-                move.w  (selTeamNumber).l,d0
-                move.w  d2,d1
-                jsr     GetPlayerAtIndex
-                btst    #1,$66(a0)
-                beq.s   loc_145830
-                bset    d1,d7
-loc_145830:
-                dbf     d2,loc_145818
-                move.w  (selTeamNumber).l,d0
-                bsr.w   GetTeamPointer
-                move.l  d7,d0
-                clr.l   d1
-                lea     (playersOnTransferMarket).l,a2
-                move.w  (numPlayersOnTransferMarket).l,d2
-                beq.s   loc_14585A
-                subq.w  #1,d2
-loc_145852:
-                move.w  (a2)+,d5
-                bset    d5,d1
-                dbf     d2,loc_145852
-loc_14585A:
-                clr.w   d2
-                lea     (aPutPlayerOnTra).l,a1 ; "PUT PLAYER ON TRANSFER MARKET"
-                bsr.w   ShowSquad
-                bmi.s   loc_145886
-                move.w  d0,d1
-                bsr.w   FindPlayerOnTransferMarket
-                bne.s   loc_145876
-                bsr.w   RemovePlayerFromTransferMarket
-                bra.s   loc_14580E
-loc_145876:
-                move.w  d1,d0
-                bsr.w   AddPlayerToTransferMarket
-                cmpi.w  #5,(numPlayersOnTransferMarket).l
-                bne.s   loc_14580E
-loc_145886:
-                bsr.w   CheckNumPlayersOnTransferMarket
-                cmpi.w  #5,(numPlayersOnTransferMarket).l
-                bne.s   locret_14589E
-                move.w  #6,d0
-                jsr     SetCurrentEntry
-locret_14589E:
-                rts
+                jmp     _PutPlayerOnMarketMenu
 
 ; ===== ViewOffersMenu =====
 ; prototype: void __usercall ViewOffersMenu()

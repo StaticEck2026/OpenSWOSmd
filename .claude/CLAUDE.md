@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1475 functions ported across 176 chunks.
+**Current status:** 1476 functions ported across 177 chunks.
 
-**Last completed chunk:** Chunk 176 — Training Match Sub Swap & Trial Players (5 → training_match.c): IsPlayerBetterSwapCandidate (static), FindBestSubSwapCandidates (static), ApplyUseMatchTeamAndSwapSubs, TryAddTrialPlayerAtPosition, AddTrialPlayersForNewSeason.
+**Last completed chunk:** Chunk 177 — PutPlayerOnMarketMenu (1 → transfer_market.c): PutPlayerOnMarketMenu.
 
-**Next candidates:** ChooseTeamsFriendly helpers (SetTeamEntriesStringsAndColors, ViewSelTeamsSetColumns, SetChooseChangeTeamsEntries, UpdateMenuEntryYLayout), Career_AutoAdvance* functions, Career_FillCurrentSeasonInfo, ContinueCareerNextSeason.
+**Next candidates:** CheckNumberOfTeams, Career_AutoAdvance*FromRecord functions, Career_FillCurrentSeasonInfo, TrainingMatch_BuildCurrentTeamFromCareerTeam, Career_SetCurrentCompetitionSlot.
 
 ---
 

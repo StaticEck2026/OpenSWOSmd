@@ -3006,6 +3006,16 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1470 functions across 175 chunks
 
+### Chunk 177 — PutPlayerOnMarketMenu (1 → transfer_market.c)
+- Date: 2026-03-02
+- Ported:
+  1. PutPlayerOnMarketMenu (→transfer_market.c) — Transfer market menu allowing user to put players on transfer market via ShowSquad. Loops: builds eligible mask (positionAndFace & 0x02), builds marketMask from playersOnTransferMarket[], calls ShowSquad with both masks, toggles player on/off market, breaks on cancel (viewSquadSelectedTeam < 0) or 5 players reached. Calls CheckNumPlayersOnTransferMarket and SetCurrentEntry(6) if maxed.
+- Stubs: PutPlayerOnMarketMenu → jmp _PutPlayerOnMarketMenu
+- New xrefs: _PutPlayerOnMarketMenu
+- New xdefs: aPutPlayerOnTra
+- Build status: **verified** (clean build, only pre-existing warnings)
+- Cumulative: 1476 functions across 177 chunks
+
 ### Chunk 173 — FindTeamInDIY (1 → diy_competition.c)
 - Date: 2026-03-03
 - Ported:
@@ -3386,5 +3396,9 @@ Update this section every time you port a chunk. Keep it chronological.
 | 171   | 3         | 1461       |
 | 172   | 2         | 1463       |
 | 173   | 1         | 1464       |
+| 174   | 4         | 1468       |
+| 175   | 2         | 1470       |
+| 176   | 5         | 1475       |
+| 177   | 1         | 1476       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

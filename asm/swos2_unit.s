@@ -2998,6 +2998,10 @@
         xref    _Career_PostMatchUpdate
 ; --- Chunk 176 xrefs ---
         xref    _TrainingMatch_AddTrialPlayersForNewSeason
+; --- Chunk 177 xrefs ---
+        xref    _PutPlayerOnMarketMenu
+; --- Chunk 177 xdefs ---
+        xdef    aPutPlayerOnTra
         xref    _ShowHighlights
         xref    _ShowMatchSequence
         xref    _ViewHighlightsSaveCurrentMenu

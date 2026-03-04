@@ -4464,3 +4464,68 @@ void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint1
     }
 }
 
+/* ================================================================
+ * PutPlayerOnMarketMenu  (SWOS2.s line 67670)
+ *
+ * Transfer market sub-menu: shows squad and lets user toggle players
+ * on/off the transfer market (max 5). Loops until user cancels or
+ * 5 players are on market. Then updates transfer market UI state.
+ * ================================================================ */
+extern uint32_t viewSquadFlags;
+extern int16_t viewSquadSelectedTeam;
+extern uint8_t aPutPlayerOnTra[];  /* "PUT PLAYER ON TRANSFER MARKET" */
+
+__attribute__((used, externally_visible))
+void _PutPlayerOnMarketMenu(void)
+{
+    uint16_t preselect = 0xFFFF;
+
+    for (;;) {
+        /* Build eligible player bitfield (bit 1 of positionAndFace set) */
+        uint32_t eligible = 0;
+        for (int16_t i = (int16_t)(careerNumPlayers - 1); i >= 0; i--) {
+            uint8_t *player = _CGetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+            PlayerFile *pf = (PlayerFile *)(player + 76);
+            if (pf->positionAndFace & 0x02)
+                eligible |= (1u << (uint16_t)i);
+        }
+
+        /* Get team pointer */
+        uint8_t *teamPtr = _GetTeamPointer(selTeamNumber);
+
+        /* Build transfer market bitfield */
+        uint32_t marketMask = 0;
+        uint16_t numOnMarket = numPlayersOnTransferMarket;
+        for (uint16_t i = 0; i < numOnMarket; i++) {
+            uint16_t pid = playersOnTransferMarket[i];
+            marketMask |= (1u << pid);
+        }
+
+        /* Show squad selection (clears viewSquadFlags as per ShowSquad entry point) */
+        viewSquadFlags = 0;
+        int16_t selected = _ShowSquad(teamPtr, aPutPlayerOnTra, eligible, marketMask, 0, preselect);
+        preselect = (uint16_t)viewSquadSelectedTeam;
+
+        /* If cancelled (viewSquadSelectedTeam < 0), exit loop */
+        if ((int16_t)viewSquadSelectedTeam < 0)
+            break;
+
+        /* Toggle player on/off transfer market */
+        uint16_t playerIdx = (uint16_t)selected;
+        if (_FindPlayerOnTransferMarket(playerIdx) == 0) {
+            /* Already on market — remove */
+            _RemovePlayerFromTransferMarket(playerIdx);
+        } else {
+            /* Not on market — add */
+            _AddPlayerToTransferMarket(playerIdx);
+            if (numPlayersOnTransferMarket == 5)
+                break;
+        }
+    }
+
+    /* Update transfer market UI state */
+    _CheckNumPlayersOnTransferMarket();
+    if (numPlayersOnTransferMarket == 5)
+        _SetCurrentEntry(6);
+}
+

@@ -166,4 +166,7 @@ void _Career_ConvertPlayerToTrialistFromName(uint16_t sourceTeam, uint16_t playe
 void _TrainingMatch_AddTrialPlayerToSelectedTeam(uint16_t role);
 void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16_t baseCount, uint8_t *teamPtr);
 
+/* --- PutPlayerOnMarketMenu (Chunk 177) --- */
+void _PutPlayerOnMarketMenu(void);
+
 #endif
