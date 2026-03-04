@@ -7706,3 +7706,43 @@ uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, uint8_t *comp)
     }
     return count;
 }
+
+/* ================================================================
+ * DIY_RecomputeCompetitionDerivedProgressionTable  (SWOS2.s line 35327)
+ *
+ * Computes an interpolated progression table in diyCompetitionStart.
+ * count = *(uint16_t *)(diyCompetitionStart + 0x1C4)
+ * start = diyCompetitionStart[0x38]
+ * end   = diyCompetitionStart[0x39]
+ * output = diyCompetitionStart + 0x1CE
+ *
+ * If count==1, stores just the start value.
+ * Otherwise for i=0..count: output[i] = start + i*(end-start)/(count-1)
+ * If end < start, adds 0x60 to end (wraps around month range).
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _DIY_RecomputeCompetitionDerivedProgressionTable(void)
+{
+    uint8_t *a0 = diyCompetitionStart;
+    uint16_t count = *(uint16_t *)(a0 + 0x1C4);
+    uint8_t startVal = a0[0x38];
+    uint8_t endVal = a0[0x39];
+    uint8_t *out = a0 + 0x1CE;
+
+    if (count == 1) {
+        out[0] = startVal;
+        return;
+    }
+
+    /* If end < start, wrap by adding 0x60 */
+    if (endVal < startVal)
+        endVal += 0x60;
+
+    uint16_t range = (uint16_t)(endVal - startVal) & 0xFF;  /* andi.w #$FF,d3 */
+    uint16_t divisor = count - 1;
+
+    for (uint16_t i = 0; i <= divisor; i++) {
+        uint16_t val = (i * range) / divisor;
+        out[i] = (uint8_t)(val + startVal);
+    }
+}

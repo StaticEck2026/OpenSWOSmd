@@ -35325,36 +35325,7 @@ loc_12EC3C:
 ; ===== DIY_RecomputeCompetitionDerivedProgressionTable =====
 ; prototype: void __usercall DIY_RecomputeCompetitionDerivedProgressionTable()
 DIY_RecomputeCompetitionDerivedProgressionTable:
-                lea     (diyCompetitionStart).l,a0
-                move.w  $1C4(a0),d0
-                move.b  $38(a0),d1
-                move.b  $39(a0),d2
-                lea     $1CE(a0),a0
-                cmpi.w  #1,d0
-                bne.s   loc_12ECD0
-                move.b  d1,(a0)
-                rts
-loc_12ECD0:
-                cmp.b   d1,d2
-                bcc.s   loc_12ECD8
-                addi.b  #$60,d2         ; '`'
-loc_12ECD8:
-                move.b  d2,d3
-                sub.b   d1,d3
-                andi.w  #$FF,d3
-                move.w  d0,d5
-                subq.w  #1,d5
-                clr.w   d4
-loc_12ECE6:
-                move.w  d4,d0
-                mulu.w  d3,d0
-                divu.w  d5,d0
-                add.b   d1,d0
-                move.b  d0,(a0)+
-                addq.w  #1,d4
-                cmp.w   d5,d4
-                bls.s   loc_12ECE6
-                rts
+                jmp     _DIY_RecomputeCompetitionDerivedProgressionTable
 
 ; ===== DIY_InitCupBracketProgressionTable =====
 ; prototype: void __usercall DIY_InitCupBracketProgressionTable()
@@ -35369,53 +35340,7 @@ DIYTournament_BuildMatchesPerTeamProgressionTable:
 ; ===== Career_PostMatchUpdate =====
 ; prototype: void __usercall Career_PostMatchUpdate()
 Career_PostMatchUpdate:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     Career_FillCurrentSeasonInfo
-                movem.l (sp)+,d0-d7/a0-a6
-                jsr     JobOffers_RemoveExpiredOffers
-                jsr     Rand2
-                andi.w  #1,d0
-                addq.w  #1,d0
-                move.w  d0,d7
-                move.w  #$63,d6         ; 'c'
-loc_12EE28:
-                move.w  (numJobOffers).l,d0
-                add.w   (numNewJobOffers).l,d0
-                cmp.w   d7,d0
-                bcc.s   loc_12EE4A
-                movem.l d6-d7,-(sp)
-                jsr     Career_MaybeGenerateJobOffer
-                movem.l (sp)+,d6-d7
-                dbf     d6,loc_12EE28
-loc_12EE4A:
-                tst.w   (isNationalSelector).l
-                bne.w   Career_HandleRetirement
-                move.w  (selTeamNumber).l,-(sp)
-                move.b  (careerTeam+TEAMFILEEX_TEAM+TEAMFILE_TEAMCONTROLS).l,d0
-                move.w  d0,-(sp)
-                move.w  #$FFFF,(selTeamNumber).l
-                move.b  #1,(careerTeam+TEAMFILEEX_TEAM+TEAMFILE_TEAMCONTROLS).l
-                movea.l (currentCompetitionPtr).l,a0
-                jsr     Career_AutoAdvanceCompetitionAndPersistSlotState
-                movea.l (secondaryCompetitionPtr).l,a0
-                cmpa.l  #0,a0
-                beq.s   loc_12EE92
-                jsr     Career_AutoAdvanceCompetitionAndPersistSlotState
-loc_12EE92:
-                movea.l (tertiaryCompetitionPtr).l,a0
-                cmpa.l  #0,a0
-                beq.s   loc_12EEA6
-                jsr     Career_AutoAdvanceCompetitionAndPersistSlotState
-loc_12EEA6:
-                movea.l (quaternaryCompetitionPtr).l,a0
-                cmpa.l  #0,a0
-                beq.s   loc_12EEBA
-                jsr     Career_AutoAdvanceCompetitionAndPersistSlotState
-loc_12EEBA:
-                move.w  (sp)+,d0
-                move.b  d0,(careerTeam+TEAMFILEEX_TEAM+TEAMFILE_TEAMCONTROLS).l
-                move.w  (sp)+,(selTeamNumber).l
-                bra.w   *+4
+                jmp     _Career_PostMatchUpdate
 
 ; ===== Career_HandleRetirement ===== (ported to C → _Career_HandleRetirement)
 Career_HandleRetirement:

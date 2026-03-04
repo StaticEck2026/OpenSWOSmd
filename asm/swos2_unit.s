@@ -2993,6 +2993,9 @@
 ; --- Chunk 174 xrefs ---
         xref    _SeasonFinished_ComputeSeasonReview
         xref    _ShowChairmanOpinionAboutTheSeason
+; --- Chunk 175 xrefs ---
+        xref    _DIY_RecomputeCompetitionDerivedProgressionTable
+        xref    _Career_PostMatchUpdate
         xref    _ShowHighlights
         xref    _ShowMatchSequence
         xref    _ViewHighlightsSaveCurrentMenu
@@ -4055,6 +4058,18 @@ _CInitNewSeason:
         rts
 
 ; --- Chunk 125 C-callable asm bridges ---
+
+; --- Chunk 175 C-callable asm bridges ---
+
+; _CCareer_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr) -> void
+; Career_AutoAdvanceCompetitionAndPersistSlotState expects: a0 = compPtr
+        xdef    _CCareer_AutoAdvanceCompetitionAndPersistSlotState
+_CCareer_AutoAdvanceCompetitionAndPersistSlotState:
+        movem.l d2-d7/a2-a6,-(sp)
+        movea.l 48(sp),a0              ; param: 44(saved regs) + 4(return addr) = offset 48
+        jsr     (Career_AutoAdvanceCompetitionAndPersistSlotState).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
 
 ; _CSelectTeamsFinalMenu(uint16_t mode) -> void
 ; SelectTeamsFinalMenu expects: d0.b = mode

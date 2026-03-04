@@ -82,3 +82,6 @@ void _Career_InitializeNewSeasonFinances(void);
 
 /* --- Career retirement (Chunk 119) --- */
 void _Career_HandleRetirement(void);
+
+/* --- Career post-match update (Chunk 175) --- */
+void _Career_PostMatchUpdate(void);

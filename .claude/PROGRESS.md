@@ -2981,6 +2981,17 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1468 functions across 174 chunks
 
+### Chunk 175 — DIY Progression Table + Career Post-Match Update (2 → diy_competition.c, career_status.c)
+- Date: 2026-03-03
+- Ported:
+  1. DIY_RecomputeCompetitionDerivedProgressionTable (→diy_competition.c) — self-contained ~30 instr. Computes interpolated progression table from diyCompetitionStart: count at +0x1C4, start/end month at +0x38/+0x39, output at +0x1CE. If count==1, stores start. Otherwise interpolates: out[i] = start + i*(end-start)/(count-1). Wraps end by +0x60 if end < start.
+  2. Career_PostMatchUpdate (→career_status.c) — ~48 instr dispatcher. Calls Career_FillCurrentSeasonInfo, removes expired job offers, generates 1-2 job offers (up to 100 attempts), auto-advances all competition slots (primary/secondary/tertiary/quaternary) with saved/restored selTeamNumber and teamControls, falls through to Career_HandleRetirement.
+- New C-callable wrapper: _CCareer_AutoAdvanceCompetitionAndPersistSlotState (a0 = compPtr) in swos2_unit.s
+- Stubs: DIY_RecomputeCompetitionDerivedProgressionTable (jmp), Career_PostMatchUpdate (jmp)
+- New xrefs: _DIY_RecomputeCompetitionDerivedProgressionTable, _Career_PostMatchUpdate
+- Build status: **verified** (clean build)
+- Cumulative: 1470 functions across 175 chunks
+
 ### Chunk 173 — FindTeamInDIY (1 → diy_competition.c)
 - Date: 2026-03-03
 - Ported:

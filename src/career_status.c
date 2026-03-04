@@ -27,6 +27,7 @@
 #include "game_types.h"
 #include "menu_system.h"
 #include "string_utils.h"
+#include "job_offers.h"
 
 /* ---- Assembly externs (functions still in asm) ---- */
 extern uint16_t _Rand(void);
@@ -3022,6 +3023,10 @@ skipSponsorship:
  * ================================================================ */
 extern uint16_t retired;
 extern void Career_MaybeGenerateJobOffer(void);
+extern void Career_FillCurrentSeasonInfo(void);
+extern void _CCareer_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr);
+extern uint16_t numJobOffers;
+extern uint16_t numNewJobOffers;
 
 __attribute__((used, externally_visible))
 void _Career_HandleRetirement(void)
@@ -3032,4 +3037,65 @@ void _Career_HandleRetirement(void)
     _UpdateBoardConfidenceScore();
     Career_MaybeGenerateJobOffer();
     _PushBoardConfidenceHistory();
+}
+
+/* ================================================================
+ * Career_PostMatchUpdate  (SWOS2.s line 35371)
+ *
+ * Called after each career match. Fills season info, removes expired
+ * job offers, generates 1-2 new job offers (up to 100 attempts),
+ * then auto-advances all competition slots. Falls through to
+ * Career_HandleRetirement at the end.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _Career_PostMatchUpdate(void)
+{
+    /* Fill current season info (preserves all regs in asm) */
+    Career_FillCurrentSeasonInfo();
+
+    /* Remove expired job offers */
+    _JobOffers_RemoveExpiredOffers();
+
+    /* Decide how many job offers to target: 1 or 2 */
+    uint16_t target = (_Rand2() & 1) + 1;
+
+    /* Try up to 100 times to generate enough job offers */
+    for (int16_t i = 99; i >= 0; i--) {
+        uint16_t total = numJobOffers + numNewJobOffers;
+        if (total >= target)
+            break;
+        Career_MaybeGenerateJobOffer();
+    }
+
+    /* If national selector, skip competition auto-advance */
+    if (isNationalSelector != 0) {
+        _Career_HandleRetirement();
+        return;
+    }
+
+    /* Save and temporarily override selTeamNumber and teamControls */
+    uint16_t savedSelTeam = selTeamNumber;
+    uint8_t savedControls = *((uint8_t *)&careerTeam + 4);  /* TEAMFILEEX_TEAM(0) + TEAMFILE_TEAMCONTROLS(4) */
+
+    selTeamNumber = 0xFFFF;
+    *((uint8_t *)&careerTeam + 4) = 1;
+
+    /* Auto-advance all competition slots */
+    _CCareer_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)currentCompetitionPtr);
+
+    if (secondaryCompetitionPtr != 0)
+        _CCareer_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)secondaryCompetitionPtr);
+
+    if (tertiaryCompetitionPtr != 0)
+        _CCareer_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)tertiaryCompetitionPtr);
+
+    if (quaternaryCompetitionPtr != 0)
+        _CCareer_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)quaternaryCompetitionPtr);
+
+    /* Restore saved values */
+    *((uint8_t *)&careerTeam + 4) = savedControls;
+    selTeamNumber = savedSelTeam;
+
+    /* Fall through to Career_HandleRetirement (bra.w *+4) */
+    _Career_HandleRetirement();
 }

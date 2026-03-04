@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1468 functions ported across 174 chunks.
+**Current status:** 1470 functions ported across 175 chunks.
 
-**Last completed chunk:** Chunk 174 — Season Review functions (4 → career_season.c): SeasonReview_AdjustWeightsForCompetition (static), SeasonReview_ComputeCategoryForCompetition (static), SeasonFinished_ComputeSeasonReview, ShowChairmanOpinionAboutTheSeason.
+**Last completed chunk:** Chunk 175 — DIY Progression Table + Career Post-Match Update (2 → diy_competition.c, career_status.c): DIY_RecomputeCompetitionDerivedProgressionTable, Career_PostMatchUpdate.
 
-**Next candidates:** Career_AdvanceToNextSeason_UpdateCompetitions, ChooseTeamsDialog/SelectTeams family, SquadInit/Finish/AfterDraw, SelectNationalTeam group, Career_MaybeGenerateJobOffer (~310 instr), remaining career update functions.
+**Next candidates:** Career_AdvanceToNextSeason_UpdateCompetitions, Career_MaybeGenerateJobOffer (~310 instr), Career_AutoAdvanceCompetitionAndPersistSlotState, Career_FillCurrentSeasonInfo, ContinueCareerNextSeason, remaining career update functions, ChooseTeamsDialog/SelectTeams family.
 
 ---
 
