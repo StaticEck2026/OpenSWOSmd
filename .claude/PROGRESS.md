@@ -3065,6 +3065,16 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, map confirmed)
 - Cumulative: 1500 functions across 187 chunks
 
+### Chunk 188 — UpdateCareerPlayersFormAfterMatch (1 → career_status.c)
+- Date: 2026-03-02
+- Ported:
+  1. UpdateCareerPlayersFormAfterMatch (→career_status.c) — ~180 instr. Loops through career team players after match, adjusting form (someFlag) based on: injury status, player slot (GK/outfield/sub/unused), performance vs expected form (someFlag/10 + price vs field_1), goal scorer bonuses, and random tables. Clamps form to [-100..100]. Uses team1/team2GoalCounterByPlayer, playerFormDeltaRandomTable[144].
+- Stubs: UpdateCareerPlayersFormAfterMatch → register bridge (a0=compCtx, a1=team1, a2=team2, d1=goals1, d2=goals2)
+- New xrefs: _UpdateCareerPlayersFormAfterMatch
+- New xdefs: team1GoalCounterByPlayer, team2GoalCounterByPlayer, avgPlayerPriceHalfClamped, playerFormDeltaRandomTable
+- Build status: **verified** (clean build, map confirmed)
+- Cumulative: 1501 functions across 188 chunks
+
 ### Chunk 178 — CheckNumberOfTeams (1 → menus.c)
 - Date: 2026-03-02
 - Ported:
@@ -3474,5 +3484,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 185   | 13        | 1493       |
 | 186   | 3         | 1496       |
 | 187   | 2+2d      | 1500       |
+| 188   | 1         | 1501       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

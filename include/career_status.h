@@ -91,3 +91,7 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr);
 void _Career_AutoAdvanceCupCompetitionFromRecord(uint8_t *record);
 void _Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record);
 void _Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record, uint16_t index);
+
+/* --- Career player form update (Chunk 188) --- */
+void _UpdateCareerPlayersFormAfterMatch(uint8_t *compCtx, uint8_t *team1, uint8_t *team2,
+                                         uint16_t team1Goals, uint16_t team2Goals);

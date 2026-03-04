@@ -27472,185 +27472,20 @@ playerAgeToFormDivisorTable:
 ; ===== UpdateCareerPlayersFormAfterMatch =====
 ; prototype: void __usercall UpdateCareerPlayersFormAfterMatch(void *team@<a0>, void *teamRef@<a1>, __int16 p1@<d1>, __int16 p2@<d2>)
 ; dos: cseg_908B4
+; ===== UpdateCareerPlayersFormAfterMatch ===== (Ported to C → _UpdateCareerPlayersFormAfterMatch, Chunk 188)
+; Bridge: a0=compCtx, a1=team1, a2=team2, d1=team1Goals, d2=team2Goals
 UpdateCareerPlayersFormAfterMatch:
-                tst.w   (isNationalSelector).l
-                bne.w   locret_124B38
-                lea     team1GoalCounterByPlayer(pc),a6
-                cmpa.l  #careerTeam,a1
-                beq.s   loc_124930
-                exg     d1,d2
-                lea     team2GoalCounterByPlayer(pc),a6
-loc_124930:
-                move.w  $3C(a0),d6
-                cmpa.l  #diyCompetitionStart,a0
-                beq.s   loc_124942
-                move.w  DIY_COMPETITION_FIELD_2+$64(a0),d7
-                bra.s   loc_124946
-loc_124942:
-                move.w  DIY_COMPETITION_FIELD_2+$60(a0),d7
-loc_124946:
-                addi.w  #$B,d7
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d2
+                move.l  d2,-(sp)
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)
+                move.l  a2,-(sp)
+                move.l  a1,-(sp)
                 move.l  a0,-(sp)
-                lea     (careerTeam).l,a0
-                movem.l d1-d7/a1-a6,-(sp)
-                bsr.w   GetAveragePlayerPrice
-                movem.l (sp)+,d1-d7/a1-a6
-                lsr.w   #1,d0
-                cmpi.w  #$11,d0
-                bls.s   loc_12496A
-                move.w  #$11,d0
-loc_12496A:
-                move.w  d0,(avgPlayerPriceHalfClamped).l
-                movea.l (sp)+,a0
-                lea     (currentMatchPlayers).l,a1
-                clr.w   d3
-loc_12497A:
-                move.b  (a1)+,d0
-                ext.w   d0
-                lea     (a6,d0.w),a5
-                mulu.w  #$26,d0         ; '&'
-                lea     (careerTeam).l,a0
-                lea     (a0,d0.w),a0
-                cmpi.b  #$9B,TEAMFILEEX_TEAM+TEAMFILE_PLAYERS+PLAYERFILE_SOMEFLAG(a0)
-                beq.w   loc_124B2C
-                cmpi.b  #$9A,TEAMFILEEX_TEAM+TEAMFILE_PLAYERS+PLAYERFILE_SOMEFLAG(a0)
-                beq.w   loc_124B2C
-                move.w  d6,d0
-                movem.l d1,-(sp)
-                jsr     IsPlayerInjured
-                movem.l (sp)+,d1
-                bne.w   loc_124A46
-                tst.w   d3
-                beq.w   loc_124A24
-                cmpi.w  #$B,d3
-                bcs.w   loc_124A5C
-                cmp.w   d7,d3
-                bcs.s   loc_1249EC
-                jsr     Rand2
-                cmpi.w  #$55,d0         ; 'U'
-                bhi.w   loc_124B10
-                jsr     Rand2
-                move.w  d0,d4
-                andi.w  #1,d4
-                neg.w   d4
-                subq.w  #1,d4
-                bra.w   loc_124ABC
-loc_1249EC:
-                jsr     Rand2
-                cmpi.w  #$33,d0         ; '3'
-                bhi.w   loc_124B10
-                move.b  TEAMFILEEX_TEAM+TEAMFILE_PLAYERS+PLAYERFILE_POSITIONANDFACE(a0),d0
-                andi.w  #$E0,d0
-                lsr.w   #5,d0
-                cmpi.w  #0,d0
-                beq.s   loc_124A12
-                move.w  #$FFFF,d4
-                bra.w   loc_124ABC
-loc_124A12:
-                jsr     Rand2
-                move.w  d0,d4
-                andi.w  #1,d4
-                neg.w   d4
-                bra.w   loc_124ABC
-loc_124A24:
-                jsr     Rand2
-                cmpi.w  #$33,d0         ; '3'
-                bhi.w   loc_124B10
-                move.w  #4,d4
-                tst.w   d2
-                beq.w   loc_124ABC
-                move.w  d2,d4
-                muls.w  #$FFFF,d4
-                bra.w   loc_124ABC
-loc_124A46:
-                jsr     Rand2
-                cmpi.w  #$33,d0         ; '3'
-                bhi.w   loc_124B10
-                move.b  #$FF,d4
-                bra.w   loc_124ABC
-loc_124A5C:
-                move.b  TEAMFILEEX_TEAM+TEAMFILE_PLAYERS+PLAYERFILE_SOMEFLAG(a0),d4
-                ext.w   d4
-                ext.l   d4
-                divs.w  #$A,d4
-                add.b   TEAMFILEEX_TEAM+TEAMFILE_PLAYERS+PLAYERFILE_PRICE(a0),d4
-                move.b  TEAMFILEEX_TEAM+TEAMFILE_PLAYERS+PLAYERFILE_FIELD_1(a0),d0
-                sub.b   d4,d0
-                move.b  d0,d4
-                lea     (playerFormDeltaRandomTable).l,a2
-                ext.w   d4
-                bmi.s   loc_124A9C
-                cmpi.w  #$11,d4
-                bls.s   loc_124A88
-                move.w  #$11,d4
-loc_124A88:
-                jsr     Rand
-                lsl.w   #3,d4
-                andi.w  #7,d0
-                add.w   d4,d0
-                move.b  (a2,d0.w),d4
-                bra.s   loc_124ABC
-loc_124A9C:
-                neg.w   d4
-                cmpi.w  #$11,d4
-                bls.s   loc_124AA8
-                move.w  #$11,d4
-loc_124AA8:
-                jsr     Rand
-                lsl.w   #3,d4
-                andi.w  #7,d0
-                add.w   d4,d0
-                move.b  (a2,d0.w),d4
-                neg.b   d4
-loc_124ABC:
-                move.b  (a5),d5
-                beq.s   loc_124AE4
-                addq.b  #1,d4
-                jsr     Rand2
-                andi.w  #1,d0
-                beq.s   loc_124AD0
-                addq.b  #1,d4
-loc_124AD0:
-                cmpi.b  #1,d5
-                beq.s   loc_124AE4
-                jsr     Rand2
-                andi.w  #3,d0
-                bne.s   loc_124AE4
-                addq.b  #1,d4
-loc_124AE4:
-                jsr     Rand2
-                andi.w  #1,d0
-                addq.w  #1,d0
-                cmp.b   d0,d4
-                ble.s   loc_124AF6
-                move.b  d0,d4
-loc_124AF6:
-                neg.w   d0
-                cmp.b   d0,d4
-                bge.s   loc_124AFE
-                move.b  d0,d4
-loc_124AFE:
-                cmpi.b  #$9B,d0
-                beq.s   loc_124B0A
-                cmpi.b  #$9A,d0
-                bne.s   loc_124B0C
-loc_124B0A:
-                clr.w   d0
-loc_124B0C:
-                add.b   d4,TEAMFILEEX_TEAM+TEAMFILE_PLAYERS+PLAYERFILE_SOMEFLAG(a0)
-loc_124B10:
-                cmpi.b  #$9C,TEAMFILEEX_TEAM+TEAMFILE_PLAYERS+PLAYERFILE_SOMEFLAG(a0)
-                bge.s   loc_124B1E
-                move.b  #$9C,TEAMFILEEX_TEAM+TEAMFILE_PLAYERS+PLAYERFILE_SOMEFLAG(a0)
-loc_124B1E:
-                cmpi.b  #$64,TEAMFILEEX_TEAM+TEAMFILE_PLAYERS+PLAYERFILE_SOMEFLAG(a0) ; 'd'
-                ble.s   loc_124B2C
-                move.b  #$64,TEAMFILEEX_TEAM+TEAMFILE_PLAYERS+PLAYERFILE_SOMEFLAG(a0) ; 'd'
-loc_124B2C:
-                addq.w  #1,d3
-                cmp.w   (careerNumPlayers).l,d3
-                bne.w   loc_12497A
-locret_124B38:
+                jsr     _UpdateCareerPlayersFormAfterMatch
+                lea     20(sp),sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 ; unsigned __int8[144]
 playerFormDeltaRandomTable:

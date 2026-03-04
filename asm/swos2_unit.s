@@ -1580,6 +1580,13 @@
         xref    _GetPlayerPrice
         xref    _UpdatePlayerPositionAndReturnRole
 
+        ; Chunk 188 xrefs
+        xref    _UpdateCareerPlayersFormAfterMatch
+        xdef    team1GoalCounterByPlayer
+        xdef    team2GoalCounterByPlayer
+        xdef    avgPlayerPriceHalfClamped
+        xdef    playerFormDeltaRandomTable
+
         ; Chunk 91 xrefs
         xref    _GetTeamPointer
         xref    _GetPlayer

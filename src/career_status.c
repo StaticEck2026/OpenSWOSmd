@@ -3274,3 +3274,203 @@ void _Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record, uint16
     _RestoreRand2State();
     careerLoadedFlag = 0;
 }
+
+/* ================================================================
+ * UpdateCareerPlayersFormAfterMatch (SWOS2.s line 27475, Chunk 188)
+ *
+ * Adjusts career team players' form (someFlag field) after a match.
+ * Considers: goals scored, injuries, position type, match performance,
+ * comparison of current form vs expected form.
+ *
+ * ASM register interface:
+ *   a0 = competition context (diyCompetitionStart or similar)
+ *   a1 = team1 pointer, a2 = team2 pointer
+ *   d1 = team1 goals, d2 = team2 goals
+ * ================================================================ */
+extern uint8_t team1GoalCounterByPlayer[];   /* 32 bytes: goal count per player slot (team 1) */
+extern uint8_t team2GoalCounterByPlayer[];   /* 32 bytes: goal count per player slot (team 2) */
+extern uint16_t avgPlayerPriceHalfClamped;
+extern uint8_t playerFormDeltaRandomTable[]; /* 144 bytes: 18×8 lookup table */
+
+__attribute__((used, externally_visible))
+void _UpdateCareerPlayersFormAfterMatch(uint8_t *compCtx, uint8_t *team1, uint8_t *team2,
+                                         uint16_t team1Goals, uint16_t team2Goals)
+{
+    if (isNationalSelector)
+        return;
+
+    /* Select goal counter based on which team is the career team.
+     * ASM: if a1 == careerTeam, use team1GoalCounterByPlayer; else swap d1/d2 and use team2. */
+    uint8_t *goalCounter = team1GoalCounterByPlayer;
+    uint16_t d1 = team1Goals;
+    uint16_t d2 = team2Goals;
+    if (team1 != (uint8_t *)&careerTeam) {
+        uint16_t tmp = d1;
+        d1 = d2;
+        d2 = tmp;
+        goalCounter = team2GoalCounterByPlayer;
+    }
+
+    /* d6 = offset 0x3C from competition context */
+    uint16_t d6 = *(uint16_t *)(compCtx + 0x3C);
+
+    /* d7 = max match player index.
+     * Primary competition (compCtx == diyCompetitionStart): use offset 2+0x60
+     * Other: use offset 2+0x64 */
+    uint16_t d7;
+    if (compCtx == diyCompetitionStart) {
+        d7 = *(uint16_t *)(compCtx + 2 + 0x60);
+    } else {
+        d7 = *(uint16_t *)(compCtx + 2 + 0x64);
+    }
+    d7 += 11;
+
+    /* Get average player price for career team, halve and clamp to 17 */
+    uint16_t avgPrice = _GetAveragePlayerPrice((uint8_t *)&careerTeam);
+    avgPrice >>= 1;
+    if (avgPrice > 0x11)
+        avgPrice = 0x11;
+    avgPlayerPriceHalfClamped = avgPrice;
+
+    /* Loop through all career players */
+    for (uint16_t d3 = 0; d3 < careerNumPlayers; d3++) {
+        int16_t slot = (int8_t)currentMatchPlayers[d3];
+        uint8_t *goalCounterForPlayer = goalCounter + slot;
+
+        /* Player base in careerTeam: careerTeam + slot * 38 */
+        uint8_t *a0 = (uint8_t *)&careerTeam + (uint16_t)((uint16_t)slot * 38);
+
+        /* PlayerFile data at playerBase + 76 (TEAMFILE_PLAYERS) */
+        uint8_t *plSomeFlag = a0 + 76 + 37;  /* PLAYERFILE_SOMEFLAG */
+
+        /* Skip trialist/reserve leaving special states */
+        if (*plSomeFlag == 0x9B || *plSomeFlag == 0x9A)
+            goto nextPlayer;
+
+        int8_t d4;  /* form delta to apply */
+
+        /* Check if player is injured */
+        if (_IsPlayerInjured(a0, (int16_t)d6)) {
+            /* Injured: 33% chance of -1 form */
+            if (_Rand2() > 0x33)
+                goto clampForm;
+            d4 = -1;
+            goto applyGoalBonus;
+        }
+
+        if (d3 == 0) {
+            /* Goalkeeper (index 0) */
+            if (_Rand2() > 0x33)
+                goto clampForm;
+            if (d2 == 0) {
+                d4 = 4;  /* clean sheet: +4 */
+            } else {
+                /* Goals taken: delta = -(goals taken).
+                 * ASM: muls.w #$FFFF,d4 (multiply by -1) */
+                d4 = (int8_t)(-((int16_t)d2));
+            }
+            goto applyGoalBonus;
+        } else if (d3 < 11) {
+            /* Starting outfield player (index 1-10): form-based adjustment */
+
+            /* Expected form: someFlag/10 + price */
+            int8_t sf = (int8_t)*plSomeFlag;
+            int16_t sfExt = (int16_t)sf;
+            int32_t sfLong = (int32_t)sfExt;
+            int16_t div10 = (int16_t)(sfLong / 10);  /* divs.w #$A */
+
+            uint8_t price = a0[76 + 32];  /* PLAYERFILE_PRICE */
+            uint8_t expected = (uint8_t)div10 + price;  /* add.b */
+
+            /* formDelta = field_1 - expected */
+            uint8_t field1 = a0[76 + 1];  /* PLAYERFILE_FIELD_1 */
+            int8_t formDelta = (int8_t)(field1 - expected);  /* sub.b */
+
+            int16_t d4s = (int16_t)formDelta;
+
+            if (d4s >= 0) {
+                /* Performing above expectations: positive random adjustment */
+                if (d4s > 0x11) d4s = 0x11;
+                uint16_t r = _Rand();
+                d4s <<= 3;
+                uint16_t rIdx = r & 7;
+                d4 = (int8_t)playerFormDeltaRandomTable[d4s + rIdx];
+            } else {
+                /* Performing below expectations: negative random adjustment */
+                d4s = -d4s;
+                if (d4s > 0x11) d4s = 0x11;
+                uint16_t r = _Rand();
+                d4s <<= 3;
+                uint16_t rIdx = r & 7;
+                d4 = -(int8_t)playerFormDeltaRandomTable[d4s + rIdx];
+            }
+            goto applyGoalBonus;
+        } else if (d3 < d7) {
+            /* Substitute who played (index 11..d7-1) */
+            if (_Rand2() > 0x33)
+                goto clampForm;
+
+            uint8_t posType = (a0[76 + 26] & 0xE0) >> 5;
+            if (posType == 0) {
+                /* GK sub: random ±1 */
+                uint16_t r = _Rand2();
+                d4 = (int8_t)(r & 1);
+                d4 = -d4;  /* 0→0 or 1→-1 */
+            } else {
+                /* Outfield sub: -1 */
+                d4 = -1;
+            }
+            goto applyGoalBonus;
+        } else {
+            /* Unused substitute (index >= d7): random small form change */
+            if (_Rand2() > 0x55)
+                goto clampForm;
+            uint16_t r = _Rand2();
+            d4 = (int8_t)(r & 1);
+            d4 = -d4;
+            d4 -= 1;  /* 0→-1 or 1→-2 */
+            goto applyGoalBonus;
+        }
+
+applyGoalBonus:
+        /* Goal scorer bonus */
+        {
+            uint8_t goals = *goalCounterForPlayer;
+            if (goals != 0) {
+                d4 += 1;
+                if ((_Rand2() & 1) == 0)
+                    d4 += 1;
+                if (goals != 1) {
+                    if ((_Rand2() & 3) == 0)
+                        d4 += 1;
+                }
+            }
+        }
+
+        /* Clamp delta to [-maxDelta..+maxDelta] where maxDelta = random 1 or 2 */
+        {
+            uint16_t r = _Rand2();
+            int16_t maxDelta = (int16_t)((r & 1) + 1);
+            if ((int8_t)d4 > (int8_t)maxDelta)
+                d4 = (int8_t)maxDelta;
+            int8_t negMax = (int8_t)(-maxDelta);
+            if ((int8_t)d4 < negMax)
+                d4 = negMax;
+        }
+
+        /* Apply delta to someFlag.
+         * ASM has dead code checking d0 against 0x9B/0x9A (impossible values).
+         * Replicated as no-op. */
+        *plSomeFlag = (uint8_t)((int8_t)*plSomeFlag + d4);
+
+clampForm:
+        /* Clamp someFlag to [-100..100] signed (0x9C..0x64 unsigned) */
+        if ((int8_t)*plSomeFlag < (int8_t)0x9C)
+            *plSomeFlag = 0x9C;
+        if ((int8_t)*plSomeFlag > (int8_t)0x64)
+            *plSomeFlag = 0x64;
+
+nextPlayer:
+        ;
+    }
+}
