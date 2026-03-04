@@ -85,3 +85,8 @@ void _Career_HandleRetirement(void);
 
 /* --- Career post-match update (Chunk 175) --- */
 void _Career_PostMatchUpdate(void);
+
+/* --- Career auto-advance chain (Chunk 179) --- */
+void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr);
+void _Career_AutoAdvanceCupCompetitionFromRecord(uint8_t *record);
+void _Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record);

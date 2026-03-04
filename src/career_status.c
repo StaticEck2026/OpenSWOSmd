@@ -24,6 +24,7 @@
  */
 
 #include "career_status.h"
+#include "career_teams.h"
 #include "game_types.h"
 #include "menu_system.h"
 #include "string_utils.h"
@@ -134,6 +135,9 @@ extern uint8_t    competitionContext[];
 extern uint8_t    tertiaryCompetitionContext[];
 extern uint8_t    euroCupsCompetitionContext[];
 extern uint8_t    competitionFileBuffer[];
+extern uint16_t   seasonUpdateInProgress;
+extern uint16_t   teamsLoaded;
+extern uint16_t   numSelectedTeams;
 
 /* Competition copy symbols (addresses used for comparisons) */
 extern uint8_t    worldCup2Copy[];
@@ -3098,4 +3102,142 @@ void _Career_PostMatchUpdate(void)
 
     /* Fall through to Career_HandleRetirement (bra.w *+4) */
     _Career_HandleRetirement();
+}
+
+/* --- Chunk 179: Career Auto-Advance Chain --- */
+
+extern uint16_t careerAutoAdvanceInProgress;
+extern void Career_AutoAdvanceLeagueFixtures(void);
+extern void Career_AutoAdvanceCupMatches(void);
+extern void Career_AutoAdvanceCompetitionSlots(void);
+
+/* Career_AutoAdvanceCompetitionAndPersistSlotState (SWOS2.s line 35559)
+ * Takes a competition pointer, identifies the corresponding context buffer,
+ * loads slot state, dispatches to the appropriate auto-advance function
+ * based on competition type, then stores the slot state back. */
+__attribute__((used, externally_visible))
+void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
+{
+    careerAutoAdvanceInProgress = 1;
+
+    /* Find the matching competition context buffer */
+    uint8_t *ctx = competitionFileBuffer;
+    if (compPtr != (uint8_t *)currentCompetitionPtr) {
+        ctx = competitionContext;
+        if (compPtr != (uint8_t *)secondaryCompetitionPtr) {
+            ctx = tertiaryCompetitionContext;
+            if (compPtr != (uint8_t *)tertiaryCompetitionPtr) {
+                ctx = euroCupsCompetitionContext;
+            }
+        }
+    }
+
+    _Career_LoadCompetitionSlotStateFromBuffer(ctx);
+
+    /* Dispatch by competition type (byte at offset 1) */
+    uint8_t compType = ctx[1];
+    if (compType == 1) {
+        Career_AutoAdvanceCupMatches();
+    } else if (compType == 2) {
+        Career_AutoAdvanceCompetitionSlots();
+    } else {
+        Career_AutoAdvanceLeagueFixtures();
+    }
+
+    _Career_StoreCompetitionSlotStateToBuffer(ctx);
+    careerAutoAdvanceInProgress = 0;
+}
+
+extern uint16_t careerLoadedFlag;
+extern uint16_t internationalAutoAdvanceFlag;
+extern uint16_t teamSelectionKeyCacheEnd;
+/* viewRandomPhase already declared at line 177 as uint8_t */
+extern uint8_t  seasonPlaying;
+extern uint8_t  englishCup[];
+extern uint8_t  englishCup_1[];
+extern uint8_t  englishLeagueCup[];
+extern uint8_t  englishLeagueCup_1[];
+
+extern void _SaveRand2State(void);
+extern void _RestoreRand2State(void);
+extern void _Randomize2(uint16_t seed);
+extern void _Career_InitCompetitionTeamSelectionFromTableHeaderSpec(uint8_t *record);
+extern void _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(uint8_t *record);
+extern void _Career_ApplyPendingForeignMarketPlayersToSelectedTeams(void);
+extern void _CInitDIYCupFromRecordParam(uint8_t *record);
+extern void _CInitDIYLeagueFromRecordParam(uint8_t *record);
+extern void _InitTeams(void);
+
+/* Career_AutoAdvanceCupCompetitionFromRecord (SWOS2.s line 35246)
+ * Auto-advances a cup competition: initializes team selection from record,
+ * loads competition, runs cup match advancement, then restores RNG state.
+ * a0 = competition record pointer. */
+__attribute__((used, externally_visible))
+void _Career_AutoAdvanceCupCompetitionFromRecord(uint8_t *record)
+{
+    /* Special-case English cup aliases */
+    if (record == englishCup)
+        record = englishCup_1;
+    else if (record == englishLeagueCup)
+        record = englishLeagueCup_1;
+
+    careerLoadedFlag = 1;
+
+    if (seasonUpdateInProgress == 0 && internationalAutoAdvanceFlag == 0)
+        teamSelectionKeyCacheEnd = 1;
+
+    teamsLoaded = 0;
+    _SaveRand2State();
+
+    /* Save viewRandomPhase + seasonPlaying (contiguous bytes, saved as word in asm) */
+    uint8_t savedViewRandom = viewRandomPhase;
+    uint8_t savedSeasonPlaying = seasonPlaying;
+
+    /* Seed RNG from record byte and seasonPlaying */
+    uint16_t seed = ((uint16_t)record[0] << 8) | (uint16_t)seasonPlaying;
+    _Randomize2(seed);
+
+    numSelectedTeams = 0;
+    _Career_InitCompetitionTeamSelectionFromTableHeaderSpec(record);
+    _Career_ApplyPendingForeignMarketPlayersToSelectedTeams();
+    _CInitDIYCupFromRecordParam(record);
+    _InitTeams();
+    Career_AutoAdvanceCupMatches();
+
+    viewRandomPhase = savedViewRandom;
+    seasonPlaying = savedSeasonPlaying;
+    _RestoreRand2State();
+    careerLoadedFlag = 0;
+}
+
+/* Career_AutoAdvanceLeagueCompetitionFromRecord (SWOS2.s line 35291)
+ * Same as above but for league competitions. */
+__attribute__((used, externally_visible))
+void _Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record)
+{
+    careerLoadedFlag = 1;
+
+    if (seasonUpdateInProgress == 0 && internationalAutoAdvanceFlag == 0)
+        teamSelectionKeyCacheEnd = 1;
+
+    teamsLoaded = 0;
+    _SaveRand2State();
+
+    uint8_t savedViewRandom = viewRandomPhase;
+    uint8_t savedSeasonPlaying = seasonPlaying;
+
+    uint16_t seed = ((uint16_t)record[0] << 8) | (uint16_t)seasonPlaying;
+    _Randomize2(seed);
+
+    numSelectedTeams = 0;
+    _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(record);
+    _Career_ApplyPendingForeignMarketPlayersToSelectedTeams();
+    _CInitDIYLeagueFromRecordParam(record);
+    _InitTeams();
+    Career_AutoAdvanceCompetitionSlots();
+
+    viewRandomPhase = savedViewRandom;
+    seasonPlaying = savedSeasonPlaying;
+    _RestoreRand2State();
+    careerLoadedFlag = 0;
 }

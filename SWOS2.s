@@ -35243,83 +35243,24 @@ loc_12EAF2:
 
 ; ===== Career_AutoAdvanceCupCompetitionFromRecord =====
 ; prototype: void __usercall Career_AutoAdvanceCupCompetitionFromRecord(void *contest@<a0>)
+; Ported to C: _Career_AutoAdvanceCupCompetitionFromRecord (career_status.c)
 Career_AutoAdvanceCupCompetitionFromRecord:
-                cmpa.l  #englishCup,a0
-                bne.s   loc_12EB7A
-                lea     (englishCup_1).l,a0
-                bra.s   loc_12EB88
-loc_12EB7A:
-                cmpa.l  #englishLeagueCup,a0
-                bne.s   loc_12EB88
-                lea     (englishLeagueCup_1).l,a0
-loc_12EB88:
-                move.w  #1,(careerLoadedFlag).l
-                tst.w   (seasonUpdateInProgress).l
-                bne.s   loc_12EBA8
-                tst.w   (internationalAutoAdvanceFlag).l
-                bne.s   loc_12EBA8
-                move.w  #1,(teamSelectionKeyCacheEnd).l
-loc_12EBA8:
-                clr.w   (teamsLoaded).l
-                jsr     SaveRand2State
-                move.w  (viewRandomPhase).l,-(sp)
-                move.b  (a0),d0
-                lsl.w   #8,d0
-                move.b  (seasonPlaying).l,d0
-                jsr     Randomize2
-                clr.w   (numSelectedTeams).l
-                movem.l a0,-(sp)
-                jsr     Career_InitCompetitionTeamSelectionFromTableHeaderSpec
-                movem.l (sp)+,a0
-                movem.l d1/a0,-(sp)
-                jsr     Career_ApplyPendingForeignMarketPlayersToSelectedTeams
-                movem.l (sp)+,d1/a0
-                movem.l a0,-(sp)
-                jsr InitDIYCupFromRecord(pc)
-                movem.l (sp)+,a0
-                movem.l a0,-(sp)
-                jsr InitTeams(pc)
-                movem.l (sp)+,a0
-                bsr.w   Career_AutoAdvanceCupMatches
-                move.w  (sp)+,(viewRandomPhase).l
-                jsr     RestoreRand2State
-                clr.w   (careerLoadedFlag).l
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a0,-(sp)
+                jsr     _Career_AutoAdvanceCupCompetitionFromRecord
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== Career_AutoAdvanceLeagueCompetitionFromRecord =====
 ; prototype: void __usercall Career_AutoAdvanceLeagueCompetitionFromRecord(void *contest@<a0>)
+; Ported to C: _Career_AutoAdvanceLeagueCompetitionFromRecord (career_status.c)
 Career_AutoAdvanceLeagueCompetitionFromRecord:
-                move.w  #1,(careerLoadedFlag).l
-                tst.w   (seasonUpdateInProgress).l
-                bne.s   loc_12EC3C
-                tst.w   (internationalAutoAdvanceFlag).l
-                bne.s   loc_12EC3C
-                move.w  #1,(teamSelectionKeyCacheEnd).l
-loc_12EC3C:
-                clr.w   (teamsLoaded).l
-                jsr     SaveRand2State
-                move.w  (viewRandomPhase).l,-(sp)
-                move.b  (a0),d0
-                lsl.w   #8,d0
-                move.b  (seasonPlaying).l,d0
-                jsr     Randomize2
-                clr.w   (numSelectedTeams).l
-                movem.l a0,-(sp)
-                jsr     Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec
-                movem.l (sp)+,a0
-                movem.l d1/a0,-(sp)
-                jsr     Career_ApplyPendingForeignMarketPlayersToSelectedTeams
-                movem.l (sp)+,d1/a0
-                movem.l a0,-(sp)
-                jsr InitDIYLeagueFromRecord(pc)
-                movem.l (sp)+,a0
-                movem.l a0,-(sp)
-                jsr InitTeams(pc)
-                movem.l (sp)+,a0
-                jsr Career_AutoAdvanceCompetitionSlots(pc)
-                move.w  (sp)+,(viewRandomPhase).l
-                jsr     RestoreRand2State
-                clr.w   (careerLoadedFlag).l
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a0,-(sp)
+                jsr     _Career_AutoAdvanceLeagueCompetitionFromRecord
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== DIY_RecomputeCompetitionDerivedProgressionTable =====
@@ -35556,43 +35497,13 @@ SearchTeamInTmdFile:
 
 ; ===== Career_AutoAdvanceCompetitionAndPersistSlotState =====
 ; prototype: void __usercall Career_AutoAdvanceCompetitionAndPersistSlotState(void *comp@<a0>)
+; Ported to C: _Career_AutoAdvanceCompetitionAndPersistSlotState (career_status.c)
 Career_AutoAdvanceCompetitionAndPersistSlotState:
-                move.w  #1,(careerAutoAdvanceInProgress).l
-                lea     (competitionFileBuffer).l,a1
-                cmpa.l  (currentCompetitionPtr).l,a0
-                beq.s   loc_12F68E
-                lea     (competitionContext).l,a1
-                cmpa.l  (secondaryCompetitionPtr).l,a0
-                beq.s   loc_12F68E
-                lea     (tertiaryCompetitionContext).l,a1
-                cmpa.l  (tertiaryCompetitionPtr).l,a0
-                beq.s   loc_12F68E
-                lea     (euroCupsCompetitionContext).l,a1
-loc_12F68E:
-                movea.l a1,a0
-                movem.l a0,-(sp)
-                bsr.w   Career_LoadCompetitionSlotStateFromBuffer
-                movem.l (sp)+,a0
-                cmpi.b  #1,1(a0)
-                beq.s   loc_12F6BA
-                cmpi.b  #2,1(a0)
-                beq.s   loc_12F6C8
-                movem.l a0,-(sp)
-                jsr Career_AutoAdvanceLeagueFixtures(pc)
-                movem.l (sp)+,a0
-                bra.s   loc_12F6D4
-loc_12F6BA:
-                movem.l a0,-(sp)
-                jsr Career_AutoAdvanceCupMatches(pc)
-                movem.l (sp)+,a0
-                bra.s   loc_12F6D4
-loc_12F6C8:
-                movem.l a0,-(sp)
-                jsr Career_AutoAdvanceCompetitionSlots(pc)
-                movem.l (sp)+,a0
-loc_12F6D4:
-                jsr Career_StoreCompetitionSlotStateToBuffer(pc)
-                clr.w   (careerAutoAdvanceInProgress).l
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a0,-(sp)
+                jsr     _Career_AutoAdvanceCompetitionAndPersistSlotState
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 careerAutoAdvanceInProgress:
                 dc.w $0000
@@ -60197,61 +60108,7 @@ loc_13F69C:
 ; 
 ; [select_teams_menu proc]
 CheckNumberOfTeams:
-                tst.w   (selectTeamsNoLimit).l
-                beq.s   loc_13F6DA
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1378)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$13B0)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1308)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                rts
-loc_13F6DA:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1378)).l,a5
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$13B0)).l,a4
-                move.w  (numSelectedTeams).l,d0
-                cmp.w   (numNeededTeams).l,d0
-                beq.s   loc_13F6FC
-                move.w  #1,MENUENTRY_ISINVISIBLE(a5)
-                clr.w   MENUENTRY_ISINVISIBLE(a4)
-                bra.s   loc_13F714
-loc_13F6FC:
-                clr.w   MENUENTRY_ISINVISIBLE(a5)
-                move.w  #1,MENUENTRY_ISINVISIBLE(a4)
-                move.w  #2,MENUENTRY_CONTENT(a5)
-                move.l  (playWhatStr).l,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a5)
-loc_13F714:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1308)).l,a5
-                clr.w   MENUENTRY_ISINVISIBLE(a5)
-                tst.w   (numSelectedTeams).l
-                bne.s   loc_13F72A
-                move.w  #1,MENUENTRY_ISINVISIBLE(a5)
-loc_13F72A:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$13B0)).l,a5
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a5),a1
-                move.w  (numSelectedTeams).l,d0
-                sub.w   (numNeededTeams).l,d0
-                beq.s   loc_13F772
-                bpl.s   loc_13F758
-                neg.w   d0
-                lea     (aSelect1MoreTea).l,a0 ; "SELECT 1 MORE TEAM"
-                cmpi.w  #1,d0
-                beq.s   loc_13F778
-                lea     (aSelect0MoreTea).l,a0 ; "SELECT %0 MORE TEAMS"
-                bra.s   loc_13F76A
-loc_13F758:
-                lea     (aSelect1LessTea).l,a0 ; "SELECT 1 LESS TEAM"
-                cmpi.w  #1,d0
-                beq.s   loc_13F778
-                lea     (aSelect0LessTea).l,a0 ; "SELECT %0 LESS TEAMS"
-loc_13F76A:
-                jsr     PrintFormatted
-                rts
-loc_13F772:
-                lea     (aError).l,a0   ; "ERROR"
-loc_13F778:
-                jsr     StringCopy
-                rts
+                jmp     _CheckNumberOfTeams
 lastSelectedTeam:
                 dc.w $0000              ; Index of last selected team (or league) for game
 selectedTeamIndex:

@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1476 functions ported across 177 chunks.
+**Current status:** 1480 functions ported across 179 chunks.
 
-**Last completed chunk:** Chunk 177 — PutPlayerOnMarketMenu (1 → transfer_market.c): PutPlayerOnMarketMenu.
+**Last completed chunk:** Chunk 179 — Career Auto-Advance Chain (3 → career_status.c): Career_AutoAdvanceCompetitionAndPersistSlotState, Career_AutoAdvanceCupCompetitionFromRecord, Career_AutoAdvanceLeagueCompetitionFromRecord.
 
-**Next candidates:** CheckNumberOfTeams, Career_AutoAdvance*FromRecord functions, Career_FillCurrentSeasonInfo, TrainingMatch_BuildCurrentTeamFromCareerTeam, Career_SetCurrentCompetitionSlot.
+**Next candidates:** Career_AutoAdvanceInternationalCompetitionFixtures, Career_SetCurrentCompetitionSlot chain, Career_FillCurrentSeasonInfo + EncodeCompetitionPositionForSeasonInfo, InitializeNewSeason, ContinueCareerNextSeason.
 
 ---
 

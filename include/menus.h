@@ -173,6 +173,7 @@ void _DisableEntries(void);
 void _FriendlyMenuInit(void);
 void _FriendlyMenuReinit(void);
 void _ChooseTeamsMenu(void);
+void _CheckNumberOfTeams(void);
 void _MinSubstitutes(void);
 void _MaxSubstitutes(void);
 void _RandomlySwapTeams(void);

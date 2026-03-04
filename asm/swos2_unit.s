@@ -2998,6 +2998,20 @@
         xref    _Career_PostMatchUpdate
 ; --- Chunk 176 xrefs ---
         xref    _TrainingMatch_AddTrialPlayersForNewSeason
+; --- Chunk 179 xrefs ---
+        xref    _Career_AutoAdvanceCompetitionAndPersistSlotState
+        xref    _Career_AutoAdvanceCupCompetitionFromRecord
+        xref    _Career_AutoAdvanceLeagueCompetitionFromRecord
+; --- Chunk 179 xdefs ---
+        xdef    Career_AutoAdvanceLeagueFixtures
+        xdef    Career_AutoAdvanceCupMatches
+        xdef    Career_AutoAdvanceCompetitionSlots
+        xdef    englishCup
+        xdef    englishCup_1
+        xdef    englishLeagueCup
+        xdef    englishLeagueCup_1
+; --- Chunk 178 xrefs ---
+        xref    _CheckNumberOfTeams
 ; --- Chunk 177 xrefs ---
         xref    _PutPlayerOnMarketMenu
 ; --- Chunk 177 xdefs ---
@@ -4067,13 +4081,28 @@ _CInitNewSeason:
 
 ; --- Chunk 175 C-callable asm bridges ---
 
-; _CCareer_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr) -> void
-; Career_AutoAdvanceCompetitionAndPersistSlotState expects: a0 = compPtr
+; _CCareer_AutoAdvanceCompetitionAndPersistSlotState — now just forwards to C impl
         xdef    _CCareer_AutoAdvanceCompetitionAndPersistSlotState
 _CCareer_AutoAdvanceCompetitionAndPersistSlotState:
+        jmp     _Career_AutoAdvanceCompetitionAndPersistSlotState
+
+; _CInitDIYCupFromRecordParam(uint8_t *record) -> void
+; InitDIYCupFromRecord expects: a0 = record
+        xdef    _CInitDIYCupFromRecordParam
+_CInitDIYCupFromRecordParam:
         movem.l d2-d7/a2-a6,-(sp)
         movea.l 48(sp),a0              ; param: 44(saved regs) + 4(return addr) = offset 48
-        jsr     (Career_AutoAdvanceCompetitionAndPersistSlotState).l
+        jsr     (InitDIYCupFromRecord).l
+        movem.l (sp)+,d2-d7/a2-a6
+        rts
+
+; _CInitDIYLeagueFromRecordParam(uint8_t *record) -> void
+; InitDIYLeagueFromRecord expects: a0 = record
+        xdef    _CInitDIYLeagueFromRecordParam
+_CInitDIYLeagueFromRecordParam:
+        movem.l d2-d7/a2-a6,-(sp)
+        movea.l 48(sp),a0              ; param: 44(saved regs) + 4(return addr) = offset 48
+        jsr     (InitDIYLeagueFromRecord).l
         movem.l (sp)+,d2-d7/a2-a6
         rts
 

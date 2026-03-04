@@ -3006,6 +3006,27 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1470 functions across 175 chunks
 
+### Chunk 179 — Career Auto-Advance Chain (3 → career_status.c)
+- Date: 2026-03-02
+- Ported:
+  1. Career_AutoAdvanceCompetitionAndPersistSlotState (→career_status.c) — Identifies competition context buffer from pointer comparison, loads slot state, dispatches to AutoAdvanceLeagueFixtures/CupMatches/CompetitionSlots by type, stores state back. Replaces old _CCareer_AutoAdvanceCompetitionAndPersistSlotState wrapper.
+  2. Career_AutoAdvanceCupCompetitionFromRecord (→career_status.c) — Auto-advance cup competition: handles English cup aliases, seeds RNG, initializes team selection, loads cup, runs cup matches, restores RNG.
+  3. Career_AutoAdvanceLeagueCompetitionFromRecord (→career_status.c) — Same as above but for league competitions. Calls InitDIYLeagueFromRecord and Career_AutoAdvanceCompetitionSlots.
+- Stubs: Register bridges (a0 param) for all 3
+- New xdefs: Career_AutoAdvanceLeagueFixtures, Career_AutoAdvanceCupMatches, Career_AutoAdvanceCompetitionSlots, englishCup, englishCup_1, englishLeagueCup, englishLeagueCup_1
+- New C-callable wrappers: _CInitDIYCupFromRecordParam, _CInitDIYLeagueFromRecordParam
+- Build status: **verified** (clean build)
+- Cumulative: 1480 functions across 179 chunks
+
+### Chunk 178 — CheckNumberOfTeams (1 → menus.c)
+- Date: 2026-03-02
+- Ported:
+  1. CheckNumberOfTeams (→menus.c) — Updates team selection menu entries (86-88) based on numSelectedTeams vs numNeededTeams. Handles selectTeamsNoLimit, builds "SELECT N MORE/LESS TEAMS" text via PrintFormatted/StringCopy.
+- Stubs: CheckNumberOfTeams → jmp _CheckNumberOfTeams
+- New xrefs: _CheckNumberOfTeams
+- Build status: **verified** (clean build)
+- Cumulative: 1477 functions across 178 chunks
+
 ### Chunk 177 — PutPlayerOnMarketMenu (1 → transfer_market.c)
 - Date: 2026-03-02
 - Ported:
@@ -3400,5 +3421,7 @@ Update this section every time you port a chunk. Keep it chronological.
 | 175   | 2         | 1470       |
 | 176   | 5         | 1475       |
 | 177   | 1         | 1476       |
+| 178   | 1         | 1477       |
+| 179   | 3         | 1480       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)
