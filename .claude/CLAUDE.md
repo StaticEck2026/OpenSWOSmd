@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1470 functions ported across 175 chunks.
+**Current status:** 1475 functions ported across 176 chunks.
 
-**Last completed chunk:** Chunk 175 — DIY Progression Table + Career Post-Match Update (2 → diy_competition.c, career_status.c): DIY_RecomputeCompetitionDerivedProgressionTable, Career_PostMatchUpdate.
+**Last completed chunk:** Chunk 176 — Training Match Sub Swap & Trial Players (5 → training_match.c): IsPlayerBetterSwapCandidate (static), FindBestSubSwapCandidates (static), ApplyUseMatchTeamAndSwapSubs, TryAddTrialPlayerAtPosition, AddTrialPlayersForNewSeason.
 
-**Next candidates:** Career_AdvanceToNextSeason_UpdateCompetitions, Career_MaybeGenerateJobOffer (~310 instr), Career_AutoAdvanceCompetitionAndPersistSlotState, Career_FillCurrentSeasonInfo, ContinueCareerNextSeason, remaining career update functions, ChooseTeamsDialog/SelectTeams family.
+**Next candidates:** ChooseTeamsFriendly helpers (SetTeamEntriesStringsAndColors, ViewSelTeamsSetColumns, SetChooseChangeTeamsEntries, UpdateMenuEntryYLayout), Career_AutoAdvance* functions, Career_FillCurrentSeasonInfo, ContinueCareerNextSeason.
 
 ---
 

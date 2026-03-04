@@ -2996,6 +2996,8 @@
 ; --- Chunk 175 xrefs ---
         xref    _DIY_RecomputeCompetitionDerivedProgressionTable
         xref    _Career_PostMatchUpdate
+; --- Chunk 176 xrefs ---
+        xref    _TrainingMatch_AddTrialPlayersForNewSeason
         xref    _ShowHighlights
         xref    _ShowMatchSequence
         xref    _ViewHighlightsSaveCurrentMenu

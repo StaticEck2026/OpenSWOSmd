@@ -10,3 +10,8 @@ void _TrainingMatch_RestoreLastMatchState(void);
 void _TrainingMatch_RestoreSavedTeamSelectionState(void);
 void _TrainingMatch_SaveTeamSelectionState(void);
 int16_t _CheckIfTeamIsChanged(void);
+
+/* --- Sub swap candidates and trial players (Chunk 176) --- */
+void _TrainingMatch_ApplyUseMatchTeamAndSwapSubs(void);
+void _TrainingMatch_TryAddTrialPlayerAtPosition(uint16_t position);
+void _TrainingMatch_AddTrialPlayersForNewSeason(void);

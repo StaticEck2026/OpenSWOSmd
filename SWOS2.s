@@ -36020,135 +36020,26 @@ trainingPosOrder7:
 ; ===== TrainingMatch_ApplyUseMatchTeamAndSwapSubs =====
 ; prototype: void __usercall TrainingMatch_ApplyUseMatchTeamAndSwapSubs()
 TrainingMatch_ApplyUseMatchTeamAndSwapSubs:
-                bsr.w   TrainingMatch_SaveTeamSelectionState
-                move.b  (careerTeam+TEAMFILEEX_TEAM+TEAMFILE_TACTICS).l,(currentTeam+TEAMFILEEX_TEAM+TEAMFILE_TACTICS).l
-                bra.w   *+4
-loc_130264:
-                bsr.w   TrainingMatch_FindBestSubSwapCandidates
-                lea     (trainingMatchSavedPlayers).l,a0
-                tst.b   d4
-                bmi.s   loc_130280
-                move.b  $B(a0),d0
-                move.b  (a0,d2.w),$B(a0)
-                move.b  d0,(a0,d2.w)
-loc_130280:
-                tst.b   d5
-                bmi.s   locret_130292
-                move.b  $C(a0),d0
-                move.b  (a0,d3.w),$C(a0)
-                move.b  d0,(a0,d3.w)
-locret_130292:
                 rts
 
 ; ===== TrainingMatch_FindBestSubSwapCandidates =====
 ; prototype: void __usercall TrainingMatch_FindBestSubSwapCandidates()
 TrainingMatch_FindBestSubSwapCandidates:
-                move.b  #$FF,d4
-                move.b  #$FF,d5
-                move.w  #$B,d1
-loc_1302A0:
-                move.w  (selTeamNumber).l,d0
-                movem.l d1,-(sp)
-                jsr     GetPlayerAtIndex
-                movem.l (sp)+,d1
-                move.b  $66(a0),d0
-                andi.w  #$E0,d0
-                lsr.w   #5,d0
-                cmpi.b  #0,d0
-                beq.s   loc_1302F0
-                movea.l a4,a1
-                move.b  d4,d0
-                bsr.w   TrainingMatch_IsPlayerBetterSwapCandidate
-                bne.s   loc_1302DE
-                movea.l a4,a5
-                move.b  d4,d5
-                move.w  d2,d3
-                movea.l a0,a4
-                move.b  $6C(a0),d4
-                move.w  d1,d2
-                bra.s   loc_1302F0
-loc_1302DE:
-                movea.l a5,a1
-                move.b  d5,d0
-                bsr.w   TrainingMatch_IsPlayerBetterSwapCandidate
-                bne.s   loc_1302F0
-                movea.l a0,a5
-                move.b  $6C(a0),d5
-                move.w  d1,d3
-loc_1302F0:
-                addq.w  #1,d1
-                cmp.w   (careerNumPlayers).l,d1
-                bne.s   loc_1302A0
                 rts
 
 ; ===== TrainingMatch_IsPlayerBetterSwapCandidate =====
 ; prototype: unsigned __int16 __usercall TrainingMatch_IsPlayerBetterSwapCandidate@<d0>(void *cur@<a0>, void *best@<a1>, signed __int8 bestSkill@<d0>)
 TrainingMatch_IsPlayerBetterSwapCandidate:
-                tst.b   d0
-                bmi.s   loc_130332
-                cmpi.b  #$9B,$71(a0)
-                beq.s   loc_130310
-                cmpi.b  #$9A,$71(a0)
-                bne.s   loc_130322
-loc_130310:
-                cmpi.b  #$9B,$71(a1)
-                beq.s   loc_130332
-                cmpi.b  #$9A,$71(a1)
-                beq.s   loc_130332
-                bra.s   loc_13033C
-loc_130322:
-                cmpi.b  #$9B,$71(a1)
-                beq.s   loc_130338
-                cmpi.b  #$9A,$71(a1)
-                beq.s   loc_130338
-loc_130332:
-                cmp.b   $6C(a0),d0
-                bge.s   loc_13033C
-loc_130338:
-                clr.w   d0
-                rts
-loc_13033C:
-                move.w  #1,d0
                 rts
 
 ; ===== TrainingMatch_AddTrialPlayersForNewSeason =====
 ; prototype: void __usercall TrainingMatch_AddTrialPlayersForNewSeason()
 TrainingMatch_AddTrialPlayersForNewSeason:
-                tst.w   (isNationalSelector).l
-                bne.w   locret_1303BE
-                move.w  #2,d0
-                bsr.w   TrainingMatch_TryAddTrialPlayerAtPosition
-                move.w  #1,d0
-                bsr.w   TrainingMatch_TryAddTrialPlayerAtPosition
-                move.w  #5,d0
-                bsr.w   TrainingMatch_TryAddTrialPlayerAtPosition
-                move.w  #4,d0
-                bsr.w   TrainingMatch_TryAddTrialPlayerAtPosition
-                move.w  #3,d0
-                bsr.w   TrainingMatch_TryAddTrialPlayerAtPosition
-                move.w  #3,d0
-                bsr.w   TrainingMatch_TryAddTrialPlayerAtPosition
-                move.w  #6,d0
-                bsr.w   TrainingMatch_TryAddTrialPlayerAtPosition
-                move.w  #6,d0
-                bsr.w   TrainingMatch_TryAddTrialPlayerAtPosition
-                move.w  #7,d0
-                bsr.w   TrainingMatch_TryAddTrialPlayerAtPosition
-                move.w  #7,d0
-                bsr.w   TrainingMatch_TryAddTrialPlayerAtPosition
-                bsr.w   TrainingMatch_ApplyUseMatchTeamAndSwapSubs
-                rts
+                jmp     _TrainingMatch_AddTrialPlayersForNewSeason
 
 ; ===== TrainingMatch_TryAddTrialPlayerAtPosition =====
 ; prototype: void __usercall TrainingMatch_TryAddTrialPlayerAtPosition(unsigned __int16 position@<d0>)
 TrainingMatch_TryAddTrialPlayerAtPosition:
-                bsr.w   TrainingMatch_AddTrialPlayerAtPosition
-                jsr     Rand2
-                cmpi.w  #$99,d0
-                bcs.s   locret_1303BE
-                move.b  #$9A,$71(a3)
-                jsr     Career_UpdatePlayerWeeklyWageCache
-locret_1303BE:
                 rts
 
 ; ===== AddTrialPlayer =====

@@ -2981,6 +2981,20 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1468 functions across 174 chunks
 
+### Chunk 176 — Training Match Sub Swap & Trial Players (5 → training_match.c)
+- Date: 2026-03-03
+- Ported:
+  1. TrainingMatch_IsPlayerBetterSwapCandidate (static) — compares two player candidates for sub swap: avoids trialist/special flagged players (someFlag 0x9A/0x9B), prefers higher price. Returns 0=better, 1=not better.
+  2. TrainingMatch_FindBestSubSwapCandidates (static) — iterates players from index 11 to careerNumPlayers, finds top 2 non-goalkeeper outfield players for swap using IsPlayerBetterSwapCandidate. Returns struct with indices and skill values.
+  3. TrainingMatch_ApplyUseMatchTeamAndSwapSubs — saves team state, copies tactics byte from careerTeam to currentTeam, finds best sub candidates and swaps them into positions 11/12 of trainingMatchSavedPlayers.
+  4. TrainingMatch_TryAddTrialPlayerAtPosition — calls AddTrialPlayerAtPosition(position), then ~40% chance (random >= 0x99) marks player's someFlag as 0x9A and updates wage cache.
+  5. TrainingMatch_AddTrialPlayersForNewSeason — if not national selector, adds 10 trial players at positions (2,1,5,4,3,3,6,6,7,7) then applies sub swap.
+- Note: Fixed latent bug where TrainingMatch_AddTrialPlayerAtPosition was incorrectly stubbed as `rts` while still called from live asm (TryAddTrialPlayerAtPosition). This caused writes to uninitialized a3 pointer ~40% of the time.
+- Stubs: AddTrialPlayersForNewSeason (jmp, called from asm). IsPlayerBetterSwapCandidate, FindBestSubSwapCandidates, ApplyUseMatchTeamAndSwapSubs, TryAddTrialPlayerAtPosition all rts (dead — only callers ported).
+- New xrefs: _TrainingMatch_AddTrialPlayersForNewSeason
+- Build status: **verified** (clean build)
+- Cumulative: 1475 functions across 176 chunks
+
 ### Chunk 175 — DIY Progression Table + Career Post-Match Update (2 → diy_competition.c, career_status.c)
 - Date: 2026-03-03
 - Ported:
