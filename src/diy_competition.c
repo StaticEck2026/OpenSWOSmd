@@ -14,6 +14,7 @@
 #include "match_sim.h"
 #include "career_status.h"
 #include "career_season.h"
+#include "game_init.h"
 
 /* ---- Constants ---- */
 #define DIY_CUP                         1
@@ -8168,4 +8169,341 @@ uint16_t _DIY_CompareCurrentMatchTeamCategories(void) {
     if (ctrl1 == 1) /* TEAM_COMPUTER */
         return (uint16_t)ctrl2;
     return 2;
+}
+
+/* ========================================================================
+ * Chunk 192 — PlayDIYLeagueMatchAndCacheResult, PlayDIYCupFixtureAndCacheResult
+ * ======================================================================== */
+
+/* Externs for Chunk 192 */
+extern uint16_t isCareer;
+extern uint16_t exitGameFlag;
+extern uint16_t gameCanceled;
+extern uint8_t  gameName[];
+extern uint8_t  gameRound;
+extern uint16_t gamePitchTypeOrSeason;
+extern uint16_t gameSeason;
+extern uint16_t gamePitchType;
+extern uint16_t team1GoalsFirstLeg;
+extern uint16_t team2GoalsFirstLeg;
+extern int16_t  extraTimeState;
+extern int16_t  penaltiesState;
+extern uint16_t secondLeg;
+extern uint16_t playing2ndGame;
+extern uint16_t isGameFriendly;
+extern uint16_t statsTeam1GoalsCopy;
+extern uint16_t statsTeam2GoalsCopy;
+extern uint16_t statsTeam1Goals;
+extern uint16_t statsTeam2Goals;
+extern uint16_t team1PenaltyGoals;
+extern uint16_t team2PenaltyGoals;
+
+extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
+extern void _CInitializeInGameTeamsAndStartGame(int16_t randomizePitch,
+    int16_t minSubs, int16_t maxSubs, int16_t paramD3, int16_t paramD7,
+    uint8_t *team1, uint8_t *team2);
+
+/* Helper: compute gameSeason from viewRandomPhase byte */
+static uint16_t computeGameSeason(uint8_t phase) {
+    uint8_t d0 = phase;
+    if (d0 >= 0x60)
+        d0 -= 0x60;
+    return (uint16_t)((uint32_t)d0 / 8);
+}
+
+/* PlayDIYLeagueMatchAndCacheResult
+ *
+ * Plays a DIY league match: shows SetupPlayers menu, sets up game name/round,
+ * game parameters, then calls InitializeInGameTeamsAndStartGame. Caches the
+ * view result goals on success.
+ *
+ * Returns 0 on success (Z=1), nonzero on cancel (Z=0).
+ * Caller checks Z flag via bridge.
+ */
+__attribute__((used, externally_visible))
+uint16_t _PlayDIYLeagueMatchAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
+                                            int16_t allowSquadChanges, int16_t mode) {
+    DIY_Competition *diy = (DIY_Competition *)diyCompetitionStart;
+
+    /* Call SetupPlayers: d1=diyLeagueMaxSubstitutes, d2=substitutesCount */
+    _SetupPlayers(team1, team2, (int16_t)diyLeagueMaxSubstitutes,
+                  diy->substitutesCount, allowSquadChanges, mode);
+
+    if (exitGameFlag != 0)
+        return 1;
+
+    /* Set isCareer if one team is careerTeam */
+    isCareer = 0;
+    if (team1 == &careerTeam || team2 == &careerTeam)
+        isCareer = 1;
+
+    /* Copy competition name to gameName */
+    _StringCopy((const uint8_t *)diyCompetitionStart + 4, gameName);
+    gameRound = 0;
+
+    /* If hasGroups, build round string */
+    if (diy->hasGroups != 0) {
+        const char *roundStr = _GetCupRoundString(
+            (uint16_t)diy->field4A, (uint16_t)diy->halfTeams,
+            (uint16_t)diy->nonNationalCount, (uint16_t)diy->numTeams, 0);
+        _StringCopy((const uint8_t *)roundStr, &gameRound);
+    }
+
+    /* Set game parameters from competition */
+    gamePitchTypeOrSeason = diy->pitchTypeOrSeason;
+    gameSeason = computeGameSeason(diy->viewRandomPhase);
+    gamePitchType = diy->pitchType;
+    team1GoalsFirstLeg = 0;
+    team2GoalsFirstLeg = 0;
+    extraTimeState = 0;
+    penaltiesState = 0;
+    secondLeg = 0;
+    playing2ndGame = 0;
+    isGameFriendly = 0;
+
+    /* d7 = word at offset 0x2C (compId|field_2D) */
+    int16_t d7val = *(int16_t *)((uint8_t *)diy + 0x2C);
+
+    /* d0 = (playEachTeam == 1) ? 0xFF : 0 */
+    int16_t d0val = (diy->playEachTeam == 1) ? 0xFF : 0;
+
+    _CInitializeInGameTeamsAndStartGame(d0val,
+        (int16_t)diyLeagueMinSubstitutes, (int16_t)diyLeagueMaxSubstitutes,
+        diy->substitutesCount, d7val,
+        (uint8_t *)team1, (uint8_t *)team2);
+
+    if (gameCanceled != 0)
+        return 1;
+
+    /* Cache view result */
+    cachedViewResultTeam1Goals = statsTeam1GoalsCopy;
+    cachedViewResultTeam2Goals = statsTeam2GoalsCopy;
+
+    isCareer = 0;
+    return 0;
+}
+
+/* PlayDIYCupFixtureAndCacheResult
+ *
+ * Plays a DIY cup fixture: shows SetupPlayers menu, builds game name/round
+ * with replay/leg suffix, sets game parameters, then routes to one of three
+ * match paths (first leg, second leg, auto/sim) depending on competition state.
+ * Caches view result goals, extra time goals, and penalty scores on success.
+ *
+ * Returns 0 on success (Z=1), nonzero on cancel (Z=0).
+ * Implicit params from caller: allowSquadChanges (d6), mode (d7).
+ */
+__attribute__((used, externally_visible))
+uint16_t _PlayDIYCupFixtureAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
+                                           int16_t allowSquadChanges, int16_t mode) {
+    /* d1 = diyPointsForAWin (word), d2 = substitutesCount (offset 0x3C) → SetupPlayers */
+    int16_t subsCount = *(int16_t *)(diyCompetitionStart + 0x3C);
+    _SetupPlayers(team1, team2, *(int16_t *)diyPointsForAWin,
+                  subsCount, allowSquadChanges, mode);
+
+    if (exitGameFlag != 0)
+        return 1;
+
+    /* Set isCareer if one team is careerTeam */
+    isCareer = 0;
+    if (team1 == &careerTeam || team2 == &careerTeam)
+        isCareer = 1;
+
+    /* a6 = diyCompetitionStart */
+    uint8_t *a6 = diyCompetitionStart;
+    DIY_Competition *diy = (DIY_Competition *)a6;
+
+    /* a5 = a6 + exitFlag * 2 (competition progress pointer) */
+    int16_t exitFlagVal = diy->exitFlag;
+    uint8_t *a5 = a6 + exitFlagVal * 2;
+
+    /* --- String building section --- */
+    int16_t d2; /* tracks d2 through string building for later caching */
+
+    /* Copy competition name to gameName */
+    _StringCopy(a6 + 4, gameName);
+
+    /* Build game round string */
+    uint8_t *strDst = (uint8_t *)&gameRound;
+
+    if (diy->hasGroups != 0) {
+        /* Groups path: use diyFileBufferCopy fields */
+        uint8_t *bufCopy = diyFileBufferCopy;
+        uint16_t d0 = *(uint16_t *)(bufCopy + 0x54);   /* currentRound from copy */
+        uint16_t d1 = 0;
+        d2 = *(int16_t *)(bufCopy + 0x52);              /* totalRounds from copy */
+        uint16_t d3 = *(uint16_t *)(a6 + 0x52);         /* totalRounds from main */
+        d3 <<= 1;
+        uint16_t d4 = *(uint16_t *)(bufCopy + 0x15A);
+        const char *roundStr = _GetCupRoundString(d0, d1, (uint16_t)d2, d3, d4);
+        strDst = _StringCopy((const uint8_t *)roundStr, strDst);
+    } else {
+        /* Non-groups path */
+        uint16_t d0 = (uint16_t)diy->exitFlag;
+        uint16_t d1 = (uint16_t)diy->numRounds;
+        d2 = diy->subRoundCounter;
+        const char *roundStr = _GetNextCupRoundString(d0, d1, (uint16_t)d2);
+        strDst = _StringCopy((const uint8_t *)roundStr, strDst);
+    }
+
+    /* Append replay/leg suffix to round string */
+    uint16_t replayField = *(uint16_t *)(a6 + 0x330);
+
+    if (replayField != 0) {
+        /* Replay suffix: rndStringTable[12+replay-1] for replay <= 3, else "REPLAY" */
+        const uint8_t *suffixStr = aReplay; /* "REPLAY" default */
+        if (replayField <= 3) {
+            suffixStr = (const uint8_t *)rndStringTable[11 + replayField];
+        }
+        *strDst++ = ' ';
+        strDst = _StringCopy(suffixStr, strDst);
+    } else {
+        /* Check two-leg conditions */
+        uint16_t field14A = *(uint16_t *)(a6 + 0x14A);
+        uint16_t field14C = *(uint16_t *)(a6 + 0x14C);
+        if (field14A == 1) {
+            *strDst++ = ' ';
+            strDst = _StringCopy(a2ndLeg, strDst);
+        } else if (field14C == 2) {
+            *strDst++ = ' ';
+            strDst = _StringCopy(a1stLeg, strDst);
+        }
+    }
+    *strDst = 0; /* null terminate */
+    /* --- End string building --- */
+
+    /* Set game parameters from competition */
+    gamePitchTypeOrSeason = diy->pitchTypeOrSeason;
+    gameSeason = computeGameSeason(diy->viewRandomPhase);
+    gamePitchType = diy->pitchType;
+    team1GoalsFirstLeg = 0;
+    team2GoalsFirstLeg = 0;
+    extraTimeState = 0;
+    penaltiesState = 0;
+    secondLeg = 0;
+    playing2ndGame = 0;
+    isGameFriendly = 0;
+
+    /* Cache d2 (side effect from string building) into cachedViewResultTeam2Goals */
+    cachedViewResultTeam2Goals = (int16_t)d2;
+
+    /* Common values for InitializeInGameTeamsAndStartGame */
+    int16_t d7val = *(int16_t *)(a6 + 0x2C);
+
+    /* Determine play path based on a5[0x66], replayField, field14A */
+    int16_t a5_66 = *(int16_t *)(a5 + 0x66);
+
+    if (a5_66 == 0 || a5_66 == 1)
+        goto path_C;
+    if (replayField != 0)
+        goto path_C;
+
+    if (*(uint16_t *)(a6 + 0x14A) != 0)
+        goto path_B;
+
+    /* === Path A: first leg (a5_66 > 1, replayField == 0, field14A == 0) === */
+    {
+        _CInitializeInGameTeamsAndStartGame(0,
+            (int16_t)diyMinSubstitutes, *(int16_t *)diyPointsForAWin,
+            subsCount, d7val,
+            (uint8_t *)team1, (uint8_t *)team2);
+        if (gameCanceled != 0)
+            return 1;
+        cachedViewResultTeam1Goals = statsTeam1GoalsCopy;
+        cachedViewResultTeam2Goals = statsTeam2GoalsCopy;
+        goto done;
+    }
+
+path_B: /* === Second leg === */
+    {
+        secondLeg = 1;
+
+        /* Extra time condition: a5[0x72] */
+        int16_t a5_72 = *(int16_t *)(a5 + 0x72);
+        if (a5_72 == 1 || (a5_72 > 1 && replayField != 0))
+            extraTimeState = 1;
+
+        /* Penalties condition: a5[0x7E] */
+        int16_t a5_7E = *(int16_t *)(a5 + 0x7E);
+        if (a5_7E == 1 || (a5_7E > 1 && replayField != 0))
+            penaltiesState = 1;
+
+        /* Load first-leg goals from table at a6+0x14E */
+        uint16_t matchIdx = *(uint16_t *)(a6 + 0x64);
+        uint8_t *goalsTable = a6 + 0x14E;
+        team1GoalsFirstLeg = goalsTable[matchIdx * 2];
+        team2GoalsFirstLeg = goalsTable[matchIdx * 2 + 1];
+
+        /* playing2ndGame = playEachTeam */
+        playing2ndGame = (uint16_t)diy->playEachTeam;
+
+        /* Play the match */
+        _CInitializeInGameTeamsAndStartGame(0,
+            (int16_t)diyMinSubstitutes, *(int16_t *)diyPointsForAWin,
+            subsCount, d7val,
+            (uint8_t *)team1, (uint8_t *)team2);
+        if (gameCanceled != 0)
+            return 1;
+
+        cachedViewResultTeam1Goals = statsTeam1GoalsCopy;
+        cachedViewResultTeam2Goals = statsTeam2GoalsCopy;
+
+        /* Cache extra time goals if extra time was actually played (state < 0) */
+        if (extraTimeState < 0) {
+            cachedExtraTimeTeam1Goals = statsTeam1Goals - statsTeam1GoalsCopy;
+            cachedExtraTimeTeam2Goals = statsTeam2Goals - statsTeam2GoalsCopy;
+        }
+
+        /* Cache penalty scores if penalties were actually played (state < 0) */
+        if (penaltiesState < 0) {
+            cachedPenaltyShootoutTeam1Score = team1PenaltyGoals;
+            cachedPenaltyShootoutTeam2Score = team2PenaltyGoals;
+        }
+        goto done;
+    }
+
+path_C: /* === Auto-play/sim path === */
+    {
+        /* Extra time condition: a5[0x72] */
+        int16_t a5_72 = *(int16_t *)(a5 + 0x72);
+        if (a5_72 == 1 || (a5_72 > 1 && replayField != 0))
+            extraTimeState = 1;
+
+        /* Penalties condition: a5[0x7E] */
+        int16_t a5_7E = *(int16_t *)(a5 + 0x7E);
+        if (a5_7E == 1 || (a5_7E > 1 && replayField != 0))
+            penaltiesState = 1;
+
+        /* seq d0: clr.w d0; tst.w 0x14C(a6); seq d0 → d0.w = 0x00FF if field14C==0 */
+        uint16_t field14C = *(uint16_t *)(a6 + 0x14C);
+        int16_t randomizePitch = (field14C == 0) ? 0xFF : 0;
+
+        /* Play the match */
+        _CInitializeInGameTeamsAndStartGame(randomizePitch,
+            (int16_t)diyMinSubstitutes, *(int16_t *)diyPointsForAWin,
+            subsCount, d7val,
+            (uint8_t *)team1, (uint8_t *)team2);
+        if (gameCanceled != 0)
+            return 1;
+
+        cachedViewResultTeam1Goals = statsTeam1GoalsCopy;
+        cachedViewResultTeam2Goals = statsTeam2GoalsCopy;
+
+        /* Cache extra time goals if extra time was actually played (state < 0) */
+        if (extraTimeState < 0) {
+            cachedExtraTimeTeam1Goals = statsTeam1Goals - statsTeam1GoalsCopy;
+            cachedExtraTimeTeam2Goals = statsTeam2Goals - statsTeam2GoalsCopy;
+        }
+
+        /* Cache penalty scores if penalties were actually played (state < 0) */
+        if (penaltiesState < 0) {
+            cachedPenaltyShootoutTeam1Score = team1PenaltyGoals;
+            cachedPenaltyShootoutTeam2Score = team2PenaltyGoals;
+        }
+        goto done;
+    }
+
+done:
+    isCareer = 0;
+    return 0;
 }

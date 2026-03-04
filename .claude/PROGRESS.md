@@ -3080,6 +3080,16 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, map confirmed at 0x00154256 / 0x0015439e)
 - Cumulative: 1507 functions across 190 chunks
 
+### Chunk 192 — PlayDIYLeagueMatchAndCacheResult + PlayDIYCupFixtureAndCacheResult (2 → diy_competition.c)
+- Date: 2026-03-02
+- Ported:
+  1. PlayDIYLeagueMatchAndCacheResult (→diy_competition.c) — ~90 instr. DIY league match play: calls SetupPlayers, sets isCareer, copies competition name/round, sets game params (pitch/season/goals), calls InitializeInGameTeamsAndStartGame via C→asm bridge, caches view result goals. Has computeGameSeason helper. Uses d6/d7 from caller (allowSquadChanges/mode).
+  2. PlayDIYCupFixtureAndCacheResult (→diy_competition.c) — ~217 instr. DIY cup fixture play with three paths: first leg (simple match), second leg (loads first-leg goals from table, extra time/penalties), auto/sim path (seq-based randomize pitch). Builds complex round strings with replay/leg suffix. Tracks d2 side-effect through string building for cachedViewResultTeam2Goals. Caches extra time goals and penalty scores if states go negative (indicating they were actually played).
+- Asm→C bridges: PlayDIYLeagueMatchAndCacheResult (d6/d7/a1/a2 → stack, Z flag return), PlayDIYCupFixtureAndCacheResult (d6/d7/a1/a2 → stack, Z flag return)
+- Fixed duplicate extern declarations with type conflicts (diyPointsForAWin uint8_t[] vs uint16_t, cachedView* int16_t vs uint16_t)
+- Build status: **verified** (clean build)
+- Cumulative: 1513 functions across 192 chunks
+
 ### Chunk 191 — DIY Match Team Slots + SetupPlayers + InitAndPlayGame (4 → diy_competition.c, game_init.c)
 - Date: 2026-03-02
 - Ported:

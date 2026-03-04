@@ -28834,298 +28834,38 @@ InitAndPlayGame:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== PlayDIYCupFixtureAndCacheResult =====
-; prototype: void __usercall PlayDIYCupFixtureAndCacheResult(struct TeamFile *team1@<a1>, struct TeamFile *team2@<a2>)
+; ===== PlayDIYCupFixtureAndCacheResult ===== (ported to C → _PlayDIYCupFixtureAndCacheResult)
+; Bridge: a1=team1, a2=team2, d6=allowSquadChanges, d7=mode → C
+; Returns Z flag: Z=1 (success), Z=0 (cancelled)
 PlayDIYCupFixtureAndCacheResult:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.w  (diyPointsForAWin).l,d1
-                move.w  (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+2).l,d2
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   SetupPlayers
-                movem.l (sp)+,d0-d7/a0-a6
-                tst.w   (exitGameFlag).l
-                bne.w   loc_128186
-                clr.w   (isCareer).l
-                cmpa.l  #careerTeam,a1
-                beq.s   loc_127E46
-                cmpa.l  #careerTeam,a2
-                bne.s   loc_127E4E
-loc_127E46:
-                move.w  #1,(isCareer).l
-loc_127E4E:
-                lea     (diyCompetitionStart).l,a6
-                move.w  $58(a6),d0
-                lsl.w   #1,d0
-                lea     (a6,d0.w),a5
-                movem.l d7/a1-a2,-(sp)
-                lea     (diyCompetitionStart).l,a2
-                lea     (gameName).l,a1
-                lea     4(a2),a0
-                jsr StringCopy(pc)
-                lea     (gameRound).l,a1
-                tst.w   $48(a2)
-                beq.s   loc_127EA6
-                lea     (diyFileBufferCopy).l,a0
-                move.w  $54(a0),d0
-                clr.w   d1
-                move.w  $52(a0),d2
-                move.w  $52(a2),d3
-                lsl.w   #1,d3
-                move.w  $15A(a0),d4
-                jsr GetCupRoundString(pc)
-                jsr StringCopy(pc)
-                bra.s   loc_127EBA
-loc_127EA6:
-                move.w  $58(a2),d0
-                move.w  $5A(a2),d1
-                move.w  $5C(a2),d2
-                jsr GetNextCupRoundString(pc)
-                jsr StringCopy(pc)
-loc_127EBA:
-                move.w  $330(a2),d0
-                beq.s   loc_127EE6
-                lea     (aReplay).l,a0  ; "REPLAY"
-                cmpi.w  #3,d0
-                bls.s   loc_127ECE
-                bra.s   loc_127EDC
-loc_127ECE:
-                lea     ((rndStringTable+$30)).l,a0
-                subq.w  #1,d0
-                lsl.w   #2,d0
-                movea.l (a0,d0.w),a0
-loc_127EDC:
-                move.b  #$20,(a1)+      ; ' '
-                jsr StringCopy(pc)
-                bra.s   loc_127F0A
-loc_127EE6:
-                lea     (a2ndLeg).l,a0  ; "2ND LEG"
-                cmpi.w  #1,$14A(a2)
-                beq.s   loc_127F02
-                cmpi.w  #2,$14C(a2)
-                bne.s   loc_127F0A
-                lea     (a1stLeg).l,a0  ; "1ST LEG"
-loc_127F02:
-                move.b  #$20,(a1)+      ; ' '
-                jsr StringCopy(pc)
-loc_127F0A:
-                clr.b   (a1)
-                movem.l (sp)+,d7/a1-a2
-                move.w  $34(a6),(gamePitchTypeOrSeason).l
-                move.b  $2F(a6),d0
-                cmpi.b  #$60,d0         ; '`'
-                bcs.s   loc_127F26
-                subi.b  #$60,d0         ; '`'
-loc_127F26:
-                andi.l  #$FF,d0
-                divu.w  #8,d0
-                move.w  d0,(gameSeason).l
-                move.w  $36(a6),(gamePitchType).l
-                clr.w   (team1GoalsFirstLeg).l
-                clr.w   (team2GoalsFirstLeg).l
-                clr.w   (extraTimeState).l
-                clr.w   (penaltiesState).l
-                clr.w   (secondLeg).l
-                clr.w   (playing2ndGame).l
-                clr.w   (isGameFriendly).l
-                move.w  d2,(cachedViewResultTeam2Goals).l
-                tst.w   $66(a5)
-                beq.w   loc_1280BC
-                cmpi.w  #1,$66(a5)
-                beq.w   loc_1280BC
-                tst.w   $330(a6)
-                bne.w   loc_1280BC
-                tst.w   $14A(a6)
-                bne.s   loc_127FCE
-                movea.l a0,a4
-                movea.l #0,a5
-                move.w  $2C(a6),d7
-                clr.w   d0
-                move.w  (diyMinSubstitutes).l,d1
-                move.w  (diyPointsForAWin).l,d2
-                move.w  (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+2).l,d3
-                bsr.w   InitializeInGameTeamsAndStartGame
-                bne.w   loc_128186
-                move.w  (statsTeam1GoalsCopy).l,(cachedViewResultTeam1Goals).l
-                move.w  (statsTeam2GoalsCopy).l,(cachedViewResultTeam2Goals).l
-                bra.w   loc_12817E
-loc_127FCE:
-                move.w  #1,(secondLeg).l
-                tst.w   $72(a5)
-                beq.s   loc_127FF2
-                cmpi.w  #1,$72(a5)
-                beq.s   loc_127FEA
-                tst.w   $330(a6)
-                beq.s   loc_127FF2
-loc_127FEA:
-                move.w  #1,(extraTimeState).l
-loc_127FF2:
-                tst.w   $7E(a5)
-                beq.s   loc_12800E
-                cmpi.w  #1,$7E(a5)
-                beq.s   loc_128006
-                tst.w   $330(a6)
-                beq.s   loc_12800E
-loc_128006:
-                move.w  #1,(penaltiesState).l
-loc_12800E:
-                move.w  $64(a6),d0
-                lsl.w   #1,d0
-                lea     $14E(a6),a3
-                clr.w   d5
-                clr.w   d6
-                move.b  (a3,d0.w),(team1GoalsFirstLeg+1).l
-                move.b  1(a3,d0.w),(team2GoalsFirstLeg+1).l
-                move.w  $5E(a6),(playing2ndGame).l
-                movea.l a0,a4
-                movea.l #0,a5
-                move.w  $2C(a6),d7
-                clr.w   d0
-                move.w  (diyMinSubstitutes).l,d1
-                move.w  (diyPointsForAWin).l,d2
-                move.w  (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+2).l,d3
-                bsr.w   InitializeInGameTeamsAndStartGame
-                bne.w   loc_128186
-                move.w  (statsTeam1GoalsCopy).l,(cachedViewResultTeam1Goals).l
-                move.w  (statsTeam2GoalsCopy).l,(cachedViewResultTeam2Goals).l
-                tst.w   (extraTimeState).l
-                bpl.s   loc_12809C
-                move.w  (statsTeam1Goals).l,d0
-                sub.w   (statsTeam1GoalsCopy).l,d0
-                move.w  d0,(cachedExtraTimeTeam1Goals).l
-                move.w  (statsTeam2Goals).l,d0
-                sub.w   (statsTeam2GoalsCopy).l,d0
-                move.w  d0,(cachedExtraTimeTeam2Goals).l
-loc_12809C:
-                tst.w   (penaltiesState).l
-                bpl.s   loc_1280B8
-                move.w  (team1PenaltyGoals).l,(cachedPenaltyShootoutTeam1Score).l
-                move.w  (team2PenaltyGoals).l,(cachedPenaltyShootoutTeam2Score).l
-loc_1280B8:
-                bra.w   loc_12817E
-loc_1280BC:
-                tst.w   $72(a5)
-                beq.s   loc_1280D8
-                cmpi.w  #1,$72(a5)
-                beq.s   loc_1280D0
-                tst.w   $330(a6)
-                beq.s   loc_1280D8
-loc_1280D0:
-                move.w  #1,(extraTimeState).l
-loc_1280D8:
-                tst.w   $7E(a5)
-                beq.s   loc_1280F4
-                cmpi.w  #1,$7E(a5)
-                beq.s   loc_1280EC
-                tst.w   $330(a6)
-                beq.s   loc_1280F4
-loc_1280EC:
-                move.w  #1,(penaltiesState).l
-loc_1280F4:
-                movea.l a0,a4
-                movea.l #0,a5
-                move.w  $2C(a6),d7
-                clr.w   d0
-                tst.w   $14C(a6)
-                seq     d0
-                move.w  (diyMinSubstitutes).l,d1
-                move.w  (diyPointsForAWin).l,d2
-                move.w  (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+2).l,d3
-                bsr.w   InitializeInGameTeamsAndStartGame
-                bne.w   loc_128186
-                move.w  (statsTeam1GoalsCopy).l,(cachedViewResultTeam1Goals).l
-                move.w  (statsTeam2GoalsCopy).l,(cachedViewResultTeam2Goals).l
-                tst.w   (extraTimeState).l
-                bpl.s   loc_128162
-                move.w  (statsTeam1Goals).l,d0
-                sub.w   (statsTeam1GoalsCopy).l,d0
-                move.w  d0,(cachedExtraTimeTeam1Goals).l
-                move.w  (statsTeam2Goals).l,d0
-                sub.w   (statsTeam2GoalsCopy).l,d0
-                move.w  d0,(cachedExtraTimeTeam2Goals).l
-loc_128162:
-                tst.w   (penaltiesState).l
-                bpl.s   loc_12817E
-                move.w  (team1PenaltyGoals).l,(cachedPenaltyShootoutTeam1Score).l
-                move.w  (team2PenaltyGoals).l,(cachedPenaltyShootoutTeam2Score).l
-loc_12817E:
-                clr.w   (isCareer).l
-                clr.w   d0
-loc_128186:
-                movem.l (sp)+,d0-d7/a0-a6
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d7
+                move.l  d7,-(sp)        ; mode
+                andi.l  #$FFFF,d6
+                move.l  d6,-(sp)        ; allowSquadChanges
+                move.l  a2,-(sp)        ; team2
+                move.l  a1,-(sp)        ; team1
+                jsr     _PlayDIYCupFixtureAndCacheResult
+                lea     16(sp),sp
+                tst.w   d0              ; set Z flag from return value
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== PlayDIYLeagueMatchAndCacheResult =====
-; prototype: void __usercall PlayDIYLeagueMatchAndCacheResult(struct TeamFile *team1@<a1>, struct TeamFile *team2@<a2>)
+; ===== PlayDIYLeagueMatchAndCacheResult ===== (ported to C → _PlayDIYLeagueMatchAndCacheResult)
+; Bridge: a1=team1, a2=team2, d6=allowSquadChanges, d7=mode → C
+; Returns Z flag: Z=1 (success), Z=0 (cancelled)
 PlayDIYLeagueMatchAndCacheResult:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.w  (diyLeagueMaxSubstitutes).l,d1
-                move.w  (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+2).l,d2
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   SetupPlayers
-                movem.l (sp)+,d0-d7/a0-a6
-                tst.w   (exitGameFlag).l
-                bne.w   loc_1282C2
-                clr.w   (isCareer).l
-                cmpa.l  #careerTeam,a1
-                beq.s   loc_1281C8
-                cmpa.l  #careerTeam,a2
-                bne.s   loc_1281D0
-loc_1281C8:
-                move.w  #1,(isCareer).l
-loc_1281D0:
-                movem.l d7/a1-a2,-(sp)
-                lea     (diyCompetitionStart).l,a2
-                lea     (gameName).l,a1
-                lea     4(a2),a0
-                jsr StringCopy(pc)
-                clr.b   (gameRound).l
-                tst.w   $48(a2)
-                beq.s   loc_128214
-                lea     (gameRound).l,a1
-                move.w  $4A(a2),d0
-                move.w  $50(a2),d1
-                move.w  $4C(a2),d2
-                move.w  $32(a2),d3
-                clr.w   d4
-                jsr GetCupRoundString(pc)
-                jsr StringCopy(pc)
-loc_128214:
-                movem.l (sp)+,d7/a1-a2
-                lea     (diyCompetitionStart).l,a6
-                move.w  $34(a6),(gamePitchTypeOrSeason).l
-                move.b  $2F(a6),d0
-                cmpi.b  #$60,d0         ; '`'
-                bcs.s   loc_128234
-                subi.b  #$60,d0         ; '`'
-loc_128234:
-                andi.l  #$FF,d0
-                divu.w  #8,d0
-                move.w  d0,(gameSeason).l
-                move.w  $36(a6),(gamePitchType).l
-                clr.w   (team1GoalsFirstLeg).l
-                clr.w   (team2GoalsFirstLeg).l
-                clr.w   (extraTimeState).l
-                clr.w   (penaltiesState).l
-                clr.w   (secondLeg).l
-                clr.w   (playing2ndGame).l
-                clr.w   (isGameFriendly).l
-                movea.l a0,a4
-                movea.l #0,a5
-                move.w  $2C(a6),d7
-                clr.w   d0
-                cmpi.w  #1,$5E(a6)
-                seq     d0
-                move.w  (diyLeagueMinSubstitutes).l,d1
-                move.w  (diyLeagueMaxSubstitutes).l,d2
-                move.w  (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+2).l,d3
-                bsr.w   InitializeInGameTeamsAndStartGame
-                bne.w   loc_1282C2
-                move.w  (statsTeam1GoalsCopy).l,(cachedViewResultTeam1Goals).l
-                move.w  (statsTeam2GoalsCopy).l,(cachedViewResultTeam2Goals).l
-                clr.w   (isCareer).l
-                clr.w   d0
-loc_1282C2:
-                movem.l (sp)+,d0-d7/a0-a6
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d7
+                move.l  d7,-(sp)        ; mode
+                andi.l  #$FFFF,d6
+                move.l  d6,-(sp)        ; allowSquadChanges
+                move.l  a2,-(sp)        ; team2
+                move.l  a1,-(sp)        ; team1
+                jsr     _PlayDIYLeagueMatchAndCacheResult
+                lea     16(sp),sp
+                tst.w   d0              ; set Z flag from return value
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== SetupPlayers ===== (ported to C → _SetupPlayers)

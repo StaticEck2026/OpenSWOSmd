@@ -300,6 +300,12 @@ void _DIY_RecomputeCompetitionDerivedProgressionTable(void);
 void _DIY_GetCurrentMatchTeamSlots(uint8_t **outSlot1, uint8_t **outSlot2);
 uint16_t _DIY_CompareCurrentMatchTeamCategories(void);
 
+/* --- Match Play & Result Caching --- */
+uint16_t _PlayDIYLeagueMatchAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
+                                            int16_t allowSquadChanges, int16_t mode);
+uint16_t _PlayDIYCupFixtureAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
+                                           int16_t allowSquadChanges, int16_t mode);
+
 /* --- Match Result Processing (Chunk 190) --- */
 void _ProcessDIYLeagueMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileEx *team2,
     uint16_t *outGoals1, uint16_t *outGoals2, uint16_t *outFlags);

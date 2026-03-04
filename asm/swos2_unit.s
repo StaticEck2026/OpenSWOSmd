@@ -1617,6 +1617,10 @@
         xref    _InitAndPlayGame
         xdef    aTraining
 
+        ; Chunk 192 xrefs
+        xref    _PlayDIYLeagueMatchAndCacheResult
+        xref    _PlayDIYCupFixtureAndCacheResult
+
         ; Chunk 91 xrefs
         xref    _GetTeamPointer
         xref    _GetPlayer
