@@ -388,11 +388,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1461 functions ported across 171 chunks.
+**Current status:** 1468 functions ported across 174 chunks.
 
-**Last completed chunk:** Chunk 171 — Player Position Lookup, Remove Intl Players, Expensive Teams Count (3 → career_teams.c, diy_competition.c): GetPlayerPositionFromCurrent, Career_RemoveInternationalPlayersByMask, GetMoreExpensiveTeamsCount.
+**Last completed chunk:** Chunk 174 — Season Review functions (4 → career_season.c): SeasonReview_AdjustWeightsForCompetition (static), SeasonReview_ComputeCategoryForCompetition (static), SeasonFinished_ComputeSeasonReview, ShowChairmanOpinionAboutTheSeason.
 
-**Next candidates:** FindTeamInDIY (~180 instr), GetMoreExpensiveTeamsCountWrapper (already just a register adapter, could stub as dead), ChooseTeamsDialog/SelectTeams family (~10), SquadInit/Finish/AfterDraw (~10), SelectNationalTeam group (~8), Career_MaybeGenerateJobOffer (~310 instr), ChooseTeamForEditTactics (~1).
+**Next candidates:** Career_AdvanceToNextSeason_UpdateCompetitions, ChooseTeamsDialog/SelectTeams family, SquadInit/Finish/AfterDraw, SelectNationalTeam group, Career_MaybeGenerateJobOffer (~310 instr), remaining career update functions.
 
 ---
 

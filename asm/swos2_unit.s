@@ -2990,6 +2990,9 @@
         xref    _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries
 ; --- Chunk 161 xrefs ---
         xref    _ShowSeasonOpinion
+; --- Chunk 174 xrefs ---
+        xref    _SeasonFinished_ComputeSeasonReview
+        xref    _ShowChairmanOpinionAboutTheSeason
         xref    _ShowHighlights
         xref    _ShowMatchSequence
         xref    _ViewHighlightsSaveCurrentMenu

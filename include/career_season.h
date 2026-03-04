@@ -17,3 +17,7 @@ void _ShowSeasonOpinion(void);
 
 /* --- Career_UpdateLastNationalityCall (Chunk 170) --- */
 uint16_t _Career_UpdateLastNationalityCall(void);
+
+/* --- Chunk 174: Season Review functions --- */
+void _SeasonFinished_ComputeSeasonReview(void);
+void _ShowChairmanOpinionAboutTheSeason(void);

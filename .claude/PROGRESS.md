@@ -2969,6 +2969,18 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, only pre-existing warnings)
 - Cumulative: 1450 functions across 167 chunks
 
+### Chunk 174 — Season Review functions (4 → career_season.c)
+- Date: 2026-03-03
+- Ported:
+  1. SeasonReview_AdjustWeightsForCompetition (static helper in career_season.c) — classifies competition by pointer comparison against known globals (worldCup2Copy, friendlyCopy, continental cups, WC qualifiers, domestic), multiplies category by weight (8/6/4/3/1), accumulates weight in d5. Friendly/tournament/tour: weight 1 but d7 NOT multiplied.
+  2. SeasonReview_ComputeCategoryForCompetition (static helper in career_season.c) — calls FindTeamInDIY (suppressed side effects) and GetMoreExpensiveTeamsCount, computes ratio = (rank-position)*100/numTeams, assigns category 0-4 based on ratio thresholds (30/10/-10/-30). Adjusts: top-25% percentile upgrades (guarded), bottom-75% downgrades (guarded). Returns -1 if team not found.
+  3. SeasonFinished_ComputeSeasonReview — orchestrates season review for primary+secondary competitions: computes category and weights for each, then weighted average with rounding ((sum + totalWeight/2) / totalWeight). Bonus: wonWorldCup → rating 0, wonContinentalCup → -2. Clamps to >= 0, stores in seasonReview.
+  4. ShowChairmanOpinionAboutTheSeason — national teams: delegates to ShowSeasonOpinion. Club teams: inline category computation (same logic but NO suppressed side effects, NO guards on percentile adjustments). Checks secondary/tertiary/quaternary competitions for top-2 finishes (-2/-2/-3 bonus). Clamps to [0,4+], maps to chairman message IDs 13-17.
+- Stubs: SeasonFinished_ComputeSeasonReview (jmp, void→void), ShowChairmanOpinionAboutTheSeason (jmp). AdjustWeights and ComputeCategory stubbed as rts (dead — only caller was ComputeSeasonReview, now ported).
+- New xrefs: _SeasonFinished_ComputeSeasonReview, _ShowChairmanOpinionAboutTheSeason
+- Build status: **verified** (clean build)
+- Cumulative: 1468 functions across 174 chunks
+
 ### Chunk 173 — FindTeamInDIY (1 → diy_competition.c)
 - Date: 2026-03-03
 - Ported:

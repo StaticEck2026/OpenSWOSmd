@@ -4,6 +4,7 @@
  */
 
 #include "career_season.h"
+#include "diy_competition.h"
 #include "game_types.h"
 #include "random.h"
 
@@ -371,4 +372,256 @@ check_self:
 
     lastNationalityCall = (uint16_t)d0;
     return (uint16_t)d0;
+}
+
+/* ================================================================
+ * Chunk 174: Season Review functions (SWOS2.s lines 35525-35785)
+ *
+ * 4 functions:
+ *   SeasonReview_AdjustWeightsForCompetition (static helper)
+ *   SeasonReview_ComputeCategoryForCompetition (static helper)
+ *   SeasonFinished_ComputeSeasonReview
+ *   ShowChairmanOpinionAboutTheSeason
+ * ================================================================ */
+
+extern uint8_t competitionFileBuffer[];
+extern uint8_t competitionContext[];
+extern uint8_t tertiaryCompetitionContext[];
+extern uint8_t euroCupsCompetitionContext[];
+
+extern uint32_t currentCompetitionPtr;
+extern uint32_t secondaryCompetitionPtr;
+extern uint32_t tertiaryCompetitionPtr;
+extern uint32_t quaternaryCompetitionPtr;
+
+extern uint16_t wonWorldCup;
+extern uint16_t wonContinentalCup;
+extern uint16_t findTeamInDIY_SuppressSideEffectsFlag;
+
+/* ---- SeasonReview_AdjustWeightsForCompetition (SWOS2.s line 35686) ----
+ * Classifies a competition by comparing its pointer against known addresses,
+ * then multiplies the category by a weight factor and accumulates the weight.
+ * Only called from SeasonFinished_ComputeSeasonReview (static). */
+static void adjustWeightsForCompetition(uint8_t *compPtr, uint16_t *weightAccum,
+                                         uint16_t *weightedCategory)
+{
+    /* World Cup: weight 8 */
+    if (compPtr == worldCup2Copy) {
+        *weightedCategory *= 8;
+        *weightAccum += 8;
+        return;
+    }
+    /* Friendly / Invitation Tournament / Tour: weight 1, d7 NOT multiplied */
+    if (compPtr == friendlyCopy || compPtr == invitationTournamentCopy ||
+        compPtr == tourCopy) {
+        *weightAccum += 1;
+        return;
+    }
+    /* Continental cups: weight 6 */
+    if (compPtr == europeanChampionships2Copy || compPtr == northAmericanCupCopy ||
+        compPtr == copaAmericaCopy || compPtr == africanNationsCupCopy ||
+        compPtr == asianCupCopy || compPtr == oceaniaCupCopy) {
+        *weightedCategory *= 6;
+        *weightAccum += 6;
+        return;
+    }
+    /* World Cup qualifiers (range check): weight 4 */
+    if ((uint32_t)compPtr >= (uint32_t)worldCupQualifyingGroup1Copy &&
+        (uint32_t)compPtr <= (uint32_t)oceaniaWorldCupQualificationCopy) {
+        *weightedCategory *= 4;
+        *weightAccum += 4;
+        return;
+    }
+    /* Default: domestic competition, weight 3 */
+    *weightedCategory *= 3;
+    *weightAccum += 3;
+}
+
+/* ---- SeasonReview_ComputeCategoryForCompetition (SWOS2.s line 35733) ----
+ * Computes season review category (0=best, 4=worst) for a competition buffer.
+ * Returns -1 if team not found. Only called from SeasonFinished_ComputeSeasonReview. */
+static int16_t computeCategoryForCompetition(uint8_t *comp)
+{
+    findTeamInDIY_SuppressSideEffectsFlag = 1;
+    int16_t position = (int16_t)_FindTeamInDIY(selTeamNumber, comp);
+    findTeamInDIY_SuppressSideEffectsFlag = 0;
+
+    if (position < 0)
+        return -1;
+
+    uint16_t rank = _GetMoreExpensiveTeamsCount(selTeamNumber, comp);
+    uint16_t numTeams = *(uint16_t *)(comp + 50);
+
+    /* ratio = (rank - position) * 100 / numTeams (signed) */
+    int32_t product = (int32_t)(int16_t)((int16_t)rank - position) * 100;
+    int16_t ratio = (int16_t)(product / (int16_t)numTeams);
+
+    int16_t category = 0;
+    if (position != 0) {
+        if (ratio < 30) {
+            category = 1;
+            if (ratio < 10) {
+                category = 2;
+                if (ratio <= -10) {
+                    category = 3;
+                    if (ratio <= -30)
+                        category = 4;
+                }
+            }
+        }
+    }
+
+    /* Position percentile (unsigned): position * 100 / numTeams */
+    uint16_t percentile = (uint16_t)((uint16_t)position * 100) / numTeams;
+
+    /* Top 25%: upgrade category by 1 (guarded: not if already 0) */
+    if (percentile <= 25 && category != 0)
+        category--;
+
+    /* Bottom 75%: downgrade category by 1 (guarded: not if already 4) */
+    if (percentile >= 75 && category != 4)
+        category++;
+
+    return category;
+}
+
+/* ---- SeasonFinished_ComputeSeasonReview (SWOS2.s line 35638) ----
+ * Computes weighted average season review from primary and secondary
+ * competitions, with bonuses for World Cup / Continental Cup wins.
+ * Stores result in seasonReview global. */
+__attribute__((used, externally_visible))
+void _SeasonFinished_ComputeSeasonReview(void)
+{
+    uint16_t d5 = 0;  /* weight accumulator */
+    uint16_t d6 = 0;  /* weighted score accumulator */
+
+    /* Primary competition */
+    int16_t cat = computeCategoryForCompetition(competitionFileBuffer);
+    if (cat >= 0) {
+        uint16_t ucat = (uint16_t)cat;
+        adjustWeightsForCompetition((uint8_t *)currentCompetitionPtr, &d5, &ucat);
+        d6 += ucat;
+    }
+
+    /* Secondary competition (if exists) */
+    if (secondaryCompetitionPtr != 0) {
+        cat = computeCategoryForCompetition(competitionContext);
+        if (cat >= 0) {
+            uint16_t ucat = (uint16_t)cat;
+            adjustWeightsForCompetition((uint8_t *)secondaryCompetitionPtr, &d5, &ucat);
+            d6 += ucat;
+        }
+    }
+
+    /* Weighted average with rounding: (d6 + d5/2) / d5 */
+    d6 += (d5 >> 1);
+    /* ext.l d6; divu.w d5,d6 — sign-extend d6 word to long, unsigned divide */
+    uint32_t d6_32 = (uint32_t)(int32_t)(int16_t)d6;
+    d6 = (uint16_t)(d6_32 / (uint32_t)d5);
+
+    /* Bonus: World Cup win → best rating; Continental Cup win → -2 */
+    if (wonWorldCup != 0) {
+        d6 = 0;
+    } else if (wonContinentalCup != 0) {
+        d6 -= 2;
+    }
+
+    /* Clamp to >= 0 */
+    if ((int16_t)d6 < 0)
+        d6 = 0;
+
+    seasonReview = d6;
+}
+
+/* ---- ShowChairmanOpinionAboutTheSeason (SWOS2.s line 35525) ----
+ * For national teams, delegates to ShowSeasonOpinion.
+ * For club teams, computes category with inline logic (same as ComputeCategory
+ * but WITHOUT suppressing side effects), checks secondary/tertiary/quaternary
+ * competitions for top-2 finishes, then maps category to a chairman message. */
+#define CHAIRMAN_MSG_EXCELLENT   13
+#define CHAIRMAN_MSG_GOOD        14
+#define CHAIRMAN_MSG_AVERAGE     15
+#define CHAIRMAN_MSG_POOR        16
+#define CHAIRMAN_MSG_TERRIBLE    17
+
+__attribute__((used, externally_visible))
+void _ShowChairmanOpinionAboutTheSeason(void)
+{
+    /* National teams → use season review score */
+    if (isNationalSelector != 0) {
+        _ShowSeasonOpinion();
+        return;
+    }
+
+    /* --- Compute category for primary competition (inline) --- */
+    uint8_t *comp = competitionFileBuffer;
+    int16_t position = (int16_t)_FindTeamInDIY(selTeamNumber, comp);
+    uint16_t rank = _GetMoreExpensiveTeamsCount(selTeamNumber, comp);
+    uint16_t numTeams = *(uint16_t *)(comp + 50);
+
+    int32_t product = (int32_t)(int16_t)((int16_t)rank - position) * 100;
+    int16_t ratio = (int16_t)(product / (int16_t)numTeams);
+
+    int16_t d7 = 0;
+    if (position != 0) {
+        if (ratio < 30) {
+            d7 = 1;
+            if (ratio < 10) {
+                d7 = 2;
+                if (ratio <= -10) {
+                    d7 = 3;
+                    if (ratio <= -30)
+                        d7 = 4;
+                }
+            }
+        }
+    }
+
+    /* Percentile adjustments (NO guards for d7==0 or d7==4) */
+    uint16_t percentile = (uint16_t)((uint16_t)position * 100) / numTeams;
+    if (percentile <= 25)
+        d7--;
+    if (percentile >= 75)
+        d7++;
+
+    /* Secondary competition: top-2 finish → -2 */
+    if (secondaryCompetitionPtr != 0) {
+        int16_t pos2 = (int16_t)_FindTeamInDIY(selTeamNumber, competitionContext);
+        if ((uint16_t)pos2 < 2)
+            d7 -= 2;
+    }
+
+    /* Tertiary competition: top-2 finish → -2 */
+    if (tertiaryCompetitionPtr != 0) {
+        int16_t pos3 = (int16_t)_FindTeamInDIY(selTeamNumber, tertiaryCompetitionContext);
+        if ((uint16_t)pos3 < 2)
+            d7 -= 2;
+    }
+
+    /* Quaternary competition (Euro cups): top-2 finish → -3 */
+    if (quaternaryCompetitionPtr != 0) {
+        int16_t pos4 = (int16_t)_FindTeamInDIY(selTeamNumber, euroCupsCompetitionContext);
+        if ((uint16_t)pos4 < 2)
+            d7 -= 3;
+    }
+
+    /* Clamp d7 to >= 0 */
+    if (d7 < 0)
+        d7 = 0;
+
+    /* Map category to chairman message */
+    uint16_t msg;
+    if (d7 >= 4)
+        msg = CHAIRMAN_MSG_TERRIBLE;
+    else if (d7 == 3)
+        msg = CHAIRMAN_MSG_POOR;
+    else if (d7 == 2)
+        msg = CHAIRMAN_MSG_AVERAGE;
+    else if (d7 == 1)
+        msg = CHAIRMAN_MSG_GOOD;
+    else
+        msg = CHAIRMAN_MSG_EXCELLENT;
+
+    currentMessage = msg;
+    _ShowChairmanMessage();
 }

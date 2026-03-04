@@ -35521,112 +35521,9 @@ InitializeNewSeason_BuildTeamBudgetRankTable:
                 jmp     _InitializeNewSeason_BuildTeamBudgetRankTable
 
 ; ===== ShowChairmanOpinionAboutTheSeason =====
-; prototype: void __usercall ShowChairmanOpinionAboutTheSeason()
+; Ported to C: _ShowChairmanOpinionAboutTheSeason in src/career_season.c
 ShowChairmanOpinionAboutTheSeason:
-                tst.w   (isNationalSelector).l
-                bne.w   ShowSeasonOpinion
-                lea     (competitionFileBuffer).l,a6
-                move.w  (selTeamNumber).l,d0
-                movem.l a6,-(sp)
-                bsr.w   FindTeamInDIY
-                movem.l (sp)+,a6
-                move.w  (selTeamNumber).l,d0
-                movem.l d1,-(sp)
-                bsr.w   GetMoreExpensiveTeamsCount
-                movem.l (sp)+,d1
-                move.w  $32(a6),d3
-                move.w  d2,d0
-                sub.w   d1,d0
-                muls.w  #$64,d0         ; 'd'
-                divs.w  d3,d0
-                clr.w   d7
-                cmpi.w  #0,d1
-                beq.s   loc_12F252
-                cmpi.w  #$1E,d0
-                bge.s   loc_12F252
-                move.w  #1,d7
-                cmpi.w  #$A,d0
-                bge.s   loc_12F252
-                move.w  #2,d7
-                cmpi.w  #$FFF6,d0
-                bgt.s   loc_12F252
-                move.w  #3,d7
-                cmpi.w  #$FFE2,d0
-                bgt.s   loc_12F252
-                move.w  #4,d7
-loc_12F252:
-                move.w  d1,d0
-                mulu.w  #$64,d0         ; 'd'
-                divu.w  $32(a6),d0
-                cmpi.w  #$19,d0
-                bhi.s   loc_12F264
-                subq.w  #1,d7
-loc_12F264:
-                cmpi.w  #$4B,d0         ; 'K'
-                bcs.s   loc_12F26C
-                addq.w  #1,d7
-loc_12F26C:
-                tst.l   (secondaryCompetitionPtr).l
-                beq.s   loc_12F294
-                lea     (competitionContext).l,a6
-                move.w  (selTeamNumber).l,d0
-                movem.l d7,-(sp)
-                bsr.w   FindTeamInDIY
-                movem.l (sp)+,d7
-                cmpi.w  #2,d1
-                bcc.s   loc_12F294
-                subq.w  #2,d7
-loc_12F294:
-                tst.l   (tertiaryCompetitionPtr).l
-                beq.s   loc_12F2BC
-                lea     (tertiaryCompetitionContext).l,a6
-                move.w  (selTeamNumber).l,d0
-                movem.l d7,-(sp)
-                bsr.w   FindTeamInDIY
-                movem.l (sp)+,d7
-                cmpi.w  #2,d1
-                bcc.s   loc_12F2BC
-                subq.w  #2,d7
-loc_12F2BC:
-                tst.l   (quaternaryCompetitionPtr).l
-                beq.s   loc_12F2E4
-                lea     (euroCupsCompetitionContext).l,a6
-                move.w  (selTeamNumber).l,d0
-                movem.l d7,-(sp)
-                bsr.w   FindTeamInDIY
-                movem.l (sp)+,d7
-                cmpi.w  #2,d1
-                bcc.s   loc_12F2E4
-                subq.w  #3,d7
-loc_12F2E4:
-                tst.w   d7
-                bpl.s   loc_12F2EA
-                clr.w   d7
-loc_12F2EA:
-                cmpi.w  #4,d7
-                bcc.s   loc_12F31A
-                cmpi.w  #3,d7
-                beq.s   loc_12F314
-                cmpi.w  #2,d7
-                beq.s   loc_12F30E
-                cmpi.w  #1,d7
-                beq.s   loc_12F308
-                move.w  #$D,d0
-                bra.s   loc_12F31E
-loc_12F308:
-                move.w  #$E,d0
-                bra.s   loc_12F31E
-loc_12F30E:
-                move.w  #$F,d0
-                bra.s   loc_12F31E
-loc_12F314:
-                move.w  #$10,d0
-                bra.s   loc_12F31E
-loc_12F31A:
-                move.w  #$11,d0
-loc_12F31E:
-                move.w  d0,(currentMessage).l
-                jmp     ShowChairmanMessage
+                jmp     _ShowChairmanOpinionAboutTheSeason
 
 ; ===== ShowSeasonOpinion =====
 ; prototype: void __usercall ShowSeasonOpinion()
@@ -35634,154 +35531,18 @@ ShowSeasonOpinion:
                 jmp     _ShowSeasonOpinion
 
 ; ===== SeasonFinished_ComputeSeasonReview =====
-; prototype: void __usercall SeasonFinished_ComputeSeasonReview()
+; Ported to C: _SeasonFinished_ComputeSeasonReview in src/career_season.c
 SeasonFinished_ComputeSeasonReview:
-                clr.w   d5
-                clr.w   d6
-                lea     (competitionFileBuffer).l,a6
-                movem.l d5-d6,-(sp)
-                bsr.w   SeasonReview_ComputeCategoryForCompetition
-                movem.l (sp)+,d5-d6
-                tst.w   d7
-                bmi.s   loc_12F396
-                movea.l (currentCompetitionPtr).l,a0
-                bsr.w   SeasonReview_AdjustWeightsForCompetition
-                add.w   d7,d6
-loc_12F396:
-                tst.l   (secondaryCompetitionPtr).l
-                beq.s   loc_12F3C0
-                lea     (competitionContext).l,a6
-                movem.l d5-d6,-(sp)
-                bsr.w   SeasonReview_ComputeCategoryForCompetition
-                movem.l (sp)+,d5-d6
-                tst.w   d7
-                bmi.s   loc_12F3C0
-                movea.l (secondaryCompetitionPtr).l,a0
-                bsr.w   SeasonReview_AdjustWeightsForCompetition
-                add.w   d7,d6
-loc_12F3C0:
-                move.w  d5,d0
-                lsr.w   #1,d0
-                add.w   d0,d6
-                ext.l   d6
-                divu.w  d5,d6
-                tst.w   (wonWorldCup).l
-                beq.s   loc_12F3D6
-                clr.w   d6
-                bra.s   loc_12F3E0
-loc_12F3D6:
-                tst.w   (wonContinentalCup).l
-                beq.s   loc_12F3E0
-                subq.w  #2,d6
-loc_12F3E0:
-                tst.w   d6
-                bpl.s   loc_12F3E6
-                clr.w   d6
-loc_12F3E6:
-                move.w  d6,(seasonReview).l
-                rts
+                jmp     _SeasonFinished_ComputeSeasonReview
 
 ; ===== SeasonReview_AdjustWeightsForCompetition =====
-; prototype: void __usercall SeasonReview_AdjustWeightsForCompetition(void *comp@<a0>)
+; Ported to C (static helper in career_season.c). Dead in asm — only caller was ComputeSeasonReview.
 SeasonReview_AdjustWeightsForCompetition:
-                cmpa.l  #worldCup2Copy,a0
-                beq.s   loc_12F466
-                cmpa.l  #friendlyCopy,a0
-                beq.s   loc_12F46E
-                cmpa.l  #invitationTournamentCopy,a0
-                beq.s   loc_12F46E
-                cmpa.l  #tourCopy,a0
-                beq.s   loc_12F46E
-                cmpa.l  #europeanChampionships2Copy,a0
-                beq.s   loc_12F45E
-                cmpa.l  #northAmericanCupCopy,a0
-                beq.s   loc_12F45E
-                cmpa.l  #copaAmericaCopy,a0
-                beq.s   loc_12F45E
-                cmpa.l  #africanNationsCupCopy,a0
-                beq.s   loc_12F45E
-                cmpa.l  #asianCupCopy,a0
-                beq.s   loc_12F45E
-                cmpa.l  #oceaniaCupCopy,a0
-                beq.s   loc_12F45E
-                cmpa.l  #worldCupQualifyingGroup1Copy,a0
-                bcs.s   loc_12F44E
-                cmpa.l  #oceaniaWorldCupQualificationCopy,a0
-                bls.s   loc_12F456
-loc_12F44E:
-                mulu.w  #3,d7
-                addq.w  #3,d5
-                rts
-loc_12F456:
-                mulu.w  #4,d7
-                addq.w  #4,d5
-                rts
-loc_12F45E:
-                mulu.w  #6,d7
-                addq.w  #6,d5
-                rts
-loc_12F466:
-                mulu.w  #8,d7
-                addq.w  #8,d5
-                rts
-loc_12F46E:
-                addq.w  #1,d5
                 rts
 
 ; ===== SeasonReview_ComputeCategoryForCompetition =====
-; prototype: void __usercall SeasonReview_ComputeCategoryForCompetition()
+; Ported to C (static helper in career_season.c). Dead in asm — only caller was ComputeSeasonReview.
 SeasonReview_ComputeCategoryForCompetition:
-                move.w  (selTeamNumber).l,d0
-                move.w  #1,(findTeamInDIY_SuppressSideEffectsFlag).l
-                movem.l a6,-(sp)
-                bsr.w   FindTeamInDIY
-                movem.l (sp)+,a6
-                clr.w   (findTeamInDIY_SuppressSideEffectsFlag).l
-                tst.w   d1
-                bmi.s   loc_12F50C
-                move.w  (selTeamNumber).l,d0
-                movem.l d1,-(sp)
-                bsr.w   GetMoreExpensiveTeamsCount
-                movem.l (sp)+,d1
-                move.w  $32(a6),d3
-                move.w  d2,d0
-                sub.w   d1,d0
-                muls.w  #$64,d0         ; 'd'
-                divs.w  d3,d0
-                clr.w   d7
-                cmpi.w  #0,d1
-                beq.s   loc_12F4E6
-                cmpi.w  #$1E,d0
-                bge.s   loc_12F4E6
-                move.w  #1,d7
-                cmpi.w  #$A,d0
-                bge.s   loc_12F4E6
-                move.w  #2,d7
-                cmpi.w  #$FFF6,d0
-                bgt.s   loc_12F4E6
-                move.w  #3,d7
-                cmpi.w  #$FFE2,d0
-                bgt.s   loc_12F4E6
-                move.w  #4,d7
-loc_12F4E6:
-                move.w  d1,d0
-                mulu.w  #$64,d0         ; 'd'
-                divu.w  $32(a6),d0
-                cmpi.w  #$19,d0
-                bhi.s   loc_12F4FC
-                tst.w   d7
-                beq.s   loc_12F4FC
-                subq.w  #1,d7
-loc_12F4FC:
-                cmpi.w  #$4B,d0         ; 'K'
-                bcs.s   locret_12F50A
-                cmpi.w  #4,d7
-                beq.s   locret_12F50A
-                addq.w  #1,d7
-locret_12F50A:
-                rts
-loc_12F50C:
-                move.w  #$FFFF,d7
                 rts
 
 ; ===== ShowLeavingMessage =====
