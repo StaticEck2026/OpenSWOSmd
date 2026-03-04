@@ -3107,7 +3107,7 @@ void _Career_PostMatchUpdate(void)
 /* --- Chunk 179: Career Auto-Advance Chain --- */
 
 extern uint16_t careerAutoAdvanceInProgress;
-extern void Career_AutoAdvanceCompetitionSlots(void);
+/* Career_AutoAdvanceCompetitionSlots — forward declaration (ported below) */
 
 /* Career_AutoAdvanceCompetitionAndPersistSlotState (SWOS2.s line 35559)
  * Takes a competition pointer, identifies the corresponding context buffer,
@@ -3137,7 +3137,7 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
     if (compType == 1) {
         _Career_AutoAdvanceCupMatches();
     } else if (compType == 2) {
-        Career_AutoAdvanceCompetitionSlots();
+        _Career_AutoAdvanceCompetitionSlots();
     } else {
         _Career_AutoAdvanceLeagueFixtures();
     }
@@ -3234,7 +3234,7 @@ void _Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record)
     _Career_ApplyPendingForeignMarketPlayersToSelectedTeams();
     _CInitDIYLeagueFromRecordParam(record);
     _InitTeams();
-    Career_AutoAdvanceCompetitionSlots();
+    _Career_AutoAdvanceCompetitionSlots();
 
     viewRandomPhase = savedViewRandom;
     seasonPlaying = savedSeasonPlaying;
@@ -3866,5 +3866,52 @@ cup_catch_up:
         _ShowDIYCupMenuWithParams(1, 1, 0);
     } else {
         _ShowDIYCupMenuWithParams(1, 0, 0);
+    }
+}
+
+extern void _DIY_SortLeagueTableByStandings(void);
+extern void _DIY_AdvanceToNextCompetitionSlot(void);
+
+/* Career_AutoAdvanceCompetitionSlots (SWOS2.s line 31635)
+ *
+ * Iterates through competition slots in diyFileBufferCopy, dispatching each
+ * to league or cup auto-advance based on the slot type flag at offset 0x15E.
+ * Sets hasGroups (0x48) to indicate slot position (1=normal, 2=last).
+ * Loops via tail-call recursion until all slots are processed.
+ */
+__attribute__((used, externally_visible))
+void _Career_AutoAdvanceCompetitionSlots(void)
+{
+restart:
+    ;
+    uint8_t *bufCopy = diyFileBufferCopy;
+    uint16_t slotIndex = *(uint16_t *)(bufCopy + 0x54);
+    uint8_t *slotRecord = bufCopy + (uint32_t)slotIndex * 0x76;
+    uint8_t *base = diyCompetitionStart;
+
+    /* Determine hasGroups value based on slot position */
+    uint16_t hasGroups = 1;
+    if (slotIndex + 1 == *(uint16_t *)(bufCopy + 0x52))
+        hasGroups = 2; /* last slot */
+
+    if (*(uint16_t *)(slotRecord + 0x15E) != 0) {
+        /* League path */
+        *(uint16_t *)(base + 0x48) = hasGroups;
+        _Career_AutoAdvanceLeagueFixtures();
+        if ((int16_t)*(uint16_t *)(base + 0x48) < 0)
+            return; /* hasGroups went negative → done */
+        _DIY_SortLeagueTableByStandings();
+        _DIY_AdvanceToNextCompetitionSlot();
+        if (*(uint16_t *)(bufCopy + 0x58) == 0)
+            goto restart; /* more slots remain */
+    } else {
+        /* Cup path */
+        *(uint16_t *)(base + 0x48) = hasGroups;
+        _Career_AutoAdvanceCupMatches();
+        if ((int16_t)*(uint16_t *)(base + 0x48) < 0)
+            return; /* hasGroups went negative → done */
+        _DIY_AdvanceToNextCompetitionSlot();
+        if (*(uint16_t *)(bufCopy + 0x58) == 0)
+            goto restart; /* more slots remain */
     }
 }

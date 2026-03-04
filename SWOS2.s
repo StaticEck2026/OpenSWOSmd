@@ -31632,57 +31632,11 @@ DIY_AdvanceCupFixtureIndex:
 
 ; ===== Career_AutoAdvanceCompetitionSlots =====
 ; prototype: void __usercall Career_AutoAdvanceCompetitionSlots()
+; ===== Career_AutoAdvanceCompetitionSlots ===== (ported to C → _Career_AutoAdvanceCompetitionSlots)
 Career_AutoAdvanceCompetitionSlots:
-                lea     (diyFileBufferCopy).l,a2
-                movea.l a2,a3
-                move.w  $54(a2),d0
-                mulu.w  #$76,d0         ; 'v'
-                adda.l  d0,a3
-                lea     (diyCompetitionStart).l,a4
-                lea     (diyCompetitionStart).l,a5
-                tst.w   $15E(a3)
-                beq.w   loc_12D980
-                move.w  #1,$48(a5)
-                move.w  $54(a2),d0
-                addq.w  #1,d0
-                cmp.w   $52(a2),d0
-                bne.s   loc_12D94C
-                move.w  #2,$48(a5)
-loc_12D94C:
-                movem.l d7/a2-a5,-(sp)
-                bsr.w   Career_AutoAdvanceLeagueFixtures
-                movem.l (sp)+,d7/a2-a5
-                tst.w   $48(a5)
-                bmi.w   locret_12D9C2
-                movem.l d7/a2-a5,-(sp)
-                bsr.w   DIY_SortLeagueTableByStandings
-                movem.l (sp)+,d7/a2-a5
-                movem.l d7/a2-a5,-(sp)
-                bsr.w   DIY_AdvanceToNextCompetitionSlot
-                movem.l (sp)+,d7/a2-a5
-                tst.w   $58(a2)
-                beq.s   Career_AutoAdvanceCompetitionSlots
-                rts
-loc_12D980:
-                move.w  #1,$48(a4)
-                move.w  $54(a2),d0
-                addq.w  #1,d0
-                cmp.w   $52(a2),d0
-                bne.s   loc_12D998
-                move.w  #2,$48(a4)
-loc_12D998:
-                movem.l d7/a2-a5,-(sp)
-                bsr.w   Career_AutoAdvanceCupMatches
-                movem.l (sp)+,d7/a2-a5
-                tst.w   $48(a4)
-                bmi.w   locret_12D9C2
-                movem.l d7/a2-a5,-(sp)
-                bsr.w   DIY_AdvanceToNextCompetitionSlot
-                movem.l (sp)+,d7/a2-a5
-                tst.w   $58(a2)
-                beq.w   Career_AutoAdvanceCompetitionSlots
-                rts
-locret_12D9C2:
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _Career_AutoAdvanceCompetitionSlots
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== Career_CopyCompetitionFileBufferToOrFromActive =====

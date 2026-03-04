@@ -92,9 +92,10 @@ void _Career_AutoAdvanceCupCompetitionFromRecord(uint8_t *record);
 void _Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record);
 void _Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record, uint16_t index);
 
-/* --- Career auto-advance match sim (Chunk 194) --- */
+/* --- Career auto-advance match sim (Chunk 194/195) --- */
 void _Career_AutoAdvanceLeagueFixtures(void);
 void _Career_AutoAdvanceCupMatches(void);
+void _Career_AutoAdvanceCompetitionSlots(void);
 
 /* --- Career player form update (Chunk 188) --- */
 void _UpdateCareerPlayersFormAfterMatch(uint8_t *compCtx, uint8_t *team1, uint8_t *team2,

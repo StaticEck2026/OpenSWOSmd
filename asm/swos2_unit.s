@@ -1626,9 +1626,10 @@
         xref    _DIY_PlayCupMatchAndAdvance
         xref    _DIY_PlayOrSimulateLeagueFixture
 
-        ; Chunk 194 xrefs
+        ; Chunk 194/195 xrefs
         xref    _Career_AutoAdvanceLeagueFixtures
         xref    _Career_AutoAdvanceCupMatches
+        xref    _Career_AutoAdvanceCompetitionSlots
 
         ; Chunk 91 xrefs
         xref    _GetTeamPointer

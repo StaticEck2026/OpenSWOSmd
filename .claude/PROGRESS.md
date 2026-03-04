@@ -3080,6 +3080,15 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, map confirmed at 0x00154256 / 0x0015439e)
 - Cumulative: 1507 functions across 190 chunks
 
+### Chunk 195 — Career_AutoAdvanceCompetitionSlots (1 → career_status.c)
+- Date: 2026-03-02
+- Ported:
+  1. Career_AutoAdvanceCompetitionSlots (→career_status.c) — ~50 instr. Iterates competition slots dispatching to league or cup auto-advance path. Uses diyFileBufferCopy + slotIndex * 0x76 to find slot record, checks type flag at offset 0x15E (nonzero=league, zero=cup). Sets hasGroups flag (1=normal, 2=last slot). For league: calls _Career_AutoAdvanceLeagueFixtures, _DIY_SortLeagueTableByStandings, _DIY_AdvanceToNextCompetitionSlot. For cup: calls _Career_AutoAdvanceCupMatches, _DIY_AdvanceToNextCompetitionSlot. Loop restarts unless doneFlag(0x58) set or base+0x48 goes negative. Original recursive tail-call replaced with goto-based loop.
+- Asm→C bridge: Career_AutoAdvanceCompetitionSlots (simple jsr)
+- Fixed call site at line 3237 (_Career_AutoAdvanceLeagueCompetitionFromRecord) from un-prefixed to _-prefixed
+- Build status: **verified** (clean build)
+- Cumulative: 1520 functions across 195 chunks
+
 ### Chunk 194 — Career_AutoAdvanceLeagueFixtures + Career_AutoAdvanceCupMatches (2+2 → career_status.c)
 - Date: 2026-03-02
 - Ported:
@@ -3558,5 +3567,9 @@ Update this section every time you port a chunk. Keep it chronological.
 | 189   | 1         | 1502       |
 | 190   | 5+3s      | 1507       |
 | 191   | 4         | 1511       |
+| 192   | 2         | 1513       |
+| 193   | 2         | 1515       |
+| 194   | 2+2d      | 1519       |
+| 195   | 1         | 1520       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)
