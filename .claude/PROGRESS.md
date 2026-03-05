@@ -3139,6 +3139,41 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1535 functions across 199 chunks
 
+### Chunk 201 — ChooseTeamsDialog + ChooseTeamsDialogWithNationality (2 → menus.c)
+- Date: 2026-03-02
+- Ported:
+  1. ChooseTeamsDialog (→menus.c) — Sets up team selection dialog globals and calls ChooseTeamsMenu.
+  2. ChooseTeamsDialogWithNationality (→menus.c) — Like ChooseTeamsDialog but also sets isNationalSelector and nationality filter.
+- Cumulative: 1537 functions across 200 chunks
+
+### Chunk 202 — SelectTeamToManage (1 → menus.c)
+- Date: 2026-03-02
+- Ported: SelectTeamToManage — wraps ChooseTeamsDialog(1,0,0,title,0).
+- Cumulative: 1538 functions across 201 chunks
+
+### Chunk 203 — BuyOtherDomesticPlayer + BuyOtherForeignPlayer + EditCustomTeam + ImportTeamsMenu (4 → menus.c)
+- Date: 2026-03-02
+- Ported: Team purchase/edit dialog wrappers via ChooseTeamsDialog.
+- Cumulative: 1542 functions across 202 chunks
+
+### Chunk 204 — Career_ShowAddInternationalPlayerDialog (1 → menus.c)
+- Date: 2026-03-02
+- Ported: Shows dialog for adding international player (home/abroad), delegates to AddInternationalPlayerHome/Abroad callbacks.
+- Cumulative: 1547 functions across 204 chunks
+
+### Chunk 205 — Career_AddInternationalPlayerCommon + AddInternationalPlayerHome + AddInternationalPlayerAbroad (3 → menus.c)
+- Date: 2026-03-02
+- Ported:
+  1. Career_AddInternationalPlayerCommon (→menus.c) — ~130 instr. Core logic for adding an international player: marks unavailable players with injury flag in cardsInjuries (loop through careerUnavailablePlayerList), builds nationality bitmask for ShowSquad filtering, builds unavailable mask from careerUnavailablePlayerLookupTable (20 entries), calls ShowSquadWithFlags for player selection. On selection: searches career team for empty slot with compatible position (GK→GK, outfield→outfield) via GetPlayerInfoBreakPosition, shifts currentMatchPlayers array if needed, calls Career_CopyUnavailablePlayerToCareerTeamSlot. Results in careerAddIntlPlayerResult (0=OK, 1=no room, 0xFFFF=cancelled).
+  2. AddInternationalPlayerHome (→menus.c) — Wrapper calling Common with "ADD INTERNATIONAL PLAYER (HOME)" title.
+  3. AddInternationalPlayerAbroad (→menus.c) — Wrapper calling Common with "ADD INTERNATIONAL PLAYER (ABROAD)" title.
+- Asm→C bridges: AddInternationalPlayerHome/Abroad (save d2-d7/a2-a6, push a0, jsr, restore). Career_AddInternationalPlayerCommon body → rts (dead, only called from Home/Abroad wrappers).
+- Added xdefs: careerAddIntlPlayerSelectedTeamNumber, careerAddIntlPlayerSelectedPlayerOrdinal
+- Added xrefs: _AddInternationalPlayerHome, _AddInternationalPlayerAbroad, _Career_AddInternationalPlayerCommon
+- Used volatile for currentMatchPlayers shift loop to prevent GCC memmove optimization.
+- Build status: **verified** (clean build, map confirms correct placement)
+- Cumulative: 1550 functions across 205 chunks
+
 ### Chunk 195 — Career_AutoAdvanceCompetitionSlots (1 → career_status.c)
 - Date: 2026-03-02
 - Ported:

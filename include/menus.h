@@ -144,6 +144,11 @@ void _SelectTeamToManage(void);
 /* --- Chunk 204: Career_ShowAddInternationalPlayerDialog --- */
 void _Career_ShowAddInternationalPlayerDialog(uint16_t homeOrAbroadFlag);
 
+/* --- Chunk 205: Career_AddInternationalPlayerCommon + Home/Abroad --- */
+void _Career_AddInternationalPlayerCommon(uint8_t *selectedTeam, uint8_t *title);
+void _AddInternationalPlayerHome(uint8_t *selectedTeam);
+void _AddInternationalPlayerAbroad(uint8_t *selectedTeam);
+
 /* --- Competition menu functions (Chunk 124) --- */
 void _DIYCompetitionMenu(void);
 void _PresetCompetitionMenu(void);

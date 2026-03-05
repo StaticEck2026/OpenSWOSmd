@@ -64825,143 +64825,30 @@ Career_ShowAddInternationalPlayerDialog:
                 rts
 
 ; ===== AddInternationalPlayerHome =====
-; prototype: unsigned __int8 __usercall AddInternationalPlayerHome@<d0>(void *selectedTeam@<a0>)
+; Ported to C: _AddInternationalPlayerHome in src/menus.c
+; Bridge: a0=selectedTeam → C param
 AddInternationalPlayerHome:
-                lea     (aAddInternation).l,a1 ; "ADD INTERNATIONAL PLAYER (HOME)"
-                bra.s   Career_AddInternationalPlayerCommon
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a0,-(sp)
+                jsr     _AddInternationalPlayerHome
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== AddInternationalPlayerAbroad =====
-; prototype: unsigned __int8 __usercall AddInternationalPlayerAbroad@<d0>(void *selectedTeam@<a0>)
+; Ported to C: _AddInternationalPlayerAbroad in src/menus.c
+; Bridge: a0=selectedTeam → C param
 AddInternationalPlayerAbroad:
-                lea     (aAddInternation_0).l,a1 ; "ADD INTERNATIONAL PLAYER (ABROAD)"
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a0,-(sp)
+                jsr     _AddInternationalPlayerAbroad
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== Career_AddInternationalPlayerCommon =====
-; prototype: unsigned __int16 __usercall Career_AddInternationalPlayerCommon@<d0>(void *selectedTeam@<a0>, const char *title@<a1>)
+; Ported to C: _Career_AddInternationalPlayerCommon in src/menus.c
 Career_AddInternationalPlayerCommon:
-                move.w  (a0),(careerAddIntlPlayerSelectedTeamNumber).l
-                move.w  (a0),d0
-                movem.l d0-d7/a1-a6,-(sp)
-                jsr GetTeamPointer(pc)
-                movem.l (sp)+,d0-d7/a1-a6
-                movea.l a0,a2
-                move.b  (nationalTeamNationality).l,d1
-                move.w  (a2),d0
-                clr.w   d2
-loc_146A18:
-                cmp.b   $4C(a2),d1
-                bne.s   loc_146A4C
-                lea     (careerUnavailablePlayerList).l,a3
-                move.w  #3,d4
-loc_146A28:
-                cmp.w   (a3),d0
-                bne.s   loc_146A44
-                cmp.w   2(a3),d2
-                bne.s   loc_146A44
-                move.b  $67(a2),d4
-                andi.w  #$FFFC,d4
-                ori.w   #8,d4
-                move.b  d4,$67(a2)
-                bra.s   loc_146A4C
-loc_146A44:
-                lea     4(a3),a3
-                dbf     d4,loc_146A28
-loc_146A4C:
-                lea     $26(a2),a2
-                addq.w  #1,d2
-                cmpi.w  #$10,d2
-                bne.s   loc_146A18
-                movea.l a0,a2
-                clr.l   d0
-                move.b  (nationalTeamNationality).l,d1
-                clr.w   d2
-loc_146A64:
-                cmp.b   $4C(a2),d1
-                beq.s   loc_146A6C
-                bset    d2,d0
-loc_146A6C:
-                lea     $26(a2),a2
-                addq.w  #1,d2
-                cmpi.w  #$10,d2
-                bne.s   loc_146A64
-                clr.l   d4
-                lea     (careerUnavailablePlayerLookupTable).l,a2
-                move.w  (careerAddIntlPlayerSelectedTeamNumber).l,d1
-                move.w  #$13,d2
-loc_146A8A:
-                cmp.w   (a2),d1
-                bne.s   loc_146A96
-                move.w  2(a2),d3
-                bset    d3,d0
-                bset    d3,d4
-loc_146A96:
-                lea     4(a2),a2
-                dbf     d2,loc_146A8A
-                move.w  #$FFFF,(careerAddIntlPlayerResult).l
-                clr.w   (careerSquadScreenDidSelectPlayerFlag).l
-                clr.l   d1
-                clr.w   d2
-                move.w  #$FFFF,d3
-                movem.l a0,-(sp)
-                bsr.w   ShowSquadWithFlags
-                movem.l (sp)+,a0
-                bmi.w   locret_146B8C
-                move.w  #1,(careerSquadScreenDidSelectPlayerFlag).l
-                move.w  d0,(careerAddIntlPlayerSelectedPlayerOrdinal).l
-                mulu.w  #$26,d0         ; '&'
-                lea     (a0,d0.w),a5
-                lea     5(a0),a2
-                move.l  a5,(careerAddIntlPlayerSelectedSrcPlayerPtr).l
-                move.l  a2,(careerAddIntlPlayerSelectedSrcPlayerNamePtr).l
-                move.b  $66(a5),d6
-                andi.w  #$E0,d6
-                lsr.w   #5,d6
-                cmpi.w  #$14,(careerNumPlayers).l
-                beq.w   loc_146B84
-                move.w  #$FFFF,d7
-loc_146B04:
-                addq.w  #1,d7
-                cmpi.w  #$14,d7
-                beq.s   loc_146B84
-                lea     (careerTeam).l,a0
-                move.w  d7,d1
-                bsr.w   GetPlayerInfoBreakPosition
-                cmpi.b  #$FF,$4F(a0)
-                bne.s   loc_146B04
-                move.b  $66(a0),d2
-                andi.w  #$E0,d2
-                lsr.w   #5,d2
-                cmpi.w  #0,d6
-                bne.s   loc_146B38
-                cmpi.w  #0,d2
-                beq.s   loc_146B3E
-                bra.s   loc_146B04
-loc_146B38:
-                cmpi.w  #0,d2
-                beq.s   loc_146B04
-loc_146B3E:
-                cmpi.w  #$10,d0
-                bls.s   loc_146B60
-                lea     (currentMatchPlayers).l,a1
-                move.b  (a1,d0.w),d2
-loc_146B4E:
-                move.b  -1(a1,d0.w),(a1,d0.w)
-                subq.b  #1,d0
-                cmpi.b  #$10,d0
-                bne.s   loc_146B4E
-                move.b  d2,$10(a1)
-loc_146B60:
-                movea.l a0,a1
-                movea.l a5,a0
-                move.w  d1,d3
-                move.w  (careerAddIntlPlayerSelectedPlayerOrdinal).l,d1
-                move.w  (careerAddIntlPlayerSelectedTeamNumber).l,d2
-                bsr.w   Career_CopyUnavailablePlayerToCareerTeamSlot
-                addq.w  #1,(careerNumPlayers).l
-                clr.w   (careerAddIntlPlayerResult).l
-                rts
-loc_146B84:
-                move.w  #1,(careerAddIntlPlayerResult).l
-locret_146B8C:
                 rts
 careerAddIntlPlayerResult:
                 dc.w $0000

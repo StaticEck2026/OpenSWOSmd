@@ -4640,6 +4640,20 @@ extern uint8_t  aAddInternation_0[];
 extern void AddInternationalPlayerHome(void);
 extern void AddInternationalPlayerAbroad(void);
 
+/* Additional externs for Chunk 205 */
+extern uint16_t careerAddIntlPlayerSelectedTeamNumber;
+extern uint16_t careerAddIntlPlayerSelectedPlayerOrdinal;
+extern uint8_t  nationalTeamNationality;
+extern uint16_t careerUnavailablePlayerList[];
+extern uint16_t careerUnavailablePlayerLookupTable[];
+extern uint8_t  currentMatchPlayers[];
+extern uint8_t *_GetTeamPointer(uint16_t teamId);
+extern int16_t  _ShowSquad(uint8_t *teamPtr, uint8_t *title, uint32_t maskLo,
+                            uint32_t maskHi, uint16_t arg2, uint16_t arg3);
+extern void _Career_CopyUnavailablePlayerToCareerTeamSlot(uint8_t *srcPlayer,
+    uint8_t *dstTeam, uint8_t *srcName, uint16_t srcTeamNumber,
+    uint16_t srcPlayerIndex, uint16_t dstSlotIndex);
+
 /* Career_ShowAddInternationalPlayerDialog — show dialog to add international player.
  * If homeOrAbroadFlag==0: use nationality filter (home), else show all (abroad).
  * Results stored in globals: careerAddIntlPlayerResult,
@@ -4656,4 +4670,169 @@ void _Career_ShowAddInternationalPlayerDialog(uint16_t homeOrAbroadFlag)
         /* Abroad: show all club teams */
         _ChooseTeamsDialog(1, 0, 0, aAddInternation_0, (void *)AddInternationalPlayerAbroad);
     }
+}
+
+
+/* ==========================================================================
+ * Chunk 205 — Career_AddInternationalPlayerCommon,
+ *             AddInternationalPlayerHome, AddInternationalPlayerAbroad
+ * (SWOS2.s lines 64829-64965)
+ *
+ * Called as chooseTeamsFunc callback with a0 = selected team entry pointer.
+ * Displays a squad view filtered by nationality/unavailability, lets the
+ * user pick a player, then copies that player into the career team.
+ * ========================================================================== */
+
+/* Career_AddInternationalPlayerCommon
+ * selectedTeam: pointer to team selection data (first word = team number)
+ * title: menu title string ("ADD INTERNATIONAL PLAYER (HOME/ABROAD)") */
+__attribute__((used, externally_visible))
+void _Career_AddInternationalPlayerCommon(uint8_t *selectedTeam, uint8_t *title)
+{
+    uint16_t teamNumber = *(uint16_t *)selectedTeam;
+    careerAddIntlPlayerSelectedTeamNumber = teamNumber;
+
+    uint8_t *teamData = _GetTeamPointer(teamNumber);
+    TeamFileEx *teamEx = (TeamFileEx *)teamData;
+    uint8_t nat = nationalTeamNationality;
+    uint16_t teamNum = teamEx->team.globalTeamNumber;
+
+    /* Loop 1: Mark unavailable players with injury flag in cardsInjuries.
+     * For each player matching the national team nationality, check if
+     * they appear in careerUnavailablePlayerList (4 entries). If found,
+     * set injury bits in cardsInjuries. */
+    for (uint16_t d2 = 0; d2 < 16; d2++) {
+        if (teamEx->players[d2].nationality == (int8_t)nat) {
+            uint16_t *entry = careerUnavailablePlayerList;
+            for (int16_t d4 = 3; d4 >= 0; d4--) {
+                if (entry[0] == teamNum && entry[1] == d2) {
+                    uint8_t ci = teamEx->players[d2].cardsInjuries;
+                    ci = (ci & 0xFC) | 0x08;
+                    teamEx->players[d2].cardsInjuries = ci;
+                    break;
+                }
+                entry += 2;  /* next 4-byte entry */
+            }
+        }
+    }
+
+    /* Loop 2: Build nationality mask — bit set means player does NOT
+     * match the national team nationality (greyed out in squad view). */
+    uint32_t natMask = 0;
+    for (uint16_t d2 = 0; d2 < 16; d2++) {
+        if (teamEx->players[d2].nationality != (int8_t)nat) {
+            natMask |= (1UL << d2);
+        }
+    }
+
+    /* Loop 3: Build unavailable mask from careerUnavailablePlayerLookupTable
+     * (20 entries). If the entry's team number matches, mark that player
+     * index bit in both masks. */
+    uint32_t unavailMask = 0;
+    uint16_t *lookup = careerUnavailablePlayerLookupTable;
+    for (int16_t i = 19; i >= 0; i--) {
+        if (lookup[0] == careerAddIntlPlayerSelectedTeamNumber) {
+            uint16_t pidx = lookup[1];
+            natMask |= (1UL << pidx);
+            unavailMask |= (1UL << pidx);
+        }
+        lookup += 2;  /* next 4-byte entry */
+    }
+
+    /* Show squad selection screen */
+    careerAddIntlPlayerResult = 0xFFFF;
+    careerSquadScreenDidSelectPlayerFlag = 0;
+    viewSquadFlags = unavailMask;
+    int16_t selected = _ShowSquad(teamData, title, natMask, 0, 0, 0xFFFF);
+
+    if (selected < 0)
+        return;
+
+    careerSquadScreenDidSelectPlayerFlag = 1;
+    careerAddIntlPlayerSelectedPlayerOrdinal = (uint16_t)selected;
+
+    /* Calculate source player pointers using block pointer convention:
+     * block_ptr = teamBase + ordinal * sizeof(PlayerFile)
+     * PlayerFile fields at block_ptr + sizeof(TeamFile) */
+    uint8_t *srcBlock = teamData + (uint16_t)((uint16_t)selected * sizeof(PlayerFile));
+    careerAddIntlPlayerSelectedSrcPlayerPtr = (uint32_t)srcBlock;
+    careerAddIntlPlayerSelectedSrcPlayerNamePtr = (uint32_t)(teamData + 5);
+
+    /* Get position type of selected source player */
+    uint16_t srcPos = (teamEx->players[selected].positionAndFace & 0xE0) >> 5;
+
+    /* Check if career team is full (max 20 players) */
+    if (careerNumPlayers >= 20) {
+        careerAddIntlPlayerResult = 1;
+        return;
+    }
+
+    /* Search for an empty, position-compatible slot in the career team */
+    uint16_t dstSlot, dstFileIdx;
+    for (int16_t d7 = 0; d7 < 20; d7++) {
+        uint8_t *careerPlayer = _GetPlayerInfoBreakPosition(
+            careerTeam, (uint16_t)d7, &dstSlot, &dstFileIdx);
+        PlayerFile *pf = (PlayerFile *)(careerPlayer + sizeof(TeamFile));
+
+        /* Check if slot is empty (name starts with 0xFF) */
+        if ((uint8_t)pf->playerName[0] != 0xFF)
+            continue;
+
+        /* Position compatibility:
+         * goalkeeper (0) → only goalkeeper slots
+         * outfield (>0) → only outfield slots */
+        uint16_t dstPos = (pf->positionAndFace & 0xE0) >> 5;
+        if (srcPos == 0) {
+            if (dstPos != 0)
+                continue;
+        } else {
+            if (dstPos == 0)
+                continue;
+        }
+
+        /* Found compatible slot. If slot > 16, shift currentMatchPlayers
+         * to insert the value at position 16. Use volatile to prevent
+         * GCC from optimizing this into a memmove call (no libc). */
+        if (dstSlot > 16) {
+            volatile uint8_t *cmp = currentMatchPlayers;
+            uint8_t saved = cmp[dstSlot];
+            uint16_t idx = dstSlot;
+            while (idx != 16) {
+                cmp[idx] = cmp[idx - 1];
+                idx--;
+            }
+            cmp[16] = saved;
+        }
+
+        /* Copy the international player into the career team slot */
+        _Career_CopyUnavailablePlayerToCareerTeamSlot(
+            srcBlock, careerPlayer,
+            teamData + 5,  /* srcName = team name pointer */
+            careerAddIntlPlayerSelectedTeamNumber,
+            careerAddIntlPlayerSelectedPlayerOrdinal,
+            dstFileIdx);
+
+        careerNumPlayers++;
+        careerAddIntlPlayerResult = 0;
+        return;
+    }
+
+    /* No compatible empty slot found */
+    careerAddIntlPlayerResult = 1;
+}
+
+/* AddInternationalPlayerHome — callback for home nationality team selection.
+ * selectedTeam passed in a0 from menu callback (chooseTeamsFunc). */
+__attribute__((used, externally_visible))
+void _AddInternationalPlayerHome(uint8_t *selectedTeam)
+{
+    _Career_AddInternationalPlayerCommon(selectedTeam, aAddInternation);
+}
+
+/* AddInternationalPlayerAbroad — callback for abroad team selection.
+ * selectedTeam passed in a0 from menu callback (chooseTeamsFunc). */
+__attribute__((used, externally_visible))
+void _AddInternationalPlayerAbroad(uint8_t *selectedTeam)
+{
+    _Career_AddInternationalPlayerCommon(selectedTeam, aAddInternation_0);
 }

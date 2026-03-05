@@ -2659,10 +2659,15 @@
         xref    _EditCustomTeam
         xref    _ImportTeamsMenu
         xref    _Career_ShowAddInternationalPlayerDialog
+        xref    _AddInternationalPlayerHome
+        xref    _AddInternationalPlayerAbroad
+        xref    _Career_AddInternationalPlayerCommon
         xdef    PlayTrainingGame
         xdef    careerAddIntlPlayerResult
         xdef    careerAddIntlPlayerSelectedSrcPlayerPtr
         xdef    careerAddIntlPlayerSelectedSrcPlayerNamePtr
+        xdef    careerAddIntlPlayerSelectedTeamNumber
+        xdef    careerAddIntlPlayerSelectedPlayerOrdinal
         xdef    aAddInternation
         xdef    aAddInternation_0
         xdef    AddInternationalPlayerHome
