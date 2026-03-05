@@ -44494,47 +44494,12 @@ maxSubstitutes:
                 dc.w $0000
 
 ; ===== EditCustomTeam =====
-; prototype: void __usercall EditCustomTeam()
+; Bridge to C: _EditCustomTeam
 EditCustomTeam:
-                lea     (aEditCustomTeam).l,a0 ; "EDIT CUSTOM TEAMS"
-                jsr     CheckContinueAbortPrompt
-                bne.w   locret_1373A6
-                clr.w   (numSelectedTeams).l
-                clr.w   (saveCustomTeams).l
-                lea     (aSelectTeamToEd).l,a0 ; "SELECT TEAM TO EDIT"
-                lea     (EditTeamsCallback).l,a1
-                move.w  #0,d2           ; don't show club teams
-                move.w  #0,d3           ; don't show national teams
-                move.w  #1,d4           ; show original custom teams
-                bsr.w   ChooseTeamsDialog
-                tst.w   (saveCustomTeams).l
-                beq.s   loc_137376
-loc_13731C:
-                lea     (aEditCustomTeam).l,a0 ; "EDIT CUSTOM TEAMS"
-                lea     (aCustomTeamsChanged).l,a1 ; "\x01CUSTOM TEAMS HAVE BEEN CHANGED"
-                lea     (aSave).l,a2    ; "SAVE"
-                lea     (aAbort).l,a3   ; "ABORT"
-                clr.w   d0
-                jsr     DoContinueAbortMenu
-                beq.s   loc_137340
-                bra.s   loc_137376
-loc_137340:
-                lea     (aEditCustomTeam).l,a0 ; "EDIT CUSTOM TEAMS"
-                jsr     Asset_PromptInsertSaveDiskDf0
-                bne.s   loc_13731C
-                lea     (aCustomsEdt).l,a0 ; "CUSTOMS.EDT"
-                lea     (teamFileBuffer).l,a1
-                move.w  (teamFileBuffer).l,d1
-                mulu.w  #684,d1
-                addq.l  #2,d1
-                jsr     WriteFile
-                beq.s   loc_137376
-                jsr     ShowFsErrorByCode
-                bra.s   loc_13731C
-loc_137376:
-                move.b  #255,(lastLoadedExtNumber).l
-                lea     (aEditCustomTeam).l,a0 ; "EDIT CUSTOM TEAMS"
-                jmp     ShowInsertDisk2Dialog
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _EditCustomTeam
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== EditTeamsCallback ===== (ported to C → _EditTeamsCallback in edit_tactics.c)
 ; Bridge: a0→stack param
@@ -45965,65 +45930,12 @@ EditTeamsFinish:
                 jmp     _EditTeamsFinish
 
 ; ===== ImportTeamsMenu =====
-; prototype: void __usercall ImportTeamsMenu()
+; Bridge to C: _ImportTeamsMenu
 ImportTeamsMenu:
-                lea     (teamFileBuffer).l,a0
-                move.w  (a0),d1
-                mulu.w  #684,d1
-                addq.l  #2,d1
-                lsr.l   #1,d1
-                lea     (editTeamsBuffer).l,a1
-loc_137B82:
-                move.w  (a0)+,(a1)+
-                subq.l  #1,d1
-                bne.s   loc_137B82
-                lea     (lastSelectedTeam).l,a0
-                lea     (editTeamsSaveVarsArea).l,a1
-                move.w  #$F5,d0
-loc_137B98:
-                move.w  (a0)+,(a1)+
-                dbf     d0,loc_137B98
-                lea     (aSelectTeamToIm).l,a0 ; "SELECT TEAM TO IMPORT "
-                jsr     ShowInsertDisk2Dialog
-                lea     (aSelectTeamToIm).l,a0 ; "SELECT TEAM TO IMPORT "
-                lea     (0).w,a1
-                move.w  #1,d2
-                move.w  #1,d3
-                move.w  #0,d4
-                bsr.w   ChooseTeamsDialog
-                cmpi.w  #$FFFF,d0
-                beq.s   loc_137C04
-                move.w  (selTeamsPtr).l,-(sp)
-                move.b  (selTeamImportField).l,-(sp)
-                lea     (selTeamsPtr).l,a1
-                move.w  #341,d0
-loc_137BE0:
-                move.w  (a0)+,(a1)+
-                dbf     d0,loc_137BE0
-                move.b  (sp)+,(selTeamImportField).l
-                move.w  (sp)+,(selTeamsPtr).l
-                move.w  #1,(teamIsImported).l
-                move.w  #21,d0
-                jsr     SetCurrentEntry
-loc_137C04:
-                lea     (lastSelectedTeam).l,a0
-                lea     (editTeamsSaveVarsArea).l,a1
-                move.w  #245,d0
-loc_137C14:
-                move.w  (a1)+,(a0)+
-                dbf     d0,loc_137C14
-                move.b  #$FF,(lastLoadedExtNumber).l
-                lea     (editTeamsBuffer).l,a0
-                move.w  (a0),d1
-                mulu.w  #684,d1
-                addq.l  #2,d1
-                lsr.l   #1,d1
-                lea     (teamFileBuffer).l,a1
-loc_137C38:
-                move.w  (a0)+,(a1)+
-                subq.l  #1,d1
-                bne.s   loc_137C38
-                bra.w   InitEditTeamsMenu
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _ImportTeamsMenu
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== EditTeamsUndo =====
 ; prototype: void __usercall EditTeamsUndo()
@@ -50036,17 +49948,14 @@ ExitCareerMenu:
                 jmp     _ExitCareerMenu
 
 ; ===== SelectTeamToManage =====
-; prototype: __int16 __usercall SelectTeamToManage@<d0>()
-; out:
-;      D0 - selected team country number
-;      A0 - selected team pointer
+; Bridge to C: _SelectTeamToManage
+; out: D0=selectedTeamCountryNumber, A0=selectedTeamPtr
 SelectTeamToManage:
-                lea     (aSelectTeamToMa).l,a0 ; "SELECT TEAM TO MANAGE"
-                lea     (0).w,a1
-                move.w  #1,d2           ; show club teams only
-                clr.w   d3
-                clr.w   d4
-                bsr.w   ChooseTeamsDialog
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _SelectTeamToManage
+                movem.l (sp)+,d2-d7/a2-a6
+                move.w  (selectedTeamCountryNumber).l,d0
+                movea.l (selectedTeamPtr).l,a0
                 rts
 ; Menu_Career
 careerMenu:
@@ -54884,80 +54793,38 @@ IsClubTeamsContest:
                 rts
 
 ; ===== ChooseTeamsDialog =====
-; prototype: struct TeamFile *__usercall ChooseTeamsDialog@<a0>(unsigned __int16 showClubTeams@<d2>, unsigned __int16 showNationalTeams@<d3>, unsigned __int16 showOrigCustomTeams@<d4>, const char *title@<a0>, void *onSelect@<a1>)
-; in:
-;      D2 -  show club teams
-;      D3 -  show national teams
-;      D4 -  show original custom teams
-;      A0 -> title
-;      A1 -> function to call when teams are selected
-;            (on entry A0 -> selected team)
-; out:
-;      D0 -  selected team country number (-1 if aborted)
-;      A0 -> selected team
-; 
-; Choose teams selector. First you select teams category from which to select teams (club, national, etc.)
+; Bridge to C: _ChooseTeamsDialog(showClub, showNational, showOrigCustom, title, onSelect)
+; in: D2=showClub, D3=showNational, D4=showOrigCustom, A0=title, A1=onSelect
+; out: D0=selectedTeamCountryNumber, A0=selectedTeamPtr
 ChooseTeamsDialog:
-                move.w  d2,(showClubTeams).l
-                move.w  d3,(showNationalTeams).l
-                move.w  d4,(showOrigCustomTeams).l
-                clr.l   (gameTypeStr).l
-                move.l  a0,(chooseTeamsHeader1stPart).l
-                move.l  a1,(chooseTeamsFunc).l
-                clr.w   (careerSquadScreenDidSelectPlayerFlag).l
-                cmpa.l  #0,a1
-                seq     (careerSquadScreenDidSelectPlayerFlag).l
-                move.l  #aStatistics,(playWhatStr).l ; "STATISTICS" ...
-                move.w  #1,(numNeededTeams).l
-                move.w  #1,(selectTeamsNoLimit).l
-                move.w  #$FFFF,(selectedTeamCountryNumber).l
-                move.l  #0,(selectedTeamPtr).l
-                lea     (chooseTeamsMenu).l,a6
-                jsr     ShowMenu
-                tst.w   (teamsType).l
-                bmi.s   loc_13E964
-                move.w  #1,(loadTeam).l
-                clr.w   (showCupsAndOther).l
-                clr.w   (playSeason).l
-                move.b  #255,d0
-                bsr.w   SelectTeamsFinalMenu
-loc_13E964:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a1,-(sp)
+                move.l  a0,-(sp)
+                move.w  d4,-(sp)
+                move.w  d3,-(sp)
+                move.w  d2,-(sp)
+                jsr     _ChooseTeamsDialog
+                lea     14(sp),sp
+                movem.l (sp)+,d2-d7/a2-a6
                 move.w  (selectedTeamCountryNumber).l,d0
                 movea.l (selectedTeamPtr).l,a0
                 rts
 
 ; ===== ChooseTeamsDialogWithNationality =====
-; prototype: struct TeamFile *__usercall ChooseTeamsDialogWithNationality@<a0>(unsigned __int16 nationality@<d0>, unsigned __int16 showClubTeams@<d2>, unsigned __int16 showNationalTeams@<d3>, unsigned __int16 showOrigCustomTeams@<d4>, const char *title@<a0>, void *onSelect@<a1>)
-; in:
-;     D0 - nationality
-;     A0
-; dos: cseg_4C83A
+; Bridge to C: _ChooseTeamsDialogWithNationality(nationality, showClub, showNational, showOrigCustom, title, onSelect)
+; in: D0=nationality, D2=showClub, D3=showNational, D4=showOrigCustom, A0=title, A1=onSelect
+; out: D0=selectedTeamCountryNumber, A0=selectedTeamPtr
 ChooseTeamsDialogWithNationality:
-                move.w  d2,(showClubTeams).l
-                move.w  d3,(showNationalTeams).l
-                move.w  d4,(showOrigCustomTeams).l
-                clr.l   (gameTypeStr).l
-                move.l  a0,(chooseTeamsHeader1stPart).l
-                move.l  a1,(chooseTeamsFunc).l
-                clr.w   (careerSquadScreenDidSelectPlayerFlag).l
-                cmpa.l  #0,a1
-                seq     (careerSquadScreenDidSelectPlayerFlag).l
-                move.l  #aStatistics,(playWhatStr).l ; "STATISTICS" ...
-                move.w  #1,(numNeededTeams).l
-                move.w  #1,(selectTeamsNoLimit).l
-                move.w  #$FFFF,(selectedTeamCountryNumber).l
-                move.l  #0,(selectedTeamPtr).l
-                lea     (chooseTeamsMenu).l,a6
-                movem.l d0,-(sp)
-                jsr     ShowMenu
-                movem.l (sp)+,d0
-                tst.w   (teamsType).l
-                bmi.s   loc_13EA08
-                move.w  #1,(loadTeam).l
-                clr.w   (showCupsAndOther).l
-                clr.w   (playSeason).l
-                bsr.w   SelectTeamsFinalMenu
-loc_13EA08:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a1,-(sp)
+                move.l  a0,-(sp)
+                move.w  d4,-(sp)
+                move.w  d3,-(sp)
+                move.w  d2,-(sp)
+                move.w  d0,-(sp)
+                jsr     _ChooseTeamsDialogWithNationality
+                lea     16(sp),sp
+                movem.l (sp)+,d2-d7/a2-a6
                 move.w  (selectedTeamCountryNumber).l,d0
                 movea.l (selectedTeamPtr).l,a0
                 rts
@@ -63610,48 +63477,19 @@ ViewForeignPlayerMarket:
                 jmp     _ViewForeignPlayerMarket
 
 ; ===== BuyOtherDomesticPlayer =====
-; prototype: void __usercall BuyOtherDomesticPlayer()
+; Bridge to C: _BuyOtherDomesticPlayer
 BuyOtherDomesticPlayer:
-                lea     (aBuyOtherDomest).l,a0 ; "BUY OTHER DOMESTIC PLAYER"
-                lea     (0).w,a1
-                move.w  #1,d2
-                clr.w   d3
-                clr.w   d4
-                move.b  (selTeamNumber).l,d0
-                jsr ChooseTeamsDialogWithNationality(pc)
-                cmpi.w  #$FFFF,d0
-                beq.s   locret_145502
-                move.w  d0,(teamOffering).l
-                move.l  #aBuyOtherDomest,(buyOtherPlayersTitlePtr).l ; "BUY OTHER DOMESTIC PLAYER" ...
-                lea     buyOtherPlayersMenu(pc),a6
-                jsr     ShowMenu
-                tst.w   (transferCompleted).l
-                bne.w   BuyPlayerExit
-                tst.w   (transferCompleted).l
-                bne.w   BuyPlayerExit
-locret_145502:
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _BuyOtherDomesticPlayer
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== BuyOtherForeignPlayer =====
-; prototype: void __usercall BuyOtherForeignPlayer()
+; Bridge to C: _BuyOtherForeignPlayer
 BuyOtherForeignPlayer:
-                lea     (aBuyOtherForeig).l,a0 ; "BUY OTHER FOREIGN PLAYER"
-                lea     (0).w,a1
-                move.w  #1,d2
-                clr.w   d3
-                clr.w   d4
-                jsr ChooseTeamsDialog(pc)
-                cmpi.w  #$FFFF,d0
-                beq.s   locret_14554A
-                move.w  d0,(teamOffering).l
-                move.l  #aBuyOtherForeig,(buyOtherPlayersTitlePtr).l ; "BUY OTHER FOREIGN PLAYER" ...
-                lea     buyOtherPlayersMenu(pc),a6
-                jsr     ShowMenu
-                tst.w   (transferCompleted).l
-                bne.s   BuyPlayerExit
-                tst.w   (transferCompleted).l
-                bne.s   BuyPlayerExit
-locret_14554A:
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _BuyOtherForeignPlayer
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== BuyPlayerViewSquad =====
@@ -64973,24 +64811,14 @@ Career_CopyUnavailablePlayerToCareerTeamSlot:
                 rts
 
 ; ===== Career_ShowAddInternationalPlayerDialog =====
-; prototype: unsigned __int16 __usercall Career_ShowAddInternationalPlayerDialog@<d0>(unsigned __int16 homeOrAbroadFlag@<d0>)
+; Bridge to C: _Career_ShowAddInternationalPlayerDialog(homeOrAbroadFlag)
+; Returns: d0=careerAddIntlPlayerResult, a5=srcPlayerPtr, a2=srcPlayerNamePtr
 Career_ShowAddInternationalPlayerDialog:
-                move.w  #$FFFF,(careerAddIntlPlayerResult).l
-                move.w  #1,d2
-                clr.w   d3
-                clr.w   d4
-                tst.w   d0
-                bne.s   loc_1469C4
-                lea     (aAddInternation).l,a0 ; "ADD INTERNATIONAL PLAYER (HOME)"
-                move.b  (nationalTeamFileId).l,d0
-                lea     (AddInternationalPlayerHome).l,a1
-                jsr     ChooseTeamsDialogWithNationality
-                bra.s   loc_1469D6
-loc_1469C4:
-                lea     (aAddInternation_0).l,a0 ; "ADD INTERNATIONAL PLAYER (ABROAD)"
-                lea     (AddInternationalPlayerAbroad).l,a1
-                jsr     ChooseTeamsDialog
-loc_1469D6:
+                movem.l d2-d7/a3-a4/a6,-(sp)
+                move.w  d0,-(sp)
+                jsr     _Career_ShowAddInternationalPlayerDialog
+                addq.l  #2,sp
+                movem.l (sp)+,d2-d7/a3-a4/a6
                 move.w  (careerAddIntlPlayerResult).l,d0
                 movea.l (careerAddIntlPlayerSelectedSrcPlayerPtr).l,a5
                 movea.l (careerAddIntlPlayerSelectedSrcPlayerNamePtr).l,a2

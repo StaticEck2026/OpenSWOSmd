@@ -2832,3 +2832,152 @@ void _EditTeamsCallback(uint8_t *team)
     editTeamsSelectedTeam = team;
     _ShowMenu(editTeamsMenu);
 }
+
+
+/* ==========================================================================
+ * Chunk 203 — EditCustomTeam + ImportTeamsMenu
+ * (SWOS2.s lines 44496-44537, 45967-46026)
+ * ========================================================================== */
+
+extern uint16_t numSelectedTeams;
+extern uint8_t  lastLoadedExtNumber;
+extern uint8_t  teamFileBuffer[];
+extern uint8_t  editTeamsBuffer[];
+extern uint8_t  lastSelectedTeam[];
+extern uint8_t  editTeamsSaveVarsArea[];
+extern uint8_t  selTeamImportField;
+extern uint8_t  aEditCustomTeam[];
+extern uint8_t  aSelectTeamToEd[];
+extern uint8_t  aCustomTeamsChanged[];
+extern uint8_t  aCustomsEdt[];
+extern uint8_t  aSave[];
+extern uint8_t  aAbort[];
+extern uint8_t  aSelectTeamToIm[];
+
+extern int16_t _CheckContinueAbortPrompt(uint8_t *header);
+extern int16_t _DoContinueAbortMenu(uint8_t *header, uint8_t *changing,
+                                     uint8_t *contText, uint8_t *abortTextStr,
+                                     uint16_t defaultEntry);
+extern int16_t _Asset_PromptInsertSaveDiskDf0(uint8_t *title);
+extern int16_t _WriteFile(uint8_t *filename, uint8_t *src, uint32_t size);
+extern void _ShowFsErrorByCode(uint16_t errCode);
+extern void _ShowInsertDisk2Dialog(uint8_t *header);
+
+/* EditCustomTeam — show "EDIT CUSTOM TEAMS" flow: choose team, edit, optionally save. */
+__attribute__((used, externally_visible))
+void _EditCustomTeam(void)
+{
+    if (_CheckContinueAbortPrompt(aEditCustomTeam) != 0)
+        return;
+
+    numSelectedTeams = 0;
+    saveCustomTeams = 0;
+    _ChooseTeamsDialog(0, 0, 1, aSelectTeamToEd, (void *)_EditTeamsCallback);
+
+    if (saveCustomTeams == 0)
+        goto done;
+
+retry:
+    if (_DoContinueAbortMenu(aEditCustomTeam, aCustomTeamsChanged,
+                              aSave, aAbort, 0) != 0)
+        goto done;
+
+    /* Prompt for save disk */
+    if (_Asset_PromptInsertSaveDiskDf0(aEditCustomTeam) != 0)
+        goto retry;
+
+    /* Write team file: size = teamCount * 684 + 2 (for the count word) */
+    {
+        uint16_t teamCount = *(uint16_t *)teamFileBuffer;
+        uint32_t fileSize = (uint32_t)teamCount * 684 + 2;
+        int16_t result = _WriteFile(aCustomsEdt, teamFileBuffer, fileSize);
+        if (result != 0) {
+            _ShowFsErrorByCode((uint16_t)result);
+            goto retry;
+        }
+    }
+
+done:
+    lastLoadedExtNumber = 0xFF;
+    _ShowInsertDisk2Dialog(aEditCustomTeam);
+}
+
+/* ImportTeamsMenu — import a team from club/national teams into the editor buffer. */
+__attribute__((used, externally_visible))
+void _ImportTeamsMenu(void)
+{
+    /* Save teamFileBuffer to editTeamsBuffer */
+    {
+        uint16_t *src = (uint16_t *)teamFileBuffer;
+        uint16_t teamCount = *src;
+        uint32_t wordCount = (uint32_t)teamCount * 684 + 2;
+        wordCount >>= 1; /* convert bytes to words */
+        volatile uint16_t *s = (volatile uint16_t *)src;
+        volatile uint16_t *d = (volatile uint16_t *)editTeamsBuffer;
+        while (wordCount > 0) {
+            *d++ = *s++;
+            wordCount--;
+        }
+    }
+
+    /* Save lastSelectedTeam area (0xF6 words = 246 words = 492 bytes) */
+    {
+        volatile uint16_t *src = (volatile uint16_t *)lastSelectedTeam;
+        volatile uint16_t *dst = (volatile uint16_t *)editTeamsSaveVarsArea;
+        for (int16_t i = 0xF5; i >= 0; i--)
+            *dst++ = *src++;
+    }
+
+    _ShowInsertDisk2Dialog(aSelectTeamToIm);
+
+    /* Show team selection dialog (club + national, no custom) */
+    _ChooseTeamsDialog(1, 1, 0, aSelectTeamToIm, (void *)0);
+
+    extern uint16_t selectedTeamCountryNumber;
+    extern uint32_t selectedTeamPtr;
+
+    if ((int16_t)selectedTeamCountryNumber != -1) {
+        /* Save selTeamsPtr team number and selTeamImportField, copy selected team data */
+        uint16_t savedTeamNum = *(uint16_t *)&selTeamsPtr;
+        uint8_t savedImportField = selTeamImportField;
+
+        /* Copy 342 words (684 bytes) from selectedTeamPtr to selTeamsPtr */
+        volatile uint16_t *src = (volatile uint16_t *)(uint32_t)selectedTeamPtr;
+        volatile uint16_t *dst = (volatile uint16_t *)&selTeamsPtr;
+        for (int16_t i = 341; i >= 0; i--)
+            *dst++ = *src++;
+
+        /* Restore saved values */
+        selTeamImportField = savedImportField;
+        *(uint16_t *)&selTeamsPtr = savedTeamNum;
+
+        teamIsImported = 1;
+        _SetCurrentEntry(21);
+    }
+
+    /* Restore lastSelectedTeam area from editTeamsSaveVarsArea */
+    {
+        volatile uint16_t *src = (volatile uint16_t *)editTeamsSaveVarsArea;
+        volatile uint16_t *dst = (volatile uint16_t *)lastSelectedTeam;
+        for (int16_t i = 245; i >= 0; i--)
+            *dst++ = *src++;
+    }
+
+    lastLoadedExtNumber = 0xFF;
+
+    /* Restore teamFileBuffer from editTeamsBuffer */
+    {
+        uint16_t *srcBuf = (uint16_t *)editTeamsBuffer;
+        uint16_t teamCount = *srcBuf;
+        uint32_t wordCount = (uint32_t)teamCount * 684 + 2;
+        wordCount >>= 1;
+        volatile uint16_t *s = (volatile uint16_t *)srcBuf;
+        volatile uint16_t *d = (volatile uint16_t *)teamFileBuffer;
+        while (wordCount > 0) {
+            *d++ = *s++;
+            wordCount--;
+        }
+    }
+
+    _InitEditTeamsMenu();
+}

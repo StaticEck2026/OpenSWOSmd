@@ -131,6 +131,19 @@ void _GoGetTeamsForPlay(uint8_t *gameTypeStrParam, uint8_t *playWhatStrParam,
                         uint16_t numTeams, uint16_t showClub,
                         uint16_t showNational, uint16_t showOrigCustom);
 
+/* --- Chunk 201: ChooseTeamsDialog --- */
+void _ChooseTeamsDialog(uint16_t showClub, uint16_t showNational, uint16_t showOrigCustom,
+                        uint8_t *title, void *onSelect);
+void _ChooseTeamsDialogWithNationality(uint16_t nationality, uint16_t showClub,
+                                       uint16_t showNational, uint16_t showOrigCustom,
+                                       uint8_t *title, void *onSelect);
+
+/* --- Chunk 202: SelectTeamToManage --- */
+void _SelectTeamToManage(void);
+
+/* --- Chunk 204: Career_ShowAddInternationalPlayerDialog --- */
+void _Career_ShowAddInternationalPlayerDialog(uint16_t homeOrAbroadFlag);
+
 /* --- Competition menu functions (Chunk 124) --- */
 void _DIYCompetitionMenu(void);
 void _PresetCompetitionMenu(void);

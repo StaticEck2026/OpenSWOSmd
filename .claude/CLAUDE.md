@@ -404,11 +404,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1535 functions ported across 199 chunks.
+**Current status:** 1547 functions ported across 204 chunks.
 
-**Last completed chunk:** Chunk 199 — Career_FillCurrentSeasonInfo + EncodeCompetitionPositionForSeasonInfo (2 → statistics.c).
+**Last completed chunk:** Chunk 204 — Career_ShowAddInternationalPlayerDialog (1 → menus.c).
 
-**Next candidates:** SelectTeamsFinalMenu (~550 instr), Career_MaybeGenerateJobOffer (~310 instr), ChooseTeamForEditTactics (~300 instr).
+**Next candidates:** Career_AddInternationalPlayerCommon (~130 instr), SquadMenu (~70 instr), CareerGameListCommon (~440 instr), PlayerMarketPlayerMatchesFilters (~105 instr), remaining small game logic functions.
 
 ---
 

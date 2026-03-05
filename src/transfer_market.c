@@ -4529,3 +4529,61 @@ void _PutPlayerOnMarketMenu(void)
         _SetCurrentEntry(6);
 }
 
+
+/* ==========================================================================
+ * Chunk 202 — BuyOtherDomesticPlayer + BuyOtherForeignPlayer
+ * (SWOS2.s lines 63572-63613)
+ * ========================================================================== */
+
+extern uint16_t selectedTeamCountryNumber;
+extern uint8_t  aBuyOtherDomest[];
+extern uint8_t  aBuyOtherForeig[];
+extern uint8_t  buyOtherPlayersMenu[];
+
+/* BuyOtherDomesticPlayer — open dialog to buy player from another domestic team.
+ * Calls ChooseTeamsDialogWithNationality with selTeamNumber nationality,
+ * then shows buyOtherPlayersMenu. */
+__attribute__((used, externally_visible))
+void _BuyOtherDomesticPlayer(void)
+{
+    /* move.b (selTeamNumber).l,d0 — reads HIGH byte on big-endian = country code */
+    uint16_t nationality = (uint8_t)(selTeamNumber >> 8);
+    _ChooseTeamsDialogWithNationality(nationality, 1, 0, 0, aBuyOtherDomest, (void *)0);
+    if ((int16_t)selectedTeamCountryNumber == -1)
+        return;
+    teamOffering = selectedTeamCountryNumber;
+    buyOtherPlayersTitlePtr = (uint8_t *)aBuyOtherDomest;
+    _ShowMenu(buyOtherPlayersMenu);
+    /* Original asm has duplicate check — preserve as-is */
+    if (transferCompleted != 0) {
+        _BuyPlayerExit();
+        return;
+    }
+    if (transferCompleted != 0) {
+        _BuyPlayerExit();
+        return;
+    }
+}
+
+/* BuyOtherForeignPlayer — open dialog to buy player from foreign team.
+ * Calls ChooseTeamsDialog with showClub=1, then shows buyOtherPlayersMenu. */
+__attribute__((used, externally_visible))
+void _BuyOtherForeignPlayer(void)
+{
+    _ChooseTeamsDialog(1, 0, 0, aBuyOtherForeig, (void *)0);
+    if ((int16_t)selectedTeamCountryNumber == -1)
+        return;
+    teamOffering = selectedTeamCountryNumber;
+    buyOtherPlayersTitlePtr = (uint8_t *)aBuyOtherForeig;
+    _ShowMenu(buyOtherPlayersMenu);
+    /* Original asm has duplicate check — preserve as-is */
+    if (transferCompleted != 0) {
+        _BuyPlayerExit();
+        return;
+    }
+    if (transferCompleted != 0) {
+        _BuyPlayerExit();
+        return;
+    }
+}
+

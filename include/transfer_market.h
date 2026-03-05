@@ -169,4 +169,8 @@ void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint1
 /* --- PutPlayerOnMarketMenu (Chunk 177) --- */
 void _PutPlayerOnMarketMenu(void);
 
+/* --- Chunk 202: BuyOtherDomesticPlayer + BuyOtherForeignPlayer --- */
+void _BuyOtherDomesticPlayer(void);
+void _BuyOtherForeignPlayer(void);
+
 #endif

@@ -2651,7 +2651,36 @@
         xref    _Squad45AfterDraw
         xref    _PlayTrainingGame
         xref    _TrainingMatch_BuildCurrentTeamFromCareerTeam
+        xref    _ChooseTeamsDialog
+        xref    _ChooseTeamsDialogWithNationality
+        xref    _SelectTeamToManage
+        xref    _BuyOtherDomesticPlayer
+        xref    _BuyOtherForeignPlayer
+        xref    _EditCustomTeam
+        xref    _ImportTeamsMenu
+        xref    _Career_ShowAddInternationalPlayerDialog
         xdef    PlayTrainingGame
+        xdef    careerAddIntlPlayerResult
+        xdef    careerAddIntlPlayerSelectedSrcPlayerPtr
+        xdef    careerAddIntlPlayerSelectedSrcPlayerNamePtr
+        xdef    aAddInternation
+        xdef    aAddInternation_0
+        xdef    AddInternationalPlayerHome
+        xdef    AddInternationalPlayerAbroad
+        xdef    editTeamsBuffer
+        xdef    editTeamsSaveVarsArea
+        xdef    selTeamImportField
+        xdef    aEditCustomTeam
+        xdef    aSelectTeamToEd
+        xdef    aSelectTeamToIm
+        xdef    aCustomTeamsChanged
+        xdef    aStatistics
+        xdef    selectedTeamCountryNumber
+        xdef    selectedTeamPtr
+        xdef    aSelectTeamToMa
+        xdef    aBuyOtherDomest
+        xdef    aBuyOtherForeig
+        xdef    buyOtherPlayersMenu
         xdef    SquadMenuSavePlayerPositions
         xdef    SquadUpdateMenuState
         xdef    squadMenu

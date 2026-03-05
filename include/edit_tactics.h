@@ -128,3 +128,7 @@ void _EditTeamsPlayersBeforeDraw(MenuEntry *entry);
 
 /* --- EditTeamsCallback (Chunk 148) --- */
 void _EditTeamsCallback(uint8_t *team);
+
+/* --- Chunk 203: EditCustomTeam + ImportTeamsMenu --- */
+void _EditCustomTeam(void);
+void _ImportTeamsMenu(void);

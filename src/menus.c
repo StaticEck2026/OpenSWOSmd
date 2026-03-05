@@ -4531,3 +4531,129 @@ void _CheckNumberOfTeams(void)
     }
     _PrintFormatted(fmt, outBuf, absDiff, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
+
+
+/* ==========================================================================
+ * Chunk 201 — ChooseTeamsDialog + ChooseTeamsDialogWithNationality
+ * (SWOS2.s lines 54900-54963)
+ * ========================================================================== */
+
+extern uint16_t selectedTeamCountryNumber;
+extern uint32_t selectedTeamPtr;
+extern uint8_t  aStatistics[];
+
+/* ChooseTeamsDialog — set up team selection globals and show choose-teams menu.
+ * If teamsType >= 0 after menu, calls SelectTeamsFinalMenu(255).
+ * Assembly: d2=showClub, d3=showNational, d4=showOrigCustom, a0=title, a1=onSelect.
+ * Returns via globals: selectedTeamCountryNumber, selectedTeamPtr. */
+__attribute__((used, externally_visible))
+void _ChooseTeamsDialog(uint16_t showClub, uint16_t showNational, uint16_t showOrigCustom,
+                        uint8_t *title, void *onSelect)
+{
+    showClubTeams = showClub;
+    showNationalTeams = showNational;
+    showOrigCustomTeams = showOrigCustom;
+    gameTypeStr = 0;
+    chooseTeamsHeader1stPart = (uint32_t)title;
+    chooseTeamsFunc = (uint32_t)onSelect;
+    careerSquadScreenDidSelectPlayerFlag = 0;
+    /* seq instruction: sets high byte of word to 0xFF when a1==0 (big-endian) */
+    if (onSelect == (void *)0)
+        careerSquadScreenDidSelectPlayerFlag = 0xFF00;
+    playWhatStr = (uint32_t)aStatistics;
+    numNeededTeams = 1;
+    selectTeamsNoLimit = 1;
+    selectedTeamCountryNumber = 0xFFFF;
+    selectedTeamPtr = 0;
+    _ShowMenu(chooseTeamsMenu);
+    if ((int16_t)teamsType >= 0) {
+        loadTeam = 1;
+        showCupsAndOther = 0;
+        playSeason = 0;
+        _CSelectTeamsFinalMenu(255);
+    }
+}
+
+/* ChooseTeamsDialogWithNationality — same as ChooseTeamsDialog but passes
+ * nationality to SelectTeamsFinalMenu instead of 255.
+ * Assembly: d0=nationality, d2=showClub, d3=showNational, d4=showOrigCustom,
+ * a0=title, a1=onSelect.
+ * Returns via globals: selectedTeamCountryNumber, selectedTeamPtr. */
+__attribute__((used, externally_visible))
+void _ChooseTeamsDialogWithNationality(uint16_t nationality, uint16_t showClub,
+                                       uint16_t showNational, uint16_t showOrigCustom,
+                                       uint8_t *title, void *onSelect)
+{
+    showClubTeams = showClub;
+    showNationalTeams = showNational;
+    showOrigCustomTeams = showOrigCustom;
+    gameTypeStr = 0;
+    chooseTeamsHeader1stPart = (uint32_t)title;
+    chooseTeamsFunc = (uint32_t)onSelect;
+    careerSquadScreenDidSelectPlayerFlag = 0;
+    /* seq instruction: sets high byte of word to 0xFF when a1==0 (big-endian) */
+    if (onSelect == (void *)0)
+        careerSquadScreenDidSelectPlayerFlag = 0xFF00;
+    playWhatStr = (uint32_t)aStatistics;
+    numNeededTeams = 1;
+    selectTeamsNoLimit = 1;
+    selectedTeamCountryNumber = 0xFFFF;
+    selectedTeamPtr = 0;
+    _ShowMenu(chooseTeamsMenu);
+    if ((int16_t)teamsType >= 0) {
+        loadTeam = 1;
+        showCupsAndOther = 0;
+        playSeason = 0;
+        _CSelectTeamsFinalMenu(nationality);
+    }
+}
+
+
+/* ==========================================================================
+ * Chunk 202 — SelectTeamToManage
+ * (SWOS2.s lines 50038-50050)
+ * ========================================================================== */
+
+extern uint8_t aSelectTeamToMa[];
+
+/* SelectTeamToManage — show club team selection dialog for career mode.
+ * Wraps ChooseTeamsDialog with showClub=1, showNational=0, showOrigCustom=0.
+ * Results available in globals: selectedTeamCountryNumber, selectedTeamPtr. */
+__attribute__((used, externally_visible))
+void _SelectTeamToManage(void)
+{
+    _ChooseTeamsDialog(1, 0, 0, aSelectTeamToMa, (void *)0);
+}
+
+
+/* ==========================================================================
+ * Chunk 204 — Career_ShowAddInternationalPlayerDialog
+ * (SWOS2.s lines 64815-64835)
+ * ========================================================================== */
+
+extern uint16_t careerAddIntlPlayerResult;
+extern uint32_t careerAddIntlPlayerSelectedSrcPlayerPtr;
+extern uint32_t careerAddIntlPlayerSelectedSrcPlayerNamePtr;
+extern uint8_t  nationalTeamFileId;
+extern uint8_t  aAddInternation[];
+extern uint8_t  aAddInternation_0[];
+extern void AddInternationalPlayerHome(void);
+extern void AddInternationalPlayerAbroad(void);
+
+/* Career_ShowAddInternationalPlayerDialog — show dialog to add international player.
+ * If homeOrAbroadFlag==0: use nationality filter (home), else show all (abroad).
+ * Results stored in globals: careerAddIntlPlayerResult,
+ * careerAddIntlPlayerSelectedSrcPlayerPtr, careerAddIntlPlayerSelectedSrcPlayerNamePtr. */
+__attribute__((used, externally_visible))
+void _Career_ShowAddInternationalPlayerDialog(uint16_t homeOrAbroadFlag)
+{
+    careerAddIntlPlayerResult = 0xFFFF;
+    if (homeOrAbroadFlag == 0) {
+        /* Home: filter by nationality */
+        _ChooseTeamsDialogWithNationality((uint16_t)nationalTeamFileId, 1, 0, 0,
+                                          aAddInternation, (void *)AddInternationalPlayerHome);
+    } else {
+        /* Abroad: show all club teams */
+        _ChooseTeamsDialog(1, 0, 0, aAddInternation_0, (void *)AddInternationalPlayerAbroad);
+    }
+}

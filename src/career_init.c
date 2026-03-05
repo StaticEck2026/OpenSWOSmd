@@ -236,21 +236,21 @@ void _InitializeNewSeason(void);
 void _DIY_SelectCompetitionSlot4FromCurrentDivision(void);
 uint16_t _Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t euroCupIndex);
 
-/* C→asm bridges (defined in SWOS2.s) */
-extern uint8_t *_CSelectTeamToManage(void);
-extern uint16_t _cSelectTeamToManageResult;
+extern uint16_t selectedTeamCountryNumber;
+extern uint32_t selectedTeamPtr;
+void _SelectTeamToManage(void);
 
 /* ChooseTeamAndStartCareer: let user pick a team, then start career.
  * Called as menu onSelect callback. */
 __attribute__((used, externally_visible))
 void _ChooseTeamAndStartCareer(void)
 {
-    uint8_t *team = _CSelectTeamToManage();
-    if (team == 0) {
+    _SelectTeamToManage();
+    if (selectedTeamPtr == 0) {
         _SetExitMenuFlag();
         return;
     }
-    _InitCareer(_cSelectTeamToManageResult);
+    _InitCareer(selectedTeamCountryNumber);
     _ActivateMenu(contestMenu);
 }
 

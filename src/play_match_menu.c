@@ -473,11 +473,12 @@ void _SetPlayerSurnamesOnSidePitch(void) {
         entry->y = *pos++ + 40;
         entry->stringFlags = *pos++;
         uint8_t *pl = _CGetPlayerAtIndex(tNum, (uint16_t)i);
+        PlayerFile *plPf = (PlayerFile *)(pl + 76);
         uint8_t *surname;
         if (entry->x == 0x106)
-            surname = _ExtractSurname(pl + PLAYERFILE_PLAYERNAME, 0x400F);
+            surname = _ExtractSurname((uint8_t *)plPf->playerName, 0x400F);
         else
-            surname = _ExtractSurname(pl + PLAYERFILE_PLAYERNAME, 0x400A);
+            surname = _ExtractSurname((uint8_t *)plPf->playerName, 0x400A);
         _StringCopy(surname, (uint8_t *)entry->fg);
     }
 }
@@ -790,8 +791,8 @@ cpuPath:
         int16_t d1 = a5->ordinal - ME(0x2D8).ordinal;
         uint16_t slot, fIdx;
         uint8_t *pl = _GetPlayerInfoBreakPosition(t1, (uint16_t)d1, &slot, &fIdx);
-        uint8_t posF = pl[PLAYERFILE_POSITIONANDFACE];
-        if (((posF & 0xE0) >> 5) == 0) return;
+        PlayerFile *plPf = (PlayerFile *)(pl + 76);
+        if (((plPf->positionAndFace & 0xE0) >> 5) == 0) return;
 
         uint16_t *ip = (uint16_t *)currentSelectedPlayerIndexPtr;
         if (*ip == fIdx)
@@ -821,9 +822,11 @@ void _PlayMatchMenuSwapPlayers(uint8_t *team, int16_t d1, int16_t d2, int16_t d3
         playerPositionsArray[p2Idx] = playerPositionsArray[p1Idx];
         playerPositionsArray[p1Idx] = tmp;
 
-        uint8_t ts = p2[PLAYERFILE_SHIRTNUMBER];
-        p2[PLAYERFILE_SHIRTNUMBER] = p1[PLAYERFILE_SHIRTNUMBER];
-        p1[PLAYERFILE_SHIRTNUMBER] = ts;
+        PlayerFile *pf1 = (PlayerFile *)(p1 + 76);
+        PlayerFile *pf2 = (PlayerFile *)(p2 + 76);
+        int8_t ts = pf2->shirtNumber;
+        pf2->shirtNumber = pf1->shirtNumber;
+        pf1->shirtNumber = ts;
     }
 
 secondarySwap:
@@ -876,7 +879,8 @@ int16_t _HandleSquadSwapSelectionToggle(int16_t d6) {
         curSel = -1;
     } else {
         uint8_t *pl = _CGetPlayerAtIndex(tNum, (uint16_t)selectedPlayerPosition);
-        if (((pl[PLAYERFILE_POSITIONANDFACE] & 0xE0) >> 5) == 0) return 0;
+        PlayerFile *plPf = (PlayerFile *)(pl + 76);
+        if (((plPf->positionAndFace & 0xE0) >> 5) == 0) return 0;
     }
 
     *selPos = (uint16_t)curSel;
@@ -1170,16 +1174,17 @@ void _DrawPlayerEntries(MenuEntry *a5) {
 
     /* Shirt number entry (entry 32) */
     MenuEntry *shE = bgE + 1;
+    PlayerFile *playerPf = (PlayerFile *)(player + 76);
     shE->isInvisible = 1;
     if (!d5) {
-        *(uint16_t *)&shE->fg = (uint16_t)(uint8_t)player[PLAYERFILE_SHIRTNUMBER];
+        *(uint16_t *)&shE->fg = (uint16_t)(uint8_t)playerPf->shirtNumber;
         shE->isInvisible = 0;
     }
     shE->y = a5->y;
 
     /* Surname entry (entry 33 = numE) */
     {
-        uint8_t *surname = _ExtractSurname(player + PLAYERFILE_PLAYERNAME, 0x800D);
+        uint8_t *surname = _ExtractSurname((uint8_t *)playerPf->playerName, 0x800D);
         numE->fg = (uint32_t)surname;
         numE->y = a5->y;
     }
@@ -1187,14 +1192,14 @@ void _DrawPlayerEntries(MenuEntry *a5) {
     /* Position text (entry 34) */
     MenuEntry *posE = numE + 1;
     {
-        uint16_t posField = (player[PLAYERFILE_POSITIONANDFACE] & 0xE0) >> 3;
+        uint16_t posField = (playerPf->positionAndFace & 0xE0) >> 3;
         posE->fg = playerPositionsStringTable[posField >> 2];
         posE->y = a5->y;
     }
 
     /* Skills string (entry 35) */
     MenuEntry *skE = posE + 1;
-    _CFormTopSkillsString((uint8_t *)skE->fg, player);
+    _FormTopSkillsString((uint8_t *)skE->fg, player);
     skE->y = a5->y;
 
     /* Value/status (entry 36) */
@@ -1214,12 +1219,12 @@ void _DrawPlayerEntries(MenuEntry *a5) {
 
     {
         uint16_t cb = 0x0D;
-        uint8_t sf = player[PLAYERFILE_SOMEFLAG];
+        uint8_t sf = (uint8_t)playerPf->someFlag;
         if (sf == 0x9B)      cb = 0x0D;
         else if (sf == 0x9A) cb = 0x01;
         else {
             cb = 0x0F;
-            if (!(player[PLAYERFILE_POSITIONANDFACE] & 0x02)) cb = 0x02;
+            if (!(playerPf->positionAndFace & 0x02)) cb = 0x02;
         }
         valE->stringFlags = (valE->stringFlags & 0xFFF0) | cb;
         valE->isInvisible = 0;
@@ -1245,11 +1250,6 @@ void _DrawPlayerEntries(MenuEntry *a5) {
  *   rotating by amounts from the bit-rotation table
  * - Pick the top 3 skill values and output their corresponding letters
  * ================================================================ */
-#define PLAYERFILE_POSITIONANDFACE_OFF  0   /* relative to player data at +0x4C */
-#define PLAYERFILE_PRICE_OFF            (-1) /* relative to player data at +0x4C; price is at +0x4B */
-#define PLAYERFILE_PLAYERNAME_OFF       0    /* at +0x4C */
-#define PLAYERFILE_PASSING_OFF          7    /* at +0x53 = PASSING longword */
-
 extern uint32_t topSkillLettersEven[];  /* 7 pointers to letter strings */
 extern uint32_t topSkillLettersOdd[];
 extern uint32_t topSkillBitRotEven[];   /* 7 pointers to byte arrays */
@@ -1258,22 +1258,22 @@ extern uint32_t topSkillBitRotOdd[];
 __attribute__((used, externally_visible))
 void _FormTopSkillsString(uint8_t *dst, uint8_t *playerBase)
 {
-    /* playerBase = a6 in asm, which points to team entry start.
-     * Player file data is at playerBase + 0x4C. */
-    uint8_t *pf = playerBase + 0x4C;
+    /* playerBase = a6 in asm = GetPlayer-style pointer (teamBase + fileIdx*38).
+     * PlayerFile data is at playerBase + 76. */
+    PlayerFile *pf = (PlayerFile *)(playerBase + 76);
 
-    uint16_t posGroup = (pf[0] & 0xE0) >> 5;  /* bits 7-5 of POSITIONANDFACE */
+    uint16_t posGroup = (pf->positionAndFace & 0xE0) >> 5;
     if (posGroup == 0) {
-        /* Goalkeeper or position 0: no skill string */
+        /* Goalkeeper: no skill string */
         *dst = 0;
         return;
     }
     posGroup -= 1;  /* 0-based index into tables (0-6) */
 
     /* Determine even/odd variant from XOR of price and name bytes */
-    uint8_t price = playerBase[0x4B];   /* PLAYERFILE_PRICE, 1 byte before +0x4C */
-    uint8_t name0 = pf[0];             /* first byte of player name at +0x4C */
-    uint8_t name1 = pf[1];             /* second byte at +0x4D */
+    uint8_t price = (uint8_t)pf->price;
+    uint8_t name0 = (uint8_t)pf->playerName[0];
+    uint8_t name1 = (uint8_t)pf->playerName[1];
     uint8_t xorVal = price ^ name0 ^ name1;
 
     const uint8_t *letters;
@@ -1287,8 +1287,9 @@ void _FormTopSkillsString(uint8_t *dst, uint8_t *playerBase)
         bitRot = (const uint8_t *)topSkillBitRotEven[posGroup];
     }
 
-    /* Get PASSING longword at +0x53 (7 bytes into player data) and shift left 4 */
-    uint32_t d7 = *(uint32_t *)(pf + 7);
+    /* Get PASSING longword (4 skills packed: passing, shootingHeading,
+     * tacklingBallControl, speedFinishing) and shift left 4 */
+    uint32_t d7 = *(uint32_t *)&pf->passing;
     d7 <<= 4;
 
     /* Find top 3 skill values. Each skill is extracted as 3 bits after

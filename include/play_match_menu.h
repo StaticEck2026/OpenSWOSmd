@@ -44,11 +44,13 @@
 /* TeamTactics offsets */
 #define TEAMTACTICS_BALLOUTOFPLAYTACTICS  2
 
-/* PlayerFile offsets (relative to player record within teamfile, at +0x4C from team start) */
-#define PLAYERFILE_PLAYERNAME       0
-#define PLAYERFILE_POSITIONANDFACE  16
-#define PLAYERFILE_SHIRTNUMBER      17
-#define PLAYERFILE_SOMEFLAG         18
+/* PlayerFile field offsets (within the 38-byte PlayerFile struct, at +76 from GetPlayer result) */
+#define PF_SHIRTNUMBER       2
+#define PF_PLAYERNAME        3
+#define PF_POSITIONANDFACE  26
+#define PF_PASSING          28
+#define PF_PRICE            32
+#define PF_SOMEFLAG         37
 
 /* --- Top skills string builder (Chunk 151) --- */
 void _FormTopSkillsString(uint8_t *dst, uint8_t *playerBase);
