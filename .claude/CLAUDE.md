@@ -404,11 +404,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1550 functions ported across 205 chunks.
+**Current status:** 1558 functions ported across 206 chunks.
 
-**Last completed chunk:** Chunk 205 — Career_AddInternationalPlayerCommon + AddInternationalPlayerHome/Abroad (3 → menus.c).
+**Last completed chunk:** Chunk 206 — National Team Selection family (8 → menus.c): SelectNationalTeamInit/Finish, Career_RebuildInternationalPlayerSelectionMasks, NationalTeamAddPlayer/RemovePlayers, SelectNationalTeamAbort/Common/AfterDrawCommon.
 
-**Next candidates:** SquadMenu family, ChooseTeams family, NationalTeam family, EditTactics callbacks, PlayerMarket filters, CareerGameListCommon, PrintFormatted, Loader/Asset functions (12, A-line traps).
+**Next candidates:** PlayerMarket filters (2), SquadMenu helpers (5), SquadInit/Finish/UpdateMenuState (3), SquadAfterDrawCommon, ChooseTeams family (4), EditTactics callbacks (2), CareerGameListCommon (~388 instr), Loader/Asset functions (12, A-line traps).
 
 ---
 

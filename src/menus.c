@@ -4836,3 +4836,310 @@ void _AddInternationalPlayerAbroad(uint8_t *selectedTeam)
 {
     _Career_AddInternationalPlayerCommon(selectedTeam, aAddInternation_0);
 }
+
+
+/* ==========================================================================
+ * Chunk 206 — National Team Selection family
+ * (SWOS2.s lines 65499-65745)
+ *
+ * SelectNationalTeamInit, SelectNationalTeamFinish,
+ * Career_RebuildInternationalPlayerSelectionMasks,
+ * NationalTeamAddPlayer, NationalTeamRemovePlayers,
+ * SelectNationalTeamAbort, SelectNationalTeamCommon,
+ * SelectNationalTeamAfterDrawCommon
+ * ========================================================================== */
+
+extern uint32_t careerIntlPlayersRemoveMask;
+extern uint32_t careerIntlPlayersWrongTypeMask;
+extern uint32_t careerIntlPlayersSelectableMask;
+extern uint16_t careerNationalTeamHasPendingAddPlayer;
+extern uint16_t selectNationalTeamMenuResult;
+extern uint16_t careerNationalTeamAddPlayerType;
+extern uint8_t  careerIntlPlayerSelectedPlayerDataCopy[];
+extern uint8_t  careerIntlPlayerSelectedTeamName[];
+extern uint8_t  nationalTeamAddPlayerMenu[];
+extern uint8_t  careerUnavailablePlayerNames[];
+extern uint16_t selTeamNumber;
+
+extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
+extern void _Career_UpdateNationalTeamMenuEntries(void);
+extern void _Career_UpdateRemovePlayersMenuEntry(void);
+extern void _Career_RemoveInternationalPlayersByMask(uint32_t removeMask);
+
+/* SelectNationalTeamInit — onInit for the national team selection menu.
+ * Clears remove mask and pending add flag. If squad not full, enables
+ * "add player" button (entry 3). */
+__attribute__((used, externally_visible))
+void _SelectNationalTeamInit(void)
+{
+    careerIntlPlayersRemoveMask = 0;
+    careerNationalTeamHasPendingAddPlayer = 0;
+    if (careerNumPlayers != 20) {
+        _SetCurrentEntry(3);
+    }
+}
+
+/* SelectNationalTeamFinish — onReturn for the national team selection menu.
+ * Adjusts entry layout, disables play button, sets string flag,
+ * then updates menu state. */
+__attribute__((used, externally_visible))
+void _SelectNationalTeamFinish(void)
+{
+    menuEntries[38].x -= 25;
+    menuEntries[7].isDisabled = 1;
+    uint16_t sf = menuEntries[1].stringFlags;
+    sf |= (1 << 13);
+    menuEntries[1].stringFlags = sf;
+    _Career_UpdateNationalTeamMenuEntries();
+    _Career_RebuildInternationalPlayerSelectionMasks();
+    _Career_UpdateRemovePlayersMenuEntry();
+}
+
+/* Career_RebuildInternationalPlayerSelectionMasks
+ * Scans career team slots (0-19). For each occupied slot, checks if the
+ * player's position type is compatible with the pending add player's type.
+ * Builds two masks:
+ *   careerIntlPlayersSelectableMask: bit CLEAR = selectable
+ *   careerIntlPlayersWrongTypeMask: bit SET = wrong position type */
+__attribute__((used, externally_visible))
+void _Career_RebuildInternationalPlayerSelectionMasks(void)
+{
+    /* loc_147376 is a block pointer for the pending player data copy.
+     * In asm, loc_147376 = careerIntlPlayerSelectedPlayerDataCopy - 76.
+     * The block pointer convention: adding 0x66 reaches positionAndFace. */
+    PlayerFile *pendingPf = (PlayerFile *)careerIntlPlayerSelectedPlayerDataCopy;
+    uint16_t pendingPos = (pendingPf->positionAndFace & 0xE0) >> 5;
+
+    uint32_t wrongMask = 0;
+    uint32_t selectMask = 0xFFFFFFFF;  /* all bits set = all selectable */
+
+    for (int16_t d1 = 19; d1 >= 0; d1--) {
+        uint8_t *player = _GetPlayer(selTeamNumber, (uint16_t)d1);
+        PlayerFile *pf = (PlayerFile *)(player + sizeof(TeamFile));
+
+        /* Skip empty slots */
+        if ((uint8_t)pf->playerName[0] == 0xFF)
+            continue;
+
+        /* Check position compatibility if pending add is active */
+        if (careerNationalTeamHasPendingAddPlayer) {
+            uint16_t slotPos = (pf->positionAndFace & 0xE0) >> 5;
+            if (pendingPos == 0) {
+                /* Pending is GK: only GK slots are compatible */
+                if (slotPos != 0) {
+                    wrongMask |= (1UL << d1);
+                    continue;
+                }
+            } else {
+                /* Pending is outfield: only non-GK slots */
+                if (slotPos == 0) {
+                    wrongMask |= (1UL << d1);
+                    continue;
+                }
+            }
+        }
+
+        /* Slot is selectable: clear its bit */
+        selectMask &= ~(1UL << d1);
+    }
+
+    careerIntlPlayersSelectableMask = selectMask;
+    careerIntlPlayersWrongTypeMask = wrongMask;
+}
+
+/* NationalTeamAddPlayer — shows the home/abroad sub-menu, then lets user
+ * select a player. If player selected but no room in career team (result==1),
+ * copies player data for pending addition. */
+__attribute__((used, externally_visible))
+void _NationalTeamAddPlayer(void)
+{
+    careerIntlPlayersRemoveMask = 0;
+    _ShowMenu(nationalTeamAddPlayerMenu);
+    int16_t addType = (int16_t)careerNationalTeamAddPlayerType;
+
+    if (addType >= 0) {
+        _Career_ShowAddInternationalPlayerDialog((uint16_t)addType);
+
+        if (careerAddIntlPlayerResult == 1) {
+            /* No room right now — store as pending add */
+            _StringCopy((uint8_t *)(uint32_t)careerAddIntlPlayerSelectedSrcPlayerNamePtr,
+                         careerIntlPlayerSelectedTeamName);
+
+            /* Copy 38 bytes of PlayerFile data from source player */
+            uint8_t *src = (uint8_t *)(uint32_t)careerAddIntlPlayerSelectedSrcPlayerPtr + sizeof(TeamFile);
+            volatile uint8_t *dst = (volatile uint8_t *)careerIntlPlayerSelectedPlayerDataCopy;
+            for (int16_t i = 37; i >= 0; i--) {
+                *dst++ = *src++;
+            }
+
+            careerNationalTeamHasPendingAddPlayer = 1;
+            _SetCurrentEntry(5);
+            _Career_UpdateRemovePlayersMenuEntry();
+        }
+    }
+
+    _Career_UpdateNationalTeamMenuEntries();
+    _Career_RebuildInternationalPlayerSelectionMasks();
+    _DrawMenu();
+}
+
+/* NationalTeamRemovePlayers — removes marked international players and
+ * updates the UI. */
+__attribute__((used, externally_visible))
+void _NationalTeamRemovePlayers(void)
+{
+    _Career_RemoveInternationalPlayersByMask(careerIntlPlayersRemoveMask);
+    careerIntlPlayersRemoveMask = 0;
+    _Career_UpdateNationalTeamMenuEntries();
+    _Career_RebuildInternationalPlayerSelectionMasks();
+    _Career_UpdateRemovePlayersMenuEntry();
+    _SetCurrentEntry(4);
+    if (careerNumPlayers != 20) {
+        _SetCurrentEntry(3);
+    }
+    _DrawMenu();
+}
+
+/* SelectNationalTeamAbort — cancels pending add and resets UI. */
+__attribute__((used, externally_visible))
+void _SelectNationalTeamAbort(void)
+{
+    careerNationalTeamHasPendingAddPlayer = 0;
+    _Career_UpdateNationalTeamMenuEntries();
+    _Career_RebuildInternationalPlayerSelectionMasks();
+    _Career_UpdateRemovePlayersMenuEntry();
+    _SetCurrentEntry(3);
+    _DrawMenu();
+}
+
+/* SelectNationalTeamCommon — handles clicking a player slot in the
+ * national team menu. If a pending add is in progress, places the
+ * pending player into the selected slot. Otherwise toggles the
+ * remove-mark on the selected player.
+ * entry = a5 from asm (current menu entry). */
+__attribute__((used, externally_visible))
+void _SelectNationalTeamCommon(void *entryPtr)
+{
+    MenuEntry *a5 = (MenuEntry *)entryPtr;
+    /* Get player index from current entry's ordinal relative to entry 8 */
+    uint16_t d1 = a5->ordinal - menuEntries[8].ordinal;
+
+    uint16_t slot, fileIdx;
+    uint8_t *careerPlayer = _GetPlayerInfoBreakPosition(
+        careerTeam, d1, &slot, &fileIdx);
+
+    if (careerNationalTeamHasPendingAddPlayer) {
+        /* Place pending player into selected slot.
+         * loc_147376 = careerIntlPlayerSelectedPlayerDataCopy - 76 is the
+         * "block pointer" for the pending player data copy. */
+        uint8_t *pendingBlock = careerIntlPlayerSelectedPlayerDataCopy - sizeof(TeamFile);
+
+        _Career_CopyUnavailablePlayerToCareerTeamSlot(
+            pendingBlock, careerPlayer,
+            careerIntlPlayerSelectedTeamName,
+            careerAddIntlPlayerSelectedTeamNumber,
+            careerAddIntlPlayerSelectedPlayerOrdinal,
+            fileIdx);
+
+        careerNationalTeamHasPendingAddPlayer = 0;
+        _SetCurrentEntry(3);
+        _Career_UpdateNationalTeamMenuEntries();
+        _Career_UpdateRemovePlayersMenuEntry();
+        _Career_RebuildInternationalPlayerSelectionMasks();
+        _DrawMenu();
+    } else {
+        /* Toggle remove mark on this player */
+        selectNationalTeamMenuResult = fileIdx;
+        careerIntlPlayersRemoveMask ^= (1UL << d1);
+        _Career_UpdateRemovePlayersMenuEntry();
+        _DrawMenu();
+    }
+}
+
+/* SelectNationalTeamAfterDrawCommon — after-draw callback for each player
+ * slot in the national team menu. Draws player info row with appropriate
+ * coloring based on position compatibility, selection state, and remove marks.
+ *
+ * Uses the "block pointer" convention for BuildTransferPlayerMenuEntry:
+ * block_ptr + 0x4C = PlayerFile.nationality, etc.
+ * entry = a5 from asm (current menu entry). */
+__attribute__((used, externally_visible))
+void _SelectNationalTeamAfterDrawCommon(void *entryPtr)
+{
+    MenuEntry *a5 = (MenuEntry *)entryPtr;
+    int16_t d6;
+    uint16_t d5;
+    uint8_t *a6_player;  /* player block pointer for BuildTransferPlayerMenuEntry */
+    uint8_t *a4_extra;   /* extra name pointer */
+
+    if (a5->ordinal == 7) {
+        /* Entry 7 = pending add player display slot */
+        if (!careerNationalTeamHasPendingAddPlayer)
+            return;
+
+        /* Use the pending player data copy as block pointer.
+         * loc_147376 = careerIntlPlayerSelectedPlayerDataCopy - 76. */
+        a6_player = careerIntlPlayerSelectedPlayerDataCopy - sizeof(TeamFile);
+        d6 = -1;  /* 0xFFFF */
+        d5 = 0x0D;
+        a4_extra = careerIntlPlayerSelectedTeamName;
+    } else {
+        /* Normal player slot */
+        uint16_t relIdx = a5->ordinal - menuEntries[8].ordinal;
+        d6 = (int16_t)(relIdx + 1);
+        uint16_t d1 = relIdx;
+
+        /* Entry for last slot (ordinal delta == 16) gets d6 = -1 */
+        if (d1 == 16)
+            d6 = -1;
+
+        uint16_t slot, fileIdx;
+        uint8_t *careerPlayer = _GetPlayerInfoBreakPosition(
+            careerTeam, d1, &slot, &fileIdx);
+        a6_player = careerPlayer;
+
+        /* Default color based on position type */
+        d5 = 0;
+        PlayerFile *pf = (PlayerFile *)(careerPlayer + sizeof(TeamFile));
+        uint16_t posType = (pf->positionAndFace & 0xE0) >> 5;
+        if (posType == 0)
+            d5 = 0x0E;  /* goalkeeper color */
+
+        /* Disable entry if wrong position type */
+        a5->isDisabled = 0;
+        if (careerIntlPlayersWrongTypeMask & (1UL << d1)) {
+            a5->isDisabled = 1;
+            d5 = 9;
+        }
+
+        /* Disable entry if not selectable */
+        if (careerIntlPlayersSelectableMask & (1UL << d1)) {
+            a5->isDisabled = 1;
+        }
+
+        /* If not in pending add mode, check remove mask */
+        if (!careerNationalTeamHasPendingAddPlayer) {
+            if (careerIntlPlayersRemoveMask & (1UL << d1)) {
+                d5 = 0x0D;
+            }
+        }
+
+        /* Set extra name pointer from careerUnavailablePlayerNames */
+        a4_extra = careerUnavailablePlayerNames + d1 * 17;
+    }
+
+    /* Call BuildTransferPlayerMenuEntry and draw */
+    uint16_t y = a5->y;
+    _BuildTransferPlayerMenuEntry(
+        (void *)&menuEntries[27],
+        a6_player,
+        y,
+        d6,
+        d5,
+        a4_extra);
+
+    /* Hide entry 37 */
+    menuEntries[37].isInvisible = 1;
+
+    _DrawMultipleItems(12, &menuEntries[27]);
+}

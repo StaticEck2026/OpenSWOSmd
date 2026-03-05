@@ -65496,30 +65496,20 @@ selectNationalTeamMenu:
 
 ; ===== SelectNationalTeamInit =====
 ; prototype: void __usercall SelectNationalTeamInit()
+; ===== SelectNationalTeamInit =====
+; Ported to C: _SelectNationalTeamInit in src/menus.c
 SelectNationalTeamInit:
-                clr.l   (careerIntlPlayersRemoveMask).l
-                clr.w   (careerNationalTeamHasPendingAddPlayer).l
-                cmpi.w  #$14,(careerNumPlayers).l
-                beq.s   loc_146F9E
-                move.w  #3,d0
-                jsr     SetCurrentEntry
-loc_146F9E:
-                bra.w   *+4
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _SelectNationalTeamInit
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== SelectNationalTeamFinish =====
-; prototype: void __usercall SelectNationalTeamFinish()
+; Ported to C: _SelectNationalTeamFinish in src/menus.c
 SelectNationalTeamFinish:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$850)).l,a0
-                subi.w  #$19,MENUENTRY_X(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a0
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                move.w  MENUENTRY_STRINGFLAGS(a0),d0
-                bset    #$D,d0
-                move.w  d0,$24(a0)
-                bsr.w   Career_UpdateNationalTeamMenuEntries
-                bsr.w   Career_RebuildInternationalPlayerSelectionMasks
-                bsr.w   Career_UpdateRemovePlayersMenuEntry
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _SelectNationalTeamFinish
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== Career_UpdateNationalTeamMenuEntries ===== (ported to C → _Career_UpdateNationalTeamMenuEntries in career_teams.c)
@@ -65527,42 +65517,11 @@ Career_UpdateNationalTeamMenuEntries:
                 jmp     _Career_UpdateNationalTeamMenuEntries
 
 ; ===== Career_RebuildInternationalPlayerSelectionMasks =====
-; prototype: void __usercall Career_RebuildInternationalPlayerSelectionMasks()
+; Ported to C: _Career_RebuildInternationalPlayerSelectionMasks in src/menus.c
 Career_RebuildInternationalPlayerSelectionMasks:
-                lea     (loc_147376).l,a0
-                move.b  $66(a0),d3
-                andi.w  #$E0,d3
-                lsr.w   #5,d3
-                clr.l   d5
-                moveq   #$FFFFFFFF,d2
-                move.w  #$13,d1
-loc_1470BC:
-                move.w  (selTeamNumber).l,d0
-                bsr.w   GetPlayer
-                cmpi.b  #$FF,$4F(a0)
-                beq.s   loc_1470FA
-                tst.w   (careerNationalTeamHasPendingAddPlayer).l
-                beq.s   loc_1470F8
-                move.b  $66(a0),d4
-                andi.w  #$E0,d4
-                lsr.w   #5,d4
-                cmpi.w  #0,d3
-                bne.s   loc_1470EE
-                cmpi.w  #0,d4
-                beq.s   loc_1470F8
-                bra.s   loc_1470F4
-loc_1470EE:
-                cmpi.w  #0,d4
-                bne.s   loc_1470F8
-loc_1470F4:
-                bset    d1,d5
-                bra.s   loc_1470FA
-loc_1470F8:
-                bclr    d1,d2
-loc_1470FA:
-                dbf     d1,loc_1470BC
-                move.l  d2,(careerIntlPlayersSelectableMask).l
-                move.l  d5,(careerIntlPlayersWrongTypeMask).l
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _Career_RebuildInternationalPlayerSelectionMasks
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== Career_UpdateRemovePlayersMenuEntry ===== (ported to C → _Career_UpdateRemovePlayersMenuEntry in career_teams.c)
@@ -65570,51 +65529,20 @@ Career_UpdateRemovePlayersMenuEntry:
                 jmp     _Career_UpdateRemovePlayersMenuEntry
 
 ; ===== NationalTeamAddPlayer =====
-; prototype: void __usercall NationalTeamAddPlayer()
+; Ported to C: _NationalTeamAddPlayer in src/menus.c
 NationalTeamAddPlayer:
-                clr.l   (careerIntlPlayersRemoveMask).l
-                lea     (nationalTeamAddPlayerMenu).l,a6
-                jsr     ShowMenu
-                move.w  (careerNationalTeamAddPlayerType).l,d0
-                bmi.s   loc_1471B4
-                jsr Career_ShowAddInternationalPlayerDialog(pc)
-                cmpi.w  #1,d0
-                bne.s   loc_1471B4
-                movea.l a2,a0
-                lea     (careerIntlPlayerSelectedTeamName).l,a1
-                jsr     StringCopy
-                lea     (careerIntlPlayerSelectedPlayerDataCopy).l,a0
-                lea     $4C(a5),a5
-                move.w  #$25,d0         ; '%'
-loc_147198:
-                move.b  (a5)+,(a0)+
-                dbf     d0,loc_147198
-                move.w  #1,(careerNationalTeamHasPendingAddPlayer).l
-                move.w  #5,d0
-                jsr     SetCurrentEntry
-                bsr.w   Career_UpdateRemovePlayersMenuEntry
-loc_1471B4:
-                bsr.w   Career_UpdateNationalTeamMenuEntries
-                bsr.w   Career_RebuildInternationalPlayerSelectionMasks
-                jmp     DrawMenu
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _NationalTeamAddPlayer
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== NationalTeamRemovePlayers =====
-; prototype: void __usercall NationalTeamRemovePlayers()
+; Ported to C: _NationalTeamRemovePlayers in src/menus.c
 NationalTeamRemovePlayers:
-                move.l  (careerIntlPlayersRemoveMask).l,d0
-                jsr Career_RemoveInternationalPlayersByMask(pc)
-                clr.l   (careerIntlPlayersRemoveMask).l
-                bsr.w   Career_UpdateNationalTeamMenuEntries
-                bsr.w   Career_RebuildInternationalPlayerSelectionMasks
-                bsr.w   Career_UpdateRemovePlayersMenuEntry
-                move.w  #4,d0
-                jsr     SetCurrentEntry
-                cmpi.w  #$14,(careerNumPlayers).l
-                beq.s   loc_1471FC
-                move.w  #3,d0
-                jsr     SetCurrentEntry
-loc_1471FC:
-                jmp     DrawMenu
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _NationalTeamRemovePlayers
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== SelectNationalTeamExit =====
 ; prototype: void __usercall SelectNationalTeamExit()
@@ -65623,15 +65551,12 @@ SelectNationalTeamExit:
                 jmp     _SelectNationalTeamExit
 
 ; ===== SelectNationalTeamAbort =====
-; prototype: void __usercall SelectNationalTeamAbort()
+; Ported to C: _SelectNationalTeamAbort in src/menus.c
 SelectNationalTeamAbort:
-                clr.w   (careerNationalTeamHasPendingAddPlayer).l
-                bsr.w   Career_UpdateNationalTeamMenuEntries
-                bsr.w   Career_RebuildInternationalPlayerSelectionMasks
-                bsr.w   Career_UpdateRemovePlayersMenuEntry
-                move.w  #3,d0
-                jsr     SetCurrentEntry
-                jmp     DrawMenu
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _SelectNationalTeamAbort
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== SelectNationalTeamOnSelect25 =====
 ; Ported to C: _SelectNationalTeamOnSelect25 in src/menus.c
@@ -65644,104 +65569,25 @@ SelectNationalTeam25AfterDraw:
                 jmp     _SelectNationalTeam25AfterDraw
 
 ; ===== SelectNationalTeamCommon =====
-; prototype: void __usercall SelectNationalTeamCommon()
+; Ported to C: _SelectNationalTeamCommon in src/menus.c
+; Bridge: a5 → C param
 SelectNationalTeamCommon:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a0
-                move.w  2(a5),d1
-                sub.w   2(a0),d1
-                lea     (careerTeam).l,a0
-                jsr GetPlayerInfoBreakPosition(pc)
-                tst.w   (careerNationalTeamHasPendingAddPlayer).l
-                beq.s   loc_1472B8
-                movea.l a0,a1
-                lea     (loc_147376).l,a0
-                lea     (careerIntlPlayerSelectedTeamName).l,a2
-                move.w  d1,d3
-                move.w  (careerAddIntlPlayerSelectedPlayerOrdinal).l,d1
-                move.w  (careerAddIntlPlayerSelectedTeamNumber).l,d2
-                bsr.w   Career_CopyUnavailablePlayerToCareerTeamSlot
-                clr.w   (careerNationalTeamHasPendingAddPlayer).l
-                move.w  #3,d0
-                jsr     SetCurrentEntry
-                bsr.w   Career_UpdateNationalTeamMenuEntries
-                bsr.w   Career_UpdateRemovePlayersMenuEntry
-                bsr.w   Career_RebuildInternationalPlayerSelectionMasks
-                jmp     DrawMenu
-loc_1472B8:
-                move.w  d1,(selectNationalTeamMenuResult).l
-                move.l  (careerIntlPlayersRemoveMask).l,d0
-                bchg    d1,d0
-                move.l  d0,(careerIntlPlayersRemoveMask).l
-                bsr.w   Career_UpdateRemovePlayersMenuEntry
-                jmp     DrawMenu
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _SelectNationalTeamCommon
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== SelectNationalTeamAfterDrawCommon =====
-; prototype: void __usercall SelectNationalTeamAfterDrawCommon()
+; Ported to C: _SelectNationalTeamAfterDrawCommon in src/menus.c
+; Bridge: a5 → C param
 SelectNationalTeamAfterDrawCommon:
-                cmpi.w  #7,2(a5)
-                bne.s   loc_147300
-                tst.w   (careerNationalTeamHasPendingAddPlayer).l
-                beq.w   locret_1473B0
-                lea     (loc_147376).l,a6
-                move.w  #$FFFF,d6
-                move.w  #$D,d5
-                lea     (careerIntlPlayerSelectedTeamName).l,a4
-                bra.w   loc_147390
-loc_147300:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a0
-                move.w  2(a5),d6
-                sub.w   2(a0),d6
-                move.w  d6,d7
-                move.w  d6,d1
-                addq.w  #1,d6
-                cmpi.w  #$10,d1
-                bne.s   loc_14731C
-                move.w  #$FFFF,d6
-loc_14731C:
-                lea     (careerTeam).l,a0
-                jsr GetPlayerInfoBreakPosition(pc)
-                movea.l a0,a6
-                clr.w   d5
-                move.b  $66(a0),d0
-                andi.w  #$E0,d0
-                lsr.w   #5,d0
-                cmpi.w  #0,d0
-                bne.s   loc_14733E
-                move.w  #$E,d5
-loc_14733E:
-                clr.w   6(a5)
-                move.l  (careerIntlPlayersWrongTypeMask).l,d0
-                btst    d1,d0
-                beq.s   loc_147356
-                move.w  #1,6(a5)
-                move.w  #9,d5
-loc_147356:
-                move.l  (careerIntlPlayersSelectableMask).l,d0
-                btst    d1,d0
-                beq.s   loc_147366
-                move.w  #1,6(a5)
-loc_147366:
-                tst.w   (careerNationalTeamHasPendingAddPlayer).l
-                bne.s   loc_14737C
-                move.l  (careerIntlPlayersRemoveMask).l,d0
-                btst    d1,d0
-loc_147376:
-                beq.s   loc_14737C
-                move.w  #$D,d5
-loc_14737C:
-                movea.l #0,a4
-                lea     (careerUnavailablePlayerNames).l,a4
-                mulu.w  #$11,d1
-                lea     (a4,d1.w),a4
-loc_147390:
-                move.w  $16(a5),d7
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$5E8)).l,a0
-                bsr.w   BuildTransferPlayerMenuEntry
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$818).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$5E8)).l,a5
-                move.w  #$C,d0
-                jmp     DrawMultipleItems
-locret_1473B0:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _SelectNationalTeamAfterDrawCommon
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 careerIntlPlayersRemoveMask:
                 dc.l $00000000          ; raw

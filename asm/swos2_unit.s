@@ -2672,6 +2672,19 @@
         xdef    aAddInternation_0
         xdef    AddInternationalPlayerHome
         xdef    AddInternationalPlayerAbroad
+        xdef    careerIntlPlayersWrongTypeMask
+        xdef    careerIntlPlayersSelectableMask
+        xdef    careerIntlPlayerSelectedPlayerDataCopy
+        xdef    careerIntlPlayerSelectedTeamName
+        xdef    nationalTeamAddPlayerMenu
+        xref    _SelectNationalTeamInit
+        xref    _SelectNationalTeamFinish
+        xref    _Career_RebuildInternationalPlayerSelectionMasks
+        xref    _NationalTeamAddPlayer
+        xref    _NationalTeamRemovePlayers
+        xref    _SelectNationalTeamAbort
+        xref    _SelectNationalTeamCommon
+        xref    _SelectNationalTeamAfterDrawCommon
         xdef    editTeamsBuffer
         xdef    editTeamsSaveVarsArea
         xdef    selTeamImportField

@@ -149,6 +149,16 @@ void _Career_AddInternationalPlayerCommon(uint8_t *selectedTeam, uint8_t *title)
 void _AddInternationalPlayerHome(uint8_t *selectedTeam);
 void _AddInternationalPlayerAbroad(uint8_t *selectedTeam);
 
+/* --- Chunk 206: National Team Selection family --- */
+void _SelectNationalTeamInit(void);
+void _SelectNationalTeamFinish(void);
+void _Career_RebuildInternationalPlayerSelectionMasks(void);
+void _NationalTeamAddPlayer(void);
+void _NationalTeamRemovePlayers(void);
+void _SelectNationalTeamAbort(void);
+void _SelectNationalTeamCommon(void *entryPtr);
+void _SelectNationalTeamAfterDrawCommon(void *entryPtr);
+
 /* --- Competition menu functions (Chunk 124) --- */
 void _DIYCompetitionMenu(void);
 void _PresetCompetitionMenu(void);

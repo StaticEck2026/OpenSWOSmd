@@ -3174,6 +3174,24 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, map confirms correct placement)
 - Cumulative: 1550 functions across 205 chunks
 
+### Chunk 206 — National Team Selection family (8 → menus.c)
+- Date: 2026-03-02
+- Ported:
+  1. SelectNationalTeamInit (→menus.c) — ~7 instr. Clears remove mask and pending add flag. If squad not full, enables add player button (entry 3).
+  2. SelectNationalTeamFinish (→menus.c) — ~12 instr. Adjusts entry 38 x-coord, disables entry 7, sets bit 13 of entry 1 stringFlags. Calls update functions.
+  3. Career_RebuildInternationalPlayerSelectionMasks (→menus.c) — ~30 instr. Scans 20 career team slots via GetPlayer. For each occupied slot, checks position compatibility with pending add player. Builds selectableMask (bit clear=selectable) and wrongTypeMask (bit set=wrong position type). Uses code-as-data pattern: loc_147376 block pointer for careerIntlPlayerSelectedPlayerDataCopy.
+  4. NationalTeamAddPlayer (→menus.c) — ~23 instr. Shows home/abroad sub-menu (nationalTeamAddPlayerMenu), calls Career_ShowAddInternationalPlayerDialog. If result==1 (no room), copies player data to pending buffers. Uses volatile byte copy to prevent GCC memcpy optimization.
+  5. NationalTeamRemovePlayers (→menus.c) — ~13 instr. Calls Career_RemoveInternationalPlayersByMask with remove mask, clears mask, updates UI.
+  6. SelectNationalTeamAbort (→menus.c) — ~7 instr. Clears pending add flag, updates UI.
+  7. SelectNationalTeamCommon (→menus.c) — ~27 instr. Handles player slot click. If pending add: places player via Career_CopyUnavailablePlayerToCareerTeamSlot using block pointer convention. Otherwise toggles remove bit.
+  8. SelectNationalTeamAfterDrawCommon (→menus.c) — ~56 instr. After-draw for player slots. Entry 7 = pending add display. Normal slots: position type color, wrong type/selectable/remove mask checks. Calls BuildTransferPlayerMenuEntry + DrawMultipleItems.
+- Asm→C bridges: All 8 functions. SelectNationalTeamCommon/AfterDrawCommon pass a5 as param. Others save/restore d2-d7/a2-a6.
+- Added xdefs: careerIntlPlayersWrongTypeMask, careerIntlPlayersSelectableMask, careerIntlPlayerSelectedPlayerDataCopy, careerIntlPlayerSelectedTeamName, nationalTeamAddPlayerMenu
+- Added xrefs: all 8 C functions
+- Code-as-data note: loc_147376 = careerIntlPlayerSelectedPlayerDataCopy - 76 is used as a "player block pointer" in the asm. In C, computed explicitly.
+- Build status: **verified** (clean build, map confirms correct placement)
+- Cumulative: 1558 functions across 206 chunks
+
 ### Chunk 195 — Career_AutoAdvanceCompetitionSlots (1 → career_status.c)
 - Date: 2026-03-02
 - Ported:
