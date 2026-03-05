@@ -2662,6 +2662,7 @@
         xref    _AddInternationalPlayerHome
         xref    _AddInternationalPlayerAbroad
         xref    _Career_AddInternationalPlayerCommon
+        xref    _PlayerMarketBuildVisiblePlayerList
         xdef    PlayTrainingGame
         xdef    careerAddIntlPlayerResult
         xdef    careerAddIntlPlayerSelectedSrcPlayerPtr
@@ -3466,6 +3467,9 @@
         xdef    playerMarketTotalMatchCount
         xdef    playerMarketVisibleItemCount
         xdef    playerMarketListScrollOffset
+        xdef    positionGroupTable
+        xdef    playerRatingFilterThresholds
+        xdef    playerMarketVisibleItems
         xdef    viewSquadTitle
         xdef    viewSquadFlags
         xdef    viewSquadMaskLo

@@ -4587,3 +4587,165 @@ void _BuyOtherForeignPlayer(void)
     }
 }
 
+/* =============================================================== */
+/* Chunk 207: PlayerMarketBuildVisiblePlayerList +                  */
+/*            PlayerMarketPlayerMatchesFilters                     */
+/* =============================================================== */
+
+extern uint8_t *positionGroupTable[];   /* 4 pointers to position group byte arrays (0xFF terminated) */
+extern uint8_t  playerRatingFilterThresholds[];  /* 17-byte lookup: filter index → min rating */
+extern uint32_t playerMarketVisibleItems[];      /* up to 10 pointers to market entries */
+
+/* PlayerMarketPlayerMatchesFilters — filter predicate for player market.
+ * blockPtr uses the "block pointer" convention: blockPtr + 0x4C = PlayerFile start.
+ * Returns 0 if player matches all active filters, 1 otherwise. */
+static int16_t playerMarketPlayerMatchesFilters(uint8_t *blockPtr, int16_t ratingThreshold,
+                                                 uint8_t *countryRange, uint8_t *positionList,
+                                                 int16_t skillBitIndex)
+{
+    PlayerFile *pf = (PlayerFile *)(blockPtr + 76);  /* blockPtr + $4C */
+
+    /* --- Rating/price filter --- */
+    if (ratingThreshold >= 0) {
+        int8_t diff = (int8_t)((uint8_t)pf->price - (uint8_t)ratingThreshold);
+        if (diff > 6 || diff < (int8_t)0xFA)   /* 0xFA = -6 signed */
+            return 1;
+    }
+
+    /* --- Country/nationality range filter --- */
+    if (countryRange != (uint8_t *)0) {
+        uint8_t nat = (uint8_t)pf->nationality;
+        if (nat < countryRange[0])              /* bcs = unsigned below */
+            return 1;
+        if (nat >= countryRange[1])             /* bcc = unsigned above or equal */
+            return 1;
+    }
+
+    /* --- Position group filter (from positionGroupTable) --- */
+    if (positionList != (uint8_t *)0) {
+        uint8_t posGroup = (uint8_t)((pf->positionAndFace & 0xE0) >> 5);
+        uint8_t *p = positionList;
+        for (;;) {
+            if ((int8_t)*p < 0)                 /* 0xFF terminator (negative as signed) */
+                return 1;                       /* position not found → no match */
+            if (*p == posGroup)
+                break;                          /* found → pass this filter */
+            p++;
+        }
+    }
+
+    /* --- Specific position skill bit filter --- */
+    if (playerMarketFilterPosition != 0 && skillBitIndex >= 0) {
+        uint8_t posGroup = (uint8_t)((pf->positionAndFace & 0xE0) >> 5);
+        if (posGroup == 0)
+            return 1;                           /* goalkeepers excluded */
+        /* Reconstruct big-endian skills longword from 4 consecutive bytes */
+        uint32_t skills = ((uint32_t)(uint8_t)pf->passing << 24) |
+                          ((uint32_t)(uint8_t)pf->shootingHeading << 16) |
+                          ((uint32_t)(uint8_t)pf->tacklingBallControl << 8) |
+                          (uint32_t)(uint8_t)pf->speedFinishing;
+        if (!(skills & ((uint32_t)1 << skillBitIndex)))
+            return 1;                           /* required skill bit not set */
+    }
+
+    return 0;   /* all filters passed */
+}
+
+/* PlayerMarketBuildVisiblePlayerList — builds the visible player list for the
+ * transfer market browser.  Sets up filter state from globals, iterates
+ * domestic or foreign market entries, applies filters, and populates the
+ * playerMarketVisibleItems array with pointers to matching entries within
+ * the current scroll window (up to 10 items). */
+__attribute__((used, externally_visible))
+void _PlayerMarketBuildVisiblePlayerList(void)
+{
+    /* --- Set up position group list (a6) --- */
+    uint8_t *positionList = (uint8_t *)0;
+    int16_t filterPos = (int16_t)playerMarketFilterPosition;
+    if (filterPos >= 0) {
+        positionList = positionGroupTable[filterPos];
+    }
+
+    /* --- Set up skill bit index (d6) from age group filter --- */
+    int16_t skillBitIndex = (int16_t)playerMarketFilterAgeGroup;
+    if (skillBitIndex >= 0) {
+        skillBitIndex = 6 - (int16_t)playerMarketFilterAgeGroup;
+        skillBitIndex = skillBitIndex * 4 + 3;
+    }
+
+    /* --- Set up rating threshold (d4) --- */
+    int16_t ratingThreshold = (int16_t)playerMarketFilterRatingIndex;
+    if (ratingThreshold >= 0) {
+        ratingThreshold = (int16_t)(uint8_t)playerRatingFilterThresholds[ratingThreshold];
+    }
+
+    /* --- Set up country range pointer (a5) --- */
+    uint8_t *countryRange = (uint8_t *)0;
+    if (showDomesticPlayerMarket == 0) {
+        uint16_t countryFilter = playerMarketFilterCountry;
+        if (countryFilter != 6) {
+            countryRange = &shortCountryNames[0x1CB] + countryFilter;
+        }
+    }
+
+    /* --- Reset counters --- */
+    playerMarketTotalMatchCount = 0;
+    playerMarketVisibleItemCount = 0;
+
+    uint32_t *visPtr = playerMarketVisibleItems;
+
+    if (showDomesticPlayerMarket != 0) {
+        /* ---- Domestic market path ---- */
+        uint8_t *a1 = homeMarketPlayers;
+        uint16_t count = numHomeMarketPlayers;
+        if (count == 0)
+            return;
+        uint16_t i = count;
+        do {
+            uint16_t teamNum = *(uint16_t *)a1;
+            uint8_t *teamData = _VerifyTeamLoaded(teamNum);
+            uint16_t ordinal = (uint16_t)(uint8_t)a1[2];
+            uint8_t *blockPtr = teamData + (uint32_t)ordinal * 38;  /* mulu #$26 */
+            if (playerMarketPlayerMatchesFilters(blockPtr, ratingThreshold,
+                                                  countryRange, positionList,
+                                                  skillBitIndex) == 0) {
+                playerMarketTotalMatchCount++;
+                uint16_t scrollOff = playerMarketListScrollOffset;
+                if (scrollOff < playerMarketTotalMatchCount &&
+                    scrollOff + 10 >= playerMarketTotalMatchCount) {
+                    *visPtr++ = (uint32_t)a1;
+                    playerMarketVisibleItemCount++;
+                }
+            }
+            a1 += 4;
+            i--;
+        } while (i != 0);
+    } else {
+        /* ---- Foreign market path ---- */
+        uint8_t *a1 = foreignMarketPlayers;
+        uint16_t count = numForeignMarketPlayers;
+        if (count == 0)
+            return;
+        uint16_t i = count;
+        do {
+            uint16_t teamId = *(uint16_t *)a1;
+            uint8_t ordinal = a1[2];
+            PoolPlayer *pool = _FindPoolplyrDatPlayer(teamId, (uint16_t)ordinal);
+            uint8_t *blockPtr = (uint8_t *)pool - 0x38;   /* lea -$38(a0),a0 */
+            if (playerMarketPlayerMatchesFilters(blockPtr, ratingThreshold,
+                                                  countryRange, positionList,
+                                                  skillBitIndex) == 0) {
+                playerMarketTotalMatchCount++;
+                uint16_t scrollOff = playerMarketListScrollOffset;
+                if (scrollOff < playerMarketTotalMatchCount &&
+                    scrollOff + 10 >= playerMarketTotalMatchCount) {
+                    *visPtr++ = (uint32_t)a1;
+                    playerMarketVisibleItemCount++;
+                }
+            }
+            a1 += 4;
+            i--;
+        } while (i != 0);
+    }
+}
+

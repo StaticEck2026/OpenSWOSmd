@@ -3192,6 +3192,17 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build, map confirms correct placement)
 - Cumulative: 1558 functions across 206 chunks
 
+### Chunk 207 — PlayerMarketBuildVisiblePlayerList + PlayerMarketPlayerMatchesFilters (2 → transfer_market.c)
+- Date: 2026-03-02
+- Ported:
+  1. PlayerMarketBuildVisiblePlayerList (→transfer_market.c) — ~78 instr. Builds visible player list for transfer market browser. Sets up filter state from globals: position group table, age/skill bit index, rating threshold, country range. Two paths: domestic (homeMarketPlayers with VerifyTeamLoaded) and foreign (foreignMarketPlayers with FindPoolplyrDatPlayer, block pointer = pool - 0x38). Stores matching entries within scroll window in playerMarketVisibleItems (up to 10).
+  2. PlayerMarketPlayerMatchesFilters (→transfer_market.c, static) — ~41 instr. Filter predicate using block pointer convention. Checks: (1) price ±6 of rating threshold, (2) nationality in country range [low, high), (3) position group in 0xFF-terminated list, (4) specific skill bit via big-endian skills longword btst.
+- Asm changes: PlayerMarketBuildVisiblePlayerList → bridge (save/restore, jsr C). PlayerMarketPlayerMatchesFilters → rts (dead, only caller ported).
+- Added xdefs: positionGroupTable, playerRatingFilterThresholds, playerMarketVisibleItems
+- Added xref: _PlayerMarketBuildVisiblePlayerList
+- Build status: **verified** (clean build)
+- Cumulative: 1560 functions across 207 chunks
+
 ### Chunk 195 — Career_AutoAdvanceCompetitionSlots (1 → career_status.c)
 - Date: 2026-03-02
 - Ported:

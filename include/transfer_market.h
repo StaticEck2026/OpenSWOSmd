@@ -173,4 +173,7 @@ void _PutPlayerOnMarketMenu(void);
 void _BuyOtherDomesticPlayer(void);
 void _BuyOtherForeignPlayer(void);
 
+/* --- Chunk 207: PlayerMarketBuildVisiblePlayerList --- */
+void _PlayerMarketBuildVisiblePlayerList(void);
+
 #endif

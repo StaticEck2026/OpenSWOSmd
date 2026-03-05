@@ -63106,147 +63106,16 @@ loc_145180:
                 jmp     DrawMultipleItems
 
 ; ===== PlayerMarketBuildVisiblePlayerList =====
-; prototype: void __usercall PlayerMarketBuildVisiblePlayerList()
+; Ported to C: _PlayerMarketBuildVisiblePlayerList in src/transfer_market.c
 PlayerMarketBuildVisiblePlayerList:
-                movea.l #0,a6
-                move.w  (playerMarketFilterPosition).l,d0
-                bmi.s   loc_1451BA
-                lea     positionGroupTable(pc),a6
-                lsl.w   #2,d0
-                movea.l (a6,d0.w),a6
-loc_1451BA:
-                move.w  (playerMarketFilterAgeGroup).l,d6
-                bmi.s   loc_1451D0
-                move.w  #6,d6
-                sub.w   (playerMarketFilterAgeGroup).l,d6
-                lsl.w   #2,d6
-                addq.w  #3,d6
-loc_1451D0:
-                move.w  (playerMarketFilterRatingIndex).l,d4
-                bmi.s   loc_1451E2
-                lea     (playerRatingFilterThresholds).l,a0
-                move.b  (a0,d4.w),d4
-loc_1451E2:
-                tst.w   (showDomesticPlayerMarket).l
-                bne.s   loc_145202
-                move.w  (playerMarketFilterCountry).l,d0
-                cmpi.w  #6,d0
-                beq.s   loc_145202
-                lea     ((shortCountryNames+$1CB)).l,a5 ; "\x003DPv��"
-                lea     (a5,d0.w),a5
-                bra.s   loc_145208
-loc_145202:
-                movea.l #0,a5
-loc_145208:
-                clr.w   (playerMarketTotalMatchCount).l
-                clr.w   (playerMarketVisibleItemCount).l
-                lea     (playerMarketVisibleItems).l,a3
-                tst.w   (showDomesticPlayerMarket).l
-                beq.s   loc_145280
-                lea     (homeMarketPlayers).l,a1
-                move.w  (numHomeMarketPlayers).l,d2
-                beq.w   locret_14527E
-                subq.w  #1,d2
-loc_145234:
-                move.w  (a1),d0
-                jsr     VerifyTeamLoaded
-                move.b  2(a1),d0
-                andi.w  #$FF,d0
-                mulu.w  #$26,d0         ; '&'
-                adda.l  d0,a0
-                bsr.w   PlayerMarketPlayerMatchesFilters
-                bne.s   loc_145278
-                addq.w  #1,(playerMarketTotalMatchCount).l
-                move.w  (playerMarketListScrollOffset).l,d0
-                cmp.w   (playerMarketTotalMatchCount).l,d0
-                bcc.s   loc_145278
-                addi.w  #$A,d0
-                cmp.w   (playerMarketTotalMatchCount).l,d0
-                bcs.s   loc_145278
-                move.l  a1,(a3)+
-                addq.w  #1,(playerMarketVisibleItemCount).l
-loc_145278:
-                addq.l  #4,a1
-                dbf     d2,loc_145234
-locret_14527E:
-                rts
-loc_145280:
-                lea     (foreignMarketPlayers).l,a1
-                move.w  (numForeignMarketPlayers).l,d2
-                beq.s   locret_14527E
-                subq.w  #1,d2
-loc_145290:
-                move.w  (a1),d0
-                move.b  2(a1),d1
-                movem.l d2,-(sp)
-                bsr.w   FindPoolplyrDatPlayer
-                movem.l (sp)+,d2
-                lea     -$38(a0),a0
-                bsr.w   PlayerMarketPlayerMatchesFilters
-                bne.s   loc_1452D4
-                addq.w  #1,(playerMarketTotalMatchCount).l
-                move.w  (playerMarketListScrollOffset).l,d0
-                cmp.w   (playerMarketTotalMatchCount).l,d0
-                bcc.s   loc_1452D4
-                addi.w  #$A,d0
-                cmp.w   (playerMarketTotalMatchCount).l,d0
-                bcs.s   loc_1452D4
-                move.l  a1,(a3)+
-                addq.w  #1,(playerMarketVisibleItemCount).l
-loc_1452D4:
-                addq.l  #4,a1
-                dbf     d2,loc_145290
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _PlayerMarketBuildVisiblePlayerList
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== PlayerMarketPlayerMatchesFilters =====
-; prototype: __int16 __usercall PlayerMarketPlayerMatchesFilters@<d0>(void *player@<a0>, __int16 diffFilter@<d4>, const unsigned __int8 *ratingRange@<a5>, const unsigned __int8 *positionList@<a6>, unsigned __int16 bitIndex@<d6>)
+; Dead — only called from PlayerMarketBuildVisiblePlayerList (now in C)
 PlayerMarketPlayerMatchesFilters:
-                tst.w   d4
-                bmi.s   loc_1452F2
-                move.b  $6C(a0),d0
-                sub.b   d4,d0
-                cmpi.b  #6,d0
-                bgt.s   loc_14534C
-                cmpi.b  #$FA,d0
-                blt.s   loc_14534C
-loc_1452F2:
-                cmpa.l  #0,a5
-                beq.s   loc_145308
-                move.b  $4C(a0),d0
-                cmp.b   (a5),d0
-                bcs.s   loc_14534C
-                cmp.b   1(a5),d0
-                bcc.s   loc_14534C
-loc_145308:
-                cmpa.l  #0,a6
-                beq.s   loc_145324
-                movea.l a6,a2
-                move.b  $66(a0),d0
-                andi.w  #$E0,d0
-                lsr.w   #5,d0
-loc_14531C:
-                tst.b   (a2)
-                bmi.s   loc_14534C
-                cmp.b   (a2)+,d0
-                bne.s   loc_14531C
-loc_145324:
-                tst.w   (playerMarketFilterPosition).l
-                beq.s   loc_145348
-                tst.w   d6
-                bmi.s   loc_145348
-                move.b  $66(a0),d0
-                andi.w  #$E0,d0
-                lsr.w   #5,d0
-                cmpi.b  #0,d0
-                beq.s   loc_14534C
-                move.l  $68(a0),d0
-                btst    d6,d0
-                beq.s   loc_14534C
-loc_145348:
-                clr.w   d0
-                rts
-loc_14534C:
-                move.w  #1,d0
                 rts
 playerMarketFilterPosition:
                 dc.w $0000
