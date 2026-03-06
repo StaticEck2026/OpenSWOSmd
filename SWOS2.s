@@ -48422,236 +48422,22 @@ squadMenu:
 
 ; ===== SquadInit =====
 ; prototype: void __usercall SquadInit()
+; ===== SquadInit =====
+; Ported to C: _SquadInit in src/menus.c
 SquadInit:
-                clr.w   (isNationalSquad).l
-                cmpi.l  #careerTeam,(squadTeamFilePtr).l
-                bne.s   loc_139632
-                tst.w   (isNationalSelector).l
-                beq.s   loc_139632
-                move.w  #1,(isNationalSquad).l
-loc_139632:
-                move.l  (quaternaryCompetitionPtr).l,d0
-                or.l    (secondaryCompetitionPtr).l,d0
-                or.l    (tertiaryCompetitionPtr).l,d0
-                bne.w   loc_139698
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$CE8)).l,a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$D20)).l,a1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$D58)).l,a2
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$D90)).l,a3
-                addi.w  #$14,$14(a0)
-                addi.w  #$14,$14(a1)
-                addi.w  #$14,$14(a2)
-                addi.w  #$14,$14(a3)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3F0)).l,a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$428)).l,a1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3B8)).l,a2
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$498)).l,a3
-                addi.w  #$14,$14(a0)
-                addi.w  #$14,$14(a1)
-                addi.w  #$14,$14(a2)
-                addi.w  #$14,$14(a3)
-loc_139698:
-                tst.l   (quaternaryCompetitionPtr).l
-                bne.w   loc_1396DE
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$CE8)).l,a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$D20)).l,a1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$D58)).l,a2
-                addi.w  #$14,$14(a0)
-                addi.w  #$14,$14(a1)
-                addi.w  #$14,$14(a2)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3F0)).l,a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$428)).l,a1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3B8)).l,a2
-                addi.w  #$14,$14(a0)
-                addi.w  #$14,$14(a1)
-                addi.w  #$14,$14(a2)
-loc_1396DE:
-                tst.l   (tertiaryCompetitionPtr).l
-                bne.w   loc_139710
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$CE8)).l,a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$D20)).l,a1
-                addi.w  #$14,$14(a0)
-                addi.w  #$14,$14(a1)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3F0)).l,a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$428)).l,a1
-                addi.w  #$14,$14(a0)
-                addi.w  #$14,$14(a1)
-loc_139710:
-                tst.l   (secondaryCompetitionPtr).l
-                bne.w   loc_13972E
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$CE8)).l,a0
-                addi.w  #$14,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3F0)).l,a0
-                addi.w  #$14,$14(a0)
-loc_13972E:
-                tst.w   (teamSkillDiffAfterChange).l
-                bpl.w   loc_1397CA
-                lea     ($3516).w,a0
-                move.w  $14(a0),d1
-                subi.w  #$C7,d1
-                lsr.w   #1,d1
-                tst.w   (isNationalSquad).l
-                beq.w   loc_13975E
-                addq.w  #8,d1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$380)).l,a0
-                subq.w  #8,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$CE8)).l,a0
-loc_13975E:
-                sub.w   d1,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$D20)).l,a0
-                sub.w   d1,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$D58)).l,a0
-                sub.w   d1,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$D90)).l,a0
-                sub.w   d1,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$DC8)).l,a0
-                sub.w   d1,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3B8)).l,a0
-                sub.w   d1,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3F0)).l,a0
-                sub.w   d1,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$428)).l,a0
-                sub.w   d1,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$498)).l,a0
-                sub.w   d1,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$4D0)).l,a0
-                sub.w   d1,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$540)).l,a0
-                sub.w   d1,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$578)).l,a0
-                sub.w   d1,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$5B0)).l,a0
-                sub.w   d1,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$5E8)).l,a0
-                sub.w   d1,$14(a0)
-loc_1397CA:
-                tst.w   (teamSkillDiffAfterChange).l
-                bmi.s   loc_1397FC
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$540)).l,a0
-                subi.w  #$32,$14(a0)    ; '2'
-                subi.w  #$A,$16(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$578)).l,a0
-                subi.w  #$32,$14(a0)    ; '2'
-                subi.w  #$A,$16(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1F8)).l,a0
-                subi.w  #$1F,$14(a0)
-loc_1397FC:
-                bra.w   *+4
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _SquadInit
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== SquadFinish =====
-; prototype: void __usercall SquadFinish()
+; Ported to C: _SquadFinish in src/menus.c
 SquadFinish:
-                tst.w   (isNationalSquad).l
-                bne.s   loc_139842
-                movea.l (squadTeamFilePtr).l,a1
-                cmpi.b  #$50,(a1)       ; 'P'
-                bcs.s   loc_139842
-                cmpi.b  #$55,(a1)       ; 'U'
-                bhi.s   loc_139842
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2D8)).l,a0
-                subi.w  #$D,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$C08)).l,a0
-                subi.w  #$D,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$540)).l,a0
-                subi.w  #$D,$14(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$578)).l,a0
-                subi.w  #$D,$14(a0)
-loc_139842:
-                jsr     CheckIsTeamNational
-                movea.l (squadTeamFilePtr).l,a0
-                jsr     SetBenchPlayersNumbers
-                move.w  (selTeamNumber).l,d0
-                cmpi.w  #$FFFF,d0
-                beq.s   loc_13986A
-                movea.l (squadTeamFilePtr).l,a0
-                cmp.w   (a0),d0
-                beq.s   loc_139870
-loc_13986A:
-                move.w  #$10,d0
-                bra.s   loc_139876
-loc_139870:
-                move.w  (careerNumPlayers).l,d0
-loc_139876:
-                move.w  d0,(squadDisplayCount).l
-                clr.l   (squadPrevHighlightedMenuEntryPtr).l
-                move.w  #$FFFF,(squadPrevSelectedPlayerIndex).l
-                movea.l (squadTeamFilePtr).l,a6
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$9A0).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$9D8).l
-                move.w  (squadDisplayCount).l,d1
-                subi.w  #$10,d1
-                beq.s   loc_1398B6
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$9A0).l
-                cmpi.w  #1,d1
-                beq.s   loc_1398B6
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$9D8).l
-loc_1398B6:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$498)).l,a0
-                move.b  (selTeamNumber).l,d0
-                andi.w  #$FF,d0
-                lsl.w   #2,d0
-                lea     (countriesTable).l,a1
-                movea.l (a1,d0.w),a1
-                move.b  (a1),d0
-                ext.w   d0
-                lsl.w   #2,d0
-                lea     ((playerPositionsStringTable+$20)).l,a1
-                move.l  (a1,d0.w),$26(a0)
-                tst.w   (isNationalSquad).l
-                beq.w   loc_139940
-                movea.l (currentCompetitionPtr).l,a1
-                bsr.w   GetCompetitionAbbrevStr
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$4D0)).l,a0
-                movea.l (secondaryCompetitionPtr).l,a1
-                cmpa.l  #0,a1
-                beq.s   loc_13993C
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3F0)).l,a0
-                move.l  a2,$26(a0)
-                bsr.w   GetCompetitionAbbrevStr
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$428)).l,a0
-                movea.l (tertiaryCompetitionPtr).l,a1
-                cmpa.l  #0,a1
-                beq.s   loc_13993C
-                move.l  a2,$26(a0)
-                bsr.w   GetCompetitionAbbrevStr
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$460)).l,a0
-                move.l  a2,$26(a0)
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$460).l
-                bra.s   loc_139940
-loc_13993C:
-                move.l  a2,$26(a0)
-loc_139940:
-                clr.w   (isSquadViewMode).l
-                bsr.w   SquadUpdateMenuState
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1C0).l
-                tst.w   (teamSkillDiffAfterChange).l
-                bpl.s   loc_13995C
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$1C0).l
-loc_13995C:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a0
-                move.l  #aGoals,$26(a0) ; "GOALS"
-                tst.w   (isNationalSquad).l
-                beq.s   loc_139978
-                move.l  #aClubs,$26(a0) ; "CLUBS"
-loc_139978:
-                movea.l (squadTeamFilePtr).l,a6
-                cmpi.b  #1,4(a6)
-                bne.s   loc_1399B0
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1F8).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$230).l
-                move.w  #$A,d0
-                jsr     SetCurrentEntry
-                cmpi.b  #$50,(a6)       ; 'P'
-                bcs.s   loc_1399B0
-                cmpi.b  #$55,(a6)       ; 'U'
-                bhi.s   loc_1399B0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$230)).l,a0
-                move.w  #$DF,$14(a0)
-loc_1399B0:
-                bsr.w   SquadUpdateGoalsMenuText
-                bsr.w   SquadCommitPositionsAndUpdateSkill
-                bsr.w   SquadMenuSavePlayerPositions
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _SquadFinish
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
+
 
 ; ===== SelectTraining =====
 ; Ported to C: _SelectTraining in src/menus.c
@@ -48684,60 +48470,25 @@ Squad45AfterDraw:
                 jmp     _Squad45AfterDraw
 
 ; ===== SquadUpdateGoalsMenuText =====
-; prototype: void __usercall SquadUpdateGoalsMenuText()
-; DOS: cseg_114EC
+; Ported to C: _SquadUpdateGoalsMenuText in src/menus.c
 SquadUpdateGoalsMenuText:
-                movea.l (squadTeamFilePtr).l,a6
-                lea     $3C(a6),a1
-                move.w  #$10,d7
-                clr.w   d6
-                move.w  (selTeamNumber).l,d0
-                cmpi.w  #$FFFF,d0
-                beq.s   loc_139A7E
-                cmp.w   (a6),d0
-                bne.s   loc_139A7E
-                lea     (currentMatchPlayers).l,a1
-                move.w  (careerNumPlayers).l,d7
-                move.w  (removedPlayerStatAccum).l,d6
-loc_139A7E:
-                subq.w  #1,d7
-                clr.w   d0
-                move.b  $16(a6),d0
-                add.w   d0,d6
-loc_139A88:
-                move.b  (a1)+,d0
-                ext.w   d0
-                mulu.w  #$26,d0         ; '&'
-                lea     (a6,d0.w),a0
-                clr.w   d0
-                move.b  $6D(a0),d0
-                add.w   d0,d6
-                move.b  $6E(a0),d0
-                add.w   d0,d6
-                move.b  $6F(a0),d0
-                add.w   d0,d6
-                move.b  $70(a0),d0
-                add.w   d0,d6
-                lea     $26(a0),a0
-                dbf     d7,loc_139A88
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$380)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                lea     (aGoals).l,a0   ; "GOALS"
-                jsr     StringCopy
-                move.b  #' ',(a1)+
-                move.b  #'(',(a1)+
-                move.w  d6,d0
-                jsr     Int2Ascii
-                move.b  #')',(a1)+
-                clr.b   (a1)
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _SquadUpdateGoalsMenuText
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 locret_139AE2:
                 rts
 
 ; ===== SquadUpdateMenuState =====
-; prototype: void __usercall SquadUpdateMenuState()
-; DOS: cseg_116E8
+; Ported to C: _SquadUpdateMenuState in src/menus.c
 SquadUpdateMenuState:
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _SquadUpdateMenuState
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
+
+; Dead code — SquadUpdateMenuState original body replaced above
+SquadUpdateMenuState_dead:
                 bsr.w   UpdateBigCheckMark
                 movea.l (squadTeamFilePtr).l,a6
                 lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a0
@@ -49007,101 +48758,30 @@ loc_139F26:
                 rts
 
 ; ===== SquadCommon =====
-; prototype: void __usercall SquadCommon()
+; Ported to C: _SquadCommon in src/menus.c
 SquadCommon:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$620)).l,a0
-                move.w  2(a5),d6
-                sub.w   2(a0),d6
-                move.w  d6,d1
-                movea.l (squadTeamFilePtr).l,a0
-                jsr     GetPlayerInfoBreakPosition
-                move.w  d0,d6
-                move.w  d1,d7
-                tst.w   (squadPrevSelectedPlayerIndex).l
-                bmi.s   loc_139FB0
-                cmp.w   (squadPrevSelectedPlayerIndex).l,d7
-                beq.s   loc_139FAC
-                move.w  (squadPrevSelectedPlayerIndex).l,d1
-                move.w  d7,d2
-                move.w  (squadPrevSelectedBreakPos).l,d3
-                move.w  d6,d4
-                bsr.w   SquadSwapPlayersAtIndices
-                movea.l (squadTeamFilePtr).l,a0
-                jsr     SetBenchPlayersNumbers
-                movea.l (squadTeamFilePtr).l,a0
-                move.b  #1,$3B(a0)
-                bsr.w   SquadCommitPositionsAndUpdateSkill
-                move.w  #$FFFF,(squadPrevSelectedPlayerIndex).l
-                jmp     DrawMenu
-loc_139FAC:
-                move.w  #$FFFF,d7
-loc_139FB0:
-                move.w  d7,(squadPrevSelectedPlayerIndex).l
-                move.w  d6,(squadPrevSelectedBreakPos).l
-                movea.l (squadPrevHighlightedMenuEntryPtr).l,a0
-                move.l  a5,(squadPrevHighlightedMenuEntryPtr).l
-                cmpa.l  #0,a0
-                beq.s   loc_139FDC
+                movem.l d2-d7/a2-a6,-(sp)
                 move.l  a5,-(sp)
-                movea.l a0,a5
-                jsr     CallDrawMenuItem
-                movea.l (sp)+,a5
-loc_139FDC:
-                jsr     CallDrawMenuItem
-                bsr.w   SquadMenuSavePlayerPositions
-                bsr.w   SquadRedrawPlayerListAndCheckMark
+                jsr     _SquadCommon
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== SquadSwapPlayersAtIndices =====
-; prototype: void __usercall SquadSwapPlayersAtIndices()
+; Dead — only called from SquadCommon (now in C)
 SquadSwapPlayersAtIndices:
-                cmpi.w  #$10,d3
-                bcc.s   loc_13A00C
-                cmpi.w  #$10,d4
-                bcc.s   loc_13A00C
-                cmpi.w  #$B,d3
-                bcc.s   loc_13A006
-                cmpi.w  #$B,d4
-                bcs.s   loc_13A052
-                bra.s   loc_13A00C
-loc_13A006:
-                cmpi.w  #$B,d4
-                bcc.s   loc_13A052
-loc_13A00C:
-                movea.l (squadTeamFilePtr).l,a0
-                move.w  (a0),d0
-                move.w  d3,d1
-                jsr     GetPlayerAtIndex
-                move.w  d1,d2
-                movea.l a0,a1
-                movea.l (squadTeamFilePtr).l,a0
-                move.w  (a0),d0
-                move.w  d4,d1
-                jsr     GetPlayerAtIndex
-                lea     (playerPositionsArray).l,a2
-                move.b  (a2,d1.w),d0
-                move.b  (a2,d2.w),(a2,d1.w)
-                move.b  d0,(a2,d2.w)
-                move.b  $4E(a0),d0
-                move.b  $4E(a1),$4E(a0)
-                move.b  d0,$4E(a1)
-loc_13A052:
-                cmpi.w  #4,(gameType).l
-                bne.s   loc_13A072
-                lea     (currentMatchPlayers).l,a0
-loc_13A062:
-                move.b  (a0,d3.w),d0
-                move.b  (a0,d4.w),(a0,d3.w)
-                move.b  d0,(a0,d4.w)
                 rts
-loc_13A072:
-                movea.l (squadTeamFilePtr).l,a0
-                lea     $3C(a0),a0
-                bra.s   loc_13A062
 
 ; ===== SquadAfterDrawCommon =====
-; prototype: __int16 __usercall SquadAfterDrawCommon@<d0>()
+; Ported to C: _SquadAfterDrawCommon in src/menus.c
 SquadAfterDrawCommon:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _SquadAfterDrawCommon
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
+; --- dead code below (original body replaced by C port) ---
                 move.w  2(a5),d7
                 subi.w  #$1C,d7
                 movea.l (squadTeamFilePtr).l,a6

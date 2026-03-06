@@ -8,7 +8,9 @@
 #include "edit_tactics.h"
 #include "teams.h"
 #include "audio.h"
+#include "career_status.h"
 #include "chairman_memo.h"
+#include "play_match_menu.h"
 
 /* ---- Constants ---- */
 #define GAME_TYPE_NO_GAME 0
@@ -1018,6 +1020,943 @@ void _SquadCommitPositionsAndUpdateSkill(void)
 
     _ComputeOldPlayerSkillForViewResult(teamFile, 5);
     _UpdateBigCheckMark();
+}
+
+/* ================================================================
+ * Chunk 208: SquadUpdateGoalsMenuText + SquadCommon +
+ *            SquadSwapPlayersAtIndices (3 → menus.c)
+ * ================================================================ */
+
+extern uint16_t removedPlayerStatAccum;
+extern uint16_t squadPrevSelectedBreakPos;
+extern MenuEntry *squadPrevHighlightedMenuEntryPtr;
+extern uint8_t aGoals[];
+extern uint8_t  currentMatchPlayers[];
+extern uint16_t careerNumPlayers;
+extern void _CallDrawMenuItem(MenuEntry *entry);
+extern void _SetBenchPlayersNumbers(uint8_t *teamPtr);
+extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+extern uint16_t _cGetPlayerAtIndexFileIdx;
+
+/* SquadUpdateGoalsMenuText (SWOS2.s line 48686)
+ * Computes total goals for all players in current squad and
+ * writes "GOALS (N)" string into menu entry 16's fg buffer. */
+__attribute__((used, externally_visible))
+void _SquadUpdateGoalsMenuText(void)
+{
+    uint8_t *teamBase = (uint8_t *)squadTeamFilePtr;
+    uint8_t *playerList = teamBase + 0x3C;    /* TeamFile.playerNumbers */
+    uint16_t count = 16;
+    uint16_t totalGoals = 0;
+
+    if ((int16_t)selTeamNumber != -1 &&
+        selTeamNumber == *(uint16_t *)teamBase) {
+        playerList = currentMatchPlayers;
+        count = careerNumPlayers;
+        totalGoals = removedPlayerStatAccum;
+    }
+
+    /* Add field at TeamFile offset 0x16 (writesZeroHere) */
+    totalGoals += (uint16_t)(uint8_t)teamBase[0x16];
+
+    count--;   /* subq.w #1,d7 for dbf loop */
+    uint16_t i;
+    for (i = count + 1; i > 0; i--) {
+        int16_t idx = (int16_t)(int8_t)*playerList++;
+        uint8_t *blockPtr = teamBase + (uint32_t)(uint16_t)idx * 38;
+        PlayerFile *pf = (PlayerFile *)(blockPtr + 76);
+        totalGoals += (uint16_t)pf->goalStats[0];
+        totalGoals += (uint16_t)pf->goalStats[1];
+        totalGoals += (uint16_t)pf->goalStats[2];
+        totalGoals += (uint16_t)pf->goalStats[3];
+    }
+
+    /* Build "GOALS (N)" string in entry 16's fg buffer */
+    uint8_t *buf = (uint8_t *)menuEntries[16].fg;
+    buf = _StringCopy((const uint8_t *)aGoals, buf);
+    *buf++ = ' ';
+    *buf++ = '(';
+    _Int2Ascii(totalGoals, buf);
+    while (*buf) buf++;
+    *buf++ = ')';
+    *buf = 0;
+}
+
+/* SquadSwapPlayersAtIndices (SWOS2.s line 49055)
+ * Swaps two players at given break positions.  If the swap crosses
+ * the starting 11 / substitutes boundary (one < 11, one >= 11, or
+ * either >= 16), also swaps playerPositionsArray and shirt numbers.
+ * Always swaps the player number array entry. */
+static void squadSwapPlayersAtIndices(uint16_t prevFileIdx, uint16_t currFileIdx,
+                                       uint16_t prevBreakPos, uint16_t currBreakPos)
+{
+    /* Check if full swap needed (cross-boundary or either >= 16) */
+    int needFullSwap = 0;
+    if (prevBreakPos >= 16 || currBreakPos >= 16) {
+        needFullSwap = 1;
+    } else if (prevBreakPos >= 11 && currBreakPos < 11) {
+        needFullSwap = 1;
+    } else if (currBreakPos >= 11 && prevBreakPos < 11) {
+        needFullSwap = 1;
+    }
+
+    if (needFullSwap) {
+        /* Full swap: get player pointers via GetPlayerAtIndex */
+        uint16_t teamNum = *(uint16_t *)(uint32_t)squadTeamFilePtr;
+        uint8_t *prevBlockPtr = _GetPlayerAtIndex(teamNum, prevBreakPos);
+        uint16_t prevFIdx = _cGetPlayerAtIndexFileIdx;
+
+        uint8_t *currBlockPtr = _GetPlayerAtIndex(teamNum, currBreakPos);
+        uint16_t currFIdx = _cGetPlayerAtIndexFileIdx;
+
+        /* Swap playerPositionsArray entries */
+        uint8_t tmp = playerPositionsArray[currFIdx];
+        playerPositionsArray[currFIdx] = playerPositionsArray[prevFIdx];
+        playerPositionsArray[prevFIdx] = tmp;
+
+        /* Swap shirt numbers (block_ptr + 0x4E = PlayerFile.shirtNumber) */
+        PlayerFile *prevPf = (PlayerFile *)(prevBlockPtr + 76);
+        PlayerFile *currPf = (PlayerFile *)(currBlockPtr + 76);
+        int8_t tmpShirt = currPf->shirtNumber;
+        currPf->shirtNumber = prevPf->shirtNumber;
+        prevPf->shirtNumber = tmpShirt;
+    }
+
+    /* Always swap player number array entries at break positions */
+    uint8_t *numArray;
+    if (gameType == 4) {   /* GAME_TYPE_CAREER */
+        numArray = currentMatchPlayers;
+    } else {
+        numArray = (uint8_t *)squadTeamFilePtr + 0x3C;  /* TeamFile.playerNumbers */
+    }
+    uint8_t tmpNum = numArray[prevBreakPos];
+    numArray[prevBreakPos] = numArray[currBreakPos];
+    numArray[currBreakPos] = tmpNum;
+}
+
+/* SquadCommon (SWOS2.s line 49009)
+ * Menu callback for squad entry selection.  Computes the selected
+ * slot from entry y-coordinate delta, resolves via
+ * GetPlayerInfoBreakPosition, handles swap or select/deselect. */
+__attribute__((used, externally_visible))
+void _SquadCommon(void *entryPtr)
+{
+    MenuEntry *a5 = (MenuEntry *)entryPtr;
+    uint16_t d6 = a5->ordinal - menuEntries[28].ordinal;
+    uint16_t d1 = d6;
+
+    uint8_t *teamPtr = (uint8_t *)squadTeamFilePtr;
+    uint16_t outSlot, outPlayerIndex;
+    _GetPlayerInfoBreakPosition(teamPtr, d1, &outSlot, &outPlayerIndex);
+    d6 = outSlot;
+    uint16_t d7 = outPlayerIndex;
+
+    if ((int16_t)squadPrevSelectedPlayerIndex >= 0) {
+        if (d7 != squadPrevSelectedPlayerIndex) {
+            /* Swap the two players */
+            squadSwapPlayersAtIndices(
+                squadPrevSelectedPlayerIndex, d7,
+                squadPrevSelectedBreakPos, d6);
+            _SetBenchPlayersNumbers((uint8_t *)squadTeamFilePtr);
+            ((uint8_t *)squadTeamFilePtr)[0x3B] = 1;
+            _SquadCommitPositionsAndUpdateSkill();
+            squadPrevSelectedPlayerIndex = 0xFFFF;
+            _DrawMenu();
+            return;
+        }
+        /* Same player selected twice → deselect */
+        d7 = 0xFFFF;
+    }
+
+    squadPrevSelectedPlayerIndex = d7;
+    squadPrevSelectedBreakPos = d6;
+
+    MenuEntry *oldEntry = squadPrevHighlightedMenuEntryPtr;
+    squadPrevHighlightedMenuEntryPtr = a5;
+    if (oldEntry != (MenuEntry *)0) {
+        _CallDrawMenuItem(oldEntry);
+    }
+    _CallDrawMenuItem(a5);
+    _SquadMenuSavePlayerPositions();
+    _SquadRedrawPlayerListAndCheckMark();
+}
+
+/* ================================================================
+ * Chunk 209: SquadInit + SquadFinish (2 → menus.c)
+ * ================================================================ */
+
+extern uint16_t isNationalSquad;
+extern uint16_t squadDisplayCount;
+extern uint8_t careerTeam[];
+extern uint32_t currentCompetitionPtr;
+extern uint32_t secondaryCompetitionPtr;
+extern uint32_t tertiaryCompetitionPtr;
+extern uint32_t quaternaryCompetitionPtr;
+extern uint32_t countriesTable[];
+extern uint32_t playerPositionsStringTable[];
+extern uint8_t aClubs[];
+extern uint16_t isNationalSelector;
+extern void _SetCurrentEntry(uint16_t entry);
+extern uint8_t *_GetCompetitionAbbrevStr(uint8_t *competition);
+extern void _GetBankBalance(uint8_t *dst);
+extern uint8_t shortCountryNames[];
+
+/* Helper: set the low nibble of the bg field's high word (68k big-endian color index) */
+static void setBgColorIndex(MenuEntry *e, uint16_t colorIdx) {
+    uint16_t bgHigh = (uint16_t)(e->bg >> 16);
+    bgHigh = (bgHigh & 0xFFF0) | colorIdx;
+    e->bg = ((uint32_t)bgHigh << 16) | (e->bg & 0xFFFF);
+}
+
+/* SquadUpdateMenuState (SWOS2.s line 48491)
+ * Updates squad menu entry visibility, colors, and strings based on
+ * current mode (view vs edit), competition state, and team status. */
+__attribute__((used, externally_visible))
+void _SquadUpdateMenuState(void)
+{
+    _UpdateBigCheckMark();
+    uint8_t *a6 = (uint8_t *)squadTeamFilePtr;
+
+    /* Entry 2: bg color based on team type byte (offset 4) */
+    setBgColorIndex(&menuEntries[2], 12); /* ORANGE_TO_BROWN */
+    if (a6[4] != 1) {
+        setBgColorIndex(&menuEntries[2], 11); /* BLUE_TO_PURPLE */
+        if (a6[4] != 2) {
+            setBgColorIndex(&menuEntries[2], 13); /* BRIGHT_BLUE_TO_BLUE */
+        }
+    }
+
+    /* Entry 3: set fg string to "(COUNTRY)" */
+    {
+        uint8_t *dst = (uint8_t *)menuEntries[3].fg;
+        uint8_t countryIdx = a6[0];
+        uint8_t *countryStr = (uint8_t *)countriesTable[countryIdx];
+        *dst++ = '(';
+        dst = _StringCopy(countryStr + 1, dst);
+        *dst++ = ')';
+        *dst = 0;
+    }
+
+    /* Entry 25: fg = team byte at offset 0x16 */
+    menuEntries[25].fg = (uint32_t)(uint16_t)(uint8_t)a6[0x16];
+
+    /* Entries 15, 13 initially invisible */
+    menuEntries[15].isInvisible = 1;
+    menuEntries[13].isInvisible = 1;
+    if (isSquadViewMode == 0) {
+        menuEntries[13].isInvisible = 0;
+    }
+
+    /* Entry 14 initially invisible */
+    menuEntries[14].isInvisible = 1;
+    {
+        uint8_t *teamPtr = (uint8_t *)squadTeamFilePtr;
+        if (teamPtr[0] >= 0x50 && teamPtr[0] <= 0x55) {
+            /* do nothing — keep invisible */
+        } else if (isSquadViewMode == 0) {
+            menuEntries[14].isInvisible = 0;
+        }
+    }
+
+    if (isSquadViewMode != 0) {
+        /* ============ SQUAD VIEW MODE ============ */
+        menuEntries[6].isInvisible = 1;
+
+        if ((int16_t)selTeamNumber != -1 &&
+            selTeamNumber == *(uint16_t *)a6) {
+            menuEntries[26].isInvisible = 0;
+            menuEntries[27].isInvisible = 0;
+            menuEntries[27].fg = (uint32_t)removedPlayerStatAccum;
+        } else {
+            menuEntries[26].isInvisible = 1;
+            menuEntries[27].isInvisible = 1;
+        }
+
+        menuEntries[24].isInvisible = 0;
+        menuEntries[25].isInvisible = 0;
+
+        /* Entries 16-22: visible by default */
+        {
+            int16_t i;
+            for (i = 16; i <= 22; i++)
+                menuEntries[i].isInvisible = 0;
+        }
+
+        menuEntries[8].isInvisible = 1;
+        menuEntries[9].isInvisible = 1;
+
+        if (isNationalSquad != 0) {
+            /* National squad view: hide competition entries 16-22, stats entries */
+            int16_t i;
+            for (i = 16; i <= 22; i++)
+                menuEntries[i].isInvisible = 1;
+            menuEntries[26].isInvisible = 1;
+            menuEntries[27].isInvisible = 1;
+            menuEntries[24].isInvisible = 1;
+            menuEntries[25].isInvisible = 1;
+            goto afterEDE;
+        }
+
+        /* Check competition pointers for view mode */
+        if ((quaternaryCompetitionPtr | secondaryCompetitionPtr | tertiaryCompetitionPtr) == 0) {
+            menuEntries[18].isInvisible = 1;
+            menuEntries[17].isInvisible = 1;
+            menuEntries[19].isInvisible = 1;
+            menuEntries[21].isInvisible = 1;
+            goto afterEDE;
+        }
+
+        if (quaternaryCompetitionPtr == 0) {
+            menuEntries[21].isInvisible = 1;
+        }
+
+        if (secondaryCompetitionPtr == 0) {
+            menuEntries[17].isInvisible = 1;
+            menuEntries[19].isInvisible = 1;
+            goto afterEDE;
+        }
+
+        if (tertiaryCompetitionPtr == 0) {
+            menuEntries[17].isInvisible = 1;
+            goto afterEDE;
+        }
+
+        /* All three non-null: check national selector */
+        if (isNationalSelector != 0 &&
+            secondaryCompetitionPtr != 0 &&
+            tertiaryCompetitionPtr != 0) {
+            menuEntries[17].isInvisible = 1;
+            menuEntries[20].isInvisible = 0;
+            menuEntries[20].x = menuEntries[17].x;
+            menuEntries[20].x += 11;
+            goto afterEDE;
+        }
+
+        menuEntries[19].isInvisible = 1;
+        goto afterEDE;
+
+    } else {
+        /* ============ SQUAD EDIT MODE ============ */
+        menuEntries[6].isInvisible = 1;
+
+        if (gameType == 4 &&
+            squadTeamFilePtr == (uint32_t)careerTeam &&
+            isNationalSelector == 0) {
+            menuEntries[6].isInvisible = 0;
+        } else {
+            /* teamSkillDiff < 0: adjust entry 8 and 9 positions */
+            if ((int16_t)teamSkillDiffAfterChange < 0) {
+                menuEntries[8].x = 0xEE;
+                menuEntries[8].dwWidth = 0x3C;
+                menuEntries[9].x = 0xEE;
+                menuEntries[9].dwWidth = 0x3C;
+
+                if (isNationalSquad != 0) {
+                    menuEntries[8].x -= 14;
+                    menuEntries[8].y = 0xE5;
+                    menuEntries[9].x -= 14;
+                    menuEntries[9].y = 0xF5;
+                }
+            }
+        }
+
+        /* Entry 6: bg color and disabled state */
+        setBgColorIndex(&menuEntries[6], 14); /* YELLOW_GREEN_BLACK */
+        menuEntries[6].isDisabled = 0;
+
+        {
+            uint8_t *teamPtr = (uint8_t *)squadTeamFilePtr;
+            if (teamPtr[0x17] & 1) {
+                setBgColorIndex(&menuEntries[6], 9); /* PINK_TO_BROWN */
+                menuEntries[6].isDisabled = 1;
+            }
+        }
+
+        if ((int16_t)teamSkillDiffAfterChange >= 0) {
+            menuEntries[6].x = 0xEE;
+            menuEntries[6].dwWidth = 0x3C;
+            menuEntries[9].x = 0xEE;
+            menuEntries[9].dwWidth = 0x3C;
+            menuEntries[9].y = 0xDD;
+
+            {
+                uint8_t *teamPtr = (uint8_t *)squadTeamFilePtr;
+                if (teamPtr[4] != 1 &&
+                    teamPtr[0] >= 0x50 && teamPtr[0] <= 0x55) {
+                    menuEntries[9].x -= 14;
+                }
+            }
+        }
+
+        /* Entries 26,27 invisible */
+        menuEntries[26].isInvisible = 1;
+        menuEntries[27].isInvisible = 1;
+
+        /* Entries 16-22 invisible */
+        {
+            int16_t i;
+            for (i = 16; i <= 22; i++)
+                menuEntries[i].isInvisible = 1;
+        }
+
+        /* Entries 8,9 visible */
+        menuEntries[8].isInvisible = 0;
+        menuEntries[9].isInvisible = 0;
+
+        if ((int16_t)teamSkillDiffAfterChange < 0) {
+            menuEntries[24].isInvisible = 1;
+            menuEntries[25].isInvisible = 1;
+
+            if (isNationalSquad != 0) {
+                menuEntries[24].isInvisible = 0;
+                menuEntries[25].isInvisible = 0;
+                /* Make entries 16-22 visible again */
+                {
+                    int16_t i;
+                    for (i = 16; i <= 22; i++)
+                        menuEntries[i].isInvisible = 0;
+                }
+                menuEntries[13].isInvisible = 1;
+                goto viewModeCompChecks;
+            }
+        } else {
+            menuEntries[24].isInvisible = 0;
+            menuEntries[25].isInvisible = 0;
+        }
+    }
+
+afterEDE:
+    /* Bank balance (entry 12) */
+    if (isSquadViewMode == 0 &&
+        gameType == 4 &&
+        isNationalSelector == 0) {
+        uint8_t *teamPtr = (uint8_t *)squadTeamFilePtr;
+        if (*(uint16_t *)teamPtr == selTeamNumber) {
+            menuEntries[12].isInvisible = 0;
+            _GetBankBalance((uint8_t *)menuEntries[12].fg);
+            goto afterBankBalance;
+        }
+    }
+    menuEntries[12].isInvisible = 1;
+
+afterBankBalance:
+    /* Entry 2: fg = team name (offset 5), Entry 5: fg = manager (offset 0x24) */
+    menuEntries[2].fg = (uint32_t)(a6 + 5);
+    menuEntries[5].fg = (uint32_t)(a6 + 0x24);
+    return;
+
+viewModeCompChecks:
+    /* Jumped to from edit mode national squad path — runs view mode competition checks */
+    if ((quaternaryCompetitionPtr | secondaryCompetitionPtr | tertiaryCompetitionPtr) == 0) {
+        menuEntries[18].isInvisible = 1;
+        menuEntries[17].isInvisible = 1;
+        menuEntries[19].isInvisible = 1;
+        menuEntries[21].isInvisible = 1;
+        goto afterEDE;
+    }
+    if (quaternaryCompetitionPtr == 0) {
+        menuEntries[21].isInvisible = 1;
+    }
+    if (secondaryCompetitionPtr == 0) {
+        menuEntries[17].isInvisible = 1;
+        menuEntries[19].isInvisible = 1;
+        goto afterEDE;
+    }
+    if (tertiaryCompetitionPtr == 0) {
+        menuEntries[17].isInvisible = 1;
+        goto afterEDE;
+    }
+    if (isNationalSelector != 0 &&
+        secondaryCompetitionPtr != 0 &&
+        tertiaryCompetitionPtr != 0) {
+        menuEntries[17].isInvisible = 1;
+        menuEntries[20].isInvisible = 0;
+        menuEntries[20].x = menuEntries[17].x;
+        menuEntries[20].x += 11;
+        goto afterEDE;
+    }
+    menuEntries[19].isInvisible = 1;
+    goto afterEDE;
+}
+
+/* ================================================================
+ * Chunk 211: SquadAfterDrawCommon (1 → menus.c)
+ * ================================================================ */
+
+extern uint8_t playerPositionsArray[];
+extern uint8_t oldPlayerPositionsArray[];
+extern uint16_t squadRowMode;
+extern uint16_t squadSelectedPlayerIndex;
+extern uint32_t squadSelectedPlayerPtr;
+extern uint8_t fundsBuffer[];
+extern uint8_t careerUnavailablePlayerNames[];
+
+/* Helper: set color index on both entries 46 and 48 */
+static void setColorPair46_48(uint16_t colorIdx) {
+    setBgColorIndex(&menuEntries[46], colorIdx);
+    setBgColorIndex(&menuEntries[48], colorIdx);
+}
+
+/* SquadAfterDrawCommon (SWOS2.s line 48777)
+ * AfterDraw callback for squad menu player rows. Sets row colors,
+ * fills in player data for entries 46-63, then draws them. */
+__attribute__((used, externally_visible))
+void _SquadAfterDrawCommon(void *entryPtr)
+{
+    MenuEntry *a5 = (MenuEntry *)entryPtr;
+    uint16_t d7 = a5->ordinal - 0x1C;
+    uint8_t *teamBase = (uint8_t *)squadTeamFilePtr;
+    uint16_t d5;
+
+    /* Set row background colors based on row index and team type */
+    if (d7 == 0x10) {
+        d5 = 1;
+        setColorPair46_48(8);
+    } else {
+        d5 = 0;
+        if (d7 >= 11) {
+            /* Substitutes */
+            if (teamBase[4] == 1) {
+                setColorPair46_48(12);
+            } else {
+                setColorPair46_48(11);
+            }
+        } else {
+            /* Starting 11 */
+            if (teamBase[4] == 1) {
+                setColorPair46_48(10);
+            } else if (d7 == 0) {
+                setColorPair46_48(14); /* goalkeeper */
+            } else {
+                setColorPair46_48(13);
+            }
+        }
+    }
+
+    /* Get player info at this row */
+    uint16_t d6_breakPos, d4_fileIdx;
+    uint8_t *player = _GetPlayerInfoBreakPosition(teamBase, d7, &d6_breakPos, &d4_fileIdx);
+
+    /* Check if injured */
+    uint16_t injured = _IsPlayerInjured(player, (int16_t)squadRowMode);
+    if (injured != 0) {
+        setColorPair46_48(10);
+    }
+
+    /* Check if this is the previously selected player */
+    if (d4_fileIdx == squadPrevSelectedPlayerIndex) {
+        setColorPair46_48(6);
+    }
+
+    squadSelectedPlayerIndex = d4_fileIdx;
+    squadSelectedPlayerPtr = (uint32_t)player;
+
+    uint16_t yPos = a5->y;
+
+    /* Entry 46: status sprite */
+    MenuEntry *e = &menuEntries[46];
+    e->y = yPos;
+    _SetSquadMenuEntryStatusSprite(e, player, (uint16_t)squadRowMode);
+
+    /* Check position arrow (up/down indicator) */
+    if (d6_breakPos < 11) {
+        uint8_t curPos = playerPositionsArray[d4_fileIdx];
+        uint8_t oldPos = oldPlayerPositionsArray[d4_fileIdx];
+        if (curPos < oldPos) {
+            e->fg = 0xD1; /* down arrow */
+        } else if (curPos > oldPos) {
+            e->fg = 0xD0; /* up arrow */
+        }
+    }
+
+    /* Entry 47: shirt number (hidden if d5==1 i.e. row 16) */
+    e = &menuEntries[47];
+    e->isInvisible = 1;
+    if (d5 == 0) {
+        e->fg = (uint32_t)(uint16_t)(uint8_t)player[0x4E];
+        e->isInvisible = 0;
+    }
+    e->y = yPos;
+
+    /* Entry 48: player name */
+    e = &menuEntries[48];
+    e->fg = (uint32_t)(player + 0x4F);
+    e->y = yPos;
+
+    /* Entry 49: position string */
+    e = &menuEntries[49];
+    {
+        uint8_t posAndFace = player[0x66];
+        uint16_t posIdx = (posAndFace & 0xE0) >> 3;
+        e->fg = playerPositionsStringTable[posIdx / 4];
+    }
+    e->y = yPos;
+
+    /* Entry 50: top skills string */
+    e = &menuEntries[50];
+    _FormTopSkillsString((uint8_t *)e->fg, player);
+    e->y = yPos;
+
+    /* Entries 51-54: invisible */
+    menuEntries[51].isInvisible = 1; menuEntries[51].y = yPos;
+    menuEntries[52].isInvisible = 1; menuEntries[52].y = yPos;
+    menuEntries[53].isInvisible = 1; menuEntries[53].y = yPos;
+    menuEntries[54].isInvisible = 1; menuEntries[54].y = yPos;
+
+    /* Entry 54: nationality — show if team NOT in [0x50..0x55] and not view mode */
+    {
+        uint8_t *teamCheck = (uint8_t *)squadTeamFilePtr;
+        if (teamCheck[0] >= 0x50 && teamCheck[0] <= 0x55) {
+            /* team in range — skip nationality */
+        } else if (isSquadViewMode == 0) {
+            uint8_t *dst = (uint8_t *)menuEntries[54].fg;
+            uint8_t nat = player[0x4C];
+            uint16_t natIdx = (uint16_t)nat * 3;
+            *dst++ = '(';
+            dst[0] = shortCountryNames[natIdx];
+            dst[1] = shortCountryNames[natIdx + 1];
+            dst[2] = shortCountryNames[natIdx + 2];
+            dst += 3;
+            *dst++ = ')';
+            *dst = 0;
+            menuEntries[54].isInvisible = 0;
+        }
+    }
+    menuEntries[54].y = yPos;
+
+    /* Entry 55: goals/stats */
+    e = &menuEntries[55];
+    e->isInvisible = 1;
+    {
+        int16_t skillDiff = (int16_t)teamSkillDiffAfterChange;
+        if (skillDiff < 0) {
+            if (isNationalSquad == 0 && isSquadViewMode == 0) {
+                uint16_t sum = (uint16_t)(uint8_t)player[0x6D]
+                             + (uint16_t)(uint8_t)player[0x6E]
+                             + (uint16_t)(uint8_t)player[0x6F]
+                             + (uint16_t)(uint8_t)player[0x70];
+                e->fg = (uint32_t)sum;
+                e->isInvisible = 0;
+            }
+        } else {
+            e->fg = (uint32_t)(uint16_t)(uint8_t)player[0x6D + skillDiff];
+            e->isInvisible = 0;
+        }
+    }
+    e->y = yPos;
+
+    /* Entry 56: invisible */
+    menuEntries[56].isInvisible = 1;
+    menuEntries[56].y = yPos;
+
+    /* Entry 57: invisible by default */
+    menuEntries[57].isInvisible = 1;
+
+    if (isSquadViewMode == 0) {
+        uint8_t *teamGeneral = (uint8_t *)squadTeamFilePtr;
+        uint16_t isNat = _IsTeamNational(teamGeneral);
+        if (isNat != 0) {
+            _InitPlayerValueDisplayStruct(player, teamGeneral);
+        } else {
+            _FormatPlayerValueOrStatusText(player, fundsBuffer);
+            menuEntries[57].fg = (uint32_t)fundsBuffer;
+        }
+        menuEntries[57].isInvisible = 0;
+
+        /* Color based on player status byte 0x71 */
+        uint16_t colorIdx = 2;
+        if (player[0x71] == 0x9B) {
+            colorIdx = 13;
+        } else if (player[0x71] == 0x9A) {
+            colorIdx = 1;
+        } else if (player[0x66] & 0x02) {
+            colorIdx = 15;
+        }
+        {
+            uint16_t sf = menuEntries[57].stringFlags;
+            sf = (sf & 0xFFF0) | colorIdx;
+            menuEntries[57].stringFlags = sf;
+        }
+    }
+    menuEntries[57].y = yPos;
+
+    /* Entry 58: invisible by default */
+    menuEntries[58].isInvisible = 1;
+    menuEntries[58].y = yPos;
+
+    /* National squad view: show club names in entry 58 */
+    if (isNationalSquad != 0 && isSquadViewMode != 0) {
+        uint8_t *dst = (uint8_t *)menuEntries[58].fg;
+        uint8_t *clubName = careerUnavailablePlayerNames + (uint16_t)(d4_fileIdx * 17);
+        *dst++ = '(';
+        dst = _StringCopy(clubName, dst);
+        *dst++ = ')';
+        *dst = 0;
+        menuEntries[58].isInvisible = 0;
+    }
+
+    /* Entries 59-63: show competition goals when exactly one of
+     * isNationalSquad/isSquadViewMode is set (XOR logic) */
+    if ((isNationalSquad != 0) == (isSquadViewMode != 0)) {
+        /* Both set or both clear: hide entries 59-63 */
+        menuEntries[59].isInvisible = 1; menuEntries[59].y = yPos;
+        menuEntries[60].isInvisible = 1; menuEntries[60].y = yPos;
+        menuEntries[61].isInvisible = 1; menuEntries[61].y = yPos;
+        menuEntries[62].isInvisible = 1; menuEntries[62].y = yPos;
+        menuEntries[63].isInvisible = 1; menuEntries[63].y = yPos;
+    } else {
+        /* Show competition goal counts */
+        /* Entry 59: first competition goals (if any secondary competitions exist) */
+        e = &menuEntries[59];
+        e->isInvisible = 1;
+        if ((quaternaryCompetitionPtr | secondaryCompetitionPtr | tertiaryCompetitionPtr) != 0) {
+            e->fg = (uint32_t)(uint16_t)(uint8_t)player[0x6D];
+            e->isInvisible = 0;
+        }
+        e->y = yPos;
+
+        /* Entry 60: secondary competition goals */
+        e = &menuEntries[60];
+        e->isInvisible = 1;
+        if (secondaryCompetitionPtr != 0) {
+            e->fg = (uint32_t)(uint16_t)(uint8_t)player[0x6E];
+            e->isInvisible = 0;
+        }
+        e->y = yPos;
+
+        /* Entry 61: tertiary competition goals */
+        e = &menuEntries[61];
+        e->isInvisible = 1;
+        if (tertiaryCompetitionPtr != 0) {
+            e->fg = (uint32_t)(uint16_t)(uint8_t)player[0x6F];
+            e->isInvisible = 0;
+        }
+        e->y = yPos;
+
+        /* Entry 62: quaternary competition goals */
+        e = &menuEntries[62];
+        e->isInvisible = 1;
+        if (quaternaryCompetitionPtr != 0) {
+            e->fg = (uint32_t)(uint16_t)(uint8_t)player[0x70];
+            e->isInvisible = 0;
+        }
+        e->y = yPos;
+
+        /* Entry 63: total goals (sum of all 4) */
+        e = &menuEntries[63];
+        {
+            uint16_t total = (uint16_t)(uint8_t)player[0x6D]
+                           + (uint16_t)(uint8_t)player[0x6E]
+                           + (uint16_t)(uint8_t)player[0x6F]
+                           + (uint16_t)(uint8_t)player[0x70];
+            e->fg = (uint32_t)total;
+            e->isInvisible = 0;
+        }
+        e->y = yPos;
+    }
+
+    /* Draw 18 entries starting from entry 46 */
+    _DrawMultipleItems(18, &menuEntries[46]);
+}
+
+/* SquadFinish (SWOS2.s line 48543)
+ * Called as the squad menu's onReturn/setup callback.
+ * Adjusts menu entry positions, sets display count, sets up
+ * competition abbreviation strings, etc. */
+__attribute__((used, externally_visible))
+void _SquadFinish(void)
+{
+    uint8_t *teamPtr = (uint8_t *)squadTeamFilePtr;
+
+    /* If not national squad and team byte 0 in [0x50..0x55],
+     * shift entries 13, 55, 24, 25 left by 13 */
+    if (isNationalSquad == 0) {
+        if (teamPtr[0] >= 0x50 && teamPtr[0] <= 0x55) {
+            menuEntries[13].x -= 13;
+            menuEntries[55].x -= 13;
+            menuEntries[24].x -= 13;
+            menuEntries[25].x -= 13;
+        }
+    }
+
+    _CheckIsTeamNational();
+    _SetBenchPlayersNumbers((uint8_t *)squadTeamFilePtr);
+
+    /* Determine squad display count */
+    uint16_t displayCount;
+    if ((int16_t)selTeamNumber == -1 ||
+        selTeamNumber != *(uint16_t *)teamPtr) {
+        displayCount = 16;
+    } else {
+        displayCount = careerNumPlayers;
+    }
+    squadDisplayCount = displayCount;
+
+    /* Reset selection state */
+    squadPrevHighlightedMenuEntryPtr = (MenuEntry *)0;
+    squadPrevSelectedPlayerIndex = 0xFFFF;
+
+    uint8_t *a6 = (uint8_t *)squadTeamFilePtr;
+
+    /* Entries 44, 45 visibility: hidden by default, shown for extra players */
+    menuEntries[44].isInvisible = 1;
+    menuEntries[45].isInvisible = 1;
+    int16_t extraPlayers = (int16_t)squadDisplayCount - 16;
+    if (extraPlayers != 0) {
+        menuEntries[44].isInvisible = 0;
+        if (extraPlayers != 1) {
+            menuEntries[45].isInvisible = 0;
+        }
+    }
+
+    /* Entry 21: set fg to country-specific position string */
+    {
+        uint8_t countryIdx = (uint8_t)selTeamNumber;
+        uint8_t *countryEntry = (uint8_t *)countriesTable[countryIdx];
+        int8_t langCode = (int8_t)countryEntry[0];
+        int16_t langIdx = (int16_t)langCode;
+        /* playerPositionsStringTable + $20 = index 8, then + langIdx */
+        menuEntries[21].fg = playerPositionsStringTable[8 + langIdx];
+    }
+
+    if (isNationalSquad != 0) {
+        /* Set competition abbreviation strings */
+        uint8_t *abbrev = _GetCompetitionAbbrevStr((uint8_t *)currentCompetitionPtr);
+        MenuEntry *target = &menuEntries[22]; /* default target if no secondary */
+
+        if (secondaryCompetitionPtr != 0) {
+            menuEntries[18].fg = (uint32_t)abbrev;
+            abbrev = _GetCompetitionAbbrevStr((uint8_t *)secondaryCompetitionPtr);
+            target = &menuEntries[19];
+
+            if (tertiaryCompetitionPtr != 0) {
+                menuEntries[19].fg = (uint32_t)abbrev;
+                abbrev = _GetCompetitionAbbrevStr((uint8_t *)tertiaryCompetitionPtr);
+                menuEntries[20].fg = (uint32_t)abbrev;
+                menuEntries[20].isInvisible = 0;
+                goto skipFgStore;
+            }
+        }
+        target->fg = (uint32_t)abbrev;
+    skipFgStore:;
+    }
+
+    isSquadViewMode = 0;
+    _SquadUpdateMenuState();
+
+    /* Entry 8: GOALS/CLUBS label visibility */
+    menuEntries[8].isInvisible = 1;
+    if ((int16_t)teamSkillDiffAfterChange < 0) {
+        menuEntries[8].isInvisible = 0;
+    }
+
+    menuEntries[8].fg = (uint32_t)aGoals;
+    if (isNationalSquad != 0) {
+        menuEntries[8].fg = (uint32_t)aClubs;
+    }
+
+    /* If team type byte (offset 4) == 1 */
+    a6 = (uint8_t *)squadTeamFilePtr;
+    if (a6[4] == 1) {
+        menuEntries[9].isInvisible = 1;
+        menuEntries[10].isInvisible = 0;
+        _SetCurrentEntry(10);
+        if (a6[0] >= 0x50 && a6[0] <= 0x55) {
+            menuEntries[10].x = 0xDF;
+        }
+    }
+
+    _SquadUpdateGoalsMenuText();
+    _SquadCommitPositionsAndUpdateSkill();
+    _SquadMenuSavePlayerPositions();
+}
+
+/* SquadInit (SWOS2.s line 48425)
+ * Called as the squad menu's onInit callback.
+ * Sets isNationalSquad flag, adjusts menu entry x positions
+ * based on which competition pointers are active and
+ * teamSkillDiffAfterChange, then falls through to SquadFinish. */
+__attribute__((used, externally_visible))
+void _SquadInit(void)
+{
+    /* Set national squad flag */
+    isNationalSquad = 0;
+    if (squadTeamFilePtr == (uint32_t)careerTeam && isNationalSelector != 0) {
+        isNationalSquad = 1;
+    }
+
+    /* If all three competition pointers are zero, shift entries right */
+    if ((quaternaryCompetitionPtr | secondaryCompetitionPtr | tertiaryCompetitionPtr) == 0) {
+        menuEntries[59].x += 20;
+        menuEntries[60].x += 20;
+        menuEntries[61].x += 20;
+        menuEntries[62].x += 20;
+        menuEntries[18].x += 20;
+        menuEntries[19].x += 20;
+        menuEntries[17].x += 20;
+        menuEntries[21].x += 20;
+    }
+
+    /* If quaternary is null, shift more entries */
+    if (quaternaryCompetitionPtr == 0) {
+        menuEntries[59].x += 20;
+        menuEntries[60].x += 20;
+        menuEntries[61].x += 20;
+        menuEntries[18].x += 20;
+        menuEntries[19].x += 20;
+        menuEntries[17].x += 20;
+    }
+
+    /* If tertiary is null */
+    if (tertiaryCompetitionPtr == 0) {
+        menuEntries[59].x += 20;
+        menuEntries[60].x += 20;
+        menuEntries[18].x += 20;
+        menuEntries[19].x += 20;
+    }
+
+    /* If secondary is null */
+    if (secondaryCompetitionPtr == 0) {
+        menuEntries[59].x += 20;
+        menuEntries[18].x += 20;
+    }
+
+    /* Negative teamSkillDiff: compute shift and apply to many entries */
+    if ((int16_t)teamSkillDiffAfterChange < 0) {
+        int16_t d1 = (menuEntries[59].x - 0xC7) >> 1;
+
+        if (isNationalSquad != 0) {
+            d1 += 8;
+            menuEntries[16].x -= 8;
+        }
+
+        menuEntries[59].x -= d1;
+        menuEntries[60].x -= d1;
+        menuEntries[61].x -= d1;
+        menuEntries[62].x -= d1;
+        menuEntries[63].x -= d1;
+        menuEntries[17].x -= d1;
+        menuEntries[18].x -= d1;
+        menuEntries[19].x -= d1;
+        menuEntries[21].x -= d1;
+        menuEntries[22].x -= d1;
+        menuEntries[24].x -= d1;
+        menuEntries[25].x -= d1;
+        menuEntries[26].x -= d1;
+        menuEntries[27].x -= d1;
+    }
+
+    /* Non-negative teamSkillDiff: adjust entries 24, 25, 9 */
+    if ((int16_t)teamSkillDiffAfterChange >= 0) {
+        menuEntries[24].x -= 0x32;
+        menuEntries[24].y -= 0x0A;
+        menuEntries[25].x -= 0x32;
+        menuEntries[25].y -= 0x0A;
+        menuEntries[9].x -= 0x1F;
+    }
+
+    /* Fall through to SquadFinish */
+    _SquadFinish();
 }
 
 /* ================================================================

@@ -2706,12 +2706,30 @@
         xdef    squadPrevSelectedPlayerIndex
         xdef    isSquadViewMode
         xdef    squadTeamFilePtr
+        xdef    squadPrevSelectedBreakPos
+        xdef    squadPrevHighlightedMenuEntryPtr
 ; --- Chunk 112: Squad operations (menus.c) ---
         xref    _UpdateBigCheckMark
         xref    _SquadRedrawPlayerListAndCheckMark
         xref    _SquadMenuSavePlayerPositions
+; --- Chunk 208: Squad menu functions (menus.c) ---
+        xref    _SquadUpdateGoalsMenuText
+        xref    _SquadCommon
         xref    _SquadCommitPositionsAndUpdateSkill
         xdef    teamSkillDiffAfterChange
+; --- Chunk 209: SquadInit + SquadFinish (menus.c) ---
+        xref    _SquadInit
+        xref    _SquadFinish
+        xdef    isNationalSquad
+        xdef    squadDisplayCount
+        xdef    aClubs
+; --- Chunk 210: SquadUpdateMenuState (menus.c) ---
+        xref    _SquadUpdateMenuState
+; --- Chunk 211: SquadAfterDrawCommon ---
+        xdef    squadRowMode
+        xdef    squadSelectedPlayerIndex
+        xdef    squadSelectedPlayerPtr
+        xref    _SquadAfterDrawCommon
 ; --- Chunk 113: Options + Transfer callbacks (menus.c, transfer_market.c) ---
         xref    _OptionsMenuBeforeDraw
         xref    _ChangePitchType

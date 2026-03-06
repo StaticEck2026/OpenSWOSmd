@@ -3203,6 +3203,51 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified** (clean build)
 - Cumulative: 1560 functions across 207 chunks
 
+### Chunk 208 — SquadUpdateGoalsMenuText + SquadCommon + SquadSwapPlayersAtIndices (3 → menus.c)
+- Date: 2026-03-02
+- Ported:
+  1. SquadUpdateGoalsMenuText (→menus.c) — ~43 instr. Computes total goals for all players in current squad (sums goalStats[0..3] for each player). Uses currentMatchPlayers/careerNumPlayers for career mode, else playerNumbers. Writes "GOALS (N)" string into entry 16's fg buffer.
+  2. SquadCommon (→menus.c) — ~39 instr. Menu onSelect callback for squad entries. Computes slot from entry ordinal delta vs entry 28, calls GetPlayerInfoBreakPosition. Handles first-select (store) and second-select (swap via SquadSwapPlayersAtIndices, then SetBenchPlayersNumbers + SquadCommitPositionsAndUpdateSkill). Same-player click deselects.
+  3. SquadSwapPlayersAtIndices (→menus.c, static) — ~38 instr. Swaps two players at given break positions. Cross-boundary swaps (one < 11, other >= 11, or either >= 16) also swap playerPositionsArray entries and shirt numbers. Always swaps player number array entries.
+- Asm changes: SquadUpdateGoalsMenuText → bridge. SquadCommon → bridge (passes a5). SquadSwapPlayersAtIndices → rts (dead, only caller ported).
+- Added xdefs: squadPrevSelectedBreakPos, squadPrevHighlightedMenuEntryPtr
+- Added xrefs: _SquadUpdateGoalsMenuText, _SquadCommon
+- Build status: **verified** (clean build)
+- Cumulative: 1563 functions across 208 chunks
+
+### Chunk 209 — SquadInit + SquadFinish (2 → menus.c)
+- Date: 2026-03-06
+- Ported:
+  1. SquadInit (→menus.c) — Squad menu onInit callback. Sets up competition abbreviation strings for entries 18-25, configures entries 44-45 visibility based on extra players, sets position string language, and falls through to SquadFinish.
+  2. SquadFinish (→menus.c) — Squad menu onReturn callback. Adjusts entry positions for national teams, calls CheckIsTeamNational/SetBenchPlayersNumbers, determines squad display count, resets selection state.
+- Asm changes: SquadInit/SquadFinish → bridges (save d2-d7/a2-a6, jsr, restore)
+- Added xdefs: isNationalSquad, squadDisplayCount, aClubs
+- Added xrefs: _SquadInit, _SquadFinish
+- Build status: **verified**
+- Cumulative: 1565 functions across 209 chunks
+
+### Chunk 210 — SquadUpdateMenuState (1 → menus.c)
+- Date: 2026-03-06
+- Ported:
+  1. SquadUpdateMenuState (→menus.c) — ~268 instr. Large menu state update function for squad view. Sets visibility/text/colors for menu entries based on competition state, national/view mode flags.
+- Added helper: setBgColorIndex() static helper for setting bg color index on MenuEntry.
+- Asm changes: SquadUpdateMenuState → bridge
+- Added xref: _SquadUpdateMenuState
+- Build status: **verified**
+- Cumulative: 1566 functions across 210 chunks
+
+### Chunk 211 — SquadAfterDrawCommon (1 → menus.c)
+- Date: 2026-03-06
+- Ported:
+  1. SquadAfterDrawCommon (→menus.c) — ~385 instr. AfterDraw callback for squad menu player rows. Sets row background colors based on row index/team type, gets player info via GetPlayerInfoBreakPosition, sets injury/selection colors, fills entries 46-63 with player data (status sprite, shirt number, name, position, skills, nationality, goals, value/status, club name for nationals, competition goals), then draws 18 entries.
+- Added helpers: setColorPair46_48() static helper.
+- Asm changes: SquadAfterDrawCommon → bridge (save d2-d7/a2-a6, push a5, jsr, clean, restore, rts)
+- Added xdefs: squadRowMode, squadSelectedPlayerIndex, squadSelectedPlayerPtr
+- Added xrefs: _SquadAfterDrawCommon
+- Added includes: career_status.h, play_match_menu.h (for IsPlayerInjured, FormTopSkillsString)
+- Build status: **verified**
+- Cumulative: 1567 functions across 211 chunks
+
 ### Chunk 195 — Career_AutoAdvanceCompetitionSlots (1 → career_status.c)
 - Date: 2026-03-02
 - Ported:
@@ -3699,5 +3744,16 @@ Update this section every time you port a chunk. Keep it chronological.
 | 198   | 1         | 1533       |
 | 199   | 1+1s      | 1535       |
 | 200   | 2         | 1537       |
+| 201   | 2         | 1539       |
+| 202   | 1         | 1540       |
+| 203   | 4         | 1544       |
+| 204   | 1         | 1545       |
+| 205   | 3         | 1548       |
+| 206   | 8         | 1556       |
+| 207   | 2         | 1558       |
+| 208   | 3+1s      | 1563       |
+| 209   | 2         | 1565       |
+| 210   | 1+1s      | 1567       |
+| 211   | 1+1s      | 1570       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

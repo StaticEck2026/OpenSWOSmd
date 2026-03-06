@@ -40,9 +40,23 @@ void _Squad45AfterDraw(void);
 
 /* --- Squad operations (Chunk 112) --- */
 void _UpdateBigCheckMark(void);
+
+/* --- Squad menu functions (Chunk 208) --- */
+void _SquadUpdateGoalsMenuText(void);
+void _SquadCommon(void *entryPtr);
 void _SquadRedrawPlayerListAndCheckMark(void);
 void _SquadMenuSavePlayerPositions(void);
 void _SquadCommitPositionsAndUpdateSkill(void);
+
+/* --- Squad Init/Finish (Chunk 209) --- */
+void _SquadInit(void);
+void _SquadFinish(void);
+
+/* --- SquadUpdateMenuState (Chunk 210) --- */
+void _SquadUpdateMenuState(void);
+
+/* --- SquadAfterDrawCommon (Chunk 211) --- */
+void _SquadAfterDrawCommon(void *entryPtr);
 
 /* --- Options menu callbacks (Chunk 113) --- */
 #include "menu_system.h"
