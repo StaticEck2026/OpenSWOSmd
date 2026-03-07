@@ -47,6 +47,11 @@
 #include "sprites.h"
 #include "team_colors.h"
 #include "input_text.h"
+#include "career_teams.h"
+#include "career_status.h"
+#include "play_match_menu.h"
+#include "player_sprites.h"
+#include "match_sim.h"
 
 /* ---- Menu entries (defined in asm) ---- */
 extern MenuEntry menuEntries[];
@@ -68,6 +73,7 @@ extern uint16_t chosenTactics;
 extern uint16_t flipOnOff;
 extern uint32_t chooseTacticsTeamPtr;   /* stored as uint32_t, used as pointer */
 extern uint16_t selTeamNumber;
+extern uint16_t inEditTactics;
 extern uint16_t careerNumPlayers;
 extern uint16_t editTacticsNumPlayers;
 extern uint16_t editTacticsSelectedPairSlotIndex;
@@ -2980,4 +2986,410 @@ void _ImportTeamsMenu(void)
     }
 
     _InitEditTeamsMenu();
+}
+
+/* Helper: set bg color index (high word of bg, low nibble) */
+static void setBgColor(MenuEntry *e, uint16_t colorIdx) {
+    uint16_t bgHigh = (uint16_t)(e->bg >> 16);
+    bgHigh = (bgHigh & 0xFFF0) | colorIdx;
+    e->bg = ((uint32_t)bgHigh << 16) | (e->bg & 0xFFFF);
+}
+
+/* ================================================================
+ * ChooseTeamForEditTactics  (SWOS2.s line 52506)
+ *
+ * Display a list of teams to choose from for editing tactics.
+ * Sorts teams alphabetically (bubble sort), shows menu, returns
+ * selected team pointer (or NULL if cancelled).
+ *
+ * in:  a0 = menu title string
+ *      a1 = pointer to team numbers array (uint16_t[])
+ *      d0 = number of teams
+ * out: a0 = team pointer (or NULL)
+ * ================================================================ */
+extern uint32_t chooseTeamMenuName;
+extern uint16_t numTeamsCountryBuffer;
+extern uint32_t dwArrayCountries[];
+extern uint8_t indexCountries[];
+extern uint8_t selectTeamsForTacticsMenu[];
+extern uint16_t teamSelected;
+
+__attribute__((used, externally_visible))
+uint8_t *_ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers,
+                                    uint16_t numTeams)
+{
+    chooseTeamMenuName = (uint32_t)menuTitle;
+    numTeamsCountryBuffer = numTeams;
+
+    uint32_t *nameArray = dwArrayCountries;
+    uint8_t *idxArray = indexCountries;
+    uint16_t count = 0;
+
+    uint16_t *teamNums = teamNumbers;
+    uint16_t i;
+    for (i = 0; i < numTeams; i++) {
+        uint16_t teamNum = teamNums[i];
+        uint8_t *teamPtr = _VerifyTeamLoaded(teamNum);
+        idxArray[i] = (uint8_t)count;
+        nameArray[count] = (uint32_t)(teamPtr + 5);
+        count++;
+    }
+
+    /* Bubble sort by team name */
+    if (numTeams >= 2) {
+        int16_t limit = (int16_t)numTeams - 2;
+        int16_t swapped;
+        do {
+            swapped = 0;
+            for (int16_t j = 0; j <= limit; j++) {
+                uint8_t idx1 = idxArray[j];
+                uint8_t idx2 = idxArray[j + 1];
+                uint8_t *name1 = (uint8_t *)nameArray[idx1];
+                uint8_t *name2 = (uint8_t *)nameArray[idx2];
+                /* Compare strings */
+                uint8_t *p1 = name1;
+                uint8_t *p2 = name2;
+                int cmpResult = 0;
+                while (1) {
+                    uint8_t c1 = *p1++;
+                    if (c1 == 0) break;
+                    uint8_t c2 = *p2++;
+                    if (c1 < c2) break;
+                    if (c1 > c2) {
+                        /* Swap */
+                        uint8_t tmp = idxArray[j];
+                        idxArray[j] = idxArray[j + 1];
+                        idxArray[j + 1] = tmp;
+                        swapped = 1;
+                        cmpResult = 1;
+                        break;
+                    }
+                }
+                (void)cmpResult;
+            }
+        } while (swapped);
+    }
+
+    /* Show the selection menu */
+    _ShowMenu(selectTeamsForTacticsMenu);
+
+    int16_t selected = (int16_t)teamSelected;
+    if (selected >= 0) {
+        uint8_t finalIdx = indexCountries[selected];
+        uint16_t teamNum = teamNumbers[finalIdx];
+        return _VerifyTeamLoaded(teamNum);
+    }
+
+    return (uint8_t *)0;
+}
+
+/* ================================================================
+ * EditTactics  (SWOS2.s line 68771)
+ *
+ * Entry point for Edit Tactics menu. Determines which team to edit:
+ * - In career mode: uses careerTeam
+ * - With multiple selected teams: shows team selection menu
+ * - With one team: uses that team
+ * - No teams: loads default team (Leicester City)
+ * ================================================================ */
+extern uint8_t aEditTacticsSel[];  /* "EDIT TACTICS - SELECT TEAM" */
+extern uint8_t editTacticsCountryBuffer[];
+extern uint8_t teamFileBuffer[];
+
+__attribute__((used, externally_visible))
+void _EditTactics(void)
+{
+    inEditTactics = 1;
+
+    uint8_t *teamPtr = (uint8_t *)&careerTeam;
+
+    if (gameType == GAME_TYPE_CAREER) {
+        /* Career mode: use career team directly */
+        goto show_menu;
+    }
+
+    if (numSelectedTeams == 0) {
+        goto no_teams;
+    }
+
+    {
+        uint8_t *selPtr = &selTeamsPtr;
+        uint16_t *countryBuf = (uint16_t *)editTacticsCountryBuffer;
+        uint16_t found = 0;
+        uint8_t *lastNonComputer = (uint8_t *)0;
+
+        for (uint16_t i = 0; i < numSelectedTeams; i++) {
+            uint8_t *t = selPtr + (uint32_t)i * 684;
+            if (t[4] != TEAM_COMPUTER) {  /* TEAMFILE_TEAMCONTROLS */
+                *countryBuf++ = *(uint16_t *)t;
+                lastNonComputer = t;
+                found++;
+            }
+        }
+
+        if (found == 0) {
+            if (numSelectedTeams != 0) {
+                goto check_sel_team;
+            }
+            goto no_teams;
+        }
+
+        teamPtr = lastNonComputer;
+
+        if (found == 1) {
+            goto show_menu;
+        }
+
+        /* Multiple non-computer teams: show selection */
+        teamPtr = _ChooseTeamForEditTactics(aEditTacticsSel,
+                    (uint16_t *)editTacticsCountryBuffer, found);
+        if (teamPtr != (uint8_t *)0) {
+            goto show_menu;
+        }
+        return;
+    }
+
+no_teams:
+    /* Load English Premier Division and pick Leicester City (18th team) */
+    _LoadTeamFile(8);
+    _AddTeamToBuffer(teamFileBuffer + 0x2D6E);
+    _InitTeams();
+    goto show_menu_from_sel;
+
+check_sel_team:
+    teamPtr = (uint8_t *)&careerTeam;
+    if (selTeamNumber != 0xFFFF) {
+        goto show_menu;
+    }
+
+show_menu_from_sel:
+    teamPtr = &selTeamsPtr;
+
+show_menu:
+    _ShowStandardChooseTacticsMenu(teamPtr);
+}
+
+/* ================================================================
+ * EditTactics_ApplyPlayerRowHighlighting  (SWOS2.s line 70226)
+ *
+ * Sets the background color of menuEntries[39] based on the player
+ * row index (position group: GK=0, defenders=1-10, subs=11+, slot16).
+ * Also checks injury, selection, pair-swap, and flip-on states.
+ *
+ * in:  d7 = player ordinal (0-16)
+ *      a5 = current menu entry
+ * ================================================================ */
+extern uint16_t editTacticsFlipPairColorTable[];
+
+__attribute__((used, externally_visible))
+void _EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *cur)
+{
+    MenuEntry *entry39 = &menuEntries[39];
+
+    if (playerOrdinal == 16) {
+        setBgColor(entry39, BLUE_TO_BLACK_8);
+    } else if (playerOrdinal < 11) {
+        if (playerOrdinal == 0) {
+            setBgColor(entry39, YELLOW_GREEN_BLACK_14);
+        } else {
+            setBgColor(entry39, BRIGHT_BLUE_TO_BLUE_13);
+        }
+    } else if (playerOrdinal == 11) {
+        setBgColor(entry39, YELLOW_GREEN_BLACK_14);
+    } else {
+        setBgColor(entry39, BLUE_TO_PURPLE_11);
+    }
+
+    /* Save/restore tactics byte, get player info */
+    uint8_t *teamBase = (uint8_t *)(uint32_t)chooseTacticsTeamPtr;
+    uint8_t savedTactics = teamBase[24]; /* TEAMFILE_TACTICS */
+    teamBase[24] = ((uint8_t *)&editTacticsCurrentTactics)[TEAMTACTICS_BALLOUTOFPLAYTACTICS];
+
+    uint16_t slot, playerIndex;
+    uint8_t *playerPtr = _GetPlayerInfoBreakPosition(teamBase, (uint16_t)playerOrdinal, &slot, &playerIndex);
+
+    teamBase = (uint8_t *)(uint32_t)chooseTacticsTeamPtr;
+    teamBase[24] = savedTactics;
+
+    /* Check position byte for injury - offset 0x67 from player base */
+    uint8_t posByte = playerPtr[0x67];
+    uint16_t posField = (uint16_t)posByte & 0xE0;
+    if (posField != 0 && posField != 0x20) {
+        setBgColor(entry39, RED_10);
+    }
+
+    /* Selected player highlight */
+    if (playerIndex == editTacticsSelectedPlayerNameIndex) {
+        setBgColor(entry39, ORANGE_TO_BROWN_6);
+    }
+
+    /* Pair swap highlight */
+    if ((int16_t)editTacticsSelectedPairSlotIndex >= 0) {
+        uint16_t pairSlot = editTacticsSelectedPairSlotIndex + 1;
+        if (slot == pairSlot) {
+            setBgColor(entry39, ORANGE_TO_BROWN_12);
+        }
+    }
+
+    /* Flip-on pair coloring */
+    if (flipOnOff != 0) {
+        if (slot != 0 && slot < 11) {
+            uint8_t *unkTable = (uint8_t *)&editTacticsCurrentTactics + 359; /* TEAMTACTICS_UNKTABLE */
+            int8_t pairVal = (int8_t)unkTable[slot - 1];
+            if (pairVal >= 0) {
+                uint16_t colorIdx = editTacticsFlipPairColorTable[pairVal];
+                setBgColor(entry39, colorIdx);
+            } else {
+                setBgColor(entry39, PINK_TO_BROWN_0);
+            }
+        } else {
+            setBgColor(entry39, PINK_TO_BROWN_0);
+        }
+    }
+
+    /* Copy Y position and set player face */
+    entry39->y = cur->y;
+    _SetMenuEntryPlayerFace(entry39, playerPtr);
+
+    /* Check position changes (only for first 11 players) */
+    if (slot < 11) {
+        uint8_t *posArray = &playerPositionsArray;
+        uint8_t *oldPosArray = &oldPlayerPositionsArray;
+        uint8_t curPos = posArray[playerIndex];
+        uint8_t oldPos = oldPosArray[playerIndex];
+        if (curPos > oldPos) {
+            entry39->fg = (entry39->fg & 0xFFFF0000u) | SPR_CHECK_SMALL;
+        } else if (curPos < oldPos) {
+            entry39->fg = (entry39->fg & 0xFFFF0000u) | SPR_NOT_CHECK_SMALL;
+        }
+    }
+}
+
+/* ================================================================
+ * EditTacticsAfterDrawPlayerNames  (SWOS2.s line 70061)
+ *
+ * After-draw callback for edit tactics player name entries.
+ * Sets up the info panel (entries 40-46) with player details:
+ * shirt number, name, position, skills, value/status, face indicator.
+ *
+ * in:  a5 = current menu entry
+ * ================================================================ */
+extern uint8_t fundsBuffer[];
+
+__attribute__((used, externally_visible))
+void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
+{
+    uint16_t d7 = cur->ordinal - 0xB;  /* entry ordinal - 11 */
+
+    _EditTactics_ApplyPlayerRowHighlighting((int16_t)d7, cur);
+
+    MenuEntry *entry41 = &menuEntries[41];
+    uint16_t d5; /* flag: 1 if slot 16 (no player details) */
+
+    if (d7 == 0x10) {
+        d5 = 1;
+        setBgColor(entry41, BLUE_TO_BLACK_8);
+    } else if (d7 < 0xB) {
+        d5 = 0;
+        if (d7 == 0) {
+            setBgColor(entry41, YELLOW_GREEN_BLACK_14);
+        } else {
+            setBgColor(entry41, BRIGHT_BLUE_TO_BLUE_13);
+        }
+    } else {
+        d5 = 0;
+        setBgColor(entry41, BLUE_TO_PURPLE_11);
+    }
+
+    /* Get player info */
+    uint8_t *teamBase = (uint8_t *)(uint32_t)chooseTacticsTeamPtr;
+    uint8_t savedTactics = teamBase[24]; /* TEAMFILE_TACTICS */
+    teamBase[24] = ((uint8_t *)&editTacticsCurrentTactics)[TEAMTACTICS_BALLOUTOFPLAYTACTICS];
+
+    uint16_t d7_slot, d1_fileIdx;
+    uint8_t *playerPtr = _GetPlayerInfoBreakPosition(teamBase, d7, &d7_slot, &d1_fileIdx);
+
+    teamBase = (uint8_t *)(uint32_t)chooseTacticsTeamPtr;
+    teamBase[24] = savedTactics;
+
+    /* Check if player is injured */
+    if (_IsPlayerInjured(playerPtr, (int16_t)inEditTactics)) {
+        setBgColor(entry41, RED_10);
+    }
+
+    /* Check if this player is selected */
+    if (d1_fileIdx == editTacticsSelectedPlayerNameIndex) {
+        setBgColor(entry41, ORANGE_TO_BROWN_6);
+    }
+
+    /* Check pair swap highlight */
+    if ((int16_t)editTacticsSelectedPairSlotIndex >= 0) {
+        uint16_t pairSlot = editTacticsSelectedPairSlotIndex + 1;
+        if (d7_slot == pairSlot) {
+            setBgColor(entry41, ORANGE_TO_BROWN_12);
+        }
+    }
+
+    /* Set up detail entries (40-44) */
+    MenuEntry *e = &menuEntries[40];
+    uint16_t entryY = cur->y;
+
+    /* Entry 40: shirt number */
+    e->isInvisible = 1;
+    if (!d5) {
+        e->fg = (e->fg & 0xFFFF0000u) | (uint16_t)playerPtr[0x4E];
+        e->isInvisible = 0;
+    }
+    e->y = entryY;
+    e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 41 */
+
+    /* Entry 41: player name (surname) */
+    uint8_t *surname = _ExtractSurname(playerPtr + 0x4F, 0x800D);
+    e->content = (uint32_t)surname;
+    e->y = entryY;
+    e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 42 */
+
+    /* Entry 42: position string */
+    uint8_t posAndFace = playerPtr[0x66];
+    uint16_t posIdx = ((uint16_t)posAndFace & 0xE0) >> 3;
+    e->content = playerPositionsStringTable[posIdx / 4];
+    e->y = entryY;
+    e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 43 */
+
+    /* Entry 43: top skills */
+    _FormTopSkillsString((uint8_t *)e->content, playerPtr);
+    e->y = entryY;
+    e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 44 */
+
+    /* Entry 44: value/status */
+    e->isInvisible = 1;
+    e->y = entryY;
+
+    if (_IsTeamNational((uint8_t *)(uint32_t)chooseTacticsTeamPtr)) {
+        _InitPlayerValueDisplayStruct(playerPtr, (uint8_t *)e);
+    } else {
+        _FormatPlayerValueOrStatusText(playerPtr, fundsBuffer);
+        e->content = (uint32_t)fundsBuffer;
+    }
+    e->isInvisible = 0;
+
+    /* Determine color for entry 44 based on player status */
+    uint16_t colorVal;
+    if (playerPtr[0x71] == 0x9B) {
+        colorVal = 0xD;
+    } else if (playerPtr[0x71] == 0x9A) {
+        colorVal = 1;
+    } else if (playerPtr[0x66] & 0x02) {
+        colorVal = 2;
+    } else {
+        colorVal = 0xF;
+    }
+
+    {
+        uint16_t fgHigh = (uint16_t)(e->fg >> 16);
+        fgHigh = (fgHigh & 0xFFF0) | colorVal;
+        e->fg = ((uint32_t)fgHigh << 16) | (e->fg & 0xFFFF);
+    }
+
+    _DrawMultipleItems(6, &menuEntries[39]);
 }

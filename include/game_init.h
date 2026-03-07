@@ -20,6 +20,11 @@ void _UpdateCareerPlayerStatsAfterMatch(TeamGame *tg, uint8_t *teamFileBase);
 void _InitInGameTeamStructure(uint8_t *teamFileBase, TeamGame *tg,
                                 int16_t *avgPricePct);
 
+/* --- InitializeInGameTeamsAndStartGame (Chunk 214) --- */
+void _InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
+    int16_t maxSubs, int16_t paramD3, int16_t paramD7,
+    TeamFile *team1, TeamFile *team2);
+
 /* --- SetupPlayers & InitAndPlayGame (Chunk 191) --- */
 void _SetupPlayers(TeamFileEx *team1, TeamFileEx *team2, int16_t maxSubs,
                    int16_t excludeFlags, int16_t allowSquadChanges, int16_t mode);

@@ -101,6 +101,13 @@ void _EditTactics_SwapPlayersInSlots(uint16_t slot1, uint16_t slot2);
 void _EditTacticsCommon(MenuEntry *cur);
 void _EditTacticsPlayerNamesCommon(MenuEntry *cur);
 
+/* --- Chunk 213: EditTactics, ChooseTeamForEditTactics, AfterDraw, Highlighting --- */
+uint8_t *_ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers,
+                                    uint16_t numTeams);
+void _EditTactics(void);
+void _EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *cur);
+void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur);
+
 /* --- Load tactics file (Chunk 89) --- */
 void _LoadTactics(void);
 

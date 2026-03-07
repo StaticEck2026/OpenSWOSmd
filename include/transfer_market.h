@@ -176,4 +176,9 @@ void _BuyOtherForeignPlayer(void);
 /* --- Chunk 207: PlayerMarketBuildVisiblePlayerList --- */
 void _PlayerMarketBuildVisiblePlayerList(void);
 
+/* --- Chunk 215: CreateRandomTransferOfferForPlayer + EvaluateTransferOfferNegotiation --- */
+void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal);
+int16_t _EvaluateTransferOfferNegotiation(void);
+uint16_t _ApplyOfferDemandMultipliersForSwapAndExtraPlayers(uint16_t demandValue);
+
 #endif

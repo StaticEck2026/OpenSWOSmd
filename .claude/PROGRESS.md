@@ -3248,6 +3248,26 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified**
 - Cumulative: 1567 functions across 211 chunks
 
+### Chunk 214 — InitializeInGameTeamsAndStartGame (1 → game_init.c)
+- Date: 2026-03-06
+- Ported:
+  1. InitializeInGameTeamsAndStartGame (→game_init.c) — ~220 instr. Sets up in-game teams, secondary/primary colors, computes injuries, shows stadium menu, waits 150 frames, plays match via ShowMatchSequence, then does post-match processing (injuries, stats, player status).
+- Updated _InitAndPlayGame to call _InitializeInGameTeamsAndStartGame directly
+- Simplified _CInitializeInGameTeamsAndStartGame bridge to jmp
+- Build status: **verified**
+- Cumulative: 1577 functions across 214 chunks
+
+### Chunk 215 — CreateRandomTransferOfferForPlayer + EvaluateTransferOfferNegotiation + ApplyOfferDemandMultipliersForSwapAndExtraPlayers (3 → transfer_market.c)
+- Date: 2026-03-06
+- Ported:
+  1. CreateRandomTransferOfferForPlayer (→transfer_market.c) — ~217 instr. Creates random transfer offer: picks eligible team (home/foreign), determines swap/extra players, calculates offer amount with negotiation steps, writes to offer table.
+  2. EvaluateTransferOfferNegotiation (→transfer_market.c) — ~231 instr. Evaluates transfer negotiation: checks roster constraints, randomizes player valuation, determines selling team's asking price based on market presence/division/transfer list status, shows player transfer menu.
+  3. ApplyOfferDemandMultipliersForSwapAndExtraPlayers (→transfer_market.c) — ~19 instr. Dead code (never called). Adjusts demand value by random multipliers for swap/extra players.
+- Added xdefs: offerValueBaseSum, offerPrimaryPositionMask, offerExtraPositionMask, offerTargetValueBase, offerSwapValueBaseSum, offerCandidateTeamIndexBuffer, offerSearchRetryCount, offerNegotiationStep1Amount, offerNegotiationStep2Amount, offerLifespanTable, swapPlayerValueRandom, extraPlayerValueRandom
+- Added xrefs: _CreateRandomTransferOfferForPlayer, _EvaluateTransferOfferNegotiation, _ApplyOfferDemandMultipliersForSwapAndExtraPlayers
+- Build status: **verified**
+- Cumulative: 1580 functions across 215 chunks
+
 ### Chunk 195 — Career_AutoAdvanceCompetitionSlots (1 → career_status.c)
 - Date: 2026-03-02
 - Ported:
@@ -3755,5 +3775,9 @@ Update this section every time you port a chunk. Keep it chronological.
 | 209   | 2         | 1565       |
 | 210   | 1+1s      | 1567       |
 | 211   | 1+1s      | 1570       |
+| 212   | 1         | 1571       |
+| 213   | 4+1s      | 1576       |
+| 214   | 1         | 1577       |
+| 215   | 3         | 1580       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

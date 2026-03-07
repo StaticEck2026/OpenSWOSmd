@@ -41,6 +41,10 @@
         xref    _FrontEndPreLoopSetup
         xref    _LoadOverlayToFrontbuffer
         xref    _InitMenuMusic
+        xref    _InitializeInGameTeamsAndStartGame
+        xref    _CreateRandomTransferOfferForPlayer
+        xref    _EvaluateTransferOfferNegotiation
+        xref    _ApplyOfferDemandMultipliersForSwapAndExtraPlayers
         xref    _TryPlayMusic
         xref    _Player1StatusProc
         xref    _PrepareMenuBackground
@@ -1470,6 +1474,10 @@
         xref    _ConvertPlayerDressColor
         xref    _ChooseTacticsInit
         xref    _ShowStandardChooseTacticsMenu
+        xref    _EditTactics
+        xref    _ChooseTeamForEditTactics
+        xref    _EditTacticsAfterDrawPlayerNames
+        xref    _EditTactics_ApplyPlayerRowHighlighting
         xref    _EditTacticsInit
         xref    _EditTacticsOnRestore
         xref    _EnableOrDisablePlayerFacesItems
@@ -1534,6 +1542,14 @@
         xref    _EditTactics_SwapPlayersInSlots
         xref    _EditTacticsCommon
         xref    _EditTacticsPlayerNamesCommon
+; Chunk 212: Edit tactics multi-register bridges
+        xref    _GetPlayerQuadrant
+        xref    _GetBallQuadrant
+        xref    _GetBallXYPositionFromQuadrant
+        xref    _GetPlayerXYPositionFromQuadrant
+        xref    _EditTactics_GetDirectionDelta
+        xref    _EditTactics_TryMoveQuadrantCursor
+        xref    _GetEditTacticsItemXYPosition
 ; Chunk 89 xrefs
         xref    _LoadTactics
         xref    _ShowStadiumInit
@@ -2730,6 +2746,10 @@
         xdef    squadSelectedPlayerIndex
         xdef    squadSelectedPlayerPtr
         xref    _SquadAfterDrawCommon
+; --- Chunk 212: ShowPlayMatchMenu ---
+        xref    _ShowPlayMatchMenu
+        xdef    inEditTactics
+        xdef    playMatchMenu
 ; --- Chunk 113: Options + Transfer callbacks (menus.c, transfer_market.c) ---
         xref    _OptionsMenuBeforeDraw
         xref    _ChangePitchType
@@ -3696,6 +3716,14 @@
         xdef    numTeamsCountryBuffer
         xdef    selTeamsListTopY
         xdef    selTeamsListBottomY
+; --- Chunk 213 xdefs ---
+        xdef    editTacticsCountryBuffer
+        xdef    chooseTeamMenuName
+        xdef    dwArrayCountries
+        xdef    indexCountries
+        xdef    selectTeamsForTacticsMenu
+        xdef    aEditTacticsSel
+        xdef    editTacticsFlipPairColorTable
 ; --- Chunk 136 xdefs ---
         xdef    secondaryCompetitionName
         xdef    tertiaryCompetitionName
@@ -3784,6 +3812,19 @@
         xdef    offerExtraPlayerOrdinal
         xdef    offerAmount
         xdef    aPlus
+; --- Chunk 215 xdefs ---
+        xdef    offerValueBaseSum
+        xdef    offerPrimaryPositionMask
+        xdef    offerExtraPositionMask
+        xdef    offerTargetValueBase
+        xdef    offerSwapValueBaseSum
+        xdef    offerCandidateTeamIndexBuffer
+        xdef    offerSearchRetryCount
+        xdef    offerNegotiationStep1Amount
+        xdef    offerNegotiationStep2Amount
+        xdef    offerLifespanTable
+        xdef    swapPlayerValueRandom
+        xdef    extraPlayerValueRandom
 ; --- Chunk 142 xdefs ---
         xdef    transferCompleted
         xdef    a0EndSeason
@@ -4416,21 +4457,8 @@ _CShowPlayMatchMenu:
         movem.l (sp)+,d2-d7/a2-a6
         rts
 
-; ===== C→asm bridge: _CInitializeInGameTeamsAndStartGame =====
-; void _CInitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
-;     int16_t maxSubs, int16_t paramD3, int16_t paramD7,
-;     uint8_t *team1, uint8_t *team2)
-; Loads C params into d0, d1, d2, d3, d7, a1, a2 and calls InitializeInGameTeamsAndStartGame.
+; ===== C→C bridge: _CInitializeInGameTeamsAndStartGame =====
+; Now just forwards to _InitializeInGameTeamsAndStartGame (same signature)
         xdef    _CInitializeInGameTeamsAndStartGame
 _CInitializeInGameTeamsAndStartGame:
-        movem.l d2-d7/a2-a6,-(sp)      ; save 11 regs = 44 bytes
-        move.l  48(sp),d0               ; randomizePitch
-        move.l  52(sp),d1               ; minSubs
-        move.l  56(sp),d2               ; maxSubs
-        move.l  60(sp),d3               ; paramD3
-        move.l  64(sp),d7               ; paramD7
-        movea.l 68(sp),a1               ; team1
-        movea.l 72(sp),a2               ; team2
-        jsr     (InitializeInGameTeamsAndStartGame).l
-        movem.l (sp)+,d2-d7/a2-a6
-        rts
+        jmp     (_InitializeInGameTeamsAndStartGame).l

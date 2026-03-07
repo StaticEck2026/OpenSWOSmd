@@ -1322,3 +1322,39 @@ void _FormTopSkillsString(uint8_t *dst, uint8_t *playerBase)
     *dst++ = let3;
     *dst = 0;
 }
+
+/* ================================================================
+ * Chunk 212: ShowPlayMatchMenu (1 → play_match_menu.c)
+ * ================================================================ */
+
+extern uint16_t inEditTactics;
+extern uint8_t playMatchMenu[];
+extern void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16_t baseCount, uint8_t *teamPtr);
+
+/* ShowPlayMatchMenu (SWOS2.s line 65312)
+ * Sets up play match globals from params, optionally adjusts trialists,
+ * shows the play match menu, returns playerNumThatStarted. */
+__attribute__((used, externally_visible))
+int16_t _ShowPlayMatchMenu(int16_t controlFlags, int16_t maxSubstitutes,
+                            int16_t excludeFlags, int16_t isFirstPlayer,
+                            int16_t squadChanges, uint8_t *team1, uint8_t *team2)
+{
+    isFirstPlayerChoosingTeam = (uint16_t)isFirstPlayer;
+    squadChangesAllowed = (uint16_t)squadChanges;
+    playMatchTeam1Ptr = (uint32_t)team1;
+    playMatchTeam2Ptr = (uint32_t)team2;
+    maxSubstitutesEntries = (uint16_t)maxSubstitutes;
+    playMatchControlFlags = (uint16_t)controlFlags;
+    playMatchExcludeFlags = (int16_t)excludeFlags;
+    inEditTactics = (uint16_t)excludeFlags;
+
+    if (gameType == GAME_TYPE_CAREER) {
+        _TrainingMatch_AdjustSelectedTeamRosterForTrialists(
+            (uint16_t)playMatchExcludeFlags,
+            maxSubstitutesEntries,
+            (uint8_t *)playMatchTeam1Ptr);
+    }
+
+    _ShowMenu(playMatchMenu);
+    return (int16_t)playerNumThatStarted;
+}

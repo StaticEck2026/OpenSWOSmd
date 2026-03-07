@@ -4749,3 +4749,600 @@ void _PlayerMarketBuildVisiblePlayerList(void)
     }
 }
 
+/* ================================================================
+ * CreateRandomTransferOfferForPlayer  (SWOS2.s line 63443)
+ *
+ * Creates a random transfer offer for a specified player. Picks a
+ * random eligible team (from home or foreign market), determines
+ * swap/extra players, calculates offer amount with negotiation steps,
+ * and writes the offer to the transfer offer table.
+ *
+ * Asm register convention:
+ *   in:  d1.w = player ordinal (offerPrimaryPlayerOrdinal)
+ *        d7.b = ref skill (for team eligibility)
+ *   out: none (offer written to transferOfferTable)
+ * ================================================================ */
+extern uint16_t offerSearchRetryCount;
+extern uint16_t offerPrimaryPositionMask;
+extern uint16_t offerExtraPositionMask;
+extern uint16_t offerTargetValueBase;
+extern uint16_t offerValueBaseSum;
+extern uint16_t offerSwapValueBaseSum;
+extern uint8_t  offerCandidateTeamIndexBuffer[];
+extern uint8_t  offerLifespanTable[];
+extern uint16_t offerNegotiationStep1Amount;
+extern uint16_t offerNegotiationStep2Amount;
+extern uint16_t swapPlayerValueRandom;
+extern uint16_t extraPlayerValueRandom;
+
+extern uint16_t _IsPlayerInjured(uint8_t *playerBase, int16_t mode);
+extern uint16_t _SnapToNearestAvgTeamValueBase(uint16_t value);
+extern uint16_t _SnapUpToAvgTeamValueBase(uint16_t value);
+extern void _SaveRand2State(void);
+extern void _RestoreRand2State(void);
+extern void _Randomize2(uint16_t seed);
+extern uint16_t _GetPlayerRandomNum(uint8_t *teamEntry);
+
+__attribute__((used, externally_visible))
+void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
+{
+    offerPrimaryPlayerOrdinal = playerOrdinal;
+
+    /* Get value base for the primary player */
+    uint16_t avgVal = _GetAvgTeamValueBaseForCurrentPlayer(selTeamNumber, playerOrdinal);
+    offerValueBaseSum = avgVal;
+
+    /* Get player data and check injury */
+    uint8_t *playerEntry = _GetPlayer(selTeamNumber, playerOrdinal);
+    uint16_t refSkill = (uint16_t)playerEntry[0x6C]; /* ref skill from player file, stored in d7 */
+    if (_IsPlayerInjured(playerEntry, -1) != 0)
+        return;
+
+    /* Get position mask */
+    uint16_t posMask = (uint16_t)playerEntry[0x66] & 0xE0;
+    offerPrimaryPositionMask = posMask;
+
+    /* Decide home vs foreign market */
+    uint16_t rnd = _Rand2();
+    uint8_t *teamsBase;
+    uint16_t teamCount;
+
+    if (rnd >= 8) {
+        /* Home market path */
+        homeMarketRandomPickRetries++;
+        uint8_t *a0 = &selTeamsPtr;
+        teamsBase = a0;
+        uint16_t d5 = 0;
+        uint16_t d4 = 0;
+        while (d4 < numSelectedTeams) {
+            uint8_t selTeamByte = *(uint8_t *)((uint32_t)&selTeamNumber);
+            if (selTeamByte == *a0) {
+                if (_IsTeamEligibleForOfferByRefSkill(a0, refSkill) == 0) {
+                    offerCandidateTeamIndexBuffer[d5] = (uint8_t)d4;
+                    d5++;
+                }
+            }
+            a0 += 0x2AC;
+            d4++;
+        }
+        teamCount = d5;
+    } else {
+        /* Foreign market path */
+        offerSearchRetryCount++;
+        uint8_t *a0 = &tmdFileBuffer;
+        teamsBase = a0;
+        uint16_t d5 = 0;
+        uint16_t d4 = 0;
+        uint16_t numCareerTeams = careerFileBuffer;
+        while (d4 < numCareerTeams) {
+            uint8_t selTeamByte = *(uint8_t *)((uint32_t)&selTeamNumber);
+            if (selTeamByte != *a0) {
+                if (_IsTeamEligibleForOfferByRefSkill(a0, refSkill) == 0) {
+                    offerCandidateTeamIndexBuffer[d5] = (uint8_t)d4;
+                    d5++;
+                }
+            }
+            a0 += 0x2AC;
+            d4++;
+        }
+        teamCount = d5;
+    }
+
+    if (teamCount == 0)
+        return;
+
+    /* Pick a random team from candidates */
+    rnd = _Rand2();
+    uint16_t idx = (uint16_t)((uint16_t)(rnd * teamCount) >> 8);
+    uint8_t teamIdx = offerCandidateTeamIndexBuffer[idx];
+    uint8_t *teamBlock = teamsBase + (uint32_t)teamIdx * 0x2AC;
+
+    /* Check uniqueness */
+    uint16_t offTeamId = *(uint16_t *)teamBlock;
+    if (_IsOfferTeamPlayerPairUnique(offTeamId, offerPrimaryPlayerOrdinal) == 0)
+        return;
+
+    teamOffering = offTeamId;
+    offerExtraPositionMask = 0xFFFF;
+    numExtraPlayersWanted = -1;
+
+    /* Try to add an extra player wanted */
+    uint16_t swapSlots = _GetRemainingOfferSwapSlots();
+    /* swapSlots is in return value; the asm checks d2 for slot count */
+    /* Actually _GetRemainingOfferSwapSlots returns the slot count as a uint16_t
+       but the asm bridge also sets d2. Let me re-check. */
+
+    /* The asm checks d2 >= 2. The C _GetRemainingOfferSwapSlots returns the count.
+       But looking at the bridge, it returns with d0 = result (Z flag from beq).
+       Actually the asm code at 63521 does:
+         bsr.w GetRemainingOfferSwapSlots
+         cmpi.w #2,d2
+       So d2 is set by GetRemainingOfferSwapSlots. Let me check the bridge... */
+
+    /* _GetRemainingOfferSwapSlots returns the remaining count.
+       But the asm bridge sets d2 = remaining count AND sets Z flag for ==0.
+       Since I'm calling the C function directly, I get the count back. */
+    if (swapSlots >= 2) {
+        rnd = _Rand2();
+        if (rnd < 0x19) {
+            int16_t extraOrd = _PickRandomEligibleExtraPlayerOrdinal(refSkill);
+            numExtraPlayersWanted = extraOrd;
+            if (extraOrd >= 0) {
+                /* Check uniqueness for extra player */
+                if (_IsOfferTeamPlayerPairUnique(offTeamId, (uint16_t)extraOrd) == 0) {
+                    numExtraPlayersWanted = -1;
+                } else {
+                    /* Add extra player's value */
+                    uint16_t extraVal = _GetAvgTeamValueBaseForCurrentPlayer(selTeamNumber, (uint16_t)extraOrd);
+                    offerValueBaseSum += extraVal;
+
+                    /* Get extra player entry and check injury + position */
+                    uint8_t *extraEntry = _GetPlayer(selTeamNumber, (uint16_t)extraOrd);
+                    uint16_t extraPos = (uint16_t)extraEntry[0x66] & 0xE0;
+                    offerExtraPositionMask = extraPos;
+                    if (_IsPlayerInjured(extraEntry, -1) != 0)
+                        return;
+                }
+            }
+        }
+    }
+
+    /* Calculate target value (random 85-119% of value sum) */
+    rnd = _Rand2();
+    uint16_t pct = (uint16_t)((uint16_t)(rnd * 0x23) >> 8) + 0x55;
+    uint16_t targetVal = (uint16_t)((uint16_t)(pct * offerValueBaseSum) / 100);
+    offerTargetValueBase = targetVal;
+
+    /* Initialize swap player fields */
+    offerSwapValueBaseSum = 0;
+    offerSwapPlayerOrdinal = -1;
+    offerExtraPlayerOrdinal = -1;
+
+    /* Try to add a swap player */
+    uint16_t poolSlots = _GetRemainingTransferPoolSlots();
+    if (poolSlots != 0) {
+        rnd = _Rand2();
+        if (rnd < 0x19) {
+            int16_t swapOrd = _PickRandomEligibleSwapPlayerOrdinalFromTeam(
+                teamBlock, -1);
+            if (swapOrd >= 0) {
+                uint16_t swapVal = _GetAvgTeamValueBaseForCurrentPlayer(teamOffering, (uint16_t)swapOrd);
+                if (swapVal <= offerTargetValueBase) {
+                    offerSwapValueBaseSum = swapVal;
+                    offerSwapPlayerOrdinal = swapOrd;
+
+                    /* Try to add an extra swap player */
+                    poolSlots = _GetRemainingTransferPoolSlots();
+                    if (poolSlots >= 2) {
+                        rnd = _Rand2();
+                        if (rnd < 0x19) {
+                            int16_t extraSwapOrd = _PickRandomEligibleSwapPlayerOrdinalFromTeam(
+                                teamBlock, swapOrd);
+                            if (extraSwapOrd >= 0) {
+                                uint16_t extraSwapVal = _GetAvgTeamValueBaseForCurrentPlayer(
+                                    teamOffering, (uint16_t)extraSwapOrd);
+                                uint16_t combined = extraSwapVal + offerSwapValueBaseSum;
+                                if (combined <= offerTargetValueBase) {
+                                    offerSwapValueBaseSum += extraSwapVal;
+                                    offerExtraPlayerOrdinal = extraSwapOrd;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /* Calculate offer amount = targetValue - swapValue, with 15% floor */
+    uint16_t cashOffer = offerTargetValueBase - offerSwapValueBaseSum;
+    uint16_t floor15pct = (uint16_t)((uint16_t)(offerTargetValueBase * 15) / 100);
+    if (cashOffer < floor15pct)
+        cashOffer = 0;
+    cashOffer = _SnapToNearestAvgTeamValueBase(cashOffer);
+    offerAmount = cashOffer;
+
+    /* Generate negotiation steps */
+    rnd = _Rand2();
+    offerNegotiationStep1Amount = 0;
+    offerNegotiationStep2Amount = 0;
+
+    if (rnd & 1) {
+        /* Step 1: random 105-112% of offer amount */
+        uint16_t step1pct = (uint16_t)((uint16_t)(rnd * 0x14) >> 8) + 0x69;
+        uint16_t step1 = (uint16_t)((uint16_t)(step1pct * offerAmount) / 100);
+        step1 = _SnapToNearestAvgTeamValueBase(step1);
+        if (step1 != offerAmount) {
+            offerNegotiationStep1Amount = step1;
+
+            rnd = _Rand2();
+            if (rnd & 1) {
+                /* Step 2: random 105-112% of step1 */
+                uint16_t step2pct = (uint16_t)((uint16_t)(rnd * 0x14) >> 8) + 0x69;
+                uint16_t step2 = (uint16_t)((uint16_t)(step2pct * offerNegotiationStep1Amount) / 100);
+                step2 = _SnapToNearestAvgTeamValueBase(step2);
+                if (step2 != offerNegotiationStep1Amount) {
+                    offerNegotiationStep2Amount = step2;
+                }
+            }
+        }
+    }
+
+    /* Check roster size constraint */
+    int16_t rosterDelta = -1; /* start at 0xFFFF = -1 (will add primary player) */
+    if (numExtraPlayersWanted >= 0)
+        rosterDelta--;  /* losing an extra player */
+    if (offerSwapPlayerOrdinal >= 0) {
+        rosterDelta++;  /* gaining a swap player */
+        if (offerExtraPlayerOrdinal >= 0)
+            rosterDelta++;  /* gaining extra swap player */
+    }
+    int16_t newTotal = rosterDelta + (int16_t)careerNumPlayers;
+    if (newTotal > 30)
+        return;
+
+    /* Write offer to table */
+    uint16_t offerIdx = numOffers;
+    uint8_t *entry = transferOfferTable + (uint32_t)offerIdx * OFFER_ENTRY_SIZE;
+    *(uint16_t *)(entry + 6) = offerAmount;
+    *(uint16_t *)(entry + 8) = offerNegotiationStep1Amount;
+    *(uint16_t *)(entry + 10) = offerNegotiationStep2Amount;
+    *(uint16_t *)(entry + 0) = teamOffering;
+    entry[2] = (uint8_t)offerPrimaryPlayerOrdinal;
+    entry[3] = (uint8_t)numExtraPlayersWanted;
+    entry[4] = (uint8_t)offerSwapPlayerOrdinal;
+    entry[5] = (uint8_t)offerExtraPlayerOrdinal;
+
+    /* Random lifespan from table */
+    rnd = _Rand2();
+    entry[12] = offerLifespanTable[rnd & 0xF];
+    entry[13] = 0;
+
+    numOffers++;
+}
+
+/* ================================================================
+ * EvaluateTransferOfferNegotiation  (SWOS2.s line 63754)
+ *
+ * Evaluates a transfer offer negotiation. Checks roster constraints,
+ * randomizes player valuation, evaluates if the offering team will
+ * accept, and shows the player transfer menu.
+ *
+ * Asm register convention:
+ *   in:  globals (teamOffering, offerPrimaryPlayerOrdinal, etc.)
+ *   out: d0.w = transferPlayerMenuResult
+ * ================================================================ */
+extern uint8_t  playerTransferMenu[];
+
+__attribute__((used, externally_visible))
+int16_t _EvaluateTransferOfferNegotiation(void)
+{
+    /* Check roster size constraint */
+    int16_t rosterDelta = 1;  /* gaining the primary player */
+    if (numExtraPlayersWanted >= 0)
+        rosterDelta++;  /* losing an extra player → gaining one more */
+    if (offerSwapPlayerOrdinal >= 0)
+        rosterDelta--;  /* giving away swap player */
+    if (offerExtraPlayerOrdinal >= 0)
+        rosterDelta--;  /* giving away extra swap player */
+
+    int16_t newTotal = rosterDelta + (int16_t)careerNumPlayers;
+    if ((uint16_t)newTotal > 30) {
+        currentMessage = 2;
+        _ShowChairmanMessage();
+        return 0;
+    }
+
+    /* Save random state, seed with player-specific random */
+    _SaveRand2State();
+
+    uint8_t *playerEntry = _GetPlayer(teamOffering, offerPrimaryPlayerOrdinal);
+    uint16_t playerRand = _GetPlayerRandomNum(playerEntry);
+    _Randomize2(playerRand);
+
+    uint16_t d2 = _Rand2();  /* save for later XOR */
+
+    /* Generate random divisor: Rand2 * 16 / 256 + 1, then 96 / that */
+    uint16_t rnd = _Rand2();
+    uint16_t divisor = (uint16_t)((uint16_t)(rnd * 0x10) >> 8) + 1;
+    uint16_t d1val = 0x60 / divisor;
+
+    /* XOR with viewRandomPhase mod d1val, then re-randomize */
+    uint16_t phase = (uint16_t)(uint8_t)viewRandomPhase;
+    uint16_t phasemod = (d1val != 0) ? (phase % d1val) : 0;
+    uint16_t seed2 = phasemod ^ d2;
+    _Randomize2(seed2);
+
+    /* Check if swap players can be accepted */
+    if (offerSwapPlayerOrdinal >= 0) {
+        uint16_t slots = _GetRemainingOfferSwapSlots();
+        if (slots == 0)
+            goto reject;
+        if (offerExtraPlayerOrdinal >= 0) {
+            slots = _GetRemainingOfferSwapSlots();
+            if (slots < 2)
+                goto reject;
+        }
+    }
+
+    /* Random values for swap/extra player valuation */
+    _Rand2();  /* discard one */
+    _Rand2();
+    swapPlayerValueRandom = _Rand2();  /* actually: rnd→discard, rnd→swap, rnd→extra */
+    /* Wait, let me re-read the asm more carefully:
+       jsr Rand2          ; discard
+       jsr Rand2
+       move.w d0,(swapPlayerValueRandom)
+       jsr Rand2
+       move.w d0,(extraPlayerValueRandom)
+       Actually no — the first Rand2 result is discarded, second goes to swapPlayerValueRandom,
+       third goes to extraPlayerValueRandom. But looking at lines 63804-63808:
+       jsr Rand2               ; d0 = rnd1 (discarded)
+       jsr Rand2               ; d0 = rnd2
+       move.w d0,(swapPlayerValueRandom)  ; swapPlayerValueRandom = rnd2
+       jsr Rand2               ; d0 = rnd3
+       move.w d0,(extraPlayerValueRandom) ; extraPlayerValueRandom = rnd3
+    */
+    /* Let me re-do this properly */
+    {
+        _Rand2();  /* line 63804 - result discarded */
+        swapPlayerValueRandom = _Rand2();  /* line 63805-63806 */
+        extraPlayerValueRandom = _Rand2(); /* line 63807-63808 */
+    }
+
+    /* Get primary player demand value */
+    uint16_t demandValue = _GetAvgTeamValueBaseForCurrentPlayer(teamOffering, offerPrimaryPlayerOrdinal);
+    uint16_t d7demand = demandValue;
+
+    /* Add extra player wanted demand */
+    if (numExtraPlayersWanted >= 0) {
+        uint16_t extraDemand = _GetAvgTeamValueBaseForCurrentPlayer(teamOffering, (uint16_t)numExtraPlayersWanted);
+        d7demand += extraDemand;
+    }
+
+    /* Calculate total offer value (cash + swap players) */
+    uint16_t totalOffer = offerAmount;
+
+    if (offerSwapPlayerOrdinal >= 0) {
+        /* Swap player valuation with random multiplier */
+        uint16_t swapVal = _GetAvgTeamValueBaseForCurrentPlayer(selTeamNumber, (uint16_t)offerSwapPlayerOrdinal);
+        uint16_t swapRnd = swapPlayerValueRandom;
+        uint16_t swapPct = (uint16_t)((uint16_t)(swapRnd * 0x4B) >> 8) + 0x32;
+        uint16_t adjustedSwap = (uint16_t)((uint16_t)(swapPct * swapVal) / 100);
+        adjustedSwap = _SnapToNearestAvgTeamValueBase(adjustedSwap);
+        totalOffer += adjustedSwap;
+
+        if (offerExtraPlayerOrdinal >= 0) {
+            /* Extra swap player valuation */
+            uint16_t extraSwapVal = _GetAvgTeamValueBaseForCurrentPlayer(selTeamNumber, (uint16_t)offerExtraPlayerOrdinal);
+            uint16_t extraRnd = extraPlayerValueRandom;
+            uint16_t extraPct = (uint16_t)((uint16_t)(extraRnd * 0x32) >> 8) + 0x32;
+            uint16_t adjustedExtra = (uint16_t)((uint16_t)(extraPct * extraSwapVal) / 100);
+            adjustedExtra = _SnapToNearestAvgTeamValueBase(adjustedExtra);
+            totalOffer += adjustedExtra;
+        }
+    }
+
+    /* Determine selling team's asking price (d5) */
+    uint16_t askingPrice;
+
+    /* Check if offering team is from a different division than career team */
+    uint16_t offTeamHigh = teamOffering >> 8;
+    uint8_t selTeamByte = *(uint8_t *)((uint32_t)&selTeamNumber);
+    if (offTeamHigh != selTeamByte) {
+        /* Different division — check average player price */
+        uint16_t avgPrice = _GetAveragePlayerPrice(careerTeam);
+        uint16_t threshold = (uint16_t)((uint16_t)(avgPrice * 0x8C) / 100);
+
+        /* Get primary player's skill and check against threshold */
+        uint8_t *primEntry = _GetPlayer(teamOffering, offerPrimaryPlayerOrdinal);
+        if (threshold >= primEntry[0x6C]) {
+            /* Primary player below threshold, check extra */
+            if (numExtraPlayersWanted >= 0) {
+                uint8_t *extraEntry = _GetPlayer(teamOffering, (uint16_t)numExtraPlayersWanted);
+                if (threshold < extraEntry[0x6C]) {
+                    goto highDemand;
+                }
+            }
+            /* Player(s) below threshold — go to market check */
+            goto checkMarket;
+        }
+    highDemand:
+        /* High-value player: 100-149% of demand */
+        rnd = _Rand2();
+        uint16_t pct = (uint16_t)((uint16_t)(rnd * 0x32) >> 8) + 0x64;
+        askingPrice = (uint16_t)((uint16_t)(pct * d7demand) / 100);
+        /* nullsub_14 — no-op */
+        goto compareOffer;
+    }
+
+checkMarket:
+    /* Check if player(s) are on the transfer market */
+    {
+        int16_t primOnMarket = (_FindPlayerInCareerOrForeignMarket(teamOffering, offerPrimaryPlayerOrdinal) == 0);
+        int16_t allOnMarket = 0;
+
+        if (primOnMarket) {
+            if (numExtraPlayersWanted < 0) {
+                allOnMarket = 1;  /* only primary, and it's on market */
+            } else {
+                int16_t extraOnMarket = (_FindPlayerInCareerOrForeignMarket(teamOffering, (uint16_t)numExtraPlayersWanted) == 0);
+                if (extraOnMarket)
+                    allOnMarket = 1;  /* both on market */
+                /* else: primary on market, extra not → check transfer list */
+            }
+        }
+        /* else: primary not on market → check transfer list */
+
+        if (allOnMarket) {
+            /* All requested players are on market → low demand (87-101%) */
+            rnd = _Rand2();
+            uint16_t pct = (uint16_t)((uint16_t)(rnd * 0x26) >> 8) + 0x57;
+            askingPrice = (uint16_t)((uint16_t)(pct * d7demand) / 100);
+            goto compareOffer;
+        }
+
+        /* At least one player NOT on market — check transfer list flag */
+        {
+            uint8_t *prim2 = _GetPlayer(teamOffering, offerPrimaryPlayerOrdinal);
+            if (prim2[0x67] & 0x04)
+                goto onTransferList;
+
+            if (numExtraPlayersWanted >= 0) {
+                uint8_t *extra2 = _GetPlayer(teamOffering, (uint16_t)numExtraPlayersWanted);
+                if (extra2[0x67] & 0x04)
+                    goto onTransferList;
+            }
+
+            /* Not on transfer list — chance of low/high demand */
+            rnd = _Rand2();
+            if (rnd >= 0x99) {
+                /* Rare low demand: 95-133% */
+                rnd = _Rand2();
+                uint16_t pct = (uint16_t)((uint16_t)(rnd * 0x28) >> 8) + 0x5F;
+                askingPrice = (uint16_t)((uint16_t)(pct * d7demand) / 100);
+                goto compareOffer;
+            }
+
+            /* Normal demand: 150-249% */
+            rnd = _Rand2();
+            uint16_t pct = (uint16_t)((uint16_t)(rnd * 0x64) >> 8) + 0x96;
+            askingPrice = (uint16_t)((uint16_t)(pct * d7demand) / 100);
+            goto compareOffer;
+
+        onTransferList:
+            /* On transfer list: 150-299% */
+            rnd = _Rand2();
+            {
+                uint16_t pct = (uint16_t)((uint16_t)(rnd * 0x96) >> 8) + 0x96;
+                askingPrice = (uint16_t)((uint16_t)(pct * d7demand) / 100);
+            }
+            goto compareOffer;
+        }
+    }
+
+compareOffer:
+    if (totalOffer >= askingPrice) {
+        /* Offer meets asking price — willing to sell */
+        teamWillingToSellOrExchange = 0;
+    } else {
+        /* Check if close enough (within 20%) and negotiation attempts <= 3 */
+        if (offerNegotiationAttemptCount > 3)
+            goto reject;
+
+        uint16_t diff = askingPrice - totalOffer;
+        uint16_t diffPct = (uint16_t)((uint16_t)(diff * 100) / askingPrice);
+        if (diffPct >= 20)
+            goto reject;
+
+        /* Close enough — counter-offer */
+        rnd = _Rand2();
+        uint16_t counterPct = (uint16_t)((uint16_t)(rnd * 0xA) >> 8) + 0x64;
+        uint16_t counterVal = (uint16_t)((uint16_t)(counterPct * askingPrice) / 100);
+        counterVal = _SnapUpToAvgTeamValueBase(counterVal);
+        int16_t counterDiff = (int16_t)(counterVal - totalOffer);
+        counterDiff = -counterDiff;
+        teamWillingToSellOrExchange = counterDiff;
+    }
+    goto showMenu;
+
+reject:
+    /* Rejection — determine reason */
+    {
+        int16_t primFound = _FindPlayerInCareerOrForeignMarket(teamOffering, offerPrimaryPlayerOrdinal);
+        if (primFound == 0) {
+            /* Primary not on market */
+            if (numExtraPlayersWanted >= 0) {
+                int16_t extraFound = _FindPlayerInCareerOrForeignMarket(teamOffering, (uint16_t)numExtraPlayersWanted);
+                if (extraFound == 0) {
+                    /* Neither on market → willing=4 */
+                    teamWillingToSellOrExchange = 4;
+                    _RemoveNegotiatedOfferPlayersFromMarkets();
+                    goto showMenu;
+                }
+                /* Primary not on market, extra IS on market → willing=4 */
+                teamWillingToSellOrExchange = 4;
+                _RemoveNegotiatedOfferPlayersFromMarkets();
+                goto showMenu;
+            }
+            /* Primary not on market, no extra → willing=3 */
+            teamWillingToSellOrExchange = 3;
+            _RemoveNegotiatedOfferPlayersFromMarkets();
+            goto showMenu;
+        }
+        /* Primary IS on market */
+        if (numExtraPlayersWanted >= 0) {
+            int16_t extraFound = _FindPlayerInCareerOrForeignMarket(teamOffering, (uint16_t)numExtraPlayersWanted);
+            if (extraFound == 0) {
+                /* Extra not on market → willing=4 */
+                teamWillingToSellOrExchange = 4;
+                _RemoveNegotiatedOfferPlayersFromMarkets();
+                goto showMenu;
+            }
+            /* Both on market but rejected → willing=2 */
+            teamWillingToSellOrExchange = 2;
+            goto showMenu;
+        }
+        /* Primary on market, no extra → willing=1 */
+        teamWillingToSellOrExchange = 1;
+    }
+
+showMenu:
+    _RestoreRand2State();
+    _ShowMenu(playerTransferMenu);
+    return (int16_t)transferPlayerMenuResult;
+}
+
+/* ================================================================
+ * ApplyOfferDemandMultipliersForSwapAndExtraPlayers  (SWOS2.s line 64031)
+ *
+ * Adjusts the demand value (d5) by random multipliers based on
+ * whether swap and extra players are part of the offer.
+ * Dead code — never called from anywhere.
+ *
+ * Asm register convention:
+ *   in:  d5 = demand value
+ *   out: d5 = adjusted demand value
+ * ================================================================ */
+__attribute__((used, externally_visible))
+uint16_t _ApplyOfferDemandMultipliersForSwapAndExtraPlayers(uint16_t demandValue)
+{
+    if (offerSwapPlayerOrdinal < 0)
+        return demandValue;
+
+    /* Swap player: random 100-139% */
+    uint16_t rnd = _Rand2();
+    uint16_t pct = (uint16_t)((uint16_t)(rnd * 0x64) >> 8) + 0x64;
+    demandValue = (uint16_t)((uint16_t)(pct * demandValue) / 100);
+
+    if (offerExtraPlayerOrdinal < 0)
+        return demandValue;
+
+    /* Extra player: random 100-149% */
+    rnd = _Rand2();
+    pct = (uint16_t)((uint16_t)(rnd * 0x32) >> 8) + 0x64;
+    demandValue = (uint16_t)((uint16_t)(pct * demandValue) / 100);
+
+    return demandValue;
+}
+

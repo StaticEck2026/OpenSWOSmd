@@ -2274,7 +2274,7 @@ extern uint8_t selectNationalTeamMenu[];
 
 extern void Friendly(void);
 extern void EditCustomTeam(void);
-extern void EditTactics(void);
+extern void _EditTactics(void);
 extern void CheckContinueAbortPrompt(void);   /* sets Z flag — but called via asm bridge */
 extern void ShowDesignDIYLeagueMenu(void);
 extern void ShowDesignDIYCupMenu(void);
@@ -2306,7 +2306,7 @@ void _EditCustomTeamMenu(void)
 __attribute__((used, externally_visible))
 void _EditTacticsMenu(void)
 {
-    EditTactics();
+    _EditTactics();
     _CommonMenuExit();
 }
 

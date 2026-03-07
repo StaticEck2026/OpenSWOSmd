@@ -844,9 +844,224 @@ void _InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2) {
     isGameFriendly = 1;
 
     /* d0=1, d1=minSubs, d2=maxSubs, d3=0, d7=-1, a1=team1, a2=team2 */
-    _CInitializeInGameTeamsAndStartGame(1, (int16_t)minSubstitutes,
-        (int16_t)maxSubstitutes, 0, -1, (uint8_t *)team1, (uint8_t *)team2);
+    _InitializeInGameTeamsAndStartGame(1, (int16_t)minSubstitutes,
+        (int16_t)maxSubstitutes, 0, -1, &team1->team, &team2->team);
 
 done:
     isCareer = 0;
+}
+
+/* ========================================================================
+ * Chunk 214 — InitializeInGameTeamsAndStartGame
+ * ======================================================================== */
+
+/* Additional externs for Chunk 214 */
+extern uint16_t hilStarted;
+extern uint16_t plgD0Param;
+extern uint16_t maxSubsPerTeam;
+extern TeamFile *gameTeam1;
+extern TeamFile *gameTeam2;
+extern uint16_t teamsLoaded;
+extern uint16_t poolplyrLoaded;
+extern uint16_t team1Computer;
+extern uint16_t team2Computer;
+extern int16_t  team1AppPercent;
+extern int16_t  team2AppPercent;
+extern uint16_t team1NumAllowedInjuries;
+extern uint16_t team2NumAllowedInjuries;
+extern uint16_t menuMusic;
+extern uint16_t deadVarAlways0;
+extern uint16_t gameLength;
+extern uint16_t gameLengthInGame;
+extern volatile uint16_t currentGameTick;
+extern uint8_t  stadiumMenu[];
+
+/* C function declarations for called routines */
+extern void _SetTeamSecondaryColors(uint16_t shirtType, uint8_t stripesColor,
+    uint8_t basicColor, uint8_t shortsColor, uint8_t socksColor, TeamGame *team);
+extern void _SetInGameTeamsPrimaryColors(TeamFile *team1File, TeamFile *team2File);
+extern uint16_t _ComputeOldPlayerSkillForViewResult(uint8_t *team, uint16_t goalsCount);
+extern uint16_t _GetAveragePlayerPriceInSelectedTeams(void);
+extern void _InitInGameTeamStructure(uint8_t *teamFileBase, TeamGame *tg, int16_t *avgPricePct);
+extern uint32_t _GetNumberOfAvailablePlayers(uint8_t *team, int16_t excludeCardsFlag, uint16_t numPl);
+extern void _StopMusic(void);
+extern void _ShowMenu(uint8_t *packedMenu);
+extern void _ShowMatchSequence(void);
+extern void _InitMenuMusic(void);
+extern void _TryPlayMusic(void);
+extern void _PrepareMenuForFadeIn(void);
+extern void _InitInGameTeams_PlayerControlled(uint8_t *team1, uint8_t *team2, uint16_t mode);
+extern void _AccumulateMatchGoalsIntoTeamFile(TeamGame *tg, uint8_t *teamFileBase, uint16_t statOffset);
+extern void _UpdatePlayerInjuries(TeamGame *tg, uint8_t *teamFileBase);
+extern void _ApplyPlayerStatusAfterSim(TeamGame *tg, uint8_t *teamFileBase);
+extern void _UpdateCareerPlayerStatsAfterMatch(TeamGame *tg, uint8_t *teamFileBase);
+
+/* InitializeInGameTeamsAndStartGame
+ *
+ * Sets up teams for a match, displays stadium menu, plays match,
+ * then handles post-match statistics and injuries.
+ *
+ * Parameters (from asm register convention):
+ *   randomizePitch (d0) — pitch randomization param
+ *   minSubs (d1)        — minimum substitutes
+ *   maxSubs (d2)        — maximum substitutes
+ *   paramD3 (d3)        — passed to plgD3Param
+ *   paramD7 (d7)        — flags; -1 = skip post-match processing
+ *   team1 (a1)          — first team (TeamFile)
+ *   team2 (a2)          — second team (TeamFile)
+ */
+__attribute__((used, externally_visible))
+void _InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
+    int16_t maxSubs, int16_t paramD3, int16_t paramD7,
+    TeamFile *team1, TeamFile *team2) {
+    uint16_t d0;
+    int16_t disabledCount;
+    int16_t allowedInjuries;
+    uint32_t avail;
+
+    hilStarted = 0;
+    plgD0Param = (uint16_t)randomizePitch;
+    maxSubsPerTeam = (uint16_t)minSubs;
+    gameMaxSubstitutes = (uint16_t)maxSubs;
+    plgD3Param = (uint16_t)paramD3;
+    gameTeam1 = team1;
+    gameTeam2 = team2;
+
+    /* Compute old player skill for view result (for both teams) */
+    _ComputeOldPlayerSkillForViewResult((uint8_t *)team1, (uint16_t)maxSubs);
+    _ComputeOldPlayerSkillForViewResult((uint8_t *)team2, (uint16_t)maxSubs);
+
+    teamsLoaded = 0;
+    poolplyrLoaded = 0;
+
+    /* Set computer flags:
+     * clr.w + seq on low byte → 0x00FF if computer, 0x0000 otherwise */
+    team1Computer = 0;
+    team2Computer = 0;
+    if (team1->teamControls == TEAM_COMPUTER)
+        team1Computer = 0x00FF;
+    if (team2->teamControls == TEAM_COMPUTER)
+        team2Computer = 0x00FF;
+
+    /* Set secondary colors for both teams */
+    _SetTeamSecondaryColors((uint16_t)team1->prShirtType, team1->prStripesColor,
+        team1->prBasicColor, team1->prShortsColor, team1->prSocksColor, &topTeamInGame);
+    _SetTeamSecondaryColors((uint16_t)team2->prShirtType, team2->prStripesColor,
+        team2->prBasicColor, team2->prShortsColor, team2->prSocksColor, &bottomTeamInGame);
+
+    /* Set primary colors */
+    _SetInGameTeamsPrimaryColors(team1, team2);
+
+    /* If not career and all player teams are equal, compute average price */
+    if (gameType != GAME_TYPE_CAREER && allPlayerTeamsEqual != 0) {
+        avgSelectedTeamsPlayerPrice = _GetAveragePlayerPriceInSelectedTeams();
+    }
+
+    /* Initialize in-game team structures */
+    _InitInGameTeamStructure((uint8_t *)team1, &topTeamInGame, &team1AppPercent);
+    _InitInGameTeamStructure((uint8_t *)team2, &bottomTeamInGame, &team2AppPercent);
+
+    /* Calculate allowed injuries for each team */
+    if (gameType == GAME_TYPE_CAREER) {
+        /* Career mode: allow up to 4 injuries */
+        avail = _GetNumberOfAvailablePlayers((uint8_t *)team1, -1, 0);
+        disabledCount = (int16_t)(avail >> 16); /* d6 = disabled */
+        allowedInjuries = 4 - disabledCount;
+        if (allowedInjuries < 0) allowedInjuries = 0;
+        team1NumAllowedInjuries = (uint16_t)allowedInjuries;
+
+        avail = _GetNumberOfAvailablePlayers((uint8_t *)team2, -1, 0);
+        disabledCount = (int16_t)(avail >> 16);
+        allowedInjuries = 4 - disabledCount;
+        if (allowedInjuries < 0) allowedInjuries = 0;
+        team2NumAllowedInjuries = (uint16_t)allowedInjuries;
+    } else {
+        /* Non-career: allow up to 2 injuries */
+        avail = _GetNumberOfAvailablePlayers((uint8_t *)team1, -1, 0);
+        disabledCount = (int16_t)(avail >> 16);
+        allowedInjuries = 2 - disabledCount;
+        if (allowedInjuries < 0) allowedInjuries = 0;
+        team1NumAllowedInjuries = (uint16_t)allowedInjuries;
+
+        avail = _GetNumberOfAvailablePlayers((uint8_t *)team2, -1, 0);
+        disabledCount = (int16_t)(avail >> 16);
+        allowedInjuries = 2 - disabledCount;
+        if (allowedInjuries < 0) allowedInjuries = 0;
+        team2NumAllowedInjuries = (uint16_t)allowedInjuries;
+    }
+
+    /* Override for friendly games */
+    if (isGameFriendly != 0) {
+        team1NumAllowedInjuries = 4;
+        team2NumAllowedInjuries = 4;
+    }
+
+    /* Stop music if playing */
+    if (menuMusic != 0) {
+        _StopMusic();
+    }
+
+    /* Show stadium menu */
+    _ShowMenu(stadiumMenu);
+
+    /* Wait 150 frames (~3 seconds at 50Hz) */
+    {
+        int16_t i;
+        for (i = 0x95; i >= 0; i--) {
+            d0 = currentGameTick;
+            while (currentGameTick == d0)
+                ;
+        }
+    }
+
+    deadVarAlways0 = 0;
+    gameLengthInGame = gameLength;
+
+    /* For non-friendly, non-season games, clear game length */
+    if (isGameFriendly == 0 && gameType != 1) {
+        gameLengthInGame = 0;
+    }
+
+    /* Play the match */
+    _ShowMatchSequence();
+
+    if (gameCanceled != 0)
+        goto post_match;
+
+    if (trainingGame != 0) {
+        /* Training game: set flag and update injuries only */
+        team1->andWith0xFE |= 1; /* bset #0,$17(a0) */
+        team2->andWith0xFE |= 1;
+
+        _UpdatePlayerInjuries(&topTeamInGame, (uint8_t *)team1);
+        _UpdatePlayerInjuries(&bottomTeamInGame, (uint8_t *)team2);
+        goto post_match;
+    }
+
+    /* Non-training: full post-match processing */
+    _InitInGameTeams_PlayerControlled((uint8_t *)team1, (uint8_t *)team2, (uint16_t)plgD3Param);
+
+    if (paramD7 < 0)
+        goto post_match;
+
+    /* Process team 1 */
+    _AccumulateMatchGoalsIntoTeamFile(&topTeamInGame, (uint8_t *)team1, (uint16_t)paramD7);
+    _UpdatePlayerInjuries(&topTeamInGame, (uint8_t *)team1);
+    _ApplyPlayerStatusAfterSim(&topTeamInGame, (uint8_t *)team1);
+    _UpdateCareerPlayerStatsAfterMatch(&topTeamInGame, (uint8_t *)team1);
+
+    /* Process team 2 */
+    _AccumulateMatchGoalsIntoTeamFile(&bottomTeamInGame, (uint8_t *)team2, (uint16_t)paramD7);
+    _UpdatePlayerInjuries(&bottomTeamInGame, (uint8_t *)team2);
+    _ApplyPlayerStatusAfterSim(&bottomTeamInGame, (uint8_t *)team2);
+    _UpdateCareerPlayerStatsAfterMatch(&bottomTeamInGame, (uint8_t *)team2);
+
+post_match:
+    _InitMenuMusic();
+    if (menuMusic != 0) {
+        _TryPlayMusic();
+    }
+
+    _PrepareMenuForFadeIn();
+    /* gameCanceled is tested by caller via return/tst.w */
 }

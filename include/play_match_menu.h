@@ -85,4 +85,10 @@ void _UpdateCheckMarkSprite(void);
 void _UseMatchTeamSelect(void);
 void _TogglePlayerCoach(void);
 
+/* --- Chunk 212: ShowPlayMatchMenu --- */
+#define GAME_TYPE_SEASON     3
+int16_t _ShowPlayMatchMenu(int16_t controlFlags, int16_t maxSubstitutes,
+                            int16_t excludeFlags, int16_t isFirstPlayer,
+                            int16_t squadChanges, uint8_t *team1, uint8_t *team2);
+
 #endif

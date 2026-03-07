@@ -28914,226 +28914,25 @@ ViewHighlightsSaveCurrentMenu:
 ;      D7 = -1
 ;      A1 -> team 1 (structures from file)
 ;      A2 -> team 2
+; ===== InitializeInGameTeamsAndStartGame ===== (Ported to C → _InitializeInGameTeamsAndStartGame in game_init.c, Chunk 214)
+; Bridge: d0=randomizePitch, d1=minSubs, d2=maxSubs, d3=paramD3, d7=paramD7, a1=team1, a2=team2
 InitializeInGameTeamsAndStartGame:
-                clr.w   (hilStarted).l
-                move.w  d0,(plgD0Param).l
-                move.w  d1,(maxSubsPerTeam).l
-                move.w  d2,(gameMaxSubstitutes).l
-                move.w  d3,(plgD3Param).l
-                move.l  a1,(gameTeam1).l
-                move.l  a2,(gameTeam2).l
-                movea.l a1,a0
-                move.w  d2,d0
-                movem.l d2/d7/a1-a2,-(sp)
-                jsr ComputeOldPlayerSkillForViewResult(pc)
-                movem.l (sp)+,d2/d7/a1-a2
-                movea.l a2,a0
-                move.w  d2,d0
-                movem.l d7/a1-a2,-(sp)
-                jsr ComputeOldPlayerSkillForViewResult(pc)
-                movem.l (sp)+,d7/a1-a2
-                clr.w   (teamsLoaded).l
-                clr.w   (poolplyrLoaded).l
-                movea.l a2,a3
-                movea.l a1,a2
-                clr.w   (team1Computer).l
-                clr.w   (team2Computer).l
-                cmpi.b  #TEAM_COMPUTER,TEAMFILE_TEAMCONTROLS(a2)
-                seq     (team1Computer+1).l
-                cmpi.b  #TEAM_COMPUTER,TEAMFILE_TEAMCONTROLS(a3)
-                seq     (team2Computer+1).l
-                move.b  TEAMFILE_PRSHIRTTYPE(a2),d0
-                move.b  TEAMFILE_PRSTRIPESCOLOR(a2),d1
-                move.b  TEAMFILE_PRBASICCOLOR(a2),d2
-                move.b  TEAMFILE_PRSHORTSCOLOR(a2),d3
-                move.b  TEAMFILE_PRSOCKSCOLOR(a2),d4
-                lea     (topTeamInGame).l,a1
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   SetTeamSecondaryColors
-                movem.l (sp)+,d0-d7/a0-a6
-                move.b  TEAMFILE_PRSHIRTTYPE(a3),d0
-                move.b  TEAMFILE_PRSTRIPESCOLOR(a3),d1
-                move.b  TEAMFILE_PRBASICCOLOR(a3),d2
-                move.b  TEAMFILE_PRSHORTSCOLOR(a3),d3
-                move.b  TEAMFILE_PRSOCKSCOLOR(a3),d4
-                lea     (bottomTeamInGame).l,a1
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   SetTeamSecondaryColors
-                movem.l (sp)+,d0-d7/a0-a6
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   SetInGameTeamsPrimaryColors
-                movem.l (sp)+,d0-d7/a0-a6
-                cmpi.w  #GAME_TYPE_CAREER,(gameType).l
-                beq.s   loc_128660
-                tst.w   (allPlayerTeamsEqual).l
-                beq.s   loc_128660
-                movem.l d1-d7/a0-a6,-(sp)
-                jsr GetAveragePlayerPriceInSelectedTeams(pc)
-                movem.l (sp)+,d1-d7/a0-a6
-                move.w  d0,(avgSelectedTeamsPlayerPrice).l
-loc_128660:
-                lea     (team1AppPercent).l,a6
-                lea     (topTeamInGame).l,a4
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   InitInGameTeamStructure
-                movem.l (sp)+,d0-d7/a0-a6
-                exg     a2,a3
-                lea     (team2AppPercent).l,a6
-                lea     (bottomTeamInGame).l,a4
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   InitInGameTeamStructure
-                movem.l (sp)+,d0-d7/a0-a6
-                exg     a2,a3
-                movem.l d0-d7/a0-a6,-(sp)
-                cmpi.w  #GAME_TYPE_CAREER,(gameType).l
-                beq.s   loc_1286E6
-                move.w  #$FFFF,d0
-                clr.w   d1
-                movea.l a2,a0
-                movem.l a3,-(sp)
-                jsr GetNumberOfAvailablePlayers(pc)
-                movem.l (sp)+,a3
-                move.w  #2,d0
-                sub.w   d6,d0
-                bpl.s   loc_1286C0
-                clr.w   d0
-loc_1286C0:
-                move.w  d0,(team1NumAllowedInjuries).l
-                move.w  #$FFFF,d0
-                clr.w   d1
-                movea.l a3,a0
-                jsr GetNumberOfAvailablePlayers(pc)
-                move.w  #2,d0
-                sub.w   d6,d0
-                bpl.s   loc_1286DC
-                clr.w   d0
-loc_1286DC:
-                move.w  d0,(team2NumAllowedInjuries).l
-                bra.w   loc_128726
-loc_1286E6:
-                move.w  #$FFFF,d0
-                clr.w   d1
-                movea.l a2,a0
-                movem.l a3,-(sp)
-                jsr GetNumberOfAvailablePlayers(pc)
-                movem.l (sp)+,a3
-                move.w  #4,d0
-                sub.w   d6,d0
-                bpl.s   loc_128704
-                clr.w   d0
-loc_128704:
-                move.w  d0,(team1NumAllowedInjuries).l
-                move.w  #$FFFF,d0
-                clr.w   d1
-                movea.l a3,a0
-                jsr GetNumberOfAvailablePlayers(pc)
-                move.w  #4,d0
-                sub.w   d6,d0
-                bpl.s   loc_128720
-                clr.w   d0
-loc_128720:
-                move.w  d0,(team2NumAllowedInjuries).l
-loc_128726:
-                movem.l (sp)+,d0-d7/a0-a6
-                tst.w   (isGameFriendly).l
-                beq.s   loc_128742
-                move.w  #4,(team1NumAllowedInjuries).l
-                move.w  #4,(team2NumAllowedInjuries).l
-loc_128742:
-                tst.w   (menuMusic).l
-                beq.s   loc_128758
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     StopMusic
-                movem.l (sp)+,d0-d7/a0-a6
-loc_128758:
-                movem.l d0-d7/a0-a6,-(sp)
-                lea     (stadiumMenu).l,a6
-                jsr ShowMenu(pc)
-                movem.l (sp)+,d0-d7/a0-a6
-                movem.l d0-d1,-(sp)
-                move.w  #$95,d1
-loc_128772:
-                move.w  (currentGameTick).l,d0
-loc_128778:
-                cmp.w   (currentGameTick).l,d0
-                beq.s   loc_128778
-                dbf     d1,loc_128772
-                movem.l (sp)+,d0-d1
-                clr.w   (deadVarAlways0).l
-                move.w  (gameLength).l,(gameLengthInGame).l
-                tst.w   (isGameFriendly).l
-                bne.s   loc_1287B0
-                cmpi.w  #1,(gameType).l
-                beq.s   loc_1287B0
-                clr.w   (gameLengthInGame).l
-loc_1287B0:
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   ShowMatchSequence
-                movem.l (sp)+,d0-d7/a0-a6
-                tst.w   (gameCanceled).l
-                bne.w   loc_12889A
-                tst.w   (trainingGame).l
-                beq.s   loc_128812
-                movea.l (gameTeam1).l,a0
-                bset    #0,$17(a0)
-                movea.l (gameTeam2).l,a0
-                bset    #0,$17(a0)
-                lea     (topTeamInGame).l,a1
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   UpdatePlayerInjuries
-                movem.l (sp)+,d0-d7/a0-a6
-                exg     a2,a3
-                lea     (bottomTeamInGame).l,a1
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   UpdatePlayerInjuries
-                movem.l (sp)+,d0-d7/a0-a6
-                exg     a2,a3
-                bra.w   loc_12889A
-loc_128812:
-                movem.l d0-d7/a0-a6,-(sp)
-                movea.l a2,a1
-                movea.l a3,a2
-                move.w  (plgD3Param).l,d0
-                jsr InitInGameTeams_PlayerControlled(pc)
-                movem.l (sp)+,d0-d7/a0-a6
-                tst.w   d7
-                bmi.s   loc_12889A
-                lea     (topTeamInGame).l,a1
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   AccumulateMatchGoalsIntoTeamFile
-                movem.l (sp)+,d0-d7/a0-a6
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   UpdatePlayerInjuries
-                movem.l (sp)+,d0-d7/a0-a6
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   ApplyPlayerStatusAfterSim
-                movem.l (sp)+,d0-d7/a0-a6
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   UpdateCareerPlayerStatsAfterMatch
-                movem.l (sp)+,d0-d7/a0-a6
-                exg     a2,a3
-                lea     (bottomTeamInGame).l,a1
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   AccumulateMatchGoalsIntoTeamFile
-                movem.l (sp)+,d0-d7/a0-a6
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   UpdatePlayerInjuries
-                movem.l (sp)+,d0-d7/a0-a6
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   ApplyPlayerStatusAfterSim
-                movem.l (sp)+,d0-d7/a0-a6
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   UpdateCareerPlayerStatsAfterMatch
-                movem.l (sp)+,d0-d7/a0-a6
-loc_12889A:
-                jsr     InitMenuMusic
-                tst.w   (menuMusic).l
-                beq.s   loc_1288AE
-                jsr     TryPlayMusic
-loc_1288AE:
-                movem.l d1-d2,-(sp)
-                jsr     PrepareMenuForFadeIn
-                movem.l (sp)+,d1-d2
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a2,-(sp)        ; team2
+                move.l  a1,-(sp)        ; team1
+                andi.l  #$FFFF,d7
+                move.l  d7,-(sp)        ; paramD7 (sign-extended later in C)
+                andi.l  #$FFFF,d3
+                move.l  d3,-(sp)        ; paramD3
+                andi.l  #$FFFF,d2
+                move.l  d2,-(sp)        ; maxSubs
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)        ; minSubs
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)        ; randomizePitch
+                jsr     _InitializeInGameTeamsAndStartGame
+                lea     28(sp),sp
+                movem.l (sp)+,d2-d7/a2-a6
                 tst.w   (gameCanceled).l
                 rts
 
@@ -52503,7 +52302,20 @@ EncodeCompetitionPositionForSeasonInfo:
 ;      A0 - success boolean flag
 ; 
 ; Also for view competition - view squads.
+; Ported to C: _ChooseTeamForEditTactics in src/edit_tactics.c
+; Bridge: a0=menuTitle, a1=teamNumbers, d0=numTeams → returns a0=teamPtr (or NULL)
 ChooseTeamForEditTactics:
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)
+                move.l  a1,-(sp)
+                move.l  a0,-(sp)
+                jsr     _ChooseTeamForEditTactics
+                lea     12(sp),sp
+                movea.l d0,a0
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
+                ; dead code below
                 movea.l a1,a5
                 move.l  a0,(chooseTeamMenuName).l
                 move.w  d0,(numTeamsCountryBuffer).l
@@ -63628,239 +63440,16 @@ _CCreateRandomTransferOfferForPlayer:
 
 ; ===== CreateRandomTransferOfferForPlayer =====
 ; prototype: void __usercall CreateRandomTransferOfferForPlayer(unsigned __int16 playerIndex@<d1>)
+; ===== CreateRandomTransferOfferForPlayer =====
+; Ported to C: _CreateRandomTransferOfferForPlayer in src/transfer_market.c
+; Bridge: d1=playerOrdinal → C param
 CreateRandomTransferOfferForPlayer:
-                move.w  d1,(offerPrimaryPlayerOrdinal).l
-                move.w  (selTeamNumber).l,d0
-                movem.l d1,-(sp)
-                bsr.w   GetAvgTeamValueBaseForCurrentPlayer
-                movem.l (sp)+,d1
-                move.w  d0,(offerValueBaseSum).l
-                move.w  (selTeamNumber).l,d0
-                bsr.w   GetPlayer
-                move.b  $6C(a0),d7
-                move.w  #$FFFF,d0
-                jsr     IsPlayerInjured
-                bne.w   locret_14617E
-                move.b  $66(a0),d0
-                andi.w  #$E0,d0
-                move.w  d0,(offerPrimaryPositionMask).l
-                jsr     Rand2
-                cmpi.w  #8,d0
-                bcs.s   loc_145E86
-                addq.w  #1,(homeMarketRandomPickRetries).l
-                lea     (offerCandidateTeamIndexBuffer).l,a2
-                lea     (selTeamsPtr).l,a5
-                lea     (selTeamsPtr).l,a0
-                clr.w   d5
-                clr.w   d4
-loc_145E60:
-                move.b  (selTeamNumber).l,d2
-                cmp.b   (a0),d2
-                bne.s   loc_145E76
-                bsr.w   IsTeamEligibleForOfferByRefSkill
-                bne.s   loc_145E76
-                move.b  d4,(a2,d5.w)
-                addq.w  #1,d5
-loc_145E76:
-                lea     $2AC(a0),a0
-                addq.w  #1,d4
-                cmp.w   (numSelectedTeams).l,d4
-                bne.s   loc_145E60
-                bra.s   loc_145EC6
-loc_145E86:
-                addq.w  #1,(offerSearchRetryCount).l
-                lea     (offerCandidateTeamIndexBuffer).l,a2
-                lea     (tmdFileBuffer).l,a5
-                lea     (tmdFileBuffer).l,a0
-                clr.w   d5
-                clr.w   d4
-loc_145EA2:
-                move.b  (selTeamNumber).l,d2
-                cmp.b   (a0),d2
-                beq.s   loc_145EB8
-                bsr.w   IsTeamEligibleForOfferByRefSkill
-                bne.s   loc_145EB8
-                move.b  d4,(a2,d5.w)
-                addq.w  #1,d5
-loc_145EB8:
-                lea     $2AC(a0),a0
-                addq.w  #1,d4
-                cmp.w   (careerFileBuffer).l,d4
-                bne.s   loc_145EA2
-loc_145EC6:
-                tst.w   d5
-                beq.w   locret_14617E
-                jsr     Rand2
-                mulu.w  d5,d0
-                lsr.w   #8,d0
-                move.b  (a2,d0.w),d0
-                andi.w  #$FF,d0
-                mulu.w  #$2AC,d0
-                movea.l a5,a0
-                adda.l  d0,a0
-                movea.l a0,a6
-                move.w  (a6),d0
-                move.w  offerPrimaryPlayerOrdinal(pc),d1
-                bsr.w   IsOfferTeamPlayerPairUnique
-                beq.w   locret_14617E
-                move.w  d0,(teamOffering).l
-                move.w  #$FFFF,(offerExtraPositionMask).l
-                move.w  #$FFFF,(numExtraPlayersWanted).l
-                bsr.w   GetRemainingOfferSwapSlots
-                cmpi.w  #2,d2
-                bcs.s   loc_145F82
-                jsr     Rand2
-                cmpi.w  #$19,d0
-                bcc.s   loc_145F82
-                bsr.w   PickRandomEligibleExtraPlayerOrdinal
-                move.w  d1,(numExtraPlayersWanted).l
-                bmi.s   loc_145F82
-                move.w  (a6),d0
-                move.w  numExtraPlayersWanted(pc),d1
-                bsr.w   IsOfferTeamPlayerPairUnique
-                bne.s   loc_145F44
-                move.w  #$FFFF,(numExtraPlayersWanted).l
-                bra.s   loc_145F82
-loc_145F44:
-                move.w  (selTeamNumber).l,d0
-                movem.l d1,-(sp)
-                bsr.w   GetAvgTeamValueBaseForCurrentPlayer
-                movem.l (sp)+,d1
-                add.w   d0,(offerValueBaseSum).l
-                move.w  (selTeamNumber).l,d0
-                bsr.w   GetPlayer
-                move.b  $66(a0),d0
-                andi.w  #$E0,d0
-                move.w  d0,(offerExtraPositionMask).l
-                move.w  #$FFFF,d0
-                jsr     IsPlayerInjured
-                bne.w   locret_14617E
-loc_145F82:
-                jsr     Rand2
-                mulu.w  #$23,d0         ; '#'
-                lsr.w   #8,d0
-                addi.w  #$55,d0         ; 'U'
-                mulu.w  (offerValueBaseSum).l,d0
-                divu.w  #$64,d0         ; 'd'
-                move.w  d0,(offerTargetValueBase).l
-                clr.w   (offerSwapValueBaseSum).l
-                move.w  #$FFFF,(offerSwapPlayerOrdinal).l
-                move.w  #$FFFF,(offerExtraPlayerOrdinal).l
-                bsr.w   GetRemainingTransferPoolSlots
-                beq.w   loc_14605A
-                jsr     Rand2
-                cmpi.w  #$19,d0
-                bcc.w   loc_14605A
-                move.w  #$FFFF,d6
-                move.w  (offerPrimaryPositionMask).l,d5
-                bsr.w   PickRandomEligibleSwapPlayerOrdinalFromTeam
-                tst.w   d1
-                bmi.w   loc_14605A
-                move.w  teamOffering(pc),d0
-                movem.l d1,-(sp)
-                bsr.w   GetAvgTeamValueBaseForCurrentPlayer
-                movem.l (sp)+,d1
-                cmp.w   (offerTargetValueBase).l,d0
-                bhi.s   loc_14605A
-                move.w  d0,(offerSwapValueBaseSum).l
-                move.w  d1,(offerSwapPlayerOrdinal).l
-                bsr.w   GetRemainingTransferPoolSlots
-                cmpi.w  #2,d2
-                bcs.w   loc_14605A
-                jsr     Rand2
-                cmpi.w  #$19,d0
-                bcc.s   loc_14605A
-                move.w  d1,d6
-                move.w  (offerExtraPositionMask).l,d5
-                bsr.w   PickRandomEligibleSwapPlayerOrdinalFromTeam
-                tst.w   d1
-                bmi.s   loc_14605A
-                move.w  teamOffering(pc),d0
-                movem.l d1,-(sp)
-                bsr.w   GetAvgTeamValueBaseForCurrentPlayer
-                movem.l (sp)+,d1
-                move.w  d0,d2
-                add.w   (offerSwapValueBaseSum).l,d2
-                cmp.w   (offerTargetValueBase).l,d2
-                bhi.s   loc_14605A
-                add.w   d0,(offerSwapValueBaseSum).l
-                move.w  d1,(offerExtraPlayerOrdinal).l
-loc_14605A:
-                move.w  (offerTargetValueBase).l,d0
-                sub.w   (offerSwapValueBaseSum).l,d0
-                move.w  (offerTargetValueBase).l,d1
-                mulu.w  #$F,d1
-                divu.w  #$64,d1         ; 'd'
-                cmp.w   d1,d0
-                bcc.s   loc_14607A
-                clr.w   d0
-loc_14607A:
-                bsr.w   SnapToNearestAvgTeamValueBase
-                move.w  d0,(offerAmount).l
-                jsr     Rand2
-                btst    #0,d0
-                beq.s   loc_1460E2
-                mulu.w  #$14,d0
-                lsr.w   #8,d0
-                addi.w  #$69,d0         ; 'i'
-                mulu.w  offerAmount(pc),d0
-                divu.w  #$64,d0         ; 'd'
-                bsr.w   SnapToNearestAvgTeamValueBase
-                cmp.w   offerAmount(pc),d0
-                beq.s   loc_1460E2
-                move.w  d0,(offerNegotiationStep1Amount).l
-                jsr     Rand2
-                btst    #0,d0
-                beq.s   loc_1460E8
-                mulu.w  #$14,d0
-                lsr.w   #8,d0
-                addi.w  #$69,d0         ; 'i'
-                mulu.w  offerNegotiationStep1Amount(pc),d0
-                divu.w  #$64,d0         ; 'd'
-                bsr.w   SnapToNearestAvgTeamValueBase
-                cmp.w   offerNegotiationStep1Amount(pc),d0
-                beq.s   loc_1460E8
-                move.w  d0,(offerNegotiationStep2Amount).l
-                bra.s   loc_1460EE
-loc_1460E2:
-                clr.w   (offerNegotiationStep1Amount).l
-loc_1460E8:
-                clr.w   (offerNegotiationStep2Amount).l
-loc_1460EE:
-                move.w  #$FFFF,d0
-                tst.w   (numExtraPlayersWanted).l
-                bmi.s   loc_1460FC
-                subq.w  #1,d0
-loc_1460FC:
-                tst.w   (offerSwapPlayerOrdinal).l
-                bmi.s   loc_146110
-                addq.w  #1,d0
-                tst.w   (offerExtraPlayerOrdinal).l
-                bmi.s   loc_146110
-                addq.w  #1,d0
-loc_146110:
-                add.w   (careerNumPlayers).l,d0
-                cmpi.w  #$1E,d0
-                bhi.w   locret_14617E
-                move.w  (numOffers).l,d0
-                mulu.w  #$E,d0
-                lea     (transferOfferTable).l,a5
-                adda.l  d0,a5
-                move.w  offerAmount(pc),6(a5)
-                move.w  offerNegotiationStep1Amount(pc),8(a5)
-                move.w  offerNegotiationStep2Amount(pc),$A(a5)
-                move.w  teamOffering(pc),(a5)
-                move.b  offerPrimaryPlayerOrdinal+1(pc),2(a5)
-                move.b  numExtraPlayersWanted+1(pc),3(a5)
-                move.b  offerSwapPlayerOrdinal+1(pc),4(a5)
-                move.b  offerExtraPlayerOrdinal+1(pc),5(a5)
-                jsr     Rand2
-                andi.w  #$F,d0
-                lea     (offerLifespanTable).l,a0
-                move.b  (a0,d0.w),$C(a5)
-                clr.b   $D(a5)
-                addq.w  #1,(numOffers).l
-locret_14617E:
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)        ; playerOrdinal
+                jsr     _CreateRandomTransferOfferForPlayer
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 ; unsigned __int8[16]
 offerLifespanTable:
@@ -63939,260 +63528,13 @@ offerCandidateTeamIndexBuffer:
 
 ; ===== EvaluateTransferOfferNegotiation =====
 ; prototype: __int16 __usercall EvaluateTransferOfferNegotiation@<d0>()
+; ===== EvaluateTransferOfferNegotiation =====
+; Ported to C: _EvaluateTransferOfferNegotiation in src/transfer_market.c
+; Bridge: no params → returns d0 = transferPlayerMenuResult
 EvaluateTransferOfferNegotiation:
-                move.w  #1,d0
-                tst.w   (numExtraPlayersWanted).l
-                bmi.s   loc_146348
-                addq.w  #1,d0
-loc_146348:
-                tst.w   (offerSwapPlayerOrdinal).l
-                bmi.s   loc_146352
-                subq.w  #1,d0
-loc_146352:
-                tst.w   (offerExtraPlayerOrdinal).l
-                bmi.s   loc_14635C
-                subq.w  #1,d0
-loc_14635C:
-                add.w   (careerNumPlayers).l,d0
-                cmpi.w  #$1E,d0
-                bls.s   loc_14637A
-                move.w  #2,(currentMessage).l
-                jsr     ShowChairmanMessage
-                clr.w   d0
-                rts
-loc_14637A:
-                jsr     SaveRand2State
-                move.w  teamOffering(pc),d0
-                move.w  offerPrimaryPlayerOrdinal(pc),d1
-                bsr.w   GetPlayer
-                jsr     GetPlayerRandomNum
-                jsr     Randomize2
-                move.w  d0,d2
-                jsr     Rand2
-                mulu.w  #$10,d0
-                lsr.w   #8,d0
-                addq.w  #1,d0
-                moveq   #$60,d1         ; '`'
-                divu.w  d0,d1
-                move.b  (viewRandomPhase).l,d0
-                andi.l  #$FF,d0
-                divu.w  d1,d0
-                eor.w   d2,d0
-                jsr     Randomize2
-                tst.w   (offerSwapPlayerOrdinal).l
-                bmi.s   loc_1463E6
-                bsr.w   GetRemainingOfferSwapSlots
-                beq.w   loc_146628
-                tst.w   (offerExtraPlayerOrdinal).l
-                bmi.s   loc_1463E6
-                bsr.w   GetRemainingOfferSwapSlots
-                cmpi.w  #2,d2
-                bcs.w   loc_146628
-loc_1463E6:
-                jsr     Rand2
-                jsr     Rand2
-                move.w  d0,(swapPlayerValueRandom).l
-                jsr     Rand2
-                move.w  d0,(extraPlayerValueRandom).l
-                move.w  teamOffering(pc),d0
-                move.w  offerPrimaryPlayerOrdinal(pc),d1
-                bsr.w   GetAvgTeamValueBaseForCurrentPlayer
-                move.w  d0,d7
-                move.w  numExtraPlayersWanted(pc),d1
-                bmi.s   loc_146422
-                move.w  teamOffering(pc),d0
-                bsr.w   GetAvgTeamValueBaseForCurrentPlayer
-                add.w   d0,d7
-loc_146422:
-                move.w  offerAmount(pc),d6
-                move.w  offerSwapPlayerOrdinal(pc),d1
-                bmi.s   loc_146486
-                move.w  (selTeamNumber).l,d0
-                bsr.w   GetAvgTeamValueBaseForCurrentPlayer
-                move.w  d0,d1
-                move.w  (swapPlayerValueRandom).l,d0
-                mulu.w  #$4B,d0         ; 'K'
-                lsr.w   #8,d0
-                addi.w  #$32,d0         ; '2'
-                mulu.w  d0,d1
-                divu.w  #$64,d1         ; 'd'
-                move.w  d1,d0
-                bsr.w   SnapToNearestAvgTeamValueBase
-                add.w   d0,d6
-                move.w  offerExtraPlayerOrdinal(pc),d1
-                bmi.s   loc_146486
-                move.w  (selTeamNumber).l,d0
-                bsr.w   GetAvgTeamValueBaseForCurrentPlayer
-                move.w  d0,d1
-                move.w  (extraPlayerValueRandom).l,d0
-                mulu.w  #$32,d0         ; '2'
-                lsr.w   #8,d0
-                addi.w  #$32,d0         ; '2'
-                mulu.w  d0,d1
-                divu.w  #$64,d1         ; 'd'
-                move.w  d1,d0
-                bsr.w   SnapToNearestAvgTeamValueBase
-                add.w   d0,d6
-loc_146486:
-                move.w  teamOffering(pc),d0
-                lsr.w   #8,d0
-                cmp.b   (selTeamNumber).l,d0
-                beq.s   loc_1464FA
-                lea     (careerTeam).l,a0
-                movem.l d1-d7/a0-a6,-(sp)
-                jsr     GetAveragePlayerPrice
-                movem.l (sp)+,d1-d7/a0-a6
-                move.w  d0,d2
-                mulu.w  #$8C,d2
-                divu.w  #$64,d2         ; 'd'
-                move.w  teamOffering(pc),d0
-                move.w  offerPrimaryPlayerOrdinal(pc),d1
-                bsr.w   GetPlayer
-                cmp.b   $6C(a0),d2
-                bcs.w   loc_1464DA
-                move.w  numExtraPlayersWanted(pc),d1
-                bmi.s   loc_1464FA
-                move.w  teamOffering(pc),d0
-                bsr.w   GetPlayer
-                cmp.b   $6C(a0),d2
-                bcc.s   loc_1464FA
-loc_1464DA:
-                jsr     Rand2
-                mulu.w  #$32,d0         ; '2'
-                lsr.w   #8,d0
-                addi.w  #$64,d0         ; 'd'
-                mulu.w  d7,d0
-                divu.w  #$64,d0         ; 'd'
-                move.w  d0,d5
-                bsr.w   nullsub_14
-                bra.w   loc_1465D0
-loc_1464FA:
-                move.w  teamOffering(pc),d0
-                move.w  offerPrimaryPlayerOrdinal(pc),d1
-                bsr.w   FindPlayerInCareerOrForeignMarket
-                bne.s   loc_14651C
-                move.w  numExtraPlayersWanted(pc),d1
-                bmi.w   loc_1465B4
-                move.w  teamOffering(pc),d0
-                bsr.w   FindPlayerInCareerOrForeignMarket
-                beq.w   loc_1465B4
-loc_14651C:
-                move.w  teamOffering(pc),d0
-                move.w  offerPrimaryPlayerOrdinal(pc),d1
-                jsr     GetPlayer
-                btst    #2,$67(a0)
-                bne.s   loc_146576
-                move.w  teamOffering(pc),d0
-                move.w  numExtraPlayersWanted(pc),d1
-                bmi.s   loc_14654A
-                jsr     GetPlayer
-                btst    #2,$67(a0)
-                bne.s   loc_146576
-loc_14654A:
-                jsr     Rand2
-                cmpi.w  #$99,d0
-                bcc.s   loc_146596
-                jsr     Rand2
-                mulu.w  #$64,d0         ; 'd'
-                lsr.w   #8,d0
-                addi.w  #$96,d0
-                mulu.w  d7,d0
-                divu.w  #$64,d0         ; 'd'
-                move.w  d0,d5
-                bsr.w   nullsub_14
-                bra.w   loc_1465D0
-loc_146576:
-                jsr     Rand2
-                mulu.w  #$96,d0
-                lsr.w   #8,d0
-                addi.w  #$96,d0
-                mulu.w  d7,d0
-                divu.w  #$64,d0         ; 'd'
-                move.w  d0,d5
-                bsr.w   nullsub_14
-                bra.w   loc_1465D0
-loc_146596:
-                jsr     Rand2
-                mulu.w  #$28,d0         ; '('
-                lsr.w   #8,d0
-                addi.w  #$5F,d0         ; '_'
-                mulu.w  d7,d0
-                divu.w  #$64,d0         ; 'd'
-                move.w  d0,d5
-                bsr.w   nullsub_14
-                bra.s   loc_1465D0
-loc_1465B4:
-                jsr     Rand2
-                mulu.w  #$26,d0         ; '&'
-                lsr.w   #8,d0
-                addi.w  #$57,d0         ; 'W'
-                mulu.w  d7,d0
-                divu.w  #$64,d0         ; 'd'
-                move.w  d0,d5
-                bsr.w   nullsub_14
-loc_1465D0:
-                cmp.w   d5,d6
-                bcc.w   loc_14661E
-                cmpi.w  #3,(offerNegotiationAttemptCount).l
-                bhi.w   loc_146628
-                move.w  d5,d0
-                sub.w   d6,d0
-                mulu.w  #$64,d0         ; 'd'
-                divu.w  d5,d0
-                cmpi.w  #$14,d0
-                bcc.w   loc_146628
-                jsr     Rand2
-                mulu.w  #$A,d0
-                lsr.w   #8,d0
-                addi.w  #$64,d0         ; 'd'
-                mulu.w  d5,d0
-                divu.w  #$64,d0         ; 'd'
-                bsr.w   SnapUpToAvgTeamValueBase
-                move.w  d0,d4
-                sub.w   d6,d4
-                neg.w   d4
-                move.w  d4,(teamWillingToSellOrExchange).l
-                bra.w   loc_146696
-loc_14661E:
-                clr.w   (teamWillingToSellOrExchange).l
-                bra.w   loc_146696
-loc_146628:
-                move.w  teamOffering(pc),d0
-                move.w  offerPrimaryPlayerOrdinal(pc),d1
-                bsr.w   FindPlayerInCareerOrForeignMarket
-                beq.s   loc_146654
-                move.w  numExtraPlayersWanted(pc),d1
-                bmi.w   loc_146680
-                move.w  teamOffering(pc),d0
-                bsr.w   FindPlayerInCareerOrForeignMarket
-                beq.s   loc_146664
-                move.w  #2,(teamWillingToSellOrExchange).l
-                bra.w   loc_146696
-loc_146654:
-                move.w  numExtraPlayersWanted(pc),d1
-                bmi.s   loc_146672
-                move.w  teamOffering(pc),d0
-                bsr.w   FindPlayerInCareerOrForeignMarket
-                beq.s   loc_14668A
-loc_146664:
-                move.w  #4,(teamWillingToSellOrExchange).l
-                bsr.w   RemoveNegotiatedOfferPlayersFromMarkets
-                bra.s   loc_146696
-loc_146672:
-                move.w  #3,(teamWillingToSellOrExchange).l
-                bsr.w   RemoveNegotiatedOfferPlayersFromMarkets
-                bra.s   loc_146696
-loc_146680:
-                move.w  #1,(teamWillingToSellOrExchange).l
-                bra.s   loc_146696
-loc_14668A:
-                move.w  #4,(teamWillingToSellOrExchange).l
-                bsr.w   RemoveNegotiatedOfferPlayersFromMarkets
-loc_146696:
-                jsr     RestoreRand2State
-                lea     playerTransferMenu(pc),a6
-                jsr     ShowMenu
-                move.w  transferPlayerMenuResult(pc),d0
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _EvaluateTransferOfferNegotiation
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== RemoveNegotiatedOfferPlayersFromMarkets =====
@@ -64215,25 +63557,17 @@ nullsub_14:
                 rts
 
 ; ===== ApplyOfferDemandMultipliersForSwapAndExtraPlayers =====
-; prototype: void ApplyOfferDemandMultipliersForSwapAndExtraPlayers(...)
+; Ported to C: _ApplyOfferDemandMultipliersForSwapAndExtraPlayers in src/transfer_market.c
+; Dead code - never called. Bridge kept for symbol preservation.
+; Bridge: d5=demandValue → C param, returns d5
 ApplyOfferDemandMultipliersForSwapAndExtraPlayers:
-                tst.w   (offerSwapPlayerOrdinal).l
-                bmi.s   locret_146740
-                jsr     Rand2
-                mulu.w  #$64,d0         ; 'd'
-                lsr.w   #8,d0
-                addi.w  #$64,d0         ; 'd'
-                mulu.w  d0,d5
-                divu.w  #$64,d5         ; 'd'
-                tst.w   (offerExtraPlayerOrdinal).l
-                bmi.s   locret_146740
-                jsr     Rand2
-                mulu.w  #$32,d0         ; '2'
-                lsr.w   #8,d0
-                addi.w  #$64,d0         ; 'd'
-                mulu.w  d0,d5
-                divu.w  #$64,d5         ; 'd'
-locret_146740:
+                movem.l d0-d4/d6-d7/a0-a6,-(sp)
+                andi.l  #$FFFF,d5
+                move.l  d5,-(sp)
+                jsr     _ApplyOfferDemandMultipliersForSwapAndExtraPlayers
+                addq.l  #4,sp
+                move.w  d0,d5
+                movem.l (sp)+,d0-d4/d6-d7/a0-a6
                 rts
 swapPlayerValueRandom:
                 dc.w $0000              ; Random multiplier factor for swap player valuation.
@@ -64300,30 +63634,20 @@ GetPlayerSlotIndexByPlayerNumber:
                 rts
 
 ; ===== GetPlayerInfoBreakPosition =====
-; C version: _GetPlayerInfoBreakPosition in src/edit_tactics.c (multi-register return, asm body kept)
+; Ported to C: _GetPlayerInfoBreakPosition in src/edit_tactics.c
 ; in: A0=teamPtr, D1=requestedSlot  out: A0=playerPtr, D0=slot, D1=fileIndex
 GetPlayerInfoBreakPosition:
-                cmpi.w  #11,d1
-                bcc.s   loc_1468D4
-                move.l  a0,-(sp)
-                move.b  TEAMFILE_TACTICS(a0),d0
-                ext.w   d0
-                lsl.w   #2,d0
-                lea     (teamTacticsTable).l,a0
-                movea.l (a0,d0.w),a0
-                move.b  TEAMTACTICS_BALLOUTOFPLAYTACTICS(a0),d0
-                ext.w   d0
-                lsl.w   #2,d0
-                lea     (positionsTable).l,a0
-                movea.l (a0,d0.w),a0
-                move.b  (a0,d1.w),d1
-                subq.b  #1,d1
-                movea.l (sp)+,a0
-loc_1468D4:
-                move.w  (a0),d0
-                move.w  d1,-(sp)
-                jsr GetPlayerAtIndex(pc)
-                move.w  (sp)+,d0
+                subq.l  #4,sp           ; space for outSlot(2) + outPlayerIndex(2)
+                pea     2(sp)           ; &outPlayerIndex
+                pea     2(sp)           ; &outSlot (shifted by 4)
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)        ; requestedSlot
+                move.l  a0,-(sp)        ; teamPtr
+                jsr     _GetPlayerInfoBreakPosition
+                lea     16(sp),sp
+                movea.l d0,a0           ; playerPtr → a0
+                move.w  (sp)+,d0        ; outSlot → d0
+                move.w  (sp)+,d1        ; outPlayerIndex → d1
                 rts
 
 ; ===== GetTeamLeague =====
@@ -65309,25 +64633,24 @@ GetPlayerPosition:
 ;      
 ; out:
 ;      D0 - player number that started
+; Ported to C: _ShowPlayMatchMenu in src/play_match_menu.c
 ShowPlayMatchMenu:
-                move.w  d5,(isFirstPlayerChoosingTeam).l
-                move.w  d6,(squadChangesAllowed).l
-                move.l  a1,(playMatchTeam1Ptr).l
-                move.l  a2,(playMatchTeam2Ptr).l
-                move.w  d1,(maxSubstitutesEntries).l
-                move.w  d0,(playMatchControlFlags).l
-                move.w  d2,(playMatchExcludeFlags).l
-                move.w  d2,(inEditTactics).l
-                cmpi.w  #GAME_TYPE_CAREER,(gameType).l
-                bne.s   loc_147544
-                movea.l (playMatchTeam1Ptr).l,a0
-                move.w  (playMatchExcludeFlags).l,d0
-                move.w  (maxSubstitutesEntries).l,d1
-                jsr TrainingMatch_AdjustSelectedTeamRosterForTrialists(pc)
-loc_147544:
-                lea     (playMatchMenu).l,a6
-                jsr     ShowMenu
-                move.w  (playerNumThatStarted).l,d0
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a2,-(sp)        ; team2
+                move.l  a1,-(sp)        ; team1
+                andi.l  #$FFFF,d6
+                move.l  d6,-(sp)        ; squadChanges
+                andi.l  #$FFFF,d5
+                move.l  d5,-(sp)        ; isFirstPlayer
+                andi.l  #$FFFF,d2
+                move.l  d2,-(sp)        ; excludeFlags
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)        ; maxSubstitutes
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)        ; controlFlags
+                jsr     _ShowPlayMatchMenu
+                lea     28(sp),sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 ; Menu_PlayMatch
 playMatchMenu:
@@ -68778,8 +68101,10 @@ editTacticsTransitionActive:
                 dc.w $0000              ; Flag set to 1 when edit tactics pitch transition is active.
 
 ; ===== EditTactics =====
-; prototype: void __usercall EditTactics()
+; Ported to C: _EditTactics in src/edit_tactics.c
 EditTactics:
+                jmp     _EditTactics
+                ; dead code below
                 move.w  #1,(inEditTactics).l
                 lea     (careerTeam).l,a0
                 cmpi.w  #GAME_TYPE_CAREER,(gameType).l
@@ -70069,7 +69394,16 @@ EditTactics_UpdateExtraPlayerMenuVisibility:
 
 ; ===== EditTacticsAfterDrawPlayerNames =====
 ; prototype: __int16 __usercall EditTacticsAfterDrawPlayerNames@<d0>(MenuEntry *cur@<a5>)
+; Ported to C: _EditTacticsAfterDrawPlayerNames in src/edit_tactics.c
+; Bridge: a5=cur → C param
 EditTacticsAfterDrawPlayerNames:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _EditTacticsAfterDrawPlayerNames
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
+                ; dead code below
                 move.w  MENUENTRY_ORDINAL(a5),d7
                 subi.w  #$B,d7
                 movem.l d7,-(sp)
@@ -70234,7 +69568,18 @@ loc_14C352:
 ; in:
 ;      D7 - player ordinal
 ; dos: cseg_4F37E
+; Ported to C: _EditTactics_ApplyPlayerRowHighlighting in src/edit_tactics.c
+; Bridge: d7=ordinal, a5=cur → C params
 EditTactics_ApplyPlayerRowHighlighting:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                ext.l   d7
+                move.l  d7,-(sp)
+                jsr     _EditTactics_ApplyPlayerRowHighlighting
+                addq.l  #8,sp
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
+                ; dead code below
                 cmpi.w  #16,d7          ; player 16
                 bne.s   loc_14C38E
                 lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$888)).l,a0
@@ -70468,31 +69813,24 @@ EditTacticsReadControls:
                 rts
 
 ; ===== EditTactics_TryMoveQuadrantCursor =====
-; C version: _EditTactics_TryMoveQuadrantCursor in src/edit_tactics.c (multi-register return, asm body kept)
+; Ported to C: _EditTactics_TryMoveQuadrantCursor in src/edit_tactics.c
 ; in: D1=row, D2=col  out: D1=newRow, D2=newCol, D3=ballLoc, D5=flag(Z)
 EditTactics_TryMoveQuadrantCursor:
-                bsr.w   EditTactics_GetDirectionDelta
-                move.w  #1,d5
-                move.w  d1,d0
-                add.w   d3,d0
-                bmi.s   loc_14CB86
-                cmpi.w  #5,d0
-                bcc.s   loc_14CB86
-                move.w  d0,d1
-                clr.w   d5
-loc_14CB86:
-                move.w  d2,d0
-                add.w   d4,d0
-                bmi.s   loc_14CB96
-                cmpi.w  #7,d0
-                bcc.s   loc_14CB96
-                move.w  d0,d2
-                clr.w   d5
-loc_14CB96:
-                move.w  d2,d3
-                mulu.w  #5,d3
-                add.w   d1,d3
-                tst.w   d5
+                subq.l  #6,sp           ; space for outRow(2), outCol(2), outBallLoc(2)
+                pea     4(sp)           ; &outBallLoc
+                pea     4(sp)           ; &outCol (shifted)
+                pea     4(sp)           ; &outRow (shifted)
+                andi.l  #$FFFF,d2
+                move.l  d2,-(sp)        ; col
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)        ; row
+                jsr     _EditTactics_TryMoveQuadrantCursor
+                lea     20(sp),sp
+                move.w  d0,d5           ; return value = flag
+                move.w  (sp)+,d1        ; outRow
+                move.w  (sp)+,d2        ; outCol
+                move.w  (sp)+,d3        ; outBallLoc
+                tst.w   d5              ; set Z flag for caller
                 rts
 
 ; ===== DrawEditTacticsPitchAndPlayers =====
@@ -70522,26 +69860,19 @@ SortEditTacticsDrawOrderByY:
                 rts
 
 ; ===== GetEditTacticsItemXYPosition =====
-; C version: _GetEditTacticsItemXYPosition in src/edit_tactics.c (multi-register return, asm body kept)
+; Ported to C: _GetEditTacticsItemXYPosition in src/edit_tactics.c
 ; in: D0=idx  out: D1=x, D2=y
 GetEditTacticsItemXYPosition:
-                tst.w   d0
-                bmi.s   loc_14CDD8
-                bne.s   loc_14CDE4
-                move.w  ballRow(pc),d1
-                move.w  ballColumn(pc),d2
-                bra.w   GetBallXYPositionFromQuadrant
-loc_14CDD8:
-                move.w  editTacticsBallRow(pc),d1
-                move.w  editTacticsBallColumn(pc),d2
-                bra.w   GetBallXYPositionFromQuadrant
-loc_14CDE4:
-                move.w  editTacticsBallLocation(pc),d1
-                cmpi.w  #6,(editTacticsPitchStatus).l
-                bne.s   loc_14CDF6
-                move.w  editTacticsPlayerX(pc),d1
-loc_14CDF6:
-                bra.w   GetPlayerXYPositionFromQuadrant
+                subq.l  #4,sp
+                pea     2(sp)           ; &outY
+                pea     2(sp)           ; &outX (shifted)
+                ext.l   d0
+                move.l  d0,-(sp)        ; idx (sign-extended)
+                jsr     _GetEditTacticsItemXYPosition
+                lea     12(sp),sp
+                move.w  (sp)+,d1        ; outX
+                move.w  (sp)+,d2        ; outY
+                rts
 
 ; ===== DrawEditTacticsHighlightedPlayerRoute =====
 ; prototype: void __usercall DrawEditTacticsHighlightedPlayerRoute()
@@ -70586,48 +69917,37 @@ tacticCursorFrames:
                 dc.w $0095,$0096,$0097,$0096
 
 ; ===== GetPlayerXYPositionFromQuadrant =====
-; C version: _GetPlayerXYPositionFromQuadrant in src/edit_tactics.c (multi-register return, asm body kept)
+; Ported to C: _GetPlayerXYPositionFromQuadrant in src/edit_tactics.c
 ; in: D0=player, D1=ballLoc  out: D1=x, D2=y
 GetPlayerXYPositionFromQuadrant:
-                move.w  d1,-(sp)
-                bsr.w   GetPlayerQuadrant
-                move.w  (sp)+,d0
-                cmpi.w  #$F,d1
-                bne.s   loc_14D01A
-                cmpi.w  #$F,d2
-                bne.s   loc_14D01A
-                bsr.w   GetBallQuadrant ; D1 == 15 && D2 == 15
-                bsr.w   GetBallXYPositionFromQuadrant
-                subq.w  #3,d2
-                rts
-loc_14D01A:
-                lsl.w   #1,d1
-                lea     xQuadrantToCoordinates(pc),a0
-                lea     (a0,d1.w),a0
-                move.w  #$81,d1
-                sub.w   (a0),d1
-                addi.w  #$16,d1
-                lsl.w   #1,d2
-                lea     yQuadrantToCoordinates(pc),a0
-                lea     (a0,d2.w),a0
-                move.w  #$C7,d2
-                sub.w   (a0),d2
-                addi.w  #$24,d2         ; '$'
+                subq.l  #4,sp
+                pea     2(sp)           ; &outY
+                pea     2(sp)           ; &outX (shifted)
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)        ; ballLoc
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)        ; player
+                jsr     _GetPlayerXYPositionFromQuadrant
+                lea     16(sp),sp
+                move.w  (sp)+,d1        ; outX
+                move.w  (sp)+,d2        ; outY
                 rts
 
 ; ===== GetPlayerQuadrant =====
-; C version: _GetPlayerQuadrant in src/edit_tactics.c (multi-register return, asm body kept)
-; in: D0=player, D1=ballLoc  out: D0=(player-1)*35, D1=xQuad, D2=yQuad
+; Ported to C: _GetPlayerQuadrant in src/edit_tactics.c
+; in: D0=player, D1=ballLoc  out: D1=xQuad, D2=yQuad
 GetPlayerQuadrant:
-                lea     (editTacticsCurrentTactics+TEAMTACTICS_POSITIONS).l,a0
-                subq.w  #1,d0
-                mulu.w  #35,d0
-                add.w   d0,d1
-                move.b  (a0,d1.w),d1
-                andi.w  #$FF,d1
-                move.w  d1,d2
-                lsr.w   #4,d1
-                andi.w  #$F,d2
+                subq.l  #4,sp
+                pea     2(sp)           ; &outYQuad
+                pea     2(sp)           ; &outXQuad (shifted by push)
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)        ; ballLoc
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)        ; player
+                jsr     _GetPlayerQuadrant
+                lea     16(sp),sp
+                move.w  (sp)+,d1        ; outXQuad
+                move.w  (sp)+,d2        ; outYQuad
                 rts
 
 ; ===== SetPlayerQuadrant =====
@@ -70644,36 +69964,35 @@ SetPlayerQuadrant:
                 rts
 
 ; ===== GetBallXYPositionFromQuadrant =====
-; C version: _GetBallXYPositionFromQuadrant in src/edit_tactics.c (multi-register return, asm body kept)
+; Ported to C: _GetBallXYPositionFromQuadrant in src/edit_tactics.c
 ; in: D1=row, D2=col  out: D1=x, D2=y
 GetBallXYPositionFromQuadrant:
-                lsl.w   #1,d1
-                lea     ballXQuadrantCoordinates(pc),a0
-                lea     (a0,d1.w),a0
-                move.w  #129,d1
-                sub.w   (a0),d1
-                addi.w  #22,d1
-                lsl.w   #1,d2
-                lea     ballYQuadrantCoordinates(pc),a0
-                lea     (a0,d2.w),a0
-                move.w  #199,d2
-                sub.w   (a0),d2
-                addi.w  #36,d2
+                subq.l  #4,sp
+                pea     2(sp)           ; &outY
+                pea     2(sp)           ; &outX (shifted)
+                andi.l  #$FFFF,d2
+                move.l  d2,-(sp)        ; col
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)        ; row
+                jsr     _GetBallXYPositionFromQuadrant
+                lea     16(sp),sp
+                move.w  (sp)+,d1        ; outX
+                move.w  (sp)+,d2        ; outY
                 rts
 
 ; ===== GetBallQuadrant =====
-; C version: _GetBallQuadrant in src/edit_tactics.c (multi-register return, asm body kept)
+; Ported to C: _GetBallQuadrant in src/edit_tactics.c
 ; in: D0=ballLoc  out: D1=col, D2=row
 GetBallQuadrant:
-                ext.l   d0
-                divu.w  #5,d0
-                move.w  d0,d2
-                move.l  d0,d1
-                swap    d1
-                rts
-                move.w  d2,d0
-                mulu.w  #5,d0
-                add.w   d1,d0
+                subq.l  #4,sp
+                pea     2(sp)           ; &outRow
+                pea     2(sp)           ; &outCol (shifted)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)        ; ballLoc
+                jsr     _GetBallQuadrant
+                lea     12(sp),sp
+                move.w  (sp)+,d1        ; outCol
+                move.w  (sp)+,d2        ; outRow
                 rts
 ; Ported to C: _HandlePlayersOrBallInEditTactics in src/edit_tactics.c
 HandlePlayersOrBallInEditTactics:
@@ -70685,22 +70004,16 @@ editTacticsNearestSelectPitchWidth:
                 dc.w $0000
 
 ; ===== EditTactics_GetDirectionDelta =====
-; C version: _EditTactics_GetDirectionDelta in src/edit_tactics.c (multi-register return, asm body kept)
+; Ported to C: _EditTactics_GetDirectionDelta in src/edit_tactics.c
 ; out: D3=dx, D4=dy
 EditTactics_GetDirectionDelta:
-                clr.w   d3
-                clr.w   d4
-                move.w  (menuControlsDirection2).l,d0
-                bmi.s   locret_14D242
-                lea     (editTacticsDirectionDeltaTable).l,a0
-                lsl.w   #1,d0
-                move.b  (a0,d0.w),d3
-                ext.w   d3
-                move.b  1(a0,d0.w),d4
-                ext.w   d4
-                neg.w   d3
-                neg.w   d4
-locret_14D242:
+                subq.l  #4,sp
+                pea     2(sp)           ; &outDy
+                pea     2(sp)           ; &outDx (shifted)
+                jsr     _EditTactics_GetDirectionDelta
+                addq.l  #8,sp
+                move.w  (sp)+,d3        ; outDx
+                move.w  (sp)+,d4        ; outDy
                 rts
 ; unsigned __int8[16]
 editTacticsDirectionDeltaTable:
