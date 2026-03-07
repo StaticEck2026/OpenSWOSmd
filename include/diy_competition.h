@@ -208,6 +208,8 @@ void _DesignDIYTournament_RedrawStageItemsFromBlock(uint8_t *blk, uint16_t count
 void _DIYTournament_RecalculateNumStages(void);
 
 /* ---- DesignDIYCup Draw & Helpers (Chunk 130) ---- */
+void _DesignDIYCup_BuildMatchListEntryStrings(void);
+void _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection(void);
 void _DesignDIYCupOnDraw(void);
 void _DesignDIYCupOnSelect48(void);
 void _DesignDIYCup_UpdateRoundOptionsVisibility(void);

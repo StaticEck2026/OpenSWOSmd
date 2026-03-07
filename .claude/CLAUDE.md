@@ -404,11 +404,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1595 functions ported across 224 chunks.
+**Current status:** 1605 functions ported across 227 chunks.
 
-**Last completed chunk:** Chunk 224 — SetTeamsCoordinates + SelectTeamsReinit + SelectTeamsInit (3 → teams.c).
+**Last completed chunk:** Chunk 227 — InitDIYCompetitionFromTableEntry + InitDIYCupFromRecord + InitDIYLeagueFromRecord + 3 static helpers (6 → diy_competition.c). Also updated asm bridge wrappers in swos2_unit.s to call C directly.
 
-**Next candidates:** SelTeamForTacticsInit (91 instr), SelTeamForTacticsCommon (66 instr), ChooseTeamsDialog/WithNationality, DIY init functions (InitDIYCompetitionFromTableEntry, InitDIYCupFromRecord, InitDIYLeagueFromRecord), remaining SelectTeams/DIY menu callbacks.
+**Next candidates:** Remaining unported functions: DIY display functions (DesignDIYCup_BuildMatchListEntryStrings, DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection, DIYLeagueTournament16BeforeDraw, DIYLeagueTournamentOnRestore), large menu functions (SelectTeamsFinalMenu, CareerGameListCommon), asset/loader system (~14 functions), small helpers, HW handlers.
 
 ---
 

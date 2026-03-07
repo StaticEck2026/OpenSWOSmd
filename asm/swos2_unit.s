@@ -3338,6 +3338,9 @@
         xref    _DesignDIYCup_UpdateMatchListScrollAndRebuildStrings
         xref    _DesignDIYCup_UpdateMatchListAndRedrawIfNeeded
         xref    _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries
+; --- Chunk 228 xrefs ---
+        xref    _DesignDIYCup_BuildMatchListEntryStrings
+        xref    _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection
 ; --- Chunk 161 xrefs ---
         xref    _ShowSeasonOpinion
 ; --- Chunk 174 xrefs ---
@@ -3626,6 +3629,10 @@
         xdef    aTeamsRelegated
         xdef    aTeamsRelegated_0
         xdef    DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection
+; --- Chunk 228 xdefs ---
+        xdef    aNextRoundDraw
+        xdef    aPlayReplays
+        xdef    a2ndLegRound
         xdef    MenuCheckControls
 ; --- Chunk 133 xdefs ---
         xdef    editTeamsSelectedTeam

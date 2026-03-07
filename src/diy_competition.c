@@ -5600,8 +5600,6 @@ extern uint8_t aPlayCup[]; /* "PLAY CUP" */
 extern uint32_t rndStringTable[];     /* const char *[15] */
 extern uint32_t replayStringTable[];  /* const char *[3] */
 
-/* ASM functions still in asm */
-extern void DesignDIYCup_BuildMatchListEntryStrings(void);
 extern void MenuCheckControls(void);
 
 /* C functions from other modules */
@@ -5611,6 +5609,216 @@ extern void _InitTeams(void);
 extern void _GoGetTeamsForPlay(uint8_t *gameTypeStr, uint8_t *playWhatStr,
                                uint16_t numTeams, uint16_t showClub,
                                uint16_t showNational, uint16_t showOrigCustom);
+
+/* ---- Chunk 228: DesignDIYCup_BuildMatchListEntryStrings ---- */
+
+/* Helper: resolve team name pointer from competition team table.
+ * d0 = byte index, a4 = diyCompetitionStart base */
+static uint8_t *getTeamNameFromIndex(int8_t idx, uint8_t *comp)
+{
+    int16_t d0 = (int16_t)idx;
+    uint32_t off = (uint16_t)(d0 * 4);
+    uint32_t *teamPtrTable = (uint32_t *)(comp + 0x344);
+    uint8_t *teamEntry = (uint8_t *)teamPtrTable[off / 4];
+    return teamEntry + (uint32_t)&selTeamNameBase;
+}
+
+/* Helper: advance menu entry pointer and set isInvisible = 1 */
+static MenuEntry *hideAndAdvance(MenuEntry *e)
+{
+    e->isInvisible = 1;
+    return e + 1;
+}
+
+__attribute__((used, externally_visible))
+void _DesignDIYCup_BuildMatchListEntryStrings(void)
+{
+    if (diyCupMatchListDrawModeFlag != 0) {
+        /* Draw mode path */
+        uint8_t *a4 = diyCompetitionStart;
+        MenuEntry *a3 = &menuEntries[18]; /* +$3F0 */
+        uint16_t d7 = *(uint16_t *)(a4 + 0x52);
+        d7 >>= 1;
+        uint8_t *a2 = a4 + 0x2CE;
+        uint8_t *a5 = a4 + 0x30E;
+        uint16_t scrollIdx = diyCupMatchListScrollIndex;
+        a5 += scrollIdx * 2;
+        uint8_t *a6 = a4 + 0x8A;
+        uint16_t d6 = scrollIdx;
+        int16_t d5 = 5;
+
+        for (; d5 >= 0; d5--) {
+            if (d6 >= d7) {
+                /* Past end — hide 8 entries */
+                for (int i = 0; i < 8; i++)
+                    a3 = hideAndAdvance(a3);
+            } else {
+                /* "V" label */
+                a3->content = (uint32_t)aV;
+                a3->isInvisible = 0;
+                a3++;
+
+                int16_t d3 = 1;
+                for (; d3 >= 0; d3--) {
+                    int8_t d4 = (int8_t)*a5++;
+                    int16_t d4w = d4;
+                    uint8_t flagByte = a6[(uint16_t)d4w];
+                    d4w = (int16_t)(d4w * 2);
+
+                    if (flagByte & 2) {
+                        /* Has result */
+                        if (!(flagByte & 1)) {
+                            /* Team A won */
+                            int8_t teamIdx = a2[(uint16_t)d4w];
+                            uint8_t *name = getTeamNameFromIndex(teamIdx, a4);
+                            uint8_t *dst = (uint8_t *)a3->content;
+                            _StringCopy(name, dst);
+                            a3->isInvisible = 0;
+                            a3++;
+                            a3->isInvisible = 1;
+                            a3++;
+                        } else {
+                            /* Team B won */
+                            int8_t teamIdx = a2[(uint16_t)d4w + 1];
+                            uint8_t *name = getTeamNameFromIndex(teamIdx, a4);
+                            uint8_t *dst = (uint8_t *)a3->content;
+                            _StringCopy(name, dst);
+                            a3->isInvisible = 0;
+                            a3++;
+                            a3->isInvisible = 1;
+                            a3++;
+                        }
+                    } else {
+                        /* No result — show both teams */
+                        int8_t teamIdx1 = a2[(uint16_t)d4w];
+                        uint8_t *name1 = getTeamNameFromIndex(teamIdx1, a4);
+                        uint8_t *dst = (uint8_t *)a3->content;
+                        _StringCopy(name1, dst);
+                        a3->isInvisible = 0;
+                        a3++;
+
+                        /* "OR teamName2" */
+                        int8_t teamIdx2 = a2[(uint16_t)d4w + 1];
+                        uint8_t *name2 = getTeamNameFromIndex(teamIdx2, a4);
+                        dst = (uint8_t *)a3->content;
+                        dst = _StringCopy((uint8_t *)aOr, dst);
+                        _StringCopy(name2, dst);
+                        a3->isInvisible = 0;
+                        a3++;
+                    }
+                }
+
+                /* Hide remaining 3 entries per row + 2 spacers */
+                a3->isInvisible = 1; a3++;
+                a3->isInvisible = 1; a3++;
+                a3->isInvisible = 1; a3++;
+            }
+            d6++;
+        }
+        return;
+    }
+
+    /* Normal (non-draw) mode */
+    uint8_t *a4 = diyCompetitionStart;
+    MenuEntry *a3 = &menuEntries[18]; /* +$3F0 */
+    uint16_t d7 = *(uint16_t *)(a4 + 0x52);
+    uint8_t *a5 = a4 + 0x8A;
+    uint8_t *a6 = a4 + 0x2CE;
+    uint16_t scrollIdx = diyCupMatchListScrollIndex;
+    a5 += scrollIdx;
+    a6 += scrollIdx * 2;
+    uint16_t d6 = scrollIdx;
+    int16_t d5 = 5;
+
+    for (; d5 >= 0; d5--) {
+        if (d6 >= d7) {
+            /* Past end — hide 8 entries */
+            for (int i = 0; i < 8; i++)
+                a3 = hideAndAdvance(a3);
+        } else {
+            uint16_t d4 = d6 * 2;
+
+            /* "V" or "-" label */
+            a3->content = (uint32_t)aV;
+            if (*a5 & 0x80)
+                a3->content = (uint32_t)aMinus;
+            a3->isInvisible = 0;
+            a3++;
+
+            /* Team 1 name */
+            int8_t teamIdx1 = (int8_t)a6[0];
+            uint8_t *name1 = getTeamNameFromIndex(teamIdx1, a4);
+            diyCupMatchTeamNamePtr1 = (uint32_t)name1;
+            uint8_t *dst = (uint8_t *)a3->content;
+            _StringCopy(name1, dst);
+            a3->isInvisible = 0;
+            a3++;
+
+            /* Spacer */
+            a3->isInvisible = 1;
+            a3++;
+
+            /* Team 2 name */
+            int8_t teamIdx2 = (int8_t)a6[1];
+            uint8_t *name2 = getTeamNameFromIndex(teamIdx2, a4);
+            diyCupMatchTeamNamePtr2 = (uint32_t)name2;
+            dst = (uint8_t *)a3->content;
+            _StringCopy(name2, dst);
+            a3->isInvisible = 0;
+            a3++;
+
+            /* Spacer */
+            a3->isInvisible = 1;
+            a3++;
+
+            if (*a5 & 0x80) {
+                /* Has result — show scores */
+                uint8_t *scoreBase = a4 + 0xCA;
+                int16_t score1 = (int8_t)scoreBase[d4];
+                *(int16_t *)&a3->content = score1;
+                a3->isInvisible = 0;
+                a3++;
+
+                int16_t score2 = (int8_t)scoreBase[d4 + 1];
+                *(int16_t *)&a3->content = score2;
+                a3->isInvisible = 0;
+                a3++;
+            } else {
+                /* No result — hide score entries */
+                a3->isInvisible = 1;
+                a3++;
+                a3->isInvisible = 1;
+                a3++;
+            }
+
+            /* Match result string */
+            {
+                uint16_t *leg2Ptr = (uint16_t *)(a4 + 0x1CE);
+                uint16_t leg2 = leg2Ptr[d4 / 2];
+                uint16_t *leg1Ptr = (uint16_t *)(a4 + 0x14E);
+                uint16_t leg1 = leg1Ptr[d4 / 2];
+                uint16_t *scorePtr = (uint16_t *)(a4 + 0xCA);
+                uint16_t pens = scorePtr[d4 / 2];
+                uint8_t flags = *a5;
+
+                uint8_t *resultStr = _BuildMatchResultString(
+                    0, leg2, leg1, pens,
+                    (uint8_t *)diyCupMatchTeamNamePtr1,
+                    (uint8_t *)diyCupMatchTeamNamePtr2,
+                    (uint16_t)flags);
+
+                a3->isInvisible = 0;
+                dst = (uint8_t *)a3->content;
+                _StringCopy(resultStr, dst);
+                a3++;
+            }
+        }
+
+        a6 += 2;
+        a5++;
+        d6++;
+    }
+}
 
 /* DesignDIYCupOnDraw — draw callback for cup design menu (SWOS2.s line 44793)
  * Iterates cup rounds, configures menu entries with round names and values. */
@@ -5889,7 +6097,7 @@ int16_t _DesignDIYCup_UpdateMatchListScrollAndRebuildStrings(void)
 {
     if (diyCupMatchListDrawModeFlag != 0) {
         diyCupMatchListScrollIndex = 0;
-        DesignDIYCup_BuildMatchListEntryStrings();
+        _DesignDIYCup_BuildMatchListEntryStrings();
         return 1;
     }
 
@@ -5935,7 +6143,7 @@ int16_t _DesignDIYCup_UpdateMatchListScrollAndRebuildStrings(void)
     }
 
     if (changed != 0) {
-        DesignDIYCup_BuildMatchListEntryStrings();
+        _DesignDIYCup_BuildMatchListEntryStrings();
         return 1;
     }
     return 0;
@@ -6000,7 +6208,150 @@ extern uint8_t aTeamsPromoted0[];   /* "TEAMS PROMOTED  %0" */
 extern uint8_t aTeamsPromoted0_0[]; /* "TEAMS PROMOTED  %0   TEAMS IN PLAYOFFS ..." */
 extern uint8_t aTeamsRelegated[];   /* "TEAMS RELEGATED  %0" */
 extern uint8_t aTeamsRelegated_0[]; /* "TEAMS RELEGATED  %0   TEAMS IN PLAYOFFS..." */
-extern void DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection(void);
+/* ---- Chunk 228: DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection ---- */
+extern uint8_t aNextRoundDraw[];   /* "NEXT ROUND DRAW" */
+extern uint8_t aPlayReplays[];     /* "PLAY REPLAYS" */
+extern uint8_t a2ndLegRound[];     /* "2ND LEG ROUND" */
+extern uint8_t aNextRound[];       /* "NEXT ROUND" */
+extern uint8_t aNextMatch[];       /* "NEXT MATCH" */
+extern uint16_t fireResetFlag;
+
+__attribute__((used, externally_visible))
+void _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection(void)
+{
+    if (diyCupMenuArg1 != 0) {
+        /* Hide entries 1-8 (offsets $38..$1C8 from menuEntries+$38) */
+        MenuEntry *a0 = &menuEntries[1];
+        a0->isInvisible = 1;
+        a0[1].isInvisible = 1;
+        a0[2].isInvisible = 1;
+        a0[3].isInvisible = 1;
+        a0[4].isInvisible = 1;
+        a0[5].isInvisible = 1;
+        a0[6].isInvisible = 1;
+        a0[7].isInvisible = 1;
+        return;
+    }
+
+    uint8_t *a1 = diyCompetitionStart;
+    uint16_t field4A = *(uint16_t *)(a1 + 0x3A + 0x10); /* DIY_COMPETITION_FIELD_3A + $10 = 0x4A */
+
+    if (field4A == 6) {
+        /* Competition complete */
+        if (diyCupMenuArg0 == 0)
+            fireResetFlag = 1;
+
+        menuEntries[1].isInvisible = 1;
+        MenuEntry *e3 = &menuEntries[3];
+        e3->isInvisible = 1;
+        e3[1].isInvisible = 1;
+        e3[2].isInvisible = 1;
+        MenuEntry *e6 = &menuEntries[6];
+        e6->isInvisible = 1;
+        e6[1].isInvisible = 1;
+        e6[2].isInvisible = 1;
+        _SetCurrentEntry(10);
+        goto check_arg2;
+    }
+
+    if (field4A == 0) {
+        if ((int16_t)diyCupMenuArg0Copy <= 0) {
+            menuEntries[1].content = (uint32_t)aNextMatch;
+            goto show_entry1_hide_rest;
+        }
+        goto show_match_entries;
+    }
+
+    if (field4A == 1) {
+        fireResetFlag = 1;
+        menuEntries[1].content = (uint32_t)a2ndLegRound;
+        goto show_entry1_hide_rest;
+    }
+
+    if (field4A == 2) {
+        fireResetFlag = 1;
+        menuEntries[1].content = (uint32_t)aNextRoundDraw;
+        goto show_entry1_hide_rest;
+    }
+
+    if (field4A == 3) {
+        fireResetFlag = 1;
+        menuEntries[1].content = (uint32_t)aPlayReplays;
+        goto show_entry1_hide_rest;
+    }
+
+    if (field4A == 4) {
+        fireResetFlag = 1;
+        menuEntries[1].content = (uint32_t)aNextRound;
+        goto show_entry1_hide_rest;
+    }
+
+    /* Default: field4A >= 5 (but != 6) */
+    fireResetFlag = 1;
+    menuEntries[1].content = (uint32_t)aNextRound;
+
+show_entry1_hide_rest:
+    menuEntries[1].isInvisible = 0;
+    {
+        MenuEntry *e3 = &menuEntries[3];
+        e3->isInvisible = 1;
+        e3[1].isInvisible = 1;
+        e3[2].isInvisible = 1;
+        MenuEntry *e6 = &menuEntries[6];
+        e6->isInvisible = 1;
+        e6[1].isInvisible = 1;
+        e6[2].isInvisible = 1;
+    }
+    _SetCurrentEntry(1);
+    goto check_arg2;
+
+show_match_entries:
+    menuEntries[1].isInvisible = 1;
+    {
+        uint16_t cmpResult = _DIY_CompareCurrentMatchTeamCategories();
+        if (cmpResult == 0 || cmpResult == 1) {
+            /* Show entries 6-8, hide entries 3-5 */
+            MenuEntry *e6 = &menuEntries[6];
+            e6->isInvisible = 0;
+            e6[1].isInvisible = 0;
+            e6[2].isInvisible = 0;
+            menuEntries[4].isInvisible = 1;
+            MenuEntry *e3 = &menuEntries[3];
+            e3->isInvisible = 1;
+            e3[1].isInvisible = 1;
+            e3[2].isInvisible = 1;
+
+            if (careerLoadedFlag != 0) {
+                menuEntries[6].isInvisible = 1;
+                menuEntries[7].isInvisible = 1;
+                /* Copy x coordinate from entry 6 to entry 8 */
+                menuEntries[8].x = menuEntries[6].x;
+                menuEntries[8].dwHeight = 0xCA;
+            }
+            _SetCurrentEntry(*(uint16_t *)(diyCompetitionStart + 0x3A + 8));
+        } else {
+            /* Show entries 3-5, hide entries 6-8 */
+            MenuEntry *e3 = &menuEntries[3];
+            e3->isInvisible = 0;
+            e3[1].isInvisible = 0;
+            e3[2].isInvisible = 0;
+            menuEntries[4].isInvisible = 1;
+            MenuEntry *e6 = &menuEntries[6];
+            e6->isInvisible = 1;
+            e6[1].isInvisible = 1;
+            e6[2].isInvisible = 1;
+            _SetCurrentEntry(*(uint16_t *)(diyCompetitionStart + 0x3A + 4));
+        }
+        goto check_arg2;
+    }
+
+check_arg2:
+    if (diyCupMenuArg2 != 0) {
+        diyCupMenuArg2 = 0;
+        fireResetFlag = 0;
+        _SetCurrentEntry(10);
+    }
+}
 
 /* DIYSetMonthsOrPitchTypeEntries — toggle pitch type / month entry visibility (SWOS2.s line 41515) */
 __attribute__((used, externally_visible))
@@ -6233,8 +6584,8 @@ void _DIYCupFinish(void)
     }
 
     _DesignDIYCup_UpdateRoundOptionsVisibility();
-    DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection();
-    DesignDIYCup_BuildMatchListEntryStrings();
+    _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection();
+    _DesignDIYCup_BuildMatchListEntryStrings();
     _DesignDIYCup_UpdateMatchListScrollAndRebuildStrings();
     _DesignDIYCup_BuildMenuTitleString();
 }
@@ -6308,7 +6659,7 @@ void _DIYCupOnSelect16(void)
     if (diyCupMatchListScrollIndex == 0)
         return;
     diyCupMatchListScrollIndex--;
-    DesignDIYCup_BuildMatchListEntryStrings();
+    _DesignDIYCup_BuildMatchListEntryStrings();
     _DrawMenu();
 }
 
@@ -6326,7 +6677,7 @@ void _DIYCupOnSelect17(void)
         return;
 
     diyCupMatchListScrollIndex++;
-    DesignDIYCup_BuildMatchListEntryStrings();
+    _DesignDIYCup_BuildMatchListEntryStrings();
     _DrawMenu();
 }
 
@@ -6441,8 +6792,8 @@ state_check:
 final_draw:
     _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries();
     _DesignDIYCup_UpdateMatchListScrollAndRebuildStrings();
-    DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection();
-    DesignDIYCup_BuildMatchListEntryStrings();
+    _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection();
+    _DesignDIYCup_BuildMatchListEntryStrings();
     _DrawMenu();
 }
 
@@ -6543,7 +6894,7 @@ void _DIYCupOnSelect1(void)
         _DesignDIYCup_UpdateMatchListAndRedrawIfNeeded();
         _DesignDIYCup_DrawCurrentMatchTeamEntries();
         /* loc_134C96 */
-        DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection();
+        _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection();
         _CallDrawMultipleItems(8, &menuEntries[1]);
         return;
     }
@@ -6552,8 +6903,8 @@ void _DIYCupOnSelect1(void)
     _DesignDIYCup_BuildMenuTitleString();
     _DesignDIYCup_HideCurrentMatchTeamEntries();
     diyCupMatchListScrollIndex = 0;
-    DesignDIYCup_BuildMatchListEntryStrings();
-    DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection();
+    _DesignDIYCup_BuildMatchListEntryStrings();
+    _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection();
     _DrawMenu();
 }
 

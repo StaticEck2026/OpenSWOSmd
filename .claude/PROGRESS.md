@@ -3800,5 +3800,6 @@ Update this section every time you port a chunk. Keep it chronological.
 | 225   | 1         | 1601       |
 | 226   | 1         | 1602       |
 | 227   | 3+3s      | 1605       |
+| 228   | 2+2s      | 1607       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)
