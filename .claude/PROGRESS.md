@@ -3268,6 +3268,15 @@ Update this section every time you port a chunk. Keep it chronological.
 - Build status: **verified**
 - Cumulative: 1580 functions across 215 chunks
 
+### Chunk 216 — Career_MaybeGenerateJobOffer (1 → job_offers.c)
+- Date: 2026-03-06
+- Ported:
+  1. Career_MaybeGenerateJobOffer (→job_offers.c) — ~283 instr. Complex function that conditionally generates job offers in career mode. Handles four search paths: domestic teams (selected), foreign teams (TMD), national teams, and sacked+national (teamFile). Checks conditions (sacked, national selector, board confidence, career mode), calculates reputation range from trophy bonus and league position, randomly picks teams within range, validates uniqueness and division constraints.
+- Added xdefs: sackedReputationScore, nat_teams_rand_limit1, diyTeamMinDivisionIndex, diyTeamMaxDivisionOffset
+- Added xrefs: _Career_MaybeGenerateJobOffer
+- Build status: **verified**
+- Cumulative: 1581 functions across 216 chunks
+
 ### Chunk 195 — Career_AutoAdvanceCompetitionSlots (1 → career_status.c)
 - Date: 2026-03-02
 - Ported:
@@ -3779,5 +3788,17 @@ Update this section every time you port a chunk. Keep it chronological.
 | 213   | 4+1s      | 1576       |
 | 214   | 1         | 1577       |
 | 215   | 3         | 1580       |
+| 216   | 1         | 1581       |
+| 217   | 5         | 1586       |
+| 218   | 2         | 1588       |
+| 219   | 2         | 1590       |
+| 220   | 4         | 1594       |
+| 221   | 1         | 1595       |
+| 222   | 1         | 1596       |
+| 223   | 1         | 1597       |
+| 224   | 3         | 1600       |
+| 225   | 1         | 1601       |
+| 226   | 1         | 1602       |
+| 227   | 3+3s      | 1605       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)

@@ -50,6 +50,9 @@ void _DIY_SaveLeagueScratchToTable(void);
 /* --- DIY Cup Init & Helpers --- */
 void _InitDIYCup(void);
 void _InitCompetitionFromRecord(uint16_t index, uint8_t *record);
+void _InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table);
+void _InitDIYCupFromRecord(uint8_t *cupRec);
+void _InitDIYLeagueFromRecord(uint8_t *leagueRec);
 void _DIY_ShuffleTeamOrderList(void);
 void _DIY_ShuffleTeamGridPairs(void);
 void _DIY_SyncProgressToDiyFileBufferCopy(void);

@@ -26,6 +26,47 @@ extern uint32_t teamFundsAccepted;
 extern uint16_t youreSacked;
 extern uint16_t highlightedLeagueTeamId;
 
+/* Additional externs for Career_MaybeGenerateJobOffer */
+extern uint16_t careerSeasonsCompleted;
+extern uint16_t currentSeasonShowing;
+extern uint16_t careerJobOfferMode;
+extern uint8_t  viewRandomPhase;
+extern int8_t   careerJobOfferPhaseBias;
+extern uint16_t wageScalingDivisor;
+extern uint16_t sameNationalCallFlag;
+extern uint16_t lastNationalityCall;
+extern int16_t  boardConfidenceScore;
+extern int16_t  sackedReputationScore;
+extern int16_t  nationalSelectorReputationPoints;
+extern uint8_t  majorTrophyBonusValue;
+extern uint16_t isNationalSelector;
+extern uint16_t selTeamNumber;
+extern uint16_t numSelectedTeams;
+extern uint8_t  selTeamsPtr;
+extern uint16_t currentDivisionIndex;
+extern uint16_t competitionFileBuffer;
+extern uint16_t numDiyTeams;
+extern uint16_t diyTeamMinDivisionIndex;
+extern uint16_t diyTeamMaxDivisionOffset;
+extern uint16_t nat_teams_rand_limit1;
+extern uint8_t  nationalTeams[];
+extern uint8_t  nationalTeamFileCode;
+extern uint8_t  teamFileBuffer;
+extern uint16_t careerFileBuffer;
+extern uint8_t  tmdFileBuffer;
+
+extern uint16_t _Rand(void);
+extern uint16_t _GetAveragePlayerPrice(uint8_t *team);
+extern int16_t  _IsNewJobOffer(uint16_t teamNumber);
+extern int16_t  _IsOldJobOffer(uint16_t teamNumber);
+extern void     _AddJobOffer(uint16_t teamNumber, uint32_t initialFunds);
+extern int16_t  _GetBoardConfidenceScore(void);
+extern int16_t  _IsTeamCodeOkForNationalSelector(uint16_t code);
+extern int16_t  _IsPlayerOkForNationalSelector(void);
+extern uint16_t _FindTeamInDIY(uint16_t teamId, DIY_Competition *compBuffer);
+extern uint32_t _CalculateStartingBalance(uint16_t teamId);
+extern void     _LoadTeamFile(uint16_t code);
+
 /* Job offer menu data (in SWOS2.s) */
 extern uint16_t jobOffersFromRetired;
 extern int16_t  jobOfferOrdinal;
@@ -936,4 +977,331 @@ void _JobOffersAfterDrawCommon(void *entryPtr)
 
     /* Draw entries 11-12 */
     _DrawMultipleItems(2, &menuEntries[11]);
+}
+
+/* ================================================================
+ * Career_MaybeGenerateJobOffer  (SWOS2.s line 66143)
+ *
+ * Checks conditions and potentially generates a random job offer
+ * from another team during career mode. Handles domestic teams,
+ * foreign (TMD) teams, and national team offers.
+ *
+ * Asm register convention:
+ *   in:  none (uses globals)
+ *   out: none (may call AddJobOffer)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _Career_MaybeGenerateJobOffer(void)
+{
+    uint16_t foundTeamId = 0;
+
+    if (teamNoOfferAccepted != 0xFFFF)
+        return;
+    if (careerSeasonsCompleted == 7)
+        return;
+
+    int16_t maxNewOffers = 5 - (int16_t)numJobOffers;
+    if (maxNewOffers == 0)
+        return;
+    if ((int16_t)numNewJobOffers >= maxNewOffers)
+        return;
+    if (currentSeasonShowing == 0x13)
+        return;
+
+    if (careerJobOfferMode == 1)
+        goto searchDomestic;
+    if (careerJobOfferMode == 2)
+        goto checkNational;
+    if (youreSacked != 0)
+        goto searchDomestic;
+
+    /* Random phase check */
+    {
+        int8_t d0 = (int8_t)viewRandomPhase - careerJobOfferPhaseBias;
+        int16_t d0w = (int16_t)d0;
+        int32_t d0l = (int32_t)(d0w << 2);
+        uint16_t divided = (uint16_t)((uint32_t)d0l / (uint32_t)wageScalingDivisor);
+        if (divided != 3)
+            return;
+    }
+
+checkNational:
+    /* Try national team offer */
+    if (sameNationalCallFlag == 0) {
+        uint16_t natCall = lastNationalityCall;
+        if (natCall != 0xFFFF) {
+            if (careerJobOfferMode != 2) {
+                if (boardConfidenceScore == 0)
+                    goto noNational;
+            }
+            /* Check if already offered */
+            if (_IsNewJobOffer(natCall) == 0)
+                goto noNational;
+            if (_IsOldJobOffer(natCall) == 0)
+                goto noNational;
+            if (careerJobOfferMode != 2) {
+                int16_t conf = _GetBoardConfidenceScore();
+                if (conf < 0xC8)
+                    goto noNational;
+            }
+            /* Check if team code is valid for national selector */
+            uint16_t natHigh = natCall >> 8;
+            if (_IsTeamCodeOkForNationalSelector(natHigh) != 0) {
+                /* Valid national offer */
+                _AddJobOffer(natCall, (uint32_t)-1);
+                return;
+            }
+        }
+    }
+
+noNational:
+    if (careerJobOfferMode == 2)
+        return;
+
+    /* Random chance to generate offer */
+    {
+        uint16_t rnd = _Rand();
+        if (rnd >= 42)
+            return;
+    }
+
+searchDomestic:
+    ;
+    /* Calculate reputation range [d6..d7] */
+    uint16_t repLow, repHigh;
+    uint16_t repScore;
+
+    if (youreSacked != 0 && isNationalSelector != 0) {
+        repScore = (uint16_t)sackedReputationScore;
+    } else if (isNationalSelector != 0) {
+        repScore = (uint16_t)nationalSelectorReputationPoints;
+    } else {
+        /* Calculate from major trophy bonus and league position */
+        uint16_t mtb = (uint16_t)(uint8_t)majorTrophyBonusValue;
+        uint16_t low75 = (uint16_t)((uint16_t)(mtb * 0x4B) / 100);
+        uint16_t high150 = (uint16_t)((uint16_t)(mtb * 0x96) / 100);
+
+        /* Find team position in DIY table */
+        int16_t pos = _FindTeamInDIY(selTeamNumber, (DIY_Competition *)&competitionFileBuffer);
+
+        uint16_t posPct = (uint16_t)((uint16_t)((uint16_t)pos * 100) / (numDiyTeams - 1));
+        uint16_t invPct = 100 - posPct;
+
+        uint16_t range = high150 - low75;
+        uint16_t adj = (uint16_t)((uint16_t)(range * invPct) / 100);
+        repScore = adj + low75;
+
+        if (isNationalSelector == 0) {
+            sackedReputationScore = (int16_t)repScore;
+            nationalSelectorReputationPoints = (int16_t)repScore;
+        }
+    }
+
+    if (youreSacked == 0) {
+        repHigh = repScore;
+        repLow = (uint16_t)((uint16_t)(repHigh * 0x4B) / 100);
+    } else {
+        repHigh = repScore;
+        repLow = (uint16_t)((uint16_t)(repHigh * 0) / 100);  /* mulu #0 */
+    }
+
+    if (careerJobOfferMode == 1)
+        goto searchNational;
+
+    if (youreSacked != 0 && isNationalSelector != 0)
+        goto searchSacked;
+
+    /* Try domestic (selected teams) first */
+    {
+        uint16_t rnd = _Rand();
+        if (rnd < 0x15) {
+            /* Try national team selector offer */
+            if (isNationalSelector != 0)
+                goto searchNational;
+
+            /* Random chance for national team if player qualifies */
+            rnd = _Rand();
+            if (rnd < 0x55) {
+                goto searchForeign;
+            }
+            if (_IsPlayerOkForNationalSelector() == 0)
+                goto searchNational;
+            goto searchForeign;
+        }
+
+        /* Search among selected teams (home division) */
+        if (isNationalSelector != 0)
+            return;
+
+        uint16_t selTeam = selTeamNumber;
+        uint8_t *a0;
+
+        for (int16_t tries = 99; tries >= 0; tries--) {
+            rnd = _Rand();
+            uint16_t idx = (uint16_t)((uint16_t)(rnd * numSelectedTeams) >> 8);
+            a0 = &selTeamsPtr + (uint32_t)idx * 0x2AC;
+
+            /* Skip custom teams (type 4) */
+            if (a0[0x19] == 4)
+                continue;
+
+            /* Must be same division */
+            if (*(uint8_t *)((uint32_t)&selTeamNumber) != a0[0])
+                continue;
+
+            uint16_t teamId = *(uint16_t *)a0;
+            if (teamId == selTeam)
+                continue;
+
+            uint16_t avgPrice = _GetAveragePlayerPrice(a0);
+            if (avgPrice < repLow || avgPrice > repHigh)
+                continue;
+
+            if (_IsNewJobOffer(teamId) == 0)
+                continue;
+            if (_IsOldJobOffer(teamId) == 0)
+                continue;
+
+            /* Check division index match */
+            uint16_t divIdx = currentDivisionIndex;
+            if ((uint8_t)divIdx != a0[0x19]) {
+                foundTeamId = teamId;
+                goto foundWithBalance;
+            }
+
+            /* Same division — check league position */
+            _FindTeamInDIY(teamId, (DIY_Competition *)&competitionFileBuffer);
+            uint16_t minDiv = diyTeamMinDivisionIndex + diyTeamMaxDivisionOffset;
+            if ((uint16_t)divIdx < minDiv)
+                continue;
+
+            foundTeamId = teamId;
+            goto foundWithBalance;
+        }
+
+        if (youreSacked != 0)
+            goto searchForeign;
+        return;
+    }
+
+searchForeign:
+    /* Search among TMD (foreign) teams */
+    {
+        uint16_t selTeam = selTeamNumber;
+        uint8_t *base = &tmdFileBuffer;
+
+        for (int16_t tries = 99; tries >= 0; tries--) {
+            uint16_t rnd = _Rand();
+            uint16_t idx = (uint16_t)((uint16_t)(rnd * careerFileBuffer) >> 8);
+            uint8_t *a0 = base + (uint32_t)idx * 0x2AC;
+
+            if (a0[0x19] == 4)
+                continue;
+            if (*(uint8_t *)((uint32_t)&selTeamNumber) == a0[0])
+                continue;
+
+            uint16_t teamId = *(uint16_t *)a0;
+            if (teamId == selTeam)
+                continue;
+
+            uint16_t avgPrice = _GetAveragePlayerPrice(a0);
+            if (avgPrice < repLow || avgPrice > repHigh)
+                continue;
+
+            if (_IsNewJobOffer(teamId) == 0)
+                continue;
+            if (_IsOldJobOffer(teamId) == 0)
+                continue;
+
+            foundTeamId = teamId;
+            goto foundWithBalance;
+        }
+        return;
+    }
+
+searchNational:
+    /* Search among national teams */
+    {
+        for (;;) {
+            for (int16_t tries = 99; tries >= 0; tries--) {
+                uint16_t rnd = _Rand();
+                uint32_t idx32 = (uint32_t)rnd * (uint32_t)nat_teams_rand_limit1;
+                uint16_t idx = (uint16_t)(idx32 >> 8);
+                uint8_t *entry = nationalTeams + (uint32_t)idx * 6;
+
+                uint16_t teamId = *(uint16_t *)entry;
+                uint16_t skill = *(uint16_t *)(entry + 4);
+
+                if (skill < repLow || skill > repHigh)
+                    continue;
+                if (teamId == selTeamNumber)
+                    continue;
+                if (teamId == lastNationalityCall)
+                    continue;
+
+                if (_IsTeamCodeOkForNationalSelector(entry[0]) == 0)
+                    continue;
+                if (_IsNewJobOffer(teamId) == 0)
+                    continue;
+                if (_IsOldJobOffer(teamId) == 0)
+                    continue;
+
+                /* Found a valid national team offer */
+                _AddJobOffer(teamId, (uint32_t)-1);
+                return;
+            }
+
+            /* Didn't find one — widen range and retry */
+            if (repLow == 0)
+                return;
+            repLow -= 8;
+            if ((int16_t)repLow < 0)
+                repLow = 0;
+        }
+    }
+
+searchSacked:
+    /* Sacked + national selector: search teamFileBuffer */
+    _LoadTeamFile(nationalTeamFileCode);
+    repLow = repHigh >> 1;
+
+    for (;;) {
+        uint16_t selTeam = selTeamNumber;
+
+        for (int16_t tries = 99; tries >= 0; tries--) {
+            uint16_t rnd = _Rand();
+            uint16_t numTeams = *(uint16_t *)&teamFileBuffer;
+            uint16_t idx = (uint16_t)((uint16_t)(rnd * numTeams) >> 8);
+            uint8_t *a0 = (&teamFileBuffer + 2) + (uint32_t)idx * 0x2AC;
+
+            if (a0[0x19] == 4)
+                continue;
+
+            uint16_t teamId = *(uint16_t *)a0;
+
+            uint16_t avgPrice = _GetAveragePlayerPrice(a0);
+            if (avgPrice < repLow || avgPrice > repHigh)
+                continue;
+
+            if (_IsNewJobOffer(teamId) == 0)
+                continue;
+            if (_IsOldJobOffer(teamId) == 0)
+                continue;
+
+            foundTeamId = teamId;
+            goto foundWithBalance;
+        }
+
+        if (repLow == 0)
+            return;
+        repLow -= 8;
+        if ((int16_t)repLow < 0)
+            repLow = 0;
+    }
+
+foundWithBalance:
+    {
+        uint32_t funds = _CalculateStartingBalance(foundTeamId);
+        _AddJobOffer(foundTeamId, funds);
+    }
 }

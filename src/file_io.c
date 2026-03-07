@@ -1153,3 +1153,187 @@ void _SelectFilesInputSaveFilenameOnSelect(MenuEntry *entry)
     _StringCopyUntilChar(inputSaveFilename, dst, '.');
     _CallDrawMenuItem(entry48);
 }
+
+/* ================================================================
+ * _SelectFilesOnReturn  (SWOS2.s line 57336)
+ *
+ * Called on return/draw for the file selection menu.
+ * Sets up title, save entries, calculates 3-column layout,
+ * and assigns filenames to visible menu entries.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SelectFilesOnReturn(void)
+{
+    /* Set menu title in entry 0 */
+    menuEntries[0].fg = menuTitle;
+
+    if (savingFile != 0) {
+        /* Show save filename entry (entry 48) */
+        menuEntries[48].isInvisible = 0;
+        uint8_t *str = (uint8_t *)menuEntries[48].fg;
+        *str = 0;
+        _StringCopyUntilChar(inputSaveFilename, str, '.');
+
+        /* Show input box (entry 47) */
+        menuEntries[47].isInvisible = 0;
+
+        if (inputSaveFilename[0] != 0) {
+            /* Show save button (entry 49) */
+            menuEntries[49].isInvisible = 0;
+        }
+    }
+    /* note: the "not saving + no files" case still falls through to column calc */
+
+    /* Calculate 3-column layout */
+    if (numMatchedFiles <= 8) {
+        selFilesColumn1NumItems = 0;
+        selFilesColumn2NumItems = numMatchedFiles;
+        selFilesColumn3NumItems = 0;
+    } else {
+        uint16_t perCol = numMatchedFiles / 3;
+        uint16_t remainder = numMatchedFiles % 3;
+        selFilesColumn1NumItems = perCol;
+        selFilesColumn2NumItems = perCol;
+        selFilesColumn3NumItems = perCol;
+        if (remainder == 1) {
+            selFilesColumn2NumItems++;
+        } else if (remainder == 2) {
+            selFilesColumn1NumItems++;
+            selFilesColumn2NumItems++;
+        }
+    }
+
+    _RepositionSelectFileEntries();
+    /* Assign filenames to menu entries */
+    uint32_t *filePtr = foundFilesPtrTable;
+    MenuEntry *entry = &menuEntries[1]; /* entry at offset 0x38 = index 1 */
+    uint16_t d6 = 0;
+
+    for (;;) {
+        entry->isInvisible = 1;
+
+        if (d6 >= numberOfFiles)
+            goto nextEntry;
+
+        /* Find the right column slot for this file */
+        for (;;) {
+            uint16_t ordinal = entry->ordinal;
+            int16_t idx = (int16_t)(ordinal - 1);
+            uint16_t col = (uint16_t)((int32_t)idx / 15);  /* divu.w #$F */
+            uint16_t row = (uint16_t)((int32_t)idx % 15);
+
+            uint16_t colMax;
+            if (col == 0) {
+                colMax = selFilesColumn1NumItems;
+            } else if (col == 1) {
+                colMax = selFilesColumn2NumItems;
+            } else {
+                colMax = selFilesColumn3NumItems;
+            }
+
+            if (row >= colMax) {
+                /* Entry not in visible range — skip to next entry */
+                entry++;
+                if (entry->ordinal == 0x2E)
+                    return;
+                entry->isInvisible = 1;
+                continue;
+            }
+
+            /* Entry is in range — assign filename */
+            entry->isInvisible = 0;
+            uint8_t *filename = (uint8_t *)*filePtr++;
+            uint8_t *dst = (uint8_t *)entry->fg;
+
+            /* Copy filename until '.' */
+            while (*filename != 0) {
+                *dst++ = *filename++;
+                if (*(filename - 1) == '.') {
+                    dst--;
+                    break;
+                }
+            }
+            *dst = 0;
+            break;
+        }
+
+    nextEntry:
+        entry++;
+        if (entry->ordinal == 0x2E)
+            return;
+        d6++;
+    }
+}
+
+/* ================================================================
+ * _SelectFilesInit  (SWOS2.s line 57279)
+ *
+ * Called on init for the file selection menu.
+ * Sets initial cursor position, sorts files by extension/name,
+ * then calls SelectFilesOnReturn to set up display.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SelectFilesInit(void)
+{
+    /* Set initial menu entry based on mode */
+    if (savingFile != 0) {
+        if (inputSaveFilename[0] != 0)
+            _SetCurrentEntry(49);
+        else
+            _SetCurrentEntry(48);
+    } else {
+        if (numMatchedFiles == 0)
+            _SetCurrentEntry(50);
+    }
+
+    /* Bubble sort files by extension then name */
+    int16_t count = (int16_t)numMatchedFiles - 2;
+    if (count >= 0) {
+        uint16_t swapped;
+        do {
+            swapped = 0;
+            uint32_t *ptrCur = foundFilesPtrTable;
+            uint32_t *extCur = extensionsBuffer;
+
+            for (int16_t i = count; i >= 0; i--) {
+                uint8_t *name1 = (uint8_t *)ptrCur[0];
+                uint32_t ext1 = extCur[0];
+                uint32_t ext2 = extCur[1];
+
+                if (ext1 > ext2) {
+                    goto doSwap;
+                } else if (ext1 == ext2) {
+                    /* Extensions equal — compare names */
+                    uint8_t *name2 = (uint8_t *)ptrCur[1];
+                    uint8_t *p1 = name1;
+                    uint8_t *p2 = name2;
+                    for (;;) {
+                        uint8_t c = *p1++;
+                        if (c == 0) break;       /* end of name1 → no swap */
+                        uint8_t c2 = *p2++;
+                        if (c < c2) break;        /* name1 < name2 → no swap */
+                        if (c > c2) goto doSwap;  /* name1 > name2 → swap */
+                        /* equal → continue */
+                    }
+                }
+                goto noSwap;
+
+            doSwap:
+                /* Swap pointer table entries */
+                ptrCur[0] = ptrCur[1];
+                ptrCur[1] = (uint32_t)name1;
+                /* Swap extension entries */
+                extCur[0] = ext2;
+                extCur[1] = ext1;
+                swapped = 1;
+
+            noSwap:
+                ptrCur++;
+                extCur++;
+            }
+        } while (swapped);
+    }
+
+    /* Fall through to OnReturn */
+    _SelectFilesOnReturn();
+}

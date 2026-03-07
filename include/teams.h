@@ -1,6 +1,8 @@
 #ifndef TEAMS_H
 #define TEAMS_H
 
+#include "menu_system.h"
+
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned long uint32_t;
@@ -48,6 +50,22 @@ uint16_t _GetPlayerSlotIndexByPlayerNumber(uint16_t teamNumber, uint16_t playerN
 void _SetBenchPlayersNumbers(uint8_t *teamPtr);
 void _Career_RemovePlayerFromSelectedTeamRoster(uint16_t index);
 void _RemovePlayerFromTeam(uint16_t playerOrd);
+
+/* ---- ChooseTeams layout & selection (Chunks 219-221) ---- */
+void _ChooseTeamsFriendly_UpdateMenuEntryYLayout(void);
+void _ViewSelTeamsSetColumns(void);
+void _SetTeamEntriesStringsAndColors(void);
+void _SetChooseChangeTeamsEntries(void);
+void _ChooseTeamsFriendly_DrawChangeTeamsPrompt(MenuEntry *savedA5);
+void _ChooseTeamsFriendlyCommon(MenuEntry *entry);
+void _ChooseTeamsFriendlyCommon2(MenuEntry *entry);
+void _ChooseTeamsFriendlyInit(void);
+void _ChooseTeamsFriendlyInitFinish(void);
+void _SetTeamsCoordinates(void);
+void _SelectTeamsReinit(void);
+void _SelectTeamsInit(void);
+void _SelTeamForTacticsInit(void);
+void _ChooseTeamsInit(void);
 
 /* ---- Team selection menu callbacks (Chunks 107-108) ---- */
 void _DeselectAllTeams(void);

@@ -2506,7 +2506,11 @@ extern void _DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
 extern void Career_PostMatchUpdate(void);        /* still in asm */
 extern void _CCareer_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel); /* C bridge for asm */
 extern void SeasonFinished_ComputeSeasonReview(void); /* still in asm */
-extern void SelectAndShowSquadToView(void);      /* still in asm, requires a0/a1/d0/d1 */
+extern uint8_t *_ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers, uint16_t numTeams);
+extern uint8_t aSelectSquadToV[];   /* "SELECT SQUAD TO VIEW" */
+extern uint16_t diyNumberOfTeams;
+extern uint32_t diyTeamsBufferPtr;
+extern uint16_t numDiyTeams;
 extern void ChooseCompetitionMenu(void);         /* asm stub → _ChooseCompetitionMenu */
 
 /* ScrollUpInGameList — decrement currentGame/listIndex with bounds (SWOS2.s line 60083) */
@@ -6081,4 +6085,125 @@ void _SelectNationalTeamAfterDrawCommon(void *entryPtr)
     menuEntries[37].isInvisible = 1;
 
     _DrawMultipleItems(12, &menuEntries[27]);
+}
+
+/* ---- Chunk 217: SelectAndShowSquadToView + StatsViewSquads + SquadMenu ---- */
+extern uint16_t inEditTactics;
+extern uint8_t  diyCompetitionStart[];
+
+/* ================================================================
+ * _ShowSquadMenuForTeam  (SWOS2.s loc_1391C4)
+ *
+ * Common helper: sets up squad menu state and shows it.
+ * teamPtr = pointer to team file, rowMode = squad display mode.
+ * ================================================================ */
+static void _ShowSquadMenuForTeam(uint8_t *teamPtr, uint16_t rowMode)
+{
+    squadTeamFilePtr = (uint32_t)teamPtr;
+    squadRowMode = rowMode;
+    inEditTactics = rowMode;
+
+    /* Read skill diff param from diyCompetitionStart offset 0x2C (word) */
+    uint16_t d0 = *(uint16_t *)(diyCompetitionStart + 0x2C);
+    if (d0 == 4)
+        d0 = 0;
+    teamSkillDiffAfterChange = d0;
+
+    /* For game types other than DIY(1) or preset(2), and team isn't computer,
+     * set skill diff to -1 (disabled) */
+    uint16_t gt = gameType;
+    if (gt != 1 && gt != 2) {
+        if (*(uint8_t *)(teamPtr + 4) != 1) {
+            teamSkillDiffAfterChange = 0xFFFF;
+        }
+    }
+
+    _ShowMenu(squadMenu);
+}
+
+/* ================================================================
+ * _SelectAndShowSquadToView  (SWOS2.s line 47290)
+ *
+ * Shows "SELECT SQUAD TO VIEW" dialog, then opens squad menu.
+ * Called with teamNumbers in a1 and numTeams in d0 from caller.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SelectAndShowSquadToView(uint16_t *teamNumbers, uint16_t numTeams, uint16_t rowMode)
+{
+    uint8_t *teamPtr = _ChooseTeamForEditTactics(aSelectSquadToV, teamNumbers, numTeams);
+    if (teamPtr == (uint8_t *)0)
+        return;
+    _ShowSquadMenuForTeam(teamPtr, rowMode);
+}
+
+/* ================================================================
+ * _SelectAndShowSquadToView_Direct  (SWOS2.s loc_1391AC)
+ *
+ * Loads team from selTeamNumber, then opens squad menu.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SelectAndShowSquadToView_Direct(uint16_t rowMode)
+{
+    uint8_t *teamPtr = _VerifyTeamLoaded(selTeamNumber);
+    _ShowSquadMenuForTeam(teamPtr, rowMode);
+}
+
+/* ================================================================
+ * _StatsViewSquads  (SWOS2.s line 49177)
+ *
+ * Opens squad view from stats menu using DIY teams buffer.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _StatsViewSquads(void)
+{
+    uint16_t *teams = (uint16_t *)diyTeamsBufferPtr;
+    uint16_t numTeams = diyNumberOfTeams;
+    uint16_t rowMode = *(uint16_t *)(diyCompetitionStart + 0x3C);
+    _SelectAndShowSquadToView(teams, numTeams, rowMode);
+}
+
+/* ================================================================
+ * _SquadMenu  (SWOS2.s line 50835)
+ *
+ * Opens squad menu from management/season context.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SquadMenu(void)
+{
+    uint16_t rowMode = primaryCompSquadViewParam;
+
+    if (gameType != GAME_TYPE_SEASON) {
+        /* Non-season: load team directly */
+        _SelectAndShowSquadToView_Direct(rowMode);
+        return;
+    }
+
+    /* Season mode */
+    if (seasonNumberOfSquads != 0) {
+        /* Season with squads: check if exactly 1 squad */
+        if (seasonNumberOfSquads == 1) {
+            /* Load that team and go to direct squad view */
+            uint8_t *teamPtr = _VerifyTeamLoaded(seasonSquadTeamNumbers[0]);
+            _ShowSquadMenuForTeam(teamPtr, rowMode);
+            return;
+        }
+        /* Multiple squads: show selection from squad team numbers */
+        _SelectAndShowSquadToView(seasonSquadTeamNumbers, seasonNumberOfSquads, rowMode);
+        return;
+    }
+
+    /* No squads — use competition file buffer teams */
+    uint16_t compType = *(uint16_t *)competitionFileBuffer;
+    uint16_t numT = numDiyTeams;
+    uint16_t *teamList;
+
+    if (compType == 0) {
+        teamList = (uint16_t *)(competitionFileBuffer + 302);
+    } else if (compType == 1) {
+        teamList = (uint16_t *)(competitionFileBuffer + 590);
+    } else {
+        teamList = (uint16_t *)(competitionFileBuffer + 154);
+    }
+
+    _SelectAndShowSquadToView(teamList, numT, rowMode);
 }

@@ -45,6 +45,13 @@
         xref    _CreateRandomTransferOfferForPlayer
         xref    _EvaluateTransferOfferNegotiation
         xref    _ApplyOfferDemandMultipliersForSwapAndExtraPlayers
+        xref    _Career_MaybeGenerateJobOffer
+        xref    _SelectAndShowSquadToView
+        xref    _SelectAndShowSquadToView_Direct
+        xref    _StatsViewSquads
+        xref    _SquadMenu
+        xref    _SelectFilesInit
+        xref    _SelectFilesOnReturn
         xref    _TryPlayMusic
         xref    _Player1StatusProc
         xref    _PrepareMenuBackground
@@ -1343,6 +1350,10 @@
         xdef    cupWinnersCupTitleHolderGrid
         xdef    uefaCupTitleHolderGrid
         xdef    countriesTable
+        xdef    europeanCupsandNationalTeamCompetitionsAndQualifications
+        xdef    divisionStringTable
+        xdef    aCup_0
+        xdef    aLeague_1
 
 ; --- Chunk 66: career_teams.c + diy_competition.c team cache, fixtures ---
         xref    _VerifyTeamLoaded
@@ -2587,6 +2598,65 @@
         xdef    viewSelectedTeams
         xdef    abortSelectTeams
         xdef    exitSelectTeams
+; --- Chunk 219-222: ChooseTeams layout + team entries + selection + init (teams.c) ---
+        xref    _ChooseTeamsFriendly_UpdateMenuEntryYLayout
+        xref    _ViewSelTeamsSetColumns
+        xref    _SetTeamEntriesStringsAndColors
+        xref    _SetChooseChangeTeamsEntries
+        xref    _ChooseTeamsFriendlyCommon
+        xref    _ChooseTeamsFriendlyCommon2
+        xref    _ChooseTeamsFriendlyInit
+        xref    _ChooseTeamsFriendlyInitFinish
+        xref    _SetTeamsCoordinates
+        xref    _SelectTeamsReinit
+        xref    _SelectTeamsInit
+        xref    _SelTeamForTacticsInit
+        xref    _ChooseTeamsInit
+        xref    _InitDIYCompetitionFromTableEntry
+        xref    _InitDIYCupFromRecord
+        xref    _InitDIYLeagueFromRecord
+        xdef    numTeamsColumn1
+        xdef    numTeamsColumn2
+        xdef    numTeamsColumn3
+        xdef    numLeaguesInCountry
+        xdef    chooseTeamsNumTeams
+        xdef    headerYPlusHeight
+        xdef    exitY
+        xdef    teamDepthLevel
+        xdef    startingTeamIndex
+        xdef    teamsLowerBound
+        xdef    stayInSelectTeams
+        xdef    exitFlag
+        xdef    aChooseTeamsFor
+        xdef    aChangeTeamsFor
+        xdef    chooseTeamsFriendly_leftListNumEntries
+        xdef    chooseTeamsFriendly_middleListNumEntries
+        xdef    chooseTeamsFriendly_rightListNumEntries
+        xdef    chooseTeamsFriendly_numTeamsInLeagueList
+        xdef    chooseTeamsFriendly_menuTopY
+        xdef    chooseTeamsFriendly_menuBottomY
+        xdef    viewTeamsColumn1
+        xdef    viewTeamsColumn2
+        xdef    viewTeamsColumn3
+        xdef    viewTeamsStartY
+        xdef    viewTeamsAbortY
+        xdef    selTeamsUpperBound
+        xdef    teamNumbersIndices
+        xdef    teamPointers
+        xdef    numSelectedTeamsCopy
+        xdef    chooseTeamsFriendly_changeTeamsPromptDrawList
+        xdef    aChooseTeams
+        xdef    aChangeTeams
+        xdef    aSelect1MoreTea
+        xdef    aSelect0MoreTea
+        xdef    aSelect1LessTea
+        xdef    aSelect0LessTea
+        xdef    teamsTable
+        xdef    teamsIndex
+        xdef    teamsPtrTable
+        xdef    aAllSelectedTea
+        xdef    copaAmerica
+        xdef    leagueNumber
 ; --- Chunk 108: Menu callbacks (teams.c, diy_competition.c, career_teams.c) ---
         xref    _ViewSelected
         xref    _ExitChooseTeams2
@@ -2957,6 +3027,7 @@
         xdef    aSquadSelected
         xdef    aChangeSquad
         xdef    aSelectSquad
+        xdef    aSelectSquadToV
         xdef    aPlayMatch
         xdef    aFinishSeason
         xdef    aNextMatch
@@ -3812,6 +3883,11 @@
         xdef    offerExtraPlayerOrdinal
         xdef    offerAmount
         xdef    aPlus
+; --- Chunk 216 xdefs ---
+        xdef    sackedReputationScore
+        xdef    nat_teams_rand_limit1
+        xdef    diyTeamMinDivisionIndex
+        xdef    diyTeamMaxDivisionOffset
 ; --- Chunk 215 xdefs ---
         xdef    offerValueBaseSum
         xdef    offerPrimaryPositionMask
@@ -4320,36 +4396,38 @@ _CInitAndPlayGame:
 ; --- Chunk 124 C-callable asm bridges ---
 
 ; _CInitDIYCompetitionFromTableEntry(void) -> void
-; Reads selectedContest and contestLeagueNumber from globals
-; InitDIYCompetitionFromTableEntry expects: a0=contest, d0.w=leagueNumber
+; Reads selectedContest and contestLeagueNumber from globals, calls C impl
         xdef    _CInitDIYCompetitionFromTableEntry
 _CInitDIYCompetitionFromTableEntry:
         movem.l d2-d7/a2-a6,-(sp)
-        movea.l (selectedContest).l,a0
+        move.l  (selectedContest).l,-(sp)
         move.w  (contestLeagueNumber).l,d0
-        jsr     (InitDIYCompetitionFromTableEntry).l
+        andi.l  #$FFFF,d0
+        move.l  d0,-(sp)
+        jsr     _InitDIYCompetitionFromTableEntry
+        addq.l  #8,sp
         movem.l (sp)+,d2-d7/a2-a6
         rts
 
 ; _CInitDIYCupFromRecord(void) -> void
-; Reads selectedContest from global
-; InitDIYCupFromRecord expects: a0=contest
+; Reads selectedContest from global, calls C impl
         xdef    _CInitDIYCupFromRecord
 _CInitDIYCupFromRecord:
         movem.l d2-d7/a2-a6,-(sp)
-        movea.l (selectedContest).l,a0
-        jsr     (InitDIYCupFromRecord).l
+        move.l  (selectedContest).l,-(sp)
+        jsr     _InitDIYCupFromRecord
+        addq.l  #4,sp
         movem.l (sp)+,d2-d7/a2-a6
         rts
 
 ; _CInitDIYLeagueFromRecord(void) -> void
-; Reads selectedContest from global
-; InitDIYLeagueFromRecord expects: a0=contest
+; Reads selectedContest from global, calls C impl
         xdef    _CInitDIYLeagueFromRecord
 _CInitDIYLeagueFromRecord:
         movem.l d2-d7/a2-a6,-(sp)
-        movea.l (selectedContest).l,a0
-        jsr     (InitDIYLeagueFromRecord).l
+        move.l  (selectedContest).l,-(sp)
+        jsr     _InitDIYLeagueFromRecord
+        addq.l  #4,sp
         movem.l (sp)+,d2-d7/a2-a6
         rts
 
@@ -4375,35 +4453,22 @@ _CCareer_AutoAdvanceCompetitionAndPersistSlotState:
         jmp     _Career_AutoAdvanceCompetitionAndPersistSlotState
 
 ; _CInitDIYCupFromRecordParam(uint8_t *record) -> void
-; InitDIYCupFromRecord expects: a0 = record
+; Now just forwards to C impl
         xdef    _CInitDIYCupFromRecordParam
 _CInitDIYCupFromRecordParam:
-        movem.l d2-d7/a2-a6,-(sp)
-        movea.l 48(sp),a0              ; param: 44(saved regs) + 4(return addr) = offset 48
-        jsr     (InitDIYCupFromRecord).l
-        movem.l (sp)+,d2-d7/a2-a6
-        rts
+        jmp     _InitDIYCupFromRecord
 
 ; _CInitDIYLeagueFromRecordParam(uint8_t *record) -> void
-; InitDIYLeagueFromRecord expects: a0 = record
+; Now just forwards to C impl
         xdef    _CInitDIYLeagueFromRecordParam
 _CInitDIYLeagueFromRecordParam:
-        movem.l d2-d7/a2-a6,-(sp)
-        movea.l 48(sp),a0              ; param: 44(saved regs) + 4(return addr) = offset 48
-        jsr     (InitDIYLeagueFromRecord).l
-        movem.l (sp)+,d2-d7/a2-a6
-        rts
+        jmp     _InitDIYLeagueFromRecord
 
 ; _CInitDIYCompetitionFromTableEntryParam(uint16_t index, uint8_t *record) -> void
-; InitDIYCompetitionFromTableEntry expects: a0=contest, d0.w=leagueNumber
+; Now just forwards to C impl
         xdef    _CInitDIYCompetitionFromTableEntryParam
 _CInitDIYCompetitionFromTableEntryParam:
-        movem.l d2-d7/a2-a6,-(sp)
-        move.w  48(sp),d0              ; param1: index (44 saved + 4 ret = 48)
-        movea.l 50(sp),a0              ; param2: record (48 + 2 = 50)
-        jsr     (InitDIYCompetitionFromTableEntry).l
-        movem.l (sp)+,d2-d7/a2-a6
-        rts
+        jmp     _InitDIYCompetitionFromTableEntry
 
 ; _CSelectTeamsFinalMenu(uint16_t mode) -> void
 ; SelectTeamsFinalMenu expects: d0.b = mode

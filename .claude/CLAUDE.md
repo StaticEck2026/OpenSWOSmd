@@ -404,11 +404,11 @@ For each chunk:
 > **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
 > Read it with: `Read .claude/PROGRESS.md`
 
-**Current status:** 1580 functions ported across 215 chunks.
+**Current status:** 1595 functions ported across 224 chunks.
 
-**Last completed chunk:** Chunk 215 — CreateRandomTransferOfferForPlayer + EvaluateTransferOfferNegotiation + ApplyOfferDemandMultipliersForSwapAndExtraPlayers (3 → transfer_market.c).
+**Last completed chunk:** Chunk 224 — SetTeamsCoordinates + SelectTeamsReinit + SelectTeamsInit (3 → teams.c).
 
-**Next candidates:** ChooseTeams family (4), EditTactics callbacks (2), CareerGameListCommon (~388 instr), SelectTeamsFinalMenu (~443 instr), Career_MaybeGenerateJobOffer (~282 instr), Loader/Asset functions (12, A-line traps).
+**Next candidates:** SelTeamForTacticsInit (91 instr), SelTeamForTacticsCommon (66 instr), ChooseTeamsDialog/WithNationality, DIY init functions (InitDIYCompetitionFromTableEntry, InitDIYCupFromRecord, InitDIYLeagueFromRecord), remaining SelectTeams/DIY menu callbacks.
 
 ---
 

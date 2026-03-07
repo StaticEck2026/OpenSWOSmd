@@ -42,4 +42,8 @@ void _RepositionSelectFileEntries(void);
 /* ---- SelectFilesInputSaveFilenameOnSelect (Chunk 142) ---- */
 void _SelectFilesInputSaveFilenameOnSelect(MenuEntry *entry);
 
+/* --- Chunk 218: SelectFilesInit, SelectFilesOnReturn --- */
+void _SelectFilesInit(void);
+void _SelectFilesOnReturn(void);
+
 #endif

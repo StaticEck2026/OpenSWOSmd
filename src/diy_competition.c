@@ -7135,20 +7135,388 @@ uint16_t _IsNationalTeamCompetitionOrQualification(uint32_t key)
  *   type 1 → InitDIYCupFromRecord
  *   else   → InitDIYLeagueFromRecord
  * ================================================================ */
-extern void _CInitDIYCompetitionFromTableEntryParam(uint16_t index, uint8_t *record);
-extern void _CInitDIYCupFromRecordParam(uint8_t *record);
-extern void _CInitDIYLeagueFromRecordParam(uint8_t *record);
+extern uint32_t europeanCupsandNationalTeamCompetitionsAndQualifications[];
+extern uint32_t countriesTable[];
+extern const char *divisionStringTable[];
+extern const char aCup_0[];
+extern const char aLeague_1[];
+
+/* Helper: check if record pointer is in the european cups / national team list.
+ * If found, clear the field at offset 0x3C in the competition buffer. */
+static void checkEuropeanCupsAndClear3C(uint8_t *record, uint8_t *comp)
+{
+    uint32_t *p = europeanCupsandNationalTeamCompetitionsAndQualifications;
+    while (*p != 0xFFFFFFFF) {
+        if (*p == (uint32_t)record) {
+            *(uint16_t *)(comp + 0x3C) = 0;
+            return;
+        }
+        p++;
+    }
+}
+
+/* Helper: if not a national team competition, prepend country name + space to dst.
+ * Returns updated dst pointer. */
+static uint8_t *prependCountryNameIfClub(uint8_t *record, uint8_t *dst)
+{
+    if (_IsNationalTeamCompetitionOrQualification((uint32_t)record) != 0) {
+        uint16_t countryIdx = record[2];
+        uint8_t *countryEntry = (uint8_t *)countriesTable[countryIdx];
+        uint8_t *namePtr = countryEntry + 1;
+        while (*namePtr) namePtr++;
+        namePtr++; /* past null — points to second string */
+        dst = _StringCopy(namePtr, dst);
+        *dst++ = ' ';
+    }
+    return dst;
+}
+
+/* Helper: set pitch type fields at offsets 0x34/0x36 in competition buffer. */
+static void setPitchTypeFields(uint8_t *comp)
+{
+    *(uint16_t *)(comp + 0x34) = 1;
+    if ((int16_t)pitchType != (int16_t)0xFFFE) {
+        *(uint16_t *)(comp + 0x34) = 0;
+        *(uint16_t *)(comp + 0x36) = pitchType;
+    }
+}
+
+/* ================================================================
+ * Chunk 227: InitDIYCompetitionFromTableEntry, InitDIYCupFromRecord,
+ *            InitDIYLeagueFromRecord
+ * ================================================================ */
+
+__attribute__((used, externally_visible))
+void _InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table)
+{
+    uint16_t byteOff = (uint16_t)(idx * 6);
+    if (table[byteOff + 0xD] & 1) {
+        panicReasonCode = 0x1313;
+        _PanicHaltLoop();
+    }
+
+    uint8_t *a5 = table;
+    uint16_t d7 = idx;
+
+    _DIY_InitCompetitionDefaults();
+
+    uint8_t *a6 = diyCompetitionStart;
+    *(uint16_t *)(a6 + 0x3C) = 1;
+    checkEuropeanCupsAndClear3C(a5, a6);
+
+    a6[0x2E] = a5[0];
+    a6[0x38] = a5[3];
+    a6[0x39] = a5[4];
+
+    if ((int16_t)*(uint16_t *)(a5 + 0xA) < 0)
+        *(uint16_t *)(a6 + 0x68) = 1;
+
+    setPitchTypeFields(a6);
+
+    /* Extract round-specific values from table at idx*6 offset */
+    uint16_t off = (uint16_t)(d7 * 6);
+    uint16_t d1;
+
+    d1 = a5[off + 0xE];
+    *(uint16_t *)(a6 + 0x54) = d1;
+
+    d1 = a5[off + 0xF];
+    if ((int8_t)d1 < 0) {
+        d1 = (uint8_t)(-(int8_t)d1);
+        d1 >>= 1;
+    }
+    *(uint16_t *)(a6 + 0x56) = d1;
+
+    d1 = a5[off + 0x10];
+    *(uint16_t *)(a6 + 0x58) = d1;
+
+    d1 = a5[off + 0x11];
+    if ((int8_t)d1 < 0) {
+        d1 = (uint8_t)(-(int8_t)d1);
+        d1 >>= 1;
+    }
+    *(uint16_t *)(a6 + 0x5A) = d1;
+
+    int16_t numTeams = (int8_t)a5[off + 0xD];
+    *(int16_t *)(a6 + 0x32) = numTeams;
+
+    *(uint16_t *)(a6 + 0x50) = 1;
+
+    /* Build competition name at offset 4 */
+    uint8_t *a1 = a6 + 4;
+    a1 = prependCountryNameIfClub(a5, a1);
+
+    /* Division/competition name */
+    uint8_t *nameSource;
+    int8_t nameOffset = (int8_t)a5[5];
+    if (nameOffset == 0) {
+        nameSource = (uint8_t *)divisionStringTable[d7];
+    } else {
+        uint8_t *customTable = a5 + 5 + nameOffset;
+        nameSource = *(uint8_t **)(customTable + (d7 << 3));
+    }
+    *(uint32_t *)(a6 + 0x28) = (uint32_t)nameSource;
+    a1 = _StringCopy(nameSource, a1);
+
+    *(int16_t *)(a6 + 0x62) = (int8_t)a5[0xB];
+
+    int8_t typeVal = (int8_t)a5[0xA];
+    if (typeVal < 0)
+        typeVal = 1;
+    *(int16_t *)(a6 + 0x5E) = (int16_t)typeVal;
+
+    uint16_t c = a5[0xC];
+    *(uint16_t *)(a6 + 0x64) = (c & 0xF0) >> 4;
+    *(uint16_t *)(a6 + 0x66) = c & 0x0F;
+
+    _DIY_RecomputeCompetitionDerivedFields();
+    _DIY_ShuffleLeagueTeamOrder();
+}
+
+__attribute__((used, externally_visible))
+void _InitDIYCupFromRecord(uint8_t *cupRec)
+{
+    if (cupRec[0xA] & 1) {
+        panicReasonCode = 0x1313;
+        _PanicHaltLoop();
+    }
+
+    uint8_t *a5 = cupRec;
+
+    _InitDIYCup();
+
+    uint8_t *a6 = diyCompetitionStart;
+    *(uint16_t *)(a6 + 0x3C) = 1;
+    checkEuropeanCupsAndClear3C(a5, a6);
+
+    a6[0x2E] = a5[0];
+    *(int16_t *)(a6 + 0x5C) = (int8_t)a5[0xD];
+    a6[0x38] = a5[3];
+    a6[0x39] = a5[4];
+
+    setPitchTypeFields(a6);
+
+    *(int16_t *)(a6 + 0x32) = (int8_t)a5[0xA];
+
+    /* Build competition name at offset 4 */
+    uint8_t *a1 = a6 + 4;
+    a1 = prependCountryNameIfClub(a5, a1);
+
+    /* Cup name */
+    uint8_t *nameSource = (uint8_t *)aCup_0; /* "CUP" default */
+    int8_t nameOffset = (int8_t)a5[5];
+    if (nameOffset != 0) {
+        nameSource = *(uint8_t **)(a5 + 5 + nameOffset);
+    }
+    *(uint32_t *)(a6 + 0x28) = (uint32_t)nameSource;
+    a1 = _StringCopy(nameSource, a1);
+
+    *(int16_t *)(a6 + 0x5E) = (int8_t)a5[0xB];
+
+    uint16_t c = a5[0xC];
+    *(uint16_t *)(a6 + 0x60) = (c & 0xF0) >> 4;
+    *(uint16_t *)(a6 + 0x62) = c & 0x0F;
+
+    /* Count number of rounds: log2(numTeams/2) */
+    uint16_t d2 = 0;
+    uint16_t d0 = (uint16_t)(*(int16_t *)(a6 + 0x32)) >> 1;
+    while (d0) {
+        d2++;
+        d0 >>= 1;
+    }
+    d2--;
+
+    /* Unpack round flags from record byte 0xE onwards */
+    uint8_t *recPtr = a5;
+    uint8_t *compPtr = a6;
+    for (int16_t i = (int16_t)d2; i >= 0; i--) {
+        uint8_t flags = recPtr[0xE];
+        *(uint16_t *)(compPtr + 0x66) = (flags >> 6) & 3;
+        *(uint16_t *)(compPtr + 0x72) = (flags >> 4) & 3;
+        *(uint16_t *)(compPtr + 0x7E) = (flags >> 2) & 3;
+        recPtr++;
+        compPtr += 2;
+    }
+
+    _DIY_InitCupBracketState();
+
+    /* Third-place match */
+    if (a5[9] != 0) {
+        int16_t val = (int8_t)a5[9];
+        *(int16_t *)(diyCompetitionStart + 0x3A + 0x20) = val;
+    }
+
+    if (a5[8] == 0)
+        _DIY_ShuffleTeamGridPairs();
+}
+
+__attribute__((used, externally_visible))
+void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
+{
+    uint8_t *a5 = leagueRec;
+
+    _InitDIYTournament();
+
+    uint8_t *a6 = diyFileBufferCopy;
+    *(uint16_t *)(a6 + 0x3C) = 1;
+    checkEuropeanCupsAndClear3C(a5, a6);
+
+    a6[0x2E] = a5[0];
+    *(uint16_t *)(a6 + 0x50) = 0;
+
+    if (a5[8] != 0) {
+        *(uint16_t *)(a6 + 0x50) = 1;
+
+        int8_t seedOff = (int8_t)a5[7];
+        if (seedOff == 0) {
+            panicReasonCode = 0x5295;
+            _PanicHaltLoop();
+        }
+
+        uint16_t *seedTable = (uint16_t *)(a5 + 7 + seedOff);
+        uint8_t *a3 = a6 + 0x5A;
+        int16_t count = (int8_t)a5[0xF] - 1;
+        uint16_t numTeams16 = *(uint16_t *)(a6 + 0x32);
+
+        for (int16_t i = count; i >= 0; i--) {
+            uint16_t seedId = *seedTable++;
+            uint16_t *teamIds = (uint16_t *)(a6 + 0x9A);
+            uint16_t d1 = 0;
+
+            /* Find seedId in team list */
+            while (d1 < numTeams16) {
+                if (*teamIds == seedId)
+                    break;
+                teamIds++;
+                d1++;
+            }
+
+            if (d1 < numTeams16) {
+                /* Check if d1 is already at position a3 */
+                if ((uint8_t)d1 != *a3) {
+                    /* Swap: find d1 in the shuffle indices and swap with a3 position */
+                    uint8_t *scan = a6 + 0x5A;
+                    while (*scan != (uint8_t)d1)
+                        scan++;
+                    uint8_t tmp = *scan;
+                    *scan = *a3;
+                    *a3 = tmp;
+                }
+            }
+
+            a3++;
+        }
+    }
+
+    a6[0x38] = a5[3];
+    a6[0x39] = a5[4];
+
+    setPitchTypeFields(a6);
+
+    *(int16_t *)(a6 + 0x32) = (int8_t)a5[0xF];
+
+    /* Build competition name at offset 4 */
+    uint8_t *a1 = a6 + 4;
+    a1 = prependCountryNameIfClub(a5, a1);
+
+    /* League name */
+    uint8_t *nameSource = (uint8_t *)aLeague_1; /* "LEAGUE" default */
+    int8_t nameOffset = (int8_t)a5[5];
+    if (nameOffset != 0) {
+        nameSource = *(uint8_t **)(a5 + 5 + nameOffset);
+    }
+    *(uint32_t *)(a6 + 0x28) = (uint32_t)nameSource;
+    a1 = _StringCopy(nameSource, a1);
+
+    *(int16_t *)(a6 + 0x4A) = (int8_t)a5[0xA];
+
+    uint16_t dc = a5[0xD];
+    *(uint16_t *)(a6 + 0x4C) = (dc & 0xF0) >> 4;
+    *(uint16_t *)(a6 + 0x4E) = dc & 0x0F;
+
+    *(uint16_t *)(a6 + 0x15A) = 0;
+
+    int16_t d7 = (int8_t)a5[0xC];
+    int16_t d6 = (int8_t)a5[0xB];
+
+    uint8_t *a2 = a5 + 0x22;
+    uint8_t *stageRec = a5 + 0xE;
+    uint8_t *a0 = a6;
+
+    /* First stage header */
+    int8_t numStages = (int8_t)*stageRec++;
+    *(int16_t *)(a0 + 0x52) = (int16_t)numStages;
+
+    int8_t numTeamsPerStage = (int8_t)*stageRec;
+    *(int16_t *)(a0 + 0x32) = (int16_t)numTeamsPerStage;
+
+    int16_t d2 = *(int16_t *)(a0 + 0x52) - 1;
+
+    for (; d2 >= 0; d2--) {
+        *(int16_t *)(a0 + 0x160) = (int8_t)a5[9];
+        *(int16_t *)(a0 + 0x168) = d7;
+        *(int16_t *)(a0 + 0x166) = d6;
+
+        uint16_t groupTeams = 0;
+        uint8_t groupByte = *stageRec++;
+        groupTeams = groupByte;
+        *(uint16_t *)(a0 + 0x162) = groupTeams;
+
+        *(uint16_t *)(a0 + 0x15C) = 0;
+        uint8_t cupFlag = *stageRec;
+        if ((int8_t)cupFlag < 0) {
+            *(uint16_t *)(a6 + 0x15A) = 1;
+            *(uint16_t *)(a0 + 0x15C) = 1;
+            cupFlag = 0;
+        }
+        *(uint16_t *)(a0 + 0x15E) = cupFlag;
+
+        uint8_t matchesVal = *stageRec++;
+        *(uint16_t *)(a0 + 0x16A) = matchesVal;
+
+        uint8_t groupCount = *stageRec++;
+        *(uint16_t *)(a0 + 0x16C) = groupCount;
+
+        /* Validate: if cup mode and group count is odd, panic */
+        if (*(uint16_t *)(a0 + 0x15E) != 0) {
+            if (groupCount & 1) {
+                panicReasonCode = 0x1313;
+                _PanicHaltLoop();
+            }
+        }
+
+        uint8_t qualifiers = *stageRec;
+        *(uint16_t *)(a0 + 0x164) = qualifiers;
+
+        /* Unpack round flags from a2 */
+        uint8_t flags = *a2++;
+        *(uint16_t *)(a0 + 0x16E) = (flags >> 6) & 3;
+        *(uint16_t *)(a0 + 0x170) = (flags >> 4) & 3;
+        *(uint16_t *)(a0 + 0x172) = (flags >> 2) & 3;
+
+        a0 += 0x76;
+    }
+
+    /* Post-loop check: if diyFileBufferCopy field at 0x3A+0x18 == 6, skip */
+    if (*(uint16_t *)(diyFileBufferCopy + 0x3A + 0x18) != 6) {
+        /* Copy field from offset 0xEE to 0x162 in the last stage slot */
+        *(uint16_t *)(a0 + 0x162) = *(uint16_t *)(a0 + 0xEE);
+    }
+
+    _DIYTournament_RecalculateMatchesPerTeam();
+    _DIY_LoadCurrentCompetitionSlot();
+}
 
 __attribute__((used, externally_visible))
 void _InitCompetitionFromRecord(uint16_t index, uint8_t *record)
 {
     uint8_t type = record[1];
     if (type == 0)
-        _CInitDIYCompetitionFromTableEntryParam(index, record);
+        _InitDIYCompetitionFromTableEntry(index, record);
     else if (type == 1)
-        _CInitDIYCupFromRecordParam(record);
+        _InitDIYCupFromRecord(record);
     else
-        _CInitDIYLeagueFromRecordParam(record);
+        _InitDIYLeagueFromRecord(record);
 }
 
 /* ================================================================

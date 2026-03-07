@@ -28358,403 +28358,34 @@ InitCompetitionFromRecord:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== InitDIYCompetitionFromTableEntry =====
-; prototype: void __usercall InitDIYCompetitionFromTableEntry(unsigned __int16 idx@<d0>, const void *table@<a0>)
+; ===== InitDIYCompetitionFromTableEntry ===== (ported to C → _InitDIYCompetitionFromTableEntry)
 InitDIYCompetitionFromTableEntry:
-                mulu.w  #6,d0
-                btst    #0,$D(a0,d0.w)
-                beq.s   loc_12756C
-                move.w  #$1313,(panicReasonCode).l
-                jsr     PanicHaltLoop
-loc_12756C:
-                divu.w  #6,d0
-                movea.l a0,a5
-                move.w  d0,d7
-                movem.l d7/a5,-(sp)
-                jsr     DIY_InitCompetitionDefaults
-                movem.l (sp)+,d7/a5
-                lea     (diyCompetitionStart).l,a6
-                move.w  #1,diyCompetitionStart+DIY_COMPETITION_FIELD_3A+2-diyCompetitionStart(a6)
-                lea     (europeanCupsandNationalTeamCompetitionsAndQualifications).l,a1
-loc_127594:
-                cmpi.l  #$FFFFFFFF,(a1)
-                beq.s   loc_1275A4
-                cmpa.l  (a1)+,a5
-                bne.s   loc_127594
-                clr.w   $3C(a6)
-loc_1275A4:
-                move.b  (a5),$2E(a6)
-                move.b  3(a5),$38(a6)
-                move.b  4(a5),$39(a6)
-                tst.w   $A(a5)
-                bpl.s   loc_1275C0
-                move.w  #1,$68(a6)
-loc_1275C0:
-                move.w  #1,$34(a6)
-                cmpi.w  #$FFFE,(pitchType).l
-                beq.s   loc_1275DC
-                clr.w   $34(a6)
-                move.w  (pitchType).l,$36(a6)
-loc_1275DC:
-                move.w  d7,d0
-                mulu.w  #6,d0
-                clr.w   d1
-                move.b  $E(a5,d0.w),d1
-                move.w  d1,$54(a6)
-                move.b  $F(a5,d0.w),d1
-                bpl.s   loc_1275F6
-                neg.b   d1
-                lsr.w   #1,d1
-loc_1275F6:
-                move.w  d1,$56(a6)
-                move.b  $10(a5,d0.w),d1
-                move.w  d1,$58(a6)
-                move.b  $11(a5,d0.w),d1
-                bpl.s   loc_12760C
-                neg.b   d1
-                lsr.w   #1,d1
-loc_12760C:
-                move.w  d1,$5A(a6)
-                move.b  $D(a5,d0.w),d0
-                ext.w   d0
-                move.w  d0,$32(a6)
-                move.w  #1,$50(a6)
-                lea     4(a6),a1
-                bsr.w   IsNationalTeamCompetitionOrQualification
-                beq.s   loc_12764E
-                move.b  2(a5),d0
-                andi.w  #$FF,d0
-                lsl.w   #2,d0
-                lea     (countriesTable).l,a0
-                movea.l (a0,d0.w),a0
-                lea     1(a0),a0
-loc_127642:
-                tst.b   (a0)+
-                bne.s   loc_127642
-                jsr StringCopy(pc)
-                move.b  #$20,(a1)+      ; ' '
-loc_12764E:
-                move.b  5(a5),d0
-                beq.s   loc_127666
-                ext.w   d0
-                lea     5(a5,d0.w),a0
-                lea     (a0),a0
-                move.w  d7,d0
-                lsl.w   #3,d0
-                movea.l (a0,d0.w),a0
-                bra.s   loc_127674
-loc_127666:
-                lea     (divisionStringTable).l,a0
-                move.w  d7,d0
-                lsl.w   #2,d0
-                movea.l (a0,d0.w),a0
-loc_127674:
-                move.l  a0,$28(a6)
-                jsr StringCopy(pc)
-                move.b  $B(a5),d0
-                ext.w   d0
-                move.w  d0,$62(a6)
-                move.b  $A(a5),d0
-                bpl.s   loc_127690
-                move.b  #1,d0
-loc_127690:
-                ext.w   d0
-                move.w  d0,$5E(a6)
-                move.b  $C(a5),d0
-                andi.w  #$F0,d0
-                lsr.w   #4,d0
-                move.w  d0,$64(a6)
-                move.b  $C(a5),d0
-                andi.w  #$F,d0
-                move.w  d0,$66(a6)
-                jsr     DIY_RecomputeCompetitionDerivedFields
-                jsr     DIY_ShuffleLeagueTeamOrder
+                movem.l d0-d7/a0-a6,-(sp)
+                andi.l  #$FFFF,d0
+                move.l  a0,-(sp)
+                move.l  d0,-(sp)
+                jsr     _InitDIYCompetitionFromTableEntry
+                addq.l  #8,sp
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
-; ===== InitDIYCupFromRecord =====
-; prototype: void __usercall InitDIYCupFromRecord(const void *cupRec@<a0>)
+; ===== InitDIYCupFromRecord ===== (ported to C → _InitDIYCupFromRecord)
 InitDIYCupFromRecord:
-                btst    #0,$A(a0)
-                beq.s   loc_1276D4
-                move.w  #$1313,(panicReasonCode).l
-                jsr     PanicHaltLoop
-loc_1276D4:
-                movea.l a0,a5
-                movem.l a5,-(sp)
-                jsr     InitDIYCup
-                movem.l (sp)+,a5
-                lea     (diyCompetitionStart).l,a6
-                move.w  #1,DIY_COMPETITION_FIELD_3A+2(a6)
-                lea     (europeanCupsandNationalTeamCompetitionsAndQualifications).l,a1
-loc_1276F6:
-                cmpi.l  #$FFFFFFFF,(a1)
-                beq.s   loc_127706
-                cmpa.l  (a1)+,a5
-                bne.s   loc_1276F6
-                clr.w   $3C(a6)
-loc_127706:
-                move.b  (a5),$2E(a6)
-                move.b  $D(a5),d0
-                ext.w   d0
-                move.w  d0,$5C(a6)
-                move.b  3(a5),$38(a6)
-                move.b  4(a5),$39(a6)
-                move.w  #1,$34(a6)
-                cmpi.w  #$FFFE,(pitchType).l
-                beq.s   loc_12773C
-                clr.w   $34(a6)
-                move.w  (pitchType).l,$36(a6)
-loc_12773C:
-                move.b  $A(a5),d0
-                ext.w   d0
-                move.w  d0,$32(a6)
-                lea     4(a6),a1
-                bsr.w   IsNationalTeamCompetitionOrQualification
-                beq.s   loc_127774
-                move.b  2(a5),d0
-                andi.w  #$FF,d0
-                lsl.w   #2,d0
-                lea     (countriesTable).l,a0
-                movea.l (a0,d0.w),a0
-                lea     1(a0),a0
-loc_127768:
-                tst.b   (a0)+
-                bne.s   loc_127768
-                jsr StringCopy(pc)
-                move.b  #$20,(a1)+      ; ' '
-loc_127774:
-                lea     (aCup_0).l,a0   ; "CUP"
-                move.b  5(a5),d0
-                beq.s   loc_127788
-                ext.w   d0
-                lea     5(a5,d0.w),a0
-                movea.l (a0),a0
-loc_127788:
-                move.l  a0,$28(a6)
-                jsr StringCopy(pc)
-                move.b  $B(a5),d0
-                ext.w   d0
-                move.w  d0,$5E(a6)
-                move.b  $C(a5),d0
-                andi.w  #$F0,d0
-                lsr.w   #4,d0
-                move.w  d0,$60(a6)
-                move.b  $C(a5),d0
-                andi.w  #$F,d0
-                move.w  d0,$62(a6)
-                clr.w   d2
-                move.w  $32(a6),d0
-                lsr.w   #1,d0
-loc_1277BC:
-                addq.w  #1,d2
-                lsr.w   #1,d0
-                bne.s   loc_1277BC
-                subq.w  #1,d2
-                movea.l a5,a0
-                movea.l a6,a1
-loc_1277C8:
-                move.b  $E(a0),d1
-                move.b  d1,d0
-                andi.w  #$C0,d0
-                lsr.w   #6,d0
-                move.w  d0,$66(a1)
-                move.b  d1,d0
-                andi.w  #$30,d0         ; '0'
-                lsr.w   #4,d0
-                move.w  d0,$72(a1)
-                move.b  d1,d0
-                andi.w  #$C,d0
-                lsr.w   #2,d0
-                move.w  d0,$7E(a1)
-                addq.l  #1,a0
-                addq.l  #2,a1
-                dbf     d2,loc_1277C8
-                movem.l a5,-(sp)
-                jsr     DIY_InitCupBracketState
-                movem.l (sp)+,a5
-                move.b  9(a5),d0
-                beq.s   loc_127814
-                ext.w   d0
-                move.w  d0,(diyCompetitionStart+DIY_COMPETITION_FIELD_3A+$20).l
-loc_127814:
-                tst.b   8(a5)
-                bne.s   locret_127820
-                jsr     DIY_ShuffleTeamGridPairs
-locret_127820:
+                movem.l d0-d7/a0-a6,-(sp)
+                move.l  a0,-(sp)
+                jsr     _InitDIYCupFromRecord
+                addq.l  #4,sp
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
-; ===== InitDIYLeagueFromRecord =====
-; prototype: void __usercall InitDIYLeagueFromRecord(const void *leagueRec@<a0>)
+; ===== InitDIYLeagueFromRecord ===== (ported to C → _InitDIYLeagueFromRecord)
 InitDIYLeagueFromRecord:
-                movea.l a0,a5
-                movem.l a5,-(sp)
-                jsr     InitDIYTournament
-                movem.l (sp)+,a5
-                lea     (diyFileBufferCopy).l,a6
-                move.w  #1,DIY_COMPETITION_FIELD_3A+2(a6)
-                lea     (europeanCupsandNationalTeamCompetitionsAndQualifications).l,a1
-loc_127844:
-                cmpi.l  #$FFFFFFFF,(a1)
-                beq.s   loc_127854
-                cmpa.l  (a1)+,a5
-                bne.s   loc_127844
-                clr.w   $3C(a6)
-loc_127854:
-                move.b  (a5),$2E(a6)
-                clr.w   $50(a6)
-                tst.b   8(a5)
-                beq.s   loc_1278B4
-                move.w  #1,$50(a6)
-                movea.l a5,a1
-                move.b  7(a1),d0
-                beq.w   loc_127A2E
-                andi.w  #$FF,d0
-                lea     7(a1,d0.w),a1
-                lea     $5A(a6),a3
-                move.b  $F(a5),d2
-                ext.w   d2
-                subq.w  #1,d2
-loc_127886:
-                move.w  (a1)+,d0
-                lea     $9A(a6),a0
-                clr.w   d1
-loc_12788E:
-                cmp.w   (a0)+,d0
-                beq.s   loc_12789C
-                addq.w  #1,d1
-                cmp.w   $32(a6),d1
-                bne.s   loc_12788E
-                bra.s   loc_1278AE
-loc_12789C:
-                cmp.b   (a3),d1
-                beq.s   loc_1278AE
-                lea     $5A(a6),a0
-loc_1278A4:
-                cmp.b   (a0)+,d1
-                bne.s   loc_1278A4
-                move.b  -(a0),d0
-                move.b  (a3),(a0)
-                move.b  d0,(a3)
-loc_1278AE:
-                addq.l  #1,a3
-                dbf     d2,loc_127886
-loc_1278B4:
-                move.b  3(a5),$38(a6)
-                move.b  4(a5),$39(a6)
-                move.w  #1,$34(a6)
-                cmpi.w  #$FFFE,(pitchType).l
-                beq.s   loc_1278DC
-                clr.w   $34(a6)
-                move.w  (pitchType).l,$36(a6)
-loc_1278DC:
-                move.b  $F(a5),d0
-                ext.w   d0
-                move.w  d0,$32(a6)
-                lea     4(a6),a1
-                bsr.w   IsNationalTeamCompetitionOrQualification
-                beq.s   loc_127914
-                move.b  2(a5),d0
-                andi.w  #$FF,d0
-                lsl.w   #2,d0
-                lea     (countriesTable).l,a0
-                movea.l (a0,d0.w),a0
-                lea     1(a0),a0
-loc_127908:
-                tst.b   (a0)+
-                bne.s   loc_127908
-                jsr StringCopy(pc)
-                move.b  #$20,(a1)+      ; ' '
-loc_127914:
-                lea     (aLeague_1).l,a0 ; "LEAGUE"
-                move.b  5(a5),d0
-                beq.s   loc_127928
-                ext.w   d0
-                lea     5(a5,d0.w),a0
-                movea.l (a0),a0
-loc_127928:
-                move.l  a0,$28(a6)
-                jsr StringCopy(pc)
-                move.b  $A(a5),d0
-                ext.w   d0
-                move.w  d0,$4A(a6)
-                move.b  $D(a5),d0
-                andi.w  #$F0,d0
-                lsr.w   #4,d0
-                move.w  d0,$4C(a6)
-                move.b  $D(a5),d0
-                andi.w  #$F,d0
-                move.w  d0,$4E(a6)
-                clr.w   $15A(a6)
-                move.b  $C(a5),d7
-                ext.w   d7
-                move.b  $B(a5),d6
-                ext.w   d6
-                lea     $22(a5),a2
-                lea     $E(a5),a1
-                movea.l a6,a0
-                move.b  (a1)+,d0
-                ext.w   d0
-                move.w  d0,$52(a0)
-                move.b  (a1),d0
-                ext.w   d0
-                move.w  d0,$32(a0)
-                move.w  $52(a0),d2
-                subq.w  #1,d2
-loc_127984:
-                move.b  9(a5),d0
-                ext.w   d0
-                move.w  d0,$160(a0)
-                move.w  d7,$168(a0)
-                move.w  d6,$166(a0)
-                clr.w   d0
-                move.b  (a1)+,d0
-                move.w  d0,$162(a0)
-                clr.w   $15C(a0)
-                move.b  (a1),d0
-                bpl.s   loc_1279B4
-                move.w  #1,$15A(a6)
-                move.w  #1,$15C(a0)
-                clr.b   d0
-loc_1279B4:
-                move.w  d0,$15E(a0)
-                move.b  (a1)+,d0
-                move.w  d0,$16A(a0)
-                move.b  (a1)+,d0
-                move.w  d0,$16C(a0)
-                tst.w   $15E(a0)
-                beq.s   loc_1279DE
-                btst    #0,d0
-                beq.s   loc_1279DE
-                move.w  #$1313,(panicReasonCode).l
-                jsr     PanicHaltLoop
-loc_1279DE:
-                move.b  (a1),d0
-                move.w  d0,$164(a0)
-                move.b  (a2)+,d1
-                move.b  d1,d0
-                andi.w  #$C0,d0
-                lsr.w   #6,d0
-                move.w  d0,$16E(a0)
-                move.b  d1,d0
-                andi.w  #$30,d0         ; '0'
-                lsr.w   #4,d0
-                move.w  d0,$170(a0)
-                move.b  d1,d0
-                andi.w  #$C,d0
-                lsr.w   #2,d0
-                move.w  d0,$172(a0)
-                adda.l  #$76,a0         ; 'v'
-                dbf     d2,loc_127984
-                cmpi.w  #6,(diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$18).l
-                beq.s   loc_127A24
-                move.w  $EE(a0),$162(a0)
-loc_127A24:
-                bsr.w   DIYTournament_RecalculateMatchesPerTeam
-                bsr.w   DIY_LoadCurrentCompetitionSlot
+                movem.l d0-d7/a0-a6,-(sp)
+                move.l  a0,-(sp)
+                jsr     _InitDIYLeagueFromRecord
+                addq.l  #4,sp
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
-loc_127A2E:
-                move.w  #$5295,(panicReasonCode).l
-                jsr     PanicHaltLoop
 
 ; ===== CheckContinueAbortPrompt =====
 ; prototype: __int16 __usercall CheckContinueAbortPrompt@<d0>(const char *header@<a0>)
@@ -33686,223 +33317,9 @@ chooseTeamsFriendlyMenu:
 ; ===== ChooseTeamsFriendlyInitFinish =====
 ; prototype: void __usercall ChooseTeamsFriendlyInitFinish()
 ChooseTeamsFriendlyInitFinish:
-                tst.w   (topOfStackMark).l
-                bpl.s   loc_130A82
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$C40)).l,a0
-                move.l  #aAbort,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "ABORT" ...
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #RED_10,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-loc_130A82:
-                tst.w   (selectTeamsNoLimit).l
-                beq.s   loc_130AB2
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  #1,MENUENTRY_ISINVISIBLE+$38(a0)
-                move.w  #1,MENUENTRY_ISINVISIBLE+$70(a0)
-                move.w  #1,MENUENTRY_ISINVISIBLE+$A8(a0)
-                move.w  #1,MENUENTRY_ISINVISIBLE+$E0(a0)
-                move.w  #1,MENUENTRY_ISINVISIBLE+$118(a0)
-loc_130AB2:
-                lea     (teamsIndex).l,a4
-                lea     (teamsPtrTable).l,a5
-                move.w  (teamFileBuffer).l,d0
-                subq.w  #1,d0
-                lea     ((teamFileBuffer+2)).l,a0
-                move.w  (leagueNumber).l,d1
-                clr.w   d2
-                move.w  (selTeamNumber).l,d3
-loc_130ADA:
-                cmp.b   TEAMFILE_LEAGUE(a0),d1
-                bne.s   loc_130AF2
-                tst.w   (inFriendlyMenu).l
-                bne.s   loc_130AEC
-                cmp.w   (a0),d3
-                beq.s   loc_130AF2
-loc_130AEC:
-                move.b  d2,(a4)+
-                move.l  a0,(a5)+
-                addq.w  #1,d2
-loc_130AF2:
-                adda.l  #684,a0
-                dbf     d0,loc_130ADA
-                move.w  d2,(chooseTeamsFriendly_numTeamsInLeagueList).l
-                move.w  (chooseTeamsFriendly_numTeamsInLeagueList).l,d2
-                subq.w  #2,d2
-                bmi.w   loc_130B5C
-                lea     (teamsPtrTable).l,a3
-loc_130B14:
-                lea     (teamsIndex).l,a2
-                clr.w   d3
-                move.w  d2,d1
-loc_130B1E:
-                move.b  (a2)+,d0
-                ext.w   d0
-                lsl.w   #2,d0
-                movea.l (a3,d0.w),a0
-                lea     5(a0),a0
-                move.b  (a2),d0
-                ext.w   d0
-                lsl.w   #2,d0
-                movea.l (a3,d0.w),a1
-                lea     5(a1),a1
-loc_130B3A:
-                move.b  (a0)+,d0
-                beq.s   loc_130B54
-                cmp.b   (a1)+,d0
-                bcs.s   loc_130B54
-                bhi.s   loc_130B46
-                bra.s   loc_130B3A
-loc_130B46:
-                move.b  -1(a2),d0
-                move.b  (a2),-1(a2)
-                move.b  d0,(a2)
-                move.w  #1,d3
-loc_130B54:
-                dbf     d1,loc_130B1E
-                tst.w   d3
-                bne.s   loc_130B14
-loc_130B5C:
-                lea     (teamsTable).l,a0
-                move.w  #$63,d0         ; 'c'
-loc_130B66:
-                clr.b   (a0)+
-                dbf     d0,loc_130B66
-                cmpi.w  #1,(numNeededTeams).l
-                beq.s   loc_130BC6
-                move.w  (numSelectedTeams).l,d3
-                beq.s   loc_130BC6
-                subq.w  #1,d3
-                lea     (teamsTable).l,a1
-                lea     (selTeamsPtr).l,a0
-                move.b  (lastLoadedExtNumber).l,d1
-                move.w  (leagueNumber).l,d2
-loc_130B98:
-                cmpi.b  #$64,(lastLoadedExtNumber).l ; 'd'
-                beq.s   loc_130BAE
-                move.b  (a0),d0
-                cmp.b   d0,d1
-                bne.s   loc_130BBC
-                cmp.b   $19(a0),d2
-                bne.s   loc_130BBC
-loc_130BAE:
-                move.b  1(a0),d0
-                andi.w  #$FF,d0
-                move.b  4(a0),(a1,d0.w)
-loc_130BBC:
-                adda.l  #684,a0
-                dbf     d3,loc_130B98
-loc_130BC6:
-                cmpi.w  #$30,(chooseTeamsFriendly_numTeamsInLeagueList).l ; '0'
-                bcs.s   loc_130BEC
-                move.w  #$10,(chooseTeamsFriendly_leftListNumEntries).l
-                move.w  #$10,(chooseTeamsFriendly_middleListNumEntries).l
-                move.w  #$10,(chooseTeamsFriendly_rightListNumEntries).l
-                bra.w   loc_130C52
-loc_130BEC:
-                cmpi.w  #8,(chooseTeamsFriendly_numTeamsInLeagueList).l
-                bhi.s   loc_130C10
-                clr.w   (chooseTeamsFriendly_leftListNumEntries).l
-                move.w  (chooseTeamsFriendly_numTeamsInLeagueList).l,(chooseTeamsFriendly_middleListNumEntries).l
-                clr.w   (chooseTeamsFriendly_rightListNumEntries).l
-                bra.w   loc_130C52
-loc_130C10:
-                move.w  (chooseTeamsFriendly_numTeamsInLeagueList).l,d0
-                ext.l   d0
-                divu.w  #3,d0
-                move.w  d0,(chooseTeamsFriendly_leftListNumEntries).l
-                move.w  d0,(chooseTeamsFriendly_middleListNumEntries).l
-                move.w  d0,(chooseTeamsFriendly_rightListNumEntries).l
-                swap    d0
-                cmpi.w  #1,d0
-                bne.s   loc_130C40
-                addq.w  #1,(chooseTeamsFriendly_middleListNumEntries).l
-                bra.w   loc_130C52
-loc_130C40:
-                cmpi.w  #2,d0
-                bne.s   loc_130C52
-                addq.w  #1,(chooseTeamsFriendly_leftListNumEntries).l
-                addq.w  #1,(chooseTeamsFriendly_middleListNumEntries).l
-loc_130C52:
-                bsr.w   ChooseTeamsFriendly_UpdateMenuEntryYLayout
-                bsr.w   ChooseTeamsSetHeader
-                bsr.w   CheckNumTeamsAllowed
-                bra.w   *+4
-loc_130C62:
-                lea     (teamsIndex).l,a4
-                lea     (teamsPtrTable).l,a5
-                lea     (teamsTable).l,a3
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a2
-                clr.w   d6
-                clr.w   d5
-loc_130C7C:
-                move.w  #1,4(a2)
-loc_130C82:
-                move.w  2(a2),d0
-                subq.w  #7,d0
-                ext.l   d0
-                divu.w  #$10,d0
-                bne.s   loc_130C98
-                move.w  (chooseTeamsFriendly_leftListNumEntries).l,d1
-                bra.s   loc_130CAE
-loc_130C98:
-                cmpi.w  #1,d0
-                bne.s   loc_130CA6
-                move.w  (chooseTeamsFriendly_middleListNumEntries).l,d1
-                bra.s   loc_130CAE
-loc_130CA6:
-                move.w  d2,d1
-                move.w  (chooseTeamsFriendly_rightListNumEntries).l,d1
-loc_130CAE:
-                swap    d0
-                cmp.w   d1,d0
-                bcs.s   loc_130CCA
-                lea     $38(a2),a2
-                cmpi.w  #$37,2(a2)      ; '7'
-                beq.w   locret_130D50
-                move.w  #1,4(a2)
-                bra.s   loc_130C82
-loc_130CCA:
-                move.w  #9,d2
-                tst.w   (selectTeamsNoLimit).l
-                beq.s   loc_130CDA
-                move.w  #5,d2
-loc_130CDA:
-                clr.w   4(a2)
-                lea     (teamsIndex).l,a4
-                lea     (teamsPtrTable).l,a5
-                move.b  (a4,d5.w),d0
-                ext.w   d0
-                lsl.w   #2,d0
-                movea.l (a5,d0.w),a0
-                move.b  1(a0),d0
-                andi.w  #$FF,d0
-                lea     5(a0),a1
-                move.l  a1,$26(a2)
-                move.w  d2,d1
-                tst.b   (a3,d0.w)
-                beq.s   loc_130D2A
-                move.w  #$A,d1
-                cmpi.b  #1,(a3,d0.w)
-                beq.s   loc_130D2A
-                move.w  #$B,d1
-                cmpi.b  #2,(a3,d0.w)
-                beq.s   loc_130D2A
-                move.w  #$D,d1
-loc_130D2A:
-                move.w  d1,$1E(a2)
-loc_130D2E:
-                lea     $38(a2),a2
-                cmpi.w  #$37,2(a2)      ; '7'
-                beq.s   locret_130D50
-                move.w  #1,4(a2)
-                addq.w  #1,d6
-                cmp.w   (chooseTeamsFriendly_numTeamsInLeagueList).l,d6
-                bcc.s   loc_130D2E
-                addq.w  #1,d5
-                bra.w   loc_130C7C
-locret_130D50:
+                movem.l d0-d7/a0-a6,-(sp)
+                jsr     _ChooseTeamsFriendlyInitFinish
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
 ; ===== ViewSelected =====
@@ -33923,78 +33340,11 @@ ChooseTeamsPlayMatchSelected:
 ; ===== ChooseTeamsFriendlyCommon2 =====
 ; prototype: void __usercall ChooseTeamsFriendlyCommon2(struct MenuEntry *entry@<a5>)
 ChooseTeamsFriendlyCommon2:
-                move.w  MENUENTRY_ORDINAL(a5),d0
-                subq.w  #7,d0
-                cmpi.w  #16,d0
-                bcs.s   loc_130E06
-                cmpi.w  #32,d0
-                bcs.s   loc_130DFC
-                subi.w  #16,d0
-                add.w   (chooseTeamsFriendly_middleListNumEntries).l,d0
-loc_130DFC:
-                subi.w  #16,d0
-                add.w   (chooseTeamsFriendly_leftListNumEntries).l,d0
-loc_130E06:
-                lea     (teamsIndex).l,a0
-                move.b  (a0,d0.w),d0
-                ext.w   d0
-                lsl.w   #2,d0
-                lea     (teamsPtrTable).l,a0
-                movea.l (a0,d0.w),a0
-                move.l  a0,(selectedTeamPtr).l
-                move.w  (a0),(selectedTeamCountryNumber).l
-                tst.l   (chooseTeamsFunc).l
-                beq.s   loc_130E44
-                movea.l (chooseTeamsFunc).l,a6
-                jsr     (a6)
-                tst.w   (careerSquadScreenDidSelectPlayerFlag).l
-                bne.s   loc_130E4C
-                rts
-loc_130E44:
-                tst.w   (careerSquadScreenDidSelectPlayerFlag).l
-                beq.s   loc_130E60
-loc_130E4C:
-                move.w  #1,(abortSelectTeams).l
-                clr.w   (chooseTeamsResult).l
-                jmp     SetExitMenuFlag
-loc_130E60:
-                move.b  1(a0),d2
-                andi.w  #$FF,d2
-                lea     (teamsTable).l,a1
-                lea     (a1,d2.w),a1
-                tst.b   (a1)
-                beq.s   loc_130EBE
-                cmpi.b  #1,(a1)
-                beq.s   loc_130E92
-                cmpi.b  #2,(a1)
-                beq.s   loc_130EA8
-                move.b  #0,(a1)         ; unselect
-                move.w  #9,$1E(a5)      ; gray
-                bsr.w   DeselectTeam
-                bra.s   loc_130EDC
-loc_130E92:
-                move.b  #2,(a1)
-                bsr.w   FindTeam
-                move.b  #2,4(a0)
-                move.w  #11,$1E(a5)     ; purple
-                bra.s   loc_130EDC
-loc_130EA8:
-                move.b  #3,(a1)
-                bsr.w   FindTeam
-                move.b  #3,4(a0)
-                move.w  #13,$1E(a5)     ; light blue
-                bra.s   loc_130EDC
-loc_130EBE:
-                cmpi.w  #$40,(numSelectedTeams).l ; '@'
-                beq.s   locret_130EE6
-                move.b  #1,(a1)
-                move.w  #10,$1E(a5)     ; red
-                bsr.w   AddTeamToBuffer
-                move.b  #1,4(a0)
-loc_130EDC:
-                bsr.w   Bureaucracy
-                jmp     CallDrawMenuItem
-locret_130EE6:
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _ChooseTeamsFriendlyCommon2
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== ChooseTeamsSetHeader ===== (ported to C → _ChooseTeamsSetHeader in diy_competition.c)
@@ -34016,57 +33366,9 @@ CheckNumTeamsAllowed:
 ; ===== ChooseTeamsFriendly_UpdateMenuEntryYLayout =====
 ; prototype: void __usercall ChooseTeamsFriendly_UpdateMenuEntryYLayout()
 ChooseTeamsFriendly_UpdateMenuEntryYLayout:
-                lea     (menuEntries).l,a0
-                move.w  MENUENTRY_Y(a0),d0
-                add.w   $1A(a0),d0
-                move.w  d0,(chooseTeamsFriendly_menuTopY).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$C40)).l,a0
-                move.w  MENUENTRY_Y(a0),(chooseTeamsFriendly_menuBottomY).l
-                move.w  (chooseTeamsFriendly_leftListNumEntries).l,d0
-                cmp.w   (chooseTeamsFriendly_middleListNumEntries).l,d0
-                bhi.s   loc_131090
-                move.w  (chooseTeamsFriendly_middleListNumEntries).l,d0
-loc_131090:
-                cmp.w   (chooseTeamsFriendly_rightListNumEntries).l,d0
-                bhi.s   loc_13109E
-                move.w  (chooseTeamsFriendly_rightListNumEntries).l,d0
-loc_13109E:
-                mulu.w  #$A,d0
-                move.w  (chooseTeamsFriendly_menuBottomY).l,d1
-                sub.w   (chooseTeamsFriendly_menuTopY).l,d1
-                sub.w   d0,d1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                sub.w   MENUENTRY_DWHEIGHT(a0),d1
-                ext.l   d1
-                divu.w  #3,d1
-                move.w  d1,d2
-                add.w   (chooseTeamsFriendly_menuTopY).l,d2
-                move.w  d2,$16(a0)
-                lea     $38(a0),a0
-                move.w  d2,$16(a0)
-                lea     $38(a0),a0
-                move.w  d2,$16(a0)
-                lea     $38(a0),a0
-                move.w  d2,$16(a0)
-                lea     $38(a0),a0
-                move.w  d2,$16(a0)
-                lea     $38(a0),a0
-                move.w  d2,$16(a0)
-                lea     $38(a0),a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                add.w   MENUENTRY_DWHEIGHT(a0),d2
-                add.w   d2,d1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a0
-                move.w  #2,d2
-loc_131108:
-                move.w  d1,d0
-                move.w  #$F,d3
-loc_13110E:
-                move.w  d0,$16(a0)
-                addi.w  #$A,d0
-                lea     $38(a0),a0
-                dbf     d3,loc_13110E
-                dbf     d2,loc_131108
+                movem.l d0-d7/a0-a6,-(sp)
+                jsr     _ChooseTeamsFriendly_UpdateMenuEntryYLayout
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 chooseTeamsFriendly_leftListNumEntries:
                 dc.w $0000
@@ -35426,189 +34728,17 @@ chooseTeamsFriendlyMenu2:
 ; ===== ChooseTeamsFriendlyInit =====
 ; prototype: void __usercall ChooseTeamsFriendlyInit()
 ChooseTeamsFriendlyInit:
-                move.w  (numSelectedTeams).l,(numSelectedTeamsCopy).l
-                move.w  (numSelectedTeams).l,(selTeamsUpperBound).l
-                lea     (teamPointers).l,a1
-                lea     (teamNumbersIndices).l,a2
-                lea     (selTeamsPtr).l,a0
-                clr.w   d7
-loc_1316C8:
-                move.l  a0,(a1)+
-                move.b  d7,(a2)+
-                adda.l  #684,a0
-                addq.w  #1,d7
-                cmp.w   (selTeamsUpperBound).l,d7
-                bne.s   loc_1316C8
-                move.w  (selTeamsUpperBound).l,d2
-                subq.w  #2,d2
-                bmi.w   loc_131736
-                lea     (teamPointers).l,a3
-loc_1316EE:
-                lea     (teamNumbersIndices).l,a2
-                clr.w   d3
-                move.w  d2,d1
-loc_1316F8:
-                move.b  (a2)+,d0
-                ext.w   d0
-                lsl.w   #2,d0
-                movea.l (a3,d0.w),a0
-                lea     5(a0),a0
-                move.b  (a2),d0
-                ext.w   d0
-                lsl.w   #2,d0
-                movea.l (a3,d0.w),a1
-                lea     5(a1),a1
-loc_131714:
-                move.b  (a0)+,d0
-                beq.s   loc_13172E
-                cmp.b   (a1)+,d0
-                bcs.s   loc_13172E
-                bhi.s   loc_131720
-                bra.s   loc_131714
-loc_131720:
-                move.b  -1(a2),d0
-                move.b  (a2),-1(a2)
-                move.b  d0,(a2)
-                move.w  #1,d3
-loc_13172E:
-                dbf     d1,loc_1316F8
-                tst.w   d3
-                bne.s   loc_1316EE
-loc_131736:
-                lea     (menuEntries).l,a2
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a2),a1
-                movea.l (chooseTeamsHeader1stPart).l,a0
-                cmpa.l  #0,a0
-                bne.s   loc_13179E
-                lea     (aAllSelectedTea).l,a0 ; "ALL SELECTED TEAMS FOR "
-                jsr     StringCopy
-                movea.l (gameTypeStr).l,a0
-                cmpa.l  #0,a0
-                beq.s   loc_13176C
-                jsr     StringCopy
-loc_13176C:
-                movea.l $26(a2),a0
-                jsr     GetStringLength
-                move.w  d0,d1
-                movea.l (curCountryStr).l,a0
-                jsr     GetStringLength
-                add.w   d0,d1
-                cmpi.w  #'/',d1
-                bhi.s   loc_1317A4
-                move.b  #' ',(a1)+
-                move.b  #'-',(a1)+
-                move.b  #' ',(a1)+
-                movea.l (curCountryStr).l,a0
-loc_13179E:
-                jsr     StringCopy
-loc_1317A4:
-                cmpi.w  #8,(selTeamsUpperBound).l
-                bhi.s   loc_1317C8
-                clr.w   (viewTeamsColumn1).l
-                move.w  (selTeamsUpperBound).l,(viewTeamsColumn2).l
-                clr.w   (viewTeamsColumn3).l
-                bra.w   loc_13180A
-loc_1317C8:
-                move.w  (selTeamsUpperBound).l,d0
-                ext.l   d0
-                divu.w  #3,d0
-                move.w  d0,(viewTeamsColumn1).l
-                move.w  d0,(viewTeamsColumn2).l
-                move.w  d0,(viewTeamsColumn3).l
-                swap    d0              ; D0 = num. teams % 3
-                cmpi.w  #1,d0
-                bne.s   loc_1317F8
-                addq.w  #1,(viewTeamsColumn2).l
-                bra.w   loc_13180A
-loc_1317F8:
-                cmpi.w  #2,d0
-                bne.s   loc_13180A
-                addq.w  #1,(viewTeamsColumn1).l
-                addq.w  #1,(viewTeamsColumn2).l
-loc_13180A:
-                bsr.w   ViewSelTeamsSetColumns
-                tst.w   (choosingPreset).l
-                beq.s   loc_131828
-                cmpi.l  #copaAmerica,(selectedContest).l
-                bne.s   loc_131828
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1030).l
-loc_131828:
-                bsr.w   SetChooseChangeTeamsEntries
-                bsr.w   SetTeamEntriesStringsAndColors
-                cmpi.w  #2,(viewSelectedTeams).l
-                beq.s   loc_131846
-                cmpi.w  #1,(viewSelectedTeams).l
-                beq.s   loc_131850
+                movem.l d0-d7/a0-a6,-(sp)
+                jsr     _ChooseTeamsFriendlyInit
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
-loc_131846:
-                move.w  #76,d0
-                jmp     SetCurrentEntry
-loc_131850:
-                move.w  #74,d0
-                jmp     SetCurrentEntry
 
 ; ===== SetTeamEntriesStringsAndColors =====
 ; prototype: void __usercall SetTeamEntriesStringsAndColors()
 SetTeamEntriesStringsAndColors:
-                lea     (teamNumbersIndices).l,a3
-                lea     (teamPointers).l,a4
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a2
-                clr.w   d6
-loc_13186C:
-                move.w  #1,MENUENTRY_ISINVISIBLE(a2)
-                cmp.w   (selTeamsUpperBound).l,d6
-                bcc.w   loc_131902
-loc_13187C:
-                move.w  MENUENTRY_ORDINAL(a2),d0
-                subq.w  #8,d0
-                ext.l   d0
-                divu.w  #22,d0
-                bne.s   loc_131892
-                move.w  (viewTeamsColumn1).l,d1
-                bra.s   loc_1318A6
-loc_131892:
-                cmpi.w  #1,d0
-                bne.s   loc_1318A0
-                move.w  (viewTeamsColumn2).l,d1
-                bra.s   loc_1318A6
-loc_1318A0:
-                move.w  (viewTeamsColumn3).l,d1
-loc_1318A6:
-                swap    d0
-                cmp.w   d1,d0
-                bcs.s   loc_1318C0
-                lea     56(a2),a2
-                cmpi.w  #74,MENUENTRY_ORDINAL(a2)
-                beq.s   locret_131914
-                move.w  #1,MENUENTRY_ISINVISIBLE(a2)
-                bra.s   loc_13187C
-loc_1318C0:
-                clr.w   MENUENTRY_ISINVISIBLE(a2)
-                move.b  (a3)+,d0
-                ext.w   d0
-                lsl.w   #2,d0
-                movea.l (a4,d0.w),a0
-                lea     TEAMFILE_TEAMNAME(a0),a1
-                move.l  a1,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a2)
-                move.w  #PINK_TO_BROWN_9,d1
-                cmpi.b  #TEAM_NOT_SELECTED,TEAMFILE_TEAMCONTROLS(a0)
-                beq.s   loc_1318FE
-                move.w  #RED_10,d1
-                cmpi.b  #TEAM_COMPUTER,TEAMFILE_TEAMCONTROLS(a0)
-                beq.s   loc_1318FE
-                move.w  #BLUE_TO_PURPLE_11,d1
-                cmpi.b  #TEAM_PLAYER_COACH,TEAMFILE_TEAMCONTROLS(a0)
-                beq.s   loc_1318FE
-                move.w  #BRIGHT_BLUE_TO_BLUE_13,d1
-loc_1318FE:
-                move.w  d1,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a2)
-loc_131902:
-                lea     56(a2),a2
-                cmpi.w  #74,MENUENTRY_ORDINAL(a2)
-                beq.s   locret_131914
-                addq.w  #1,d6
-                bra.w   loc_13186C
-locret_131914:
+                movem.l d0-d7/a0-a6,-(sp)
+                jsr     _SetTeamEntriesStringsAndColors
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
 ; ===== ChangeTeams =====
@@ -35637,59 +34767,21 @@ ChooseTeamsFriendlyOnSelect76:
 ; unselected -> CPU -> player coach -> coach -> unselected...
 ; It also updates the menu to reflect the new selection.
 ChooseTeamsFriendlyCommon:
-                move.w  2(a5),d0
-                subq.w  #8,d0
-                cmpi.w  #SPRITEGRAPHICS_ORDINAL,d0
-                bcs.s   loc_1319BA
-                cmpi.w  #44,d0
-                bcs.s   loc_1319B0
-                subi.w  #22,d0
-                add.w   (viewTeamsColumn2).l,d0
-loc_1319B0:
-                subi.w  #22,d0
-                add.w   (viewTeamsColumn1).l,d0
-loc_1319BA:
-                lea     (teamNumbersIndices).l,a0
-                move.b  (a0,d0.w),d0
-                ext.w   d0
-                lsl.w   #2,d0
-                lea     (teamPointers).l,a0
-                movea.l (a0,d0.w),a0
-                cmpi.b  #TEAM_NOT_SELECTED,TEAMFILE_TEAMCONTROLS(a0)
-                beq.s   loc_131A1A
-                cmpi.b  #TEAM_COMPUTER,TEAMFILE_TEAMCONTROLS(a0)
-                beq.s   loc_1319FE
-                cmpi.b  #TEAM_PLAYER_COACH,TEAMFILE_TEAMCONTROLS(a0)
-                beq.s   loc_131A0C
-                move.w  #COLOR_PINK_GRAYISH,$1E(a5)
-                move.b  #TEAM_NOT_SELECTED,TEAMFILE_TEAMCONTROLS(a0)
-                subq.w  #1,(numSelectedTeamsCopy).l
-                bra.s   loc_131A2C
-loc_1319FE:
-                move.b  #TEAM_PLAYER_COACH,TEAMFILE_TEAMCONTROLS(a0)
-                move.w  #COLOR_PURPLISH,$1E(a5)
-                bra.s   loc_131A2C
-loc_131A0C:
-                move.b  #TEAM_COACH,TEAMFILE_TEAMCONTROLS(a0)
-                move.w  #COLOR_LIGHT_BLUE,$1E(a5)
-                bra.s   loc_131A2C
-loc_131A1A:
-                move.w  #COLOR_RED,$1E(a5)
-                move.b  #TEAM_COMPUTER,TEAMFILE_TEAMCONTROLS(a0)
-                addq.w  #1,(numSelectedTeamsCopy).l
-loc_131A2C:
-                bsr.w   ChooseTeamsFriendly_DrawChangeTeamsPrompt
-                jmp     CallDrawMenuItem
+                movem.l d2-d7/a2-a6,-(sp)
+                move.l  a5,-(sp)
+                jsr     _ChooseTeamsFriendlyCommon
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== ChooseTeamsFriendly_DrawChangeTeamsPrompt =====
 ; prototype: void __usercall ChooseTeamsFriendly_DrawChangeTeamsPrompt()
 ChooseTeamsFriendly_DrawChangeTeamsPrompt:
-                move.l  a5,-(sp)
-                bsr.w   SetChooseChangeTeamsEntries
+                movem.l d0-d7/a0-a6,-(sp)
+                jsr     _SetChooseChangeTeamsEntries
                 lea     (chooseTeamsFriendly_changeTeamsPromptDrawList).l,a0
                 jsr     DrawMenuItemsWaitForVSync
-                movea.l (sp)+,a5
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 chooseTeamsFriendly_changeTeamsPromptDrawList:
                 dc.l $004D004C,$004AFFFF
@@ -35697,52 +34789,9 @@ chooseTeamsFriendly_changeTeamsPromptDrawList:
 ; ===== SetChooseChangeTeamsEntries =====
 ; prototype: void __usercall SetChooseChangeTeamsEntries()
 SetChooseChangeTeamsEntries:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1030)).l,a0
-                lea     (aChooseTeams).l,a1 ; "CHOOSE TEAMS"
-                move.w  (numSelectedTeamsCopy).l,d0
-                cmp.w   (numNeededTeams).l,d0
-                bne.s   loc_131A74
-                lea     (aChangeTeams).l,a1 ; "CHANGE TEAMS"
-loc_131A74:
-                move.l  a1,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$10A0)).l,a5
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$10D8)).l,a4
-                move.w  (numSelectedTeamsCopy).l,d0
-                cmp.w   (numNeededTeams).l,d0
-                beq.s   loc_131A9A
-                move.w  #1,MENUENTRY_ISINVISIBLE(a5)
-                clr.w   MENUENTRY_ISINVISIBLE(a4)
-                bra.s   loc_131AB2
-loc_131A9A:
-                clr.w   MENUENTRY_ISINVISIBLE(a5)
-                move.w  #1,MENUENTRY_ISINVISIBLE(a4)
-                move.w  #ENTRY_STRING,MENUENTRY_CONTENT(a5)
-                move.l  (playWhatStr).l,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a5)
-loc_131AB2:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$10D8)).l,a5
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a5),a1
-                move.w  (numSelectedTeamsCopy).l,d0
-                sub.w   (numNeededTeams).l,d0
-                beq.s   loc_131AFA
-                bpl.s   loc_131AE0
-                neg.w   d0
-                lea     (aSelect1MoreTea).l,a0 ; "SELECT 1 MORE TEAM"
-                cmpi.w  #1,d0
-                beq.s   loc_131B00
-                lea     (aSelect0MoreTea).l,a0 ; "SELECT %0 MORE TEAMS"
-                bra.s   loc_131AF2
-loc_131AE0:
-                lea     (aSelect1LessTea).l,a0 ; "SELECT 1 LESS TEAM"
-                cmpi.w  #1,d0
-                beq.s   loc_131B00
-                lea     (aSelect0LessTea).l,a0 ; "SELECT %0 LESS TEAMS"
-loc_131AF2:
-                jsr     PrintFormatted
-                rts
-loc_131AFA:
-                lea     (aError).l,a0   ; "ERROR"
-loc_131B00:
-                jsr     StringCopy
+                movem.l d0-d7/a0-a6,-(sp)
+                jsr     _SetChooseChangeTeamsEntries
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
 ; ===== ViewSelTeamsSetColumns =====
@@ -35750,69 +34799,9 @@ loc_131B00:
 ; Set columns and dynamically calculate height of entries
 ; depending on their number.
 ViewSelTeamsSetColumns:
-                move.w  (viewTeamsColumn1).l,d1
-                cmp.w   (viewTeamsColumn2).l,d1
-                bhi.s   loc_131B1C
-                move.w  (viewTeamsColumn2).l,d1
-loc_131B1C:
-                cmp.w   (viewTeamsColumn3).l,d1
-                bhi.s   loc_131B2A
-                move.w  (viewTeamsColumn3).l,d1
-loc_131B2A:
-                lea     (menuEntries).l,a0
-                move.w  MENUENTRY_Y(a0),d0
-                add.w   MENUENTRY_DWHEIGHT(a0),d0
-                move.w  d0,(viewTeamsStartY).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1068)).l,a0
-                move.w  MENUENTRY_Y(a0),(viewTeamsAbortY).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a0
-                move.w  MENUENTRY_DWHEIGHT(a0),d7
-                move.w  #$A,d4
-loc_131B54:
-                move.w  d1,d0
-                mulu.w  d4,d0
-                move.w  (viewTeamsAbortY).l,d2
-                sub.w   (viewTeamsStartY).l,d2
-                sub.w   d7,d2
-                sub.w   d0,d2
-                cmpi.w  #4,d2
-                bge.s   loc_131B72
-                subq.w  #1,d4
-                bra.s   loc_131B54
-loc_131B72:
-                move.w  d2,d1
-                ext.l   d1
-                divu.w  #3,d1
-                move.w  d1,d2
-                add.w   (viewTeamsStartY).l,d2
-                move.w  d2,$16(a0)
-                lea     $38(a0),a0
-                move.w  d2,$16(a0)
-                lea     $38(a0),a0
-                move.w  d2,$16(a0)
-                lea     $38(a0),a0
-                move.w  d2,$16(a0)
-                lea     $38(a0),a0
-                move.w  d2,$16(a0)
-                lea     $38(a0),a0
-                move.w  d2,$16(a0)
-                lea     $38(a0),a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a0
-                add.w   MENUENTRY_DWHEIGHT(a0),d2
-                add.w   d2,d1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a0
-                move.w  #2,d2
-loc_131BC4:
-                move.w  d1,d0
-                move.w  #$15,d3
-loc_131BCA:
-                move.w  d0,$16(a0)
-                move.w  d4,$1A(a0)
-                subq.w  #1,$1A(a0)
-                add.w   d4,d0
-                lea     $38(a0),a0
-                dbf     d3,loc_131BCA
-                dbf     d2,loc_131BC4
+                movem.l d0-d7/a0-a6,-(sp)
+                jsr     _ViewSelTeamsSetColumns
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
 ; ===== DeselectAllTeams =====
@@ -47287,45 +46276,28 @@ tacticPosMap10:
 ; unsigned __int8[11]
 tacticPosMap11:
                 dc.b $00,$01,$03,$03,$02,$04,$06,$06,$05,$06,$07 ; Position group mapping for tactic 11.
+; ===== SelectAndShowSquadToView ===== (ported to C → _SelectAndShowSquadToView)
+; Bridge: a1=teamNumbers, d0=numTeams, d1=rowMode
 SelectAndShowSquadToView:
-                lea     (aSelectSquadToV).l,a0 ; "SELECT SQUAD TO VIEW"
-                movem.l d1,-(sp)
-                bsr.w   ChooseTeamForEditTactics
-                movem.l (sp)+,d1
-                cmpa.l  #0,a0
-                beq.s   locret_1391AA
-                bra.w   loc_1391C4
-locret_1391AA:
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)
+                andi.l  #$FFFF,d0
+                move.l  d0,-(sp)
+                move.l  a1,-(sp)
+                jsr     _SelectAndShowSquadToView
+                lea     12(sp),sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
+; ===== loc_1391AC ===== (ported to C → _SelectAndShowSquadToView_Direct)
+; Bridge: d1=rowMode
 loc_1391AC:
-                move.w  (selTeamNumber).l,d0
-                movem.l d1,-(sp)
-                jsr     VerifyTeamLoaded
-                movem.l (sp)+,d1
-                bra.w   *+4
-loc_1391C4:
-                move.l  a0,(squadTeamFilePtr).l
-                move.w  d1,(squadRowMode).l
-                move.w  d1,(inEditTactics).l
-                move.w  (diyCompetitionStart+DIY_COMPETITION_FIELD_2+$2A).l,d0
-                cmpi.w  #4,d0
-                bne.s   loc_1391E6
-                move.w  #0,d0
-loc_1391E6:
-                move.w  d0,(teamSkillDiffAfterChange).l
-                move.w  (gameType).l,d0
-                cmpi.w  #1,d0
-                beq.s   loc_13920E
-                cmpi.w  #2,d0
-                beq.s   loc_13920E
-                cmpi.b  #1,4(a0)
-                beq.s   loc_13920E
-                move.w  #$FFFF,(teamSkillDiffAfterChange).l
-loc_13920E:
-                lea     (squadMenu).l,a6
-                movem.l a5,-(sp)
-                jsr     ShowMenu
-                movem.l (sp)+,a5
+                movem.l d2-d7/a2-a6,-(sp)
+                andi.l  #$FFFF,d1
+                move.l  d1,-(sp)
+                jsr     _SelectAndShowSquadToView_Direct
+                addq.l  #4,sp
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 ; Menu_Squad
 squadMenu:
@@ -49172,13 +48144,12 @@ StatsHighestScorerList:
 CompetitionInfo:
                 jmp     _CompetitionInfo
 
-; ===== StatsViewSquads =====
-; prototype: void __usercall StatsViewSquads(unsigned __int16 numTeams@<d0>, unsigned __int16 arg@<d1>, TeamFile *teams@<a1>)
+; ===== StatsViewSquads ===== (ported to C → _StatsViewSquads)
 StatsViewSquads:
-                movea.l (diyTeamsBufferPtr).l,a1
-                move.w  (diyNumberOfTeams).l,d0
-                move.w  (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+2).l,d1
-                jmp SelectAndShowSquadToView(pc)
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _StatsViewSquads
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
 ; ===== StatsExit =====
 ; Ported to C: _StatsExit in src/menus.c
@@ -50831,38 +49802,11 @@ ViewCompetitionsMenu:
                 jmp     _ViewCompetitionsMenu
 
 ; ===== SquadMenu =====
-; prototype: unsigned __int16 __usercall SquadMenu@<d0>()
+; ===== SquadMenu ===== (ported to C → _SquadMenu)
 SquadMenu:
-                cmpi.w  #GAME_TYPE_SEASON,(gameType).l
-                beq.s   loc_13BC4E
-                move.w  (primaryCompSquadViewParam).l,d1
-                jmp loc_1391AC(pc)
-loc_13BC4E:
-                move.w  (seasonNumberOfSquads).l,d0
-                bne.s   loc_13BC82
-                lea     (competitionFileBuffer).l,a0
-                move.w  numDiyTeams-competitionFileBuffer(a0),d0
-                lea     302(a0),a1
-                cmpi.w  #0,(a0)
-                beq.s   loc_13BC78
-                lea     590(a0),a1
-                cmpi.w  #1,(a0)
-                beq.s   loc_13BC78
-                lea     154(a0),a1
-loc_13BC78:
-                move.w  (primaryCompSquadViewParam).l,d1
-                jmp SelectAndShowSquadToView(pc)
-loc_13BC82:
-                cmpi.w  #1,d0
-                bne.s   loc_13BC9E
-                move.w  (seasonSquadTeamNumbers).l,d0
-                jsr     VerifyTeamLoaded
-                move.w  (primaryCompSquadViewParam).l,d1
-                jmp loc_1391C4(pc)
-loc_13BC9E:
-                lea     (seasonSquadTeamNumbers).l,a1
-                move.w  (primaryCompSquadViewParam).l,d1
-                jmp SelectAndShowSquadToView(pc)
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _SquadMenu
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== ClubBusinessMenu =====
@@ -53501,93 +52445,9 @@ selectTeamsForTacticsMenu:
 ; ===== SelTeamForTacticsInit =====
 ; prototype: void __usercall SelTeamForTacticsInit()
 SelTeamForTacticsInit:
-                lea     (menuEntries).l,a0
-                move.l  (chooseTeamMenuName).l,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0)
-                cmpi.w  #66,(numTeamsCountryBuffer).l
-                bcs.s   loc_13DCC0
-                move.w  #22,(selTeamsColumn1).l
-                move.w  #21,(selTeamsColumn2).l
-                move.w  #21,(selTeamsColumn3).l
-                bra.w   loc_13DD3A
-loc_13DCC0:
-                cmpi.w  #8,(numTeamsCountryBuffer).l
-                bhi.s   loc_13DCE4
-                clr.w   (selTeamsColumn1).l
-                move.w  (numTeamsCountryBuffer).l,(selTeamsColumn2).l
-                clr.w   (selTeamsColumn3).l
-                bra.w   loc_13DD3A
-loc_13DCE4:
-                move.w  (numTeamsCountryBuffer).l,d0
-                ext.l   d0
-                divu.w  #3,d0
-                move.w  d0,(selTeamsColumn1).l
-                move.w  d0,(selTeamsColumn2).l
-                move.w  d0,(selTeamsColumn3).l
-                swap    d0
-                cmpi.w  #1,d0
-                bne.s   loc_13DD28
-                cmpi.w  #64,(numTeamsCountryBuffer).l
-                bne.s   loc_13DD1E
-                addq.w  #1,(selTeamsColumn1).l
-                bra.w   loc_13DD3A
-loc_13DD1E:
-                addq.w  #1,(selTeamsColumn2).l
-                bra.w   loc_13DD3A
-loc_13DD28:
-                cmpi.w  #2,d0
-                bne.s   loc_13DD3A
-                addq.w  #1,(selTeamsColumn1).l
-                addq.w  #1,(selTeamsColumn2).l
-loc_13DD3A:
-                bsr.w   SelTeamForTactics_ReflowTeamListLayout
-                bra.w   *+4
-loc_13DD42:
-                lea     (indexCountries).l,a1
-                lea     (dwArrayCountries).l,a3
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a2
-                clr.w   d6
-loc_13DD54:
-                move.w  #1,4(a2)
-                cmp.w   (numTeamsCountryBuffer).l,d6
-                bcc.w   loc_13DDBA
-loc_13DD64:
-                move.w  2(a2),d0
-                subq.w  #1,d0
-                ext.l   d0
-                divu.w  #$16,d0
-                bne.s   loc_13DD7A
-                move.w  (selTeamsColumn1).l,d1
-                bra.s   loc_13DD90
-loc_13DD7A:
-                cmpi.w  #1,d0
-                bne.s   loc_13DD88
-                move.w  (selTeamsColumn2).l,d1
-                bra.s   loc_13DD90
-loc_13DD88:
-                move.w  d2,d1
-                move.w  (selTeamsColumn3).l,d1
-loc_13DD90:
-                swap    d0
-                cmp.w   d1,d0
-                bcs.s   loc_13DDAA
-                lea     56(a2),a2
-                cmpi.w  #67,2(a2)
-                beq.s   locret_13DDCA
-                move.w  #1,4(a2)
-                bra.s   loc_13DD64
-loc_13DDAA:
-                clr.w   4(a2)
-                move.b  (a1)+,d0
-                ext.w   d0
-                lsl.w   #2,d0
-                move.l  (a3,d0.w),$26(a2)
-loc_13DDBA:
-                lea     $38(a2),a2
-                cmpi.w  #$43,2(a2)      ; 'C'
-                beq.s   locret_13DDCA
-                addq.w  #1,d6
-                bra.s   loc_13DD54
-locret_13DDCA:
+                movem.l d0-d7/a0-a6,-(sp)
+                jsr     _SelTeamForTacticsInit
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
 ; ===== SelTeamForTacticsExit =====
@@ -55803,143 +54663,18 @@ selectTeamsMenu:
 ; ===== SelectTeamsInit =====
 ; prototype: void __usercall SelectTeamsInit()
 SelectTeamsInit:
-                bsr.w   SelectTeamsReinit
-                tst.w   (stayInSelectTeams).l
-                beq.s   loc_13F15A
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$268)).l,a5
-                bra.w   SelectLeaguesCommon
-loc_13F15A:
-                tst.w   (exitFlag).l
-                bne.w   ExitSelectTeams
+                movem.l d0-d7/a0-a6,-(sp)
+                jsr     _SelectTeamsInit
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
 ; ===== SelectTeamsReinit =====
 ; prototype: void __usercall SelectTeamsReinit()
 SelectTeamsReinit:
-                move.w  (chooseTeamsNumTeams).l,d0
-                addq.w  #2,d0
-                ext.l   d0
-                divu.w  #3,d0
-                add.w   (numLeaguesInCountry).l,d0
-                cmpi.w  #18,d0
-                bls.s   loc_13F1AE
-                move.w  #10,d1
-                cmpi.w  #19,d0
-                beq.s   loc_13F18E
-                move.w  #15,d1
-loc_13F18E:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1308)).l,a0
-                add.w   d1,MENUENTRY_Y(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1340)).l,a0
-                add.w   d1,MENUENTRY_Y(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1378)).l,a0
-                add.w   d1,MENUENTRY_Y(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$13B0)).l,a0
-                add.w   d1,MENUENTRY_Y(a0)
-loc_13F1AE:
-                move.w  (numLeaguesInCountry).l,d0
-                move.w  (teamDepthLevel).l,d0
-                cmp.w   (topOfStackMark).l,d0
-                bne.s   loc_13F1DE
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1340)).l,a0
-                move.l  #aAbort,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "ABORT" ...
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #RED_10,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-loc_13F1DE:
-                lea     (menuEntries).l,a2
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a2),a1
-                movea.l (chooseTeamsHeader1stPart).l,a0
-                cmpa.l  #0,a0
-                bne.s   loc_13F20E
-                lea     (aChooseTeamsFor).l,a0 ; "CHOOSE TEAMS FOR "
-                move.w  (numSelectedTeams).l,d0
-                cmp.w   (numNeededTeams).l,d0
-                bne.s   loc_13F20E
-                lea     (aChangeTeamsFor).l,a0 ; "CHANGE TEAMS FOR "
-loc_13F20E:
-                jsr     StringCopy
-                movea.l (gameTypeStr).l,a0
-                cmpa.l  #0,a0
-                beq.s   loc_13F228
-                jsr     StringCopy
-loc_13F228:
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a2),a0
-                jsr     GetStringLength
-                move.w  d0,d1
-                movea.l (curCountryStr).l,a0
-                jsr     GetStringLength
-                add.w   d0,d1
-                cmpi.w  #47,d1
-                bhi.s   loc_13F260
-                move.b  #' ',(a1)+
-                move.b  #'-',(a1)+
-                move.b  #' ',(a1)+
-                movea.l (curCountryStr).l,a0
-                jsr     StringCopy
-loc_13F260:
-                clr.w   (startingTeamIndex).l
-                move.w  #0,(teamsLowerBound).l
-                cmpi.w  #66,(chooseTeamsNumTeams).l
-                bcs.s   loc_13F294
-                move.w  #22,(numTeamsColumn1).l
-                move.w  #21,(numTeamsColumn2).l
-                move.w  #21,(numTeamsColumn3).l
-                bra.w   loc_13F30E
-loc_13F294:
-                cmpi.w  #8,(chooseTeamsNumTeams).l
-                bhi.s   loc_13F2B8
-                clr.w   (numTeamsColumn1).l
-                move.w  (chooseTeamsNumTeams).l,(numTeamsColumn2).l
-                clr.w   (numTeamsColumn3).l
-                bra.w   loc_13F30E
-loc_13F2B8:
-                move.w  (chooseTeamsNumTeams).l,d0
-                ext.l   d0
-                divu.w  #3,d0
-                move.w  d0,(numTeamsColumn1).l
-                move.w  d0,(numTeamsColumn2).l
-                move.w  d0,(numTeamsColumn3).l
-                swap    d0
-                cmpi.w  #1,d0
-                bne.s   loc_13F2FC
-                cmpi.w  #64,(chooseTeamsNumTeams).l
-                bne.s   loc_13F2F2
-                addq.w  #1,(numTeamsColumn1).l
-                bra.w   loc_13F30E
-loc_13F2F2:
-                addq.w  #1,(numTeamsColumn2).l
-                bra.w   loc_13F30E
-loc_13F2FC:
-                cmpi.w  #2,d0
-                bne.s   loc_13F30E
-                addq.w  #1,(numTeamsColumn1).l
-                addq.w  #1,(numTeamsColumn2).l
-loc_13F30E:
-                bsr.w   SetTeamsCoordinates
-                bsr.w   SetLeagueNames
-                bsr.w   SetCountryNames
-                move.w  (prevSelectedTeamEntry).l,d0
-                cmpi.w  #$FFFF,d0
-                beq.s   loc_13F348
-                movem.l d0,-(sp)
-                jsr     CalcMenuEntryAddress
-                movem.l (sp)+,d0
-                tst.w   MENUENTRY_ISINVISIBLE(a0)
-                beq.s   loc_13F340
-                move.w  #$FFFF,d0
-                bra.s   loc_13F348
-loc_13F340:
-                jsr     SetCurrentEntry
-                bra.s   loc_13F35A
-loc_13F348:
-                tst.w   (chooseTeamsNumTeams).l
-                bne.s   loc_13F35A
-                move.w  #11,d0
-                jsr     SetCurrentEntry
-loc_13F35A:
-                bra.w   CheckNumberOfTeams
+                movem.l d0-d7/a0-a6,-(sp)
+                jsr     _SelectTeamsReinit
+                movem.l (sp)+,d0-d7/a0-a6
+                rts
 
 ; ===== SetLeagueNames =====
 ; prototype: void __usercall SetLeagueNames()
@@ -55985,67 +54720,9 @@ SelectLeaguesCommon:
 ; ===== SetTeamsCoordinates =====
 ; prototype: void __usercall SetTeamsCoordinates()
 SetTeamsCoordinates:
-                move.w  (numTeamsColumn1).l,d1
-                cmp.w   (numTeamsColumn2).l,d1
-                bhi.s   loc_13F5E8
-                move.w  (numTeamsColumn2).l,d1
-loc_13F5E8:
-                cmp.w   (numTeamsColumn3).l,d1
-                bhi.s   loc_13F5F6
-                move.w  (numTeamsColumn3).l,d1
-loc_13F5F6:
-                move.w  (numLeaguesInCountry).l,d0
-                add.w   d0,d1
-                lea     (menuEntries).l,a0
-                move.w  MENUENTRY_Y(a0),d0
-                add.w   MENUENTRY_DWHEIGHT(a0),d0
-                move.w  d0,(headerYPlusHeight).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1340)).l,a0
-                move.w  MENUENTRY_Y(a0),(exitY).l
-                move.w  d1,d0
-                mulu.w  #9,d0
-                move.w  (exitY).l,d1
-                sub.w   (headerYPlusHeight).l,d1
-                sub.w   d0,d1
-                lsr.w   #1,d1
-                add.w   (headerYPlusHeight).l,d1
-                tst.w   (numLeaguesInCountry).l
-                beq.s   loc_13F68C
-                tst.w   (chooseTeamsNumTeams).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$268)).l,a0
-                move.w  (numLeaguesInCountry).l,d2
-                subq.w  #1,d2
-loc_13F652:
-                move.w  d1,MENUENTRY_Y(a0)
-                addi.w  #9,d1
-                lea     56(a0),a0
-                dbf     d2,loc_13F652
-                bra.s   loc_13F68C
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                move.w  (numLeaguesInCountry).l,d2
-                addq.w  #1,d2
-                lsr.w   #1,d2
-                subq.w  #1,d2
-loc_13F674:
-                move.w  d1,MENUENTRY_Y(a0)
-                lea     56(a0),a0
-                move.w  d1,MENUENTRY_Y(a0)
-                addi.w  #9,d1
-                lea     56(a0),a0
-                dbf     d2,loc_13F674
-loc_13F68C:
-                addq.w  #2,d1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$498)).l,a0
-                move.w  #2,d2
-loc_13F696:
-                move.w  d1,d0
-                move.w  #21,d3
-loc_13F69C:
-                move.w  d0,MENUENTRY_Y(a0)
-                addi.w  #9,d0
-                lea     56(a0),a0
-                dbf     d3,loc_13F69C
-                dbf     d2,loc_13F696
+                movem.l d0-d7/a0-a6,-(sp)
+                jsr     _SetTeamsCoordinates
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
 ; ===== CheckNumberOfTeams =====
@@ -56358,71 +55035,9 @@ chooseTeamsMenu:
 ; This single category can only be club or national teams. And finally sets up the custom menu
 ; title: first part, if given, if not "CHOOSE TEAMS FOR" + game type string (if given).
 ChooseTeamsInit:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                move.w  MENUENTRY_Y(a0),d7
-                lea     (menuEntries).l,a0
-                sub.w   MENUENTRY_Y(a0),d7
-                lsr.w   #1,d7
-                move.w  #4,d6
-                tst.w   (showClubTeams).l
-                bne.s   loc_13FA72
-                subq.w  #1,d6
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                sub.w   d7,MENUENTRY_Y(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a0
-                sub.w   d7,MENUENTRY_Y(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                sub.w   d7,MENUENTRY_Y(a0)
-                move.w  #1,d0
-                jsr     SetCurrentEntry
-loc_13FA72:
-                tst.w   (showNationalTeams).l
-                bne.s   loc_13FAAC
-                subq.w  #1,d6
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$38).l
-                lea     (menuEntries).l,a0
-                add.w   d7,MENUENTRY_Y(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a0
-                sub.w   d7,MENUENTRY_Y(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                sub.w   d7,MENUENTRY_Y(a0)
-                tst.w   (showClubTeams).l
-                bne.s   loc_13FAAC
-                move.w  #2,d0
-                jsr     SetCurrentEntry
-loc_13FAAC:
-                tst.w   (showOrigCustomTeams).l
-                bne.s   loc_13FADA
-                subq.w  #2,d6
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$70).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$A8).l
-                lea     (menuEntries).l,a0
-                add.w   d7,MENUENTRY_Y(a0)
-                add.w   d7,$16(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a0
-                add.w   d7,MENUENTRY_Y(a0)
-                add.w   d7,$16(a0)
-loc_13FADA:
-                cmpi.w  #1,d6
-                bne.s   loc_13FAEE
-                tst.w   (showClubTeams).l
-                bne.w   ClubTeams
-                bra.w   NationalTeams
-loc_13FAEE:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                movea.l chooseTeamsHeader1stPart(pc),a0
-                cmpa.l  #0,a0
-                bne.s   loc_13FB08
-                lea     (aChooseTeamsFor).l,a0 ; "CHOOSE TEAMS FOR "
-loc_13FB08:
-                jsr     StringCopy
-                movea.l gameTypeStr(pc),a0
-                cmpa.l  #0,a0
-                beq.s   locret_13FB20
-                jsr     StringCopy
-locret_13FB20:
+                movem.l d0-d7/a0-a6,-(sp)
+                jsr     _ChooseTeamsInit
+                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
 ; ===== ClubTeams =====
@@ -57319,171 +55934,18 @@ selectFilesMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== SelectFilesInit =====
-; prototype: void __usercall SelectFilesInit()
+; ===== SelectFilesInit ===== (ported to C → _SelectFilesInit)
 SelectFilesInit:
-                tst.w   (savingFile).l
-                beq.s   loc_1401AE
-                tst.b   (inputSaveFilename).l
-                beq.s   loc_1401A2
-                move.w  #49,d0
-                jsr     SetCurrentEntry
-                bra.s   loc_1401C0
-loc_1401A2:
-                move.w  #48,d0
-                jsr     SetCurrentEntry
-                bra.s   loc_1401C0
-loc_1401AE:
-                tst.w   (numMatchedFiles).l
-                bne.s   loc_1401C0
-                move.w  #50,d0
-                jsr     SetCurrentEntry
-loc_1401C0:
-                move.w  (numMatchedFiles).l,d2
-                subq.w  #2,d2
-                bmi.w   loc_140214
-loc_1401CC:
-                lea     (foundFilesPtrTable).l,a2
-                lea     (extensionsBuffer).l,a3
-                clr.w   d3
-                move.w  d2,d1
-loc_1401DC:
-                movea.l (a2)+,a0
-                move.l  (a3)+,d0
-                cmp.l   (a3),d0
-                bcs.s   loc_14020C
-                bhi.s   loc_1401F4
-                movea.l (a2),a1
-loc_1401E8:
-                move.b  (a0)+,d0
-                beq.s   loc_14020C
-                cmp.b   (a1)+,d0
-                bcs.s   loc_14020C
-                bhi.s   loc_1401F4
-                bra.s   loc_1401E8
-loc_1401F4:
-                move.l  -4(a2),d0
-                move.l  (a2),-4(a2)
-                move.l  d0,(a2)
-                move.l  -4(a3),d0
-                move.l  (a3),-4(a3)
-                move.l  d0,(a3)
-                move.w  #1,d3
-loc_14020C:
-                dbf     d1,loc_1401DC
-                tst.w   d3
-                bne.s   loc_1401CC
-loc_140214:
-                bra.w   *+4
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _SelectFilesInit
+                movem.l (sp)+,d2-d7/a2-a6
+                rts
 
-; ===== SelectFilesOnReturn =====
-; prototype: void __usercall SelectFilesOnReturn()
+; ===== SelectFilesOnReturn ===== (ported to C → _SelectFilesOnReturn)
 SelectFilesOnReturn:
-                lea     (menuEntries).l,a0
-                move.l  (menuTitle).l,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0)
-                tst.w   (savingFile).l
-                beq.s   loc_140266
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A80)).l,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                clr.b   (a1)
-                lea     (inputSaveFilename).l,a0
-                move.b  #46,d0
-                jsr     StringCopyUntilChar
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A48)).l,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                tst.b   (inputSaveFilename).l
-                beq.s   loc_140264
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$AB8)).l,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                bra.s   loc_140270
-loc_140264:
-                bra.s   loc_140270
-loc_140266:
-                tst.w   (numMatchedFiles).l
-                bne.w   *+4
-loc_140270:
-                cmpi.w  #8,(numMatchedFiles).l
-                bhi.s   loc_140294
-                clr.w   (selFilesColumn1NumItems).l
-                move.w  (numMatchedFiles).l,(selFilesColumn2NumItems).l
-                clr.w   (selFilesColumn3NumItems).l
-                bra.w   loc_1402D6
-loc_140294:
-                move.w  (numMatchedFiles).l,d0
-                ext.l   d0
-                divu.w  #3,d0
-                move.w  d0,(selFilesColumn1NumItems).l
-                move.w  d0,(selFilesColumn2NumItems).l
-                move.w  d0,(selFilesColumn3NumItems).l
-                swap    d0
-                cmpi.w  #1,d0
-                bne.s   loc_1402C4
-                addq.w  #1,(selFilesColumn2NumItems).l
-                bra.w   loc_1402D6
-loc_1402C4:
-                cmpi.w  #2,d0
-                bne.s   loc_1402D6
-                addq.w  #1,(selFilesColumn1NumItems).l
-                addq.w  #1,(selFilesColumn2NumItems).l
-loc_1402D6:
-                bsr.w   RepositionSelectFileEntries
-                bra.w   *+4
-loc_1402DE:
-                lea     (foundFilesPtrTable).l,a1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a2
-                clr.w   d6
-loc_1402EA:
-                move.w  #1,MENUENTRY_ISINVISIBLE(a2)
-                cmp.w   (numberOfFiles).l,d6
-                bcc.w   loc_140362
-                clr.w   d2
-loc_1402FC:
-                move.w  d2,d1
-                move.w  MENUENTRY_ORDINAL(a2),d0
-                subq.w  #1,d0
-                ext.l   d0
-                divu.w  #$F,d0
-                bne.s   loc_140314
-                add.w   (selFilesColumn1NumItems).l,d1
-                bra.s   loc_14032A
-loc_140314:
-                cmpi.w  #1,d0
-                bne.s   loc_140322
-                add.w   (selFilesColumn2NumItems).l,d1
-                bra.s   loc_14032A
-loc_140322:
-                move.w  d2,d1
-                add.w   (selFilesColumn3NumItems).l,d1
-loc_14032A:
-                swap    d0
-                cmp.w   d2,d0
-                bcs.s   loc_140334
-                cmp.w   d1,d0
-                bcs.s   loc_140348
-loc_140334:
-                lea     MENUENTRY_SIZE(a2),a2
-                cmpi.w  #$2E,MENUENTRY_ORDINAL(a2) ; '.'
-                beq.s   locret_140374
-                move.w  #1,MENUENTRY_ISINVISIBLE(a2)
-                bra.s   loc_1402FC
-loc_140348:
-                clr.w   MENUENTRY_ISINVISIBLE(a2)
-                movea.l (a1)+,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a2),a3
-loc_140352:
-                move.b  (a0)+,(a3)+
-                cmpi.b  #$2E,-1(a0)     ; '.'
-                bne.s   loc_140352
-                clr.b   -1(a3)
-                bne.s   loc_140352
-loc_140362:
-                lea     MENUENTRY_SIZE(a2),a2
-                cmpi.w  #$2E,MENUENTRY_ORDINAL(a2) ; '.'
-                beq.s   locret_140374
-                addq.w  #1,d6
-                bra.w   loc_1402EA
-locret_140374:
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _SelectFilesOnReturn
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== SelFilesDrawItemDescription =====
@@ -66140,316 +64602,13 @@ careerTeamCoachOnly:
 
 ; ===== Career_MaybeGenerateJobOffer =====
 ; prototype: void __usercall Career_MaybeGenerateJobOffer()
+; ===== Career_MaybeGenerateJobOffer =====
+; Ported to C: _Career_MaybeGenerateJobOffer in src/job_offers.c
+; Bridge: no params
 Career_MaybeGenerateJobOffer:
-                cmpi.w  #$FFFF,(teamNoOfferAccepted).l
-                bne.w   locret_149694
-                cmpi.w  #7,(careerSeasonsCompleted).l
-                beq.w   locret_149694
-                move.w  #5,d0
-                sub.w   (numJobOffers).l,d0
-                beq.w   locret_149694
-                cmp.w   (numNewJobOffers).l,d0
-                beq.w   locret_149694
-                cmpi.w  #$13,(currentSeasonShowing).l
-                beq.w   locret_149694
-                cmpi.w  #1,(careerJobOfferMode).l
-                beq.w   loc_149334
-                cmpi.w  #2,(careerJobOfferMode).l
-                beq.w   loc_1492A8
-                tst.w   (youreSacked).l
-                bne.w   loc_149334
-                move.b  (viewRandomPhase).l,d0
-                sub.b   (careerJobOfferPhaseBias).l,d0
-                ext.w   d0
-                lsl.w   #2,d0
-                ext.l   d0
-                divu.w  (wageScalingDivisor).l,d0
-                cmpi.w  #3,d0
-                bne.w   locret_149694
-loc_1492A8:
-                tst.w   (sameNationalCallFlag).l
-                bne.s   loc_14931A
-                move.w  (lastNationalityCall).l,d0
-                cmpi.w  #$FFFF,d0
-                beq.s   loc_14931A
-                cmpi.w  #2,(careerJobOfferMode).l
-                beq.w   loc_1492D0
-                tst.w   (boardConfidenceScore).l
-                beq.s   loc_14931A
-loc_1492D0:
-                jsr     IsNewJobOffer
-                beq.s   loc_14931A
-                jsr     IsOldJobOffer
-                beq.s   loc_14931A
-                cmpi.w  #2,(careerJobOfferMode).l
-                beq.w   loc_149300
-                movem.l d1-d7/a0-a6,-(sp)
-                jsr     GetBoardConfidenceScore
-                movem.l (sp)+,d1-d7/a0-a6
-                cmpi.w  #$C8,d0
-                blt.s   loc_14931A
-loc_149300:
-                move.w  (lastNationalityCall).l,d0
-                lsr.w   #8,d0
-                bsr.w   IsTeamCodeOkForNationalSelector
-                beq.w   loc_14931A
-                move.w  (lastNationalityCall).l,d0
-                bra.w   loc_149678
-loc_14931A:
-                cmpi.w  #2,(careerJobOfferMode).l
-                beq.w   locret_149694
-                jsr     Rand
-                cmpi.w  #$2A,d0         ; '*'
-                bcc.w   locret_149694
-loc_149334:
-                tst.w   (youreSacked).l
-                beq.s   loc_14934E
-                tst.w   (isNationalSelector).l
-                beq.w   loc_14934E
-                move.w  (sackedReputationScore).l,d0
-                bra.s   loc_1493C8
-loc_14934E:
-                tst.w   (isNationalSelector).l
-                beq.w   loc_149360
-                move.w  (nationalSelectorReputationPoints).l,d0
-                bra.s   loc_1493C8
-loc_149360:
-                move.b  (majorTrophyBonusValue).l,d0
-                move.w  d0,d6
-                mulu.w  #$4B,d6         ; 'K'
-                divu.w  #$64,d6         ; 'd'
-                move.w  d0,d7
-                mulu.w  #$96,d7
-                divu.w  #$64,d7         ; 'd'
-                lea     (competitionFileBuffer).l,a6
-                move.w  (selTeamNumber).l,d0
-                movem.l d0/d2-d7/a0-a6,-(sp)
-                jsr     FindTeamInDIY
-                movem.l (sp)+,d0/d2-d7/a0-a6
-                mulu.w  #$64,d1         ; 'd'
-                move.w  (numDiyTeams).l,d0
-                subq.w  #1,d0
-                divs.w  d0,d1
-                move.w  #$64,d2         ; 'd'
-                sub.w   d1,d2
-                move.w  d7,d0
-                sub.w   d6,d0
-                mulu.w  d2,d0
-                divu.w  #$64,d0         ; 'd'
-                add.w   d6,d0
-                tst.w   (isNationalSelector).l
-                bne.s   loc_1493C8
-                move.w  d0,(sackedReputationScore).l
-                move.w  d0,(nationalSelectorReputationPoints).l
-loc_1493C8:
-                tst.w   (youreSacked).l
-                bne.s   loc_1493DE
-                move.w  d0,d7
-                move.w  d7,d6
-                mulu.w  #$4B,d6         ; 'K'
-                divu.w  #$64,d6         ; 'd'
-                bra.s   loc_1493EA
-loc_1493DE:
-                move.w  d0,d7
-                move.w  d7,d6
-                mulu.w  #0,d6
-                divu.w  #$64,d6         ; 'd'
-loc_1493EA:
-                cmpi.w  #1,(careerJobOfferMode).l
-                beq.w   loc_14957A
-                tst.w   (youreSacked).l
-                beq.s   loc_149408
-                tst.w   (isNationalSelector).l
-                bne.w   loc_1495E8
-loc_149408:
-                jsr     Rand
-                cmpi.w  #$15,d0
-                bcc.s   loc_149438
-                tst.w   (isNationalSelector).l
-                bne.w   loc_14957A
-                jsr     Rand
-                cmpi.w  #$55,d0         ; 'U'
-                bcc.w   loc_14950A
-                bsr.w   IsPlayerOkForNationalSelector
-                bne.w   loc_14957A
-                bra.w   loc_14950A
-loc_149438:
-                tst.w   (isNationalSelector).l
-                bne.w   locret_149694
-                move.w  (selTeamNumber).l,d4
-                move.w  #$63,d5         ; 'c'
-loc_14944C:
-                jsr     Rand
-                mulu.w  (numSelectedTeams).l,d0
-                lsr.w   #8,d0
-                lea     (selTeamsPtr).l,a0
-                mulu.w  #$2AC,d0
-                adda.l  d0,a0
-                cmpi.b  #4,$19(a0)
-                beq.w   loc_1494F6
-                move.b  (selTeamNumber).l,d0
-                cmp.b   (a0),d0
-                bne.w   loc_1494F6
-                move.w  (a0),d3
-                cmp.w   d3,d4
-                beq.w   loc_1494F6
-                movem.l a0,-(sp)
-                jsr     GetAveragePlayerPrice
-                movem.l (sp)+,a0
-                cmp.w   d6,d0
-                bcs.w   loc_1494F6
-                cmp.w   d7,d0
-                bhi.w   loc_1494F6
-                move.w  d3,d0
-                movem.l a0,-(sp)
-                jsr     IsNewJobOffer
-                movem.l (sp)+,a0
-                beq.s   loc_1494F6
-                movem.l a0,-(sp)
-                jsr     IsOldJobOffer
-                movem.l (sp)+,a0
-                beq.s   loc_1494F6
-                move.w  (currentDivisionIndex).l,d1
-                cmp.b   $19(a0),d1
-                bne.w   loc_149680
-                lea     (competitionFileBuffer).l,a6
-                movem.l d0/d2-d7/a0-a6,-(sp)
-                jsr     FindTeamInDIY
-                movem.l (sp)+,d0/d2-d7/a0-a6
-                move.w  (diyTeamMinDivisionIndex).l,d2
-                add.w   (diyTeamMaxDivisionOffset).l,d2
-                cmp.w   d2,d1
-                bcs.s   loc_1494F6
-                bra.w   loc_149680
-loc_1494F6:
-                dbf     d5,loc_14944C
-                tst.w   (youreSacked).l
-                beq.w   locret_149694
-                bra.w   loc_14950A
-                rts
-loc_14950A:
-                move.w  (selTeamNumber).l,d4
-                move.w  #$63,d5         ; 'c'
-loc_149514:
-                jsr     Rand
-                mulu.w  (careerFileBuffer).l,d0
-                lsr.w   #8,d0
-                lea     (tmdFileBuffer).l,a0
-                mulu.w  #$2AC,d0
-                adda.l  d0,a0
-                cmpi.b  #4,$19(a0)
-                beq.s   loc_149574
-                move.b  (selTeamNumber).l,d0
-                cmp.b   (a0),d0
-                beq.s   loc_149574
-                move.w  (a0),d3
-                cmp.w   d3,d4
-                beq.w   loc_149574
-                movem.l a0,-(sp)
-loc_14954C:
-                jsr     GetAveragePlayerPrice
-                movem.l (sp)+,a0
-                cmp.w   d6,d0
-                bcs.s   loc_149574
-                cmp.w   d7,d0
-                bhi.s   loc_149574
-                move.w  d3,d0
-                jsr     IsNewJobOffer
-                beq.s   loc_149574
-                jsr     IsOldJobOffer
-                beq.s   loc_149574
-                bra.w   loc_149680
-loc_149574:
-                dbf     d5,loc_149514
-                rts
-loc_14957A:
-                move.w  #$63,d5         ; 'c'
-loc_14957E:
-                jsr     Rand
-                mulu.w  (nat_teams_rand_limit1).l,d0
-                lsr.l   #8,d0
-                mulu.w  #6,d0
-                lea     (nationalTeams).l,a0
-                lea     (a0,d0.w),a0
-                move.w  (a0),d3
-                move.w  4(a0),d0
-                cmp.w   d6,d0
-                bcs.s   loc_1495D6
-                cmp.w   d7,d0
-                bhi.s   loc_1495D6
-                cmp.w   (selTeamNumber).l,d3
-                beq.s   loc_1495D6
-                cmp.w   (lastNationalityCall).l,d3
-                beq.s   loc_1495D6
-                move.b  (a0),d0
-                bsr.w   IsTeamCodeOkForNationalSelector
-                beq.s   loc_1495D6
-                move.w  d3,d0
-                jsr     IsNewJobOffer
-                beq.s   loc_1495D6
-                jsr     IsOldJobOffer
-                beq.s   loc_1495D6
-                bra.w   loc_149678
-loc_1495D6:
-                dbf     d5,loc_14957E
-                tst.w   d6
-                beq.w   locret_149694
-                subq.w  #8,d6
-                bpl.s   loc_14957A
-                clr.w   d6
-                bra.s   loc_14957A
-loc_1495E8:
-                move.b  (nationalTeamFileCode).l,d0
-                jsr     LoadTeamFile
-                move.w  d7,d6
-                lsr.w   #1,d6
-loc_1495F8:
-                move.w  (selTeamNumber).l,d4
-                move.w  #$63,d5         ; 'c'
-loc_149602:
-                jsr     Rand
-                mulu.w  (teamFileBuffer).l,d0
-                lsr.w   #8,d0
-                lea     ((teamFileBuffer+2)).l,a0
-                mulu.w  #$2AC,d0
-                adda.l  d0,a0
-                cmpi.b  #4,$19(a0)
-                beq.w   loc_149668
-                move.w  (a0),d3
-                movem.l a0,-(sp)
-                jsr     GetAveragePlayerPrice
-                movem.l (sp)+,a0
-                cmp.w   d6,d0
-                bcs.w   loc_149668
-                cmp.w   d7,d0
-                bhi.w   loc_149668
-                move.w  d3,d0
-                movem.l a0,-(sp)
-                jsr     IsNewJobOffer
-                movem.l (sp)+,a0
-                beq.s   loc_149668
-                movem.l a0,-(sp)
-                jsr     IsOldJobOffer
-                movem.l (sp)+,a0
-                beq.s   loc_149668
-                bra.w   loc_149680
-loc_149668:
-                dbf     d5,loc_149602
-                tst.w   d6
-                beq.s   locret_149694
-                subq.w  #8,d6
-                bpl.s   loc_1495F8
-                clr.w   d6
-                bra.s   loc_1495F8
-loc_149678:
-                moveq   #$FFFFFFFF,d1
-                jmp     AddJobOffer
-loc_149680:
-                movem.l d0,-(sp)
-                jsr     CalculateStartingBalance
-                movem.l (sp)+,d0
-                jsr     AddJobOffer
-locret_149694:
+                movem.l d2-d7/a2-a6,-(sp)
+                jsr     _Career_MaybeGenerateJobOffer
+                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== IsTeamCodeOkForNationalSelector =====

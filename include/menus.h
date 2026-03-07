@@ -229,4 +229,10 @@ void _ViewSquadInit(void);
 void _ViewSquadCommon(void *entry);
 void _ViewSquadAfterDrawCommon(void *entry);
 
+/* --- Chunk 217: SelectAndShowSquadToView, StatsViewSquads, SquadMenu --- */
+void _SelectAndShowSquadToView(uint16_t *teamNumbers, uint16_t numTeams, uint16_t rowMode);
+void _SelectAndShowSquadToView_Direct(uint16_t rowMode);
+void _StatsViewSquads(void);
+void _SquadMenu(void);
+
 #endif
