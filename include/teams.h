@@ -88,6 +88,9 @@ void _IsContestContinentalCup(void);
 uint16_t _IsClubTeamsContest(uint32_t contest);
 void _SetTeamsTypeForSelectedContest(void);
 
+/* ---- SelectTeamsFinalMenu ---- */
+void _SelectTeamsFinalMenu(uint16_t mode);
+
 /* ---- National team selector utilities (Chunk 91) ---- */
 uint8_t *_GetNationalityRecordPtr(uint16_t teamFileAndOrdinal);
 int16_t _GetNationalTeamNumber(uint16_t nationality);

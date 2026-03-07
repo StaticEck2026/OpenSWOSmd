@@ -8,11 +8,18 @@
 #include "diy_competition.h"
 #include "career_status.h"
 #include "play_match_menu.h"
+#include "career_init.h"
 
 /* ---- Constants ---- */
 #define GAME_TYPE_CAREER            4
-#define CN_EUROPE   80
-#define CN_OCEANIA  85
+#define ORIGINAL_CUSTOM_TEAMS   2
+#define EDITED_CUSTOM_TEAMS     3
+#define CN_EUROPE           80
+#define CN_AFRICA           81
+#define CN_SOUTH_AMERICA    82
+#define CN_NORTH_AMERICA    83
+#define CN_ASIA             84
+#define CN_OCEANIA          85
 
 /* ---- External functions ---- */
 extern void _SetExitMenuFlag(void);
@@ -71,6 +78,64 @@ extern uint16_t viewSelectedTeams;
 extern uint16_t abortSelectTeams;
 extern uint16_t exitSelectTeams;
 extern int16_t  topOfStackMark;
+
+/* Globals for SelectTeamsFinalMenu */
+extern uint8_t customsLeague[];
+extern uint32_t competitionsTable[];
+extern uint32_t teamNames[];
+extern uint32_t leaguesPtrTable[];
+extern uint16_t leagueNumbersTable[];
+extern uint32_t countryNames[];
+extern uint16_t numLeaguesInCountry;
+extern uint16_t chooseTeamsNumTeams;
+extern int16_t  selectedTeamIndex;
+extern int16_t  selectedLeagueIndex;
+extern uint16_t showCupsAndOther;
+extern uint16_t playSeason;
+extern uint16_t loadTeam;
+extern uint16_t stayInSelectTeams;
+extern uint16_t exitFlag;
+extern uint16_t isContestContinentalCup;
+extern uint16_t isCountryNumber;
+extern uint16_t gotCountryName;
+extern uint16_t numberOfLeagues;
+extern uint32_t selectedContest;
+extern uint16_t selectTeamsNoLimit;
+extern uint32_t chooseTeamsHeader1stPart;
+extern uint32_t selectedTeamText;
+extern uint32_t gameTypeStr;
+extern uint32_t playWhatStr;
+extern uint32_t entryText2;
+extern uint8_t  someTeamFlags;
+extern uint16_t isNationalSelector;
+extern uint16_t chooseCompetitionOnly;
+extern uint16_t countryNumber;
+extern uint16_t leagueNumber;
+extern uint16_t contestLeagueNumber;
+extern uint32_t divisionStringTable[];
+extern uint8_t  selectTeamsMenu[];
+extern uint8_t  chooseTeamsFriendlyMenu[];
+extern uint8_t  chooseTeamsFriendlyMenu2[];
+extern uint8_t  europeanChampionships[];
+extern uint8_t  worldCup[];
+extern uint8_t  africanNationsCup[];
+extern uint8_t  copaAmerica[];
+extern uint8_t  northAmericanCup[];
+extern uint8_t  asianCup[];
+extern uint8_t  oceaniaCup[];
+extern uint8_t  northAmericaWorldCupQualification[];
+extern uint8_t  southAmericaWorldCupQualification[];
+extern uint8_t  africaWorldCupQualification[];
+extern uint8_t  asiaWorldCupQualification[];
+extern uint8_t  oceaniaWorldCupQualification[];
+extern uint8_t  aEditedCustomTe_0[]; /* "EDITED CUSTOM TEAMS" */
+extern uint8_t  aPlaySeason[];       /* "PLAY SEASON" */
+extern uint8_t  aPlayTournament[];   /* "PLAY TOURNAMENT" */
+extern uint8_t  aPlayCup[];          /* "PLAY CUP" */
+extern uint8_t  aPlayLeague[];       /* "PLAY LEAGUE" */
+extern const char aCup_0[];          /* "CUP" */
+extern const char aLeague_1[];       /* "LEAGUE" */
+extern uint8_t  countriesStack[];
 
 /* Globals for team navigation stack (Chunk 109) */
 extern uint32_t countriesTable[];
@@ -2663,4 +2728,574 @@ void _SelectTeamsInit(void)
         if (exitFlag != 0)
             _ExitSelectTeams();
     }
+}
+
+/* ================================================================
+ * SelectTeamsFinalMenu  (SWOS2.s line 51856)
+ *
+ * Main team selection state machine. Enumerates competitions for
+ * a given country, builds team/league name lists, shows the
+ * selectTeamsMenu, and handles navigation, team loading, and
+ * competition setup.
+ *
+ * Asm register convention:
+ *   in:  d0.b = mode (0xFF=default, or a nationality/country number)
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _SelectTeamsFinalMenu(uint16_t mode)
+{
+    uint16_t d6;            /* country/team-file number, preserved across calls */
+    uint16_t d7;            /* current country index byte */
+    uint16_t d1;            /* counter for enumeration */
+    uint32_t *a5;           /* pointer into competition entry list, advances via (a5)+ */
+    uint8_t *compEntry;     /* a1 - current competition entry pointer */
+    uint32_t compListAddr;
+    uint32_t *compList;
+    uint32_t *teamNamesPtr;
+    uint32_t *leaguesPtrOut;
+    uint16_t *leagueNumsOut;
+    uint32_t *countryNamesPtr;
+    uint16_t cnCount;
+    uint8_t *contest;
+    uint16_t lnum;
+    uint16_t countryForName;
+    uint16_t countryIdx;
+    uint8_t *ctEntry;
+    uint8_t compType;
+    uint16_t divIdx;
+    uint8_t nameOff;
+    uint8_t *namePtr;
+    int16_t off16;
+    uint8_t *nameTable;
+    uint8_t *cPtr;
+    uint8_t cByte;
+    uint16_t cidx;
+    uint16_t countryByte;
+
+    leagueNumber = 0;
+
+    /* Initialize customsLeague: offset 9 = comp.divisionsCount, offset 0xD = divisions[0].teams */
+    customsLeague[9] = 3;
+    customsLeague[0xD] = 20;
+
+    if (teamsType == EDITED_CUSTOM_TEAMS) {
+        if (_Asset_PromptInsertSaveDiskDf0(aEditedCustomTe_0) != 0)
+            goto exit_clear;
+        if (_LoadTeamFile(100) != 0)
+            goto exit_clear;
+        if (*(uint16_t *)teamFileBuffer == 0x30) {
+            customsLeague[9] = 1;
+            customsLeague[0xD] = 0x30;
+        }
+    }
+
+    /* loc_13DF8E: always executed (unconditional in asm) */
+    customsLeague[9] = 1;
+    customsLeague[0xD] = 0x30;
+
+    exitSelectTeams = 0;
+    isCountryNumber = 0;
+    isContestContinentalCup = 0;
+
+    if ((uint8_t)mode != 255) {
+        d6 = (uint8_t)mode;
+        d7 = (uint8_t)mode;
+        teamDepthLevel = 2;
+        topOfStackMark = 2;
+        goto loc_E004;
+    }
+
+    /* loc_13DFD4: default mode */
+    d6 = 254;
+    if (teamsType == EDITED_CUSTOM_TEAMS) {
+        d6 = 100;
+    } else if (teamsType == ORIGINAL_CUSTOM_TEAMS) {
+        d6 = 72;
+    }
+
+    /* loc_13DFF6: */
+    d7 = (uint8_t)d6;
+    topOfStackMark = 0;
+    teamDepthLevel = 0;
+
+loc_E004:
+    _SetSelectedTeamsStackTop();
+    countryStackPtr = countriesStack;
+
+loc_E012:
+    /* Main loop: enumerate competitions for country d7 */
+    d7 &= 0xFF;
+    countryForName = d7;
+    if (isCountryNumber != 0)
+        countryForName = d6;
+    _GetCountryName(countryForName);
+
+    gotCountryName = 0;
+    if (teamDepthLevel == 2 && isCountryNumber == 0)
+        gotCountryName = 1;
+
+    /* loc_13E046: enumerate competitions */
+    numberOfLeagues = 0;
+    compListAddr = competitionsTable[d7];
+    if (compListAddr == 0) {
+        panicReasonCode = 0x8632;
+        _PanicHaltLoop();
+    }
+    compList = (uint32_t *)compListAddr;
+    teamNamesPtr = teamNames;
+    leaguesPtrOut = leaguesPtrTable;
+    leagueNumsOut = leagueNumbersTable;
+    d1 = 0;
+    a5 = compList;
+
+    /* loc_13E086: iterate through competition entries */
+loc_E086:
+    compEntry = (uint8_t *)*a5;
+    a5++;
+
+    if ((uint32_t)compEntry == 0xFFFFFFFF)
+        goto loc_E2D0;
+
+    if ((uint32_t)compEntry == 0xFFFFFFFE) {
+        if (showCupsAndOther == 0)
+            goto loc_E2D0;
+        goto loc_E086;
+    }
+
+    /* Career mode continental cup filtering (loc_13E0A6) */
+    if (gameType == GAME_TYPE_CAREER) {
+        if (compEntry == africanNationsCup) {
+            if ((uint8_t)(selTeamNumber >> 8) != CN_AFRICA)
+                goto loc_E086;
+            goto loc_E114;
+        }
+        if (compEntry == copaAmerica) {
+            if ((uint8_t)(selTeamNumber >> 8) != CN_SOUTH_AMERICA)
+                goto loc_E086;
+            goto loc_E114;
+        }
+        if (compEntry == northAmericanCup) {
+            if ((uint8_t)(selTeamNumber >> 8) != CN_NORTH_AMERICA)
+                goto loc_E086;
+            goto loc_E114;
+        }
+        if (compEntry == asianCup) {
+            if ((uint8_t)(selTeamNumber >> 8) != CN_ASIA)
+                goto loc_E086;
+            goto loc_E114;
+        }
+        if (compEntry == oceaniaCup) {
+            if ((uint8_t)(selTeamNumber >> 8) != CN_OCEANIA)
+                goto loc_E086;
+            goto loc_E114;
+        }
+    }
+
+    /* loc_13E120: European Championships check */
+    if (compEntry == europeanChampionships) {
+        if (gameType == GAME_TYPE_CAREER) {
+            if ((uint8_t)(selTeamNumber >> 8) != CN_EUROPE)
+                goto loc_E086;
+            if (!(someTeamFlags & (1 << 0))) {
+                if (!(someTeamFlags & (1 << 1)))
+                    goto loc_E086;
+            }
+        }
+    }
+
+    goto skip_continental_check;
+loc_E114:
+    if (!(someTeamFlags & (1 << 1)))
+        goto loc_E086;
+skip_continental_check:
+
+    /* loc_13E154: World Cup qualification checks */
+    if ((uint32_t)compEntry == 252 ||
+        compEntry == northAmericaWorldCupQualification ||
+        compEntry == southAmericaWorldCupQualification ||
+        compEntry == africaWorldCupQualification ||
+        compEntry == asiaWorldCupQualification ||
+        compEntry == oceaniaWorldCupQualification) {
+        /* loc_13E184: */
+        if (gameType != GAME_TYPE_CAREER)
+            goto loc_E086;
+        if (isNationalSelector == 0)
+            goto loc_E086;
+        if (!(someTeamFlags & (1 << 6)))
+            goto loc_E086;
+    }
+
+    /* loc_13E1A6: World Cup check */
+    if (compEntry == worldCup) {
+        if (gameType == GAME_TYPE_CAREER) {
+            if (isNationalSelector == 0)
+                goto loc_E086;
+            if (!(someTeamFlags & (1 << 7)))
+                goto loc_E086;
+        }
+    }
+
+    /* loc_13E1CE: depth level filtering */
+    if (showCupsAndOther == 0 &&
+        teamsType != ORIGINAL_CUSTOM_TEAMS &&
+        teamsType != EDITED_CUSTOM_TEAMS &&
+        teamDepthLevel != 2) {
+        goto loc_E086;
+    }
+
+    /* loc_13E1F6: entry type dispatch */
+    if ((uint32_t)compEntry < 256) {
+        /* Country entry: get country name from countriesTable */
+        countryIdx = (uint16_t)(uint32_t)compEntry;
+        ctEntry = (uint8_t *)countriesTable[countryIdx];
+        *teamNamesPtr++ = (uint32_t)(ctEntry + 1);
+        *leaguesPtrOut++ = (uint32_t)compEntry;
+        *leagueNumsOut++ = 0xFFFF;
+        d1++;
+        goto loc_E086;
+    }
+
+    /* loc_13E21E: competition entry (>= 256) */
+    compType = compEntry[1];
+    if (compType == 0) {
+        /* League: enumerate divisions */
+        divIdx = 0;
+loc_E246:
+        nameOff = compEntry[5];
+        if (nameOff == 0) {
+            /* Use divisionStringTable */
+            namePtr = (uint8_t *)divisionStringTable[divIdx];
+        } else {
+            /* Name table relative to offset 5 */
+            off16 = (int8_t)nameOff;
+            nameTable = compEntry + 5 + off16;
+            namePtr = (uint8_t *)*(uint32_t *)(nameTable + (divIdx << 3));
+        }
+        *teamNamesPtr++ = (uint32_t)namePtr;
+        *leaguesPtrOut++ = (uint32_t)compEntry;
+        *leagueNumsOut++ = divIdx;
+        d1++;
+        divIdx++;
+        if ((uint8_t)divIdx != compEntry[9])
+            goto loc_E246;
+        numberOfLeagues = (int8_t)compEntry[9];
+        goto loc_E086;
+    } else if (compType == 1) {
+        /* Cup */
+        nameOff = compEntry[5];
+        if (nameOff == 0) {
+            namePtr = (uint8_t *)aCup_0;
+        } else {
+            off16 = (int8_t)nameOff;
+            namePtr = (uint8_t *)*(uint32_t *)(compEntry + 5 + off16);
+        }
+        *teamNamesPtr++ = (uint32_t)namePtr;
+        *leaguesPtrOut++ = (uint32_t)compEntry;
+        *leagueNumsOut++ = 0xFFFF;
+        d1++;
+        goto loc_E086;
+    } else if (compType == 2) {
+        /* Tournament */
+        nameOff = compEntry[5];
+        if (nameOff == 0) {
+            namePtr = (uint8_t *)aLeague_1;
+        } else {
+            off16 = (int8_t)nameOff;
+            namePtr = (uint8_t *)*(uint32_t *)(compEntry + 5 + off16);
+        }
+        *teamNamesPtr++ = (uint32_t)namePtr;
+        *leaguesPtrOut++ = (uint32_t)compEntry;
+        *leagueNumsOut++ = 0xFFFF;
+        d1++;
+        goto loc_E086;
+    } else {
+        panicReasonCode = 0x2209;
+        _PanicHaltLoop();
+    }
+
+loc_E2D0:
+    numLeaguesInCountry = d1;
+
+    /* Build country names list */
+    countryNamesPtr = countryNames;
+    cnCount = 0;
+
+    if (d7 == 254 || (d7 >= CN_EUROPE && d7 <= CN_OCEANIA)) {
+        /* loc_13E2F4: enumerate countries from continent byte list */
+        cPtr = (uint8_t *)a5;
+        for (;;) {
+            cByte = *cPtr++;
+            if (cByte == 255)
+                break;
+            cidx = (uint16_t)cByte;
+            ctEntry = (uint8_t *)countriesTable[cidx];
+            *countryNamesPtr++ = (uint32_t)(ctEntry + 1);
+            cnCount++;
+        }
+    }
+
+    chooseTeamsNumTeams = cnCount;
+
+    /* loc_13E318: prepare menu */
+    stayInSelectTeams = 0;
+    exitFlag = 0;
+
+    if (showCupsAndOther == 0 && chooseTeamsNumTeams == 0 &&
+        numLeaguesInCountry == 1) {
+        if (exitSelectTeams != 0) {
+            exitFlag = 1;
+        } else {
+            stayInSelectTeams = 1;
+        }
+    }
+
+    /* loc_13E35E: show menu */
+    _GetSelectedTeamsStackTop();
+    _ShowMenu(selectTeamsMenu);
+
+    if (chooseTeamsResult != 0)
+        goto exit_return;
+    if (abortSelectTeams != 0)
+        goto exit_return;
+
+    d6 = d7;
+
+    if (viewSelectedTeams != 0)
+        goto loc_E73A;
+
+    /* Check selectedTeamIndex */
+    d7 = (uint16_t)selectedTeamIndex;
+    if (selectedTeamIndex >= 0)
+        goto loc_E3DC;
+
+    /* selectedTeamIndex < 0: check selectedLeagueIndex */
+    d7 = (uint16_t)selectedLeagueIndex;
+    if (selectedLeagueIndex < 0) {
+        /* loc_13E3C4: go back */
+        if (teamDepthLevel == 0)
+            goto exit_return;
+        isCountryNumber = 0;
+        _PopContinent();
+        goto loc_E012;
+    }
+
+    _PushLastSelectedTeam();
+
+    if (loadTeam != 0)
+        goto loc_E6E4;
+    if (playSeason != 0)
+        goto loc_E428;
+    goto loc_E50A;
+
+loc_E3DC:
+    _PushLastSelectedTeam();
+
+    if (showCupsAndOther != 0 || playSeason != 0 || teamsType != 0) {
+        /* loc_13E3F8: push and navigate deeper */
+        _PushContinent(d6);
+        d7 = ((uint8_t *)a5)[d7];
+        _SetSelectedTeamsStackTop();
+        goto loc_E012;
+    }
+
+    /* loc_13E408: direct team load */
+    countryByte = ((uint8_t *)a5)[d7];
+    _GetCountryName(countryByte & 0xFF);
+    leagueNumber = 0;
+    _LoadTeamFile((uint8_t)countryByte);
+    goto loc_E6F6;
+
+loc_E428:
+    /* Play season: dispatch by competition type */
+    contest = (uint8_t *)leaguesPtrTable[d7];
+    selectedContest = (uint32_t)contest;
+
+    if (contest[1] == 0) {
+        /* League: loc_13E476 */
+        lnum = leagueNumbersTable[d7];
+        leagueNumber = lnum;
+        contestLeagueNumber = lnum;
+        _InitCompetitionTeamSelectionFromTableEntry(lnum, contest);
+    } else if (contest[1] == 2) {
+        /* Tournament: loc_13E45A */
+        leagueNumber = 0;
+        contestLeagueNumber = 0;
+        _InitCompetitionTeamSelectionFromAltTableHeader(contest);
+    } else {
+        panicReasonCode = 0x1789;
+        _PanicHaltLoop();
+    }
+
+    /* loc_13E49E: */
+    playWhatStr = (uint32_t)aPlaySeason;
+    _MarkSelectedTeamsStackLocation();
+    selectTeamsNoLimit = 0;
+    playSeason = 0;
+    loadTeam = 1;
+    chooseTeamsHeader1stPart = 0;
+    teamsType = 1;
+    gameTypeStr = selectedTeamText;
+    viewSelectedTeams = 3;
+    _GetCountryName(d6);
+    goto loc_E73A;
+
+loc_E4EA:
+    /* Country number navigation */
+    d7 = (uint16_t)(uint32_t)contest;
+    _PushLastSelectedTeam();
+    _PushContinent(d6);
+    _SetSelectedTeamsStackTop();
+    isCountryNumber = 1;
+    countryNumber = d6;
+    goto loc_E012;
+
+loc_E50A:
+    /* Select league/competition: dispatch */
+    contest = (uint8_t *)leaguesPtrTable[d7];
+
+    /* Career mode special checks (loc_13E50A) */
+    if (gameType == GAME_TYPE_CAREER) {
+        if (contest == europeanChampionships) {
+            if (someTeamFlags & (1 << 0))
+                contest = (uint8_t *)0xFD;
+        }
+        if (contest == worldCup) {
+            if (someTeamFlags & (1 << 6))
+                contest = (uint8_t *)0xFC;
+        }
+    }
+
+    /* loc_13E554: check if country entry (< 256) */
+    if ((uint32_t)contest < 256)
+        goto loc_E4EA;
+
+    selectedContest = (uint32_t)contest;
+
+    if (contest[1] == 0)
+        goto loc_E65A;
+    else if (contest[1] == 1)
+        goto loc_E5EA;
+    else
+        goto loc_E57A;
+
+loc_E57A:
+    /* Tournament setup */
+    if (chooseCompetitionOnly != 0) {
+        chooseTeamsResult = 1;
+        goto exit_return;
+    }
+    _InitCompetitionTeamSelectionFromAltTableHeader((uint8_t *)selectedContest);
+    playWhatStr = (uint32_t)aPlayTournament;
+    _SetTeamsTypeForSelectedContest();
+    _IsContestContinentalCup();
+    _MarkSelectedTeamsStackLocation();
+    selectTeamsNoLimit = 0;
+    showCupsAndOther = 0;
+    loadTeam = 1;
+    chooseTeamsHeader1stPart = 0;
+    gameTypeStr = selectedTeamText;
+    viewSelectedTeams = 2;
+    _GetCountryName(d6);
+    goto loc_E73A;
+
+loc_E5EA:
+    /* Cup setup */
+    if (chooseCompetitionOnly != 0) {
+        chooseTeamsResult = 1;
+        goto exit_return;
+    }
+    _InitCompetitionTeamSelectionFromTableHeader((uint8_t *)selectedContest);
+    playWhatStr = (uint32_t)aPlayCup;
+    _SetTeamsTypeForSelectedContest();
+    _IsContestContinentalCup();
+    _MarkSelectedTeamsStackLocation();
+    selectTeamsNoLimit = 0;
+    showCupsAndOther = 0;
+    loadTeam = 1;
+    chooseTeamsHeader1stPart = 0;
+    gameTypeStr = selectedTeamText;
+    viewSelectedTeams = 2;
+    _GetCountryName(d6);
+    goto loc_E73A;
+
+loc_E65A:
+    /* League setup */
+    lnum = leagueNumbersTable[d7];
+    leagueNumber = lnum;
+    contestLeagueNumber = lnum;
+
+    if (chooseCompetitionOnly != 0) {
+        chooseTeamsResult = 1;
+        goto exit_return;
+    }
+    _InitCompetitionTeamSelectionFromTableEntry(lnum, (uint8_t *)selectedContest);
+    playWhatStr = (uint32_t)aPlayLeague;
+    _SetTeamsTypeForSelectedContest();
+    _IsContestContinentalCup();
+    _MarkSelectedTeamsStackLocation();
+    selectTeamsNoLimit = 0;
+    showCupsAndOther = 0;
+    loadTeam = 1;
+    chooseTeamsHeader1stPart = 0;
+    gameTypeStr = selectedTeamText;
+    viewSelectedTeams = 2;
+    _GetCountryName(d6);
+    goto loc_E73A;
+
+loc_E6E4:
+    /* Load team file for selected league */
+    leagueNumber = d7;
+    if (_LoadTeamFile((uint8_t)d6) != 0)
+        goto exit_clear;
+
+loc_E6F6:
+    /* Show friendly menu */
+    entryText2 = selectedTeamText;
+    _ShowMenu(chooseTeamsFriendlyMenu);
+
+    if (viewSelectedTeams != 0)
+        goto loc_E73A;
+    if (abortSelectTeams != 0)
+        goto exit_return;
+    if (chooseTeamsResult != 0)
+        goto exit_return;
+
+    /* loc_13E734: */
+    d7 = d6;
+    goto loc_E012;
+
+loc_E73A:
+    /* Show friendly menu 2 (with country name if needed) */
+    if (isCountryNumber != 0)
+        _GetCountryName(countryNumber);
+    entryText2 = selectedTeamText;
+    _ShowMenu(chooseTeamsFriendlyMenu2);
+
+    if (abortSelectTeams != 0)
+        goto exit_return;
+    if (chooseTeamsResult != 0)
+        goto exit_return;
+
+    if (isCountryNumber != 0) {
+        isCountryNumber = 0;
+        _PopContinent();
+        if (isContestContinentalCup != 0)
+            goto loc_E6F6;
+        goto loc_E012;
+    }
+
+    /* loc_13E79A: */
+    if (isContestContinentalCup != 0)
+        goto loc_E6F6;
+
+    /* loc_13E734: */
+    d7 = d6;
+    goto loc_E012;
+
+exit_clear:
+    /* loc_13E7A6: */
+    chooseTeamsResult = 0;
+exit_return:
+    /* locret_13E7AC: */
+    return;
 }

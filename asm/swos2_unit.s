@@ -2610,6 +2610,28 @@
         xref    _SetTeamsCoordinates
         xref    _SelectTeamsReinit
         xref    _SelectTeamsInit
+        xref    _SelectTeamsFinalMenu
+; --- Chunk 231 xdefs (SelectTeamsFinalMenu) ---
+        xdef    aEditedCustomTe_0
+        xdef    aPlaySeason
+        xdef    africaWorldCupQualification
+        xdef    africanNationsCup
+        xdef    asiaWorldCupQualification
+        xdef    asianCup
+        xdef    chooseTeamsFriendlyMenu
+        xdef    chooseTeamsFriendlyMenu2
+        xdef    countriesStack
+        xdef    countryNumber
+        xdef    customsLeague
+        xdef    entryText2
+        xdef    leagueNumbersTable
+        xdef    leaguesPtrTable
+        xdef    northAmericaWorldCupQualification
+        xdef    northAmericanCup
+        xdef    oceaniaCup
+        xdef    oceaniaWorldCupQualification
+        xdef    selectTeamsMenu
+        xdef    southAmericaWorldCupQualification
         xref    _SelTeamForTacticsInit
         xref    _ChooseTeamsInit
         xref    _InitDIYCompetitionFromTableEntry
@@ -2981,6 +3003,20 @@
         xref    _ContestSetButtons
         xref    _ContestMenuInit
         xref    _ContestMenuOnReturn
+        xref    _CareerGameListCommon
+; --- Chunk 230 xdefs (CareerGameListCommon) ---
+        xdef    careerGameTopTeamName
+        xdef    careerGameBottomTeamName
+        xdef    careerGameListTeamControl
+        xdef    divStringTable
+        xdef    roundStringTable
+        xdef    aCup_1
+        xdef    aCup_2
+        xdef    aPlayoffs
+        xdef    aH
+        xdef    aA_2
+        xdef    aLeg1
+        xdef    aLeg2
 ; --- Chunk 123 xrefs ---
         xref    _PlayMatchMenu
         xref    _NextMatch
@@ -3341,6 +3377,9 @@
 ; --- Chunk 228 xrefs ---
         xref    _DesignDIYCup_BuildMatchListEntryStrings
         xref    _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection
+; --- Chunk 229 xrefs ---
+        xref    _DIYLeagueTournamentOnRestore
+        xref    _DIYLeagueTournament16BeforeDraw
 ; --- Chunk 161 xrefs ---
         xref    _ShowSeasonOpinion
 ; --- Chunk 174 xrefs ---
@@ -3633,6 +3672,10 @@
         xdef    aNextRoundDraw
         xdef    aPlayReplays
         xdef    a2ndLegRound
+; --- Chunk 229 xdefs ---
+        xdef    diyLeagueTournament_fixtureRowHeight
+        xdef    diyLeagueTournament_fixtureRowYStep
+        xdef    groupStringTable
         xdef    MenuCheckControls
 ; --- Chunk 133 xdefs ---
         xdef    editTeamsSelectedTeam

@@ -235,4 +235,6 @@ void _SelectAndShowSquadToView_Direct(uint16_t rowMode);
 void _StatsViewSquads(void);
 void _SquadMenu(void);
 
+/* --- Chunk 230: CareerGameListCommon (called from asm only) --- */
+
 #endif

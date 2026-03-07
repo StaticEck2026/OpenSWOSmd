@@ -44,7 +44,8 @@
       "Bash(xxd:*)",
       "Bash(wc:*)",
       "Bash(gawk:*)",
-      "Read(//c//**)"
+      "Read(//c//**)",
+      "Bash(HOME=/home/bbaker /tmp/build_swos.sh:*)"
     ]
   }
 }

@@ -3801,5 +3801,29 @@ Update this section every time you port a chunk. Keep it chronological.
 | 226   | 1         | 1602       |
 | 227   | 3+3s      | 1605       |
 | 228   | 2+2s      | 1607       |
+| 229   | 2         | 1609       |
+| 230   | 1         | 1610       |
+| 231   | 1         | 1611       |
 
 (s = static/internal helpers, a = alias/shared, d = dead code stubbed)
+
+### Chunk 230 — CareerGameListCommon (menus.c)
+- Ported `CareerGameListCommon` — beforeDraw callback for career game list menu entries
+- ~530 lines, handles league/cup/other competition display in career contest menu
+- Bridge stub in SWOS2.s, xdefs for 12 symbols in swos2_unit.s
+
+### Chunk 231 — SelectTeamsFinalMenu (teams.c)
+- Ported `SelectTeamsFinalMenu` — main team selection state machine (~570 lines)
+- Handles country/competition enumeration, team loading, navigation, competition setup
+- Bridge stub in SWOS2.s, xdefs for 20 symbols in swos2_unit.s
+
+### PHASE 1 COMPLETE
+All game logic subroutines have been ported to C. Remaining assembly consists of:
+- Bridge/forwarding stubs (call C functions)
+- Data declarations (variables, tables, competition structs)
+- Dead floppy disk code (skip per CLAUDE.md)
+- Interrupt handlers (Int3Handler, Int5Handler — require rte instruction)
+- WHDLoad/Loader trap functions (use dc.w -2405x opcodes)
+- AssetSys functions (PC-relative, call dead floppy code)
+- Low-level blitter/hardware routines (direct custom chip register access)
+- RNC decompression (complex algorithm, working in asm)

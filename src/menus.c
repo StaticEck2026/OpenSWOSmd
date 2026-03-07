@@ -6207,3 +6207,530 @@ void _SquadMenu(void)
 
     _SelectAndShowSquadToView(teamList, numT, rowMode);
 }
+
+/* ===== CareerGameListCommon (SWOS2.s line 49351) =====
+ * beforeDraw callback for career game list menu entries.
+ * Fills menu entries 33-43 with competition/match info for a single game slot.
+ * Parameter: item (MenuEntry *) — the current menu entry being drawn (a5 in asm).
+ */
+
+extern uint8_t *_BuildMatchResultString(uint16_t control, uint16_t leg2, uint16_t leg1,
+                                         uint16_t pens, uint8_t *teamA, uint8_t *teamB,
+                                         uint16_t flags);
+extern char *careerGameTopTeamName;
+extern char *careerGameBottomTeamName;
+extern uint16_t careerGameListTeamControl;
+extern const char *divStringTable[];
+extern const char *roundStringTable[];
+extern const char *rndStringTable[];
+extern uint16_t currentDivisionIndex;
+extern uint8_t  aError[];       /* "ERROR" */
+extern uint8_t  aMinus[];       /* "-" */
+extern uint8_t  aV[];           /* "V" */
+extern uint8_t  aH[];           /* "(H)" */
+extern uint8_t  aA_2[];         /* "(A)" */
+extern uint8_t  aLeg1[];        /* "LEG 1" */
+extern uint8_t  aLeg2[];        /* "LEG 2" */
+extern uint8_t  aReplay[];      /* "REPLAY" */
+extern uint8_t  aPlayoffs[];    /* "PLAYOFFS" */
+extern uint8_t  aCup_1[];       /* "CUP" */
+extern uint8_t  aCup_2[];       /* "CUP" */
+extern uint32_t careerCompetitionSlotPtrTable[];
+
+__attribute__((used, externally_visible))
+void _CareerGameListCommon(MenuEntry *item)
+{
+    MenuEntry *a5 = item;
+    /* d0 = ordinal difference between current item and entry 19 */
+    MenuEntry *entry19 = &menuEntries[19]; /* menuEntries + 0x428/0x38 */
+    uint16_t d0 = a5->ordinal - entry19->ordinal;
+
+    if (d0 == 0) {
+        columnMarker = gameListY;
+        cglmVar3 = 0;
+    }
+
+    uint16_t d2 = columnMarker;
+
+    if (cglmVar3 != 0)
+        goto hideAll;
+
+    uint16_t d4 = 0;
+    uint16_t d3 = 0;
+
+    /* d0 <<= 3 to get byte offset into gameListArray (8 bytes per pair) */
+    uint16_t arrayOff = d0 << 3;
+    uint8_t *a6 = (uint8_t *)gameListArray[arrayOff / 4]; /* contest entry ptr */
+    if (a6 == 0)
+        goto hideAll;
+    uint8_t *a4 = (uint8_t *)gameListArray[arrayOff / 4 + 1]; /* round/game ptr */
+
+    /* a5 = entry 33 (menuEntries + 0x738) */
+    a5 = &menuEntries[33];
+
+    /* Hide entry 33 (first slot) */
+    a5->isInvisible = 1;
+    a5++; /* entry 34 */
+
+    /* Initialize team name pointers to "ERROR" */
+    careerGameTopTeamName = (char *)aError;
+    careerGameBottomTeamName = (char *)aError;
+
+    uint8_t *a2 = 0; /* result string pointer, NULL if no result */
+
+    if (a6[5] != 0) {
+        /* Has teams — load them */
+        uint16_t topTeamIdx = *(uint16_t *)(a4 + 0x0C);
+        uint8_t *topTeamData = _VerifyTeamLoaded(topTeamIdx);
+        careerGameTopTeamName = (char *)(topTeamData + 5); /* team name at offset 5 */
+
+        uint16_t botTeamIdx = *(uint16_t *)(a4 + 0x0E);
+        uint8_t *botTeamData = _VerifyTeamLoaded(botTeamIdx);
+        /* Check if bottom team is player-controlled (byte 4 == 1 → sne → 0, else -1) */
+        uint16_t ctrl;
+        if (botTeamData[4] == 1)
+            ctrl = 0;
+        else
+            ctrl = 0xFFFF;
+        careerGameListTeamControl = ctrl;
+        careerGameBottomTeamName = (char *)(botTeamData + 5);
+
+        /* Check if match has been played (byte 0x0B != 0) */
+        if (a4[0x0B] != 0) {
+            uint16_t resultFlags = (uint16_t)a4[0x0B];
+            uint16_t leg2Scores = *(uint16_t *)(a4 + 0x10);
+            uint16_t leg1Scores = *(uint16_t *)(a4 + 0x12);
+            uint16_t penScores  = *(uint16_t *)(a4 + 0x14);
+            uint8_t *resultStr = _BuildMatchResultString(
+                1, leg2Scores, leg1Scores, penScores,
+                (uint8_t *)careerGameTopTeamName,    /* teamA (a1) */
+                (uint8_t *)careerGameBottomTeamName,  /* teamB (a2) */
+                resultFlags);
+            if (resultStr[0] != 0) {
+                a2 = resultStr;
+                goto pastTeamLoad;
+            }
+        }
+        a2 = 0;
+        goto pastTeamLoad;
+    }
+    /* a6[5] == 0: no teams loaded */
+
+pastTeamLoad:
+    ;
+    /* Determine slot type and competition name */
+    uint16_t slotType = a6[0] & 0xFF;
+    uint8_t *compInfo = ((uint8_t **)&currentCompetitionPtr)[slotType]; /* a1 */
+    uint16_t d5; /* color/stringFlags value */
+    uint8_t *namePtr; /* competition name pointer */
+
+    switch (slotType) {
+    case 0: /* league */
+        namePtr = (uint8_t *)divStringTable;
+        d5 = 2;
+        break;
+    case 1: /* cup type 1 */
+        namePtr = aCup_1;
+        d5 = 6;
+        break;
+    case 2: /* cup type 2 */
+        namePtr = aCup_2;
+        d5 = 0x0F;
+        break;
+    case 3:
+        namePtr = aError;
+        d5 = 0x0D;
+        break;
+    case 4:
+        namePtr = aPlayoffs;
+        d5 = 0x0E;
+        break;
+    default:
+        /* Unknown slot type — show dashes */
+        a5->fg = (uint32_t)aMinus;
+        a5->isInvisible = 0;
+        a5++; /* next entry */
+        a5->fg = (uint32_t)aMinus;
+        a5->isInvisible = 0;
+        a5++; /* next entry */
+        d5 = 1;
+        goto afterHeader;
+    }
+
+    {
+        /* Get competition slot ptr table entry
+         * careerCompetitionSlotPtrTable is really an array of 5 pointers (20 bytes) */
+        uint32_t *slotPtrTable = (uint32_t *)careerCompetitionSlotPtrTable;
+        uint8_t *a3slot = (uint8_t *)slotPtrTable[slotType];
+        uint16_t slotVal = *(uint16_t *)a3slot;
+
+        if (slotVal == 0) {
+            /* --- League-style header --- */
+            /* Height check */
+            uint16_t checkY = d2 + 8 - gameListY;
+            if (checkY >= contestEntryHeight)
+                goto hideAll;
+
+            a5->y = d2;
+            d3 += 8;
+            d4 += 8;
+
+            /* Get division/competition name string */
+            uint8_t strTableOff = compInfo[5];
+            if (strTableOff == 0) {
+                /* Use divStringTable[currentDivisionIndex]
+                 * namePtr == divStringTable base for league type */
+                namePtr = (uint8_t *)divStringTable[currentDivisionIndex];
+            } else {
+                /* compInfo + 5 + strTableOff, then index by currentDivisionIndex*8 + 4 */
+                int16_t off = (int8_t)strTableOff;
+                uint8_t *base = compInfo + 5 + off;
+                uint16_t idx = currentDivisionIndex << 3;
+                namePtr = (uint8_t *)(*(uint32_t *)(base + 4 + idx));
+            }
+
+            a5->fg = (uint32_t)namePtr;
+            a5->isInvisible = 0;
+            a5++; /* next entry */
+
+            /* Second header line — invisible */
+            a5->y = d2 + 8;
+            a5->isInvisible = 1;
+            a5++; /* next entry */
+        } else if (slotVal == 1) {
+            /* --- Cup-style header (single line comp name + round info) --- */
+            /* Resolve competition name if strTableOff != 0 */
+            uint8_t strTableOff = compInfo[5];
+            if (strTableOff != 0) {
+                int16_t off = (int8_t)strTableOff;
+                uint8_t *base = compInfo + 5 + off;
+                namePtr = (uint8_t *)(*(uint32_t *)(base + 4));
+            }
+
+            a5->fg = (uint32_t)namePtr;
+
+            /* Height check depends on whether a4 == a6 */
+            if (a4 == a6) {
+                /* Need 16 pixels of space */
+                uint16_t checkY = d2 + 16 - gameListY;
+                if (checkY >= contestEntryHeight)
+                    goto hideAll;
+            } else {
+                /* Need 8 pixels */
+                uint16_t checkY = d2 + 8 - gameListY;
+                if (checkY >= contestEntryHeight)
+                    goto hideAll;
+            }
+
+            a5->y = d2;
+            d3 += 16;
+            d4 += 8;
+            a5->isInvisible = 0;
+            a5++; /* next entry */
+
+            /* Round info line */
+            a5->y = d2 + 8;
+
+            /* Get round string */
+            int16_t roundIdx = (int8_t)a6[9];
+            uint8_t *roundStr = (uint8_t *)roundStringTable[roundIdx];
+            if (a6[8] == 3) {
+                /* Replay — use rndStringTable instead */
+                roundStr = (uint8_t *)rndStringTable[roundIdx];
+            }
+
+            /* Copy round string into entry's string buffer */
+            uint8_t *dst = (uint8_t *)a5->fg;
+            dst = _StringCopy((const uint8_t *)roundStr, dst);
+
+            /* Append leg/replay suffix */
+            uint8_t *suffixStr;
+            uint8_t legType = a6[8];
+            if (legType == 1) {
+                suffixStr = aLeg1;
+                goto appendSuffix;
+            } else if (legType == 2) {
+                suffixStr = aLeg2;
+                goto appendSuffix;
+            } else if (legType == 3) {
+                suffixStr = aReplay;
+                goto appendSuffix;
+            }
+            goto noSuffix;
+
+        appendSuffix:
+            *dst++ = ' ';
+            dst = _StringCopy((const uint8_t *)suffixStr, dst);
+
+        noSuffix:
+            *dst = 0; /* null terminate */
+            a5->isInvisible = 0;
+            a5++; /* next entry */
+
+            /* Check if should add extra spacing */
+            if (a6[5] == 0) {
+                d4 += 8;
+            } else if (a6[5] == 1 && a2 == 0) {
+                d2 += 4;
+                d4 += 8;  /* fall-through to loc_13C77E in asm */
+            }
+        } else {
+            /* --- Default (slotVal >= 2) header: same as cup but different path --- */
+            /* Resolve competition name if strTableOff != 0 */
+            uint8_t strTableOff = compInfo[5];
+            if (strTableOff != 0) {
+                int16_t off = (int8_t)strTableOff;
+                uint8_t *base = compInfo + 5 + off;
+                namePtr = (uint8_t *)(*(uint32_t *)(base + 4));
+            }
+
+            a5->fg = (uint32_t)namePtr;
+
+            /* Height check */
+            if (a4 == a6) {
+                uint16_t checkY = d2 + 16 - gameListY;
+                if (checkY >= contestEntryHeight)
+                    goto hideAll;
+            } else {
+                uint16_t checkY = d2 + 8 - gameListY;
+                if (checkY >= contestEntryHeight)
+                    goto hideAll;
+            }
+
+            a5->y = d2;
+            d3 += 16;
+            d4 += 8;
+            a5->isInvisible = 0;
+            a5++; /* next entry */
+
+            /* Round info line */
+            a5->y = d2 + 8;
+
+            int16_t roundIdx = (int8_t)a6[9];
+            uint8_t *roundStr = (uint8_t *)roundStringTable[roundIdx];
+            if (a6[8] == 3) {
+                roundStr = (uint8_t *)rndStringTable[roundIdx];
+            }
+
+            uint8_t *dst = (uint8_t *)a5->fg;
+            dst = _StringCopy((const uint8_t *)roundStr, dst);
+
+            uint8_t legType = a6[8];
+            if (legType == 1) {
+                *dst++ = ' ';
+                dst = _StringCopy((const uint8_t *)aLeg1, dst);
+            } else if (legType == 2) {
+                *dst++ = ' ';
+                dst = _StringCopy((const uint8_t *)aLeg2, dst);
+            } else if (legType == 3) {
+                *dst++ = ' ';
+                dst = _StringCopy((const uint8_t *)aReplay, dst);
+            }
+
+            *dst = 0;
+            a5->isInvisible = 0;
+            a5++; /* next entry */
+
+            /* Check spacing */
+            if (a6[5] == 0) {
+                d4 += 8;
+            } else if (a6[5] == 1 && a2 == 0) {
+                d2 += 4;
+                d4 += 8;  /* fall-through to loc_13C77E in asm */
+            }
+        }
+    }
+
+afterHeader:
+    ;
+    /* Apply stringFlags color to entries 33-42 (10 entries) */
+    {
+        MenuEntry *colorEntry = &menuEntries[33];
+        for (int16_t i = 9; i >= 0; i--) {
+            uint16_t sf = colorEntry->stringFlags;
+            sf = (sf & 0xFFF0) | d5;
+            colorEntry->stringFlags = sf;
+            colorEntry++;
+        }
+    }
+
+    /* If a4 == a6 (no game data, just header), hide last two filled entries */
+    if (a4 != a6) {
+        /* Hide the two entries before current a5 */
+        MenuEntry *prev1 = a5 - 1;
+        prev1->isInvisible = 1;
+        MenuEntry *prev2 = a5 - 2;
+        prev2->isInvisible = 1;
+    }
+
+    /* If a6[5] == 0, no teams — hide remaining 8 entries and skip to end */
+    if (a6[5] == 0) {
+        for (int16_t i = 7; i >= 0; i--) {
+            a5->y = d2;
+            a5->isInvisible = 1;
+            a5++;
+        }
+        goto calcColumnMarker;
+    }
+
+    /* --- Fill team/score entries --- */
+    /* Entry: home/away indicator (or invisible for gameType==3) */
+    a5->y = d2;
+    a5->isInvisible = 1;
+
+    if (gameType != 3) {
+        uint8_t homeAway = a4[0x0A];
+        if (homeAway != 0) {
+            if (homeAway == 1) {
+                a5->fg = (uint32_t)aH; /* "(H)" */
+            } else if (homeAway == 2) {
+                a5->fg = (uint32_t)aA_2; /* "(A)" */
+            }
+            /* asm: clr.w 4(a5) regardless of homeAway value (1, 2, or other) */
+            a5->isInvisible = 0;
+        }
+        /* if homeAway == 0 or gameType == 3: entry stays hidden (isInvisible=1) */
+    }
+
+    a5++; /* next entry */
+
+    /* Highlight marker entry — set y and height */
+    a5->y = d2 - 1;
+    a5->dwHeight = 7;
+
+    /* Check if this is the saved/active contest entry */
+    if ((uint32_t)a6 == savedContestEntryPtr &&
+        (uint32_t)a4 == savedContestRoundPtr) {
+        a5->isInvisible = 0;
+    } else {
+        a5->isInvisible = 1;
+    }
+
+    a5++; /* next entry */
+
+    /* Top team name (player-controlled team) */
+    a5->y = d2;
+    if (careerGameListTeamControl == 0)
+        a5->fg = (uint32_t)careerGameTopTeamName;
+    else
+        a5->fg = (uint32_t)careerGameBottomTeamName;
+    a5->isInvisible = 0;
+    a5++; /* next entry */
+
+    /* Score entries — depends on whether match was played */
+    if (a4[0x0B] != 0) {
+        /* Match played — show scores */
+        /* Top score — write as uint16_t to match asm move.w to offset $26 */
+        a5->y = d2;
+        {
+            int8_t topScore;
+            if (careerGameListTeamControl == 0)
+                topScore = (int8_t)a4[0x10];
+            else
+                topScore = (int8_t)a4[0x11];
+            *(uint16_t *)&a5->fg = (uint16_t)(int16_t)topScore;
+        }
+        a5->isInvisible = 0;
+        a5++; /* next entry */
+
+        /* Dash separator */
+        a5->y = d2;
+        a5->fg = (uint32_t)aMinus;
+        a5->isInvisible = 0;
+        a5++; /* next entry */
+
+        /* Bottom score — write as uint16_t to match asm move.w to offset $26 */
+        a5->y = d2;
+        {
+            int8_t botScore;
+            if (careerGameListTeamControl == 0)
+                botScore = (int8_t)a4[0x11];
+            else
+                botScore = (int8_t)a4[0x10];
+            *(uint16_t *)&a5->fg = (uint16_t)(int16_t)botScore;
+        }
+        a5->isInvisible = 0;
+        a5++; /* next entry */
+    } else {
+        /* Match not played — show "V" */
+        a5->y = d2;
+        a5->isInvisible = 1;
+        a5++; /* top score hidden */
+
+        a5->y = d2;
+        a5->fg = (uint32_t)aV;
+        a5->isInvisible = 0;
+        a5++; /* "V" separator */
+
+        a5->y = d2;
+        a5->isInvisible = 1;
+        a5++; /* bottom score hidden */
+    }
+
+    /* Bottom team name (opponent) */
+    a5->y = d2;
+    if (careerGameListTeamControl == 0)
+        a5->fg = (uint32_t)careerGameBottomTeamName;
+    else
+        a5->fg = (uint32_t)careerGameTopTeamName;
+    a5->isInvisible = 0;
+    a5++; /* next entry */
+
+    /* Result string entry */
+    a5->y = d2 + 8;
+    a5->isInvisible = 1;
+    if (a2 != 0) {
+        d4 += 8;
+        uint8_t *dst = (uint8_t *)a5->fg;
+        _StringCopy((const uint8_t *)a2, dst);
+        a5->isInvisible = 0;
+    }
+    a5++; /* next entry */
+
+calcColumnMarker:
+    ;
+    /* Calculate column marker update
+     * asm: move.l a4,d0; sub.l a6,d0; ext.l d0; divu.w #$C,d0; addq.w #1,d0; cmp.b 5(a6),d0
+     * ext.l sign-extends low word to long before unsigned divide */
+    {
+        uint8_t numRounds = a6[5];
+        if (numRounds != 0) {
+            int16_t diff16 = (int16_t)((uint32_t)a4 - (uint32_t)a6);
+            uint32_t dividend = (uint32_t)(int32_t)diff16;
+            uint16_t gameIndex = (uint16_t)(dividend / 12) + 1;
+            if ((uint8_t)gameIndex != numRounds)
+                goto skipExtraPad;
+        }
+        d4 += 4;
+    }
+skipExtraPad:
+    columnMarker += d4;
+
+    /* Draw the entries */
+    if (a4 == a6) {
+        /* No game — draw all 11 entries at once */
+        MenuEntry *drawStart = &menuEntries[33];
+        _DrawMultipleItems(11, drawStart);
+        return;
+    }
+
+    /* Has game — draw entry 33 separately, then entries 36-43 (8 entries) */
+    {
+        MenuEntry *first = &menuEntries[33];
+        _DrawMenuItem(first);
+        MenuEntry *rest = &menuEntries[36]; /* entry 36 = menuEntries + 0x7E0/0x38 */
+        _DrawMultipleItems(8, rest);
+        return;
+    }
+
+hideAll:
+    cglmVar3 = 1;
+    {
+        MenuEntry *hideEntry = &menuEntries[33];
+        for (int16_t i = 10; i >= 0; i--) {
+            hideEntry->y = d2;
+            hideEntry->isInvisible = 1;
+            hideEntry++;
+        }
+    }
+}

@@ -6353,6 +6353,397 @@ check_arg2:
     }
 }
 
+/* ================================================================
+ * Chunk 229 — DIYLeagueTournamentOnRestore + DIYLeagueTournament16BeforeDraw
+ * ================================================================ */
+
+extern uint16_t diyLeagueTournament_fixtureRowHeight;
+extern uint16_t diyLeagueTournament_fixtureRowYStep;
+extern uint32_t groupStringTable[];
+extern uint16_t diyFixtureViewMode;
+extern uint16_t numDiyResults;
+extern uint16_t currentDiyLine;
+extern uint16_t diyLeagueTournament_viewOptionsAvailable;
+extern uint16_t highlightedLeagueTeamId;
+
+/* DIYLeagueTournamentOnRestore — menu onReturn callback for DIY league/tournament menu */
+/* Rebuilds title string, adjusts entry heights for >22 teams, computes fixture row count */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournamentOnRestore(void)
+{
+    uint8_t *comp = diyCompetitionStart;
+
+    /* If comp[0x50] == 1, adjust bg color of entry 16 */
+    if (*(uint16_t *)(comp + 0x50) == 1) {
+        MenuEntry *a0 = &menuEntries[16];
+        uint16_t *bgColor = (uint16_t *)&a0->bg;
+        uint16_t d0 = *bgColor & 0xFFF0;
+        d0 += 0; /* PINK_TO_BROWN_0 = 0 */
+        *bgColor = d0;
+    }
+
+    /* Branch on diyFixtureViewMode */
+    if (diyFixtureViewMode != 0) {
+        if ((int16_t)diyFixtureViewMode < 0) {
+            _DIYSetTeamNamesAndResults();
+        } else {
+            _DIYLeagueTournament_SetupCurrentFixtureTeamNames();
+        }
+    } else {
+        /* Hide entries 11-15 */
+        menuEntries[11].isInvisible = 1;
+        menuEntries[12].isInvisible = 1;
+        menuEntries[13].isInvisible = 1;
+        menuEntries[14].isInvisible = 1;
+        menuEntries[15].isInvisible = 1;
+    }
+
+    /* Build title string */
+    {
+        uint8_t *a1 = (uint8_t *)menuEntries[0].fg;
+        uint8_t *titleSrc = comp + 4;
+        a1 = _StringCopy(titleSrc, a1);
+
+        if (*(uint16_t *)(comp + 72) != 0) {
+            *a1++ = ' ';
+            uint16_t d0 = *(uint16_t *)(comp + 74);
+            uint16_t d1 = *(uint16_t *)(comp + 80);
+            uint16_t d2 = *(uint16_t *)(comp + 76);
+            uint16_t d3 = *(uint16_t *)(comp + 50);
+            const char *roundStr = _GetCupRoundString(d0, d1, d2, d3, 0);
+            a1 = _StringCopy((const uint8_t *)roundStr, a1);
+        }
+    }
+
+    /* Hide entries 16-23 */
+    {
+        MenuEntry *a0 = &menuEntries[16];
+        int16_t d0;
+        for (d0 = 7; d0 >= 0; d0--) {
+            a0->isInvisible = 1;
+            a0++;
+        }
+    }
+
+    /* Set default fixture row dimensions */
+    diyLeagueTournament_fixtureRowHeight = 6;
+    diyLeagueTournament_fixtureRowYStep = 7;
+
+    uint16_t numTeamsPerGroup = *(uint16_t *)(comp + 0x52);
+
+    /* If numTeamsPerGroup > 22, adjust menu entry dimensions */
+    if (numTeamsPerGroup > 22) {
+        menuEntries[0].dwHeight = 9;
+
+        /* Add 5 to y, subtract 5 from dwHeight for entries 1-8 */
+        {
+            MenuEntry *a0 = &menuEntries[1];
+            int16_t d0;
+            for (d0 = 7; d0 >= 0; d0--) {
+                a0->y += 5;
+                a0->dwHeight -= 5;
+                a0++;
+            }
+        }
+
+        /* Adjust entries 9 and 10 */
+        menuEntries[9].y += 5;
+        menuEntries[9].dwHeight -= 5;
+        menuEntries[10].y += 5;
+        menuEntries[10].dwHeight -= 5;
+
+        /* Add 6 to y for entries 11-15 */
+        {
+            MenuEntry *a0 = &menuEntries[11];
+            int16_t d0;
+            for (d0 = 4; d0 >= 0; d0--) {
+                a0->y += 6;
+                a0++;
+            }
+        }
+
+        /* Set dwHeight=7 for entries 24-30 */
+        {
+            MenuEntry *a0 = &menuEntries[24];
+            int16_t d0;
+            for (d0 = 6; d0 >= 0; d0--) {
+                a0->dwHeight = 7;
+                a0++;
+            }
+        }
+
+        /* Set dwHeight=7 for entries 16-23 */
+        {
+            MenuEntry *a0 = &menuEntries[16];
+            int16_t d0;
+            for (d0 = 7; d0 >= 0; d0--) {
+                a0->dwHeight = 7;
+                a0++;
+            }
+        }
+    }
+
+    /* Compute number of fixture rows that fit */
+    {
+        int16_t d1 = menuEntries[11].y;
+        int16_t d2 = menuEntries[0].y + menuEntries[0].dwHeight;
+        d1 -= d2;
+
+        uint16_t d3 = numTeamsPerGroup;
+        d3 *= diyLeagueTournament_fixtureRowYStep;
+        d3 += menuEntries[16].dwHeight + 1;
+
+        uint16_t d0 = (uint16_t)((uint32_t)(uint16_t)d1 / d3);
+        if (d0 > *(uint16_t *)(comp + 0x50))
+            d0 = *(uint16_t *)(comp + 0x50);
+        numDiyResults = d0;
+
+        uint16_t d4 = d3 * numDiyResults;
+        int16_t d5 = d1 - d4;
+        int32_t d5ext = (int16_t)d5;
+        d5 = (uint16_t)((uint32_t)d5ext / (uint16_t)(numDiyResults + 1));
+
+        MenuEntry *a0 = &menuEntries[16];
+        int16_t i;
+        for (i = numDiyResults - 1; i >= 0; i--) {
+            a0->isInvisible = 0;
+            d2 += d5;
+            a0->y = d2;
+            d2 += d3;
+            a0++;
+        }
+
+        /* If comp[80] == numDiyResults, hide scroll buttons */
+        if (*(uint16_t *)(comp + 80) == numDiyResults) {
+            menuEntries[40].isInvisible = 1;
+            menuEntries[41].isInvisible = 1;
+        }
+    }
+
+    /* If diyHasGroups, adjust some entries */
+    if (diyHasGroups != 0) {
+        {
+            MenuEntry *a0 = &menuEntries[11];
+            int16_t d0;
+            for (d0 = 4; d0 >= 0; d0--) {
+                a0->y -= 80;
+                a0++;
+            }
+        }
+
+        /* Hide entries 31-39 */
+        {
+            MenuEntry *a0 = &menuEntries[31];
+            a0[0].isInvisible = 1;
+            a0[1].isInvisible = 1;
+            a0[2].isInvisible = 1;
+            a0[3].isInvisible = 1;
+            a0[4].isInvisible = 1;
+            a0[5].isInvisible = 1;
+            a0[6].isInvisible = 1;
+            a0[7].isInvisible = 1;
+            a0[8].isInvisible = 1;
+        }
+        menuEntries[9].isInvisible = 1;
+
+        /* Widen entries 3 and 5 */
+        menuEntries[3].dwWidth += 25;
+        menuEntries[5].x += 25;
+        menuEntries[5].dwWidth += 25;
+    }
+
+    _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus();
+    /* nullsub_15 — does nothing */
+    _DIYLeagueTournament_EnsureCurrentFixtureVisible();
+}
+
+/* DIYLeagueTournament16BeforeDraw — beforeDraw callback for fixture display entries 16-23 */
+/* Draws league table rows and fixture rows for the current group */
+__attribute__((used, externally_visible))
+void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
+{
+    uint8_t *comp = diyCompetitionStart;
+    int16_t d7 = entry->ordinal - 16 + currentDiyLine;
+    uint16_t numTeamsPerGroup = *(uint16_t *)(comp + 0x52);
+
+    /* Set group string if comp[0x50] != 1 */
+    if (*(uint16_t *)(comp + 0x50) != 1) {
+        entry->fg = groupStringTable[d7];
+    }
+
+    int16_t d2 = entry->y;
+
+    /* Setup entries 24-30: set isInvisible and y */
+    {
+        MenuEntry *a0 = &menuEntries[24];
+        int16_t d0;
+        for (d0 = 6; d0 >= 0; d0--) {
+            a0->isInvisible = 0;
+            if (diyHasGroups)
+                a0->isInvisible = 1;
+            a0->y = d2;
+            a0++;
+        }
+    }
+
+    /* Draw entries 24-30 (7 items) */
+    _DrawMultipleItems(7, &menuEntries[24]);
+
+    /* Advance d2 past the header row */
+    d2 += menuEntries[24].dwHeight + 1;
+
+    uint16_t d4 = diyLeagueTournament_fixtureRowHeight;
+    int16_t rowIdx = d7;
+    uint16_t teamIdx = (uint16_t)rowIdx * numTeamsPerGroup;
+    teamIdx <<= 1; /* byte offset into fixture table */
+
+    MenuEntry *a5 = &menuEntries[31];
+    uint16_t d5 = 1; /* team number, 1-based */
+
+    do {
+        /* Get fixture entry pointer */
+        uint16_t fixtureOff = *(uint16_t *)(comp + 0x6E + teamIdx);
+        uint8_t *a4 = comp + fixtureOff;
+
+        /* Entry for team number */
+        a5->y = d2;
+        *(uint16_t *)&a5->fg = d5; /* ENTRYTYPE2UNION_NUMBER */
+        a5++;
+
+        /* Entry for team name */
+        a5->y = d2;
+        a5->dwHeight = d4;
+
+        /* Get team pointer: a4[0x2B4] + selTeamsPtr base */
+        uint8_t *teamPtr = (uint8_t *)((uint32_t)(*(uint32_t *)(a4 + 0x2B4)) + (uint32_t)&selTeamsPtr);
+
+        /* Set color based on team controls */
+        uint16_t *bgColor = (uint16_t *)&a5->bg;
+        uint8_t teamControls = teamPtr[4]; /* TEAMFILE_TEAMCONTROLS */
+        if (teamControls == 1)
+            *bgColor = 10; /* COLOR_RED */
+        else if (teamControls == 2)
+            *bgColor = 11; /* COLOR_PURPLISH */
+        else if (teamControls == 3)
+            *bgColor = 13; /* COLOR_LIGHT_BLUE */
+        else
+            *bgColor = 14; /* COLOR_ORANGE */
+
+        /* Set team name string */
+        a5->fg = (uint32_t)(teamPtr + 5); /* TEAMFILE_TEAMNAME */
+
+        /* Determine row color (d3) based on view options and promotion/relegation zones */
+        uint16_t d3;
+        int16_t zoneHandled = 0;
+        if (diyLeagueTournament_viewOptionsAvailable != 0) {
+            uint16_t totalZones = *(uint16_t *)(comp + 0x54) + *(uint16_t *)(comp + 0x56) +
+                                  *(uint16_t *)(comp + 0x58) + *(uint16_t *)(comp + 0x5A);
+            if (totalZones != 0) {
+                uint16_t promoted = *(uint16_t *)(comp + 0x54);
+                int16_t applyToPlayer = 1; /* whether to apply d3 to bgColor if player-controlled */
+                if (d5 <= promoted) {
+                    /* In promotion zone */
+                    if (*(uint16_t *)(comp + 0x56) == 0)
+                        d3 = 9; /* PINK_TO_BROWN_9 */
+                    else
+                        d3 = 7; /* PINK_TO_BROWN_7 */
+                } else {
+                    uint16_t d0 = promoted + *(uint16_t *)(comp + 0x56);
+                    if (d5 <= d0) {
+                        /* In promotion playoff zone */
+                        d3 = 9; /* PINK_TO_BROWN_9 */
+                    } else {
+                        d0 = numTeamsPerGroup - *(uint16_t *)(comp + 0x58);
+                        if (d5 > d0) {
+                            /* In relegation zone */
+                            if (*(uint16_t *)(comp + 0x5A) == 0)
+                                d3 = 9; /* PINK_TO_BROWN_9 */
+                            else
+                                d3 = 7; /* PINK_TO_BROWN_7 */
+                        } else {
+                            d0 -= *(uint16_t *)(comp + 0x5A);
+                            if (d5 > d0) {
+                                /* In relegation playoff zone */
+                                d3 = 9; /* PINK_TO_BROWN_9 */
+                            } else {
+                                /* Safe zone — d3=7, skip player-controlled check */
+                                d3 = 7; /* PINK_TO_BROWN_7 */
+                                applyToPlayer = 0;
+                            }
+                        }
+                    }
+                }
+
+                /* If team is player-controlled, apply zone color */
+                if (applyToPlayer && teamPtr[4] == 1)
+                    *bgColor = d3;
+                zoneHandled = 1;
+            }
+        }
+
+        if (!zoneHandled) {
+            /* Default row colors: odd/even alternation */
+            d3 = 7;
+            if (d5 & 1)
+                d3 = 9;
+        }
+        /* Highlight player's team */
+        if (highlightedLeagueTeamId == *(uint16_t *)teamPtr)
+            *bgColor = 12; /* ORANGE_TO_BROWN_12 */
+
+        a5++;
+
+        /* Stats columns (7 entries): played, won, drawn, lost, GF, GA, points */
+        a5->y = d2;
+        a5->dwHeight = d4;
+        *(uint16_t *)&a5->bg = d3;
+        *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2B8);
+        a5++;
+
+        a5->y = d2;
+        a5->dwHeight = d4;
+        *(uint16_t *)&a5->bg = d3;
+        *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2BA);
+        a5++;
+
+        a5->y = d2;
+        a5->dwHeight = d4;
+        *(uint16_t *)&a5->bg = d3;
+        *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2BC);
+        a5++;
+
+        a5->y = d2;
+        a5->dwHeight = d4;
+        *(uint16_t *)&a5->bg = d3;
+        *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2BE);
+        a5++;
+
+        a5->y = d2;
+        a5->dwHeight = d4;
+        *(uint16_t *)&a5->bg = d3;
+        *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2C0);
+        a5++;
+
+        a5->y = d2;
+        a5->dwHeight = d4;
+        *(uint16_t *)&a5->bg = d3;
+        *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2C2);
+        a5++;
+
+        a5->y = d2;
+        a5->dwHeight = d4;
+        *(uint16_t *)&a5->bg = d3;
+        *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2C4);
+
+        /* Draw fixture rows (9 items starting at entry 31) */
+        _DrawMultipleItems(9, &menuEntries[31]);
+
+        d2 += diyLeagueTournament_fixtureRowYStep;
+        teamIdx += 2;
+        d5++;
+    } while (d5 <= numTeamsPerGroup);
+}
+
 /* DIYSetMonthsOrPitchTypeEntries — toggle pitch type / month entry visibility (SWOS2.s line 41515) */
 __attribute__((used, externally_visible))
 void _DIYSetMonthsOrPitchTypeEntries(void)
