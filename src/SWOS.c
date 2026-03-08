@@ -92,7 +92,7 @@ __attribute__((used, externally_visible)) void _start(void)
     *(volatile uint32_t *)&loaderBankBitmap = 0;
     loaderParam = SWOS_FASTBITS;
 
-    *(volatile uint16_t *)COLOR00_ADDR = 0xF00u;
+    *(volatile uint16_t *)COLOR00_ADDR = 0x0u;
 
     volatile uint16_t *front = &frontbufferBase;
     volatile uint16_t *alt = &frontbufferBaseAlt;
