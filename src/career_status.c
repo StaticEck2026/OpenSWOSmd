@@ -2672,8 +2672,6 @@ extern uint8_t aAdditionalInve[];
 extern uint16_t _GetTeamValueBase(uint16_t avgPrice);
 
 /* Helper: menu entry from byte offset */
-#define ME(off) menuEntries[(off) / 56]
-#define MEP(off) (&menuEntries[(off) / 56])
 
 /* Helper: access bg as the high 16 bits (big-endian BACKANDFRAMECOLOR) */
 static inline uint16_t bgColor_cs(MenuEntry *e) { return *(uint16_t *)&e->bg; }
@@ -2718,73 +2716,73 @@ void _ClubBusinessInit(void)
     if (contractNegotiationActive) {
         /* ---- Path 1: Full financial summary ---- */
         /* Old balance */
-        _Int2PoundsSigned(old_balance, (uint8_t *)MEP(0x2A0)->fg);
+        _Int2PoundsSigned(old_balance, (uint8_t *)menuEntries[12].fg);
         /* Gate receipts */
-        _WriteAccountBalance(gateReceipts, (uint8_t *)MEP(0x310)->fg);
+        _WriteAccountBalance(gateReceipts, (uint8_t *)menuEntries[14].fg);
         /* General running costs (negated) */
-        _WriteAccountBalance(-generalRunningCosts, (uint8_t *)MEP(0x348)->fg);
+        _WriteAccountBalance(-generalRunningCosts, (uint8_t *)menuEntries[15].fg);
         /* Player sales */
-        _WriteAccountBalance(playerSales, (uint8_t *)MEP(0x3B8)->fg);
+        _WriteAccountBalance(playerSales, (uint8_t *)menuEntries[17].fg);
         /* Player purchases (negated) */
-        _WriteAccountBalance(-playerPurchases, (uint8_t *)MEP(0x3F0)->fg);
+        _WriteAccountBalance(-playerPurchases, (uint8_t *)menuEntries[18].fg);
         /* Player wages bill (negated) */
-        _WriteAccountBalance(-playerWagesBill, (uint8_t *)MEP(0x428)->fg);
+        _WriteAccountBalance(-playerWagesBill, (uint8_t *)menuEntries[19].fg);
 
         /* Compute total profit/loss */
         int32_t total = computeTotalProfitLoss();
         if (total < 0) {
-            MEP(0x230)->fg = (uint32_t)aTotalLoss;
+            menuEntries[10].fg = (uint32_t)aTotalLoss;
         }
 
         /* Write total */
-        _WriteAccountBalance(total, (uint8_t *)MEP(0x460)->fg);
+        _WriteAccountBalance(total, (uint8_t *)menuEntries[20].fg);
 
         /* New balance with red color if negative */
-        formatNewBalanceEntry(MEP(0x498), newBalance);
+        formatNewBalanceEntry(&menuEntries[21], newBalance);
         return;
     }
 
     if (!stayingInOldClub) {
         /* ---- Path 2: Abbreviated summary (no gate receipts etc.) ---- */
-        MenuEntry *e70 = MEP(0x70);
+        MenuEntry *e70 = &menuEntries[2];
         e70->y += 30;
         e70->fg = (uint32_t)aBalanceAtStart;
 
-        MenuEntry *e2A0 = MEP(0x2A0);
+        MenuEntry *e2A0 = &menuEntries[12];
         e2A0->y += 30;
         _Int2PoundsSigned(old_balance, (uint8_t *)e2A0->fg);
 
         /* Hide entries: E0, 118, 310, 348 */
-        ME(0xE0).isInvisible = 1;
-        ME(0x118).isInvisible = 1;
-        ME(0x310).isInvisible = 1;
-        ME(0x348).isInvisible = 1;
+        menuEntries[4].isInvisible = 1;
+        menuEntries[5].isInvisible = 1;
+        menuEntries[14].isInvisible = 1;
+        menuEntries[15].isInvisible = 1;
 
         /* Player sales & purchases */
-        _WriteAccountBalance(playerSales, (uint8_t *)MEP(0x3B8)->fg);
-        _WriteAccountBalance(-playerPurchases, (uint8_t *)MEP(0x3F0)->fg);
+        _WriteAccountBalance(playerSales, (uint8_t *)menuEntries[17].fg);
+        _WriteAccountBalance(-playerPurchases, (uint8_t *)menuEntries[18].fg);
 
         /* Hide: 1F8, 428 */
-        ME(0x1F8).isInvisible = 1;
-        ME(0x428).isInvisible = 1;
+        menuEntries[9].isInvisible = 1;
+        menuEntries[19].isInvisible = 1;
 
         /* Adjust Y positions */
-        MEP(0x230)->y -= 15;
+        menuEntries[10].y -= 15;
 
         /* Compute total */
         int32_t total = computeTotalProfitLoss();
         if (total < 0) {
-            MEP(0x230)->fg = (uint32_t)aTotalLoss;
+            menuEntries[10].fg = (uint32_t)aTotalLoss;
         }
 
         /* Write total */
-        MEP(0x460)->y -= 15;
-        _WriteAccountBalance(total, (uint8_t *)MEP(0x460)->fg);
+        menuEntries[20].y -= 15;
+        _WriteAccountBalance(total, (uint8_t *)menuEntries[20].fg);
 
-        MEP(0x268)->y -= 15;
+        menuEntries[11].y -= 15;
 
         /* New balance with color adjustments */
-        MenuEntry *e498 = MEP(0x498);
+        MenuEntry *e498 = &menuEntries[21];
         e498->y -= 15;
         formatNewBalanceEntry(e498, newBalance);
         return;
@@ -2793,12 +2791,12 @@ void _ClubBusinessInit(void)
     /* ---- Path 3: Extended with sponsorship ---- */
     if (sensisoftPlcSponsorshipFactor) {
         /* Shift entries 0x70..0x70+9*56 up by 13 each */
-        MenuEntry *e = MEP(0x70);
+        MenuEntry *e = &menuEntries[2];
         for (int16_t i = 9; i >= 0; i--) {
             e->y -= 13;
             e++;
         }
-        e = MEP(0x2A0);
+        e = &menuEntries[12];
         for (int16_t i = 9; i >= 0; i--) {
             e->y -= 13;
             e++;
@@ -2806,31 +2804,31 @@ void _ClubBusinessInit(void)
     }
 
     /* Set "BALANCE AT END OF LAST SEASON:" */
-    MenuEntry *e70 = MEP(0x70);
+    MenuEntry *e70 = &menuEntries[2];
     e70->fg = (uint32_t)aBalanceAtEndOf;
     e70->y += 5;
 
-    MenuEntry *e2A0 = MEP(0x2A0);
+    MenuEntry *e2A0 = &menuEntries[12];
     e2A0->y += 5;
     _Int2PoundsSigned(old_balance, (uint8_t *)e2A0->fg);
 
     /* Show entries: A8, 2D8 */
-    ME(0xA8).isInvisible = 0;
-    ME(0x2D8).isInvisible = 0;
+    menuEntries[3].isInvisible = 0;
+    menuEntries[13].isInvisible = 0;
 
     /* Competition bonuses */
-    _WriteAccountBalance(competitionBonuses, (uint8_t *)MEP(0x2D8)->fg);
+    _WriteAccountBalance(competitionBonuses, (uint8_t *)menuEntries[13].fg);
 
     /* Shift entries E0..E0+7*56 down by 15 */
     {
-        MenuEntry *e = MEP(0xE0);
+        MenuEntry *e = &menuEntries[4];
         for (int16_t i = 7; i >= 0; i--) {
             e->y += 15;
             e++;
         }
     }
     {
-        MenuEntry *e = MEP(0x310);
+        MenuEntry *e = &menuEntries[14];
         for (int16_t i = 7; i >= 0; i--) {
             e->y += 15;
             e++;
@@ -2838,37 +2836,37 @@ void _ClubBusinessInit(void)
     }
 
     /* Set sponsorship text */
-    MenuEntry *eE0 = MEP(0xE0);
+    MenuEntry *eE0 = &menuEntries[4];
     eE0->fg = (uint32_t)aSponsorshipFor;
     eE0->y += 5;
 
-    MEP(0x118)->fg = (uint32_t)aSeasonFromSens;
+    menuEntries[5].fg = (uint32_t)aSeasonFromSens;
 
     /* Starting balance copy */
-    MEP(0x310)->y += 10;
-    ME(0x348).isInvisible = 1;
-    _WriteAccountBalance(startingBalanceCopy, (uint8_t *)MEP(0x310)->fg);
+    menuEntries[14].y += 10;
+    menuEntries[15].isInvisible = 1;
+    _WriteAccountBalance(startingBalanceCopy, (uint8_t *)menuEntries[14].fg);
 
     if (sensisoftPlcSponsorshipFactor) {
         /* Show sponsorship entries */
-        ME(0x150).isInvisible = 0;
-        ME(0x380).isInvisible = 0;
-        _WriteAccountBalance(sensisoftPlcSponsorship, (uint8_t *)MEP(0x380)->fg);
+        menuEntries[6].isInvisible = 0;
+        menuEntries[16].isInvisible = 0;
+        _WriteAccountBalance(sensisoftPlcSponsorship, (uint8_t *)menuEntries[16].fg);
 
         if (additionalInvestments) {
-            MEP(0x150)->fg = (uint32_t)aAdditionalInve;
+            menuEntries[6].fg = (uint32_t)aAdditionalInve;
         }
 
         /* Shift entries 188..188+4*56 down by 15 */
         {
-            MenuEntry *e = MEP(0x188);
+            MenuEntry *e = &menuEntries[7];
             for (int16_t i = 4; i >= 0; i--) {
                 e->y += 15;
                 e++;
             }
         }
         {
-            MenuEntry *e = MEP(0x3B8);
+            MenuEntry *e = &menuEntries[17];
             for (int16_t i = 4; i >= 0; i--) {
                 e->y += 15;
                 e++;
@@ -2877,27 +2875,27 @@ void _ClubBusinessInit(void)
     }
 
     /* Player sales & purchases */
-    _WriteAccountBalance(playerSales, (uint8_t *)MEP(0x3B8)->fg);
-    _WriteAccountBalance(-playerPurchases, (uint8_t *)MEP(0x3F0)->fg);
+    _WriteAccountBalance(playerSales, (uint8_t *)menuEntries[17].fg);
+    _WriteAccountBalance(-playerPurchases, (uint8_t *)menuEntries[18].fg);
 
     /* Hide: 1F8, 428 */
-    ME(0x1F8).isInvisible = 1;
-    ME(0x428).isInvisible = 1;
+    menuEntries[9].isInvisible = 1;
+    menuEntries[19].isInvisible = 1;
 
     /* Adjust and compute total */
-    MEP(0x230)->y -= 15;
+    menuEntries[10].y -= 15;
 
     int32_t total = computeTotalProfitLoss();
     if (total < 0) {
-        MEP(0x230)->fg = (uint32_t)aTotalLoss;
+        menuEntries[10].fg = (uint32_t)aTotalLoss;
     }
 
-    MEP(0x460)->y -= 15;
-    _WriteAccountBalance(total, (uint8_t *)MEP(0x460)->fg);
+    menuEntries[20].y -= 15;
+    _WriteAccountBalance(total, (uint8_t *)menuEntries[20].fg);
 
-    MEP(0x268)->y -= 15;
+    menuEntries[11].y -= 15;
 
-    MenuEntry *e498 = MEP(0x498);
+    MenuEntry *e498 = &menuEntries[21];
     e498->y -= 15;
     formatNewBalanceEntry(e498, newBalance);
 }

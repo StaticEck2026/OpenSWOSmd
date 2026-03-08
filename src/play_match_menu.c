@@ -136,8 +136,6 @@ extern void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void);
 extern void _CTrainingMatch_ApplyUseMatchTeamAndSwapSubs(void);
 
 /* ---- Helper: menu entry from byte offset ---- */
-#define ME(off) menuEntries[(off) / 56]
-#define MEP(off) (&menuEntries[(off) / 56])
 
 /* Helper: access bg as the high 16 bits (big-endian BACKANDFRAMECOLOR) */
 static inline uint16_t bgColor(MenuEntry *e) { return *(uint16_t *)&e->bg; }
@@ -214,7 +212,7 @@ void _SavePositionsAndUpdateLittleCheckmark(void) {
 /* ================================================================ */
 __attribute__((used, externally_visible))
 void _SetGameStartButtonText(void) {
-    MenuEntry *e = MEP(0x1F8);
+    MenuEntry *e = &menuEntries[9];
     setBgColor(e, (bgColor(e) & 0xFFF0) | YELLOW_GREEN_BLACK_14);
     e->fg = (uint32_t)aViewResult;
     if (!squadChangesAllowed) return;
@@ -235,11 +233,11 @@ void _SetGameStartButtonText(void) {
 /* ================================================================ */
 __attribute__((used, externally_visible))
 void _ShowUseMatchTeamIfTraining(void) {
-    ME(0x118).isInvisible = 1;
+    menuEntries[5].isInvisible = 1;
     if (!trainingGame) return;
     if (is_A_team) return;
     if (!_CheckIfTeamIsChanged()) return;
-    ME(0x118).isInvisible = 0;
+    menuEntries[5].isInvisible = 0;
 }
 
 /* ================================================================
@@ -266,22 +264,22 @@ void _ShowUseMatchTeamIfTraining(void) {
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _ShowOrHidePlayMatchButton(void) {
-    ME(0x1C0).isInvisible = 1;
+    menuEntries[8].isInvisible = 1;
 
     if (viewingOpponentTeam) {
         uint8_t *t2 = (uint8_t *)playMatchTeam2Ptr;
         /* asm compares byte at MENUENTRY_ISINVISIBLE(a0) which is offset 4 = TEAMFILE_TEAMCONTROLS */
         if (t2[TEAMFILE_TEAMCONTROLS] != 1) goto hidePlayBtnPath;
         if (!squadChangesAllowed) goto hidePlayBtnPath;
-        ME(0x1C0).isInvisible = 0;
+        menuEntries[8].isInvisible = 0;
         if (!playMatchButtonVisibilityState) goto hidePlayBtnPath;
         goto canPlay;
     }
 
     /* notViewingOpponent */
-    ME(0x1C0).isInvisible = 0;
+    menuEntries[8].isInvisible = 0;
     {
-        MenuEntry *vb = MEP(0x188);
+        MenuEntry *vb = &menuEntries[7];
         vb->stringFlags &= ~(1u << 13);
         if (trainingGame) {
             vb->fg = (uint32_t)aViewATeam;
@@ -337,7 +335,7 @@ void _ShowOrHidePlayMatchButton(void) {
                 uint16_t ns2 = _GetNumberOfSubstitutes(currentTeam, 1);
                 if (ns2 != 1) {
                     /* Set blink on view button */
-                    MenuEntry *vb = MEP(0x188);
+                    MenuEntry *vb = &menuEntries[7];
                     vb->stringFlags |= (1u << 13);
                     uint32_t sr2 = _GetNumberOfAvailableSubstitutes(team, playMatchExcludeFlags);
                     if ((uint16_t)(sr2 & 0xFFFF) < 2) goto cannotPlay;
@@ -378,7 +376,7 @@ canPlay:
         playMatchButtonVisibilityState = 1;
     }
     /* showPlayBtn: loc_148768 */
-    ME(0x1F8).isInvisible = 0;
+    menuEntries[9].isInvisible = 0;
     return;
 
 showPlayBtnPath:
@@ -388,14 +386,14 @@ hidePlayBtnPath:
         playMatchButtonVisibilityState = 0;
 hidePlayBtn:
     /* loc_148780 */
-    ME(0x1F8).isInvisible = 1;
+    menuEntries[9].isInvisible = 1;
     return;
 }
 
 /* ================================================================ */
 __attribute__((used, externally_visible))
 void _UpdateTeamCheckmark(void) {
-    ME(0x818).isInvisible = 1;
+    menuEntries[37].isInvisible = 1;
     if (!squadChangesAllowed) return;
 
     int16_t d1;
@@ -425,7 +423,7 @@ void _UpdateTeamCheckmark(void) {
     }
 
     {
-        MenuEntry *ck = MEP(0x818);
+        MenuEntry *ck = &menuEntries[37];
         ck->stringFlags |= (1u << 13);
         MenuEntry *pe = _CalcMenuEntryAddress(13 + d1);
         ck->y = pe->y;
@@ -440,7 +438,7 @@ void _SetUpTacticsButtons(void) {
     if (viewingOpponentTeam) team = (uint8_t *)playMatchTeam2Ptr;
     uint8_t curTact = team[TEAMFILE_TACTICS];
 
-    MenuEntry *e = MEP(0x850);
+    MenuEntry *e = &menuEntries[38];
     int16_t i;
     for (i = 0; i < 18; i++, e++) {
         uint16_t c = bgColor(e) & 0xFFF0;
@@ -457,7 +455,7 @@ void _SetUpTacticsButtons(void) {
 /* ================================================================ */
 __attribute__((used, externally_visible))
 void _SetPlayerSurnamesOnSidePitch(void) {
-    MenuEntry *entry = MEP(0xC78);
+    MenuEntry *entry = &menuEntries[57];
     uint8_t *team = (uint8_t *)playMatchTeam1Ptr;
     if (viewingOpponentTeam) team = (uint8_t *)playMatchTeam2Ptr;
 
@@ -489,7 +487,7 @@ void _SetVariableButtons(void) {
     _SetGameStartButtonText();
     _ShowUseMatchTeamIfTraining();
 
-    MenuEntry *vb = MEP(0x188);
+    MenuEntry *vb = &menuEntries[7];
     vb->fg = (uint32_t)aViewOppo;
     if (viewingOpponentTeam) vb->fg = (uint32_t)aViewTeam;
     if (showingCpuTeams) { vb->fg = (uint32_t)aViewOtherTeam; vb->dwWidth = 93; }
@@ -508,7 +506,7 @@ void _SetVariableButtons(void) {
 
     /* Team country name */
     {
-        MenuEntry *top = MEP(0x70);
+        MenuEntry *top = &menuEntries[2];
         uint8_t *nameOut = (uint8_t *)top->fg;
         if (!(trainingGame && !is_A_team)) {
             uint8_t *tm = (uint8_t *)playMatchTeam1Ptr;
@@ -528,37 +526,37 @@ void _SetVariableButtons(void) {
 
     if (viewingOpponentTeam) {
         /* Viewing opponent */
-        ME(0xE0).isInvisible = 0;
-        ME(0xA8).isInvisible = 0;
-        MEP(0xA8)->y = 204;
-        MEP(0xE0)->y = 204;
-        ME(0x150).isInvisible = 1;
-        setBgColor(MEP(0x38), (bgColor(MEP(0x38)) & 0xFFF0) | ORANGE_TO_BROWN_12);
+        menuEntries[4].isInvisible = 0;
+        menuEntries[3].isInvisible = 0;
+        menuEntries[3].y = 204;
+        menuEntries[4].y = 204;
+        menuEntries[6].isInvisible = 1;
+        setBgColor(&menuEntries[1], (bgColor(&menuEntries[1]) & 0xFFF0) | ORANGE_TO_BROWN_12);
 
         curTeam = (uint8_t *)playMatchTeam2Ptr;
-        ME(0x230).isInvisible = 1;
+        menuEntries[10].isInvisible = 1;
 
         uint8_t *t2 = (uint8_t *)playMatchTeam2Ptr;
         if (t2[TEAMFILE_TEAMCONTROLS] != TEAM_COMPUTER || !squadChangesAllowed)
-            ME(0x188).isInvisible = 1;
+            menuEntries[7].isInvisible = 1;
 
-        ME(0x268).isInvisible = 0;
-        ME(0x658).isInvisible = 1;
-        ME(0x690).isInvisible = 1;
+        menuEntries[11].isInvisible = 0;
+        menuEntries[29].isInvisible = 1;
+        menuEntries[30].isInvisible = 1;
     } else {
         /* Viewing own team */
-        ME(0xE0).isInvisible = 0;
-        ME(0xA8).isInvisible = 1;
-        MEP(0xA8)->y = 204;
-        MEP(0xE0)->y = 204;
-        ME(0x150).isInvisible = 0;
+        menuEntries[4].isInvisible = 0;
+        menuEntries[3].isInvisible = 1;
+        menuEntries[3].y = 204;
+        menuEntries[4].y = 204;
+        menuEntries[6].isInvisible = 0;
 
-        MenuEntry *cb = MEP(0x150);
+        MenuEntry *cb = &menuEntries[6];
         uint8_t *t1 = (uint8_t *)playMatchTeam1Ptr;
 
         if (showingCpuTeams) {
-            ME(0x150).isInvisible = 1;
-            ME(0xA8).isInvisible = 0;
+            menuEntries[6].isInvisible = 1;
+            menuEntries[3].isInvisible = 0;
         }
 
         cb->fg = (uint32_t)aCoach_1;
@@ -570,12 +568,12 @@ void _SetVariableButtons(void) {
             setBgColor(cb, (bgColor(cb) & 0xFFF0) | BLUE_TO_PURPLE_11);
 
         if (!squadChangesAllowed) {
-            ME(0xA8).isInvisible = 0;
-            ME(0x150).isInvisible = 1;
+            menuEntries[3].isInvisible = 0;
+            menuEntries[6].isInvisible = 1;
         }
 
         cb->isDisabled = 0;
-        if (is_A_team) ME(0xA8).isInvisible = 1;
+        if (is_A_team) menuEntries[3].isInvisible = 1;
 
         if (trainingGame) {
             if (t1[TEAMFILE_TEAMCONTROLS] != TEAM_PLAYER_COACH) {
@@ -588,7 +586,7 @@ void _SetVariableButtons(void) {
         }
 
         /* Edit tactics button */
-        MenuEntry *eb = MEP(0x38);
+        MenuEntry *eb = &menuEntries[1];
         setBgColor(eb, (bgColor(eb) & 0xFFF0) | BLUE_TO_PURPLE_11);
         if (t1[TEAMFILE_TEAMCONTROLS] != TEAM_PLAYER_COACH) {
             setBgColor(eb, (bgColor(eb) & 0xFFF0) | BRIGHT_BLUE_TO_BLUE_13);
@@ -598,27 +596,27 @@ void _SetVariableButtons(void) {
         if (trainingGame && t1[TEAMFILE_TEAMCONTROLS] == TEAM_COMPUTER)
             setBgColor(eb, (bgColor(eb) & 0xFFF0) | BRIGHT_BLUE_TO_BLUE_13);
 
-        ME(0x230).isInvisible = 0;
-        if (showingCpuTeams) ME(0x230).isInvisible = 1;
-        if (is_A_team) ME(0x230).isInvisible = 1;
+        menuEntries[10].isInvisible = 0;
+        if (showingCpuTeams) menuEntries[10].isInvisible = 1;
+        if (is_A_team) menuEntries[10].isInvisible = 1;
 
-        ME(0x188).isInvisible = 0;
-        ME(0x268).isInvisible = 1;
-        ME(0x658).isInvisible = 1;
-        ME(0x690).isInvisible = 1;
+        menuEntries[7].isInvisible = 0;
+        menuEntries[11].isInvisible = 1;
+        menuEntries[29].isInvisible = 1;
+        menuEntries[30].isInvisible = 1;
 
         if (!showingCpuTeams) {
             int16_t diff = (int16_t)numPlayersToShowInMenu - (int16_t)pmMenuNumPlayers;
             if (diff != 0) {
-                ME(0x658).isInvisible = 0;
-                if (diff != 1) ME(0x690).isInvisible = 0;
+                menuEntries[29].isInvisible = 0;
+                if (diff != 1) menuEntries[30].isInvisible = 0;
             }
         }
     }
 
     /* Set team name and coach name */
     {
-        MenuEntry *nm = MEP(0x38);
+        MenuEntry *nm = &menuEntries[1];
         uint8_t *tm = curTeam;
 
         if (trainingGame && !is_A_team) {
@@ -642,7 +640,7 @@ void _SetVariableButtons(void) {
     {
         uint8_t *tm = (uint8_t *)playMatchTeam1Ptr;
         if (viewingOpponentTeam) tm = (uint8_t *)playMatchTeam2Ptr;
-        MEP(0xE0)->fg = (uint32_t)(tm + TEAMFILE_COACHNAME);
+        menuEntries[4].fg = (uint32_t)(tm + TEAMFILE_COACHNAME);
     }
 }
 
@@ -675,14 +673,14 @@ void _PlayMatchMenuReinit(void) {
 
     int16_t extra = 4 - (int16_t)maxSubstitutesEntries;
     if (extra >= 0) {
-        MenuEntry *sub = MEP(0x620);
+        MenuEntry *sub = &menuEntries[28];
         int16_t j;
         for (j = extra; j >= 0; j--) {
             sub->isInvisible = 1;
             sub--;
-            MEP(0x2A0)->y -= 9;
-            MEP(0x690)->y -= 9;
-            MEP(0x658)->y -= 9;
+            menuEntries[12].y -= 9;
+            menuEntries[30].y -= 9;
+            menuEntries[29].y -= 9;
         }
     }
 
@@ -740,7 +738,7 @@ void _OnSwapPlayer(MenuEntry *a5) {
 
     /* Normal player path */
     {
-        int16_t d6 = a5->ordinal - ME(0x2D8).ordinal;
+        int16_t d6 = a5->ordinal - menuEntries[13].ordinal;
         if (d6 == 16) d6 = d6 - 5 + maxSubstitutesEntries;
 
         uint16_t slot, fIdx;
@@ -788,7 +786,7 @@ cpuPath:
     if (longFireFlag) return;
     if (!squadChangesAllowed) return;
     {
-        int16_t d1 = a5->ordinal - ME(0x2D8).ordinal;
+        int16_t d1 = a5->ordinal - menuEntries[13].ordinal;
         uint16_t slot, fIdx;
         uint8_t *pl = _GetPlayerInfoBreakPosition(t1, (uint16_t)d1, &slot, &fIdx);
         PlayerFile *plPf = (PlayerFile *)(pl + 76);
@@ -896,7 +894,7 @@ __attribute__((used, externally_visible))
 void _PlayMatchChangeTactics(MenuEntry *a5) {
     _UpdateLittleCheckmark();
     _RedrawPlayerNames();
-    int16_t nt = a5->ordinal - ME(0x850).ordinal;
+    int16_t nt = a5->ordinal - menuEntries[38].ordinal;
     uint8_t *t = (uint8_t *)playMatchTeam1Ptr;
     if ((int8_t)t[TEAMFILE_TACTICS] == (int8_t)nt) return;
     t[TEAMFILE_TACTICS] = (uint8_t)nt;
@@ -1012,13 +1010,13 @@ void _PlayMatchOnSelect30(void) {
 /* ================================================================ */
 __attribute__((used, externally_visible))
 void _PlayMatch30AfterDraw(void) {
-    _CallDrawMenuItem(MEP(0x658));
+    _CallDrawMenuItem(&menuEntries[29]);
 }
 
 /* ================================================================ */
 __attribute__((used, externally_visible))
 void _RedrawPlayerNames(void) {
-    _CallDrawMultipleItems(11, MEP(0x2D8));
+    _CallDrawMultipleItems(11, &menuEntries[13]);
     _CallDrawMenuItem(&menuEntries[0]);
 }
 
@@ -1084,8 +1082,8 @@ void _DrawPlayerEntries(MenuEntry *a5) {
     int16_t d7 = a5->ordinal - 13;
     int16_t d5 = 0;
 
-    MenuEntry *bgE = MEP(0x6C8);  /* entry 31 */
-    MenuEntry *numE = MEP(0x738); /* entry 33 */
+    MenuEntry *bgE = &menuEntries[31];  /* entry 31 */
+    MenuEntry *numE = &menuEntries[33]; /* entry 33 */
 
     if (d7 == 16) {
         d5 = 1;
@@ -1165,7 +1163,7 @@ void _DrawPlayerEntries(MenuEntry *a5) {
             selIdx = (int16_t)*(uint16_t *)currentSelectedPlayerIndexPtr;
         }
         if (selIdx == d1) {
-            MenuEntry *ck = MEP(0x818);
+            MenuEntry *ck = &menuEntries[37];
             ck->y = bgE->y;
             setBgColor(ck, bgColor(bgE));
             *(uint16_t *)&ck->fg = *(uint16_t *)&bgE->fg;
@@ -1230,7 +1228,7 @@ void _DrawPlayerEntries(MenuEntry *a5) {
         valE->isInvisible = 0;
     }
 
-    _DrawMultipleItems(6, MEP(0x6C8));
+    _DrawMultipleItems(6, &menuEntries[31]);
 }
 
 /* ================================================================

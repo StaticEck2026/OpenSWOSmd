@@ -133,8 +133,6 @@ extern void _CShowSquad(uint8_t *team, uint8_t *title, uint32_t maskLo, uint32_t
 extern void _CCareer_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel);
 
 /* Helper: menu entry from byte offset */
-#define ME(off) menuEntries[(off) / 56]
-#define MEP(off) (&menuEntries[(off) / 56])
 
 /* Helper: access bg as the high 16 bits (big-endian BACKANDFRAMECOLOR) */
 static inline uint16_t bgColor(MenuEntry *e) { return *(uint16_t *)&e->bg; }
@@ -402,8 +400,8 @@ void _JobOffers_ConvertNewOfferToOffer(uint16_t teamNumber, uint32_t initialFund
  * ================================================================ */
 
 /* Helper: format string into menu entry's text buffer */
-static inline void printToEntry(uint16_t entryOff, const uint8_t *fmt, const uint8_t *a, const uint8_t *b) {
-    MenuEntry *e = MEP(entryOff);
+static inline void printToEntry(uint16_t entryIdx, const uint8_t *fmt, const uint8_t *a, const uint8_t *b) {
+    MenuEntry *e = &menuEntries[entryIdx];
     uint8_t *out = (uint8_t *)e->fg;
     _PrintFormatted(fmt, out, 0,0,0,0,0,0,0, a, b, 0);
 }
@@ -446,7 +444,7 @@ void _GotJobOfferFinish(void) {
     /* If sacked and only 1 total offer, change exit to "RETIRE" with red color */
     if (youreSacked) {
         if ((uint16_t)(numNewJobOffers + numJobOffers) == 1) {
-            MenuEntry *exitEntry = MEP(0x1C0);
+            MenuEntry *exitEntry = &menuEntries[8];
             exitEntry->fg = (uint32_t)aRetire;
             setBgColor(exitEntry, (bgColor(exitEntry) & 0xFFF0) | 10); /* RED_10 */
         }
@@ -458,10 +456,10 @@ void _GotJobOfferFinish(void) {
         e0->fg = (uint32_t)aInternationalJ;
         e0->x -= 30;
         e0->dwWidth += 60;
-        MEP(0x1C0)->x += 65;
-        MEP(0x2D8)->x -= 65;
-        ME(0x1F8).isInvisible = 1;
-        ME(0x2A0).isInvisible = 1;
+        menuEntries[8].x += 65;
+        menuEntries[13].x -= 65;
+        menuEntries[9].isInvisible = 1;
+        menuEntries[12].isInvisible = 1;
     }
 
     if (teamNoOfferAccepted != 0xFFFF) {
@@ -472,13 +470,13 @@ void _GotJobOfferFinish(void) {
     /* ---- New/existing offer path ---- */
     /* loc_14A400 */
     if (jobOfferOrdinal >= 0) {
-        ME(0x268).isInvisible = 1;
+        menuEntries[11].isInvisible = 1;
     } else {
-        ME(0x230).isInvisible = 1;
+        menuEntries[10].isInvisible = 1;
     }
 
     if (!jobOffersFromRetired) {
-        MenuEntry *acceptBtn = MEP(0x2D8);
+        MenuEntry *acceptBtn = &menuEntries[13];
         acceptBtn->isDisabled = 1;
         setBgColor(acceptBtn, (bgColor(acceptBtn) & 0xFFF0) | 9); /* PINK_TO_BROWN_9 */
     }
@@ -488,7 +486,7 @@ void _GotJobOfferFinish(void) {
 
     /* Format "DEAR %a %b" with manager sex and surname */
     {
-        uint8_t *out = (uint8_t *)MEP(0x38)->fg;
+        uint8_t *out = (uint8_t *)menuEntries[1].fg;
         _PrintFormatted(aDearAB, out, 0,0,0,0,0,0,0, managerSexBuffer, managerSurnameBuffer, 0);
     }
 
@@ -497,46 +495,46 @@ void _GotJobOfferFinish(void) {
         uint8_t *teamName = ((uint8_t *)teamOfferingJobPtr) + 5;
 
         {
-            uint8_t *out = (uint8_t *)MEP(0x70)->fg;
+            uint8_t *out = (uint8_t *)menuEntries[2].fg;
             _PrintFormatted(&aWeHereAtAWould[1], out, 0,0,0,0,0,0,0, teamName, 0, 0);
         }
-        printToEntry(0xA8, aCoachingJobAtO, 0, 0);
+        printToEntry(3, aCoachingJobAtO, 0, 0);
 
         _CInt2Pounds((uint32_t)jobOfferFunds, fundsBuffer);
 
         {
-            uint8_t *out = (uint8_t *)MEP(0xE0)->fg;
+            uint8_t *out = (uint8_t *)menuEntries[4].fg;
             _PrintFormatted(aWeCanOfferYouA, out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
         }
         {
-            uint8_t *out = (uint8_t *)MEP(0x118)->fg;
+            uint8_t *out = (uint8_t *)menuEntries[5].fg;
             _PrintFormatted(aWeHopeToBeAble, out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
         }
         {
-            uint8_t *out = (uint8_t *)MEP(0x150)->fg;
+            uint8_t *out = (uint8_t *)menuEntries[6].fg;
             _PrintFormatted(aInTheRegionOfA, out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
         }
         {
-            uint8_t *out = (uint8_t *)MEP(0x188)->fg;
+            uint8_t *out = (uint8_t *)menuEntries[7].fg;
             _PrintFormatted(aWeLookForwardT_1, out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
         }
     } else {
         /* International offer */
-        MenuEntry *e0xA8 = MEP(0xA8);
+        MenuEntry *e0xA8 = &menuEntries[3];
         int16_t newY = e0xA8->y + 10;
-        MEP(0xE0)->y = newY;
+        menuEntries[4].y = newY;
 
         uint8_t *teamName = ((uint8_t *)teamOfferingJobPtr) + 5;
 
         {
-            uint8_t *out = (uint8_t *)MEP(0x70)->fg;
+            uint8_t *out = (uint8_t *)menuEntries[2].fg;
             _PrintFormatted(aTheMembersOfTh, out, 0,0,0,0,0,0,0, teamName, 0, 0);
         }
-        printToEntry(0xA8, aOfAWouldLikeTo, teamName, 0);
-        printToEntry(0xE0, aAsCoachOfTheNa, 0, 0);
-        printToEntry(0x118, aWeCanPromiseYo, 0, 0);
-        printToEntry(0x150, aAnAnnuallyRevi, 0, 0);
-        printToEntry(0x188, aWeLookForwardT, 0, 0);
+        printToEntry(3, aOfAWouldLikeTo, teamName, 0);
+        printToEntry(4, aAsCoachOfTheNa, 0, 0);
+        printToEntry(5, aWeCanPromiseYo, 0, 0);
+        printToEntry(6, aAnAnnuallyRevi, 0, 0);
+        printToEntry(7, aWeLookForwardT, 0, 0);
     }
     return;
 
@@ -544,17 +542,17 @@ acceptedJobPath:
     /* loc_14A5D0: team already accepted */
     menuEntries[0].fg = (uint32_t)aNewJob;
     {
-        int16_t newY = MEP(0xA8)->y + 10;
-        MEP(0xE0)->y = newY;
+        int16_t newY = menuEntries[3].y + 10;
+        menuEntries[4].y = newY;
     }
-    ME(0x230).isInvisible = 1;
-    ME(0x2D8).isInvisible = 1;
-    ME(0x1C0).isInvisible = 1;
+    menuEntries[10].isInvisible = 1;
+    menuEntries[13].isInvisible = 1;
+    menuEntries[8].isInvisible = 1;
 
     teamOfferingJobPtr = (uint32_t)_GetTeamPointer(teamNoOfferAccepted);
 
     {
-        uint8_t *out = (uint8_t *)MEP(0x38)->fg;
+        uint8_t *out = (uint8_t *)menuEntries[1].fg;
         _PrintFormatted(aDearAB, out, 0,0,0,0,0,0,0, managerSexBuffer, managerSurnameBuffer, 0);
     }
 
@@ -563,47 +561,47 @@ acceptedJobPath:
         uint8_t *teamName = ((uint8_t *)teamOfferingJobPtr) + 5;
 
         {
-            uint8_t *out = (uint8_t *)MEP(0x70)->fg;
+            uint8_t *out = (uint8_t *)menuEntries[2].fg;
             _PrintFormatted(aWeHereAtAAreDe, out, 0,0,0,0,0,0,0, teamName, 0, 0);
         }
-        printToEntry(0xA8, aHaveAcceptedTh, 0, 0);
+        printToEntry(3, aHaveAcceptedTh, 0, 0);
 
         _CInt2Pounds(teamFundsAccepted, fundsBuffer);
 
-        printToEntry(0xE0, aFromTheStartOf_0, fundsBuffer, 0);
+        printToEntry(4, aFromTheStartOf_0, fundsBuffer, 0);
         {
-            uint8_t *out = (uint8_t *)MEP(0x118)->fg;
+            uint8_t *out = (uint8_t *)menuEntries[5].fg;
             _PrintFormatted(aWeHopeToBeAble_0, out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
         }
         {
-            uint8_t *out = (uint8_t *)MEP(0x150)->fg;
+            uint8_t *out = (uint8_t *)menuEntries[6].fg;
             _PrintFormatted(aInTheRegionOfA_0, out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
         }
-        printToEntry(0x188, aAndWeLookForwa, fundsBuffer, 0);
+        printToEntry(7, aAndWeLookForwa, fundsBuffer, 0);
     } else {
         /* International accepted */
         {
-            int16_t newY = MEP(0xE0)->y + 10;
-            MEP(0x118)->y = newY;
+            int16_t newY = menuEntries[4].y + 10;
+            menuEntries[5].y = newY;
         }
-        MEP(0x188)->y -= 15;
+        menuEntries[7].y -= 15;
 
         uint8_t *teamName = ((uint8_t *)teamOfferingJobPtr) + 5;
 
         {
-            uint8_t *out = (uint8_t *)MEP(0x70)->fg;
+            uint8_t *out = (uint8_t *)menuEntries[2].fg;
             _PrintFormatted(aTheMembersOfTh_0, out, 0,0,0,0,0,0,0, teamName, 0, 0);
         }
-        printToEntry(0xA8, aOfAAreDelighte, teamName, 0);
-        printToEntry(0xE0, aAcceptedThePos, 0, 0);
-        printToEntry(0x118, aFromTheStartOf, 0, 0);
+        printToEntry(3, aOfAAreDelighte, teamName, 0);
+        printToEntry(4, aAcceptedThePos, 0, 0);
+        printToEntry(5, aFromTheStartOf, 0, 0);
         {
-            uint8_t *out = (uint8_t *)MEP(0x150)->fg;
+            uint8_t *out = (uint8_t *)menuEntries[6].fg;
             _PrintFormatted(aWeLookForwardT_0, out, 0,0,0,0,0,0,0, 0, 0, 0);
         }
         {
             /* asm uses (aWeLookForwardT_0+1) which skips the leading \x00 byte */
-            uint8_t *out = (uint8_t *)MEP(0x188)->fg;
+            uint8_t *out = (uint8_t *)menuEntries[7].fg;
             _PrintFormatted(&aWeLookForwardT_0[1], out, 0,0,0,0,0,0,0, 0, 0, 0);
         }
     }

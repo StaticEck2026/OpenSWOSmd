@@ -12,7 +12,7 @@ typedef void (*VoidFunc)(void);
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t currentMenu[];
-extern uint8_t menuEntries[];
+extern MenuEntry menuEntries[];
 extern uint32_t currentMenuPtr;
 extern uint16_t menuStatus;
 extern uint16_t menuFade;
