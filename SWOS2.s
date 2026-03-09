@@ -3224,9 +3224,6 @@ nullsub_3:
 ; prototype: void __usercall ReturnFunction()
 ReturnFunction:
                 rts
-                tst.w   (syncWaitFlag).l
-                beq.s   ReturnFunction
-                move.w  #1,(syncReadyFlag).l
 loc_103988:
                 tst.w   (syncWaitFlag).l
                 beq.s   ReturnFunction
@@ -3323,31 +3320,6 @@ ReturnFromFunction:
 ; prototype: void __usercall BlitterSpan4Planes()
 BlitterSpan4Planes:
                 rts
-                lea     (CUSTOM).l,a6
-                mulu.w  #ROW_STRIDE_BYTES,d1
-                adda.l  d1,a0
-                move.w  d0,d1
-                lsr.w   #3,d0
-                andi.w  #WORD_ALIGN_EVEN_MASK,d0
-                adda.w  d0,a0
-                andi.w  #TILE_MASK,d1
-                move.w  #BLTCON0_USEA_LF_FC,d5
-                move.w  #BLTCON0_USED_LF_00,d6
-                movem.l d1-d2/d4/a0,-(sp)
-                bsr.w   align_and_prepare_left_mask
-                movem.l (sp)+,d1-d2/d4/a0
-                movem.l d1-d2/a0,-(sp)
-                bsr.w   BlitterSpanCoreMasked
-                movem.l (sp)+,d1-d2/a0
-                lea     PLANE_STRIDE(a0),a0
-                movem.l d1-d2/a0,-(sp)
-                bsr.w   BlitterSpanCoreMasked
-                movem.l (sp)+,d1-d2/a0
-                lea     PLANE_STRIDE(a0),a0
-                movem.l d1-d2/a0,-(sp)
-                bsr.w   BlitterSpanCoreMasked
-                movem.l (sp)+,d1-d2/a0
-                lea     PLANE_STRIDE(a0),a0
 loc_103C34:
                 bra.s   BlitterSpanCoreMasked
 leftMaskTable:
@@ -3358,12 +3330,6 @@ leftMaskTable:
 ; prototype: void __usercall BlitterSpanCoreMasked()
 BlitterSpanCoreMasked:
                 rts
-                move.w  #BLTCON0_USEA_USED_LF_F0,d5
-                move.w  #BLTCON0_USED_LF_00,d6
-                lsr.w   #1,d4
-                bcc.s   align_and_prepare_left_mask
-                move.w  #BLTCON0_USEA_USED_LF_FC,d5
-                move.w  #BLTCON0_USED_LF_FF,d6
 align_and_prepare_left_mask:
                 tst.w   d1
                 beq.w   blit_aligned_middle_words
@@ -4916,17 +4882,6 @@ PlayGoalKickOffSample:
 ; prototype: void nullsub_6(...)
 nullsub_6:
                 rts
-                rts
-                move.w  #1,d0
-                move.w  #3,d1
-                bra.w   nullsub_22
-                move.w  #2,d0
-                move.w  #3,d1
-                bra.w   nullsub_22
-
-; ===== HandleKickSampleAndCrowd =====
-; Ported to C (_HandleKickSampleAndCrowd in sfx_crowd.c)
-; Returns Z flag: Z=1 (played), Z=0 (blocked)
 HandleKickSampleAndCrowd:
                 move.l  d1,-(sp)
                 move.l  d0,-(sp)
@@ -5606,34 +5561,6 @@ nullsub_21:
 ; prototype: void nullsub_20(...)
 nullsub_20:
                 rts
-                rts
-                rts
-                move.w  #$1113,(panicReasonCode).l
-                jsr PanicHaltLoop(pc)
-
-; ===== InjuryUpdateTickGuard =====
-; prototype: void __usercall InjuryUpdateTickGuard()
-; Ported to C: _InjuryUpdateTickGuard in src/ball_physics.c
-
-; ===== CopyAdvertisementsData =====
-; prototype: void __usercall CopyAdvertisementsData()
-; Ported to C: _CopyAdvertisementsData in src/adverts.c
-
-; ===== InitAdvertisements =====
-; prototype: void __usercall InitAdvertisements()
-; Ported to C: _InitAdvertisements in src/adverts.c
-
-; ===== SetAdvertisementsVisible =====
-; prototype: void __usercall SetAdvertisementsVisible()
-; Ported to C: _SetAdvertisementsVisible in src/adverts.c
-
-; ===== SetAdvertisementsInvisible =====
-; prototype: void __usercall SetAdvertisementsInvisible()
-; Ported to C: _SetAdvertisementsInvisible in src/adverts.c
-
-; ===== ManageAdvertisements =====
-; prototype: void __usercall ManageAdvertisements()
-; Ported to C: _ManageAdvertisements in src/adverts.c
 advertIndex:
                 dc.w $0000              ; Determines which advertisement is shown during the game, -1 = none
 advertSlideTimer:
@@ -7287,12 +7214,6 @@ DrawOpponentsBench:
 DrawBenchPlayersAndCoach:
 ; Ported to C as static drawBenchPlayersAndCoach() in bench_subs.c (dead code)
                 rts
-                clr.w   d5
-                clr.w   d6
-                cmpi.w  #1,TEAMGENERALINFO_TEAMNUMBER(a1)
-                beq.s   loc_10DBF6
-                move.w  #7,d5
-                move.w  #$C,d6
 loc_10DBF6:
                 subi.w  #$13,d2
                 addq.w  #4,d2
@@ -7436,18 +7357,6 @@ loc_10DDA0:
 DrawSubstitutesMenu:
 ; Ported to C as static drawSubstitutesMenu() in bench_subs.c (dead code)
                 rts
-                movea.l (benchTeamGame).l,a0
-                lea     (benchColors).l,a1
-                move.w  TEAMGAME_PRSHIRTCOL(a0),(a1)+
-                move.w  TEAMGAME_PRSTRIPESCOL(a0),(a1)+
-                move.w  TEAMGAME_PRSHORTSCOL(a0),(a1)+
-                move.w  TEAMGAME_PRSOCKSCOL(a0),(a1)+
-                move.w  #3,(a1)+
-                move.w  #1,(a1)+
-                move.w  #3,(a1)+
-                move.w  #1,(a1)+
-                move.w  #$FFFF,(a1)+
-                lea     (benchColors).l,a1
 loc_10DDE2:
                 move.w  (a1)+,d1
                 cmpi.w  #2,d1
@@ -7590,50 +7499,6 @@ locret_10DFA4:
 ;      A4 -> in-game team player offsets
 DrawSubstitutesMenuEntry:
 ; Ported to C as static drawSubstitutesMenuEntry() in bench_subs.c (dead code)
-                rts
-                movem.l d2/d4,-(sp)
-                move.w  (subsMenuX).l,d0
-                sub.w   (cameraX).l,d0
-                move.w  d2,d1
-                move.w  #126,d2
-                move.w  #11,d3
-                move.w  #8,d4
-                movem.l d0-d3/d7/a1-a4,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d0-d3/d7/a1-a4
-                subq.w  #2,d0
-                subq.w  #2,d1
-                move.w  (subsMenuEntryFrameColor).l,d4
-                movem.l d7/a1-a4,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d7/a1-a4
-                movem.l (sp)+,d2/d4
-                movem.l d2,-(sp)
-                move.w  (subsMenuX).l,d0
-                sub.w   (cameraX).l,d0
-                subq.w  #1,d0
-                move.w  d2,d1
-                subq.w  #1,d1
-                move.w  #124,d2
-                move.w  #9,d3
-                movem.l d7/a1-a4,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d7/a1-a4
-                movem.l (sp)+,d2
-                cmpi.w  #4,(subsState).l
-                bne.s   loc_10E05C
-                cmpi.w  #$FFFF,d7
-                bne.s   loc_10E05C
-                lea     (aFormation).l,a0 ; "FORMATION"
-                move.w  (subsMenuX).l,d1
-                sub.w   (cameraX).l,d1
-                addi.w  #63,d1
-                move.w  #2,d3
-                addq.w  #1,d2
-                movem.l d0/d2/d6-d7/a1-a4,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d0/d2/d6-d7/a1-a4
-                subq.w  #1,d2
                 rts
 loc_10E05C:
                 move.w  d7,d0
@@ -7784,18 +7649,6 @@ locret_10E262:
 DrawFormationMenu:
 ; Ported to C as static drawFormationMenu() in bench_subs.c (dead code)
                 rts
-                movea.l (benchTeamGame).l,a0
-                lea     (benchColors).l,a1
-                move.w  TEAMGAME_PRSHIRTCOL(a0),(a1)+
-                move.w  TEAMGAME_PRSTRIPESCOL(a0),(a1)+
-                move.w  TEAMGAME_PRSHORTSCOL(a0),(a1)+
-                move.w  TEAMGAME_PRSOCKSCOL(a0),(a1)+
-                move.w  #3,(a1)+
-                move.w  #1,(a1)+
-                move.w  #3,(a1)+
-                move.w  #1,(a1)+
-                move.w  #$FFFF,(a1)+
-                lea     (benchColors).l,a1
 loc_10E29A:
                 move.w  (a1)+,d1
                 cmpi.w  #2,d1
@@ -7887,42 +7740,6 @@ loc_10E392:
 DrawFormationMenuEntry:
 ; Ported to C as static drawFormationMenuEntry() in bench_subs.c (dead code)
                 rts
-                movem.l d2/d4,-(sp)
-                move.w  (formationMenuX).l,d0
-                sub.w   (cameraX).l,d0
-                move.w  d2,d1
-                move.w  #60,d2
-                move.w  #11,d3
-                move.w  #8,d4
-                movem.l d0-d3/d7/a1-a4,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d0-d3/d7/a1-a4
-                subq.w  #2,d0
-                subq.w  #2,d1
-                move.w  (subsMenuEntryFrameColor).l,d4
-                movem.l d7/a1-a4,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d7/a1-a4
-                movem.l (sp)+,d2/d4
-                movem.l d2,-(sp)
-                move.w  (formationMenuX).l,d0
-                sub.w   (cameraX).l,d0
-                subq.w  #1,d0
-                move.w  d2,d1
-                subq.w  #1,d1
-                move.w  #58,d2
-                move.w  #9,d3
-                movem.l d7/a1-a4,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d7/a1-a4
-                movem.l (sp)+,d2
-                cmpi.w  #12,d7
-                bcc.s   loc_10E432
-                lea     (tacticsStringTable).l,a0
-                move.w  d7,d0
-                lsl.w   #2,d0
-                movea.l (a0,d0.w),a0
-                bra.s   loc_10E442
 loc_10E432:
                 lea     (teamTacticsTable).l,a0
                 move.w  d7,d0
@@ -9274,13 +9091,6 @@ draw_fouls_conceded_team2:
 ; Ported to C as static helper in statistics.c (only called from DrawStatistics)
 WriteStatsNumber:
                 rts
-                movem.l d2-d3/a1/a5-a6,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d2-d3/a1/a5-a6
-                rts
-
-; ===== WriteStatsPercent =====
-; Ported to C as static helper in statistics.c (only called from DrawStatistics)
 WriteStatsPercent:
                 rts
 
@@ -22834,15 +22644,6 @@ currentGoalScorerDistPtr:
 ; Dead — only called from CalculateViewResult which is now in C
 ApplyRandomPlayerStatusAfterSim:
                 rts
-                move.w  #$FFFF,d0
-                clr.w   d1
-                movem.l a1,-(sp)
-                jsr     GetNumberOfAvailablePlayers
-                movem.l (sp)+,a1
-                move.w  #4,d5
-                cmpi.w  #4,(gameType).l
-                beq.s   loc_122274
-                move.w  #2,d5
 loc_122274:
                 sub.w   d6,d5
                 beq.w   locret_1223BC
@@ -24325,32 +24126,6 @@ teamTacticsTable:
 ; Dead — only called from now-ported UpdatePlayerPositionAndReturnRole
 GetPlayerPrice:
                 rts
-                ; === dead code below (old body) ===
-                move.l  a1,-(sp)
-                move.b  PLAYERFILE_POSITIONANDFACE+$4C(a1),d0
-                andi.w  #$E0,d0
-                lsr.w   #5,d0
-                mulu.w  #35,d0
-                lea     skillsPerQuadrant(pc),a5
-                lea     loc_122D6A+1-skillsPerQuadrant(a5,d0.w),a5
-                move.l  PLAYERFILE_PASSING+$4C(a1),d5
-                andi.l  #$7777777,d5
-                addi.l  #$1111111,d5
-                move.b  24(a0),d0
-                ext.w   d0
-                lsl.w   #2,d0
-                lea     teamTacticsTable(pc),a3
-                movea.l (a3,d0.w),a3
-                lea     9(a3),a3
-                move.l  a3,(plPositions).l
-                subq.w  #1,d7
-                mulu.w  #35,d7
-                lea     (a3,d7.w),a3
-                lea     quadrantCoordinatesToBallQuadrant(pc),a4
-                lea     (quadrantDistanceFactor+$4A6)(pc),a2
-                clr.w   (totalSkillsFactorSum).l
-                clr.w   d6
-                move.w  #34,d3
 loc_1246F4:
                 move.w  d3,-(sp)
                 clr.w   d7
@@ -26622,23 +26397,6 @@ AppendTeamToCupWinnersCupList:
                 rts
 AppendTeamToUefaCupList:
                 rts
-                movea.l a5,a0
-                lea     euroCupTeamListPtr(pc),a1
-                lea     euroCupTeamListWritePtr(pc),a2
-                lea     euroCupQualifiedTeamCount(pc),a3
-                bra.w   loc_12B218
-                movea.l a5,a0
-                lea     cupWinnersCupTeamListPtr(pc),a1
-                lea     cupWinnersCupTeamListWritePtr(pc),a2
-                lea     cupWinnersCupQualifiedTeamCount(pc),a3
-                bra.w   loc_12B218
-                movea.l a5,a0
-                lea     uefaCupTeamListPtr(pc),a1
-                lea     uefaCupTeamListWritePtr(pc),a2
-                lea     uefaCupQualifiedTeamCount(pc),a3
-                bra.w   loc_12B218
-
-; ===== Career_AdvanceToNextSeason_UpdateCompetitions ===== (ported to C → _Career_AdvanceToNextSeason_UpdateCompetitions)
 Career_AdvanceToNextSeason_UpdateCompetitions:
                 movem.l d2-d7/a2-a6,-(sp)
                 jsr     _Career_AdvanceToNextSeason_UpdateCompetitions
@@ -71767,13 +71525,6 @@ SetLoadedTeamsGlobalNumbers:
 ; ===== SetLeagueNumbers =====
 SetLeagueNumbers:
                 rts
-                lea     (teamFileBuffer).l,a0
-                move.w  (a0),d7
-                beq.w   locret_151E0E
-                lea     TEAMFILE_GLOBALTEAMNUMBER(a0),a0
-                subq.w  #1,d7
-                move.w  #999,d1
-                clr.w   d2
 loc_151DB0:
                 movem.l d1-d7/a0-a6,-(sp)
                 jsr     GetAveragePlayerPrice
