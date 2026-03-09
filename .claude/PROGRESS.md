@@ -3827,3 +3827,26 @@ All game logic subroutines have been ported to C. Remaining assembly consists of
 - AssetSys functions (PC-relative, call dead floppy code)
 - Low-level blitter/hardware routines (direct custom chip register access)
 - RNC decompression (complex algorithm, working in asm)
+
+### Phase 3 Progress — Assembly Code Removal
+
+#### Session 2026-03-09
+- Changed 480+ dc.l menu entries to point directly to C functions (via fix_menu_dcl.py)
+- Ported 7 player market callback functions to C (transfer_market.c)
+- Modified _CallMenuOnSelect to pass a5 as C stack argument
+- Added stringDataEnd label for _ZeroOutStars boundary marker
+- Removed 12 dead code blocks after jmp stubs (206 lines)
+- Removed 501 unreferenced simple jmp forwarding stubs (1821 lines)
+- Removed 60 dead bridge functions from swos2_unit.s and resload_unit.s (637 lines)
+- Removed 15 dead code blocks after rts stubs (249 lines)
+- Removed 655 unreferenced multi-line bridge stubs (5548 lines)
+- Fixed 28 C extern declarations to call _FuncName directly (eliminating C→asm→C round-trips)
+- Cleaned up 91 orphan xdef entries and 352 orphan xref entries
+
+**Remaining in SWOS2.s:** 69,302 lines total
+- 38,639 data lines (dc/ds)
+- 8,617 instruction lines
+  - 104 bridge stubs (still referenced from asm callers)
+  - ~91 live asm code blocks (HUD, statistics, blitter, RNC, interrupt handlers)
+- 5,068 labels
+- 15,903 comments

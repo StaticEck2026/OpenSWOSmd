@@ -1023,7 +1023,7 @@ finish_menu:
         {
             uint32_t cookie = irqCookieObfuscated ^ 0xCFD1F8C5;
             if (cookie != 0x1722) {
-                loc_1215BC();
+                //loc_1215BC();
                 return;
             }
         }

@@ -3277,7 +3277,7 @@ extern void _InitDIYCupFromRecord(uint8_t *cupRec);
 extern void _InitDIYLeagueFromRecord(uint8_t *leagueRec);
 extern void _InitTeams(void);
 extern void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
-extern void _asm_ShowDIYCupMenuWithParams(uint16_t d0, uint16_t d1, uint16_t d2);
+extern void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
 extern void _DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC);
 extern void _DIY_RestoreCompetitionFileBufferFromDIYCompetition(void);
 extern void _DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt(void);
@@ -3386,7 +3386,7 @@ void _PresetCompetitionMenu(void)
         _CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyCupTeamIds);
         _InitDIYCupFromRecord((uint8_t *)selectedContest);
         _InitTeams();
-        _asm_ShowDIYCupMenuWithParams(0, 0, 0);
+        _ShowDIYCupMenuWithParams(0, 0, 0);
         _DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt();
         _CommonMenuExit();
     } else {
@@ -3489,7 +3489,7 @@ diy_over: /* loc_140FDC — DIY competition over */
         } else if (ct == 1) {
             /* Cup: loc_141010 */
             _DIY_CopyCompetitionFileBufferToCompetitionStart();
-            _asm_ShowDIYCupMenuWithParams(0, 0, 0);
+            _ShowDIYCupMenuWithParams(0, 0, 0);
             _DIY_CopyCompetitionStartToCompetitionFileBuffer();
             _CommonMenuExit();
             goto final_check;
@@ -3516,7 +3516,7 @@ preset_over: /* loc_141050 — preset competition over */
         } else if (ct == 1) {
             /* Cup: loc_141080 */
             _DIY_CopyCompetitionFileBufferToCompetitionStart_Alt();
-            _asm_ShowDIYCupMenuWithParams(0, 0, 0);
+            _ShowDIYCupMenuWithParams(0, 0, 0);
             _DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt();
             _CommonMenuExit();
             goto final_check;
@@ -3547,7 +3547,7 @@ diy_not_over: /* loc_1410E4 — DIY not over yet */
             _DIY_CopyCompetitionFileBufferToCompetitionStart();
             _InitTeams();
             _DIY_InitCupFromTeamGridAndValidateTeams();
-            _asm_ShowDIYCupMenuWithParams(0, 0, 0);
+            _ShowDIYCupMenuWithParams(0, 0, 0);
             _DIY_CopyCompetitionStartToCompetitionFileBuffer();
             _CommonMenuExit();
             goto final_check;
@@ -3580,7 +3580,7 @@ preset_not_over: /* loc_14117C — preset not over yet */
             _DIY_CopyCompetitionFileBufferToCompetitionStart_Alt();
             _InitTeams();
             _DIY_InitCupFromTeamGridAndValidateTeams();
-            _asm_ShowDIYCupMenuWithParams(0, 0, 0);
+            _ShowDIYCupMenuWithParams(0, 0, 0);
             _DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt();
             _CommonMenuExit();
             goto final_check;

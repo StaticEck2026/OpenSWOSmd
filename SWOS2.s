@@ -2964,17 +2964,6 @@ Int3TimerHandler:
                 movem.l (sp)+,d0-d7/a0-a6
                 rte
 
-; ===== GetKey =====
-; prototype: unsigned __int16 __usercall GetKey@<d0>()
-; out:
-;       ASCII code in convertedKey 
-;       scan code in lastKey
-;       0 if nothing pressed
-;       
-; destroys: eax, ebx, esi
-; [ebp safe]
-GetKey:
-                jmp     _GetKey
 ; unsigned __int8[128]
 keycodeLut:
                 dc.b $27,$31,$32,$33,$34,$35,$36,$37,$38,$39,$30,$2D,$3D,$5C,$3F,$B0
@@ -3008,40 +2997,7 @@ copperListTemplate:
                 dc.w $00EE,$0000,$FFE1,$FFFE,$0001,$FFFE,$00E0,$0000
                 dc.w $00E2,$0000,$00E4,$0000,$00E6,$0000,$00E8,$0000
                 dc.w $00EA,$0000,$00EC,$0000,$00EE,$0000,$FFFF,$FFFE
-                movem.l d0-d7/a0-a7,(panicRegDumpBlock).l
-loc_1023F6:
-                move.w  d0,(COLOR00).l
-                addq.w  #1,d0
-                bra.s   loc_1023F6
-                movem.l d0-d7/a0-a6,-(sp)
-                movem.l d0-d7/a0-a7,(panicRegDumpBlock).l
-                movea.l (errorMessagePtr).l,a0
-                lea     (smallCharsTable).l,a1
-                move.w  #$A8,d1
-                move.w  #$F,d2
-                move.w  #2,d3
-                movem.l d1-d2/a0-a1,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d1-d2/a0-a1
-                jsr     WaitForVSync
-                move.w  #2,d3
-                movem.l d1-d2/a0-a1,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d1-d2/a0-a1
-                jsr     WaitForVSync
-loc_102450:
-                jsr GetKey(pc)
-                cmpi.w  #$20,(currentKey).l ; ' '
-                bne.s   loc_102450
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
-; ===== PanicHaltLoop =====
-; Ported to C (_PanicHaltLoop in panic.c)
-; Stub saves registers for debug dump, then jumps to C.
-PanicHaltLoop:
-                movem.l d0-d7/a0-a6,(panicRegDumpBlock).l
-                jmp     _PanicHaltLoop
 panicFormatStr:
                 dc.b '%a',0
 panicOutBuf:
@@ -3049,84 +3005,6 @@ panicOutBuf:
 pad_102555:
                 dc.b $00,$00,$00,$00,$00,$C0,$FC,$00,$0A
 
-; ===== FlashColor0Delay =====
-; Ported to C: _FlashColor0Delay in src/display.c
-; d0 = loopCount (uint32_t), d1 = color (uint16_t)
-
-; ===== Player1StatusProc =====
-; prototype: unsigned __int16 __usercall Player1StatusProc@<d0>()
-; Returns
-; 
-; D0 =
-; 1 = UpRight
-; 3 = DownRight
-; 5 = DownLeft
-; 7 = UpLeft
-; 0 = Up
-; 2 = Right
-; 4 = Down
-; 6 = Left
-; ===== Player1StatusProc =====
-; Ported to C (_Player1StatusProc in input.c)
-Player1StatusProc:
-                jmp     _Player1StatusProc
-
-; ===== Player2StatusProc =====
-; Ported to C (_Player2StatusProc in input.c)
-Player2StatusProc:
-                jmp     _Player2StatusProc
-
-; ===== ProcessSpriteBlitQueue =====
-; Ported to C: _ProcessSpriteBlitQueue in src/display.c
-
-; ===== LoadPitchMap =====
-; Ported to C: _LoadPitchMap in src/pitch.c
-; d0 = mapIndex (uint16_t)
-
-; ===== FixupAndColorPitchFile =====
-
-; ===== InitCameraMoveView =====
-; prototype: void __usercall InitCameraMoveView()
-; Ported to C: _InitCameraMoveView in src/camera.c
-; in: D1 = targetX, D2 = targetY
-
-; ===== MoveView =====
-; prototype: void __usercall MoveView(__int16 newScreenX@<d1>, __int16 newScreenY@<d2>)
-; in:
-;      D1 - new visible screen x
-;      D2 - new visible screen y
-; Ported to C: _MoveView in src/camera.c
-; in: D1 = newScreenX, D2 = newScreenY
-
-; ===== ScrollToCurrent =====
-; prototype: void __usercall ScrollToCurrent()
-; Sets view to cameraX and cameraY.
-; Updates oldCameraX and oldCameraY.
-; 
-; out:
-;      D1 - camera x
-;      D2 - camera y
-; Ported to C: _ScrollToCurrent in src/camera.c
-
-; ===== ScrollXUpdateColumnsAndBlit =====
-; Ported to C: _ScrollXUpdateColumnsAndBlit in src/scroll_blit.c
-
-; ===== ScrollYUpdateRowsAndBlit =====
-; Ported to C: _ScrollYUpdateRowsAndBlit in src/scroll_blit.c
-
-; ===== ApplyFadeStep =====
-; Ported to C: _ApplyFadeStep in src/fade.c
-; d2 = fadeLevel (uint16_t)
-
-; ===== FadeOutTick =====
-; Ported to C: _FadeOutTick in src/fade.c
-
-; ===== FadeInTick =====
-; Ported to C: _FadeInTick in src/fade.c
-
-; ===== ProcessImageCommandStream =====
-; Ported to C (_ProcessImageCommandStream in image_cmd.c)
-; Register-to-stack forwarding stub for remaining asm callers.
 currentSpriteIndex:
                 dc.w -1
 
@@ -3220,59 +3098,10 @@ isrTrampolineGuard:
                 dc.w $0000
 ReturnFromFunction:
                 jmp ReturnFunction(pc)
-
-; ===== BlitterSpan4Planes =====
-; prototype: void __usercall BlitterSpan4Planes()
-BlitterSpan4Planes:
-                rts
-loc_103C34:
-                bra.s   BlitterSpanCoreMasked
 leftMaskTable:
                 dc.w $8000,$C000,$E000,$F000,$F800,$FC00,$FE00,$FF00
                 dc.w $FF80,$FFC0,$FFE0,$FFF0,$FFF8,$FFFC,$FFFE
 
-; ===== BlitterSpanCoreMasked =====
-; prototype: void __usercall BlitterSpanCoreMasked()
-BlitterSpanCoreMasked:
-                rts
-align_and_prepare_left_mask:
-                tst.w   d1
-                beq.w   blit_aligned_middle_words
-                add.w   d1,d1
-                move.w  loc_103C34(pc,d1.w),d7
-                lsr.w   #1,d1
-                moveq   #$10,d0
-                sub.w   d1,d0
-                sub.w   d0,d2
-                bpl.s   start_left_edge_blit
-                neg.w   d2
-                add.w   d2,d2
-                or.w    partialSpanMaskTable(pc,d2.w),d7
-                moveq   #0,d2
-start_left_edge_blit:
-                move.w  #DMACON_BLT_ON,(DMACON).l
-                btst    #DMACONR_BLTBUSY_BIT,(DMACONR).l
-wait_blitter_ready_left:
-                btst    #DMACONR_BLTBUSY_BIT,(DMACONR).l
-                bne.s   wait_blitter_ready_left
-                move.w  #DMACON_BLT_OFF,(DMACON).l
-                move.w  d7,BLTAFWM(a6)
-                move.w  d7,BLTALWM(a6)
-                not.w   d7
-                move.w  d7,BLTBDAT(a6)
-                move.l  a0,BLTAPT(a6)
-                move.l  a0,BLTDPT(a6)
-                move.w  #FB_BLT_MOD_AFTER_1_WORD,BLTAMOD(a6)
-                move.w  #FB_BLT_MOD_AFTER_1_WORD,BLTDMOD(a6)
-                move.w  d5,BLTCON0(a6)
-                move.w  #0,BLTCON1(a6)
-                move.w  d3,d7
-                asl.w   #6,d7
-                ori.w   #1,d7
-                move.w  d7,BLTSIZE(a6)
-                addq.w  #2,a0
-                tst.w   d2
-                bne.s   blit_aligned_middle_words
 ; unsigned __int16[16]
 partialSpanMaskTable:
                 ; unsigned __int16[16]
@@ -3283,112 +3112,6 @@ tailMaskTable:
                 ; unsigned __int16[16]
                 dc.w $FFFF,$8000,$C000,$E000,$F000,$F800,$FC00,$FE00
                 dc.w $FF00,$FF80,$FFC0,$FFE0,$FFF0,$FFF8,$FFFC,$FFFE
-blit_aligned_middle_words:
-                move.w  d2,d0
-                lsr.w   #4,d0
-                beq.s   blit_right_edge
-                move.w  #ROW_STRIDE_BYTES,d1
-                sub.w   d0,d1
-                sub.w   d0,d1
-                move.w  #DMACON_BLT_ON,(DMACON).l
-                btst    #DMACONR_BLTBUSY_BIT,(DMACONR).l
-wait_blitter_ready_middle:
-                btst    #DMACONR_BLTBUSY_BIT,(DMACONR).l
-                bne.s   wait_blitter_ready_middle
-                move.w  #DMACON_BLT_OFF,(DMACON).l
-                move.l  a0,BLTDPT(a6)
-                move.w  d1,BLTDMOD(a6)
-                move.w  d6,BLTCON0(a6)
-                move.w  #0,BLTCON1(a6)
-                move.w  d3,d1
-                asl.w   #6,d1
-                or.w    d0,d1
-                move.w  d1,BLTSIZE(a6)
-                add.w   d0,d0
-                adda.w  d0,a0
-blit_right_edge:
-                andi.w  #TILE_MASK,d2
-                beq.s   blitter_span_core_masked_return
-                add.w   d2,d2
-                move.w  tailMaskTable(pc,d2.w),d7
-                not.w   d7
-                move.w  #DMACON_BLT_ON,(DMACON).l
-                btst    #DMACONR_BLTBUSY_BIT,(DMACONR).l
-wait_blitter_ready_right:
-                btst    #DMACONR_BLTBUSY_BIT,(DMACONR).l
-                bne.s   wait_blitter_ready_right
-                move.w  #DMACON_BLT_OFF,(DMACON).l
-                move.w  d7,BLTAFWM(a6)
-                move.w  d7,BLTALWM(a6)
-                not.w   d7
-                move.w  d7,BLTBDAT(a6)
-                move.l  a0,BLTAPT(a6)
-                move.l  a0,BLTDPT(a6)
-                move.w  #FB_BLT_MOD_AFTER_1_WORD,BLTAMOD(a6)
-                move.w  #FB_BLT_MOD_AFTER_1_WORD,BLTDMOD(a6)
-                move.w  d5,BLTCON0(a6)
-                move.w  #0,BLTCON1(a6)
-                move.w  d3,d7
-                asl.w   #6,d7
-                ori.w   #1,d7
-                move.w  d7,BLTSIZE(a6)
-blitter_span_core_masked_return:
-                rts
-blitter_rectrow_masked:
-                movem.l d0-d3/a0-a1,-(sp)
-                moveq   #0,d4
-                movea.l a1,a0
-                bsr.w   BlitterSpan4Planes
-                movem.l (sp)+,d0-d3/a0-a1
-                asl.w   #2,d1
-                asl.w   #2,d3
-                mulu.w  #PLANE_STRIDE,d1
-                adda.l  d1,a0
-                adda.l  d1,a1
-                move.w  d0,d4
-                lsr.w   #4,d4
-                subq.w  #1,d2
-                move.w  d0,d1
-                add.w   d2,d1
-                move.w  d1,d5
-                lsr.w   #4,d5
-                sub.w   d4,d5
-                add.w   d4,d4
-                adda.w  d4,a0
-                adda.w  d4,a1
-                andi.w  #TILE_MASK,d0
-                andi.w  #TILE_MASK,d1
-                lea     (CUSTOM).l,a6
-                lea     firstWordMaskTable(pc),a2
-                add.w   d0,d0
-                add.w   d1,d1
-                move.w  (a2,d0.w),d0
-                lea     lastWordMaskTable(pc),a2
-                move.w  (a2,d1.w),d1
-                move.w  #DMACON_BLT_ON,(DMACON).l
-                btst    #DMACONR_BLTBUSY_BIT,(DMACONR).l
-wait_blitter_ready:
-                btst    #DMACONR_BLTBUSY_BIT,(DMACONR).l
-                bne.s   wait_blitter_ready
-                move.w  #DMACON_BLT_OFF,(DMACON).l
-                addq.w  #1,d5
-                move.w  #BLTCON0_USEA_USEB_USED_LF_FC,BLTCON0(a6)
-                move.w  #0,BLTCON1(a6)
-                move.w  d0,BLTAFWM(a6)
-                move.w  d1,BLTALWM(a6)
-                move.l  a0,BLTAPT(a6)
-                move.l  a1,BLTBPT(a6)
-                move.l  a1,BLTDPT(a6)
-                move.w  #PLANE_STRIDE,d0
-                sub.w   d5,d0
-                sub.w   d5,d0
-                move.w  d0,BLTAMOD(a6)
-                move.w  d0,BLTBMOD(a6)
-                move.w  d0,BLTDMOD(a6)
-                asl.w   #6,d3
-                or.w    d5,d3
-                move.w  d3,BLTSIZE(a6)
-                rts
 firstWordMaskTable:
                 dc.w $FFFF,$7FFF,$3FFF,$1FFF,$0FFF,$07FF,$03FF,$01FF
                 dc.w $00FF,$007F,$003F,$001F,$000F,$0007,$0003,$0001
@@ -3396,230 +3119,9 @@ lastWordMaskTable:
                 dc.w $8000,$C000,$E000,$F000,$F800,$FC00,$FE00,$FF00
                 dc.w $FF80,$FFC0,$FFE0,$FFF0,$FFF8,$FFFC,$FFFE,$FFFF
 
-; ===== BuildPaletteFromColors =====
-; prototype: void __usercall BuildPaletteFromColors(unsigned __int8 *palette@<a0>)
-; in:  A0 = color table (48 bytes = 16*(R,G,B) bytes; uses high nibbles only)
-; out: A1 = palette (16 words, $0RGB)
 overlayActiveFlag:
                 dc.w $0000
 
-; ===== BlitterCopyPanelToScreen =====
-; Ported to C: _BlitterCopyPanelToScreen in src/display.c
-
-; ===== HWSprite_LoadFromSpriteGraphics =====
-; Ported to C: _HWSprite_LoadFromSpriteGraphics in src/display.c
-; d0 = spriteIndex (uint16_t)
-
-; ===== BlitSpritePlanar_Word_StridedDest =====
-; Ported to C: _BlitSpritePlanar_Word_StridedDest in blitter.c
-BlitSpritePlanar_Word_StridedDest:
-                move.l  d0,-(sp)
-                jsr     _BlitSpritePlanar_Word_StridedDest
-                addq.l  #4,sp
-                rts
-
-; ===== BlitSpritePlanar_Long_StridedDest =====
-; Ported to C: _BlitSpritePlanar_Long_StridedDest in blitter.c
-BlitSpritePlanar_Long_StridedDest:
-                move.l  d0,-(sp)
-                jsr     _BlitSpritePlanar_Long_StridedDest
-                addq.l  #4,sp
-                rts
-
-; ===== DrawSprite16Pixels =====
-; Ported to C: _DrawSprite16Pixels in src/sprites.c
-DrawSprite16Pixels:
-                movem.l d2-d7/a2-a6,-(sp)
-                ext.l   d2
-                move.l  d2,-(sp)
-                ext.l   d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _DrawSprite16Pixels
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== CopySprite =====
-; prototype: unsigned __int8 __usercall CopySprite@<d0>(unsigned __int16 srcSprite@<d0>, unsigned __int16 xOffset@<d1>, unsigned __int16 yOffset@<d2>, unsigned __int16 dstSprite@<d3>)
-; Copies sprite2 into sprite1. Sprite 1 must be big enough.
-; in:
-;      D0 - src sprite (2)
-;      D1 - x offset in dest sprite
-;      D2 - y offset in dest sprite (only in EGA)
-;      D3 - dest sprite (1)
-;
-; Note: x offset can only start from even number (rounded down).
-CopySprite:
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                move.l  d3,-(sp)
-                move.l  d0,-(sp)
-                jsr     _CopySprite
-                lea     16(sp),sp
-                rts
-
-; ===== DrawSpriteHotspotInCameraView =====
-; Ported to C: _DrawSpriteHotspotInCameraView in src/sprites.c
-DrawSpriteHotspotInCameraView:
-                movem.l d2-d7/a2-a6,-(sp)
-                ext.l   d2
-                move.l  d2,-(sp)
-                ext.l   d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _DrawSpriteHotspotInCameraView
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== DrawSpriteInCameraView =====
-; Ported to C: _DrawSpriteInCameraView in src/sprites.c
-DrawSpriteInCameraView:
-                movem.l d2-d7/a2-a6,-(sp)
-                ext.l   d2
-                move.l  d2,-(sp)
-                ext.l   d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _DrawSpriteInCameraView
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-
-; ===== InitDisplaySprites =====
-; prototype: void __usercall InitDisplaySprites()
-InitDisplaySprites:
-                jmp     _InitDisplaySprites
-
-; ===== AdjustFanColor =====
-; prototype: char __usercall AdjustFanColor@<d0>(unsigned __int8 *destPattern@<a1>, const unsigned __int8 *pitchConvTable@<a0>)
-; in:
-;      A1 - dest pattern
-;      A0 - pitch convert table
-; 
-; Synchronizes fan color with teams that are playing. Fans are on the
-; upper and lower part of pitch.
-; Algorithm:
-; Get byte from dest, use it as a word index into src, get byte and
-; store it into dest (replacing previous index).
-
-; ===== ConvertSpriteColors =====
-; prototype: char __usercall ConvertSpriteColors@<d0>(unsigned __int16 spriteNumber@<d0>, unsigned __int16 *colorConvTable@<a0>)
-; in:
-;      D0 -  sprite number
-;      A0 -> color conversion table
-; 
-
-; ===== FillRectangle =====
-; Ported to C: _FillRectangle in src/blitter.c
-; in: d0=x, d1=y, d2=w, d3=h, d4=color
-FillRectangle:
-                move.l  d4,-(sp)
-                move.l  d3,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _FillRectangle
-                lea     20(sp),sp
-                rts
-
-; ===== WaitForVSync =====
-; prototype: void __usercall WaitForVSync()
-WaitForVSync:
-                jmp     _WaitForVSync
-
-; ===== GetTextWidth =====
-; prototype: unsigned __int16 __usercall GetTextWidth@<d7>(const char *text@<a0>, const CharTable *charsTable@<a1>)
-; in:
-;      A0 -> text
-;      A1 -> chars table (big or small)
-; out:
-;      D7 - number of pixels needed to display string
-
-; ===== DrawMenuText =====
-; prototype: __int16 __usercall DrawMenuText@<d0>(unsigned __int16 x@<d1>, unsigned __int16 y@<d2>, unsigned __int16 color@<d3>, char *text@<a0>, CharTable *chars@<a1>)
-; in:
-;      D1 - x
-;      D2 - y
-;      D3 - char color
-;      A0 -> text
-;      A1 -> chars table
-; 
-; Destroys D0, D1, D4, D5, D6, A0,
-;          A1, A2, A3, A5,
-;          eax, ebx, ecx, esi, edi, ebp.
-; Saves edx, D2, D3, A4.
-DrawMenuText:
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                move.l  d3,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                jsr     _DrawMenuText
-                lea     20(sp),sp
-                move.w  d0,d1
-                rts
-
-; ===== DrawMenuTextRightAligned =====
-; prototype: __int16 __usercall DrawMenuTextRightAligned@<d0>(unsigned __int16 x_end@<d1>, unsigned __int16 y@<d2>, unsigned __int16 color@<d3>, const char *text@<a0>, const struct CharTable *chars@<a1>)
-; in:
-;      D1 - x (end of text)
-;      D2 - y
-;      D3 - char color
-;      A0 -> text
-;      A1 -> chars table
-; 
-; Draws right aligned text. x coordinate matches the end of the text.
-
-; ===== DrawMenuTextCentered =====
-; prototype: __int16 __usercall DrawMenuTextCentered@<d0>(unsigned __int16 x_center@<d1>, unsigned __int16 y@<d2>, unsigned __int16 color@<d3>, const char *text@<a0>, const struct CharTable *chars@<a1>)
-; in:
-;      D1 - x (center of text)
-;      D2 - y
-;      D3 - char color
-;      A0 -> text
-;      A1 -> chars table
-; 
-; Draws centered text at y. x coordinate is the center of text.
-; 
-; Destroys D0, D1, D4, D5, D6, D7,
-;          A0, A1, A2, A3, A5,
-;          eax, ebx, ecx, esi, edi, ebp.
-; Saves edx, D2, D3, A4.
-DrawMenuTextCentered:
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                move.l  d3,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                jsr     _DrawMenuTextCentered
-                lea     20(sp),sp
-                move.w  d0,d1
-                rts
-
-; ===== Text2Sprite =====
-; prototype: unsigned __int16 __usercall Text2Sprite@<d0>(unsigned __int16 xOff@<d1>, unsigned __int16 yOff@<d2>, unsigned __int16 dstSpriteIndex@<d4>, const char *text@<a0>, const CharTable *charsTable@<a1>)
-; in:
-;      D1 - x offset in dest sprite
-;      D2 - y offset in dest sprite (only in EGA)
-;      D4 - dest sprite index
-;      A0 -> text
-;      A1 -> chars table
-; out:
-;      D0 = 0:OK (& zf set), 1:error (& zf clear) (text wider than sprite)
-;      D1 = total width in pixels of entire sprite after concatenation
-; 
-; Converts text in A0 and concatenates it to sprite in D4.
-; In case of not enough space in the sprite to write the text, the sprite
-; will not be modified.
-; Sets ebp to -1 unconditionally.
-; Ported to C: _Text2Sprite in src/blitter.c
-; in: d1=xOff, d2=yOff, d3=planeMask, d4=dstSpriteIndex, a0=text, a1=charsTable
 bltconShiftBase:
                 dc.w $0000
 textBlitPlaneMask:
@@ -3666,249 +3168,7 @@ assetLoaderWorkPtr:
 assetLoaderAltPathReady:
                 dc.w $0000
 
-; ===== LoadFile =====
-; prototype: unsigned __int16 __usercall LoadFile@<d0>(const char *filename@<a0>, void *dst@<a1>)
-; in:
-;      A0 -> file name
-;      A1 -> buffer
-; out:
-;      zero flag set - all OK
-;        -||-  clear - error
-;      D0 contains result (0 - OK)
-;      D1 returns file size
-; 
-; Loads entire file into given buffer. Reads 64k at a time. If the file can't be found,
-; or some error happens, writes the name of the file to screen, and terminates the program.
-; ===== LoadFile =====
-; Ported to C: _LoadFileEx in src/file_io.c
-; in: a0=filename, a1=dest, out: d0=status, d1=file size, Z flag
 
-; ===== WriteFile =====
-; Ported to C: _WriteFile in src/file_io.c
-; in: a0=filename, a1=src, d1=size, out: d0=status, Z flag
-WriteFile:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d1,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _WriteFile
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                tst.w   d0
-                rts
-                dc.w -24063
-                rts
-                cmpa.l  #0,a1
-                beq.w   loc_105B7A
-                movem.l d2-d7/a0-a6,-(sp)
-                bsr.w   Loader_CopyNormalizedPath
-                bsr.w   Loader_OpenFileForRead
-                bne.s   loc_105B74
-                movem.l d1,-(sp)
-                moveq   #$FFFFFFFF,d1
-                bsr.w   Loader_ReadFileChunks
-                movem.l (sp)+,d1
-                bsr.w   Loader_CloseFile
-                tst.w   d0
-loc_105B74:
-                movem.l (sp)+,d2-d7/a0-a6
-                rts
-loc_105B7A:
-                move.w  #$5590,(panicReasonCode).l
-                jsr PanicHaltLoop(pc)
-                movem.l d1-d7/a0-a6,-(sp)
-                bsr.w   Loader_CopyNormalizedPath
-                bsr.w   Loader_OpenFileForWrite
-                bne.w   loc_105BB4
-                bsr.w   Loader_WriteFileChunks
-                bne.s   loc_105BA2
-                bsr.w   Loader_CloseFile
-                bra.s   loc_105BB2
-loc_105BA2:
-                bsr.w   Loader_CloseFile
-                movem.l d0,-(sp)
-                bsr.w   Loader_NormalizePath
-                movem.l (sp)+,d0
-loc_105BB2:
-                tst.w   d0
-loc_105BB4:
-                movem.l (sp)+,d1-d7/a0-a6
-                rts
-                move.w  #$1265,(panicReasonCode).l
-                jsr PanicHaltLoop(pc)
-
-; ===== Loader_ReadFileChunks =====
-; prototype: unsigned __int16 __usercall Loader_ReadFileChunks@<d0>(int param@<d1>, void *buffer@<a1>)
-Loader_ReadFileChunks:
-                movem.l d1-d7/a0-a6,-(sp)
-                cmpi.l  #$FFFFFFFF,d1
-                bne.s   loc_105BFC
-                move.w  dstRowAdvanceBytes+4(pc),d1
-                clr.l   d2
-                move.w  #2,d3
-                movem.l a1,-(sp)
-                dc.w -24057
-                movea.l (sp)+,a1
-                bne.s   loc_105C3E
-                move.l  d2,d1
-                clr.l   d2
-                clr.w   d3
-                movem.l d1/a1,-(sp)
-                move.w  dstRowAdvanceBytes+4(pc),d1
-                dc.w -24057
-                movem.l (sp)+,d1/a1
-                bne.s   loc_105C3E
-loc_105BFC:
-                move.l  d1,d4
-                move.l  d1,d3
-                movea.l a1,a0
-                move.l  d1,d2
-loc_105C04:
-                move.l  d1,d2
-                cmpi.l  #$2000,d2
-                bcs.s   loc_105C12
-                move.w  #$2000,d2
-loc_105C12:
-                move.w  d2,d3
-                movem.l d1/d3-d4/a0,-(sp)
-                move.w  dstRowAdvanceBytes+4(pc),d1
-                dc.w -24059
-                movem.l (sp)+,d1/d3-d4/a0
-                bne.s   loc_105C3E
-                cmp.w   d2,d3
-                bne.s   loc_105C3A
-                andi.l  #$FFFF,d2
-                adda.l  d2,a0
-                sub.l   d2,d1
-                bne.s   loc_105C04
-                move.l  d4,d1
-                tst.w   d0
-                bra.s   loc_105C3E
-loc_105C3A:
-                move.w  #$64,d0         ; 'd'
-loc_105C3E:
-                movem.l (sp)+,d1-d7/a0-a6
-                rts
-
-; ===== Loader_WriteFileChunks =====
-; prototype: unsigned __int16 __usercall Loader_WriteFileChunks@<d0>(unsigned int length@<d1>, void *buffer@<a1>)
-Loader_WriteFileChunks:
-                movem.l d1-d7/a0-a6,-(sp)
-                move.l  d1,d3
-                movea.l a1,a0
-                move.l  d1,d2
-loc_105C4E:
-                move.l  d1,d2
-                cmpi.l  #$2000,d2
-                bcs.s   loc_105C5C
-                move.w  #$2000,d2
-loc_105C5C:
-                move.w  d2,d3
-                movem.l d1/d3/a0,-(sp)
-                move.w  dstRowAdvanceBytes+4(pc),d1
-                dc.w -24058
-                movem.l (sp)+,d1/d3/a0
-                bne.s   loc_105C84
-                cmp.w   d2,d3
-                bne.s   loc_105C80
-                andi.l  #$FFFF,d2
-                adda.l  d2,a0
-                sub.l   d2,d1
-                bne.s   loc_105C4E
-                bra.s   loc_105C84
-loc_105C80:
-                move.w  #$64,d0         ; 'd'
-loc_105C84:
-                movem.l (sp)+,d1-d7/a0-a6
-                rts
-
-; ===== Loader_OpenFileForRead =====
-; prototype: unsigned __int16 __usercall Loader_OpenFileForRead@<d0>(const char *path@<a0>)
-Loader_OpenFileForRead:
-                movem.l d2-d7/a0-a6,-(sp)
-                bsr.w   Loader_CopyNormalizedPath
-                clr.w   d1
-                dc.w -24061
-                bne.s   loc_105CBE
-                move.w  d1,(dstRowAdvanceBytes+4).l
-                move.w  #2,d3
-                clr.l   d2
-                dc.w -24057
-                bne.s   loc_105CBE
-                move.l  d2,d1
-                move.l  d1,-(sp)
-                move.w  dstRowAdvanceBytes+4(pc),d1
-                move.w  #0,d3
-                clr.l   d2
-                dc.w -24057
-                bne.s   loc_105CBE
-                move.l  (sp)+,d1
-                tst.w   d0
-loc_105CBE:
-                movem.l (sp)+,d2-d7/a0-a6
-                rts
-                bsr.w   Loader_CopyNormalizedPath
-                bsr.s   Loader_OpenFileForRead
-                bne.s   locret_105CD2
-                bsr.w   Loader_CloseFile
-                tst.w   d0
-locret_105CD2:
-                rts
-
-; ===== Loader_OpenFileForWrite =====
-; prototype: unsigned __int16 __usercall Loader_OpenFileForWrite@<d0>(const char *path@<a0>)
-Loader_OpenFileForWrite:
-                movem.l d1-d7/a0-a6,-(sp)
-                bsr.w   Loader_CopyNormalizedPath
-                clr.w   d1
-                dc.w -24062
-                move.w  d1,(dstRowAdvanceBytes+4).l
-                tst.w   d0
-                movem.l (sp)+,d1-d7/a0-a6
-                rts
-
-; ===== Loader_CloseFile =====
-; prototype: unsigned __int16 __usercall Loader_CloseFile@<d0>()
-Loader_CloseFile:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.w  dstRowAdvanceBytes+4(pc),d1
-                dc.w -24060
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== Loader_NormalizePath =====
-; prototype: void __usercall Loader_NormalizePath(const char *path@<a0>)
-Loader_NormalizePath:
-                movem.l d1-d7/a0-a6,-(sp)
-                bsr.w   Loader_CopyNormalizedPath
-                movem.l (sp)+,d1-d7/a0-a6
-                rts
-
-; ===== Loader_NormalizePath2 =====
-; prototype: void __usercall Loader_NormalizePath2(const char *path@<a0>)
-Loader_NormalizePath2:
-                movem.l d1-d7/a0-a6,-(sp)
-                bsr.w   Loader_CopyNormalizedPath
-                movem.l (sp)+,d1-d7/a0-a6
-                rts
-
-; ===== Loader_CopyNormalizedPath =====
-; prototype: const char *__usercall Loader_CopyNormalizedPath@<a0>(const char *path@<a0>)
-Loader_CopyNormalizedPath:
-                move.l  a1,-(sp)
-                lea     (dstRowAdvanceBytes+6)(pc),a1
-loc_105D20:
-                move.b  (a0)+,(a1)+
-                beq.s   loc_105D34
-                cmpi.b  #$5C,-1(a1)     ; '\'
-                bne.s   loc_105D20
-                move.b  #$2F,-1(a1)     ; '/'
-                bra.s   loc_105D20
-loc_105D34:
-                movea.l (sp)+,a1
-                lea     (dstRowAdvanceBytes+6)(pc),a0
-                rts
-                rts
 ; unsigned __int8[2226]
 LoaderBootstrapBlobPI:
                 dc.b $26,$BC,$CF,$D1,$EF,$E7,$20,$13,$4E,$75,$26,$BC,$71,$58,$3E,$FC
@@ -4052,23 +3312,6 @@ LoaderBootstrapBlobPI:
                 dc.b $B8,$34,$49,$81,$A7,$08,$90,$7D,$B3,$B2,$A7,$08,$90,$59,$4E,$71
                 dc.b $4E,$75
 
-; ===== AssetCacheFindByName =====
-; Ported to C (_AssetCacheFindByName in asset_loader.c)
-; No remaining asm callers — AssetCacheCopyByName also ported to C.
-
-; ===== AssetCacheCopyByName =====
-; Ported to C (_AssetCacheCopyByName in asset_loader.c)
-; Called from LoadFile (asm) with a0=name, a1=dest. Returns d0=status, d1=fileSize.
-
-; ===== AssetCacheLoadFromAssetSys =====
-; Ported to C (_AssetCacheLoadFromAssetSys in asset_loader.c)
-; No remaining asm callers — precache functions already ported to C.
-
-; ===== AssetCacheStoreFromMemory =====
-; Ported to C (_AssetCacheStoreFromMemory in asset_loader.c)
-; Called from LoadFile (asm) with a0=name, a1=src, d1=size.
-
-; RNC decompression: fully ported to C in rnc.c
 crowdEventFlags:
                 dc.w $0000
 sfxQueueCount:
@@ -4102,17 +3345,6 @@ audioBankLoaded:
 pad_106D08:
                 dc.b 0,0
 
-; ===== CrowdResetMatchState =====
-; Ported to C (_CrowdResetMatchState in sfx_crowd.c)
-
-; ===== TurnCrowdChantsOn =====
-; Ported to C (_TurnCrowdChantsOn in sfx_crowd.c)
-
-; ===== TurnCrowdChantsOff =====
-; Ported to C (_TurnCrowdChantsOff in sfx_crowd.c)
-
-; ===== PlayCrowdChants =====
-; Ported to C (_PlayCrowdChants in sfx_crowd.c)
 crowdSamples:
                 dc.w $0037,$0038,$003A,$003E
 currentCrowdSample:
@@ -4126,234 +3358,13 @@ fadeOutChantTimer:
 crowdChantVolume:
                 dc.w $0000
 
-; ===== MuteAllAudioChannelsWithDelay =====
-; Ported to C (_MuteAllAudioChannelsWithDelay in sfx_crowd.c)
-
-; ===== AudioFadeCrowdDownThenPulseMusic =====
-; Ported to C (_AudioFadeCrowdDownThenPulseMusic in sfx_crowd.c)
-
-; ===== AudioMuteAllWithFrameRamp =====
-; Ported to C (_AudioMuteAllWithFrameRamp in sfx_crowd.c)
-
-; ===== LoadSfxResources =====
-; Ported to C (_LoadSfxResources in audio.c)
-
-; ===== EnsureSfxLoadedAndStart =====
-; Ported to C (_EnsureSfxLoadedAndStart in audio.c)
-
-; ===== ClearAudioActiveFlag =====
-; Ported to C (_ClearAudioActiveFlag in audio.c)
-
-; ===== StopAudioAndClearFlags =====
-; Ported to C (_StopAudioAndClearFlags in audio.c)
-
-; ===== InitMenuMusic =====
-; Ported to C (_InitMenuMusic in audio.c)
-
-; ===== TryRestartingMusic =====
-; Ported to C (_TryRestartingMusic in audio.c)
-
-; ===== TryPlayMusic =====
-; Ported to C (_TryPlayMusic in audio.c)
-
-; ===== StopMusic =====
-; Ported to C (_StopMusic in audio.c)
-
-; ===== PlayEnqueuedSamples =====
-; Ported to C (_PlayEnqueuedSamples in sfx_crowd.c)
-
-; ===== PlayPenaltySample =====
-; Ported to C (_PlayPenaltySample in sfx_crowd.c)
-
-; ===== PlaySample7IfNotTraining =====
-; Ported to C (_PlaySample7IfNotTraining in sfx_crowd.c)
-
-; ===== sub_107260 =====
-; Ported to C (_PlaySfxSample16 in sfx_crowd.c)
-
-; ===== PlayGoodPassSample =====
-; Ported to C (_PlayGoodPassSample in sfx_crowd.c)
-
-; ===== PlayKickSample =====
-; Ported to C (_PlayKickSample in sfx_crowd.c)
-PlayKickSample:
-                jmp     _PlayKickSample
-
-; ===== PlayRefereeWhistleSample =====
-; Ported to C (_PlayRefereeWhistleSample in sfx_crowd.c)
-PlayRefereeWhistleSample:
-                jmp     _PlayRefereeWhistleSample
-
-; ===== PlayFoulWhistleSample =====
-; Ported to C (_PlayFoulWhistleSample in sfx_crowd.c)
-
-; ===== PlayEndGameWhistleSample =====
-; Ported to C (_PlayEndGameWhistleSample in sfx_crowd.c)
-PlayEndGameWhistleSample:
-                jmp     _PlayEndGameWhistleSample
-
-; ===== PlaySample1IfNotTraining =====
-; Ported to C (_PlaySample1IfNotTraining in sfx_crowd.c)
-
-; ===== PlaySample1 =====
-; Ported to C (_PlaySample1 in sfx_crowd.c)
-
-; ===== PlaySample2IfNotTraining =====
-; Ported to C (_PlaySample2IfNotTraining in sfx_crowd.c)
-
-; ===== PlaySample4IfNotTraining =====
-; Ported to C (_PlaySample4IfNotTraining in sfx_crowd.c)
-
-; ===== PlaySample3IfNotTraining =====
-; Ported to C (_PlaySample3IfNotTraining in sfx_crowd.c)
-
-; ===== PlayMissGoalSample =====
-; Ported to C (_PlayMissGoalSample in sfx_crowd.c)
-
-; ===== PlayPenalty =====
-; Ported to C (_PlayPenalty in sfx_crowd.c)
-
-; ===== PlayGameStateWhistleSample =====
-; Ported to C (_PlayGameStateWhistleSample in sfx_crowd.c)
-
-; ===== PlayGoalReplayBottomSample =====
-; Ported to C (_PlayGoalReplayBottomSample in sfx_crowd.c)
-PlayGoalReplayBottomSample:
-                jmp     _PlayGoalReplayBottomSample
-
-; ===== PlayGoalKickOffSample =====
-; Ported to C (_PlayGoalKickOffSample in sfx_crowd.c)
-PlayGoalKickOffSample:
-                jmp     _PlayGoalKickOffSample
-
-; ===== PlayCornerKickSample =====
-
 ; ===== Int4Handler =====
 ; prototype: void __usercall Int4Handler()
 Int4Handler:
                 rte
 
-; ===== AudioIRQEntryThunk =====
-; prototype: void __usercall AudioIRQEntryThunk()
-AudioIRQEntryThunk:
-                bra.w   AudioIRQUpdateChannels
-
-; ===== StartMenuMusic =====
-; prototype: void __usercall StartMenuMusic()
-StartMenuMusic:
-                bra.w   InitAudioState
-
-; ===== CrowdTickJump =====
-; prototype: void __usercall CrowdTickJump()
-CrowdTickJump:
-                bra.w   AudioChannelQueueNextWaveIfEnabled
-
-; ===== j_AudioApplyPresetToChannels =====
-; prototype: void __usercall j_AudioApplyPresetToChannels()
-j_AudioApplyPresetToChannels:
-                bra.w   AudioApplyPresetToChannels
-                bra.w   AudioChannelNoteOnOff
-
-; ===== SetVolumeOrStopChants =====
-; prototype: void __usercall SetVolumeOrStopChants()
-SetVolumeOrStopChants:
-                bra.w   AudioSetChannelVolume
-
-; ===== StopAudio =====
-; prototype: void __usercall StopAudio()
-StopAudio:
-                bra.w   StopAllAudioChannels
-                bra.w   AudioSetMode
 aCodedByAndiSmi:
                 dc.b 'CODED BY ANDI SMITHERS, VECTORDEAN (C) MILLENNIUM 1992',0,0
-
-; ===== InitAudioState =====
-; prototype: void __usercall InitAudioState(void *bankBase@<a0>, void *songPtr@<a1>)
-; Ported to C as _InitAudioState (audio.c, Chunk 25)
-InitAudioState:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _InitAudioState
-                addq.l  #8,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== StopAllAudioChannels =====
-; prototype: void __usercall StopAllAudioChannels()
-; Ported to C as _StopAllAudioChannels (audio.c, Chunk 25)
-StopAllAudioChannels:
-                movem.l d0-d1/a0-a1,-(sp)
-                jsr     _StopAllAudioChannels
-                movem.l (sp)+,d0-d1/a0-a1
-                rts
-
-; ===== AudioSetChannelVolume =====
-; prototype: void __usercall AudioSetChannelVolume(unsigned int channelOrAll@<d0>, unsigned int volume@<d1>)
-; Ported to C as _AudioSetChannelVolume (audio.c, Chunk 25)
-AudioSetChannelVolume:
-                movem.l d0-d1/a0-a1,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _AudioSetChannelVolume
-                addq.l  #8,sp
-                movem.l (sp)+,d0-d1/a0-a1
-                rts
-
-; ===== AudioSetMode =====
-; prototype: void __usercall AudioSetMode(unsigned int modeFlags@<d0>)
-; Ported to C as _AudioSetMode (audio.c, Chunk 25)
-AudioSetMode:
-                movem.l d0-d1/a0-a1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _AudioSetMode
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d1/a0-a1
-                rts
-
-; ===== AudioApplyPresetToChannels =====
-; prototype: void __usercall AudioApplyPresetToChannels(unsigned int presetId@<d0>)
-; Ported to C as _AudioApplyPresetToChannels (audio.c, Chunk 25)
-AudioApplyPresetToChannels:
-                movem.l d0-d1/a0-a1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _AudioApplyPresetToChannels
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d1/a0-a1
-                rts
-
-; ===== AudioChannelNoteOnOff =====
-; prototype: void __usercall AudioChannelNoteOnOff(unsigned int channel@<d0>, unsigned int noteId@<d1>)
-; Ported to C as _AudioChannelNoteOnOff (audio.c, Chunk 25)
-AudioChannelNoteOnOff:
-                movem.l d0-d1/a0-a1,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _AudioChannelNoteOnOff
-                addq.l  #8,sp
-                movem.l (sp)+,d0-d1/a0-a1
-                rts
-
-; ===== AudioChannelQueueNextWaveIfEnabled =====
-; prototype: void __usercall AudioChannelQueueNextWaveIfEnabled(unsigned int channel@<d0>, unsigned int waveId@<d1>)
-; Ported to C as _AudioChannelQueueNextWaveIfEnabled (audio.c, Chunk 25)
-AudioChannelQueueNextWaveIfEnabled:
-                movem.l d0-d1/a0-a1,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _AudioChannelQueueNextWaveIfEnabled
-                addq.l  #8,sp
-                movem.l (sp)+,d0-d1/a0-a1
-                rts
-
-; ===== AudioIRQUpdateChannels =====
-; prototype: unsigned __int8 __usercall AudioIRQUpdateChannels@<d0>()
-; Ported to C as _AudioIRQUpdateChannels (audio_irq.c, Chunk 32)
-AudioIRQUpdateChannels:
-                movem.l d1-d7/a0-a6,-(sp)
-                jsr     _AudioIRQUpdateChannels
-                movem.l (sp)+,d1-d7/a0-a6
-                rts
 
 ; Dead code removed (old function bodies and local labels from Chunk 32 port)
 kAmigaNotePeriodTable:
@@ -4419,313 +3430,10 @@ audioCounter:
                 dc.b $00
 audioFlags:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-
-; ===== CalculateDeltaXAndY =====
-; prototype: __int16 __usercall CalculateDeltaXAndY@<d0>(__int16 speed@<d0>, __int16 destX@<d1>, __int16 destY@<d2>, __int16 curX@<d3>, __int16 curY@<d4>)
-; in:
-;      D0 - speed
-;      D1 - destination x
-;      D2 - destination y
-;      D3 - current x
-;      D4 - current y
-;      (all inputs are 16-bit integers)
-; out:
-;      D0 - angle (0..255) (0 is 270 degrees, start of trigonometric circle is 64)
-;           -1 if no movement (word)
-;      D1 - delta x (32-bit fixed point)
-;      D2 - delta y (32-bit fixed point)
-;      sign flag: set = no movement, clear = there is movement
-; 
-; Delta x and y are numbers of pixels that sprite needs to be moved in one cycle to reach
-; destination coordinates.
-; Ported to C: _CalculateDeltaXAndY in src/math68k.c
-; Input:  d0=speed, d1=destX, d2=destY, d3=srcX, d4=srcY
-; Output: d0=direction (0..255 or $FFFF), d1=deltaX(32), d2=deltaY(32), Z flag
-CalculateDeltaXAndY:
-                sub.l   #8,sp
-                move.l  sp,a0
-                lea     4(sp),a1
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                move.l  d0,-(sp)
-                move.l  d4,-(sp)
-                move.l  d3,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                jsr     _CalculateDeltaXAndY
-                lea     28(sp),sp
-                move.l  (sp),d1
-                move.l  4(sp),d2
-                addq.l  #8,sp
-                tst.w   d0
-                rts
-
-; ===== MovePlayers =====
-; prototype: void __usercall MovePlayers()
-; Update x and y coordinates and do animation.
-
-; ===== SetNextPlayerFrame =====
-; prototype: void __usercall SetNextPlayerFrame(struct Sprite *player@<a0>)
-; in:
-;      A0 -> player
-; 
-; globals:
-;   read:
-;     goalScored
-;     lastTeamScoredPtr
-;     playerScoredPtr
-
-; ===== MovePlayer =====
-; prototype: void __usercall MovePlayer(struct Sprite *player@<a0>)
-; in:
-;      A0 -> player
-; 
-; globals:
-;   read:
-;      gameStatePl
-
-; ===== SetPlayerAnimationTableAndPictureIndex =====
-; prototype: void __usercall SetPlayerAnimationTableAndPictureIndex(const AnimTable *animTable@<a0>, Sprite *player@<a1>)
-; in:
-;      A0 -> animation table
-;      A1 -> player (sprite)
-
-; ===== SetPlayerAnimationTable =====
-; prototype: void __usercall SetPlayerAnimationTable(const AnimTable *animTable@<a0>, Sprite *player@<a1>)
-; in:
-;      A0 -> animation table
-;      A1 -> player
-;
-; Set player's animation table and frame indices table and sets up starting state.
-SetPlayerAnimationTable:
-                move.w  d0,-(sp)
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _SetPlayerAnimationTable
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                move.w  (sp)+,d0
-                rts
-                nop
 cameraXVelocity:
                 dc.w $0000              ; -40..40
 cameraYVelocity:
                 dc.w $0000              ; -40..40
-
-; ===== UpdateBall =====
-; prototype: void __usercall UpdateBall()
-; Ported to C: _UpdateBall in src/ball_physics.c
-; ===== ReverseDestXDirection =====
-; prototype: void __usercall ReverseDestXDirection(Sprite *spr@<a0>, __int32 ballX@<d5>)
-; in:
-;      D5 -  ball x
-
-; ===== ReverseDestYDirection =====
-; prototype: void __usercall ReverseDestYDirection(Sprite *spr@<a0>, __int32 ballY@<d6>)
-; in:
-;      D6 -  ball y
-
-; ===== DoGoalkeeperSprites =====
-; prototype: void __usercall DoGoalkeeperSprites()
-; Ported to C: _DoGoalkeeperSprites in src/ball_physics.c
-; ===== RemoveReferee =====
-; prototype: void __usercall RemoveReferee()
-; Makes referee invisible.
-
-; ===== ActivateReferee =====
-; prototype: void __usercall ActivateReferee()
-; Foul has been conceeded. Set referee x, y, speed and destination
-; coordinates. Referee comes from above or below screen, depending on
-; current camera position. X coordinate is card coordinate +/- 0..7, sign
-; depends on which vertical half camera is in.
-; Ported to C: _ActivateReferee in src/referee.c
-
-; ===== SetRefereeToLeavingState =====
-; prototype: void __usercall SetRefereeToLeavingState()
-; Sets off screen x and y destination coordinates for the referee.
-; Ported to C: _SetRefereeToLeavingState in src/referee.c
-SetRefereeToLeavingState:
-                jmp     _SetRefereeToLeavingState
-
-; ===== InitRefereeAnimationTable =====
-; prototype: void __usercall InitRefereeAnimationTable(AnimTable *animTable@<a1>)
-; in:
-;      A1 -> referee animation table
-; Ported to C: _InitRefereeAnimationTable in src/referee.c
-; Register-to-stack stub: A1 = animTable pointer
-InitRefereeAnimationTable:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _InitRefereeAnimationTable
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== UpdateReferee =====
-; prototype: void __usercall UpdateReferee()
-; Also queue up sound samples.
-; Ported to C: _UpdateReferee in src/referee.c
-loc_109D38:
-                move.w  SPRITE_FRAMEINDEX(a0),d0
-                lsl.w   #1,d0
-                move.w  (a1,d0.w),d0
-                bpl.s   loc_109D7C
-                cmpi.w  #$FC19,d0
-                beq.s   loc_109D66
-                cmpi.w  #$FF9B,d0
-                beq.s   loc_109D76
-                cmpi.w  #$FF9C,d0
-                ble.s   loc_109D6C
-                neg.w   d0
-                move.w  d0,SPRITE_FRAMEDELAY(a0)
-                move.w  d0,SPRITE_CYCLEFRAMESTIMER(a0)
-                addq.w  #1,SPRITE_FRAMEINDEX(a0)
-                bra.s   loc_109D38
-loc_109D66:
-                clr.w   SPRITE_FRAMEINDEX(a0)
-                bra.s   loc_109D38
-loc_109D6C:
-                addi.w  #100,d0
-                add.w   d0,SPRITE_FRAMEINDEX(a0)
-                bra.s   loc_109D38
-loc_109D76:
-                subq.w  #1,SPRITE_FRAMEINDEX(a0)
-                bra.s   loc_109D84
-loc_109D7C:
-                addq.w  #1,SPRITE_FRAMESWITCHCOUNTER(a0)
-                move.w  d0,SPRITE_IMAGEINDEX(a0)
-loc_109D84:
-                cmpi.w  #REF_ABOUT_TO_GIVE_CARD,(refState).l
-                beq.w   loc_109E8E
-                cmpi.w  #REF_INCOMING,(refState).l
-                beq.s   loc_109DBE
-                cmpi.w  #REF_LEAVING,(refState).l
-                bne.w   locret_109ED0
-                tst.w   SPRITE_ONSCREEN(a0)
-                bne.s   loc_109DBE
-                clr.w   (refState).l
-                clr.w   SPRITE_VISIBLE(a0)
-                jsr InitDisplaySprites(pc)
-                bra.w   locret_109ED0
-loc_109DBE:
-                move.w  (kRefereeSpeed).l,SPRITE_SPEED(a0)
-                move.w  SPRITE_DIRECTION(a0),d5
-                move.w  SPRITE_DESTX(a0),d1
-                move.w  SPRITE_DESTY(a0),d2
-                move.w  SPRITE_X(a0),d3
-                move.w  SPRITE_Y(a0),d4
-                move.w  SPRITE_SPEED(a0),d0
-                movem.l d5/a0,-(sp)
-                jsr CalculateDeltaXAndY(pc)
-                movem.l (sp)+,d5/a0
-                move.l  d1,SPRITE_DELTAX(a0)
-                move.l  d2,SPRITE_DELTAY(a0)
-                addi.w  #16,d0
-                andi.w  #$FF,d0
-                lsr.w   #5,d0
-                move.w  d0,SPRITE_DIRECTION(a0)
-                cmp.w   d5,d0
-                beq.s   loc_109E0E
-                lea     (refComingAnimTable).l,a1
-                jsr InitRefereeAnimationTable(pc)
-loc_109E0E:
-                move.w  SPRITE_DESTX(a0),d1
-                move.l  SPRITE_DELTAX(a0),d0
-                beq.s   loc_109E38
-                bpl.s   loc_109E2E
-                add.l   d0,SPRITE_X(a0)
-                cmp.w   SPRITE_X(a0),d1
-                blt.s   loc_109E38
-loc_109E24:
-                move.w  d1,SPRITE_X(a0)
-                clr.l   SPRITE_DELTAX(a0)
-                bra.s   loc_109E38
-loc_109E2E:
-                add.l   d0,SPRITE_X(a0)
-                cmp.w   SPRITE_X(a0),d1
-                ble.s   loc_109E24
-loc_109E38:
-                move.w  SPRITE_DESTY(a0),d1
-                move.l  SPRITE_DELTAY(a0),d0
-                beq.s   loc_109E64
-                bpl.s   loc_109E5A
-                add.l   d0,SPRITE_Y(a0)
-                cmp.w   SPRITE_Y(a0),d1
-                blt.w   locret_109ED0
-loc_109E50:
-                move.w  d1,SPRITE_Y(a0)
-                clr.l   SPRITE_DELTAY(a0)
-                bra.s   loc_109E64
-loc_109E5A:
-                add.l   d0,SPRITE_Y(a0)
-                cmp.w   SPRITE_Y(a0),d1
-                ble.s   loc_109E50
-loc_109E64:
-                tst.l   SPRITE_DELTAX(a0)
-                bne.w   locret_109ED0
-                tst.l   SPRITE_DELTAY(a0)
-                bne.w   locret_109ED0
-                move.w  #REF_WAITING_PLAYER,(refState).l
-                move.w  #6,SPRITE_DIRECTION(a0)
-                lea     (refWaitingAnimTable).l,a1
-                jsr InitRefereeAnimationTable(pc)
-                bra.s   locret_109ED0
-loc_109E8E:
-                move.w  #REF_BOOKING,(refState).l
-                cmpi.w  #CARD_RED,(whichCard).l
-                beq.s   loc_109EB6
-                cmpi.w  #CARD_SECOND_YELLOW,(whichCard).l
-                beq.s   loc_109EC2
-                lea     (refYellowCardAnimTable).l,a1
-                jsr InitRefereeAnimationTable(pc)
-                bra.s   locret_109ED0
-loc_109EB6:
-                lea     (refRedCardAnimTable).l,a1
-                jsr InitRefereeAnimationTable(pc)
-                bra.s   locret_109ED0
-loc_109EC2:
-                lea     (refSecondYellowAnimTable).l,a1
-                jsr InitRefereeAnimationTable(pc)
-                bra.w   *+4
-locret_109ED0:
-                rts
-loc_109ED2:
-                cmpi.w  #ST_GAME_IN_PROGRESS,(gameStatePl).l
-                bne.w   loc_109D84
-                move.w  SPRITE_DESTX(a0),d1
-                move.l  SPRITE_DELTAX(a0),d0
-                beq.s   loc_109F08
-                bpl.s   loc_109EFE
-                add.l   d0,SPRITE_X(a0)
-                cmp.w   SPRITE_X(a0),d1
-                blt.s   loc_109F08
-loc_109EF4:
-                move.w  d1,SPRITE_X(a0)
-                clr.l   SPRITE_DELTAX(a0)
-                bra.s   loc_109F08
-loc_109EFE:
-                add.l   d0,SPRITE_X(a0)
-                cmp.w   SPRITE_X(a0),d1
-                ble.s   loc_109EF4
-loc_109F08:
-                move.w  SPRITE_DESTY(a0),d1
-                move.l  SPRITE_DELTAY(a0),d0
-                beq.s   locret_109F34
-                bpl.s   loc_109F2A
-                add.l   d0,SPRITE_Y(a0)
-                cmp.w   SPRITE_Y(a0),d1
-                blt.w   locret_109F34
-loc_109F20:
-                move.w  d1,SPRITE_Y(a0)
-                clr.l   SPRITE_DELTAY(a0)
-                bra.s   locret_109F34
-loc_109F2A:
-                add.l   d0,SPRITE_Y(a0)
-                cmp.w   SPRITE_Y(a0),d1
-                ble.s   loc_109F20
-locret_109F34:
-                rts
 advertIndex:
                 dc.w $0000              ; Determines which advertisement is shown during the game, -1 = none
 advertSlideTimer:
@@ -4741,16 +3449,10 @@ advert3Pointers:
 blockAdvertisements:
                 dc.w $0000              ; Don't animate advertisements if this is true
 
-; ===== UpdateCornerFlagSprite =====
-; prototype: void __usercall UpdateCornerFlagSprite()
-; Ported to C: _UpdateCornerFlagSprite in src/adverts.c
 cornerFlagPictureIndices:
                 dc.b $00,$00,$00,$00,$01,$01,$01,$01,$02,$02,$02,$02,$03,$03,$03,$03
                 dc.b $00,$00,$00,$00,$01,$01,$01,$01,$02,$02,$02,$02,$03,$03,$03,$03
 
-; ===== SpinBig_S_Sprite =====
-; prototype: void __usercall SpinBig_S_Sprite()
-; Ported to C: _SpinBig_S_Sprite in src/adverts.c
 ; __int16
 spinBigS:
                 dc.w 0
@@ -4758,31 +3460,10 @@ bigSIndex:
                 dc.w $0001              ; Index of that annoying big S that keeps spining
                                         ; in the upper right corner during the game
 
-; ===== MakeSpritesFromPlayerNames =====
-; prototype: void __usercall MakeSpritesFromPlayerNames(TeamGame *leftTeam@<a5>, TeamGame *rightTeam@<a6>)
-; in:
-;      A5 -> left team (game)
-;      A6 -> right team (game)
-; 
-; Make sprites from player names from both teams.
-
-; ===== MakePlayerNameSprite =====
-; prototype: unsigned __int16 __usercall MakePlayerNameSprite@<d6>(unsigned __int16 playerNumber@<d0>, const unsigned __int8 *shortName@<a0>, unsigned __int16 spriteIndex@<d6>, unsigned __int8 *nameLenTable@<a4>)
-; in:
-;      D0 -  player number
-;      A0 -> player short name
-;      D6 -  sprite index to copy name to
-;      A4 -> table of pl. name lengths
-; 
-; out:
-;      D6 - sprite index + 1
 ; __int8[16]
 numberBuffer:
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
-; ===== CopyPlayerNameLengths =====
-; prototype: void __usercall CopyPlayerNameLengths()
-; Ported to C: _CopyPlayerNameLengths (game_state.c)
 ; unsigned __int16[3]
 normalPalette:
                 ; unsigned __int16[3]
@@ -4833,40 +3514,7 @@ pitchTypeSeasonalProbabilities:
 pitchTypeProbabilities:
                 dc.b 5,5,10,20,30,20,10,0
 
-; ===== InitGameSaveTeams =====
-; prototype: void __usercall InitGameSaveTeams(void *leftTeamInGame@<a5>, void *rightTeamInGame@<a6>)
-; in:
-;      A5 -> left team in-game struct
-;      A6 -> right team in-game struct
-; in the upper left corner during the game.
-; 
-; in:
-;      A5 -> team1 (game)
-;      A6 -> team2 (game)
 
-; ===== CountFaces =====
-; prototype: void __usercall CountFaces(struct TeamGame *team@<a1>)
-; in:
-;      A1 -> team (game)
-; out:
-;      face frequencies in facesFrequency
-
-; ===== ConvertColorTableToSkinColor =====
-; prototype: void __usercall ConvertColorTableToSkinColor(unsigned __int16 color@<d0>, unsigned __int16 *destTable@<a1>)
-; in:
-;      D0 -  skin/hair color
-;      A1 -> dest color table
-
-; ===== DetermineGoalieFaces =====
-; prototype: char __usercall DetermineGoalieFaces@<d0>(struct TeamGame *team@<a0>, unsigned __int8 *gkFaceToIndex@<a1>, unsigned __int8 *gkFaceIndices@<a2>)
-; in:
-;      A0 -> team (game)
-;      A1 -> goalkeeper face to index table
-;      A2 -> goalkeeper face indices (for main and reserve, if present)
-; 
-; Set up color conversion table for the goalkeeper, by assigning face color for main and reserve.
-; Algorithm will go through players in team, and set face colors of goalkeepers,
-; or first available face from a player if goalkeeper not found (not on the team for this game).
 ; unsigned __int8[4]
 facesFrequency:
                 dc.b $00,$00,$00,$00    ; Number of occurences of each face type in a team
@@ -4914,61 +3562,6 @@ team2GoalieSkinType:
 team2ReserveGoalieSkinType:
                 dc.b $00                ; Skin/face type index for team 2 reserve goalkeeper. Negative means no reserve keeper.
 
-; ===== InitializePlayerSpriteFrameIndices =====
-; prototype: void __usercall InitializePlayerSpriteFrameIndices()
-; Initialize player sprite frame indices. They are decided based on their skin color.
-; There are three sets of player sprites based on skin color (team1: 341-441, 442-542, 543-643,
-; team2: 745-845, 846-946, 947-1004), and two sets of goalkeeper sprites (team1: main: 940-1004,
-; reserve: 1005-1062, team2: main: 1063-1120, reserve: 1121-1178).
-; Goalkeeper skin color is already applied.
-; Ported to C: _InitializePlayerSpriteFrameIndices in src/player_sprites.c
-
-; ===== UpdateBookedPlayerNumberSprite =====
-; prototype: void __usercall UpdateBookedPlayerNumberSprite()
-; Ported to C: _UpdateBookedPlayerNumberSprite in src/referee.c
-loc_10AF6A:
-                cmpi.b  #CARD_YELLOW,(a1,d0.w)
-                beq.s   loc_10AFB0
-                cmpi.b  #CARD_RED,(a1,d0.w)
-                beq.s   loc_10AFBE
-                tst.b   (a1,d0.w)
-                bmi.s   loc_10AFDE
-                beq.s   locret_10AFDC
-                movea.l (bookedPlayer).l,a1
-                movea.l (lastTeamBooked).l,a2
-                movea.l TEAMGENERALINFO_INGAMETEAMPTR(a2),a2
-                move.w  SPRITE_PLAYERORDINAL(a1),d1
-                subq.w  #1,d1
-                mulu.w  #PLAYERINFO_SIZE+PLAYERINFO_SKIP,d1
-                move.b  PLAYERINFOHEADER_SHIRTNUMBER(a2,d1.w),d1
-                ext.w   d1
-                move.w  #SPR_CORNER_FLAG_FRAME_3,d0 ; one below digit "1"
-                add.w   d1,d0
-                move.w  d0,SPRITE_IMAGEINDEX(a0)
-                bra.w   loc_10AFCA
-loc_10AFB0:
-                movea.l (bookedPlayer).l,a1
-                move.w  #SPR_YELLOW_CARD,SPRITE_IMAGEINDEX(a0)
-                bra.s   loc_10AFCA
-loc_10AFBE:
-                movea.l (bookedPlayer).l,a1
-                move.w  #SPR_RED_CARD,SPRITE_IMAGEINDEX(a0)
-loc_10AFCA:
-                move.w  SPRITE_X(a1),SPRITE_X(a0)
-                move.w  #20,SPRITE_Z(a0)
-                move.w  SPRITE_Y(a1),SPRITE_Y(a0)
-locret_10AFDC:
-                rts
-loc_10AFDE:
-                jsr SetRefereeToLeavingState(pc)
-                btst    #1,(whichCard+1).l
-                beq.s   loc_10AFF8
-                movea.l (bookedPlayer).l,a1
-                jsr     SendPlayerAway
-loc_10AFF8:
-                clr.w   (whichCard).l
-                clr.l   (bookedPlayer).l
-                rts
 ; __int8[30]
 yellowCardTable:
                 dc.b 0,9,0,9,0,9,0,9,0,9,0,9,0,0,0,0
@@ -4983,14 +3576,6 @@ secondYellowTable:
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,-1,0
 
-; ===== UpdateControlledPlayerNumbers =====
-; Ported to C: _UpdateControlledPlayerNumbers in src/game_hud.c
-
-; ===== MarkPlayer =====
-; Ported to C: _MarkPlayer in src/game_hud.c
-
-; ===== SetCurrentPlayerName =====
-; Ported to C: _SetCurrentPlayerName in src/game_hud.c
 nobodysBallTimer:
                 dc.w $0000
 nobodysBallLastFrame:
@@ -5005,269 +3590,7 @@ lastTeamScored:
 lastPlayerBeforeGoalkeeper:
                 dc.l $00000000
 
-; ===== ClearSaveFlagForGoalSprites =====
 
-; ===== ResetTime =====
-; prototype: void __usercall ResetTime()
-; Ported to C: _ResetTime (game_state.c)
-
-; ===== UpdateTime =====
-; prototype: void __usercall UpdateTime()
-; Ported to C: _UpdateTime (game_state.c)
-loc_10B3BE:
-                move.w  #150,(timeVar).l
-loc_10B3C6:
-                tst.w   (currentTimeSprite+SPRITE_VISIBLE).l
-                bne.s   loc_10B3DA
-                move.w  #1,(currentTimeSprite+SPRITE_VISIBLE).l
-                bsr.w   InitDisplaySprites
-loc_10B3DA:
-                move.w  (lastFrameTicks).l,d0
-                bra.w   time_invisible
-                sub.w   d0,(timeVar).l
-                bmi.s   make_time_invisible
-                bne.w   not_end_of_second_extra
-make_time_invisible:
-                clr.w   (timeVar).l
-                tst.w   (currentTimeSprite+SPRITE_VISIBLE).l
-                beq.s   time_invisible
-                clr.w   (currentTimeSprite+SPRITE_VISIBLE).l
-                bsr.w   InitDisplaySprites
-                bra.w   *+4
-time_invisible:
-                tst.w   (gameSeconds).l
-                bmi.w   last_minute_in_progress
-                cmpi.w  #ST_GAME_IN_PROGRESS,(gameStatePl).l
-                bne.w   no_update_to_time
-                tst.w   (playingPenalties).l
-                bne.w   no_update_to_time
-                move.w  (timeDelta).l,d0
-                sub.w   d0,(secondsSwitchAccumulator).l
-                bpl.w   no_update_to_time
-                addi.w  #49,(secondsSwitchAccumulator).l ; increase time cycle
-                addq.w  #1,(gameSeconds).l
-                cmpi.w  #60,(gameSeconds).l
-                bne.w   no_update_to_time
-                clr.w   (gameSeconds).l
-                addq.b  #1,(gameTime+3).l
-                cmpi.b  #$A,(gameTime+3).l
-                bne.s   check_game_end
-                clr.b   (gameTime+3).l  ; increase time (minutes)
-                addq.b  #1,(gameTime+2).l
-                cmpi.b  #$A,(gameTime+2).l
-                bne.s   check_game_end
-                clr.b   (gameTime+2).l
-                addq.b  #1,(gameTime+1).l
-check_game_end:
-                cmpi.l  #1,(gameTime).l
-                bne.s   not_first_minute
-                bsr.w   BumpPlayersLastPlayedHalfAtHalfStart ; first minute
-not_first_minute:
-                cmpi.l  #$406,(gameTime).l
-                bne.s   not_minute_46
-                bsr.w   BumpPlayersLastPlayedHalfAtHalfStart ; minute 46
-not_minute_46:
-                cmpi.l  #$405,(gameTime).l ; minute 45?
-                bne.s   not_halftime
-                tst.w   (gameSeconds).l
-                bpl.w   last_cycle
-                clr.w   (gameSeconds).l ; half time
-                bsr.w   PlayEndGameWhistleSample
-                jsr     EndFirstHalf
-                bsr.w   BumpPlayersLastPlayedHalfAtHalfEnd
-                bra.w   not_end_of_second_extra
-not_halftime:
-                cmpi.l  #$900,(gameTime).l ; minute 90
-                bne.w   not_fulltime
-                tst.w   (gameSeconds).l ; end of game
-                bpl.w   last_cycle
-                clr.w   (gameSeconds).l ; 90th minute
-                bsr.w   PlayEndGameWhistleSample
-                bsr.w   BumpPlayersLastPlayedHalfAtHalfEnd
-                move.w  (statsTeam1Goals).l,(statsTeam1GoalsCopy).l
-                move.w  (statsTeam2Goals).l,(statsTeam2GoalsCopy).l
-                move.w  (team1TotalGoals).l,d0
-                cmp.w   (team2TotalGoals).l,d0
-                bne.w   not_draw
-                tst.w   (secondLeg).l   ; tied
-                beq.w   loc_10B53A
-                cmpi.w  #1,(playing2ndGame).l
-                beq.s   loc_10B552
-loc_10B53A:
-                tst.w   (extraTimeState).l
-                bne.w   cseg_6FDAB
-cseg_6FBFD:
-                tst.w   (penaltiesState).l
-                bne.w   cseg_6FDBE
-                bra.w   cseg_6FD97
-loc_10B552:
-                move.w  (statsTeam2Goals).l,d0
-                lsl.w   #1,d0
-                add.w   (team2GoalsFirstLeg).l,d0
-                move.w  (team1GoalsFirstLeg).l,d1
-                lsl.w   #1,d1
-                add.w   (statsTeam1Goals).l,d1
-                cmp.w   d0,d1
-                bne.w   cseg_6FD6C
-                bra.s   loc_10B53A
-not_fulltime:
-                cmpi.l  #$10005,(gameTime).l ; minute 105
-                bne.s   not_end_of_first_extra
-                tst.w   (gameSeconds).l
-                bpl.w   last_cycle
-                clr.w   (gameSeconds).l ; end of extra time
-                bsr.w   PlayEndGameWhistleSample
-                jsr     EndFirstExtraTime
-                bra.w   not_end_of_second_extra
-not_end_of_first_extra:
-                cmpi.l  #$10200,(gameTime).l ; minute 120
-                bne.w   not_end_of_second_extra
-                tst.w   (gameSeconds).l
-                bpl.w   last_cycle
-                clr.w   (gameSeconds).l ; end of second extra time
-                bsr.w   PlayEndGameWhistleSample
-                move.w  (team1TotalGoals).l,d0
-                cmp.w   (team2TotalGoals).l,d0
-                bne.s   not_draw
-                tst.w   (secondLeg).l
-                beq.w   cseg_6FBFD
-                tst.w   (playing2ndGame).l
-                beq.w   cseg_6FBFD
-                move.w  (statsTeam2Goals).l,d0
-                lsl.w   #1,d0
-                add.w   (team2GoalsFirstLeg).l,d0
-                move.w  (team1GoalsFirstLeg).l,d1
-                lsl.w   #1,d1
-                add.w   (statsTeam1Goals).l,d1
-                cmp.w   d0,d1
-                bne.s   cseg_6FD6C
-                bra.w   cseg_6FBFD
-cseg_6FD6C:
-                cmp.w   d0,d1
-                bhi.s   team1_wins
-                bra.s   team2_wins
-not_draw:
-                bhi.s   team1_wins
-team2_wins:
-                move.l  #bottomTeamInGame,(winningTeamPtr).l
-                bra.s   end_game
-team1_wins:
-                move.l  #topTeamInGame,(winningTeamPtr).l
-                bra.s   end_game
-cseg_6FD97:
-                clr.l   (winningTeamPtr).l
-end_game:
-                jsr     EndOfGame
-                bra.w   not_end_of_second_extra
-cseg_6FDAB:
-                move.w  #$FFFF,(extraTimeState).l
-                jsr     StartFirstExtraTime
-                bra.w   not_end_of_second_extra
-cseg_6FDBE:
-                move.w  #$FFFF,(penaltiesState).l
-                bsr.w   StartPenalties
-                bra.w   not_end_of_second_extra
-last_cycle:
-                move.w  #$FFFF,(gameSeconds).l
-                move.w  #50,(endGameCounter).l
-                bra.w   no_update_to_time
-last_minute_in_progress:
-                move.w  (lastFrameTicks).l,d0
-                sub.w   d0,(endGameCounter).l
-                bmi.w   check_game_end
-                cmpi.w  #ST_GAME_IN_PROGRESS,(gameStatePl).l
-                bne.s   last_cycle
-                lea     (ballSprite).l,a1
-                cmpi.w  #216,ballSprite+SPRITE_Y-ballSprite(a1) ; upper penalty area lower line
-                bls.s   last_cycle
-                cmpi.w  #682,$22(a1)    ; lower penalty area upper line
-                bcc.s   last_cycle
-                cmpi.w  #449,$22(a1)    ; center line
-                bhi.s   loc_10B6B4
-                cmpi.l  #bottomTeamData,(lastTeamPlayed).l
-                beq.s   last_cycle
-                bra.s   no_update_to_time
-loc_10B6B4:
-                cmpi.l  #topTeamData,(lastTeamPlayed).l
-                beq.s   last_cycle
-no_update_to_time:
-                tst.w   (copyTimeSprite).l
-                beq.w   set_time_sprite_x
-not_end_of_second_extra:
-                clr.w   d1              ; D1 - x offset, depends on number of digits
-                clr.w   d2              ; D2 - y offset, always 0
-                tst.b   (gameTime+1).l
-                beq.s   first_digit_zero
-                move.w  #SPR_INVITATION_TOURNAMENT,d3 ; D3 - sprite index, depending on number of digits
-                move.w  #5,d1           ; one digit width, assume 1, no need to copy
-                bra.s   time_two_digits
-first_digit_zero:
-                tst.b   (gameTime+2).l
-                bne.s   loc_10B6EE
-                move.w  #SPR_LITTLE_PLAYER_GENERIC,d3
-                bra.s   copy_last_digit
-loc_10B6EE:
-                move.w  #SPR_PREMIERE_DIVISION_WINNER,d3
-time_two_digits:
-                move.b  (gameTime+2).l,d0
-                ext.w   d0
-                addi.w  #SPR_CUP_WINNER,d0
-                movem.l d1-d3,-(sp)
-                bsr.w   CopySprite
-                movem.l (sp)+,d1-d3
-                addq.w  #6,d1
-copy_last_digit:
-                move.b  (gameTime+3).l,d0
-                ext.w   d0
-                addi.w  #SPR_CUP_WINNER,d0
-                movem.l d3,-(sp)
-                bsr.w   CopySprite
-                movem.l (sp)+,d3
-                lea     (currentTimeSprite).l,a0
-                move.w  d3,SPRITE_IMAGEINDEX(a0)
-                move.w  d3,d0
-                cmpi.w  #SPR_INVITATION_TOURNAMENT,d0
-                bne.s   cseg_6FF81
-                bsr.w   BlitSpritePlanar_Long_StridedDest
-                bra.s   cseg_6FF86
-cseg_6FF81:
-                bsr.w   BlitSpritePlanar_Word_StridedDest
-cseg_6FF86:
-                clr.w   (copyTimeSprite).l
-set_time_sprite_x:
-                lea     (currentTimeSprite).l,a1
-                move.w  (cameraX).l,SPRITE_X(a1)
-                tst.b   (gameTime+1).l
-                bne.s   loc_10B774
-                tst.b   (gameTime+2).l
-                bne.s   loc_10B76C
-                addi.w  #$14,$1E(a1)
-                bra.s   loc_10B77A
-loc_10B76C:
-                addi.w  #$14,$1E(a1)
-                bra.s   loc_10B77A
-loc_10B774:
-                addi.w  #$14,$1E(a1)
-loc_10B77A:
-                move.w  (cameraY).l,$22(a1)
-                addi.w  #$2721,$22(a1)
-                cmpi.w  #4,(currentPlayerIndicatorPosition).l
-                bne.s   loc_10B796
-                addq.w  #8,$22(a1)
-loc_10B796:
-                move.w  #$2710,$26(a1)
-                rts
-
-; ===== BumpPlayersLastPlayedHalfAtHalfStart =====
-; prototype: void __usercall BumpPlayersLastPlayedHalfAtHalfStart()
-; Ported to C: _BumpPlayersLastPlayedHalfAtHalfStart (game_state.c)
-BumpPlayersLastPlayedHalfAtHalfStart:
-                jmp     _BumpPlayersLastPlayedHalfAtHalfStart
-
-; ===== BumpPlayersLastPlayedHalfAtHalfEnd =====
-; Ported to C: _BumpPlayersLastPlayedHalfAtHalfEnd (game_state.c)
-BumpPlayersLastPlayedHalfAtHalfEnd:
-                jmp     _BumpPlayersLastPlayedHalfAtHalfEnd
 copyTimeSprite:
                 dc.w $0000              ; 1 Only right before the game starts
                                         ; if true, in UpdateTime fill time placeholder sprite
@@ -5299,389 +3622,6 @@ endGameCounter:
                 dc.w $0001              ; When the game is about to end, this is set to 55 (frames)
                                         ; it counts down then, and when reaches -1, game ends
                                         ; (game, or half, extra time... etc.)
-
-; ===== ResetResultSprites =====
-; prototype: void __usercall ResetResultSprites()
-; Ported to C: _ResetResultSprites (game_state.c)
-
-; ===== ShowResult =====
-; prototype: void __usercall ShowResult()
-; Ported to C: _ShowResult (game_state.c)
-loc_10B952:
-                move.w  #250,(resultTimer).l
-                bra.s   loc_10B964
-loc_10B95C:
-                move.w  #150,(resultTimer).l
-loc_10B964:
-                cmpi.w  #ST_RESULT_ON_HALFTIME,(gameState).l
-                bne.s   loc_10B976
-                move.w  #1,(resultOnHalftimeSprite+SPRITE_VISIBLE).l
-loc_10B976:
-                cmpi.w  #ST_RESULT_AFTER_THE_GAME,(gameState).l
-                bne.s   loc_10B988
-                move.w  #1,(resultAfterTheGameSprite+SPRITE_VISIBLE).l
-loc_10B988:
-                tst.w   (dontShowScorers).l
-                bne.s   loc_10B998
-                tst.w   (secondLeg).l
-                beq.s   loc_10B9D4
-loc_10B998:
-                move.w  #1,(team1TotalGoalsDigit2Sprite+SPRITE_VISIBLE).l
-                move.w  (team1TotalGoals).l,d0
-                ext.l   d0
-                divu.w  #10,d0
-                beq.s   loc_10B9B6
-                move.w  #1,(team1TotalGoalsDigit1Sprite+SPRITE_VISIBLE).l
-loc_10B9B6:
-                move.w  #1,(team2TotalGoalsDigit2Sprite+SPRITE_VISIBLE).l
-                move.w  (team2TotalGoals).l,d0
-                ext.l   d0
-                divu.w  #10,d0
-                beq.s   loc_10B9D4
-                move.w  #1,(team2TotalGoalsDigit1Sprite+SPRITE_VISIBLE).l
-loc_10B9D4:
-                move.w  #1,(gridUpperRowLeftSprite+SPRITE_VISIBLE).l
-                move.w  #1,(gridUpperRowRightSprite+SPRITE_VISIBLE).l
-                move.w  #1,(gridMiddleRowLeftSprite+SPRITE_VISIBLE).l
-                move.w  #1,(gridMiddleRowRightSprite+SPRITE_VISIBLE).l
-                move.w  #1,(gridBottomRowLeftSprite+SPRITE_VISIBLE).l
-                move.w  #1,(gridBottomRowRightSprite+SPRITE_VISIBLE).l
-                move.w  #1,(team1NameSprite+SPRITE_VISIBLE).l
-                move.w  #1,(team2NameSprite+SPRITE_VISIBLE).l
-                move.w  #1,(team1GoalsDigit2Sprite+SPRITE_VISIBLE).l
-                tst.w   (team1GoalsDigit1).l
-                beq.s   loc_10BA2C
-                move.w  #1,(team1GoalsDigit1Sprite+SPRITE_VISIBLE).l
-loc_10BA2C:
-                move.w  #1,(team2GoalsDigit2Sprite+SPRITE_VISIBLE).l
-                tst.w   (team2GoalsDigit1).l
-                beq.s   loc_10BA44
-                move.w  #1,(team2GoalsDigit1Sprite+SPRITE_VISIBLE).l
-loc_10BA44:
-                move.w  #1,(team1NameSprite+SPRITE_VISIBLE).l
-                move.w  #1,(dashSprite+SPRITE_VISIBLE).l
-                lea     (team1Scorer1Sprite).l,a1
-                lea     (team1ScorerSpritesWidths).l,a2
-                move.w  #7,d0
-loc_10BA64:
-                tst.w   (a2)+
-                beq.s   loc_10BA80
-                tst.w   (dontShowScorers).l
-                bne.s   loc_10BA80
-                move.w  #1,SPRITE_VISIBLE(a1)
-                adda.l  #SPRITE_SIZE+SPRITE_TEAMNUMBER,a1
-                dbf     d0,loc_10BA64
-loc_10BA80:
-                lea     (team2Scorer1Sprite).l,a1
-                lea     (team2ScorerSpritesWidths).l,a2
-                move.w  #7,d0
-loc_10BA90:
-                tst.w   (a2)+
-                beq.s   loc_10BAAC
-                tst.w   (dontShowScorers).l
-                bne.s   loc_10BAAC
-                move.w  #1,SPRITE_VISIBLE(a1)
-                adda.l  #SPRITE_SIZE+SPRITE_TEAMNUMBER,a1
-                dbf     d0,loc_10BA90
-loc_10BAAC:
-                bsr.w   InitDisplaySprites
-loc_10BAB0:
-                move.w  (lastFrameTicks).l,d0
-                sub.w   d0,(resultTimer).l
-                bmi.s   loc_10BAC2
-                bne.w   loc_10BB96
-loc_10BAC2:
-                cmpi.w  #ST_RESULT_ON_HALFTIME,(gameState).l
-                beq.s   loc_10BAD6
-                cmpi.w  #ST_RESULT_AFTER_THE_GAME,(gameState).l
-                bne.s   loc_10BADE
-loc_10BAD6:
-                move.w  #$7D00,(statsTimer).l
-loc_10BADE:
-                clr.w   (resultTimer).l
-                tst.w   (team1NameSprite+SPRITE_VISIBLE).l
-                beq.w   locret_10C024
-                clr.w   (resultOnHalftimeSprite+SPRITE_VISIBLE).l
-                clr.w   (resultAfterTheGameSprite+SPRITE_VISIBLE).l
-                clr.w   (gridUpperRowLeftSprite+SPRITE_VISIBLE).l
-                clr.w   (gridUpperRowRightSprite+SPRITE_VISIBLE).l
-                clr.w   (gridMiddleRowLeftSprite+SPRITE_VISIBLE).l
-                clr.w   (gridMiddleRowRightSprite+SPRITE_VISIBLE).l
-                clr.w   (gridBottomRowLeftSprite+SPRITE_VISIBLE).l
-                clr.w   (gridBottomRowRightSprite+SPRITE_VISIBLE).l
-                clr.w   (team1NameSprite+SPRITE_VISIBLE).l
-                clr.w   (team2NameSprite+SPRITE_VISIBLE).l
-                clr.w   (team1GoalsDigit2Sprite+SPRITE_VISIBLE).l
-                clr.w   (team1GoalsDigit1Sprite+SPRITE_VISIBLE).l
-                clr.w   (team1TotalGoalsDigit2Sprite+SPRITE_VISIBLE).l
-                clr.w   (team1TotalGoalsDigit1Sprite+SPRITE_VISIBLE).l
-                clr.w   (team2GoalsDigit2Sprite+SPRITE_VISIBLE).l
-                clr.w   (team2GoalsDigit1Sprite+SPRITE_VISIBLE).l
-                clr.w   (team2TotalGoalsDigit2Sprite+SPRITE_VISIBLE).l
-                clr.w   (team2TotalGoalsDigit1Sprite+SPRITE_VISIBLE).l
-                clr.w   (team1NameSprite+SPRITE_VISIBLE).l
-                clr.w   (dashSprite+SPRITE_VISIBLE).l
-                lea     (team1Scorer1Sprite).l,a1
-                lea     (team2Scorer1Sprite).l,a2
-                move.w  #7,d0
-loc_10BB76:
-                clr.w   SPRITE_VISIBLE(a1)
-                clr.w   SPRITE_VISIBLE(a2)
-                adda.l  #SPRITE_SIZE+SPRITE_TEAMNUMBER,a1
-                adda.l  #SPRITE_SIZE+SPRITE_TEAMNUMBER,a2
-                dbf     d0,loc_10BB76
-                bsr.w   InitDisplaySprites
-                bra.w   locret_10C024
-loc_10BB96:
-                lea     (team1ScorerSpritesWidths).l,a0
-                lea     (team2ScorerSpritesWidths).l,a1
-                clr.w   d7
-                move.w  #7,d1
-loc_10BBA8:
-                move.w  (a0)+,d0
-                add.w   (a1)+,d0
-                beq.s   loc_10BBB4
-                subq.w  #7,d7
-                dbf     d1,loc_10BBA8
-loc_10BBB4:
-                cmpi.w  #$FFF2,d7
-                ble.s   loc_10BBBE
-                move.w  #$FFF2,d7
-loc_10BBBE:
-                lea     (team1NameSprite).l,a0
-                move.w  (cameraX).l,SPRITE_X(a0)
-                addi.w  #136,SPRITE_X(a0)
-                move.w  (team1NameLength).l,d0
-                sub.w   d0,SPRITE_X(a0)
-                move.w  (cameraY).l,SPRITE_Y(a0)
-                addi.w  #246,SPRITE_Y(a0)
-                add.w   d7,SPRITE_Y(a0)
-                addi.w  #10000,SPRITE_Y(a0)
-                move.w  #10000,SPRITE_Z(a0)
-                move.w  SPRITE_Y(a0),d0
-                subi.w  #1015,d0
-                lea     (gridUpperRowLeftSprite).l,a1
-                move.w  (cameraX).l,SPRITE_X(a1)
-                move.w  d0,SPRITE_Y(a1)
-                move.w  #9000,SPRITE_Z(a1)
-                lea     (gridUpperRowRightSprite).l,a1
-                move.w  (cameraX).l,SPRITE_X(a1)
-                addi.w  #168,SPRITE_X(a1)
-                move.w  d0,SPRITE_Y(a1)
-                move.w  #9000,SPRITE_Z(a1)
-                addi.w  #32,d0
-                lea     (gridMiddleRowLeftSprite).l,a1
-                move.w  (cameraX).l,SPRITE_X(a1)
-                move.w  d0,SPRITE_Y(a1)
-                move.w  #9000,SPRITE_Z(a1)
-                lea     (gridMiddleRowRightSprite).l,a1
-                move.w  (cameraX).l,SPRITE_X(a1)
-                addi.w  #168,SPRITE_X(a1)
-                move.w  d0,SPRITE_Y(a1)
-                move.w  #9000,SPRITE_Z(a1)
-                addi.w  #32,d0
-                lea     (gridBottomRowLeftSprite).l,a1
-                move.w  (cameraX).l,SPRITE_X(a1)
-                move.w  d0,SPRITE_Y(a1)
-                move.w  #9000,SPRITE_Z(a1)
-                lea     (gridBottomRowRightSprite).l,a1
-                move.w  (cameraX).l,SPRITE_X(a1)
-                addi.w  #168,SPRITE_X(a1)
-                move.w  d0,SPRITE_Y(a1)
-                move.w  #9000,SPRITE_Z(a1)
-                lea     (team2NameSprite).l,a1
-                move.w  (cameraX).l,SPRITE_X(a1)
-                addi.w  #200,SPRITE_X(a1)
-                move.w  SPRITE_Y(a0),SPRITE_Y(a1)
-                move.w  #10000,SPRITE_Z(a1)
-                lea     (team1GoalsDigit2Sprite).l,a0
-                move.w  (cameraX).l,SPRITE_X(a0)
-                addi.w  #151,SPRITE_X(a0)
-                move.w  (cameraY).l,SPRITE_Y(a0)
-                addi.w  #241,SPRITE_Y(a0)
-                add.w   d7,SPRITE_Y(a0)
-                clr.w   SPRITE_Z(a0)
-                addi.w  #10000,SPRITE_Y(a0)
-                move.w  #10000,SPRITE_Z(a0)
-                move.w  #SPR_BIG_0,d0
-                add.w   (team1GoalsDigit2).l,d0
-                move.w  d0,SPRITE_IMAGEINDEX(a0)
-                lea     (team1GoalsDigit1Sprite).l,a1
-                tst.w   SPRITE_VISIBLE(a1)
-                beq.s   loc_10BD42
-                move.w  SPRITE_X(a0),SPRITE_X(a1)
-                subi.w  #12,SPRITE_X(a1)
-                move.w  SPRITE_Y(a0),SPRITE_Y(a1)
-                move.w  SPRITE_Z(a0),SPRITE_Z(a1)
-                move.w  #SPR_BIG_0,d0
-                add.w   (team1GoalsDigit1).l,d0
-                move.w  d0,SPRITE_IMAGEINDEX(a1)
-loc_10BD42:
-                lea     (team1TotalGoalsDigit2Sprite).l,a0
-                tst.w   team1TotalGoalsDigit2Sprite+SPRITE_VISIBLE-team1TotalGoalsDigit2Sprite(a0)
-                beq.w   loc_10BDE2
-                move.w  (team1TotalGoals).l,d1
-                ext.l   d1
-                divu.w  #$A,d1
-                move.w  d1,d2
-                swap    d1
-                move.w  (cameraX).l,SPRITE_X(a0)
-                addi.w  #158,SPRITE_X(a0)
-                cmpi.w  #1,d1
-                bne.s   loc_10BD78
-                addq.w  #4,SPRITE_X(a0)
-loc_10BD78:
-                move.w  (cameraY).l,SPRITE_Y(a0)
-                addi.w  #263,SPRITE_Y(a0)
-                add.w   d7,SPRITE_Y(a0)
-                clr.w   SPRITE_Z(a0)
-                addi.w  #10002,SPRITE_Y(a0)
-                move.w  #10002,SPRITE_Z(a0)
-                move.w  #SPR_SMALL_ZERO,d0
-                add.w   d1,d0
-                move.w  d0,SPRITE_IMAGEINDEX(a0)
-                lea     (team1TotalGoalsDigit1Sprite).l,a1
-                tst.w   SPRITE_VISIBLE(a1)
-                beq.s   loc_10BDE2
-                move.w  SPRITE_X(a0),SPRITE_X(a1)
-                subq.w  #6,SPRITE_X(a1)
-                cmpi.w  #1,d2
-                bne.s   loc_10BDC4
-                addq.w  #4,SPRITE_X(a1)
-loc_10BDC4:
-                move.w  SPRITE_Y(a0),SPRITE_Y(a1)
-                move.w  SPRITE_Z(a0),SPRITE_Z(a1)
-                subq.w  #1,SPRITE_Y(a1)
-                subq.w  #1,SPRITE_Z(a1)
-                move.w  #SPR_SMALL_ZERO,d0
-                add.w   d2,d0
-                move.w  d0,SPRITE_IMAGEINDEX(a1)
-loc_10BDE2:
-                lea     (team2GoalsDigit2Sprite).l,a0
-                move.w  (cameraX).l,SPRITE_X(a0)
-                addi.w  #173,SPRITE_X(a0)
-                move.w  (cameraY).l,SPRITE_Y(a0)
-                addi.w  #241,SPRITE_Y(a0)
-                add.w   d7,SPRITE_Y(a0)
-                clr.w   SPRITE_Z(a0)
-                addi.w  #10000,SPRITE_Y(a0)
-                move.w  #10000,SPRITE_Z(a0)
-                move.w  #SPR_SCROLL_ARROW_UP,d0
-                add.w   (team2GoalsDigit2).l,d0
-                move.w  d0,SPRITE_IMAGEINDEX(a0)
-                lea     (team2GoalsDigit1Sprite).l,a1
-                tst.w   SPRITE_VISIBLE(a1)
-                beq.s   loc_10BE58
-                move.w  SPRITE_X(a0),SPRITE_X(a1)
-                addi.w  #12,SPRITE_X(a0)
-                move.w  SPRITE_Y(a0),SPRITE_Y(a1)
-                move.w  SPRITE_Z(a0),SPRITE_Z(a1)
-                move.w  #SPR_SCROLL_ARROW_UP,d0
-                add.w   (team2GoalsDigit1).l,d0
-                move.w  d0,SPRITE_IMAGEINDEX(a1)
-loc_10BE58:
-                lea     (team2TotalGoalsDigit2Sprite).l,a0
-                tst.w   SPRITE_VISIBLE(a0)
-                beq.w   loc_10BEEE
-                move.w  (team2TotalGoals).l,d1
-                ext.l   d1
-                divu.w  #$A,d1
-                move.w  d1,d2
-                swap    d1
-                move.w  (cameraX).l,SPRITE_X(a0)
-                addi.w  #171,SPRITE_X(a0)
-                move.w  (cameraY).l,SPRITE_Y(a0)
-                addi.w  #263,SPRITE_Y(a0)
-                add.w   d7,SPRITE_Y(a0)
-                clr.w   SPRITE_Z(a0)
-                addi.w  #10002,SPRITE_Y(a0)
-                move.w  #10002,SPRITE_Z(a0)
-                move.w  #SPR_SMALL_ZERO,d0
-                add.w   d1,d0
-                move.w  d0,SPRITE_IMAGEINDEX(a0)
-                lea     (team2TotalGoalsDigit1Sprite).l,a1
-                tst.w   SPRITE_VISIBLE(a1)
-                beq.s   loc_10BEEE
-                move.w  SPRITE_X(a0),SPRITE_X(a1)
-                addq.w  #6,SPRITE_X(a0)
-                cmpi.w  #1,d2
-                bne.s   loc_10BED0
-                subq.w  #4,SPRITE_X(a0)
-loc_10BED0:
-                move.w  SPRITE_Y(a0),SPRITE_Y(a1)
-                move.w  SPRITE_Z(a0),SPRITE_Z(a1)
-                subq.w  #1,SPRITE_Y(a1)
-                subq.w  #1,SPRITE_Z(a1)
-                move.w  #SPR_SMALL_ZERO,d0
-                add.w   d2,d0
-                move.w  d0,SPRITE_IMAGEINDEX(a1)
-loc_10BEEE:
-                lea     (dashSprite).l,a0
-                move.w  (cameraX).l,SPRITE_X(a0)
-                addi.w  #165,SPRITE_X(a0)
-                move.w  (cameraY).l,SPRITE_Y(a0)
-                addi.w  #249,SPRITE_Y(a0)
-                add.w   d7,SPRITE_Y(a0)
-                addi.w  #10000,SPRITE_Y(a0)
-                move.w  #10000,SPRITE_Z(a0)
-                lea     (team1Scorer1Sprite).l,a0
-                lea     (team1Scorers).l,a2
-                lea     (team1ScorerSpritesWidths).l,a3
-                move.w  #263,d1
-                add.w   d7,d1
-                move.w  #7,d0
-loc_10BF3C:
-                tst.w   (a3)+
-                beq.s   loc_10BF84
-                move.w  (cameraX).l,SPRITE_X(a0)
-                addi.w  #136,SPRITE_X(a0)
-                move.w  -2(a3),d2
-                sub.w   d2,SPRITE_X(a0)
-                move.w  (cameraY).l,SPRITE_Y(a0)
-                add.w   d1,SPRITE_Y(a0)
-                clr.w   SPRITE_Z(a0)
-                addi.w  #10000,SPRITE_Y(a0)
-                move.w  #10000,SPRITE_Z(a0)
-                addq.w  #7,d1
-                adda.l  #SPRITE_SIZE+SPRITE_TEAMNUMBER,a0
-                adda.l  #SCORERINFO_SIZE+SCORERINFO_SHIRTNUM,a2
-                dbf     d0,loc_10BF3C
-loc_10BF84:
-                lea     (team2Scorer1Sprite).l,a0
-                lea     (team2Scorers).l,a2
-                lea     (team2ScorerSpritesWidths).l,a3
-                move.w  #263,d1
-                add.w   d7,d1
-                move.w  #7,d0
-loc_10BFA0:
-                tst.w   (a3)+
-                beq.s   loc_10BFE0
-                move.w  (cameraX).l,SPRITE_X(a0)
-                addi.w  #200,SPRITE_X(a0)
-                move.w  (cameraY).l,SPRITE_Y(a0)
-                add.w   d1,SPRITE_Y(a0)
-                clr.w   SPRITE_Z(a0)
-                addi.w  #10000,SPRITE_Y(a0)
-                move.w  #10000,SPRITE_Z(a0)
-                addq.w  #7,d1
-                adda.l  #SPRITE_SIZE+SPRITE_TEAMNUMBER,a0
-                adda.l  #SCORERINFO_SIZE+SCORERINFO_SHIRTNUM,a2
-                dbf     d0,loc_10BFA0
-loc_10BFE0:
-                lea     (gridUpperRowLeftSprite).l,a1
-                move.w  SPRITE_Y(a1),d0
-                addi.w  #990,d0
-                lea     (resultOnHalftimeSprite).l,a0
-                move.w  (cameraX).l,SPRITE_X(a0)
-                addi.w  #168,SPRITE_X(a0)
-                move.w  d0,SPRITE_Y(a0)
-                move.w  #10000,SPRITE_Z(a0)
-                lea     (resultAfterTheGameSprite).l,a1
-                move.w  SPRITE_X(a0),SPRITE_X(a1)
-                move.w  SPRITE_Y(a0),SPRITE_Y(a1)
-                move.w  SPRITE_Z(a0),SPRITE_Z(a1)
-locret_10C024:
-                rts
 numScenesInHilFile:
                 dc.w $0000
 hilSceneNumber:
@@ -5702,9 +3642,6 @@ savedGoalBasePtr:
 savedNextGoalPtr:
                 dc.l $00000000
 
-; ===== SetPitchTypeAndNumber =====
-; prototype: void __usercall SetPitchTypeAndNumber()
-; Ported to C: _SetPitchTypeAndNumber in src/highlight.c
 pitchNumberProbabilities:
                 dc.b $00,$00,$00,$00,$00,$01,$01,$01,$01,$01,$04,$04,$02,$02,$03,$03 ; Probabilities:
                                         ; pitch 1 - 31,25%
@@ -5713,87 +3650,9 @@ pitchNumberProbabilities:
                                         ; pitch 4 - 12,5%
                                         ; pitch 5 - 12,5%
 
-; ===== CopyTeamsAndHeader =====
-; prototype: void __usercall CopyTeamsAndHeader()
-; Copies left and right team from higlight file to
-; their in-game stuctures, and copies game titles
-; to corresponding arrays.
-; Ported to C: _CopyTeamsAndHeader in src/highlight.c
-
-; ===== SetHilFileHeader =====
-; prototype: void __usercall SetHilFileHeader()
-; Ported to C: _SetHilFileHeader in src/highlight.c
 kHilFileSig:
                 dc.l $0000000C          ; Every *.hil file starts with this dword
-                movea.l (goalBasePtr).l,a0
-                move.w  #4749,d0
-loc_10C336:
-                clr.l   (a0)+
-                dbf     d0,loc_10C336
-                move.l  (goalBasePtr).l,(currentHilPtr).l
-                clr.w   (replayState).l
-                rts
 
-; ===== SaveCoordinatesForHighlights =====
-; prototype: void __usercall SaveCoordinatesForHighlights(__int16 spriteIndexOrMarker@<d0>, unsigned __int16 x@<d4>, unsigned __int16 y@<d5>)
-; in:
-;      D0 - >= 0 - sprite index
-;           = -2 - mark end of the segment with -1
-;              < 0 - (usually -1) beginning of frame
-;      D4 - sprite x coordinate (or camera if D0 < 0)
-;      D5 - sprite y coordinate (or camera if D0 < 0)
-; 
-; Saves current sprite coordinate for highlights.
-; Ported to C: _SaveCoordinatesForHighlights in src/highlight.c
-; in: D0 = spriteIndexOrMarker (int16_t), D4 = x (uint16_t), D5 = y (uint16_t)
-
-; ===== IncrementHilBufferPointer =====
-
-; ===== DrawReplayFrame =====
-; prototype: void __usercall DrawReplayFrame()
-; Ported to C: _DrawReplayFrame in src/highlight.c
-
-; ===== ValidateHilPointerAdd =====
-; prototype: unsigned __int8 *__usercall ValidateHilPointerAdd@<a0>(unsigned __int8 *p@<a0>)
-; in:
-;      A0 - current pointer in hil buffer, possibly out of bounds
-; out:
-
-; ===== ValidateHilPointerSub =====
-; prototype: unsigned __int8 *__usercall ValidateHilPointerSub@<a0>(unsigned __int8 *p@<a0>)
-; in:
-
-; ===== ReplayUpdateCameraAndSwapBuffers =====
-; prototype: void __usercall ReplayUpdateCameraAndSwapBuffers()
-; Ported to C: _ReplayUpdateCameraAndSwapBuffers in src/highlight.c
-; in: D1 = targetX (int16_t), D2 = targetY (int16_t)
-
-; ===== HandleInstantReplayStateSwitch =====
-; prototype: void __usercall HandleInstantReplayStateSwitch()
-; Ported to C: _HandleInstantReplayStateSwitch in src/highlight.c
-
-; ===== RestoreCameraPosition =====
-; prototype: void __usercall RestoreCameraPosition()
-; Ported to C: _RestoreCameraPosition in src/highlight.c
-
-; ===== GoalScored =====
-; prototype: void __usercall GoalScored(__int16 scoringTeam@<d0>, struct Sprite *scorerSprite@<a0>)
-; in:
-;      D0  - number of team that scored (1 or 2)
-;      A0 -> in-game sprite of the player which scored
-; 
-; Updates goal variables. Puts name of scorer and minute into scorers list.
-; If the goal list is too long, it will be broken into up to 8 lines.
-; Each line is one sprite. Skips result sprites updating if it's penalty shootout.
-GoalScored:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                ext.l   d0
-                move.l  d0,-(sp)
-                jsr     _GoalScored
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 aAsc_0:
                 dc.b "****",0,$00
 aAsc_1:
@@ -5818,942 +3677,7 @@ firstGoalScoredTable:
                 dc.l aAsc_0             ; element[0]
                 dc.l aPen               ; element[1]
                 dc.l aOg                ; element[2]
-loc_10CA92:
-                movea.l (topTeamPtr).l,a0
-                cmpi.w  #1,TEAMGENERALINFO_PLAYERNUMBER(a6)
-                beq.s   loc_10CAB0
-                cmpi.w  #2,TEAMGENERALINFO_PLAYERNUMBER(a6)
-                beq.s   loc_10CACE
-                cmpi.w  #1,TEAMGENERALINFO_PLAYERCOACHNUMBER(a6)
-                bne.s   loc_10CACE
-loc_10CAB0:
-                jsr     Player1StatusProc ; Returns
-                move.w  (pl1Direction).l,(subsDirection).l
-                move.b  (pl1Fire).l,(subsFire).l
-                bra.w   loc_10CC24
-loc_10CACE:
-                jsr     Player2StatusProc ; Returns
-                move.w  (pl2Direction).l,(subsDirection).l
-                move.b  (pl2Fire).l,(subsFire).l
-                bra.w   loc_10CC24
-loc_10CAEC:
-                tst.w   (benchOff).l
-                beq.s   loc_10CB02
-                tst.w   (cameraCoordinatesValid).l
-                beq.s   loc_10CB02
-                clr.w   (benchOff).l
-loc_10CB02:
-                tst.w   (waitForPlayerToGoInTimer).l
-                beq.s   loc_10CB14
-                subq.w  #1,(waitForPlayerToGoInTimer).l
-                bra.w   _10CF6C_exit_rts
-loc_10CB14:
-                tst.w   (cameraLeavingSubsTimer).l
-                beq.s   loc_10CB26
-                subq.w  #1,(cameraLeavingSubsTimer).l
-                bra.w   _10CF6C_exit_rts
-loc_10CB26:
-                tst.w   (substituteInProgress).l
-                bne.w   _10CF6C_exit_rts
-                tst.w   (refState).l
-                bne.w   _10CF6C_exit_rts
-                tst.w   (injuriesForever).l
-                bne.w   _10CF6C_exit_rts
-                tst.w   (statsTimer).l
-                bne.w   _10CF6C_exit_rts
-                cmpi.w  #ST_GAME_IN_PROGRESS,(gameStatePl).l
-                beq.w   loc_10CD08
-                tst.w   (whichCard).l
-                bne.w   loc_10CD08
-                tst.w   (playingPenalties).l
-                bne.w   loc_10CD08
-                cmpi.w  #ST_STARTING_GAME,(gameState).l
-                bcs.s   loc_10CB84
-                cmpi.w  #ST_GAME_ENDED,(gameState).l
-                bls.w   loc_10CD08
-loc_10CB84:
-                lea     (topTeamData).l,a6
-                tst.w   (bench1Called).l
-                bne.w   loc_10CE48
-                lea     (bottomTeamData).l,a6
-                tst.w   (bench2Called).l
-                bne.w   loc_10CE48
-                btst    #0,(frameCount+1).l
-                beq.s   loc_10CBB8
-                lea     (topTeamData).l,a6
-                bra.w   loc_10CBBE
-loc_10CBB8:
-                lea     (bottomTeamData).l,a6
-loc_10CBBE:
-                tst.w   TEAMGENERALINFO_PLAYERNUMBER(a6)
-                beq.s   loc_10CBD8
-                move.w  TEAMGENERALINFO_DIRECTION(a6),(subsDirection).l
-                move.b  TEAMGENERALINFO_FIREPRESSED(a6),(subsFire).l
-                bra.w   loc_10CD3E
-loc_10CBD8:
-                tst.w   TEAMGENERALINFO_PLAYERCOACHNUMBER(a6)
-                beq.w   _10CF6C_exit_rts
-                cmpi.w  #2,TEAMGENERALINFO_PLAYERCOACHNUMBER(a6)
-                beq.s   loc_10CC06
-                jsr     Player1StatusProc ; Returns
-                move.w  (pl1Direction).l,(subsDirection).l
-                move.b  (pl1Fire).l,(subsFire).l
-                bra.w   loc_10CD3E
-loc_10CC06:
-                jsr     Player2StatusProc ; Returns
-                move.w  (pl2Direction).l,(subsDirection).l
-                move.b  (pl2Fire).l,(subsFire).l
-                bra.w   loc_10CD3E
-loc_10CC24:
-                movea.l (benchTeam).l,a6
-                tst.w   (cameraCoordinatesValid).l
-                bne.s   loc_10CC3E
-                move.w  #15,(goToSubsTimer).l
-                bra.w   _10CF6C_exit_rts
-loc_10CC3E:
-                tst.w   (goToSubsTimer).l
-                beq.s   loc_10CC50
-                subq.w  #1,(goToSubsTimer).l
-                bra.w   _10CF6C_exit_rts
-loc_10CC50:
-                cmpa.l  (benchTeam).l,a6
-                bne.w   _10CF6C_exit_rts
-                cmpi.w  #30,(inSubstitutesMenu).l
-                blt.w   _10CF6C_exit_rts
-                tst.w   (substituteInProgress).l
-                bmi.w   SubstitutePlayer
-                move.w  (subsDirection).l,d7
-                bmi.s   loc_10CCB8
-                tst.w   (subsBlockDirections).l
-                beq.s   loc_10CCBE
-                cmp.w   (subsPrevDirection).l,d7
-                bne.s   loc_10CCB8
-                tst.w   (subsState).l
-                beq.w   _10CF6C_exit_rts
-                tst.w   (subsPrevDirection).l
-                beq.s   loc_10CCA6
-                cmpi.w  #4,(subsPrevDirection).l
-                bne.w   _10CF6C_exit_rts
-loc_10CCA6:
-                addq.w  #1,(subsMovementDelayTimer).l
-                cmpi.w  #2,(subsMovementDelayTimer).l
-                bne.w   _10CF6C_exit_rts
-loc_10CCB8:
-                clr.w   (subsBlockDirections).l
-loc_10CCBE:
-                clr.w   (subsMovementDelayTimer).l
-                move.w  d7,(subsPrevDirection).l
-                clr.w   d0
-                tst.b   (subsFire).l
-                beq.s   loc_10CCDC
-                move.w  (subsFireTimer).l,d0
-                addq.w  #1,d0
-loc_10CCDC:
-                move.w  d0,(subsFireTimer).l
-                tst.w   (subsBlockFire).l
-                beq.s   loc_10CCFA
-                tst.b   (subsFire).l
-                bne.w   _10CF6C_exit_rts
-                clr.w   (subsBlockFire).l
-loc_10CCFA:
-                cmpi.w  #30,(inSubstitutesMenu).l
-                beq.w   BenchMenuHandleControls
-                rts
-loc_10CD08:
-                move.w  #$FFFF,(subsPrevPl1Direction).l
-                clr.w   (subsPl1TapCount).l
-                clr.w   (pl1BenchTimeoutCounter).l
-                move.w  #$FFFF,(subsPrevPl2Direction).l
-                clr.w   (subsPl2TapCount).l
-                clr.w   (pl2BenchTimeoutCounter).l
-                clr.w   (bench1Called).l
-                clr.w   (bench2Called).l
-                rts
-loc_10CD3E:
-                cmpa.l  #topTeamData,a6
-                bne.w   loc_10CDC8
-                move.w  (subsDirection).l,d0
-                bmi.s   loc_10CD98
-                tst.w   (pl1BenchBlockWhileHoldingDirection).l
-                bne.w   _10CF6C_exit_rts
-                move.w  (subsPrevPl1Direction).l,d1
-                bmi.s   loc_10CD82
-                cmp.w   (subsPrevPl1Direction).l,d0
-                bne.s   loc_10CDB0
-                addq.w  #1,(subsPl1TapCount).l
-                clr.w   (pl1BenchTimeoutCounter).l
-                cmpi.w  #2,(subsPl1TapCount).l
-                beq.w   loc_10CE48
-loc_10CD82:
-                move.w  (subsDirection).l,(subsPrevPl1Direction).l
-                move.w  #1,(pl1BenchBlockWhileHoldingDirection).l
-                bra.w   _10CF6C_exit_rts
-loc_10CD98:
-                clr.w   (pl1BenchBlockWhileHoldingDirection).l
-                addq.w  #1,(pl1BenchTimeoutCounter).l
-                cmpi.w  #15,(pl1BenchTimeoutCounter).l
-                bne.w   _10CF6C_exit_rts
-loc_10CDB0:
-                move.w  #$FFFF,(subsPrevPl1Direction).l
-                clr.w   (subsPl1TapCount).l
-                clr.w   (pl1BenchTimeoutCounter).l
-                bra.w   _10CF6C_exit_rts
-loc_10CDC8:
-                move.w  (subsDirection).l,d0
-                bmi.s   loc_10CE18
-                tst.w   (pl2BenchBlockWhileHoldingDirection).l
-                bne.w   _10CF6C_exit_rts
-                move.w  (subsPrevPl2Direction).l,d1
-                bmi.s   loc_10CE02
-                cmp.w   (subsPrevPl2Direction).l,d0
-                bne.s   loc_10CE30
-                addq.w  #1,(subsPl2TapCount).l
-                clr.w   (pl2BenchTimeoutCounter).l
-                cmpi.w  #2,(subsPl2TapCount).l
-                beq.w   loc_10CE48
-loc_10CE02:
-                move.w  (subsDirection).l,(subsPrevPl2Direction).l
-                move.w  #1,(pl2BenchBlockWhileHoldingDirection).l
-                bra.w   _10CF6C_exit_rts
-loc_10CE18:
-                clr.w   (pl2BenchBlockWhileHoldingDirection).l
-                addq.w  #1,(pl2BenchTimeoutCounter).l
-                cmpi.w  #15,(pl2BenchTimeoutCounter).l
-                bne.w   _10CF6C_exit_rts
-loc_10CE30:
-                move.w  #$FFFF,(subsPrevPl2Direction).l
-                clr.w   (subsPl2TapCount).l
-                clr.w   (pl2BenchTimeoutCounter).l
-                bra.w   _10CF6C_exit_rts
-loc_10CE48:
-                clr.w   (bench1Called).l
-                clr.w   (bench2Called).l
-                move.l  a6,(benchTeam).l
-                movea.l (topTeamPtr).l,a0
-                cmpi.w  #2,TEAMGENERALINFO_TEAMNUMBER(a6)
-                bne.s   loc_10CE6E
-                movea.l (bottomTeamPtr).l,a0
-loc_10CE6E:
-                move.l  a0,(benchTeamGame).l
-                move.w  #$FFFF,(plToBeSubstitutedPos).l
-                clr.w   (subsState).l
-                clr.w   (benchPlayerIndex).l
-                move.w  #1,(subsBlockFire).l
-                move.w  #1,(subsBlockDirections).l
-                move.w  #30,(inSubstitutesMenu).l
-                move.w  #15,(goToSubsTimer).l
-                neg.w   (timeVar).l
-                neg.w   (resultTimer).l
-                neg.w   (statsTimer).l
-                move.w  #389,d1         ; top bench y
-                move.w  #485,d2         ; bottom bench y
-                tst.w   (trainingGame).l
-                beq.s   loc_10CEF0
-                addi.w  #67,d1          ; training game bench coordinates
-                subi.w  #29,d2
-                clr.w   (subsTrainingTopTeam).l
-                exg     d1,d2
-                cmpi.l  #topTeamInGame,(benchTeamGame).l
-                beq.s   loc_10CF0A
-                move.w  #1,(subsTrainingTopTeam).l
-                bra.s   loc_10CF0A
-loc_10CEF0:
-                btst    #1,(topTeamInGame+TEAMGAME_TEAMNAME).l ; 2nd character of team name?
-                beq.s   loc_10CEFC
-                exg     d1,d2
-loc_10CEFC:
-                cmpi.l  #topTeamInGame,(benchTeamGame).l
-                beq.s   loc_10CF0A
-                exg     d1,d2
-loc_10CF0A:
-                move.w  d1,(benchY).l
-                move.w  d2,(opponentBenchY).l
-                move.w  #449,(plComingYTmp).l
-                move.w  (plComingYTmp).l,(plComingY).l
-                move.w  (benchY).l,d0
-                addi.w  #50,d0
-                move.w  d0,(benchWriteOnly01).l
-                move.w  #27,(benchXLimit).l
-                move.w  #100,(subsMenuX).l
-                move.w  #100,(formationMenuX).l
-                move.w  #39,(plLeavingX).l
-                move.w  #26,(plComingX).l
-                move.w  #35,(benchWriteOnly02).l
-                bra.w   CheckForThrowInAndGoalkeepersBall
-_10CF6C_exit_rts:
-                rts
-loc_10CF6E:
-                clr.w   (deadBenchVar).l
-                rts
 
-; ===== BenchMenuHandleControls =====
-; prototype: void __usercall BenchMenuHandleControls()
-BenchMenuHandleControls:
-                jmp     _BenchMenuHandleControls
-
-; ===== IsThisPlayerOkToSelect =====
-; prototype: signed __int16 __usercall IsThisPlayerOkToSelect@<d0>()
-; out:
-;      sign flag: set=not OK, clear=OK
-; 
-; Checks if bench player at benchPlayerIndex is OK to select in bench.
-
-; ===== CheckForThrowInAndGoalkeepersBall =====
-; prototype: void __usercall CheckForThrowInAndGoalkeepersBall()
-CheckForThrowInAndGoalkeepersBall:
-                jmp     _CheckForThrowInAndGoalkeepersBall
-
-; ===== SubstitutePlayer =====
-; prototype: void __usercall SubstitutePlayer()
-SubstitutePlayer:
-                jmp     _SubstitutePlayer
-
-; ===== IsPlayerOkToSubstitute =====
-; prototype: unsigned __int16 __usercall IsPlayerOkToSubstitute@<d0>()
-; out:
-;      zero flag set, D0 = 0 : ok to substitute
-;      zero flag clear, D0 = 1 : do not substitute
-
-; ===== FindInitialPlayerToBeSubstituted =====
-; prototype: void __usercall FindInitialPlayerToBeSubstituted()
-; Search the whole team for a player with the same position as the one about to enter the game.
-; If there's no exact match try approximate (RB,LB,D -> D, RW,LW,M -> M). If there isn't evan an
-; approximate match, then just use first one available.
-; This data will be used to mark the initial player when substitutes menu opens up for the first time.
-
-; ===== SwapPlayerNameData =====
-; prototype: void __usercall SwapPlayerNameData(__int16 enterIndex@<d6>, __int16 leaveIndex@<d7>)
-; in:
-;      D6 - index of player that's entering the game
-;      D7 - index of player that's leaving the game
-; 
-; Swap name lengths and ordinals of players.
-loc_10DA7A:
-                move.w  (benchXLimit).l,d0
-                addq.w  #8,d0
-                cmp.w   (cameraX).l,d0
-                bls.w   locret_10DFA4
-                move.w  (subsState).l,(initialSubsState).l
-                tst.w   (trainingGame).l
-                beq.s   loc_10DAA6
-                tst.w   (subsTrainingTopTeam).l
-                bne.s   loc_10DAAA
-loc_10DAA6:
-                bsr.w   DrawOpponentsBench
-loc_10DAAA:
-                move.w  (benchXLimit).l,d1
-                move.w  (benchY).l,d2
-                subi.w  #21,d2
-                addq.w  #4,d2
-                move.w  (benchPlayerIndex).l,d0
-                subi.w  #12,d1
-                mulu.w  #7,d0
-                tst.w   (trainingGame).l
-                beq.s   loc_10DADC
-                tst.w   (subsTrainingTopTeam).l
-                beq.s   loc_10DADC
-                neg.w   d0
-loc_10DADC:
-                tst.w   (trainingGame).l
-                beq.s   loc_10DAF2
-                subq.w  #7,d0
-                tst.w   (subsTrainingTopTeam).l
-                bne.s   loc_10DAF2
-                addi.w  #14,d0
-loc_10DAF2:
-                add.w   d0,d2
-                tst.w   (goToSubsTimer).l
-                bne.s   loc_10DB1E
-                tst.w   (substituteInProgress).l
-                bne.s   loc_10DB1E
-                tst.w   (subsState).l
-                bne.s   loc_10DB1E
-                move.w  #SPR_SELECT_SUBSTITUTE_ARROW,d0
-                movem.l d1,-(sp)
-                jsr     DrawSpriteInCameraView
-                movem.l (sp)+,d1
-loc_10DB1E:
-                addi.w  #12,d1
-                move.w  (benchY).l,d2
-                movea.l (benchTeamGame).l,a0
-                movea.l (benchTeam).l,a1
-                move.w  (subsTrainingTopTeam).l,(drawTrainingTopHalfOfTheBench).l
-                bsr.w   DrawBenchPlayersAndCoach
-                tst.w   (trainingGame).l
-                beq.s   loc_10DB56
-                tst.w   (subsTrainingTopTeam).l
-                beq.s   loc_10DB56
-                bsr.w   DrawOpponentsBench
-loc_10DB56:
-                cmpi.w  #1,(subsState).l
-                beq.w   DrawSubstitutesMenu
-                cmpi.w  #3,(subsState).l
-                beq.w   DrawSubstitutesMenu
-                cmpi.w  #2,(subsState).l
-                beq.w   DrawFormationMenu
-                cmpi.w  #4,(subsState).l
-                beq.w   DrawSubstitutesMenu
-                rts
-
-; ===== DrawOpponentsBench =====
-; prototype: void __usercall DrawOpponentsBench()
-DrawOpponentsBench:
-; Ported to C as static drawOpponentsBench() in bench_subs.c (dead code — called only from ported DrawBenchAndSubsMenu)
-                rts
-
-; ===== DrawBenchPlayersAndCoach =====
-; prototype: void __usercall DrawBenchPlayersAndCoach(struct TeamGame *requestingTeam@<a0>, struct TeamGeneralInfo *team@<a1>, unsigned __int16 x@<d1>, unsigned __int16 y@<d2>)
-; in:
-;      D1 - x (for player sprites)
-;      D2 - y
-;      A0 -> team that requested team management (in-game)
-;      A1 -> team data (general info)
-; 
-; Draws all bench sprites.
-DrawBenchPlayersAndCoach:
-; Ported to C as static drawBenchPlayersAndCoach() in bench_subs.c (dead code)
-                rts
-loc_10DBF6:
-                subi.w  #$13,d2
-                addq.w  #4,d2
-                move.w  #$49E,d3
-                cmpi.w  #4,(initialSubsState).l
-                beq.s   loc_10DC14
-                cmpi.w  #2,(initialSubsState).l
-                bne.s   loc_10DC20
-loc_10DC14:
-                tst.w   (benchPlayerIndex).l
-                bne.s   loc_10DC20
-                move.w  #$4A1,d3
-loc_10DC20:
-                move.w  (currentGameTick).l,d0
-                andi.w  #$1E0,d0
-                lsr.w   #4,d0
-                lea     (ourCoachFrames).l,a2
-                tst.w   (initialSubsState).l
-                bpl.s   loc_10DC40
-                lea     (opponentCoachFrames).l,a2
-loc_10DC40:
-                move.w  (a2,d0.w),d0
-                add.w   d3,d0
-                add.w   d5,d0
-                tst.w   (trainingGame).l
-                beq.s   loc_10DC58
-                tst.w   (drawTrainingTopHalfOfTheBench).l
-                bne.s   loc_10DC92
-loc_10DC58:
-                tst.w   (trainingGame).l
-                beq.s   loc_10DC6E
-                subq.w  #7,d2
-                tst.w   (subsTrainingTopTeam).l
-                bne.s   loc_10DC6E
-                addi.w  #$E,d2
-loc_10DC6E:
-                movem.l d1-d2/d5-d6/a0-a1,-(sp)
-                jsr     DrawSpriteHotspotInCameraView
-                movem.l (sp)+,d1-d2/d5-d6/a0-a1
-                tst.w   (trainingGame).l
-                beq.s   loc_10DC92
-                addq.w  #7,d2
-                tst.w   (subsTrainingTopTeam).l
-                bne.s   loc_10DC92
-                subi.w  #$E,d2
-loc_10DC92:
-                addq.w  #7,d2
-                tst.w   (trainingGame).l
-                beq.s   loc_10DC9E
-                addq.w  #7,d2
-loc_10DC9E:
-                lea     $29F(a0),a0
-                tst.w   (trainingGame).l
-                beq.s   loc_10DCBA
-                tst.w   (drawTrainingTopHalfOfTheBench).l
-                beq.s   loc_10DCBA
-                subi.w  #$38,d2         ; '8'
-                lea     $F4(a0),a0
-loc_10DCBA:
-                move.w  #1,d7
-loc_10DCBE:
-                tst.b   $2A(a0)
-                bne.w   loc_10DD82
-                tst.b   $2E(a0)
-                bmi.w   loc_10DD82
-                cmpi.b  #2,$34(a0)
-                bcc.w   loc_10DD82
-                tst.w   (subsState).l
-                bmi.s   loc_10DD2E
-                tst.w   (substituteInProgress).l
-                beq.s   loc_10DCF8
-                move.w  (plToEnterGameIndex).l,d3
-                subi.w  #$A,d3
-                cmp.w   d7,d3
-                beq.s   loc_10DD0A
-                bra.s   loc_10DD2E
-loc_10DCF8:
-                cmpi.w  #1,(subsState).l
-                bne.s   loc_10DD2E
-                cmp.w   (benchPlayerIndex).l,d7
-                bne.s   loc_10DD2E
-loc_10DD0A:
-                move.w  #$4B5,d0
-                cmpi.w  #5,(gameMaxSubstitutes).l
-                bls.s   loc_10DD20
-                cmpi.w  #1,d7
-                bne.s   loc_10DD50
-                bra.s   loc_10DD28
-loc_10DD20:
-                cmpi.b  #0,$2E(a0)
-                bne.s   loc_10DD50
-loc_10DD28:
-                move.w  #$4B2,d0
-                bra.s   loc_10DD50
-loc_10DD2E:
-                move.w  #$4AF,d0
-                cmpi.w  #5,(gameMaxSubstitutes).l
-                bls.s   loc_10DD44
-                cmpi.w  #1,d7
-                bne.s   loc_10DD50
-                bra.s   loc_10DD4C
-loc_10DD44:
-                cmpi.b  #0,$2E(a0)
-                bne.s   loc_10DD50
-loc_10DD4C:
-                move.w  #$4AC,d0
-loc_10DD50:
-                tst.w   (useIndividualPlayerSkinColor).l
-                bne.s   loc_10DD6A
-                move.w  $12(a1),d3
-                lsl.w   #1,d3
-                lea     (team2GoalkeeperReplaced).l,a1
-                move.w  (a1,d3.w),d3
-                bra.s   loc_10DD70
-loc_10DD6A:
-                move.b  $2F(a0),d3
-                ext.w   d3
-loc_10DD70:
-                add.w   d3,d0
-                add.w   d6,d0
-                movem.l d1-d2/d5-d7/a0-a1,-(sp)
-                jsr     DrawSpriteHotspotInCameraView
-                movem.l (sp)+,d1-d2/d5-d7/a0-a1
-loc_10DD82:
-                addq.w  #7,d2
-                adda.l  #$3D,a0         ; '='
-                tst.w   (trainingGame).l
-                beq.s   loc_10DDA0
-                tst.w   (drawTrainingTopHalfOfTheBench).l
-                beq.s   loc_10DDA0
-                suba.l  #$7A,a0         ; 'z'
-loc_10DDA0:
-                addq.w  #1,d7
-                cmpi.w  #6,d7
-                bne.w   loc_10DCBE
-                rts
-
-; ===== DrawSubstitutesMenu =====
-; prototype: void __usercall DrawSubstitutesMenu()
-; Expecting deltaColor to be set to 16.
-DrawSubstitutesMenu:
-; Ported to C as static drawSubstitutesMenu() in bench_subs.c (dead code)
-                rts
-loc_10DDE2:
-                move.w  (a1)+,d1
-                cmpi.w  #2,d1
-                beq.s   loc_10DDE2
-                cmpi.w  #$F,d1
-                beq.s   loc_10DDE2
-                lea     (benchColors).l,a1
-loc_10DDF6:
-                move.w  (a1)+,d2
-                cmpi.w  #2,d2
-                beq.s   loc_10DDF6
-                cmpi.w  #$F,d2
-                beq.s   loc_10DDF6
-                cmp.w   d1,d2
-                beq.s   loc_10DDF6
-                lea     (benchColors).l,a1
-loc_10DE0E:
-                move.w  (a1)+,d3
-                cmp.w   d1,d3
-                beq.s   loc_10DE0E
-                cmp.w   d2,d3
-                beq.s   loc_10DE0E
-                move.w  d1,(subsMenuBackgroundColor).l
-                move.w  d2,(subsMenuHighlightColor).l
-                tst.w   d3
-                bpl.s   loc_10DE2A
-                move.w  d2,d3
-loc_10DE2A:
-                move.w  d3,(subsMenuEntryFrameColor).l
-                movea.l (benchTeamGame).l,a2
-                move.w  #36,d2
-                lea     (smallCharsTable).l,a1
-                lea     (ingameTeamPlayerOffsets).l,a4
-                cmpi.w  #3,(subsState).l
-                beq.s   loc_10DE88
-                cmpi.w  #4,(subsState).l
-                bne.s   loc_10DE78
-                move.w  (subsMenuBackgroundColor).l,d4
-                tst.w   (plToBeSubstitutedOrd).l
-                bpl.s   loc_10DE6E
-                move.w  (subsMenuHighlightColor).l,d4
-loc_10DE6E:
-                move.w  #$FFFF,d7
-                bsr.w   DrawSubstitutesMenuEntry
-                bra.s   loc_10DE88
-loc_10DE78:
-                move.w  (plToEnterGameIndex).l,d7
-                move.w  (subsMenuBackgroundColor).l,d4
-                bsr.w   DrawSubstitutesMenuEntry
-loc_10DE88:
-                addi.w  #15,d2
-                movem.l d2,-(sp)
-                move.w  (subsMenuX).l,d0
-                sub.w   (cameraX).l,d0
-                addi.w  #43,d0
-                move.w  d2,d1
-                move.w  #41,d2
-                move.w  #33,d3
-                move.w  #8,d4
-                movem.l d0-d3/a1-a4,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d0-d3/a1-a4
-                subq.w  #2,d0
-                subq.w  #2,d1
-                move.w  (subsMenuBackgroundColor).l,d4
-                movem.l d0-d3/d7/a1-a4,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d0-d3/d7/a1-a4
-                addq.w  #1,d0
-                addq.w  #1,d1
-                subq.w  #2,d2
-                subq.w  #2,d3
-                move.w  (subsMenuHighlightColor).l,d4
-                movem.l d0-d3/d7/a1-a4,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d0-d3/d7/a1-a4
-                move.w  d1,d2
-                move.w  d0,d1
-                addq.w  #2,d1
-                addq.w  #2,d2
-                move.w  #SPR_SUBSTITUTES,d0
-                cmpi.w  #1,(subsState).l
-                beq.s   loc_10DF1E
-                cmpi.w  #4,(subsState).l
-                beq.s   loc_10DF1E
-                move.w  #$4554,(panicReasonCode).l
-                jsr     PanicHaltLoop
-loc_10DF1E:
-                movem.l d2/a1-a4,-(sp)
-                jsr     DrawSprite16Pixels
-                movem.l (sp)+,d2/a1-a4
-                movem.l (sp)+,d2
-                addi.w  #$25,d2         ; '%'
-                clr.w   d7
-loc_10DF36:
-                move.w  d7,-(sp)
-                move.w  d7,d0
-                bsr.w   GetBenchPlayerPointer
-                move.w  d0,d7
-                move.w  (subsMenuBackgroundColor).l,d4
-                cmp.w   (plToBeSubstitutedPos).l,d7
-                bne.s   loc_10DF54
-                move.w  (subsMenuHighlightColor).l,d4
-loc_10DF54:
-                cmpi.w  #4,(subsState).l
-                bne.s   loc_10DF92
-                cmp.w   (selectedPlayerInSubs).l,d7
-                bne.s   loc_10DF92
-                move.w  #10,d4
-                cmp.w   (subsMenuBackgroundColor).l,d4
-                beq.s   loc_10DF7A
-                cmp.w   (subsMenuHighlightColor).l,d4
-                bne.s   loc_10DF92
-loc_10DF7A:
-                move.w  #11,d4
-                cmp.w   (subsMenuBackgroundColor).l,d4
-                beq.s   loc_10DF8E
-                cmp.w   (subsMenuHighlightColor).l,d4
-                bne.s   loc_10DF92
-loc_10DF8E:
-                move.w  #14,d4
-loc_10DF92:
-                bsr.w   DrawSubstitutesMenuEntry
-                move.w  (sp)+,d7
-                addi.w  #10,d2
-                addq.w  #1,d7
-                cmpi.w  #11,d7
-                bne.s   loc_10DF36
-locret_10DFA4:
-                rts
-
-; ===== DrawSubstitutesMenuEntry =====
-; prototype: void __usercall DrawSubstitutesMenuEntry(__int16 y@<d2>, unsigned __int16 baseColor@<d4>, __int16 selectedIndex@<d7>, const void *charsTable@<a1>, const struct TeamGame *teamGame@<a2>, const unsigned __int16 *playerOffsets@<a4>)
-; in:
-;      D2 - y (of the shadow, frame is at -2)
-;      D4 - base color (background)
-;      D7 - selected player index in menu (-1 = "FORMATION")
-;      A1 -> chars table
-;      A2 -> current team (game)
-;      A4 -> in-game team player offsets
-DrawSubstitutesMenuEntry:
-; Ported to C as static drawSubstitutesMenuEntry() in bench_subs.c (dead code)
-                rts
-loc_10E05C:
-                move.w  d7,d0
-                lsl.w   #1,d0
-                move.w  (a4,d0.w),d6
-                lea     PLAYERINFOHEADER_SHIRTNUMBER(a2),a0
-                move.b  (a0,d6.w),d5
-                ext.w   d5
-                tst.w   (useIndividualPlayerSkinColor).l
-                beq.s   loc_10E0BC
-                lea     PLAYERINFOHEADER_FACE(a2),a0
-                move.b  (a0,d6.w),d0
-                ext.w   d0
-                lsl.w   #1,d0
-                lea     (playerFacesTable).l,a0
-                move.w  (a0,d0.w),d0
-                move.w  (subsMenuX).l,d1
-                sub.w   (cameraX).l,d1
-                movea.l (benchTeamGame).l,a0
-                cmp.w   TEAMGAME_MARKEDPLAYER(a0),d7
-                bne.s   loc_10E0AE
-                btst    #2,(frameCount+1).l
-                beq.s   loc_10E0BC
-loc_10E0AE:
-                movem.l d2/d5-d7/a1-a4,-(sp)
-                jsr     DrawSprite16Pixels
-                movem.l (sp)+,d2/d5-d7/a1-a4
-loc_10E0BC:
-                movea.l (benchTeam).l,a0
-                movea.l TEAMGENERALINFO_SPRITESTABLE(a0),a0
-                move.w  d7,d0
-                lsl.w   #2,d0
-                movea.l (a0,d0.w),a0
-                cmpi.w  #$FFFE,SPRITE_INJURYLEVEL(a0)
-                bne.s   loc_10E104
-                move.w  #SPR_RED_CROSS_INJURY,d0
-                move.w  (subsMenuX).l,d1
-                sub.w   (cameraX).l,d1
-                tst.w   (useIndividualPlayerSkinColor).l
-                beq.s   loc_10E0F2
-                addi.w  #9,d1
-loc_10E0F2:
-                movem.l d2/d6-d7/a1-a4,-(sp)
-                jsr     DrawSprite16Pixels
-                movem.l (sp)+,d2/d6-d7/a1-a4
-                bra.w   loc_10E1A8
-loc_10E104:
-                move.w  (subsMenuX).l,d1
-                sub.w   (cameraX).l,d1
-                addq.w  #4,d1
-                tst.w   (useIndividualPlayerSkinColor).l
-                beq.s   loc_10E11E
-                addi.w  #9,d1
-loc_10E11E:
-                move.b  d5,d0
-                lea     (playerNumberString).l,a0 ; "--"
-                cmpi.b  #10,d0
-                bcs.s   loc_10E134
-                move.b  #'1',(a0)+
-                subi.b  #$A,d0
-loc_10E134:
-                move.b  d0,(a0)
-                addi.b  #'0',(a0)+
-                clr.b   (a0)
-                lea     (playerNumberString).l,a0 ; "--"
-                addq.w  #1,d2
-                move.w  #2,d3
-                movem.l d0/d2/d6-d7/a1-a4,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d0/d2/d6-d7/a1-a4
-                cmpi.w  #11,d7
-                bcc.s   loc_10E1A8
-                movea.l (benchTeam).l,a0
-                movea.l TEAMGENERALINFO_SPRITESTABLE(a0),a0
-                move.w  d7,d0
-                lsl.w   #2,d0
-                movea.l (a0,d0.w),a0
-                move.w  #SPR_RED_CARD_SMALL,d0
-                tst.w   $66(a0)
-                bmi.s   loc_10E17E
-                beq.s   loc_10E1A8
-                move.w  #SPR_YELLOW_CARD_SMALL,d0
-loc_10E17E:
-                subq.w  #1,d2
-                move.w  (subsMenuX).l,d1
-                sub.w   (cameraX).l,d1
-                tst.w   (useIndividualPlayerSkinColor).l
-                beq.s   loc_10E198
-                addi.w  #9,d1
-loc_10E198:
-                movem.l d2/d6-d7/a1-a4,-(sp)
-                jsr     DrawSprite16Pixels
-                movem.l (sp)+,d2/d6-d7/a1-a4
-                addq.w  #1,d2
-loc_10E1A8:
-                lea     PLAYERINFOHEADER_SHORTNAME(a2),a0
-                lea     (a0,d6.w),a0
-                move.w  (subsMenuX).l,d1
-                sub.w   (cameraX).l,d1
-                addi.w  #9,d1
-                tst.w   (useIndividualPlayerSkinColor).l
-                beq.s   loc_10E1CC
-                addi.w  #9,d1
-loc_10E1CC:
-                move.w  #2,d3
-                movem.l d0/d2/d6-d7/a1-a4,-(sp)
-                jsr     DrawMenuText
-                movem.l (sp)+,d0/d2/d6-d7/a1-a4
-                lea     PLAYERINFOHEADER_POSITION(a2),a0
-                move.b  (a0,d6.w),d0
-                ext.w   d0
-                lsl.w   #2,d0
-                lea     (playerPositionsStringTable).l,a0
-                movea.l (a0,d0.w),a0
-                move.w  (subsMenuX).l,d1
-                sub.w   (cameraX).l,d1
-                addi.w  #116,d1
-                move.w  #2,d3
-                movem.l d0/d2/d6-d7/a1-a4,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d0/d2/d6-d7/a1-a4
-                subq.w  #1,d2
-                lea     PLAYERINFOHEADER_INJURIESBITFIELD(a2),a0
-                move.b  (a0,d6.w),d0
-                cmpi.b  #0,d0
-                beq.s   locret_10E262
-                cmpi.b  #$20,d0         ; ' '
-                beq.s   loc_10E240
-                andi.w  #$E0,d0
-                lsr.w   #5,d0
-                move.w  (frameCount).l,d1
-                andi.w  #7,d1
-                cmp.w   d1,d0
-                bcs.s   locret_10E262
-loc_10E240:
-                move.w  #SPR_RED_CROSS_INJURY,d0
-                move.w  (subsMenuX).l,d1
-                sub.w   (cameraX).l,d1
-                addi.w  #101,d1
-                movem.l d2/d7/a1-a4,-(sp)
-                jsr     DrawSprite16Pixels
-                movem.l (sp)+,d2/d7/a1-a4
-locret_10E262:
-                rts
-
-; ===== DrawFormationMenu =====
-; prototype: void __usercall DrawFormationMenu()
-DrawFormationMenu:
-; Ported to C as static drawFormationMenu() in bench_subs.c (dead code)
-                rts
-loc_10E29A:
-                move.w  (a1)+,d1
-                cmpi.w  #2,d1
-                beq.s   loc_10E29A
-                cmpi.w  #$F,d1
-                beq.s   loc_10E29A
-                lea     (benchColors).l,a1
-loc_10E2AE:
-                move.w  (a1)+,d2
-                cmpi.w  #2,d2
-                beq.s   loc_10E2AE
-                cmpi.w  #$F,d2
-                beq.s   loc_10E2AE
-                cmp.w   d1,d2
-                beq.s   loc_10E2AE
-                lea     (benchColors).l,a1
-loc_10E2C6:
-                move.w  (a1)+,d3
-                cmp.w   d1,d3
-                beq.s   loc_10E2C6
-                cmp.w   d2,d3
-                beq.s   loc_10E2C6
-                move.w  d1,(subsMenuBackgroundColor).l
-                move.w  d2,(subsMenuHighlightColor).l
-                tst.w   d3
-                bpl.s   loc_10E2E2
-                move.w  d2,d3
-loc_10E2E2:
-                move.w  d3,(subsMenuEntryFrameColor).l
-                move.w  #$B,d2
-                lea     (smallCharsTable).l,a1
-                addi.w  #$F,d2
-                movem.l d2,-(sp)
-                move.w  (formationMenuX).l,d0
-                sub.w   (cameraX).l,d0
-                addi.w  #10,d0
-                move.w  d2,d1
-                move.w  #41,d2
-                move.w  #33,d3
-                move.w  #8,d4
-                movem.l d0-d3/a1-a4,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d0-d3/a1-a4
-                subq.w  #2,d0
-                subq.w  #2,d1
-                move.w  (subsMenuBackgroundColor).l,d4
-                movem.l d0-d3/d7/a1-a4,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d0-d3/d7/a1-a4
-                addq.w  #1,d0
-                addq.w  #1,d1
-                subq.w  #2,d2
-                subq.w  #2,d3
-                move.w  (subsMenuHighlightColor).l,d4
-                movem.l d0-d3/d7/a1-a4,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d0-d3/d7/a1-a4
-                move.w  d1,d2
-                move.w  d0,d1
-                addq.w  #2,d1
-                addq.w  #2,d2
-                move.w  #SPR_FORMATION,d0
-                movem.l d2/a1-a4,-(sp)
-                jsr     DrawSprite16Pixels
-                movem.l (sp)+,d2/a1-a4
-                movem.l (sp)+,d2
-                addi.w  #37,d2
-                clr.w   d7
-loc_10E37E:
-                move.w  (subsMenuBackgroundColor).l,d4
-                cmp.w   (selectedFormationEntry).l,d7
-                bne.s   loc_10E392
-                move.w  (subsMenuHighlightColor).l,d4
-loc_10E392:
-                bsr.w   DrawFormationMenuEntry
-                addi.w  #10,d2
-                addq.w  #1,d7
-                cmpi.w  #18,d7
-                bne.s   loc_10E37E
-                rts
-
-; ===== DrawFormationMenuEntry =====
-; prototype: void __usercall DrawFormationMenuEntry(const unsigned __int8 *charsTable@<a1>, unsigned __int16 y@<d2>, unsigned __int16 entryColor@<d4>, unsigned __int16 entryIndex@<d7>)
-; in:
-;      D2 - y
-;      D4 - entry color
-;      D7 - entry index
-;      A1 -> chars table
-DrawFormationMenuEntry:
-; Ported to C as static drawFormationMenuEntry() in bench_subs.c (dead code)
-                rts
-loc_10E432:
-                lea     (teamTacticsTable).l,a0
-                move.w  d7,d0
-                lsl.w   #2,d0
-                movea.l (a0,d0.w),a0
-                lea     (a0),a0
-loc_10E442:
-                move.w  (formationMenuX).l,d1
-                sub.w   (cameraX).l,d1
-                addi.w  #30,d1
-                move.w  #2,d3
-                movem.l d0/d2/d6-d7/a1-a4,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d0/d2/d6-d7/a1-a4
-                rts
 playerNumberString:
                 dc.b "--",0,$00         ; When drawing player list in substitutes menu during the game
                                         ; this align saves the day so we can add three digit number support ;)
@@ -6777,26 +3701,6 @@ opponentCoachFrames:
                 dc.w $0002,$0001,$0002,$0002,$0001,$0002,$0000,$0001
                 dc.w $0002,$0000,$0001,$0001,$0001,$0000,$0001,$0002
 
-; ===== GetBenchPlayerPointer =====
-; prototype: void *__usercall GetBenchPlayerPointer@<a0>(unsigned __int16 index@<d0>)
-; in:
-;      D0 - player index
-; out:
-;      A0 -> player pointer (game) + header
-;      D0 -  player ordinal (0..10)
-;      
-; Get in-game player pointer given his index, based on current tactics.
-GetBenchPlayerPointer:
-                move.w  d1,-(sp)                ; callers expect d1 preserved
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)                ; push index
-                jsr     _GetBenchPlayerPointer
-                addq.l  #4,sp
-                movea.l (benchPlayerResultA0).l,a0
-                movem.l (sp)+,d2-d7/a2-a6
-                move.w  (sp)+,d1
-                rts
 pad_10E512:
                 dc.b 1,0
 ; unsigned __int16[2]
@@ -6947,31 +3851,6 @@ kInjuryForeverSpeed:
 mainAsm:
                 rts                     ; dead — _startShim calls _mainC directly
 
-; ===== GameLoop =====
-; prototype: void __usercall GameLoop()
-; in:
-;      A5 -> left team in-game struct
-;      A6 -> right team in-game struct
-
-; ===== ViewHighLightsMain =====
-; prototype: void __usercall ViewHighLightsMain(void *leftTeam@<a5>, void *rightTeam@<a6>)
-; in:
-;      A5 -> left team in-game
-;      A6 -> right team in-game
-
-; ===== PlayInstantReplayLoop =====
-; prototype: void __usercall PlayInstantReplayLoop()
-; Plays an instant replay when player presses 'R' during the game.
-; Doesn't return until it's either played fully or aborted.
-
-; ===== PlayHighlightsLoop =====
-; prototype: void __usercall PlayHighlightsLoop()
-; Doesn't return until the playback is done, either by playing all scenes
-; or user aborting by pressing fire.
-
-; ===== ReadTimerDelta =====
-; prototype: unsigned __int16 __usercall ReadTimerDelta@<d0>()
-; Read timer difference and update time of last drawn frame.
 normalReplayRunning:
                 dc.w $0000              ; 0  = Instant replay is running (show big spinning "R")
                                         ; !0 = standard replay running (don't show big "R")
@@ -7440,21 +4319,6 @@ lastCameraDirection:
 lastPlayerTurnFlags:
                 dc.w $0000
 
-; ===== GetRandomWord =====
-; prototype: unsigned __int16 __usercall GetRandomWord@<d0>()
-; out:
-;     D0 - random 16-bit int
-
-; ===== Rand2 =====
-; prototype: unsigned __int16 __usercall Rand2@<d0>()
-; out:
-;     D0 - random number 0..255
-; Ported to C: _Rand2 (random.c). Original preserves d1/a0.
-Rand2:
-                movem.l d1/a0,-(sp)
-                jsr     _Rand2
-                movem.l (sp)+,d1/a0
-                rts
 ; unsigned __int8 (*)[15]
 savedRandStatePtr:
                 dc.l savedRandState
@@ -7481,16 +4345,6 @@ kRandomTable:
                 dc.b 77,100,-64,-36,-52,-90,-91,53,112,-120,23,63,49,-8,-41,58
                 dc.b 26
 
-; ===== Rand =====
-; prototype: unsigned __int16 __usercall Rand@<d0>()
-; out:
-;      D0 - random number 0-255
-; Ported to C: _Rand (random.c). Original preserves d1/a0.
-Rand:
-                movem.l d1/a0,-(sp)
-                jsr     _Rand
-                movem.l (sp)+,d1/a0
-                rts
 seed:
                 dc.b $00
 randXorIndex:
@@ -7500,13 +4354,6 @@ randXorKey:
 pad_10F441:
                 dc.b $00
 
-; ===== MainKeysCheck =====
-; prototype: void __usercall MainKeysCheck(unsigned __int16 key@<d0>)
-; Checks keys in game. This is where the pause gets set.
-; 
-; destroys: eax, esi
-; + ecx, edx while in multiplayer game
-; [ebp safe]
 corePrecacheTable:
                 dc.l aSoundSfxIn2       ; "sound/sfx.in2"
                 dc.l aGrafsSwcpich2M    ; "grafs/swcpich2.map"
@@ -7539,61 +4386,7 @@ menuPrecacheTable:
                 dc.l $FFFFFFFF          ; element[22]
 aDataTeam008:
                 dc.b 'data/team.008',0
-                move.w  #150,d2
-                move.w  #20,d3
-                tst.w   d4
-                bmi.s   draw_menu_frame_segments
-                movem.l d0-d3/d5-d6,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d0-d3/d5-d6
-draw_menu_frame_segments:
-                addq.w  #1,d0
-                subq.w  #2,d2
-                move.w  #1,d3
-                move.w  d5,d4
-                movem.l d0-d3/d5-d6,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d0-d3/d5-d6
-                addi.w  #$13,d1
-                move.w  d6,d4
-                movem.l d0-d3/d5-d6,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d0-d3/d5-d6
-                addq.w  #1,d0
-                subi.w  #$11,d1
-                move.w  d5,d4
-                move.w  #$92,d2
-                move.w  #1,d3
-                movem.l d0-d4,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d0-d4
-                addi.w  #$F,d1
-                movem.l d0-d4,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d0-d4
-                subi.w  #$F,d1
-                move.w  #1,d2
-                move.w  #$10,d3
-                movem.l d0-d4,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d0-d4
-                addi.w  #$91,d0
-                movem.l d0-d4,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d0-d4
-                rts
-                move.w  #1,d2
-                move.w  #$14,d3
-                movem.l d0-d6,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d0-d6
-                addi.w  #$95,d0
-                movem.l d0-d3/d5-d6,-(sp)
-                jsr     FillRectangle
-                movem.l (sp)+,d0-d3/d5-d6
-                subi.w  #$95,d0
-                move.w  #$96,d2
-                bra.w   draw_menu_frame_segments
+
 replayContTbl:
                 dc.w 0,1,2,3,4,5,6,7
                 dc.w 8,9,0,11,12,13,14,15
@@ -7665,308 +4458,6 @@ statsTimer:
 isGoalAttempt:
                 dc.w $0000              ; 1 If this strike was goal attempt, regardless
                                         ; of wheter it was on target; shortly set
-
-; ===== ResetGoalAttempt =====
-; prototype: void __usercall ResetGoalAttempt()
-; Ported to C: _ResetGoalAttempt (game_state.c)
-
-; ===== AllowStatistics =====
-; prototype: void __usercall AllowStatistics()
-; Ported to C: _AllowStatistics (game_state.c)
-
-; ===== StatisticsOff =====
-; prototype: void __usercall StatisticsOff()
-; Ported to C: _StatisticsOff (game_state.c)
-StatisticsOff:
-                jmp     _StatisticsOff
-
-; ===== UpdateAndDrawStatistics =====
-; prototype: void __usercall UpdateAndDrawStatistics()
-; Ported to C: _UpdateAndDrawStatistics (statistics.c)
-check_showing_user_stats:
-                tst.w   (showingUserStats).l
-                beq.s   check_penalty_or_goal_attempt
-                jsr     Player1StatusProc ; Returns
-                jsr     Player2StatusProc ; Returns
-                tst.b   (pl1Fire).l
-                bne.s   player1_fire_pressed
-                tst.b   (pl2Fire).l
-                bne.s   player2_fire_pressed
-                rts
-player1_fire_pressed:
-                move.w  #1,(fireBlocked).l
-                bra.w   turn_off_statistics
-player2_fire_pressed:
-                move.w  #1,(fireBlocked).l
-                bra.w   turn_off_statistics
-check_penalty_or_goal_attempt:
-                tst.w   (playingPenalties).l
-                bne.w   check_show_stats_flag
-                cmpi.w  #ST_GAME_IN_PROGRESS,(gameStatePl).l
-                bne.s   check_goal_attempt_conditions
-                movea.l (lastTeamPlayed).l,a0
-                cmpa.l  #topTeamData,a0
-                beq.s   increment_last_team_stat
-                cmpa.l  #bottomTeamData,a0
-                bne.w   check_goal_attempt_conditions
-increment_last_team_stat:
-                movea.l $E(a0),a0
-                addq.w  #1,0(a0)
-check_goal_attempt_conditions:
-                cmpi.w  #ST_GAME_IN_PROGRESS,(gameStatePl).l
-                bne.w   clear_goal_attempt
-                tst.w   (isGoalAttempt).l
-                beq.s   check_goalkeeper_area_strike
-                lea     (topTeamData).l,a0
-                move.l  (ballSprite+SPRITE_DELTAY).l,d0
-                cmpi.w  #449,(ballSprite+SPRITE_Y).l
-                bcs.s   swap_to_bottom_team
-                lea     (bottomTeamData).l,a0
-                neg.l   d0
-swap_to_bottom_team:
-                cmpa.l  (lastTeamPlayed).l,a0
-                beq.w   clear_goal_attempt
-                tst.l   d0
-                bpl.w   clear_goal_attempt
-                bra.w   check_show_stats_flag
-check_goalkeeper_area_strike:
-                tst.w   (ballInGoalkeeperArea).l
-                beq.w   check_show_stats_flag
-                lea     (topTeamData).l,a0
-                move.l  (ballSprite+SPRITE_DELTAY).l,d0
-                cmpi.w  #449,(ballSprite+SPRITE_Y).l
-                bhi.s   check_shot_direction
-swap_to_bottom_team_goalkeeper:
-                lea     (bottomTeamData).l,a0
-                neg.l   d0
-check_shot_direction:
-                tst.l   d0
-                ble.w   check_show_stats_flag
-                cmpa.l  (lastTeamPlayed).l,a0
-                bne.w   check_show_stats_flag
-                tst.w   TEAMGENERALINFO_PLAYERHASBALL(a0)
-                bne.w   check_show_stats_flag
-                cmpi.w  #240,(strikeDestX).l
-                bcs.w   check_show_stats_flag
-                cmpi.w  #431,(strikeDestX).l
-                bhi.w   check_show_stats_flag
-                cmpi.w  #303,(strikeDestX).l
-                bcs.s   increment_shots_total
-                cmpi.w  #367,(strikeDestX).l
-                bhi.w   increment_shots_total
-                movea.l (topTeamData+TEAMGENERALINFO_TEAMSTATSPTR).l,a0
-                lea     TEAMSTATISTICSDATA_ONTARGET(a0),a0
-                cmpi.w  #449,(ballSprite+SPRITE_Y).l
-                bhi.s   increment_shots_on_target
-                movea.l (bottomTeamData+TEAMGENERALINFO_TEAMSTATSPTR).l,a0
-                lea     TEAMSTATISTICSDATA_ONTARGET(a0),a0
-increment_shots_on_target:
-                addq.w  #1,(a0)
-increment_shots_total:
-                movea.l (topTeamData+TEAMGENERALINFO_TEAMSTATSPTR).l,a0
-                lea     TEAMSTATISTICSDATA_GOALATTEMPTS(a0),a0
-                cmpi.w  #449,(ballSprite+SPRITE_Y).l
-                bhi.s   finalize_goal_attempt
-                movea.l (bottomTeamData+TEAMGENERALINFO_TEAMSTATSPTR).l,a0
-                lea     TEAMSTATISTICSDATA_GOALATTEMPTS(a0),a0
-finalize_goal_attempt:
-                addq.w  #1,(a0)
-                move.w  #1,(isGoalAttempt).l
-                bra.s   check_show_stats_flag
-clear_goal_attempt:
-                clr.w   (isGoalAttempt).l
-check_show_stats_flag:
-                tst.w   (showStats).l
-                beq.s   check_stats_timer
-                clr.w   (showStats).l
-                move.w  #1,(showingUserStats).l
-check_stats_timer:
-                tst.w   (statsTimer).l
-                beq.w   _110286_exit_rts
-                bmi.s   turn_off_statistics
-                cmpi.w  #32000,(statsTimer).l
-                bne.s   decrement_stats_timer
-                move.w  #30000,(statsTimer).l
-                move.w  #1,(overlayActiveFlag).l
-                bra.s   draw_statistics_and_continue
-decrement_stats_timer:
-                move.w  lastFrameTicks(pc),d0
-                sub.w   d0,(statsTimer).l
-                bgt.s   draw_statistics_and_continue
-turn_off_statistics:
-                bsr.w   StatisticsOff
-                rts
-draw_statistics_and_continue:
-                bsr.w   DrawStatistics
-_110286_exit_rts:
-                rts
-
-; ===== DrawStatistics =====
-; prototype: void __usercall DrawStatistics()
-; Ported to C: _DrawStatistics (statistics.c)
-DrawStatistics:
-                jmp     _DrawStatistics
-select_team_order_for_stats:
-                lea     (bottomTeamData).l,a6
-                cmpi.l  #topTeamInGame,TEAMGENERALINFO_INGAMETEAMPTR(a5)
-                beq.s   resolve_team_data_pointers
-                exg     a5,a6
-resolve_team_data_pointers:
-                movea.l TEAMGENERALINFO_TEAMSTATSPTR(a5),a5
-                movea.l TEAMGENERALINFO_TEAMSTATSPTR(a6),a6
-                lea     (bigCharsTable).l,a1
-                move.w  #2,d3
-                move.w  #39,d2
-                lea     (aMATCHSTATS).l,a0 ; "M A T C H   S T A T S"
-                move.w  #168,d1
-                movem.l d2-d3/a1/a5-a6,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d2-d3/a1/a5-a6
-                addi.w  #20,d2
-                lea     (topTeamInGame+TEAMGAME_TEAMNAME).l,a0
-                move.w  #80,d1
-                tst.w   (trainingGame).l
-                beq.s   draw_training_mode_adjustment_top
-                addq.w  #5,d1
-draw_training_mode_adjustment_top:
-                movem.l d2-d3/a1/a5-a6,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d2-d3/a1/a5-a6
-                lea     (bottomTeamInGame+TEAMGAME_TEAMNAME).l,a0
-                move.w  #256,d1
-                tst.w   (trainingGame).l
-                beq.s   draw_training_mode_adjustment_bottom
-                subq.w  #5,d1
-draw_training_mode_adjustment_bottom:
-                movem.l d2-d3/a1/a5-a6,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d2-d3/a1/a5-a6
-                addi.w  #18,d2
-                lea     (aGoals).l,a0   ; "GOALS"
-                move.w  #168,d1
-                movem.l d2-d3/a1/a5-a6,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d2-d3/a1/a5-a6
-                move.w  #80,d1
-                move.w  statsTeam1Goals(pc),d0
-                bsr.w   WriteStatsNumber
-                move.w  #256,d1
-                move.w  statsTeam2Goals(pc),d0
-                bsr.w   WriteStatsNumber
-                addi.w  #18,d2
-                lea     (aPossession).l,a0 ; "POSSESSION"
-                move.w  #168,d1
-                movem.l d2-d3/a1/a5-a6,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d2-d3/a1/a5-a6
-                move.w  #80,d1
-                move.w  TEAMSTATISTICSDATA_BALLPOSSESSION(a5),d7
-                add.w   TEAMSTATISTICSDATA_BALLPOSSESSION(a6),d7
-                bne.s   calc_possession_percentages
-                lea     (aMinus).l,a0   ; "-"
-                movem.l d2-d3/a1/a5-a6,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d2-d3/a1/a5-a6
-                move.w  #256,d1
-                lea     (aMinus).l,a0   ; "-"
-                movem.l d2-d3/a1/a5-a6,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d2-d3/a1/a5-a6
-                bra.s   draw_goal_attempts_label
-calc_possession_percentages:
-                move.w  TEAMSTATISTICSDATA_BALLPOSSESSION(a5),d0
-                mulu.w  #$64,d0         ; 'd'
-                divu.w  d7,d0
-                move.w  d0,d7
-                movem.l d7,-(sp)
-                bsr.w   WriteStatsPercent
-                movem.l (sp)+,d7
-                move.w  #256,d1
-                move.w  #100,d0
-                sub.w   d7,d0
-                bsr.w   WriteStatsPercent
-draw_goal_attempts_label:
-                addi.w  #18,d2
-                lea     (aGoalAttempts).l,a0 ; "GOAL ATTEMPTS"
-                move.w  #168,d1
-                movem.l d2-d3/a1/a5-a6,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d2-d3/a1/a5-a6
-                move.w  #80,d1
-                move.w  TEAMSTATISTICSDATA_GOALATTEMPTS(a5),d0
-                bsr.w   WriteStatsNumber
-                move.w  #256,d1
-                move.w  TEAMSTATISTICSDATA_GOALATTEMPTS(a6),d0
-                bsr.w   WriteStatsNumber
-                addi.w  #18,d2
-                lea     (aOnTarget).l,a0 ; "ON TARGET"
-                move.w  #168,d1
-                movem.l d2-d3/a1/a5-a6,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d2-d3/a1/a5-a6
-                move.w  #80,d1
-                move.w  TEAMSTATISTICSDATA_ONTARGET(a5),d0
-                bsr.w   WriteStatsNumber
-                move.w  #256,d1
-                move.w  TEAMSTATISTICSDATA_ONTARGET(a6),d0
-                bsr.w   WriteStatsNumber
-                addi.w  #18,d2
-                lea     (aCornersWon).l,a0 ; "CORNERS WON"
-                move.w  #168,d1
-                movem.l d2-d3/a1/a5-a6,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d2-d3/a1/a5-a6
-                move.w  #80,d1
-                move.w  TEAMSTATISTICSDATA_CORNERSWON(a5),d0
-                bsr.w   WriteStatsNumber
-                move.w  #256,d1
-                move.w  TEAMSTATISTICSDATA_CORNERSWON(a6),d0
-                bsr.w   WriteStatsNumber
-                addi.w  #18,d2
-                lea     (aFoulsConceded).l,a0 ; "FOULS CONCEDED"
-                move.w  #168,d1
-                movem.l d2-d3/a1/a5-a6,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d2-d3/a1/a5-a6
-                move.w  #80,d1
-                move.w  TEAMSTATISTICSDATA_FOULSCONCEDED(a5),d0
-                bsr.w   WriteStatsNumber
-draw_fouls_conceded_team2:
-                move.w  #256,d1
-                move.w  TEAMSTATISTICSDATA_FOULSCONCEDED(a6),d0
-                bsr.w   WriteStatsNumber
-                addi.w  #18,d2
-                lea     (aBookings).l,a0 ; "BOOKINGS"
-                move.w  #168,d1
-                movem.l d2-d3/a1/a5-a6,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d2-d3/a1/a5-a6
-                move.w  #80,d1
-                move.w  TEAMSTATISTICSDATA_BOOKINGS(a5),d0
-                bsr.w   WriteStatsNumber
-                move.w  #256,d1
-                move.w  TEAMSTATISTICSDATA_BOOKINGS(a6),d0
-                bsr.w   WriteStatsNumber
-                addi.w  #18,d2
-                lea     (aSendingsOff).l,a0 ; "SENDINGS OFF"
-                move.w  #168,d1
-                movem.l d2-d3/a1/a5-a6,-(sp)
-                jsr     DrawMenuTextCentered
-                movem.l (sp)+,d2-d3/a1/a5-a6
-                move.w  #80,d1
-                move.w  TEAMSTATISTICSDATA_SENDINGSOFF(a5),d0
-                bsr.w   WriteStatsNumber
-                move.w  #256,d1
-                move.w  TEAMSTATISTICSDATA_SENDINGSOFF(a6),d0
-                bsr.w   WriteStatsNumber
-                rts
-
-; ===== WriteStatsNumber =====
-; Ported to C as static helper in statistics.c (only called from DrawStatistics)
-WriteStatsNumber:
-                rts
-WriteStatsPercent:
-                rts
 ; __int8[6]
 statsNumber:
                 dc.b 0,0,0,0,0,0        ; For converting numbers in statistics
@@ -8055,59 +4546,9 @@ kPlayerHeaderSpeedIncrease:
                 ; __int16[8]
                 dc.w -336,-288,-240,-192,-144,-96,-48,0 ; Indexed by player's heading skill, add to his speed
 
-; ===== DoPass =====
-; prototype: void __usercall DoPass(struct Sprite *player@<a1>, struct TeamGeneralInfo *team@<a6>)
-; in:
-;      A1 -> player sprite
-;      A6 -> team
-
-; ===== PlayerKickingBall =====
-; prototype: void __usercall PlayerKickingBall(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
-; in:
-;      A1 -> player sprite
-;      A6 -> team
-
-; ===== CalculateIfPlayerWinsBall =====
-; prototype: void __usercall CalculateIfPlayerWinsBall(unsigned __int16 dir@<d0>, struct Sprite *player@<a1>, struct TeamGeneralInfo *team@<a6>)
-; in:
-;      D0 =  current player direction
-;      A6 -> team data
-;      A1 -> current player sprite
-;      
-; When running.
-; Sets team's direction of player controlling the ball.
-; Updates the ball when controlled by the player (makes it "run away" a bit).
-
-; ===== PlayerTackledTheBallWeak =====
-; prototype: void __usercall PlayerTackledTheBallWeak(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
-; in:
-;     A1 -> player
-;     A6 -> team (general info)
-; 
-; Weak tackle: player speed goes down to 50%, ball speed = 75% of original player speed.
-
-; ===== SetPlayerDowntimeAfterTackle =====
-; prototype: void __usercall SetPlayerDowntimeAfterTackle(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
-; in:
-;      A1 -> sprite
-;      A6 -> team data
-; 
-; Set how much time will player be lying on the ground after tackle.
-; Better tackling skill means less time.
-
-; ===== UpdatePlayerSpeed =====
-; prototype: void __usercall UpdatePlayerSpeed(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
-; in:
-;      A1 -> player sprite
-;      A6 -> player team (general)
 kInjuriesSpeedHandicap:
                 dc.w 0,-96,-128,-160,-192,-224,-256,-288
 
-; ===== UpdatePlayerShotChanceTable =====
-; prototype: void __usercall UpdatePlayerShotChanceTable(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
-; in:
-;      A1 -> sprite (player)
-;      A6 -> team data
 ; GoalieSkill *[8]
 kGoalieSkillTables:
                 ; GoalieSkill *[8]
@@ -8186,15 +4627,6 @@ teamPlOfs24Table:
                 dc.w $0009              ; field_38
                 dc.w $0004              ; field_3A
 
-; ===== GetPlayerPointerFromShirtNumber =====
-; prototype: PlayerInfoHeader *__usercall GetPlayerPointerFromShirtNumber@<a4>(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
-; in:
-;      A1 -> sprite (player)
-;      A6 -> team data
-; out:
-;      A4 -> player + header (in-game), requires addition of sizeof(TeamGame) to it to be a proper pointer
-; Ported to C: _GetPlayerPointerFromShirtNumber in src/ball_physics.c
-; Register bridge: A1 (player), A6 (team) → result in A4
 ballNextX:
                 dc.w $0000
 ballNextY:
@@ -8226,19 +4658,6 @@ playerYQuadrantCoordinates:
                 dc.w $0095,$00BD,$00E5,$010D,$0135,$015D,$0185,$01AD
                 dc.w $01D5,$01FD,$0225,$024D,$0275,$029D,$02C5,$02ED
 
-; ===== SetPlayerWithNoBallDestination =====
-; prototype: void __usercall SetPlayerWithNoBallDestination(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
-; in:
-;      A1 -> current player sprite
-;      A6 -> team data
-
-; ===== PlayerTackled =====
-; prototype: void __usercall PlayerTackled(Sprite *playerSprite@<a1>, TeamGeneralInfo *team@<a6>)
-; in:
-;      A1 -> player sprite
-;      A6 -> team (general)
-; 
-; This function is called when this player was tackled.
 ; __int8[7]
 kInjuryLevels:
                 dc.b 42,7,5,4,3,2,1
@@ -8713,74 +5132,18 @@ playerCardChancesPerGameLength:
                 dc.l playerCardChances7min
                 dc.l playerCardChances10min
 
-; ===== StartPenalties =====
-; prototype: void __usercall StartPenalties()
-StartPenalties:
-                jmp     _StartPenalties
-
-; ===== UpdateControlledPlayer =====
-; prototype: void __usercall UpdateControlledPlayer(TeamGeneralInfo *team@<a6>)
-; in:
-;      A6 -> current team data
-;      
-; Update players distance from the ball. Update controlling player if
-; he's closest to the ball. Stop him if he was getting passed to.
 ballOutOfGameTimer:
                 dc.w $0000              ; I think this is timer for camera when the ball goes out of play
 stoppageAuxFlag:
                 dc.w $0000
 
-; ===== UpdateAndApplyTeamControls =====
-; Ported to C: _UpdateAndApplyTeamControls in src/team_control.c (Chunk 54)
-
-; ===== SetJumpHeaderHitAnimTable =====
-; prototype: void __usercall SetJumpHeaderHitAnimTable(Sprite *player@<a1>)
-; in:
-;      A1 -> player
-
-; ===== PlayerHittingJumpHeader =====
-; prototype: void __usercall PlayerHittingJumpHeader(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
-; in:
-;     A1 -> player
-;     A6 -> team
-; 
-
-; ===== DoLobHeader =====
-
-; ===== SetPlayerJumpHeaderHitAnimationTable =====
-; prototype: void __usercall SetPlayerJumpHeaderHitAnimationTable(Sprite *player@<a1>)
 kHeaderLowJumpHeight:
                 dc.l $00020000          ; =2.0, For flying headers
 kHeaderHighJumpHeight:
                 dc.l $00024000          ; =4.25, For lob headers
 
-; ===== SetStaticHeaderDirection =====
-; prototype: void __usercall SetStaticHeaderDirection(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
-; in:
-;      A1 -> player (sprite)
-;      A6 -> team general data
-; 
-; Static header was activated now we need to aim it somewhere.
-
-; ===== PlayerHittingStaticHeader =====
-; prototype: void __usercall PlayerHittingStaticHeader(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
-; in:
-;      A1 -> player (sprite)
-;      A6 -> team general info
-; 
-; Runs when a player makes contact with the ball while doing static header.
-; Applies ball speed and destination. Increases player speed, updates delta z
-; and plays kick sample.
 kStaticHeaderBaseBallSpeed:
                 dc.w $0700
-
-; ===== AttemptStaticHeader =====
-; prototype: void __usercall AttemptStaticHeader(struct Sprite *player@<a1>, unsigned __int16 dir@<d0>)
-; in:
-;      D0 - some direction
-;      A1 -> player sprite
-; 
-; Players jumps in place trying to hit static header.
 kStaticHeaderPlayerSpeed:
                 dc.w $0100              ; =1.0
 ballDefensiveX:
@@ -8812,121 +5175,6 @@ cardAnimStatesNoFlag:
 cardAnimStatesWithFlag:
                 dc.b 1,2,4,4,4
 
-; ===== TryBookingThePlayer =====
-; prototype: unsigned __int16 __usercall TryBookingThePlayer@<d0>(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
-; in:
-;      A1 -> player sprite
-;      A6 -> team (general)
-; out:
-
-; ===== TrySendingOffThePlayer =====
-; prototype: unsigned __int16 __usercall TrySendingOffThePlayer@<d0>(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
-; in:
-
-; ===== SendPlayerAway =====
-; prototype: void __usercall SendPlayerAway(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
-; in:
-;      A1 -> booked player
-;      A6 -> team data
-; 
-; Called when player gets red card.
-; Ported to C: _SendPlayerAway in src/tackle_foul.c
-SendPlayerAway:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _SendPlayerAway
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-                lea     (goalieDeflectBallAnimTable).l,a0
-                jsr     SetPlayerAnimationTable
-                move.b  #$B,$C(a1)
-                move.b  #$14,$D(a1)
-                move.w  $1E(a1),$3A(a1)
-                move.w  $22(a1),$3C(a1)
-                move.w  $22(a1),$22(a2)
-                addq.w  #5,$22(a2)
-                move.w  currentGameTick(pc),d0
-                andi.w  #$1F,d0
-                lsl.w   #5,d0
-                subi.w  #$200,d0
-                add.w   d0,$3A(a2)
-                move.w  goalkeeperDeflectBallSpeeds(pc),d1
-                move.w  d1,$2C(a2)
-                move.l  goalkeeperDeflectDeltaZ(pc),$36(a2)
-                bsr.w   ResetBothTeamSpinTimers
-                jsr     PlayKickSample
-                rts
-
-; ===== GoalkeeperJumping =====
-; prototype: void __usercall GoalkeeperJumping(__int16 direction@<d0>, __int16 farJumpVariant@<d1>, __int16 dir2@<d3>, Sprite *player@<a1>, Sprite *ball@<a2>, TeamGeneralInfo *team@<a6>)
-; in:
-;      D0 -  direction
-;      D1 -  goalkeeper far jump speed flag, overrides goalkeeper jump speed if:
-;                0 - no influence, use high speed as usual (2048)
-;                1 - use lower speed (1280)
-;                * - anything else: use low speed (1024) + low byte of currentGameTick
-;                    effectively random: 1024..1279
-;      D3 -  also some direction
-;      A1 -> player sprite
-;      A6 -> player team (general)
-
-; ===== PlayerBeginTackling =====
-; prototype: void __usercall PlayerBeginTackling(__int16 pressedDir@<d0>, Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
-; in:
-;     D0 -  currently pressed direction
-;     A1 -> player sprite that's tackling
-;     
-; Set player state to tackling. Set his dest x and y with a table, and set speed to taclking speed.
-
-; ===== PlayerTackledTheBallStrong =====
-; prototype: void __usercall PlayerTackledTheBallStrong(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
-; in:
-;      A1 -> sprite (player)
-;      A6 -> team (general)
-;      
-; Player is tackling and hitting the ball. Adjust ball direction according to the player direction and
-; controls direction (do deflected tackles). Set ball destination coordinates far away in that direction.
-; Adjust ball speed after tackle to 125% of player's speed (100% if CPU player). Set player's speed
-; afterward to 50%. If opponent's controlled player is more than 9u away from the ball and distance
-; between the 2 players is greater than 32u it is considered a good tackle.
-;  u = sqr((x1 - x2) ^ 2) + sqr((y1 - y2) ^ 2)
-
-; ===== PlayerAttemptingJumpHeader =====
-; prototype: void __usercall PlayerAttemptingJumpHeader(__int16 direction@<d0>, Sprite *player@<a1>)
-; in:
-;      D0 -  direction
-;      A1 -> player sprite
-;      
-; Player starts jumping in attempt to hit the ball with his head. Set his state
-; and render him 'inoperable' for the next 55 cycles. Sets his animation table,
-; dest x and y, and his speed. Only triggers for flying and lob header attempts,
-; not for static ones. 
-
-; ===== GetBallDestCoordinatesTable =====
-; prototype: __int16 *__usercall GetBallDestCoordinatesTable@<a0>()
-; out:
-;      A0 -> ball factor table, depending on game state
-; 
-; Even indices are delta x, odd are delta y. They are added to ball
-
-; ===== GetClosestNonControlledPlayerInDirection =====
-; prototype: Sprite *__usercall GetClosestNonControlledPlayerInDirection@<a0>(unsigned __int16 direction@<d0>, TeamGeneralInfo *team@<a6>)
-; in:
-;      D0 -  direction
-;      A6 -> team (general)
-; out:
-;      A0 -> player sprite
-;      D2 -  ball distance
-; 
-
-; ===== UpdateControllingPlayer =====
-; prototype: void __usercall UpdateControllingPlayer(Sprite *player@<a1>)
-; in:
-;      A1 -> sprite (player)
-; Ported to C: _UpdateControllingPlayer in src/ball_physics.c
-; Register bridge: A1 (player) → void
 ; __int16[16]
 kBallPlOffsets:
                 ; __int16[16]
@@ -8937,411 +5185,13 @@ kBallPlOffsets:
                                         ; to form ball coordinates when player has the ball
                                         ; indexed with direction of player
 
-; ===== UpdateBallWithControllingGoalkeeper =====
-; prototype: void __usercall UpdateBallWithControllingGoalkeeper(Sprite *playerHoldingBall@<a1>)
-; in:
-;      A1 -> sprite of player that holds the ball
-; 
-; Set ball coordinates in regard to player that controls it. Ball is
-; always about a pixel in front of player, wherever he may be turned.
-; If it's in the air, steady it down.
-; Ported to C: _UpdateBallWithControllingGoalkeeper in src/ball_physics.c
-; Register bridge: A1 (player) → void
 
-; ===== UpdatePlayerWithBall =====
-; prototype: void __usercall UpdatePlayerWithBall(Sprite *player@<a1>)
-; in:
-;      A1 -> sprite
-; 
-; Set coordinates of player that has the ball. Make him dodge
-; a little, by varying x and y coordinates by 1.
-; Ported to C: _UpdatePlayerWithBall in src/ball_physics.c
-; Register bridge: A1 (player) → void
 ; __int16[16]
 kPlayerWithBallOffsets:
                 ; __int16[16]
                 dc.w 0,1,-1,1,-1,0,-1,-1
                 dc.w 0,-1,1,-1,1,0,1,1
 
-; ===== SetThrowInPlayerDestinationCoordinates =====
-; prototype: void __usercall SetThrowInPlayerDestinationCoordinates(Sprite *player@<a1>)
-; in:
-;      A1 -> player sprite that's taking the throw-in
-; 
-; Sets the coordinates of a player that takes the throw in.
-; Ported to C: _SetThrowInPlayerDestinationCoordinates in src/ball_physics.c
-; Register bridge: A1 (player) → void
-
-; ===== ApplyBallAfterTouch =====
-; prototype: void __usercall ApplyBallAfterTouch(struct TeamGeneralInfo *team@<a6>)
-; in:
-;      A6 -> team data
-;      
-; Apply "after effects" to pass/kick. Apply spin if player holding left/right
-; directions, and high kick if player holding back direction. Also update ball
-; for normal kicks too. Slow down ball after kick/pass.
-
-; ===== ResetBothTeamSpinTimers =====
-; prototype: void __usercall ResetBothTeamSpinTimers()
-; Ported to C: _ResetBothTeamSpinTimers in src/ball_physics.c
-ResetBothTeamSpinTimers:
-                jmp     _ResetBothTeamSpinTimers
-
-; ===== TestFoulForPenaltyAndFreeKick =====
-; prototype: void __usercall TestFoulForPenaltyAndFreeKick(Sprite *player@<a2>, TeamGeneralInfo *team@<a6>)
-; in:
-;      A2 -> fouled player (sprite)
-;      A6 -> team that fouled (general info)
-; 
-; Foul has been made. See where, and make it a penalty or
-
-; ===== NextPenalty =====
-; prototype: void __usercall NextPenalty()
-; Next penalty is about to be shot. Check if penalties are over. If not,
-; initialize globals for penalty, set penaltyShooterSprite.
-; (penalties after the game)
-
-; ===== GoalkeeperClaimedTheBall =====
-; prototype: void __usercall GoalkeeperClaimedTheBall(Sprite *goalkeeper@<a1>, Sprite *ball@<a2>, TeamGeneralInfo *team@<a6>)
-; in:
-;      A1 -> goalkeeper sprite
-;      A2 -> ball sprite
-;      A6 -> player team (general)
-
-; ===== SetCameraMovingToShowerState =====
-; prototype: void __usercall SetCameraMovingToShowerState()
-; Called when first half is over.
-
-; ===== EndFirstHalf =====
-; prototype: void __usercall EndFirstHalf()
-EndFirstHalf:
-                jmp     _EndFirstHalf
-
-; ===== EndOfGame =====
-; prototype: void __usercall EndOfGame()
-EndOfGame:
-                jmp     _EndOfGame
-
-; ===== StartFirstExtraTime =====
-; prototype: void __usercall StartFirstExtraTime()
-StartFirstExtraTime:
-                jmp     _StartFirstExtraTime
-
-; ===== EndFirstExtraTime =====
-; prototype: void __usercall EndFirstExtraTime()
-EndFirstExtraTime:
-                jmp     _EndFirstExtraTime
-
-
-; ===== StopAllPlayers =====
-; prototype: void __usercall StopAllPlayers()
-StopAllPlayers:
-                jmp     _StopAllPlayers
-
-setup_goal_replay_for_bottom_team:
-                move.w  #2,d0
-                movea.l lastPlayerPlayed(pc),a0
-                tst.l   (lastKeeperPlayed).l
-                beq.s   write_score_snapshots_and_call_goal_scene_bottom
-                cmpa.l  #goalie1Sprite,a0
-                beq.s   prefer_last_keeper_over_last_player_bottom
-                cmpa.l  #goalie2Sprite,a0
-                bne.s   write_score_snapshots_and_call_goal_scene_bottom
-prefer_last_keeper_over_last_player_bottom:
-                movea.l lastKeeperPlayed(pc),a0
-write_score_snapshots_and_call_goal_scene_bottom:
-                move.w  statsTeam1Goals(pc),(statsTeam1GoalsCopy2).l
-                move.w  statsTeam2Goals(pc),(statsTeam2GoalsCopy2).l
-                movem.l a6,-(sp)
-                jsr     GoalScored
-                movem.l (sp)+,a6
-                move.w  #1,(goalCameraMode).l
-                move.w  #2,(teamNumThatScored).l
-                bra.s   finalize_goal_replay_side
-ball_below_centerline:
-                lea     topTeamData(pc),a6
-                cmpi.w  #2,TEAMGENERALINFO_TEAMNUMBER(a6)
-                beq.s   setup_goal_replay_for_bottom_team
-setup_goal_replay_for_top_team:
-                move.w  #1,d0
-                movea.l lastPlayerPlayed(pc),a0
-                tst.l   (lastKeeperPlayed).l
-                beq.s   write_score_snapshots_and_call_goal_scene_top
-                cmpa.l  #goalie1Sprite,a0
-                beq.s   prefer_last_keeper_over_last_player_top
-                cmpa.l  #goalie2Sprite,a0
-                bne.s   write_score_snapshots_and_call_goal_scene_top
-prefer_last_keeper_over_last_player_top:
-                movea.l lastKeeperPlayed(pc),a0
-write_score_snapshots_and_call_goal_scene_top:
-                move.w  statsTeam1Goals(pc),(statsTeam1GoalsCopy2).l
-                move.w  statsTeam2Goals(pc),(statsTeam2GoalsCopy2).l
-                movem.l a6,-(sp)
-                jsr     GoalScored
-                movem.l (sp)+,a6
-                move.w  #1,(goalCameraMode).l
-                move.w  #1,(teamNumThatScored).l
-finalize_goal_replay_side:
-                move.l  a6,(teamScoredDataPtr).l
-                move.l  TEAMGENERALINFO_INGAMETEAMPTR(a6),(teamScoredGamePtr).l
-                movea.l (a6),a6
-                cmpa.l  #topTeamData,a6
-                beq.s   goal_replay_camera_for_top_team
-                move.w  #0,d3
-                move.b  #199,d4
-                bra.s   goal_replay_camera_for_bottom_team
-goal_replay_camera_for_top_team:
-                move.w  #4,d3
-                move.b  #124,d4
-goal_replay_camera_for_bottom_team:
-                jsr     PlayGoalReplayBottomSample
-                clr.w   (playRefereeWhistle).l
-                bsr.w   Rand
-                lsr.w   #1,d0
-                addi.w  #100,d0
-                move.w  d0,d1
-                tst.w   (playingPenalties).l
-                bne.w   goal_counter_commit
-                move.w  statsTeam1Goals(pc),d0
-                sub.w   statsTeam2Goals(pc),d0
-                beq.w   goal_counter_bias_draw
-                move.w  statsTeam1GoalsCopy2(pc),d0
-                sub.w   statsTeam2GoalsCopy2(pc),d0
-                beq.s   goal_counter_bias_big_lead
-                cmpi.w  #1,d0
-                beq.s   continue_entity_update
-                cmpi.w  #$FFFF,d0
-                bne.s   goal_counter_bias_default
-continue_entity_update:
-                move.w  statsTeam1Goals(pc),d0
-                sub.w   statsTeam2Goals(pc),d0
-                cmpi.w  #2,d0
-                beq.s   goal_counter_bias_two_goal_lead
-                cmpi.w  #$FFFE,d0
-                beq.s   goal_counter_bias_two_goal_lead
-goal_counter_bias_default:
-                move.w  #100,d1
-                bra.s   goal_counter_add_random
-goal_counter_bias_big_lead:
-                move.w  #300,d1
-                bra.s   goal_counter_add_random
-goal_counter_bias_two_goal_lead:
-                move.w  #200,d1
-                bra.s   goal_counter_add_random
-goal_counter_bias_draw:
-                move.w  #200,d1
-goal_counter_add_random:
-                bsr.w   Rand
-                add.w   d0,d1
-goal_counter_commit:
-                move.w  d1,(goalCounter).l
-                move.w  #1,(patternsGoalCounter).l
-                move.w  #336,d1
-                move.w  #449,d2
-                move.w  #ST_PLAYERS_TO_INITIAL_POSITIONS,(gameState).l
-                move.w  #$FFFF,(breakCameraMode).l
-                bra.w   write_restart_globals_and_stop_players
-not_in_goal_window:
-                lea     (ballSprite).l,a6
-                move.w  SPRITE_X(a6),d1
-                move.w  SPRITE_Y(a6),d2
-                move.w  SPRITE_Z(a6),d3
-                addq.w  #2,d3
-                cmpi.w  #768,SPRITE_SPEED(a6)
-                bcs.s   begin_oob_restart_selection
-                cmpi.w  #290,d1
-                blt.s   begin_oob_restart_selection
-                cmpi.w  #381,d1
-                bgt.s   begin_oob_restart_selection
-                cmpi.w  #25,d3
-                bgt.s   begin_oob_restart_selection
-                movem.l d1-d3,-(sp)
-                jsr     PlayGoalKickOffSample
-                movem.l (sp)+,d1-d3
-                clr.w   (playRefereeWhistle).l
-begin_oob_restart_selection:
-                lea     topTeamData(pc),a6
-                cmpi.w  #129,d2
-                bge.s   ball_above_centerline
-                cmpa.l  lastTeamPlayed(pc),a6
-                bne.w   same_side_as_last_team_elsewhere
-                lea     bottomTeamData(pc),a6
-                cmpi.w  #336,d1
-                blt.w   set_corner_left_upper
-                bra.s   set_corner_right_upper
-ball_above_centerline:
-                lea     bottomTeamData(pc),a6
-                cmpi.w  #769,d2
-                ble.w   ball_in_throwin_band
-                cmpa.l  lastTeamPlayed(pc),a6
-                bne.w   opposite_side_as_last_team_elsewhere
-                lea     topTeamData(pc),a6
-                cmpi.w  #336,d1
-                blt.s   set_corner_right_lower
-                cmpi.w  #1,(forceLeftTeam).l
-                beq.s   set_corner_right_upper
-                move.w  #585,d1
-                move.w  #764,d2
-                move.w  #6,d3
-                move.b  #$C1,d4
-                move.w  #ST_CORNER_LEFT,(gameState).l
-                move.w  #$FFFF,(breakCameraMode).l
-                bra.s   commit_corner_left_upper
-set_corner_right_lower:
-                cmpi.w  #1,(forceLeftTeam).l
-                beq.s   set_corner_left_upper
-                move.w  #86,d1
-                move.w  #764,d2
-                move.w  #2,d3
-                move.b  #7,d4
-                move.w  #ST_CORNER_RIGHT,(gameState).l
-                move.w  #$FFFF,(breakCameraMode).l
-                bra.s   commit_corner_left_upper
-set_corner_right_upper:
-                move.w  #585,d1
-                move.w  #134,d2
-                move.w  #6,d3
-                move.b  #$70,d4         ; 'p'
-                move.w  #ST_CORNER_RIGHT,(gameState).l
-                move.w  #$FFFF,(breakCameraMode).l
-                bra.s   commit_corner_left_upper
-set_corner_left_upper:
-                move.w  #86,d1
-                move.w  #134,d2
-                move.w  #2,d3
-                move.b  #$1C,d4
-                move.w  #ST_CORNER_LEFT,(gameState).l
-                move.w  #$FFFF,(breakCameraMode).l
-commit_corner_left_upper:
-                movea.l TEAMGENERALINFO_TEAMSTATSPTR(a6),a0
-                addq.w  #1,TEAMSTATISTICSDATA_CORNERSWON(a0)
-                bra.w   write_restart_globals_and_stop_players
-same_side_as_last_team_elsewhere:
-                cmpi.w  #336,d1
-                blt.s   setup_goal_out_right_top_half
-setup_goal_out_left_top_half:
-                move.w  #396,d1
-                move.w  #154,d2
-                move.w  #4,d3
-                move.b  #$7C,d4         ; '|'
-                move.w  #ST_GOAL_OUT_LEFT,(gameState).l
-                move.w  #$FFFF,(breakCameraMode).l
-                bra.s   commit_goal_out_common
-setup_goal_out_right_top_half:
-                move.w  #276,d1
-                move.w  #154,d2
-                move.w  #4,d3
-                move.b  #$7C,d4         ; '|'
-                move.w  #ST_GOAL_OUT_RIGHT,(gameState).l
-                move.w  #$FFFF,(breakCameraMode).l
-                bra.s   commit_goal_out_common
-opposite_side_as_last_team_elsewhere:
-                cmpi.w  #336,d1
-                blt.s   setup_goal_out_left_bottom_half
-                cmpi.w  #1,(forceLeftTeam).l
-                beq.s   setup_goal_out_left_top_half
-                move.w  #396,d1
-                move.w  #744,d2
-                move.w  #0,d3
-                move.b  #$C7,d4
-                move.w  #ST_GOAL_OUT_RIGHT,(gameState).l
-                move.w  #$FFFF,(breakCameraMode).l
-                bra.s   commit_goal_out_common
-setup_goal_out_left_bottom_half:
-                cmpi.w  #1,(forceLeftTeam).l
-                beq.s   setup_goal_out_right_top_half
-                move.w  #276,d1
-                move.w  #744,d2
-                move.w  #0,d3
-                move.b  #$C7,d4
-                move.w  #ST_GOAL_OUT_LEFT,(gameState).l
-                move.w  #$FFFF,(breakCameraMode).l
-commit_goal_out_common:
-                tst.w   4(a6)
-                bne.s   commit_goal_out_skip_clear
-                andi.b  #$BB,d4
-commit_goal_out_skip_clear:
-                move.w  #1,(goalOut).l
-                bra.w   write_restart_globals_and_stop_players
-ball_in_throwin_band:
-                movea.l lastTeamPlayed(pc),a6
-                movea.l (a6),a6
-                cmpi.w  #336,d1
-                blt.s   throwin_left_band
-                move.w  #590,d1
-                move.w  #6,d3
-                move.b  #$F1,d4
-                cmpa.l  #topTeamData,a6
-                bne.s   throwin_left_band_zone_select
-                cmpi.w  #342,d2
-                blt.s   throwin_forward_right
-                cmpi.w  #556,d2
-                blt.s   throwin_center_right
-                bra.s   throwin_back_right
-throwin_left_band_zone_select:
-                cmpi.w  #$156,d2
-                blt.s   throwin_back_left
-                cmpi.w  #$22C,d2
-                blt.s   throwin_center_left
-                bra.s   throwin_forward_left
-throwin_left_band:
-                move.w  #81,d1
-                move.w  #2,d3
-                move.b  #$1F,d4
-                cmpa.l  #topTeamData,a6
-                bne.s   throwin_right_band
-                cmpi.w  #342,d2
-                blt.s   throwin_forward_left
-                cmpi.w  #556,d2
-                blt.s   throwin_center_left
-                bra.s   throwin_back_left
-throwin_right_band:
-                cmpi.w  #342,d2
-                blt.s   throwin_back_right
-                cmpi.w  #556,d2
-                blt.s   throwin_center_right
-throwin_forward_right:
-                move.w  #ST_THROW_IN_FORWARD_RIGHT,(gameState).l
-                bra.s   post_restart_common_set_break
-throwin_center_right:
-                move.w  #ST_THROW_IN_CENTER_RIGHT,(gameState).l
-                bra.s   post_restart_common_set_break
-throwin_back_right:
-                move.w  #ST_THROW_IN_BACK_RIGHT,(gameState).l
-                bra.s   post_restart_common_set_break
-throwin_forward_left:
-                move.w  #ST_THROW_IN_FORWARD_LEFT,(gameState).l
-                bra.s   post_restart_common_set_break
-throwin_center_left:
-                move.w  #ST_THROW_IN_CENTER_LEFT,(gameState).l
-                bra.s   post_restart_common_set_break
-throwin_back_left:
-                move.w  #ST_THROW_IN_BACK_LEFT,(gameState).l
-post_restart_common_set_break:
-                move.w  #$FFFF,(breakCameraMode).l
-write_restart_globals_and_stop_players:
-                cmpi.w  #1,(forceLeftTeam).l
-                bne.s   apply_force_left_team_override
-                movea.l #topTeamData,a6
-apply_force_left_team_override:
-                move.w  #ST_STOPPED,(gameStatePl).l
-                clr.w   (gameNotInProgressCounterWriteOnly).l
-                move.w  d1,(foulXCoordinate).l
-                move.w  d2,(foulYCoordinate).l
-                move.w  d3,(cameraDirection).l
-                move.b  d4,(playerTurnFlags).l
-                move.l  a6,(lastTeamPlayedBeforeBreak).l
-                clr.w   (stoppageTimerTotal).l
-                clr.w   (stoppageTimerActive).l
-                bsr.w   StopAllPlayers
-                clr.w   (cameraXVelocity).l
-                clr.w   (cameraYVelocity).l
-exit_check_whistle:
-                tst.w   (playRefereeWhistle).l
-                beq.s   bexit_rts
-                jsr     PlayRefereeWhistleSample
-bexit_rts:
-                rts
 playRefereeWhistle:
                 dc.w $0000
 ; Position[22]
@@ -9715,23 +5565,6 @@ deadVarAlways0:
 playerKickerPtr:
                 dc.l $00000000
 
-; ===== AI_SetControlsDirection =====
-; prototype: void __usercall AI_SetControlsDirection(struct TeamGeneralInfo *team@<a6>)
-; in:
-;      A6 -> team data
-; ===== AI_ResumeGameDelay =====
-; prototype: struct TeamGeneralInfo *__usercall AI_ResumeGameDelay@<a0>(struct TeamGeneralInfo *team@<a6>)
-; in:
-;      A6 -> team (general)
-; out:
-;      A0 -> opponents team
-;      carry flag = pass/kick time == 13
-; 
-; Only used by AI.
-AI_ResumeGameDelay:
-                movea.l (a6),a0
-                cmpi.w  #13,TEAMGENERALINFO_PASSKICKTIMER(a6)
-                rts
 aiTurnDirection:
                 dc.w $0001
 aiResumePlayTimer:
@@ -9772,22 +5605,6 @@ aiCounterWriteOnly:
 aiThrowInDirections:
                 dc.b 3,6,12,-127,-64,96 ; Angle range 0..255, indexed by game state enum, values for throw-in
 
-; ===== AI_Kick =====
-; prototype: char __usercall AI_Kick@<d0>(struct Sprite *player@<a1>, struct TeamGeneralInfo *team@<a6>)
-; in:
-;      A1 -> player controlling the ball
-;      A6 -> team general info
-
-; ===== FindClosestPlayerToBallFacing =====
-; prototype: Sprite *__usercall FindClosestPlayerToBallFacing@<a0>(unsigned __int16 fullDir@<d0>, TeamGeneralInfo *team@<a6>)
-; in:
-;      D0 -  full direction player must be facing (+/- 16)
-;      A6 -> team (general)
-; out:
-;      D2 - ball distance
-;      A0 -> player
-; 
-; Find player closest to ball facing specified direction. Search both teams.
 ; unsigned __int16[343]
 introMenuImageScript:
                 dc.w $7000
@@ -19990,13 +15807,6 @@ useAltBaseFlag:
                 dc.w $0000
 usePlaneOffsetFlag:
                 dc.w 0,376,429,155,370,24,0,1
-
-; ===== sub_11FBA2 =====
-; prototype: void __usercall sub_11FBA2()
-sub_11FBA2:
-                tst.w   (deadVar02).l
-                bne.w   *+4
-                rts
 fireCounter:
                 dc.w $0000              ; For any player input
 menuControlsDirection2:
@@ -20078,17 +15888,6 @@ hexLongStringBuffer:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; Buffer for converting a 32-bit value to an 8-digit hex ASCII string with null terminator.
 hexWordStringBuffer:
                 dc.b $00,$00,$00,$00,$00,$00 ; Buffer for converting a 16-bit panic code to a 4-digit hex ASCII string.
-
-; ===== UnpackMenu =====
-; prototype: void __usercall UnpackMenu(Menu *dstMenu@<a1>, const void *staticMenu@<a0>)
-; in:
-;      A1 -> ptr to buffer where the menu will be unpacked
-;            (usually g_currentMenu)
-
-; ===== MenuProc =====
-; prototype: void __usercall MenuProc()
-; Draws currentMenu and loops waiting for a key.
-; Refreshes keyboard/joypad variables.
 aStackOverflow:
                 dc.b 'STACK OVERFLOW',0,0
                 even
@@ -20121,10 +15920,6 @@ _CallMenuFuncWithXY:
 nextEntryDirectionOffsets:
                 dc.w $0002,$0001,$0003,$0000
 
-; ===== InitMainMenuStuff =====
-; prototype: void __usercall InitMainMenuStuff()
-; ===== InitMainMenuStuff =====
-; Ported to C (_InitMainMenuStuff in menus.c)
 ; char *[6]
 defaultNamesTable:
                 ; char *[6]
@@ -20168,16 +15963,6 @@ aDavid_0:
 aNottingham:
                 dc.b "NOTTINGHAM",0,$00
 
-; ===== FrontEndPreLoopSetup =====
-
-; ===== PrepareMenuBackground =====
-; prototype: void __usercall PrepareMenuBackground()
-; ===== PrepareMenuBackground =====
-; Ported to C (_PrepareMenuBackground in menus.c)
-
-; ===== LoadOverlayToFrontbuffer =====
-; Ported to C (_LoadOverlayToFrontbuffer in frontend.c)
-; Forwarding stub: a0 (register param) -> stack arg for C function
 allowShorterMenuItemsWithFrames:
                 dc.l $00000000          ; If this is true then menu items on the right side of the screen (x >= 160) will have outer
                                         ; frames even if their height is a bit shorter (>6 px), otherwise all items must have height
@@ -20188,306 +15973,24 @@ pl1SkipFireCounter:
                 dc.w $0000              ; Never written (the only write depends on top variable being true)
 pl2SkipFireCounter:
                 dc.w $0000              ; Never written
-
-; ===== DrawMenuItemOuterFrame =====
-; prototype: void __usercall DrawMenuItemOuterFrame(unsigned __int16 color@<d0>, unsigned __int16 x@<d1>, unsigned __int16 y@<d2>, unsigned __int16 width@<d3>, unsigned __int16 height@<d4>)
-; in:
-;      D0 - color
-;      D1 - x
-;      D2 - y
-;      D3 - width
-;      D4 - height
-; 
-; Draw rectangle on that coordinates.
-; Do color conversion.
 outerFrameColorsTable:
                 dc.b $01,$09,$01,$09,$01,$09,$01,$09,$05,$09,$06,$04,$02,$04,$01,$09
                 dc.b $01,$09,$01,$03,$06,$09,$0D,$08,$0A,$08,$01,$09,$01,$09,$01,$09
-
-; ===== DrawMenuItemInnerFrame =====
-; prototype: void __usercall DrawMenuItemInnerFrame(unsigned __int16 color@<d0>, unsigned __int16 x@<d1>, unsigned __int16 y@<d2>, unsigned __int16 width@<d3>, unsigned __int16 height@<d4>)
-; in:
-;      D0 - color
-;      D1 - x
-;      D2 - y
-;      D3 - width
-;      D4 - height
-; 
-; Draw rectangle on that coordinates.
-
-; ===== DrawMenuItemBackground =====
-; prototype: void __usercall DrawMenuItemBackground(unsigned __int16 color@<d0>, unsigned __int16 x@<d1>, unsigned __int16 y@<d2>, unsigned __int16 width@<d3>, unsigned __int16 height@<d4>)
-; in:
-;      D0 - color
-;      D1 - x
-;      D2 - y
-;      D3 - width
-;      D4 - height
-
-; ===== BlitMaskedRectAltToFront =====
-; Ported to C: _BlitMaskedRectAltToFront in src/menu_system.c
-; in: d1=x, d2=y, d3=w, d4=h
-
-; ===== CopyWholeSprite =====
-; prototype: unsigned __int8 __usercall CopyWholeSprite@<d0>(unsigned __int16 srcSprite@<d0>, unsigned __int16 dstSprite@<d1>)
-; in:
-;      D0 = src sprite index
-;      D1 = dest sprite index
-
-; ===== SetCurrentEntry =====
-; prototype: void __usercall SetCurrentEntry(unsigned __int16 index@<d0>)
-; in:
-;     D0 - number of menu entry
-; 
-; Sets current entry in the current menu.
-SetCurrentEntry:
-                move.l  d0,-(sp)
-                jsr     _SetCurrentEntry
-                addq.l  #4,sp
-                rts
-                adda.l  #MENUENTRY_SIZE,a0
-                rts
-                suba.l  #MENUENTRY_SIZE+MENUENTRY_ALREADYDRAWN,a0
-                rts
-
-; ===== GetStringLength =====
-; Ported to C: _GetStringLength in src/string_utils.c
-; in: a0 = string, out: d0.w = length, a0 = pointer to null terminator
-loc_120C7C:
-                tst.b   (a0)+
-                bne.s   loc_120C7C
-                rts
-                subq.w  #1,d0
-                bmi.s   locret_120C8E
-loc_120C86:
-                tst.b   (a0)+
-                bne.s   loc_120C86
-                dbf     d0,loc_120C86
-locret_120C8E:
-                rts
-
-; ===== StringEquals =====
-; Ported to C: _StringEquals in src/string_utils.c
-; in: a0=s1, a1=s2, out: Z flag (set if equal)
-
-; ===== StringCopy =====
-; Ported to C: _StringCopy in src/string_utils.c
-; in: a0=src, a1=dst, out: a1=pointer to null terminator in dst
-StringCopy:
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _StringCopy
-                addq.l  #8,sp
-                movea.l d0,a1
-                rts
-
-; ===== StringCopyUntilChar =====
-; prototype: char *__usercall StringCopyUntilChar@<a1>(const char *src@<a0>, char *dst@<a1>, unsigned __int8 ch@<d0>)
-; Copy string1 to string2 until char or end of string is encountered.
-; 
-; in:  A0 -> src string
-;      A1 -> dst string
-;      D0 = char
-; ===== StringCopyUntilChar ===== (ported to C → _StringCopyUntilChar)
-; in: a0=src, a1=dst, d0.b=stopChar
-
-; ===== PrintFormatted =====
-; prototype: void __usercall PrintFormatted(const char *fmt@<a0>, char *out@<a1>, unsigned __int16 n0@<d0>, unsigned __int16 n1@<d1>, unsigned __int16 n2@<d2>, unsigned __int16 n3@<d3>, unsigned __int16 n4@<d4>, unsigned __int16 n5@<d5>, unsigned __int16 n6@<d6>, const char *a@<a2>, const char *b@<a3>, const char *c@<a4>)
-; in:
-;     A0 -> format string
-;     A1 -> converted string in the end (words)
-;     D0 - number 0
-;     D1 - number 1
-;     D2 - number 2
-;     D3 - number 3
-;     D4 - number 4
-;     D5 - number 5
-;     D6 - number 6
-;     A2 - string a
-;     A3 - string b
-;     A4 - string c
-; 
-; Format string can contain simple commands that start with %.
-; %a, %b and %c mark string insertation, where actual strings
-; are in A2, A3 and A4. Ascii representation of 0, 1,
-; 2, 3, 4, 5, or 6 after % means converting number in D0-D6
-; to ascii and inserting in output string.
-PrintFormatted:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a4,-(sp)
-                move.l  a3,-(sp)
-                move.l  a2,-(sp)
-                andi.l  #$FFFF,d6
-                move.l  d6,-(sp)
-                andi.l  #$FFFF,d5
-                move.l  d5,-(sp)
-                andi.l  #$FFFF,d4
-                move.l  d4,-(sp)
-                andi.l  #$FFFF,d3
-                move.l  d3,-(sp)
-                andi.l  #$FFFF,d2
-                move.l  d2,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _PrintFormatted
-                lea     48(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== InputText =====
-; prototype: unsigned __int16 __usercall InputText@<d0>(unsigned __int16 maxLenPlus1@<d0>, struct MenuEntry *entry@<a5>)
-; in:
-;      D0 -  input length (max 99) + 1 for zero terminator
-;      A5 -> current menu entry (must be string type)
-; out:
-;      D0 - 0, zf set   = OK, ended with carriage
-;           1, zf clear = aborted, escape pressed
-; 
-; destroys: eax, esi...
-
-; ===== InsertCharacter =====
-; prototype: void __usercall InsertCharacter(char *pos@<a0>, unsigned __int8 ch@<d1>)
-; in:
-;      A0 -> ptr where to insert character
-;      D1 -  character to add
-; out:
-;      zero flag - set from value of char
-; 
+ 
 inputAllowedControlKeys:
                 dc.b $0D,$12,$13,$1B,$7F,$7E,$20,$2D,$2F,$2E,$FF,$00 ; Enter, left shift, right shift, escape,
                                         ; backspace, 'special'(?), space, '-', '/', '.', terminator
-loc_120F58:
-                move.w  #$1197,(panicReasonCode).l
-                jsr     PanicHaltLoop
 allowExtraCharsFlag:
                 dc.w $0000              ; If true, allows '.' when typing in... at least in theory
 pad_120F68:
                 dc.b "S@"
 
-; ===== menu_mark_entries_active_loop =====
-; prototype: void menu_mark_entries_active_loop(...)
-menu_mark_entries_active_loop:
-                move.w  #1,4(a5)
-                lea     $38(a5),a5
-                dbf     d0,menu_mark_entries_active_loop
-                rts
-                subq.w  #1,d0
-
-; ===== menu_clear_entries_active_loop =====
-; prototype: void menu_clear_entries_active_loop(...)
-menu_clear_entries_active_loop:
-                clr.w   4(a5)
-                lea     $38(a5),a5
-                dbf     d0,menu_clear_entries_active_loop
-                rts
-
-; ===== DrawMenuItemsWaitForVSync =====
-; Ported to C: _DrawMenuItemsWaitForVSync in src/menu_system.c
-DrawMenuItemsWaitForVSync:
-                move.l  a0,-(sp)
-                jsr     _DrawMenuItemsWaitForVSync
-                addq.l  #4,sp
-                rts
-
-; ===== CallDrawMultipleItemsRect =====
-; Ported to C: _CallDrawMultipleItemsRect in src/menu_system.c
-; in: d0=count (implicit), a5=first entry
-
-; ===== CallDrawMultipleItems =====
-; Ported to C: _CallDrawMultipleItems in src/menu_system.c
-; in: d0=count, a5=first entry
-CallDrawMultipleItems:
-                move.l  a5,-(sp)
-                move.l  d0,-(sp)
-                jsr     _CallDrawMultipleItems
-                addq.l  #8,sp
-                rts
-
-; ===== DrawMultipleItems =====
-; Ported to C: _DrawMultipleItems in src/menu_system.c
-; in: d0=count, a5=first entry
-DrawMultipleItems:
-                move.l  a5,-(sp)
-                move.l  d0,-(sp)
-                jsr     _DrawMultipleItems
-                addq.l  #8,sp
-                rts
-
-; ===== CallDrawMenuItem =====
-; prototype: void __usercall CallDrawMenuItem(struct MenuEntry *item@<a5>)
-; in:
-;      A5 - ptr to item to draw
-CallDrawMenuItem:
-                move.l  a5,-(sp)
-                jsr     _CallDrawMenuItem
-                addq.l  #4,sp
-                rts
-
-; ===== DrawMenuItem =====
-; prototype: void __usercall DrawMenuItem(struct MenuEntry *item@<a5>)
-; in:
-;      A5 -> menu item to draw
-
-; ===== DrawBackAllItems =====
-; prototype: void __usercall DrawBackAllItems(unsigned __int16 maxItems@<d0>, struct MenuEntry *firstEntry@<a5>)
-; in:
-;      D0 - max. number of items to draw
-;      A5 - pointer to first entry to draw
-
-; ===== DrawMenuBackWithCheck =====
-; prototype: void __usercall DrawMenuBackWithCheck(struct MenuEntry *entry@<a5>)
-; in:
-;      A5 -> menu entry
-
-; ===== DrawSelectedMenuItemFrame =====
-; prototype: void __usercall DrawSelectedMenuItemFrame(struct Menu *menu@<a6>)
-; in:
-;     A6 -> menu
-; 
-; Draws a frame around the currently selected item.
-
-; ===== DrawMenu =====
-; prototype: void __usercall DrawMenu()
-DrawMenu:
-                jmp     _DrawMenu
 aSwosDate0:
                 dc.b 'SWOS DATE: %0',0
 pad_121558:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $00,$00,$00,$00
 
-; ===== ShowMenu =====
-; prototype: void __usercall ShowMenu(const void *packedMenu@<a6>)
-; in:
-;      A6 -> menu to show on screen (packed form)
-; 
-; After showing this menu, returns to previous menu.
-ShowMenu:
-                move.l  a6,-(sp)
-                jsr     _ShowMenu
-                addq.l  #4,sp
-                rts
-
-; ===== RestorePreviousMenu =====
-; prototype: void __usercall RestorePreviousMenu(void *oldSelectedEntry@<a5>, const void *oldPackedMenu@<a6>)
-; in:
-;      A5 -> old selected entry
-;      A6 -> old menu to return to
-loc_1215BC:
-
-; ===== SetExitMenuFlag =====
-; prototype: void __usercall SetExitMenuFlag()
-SetExitMenuFlag:
-                jmp     _SetExitMenuFlag
-
-; ===== ActivateMenu =====
-; prototype: __int16 __usercall ActivateMenu@<d0>(struct Menu *menu@<a6>)
-; in:
-;      A6 -> menu to prepare (or activate)
 forceDrawTransparentMenuItems:
                 dc.w $0000              ; If this is true menu entries with background color 0 (transparent) will be
                                         ; rendered with background color 15 (yellow)
@@ -20500,21 +16003,12 @@ kTeamColorsTable:
                 dc.b 0,1,0,2,0,3,0,6,0,10,0,11,0,12,0,13
                 dc.b 0,14,0,15
 
-; ===== AssignFakeGoalsToScorers =====
-; prototype: char __usercall AssignFakeGoalsToScorers@<d0>(unsigned __int16 winningTeam@<d0>, unsigned __int16 numGoals@<d5>)
-; in:
-;     D0 - winning team number
-;     D5 - number of goals to generate
-;     
 ; When player aborts the game they are punished with a loss, and this function will
 ; assign those fictive goals to other team scorers.
 kAbortLossScorerWeightTable:
                 dc.b 35,25,20,15,11,7,5,4,3,2,124,4
                 rts
 
-; ===== CalcTeamViewOffset =====
-; Bridge: a0=team → d1=X, d2=Y
-; C function returns packed uint32_t: high word = X, low word = Y
 kUserTeamOffsetBiasLUT:
                 dc.b -3,0,1,-1,-2,-2,-3,-2
 kMenuIrqCookieFailTrap:
@@ -20712,131 +16206,7 @@ goalScorerDistDefend:
 ; unsigned __int8 *
 currentGoalScorerDistPtr:
                 dc.l $00000000          ; Pointer to the currently active goal scorer distribution table
-loc_122274:
-                sub.w   d6,d5
-                beq.w   locret_1223BC
-                lea     $3C(a0),a5
-                cmpa.l  #careerTeam,a0
-                bne.s   loc_12228C
-                lea     (currentMatchPlayers).l,a5
-loc_12228C:
-                move.w  #$A,d7
-loc_122290:
-                move.b  (a5,d7.w),d6
-                ext.w   d6
-                jsr     Rand2
-                tst.b   (a1,d6.w)
-                bmi.s   loc_1222AC
-                btst    #0,d0
-                bne.s   loc_1222AC
-                move.b  (a1,d6.w),d6
-loc_1222AC:
-                move.w  d6,d2
-                mulu.w  #$26,d2         ; '&'
-                lea     (a0,d2.w),a6
-                move.b  $67(a6),d1
-                move.b  d1,d2
-                andi.w  #$1C,d1
-                andi.w  #3,d2
-                tst.w   d7
-                bne.s   loc_1222D2
-                cmpi.w  #2,d0
-                bcc.w   loc_1223B8
-                bra.s   loc_1222DA
-loc_1222D2:
-                cmpi.w  #$10,d0
-                bcc.w   loc_1223B8
-loc_1222DA:
-                move.b  $66(a6),d0
-                andi.w  #$E0,d0
-                lsr.w   #5,d0
-                cmpi.b  #0,d0
-                bne.s   loc_12230C
-                movem.l d0-d2/d7/a1,-(sp)
-                move.w  #$FFFF,d0
-                clr.w   d1
-                movem.l d5,-(sp)
-                jsr     GetNumberOfAvailableSubstitutes
-                movem.l (sp)+,d5
-                movem.l (sp)+,d0-d2/d7/a1
-                tst.w   d6
-                bne.w   loc_1223B8
-loc_12230C:
-                jsr     Rand2
-                andi.w  #$1F,d0
-                cmpi.w  #$1D,d0
-                bcs.s   loc_122352
-                cmpi.w  #$1E,d0
-                bcs.s   loc_122342
-                cmpi.w  #$1F,d0
-                bcs.s   loc_122338
-                tst.w   (inEditTactics).l
-                bne.s   loc_122392
-                cmpi.w  #0,d1
-                bne.s   loc_122384
-                bra.s   loc_122384
-loc_122338:
-                tst.w   (inEditTactics).l
-                bne.s   loc_122392
-                bra.s   loc_122384
-loc_122342:
-                tst.w   (inEditTactics).l
-                bne.s   loc_122392
-                cmpi.w  #0,d1
-                bne.s   loc_122384
-                bra.s   loc_122376
-loc_122352:
-                tst.w   (inEditTactics).l
-                bne.s   loc_1223B8
-                cmpi.w  #0,d1
-                bne.s   loc_122370
-                jsr     ShouldApplyRandomPlayerStatusAfterSim
-                beq.w   loc_1223B2
-                move.w  #4,d1
-                bra.s   loc_122396
-loc_122370:
-                move.w  #8,d1
-                bra.s   loc_122396
-loc_122376:
-                jsr     ShouldApplyRandomPlayerStatusAfterSim
-                beq.s   loc_122370
-                move.w  #$C,d1
-                bra.s   loc_122396
-loc_122384:
-                jsr     ShouldApplyRandomPlayerStatusAfterSim
-                beq.s   loc_122370
-                move.w  #$10,d1
-                bra.s   loc_122396
-loc_122392:
-                move.w  #2,d2
-loc_122396:
-                move.b  $67(a6),d0
-                andi.w  #$FFE3,d0
-                or.w    d1,d0
-                move.b  d0,$67(a6)
-                move.b  $67(a6),d0
-                andi.w  #$FFFC,d0
-                or.w    d2,d0
-                move.b  d0,$67(a6)
-loc_1223B2:
-                subq.w  #1,d5
-                tst.w   d5
-                beq.s   locret_1223BC
-loc_1223B8:
-                dbf     d7,loc_122290
-locret_1223BC:
-                rts
 
-; ===== InitInGameTeams_PlayerControlled =====
-; Bridge: a1=team1, a2=team2, d0=mode → C params
-
-; ===== InitInGameTeams_WithMatchParam =====
-; Bridge: a1=team1, a2=team2 → C params
-
-; ===== InitInGameTeams_WithMatchParam_Alt =====
-
-; ===== InitPlayerRemapTableForTeam =====
-; Bridge: a0=team, a1=map → C function _InitPlayerRemapTableForTeam(team, map)
 playerStatusBucketThresholds:
                 dc.b $20,$08,$06,$05,$04,$08,$01,$00
 availablePickCountByGoalsInTable:
@@ -20945,24 +16315,6 @@ playersPositionsByTactics:
                 dc.l tacticsPositionUSERD ; element[15]
                 dc.l tacticsPositionUSERE ; element[16]
                 dc.l tacticsPositionUSERF ; element[17]
-
-; ===== ComputeOldPlayerSkillForViewResult =====
-; Bridge: a0=team, d0=goalsCount → d0=result
-; Dead code preserved for code-as-data: GetPlayerPrice reads
-; the bytes at loc_122D6A+1 through skillsPerQuadrant as the
-; goalkeeper (role 0) row of skillsPerQuadrant.
-loc_122D6A:
-                andi.w  #$E0,d1
-                lsr.w   #5,d1
-                cmpi.b  #0,d1
-                beq.s   loc_122D78
-                lsr.w   #1,d0
-loc_122D78:
-                ext.l   d0
-                divu.w  (oldPlayerSkillDivisor).l,d0
-                move.w  d0,(oldPlayerSkill).l
-                clr.b   $3B(a0)
-                rts
 oldPlayerSkillDivisor:
                 dc.w $0000
 ; unsigned __int8[245]
@@ -22110,134 +17462,6 @@ teamTacticsTable:
                 dc.l teamTacticsUSERF   ; element[17]
                 dc.l editTacticsCurrentTactics ; element[18]
 
-; ===== GetPlayerPrice =====
-; prototype: unsigned __int16 __usercall GetPlayerPrice@<d7>(TeamFile *team@<a0>, PlayerFile *player@<a1>, unsigned __int16 position@<d7>)
-; in:
-;      A0 -> team (file)
-;      A1 -> player (file)
-;      D7 = player number (position)
-; out:
-loc_1246F4:
-                move.w  d3,-(sp)
-                clr.w   d7
-                move.b  (a3,d3.w),d6
-                move.b  (a4,d6.w),d6
-                cmpi.b  #TEAM_COMPUTER,TEAMFILE_TEAMCONTROLS(a0)
-                beq.s   loc_12474C
-                move.w  #1,(numPlayersAtQuadrant).l
-                cmpi.w  #5,d3
-                bcs.s   loc_12474C
-                cmpi.w  #30,d3
-                bcc.s   loc_12474C
-                cmpi.w  #7,d3
-                beq.s   loc_12474C
-                movea.l (plPositions).l,a6
-                clr.w   d2
-                move.w  #9,d1
-loc_12472E:
-                clr.w   d0
-                move.b  (a6,d3.w),d0
-                move.b  (a4,d0.w),d0
-                cmp.b   d6,d0
-                bne.s   loc_12473E
-                addq.w  #1,d2
-loc_12473E:
-                lea     35(a6),a6
-                dbf     d1,loc_12472E
-                move.w  d2,(numPlayersAtQuadrant).l
-loc_12474C:
-                move.w  d6,d3
-                lsl.w   #2,d3
-                lea     priceSkillPonders(pc),a6
-                move.l  (a6,d3.w),d3
-                lea     (skillValuePonders).l,a1
-                move.l  d5,d2
-                move.w  #6,d4
-loc_124764:
-                move.w  d2,d0
-                andi.w  #$F,d0
-                move.w  d3,d1
-                andi.w  #$F,d1
-                beq.s   loc_12477A
-                move.b  (a1,d1.w),d1
-                mulu.w  d1,d0
-                add.w   d0,d7
-loc_12477A:
-                lsr.l   #4,d2
-                lsr.l   #4,d3
-                dbf     d4,loc_124764
-                lsr.w   #1,d7
-                move.b  (a5,d6.w),d0
-                ext.w   d0
-                mulu.w  d0,d7
-                clr.w   d0
-                move.b  (a2,d6.w),d0
-                ext.w   d0
-                mulu.w  d0,d7
-                lsr.l   #3,d7
-                cmpi.b  #TEAM_COMPUTER,TEAMFILE_TEAMCONTROLS(a0)
-                beq.s   loc_1247AC
-                move.w  (numPlayersAtQuadrant).l,d0
-                subq.w  #1,d0
-                beq.s   loc_1247AC
-                divu.w  d0,d7
-loc_1247AC:
-                move.w  (sp)+,d3
-                cmpi.b  #TEAM_COMPUTER,TEAMFILE_TEAMCONTROLS(a0)
-                beq.s   loc_1247BA
-                bsr.w   CountNearnessFactor
-loc_1247BA:
-                add.w   d7,(totalSkillsFactorSum).l
-                lea     -35(a2),a2
-                dbf     d3,loc_1246F4
-                move.w  (totalSkillsFactorSum).l,d7
-                ext.l   d7
-                divu.w  #350,d7
-                subq.w  #8,d7
-                bpl.s   loc_1247DC
-                clr.w   d7
-                bra.s   loc_1247E6
-loc_1247DC:
-                cmpi.w  #49,d7
-                bls.s   loc_1247E6
-                move.w  #49,d7
-loc_1247E6:
-                movea.l (sp)+,a1
-                move.w  d7,d0
-                sub.b   PLAYERFILE_PRICE+$4C(a1),d0
-                bmi.s   locret_1247FE
-                lea     (plPricesIncreaseTable).l,a5
-                move.b  (a5,d0.w),d7
-                add.b   PLAYERFILE_PRICE+$4C(a1),d7
-locret_1247FE:
-                rts
-
-; ===== CountNearnessFactor =====
-; prototype: unsigned __int16 __usercall CountNearnessFactor@<d7>(unsigned __int16 curBallQuadrant@<d3>, unsigned __int16 dstBallQuadrant@<d6>, unsigned __int16 price@<d7>, const unsigned __int8 *curQuadDistFactor@<a2>, const unsigned __int8 *playerPositions@<a3>, const unsigned __int8 *coordToQuad@<a4>)
-; in:
-;      D3 -  current ball quadrant
-;      D6 -  destination ball quadrant
-;      D7 -  price currently calculated value
-;      A2 -> quadrant distance factor table for current ball quadrant
-;      A3 -> players positions (from tactics)
-;      A4 -> player coordinates to quadrants table
-; out:
-;      D7 - fixed price value, with destination quadrants factor included
-;      
-; Multiply price value with ratio of near quadrants to near destination quadrants. It's <= 1.
-CountNearnessFactor:
-                movem.l d2-d6/a2-a6,-(sp)
-                move.l  a4,-(sp)        ; coordToQuad (6th param)
-                move.l  a3,-(sp)        ; playerPositions (5th param)
-                move.l  a2,-(sp)        ; curQuadDistFactor (4th param)
-                move.l  d7,-(sp)        ; price (3rd param)
-                move.l  d6,-(sp)        ; dstBallQuadrant (2nd param)
-                move.l  d3,-(sp)        ; curBallQuadrant (1st param)
-                jsr     _CountNearnessFactor
-                add.l   #24,sp
-                move.w  d0,d7           ; result in d7
-                movem.l (sp)+,d2-d6/a2-a6
-                rts
 skillValuePonders:
                 dc.b $00,$01,$03,$06,$0A,$0F,$15,$1C ; Multiply value of skill with this
 plPricesIncreaseTable:
@@ -22263,11 +17487,6 @@ playerAgeToFormDivisorTable:
                 dc.b $08,$08,$08,$09,$09,$09,$0A,$0A,$0C,$0C,$0C,$0F,$0F,$0F,$0F,$0F
                 dc.b $0F,$0F
 
-; ===== UpdateCareerPlayersFormAfterMatch =====
-; prototype: void __usercall UpdateCareerPlayersFormAfterMatch(void *team@<a0>, void *teamRef@<a1>, __int16 p1@<d1>, __int16 p2@<d2>)
-; dos: cseg_908B4
-; ===== UpdateCareerPlayersFormAfterMatch ===== (Ported to C → _UpdateCareerPlayersFormAfterMatch, Chunk 188)
-; Bridge: a0=compCtx, a1=team1, a2=team2, d1=team1Goals, d2=team2Goals
 ; unsigned __int8[144]
 playerFormDeltaRandomTable:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$01,$00,$00,$00,$00,$00,$00,$00
@@ -22296,82 +17515,10 @@ seasonGateReceiptsAccum2:
 seasonRunningCostsAccum2:
                 dc.l $00000000          ; Second accumulator for weekly running costs.
 
-; ===== GetNumberOfSubstitutes =====
-; Bridge: a0=team, d0=numPlayers → C params, returns d0
-
-; ===== GetNumberOfSubstitutesInSelectionList =====
-; Bridge: a0=team, d0=extraCount → C params, returns d0
-
-; ===== GetNumberOfAvailablePlayers =====
-; Bridge: a0=team, d0=excludeCardsFlag, d1=numPlayers → C params
-; Returns: d6=disabled, d7=available (packed in d0 from C)
-
-; ===== GetNumberOfAvailableSubstitutes =====
-; Bridge: a0=team, d0=flag → C params
-; Returns: d6=disabled, d7=available
-GetNumberOfAvailableSubstitutes:
-                ext.l   d0
-                move.l  d0,-(sp)        ; flag
-                move.l  a0,-(sp)        ; team
-                jsr     _GetNumberOfAvailableSubstitutes
-                addq.l  #8,sp
-                move.w  d0,d7           ; available (low word)
-                swap    d0
-                move.w  d0,d6           ; disabled (high word)
-                rts
-
-; ===== GetNumberOfAvailableStartingPlayers =====
-; Bridge: a0=team, d0=flag → C params
-; Returns: d6=disabled, d7=available
-
-; ===== IsPlayerInjured =====
-; Bridge: a0=playerBase, d0=mode → C params, returns d0 + flags
-IsPlayerInjured:
-                movem.l d2-d7/a2-a6,-(sp)
-                ext.l   d0
-                move.l  d0,-(sp)        ; mode
-                move.l  a0,-(sp)        ; playerBase
-                jsr     _IsPlayerInjured
-                addq.l  #8,sp
-                tst.w   d0              ; set zero flag for callers
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-; Data tables moved to static const in C
 leagueMatchReceiptsMultiplierTable:
                 dc.b $01,$90,$01,$2C,$00,$C8,$00,$96,$00,$7D,$00,$64
 cupMatchReceiptsMultiplierTable:
                 dc.b $03,$20,$02,$58,$01,$90,$01,$2C,$00,$FA,$00,$C8
-
-; ===== ClampNewBalanceAndUpdateClubStatus =====
-; Ported to C: _ClampNewBalanceAndUpdateClubStatus (career_status.c)
-
-; ===== ClearOverdraftStateIfRecovered =====
-; Ported to C: _ClearOverdraftStateIfRecovered (career_status.c)
-
-; ===== MaybeSackManagerAfterSeasonReview =====
-; Ported to C: _MaybeSackManagerAfterSeasonReview (career_status.c)
-
-; ===== UpdateCareerChairmanWarningsAfterMatch =====
-
-; ===== ApplyWeeklyFinancialDeductions =====
-; Ported to C: _ApplyWeeklyFinancialDeductions (career_status.c)
-
-; ===== InitializeCareerSeasonFinancials =====
-; prototype: void __usercall InitializeCareerSeasonFinancials()
-; dos: cseg_3D204
-InitializeCareerSeasonFinancials:
-                jmp     _InitializeCareerSeasonFinancials
-
-; ===== ShouldApplyRandomPlayerStatusAfterSim =====
-; Ported to C: _ShouldApplyRandomPlayerStatusAfterSim (career_status.c)
-ShouldApplyRandomPlayerStatusAfterSim:
-                jmp     _ShouldApplyRandomPlayerStatusAfterSim
-
-; ===== UpdateBoardConfidenceScore =====
-; Ported to C: _UpdateBoardConfidenceScore (career_status.c)
-
-; ===== PushBoardConfidenceHistory =====
-; Ported to C: _PushBoardConfidenceHistory (career_status.c)
 ; __int16[5]
 seasonReviewConfidenceDeltaTable:
                 ; __int16[5]
@@ -22380,60 +17527,6 @@ seasonReviewConfidenceDeltaTable:
 nationalSelectorSeasonReviewReputationDeltaTable:
                 ; __int16[5]
                 dc.w 5,2,0,-2,-5
-
-; ===== BeginContractNegotiationSequence =====
-; prototype: void __usercall BeginContractNegotiationSequence()
-; ===== BeginContractNegotiationSequence ===== (ported to C → _BeginContractNegotiationSequence)
-; in: a0=ctx (diyCompetitionStart), a1=team ptr
-
-; ===== GetLowestAndHighestPlayerPrice =====
-; prototype: void __usercall GetLowestAndHighestPlayerPrice()
-; out:
-;      D4 - lowest player price
-;      D5 - highest player price
-; 
-; Find lowest and highest player price in the selected career team.
-
-; ===== GetPlayerRandomNum ===== (ported to C → _GetPlayerRandomNum in teams.c)
-; in: A0 = team entry ptr, out: D0.w = random number (0-255)
-
-; ===== GetTeamValueBase ===== (ported to C → _GetTeamValueBase in teams.c)
-; in: D0 = avgPrice, out: D0.w = team value base
-
-; ===== IsTeamNational ===== (ported to C → _IsTeamNational in teams.c)
-; in: A1 = teamGeneral ptr, out: D0.w = 1/0, Z flag
-IsTeamNational:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _IsTeamNational
-                addq.l  #4,sp
-                tst.w   d0
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== InitPlayerValueDisplayStruct =====
-; prototype: void __usercall InitPlayerValueDisplayStruct(void *dst@<a1>)
-InitPlayerValueDisplayStruct:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)        ; dst
-                move.l  a0,-(sp)        ; playerEntry
-                jsr     _InitPlayerValueDisplayStruct
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== FormatPlayerValueOrStatusText =====
-; prototype: void __usercall FormatPlayerValueOrStatusText(void *src@<a0>, char *dst@<a1>)
-FormatPlayerValueOrStatusText:
-; Ported to C: _FormatPlayerValueOrStatusText in src/teams.c
-; Bridge: a0=base, a1=dst → C params
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _FormatPlayerValueOrStatusText
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 pad_12654E:
                 dc.b $00,$00
 
@@ -22457,32 +17550,6 @@ displayedPlayerValueRandomDeltaTable:
                 dc.b $FE,$FE,$FE,$FE,$FE,$FE,$FE,$FE,$FE,$FE,$FE,$FE,$FE,$FE,$FE,$FE
                 dc.b $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
                 dc.b $FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF,$FF
-
-; ===== GetAveragePlayerPrice =====
-; prototype: unsigned __int16 __usercall GetAveragePlayerPrice@<d0>(void *team@<a0>)
-GetAveragePlayerPrice:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _GetAveragePlayerPrice
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-                move.w  (a0),d0
-                clr.w   d2
-                clr.w   d3
-                move.w  #$A,d1
-loc_126744:
-                movem.l d1,-(sp)
-                jsr     GetPlayerAtIndex
-                movem.l (sp)+,d1
-                move.b  $6C(a0),d2
-                add.w   d2,d3
-                dbf     d1,loc_126744
-                move.w  d3,d0
-                ext.l   d0
-                divu.w  #$27,d0         ; '''
-                rts
-                rts
 cachedViewResultTeam1Goals:
                 dc.w -1
 cachedViewResultTeam2Goals:
@@ -22501,9 +17568,6 @@ pad_126A90:
                 movem.l (sp)+,d2-d6/a0-a1
                 rts
 
-; ===== AreBasicColorsConflicting =====
-; prototype: void __usercall AreBasicColorsConflicting(unsigned __int8 color1@<d0>, unsigned __int8 color2@<d4>)
-; in:
 ; unsigned __int16[10]
 conflictingBasicTeamColorsTable:
                 ; unsigned __int16[10]
@@ -22546,270 +17610,14 @@ shirtType2:
 similarityFactor:
                 dc.w $0000              ; How similar are the colors of two teams
 
-; ===== GetNextCupRoundStringIndex ===== (ported to C → _GetNextCupRoundStringIndex)
-; d0=cur, d1=n, d2=add, returns d0=index
-
-; ===== GetNextCupRoundString ===== (ported to C → _GetNextCupRoundString)
-; d0=cur, d1=n, d2=add, returns a0=string pointer
-
-; ===== GetCupRoundStringIndex ===== (ported to C → _GetCupRoundStringIndex)
-; d0=cur, d1=flag, d2=idx, d3=stage, d4=opt, returns d0=index
-; ===== GetCupRoundString ===== (ported to C → _GetCupRoundString)
-; d0=cur, d1=flag, d2=idx, d3=stage, d4=opt, returns a0=string pointer
-
-; ===== MeasureTeamKitsSimilarity =====
-; prototype: unsigned __int8 *__usercall MeasureTeamKitsSimilarity@<a6>(const TeamFile *team1@<a0>, const TeamFile *team2@<a1>)
-; in:
-;      A0 -> team1 (file)
-;      A1 -> team2 (file)
-; out:
-;      A6 -> team kits similarity factors
 teamKitsSimilarity:
                 dc.b $00,$00,$00,$00    ; Team1 prim. vs team2 prim.
                                         ; team1 prim. vs team2 sec.
                                         ; team1 sec. vs team2 prim.
                                         ; team1 sec. vs team2 sec.
-
-; ===== ExtractSurname =====
-; prototype: const char *__usercall ExtractSurname@<a0>(const char *name@<a0>, unsigned __int16 maxLenAndFlags@<d0>)
-; Ported to C: _ExtractSurname in src/player_sprites.c
-ExtractSurname:
-                move.l  d0,-(sp)
-                move.l  a0,-(sp)
-                jsr     _ExtractSurname
-                addq.l  #8,sp
-                movea.l d0,a0
-                rts
-
-; ===== nullsub_11 =====
-; prototype: void nullsub_11(...)
-nullsub_11:
-                rts
-
-; ===== Int2StrWithCommas =====
-; prototype: void __usercall Int2StrWithCommas(unsigned int value@<d0>, char *dst@<a1>)
-Int2StrWithCommas:
-; Ported to C as static int2StrWithCommas() in string_utils.c (dead code — no asm callers)
-Int2AsciiLessThan100Check:
-
-; ===== GetBankBalance =====
-; prototype: void __usercall GetBankBalance(char *dst@<a1>)
-; in:
-;      A1 -> buffer to get bank balance
-; ===== GetBankBalance =====
-; Bridge: a1=dst → _GetBankBalance(uint8_t*)
-GetBankBalance:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _GetBankBalance
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== Int2Pounds =====
-; prototype: void __usercall Int2Pounds(unsigned int pounds@<d0>, char *dst@<a1>)
-; in:
-;      D0 - pounds quantity
-;      A1 -> buffer for string
-; 
-; Accepts only positive values.
-; ===== Int2Pounds =====
-; Bridge: d0.l=value, a1=dst → _Int2Pounds(uint32_t, uint8_t*)
-
-; ===== Int2PoundsSigned =====
-; prototype: void __usercall Int2PoundsSigned(int pounds@<d0>, char *dst@<a1>)
-; Bridge: d0.l=value, a1=dst → _Int2PoundsSigned(int32_t, uint8_t*)
-
-; ===== WriteAccountBalance =====
-; prototype: void __usercall WriteAccountBalance(int delta@<d0>, char *dst@<a1>)
-; Bridge: d0.l=delta, a1=dst → _WriteAccountBalance(int32_t, uint8_t*)
-loc_127414:
-                mulu.w  #1000,d0
-                bsr.w   nullsub_11
-                divu.w  #1000,d0
-                move.w  d0,d1
-                andi.l  #$FFFF,d1
-                divu.w  #$3E8,d1
-                beq.s   loc_127466
-                move.l  d1,d0
-                swap    d1
-                tst.w   d1
-                beq.s   loc_12745E
-                andi.l  #$FFFF,d1
-                divu.w  #$A,d1
-                move.w  d1,d2
-                andi.l  #$FFFF,d2
-                divu.w  #$A,d2
-                swap    d2
-                tst.w   d2
-                bne.s   loc_127456
-                swap    d2
-                move.w  d2,d1
-loc_127456:
-                lea     (a01m).l,a0     ; "�%0.%1M"
-                bra.s   loc_12746E
-loc_12745E:
-                lea     (a0m).l,a0      ; "�%0M"
-                bra.s   loc_12746E
-loc_127466:
-                swap    d1
-                lea     (a1k).l,a0      ; "�%1K"
-loc_12746E:
-                jmp PrintFormatted(pc)
-                ext.w   d0
-                move.w  d0,(numNeededTeams).l
-                clr.w   d0
-                rts
-
-; ===== InitCompetitionTeamSelectionFromTableHeader =====
-; prototype: unsigned __int16 __usercall InitCompetitionTeamSelectionFromTableHeader@<d0>(void *base@<a0>)
-; Ported to C: _InitCompetitionTeamSelectionFromTableHeader in career_init.c
-; Bridge: a0=base → C param, returns d0=0
-
-; ===== InitCompetitionTeamSelectionFromAltTableHeader =====
-; prototype: unsigned __int16 __usercall InitCompetitionTeamSelectionFromAltTableHeader@<d0>(void *base@<a0>)
-; Ported to C: _InitCompetitionTeamSelectionFromAltTableHeader in career_init.c
-; Bridge: a0=base → C param, returns d0=0
-
-; ===== IsNationalTeamCompetitionOrQualification =====
-; prototype: unsigned __int16 __usercall IsNationalTeamCompetitionOrQualification@<d0>(const void *key@<a5>)
-; Ported to C: _IsNationalTeamCompetitionOrQualification in diy_competition.c
-; Bridge: a5=key → C param. Returns d0=0 if found (Z set), d0=1 if not found (Z clear).
-
-; ===== CheckContinueAbortPrompt =====
-; prototype: __int16 __usercall CheckContinueAbortPrompt@<d0>(const char *header@<a0>)
-; in:
-;      A0 -> header string
-; out:
-;      zero flag - 0 - continue (D0 = 0)
-;                  1 - abort (D0 = 1)
-; 
-; Depending on the value of gameType shows continue/abort prompt.
-; Ported to C: _CheckContinueAbortPrompt in match_sim.c
-; Bridge: a0=header → stack param, d0=return, sets ZF
-
-; ===== InitCareerVariables =====
-; prototype: void __usercall InitCareerVariables(unsigned __int16 gameType@<d0>)
-; in:
-;      D0 - game type
-InitCareerVariables:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d0,-(sp)
-                jsr     _InitCareerVariables
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== InitTeams =====
-; prototype: void __usercall InitTeams()
-; Ported to C: _InitTeams in match_sim.c
-InitTeams:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _InitTeams
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== InitAndPlayGame ===== (ported to C → _InitAndPlayGame)
-; Bridge: a1=team1, a2=team2 → C
-
-; ===== PlayDIYCupFixtureAndCacheResult ===== (ported to C → _PlayDIYCupFixtureAndCacheResult)
-; Bridge: a1=team1, a2=team2, d6=allowSquadChanges, d7=mode → C
-; Returns Z flag: Z=1 (success), Z=0 (cancelled)
-
-; ===== PlayDIYLeagueMatchAndCacheResult ===== (ported to C → _PlayDIYLeagueMatchAndCacheResult)
-; Bridge: a1=team1, a2=team2, d6=allowSquadChanges, d7=mode → C
-; Returns Z flag: Z=1 (success), Z=0 (cancelled)
-
-; ===== SetupPlayers ===== (ported to C → _SetupPlayers)
-; Bridge: a1=team1, a2=team2, d1=maxSubs, d2=excludeFlags, d6=allowSquadChanges, d7=mode → C
 exitGameFlag:
                 dc.w $0000              ; Must be zero in order to start the game, if 1 SetupPlayers bails
 
-; ===== InitializeInGameTeamsAndStartGame =====
-; prototype: void __usercall InitializeInGameTeamsAndStartGame(__int16 randomizePitch@<d0>, __int16 minSubs@<d1>, __int16 maxSubs@<d2>, __int16 paramD3@<d3>, __int16 paramD7@<d7>, struct TeamFile *team1@<a1>, struct TeamFile *team2@<a2>)
-; in:
-;      D0 = randomize pitch number (among else) (true for friendly, false for career)
-;      D1 = min substitutes
-;      D2 = max substitutes
-;      D3 = 0
-;      D7 = -1
-;      A1 -> team 1 (structures from file)
-;      A2 -> team 2
-; ===== InitializeInGameTeamsAndStartGame ===== (Ported to C → _InitializeInGameTeamsAndStartGame in game_init.c, Chunk 214)
-; Bridge: d0=randomizePitch, d1=minSubs, d2=maxSubs, d3=paramD3, d7=paramD7, a1=team1, a2=team2
-
-; ===== UpdateCareerPlayerStatsAfterMatch =====
-; prototype: void __usercall UpdateCareerPlayerStatsAfterMatch(struct TeamGame *teamGame@<a1>, struct TeamFile *teamFile@<a2>)
-; in:
-;      A1 -> team (game)
-;      A2 -> team (file)
-; dos: cseg_2F0E2
-; Bridge: a1=TeamGame*, a2=TeamFile* → _UpdateCareerPlayerStatsAfterMatch(TeamGame*, uint8_t*)
-
-; ===== ApplyPlayerStatusAfterSim =====
-; prototype: void __usercall ApplyPlayerStatusAfterSim(struct TeamGame *teamGame@<a1>, struct TeamFile *teamFile@<a2>)
-; in:
-;      A1 -> team (game)
-;      A2 -> team (file)
-; dos: cseg_2F194
-; Bridge: a1=TeamGame*, a2=TeamFile* → _ApplyPlayerStatusAfterSim(TeamGame*, uint8_t*)
-
-; ===== UpdatePlayerInjuries =====
-; prototype: void __usercall UpdatePlayerInjuries(struct TeamGame *teamGame@<a1>, struct TeamFile *teamFile@<a2>)
-; in:
-;      A1 -> team (game)
-;      A2 -> team (file)
-; Bridge: a1=TeamGame*, a2=TeamFile* → _UpdatePlayerInjuries(TeamGame*, uint8_t*)
-
-; ===== AccumulateMatchGoalsIntoTeamFile =====
-; prototype: void __usercall AccumulateMatchGoalsIntoTeamFile(struct TeamGame *teamGame@<a1>, struct TeamFile *teamFile@<a2>, __int16 offset@<d7>)
-; in:
-;      A1 -> team (game)
-;      A2 -> team (file)
-;      D7 -  some offset
-; Bridge: a1=TeamGame*, a2=TeamFile*, d7.w=statOffset
-; → _AccumulateMatchGoalsIntoTeamFile(TeamGame*, uint8_t*, uint16_t)
-
-; ===== InitInGameTeamStructure =====
-; prototype: void __usercall InitInGameTeamStructure(struct TeamFile *teamFile@<a2>, struct TeamGame *teamGame@<a4>, __int16 *avgPricePct@<a6>)
-; in:
-;      A2 -> this team (file)
-;      A4 -> team (in game) - to fill
-;      A6 -> selected teams average player price in percents
-;            compared to this team average player price
-; Bridge: a2=TeamFile*, a4=TeamGame*, a6=int16_t* avgPricePct
-; → _InitInGameTeamStructure(uint8_t*, TeamGame*, int16_t*)
-
-; ===== SetPlayerNameAndFace =====
-; prototype: void __usercall SetPlayerNameAndFace(struct PlayerFile *playerFile@<a5>, struct PlayerInfoHeader *playerGame@<a6>)
-; in:
-;      A5 -> player + header (file)
-;      A6 -> player + header (game)
-; Bridge: a5=playerBase, a6=PlayerInfoHeader base (PlayerInfo at a6+42)
-; → _SetPlayerNameAndFace(uint8_t *playerBase, PlayerInfo *pi)
-
-; ===== InitInGamePlayer =====
-; prototype: void __usercall InitInGamePlayer(__int16 playerIndex@<d1>, struct PlayerFile *playerFile@<a5>, struct PlayerInfoHeader *playerGame@<a6>)
-; in:
-;      D1 - player index
-;      A5 -> player (file) + header
-;      A6 -> player (game) + header
-; 
-; Generates player short name used for displaying in top left corner when they have the ball.
-; Initializes other fields. Full name isn't copied here.
-; Bridge: d1.w=playerIndex, d2.w=playerSlot, a5=playerBase,
-;         a6=PlayerInfoHeader base (PlayerInfo at a6+42)
-; → _InitInGamePlayer(uint16_t playerIndex, uint16_t playerSlot,
-;                     uint8_t *playerBase, PlayerInfo *pi)
-
-; ===== SetInGameTeamsPrimaryColors =====
-; prototype: void __usercall SetInGameTeamsPrimaryColors(struct TeamFile *topTeamFile@<a2>, struct TeamFile *bottomTeamFile@<a3>, unsigned __int8 *similarityFactors@<a6>)
-
-; ===== ConvertTeamKitColors =====
-; prototype: void __usercall ConvertTeamKitColors(unsigned __int16 shirtType@<d0>, unsigned __int8 stripesColor@<d1>, unsigned __int8 basicColor@<d2>, unsigned __int8 shortsColor@<d3>, unsigned __int8 socksColor@<d4>, struct TeamGame *team@<a1>)
-; in:
-;     D0 -  primary shirt type
-;     D1 -  primary shirt stripes color
 teamKitTieBreakColors:
                 dc.b $04,$05,$01,$07,$09,$00,$03,$06,$08,$02,$FF,$00 ; Single color kit colors to try to resolve too similar team kits
 avgSelectedTeamsPlayerPrice:
@@ -22831,133 +17639,6 @@ team2AppPercent:
 pad_128EDC:
                 dc.b 'cd_dZdUdPdKdFdAdcd_dZdUdPdKdFdAd',0,$00
 
-; ===== DIY_LoadCurrentCompetitionSlot ===== (ported to C → _DIY_LoadCurrentCompetitionSlot)
-DIY_LoadCurrentCompetitionSlot:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _DIY_LoadCurrentCompetitionSlot
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== DIY_AdvanceToNextCompetitionSlot ===== (ported to C → _DIY_AdvanceToNextCompetitionSlot)
-DIY_AdvanceToNextCompetitionSlot:
-                jmp     _DIY_AdvanceToNextCompetitionSlot
-
-; ===== DIY_EditCompetitionSlot ===== (ported to C → _DIY_EditCompetitionSlot)
-; d0=paramA, d1=paramB, d2=paramC
-DIY_EditCompetitionSlot:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d2
-                move.l  d2,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _DIY_EditCompetitionSlot
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-                ; === dead code below (old body) ===
-loc_1291BE:
-                lea     (diyFileBufferCopy).l,a2
-                movea.l a2,a3
-                move.w  DIY_COMPETITION_FIELD_3A+$1A(a2),d0
-                mulu.w  #$76,d0         ; 'v'
-                adda.l  d0,a3
-                lea     (diyCompetitionStart).l,a4
-                lea     (diyCompetitionStart).l,a5
-                tst.w   $15E(a3)
-                beq.w   loc_12928E
-                move.w  #1,DIY_COMPETITION_FIELD_3A+$E(a5)
-                move.w  DIY_COMPETITION_FIELD_3A+$1A(a2),d0
-                addq.w  #1,d0
-                cmp.w   $52(a2),d0
-                bne.s   loc_1291FC
-                move.w  #2,DIY_COMPETITION_FIELD_3A+$E(a5)
-loc_1291FC:
-                move.w  (diyEditParamA).l,d0
-                move.w  (diyEditParamB).l,d1
-                move.w  (diyEditParamC).l,d2
-                move.w  DIY_COMPETITION_FIELD_3A+6(a2),DIY_COMPETITION_FIELD_3A+6(a5)
-                move.w  DIY_COMPETITION_FIELD_3A+4(a2),DIY_COMPETITION_FIELD_3A+4(a5)
-                move.w  DIY_COMPETITION_FIELD_3A+8(a2),DIY_COMPETITION_FIELD_3A+8(a5)
-                movem.l d7/a2-a5,-(sp)
-                jsr     ShowDiyLeaguesTournamentMenu
-                movem.l (sp)+,d7/a2-a5
-                move.w  DIY_COMPETITION_FIELD_3A(a5),DIY_COMPETITION_FIELD_3A(a2)
-                move.w  DIY_COMPETITION_FIELD_3A+$A(a5),DIY_COMPETITION_FIELD_3A+$A(a2)
-                move.w  DIY_COMPETITION_FIELD_3A+$C(a5),DIY_COMPETITION_FIELD_3A+$C(a2)
-                move.w  DIY_COMPETITION_FIELD_3A+6(a5),DIY_COMPETITION_FIELD_3A+6(a2)
-                move.w  DIY_COMPETITION_FIELD_3A+4(a5),DIY_COMPETITION_FIELD_3A+4(a2)
-                move.w  DIY_COMPETITION_FIELD_3A+8(a5),DIY_COMPETITION_FIELD_3A+8(a2)
-                tst.w   DIY_COMPETITION_SIZE(a5)
-                seq     DIY_COMPETITION_FIELD_3A+$1C(a2)
-                cmpi.w  #4,(gameType).l
-                beq.s   locret_12926E
-                cmpi.w  #3,(gameType).l
-                bne.s   loc_129270
-locret_12926E:
-                rts
-loc_129270:
-                tst.w   DIY_COMPETITION_FIELD_3A+$E(a5)
-                bmi.w   locret_129354
-                movem.l d7/a2-a5,-(sp)
-                bsr.w   DIY_AdvanceToNextCompetitionSlot
-                movem.l (sp)+,d7/a2-a5
-                tst.w   DIY_COMPETITION_FIELD_3A+$1E(a2)
-                beq.w   loc_1291BE
-                rts
-loc_12928E:
-                move.w  #1,DIY_COMPETITION_FIELD_3A+$E(a4)
-                move.w  DIY_COMPETITION_FIELD_3A+$1A(a2),d0
-                addq.w  #1,d0
-                cmp.w   DIY_COMPETITION_FIELD_3A+$18(a2),d0
-                bne.s   loc_1292A6
-                move.w  #2,DIY_COMPETITION_FIELD_3A+$E(a4)
-loc_1292A6:
-                move.w  (diyEditParamA).l,d0
-                move.w  (diyEditParamB).l,d1
-                move.w  (diyEditParamC).l,d2
-                move.w  DIY_COMPETITION_FIELD_3A+$E(a2),DIY_COMPETITION_FIELD_3A+$12(a4)
-                move.w  DIY_COMPETITION_FIELD_3A+6(a2),DIY_COMPETITION_FIELD_3A+6(a4)
-                move.w  DIY_COMPETITION_FIELD_3A+4(a2),DIY_COMPETITION_FIELD_3A+4(a4)
-                move.w  DIY_COMPETITION_FIELD_3A+8(a2),DIY_COMPETITION_FIELD_3A+8(a4)
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     ShowDIYCupMenuWithParams
-                movem.l (sp)+,d0-d7/a0-a6
-                move.w  DIY_COMPETITION_FIELD_3A+$12(a4),DIY_COMPETITION_FIELD_3A+$E(a2)
-                move.w  DIY_COMPETITION_FIELD_3A(a4),DIY_COMPETITION_FIELD_3A(a2)
-                move.w  DIY_COMPETITION_FIELD_3A+$A(a4),DIY_COMPETITION_FIELD_3A+$A(a2)
-                move.w  DIY_COMPETITION_FIELD_3A+$C(a4),DIY_COMPETITION_FIELD_3A+$C(a2)
-                move.w  DIY_COMPETITION_FIELD_3A+6(a4),DIY_COMPETITION_FIELD_3A+6(a2)
-                move.w  DIY_COMPETITION_FIELD_3A+4(a4),DIY_COMPETITION_FIELD_3A+4(a2)
-                move.w  DIY_COMPETITION_FIELD_3A+8(a4),DIY_COMPETITION_FIELD_3A+8(a2)
-                tst.w   DIY_COMPETITION_FIELD_3A+$1C(a4)
-                sne     DIY_COMPETITION_FIELD_3A+$1C(a2)
-                cmpi.w  #4,(gameType).l
-                beq.s   loc_129324
-                cmpi.w  #3,(gameType).l
-                bne.s   loc_129338
-loc_129324:
-                tst.w   DIY_COMPETITION_FIELD_3A+$1A(a4)
-                beq.s   locret_129336
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   DIY_UpdateCompetitionProgress
-                movem.l (sp)+,d0-d7/a0-a6
-locret_129336:
-                rts
-loc_129338:
-                tst.w   DIY_COMPETITION_FIELD_3A+$E(a4)
-                bmi.s   locret_129354
-                movem.l d7/a2-a5,-(sp)
-                bsr.w   DIY_AdvanceToNextCompetitionSlot
-                movem.l (sp)+,d7/a2-a5
-                tst.w   DIY_COMPETITION_FIELD_3A+$1E(a2)
-                beq.w   loc_1291BE
-                rts
-locret_129354:
-                rts
-                move.w  #$4412,(panicReasonCode).l
-                jsr     PanicHaltLoop
 diyEditParamA:
                 dc.w $0000
 diyEditParamB:
@@ -22990,12 +17671,6 @@ diyGroupPatternLookup:
 diyTournamentShuffleOrder8:
                 dc.b $06,$01,$05,$04,$02,$03,$07,$00 ; Index mapping table for reordering 8 teams in a 2-group DIY tournament.
 
-; ===== sub_129960 ===== (data-as-code pattern, used as 4-byte lookup table by DIY_BuildCompSpecificTeamList case 3)
-; Ported — the data bytes are now in C as diyCompSpecificShuffle4[]
-sub_129960:
-                andi.b  #0,d1
-                move.w  #$7700,(panicReasonCode).l
-                jsr     PanicHaltLoop
 ; unsigned __int16[20]
 diyTournamentInitTable:
                 ; unsigned __int16[20]
@@ -23003,322 +17678,6 @@ diyTournamentInitTable:
                 dc.w $0000,$0008,$0004,$0000,$0004,$0002,$0000,$0002
                 dc.w $0001,$0001,$0001,$0001
 
-; ===== DIY_BuildTeamSelectionPointerCache =====
-; prototype: void __usercall DIY_BuildTeamSelectionPointerCache()
-; ===== DIY_BuildTeamSelectionPointerCache ===== (ported to C → _DIY_BuildTeamSelectionPointerCache)
-DIY_BuildTeamSelectionPointerCache:
-                jmp     _DIY_BuildTeamSelectionPointerCache
-
-; ===== DIY_UpdateCompetitionProgress ===== (ported to C → _DIY_UpdateCompetitionProgress)
-DIY_UpdateCompetitionProgress:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _DIY_UpdateCompetitionProgress
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-                ; === dead code below (old body) ===
-                tst.w   (diyCompetitionStart+DIY_COMPETITION_FIELD_3A+$1C).l
-                bne.w   locret_12A26E
-                lea     (diyCompetitionStart).l,a0
-                cmpi.w  #1,DIY_COMPETITION_FIELD_2+$148(a0)
-                beq.s   loc_12A112
-                cmpi.w  #2,$14C(a0)
-                beq.w   loc_12A1AA
-loc_12A112:
-                tst.w   $32E(a0)
-                bne.w   loc_12A1E8
-                bsr.w   DIY_ReorderTeamGridByOrderList
-                lea     (diyCompetitionStart).l,a0
-                cmpi.w  #2,DIY_COMPETITION_FIELD_2+$14A(a0)
-                beq.s   loc_12A148
-                tst.w   $330(a0)
-                bne.s   loc_12A148
-                move.w  $58(a0),d0
-                lsl.w   #1,d0
-                lea     (a0,d0.w),a1
-                cmpi.w  #1,$7E(a1)
-                beq.s   loc_12A148
-                addq.w  #1,$336(a0)
-loc_12A148:
-                addq.w  #1,$336(a0)
-                addq.w  #1,$58(a0)
-                move.w  $50(a0),d0
-                lsr.w   #1,d0
-                move.w  d0,$50(a0)
-                move.w  $50(a0),$52(a0)
-                clr.w   $64(a0)
-                move.w  $58(a0),d0
-                lsl.w   #1,d0
-                move.w  $66(a0,d0.w),$14C(a0)
-                cmpi.w  #1,$50(a0)
-                bne.s   loc_12A184
-                cmpi.w  #2,$14C(a0)
-                beq.s   loc_12A184
-                clr.w   $14C(a0)
-loc_12A184:
-                clr.w   $330(a0)
-                clr.w   $32E(a0)
-                clr.w   $54(a0)
-                clr.w   $14A(a0)
-                move.b  #0,d1
-                lea     $8A(a0),a0
-                move.w  #$1F,d0
-loc_12A1A0:
-                move.b  d1,(a0)+
-                dbf     d0,loc_12A1A0
-                bra.w   loc_12A24E
-loc_12A1AA:
-                addq.w  #1,$336(a0)
-                addq.w  #1,$14A(a0)
-                clr.w   $64(a0)
-                clr.w   $54(a0)
-                lea     $CA(a0),a1
-                lea     $14E(a0),a2
-                lea     $2CE(a0),a3
-                move.w  $52(a0),d1
-                lea     $8A(a0),a0
-                subq.w  #1,d1
-loc_12A1D0:
-                move.b  #$20,(a0)+      ; ' '
-                move.w  (a3),d0
-                ror.w   #8,d0
-                move.w  d0,(a3)+
-                move.w  (a1)+,d0
-                ror.w   #8,d0
-                move.w  d0,(a2)+
-                dbf     d1,loc_12A1D0
-                bra.w   loc_12A24E
-loc_12A1E8:
-                bsr.w   DIY_ReorderTeamsBySelectionFlags
-                lea     (diyCompetitionStart).l,a0
-                tst.w   $330(a0)
-                bne.s   loc_12A204
-                cmpi.w  #2,$14C(a0)
-                beq.s   loc_12A204
-                addq.w  #1,$336(a0)
-loc_12A204:
-                move.w  $32E(a0),$52(a0)
-                cmpi.w  #2,$14C(a0)
-                bne.s   loc_12A216
-                clr.w   $14C(a0)
-loc_12A216:
-                clr.w   $14A(a0)
-                addq.w  #1,$330(a0)
-                clr.w   $64(a0)
-                clr.w   $54(a0)
-                lea     $2CE(a0),a3
-                move.w  $52(a0),d2
-                move.b  #0,d1
-                tst.w   $330(a0)
-                beq.s   loc_12A23C
-                bset    #6,d1
-loc_12A23C:
-                lea     $8A(a0),a0
-                subq.w  #1,d2
-loc_12A242:
-                move.b  d1,(a0)+
-                move.w  (a3),d0
-                ror.w   #8,d0
-                move.w  d0,(a3)+
-                dbf     d2,loc_12A242
-loc_12A24E:
-                tst.w   (careerLoadedFlag).l
-                bne.s   locret_12A26E
-                cmpi.w  #4,(gameType).l
-                beq.w   loc_12D36A
-                cmpi.w  #3,(gameType).l
-                beq.w   loc_12D36A
-locret_12A26E:
-                rts
-
-; ===== DIY_ReorderTeamsBySelectionFlags ===== (ported to C → _DIY_ReorderTeamsBySelectionFlags)
-DIY_ReorderTeamsBySelectionFlags:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _DIY_ReorderTeamsBySelectionFlags
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-                ; === dead code below (old body) ===
-                lea     (diyCompetitionStart).l,a0
-                lea     $2CE(a0),a3
-                lea     $8A(a0),a2
-                lea     $CA(a0),a1
-                clr.w   d1
-                clr.w   d2
-loc_12A286:
-                btst    #1,(a2,d1.w)
-                bne.w   loc_12A31E
-                lsl.w   #1,d1
-                lsl.w   #1,d2
-                move.w  (a3,d1.w),d0
-                move.w  (a3,d2.w),(a3,d1.w)
-                move.w  d0,(a3,d2.w)
-                move.w  (a1,d1.w),d0
-                move.w  (a1,d2.w),(a1,d1.w)
-                move.w  d0,(a1,d2.w)
-                addi.w  #$84,d1
-                addi.w  #$84,d2
-                move.w  (a1,d1.w),d0
-                move.w  (a1,d2.w),(a1,d1.w)
-                move.w  d0,(a1,d2.w)
-                subi.w  #$84,d1
-                subi.w  #$84,d2
-                addi.w  #$104,d1
-                addi.w  #$104,d2
-                move.w  (a1,d1.w),d0
-                move.w  (a1,d2.w),(a1,d1.w)
-                move.w  d0,(a1,d2.w)
-                subi.w  #$104,d1
-                subi.w  #$104,d2
-                lsr.w   #1,d1
-                lsr.w   #1,d2
-                move.b  (a2,d1.w),d0
-                move.b  (a2,d2.w),(a2,d1.w)
-                move.b  d0,(a2,d2.w)
-                tst.w   $48(a0)
-                bne.s   loc_12A31C
-                lea     $30E(a0),a4
-loc_12A308:
-                cmp.b   (a4)+,d1
-                bne.s   loc_12A308
-                lea     $30E(a0),a5
-loc_12A310:
-                cmp.b   (a5)+,d2
-                bne.s   loc_12A310
-                move.b  d1,-1(a5)
-                move.b  d2,-1(a4)
-loc_12A31C:
-                addq.w  #1,d2
-loc_12A31E:
-                addq.w  #1,d1
-                cmp.w   $52(a0),d1
-                bne.w   loc_12A286
-                rts
-                lea     (diyCompetitionStart).l,a0
-                lea     $2CE(a0),a1
-                move.w  $52(a0),d1
-                lsl.w   #1,d1
-                subq.w  #1,d1
-loc_12A364:
-                move.b  (a1)+,d2
-                ext.w   d2
-                mulu.w  #4,d2
-                lea     (a0,d2.w),a2
-                movea.l $344(a2),a2
-                adda.l  #selTeamsPtr,a2
-                cmp.w   (a2),d0
-                beq.s   loc_12A388
-                dbf     d1,loc_12A364
-                move.w  #1,d0
-                rts
-loc_12A388:
-                clr.w   d0
-                rts
-
-; ===== DIY_ReorderTeamGridByOrderList =====
-; prototype: void __usercall DIY_ReorderTeamGridByOrderList()
-; ===== DIY_ReorderTeamGridByOrderList ===== (ported to C → _DIY_ReorderTeamGridByOrderList)
-DIY_ReorderTeamGridByOrderList:
-                jmp     _DIY_ReorderTeamGridByOrderList
-
-; ===== DIY_GetCurrentMatchTeamSlots ===== (ported to C → _DIY_GetCurrentMatchTeamSlots)
-; Bridge: outputs a1, a2 (slot pointers)
-
-; ===== DIY_CompareCurrentMatchTeamCategories ===== (ported to C → _DIY_CompareCurrentMatchTeamCategories)
-; Bridge: returns d0
-
-; ===== DIY_PlayCupMatchAndAdvance ===== (ported to C → _DIY_PlayCupMatchAndAdvance)
-; prototype: void __usercall DIY_PlayCupMatchAndAdvance(unsigned __int16 mode@<d7>)
-; d6=allowSquadChanges (implicit), d7=mode → C params
-DIY_PlayCupMatchAndAdvance:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d7
-                move.l  d7,-(sp)        ; mode
-                andi.l  #$FFFF,d6
-                move.l  d6,-(sp)        ; allowSquadChanges
-                jsr     _DIY_PlayCupMatchAndAdvance
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                tst.w   d0
-                rts
-loc_12AB5C:
-                lea     (diyCompetitionStart).l,a2
-                move.b  $38(a2),$2F(a2)
-                clr.w   $1BE(a2)
-                clr.w   $5C(a2)
-                clr.w   $1CC(a2)
-                clr.w   $1CA(a2)
-                clr.w   $1C2(a2)
-                clr.w   $1C0(a2)
-                move.w  $6A(a2),$6C(a2)
-                move.w  $5E(a2),$60(a2)
-                move.w  #$3F,d0         ; '?'
-loc_12AB90:
-                clr.w   $2B8(a2)
-                clr.w   $2BA(a2)
-                clr.w   $2BC(a2)
-                clr.w   $2BE(a2)
-                clr.w   $2C0(a2)
-                clr.w   $2C2(a2)
-                clr.w   $2C4(a2)
-                adda.l  #$12,a2
-                dbf     d0,loc_12AB90
-                rts
-
-
-; ===== VerifyTeamLoaded ===== (ported to C → _VerifyTeamLoaded)
-; d0=teamNum, returns a0=team ptr
-VerifyTeamLoaded:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d0,-(sp)
-                jsr     _VerifyTeamLoaded
-                addq.l  #4,sp
-                movea.l d0,a0
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== DIY_GetCurrentFixtureTeamPtrs ===== (ported to C → _DIY_GetCurrentFixtureTeamPtrs)
-; returns a1=team1 comp record, a2=team2 comp record
-DIY_GetCurrentFixtureTeamPtrs:
-                movem.l d2-d7/a3-a6,-(sp)
-                jsr     _DIY_GetCurrentFixtureTeamPtrs
-                movem.l (sp)+,d2-d7/a3-a6
-                movea.l (fixtureTeam1CompPtr).l,a1
-                movea.l (fixtureTeam2CompPtr).l,a2
-                rts
-
-; ===== DIY_AdvanceLeagueProgressAfterMatch ===== (ported to C → _DIY_AdvanceLeagueProgressAfterMatch)
-; a1=team1, a2=team2
-DIY_AdvanceLeagueProgressAfterMatch:
-                move.l  a2,-(sp)
-                move.l  a1,-(sp)
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _DIY_AdvanceLeagueProgressAfterMatch
-                movem.l (sp)+,d2-d7/a2-a6
-                addq.l  #8,sp
-                rts
-
-; ===== DIY_PlayOrSimulateLeagueFixture ===== (ported to C → _DIY_PlayOrSimulateLeagueFixture)
-; prototype: __int16 __usercall DIY_PlayOrSimulateLeagueFixture@<d0>(__int16 selector@<d7>)
-; d6=allowSquadChanges (implicit), d7=selector → C params
-DIY_PlayOrSimulateLeagueFixture:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d7
-                move.l  d7,-(sp)        ; selector
-                andi.l  #$FFFF,d6
-                move.l  d6,-(sp)        ; allowSquadChanges
-                jsr     _DIY_PlayOrSimulateLeagueFixture
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                tst.w   d0
-                rts
-
-; ===== SaveSelectedTeams =====
-; prototype: void __usercall SaveSelectedTeams()
-SaveSelectedTeams:
-                jmp     _SaveSelectedTeams
-
-; ===== RestoreSelectedTeams ===== (ported to C → _RestoreSelectedTeams)
-RestoreSelectedTeams:
-                jmp     _RestoreSelectedTeams
 euroCupTitleHolderTeamId:
                 dc.w $0000
 cupWinnersCupTitleHolderTeamId:
@@ -23371,120 +17730,7 @@ diyQualifiedTeamIndices:
                 ; unsigned __int16[16]
                 dc.w $0000,$0000,$0000,$0000,$0000,$0000,$0000,$0000 ; Buffer receiving team index words during DIY league qualification processing.
                 dc.w $0000,$0000,$0000,$0000,$0000,$0000,$0000,$0000
-loc_12B1F4:
-                movea.l (a1),a0
-                move.w  (a3),d1
-                beq.s   loc_12B204
-                subq.w  #1,d1
-loc_12B1FC:
-                cmp.w   (a0)+,d0
-                beq.s   locret_12B208
-                dbf     d1,loc_12B1FC
-loc_12B204:
-                move.w  #1,d1
-locret_12B208:
-                rts
-loc_12B20A:
-                movea.l (a1),a4
-                move.w  (a0),(a4)+
-                move.l  a4,(a1)
-                addq.w  #1,(a3)
-                bsr.w   Career_AppendTeamToTmdTeamPool
-                rts
-loc_12B218:
-                movea.l (a1),a4
-                move.w  (a0),d0
-loc_12B21C:
-                cmpa.l  (a2),a4
-                beq.s   locret_12B234
-                cmp.w   (a4)+,d0
-                bne.s   loc_12B21C
-                subq.w  #1,(a3)
-                subq.l  #2,(a2)
-                subq.l  #2,a4
-loc_12B22A:
-                cmpa.l  (a2),a4
-                beq.s   locret_12B234
-                move.w  2(a4),(a4)+
-                bra.s   loc_12B22A
-locret_12B234:
-                rts
-loc_12B63E:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     Career_AutoAdvanceLeagueCompetitionFromRecord
-                movem.l (sp)+,d0-d7/a0-a6
-loc_12B6AC:
-                move.w  #$1991,(panicReasonCode).l
-                jsr     PanicHaltLoop
-loc_12B6BA:
-                move.w  #$1992,(panicReasonCode).l
-                jsr     PanicHaltLoop
 
-; ===== Career_ProcessCompetitionForNextSeason =====
-; prototype: void __usercall Career_ProcessCompetitionForNextSeason(unsigned __int8 comp@<d0>)
-; ===== Career_ProcessCompetitionForNextSeason ===== (ported to C)
-; in: d0.b = competition ID
-
-; ===== nullsub_13 =====
-; prototype: void nullsub_13(...)
-nullsub_13:
-                rts
-
-; ===== DIY_LoadCompetitionDivisionForGrid =====
-; prototype: void __usercall DIY_LoadCompetitionDivisionForGrid(void *competition@<a4>, unsigned __int16 arg@<d7>)
-DIY_LoadCompetitionDivisionForGrid:
-                bsr.s   nullsub_13
-                movea.l a4,a0
-                move.w  d7,d0
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     Career_AutoAdvanceInternationalCompetitionFixtures
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== DIY_LoadCompetitionForQualifiedTeamsGrid =====
-; prototype: void __usercall DIY_LoadCompetitionForQualifiedTeamsGrid(void *competition@<a4>)
-DIY_LoadCompetitionForQualifiedTeamsGrid:
-                bsr.s   nullsub_13
-                movea.l a4,a0
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     Career_AutoAdvanceCupCompetitionFromRecord
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== DIY_EditCompetitionSlotForCompetition =====
-; prototype: void __usercall DIY_EditCompetitionSlotForCompetition(void *competition@<a4>)
-DIY_EditCompetitionSlotForCompetition:
-                bsr.s   nullsub_13
-                movea.l a4,a0
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     Career_AutoAdvanceLeagueCompetitionFromRecord
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-loc_12BCD0:
-                move.w  #$3003,(panicReasonCode).l
-                jsr     PanicHaltLoop
-
-; ===== Career_ProcessSecondaryCompetitionForNextSeason =====
-; prototype: void __usercall Career_ProcessSecondaryCompetitionForNextSeason(void *competition@<a4>)
-; ===== Career_ProcessSecondaryCompetitionForNextSeason ===== (ported to C)
-; in: a4 = competition record ptr
-
-; ===== Career_ProcessTertiaryCompetitionForNextSeason =====
-; prototype: void __usercall Career_ProcessTertiaryCompetitionForNextSeason(void *competition@<a4>)
-
-; ===== DIY_ApplyPromotionRelegationWeightsToScratch ===== (ported to C → _DIY_ApplyPromotionRelegationWeightsToScratch)
-; a2=weights
-
-; ===== Career_FillRandomTeamListExcludingSelected ===== (ported to C → _Career_FillRandomTeamListExcludingSelected)
-; d0=excludeCount, a0=table, a1=compIds
-
-; ===== DIY_LoadLeagueScratchFromTable ===== (ported to C → _DIY_LoadLeagueScratchFromTable)
-DIY_LoadLeagueScratchFromTable:
-                jmp     _DIY_LoadLeagueScratchFromTable
-
-; ===== DIY_SaveLeagueScratchToTable ===== (ported to C → _DIY_SaveLeagueScratchToTable)
-DIY_SaveLeagueScratchToTable:
-                jmp     _DIY_SaveLeagueScratchToTable
 ; CompetitionCup *[5]
 cupPickOceaniaInviteFriendly:
                 ; CompetitionCup *[5]
@@ -23812,15 +18058,6 @@ worldCupQualifyingGroupsTable:
                 dc.l worldCupQualifyingGroup7Copy ; element[6]
                 dc.l worldCupQualifyingGroup8Copy ; element[7]
 
-; ===== Career_SetCupPickList_ForSelectedRegion ===== (ported to C → _Career_SetCupPickList_ForSelectedRegion)
-; in: a6 = sorted team list pointer
-Career_SetCupPickList_ForSelectedRegion:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                jsr     _Career_SetCupPickList_ForSelectedRegion
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; char *[6]
 tourStringTable:
                 ; char *[6]
@@ -23831,969 +18068,9 @@ tourStringTable:
                 dc.l aAsianTour         ; element[4]
                 dc.l aOceaniaTour       ; element[5]
 
-; ===== DIY_SelectCompetitionSlot4FromCurrentDivision =====
-; prototype: void __usercall DIY_SelectCompetitionSlot4FromCurrentDivision()
-; ===== DIY_SelectCompetitionSlot4FromCurrentDivision =====
-; Ported to C: _DIY_SelectCompetitionSlot4FromCurrentDivision in career_init.c (Chunk 197)
-DIY_SelectCompetitionSlot4FromCurrentDivision:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _DIY_SelectCompetitionSlot4FromCurrentDivision
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-                ; === dead code below (old body) ===
-                cmpi.l  #0,(diyCompetitionPtr).l
-                beq.w   locret_12CE52
-                movea.l (diyCompetitionTablePtr).l,a6
-                lea     (competitionTeamIdScratchList4).l,a5
-                lea     (diyCompetitionContext).l,a4
-                move.w  $32(a4),d7
-                subq.w  #1,d7
-loc_12CD78:
-                movea.l (a6)+,a0
-                move.l  (a6)+,d0
-                cmpa.l  (currentCompetitionPtr).l,a0
-                bne.s   loc_12CD98
-                cmp.w   (currentDivisionIndex).l,d0
-                bne.s   loc_12CD98
-                lea     (competitionFileBuffer).l,a1
-                bsr.w   Career_CopyCompetitionTeamByIndex
-                bra.s   loc_12CDD6
-loc_12CD98:
-                move.w  #1,(internationalAutoAdvanceFlag).l
-                movem.l d0/a0-a1,-(sp)
-                jsr SaveSelectedTeams(pc)
-                movem.l (sp)+,d0/a0-a1
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     Career_AutoAdvanceInternationalCompetitionFixtures
-                movem.l (sp)+,d0-d7/a0-a6
-                movem.l a1,-(sp)
-                jsr RestoreSelectedTeams(pc)
-                movem.l (sp)+,a1
-                clr.w   (internationalAutoAdvanceFlag).l
-                lea     (diyCompetitionStart).l,a1
-                bsr.w   Career_CopyCompetitionTeamByIndex
-loc_12CDD6:
-                dbf     d7,loc_12CD78
-                movem.l d7/a6,-(sp)
-                lea     (competitionTeamIdScratchList4).l,a6
-                lea     $24E(a4),a2
-                move.w  $32(a4),d7
-                jsr     AppendTeamsToSelectionFromTmdOrTeamFile
-                movem.l (sp)+,d7/a6
-                lea     (diyCompetitionContext).l,a0
-                movem.l a0,-(sp)
-                bsr.w   Career_LoadCompetitionSlotStateFromBuffer
-                movem.l (sp)+,a0
-                movem.l a0,-(sp)
-                jsr DIY_BuildTeamSelectionPointerCache(pc)
-                movem.l (sp)+,a0
-                movem.l a0,-(sp)
-                bsr.w   DIY_UpdateCompetitionProgressOrAdvanceSlot
-                movem.l (sp)+,a0
-                movem.l a0,-(sp)
-                bsr.w   Career_StoreCompetitionSlotStateToBuffer
-                movem.l (sp)+,a0
-                move.w  #1,(competitionSlotUpdatedFlag).l
-                move.w  (primaryCompSlotStateA).l,(diyCompSlotStateA).l
-                move.w  (primaryCompSlotStateB).l,(diyCompSlotStateB).l
-                move.w  (primaryCompSlotStateC).l,(diyCompSlotStateC).l
-locret_12CE52:
-                rts
-
-; ===== Career_CopyCompetitionTeamByIndex =====
-; prototype: void __usercall Career_CopyCompetitionTeamByIndex(void *competition@<a1>, unsigned __int16 *outList@<a5>, const __int32 *indexStream@<a6>)
-Career_CopyCompetitionTeamByIndex:
-                move.l  (a6)+,d0
-                lea     $1AE(a1),a0
-                lsl.w   #1,d0
-                move.w  (a0,d0.w),(a5)+
-                rts
-                move.w  #$3004,(panicReasonCode).l
-                jsr     PanicHaltLoop
 competitionTeamIdScratchList4:
                 dc.w $0000,$0000,$0000,$0000
 
-; ===== Career_SetCurrentCompetitionSlot ===== (ported to C → _Career_SetCurrentCompetitionSlot)
-; prototype: void __usercall Career_SetCurrentCompetitionSlot(void *comp@<a0>, unsigned __int16 slot@<d0>, unsigned __int16 divIdx@<d1>, unsigned __int16 hasSelectedTeams@<d2>)
-; d1 is a hidden param: division index passed through to InitCompetitionFromRecord
-Career_SetCurrentCompetitionSlot:
-                movem.l d1-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d2
-                move.l  d2,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                move.l  a0,-(sp)
-                jsr     _Career_SetCurrentCompetitionSlot
-                lea     16(sp),sp
-                movem.l (sp)+,d1-d7/a2-a6
-                rts
-
-; ===== DIY_UpdateCompetitionProgressOrAdvanceSlot ===== (ported to C)
-DIY_UpdateCompetitionProgressOrAdvanceSlot:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _DIY_UpdateCompetitionProgressOrAdvanceSlot
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-                ; === dead code below (old body) ===
-                cmpi.w  #0,(a0)
-                beq.w   DIY_RecordLeagueFixtureResultAndAdvanceProgress
-                cmpi.w  #1,(a0)
-                beq.w   loc_12D36A
-                bra.w   loc_12D4B0
-
-; ===== DIY_RecordLeagueFixtureResultAndAdvanceProgress ===== (ported to C)
-DIY_RecordLeagueFixtureResultAndAdvanceProgress:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _DIY_RecordLeagueFixtureResultAndAdvanceProgress
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-                ; === dead code below (old body) ===
-                lea     (diyCompetitionStart).l,a6
-                tst.w   $60(a6)
-                beq.w   locret_12D368
-                lea     (teamSelectionKeyCache).l,a4
-                move.w  (teamSelectionKeyCacheCount).l,d7
-                subq.w  #1,d7
-                move.w  (diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$1A).l,d1
-                move.w  $2C(a6),d0
-loc_12D29A:
-                cmp.b   (a4),d0
-                bne.s   loc_12D2AA
-                tst.w   $48(a6)
-                beq.s   loc_12D2C0
-                cmp.b   7(a4),d1
-                beq.s   loc_12D2C0
-loc_12D2AA:
-                adda.w  2(a4),a4
-                dbf     d7,loc_12D29A
-                move.w  #$7777,(panicReasonCode).l
-                jsr     PanicHaltLoop
-loc_12D2C0:
-                movea.l a4,a3
-loc_12D2C2:
-                movem.l d0-d7/a0/a3-a6,-(sp)
-                jsr DIY_GetCurrentFixtureTeamPtrs(pc)
-                movem.l (sp)+,d0-d7/a0/a3-a6
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr DIY_AdvanceLeagueProgressAfterMatch(pc)
-                movem.l (sp)+,d0-d7/a0-a6
-                movea.l $2B4(a1),a1
-                adda.l  #selTeamsPtr,a1
-                movea.l $2B4(a2),a2
-                adda.l  #selTeamsPtr,a2
-                cmpi.b  #1,4(a1)
-                bne.s   loc_12D31C
-                cmpi.b  #1,4(a2)
-                beq.s   loc_12D358
-                cmpi.l  #aFriendly,(diyCompetitionStart+DIY_COMPETITION_FIELD_2+$26).l ; "FRIENDLY" ...
-                beq.s   loc_12D314
-                cmpi.w  #1,(diyCompetitionStart+DIY_COMPETITION_PLAYEACHTEAM).l
-                beq.s   loc_12D33A
-loc_12D314:
-                move.b  #2,$A(a3)
-                bra.s   loc_12D33E
-loc_12D31C:
-                cmpi.l  #aFriendly,(diyCompetitionStart+DIY_COMPETITION_FIELD_2+$26).l ; "FRIENDLY" ...
-                beq.s   loc_12D332
-                cmpi.w  #1,(diyCompetitionStart+DIY_COMPETITION_PLAYEACHTEAM).l
-                beq.s   loc_12D33A
-loc_12D332:
-                move.b  #1,$A(a3)
-                bra.s   loc_12D33E
-loc_12D33A:
-                clr.b   $A(a3)
-loc_12D33E:
-                addq.b  #1,5(a4)
-                addq.b  #1,6(a4)
-                move.b  #0,$B(a3)
-                move.w  (a1),$C(a3)
-                move.w  (a2),$E(a3)
-                lea     $C(a3),a3
-loc_12D358:
-                tst.w   $1C0(a6)
-                beq.w   loc_12D2C2
-                tst.w   $60(a6)
-                bne.w   loc_12D2AA
-locret_12D368:
-                rts
-loc_12D36A:
-                clr.w   d7
-loc_12D36C:
-                lea     (diyCompetitionStart).l,a2
-                tst.w   $56(a2)
-                bne.w   locret_12D494
-                cmpi.w  #1,$14A(a2)
-                beq.w   locret_12D494
-                move.w  $58(a2),d1
-                tst.w   $48(a2)
-                beq.s   loc_12D394
-                move.w  (diyFileBufferCopy+DIY_COMPETITION_FIELD_3A+$1A).l,d1
-loc_12D394:
-                move.w  $2C(a2),d0
-                lea     (teamSelectionKeyCache).l,a6
-                move.w  (teamSelectionKeyCacheCount).l,d2
-                subq.w  #1,d2
-loc_12D3A6:
-                cmp.b   (a6),d0
-                bne.s   loc_12D3B0
-                cmp.b   7(a6),d1
-                beq.s   loc_12D3C6
-loc_12D3B0:
-                adda.w  2(a6),a6
-                dbf     d2,loc_12D3A6
-                move.w  #$6666,(panicReasonCode).l
-                jsr     PanicHaltLoop
-loc_12D3C6:
-                tst.w   d7
-                beq.s   loc_12D3D4
-                cmpi.b  #2,8(a6)
-                bne.s   loc_12D3B0
-                bra.s   loc_12D3F8
-loc_12D3D4:
-                cmpi.b  #1,8(a6)
-                beq.s   loc_12D3F8
-                tst.w   $330(a2)
-                bne.s   loc_12D3EC
-                cmpi.b  #3,8(a6)
-                beq.s   loc_12D3B0
-                bra.s   loc_12D3F8
-loc_12D3EC:
-                cmpi.b  #3,8(a6)
-                bne.s   loc_12D3B0
-                clr.b   4(a6)
-loc_12D3F8:
-                movea.l a6,a5
-                clr.b   5(a6)
-                clr.b   6(a6)
-                lea     $2CE(a2),a1
-                move.w  $52(a2),d2
-                subq.w  #1,d2
-loc_12D40C:
-                bsr.w   DIY_GetSelectedTeamIdFromIndex
-                move.w  d0,d3
-                movea.l a0,a3
-                bsr.w   DIY_GetSelectedTeamIdFromIndex
-                cmpi.b  #2,8(a6)
-                bne.s   loc_12D424
-                exg     d0,d3
-                exg     a0,a3
-loc_12D424:
-                cmpi.b  #1,4(a3)
-                bne.s   loc_12D442
-                cmpi.b  #1,4(a0)
-                beq.s   loc_12D470
-                tst.w   $14C(a2)
-                beq.s   loc_12D450
-                move.b  #2,$A(a5)
-                bra.s   loc_12D454
-loc_12D442:
-                tst.w   $14C(a2)
-                beq.s   loc_12D450
-                move.b  #1,$A(a5)
-                bra.s   loc_12D454
-loc_12D450:
-                clr.b   $A(a5)
-loc_12D454:
-                move.w  (a0),$E(a5)
-                move.w  (a3),$C(a5)
-                move.b  #0,$B(a5)
-                addq.b  #1,5(a6)
-                addq.b  #1,6(a6)
-                adda.l  #$C,a5
-loc_12D470:
-                dbf     d2,loc_12D40C
-                tst.b   5(a6)
-                bne.s   loc_12D486
-                tst.w   $4C(a2)
-                beq.s   loc_12D486
-                move.b  #$FF,6(a6)
-loc_12D486:
-                move.w  #1,d7
-                cmpi.b  #1,8(a6)
-                beq.w   loc_12D36C
-locret_12D494:
-                rts
-
-; ===== DIY_GetSelectedTeamIdFromIndex =====
-; prototype: unsigned __int16 __usercall DIY_GetSelectedTeamIdFromIndex@<d0>(const unsigned __int8 *p@<a1>, const void *base@<a2>)
-DIY_GetSelectedTeamIdFromIndex:
-                move.b  (a1)+,d0
-                ext.w   d0
-                mulu.w  #4,d0
-                lea     $344(a2),a0
-                movea.l (a0,d0.w),a0
-                adda.l  #selTeamsPtr,a0
-                move.w  (a0),d0
-                rts
-loc_12D4B0:
-                lea     (diyFileBufferCopy).l,a0
-                tst.w   $58(a0)
-                bne.w   locret_12D4D8
-                move.w  $54(a0),d0
-                mulu.w  #$76,d0         ; 'v'
-                adda.l  d0,a0
-                tst.w   $15E(a0)
-                beq.w   loc_12D36A
-                bsr.w   DIY_RecordLeagueFixtureResultAndAdvanceProgress
-                bra.w   loc_12AB5C
-locret_12D4D8:
-                rts
-
-
-; ===== DIY_AdvanceCupFixtureIndex ===== (dead — only caller ported to C)
-DIY_AdvanceCupFixtureIndex:
-                addq.b  #1,d6
-                rts
-
-; ===== Career_CopyCompetitionFileBufferToOrFromActive =====
-; C bridge → _Career_CopyCompetitionFileBufferToOrFromActive (Chunk 92)
-
-; ===== Career_CopyCompetitionContextToOrFromActive =====
-; C bridge → _Career_CopyCompetitionContextToOrFromActive (Chunk 92)
-
-; ===== Career_CopyTertiaryCompetitionContextToOrFromActive =====
-; C bridge → _Career_CopyTertiaryCompetitionContextToOrFromActive (Chunk 92)
-
-; ===== Career_CopyEuroCupsCompetitionContextToOrFromActive =====
-; C bridge → _Career_CopyEuroCupsCompetitionContextToOrFromActive (Chunk 92)
-
-; ===== Career_LoadCompetitionSlotStateFromBuffer =====
-; C bridge → _Career_LoadCompetitionSlotStateFromBuffer(a0) (Chunk 92)
-Career_LoadCompetitionSlotStateFromBuffer:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _Career_LoadCompetitionSlotStateFromBuffer
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== Career_StoreCompetitionSlotStateToBuffer =====
-; C bridge → _Career_StoreCompetitionSlotStateToBuffer(a0) (Chunk 92)
-Career_StoreCompetitionSlotStateToBuffer:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _Career_StoreCompetitionSlotStateToBuffer
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== Career_UpdateCareerFinishedFlag =====
-; C bridge → _Career_UpdateCareerFinishedFlag (Chunk 92)
-
-; ===== CareerPlayMatch =====
-; C bridge → _CareerPlayMatch (Chunk 93)
-
-; ===== Career_PlayMatchMenuLoop =====
-; C bridge → _Career_PlayMatchMenuLoop (Chunk 93)
-
-; ===== Career_NextMatch =====
-; C bridge → _Career_NextMatch (Chunk 93)
-
-; ===== Career_OpenCompetitionSlotMenuAndApplyChanges =====
-; C bridge → _Career_OpenCompetitionSlotMenuAndApplyChanges(d2) (Chunk 93)
-
-; ===== Career_ProcessCurrentCompetitionSlotForMatch =====
-; C bridge → _Career_ProcessCurrentCompetitionSlotForMatch (Chunk 93)
-
-; ===== Career_ProcessCurrentCompetitionSlotAfterMatch =====
-; C bridge → _Career_ProcessCurrentCompetitionSlotAfterMatch (Chunk 93)
-
-; ===== C-callable asm wrappers for menu functions (Chunk 93) =====
-; These set d0=1, d1=0, d2=param from C stack, then call the real asm function
-
-; _asm_ShowDiyLeaguesTournamentMenu_Career(uint16_t d2)
-_asm_ShowDiyLeaguesTournamentMenu_Career:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  44(sp),d2       ; d2 = first C arg (10 regs * 4 + retaddr 4)
-                move.w  #1,d0
-                clr.w   d1
-                jsr     ShowDiyLeaguesTournamentMenu
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; _asm_ShowDIYCupMenuWithParams_Career(uint16_t d2)
-_asm_ShowDIYCupMenuWithParams_Career:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  44(sp),d2       ; d2 = first C arg
-                move.w  #1,d0
-                clr.w   d1
-                jsr     ShowDIYCupMenuWithParams
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; _asm_DIY_EditCompetitionSlot_Career(uint16_t d2)
-_asm_DIY_EditCompetitionSlot_Career:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  44(sp),d2       ; d2 = first C arg
-                move.w  #1,d0
-                clr.w   d1
-                jsr     DIY_EditCompetitionSlot
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== Chunk 96 C-callable asm bridges =====
-
-; void _asm_ShowDiyLeaguesTournamentMenu(uint16_t d0, uint16_t d1, uint16_t d2)
-_asm_ShowDiyLeaguesTournamentMenu:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  52(sp),d2       ; 3rd C arg (10 regs * 4 + retaddr 4 + 2 args * 4)
-                move.l  48(sp),d1       ; 2nd C arg
-                move.l  44(sp),d0       ; 1st C arg
-                jsr     ShowDiyLeaguesTournamentMenu
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; void _asm_ShowDIYCupMenuWithParams(uint16_t d0, uint16_t d1, uint16_t d2)
-_asm_ShowDIYCupMenuWithParams:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  52(sp),d2       ; 3rd C arg
-                move.l  48(sp),d1       ; 2nd C arg
-                move.l  44(sp),d0       ; 1st C arg
-                jsr     ShowDIYCupMenuWithParams
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== Chunk 94 C-callable asm bridges =====
-
-; uint16_t _asm_DIY_SimulateLeagueFixture(void)
-; Calls DIY_PlayOrSimulateLeagueFixture with d7=0 (simulate mode)
-_asm_DIY_SimulateLeagueFixture:
-                movem.l d2-d7/a2-a6,-(sp)
-                clr.w   d7
-                jsr     DIY_PlayOrSimulateLeagueFixture(pc)
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; uint16_t _asm_DIY_PlayOrSimulateLeagueFixture(uint16_t mode)
-; Calls DIY_PlayOrSimulateLeagueFixture with d7=mode, returns d0 status.
-; Stores multi-reg results (a1,a2,d1,d2) to globals for C caller.
-_asm_DIY_PlayOrSimulateLeagueFixture:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  44(sp),d7       ; 1st C arg → d7
-                jsr     DIY_PlayOrSimulateLeagueFixture
-                move.l  a1,(diyLeftTeamPtr).l
-                move.l  a2,(diyRightTeamPtr).l
-                move.w  d1,(diyLeftTeamResult).l
-                move.w  d2,(diyRightTeamResult).l
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; uint16_t _asm_DIY_SimulateCupMatch(void)
-; Calls DIY_PlayCupMatchAndAdvance with d7=0 (simulate mode)
-_asm_DIY_SimulateCupMatch:
-                movem.l d2-d7/a2-a6,-(sp)
-                clr.w   d7
-                jsr     DIY_PlayCupMatchAndAdvance(pc)
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; uint16_t _asm_DIY_PlayCupMatchAndAdvance(uint16_t mode)
-; Calls DIY_PlayCupMatchAndAdvance with d7=mode, returns d0 status.
-; Stores multi-reg results (a1,a2,d1,d2) to globals for C caller.
-_asm_DIY_PlayCupMatchAndAdvance:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  44(sp),d7       ; 1st C arg → d7
-                jsr     DIY_PlayCupMatchAndAdvance
-                move.l  a1,(diyCupLastMatchTeam1Ptr).l
-                move.l  a2,(diyCupLastMatchTeam2Ptr).l
-                move.w  d1,(diyCupLastMatchScoreTeam1).l
-                move.w  d2,(diyCupLastMatchScoreTeam2).l
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; void _asm_DIY_LoadCurrentCompetitionSlot(void)
-_asm_DIY_LoadCurrentCompetitionSlot:
-                movem.l d2-d7/a2-a6,-(sp)
-                bsr.w   DIY_LoadCurrentCompetitionSlot
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; void _asm_Career_AutoAdvanceInternationalCompetitionFixtures(void)
-_asm_Career_AutoAdvanceInternationalCompetitionFixtures:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     Career_AutoAdvanceInternationalCompetitionFixtures
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; void _asm_DIY_PostLoadCompetitionDispatch(void)
-; Calls loc_12D4B0 (career mode post-load processing)
-_asm_DIY_PostLoadCompetitionDispatch:
-                movem.l d2-d7/a2-a6,-(sp)
-                bsr.w   loc_12D4B0
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== TeamSelectionKeyCache_GetListElementPtr =====
-; C bridge → _TeamSelectionKeyCache_GetListElementPtr(d0, d1) → a1 (Chunk 92)
-; Also sets a0 via calling GetListPtr, then computes a1 = a0 + (d1&0xFF)*12
-
-; ===== TeamSelectionKeyCache_GetListPtr =====
-; C bridge → _TeamSelectionKeyCache_GetListPtr(d0) → a0 (Chunk 92)
-
-; ===== TeamSelectionKeyCache_GetCurrentSelectedElementPtr =====
-; C bridge → _TeamSelectionKeyCache_GetCurrentSelectedElementPtr() → a1 (Chunk 92)
-
-; ===== TeamSelectionKeyCache_GetCurrentListPtr =====
-; C bridge → _TeamSelectionKeyCache_GetCurrentListPtr() → a0 (Chunk 92)
-
-; ===== Career_AdvanceToNextTeamSelectionKeyCacheEntry =====
-; C bridge → _Career_AdvanceToNextTeamSelectionKeyCacheEntry (Chunk 92)
-
-; ===== Career_InitializeSelectedTeamAndStartingBalance =====
-; Ported to C: _Career_InitializeSelectedTeamAndStartingBalance in src/career_init.c
-; in: D0 = teamNumber, D1 = startingBalance
-Career_InitializeSelectedTeamAndStartingBalance:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d1,-(sp)
-                move.w  d0,-(sp)
-                jsr     _Career_InitializeSelectedTeamAndStartingBalance
-                lea     6(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== InitCareer =====
-; Ported to C: _InitCareer in career_init.c (Chunk 197)
-; in: d0 = teamNo
-InitCareer:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _InitCareer
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-                ; === dead code below (old body) ===
-                move.w  d0,d7
-                move.w  #20994,(worldCupHostTeam).l
-                lea     (diyLeagueSeasonStateTable).l,a0
-                move.w  #1999,d0
-loc_12E0FC:
-                clr.b   (a0)+
-                dbf     d0,loc_12E0FC
-                bsr.w   DIY_LoadLeagueScratchFromTable
-                clr.w   (sameNationalCallFlag).l
-                clr.w   (careerSeasonsCompleted).l
-                clr.w   (boardConfidenceHistory0).l
-                clr.w   (boardConfidenceHistory1).l
-                clr.w   (boardConfidenceHistory2).l
-                clr.w   (boardConfidenceHistory3).l
-                clr.w   (boardConfidenceScore).l
-                clr.w   (gamesPlayed).l
-                clr.w   (numWins).l
-                clr.w   (numDrawn).l
-                clr.w   (numLost).l
-                clr.w   (goalsScored).l
-                clr.w   (goalsTaken).l
-                clr.w   (careerReputationPoints).l
-                clr.w   (winCupBonusCount).l
-                clr.w   (minorTrophyBonusCount).l
-                clr.w   (majorTrophyBonusCount).l
-                clr.w   (playPromotedAnimation).l
-                clr.w   (playRelegatedAnimation).l
-                clr.w   (teamsLoaded).l
-                clr.w   (poolplyrLoaded).l
-                clr.w   (careerFileBuffer).l
-                move.w  #$FFFF,(previousBoardConfidence).l
-                clr.w   (playWinCupAnimation).l
-                clr.w   (minorTrophyBonusActive).l
-                clr.w   (leagueTitleBonusActive).l
-                clr.w   (majorTrophyBonusActive).l
-                clr.w   (cupBonus1Active).l
-                clr.w   (cupBonus2Active).l
-                clr.w   (wonWorldCup).l
-                clr.w   (wonContinentalCup).l
-                clr.w   (qualifyingStage1PendingFlag0).l
-                clr.w   (qualifyingStage1PendingFlag1).l
-                clr.w   (qualifyingStage2PendingFlag0).l
-                clr.w   (qualifyingStage2PendingFlag1).l
-                clr.w   (wonInvitationTournament).l
-                movem.l d7,-(sp)
-                jsr     Career_InitTransferMarketState
-                movem.l (sp)+,d7
-                move.w  #4,d0
-                jsr InitCareerVariables(pc)
-                move.w  d7,d0
-                movem.l d0/d7,-(sp)
-                jsr     CalculateStartingBalance
-                movem.l (sp)+,d0/d7
-                bsr.w   Career_InitializeSelectedTeamAndStartingBalance
-                clr.w   (careerFileBuffer).l
-                lea     (euroCup).l,a0
-                jsr     LoadSomeEuroCup
-                lea     (cupWinnersCup).l,a0
-                jsr     LoadSomeEuroCup
-                lea     (uefaCup).l,a0
-                jsr     LoadSomeEuroCup
-                lea     (careerContests).l,a2
-loc_12E23A:
-                movea.l (a2)+,a0
-                cmpa.l  #$FFFFFFFF,a0
-                beq.s   loc_12E252
-                movea.l (a2)+,a1
-                move.w  (a2)+,d0
-                subq.w  #1,d0
-loc_12E24A:
-                move.b  (a0)+,(a1)+
-                dbf     d0,loc_12E24A
-                bra.s   loc_12E23A
-loc_12E252:
-                clr.w   (teamsLoaded).l
-                move.w  #3,(primaryCompSlotStateA).l
-                move.w  #2,(primaryCompSlotStateB).l
-                move.w  #8,(primaryCompSlotStateC).l
-                move.w  #3,(secondaryCompSlotStateA).l
-                move.w  #2,(secondaryCompSlotStateB).l
-                move.w  #8,(secondaryCompSlotStateC).l
-                move.w  #3,(tertiaryCompSlotStateA).l
-                move.w  #2,(tertiaryCompSlotStateB).l
-                move.w  #8,(tertiaryCompSlotStateC).l
-                move.w  #3,(quaternaryCompSlotStateA).l
-                move.w  #2,(quaternaryCompSlotStateB).l
-                move.w  #8,(quaternaryCompSlotStateC).l
-                move.w  #$FFFF,(currentSeasonShowing).l
-                subq.b  #1,(seasonPlaying).l
-                bsr.w   InitializeNewSeason
-                clr.w   (careerLoadedFlag).l
-                rts
-
-; ===== InitializeNewSeason =====
-; Ported to C: _InitializeNewSeason in career_init.c (Chunk 197)
-InitializeNewSeason:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _InitializeNewSeason
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-                ; === dead code below (old body) ===
-                clr.w   (teamsLoaded).l
-                addq.w  #1,(currentSeasonShowing).l
-                cmpi.w  #20,(currentSeasonShowing).l
-                bne.s   loc_12E2EE
-                clr.w   (currentSeasonShowing).l
-loc_12E2EE:
-                move.w  #$FFFF,(selTeamSelectedPlayerPosition).l
-                lea     (careerUnavailablePlayerList).l,a0
-                move.w  #$FFFF,(a0)
-                move.w  #$FFFF,4(a0)
-                move.w  #$FFFF,8(a0)
-                move.w  #$FFFF,$C(a0)
-                clr.w   (retired).l
-                clr.w   (youreSacked).l
-                clr.w   (competitionSlotUpdatedFlag).l
-                addq.w  #1,(stayingInOldClub).l
-                addq.b  #1,(seasonPlaying).l
-                cmpi.b  #100,(seasonPlaying).l
-                bne.s   loc_12E340
-                clr.b   (seasonPlaying).l
-loc_12E340:
-                bsr.w   DIY_SaveLeagueScratchToTable
-                clr.w   (boardConfidenceMod0).l
-                clr.w   (boardConfidenceMod1).l
-                clr.w   (boardConfidenceMod2).l
-                clr.w   (boardConfidenceMod3).l
-                clr.w   (boardConfidenceValue0).l
-                clr.w   (boardConfidenceValue1).l
-                clr.w   (boardConfidenceMod4).l
-                clr.w   (boardConfidenceMod5).l
-                clr.w   (boardConfidenceMod6).l
-                clr.w   (boardConfidenceMod7).l
-                clr.w   (boardConfidenceMod8).l
-                clr.w   (boardConfidenceMod9).l
-                jsr     GetCurrentSeasonPointer
-                move.w  (selTeamNumber).l,(a0)
-                clr.l   SEASONINFORMATIONS_LEAGUESTRINGOFFSET(a0)
-                clr.l   SEASONINFORMATIONS_STROFFSET1(a0)
-                clr.l   SEASONINFORMATIONS_STROFFSET2(a0)
-                clr.l   SEASONINFORMATIONS_FIELD_22(a0)
-                clr.b   SEASONINFORMATIONS_FIELD_56(a0)
-                clr.b   SEASONINFORMATIONS_FINALPOSITION(a0)
-                clr.b   SEASONINFORMATIONS_FIELD_58(a0)
-                clr.b   SEASONINFORMATIONS_FIELD_59(a0)
-                clr.b   SEASONINFORMATIONS_BESTSCORERNAME(a0)
-                clr.b   SEASONINFORMATIONS_MANAGERSTATUS(a0)
-                lea     SEASONINFORMATIONS_CLUBNAME(a0),a1
-                lea     (careerTeam+TEAMFILEEX_TEAM+TEAMFILE_TEAMNAME).l,a0
-                jsr     StringCopy
-                move.w  (selTeamNumber).l,d0
-                jsr VerifyTeamLoaded(pc)
-                move.w  TEAMFILE_GLOBALTEAMNUMBER(a0),d0
-                lea     (diyLeagueSeasonStateTable).l,a1
-                move.b  (a1,d0.w),d0
-                ext.w   d0
-                add.w   (careerTeamLeague).l,d0
-                move.w  d0,(currentDivisionIndex).l
-                move.b  d0,TEAMFILE_LEAGUE(a0)
-                clr.w   (contractNegotiationActive).l
-                clr.w   (removedPlayerStatAccum).l
-                jsr     Career_InitSeasonTransferMarketState
-                clr.w   (teamSelectionKeyCacheEnd).l
-                clr.w   (isCareer).l
-                clr.w   (careerMatchSimulatedFlag).l
-                clr.w   (numNewJobOffers).l
-                clr.w   (numJobOffers).l
-                clr.w   (careerTeamLostMatch).l
-                move.w  #0,(currentMessage).l
-                lea     (careerLastMatchIndexByCompetitionSlot).l,a0
-                move.w  #161,d0
-loc_12E442:
-                move.b  #$FF,(a0)+
-                dbf     d0,loc_12E442
-                lea     (careerCompetitionSlotPtrTable).l,a0
-                move.l  #competitionFileBuffer,(a0)+
-                move.l  #competitionContext,(a0)+
-                move.l  #tertiaryCompetitionContext,(a0)+
-                move.l  #euroCupsCompetitionContext,(a0)+
-                move.l  #diyCompetitionContext,(a0)+
-                clr.l   (currentCompetitionPtr).l
-                clr.l   (secondaryCompetitionPtr).l
-                clr.l   (tertiaryCompetitionPtr).l
-                clr.l   (quaternaryCompetitionPtr).l
-                clr.l   (diyCompetitionPtr).l
-                move.w  #1,(numSelectedTeams).l
-                clr.w   (teamSelectionKeyCacheCount).l
-                clr.w   (teamSelectionKeyCacheIndex).l
-                clr.w   (teamSelectionKeyCacheOffset).l
-                clr.w   (careerSlotProcessingInProgress).l
-                clr.w   (isNationalSelector).l
-                move.w  (selTeamNumber).l,d0
-                lsr.w   #8,d0
-                cmpi.w  #CN_EUROPE,d0
-                bcs.w   loc_12E562
-                cmpi.w  #CN_OCEANIA,d0
-                bhi.w   loc_12E562
-                move.w  #1,(isNationalSelector).l
-                move.w  (selTeamNumber).l,d0
-                cmp.w   (lastNationalityCall).l,d0
-                bne.s   loc_12E4E8
-                move.w  #1,(sameNationalCallFlag).l
-loc_12E4E8:
-                lea     (careerTeamFlagsByRegionTable).l,a0
-                move.b  (selTeamNumber).l,d0
-                ext.w   d0
-                subi.w  #80,d0
-                lsl.w   #2,d0
-                movea.l (a0,d0.w),a0
-                move.w  (currentSeasonShowing).l,d0
-                move.b  (a0,d0.w),d0
-                move.b  d0,(someTeamFlags).l
-                move.w  (selTeamNumber).l,d0
-                jsr     GetNationalityAndTeamFile
-                move.b  d0,(nationalTeamNationality).l
-                move.b  d1,(nationalTeamFileId).l
-                move.w  (currentSeasonShowing).l,d0
-                lsr.w   #2,d0
-                lsl.w   #1,d0
-                lea     (seasonCycleNationalFlagsA).l,a0
-                move.w  (a0,d0.w),(worldCupQualifyingTeam).l
-                lea     (seasonCycleNationalFlagsB).l,a0
-                move.w  (a0,d0.w),(euroChampionshipQualTeam).l
-                movem.l d0-d7/a0-a5,-(sp)
-                bsr.w   Career_SetCupPickList_ForSelectedRegion
-                movem.l (sp)+,d0-d7/a0-a5
-                lea     (careerCupPickList).l,a6
-                bra.s   loc_12E580
-loc_12E562:
-                move.b  (selTeamNumber).l,(nationalTeamFileCode).l
-                move.w  (selTeamNumber).l,d0
-                lsr.w   #8,d0
-                lsl.w   #2,d0
-                lea     (competitionsTable).l,a6
-                movea.l (a6,d0.w),a6
-loc_12E580:
-                movem.l d0-d7/a0-a6,-(sp)
-                bsr.w   Career_UpdateLastNationalityCall
-                movem.l (sp)+,d0-d7/a0-a6
-                move.w  (primaryCompSlotStateA).l,-(sp)
-                move.w  (primaryCompSlotStateB).l,-(sp)
-                move.w  (primaryCompSlotStateC).l,-(sp)
-                movea.l (a6)+,a0
-                move.w  #0,d0
-                move.w  (currentDivisionIndex).l,d1
-                clr.w   d2
-                movem.l a6,-(sp)
-                bsr.w   Career_SetCurrentCompetitionSlot
-                movem.l (sp)+,a6
-                jsr     GetCurrentSeasonPointer
-                move.l  (primaryCompStringOffset).l,SEASONINFORMATIONS_LEAGUESTRINGOFFSET(a0)
-                move.w  (sp)+,(primaryCompSlotStateC).l
-                move.w  (sp)+,(primaryCompSlotStateB).l
-                move.w  (sp)+,(primaryCompSlotStateA).l
-                lea     4(a6),a6
-                cmpi.l  #$FFFFFFFF,(a6)
-                beq.w   loc_12E67E
-                move.w  (secondaryCompSlotStateA).l,-(sp)
-                move.w  (secondaryCompSlotStateB).l,-(sp)
-                move.w  (secondaryCompSlotStateC).l,-(sp)
-                movea.l (a6)+,a0
-                move.w  #1,d0
-                clr.w   d1
-                clr.w   d2
-                movem.l a6,-(sp)
-                bsr.w   Career_SetCurrentCompetitionSlot
-                movem.l (sp)+,a6
-                jsr     GetCurrentSeasonPointer
-                move.l  (secondaryCompStringOffset).l,$1A(a0)
-                move.w  (sp)+,(secondaryCompSlotStateC).l
-                move.w  (sp)+,(secondaryCompSlotStateB).l
-                move.w  (sp)+,(secondaryCompSlotStateA).l
-                cmpi.l  #$FFFFFFFF,(a6)
-                beq.s   loc_12E67E
-                move.w  (tertiaryCompSlotStateA).l,-(sp)
-                move.w  (tertiaryCompSlotStateB).l,-(sp)
-                move.w  (tertiaryCompSlotStateC).l,-(sp)
-                movea.l (a6),a0
-                move.w  #2,d0
-                clr.w   d1
-                clr.w   d2
-                movem.l a6,-(sp)
-                bsr.w   Career_SetCurrentCompetitionSlot
-                movem.l (sp)+,a6
-                jsr     GetCurrentSeasonPointer
-                move.l  (tertiaryCompStringOffset).l,$1E(a0)
-                move.w  (sp)+,(tertiaryCompSlotStateC).l
-                move.w  (sp)+,(tertiaryCompSlotStateB).l
-                move.w  (sp)+,(tertiaryCompSlotStateA).l
-loc_12E67E:
-                lea     (euroCupCopy).l,a0
-                move.w  #0,d7
-                bsr.w   Career_SelectEuroCupSlotIfTeamParticipates
-                beq.s   loc_12E6AC
-                lea     (cupWinnersCupCopy).l,a0
-                move.w  #1,d7
-                bsr.w   Career_SelectEuroCupSlotIfTeamParticipates
-                beq.s   loc_12E6AC
-                lea     (uefaCupCopy).l,a0
-                move.w  #2,d7
-                bsr.w   Career_SelectEuroCupSlotIfTeamParticipates
-loc_12E6AC:
-                bsr.w   DIY_SelectCompetitionSlot4FromCurrentDivision
-                jsr     InitializeNewSeason_BuildTeamBudgetRankTable
-                move.w  #1,d0
-                movea.l (currentCompetitionPtr).l,a0
-                cmpi.b  #0,1(a0)
-                bne.s   loc_12E6CC
-                move.b  9(a0),d0
-loc_12E6CC:
-                move.w  d0,(leagueFirstRoundNumber).l
-                clr.w   (seasonFinished).l
-                clr.w   (careerFinished).l
-                move.b  (careerJobOfferPhaseBias).l,(viewRandomPhase).l
-                lea     (teamSelectionKeyCache).l,a0
-                move.w  (teamSelectionKeyCacheCount).l,d1
-                subq.w  #1,d1
-loc_12E6F6:
-                move.b  1(a0),d0
-                adda.w  2(a0),a0
-                dbf     d1,loc_12E6F6
-                sub.b   (careerJobOfferPhaseBias).l,d0
-                andi.w  #$FF,d0
-                bne.s   loc_12E712
-                move.w  #1,d0
-loc_12E712:
-                move.w  d0,(wageScalingDivisor).l
-                move.b  (careerJobOfferPhaseBias).l,(lastFinancialWeekIndex).l
-                jsr InitTeams(pc)
-                move.w  (selTeamNumber).l,d0
-                bsr.w   VerifyTeamLoaded
-                lea     $24(a0),a1
-                lea     (managerNameBuffer).l,a0
-                jsr     StringCopy
-                move.b  #$20,(a1)+      ; ' '
-                lea     (managerSurnameBuffer).l,a0
-                jsr     StringCopy
-                jsr     FillForeignMarketPlayers
-                jsr     FillCareerTeamPlayers
-                jsr     Career_InitializeNewSeasonFinances
-                jsr     InitializeCareerSeasonFinancials
-                tst.w   (stayingInOldClub).l
-                beq.s   loc_12E78A
-                cmpi.w  #$13,(currentSeasonShowing).l
-                bne.s   loc_12E782
-                jsr     ShowEnjoyLastSeasonMessage
-                bra.s   loc_12E7A2
-loc_12E782:
-                jsr     ShowWishYouSuccessMessage
-                bra.s   loc_12E7A2
-loc_12E78A:
-                cmpi.w  #$13,(currentSeasonShowing).l
-                bne.s   loc_12E79C
-                jsr     ShowLastSeasonMessage
-                bra.s   loc_12E7A2
-loc_12E79C:
-                jsr     ShowGreetingMessage
-loc_12E7A2:
-                tst.w   (stayingInOldClub).l
-                bne.s   locret_12E7BE
-                jsr     TrainingMatch_AddTrialPlayersForNewSeason
-                tst.w   (isNationalSelector).l
-                beq.s   locret_12E7BE
-                jsr     Career_InitInternationalSquadAndLookupTablesForNewSeason
-locret_12E7BE:
-                rts
-
-; ===== Career_SelectEuroCupSlotIfTeamParticipates =====
-; Ported to C: _Career_SelectEuroCupSlotIfTeamParticipates in career_init.c (Chunk 197)
-; in: a0 = cupCopy, d7 = euroCupIndex; out: d0 = 0 if participating, 1 if not
-Career_SelectEuroCupSlotIfTeamParticipates:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d7
-                move.l  d7,-(sp)
-                move.l  a0,-(sp)
-                jsr     _Career_SelectEuroCupSlotIfTeamParticipates
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                tst.w   d0
-                rts
-                ; === dead code below (old body) ===
-                move.b  7(a0),d0
-                andi.w  #$FF,d0
-                lea     7(a0,d0.w),a1
-                move.w  (selTeamNumber).l,d2
-                cmpi.b  #1,1(a0)
-                beq.s   loc_12E7E8
-                cmpi.b  #2,1(a0)
-                beq.s   loc_12E7EE
-                move.b  $D(a0),d1
-                bra.s   loc_12E7F2
-loc_12E7E8:
-                move.b  $A(a0),d1
-                bra.s   loc_12E7F2
-loc_12E7EE:
-                move.b  $F(a0),d1
-loc_12E7F2:
-                ext.w   d1
-                subq.w  #1,d1
-loc_12E7F6:
-                cmp.w   (a1)+,d2
-                beq.s   loc_12E804
-                dbf     d1,loc_12E7F6
-                move.w  #1,d0
-                rts
-loc_12E804:
-                move.w  (quaternaryCompSlotStateA).l,-(sp)
-                move.w  (quaternaryCompSlotStateB).l,-(sp)
-                move.w  (quaternaryCompSlotStateC).l,-(sp)
-                move.w  #3,d0
-                clr.w   d2
-                movem.l d7/a6,-(sp)
-                bsr.w   Career_SetCurrentCompetitionSlot
-                movem.l (sp)+,d7/a6
-                jsr     GetCurrentSeasonPointer
-                move.l  (quaternaryCompStringOffset).l,$22(a0)
-                move.w  (sp)+,(quaternaryCompSlotStateC).l
-                move.w  (sp)+,(quaternaryCompSlotStateB).l
-                move.w  (sp)+,(quaternaryCompSlotStateA).l
-                move.w  d7,(euroCupSlotIndex).l
-                clr.w   d0
-                rts
-
-; ===== Career_UpdateLastNationalityCall =====
-; Ported to C: _Career_UpdateLastNationalityCall in src/career_season.c
-Career_UpdateLastNationalityCall:
-                jmp     _Career_UpdateLastNationalityCall
 ; char (*[6])[20]
 careerTeamFlagsByRegionTable:
                 ; char (*[6])[20]
@@ -24803,283 +18080,16 @@ careerTeamFlagsByRegionTable:
                 dc.l careerTeamFlagsBySeason1 ; element[3]
                 dc.l careerTeamFlagsBySeason1 ; element[4]
                 dc.l careerTeamFlagsBySeason1 ; element[5]
-                clr.w   (retired).l
-                move.b  2(a0),d7
-                move.w  d1,(currentDivisionIndex).l
-                lea     (careerCompetitionSlotPtrTable).l,a0
-                move.l  #competitionFileBuffer,(a0)+
-                move.l  #competitionContext,(a0)+
-                move.l  #tertiaryCompetitionContext,(a0)+
-                move.l  #euroCupsCompetitionContext,(a0)+
-                move.l  #diyCompetitionContext,(a0)+
-                clr.l   (currentCompetitionPtr).l
-                clr.l   (secondaryCompetitionPtr).l
-                clr.l   (tertiaryCompetitionPtr).l
-                clr.l   (quaternaryCompetitionPtr).l
-                clr.l   (diyCompetitionPtr).l
-                clr.w   (teamSelectionKeyCacheCount).l
-                clr.w   (teamSelectionKeyCacheIndex).l
-                clr.w   (teamSelectionKeyCacheOffset).l
-                clr.w   (careerSlotProcessingInProgress).l
-                move.b  d7,d0
-                andi.w  #$FF,d0
-                lsl.w   #2,d0
-                lea     (competitionsTable).l,a6
-                movea.l (a6,d0.w),a6
-                movea.l (a6)+,a0
-                move.w  #0,d0
-                move.w  (currentDivisionIndex).l,d1
-                move.w  #1,d2
-                movem.l a6,-(sp)
-                bsr.w   Career_SetCurrentCompetitionSlot
-                movem.l (sp)+,a6
-                lea     4(a6),a6
-                cmpi.l  #$FFFFFFFF,(a6)
-                beq.s   loc_12E982
-                movea.l (a6)+,a0
-                move.w  #1,d0
-                clr.w   d2
-                movem.l a6,-(sp)
-                bsr.w   Career_SetCurrentCompetitionSlot
-                movem.l (sp)+,a6
-                cmpi.l  #$FFFFFFFF,(a6)
-                beq.s   loc_12E982
-                movea.l (a6),a0
-                move.w  #2,d0
-                clr.w   d2
-                movem.l a6,-(sp)
-                bsr.w   Career_SetCurrentCompetitionSlot
-                movem.l (sp)+,a6
-loc_12E982:
-                clr.w   (seasonFinished).l
-                clr.w   (careerFinished).l
-                clr.w   (seasonNumberOfSquads).l
-                lea     (seasonSquadTeamNumbers).l,a1
-                move.w  (numSelectedTeams).l,d0
-                subq.w  #1,d0
-                lea     (selTeamsPtr).l,a0
-loc_12E9A8:
-                cmpi.b  #1,selTeamIsComputerFlag-selTeamsPtr(a0)
-                beq.s   loc_12E9B8
-                addq.w  #1,(seasonNumberOfSquads).l
-                move.w  (a0),(a1)+
-loc_12E9B8:
-                lea     684(a0),a0
-                dbf     d0,loc_12E9A8
-                tst.w   (seasonNumberOfSquads).l
-                bne.s   loc_12E9D0
-                move.w  #1,(careerFinished).l
-loc_12E9D0:
-                move.b  (careerJobOfferPhaseBias).l,(viewRandomPhase).l
-                jsr InitTeams(pc)
-                rts
-                lea     ((nationalTeamCompetitionsAndQualifications1+$96)).l,a2
-loc_12E9E6:
-                lea     6(a2),a2
-                movea.l (a2)+,a1
-                cmpa.l  #$FFFFFFFF,a1
-                beq.s   loc_12E9FA
-                cmpa.l  a1,a0
-                bne.s   loc_12E9E6
-                movea.l (a2),a0
-loc_12E9FA:
-                cmpa.l  #europeanChampionships,a0
-                bne.s   loc_12EA08
-                lea     (europeanChampionships2Copy).l,a0
-loc_12EA08:
-                cmpa.l  #worldCup,a0
-                bne.s   loc_12EA16
-                lea     (worldCup2Copy).l,a0
-loc_12EA16:
-                lea     (competitionFileBuffer).l,a1
-                cmpa.l  (currentCompetitionPtr).l,a0
-                bne.s   loc_12EA2C
-                cmp.w   (currentDivisionIndex).l,d0
-                beq.s   loc_12EA56
-loc_12EA2C:
-                lea     (competitionContext).l,a1
-                cmpa.l  (secondaryCompetitionPtr).l,a0
-                beq.s   loc_12EA56
-                lea     (tertiaryCompetitionContext).l,a1
-                cmpa.l  (tertiaryCompetitionPtr).l,a0
-                beq.s   loc_12EA56
-                lea     (euroCupsCompetitionContext).l,a1
-                cmpa.l  (quaternaryCompetitionPtr).l,a0
-                bne.s   loc_12EAA2
-loc_12EA56:
-                movea.l a1,a0
-                movem.l a0,-(sp)
-                bsr.w   Career_LoadCompetitionSlotStateFromBuffer
-                movem.l (sp)+,a0
-                cmpi.b  #1,1(a0)
-                beq.s   loc_12EA84
-                cmpi.b  #2,1(a0)
-                beq.s   loc_12EA94
-                move.w  #1,d0
-                move.w  #1,d1
-                clr.w   d2
-                jmp     ShowDiyLeaguesTournamentMenu
-loc_12EA84:
-                move.w  #1,d0
-                move.w  #1,d1
-                clr.w   d2
-                jmp     ShowDIYCupMenuWithParams
-loc_12EA94:
-                move.w  #1,d0
-                move.w  #1,d1
-                clr.w   d2
-                jmp DIY_EditCompetitionSlot(pc)
-loc_12EAA2:
-                movem.l d0/a0,-(sp)
-                jsr SaveSelectedTeams(pc)
-                movem.l (sp)+,d0/a0
-                cmpi.b  #1,1(a0)
-                beq.s   loc_12EAC4
-                cmpi.b  #2,1(a0)
-                beq.s   loc_12EACA
-                bsr.w   Career_AutoAdvanceInternationalCompetitionFixtures
-                bra.s   loc_12EACE
-loc_12EAC4:
-                bsr.w   Career_AutoAdvanceCupCompetitionFromRecord
-                bra.s   loc_12EACE
-loc_12EACA:
-                bsr.w   Career_AutoAdvanceLeagueCompetitionFromRecord
-loc_12EACE:
-                jmp RestoreSelectedTeams(pc)
 
-; ===== Career_AutoAdvanceInternationalCompetitionFixtures ===== (ported to C → _Career_AutoAdvanceInternationalCompetitionFixtures)
-Career_AutoAdvanceInternationalCompetitionFixtures:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                move.l  d0,-(sp)
-                jsr     _Career_AutoAdvanceInternationalCompetitionFixtures
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
-; ===== Career_AutoAdvanceCupCompetitionFromRecord =====
-; prototype: void __usercall Career_AutoAdvanceCupCompetitionFromRecord(void *contest@<a0>)
-; Ported to C: _Career_AutoAdvanceCupCompetitionFromRecord (career_status.c)
-Career_AutoAdvanceCupCompetitionFromRecord:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _Career_AutoAdvanceCupCompetitionFromRecord
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== Career_AutoAdvanceLeagueCompetitionFromRecord =====
-; prototype: void __usercall Career_AutoAdvanceLeagueCompetitionFromRecord(void *contest@<a0>)
-; Ported to C: _Career_AutoAdvanceLeagueCompetitionFromRecord (career_status.c)
-Career_AutoAdvanceLeagueCompetitionFromRecord:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _Career_AutoAdvanceLeagueCompetitionFromRecord
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== FindTeamInDIY =====
-; prototype: unsigned __int16 FindTeamInDIY()
-; in:
-;     D0 -  team file number
-;     A6 -> DIY competition
-; out:
-;     D1 -  index of that team in DIY competition, or -1 if not found
-loc_12F0DC:
-                move.w  #$6006,(panicReasonCode).l
-                jsr     PanicHaltLoop
 diyFoundTeamIndex:
                 dc.w $0000
 diyCompHasGroupStage:
                 dc.w $0000              ; Boolean flag for whether the DIY competition has a group/seeded stage.
 findTeamInDIY_SuppressSideEffectsFlag:
                 dc.w $0000
-                lea     (competitionFileBuffer).l,a6
-                move.w  $32(a6),d6
-                lea     $12E(a6),a5
-                lea     $EE(a6),a4
-                cmpi.w  #0,(a6)
-                beq.s   loc_12F16C
-                lea     $24E(a6),a5
-                lea     $2CE(a6),a4
-                cmpi.w  #1,(a6)
-                beq.s   loc_12F16C
-                lea     $9A(a6),a5
-                lea     $5A(a6),a4
-loc_12F16C:
-                move.b  (a4)+,d1
-                ext.w   d1
-                lsl.w   #1,d1
-                cmp.w   (a5,d1.w),d0
-                bne.s   loc_12F16C
-                lea     (teamBudgetRankTable).l,a3
-                lsr.w   #1,d1
-                move.b  (a3,d1.w),d2
-                ext.w   d2
-                rts
 
-; ===== InitializeNewSeason_BuildTeamBudgetRankTable =====
-; prototype: void __usercall InitializeNewSeason_BuildTeamBudgetRankTable()
-; Chunk 172: ported to C (_InitializeNewSeason_BuildTeamBudgetRankTable)
-InitializeNewSeason_BuildTeamBudgetRankTable:
-                jmp     _InitializeNewSeason_BuildTeamBudgetRankTable
 
-; ===== ShowChairmanOpinionAboutTheSeason =====
-; Ported to C: _ShowChairmanOpinionAboutTheSeason in src/career_season.c
-
-; ===== SeasonFinished_ComputeSeasonReview =====
-
-; ===== ShowGreetingMessage =====
-; Ported to C: _ShowGreetingMessage in src/career_status.c
-ShowGreetingMessage:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ShowGreetingMessage
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== ShowLastSeasonMessage =====
-; Ported to C: _ShowLastSeasonMessage in src/career_status.c
-ShowLastSeasonMessage:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ShowLastSeasonMessage
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== ShowWishYouSuccessMessage =====
-; Ported to C: _ShowWishYouSuccessMessage in src/career_status.c
-ShowWishYouSuccessMessage:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ShowWishYouSuccessMessage
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== ShowEnjoyLastSeasonMessage =====
-; Ported to C: _ShowEnjoyLastSeasonMessage in src/career_status.c
-ShowEnjoyLastSeasonMessage:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ShowEnjoyLastSeasonMessage
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== Career_AppendTeamToTmdTeamPool =====
-; Ported to C: _Career_AppendTeamToTmdTeamPool in src/career_teams.c
-; Bridge: a0=team ptr → C param
-Career_AppendTeamToTmdTeamPool:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _Career_AppendTeamToTmdTeamPool
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== Career_RemoveTeamFromTmdTeamPool =====
-; Ported to C: _Career_RemoveTeamFromTmdTeamPool in src/career_teams.c
-; Bridge: d0=teamNo → C param
-
-; ===== SearchTeamInTmdFile =====
-; Ported to C: _SearchTeamInTmdFile in src/career_teams.c
-; Bridge: d0=teamNo → C param, returns Z flag (0=found/Z set, 1=not found/Z clear)
 careerAutoAdvanceInProgress:
                 dc.w $0000
 pl1Coach:
@@ -25145,9 +18155,6 @@ team1NumAllowedInjuries:
 team2NumAllowedInjuries:
                 dc.w $0000
 
-; ===== DrawAnimatedPatterns =====
-; prototype: void __usercall DrawAnimatedPatterns()
-; This proc serves to draw some additional patterns, mostly fans jumping and cheering.
 animPatternsRandomTable:
                 dc.b $00,$01,$02,$03,$04,$05,$06,$07,$08,$09,$0A,$0B,$0C,$0D,$0E,$0F
                 dc.b $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$1A,$1B,$1C,$1D,$1E,$1F
@@ -25224,18 +18231,6 @@ trainingPosOrder6:
 trainingPosOrder7:
                 dc.b $07,$06,$04,$05,$03,$01,$02,$00,$FF ; Training position priority order for outfield position 7, 0xFF-terminated.
 
-; ===== TrainingMatch_AddTrialPlayersForNewSeason =====
-; prototype: void __usercall TrainingMatch_AddTrialPlayersForNewSeason()
-TrainingMatch_AddTrialPlayersForNewSeason:
-                jmp     _TrainingMatch_AddTrialPlayersForNewSeason
-
-; ===== Career_ApplyPostMatchPlayerStatModsIfCareerTeam =====
-; Ported to C: _Career_ApplyPostMatchPlayerStatModsIfCareerTeam in src/career_status.c (Chunk 95)
-; Asm stub: a0=team, a1=mods -> push as C args
-
-; ===== Career_UpdateSinglePlayerPostMatchStats =====
-; Ported to C: _Career_UpdateSinglePlayerPostMatchStats in src/career_status.c (Chunk 95)
-; Asm stub: a6=playerSlotPtr -> push as C arg
 ; Menu_ChooseTeamsFriendly
 chooseTeamsFriendlyMenu:
                 ; Menu_ChooseTeamsFriendly
@@ -26246,32 +19241,6 @@ abortSelectTeams:
 exitSelectTeams:
                 dc.w $0000
 
-; ===== AddTeamToBuffer =====
-; prototype: struct TeamFile *__usercall AddTeamToBuffer@<a0>(struct TeamFile *team@<a0>)
-; in:
-;     A0 -> team to add
-; 
-; Adds team to selected teams buffer.
-; Ported to C: _AddTeamToBuffer in src/teams.c
-; Bridge: a0=team → d0=result, moved to a0
-AddTeamToBuffer:
-                movem.l d1-d7/a1-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _AddTeamToBuffer
-                addq.l  #4,sp
-                movea.l d0,a0
-                movem.l (sp)+,d1-d7/a1-a6
-                rts
-
-; ===== FindTeam =====
-; prototype: struct TeamFile *__usercall FindTeam@<a0>(struct TeamFile *teamToFind@<a0>, unsigned __int16 index@<d2>)
-; in:
-;      A0 -> team to search for
-; out:
-;      A0 -> team in selected teams buffer
-;      D2 = index of team in sel. teams buffer
-; Ported to C: _FindTeam in src/teams.c
-; Bridge: a0=team → a0=found, d2=remaining
 ; Menu_ChooseTeamsFriendly2
 chooseTeamsFriendlyMenu2:
                 ; Menu_ChooseTeamsFriendly2
@@ -27547,23 +20516,8 @@ chooseTeamsFriendlyMenu2:
                 dc.w MENU_CMD_END       ; entry77_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== ChooseTeamsFriendlyCommon =====
-; prototype: __int16 __usercall ChooseTeamsFriendlyCommon@<d0>(struct MenuEntry *entry@<a5>)
-; in:
-;     A5 -> menu entry for team that's being selected
-;           (team entries start at 8, there are 66 of them max)
-; 
-; This routine is executed when team name entry is selected, and it cycles
-; through team controls in the following order:
-; unselected -> CPU -> player coach -> coach -> unselected...
-; It also updates the menu to reflect the new selection.
 chooseTeamsFriendly_changeTeamsPromptDrawList:
                 dc.l $004D004C,$004AFFFF
-
-; ===== ViewSelTeamsSetColumns =====
-; prototype: void __usercall ViewSelTeamsSetColumns()
-; Set columns and dynamically calculate height of entries
-; depending on their number.
 viewTeamsColumn1:
                 dc.w $0000              ; Number of teams in columns 1 when selecting teams
 viewTeamsColumn2:
@@ -27585,17 +20539,7 @@ teamNumbersIndices:
 numSelectedTeamsCopy:
                 dc.w $0000
 
-; ===== ShowDiyLeaguesTournamentMenu =====
-; prototype: void __usercall ShowDiyLeaguesTournamentMenu(__int16 arg0@<d0>, __int16 arg1@<d1>, __int16 arg2@<d2>)
-ShowDiyLeaguesTournamentMenu:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d2,-(sp)        ; 3rd arg: focusOverride
-                move.l  d1,-(sp)        ; 2nd arg: viewOnly
-                move.l  d0,-(sp)        ; 1st arg: type
-                jsr     _ShowDiyLeaguesTournamentMenu
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
+
 ; Menu_DesignDIYLeague
 designDiyLeagueMenu:
                 ; Menu_DesignDIYLeague
@@ -28091,7 +21035,7 @@ designDiyLeagueMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l _SetExitMenuFlag ; funcPtr
+                dc.l _SetExitMenuFlag   ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry23_rc (struct)
                 dc.b -72                ; x
@@ -28157,11 +21101,6 @@ diyLeagueEndingMonthStrTable:
 asc_131FF2:
                 dc.b "-",0
 
-; ===== DesignDIYLeagueUpdatePromotionRelegationText =====
-; prototype: void __usercall DesignDIYLeagueUpdatePromotionRelegationText()
-; DOS: cseg_47981
-jmp_SetExitMenuFlag_6:
-                jmp     SetExitMenuFlag
 diyPitchTypeOrSeason_1:
                 dc.w $0000
 diyLeagueStartingMonth:
@@ -29000,18 +21939,10 @@ diyLeagueTournamentMenu:
                 ; entry42_input (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 65535              ; ctrlMask
-                dc.l _jmp_SetExitMenuFlag_7 ; funcPtr
+                dc.l _SetExitMenuFlag   ; funcPtr
                 dc.w MENU_CMD_END       ; entry42_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
-loc_132E24:
-                bsr.w   DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a5
-                move.w  #8,d0
-                jmp     CallDrawMultipleItems
 
-; ===== DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus ===== (ported to C)
-DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus:
-                jmp     _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus
 ; char *[8]
 groupStringTable:
                 ; char *[8]
@@ -29056,17 +21987,6 @@ diyRightTeamResult:
 pad_133328:
                 dc.b 0,0
 
-; ===== ShowDIYCupMenuWithParams =====
-; prototype: void __usercall ShowDIYCupMenuWithParams(__int16 a0@<d0>, __int16 a1@<d1>, __int16 a2@<d2>)
-ShowDIYCupMenuWithParams:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _ShowDIYCupMenuWithParams
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; Menu_DesignDIYCup
 designDiyCupMenu:
                 ; Menu_DesignDIYCup
@@ -30165,7 +23085,7 @@ designDiyCupMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l _SetExitMenuFlag ; funcPtr
+                dc.l _SetExitMenuFlag   ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry51_rc (struct)
                 dc.b -72                ; x
@@ -30381,20 +23301,6 @@ diyCupPenaltiesStringTable5:
 aHyphen:
                 dc.b "-",0
 
-; ===== DesignDIYCup_UpdateStartEndMonthIndices =====
-; prototype: void __usercall DesignDIYCup_UpdateStartEndMonthIndices()
-; dos: cseg_44F40
-
-; ===== DesignDIYCup_SetupTeamsSelectionUI =====
-; prototype: void __usercall DesignDIYCup_SetupTeamsSelectionUI()
-; dos: cseg_44FE8
-jmp_SetExitMenuFlag_4:
-                jmp     SetExitMenuFlag
-
-; ===== DesignDIYCup_GetRoundIndexFromMenuEntry =====
-; prototype: void __usercall DesignDIYCup_GetRoundIndexFromMenuEntry(struct MenuEntry *entry@<a5>)
-DesignDIYCup_GetRoundIndexFromMenuEntry:
-                rts                     ; only called from now-ported C code
 diyCupPitchTypeOrSeasonSelection:
                 dc.w $0000
 diyCupStartMonthIndex:
@@ -31389,24 +24295,10 @@ diyCupMenu:
                 ; entry66_input (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 65535              ; ctrlMask
-                dc.l _SetExitMenuFlag ; funcPtr
+                dc.l _SetExitMenuFlag   ; funcPtr
                 dc.w MENU_CMD_END       ; entry66_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== jmp_SetExitMenuFlag_5 =====
-; prototype: void __usercall jmp_SetExitMenuFlag_5()
-jmp_SetExitMenuFlag_5:
-                jmp     SetExitMenuFlag
-
-; ===== DIYCupOnSelect9 =====
-; prototype: void __usercall DIYCupOnSelect9()
-DIYCupOnSelect9:
-                jmp     SetupDIYCompetitionStatsMenu
-
-
-; ===== DesignDIYCup_UpdateCurrentMatchResultHeaderEntries =====
-; prototype: void __usercall DesignDIYCup_UpdateCurrentMatchResultHeaderEntries()
-; (ported to C: _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries)
 diyCupMatchListScrollIndex:
                 dc.w $0000
 diyCupMenuArg0Copy:
@@ -33762,7 +26654,7 @@ designDiyTournamentMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l _SetExitMenuFlag ; funcPtr
+                dc.l _SetExitMenuFlag   ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry92_rc (struct)
                 dc.b -72                ; x
@@ -34068,33 +26960,7 @@ diyStage6PlayCountStrTab:
                 dc.l aPlayEachTeamX2    ; "PLAY EACH TEAM X 2"
                 dc.l aPlayEachTeamX3    ; "PLAY EACH TEAM X 3"
                 dc.l aPlayEachTeamX4    ; "PLAY EACH TEAM X 4"
-DesignDIYTournamentOnSelect91:
-                jmp     SetExitMenuFlag
 
-; ===== DesignDIYTournament_GetStageBlockFromMenuEntry ===== (replaced by static getTournamentStageBlock in C)
-DesignDIYTournament_GetStageBlockFromMenuEntry:
-                rts             ; dead — all callers ported to C
-; (old OnDraw body removed — ported to C)
-; ===== DesignDIYTournament_CacheStageSelection ===== (ported to C → _DesignDIYTournament_CacheStageSelection)
-DesignDIYTournament_CacheStageSelection:
-                rts             ; dead — all callers ported to C
-; ===== DesignDIYTournament_RedrawStageItemsFromBlock ===== (ported to C → _DesignDIYTournament_RedrawStageItemsFromBlock)
-DesignDIYTournament_RedrawStageItemsFromBlock:
-                rts             ; dead — all callers ported to C
-
-; ===== DIYTournament_RecalculateNumStages ===== (ported to C → _DIYTournament_RecalculateNumStages)
-DIYTournament_RecalculateNumStages:
-                rts             ; dead — all callers ported to C
-
-; ===== DIYTournament_ComputeGroupLayoutForTeams =====
-; prototype: __int16 __usercall DIYTournament_ComputeGroupLayoutForTeams@<d3>(__int16 candidate@<d0>, __int16 current@<d6>, __int16 stage@<d7>)
-; (ported to C as static computeGroupLayoutForTeams)
-DIYTournament_ComputeGroupLayoutForTeams:
-                rts             ; dead — all callers ported to C
-; ===== DIYTournament_AdjustGroupLayoutForMaxTeams =====
-; (ported to C as static adjustGroupLayoutForMaxTeams)
-DIYTournament_AdjustGroupLayoutForMaxTeams:
-                rts             ; dead — all callers ported to C
 diyTournamentUseSeasonalPitchEffective:
                 dc.w $0000
 diyTournamentStartMonthPage:
@@ -34212,8 +27078,6 @@ pad_136DFA:
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0,0,0,0,0
 
-; ===== ContestInProgress ===== (merged into _Friendly)
-ContestInProgress:
 ; Menu_FriendlyGame
 friendlyGameMenu:
                 ; Menu_FriendlyGame
@@ -34448,7 +27312,7 @@ friendlyGameMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l _SetExitMenuFlag ; funcPtr
+                dc.l _SetExitMenuFlag   ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry10_rc (struct)
                 dc.b -72                ; x
@@ -34496,18 +27360,6 @@ friendly_season_table:
                 dc.l aOct               ; "OCT"
                 dc.l aNov               ; "NOV"
                 dc.l aDec               ; "DEC"
-jmpSetExitMenuFlag:
-                jmp     SetExitMenuFlag
-
-; ===== PitchTypeOrSeasonProc =====
-; Ported to C: _PitchTypeOrSeasonProc in src/menus.c
-
-; ===== SetFriendlyPitchOrSeason =====
-; Ported to C: _SetFriendlyPitchOrSeason in src/menus.c
-
-; ===== FriendlyPitchTypeProc =====
-; Ported to C: _FriendlyPitchTypeProc in src/menus.c
-; Bridge: a5=MenuEntry* → C param
 friendlyOk:
                 dc.w $0000              ; Initialised to 0
                                         ; set to 1 when ok is selected in friendly game menu
@@ -35954,56 +28806,6 @@ shirtTypesTable:
 shirtsIndexTable:
                 dc.b $00,$16,$00,$04,$00,$14,$00,$1C,$00,$1A,$00,$0E,$00,$18,$00,$1E
 
-; ===== ImportTeamsMenu =====
-; Bridge to C: _ImportTeamsMenu
-
-; ===== EditTeamsUndo =====
-; prototype: void __usercall EditTeamsUndo()
-; Restore team currently editing.
-
-; ===== InitEditTeamsMenu =====
-; prototype: void __usercall InitEditTeamsMenu()
-; [edit teams menu function]
-; Sets small faces and player names menu entries.
-; Set coach name. Mark in red shirt corresponding
-; to team settings, for both kits.
-; Also do some kind of color conversion.
-; Reads all from edit teams selected team.
-
-; ===== PrimaryKitColorConversion =====
-; prototype: void __usercall PrimaryKitColorConversion()
-PrimaryKitColorConversion:
-                rts     ; dead — now called only from C
-
-; ===== SecondaryKitColorConversion =====
-; prototype: void __usercall SecondaryKitColorConversion()
-; [edit teams menu function]
-SecondaryKitColorConversion:
-                rts     ; dead — now called only from C
-
-; ===== MarkFirstKitShirt =====
-; prototype: void __usercall MarkFirstKitShirt()
-; [edit teams menu procedure]
-; In edit menu team colors in red shirt corresponding
-; to selected team settings, for the first (upper) kit.
-MarkFirstKitShirt:
-                rts     ; dead — now called only from C
-
-; ===== MarkSecondKitShirt =====
-; prototype: void __usercall MarkSecondKitShirt()
-; [edit teams menu procedure]
-; In edit menu team colors in red shirt corresponding
-; to selected team settings, for the second (lower) kit.
-MarkSecondKitShirt:
-                rts     ; dead — now called only from C
-
-; ===== EditTeamsGetPlayerPointer =====
-; prototype: PlayerFile *__usercall EditTeamsGetPlayerPointer@<a0>(MenuEntry *entry@<a5>)
-; [edit teams function]
-; out:
-;     A0 -> currently selected player
-EditTeamsGetPlayerPointer:
-                rts     ; dead — now called only from C
 ; TeamFile *
 editTeamsSelectedTeam:
                 dc.l $00000000
@@ -36015,20 +28817,7 @@ saveCustomTeams:
 teamIsImported:
                 dc.w $0000              ; In edit custom teams menu.
 
-; ===== TopGoalScorersMenu_0 =====
-; prototype: void __usercall TopGoalScorersMenu_0()
-; Ported to C: _TopGoalScorersMenu_0 in src/statistics.c
 
-
-
-
-
-
-
-; ===== GetScorerSurname =====
-; prototype: char *__usercall GetScorerSurname@<a6>(void *scorer@<a0>)
-; in:
-;      A0 = player in highest_scorers_table
 ; Menu_CompetitionTopGoalScorers
 competitionTopGoalScorersMenu:
                 ; Menu_CompetitionTopGoalScorers
@@ -36783,12 +29572,6 @@ competitionTopGoalScorersMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== CompetitionTopGoalScorersInit =====
-; prototype: void __usercall CompetitionTopGoalScorersInit()
-; Ported to C: _CompetitionTopGoalScorersInit in src/statistics.c
-
-; ===== CompetitionTopGoalScorersExit =====
-; Ported to C: _CompetitionTopGoalScorersExit in src/menus.c
 ; Menu_TopGoalScorers
 topGoalScorersMenu:
                 ; Menu_TopGoalScorers
@@ -37150,37 +29933,9 @@ topGoalScorersMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== TopGoalScorersInit =====
-; prototype: void __usercall TopGoalScorersInit()
-; Ported to C: _TopGoalScorersInit in src/statistics.c
-
-; ===== TopGoalScorersBeforeDrawCommon =====
-; prototype: void __usercall TopGoalScorersBeforeDrawCommon(MenuEntry *entry@<a5>)
-; Ported to C: _TopGoalScorersBeforeDrawCommon in src/statistics.c
-; Bridge: a5 = MenuEntry* → push as parameter
-
-; ===== TopGoalScorersExit =====
-; Ported to C: _TopGoalScorersExit in src/menus.c
 diyStatsName:
                 dc.l $00000000          ; raw
 
-; ===== FormTopSkillsString =====
-; prototype: void __usercall FormTopSkillsString(char *dest@<a1>, PlayerFile *player@<a6>)
-; in:
-;     A1 -> destination buffer
-;     A6 -> player (file) + header
-; 
-; Form that weird 3-letter string that comes after player name in play match menu.
-; Ported to C: _FormTopSkillsString in src/play_match_menu.c
-; Bridge: a1=dst, a6=playerBase → C params
-FormTopSkillsString:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _FormTopSkillsString
-                addq.l  #8,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 topSkillLettersEven:
                 dc.l aTspvhcfstpvhcf,aTspvhcfstpvhcf+$E,aTspvhcfstpvhcf+$1C,aTspvhcfstpvhcf+$2A,aTspvhcfstpvhcf+$38,aTspvhcfstpvhcf+$46,aTspvhcfstpvhcf+$54 ; Pointers to skill letter strings (even variant) per position group.
 topSkillLettersOdd:
@@ -37242,7 +29997,7 @@ skillBitRotOdd7:
                 dc.b $00,$30,$00,$08,$60,$00,$10,$31,$40,$00,$13,$B1,$60,$00,$40,$00
                 dc.b $13,$80,$60,$00,$52,$46,$0C,$46,$00,$0B,$65,$CC,$4E,$75,$16,$3C
                 dc.b $00,$FF,$38,$3C,$FF,$FF,$34,$06,$30,$05,$32,$02,$4E,$B9
-                dc.l GetPlayerAtIndex
+                dc.l _GetPlayerAtIndex
                 dc.b $10,$28,$00,$66,$02,$40,$00,$E0,$EA,$48,$B0,$36,$60,$00,$66,$0C
                 dc.b $B6,$28,$00,$6C,$6C,$06,$16,$28,$00,$6C,$38,$02,$52,$42,$B4,$47
                 dc.b $65,$D4,$4A,$44,$4E,$75,$10,$36,$60,$00,$48,$80,$E5,$48,$45,$F9
@@ -37250,7 +30005,7 @@ skillBitRotOdd7:
                 dc.b "$r",0,$00,$16,$3C,$00,$FF,$38,$3C,$FF,$FF,$34,$06,$41,$F9
                 dc.l posFilledFlags
                 dc.b "J0 ",0,$66,$24,$30,$05,$32,$02,$4E,$B9
-                dc.l GetPlayerAtIndex
+                dc.l _GetPlayerAtIndex
                 dc.b $10,$28,$00,$66,$02,$40,$00,$E0,$EA,$48,$B0,$12,$66,$0C,$B6,$28
                 dc.b $00,$6C,$6C,$06,$16,$28,$00,$6C,$38,$02,$52,$42,$B4,$47,$65,$CA
                 dc.b $4A,$44,$6A,$06,$52,$8A,$4A,$12,$6A,$B6,$4A,$44,$4E,$75
@@ -37540,7 +30295,7 @@ squadMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l _SetExitMenuFlag  ; funcPtr
+                dc.l _SetExitMenuFlag   ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry10_rc (struct)
                 dc.b -43                ; x
@@ -37560,7 +30315,7 @@ squadMenu:
                 dc.l aExit              ; textPtr
                 ; entry10_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l _SetExitMenuFlag  ; funcPtr
+                dc.l _SetExitMenuFlag   ; funcPtr
                 dc.w MENU_CMD_END       ; entry10_end
                 ; entry11_rc (struct)
                 dc.b $00                ; x
@@ -38245,676 +31000,9 @@ squadMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-
-
-; ===== SelectTraining =====
-; Ported to C: _SelectTraining in src/menus.c
-
-; ===== SelectGoals =====
-; Ported to C: _SelectGoals in src/menus.c
-
-; ===== SquadOnSelect11 =====
-; Ported to C: _SquadOnSelect11 in src/menus.c
-
-; ===== j_SetExitMenuFlag =====
-; prototype: void j_SetExitMenuFlag(...)
-j_SetExitMenuFlag:
-                jmp     SetExitMenuFlag
-
-; ===== SquadOnSelect45 =====
-; Ported to C: _SquadOnSelect45 in src/menus.c
-
-; ===== Squad45AfterDraw =====
 locret_139AE2:
                 rts
 
-; Dead code — SquadUpdateMenuState original body replaced above
-SquadUpdateMenuState_dead:
-                bsr.w   UpdateBigCheckMark
-                movea.l (squadTeamFilePtr).l,a6
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #ORANGE_TO_BROWN_12,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                cmpi.b  #1,4(a6)
-                beq.s   loc_139B3A
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #BLUE_TO_PURPLE_11,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                cmpi.b  #2,4(a6)
-                beq.s   loc_139B3A
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #BRIGHT_BLUE_TO_BLUE_13,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-loc_139B3A:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A8)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                move.b  (a6),d0
-                andi.w  #$FF,d0
-                lsl.w   #2,d0
-                lea     (countriesTable).l,a0
-                movea.l (a0,d0.w),a0
-                lea     1(a0),a0
-                move.b  #$28,(a1)+      ; '('
-                jsr     StringCopy
-                move.b  #$29,(a1)+      ; ')'
-                clr.b   (a1)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$578)).l,a0
-                move.b  $16(a6),d0
-                andi.w  #$FF,d0
-                move.w  d0,$26(a0)
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$348).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$2D8).l
-                tst.w   (isSquadViewMode).l
-                bne.s   loc_139B90
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$2D8).l
-loc_139B90:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$310).l
-                movea.l (squadTeamFilePtr).l,a0
-                cmpi.b  #$50,(a0)       ; 'P'
-                bcs.s   loc_139BA8
-                cmpi.b  #$55,(a0)       ; 'U'
-                bls.s   loc_139BB4
-loc_139BA8:
-                tst.w   (isSquadViewMode).l
-                bne.s   loc_139BB4
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$310).l
-loc_139BB4:
-                tst.w   (isSquadViewMode).l
-                beq.w   loc_139D2E
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$150).l
-                move.w  (selTeamNumber).l,d0
-                cmpi.w  #$FFFF,d0
-                beq.s   loc_139BEA
-                cmp.w   (a6),d0
-                bne.s   loc_139BEA
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$5B0).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$5E8).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$5E8)).l,a0
-                move.w  (removedPlayerStatAccum).l,$26(a0)
-                bra.s   loc_139BF6
-loc_139BEA:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$5B0).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$5E8).l
-loc_139BF6:
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$540).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$578).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$380)).l,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                clr.w   $3C(a0)
-                clr.w   $74(a0)
-                clr.w   $AC(a0)
-                clr.w   $E4(a0)
-                clr.w   $11C(a0)
-                clr.w   $154(a0)
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1C0).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1F8).l
-                tst.w   (isNationalSquad).l
-                beq.s   loc_139C7C
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$380)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  #1,$3C(a0)
-                move.w  #1,$74(a0)
-                move.w  #1,$AC(a0)
-                move.w  #1,$E4(a0)
-                move.w  #1,$11C(a0)
-                move.w  #1,$154(a0)
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$5B0).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$5E8).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$540).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$578).l
-                bra.w   loc_139EDE
-loc_139C7C:
-                move.l  (quaternaryCompetitionPtr).l,d0
-                or.l    (secondaryCompetitionPtr).l,d0
-                or.l    (tertiaryCompetitionPtr).l,d0
-                bne.s   loc_139CAC
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$3F0).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$3B8).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$428).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$498).l
-                bra.w   loc_139EDE
-loc_139CAC:
-                tst.l   (quaternaryCompetitionPtr).l
-                bne.w   loc_139CBC
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$498).l
-loc_139CBC:
-                tst.l   (secondaryCompetitionPtr).l
-                bne.w   loc_139CD6
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$3B8).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$428).l
-                bra.w   loc_139EDE
-loc_139CD6:
-                tst.l   (tertiaryCompetitionPtr).l
-                bne.w   loc_139CEA
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$3B8).l
-                bra.w   loc_139EDE
-loc_139CEA:
-                tst.w   (isNationalSelector).l
-                beq.s   loc_139D24
-                tst.l   (secondaryCompetitionPtr).l
-                beq.s   loc_139D24
-                tst.l   (tertiaryCompetitionPtr).l
-                beq.s   loc_139D24
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$3B8).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$460).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3B8)).l,a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$460)).l,a1
-                move.w  $14(a0),MENUENTRY_X(a1)
-                addi.w  #$B,$14(a1)
-                bra.w   loc_139EDE
-loc_139D24:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$428).l
-                bra.w   loc_139EDE
-loc_139D2E:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$150).l
-                cmpi.w  #4,(gameType).l
-                bne.s   loc_139D58
-                cmpi.l  #careerTeam,(squadTeamFilePtr).l
-                bne.s   loc_139D58
-                tst.w   (isNationalSelector).l
-                bne.s   loc_139D58
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$150).l
-                bra.s   loc_139DA8
-loc_139D58:
-                tst.w   (teamSkillDiffAfterChange).l
-                bpl.s   loc_139DA8
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a0
-                move.w  #$EE,MENUENTRY_X(a0)
-                move.w  #$3C,$18(a0)    ; '<'
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1F8)).l,a0
-                move.w  #$EE,MENUENTRY_X(a0)
-                move.w  #$3C,$18(a0)    ; '<'
-                tst.w   (isNationalSquad).l
-                beq.s   loc_139DA8
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a0
-                subi.w  #$E,MENUENTRY_X(a0)
-                move.w  #$E5,$16(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1F8)).l,a0
-                subi.w  #$E,MENUENTRY_X(a0)
-                move.w  #$F5,$16(a0)
-loc_139DA8:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #YELLOW_GREEN_BLACK_14,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                clr.w   MENUENTRY_ISDISABLED(a0)
-                movea.l (squadTeamFilePtr).l,a0
-                btst    #0,$17(a0)
-                beq.s   loc_139DF0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-loc_139DF0:
-                tst.w   (teamSkillDiffAfterChange).l
-                bmi.s   loc_139E44
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$150)).l,a0
-                move.w  #$EE,MENUENTRY_X(a0)
-                move.w  #$3C,$18(a0)    ; '<'
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1F8)).l,a0
-                move.w  #$EE,MENUENTRY_X(a0)
-                move.w  #$3C,$18(a0)    ; '<'
-                move.w  #$DD,$16(a0)
-                movea.l (squadTeamFilePtr).l,a0
-                cmpi.b  #1,4(a0)
-                beq.w   loc_139E44
-                cmpi.b  #$50,(a0)       ; 'P'
-                bcs.s   loc_139E44
-                cmpi.b  #$55,(a0)       ; 'U'
-                bhi.s   loc_139E44
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1F8)).l,a0
-                subi.w  #$E,MENUENTRY_X(a0)
-loc_139E44:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$5B0).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$5E8).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$380)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  #1,$3C(a0)
-                move.w  #1,$74(a0)
-                move.w  #1,$AC(a0)
-                move.w  #1,$E4(a0)
-                move.w  #1,$11C(a0)
-                move.w  #1,$154(a0)
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$1C0).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$1F8).l
-                tst.w   (teamSkillDiffAfterChange).l
-                bpl.s   loc_139ED6
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$540).l
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$578).l
-                tst.w   (isNationalSquad).l
-                beq.s   loc_139ED4
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$540).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$578).l
-                lea     ($2BAE).w,a0
-                clr.w   MENUENTRY_ISINVISIBLE(a0)
-                clr.w   $3C(a0)
-                clr.w   $74(a0)
-                clr.w   $AC(a0)
-                clr.w   $E4(a0)
-                clr.w   $11C(a0)
-                clr.w   $154(a0)
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$2D8).l
-                bra.w   loc_139C7C
-loc_139ED4:
-                bra.s   loc_139EDE
-loc_139ED6:
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$540).l
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$578).l
-loc_139EDE:
-                tst.w   (isSquadViewMode).l
-                bne.w   loc_139F20
-                cmpi.w  #4,(gameType).l
-                bne.s   loc_139F20
-                tst.w   (isNationalSelector).l
-                bne.w   loc_139F20
-                movea.l (squadTeamFilePtr).l,a0
-                move.w  (a0),d0
-                cmp.w   (selTeamNumber).l,d0
-                bne.s   loc_139F20
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$2A0).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2A0)).l,a0
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0),a1
-                jsr     GetBankBalance
-                bra.s   loc_139F26
-loc_139F20:
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$2A0).l
-loc_139F26:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$70)).l,a0
-                lea     5(a6),a2
-                move.l  a2,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a0
-                lea     $24(a6),a2
-                move.l  a2,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0)
-                rts
-loc_13A0BE:
-                clr.w   d5
-                cmpi.w  #$B,d7
-                bcc.w   loc_13A158
-                cmpi.b  #1,4(a6)
-                beq.s   loc_13A100
-                tst.w   d7
-                beq.s   loc_13A12C
-                lea     ($323E).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #$D,d0
-                move.w  d0,$1E(a0)
-                lea     ($32AE).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #$D,d0
-                move.w  d0,$1E(a0)
-                bra.w   loc_13A1DC
-loc_13A100:
-                lea     ($323E).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #$A,d0
-                move.w  d0,$1E(a0)
-                lea     ($32AE).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #$A,d0
-                move.w  d0,$1E(a0)
-                bra.w   loc_13A1DC
-loc_13A12C:
-                lea     ($323E).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #$E,d0
-                move.w  d0,$1E(a0)
-                lea     ($32AE).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #$E,d0
-                move.w  d0,$1E(a0)
-                bra.w   loc_13A1DC
-loc_13A158:
-                cmpi.b  #1,4(a6)
-                beq.s   loc_13A1B4
-                lea     ($323E).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #$B,d0
-                move.w  d0,$1E(a0)
-                lea     ($32AE).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #$B,d0
-                move.w  d0,$1E(a0)
-                bra.s   loc_13A1DC
-                lea     ($323E).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #$E,d0
-                move.w  d0,$1E(a0)
-                lea     ($32AE).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #$E,d0
-                move.w  d0,$1E(a0)
-                bra.s   loc_13A1DC
-loc_13A1B4:
-                lea     ($323E).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #$C,d0
-                move.w  d0,$1E(a0)
-                lea     ($32AE).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #$C,d0
-                move.w  d0,$1E(a0)
-loc_13A1DC:
-                movea.l (squadTeamFilePtr).l,a0
-                move.w  d7,d1
-                jsr     GetPlayerInfoBreakPosition
-                movea.l a0,a6
-                move.w  d1,d4
-                move.w  d0,d6
-                move.w  (squadRowMode).l,d0
-                movem.l d1,-(sp)
-                jsr     IsPlayerInjured
-                movem.l (sp)+,d1
-                beq.s   loc_13A22E
-                lea     ($323E).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #$A,d0
-                move.w  d0,$1E(a0)
-                lea     ($32AE).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #$A,d0
-                move.w  d0,$1E(a0)
-loc_13A22E:
-                cmp.w   (squadPrevSelectedPlayerIndex).l,d1
-                bne.s   loc_13A25A
-                lea     ($323E).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addq.w  #6,d0
-                move.w  d0,$1E(a0)
-                lea     ($32AE).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addq.w  #6,d0
-                move.w  d0,$1E(a0)
-loc_13A25A:
-                move.w  d4,(squadSelectedPlayerIndex).l
-                move.l  a6,(squadSelectedPlayerPtr).l
-                move.w  $16(a5),d7
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A10)).l,a0
-                move.w  d7,$16(a0)
-                move.w  (squadRowMode).l,d0
-                jsr     SetSquadMenuEntryStatusSprite
-                cmpi.w  #$B,d6
-                bcc.s   loc_13A2AA
-                lea     (playerPositionsArray).l,a1
-                move.b  (a1,d4.w),d0
-                lea     (oldPlayerPositionsArray).l,a1
-                cmp.b   (a1,d4.w),d0
-                bhi.s   loc_13A2A4
-                beq.s   loc_13A2AA
-                move.w  #$D1,$26(a0)
-                bra.s   loc_13A2AA
-loc_13A2A4:
-                move.w  #$D0,$26(a0)
-loc_13A2AA:
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                tst.w   d5
-                bne.s   loc_13A2C6
-                clr.w   d0
-                move.b  $4E(a6),d0
-                move.w  d0,$26(a0)
-                clr.w   4(a0)
-loc_13A2C6:
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                lea     $4F(a6),a2
-                move.l  a2,$26(a0)
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                lea     (playerPositionsStringTable).l,a2
-                move.b  $66(a6),d0
-                andi.w  #$E0,d0
-                lsr.w   #3,d0
-                move.l  (a2,d0.w),$26(a0)
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                movea.l $26(a0),a1
-                movem.l d4,-(sp)
-                bsr.w   FormTopSkillsString
-                movem.l (sp)+,d4
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                movea.l (squadTeamFilePtr).l,a1
-                cmpi.b  #$50,(a1)       ; 'P'
-                bcs.s   loc_13A356
-                cmpi.b  #$55,(a1)       ; 'U'
-                bls.s   loc_13A38E
-loc_13A356:
-                tst.w   (isSquadViewMode).l
-                bne.s   loc_13A38E
-                movea.l $26(a0),a1
-                move.b  $4C(a6),d0
-                andi.w  #$FF,d0
-                move.w  d0,d1
-                add.w   d1,d0
-                add.w   d1,d0
-                lea     (shortCountryNames).l,a2 ; "ALBAUTBELBULCROCYPTCHDENENGESTFARFINFRA"...
-                lea     (a2,d0.w),a2
-                move.b  #$28,(a1)+      ; '('
-                move.b  (a2)+,(a1)+
-                move.b  (a2)+,(a1)+
-                move.b  (a2)+,(a1)+
-                move.b  #$29,(a1)+      ; ')'
-                clr.b   (a1)
-                clr.w   4(a0)
-loc_13A38E:
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                move.w  (teamSkillDiffAfterChange).l,d0
-                bpl.s   loc_13A3D6
-                tst.w   (isNationalSquad).l
-                bne.w   loc_13A3E2
-                tst.w   (isSquadViewMode).l
-                bne.s   loc_13A3E2
-                move.b  $6D(a6),d0
-                andi.w  #$FF,d0
-                move.b  $6E(a6),d1
-                andi.w  #$FF,d1
-                add.w   d1,d0
-                move.b  $6F(a6),d1
-                add.w   d1,d0
-                move.b  $70(a6),d1
-                add.w   d1,d0
-                bra.s   loc_13A3DA
-loc_13A3D6:
-                move.b  $6D(a6,d0.w),d0
-loc_13A3DA:
-                move.w  d0,$26(a0)
-                clr.w   4(a0)
-loc_13A3E2:
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                tst.w   (isSquadViewMode).l
-                bne.s   loc_13A47E
-                movea.l a0,a1
-                movem.l a0,-(sp)
-                movea.l (squadTeamFilePtr).l,a1
-                jsr     IsTeamNational
-                beq.s   loc_13A42A
-                movea.l a0,a1
-                movea.l a6,a0
-                jsr     InitPlayerValueDisplayStruct
-                movem.l (sp)+,a0
-                bra.s   loc_13A444
-loc_13A42A:
-                lea     (fundsBuffer).l,a1
-                movea.l a6,a0
-                jsr     FormatPlayerValueOrStatusText
-                movem.l (sp)+,a0
-                move.l  #fundsBuffer,$26(a0)
-loc_13A444:
-                clr.w   4(a0)
-                move.w  #$D,d1
-                cmpi.b  #$9B,$71(a6)
-                beq.s   loc_13A470
-                move.w  #1,d1
-                cmpi.b  #$9A,$71(a6)
-                beq.s   loc_13A470
-                move.w  #2,d1
-                btst    #1,$66(a6)
-                beq.s   loc_13A470
-                move.w  #$F,d1
-loc_13A470:
-                move.w  $24(a0),d0
-                andi.w  #$FFF0,d0
-                or.w    d1,d0
-                move.w  d0,$24(a0)
-loc_13A47E:
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                move.w  d7,$16(a0)
-                tst.w   (isNationalSquad).l
-                beq.s   loc_13A4CA
-                tst.w   (isSquadViewMode).l
-                beq.s   loc_13A4CA
-                move.l  a0,-(sp)
-                movea.l $26(a0),a1
-                lea     (careerUnavailablePlayerNames).l,a0
-                mulu.w  #$11,d4
-                lea     (a0,d4.w),a0
-                move.b  #$28,(a1)+      ; '('
-                jsr     StringCopy
-                movea.l (sp)+,a0
-                move.b  #$29,(a1)+      ; ')'
-                clr.b   (a1)
-                clr.w   4(a0)
-loc_13A4CA:
-                lea     $38(a0),a0
-                tst.w   (isNationalSquad).l
-                beq.s   loc_13A4E0
-                tst.w   (isSquadViewMode).l
-                beq.s   loc_13A532
-                bra.s   loc_13A4E8
-loc_13A4E0:
-                tst.w   (isSquadViewMode).l
-                bne.s   loc_13A532
-loc_13A4E8:
-                move.w  #1,4(a0)
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                bra.w   loc_13A5F8
-loc_13A532:
-                clr.w   d0
-                move.w  #1,4(a0)
-                move.l  (quaternaryCompetitionPtr).l,d0
-                or.l    (secondaryCompetitionPtr).l,d0
-                or.l    (tertiaryCompetitionPtr).l,d0
-                beq.s   loc_13A560
-                clr.w   d0
-                move.b  $6D(a6),d0
-                move.w  d0,$26(a0)
-                clr.w   4(a0)
-                move.w  d7,$16(a0)
-loc_13A560:
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                tst.l   (secondaryCompetitionPtr).l
-                beq.s   loc_13A582
-                move.b  $6E(a6),d0
-                move.w  d0,$26(a0)
-                clr.w   4(a0)
-                move.w  d7,$16(a0)
-loc_13A582:
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                tst.l   (tertiaryCompetitionPtr).l
-                beq.s   loc_13A5A4
-                move.b  $6F(a6),d0
-                move.w  d0,$26(a0)
-                clr.w   4(a0)
-                move.w  d7,$16(a0)
-loc_13A5A4:
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                tst.l   (quaternaryCompetitionPtr).l
-                beq.s   loc_13A5C6
-                move.b  $70(a6),d0
-                move.w  d0,$26(a0)
-                clr.w   4(a0)
-                move.w  d7,$16(a0)
-loc_13A5C6:
-                lea     $38(a0),a0
-                move.b  $6D(a6),d1
-                andi.w  #$FF,d1
-                move.b  $6E(a6),d0
-                andi.w  #$FF,d0
-                add.w   d0,d1
-                move.b  $6F(a6),d0
-                add.w   d0,d1
-                move.b  $70(a6),d0
-                add.w   d0,d1
-                move.w  d1,$26(a0)
-                clr.w   4(a0)
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-loc_13A5F8:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$A10)).l,a5
-                move.w  #$12,d0
-                jmp     DrawMultipleItems
-
-; ===== SquadRedrawPlayerListAndCheckMark =====
-
-; ===== SquadCommitPositionsAndUpdateSkill =====
-; Ported to C: _SquadCommitPositionsAndUpdateSkill in src/menus.c
-
-; ===== UpdateBigCheckMark =====
-; Ported to C: _UpdateBigCheckMark in src/menus.c
-UpdateBigCheckMark:
-                jmp     _UpdateBigCheckMark
 squadRowMode:
                 dc.w $0000
 isSquadViewMode:
@@ -38940,140 +31028,133 @@ squadPrevHighlightedMenuEntryPtr:
 isNationalSquad:
                 dc.w $0000              ; SquadInit sets this
 
-; ===== RotatePlayersLeft =====
-; Ported to C: _RotatePlayersLeft in src/teams.c
-; in: A0 = team pointer, D0 = max substitutes
-
-; ===== SetSquadMenuEntryStatusSprite =====
-; prototype: void __usercall SetSquadMenuEntryStatusSprite(__int16 rowMode@<d0>, MenuEntry *entry@<a0>, PlayerFile *player@<a6>)
-; ===== SetSquadMenuEntryStatusSprite ===== (ported to C → _SetSquadMenuEntryStatusSprite)
-; in: a0=MenuEntry*, a6=player data, d0=flag
-SetSquadMenuEntryStatusSprite:
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                move.l  a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _SetSquadMenuEntryStatusSprite
-                lea     12(sp),sp
-                rts
-
-; ===== SetSquadMenuEntryStatusSprite_AfterSim =====
-; prototype: void __usercall SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry@<a0>, PlayerFile *player@<a6>)
-; ===== SetSquadMenuEntryStatusSprite_AfterSim ===== (ported to C → _SetSquadMenuEntryStatusSprite_AfterSim)
-; in: a0=MenuEntry*, a6=player data
-
-; ===== SetMenuEntryPlayerFace =====
-; Ported to C: _SetMenuEntryPlayerFace in src/menus.c
-SetMenuEntryPlayerFace:
-                move.l  a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _SetMenuEntryPlayerFace
-                addq.l  #8,sp
-                rts
-
-; ===== GetCompetitionAbbrevStr =====
-; Ported to C: _GetCompetitionAbbrevStr in src/career_season.c
-; Bridge: a1=competition → C param, returns a2=abbrev string from C return (d0)
-
-; ===== SetupDIYCompetitionStatsMenu =====
-; Ported to C: _SetupDIYCompetitionStatsMenu in src/diy_competition.c
-SetupDIYCompetitionStatsMenu:
-                jmp     _SetupDIYCompetitionStatsMenu
+; Menu_CompetitionStats
 competitionStatsMenu:
-                dc.l $00000000          ; On init function
-                dc.l $00000000          ; on return function
-                dc.l $00000000          ; on draw function
-                dc.l $00000001          ; -= default entry =-
-                dc.w -1                 ; byte coords
-                dc.b $5C                ; x (0)
+                ; Menu_CompetitionStats
+                ; hdr (struct)
+                dc.l 0                  ; onInitPtr
+                dc.l 0                  ; onReturnPtr
+                dc.l 0                  ; onDrawPtr
+                dc.l $00000001          ; On init function
+                dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
+                ; entry0 (struct)
+                ; rc (struct)
+                dc.b $5C                ; x
                 dc.b $00                ; y
-                dc.b $78                ; width
-                dc.b $0F                ; height
-                dc.w $0004              ; type 4 - entry and frame color
-                dc.w $0017              ; background color: pink to brown, outer frame color: gray, inner frame color: gray
-                dc.w $0008              ; type 8 - entry text pointer
-                dc.w $0000              ; string flags: color = white, font = small, alignment = center
-                dc.l aStatistics        ; "STATISTICS"
-                dc.w $0000              ; -= end entry 0 =-
-                dc.b $5C                ; x (1)
+                dc.b $78                ; w
+                dc.b $0F                ; h
+                ; colors (struct)
+                dc.w MENU_CMD_COLORS    ; type
+                ; flags (struct)
+                dc.w $0017              ; reserved
+                ; text (struct)
+                dc.w MENU_CMD_TEXT_PTR  ; type
+                ; strFlags (struct)
+                dc.w $0000              ; textColor
+                dc.l aStatistics        ; textPtr
+                dc.w MENU_CMD_END       ; end
+                ; entry1 (struct)
+                ; rc (struct)
+                dc.b $5C                ; x
                 dc.b $28                ; y
-                dc.b $78                ; width
-                dc.b $0F                ; height
-                dc.w $0002              ; type 2 - positions
-                dc.b -1                 ; left entry
-                dc.b -1                 ; right entry
-                dc.b -1                 ; up entry
-                dc.b $02                ; down entry
-                dc.w $0004              ; type 4 - entry and frame color
-                dc.w $000E              ; background color: yellow-to-green-to-black, outer frame color: gray, no inner frame
-                dc.w $0008              ; type 8 - entry text pointer
-                dc.w $0000              ; string flags: color = white, font = small, alignment = center
-                dc.l aHighestScorerL    ; "HIGHEST SCORER LIST"
-                dc.w $000D              ; type 13 - on select function - fire only
-                dc.l _StatsHighestScorerList ; " y"
-                dc.w $0000              ; -= end entry 1 =-
-                dc.b $5C                ; x (2)
+                dc.b $78                ; w
+                dc.b $0F                ; h
+                ; nav (struct)
+                dc.w MENU_CMD_NAV       ; type
+                dc.b -1                 ; left
+                dc.b -1                 ; right
+                dc.b -1                 ; up
+                dc.b $02                ; down
+                ; colors (struct)
+                dc.w MENU_CMD_COLORS    ; type
+                ; flags (struct)
+                dc.w $000E              ; reserved
+                ; text (struct)
+                dc.w MENU_CMD_TEXT_PTR  ; type
+                ; strFlags (struct)
+                dc.w $0000              ; textColor
+                dc.l aHighestScorerL    ; textPtr
+                ; onSelect (struct)
+                dc.w MENU_CMD_ONSELECT_FIRE ; type
+                dc.l _StatsHighestScorerList ; funcPtr
+                dc.w MENU_CMD_END       ; end
+                ; entry2 (struct)
+                ; rc (struct)
+                dc.b $5C                ; x
                 dc.b $41                ; y
-                dc.b $78                ; width
-                dc.b $0F                ; height
-                dc.w $0002              ; type 2 - positions
-                dc.b -1                 ; left entry
-                dc.b -1                 ; right entry
-                dc.b $01                ; up entry
-                dc.b $03                ; down entry
-                dc.w $0004              ; type 4 - entry and frame color
-                dc.w $000E              ; background color: yellow-to-green-to-black, outer frame color: gray, no inner frame
-                dc.w $0008              ; type 8 - entry text pointer
-                dc.w $0000              ; string flags: color = white, font = small, alignment = center
-                dc.l aCompetitionInf    ; "COMPETITION INFO"
-                dc.w $000D              ; type 13 - on select function - fire only
-                dc.l _CompetitionInfo
-
-                dc.w $0000              ; -= end entry 2 =-
-                dc.b $5C                ; x (3)
+                dc.b $78                ; w
+                dc.b $0F                ; h
+                ; nav (struct)
+                dc.w MENU_CMD_NAV       ; type
+                dc.b -1                 ; left
+                dc.b -1                 ; right
+                dc.b $01                ; up
+                dc.b $03                ; down
+                ; colors (struct)
+                dc.w MENU_CMD_COLORS    ; type
+                ; flags (struct)
+                dc.w $000E              ; reserved
+                ; text (struct)
+                dc.w MENU_CMD_TEXT_PTR  ; type
+                ; strFlags (struct)
+                dc.w $0000              ; textColor
+                dc.l aCompetitionInf    ; textPtr
+                ; onSelect (struct)
+                dc.w MENU_CMD_ONSELECT_FIRE ; type
+                dc.l _CompetitionInfo    ; funcPtr
+                dc.w MENU_CMD_END       ; end
+                ; entry3 (struct)
+                ; rc (struct)
+                dc.b $5C                ; x
                 dc.b $5A                ; y
-                dc.b $78                ; width
-                dc.b $0F                ; height
-                dc.w $0002              ; type 2 - positions
-                dc.b -1                 ; left entry
-                dc.b -1                 ; right entry
-                dc.b $02                ; up entry
-                dc.b $04                ; down entry
-                dc.w $0004              ; type 4 - entry and frame color
-                dc.w $000E              ; background color: yellow-to-green-to-black, outer frame color: gray, no inner frame
-                dc.w $0008              ; type 8 - entry text pointer
-                dc.w $0000              ; string flags: color = white, font = small, alignment = center
-                dc.l aViewSquads        ; "VIEW SQUADS"
-                dc.w $000D              ; type 13 - on select function - fire only
-                dc.l _StatsViewSquads    ; """y"
-                dc.w $0000              ; -= end entry 3 =-
-                dc.b $66                ; x (4)
+                dc.b $78                ; w
+                dc.b $0F                ; h
+                ; nav (struct)
+                dc.w MENU_CMD_NAV       ; type
+                dc.b -1                 ; left
+                dc.b -1                 ; right
+                dc.b $02                ; up
+                dc.b $04                ; down
+                ; colors (struct)
+                dc.w MENU_CMD_COLORS    ; type
+                ; flags (struct)
+                dc.w $000E              ; reserved
+                ; text (struct)
+                dc.w MENU_CMD_TEXT_PTR  ; type
+                ; strFlags (struct)
+                dc.w $0000              ; textColor
+                dc.l aViewSquads        ; textPtr
+                ; onSelect (struct)
+                dc.w MENU_CMD_ONSELECT_FIRE ; type
+                dc.l _StatsViewSquads    ; funcPtr
+                dc.w MENU_CMD_END       ; end
+                ; entry4 (struct)
+                ; rc (struct)
+                dc.b $66                ; x
                 dc.b -71                ; y
-                dc.b $64                ; width
-                dc.b $0F                ; height
-                dc.w $0002              ; type 2 - positions
-                dc.b -1                 ; left entry
-                dc.b -1                 ; right entry
-                dc.b $03                ; up entry
-                dc.b -1                 ; down entry
-                dc.w $0004              ; type 4 - entry and frame color
-                dc.w $000C              ; background color: orange to brown, outer frame color: red, no inner frame
-                dc.w $0008              ; type 8 - entry text pointer
-                dc.w $0000              ; string flags: color = white, font = small, alignment = center
-                dc.l aExit              ; "EXIT"
-                dc.w $000D              ; type 13 - on select function - fire only
-                dc.l _StatsExit
+                dc.b $64                ; w
+                dc.b $0F                ; h
+                ; nav (struct)
+                dc.w MENU_CMD_NAV       ; type
+                dc.b -1                 ; left
+                dc.b -1                 ; right
+                dc.b $03                ; up
+                dc.b -1                 ; down
+                ; colors (struct)
+                dc.w MENU_CMD_COLORS    ; type
+                ; flags (struct)
+                dc.w $000C              ; reserved
+                ; text (struct)
+                dc.w MENU_CMD_TEXT_PTR  ; type
+                ; strFlags (struct)
+                dc.w $0000              ; textColor
+                dc.l aExit              ; textPtr
+                ; onSelect (struct)
+                dc.w MENU_CMD_ONSELECT_FIRE ; type
+                dc.l _StatsExit          ; funcPtr
+                dc.w MENU_CMD_END       ; end
+                dc.w MENU_MARK_END_MENU ; markEndMenu
 
-                dc.w $0000              ; -= end entry 4 =-
-                dc.w -999               ; -= end menu =-
-
-; ===== StatsHighestScorerList =====
-; prototype: void __usercall StatsHighestScorerList(__int16 mode@<d0>, const char *diyName@<a0>)
-; Ported to C: _StatsHighestScorerList in src/statistics.c
-
-
-; ===== StatsExit =====
-; Ported to C: _StatsExit in src/menus.c
 diyCompetitionType:
                 dc.w $0000
 diyUnknownWord_2C:
@@ -39277,27 +31358,6 @@ careerOverMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== CareerOverInit =====
-; Ported to C: _CareerOverInit in src/menus.c
-
-; ===== CareerOverFinish =====
-
-; ===== JobOffersMenuRetired =====
-; Ported to C: _JobOffersMenuRetired in src/menus.c
-
-; ===== ExitCareerMenu =====
-; Ported to C: _ExitCareerMenu in src/menus.c
-
-; ===== SelectTeamToManage =====
-; Bridge to C: _SelectTeamToManage
-; out: D0=selectedTeamCountryNumber, A0=selectedTeamPtr
-SelectTeamToManage:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _SelectTeamToManage
-                movem.l (sp)+,d2-d7/a2-a6
-                move.w  (selectedTeamCountryNumber).l,d0
-                movea.l (selectedTeamPtr).l,a0
-                rts
 ; Menu_Career
 careerMenu:
                 ; Menu_Career
@@ -39569,7 +31629,7 @@ careerMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l _SetExitMenuFlag ; funcPtr
+                dc.l _SetExitMenuFlag   ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 ; unsigned __int8[64]
@@ -39583,24 +31643,6 @@ offsetCoachOrPlayer:
                 dc.w $0000
                 dc.l aCoach_0           ; "COACH"
                 dc.l aPlayerCoach_0     ; "PLAYER-COACH"
-                xdef    _CSelectTeamToManage
-                xdef    _cSelectTeamToManageResult
-_CSelectTeamToManage:
-                movem.l d1-d7/a1-a6,-(sp)
-                bsr.w   SelectTeamToManage
-                move.w  d0,(_cSelectTeamToManageResult).l
-                move.l  a0,d0           ; C return = team pointer
-                movem.l (sp)+,d1-d7/a1-a6
-                rts
-_cSelectTeamToManageResult:
-                dc.w    0
-                xdef    _CInitCareer
-_CInitCareer:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.w  66(sp),d0       ; first C param low word (15*4 + 4 ret = 64, +2 for high word = 66)
-                jsr     InitCareer
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== j_SetExitMenuFlag2 =====
 ; Updated: direct jmp to C
@@ -39810,20 +31852,6 @@ viewCompetitionsMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== ViewCompetitionsInit =====
-; Ported to C: _ViewCompetitionsInit in src/menus.c
-
-; ===== ViewCompetitionsOnReturn =====
-; Ported to C: _ViewCompetitionsOnReturn in src/menus.c
-
-; ===== ShowDiyCompetitionForSource ===== (ported to C → _ShowDiyCompetitionForSource)
-; C bridge: push a0 (header ptr), call C, clean stack
-
-; ===== TopGoalScorersMenu =====
-; Updated: direct jmp to C
-
-; ===== jmp_SetExitMenuFlag_2 =====
-; Updated: direct jmp to C
 ; Menu_Contest
 contestMenu:
                 ; Menu_Contest
@@ -40530,63 +32558,6 @@ contestMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== CheckClubBusiness ===== (ported to C → _CheckClubBusiness)
-; Note: asm used absolute address ($297E).w which was entry 6 in original binary
-                ; === dead code below (old body) ===
-loc_13C020:
-                tst.w   (seasonFinished).l
-                beq.s   locret_13C032
-                move.w  #7,d0
-                jsr     SetCurrentEntry
-locret_13C032:
-                rts
-loc_13C0A2:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a0
-                move.l  #aFinishSeason,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "FINISH SEASON" ...
-                rts
-loc_13C0B0:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a0
-                move.l  #aFinishSeason,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "FINISH SEASON" ...
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$230)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_9,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$230)).l,a0
-                move.w  #1,MENUENTRY_ISDISABLED(a0)
-                rts
-loc_13C0DC:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2D8)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addq.w  #ORANGE_TO_BROWN_4,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2D8)).l,a0
-                clr.w   MENUENTRY_ISDISABLED(a0)
-                tst.w   (seasonNumberOfSquads).l
-                bne.s   loc_13C118
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a0
-                move.l  #aNextMatch,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "NEXT MATCH" ...
-                bsr.w   SeasonLowerButtons
-                tst.w   (seasonFinished).l
-                bne.s   loc_13C130
-                rts
-loc_13C118:
-                tst.w   (seasonFinished).l
-                bne.w   loc_13C12C
-                tst.w   (careerFinished).l
-                bne.s   loc_13C130
-                rts
-loc_13C12C:
-                bsr.w   SeasonLowerButtons
-loc_13C130:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a0
-                move.l  #aFinishSeason,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "FINISH SEASON" ...
-                rts
-
-; ===== SeasonLowerButtons ===== (ported to C → _SeasonLowerButtons)
-SeasonLowerButtons:
-                jmp     _SeasonLowerButtons
 teamSelectionKeyCache_ListIndex:
                 dc.w $0000
 currentGame:
@@ -40913,545 +32884,13 @@ managementRecordMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== ManagementRecordInit =====
-; Ported to C: _ManagementRecordInit in src/statistics.c
-
-; ===== jmp_SetExitMenuFlag_3 =====
-; Updated: direct jmp to C
-
-; ===== ManagementArrowUpSelect =====
-; Ported to C: _ManagementArrowUpSelect in src/statistics.c
-
-; ===== ManagementArrowDownSelect =====
-; Ported to C: _ManagementArrowDownSelect in src/statistics.c
-
-; ===== FillManagementRecordInfo =====
-; Ported to C: _FillManagementRecordInfo in src/statistics.c
-loc_13CD74:
-                cmpi.w  #$A,d2
-                bcs.s   loc_13CD82
-                lea     (a12Season).l,a0 ; "%1/%2 SEASON"
-                bra.s   loc_13CD88
-loc_13CD82:
-                lea     (a102Season).l,a0 ; "%1/0%2 SEASON"
-loc_13CD88:
-                jsr     PrintFormatted
-                move.w  d5,MENUENTRY_Y(a4)
-                addi.w  #$F,d5
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$E0)).l,a4
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a4),a1
-                lea     2(a6),a0
-                jsr     StringCopy
-                move.w  d5,MENUENTRY_Y(a4)
-                addi.w  #$A,d5
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$118)).l,a4
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a4),a1
-                move.b  (a6),d0
-                cmpi.b  #CN_EUROPE,d0
-                bcs.s   loc_13CDCE
-                cmpi.b  #CN_OCEANIA,d0
-                bhi.s   loc_13CDCE
-                lea     (aNational).l,a2 ; "NATIONAL"
-                bra.s   loc_13CDE2
-loc_13CDCE:
-                andi.w  #$FF,d0
-                lsl.w   #2,d0
-                lea     (countriesTable).l,a2
-                movea.l (a2,d0.w),a2
-                lea     1(a2),a2
-loc_13CDE2:
-                lea     (aA).l,a0       ; "(%a)"
-                jsr     PrintFormatted
-                move.w  d5,MENUENTRY_Y(a4)
-                addi.w  #17,d5
-                movea.l 22(a6),a0
-                move.b  86(a6),d4
-                move.b  104(a6),d7
-                bsr.w   RenderCompLine
-                movea.l 26(a6),a0
-                move.b  87(a6),d4
-                clr.b   d7
-                bsr.w   RenderCompLine
-                movea.l 30(a6),a0
-                move.b  88(a6),d4
-                clr.b   d7
-                bsr.w   RenderCompLine
-                movea.l 34(a6),a0
-                move.b  89(a6),d4
-                clr.b   d7
-                bsr.w   RenderCompLine
-                addq.w  #8,d5
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$230)).l,a4
-                move.w  d5,MENUENTRY_Y(a4)
-                addi.w  #9,d5
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$268)).l,a4
-                movea.l MENUENTRY_FG(a4),a1
-                tst.b   SEASONINFORMATIONS_BESTSCORERNAME(a6)
-                bne.s   loc_13CE5A
-                lea     (aDash).l,a0    ; "-"
-                jsr     StringCopy
-                bra.s   loc_13CE90
-loc_13CE5A:
-                move.w  d5,-(sp)
-                lea     (aDash).l,a0    ; "-"
-                clr.w   d0
-                move.b  SEASONINFORMATIONS_TOTALGAMES(a6),d0
-                beq.s   loc_13CE8A
-                clr.w   d1
-                move.b  SEASONINFORMATIONS_TOTALWINS(a6),d1
-                clr.w   d2
-                move.b  SEASONINFORMATIONS_TOTALDRAWN(a6),d2
-                clr.w   d3
-                move.b  SEASONINFORMATIONS_TOTALLOST(a6),d3
-                move.w  SEASONINFORMATIONS_TOTALGOALSSCORED(a6),d4
-                move.w  SEASONINFORMATIONS_TOTALGOALSTAKEN(a6),d5
-                lea     (aPl0W1D2L3F4A5).l,a0 ; "PL %0    W %1    D %2    L %3    F %4  "...
-loc_13CE8A:
-                jsr     PrintFormatted
-loc_13CE90:
-                move.w  (sp)+,d5
-                move.w  d5,MENUENTRY_Y(a4)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$230)).l,a5
-                move.w  #2,d0
-                movem.l d5-d7/a6,-(sp)
-                jsr     DrawMultipleItems
-                movem.l (sp)+,d5-d7/a6
-                addi.w  #13,d5
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$1F8).l
-                tst.b   SEASONINFORMATIONS_MANAGERSTATUS(a6)
-                beq.s   loc_13CF22
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$1F8).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1F8)).l,a4
-                move.w  d5,MENUENTRY_Y(a4)
-                move.w  #10,d0
-                tst.b   SEASONINFORMATIONS_MANAGERSTATUS(a6)
-                bmi.s   loc_13CEF2
-                move.w  #6,d0
-                move.l  #aResigned,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a4) ; "- RESIGNED -" ...
-                cmpi.b  #1,SEASONINFORMATIONS_MANAGERSTATUS(a6)
-                beq.s   loc_13CEF2
-                move.w  #15,d0
-                move.l  #aRetired,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a4) ; "- RETIRED -" ...
-loc_13CEF2:
-                move.w  MENUENTRY_STRINGFLAGS(a4),d1
-                andi.w  #$FFF0,d1
-                or.w    d0,d1
-                move.w  d1,MENUENTRY_STRINGFLAGS(a4)
-                move.w  MENUENTRY_STRINGFLAGS(a4),d1
-                bset    #13,d1
-                move.w  d1,MENUENTRY_STRINGFLAGS(a4)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1F8)).l,a5
-                move.w  #1,d0
-                movem.l d5-d7/a6,-(sp)
-                jsr     DrawMultipleItems
-                movem.l (sp)+,d5-d7/a6
-loc_13CF22:
-                addi.w  #13,d5
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2A0)).l,a4
-                move.l  #aSeasonSTopScor,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a4) ; "SEASON'S TOP SCORER" ...
-                tst.b   SEASONINFORMATIONS_BESTSCORERNAME(a6)
-                beq.w   loc_13CF48
-                tst.b   63(a6)
-                beq.s   loc_13CF48
-                move.l  #aSeasonSTopScor_0,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a4) ; "SEASON'S TOP SCORERS" ...
-loc_13CF48:
-                move.w  d5,MENUENTRY_Y(a4)
-                addi.w  #10,d5
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2D8)).l,a4
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a4),a1
-                tst.w   SEASONINFORMATIONS_BESTSCORERNUMGOALS(a6)
-                beq.s   loc_13CF64
-                tst.b   SEASONINFORMATIONS_BESTSCORERNAME(a6)
-                bne.s   loc_13CF72
-loc_13CF64:
-                lea     (aDash).l,a0    ; "-"
-                jsr     StringCopy
-                bra.s   loc_13CF86
-loc_13CF72:
-                lea     40(a6),a2
-                lea     (aA0).l,a0      ; "%a  %0"
-                move.w  SEASONINFORMATIONS_BESTSCORERNUMGOALS(a6),d0
-                jsr     PrintFormatted
-loc_13CF86:
-                move.w  d5,MENUENTRY_Y(a4)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$2A0)).l,a5
-                move.w  #2,d0
-                movem.l d5-d7/a6,-(sp)
-                jsr     DrawMultipleItems
-                movem.l (sp)+,d5-d7/a6
-                addq.w  #8,d5
-                move.w  #1,(menuEntries+MENUENTRY_ISINVISIBLE+$310).l
-                tst.b   SEASONINFORMATIONS_BESTSCORERNAME(a6)
-                beq.w   loc_13CFF4
-                tst.b   $3F(a6)
-                beq.s   loc_13CFF4
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$310).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$310)).l,a4
-                movea.l MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a4),a1
-                lea     $3F(a6),a2
-                lea     (aA0).l,a0      ; "%a  %0"
-                move.w  MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a6),d0
-                jsr     PrintFormatted
-                move.w  d5,$16(a4)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$310)).l,a5
-                move.w  #1,d0
-                movem.l d5-d7/a6,-(sp)
-                jsr     DrawMultipleItems
-                movem.l (sp)+,d5-d7/a6
-                addi.w  #$A,d5
-loc_13CFF4:
-                addq.w  #4,d5
-                move.w  #36,d5
-                tst.w   SEASONINFORMATIONS_TROPHYFLAGS(a6)
-                beq.s   locret_13D020
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3B8)).l,a4
-                move.w  d5,MENUENTRY_Y(a4)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3F0)).l,a4
-                move.w  d5,MENUENTRY_Y(a4)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$428)).l,a4
-                move.w  d5,MENUENTRY_Y(a4)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$460)).l,a4
-                move.w  d5,MENUENTRY_Y(a4)
-locret_13D020:
-                rts
-
-; ===== RenderCompLine =====
-; prototype: void __usercall RenderCompLine(const char *compName@<a0>, __int16 resultCode@<d4>, unsigned __int8 qualFlag@<d7>, struct SeasonInformations *si@<a6>, int y@<d5>)
-; Render one competition block (2–3 lines) using fields from SeasonInfo @a6.
-; Inputs (68k calling convention shown):
-;   a0 = compNamePtr (e.g., "LEAGUE"/"CUP"/"FRIENDLY"/"EUROPEAN TOUR"...)
-;   d4 = result/position code (encoded, see table below)
-;   d7 = qualifier/promotion flag (0 none, 1 QUALIFIED, 2 NOT QUALIFIED, 3 PROMOTED, else RELEGATED)
-;   a6 = SeasonInfo* (base for the season’s stats)
-;   d5 = running Y (advanced by this routine)
-RenderCompLine:
-                rts     ; dead — only called from FillManagementRecordInfo (now in C)
-                movea.l a0,a2
-                cmpa.l  #0,a0
-                beq.w   locret_13D242
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a4
-                move.w  d5,MENUENTRY_Y(a4)
-                cmpa.l  #aFriendly,a0   ; "FRIENDLY"
-                bne.s   loc_13D044
-                lea     (aFriendlies).l,a0 ; "FRIENDLIES"
-loc_13D044:
-                movea.l $26(a4),a1
-                jsr     StringCopy
-                ext.w   d4
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a4
-                move.w  d5,MENUENTRY_Y(a4)
-                move.w  $24(a4),d0
-                andi.w  #$FFF0,d0
-                ori.w   #2,d0
-                move.w  d0,$24(a4)
-                lea     (aDash).l,a0    ; "-"
-                tst.w   d4
-                beq.w   loc_13D1A2
-                cmpa.l  #aFriendly,a2   ; "FRIENDLY"
-                bne.s   loc_13D0AC
-                move.b  $62(a6),d0
-                move.b  $63(a6),d1
-                move.b  $64(a6),d2
-                ext.w   d0
-                ext.w   d1
-                ext.w   d2
-                lea     (aDash).l,a0    ; "-"
-                tst.w   d0
-                bne.s   loc_13D0A2
-                tst.w   d1
-                bne.s   loc_13D0A2
-                tst.w   d2
-                beq.w   loc_13D1A2
-loc_13D0A2:
-                lea     (aWon0Drawn1Lost).l,a0 ; "WON %0  DRAWN %1  LOST %2"
-                bra.w   loc_13D1A2
-loc_13D0AC:
-                cmpa.l  #aEuropeanTour,a2 ; "EUROPEAN TOUR"
-                bcs.s   loc_13D0EC
-                cmpa.l  #aOceaniaTour,a2 ; "OCEANIA TOUR"
-                bhi.s   loc_13D0EC
-                move.b  $65(a6),d0
-                move.b  $66(a6),d1
-                move.b  $67(a6),d2
-                ext.w   d0
-                ext.w   d1
-                ext.w   d2
-                lea     (aDash).l,a0    ; "-"
-                tst.w   d0
-                bne.s   loc_13D0E2
-                tst.w   d1
-                bne.s   loc_13D0E2
-                tst.w   d2
-                beq.w   loc_13D1A2
-loc_13D0E2:
-                lea     (aWon0Drawn1Lost).l,a0 ; "WON %0  DRAWN %1  LOST %2"
-                bra.w   loc_13D1A2
-loc_13D0EC:
-                cmpi.w  #1,d4
-                bne.s   loc_13D102
-                move.w  $24(a4),d1
-                andi.w  #$FFF0,d1
-                ori.w   #$F,d1
-                move.w  d1,$24(a4)
-loc_13D102:
-                lea     (aWinners).l,a0 ; "WINNERS"
-                cmpi.w  #1,d4
-                beq.w   loc_13D1A2
-                lea     (aRunnerUp).l,a0 ; "RUNNER-UP"
-                cmpi.w  #2,d4
-                beq.w   loc_13D1A2
-                lea     (aFinalist).l,a0 ; "FINALIST"
-                cmpi.w  #$FF9C,d4
-                beq.w   loc_13D1A2
-                lea     (aReachedSemiFin).l,a0 ; "REACHED SEMI-FINAL"
-                cmpi.w  #$FF9B,d4
-                beq.s   loc_13D1A2
-                lea     (aReachedQuarter).l,a0 ; "REACHED QUARTER-FINAL"
-                cmpi.w  #$FF9A,d4
-                beq.s   loc_13D1A2
-                lea     (aThirdPlace).l,a0 ; "THIRD PLACE"
-                cmpi.w  #$FF99,d4
-                beq.s   loc_13D1A2
-                lea     (aFourthPlace).l,a0 ; "FOURTH PLACE"
-                cmpi.w  #$FF97,d4
-                beq.s   loc_13D1A2
-loc_13D15C:
-                lea     (aStillInCompeti).l,a0 ; "STILL IN COMPETITION"
-                cmpi.w  #$FF98,d4
-                beq.s   loc_13D1A2
-                lea     (aDash).l,a0    ; "-"
-                cmpi.w  #$FF96,d4
-                beq.s   loc_13D1A2
-                tst.w   d4
-                bpl.s   loc_13D18E
-                cmpi.w  #$FF92,d4
-                bgt.s   loc_13D198
-                addi.w  #$6E,d4         ; 'n'
-                move.w  d4,d0
-                neg.w   d0
-                lea     (aKnockedOutInRo).l,a0 ; "KNOCKED OUT IN ROUND %0"
-                bra.s   loc_13D1A2
-loc_13D18E:
-                lea     (aPosition0).l,a0 ; "POSITION: %0"
-                move.w  d4,d0
-                bra.s   loc_13D1A2
-loc_13D198:
-                lea     (aPosition0).l,a0 ; "POSITION: %0"
-                move.w  d4,d0
-                neg.w   d0
-loc_13D1A2:
-                movea.l $26(a4),a1
-                jsr     PrintFormatted
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a5
-                move.w  #2,d0
-                movem.l d5-d7/a6,-(sp)
-                jsr     DrawMultipleItems
-                movem.l (sp)+,d5-d7/a6
-                addi.w  #$A,d5
-                tst.b   d7
-                beq.w   locret_13D242
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$1C0)).l,a4
-                move.w  d5,MENUENTRY_Y(a4)
-                movea.l $26(a4),a1
-                clr.b   (a1)
-                lea     (aQualified).l,a0 ; "(QUALIFIED)"
-                move.w  #6,d0
-                cmpi.b  #1,d7
-                beq.s   loc_13D214
-                lea     (aNotQualified).l,a0 ; "(NOT QUALIFIED)"
-                move.w  #$A,d0
-                cmpi.b  #2,d7
-                beq.s   loc_13D214
-                lea     (aPromoted).l,a0 ; "(PROMOTED)"
-                move.w  #6,d0
-                cmpi.b  #3,d7
-                beq.s   loc_13D214
-                lea     (aRelegated).l,a0 ; "(RELEGATED)"
-                move.w  #$A,d0
-loc_13D214:
-                jsr     StringCopy
-                move.w  $24(a4),d1
-                andi.w  #$FFF0,d1
-                or.w    d0,d1
-                move.w  d1,$24(a4)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a5
-                move.w  #2,d0
-                movem.l d5-d7/a6,-(sp)
-                jsr     DrawMultipleItems
-                movem.l (sp)+,d5-d7/a6
-                addi.w  #$A,d5
-locret_13D242:
-                rts
-
-; ===== SetTrophySprites =====
-; prototype: void __usercall SetTrophySprites(SeasonInformations *si@<a6>)
-; in:
-;      A6 -> season informations
-; out:
-;      A0 -> first unknown string (management record for ...)
-SetTrophySprites:
-                rts     ; dead — only called from FillManagementRecordInfo (now in C)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3B8)).l,a0
-                move.w  #1,MENUENTRY_ISINVISIBLE(a0)
-                move.w  #1,MENUENTRY_ISINVISIBLE+$38(a0)
-                move.w  #1,MENUENTRY_ISINVISIBLE+$70(a0)
-                move.w  #1,MENUENTRY_ISINVISIBLE+$A8(a0)
-                move.w  #176,d0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3B8)).l,a0
-                move.w  d0,MENUENTRY_X(a0)
-                addi.w  #20,d0
-                lea     56(a0),a0
-                move.w  d0,MENUENTRY_X(a0)
-                addi.w  #20,d0
-                lea     56(a0),a0
-                move.w  d0,MENUENTRY_X(a0)
-                addi.w  #20,d0
-                lea     56(a0),a0
-                move.w  d0,MENUENTRY_X(a0)
-                addi.w  #20,d0
-                lea     56(a0),a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3B8)).l,a1
-                move.w  20(a6),d7
-                beq.s   locret_13D2B4
-                clr.w   d6
-loc_13D2A4:
-                btst    d6,d7
-                beq.s   loc_13D2AC
-                bsr.w   SetTrophySprite
-loc_13D2AC:
-                addq.w  #1,d6
-                cmpi.w  #$A,d6
-                bne.s   loc_13D2A4
-locret_13D2B4:
-                rts
-
-; ===== SetTrophySprite =====
-; prototype: MenuEntry *__usercall SetTrophySprite@<a1>(unsigned __int16 trophyIndex@<d6>, MenuEntry *slot@<a1>)
-; in:
-;      D6 - trophy index
-;      A1 - entry whose sprite needs to be filled
-SetTrophySprite:
-                rts     ; dead — only called from SetTrophySprites (now in C)
-                lea     (trophySprites).l,a2
-                move.w  d6,d0
-                lsl.w   #1,d0
-                move.w  (a2,d0.w),38(a1)
-                clr.w   MENUENTRY_ISINVISIBLE(a1)
-                lea     56(a1),a1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$3B8)).l,a0
-                subi.w  #10,MENUENTRY_X(a0)
-                lea     56(a0),a0
-                subi.w  #10,MENUENTRY_X(a0)
-                lea     56(a0),a0
-                subi.w  #10,MENUENTRY_X(a0)
-                lea     56(a0),a0
-                subi.w  #10,MENUENTRY_X(a0)
-                lea     56(a0),a0
-                rts
 trophySprites:
                 dc.w $00DE,$00DF,$00DB,$00DD,$00DC,$00D7,$00D8,$00D9
                 dc.w $00DA,$00D8
 currentSeasonNumber:
                 dc.w $0000              ; When showing management record menu
 
-; ===== GetCurrentSeasonPointer =====
-; Ported to C: _GetCurrentSeasonPointer in src/statistics.c
-GetCurrentSeasonPointer:
-                jmp     _GetCurrentSeasonPointer
 
-
-; ===== ChooseTeamForEditTactics =====
-; prototype: void *__usercall ChooseTeamForEditTactics@<a0>(const char *menuName@<a0>, const unsigned __int16 *teamIds@<a1>, unsigned __int16 teamCount@<d0>)
-; in:
-;      A0 -> menu name
-;      A1 -> buffer with country numbers for teams
-;      D0 = number of teams in country buffer
-; out:
-;      A0 - success boolean flag
-; 
-; Also for view competition - view squads.
-; Ported to C: _ChooseTeamForEditTactics in src/edit_tactics.c
-; Bridge: a0=menuTitle, a1=teamNumbers, d0=numTeams → returns a0=teamPtr (or NULL)
-ChooseTeamForEditTactics:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _ChooseTeamForEditTactics
-                lea     12(sp),sp
-                movea.l d0,a0
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-                ; dead code below
-                movea.l a1,a5
-                move.l  a0,(chooseTeamMenuName).l
-                move.w  d0,(numTeamsCountryBuffer).l
-                lea     (dwArrayCountries).l,a2
-                lea     (indexCountries).l,a3
-                clr.w   d6
-                move.w  d0,d7
-                subq.w  #1,d7
-loc_13D7AC:
-                move.w  (a1)+,d0
-                movem.l a5,-(sp)
-                jsr     VerifyTeamLoaded
-                movem.l (sp)+,a5
-                move.b  d6,(a3)+
-                lea     5(a0),a0
-                move.l  a0,(a2)+
-                addq.w  #1,d6
-                dbf     d7,loc_13D7AC
-                move.w  (numTeamsCountryBuffer).l,d2
-                subq.w  #2,d2
-                bmi.w   loc_13D81C
-                lea     (dwArrayCountries).l,a3
-loc_13D7DC:
-                lea     (indexCountries).l,a2
-                clr.w   d3
-                move.w  d2,d1
-loc_13D7E6:
-                move.b  (a2)+,d0
-                ext.w   d0
-                lsl.w   #2,d0
-                movea.l (a3,d0.w),a0
-                move.b  (a2),d0
-                ext.w   d0
-                lsl.w   #2,d0
-                movea.l (a3,d0.w),a1
-loc_13D7FA:
-                move.b  (a0)+,d0
-                beq.s   loc_13D814
-                cmp.b   (a1)+,d0
-                bcs.s   loc_13D814
-                bhi.s   loc_13D806
-                bra.s   loc_13D7FA
-loc_13D806:
-                move.b  -1(a2),d0
-                move.b  (a2),-1(a2)
-                move.b  d0,(a2)
-                move.w  #1,d3
-loc_13D814:
-                dbf     d1,loc_13D7E6
-                tst.w   d3
-                bne.s   loc_13D7DC
-loc_13D81C:
-                lea     (selectTeamsForTacticsMenu).l,a6
-                movem.l a5,-(sp)
-                jsr     ShowMenu
-                movem.l (sp)+,a5
-                move.w  (teamSelected).l,d0
-                bmi.s   loc_13D852
-                lea     (indexCountries).l,a0
-                move.b  (a0,d0.w),d0
-                ext.w   d0
-                lsl.w   #1,d0
-                move.w  (a5,d0.w),d0
-                jsr     VerifyTeamLoaded
-                rts
-loc_13D852:
-                movea.l #0,a0
-                rts
 ; Menu_SelectTeamsForTactics
 selectTeamsForTacticsMenu:
                 ; Menu_SelectTeamsForTactics
@@ -42594,58 +34033,10 @@ indexCountries:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 
-; ===== SelectTeamsFinalMenu =====
-; prototype: void __usercall SelectTeamsFinalMenu(unsigned __int16 teamFileNumber@<d0>)
-; in:
-;      D0 - team file number
-; 
-; Also reads teamsType.
-; ===== SelectTeamsFinalMenu =====
-; Ported to C: _SelectTeamsFinalMenu in teams.c
-; Bridge: d0.b=mode → C param
-
-; ===== GetCountryName =====
-; prototype: char *__usercall GetCountryName@<a0>(unsigned __int16 countryId@<d0>)
-; in:
-;      D0 - team country number
-; out:
-;      A0,
-;      curCountryStr -> country string
-
-; ===== PushContinent =====
-; prototype: void __usercall PushContinent(unsigned __int16 countryId@<d6>)
-; in:
-;     D6 - country number
-
-; ===== PopContinent =====
-; prototype: unsigned __int16 __usercall PopContinent@<d7>()
-; out:
-;     D7 - country number
-
-; ===== ChooseTeamsDialog =====
-; Bridge to C: _ChooseTeamsDialog(showClub, showNational, showOrigCustom, title, onSelect)
-; in: D2=showClub, D3=showNational, D4=showOrigCustom, A0=title, A1=onSelect
-; out: D0=selectedTeamCountryNumber, A0=selectedTeamPtr
-
-; ===== ChooseTeamsDialogWithNationality =====
-; Bridge to C: _ChooseTeamsDialogWithNationality(nationality, showClub, showNational, showOrigCustom, title, onSelect)
-; in: D0=nationality, D2=showClub, D3=showNational, D4=showOrigCustom, A0=title, A1=onSelect
-; out: D0=selectedTeamCountryNumber, A0=selectedTeamPtr
 choosingPreset:
                 dc.w $0000              ; Set to true when select teams menu is used for selecting
                                         ; preset competition
 
-; ===== GoGetTeamsForPlay =====
-; prototype: void __usercall GoGetTeamsForPlay(unsigned __int16 showClubTeams@<d2>, unsigned __int16 showNationalTeams@<d3>, unsigned __int16 showOrigCustomTeams@<d4>, const char *gameTypeStr@<a0>, const char *playWhatStr@<a1>, unsigned __int16 numNeededTeams@<d0>)
-; in:
-;      A0 -> game type string
-;      A1 -> play what string
-;      D0 =  num of teams needed
-;      D2 =  show club teams flag
-;      D3 =  show national teams flag
-;      D4 =  show original custom teams flag
-; out:
-;      global var chooseTeamsResult: 0 = nothing selected, !0 = choice made
 ; Menu_SelectTeams
 selectTeamsMenu:
                 ; Menu_SelectTeams
@@ -44084,20 +35475,6 @@ selectTeamsMenu:
                 dc.w MENU_CMD_END       ; entry90_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== SetCountryNames =====
-; prototype: void __usercall SetCountryNames()
-; Also make non showing team entries invisible.
-
-; ===== ChooseTeamsPlayGame =====
-; Ported to C: _ChooseTeamsPlayGame in src/menus.c
-
-; ===== ExitSelectTeams =====
-
-; ===== CheckNumberOfTeams =====
-; prototype: void __usercall CheckNumberOfTeams()
-; Set field of select n more teams if needed.
-; 
-; [select_teams_menu proc]
 lastSelectedTeam:
                 dc.w $0000              ; Index of last selected team (or league) for game
 selectedTeamIndex:
@@ -44385,40 +35762,6 @@ chooseTeamsMenu:
                 dc.w MENU_CMD_END       ; entry5_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== ChooseTeamsInit =====
-; prototype: void __usercall ChooseTeamsInit()
-; in:
-;     showClubTeams, showNationalTeams, showOrigCustomTeams
-;     chooseTeamsHeader1stPart, gameTypeStr
-; out:
-;     output of the entire menu:
-;         teamsType: 0 = national teams, 1 = club teams, 
-;                    2 = original custom teams, 3 = edited custom teams,
-;                   -1 = none
-; 
-; Sets up a menu to choose category of teams to further choose from. Lays out items according to
-; given flags. If only one category is requested, jumps directly to the next menu for that category.
-; This single category can only be club or national teams. And finally sets up the custom menu
-; title: first part, if given, if not "CHOOSE TEAMS FOR" + game type string (if given).
-
-; ===== ShowFsErrorByCode =====
-; Ported to C: _ShowFsErrorByCode in src/file_io.c
-; in: d0 = error code
-ShowFsErrorByCode:
-                move.l  d0,-(sp)
-                jsr     _ShowFsErrorByCode
-                addq.l  #4,sp
-                rts
-
-; ===== SelectFileToSaveDialog =====
-; Ported to C: _SelectFileToSaveDialog in src/file_io.c
-; in: d0 = filterExt, a0 = defaultFilename, a1 = menuTitle
-; out: d0 = 0 (success) or 1 (error), Z flag
-
-; ===== GetFilenameAndExtension =====
-; Ported to C: _GetFilenameAndExtension in src/file_io.c
-; in: d0 = preferredExt, a0 = defaultFilename, a1 = menuTitle
-; out: d0 = 0 (success) or 1 (error), Z flag
 ; Menu_SelectFiles
 selectFilesMenu:
                 ; Menu_SelectFiles
@@ -45952,24 +37295,6 @@ showDomesticPlayerMarket:
 transferCompleted:
                 dc.w $0000              ; Flag set to 1 when a player transfer is completed.
 
-; ===== AddCareerPoolPlayer =====
-; prototype: __int16 __usercall AddCareerPoolPlayer@<d0>(unsigned __int16 teamNumber@<d0>, unsigned __int8 playerOrdinal@<d1>, struct TeamFile *teamFile@<a0>)
-; in:
-;     D0 - team number
-;     D1 - player ordinal in team
-;     A1 -> team (file)
-
-; ===== Career_InitTransferMarketState ===== (ported to C → _Career_InitTransferMarketState)
-Career_InitTransferMarketState:
-                jmp     _Career_InitTransferMarketState
-
-; ===== Career_InitSeasonTransferMarketState ===== (ported to C → _Career_InitSeasonTransferMarketState)
-Career_InitSeasonTransferMarketState:
-                jmp     _Career_InitSeasonTransferMarketState
-
-; ===== RemovePlayerFromTeam =====
-; Ported to C: _RemovePlayerFromTeam in src/teams.c (Chunk 95)
-; Asm stub: save regs, push d1 (player ordinal), call C, restore regs
 ; unsigned __int8 (*[8])[9]
 transferReplacementPriorityTable:
                 ; unsigned __int8 (*[8])[9]
@@ -46105,62 +37430,7 @@ trialistNameBuffer:
 trialistNameBufTerminator:
                 dc.b $00                ; End-of-buffer sentinel for trialistNameBuffer
 
-; ===== ShowPlayerOfferMenuForPlayer =====
-; prototype: void __usercall ShowPlayerOfferMenuForPlayer(unsigned __int16 teamNumber@<d0>, unsigned __int16 playerOrdinal@<d1>)
-ShowPlayerOfferMenuForPlayer:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _ShowPlayerOfferMenuForPlayer
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
-; ===== CheckForTransferOffers =====
-; prototype: __int16 __usercall CheckForTransferOffers@<d0>()
-; out:
-;      got offers: D0 = 0, zf = 1
-;      no offers: D0 = 1, zf = 0
-
-; ===== FindPoolplyrDatPlayer =====
-; prototype: void *__usercall FindPoolplyrDatPlayer@<a0>(unsigned __int16 teamId@<d0>, unsigned __int8 playerOrdinal@<d1>)
-FindPoolplyrDatPlayer:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _FindPoolplyrDatPlayer
-                addq.l  #8,sp
-                move.l  d0,a0
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== FillCareerTeamPlayers =====
-; prototype: void __usercall FillCareerTeamPlayers()
-FillCareerTeamPlayers:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _FillCareerTeamPlayers
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-.not_found:
-                movem.l (sp)+,d2-d7/a2-a6
-                move.w  #1,d0
-                rts
-
-; ===== FillForeignMarketPlayers =====
-; prototype: void __usercall FillForeignMarketPlayers()
-FillForeignMarketPlayers:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _FillForeignMarketPlayers
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-.not_found_f:
-                movem.l (sp)+,d2-d7/a2-a6
-                move.w  #1,d0
-                rts
 ; Menu_Offers
 offersMenu:
                 ; Menu_Offers
@@ -47256,19 +38526,6 @@ thirdPartyOfferMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== AcceptOffer =====
-; Ported to C: _AcceptOffer in src/transfer_market.c
-
-; ===== RejectOffer =====
-; Ported to C: _RejectOffer in src/transfer_market.c
-
-; ===== AskForMore =====
-; Ported to C: _AskForMore in src/transfer_market.c
-
-; ===== ConsiderOffer =====
-; Ported to C: _ConsiderOffer in src/transfer_market.c
-
-; ===== ThirdPartyOfferMenuExit =====
 offerStatus:
                 dc.w $0000              ; -1 = No offer
                                         ; 0 = we want to buy player
@@ -47715,44 +38972,6 @@ playerOffersMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== PlayerOffersInit =====
-; Ported to C: _PlayerOffersInit in src/transfer_market.c
-
-; ===== UpdatePlayerOfferMenuIndicators =====
-
-; ===== PlayerOffersUpdateOfferAmountText =====
-; Ported to C: _PlayerOffersUpdateOfferAmountText in src/transfer_market.c
-
-; ===== PlayerOffersOnSelect13 =====
-
-; ===== ShowSquad =====
-; prototype: __int16 __usercall ShowSquad@<d0>(TeamFile *team@<a0>, const char *title@<a1>, unsigned __int32 maskLo@<d0>, unsigned __int32 maskHi@<d1>, __int16 arg2@<d2>, __int16 arg3@<d3>)
-; in:
-;      A0 -> team pointer
-;      A1 -> menu title
-ShowSquad:
-                clr.l   (viewSquadFlags).l
-loc_14449C:
-                movem.l d2/d4-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d3
-                move.l  d3,-(sp)
-                andi.l  #$FFFF,d2
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _ShowSquad
-                lea     24(sp),sp
-                movem.l (sp)+,d2/d4-d7/a2-a6
-                move.w  (viewSquadSelectedTeam).l,d3
-                rts
-
-; ===== ShowSquadWithFlags =====
-; Ported to C: _ShowSquad in src/menus.c (variant sets viewSquadFlags from d4)
-ShowSquadWithFlags:
-                move.l  d4,(viewSquadFlags).l
-                bra.s   loc_14449C
 ; Menu_ViewSquad
 viewSquadMenu:
                 ; Menu_ViewSquad
@@ -48737,16 +39956,6 @@ buyOtherPlayersMenu:
                 dc.w MENU_CMD_END       ; entry30_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== BuyOtherPlayersInit =====
-; Ported to C: _BuyOtherPlayersInit in src/transfer_market.c
-
-; ===== BuyOtherPlayersFinish =====
-; Ported to C: _BuyOtherPlayersFinish in src/transfer_market.c
-
-; ===== j_SetExitMenuFlag_10 =====
-; prototype: void __usercall j_SetExitMenuFlag_10()
-j_SetExitMenuFlag_10:
-                jmp     SetExitMenuFlag
 ; char *
 buyOtherPlayersTitlePtr:
                 dc.l $00000000          ; Pointer to title string for buy other domestic/foreign player menu.
@@ -48959,7 +40168,7 @@ showPlayerMarketMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l _SetExitMenuFlag         ; funcPtr
+                dc.l _SetExitMenuFlag   ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; menu1Start (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -49297,181 +40506,11 @@ positionGroupMidfielder:
 positionGroupAttacker:
                 dc.b $07,$FF            ; Position sub-indices for attacker filter: {7, 0xFF}.
 
-; ===== ShowPlayerMarket =====
-; Ported to C: _ShowPlayerMarket in src/transfer_market.c
-loc_144EFC:
-                addq.w  #1,(playerMarketFilterPosition).l
-                cmpi.w  #4,(playerMarketFilterPosition).l
-                bne.s   loc_144F14
-                move.w  #$FFFF,(playerMarketFilterPosition).l
-loc_144F14:
-                bsr.w   PlayerMarketResetListState
-                bra.w   loc_14506E
-                cmpi.w  #$81,(controlMask).l
-                beq.w   loc_144F66
-                cmpi.w  #$101,(controlMask).l
-                beq.w   loc_144F66
-                cmpi.w  #$41,(controlMask).l ; 'A'
-                beq.s   loc_144F4A
-                cmpi.w  #$201,(controlMask).l
-                beq.s   loc_144F4A
-                rts
-loc_144F4A:
-                tst.w   (playerMarketFilterRatingIndex).l
-                bpl.s   loc_144F5C
-                move.w  #$F,(playerMarketFilterRatingIndex).l
-                bra.s   loc_144F7E
-loc_144F5C:
-                subq.w  #1,(playerMarketFilterRatingIndex).l
-                bmi.s   loc_144F76
-                bra.s   loc_144F7E
-loc_144F66:
-                addq.w  #1,(playerMarketFilterRatingIndex).l
-                cmpi.w  #$10,(playerMarketFilterRatingIndex).l
-                bne.s   loc_144F7E
-loc_144F76:
-                move.w  #$FFFF,(playerMarketFilterRatingIndex).l
-loc_144F7E:
-                movem.l a5,-(sp)
-                bsr.w   PlayerMarketResetListState
-                movem.l (sp)+,a5
-                jmp     CallDrawMenuItem
-loc_144F90:
-                addq.w  #1,(playerMarketFilterAgeGroup).l
-                cmpi.w  #7,(playerMarketFilterAgeGroup).l
-                bne.s   loc_144FA8
-                move.w  #$FFFF,(playerMarketFilterAgeGroup).l
-loc_144FA8:
-                bsr.w   PlayerMarketResetListState
-                bra.w   loc_14506E
-loc_144FB0:
-                clr.w   d0
-                move.w  (playerMarketTotalMatchCount).l,d1
-                beq.s   loc_144FCA
-                move.w  (playerMarketListScrollOffset).l,d0
-                addi.w  #$A,d0
-                cmp.w   d1,d0
-                bcs.s   loc_144FCA
-                clr.w   d0
-loc_144FCA:
-                move.w  d0,(playerMarketListScrollOffset).l
-                bsr.w   PlayerMarketBuildVisiblePlayerList
-                bsr.w   PlayerMarketUpdateMoreListLabel
-                jmp     DrawMenu
-
-; ===== PlayerMarketUpdateMoreListLabel =====
-; prototype: void __usercall PlayerMarketUpdateMoreListLabel()
-PlayerMarketUpdateMoreListLabel:
-                jmp     _PlayerMarketUpdateMoreListLabel
-loc_14500A:
-                lea     (careerTeam).l,a0
-                lea     (aViewSquad).l,a1 ; "VIEW SQUAD"
-                clr.l   d0
-                lea     (playersOnTransferMarket).l,a2
-                move.w  (numPlayersOnTransferMarket).l,d2
-                beq.s   loc_145030
-                subq.w  #1,d2
-loc_145028:
-                move.w  (a2)+,d1
-                bset    d1,d0
-                dbf     d2,loc_145028
-loc_145030:
-                clr.l   d1
-                move.w  #1,d2
-                move.w  #$FFFF,d3
-                move.w  #$FFFF,d4
-                jmp ShowSquad(pc)
-loc_145042:
-                jmp     SetExitMenuFlag
-
-; ===== PlayerMarketResetListState =====
-; prototype: void __usercall PlayerMarketResetListState()
-PlayerMarketResetListState:
-                jmp     _PlayerMarketResetListState
-loc_14506E:
-                bsr.w   PlayerMarketUpdateFilterMenuEntryState
-                lea     (filterMenuRedrawList).l,a0
-                jmp     DrawMenuItemsWaitForVSync
 ; __int16[3]
 filterMenuRedrawList:
                 ; __int16[3]
                 dc.w 4,6,-1             ; List of menu entry indices to redraw after updating player market filter.
 
-; ===== PlayerMarketUpdateFilterMenuEntryState =====
-; prototype: void __usercall PlayerMarketUpdateFilterMenuEntryState()
-PlayerMarketUpdateFilterMenuEntryState:
-                jmp     _PlayerMarketUpdateFilterMenuEntryState
-loc_1450CA:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$230)).l,a0
-                move.w  2(a5),d0
-                sub.w   2(a0),d0
-                lea     (playerMarketVisibleItems).l,a0
-                lsl.w   #2,d0
-                movea.l (a0,d0.w),a0
-                move.w  (a0),d0
-                move.b  2(a0),d1
-                ext.w   d1
-                jsr ShowPlayerOfferMenuForPlayer(pc)
-                tst.w   (transferCompleted).l
-                beq.s   loc_1450FC
-                jmp     SetExitMenuFlag
-loc_1450FC:
-                move.w  #7,d0
-                jsr     SetCurrentEntry
-                bsr.w   PlayerMarketResetListState
-                rts
-loc_14510C:
-                clr.w   6(a5)
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$230)).l,a0
-                move.w  2(a5),d6
-                sub.w   2(a0),d6
-                clr.w   d5
-                cmp.w   (playerMarketVisibleItemCount).l,d6
-                bcs.s   loc_145134
-                movea.l #0,a6
-                move.w  #1,6(a5)
-                bra.s   loc_145180
-loc_145134:
-                lea     (playerMarketVisibleItems).l,a6
-                move.w  d6,d0
-                lsl.w   #2,d0
-                movea.l (a6,d0.w),a6
-                tst.w   (showDomesticPlayerMarket).l
-                beq.s   loc_14516C
-                move.w  (a6),d0
-                jsr     VerifyTeamLoaded
-                lea     5(a0),a4
-                move.b  2(a6),d0
-                move.w  d0,d1
-                andi.w  #$FF,d0
-                mulu.w  #$26,d0         ; '&'
-                lea     (a0,d0.w),a0
-                movea.l a0,a6
-                bra.s   loc_145180
-loc_14516C:
-                move.w  (a6),d0
-                move.w  d0,d2
-                move.b  2(a6),d1
-                bsr.w   FindPoolplyrDatPlayer
-                lea     3(a0),a4
-                lea     -$38(a0),a6
-loc_145180:
-                addq.w  #1,d6
-                add.w   (playerMarketListScrollOffset).l,d6
-                move.w  $16(a5),d7
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$460)).l,a0
-                bsr.w   BuildTransferPlayerMenuEntry
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$460)).l,a5
-                move.w  #$C,d0
-                jmp     DrawMultipleItems
-
-; ===== PlayerMarketBuildVisiblePlayerList =====
-; Ported to C: _PlayerMarketBuildVisiblePlayerList in src/transfer_market.c
-PlayerMarketBuildVisiblePlayerList:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _PlayerMarketBuildVisiblePlayerList
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 playerMarketFilterPosition:
                 dc.w $0000
 playerMarketFilterRatingIndex:
@@ -49849,7 +40888,7 @@ transferMarketMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l _SetExitMenuFlag ; funcPtr
+                dc.l _SetExitMenuFlag   ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry7 (struct)
                 ; rc (struct)
@@ -50114,90 +41153,19 @@ transferMarketMenu:
                 dc.w MENU_CMD_END       ; entry25_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== jmp_SetExitMenuFlag_8 =====
-; prototype: void __usercall jmp_SetExitMenuFlag_8()
-jmp_SetExitMenuFlag_8:
-                jmp     SetExitMenuFlag
+
 ; __int16[3]
 buyPlayerRedrawList:
                 ; __int16[3]
                 dc.w 5,7,-1             ; List of menu entry indices to redraw in the buy player screen.
 playerSelected:
                 dc.w $0000
-
-; ===== FindTeamIdInDiyTeamsList =====
-; Ported to C: _FindTeamIdInDiyTeamsList in src/transfer_market.c
-; Bridge: a0=teamIdPtr → C param, returns Z flag from C return
-
-; ===== BuildTransferPlayerMenuEntry =====
-; prototype: void __usercall BuildTransferPlayerMenuEntry(struct MenuEntry *item@<a0>, void *player@<a6>, unsigned __int16 y@<d7>, unsigned __int16 idx@<d6>, unsigned __int16 style@<d5>, const char *extra@<a4>)
-BuildTransferPlayerMenuEntry:
-; Register bridge: a0=item, a6=player, d7=y, d6=idx, d5=style, a4=extra
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a4,-(sp)        ; extra
-                andi.l  #$FFFF,d5
-                move.l  d5,-(sp)        ; style
-                andi.l  #$FFFF,d6
-                move.l  d6,-(sp)        ; idx (sign-extended to 32-bit)
-                andi.l  #$FFFF,d7
-                move.l  d7,-(sp)        ; y
-                move.l  a6,-(sp)        ; player
-                move.l  a0,-(sp)        ; item
-                jsr     _BuildTransferPlayerMenuEntry
-                lea     24(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 viewFutureTeamModeFlag:
                 dc.w $0000
 
-; ===== ProcessOfferExpiryCountdown =====
-; Ported to C: _ProcessOfferExpiryCountdown in src/transfer_market.c
-
-; ===== UpdateAndExpireTransferOffers =====
-
-; ===== _CCreateRandomTransferOfferForPlayer =====
-; C-callable bridge: uint16_t playerIndex → d1 for CreateRandomTransferOfferForPlayer
-_CCreateRandomTransferOfferForPlayer:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  64(sp),d1       ; first C param (15 regs * 4 + 4 ret addr = 64)
-                bsr.s   CreateRandomTransferOfferForPlayer
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== CreateRandomTransferOfferForPlayer =====
-; prototype: void __usercall CreateRandomTransferOfferForPlayer(unsigned __int16 playerIndex@<d1>)
-; ===== CreateRandomTransferOfferForPlayer =====
-; Ported to C: _CreateRandomTransferOfferForPlayer in src/transfer_market.c
-; Bridge: d1=playerOrdinal → C param
-CreateRandomTransferOfferForPlayer:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)        ; playerOrdinal
-                jsr     _CreateRandomTransferOfferForPlayer
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; unsigned __int8[16]
 offerLifespanTable:
                 dc.b $01,$01,$01,$02,$02,$02,$02,$02,$02,$03,$03,$03,$03,$04,$05,$06
-
-; ===== IsTeamEligibleForOfferByRefSkill =====
-; Ported to C: _IsTeamEligibleForOfferByRefSkill in src/transfer_market.c
-; Bridge: a0=team, d7=refSkill → C params, returns Z flag
-; Z=1 → eligible, Z=0 → not eligible (C returns 0/non-zero)
-
-; ===== PickRandomEligibleExtraPlayerOrdinal =====
-; Ported to C: _PickRandomEligibleExtraPlayerOrdinal in src/transfer_market.c
-; Bridge: d7=refSkill → C param, returns d1 (file index or -1)
-
-; ===== PickRandomEligibleSwapPlayerOrdinalFromTeam =====
-; Ported to C: _PickRandomEligibleSwapPlayerOrdinalFromTeam in src/transfer_market.c
-; Bridge: a6=teamBlock, d6=excludeSlot → C params, returns d1
-
-; ===== IsOfferTeamPlayerPairUnique =====
-; Ported to C: _IsOfferTeamPlayerPairUnique in src/transfer_market.c
-; Bridge: d0=teamId, d1=playerIdx → C params, returns Z flag
-; Z=0 (NZ) → unique, Z=1 → duplicate (C returns 1/0 respectively)
 offerPrimaryPositionMask:
                 dc.w $0000
 offerExtraPositionMask:
@@ -50232,74 +41200,6 @@ swapPlayerValueRandom:
 extraPlayerValueRandom:
                 dc.w $0000              ; Random multiplier factor for extra player valuation.
 
-; ===== GetTeamPointer =====
-; Ported to C: _GetTeamPointer in src/career_teams.c
-; Bridge: d0=teamId → a0=teamPtr. Preserves d0-d2.
-
-; ===== GetPlayer =====
-; Ported to C: _GetPlayer in teams.c
-; Bridge: d0=teamNumber, d1=playerFileIndex → a0=playerPtr. Preserves d1.
-
-; ===== GetPlayerAtIndex =====
-; Ported to C: _GetPlayerAtIndex in teams.c
-; Bridge: d0=teamNumber, d1=ordinal → a0=playerPtr, d1=fileIndex.
-GetPlayerAtIndex:
-                movem.l d2-d7/a1-a6,-(sp)
-                and.l   #$FFFF,d1
-                move.l  d1,-(sp)
-                and.l   #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _GetPlayerAtIndex
-                addq.l  #8,sp
-                movea.l d0,a0
-                move.w  (_cGetPlayerAtIndexFileIdx).l,d1
-                movem.l (sp)+,d2-d7/a1-a6
-                rts
-
-; ===== GetPlayerSlotIndexByPlayerNumber =====
-; Ported to C: _GetPlayerSlotIndexByPlayerNumber in teams.c
-; Bridge: d0=teamNumber, d1=playerNumber → d1=slotIndex. Preserves d0, a0.
-
-; ===== GetPlayerInfoBreakPosition =====
-; Ported to C: _GetPlayerInfoBreakPosition in src/edit_tactics.c
-; in: A0=teamPtr, D1=requestedSlot  out: A0=playerPtr, D0=slot, D1=fileIndex
-GetPlayerInfoBreakPosition:
-                subq.l  #4,sp           ; space for outSlot(2) + outPlayerIndex(2)
-                pea     2(sp)           ; &outPlayerIndex
-                pea     2(sp)           ; &outSlot (shifted by 4)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)        ; requestedSlot
-                move.l  a0,-(sp)        ; teamPtr
-                jsr     _GetPlayerInfoBreakPosition
-                lea     16(sp),sp
-                movea.l d0,a0           ; playerPtr → a0
-                move.w  (sp)+,d0        ; outSlot → d0
-                move.w  (sp)+,d1        ; outPlayerIndex → d1
-                rts
-
-; ===== GetTeamLeague =====
-; prototype: unsigned __int16 __usercall GetTeamLeague@<d0>(unsigned __int16 teamNumber@<d0>)
-; in:
-;      D0 - selected team number
-; out:
-;      D0 - selected team league
-; Ported to C: _GetTeamLeague in src/career_teams.c
-; Bridge: d0=teamNumber → C param, returns d0.w=league
-
-; ===== Career_CopyUnavailablePlayerToCareerTeamSlot =====
-; Ported to C: _Career_CopyUnavailablePlayerToCareerTeamSlot in src/career_teams.c
-; in: A0=srcPlayer, A1=dstTeam, A2=srcName, D2=srcTeamNumber, D1=srcPlayerIndex, D3=dstSlotIndex
-
-; ===== Career_ShowAddInternationalPlayerDialog =====
-; Bridge to C: _Career_ShowAddInternationalPlayerDialog(homeOrAbroadFlag)
-; Returns: d0=careerAddIntlPlayerResult, a5=srcPlayerPtr, a2=srcPlayerNamePtr
-
-; ===== AddInternationalPlayerHome =====
-; Ported to C: _AddInternationalPlayerHome in src/menus.c
-; Bridge: a0=selectedTeam → C param
-
-; ===== AddInternationalPlayerAbroad =====
-; Ported to C: _AddInternationalPlayerAbroad in src/menus.c
 careerAddIntlPlayerResult:
                 dc.w $0000
 ; void *
@@ -50309,37 +41209,9 @@ careerAddIntlPlayerSelectedSrcPlayerPtr:
 careerAddIntlPlayerSelectedSrcPlayerNamePtr:
                 dc.l $00000000
 
-; ===== Career_RemoveInternationalPlayersByMask =====
-; prototype: void __usercall Career_RemoveInternationalPlayersByMask(unsigned int removeMask@<d0>)
-; Chunk 171: ported to C (_Career_RemoveInternationalPlayersByMask)
-
-; ===== GetPlayerPositionFromCurrent =====
-; prototype: unsigned __int16 __usercall GetPlayerPositionFromCurrent@<d1>(unsigned __int16 playerIndex@<d1>)
-; Chunk 171: ported to C (_GetPlayerPositionFromCurrent)
-; in: d1 = playerIndex, out: d1 = position
-
-; ===== Career_InitInternationalSquadAndLookupTablesForNewSeason =====
-; prototype: void __usercall Career_InitInternationalSquadAndLookupTablesForNewSeason(void *teamPtr@<a0>)
-; Chunk 172: ported to C (_Career_InitInternationalSquadAndLookupTablesForNewSeason)
-; in: a0 = teamPtr (dead parameter but passed for ABI compat)
-Career_InitInternationalSquadAndLookupTablesForNewSeason:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _Career_InitInternationalSquadAndLookupTablesForNewSeason
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== careerDefaultInternationalSquadSlotsTable =====
-; prototype: void careerDefaultInternationalSquadSlotsTable(void)
 careerDefaultInternationalSquadSlotsTable:
-                btst    d0,d2
-                btst    d2,d6
-                movep.w $407(a1),d1
-                movep.w $800(a2),d5
+                dc.b 1, 2, 5, 6, 3, 9, 4, 7, 11, 10, 8, 0
 
-; ===== ShowSelectRepresentationMenu ===== (ported to C → _ShowSelectRepresentationMenu)
-; Returns d0 = selectNationalTeamMenuResult (GCC returns uint16_t in d0)
 ; Menu_SelectNationalTeam
 selectNationalTeamMenu:
                 ; Menu_SelectNationalTeam
@@ -52286,90 +43158,10 @@ sidePitchSurnamePositionsTable:
                 dc.l sidePitchPositionsDefault
                 dc.l sidePitchPositionsDefault
 
-; ===== PlayMatchMenuInit =====
-; Forwarding stub -> _PlayMatchMenuInit in C
-
-; ===== PlayMatchMenuReinit =====
-; Forwarding stub -> _PlayMatchMenuReinit in C
-
-; ===== SetCurrentSelectedPlayerIndexPointer =====
-; Forwarding stub -> _SetCurrentSelectedPlayerIndexPointer in C
-
-; ===== OnSwapPlayer =====
-
-; ===== HandleSquadSwapSelectionToggle =====
-; Forwarding stub -> _HandleSquadSwapSelectionToggle in C
-; in: D6 = menuPos; out: D0 = result, sets zero flag
-
-; ===== PlayMatchChangeTactics =====
-; Forwarding stub -> _PlayMatchChangeTactics in C (a5 = MenuEntry*)
-
-; ===== ExitPlayMatch =====
-; Forwarding stub -> _ExitPlayMatch in C
-
-; ===== PlayMatchSelected =====
-; Forwarding stub -> _PlayMatchSelected in C
-
-; ===== EditTacticsInPlayMatchMenu =====
-; Forwarding stub -> _EditTacticsInPlayMatchMenu in C
-
-; ===== ViewOpponentsSelect =====
-; Forwarding stub -> _ViewOpponentsSelect in C
-
-; ===== ReturnFromViewOpponent =====
-; Forwarding stub -> _ReturnFromViewOpponent in C
-
-; ===== PlayMatchOnSelect30 =====
-; Forwarding stub -> _PlayMatchOnSelect30 in C
 ; __int16[3]
 playMatchRedrawList:
                 ; __int16[3]
                 dc.w 12,29,-1           ; List of menu entry indices to redraw after rotating players in play match menu.
-
-; ===== PlayMatch30AfterDraw =====
-; Forwarding stub -> _PlayMatch30AfterDraw in C
-
-; ===== UpdateTeamCheckmark =====
-; Forwarding stub -> _UpdateTeamCheckmark in C
-
-; ===== SetGameStartButtonText =====
-; Forwarding stub -> _SetGameStartButtonText in C
-
-; ===== ShowOrHidePlayMatchButton =====
-; Forwarding stub -> _ShowOrHidePlayMatchButton in C
-
-; ===== SetUpTacticsButtons =====
-; Forwarding stub -> _SetUpTacticsButtons in C
-
-; ===== SetPlayerSurnamesOnSidePitch =====
-; Forwarding stub -> _SetPlayerSurnamesOnSidePitch in C
-
-; ===== ShowUseMatchTeamIfTraining =====
-; Forwarding stub -> _ShowUseMatchTeamIfTraining in C
-
-; ===== SetVariableButtons =====
-; Forwarding stub -> _SetVariableButtons in C
-
-; ===== DrawPlayerEntries =====
-; Forwarding stub -> _DrawPlayerEntries in C (a5 = MenuEntry*)
-
-; ===== RedrawPlayerNames =====
-; Forwarding stub -> _RedrawPlayerNames in C
-
-; ===== UpdateLittleCheckmark =====
-; Forwarding stub -> _UpdateLittleCheckmark in C
-
-; ===== SavePositionsAndUpdateLittleCheckmark =====
-; Forwarding stub -> _SavePositionsAndUpdateLittleCheckmark in C
-
-; ===== UpdateCheckMarkSprite =====
-; Forwarding stub -> _UpdateCheckMarkSprite in C
-
-; ===== UseMatchTeamSelect =====
-; Forwarding stub -> _UseMatchTeamSelect in C
-
-; ===== TogglePlayerCoach =====
-; Forwarding stub -> _TogglePlayerCoach in C
 togglePlayerCoachRedrawItemList:
                 dc.w $0009,$0001,$0006,$FFFF
 isFirstPlayerChoosingTeam:
@@ -52428,53 +43220,9 @@ playMatchButtonVisibilityState:
 careerTeamCoachOnly:
                 dc.w $0000              ; True if the career team is controlled by the CPU, i.e. the player is coach only
                                         ; (set when view result was pressed)
-
-; ===== Career_MaybeGenerateJobOffer =====
-; prototype: void __usercall Career_MaybeGenerateJobOffer()
-; ===== Career_MaybeGenerateJobOffer =====
-; Ported to C: _Career_MaybeGenerateJobOffer in src/job_offers.c
-; Bridge: no params
-
-; ===== IsTeamCodeOkForNationalSelector =====
-; Ported to C: _IsTeamCodeOkForNationalSelector in teams.c
-; Bridge: d0=code → Z flag (0=notOK/Z set, non-zero=OK/Z clear)
-
-; ===== IsPlayerOkForNationalSelector =====
-; Ported to C: _IsPlayerOkForNationalSelector in teams.c
-; Bridge: → Z flag (0=notOK/Z set, non-zero=OK/Z clear)
-
-; ===== NotOkForNationalSelector ===== (dead — callers ported to C)
-NotOkForNationalSelector:
-                clr.w   d0
-                rts
 careerJobOfferMode:
                 dc.w $0000
 
-; ===== GetNationalityAndTeamFile =====
-; Ported to C: _GetNationalityAndTeamFile in teams.c
-; Bridge: d0=teamFileAndOrdinal → d0.b=nationality, d1.b=teamFileId
-GetNationalityAndTeamFile:
-                movem.l d2-d7/a2-a6,-(sp)
-                and.l   #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _GetNationalityAndTeamFile
-                addq.l  #4,sp
-                move.l  d0,d1
-                swap    d0
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== GetNationalTeamNumberFromTeamFileId =====
-; Ported to C: _GetNationalTeamNumberFromTeamFileId in teams.c
-; Bridge: d0=teamFileId → d0=teamNumber or -1
-
-; ===== GetNationalTeamNumber =====
-; Ported to C: _GetNationalTeamNumber in teams.c
-; Bridge: d0=nationality → d0=teamNumber or -1
-
-; ===== GetNationalityRecordPtr =====
-; Ported to C: _GetNationalityRecordPtr in teams.c
-; Bridge: d0=teamFileAndOrdinal → a0=record ptr or NULL
 nat_teams_rand_limit1:
                 dc.w $0029
 numNationalTeams:
@@ -52537,41 +43285,6 @@ nationalTeams:
                 dc.b $00,$06,$54,$1E,$00,$00,$00,$05,$55,$01,$00,$00,$00,$01,$55,$03
                 dc.b $00,$00,$00,$01
 
-; ===== Career_ContinueToNextSeasonInitTeamAndFunds =====
-; Ported to C: _Career_ContinueToNextSeasonInitTeamAndFunds in src/career_init.c
-; in: D0 = teamNumber, D1 = baseFunds
-
-; ===== JobOffers_ConvertNewOfferToOffer =====
-; Ported to C: _JobOffers_ConvertNewOfferToOffer in src/job_offers.c
-; Bridge: d0=teamNumber, d1=initialFunds → C params
-
-; ===== JobOffers_RemoveOffer =====
-; Ported to C: _JobOffers_RemoveOffer in src/job_offers.c
-; Bridge: d0=teamNumber → C param
-
-; ===== IsOldJobOffer =====
-; Ported to C: _IsOldJobOffer in src/job_offers.c
-; Bridge: d0=teamNo → C param, returns Z flag (0=found/Z set, 1=not found/Z clear)
-
-; ===== GetJobOfferPtr =====
-; Ported to C: _GetJobOfferPtr in src/job_offers.c
-; Bridge: d0=index → C param, returns ptr in a0
-
-; ===== AddJobOffer =====
-; Ported to C: _AddJobOffer in src/job_offers.c
-; Bridge: d0=teamNo, d1=initialFunds(32-bit) → C params
-
-; ===== RemoveJobOffer =====
-; Ported to C: _RemoveJobOffer in src/job_offers.c
-; Bridge: d0=teamNo → C param
-
-; ===== IsNewJobOffer =====
-; Ported to C: _IsNewJobOffer in src/job_offers.c
-; Bridge: d0=teamNo → C param, returns Z flag (0=found/Z set, 1=not found/Z clear)
-
-; ===== GetNewJobOfferPtr =====
-; Ported to C: _GetNewJobOfferPtr in src/job_offers.c
-; Bridge: d0=index → C param, returns ptr in a0
 ; Menu_JobOffers
 jobOffersMenu:
                 ; Menu_JobOffers
@@ -53082,7 +43795,7 @@ gotJobOfferMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l _j_SetExitMenuFlag_14 ; funcPtr
+                dc.l _SetExitMenuFlag   ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry12 (struct)
                 ; rc (struct)
@@ -53377,7 +44090,7 @@ clubBusinessMenu:
                 dc.l aContinue          ; textPtr
                 ; entry1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l _SetExitMenuFlag ; funcPtr
+                dc.l _SetExitMenuFlag   ; funcPtr
                 dc.w MENU_CMD_END       ; entry1_end
                 ; menu1Start (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -53629,43 +44342,6 @@ clubBusinessMenu:
                 dc.w MENU_CMD_END       ; entry21_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== j_SetExitMenuFlag13 =====
-; prototype: void __usercall j_SetExitMenuFlag13()
-j_SetExitMenuFlag13:
-                jmp     SetExitMenuFlag
-
-; ===== CalculateStartingBalance =====
-; Ported to C: _CalculateStartingBalance in career_status.c
-; Bridge: d0=teamNumber → d1=balance(32-bit)
-CalculateStartingBalance:
-                movem.l d2-d7/a0-a6,-(sp)
-                and.l   #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _CalculateStartingBalance
-                addq.l  #4,sp
-                move.l  d0,d1
-                movem.l (sp)+,d2-d7/a0-a6
-                rts
-
-; Ported to C: _Career_InitializeNewSeasonFinances in career_status.c
-Career_InitializeNewSeasonFinances:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_InitializeNewSeasonFinances
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== Career_CommitNewBalanceAndResetFinanceTotals =====
-; prototype: void __usercall Career_CommitNewBalanceAndResetFinanceTotals()
-; dos: cseg_5E2E0
-
-; ===== Career_UpdatePlayerWeeklyWageCache =====
-; prototype: void __usercall Career_UpdatePlayerWeeklyWageCache(unsigned __int16 playerIndex@<d1>)
-; in:
-;     D1 - player index
-; dos: cseg_5E345
-
-; ===== CalcGateReceiptsBaseFromTeamValue ===== (ported to C → _CalcGateReceiptsBaseFromTeamValue in teams.c)
-; in: D0 = avgPrice, out: D0.w = gate receipts base
 ballXQuadrantCoordinates:
                 dc.w 12,38,64,90,116
 ballYQuadrantCoordinates:
@@ -53747,48 +44423,7 @@ tacticsChangedFlag:
 editTacticsTransitionActive:
                 dc.w $0000              ; Flag set to 1 when edit tactics pitch transition is active.
 
-; ===== EditTactics =====
-; Ported to C: _EditTactics in src/edit_tactics.c
-loc_14B4EA:
-                cmpi.b  #TEAM_COMPUTER,TEAMFILE_TEAMCONTROLS(a0)
-                beq.s   loc_14B4F8
-                move.w  (a0),(a1)+
-                movea.l a0,a2
-                addq.w  #1,d0
-loc_14B4F8:
-                lea     684(a0),a0
-                dbf     d1,loc_14B4EA
-                tst.w   d0
-                beq.s   loc_14B52A
-                movea.l a2,a0
-                cmpi.w  #1,d0
-                beq.s   loc_14B566
-                lea     (aEditTacticsSel).l,a0 ; "EDIT TACTICS - SELECT TEAM"
-                lea     (editTacticsCountryBuffer).l,a1
-                jsr     ChooseTeamForEditTactics
-                cmpa.l  #0,a0
-                bne.s   loc_14B566
-                bra.w   locret_14B56C
-loc_14B52A:
-                tst.w   (numSelectedTeams).l
-                bne.s   loc_14B550
-loc_14B532:
-                move.b  #8,d0           ; english premier division
-                jsr     LoadTeamFile
-                lea     ((teamFileBuffer+$2D6E)).l,a0 ; 18th team
-                jsr     AddTeamToBuffer ; if nothing selected, load Leicester City
-                jsr     InitTeams
-                bra.s   loc_14B560
-loc_14B550:
-                lea     (careerTeam).l,a0
-                cmpi.w  #$FFFF,(selTeamNumber).l
-                bne.s   loc_14B566
-loc_14B560:
-                lea     (selTeamsPtr).l,a0
-loc_14B566:
-                jsr     ShowStandardChooseTacticsMenu
-locret_14B56C:
-                rts
+
 editTacticsCountryBuffer:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; Here are copied country numbers of selected teams
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
@@ -53800,16 +44435,7 @@ editTacticsCountryBuffer:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                                         ; in edit tactics menu
 
-; ===== ShowStandardChooseTacticsMenu =====
-; Ported to C: _ShowStandardChooseTacticsMenu in src/edit_tactics.c
-; Bridge: a0=teamPtr → C param
-ShowStandardChooseTacticsMenu:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _ShowStandardChooseTacticsMenu
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
+
 ; Menu_ChooseTactics
 chooseTacticsMenu:
                 ; Menu_ChooseTactics
@@ -54750,322 +45376,12 @@ flipStrTable:
                 dc.l aUSER_B            ; "USER B"
                 dc.l aUSER_C            ; "USER C"
 
-; ===== EditTacticsCommon =====
-; prototype: void __usercall EditTacticsCommon(MenuEntry *cur@<a5>)
-; Ported to C: _EditTacticsCommon in src/edit_tactics.c
-; Bridge: a5=MenuEntry* → void
 
-; ===== EditTactics_FindFreePairId =====
-; prototype: __int16 __usercall EditTactics_FindFreePairId@<d0>()
-; out:
-;      D0 -
-;      D2 -
-; dos: cseg_4E166
-; Ported to C: _EditTactics_FindFreePairId in src/edit_tactics.c
-; Bridge: returns d0
-
-; ===== EditTactics_ClearPairId =====
-; prototype: void __usercall EditTactics_ClearPairId(__int16 value@<d0>)
-; in:
-;      D0 - byte from table at ofs359
-; dos: cseg_4E1F1
-; Ported to C: _EditTactics_ClearPairId in src/edit_tactics.c
-; Bridge: d0=value → void
-
-; ===== EditTacticsPlayerNamesCommon =====
-; prototype: void __usercall EditTacticsPlayerNamesCommon(MenuEntry *cur@<a5>)
-; Called when player name is selected in edit tactics menu.
-; Ported to C: _EditTacticsPlayerNamesCommon in src/edit_tactics.c
-; Bridge: a5=MenuEntry* → void
-
-; ===== EditTactics_SwapPlayersInSlots =====
-; prototype: void __usercall EditTactics_SwapPlayersInSlots(__int16 i1@<d1>, __int16 i2@<d2>, __int16 i3@<d3>, __int16 i4@<d4>)
-; dos: cseg_4E3DD
-; Ported to C: _EditTactics_SwapPlayersInSlots in src/edit_tactics.c
-; Bridge: d3=slot1, d4=slot2 → void
-
-; ===== CopyCurrentTacticName =====
-; prototype: void __usercall CopyCurrentTacticName()
-; Sets edit tactics menu header to name of current tactics.
 ; __int16[3]
 editTacticsRotateRedrawList:
                 ; __int16[3]
                 dc.w 10,27,-1           ; List of menu entry indices to redraw after rotating players in edit tactics.
 
-; ===== EditTacticsAfterDrawPlayerNames =====
-; prototype: __int16 __usercall EditTacticsAfterDrawPlayerNames@<d0>(MenuEntry *cur@<a5>)
-; Ported to C: _EditTacticsAfterDrawPlayerNames in src/edit_tactics.c
-; Bridge: a5=cur → C param
-loc_14C170:
-                clr.w   d5
-                cmpi.w  #$B,d7
-                bcc.s   loc_14C1AC
-                tst.w   d7
-                beq.s   loc_14C194
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$8F8)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #BRIGHT_BLUE_TO_BLUE_13,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                bra.w   loc_14C1D8
-loc_14C194:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$8F8)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #YELLOW_GREEN_BLACK_14,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                bra.w   loc_14C1D8
-loc_14C1AC:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$8F8)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #BLUE_TO_PURPLE_11,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                bra.w   loc_14C1D8
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$8F8)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #YELLOW_GREEN_BLACK_14,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-loc_14C1D8:
-                movea.l chooseTacticsTeamPtr(pc),a0
-                move.b  $18(a0),d6
-                move.b  (editTacticsCurrentTactics+TEAMTACTICS_BALLOUTOFPLAYTACTICS).l,$18(a0)
-                move.w  d7,d1
-                bsr.w   GetPlayerInfoBreakPosition
-                move.w  d0,d7
-                movea.l a0,a6
-                movea.l chooseTacticsTeamPtr(pc),a0
-                move.b  d6,$18(a0)
-                move.w  (inEditTactics).l,d0
-                movea.l a6,a0
-                movem.l d1,-(sp)
-                jsr     IsPlayerInjured
-                movem.l (sp)+,d1
-                beq.s   loc_14C226
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$8F8)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #RED_10,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-loc_14C226:
-                cmp.w   (editTacticsSelectedPlayerNameIndex).l,d1
-                bne.s   loc_14C240
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$8F8)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addq.w  #ORANGE_TO_BROWN_6,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-loc_14C240:
-                move.w  (editTacticsSelectedPairSlotIndex).l,d0
-                bmi.s   loc_14C262
-                addq.w  #1,d0
-                cmp.w   d0,d7
-                bne.s   loc_14C262
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$8F8)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #ORANGE_TO_BROWN_12,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-loc_14C262:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$8C0)).l,a0
-                move.w  $16(a5),d7
-                move.w  #1,4(a0)
-                tst.w   d5
-                bne.s   loc_14C282
-                clr.w   d0
-                move.b  $4E(a6),d0
-                move.w  d0,$26(a0)
-                clr.w   4(a0)
-loc_14C282:
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                move.l  a0,-(sp)
-                lea     $4F(a6),a0
-                move.w  #$800D,d0
-                movem.l d6-d7/a6,-(sp)
-                jsr     ExtractSurname
-                movem.l (sp)+,d6-d7/a6
-                movea.l a0,a1
-                movea.l (sp)+,a0
-                move.l  a1,$26(a0)
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                lea     (playerPositionsStringTable).l,a2
-                move.b  $66(a6),d0
-                andi.w  #$E0,d0
-                lsr.w   #3,d0
-                move.l  (a2,d0.w),$26(a0)
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                movea.l $26(a0),a1
-                jsr     FormTopSkillsString
-                move.w  d7,$16(a0)
-                lea     $38(a0),a0
-                move.w  #1,4(a0)
-                move.w  d7,$16(a0)
-                movem.l a0,-(sp)
-                movea.l chooseTacticsTeamPtr(pc),a1
-                jsr     IsTeamNational
-                beq.s   loc_14C30C
-                movea.l a0,a1
-                movea.l a6,a0
-                jsr     InitPlayerValueDisplayStruct
-                movem.l (sp)+,a0
-                bra.s   loc_14C326
-loc_14C30C:
-                lea     (fundsBuffer).l,a1
-                movea.l a6,a0
-                jsr     FormatPlayerValueOrStatusText
-                movem.l (sp)+,a0
-                move.l  #fundsBuffer,$26(a0)
-loc_14C326:
-                clr.w   4(a0)
-                move.w  #$D,d1
-                cmpi.b  #$9B,$71(a6)
-                beq.s   loc_14C352
-                move.w  #1,d1
-                cmpi.b  #$9A,$71(a6)
-                beq.s   loc_14C352
-                move.w  #2,d1
-                btst    #1,$66(a6)
-                beq.s   loc_14C352
-                move.w  #$F,d1
-loc_14C352:
-                move.w  $24(a0),d0
-                andi.w  #$FFF0,d0
-                or.w    d1,d0
-                move.w  d0,$24(a0)
-                lea     $38(a0),a0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$888)).l,a5
-                move.w  #6,d0
-                jmp     DrawMultipleItems
-                cmpi.w  #16,d7          ; player 16
-                bne.s   loc_14C38E
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$888)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addq.w  #BLUE_TO_BLACK_8,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                bra.w   loc_14C3FA
-loc_14C38E:
-                cmpi.w  #11,d7
-                bcc.s   loc_14C3C8
-                tst.w   d7
-                beq.s   loc_14C3B0
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$888)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #BRIGHT_BLUE_TO_BLUE_13,d0
-                move.w  d0,MENUENTRY_BG(a0)
-                bra.w   loc_14C3FA
-loc_14C3B0:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$888)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #YELLOW_GREEN_BLACK_14,d0
-                move.w  d0,MENUENTRY_BG(a0)
-                bra.w   loc_14C3FA
-loc_14C3C8:
-                cmpi.w  #$B,d7
-                beq.s   loc_14C3E6
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$888)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #BLUE_TO_PURPLE_11,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                bra.w   loc_14C3FA
-loc_14C3E6:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$888)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #YELLOW_GREEN_BLACK_14,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-loc_14C3FA:
-                movea.l chooseTacticsTeamPtr(pc),a0
-                move.b  TEAMFILE_TACTICS(a0),d6
-                move.b  (editTacticsCurrentTactics+TEAMTACTICS_BALLOUTOFPLAYTACTICS).l,TEAMFILE_TACTICS(a0)
-                move.w  d7,d1
-                bsr.w   GetPlayerInfoBreakPosition
-                move.w  d1,d5
-                move.w  d0,d7
-                movea.l a0,a6
-                movea.l chooseTacticsTeamPtr(pc),a0
-                move.b  d6,TEAMFILE_TACTICS(a0)
-                move.b  $67(a6),d0
-                andi.w  #$E0,d0
-                cmpi.w  #0,d0
-                beq.s   loc_14C446
-                cmpi.w  #$20,d0         ; ' '
-                beq.s   loc_14C446
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$888)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #COLOR_RED,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-loc_14C446:
-                cmp.w   (editTacticsSelectedPlayerNameIndex).l,d1
-                bne.s   loc_14C460
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$888)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addq.w  #ORANGE_TO_BROWN_6,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-loc_14C460:
-                move.w  (editTacticsSelectedPairSlotIndex).l,d0
-                bmi.s   loc_14C482
-                addq.w  #1,d0
-                cmp.w   d0,d7
-                bne.s   loc_14C482
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$888)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #ORANGE_TO_BROWN_12,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-loc_14C482:
-                tst.w   (flipOnOff).l
-                beq.s   loc_14C4D6
-                tst.w   d7
-                beq.s   loc_14C4C2
-                cmpi.w  #11,d7
-                bcc.s   loc_14C4C2
-                lea     (editTacticsCurrentTactics+TEAMTACTICS_UNKTABLE).l,a0
-                move.b  -1(a0,d7.w),d0
-                bmi.s   loc_14C4C2
-                ext.w   d0
-                lea     (editTacticsFlipPairColorTable).l,a0
-                lsl.w   #PINK_TO_BROWN_1,d0
-                move.w  (a0,d0.w),d1
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$888)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                add.w   d1,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                bra.s   loc_14C4D6
-loc_14C4C2:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$888)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addi.w  #PINK_TO_BROWN_0,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-loc_14C4D6:
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$888)).l,a0
-                move.w  MENUENTRY_Y(a5),MENUENTRY_Y(a0)
-                jsr     SetMenuEntryPlayerFace
-                cmpi.w  #11,d7
-                bcc.s   locret_14C512
-                lea     (playerPositionsArray).l,a1
-                move.b  (a1,d5.w),d0
-                lea     (oldPlayerPositionsArray).l,a1
-                cmp.b   (a1,d5.w),d0
-                bhi.s   loc_14C50C
-                beq.s   locret_14C512
-                move.w  #SPR_NOT_CHECK_SMALL,MENUENTRY_FG+ENTRYTYPE2UNION_SPRITE2(a0)
-                rts
-loc_14C50C:
-                move.w  #SPR_CHECK_SMALL,MENUENTRY_FG+ENTRYTYPE2UNION_SPRITE2(a0)
-locret_14C512:
-                rts
 editTacticsFlipPairColorTable:
                 dc.w 14,10,12,6,11
 editTacticsNumPlayers:
@@ -55083,35 +45399,6 @@ editTacticsSelectedPairSlotIndex:
 editTacticsSelectedPairMenuEntryPtr:
                 dc.l $00000000          ; From edit tactics menu
 
-; ===== EditTacticsStatus =====
-; prototype: void __usercall EditTacticsStatus(__int16 status@<d0>)
-; in:
-;      D0 - edit tactics status
-
-; ===== ConvertPlayerDressColor =====
-; prototype: unsigned __int8 __usercall ConvertPlayerDressColor@<d0>(unsigned __int8 color@<d0>)
-; in:
-;     D0 - color
-; out:
-;     D0 - converted color
-; Ported to C: _ConvertPlayerDressColor in src/team_colors.c
-; Bridge: d0=color → d0=result
-
-; ===== EditTactics_HandlePitchInput =====
-; prototype: unsigned __int16 __usercall EditTactics_HandlePitchInput@<d0>(unsigned __int16 col@<d1>, unsigned __int16 row@<d2>)
-; dos: cseg_50501
-
-; ===== EditTactics_TryMoveQuadrantCursor =====
-; Ported to C: _EditTactics_TryMoveQuadrantCursor in src/edit_tactics.c
-; in: D1=row, D2=col  out: D1=newRow, D2=newCol, D3=ballLoc, D5=flag(Z)
-
-; ===== GetEditTacticsItemXYPosition =====
-; Ported to C: _GetEditTacticsItemXYPosition in src/edit_tactics.c
-; in: D0=idx  out: D1=x, D2=y
-
-; ===== DrawEditTacticsHighlightedPlayerRoute =====
-; prototype: void __usercall DrawEditTacticsHighlightedPlayerRoute()
-; dos: cseg_51729
 playerAreas:
                 dc.w 0,1,2,3,4,5,6,7    ; In edit tactics menu
                 dc.w 8,9,10,11,12,13,14,15
@@ -55121,27 +45408,9 @@ playerAreas:
 tacticCursorFrames:
                 dc.w $0095,$0096,$0097,$0096
 
-; ===== GetPlayerXYPositionFromQuadrant =====
-; Ported to C: _GetPlayerXYPositionFromQuadrant in src/edit_tactics.c
-; in: D0=player, D1=ballLoc  out: D1=x, D2=y
-
-; ===== GetPlayerQuadrant =====
-; Ported to C: _GetPlayerQuadrant in src/edit_tactics.c
-; in: D0=player, D1=ballLoc  out: D1=xQuad, D2=yQuad
-
-; ===== GetBallXYPositionFromQuadrant =====
-; Ported to C: _GetBallXYPositionFromQuadrant in src/edit_tactics.c
-; in: D1=row, D2=col  out: D1=x, D2=y
-
-; ===== GetBallQuadrant =====
-; Ported to C: _GetBallQuadrant in src/edit_tactics.c
-; in: D0=ballLoc  out: D1=col, D2=row
 editTacticsNearestSelectPitchWidth:
                 dc.w $0000
 
-; ===== EditTactics_GetDirectionDelta =====
-; Ported to C: _EditTactics_GetDirectionDelta in src/edit_tactics.c
-; out: D3=dx, D4=dy
 ; unsigned __int8[16]
 editTacticsDirectionDeltaTable:
                 dc.b $00,$FF,$01,$FF,$01,$00,$01,$01,$00,$01,$FF,$01,$FF,$00,$FF,$FF
@@ -64224,39 +54493,6 @@ euroCupQualSeedBucket22Full:
                 dc.b $10,$0C,$00,$11,$05,$1B,$1A,$18,$12,$17,$04,$0A,$0B,$13,$15,$16 ; Full seed bucket for euro cup qualifying draw.
                 dc.b $20,$22,$27,$28,$4C,$4E,$FF
 
-; ===== Career_SortTeamFilePtrsByAvgPlayerPrice =====
-; Ported to C: _Career_SortTeamFilePtrsByAvgPlayerPrice in src/career_teams.c
-; Bridge: d0=extNumber → C param
-
-; ===== LoadSomeEuroCup =====
-; Ported to C: _LoadSomeEuroCup in src/career_teams.c
-; Bridge: a0=whichCup → C param
-LoadSomeEuroCup:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _LoadSomeEuroCup
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== AppendTeamsToSelectionFromTmdOrTeamFile =====
-; prototype: void __usercall AppendTeamsToSelectionFromTmdOrTeamFile(unsigned __int16 *out@<a2>, const unsigned __int16 *teamIds@<a6>, unsigned __int16 count@<d7>)
-; in:
-;      A6 -
-;      D7 -
-; dos: cseg_32E15
-; ===== AppendTeamsToSelectionFromTmdOrTeamFile =====
-; Ported to C: _AppendTeamsToSelectionFromTmdOrTeamFile in src/career_teams.c
-; Bridge: a2=out, a6=teamIds, d7=count → C params
-AppendTeamsToSelectionFromTmdOrTeamFile:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  d7,-(sp)
-                move.l  a6,-(sp)
-                move.l  a2,-(sp)
-                jsr     _AppendTeamsToSelectionFromTmdOrTeamFile
-                lea     12(sp),sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 teamIdSelectionProcessedFlags:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
@@ -64279,110 +54515,6 @@ careerRegionPickWeightsTable2:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$02,$02,$02,$03,$03,$04
 
-; ===== ShowInsertDisk2Dialog =====
-; Ported to C: _ShowInsertDisk2Dialog in src/file_io.c
-; in: a0 = header string
-
-; ===== Asset_PromptInsertSaveDiskDf0 =====
-; Ported to C: _Asset_PromptInsertSaveDiskDf0 in src/file_io.c
-; in: a0 = title string
-; out: d0 = 0 success, non-zero = aborted; Z flag
-
-; ===== SaveCompetitionFile =====
-; Ported to C: _SaveCompetitionFile in src/file_io.c
-
-; ===== LoadCompetitionFile =====
-; Ported to C: _LoadCompetitionFile in src/file_io.c
-; out: d0 = 0 success, 1 = error; Z flag set accordingly
-
-; ===== LoadCareerFile =====
-; Ported to C: _LoadCareerFile in src/file_io.c
-; in: a0 = filename
-; out: d0 = 0 success, 1 = error; Z flag set accordingly
-LoadCareerFile:
-                move.l  a0,-(sp)
-                jsr     _LoadCareerFile
-                addq.l  #4,sp
-                tst.w   d0
-                rts
-
-; ===== SaveCareerFile =====
-; Ported to C: _SaveCareerFile in src/file_io.c
-; in: a0 = filename
-; out: d0 = 0 success, 1 = error
-SaveCareerFile:
-                move.l  a0,-(sp)
-                jsr     _SaveCareerFile
-                addq.l  #4,sp
-                tst.w   d0
-                rts
-
-; ===== j_LoadCareerFile =====
-j_LoadCareerFile:
-                bra.s   LoadCareerFile
-
-; ===== j_SaveCareerFile =====
-j_SaveCareerFile:
-                bra.s   SaveCareerFile
-                dc.w 0
-                dc.w 0
-                addi.l  #2254,d1        ; header
-                jsr     WriteFile
-                beq.s   locret_151C1C
-                jsr     ShowFsErrorByCode
-                move.w  #1,d0
-locret_151C1C:
-                rts
-
-; ===== LoadTeamFile =====
-; prototype: unsigned __int16 __usercall LoadTeamFile@<d0>(unsigned __int16 extNumber@<d0>)
-LoadTeamFile:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d0,-(sp)
-                jsr     _LoadTeamFile
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                tst.w   d0
-                rts
-loc_151DB0:
-                movem.l d1-d7/a0-a6,-(sp)
-                jsr     GetAveragePlayerPrice
-                movem.l (sp)+,d1-d7/a0-a6
-                cmp.w   d1,d0
-                bcc.s   loc_151DC4
-                move.w  d0,d1
-loc_151DC4:
-                cmp.w   d2,d0
-                bls.s   loc_151DCA
-                move.w  d0,d2
-loc_151DCA:
-                lea     TEAMFILE_SIZE+TEAMFILE_COUNTRYNUMBER(a0),a0
-                dbf     d7,loc_151DB0
-                sub.w   d1,d2
-                lsr.w   #2,d2
-                lea     (teamFileBuffer).l,a0
-                move.w  (a0),d7
-                lea     TEAMFILE_GLOBALTEAMNUMBER(a0),a0
-                subq.w  #1,d7
-loc_151DE4:
-                movem.l d1-d7/a0-a6,-(sp)
-                jsr     GetAveragePlayerPrice
-                movem.l (sp)+,d1-d7/a0-a6
-                sub.w   d1,d0
-                ext.l   d0
-                divu.w  d2,d0
-                cmpi.w  #3,d0
-                bcs.s   loc_151E02
-                move.w  #3,d0
-loc_151E02:
-                move.b  d0,TEAMFILE_LEAGUE(a0)
-                lea     TEAMFILE_SIZE+TEAMFILE_COUNTRYNUMBER(a0),a0
-                dbf     d7,loc_151DE4
-                move.w  #$1938,(panicReasonCode).l
-                jsr     PanicHaltLoop
-
-; ===== FatalError =====
-; Ported to C: _FatalError in src/career_teams.c
 aDataTeamNnn:
                 dc.b 'data/team.nnn',0
 aCustomsEdt:
@@ -64390,21 +54522,6 @@ aCustomsEdt:
 skipLeagueNumbers:
                 dc.w $0000
 
-; ===== Career_InitCompetitionTeamSelection_Dispatch =====
-; Ported to C: _Career_InitCompetitionTeamSelection_Dispatch in src/career_teams.c
-; Bridge: a0=spec, d1=idx → C params
-
-; ===== Career_InitCompetitionTeamSelectionFromTableEntrySpec =====
-; Ported to C: _Career_InitCompetitionTeamSelectionFromTableEntrySpec in src/career_teams.c
-; Bridge: a0=spec, d1=idx → C params
-
-; ===== Career_InitCompetitionTeamSelectionFromTableHeaderSpec =====
-; Ported to C: _Career_InitCompetitionTeamSelectionFromTableHeaderSpec in src/career_teams.c
-; Bridge: a0=spec → C param
-
-; ===== Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec =====
-; Ported to C: _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec in src/career_teams.c
-; Bridge: a0=spec → C param
 aLoadLiverpool:
                 dc.b 'LOAD LIVERPOOL',0
 aError:

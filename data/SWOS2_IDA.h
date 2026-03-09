@@ -5548,3 +5548,18 @@ enum AmigaRegisters
   AUD3VOL = 0xD8,
 };
 
+/* 357 */
+#pragma pack(push, 1)
+struct Menu_CompetitionStats
+{
+  MenuHeader hdr;
+  MenuMark markByteCoords;
+  MenuEntry_Byte_Colors_TextPtr entry0;
+  MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry1;
+  MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry2;
+  MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry3;
+  MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry4;
+  MenuMark markEndMenu;
+};
+#pragma pack(pop)
+

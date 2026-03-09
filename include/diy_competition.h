@@ -108,6 +108,9 @@ void _DIY_UpdateCompetitionProgressOrAdvanceSlot(uint8_t *blk);
 void _DIY_RecordLeagueFixtureResultAndAdvanceProgress(void);
 void _DIY_RebuildCompetitionAndTeamSelectionCaches(void);
 
+/* --- Career post-load dispatch (loc_12D4B0) --- */
+void _DIY_PostLoadCompetitionDispatch(void);
+
 /* --- Chunk 97: DIY Competition Setup Functions --- */
 void _DIY_LoadCurrentCompetitionSlot(void);
 void _DIY_ResetAndLoadCurrentCompetitionSlot(void);

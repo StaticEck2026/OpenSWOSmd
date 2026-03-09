@@ -1345,16 +1345,15 @@ extern uint8_t viewRandomPhase;
 
 extern void _DIY_UpdateCompetitionProgress(void);
 
-/* C-callable asm wrappers for menu functions (take d2 param) */
+/* C functions for menu/competition dispatch */
 extern void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
-extern void _asm_ShowDIYCupMenuWithParams_Career(uint16_t d2);
-extern void _asm_DIY_EditCompetitionSlot_Career(uint16_t d2);
+extern void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
+extern void _DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC);
 
-/* C-callable asm bridges for match sim functions (Chunk 94) */
-extern uint16_t _asm_DIY_SimulateLeagueFixture(void);
-extern uint16_t _asm_DIY_SimulateCupMatch(void);
-extern void _asm_DIY_LoadCurrentCompetitionSlot(void);
-extern void _asm_DIY_PostLoadCompetitionDispatch(void);
+/* C functions for match sim */
+extern uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t selector);
+extern uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode);
+extern void _DIY_LoadCurrentCompetitionSlot(void);
 extern uint16_t diyMinSubstitutes;
 
 /* C functions for bracket/team grid (called from DIY_AdvanceToNextCompetitionSlot) */
@@ -1467,12 +1466,12 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
     uint16_t type = *(uint16_t *)slotPtr;
     if (type == 1) {
         /* Cup */
-        _asm_ShowDIYCupMenuWithParams_Career(d2);
+        _ShowDIYCupMenuWithParams(1, 0, d2);
         if (((DIY_Competition *)diyCompetitionStart)->currentRound != 0)
             _DIY_UpdateCompetitionProgress();
     } else if (type == 2) {
         /* Hybrid */
-        _asm_DIY_EditCompetitionSlot_Career(d2);
+        _DIY_EditCompetitionSlot(1, 0, d2);
         if (((DIY_Competition *)diyFileBufferCopy)->finishedFlag != 0)
             _DIY_AdvanceToNextCompetitionSlot();
     } else {
@@ -1650,7 +1649,7 @@ void _Career_AutoSimulateLeagueFixturesUntilHumanTeam(void)
         if (team2[4] != 1) return;  /* human team found */
 
         /* Both AI: simulate */
-        _asm_DIY_SimulateLeagueFixture();
+        _DIY_PlayOrSimulateLeagueFixture(0, 0);
     }
 }
 
@@ -1698,7 +1697,7 @@ void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
         if (team2[4] != 1) return;  /* human team found */
 
         /* Both AI: simulate */
-        _asm_DIY_SimulateCupMatch();
+        _DIY_PlayCupMatchAndAdvance(0, 0);
     }
 }
 
@@ -1736,7 +1735,7 @@ void _Career_AutoPlayOrSimulateLeagueFixtureLoop(void)
         uint16_t field1C0 = *(uint16_t *)(diyCompetitionStart + 0x1C0);
         if (field1C0 != 0 && careerSlotProcessingInProgress != 0)
             return;
-        _asm_DIY_SimulateLeagueFixture();
+        _DIY_PlayOrSimulateLeagueFixture(0, 0);
     }
 }
 
@@ -1756,7 +1755,7 @@ void _Career_AutoPlayCupMatchAndAdvanceLoop(void)
             _DIY_UpdateCompetitionProgress();
             return;
         }
-        _asm_DIY_SimulateCupMatch();
+        _DIY_PlayCupMatchAndAdvance(0, 0);
     }
 }
 
@@ -1852,14 +1851,14 @@ void _DIY_AdvanceToNextCompetitionSlot(void)
     bufComp->currentRound = currentSlot + 1;
 
     /* Load the new slot */
-    _asm_DIY_LoadCurrentCompetitionSlot();
+    _DIY_LoadCurrentCompetitionSlot();
 
     if (careerLoadedFlag != 0)
         return;
 
-    /* Career modes: additional post-load processing */
+    /* Career modes: additional post-load processing (was loc_12D4B0) */
     if (gameType == 4 || gameType == 3)
-        _asm_DIY_PostLoadCompetitionDispatch();
+        _DIY_PostLoadCompetitionDispatch();
 }
 
 /* ================================================================

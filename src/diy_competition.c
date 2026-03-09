@@ -71,8 +71,8 @@ extern void _DIY_RecomputeCompetitionDerivedProgressionTable(void);
 
 /* ---- ASM functions still in asm (called via bridge) ---- */
 /* _ShowDiyLeaguesTournamentMenu now ported to C — declared in diy_competition.h */
-extern void _asm_ShowDIYCupMenuWithParams(uint16_t d0, uint16_t d1, uint16_t d2);
-extern void _asm_Career_AutoAdvanceInternationalCompetitionFixtures(void);
+extern void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
+extern void _Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record, uint16_t index);
 
 extern void _SetExitMenuFlag(void);
 
@@ -2116,7 +2116,7 @@ restart_loop:
         comp->progressField8 = bufCopy->progressField8;  /* field_3A+8 */
 
         /* Call ShowDIYCupMenuWithParams */
-        _asm_ShowDIYCupMenuWithParams(editA, editB, editC);
+        _ShowDIYCupMenuWithParams(editA, editB, editC);
 
         /* Copy results back from comp to bufCopy */
         bufCopy->hasGroups = comp->nonNationalCount;  /* field_3A+$E(a2) = field_3A+$12(a4) */
@@ -2637,6 +2637,32 @@ try_next:
 }
 
 /* ================================================================
+ * DIY_PostLoadCompetitionDispatch (SWOS2.s loc_12D4B0)
+ *
+ * Career-mode post-load processing for hybrid competition slots.
+ * Checks diyFileBufferCopy exitFlag, computes current slot from
+ * currentRound, then dispatches to cup bracket or league+reset path.
+ * ================================================================ */
+void _DIY_PostLoadCompetitionDispatch(void)
+{
+    DIY_Competition *fbCopy = (DIY_Competition *)diyFileBufferCopy;
+    if (fbCopy->exitFlag != 0)
+        return;
+
+    uint16_t currentRound = fbCopy->currentRound;
+    uint8_t *slot = (uint8_t *)fbCopy + (uint16_t)(currentRound * 0x76);
+
+    if (*(uint16_t *)(slot + 0x15E) == 0) {
+        /* Cup path */
+        _DIY_RecordCupBracketProgress();
+    } else {
+        /* League path then reset stats */
+        _DIY_RecordLeagueFixtureResultAndAdvanceProgress();
+        diy_ResetCompetitionStatsAndProgress();
+    }
+}
+
+/* ================================================================
  * DIY_UpdateCompetitionProgressOrAdvanceSlot (SWOS2.s line 35425)
  *
  * Dispatches by competition type:
@@ -2846,7 +2872,7 @@ void _DIY_RebuildCompetitionAndTeamSelectionCaches(void)
             /* Not current — auto-advance international fixtures */
             internationalAutoAdvanceFlag = 1;
             _SaveSelectedTeams();
-            _asm_Career_AutoAdvanceInternationalCompetitionFixtures();
+            _Career_AutoAdvanceInternationalCompetitionFixtures(compPtr, (uint16_t)divIndex);
             _RestoreSelectedTeams();
             internationalAutoAdvanceFlag = 0;
 
@@ -3832,7 +3858,7 @@ void _ShowDiyCompetitionForSource(uint8_t *header)
     if (type == 0) {
         _ShowDiyLeaguesTournamentMenu(1, 1, 0);
     } else if (type == 1) {
-        _asm_ShowDIYCupMenuWithParams(1, 1, 0);
+        _ShowDIYCupMenuWithParams(1, 1, 0);
     } else {
         _DIY_EditCompetitionSlot(1, 1, 0);
     }
@@ -5919,7 +5945,7 @@ void _DesignDIYCupOnSelect48(void)
     _DIY_InitCupBracketState();
     _DIY_ShuffleTeamGridPairs();
     _InitTeams();
-    _asm_ShowDIYCupMenuWithParams(0, 0, 0);
+    _ShowDIYCupMenuWithParams(0, 0, 0);
     _DIY_CopyCompetitionStartToCompetitionFileBuffer();
     _SetExitMenuFlag();
 }
@@ -7077,7 +7103,7 @@ void _DIYCupOnSelect17(void)
  *             DesignDIYTournamentOnSelect89 (10 functions)
  * ========================================================================== */
 
-extern uint16_t _asm_DIY_PlayCupMatchAndAdvance(uint16_t mode);
+extern uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode);
 extern uint8_t aPlayTournament[]; /* "PLAY TOURNAMENT" */
 
 /* DIYLeagueChangePitchTypeOrSeason — toggle pitchTypeOrSeason, redraw (SWOS2.s line 41373) */
@@ -7093,11 +7119,11 @@ void _DIYLeagueChangePitchTypeOrSeason(void)
  * Called from DIYCupOnSelect3-8 with mode parameter. */
 static void DIYCupOnSelectCommonC(uint16_t mode)
 {
-    uint16_t result = _asm_DIY_PlayCupMatchAndAdvance(mode);
+    uint16_t result = _DIY_PlayCupMatchAndAdvance(0, mode);
     if (result != 0)
         return;
 
-    /* Match results already stored in globals by bridge */
+    /* Match results stored in globals by internal match code */
     diyCupMenuArg0Copy = 0xFFFF;
 
     uint8_t *a0 = diyCompetitionStart;
@@ -8271,10 +8297,7 @@ extern uint16_t careerLoadedFlag;
 extern uint16_t fireResetFlag;
 extern uint16_t highlightedLeagueTeamId;
 
-/* C-callable asm bridge — calls DIY_PlayOrSimulateLeagueFixture with d7=mode,
- * stores multi-register results to diyLeft/RightTeamPtr/Result globals.
- * Returns d0 (0 = success, non-zero = exit/cancel). */
-extern uint16_t _asm_DIY_PlayOrSimulateLeagueFixture(uint16_t mode);
+extern uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t selector);
 
 extern void _SetCurrentEntry(uint16_t index);
 
@@ -8365,7 +8388,7 @@ void _DIYLeagueTournamentViewResult(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _DIYLeagueTournamentMatchCommon(uint16_t action)
 {
-    uint16_t result = _asm_DIY_PlayOrSimulateLeagueFixture(action);
+    uint16_t result = _DIY_PlayOrSimulateLeagueFixture(0, action);
     if (result != 0)
         return;
 
@@ -8374,7 +8397,7 @@ void _DIYLeagueTournamentMatchCommon(uint16_t action)
     /* nullsub_15 omitted (no-op) */
 
     /* diyLeftTeamPtr/diyRightTeamPtr/diyLeftTeamResult/diyRightTeamResult
-     * already populated by the asm bridge */
+     * populated by internal match/sim code */
 
     uint16_t setAllPlayed = 0;
 

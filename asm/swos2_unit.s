@@ -1891,11 +1891,7 @@
         xdef    DIY_AdvanceToNextCompetitionSlot
         ; Chunk 94: C functions called from asm stubs
         xref    _DIY_AdvanceToNextCompetitionSlot
-        ; Chunk 94: asm bridge functions callable from C
-        xdef    _asm_DIY_SimulateLeagueFixture
-        xdef    _asm_DIY_SimulateCupMatch
-        xdef    _asm_DIY_LoadCurrentCompetitionSlot
-        xdef    _asm_DIY_PostLoadCompetitionDispatch
+        ; (Chunk 94 asm bridges removed — C calls directly now)
         ; Chunk 94: data accessed from C
         xdef    diyMinSubstitutes
         ; Chunk 95: C functions called from asm stubs
@@ -1915,19 +1911,14 @@
         xref    _DIY_RebuildCompetitionAndTeamSelectionCaches
         xref    _DIY_UpdateCompetitionProgressOrAdvanceSlot
         xref    _DIY_RecordLeagueFixtureResultAndAdvanceProgress
-        ; Chunk 96: asm bridges for C to call asm
-        xdef    _asm_Career_AutoAdvanceInternationalCompetitionFixtures
-        xdef    _asm_ShowDiyLeaguesTournamentMenu
-        xdef    _asm_ShowDIYCupMenuWithParams
+        ; (Chunk 96 asm bridges removed — C calls directly now)
         ; Chunk 96: asm stubs that forward to C (keep asm labels alive)
         xdef    DIY_UpdateCompetitionProgress
         xdef    DIY_ReorderTeamsBySelectionFlags
         xdef    ShowDiyLeaguesTournamentMenu
         xdef    ShowDIYCupMenuWithParams
         xdef    DIY_EditCompetitionSlot
-        xdef    _asm_ShowDiyLeaguesTournamentMenu_Career
-        xdef    _asm_ShowDIYCupMenuWithParams_Career
-        xdef    _asm_DIY_EditCompetitionSlot_Career
+        ; (_asm_*_Career bridges removed — C calls directly now)
         ; Chunk 97: C functions called from asm stubs
         xref    _DIY_LoadCurrentCompetitionSlot
         xref    _DIY_ShuffleTeamsAndBuildCompTeamList
@@ -3267,10 +3258,8 @@
 ; --- Chunk 153 xdefs ---
         xdef    diyLeagueTournamentMenu
 ; --- Chunk 152 xdefs ---
-        xdef    _asm_DIY_PlayOrSimulateLeagueFixture
         xdef    diyTournamentType
 ; --- Chunk 132 xdefs ---
-        xdef    _asm_DIY_PlayCupMatchAndAdvance
         xdef    aPlayTournament
 ; --- Chunk 129 xdefs ---
         xdef    diyTournamentSelectedStageIndex1Based
