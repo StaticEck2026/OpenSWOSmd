@@ -797,6 +797,7 @@
         xdef    menuBGImageCmdStream
         xdef    aGrafsMenubgRaw
         xdef    aResigned
+        xdef    stringDataEnd
         xdef    InitSkinAndDefaultPointers
         xdef    gameLength
         xdef    autoReplays
@@ -3425,6 +3426,12 @@
         xref    _PlayerMarketUpdateFilterMenuEntryState
         xref    _PlayerMarketUpdateMoreListLabel
         xref    _PlayerMarketResetListState
+        xref    _PlayerMarketFilterPositionOnSelect
+        xref    _PlayerMarketFilterAgeGroupOnSelect
+        xref    _PlayerMarketScrollOnSelect
+        xref    _PlayerMarketViewSquadOnSelect
+        xref    _PlayerMarketItemOnSelect
+        xref    _PlayerMarketItemBeforeDraw
         xref    _BuyOtherPlayersCommon
         xref    _BuyOtherPlayersAfterDrawCommon
         xref    _ViewSquadInit
@@ -3608,6 +3615,7 @@
         xdef    positionGroupTable
         xdef    playerRatingFilterThresholds
         xdef    playerMarketVisibleItems
+        xdef    filterMenuRedrawList
         xdef    viewSquadTitle
         xdef    viewSquadFlags
         xdef    viewSquadMaskLo

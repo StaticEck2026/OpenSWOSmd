@@ -87,7 +87,7 @@ extern uint8_t  viewRandomPhase;
 extern uint16_t offerExpiryIterationsRemaining;
 
 /* C-callable bridge for asm GetPlayerAtIndex (in swos2_unit.s) */
-extern uint8_t *_CGetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
 
 /* File index output from _CGetPlayerAtIndex — written by asm bridge, read by C */
 uint16_t _cGetPlayerAtIndexFileIdx __attribute__((used, externally_visible));
@@ -1072,7 +1072,7 @@ int16_t _PickRandomEligibleExtraPlayerOrdinal(uint16_t refSkill)
         uint8_t *player;
         uint16_t fileIdx;
 
-        player = _CGetPlayerAtIndex(selTeamNumber, ordinal);
+        player = _GetPlayerAtIndex(selTeamNumber, ordinal);
         fileIdx = _cGetPlayerAtIndexFileIdx;
 
         /* Skip if same as primary player */
@@ -1119,7 +1119,7 @@ int16_t _PickRandomEligibleSwapPlayerOrdinalFromTeam(uint8_t *teamBlock, int16_t
 
     /* Phase 1: Find min/max skill in selected team */
     for (i = (int16_t)(careerNumPlayers - 1); i >= 0; i--) {
-        uint8_t *player = _CGetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+        uint8_t *player = _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
         uint8_t skill = player[0x6C];
         if (skill < minSkill)
             minSkill = skill;
@@ -1598,9 +1598,9 @@ void _ThirdPartyOfferMenuExit(void)
 
 extern MenuEntry menuEntries[];
 extern void _GetBankBalance(uint8_t *dst);
-extern void CheckNumPlayersOnTransferMarket(void);  /* still in asm */
-extern void CheckIfPlayerSelected(void);             /* still in asm */
-extern void EnableDisableOffers(void);               /* still in asm */
+extern void _CheckNumPlayersOnTransferMarket(void);  /* still in asm */
+extern void _CheckIfPlayerSelected(void);             /* still in asm */
+extern void _EnableDisableOffers(void);               /* still in asm */
 
 /* TransferMenuSetBankState — write bank balance to entry 1's string (SWOS2.s line 76190) */
 __attribute__((used, externally_visible))
@@ -1623,9 +1623,9 @@ __attribute__((used, externally_visible))
 void _TransferMarketFinish(void)
 {
     _TransferMenuSetBankState();
-    CheckNumPlayersOnTransferMarket();
-    CheckIfPlayerSelected();
-    EnableDisableOffers();
+    _CheckNumPlayersOnTransferMarket();
+    _CheckIfPlayerSelected();
+    _EnableDisableOffers();
 }
 
 /* ShowDomesticPlayerMarket — update home market, show market menu (SWOS2.s line 70638) */
@@ -1786,8 +1786,7 @@ void _PlayerOffersInit(void)
 /* SWOS2.s line 71753 — loop through career players starting at random offset,
  * try to create transfer offers for eligible players. */
 
-/* C-callable bridge for CreateRandomTransferOfferForPlayer (still in asm) */
-extern void _CCreateRandomTransferOfferForPlayer(uint16_t playerIndex);
+/* _CreateRandomTransferOfferForPlayer declared in transfer_market.h */
 
 __attribute__((used, externally_visible))
 void _GenerateRandomTransferOffers(void)
@@ -1813,7 +1812,7 @@ void _GenerateRandomTransferOffers(void)
                 }
                 uint16_t roll = _Rand2();
                 if (roll < threshold) {
-                    _CCreateRandomTransferOfferForPlayer(_cGetPlayerAtIndexFileIdx);
+                    _CreateRandomTransferOfferForPlayer(_cGetPlayerAtIndexFileIdx);
                 }
             }
         }
@@ -1916,8 +1915,8 @@ void _ViewOffersMenu(void)
 /* ================================================================
  * Chunk 162: Transfer Market Menu Helpers
  *
- * CheckNumPlayersOnTransferMarket, CheckIfPlayerSelected,
- * EnableDisableOffers, TransferMarketInit, BuyPlayerMenu,
+ * _CheckNumPlayersOnTransferMarket, _CheckIfPlayerSelected,
+ * _EnableDisableOffers, TransferMarketInit, BuyPlayerMenu,
  * GiveFreeTransfer, TakeOffMarketMenu, TransferMarketCommon
  * ================================================================ */
 
@@ -1975,7 +1974,7 @@ extern void _RemovePlayerFromTeam(uint16_t playerOrdinal);
 extern void _ShowChairmanMessage(void);
 
 /* ================================================================
- * CheckNumPlayersOnTransferMarket  (SWOS2.s line 70068)
+ * _CheckNumPlayersOnTransferMarket  (SWOS2.s line 70068)
  *
  * If 5 players on market, hide "put on market" entry (4).
  * If 0 players, hide "take off market" entry (8).
@@ -1999,7 +1998,7 @@ void _CheckNumPlayersOnTransferMarket(void)
 }
 
 /* ================================================================
- * CheckIfPlayerSelected  (SWOS2.s line 70084)
+ * _CheckIfPlayerSelected  (SWOS2.s line 70084)
  *
  * If no player selected (playerSelected < 0), hide entries 5 and 7.
  * Otherwise show them.
@@ -2022,7 +2021,7 @@ void _CheckIfPlayerSelected(void)
 }
 
 /* ================================================================
- * EnableDisableOffers  (SWOS2.s line 70097)
+ * _EnableDisableOffers  (SWOS2.s line 70097)
  *
  * Checks for transfer offers and enables/disables the offers menu
  * entry accordingly. If no offers, shows "NO OFFERS" text, disables
@@ -2509,6 +2508,144 @@ void _ShowPlayerMarket(void)
     uint8_t *balanceBuf = (uint8_t *)menuEntries[1].fg;
     _GetBankBalance(balanceBuf);
     _PlayerMarketUpdateFilterMenuEntryState();
+}
+
+/* =============================================================== */
+/* Player Market menu callbacks — ported from loc_* asm blocks     */
+/* =============================================================== */
+
+extern int16_t filterMenuRedrawList[];
+extern uint32_t playerMarketVisibleItems[];
+static void showSquadWithTransferMarketMask(void);
+
+/* Helper: update filter entry states and redraw filter entries (was loc_14506E) */
+static void playerMarketUpdateFiltersAndRedraw(void)
+{
+    _PlayerMarketUpdateFilterMenuEntryState();
+    _DrawMenuItemsWaitForVSync(filterMenuRedrawList);
+}
+
+/* PlayerMarketFilterPositionOnSelect (was loc_144EFC)
+ * Cycles the position filter through 0→1→2→3→-1(all)→0→... */
+__attribute__((used, externally_visible))
+void _PlayerMarketFilterPositionOnSelect(MenuEntry *entry)
+{
+    (void)entry;
+    playerMarketFilterPosition++;
+    if (playerMarketFilterPosition == 4)
+        playerMarketFilterPosition = 0xFFFF;
+    _PlayerMarketResetListState();
+    playerMarketUpdateFiltersAndRedraw();
+}
+
+/* PlayerMarketFilterAgeGroupOnSelect (was loc_144F90)
+ * Cycles the age group filter through 0→1→...→6→-1(all)→0→... */
+__attribute__((used, externally_visible))
+void _PlayerMarketFilterAgeGroupOnSelect(MenuEntry *entry)
+{
+    (void)entry;
+    playerMarketFilterAgeGroup++;
+    if (playerMarketFilterAgeGroup == 7)
+        playerMarketFilterAgeGroup = 0xFFFF;
+    _PlayerMarketResetListState();
+    playerMarketUpdateFiltersAndRedraw();
+}
+
+/* PlayerMarketScrollOnSelect (was loc_144FB0)
+ * Scrolls the player market list by 10 entries, wrapping to 0. */
+__attribute__((used, externally_visible))
+void _PlayerMarketScrollOnSelect(MenuEntry *entry)
+{
+    (void)entry;
+    uint16_t d0 = 0;
+    uint16_t total = playerMarketTotalMatchCount;
+    if (total != 0) {
+        d0 = playerMarketListScrollOffset + 10;
+        if (d0 >= total)
+            d0 = 0;
+    }
+    playerMarketListScrollOffset = d0;
+    _PlayerMarketBuildVisiblePlayerList();
+    _PlayerMarketUpdateMoreListLabel();
+    _DrawMenu();
+}
+
+/* PlayerMarketViewSquadOnSelect (was loc_14500A)
+ * Shows the career team squad with transfer market players highlighted. */
+__attribute__((used, externally_visible))
+void _PlayerMarketViewSquadOnSelect(MenuEntry *entry)
+{
+    (void)entry;
+    showSquadWithTransferMarketMask();
+}
+
+/* PlayerMarketItemOnSelect (was loc_1450CA)
+ * Shows player offer menu for the selected market item. */
+__attribute__((used, externally_visible))
+void _PlayerMarketItemOnSelect(MenuEntry *entry)
+{
+    /* Compute relative index from entry ordinal vs base entry 10 */
+    uint16_t relIdx = entry->ordinal - menuEntries[10].ordinal;
+
+    /* Get the visible item pointer */
+    uint8_t *item = (uint8_t *)playerMarketVisibleItems[relIdx];
+    uint16_t teamNum = *(uint16_t *)item;
+    int16_t playerOrd = (int8_t)item[2];
+
+    _ShowPlayerOfferMenuForPlayer(teamNum, (uint16_t)playerOrd);
+
+    if (transferCompleted) {
+        _SetExitMenuFlag();
+        return;
+    }
+
+    _SetCurrentEntry(7);
+    _PlayerMarketResetListState();
+}
+
+/* PlayerMarketItemBeforeDraw (was loc_14510C)
+ * beforeDraw callback: sets up visibility and renders each player entry. */
+__attribute__((used, externally_visible))
+void _PlayerMarketItemBeforeDraw(MenuEntry *entry)
+{
+    entry->isDisabled = 0;
+
+    /* Compute relative index from entry ordinal vs base entry 10 */
+    uint16_t relIdx = entry->ordinal - menuEntries[10].ordinal;
+    uint8_t *player = 0;
+    uint8_t *extra = 0;
+
+    if (relIdx >= playerMarketVisibleItemCount) {
+        /* Beyond visible count — disable entry */
+        entry->isDisabled = 1;
+        player = 0;
+    } else {
+        uint8_t *item = (uint8_t *)playerMarketVisibleItems[relIdx];
+
+        if (showDomesticPlayerMarket) {
+            /* Domestic player */
+            uint16_t teamNum = *(uint16_t *)item;
+            uint8_t *teamData = _VerifyTeamLoaded(teamNum);
+            extra = teamData + 5; /* team name area */
+            uint8_t ordinal = item[2];
+            player = teamData + (uint16_t)ordinal * 0x26;
+        } else {
+            /* Foreign player */
+            uint16_t teamNum = *(uint16_t *)item;
+            uint8_t playerOrd = item[2];
+            PoolPlayer *pp = _FindPoolplyrDatPlayer(teamNum, playerOrd);
+            extra = (uint8_t *)pp + 3; /* name area */
+            player = (uint8_t *)pp - 0x38;
+        }
+    }
+
+    /* Build the menu entry for this player */
+    uint16_t idx = relIdx + 1 + playerMarketListScrollOffset;
+    uint16_t yCoord = entry->y;
+
+    _BuildTransferPlayerMenuEntry(&menuEntries[20], player, yCoord,
+                                   (int16_t)idx, 0, extra);
+    _DrawMultipleItems(12, &menuEntries[20]);
 }
 
 /* PlayerMarketUpdateMoreListLabel (Chunk 163)
@@ -4484,7 +4621,7 @@ void _PutPlayerOnMarketMenu(void)
         /* Build eligible player bitfield (bit 1 of positionAndFace set) */
         uint32_t eligible = 0;
         for (int16_t i = (int16_t)(careerNumPlayers - 1); i >= 0; i--) {
-            uint8_t *player = _CGetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+            uint8_t *player = _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
             PlayerFile *pf = (PlayerFile *)(player + 76);
             if (pf->positionAndFace & 0x02)
                 eligible |= (1u << (uint16_t)i);

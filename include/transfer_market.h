@@ -2,6 +2,7 @@
 #define TRANSFER_MARKET_H
 
 #include "game_types.h"
+#include "menu_system.h"
 
 /* ---- Transfer pool slot utilities ---- */
 uint16_t _GetRemainingTransferPoolSlots(void);
@@ -175,6 +176,14 @@ void _BuyOtherForeignPlayer(void);
 
 /* --- Chunk 207: PlayerMarketBuildVisiblePlayerList --- */
 void _PlayerMarketBuildVisiblePlayerList(void);
+
+/* --- Player market menu callbacks --- */
+void _PlayerMarketFilterPositionOnSelect(MenuEntry *entry);
+void _PlayerMarketFilterAgeGroupOnSelect(MenuEntry *entry);
+void _PlayerMarketScrollOnSelect(MenuEntry *entry);
+void _PlayerMarketViewSquadOnSelect(MenuEntry *entry);
+void _PlayerMarketItemOnSelect(MenuEntry *entry);
+void _PlayerMarketItemBeforeDraw(MenuEntry *entry);
 
 /* --- Chunk 215: CreateRandomTransferOfferForPlayer + EvaluateTransferOfferNegotiation --- */
 void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal);

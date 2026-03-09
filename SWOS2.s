@@ -22496,7 +22496,9 @@ _CallMenuOnSelect:
                 movem.l d0-d7/a0-a6,-(sp)      ; save all regs with ORIGINAL values (60 bytes)
                 move.l  4+60(sp),a0             ; funcPtr (sp+64)
                 move.l  8+60(sp),a5             ; selectedEntry (sp+68)
-                jsr     (a0)                    ; callback sees a5 = selectedEntry
+                move.l  a5,-(sp)                ; push selectedEntry as C stack arg
+                jsr     (a0)                    ; callback sees a5 = selectedEntry AND [sp+4] = entry
+                addq.l  #4,sp                   ; clean up pushed arg
                 movem.l (sp)+,d0-d7/a0-a6       ; restore ALL original values incl. a5
                 rts
 
@@ -29989,8 +29991,8 @@ ReservePlayerLeftClubMessage:
 chooseTeamsFriendlyMenu:
                 ; Menu_ChooseTeamsFriendly
                 ; hdr (struct)
-                dc.l ChooseTeamsFriendlyInitFinish ; onInitPtr
-                dc.l ChooseTeamsFriendlyInitFinish ; onReturnPtr
+                dc.l _ChooseTeamsFriendlyInitFinish ; onInitPtr
+                dc.l _ChooseTeamsFriendlyInitFinish ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000017          ; On init function
                 ; entry0_rc (struct)
@@ -30098,7 +30100,7 @@ chooseTeamsFriendlyMenu:
                 dc.l 0                  ; textPtr
                 ; template1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ChooseTeamsFriendlyCommon2 ; funcPtr
+                dc.l _ChooseTeamsFriendlyCommon2 ; funcPtr
                 dc.w MENU_CMD_END       ; template1_end
                 ; entry7 (struct)
                 ; rc (struct)
@@ -30887,7 +30889,7 @@ chooseTeamsFriendlyMenu:
                 dc.l aViewSelectedTe    ; textPtr
                 ; entry55_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ViewSelected       ; funcPtr
+                dc.l _ViewSelected       ; funcPtr
                 dc.w MENU_CMD_END       ; entry55_end
                 ; entry56 (struct)
                 ; rc (struct)
@@ -30912,7 +30914,7 @@ chooseTeamsFriendlyMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ExitChooseTeams2   ; funcPtr
+                dc.l _ExitChooseTeams2   ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry57_rc (struct)
                 dc.b -72                ; x
@@ -30943,7 +30945,7 @@ chooseTeamsFriendlyMenu:
                 dc.w $0000              ; textColor
                 ; entry57_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ChooseTeamsPlayMatchSelected ; funcPtr
+                dc.l _ChooseTeamsPlayMatchSelected ; funcPtr
                 dc.w MENU_CMD_END       ; entry57_end
                 ; entry58_rc (struct)
                 dc.b -72                ; x
@@ -31101,7 +31103,7 @@ FindTeam:
 chooseTeamsFriendlyMenu2:
                 ; Menu_ChooseTeamsFriendly2
                 ; hdr (struct)
-                dc.l ChooseTeamsFriendlyInit ; onInitPtr
+                dc.l _ChooseTeamsFriendlyInit ; onInitPtr
                 dc.l 0                  ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $0000001E          ; On init function
@@ -31227,7 +31229,7 @@ chooseTeamsFriendlyMenu2:
                 dc.l 0                  ; textPtr
                 ; template1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ChooseTeamsFriendlyCommon ; funcPtr
+                dc.l _ChooseTeamsFriendlyCommon ; funcPtr
                 dc.w MENU_CMD_END       ; template1_end
                 ; entry8 (struct)
                 ; rc (struct)
@@ -32298,7 +32300,7 @@ chooseTeamsFriendlyMenu2:
                 dc.l 0                  ; textPtr
                 ; entry74_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ChangeTeams        ; funcPtr
+                dc.l _ChangeTeams        ; funcPtr
                 dc.w MENU_CMD_END       ; entry74_end
                 ; entry75 (struct)
                 ; rc (struct)
@@ -32323,7 +32325,7 @@ chooseTeamsFriendlyMenu2:
                 dc.l aAbort             ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l AbortChooseTeamsFriendly ; funcPtr
+                dc.l _AbortChooseTeamsFriendly ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry76_rc (struct)
                 dc.b -72                ; x
@@ -32354,7 +32356,7 @@ chooseTeamsFriendlyMenu2:
                 dc.w $0000              ; textColor
                 ; entry76_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ChooseTeamsFriendlyOnSelect76 ; funcPtr
+                dc.l _ChooseTeamsFriendlyOnSelect76 ; funcPtr
                 dc.w MENU_CMD_END       ; entry76_end
                 ; entry77_rc (struct)
                 dc.b -72                ; x
@@ -32502,8 +32504,8 @@ ShowDiyLeaguesTournamentMenu:
 designDiyLeagueMenu:
                 ; Menu_DesignDIYLeague
                 ; hdr (struct)
-                dc.l DesignDIYLeagueInit ; onInitPtr
-                dc.l DesignDIYLeagueFinish ; onReturnPtr
+                dc.l _DesignDIYLeagueInit ; onInitPtr
+                dc.l _DesignDIYLeagueFinish ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $0000000D          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords0
@@ -32569,7 +32571,7 @@ designDiyLeagueMenu:
                 dc.l $2DEF4             ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYLeagueSetName ; funcPtr
+                dc.l _DesignDIYLeagueSetName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries3_7[0]
                 ; rc (struct)
@@ -32674,7 +32676,7 @@ designDiyLeagueMenu:
                 dc.l diyPitchTypeOrSeasonStrTable ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYLeagueChangePitchTypeOrSeason ; funcPtr
+                dc.l _DIYLeagueChangePitchTypeOrSeason ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries8_10[1]
                 ; rc (struct)
@@ -32699,7 +32701,7 @@ designDiyLeagueMenu:
                 dc.l diyLeaguePitchTypeStrTable ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYLeagueChangePitchType ; funcPtr
+                dc.l _DesignDIYLeagueChangePitchType ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries8_10[2]
                 ; rc (struct)
@@ -32724,7 +32726,7 @@ designDiyLeagueMenu:
                 dc.l diyLeagueMonthsStrTable ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYLeagueChangeStartMonth ; funcPtr
+                dc.l _DesignDIYLeagueChangeStartMonth ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry11 (struct)
                 ; rc (struct)
@@ -32765,7 +32767,7 @@ designDiyLeagueMenu:
                 dc.l diyLeagueEndingMonthStrTable ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYLeagueChangeEndMonth ; funcPtr
+                dc.l _DesignDIYLeagueChangeEndMonth ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry13_rc (struct)
                 dc.b -104               ; x
@@ -32789,7 +32791,7 @@ designDiyLeagueMenu:
                 dc.w $0000              ; value
                 ; entry13_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYLeagueChangeNumberOfTeams ; funcPtr
+                dc.l _DesignDIYLeagueChangeNumberOfTeams ; funcPtr
                 dc.w MENU_CMD_END       ; entry13_end
                 ; entry14_rc (struct)
                 dc.b -104               ; x
@@ -32812,7 +32814,7 @@ designDiyLeagueMenu:
                 dc.w $0000              ; textColor
                 ; entry14_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYLeagueChangePlayEachTeam ; funcPtr
+                dc.l _DesignDIYLeagueChangePlayEachTeam ; funcPtr
                 dc.w MENU_CMD_END       ; entry14_end
                 ; entry15_rc (struct)
                 dc.b -104               ; x
@@ -32836,7 +32838,7 @@ designDiyLeagueMenu:
                 dc.w $0000              ; value
                 ; entry15_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYLeagueChangeNumPointsForWin ; funcPtr
+                dc.l _DesignDIYLeagueChangeNumPointsForWin ; funcPtr
                 dc.w MENU_CMD_END       ; entry15_end
                 ; entry16_rc (struct)
                 dc.b -104               ; x
@@ -32859,7 +32861,7 @@ designDiyLeagueMenu:
                 dc.w $0000              ; textColor
                 ; entry16_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYLeagueChangeMinSubstitutes ; funcPtr
+                dc.l _DesignDIYLeagueChangeMinSubstitutes ; funcPtr
                 dc.w MENU_CMD_END       ; entry16_end
                 ; entry17_rc (struct)
                 dc.b -24                ; x
@@ -32882,7 +32884,7 @@ designDiyLeagueMenu:
                 dc.w $0000              ; textColor
                 ; entry17_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYLeagueChangeMaxSubstitutes ; funcPtr
+                dc.l _DesignDIYLeagueChangeMaxSubstitutes ; funcPtr
                 dc.w MENU_CMD_END       ; entry17_end
                 ; entry18_rc (struct)
                 dc.b $1F                ; x
@@ -32943,7 +32945,7 @@ designDiyLeagueMenu:
                 dc.l aChooseTeams       ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYLeagueChooseTeams ; funcPtr
+                dc.l _DesignDIYLeagueChooseTeams ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries20_22[1]
                 ; rc (struct)
@@ -32968,7 +32970,7 @@ designDiyLeagueMenu:
                 dc.l aOk                ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYLeagueOK  ; funcPtr
+                dc.l _DesignDIYLeagueOK  ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries20_22[2]
                 ; rc (struct)
@@ -32993,7 +32995,7 @@ designDiyLeagueMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l jmp_SetExitMenuFlag_6 ; funcPtr
+                dc.l _SetExitMenuFlag ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry23_rc (struct)
                 dc.b -72                ; x
@@ -33208,8 +33210,8 @@ diyLeagueSelectTeams:
 diyLeagueTournamentMenu:
                 ; Menu_DIYLeagueTournament
                 ; hdr (struct)
-                dc.l DIYLeagueTournamentInit ; onInitPtr
-                dc.l DIYLeagueTournamentOnRestore ; onReturnPtr
+                dc.l _DIYLeagueTournamentInit ; onInitPtr
+                dc.l _DIYLeagueTournamentOnRestore ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000001          ; On init function
                 ; entry0_rc (struct)
@@ -33253,7 +33255,7 @@ diyLeagueTournamentMenu:
                 dc.l 0                  ; textPtr
                 ; entry1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYLeagueTournamentNextMatch ; funcPtr
+                dc.l _DIYLeagueTournamentNextMatch ; funcPtr
                 dc.w MENU_CMD_END       ; entry1_end
                 ; entry2_rc (struct)
                 dc.b $00                ; x
@@ -33301,7 +33303,7 @@ diyLeagueTournamentMenu:
                 dc.l aMatch             ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYLeagueTournamentMatch ; funcPtr
+                dc.l _DIYLeagueTournamentMatch ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry4_rc (struct)
                 dc.b $4D                ; x
@@ -33327,7 +33329,7 @@ diyLeagueTournamentMenu:
                 dc.l aViewHighlights_0  ; textPtr
                 ; entry4_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYLeagueTournamentOnSelect4 ; funcPtr
+                dc.l _DIYLeagueTournamentOnSelect4 ; funcPtr
                 dc.w MENU_CMD_END       ; entry4_end
                 ; entries5_6[0]
                 ; rc (struct)
@@ -33352,7 +33354,7 @@ diyLeagueTournamentMenu:
                 dc.l aResult            ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYLeagueTournamentResult ; funcPtr
+                dc.l _DIYLeagueTournamentResult ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries5_6[1]
                 ; rc (struct)
@@ -33377,7 +33379,7 @@ diyLeagueTournamentMenu:
                 dc.l aViewMatch         ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYLeagueTournamentViewMatch ; funcPtr
+                dc.l _DIYLeagueTournamentViewMatch ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry7_rc (struct)
                 dc.b $3D                ; x
@@ -33403,7 +33405,7 @@ diyLeagueTournamentMenu:
                 dc.l aViewHighlights_0  ; textPtr
                 ; entry7_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYLeagueTournamentViewHighlights ; funcPtr
+                dc.l _DIYLeagueTournamentViewHighlights ; funcPtr
                 dc.w MENU_CMD_END       ; entry7_end
                 ; entries8_10[0]
                 ; rc (struct)
@@ -33428,7 +33430,7 @@ diyLeagueTournamentMenu:
                 dc.l aViewResult        ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYLeagueTournamentViewResult ; funcPtr
+                dc.l _DIYLeagueTournamentViewResult ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries8_10[1]
                 ; rc (struct)
@@ -33453,7 +33455,7 @@ diyLeagueTournamentMenu:
                 dc.l aStats             ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYLeagueTournamentStats ; funcPtr
+                dc.l _DIYLeagueTournamentStats ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries8_10[2]
                 ; rc (struct)
@@ -33478,7 +33480,7 @@ diyLeagueTournamentMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYLeagueTournamentExit ; funcPtr
+                dc.l _DIYLeagueTournamentExit ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries11_13[0]
                 ; rc (struct)
@@ -33577,7 +33579,7 @@ diyLeagueTournamentMenu:
                 dc.l 0                  ; textPtr
                 ; beforeDraw (struct)
                 dc.w MENU_CMD_BEFORE_DRAW ; type
-                dc.l DIYLeagueTournament16BeforeDraw ; funcPtr
+                dc.l _DIYLeagueTournament16BeforeDraw ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries16_23[1]
                 ; rc (struct)
@@ -33596,7 +33598,7 @@ diyLeagueTournamentMenu:
                 dc.l 0                  ; textPtr
                 ; beforeDraw (struct)
                 dc.w MENU_CMD_BEFORE_DRAW ; type
-                dc.l DIYLeagueTournament16BeforeDraw ; funcPtr
+                dc.l _DIYLeagueTournament16BeforeDraw ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries16_23[2]
                 ; rc (struct)
@@ -33615,7 +33617,7 @@ diyLeagueTournamentMenu:
                 dc.l 0                  ; textPtr
                 ; beforeDraw (struct)
                 dc.w MENU_CMD_BEFORE_DRAW ; type
-                dc.l DIYLeagueTournament16BeforeDraw ; funcPtr
+                dc.l _DIYLeagueTournament16BeforeDraw ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries16_23[3]
                 ; rc (struct)
@@ -33634,7 +33636,7 @@ diyLeagueTournamentMenu:
                 dc.l 0                  ; textPtr
                 ; beforeDraw (struct)
                 dc.w MENU_CMD_BEFORE_DRAW ; type
-                dc.l DIYLeagueTournament16BeforeDraw ; funcPtr
+                dc.l _DIYLeagueTournament16BeforeDraw ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries16_23[4]
                 ; rc (struct)
@@ -33653,7 +33655,7 @@ diyLeagueTournamentMenu:
                 dc.l 0                  ; textPtr
                 ; beforeDraw (struct)
                 dc.w MENU_CMD_BEFORE_DRAW ; type
-                dc.l DIYLeagueTournament16BeforeDraw ; funcPtr
+                dc.l _DIYLeagueTournament16BeforeDraw ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries16_23[5]
                 ; rc (struct)
@@ -33672,7 +33674,7 @@ diyLeagueTournamentMenu:
                 dc.l 0                  ; textPtr
                 ; beforeDraw (struct)
                 dc.w MENU_CMD_BEFORE_DRAW ; type
-                dc.l DIYLeagueTournament16BeforeDraw ; funcPtr
+                dc.l _DIYLeagueTournament16BeforeDraw ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries16_23[6]
                 ; rc (struct)
@@ -33691,7 +33693,7 @@ diyLeagueTournamentMenu:
                 dc.l 0                  ; textPtr
                 ; beforeDraw (struct)
                 dc.w MENU_CMD_BEFORE_DRAW ; type
-                dc.l DIYLeagueTournament16BeforeDraw ; funcPtr
+                dc.l _DIYLeagueTournament16BeforeDraw ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries16_23[7]
                 ; rc (struct)
@@ -33710,7 +33712,7 @@ diyLeagueTournamentMenu:
                 dc.l 0                  ; textPtr
                 ; beforeDraw (struct)
                 dc.w MENU_CMD_BEFORE_DRAW ; type
-                dc.l DIYLeagueTournament16BeforeDraw ; funcPtr
+                dc.l _DIYLeagueTournament16BeforeDraw ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries24_29[0]
                 ; rc (struct)
@@ -34000,7 +34002,7 @@ diyLeagueTournamentMenu:
                 dc.w $00B7              ; spriteId
                 ; entry40_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYLeagueTournamentScrollUp ; funcPtr
+                dc.l _DIYLeagueTournamentScrollUp ; funcPtr
                 dc.w MENU_CMD_END       ; entry40_end
                 ; entry41_rc (struct)
                 dc.b $00                ; x
@@ -34022,7 +34024,7 @@ diyLeagueTournamentMenu:
                 dc.w $00B8              ; spriteId
                 ; entry41_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYLeagueTournamentScrollDown ; funcPtr
+                dc.l _DIYLeagueTournamentScrollDown ; funcPtr
                 dc.w MENU_CMD_END       ; entry41_end
                 ; entry42_rc (struct)
                 dc.b $00                ; x
@@ -34032,7 +34034,7 @@ diyLeagueTournamentMenu:
                 ; entry42_input (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 65535              ; ctrlMask
-                dc.l jmp_SetExitMenuFlag_7 ; funcPtr
+                dc.l _jmp_SetExitMenuFlag_7 ; funcPtr
                 dc.w MENU_CMD_END       ; entry42_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
@@ -34243,9 +34245,9 @@ ShowDIYCupMenuWithParams:
 designDiyCupMenu:
                 ; Menu_DesignDIYCup
                 ; hdr (struct)
-                dc.l DesignDIYCupInit   ; onInitPtr
-                dc.l DesignDIYCupReinit ; onReturnPtr
-                dc.l DesignDIYCupOnDraw ; onDrawPtr
+                dc.l _DesignDIYCupInit   ; onInitPtr
+                dc.l _DesignDIYCupReinit ; onReturnPtr
+                dc.l _DesignDIYCupOnDraw ; onDrawPtr
                 dc.l $0000000B          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords0
                 ; entry0 (struct)
@@ -34308,7 +34310,7 @@ designDiyCupMenu:
                 dc.l $2DEF4             ; textPtr
                 ; entry2_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect2 ; funcPtr
+                dc.l _DesignDIYCupOnSelect2 ; funcPtr
                 dc.w MENU_CMD_END       ; entry2_end
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords1
                 ; entries3_5[0]
@@ -34334,7 +34336,7 @@ designDiyCupMenu:
                 dc.l diyCupPitchTypeOrSeasonStringTable ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect3 ; funcPtr
+                dc.l _DesignDIYCupOnSelect3 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries3_5[1]
                 ; rc (struct)
@@ -34359,7 +34361,7 @@ designDiyCupMenu:
                 dc.l diyCupPitchTypeStringTable ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect4 ; funcPtr
+                dc.l _DesignDIYCupOnSelect4 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries3_5[2]
                 ; rc (struct)
@@ -34384,7 +34386,7 @@ designDiyCupMenu:
                 dc.l diyCupStartMonthStringTable ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect5 ; funcPtr
+                dc.l _DesignDIYCupOnSelect5 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry6 (struct)
                 ; rc (struct)
@@ -34425,7 +34427,7 @@ designDiyCupMenu:
                 dc.l diyCupEndMonthStringTable ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect7 ; funcPtr
+                dc.l _DesignDIYCupOnSelect7 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry8 (struct)
                 ; rc (struct)
@@ -34466,7 +34468,7 @@ designDiyCupMenu:
                 dc.l diyCupAwayGoalsStringTable ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect9 ; funcPtr
+                dc.l _DesignDIYCupOnSelect9 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry10 (struct)
                 ; rc (struct)
@@ -34506,7 +34508,7 @@ designDiyCupMenu:
                 dc.w $0000              ; value
                 ; entry11_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect11 ; funcPtr
+                dc.l _DesignDIYCupOnSelect11 ; funcPtr
                 dc.w MENU_CMD_END       ; entry11_end
                 ; entry12 (struct)
                 ; rc (struct)
@@ -34545,7 +34547,7 @@ designDiyCupMenu:
                 dc.w $0000              ; textColor
                 ; entry13_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect13 ; funcPtr
+                dc.l _DesignDIYCupOnSelect13 ; funcPtr
                 dc.w MENU_CMD_END       ; entry13_end
                 ; entry14 (struct)
                 ; rc (struct)
@@ -34585,7 +34587,7 @@ designDiyCupMenu:
                 dc.w $0000              ; textColor
                 ; entry15_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect15 ; funcPtr
+                dc.l _DesignDIYCupOnSelect15 ; funcPtr
                 dc.w MENU_CMD_END       ; entry15_end
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords2
                 ; entries16_17[0]
@@ -34668,7 +34670,7 @@ designDiyCupMenu:
                 dc.l diyCupLegsStringTable0 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect20 ; funcPtr
+                dc.l _DesignDIYCupOnSelect20 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; extraTime (struct)
                 ; rc (struct)
@@ -34693,7 +34695,7 @@ designDiyCupMenu:
                 dc.l diyCupExtraTimeStringTable0 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect21 ; funcPtr
+                dc.l _DesignDIYCupOnSelect21 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; penalties (struct)
                 ; rc (struct)
@@ -34718,7 +34720,7 @@ designDiyCupMenu:
                 dc.l diyCupPenaltiesStringTable0 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect22 ; funcPtr
+                dc.l _DesignDIYCupOnSelect22 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; rows[1]
                 ; descText (struct)
@@ -34776,7 +34778,7 @@ designDiyCupMenu:
                 dc.l diyCupLegsStringTable1 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect20 ; funcPtr
+                dc.l _DesignDIYCupOnSelect20 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; extraTime (struct)
                 ; rc (struct)
@@ -34801,7 +34803,7 @@ designDiyCupMenu:
                 dc.l diyCupExtraTimeStringTable1 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect21 ; funcPtr
+                dc.l _DesignDIYCupOnSelect21 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; penalties (struct)
                 ; rc (struct)
@@ -34826,7 +34828,7 @@ designDiyCupMenu:
                 dc.l diyCupPenaltiesStringTable1 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect22 ; funcPtr
+                dc.l _DesignDIYCupOnSelect22 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; rows[2]
                 ; descText (struct)
@@ -34884,7 +34886,7 @@ designDiyCupMenu:
                 dc.l diyCupLegsStringTable2 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect20 ; funcPtr
+                dc.l _DesignDIYCupOnSelect20 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; extraTime (struct)
                 ; rc (struct)
@@ -34909,7 +34911,7 @@ designDiyCupMenu:
                 dc.l diyCupExtraTimeStringTable2 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect21 ; funcPtr
+                dc.l _DesignDIYCupOnSelect21 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; penalties (struct)
                 ; rc (struct)
@@ -34934,7 +34936,7 @@ designDiyCupMenu:
                 dc.l diyCupPenaltiesStringTable2 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect22 ; funcPtr
+                dc.l _DesignDIYCupOnSelect22 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; rows[3]
                 ; descText (struct)
@@ -34992,7 +34994,7 @@ designDiyCupMenu:
                 dc.l diyCupLegsStringTable3 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect20 ; funcPtr
+                dc.l _DesignDIYCupOnSelect20 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; extraTime (struct)
                 ; rc (struct)
@@ -35017,7 +35019,7 @@ designDiyCupMenu:
                 dc.l diyCupExtraTimeStringTable3 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect21 ; funcPtr
+                dc.l _DesignDIYCupOnSelect21 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; penalties (struct)
                 ; rc (struct)
@@ -35042,7 +35044,7 @@ designDiyCupMenu:
                 dc.l diyCupPenaltiesStringTable3 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect22 ; funcPtr
+                dc.l _DesignDIYCupOnSelect22 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; rows[4]
                 ; descText (struct)
@@ -35100,7 +35102,7 @@ designDiyCupMenu:
                 dc.l diyCupLegsStringTable4 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect20 ; funcPtr
+                dc.l _DesignDIYCupOnSelect20 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; extraTime (struct)
                 ; rc (struct)
@@ -35125,7 +35127,7 @@ designDiyCupMenu:
                 dc.l diyCupExtraTimeStringTable4 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect21 ; funcPtr
+                dc.l _DesignDIYCupOnSelect21 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; penalties (struct)
                 ; rc (struct)
@@ -35150,7 +35152,7 @@ designDiyCupMenu:
                 dc.l diyCupPenaltiesStringTable4 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect22 ; funcPtr
+                dc.l _DesignDIYCupOnSelect22 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; rows[5]
                 ; descText (struct)
@@ -35208,7 +35210,7 @@ designDiyCupMenu:
                 dc.l diyCupLegsStringTable5 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect20 ; funcPtr
+                dc.l _DesignDIYCupOnSelect20 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; extraTime (struct)
                 ; rc (struct)
@@ -35233,7 +35235,7 @@ designDiyCupMenu:
                 dc.l diyCupExtraTimeStringTable5 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect21 ; funcPtr
+                dc.l _DesignDIYCupOnSelect21 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; penalties (struct)
                 ; rc (struct)
@@ -35258,7 +35260,7 @@ designDiyCupMenu:
                 dc.l diyCupPenaltiesStringTable5 ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect22 ; funcPtr
+                dc.l _DesignDIYCupOnSelect22 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; startMenuB (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -35287,7 +35289,7 @@ designDiyCupMenu:
                 dc.l aChooseTeams       ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOnSelect48 ; funcPtr
+                dc.l _DesignDIYCupOnSelect48 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries48_50[1]
                 ; rc (struct)
@@ -35312,7 +35314,7 @@ designDiyCupMenu:
                 dc.l aOk                ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYCupOK     ; funcPtr
+                dc.l _DesignDIYCupOK     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries48_50[2]
                 ; rc (struct)
@@ -35337,7 +35339,7 @@ designDiyCupMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l jmp_SetExitMenuFlag_4 ; funcPtr
+                dc.l _SetExitMenuFlag ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry51_rc (struct)
                 dc.b -72                ; x
@@ -35716,8 +35718,8 @@ diyCupSelectTeams:
 diyCupMenu:
                 ; Menu_DIYCup
                 ; hdr (struct)
-                dc.l DIYCupInit         ; onInitPtr
-                dc.l DIYCupFinish       ; onReturnPtr
+                dc.l _DIYCupInit         ; onInitPtr
+                dc.l _DIYCupFinish       ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000001          ; On init function
                 ; entry0_rc (struct)
@@ -35761,7 +35763,7 @@ diyCupMenu:
                 dc.l 0                  ; textPtr
                 ; entry1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYCupOnSelect1    ; funcPtr
+                dc.l _DIYCupOnSelect1    ; funcPtr
                 dc.w MENU_CMD_END       ; entry1_end
                 ; entry2_rc (struct)
                 dc.b $00                ; x
@@ -35809,7 +35811,7 @@ diyCupMenu:
                 dc.l aMatch             ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYCupOnSelect3    ; funcPtr
+                dc.l _DIYCupOnSelect3    ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry4_rc (struct)
                 dc.b $4D                ; x
@@ -35835,7 +35837,7 @@ diyCupMenu:
                 dc.l aViewHighlights_0  ; textPtr
                 ; entry4_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYCupOnSelect4    ; funcPtr
+                dc.l _DIYCupOnSelect4    ; funcPtr
                 dc.w MENU_CMD_END       ; entry4_end
                 ; entries5_6[0]
                 ; rc (struct)
@@ -35860,7 +35862,7 @@ diyCupMenu:
                 dc.l aResult            ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYCupOnSelect5    ; funcPtr
+                dc.l _DIYCupOnSelect5    ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries5_6[1]
                 ; rc (struct)
@@ -35885,7 +35887,7 @@ diyCupMenu:
                 dc.l aViewMatch         ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYCupOnSelect6    ; funcPtr
+                dc.l _DIYCupOnSelect6    ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry7_rc (struct)
                 dc.b $3D                ; x
@@ -35911,7 +35913,7 @@ diyCupMenu:
                 dc.l aViewHighlights_0  ; textPtr
                 ; entry7_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYCupOnSelect7    ; funcPtr
+                dc.l _DIYCupOnSelect7    ; funcPtr
                 dc.w MENU_CMD_END       ; entry7_end
                 ; entries8_10[0]
                 ; rc (struct)
@@ -35936,7 +35938,7 @@ diyCupMenu:
                 dc.l aViewResult        ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYCupOnSelect8    ; funcPtr
+                dc.l _DIYCupOnSelect8    ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries8_10[1]
                 ; rc (struct)
@@ -35961,7 +35963,7 @@ diyCupMenu:
                 dc.l aStats             ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYCupOnSelect9    ; funcPtr
+                dc.l _SetupDIYCompetitionStatsMenu    ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries8_10[2]
                 ; rc (struct)
@@ -35986,7 +35988,7 @@ diyCupMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYCupOnSelect10   ; funcPtr
+                dc.l _DIYCupOnSelect10   ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries11_13[0]
                 ; rc (struct)
@@ -36088,7 +36090,7 @@ diyCupMenu:
                 dc.w $00B7              ; spriteId
                 ; entry16_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYCupOnSelect16   ; funcPtr
+                dc.l _DIYCupOnSelect16   ; funcPtr
                 dc.w MENU_CMD_END       ; entry16_end
                 ; entry17_rc (struct)
                 dc.b $00                ; x
@@ -36110,7 +36112,7 @@ diyCupMenu:
                 dc.w $00B8              ; spriteId
                 ; entry17_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYCupOnSelect17   ; funcPtr
+                dc.l _DIYCupOnSelect17   ; funcPtr
                 dc.w MENU_CMD_END       ; entry17_end
                 ; blocks18_65[0]
                 ; menuStart (struct)
@@ -36696,7 +36698,7 @@ diyCupMenu:
                 ; entry66_input (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 65535              ; ctrlMask
-                dc.l jmp_SetExitMenuFlag_5 ; funcPtr
+                dc.l _SetExitMenuFlag ; funcPtr
                 dc.w MENU_CMD_END       ; entry66_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
@@ -36898,7 +36900,7 @@ CycleMenuMusic:
 optionsMenu:
                 ; Menu_Options
                 ; hdr (struct)
-                dc.l OptionsMenuBeforeDraw ; onInitPtr
+                dc.l _OptionsMenuBeforeDraw ; onInitPtr
                 dc.l 0                  ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $0000000D          ; On init function
@@ -36962,7 +36964,7 @@ optionsMenu:
                 dc.l gameLengthStrTable ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ChangeGameLength   ; funcPtr
+                dc.l _ChangeGameLength   ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; labelPitchType (struct)
                 ; rc (struct)
@@ -37003,7 +37005,7 @@ optionsMenu:
                 dc.l pitchTypeStrTable  ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ChangePitchType    ; funcPtr
+                dc.l _ChangePitchType    ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; labelAutoReplays (struct)
                 ; rc (struct)
@@ -37044,7 +37046,7 @@ optionsMenu:
                 dc.l autoReplaysStrTable ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ChangeAutoReplays  ; funcPtr
+                dc.l _ChangeAutoReplays  ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; labelAllEqual (struct)
                 ; rc (struct)
@@ -37085,7 +37087,7 @@ optionsMenu:
                 dc.l allPlTeamsEqualStrTable ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ChangeAllPlTeamsEqual ; funcPtr
+                dc.l _ChangeAllPlTeamsEqual ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; labelAutoSaveHl (struct)
                 ; rc (struct)
@@ -37126,7 +37128,7 @@ optionsMenu:
                 dc.l autoSaveHlStrTable ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ChangeAutoSaveHighlights ; funcPtr
+                dc.l _ChangeAutoSaveHighlights ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; labelMenuMusic (struct)
                 ; rc (struct)
@@ -37167,7 +37169,7 @@ optionsMenu:
                 dc.l menuMusicStrTable  ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ChangeMenuMusic    ; funcPtr
+                dc.l _ChangeMenuMusic    ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; startMenuExit (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -37196,7 +37198,7 @@ optionsMenu:
                 ; exit_input (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 48                 ; ctrlMask
-                dc.l ExitOptions        ; funcPtr
+                dc.l _ExitOptions        ; funcPtr
                 dc.w MENU_CMD_END       ; exit_end
                 ; versionText_rc (struct)
                 dc.b -104               ; x
@@ -37330,9 +37332,9 @@ ShowTournamentInfo:
 designDiyTournamentMenu:
                 ; Menu_DesignDiyTournament
                 ; hdr (struct)
-                dc.l DesignDIYTournamentInit ; onInitPtr
-                dc.l DesignDIYTournamentReinit ; onReturnPtr
-                dc.l DesignDIYTournamentOnDraw ; onDrawPtr
+                dc.l _DesignDIYTournamentInit ; onInitPtr
+                dc.l _DesignDIYTournamentReinit ; onReturnPtr
+                dc.l _DesignDIYTournamentOnDraw ; onDrawPtr
                 dc.l $00000013          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords0
                 ; entry0 (struct)
@@ -37391,7 +37393,7 @@ designDiyTournamentMenu:
                 dc.l $2DAD4             ; textPtr
                 ; entry2_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect2 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect2 ; funcPtr
                 dc.w MENU_CMD_END       ; entry2_end
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords1
                 ; entries3_5[0]
@@ -37417,7 +37419,7 @@ designDiyTournamentMenu:
                 dc.l diyPitchSeasonStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect3 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect3 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries3_5[1]
                 ; rc (struct)
@@ -37442,7 +37444,7 @@ designDiyTournamentMenu:
                 dc.l diyPitchTypeStringTable ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect4 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect4 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries3_5[2]
                 ; rc (struct)
@@ -37467,7 +37469,7 @@ designDiyTournamentMenu:
                 dc.l diyStartMonthStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect5 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect5 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry6 (struct)
                 ; rc (struct)
@@ -37508,7 +37510,7 @@ designDiyTournamentMenu:
                 dc.l diyEndMonthStrTab  ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect7 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect7 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry8 (struct)
                 ; rc (struct)
@@ -37549,7 +37551,7 @@ designDiyTournamentMenu:
                 dc.l diyAwayGoalsStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect9 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect9 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry10 (struct)
                 ; rc (struct)
@@ -37588,7 +37590,7 @@ designDiyTournamentMenu:
                 dc.w $0000              ; textColor
                 ; entry11_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect11 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect11 ; funcPtr
                 dc.w MENU_CMD_END       ; entry11_end
                 ; entry12 (struct)
                 ; rc (struct)
@@ -37627,7 +37629,7 @@ designDiyTournamentMenu:
                 dc.w $0000              ; textColor
                 ; entry13_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect13 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect13 ; funcPtr
                 dc.w MENU_CMD_END       ; entry13_end
                 ; startMenuHeaders (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -37719,7 +37721,7 @@ designDiyTournamentMenu:
                 ; qualifiers_input (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 961                ; ctrlMask
-                dc.l DesignDIYTournament_AdjustStageQualifiers ; funcPtr
+                dc.l _DesignDIYTournament_AdjustStageQualifiers ; funcPtr
                 dc.w MENU_CMD_END       ; qualifiers_end
                 ; fromValue_rc (struct)
                 dc.b $19                ; x
@@ -37742,7 +37744,7 @@ designDiyTournamentMenu:
                 dc.w $0000              ; textColor
                 ; fromValue_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect20 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect20 ; funcPtr
                 dc.w MENU_CMD_END       ; fromValue_end
                 ; star (struct)
                 ; rc (struct)
@@ -37767,7 +37769,7 @@ designDiyTournamentMenu:
                 dc.l aStar              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect21 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect21 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords
                 ; statusLine_rc (struct)
@@ -37808,7 +37810,7 @@ designDiyTournamentMenu:
                 dc.l diyStage1LegsStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect23 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect23 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[1]
                 ; rc (struct)
@@ -37833,7 +37835,7 @@ designDiyTournamentMenu:
                 dc.l diyStage1ExtraTimeStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect24 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect24 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[2]
                 ; rc (struct)
@@ -37858,7 +37860,7 @@ designDiyTournamentMenu:
                 dc.l diyStage1PenaltiesStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect25 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect25 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[3]
                 ; rc (struct)
@@ -37883,7 +37885,7 @@ designDiyTournamentMenu:
                 dc.l diyStage1PtsForWinStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect26 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect26 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; spacer_rc (struct)
                 dc.b $00                ; x
@@ -37922,7 +37924,7 @@ designDiyTournamentMenu:
                 dc.l diyStage1PlayCountStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect28 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect28 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; stage2 (struct)
                 ; startMenu (struct)
@@ -37974,7 +37976,7 @@ designDiyTournamentMenu:
                 ; qualifiers_input (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 961                ; ctrlMask
-                dc.l DesignDIYTournament_AdjustStageQualifiers ; funcPtr
+                dc.l _DesignDIYTournament_AdjustStageQualifiers ; funcPtr
                 dc.w MENU_CMD_END       ; qualifiers_end
                 ; fromValue_rc (struct)
                 dc.b $19                ; x
@@ -37997,7 +37999,7 @@ designDiyTournamentMenu:
                 dc.w $0000              ; textColor
                 ; fromValue_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect20 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect20 ; funcPtr
                 dc.w MENU_CMD_END       ; fromValue_end
                 ; star (struct)
                 ; rc (struct)
@@ -38022,7 +38024,7 @@ designDiyTournamentMenu:
                 dc.l aStar              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect21 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect21 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords
                 ; statusLine_rc (struct)
@@ -38064,7 +38066,7 @@ designDiyTournamentMenu:
                 dc.l diyStage2LegsStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect23 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect23 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[1]
                 ; rc (struct)
@@ -38089,7 +38091,7 @@ designDiyTournamentMenu:
                 dc.l diyStage2ExtraTimeStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect24 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect24 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[2]
                 ; rc (struct)
@@ -38114,7 +38116,7 @@ designDiyTournamentMenu:
                 dc.l diyStage2PenaltiesStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect25 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect25 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[3]
                 ; rc (struct)
@@ -38139,7 +38141,7 @@ designDiyTournamentMenu:
                 dc.l diyStage2PtsForWinStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect26 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect26 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; spacer_rc (struct)
                 dc.b $00                ; x
@@ -38178,7 +38180,7 @@ designDiyTournamentMenu:
                 dc.l diyStage2PlayCountStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect28 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect28 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; stages3_6[0]
                 ; startMenu (struct)
@@ -38230,7 +38232,7 @@ designDiyTournamentMenu:
                 ; qualifiers_input (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 961                ; ctrlMask
-                dc.l DesignDIYTournament_AdjustStageQualifiers ; funcPtr
+                dc.l _DesignDIYTournament_AdjustStageQualifiers ; funcPtr
                 dc.w MENU_CMD_END       ; qualifiers_end
                 ; fromValue_rc (struct)
                 dc.b $19                ; x
@@ -38253,7 +38255,7 @@ designDiyTournamentMenu:
                 dc.w $0000              ; textColor
                 ; fromValue_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect20 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect20 ; funcPtr
                 dc.w MENU_CMD_END       ; fromValue_end
                 ; star (struct)
                 ; rc (struct)
@@ -38278,7 +38280,7 @@ designDiyTournamentMenu:
                 dc.l aStar              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect21 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect21 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords
                 ; statusLine_rc (struct)
@@ -38319,7 +38321,7 @@ designDiyTournamentMenu:
                 dc.l diyStage3LegsStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect23 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect23 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[1]
                 ; rc (struct)
@@ -38344,7 +38346,7 @@ designDiyTournamentMenu:
                 dc.l diyStage3ExtraTimeStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect24 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect24 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[2]
                 ; rc (struct)
@@ -38369,7 +38371,7 @@ designDiyTournamentMenu:
                 dc.l diyStage3PenaltiesStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect25 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect25 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[3]
                 ; rc (struct)
@@ -38394,7 +38396,7 @@ designDiyTournamentMenu:
                 dc.l diyStage3PtsForWinStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect26 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect26 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; spacer_rc (struct)
                 dc.b $00                ; x
@@ -38433,7 +38435,7 @@ designDiyTournamentMenu:
                 dc.l diyStage3PlayCountStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect28 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect28 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; stages3_6[1]
                 ; startMenu (struct)
@@ -38485,7 +38487,7 @@ designDiyTournamentMenu:
                 ; qualifiers_input (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 961                ; ctrlMask
-                dc.l DesignDIYTournament_AdjustStageQualifiers ; funcPtr
+                dc.l _DesignDIYTournament_AdjustStageQualifiers ; funcPtr
                 dc.w MENU_CMD_END       ; qualifiers_end
                 ; fromValue_rc (struct)
                 dc.b $19                ; x
@@ -38508,7 +38510,7 @@ designDiyTournamentMenu:
                 dc.w $0000              ; textColor
                 ; fromValue_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect20 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect20 ; funcPtr
                 dc.w MENU_CMD_END       ; fromValue_end
                 ; star (struct)
                 ; rc (struct)
@@ -38533,7 +38535,7 @@ designDiyTournamentMenu:
                 dc.l aStar              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect21 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect21 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords
                 ; statusLine_rc (struct)
@@ -38574,7 +38576,7 @@ designDiyTournamentMenu:
                 dc.l diyStage4LegsStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect23 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect23 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[1]
                 ; rc (struct)
@@ -38599,7 +38601,7 @@ designDiyTournamentMenu:
                 dc.l diyStage4ExtraTimeStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect24 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect24 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[2]
                 ; rc (struct)
@@ -38624,7 +38626,7 @@ designDiyTournamentMenu:
                 dc.l diyStage4PenaltiesStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect25 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect25 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[3]
                 ; rc (struct)
@@ -38649,7 +38651,7 @@ designDiyTournamentMenu:
                 dc.l diyStage4PtsForWinStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect26 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect26 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; spacer_rc (struct)
                 dc.b $00                ; x
@@ -38688,7 +38690,7 @@ designDiyTournamentMenu:
                 dc.l diyStage4PlayCountStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect28 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect28 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; stages3_6[2]
                 ; startMenu (struct)
@@ -38740,7 +38742,7 @@ designDiyTournamentMenu:
                 ; qualifiers_input (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 961                ; ctrlMask
-                dc.l DesignDIYTournament_AdjustStageQualifiers ; funcPtr
+                dc.l _DesignDIYTournament_AdjustStageQualifiers ; funcPtr
                 dc.w MENU_CMD_END       ; qualifiers_end
                 ; fromValue_rc (struct)
                 dc.b $19                ; x
@@ -38763,7 +38765,7 @@ designDiyTournamentMenu:
                 dc.w $0000              ; textColor
                 ; fromValue_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect20 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect20 ; funcPtr
                 dc.w MENU_CMD_END       ; fromValue_end
                 ; star (struct)
                 ; rc (struct)
@@ -38788,7 +38790,7 @@ designDiyTournamentMenu:
                 dc.l aStar              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect21 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect21 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords
                 ; statusLine_rc (struct)
@@ -38829,7 +38831,7 @@ designDiyTournamentMenu:
                 dc.l diyStage5LegsStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect23 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect23 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[1]
                 ; rc (struct)
@@ -38854,7 +38856,7 @@ designDiyTournamentMenu:
                 dc.l diyStage5ExtraTimeStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect24 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect24 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[2]
                 ; rc (struct)
@@ -38879,7 +38881,7 @@ designDiyTournamentMenu:
                 dc.l diyStage5PenaltiesStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect25 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect25 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[3]
                 ; rc (struct)
@@ -38904,7 +38906,7 @@ designDiyTournamentMenu:
                 dc.l diyStage5PtsForWinStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect26 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect26 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; spacer_rc (struct)
                 dc.b $00                ; x
@@ -38943,7 +38945,7 @@ designDiyTournamentMenu:
                 dc.l diyStage5PlayCountStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect28 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect28 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; stages3_6[3]
                 ; startMenu (struct)
@@ -38995,7 +38997,7 @@ designDiyTournamentMenu:
                 ; qualifiers_input (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 961                ; ctrlMask
-                dc.l DesignDIYTournament_AdjustStageQualifiers ; funcPtr
+                dc.l _DesignDIYTournament_AdjustStageQualifiers ; funcPtr
                 dc.w MENU_CMD_END       ; qualifiers_end
                 ; fromValue_rc (struct)
                 dc.b $19                ; x
@@ -39018,7 +39020,7 @@ designDiyTournamentMenu:
                 dc.w $0000              ; textColor
                 ; fromValue_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect20 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect20 ; funcPtr
                 dc.w MENU_CMD_END       ; fromValue_end
                 ; star (struct)
                 ; rc (struct)
@@ -39043,7 +39045,7 @@ designDiyTournamentMenu:
                 dc.l aStar              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect21 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect21 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords
                 ; statusLine_rc (struct)
@@ -39084,7 +39086,7 @@ designDiyTournamentMenu:
                 dc.l diyStage6LegsStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect23 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect23 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[1]
                 ; rc (struct)
@@ -39109,7 +39111,7 @@ designDiyTournamentMenu:
                 dc.l diyStage6ExtraTimeStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect24 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect24 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[2]
                 ; rc (struct)
@@ -39134,7 +39136,7 @@ designDiyTournamentMenu:
                 dc.l diyStage6PenaltiesStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect25 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect25 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; opts[3]
                 ; rc (struct)
@@ -39159,7 +39161,7 @@ designDiyTournamentMenu:
                 dc.l diyStage6PtsForWinStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect26 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect26 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; spacer_rc (struct)
                 dc.b $00                ; x
@@ -39198,7 +39200,7 @@ designDiyTournamentMenu:
                 dc.l diyStage6PlayCountStrTab ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect28 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect28 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; startMenuFooter (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -39227,7 +39229,7 @@ designDiyTournamentMenu:
                 dc.l aChooseTeams       ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect89 ; funcPtr
+                dc.l _DesignDIYTournamentOnSelect89 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries89_91[1]
                 ; rc (struct)
@@ -39252,7 +39254,7 @@ designDiyTournamentMenu:
                 dc.l aOk                ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOK ; funcPtr
+                dc.l _DesignDIYTournamentOK ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries89_91[2]
                 ; rc (struct)
@@ -39277,7 +39279,7 @@ designDiyTournamentMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DesignDIYTournamentOnSelect91 ; funcPtr
+                dc.l _SetExitMenuFlag ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry92_rc (struct)
                 dc.b -72                ; x
@@ -39811,7 +39813,7 @@ diyCompetitionMenu:
                 dc.w $0000              ; string flags: color = white, font = small, alignment = center
                 dc.l aLeague            ; "LEAGUE"
                 dc.w $000D              ; type 13 - on select function - fire only
-                dc.l SelectDiyLeagueMenu ; "By"
+                dc.l _SelectDiyLeagueMenu ; "By"
                 dc.w $0000              ; -= end entry 1 =-
                 dc.b $5C                ; x (2)
                 dc.b $41                ; y
@@ -39828,7 +39830,8 @@ diyCompetitionMenu:
                 dc.w $0000              ; string flags: color = white, font = small, alignment = center
                 dc.l aCup               ; "CUP"
                 dc.w $000D              ; type 13 - on select function - fire only
-                dc.l SelectDiyCupMenu
+                dc.l _SelectDiyCupMenu
+
                 dc.w $0000              ; -= end entry 2 =-
                 dc.b $5C                ; x (3)
                 dc.b $5A                ; y
@@ -39845,7 +39848,8 @@ diyCompetitionMenu:
                 dc.w $0000              ; string flags: color = white, font = small, alignment = center
                 dc.l aTournament        ; "TOURNAMENT"
                 dc.w $000D              ; type 13 - on select function - fire only
-                dc.l SelectDiyTournamentMenu
+                dc.l _SelectDiyTournamentMenu
+
                 dc.w $0000              ; -= end entry 3 =-
                 dc.b $66                ; x (4)
                 dc.b -71                ; y
@@ -39862,7 +39866,8 @@ diyCompetitionMenu:
                 dc.w $0000              ; string flags: color = white, font = small, alignment = center
                 dc.l aExit              ; "EXIT"
                 dc.w $000D              ; type 13 - on select function - fire only
-                dc.l SelectDiyExitMenu
+                dc.l _SelectDiyExitMenu
+
                 dc.w $0000              ; -= end entry 4 =-
                 dc.w -999               ; -= end menu =-
 
@@ -39911,8 +39916,8 @@ ContestInProgress:
 friendlyGameMenu:
                 ; Menu_FriendlyGame
                 ; hdr (struct)
-                dc.l FriendlyMenuInit   ; onInitPtr
-                dc.l FriendlyMenuReinit ; onReturnPtr
+                dc.l _FriendlyMenuInit   ; onInitPtr
+                dc.l _FriendlyMenuReinit ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000008          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -39991,7 +39996,7 @@ friendlyGameMenu:
                 dc.l pitchTypeOrSeasonTable ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l PitchTypeOrSeasonProc ; funcPtr
+                dc.l _PitchTypeOrSeasonProc ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry4 (struct)
                 ; rc (struct)
@@ -40016,7 +40021,7 @@ friendlyGameMenu:
                 dc.l friendlyPitchTypeTable ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l FriendlyPitchTypeProc ; funcPtr
+                dc.l _FriendlyPitchTypeProc ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry5_rc (struct)
                 dc.b -104               ; x
@@ -40039,7 +40044,7 @@ friendlyGameMenu:
                 dc.w $0000              ; textColor
                 ; entry5_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l MinSubstitutes     ; funcPtr
+                dc.l _MinSubstitutes     ; funcPtr
                 dc.w MENU_CMD_END       ; entry5_end
                 ; entry6_rc (struct)
                 dc.b -24                ; x
@@ -40062,7 +40067,7 @@ friendlyGameMenu:
                 dc.w $0000              ; textColor
                 ; entry6_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l MaxSubstitutes     ; funcPtr
+                dc.l _MaxSubstitutes     ; funcPtr
                 dc.w MENU_CMD_END       ; entry6_end
                 ; menu2Start (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -40091,7 +40096,7 @@ friendlyGameMenu:
                 dc.l aChooseTeams       ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ChooseTeamsMenu    ; funcPtr
+                dc.l _ChooseTeamsMenu    ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry8 (struct)
                 ; rc (struct)
@@ -40116,7 +40121,7 @@ friendlyGameMenu:
                 dc.l aOk                ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l FriendlyOK         ; funcPtr
+                dc.l _FriendlyOK         ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry9 (struct)
                 ; rc (struct)
@@ -40141,7 +40146,7 @@ friendlyGameMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l jmpSetExitMenuFlag ; funcPtr
+                dc.l _SetExitMenuFlag ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry10_rc (struct)
                 dc.b -72                ; x
@@ -40304,8 +40309,8 @@ locret_1373A6:
 editTeamsMenu:
                 ; Menu_EditTeams
                 ; hdr (struct)
-                dc.l EditTeamsInit      ; onInitPtr
-                dc.l EditTeamsFinish    ; onReturnPtr
+                dc.l _EditTeamsInit      ; onInitPtr
+                dc.l _EditTeamsFinish    ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000000          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -40332,7 +40337,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsSelectTeamName ; funcPtr
+                dc.l _EditTeamsSelectTeamName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords
                 ; entry1_rc (struct)
@@ -40388,7 +40393,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsSelectCoachName ; funcPtr
+                dc.l _EditTeamsSelectCoachName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; menu1Start (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -40427,7 +40432,7 @@ editTeamsMenu:
                 ; entry5_inputFunc (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 961                ; ctrlMask
-                dc.l EditTeamsChangeShirtsPrimary ; funcPtr
+                dc.l _EditTeamsChangeShirtsPrimary ; funcPtr
                 dc.w MENU_CMD_END       ; entry5_end
                 ; entry6_rc (struct)
                 dc.b $00                ; x
@@ -40450,7 +40455,7 @@ editTeamsMenu:
                 ; entry6_inputFunc (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 961                ; ctrlMask
-                dc.l EditTeamsChangeShortsPrimary ; funcPtr
+                dc.l _EditTeamsChangeShortsPrimary ; funcPtr
                 dc.w MENU_CMD_END       ; entry6_end
                 ; entry7_rc (struct)
                 dc.b $00                ; x
@@ -40473,7 +40478,7 @@ editTeamsMenu:
                 ; entry7_inputFunc (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 961                ; ctrlMask
-                dc.l EditTeamsChangeSocksPrimary ; funcPtr
+                dc.l _EditTeamsChangeSocksPrimary ; funcPtr
                 dc.w MENU_CMD_END       ; entry7_end
                 ; menu1Start2 (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -40512,7 +40517,7 @@ editTeamsMenu:
                 ; entry9_inputFunc (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 961                ; ctrlMask
-                dc.l EditTeamsChangeShirtsSecondary ; funcPtr
+                dc.l _EditTeamsChangeShirtsSecondary ; funcPtr
                 dc.w MENU_CMD_END       ; entry9_end
                 ; entry10_rc (struct)
                 dc.b $00                ; x
@@ -40535,7 +40540,7 @@ editTeamsMenu:
                 ; entry10_inputFunc (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 961                ; ctrlMask
-                dc.l EditTeamsChangeShortsSecondary ; funcPtr
+                dc.l _EditTeamsChangeShortsSecondary ; funcPtr
                 dc.w MENU_CMD_END       ; entry10_end
                 ; entry11_rc (struct)
                 dc.b $00                ; x
@@ -40558,7 +40563,7 @@ editTeamsMenu:
                 ; entry11_inputFunc (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 961                ; ctrlMask
-                dc.l EditTeamsChangeSocksSecondary ; funcPtr
+                dc.l _EditTeamsChangeSocksSecondary ; funcPtr
                 dc.w MENU_CMD_END       ; entry11_end
                 ; menu1Start3 (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -40584,7 +40589,7 @@ editTeamsMenu:
                 dc.w $00C7              ; spriteId
                 ; entry12_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsSelectPrimaryShirtType ; funcPtr
+                dc.l _EditTeamsSelectPrimaryShirtType ; funcPtr
                 dc.w MENU_CMD_END       ; entry12_end
                 ; entry13_rc (struct)
                 dc.b $00                ; x
@@ -40606,7 +40611,7 @@ editTeamsMenu:
                 dc.w $00C8              ; spriteId
                 ; entry13_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsSelectPrimaryShirtType ; funcPtr
+                dc.l _EditTeamsSelectPrimaryShirtType ; funcPtr
                 dc.w MENU_CMD_END       ; entry13_end
                 ; entry14_rc (struct)
                 dc.b $00                ; x
@@ -40628,7 +40633,7 @@ editTeamsMenu:
                 dc.w $00C9              ; spriteId
                 ; entry14_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsSelectPrimaryShirtType ; funcPtr
+                dc.l _EditTeamsSelectPrimaryShirtType ; funcPtr
                 dc.w MENU_CMD_END       ; entry14_end
                 ; entry15_rc (struct)
                 dc.b $00                ; x
@@ -40650,7 +40655,7 @@ editTeamsMenu:
                 dc.w $00CA              ; spriteId
                 ; entry15_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsSelectPrimaryShirtType ; funcPtr
+                dc.l _EditTeamsSelectPrimaryShirtType ; funcPtr
                 dc.w MENU_CMD_END       ; entry15_end
                 ; menu1Start4 (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -40676,7 +40681,7 @@ editTeamsMenu:
                 dc.w $00C7              ; spriteId
                 ; entry16_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsSelectSecondaryShirtType ; funcPtr
+                dc.l _EditTeamsSelectSecondaryShirtType ; funcPtr
                 dc.w MENU_CMD_END       ; entry16_end
                 ; entry17_rc (struct)
                 dc.b $00                ; x
@@ -40698,7 +40703,7 @@ editTeamsMenu:
                 dc.w $00C8              ; spriteId
                 ; entry17_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsSelectSecondaryShirtType ; funcPtr
+                dc.l _EditTeamsSelectSecondaryShirtType ; funcPtr
                 dc.w MENU_CMD_END       ; entry17_end
                 ; entry18_rc (struct)
                 dc.b $00                ; x
@@ -40720,7 +40725,7 @@ editTeamsMenu:
                 dc.w $00C9              ; spriteId
                 ; entry18_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsSelectSecondaryShirtType ; funcPtr
+                dc.l _EditTeamsSelectSecondaryShirtType ; funcPtr
                 dc.w MENU_CMD_END       ; entry18_end
                 ; entry19_rc (struct)
                 dc.b $00                ; x
@@ -40742,7 +40747,7 @@ editTeamsMenu:
                 dc.w $00CA              ; spriteId
                 ; entry19_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsSelectSecondaryShirtType ; funcPtr
+                dc.l _EditTeamsSelectSecondaryShirtType ; funcPtr
                 dc.w MENU_CMD_END       ; entry19_end
                 ; menu1Start5 (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -40771,7 +40776,7 @@ editTeamsMenu:
                 dc.l aImport            ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ImportTeamsMenu    ; funcPtr
+                dc.l _ImportTeamsMenu    ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords2
                 ; entry21_rc (struct)
@@ -40796,7 +40801,7 @@ editTeamsMenu:
                 dc.l aOk                ; textPtr
                 ; entry21_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsOK        ; funcPtr
+                dc.l _EditTeamsOK        ; funcPtr
                 dc.w MENU_CMD_END       ; entry21_end
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords3
                 ; entry22 (struct)
@@ -40822,7 +40827,7 @@ editTeamsMenu:
                 dc.l aUndo              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsUndo      ; funcPtr
+                dc.l _EditTeamsUndo      ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_START_TEMPLATE ; template23_markStart
                 ; template23_rc (struct)
@@ -40832,7 +40837,7 @@ editTeamsMenu:
                 dc.b $00                ; h
                 ; template23_beforeDraw (struct)
                 dc.w MENU_CMD_BEFORE_DRAW ; type
-                dc.l EditTeamsPlayersBeforeDraw ; funcPtr
+                dc.l _EditTeamsPlayersBeforeDraw ; funcPtr
                 dc.w MENU_CMD_END       ; template23_end
                 ; menu1Start6 (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -40858,7 +40863,7 @@ editTeamsMenu:
                 dc.w $0000              ; spriteId
                 ; entry23_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerFace ; funcPtr
+                dc.l _EditTeamsChangePlayerFace ; funcPtr
                 dc.w MENU_CMD_END       ; entry23_end
                 ; entry24_rc (struct)
                 dc.b $00                ; x
@@ -40880,7 +40885,7 @@ editTeamsMenu:
                 dc.w $0000              ; spriteId
                 ; entry24_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerFace ; funcPtr
+                dc.l _EditTeamsChangePlayerFace ; funcPtr
                 dc.w MENU_CMD_END       ; entry24_end
                 ; entry25_rc (struct)
                 dc.b $00                ; x
@@ -40902,7 +40907,7 @@ editTeamsMenu:
                 dc.w $0000              ; spriteId
                 ; entry25_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerFace ; funcPtr
+                dc.l _EditTeamsChangePlayerFace ; funcPtr
                 dc.w MENU_CMD_END       ; entry25_end
                 ; entry26_rc (struct)
                 dc.b $00                ; x
@@ -40924,7 +40929,7 @@ editTeamsMenu:
                 dc.w $0000              ; spriteId
                 ; entry26_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerFace ; funcPtr
+                dc.l _EditTeamsChangePlayerFace ; funcPtr
                 dc.w MENU_CMD_END       ; entry26_end
                 ; entry27_rc (struct)
                 dc.b $00                ; x
@@ -40946,7 +40951,7 @@ editTeamsMenu:
                 dc.w $0000              ; spriteId
                 ; entry27_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerFace ; funcPtr
+                dc.l _EditTeamsChangePlayerFace ; funcPtr
                 dc.w MENU_CMD_END       ; entry27_end
                 ; entry28_rc (struct)
                 dc.b $00                ; x
@@ -40968,7 +40973,7 @@ editTeamsMenu:
                 dc.w $0000              ; spriteId
                 ; entry28_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerFace ; funcPtr
+                dc.l _EditTeamsChangePlayerFace ; funcPtr
                 dc.w MENU_CMD_END       ; entry28_end
                 ; entry29_rc (struct)
                 dc.b $00                ; x
@@ -40990,7 +40995,7 @@ editTeamsMenu:
                 dc.w $0000              ; spriteId
                 ; entry29_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerFace ; funcPtr
+                dc.l _EditTeamsChangePlayerFace ; funcPtr
                 dc.w MENU_CMD_END       ; entry29_end
                 ; entry30_rc (struct)
                 dc.b $00                ; x
@@ -41012,7 +41017,7 @@ editTeamsMenu:
                 dc.w $0000              ; spriteId
                 ; entry30_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerFace ; funcPtr
+                dc.l _EditTeamsChangePlayerFace ; funcPtr
                 dc.w MENU_CMD_END       ; entry30_end
                 ; entry31_rc (struct)
                 dc.b $00                ; x
@@ -41034,7 +41039,7 @@ editTeamsMenu:
                 dc.w $0000              ; spriteId
                 ; entry31_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerFace ; funcPtr
+                dc.l _EditTeamsChangePlayerFace ; funcPtr
                 dc.w MENU_CMD_END       ; entry31_end
                 ; entry32_rc (struct)
                 dc.b $00                ; x
@@ -41056,7 +41061,7 @@ editTeamsMenu:
                 dc.w $0000              ; spriteId
                 ; entry32_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerFace ; funcPtr
+                dc.l _EditTeamsChangePlayerFace ; funcPtr
                 dc.w MENU_CMD_END       ; entry32_end
                 ; entry33_rc (struct)
                 dc.b $00                ; x
@@ -41078,7 +41083,7 @@ editTeamsMenu:
                 dc.w $0000              ; spriteId
                 ; entry33_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerFace ; funcPtr
+                dc.l _EditTeamsChangePlayerFace ; funcPtr
                 dc.w MENU_CMD_END       ; entry33_end
                 ; entry34_rc (struct)
                 dc.b $00                ; x
@@ -41100,7 +41105,7 @@ editTeamsMenu:
                 dc.w $0000              ; spriteId
                 ; entry34_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerFace ; funcPtr
+                dc.l _EditTeamsChangePlayerFace ; funcPtr
                 dc.w MENU_CMD_END       ; entry34_end
                 ; entry35_rc (struct)
                 dc.b $00                ; x
@@ -41122,7 +41127,7 @@ editTeamsMenu:
                 dc.w $0000              ; spriteId
                 ; entry35_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerFace ; funcPtr
+                dc.l _EditTeamsChangePlayerFace ; funcPtr
                 dc.w MENU_CMD_END       ; entry35_end
                 ; entry36_rc (struct)
                 dc.b $00                ; x
@@ -41144,7 +41149,7 @@ editTeamsMenu:
                 dc.w $0000              ; spriteId
                 ; entry36_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerFace ; funcPtr
+                dc.l _EditTeamsChangePlayerFace ; funcPtr
                 dc.w MENU_CMD_END       ; entry36_end
                 ; entry37_rc (struct)
                 dc.b $00                ; x
@@ -41166,7 +41171,7 @@ editTeamsMenu:
                 dc.w $0000              ; spriteId
                 ; entry37_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerFace ; funcPtr
+                dc.l _EditTeamsChangePlayerFace ; funcPtr
                 dc.w MENU_CMD_END       ; entry37_end
                 ; entry38_rc (struct)
                 dc.b $00                ; x
@@ -41188,7 +41193,7 @@ editTeamsMenu:
                 dc.w $0000              ; spriteId
                 ; entry38_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerFace ; funcPtr
+                dc.l _EditTeamsChangePlayerFace ; funcPtr
                 dc.w MENU_CMD_END       ; entry38_end
                 dc.w MENU_MARK_INIT_ENTRY ; markInitEntry
                 ; menu1Start7 (struct)
@@ -41218,7 +41223,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerName ; funcPtr
+                dc.l _EditTeamsChangePlayerName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries39_54[1]
                 ; rc (struct)
@@ -41243,7 +41248,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerName ; funcPtr
+                dc.l _EditTeamsChangePlayerName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries39_54[2]
                 ; rc (struct)
@@ -41268,7 +41273,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerName ; funcPtr
+                dc.l _EditTeamsChangePlayerName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries39_54[3]
                 ; rc (struct)
@@ -41293,7 +41298,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerName ; funcPtr
+                dc.l _EditTeamsChangePlayerName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries39_54[4]
                 ; rc (struct)
@@ -41318,7 +41323,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerName ; funcPtr
+                dc.l _EditTeamsChangePlayerName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries39_54[5]
                 ; rc (struct)
@@ -41343,7 +41348,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerName ; funcPtr
+                dc.l _EditTeamsChangePlayerName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries39_54[6]
                 ; rc (struct)
@@ -41368,7 +41373,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerName ; funcPtr
+                dc.l _EditTeamsChangePlayerName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries39_54[7]
                 ; rc (struct)
@@ -41393,7 +41398,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerName ; funcPtr
+                dc.l _EditTeamsChangePlayerName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries39_54[8]
                 ; rc (struct)
@@ -41418,7 +41423,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerName ; funcPtr
+                dc.l _EditTeamsChangePlayerName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries39_54[9]
                 ; rc (struct)
@@ -41443,7 +41448,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerName ; funcPtr
+                dc.l _EditTeamsChangePlayerName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries39_54[10]
                 ; rc (struct)
@@ -41468,7 +41473,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerName ; funcPtr
+                dc.l _EditTeamsChangePlayerName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries39_54[11]
                 ; rc (struct)
@@ -41493,7 +41498,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerName ; funcPtr
+                dc.l _EditTeamsChangePlayerName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries39_54[12]
                 ; rc (struct)
@@ -41518,7 +41523,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerName ; funcPtr
+                dc.l _EditTeamsChangePlayerName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries39_54[13]
                 ; rc (struct)
@@ -41543,7 +41548,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerName ; funcPtr
+                dc.l _EditTeamsChangePlayerName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries39_54[14]
                 ; rc (struct)
@@ -41568,7 +41573,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerName ; funcPtr
+                dc.l _EditTeamsChangePlayerName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries39_54[15]
                 ; rc (struct)
@@ -41593,7 +41598,7 @@ editTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTeamsChangePlayerName ; funcPtr
+                dc.l _EditTeamsChangePlayerName ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry55 (struct)
                 ; rc (struct)
@@ -41950,7 +41955,7 @@ GetScorerSurname:
 competitionTopGoalScorersMenu:
                 ; Menu_CompetitionTopGoalScorers
                 ; hdr (struct)
-                dc.l CompetitionTopGoalScorersInit ; onInitPtr
+                dc.l _CompetitionTopGoalScorersInit ; onInitPtr
                 dc.l 0                  ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000002          ; On init function
@@ -42002,7 +42007,7 @@ competitionTopGoalScorersMenu:
                 dc.l aExit              ; textPtr
                 ; entry2_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l CompetitionTopGoalScorersExit ; funcPtr
+                dc.l _CompetitionTopGoalScorersExit ; funcPtr
                 dc.w MENU_CMD_END       ; entry2_end
                 ; menu1Start (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -42714,7 +42719,7 @@ CompetitionTopGoalScorersExit:
 topGoalScorersMenu:
                 ; Menu_TopGoalScorers
                 ; hdr (struct)
-                dc.l TopGoalScorersInit ; onInitPtr
+                dc.l _TopGoalScorersInit ; onInitPtr
                 dc.l 0                  ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000005          ; On init function
@@ -42800,7 +42805,7 @@ topGoalScorersMenu:
                 dc.l aExit              ; textPtr
                 ; entry5_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l TopGoalScorersExit ; funcPtr
+                dc.l _TopGoalScorersExit ; funcPtr
                 dc.w MENU_CMD_END       ; entry5_end
                 ; menu1Start (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -42814,7 +42819,7 @@ topGoalScorersMenu:
                 dc.b $00                ; h
                 ; template1_beforeDraw (struct)
                 dc.w MENU_CMD_BEFORE_DRAW ; type
-                dc.l TopGoalScorersBeforeDrawCommon ; funcPtr
+                dc.l _TopGoalScorersBeforeDrawCommon ; funcPtr
                 dc.w MENU_CMD_END       ; template1_end
                 ; entries6_20[0]
                 ; rc (struct)
@@ -43306,8 +43311,8 @@ loc_1391AC:
 squadMenu:
                 ; Menu_Squad
                 ; hdr (struct)
-                dc.l SquadInit          ; onInitPtr
-                dc.l SquadFinish        ; onReturnPtr
+                dc.l _SquadInit          ; onInitPtr
+                dc.l _SquadFinish        ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000009          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -43418,7 +43423,7 @@ squadMenu:
                 dc.l aTraining          ; textPtr
                 ; entry6_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SelectTraining     ; funcPtr
+                dc.l _SelectTraining     ; funcPtr
                 dc.w MENU_CMD_END       ; entry6_end
                 ; entry7_rc (struct)
                 dc.b $00                ; x
@@ -43464,7 +43469,7 @@ squadMenu:
                 dc.l aGoals             ; textPtr
                 ; entry8_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SelectGoals        ; funcPtr
+                dc.l _SelectGoals        ; funcPtr
                 dc.w MENU_CMD_END       ; entry8_end
                 ; entry9 (struct)
                 ; rc (struct)
@@ -43489,7 +43494,7 @@ squadMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l j_SetExitMenuFlag  ; funcPtr
+                dc.l _SetExitMenuFlag  ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry10_rc (struct)
                 dc.b -43                ; x
@@ -43509,7 +43514,7 @@ squadMenu:
                 dc.l aExit              ; textPtr
                 ; entry10_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l j_SetExitMenuFlag  ; funcPtr
+                dc.l _SetExitMenuFlag  ; funcPtr
                 dc.w MENU_CMD_END       ; entry10_end
                 ; entry11_rc (struct)
                 dc.b $00                ; x
@@ -43518,7 +43523,7 @@ squadMenu:
                 dc.b $00                ; h
                 ; entry11_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SquadOnSelect11    ; funcPtr
+                dc.l _SquadOnSelect11    ; funcPtr
                 dc.w MENU_CMD_END       ; entry11_end
                 ; entry12 (struct)
                 ; rc (struct)
@@ -43724,10 +43729,10 @@ squadMenu:
                 dc.w $0000              ; reserved
                 ; template28_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l SquadAfterDrawCommon ; funcPtr
+                dc.l _SquadAfterDrawCommon ; funcPtr
                 ; template28_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SquadCommon        ; funcPtr
+                dc.l _SquadCommon        ; funcPtr
                 dc.w MENU_CMD_END       ; template28_end
                 ; entries28_43[0]
                 ; rc (struct)
@@ -43975,10 +43980,10 @@ squadMenu:
                 dc.w $0000              ; reserved
                 ; entry45_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SquadOnSelect45    ; funcPtr
+                dc.l _SquadOnSelect45    ; funcPtr
                 ; entry45_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l Squad45AfterDraw   ; funcPtr
+                dc.l _Squad45AfterDraw   ; funcPtr
                 dc.w MENU_CMD_END       ; entry45_end
                 ; entry46_rc (struct)
                 dc.b $00                ; x
@@ -45081,7 +45086,7 @@ competitionStatsMenu:
                 dc.w $0000              ; string flags: color = white, font = small, alignment = center
                 dc.l aHighestScorerL    ; "HIGHEST SCORER LIST"
                 dc.w $000D              ; type 13 - on select function - fire only
-                dc.l StatsHighestScorerList ; " y"
+                dc.l _StatsHighestScorerList ; " y"
                 dc.w $0000              ; -= end entry 1 =-
                 dc.b $5C                ; x (2)
                 dc.b $41                ; y
@@ -45098,7 +45103,8 @@ competitionStatsMenu:
                 dc.w $0000              ; string flags: color = white, font = small, alignment = center
                 dc.l aCompetitionInf    ; "COMPETITION INFO"
                 dc.w $000D              ; type 13 - on select function - fire only
-                dc.l CompetitionInfo
+                dc.l _CompetitionInfo
+
                 dc.w $0000              ; -= end entry 2 =-
                 dc.b $5C                ; x (3)
                 dc.b $5A                ; y
@@ -45115,7 +45121,7 @@ competitionStatsMenu:
                 dc.w $0000              ; string flags: color = white, font = small, alignment = center
                 dc.l aViewSquads        ; "VIEW SQUADS"
                 dc.w $000D              ; type 13 - on select function - fire only
-                dc.l StatsViewSquads    ; """y"
+                dc.l _StatsViewSquads    ; """y"
                 dc.w $0000              ; -= end entry 3 =-
                 dc.b $66                ; x (4)
                 dc.b -71                ; y
@@ -45132,7 +45138,8 @@ competitionStatsMenu:
                 dc.w $0000              ; string flags: color = white, font = small, alignment = center
                 dc.l aExit              ; "EXIT"
                 dc.w $000D              ; type 13 - on select function - fire only
-                dc.l StatsExit
+                dc.l _StatsExit
+
                 dc.w $0000              ; -= end entry 4 =-
                 dc.w -999               ; -= end menu =-
 
@@ -45174,8 +45181,8 @@ diyNumberOfTeams:
 careerOverMenu:
                 ; Menu_CareerOver
                 ; hdr (struct)
-                dc.l CareerOverInit     ; onInitPtr
-                dc.l CareerOverFinish   ; onReturnPtr
+                dc.l _CareerOverInit     ; onInitPtr
+                dc.l _CareerOverFinish   ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000004          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -45257,7 +45264,7 @@ careerOverMenu:
                 dc.l aViewCompetitio    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ViewCompetitionsMenuRetired ; funcPtr
+                dc.l _ViewCompetitionsMenuRetired ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry5 (struct)
                 ; rc (struct)
@@ -45282,7 +45289,7 @@ careerOverMenu:
                 dc.l aJobOffers         ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l JobOffersMenuRetired ; funcPtr
+                dc.l _JobOffersMenuRetired ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry6 (struct)
                 ; rc (struct)
@@ -45307,7 +45314,7 @@ careerOverMenu:
                 dc.l aContinueCareer    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ContinueCareer     ; funcPtr
+                dc.l _ContinueCareer     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry7 (struct)
                 ; rc (struct)
@@ -45332,7 +45339,7 @@ careerOverMenu:
                 dc.l aSaveCareer        ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SaveCareer         ; funcPtr
+                dc.l _SaveCareer         ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry8 (struct)
                 ; rc (struct)
@@ -45357,7 +45364,7 @@ careerOverMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ExitCareerMenu     ; funcPtr
+                dc.l _ExitCareerMenu     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
@@ -45414,8 +45421,8 @@ SelectTeamToManage:
 careerMenu:
                 ; Menu_Career
                 ; hdr (struct)
-                dc.l CareerMenuInit     ; onInitPtr
-                dc.l CareerMenuFinish   ; onReturnPtr
+                dc.l _CareerMenuInit     ; onInitPtr
+                dc.l _CareerMenuFinish   ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000003          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -45459,7 +45466,7 @@ careerMenu:
                 dc.l aLoadLiverpool     ; textPtr
                 ; entry1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l LoadLiverpool      ; funcPtr
+                dc.l _LoadLiverpool      ; funcPtr
                 dc.w MENU_CMD_END       ; entry1_end
                 ; entry2 (struct)
                 ; rc (struct)
@@ -45590,7 +45597,7 @@ careerMenu:
                 ; entry7_input (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 961                ; ctrlMask
-                dc.l ChangeNationality  ; funcPtr
+                dc.l _ChangeNationality  ; funcPtr
                 dc.w MENU_CMD_END       ; entry7_end
                 ; entry8 (struct)
                 ; rc (struct)
@@ -45656,7 +45663,7 @@ careerMenu:
                 dc.l aChooseTeam        ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ChooseTeamAndStartCareer ; funcPtr
+                dc.l _ChooseTeamAndStartCareer ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry11 (struct)
                 ; rc (struct)
@@ -45681,7 +45688,7 @@ careerMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l j_SetExitMenuFlag2 ; funcPtr
+                dc.l _SetExitMenuFlag ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 ; unsigned __int8[64]
@@ -45820,8 +45827,8 @@ pad_13B35F:
 viewCompetitionsMenu:
                 ; Menu_ViewCompetitions
                 ; hdr (struct)
-                dc.l ViewCompetitionsInit ; onInitPtr
-                dc.l ViewCompetitionsOnReturn ; onReturnPtr
+                dc.l _ViewCompetitionsInit ; onInitPtr
+                dc.l _ViewCompetitionsOnReturn ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000001          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -45864,7 +45871,7 @@ viewCompetitionsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l OpenDiyFromFile    ; funcPtr
+                dc.l _OpenDiyFromFile    ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry2 (struct)
                 ; rc (struct)
@@ -45889,7 +45896,7 @@ viewCompetitionsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l OpenDiyPreset1     ; funcPtr
+                dc.l _OpenDiyPreset1     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry3 (struct)
                 ; rc (struct)
@@ -45914,7 +45921,7 @@ viewCompetitionsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l OpenDiyPreset2     ; funcPtr
+                dc.l _OpenDiyPreset2     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry4 (struct)
                 ; rc (struct)
@@ -45939,7 +45946,7 @@ viewCompetitionsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l OpenDiyPreset3     ; funcPtr
+                dc.l _OpenDiyPreset3     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry5 (struct)
                 ; rc (struct)
@@ -45964,7 +45971,7 @@ viewCompetitionsMenu:
                 dc.l aTopGoalScorers    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l TopGoalScorersMenu ; funcPtr
+                dc.l _TopGoalScorersMenu_0 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry6 (struct)
                 ; rc (struct)
@@ -45989,7 +45996,7 @@ viewCompetitionsMenu:
                 dc.l aManagementReco_0  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ManagementRecordMenu ; funcPtr
+                dc.l _ManagementRecordMenu ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry7 (struct)
                 ; rc (struct)
@@ -46014,7 +46021,7 @@ viewCompetitionsMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l jmp_SetExitMenuFlag_2 ; funcPtr
+                dc.l _SetExitMenuFlag ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
@@ -46071,8 +46078,8 @@ jmp_SetExitMenuFlag_2:
 contestMenu:
                 ; Menu_Contest
                 ; hdr (struct)
-                dc.l ContestMenuInit    ; onInitPtr
-                dc.l ContestMenuOnReturn ; onReturnPtr
+                dc.l _ContestMenuInit    ; onInitPtr
+                dc.l _ContestMenuOnReturn ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000007          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -46161,7 +46168,7 @@ contestMenu:
                 dc.l aTransfers         ; textPtr
                 ; entry4_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l TransfersMenu      ; funcPtr
+                dc.l _TransfersMenu      ; funcPtr
                 dc.w MENU_CMD_END       ; entry4_end
                 ; entry5_rc (struct)
                 dc.b $00                ; x
@@ -46193,7 +46200,7 @@ contestMenu:
                 dc.l aJobOffers         ; textPtr
                 ; entry5_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l JobOffersMenu      ; funcPtr
+                dc.l _JobOffersMenu      ; funcPtr
                 dc.w MENU_CMD_END       ; entry5_end
                 ; entry6_rc (struct)
                 dc.b $00                ; x
@@ -46225,7 +46232,7 @@ contestMenu:
                 dc.l aClubBusiness      ; textPtr
                 ; entry6_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ClubBusinessMenu   ; funcPtr
+                dc.l _ClubBusinessMenu   ; funcPtr
                 dc.w MENU_CMD_END       ; entry6_end
                 ; entry7_rc (struct)
                 dc.b $65                ; x
@@ -46257,7 +46264,7 @@ contestMenu:
                 dc.l aPlayMatch         ; textPtr
                 ; entry7_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l PlayMatchMenu      ; funcPtr
+                dc.l _PlayMatchMenu      ; funcPtr
                 dc.w MENU_CMD_END       ; entry7_end
                 ; entry8_rc (struct)
                 dc.b $65                ; x
@@ -46285,7 +46292,7 @@ contestMenu:
                 dc.l aSquad             ; textPtr
                 ; entry8_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SquadMenu          ; funcPtr
+                dc.l _SquadMenu          ; funcPtr
                 dc.w MENU_CMD_END       ; entry8_end
                 ; entry9 (struct)
                 ; rc (struct)
@@ -46310,7 +46317,7 @@ contestMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l jmp_SetExitMenuFlag ; funcPtr
+                dc.l _jmp_SetExitMenuFlag ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry10_rc (struct)
                 dc.b -54                ; x
@@ -46338,7 +46345,7 @@ contestMenu:
                 dc.l aNextMatch         ; textPtr
                 ; entry10_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l NextMatch          ; funcPtr
+                dc.l _NextMatch          ; funcPtr
                 dc.w MENU_CMD_END       ; entry10_end
                 ; entry11 (struct)
                 ; rc (struct)
@@ -46363,7 +46370,7 @@ contestMenu:
                 dc.l aViewCompetitio    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ViewCompetitionsMenu ; funcPtr
+                dc.l _ViewCompetitionsMenu ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry12_rc (struct)
                 dc.b -54                ; x
@@ -46391,7 +46398,7 @@ contestMenu:
                 dc.l aViewWorld         ; textPtr
                 ; entry12_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ViewWorldMenu      ; funcPtr
+                dc.l _ViewWorldMenu      ; funcPtr
                 dc.w MENU_CMD_END       ; entry12_end
                 ; entry13_rc (struct)
                 dc.b $65                ; x
@@ -46417,7 +46424,7 @@ contestMenu:
                 dc.l aNextMatch         ; textPtr
                 ; entry13_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l NextMatch          ; funcPtr
+                dc.l _NextMatch          ; funcPtr
                 dc.w MENU_CMD_END       ; entry13_end
                 ; entry14_rc (struct)
                 dc.b $65                ; x
@@ -46443,7 +46450,7 @@ contestMenu:
                 dc.l aViewCompetitio    ; textPtr
                 ; entry14_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ViewCompetitionsMenu ; funcPtr
+                dc.l _ViewCompetitionsMenu ; funcPtr
                 dc.w MENU_CMD_END       ; entry14_end
                 ; entry15_rc (struct)
                 dc.b $65                ; x
@@ -46469,7 +46476,7 @@ contestMenu:
                 dc.l aExit              ; textPtr
                 ; entry15_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l jmp_SetExitMenuFlag ; funcPtr
+                dc.l _jmp_SetExitMenuFlag ; funcPtr
                 dc.w MENU_CMD_END       ; entry15_end
                 ; entry16_rc (struct)
                 dc.b $00                ; x
@@ -46491,7 +46498,7 @@ contestMenu:
                 dc.w $00B7              ; spriteId
                 ; entry16_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ContestMenuScrollUp ; funcPtr
+                dc.l _ContestMenuScrollUp ; funcPtr
                 dc.w MENU_CMD_END       ; entry16_end
                 ; entry17_rc (struct)
                 dc.b $00                ; x
@@ -46513,7 +46520,7 @@ contestMenu:
                 dc.w $00B8              ; spriteId
                 ; entry17_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ContestMenuScrollDown ; funcPtr
+                dc.l _ContestMenuScrollDown ; funcPtr
                 dc.w MENU_CMD_END       ; entry17_end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords2
                 ; entry18 (struct)
@@ -46540,7 +46547,7 @@ contestMenu:
                 dc.b $00                ; h
                 ; template19_beforeDraw (struct)
                 dc.w MENU_CMD_BEFORE_DRAW ; type
-                dc.l CareerGameListCommon ; funcPtr
+                dc.l _CareerGameListCommon ; funcPtr
                 dc.w MENU_CMD_END       ; template19_end
                 ; entries19_32[0]
                 ; rc (struct)
@@ -47047,7 +47054,7 @@ gameListArray:
 managementRecordMenu:
                 ; Menu_ManagementRecord
                 ; hdr (struct)
-                dc.l ManagementRecordInit ; onInitPtr
+                dc.l _ManagementRecordInit ; onInitPtr
                 dc.l 0                  ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000003          ; On init function
@@ -47066,7 +47073,7 @@ managementRecordMenu:
                 dc.w $0000              ; textColor
                 ; entry0_beforeDraw (struct)
                 dc.w MENU_CMD_BEFORE_DRAW ; type
-                dc.l FillManagementRecordInfo ; funcPtr
+                dc.l _FillManagementRecordInfo ; funcPtr
                 dc.w MENU_CMD_END       ; entry0_end
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
                 ; entry1_rc (struct)
@@ -47089,7 +47096,7 @@ managementRecordMenu:
                 dc.w $00B7              ; spriteId
                 ; entry1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ManagementArrowUpSelect ; funcPtr
+                dc.l _ManagementArrowUpSelect ; funcPtr
                 dc.w MENU_CMD_END       ; entry1_end
                 ; entry2_rc (struct)
                 dc.b $00                ; x
@@ -47111,7 +47118,7 @@ managementRecordMenu:
                 dc.w $00B8              ; spriteId
                 ; entry2_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ManagementArrowDownSelect ; funcPtr
+                dc.l _ManagementArrowDownSelect ; funcPtr
                 dc.w MENU_CMD_END       ; entry2_end
                 ; entry3 (struct)
                 ; rc (struct)
@@ -47136,7 +47143,7 @@ managementRecordMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l jmp_SetExitMenuFlag_3 ; funcPtr
+                dc.l _SetExitMenuFlag ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries4_8[0]
                 ; rc (struct)
@@ -47902,8 +47909,8 @@ loc_13D852:
 selectTeamsForTacticsMenu:
                 ; Menu_SelectTeamsForTactics
                 ; hdr (struct)
-                dc.l SelTeamForTacticsInit ; onInitPtr
-                dc.l SelTeamForTacticsInit ; onReturnPtr
+                dc.l _SelTeamForTacticsInit ; onInitPtr
+                dc.l _SelTeamForTacticsInit ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000017          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -47944,7 +47951,7 @@ selectTeamsForTacticsMenu:
                 dc.l 0                  ; textPtr
                 ; template1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SelTeamForTacticsCommon ; funcPtr
+                dc.l _SelTeamForTacticsCommon ; funcPtr
                 dc.w MENU_CMD_END       ; template1_end
                 ; entries1_22[0]
                 ; rc (struct)
@@ -49008,7 +49015,7 @@ selectTeamsForTacticsMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SelTeamForTacticsExit ; funcPtr
+                dc.l _SelTeamForTacticsExit ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
@@ -49261,8 +49268,8 @@ GoGetTeamsForPlay:
 selectTeamsMenu:
                 ; Menu_SelectTeams
                 ; hdr (struct)
-                dc.l SelectTeamsInit    ; onInitPtr
-                dc.l SelectTeamsReinit  ; onReturnPtr
+                dc.l _SelectTeamsInit    ; onInitPtr
+                dc.l _SelectTeamsReinit  ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $0000002B          ; On init function
                 ; entry0_rc (struct)
@@ -49299,7 +49306,7 @@ selectTeamsMenu:
                 dc.w MENU_CMD_INVISIBLE ; type
                 ; template1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SelectLeaguesCommon ; funcPtr
+                dc.l _SelectLeaguesCommon ; funcPtr
                 dc.w MENU_CMD_END       ; template1_end
                 ; menu1Start (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -49586,7 +49593,7 @@ selectTeamsMenu:
                 dc.l 0                  ; textPtr
                 ; template21_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SelectTeamsCommon  ; funcPtr
+                dc.l _SelectTeamsCommon  ; funcPtr
                 dc.w MENU_CMD_END       ; template21_end
                 ; entry21_rc (struct)
                 dc.b $01                ; x
@@ -50621,7 +50628,7 @@ selectTeamsMenu:
                 dc.l aViewSelectedTe    ; textPtr
                 ; entry87_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ViewSelectedTeams  ; funcPtr
+                dc.l _ViewSelectedTeams  ; funcPtr
                 dc.w MENU_CMD_END       ; entry87_end
                 ; entry88 (struct)
                 ; rc (struct)
@@ -50646,7 +50653,7 @@ selectTeamsMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ExitSelectTeams    ; funcPtr
+                dc.l _ExitSelectTeams    ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry89_rc (struct)
                 dc.b -72                ; x
@@ -50677,7 +50684,7 @@ selectTeamsMenu:
                 dc.w $0000              ; textColor
                 ; entry89_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ChooseTeamsPlayGame ; funcPtr
+                dc.l _ChooseTeamsPlayGame ; funcPtr
                 dc.w MENU_CMD_END       ; entry89_end
                 ; entry90_rc (struct)
                 dc.b -72                ; x
@@ -50907,8 +50914,8 @@ numNeededTeams:
 chooseTeamsMenu:
                 ; Menu_ChooseTeams
                 ; hdr (struct)
-                dc.l ChooseTeamsInit    ; onInitPtr
-                dc.l ChooseTeamsInit    ; onReturnPtr
+                dc.l _ChooseTeamsInit    ; onInitPtr
+                dc.l _ChooseTeamsInit    ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000000          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -50935,7 +50942,7 @@ chooseTeamsMenu:
                 dc.l aClubTeams         ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ClubTeams          ; funcPtr
+                dc.l _ClubTeams          ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry1 (struct)
                 ; rc (struct)
@@ -50960,7 +50967,7 @@ chooseTeamsMenu:
                 dc.l aNationalTeams     ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l NationalTeams      ; funcPtr
+                dc.l _NationalTeams      ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry2 (struct)
                 ; rc (struct)
@@ -50985,7 +50992,7 @@ chooseTeamsMenu:
                 dc.l aOriginalCustom    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l OriginalCustomTeams ; funcPtr
+                dc.l _OriginalCustomTeams ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry3 (struct)
                 ; rc (struct)
@@ -51010,7 +51017,7 @@ chooseTeamsMenu:
                 dc.l aEditedCustomTe_0  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditedCustomTeams  ; funcPtr
+                dc.l _EditedCustomTeams  ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry4 (struct)
                 ; rc (struct)
@@ -51035,7 +51042,7 @@ chooseTeamsMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ExitChooseTeams    ; funcPtr
+                dc.l _ExitChooseTeams    ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords
                 ; entry5_rc (struct)
@@ -51142,8 +51149,8 @@ GetFilenameAndExtension:
 selectFilesMenu:
                 ; Menu_SelectFiles
                 ; hdr (struct)
-                dc.l SelectFilesInit    ; onInitPtr
-                dc.l SelectFilesOnReturn ; onReturnPtr
+                dc.l _SelectFilesInit    ; onInitPtr
+                dc.l _SelectFilesOnReturn ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000010          ; On init function
                 ; entry0_rc (struct)
@@ -51182,10 +51189,10 @@ selectFilesMenu:
                 dc.w $0000              ; textColor
                 ; template1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SelFilesOnSelectCommon ; funcPtr
+                dc.l _SelFilesOnSelectCommon ; funcPtr
                 ; template1_beforeDraw (struct)
                 dc.w MENU_CMD_BEFORE_DRAW ; type
-                dc.l SelFilesDrawItemDescription ; funcPtr
+                dc.l _SelFilesDrawItemDescription ; funcPtr
                 dc.w MENU_CMD_END       ; template1_end
                 ; entry1 (struct)
                 ; rc (struct)
@@ -51914,7 +51921,7 @@ selectFilesMenu:
                 dc.w $0000              ; textColor
                 ; entry48_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SelectFilesInputSaveFilenameOnSelect ; funcPtr
+                dc.l _SelectFilesInputSaveFilenameOnSelect ; funcPtr
                 dc.w MENU_CMD_END       ; entry48_end
                 ; entry49_rc (struct)
                 dc.b $79                ; x
@@ -51940,7 +51947,7 @@ selectFilesMenu:
                 dc.l aSave              ; textPtr
                 ; entry49_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SelectFilenameToSaveAndExit ; funcPtr
+                dc.l _SelectFilenameToSaveAndExit ; funcPtr
                 dc.w MENU_CMD_END       ; entry49_end
                 ; entry50 (struct)
                 ; rc (struct)
@@ -51965,7 +51972,7 @@ selectFilesMenu:
                 dc.l aAbort             ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l AbortSaveFile      ; funcPtr
+                dc.l _AbortSaveFile      ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
@@ -52397,7 +52404,7 @@ contAbortResult:
 swosMainMenu:
                 ; Menu_SWOSMainMenu
                 ; hdr (struct)
-                dc.l SWOSMainMenuInit   ; onInitPtr
+                dc.l _SWOSMainMenuInit   ; onInitPtr
                 dc.l GlobalRetn         ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000006          ; On init function
@@ -52438,7 +52445,7 @@ swosMainMenu:
                 dc.l aEditTactics       ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTacticsMenu    ; funcPtr
+                dc.l _EditTacticsMenu    ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry2 (struct)
                 ; rc (struct)
@@ -52463,7 +52470,7 @@ swosMainMenu:
                 dc.l aEditCustomTeam    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditCustomTeamMenu ; funcPtr
+                dc.l _EditCustomTeamMenu ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry3 (struct)
                 ; rc (struct)
@@ -52488,7 +52495,7 @@ swosMainMenu:
                 dc.l aHighlights_0      ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l HighlightsMenu     ; funcPtr
+                dc.l _HighlightsMenu     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry4 (struct)
                 ; rc (struct)
@@ -52513,7 +52520,7 @@ swosMainMenu:
                 dc.l aOptions           ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l OptionsMenuSelected ; funcPtr
+                dc.l _OptionsMenuSelected ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry5 (struct)
                 ; rc (struct)
@@ -52538,7 +52545,7 @@ swosMainMenu:
                 dc.l aSaveDiskFiling    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SaveDiskFilingMenu ; funcPtr
+                dc.l _SaveDiskFilingMenu ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry6 (struct)
                 ; rc (struct)
@@ -52563,7 +52570,7 @@ swosMainMenu:
                 dc.l aFriendly_1        ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l FriendlyMenu       ; funcPtr
+                dc.l _FriendlyMenu       ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry7 (struct)
                 ; rc (struct)
@@ -52588,7 +52595,7 @@ swosMainMenu:
                 dc.l aDiyCompetition_0  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l DIYCompetitionMenu ; funcPtr
+                dc.l _DIYCompetitionMenu ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry8 (struct)
                 ; rc (struct)
@@ -52613,7 +52620,7 @@ swosMainMenu:
                 dc.l aPresetCompetit_0  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l PresetCompetitionMenu ; funcPtr
+                dc.l _PresetCompetitionMenu ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry9 (struct)
                 ; rc (struct)
@@ -52638,7 +52645,7 @@ swosMainMenu:
                 dc.l aSeason_1          ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SeasonMenu         ; funcPtr
+                dc.l _SeasonMenu         ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry10 (struct)
                 ; rc (struct)
@@ -52663,7 +52670,7 @@ swosMainMenu:
                 dc.l aCareer_1          ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l CareerMenu         ; funcPtr
+                dc.l _CareerMenu         ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; menu2Start (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -52690,7 +52697,7 @@ swosMainMenu:
                 dc.w $0000              ; textColor
                 ; entry11_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l StartContest       ; funcPtr
+                dc.l _StartContest       ; funcPtr
                 dc.w MENU_CMD_END       ; entry11_end
                 ; entry12 (struct)
                 ; rc (struct)
@@ -52715,7 +52722,7 @@ swosMainMenu:
                 dc.l saveFileTitle      ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SaveContest        ; funcPtr
+                dc.l _SaveContest        ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry13 (struct)
                 ; rc (struct)
@@ -52740,7 +52747,7 @@ swosMainMenu:
                 dc.l aLoadOldCompeti    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l LoadOldCompetitionMenu ; funcPtr
+                dc.l _LoadOldCompetitionMenu ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; menu3Start (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -53580,8 +53587,8 @@ ShowForeignPlayerMarket:
 offersMenu:
                 ; Menu_Offers
                 ; hdr (struct)
-                dc.l OffersInit         ; onInitPtr
-                dc.l OffersInit         ; onReturnPtr
+                dc.l _OffersInit         ; onInitPtr
+                dc.l _OffersInit         ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000002          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -53624,7 +53631,7 @@ offersMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l j_SetExitMenuFlag_11 ; funcPtr
+                dc.l _j_SetExitMenuFlag_11 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; menu1Start (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -53642,10 +53649,10 @@ offersMenu:
                 dc.w $0000              ; reserved
                 ; template1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l OffersCommon       ; funcPtr
+                dc.l _OffersCommon       ; funcPtr
                 ; template1_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l OffersAfterDrawCommon ; funcPtr
+                dc.l _OffersAfterDrawCommon ; funcPtr
                 dc.w MENU_CMD_END       ; template1_end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords
                 ; entries2_6[0]
@@ -53843,8 +53850,8 @@ exchangeFmtLine2b:
 playerTransferMenu:
                 ; Menu_PlayerTransfer
                 ; hdr (struct)
-                dc.l TransferPlayerInit ; onInitPtr
-                dc.l TransferPlayerInit ; onReturnPtr
+                dc.l _TransferPlayerInit ; onInitPtr
+                dc.l _TransferPlayerInit ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $0000000B          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -53993,7 +54000,7 @@ playerTransferMenu:
                 dc.l aMakeImprovedOf    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l TransferPlayerOnSelect10 ; funcPtr
+                dc.l _TransferPlayerOnSelect10 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries10_11[1]
                 ; rc (struct)
@@ -54018,7 +54025,7 @@ playerTransferMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l TransferPlayerOnSelect11 ; funcPtr
+                dc.l _TransferPlayerOnSelect11 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry12_rc (struct)
                 dc.b $5C                ; x
@@ -54038,7 +54045,7 @@ playerTransferMenu:
                 dc.l aContinue          ; textPtr
                 ; entry12_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l TransferPlayerOnSelect12 ; funcPtr
+                dc.l _TransferPlayerOnSelect12 ; funcPtr
                 dc.w MENU_CMD_END       ; entry12_end
                 dc.w MENU_MARK_START_TEMPLATE ; template13_markStart
                 ; template13_rc (struct)
@@ -54052,7 +54059,7 @@ playerTransferMenu:
                 dc.w $0000              ; reserved
                 ; template13_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l TransferPlayerAfterDrawCommon ; funcPtr
+                dc.l _TransferPlayerAfterDrawCommon ; funcPtr
                 dc.w MENU_CMD_END       ; template13_end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords2
                 ; entries13_16[0]
@@ -54279,8 +54286,8 @@ transferPlayerMenuResult:
 thirdPartyOfferMenu:
                 ; Menu_ThirdPartyOffer
                 ; hdr (struct)
-                dc.l ThirdPartyOfferMenuInit ; onInitPtr
-                dc.l ThirdPartyOfferMenuInit ; onReturnPtr
+                dc.l _ThirdPartyOfferMenuInit ; onInitPtr
+                dc.l _ThirdPartyOfferMenuInit ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $0000000D          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -54417,7 +54424,7 @@ thirdPartyOfferMenu:
                 dc.l aViewSquad         ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ThirdPartyOfferViewSquad ; funcPtr
+                dc.l _ThirdPartyOfferViewSquad ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries9_10[1]
                 ; rc (struct)
@@ -54442,7 +54449,7 @@ thirdPartyOfferMenu:
                 dc.l aAcceptOffer       ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l AcceptOffer        ; funcPtr
+                dc.l _AcceptOffer        ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry11_rc (struct)
                 dc.b $66                ; x
@@ -54474,7 +54481,7 @@ thirdPartyOfferMenu:
                 dc.l aAskForMore        ; textPtr
                 ; entry11_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l AskForMore         ; funcPtr
+                dc.l _AskForMore         ; funcPtr
                 dc.w MENU_CMD_END       ; entry11_end
                 ; entries12_13[0]
                 ; rc (struct)
@@ -54499,7 +54506,7 @@ thirdPartyOfferMenu:
                 dc.l aRejectOffer       ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l RejectOffer        ; funcPtr
+                dc.l _RejectOffer        ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries12_13[1]
                 ; rc (struct)
@@ -54524,7 +54531,7 @@ thirdPartyOfferMenu:
                 dc.l aConsider          ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ConsiderOffer      ; funcPtr
+                dc.l _ConsiderOffer      ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry14_rc (struct)
                 dc.b $7A                ; x
@@ -54544,7 +54551,7 @@ thirdPartyOfferMenu:
                 dc.l aExit              ; textPtr
                 ; entry14_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ThirdPartyOfferMenuExit ; funcPtr
+                dc.l _ThirdPartyOfferMenuExit ; funcPtr
                 dc.w MENU_CMD_END       ; entry14_end
                 dc.w MENU_MARK_START_TEMPLATE ; template15_markStart
                 ; template15_rc (struct)
@@ -54558,7 +54565,7 @@ thirdPartyOfferMenu:
                 dc.w $0000              ; reserved
                 ; template15_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l ThirdPartyOfferMenuAfterDrawCommon ; funcPtr
+                dc.l _ThirdPartyOfferMenuAfterDrawCommon ; funcPtr
                 dc.w MENU_CMD_END       ; template15_end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords2
                 ; entries15_18[0]
@@ -54788,8 +54795,8 @@ thirdPartyOfferResult:
 playerOffersMenu:
                 ; Menu_PlayerOffers
                 ; hdr (struct)
-                dc.l PlayerOffersInit   ; onInitPtr
-                dc.l PlayerOffersInit   ; onReturnPtr
+                dc.l _PlayerOffersInit   ; onInitPtr
+                dc.l _PlayerOffersInit   ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000009          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -54915,7 +54922,7 @@ playerOffersMenu:
                 dc.l aPlus              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l PlayerOffersOnSelect8 ; funcPtr
+                dc.l _PlayerOffersOnSelect8 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry9_rc (struct)
                 dc.b $70                ; x
@@ -54939,7 +54946,7 @@ playerOffersMenu:
                 ; entry9_inputFunc (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 961                ; ctrlMask
-                dc.l PlayerOffersAdjustOfferAmount ; funcPtr
+                dc.l _PlayerOffersAdjustOfferAmount ; funcPtr
                 dc.w MENU_CMD_END       ; entry9_end
                 ; entries10_13[0]
                 ; rc (struct)
@@ -54964,7 +54971,7 @@ playerOffersMenu:
                 dc.l aPlus              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l PlayerOffersOnSelect10 ; funcPtr
+                dc.l _PlayerOffersOnSelect10 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries10_13[1]
                 ; rc (struct)
@@ -54989,7 +54996,7 @@ playerOffersMenu:
                 dc.l aPlus              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l PlayerOffersOnSelect11 ; funcPtr
+                dc.l _PlayerOffersOnSelect11 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries10_13[2]
                 ; rc (struct)
@@ -55014,7 +55021,7 @@ playerOffersMenu:
                 dc.l aConfirmOffer      ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l PlayerOffersOnSelect12 ; funcPtr
+                dc.l _PlayerOffersOnSelect12 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries10_13[3]
                 ; rc (struct)
@@ -55039,7 +55046,7 @@ playerOffersMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l PlayerOffersOnSelect13 ; funcPtr
+                dc.l _PlayerOffersOnSelect13 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_START_TEMPLATE ; template14_markStart
                 ; template14_rc (struct)
@@ -55053,7 +55060,7 @@ playerOffersMenu:
                 dc.w $0000              ; reserved
                 ; template14_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l PlayerOffersAfterDrawCommon ; funcPtr
+                dc.l _PlayerOffersAfterDrawCommon ; funcPtr
                 dc.w MENU_CMD_END       ; template14_end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords2
                 ; entries14_17[0]
@@ -55323,7 +55330,7 @@ ShowSquadWithFlags:
 viewSquadMenu:
                 ; Menu_ViewSquad
                 ; hdr (struct)
-                dc.l ViewSquadInit      ; onInitPtr
+                dc.l _ViewSquadInit      ; onInitPtr
                 dc.l 0                  ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000002          ; On init function
@@ -55383,7 +55390,7 @@ viewSquadMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ViewSquadExitContinue ; funcPtr
+                dc.l _ViewSquadExitContinue ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry3_rc (struct)
                 dc.b $7A                ; x
@@ -55409,7 +55416,7 @@ viewSquadMenu:
                 dc.l aContinue          ; textPtr
                 ; entry3_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ViewSquadExitContinue ; funcPtr
+                dc.l _ViewSquadExitContinue ; funcPtr
                 dc.w MENU_CMD_END       ; entry3_end
                 ; menu1Start (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -55427,10 +55434,10 @@ viewSquadMenu:
                 dc.w $0000              ; reserved
                 ; template1_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l ViewSquadAfterDrawCommon ; funcPtr
+                dc.l _ViewSquadAfterDrawCommon ; funcPtr
                 ; template1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ViewSquadCommon    ; funcPtr
+                dc.l _ViewSquadCommon    ; funcPtr
                 dc.w MENU_CMD_END       ; template1_end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords
                 ; entries4_19[0]
@@ -55680,10 +55687,10 @@ viewSquadMenu:
                 dc.w $0000              ; reserved
                 ; entry21_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ViewSquadOnSelect21 ; funcPtr
+                dc.l _ViewSquadOnSelect21 ; funcPtr
                 ; entry21_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l ViewSquad21AfterDraw ; funcPtr
+                dc.l _ViewSquad21AfterDraw ; funcPtr
                 dc.w MENU_CMD_END       ; entry21_end
                 ; entry22 (struct)
                 ; rc (struct)
@@ -55904,8 +55911,8 @@ viewSquadSelectedTeam:
 buyOtherPlayersMenu:
                 ; Menu_BuyOtherPlayers
                 ; hdr (struct)
-                dc.l BuyOtherPlayersInit ; onInitPtr
-                dc.l BuyOtherPlayersFinish ; onReturnPtr
+                dc.l _BuyOtherPlayersInit ; onInitPtr
+                dc.l _BuyOtherPlayersFinish ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000002          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -55964,7 +55971,7 @@ buyOtherPlayersMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l j_SetExitMenuFlag_10 ; funcPtr
+                dc.l _SetExitMenuFlag ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; menu1Start (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -55982,10 +55989,10 @@ buyOtherPlayersMenu:
                 dc.w $0000              ; reserved
                 ; template1_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l BuyOtherPlayersAfterDrawCommon ; funcPtr
+                dc.l _BuyOtherPlayersAfterDrawCommon ; funcPtr
                 ; template1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l BuyOtherPlayersCommon ; funcPtr
+                dc.l _BuyOtherPlayersCommon ; funcPtr
                 dc.w MENU_CMD_END       ; template1_end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords
                 ; entries3_18[0]
@@ -56379,8 +56386,8 @@ buyOtherPlayersTeamPtr:
 showPlayerMarketMenu:
                 ; Menu_ShowPlayerMarket
                 ; hdr (struct)
-                dc.l ShowPlayerMarketInit ; onInitPtr
-                dc.l ShowPlayerMarket   ; onReturnPtr
+                dc.l _ShowPlayerMarketInit ; onInitPtr
+                dc.l _ShowPlayerMarket   ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000007          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -56462,7 +56469,7 @@ showPlayerMarketMenu:
                 dc.l positionFilterStringTable ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l loc_144EFC         ; funcPtr
+                dc.l _PlayerMarketFilterPositionOnSelect ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry5 (struct)
                 ; rc (struct)
@@ -56506,7 +56513,7 @@ showPlayerMarketMenu:
                 dc.l skillFilterStringTable ; tablePtr
                 ; entry6_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l loc_144F90         ; funcPtr
+                dc.l _PlayerMarketFilterAgeGroupOnSelect ; funcPtr
                 dc.w MENU_CMD_END       ; entry6_end
                 ; entry7 (struct)
                 ; rc (struct)
@@ -56531,7 +56538,7 @@ showPlayerMarketMenu:
                 dc.l aList              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l loc_144FB0         ; funcPtr
+                dc.l _PlayerMarketScrollOnSelect ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry8 (struct)
                 ; rc (struct)
@@ -56556,7 +56563,7 @@ showPlayerMarketMenu:
                 dc.l aViewSquad         ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l loc_14500A         ; funcPtr
+                dc.l _PlayerMarketViewSquadOnSelect ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry9 (struct)
                 ; rc (struct)
@@ -56581,7 +56588,7 @@ showPlayerMarketMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l loc_145042         ; funcPtr
+                dc.l _SetExitMenuFlag         ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; menu1Start (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -56599,10 +56606,10 @@ showPlayerMarketMenu:
                 dc.w $0000              ; reserved
                 ; template1_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l loc_14510C         ; funcPtr
+                dc.l _PlayerMarketItemBeforeDraw ; funcPtr
                 ; template1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l loc_1450CA         ; funcPtr
+                dc.l _PlayerMarketItemOnSelect ; funcPtr
                 dc.w MENU_CMD_END       ; template1_end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords
                 ; entries10_19[0]
@@ -57132,8 +57139,8 @@ pad_145364:
 buyPlayerMenu:
                 ; Menu_BuyPlayer
                 ; hdr (struct)
-                dc.l BuyPlayerInit      ; onInitPtr
-                dc.l BuyPlayerInit      ; onReturnPtr
+                dc.l _BuyPlayerInit      ; onInitPtr
+                dc.l _BuyPlayerInit      ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000002          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -57187,7 +57194,7 @@ buyPlayerMenu:
                 dc.l aViewDomesticPl    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ViewDomesticPlayerMarket ; funcPtr
+                dc.l _ViewDomesticPlayerMarket ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry3 (struct)
                 ; rc (struct)
@@ -57212,7 +57219,7 @@ buyPlayerMenu:
                 dc.l aViewForeignPla    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ViewForeignPlayerMarket ; funcPtr
+                dc.l _ViewForeignPlayerMarket ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry4 (struct)
                 ; rc (struct)
@@ -57237,7 +57244,7 @@ buyPlayerMenu:
                 dc.l aBuyOtherDomest    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l BuyOtherDomesticPlayer ; funcPtr
+                dc.l _BuyOtherDomesticPlayer ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry5 (struct)
                 ; rc (struct)
@@ -57262,7 +57269,7 @@ buyPlayerMenu:
                 dc.l aBuyOtherForeig    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l BuyOtherForeignPlayer ; funcPtr
+                dc.l _BuyOtherForeignPlayer ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry6 (struct)
                 ; rc (struct)
@@ -57287,7 +57294,7 @@ buyPlayerMenu:
                 dc.l aViewSquad         ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l BuyPlayerViewSquad ; funcPtr
+                dc.l _BuyPlayerViewSquad ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry7 (struct)
                 ; rc (struct)
@@ -57312,7 +57319,7 @@ buyPlayerMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l BuyPlayerExit      ; funcPtr
+                dc.l _BuyPlayerExit      ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
@@ -57363,8 +57370,8 @@ BuyPlayerExit:
 transferMarketMenu:
                 ; Menu_TransferMarket
                 ; hdr (struct)
-                dc.l TransferMarketInit ; onInitPtr
-                dc.l TransferMarketFinish ; onReturnPtr
+                dc.l _TransferMarketInit ; onInitPtr
+                dc.l _TransferMarketFinish ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000002          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -57418,7 +57425,7 @@ transferMarketMenu:
                 dc.l aBuyPlayer         ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l BuyPlayerMenu      ; funcPtr
+                dc.l _BuyPlayerMenu      ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry3 (struct)
                 ; rc (struct)
@@ -57443,7 +57450,7 @@ transferMarketMenu:
                 dc.l aViewOffers        ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ViewOffersMenu     ; funcPtr
+                dc.l _ViewOffersMenu     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry4 (struct)
                 ; rc (struct)
@@ -57468,7 +57475,7 @@ transferMarketMenu:
                 dc.l aPutPlayerOnTra_0  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l PutPlayerOnMarketMenu ; funcPtr
+                dc.l _PutPlayerOnMarketMenu ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry5 (struct)
                 ; rc (struct)
@@ -57493,7 +57500,7 @@ transferMarketMenu:
                 dc.l aGiveFreeTransf    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l GiveFreeTransfer   ; funcPtr
+                dc.l _GiveFreeTransfer   ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry6 (struct)
                 ; rc (struct)
@@ -57518,7 +57525,7 @@ transferMarketMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l jmp_SetExitMenuFlag_8 ; funcPtr
+                dc.l _SetExitMenuFlag ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry7 (struct)
                 ; rc (struct)
@@ -57543,7 +57550,7 @@ transferMarketMenu:
                 dc.l aTakeOffMarket     ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l TakeOffMarketMenu  ; funcPtr
+                dc.l _TakeOffMarketMenu  ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry8 (struct)
                 ; rc (struct)
@@ -57573,10 +57580,10 @@ transferMarketMenu:
                 dc.w $0000              ; reserved
                 ; template1_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l TransferMarketAfterDrawCommon ; funcPtr
+                dc.l _TransferMarketAfterDrawCommon ; funcPtr
                 ; template1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l TransferMarketCommon ; funcPtr
+                dc.l _TransferMarketCommon ; funcPtr
                 dc.w MENU_CMD_END       ; template1_end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords
                 ; entries9_13[0]
@@ -58279,8 +58286,8 @@ ShowSelectRepresentationMenu:
 selectNationalTeamMenu:
                 ; Menu_SelectNationalTeam
                 ; hdr (struct)
-                dc.l SelectNationalTeamInit ; onInitPtr
-                dc.l SelectNationalTeamFinish ; onReturnPtr
+                dc.l _SelectNationalTeamInit ; onInitPtr
+                dc.l _SelectNationalTeamFinish ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000004          ; On init function
                 ; entry0_rc (struct)
@@ -58347,7 +58354,7 @@ selectNationalTeamMenu:
                 dc.l aAddPlayer         ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l NationalTeamAddPlayer ; funcPtr
+                dc.l _NationalTeamAddPlayer ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries3_4[1]
                 ; rc (struct)
@@ -58372,7 +58379,7 @@ selectNationalTeamMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SelectNationalTeamExit ; funcPtr
+                dc.l _SelectNationalTeamExit ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry5_rc (struct)
                 dc.b $7A                ; x
@@ -58400,7 +58407,7 @@ selectNationalTeamMenu:
                 dc.l aAbort             ; textPtr
                 ; entry5_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SelectNationalTeamAbort ; funcPtr
+                dc.l _SelectNationalTeamAbort ; funcPtr
                 dc.w MENU_CMD_END       ; entry5_end
                 ; entry6 (struct)
                 ; rc (struct)
@@ -58425,7 +58432,7 @@ selectNationalTeamMenu:
                 dc.l aRemovePlayers     ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l NationalTeamRemovePlayers ; funcPtr
+                dc.l _NationalTeamRemovePlayers ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; menu1Start (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -58443,10 +58450,10 @@ selectNationalTeamMenu:
                 dc.w $0000              ; reserved
                 ; template7_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l SelectNationalTeamAfterDrawCommon ; funcPtr
+                dc.l _SelectNationalTeamAfterDrawCommon ; funcPtr
                 ; template7_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SelectNationalTeamCommon ; funcPtr
+                dc.l _SelectNationalTeamCommon ; funcPtr
                 dc.w MENU_CMD_END       ; template7_end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords
                 ; entry7 (struct)
@@ -58703,10 +58710,10 @@ selectNationalTeamMenu:
                 dc.w $0000              ; reserved
                 ; entry25_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SelectNationalTeamOnSelect25 ; funcPtr
+                dc.l _SelectNationalTeamOnSelect25 ; funcPtr
                 ; entry25_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l SelectNationalTeam25AfterDraw ; funcPtr
+                dc.l _SelectNationalTeam25AfterDraw ; funcPtr
                 dc.w MENU_CMD_END       ; entry25_end
                 ; entry26 (struct)
                 ; rc (struct)
@@ -59028,7 +59035,7 @@ nationalTeamAddPlayerMenu:
                 dc.l aAddInternation    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l NationalTeamAddPlayerHomeOnSelect ; funcPtr
+                dc.l _NationalTeamAddPlayerHomeOnSelect ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry2 (struct)
                 ; rc (struct)
@@ -59053,7 +59060,7 @@ nationalTeamAddPlayerMenu:
                 dc.l aAddInternation_0  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l NationalTeamAddPlayerAbroadOnSelect ; funcPtr
+                dc.l _NationalTeamAddPlayerAbroadOnSelect ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry3 (struct)
                 ; rc (struct)
@@ -59078,7 +59085,7 @@ nationalTeamAddPlayerMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l NationalTeamAddPlayerExit ; funcPtr
+                dc.l _NationalTeamAddPlayerExit ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
@@ -59153,8 +59160,8 @@ ShowPlayMatchMenu:
 playMatchMenu:
                 ; Menu_PlayMatch
                 ; hdr (struct)
-                dc.l PlayMatchMenuInit  ; onInitPtr
-                dc.l PlayMatchMenuReinit ; onReturnPtr
+                dc.l _PlayMatchMenuInit  ; onInitPtr
+                dc.l _PlayMatchMenuReinit ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000009          ; On init function
                 ; menu1Start (struct)
@@ -59249,7 +59256,7 @@ playMatchMenu:
                 dc.l aUseMatchTeam      ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l UseMatchTeamSelect ; funcPtr
+                dc.l _UseMatchTeamSelect ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry6_rc (struct)
                 dc.b $00                ; x
@@ -59281,7 +59288,7 @@ playMatchMenu:
                 dc.l 0                  ; textPtr
                 ; entry6_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l TogglePlayerCoach  ; funcPtr
+                dc.l _TogglePlayerCoach  ; funcPtr
                 dc.w MENU_CMD_END       ; entry6_end
                 ; entry7 (struct)
                 ; rc (struct)
@@ -59306,7 +59313,7 @@ playMatchMenu:
                 dc.l aViewOppo          ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ViewOpponentsSelect ; funcPtr
+                dc.l _ViewOpponentsSelect ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry8_rc (struct)
                 dc.b $71                ; x
@@ -59334,7 +59341,7 @@ playMatchMenu:
                 dc.l aExit              ; textPtr
                 ; entry8_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ExitPlayMatch      ; funcPtr
+                dc.l _ExitPlayMatch      ; funcPtr
                 dc.w MENU_CMD_END       ; entry8_end
                 ; entry9_rc (struct)
                 dc.b $00                ; x
@@ -59366,7 +59373,7 @@ playMatchMenu:
                 dc.l 0                  ; textPtr
                 ; entry9_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l PlayMatchSelected  ; funcPtr
+                dc.l _PlayMatchSelected  ; funcPtr
                 dc.w MENU_CMD_END       ; entry9_end
                 ; entry10 (struct)
                 ; rc (struct)
@@ -59391,7 +59398,7 @@ playMatchMenu:
                 dc.l aEditTactics       ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTacticsInPlayMatchMenu ; funcPtr
+                dc.l _EditTacticsInPlayMatchMenu ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry11_rc (struct)
                 dc.b $00                ; x
@@ -59400,7 +59407,7 @@ playMatchMenu:
                 dc.b $00                ; h
                 ; entry11_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ReturnFromViewOpponent ; funcPtr
+                dc.l _ReturnFromViewOpponent ; funcPtr
                 dc.w MENU_CMD_END       ; entry11_end
                 ; entry12 (struct)
                 ; rc (struct)
@@ -59691,10 +59698,10 @@ playMatchMenu:
                 dc.w $0000              ; reserved
                 ; entry30_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l PlayMatchOnSelect30 ; funcPtr
+                dc.l _PlayMatchOnSelect30 ; funcPtr
                 ; entry30_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l PlayMatch30AfterDraw ; funcPtr
+                dc.l _PlayMatch30AfterDraw ; funcPtr
                 dc.w MENU_CMD_END       ; entry30_end
                 ; entry31_rc (struct)
                 dc.b $00                ; x
@@ -60927,8 +60934,8 @@ GetNewJobOfferPtr:
 jobOffersMenu:
                 ; Menu_JobOffers
                 ; hdr (struct)
-                dc.l JobOffersInit      ; onInitPtr
-                dc.l JobOffersFinish    ; onReturnPtr
+                dc.l _JobOffersInit      ; onInitPtr
+                dc.l _JobOffersFinish    ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $0000000C          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -60964,10 +60971,10 @@ jobOffersMenu:
                 dc.w $0000              ; reserved
                 ; template1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l JobOffersCommon    ; funcPtr
+                dc.l _JobOffersCommon    ; funcPtr
                 ; template1_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l JobOffersAfterDrawCommon ; funcPtr
+                dc.l _JobOffersAfterDrawCommon ; funcPtr
                 dc.w MENU_CMD_END       ; template1_end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords
                 ; entries1_5[0]
@@ -61069,10 +61076,10 @@ jobOffersMenu:
                 dc.w $0000              ; reserved
                 ; template2_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l JobOffers_DrawOldOfferLine ; funcPtr
+                dc.l _JobOffers_DrawOldOfferLine ; funcPtr
                 ; template2_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l OldJobOffersCommon ; funcPtr
+                dc.l _OldJobOffersCommon ; funcPtr
                 dc.w MENU_CMD_END       ; template2_end
                 dc.w MENU_MARK_WIDE_COORDS ; markWideCoords2
                 ; entries7_11[0]
@@ -61169,7 +61176,7 @@ jobOffersMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l JobOffersExit      ; funcPtr
+                dc.l _JobOffersExit      ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry13 (struct)
                 ; rc (struct)
@@ -61289,8 +61296,8 @@ selectedOldJobOfferOrdinal:
 gotJobOfferMenu:
                 ; Menu_GotJobOffer
                 ; hdr (struct)
-                dc.l GotJobOfferInit    ; onInitPtr
-                dc.l GotJobOfferFinish  ; onReturnPtr
+                dc.l _GotJobOfferInit    ; onInitPtr
+                dc.l _GotJobOfferFinish  ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $0000000A          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -61412,7 +61419,7 @@ gotJobOfferMenu:
                 dc.l aReject            ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l RejectJobOffer     ; funcPtr
+                dc.l _RejectJobOffer     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry9 (struct)
                 ; rc (struct)
@@ -61437,7 +61444,7 @@ gotJobOfferMenu:
                 dc.l aViewLeague        ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ViewFutureTeamLeague ; funcPtr
+                dc.l _ViewFutureTeamLeague ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry10 (struct)
                 ; rc (struct)
@@ -61462,7 +61469,7 @@ gotJobOfferMenu:
                 dc.l aConsider          ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ConsiderJobOffer   ; funcPtr
+                dc.l _ConsiderJobOffer   ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry11 (struct)
                 ; rc (struct)
@@ -61487,7 +61494,7 @@ gotJobOfferMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l j_SetExitMenuFlag_14 ; funcPtr
+                dc.l _j_SetExitMenuFlag_14 ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry12 (struct)
                 ; rc (struct)
@@ -61512,7 +61519,7 @@ gotJobOfferMenu:
                 dc.l aViewTeam          ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ViewFutureTeam     ; funcPtr
+                dc.l _ViewFutureTeam     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry13 (struct)
                 ; rc (struct)
@@ -61537,7 +61544,7 @@ gotJobOfferMenu:
                 dc.l aAccept            ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l AcceptJobOffer     ; funcPtr
+                dc.l _AcceptJobOffer     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
@@ -61637,8 +61644,8 @@ plNameForMessage:
 chairmanMemosMenu:
                 ; Menu_ChairmanMemos
                 ; hdr (struct)
-                dc.l ChairmanMemosInit  ; onInitPtr
-                dc.l ChairmanMemosOnReturn ; onReturnPtr
+                dc.l _ChairmanMemosInit  ; onInitPtr
+                dc.l _ChairmanMemosOnReturn ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000006          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -61733,7 +61740,7 @@ chairmanMemosMenu:
                 dc.l aContinue          ; textPtr
                 ; entry6_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ChairmanMemosContinue ; funcPtr
+                dc.l _ChairmanMemosContinue ; funcPtr
                 dc.w MENU_CMD_END       ; entry6_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 clubMessagesTable:
@@ -61849,7 +61856,7 @@ ShowClubBussinesMenu:
 clubBusinessMenu:
                 ; Menu_ClubBusiness
                 ; hdr (struct)
-                dc.l ClubBusinessInit   ; onInitPtr
+                dc.l _ClubBusinessInit   ; onInitPtr
                 dc.l 0                  ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000001          ; On init function
@@ -61886,7 +61893,7 @@ clubBusinessMenu:
                 dc.l aContinue          ; textPtr
                 ; entry1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l j_SetExitMenuFlag13 ; funcPtr
+                dc.l _SetExitMenuFlag ; funcPtr
                 dc.w MENU_CMD_END       ; entry1_end
                 ; menu1Start (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -62374,7 +62381,7 @@ ShowStandardChooseTacticsMenu:
 chooseTacticsMenu:
                 ; Menu_ChooseTactics
                 ; hdr (struct)
-                dc.l ChooseTacticsInit  ; onInitPtr
+                dc.l _ChooseTacticsInit  ; onInitPtr
                 dc.l 0                  ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000001          ; On init function
@@ -62418,7 +62425,7 @@ chooseTacticsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l User_A_Tactics     ; funcPtr
+                dc.l _User_A_Tactics     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry2 (struct)
                 ; rc (struct)
@@ -62443,7 +62450,7 @@ chooseTacticsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l User_B_Tactics     ; funcPtr
+                dc.l _User_B_Tactics     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry3 (struct)
                 ; rc (struct)
@@ -62468,7 +62475,7 @@ chooseTacticsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l User_C_Tactics     ; funcPtr
+                dc.l _User_C_Tactics     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry4 (struct)
                 ; rc (struct)
@@ -62493,7 +62500,7 @@ chooseTacticsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l User_D_Tactics     ; funcPtr
+                dc.l _User_D_Tactics     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry5 (struct)
                 ; rc (struct)
@@ -62518,7 +62525,7 @@ chooseTacticsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l User_E_Tactics     ; funcPtr
+                dc.l _User_E_Tactics     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry6 (struct)
                 ; rc (struct)
@@ -62543,7 +62550,7 @@ chooseTacticsMenu:
                 dc.l 0                  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l User_F_Tactics     ; funcPtr
+                dc.l _User_F_Tactics     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry7 (struct)
                 ; rc (struct)
@@ -62568,7 +62575,7 @@ chooseTacticsMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ExitChooseTacticsMenu ; funcPtr
+                dc.l _ExitChooseTacticsMenu ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
@@ -62639,8 +62646,8 @@ ExitChooseTacticsMenu:
 editTacticsMenu:
                 ; Menu_EditTactics
                 ; hdr (struct)
-                dc.l EditTacticsInit    ; onInitPtr
-                dc.l EditTacticsOnRestore ; onReturnPtr
+                dc.l _EditTacticsInit    ; onInitPtr
+                dc.l _EditTacticsOnRestore ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000008          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -62679,10 +62686,10 @@ editTacticsMenu:
                 ; entry2_inputFunc (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 65535              ; ctrlMask
-                dc.l EditTacicsMovePlayersOrBall ; funcPtr
+                dc.l _EditTacicsMovePlayersOrBall ; funcPtr
                 ; entry2_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l EditTactics2AfterDraw ; funcPtr
+                dc.l _EditTactics2AfterDraw ; funcPtr
                 dc.w MENU_CMD_END       ; entry2_end
                 ; entry3_rc (struct)
                 dc.b $00                ; x
@@ -62692,10 +62699,10 @@ editTacticsMenu:
                 ; entry3_inputFunc (struct)
                 dc.w MENU_CMD_INPUT_FUNC ; type
                 dc.w 65535              ; ctrlMask
-                dc.l CopyTactics        ; funcPtr
+                dc.l _CopyTactics        ; funcPtr
                 ; entry3_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l EditTactics2AfterDraw ; funcPtr
+                dc.l _EditTactics2AfterDraw ; funcPtr
                 dc.w MENU_CMD_END       ; entry3_end
                 ; entries4_5[0]
                 ; rc (struct)
@@ -62720,7 +62727,7 @@ editTacticsMenu:
                 dc.l aCopy              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SelectCopyTactics  ; funcPtr
+                dc.l _SelectCopyTactics  ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries4_5[1]
                 ; rc (struct)
@@ -62745,7 +62752,7 @@ editTacticsMenu:
                 dc.l aUndo              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l UndoTactics        ; funcPtr
+                dc.l _UndoTactics        ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry6_rc (struct)
                 dc.b -9                 ; x
@@ -62769,7 +62776,7 @@ editTacticsMenu:
                 dc.l flipStrTable       ; tablePtr
                 ; entry6_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l FlipOnOff          ; funcPtr
+                dc.l _FlipOnOff          ; funcPtr
                 dc.w MENU_CMD_END       ; entry6_end
                 ; entries7_9[0]
                 ; rc (struct)
@@ -62794,7 +62801,7 @@ editTacticsMenu:
                 dc.l aImport            ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ImportTactics      ; funcPtr
+                dc.l _ImportTactics      ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries7_9[1]
                 ; rc (struct)
@@ -62819,7 +62826,7 @@ editTacticsMenu:
                 dc.l aSaveExit          ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SaveAndExitEditTactics ; funcPtr
+                dc.l _SaveAndExitEditTactics ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entries7_9[2]
                 ; rc (struct)
@@ -62844,7 +62851,7 @@ editTacticsMenu:
                 dc.l aAbort             ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l AbortEditTactics   ; funcPtr
+                dc.l _AbortEditTactics   ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; menu1Start (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -62873,10 +62880,10 @@ editTacticsMenu:
                 dc.w $0000              ; reserved
                 ; template11_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l EditTacticsAfterDrawPlayerNames ; funcPtr
+                dc.l _EditTacticsAfterDrawPlayerNames ; funcPtr
                 ; template11_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTacticsPlayerNamesCommon ; funcPtr
+                dc.l _EditTacticsPlayerNamesCommon ; funcPtr
                 dc.w MENU_CMD_END       ; template11_end
                 ; entries11_25[0]
                 ; rc (struct)
@@ -63122,10 +63129,10 @@ editTacticsMenu:
                 dc.w $0000              ; reserved
                 ; entry28_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTacticsOnSelect28 ; funcPtr
+                dc.l _EditTacticsOnSelect28 ; funcPtr
                 ; entry28_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l EditTactics28AfterDraw ; funcPtr
+                dc.l _EditTactics28AfterDraw ; funcPtr
                 dc.w MENU_CMD_END       ; entry28_end
                 dc.w MENU_MARK_INIT_ENTRY ; markInitEntry
                 dc.w MENU_MARK_START_TEMPLATE ; template29_markStart
@@ -63140,10 +63147,10 @@ editTacticsMenu:
                 dc.w $0000              ; reserved
                 ; template29_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l EditTacticsAfterDrawPlayerFace ; funcPtr
+                dc.l _EditTacticsAfterDrawPlayerFace ; funcPtr
                 ; template29_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l EditTacticsCommon  ; funcPtr
+                dc.l _EditTacticsCommon  ; funcPtr
                 dc.w MENU_CMD_END       ; template29_end
                 ; entries29_38[0]
                 ; rc (struct)
@@ -64256,7 +64263,7 @@ RestoreTactics:
 importTacticsMenu:
                 ; Menu_ImportTactics
                 ; hdr (struct)
-                dc.l ImportTacticsInit  ; onInitPtr
+                dc.l _ImportTacticsInit  ; onInitPtr
                 dc.l 0                  ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000002          ; On init function
@@ -64293,7 +64300,7 @@ importTacticsMenu:
                 dc.w $000E              ; reserved
                 ; template1_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ImportTacticsSelectTactics ; funcPtr
+                dc.l _ImportTacticsSelectTactics ; funcPtr
                 dc.w MENU_CMD_END       ; template1_end
                 ; entries1_18[0]
                 ; rc (struct)
@@ -64643,7 +64650,7 @@ importTacticsMenu:
                 dc.l aLoad              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l LoadTactics        ; funcPtr
+                dc.l _LoadTactics        ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; menu2Start (struct)
                 dc.w MENU_MARK_START_MENU ; mark
@@ -64672,7 +64679,7 @@ importTacticsMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ExitImportTactics  ; funcPtr
+                dc.l _ExitImportTactics  ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
@@ -64765,7 +64772,7 @@ tacticsPositionDefensiveness:
 stadiumMenu:
                 ; Menu_Stadium
                 ; hdr (struct)
-                dc.l ShowStadiumInit    ; onInitPtr
+                dc.l _ShowStadiumInit    ; onInitPtr
                 dc.l 0                  ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $0000003B          ; On init function
@@ -64850,7 +64857,7 @@ stadiumMenu:
                 dc.b $00                ; h
                 ; template5_beforeDraw (struct)
                 dc.w MENU_CMD_BEFORE_DRAW ; type
-                dc.l StadiumBeforeDrawLeftTeam ; funcPtr
+                dc.l _StadiumBeforeDrawLeftTeam ; funcPtr
                 dc.w MENU_CMD_END       ; template5_end
                 ; entry5_rc (struct)
                 dc.b -114               ; x
@@ -65160,7 +65167,7 @@ stadiumMenu:
                 dc.b $00                ; h
                 ; template32_beforeDraw (struct)
                 dc.w MENU_CMD_BEFORE_DRAW ; type
-                dc.l StadiumBeforeDrawRightTeam ; funcPtr
+                dc.l _StadiumBeforeDrawRightTeam ; funcPtr
                 dc.w MENU_CMD_END       ; template32_end
                 ; entry32_rc (struct)
                 dc.b -94                ; x
@@ -65534,8 +65541,8 @@ FillSkinColorConversionTable:
 highlightsMenu:
                 ; Menu_Highlights
                 ; hdr (struct)
-                dc.l HighlightsMenuInit ; onInitPtr
-                dc.l HighlightsMenuOnReturn ; onReturnPtr
+                dc.l _HighlightsMenuInit ; onInitPtr
+                dc.l _HighlightsMenuOnReturn ; onReturnPtr
                 dc.l 0                  ; onDrawPtr
                 dc.l $00000001          ; On init function
                 dc.w MENU_MARK_BYTE_COORDS ; markByteCoords
@@ -65578,7 +65585,7 @@ highlightsMenu:
                 dc.l aViewHighlights    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l JmpShowHighlights  ; funcPtr
+                dc.l _JmpShowHighlights  ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry2 (struct)
                 ; rc (struct)
@@ -65603,7 +65610,7 @@ highlightsMenu:
                 dc.l aLoadHighlights    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l LoadHighlightsMenu ; funcPtr
+                dc.l _LoadHighlightsMenu ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry3 (struct)
                 ; rc (struct)
@@ -65628,7 +65635,7 @@ highlightsMenu:
                 dc.l aSaveHighlights    ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SaveHighlightsMenu ; funcPtr
+                dc.l _SaveHighlightsMenu ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry4 (struct)
                 ; rc (struct)
@@ -65653,7 +65660,7 @@ highlightsMenu:
                 dc.l aExit              ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ExitHighlights     ; funcPtr
+                dc.l _ExitHighlights     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
@@ -76235,6 +76242,7 @@ a23OnAgg:
 a23OnAgg_0:
                 dc.b '      %2-%3 ON AGG.       ',0
 
+stringDataEnd:
 ; ===== InitSkinAndDefaultPointers =====
 ; prototype: void __usercall InitSkinAndDefaultPointers()
 InitSkinAndDefaultPointers:
