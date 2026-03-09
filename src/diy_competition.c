@@ -8884,7 +8884,7 @@ void _DIY_RecomputeCompetitionDerivedProgressionTable(void)
  *            GetCachedOrCalculateExtraTimeResult,
  *            GetCachedOrCalculatePenaltyShootoutResult,
  *            ProcessDIYLeagueMatchResultAndCareerUpdates,
- *            ProcessDIYKnockoutMatchResultAndCareerUpdates
+ *            _ProcessDIYKnockoutMatchResultAndCareerUpdates
  *
  * Match result processing for DIY competitions: cache-checked result
  * calculation, career stat updates, and loss flag determination.
@@ -9626,7 +9626,7 @@ extern uint16_t careerMatchSimulatedFlag;
 /* DIY_PlayCupMatchAndAdvance
  *
  * Orchestrates a complete DIY cup match: routes to play/sim path based on mode,
- * calls ProcessDIYKnockoutMatchResultAndCareerUpdates for result processing,
+ * calls _ProcessDIYKnockoutMatchResultAndCareerUpdates for result processing,
  * updates competition state (match results, goals, penalties, indices),
  * advances to next round when all matches complete, handles two-leg logic,
  * and updates career stats if applicable.

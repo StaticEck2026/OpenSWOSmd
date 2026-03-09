@@ -60,7 +60,7 @@ _AreShortsAndStripeColorsConflicting(uint16_t color1, uint16_t color2)
 
 
 /* ============================================================
- * GetTeamKitsSimilarityFactor
+ * _GetTeamKitsSimilarityFactor
  * ============================================================
  * Computes how similar two team kits are.
  * Returns similarity factor in range [0..99]:
@@ -69,7 +69,7 @@ _AreShortsAndStripeColorsConflicting(uint16_t color1, uint16_t color2)
  *   0..~35 = detailed scoring (lower = more different)
  *   <11 triggers lookup-table-based kit replacement loop
  * The result is clamped to >= 0.
- * Original: GetTeamKitsSimilarityFactor in SWOS2.s (line 43145)
+ * Original: _GetTeamKitsSimilarityFactor in SWOS2.s (line 43145)
  *
  * Register mapping:
  *   d0 = shirtType1, d1 = stripesColor1, d2 = basicColor1, d3 = shortsColor1

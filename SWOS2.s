@@ -5307,26 +5307,6 @@ pitchTypeProbabilities:
 ; in:
 ;      A5 -> left team in-game struct
 ;      A6 -> right team in-game struct
-InitGameSaveTeams:
-                movem.l d2-d7/a2-a4,-(sp)
-                move.l  a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _InitGameSaveTeams
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a4
-
-; ===== InitGameRestoreTeams =====
-; prototype: void __usercall InitGameRestoreTeams(void *leftTeamInGame@<a5>, void *rightTeamInGame@<a6>)
-; in:
-;      A5 -> left team in-game struct
-;      A6 -> right team in-game struct
-; 
-; Also loads the game palette from pal.256.
-
-; ===== ConvertColorsAndTextSprites =====
-; prototype: char __usercall ConvertColorsAndTextSprites@<d0>(struct TeamGame *team1@<a5>, struct TeamGame *team2@<a6>)
-; Loads proper team sprite files and converts colors of various sprites.
-; Makes sprites from names and numbers of players, which will be shown
 ; in the upper left corner during the game.
 ; 
 ; in:
@@ -21343,26 +21323,6 @@ kTeamViewOffsetBaseLUT:
 ; Bridge: a0=ctx, d0=modeFlag, d1=team1Goals, d2=team2Goals,
 ;         d3=statColumnIndex, a1=team1, a2=team2
 ; out: D1 = team1 goals, D2 = team2 goals
-CalculateViewResult:
-                movem.l d3-d7/a2-a6,-(sp)
-                subq.l  #4,sp           ; space for outTeam1Goals (2) + outTeam2Goals (2)
-                ; push args right-to-left for C: ctx, modeFlag, t1goals, t2goals, statCol, team1, team2, &out1, &out2
-                pea     2(sp)           ; &outTeam2Goals
-                pea     4(sp)           ; &outTeam1Goals (sp shifted by 4)
-                move.l  a2,-(sp)        ; team2
-                move.l  a1,-(sp)        ; team1
-                andi.l  #$FFFF,d3
-                move.l  d3,-(sp)        ; statColumnIndex
-                andi.l  #$FFFF,d2
-                move.l  d2,-(sp)        ; team2GoalsIn
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)        ; team1GoalsIn
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)        ; modeFlag
-                move.l  a0,-(sp)        ; ctx
-                jsr     _CalculateViewResult
-                lea     36(sp),sp       ; pop 9 args
-                move.w  (sp)+,d1        ; outTeam1Goals
                 move.w  (sp)+,d2        ; outTeam2Goals
                 movem.l (sp)+,d3-d7/a2-a6
                 rts
@@ -23409,26 +23369,6 @@ loc_126744:
 ; ===== ProcessDIYKnockoutMatchResultAndCareerUpdates ===== (ported to C → _ProcessDIYKnockoutMatchResultAndCareerUpdates in diy_competition.c)
 ; Input: a1=team1, a2=team2, d5=firstLegTeam1, d6=firstLegTeam2
 ; Output: d4=packedGoals, d5=packedAggregate, d6=packedPenalty, d7=flags
-ProcessDIYKnockoutMatchResultAndCareerUpdates:
-                subq.l  #8,sp           ; output space: 4 × uint16_t
-                move.l  sp,a0           ; a0 = output area base
-                pea     6(a0)           ; &outFlags
-                pea     4(a0)           ; &outPackedPenalty
-                pea     2(a0)           ; &outPackedAggregate
-                move.l  a0,-(sp)        ; &outPackedGoals
-                andi.l  #$FFFF,d6
-                move.l  d6,-(sp)        ; inFirstLegTeam2
-                andi.l  #$FFFF,d5
-                move.l  d5,-(sp)        ; inFirstLegTeam1
-                move.l  a2,-(sp)        ; team2
-                move.l  a1,-(sp)        ; team1
-                jsr     _ProcessDIYKnockoutMatchResultAndCareerUpdates
-                lea     32(sp),sp       ; clean 8 args
-                move.w  (sp),d4         ; outPackedGoals
-                move.w  2(sp),d5        ; outPackedAggregate
-                move.w  4(sp),d6        ; outPackedPenalty
-                move.w  6(sp),d7        ; outFlags
-                addq.l  #8,sp           ; clean output space
                 rts
 
 ; ===== GetCachedOrCalculateViewResult ===== (dead — only called from Process* above, now in C)
@@ -23485,26 +23425,6 @@ ScaleSkill:
 ;      D7 - team2 shorts color
 ; out:
 ;      D7 - team kit colors similarity factor
-GetTeamKitsSimilarityFactor:
-                movem.l d2-d6/a0-a1,-(sp)
-                andi.l  #$FF,d7
-                move.l  d7,-(sp)
-                andi.l  #$FF,d6
-                move.l  d6,-(sp)
-                andi.l  #$FF,d5
-                move.l  d5,-(sp)
-                andi.l  #$FF,d4
-                move.l  d4,-(sp)
-                andi.l  #$FF,d3
-                move.l  d3,-(sp)
-                andi.l  #$FF,d2
-                move.l  d2,-(sp)
-                andi.l  #$FF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FF,d0
-                move.l  d0,-(sp)
-                jsr     _GetTeamKitsSimilarityFactor
-                lea     32(sp),sp
                 move.w  d0,d7
                 movem.l (sp)+,d2-d6/a0-a1
                 rts
@@ -35850,10 +35770,6 @@ maxSubstitutes:
 
 ; ===== EditTeamsCallback ===== (ported to C → _EditTeamsCallback in edit_tactics.c)
 ; Bridge: a0→stack param
-EditTeamsCallback:
-                move.l  a0,-(sp)
-                jsr     _EditTeamsCallback
-                addq.l  #4,sp
 locret_1373A6:
                 rts
 ; Menu_EditTeams
@@ -40763,7 +40679,7 @@ careerMenu:
                 dc.l managerSexBuffer   ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l ChangeSex          ; funcPtr
+                dc.l _ChangeSex          ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry4 (struct)
                 ; rc (struct)
@@ -40788,7 +40704,7 @@ careerMenu:
                 dc.l managerNameBuffer  ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SetName            ; funcPtr
+                dc.l _SetName            ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry5 (struct)
                 ; rc (struct)
@@ -40813,7 +40729,7 @@ careerMenu:
                 dc.l managerSurnameBuffer ; textPtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l SetSurname         ; funcPtr
+                dc.l _SetSurname         ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry6 (struct)
                 ; rc (struct)
@@ -40894,7 +40810,7 @@ careerMenu:
                 dc.l offsetCoachOrPlayer ; tablePtr
                 ; onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l CoachOrPlayerCoach ; funcPtr
+                dc.l _CoachOrPlayerCoach ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 ; entry10 (struct)
                 ; rc (struct)
@@ -40992,46 +40908,6 @@ _CInitCareer:
                 movem.l d0-d7/a0-a6,-(sp)
                 move.w  66(sp),d0       ; first C param low word (15*4 + 4 ret = 64, +2 for high word = 66)
                 jsr     InitCareer
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== ChangeSex =====
-; prototype: void __usercall ChangeSex()
-ChangeSex:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a5,-(sp)        ; entry (MenuEntry*)
-                jsr     _ChangeSex
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== SetName =====
-; prototype: void __usercall SetName()
-SetName:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a5,-(sp)        ; entry (MenuEntry*)
-                jsr     _SetName
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== SetSurname =====
-; prototype: void __usercall SetSurname()
-SetSurname:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a5,-(sp)        ; entry (MenuEntry*)
-                jsr     _SetSurname
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== CoachOrPlayerCoach =====
-; prototype: void __usercall CoachOrPlayerCoach()
-CoachOrPlayerCoach:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a5,-(sp)        ; entry (MenuEntry*)
-                jsr     _CoachOrPlayerCoach
-                addq.l  #4,sp
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
 
@@ -52943,10 +52819,10 @@ playMatchMenu:
                 dc.w $0000              ; reserved
                 ; template13_afterDraw (struct)
                 dc.w MENU_CMD_AFTER_DRAW ; type
-                dc.l DrawPlayerEntries  ; funcPtr
+                dc.l _DrawPlayerEntries  ; funcPtr
                 ; template13_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l OnSwapPlayer       ; funcPtr
+                dc.l _OnSwapPlayer       ; funcPtr
                 dc.w MENU_CMD_END       ; template13_end
                 ; entries13_23[0]
                 ; rc (struct)
@@ -53319,7 +53195,7 @@ playMatchMenu:
                 dc.w $000E              ; reserved
                 ; template38_onSelect (struct)
                 dc.w MENU_CMD_ONSELECT_FIRE ; type
-                dc.l PlayMatchChangeTactics ; funcPtr
+                dc.l _PlayMatchChangeTactics ; funcPtr
                 dc.w MENU_CMD_END       ; template38_end
                 ; entry38_rc (struct)
                 dc.b $00                ; x
@@ -53871,13 +53747,6 @@ sidePitchSurnamePositionsTable:
 
 ; ===== OnSwapPlayer =====
 ; Forwarding stub -> _OnSwapPlayer in C (a5 = MenuEntry*)
-OnSwapPlayer:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)        ; menuEntry
-                jsr     _OnSwapPlayer
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PlayMatchMenuSwapPlayers =====
 ; Dead stub - only called from _OnSwapPlayer (C) which calls _PlayMatchMenuSwapPlayers directly
@@ -53890,13 +53759,6 @@ PlayMatchMenuSwapPlayers:
 
 ; ===== PlayMatchChangeTactics =====
 ; Forwarding stub -> _PlayMatchChangeTactics in C (a5 = MenuEntry*)
-PlayMatchChangeTactics:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)        ; menuEntry
-                jsr     _PlayMatchChangeTactics
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== ExitPlayMatch =====
 ; Forwarding stub -> _ExitPlayMatch in C
@@ -53946,13 +53808,6 @@ playMatchRedrawList:
 
 ; ===== DrawPlayerEntries =====
 ; Forwarding stub -> _DrawPlayerEntries in C (a5 = MenuEntry*)
-DrawPlayerEntries:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)        ; entry
-                jsr     _DrawPlayerEntries
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== RedrawPlayerNames =====
 ; Forwarding stub -> _RedrawPlayerNames in C

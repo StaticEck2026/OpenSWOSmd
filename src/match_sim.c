@@ -1,6 +1,6 @@
 /* match_sim.c — Match simulation / "view result" calculation
  *
- * Ported from SWOS2.s: CalculateViewResult, CalcTeamViewOffset,
+ * Ported from SWOS2.s: _CalculateViewResult, CalcTeamViewOffset,
  * ScaleViewIndexByTeamPriceRank, AssignSimulatedGoalsToScorers,
  * ApplyRandomPlayerStatusAfterSim, InitPlayerRemapTableForTeam,
  * BuildAvailablePlayersRemapAndMask, ComputeOldPlayerSkillForViewResult,
@@ -798,7 +798,7 @@ uint16_t _ComputeOldPlayerSkillForViewResult(uint8_t *team, uint16_t goalsCount)
 }
 
 /* ================================================================
- * CalculateViewResult — main entry point
+ * _CalculateViewResult — main entry point
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _CalculateViewResult(uint8_t *ctx, uint16_t modeFlag,

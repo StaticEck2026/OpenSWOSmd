@@ -1,6 +1,6 @@
 /* match_sim.h — Match simulation / "view result" calculation
  *
- * Ported from SWOS2.s: CalculateViewResult, CalcTeamViewOffset,
+ * Ported from SWOS2.s: _CalculateViewResult, CalcTeamViewOffset,
  * ScaleViewIndexByTeamPriceRank, AssignSimulatedGoalsToScorers,
  * ApplyRandomPlayerStatusAfterSim, InitPlayerRemapTableForTeam,
  * BuildAvailablePlayersRemapAndMask, ComputeOldPlayerSkillForViewResult,

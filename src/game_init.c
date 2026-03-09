@@ -46,7 +46,7 @@ extern TeamStatisticsData team2StatsData;
 extern uint16_t pl1Tactics;
 extern uint16_t pl2Tactics;
 
-/* InitGameSaveTeams globals */
+/* _InitGameSaveTeams globals */
 extern TeamGame  topTeamInGame;
 extern TeamGame  bottomTeamInGame;
 extern TeamGame  topTeamSaved;
@@ -217,7 +217,7 @@ void _InitTeamsData(void)
 }
 
 /* ================================================================
- * InitGameSaveTeams  (SWOS2.s line 11941)
+ * _InitGameSaveTeams  (SWOS2.s line 11941)
  *
  * Saves both team in-game structs (1018 bytes each) to snapshot
  * buffers, stores team pointers, loads pitch, converts colors

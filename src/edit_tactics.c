@@ -2823,13 +2823,13 @@ void _EditTeamsPlayersBeforeDraw(MenuEntry *entry)
 }
 
 /* ================================================================
- * Chunk 148: EditTeamsCallback
+ * Chunk 148: _EditTeamsCallback
  * ================================================================ */
 
 extern uint8_t editTeamsMenu[];
 extern void _ShowMenu(uint8_t *menu);
 
-/* EditTeamsCallback: called when a team is selected from team selection.
+/* _EditTeamsCallback: called when a team is selected from team selection.
  * Stores team pointer, then shows the edit teams sub-menu.
  * a0 = selected team pointer. */
 __attribute__((used, externally_visible))
