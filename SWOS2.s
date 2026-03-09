@@ -3082,12 +3082,6 @@ pad_102555:
 ; ===== FlashColor0Delay =====
 ; Ported to C: _FlashColor0Delay in src/display.c
 ; d0 = loopCount (uint32_t), d1 = color (uint16_t)
-FlashColor0Delay:
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _FlashColor0Delay
-                addq.l  #8,sp
-                rts
 
 ; ===== Player1StatusProc =====
 ; prototype: unsigned __int16 __usercall Player1StatusProc@<d0>()
@@ -3118,34 +3112,13 @@ Player2StatusProc:
 ; ===== LoadPitchMap =====
 ; Ported to C: _LoadPitchMap in src/pitch.c
 ; d0 = mapIndex (uint16_t)
-LoadPitchMap:
-                move.l  d0,-(sp)
-                jsr     _LoadPitchMap
-                addq.l  #4,sp
-                rts
 
 ; ===== FixupAndColorPitchFile =====
-; Ported to C: _FixupAndColorPitchFile in src/pitch.c
-
-; ===== SetCameraCoordinates =====
-; prototype: void __usercall SetCameraCoordinates(__int16 newX@<d1>, __int16 newY@<d2>)
-SetCameraCoordinates:
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                jsr     _SetCameraCoordinates
-                addq.l  #8,sp
-                rts
 
 ; ===== InitCameraMoveView =====
 ; prototype: void __usercall InitCameraMoveView()
 ; Ported to C: _InitCameraMoveView in src/camera.c
 ; in: D1 = targetX, D2 = targetY
-InitCameraMoveView:
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                jsr     _InitCameraMoveView
-                addq.l  #8,sp
-                rts
 
 ; ===== MoveView =====
 ; prototype: void __usercall MoveView(__int16 newScreenX@<d1>, __int16 newScreenY@<d2>)
@@ -3154,12 +3127,6 @@ InitCameraMoveView:
 ;      D2 - new visible screen y
 ; Ported to C: _MoveView in src/camera.c
 ; in: D1 = newScreenX, D2 = newScreenY
-MoveView:
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                jsr     _MoveView
-                addq.l  #8,sp
-                rts
 
 ; ===== ScrollToCurrent =====
 ; prototype: void __usercall ScrollToCurrent()
@@ -3180,11 +3147,6 @@ MoveView:
 ; ===== ApplyFadeStep =====
 ; Ported to C: _ApplyFadeStep in src/fade.c
 ; d2 = fadeLevel (uint16_t)
-ApplyFadeStep:
-                move.l  d2,-(sp)
-                jsr     _ApplyFadeStep
-                addq.l  #4,sp
-                rts
 
 ; ===== FadeOutTick =====
 ; Ported to C: _FadeOutTick in src/fade.c
@@ -3195,12 +3157,6 @@ ApplyFadeStep:
 ; ===== ProcessImageCommandStream =====
 ; Ported to C (_ProcessImageCommandStream in image_cmd.c)
 ; Register-to-stack forwarding stub for remaining asm callers.
-ProcessImageCommandStream:
-                move.l  a3,-(sp)
-                move.l  a0,-(sp)
-                jsr     _ProcessImageCommandStream
-                addq.l  #8,sp
-                rts
 
 ; ===== BlitDispatch =====
 ; Ported to C (static blitDispatch in image_cmd.c)
@@ -3495,12 +3451,6 @@ lastWordMaskTable:
 ; prototype: void __usercall BuildPaletteFromColors(unsigned __int8 *palette@<a0>)
 ; in:  A0 = color table (48 bytes = 16*(R,G,B) bytes; uses high nibbles only)
 ; out: A1 = palette (16 words, $0RGB)
-BuildPaletteFromColors:
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _BuildPaletteFromColors
-                addq.l  #8,sp
-                rts
 overlayActiveFlag:
                 dc.w $0000
 
@@ -3510,19 +3460,6 @@ overlayActiveFlag:
 ; ===== HWSprite_LoadFromSpriteGraphics =====
 ; Ported to C: _HWSprite_LoadFromSpriteGraphics in src/display.c
 ; d0 = spriteIndex (uint16_t)
-HWSprite_LoadFromSpriteGraphics:
-                move.l  d0,-(sp)
-                jsr     _HWSprite_LoadFromSpriteGraphics
-                addq.l  #4,sp
-                rts
-
-; ===== BlitSpritePlanar_Word =====
-; Ported to C: _BlitSpritePlanar_Word in blitter.c
-BlitSpritePlanar_Word:
-                move.l  d0,-(sp)
-                jsr     _BlitSpritePlanar_Word
-                addq.l  #4,sp
-                rts
 
 ; ===== BlitSpritePlanar_Word_StridedDest =====
 ; Ported to C: _BlitSpritePlanar_Word_StridedDest in blitter.c
@@ -3540,20 +3477,6 @@ BlitSpritePlanar_Long_StridedDest:
                 addq.l  #4,sp
                 rts
 
-; ===== DrawSprite_entry2 =====
-; Ported to C: _DrawSprite_entry2 in src/sprites.c
-DrawSprite_entry2:
-                movem.l d2-d7/a2-a6,-(sp)
-                ext.l   d2
-                move.l  d2,-(sp)
-                ext.l   d1
-                move.l  d1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _DrawSprite_entry2
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== DrawSprite16Pixels =====
 ; Ported to C: _DrawSprite16Pixels in src/sprites.c
 DrawSprite16Pixels:
@@ -3565,21 +3488,6 @@ DrawSprite16Pixels:
                 andi.l  #$FFFF,d0
                 move.l  d0,-(sp)
                 jsr     _DrawSprite16Pixels
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== DrawSpriteCentered =====
-; Ported to C: _DrawSpriteCentered in src/sprites.c
-DrawSpriteCentered:
-                movem.l d2-d7/a2-a6,-(sp)
-                ext.l   d2
-                move.l  d2,-(sp)
-                ext.l   d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _DrawSpriteCentered
                 lea     12(sp),sp
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
@@ -3636,63 +3544,9 @@ DrawSpriteInCameraView:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== DarkenRectangle =====
-; Ported to C: _DarkenRectangle in src/sprites.c
-DarkenRectangle:
-                movem.l d2-d7/a2-a6,-(sp)
-                ext.l   d2
-                move.l  d2,-(sp)
-                ext.l   d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _DarkenRectangle
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== DrawSpriteClipped =====
-; Ported to C: _DrawSpriteClipped in src/sprites.c
-DrawSpriteClipped:
-                movem.l d2-d7/a2-a6,-(sp)
-                ext.l   d2
-                move.l  d2,-(sp)
-                ext.l   d1
-                move.l  d1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _DrawSpriteClipped
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-
-; ===== DrawQueuedSprites =====
-; Ported to C: _DrawQueuedSprites in src/sprites.c
-DrawQueuedSprites:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _DrawQueuedSprites
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== RenderSpriteBandsToCopperLists =====
-; Ported to C: _RenderSpriteBandsToCopperLists in src/sprites.c
-RenderSpriteBandsToCopperLists:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _RenderSpriteBandsToCopperLists
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== RenderSpriteBandPlanePair =====
 ; Now called only from C (_RenderSpriteBandsToCopperLists) — dead asm stub
 RenderSpriteBandPlanePair:
-                rts
-
-; ===== BuildSpriteBandAndGeneralRenderStacks =====
-; Ported to C: _BuildSpriteBandAndGeneralRenderStacks in src/sprites.c
-BuildSpriteBandAndGeneralRenderStacks:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _BuildSpriteBandAndGeneralRenderStacks
-                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 
@@ -3700,14 +3554,6 @@ BuildSpriteBandAndGeneralRenderStacks:
 ; prototype: void __usercall InitDisplaySprites()
 InitDisplaySprites:
                 jmp     _InitDisplaySprites
-
-; ===== DrawSprites =====
-; Ported to C: _DrawSprites in src/sprites.c
-DrawSprites:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _DrawSprites
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== AdjustFanColor =====
 ; prototype: char __usercall AdjustFanColor@<d0>(unsigned __int8 *destPattern@<a1>, const unsigned __int8 *pitchConvTable@<a0>)
@@ -3720,12 +3566,6 @@ DrawSprites:
 ; Algorithm:
 ; Get byte from dest, use it as a word index into src, get byte and
 ; store it into dest (replacing previous index).
-AdjustFanColor:
-                move.l  a0,-(sp)
-                move.l  a1,-(sp)
-                jsr     _AdjustFanColor
-                addq.l  #8,sp
-                rts
 
 ; ===== ConvertSpriteColors =====
 ; prototype: char __usercall ConvertSpriteColors@<d0>(unsigned __int16 spriteNumber@<d0>, unsigned __int16 *colorConvTable@<a0>)
@@ -3734,12 +3574,6 @@ AdjustFanColor:
 ;      A0 -> color conversion table
 ; 
 ; Converts sprites to 8 colors.
-ConvertSpriteColors:
-                move.l  a0,-(sp)
-                move.l  d0,-(sp)
-                jsr     _ConvertSpriteColors
-                addq.l  #8,sp
-                rts
 ; ===== RectRowMaskedApplyScreenOffset =====
 ; Ported to C: _RectRowMaskedApplyScreenOffset in src/blitter.c
 ; 0 asm callers - all callers now use C directly
@@ -3771,13 +3605,6 @@ WaitForVSync:
 ;      A1 -> chars table (big or small)
 ; out:
 ;      D7 - number of pixels needed to display string
-GetTextWidth:
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _GetTextWidth
-                addq.l  #8,sp
-                move.w  d0,d7
-                rts
 
 ; ===== DrawMenuText =====
 ; prototype: __int16 __usercall DrawMenuText@<d0>(unsigned __int16 x@<d1>, unsigned __int16 y@<d2>, unsigned __int16 color@<d3>, char *text@<a0>, CharTable *chars@<a1>)
@@ -3813,16 +3640,6 @@ DrawMenuText:
 ;      A1 -> chars table
 ; 
 ; Draws right aligned text. x coordinate matches the end of the text.
-DrawMenuTextRightAligned:
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                move.l  d3,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                jsr     _DrawMenuTextRightAligned
-                lea     20(sp),sp
-                move.w  d0,d1
-                rts
 
 ; ===== DrawMenuTextCentered =====
 ; prototype: __int16 __usercall DrawMenuTextCentered@<d0>(unsigned __int16 x_center@<d1>, unsigned __int16 y@<d2>, unsigned __int16 color@<d3>, const char *text@<a0>, const struct CharTable *chars@<a1>)
@@ -3869,21 +3686,6 @@ DrawMenuTextCentered:
 ; Ported to C: _Text2Sprite in src/blitter.c
 ; in: d1=xOff, d2=yOff, d3=planeMask, d4=dstSpriteIndex, a0=text, a1=charsTable
 ; out: d0=error (0=OK, 1=error), d1=totalWidth, Z flag
-Text2Sprite:
-                subq.l  #4,sp
-                move.l  sp,-(sp)
-                move.l  d3,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                move.l  d4,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                jsr     _Text2Sprite
-                lea     28(sp),sp
-                move.w  (sp),d1
-                addq.l  #4,sp
-                tst.w   d0
-                rts
 
 ; ===== BlitStringToFrontBuffer =====
 ; prototype: void __usercall BlitStringToFrontBuffer(unsigned __int16 spriteIndex@<d0>, unsigned __int16 x@<d1>, unsigned __int16 y@<d2>, unsigned __int16 planeMask@<d3>)
@@ -3905,15 +3707,6 @@ blitSrcB_GlyphPtr:
 ; ===== BlitGlyphToSpriteBitmap =====
 ; Ported to C: _BlitGlyphToSpriteBitmap in src/blitter.c
 ; in: d0=glyphIndex, d1=xOff, d2=yOff, d3=planeMask, d4=dstSpriteIndex
-BlitGlyphToSpriteBitmap:
-                move.l  d4,-(sp)
-                move.l  d3,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _BlitGlyphToSpriteBitmap
-                lea     20(sp),sp
-                rts
 panic_bad_glyph_header:
                 rts
 panic_missing_bitplanes:
@@ -3957,17 +3750,6 @@ assetLoaderAltPathReady:
 AssetSys_InitDiskImageSources:
                 rts
 
-; ===== LoadRNCToBufferNoBlit =====
-; Ported to C: _LoadRNCToBufferNoBlit in src/asset_loader.c
-LoadRNCToBufferNoBlit:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _LoadRNCToBufferNoBlit
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== LoadFile =====
 ; prototype: unsigned __int16 __usercall LoadFile@<d0>(const char *filename@<a0>, void *dst@<a1>)
 ; in:
@@ -3984,40 +3766,6 @@ LoadRNCToBufferNoBlit:
 ; ===== LoadFile =====
 ; Ported to C: _LoadFileEx in src/file_io.c
 ; in: a0=filename, a1=dest, out: d0=status, d1=file size, Z flag
-LoadFile:
-                movem.l d2-d7/a0-a6,-(sp)
-                sub.l   #4,sp
-                move.l  sp,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _LoadFileEx
-                lea     12(sp),sp
-                move.l  (sp)+,d1
-                tst.w   d0
-                movem.l (sp)+,d2-d7/a0-a6
-                rts
-
-; ===== PlaySong =====
-; Ported to C: _PlaySong in src/asset_loader.c
-PlaySong:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _PlaySong
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== AssetEnsureReadyWithRetry =====
-; Ported to C: _AssetEnsureReadyWithRetry in src/asset_loader.c
-AssetEnsureReadyWithRetry:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _AssetEnsureReadyWithRetry
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== WriteFile =====
 ; Ported to C: _WriteFile in src/file_io.c
@@ -4031,14 +3779,6 @@ WriteFile:
                 lea     12(sp),sp
                 movem.l (sp)+,d2-d7/a2-a6
                 tst.w   d0
-                rts
-
-; ===== FindFilesExtensionPresent =====
-; prototype: unsigned __int16 __usercall FindFilesExtensionPresent@<d0>(const char *ext@<a0>)
-FindFilesExtensionPresent:
-                move.l  a0,-(sp)
-                jsr     _FindFilesExtensionPresent
-                addq.l  #4,sp
                 rts
                 dc.w -24063
                 rts
@@ -4396,15 +4136,6 @@ LoaderBootstrapBlobPI:
                 dc.b $B8,$34,$49,$81,$A7,$08,$90,$7D,$B3,$B2,$A7,$08,$90,$59,$4E,$71
                 dc.b $4E,$75
 
-; ===== AssetLoaderRegisterRegion =====
-; prototype: void __usercall AssetLoaderRegisterRegion(unsigned int size@<d0>, void *region@<a0>)
-AssetLoaderRegisterRegion:
-                move.l  a0,-(sp)
-                move.l  d0,-(sp)
-                jsr     _AssetLoaderRegisterRegion
-                addq.l  #8,sp
-                rts
-
 ; ===== AssetCacheAlloc =====
 ; Ported to C (assetCacheAllocInternal in asset_loader.c, static)
 ; No remaining asm callers — all callers ported to C.
@@ -4414,75 +4145,24 @@ AssetCacheAlloc:
 ; ===== AssetCacheFindByName =====
 ; Ported to C (_AssetCacheFindByName in asset_loader.c)
 ; No remaining asm callers — AssetCacheCopyByName also ported to C.
-AssetCacheFindByName:
-                movem.l d2-d7/a1-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _AssetCacheFindByName
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a1-a6
-                rts
 
 ; ===== AssetCacheCopyByName =====
 ; Ported to C (_AssetCacheCopyByName in asset_loader.c)
 ; Called from LoadFile (asm) with a0=name, a1=dest. Returns d0=status, d1=fileSize.
-AssetCacheCopyByName:
-                movem.l d2-d7/a2-a6,-(sp)
-                sub.l   #4,sp
-                move.l  sp,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _AssetCacheCopyByName
-                lea     12(sp),sp
-                move.l  (sp)+,d1
-                tst.w   d0
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== AssetCacheLoadFromAssetSys =====
 ; Ported to C (_AssetCacheLoadFromAssetSys in asset_loader.c)
 ; No remaining asm callers — precache functions already ported to C.
-AssetCacheLoadFromAssetSys:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _AssetCacheLoadFromAssetSys
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== AssetCacheStoreFromMemory =====
 ; Ported to C (_AssetCacheStoreFromMemory in asset_loader.c)
 ; Called from LoadFile (asm) with a0=name, a1=src, d1=size.
-AssetCacheStoreFromMemory:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d1,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _AssetCacheStoreFromMemory
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== RncDecompressV2 =====
 ; Stub: register-to-stack bridge → C _RncDecompressV2(src, dst)
-RncDecompressV2:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _RncDecompressV2
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== RncDecompressV1 =====
 ; Stub: register-to-stack bridge → C _RncDecompressV1(src, dst)
-RncDecompressV1:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _RncDecompressV1
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; Dead code: V1 routines (ported to C in rnc.c)
 RncDecodeBlock:
@@ -4819,15 +4499,6 @@ crowdChantVolume:
 PlayKickSample:
                 jmp     _PlayKickSample
 
-; ===== GateKickSampleAndCrowd =====
-; Ported to C (_GateKickSampleAndCrowd in sfx_crowd.c)
-GateKickSampleAndCrowd:
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _GateKickSampleAndCrowd
-                addq.l  #8,sp
-                rts
-
 ; ===== PlayRefereeWhistleSample =====
 ; Ported to C (_PlayRefereeWhistleSample in sfx_crowd.c)
 PlayRefereeWhistleSample:
@@ -4881,20 +4552,6 @@ PlayGoalKickOffSample:
 ; ===== nullsub_6 =====
 ; prototype: void nullsub_6(...)
 nullsub_6:
-                rts
-HandleKickSampleAndCrowd:
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _HandleKickSampleAndCrowd
-                addq.l  #8,sp
-                tst.w   d0
-                rts
-; ===== PlaySample =====
-; Ported to C (_PlaySample in sfx_crowd.c)
-PlaySample:
-                move.l  d0,-(sp)
-                jsr     _PlaySample
-                addq.l  #4,sp
                 rts
 
 ; ===== nullsub_22 =====
@@ -4951,17 +4608,6 @@ InitAudioState:
                 jsr     _InitAudioState
                 addq.l  #8,sp
                 movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== ClearAudioChannelStruct =====
-; prototype: void __usercall ClearAudioChannelStruct(void *chan@<a0>)
-; Ported to C as _ClearAudioChannelStruct (audio.c, Chunk 25)
-ClearAudioChannelStruct:
-                movem.l d0-d1/a0-a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _ClearAudioChannelStruct
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d1/a0-a1
                 rts
 
 ; ===== StopAllAudioChannels =====
@@ -5275,16 +4921,6 @@ MovePlayer:
 ; in:
 ;      A0 -> animation table
 ;      A1 -> player (sprite)
-SetPlayerAnimationTableAndPictureIndex:
-                move.w  d0,-(sp)
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _SetPlayerAnimationTableAndPictureIndex
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                move.w  (sp)+,d0
-                rts
 
 ; ===== SetPlayerAnimationTable =====
 ; prototype: void __usercall SetPlayerAnimationTable(const AnimTable *animTable@<a0>, Sprite *player@<a1>)
@@ -5311,14 +4947,6 @@ SetPlayerAnimationTable:
 ;      D2 - ball y
 ; 
 ; Stop ball and put it to the ground (z = 0).
-SetBallPosition:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                jsr     _SetBallPosition
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; Ported to C: _MoveCamera in src/move_camera.c
                 nop
 cameraXVelocity:
@@ -5600,13 +5228,6 @@ bigSIndex:
 ;      A6 -> right team (game)
 ; 
 ; Make sprites from player names from both teams.
-; Ported to C: _MakeSpritesFromPlayerNames in src/player_sprites.c
-MakeSpritesFromPlayerNames:
-                move.l  a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _MakeSpritesFromPlayerNames
-                addq.l  #8,sp
-                rts
 
 ; ===== MakePlayerNameSprite =====
 ; prototype: unsigned __int16 __usercall MakePlayerNameSprite@<d6>(unsigned __int16 playerNumber@<d0>, const unsigned __int8 *shortName@<a0>, unsigned __int16 spriteIndex@<d6>, unsigned __int8 *nameLenTable@<a4>)
@@ -5711,15 +5332,6 @@ InitGameSaveTeams:
 ; in:
 ;      A5 -> team1 (game)
 ;      A6 -> team2 (game)
-; Ported to C: _ConvertColorsAndTextSprites in src/color_sprites.c
-ConvertColorsAndTextSprites:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _ConvertColorsAndTextSprites
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== CountFaces =====
 ; prototype: void __usercall CountFaces(struct TeamGame *team@<a1>)
@@ -5727,25 +5339,12 @@ ConvertColorsAndTextSprites:
 ;      A1 -> team (game)
 ; out:
 ;      face frequencies in facesFrequency
-; Ported to C: _CountFaces in src/player_sprites.c
-CountFaces:
-                move.l  a1,-(sp)
-                jsr     _CountFaces
-                addq.l  #4,sp
-                rts
 
 ; ===== ConvertColorTableToSkinColor =====
 ; prototype: void __usercall ConvertColorTableToSkinColor(unsigned __int16 color@<d0>, unsigned __int16 *destTable@<a1>)
 ; in:
 ;      D0 -  skin/hair color
 ;      A1 -> dest color table
-; Ported to C: _ConvertColorTableToSkinColor in src/player_sprites.c
-ConvertColorTableToSkinColor:
-                move.l  a1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _ConvertColorTableToSkinColor
-                addq.l  #8,sp
-                rts
 
 ; ===== DetermineGoalieFaces =====
 ; prototype: char __usercall DetermineGoalieFaces@<d0>(struct TeamGame *team@<a0>, unsigned __int8 *gkFaceToIndex@<a1>, unsigned __int8 *gkFaceIndices@<a2>)
@@ -5757,14 +5356,6 @@ ConvertColorTableToSkinColor:
 ; Set up color conversion table for the goalkeeper, by assigning face color for main and reserve.
 ; Algorithm will go through players in team, and set face colors of goalkeepers,
 ; or first available face from a player if goalkeeper not found (not on the team for this game).
-; Ported to C: _DetermineGoalieFaces in src/player_sprites.c
-DetermineGoalieFaces:
-                move.l  a2,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _DetermineGoalieFaces
-                lea     12(sp),sp
-                rts
 ; unsigned __int8[4]
 facesFrequency:
                 dc.b $00,$00,$00,$00    ; Number of occurences of each face type in a team
@@ -6683,18 +6274,6 @@ loc_10C336:
 ; Saves current sprite coordinate for highlights.
 ; Ported to C: _SaveCoordinatesForHighlights in src/highlight.c
 ; in: D0 = spriteIndexOrMarker (int16_t), D4 = x (uint16_t), D5 = y (uint16_t)
-SaveCoordinatesForHighlights:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d5
-                move.l  d5,-(sp)
-                andi.l  #$FFFF,d4
-                move.l  d4,-(sp)
-                ext.l   d0
-                move.l  d0,-(sp)
-                jsr     _SaveCoordinatesForHighlights
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== IncrementHilBufferPointer =====
 ; prototype: unsigned __int8 *__usercall IncrementHilBufferPointer@<a1>(unsigned __int8 *cur@<a1>)
@@ -6734,16 +6313,6 @@ ValidateHilPointerSub:
 ; prototype: void __usercall ReplayUpdateCameraAndSwapBuffers()
 ; Ported to C: _ReplayUpdateCameraAndSwapBuffers in src/highlight.c
 ; in: D1 = targetX (int16_t), D2 = targetY (int16_t)
-ReplayUpdateCameraAndSwapBuffers:
-                movem.l d2-d7/a2-a6,-(sp)
-                ext.l   d2
-                move.l  d2,-(sp)
-                ext.l   d1
-                move.l  d1,-(sp)
-                jsr     _ReplayUpdateCameraAndSwapBuffers
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== HandleInstantReplayStateSwitch =====
 ; prototype: void __usercall HandleInstantReplayStateSwitch()
@@ -7078,12 +6647,6 @@ BenchMenuHandleControls:
 ;      sign flag: set=not OK, clear=OK
 ; 
 ; Checks if bench player at benchPlayerIndex is OK to select in bench.
-IsThisPlayerOkToSelect:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _IsThisPlayerOkToSelect
-                movem.l (sp)+,d2-d7/a2-a6
-                tst.w   d0
-                rts
 
 ; ===== CheckForThrowInAndGoalkeepersBall =====
 ; prototype: void __usercall CheckForThrowInAndGoalkeepersBall()
@@ -7100,12 +6663,6 @@ SubstitutePlayer:
 ; out:
 ;      zero flag set, D0 = 0 : ok to substitute
 ;      zero flag clear, D0 = 1 : do not substitute
-IsPlayerOkToSubstitute:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _IsPlayerOkToSubstitute
-                movem.l (sp)+,d2-d7/a2-a6
-                tst.w   d0              ; set Z flag for callers
-                rts
 
 ; ===== FindInitialPlayerToBeSubstituted =====
 ; prototype: void __usercall FindInitialPlayerToBeSubstituted()
@@ -7121,14 +6678,6 @@ IsPlayerOkToSubstitute:
 ;      D7 - index of player that's leaving the game
 ; 
 ; Swap name lengths and ordinals of players.
-SwapPlayerNameData:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d7,-(sp)        ; 2nd arg: leaveIndex
-                move.l  d6,-(sp)        ; 1st arg: enterIndex
-                jsr     _SwapPlayerNameData
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 loc_10DA7A:
                 move.w  (benchXLimit).l,d0
                 addq.w  #8,d0
@@ -7948,17 +7497,6 @@ kInjuryForeverSpeed:
 mainAsm:
                 rts                     ; dead — _startShim calls _mainC directly
 
-; ===== StartMatchSequence =====
-; prototype: void __usercall StartMatchSequence(void *topTeam@<a5>, void *bottomTeam@<a6>)
-StartMatchSequence:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _StartMatchSequence
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== GameLoop =====
 ; prototype: void __usercall GameLoop()
 ; in:
@@ -7970,14 +7508,6 @@ StartMatchSequence:
 ; in:
 ;      A5 -> left team in-game
 ;      A6 -> right team in-game
-ViewHighLightsMain:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _ViewHighLightsMain
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PlayInstantReplayLoop =====
 ; prototype: void __usercall PlayInstantReplayLoop()
@@ -8460,45 +7990,10 @@ lastCameraDirection:
 lastPlayerTurnFlags:
                 dc.w $0000
 
-; ===== SaveRand2State =====
-; prototype: void __usercall SaveRand2State()
-; Ported to C: _SaveRand2State (random.c). Original preserves a0.
-SaveRand2State:
-                move.l  a0,-(sp)
-                jsr     _SaveRand2State
-                movea.l (sp)+,a0
-                rts
-
-; ===== RestoreRand2State =====
-; prototype: void __usercall RestoreRand2State()
-; Ported to C: _RestoreRand2State (random.c). Original preserves a0.
-RestoreRand2State:
-                move.l  a0,-(sp)
-                jsr     _RestoreRand2State
-                movea.l (sp)+,a0
-                rts
-
-; ===== Randomize2 =====
-; prototype: void __usercall Randomize2(unsigned __int16 seed@<d0>)
-; Ported to C: _Randomize2 (game_utils.c). Original preserves d0-d1/a0.
-Randomize2:
-                movem.l d0-d1/a0,-(sp)
-                move.l  d0,-(sp)
-                jsr     _Randomize2
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d1/a0
-                rts
-
 ; ===== GetRandomWord =====
 ; prototype: unsigned __int16 __usercall GetRandomWord@<d0>()
 ; out:
 ;     D0 - random 16-bit int
-; Ported to C: _GetRandomWord (random.c). Original preserves d1.
-GetRandomWord:
-                move.l  d1,-(sp)
-                jsr     _GetRandomWord
-                move.l  (sp)+,d1
-                rts
 
 ; ===== Rand2 =====
 ; prototype: unsigned __int16 __usercall Rand2@<d0>()
@@ -8562,30 +8057,10 @@ pad_10F441:
 ; destroys: eax, esi
 ; + ecx, edx while in multiplayer game
 ; [ebp safe]
-MainKeysCheck:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _MainKeysCheck
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-AssetPrecacheOneCore:
-                move.l  a0,-(sp)
-                jsr     _AssetPrecacheOneCore
-                addq.l  #4,sp
-                rts
 corePrecacheTable:
                 dc.l aSoundSfxIn2       ; "sound/sfx.in2"
                 dc.l aGrafsSwcpich2M    ; "grafs/swcpich2.map"
                 dc.l -1                 ; raw
-
-AssetPrecacheOneMenu:
-                move.l  a0,-(sp)
-                jsr     _AssetPrecacheOneMenu
-                addq.l  #4,sp
-                rts
 ; char *[23]
 menuPrecacheTable:
                 ; char *[23]
@@ -8625,15 +8100,6 @@ aDataTeam008:
 ; ===== DrawMenuBack150x20 =====
 ; Ported to C: _DrawMenuBack150x20 in src/replay_menu.c
 ; in: D0 = color, D1 = x, D2 = y
-DrawMenuBack150x20:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _DrawMenuBack150x20
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
                 move.w  #150,d2
                 move.w  #20,d3
                 tst.w   d4
@@ -8685,14 +8151,6 @@ draw_menu_frame_segments:
 ;      D1 - y
 ; Ported to C: _DrawReplayContinueShiningFrame in src/replay_menu.c
 ; in: D0 = x, D1 = y
-DrawReplayContinueShiningFrame:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _DrawReplayContinueShiningFrame
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
                 move.w  #1,d2
                 move.w  #$14,d3
                 movem.l d0-d6,-(sp)
@@ -9192,30 +8650,12 @@ kPlayerHeaderSpeedIncrease:
 ; in:
 ;      A1 -> player sprite
 ;      A6 -> team
-; ===== DoPass (ported to C: _DoPass in ball_possession.c) =====
-DoPass:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _DoPass
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PlayerKickingBall =====
 ; prototype: void __usercall PlayerKickingBall(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
 ; in:
 ;      A1 -> player sprite
 ;      A6 -> team
-; ===== PlayerKickingBall (ported to C: _PlayerKickingBall in ball_possession.c) =====
-PlayerKickingBall:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _PlayerKickingBall
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== CalculateIfPlayerWinsBall =====
 ; prototype: void __usercall CalculateIfPlayerWinsBall(unsigned __int16 dir@<d0>, struct Sprite *player@<a1>, struct TeamGeneralInfo *team@<a6>)
@@ -9227,17 +8667,6 @@ PlayerKickingBall:
 ; When running.
 ; Sets team's direction of player controlling the ball.
 ; Updates the ball when controlled by the player (makes it "run away" a bit).
-; ===== CalculateIfPlayerWinsBall (ported to C: _CalculateIfPlayerWinsBall in ball_possession.c) =====
-CalculateIfPlayerWinsBall:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _CalculateIfPlayerWinsBall
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PlayerTackledTheBallWeak =====
 ; prototype: void __usercall PlayerTackledTheBallWeak(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
@@ -9246,15 +8675,6 @@ CalculateIfPlayerWinsBall:
 ;     A6 -> team (general info)
 ; 
 ; Weak tackle: player speed goes down to 50%, ball speed = 75% of original player speed.
-; Ported to C: _PlayerTackledTheBallWeak in src/tackle_foul.c
-PlayerTackledTheBallWeak:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _PlayerTackledTheBallWeak
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== SetPlayerDowntimeAfterTackle =====
 ; prototype: void __usercall SetPlayerDowntimeAfterTackle(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
@@ -9264,30 +8684,12 @@ PlayerTackledTheBallWeak:
 ; 
 ; Set how much time will player be lying on the ground after tackle.
 ; Better tackling skill means less time.
-; Ported to C: _SetPlayerDowntimeAfterTackle in src/tackle_foul.c
-SetPlayerDowntimeAfterTackle:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _SetPlayerDowntimeAfterTackle
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== UpdatePlayerSpeed =====
 ; prototype: void __usercall UpdatePlayerSpeed(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
 ; in:
 ;      A1 -> player sprite
 ;      A6 -> player team (general)
-; ===== UpdatePlayerSpeed (ported to C: _UpdatePlayerSpeed in ball_possession.c) =====
-UpdatePlayerSpeed:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _UpdatePlayerSpeed
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 kInjuriesSpeedHandicap:
                 dc.w 0,-96,-128,-160,-192,-224,-256,-288
 
@@ -9296,15 +8698,6 @@ kInjuriesSpeedHandicap:
 ; in:
 ;      A1 -> sprite (player)
 ;      A6 -> team data
-; ===== UpdatePlayerShotChanceTable (ported to C: _UpdatePlayerShotChanceTable in ball_possession.c) =====
-UpdatePlayerShotChanceTable:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _UpdatePlayerShotChanceTable
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; GoalieSkill *[8]
 kGoalieSkillTables:
                 ; GoalieSkill *[8]
@@ -9392,15 +8785,6 @@ teamPlOfs24Table:
 ;      A4 -> player + header (in-game), requires addition of sizeof(TeamGame) to it to be a proper pointer
 ; Ported to C: _GetPlayerPointerFromShirtNumber in src/ball_physics.c
 ; Register bridge: A1 (player), A6 (team) → result in A4
-GetPlayerPointerFromShirtNumber:
-                move.l  a1,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _GetPlayerPointerFromShirtNumber
-                addq.l  #8,sp
-                movea.l (sp)+,a1
-                movea.l d0,a4
-                rts
 ballNextX:
                 dc.w $0000
 ballNextY:
@@ -9409,19 +8793,6 @@ pad_110F6C:
                 dc.b 0,0,0,0
 
 ; ===== CalculateNextBallPosition =====
-; prototype: void __usercall CalculateNextBallPosition()
-; Ported to C: _CalculateNextBallPosition in src/ball_physics.c
-; ===== QueueMaskedSpriteBlitClipped =====
-; Ported to C: _QueueMaskedSpriteBlitClipped in src/sprites.c (Chunk 54)
-QueueMaskedSpriteBlitClipped:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.w  d2,-(sp)
-                move.w  d1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _QueueMaskedSpriteBlitClipped
-                lea     8(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ballQuadrantIndex:
                 dc.w $0000              ; For tactics, 0..34
 ballXQuadrantDead:
@@ -9450,17 +8821,6 @@ playerYQuadrantCoordinates:
 ; in:
 ;      A1 -> current player sprite
 ;      A6 -> team data
-; Ported to C: _SetPlayerWithNoBallDestination in src/player_positioning.c
-SetPlayerWithNoBallDestination:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d7,-(sp)
-                move.l  d6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _SetPlayerWithNoBallDestination
-                lea     16(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PlayerTackled =====
 ; prototype: void __usercall PlayerTackled(Sprite *playerSprite@<a1>, TeamGeneralInfo *team@<a6>)
@@ -9961,32 +9321,6 @@ StartPenalties:
 ;      
 ; Update players distance from the ball. Update controlling player if
 ; he's closest to the ball. Stop him if he was getting passed to.
-; Ported to C: _UpdateControlledPlayer in src/team_control.c (Chunk 54)
-UpdateControlledPlayer:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                jsr     _UpdateControlledPlayer
-                lea     4(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== UpdatePlayerBeingPassedTo =====
-; Ported to C: _UpdatePlayerBeingPassedTo in src/team_control.c (Chunk 54)
-UpdatePlayerBeingPassedTo:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                jsr     _UpdatePlayerBeingPassedTo
-                lea     4(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== UpdateGameTimersAndCameraBreakMode =====
-; prototype: void __usercall UpdateGameTimersAndCameraBreakMode(TeamGeneralInfo *team@<a6>)
-UpdateGameTimersAndCameraBreakMode:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _UpdateGameTimersAndCameraBreakMode
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ballOutOfGameTimer:
                 dc.w $0000              ; I think this is timer for camera when the ball goes out of play
 stoppageAuxFlag:
@@ -9999,13 +9333,6 @@ stoppageAuxFlag:
 ; prototype: void __usercall SetJumpHeaderHitAnimTable(Sprite *player@<a1>)
 ; in:
 ;      A1 -> player
-SetJumpHeaderHitAnimTable:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _SetJumpHeaderHitAnimTable
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PlayerHittingJumpHeader =====
 ; prototype: void __usercall PlayerHittingJumpHeader(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
@@ -10014,14 +9341,6 @@ SetJumpHeaderHitAnimTable:
 ;     A6 -> team
 ; 
 ; Hitting flying or lob header. Only triggers on ball contact.
-PlayerHittingJumpHeader:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _PlayerHittingJumpHeader
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== DoFlyingHeader =====
 ; prototype: void __usercall DoFlyingHeader(Sprite *player@<a1>, Sprite *ball@<a2>)
@@ -10056,14 +9375,6 @@ kHeaderHighJumpHeight:
 ;      A6 -> team general data
 ; 
 ; Static header was activated now we need to aim it somewhere.
-SetStaticHeaderDirection:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _SetStaticHeaderDirection
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PlayerHittingStaticHeader =====
 ; prototype: void __usercall PlayerHittingStaticHeader(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
@@ -10074,14 +9385,6 @@ SetStaticHeaderDirection:
 ; Runs when a player makes contact with the ball while doing static header.
 ; Applies ball speed and destination. Increases player speed, updates delta z
 ; and plays kick sample.
-PlayerHittingStaticHeader:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _PlayerHittingStaticHeader
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 kStaticHeaderBaseBallSpeed:
                 dc.w $0700
 
@@ -10092,15 +9395,6 @@ kStaticHeaderBaseBallSpeed:
 ;      A1 -> player sprite
 ; 
 ; Players jumps in place trying to hit static header.
-AttemptStaticHeader:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _AttemptStaticHeader
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 kStaticHeaderPlayerSpeed:
                 dc.w $0100              ; =1.0
 ballDefensiveX:
@@ -10175,15 +9469,6 @@ SendPlayerAway:
 ; ===== ShouldGoalkeeperDive =====
 ; prototype: __int16 __usercall ShouldGoalkeeperDive@<d0>(Sprite *goalie@<a1>, Sprite *ball@<a2>, TeamGeneralInfo *team@<a6>)
 ; D0 = Attempt Save
-ShouldGoalkeeperDive:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a2,-(sp)
-                move.l  a1,-(sp)
-                jsr     _ShouldGoalkeeperDive
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== GetFramesNeededToCoverDistance =====
 ; prototype: unsigned __int16 __usercall GetFramesNeededToCoverDistance@<d7>(__int32 movementDeltaFp16_16@<d0>, unsigned __int16 distance@<d4>)
@@ -10209,26 +9494,6 @@ GetFramesNeededToCoverDistance:
 ;      A1 -> player sprite
 ;      A2 -> ball sprite
 ;      A6 -> team (general)
-; Ported to C: _UpdateBallVariables in src/ball_physics.c
-UpdateBallVariables:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a2,-(sp)
-                move.l  a1,-(sp)
-                jsr     _UpdateBallVariables
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== CalculateBallNextGroundXYPositions =====
-; Ported to C: _CalculateBallNextGroundXYPositions in src/ball_physics.c
-CalculateBallNextGroundXYPositions:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a2,-(sp)
-                jsr     _CalculateBallNextGroundXYPositions
-                lea     4(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PlayerTacklingTestFoul =====
 ; prototype: void __usercall PlayerTacklingTestFoul(Sprite *playerSprite@<a1>, Sprite *ballSprite@<a2>, TeamGeneralInfo *teamInfo@<a6>)
@@ -10240,43 +9505,17 @@ CalculateBallNextGroundXYPositions:
 ; Check if the tackle ends up in faul, there must be a few conditions satisfied:
 ; - opponent has a controlled player
 ; - distance between them is more than 32 units
-; Ported to C: _PlayerTacklingTestFoul in src/tackle_foul.c
-PlayerTacklingTestFoul:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _PlayerTacklingTestFoul
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== GoalkeeperCaughtTheBall =====
 ; prototype: void __usercall GoalkeeperCaughtTheBall(Sprite *keeper@<a1>, TeamGeneralInfo *team@<a6>)
 ; There was a shot on goal, but goalkeeper managed to throw himself and catch
 ; the ball (and save the day). (I think)
-; Ported to C: _GoalkeeperCaughtTheBall in src/tackle_foul.c
-GoalkeeperCaughtTheBall:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _GoalkeeperCaughtTheBall
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== GoalkeeperDeflectedBall =====
 ; prototype: void __usercall GoalkeeperDeflectedBall(Sprite *ball@<a2>, TeamGeneralInfo *team@<a6>)
 ; in:
 ;      A2 -> ball sprite
 ;      A6 -> player team (general)
-GoalkeeperDeflectedBall:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a2,-(sp)
-                jsr     _GoalkeeperDeflectedBall
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
                 lea     (goalieDeflectBallAnimTable).l,a0
                 jsr     SetPlayerAnimationTable
                 move.b  #$B,$C(a1)
@@ -10309,19 +9548,6 @@ GoalkeeperDeflectedBall:
 ;      D3 -  also some direction
 ;      A1 -> player sprite
 ;      A6 -> player team (general)
-; Ported to C: _GoalkeeperJumping in src/goalkeeper.c
-GoalkeeperJumping:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a2,-(sp)
-                move.l  a1,-(sp)
-                move.l  d3,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _GoalkeeperJumping
-                lea     24(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PlayerBeginTackling =====
 ; prototype: void __usercall PlayerBeginTackling(__int16 pressedDir@<d0>, Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
@@ -10330,16 +9556,6 @@ GoalkeeperJumping:
 ;     A1 -> player sprite that's tackling
 ;     
 ; Set player state to tackling. Set his dest x and y with a table, and set speed to taclking speed.
-; Ported to C: _PlayerBeginTackling in src/tackle_foul.c
-PlayerBeginTackling:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _PlayerBeginTackling
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PlayerTackledTheBallStrong =====
 ; prototype: void __usercall PlayerTackledTheBallStrong(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
@@ -10353,15 +9569,6 @@ PlayerBeginTackling:
 ; afterward to 50%. If opponent's controlled player is more than 9u away from the ball and distance
 ; between the 2 players is greater than 32u it is considered a good tackle.
 ;  u = sqr((x1 - x2) ^ 2) + sqr((y1 - y2) ^ 2)
-; Ported to C: _PlayerTackledTheBallStrong in src/tackle_foul.c
-PlayerTackledTheBallStrong:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _PlayerTackledTheBallStrong
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PlayerAttemptingJumpHeader =====
 ; prototype: void __usercall PlayerAttemptingJumpHeader(__int16 direction@<d0>, Sprite *player@<a1>)
@@ -10373,15 +9580,6 @@ PlayerTackledTheBallStrong:
 ; and render him 'inoperable' for the next 55 cycles. Sets his animation table,
 ; dest x and y, and his speed. Only triggers for flying and lob header attempts,
 ; not for static ones. 
-PlayerAttemptingJumpHeader:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _PlayerAttemptingJumpHeader
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== GetBallDestCoordinatesTable =====
 ; prototype: __int16 *__usercall GetBallDestCoordinatesTable@<a0>()
@@ -10418,13 +9616,6 @@ GetClosestNonControlledPlayerInDirection:
 ;      A1 -> sprite (player)
 ; Ported to C: _UpdateControllingPlayer in src/ball_physics.c
 ; Register bridge: A1 (player) → void
-UpdateControllingPlayer:
-                move.l  a1,-(sp)
-                move.l  a1,-(sp)
-                jsr     _UpdateControllingPlayer
-                addq.l  #4,sp
-                movea.l (sp)+,a1
-                rts
 ; __int16[16]
 kBallPlOffsets:
                 ; __int16[16]
@@ -10445,13 +9636,6 @@ kBallPlOffsets:
 ; If it's in the air, steady it down.
 ; Ported to C: _UpdateBallWithControllingGoalkeeper in src/ball_physics.c
 ; Register bridge: A1 (player) → void
-UpdateBallWithControllingGoalkeeper:
-                move.l  a1,-(sp)
-                move.l  a1,-(sp)
-                jsr     _UpdateBallWithControllingGoalkeeper
-                addq.l  #4,sp
-                movea.l (sp)+,a1
-                rts
 
 ; ===== UpdatePlayerWithBall =====
 ; prototype: void __usercall UpdatePlayerWithBall(Sprite *player@<a1>)
@@ -10462,13 +9646,6 @@ UpdateBallWithControllingGoalkeeper:
 ; a little, by varying x and y coordinates by 1.
 ; Ported to C: _UpdatePlayerWithBall in src/ball_physics.c
 ; Register bridge: A1 (player) → void
-UpdatePlayerWithBall:
-                move.l  a1,-(sp)
-                move.l  a1,-(sp)
-                jsr     _UpdatePlayerWithBall
-                addq.l  #4,sp
-                movea.l (sp)+,a1
-                rts
 ; __int16[16]
 kPlayerWithBallOffsets:
                 ; __int16[16]
@@ -10483,13 +9660,6 @@ kPlayerWithBallOffsets:
 ; Sets the coordinates of a player that takes the throw in.
 ; Ported to C: _SetThrowInPlayerDestinationCoordinates in src/ball_physics.c
 ; Register bridge: A1 (player) → void
-SetThrowInPlayerDestinationCoordinates:
-                move.l  a1,-(sp)
-                move.l  a1,-(sp)
-                jsr     _SetThrowInPlayerDestinationCoordinates
-                addq.l  #4,sp
-                movea.l (sp)+,a1
-                rts
 
 ; ===== ApplyBallAfterTouch =====
 ; prototype: void __usercall ApplyBallAfterTouch(struct TeamGeneralInfo *team@<a6>)
@@ -10499,14 +9669,6 @@ SetThrowInPlayerDestinationCoordinates:
 ; Apply "after effects" to pass/kick. Apply spin if player holding left/right
 ; directions, and high kick if player holding back direction. Also update ball
 ; for normal kicks too. Slow down ball after kick/pass.
-; Ported to C: _ApplyBallAfterTouch in src/ball_physics.c
-ApplyBallAfterTouch:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                jsr     _ApplyBallAfterTouch
-                lea     4(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== ResetBothTeamSpinTimers =====
 ; prototype: void __usercall ResetBothTeamSpinTimers()
@@ -10533,11 +9695,6 @@ TestFoulForPenaltyAndFreeKick:
 ; Next penalty is about to be shot. Check if penalties are over. If not,
 ; initialize globals for penalty, set penaltyShooterSprite.
 ; (penalties after the game)
-NextPenalty:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _NextPenalty
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== GoalkeeperClaimedTheBall =====
 ; prototype: void __usercall GoalkeeperClaimedTheBall(Sprite *goalkeeper@<a1>, Sprite *ball@<a2>, TeamGeneralInfo *team@<a6>)
@@ -10545,15 +9702,6 @@ NextPenalty:
 ;      A1 -> goalkeeper sprite
 ;      A2 -> ball sprite
 ;      A6 -> player team (general)
-GoalkeeperClaimedTheBall:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a2,-(sp)
-                move.l  a1,-(sp)
-                jsr     _GoalkeeperClaimedTheBall
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== SetCameraMovingToShowerState =====
 ; prototype: void __usercall SetCameraMovingToShowerState()
@@ -10578,14 +9726,6 @@ StartFirstExtraTime:
 ; prototype: void __usercall EndFirstExtraTime()
 EndFirstExtraTime:
                 jmp     _EndFirstExtraTime
-
-; ===== CheckIfGoalkeeperClaimedTheBall =====
-; prototype: void __usercall CheckIfGoalkeeperClaimedTheBall()
-CheckIfGoalkeeperClaimedTheBall:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _CheckIfGoalkeeperClaimedTheBall
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== ResetPlayerPassingKicking =====
 ; prototype: void __usercall ResetPlayerPassingKicking(TeamGeneralInfo *team@<a0>)
@@ -11276,13 +10416,6 @@ ballInGoalkeeperArea:
 ; ===== UpdatePlayers =====
 ; Ported to C as _UpdatePlayers (Chunk 55)
 ; Stub forwards A6 (team) to C function
-UpdatePlayers:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                jsr     _UpdatePlayers
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 deadVarAlways0:
                 dc.w $0000
 ; TeamGeneralInfo *
@@ -11293,13 +10426,6 @@ playerKickerPtr:
 ; prototype: void __usercall AI_SetControlsDirection(struct TeamGeneralInfo *team@<a6>)
 ; in:
 ;      A6 -> team data
-AI_SetControlsDirection:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                jsr     _AI_SetControlsDirection
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; ===== AI_ResumeGameDelay =====
 ; prototype: struct TeamGeneralInfo *__usercall AI_ResumeGameDelay@<a0>(struct TeamGeneralInfo *team@<a6>)
 ; in:
@@ -11358,12 +10484,6 @@ aiThrowInDirections:
 ; in:
 ;      A1 -> player controlling the ball
 ;      A6 -> team general info
-AI_Kick:
-                move.l  a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _AI_Kick
-                addq.l  #8,sp
-                rts
 
 ; ===== FindClosestPlayerToBallFacing =====
 ; prototype: Sprite *__usercall FindClosestPlayerToBallFacing@<a0>(unsigned __int16 fullDir@<d0>, TeamGeneralInfo *team@<a6>)
@@ -11375,14 +10495,6 @@ AI_Kick:
 ;      A0 -> player
 ; 
 ; Find player closest to ball facing specified direction. Search both teams.
-FindClosestPlayerToBallFacing:
-                move.l  a6,-(sp)
-                move.l  d0,-(sp)
-                jsr     _FindClosestPlayerToBallFacing
-                addq.l  #8,sp
-                movea.l d0,a0
-                move.l  (findClosestBallDist).l,d2
-                rts
 ; unsigned __int16[343]
 introMenuImageScript:
                 dc.w $7000
@@ -21707,12 +20819,6 @@ hexWordStringBuffer:
 ; 
 ; Unpacks static menu in A0 to screen menu (held in g_currentMenu).
 ; Doesn't execute any of the menu functions, only does the unpacking.
-UnpackMenu:
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _UnpackMenu
-                addq.l  #8,sp
-                rts
 InitMenuEntry:
                 rts
 
@@ -21819,15 +20925,6 @@ aNottingham:
                 dc.b "NOTTINGHAM",0,$00
 
 ; ===== FrontEndPreLoopSetup =====
-; Ported to C (_FrontEndPreLoopSetup in frontend.c)
-
-; ===== PrepareMenuForFadeIn =====
-; prototype: void __usercall PrepareMenuForFadeIn()
-PrepareMenuForFadeIn:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _PrepareMenuForFadeIn
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PrepareMenuBackground =====
 ; prototype: void __usercall PrepareMenuBackground()
@@ -21837,11 +20934,6 @@ PrepareMenuForFadeIn:
 ; ===== LoadOverlayToFrontbuffer =====
 ; Ported to C (_LoadOverlayToFrontbuffer in frontend.c)
 ; Forwarding stub: a0 (register param) -> stack arg for C function
-LoadOverlayToFrontbuffer:
-                move.l  a0,-(sp)
-                jsr     _LoadOverlayToFrontbuffer
-                addq.l  #4,sp
-                rts
 allowShorterMenuItemsWithFrames:
                 dc.l $00000000          ; If this is true then menu items on the right side of the screen (x >= 160) will have outer
                                         ; frames even if their height is a bit shorter (>6 px), otherwise all items must have height
@@ -21874,15 +20966,6 @@ sub_120A10:
 ; 
 ; Draw rectangle on that coordinates.
 ; Do color conversion.
-DrawMenuItemOuterFrame:
-                move.l  d4,-(sp)
-                move.l  d3,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _DrawMenuItemOuterFrame
-                lea     20(sp),sp
-                rts
 outerFrameColorsTable:
                 dc.b $01,$09,$01,$09,$01,$09,$01,$09,$05,$09,$06,$04,$02,$04,$01,$09
                 dc.b $01,$09,$01,$03,$06,$09,$0D,$08,$0A,$08,$01,$09,$01,$09,$01,$09
@@ -21898,15 +20981,6 @@ outerFrameColorsTable:
 ; 
 ; Draw rectangle on that coordinates.
 ; No color conversion.
-DrawMenuItemInnerFrame:
-                move.l  d4,-(sp)
-                move.l  d3,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _DrawMenuItemInnerFrame
-                lea     20(sp),sp
-                rts
 
 ; ===== sub_120B0A =====
 ; Dead code — unreferenced function, stubbed in Chunk 187
@@ -21921,59 +20995,16 @@ sub_120B0A:
 ;      D2 - y
 ;      D3 - width
 ;      D4 - height
-DrawMenuItemBackground:
-                move.l  d4,-(sp)
-                move.l  d3,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _DrawMenuItemBackground
-                lea     20(sp),sp
-                rts
-
-; ===== DrawMenuItemBackgroundMasked =====
-; prototype: void __usercall DrawMenuItemBackgroundMasked()
-DrawMenuItemBackgroundMasked:
-                move.l  d4,-(sp)
-                move.l  d3,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                jsr     _DrawMenuItemBackgroundMasked
-                lea     16(sp),sp
-                rts
 
 ; ===== BlitMaskedRectAltToFront =====
 ; Ported to C: _BlitMaskedRectAltToFront in src/menu_system.c
 ; in: d1=x, d2=y, d3=w, d4=h
-BlitMaskedRectAltToFront:
-                move.l  d4,-(sp)
-                move.l  d3,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                jsr     _BlitMaskedRectAltToFront
-                lea     16(sp),sp
-                rts
 
 ; ===== CopyWholeSprite =====
 ; prototype: unsigned __int8 __usercall CopyWholeSprite@<d0>(unsigned __int16 srcSprite@<d0>, unsigned __int16 dstSprite@<d1>)
 ; in:
 ;      D0 = src sprite index
 ;      D1 = dest sprite index
-CopyWholeSprite:
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _CopyWholeSprite
-                addq.l  #8,sp
-                rts
-
-; ===== Int2Ascii =====
-; prototype: void __usercall Int2Ascii(unsigned __int16 value@<d0>, char *out@<a1>)
-Int2Ascii:
-                move.l  a1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _Int2Ascii
-                addq.l  #8,sp
-                rts
 
 ; ===== SetCurrentEntry =====
 ; prototype: void __usercall SetCurrentEntry(unsigned __int16 index@<d0>)
@@ -21999,12 +21030,6 @@ SetCurrentEntry:
 ; destroys:
 ;      eax, ebx, edx, D0, A0
 ;      [ebp safe]
-CalcMenuEntryAddress:
-                move.l  d0,-(sp)
-                jsr     _CalcMenuEntryAddress
-                addq.l  #4,sp
-                movea.l d0,a0
-                rts
                 adda.l  #MENUENTRY_SIZE,a0
                 rts
                 suba.l  #MENUENTRY_SIZE+MENUENTRY_ALREADYDRAWN,a0
@@ -22013,12 +21038,6 @@ CalcMenuEntryAddress:
 ; ===== GetStringLength =====
 ; Ported to C: _GetStringLength in src/string_utils.c
 ; in: a0 = string, out: d0.w = length, a0 = pointer to null terminator
-GetStringLength:
-                move.l  a0,-(sp)
-                jsr     _GetStringLength
-                move.l  (sp)+,a0
-                adda.w  d0,a0
-                rts
 loc_120C7C:
                 tst.b   (a0)+
                 bne.s   loc_120C7C
@@ -22035,13 +21054,6 @@ locret_120C8E:
 ; ===== StringEquals =====
 ; Ported to C: _StringEquals in src/string_utils.c
 ; in: a0=s1, a1=s2, out: Z flag (set if equal)
-StringEquals:
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _StringEquals
-                addq.l  #8,sp
-                tst.w   d0
-                rts
 
 ; ===== StringCopy =====
 ; Ported to C: _StringCopy in src/string_utils.c
@@ -22063,14 +21075,6 @@ StringCopy:
 ;      D0 = char
 ; ===== StringCopyUntilChar ===== (ported to C → _StringCopyUntilChar)
 ; in: a0=src, a1=dst, d0.b=stopChar
-StringCopyUntilChar:
-                andi.l  #$FF,d0
-                move.l  d0,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _StringCopyUntilChar
-                lea     12(sp),sp
-                rts
 
 ; ===== PrintFormatted =====
 ; prototype: void __usercall PrintFormatted(const char *fmt@<a0>, char *out@<a1>, unsigned __int16 n0@<d0>, unsigned __int16 n1@<d1>, unsigned __int16 n2@<d2>, unsigned __int16 n3@<d3>, unsigned __int16 n4@<d4>, unsigned __int16 n5@<d5>, unsigned __int16 n6@<d6>, const char *a@<a2>, const char *b@<a3>, const char *c@<a4>)
@@ -22129,16 +21133,6 @@ PrintFormatted:
 ;           1, zf clear = aborted, escape pressed
 ; 
 ; destroys: eax, esi...
-InputText:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _InputText
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                tst.w   d0
-                rts
 
 ; ===== InsertCharacter =====
 ; prototype: void __usercall InsertCharacter(char *pos@<a0>, unsigned __int8 ch@<d1>)
@@ -22196,23 +21190,9 @@ DrawMenuItemsWaitForVSync:
                 addq.l  #4,sp
                 rts
 
-; ===== DrawMenuItemsFromList =====
-; Ported to C: _DrawMenuItemsFromList in src/menu_system.c
-DrawMenuItemsFromList:
-                move.l  a0,-(sp)
-                jsr     _DrawMenuItemsFromList
-                addq.l  #4,sp
-                rts
-
 ; ===== CallDrawMultipleItemsRect =====
 ; Ported to C: _CallDrawMultipleItemsRect in src/menu_system.c
 ; in: d0=count (implicit), a5=first entry
-CallDrawMultipleItemsRect:
-                move.l  a5,-(sp)
-                move.l  d0,-(sp)
-                jsr     _CallDrawMultipleItemsRect
-                addq.l  #8,sp
-                rts
 
 ; ===== CallDrawMultipleItems =====
 ; Ported to C: _CallDrawMultipleItems in src/menu_system.c
@@ -22248,33 +21228,17 @@ CallDrawMenuItem:
 ; prototype: void __usercall DrawMenuItem(struct MenuEntry *item@<a5>)
 ; in:
 ;      A5 -> menu item to draw
-DrawMenuItem:
-                move.l  a5,-(sp)
-                jsr     _DrawMenuItem
-                addq.l  #4,sp
-                rts
 
 ; ===== DrawBackAllItems =====
 ; prototype: void __usercall DrawBackAllItems(unsigned __int16 maxItems@<d0>, struct MenuEntry *firstEntry@<a5>)
 ; in:
 ;      D0 - max. number of items to draw
 ;      A5 - pointer to first entry to draw
-DrawBackAllItems:
-                move.l  a5,-(sp)
-                move.l  d0,-(sp)
-                jsr     _DrawBackAllItems
-                addq.l  #8,sp
-                rts
 
 ; ===== DrawMenuBackWithCheck =====
 ; prototype: void __usercall DrawMenuBackWithCheck(struct MenuEntry *entry@<a5>)
 ; in:
 ;      A5 -> menu entry
-DrawMenuBackWithCheck:
-                move.l  a5,-(sp)
-                jsr     _DrawMenuBackWithCheck
-                addq.l  #4,sp
-                rts
 
 ; ===== DrawSelectedMenuItemFrame =====
 ; prototype: void __usercall DrawSelectedMenuItemFrame(struct Menu *menu@<a6>)
@@ -22323,11 +21287,6 @@ SetExitMenuFlag:
 ; prototype: __int16 __usercall ActivateMenu@<d0>(struct Menu *menu@<a6>)
 ; in:
 ;      A6 -> menu to prepare (or activate)
-ActivateMenu:
-                move.l  a6,-(sp)
-                jsr     _ActivateMenu
-                addq.l  #4,sp
-                rts
 forceDrawTransparentMenuItems:
                 dc.w $0000              ; If this is true menu entries with background color 0 (transparent) will be
                                         ; rendered with background color 15 (yellow)
@@ -22340,16 +21299,6 @@ kTeamColorsTable:
                 dc.b 0,1,0,2,0,3,0,6,0,10,0,11,0,12,0,13
                 dc.b 0,14,0,15
 
-; ===== CalcTeamPriceRankPercentOffset ===== (ported to C → _CalcTeamPriceRankPercentOffset)
-CalcTeamPriceRankPercentOffset:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _CalcTeamPriceRankPercentOffset
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== AssignFakeGoalsToScorers =====
 ; prototype: char __usercall AssignFakeGoalsToScorers@<d0>(unsigned __int16 winningTeam@<d0>, unsigned __int16 numGoals@<d5>)
 ; in:
@@ -22358,16 +21307,6 @@ CalcTeamPriceRankPercentOffset:
 ;     
 ; When player aborts the game they are punished with a loss, and this function will
 ; assign those fictive goals to other team scorers.
-AssignFakeGoalsToScorers:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d0
-                ext.l   d5
-                move.l  d5,-(sp)
-                move.l  d0,-(sp)
-                jsr     _AssignFakeGoalsToScorers
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 kAbortLossScorerWeightTable:
                 dc.b 35,25,20,15,11,7,5,4,3,2,124,4
                 rts
@@ -22375,16 +21314,6 @@ kAbortLossScorerWeightTable:
 ; ===== CalcTeamViewOffset =====
 ; Bridge: a0=team → d1=X, d2=Y
 ; C function returns packed uint32_t: high word = X, low word = Y
-CalcTeamViewOffset:
-                movem.l d3-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _CalcTeamViewOffset
-                addq.l  #4,sp
-                move.w  d0,d2           ; d2 = low word = Y
-                swap    d0
-                move.w  d0,d1           ; d1 = high word = X
-                movem.l (sp)+,d3-d7/a2-a6
-                rts
 kUserTeamOffsetBiasLUT:
                 dc.b -3,0,1,-1,-2,-2,-3,-2
 kMenuIrqCookieFailTrap:
@@ -22528,17 +21457,6 @@ simExtraGoalProbThreshE:
 ; loc_121E56 — ExtraTimeSecondPhaseScoring bridge
 ; Called from GetCachedOrCalculateExtraTimeResult via bra
 ; Returns d3 (team1 extra goals) and d4 (team2 extra goals)
-loc_121E56:
-                movem.l d0-d2/d5-d7/a0-a6,-(sp)
-                subq.l  #4,sp           ; space for outD3 (2) + outD4 (2)
-                pea     2(sp)           ; &outD4
-                pea     4(sp)           ; &outD3 (sp shifted by 4)
-                jsr     _ExtraTimeSecondPhaseScoring
-                addq.l  #8,sp           ; pop 2 args
-                move.w  (sp)+,d3        ; outD3
-                move.w  (sp)+,d4        ; outD4
-                movem.l (sp)+,d0-d2/d5-d7/a0-a6
-                rts
 ; unsigned __int8[128]
 simGoalsByIndexDiffTable:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; Lookup table indexed by team view-index difference for second scoring phase of match simulation.
@@ -22557,17 +21475,6 @@ simExtraGoalThresholdsB:
                 dc.b $C0,$40,$00
 ; loc_121FCE — PenaltyShootoutScorerPair bridge
 ; Returns d5 and d6 via C call
-loc_121FCE:
-                movem.l d0-d4/d7/a0-a6,-(sp)
-                subq.l  #4,sp           ; space for outD5 (2) + outD6 (2)
-                pea     2(sp)           ; &outD6
-                pea     4(sp)           ; &outD5 (sp shifted by 4)
-                jsr     _PenaltyShootoutScorerPair
-                addq.l  #8,sp           ; pop 2 args
-                move.w  (sp)+,d5        ; outD5
-                move.w  (sp)+,d6        ; outD6
-                movem.l (sp)+,d0-d4/d7/a0-a6
-                rts
 ; unsigned __int8[64]
 simGoalScorerPairTable:
                 dc.b $54,$54,$54,$54,$54,$54,$54,$53,$53,$53,$53,$53,$53,$53,$53,$43 ; Table of packed nibble pairs for randomly selecting two position indices for goal assignment.
@@ -22761,39 +21668,12 @@ locret_1223BC:
 
 ; ===== InitInGameTeams_PlayerControlled =====
 ; Bridge: a1=team1, a2=team2, d0=mode → C params
-InitInGameTeams_PlayerControlled:
-                movem.l d2-d7/a2-a6,-(sp)
-                clr.l   d1
-                move.w  d0,d1
-                move.l  d1,-(sp)        ; mode (zero-extended)
-                move.l  a2,-(sp)        ; team2
-                move.l  a1,-(sp)        ; team1
-                jsr     _InitInGameTeams_PlayerControlled
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== InitInGameTeams_WithMatchParam =====
 ; Bridge: a1=team1, a2=team2 → C params
-InitInGameTeams_WithMatchParam:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a2,-(sp)        ; team2
-                move.l  a1,-(sp)        ; team1
-                jsr     _InitInGameTeams_WithMatchParam
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== InitInGameTeams_WithMatchParam_Alt =====
 ; Bridge: identical to WithMatchParam (same C function)
-InitInGameTeams_WithMatchParam_Alt:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a2,-(sp)
-                move.l  a1,-(sp)
-                jsr     _InitInGameTeams_WithMatchParam
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== CyclePlayerStatusFlagsForTeam =====
 ; Dead code — only called by InitInGameTeams_* which are now in C
@@ -22802,14 +21682,6 @@ CyclePlayerStatusFlagsForTeam:
 
 ; ===== InitPlayerRemapTableForTeam =====
 ; Bridge: a0=team, a1=map → C function _InitPlayerRemapTableForTeam(team, map)
-InitPlayerRemapTableForTeam:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _InitPlayerRemapTableForTeam
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 playerStatusBucketThresholds:
                 dc.b $20,$08,$06,$05,$04,$08,$01,$00
 
@@ -22942,15 +21814,6 @@ UpdatePlayerPositionAndReturnRole:
 
 ; ===== ComputeOldPlayerSkillForViewResult =====
 ; Bridge: a0=team, d0=goalsCount → d0=result
-ComputeOldPlayerSkillForViewResult:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)        ; goalsCount
-                move.l  a0,-(sp)        ; team
-                jsr     _ComputeOldPlayerSkillForViewResult
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; Dead code preserved for code-as-data: GetPlayerPrice reads
 ; the bytes at loc_122D6A+1 through skillsPerQuadrant as the
 ; goalkeeper (role 0) row of skillsPerQuadrant.
@@ -24266,13 +23129,6 @@ numPlayersAtQuadrant:
 
 ; ===== GetAgeAdjustedPlayerFormFactor =====
 ; Bridge: a0=playerBase → C param, returns d0
-GetAgeAdjustedPlayerFormFactor:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _GetAgeAdjustedPlayerFormFactor
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 playerAgeToFormDivisorTable:
                 dc.b $04,$04,$04,$04,$04,$04,$04,$04,$04,$04,$04,$04,$05,$05,$05,$05
                 dc.b $05,$05,$06,$06,$07,$07,$07,$07,$07,$07,$07,$07,$07,$08,$08,$08
@@ -24284,19 +23140,6 @@ playerAgeToFormDivisorTable:
 ; dos: cseg_908B4
 ; ===== UpdateCareerPlayersFormAfterMatch ===== (Ported to C → _UpdateCareerPlayersFormAfterMatch, Chunk 188)
 ; Bridge: a0=compCtx, a1=team1, a2=team2, d1=team1Goals, d2=team2Goals
-UpdateCareerPlayersFormAfterMatch:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d2
-                move.l  d2,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                move.l  a2,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _UpdateCareerPlayersFormAfterMatch
-                lea     20(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; unsigned __int8[144]
 playerFormDeltaRandomTable:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$01,$00,$00,$00,$00,$00,$00,$00
@@ -24327,45 +23170,13 @@ seasonRunningCostsAccum2:
 
 ; ===== GetNumberOfSubstitutes =====
 ; Bridge: a0=team, d0=numPlayers → C params, returns d0
-GetNumberOfSubstitutes:
-                movem.l d2-d7/a2-a6,-(sp)
-                clr.l   d1
-                move.w  d0,d1
-                move.l  d1,-(sp)        ; numPlayers (zero-extended)
-                move.l  a0,-(sp)        ; team
-                jsr     _GetNumberOfSubstitutes
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== GetNumberOfSubstitutesInSelectionList =====
 ; Bridge: a0=team, d0=extraCount → C params, returns d0
-GetNumberOfSubstitutesInSelectionList:
-                movem.l d2-d7/a2-a6,-(sp)
-                clr.l   d1
-                move.w  d0,d1
-                move.l  d1,-(sp)        ; extraCount (zero-extended)
-                move.l  a0,-(sp)        ; team
-                jsr     _GetNumberOfSubstitutesInSelectionList
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== GetNumberOfAvailablePlayers =====
 ; Bridge: a0=team, d0=excludeCardsFlag, d1=numPlayers → C params
 ; Returns: d6=disabled, d7=available (packed in d0 from C)
-GetNumberOfAvailablePlayers:
-                ext.l   d1
-                move.l  d1,-(sp)        ; numPlayers
-                ext.l   d0
-                move.l  d0,-(sp)        ; excludeCardsFlag
-                move.l  a0,-(sp)        ; team
-                jsr     _GetNumberOfAvailablePlayers
-                lea     12(sp),sp
-                move.w  d0,d7           ; available (low word)
-                swap    d0
-                move.w  d0,d6           ; disabled (high word)
-                rts
 
 ; ===== GetNumberOfAvailableSubstitutes =====
 ; Bridge: a0=team, d0=flag → C params
@@ -24384,16 +23195,6 @@ GetNumberOfAvailableSubstitutes:
 ; ===== GetNumberOfAvailableStartingPlayers =====
 ; Bridge: a0=team, d0=flag → C params
 ; Returns: d6=disabled, d7=available
-GetNumberOfAvailableStartingPlayers:
-                ext.l   d0
-                move.l  d0,-(sp)        ; flag
-                move.l  a0,-(sp)        ; team
-                jsr     _GetNumberOfAvailableStartingPlayers
-                addq.l  #8,sp
-                move.w  d0,d7           ; available (low word)
-                swap    d0
-                move.w  d0,d6           ; disabled (high word)
-                rts
 
 ; ===== IsPlayerInjured =====
 ; Bridge: a0=playerBase, d0=mode → C params, returns d0 + flags
@@ -24405,18 +23206,6 @@ IsPlayerInjured:
                 jsr     _IsPlayerInjured
                 addq.l  #8,sp
                 tst.w   d0              ; set zero flag for callers
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== UpdateCareerFinancesAfterMatch =====
-; Ported to C: _UpdateCareerFinancesAfterMatch (career_status.c)
-; prototype: void __usercall UpdateCareerFinancesAfterMatch(void *ctx@<a0>, TeamFile *team@<a1>)
-UpdateCareerFinancesAfterMatch:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _UpdateCareerFinancesAfterMatch
-                lea     8(sp),sp
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
@@ -24465,38 +23254,10 @@ InitializeCareerSeasonFinancials:
 ShouldApplyRandomPlayerStatusAfterSim:
                 jmp     _ShouldApplyRandomPlayerStatusAfterSim
 
-; ===== ShouldSetupPlayers =====
-; prototype: unsigned __int16 __usercall ShouldSetupPlayers@<d0>()
-ShouldSetupPlayers:
-                jsr     _ShouldSetupPlayers
-                tst.w   d0
-                rts
-
-; ===== IsMajorTournamentAllowingRandomStatus =====
-; prototype: void __usercall IsMajorTournamentAllowingRandomStatus()
-IsMajorTournamentAllowingRandomStatus:
-                jsr     _IsMajorTournamentAllowingRandomStatus
-                tst.w   d0
-                rts
-
-; ===== IsMajorTournamentAllowingSquadChanges =====
-; Ported to C: _IsMajorTournamentAllowingSquadChanges (career_status.c)
-IsMajorTournamentAllowingSquadChanges:
-                jsr     _IsMajorTournamentAllowingSquadChanges
-                tst.w   d0
-                rts
-
 ; ===== IsMajorInternationalTournament =====
 ; Ported to C: _IsMajorInternationalTournament (career_status.c)
 ; Dead — only called from now-ported C functions
 IsMajorInternationalTournament:
-                rts
-
-; ===== IsTournamentAllowingSquadChangesIfNotCareer =====
-; Ported to C: _IsTournamentAllowingSquadChangesIfNotCareer (career_status.c)
-IsTournamentAllowingSquadChangesIfNotCareer:
-                jsr     _IsTournamentAllowingSquadChangesIfNotCareer
-                tst.w   d0
                 rts
 
 ; ===== UpdateBoardConfidenceScore =====
@@ -24541,14 +23302,6 @@ GetExpectedLeagueRankIndex:
 ; prototype: void __usercall BeginContractNegotiationSequence()
 ; ===== BeginContractNegotiationSequence ===== (ported to C → _BeginContractNegotiationSequence)
 ; in: a0=ctx (diyCompetitionStart), a1=team ptr
-BeginContractNegotiationSequence:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _BeginContractNegotiationSequence
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== GetLowestAndHighestPlayerPrice =====
 ; prototype: void __usercall GetLowestAndHighestPlayerPrice()
@@ -24557,36 +23310,12 @@ BeginContractNegotiationSequence:
 ;      D5 - highest player price
 ; 
 ; Find lowest and highest player price in the selected career team.
-GetLowestAndHighestPlayerPrice:
-                movem.l d2-d3/d6-d7/a2-a6,-(sp)
-                jsr     _GetLowestAndHighestPlayerPrice
-                ; d0 = (lowest << 16) | highest
-                move.l  d0,d4
-                swap    d4              ; d4.w = lowest
-                move.w  d0,d5           ; d5.w = highest
-                movem.l (sp)+,d2-d3/d6-d7/a2-a6
-                rts
 
 ; ===== GetPlayerRandomNum ===== (ported to C → _GetPlayerRandomNum in teams.c)
 ; in: A0 = team entry ptr, out: D0.w = random number (0-255)
-GetPlayerRandomNum:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _GetPlayerRandomNum
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== GetTeamValueBase ===== (ported to C → _GetTeamValueBase in teams.c)
 ; in: D0 = avgPrice, out: D0.w = team value base
-GetTeamValueBase:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _GetTeamValueBase
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== IsTeamNational ===== (ported to C → _IsTeamNational in teams.c)
 ; in: A1 = teamGeneral ptr, out: D0.w = 1/0, Z flag
@@ -24627,13 +23356,6 @@ pad_12654E:
 
 ; ===== GetDisplayedPlayerValue ===== (ported to C → _GetDisplayedPlayerValue in teams.c)
 ; in: A0 = team entry ptr, out: D0.w = displayed value (1-80)
-GetDisplayedPlayerValue:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _GetDisplayedPlayerValue
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; unsigned __int8[256]
 displayedPlayerValueRandomDeltaTable:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
@@ -24665,11 +23387,6 @@ GetAveragePlayerPrice:
 
 ; ===== GetAveragePlayerPriceInSelectedTeams ===== (ported to C → _GetAveragePlayerPriceInSelectedTeams in teams.c)
 ; out: D0.w = average price across selected teams
-GetAveragePlayerPriceInSelectedTeams:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _GetAveragePlayerPriceInSelectedTeams
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
                 move.w  (a0),d0
                 clr.w   d2
                 clr.w   d3
@@ -24688,21 +23405,6 @@ loc_126744:
 
 ; ===== ProcessDIYLeagueMatchResultAndCareerUpdates ===== (ported to C → _ProcessDIYLeagueMatchResultAndCareerUpdates in diy_competition.c)
 ; Input: a1=team1, a2=team2  Output: d1=goals1, d2=goals2, d7=flags
-ProcessDIYLeagueMatchResultAndCareerUpdates:
-                subq.l  #8,sp           ; output space: outGoals1(2) + outGoals2(2) + outFlags(2) + pad(2)
-                move.l  sp,a0           ; a0 = output area base
-                pea     4(a0)           ; &outFlags
-                pea     2(a0)           ; &outGoals2
-                move.l  a0,-(sp)        ; &outGoals1
-                move.l  a2,-(sp)        ; team2
-                move.l  a1,-(sp)        ; team1
-                jsr     _ProcessDIYLeagueMatchResultAndCareerUpdates
-                lea     20(sp),sp       ; clean 5 args
-                move.w  (sp),d1         ; outGoals1
-                move.w  2(sp),d2        ; outGoals2
-                move.w  4(sp),d7        ; outFlags
-                addq.l  #8,sp           ; clean output space
-                rts
 
 ; ===== ProcessDIYKnockoutMatchResultAndCareerUpdates ===== (ported to C → _ProcessDIYKnockoutMatchResultAndCareerUpdates in diy_competition.c)
 ; Input: a1=team1, a2=team2, d5=firstLegTeam1, d6=firstLegTeam2
@@ -24753,16 +23455,6 @@ GetCachedOrCalculateExtraTimeResult:
 
 ; ===== GetCachedOrCalculatePenaltyShootoutResult ===== (dead — only called from Process* above, now in C)
 GetCachedOrCalculatePenaltyShootoutResult:
-                rts
-
-; ===== ApplyTeamTactics ===== (ported to C → _ApplyTeamTactics in match_sim.c)
-; prototype: void __usercall ApplyTeamTactics(void *teamGame@<a4>)
-ApplyTeamTactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a4,-(sp)
-                jsr     _ApplyTeamTactics
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
 ; ===== AdjustPlayerSkills ===== (ported to C → _AdjustPlayerSkills in match_sim.c)
@@ -24873,56 +23565,14 @@ similarityFactor:
 
 ; ===== GetNextCupRoundStringIndex ===== (ported to C → _GetNextCupRoundStringIndex)
 ; d0=cur, d1=n, d2=add, returns d0=index
-GetNextCupRoundStringIndex:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _GetNextCupRoundStringIndex
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== GetNextCupRoundString ===== (ported to C → _GetNextCupRoundString)
 ; d0=cur, d1=n, d2=add, returns a0=string pointer
-GetNextCupRoundString:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _GetNextCupRoundString
-                lea     12(sp),sp
-                movea.l d0,a0
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== GetCupRoundStringIndex ===== (ported to C → _GetCupRoundStringIndex)
 ; d0=cur, d1=flag, d2=idx, d3=stage, d4=opt, returns d0=index
-GetCupRoundStringIndex:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d4,-(sp)
-                move.l  d3,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _GetCupRoundStringIndex
-                lea     20(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; ===== GetCupRoundString ===== (ported to C → _GetCupRoundString)
 ; d0=cur, d1=flag, d2=idx, d3=stage, d4=opt, returns a0=string pointer
-GetCupRoundString:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d4,-(sp)
-                move.l  d3,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _GetCupRoundString
-                lea     20(sp),sp
-                movea.l d0,a0
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== MeasureTeamKitsSimilarity =====
 ; prototype: unsigned __int8 *__usercall MeasureTeamKitsSimilarity@<a6>(const TeamFile *team1@<a0>, const TeamFile *team2@<a1>)
@@ -24931,15 +23581,6 @@ GetCupRoundString:
 ;      A1 -> team2 (file)
 ; out:
 ;      A6 -> team kits similarity factors
-MeasureTeamKitsSimilarity:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _MeasureTeamKitsSimilarity
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                lea     (teamKitsSimilarity).l,a6
-                rts
 teamKitsSimilarity:
                 dc.b $00,$00,$00,$00    ; Team1 prim. vs team2 prim.
                                         ; team1 prim. vs team2 sec.
@@ -24993,38 +23634,14 @@ GetBankBalance:
 ; Accepts only positive values.
 ; ===== Int2Pounds =====
 ; Bridge: d0.l=value, a1=dst → _Int2Pounds(uint32_t, uint8_t*)
-Int2Pounds:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _Int2Pounds
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Int2PoundsSigned =====
 ; prototype: void __usercall Int2PoundsSigned(int pounds@<d0>, char *dst@<a1>)
 ; Bridge: d0.l=value, a1=dst → _Int2PoundsSigned(int32_t, uint8_t*)
-Int2PoundsSigned:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _Int2PoundsSigned
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== WriteAccountBalance =====
 ; prototype: void __usercall WriteAccountBalance(int delta@<d0>, char *dst@<a1>)
 ; Bridge: d0.l=delta, a1=dst → _WriteAccountBalance(int32_t, uint8_t*)
-WriteAccountBalance:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _WriteAccountBalance
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 loc_127414:
                 mulu.w  #1000,d0
                 bsr.w   nullsub_11
@@ -25063,15 +23680,6 @@ loc_12746E:
 ; prototype: unsigned __int16 __usercall InitCompetitionTeamSelectionFromTableEntry@<d0>(unsigned __int16 idx@<d0>, void *base@<a0>)
 ; Ported to C: _InitCompetitionTeamSelectionFromTableEntry in career_init.c
 ; Bridge: d0=idx, a0=base → C params, returns d0=0
-InitCompetitionTeamSelectionFromTableEntry:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _InitCompetitionTeamSelectionFromTableEntry
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
                 ext.w   d0
                 move.w  d0,(numNeededTeams).l
                 clr.w   d0
@@ -25081,78 +23689,16 @@ InitCompetitionTeamSelectionFromTableEntry:
 ; prototype: unsigned __int16 __usercall InitCompetitionTeamSelectionFromTableHeader@<d0>(void *base@<a0>)
 ; Ported to C: _InitCompetitionTeamSelectionFromTableHeader in career_init.c
 ; Bridge: a0=base → C param, returns d0=0
-InitCompetitionTeamSelectionFromTableHeader:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _InitCompetitionTeamSelectionFromTableHeader
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== InitCompetitionTeamSelectionFromAltTableHeader =====
 ; prototype: unsigned __int16 __usercall InitCompetitionTeamSelectionFromAltTableHeader@<d0>(void *base@<a0>)
 ; Ported to C: _InitCompetitionTeamSelectionFromAltTableHeader in career_init.c
 ; Bridge: a0=base → C param, returns d0=0
-InitCompetitionTeamSelectionFromAltTableHeader:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _InitCompetitionTeamSelectionFromAltTableHeader
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== IsNationalTeamCompetitionOrQualification =====
 ; prototype: unsigned __int16 __usercall IsNationalTeamCompetitionOrQualification@<d0>(const void *key@<a5>)
 ; Ported to C: _IsNationalTeamCompetitionOrQualification in diy_competition.c
 ; Bridge: a5=key → C param. Returns d0=0 if found (Z set), d0=1 if not found (Z clear).
-IsNationalTeamCompetitionOrQualification:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _IsNationalTeamCompetitionOrQualification
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                tst.w   d0
-                rts
-
-; ===== InitCompetitionFromRecord ===== (ported to C → _InitCompetitionFromRecord)
-InitCompetitionFromRecord:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _InitCompetitionFromRecord
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== InitDIYCompetitionFromTableEntry ===== (ported to C → _InitDIYCompetitionFromTableEntry)
-InitDIYCompetitionFromTableEntry:
-                movem.l d0-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  a0,-(sp)
-                move.l  d0,-(sp)
-                jsr     _InitDIYCompetitionFromTableEntry
-                addq.l  #8,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== InitDIYCupFromRecord ===== (ported to C → _InitDIYCupFromRecord)
-InitDIYCupFromRecord:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _InitDIYCupFromRecord
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== InitDIYLeagueFromRecord ===== (ported to C → _InitDIYLeagueFromRecord)
-InitDIYLeagueFromRecord:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _InitDIYLeagueFromRecord
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== CheckContinueAbortPrompt =====
 ; prototype: __int16 __usercall CheckContinueAbortPrompt@<d0>(const char *header@<a0>)
@@ -25165,14 +23711,6 @@ InitDIYLeagueFromRecord:
 ; Depending on the value of gameType shows continue/abort prompt.
 ; Ported to C: _CheckContinueAbortPrompt in match_sim.c
 ; Bridge: a0=header → stack param, d0=return, sets ZF
-CheckContinueAbortPrompt:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _CheckContinueAbortPrompt
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                tst.w   d0
-                rts
 
 ; ===== InitCareerVariables =====
 ; prototype: void __usercall InitCareerVariables(unsigned __int16 gameType@<d0>)
@@ -25198,92 +23736,19 @@ InitTeams:
 TeamInit:
                 rts
 
-; ===== BuildMatchResultString =====
-; prototype: char *__usercall BuildMatchResultString@<a0>(unsigned __int16 control@<d0>, unsigned __int16 leg2@<d4>, unsigned __int16 leg1@<d5>, unsigned __int16 pens@<d6>, struct TeamFile *teamA@<a1>, struct TeamFile *teamB@<a2>, unsigned __int16 flags@<d7>)
-BuildMatchResultString:
-                movem.l d0-d7/a1-a6,-(sp)
-                ; push args right-to-left: flags(d7), teamB(a2), teamA(a1), pens(d6), leg1(d5), leg2(d4), control(d0)
-                move.w  d7,-(sp)        ; flags (uint16_t, 2 bytes padded to 4)
-                clr.w   -(sp)
-                move.l  a2,-(sp)        ; teamB
-                move.l  a1,-(sp)        ; teamA
-                move.w  d6,-(sp)        ; pens (uint16_t, 2 bytes padded to 4)
-                clr.w   -(sp)
-                move.w  d5,-(sp)        ; leg1 (uint16_t, 2 bytes padded to 4)
-                clr.w   -(sp)
-                move.w  d4,-(sp)        ; leg2 (uint16_t, 2 bytes padded to 4)
-                clr.w   -(sp)
-                move.w  d0,-(sp)        ; control (uint16_t, 2 bytes padded to 4)
-                clr.w   -(sp)
-                jsr     _BuildMatchResultString
-                lea     28(sp),sp
-                movea.l d0,a0           ; return value → a0
-                movem.l (sp)+,d0-d7/a1-a6
-                rts
-
 ; ===== InitAndPlayGame ===== (ported to C → _InitAndPlayGame)
 ; Bridge: a1=team1, a2=team2 → C
-InitAndPlayGame:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a2,-(sp)        ; team2
-                move.l  a1,-(sp)        ; team1
-                jsr     _InitAndPlayGame
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PlayDIYCupFixtureAndCacheResult ===== (ported to C → _PlayDIYCupFixtureAndCacheResult)
 ; Bridge: a1=team1, a2=team2, d6=allowSquadChanges, d7=mode → C
 ; Returns Z flag: Z=1 (success), Z=0 (cancelled)
-PlayDIYCupFixtureAndCacheResult:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d7
-                move.l  d7,-(sp)        ; mode
-                andi.l  #$FFFF,d6
-                move.l  d6,-(sp)        ; allowSquadChanges
-                move.l  a2,-(sp)        ; team2
-                move.l  a1,-(sp)        ; team1
-                jsr     _PlayDIYCupFixtureAndCacheResult
-                lea     16(sp),sp
-                tst.w   d0              ; set Z flag from return value
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PlayDIYLeagueMatchAndCacheResult ===== (ported to C → _PlayDIYLeagueMatchAndCacheResult)
 ; Bridge: a1=team1, a2=team2, d6=allowSquadChanges, d7=mode → C
 ; Returns Z flag: Z=1 (success), Z=0 (cancelled)
-PlayDIYLeagueMatchAndCacheResult:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d7
-                move.l  d7,-(sp)        ; mode
-                andi.l  #$FFFF,d6
-                move.l  d6,-(sp)        ; allowSquadChanges
-                move.l  a2,-(sp)        ; team2
-                move.l  a1,-(sp)        ; team1
-                jsr     _PlayDIYLeagueMatchAndCacheResult
-                lea     16(sp),sp
-                tst.w   d0              ; set Z flag from return value
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== SetupPlayers ===== (ported to C → _SetupPlayers)
 ; Bridge: a1=team1, a2=team2, d1=maxSubs, d2=excludeFlags, d6=allowSquadChanges, d7=mode → C
-SetupPlayers:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d7
-                move.l  d7,-(sp)        ; mode
-                andi.l  #$FFFF,d6
-                move.l  d6,-(sp)        ; allowSquadChanges
-                andi.l  #$FFFF,d2
-                move.l  d2,-(sp)        ; excludeFlags
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)        ; maxSubs
-                move.l  a2,-(sp)        ; team2
-                move.l  a1,-(sp)        ; team1
-                jsr     _SetupPlayers
-                lea     24(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 exitGameFlag:
                 dc.w $0000              ; Must be zero in order to start the game, if 1 SetupPlayers bails
 
@@ -25299,25 +23764,6 @@ exitGameFlag:
 ;      A2 -> team 2
 ; ===== InitializeInGameTeamsAndStartGame ===== (Ported to C → _InitializeInGameTeamsAndStartGame in game_init.c, Chunk 214)
 ; Bridge: d0=randomizePitch, d1=minSubs, d2=maxSubs, d3=paramD3, d7=paramD7, a1=team1, a2=team2
-InitializeInGameTeamsAndStartGame:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a2,-(sp)        ; team2
-                move.l  a1,-(sp)        ; team1
-                andi.l  #$FFFF,d7
-                move.l  d7,-(sp)        ; paramD7 (sign-extended later in C)
-                andi.l  #$FFFF,d3
-                move.l  d3,-(sp)        ; paramD3
-                andi.l  #$FFFF,d2
-                move.l  d2,-(sp)        ; maxSubs
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)        ; minSubs
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)        ; randomizePitch
-                jsr     _InitializeInGameTeamsAndStartGame
-                lea     28(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                tst.w   (gameCanceled).l
-                rts
 
 ; ===== UpdateCareerPlayerStatsAfterMatch =====
 ; prototype: void __usercall UpdateCareerPlayerStatsAfterMatch(struct TeamGame *teamGame@<a1>, struct TeamFile *teamFile@<a2>)
@@ -25326,14 +23772,6 @@ InitializeInGameTeamsAndStartGame:
 ;      A2 -> team (file)
 ; dos: cseg_2F0E2
 ; Bridge: a1=TeamGame*, a2=TeamFile* → _UpdateCareerPlayerStatsAfterMatch(TeamGame*, uint8_t*)
-UpdateCareerPlayerStatsAfterMatch:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a2,-(sp)
-                move.l  a1,-(sp)
-                jsr     _UpdateCareerPlayerStatsAfterMatch
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== ApplyPlayerStatusAfterSim =====
 ; prototype: void __usercall ApplyPlayerStatusAfterSim(struct TeamGame *teamGame@<a1>, struct TeamFile *teamFile@<a2>)
@@ -25342,14 +23780,6 @@ UpdateCareerPlayerStatsAfterMatch:
 ;      A2 -> team (file)
 ; dos: cseg_2F194
 ; Bridge: a1=TeamGame*, a2=TeamFile* → _ApplyPlayerStatusAfterSim(TeamGame*, uint8_t*)
-ApplyPlayerStatusAfterSim:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a2,-(sp)
-                move.l  a1,-(sp)
-                jsr     _ApplyPlayerStatusAfterSim
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== UpdatePlayerInjuries =====
 ; prototype: void __usercall UpdatePlayerInjuries(struct TeamGame *teamGame@<a1>, struct TeamFile *teamFile@<a2>)
@@ -25357,14 +23787,6 @@ ApplyPlayerStatusAfterSim:
 ;      A1 -> team (game)
 ;      A2 -> team (file)
 ; Bridge: a1=TeamGame*, a2=TeamFile* → _UpdatePlayerInjuries(TeamGame*, uint8_t*)
-UpdatePlayerInjuries:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a2,-(sp)
-                move.l  a1,-(sp)
-                jsr     _UpdatePlayerInjuries
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== AccumulateMatchGoalsIntoTeamFile =====
 ; prototype: void __usercall AccumulateMatchGoalsIntoTeamFile(struct TeamGame *teamGame@<a1>, struct TeamFile *teamFile@<a2>, __int16 offset@<d7>)
@@ -25374,16 +23796,6 @@ UpdatePlayerInjuries:
 ;      D7 -  some offset
 ; Bridge: a1=TeamGame*, a2=TeamFile*, d7.w=statOffset
 ; → _AccumulateMatchGoalsIntoTeamFile(TeamGame*, uint8_t*, uint16_t)
-AccumulateMatchGoalsIntoTeamFile:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d7
-                move.l  d7,-(sp)
-                move.l  a2,-(sp)
-                move.l  a1,-(sp)
-                jsr     _AccumulateMatchGoalsIntoTeamFile
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== InitInGameTeamStructure =====
 ; prototype: void __usercall InitInGameTeamStructure(struct TeamFile *teamFile@<a2>, struct TeamGame *teamGame@<a4>, __int16 *avgPricePct@<a6>)
@@ -25394,15 +23806,6 @@ AccumulateMatchGoalsIntoTeamFile:
 ;            compared to this team average player price
 ; Bridge: a2=TeamFile*, a4=TeamGame*, a6=int16_t* avgPricePct
 ; → _InitInGameTeamStructure(uint8_t*, TeamGame*, int16_t*)
-InitInGameTeamStructure:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.l  a4,-(sp)
-                move.l  a2,-(sp)
-                jsr     _InitInGameTeamStructure
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== SetPlayerNameAndFace =====
 ; prototype: void __usercall SetPlayerNameAndFace(struct PlayerFile *playerFile@<a5>, struct PlayerInfoHeader *playerGame@<a6>)
@@ -25411,15 +23814,6 @@ InitInGameTeamStructure:
 ;      A6 -> player + header (game)
 ; Bridge: a5=playerBase, a6=PlayerInfoHeader base (PlayerInfo at a6+42)
 ; → _SetPlayerNameAndFace(uint8_t *playerBase, PlayerInfo *pi)
-SetPlayerNameAndFace:
-                movem.l d0-d7/a0-a6,-(sp)
-                lea     PLAYERINFOHEADER_SUBSTITUTED(a6),a0 ; a6+42 = PlayerInfo*
-                move.l  a0,-(sp)
-                move.l  a5,-(sp)
-                jsr     _SetPlayerNameAndFace
-                addq.l  #8,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== InitInGamePlayer =====
 ; prototype: void __usercall InitInGamePlayer(__int16 playerIndex@<d1>, struct PlayerFile *playerFile@<a5>, struct PlayerInfoHeader *playerGame@<a6>)
@@ -25434,33 +23828,12 @@ SetPlayerNameAndFace:
 ;         a6=PlayerInfoHeader base (PlayerInfo at a6+42)
 ; → _InitInGamePlayer(uint16_t playerIndex, uint16_t playerSlot,
 ;                     uint8_t *playerBase, PlayerInfo *pi)
-InitInGamePlayer:
-                movem.l d2-d7/a2-a6,-(sp)
-                lea     PLAYERINFOHEADER_SUBSTITUTED(a6),a0 ; a6+42 = PlayerInfo*
-                move.l  a0,-(sp)
-                move.l  a5,-(sp)
-                andi.l  #$FFFF,d2
-                move.l  d2,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                jsr     _InitInGamePlayer
-                lea     16(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== SetInGameTeamsPrimaryColors =====
 ; prototype: void __usercall SetInGameTeamsPrimaryColors(struct TeamFile *topTeamFile@<a2>, struct TeamFile *bottomTeamFile@<a3>, unsigned __int8 *similarityFactors@<a6>)
 ; in:
 ;      A2 -> team1 (file)
 ;      A3 -> team2 (file)
-SetInGameTeamsPrimaryColors:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a3,-(sp)
-                move.l  a2,-(sp)
-                jsr     _SetInGameTeamsPrimaryColors
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 IsSingleColorKitSimilar:
                 rts
@@ -25486,24 +23859,6 @@ SetInGameTeamColors:
 ConvertTeamKitColors:
                 rts
 
-SetTeamSecondaryColors:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                andi.l  #$FF,d4
-                move.l  d4,-(sp)
-                andi.l  #$FF,d3
-                move.l  d3,-(sp)
-                andi.l  #$FF,d2
-                move.l  d2,-(sp)
-                andi.l  #$FF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FF,d0
-                move.l  d0,-(sp)
-                jsr     _SetTeamSecondaryColors
-                lea     24(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ConvertTeamColor:
                 rts
 teamKitTieBreakColors:
@@ -25526,15 +23881,6 @@ team2AppPercent:
                 dc.w $0000
 pad_128EDC:
                 dc.b 'cd_dZdUdPdKdFdAdcd_dZdUdPdKdFdAd',0,$00
-
-; ===== PlayFriendly =====
-; prototype: void __usercall PlayFriendly()
-; Ported to C: _PlayFriendly in match_sim.c
-PlayFriendly:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _PlayFriendly
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== DIY_LoadCurrentCompetitionSlot ===== (ported to C → _DIY_LoadCurrentCompetitionSlot)
 DIY_LoadCurrentCompetitionSlot:
@@ -25669,60 +24015,12 @@ diyEditParamB:
                 dc.w $0000
 diyEditParamC:
                 dc.w $0000
-
-; ===== DIY_ShuffleTeamsAndBuildCompTeamList ===== (ported to C → _DIY_ShuffleTeamsAndBuildCompTeamList)
-DIY_ShuffleTeamsAndBuildCompTeamList:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a4,-(sp)        ; comp5 (4th param, unused)
-                move.l  a4,-(sp)        ; comp (3rd param)
-                move.l  a3,-(sp)        ; slot (2nd param)
-                move.l  a2,-(sp)        ; diy (1st param)
-                jsr     _DIY_ShuffleTeamsAndBuildCompTeamList
-                lea     16(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; unsigned __int8[64]
 diyTeamShuffleScratch:
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-
-; ===== DIY_BuildTeamGridAndIndexMaps ===== (ported to C → _DIY_BuildTeamGridAndIndexMaps)
-DIY_BuildTeamGridAndIndexMaps:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)        ; comp (4th param)
-                move.l  a4,-(sp)        ; comp4 (3rd param, unused)
-                move.l  a3,-(sp)        ; slot (2nd param)
-                move.l  a2,-(sp)        ; diy (1st param)
-                jsr     _DIY_BuildTeamGridAndIndexMaps
-                lea     16(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== DIY_CopyTeamGridFromCompToDIY ===== (ported to C → _DIY_CopyTeamGridFromCompToDIY)
-DIY_CopyTeamGridFromCompToDIY:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)        ; comp5 (4th param, unused)
-                move.l  a4,-(sp)        ; comp (3rd param)
-                move.l  a3,-(sp)        ; slot (2nd param)
-                move.l  a2,-(sp)        ; diy (1st param)
-                jsr     _DIY_CopyTeamGridFromCompToDIY
-                lea     16(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== DIY_BuildSeededBracketAndUpdateScores ===== (ported to C → _DIY_BuildSeededBracketAndUpdateScores)
-DIY_BuildSeededBracketAndUpdateScores:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)        ; comp (4th param)
-                move.l  a4,-(sp)        ; comp4 (3rd param, unused)
-                move.l  a3,-(sp)        ; slot (2nd param)
-                move.l  a2,-(sp)        ; diy (1st param)
-                jsr     _DIY_BuildSeededBracketAndUpdateScores
-                lea     16(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== DIY_BuildCompSpecificTeamShuffle ===== (ported to C, static)
 DIY_BuildCompSpecificTeamShuffle:
@@ -25757,39 +24055,6 @@ sub_129960:
                 andi.b  #0,d1
                 move.w  #$7700,(panicReasonCode).l
                 jsr     PanicHaltLoop
-
-; ===== DIY_AdjustWorldCupBracketScores ===== (ported to C → _DIY_AdjustWorldCupBracketScores)
-DIY_AdjustWorldCupBracketScores:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)        ; comp (3rd param)
-                move.l  a3,-(sp)        ; slot (2nd param)
-                move.l  a2,-(sp)        ; diy (1st param)
-                jsr     _DIY_AdjustWorldCupBracketScores
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== DIY_SortAndShuffleTeamsByValue =====
-; prototype: void __usercall DIY_SortAndShuffleTeamsByValue(void *diy@<a2>, void *slot@<a3>)
-DIY_SortAndShuffleTeamsByValue:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a3,-(sp)        ; slot (2nd param)
-                move.l  a2,-(sp)        ; diy (1st param)
-                jsr     _DIY_SortAndShuffleTeamsByValue
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== DIY_ShuffleTeams =====
-; prototype: void __usercall DIY_ShuffleTeams(void *diy@<a2>, void *slot@<a3>)
-DIY_ShuffleTeams:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a3,-(sp)        ; slot (2nd param)
-                move.l  a2,-(sp)        ; diy (1st param)
-                jsr     _DIY_ShuffleTeams
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; unsigned __int16[20]
 diyTournamentInitTable:
                 ; unsigned __int16[20]
@@ -25991,15 +24256,6 @@ loc_12A31E:
                 cmp.w   $52(a0),d1
                 bne.w   loc_12A286
                 rts
-
-; ===== DIY_CountUnselectedTeams =====
-; prototype: void __usercall DIY_CountUnselectedTeams()
-DIY_CountUnselectedTeams:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _DIY_CountUnselectedTeams
-                movem.l (sp)+,d2-d7/a2-a6
-                tst.w   d0              ; set Z flag for asm callers
-                rts
                 lea     (diyCompetitionStart).l,a0
                 lea     $2CE(a0),a1
                 move.w  $52(a0),d1
@@ -26033,24 +24289,9 @@ DIY_DecrementMissingTeamCountIfNotLoaded:
 
 ; ===== DIY_GetCurrentMatchTeamSlots ===== (ported to C → _DIY_GetCurrentMatchTeamSlots)
 ; Bridge: outputs a1, a2 (slot pointers)
-DIY_GetCurrentMatchTeamSlots:
-                subq.l  #8,sp           ; space for 2 pointers
-                move.l  sp,a0
-                pea     4(a0)           ; &outSlot2
-                move.l  a0,-(sp)        ; &outSlot1
-                jsr     _DIY_GetCurrentMatchTeamSlots
-                addq.l  #8,sp           ; clean args
-                movea.l (sp)+,a1        ; outSlot1
-                movea.l (sp)+,a2        ; outSlot2
-                rts
 
 ; ===== DIY_CompareCurrentMatchTeamCategories ===== (ported to C → _DIY_CompareCurrentMatchTeamCategories)
 ; Bridge: returns d0
-DIY_CompareCurrentMatchTeamCategories:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _DIY_CompareCurrentMatchTeamCategories
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== DIY_PlayCupMatchAndAdvance ===== (ported to C → _DIY_PlayCupMatchAndAdvance)
 ; prototype: void __usercall DIY_PlayCupMatchAndAdvance(unsigned __int16 mode@<d7>)
@@ -26092,14 +24333,6 @@ loc_12AB90:
 
 ; ===== CopySelectedTeamNumbers ===== (ported to C → _CopySelectedTeamNumbers)
 ; d0=count, a0=dest
-CopySelectedTeamNumbers:
-                move.l  a0,-(sp)
-                move.l  d0,-(sp)
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _CopySelectedTeamNumbers
-                movem.l (sp)+,d2-d7/a2-a6
-                addq.l  #8,sp
-                rts
 
 ; ===== FindTeamInCache ===== (ported to C, inlined in _VerifyTeamLoaded)
 FindTeamInCache:
@@ -26160,21 +24393,6 @@ SaveSelectedTeams:
 ; ===== RestoreSelectedTeams ===== (ported to C → _RestoreSelectedTeams)
 RestoreSelectedTeams:
                 jmp     _RestoreSelectedTeams
-
-; ===== DIY_ComputeAverageTeamStrengthTier =====
-; prototype: unsigned __int16 __usercall DIY_ComputeAverageTeamStrengthTier@<d0>(unsigned __int16 count@<d0>, const void *table@<a0>)
-DIY_ComputeAverageTeamStrengthTier:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)        ; table (2nd param)
-                move.l  d0,-(sp)        ; count (1st param)
-                jsr     _DIY_ComputeAverageTeamStrengthTier
-                addq.l  #8,sp
-                ; d0 = (avg << 16) | tier — unpack to d0=avg, d1=tier
-                move.l  d0,d1
-                swap    d0              ; d0.w = avg
-                ; d1.w = tier (low word)
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 euroCupTitleHolderTeamId:
                 dc.w $0000
 cupWinnersCupTitleHolderTeamId:
@@ -26266,51 +24484,13 @@ loc_12B22A:
 locret_12B234:
                 rts
 
-; ===== Career_DrawEuropeanCupTeamsAndCopyGrids =====
-; prototype: void __usercall Career_DrawEuropeanCupTeamsAndCopyGrids()
-; ===== Career_DrawEuropeanCupTeamsAndCopyGrids ===== (ported to C)
-Career_DrawEuropeanCupTeamsAndCopyGrids:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _Career_DrawEuropeanCupTeamsAndCopyGrids
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
 ; ===== Career_DrawRandomTeamFromPoolAndCopyGrid ===== (ported as static in career_eurocups.c)
 ; Callers should use Career_DrawEuropeanCupTeamsAndCopyGrids instead.
 Career_DrawRandomTeamFromPoolAndCopyGrid:
                 rts
 
-; ===== Career_UpdateEuropeanChampionshipCompetitions =====
-; prototype: void __usercall Career_UpdateEuropeanChampionshipCompetitions()
-; ===== Career_UpdateEuropeanChampionshipCompetitions ===== (ported to C)
-Career_UpdateEuropeanChampionshipCompetitions:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _Career_UpdateEuropeanChampionshipCompetitions
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
 ; ===== Career_UpdateEuropeanChampionshipCompetitionSlot ===== (inlined into C)
 Career_UpdateEuropeanChampionshipCompetitionSlot:
-                rts
-
-; ===== DIY_BuildQualifiedTeamListFromSortedTable_EC ===== (ported to C → _DIY_BuildQualifiedTeamListFromSortedTable)
-DIY_BuildQualifiedTeamListFromSortedTable_EC:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                andi.l  #$FFFF,d7
-                move.l  d7,-(sp)
-                jsr     _DIY_BuildQualifiedTeamListFromSortedTable
-                lea     8(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== Career_UpdateWorldCupCompetitions =====
-; prototype: void __usercall Career_UpdateWorldCupCompetitions()
-; ===== Career_UpdateWorldCupCompetitions ===== (ported to C)
-Career_UpdateWorldCupCompetitions:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _Career_UpdateWorldCupCompetitions
-                movem.l (sp)+,d0-d7/a0-a6
                 rts
 
 ; ===== Career_UpdateWorldCupCompetitionSlot =====
@@ -26318,65 +24498,16 @@ Career_UpdateWorldCupCompetitions:
 ; ===== Career_UpdateWorldCupCompetitionSlot ===== (inlined into C)
 Career_UpdateWorldCupCompetitionSlot:
                 rts
-
-; ===== DIY_BuildQualifiedTeamListFromSortedTable_WC ===== (ported to C → _DIY_BuildQualifiedTeamListFromSortedTable)
-DIY_BuildQualifiedTeamListFromSortedTable_WC:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                andi.l  #$FFFF,d7
-                move.l  d7,-(sp)
-                jsr     _DIY_BuildQualifiedTeamListFromSortedTable
-                lea     8(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 loc_12B63E:
                 movem.l d0-d7/a0-a6,-(sp)
                 jsr     Career_AutoAdvanceLeagueCompetitionFromRecord
                 movem.l (sp)+,d0-d7/a0-a6
-
-; ===== DIY_BuildQualifiedTeamListFromDiyFileBuffer ===== (ported to C → _DIY_BuildQualifiedTeamListFromDiyFileBuffer)
-DIY_BuildQualifiedTeamListFromDiyFileBuffer:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                andi.l  #$FFFF,d7
-                move.l  d7,-(sp)
-                jsr     _DIY_BuildQualifiedTeamListFromDiyFileBuffer
-                lea     8(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 loc_12B6AC:
                 move.w  #$1991,(panicReasonCode).l
                 jsr     PanicHaltLoop
 loc_12B6BA:
                 move.w  #$1992,(panicReasonCode).l
                 jsr     PanicHaltLoop
-
-; ===== Career_UpdateEuroCupCompetitionSlot =====
-; prototype: void __usercall Career_UpdateEuroCupCompetitionSlot()
-; ===== Career_UpdateEuroCupCompetitionSlot ===== (ported to C → _Career_UpdateEuroCupCompetitionSlot)
-Career_UpdateEuroCupCompetitionSlot:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _Career_UpdateEuroCupCompetitionSlot
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== Career_UpdateCupWinnersCupCompetitionSlot =====
-; prototype: void __usercall Career_UpdateCupWinnersCupCompetitionSlot()
-; ===== Career_UpdateCupWinnersCupCompetitionSlot ===== (ported to C → _Career_UpdateCupWinnersCupCompetitionSlot)
-Career_UpdateCupWinnersCupCompetitionSlot:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _Career_UpdateCupWinnersCupCompetitionSlot
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== Career_UpdateUefaCupCompetitionSlot =====
-; prototype: void __usercall Career_UpdateUefaCupCompetitionSlot()
-; ===== Career_UpdateUefaCupCompetitionSlot ===== (ported to C → _Career_UpdateUefaCupCompetitionSlot)
-Career_UpdateUefaCupCompetitionSlot:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _Career_UpdateUefaCupCompetitionSlot
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 Career_QualifyTeamForEuroCup_IfEligibleCompetition:
                 rts
 Career_QualifyTeamForCupWinnersCup_IfEligibleCompetition:
@@ -26397,24 +24528,11 @@ AppendTeamToCupWinnersCupList:
                 rts
 AppendTeamToUefaCupList:
                 rts
-Career_AdvanceToNextSeason_UpdateCompetitions:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_AdvanceToNextSeason_UpdateCompetitions
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_ProcessCompetitionForNextSeason =====
 ; prototype: void __usercall Career_ProcessCompetitionForNextSeason(unsigned __int8 comp@<d0>)
 ; ===== Career_ProcessCompetitionForNextSeason ===== (ported to C)
 ; in: d0.b = competition ID
-Career_ProcessCompetitionForNextSeason:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FF,d0
-                move.l  d0,-(sp)
-                jsr     _Career_ProcessCompetitionForNextSeason
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== nullsub_13 =====
 ; prototype: void nullsub_13(...)
@@ -26459,37 +24577,14 @@ loc_12BCD0:
 ; prototype: void __usercall Career_ProcessSecondaryCompetitionForNextSeason(void *competition@<a4>)
 ; ===== Career_ProcessSecondaryCompetitionForNextSeason ===== (ported to C)
 ; in: a4 = competition record ptr
-Career_ProcessSecondaryCompetitionForNextSeason:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a4,-(sp)
-                jsr     _Career_ProcessSecondaryCompetitionForNextSeason
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_ProcessTertiaryCompetitionForNextSeason =====
 ; prototype: void __usercall Career_ProcessTertiaryCompetitionForNextSeason(void *competition@<a4>)
 ; ===== Career_ProcessTertiaryCompetitionForNextSeason ===== (ported to C)
 ; in: a4 = competition record ptr
-Career_ProcessTertiaryCompetitionForNextSeason:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a4,-(sp)
-                jsr     _Career_ProcessTertiaryCompetitionForNextSeason
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_ProcessPrimaryCompetitionForNextSeason ===== (ported to C, dead)
 Career_ProcessPrimaryCompetitionForNextSeason:
-                rts
-
-; ===== DIY_CopyCompetitionTeamIndexTable ===== (ported to C → _DIY_CopyCompetitionTeamIndexTable)
-DIY_CopyCompetitionTeamIndexTable:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a3,-(sp)
-                jsr     _DIY_CopyCompetitionTeamIndexTable
-                lea     4(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== Career_ProcessDiyLeagueQualificationEntry ===== (ported to C, dead)
@@ -26498,26 +24593,9 @@ Career_ProcessDiyLeagueQualificationEntry:
 
 ; ===== DIY_ApplyPromotionRelegationWeightsToScratch ===== (ported to C → _DIY_ApplyPromotionRelegationWeightsToScratch)
 ; a2=weights
-DIY_ApplyPromotionRelegationWeightsToScratch:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a2,-(sp)
-                jsr     _DIY_ApplyPromotionRelegationWeightsToScratch
-                lea     4(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_FillRandomTeamListExcludingSelected ===== (ported to C → _Career_FillRandomTeamListExcludingSelected)
 ; d0=excludeCount, a0=table, a1=compIds
-Career_FillRandomTeamListExcludingSelected:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _Career_FillRandomTeamListExcludingSelected
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== DIY_LoadLeagueScratchFromTable ===== (ported to C → _DIY_LoadLeagueScratchFromTable)
 DIY_LoadLeagueScratchFromTable:
@@ -26526,15 +24604,6 @@ DIY_LoadLeagueScratchFromTable:
 ; ===== DIY_SaveLeagueScratchToTable ===== (ported to C → _DIY_SaveLeagueScratchToTable)
 DIY_SaveLeagueScratchToTable:
                 jmp     _DIY_SaveLeagueScratchToTable
-
-; ===== DIY_ValidateLeagueScratchBuffer =====
-; prototype: void __usercall DIY_ValidateLeagueScratchBuffer()
-; ===== DIY_ValidateLeagueScratchBuffer ===== (ported to C → _DIY_ValidateLeagueScratchBuffer)
-DIY_ValidateLeagueScratchBuffer:
-                movem.l d0-d1/a0-a1,-(sp)
-                jsr     _DIY_ValidateLeagueScratchBuffer
-                movem.l (sp)+,d0-d1/a0-a1
-                rts
 
 ; ===== Career_SetCupPickList_Oceania =====
 ; prototype: void __usercall Career_SetCupPickList_Oceania()
@@ -26942,13 +25011,6 @@ DIY_SelectCompetitionSlot4FromCurrentDivision:
                 jsr     _DIY_SelectCompetitionSlot4FromCurrentDivision
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-
-; ===== DIY_RebuildCompetitionAndTeamSelectionCaches ===== (ported to C)
-DIY_RebuildCompetitionAndTeamSelectionCaches:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _DIY_RebuildCompetitionAndTeamSelectionCaches
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
                 ; === dead code below (old body) ===
                 cmpi.l  #0,(diyCompetitionPtr).l
                 beq.w   locret_12CE52
@@ -27022,20 +25084,6 @@ Career_CopyCompetitionTeamByIndex:
 competitionTeamIdScratchList4:
                 dc.w $0000,$0000,$0000,$0000
 
-; ===== TeamSelectionKeyCache_InsertSpaceSorted =====
-; prototype: void __usercall TeamSelectionKeyCache_InsertSpaceSorted(unsigned __int8 key@<d0>, unsigned __int16 insertionBytes@<d5>)
-TeamSelectionKeyCache_InsertSpaceSorted:
-                movem.l d0-d7/a0-a3/a5-a6,-(sp)
-                andi.l  #$FFFF,d5
-                move.l  d5,-(sp)
-                andi.l  #$FF,d0
-                move.l  d0,-(sp)
-                jsr     _TeamSelectionKeyCache_InsertSpaceSorted
-                addq.l  #8,sp
-                movea.l d0,a4
-                movem.l (sp)+,d0-d7/a0-a3/a5-a6
-                rts
-
 ; ===== Career_SetCurrentCompetitionSlot ===== (ported to C → _Career_SetCurrentCompetitionSlot)
 ; prototype: void __usercall Career_SetCurrentCompetitionSlot(void *comp@<a0>, unsigned __int16 slot@<d0>, unsigned __int16 divIdx@<d1>, unsigned __int16 hasSelectedTeams@<d2>)
 ; d1 is a hidden param: division index passed through to InitCompetitionFromRecord
@@ -27051,16 +25099,6 @@ Career_SetCurrentCompetitionSlot:
                 jsr     _Career_SetCurrentCompetitionSlot
                 lea     16(sp),sp
                 movem.l (sp)+,d1-d7/a2-a6
-                rts
-
-; ===== TeamSelectionKeyCache_BuildFromCompetitionBlock ===== (ported to C → _TeamSelectionKeyCache_BuildFromCompetitionBlock)
-; prototype: void __usercall TeamSelectionKeyCache_BuildFromCompetitionBlock(void *blk@<a0>)
-TeamSelectionKeyCache_BuildFromCompetitionBlock:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _TeamSelectionKeyCache_BuildFromCompetitionBlock
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== TeamSelectionKeyCache_AddNextRoundCupEntry ===== (dead — only caller ported to C)
@@ -27286,43 +25324,9 @@ locret_12D4D8:
 
 ; ===== Career_UpdateStatsAfterMatch ===== (ported to C → _Career_UpdateStatsAfterMatch)
 ; Register bridge: a1=team1, a2=team2, d0=compType, d4=packedGoals, d5=aggregate, d6=penalty, d7=flags
-Career_UpdateStatsAfterMatch:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d7
-                move.l  d7,-(sp)
-                andi.l  #$FFFF,d6
-                move.l  d6,-(sp)
-                andi.l  #$FFFF,d5
-                move.l  d5,-(sp)
-                andi.l  #$FFFF,d4
-                move.l  d4,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                move.l  a2,-(sp)
-                move.l  a1,-(sp)
-                jsr     _Career_UpdateStatsAfterMatch
-                lea     28(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== Career_AutoAdvanceLeagueFixtures ===== (ported to C → _Career_AutoAdvanceLeagueFixtures)
-; prototype: void __usercall Career_AutoAdvanceLeagueFixtures()
-Career_AutoAdvanceLeagueFixtures:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_AutoAdvanceLeagueFixtures
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== DIY_AdvanceLeagueFixtureIndex ===== (dead — only caller ported to C)
 DIY_AdvanceLeagueFixtureIndex:
-                rts
-
-; ===== Career_AutoAdvanceCupMatches ===== (ported to C → _Career_AutoAdvanceCupMatches)
-; prototype: void __usercall Career_AutoAdvanceCupMatches()
-Career_AutoAdvanceCupMatches:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_AutoAdvanceCupMatches
-                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; ===== DIY_AdvanceCupFixtureIndex ===== (dead — only caller ported to C)
@@ -27330,46 +25334,17 @@ DIY_AdvanceCupFixtureIndex:
                 addq.b  #1,d6
                 rts
 
-; ===== Career_AutoAdvanceCompetitionSlots =====
-; prototype: void __usercall Career_AutoAdvanceCompetitionSlots()
-; ===== Career_AutoAdvanceCompetitionSlots ===== (ported to C → _Career_AutoAdvanceCompetitionSlots)
-Career_AutoAdvanceCompetitionSlots:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_AutoAdvanceCompetitionSlots
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== Career_CopyCompetitionFileBufferToOrFromActive =====
 ; C bridge → _Career_CopyCompetitionFileBufferToOrFromActive (Chunk 92)
-Career_CopyCompetitionFileBufferToOrFromActive:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_CopyCompetitionFileBufferToOrFromActive
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_CopyCompetitionContextToOrFromActive =====
 ; C bridge → _Career_CopyCompetitionContextToOrFromActive (Chunk 92)
-Career_CopyCompetitionContextToOrFromActive:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_CopyCompetitionContextToOrFromActive
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_CopyTertiaryCompetitionContextToOrFromActive =====
 ; C bridge → _Career_CopyTertiaryCompetitionContextToOrFromActive (Chunk 92)
-Career_CopyTertiaryCompetitionContextToOrFromActive:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_CopyTertiaryCompetitionContextToOrFromActive
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_CopyEuroCupsCompetitionContextToOrFromActive =====
 ; C bridge → _Career_CopyEuroCupsCompetitionContextToOrFromActive (Chunk 92)
-Career_CopyEuroCupsCompetitionContextToOrFromActive:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_CopyEuroCupsCompetitionContextToOrFromActive
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_LoadCompetitionSlotStateFromBuffer =====
 ; C bridge → _Career_LoadCompetitionSlotStateFromBuffer(a0) (Chunk 92)
@@ -27393,62 +25368,24 @@ Career_StoreCompetitionSlotStateToBuffer:
 
 ; ===== Career_UpdateCareerFinishedFlag =====
 ; C bridge → _Career_UpdateCareerFinishedFlag (Chunk 92)
-Career_UpdateCareerFinishedFlag:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_UpdateCareerFinishedFlag
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== CareerPlayMatch =====
 ; C bridge → _CareerPlayMatch (Chunk 93)
-CareerPlayMatch:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _CareerPlayMatch
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_PlayMatchMenuLoop =====
 ; C bridge → _Career_PlayMatchMenuLoop (Chunk 93)
-Career_PlayMatchMenuLoop:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_PlayMatchMenuLoop
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_NextMatch =====
 ; C bridge → _Career_NextMatch (Chunk 93)
-Career_NextMatch:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_NextMatch
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_OpenCompetitionSlotMenuAndApplyChanges =====
 ; C bridge → _Career_OpenCompetitionSlotMenuAndApplyChanges(d2) (Chunk 93)
-Career_OpenCompetitionSlotMenuAndApplyChanges:
-                movem.l d2-d7/a2-a6,-(sp)
-                and.l   #$FFFF,d2
-                move.l  d2,-(sp)
-                jsr     _Career_OpenCompetitionSlotMenuAndApplyChanges
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_ProcessCurrentCompetitionSlotForMatch =====
 ; C bridge → _Career_ProcessCurrentCompetitionSlotForMatch (Chunk 93)
-Career_ProcessCurrentCompetitionSlotForMatch:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_ProcessCurrentCompetitionSlotForMatch
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_ProcessCurrentCompetitionSlotAfterMatch =====
 ; C bridge → _Career_ProcessCurrentCompetitionSlotAfterMatch (Chunk 93)
-Career_ProcessCurrentCompetitionSlotAfterMatch:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_ProcessCurrentCompetitionSlotAfterMatch
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== C-callable asm wrappers for menu functions (Chunk 93) =====
 ; These set d0=1, d1=0, d2=param from C stack, then call the real asm function
@@ -27578,59 +25515,18 @@ _asm_DIY_PostLoadCompetitionDispatch:
 ; ===== TeamSelectionKeyCache_GetListElementPtr =====
 ; C bridge → _TeamSelectionKeyCache_GetListElementPtr(d0, d1) → a1 (Chunk 92)
 ; Also sets a0 via calling GetListPtr, then computes a1 = a0 + (d1&0xFF)*12
-TeamSelectionKeyCache_GetListElementPtr:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d1,-(sp)        ; save d1
-                and.l   #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _TeamSelectionKeyCache_GetListPtr
-                addq.l  #4,sp
-                movea.l d0,a0           ; a0 = list ptr
-                movea.l d0,a1
-                move.l  (sp)+,d1        ; restore d1
-                andi.w  #$FF,d1
-                mulu.w  #$C,d1
-                adda.l  d1,a1           ; a1 = a0 + elementIndex * 12
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== TeamSelectionKeyCache_GetListPtr =====
 ; C bridge → _TeamSelectionKeyCache_GetListPtr(d0) → a0 (Chunk 92)
-TeamSelectionKeyCache_GetListPtr:
-                movem.l d1-d7/a1-a6,-(sp)
-                and.l   #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _TeamSelectionKeyCache_GetListPtr
-                addq.l  #4,sp
-                movea.l d0,a0
-                movem.l (sp)+,d1-d7/a1-a6
-                rts
 
 ; ===== TeamSelectionKeyCache_GetCurrentSelectedElementPtr =====
 ; C bridge → _TeamSelectionKeyCache_GetCurrentSelectedElementPtr() → a1 (Chunk 92)
-TeamSelectionKeyCache_GetCurrentSelectedElementPtr:
-                movem.l d1-d7/a0/a2-a6,-(sp)
-                jsr     _TeamSelectionKeyCache_GetCurrentSelectedElementPtr
-                movea.l d0,a1
-                movem.l (sp)+,d1-d7/a0/a2-a6
-                rts
 
 ; ===== TeamSelectionKeyCache_GetCurrentListPtr =====
 ; C bridge → _TeamSelectionKeyCache_GetCurrentListPtr() → a0 (Chunk 92)
-TeamSelectionKeyCache_GetCurrentListPtr:
-                movem.l d1-d7/a1-a6,-(sp)
-                jsr     _TeamSelectionKeyCache_GetCurrentListPtr
-                movea.l d0,a0
-                movem.l (sp)+,d1-d7/a1-a6
-                rts
 
 ; ===== Career_AdvanceToNextTeamSelectionKeyCacheEntry =====
 ; C bridge → _Career_AdvanceToNextTeamSelectionKeyCacheEntry (Chunk 92)
-Career_AdvanceToNextTeamSelectionKeyCacheEntry:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_AdvanceToNextTeamSelectionKeyCacheEntry
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_InitializeSelectedTeamAndStartingBalance =====
 ; Ported to C: _Career_InitializeSelectedTeamAndStartingBalance in src/career_init.c
@@ -28096,15 +25992,6 @@ careerTeamFlagsByRegionTable:
 ; ===== InitNewSeason =====
 ; Ported to C: _InitNewSeason in career_init.c (Chunk 197)
 ; in: a0 = src comp record, d1 = divisionIndex
-InitNewSeason:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _InitNewSeason
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
                 ; === dead code below (old body) ===
                 clr.w   (retired).l
                 move.b  2(a0),d7
@@ -28180,15 +26067,6 @@ loc_12E9D0:
 ; ===== Career_ViewOrEditCompetitionSlot =====
 ; Ported to C: _Career_ViewOrEditCompetitionSlot in career_init.c (Chunk 198)
 ; in: a0 = competition pointer, d0 = selection/divisionIndex
-Career_ViewOrEditCompetitionSlot:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                move.l  a0,-(sp)
-                jsr     _Career_ViewOrEditCompetitionSlot
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
                 ; === dead code below (old body) ===
                 lea     ((nationalTeamCompetitionsAndQualifications1+$96)).l,a2
 loc_12E9E6:
@@ -28296,21 +26174,6 @@ Career_AutoAdvanceLeagueCompetitionFromRecord:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== DIY_RecomputeCompetitionDerivedProgressionTable =====
-; prototype: void __usercall DIY_RecomputeCompetitionDerivedProgressionTable()
-DIY_RecomputeCompetitionDerivedProgressionTable:
-                jmp     _DIY_RecomputeCompetitionDerivedProgressionTable
-
-; ===== ContinueCareerNextSeason =====
-; prototype: char __usercall ContinueCareerNextSeason@<d0>()
-; ===== ContinueCareerNextSeason =====
-; Ported to C: _ContinueCareerNextSeason in career_init.c (Chunk 197)
-ContinueCareerNextSeason:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _ContinueCareerNextSeason
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== FindTeamInDIY =====
 ; prototype: unsigned __int16 FindTeamInDIY()
 ; in:
@@ -28320,15 +26183,6 @@ ContinueCareerNextSeason:
 ;     D1 -  index of that team in DIY competition, or -1 if not found
 ; Chunk 173: ported to C (_FindTeamInDIY)
 ; in: d0 = teamNo, a6 = comp pointer; out: d1 = index (or 0xFFFF)
-FindTeamInDIY:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a6,-(sp)
-                move.w  d0,-(sp)
-                jsr     _FindTeamInDIY
-                lea     6(sp),sp
-                move.w  d0,d1
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== GetMoreExpensiveTeamsCountWrapper ===== (dead code — no callers)
 GetMoreExpensiveTeamsCountWrapper:
@@ -28347,13 +26201,6 @@ findTeamInDIY_SuppressSideEffectsFlag:
 ; prototype: unsigned __int16 __usercall GetMoreExpensiveTeamsCount@<d2>(unsigned __int16 teamNo@<d0>, DIY_Competition *comp@<a6>)
 ; Chunk 171: ported to C (_GetMoreExpensiveTeamsCount)
 ; in: d0 = teamNo, a6 = comp pointer; out: d2 = count
-GetMoreExpensiveTeamsCount:
-                move.l  a6,-(sp)
-                move.w  d0,-(sp)
-                jsr     _GetMoreExpensiveTeamsCount
-                lea     6(sp),sp
-                move.w  d0,d2
-                rts
                 lea     (competitionFileBuffer).l,a6
                 move.w  $32(a6),d6
                 lea     $12E(a6),a5
@@ -28400,14 +26247,6 @@ SeasonReview_AdjustWeightsForCompetition:
 SeasonReview_ComputeCategoryForCompetition:
                 rts
 
-; ===== ShowLeavingMessage =====
-; Ported to C: _ShowLeavingMessage in src/career_status.c
-ShowLeavingMessage:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ShowLeavingMessage
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
 ; ===== ShowGreetingMessage =====
 ; Ported to C: _ShowGreetingMessage in src/career_status.c
 ShowGreetingMessage:
@@ -28440,14 +26279,6 @@ ShowEnjoyLastSeasonMessage:
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
 
-; ===== ShowRetirementMessage =====
-; Ported to C: _ShowRetirementMessage in src/career_status.c
-ShowRetirementMessage:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ShowRetirementMessage
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
 ; ===== Career_AppendTeamToTmdTeamPool =====
 ; Ported to C: _Career_AppendTeamToTmdTeamPool in src/career_teams.c
 ; Bridge: a0=team ptr → C param
@@ -28462,38 +26293,10 @@ Career_AppendTeamToTmdTeamPool:
 ; ===== Career_RemoveTeamFromTmdTeamPool =====
 ; Ported to C: _Career_RemoveTeamFromTmdTeamPool in src/career_teams.c
 ; Bridge: d0=teamNo → C param
-Career_RemoveTeamFromTmdTeamPool:
-                movem.l d0-d7/a0-a6,-(sp)
-                and.l   #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _Career_RemoveTeamFromTmdTeamPool
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== SearchTeamInTmdFile =====
 ; Ported to C: _SearchTeamInTmdFile in src/career_teams.c
 ; Bridge: d0=teamNo → C param, returns Z flag (0=found/Z set, 1=not found/Z clear)
-SearchTeamInTmdFile:
-                movem.l d1-d7/a0-a6,-(sp)
-                and.l   #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _SearchTeamInTmdFile
-                addq.l  #4,sp
-                tst.w   d0
-                movem.l (sp)+,d1-d7/a0-a6
-                rts
-
-; ===== Career_AutoAdvanceCompetitionAndPersistSlotState =====
-; prototype: void __usercall Career_AutoAdvanceCompetitionAndPersistSlotState(void *comp@<a0>)
-; Ported to C: _Career_AutoAdvanceCompetitionAndPersistSlotState (career_status.c)
-Career_AutoAdvanceCompetitionAndPersistSlotState:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _Career_AutoAdvanceCompetitionAndPersistSlotState
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 careerAutoAdvanceInProgress:
                 dc.w $0000
 pl1Coach:
@@ -28603,75 +26406,14 @@ DrawPatternFromIndex:
 ; ===== TrainingMatch_SaveSelectedPlayerId =====
 ; Ported to C: _TrainingMatch_SaveSelectedPlayerId in src/training_match.c
 ; Bridge: d1=value → C param
-TrainingMatch_SaveSelectedPlayerId:
-                movem.l d0-d7/a0-a6,-(sp)
-                and.l   #$FFFF,d1
-                move.l  d1,-(sp)
-                jsr     _TrainingMatch_SaveSelectedPlayerId
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== TrainingMatch_RemoveSavedPlayerId =====
 ; Ported to C: _TrainingMatch_RemoveSavedPlayerId in src/training_match.c
 ; Bridge: d1=value → C param
-TrainingMatch_RemoveSavedPlayerId:
-                movem.l d0-d7/a0-a6,-(sp)
-                and.l   #$FFFF,d1
-                move.l  d1,-(sp)
-                jsr     _TrainingMatch_RemoveSavedPlayerId
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== TrainingMatch_SaveLastMatchState =====
-; Ported to C: _TrainingMatch_SaveLastMatchState in src/training_match.c
-TrainingMatch_SaveLastMatchState:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _TrainingMatch_SaveLastMatchState
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== TrainingMatch_RestoreLastMatchState =====
-; Ported to C: _TrainingMatch_RestoreLastMatchState in src/training_match.c
-TrainingMatch_RestoreLastMatchState:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _TrainingMatch_RestoreLastMatchState
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== TrainingMatch_RestoreSavedTeamSelectionState =====
-; Ported to C: _TrainingMatch_RestoreSavedTeamSelectionState in src/training_match.c
-TrainingMatch_RestoreSavedTeamSelectionState:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _TrainingMatch_RestoreSavedTeamSelectionState
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== TrainingMatch_SaveTeamSelectionState =====
-; Ported to C: _TrainingMatch_SaveTeamSelectionState in src/training_match.c
-TrainingMatch_SaveTeamSelectionState:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _TrainingMatch_SaveTeamSelectionState
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== CheckIfTeamIsChanged =====
 ; Ported to C: _CheckIfTeamIsChanged in src/training_match.c
 ; Bridge: returns Z flag (0=same/Z set, 1=different/Z clear)
-CheckIfTeamIsChanged:
-                movem.l d1-d7/a0-a6,-(sp)
-                jsr     _CheckIfTeamIsChanged
-                tst.w   d0
-                movem.l (sp)+,d1-d7/a0-a6
-                rts
-
-; ===== PlayTrainingGame ===== (ported to C → _PlayTrainingGame)
-PlayTrainingGame:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _PlayTrainingGame
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 trainingGame:
                 dc.w $0000
 teamAName:
@@ -28680,13 +26422,6 @@ teamAName:
 teamBName:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $00
-
-; ===== TrainingMatch_BuildCurrentTeamFromCareerTeam ===== (ported to C → _TrainingMatch_BuildCurrentTeamFromCareerTeam)
-TrainingMatch_BuildCurrentTeamFromCareerTeam:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _TrainingMatch_BuildCurrentTeamFromCareerTeam
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 ; unsigned __int8 (*[8])[9]
 trainingPosOrderTables:
                 ; unsigned __int8 (*[8])[9]
@@ -28763,33 +26498,10 @@ TrainingMatch_AddTrialPlayerAtPosition:
 ; ===== Career_ApplyPostMatchPlayerStatModsIfCareerTeam =====
 ; Ported to C: _Career_ApplyPostMatchPlayerStatModsIfCareerTeam in src/career_status.c (Chunk 95)
 ; Asm stub: a0=team, a1=mods -> push as C args
-Career_ApplyPostMatchPlayerStatModsIfCareerTeam:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _Career_ApplyPostMatchPlayerStatModsIfCareerTeam
-                addq.l  #8,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== Career_UpdateSinglePlayerPostMatchStats =====
 ; Ported to C: _Career_UpdateSinglePlayerPostMatchStats in src/career_status.c (Chunk 95)
 ; Asm stub: a6=playerSlotPtr -> push as C arg
-Career_UpdateSinglePlayerPostMatchStats:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a6,-(sp)
-                jsr     _Career_UpdateSinglePlayerPostMatchStats
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== CheckPlayersLeavingComing =====
-; Ported to C: _CheckPlayersLeavingComing in src/career_status.c (Chunk 95)
-CheckPlayersLeavingComing:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _CheckPlayersLeavingComing
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== PlayerJoinedClubOnTrial =====
 ; Ported to C: _PlayerJoinedClubOnTrial in src/career_status.c (Chunk 95)
@@ -29783,36 +27495,10 @@ chooseTeamsFriendlyMenu:
                 dc.w $0000              ; textColor
                 dc.w MENU_CMD_END       ; entry58_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
-
-; ===== ChooseTeamsFriendlyInitFinish =====
-; prototype: void __usercall ChooseTeamsFriendlyInitFinish()
-ChooseTeamsFriendlyInitFinish:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ChooseTeamsFriendlyInitFinish
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== ChooseTeamsFriendlyCommon2 =====
-; prototype: void __usercall ChooseTeamsFriendlyCommon2(struct MenuEntry *entry@<a5>)
-ChooseTeamsFriendlyCommon2:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _ChooseTeamsFriendlyCommon2
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; __int16[5]
 bureaucracyMenuItems:
                 ; __int16[5]
                 dc.w 58,57,55,0,-1      ; Array of menu item indices (58, 57, 55, 0, -1) for the Bureaucracy menu screen.
-
-; ===== ChooseTeamsFriendly_UpdateMenuEntryYLayout =====
-; prototype: void __usercall ChooseTeamsFriendly_UpdateMenuEntryYLayout()
-ChooseTeamsFriendly_UpdateMenuEntryYLayout:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ChooseTeamsFriendly_UpdateMenuEntryYLayout
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 chooseTeamsFriendly_leftListNumEntries:
                 dc.w $0000
 chooseTeamsFriendly_middleListNumEntries:
@@ -29861,17 +27547,6 @@ AddTeamToBuffer:
                 movem.l (sp)+,d1-d7/a1-a6
                 rts
 
-; ===== DeselectTeam =====
-; prototype: void __usercall DeselectTeam(struct TeamFile *teamToRemove@<a0>)
-; Ported to C: _DeselectTeam in src/teams.c
-DeselectTeam:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _DeselectTeam
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
 ; ===== FindTeam =====
 ; prototype: struct TeamFile *__usercall FindTeam@<a0>(struct TeamFile *teamToFind@<a0>, unsigned __int16 index@<d2>)
 ; in:
@@ -29881,18 +27556,6 @@ DeselectTeam:
 ;      D2 = index of team in sel. teams buffer
 ; Ported to C: _FindTeam in src/teams.c
 ; Bridge: a0=team → a0=found, d2=remaining
-FindTeam:
-                movem.l d1/d3-d7/a1-a6,-(sp)
-                subq.l  #4,sp           ; temp for outRemainingCount
-                pea     (sp)            ; push &temp
-                move.l  a0,-(sp)        ; push teamToFind
-                jsr     _FindTeam
-                addq.l  #8,sp           ; clean args
-                movea.l d0,a0           ; return ptr -> a0
-                move.w  (sp),d2         ; read remaining count
-                addq.l  #4,sp           ; free temp
-                movem.l (sp)+,d1/d3-d7/a1-a6
-                rts
 ; Menu_ChooseTeamsFriendly2
 chooseTeamsFriendlyMenu2:
                 ; Menu_ChooseTeamsFriendly2
@@ -31168,22 +28831,6 @@ chooseTeamsFriendlyMenu2:
                 dc.w MENU_CMD_END       ; entry77_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== ChooseTeamsFriendlyInit =====
-; prototype: void __usercall ChooseTeamsFriendlyInit()
-ChooseTeamsFriendlyInit:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ChooseTeamsFriendlyInit
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== SetTeamEntriesStringsAndColors =====
-; prototype: void __usercall SetTeamEntriesStringsAndColors()
-SetTeamEntriesStringsAndColors:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SetTeamEntriesStringsAndColors
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
 ; ===== ChooseTeamsFriendlyCommon =====
 ; prototype: __int16 __usercall ChooseTeamsFriendlyCommon@<d0>(struct MenuEntry *entry@<a5>)
 ; in:
@@ -31194,51 +28841,13 @@ SetTeamEntriesStringsAndColors:
 ; through team controls in the following order:
 ; unselected -> CPU -> player coach -> coach -> unselected...
 ; It also updates the menu to reflect the new selection.
-ChooseTeamsFriendlyCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _ChooseTeamsFriendlyCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== ChooseTeamsFriendly_DrawChangeTeamsPrompt =====
-; prototype: void __usercall ChooseTeamsFriendly_DrawChangeTeamsPrompt()
-ChooseTeamsFriendly_DrawChangeTeamsPrompt:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SetChooseChangeTeamsEntries
-                lea     (chooseTeamsFriendly_changeTeamsPromptDrawList).l,a0
-                jsr     DrawMenuItemsWaitForVSync
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 chooseTeamsFriendly_changeTeamsPromptDrawList:
                 dc.l $004D004C,$004AFFFF
-
-; ===== SetChooseChangeTeamsEntries =====
-; prototype: void __usercall SetChooseChangeTeamsEntries()
-SetChooseChangeTeamsEntries:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SetChooseChangeTeamsEntries
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== ViewSelTeamsSetColumns =====
 ; prototype: void __usercall ViewSelTeamsSetColumns()
 ; Set columns and dynamically calculate height of entries
 ; depending on their number.
-ViewSelTeamsSetColumns:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ViewSelTeamsSetColumns
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== DeselectAllTeams =====
-; prototype: void __usercall DeselectAllTeams()
-DeselectAllTeams:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _DeselectAllTeams
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 viewTeamsColumn1:
                 dc.w $0000              ; Number of teams in columns 1 when selecting teams
 viewTeamsColumn2:
@@ -31837,86 +29446,6 @@ asc_131FF2:
 ; DOS: cseg_47981
 jmp_SetExitMenuFlag_6:
                 jmp     SetExitMenuFlag
-
-; ===== DesignDIYLeagueSetName =====
-; prototype: void __usercall DesignDIYLeagueSetName(struct MenuEntry *entry@<a5>)
-DesignDIYLeagueSetName:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYLeagueSetName
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYLeagueChangePitchType =====
-; prototype: void __usercall DesignDIYLeagueChangePitchType(struct MenuEntry *entry@<a5>)
-DesignDIYLeagueChangePitchType:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYLeagueChangePitchType
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYLeagueChangeStartMonth =====
-; prototype: __int16 DesignDIYLeagueChangeStartMonth()
-DesignDIYLeagueChangeStartMonth:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYLeagueChangeStartMonth
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYLeagueChangeEndMonth =====
-; prototype: void __usercall DesignDIYLeagueChangeEndMonth(struct MenuEntry *entry@<a5>)
-DesignDIYLeagueChangeEndMonth:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYLeagueChangeEndMonth
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYLeagueChangeNumberOfTeams =====
-; prototype: void __usercall DesignDIYLeagueChangeNumberOfTeams(struct MenuEntry *entry@<a5>)
-DesignDIYLeagueChangeNumberOfTeams:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYLeagueChangeNumberOfTeams
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYLeagueChangePlayEachTeam =====
-; prototype: void __usercall DesignDIYLeagueChangePlayEachTeam(struct MenuEntry *entry@<a5>)
-DesignDIYLeagueChangePlayEachTeam:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYLeagueChangePlayEachTeam
-                addq.l  #4,sp
-                rts
-
-; ===== SetPlayEachTeamString =====
-; prototype: void __usercall SetPlayEachTeamString(struct MenuEntry *entry@<a5>)
-SetPlayEachTeamString:
-                move.l  a5,-(sp)
-                jsr     _SetPlayEachTeamString
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYLeagueChangeNumPointsForWin =====
-; prototype: void __usercall DesignDIYLeagueChangeNumPointsForWin(struct MenuEntry *entry@<a5>)
-DesignDIYLeagueChangeNumPointsForWin:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYLeagueChangeNumPointsForWin
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYLeagueChangeMinSubstitutes =====
-; prototype: void __usercall DesignDIYLeagueChangeMinSubstitutes(struct MenuEntry *entry@<a5>)
-DesignDIYLeagueChangeMinSubstitutes:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYLeagueChangeMinSubstitutes
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYLeagueChangeMaxSubstitutes =====
-; prototype: void __usercall DesignDIYLeagueChangeMaxSubstitutes(struct MenuEntry *entry@<a5>)
-DesignDIYLeagueChangeMaxSubstitutes:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYLeagueChangeMaxSubstitutes
-                addq.l  #4,sp
-                rts
 diyPitchTypeOrSeason_1:
                 dc.w $0000
 diyLeagueStartingMonth:
@@ -32758,67 +30287,6 @@ diyLeagueTournamentMenu:
                 dc.l _jmp_SetExitMenuFlag_7 ; funcPtr
                 dc.w MENU_CMD_END       ; entry42_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
-
-; ===== DIYLeagueTournamentOnRestore ===== (ported to C → _DIYLeagueTournamentOnRestore)
-DIYLeagueTournamentOnRestore:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _DIYLeagueTournamentOnRestore
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== DIYLeagueTournamentMatch ===== (ported to C → _DIYLeagueTournamentMatch)
-DIYLeagueTournamentMatch:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _DIYLeagueTournamentMatch
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== DIYLeagueTournamentOnSelect4 ===== (ported to C → _DIYLeagueTournamentOnSelect4)
-DIYLeagueTournamentOnSelect4:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _DIYLeagueTournamentOnSelect4
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== DIYLeagueTournamentResult ===== (ported to C → _DIYLeagueTournamentResult)
-DIYLeagueTournamentResult:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _DIYLeagueTournamentResult
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== DIYLeagueTournamentViewMatch ===== (ported to C → _DIYLeagueTournamentViewMatch)
-DIYLeagueTournamentViewMatch:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _DIYLeagueTournamentViewMatch
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== DIYLeagueTournamentViewHighlights ===== (ported to C → _DIYLeagueTournamentViewHighlights)
-DIYLeagueTournamentViewHighlights:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _DIYLeagueTournamentViewHighlights
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== DIYLeagueTournamentViewResult ===== (ported to C → _DIYLeagueTournamentViewResult)
-DIYLeagueTournamentViewResult:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _DIYLeagueTournamentViewResult
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 loc_132E24:
                 bsr.w   DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus
                 lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a5
@@ -32828,16 +30296,6 @@ loc_132E24:
 ; ===== DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus ===== (ported to C)
 DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus:
                 jmp     _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus
-
-; ===== DIYLeagueTournament16BeforeDraw ===== (ported to C → _DIYLeagueTournament16BeforeDraw)
-; prototype: void __usercall DIYLeagueTournament16BeforeDraw(struct MenuEntry *entry@<a5>)
-DIYLeagueTournament16BeforeDraw:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _DIYLeagueTournament16BeforeDraw
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; char *[8]
 groupStringTable:
                 ; char *[8]
@@ -34222,102 +31680,6 @@ aHyphen:
 jmp_SetExitMenuFlag_4:
                 jmp     SetExitMenuFlag
 
-; ===== DesignDIYCupOnSelect2 =====
-; prototype: void __usercall DesignDIYCupOnSelect2(struct MenuEntry *entry@<a5>)
-DesignDIYCupOnSelect2:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYCupOnSelect2
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYCupOnSelect3 =====
-; prototype: void __usercall DesignDIYCupOnSelect3(struct MenuEntry *entry@<a5>)
-DesignDIYCupOnSelect3:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYCupOnSelect3
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYCupOnSelect4 =====
-; prototype: void __usercall DesignDIYCupOnSelect4(struct MenuEntry *entry@<a5>)
-DesignDIYCupOnSelect4:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYCupOnSelect4
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYCupOnSelect5 =====
-; prototype: void __usercall DesignDIYCupOnSelect5(struct MenuEntry *entry@<a5>)
-DesignDIYCupOnSelect5:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYCupOnSelect5
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYCupOnSelect7 =====
-; prototype: void __usercall DesignDIYCupOnSelect7(struct MenuEntry *entry@<a5>)
-DesignDIYCupOnSelect7:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYCupOnSelect7
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYCupOnSelect9 =====
-; prototype: void __usercall DesignDIYCupOnSelect9(struct MenuEntry *entry@<a5>)
-DesignDIYCupOnSelect9:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYCupOnSelect9
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYCupOnSelect11 =====
-; prototype: void __usercall DesignDIYCupOnSelect11(struct MenuEntry *entry@<a5>)
-DesignDIYCupOnSelect11:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYCupOnSelect11
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYCupOnSelect13 =====
-; prototype: void __usercall DesignDIYCupOnSelect13(struct MenuEntry *entry@<a5>)
-DesignDIYCupOnSelect13:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYCupOnSelect13
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYCupOnSelect15 =====
-; prototype: void __usercall DesignDIYCupOnSelect15(struct MenuEntry *entry@<a5>)
-DesignDIYCupOnSelect15:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYCupOnSelect15
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYCupOnSelect20 =====
-; prototype: void __usercall DesignDIYCupOnSelect20(struct MenuEntry *entry@<a5>)
-DesignDIYCupOnSelect20:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYCupOnSelect20
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYCupOnSelect21 =====
-; prototype: void __usercall DesignDIYCupOnSelect21(struct MenuEntry *entry@<a5>)
-DesignDIYCupOnSelect21:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYCupOnSelect21
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYCupOnSelect22 =====
-; prototype: void __usercall DesignDIYCupOnSelect22(struct MenuEntry *entry@<a5>)
-DesignDIYCupOnSelect22:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYCupOnSelect22
-                addq.l  #4,sp
-                rts
-
 ; ===== DesignDIYCup_GetRoundIndexFromMenuEntry =====
 ; prototype: void __usercall DesignDIYCup_GetRoundIndexFromMenuEntry(struct MenuEntry *entry@<a5>)
 DesignDIYCup_GetRoundIndexFromMenuEntry:
@@ -35332,19 +32694,6 @@ DIYCupOnSelect9:
 
 ; ===== DesignDIYCup_UpdateMatchListScrollAndRebuildStrings ===== (ported to C)
 ; Returns d0: 0=no change, 1=rebuilt. Caller checks via tst.w d0.
-DesignDIYCup_UpdateMatchListScrollAndRebuildStrings:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _DesignDIYCup_UpdateMatchListScrollAndRebuildStrings
-                movem.l (sp)+,d2-d7/a2-a6
-                tst.w   d0
-                rts
-
-; ===== DesignDIYCup_BuildMatchListEntryStrings ===== (ported to C → _DesignDIYCup_BuildMatchListEntryStrings)
-DesignDIYCup_BuildMatchListEntryStrings:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _DesignDIYCup_BuildMatchListEntryStrings
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== DesignDIYCup_AppendOrTeamNameToMenuEntry ===== (dead — inlined into C)
 DesignDIYCup_AppendOrTeamNameToMenuEntry:
@@ -35352,55 +32701,6 @@ DesignDIYCup_AppendOrTeamNameToMenuEntry:
 
 ; ===== DesignDIYCup_AppendTeamNameToMenuEntry ===== (dead — inlined into C)
 DesignDIYCup_AppendTeamNameToMenuEntry:
-                rts
-
-; ===== DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection ===== (ported to C → _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection)
-DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== DIYCupOnSelect3 ===== (ported to C → _DIYCupOnSelect3)
-DIYCupOnSelect3:
-                move.l  a5,-(sp)
-                jsr     _DIYCupOnSelect3
-                addq.l  #4,sp
-                rts
-
-; ===== DIYCupOnSelect4 ===== (ported to C → _DIYCupOnSelect4)
-DIYCupOnSelect4:
-                move.l  a5,-(sp)
-                jsr     _DIYCupOnSelect4
-                addq.l  #4,sp
-                rts
-
-; ===== DIYCupOnSelect5 ===== (ported to C → _DIYCupOnSelect5)
-DIYCupOnSelect5:
-                move.l  a5,-(sp)
-                jsr     _DIYCupOnSelect5
-                addq.l  #4,sp
-                rts
-
-; ===== DIYCupOnSelect6 ===== (ported to C → _DIYCupOnSelect6)
-DIYCupOnSelect6:
-                move.l  a5,-(sp)
-                jsr     _DIYCupOnSelect6
-                addq.l  #4,sp
-                rts
-
-; ===== DIYCupOnSelect7 ===== (ported to C → _DIYCupOnSelect7)
-DIYCupOnSelect7:
-                move.l  a5,-(sp)
-                jsr     _DIYCupOnSelect7
-                addq.l  #4,sp
-                rts
-
-; ===== DIYCupOnSelect8 ===== (ported to C → _DIYCupOnSelect8)
-DIYCupOnSelect8:
-                move.l  a5,-(sp)
-                jsr     _DIYCupOnSelect8
-                addq.l  #4,sp
                 rts
 
 ; ===== DIYCupOnSelectCommon ===== (dead — only called from now-ported OnSelect3-8)
@@ -35812,55 +33112,6 @@ menuMusicStrTable:
                 dc.l aOn                ; "ON"
 
 ; ===== OptionsMenuBeforeDraw =====
-; Ported to C: _OptionsMenuBeforeDraw in src/menus.c
-
-; ===== ChangePitchType =====
-; Ported to C: _ChangePitchType in src/menus.c
-ChangePitchType:
-                move.l  a5,-(sp)
-                jsr     _ChangePitchType
-                addq.l  #4,sp
-                rts
-
-; ===== ChangeGameLength =====
-; Ported to C: _ChangeGameLength in src/menus.c
-ChangeGameLength:
-                move.l  a5,-(sp)
-                jsr     _ChangeGameLength
-                addq.l  #4,sp
-                rts
-
-; ===== ChangeAutoReplays =====
-; Ported to C: _ChangeAutoReplays in src/menus.c
-ChangeAutoReplays:
-                move.l  a5,-(sp)
-                jsr     _ChangeAutoReplays
-                addq.l  #4,sp
-                rts
-
-; ===== ChangeAllPlTeamsEqual =====
-; Ported to C: _ChangeAllPlTeamsEqual in src/menus.c
-ChangeAllPlTeamsEqual:
-                move.l  a5,-(sp)
-                jsr     _ChangeAllPlTeamsEqual
-                addq.l  #4,sp
-                rts
-
-; ===== ChangeAutoSaveHighlights =====
-; Ported to C: _ChangeAutoSaveHighlights in src/menus.c
-ChangeAutoSaveHighlights:
-                move.l  a5,-(sp)
-                jsr     _ChangeAutoSaveHighlights
-                addq.l  #4,sp
-                rts
-
-; ===== ChangeMenuMusic =====
-; Ported to C: _ChangeMenuMusic in src/menus.c
-ChangeMenuMusic:
-                move.l  a5,-(sp)
-                jsr     _ChangeMenuMusic
-                addq.l  #4,sp
-                rts
 showPrereleaseCounter:
                 dc.w $0000
 ; Menu_DesignDiyTournament
@@ -38123,104 +35374,6 @@ diyStage6PlayCountStrTab:
 DesignDIYTournamentOnSelect91:
                 jmp     SetExitMenuFlag
 
-; ===== DesignDIYTournamentOnSelect2 ===== (ported to C → _DesignDIYTournamentOnSelect2)
-DesignDIYTournamentOnSelect2:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYTournamentOnSelect2
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYTournamentOnSelect3 ===== (ported to C → _DesignDIYTournamentOnSelect3)
-DesignDIYTournamentOnSelect3:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYTournamentOnSelect3
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYTournamentOnSelect4 ===== (ported to C → _DesignDIYTournamentOnSelect4)
-DesignDIYTournamentOnSelect4:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYTournamentOnSelect4
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYTournamentOnSelect5 ===== (ported to C → _DesignDIYTournamentOnSelect5)
-DesignDIYTournamentOnSelect5:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYTournamentOnSelect5
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYTournamentOnSelect7 ===== (ported to C → _DesignDIYTournamentOnSelect7)
-DesignDIYTournamentOnSelect7:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYTournamentOnSelect7
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYTournamentOnSelect9 ===== (ported to C → _DesignDIYTournamentOnSelect9)
-DesignDIYTournamentOnSelect9:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYTournamentOnSelect9
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYTournamentOnSelect11 ===== (ported to C → _DesignDIYTournamentOnSelect11)
-DesignDIYTournamentOnSelect11:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYTournamentOnSelect11
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYTournamentOnSelect13 ===== (ported to C → _DesignDIYTournamentOnSelect13)
-DesignDIYTournamentOnSelect13:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYTournamentOnSelect13
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYTournamentOnSelect21 ===== (ported to C → _DesignDIYTournamentOnSelect21)
-DesignDIYTournamentOnSelect21:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYTournamentOnSelect21
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYTournamentOnSelect23 ===== (ported to C → _DesignDIYTournamentOnSelect23)
-DesignDIYTournamentOnSelect23:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYTournamentOnSelect23
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYTournamentOnSelect24 ===== (ported to C → _DesignDIYTournamentOnSelect24)
-DesignDIYTournamentOnSelect24:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYTournamentOnSelect24
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYTournamentOnSelect25 ===== (ported to C → _DesignDIYTournamentOnSelect25)
-DesignDIYTournamentOnSelect25:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYTournamentOnSelect25
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYTournamentOnSelect26 ===== (ported to C → _DesignDIYTournamentOnSelect26)
-DesignDIYTournamentOnSelect26:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYTournamentOnSelect26
-                addq.l  #4,sp
-                rts
-
-; ===== DesignDIYTournamentOnSelect28 ===== (ported to C → _DesignDIYTournamentOnSelect28)
-DesignDIYTournamentOnSelect28:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYTournamentOnSelect28
-                addq.l  #4,sp
-                rts
-
 ; ===== DesignDIYTournament_GetStageBlockFromMenuEntry ===== (replaced by static getTournamentStageBlock in C)
 DesignDIYTournament_GetStageBlockFromMenuEntry:
                 rts             ; dead — all callers ported to C
@@ -38228,13 +35381,6 @@ DesignDIYTournament_GetStageBlockFromMenuEntry:
 ; ===== DesignDIYTournament_CacheStageSelection ===== (ported to C → _DesignDIYTournament_CacheStageSelection)
 DesignDIYTournament_CacheStageSelection:
                 rts             ; dead — all callers ported to C
-
-; ===== DesignDIYTournament_AdjustStageQualifiers ===== (ported to C → _DesignDIYTournament_AdjustStageQualifiers)
-DesignDIYTournament_AdjustStageQualifiers:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYTournament_AdjustStageQualifiers
-                addq.l  #4,sp
-                rts
 ; ===== DesignDIYTournament_RedrawStageItemsFromBlock ===== (ported to C → _DesignDIYTournament_RedrawStageItemsFromBlock)
 DesignDIYTournament_RedrawStageItemsFromBlock:
                 rts             ; dead — all callers ported to C
@@ -38242,13 +35388,6 @@ DesignDIYTournament_RedrawStageItemsFromBlock:
 ; ===== DIYTournament_RecalculateNumStages ===== (ported to C → _DIYTournament_RecalculateNumStages)
 DIYTournament_RecalculateNumStages:
                 rts             ; dead — all callers ported to C
-
-; ===== DesignDIYTournamentOnSelect20 ===== (ported to C → _DesignDIYTournamentOnSelect20)
-DesignDIYTournamentOnSelect20:
-                move.l  a5,-(sp)
-                jsr     _DesignDIYTournamentOnSelect20
-                addq.l  #4,sp
-                rts
 
 ; ===== DIYTournament_ComputeGroupLayoutForTeams =====
 ; prototype: __int16 __usercall DIYTournament_ComputeGroupLayoutForTeams@<d3>(__int16 candidate@<d0>, __int16 current@<d6>, __int16 stage@<d7>)
@@ -38672,11 +35811,6 @@ jmpSetExitMenuFlag:
 ; ===== FriendlyPitchTypeProc =====
 ; Ported to C: _FriendlyPitchTypeProc in src/menus.c
 ; Bridge: a5=MenuEntry* → C param
-FriendlyPitchTypeProc:
-                move.l  a5,-(sp)
-                jsr     _FriendlyPitchTypeProc
-                addq.l  #4,sp
-                rts
 friendlyOk:
                 dc.w $0000              ; Initialised to 0
                                         ; set to 1 when ok is selected in friendly game menu
@@ -38713,11 +35847,6 @@ maxSubstitutes:
 
 ; ===== EditCustomTeam =====
 ; Bridge to C: _EditCustomTeam
-EditCustomTeam:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _EditCustomTeam
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== EditTeamsCallback ===== (ported to C → _EditTeamsCallback in edit_tactics.c)
 ; Bridge: a0→stack param
@@ -40140,61 +37269,10 @@ shirtsIndexTable:
 
 ; ===== ImportTeamsMenu =====
 ; Bridge to C: _ImportTeamsMenu
-ImportTeamsMenu:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _ImportTeamsMenu
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== EditTeamsUndo =====
 ; prototype: void __usercall EditTeamsUndo()
 ; Restore team currently editing.
-
-; ===== EditTeamsSelectPrimaryShirtType =====
-; prototype: void __usercall EditTeamsSelectPrimaryShirtType(MenuEntry *menu@<a5>)
-EditTeamsSelectPrimaryShirtType:
-                move.l  a5,-(sp)
-                jsr     _EditTeamsSelectPrimaryShirtType
-                addq.l  #4,sp
-                rts
-
-; ===== EditTeamsSelectSecondaryShirtType =====
-; prototype: void __usercall EditTeamsSelectSecondaryShirtType(MenuEntry *menu@<a5>)
-EditTeamsSelectSecondaryShirtType:
-                move.l  a5,-(sp)
-                jsr     _EditTeamsSelectSecondaryShirtType
-                addq.l  #4,sp
-                rts
-
-; ===== EditTeamsChangePlayerName =====
-; prototype: void __usercall EditTeamsChangePlayerName(MenuEntry *menu@<a5>)
-EditTeamsChangePlayerName:
-                move.l  a5,-(sp)
-                jsr     _EditTeamsChangePlayerName
-                addq.l  #4,sp
-                rts
-
-; ===== EditTeamsSelectTeamName ===== (ported to C → _EditTeamsSelectTeamName)
-EditTeamsSelectTeamName:
-                move.l  a5,-(sp)
-                jsr     _EditTeamsSelectTeamName
-                addq.l  #4,sp
-                rts
-
-; ===== EditTeamsSelectCoachName ===== (ported to C → _EditTeamsSelectCoachName)
-EditTeamsSelectCoachName:
-                move.l  a5,-(sp)
-                jsr     _EditTeamsSelectCoachName
-                addq.l  #4,sp
-                rts
-
-; ===== EditTeamsChangePlayerFace =====
-; prototype: void __usercall EditTeamsChangePlayerFace(MenuEntry *menu@<a5>)
-EditTeamsChangePlayerFace:
-                move.l  a5,-(sp)
-                jsr     _EditTeamsChangePlayerFace
-                addq.l  #4,sp
-                rts
 
 ; ===== InitEditTeamsMenu =====
 ; prototype: void __usercall InitEditTeamsMenu()
@@ -40204,14 +37282,6 @@ EditTeamsChangePlayerFace:
 ; to team settings, for both kits.
 ; Also do some kind of color conversion.
 ; Reads all from edit teams selected team.
-
-; ===== EditTeamsPlayersBeforeDraw =====
-; prototype: void __usercall EditTeamsPlayersBeforeDraw(MenuEntry *menu@<a5>)
-EditTeamsPlayersBeforeDraw:
-                move.l  a5,-(sp)
-                jsr     _EditTeamsPlayersBeforeDraw
-                addq.l  #4,sp
-                rts
 
 ; ===== PrimaryKitColorConversion =====
 ; prototype: void __usercall PrimaryKitColorConversion()
@@ -41452,11 +38522,6 @@ topGoalScorersMenu:
 ; prototype: void __usercall TopGoalScorersBeforeDrawCommon(MenuEntry *entry@<a5>)
 ; Ported to C: _TopGoalScorersBeforeDrawCommon in src/statistics.c
 ; Bridge: a5 = MenuEntry* → push as parameter
-TopGoalScorersBeforeDrawCommon:
-                move.l  a5,-(sp)
-                jsr     _TopGoalScorersBeforeDrawCommon
-                addq.l  #4,sp
-                rts
 
 ; ===== TopGoalScorersExit =====
 ; Ported to C: _TopGoalScorersExit in src/menus.c
@@ -41650,27 +38715,8 @@ tacticPosMap11:
                 dc.b $00,$01,$03,$03,$02,$04,$06,$06,$05,$06,$07 ; Position group mapping for tactic 11.
 ; ===== SelectAndShowSquadToView ===== (ported to C → _SelectAndShowSquadToView)
 ; Bridge: a1=teamNumbers, d0=numTeams, d1=rowMode
-SelectAndShowSquadToView:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                move.l  a1,-(sp)
-                jsr     _SelectAndShowSquadToView
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; ===== loc_1391AC ===== (ported to C → _SelectAndShowSquadToView_Direct)
 ; Bridge: d1=rowMode
-loc_1391AC:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                jsr     _SelectAndShowSquadToView_Direct
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; Menu_Squad
 squadMenu:
                 ; Menu_Squad
@@ -42563,23 +39609,6 @@ squadMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== SquadInit =====
-; prototype: void __usercall SquadInit()
-; ===== SquadInit =====
-; Ported to C: _SquadInit in src/menus.c
-SquadInit:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _SquadInit
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== SquadFinish =====
-; Ported to C: _SquadFinish in src/menus.c
-SquadFinish:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _SquadFinish
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 
 ; ===== SelectTraining =====
@@ -42600,24 +39629,7 @@ j_SetExitMenuFlag:
 ; Ported to C: _SquadOnSelect45 in src/menus.c
 
 ; ===== Squad45AfterDraw =====
-; Ported to C: _Squad45AfterDraw in src/menus.c
-
-; ===== SquadUpdateGoalsMenuText =====
-; Ported to C: _SquadUpdateGoalsMenuText in src/menus.c
-SquadUpdateGoalsMenuText:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _SquadUpdateGoalsMenuText
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 locret_139AE2:
-                rts
-
-; ===== SquadUpdateMenuState =====
-; Ported to C: _SquadUpdateMenuState in src/menus.c
-SquadUpdateMenuState:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _SquadUpdateMenuState
-                movem.l (sp)+,d2-d7/a2-a6
                 rts
 
 ; Dead code — SquadUpdateMenuState original body replaced above
@@ -42890,29 +39902,9 @@ loc_139F26:
                 move.l  a2,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0)
                 rts
 
-; ===== SquadCommon =====
-; Ported to C: _SquadCommon in src/menus.c
-SquadCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _SquadCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== SquadSwapPlayersAtIndices =====
 ; Dead — only called from SquadCommon (now in C)
 SquadSwapPlayersAtIndices:
-                rts
-
-; ===== SquadAfterDrawCommon =====
-; Ported to C: _SquadAfterDrawCommon in src/menus.c
-SquadAfterDrawCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _SquadAfterDrawCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
                 rts
 loc_13A0BE:
                 clr.w   d5
@@ -43284,15 +40276,6 @@ loc_13A5F8:
                 jmp     DrawMultipleItems
 
 ; ===== SquadRedrawPlayerListAndCheckMark =====
-; Ported to C: _SquadRedrawPlayerListAndCheckMark in src/menus.c
-
-; ===== SquadMenuSavePlayerPositions =====
-; Ported to C: _SquadMenuSavePlayerPositions in src/menus.c
-SquadMenuSavePlayerPositions:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SquadMenuSavePlayerPositions
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== SquadCommitPositionsAndUpdateSkill =====
 ; Ported to C: _SquadCommitPositionsAndUpdateSkill in src/menus.c
@@ -43329,14 +40312,6 @@ isNationalSquad:
 ; ===== RotatePlayersLeft =====
 ; Ported to C: _RotatePlayersLeft in src/teams.c
 ; in: A0 = team pointer, D0 = max substitutes
-RotatePlayersLeft:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d0,-(sp)
-                move.l  a0,-(sp)
-                jsr     _RotatePlayersLeft
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== SetSquadMenuEntryStatusSprite =====
 ; prototype: void __usercall SetSquadMenuEntryStatusSprite(__int16 rowMode@<d0>, MenuEntry *entry@<a0>, PlayerFile *player@<a6>)
@@ -43355,12 +40330,6 @@ SetSquadMenuEntryStatusSprite:
 ; prototype: void __usercall SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry@<a0>, PlayerFile *player@<a6>)
 ; ===== SetSquadMenuEntryStatusSprite_AfterSim ===== (ported to C → _SetSquadMenuEntryStatusSprite_AfterSim)
 ; in: a0=MenuEntry*, a6=player data
-SetSquadMenuEntryStatusSprite_AfterSim:
-                move.l  a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _SetSquadMenuEntryStatusSprite_AfterSim
-                addq.l  #8,sp
-                rts
 
 ; ===== SetMenuEntryPlayerFace =====
 ; Ported to C: _SetMenuEntryPlayerFace in src/menus.c
@@ -43374,14 +40343,6 @@ SetMenuEntryPlayerFace:
 ; ===== GetCompetitionAbbrevStr =====
 ; Ported to C: _GetCompetitionAbbrevStr in src/career_season.c
 ; Bridge: a1=competition → C param, returns a2=abbrev string from C return (d0)
-GetCompetitionAbbrevStr:
-                movem.l d0-d1/a0,-(sp)
-                move.l  a1,-(sp)
-                jsr     _GetCompetitionAbbrevStr
-                addq.l  #4,sp
-                movea.l d0,a2
-                movem.l (sp)+,d0-d1/a0
-                rts
 
 ; ===== SetupDIYCompetitionStatsMenu =====
 ; Ported to C: _SetupDIYCompetitionStatsMenu in src/diy_competition.c
@@ -43479,15 +40440,6 @@ competitionStatsMenu:
 ; prototype: void __usercall StatsHighestScorerList(__int16 mode@<d0>, const char *diyName@<a0>)
 ; Ported to C: _StatsHighestScorerList in src/statistics.c
 
-; ===== CompetitionInfo =====
-; Ported to C: _CompetitionInfo in src/menus.c
-
-; ===== StatsViewSquads ===== (ported to C → _StatsViewSquads)
-StatsViewSquads:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _StatsViewSquads
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== StatsExit =====
 ; Ported to C: _StatsExit in src/menus.c
@@ -44018,22 +40970,6 @@ offsetCoachOrPlayer:
 SetNationalityField:
                 rts
 
-; ===== ChangeNationality =====
-; Ported to C: _ChangeNationality in src/menus.c (a5 bridge)
-ChangeNationality:
-                move.l  a5,-(sp)
-                jsr     _ChangeNationality
-                addq.l  #4,sp
-                rts
-
-; ===== SetPlayerCoachFieldColor =====
-; prototype: void __usercall SetPlayerCoachFieldColor()
-SetPlayerCoachFieldColor:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SetPlayerCoachFieldColor
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
 ; ===== C→asm bridge: _CSelectTeamToManage =====
 ; Calls SelectTeamToManage, returns a0 as C return value,
 ; stores d0 (team number) in _cSelectTeamToManageResult.
@@ -44066,14 +41002,6 @@ ChangeSex:
                 move.l  a5,-(sp)        ; entry (MenuEntry*)
                 jsr     _ChangeSex
                 addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== CheckSex =====
-; prototype: void __usercall CheckSex()
-CheckSex:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _CheckSex
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
 
@@ -44323,13 +41251,6 @@ viewCompetitionsMenu:
 
 ; ===== ShowDiyCompetitionForSource ===== (ported to C → _ShowDiyCompetitionForSource)
 ; C bridge: push a0 (header ptr), call C, clean stack
-ShowDiyCompetitionForSource:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _ShowDiyCompetitionForSource
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== TopGoalScorersMenu =====
 ; Updated: direct jmp to C
@@ -45042,39 +41963,8 @@ contestMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== PlayMatchMenu =====
-; prototype: void __usercall PlayMatchMenu()
-PlayMatchMenu:
-                move.l  a5,-(sp)
-                jsr     _PlayMatchMenu
-                addq.l  #4,sp
-                rts
-
-; ===== NextMatch =====
-; prototype: void __usercall NextMatch()
-NextMatch:
-                move.l  a5,-(sp)
-                jsr     _NextMatch
-                addq.l  #4,sp
-                rts
-
-; ===== SquadMenu =====
-; ===== SquadMenu ===== (ported to C → _SquadMenu)
-SquadMenu:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _SquadMenu
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== CheckClubBusiness ===== (ported to C → _CheckClubBusiness)
 ; Note: asm used absolute address ($297E).w which was entry 6 in original binary
-
-; ===== ContestMenuOnReturn_SetButtonsAndDefaultSelection ===== (ported to C → _ContestMenuOnReturn_SetButtonsAndDefaultSelection)
-ContestMenuOnReturn_SetButtonsAndDefaultSelection:
-                move.l  a5,-(sp)
-                jsr     _ContestMenuOnReturn_SetButtonsAndDefaultSelection
-                addq.l  #4,sp
-                rts
                 ; === dead code below (old body) ===
 loc_13C020:
                 tst.w   (seasonFinished).l
@@ -45136,17 +42026,6 @@ SeasonLowerButtons:
 ; ===== ContestMenuOnReturn_NoOp =====
 ; prototype: void ContestMenuOnReturn_NoOp(...)
 ContestMenuOnReturn_NoOp:
-                rts
-
-; ===== CareerGameListCommon =====
-; prototype: void __usercall CareerGameListCommon(struct MenuEntry *item@<a5>)
-; Ported to C: _CareerGameListCommon in src/menus.c
-CareerGameListCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _CareerGameListCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
                 rts
 teamSelectionKeyCache_ListIndex:
                 dc.w $0000
@@ -45921,15 +42800,6 @@ GetCurrentSeasonPointer:
                 jmp     _GetCurrentSeasonPointer
 
 ; ===== Career_StorePromotionRelegationInSeasonInfo =====
-; Ported to C: _Career_StorePromotionRelegationInSeasonInfo in src/statistics.c
-
-; ===== Career_FillCurrentSeasonInfo =====
-; Ported to C: _Career_FillCurrentSeasonInfo in src/statistics.c
-Career_FillCurrentSeasonInfo:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_FillCurrentSeasonInfo
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== EncodeCompetitionPositionForSeasonInfo =====
 ; Ported to C (static helper in statistics.c, called only from Career_FillCurrentSeasonInfo)
@@ -47142,24 +44012,7 @@ selectTeamsForTacticsMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== SelTeamForTacticsInit =====
-; prototype: void __usercall SelTeamForTacticsInit()
-SelTeamForTacticsInit:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SelTeamForTacticsInit
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
 ; ===== SelTeamForTacticsExit =====
-; Ported to C: _SelTeamForTacticsExit in src/menus.c
-
-; ===== SelTeamForTacticsCommon =====
-; Ported to C: _SelTeamForTacticsCommon in src/menus.c (a5 bridge)
-SelTeamForTacticsCommon:
-                move.l  a5,-(sp)
-                jsr     _SelTeamForTacticsCommon
-                addq.l  #4,sp
-                rts
 
 ; ===== SelTeamForTactics_ReflowTeamListLayout =====
 ; Ported to C: _SelTeamForTactics_ReflowTeamListLayout in src/menus.c
@@ -47196,14 +44049,6 @@ indexCountries:
 ; ===== SelectTeamsFinalMenu =====
 ; Ported to C: _SelectTeamsFinalMenu in teams.c
 ; Bridge: d0.b=mode → C param
-SelectTeamsFinalMenu:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _SelectTeamsFinalMenu
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== GetCountryName =====
 ; prototype: char *__usercall GetCountryName@<a0>(unsigned __int16 countryId@<d0>)
@@ -47212,135 +44057,26 @@ SelectTeamsFinalMenu:
 ; out:
 ;      A0,
 ;      curCountryStr -> country string
-GetCountryName:
-                movem.l d1-d7/a1-a6,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _GetCountryName
-                addq.l  #4,sp
-                movea.l d0,a0
-                movem.l (sp)+,d1-d7/a1-a6
-                rts
 
 ; ===== PushContinent =====
 ; prototype: void __usercall PushContinent(unsigned __int16 countryId@<d6>)
 ; in:
 ;     D6 - country number
-PushContinent:
-                movem.l d0-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d6
-                move.l  d6,-(sp)
-                jsr     _PushContinent
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== PopContinent =====
 ; prototype: unsigned __int16 __usercall PopContinent@<d7>()
 ; out:
 ;     D7 - country number
-PopContinent:
-                movem.l d0-d6/a0-a6,-(sp)
-                jsr     _PopContinent
-                move.b  d0,d7
-                movem.l (sp)+,d0-d6/a0-a6
-                rts
-
-; ===== SetSelectedTeamsStackTop =====
-; prototype: void __usercall SetSelectedTeamsStackTop()
-SetSelectedTeamsStackTop:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SetSelectedTeamsStackTop
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== PushLastSelectedTeam =====
-; prototype: void __usercall PushLastSelectedTeam()
-PushLastSelectedTeam:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _PushLastSelectedTeam
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== GetSelectedTeamsStackTop =====
-; prototype: void __usercall GetSelectedTeamsStackTop()
-GetSelectedTeamsStackTop:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _GetSelectedTeamsStackTop
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== MarkSelectedTeamsStackLocation =====
-; prototype: void __usercall MarkSelectedTeamsStackLocation()
-MarkSelectedTeamsStackLocation:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _MarkSelectedTeamsStackLocation
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== IsContestContinentalCup =====
-; prototype: void __usercall IsContestContinentalCup()
-IsContestContinentalCup:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _IsContestContinentalCup
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== SetTeamsTypeForSelectedContest =====
-; prototype: void __usercall SetTeamsTypeForSelectedContest()
-SetTeamsTypeForSelectedContest:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SetTeamsTypeForSelectedContest
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== IsClubTeamsContest =====
-; prototype: unsigned __int16 __usercall IsClubTeamsContest@<d0>(const void *contest@<a1>)
-IsClubTeamsContest:
-                movem.l d1-d7/a0-a6,-(sp)
-                move.l  a1,-(sp)
-                jsr     _IsClubTeamsContest
-                addq.l  #4,sp
-                movem.l (sp)+,d1-d7/a0-a6
-                tst.w   d0
-                rts
 
 ; ===== ChooseTeamsDialog =====
 ; Bridge to C: _ChooseTeamsDialog(showClub, showNational, showOrigCustom, title, onSelect)
 ; in: D2=showClub, D3=showNational, D4=showOrigCustom, A0=title, A1=onSelect
 ; out: D0=selectedTeamCountryNumber, A0=selectedTeamPtr
-ChooseTeamsDialog:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                move.w  d4,-(sp)
-                move.w  d3,-(sp)
-                move.w  d2,-(sp)
-                jsr     _ChooseTeamsDialog
-                lea     14(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                move.w  (selectedTeamCountryNumber).l,d0
-                movea.l (selectedTeamPtr).l,a0
-                rts
 
 ; ===== ChooseTeamsDialogWithNationality =====
 ; Bridge to C: _ChooseTeamsDialogWithNationality(nationality, showClub, showNational, showOrigCustom, title, onSelect)
 ; in: D0=nationality, D2=showClub, D3=showNational, D4=showOrigCustom, A0=title, A1=onSelect
 ; out: D0=selectedTeamCountryNumber, A0=selectedTeamPtr
-ChooseTeamsDialogWithNationality:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                move.w  d4,-(sp)
-                move.w  d3,-(sp)
-                move.w  d2,-(sp)
-                move.w  d0,-(sp)
-                jsr     _ChooseTeamsDialogWithNationality
-                lea     16(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                move.w  (selectedTeamCountryNumber).l,d0
-                movea.l (selectedTeamPtr).l,a0
-                rts
 choosingPreset:
                 dc.w $0000              ; Set to true when select teams menu is used for selecting
                                         ; preset competition
@@ -47356,18 +44092,6 @@ choosingPreset:
 ;      D4 =  show original custom teams flag
 ; out:
 ;      global var chooseTeamsResult: 0 = nothing selected, !0 = choice made
-GoGetTeamsForPlay:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.w  d4,-(sp)               ; showOrigCustom
-                move.w  d3,-(sp)               ; showNational
-                move.w  d2,-(sp)               ; showClub
-                move.w  d0,-(sp)               ; numTeams
-                move.l  a1,-(sp)               ; playWhatStr
-                move.l  a0,-(sp)               ; gameTypeStr
-                jsr     _GoGetTeamsForPlay
-                lea     16(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; Menu_SelectTeams
 selectTeamsMenu:
                 ; Menu_SelectTeams
@@ -48806,22 +45530,6 @@ selectTeamsMenu:
                 dc.w MENU_CMD_END       ; entry90_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== SelectTeamsInit =====
-; prototype: void __usercall SelectTeamsInit()
-SelectTeamsInit:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SelectTeamsInit
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== SelectTeamsReinit =====
-; prototype: void __usercall SelectTeamsReinit()
-SelectTeamsReinit:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SelectTeamsReinit
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
 ; ===== SetCountryNames =====
 ; prototype: void __usercall SetCountryNames()
 ; Also make non showing team entries invisible.
@@ -48830,31 +45538,6 @@ SelectTeamsReinit:
 ; Ported to C: _ChooseTeamsPlayGame in src/menus.c
 
 ; ===== ExitSelectTeams =====
-; Ported to C: _ExitSelectTeams in src/menus.c
-
-; ===== SelectTeamsCommon =====
-; Ported to C: _SelectTeamsCommon in src/menus.c (a5 bridge)
-SelectTeamsCommon:
-                move.l  a5,-(sp)
-                jsr     _SelectTeamsCommon
-                addq.l  #4,sp
-                rts
-
-; ===== SelectLeaguesCommon =====
-; Ported to C: _SelectLeaguesCommon in src/menus.c (a5 bridge)
-SelectLeaguesCommon:
-                move.l  a5,-(sp)
-                jsr     _SelectLeaguesCommon
-                addq.l  #4,sp
-                rts
-
-; ===== SetTeamsCoordinates =====
-; prototype: void __usercall SetTeamsCoordinates()
-SetTeamsCoordinates:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SetTeamsCoordinates
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== CheckNumberOfTeams =====
 ; prototype: void __usercall CheckNumberOfTeams()
@@ -49163,11 +45846,6 @@ chooseTeamsMenu:
 ; given flags. If only one category is requested, jumps directly to the next menu for that category.
 ; This single category can only be club or national teams. And finally sets up the custom menu
 ; title: first part, if given, if not "CHOOSE TEAMS FOR" + game type string (if given).
-ChooseTeamsInit:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ChooseTeamsInit
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== ShowFsErrorByCode =====
 ; Ported to C: _ShowFsErrorByCode in src/file_io.c
@@ -49182,31 +45860,11 @@ ShowFsErrorByCode:
 ; Ported to C: _SelectFileToSaveDialog in src/file_io.c
 ; in: d0 = filterExt, a0 = defaultFilename, a1 = menuTitle
 ; out: d0 = 0 (success) or 1 (error), Z flag
-SelectFileToSaveDialog:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                move.l  d0,-(sp)
-                jsr     _SelectFileToSaveDialog
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                tst.w   d0
-                rts
 
 ; ===== GetFilenameAndExtension =====
 ; Ported to C: _GetFilenameAndExtension in src/file_io.c
 ; in: d0 = preferredExt, a0 = defaultFilename, a1 = menuTitle
 ; out: d0 = 0 (success) or 1 (error), Z flag
-GetFilenameAndExtension:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                move.l  d0,-(sp)
-                jsr     _GetFilenameAndExtension
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                tst.w   d0
-                rts
 ; Menu_SelectFiles
 selectFilesMenu:
                 ; Menu_SelectFiles
@@ -50038,71 +46696,16 @@ selectFilesMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== SelectFilesInit ===== (ported to C → _SelectFilesInit)
-SelectFilesInit:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _SelectFilesInit
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== SelectFilesOnReturn ===== (ported to C → _SelectFilesOnReturn)
-SelectFilesOnReturn:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _SelectFilesOnReturn
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== SelFilesDrawItemDescription =====
-; Ported to C: _SelFilesDrawItemDescription in src/file_io.c
-SelFilesDrawItemDescription:
-                move.l  a5,-(sp)
-                jsr     _SelFilesDrawItemDescription
-                addq.l  #4,sp
-                rts
-
 ; ===== SelectFilenameToSaveAndExit =====
 ; Ported to C: _SelectFilenameToSaveAndExit in src/file_io.c
 
 ; ===== AbortSaveFile =====
 ; Ported to C: _AbortSaveFile in src/menus.c
 
-; ===== SelectFilesInputSaveFilenameOnSelect =====
-; prototype: void __usercall SelectFilesInputSaveFilenameOnSelect(struct MenuEntry *entry@<a5>)
-; ===== SelectFilesInputSaveFilenameOnSelect ===== (ported to C → _SelectFilesInputSaveFilenameOnSelect)
-SelectFilesInputSaveFilenameOnSelect:
-                move.l  a5,-(sp)
-                jsr     _SelectFilesInputSaveFilenameOnSelect
-                addq.l  #4,sp
-                rts
-
-; ===== SelFilesOnSelectCommon =====
-; Ported to C: _SelFilesOnSelectCommon in src/file_io.c
-SelFilesOnSelectCommon:
-                move.l  a5,-(sp)
-                jsr     _SelFilesOnSelectCommon
-                addq.l  #4,sp
-                rts
-
-; ===== RepositionSelectFileEntries =====
-; Ported to C: _RepositionSelectFileEntries in src/file_io.c
-RepositionSelectFileEntries:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _RepositionSelectFileEntries
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
 ; ===== CopyFilenameExtensionAndSetExitMenuFlag =====
 ; Ported to C: static _CopyFilenameExtensionAndSetExitMenuFlag in src/file_io.c
 ; Dead code — all asm callers ported. Keep stub for safety.
 CopyFilenameExtensionAndSetExitMenuFlag:
-                rts
-
-; ===== AddExtension =====
-; Ported to C: _AddExtension in src/file_io.c
-AddExtension:
-                move.l  a0,-(sp)
-                jsr     _AddExtension
-                addq.l  #4,sp
                 rts
 totalNumberOfFiles:
                 dc.w $0000              ; Total number of files in game directory
@@ -50245,11 +46848,6 @@ saveFileBuffer:
 ; ===== ShowErrorMenu =====
 ; Ported to C: _ShowErrorMenu in src/menus.c
 ; in: a0 = error text string
-ShowErrorMenu:
-                move.l  a0,-(sp)
-                jsr     _ShowErrorMenu
-                addq.l  #4,sp
-                rts
 
 ; ===== DoContinueAbortMenu =====
 ; prototype: __int16 __usercall DoContinueAbortMenu@<d0>(const char *header@<a0>, const unsigned __int8 *whatIsChanging@<a1>, const char *continueText@<a2>, const char *abortText@<a3>, unsigned __int16 defaultEntry@<d0>)
@@ -50265,16 +46863,6 @@ ShowErrorMenu:
 ;      D0 - 1 - abort
 ;           0 - continue
 ;           zero flag set accordingly
-DoContinueAbortMenu:
-                move.l  d0,-(sp)
-                move.l  a3,-(sp)
-                move.l  a2,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _DoContinueAbortMenu
-                lea     20(sp),sp
-                tst.w   d0
-                rts
 ; Menu_Continue
 continueMenu:
                 ; Menu_Continue
@@ -50840,97 +47428,12 @@ showDomesticPlayerMarket:
 transferCompleted:
                 dc.w $0000              ; Flag set to 1 when a player transfer is completed.
 
-; ===== Career_BuildForeignMarketPoolFromSelectedTeam =====
-; prototype: void __usercall Career_BuildForeignMarketPoolFromSelectedTeam()
-Career_BuildForeignMarketPoolFromSelectedTeam:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_BuildForeignMarketPoolFromSelectedTeam
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== AddCareerPoolPlayer =====
 ; prototype: __int16 __usercall AddCareerPoolPlayer@<d0>(unsigned __int16 teamNumber@<d0>, unsigned __int8 playerOrdinal@<d1>, struct TeamFile *teamFile@<a0>)
 ; in:
 ;     D0 - team number
 ;     D1 - player ordinal in team
 ;     A1 -> team (file)
-AddCareerPoolPlayer:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a0,-(sp)
-                andi.l  #$FF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _AddCareerPoolPlayer
-                lea     12(sp),sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== DIY_AdvanceFixtureIndex =====
-; prototype: void __usercall DIY_AdvanceFixtureIndex(unsigned __int16 lo@<d6>, unsigned __int16 hi@<d7>)
-DIY_AdvanceFixtureIndex:
-                movem.l d0-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d7
-                move.l  d7,-(sp)
-                andi.l  #$FFFF,d6
-                move.l  d6,-(sp)
-                jsr     _DIY_AdvanceFixtureIndex
-                addq.l  #8,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== Career_PatchTeamWithForeignMarketPlayers =====
-; prototype: void __usercall Career_PatchTeamWithForeignMarketPlayers(void *teamPtr@<a0>)
-Career_PatchTeamWithForeignMarketPlayers:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _Career_PatchTeamWithForeignMarketPlayers
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== FillForeignMarketPlayersData =====
-; prototype: void __usercall FillForeignMarketPlayersData()
-FillForeignMarketPlayersData:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _FillForeignMarketPlayersData
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== GetAvgTeamValueBaseForCurrentPlayer =====
-; prototype: unsigned __int16 __usercall GetAvgTeamValueBaseForCurrentPlayer@<d0>()
-GetAvgTeamValueBaseForCurrentPlayer:
-                movem.l d1-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _GetAvgTeamValueBaseForCurrentPlayer
-                addq.l  #8,sp
-                movem.l (sp)+,d1-d7/a0-a6
-                rts
-
-; ===== SnapToNearestAvgTeamValueBase =====
-; prototype: unsigned __int16 __usercall SnapToNearestAvgTeamValueBase@<d0>(unsigned __int16 value@<d0>)
-SnapToNearestAvgTeamValueBase:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _SnapToNearestAvgTeamValueBase
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== SnapUpToAvgTeamValueBase =====
-; prototype: unsigned __int16 __usercall SnapUpToAvgTeamValueBase@<d0>(unsigned __int16 value@<d0>)
-SnapUpToAvgTeamValueBase:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _SnapUpToAvgTeamValueBase
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_InitTransferMarketState ===== (ported to C → _Career_InitTransferMarketState)
 Career_InitTransferMarketState:
@@ -50940,59 +47443,9 @@ Career_InitTransferMarketState:
 Career_InitSeasonTransferMarketState:
                 jmp     _Career_InitSeasonTransferMarketState
 
-; ===== Career_RemovePlayerFromTeamInternal =====
-; prototype: void __usercall Career_RemovePlayerFromTeamInternal(unsigned __int16 team@<d0>, unsigned __int16 arg1@<d1>, unsigned __int16 arg2@<d2>)
-Career_RemovePlayerFromTeamInternal:
-                movem.l d0-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _Career_RemovePlayerFromTeamInternal
-                addq.l  #8,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
 ; ===== RemovePlayerFromTeam =====
 ; Ported to C: _RemovePlayerFromTeam in src/teams.c (Chunk 95)
 ; Asm stub: save regs, push d1 (player ordinal), call C, restore regs
-RemovePlayerFromTeam:
-                movem.l d0-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                jsr     _RemovePlayerFromTeam
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== Career_AcceptOffer_SellPlayer =====
-; prototype: void __usercall Career_AcceptOffer_SellPlayer()
-Career_AcceptOffer_SellPlayer:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_AcceptOffer_SellPlayer
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== Career_AcceptOffer_BuyPlayer =====
-; prototype: void __usercall Career_AcceptOffer_BuyPlayer()
-Career_AcceptOffer_BuyPlayer:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_AcceptOffer_BuyPlayer
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== Career_TransferPlayerAndAddReplacedToMarketPool =====
-; prototype: void __usercall Career_TransferPlayerAndAddReplacedToMarketPool(unsigned __int16 team@<d0>, unsigned __int16 arg@<d1>)
-Career_TransferPlayerAndAddReplacedToMarketPool:
-                movem.l d0-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _Career_TransferPlayerAndAddReplacedToMarketPool
-                addq.l  #8,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 ; unsigned __int8 (*[8])[9]
 transferReplacementPriorityTable:
                 ; unsigned __int8 (*[8])[9]
@@ -51032,13 +47485,6 @@ transferReplacementPriority_role7:
 ; ===== SetBenchPlayersNumbers =====
 ; Ported to C: _SetBenchPlayersNumbers in src/teams.c (Chunk 95)
 ; Asm stub: a0=team ptr -> push as C arg
-SetBenchPlayersNumbers:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _SetBenchPlayersNumbers
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== TrainingMatch_AdjustSelectedTeamRosterForTrialists =====
 ; prototype: void __usercall TrainingMatch_AdjustSelectedTeamRosterForTrialists(unsigned __int16 arg0@<d0>, unsigned __int16 arg1@<d1>, void *team@<a0>)
@@ -51046,53 +47492,10 @@ SetBenchPlayersNumbers:
 ;      D0 -
 ;      D1 -
 ;      A0 -> team
-TrainingMatch_AdjustSelectedTeamRosterForTrialists:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _TrainingMatch_AdjustSelectedTeamRosterForTrialists
-                lea     12(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== TrainingMatch_AddTrialPlayerToSelectedTeam =====
-; prototype: void __usercall TrainingMatch_AddTrialPlayerToSelectedTeam(unsigned __int16 slotOrRole@<d0>)
-TrainingMatch_AddTrialPlayerToSelectedTeam:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _TrainingMatch_AddTrialPlayerToSelectedTeam
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== Career_RemovePlayerAndAddAsTrialist =====
-; prototype: void __usercall Career_RemovePlayerAndAddAsTrialist(unsigned __int16 team@<d0>, unsigned __int16 playerIndex@<d1>)
-Career_RemovePlayerAndAddAsTrialist:
-                movem.l d0-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _Career_RemovePlayerAndAddAsTrialist
-                addq.l  #8,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== Career_RemovePlayerFromSelectedTeamRoster =====
 ; Ported to C: _Career_RemovePlayerFromSelectedTeamRoster in src/teams.c (Chunk 95)
 ; Asm stub: save regs, push d1 (player index), call C, restore regs
-Career_RemovePlayerFromSelectedTeamRoster:
-                movem.l d0-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                jsr     _Career_RemovePlayerFromSelectedTeamRoster
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== SelectBenchReplacementForStartingPlayer =====
 ; Dead code — callers ported to C (Chunk 95)
@@ -51143,30 +47546,6 @@ replPosSearchOrderMid:
 ; unsigned __int8[9]
 replPosSearchOrderAtt:
                 dc.b $07,$06,$04,$05,$03,$01,$02,$00,$FF ; Replacement position search priority for Att, 0xFF-terminated.
-
-; ===== Career_GenerateTrialistForTeamPlayer =====
-; prototype: void __usercall Career_GenerateTrialistForTeamPlayer(unsigned __int16 playerIndex@<d1>, const char *srcName@<a2>)
-Career_GenerateTrialistForTeamPlayer:
-                movem.l d0-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                jsr     _Career_GenerateTrialistForTeamPlayer
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== Career_ConvertPlayerToTrialistFromName =====
-; prototype: void __usercall Career_ConvertPlayerToTrialistFromName(unsigned __int16 team@<d0>, unsigned __int16 playerIndex@<d1>, const char *srcName@<a2>)
-Career_ConvertPlayerToTrialistFromName:
-                movem.l d0-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _Career_ConvertPlayerToTrialistFromName
-                addq.l  #8,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== Career_InitTrialistAttributes =====
 ; prototype: void __usercall Career_InitTrialistAttributes(void *player@<a3>, unsigned __int16 team@<d5>)
@@ -51235,34 +47614,6 @@ trialistNameBuffer:
 trialistNameBufTerminator:
                 dc.b $00                ; End-of-buffer sentinel for trialistNameBuffer
 
-; ===== GetRemainingTransferPoolSlots =====
-; prototype: __int16 __usercall GetRemainingTransferPoolSlots@<d2>()
-GetRemainingTransferPoolSlots:
-                movem.l d3-d7/a2-a6,-(sp)
-                jsr     _GetRemainingTransferPoolSlots
-                move.w  d0,d2
-                movem.l (sp)+,d3-d7/a2-a6
-                tst.w   d2
-                rts
-
-; ===== GetRemainingOfferSwapSlots =====
-; prototype: __int16 __usercall GetRemainingOfferSwapSlots@<d2>()
-GetRemainingOfferSwapSlots:
-                movem.l d3-d7/a2-a6,-(sp)
-                jsr     _GetRemainingOfferSwapSlots
-                move.w  d0,d2
-                movem.l (sp)+,d3-d7/a2-a6
-                tst.w   d2
-                rts
-
-; ===== PrunePlayerOffersAgainstRosterLimits =====
-; prototype: void __usercall PrunePlayerOffersAgainstRosterLimits()
-PrunePlayerOffersAgainstRosterLimits:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _PrunePlayerOffersAgainstRosterLimits
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== ShowPlayerOfferMenuForPlayer =====
 ; prototype: void __usercall ShowPlayerOfferMenuForPlayer(unsigned __int16 teamNumber@<d0>, unsigned __int16 playerOrdinal@<d1>)
 ShowPlayerOfferMenuForPlayer:
@@ -51281,44 +47632,6 @@ ShowPlayerOfferMenuForPlayer:
 ; out:
 ;      got offers: D0 = 0, zf = 1
 ;      no offers: D0 = 1, zf = 0
-CheckForTransferOffers:
-                movem.l d1-d7/a0-a6,-(sp)
-                jsr     _CheckForTransferOffers
-                movem.l (sp)+,d1-d7/a0-a6
-                tst.w   d0
-                rts
-
-; ===== RemoveTransferOfferAtIndex =====
-; prototype: void __usercall RemoveTransferOfferAtIndex(unsigned __int16 offerIndex@<d0>)
-RemoveTransferOfferAtIndex:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _RemoveTransferOfferAtIndex
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== RemovePlayerFromTransferOffers =====
-; prototype: void __usercall RemovePlayerFromTransferOffers(unsigned __int16 teamNumber@<d0>, unsigned __int8 playerOrdinal@<d1>)
-RemovePlayerFromTransferOffers:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _RemovePlayerFromTransferOffers
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== LoadPoolplyrDat =====
-; prototype: void __usercall LoadPoolplyrDat()
-LoadPoolplyrDat:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _LoadPoolplyrDat
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== FindPoolplyrDatPlayer =====
 ; prototype: void *__usercall FindPoolplyrDatPlayer@<a0>(unsigned __int16 teamId@<d0>, unsigned __int8 playerOrdinal@<d1>)
@@ -51342,22 +47655,6 @@ FillCareerTeamPlayers:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== UpdateHomeMarketPlayers =====
-; prototype: void __usercall UpdateHomeMarketPlayers()
-UpdateHomeMarketPlayers:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _UpdateHomeMarketPlayers
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== AddCareerTeamPlayer =====
-; prototype: void __usercall AddCareerTeamPlayer()
-AddCareerTeamPlayer:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _AddCareerTeamPlayer
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== AddPlayerToCareerContest =====
 ; prototype: void __usercall AddPlayerToCareerContest(unsigned __int16 teamNumber@<d0>, unsigned __int8 playerOrdinal@<d1>)
 ; in:
@@ -51366,30 +47663,6 @@ AddCareerTeamPlayer:
 ; out:
 ;     zero flag: set = full, can't add
 ;                clear = added OK
-AddPlayerToCareerContest:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _AddPlayerToCareerContest
-                addq.l  #8,sp
-                tst.w   d0
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== RemovePlayerFromCareerContest =====
-; prototype: void __usercall RemovePlayerFromCareerContest(unsigned __int16 teamNumber@<d0>, unsigned __int8 playerOrdinal@<d1>)
-RemovePlayerFromCareerContest:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _RemovePlayerFromCareerContest
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== IsPlayerInCareerContest =====
 ; prototype: void __usercall IsPlayerInCareerContest(unsigned __int16 teamNumber@<d0>, unsigned __int8 playerOrdinal@<d1>)
@@ -51399,22 +47672,6 @@ RemovePlayerFromCareerContest:
 ; out:
 ;     zero flag: set = success, found
 ;                clear = not found
-IsPlayerInCareerContest:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _IsPlayerInCareerContest
-                addq.l  #8,sp
-                ; d0 = index (>= 0) if found, -1 if not found
-                tst.w   d0
-                bmi.s   .not_found
-                ; found: set Z flag (set = found)
-                move.w  d0,d2
-                clr.w   d0
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 .not_found:
                 movem.l (sp)+,d2-d7/a2-a6
                 move.w  #1,d0
@@ -51428,23 +47685,10 @@ FillForeignMarketPlayers:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== UpdateForeignMarketPlayers =====
-; prototype: void __usercall UpdateForeignMarketPlayers()
-UpdateForeignMarketPlayers:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _UpdateForeignMarketPlayers
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== AddRandomForeignMarketPlayer =====
 ; prototype: void __usercall AddRandomForeignMarketPlayer()
 ; Add a random player to the foreign market. 25% chance to pick up a player
 ; within the limits of the selected team (or slightly better).
-AddRandomForeignMarketPlayer:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _AddRandomForeignMarketPlayer
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== AddForeignMarketPlayer =====
 ; prototype: void __usercall AddForeignMarketPlayer(unsigned __int16 teamId@<d0>, unsigned __int8 playerOrdinal@<d1>)
@@ -51454,97 +47698,9 @@ AddRandomForeignMarketPlayer:
 ; out:
 ;     zero flag: set = not added, full
 ;                clear = added OK
-AddForeignMarketPlayer:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _AddForeignMarketPlayer
-                addq.l  #8,sp
-                tst.w   d0
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== RemoveForeignMarketPlayer =====
-; prototype: void __usercall RemoveForeignMarketPlayer(unsigned __int16 teamId@<d0>, unsigned __int8 playerOrdinal@<d1>)
-RemoveForeignMarketPlayer:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _RemoveForeignMarketPlayer
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== FindForeignMarketPlayer =====
-; prototype: void __usercall FindForeignMarketPlayer(unsigned __int16 teamId@<d0>, unsigned __int8 playerOrdinal@<d1>)
-FindForeignMarketPlayer:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _FindForeignMarketPlayer
-                addq.l  #8,sp
-                tst.w   d0
-                bmi.s   .not_found_f
-                clr.w   d0
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 .not_found_f:
                 movem.l (sp)+,d2-d7/a2-a6
                 move.w  #1,d0
-                rts
-
-; ===== FindPlayerInCareerOrForeignMarket =====
-; prototype: void __usercall FindPlayerInCareerOrForeignMarket(unsigned __int16 teamId@<d0>, unsigned __int8 playerOrdinal@<d1>)
-FindPlayerInCareerOrForeignMarket:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FF,d1
-                move.l  d1,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _FindPlayerInCareerOrForeignMarket
-                addq.l  #8,sp
-                tst.w   d0
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== AddPlayerToTransferMarket =====
-; prototype: void __usercall AddPlayerToTransferMarket(unsigned __int16 playerId@<d0>)
-AddPlayerToTransferMarket:
-                movem.l d0-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _AddPlayerToTransferMarket
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== RemovePlayerFromTransferMarket =====
-; prototype: void __usercall RemovePlayerFromTransferMarket(unsigned __int16 playerId@<d1>)
-RemovePlayerFromTransferMarket:
-                movem.l d0-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                jsr     _RemovePlayerFromTransferMarket
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== FindPlayerOnTransferMarket =====
-; prototype: void __usercall FindPlayerOnTransferMarket(unsigned __int16 playerId@<d1>)
-FindPlayerOnTransferMarket:
-                movem.l d1-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                jsr     _FindPlayerOnTransferMarket
-                addq.l  #4,sp
-                movem.l (sp)+,d1-d7/a0-a6
-                tst.w   d0
                 rts
 ; Menu_Offers
 offersMenu:
@@ -51735,28 +47891,7 @@ offersMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== OffersCommon =====
-; Ported to C: _OffersCommon in src/transfer_market.c
-OffersCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _OffersCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== j_SetExitMenuFlag_11 =====
-; Ported to C: _j_SetExitMenuFlag_11 in src/transfer_market.c
-
-; ===== OffersAfterDrawCommon =====
-; Ported to C: _OffersAfterDrawCommon in src/transfer_market.c
-OffersAfterDrawCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _OffersAfterDrawCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; char *
 offerFmtSinglePlayer:
                 dc.l $00000000          ; Pointer to format string for single-player offer text.
@@ -52200,16 +48335,6 @@ sellExchangeResponseStrings:
                 dc.l aButWeWouldBeHa    ; element[10]
                 dc.l aFavourableOffe    ; element[11]
 
-; ===== TransferPlayerInit =====
-; Ported to C: _TransferPlayerInit in src/transfer_market.c
-TransferPlayerInit:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _TransferPlayerInit
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== TransferPlayerOnSelect10 =====
 ; Ported to C: _TransferPlayerOnSelect10 in src/transfer_market.c
 
@@ -52217,17 +48342,6 @@ TransferPlayerInit:
 ; Ported to C: _TransferPlayerOnSelect11 in src/transfer_market.c
 
 ; ===== TransferPlayerOnSelect12 =====
-; Ported to C: _TransferPlayerOnSelect12 in src/transfer_market.c
-
-; ===== TransferPlayerAfterDrawCommon =====
-; Ported to C: _TransferPlayerAfterDrawCommon in src/transfer_market.c
-TransferPlayerAfterDrawCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _TransferPlayerAfterDrawCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 teamWillingToSellOrExchange:
                 dc.w $0000              ; True if team is willing to sell/exchange player
 transferPlayerMenuResult:
@@ -52683,16 +48797,6 @@ thirdPartyOfferMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== ThirdPartyOfferMenuInit =====
-; Ported to C: _ThirdPartyOfferMenuInit in src/transfer_market.c
-ThirdPartyOfferMenuInit:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _ThirdPartyOfferMenuInit
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== AcceptOffer =====
 ; Ported to C: _AcceptOffer in src/transfer_market.c
 
@@ -52706,17 +48810,6 @@ ThirdPartyOfferMenuInit:
 ; Ported to C: _ConsiderOffer in src/transfer_market.c
 
 ; ===== ThirdPartyOfferMenuExit =====
-; Ported to C: _ThirdPartyOfferMenuExit in src/transfer_market.c
-
-; ===== ThirdPartyOfferMenuAfterDrawCommon =====
-; Ported to C: _ThirdPartyOfferMenuAfterDrawCommon in src/transfer_market.c
-ThirdPartyOfferMenuAfterDrawCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _ThirdPartyOfferMenuAfterDrawCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 offerStatus:
                 dc.w $0000              ; -1 = No offer
                                         ; 0 = we want to buy player
@@ -53167,63 +49260,11 @@ playerOffersMenu:
 ; Ported to C: _PlayerOffersInit in src/transfer_market.c
 
 ; ===== UpdatePlayerOfferMenuIndicators =====
-; Ported to C: _UpdatePlayerOfferMenuIndicators in src/transfer_market.c
-
-; ===== PlayerOffersOnSelect8 =====
-; Ported to C: _PlayerOffersOnSelect8 in src/transfer_market.c
-PlayerOffersOnSelect8:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _PlayerOffersOnSelect8
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== PlayerOffersOnSelect10 =====
-; Ported to C: _PlayerOffersOnSelect10 in src/transfer_market.c
-PlayerOffersOnSelect10:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _PlayerOffersOnSelect10
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== PlayerOffersOnSelect11 =====
-; Ported to C: _PlayerOffersOnSelect11 in src/transfer_market.c
-PlayerOffersOnSelect11:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _PlayerOffersOnSelect11
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== PlayerOffersOnSelect12 =====
-; Ported to C: _PlayerOffersOnSelect12 in src/transfer_market.c
-PlayerOffersOnSelect12:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _PlayerOffersOnSelect12
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== PlayerOffersAdjustOfferAmount =====
-; Ported to C: _PlayerOffersAdjustOfferAmount in src/transfer_market.c
-PlayerOffersAdjustOfferAmount:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _PlayerOffersAdjustOfferAmount
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PlayerOffersUpdateOfferAmountText =====
 ; Ported to C: _PlayerOffersUpdateOfferAmountText in src/transfer_market.c
 
 ; ===== PlayerOffersOnSelect13 =====
-; Ported to C: _PlayerOffersOnSelect13 in src/transfer_market.c
-
-; ===== PlayerOffersAfterDrawCommon =====
-; Ported to C: _PlayerOffersAfterDrawCommon in src/transfer_market.c
-PlayerOffersAfterDrawCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _PlayerOffersAfterDrawCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== ShowSquad =====
 ; prototype: __int16 __usercall ShowSquad@<d0>(TeamFile *team@<a0>, const char *title@<a1>, unsigned __int32 maskLo@<d0>, unsigned __int32 maskHi@<d1>, __int16 arg2@<d2>, __int16 arg3@<d3>)
@@ -53781,27 +49822,6 @@ viewSquadMenu:
 ; Ported to C: _ViewSquadOnSelect21 in src/menus.c
 
 ; ===== ViewSquad21AfterDraw =====
-; Ported to C: _ViewSquad21AfterDraw in src/menus.c
-
-; ===== ViewSquadCommon =====
-; prototype: void __usercall ViewSquadCommon()
-ViewSquadCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _ViewSquadCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== ViewSquadAfterDrawCommon =====
-; prototype: __int16 __usercall ViewSquadAfterDrawCommon@<d0>()
-ViewSquadAfterDrawCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _ViewSquadAfterDrawCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; TeamFile *
 squadTeamPtr:
                 dc.l $00000000
@@ -54268,26 +50288,6 @@ buyOtherPlayersMenu:
 ; prototype: void __usercall j_SetExitMenuFlag_10()
 j_SetExitMenuFlag_10:
                 jmp     SetExitMenuFlag
-
-; ===== BuyOtherPlayersCommon =====
-; prototype: __int16 __usercall BuyOtherPlayersCommon@<d0>()
-BuyOtherPlayersCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _BuyOtherPlayersCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== BuyOtherPlayersAfterDrawCommon =====
-; prototype: __int16 __usercall BuyOtherPlayersAfterDrawCommon@<d0>()
-BuyOtherPlayersAfterDrawCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _BuyOtherPlayersAfterDrawCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; char *
 buyOtherPlayersTitlePtr:
                 dc.l $00000000          ; Pointer to title string for buy other domestic/foreign player menu.
@@ -55230,19 +51230,9 @@ buyPlayerMenu:
 
 ; ===== BuyOtherDomesticPlayer =====
 ; Bridge to C: _BuyOtherDomesticPlayer
-BuyOtherDomesticPlayer:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _BuyOtherDomesticPlayer
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== BuyOtherForeignPlayer =====
 ; Bridge to C: _BuyOtherForeignPlayer
-BuyOtherForeignPlayer:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _BuyOtherForeignPlayer
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== BuyPlayerExit =====
 ; Ported to C: _BuyPlayerExit in src/menus.c
@@ -55674,30 +51664,10 @@ transferMarketMenu:
 ; prototype: void __usercall jmp_SetExitMenuFlag_8()
 jmp_SetExitMenuFlag_8:
                 jmp     SetExitMenuFlag
-
-; ===== TransferMarketCommon =====
-; prototype: void __usercall TransferMarketCommon()
-TransferMarketCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _TransferMarketCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; __int16[3]
 buyPlayerRedrawList:
                 ; __int16[3]
                 dc.w 5,7,-1             ; List of menu entry indices to redraw in the buy player screen.
-
-; ===== TransferMarketAfterDrawCommon =====
-; prototype: void __usercall TransferMarketAfterDrawCommon()
-TransferMarketAfterDrawCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _TransferMarketAfterDrawCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 playerSelected:
                 dc.w $0000
 
@@ -55709,14 +51679,6 @@ IsTeamIdForSelectedTeam:
 ; ===== FindTeamIdInDiyTeamsList =====
 ; Ported to C: _FindTeamIdInDiyTeamsList in src/transfer_market.c
 ; Bridge: a0=teamIdPtr → C param, returns Z flag from C return
-FindTeamIdInDiyTeamsList:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _FindTeamIdInDiyTeamsList
-                addq.l  #4,sp
-                tst.w   d0
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== BuildTransferPlayerMenuEntry =====
 ; prototype: void __usercall BuildTransferPlayerMenuEntry(struct MenuEntry *item@<a0>, void *player@<a6>, unsigned __int16 y@<d7>, unsigned __int16 idx@<d6>, unsigned __int16 style@<d5>, const char *extra@<a4>)
@@ -55780,54 +51742,19 @@ offerLifespanTable:
 ; Ported to C: _IsTeamEligibleForOfferByRefSkill in src/transfer_market.c
 ; Bridge: a0=team, d7=refSkill → C params, returns Z flag
 ; Z=1 → eligible, Z=0 → not eligible (C returns 0/non-zero)
-IsTeamEligibleForOfferByRefSkill:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  d7,-(sp)
-                move.l  a0,-(sp)
-                jsr     _IsTeamEligibleForOfferByRefSkill
-                addq.l  #8,sp
-                tst.w   d0
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== PickRandomEligibleExtraPlayerOrdinal =====
 ; Ported to C: _PickRandomEligibleExtraPlayerOrdinal in src/transfer_market.c
 ; Bridge: d7=refSkill → C param, returns d1 (file index or -1)
-PickRandomEligibleExtraPlayerOrdinal:
-                movem.l d0/d2-d7/a0-a6,-(sp)
-                move.l  d7,-(sp)
-                jsr     _PickRandomEligibleExtraPlayerOrdinal
-                addq.l  #4,sp
-                move.w  d0,d1
-                movem.l (sp)+,d0/d2-d7/a0-a6
-                rts
 
 ; ===== PickRandomEligibleSwapPlayerOrdinalFromTeam =====
 ; Ported to C: _PickRandomEligibleSwapPlayerOrdinalFromTeam in src/transfer_market.c
 ; Bridge: a6=teamBlock, d6=excludeSlot → C params, returns d1
-PickRandomEligibleSwapPlayerOrdinalFromTeam:
-                movem.l d0/d2-d7/a0-a6,-(sp)
-                move.l  d6,-(sp)
-                move.l  a6,-(sp)
-                jsr     _PickRandomEligibleSwapPlayerOrdinalFromTeam
-                addq.l  #8,sp
-                move.w  d0,d1
-                movem.l (sp)+,d0/d2-d7/a0-a6
-                rts
 
 ; ===== IsOfferTeamPlayerPairUnique =====
 ; Ported to C: _IsOfferTeamPlayerPairUnique in src/transfer_market.c
 ; Bridge: d0=teamId, d1=playerIdx → C params, returns Z flag
 ; Z=0 (NZ) → unique, Z=1 → duplicate (C returns 1/0 respectively)
-IsOfferTeamPlayerPairUnique:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _IsOfferTeamPlayerPairUnique
-                addq.l  #8,sp
-                tst.w   d0
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 offerPrimaryPositionMask:
                 dc.w $0000
 offerExtraPositionMask:
@@ -55852,19 +51779,6 @@ offerCandidateTeamIndexBuffer:
 ; ===== EvaluateTransferOfferNegotiation =====
 ; Ported to C: _EvaluateTransferOfferNegotiation in src/transfer_market.c
 ; Bridge: no params → returns d0 = transferPlayerMenuResult
-EvaluateTransferOfferNegotiation:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _EvaluateTransferOfferNegotiation
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== RemoveNegotiatedOfferPlayersFromMarkets =====
-; Ported to C: _RemoveNegotiatedOfferPlayersFromMarkets in src/transfer_market.c
-RemoveNegotiatedOfferPlayersFromMarkets:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _RemoveNegotiatedOfferPlayersFromMarkets
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== RemoveOfferPlayerFromMarketsAndCount =====
 ; Ported to C: _RemoveOfferPlayerFromMarketsAndCount in src/transfer_market.c
@@ -55881,15 +51795,6 @@ nullsub_14:
 ; Ported to C: _ApplyOfferDemandMultipliersForSwapAndExtraPlayers in src/transfer_market.c
 ; Dead code - never called. Bridge kept for symbol preservation.
 ; Bridge: d5=demandValue → C param, returns d5
-ApplyOfferDemandMultipliersForSwapAndExtraPlayers:
-                movem.l d0-d4/d6-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d5
-                move.l  d5,-(sp)
-                jsr     _ApplyOfferDemandMultipliersForSwapAndExtraPlayers
-                addq.l  #4,sp
-                move.w  d0,d5
-                movem.l (sp)+,d0-d4/d6-d7/a0-a6
-                rts
 swapPlayerValueRandom:
                 dc.w $0000              ; Random multiplier factor for swap player valuation.
 extraPlayerValueRandom:
@@ -55898,30 +51803,10 @@ extraPlayerValueRandom:
 ; ===== GetTeamPointer =====
 ; Ported to C: _GetTeamPointer in src/career_teams.c
 ; Bridge: d0=teamId → a0=teamPtr. Preserves d0-d2.
-GetTeamPointer:
-                movem.l d0-d7/a1-a6,-(sp)
-                and.l   #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _GetTeamPointer
-                addq.l  #4,sp
-                movea.l d0,a0
-                movem.l (sp)+,d0-d7/a1-a6
-                rts
 
 ; ===== GetPlayer =====
 ; Ported to C: _GetPlayer in teams.c
 ; Bridge: d0=teamNumber, d1=playerFileIndex → a0=playerPtr. Preserves d1.
-GetPlayer:
-                movem.l d1-d7/a1-a6,-(sp)
-                and.l   #$FFFF,d1
-                move.l  d1,-(sp)
-                and.l   #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _GetPlayer
-                addq.l  #8,sp
-                movea.l d0,a0
-                movem.l (sp)+,d1-d7/a1-a6
-                rts
 
 ; ===== GetPlayerAtIndex =====
 ; Ported to C: _GetPlayerAtIndex in teams.c
@@ -55942,17 +51827,6 @@ GetPlayerAtIndex:
 ; ===== GetPlayerSlotIndexByPlayerNumber =====
 ; Ported to C: _GetPlayerSlotIndexByPlayerNumber in teams.c
 ; Bridge: d0=teamNumber, d1=playerNumber → d1=slotIndex. Preserves d0, a0.
-GetPlayerSlotIndexByPlayerNumber:
-                movem.l d0/d2-d7/a0-a6,-(sp)
-                and.l   #$FFFF,d1
-                move.l  d1,-(sp)
-                and.l   #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _GetPlayerSlotIndexByPlayerNumber
-                addq.l  #8,sp
-                move.w  d0,d1
-                movem.l (sp)+,d0/d2-d7/a0-a6
-                rts
 
 ; ===== GetPlayerInfoBreakPosition =====
 ; Ported to C: _GetPlayerInfoBreakPosition in src/edit_tactics.c
@@ -55979,66 +51853,22 @@ GetPlayerInfoBreakPosition:
 ;      D0 - selected team league
 ; Ported to C: _GetTeamLeague in src/career_teams.c
 ; Bridge: d0=teamNumber → C param, returns d0.w=league
-GetTeamLeague:
-                movem.l d1-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _GetTeamLeague
-                addq.l  #4,sp
-                movem.l (sp)+,d1-d7/a0-a6
-                rts
 
 ; ===== Career_CopyUnavailablePlayerToCareerTeamSlot =====
 ; Ported to C: _Career_CopyUnavailablePlayerToCareerTeamSlot in src/career_teams.c
 ; in: A0=srcPlayer, A1=dstTeam, A2=srcName, D2=srcTeamNumber, D1=srcPlayerIndex, D3=dstSlotIndex
-Career_CopyUnavailablePlayerToCareerTeamSlot:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.w  d3,-(sp)
-                move.w  d1,-(sp)
-                move.w  d2,-(sp)
-                move.l  a2,-(sp)
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _Career_CopyUnavailablePlayerToCareerTeamSlot
-                lea     18(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_ShowAddInternationalPlayerDialog =====
 ; Bridge to C: _Career_ShowAddInternationalPlayerDialog(homeOrAbroadFlag)
 ; Returns: d0=careerAddIntlPlayerResult, a5=srcPlayerPtr, a2=srcPlayerNamePtr
-Career_ShowAddInternationalPlayerDialog:
-                movem.l d2-d7/a3-a4/a6,-(sp)
-                move.w  d0,-(sp)
-                jsr     _Career_ShowAddInternationalPlayerDialog
-                addq.l  #2,sp
-                movem.l (sp)+,d2-d7/a3-a4/a6
-                move.w  (careerAddIntlPlayerResult).l,d0
-                movea.l (careerAddIntlPlayerSelectedSrcPlayerPtr).l,a5
-                movea.l (careerAddIntlPlayerSelectedSrcPlayerNamePtr).l,a2
-                rts
 
 ; ===== AddInternationalPlayerHome =====
 ; Ported to C: _AddInternationalPlayerHome in src/menus.c
 ; Bridge: a0=selectedTeam → C param
-AddInternationalPlayerHome:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _AddInternationalPlayerHome
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== AddInternationalPlayerAbroad =====
 ; Ported to C: _AddInternationalPlayerAbroad in src/menus.c
 ; Bridge: a0=selectedTeam → C param
-AddInternationalPlayerAbroad:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _AddInternationalPlayerAbroad
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_AddInternationalPlayerCommon =====
 ; Ported to C: _Career_AddInternationalPlayerCommon in src/menus.c
@@ -56056,24 +51886,11 @@ careerAddIntlPlayerSelectedSrcPlayerNamePtr:
 ; ===== Career_RemoveInternationalPlayersByMask =====
 ; prototype: void __usercall Career_RemoveInternationalPlayersByMask(unsigned int removeMask@<d0>)
 ; Chunk 171: ported to C (_Career_RemoveInternationalPlayersByMask)
-Career_RemoveInternationalPlayersByMask:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d0,-(sp)
-                jsr     _Career_RemoveInternationalPlayersByMask
-                lea     4(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== GetPlayerPositionFromCurrent =====
 ; prototype: unsigned __int16 __usercall GetPlayerPositionFromCurrent@<d1>(unsigned __int16 playerIndex@<d1>)
 ; Chunk 171: ported to C (_GetPlayerPositionFromCurrent)
 ; in: d1 = playerIndex, out: d1 = position
-GetPlayerPositionFromCurrent:
-                move.w  d1,-(sp)
-                jsr     _GetPlayerPositionFromCurrent
-                addq.l  #2,sp
-                move.w  d0,d1
-                rts
 
 ; ===== Career_InitInternationalSquadAndLookupTablesForNewSeason =====
 ; prototype: void __usercall Career_InitInternationalSquadAndLookupTablesForNewSeason(void *teamPtr@<a0>)
@@ -56686,59 +52503,9 @@ selectNationalTeamMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== SelectNationalTeamInit =====
-; prototype: void __usercall SelectNationalTeamInit()
-; ===== SelectNationalTeamInit =====
-; Ported to C: _SelectNationalTeamInit in src/menus.c
-SelectNationalTeamInit:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _SelectNationalTeamInit
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== SelectNationalTeamFinish =====
-; Ported to C: _SelectNationalTeamFinish in src/menus.c
-SelectNationalTeamFinish:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _SelectNationalTeamFinish
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== Career_RebuildInternationalPlayerSelectionMasks =====
-; Ported to C: _Career_RebuildInternationalPlayerSelectionMasks in src/menus.c
-Career_RebuildInternationalPlayerSelectionMasks:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_RebuildInternationalPlayerSelectionMasks
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== NationalTeamAddPlayer =====
-; Ported to C: _NationalTeamAddPlayer in src/menus.c
-NationalTeamAddPlayer:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _NationalTeamAddPlayer
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== NationalTeamRemovePlayers =====
-; Ported to C: _NationalTeamRemovePlayers in src/menus.c
-NationalTeamRemovePlayers:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _NationalTeamRemovePlayers
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== SelectNationalTeamExit =====
 ; prototype: void __usercall SelectNationalTeamExit()
-; Ported to C: _SelectNationalTeamExit in src/menus.c
-
-; ===== SelectNationalTeamAbort =====
-; Ported to C: _SelectNationalTeamAbort in src/menus.c
-SelectNationalTeamAbort:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _SelectNationalTeamAbort
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== SelectNationalTeamOnSelect25 =====
 ; Ported to C: _SelectNationalTeamOnSelect25 in src/menus.c
@@ -56749,24 +52516,10 @@ SelectNationalTeamAbort:
 ; ===== SelectNationalTeamCommon =====
 ; Ported to C: _SelectNationalTeamCommon in src/menus.c
 ; Bridge: a5 → C param
-SelectNationalTeamCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _SelectNationalTeamCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== SelectNationalTeamAfterDrawCommon =====
 ; Ported to C: _SelectNationalTeamAfterDrawCommon in src/menus.c
 ; Bridge: a5 → C param
-SelectNationalTeamAfterDrawCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _SelectNationalTeamAfterDrawCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 careerIntlPlayersRemoveMask:
                 dc.l $00000000          ; raw
 careerIntlPlayersWrongTypeMask:
@@ -56900,15 +52653,6 @@ careerNationalTeamAddPlayerType:
 ; ===== GetPlayerPosition =====
 ; prototype: __int16 __usercall GetPlayerPosition@<d1>(__int16 playerIndex@<d1>, void *team@<a0>)
 ; Forwarding stub -> _GetPlayerPosition in C
-GetPlayerPosition:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.w  d1,-(sp)        ; playerIndex
-                move.l  a0,-(sp)        ; team
-                jsr     _GetPlayerPosition
-                addq.l  #6,sp
-                move.w  d0,d1           ; result in d1 per original ABI
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== ShowPlayMatchMenu =====
 ; prototype: __int16 __usercall ShowPlayMatchMenu@<d0>(__int16 controlFlags@<d0>, __int16 maxSubstitutes@<d1>, __int16 excludeFlags@<d2>, __int16 isFirstPlayerChoosingTeam@<d5>, __int16 squadChangesAllowed@<d6>, void *team1@<a1>, void *team2@<a2>)
@@ -56923,25 +52667,6 @@ GetPlayerPosition:
 ;      
 ; out:
 ;      D0 - player number that started
-; Ported to C: _ShowPlayMatchMenu in src/play_match_menu.c
-ShowPlayMatchMenu:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a2,-(sp)        ; team2
-                move.l  a1,-(sp)        ; team1
-                andi.l  #$FFFF,d6
-                move.l  d6,-(sp)        ; squadChanges
-                andi.l  #$FFFF,d5
-                move.l  d5,-(sp)        ; isFirstPlayer
-                andi.l  #$FFFF,d2
-                move.l  d2,-(sp)        ; excludeFlags
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)        ; maxSubstitutes
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)        ; controlFlags
-                jsr     _ShowPlayMatchMenu
-                lea     28(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; Menu_PlayMatch
 playMatchMenu:
                 ; Menu_PlayMatch
@@ -58137,27 +53862,12 @@ sidePitchSurnamePositionsTable:
 
 ; ===== PlayMatchMenuInit =====
 ; Forwarding stub -> _PlayMatchMenuInit in C
-PlayMatchMenuInit:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _PlayMatchMenuInit
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PlayMatchMenuReinit =====
 ; Forwarding stub -> _PlayMatchMenuReinit in C
-PlayMatchMenuReinit:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _PlayMatchMenuReinit
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== SetCurrentSelectedPlayerIndexPointer =====
 ; Forwarding stub -> _SetCurrentSelectedPlayerIndexPointer in C
-SetCurrentSelectedPlayerIndexPointer:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _SetCurrentSelectedPlayerIndexPointer
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== OnSwapPlayer =====
 ; Forwarding stub -> _OnSwapPlayer in C (a5 = MenuEntry*)
@@ -58177,14 +53887,6 @@ PlayMatchMenuSwapPlayers:
 ; ===== HandleSquadSwapSelectionToggle =====
 ; Forwarding stub -> _HandleSquadSwapSelectionToggle in C
 ; in: D6 = menuPos; out: D0 = result, sets zero flag
-HandleSquadSwapSelectionToggle:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.w  d6,-(sp)        ; menuPos
-                jsr     _HandleSquadSwapSelectionToggle
-                addq.l  #2,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                tst.w   d0              ; set zero flag for caller
-                rts
 
 ; ===== PlayMatchChangeTactics =====
 ; Forwarding stub -> _PlayMatchChangeTactics in C (a5 = MenuEntry*)
@@ -58198,51 +53900,21 @@ PlayMatchChangeTactics:
 
 ; ===== ExitPlayMatch =====
 ; Forwarding stub -> _ExitPlayMatch in C
-ExitPlayMatch:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _ExitPlayMatch
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PlayMatchSelected =====
 ; Forwarding stub -> _PlayMatchSelected in C
-PlayMatchSelected:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _PlayMatchSelected
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== EditTacticsInPlayMatchMenu =====
 ; Forwarding stub -> _EditTacticsInPlayMatchMenu in C
-EditTacticsInPlayMatchMenu:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _EditTacticsInPlayMatchMenu
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== ViewOpponentsSelect =====
 ; Forwarding stub -> _ViewOpponentsSelect in C
-ViewOpponentsSelect:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _ViewOpponentsSelect
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== ReturnFromViewOpponent =====
 ; Forwarding stub -> _ReturnFromViewOpponent in C
-ReturnFromViewOpponent:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _ReturnFromViewOpponent
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== PlayMatchOnSelect30 =====
 ; Forwarding stub -> _PlayMatchOnSelect30 in C
-PlayMatchOnSelect30:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _PlayMatchOnSelect30
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ; __int16[3]
 playMatchRedrawList:
                 ; __int16[3]
@@ -58250,67 +53922,27 @@ playMatchRedrawList:
 
 ; ===== PlayMatch30AfterDraw =====
 ; Forwarding stub -> _PlayMatch30AfterDraw in C
-PlayMatch30AfterDraw:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _PlayMatch30AfterDraw
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== UpdateTeamCheckmark =====
 ; Forwarding stub -> _UpdateTeamCheckmark in C
-UpdateTeamCheckmark:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _UpdateTeamCheckmark
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== SetGameStartButtonText =====
 ; Forwarding stub -> _SetGameStartButtonText in C
-SetGameStartButtonText:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _SetGameStartButtonText
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== ShowOrHidePlayMatchButton =====
 ; Forwarding stub -> _ShowOrHidePlayMatchButton in C
-ShowOrHidePlayMatchButton:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _ShowOrHidePlayMatchButton
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== SetUpTacticsButtons =====
 ; Forwarding stub -> _SetUpTacticsButtons in C
-SetUpTacticsButtons:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _SetUpTacticsButtons
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== SetPlayerSurnamesOnSidePitch =====
 ; Forwarding stub -> _SetPlayerSurnamesOnSidePitch in C
-SetPlayerSurnamesOnSidePitch:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _SetPlayerSurnamesOnSidePitch
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== ShowUseMatchTeamIfTraining =====
 ; Forwarding stub -> _ShowUseMatchTeamIfTraining in C
-ShowUseMatchTeamIfTraining:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _ShowUseMatchTeamIfTraining
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== SetVariableButtons =====
 ; Forwarding stub -> _SetVariableButtons in C
-SetVariableButtons:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _SetVariableButtons
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== DrawPlayerEntries =====
 ; Forwarding stub -> _DrawPlayerEntries in C (a5 = MenuEntry*)
@@ -58324,51 +53956,21 @@ DrawPlayerEntries:
 
 ; ===== RedrawPlayerNames =====
 ; Forwarding stub -> _RedrawPlayerNames in C
-RedrawPlayerNames:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _RedrawPlayerNames
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== UpdateLittleCheckmark =====
 ; Forwarding stub -> _UpdateLittleCheckmark in C
-UpdateLittleCheckmark:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _UpdateLittleCheckmark
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== SavePositionsAndUpdateLittleCheckmark =====
 ; Forwarding stub -> _SavePositionsAndUpdateLittleCheckmark in C
-SavePositionsAndUpdateLittleCheckmark:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _SavePositionsAndUpdateLittleCheckmark
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== UpdateCheckMarkSprite =====
 ; Forwarding stub -> _UpdateCheckMarkSprite in C
-UpdateCheckMarkSprite:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _UpdateCheckMarkSprite
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== UseMatchTeamSelect =====
 ; Forwarding stub -> _UseMatchTeamSelect in C
-UseMatchTeamSelect:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _UseMatchTeamSelect
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== TogglePlayerCoach =====
 ; Forwarding stub -> _TogglePlayerCoach in C
-TogglePlayerCoach:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _TogglePlayerCoach
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 togglePlayerCoachRedrawItemList:
                 dc.w $0009,$0001,$0006,$FFFF
 isFirstPlayerChoosingTeam:
@@ -58433,34 +54035,14 @@ careerTeamCoachOnly:
 ; ===== Career_MaybeGenerateJobOffer =====
 ; Ported to C: _Career_MaybeGenerateJobOffer in src/job_offers.c
 ; Bridge: no params
-Career_MaybeGenerateJobOffer:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _Career_MaybeGenerateJobOffer
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== IsTeamCodeOkForNationalSelector =====
 ; Ported to C: _IsTeamCodeOkForNationalSelector in teams.c
 ; Bridge: d0=code → Z flag (0=notOK/Z set, non-zero=OK/Z clear)
-IsTeamCodeOkForNationalSelector:
-                movem.l d2-d7/a2-a6,-(sp)
-                and.l   #$FF,d0
-                move.l  d0,-(sp)
-                jsr     _IsTeamCodeOkForNationalSelector
-                addq.l  #4,sp
-                tst.w   d0
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== IsPlayerOkForNationalSelector =====
 ; Ported to C: _IsPlayerOkForNationalSelector in teams.c
 ; Bridge: → Z flag (0=notOK/Z set, non-zero=OK/Z clear)
-IsPlayerOkForNationalSelector:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _IsPlayerOkForNationalSelector
-                tst.w   d0
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== NotOkForNationalSelector ===== (dead — callers ported to C)
 NotOkForNationalSelector:
@@ -58486,39 +54068,14 @@ GetNationalityAndTeamFile:
 ; ===== GetNationalTeamNumberFromTeamFileId =====
 ; Ported to C: _GetNationalTeamNumberFromTeamFileId in teams.c
 ; Bridge: d0=teamFileId → d0=teamNumber or -1
-GetNationalTeamNumberFromTeamFileId:
-                movem.l d2-d7/a2-a6,-(sp)
-                and.l   #$FF,d0
-                move.l  d0,-(sp)
-                jsr     _GetNationalTeamNumberFromTeamFileId
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== GetNationalTeamNumber =====
 ; Ported to C: _GetNationalTeamNumber in teams.c
 ; Bridge: d0=nationality → d0=teamNumber or -1
-GetNationalTeamNumber:
-                movem.l d2-d7/a2-a6,-(sp)
-                and.l   #$FF,d0
-                move.l  d0,-(sp)
-                jsr     _GetNationalTeamNumber
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== GetNationalityRecordPtr =====
 ; Ported to C: _GetNationalityRecordPtr in teams.c
 ; Bridge: d0=teamFileAndOrdinal → a0=record ptr or NULL
-GetNationalityRecordPtr:
-                movem.l d2-d7/a2-a6,-(sp)
-                and.l   #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _GetNationalityRecordPtr
-                addq.l  #4,sp
-                movea.l d0,a0
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 nat_teams_rand_limit1:
                 dc.w $0029
 numNationalTeams:
@@ -58584,138 +54141,38 @@ nationalTeams:
 ; ===== Career_ContinueToNextSeasonInitTeamAndFunds =====
 ; Ported to C: _Career_ContinueToNextSeasonInitTeamAndFunds in src/career_init.c
 ; in: D0 = teamNumber, D1 = baseFunds
-Career_ContinueToNextSeasonInitTeamAndFunds:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d1,-(sp)
-                move.w  d0,-(sp)
-                jsr     _Career_ContinueToNextSeasonInitTeamAndFunds
-                lea     6(sp),sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== JobOffers_MaybeExpireSomeNewOffers =====
-; Ported to C: _JobOffers_MaybeExpireSomeNewOffers in src/job_offers.c
-JobOffers_MaybeExpireSomeNewOffers:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _JobOffers_MaybeExpireSomeNewOffers
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== JobOffers_FillMissingNewOfferTeamNames =====
-; Ported to C: _JobOffers_FillMissingNewOfferTeamNames in src/job_offers.c
-JobOffers_FillMissingNewOfferTeamNames:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _JobOffers_FillMissingNewOfferTeamNames
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== JobOffers_RemoveExpiredOffers =====
-; Ported to C: _JobOffers_RemoveExpiredOffers in src/job_offers.c
-JobOffers_RemoveExpiredOffers:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _JobOffers_RemoveExpiredOffers
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== JobOffers_ConvertNewOfferToOffer =====
 ; Ported to C: _JobOffers_ConvertNewOfferToOffer in src/job_offers.c
 ; Bridge: d0=teamNumber, d1=initialFunds → C params
-JobOffers_ConvertNewOfferToOffer:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  d1,-(sp)
-                move.w  d0,-(sp)
-                jsr     _JobOffers_ConvertNewOfferToOffer
-                addq.l  #6,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== JobOffers_RemoveOffer =====
 ; Ported to C: _JobOffers_RemoveOffer in src/job_offers.c
 ; Bridge: d0=teamNumber → C param
-JobOffers_RemoveOffer:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.w  d0,-(sp)
-                jsr     _JobOffers_RemoveOffer
-                addq.l  #2,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== IsOldJobOffer =====
 ; Ported to C: _IsOldJobOffer in src/job_offers.c
 ; Bridge: d0=teamNo → C param, returns Z flag (0=found/Z set, 1=not found/Z clear)
-IsOldJobOffer:
-                movem.l d1-d7/a0-a6,-(sp)
-                and.l   #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _IsOldJobOffer
-                addq.l  #4,sp
-                tst.w   d0
-                movem.l (sp)+,d1-d7/a0-a6
-                rts
 
 ; ===== GetJobOfferPtr =====
 ; Ported to C: _GetJobOfferPtr in src/job_offers.c
 ; Bridge: d0=index → C param, returns ptr in a0
-GetJobOfferPtr:
-                movem.l d1-d7/a1-a6,-(sp)
-                and.l   #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _GetJobOfferPtr
-                addq.l  #4,sp
-                movea.l d0,a0
-                movem.l (sp)+,d1-d7/a1-a6
-                rts
 
 ; ===== AddJobOffer =====
 ; Ported to C: _AddJobOffer in src/job_offers.c
 ; Bridge: d0=teamNo, d1=initialFunds(32-bit) → C params
-AddJobOffer:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  d1,-(sp)
-                and.l   #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _AddJobOffer
-                addq.l  #8,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== RemoveJobOffer =====
 ; Ported to C: _RemoveJobOffer in src/job_offers.c
 ; Bridge: d0=teamNo → C param
-RemoveJobOffer:
-                movem.l d0-d7/a0-a6,-(sp)
-                and.l   #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _RemoveJobOffer
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== IsNewJobOffer =====
 ; Ported to C: _IsNewJobOffer in src/job_offers.c
 ; Bridge: d0=teamNo → C param, returns Z flag (0=found/Z set, 1=not found/Z clear)
-IsNewJobOffer:
-                movem.l d1-d7/a0-a6,-(sp)
-                and.l   #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _IsNewJobOffer
-                addq.l  #4,sp
-                tst.w   d0
-                movem.l (sp)+,d1-d7/a0-a6
-                rts
 
 ; ===== GetNewJobOfferPtr =====
 ; Ported to C: _GetNewJobOfferPtr in src/job_offers.c
 ; Bridge: d0=index → C param, returns ptr in a0
-GetNewJobOfferPtr:
-                movem.l d1-d7/a1-a6,-(sp)
-                and.l   #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _GetNewJobOfferPtr
-                addq.l  #4,sp
-                movea.l d0,a0
-                movem.l (sp)+,d1-d7/a1-a6
-                rts
 ; Menu_JobOffers
 jobOffersMenu:
                 ; Menu_JobOffers
@@ -59015,53 +54472,11 @@ jobOffersMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== JobOffersInit =====
-; Ported to C: _JobOffersInit in src/job_offers.c
-JobOffersInit:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _JobOffersInit
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== JobOffersCommon ===== (ported to C → _JobOffersCommon)
 ; C bridge: a5 = MenuEntry*, pass on stack
-JobOffersCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _JobOffersCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== OldJobOffersCommon ===== (ported to C → _OldJobOffersCommon)
 ; C bridge: a5 = MenuEntry*, pass on stack
-OldJobOffersCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _OldJobOffersCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== JobOffers_DrawOldOfferLine =====
-; Ported to C: _JobOffers_DrawOldOfferLine in src/job_offers.c
-JobOffers_DrawOldOfferLine:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _JobOffers_DrawOldOfferLine
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== JobOffersAfterDrawCommon =====
-; Ported to C: _JobOffersAfterDrawCommon in src/job_offers.c
-JobOffersAfterDrawCommon:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _JobOffersAfterDrawCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 pad_14A1D4:
                 dc.b 0,0
 selectedOldJobOfferOrdinal:
@@ -59321,70 +54736,6 @@ gotJobOfferMenu:
                 dc.l _AcceptJobOffer     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
-
-; ===== GotJobOfferInit =====
-; prototype: void __usercall GotJobOfferInit()
-GotJobOfferInit:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _GotJobOfferInit
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== GotJobOfferFinish =====
-; prototype: void __usercall GotJobOfferFinish()
-GotJobOfferFinish:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _GotJobOfferFinish
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== AcceptJobOffer =====
-; prototype: void __usercall AcceptJobOffer()
-AcceptJobOffer:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _AcceptJobOffer
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== j_SetExitMenuFlag_14 =====
-; prototype: void j_SetExitMenuFlag_14(...)
-j_SetExitMenuFlag_14:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _j_SetExitMenuFlag_14
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== RejectJobOffer =====
-; prototype: void __usercall RejectJobOffer()
-RejectJobOffer:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _RejectJobOffer
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== ViewFutureTeam =====
-; prototype: void __usercall ViewFutureTeam()
-ViewFutureTeam:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _ViewFutureTeam
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== ViewFutureTeamLeague =====
-; prototype: void __usercall ViewFutureTeamLeague()
-ViewFutureTeamLeague:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _ViewFutureTeamLeague
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
-; ===== ConsiderJobOffer =====
-; prototype: void __usercall ConsiderJobOffer()
-ConsiderJobOffer:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _ConsiderJobOffer
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 jobOffersFromRetired:
                 dc.w $0000              ; Flag indicating job offers opened from retired/sacked path.
 jobOfferOrdinal:
@@ -59399,14 +54750,6 @@ teamOfferingJobPtr:
 jobOfferFunds:
                 dc.l $00000000          ; Funds for improving the team
                                         ; -1 = international offer
-
-; ===== ShowChairmanMessage =====
-; Ported to C: _ShowChairmanMessage in src/chairman_memo.c
-ShowChairmanMessage:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ShowChairmanMessage
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 currentMessage:
                 dc.w $0000              ; Index of current message from club managers
                                         ; 0 - no messages (1-based)
@@ -59594,38 +54937,6 @@ clubMessagesTable:
                 dc.l aDistinguishedC    ; "DISTINGUISHED CAREER - ENJOY YOUR RETIREMENT"
                 dc.l aItIsWithGreatR    ; "IT IS WITH GREAT REGRET THAT WE HAVE DECIDED NOT TO"
                 dc.l aRenewYourContr    ; "RENEW YOUR CONTRACT FOR NEXT SEASON - GOOD LUCK"
-
-; ===== ChairmanMemosInit =====
-; Ported to C: _ChairmanMemosInit in src/chairman_memo.c
-ChairmanMemosInit:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ChairmanMemosInit
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== ChairmanMemosOnReturn =====
-; Ported to C: _ChairmanMemosOnReturn in src/chairman_memo.c
-ChairmanMemosOnReturn:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ChairmanMemosOnReturn
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== ChairmanMemosContinue =====
-; Ported to C: _ChairmanMemosContinue in src/chairman_memo.c
-ChairmanMemosContinue:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ChairmanMemosContinue
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== ShowClubBussinesMenu =====
-; Ported to C: _ShowClubBussinesMenu in src/chairman_memo.c
-ShowClubBussinesMenu:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ShowClubBussinesMenu
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 ; Menu_ClubBusiness
 clubBusinessMenu:
                 ; Menu_ClubBusiness
@@ -59919,15 +55230,6 @@ clubBusinessMenu:
                 dc.w MENU_CMD_END       ; entry21_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== ClubBusinessInit =====
-; prototype: void __usercall ClubBusinessInit()
-; Ported to C: _ClubBusinessInit in career_status.c
-ClubBusinessInit:
-                movem.l d2-d7/a2-a6,-(sp)
-                jsr     _ClubBusinessInit
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
-
 ; ===== j_SetExitMenuFlag13 =====
 ; prototype: void __usercall j_SetExitMenuFlag13()
 j_SetExitMenuFlag13:
@@ -59962,36 +55264,9 @@ Career_InitializeNewSeasonFinances:
 ; in:
 ;     D1 - player index
 ; dos: cseg_5E345
-Career_UpdatePlayerWeeklyWageCache:
-                movem.l d0-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                jsr     _Career_UpdatePlayerWeeklyWageCache
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== Career_RemovePlayerWeeklyWageAndRecalcWeeklyWages =====
-; prototype: void __usercall Career_RemovePlayerWeeklyWageAndRecalcWeeklyWages(unsigned __int16 playerIndex@<d1>)
-Career_RemovePlayerWeeklyWageAndRecalcWeeklyWages:
-                movem.l d0-d7/a0-a6,-(sp)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)
-                jsr     _Career_RemovePlayerWeeklyWageAndRecalcWeeklyWages
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== CalcGateReceiptsBaseFromTeamValue ===== (ported to C → _CalcGateReceiptsBaseFromTeamValue in teams.c)
 ; in: D0 = avgPrice, out: D0.w = gate receipts base
-CalcGateReceiptsBaseFromTeamValue:
-                movem.l d2-d7/a2-a6,-(sp)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)
-                jsr     _CalcGateReceiptsBaseFromTeamValue
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 ballXQuadrantCoordinates:
                 dc.w 12,38,64,90,116
 ballYQuadrantCoordinates:
@@ -60337,70 +55612,6 @@ chooseTacticsMenu:
                 dc.l _ExitChooseTacticsMenu ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
-
-; ===== ChooseTacticsInit =====
-; Ported to C: _ChooseTacticsInit in src/edit_tactics.c
-ChooseTacticsInit:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ChooseTacticsInit
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== User_A_Tactics =====
-; Ported to C: _User_A_Tactics in src/tactics_menu.c
-User_A_Tactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _User_A_Tactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== User_B_Tactics =====
-; Ported to C: _User_B_Tactics in src/tactics_menu.c
-User_B_Tactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _User_B_Tactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== User_C_Tactics =====
-; Ported to C: _User_C_Tactics in src/tactics_menu.c
-User_C_Tactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _User_C_Tactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== User_D_Tactics =====
-; Ported to C: _User_D_Tactics in src/tactics_menu.c
-User_D_Tactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _User_D_Tactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== User_E_Tactics =====
-; Ported to C: _User_E_Tactics in src/tactics_menu.c
-User_E_Tactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _User_E_Tactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== User_F_Tactics =====
-; Ported to C: _User_F_Tactics in src/tactics_menu.c
-User_F_Tactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _User_F_Tactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== ExitChooseTacticsMenu =====
-; Ported to C: _ExitChooseTacticsMenu in src/tactics_menu.c
-ExitChooseTacticsMenu:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ExitChooseTacticsMenu
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 ; Menu_EditTactics
 editTacticsMenu:
                 ; Menu_EditTactics
@@ -61140,33 +56351,10 @@ flipStrTable:
                 dc.l aUSER_B            ; "USER B"
                 dc.l aUSER_C            ; "USER C"
 
-; ===== EditTacticsInit =====
-; Ported to C: _EditTacticsInit in src/edit_tactics.c
-EditTacticsInit:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _EditTacticsInit
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== EditTacticsOnRestore =====
-; Ported to C: _EditTacticsOnRestore in src/edit_tactics.c
-EditTacticsOnRestore:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _EditTacticsOnRestore
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
 ; ===== EditTacticsCommon =====
 ; prototype: void __usercall EditTacticsCommon(MenuEntry *cur@<a5>)
 ; Ported to C: _EditTacticsCommon in src/edit_tactics.c
 ; Bridge: a5=MenuEntry* → void
-EditTacticsCommon:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _EditTacticsCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== EditTactics_FindFreePairId =====
 ; prototype: __int16 __usercall EditTactics_FindFreePairId@<d0>()
@@ -61176,11 +56364,6 @@ EditTacticsCommon:
 ; dos: cseg_4E166
 ; Ported to C: _EditTactics_FindFreePairId in src/edit_tactics.c
 ; Bridge: returns d0
-EditTactics_FindFreePairId:
-                movem.l d1-d7/a0-a6,-(sp)
-                jsr     _EditTactics_FindFreePairId
-                movem.l (sp)+,d1-d7/a0-a6
-                rts
 
 ; ===== EditTactics_ClearPairId =====
 ; prototype: void __usercall EditTactics_ClearPairId(__int16 value@<d0>)
@@ -61189,180 +56372,31 @@ EditTactics_FindFreePairId:
 ; dos: cseg_4E1F1
 ; Ported to C: _EditTactics_ClearPairId in src/edit_tactics.c
 ; Bridge: d0=value → void
-EditTactics_ClearPairId:
-                movem.l d1-d7/a0-a6,-(sp)
-                move.w  d0,-(sp)
-                jsr     _EditTactics_ClearPairId
-                addq.l  #2,sp
-                movem.l (sp)+,d1-d7/a0-a6
-                rts
 
 ; ===== EditTacticsPlayerNamesCommon =====
 ; prototype: void __usercall EditTacticsPlayerNamesCommon(MenuEntry *cur@<a5>)
 ; Called when player name is selected in edit tactics menu.
 ; Ported to C: _EditTacticsPlayerNamesCommon in src/edit_tactics.c
 ; Bridge: a5=MenuEntry* → void
-EditTacticsPlayerNamesCommon:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _EditTacticsPlayerNamesCommon
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== EditTactics_SwapPlayersInSlots =====
 ; prototype: void __usercall EditTactics_SwapPlayersInSlots(__int16 i1@<d1>, __int16 i2@<d2>, __int16 i3@<d3>, __int16 i4@<d4>)
 ; dos: cseg_4E3DD
 ; Ported to C: _EditTactics_SwapPlayersInSlots in src/edit_tactics.c
 ; Bridge: d3=slot1, d4=slot2 → void
-EditTactics_SwapPlayersInSlots:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.w  d4,-(sp)
-                move.w  d3,-(sp)
-                jsr     _EditTactics_SwapPlayersInSlots
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== SelectCopyTactics =====
-; Ported to C: _SelectCopyTactics in src/edit_tactics.c
-SelectCopyTactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SelectCopyTactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== UndoTactics =====
-; Ported to C: _UndoTactics in src/edit_tactics.c
-UndoTactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _UndoTactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== AbortEditTactics =====
-; Ported to C: _AbortEditTactics in src/edit_tactics.c
-AbortEditTactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _AbortEditTactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== SaveAndExitEditTactics =====
-; Ported to C: _SaveAndExitEditTactics in src/edit_tactics.c
-SaveAndExitEditTactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SaveAndExitEditTactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== ImportTactics =====
-; Ported to C: _ImportTactics in src/edit_tactics.c
-ImportTactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ImportTactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== FlipOnOff =====
-; Ported to C: _FlipOnOff in src/edit_tactics.c
-FlipOnOff:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _FlipOnOff
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== EnableOrDisablePlayerFacesItems =====
-; Ported to C: _EnableOrDisablePlayerFacesItems in src/edit_tactics.c
-EnableOrDisablePlayerFacesItems:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _EnableOrDisablePlayerFacesItems
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== CopyCurrentTacticName =====
 ; prototype: void __usercall CopyCurrentTacticName()
 ; Sets edit tactics menu header to name of current tactics.
-; Ported to C: _CopyCurrentTacticName in src/edit_tactics.c
-CopyCurrentTacticName:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _CopyCurrentTacticName
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== EditTacicsMovePlayersOrBall =====
-; prototype: void __usercall EditTacicsMovePlayersOrBall()
-; Ported to C: _EditTacicsMovePlayersOrBall in src/edit_tactics.c
-EditTacicsMovePlayersOrBall:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _EditTacicsMovePlayersOrBall
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== CopyTactics =====
-; prototype: void __usercall CopyTactics()
-; Ported to C: _CopyTactics in src/edit_tactics.c
-CopyTactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _CopyTactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== EditTactics2AfterDraw =====
-; Ported to C: _EditTactics2AfterDraw in src/edit_tactics.c
-EditTactics2AfterDraw:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _EditTactics2AfterDraw
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== EditTacticsOnSelect28 =====
-; Ported to C: _EditTacticsOnSelect28 in src/edit_tactics.c
-EditTacticsOnSelect28:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _EditTacticsOnSelect28
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 ; __int16[3]
 editTacticsRotateRedrawList:
                 ; __int16[3]
                 dc.w 10,27,-1           ; List of menu entry indices to redraw after rotating players in edit tactics.
 
-; ===== EditTacticsAfterDrawPlayerFace =====
-; Ported to C: _EditTacticsAfterDrawPlayerFace in src/edit_tactics.c
-EditTacticsAfterDrawPlayerFace:
-                move.l  a5,-(sp)
-                jsr     _EditTacticsAfterDrawPlayerFace
-                addq.l  #4,sp
-                rts
-
-; ===== EditTactics28AfterDraw =====
-; Ported to C: _EditTactics28AfterDraw in src/edit_tactics.c
-EditTactics28AfterDraw:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _EditTactics28AfterDraw
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== EditTactics_UpdateExtraPlayerMenuVisibility =====
-; Ported to C: _EditTactics_UpdateExtraPlayerMenuVisibility in src/edit_tactics.c
-EditTactics_UpdateExtraPlayerMenuVisibility:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _EditTactics_UpdateExtraPlayerMenuVisibility
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
 ; ===== EditTacticsAfterDrawPlayerNames =====
 ; prototype: __int16 __usercall EditTacticsAfterDrawPlayerNames@<d0>(MenuEntry *cur@<a5>)
 ; Ported to C: _EditTacticsAfterDrawPlayerNames in src/edit_tactics.c
 ; Bridge: a5=cur → C param
-EditTacticsAfterDrawPlayerNames:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _EditTacticsAfterDrawPlayerNames
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 loc_14C170:
                 clr.w   d5
                 cmpi.w  #$B,d7
@@ -61515,15 +56549,6 @@ loc_14C352:
 ; dos: cseg_4F37E
 ; Ported to C: _EditTactics_ApplyPlayerRowHighlighting in src/edit_tactics.c
 ; Bridge: d7=ordinal, a5=cur → C params
-EditTactics_ApplyPlayerRowHighlighting:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a5,-(sp)
-                ext.l   d7
-                move.l  d7,-(sp)
-                jsr     _EditTactics_ApplyPlayerRowHighlighting
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
                 ; dead code below
                 cmpi.w  #16,d7          ; player 16
                 bne.s   loc_14C38E
@@ -61651,38 +56676,6 @@ loc_14C50C:
                 move.w  #SPR_CHECK_SMALL,MENUENTRY_FG+ENTRYTYPE2UNION_SPRITE2(a0)
 locret_14C512:
                 rts
-
-; ===== DrawPlayerNamesAndFaces =====
-; Ported to C: _DrawPlayerNamesAndFaces in src/edit_tactics.c
-DrawPlayerNamesAndFaces:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _DrawPlayerNamesAndFaces
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== EditTacticsMenuSavePlayerPositions =====
-; Ported to C: _EditTacticsMenuSavePlayerPositions in src/edit_tactics.c
-EditTacticsMenuSavePlayerPositions:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _EditTacticsMenuSavePlayerPositions
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== EditTactics_CommitPlayerPositionsAndRecalcSkill =====
-; Ported to C: _EditTactics_CommitPlayerPositionsAndRecalcSkill in src/edit_tactics.c
-EditTactics_CommitPlayerPositionsAndRecalcSkill:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _EditTactics_CommitPlayerPositionsAndRecalcSkill
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== SetBigCheckSprite =====
-; Ported to C: _SetBigCheckSprite in src/edit_tactics.c
-SetBigCheckSprite:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SetBigCheckSprite
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 editTacticsFlipPairColorTable:
                 dc.w 14,10,12,6,11
 editTacticsNumPlayers:
@@ -61704,23 +56697,6 @@ editTacticsSelectedPairMenuEntryPtr:
 ; prototype: void __usercall EditTacticsStatus(__int16 status@<d0>)
 ; in:
 ;      D0 - edit tactics status
-; Ported to C: _EditTacticsStatus in src/edit_tactics.c
-EditTacticsStatus:
-                movem.l d1-d7/a0-a6,-(sp)
-                move.w  d0,-(sp)
-                jsr     _EditTacticsStatus
-                addq.l  #2,sp
-                movem.l (sp)+,d1-d7/a0-a6
-                rts
-
-; ===== InitLittlePlayerSprites =====
-; prototype: void __usercall InitLittlePlayerSprites()
-; Ported to C: _InitLittlePlayerSprites in src/edit_tactics.c
-InitLittlePlayerSprites:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _InitLittlePlayerSprites
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== ConvertPlayerDressColor =====
 ; prototype: unsigned __int8 __usercall ConvertPlayerDressColor@<d0>(unsigned __int8 color@<d0>)
@@ -61730,279 +56706,55 @@ InitLittlePlayerSprites:
 ;     D0 - converted color
 ; Ported to C: _ConvertPlayerDressColor in src/team_colors.c
 ; Bridge: d0=color → d0=result
-ConvertPlayerDressColor:
-                movem.l d1-d7/a0-a6,-(sp)
-                move.w  d0,-(sp)
-                jsr     _ConvertPlayerDressColor
-                addq.l  #2,sp
-                movem.l (sp)+,d1-d7/a0-a6
-                rts
 
 ; ===== EditTactics_HandlePitchInput =====
 ; prototype: unsigned __int16 __usercall EditTactics_HandlePitchInput@<d0>(unsigned __int16 col@<d1>, unsigned __int16 row@<d2>)
 ; dos: cseg_50501
-; Ported to C: _EditTactics_HandlePitchInput in src/edit_tactics.c
-EditTactics_HandlePitchInput:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _EditTactics_HandlePitchInput
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== EditTacticsReadControls =====
-; prototype: void __usercall EditTacticsReadControls()
-; Ported to C: _EditTacticsReadControls in src/edit_tactics.c
-EditTacticsReadControls:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _EditTacticsReadControls
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== EditTactics_TryMoveQuadrantCursor =====
 ; Ported to C: _EditTactics_TryMoveQuadrantCursor in src/edit_tactics.c
 ; in: D1=row, D2=col  out: D1=newRow, D2=newCol, D3=ballLoc, D5=flag(Z)
-EditTactics_TryMoveQuadrantCursor:
-                subq.l  #6,sp           ; space for outRow(2), outCol(2), outBallLoc(2)
-                pea     4(sp)           ; &outBallLoc
-                pea     4(sp)           ; &outCol (shifted)
-                pea     4(sp)           ; &outRow (shifted)
-                andi.l  #$FFFF,d2
-                move.l  d2,-(sp)        ; col
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)        ; row
-                jsr     _EditTactics_TryMoveQuadrantCursor
-                lea     20(sp),sp
-                move.w  d0,d5           ; return value = flag
-                move.w  (sp)+,d1        ; outRow
-                move.w  (sp)+,d2        ; outCol
-                move.w  (sp)+,d3        ; outBallLoc
-                tst.w   d5              ; set Z flag for caller
-                rts
-
-; ===== DrawEditTacticsPitchAndPlayers =====
-; prototype: void __usercall DrawEditTacticsPitchAndPlayers()
-; Ported to C: _DrawEditTacticsPitchAndPlayers in src/edit_tactics.c
-DrawEditTacticsPitchAndPlayers:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _DrawEditTacticsPitchAndPlayers
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== DrawLittlePlayersAndBall =====
-; prototype: void __usercall DrawLittlePlayersAndBall()
-; Ported to C: _DrawLittlePlayersAndBall in src/edit_tactics.c
-DrawLittlePlayersAndBall:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _DrawLittlePlayersAndBall
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== SortEditTacticsDrawOrderByY =====
-; Ported to C: _SortEditTacticsDrawOrderByY in src/edit_tactics.c
-SortEditTacticsDrawOrderByY:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SortEditTacticsDrawOrderByY
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== GetEditTacticsItemXYPosition =====
 ; Ported to C: _GetEditTacticsItemXYPosition in src/edit_tactics.c
 ; in: D0=idx  out: D1=x, D2=y
-GetEditTacticsItemXYPosition:
-                subq.l  #4,sp
-                pea     2(sp)           ; &outY
-                pea     2(sp)           ; &outX (shifted)
-                ext.l   d0
-                move.l  d0,-(sp)        ; idx (sign-extended)
-                jsr     _GetEditTacticsItemXYPosition
-                lea     12(sp),sp
-                move.w  (sp)+,d1        ; outX
-                move.w  (sp)+,d2        ; outY
-                rts
 
 ; ===== DrawEditTacticsHighlightedPlayerRoute =====
 ; prototype: void __usercall DrawEditTacticsHighlightedPlayerRoute()
 ; dos: cseg_51729
-; Ported to C: _DrawEditTacticsHighlightedPlayerRoute in src/edit_tactics.c
-DrawEditTacticsHighlightedPlayerRoute:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _DrawEditTacticsHighlightedPlayerRoute
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== SortPlayerAreasByY =====
-; Ported to C: _SortPlayerAreasByY in src/edit_tactics.c
-SortPlayerAreasByY:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SortPlayerAreasByY
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 playerAreas:
                 dc.w 0,1,2,3,4,5,6,7    ; In edit tactics menu
                 dc.w 8,9,10,11,12,13,14,15
                 dc.w 16,17,18,19,20,21,22,23
                 dc.w 24,25,26,27,28,29,30,31
                 dc.w 32,33,34
-
-; ===== DrawPlayerDirections =====
-; Ported to C: _DrawPlayerDirections in src/edit_tactics.c
-DrawPlayerDirections:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _DrawPlayerDirections
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== EditTacticsDrawCursor =====
-; Ported to C: _EditTacticsDrawCursor in src/edit_tactics.c
-EditTacticsDrawCursor:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _EditTacticsDrawCursor
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 tacticCursorFrames:
                 dc.w $0095,$0096,$0097,$0096
 
 ; ===== GetPlayerXYPositionFromQuadrant =====
 ; Ported to C: _GetPlayerXYPositionFromQuadrant in src/edit_tactics.c
 ; in: D0=player, D1=ballLoc  out: D1=x, D2=y
-GetPlayerXYPositionFromQuadrant:
-                subq.l  #4,sp
-                pea     2(sp)           ; &outY
-                pea     2(sp)           ; &outX (shifted)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)        ; ballLoc
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)        ; player
-                jsr     _GetPlayerXYPositionFromQuadrant
-                lea     16(sp),sp
-                move.w  (sp)+,d1        ; outX
-                move.w  (sp)+,d2        ; outY
-                rts
 
 ; ===== GetPlayerQuadrant =====
 ; Ported to C: _GetPlayerQuadrant in src/edit_tactics.c
 ; in: D0=player, D1=ballLoc  out: D1=xQuad, D2=yQuad
-GetPlayerQuadrant:
-                subq.l  #4,sp
-                pea     2(sp)           ; &outYQuad
-                pea     2(sp)           ; &outXQuad (shifted by push)
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)        ; ballLoc
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)        ; player
-                jsr     _GetPlayerQuadrant
-                lea     16(sp),sp
-                move.w  (sp)+,d1        ; outXQuad
-                move.w  (sp)+,d2        ; outYQuad
-                rts
-
-; ===== SetPlayerQuadrant =====
-; Ported to C: _SetPlayerQuadrant in src/edit_tactics.c
-SetPlayerQuadrant:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  d3,-(sp)
-                move.l  d2,-(sp)
-                move.l  d1,-(sp)
-                move.l  d0,-(sp)
-                jsr     _SetPlayerQuadrant
-                add.l   #16,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== GetBallXYPositionFromQuadrant =====
 ; Ported to C: _GetBallXYPositionFromQuadrant in src/edit_tactics.c
 ; in: D1=row, D2=col  out: D1=x, D2=y
-GetBallXYPositionFromQuadrant:
-                subq.l  #4,sp
-                pea     2(sp)           ; &outY
-                pea     2(sp)           ; &outX (shifted)
-                andi.l  #$FFFF,d2
-                move.l  d2,-(sp)        ; col
-                andi.l  #$FFFF,d1
-                move.l  d1,-(sp)        ; row
-                jsr     _GetBallXYPositionFromQuadrant
-                lea     16(sp),sp
-                move.w  (sp)+,d1        ; outX
-                move.w  (sp)+,d2        ; outY
-                rts
 
 ; ===== GetBallQuadrant =====
 ; Ported to C: _GetBallQuadrant in src/edit_tactics.c
 ; in: D0=ballLoc  out: D1=col, D2=row
-GetBallQuadrant:
-                subq.l  #4,sp
-                pea     2(sp)           ; &outRow
-                pea     2(sp)           ; &outCol (shifted)
-                andi.l  #$FFFF,d0
-                move.l  d0,-(sp)        ; ballLoc
-                jsr     _GetBallQuadrant
-                lea     12(sp),sp
-                move.w  (sp)+,d1        ; outCol
-                move.w  (sp)+,d2        ; outRow
-                rts
-; Ported to C: _HandlePlayersOrBallInEditTactics in src/edit_tactics.c
-HandlePlayersOrBallInEditTactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _HandlePlayersOrBallInEditTactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 editTacticsNearestSelectPitchWidth:
                 dc.w $0000
 
 ; ===== EditTactics_GetDirectionDelta =====
 ; Ported to C: _EditTactics_GetDirectionDelta in src/edit_tactics.c
 ; out: D3=dx, D4=dy
-EditTactics_GetDirectionDelta:
-                subq.l  #4,sp
-                pea     2(sp)           ; &outDy
-                pea     2(sp)           ; &outDx (shifted)
-                jsr     _EditTactics_GetDirectionDelta
-                addq.l  #8,sp
-                move.w  (sp)+,d3        ; outDx
-                move.w  (sp)+,d4        ; outDy
-                rts
 ; unsigned __int8[16]
 editTacticsDirectionDeltaTable:
                 dc.b $00,$FF,$01,$FF,$01,$00,$01,$01,$00,$01,$FF,$01,$FF,$00,$FF,$FF
-
-; ===== CopyCurrentTactics =====
-; Ported to C: _CopyCurrentTactics in src/edit_tactics.c
-CopyCurrentTactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _CopyCurrentTactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== ApplyCurrentEditedTactics =====
-; Ported to C: _ApplyCurrentEditedTactics in src/edit_tactics.c
-ApplyCurrentEditedTactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ApplyCurrentEditedTactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== EditTactics_CommitDraggedPlayerPosition =====
-; Ported to C: _EditTactics_CommitDraggedPlayerPosition in src/edit_tactics.c
-EditTactics_CommitDraggedPlayerPosition:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _EditTactics_CommitDraggedPlayerPosition
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== SaveCurrentTactics =====
-; Ported to C: _SaveCurrentTactics in src/edit_tactics.c
-SaveCurrentTactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SaveCurrentTactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== RestoreTactics =====
-; Ported to C: _RestoreTactics in src/edit_tactics.c
-RestoreTactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _RestoreTactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 ; Menu_ImportTactics
 importTacticsMenu:
                 ; Menu_ImportTactics
@@ -62427,88 +57179,13 @@ importTacticsMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== ImportTacticsInit =====
-; Ported to C: _ImportTacticsInit in src/edit_tactics.c
-ImportTacticsInit:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ImportTacticsInit
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
 ; ===== ImportTacticsSelectTactics =====
 ; Ported to C: _ImportTacticsSelectTactics in src/edit_tactics.c
 ; Bridge: a5=MenuEntry* → C param
-ImportTacticsSelectTactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _ImportTacticsSelectTactics
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== ExitImportTactics =====
-; Ported to C: _ExitImportTactics in src/edit_tactics.c
-ExitImportTactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ExitImportTactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== LoadTactics =====
-; Ported to C: _LoadTactics in src/edit_tactics.c
-LoadTactics:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _LoadTactics
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 importMenuSelectedTactics:
                 dc.w $0000              ; In import tactics menu, number of selected tactic
                                         ; 1000 = imported tactic, rest is in enumeration
                                         ; -1 = import aborted
-
-; ===== EditTactics_FlipMaybe_MirrorBallArea =====
-; Ported to C: _EditTactics_FlipMaybe_MirrorBallArea in src/edit_tactics.c
-EditTactics_FlipMaybe_MirrorBallArea:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  d1,-(sp)
-                jsr     _EditTactics_FlipMaybe_MirrorBallArea
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== EditTactics_FlipMaybe_MirrorPlayersInArea =====
-; Ported to C: _EditTactics_FlipMaybe_MirrorPlayersInArea in src/edit_tactics.c
-EditTactics_FlipMaybe_MirrorPlayersInArea:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  d3,-(sp)
-                jsr     _EditTactics_FlipMaybe_MirrorPlayersInArea
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== EditTactics_SetAllPlayersQuadrantForBallLoc =====
-; Ported to C: _EditTactics_SetAllPlayersQuadrantForBallLoc in src/edit_tactics.c
-EditTactics_SetAllPlayersQuadrantForBallLoc:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  d3,-(sp)
-                move.l  d1,-(sp)
-                jsr     _EditTactics_SetAllPlayersQuadrantForBallLoc
-                addq.l  #8,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== MarkSelectedTeamsTacticsChanged =====
-; Ported to C: _MarkSelectedTeamsTacticsChanged in src/edit_tactics.c
-MarkSelectedTeamsTacticsChanged:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _MarkSelectedTeamsTacticsChanged
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== InitializeTacticsPositions =====
-; prototype: void __usercall InitializeTacticsPositions()
-InitializeTacticsPositions:
-                jmp     _InitializeTacticsPositions
 tacticsPositionDefensiveness:
                 dc.w 0,0,0,0,0,0,0,0
                 dc.w 0,0,0
@@ -63230,57 +57907,13 @@ littlePlayersSpriteTable:
                 dc.w SPR_LITTLE_PLAYER_VERT_STRIPES,SPR_LITTLE_PLAYER_NO_STRIPES,SPR_LITTLE_PLAYER_VERT_STRIPES,SPR_LITTLE_PLAYER_HOR_STRIPES ; Table for converting indices of those little pictures of
                                         ; players into sprites
 
-; ===== ShowStadiumInit =====
-; Ported to C: _ShowStadiumInit in src/menus.c
-ShowStadiumInit:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ShowStadiumInit
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== StadiumBeforeDrawLeftTeam =====
-; Ported to C: _StadiumBeforeDrawLeftTeam in src/menus.c
-StadiumBeforeDrawLeftTeam:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _StadiumBeforeDrawLeftTeam
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== StadiumBeforeDrawRightTeam =====
-; Ported to C: _StadiumBeforeDrawRightTeam in src/menus.c
-StadiumBeforeDrawRightTeam:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a5,-(sp)
-                jsr     _StadiumBeforeDrawRightTeam
-                addq.l  #4,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
 ; ===== StadiumPlayerSpritesBeforeDraw =====
 ; Ported to C: _StadiumPlayerSpritesBeforeDraw in src/menus.c
 ; Bridge: a5=team, d1=playerIndex
-StadiumPlayerSpritesBeforeDraw:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a5,-(sp)
-                move.w  d1,-(sp)
-                jsr     _StadiumPlayerSpritesBeforeDraw
-                addq.l  #6,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 
 ; ===== FillSkinColorConversionTable =====
 ; Ported to C: _FillSkinColorConversionTable in src/edit_tactics.c
 ; Bridge: d0=skinColor, a1=convertTable → C params
-FillSkinColorConversionTable:
-                movem.l d0-d7/a0-a6,-(sp)
-                move.l  a1,-(sp)
-                move.w  d0,-(sp)
-                jsr     _FillSkinColorConversionTable
-                addq.l  #6,sp
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
 ; Menu_Highlights
 highlightsMenu:
                 ; Menu_Highlights
@@ -63408,64 +58041,11 @@ highlightsMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== HighlightsMenuInit =====
-; prototype: void __usercall HighlightsMenuInit()
-HighlightsMenuInit:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _HighlightsMenuInit
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== HighlightsMenuOnReturn =====
-HighlightsMenuOnReturn:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _HighlightsMenuOnReturn
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== HighlightsMenuCommon =====
-; prototype: void __usercall HighlightsMenuCommon()
-HighlightsMenuCommon:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _HighlightsMenuCommon
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== LoadHighlightsMenu =====
-; Ported to C: _LoadHighlightsMenu in src/highlights_menu.c
-LoadHighlightsMenu:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _LoadHighlightsMenu
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== SaveHighlightsMenu =====
-; Ported to C: _SaveHighlightsMenu in src/highlights_menu.c
-SaveHighlightsMenu:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _SaveHighlightsMenu
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
-; ===== ExitHighlights =====
-; prototype: void __usercall ExitHighlights()
-ExitHighlights:
-                movem.l d0-d7/a0-a6,-(sp)
-                jsr     _ExitHighlights
-                movem.l (sp)+,d0-d7/a0-a6
-                rts
-
 ; ===== SetTeamGlobalNumbers =====
 ; prototype: void __usercall SetTeamGlobalNumbers(unsigned __int16 numTeams@<d0>, void *firstTeam@<a0>)
 ; in:
 ;      D0 =  number of teams
 ;      A0 -> first team
-SetTeamGlobalNumbers:
-                move.l  a0,-(sp)
-                move.l  d0,-(sp)
-                jsr     _SetTeamGlobalNumbers
-                addq.l  #8,sp
-                rts
 teamsCountryNumbers:
                 dc.w 0,16,26,44,60,72,86,102
                 dc.w 114,207,207,221,233,245,287,333
@@ -71257,13 +65837,6 @@ euroCupQualSeedBucket22Full:
 ; ===== Career_SortTeamFilePtrsByAvgPlayerPrice =====
 ; Ported to C: _Career_SortTeamFilePtrsByAvgPlayerPrice in src/career_teams.c
 ; Bridge: d0=extNumber → C param
-Career_SortTeamFilePtrsByAvgPlayerPrice:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d0,-(sp)
-                jsr     _Career_SortTeamFilePtrsByAvgPlayerPrice
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== LoadSomeEuroCup =====
 ; Ported to C: _LoadSomeEuroCup in src/career_teams.c
@@ -71314,15 +65887,6 @@ Career_TryAddRandomTeamByRegionToLists:
 ; ===== Career_IsTeamIdNotInListOrReturnSentinel =====
 ; Ported to C: _Career_IsTeamIdNotInListOrReturnSentinel in src/diy_competition.c
 ; Bridge: d0=teamId, a2=endPtr → C params; returns d0 with bit 16 as sentinel
-Career_IsTeamIdNotInListOrReturnSentinel:
-                movem.l d1-d7/a0-a6,-(sp)
-                move.l  a2,-(sp)
-                move.l  d0,-(sp)
-                jsr     _Career_IsTeamIdNotInListOrReturnSentinel
-                addq.l  #8,sp
-                movem.l (sp)+,d1-d7/a0-a6
-                btst    #16,d0
-                rts
 ; unsigned __int8[32]
 careerRegionPickWeightsTable:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
@@ -71334,15 +65898,6 @@ loc_1517C2:
 ; ===== Career_IsTeamIdNotInListOrReturnSentinel2 =====
 ; Ported to C: _Career_IsTeamIdNotInListOrReturnSentinel2 in src/diy_competition.c
 ; Bridge: d0=teamId, a2=endPtr → C params; returns d0 with bit 16 as sentinel
-Career_IsTeamIdNotInListOrReturnSentinel2:
-                movem.l d1-d7/a0-a6,-(sp)
-                move.l  a2,-(sp)
-                move.l  d0,-(sp)
-                jsr     _Career_IsTeamIdNotInListOrReturnSentinel2
-                addq.l  #8,sp
-                movem.l (sp)+,d1-d7/a0-a6
-                btst    #16,d0
-                rts
 ; unsigned __int8[32]
 careerRegionPickWeightsTable2:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
@@ -71351,22 +65906,11 @@ careerRegionPickWeightsTable2:
 ; ===== ShowInsertDisk2Dialog =====
 ; Ported to C: _ShowInsertDisk2Dialog in src/file_io.c
 ; in: a0 = header string
-ShowInsertDisk2Dialog:
-                move.l  a0,-(sp)
-                jsr     _ShowInsertDisk2Dialog
-                addq.l  #4,sp
-                rts
 
 ; ===== Asset_PromptInsertSaveDiskDf0 =====
 ; Ported to C: _Asset_PromptInsertSaveDiskDf0 in src/file_io.c
 ; in: a0 = title string
 ; out: d0 = 0 success, non-zero = aborted; Z flag
-Asset_PromptInsertSaveDiskDf0:
-                move.l  a0,-(sp)
-                jsr     _Asset_PromptInsertSaveDiskDf0
-                addq.l  #4,sp
-                tst.w   d0
-                rts
 
 ; ===== SaveCompetitionFile =====
 ; Ported to C: _SaveCompetitionFile in src/file_io.c
@@ -71374,10 +65918,6 @@ Asset_PromptInsertSaveDiskDf0:
 ; ===== LoadCompetitionFile =====
 ; Ported to C: _LoadCompetitionFile in src/file_io.c
 ; out: d0 = 0 success, 1 = error; Z flag set accordingly
-LoadCompetitionFile:
-                jsr     _LoadCompetitionFile
-                tst.w   d0
-                rts
 
 ; ===== LoadCareerFile =====
 ; Ported to C: _LoadCareerFile in src/file_io.c
@@ -71413,54 +65953,21 @@ j_SaveCareerFile:
 ; Ported to C: _LoadPresetFile in src/file_io.c
 ; in: a0 = filename
 ; out: d0 = 0 success, 1 = error; Z flag set accordingly
-LoadPresetFile:
-                move.l  a0,-(sp)
-                jsr     _LoadPresetFile
-                addq.l  #4,sp
-                tst.w   d0
-                rts
 
 ; ===== SavePresetCompetitionFile =====
 ; Ported to C: _SavePresetCompetitionFile in src/file_io.c
 ; in: a0 = filename
 ; out: d0 = 0 success, 1 = error
-SavePresetCompetitionFile:
-                move.l  a0,-(sp)
-                jsr     _SavePresetCompetitionFile
-                addq.l  #4,sp
-                tst.w   d0
-                rts
 
 ; ===== LoadDIYFile =====
 ; Ported to C: _LoadDIYFile in src/file_io.c
 ; in: a0 = filename
 ; out: d0 = 0 success, 1 = error; Z flag set accordingly
-LoadDIYFile:
-                move.l  a0,-(sp)
-                jsr     _LoadDIYFile
-                addq.l  #4,sp
-                tst.w   d0
-                rts
 
 ; ===== SaveDIYFile =====
 ; Ported to C: _SaveDIYFile in src/file_io.c
 ; in: a0 = filename
 ; out: d0 = 0 success, 1 = error
-SaveDIYFile:
-                move.l  a0,-(sp)
-                jsr     _SaveDIYFile
-                addq.l  #4,sp
-                tst.w   d0
-                rts
-
-; ===== ReadTacticsFile =====
-; prototype: unsigned __int16 __usercall ReadTacticsFile@<d0>(const char *filename@<a0>)
-ReadTacticsFile:
-                move.l  a0,-(sp)
-                jsr     _ReadTacticsFile
-                addq.l  #4,sp
-                tst.w   d0
-                rts
 
 ; ===== WriteTacticsFile =====
 ; prototype: unsigned __int16 __usercall WriteTacticsFile@<d0>(const char *filename@<a0>, const void *buffer@<a1>)
@@ -71471,31 +65978,6 @@ ReadTacticsFile:
 ;           1 - failure
 ;      zero flag set - all ok
 ;        -||-  clear - error
-WriteTacticsFile:
-                move.l  a1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _WriteTacticsFile
-                addq.l  #8,sp
-                tst.w   d0
-                rts
-
-; ===== LoadHilFile =====
-; prototype: unsigned __int16 __usercall LoadHilFile@<d0>(const char *filename@<a0>)
-LoadHilFile:
-                move.l  a0,-(sp)
-                jsr     _LoadHilFile
-                addq.l  #4,sp
-                tst.w   d0
-                rts
-
-; ===== DoSaveHighlights =====
-; prototype: unsigned __int16 __usercall DoSaveHighlights@<d0>(const char *filename@<a0>)
-DoSaveHighlights:
-                move.l  a0,-(sp)
-                jsr     _DoSaveHighlights
-                addq.l  #4,sp
-                tst.w   d0
-                rts
                 dc.w 0
                 dc.w 0
                 addi.l  #2254,d1        ; header
@@ -71576,48 +66058,18 @@ skipLeagueNumbers:
 ; ===== Career_InitCompetitionTeamSelection_Dispatch =====
 ; Ported to C: _Career_InitCompetitionTeamSelection_Dispatch in src/career_teams.c
 ; Bridge: a0=spec, d1=idx → C params
-Career_InitCompetitionTeamSelection_Dispatch:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _Career_InitCompetitionTeamSelection_Dispatch
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_InitCompetitionTeamSelectionFromTableEntrySpec =====
 ; Ported to C: _Career_InitCompetitionTeamSelectionFromTableEntrySpec in src/career_teams.c
 ; Bridge: a0=spec, d1=idx → C params
-Career_InitCompetitionTeamSelectionFromTableEntrySpec:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  d1,-(sp)
-                move.l  a0,-(sp)
-                jsr     _Career_InitCompetitionTeamSelectionFromTableEntrySpec
-                addq.l  #8,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_InitCompetitionTeamSelectionFromTableHeaderSpec =====
 ; Ported to C: _Career_InitCompetitionTeamSelectionFromTableHeaderSpec in src/career_teams.c
 ; Bridge: a0=spec → C param
-Career_InitCompetitionTeamSelectionFromTableHeaderSpec:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _Career_InitCompetitionTeamSelectionFromTableHeaderSpec
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 
 ; ===== Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec =====
 ; Ported to C: _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec in src/career_teams.c
 ; Bridge: a0=spec → C param
-Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec:
-                movem.l d2-d7/a2-a6,-(sp)
-                move.l  a0,-(sp)
-                jsr     _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec
-                addq.l  #4,sp
-                movem.l (sp)+,d2-d7/a2-a6
-                rts
 aLoadLiverpool:
                 dc.b 'LOAD LIVERPOOL',0
 aError:

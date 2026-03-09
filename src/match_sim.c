@@ -24,7 +24,6 @@
 
 /* ---- Assembly externs (functions still in asm) ---- */
 extern uint16_t _Rand2(void);
-extern void Career_ApplyPostMatchPlayerStatModsIfCareerTeam(void);
 extern uint16_t _ShouldApplyRandomPlayerStatusAfterSim(void);
 
 /* C functions (defined in diy_competition.c) */
@@ -1169,12 +1168,12 @@ void _PlayFriendly(void)
 }
 
 /* ================================================================
- * CheckContinueAbortPrompt  (SWOS2.s line 30243)
+ * _CheckContinueAbortPrompt  (SWOS2.s line 30243)
  *
  * Shows a "continue or abort?" prompt based on game type.
  * Returns 0 (abort/no game) or non-zero (continue).
  *
- * Asm: CheckContinueAbortPrompt(a0=header) -> d0, ZF
+ * Asm: _CheckContinueAbortPrompt(a0=header) -> d0, ZF
  * ================================================================ */
 __attribute__((used, externally_visible))
 int16_t _CheckContinueAbortPrompt(uint8_t *header)

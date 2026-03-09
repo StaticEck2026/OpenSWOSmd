@@ -52,7 +52,7 @@ void _SquadCommitPositionsAndUpdateSkill(void);
 void _SquadInit(void);
 void _SquadFinish(void);
 
-/* --- SquadUpdateMenuState (Chunk 210) --- */
+/* --- _SquadUpdateMenuState (Chunk 210) --- */
 void _SquadUpdateMenuState(void);
 
 /* --- SquadAfterDrawCommon (Chunk 211) --- */

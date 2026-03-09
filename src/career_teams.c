@@ -1343,9 +1343,7 @@ extern uint8_t *careerCompetitionSlotPtrTable[];
 extern uint16_t careerMatchSimulatedFlag;
 extern uint8_t viewRandomPhase;
 
-/* Asm functions still in SWOS2.s (called by ported C code) */
-extern void DIY_RebuildCompetitionAndTeamSelectionCaches(void);
-extern void DIY_UpdateCompetitionProgress(void);
+extern void _DIY_UpdateCompetitionProgress(void);
 
 /* C-callable asm wrappers for menu functions (take d2 param) */
 extern void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
@@ -1440,7 +1438,7 @@ void _Career_ProcessCurrentCompetitionSlotAfterMatch(void)
             return;
         if (*(uint16_t *)(slotPtr + 0x60) != 0)
             return;
-        DIY_RebuildCompetitionAndTeamSelectionCaches();
+        _DIY_RebuildCompetitionAndTeamSelectionCaches();
     }
 }
 
@@ -1471,7 +1469,7 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
         /* Cup */
         _asm_ShowDIYCupMenuWithParams_Career(d2);
         if (((DIY_Competition *)diyCompetitionStart)->currentRound != 0)
-            DIY_UpdateCompetitionProgress();
+            _DIY_UpdateCompetitionProgress();
     } else if (type == 2) {
         /* Hybrid */
         _asm_DIY_EditCompetitionSlot_Career(d2);
@@ -1497,7 +1495,7 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
         return;
     if (*(uint16_t *)(slotPtr + 0x60) != 0)
         return;
-    DIY_RebuildCompetitionAndTeamSelectionCaches();
+    _DIY_RebuildCompetitionAndTeamSelectionCaches();
 }
 
 /* ================================================================
@@ -1755,7 +1753,7 @@ void _Career_AutoPlayCupMatchAndAdvanceLoop(void)
     for (;;) {
         uint16_t field54 = ((DIY_Competition *)diyCompetitionStart)->currentRound;
         if (field54 != 0 && careerSlotProcessingInProgress != 0) {
-            DIY_UpdateCompetitionProgress();
+            _DIY_UpdateCompetitionProgress();
             return;
         }
         _asm_DIY_SimulateCupMatch();

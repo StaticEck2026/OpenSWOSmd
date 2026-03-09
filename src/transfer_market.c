@@ -2781,9 +2781,6 @@ extern uint8_t aSelectPlayerTo_0[];
 extern void _DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
 extern void _CallDrawMenuItem(MenuEntry *entry);
 extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
-extern void Career_AcceptOffer_SellPlayer(void);
-extern void Career_AcceptOffer_BuyPlayer(void);
-extern int16_t EvaluateTransferOfferNegotiation(void);
 
 /*
  * Shared helper: three AfterDrawCommon variants use the same pattern.
@@ -2913,7 +2910,7 @@ restart:;
     }
     if (result == 1) {
         /* Accept */
-        Career_AcceptOffer_SellPlayer();
+        _Career_AcceptOffer_SellPlayer();
         timeToNegotiate--;
         transferCompleted = 1;
         _SetExitMenuFlag();
@@ -3091,7 +3088,7 @@ void _PlayerOffersOnSelect12(void)
     }
 
     offerNegotiationAttemptCount++;
-    int16_t result = EvaluateTransferOfferNegotiation();
+    int16_t result = _EvaluateTransferOfferNegotiation();
     if (result < 0) {
         /* Rejected: set current entry to 9 */
         _SetCurrentEntry(9);
@@ -3099,7 +3096,7 @@ void _PlayerOffersOnSelect12(void)
     }
     if (result > 0) {
         /* Accepted: finalize the purchase */
-        Career_AcceptOffer_BuyPlayer();
+        _Career_AcceptOffer_BuyPlayer();
         transferCompleted = 1;
     }
     /* result == 0 or > 0: exit menu */
@@ -3870,7 +3867,7 @@ void _Career_TransferPlayerAndAddReplacedToMarketPool(uint16_t sourceTeam, uint1
 }
 
 /* ================================================================
- * Career_AcceptOffer_SellPlayer  (SWOS2.s line 63408)
+ * _Career_AcceptOffer_SellPlayer  (SWOS2.s line 63408)
  *
  * Handles accepting a sell offer: adds sale amount to balance,
  * processes swap/extra players, flags teams as changed.
@@ -3927,7 +3924,7 @@ void _Career_AcceptOffer_SellPlayer(void)
 }
 
 /* ================================================================
- * Career_AcceptOffer_BuyPlayer  (SWOS2.s line 63474)
+ * _Career_AcceptOffer_BuyPlayer  (SWOS2.s line 63474)
  *
  * Handles accepting a buy offer: subtracts purchase amount from
  * balance, processes swap/extra players, flags teams as changed.
@@ -5159,7 +5156,7 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
 }
 
 /* ================================================================
- * EvaluateTransferOfferNegotiation  (SWOS2.s line 63754)
+ * _EvaluateTransferOfferNegotiation  (SWOS2.s line 63754)
  *
  * Evaluates a transfer offer negotiation. Checks roster constraints,
  * randomizes player valuation, evaluates if the offering team will

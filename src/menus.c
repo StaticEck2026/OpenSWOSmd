@@ -831,8 +831,6 @@ void _StadiumBeforeDrawRightTeam(void *entryPtr)
 
 /* ---- External asm functions (not yet ported) ---- */
 extern void _PlayTrainingGame(void);
-extern void SquadMenuSavePlayerPositions(void);
-extern void SquadUpdateMenuState(void);
 
 /* ---- External asm data ---- */
 extern uint8_t squadMenu[];
@@ -863,9 +861,9 @@ __attribute__((used, externally_visible))
 void _SelectGoals(void)
 {
     squadPrevSelectedPlayerIndex = 0xFFFF;
-    SquadMenuSavePlayerPositions();
+    _SquadMenuSavePlayerPositions();
     isSquadViewMode = 1;
-    SquadUpdateMenuState();
+    _SquadUpdateMenuState();
     _SetCurrentEntry(11);
     _DrawMenu();
 }
@@ -880,7 +878,7 @@ __attribute__((used, externally_visible))
 void _SquadOnSelect11(void)
 {
     isSquadViewMode = 0;
-    SquadUpdateMenuState();
+    _SquadUpdateMenuState();
     _SetCurrentEntry(8);
     _DrawMenu();
 }
@@ -978,7 +976,7 @@ void _SquadRedrawPlayerListAndCheckMark(void)
 }
 
 /* ================================================================
- * SquadMenuSavePlayerPositions  (SWOS2.s line 57506)
+ * _SquadMenuSavePlayerPositions  (SWOS2.s line 57506)
  *
  * Copies newPlayerSkill → oldPlayerSkill,
  * copies 32 bytes from playerPositionsArray → oldPlayerPositionsArray,
@@ -999,7 +997,7 @@ void _SquadMenuSavePlayerPositions(void)
 /* ================================================================
  * SquadCommitPositionsAndUpdateSkill  (SWOS2.s line 57521)
  *
- * Same copy as SquadMenuSavePlayerPositions, then marks team file
+ * Same copy as _SquadMenuSavePlayerPositions, then marks team file
  * byte 0x3B as 1, calls ComputeOldPlayerSkillForViewResult(team, 5),
  * and falls through to UpdateBigCheckMark.
  * ================================================================ */
@@ -1208,7 +1206,7 @@ static void setBgColorIndex(MenuEntry *e, uint16_t colorIdx) {
     e->bg = ((uint32_t)bgHigh << 16) | (e->bg & 0xFFFF);
 }
 
-/* SquadUpdateMenuState (SWOS2.s line 48491)
+/* _SquadUpdateMenuState (SWOS2.s line 48491)
  * Updates squad menu entry visibility, colors, and strings based on
  * current mode (view vs edit), competition state, and team status. */
 __attribute__((used, externally_visible))
@@ -2273,12 +2271,7 @@ extern uint16_t selectNationalTeamMenuResult;
 extern uint8_t selectNationalTeamMenu[];
 
 extern void _Friendly(void);
-extern void EditCustomTeam(void);
 extern void _EditTactics(void);
-extern void CheckContinueAbortPrompt(void);   /* sets Z flag — but called via asm bridge */
-extern void ShowDesignDIYLeagueMenu(void);
-extern void ShowDesignDIYCupMenu(void);
-extern void ShowDesignDIYTournamentMenu(void);
 
 /* FriendlyMenu — seed RNG, run _Friendly, then update main menu (SWOS2.s line 68796) */
 __attribute__((used, externally_visible))
@@ -2292,13 +2285,13 @@ void _FriendlyMenu(void)
 }
 
 /* DIYCompetitionMenu — seed RNG, prompt, show DIY menu, dispatch design (SWOS2.s line 68803)
- * Note: CheckContinueAbortPrompt returns result via Z flag — need asm bridge */
+ * Note: _CheckContinueAbortPrompt returns result via Z flag — need asm bridge */
 
 /* EditCustomTeamMenu — edit custom teams, then update main menu (SWOS2.s line 69279) */
 __attribute__((used, externally_visible))
 void _EditCustomTeamMenu(void)
 {
-    EditCustomTeam();
+    _EditCustomTeam();
     _CommonMenuExit();
 }
 
@@ -5580,8 +5573,8 @@ extern uint32_t careerAddIntlPlayerSelectedSrcPlayerNamePtr;
 extern uint8_t  nationalTeamFileId;
 extern uint8_t  aAddInternation[];
 extern uint8_t  aAddInternation_0[];
-extern void AddInternationalPlayerHome(void);
-extern void AddInternationalPlayerAbroad(void);
+extern void _AddInternationalPlayerHome(uint8_t *selectedTeam);
+extern void _AddInternationalPlayerAbroad(uint8_t *selectedTeam);
 
 /* Additional externs for Chunk 205 */
 extern uint16_t careerAddIntlPlayerSelectedTeamNumber;
@@ -5608,10 +5601,10 @@ void _Career_ShowAddInternationalPlayerDialog(uint16_t homeOrAbroadFlag)
     if (homeOrAbroadFlag == 0) {
         /* Home: filter by nationality */
         _ChooseTeamsDialogWithNationality((uint16_t)nationalTeamFileId, 1, 0, 0,
-                                          aAddInternation, (void *)AddInternationalPlayerHome);
+                                          aAddInternation, (void *)_AddInternationalPlayerHome);
     } else {
         /* Abroad: show all club teams */
-        _ChooseTeamsDialog(1, 0, 0, aAddInternation_0, (void *)AddInternationalPlayerAbroad);
+        _ChooseTeamsDialog(1, 0, 0, aAddInternation_0, (void *)_AddInternationalPlayerAbroad);
     }
 }
 

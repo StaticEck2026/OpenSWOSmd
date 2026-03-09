@@ -2456,7 +2456,7 @@ void _Career_UpdateSinglePlayerPostMatchStats(uint8_t *playerSlotPtr)
 /* ================================================================
  * _Career_ApplyPostMatchPlayerStatModsIfCareerTeam — apply post-match
  * stat mods to career team players.
- * Asm: Career_ApplyPostMatchPlayerStatModsIfCareerTeam (a0=team, a1=mods)
+ * Asm: _Career_ApplyPostMatchPlayerStatModsIfCareerTeam (a0=team, a1=mods)
  *
  * Only processes if NOT national selector and team IS careerTeam.
  * Iterates 11 players (d7=10..0), uses currentMatchPlayers[d7] as
@@ -3033,7 +3033,6 @@ skipSponsorship:
  * board confidence modifiers/score, reputation, job offers, history.
  * ================================================================ */
 extern uint16_t retired;
-extern void Career_MaybeGenerateJobOffer(void);
 extern void _Career_FillCurrentSeasonInfo(void);
 extern void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr);
 extern uint16_t numJobOffers;
@@ -3046,7 +3045,7 @@ void _Career_HandleRetirement(void)
     _UpdateBoardConfidenceModifiers();
     _UpdateCareerReputationBonuses();
     _UpdateBoardConfidenceScore();
-    Career_MaybeGenerateJobOffer();
+    _Career_MaybeGenerateJobOffer();
     _PushBoardConfidenceHistory();
 }
 
@@ -3075,7 +3074,7 @@ void _Career_PostMatchUpdate(void)
         uint16_t total = numJobOffers + numNewJobOffers;
         if (total >= target)
             break;
-        Career_MaybeGenerateJobOffer();
+        _Career_MaybeGenerateJobOffer();
     }
 
     /* If national selector, skip competition auto-advance */

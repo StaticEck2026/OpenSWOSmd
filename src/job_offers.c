@@ -978,7 +978,7 @@ void _JobOffersAfterDrawCommon(void *entryPtr)
 }
 
 /* ================================================================
- * Career_MaybeGenerateJobOffer  (SWOS2.s line 66143)
+ * _Career_MaybeGenerateJobOffer  (SWOS2.s line 66143)
  *
  * Checks conditions and potentially generates a random job offer
  * from another team during career mode. Handles domestic teams,

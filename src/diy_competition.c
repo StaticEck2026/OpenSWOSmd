@@ -2804,7 +2804,7 @@ static void diy_ResetCompetitionStatsAndProgress(void)
 }
 
 /* ================================================================
- * DIY_RebuildCompetitionAndTeamSelectionCaches (SWOS2.s line 35046)
+ * _DIY_RebuildCompetitionAndTeamSelectionCaches (SWOS2.s line 35046)
  *
  * Rebuilds competition team selection caches from diyCompetitionContext.
  * For each competition entry, either copies from competitionFileBuffer
