@@ -1,7 +1,5 @@
         xref    benchPlayerResultA0
         xref    S_SavedSP
-        xref    _RncDecompressV1
-        xref    _RncDecompressV2
         xref    _start
         xref    _WaitForVSync
         xref    _BuildPaletteFromColors
