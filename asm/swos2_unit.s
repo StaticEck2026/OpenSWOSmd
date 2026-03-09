@@ -1779,7 +1779,6 @@
         xdef    goalieCatchingBallAnimTable
         xdef    kGoalkeeperCatchSpeed
 ; --- career_status.c globals ---
-        xdef    IsMajorTournamentAllowingRandomStatus
         xdef    careerTeam
         xdef    currentMatchPlayers
         xdef    careerNumPlayers
@@ -1885,7 +1884,6 @@
         xdef    careerSlotProcessingInProgress
         xdef    teamSelectionKeyCacheOffset
         xdef    teamSelectionKeyCacheIndex
-        xdef    Career_FillCurrentSeasonInfo
         ; Chunk 93 xdefs
         xdef    careerCompetitionSlotPtrTable
         xdef    careerMatchSimulatedFlag
@@ -1922,7 +1920,6 @@
         xdef    _asm_ShowDiyLeaguesTournamentMenu
         xdef    _asm_ShowDIYCupMenuWithParams
         ; Chunk 96: asm stubs that forward to C (keep asm labels alive)
-        xdef    DIY_RebuildCompetitionAndTeamSelectionCaches
         xdef    DIY_UpdateCompetitionProgress
         xdef    DIY_ReorderTeamsBySelectionFlags
         xdef    ShowDiyLeaguesTournamentMenu
@@ -2474,7 +2471,6 @@
         xref    _AddInternationalPlayerHome
         xref    _AddInternationalPlayerAbroad
         xref    _PlayerMarketBuildVisiblePlayerList
-        xdef    PlayTrainingGame
         xdef    careerAddIntlPlayerResult
         xdef    careerAddIntlPlayerSelectedSrcPlayerPtr
         xdef    careerAddIntlPlayerSelectedSrcPlayerNamePtr
@@ -2482,8 +2478,6 @@
         xdef    careerAddIntlPlayerSelectedPlayerOrdinal
         xdef    aAddInternation
         xdef    aAddInternation_0
-        xdef    AddInternationalPlayerHome
-        xdef    AddInternationalPlayerAbroad
         xdef    careerIntlPlayersWrongTypeMask
         xdef    careerIntlPlayersSelectableMask
         xdef    careerIntlPlayerSelectedPlayerDataCopy
@@ -2511,8 +2505,6 @@
         xdef    aBuyOtherDomest
         xdef    aBuyOtherForeig
         xdef    buyOtherPlayersMenu
-        xdef    SquadMenuSavePlayerPositions
-        xdef    SquadUpdateMenuState
         xdef    squadMenu
         xdef    squadPrevSelectedPlayerIndex
         xdef    isSquadViewMode
@@ -2617,7 +2609,6 @@
         xref    _HighlightsMenu
         xref    _OptionsMenuSelected
         xref    _SaveDiskFilingMenu
-        xdef    EditCustomTeam
         xdef    highlightsMenu
         xdef    optionsMenu
         xdef    diskMenu
@@ -2630,7 +2621,6 @@
         xdef    friendlyOk
         xdef    selectNationalTeamMenu
         xdef    retired
-        xdef    Career_MaybeGenerateJobOffer
 ; --- Chunk 120: DIY Design Menu functions + SetSelectTwoTeamsText ---
         xref    _DesignDIYLeagueOK
         xref    _DesignDIYCupOK
@@ -2749,8 +2739,6 @@
         xdef    aChoosePresetCo
         xdef    aChooseSeason
         xdef    chooseTeamsMenu
-        xdef    SelectTeamsFinalMenu
-        xdef    GoGetTeamsForPlay
 ; --- Chunk 126 xrefs ---
         xref    _DesignDIYLeagueInit
         xref    _DesignDIYLeagueSetName
@@ -2979,9 +2967,6 @@
         xref    _Career_AutoAdvanceCupCompetitionFromRecord
         xref    _Career_AutoAdvanceLeagueCompetitionFromRecord
 ; --- Chunk 179 xdefs ---
-        xdef    Career_AutoAdvanceLeagueFixtures
-        xdef    Career_AutoAdvanceCupMatches
-        xdef    Career_AutoAdvanceCompetitionSlots
         xdef    englishCup
         xdef    englishCup_1
         xdef    englishLeagueCup
@@ -3176,9 +3161,6 @@
         xdef    playerTransferMenu
         xdef    sellExchangeStrings
         xdef    sellExchangeResponseStrings
-        xdef    Career_AcceptOffer_SellPlayer
-        xdef    Career_AcceptOffer_BuyPlayer
-        xdef    EvaluateTransferOfferNegotiation
 ; --- Chunk 164 xrefs ---
         xref    _ShowSquad
         xref    _ThirdPartyOfferViewSquad
@@ -3239,7 +3221,6 @@
         xdef    chooseTeamsResult
         xdef    seasonUpdateInProgress
         xdef    fire
-        xdef    DesignDIYCup_BuildMatchListEntryStrings
 ; --- Chunk 131 xdefs ---
         xdef    diyPitchTypeOrSeason_1
         xdef    diyCupMenu
@@ -3251,7 +3232,6 @@
         xdef    aTeamsPromoted0_0
         xdef    aTeamsRelegated
         xdef    aTeamsRelegated_0
-        xdef    DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection
 ; --- Chunk 228 xdefs ---
         xdef    aNextRoundDraw
         xdef    aPlayReplays
@@ -3497,7 +3477,6 @@
 ; --- Chunk 149 xdefs ---
         xdef    aFriendly_1
         xdef    aPlayFriendly
-        xdef    ContinueCareerNextSeason
 ; --- Chunk 147 xdefs ---
         xdef    buyOtherPlayersTeamPtr
         xdef    buyOtherPlayersTitlePtr
