@@ -121,19 +121,18 @@ extern void _RotatePlayersLeft(uint8_t *teamPtr, uint16_t maxSubs);
 extern int16_t _CheckIfTeamIsChanged(void);
 extern uint8_t *_GetPlayerInfoBreakPosition(uint8_t *teamPtr, uint16_t requestedSlot,
                                              uint16_t *outSlot, uint16_t *outPlayerIndex);
-extern uint8_t *_CGetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
 extern uint16_t _cGetPlayerAtIndexFileIdx;
 extern void _ComputeOldPlayerSkillForViewResult(uint16_t maxSubs);
 extern void _ShowStandardChooseTacticsMenu(uint8_t *team);
 extern void _TrainingMatch_RestoreLastMatchState(void);
 extern void _TrainingMatch_RestoreSavedTeamSelectionState(void);
 
-/* C-callable asm bridges for still-unported functions */
-extern void _CFormTopSkillsString(uint8_t *dst, uint8_t *player);
-extern void _CFormatPlayerValueOrStatusText(uint8_t *dst, uint8_t *player);
-extern void _CSetSquadMenuEntryStatusSprite(MenuEntry *entry, uint8_t *player, int16_t excludeFlags, uint16_t fileIdx);
+extern void _FormTopSkillsString(uint8_t *dst, uint8_t *playerBase);
+extern void _FormatPlayerValueOrStatusText(uint8_t *base, uint8_t *dst);
+extern void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, uint8_t *player, uint16_t flag);
 extern void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void);
-extern void _CTrainingMatch_ApplyUseMatchTeamAndSwapSubs(void);
+extern void _TrainingMatch_ApplyUseMatchTeamAndSwapSubs(void);
 
 /* ---- Helper: menu entry from byte offset ---- */
 
@@ -470,7 +469,7 @@ void _SetPlayerSurnamesOnSidePitch(void) {
         entry->x = *pos++ + 196;
         entry->y = *pos++ + 40;
         entry->stringFlags = *pos++;
-        uint8_t *pl = _CGetPlayerAtIndex(tNum, (uint16_t)i);
+        uint8_t *pl = _GetPlayerAtIndex(tNum, (uint16_t)i);
         PlayerFile *plPf = (PlayerFile *)(pl + 76);
         uint8_t *surname;
         if (entry->x == 0x106)
@@ -811,9 +810,9 @@ void _PlayMatchMenuSwapPlayers(uint8_t *team, int16_t d1, int16_t d2, int16_t d3
 
         /* Swap playerPositionsArray and shirt numbers */
         uint16_t tNum = *(uint16_t *)team;
-        uint8_t *p1 = _CGetPlayerAtIndex(tNum, (uint16_t)d3);
+        uint8_t *p1 = _GetPlayerAtIndex(tNum, (uint16_t)d3);
         uint16_t p1Idx = _cGetPlayerAtIndexFileIdx;
-        uint8_t *p2 = _CGetPlayerAtIndex(tNum, (uint16_t)d4);
+        uint8_t *p2 = _GetPlayerAtIndex(tNum, (uint16_t)d4);
         uint16_t p2Idx = _cGetPlayerAtIndexFileIdx;
 
         uint8_t tmp = playerPositionsArray[p2Idx];
@@ -876,7 +875,7 @@ int16_t _HandleSquadSwapSelectionToggle(int16_t d6) {
     if (curSel == (int16_t)*selPos) {
         curSel = -1;
     } else {
-        uint8_t *pl = _CGetPlayerAtIndex(tNum, (uint16_t)selectedPlayerPosition);
+        uint8_t *pl = _GetPlayerAtIndex(tNum, (uint16_t)selectedPlayerPosition);
         PlayerFile *plPf = (PlayerFile *)(pl + 76);
         if (((plPf->positionAndFace & 0xE0) >> 5) == 0) return 0;
     }
@@ -1025,7 +1024,7 @@ __attribute__((used, externally_visible))
 void _UseMatchTeamSelect(void) {
     _TrainingMatch_RestoreLastMatchState();
     uint8_t saved = currentTeam[TEAMFILE_TACTICS];
-    _CTrainingMatch_ApplyUseMatchTeamAndSwapSubs();
+    _TrainingMatch_ApplyUseMatchTeamAndSwapSubs();
     currentTeam[TEAMFILE_TACTICS] = saved;
     _TrainingMatch_RestoreSavedTeamSelectionState();
     _SetBenchPlayersNumbers((uint8_t *)&careerTeam);
@@ -1140,7 +1139,7 @@ void _DrawPlayerEntries(MenuEntry *a5) {
     bgE->y = a5->y;
 
     /* Status sprite */
-    _CSetSquadMenuEntryStatusSprite(bgE, player, playMatchExcludeFlags, fIdx);
+    _SetSquadMenuEntryStatusSprite(bgE, player, (uint16_t)playMatchExcludeFlags);
 
     /* Position change arrows */
     if (!viewingOpponentTeam && d4 < 11) {
@@ -1210,7 +1209,7 @@ void _DrawPlayerEntries(MenuEntry *a5) {
         if (_IsTeamNational(t1)) {
             _InitPlayerValueDisplayStruct(player, (uint8_t *)valE);
         } else {
-            _CFormatPlayerValueOrStatusText(fundsBuffer, player);
+            _FormatPlayerValueOrStatusText(player, fundsBuffer);
             valE->fg = (uint32_t)fundsBuffer;
         }
     }

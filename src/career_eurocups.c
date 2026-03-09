@@ -46,7 +46,7 @@ extern uint16_t selTeamNumber;
 
 /* C-to-asm bridges */
 extern uint8_t *_VerifyTeamLoaded(uint16_t teamNum);
-extern void _CCareer_AppendTeamToTmdTeamPool(uint8_t *team);
+extern void _Career_AppendTeamToTmdTeamPool(uint8_t *team);
 
 /* Already-ported C functions */
 extern void _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs(void);
@@ -76,7 +76,7 @@ static void appendTeamToList(uint8_t *teamGrid, uint8_t **writePtrAddr, uint16_t
     *writePos = *(uint16_t *)teamGrid;
     *writePtrAddr = (uint8_t *)(writePos + 1);
     (*count)++;
-    _CCareer_AppendTeamToTmdTeamPool(teamGrid);
+    _Career_AppendTeamToTmdTeamPool(teamGrid);
 }
 
 /* tryConsumeCompetitionIdFromList — searches byte list for currentCompetitionId,

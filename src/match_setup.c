@@ -141,9 +141,9 @@ extern uint16_t _Rand(void);
 /* ---- C-to-asm bridges (for unported asm functions) ---- */
 extern void _SetPlayerAnimationTable(uint8_t *animTable, Sprite *sprite);
 extern void _InitRefereeAnimationTable(uint8_t *animTable);
-extern void _CApplyTeamTactics(uint8_t *playerInfos);
+extern void _ApplyTeamTactics(uint8_t *playerInfos);
 extern void _NextPenalty(void);
-extern void _CReplayUpdateCameraAndSwapBuffers(int16_t x, int16_t y);
+extern void _ReplayUpdateCameraAndSwapBuffers(int16_t x, int16_t y);
 
 /* ================================================================
  * SetBallPosition  (SWOS2.s line 10505)
@@ -559,7 +559,7 @@ void _GameOver(void)
     if (trainingGame == 0) {
         viewY = 16;
     }
-    _CReplayUpdateCameraAndSwapBuffers(viewX, viewY);
+    _ReplayUpdateCameraAndSwapBuffers(viewX, viewY);
     _UpdatePlanePtrsAndBlitParams();
 
     _SetBallPosition(1672, 449);
@@ -757,8 +757,8 @@ void _InitGameRestoreTeams(void)
     gameRandValue = _Rand();
 
     /* Apply tactics for both teams */
-    _CApplyTeamTactics((uint8_t *)&topTeamInGame);
-    _CApplyTeamTactics((uint8_t *)&bottomTeamInGame);
+    _ApplyTeamTactics((uint8_t *)&topTeamInGame);
+    _ApplyTeamTactics((uint8_t *)&bottomTeamInGame);
 
     paletteIndex = 2;
     /* nullsub_5 — no-op */

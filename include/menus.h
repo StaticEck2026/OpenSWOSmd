@@ -203,12 +203,12 @@ void _ExitOptions(void);
 void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, uint8_t *player, uint16_t flag);
 void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, uint8_t *player);
 
-/* --- Friendly pitch/season menu callbacks (Chunk 147) --- */
+/* --- _Friendly pitch/season menu callbacks (Chunk 147) --- */
 void _SetFriendlyPitchOrSeason(void);
 void _PitchTypeOrSeasonProc(void);
 void _FriendlyPitchTypeProc(MenuEntry *entry);
 
-/* --- Friendly menu cluster + RandomlySwapTeams (Chunk 149) --- */
+/* --- _Friendly menu cluster + RandomlySwapTeams (Chunk 149) --- */
 void _Friendly(void);
 void _DrawNumbersOfSubstitutes(void);
 void _DisableEntries(void);

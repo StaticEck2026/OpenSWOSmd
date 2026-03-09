@@ -34,18 +34,27 @@
 extern uint16_t _Rand(void);
 extern uint16_t _Rand2(void);
 extern uint8_t *_VerifyTeamLoaded(uint16_t teamNum);
-extern uint16_t _CGetTeamValueForGateReceipts(uint8_t *team);
-extern uint16_t _CGetTeamValueBase(uint16_t avgPrice);
-extern uint16_t _CFindTeamInDIY(uint16_t teamNum, uint8_t *compBuf);
-extern uint16_t _CGetMoreExpensiveTeamsCount(uint16_t teamNum, uint8_t *compBuf);
-extern void _CShowChairmanMessage(void);
-extern void _CAddCareerTeamPlayer(void);
-extern void _CCheckPlayersLeavingComing(void);
-extern uint8_t *_CTeamSelectionKeyCache_GetCurrentListPtr(void);
+extern uint16_t _GetAveragePlayerPrice(uint8_t *team);
+extern uint16_t _CalcGateReceiptsBaseFromTeamValue(uint16_t avgPrice);
+extern uint16_t _GetTeamValueBase(uint16_t avgPrice);
+
+/* Replaces _CGetTeamValueForGateReceipts asm bridge */
+static uint16_t getTeamValueForGateReceipts(uint8_t *team) {
+    uint16_t teamNum = *(uint16_t *)team;
+    _VerifyTeamLoaded(teamNum);
+    uint16_t avgPrice = _GetAveragePlayerPrice(team);
+    return _CalcGateReceiptsBaseFromTeamValue(avgPrice);
+}
+extern uint16_t _FindTeamInDIY(uint16_t teamNum, uint8_t *compBuf);
+extern uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNum, uint8_t *compBuf);
+extern void _ShowChairmanMessage(void);
+extern void _AddCareerTeamPlayer(void);
+extern void _CheckPlayersLeavingComing(void);
+extern uint8_t *_TeamSelectionKeyCache_GetCurrentListPtr(void);
 
 /* C-callable asm bridges for GetPlayer/GetPlayerAtIndex */
-extern uint8_t *_CallGetPlayer(uint16_t teamNumber, uint16_t playerIndex);
-extern uint8_t *_CGetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerIndex);
+extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
 extern uint16_t _cGetPlayerAtIndexFileIdx;
 
 /* Already-ported C functions */
@@ -990,7 +999,7 @@ static uint16_t calcLeagueMatchGateReceiptsFactor(uint8_t *team1, uint8_t *team2
     if (team1 == (uint8_t *)&careerTeam) {
         d0 = (uint32_t)totalTeamValue;
     } else {
-        d0 = _CGetTeamValueForGateReceipts(team1);
+        d0 = getTeamValueForGateReceipts(team1);
     }
     d0 = (uint16_t)(d0 / 4000);    /* divu #$FA0 */
     d0 = (uint32_t)(uint16_t)d0 * 10000;  /* mulu #$2710 */
@@ -1000,7 +1009,7 @@ static uint16_t calcLeagueMatchGateReceiptsFactor(uint8_t *team1, uint8_t *team2
     if (team2 == (uint8_t *)&careerTeam) {
         d0 = (uint32_t)totalTeamValue;
     } else {
-        d0 = _CGetTeamValueForGateReceipts(team2);
+        d0 = getTeamValueForGateReceipts(team2);
     }
     d0 = (uint16_t)(d0 / 4000);    /* divu #$FA0 */
     d0 = (uint32_t)(uint16_t)d0 * 2000;   /* mulu #$7D0 */
@@ -1035,7 +1044,7 @@ static uint16_t calcCupMatchGateReceiptsFactor(uint8_t *team1, uint8_t *team2) {
     if (team1 == (uint8_t *)&careerTeam) {
         d0 = (uint32_t)totalTeamValue;
     } else {
-        d0 = _CGetTeamValueForGateReceipts(team1);
+        d0 = getTeamValueForGateReceipts(team1);
     }
     d0 = (uint16_t)(d0 / 4000);    /* divu #$FA0 */
     d0 = (uint32_t)(uint16_t)d0 * 6000;   /* mulu #$1770 */
@@ -1044,7 +1053,7 @@ static uint16_t calcCupMatchGateReceiptsFactor(uint8_t *team1, uint8_t *team2) {
     if (team2 == (uint8_t *)&careerTeam) {
         d0 = (uint32_t)totalTeamValue;
     } else {
-        d0 = _CGetTeamValueForGateReceipts(team2);
+        d0 = getTeamValueForGateReceipts(team2);
     }
     d0 = (uint16_t)(d0 / 4000);
     d0 = (uint32_t)(uint16_t)d0 * 6000;
@@ -1159,7 +1168,7 @@ league_match:
         /* Multiply by crowd factor from ctx+0x30, divide by avg player price */
         int8_t crowdFactor = *(int8_t *)(a3 + 0x30);
         uint32_t product = (uint32_t)(uint16_t)receiptIndex * (uint16_t)(int16_t)crowdFactor;
-        uint16_t avgPrice = _CGetTeamValueForGateReceipts((uint8_t *)&careerTeam);
+        uint16_t avgPrice = getTeamValueForGateReceipts((uint8_t *)&careerTeam);
         if (avgPrice == 0) avgPrice = 1; /* safety */
         uint16_t priceRatio = (uint16_t)(product / (uint32_t)avgPrice);
         int16_t gateFactorResult = (int16_t)((int16_t)d7 * (int16_t)priceRatio) / 100;
@@ -1294,7 +1303,7 @@ void _MaybeSackManagerAfterSeasonReview(void) {
         return;
 
     currentMessage = CHAIRMAN_WE_DIDNT_RENEW_YOUR_CONTRACT;
-    _CShowChairmanMessage();
+    _ShowChairmanMessage();
     youreSacked = 1;
 }
 
@@ -1324,7 +1333,7 @@ void _UpdateCareerChairmanWarningsAfterMatch(void) {
         performanceWarningCooldown--;
 
     /* Get team rank in DIY league */
-    uint16_t d7 = _CFindTeamInDIY(selTeamNumber, competitionFileBuffer);
+    uint16_t d7 = _FindTeamInDIY(selTeamNumber, competitionFileBuffer);
 
     /* Compute performance pressure factor */
     int16_t viewPhase = (int16_t)(int8_t)viewRandomPhase;
@@ -1369,7 +1378,7 @@ performance_warning_active:
             performanceWarningState = 1;
             setPerformanceWarningCooldown();
             currentMessage = CHAIRMAN_IMPROVE_LEAGUE_POSITION;
-            _CShowChairmanMessage();
+            _ShowChairmanMessage();
             return;
         }
         if (performanceWarningState == 1) {
@@ -1398,7 +1407,7 @@ performance_warning_active:
             performanceWarningState = 3;
             setPerformanceWarningCooldown();
             currentMessage = CHAIRMAN_THREE_MORE_MATCHES;
-            _CShowChairmanMessage();
+            _ShowChairmanMessage();
             return;
         }
         /* State >= 3: countdown to sacking */
@@ -1415,7 +1424,7 @@ performance_warning_active:
             goto done_performance;
         /* Sacked for poor performance */
         currentMessage = CHAIRMAN_YOURE_SACKED_2;
-        _CShowChairmanMessage();
+        _ShowChairmanMessage();
         youreSacked = 1;
         return;
     }
@@ -1426,7 +1435,7 @@ random_escalate:
 issue_improve_league_soon:
         setPerformanceWarningCooldown();
         currentMessage = CHAIRMAN_IMPROVE_LEAGUE_POSITION_SOON;
-        _CShowChairmanMessage();
+        _ShowChairmanMessage();
         return;
     }
     goto done_performance;
@@ -1460,7 +1469,7 @@ done_performance:
             overdraftWarningState = 1;
             setOverdraftWarningCooldown();
             currentMessage = CHAIRMAN_BANK_BALANCE_OVERDRAFT;
-            _CShowChairmanMessage();
+            _ShowChairmanMessage();
             return;
         }
         if (overdraftWarningState == 1) {
@@ -1485,7 +1494,7 @@ done_performance:
             overdraftWarningState = 3;
             setOverdraftWarningCooldown();
             currentMessage = CHAIRMAN_CLEAR_OVERDRAFT_IMMEDIATELY;
-            _CShowChairmanMessage();
+            _ShowChairmanMessage();
             return;
         }
         /* State >= 3: countdown to sacking */
@@ -1501,7 +1510,7 @@ done_performance:
         if (competitionSlotUpdatedFlag != 0)
             return;
         currentMessage = CHAIRMAN_YOURE_SACKED;
-        _CShowChairmanMessage();
+        _ShowChairmanMessage();
         youreSacked = 1;
         return;
     }
@@ -1510,7 +1519,7 @@ issue_overdraft_last_warning:
     overdraftWarningState = 2;
     setOverdraftWarningCooldown();
     currentMessage = CHAIRMAN_OVERDRAFT_LAST_WARNING;
-    _CShowChairmanMessage();
+    _ShowChairmanMessage();
 }
 
 /* UpdateCareerAfterMatch — orchestrator */
@@ -1521,9 +1530,9 @@ void _UpdateCareerAfterMatch(void) {
     _UpdateCareerChairmanWarningsAfterMatch();
     if (removedOfferPlayersFromSelectedTeamCount != 0) {
         removedOfferPlayersFromSelectedTeamCount--;
-        _CAddCareerTeamPlayer();
+        _AddCareerTeamPlayer();
     }
-    _CCheckPlayersLeavingComing();
+    _CheckPlayersLeavingComing();
 }
 
 /* ================================================================
@@ -1533,7 +1542,7 @@ void _UpdateCareerAfterMatch(void) {
 /* ApplyWeeklyFinancialDeductions */
 __attribute__((used, externally_visible))
 void _ApplyWeeklyFinancialDeductions(void) {
-    uint8_t *listPtr = _CTeamSelectionKeyCache_GetCurrentListPtr();
+    uint8_t *listPtr = _TeamSelectionKeyCache_GetCurrentListPtr();
     uint8_t currentWeek = listPtr[1];
     uint8_t lastWeek = lastFinancialWeekIndex;
     int16_t diff = (int16_t)(uint16_t)currentWeek - (int16_t)(uint16_t)lastWeek;
@@ -1558,7 +1567,7 @@ void _ApplyWeeklyFinancialDeductions(void) {
     }
 
 save_week_and_clamp:
-    listPtr = _CTeamSelectionKeyCache_GetCurrentListPtr();
+    listPtr = _TeamSelectionKeyCache_GetCurrentListPtr();
     lastFinancialWeekIndex = listPtr[1];
 
 update_and_clamp:
@@ -1626,22 +1635,22 @@ static uint16_t getExpectedLeagueRankIndex(uint8_t *ctx, uint16_t moreExpensiveC
 __attribute__((used, externally_visible))
 void _InitializeCareerSeasonFinancials(void) {
     /* Get more expensive teams count and set expected rank */
-    uint16_t moreExpensiveCount = _CGetMoreExpensiveTeamsCount(selTeamNumber, competitionFileBuffer);
+    uint16_t moreExpensiveCount = _GetMoreExpensiveTeamsCount(selTeamNumber, competitionFileBuffer);
     expectedLeagueRankIndex = moreExpensiveCount;
 
     /* Calculate team value divisor from all active competitions */
     uint16_t d5 = getExpectedLeagueRankIndex(competitionFileBuffer, moreExpensiveCount);
 
     if (secondaryCompetitionPtr != 0) {
-        uint16_t mec2 = _CGetMoreExpensiveTeamsCount(selTeamNumber, competitionContext);
+        uint16_t mec2 = _GetMoreExpensiveTeamsCount(selTeamNumber, competitionContext);
         d5 += getExpectedLeagueRankIndex(competitionContext, mec2);
     }
     if (tertiaryCompetitionPtr != 0) {
-        uint16_t mec3 = _CGetMoreExpensiveTeamsCount(selTeamNumber, tertiaryCompetitionContext);
+        uint16_t mec3 = _GetMoreExpensiveTeamsCount(selTeamNumber, tertiaryCompetitionContext);
         d5 += getExpectedLeagueRankIndex(tertiaryCompetitionContext, mec3);
     }
     if (quaternaryCompetitionPtr != 0) {
-        uint16_t mec4 = _CGetMoreExpensiveTeamsCount(selTeamNumber, euroCupsCompetitionContext);
+        uint16_t mec4 = _GetMoreExpensiveTeamsCount(selTeamNumber, euroCupsCompetitionContext);
         d5 += getExpectedLeagueRankIndex(euroCupsCompetitionContext, mec4);
     }
 
@@ -1703,7 +1712,7 @@ static int16_t calcBoardConfidenceDeltaPercent(void) {
     }
 
     /* Club manager: compute from league rank delta */
-    uint16_t teamRank = _CFindTeamInDIY(selTeamNumber, competitionFileBuffer);
+    uint16_t teamRank = _FindTeamInDIY(selTeamNumber, competitionFileBuffer);
     int16_t d0 = (int16_t)expectedLeagueRankIndex - (int16_t)teamRank;
     int16_t numTeams = *(int16_t *)(competitionFileBuffer + 0x32);
     d0 = (int16_t)(((int32_t)d0 * 100) / (int32_t)numTeams);
@@ -1785,7 +1794,7 @@ void _UpdateBoardConfidenceModifiers(void) {
             goto check_ec_qualifying;
 
         /* In WC qualifying: find team rank and determine qualifying slots */
-        uint16_t teamRank = _CFindTeamInDIY(selTeamNumber, competitionFileBuffer);
+        uint16_t teamRank = _FindTeamInDIY(selTeamNumber, competitionFileBuffer);
         uint32_t comp = currentCompetitionPtr;
         uint16_t qualSlots;
 
@@ -1834,7 +1843,7 @@ check_ec_qualifying:
             curComp > (uint32_t)ecQualifyingGroup8Copy)
             goto check_winners;
 
-        uint16_t teamRank = _CFindTeamInDIY(selTeamNumber, competitionFileBuffer);
+        uint16_t teamRank = _FindTeamInDIY(selTeamNumber, competitionFileBuffer);
         uint16_t qualSlots;
         if (currentCompetitionPtr == (uint32_t)ecQualifyingGroup8Copy)
             qualSlots = 1;
@@ -1985,7 +1994,7 @@ void _UpdateCareerReputationBonuses(void) {
     /* Club reputation from league rank */
     if (*(int16_t *)competitionFileBuffer != 2) {
         /* Not a pure cup — compute reputation from rank delta */
-        uint16_t avgPrice = _CGetTeamValueForGateReceipts((uint8_t *)&careerTeam);
+        uint16_t avgPrice = getTeamValueForGateReceipts((uint8_t *)&careerTeam);
         int16_t d7 = (int16_t)avgPrice;
 
         /* Find team rank in league table */
@@ -2051,12 +2060,12 @@ void _UpdateCareerReputationBonuses(void) {
 __attribute__((used, externally_visible))
 void _InitializeStartingBalanceForNewSeason(void) {
     /* Get team value base from avg player price */
-    uint16_t avgPrice = _CGetTeamValueForGateReceipts((uint8_t *)&careerTeam);
-    uint16_t teamBase = _CGetTeamValueBase(avgPrice);
+    uint16_t avgPrice = getTeamValueForGateReceipts((uint8_t *)&careerTeam);
+    uint16_t teamBase = _GetTeamValueBase(avgPrice);
     uint16_t d2 = teamBase;
 
     /* Compute adjusted starting balance from expected rank */
-    uint16_t teamRank = _CFindTeamInDIY(selTeamNumber, competitionFileBuffer);
+    uint16_t teamRank = _FindTeamInDIY(selTeamNumber, competitionFileBuffer);
     int16_t rankDelta = (int16_t)expectedLeagueRankIndex - (int16_t)teamRank;
     int16_t pct = (int16_t)(((int32_t)rankDelta * 100) / (int32_t)(int16_t)numDiyTeams);
     pct >>= 1;   /* asr.w #1 */
@@ -2160,7 +2169,7 @@ static void recalcTotalWeeklyWages(void)
     int32_t total = 0;
     int16_t i;
     for (i = (int16_t)(careerNumPlayers - 1); i >= 0; i--) {
-        _CGetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+        _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
         uint16_t fileIdx = _cGetPlayerAtIndexFileIdx;
         total += weeklyWageByPlayerIndex[fileIdx];
     }
@@ -2181,7 +2190,7 @@ static void recalcTotalWeeklyWages(void)
 __attribute__((used, externally_visible))
 uint16_t _GetAvgTeamValueBaseForCurrentPlayer(uint16_t teamNumber, uint16_t playerIndex)
 {
-    uint8_t *player = _CallGetPlayer(teamNumber, playerIndex);
+    uint8_t *player = _GetPlayer(teamNumber, playerIndex);
     uint16_t displayedValue = _GetDisplayedPlayerValue(player);
     displayedValue &= 0xFF;
     return avgTeamValueBases[displayedValue];
@@ -2205,7 +2214,7 @@ void _Career_UpdatePlayerWeeklyWageCache(uint16_t playerIndex)
     uint16_t avgBase = _GetAvgTeamValueBaseForCurrentPlayer(selTeamNumber, playerIndex);
 
     /* Get player pointer to check status flags */
-    uint8_t *player = _CallGetPlayer(selTeamNumber, playerIndex);
+    uint8_t *player = _GetPlayer(selTeamNumber, playerIndex);
     PlayerFile *pf = (PlayerFile *)(player + 76);
     uint8_t someFlag = (uint8_t)pf->someFlag;
 
@@ -2255,7 +2264,7 @@ __attribute__((used, externally_visible))
 void _ShowLeavingMessage(void)
 {
     currentMessage = isNationalSelector ? 32 : 18;
-    _CShowChairmanMessage();
+    _ShowChairmanMessage();
 }
 
 /* ShowGreetingMessage — "Welcome, we look forward..." */
@@ -2263,7 +2272,7 @@ __attribute__((used, externally_visible))
 void _ShowGreetingMessage(void)
 {
     currentMessage = isNationalSelector ? 33 : 19;
-    _CShowChairmanMessage();
+    _ShowChairmanMessage();
 }
 
 /* ShowLastSeasonMessage — "Enjoy your last season" */
@@ -2271,7 +2280,7 @@ __attribute__((used, externally_visible))
 void _ShowLastSeasonMessage(void)
 {
     currentMessage = isNationalSelector ? 34 : 20;
-    _CShowChairmanMessage();
+    _ShowChairmanMessage();
 }
 
 /* ShowWishYouSuccessMessage — "Wish you success" */
@@ -2279,7 +2288,7 @@ __attribute__((used, externally_visible))
 void _ShowWishYouSuccessMessage(void)
 {
     currentMessage = isNationalSelector ? 35 : 21;
-    _CShowChairmanMessage();
+    _ShowChairmanMessage();
 }
 
 /* ShowEnjoyLastSeasonMessage — "Enjoy last season before..." */
@@ -2287,7 +2296,7 @@ __attribute__((used, externally_visible))
 void _ShowEnjoyLastSeasonMessage(void)
 {
     currentMessage = isNationalSelector ? 36 : 22;
-    _CShowChairmanMessage();
+    _ShowChairmanMessage();
 }
 
 /* ShowRetirementMessage — "Enjoy your retirement" */
@@ -2295,7 +2304,7 @@ __attribute__((used, externally_visible))
 void _ShowRetirementMessage(void)
 {
     currentMessage = isNationalSelector ? 37 : 23;
-    _CShowChairmanMessage();
+    _ShowChairmanMessage();
 }
 
 /* ================================================================
@@ -2315,7 +2324,7 @@ uint32_t _CalculateStartingBalance(uint16_t teamNumber)
 {
     uint8_t *teamPtr = _GetTeamPointer(teamNumber);
     uint16_t avgPrice = _GetAveragePlayerPrice(teamPtr);
-    uint16_t baseValue = _CGetTeamValueBase(avgPrice);
+    uint16_t baseValue = _GetTeamValueBase(avgPrice);
     uint16_t base3 = (uint16_t)(baseValue * 3);     /* mulu.w #3 + move.w truncation */
     uint16_t r = _Rand2();
     uint16_t randFactor = (uint16_t)((uint16_t)(r * 40) >> 8);  /* 0-39 */
@@ -2342,8 +2351,8 @@ extern void _Career_UpdatePlayerWeeklyWageCache(uint16_t playerIndex);
 extern void _RemovePlayerFromTeam(uint16_t playerOrd);
 
 /* asm bridges for functions not yet ported */
-extern void _CCareer_ConvertPlayerToTrialistFromName(uint16_t teamNum, uint16_t playerIdx);
-extern void _CTrainingMatch_SaveSelectedPlayerId(uint16_t value);
+extern void _Career_ConvertPlayerToTrialistFromName(uint16_t teamNum, uint16_t playerIdx);
+extern void _TrainingMatch_SaveSelectedPlayerId(uint16_t value);
 
 extern uint8_t competitionFileBuffer[];
 
@@ -2357,7 +2366,7 @@ void _PlayerJoinedClubOnTrial(uint8_t *name)
 {
     plNameForMessage = name;
     currentMessage = MSG_PLAYER_JOINED_CLUB_ON_TRIAL;
-    _CShowChairmanMessage();
+    _ShowChairmanMessage();
 }
 
 /* ================================================================
@@ -2369,7 +2378,7 @@ void _TrialPlayerLeftClubMessage(uint8_t *name)
 {
     plNameForMessage = name;
     currentMessage = MSG_TRIAL_PLAYER_LEFT_CLUB;
-    _CShowChairmanMessage();
+    _ShowChairmanMessage();
 }
 
 /* ================================================================
@@ -2381,7 +2390,7 @@ void _ReservePlayerLeftClubMessage(uint8_t *name)
 {
     plNameForMessage = name;
     currentMessage = MSG_RESERVE_PLAYER_LEFT_CLUB;
-    _CShowChairmanMessage();
+    _ShowChairmanMessage();
 }
 
 /* ================================================================
@@ -2534,7 +2543,7 @@ uint8_t *_TrainingMatch_AddTrialPlayerAtPosition(uint16_t position)
     /* Get the player record at that slot */
     uint8_t *player = _GetPlayer(selTeamNumber, freeSlot);
     PlayerFile *pf = (PlayerFile *)(player + 76);
-    _CTrainingMatch_SaveSelectedPlayerId(freeSlot);
+    _TrainingMatch_SaveSelectedPlayerId(freeSlot);
 
     /* Set shirtNumber as a flag (used as a marker here) */
     pf->shirtNumber = 0x10;
@@ -2543,7 +2552,7 @@ uint8_t *_TrainingMatch_AddTrialPlayerAtPosition(uint16_t position)
     pf->positionAndFace = (uint8_t)(position << 5);
 
     /* Convert player to trialist */
-    _CCareer_ConvertPlayerToTrialistFromName(selTeamNumber, freeSlot);
+    _Career_ConvertPlayerToTrialistFromName(selTeamNumber, freeSlot);
 
     /* Determine insertion point in currentMatchPlayers */
     uint16_t insertOffset;
@@ -2911,7 +2920,7 @@ void _Career_InitializeNewSeasonFinances(void)
 {
     /* Recalculate all player wages */
     for (int16_t i = (int16_t)(careerNumPlayers - 1); i >= 0; i--) {
-        _CGetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+        _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
         _Career_UpdatePlayerWeeklyWageCache((uint16_t)i);
     }
 
@@ -3026,7 +3035,7 @@ skipSponsorship:
 extern uint16_t retired;
 extern void Career_MaybeGenerateJobOffer(void);
 extern void _Career_FillCurrentSeasonInfo(void);
-extern void _CCareer_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr);
+extern void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr);
 extern uint16_t numJobOffers;
 extern uint16_t numNewJobOffers;
 
@@ -3042,7 +3051,7 @@ void _Career_HandleRetirement(void)
 }
 
 /* ================================================================
- * Career_PostMatchUpdate  (SWOS2.s line 35371)
+ * _Career_PostMatchUpdate  (SWOS2.s line 35371)
  *
  * Called after each career match. Fills season info, removes expired
  * job offers, generates 1-2 new job offers (up to 100 attempts),
@@ -3083,16 +3092,16 @@ void _Career_PostMatchUpdate(void)
     *((uint8_t *)&careerTeam + 4) = 1;
 
     /* Auto-advance all competition slots */
-    _CCareer_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)currentCompetitionPtr);
+    _Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)currentCompetitionPtr);
 
     if (secondaryCompetitionPtr != 0)
-        _CCareer_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)secondaryCompetitionPtr);
+        _Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)secondaryCompetitionPtr);
 
     if (tertiaryCompetitionPtr != 0)
-        _CCareer_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)tertiaryCompetitionPtr);
+        _Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)tertiaryCompetitionPtr);
 
     if (quaternaryCompetitionPtr != 0)
-        _CCareer_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)quaternaryCompetitionPtr);
+        _Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)quaternaryCompetitionPtr);
 
     /* Restore saved values */
     *((uint8_t *)&careerTeam + 4) = savedControls;
@@ -3160,9 +3169,9 @@ extern void _Randomize2(uint16_t seed);
 extern void _Career_InitCompetitionTeamSelectionFromTableHeaderSpec(uint8_t *record);
 extern void _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(uint8_t *record);
 extern void _Career_ApplyPendingForeignMarketPlayersToSelectedTeams(void);
-extern void _CInitDIYCupFromRecordParam(uint8_t *record);
-extern void _CInitDIYLeagueFromRecordParam(uint8_t *record);
-extern void _CInitDIYCompetitionFromTableEntryParam(uint16_t index, uint8_t *record);
+extern void _InitDIYCupFromRecord(uint8_t *record);
+extern void _InitDIYLeagueFromRecord(uint8_t *record);
+extern void _InitDIYCompetitionFromTableEntry(uint16_t index, uint8_t *record);
 extern void _InitTeams(void);
 extern void _Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *record, uint16_t index);
 
@@ -3198,7 +3207,7 @@ void _Career_AutoAdvanceCupCompetitionFromRecord(uint8_t *record)
     numSelectedTeams = 0;
     _Career_InitCompetitionTeamSelectionFromTableHeaderSpec(record);
     _Career_ApplyPendingForeignMarketPlayersToSelectedTeams();
-    _CInitDIYCupFromRecordParam(record);
+    _InitDIYCupFromRecord(record);
     _InitTeams();
     _Career_AutoAdvanceCupMatches();
 
@@ -3230,7 +3239,7 @@ void _Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record)
     numSelectedTeams = 0;
     _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(record);
     _Career_ApplyPendingForeignMarketPlayersToSelectedTeams();
-    _CInitDIYLeagueFromRecordParam(record);
+    _InitDIYLeagueFromRecord(record);
     _InitTeams();
     _Career_AutoAdvanceCompetitionSlots();
 
@@ -3261,7 +3270,7 @@ void _Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record, uint16
     numSelectedTeams = 0;
     _Career_InitCompetitionTeamSelectionFromTableEntrySpec(record, index);
     _Career_ApplyPendingForeignMarketPlayersToSelectedTeams();
-    _CInitDIYCompetitionFromTableEntryParam(index, record);
+    _InitDIYCompetitionFromTableEntry(index, record);
     _InitTeams();
     _Career_AutoAdvanceLeagueFixtures();
 

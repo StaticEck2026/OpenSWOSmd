@@ -67,7 +67,7 @@ extern uint16_t diyCupTeamIds[];
 
 /* ---- C bridges to asm functions ---- */
 extern uint8_t *_VerifyTeamLoaded(uint16_t teamNum);
-extern void _CDIY_RecomputeCompetitionDerivedProgressionTable(void);
+extern void _DIY_RecomputeCompetitionDerivedProgressionTable(void);
 
 /* ---- ASM functions still in asm (called via bridge) ---- */
 /* _ShowDiyLeaguesTournamentMenu now ported to C — declared in diy_competition.h */
@@ -1605,7 +1605,7 @@ void _DIY_RecomputeCompetitionDerivedFields(void)
     a2s->viewRandomPhase = (uint8_t)a2s->startMonth;
     viewRandomPhase = a2s->viewRandomPhase;
 
-    _CDIY_RecomputeCompetitionDerivedProgressionTable();
+    _DIY_RecomputeCompetitionDerivedProgressionTable();
 
     uint16_t teamCount = (uint16_t)((DIY_Competition *)diyCompetitionStart)->numTeams;
     uint32_t result = _DIY_ComputeAverageTeamStrengthTier(teamCount, (uint8_t *)diyLeagueTeamIds);
@@ -5600,7 +5600,7 @@ extern uint8_t aPlayCup[]; /* "PLAY CUP" */
 extern uint32_t rndStringTable[];     /* const char *[15] */
 extern uint32_t replayStringTable[];  /* const char *[3] */
 
-extern void MenuCheckControls(void);
+extern void _MenuCheckControls(void);
 
 /* C functions from other modules */
 extern void _InitCareerVariables(uint16_t gameType);
@@ -6952,7 +6952,7 @@ void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2)
 
     if (seasonUpdateInProgress != 0) {
         do {
-            MenuCheckControls();
+            _MenuCheckControls();
         } while (fire != 0);
     }
 
@@ -9309,9 +9309,7 @@ extern uint16_t team1PenaltyGoals;
 extern uint16_t team2PenaltyGoals;
 
 extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
-extern void _CInitializeInGameTeamsAndStartGame(int16_t randomizePitch,
-    int16_t minSubs, int16_t maxSubs, int16_t paramD3, int16_t paramD7,
-    uint8_t *team1, uint8_t *team2);
+/* _InitializeInGameTeamsAndStartGame declared in game_init.h */
 
 /* Helper: compute gameSeason from viewRandomPhase byte */
 static uint16_t computeGameSeason(uint8_t phase) {
@@ -9377,10 +9375,10 @@ uint16_t _PlayDIYLeagueMatchAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
     /* d0 = (playEachTeam == 1) ? 0xFF : 0 */
     int16_t d0val = (diy->playEachTeam == 1) ? 0xFF : 0;
 
-    _CInitializeInGameTeamsAndStartGame(d0val,
+    _InitializeInGameTeamsAndStartGame(d0val,
         (int16_t)diyLeagueMinSubstitutes, (int16_t)diyLeagueMaxSubstitutes,
         diy->substitutesCount, d7val,
-        (uint8_t *)team1, (uint8_t *)team2);
+        (TeamFile *)team1, (TeamFile *)team2);
 
     if (gameCanceled != 0)
         return 1;
@@ -9513,10 +9511,10 @@ uint16_t _PlayDIYCupFixtureAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
 
     /* === Path A: first leg (a5_66 > 1, replayField == 0, field14A == 0) === */
     {
-        _CInitializeInGameTeamsAndStartGame(0,
+        _InitializeInGameTeamsAndStartGame(0,
             (int16_t)diyMinSubstitutes, *(int16_t *)diyPointsForAWin,
             subsCount, d7val,
-            (uint8_t *)team1, (uint8_t *)team2);
+            (TeamFile *)team1, (TeamFile *)team2);
         if (gameCanceled != 0)
             return 1;
         cachedViewResultTeam1Goals = statsTeam1GoalsCopy;
@@ -9548,10 +9546,10 @@ path_B: /* === Second leg === */
         playing2ndGame = (uint16_t)diy->playEachTeam;
 
         /* Play the match */
-        _CInitializeInGameTeamsAndStartGame(0,
+        _InitializeInGameTeamsAndStartGame(0,
             (int16_t)diyMinSubstitutes, *(int16_t *)diyPointsForAWin,
             subsCount, d7val,
-            (uint8_t *)team1, (uint8_t *)team2);
+            (TeamFile *)team1, (TeamFile *)team2);
         if (gameCanceled != 0)
             return 1;
 
@@ -9589,10 +9587,10 @@ path_C: /* === Auto-play/sim path === */
         int16_t randomizePitch = (field14C == 0) ? 0xFF : 0;
 
         /* Play the match */
-        _CInitializeInGameTeamsAndStartGame(randomizePitch,
+        _InitializeInGameTeamsAndStartGame(randomizePitch,
             (int16_t)diyMinSubstitutes, *(int16_t *)diyPointsForAWin,
             subsCount, d7val,
-            (uint8_t *)team1, (uint8_t *)team2);
+            (TeamFile *)team1, (TeamFile *)team2);
         if (gameCanceled != 0)
             return 1;
 

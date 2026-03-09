@@ -37,8 +37,8 @@ typedef short int16_t;
 extern void _SafeStart(void);
 extern void _LoadDosLibrary(void);
 extern void _DetachOSDisplay(void);
-extern void InitHardwareAtFrameStart(void);
-extern void SetupInterrupts(void);
+extern void _InitHardwareAtFrameStart(void);
+extern void _SetupInterrupts(void);
 extern void Int2KeyboardHandler(void);
 extern void Int3TimerHandler(void);
 extern void Int4Handler(void);
@@ -75,7 +75,7 @@ __attribute__((used, externally_visible)) void _start(void)
     _SafeStart();
     _LoadDosLibrary();
     _DetachOSDisplay();
-    InitHardwareAtFrameStart();
+    _InitHardwareAtFrameStart();
 
     uint32_t bank_bitmap_ptr = (uint32_t)&loaderBankBitmap;
     uint32_t bank_bitmap_end = (uint32_t)&chipRamBitmapEnd;
@@ -122,7 +122,7 @@ __attribute__((used, externally_visible)) void _start(void)
     set_vector(S_VBR, LEVEL_3_INTERRUPT_AUTOVECTOR, Int3TimerHandler);
     set_vector(S_VBR, LEVEL_4_INTERRUPT_AUTOVECTOR, Int4Handler);
 
-    SetupInterrupts();
+    _SetupInterrupts();
 
     *(volatile uint8_t *)CIAA_ICR_ADDR = 0x88u;
     *(volatile uint16_t *)INTENA_ADDR = 0xC008u;

@@ -153,7 +153,7 @@ extern void _UpdateAndApplyTeamControls(void);
 extern void _UpdateBall(void);
 extern void _InjuryUpdateTickGuard(void);
 extern void _DoGoalkeeperSprites(void);
-extern void _CDrawSprites(void);
+extern void _DrawSprites(void);
 
 /* ---- Helper: VBlank sync with anti-tamper cookie check ----
  * Each loop has its own XOR magic and expected value.
@@ -650,7 +650,7 @@ vblank_return_dispatch:
     _UpdateBookedPlayerNumberSprite();
     _ShowResult();
     _DrawAnimatedPatterns();
-    _CDrawSprites();
+    _DrawSprites();
     _DrawBenchAndSubsMenu();
     _BenchCheckControls();
     _UpdateAndDrawStatistics();

@@ -154,21 +154,21 @@ extern uint32_t editTacticsSelectedPairMenuEntryPtr;
 extern uint16_t gameType;
 extern uint8_t playerPositions[];       /* player positions translation table (current team) */
 extern uint16_t _cGetPlayerAtIndexFileIdx;
-extern uint8_t *_CGetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
 
 /* ---- Menu definitions (defined in asm) ---- */
 extern uint8_t chooseTacticsMenu[];
 extern uint8_t editTacticsMenu[];
 
 /* ---- C-callable bridges for asm functions (defined in swos2_unit.s) ---- */
-extern void _CCallSetBenchPlayersNumbers(uint8_t *teamPtr);
-extern void _CCallEditTactics_CommitPlayerPositionsAndRecalcSkill(void);
-extern void _CCallEditTacticsMenuSavePlayerPositions(void);
-extern void _CCallInitLittlePlayerSprites(void);
-extern void _CCallInitializeTacticsPositions(void);
-extern void _CCallDrawEditTacticsPitchAndPlayers(void);
-extern void _CCallEditTactics_ApplyPlayerRowHighlighting(uint16_t playerIndex);
-extern void _CCallRotatePlayersLeft(uint8_t *teamPtr, uint16_t maxSubs);
+extern void _SetBenchPlayersNumbers(uint8_t *teamPtr);
+extern void _EditTactics_CommitPlayerPositionsAndRecalcSkill(void);
+extern void _EditTacticsMenuSavePlayerPositions(void);
+extern void _InitLittlePlayerSprites(void);
+extern void _InitializeTacticsPositions(void);
+extern void _DrawEditTacticsPitchAndPlayers(void);
+/* _EditTactics_ApplyPlayerRowHighlighting declared in edit_tactics.h */
+extern void _RotatePlayersLeft(uint8_t *teamPtr, uint16_t maxSubs);
 
 /* ---- Sprite constants ---- */
 #define SPR_CHECK_BIG       206
@@ -227,7 +227,7 @@ __attribute__((used, externally_visible))
 void _EditTacticsInit(void)
 {
     uint8_t *teamPtr = (uint8_t *)chooseTacticsTeamPtr;
-    _CCallSetBenchPlayersNumbers(teamPtr);
+    _SetBenchPlayersNumbers(teamPtr);
 
     uint16_t numPlayers;
     if (selTeamNumber == 0xFFFF || *(uint16_t *)teamPtr != selTeamNumber) {
@@ -241,8 +241,8 @@ void _EditTacticsInit(void)
     editTacticsSelectedPlayerMenuEntryPtr = 0;
     editTacticsSelectedPlayerNameIndex = 0xFFFF;
 
-    _CCallEditTactics_CommitPlayerPositionsAndRecalcSkill();
-    _CCallEditTacticsMenuSavePlayerPositions();
+    _EditTactics_CommitPlayerPositionsAndRecalcSkill();
+    _EditTacticsMenuSavePlayerPositions();
 
     /* Fallthrough to EditTacticsOnRestore */
     _EditTacticsOnRestore();
@@ -419,7 +419,7 @@ void _ApplyCurrentEditedTactics(void)
         *dst++ = *src++;
     }
 
-    _CCallInitializeTacticsPositions();
+    _InitializeTacticsPositions();
 }
 
 /* ================================================================
@@ -811,7 +811,7 @@ cleanup:
 __attribute__((used, externally_visible))
 void _EditTacticsOnSelect28(void)
 {
-    _CCallRotatePlayersLeft((uint8_t *)chooseTacticsTeamPtr, 5);
+    _RotatePlayersLeft((uint8_t *)chooseTacticsTeamPtr, 5);
     _DrawMenuItemsWaitForVSync(editTacticsRotateRedrawList);
 }
 
@@ -826,7 +826,7 @@ __attribute__((used, externally_visible))
 void _EditTacticsAfterDrawPlayerFace(MenuEntry *cur)
 {
     uint16_t playerIdx = cur->ordinal - 29 + 1;
-    _CCallEditTactics_ApplyPlayerRowHighlighting(playerIdx);
+    _EditTactics_ApplyPlayerRowHighlighting((int16_t)playerIdx, cur);
     _DrawMenuItem(&menuEntries[39]);
 }
 
@@ -2051,7 +2051,7 @@ uint8_t *_GetPlayerInfoBreakPosition(uint8_t *teamPtr, uint16_t requestedSlot,
         slot = (uint8_t)(positions[requestedSlot] - 1);
     }
     uint16_t teamNumber = *(uint16_t *)teamPtr;
-    uint8_t *player = _CGetPlayerAtIndex(teamNumber, slot);
+    uint8_t *player = _GetPlayerAtIndex(teamNumber, slot);
     *outSlot = slot;
     *outPlayerIndex = _cGetPlayerAtIndexFileIdx;
     return player;
@@ -2128,9 +2128,9 @@ void _EditTactics_SwapPlayersInSlots(uint16_t slot1, uint16_t slot2)
 
     if (doPlayerSwap) {
         uint16_t teamNumber = *(uint16_t *)teamEx;
-        uint8_t *player1 = _CGetPlayerAtIndex(teamNumber, slot1);
+        uint8_t *player1 = _GetPlayerAtIndex(teamNumber, slot1);
         uint16_t fileIdx1 = _cGetPlayerAtIndexFileIdx;
-        uint8_t *player2 = _CGetPlayerAtIndex(teamNumber, slot2);
+        uint8_t *player2 = _GetPlayerAtIndex(teamNumber, slot2);
         uint16_t fileIdx2 = _cGetPlayerAtIndexFileIdx;
 
         /* Swap position bytes in playerPositionsArray */
@@ -2262,7 +2262,7 @@ void _EditTacticsPlayerNamesCommon(MenuEntry *cur)
             /* Different player - swap them */
             _EditTactics_SwapPlayersInSlots(
                 editTacticsSelectedPlayerSlotIndex, slot);
-            _CCallSetBenchPlayersNumbers((uint8_t *)(uint32_t)chooseTacticsTeamPtr);
+            _SetBenchPlayersNumbers((uint8_t *)(uint32_t)chooseTacticsTeamPtr);
             teamEx = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
             teamEx->team.someFlag = 1;
             _EditTactics_CommitPlayerPositionsAndRecalcSkill();

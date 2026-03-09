@@ -48,7 +48,7 @@ extern Sprite   big_S_Sprite;           /* SPRITE_SIZE bytes */
 extern uint8_t  cornerFlagPictureIndices[32];
 
 /* ---- External C/asm functions ---- */
-extern void     _CInitDisplaySprites(void);
+extern void     _InitDisplaySprites(void);
 extern uint16_t _Rand(void);
 
 /* ================================================================
@@ -115,7 +115,7 @@ void _SetAdvertisementsVisible(void)
     for (i = 0; i < 8; i++) {
         advertInGameSprites[i].visible = 1;
     }
-    _CInitDisplaySprites();
+    _InitDisplaySprites();
 }
 
 /* ================================================================
@@ -131,7 +131,7 @@ void _SetAdvertisementsInvisible(void)
     for (i = 0; i < 8; i++) {
         advertInGameSprites[i].visible = 0;
     }
-    _CInitDisplaySprites();
+    _InitDisplaySprites();
 }
 
 /* ================================================================

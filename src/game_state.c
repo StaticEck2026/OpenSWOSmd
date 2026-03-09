@@ -90,7 +90,7 @@ extern TeamGeneralInfo topTeamData;
 extern TeamGeneralInfo bottomTeamData;
 
 /* C-to-asm bridges */
-extern void _CInitDisplaySprites(void);
+extern void _InitDisplaySprites(void);
 
 /* Match state transitions (now in match_setup.c) */
 extern void _EndFirstHalf(void);
@@ -354,7 +354,7 @@ void _ResetResultSprites(void)
         sc2++;
     }
 
-    _CInitDisplaySprites();
+    _InitDisplaySprites();
 }
 
 /* ================================================================
@@ -465,7 +465,7 @@ show_sprites:
         s++;
     }
 
-    _CInitDisplaySprites();
+    _InitDisplaySprites();
 
 countdown:
     /* Decrement timer by lastFrameTicks */
@@ -520,7 +520,7 @@ hide_result:
         }
     }
 
-    _CInitDisplaySprites();
+    _InitDisplaySprites();
     return;
 
 position_sprites:
@@ -739,7 +739,7 @@ void _UpdateTime(void)
     if (currentTimeSprite.visible == 0)
     {
         currentTimeSprite.visible = 1;
-        _CInitDisplaySprites();
+        _InitDisplaySprites();
     }
 
     /* --- Time update section (time_invisible) --- */

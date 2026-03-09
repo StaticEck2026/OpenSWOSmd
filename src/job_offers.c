@@ -127,10 +127,10 @@ extern void _PrintFormatted(const uint8_t *fmt, uint8_t *out,
                      const uint8_t *strA, const uint8_t *strB, const uint8_t *strC);
 
 /* ---- C-callable ASM bridges ---- */
-extern uint8_t *_CCallGetTeamPointer(uint16_t teamNumber);
-extern void _CInt2Pounds(uint32_t value, uint8_t *dst);
-extern void _CShowSquad(uint8_t *team, uint8_t *title, uint32_t maskLo, uint32_t maskHi, int16_t arg2, int16_t arg3);
-extern void _CCareer_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel);
+extern uint8_t *_GetTeamPointer(uint16_t teamNumber);
+extern void _Int2Pounds(uint32_t value, uint8_t *dst);
+extern int16_t _ShowSquad(uint8_t *teamPtr, uint8_t *title, uint32_t maskLo, uint32_t maskHi, uint16_t arg2, uint16_t arg3);
+extern void _Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel);
 
 /* Helper: menu entry from byte offset */
 
@@ -333,7 +333,7 @@ void _JobOffers_FillMissingNewOfferTeamNames(void)
             continue;
 
         /* Look up team pointer and copy name */
-        uint8_t *teamPtr = _CCallGetTeamPointer(offer->teamNo);
+        uint8_t *teamPtr = _GetTeamPointer(offer->teamNo);
         _StringCopy((uint8_t *)((TeamFile *)teamPtr)->teamName, (uint8_t *)offer->teamName);
     }
 }
@@ -500,7 +500,7 @@ void _GotJobOfferFinish(void) {
         }
         printToEntry(3, aCoachingJobAtO, 0, 0);
 
-        _CInt2Pounds((uint32_t)jobOfferFunds, fundsBuffer);
+        _Int2Pounds((uint32_t)jobOfferFunds, fundsBuffer);
 
         {
             uint8_t *out = (uint8_t *)menuEntries[4].fg;
@@ -566,7 +566,7 @@ acceptedJobPath:
         }
         printToEntry(3, aHaveAcceptedTh, 0, 0);
 
-        _CInt2Pounds(teamFundsAccepted, fundsBuffer);
+        _Int2Pounds(teamFundsAccepted, fundsBuffer);
 
         printToEntry(4, aFromTheStartOf_0, fundsBuffer, 0);
         {
@@ -660,7 +660,7 @@ __attribute__((used, externally_visible))
 void _ViewFutureTeam(void) {
     uint8_t *team = (uint8_t *)teamOfferingJobPtr;
     viewFutureTeamModeFlag = 1;
-    _CShowSquad(team, aViewTeam, 0, 0, 1, -1);
+    _ShowSquad(team, aViewTeam, 0, 0, 1, -1);
     viewFutureTeamModeFlag = 0;
     _GotJobOfferFinish();
 }
@@ -678,7 +678,7 @@ void _ViewFutureTeamLeague(void) {
     uint8_t *comp = (uint8_t *)(*(uint32_t *)compEntry);
 
     highlightedLeagueTeamId = *(uint16_t *)teamPtr;
-    _CCareer_ViewOrEditCompetitionSlot(comp, (uint16_t)d7);
+    _Career_ViewOrEditCompetitionSlot(comp, (uint16_t)d7);
     highlightedLeagueTeamId = 0xFFFF;
     _GotJobOfferFinish();
 }

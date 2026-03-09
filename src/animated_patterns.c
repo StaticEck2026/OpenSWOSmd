@@ -49,7 +49,7 @@ extern uint16_t otherTeamScored;
 /* ---- external functions ---- */
 extern uint16_t _Rand(void);
 extern void _PanicHaltLoop(void);
-extern void _CDrawSprite16Pixels(uint16_t spriteIndex, int16_t x, int16_t y);
+extern void _DrawSprite16Pixels(uint16_t spriteIndex, int16_t x, int16_t y);
 
 /* ================================================================
  * swapTwoRandomIndicesFromAnimPatternsTable
@@ -108,13 +108,13 @@ static void drawPatternFromIndex(uint16_t patternIndex)
         return;
 
     /* draw to frontbuffer */
-    _CDrawSprite16Pixels(137, screenX, screenY);
+    _DrawSprite16Pixels(137, screenX, screenY);
 
     /* draw to mask buffer (swap frontbuffer ptr temporarily) */
     {
         uint32_t savedFbPtr = frontbufferBasePtr;
         frontbufferBasePtr = (uint32_t)frontbufferMaskBuffer;
-        _CDrawSprite16Pixels(137, screenX, screenY);
+        _DrawSprite16Pixels(137, screenX, screenY);
         frontbufferBasePtr = savedFbPtr;
     }
 }

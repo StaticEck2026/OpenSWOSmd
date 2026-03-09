@@ -388,7 +388,7 @@ check_self:
  * 4 functions:
  *   SeasonReview_AdjustWeightsForCompetition (static helper)
  *   SeasonReview_ComputeCategoryForCompetition (static helper)
- *   SeasonFinished_ComputeSeasonReview
+ *   _SeasonFinished_ComputeSeasonReview
  *   ShowChairmanOpinionAboutTheSeason
  * ================================================================ */
 
@@ -409,7 +409,7 @@ extern uint16_t findTeamInDIY_SuppressSideEffectsFlag;
 /* ---- SeasonReview_AdjustWeightsForCompetition (SWOS2.s line 35686) ----
  * Classifies a competition by comparing its pointer against known addresses,
  * then multiplies the category by a weight factor and accumulates the weight.
- * Only called from SeasonFinished_ComputeSeasonReview (static). */
+ * Only called from _SeasonFinished_ComputeSeasonReview (static). */
 static void adjustWeightsForCompetition(uint8_t *compPtr, uint16_t *weightAccum,
                                          uint16_t *weightedCategory)
 {
@@ -419,7 +419,7 @@ static void adjustWeightsForCompetition(uint8_t *compPtr, uint16_t *weightAccum,
         *weightAccum += 8;
         return;
     }
-    /* Friendly / Invitation Tournament / Tour: weight 1, d7 NOT multiplied */
+    /* _Friendly / Invitation Tournament / Tour: weight 1, d7 NOT multiplied */
     if (compPtr == friendlyCopy || compPtr == invitationTournamentCopy ||
         compPtr == tourCopy) {
         *weightAccum += 1;
@@ -447,7 +447,7 @@ static void adjustWeightsForCompetition(uint8_t *compPtr, uint16_t *weightAccum,
 
 /* ---- SeasonReview_ComputeCategoryForCompetition (SWOS2.s line 35733) ----
  * Computes season review category (0=best, 4=worst) for a competition buffer.
- * Returns -1 if team not found. Only called from SeasonFinished_ComputeSeasonReview. */
+ * Returns -1 if team not found. Only called from _SeasonFinished_ComputeSeasonReview. */
 static int16_t computeCategoryForCompetition(uint8_t *comp)
 {
     findTeamInDIY_SuppressSideEffectsFlag = 1;
@@ -493,7 +493,7 @@ static int16_t computeCategoryForCompetition(uint8_t *comp)
     return category;
 }
 
-/* ---- SeasonFinished_ComputeSeasonReview (SWOS2.s line 35638) ----
+/* ---- _SeasonFinished_ComputeSeasonReview (SWOS2.s line 35638) ----
  * Computes weighted average season review from primary and secondary
  * competitions, with bonuses for World Cup / Continental Cup wins.
  * Stores result in seasonReview global. */
@@ -642,7 +642,7 @@ extern uint16_t lastOfferPrimaryPlayerOrdinal;
 extern uint16_t offerNegotiationAttemptCount;
 extern uint16_t financeTotalsNeedResetFlag;
 
-extern void _CCareer_MaybeGenerateJobOffer(void);
+extern void _Career_MaybeGenerateJobOffer(void);
 
 /* BeginContractNegotiationSequence (SWOS2.s line 28035)
  * Called after a career match to begin contract negotiation phase.
@@ -661,7 +661,7 @@ void _BeginContractNegotiationSequence(uint8_t *ctx, uint8_t *team)
     _UpdateCareerFinancesAfterMatch(ctx, team);
     _ProcessOfferExpiryCountdown();
     _JobOffers_MaybeExpireSomeNewOffers();
-    _CCareer_MaybeGenerateJobOffer();
+    _Career_MaybeGenerateJobOffer();
 }
 
 /* ---- Chunk 182: Competition Season Processing ---- */

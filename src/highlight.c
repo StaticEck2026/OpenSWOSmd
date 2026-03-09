@@ -76,7 +76,7 @@ extern void _SetCameraCoordinates(int16_t targetX, int16_t targetY);
 extern void _InitCameraMoveView(int16_t targetX, int16_t targetY);
 extern void _SwapBuffersAndCameraViewState(void);
 extern void _MoveView(int16_t newScreenX, int16_t newScreenY);
-extern void _CDarkenRectangle(uint16_t sprIdx, uint16_t x, uint16_t y);
+extern void _DarkenRectangle(uint16_t sprIdx, uint16_t x, uint16_t y);
 extern void _ResetAnimatedPatternsForBothTeams(void);
 extern void _DrawAnimatedPatterns(void);
 
@@ -484,7 +484,7 @@ sprite_decode:
         int32_t sx = (int32_t)(d0 << 12) >> 22;
         int32_t sy = (int32_t)(d0 << 22) >> 22;
         uint32_t sprIdx = d0 >> 20;
-        _CDarkenRectangle((uint16_t)sprIdx, (uint16_t)(int16_t)sx,
+        _DarkenRectangle((uint16_t)sprIdx, (uint16_t)(int16_t)sx,
                           (uint16_t)(int16_t)sy);
     }
 
@@ -517,7 +517,7 @@ after_decode:
     /* Show replay icon (spinning R) when NOT in normal replay */
     if (normalReplayRunning == 0) {
         uint16_t frame = (currentGameTick >> 1) & 0x1F;
-        _CDarkenRectangle(SPR_REPLAY_FRAME_00 + frame, 0xB, 0xE);
+        _DarkenRectangle(SPR_REPLAY_FRAME_00 + frame, 0xB, 0xE);
     }
 
     /* Show score overlay during normal replay */
@@ -531,15 +531,15 @@ after_decode:
         uint16_t units = leftGoals % 10;
 
         if (tens != 0) {
-            _CDarkenRectangle(SPR_BIG_0 + tens, bx, by);
+            _DarkenRectangle(SPR_BIG_0 + tens, bx, by);
             bx += 12;
         }
-        _CDarkenRectangle(SPR_BIG_0 + units, bx, by);
+        _DarkenRectangle(SPR_BIG_0 + units, bx, by);
         bx += 15;
         by += 8;
 
         /* Dash separator (sprite 0xC3 = 195) */
-        _CDarkenRectangle(0xC3, bx, by);
+        _DarkenRectangle(0xC3, bx, by);
         by -= 8;
         bx += 8;
 
@@ -549,10 +549,10 @@ after_decode:
         units = rightGoals % 10;
 
         if (tens != 0) {
-            _CDarkenRectangle(SPR_BIG_0_ALT + tens, bx, by);
+            _DarkenRectangle(SPR_BIG_0_ALT + tens, bx, by);
             bx += 12;
         }
-        _CDarkenRectangle(SPR_BIG_0_ALT + units, bx, by);
+        _DarkenRectangle(SPR_BIG_0_ALT + units, bx, by);
     }
 
     /* State 3 timing: wait 2 game ticks when not paused */

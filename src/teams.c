@@ -1042,7 +1042,7 @@ extern void _Career_RemovePlayerFromTeamInternal(uint16_t teamNumber, uint16_t p
 extern void _PrunePlayerOffersAgainstRosterLimits(void);
 
 /* asm bridges for functions not yet ported to C */
-extern void _CCareer_GenerateTrialistForTeamPlayer(uint16_t playerIndex);
+extern void _Career_GenerateTrialistForTeamPlayer(uint16_t playerIndex);
 
 /* asm data externs */
 extern uint16_t removedPlayerStatAccum;
@@ -1245,7 +1245,7 @@ void _Career_RemovePlayerFromSelectedTeamRoster(uint16_t index)
         if (*(uint16_t *)careerNumPlayers == 16) {
             /* Exactly 16 players — generate trialist replacement */
             d1 = (uint16_t)(int8_t)currentMatchPlayers[d2];
-            _CCareer_GenerateTrialistForTeamPlayer(d1);
+            _Career_GenerateTrialistForTeamPlayer(d1);
             _Career_UpdatePlayerWeeklyWageCache(d1);
             return;
         }

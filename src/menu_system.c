@@ -36,7 +36,7 @@ extern uint32_t irqCookieObfuscated;
 extern uint32_t errorMessagePtr;
 extern uint16_t forceDrawTransparentMenuItems;
 
-/* MenuCheckControls globals */
+/* _MenuCheckControls globals */
 extern volatile uint16_t currentKey;
 extern uint16_t lastFrameTicks;
 extern int16_t fireCounter;
@@ -103,7 +103,7 @@ extern uint8_t diyLeagueScratchBuffer[];
 extern void loc_1215BC(void);
 
 /* ---- External asm functions (C-to-asm bridges still needed) ---- */
-extern void _CDrawSprite16Pixels(uint16_t sprIdx, uint16_t x, uint16_t y);
+/* _DrawSprite16Pixels declared in sprites.h */
 
 /* External C functions (already ported) */
 extern void _WaitForVSync(void);
@@ -488,7 +488,7 @@ void _DrawMenuItem(MenuEntry *entry)
             }
         } else if (bg == ENTRY_SPRITE1) {
             uint16_t sprIdx = *(uint16_t *)((uint8_t *)entry + 30);
-            _CDrawSprite16Pixels(sprIdx, entry->x, entry->y);
+            _DrawSprite16Pixels(sprIdx, entry->x, entry->y);
         } else if (bg == ENTRY_FUNC1) {
             /* Original asm passes x in d1, y in d2 as register params */
             _CallMenuFuncWithXY((void *)(*(uint32_t *)((uint8_t *)entry + 30)), entry->x, entry->y);
@@ -620,7 +620,7 @@ fg_sprite_draw:
         cx = (entry->dwWidth >> 1) + entry->x - (sprPixW >> 1);
         cy = (entry->dwHeight >> 1) + entry->y - (sprNLines >> 1);
 
-        _CDrawSprite16Pixels(sprIdx, cx, cy);
+        _DrawSprite16Pixels(sprIdx, cx, cy);
         goto post_draw_callback;
     }
 
@@ -1151,7 +1151,7 @@ void _UpdateBlinkingMenuText(void)
 }
 
 /* ================================================================
- * MenuCheckControls
+ * _MenuCheckControls
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _MenuCheckControls(void)

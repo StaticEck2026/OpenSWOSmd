@@ -57,7 +57,7 @@ extern void _FadeInTick(void);
 extern uint8_t _AudioIRQUpdateChannels(void);
 
 /* ================================================================
- * InitHardwareAtFrameStart  (SWOS2.s:5431-5446)
+ * _InitHardwareAtFrameStart  (SWOS2.s:5431-5446)
  *
  * Called during startup. Waits for the raster to reach the top
  * of the frame, then disables all interrupts and DMA.
@@ -89,7 +89,7 @@ void _InitHardwareAtFrameStart(void)
 }
 
 /* ================================================================
- * SetupInterrupts  (SWOS2.s:6056-6065)
+ * _SetupInterrupts  (SWOS2.s:6056-6065)
  *
  * Installs interrupt handlers into the vector table:
  *   - Saves old Level 3 vector to Level 1

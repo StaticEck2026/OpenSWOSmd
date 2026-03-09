@@ -34,7 +34,7 @@ extern uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, DIY_Competition *co
 /* C-callable bridges to asm functions (defined in swos2_unit.s) */
 /* Forward declaration: _UpdatePlayerPositionAndReturnRole (Chunk 187) */
 uint32_t _UpdatePlayerPositionAndReturnRole(uint8_t *team, uint16_t playerIdx);
-extern void _CCareer_ApplyPostMatchPlayerStatModsIfCareerTeam(uint8_t *team, uint8_t *remap);
+extern void _Career_ApplyPostMatchPlayerStatModsIfCareerTeam(uint8_t *team, uint8_t *remap);
 
 /* GetNumberOfAvailable* — return packed: d6 in low word, d7 in upper bits */
 extern uint32_t _GetNumberOfAvailablePlayers(uint8_t *team, int16_t excludeCardsFlag, uint16_t numPl);
@@ -839,8 +839,8 @@ void _CalculateViewResult(uint8_t *ctx, uint16_t modeFlag,
     _InitPlayerRemapTableForTeam(team2, team2PlayerRemapTable);
 
     /* Apply post-match career stat mods */
-    _CCareer_ApplyPostMatchPlayerStatModsIfCareerTeam(team1, team1PlayerRemapTable);
-    _CCareer_ApplyPostMatchPlayerStatModsIfCareerTeam(team2, team2PlayerRemapTable);
+    _Career_ApplyPostMatchPlayerStatModsIfCareerTeam(team1, team1PlayerRemapTable);
+    _Career_ApplyPostMatchPlayerStatModsIfCareerTeam(team2, team2PlayerRemapTable);
 
     /* Apply random player status */
     ApplyRandomPlayerStatusAfterSim(team1, team1PlayerRemapTable);
@@ -1077,7 +1077,7 @@ extern uint16_t selTeamNumber;
 extern uint16_t stayingInOldClub;
 
 /* Asm function bridges */
-extern void _CInitAndPlayGame(uint8_t *team1, uint8_t *team2);
+extern void _InitAndPlayGame(uint8_t *team1, uint8_t *team2);
 extern void _InitCareerVariables(uint16_t gameType);
 
 /* C functions from other modules */
@@ -1165,7 +1165,7 @@ void _PlayFriendly(void)
 {
     uint8_t *team1 = &selTeamsPtr;
     uint8_t *team2 = &selTeamsPtr + sizeof(TeamFileEx);
-    _CInitAndPlayGame(team1, team2);
+    _InitAndPlayGame(team1, team2);
 }
 
 /* ================================================================

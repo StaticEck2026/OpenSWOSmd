@@ -190,12 +190,12 @@ extern void _Player2StatusProc(void);
 extern void _InitCurrentGoalHighlight(void);
 extern void _CheckIfGoalkeeperClaimedTheBall(void);
 extern void _InitializePlayerSpriteFrameIndices(void);
-extern void _CApplyTeamTactics(TeamGame *teamGame);
+extern void _ApplyTeamTactics(TeamGame *teamGame);
 extern void _SetPlayerAnimationTable(uint8_t *animTable, Sprite *sprite);
 extern void _StopAllPlayers(void);
-extern void _CDrawSprite16Pixels(uint16_t spriteIndex, uint16_t x, uint16_t y);
-extern void _CDrawSpriteInCameraView(uint16_t spriteIndex, uint16_t x, uint16_t y);
-extern void _CDrawSpriteHotspotInCameraView(uint16_t spriteIndex, uint16_t x, uint16_t y);
+extern void _DrawSprite16Pixels(uint16_t spriteIndex, uint16_t x, uint16_t y);
+extern void _DrawSpriteInCameraView(uint16_t spriteIndex, uint16_t x, uint16_t y);
+extern void _DrawSpriteHotspotInCameraView(uint16_t spriteIndex, uint16_t x, uint16_t y);
 extern void _FillRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
 extern uint16_t _DrawMenuText(uint16_t x, uint16_t y, uint16_t color, uint8_t *text, uint8_t *charsTable);
 extern uint16_t _DrawMenuTextCentered(uint16_t x, uint16_t y, uint16_t color, uint8_t *text, uint8_t *charsTable);
@@ -950,7 +950,7 @@ substitutePlayer(void)
     }
 
     _InitializePlayerSpriteFrameIndices();
-    _CApplyTeamTactics((TeamGame *)benchTeamGame);
+    _ApplyTeamTactics((TeamGame *)benchTeamGame);
 
     waitForPlayerToGoInTimer = 100;
     subsBlockFire = 1;
@@ -1089,7 +1089,7 @@ markPlayersMenuHandler(void)
                 }
 
                 _InitializePlayerSpriteFrameIndices();
-                _CApplyTeamTactics((TeamGame *)benchTeamGame);
+                _ApplyTeamTactics((TeamGame *)benchTeamGame);
 
                 selectedPlayerInSubs = 0xFFFF;
                 overlayActiveFlag = 0;
@@ -1119,7 +1119,7 @@ static void handleFormationMenuControls(void)
             pl2Tactics = selectedFormationEntry;
         }
 
-        _CApplyTeamTactics((TeamGame *)benchTeamGame);
+        _ApplyTeamTactics((TeamGame *)benchTeamGame);
         subsBenchOff();
         return;
     }
@@ -1469,7 +1469,7 @@ skip_opponent_1:
 
     if (goToSubsTimer == 0 && substituteInProgress == 0 && subsState == 0) {
         uint16_t save_d1 = d1;
-        _CDrawSpriteInCameraView(SPR_SELECT_SUBSTITUTE_ARROW, d1, d2);
+        _DrawSpriteInCameraView(SPR_SELECT_SUBSTITUTE_ARROW, d1, d2);
         d1 = save_d1;
     }
 
@@ -1576,7 +1576,7 @@ static void drawBenchPlayersAndCoach(TeamGame *teamGame, TeamGeneralInfo *team, 
             if (subsTrainingTopTeam == 0)
                 coach_d2 += 14;
         }
-        _CDrawSpriteHotspotInCameraView(d0, d1, coach_d2);
+        _DrawSpriteHotspotInCameraView(d0, d1, coach_d2);
     }
 
     if (trainingGame != 0) {
@@ -1659,7 +1659,7 @@ skip_coach:
         }
         d0 += d3;
         d0 += d6;
-        _CDrawSpriteHotspotInCameraView(d0, d1, d2);
+        _DrawSpriteHotspotInCameraView(d0, d1, d2);
 
     next_player:
         d2 += 7;
@@ -1760,7 +1760,7 @@ skip_formation_entry:
                 panicReasonCode = 0x4554;
                 _PanicHaltLoop();
             }
-            _CDrawSprite16Pixels(spr, tx, ty);
+            _DrawSprite16Pixels(spr, tx, ty);
         }
         d2 = saved_d2;
     }
@@ -1850,7 +1850,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
                         goto skip_face;
                 }
             }
-            _CDrawSprite16Pixels(faceSpr, fx, y);
+            _DrawSprite16Pixels(faceSpr, fx, y);
         }
     skip_face:;
     }
@@ -1864,7 +1864,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
             uint16_t ix = subsMenuX - cameraX;
             if (useIndividualPlayerSkinColor != 0)
                 ix += 9;
-            _CDrawSprite16Pixels(SPR_RED_CROSS_INJURY, ix, y);
+            _DrawSprite16Pixels(SPR_RED_CROSS_INJURY, ix, y);
             goto draw_name;
         }
     }
@@ -1910,7 +1910,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
                 uint16_t cx = subsMenuX - cameraX;
                 if (useIndividualPlayerSkinColor != 0)
                     cx += 9;
-                _CDrawSprite16Pixels(cardSpr, cx, y);
+                _DrawSprite16Pixels(cardSpr, cx, y);
             }
             y += 1;
         }
@@ -1952,7 +1952,7 @@ draw_name:
     draw_injury:
         {
             uint16_t ix = subsMenuX - cameraX + 101;
-            _CDrawSprite16Pixels(SPR_RED_CROSS_INJURY, ix, y);
+            _DrawSprite16Pixels(SPR_RED_CROSS_INJURY, ix, y);
         }
     }
 }
@@ -2021,7 +2021,7 @@ static void drawFormationMenu(void)
         {
             uint16_t tx = bx - 1 + 2;
             uint16_t ty = d2 - 1 + 2;
-            _CDrawSprite16Pixels(SPR_FORMATION, tx, ty);
+            _DrawSprite16Pixels(SPR_FORMATION, tx, ty);
         }
         d2 = saved_d2;
     }

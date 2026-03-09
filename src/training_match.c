@@ -29,7 +29,7 @@ extern uint16_t selTeamSelectedPlayerPosition;
 extern uint16_t panicReasonCode;
 
 /* ---- C-callable ASM bridges ---- */
-extern uint8_t *_CallGetPlayer(uint16_t teamNumber, uint16_t playerIndex);
+extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerIndex);
 
 /* Shirt number offset from GetPlayer result: TEAMFILE_PLAYERS(76) + PLAYERFILE_SHIRTNUMBER(2) */
 #define GETPLAYER_SHIRTNUMBER_OFF  0x4E
@@ -82,7 +82,7 @@ void _TrainingMatch_RemoveSavedPlayerId(uint16_t value)
     /* If in starting 11 (index < 11), find best replacement from subs */
     if (foundIdx < 11) {
         /* Get position group of the removed player */
-        uint8_t *targetPlayer = _CallGetPlayer(selTeamNumber, value);
+        uint8_t *targetPlayer = _GetPlayer(selTeamNumber, value);
         uint8_t targetPosGroup = (targetPlayer[0x66] & 0xE0) >> 5;
 
         /* Search substitutes (index 11 to careerNumPlayers-1) for best replacement */
@@ -139,7 +139,7 @@ void _TrainingMatch_SaveLastMatchState(void)
 {
     /* Save shirt numbers via GetPlayer for all 32 indices */
     for (int16_t i = 31; i >= 0; i--) {
-        uint8_t *player = _CallGetPlayer(selTeamNumber, (uint16_t)i);
+        uint8_t *player = _GetPlayer(selTeamNumber, (uint16_t)i);
         lastMatchSavedShirtNums[i] = player[GETPLAYER_SHIRTNUMBER_OFF];
     }
 
@@ -176,7 +176,7 @@ void _TrainingMatch_RestoreLastMatchState(void)
 
     /* Restore shirt numbers via GetPlayer for all 32 indices */
     for (int16_t i = 31; i >= 0; i--) {
-        uint8_t *player = _CallGetPlayer(selTeamNumber, (uint16_t)i);
+        uint8_t *player = _GetPlayer(selTeamNumber, (uint16_t)i);
         player[GETPLAYER_SHIRTNUMBER_OFF] = lastMatchSavedShirtNums[i];
     }
 }
@@ -200,7 +200,7 @@ void _TrainingMatch_RestoreSavedTeamSelectionState(void)
 
     /* Restore shirt numbers via GetPlayer for all 32 indices */
     for (int16_t i = 31; i >= 0; i--) {
-        uint8_t *player = _CallGetPlayer(selTeamNumber, (uint16_t)i);
+        uint8_t *player = _GetPlayer(selTeamNumber, (uint16_t)i);
         player[GETPLAYER_SHIRTNUMBER_OFF] = trainingMatchSavedShirtNums[i];
     }
 }
@@ -224,7 +224,7 @@ void _TrainingMatch_SaveTeamSelectionState(void)
 
     /* Save shirt numbers via GetPlayer for all 32 indices */
     for (int16_t i = 31; i >= 0; i--) {
-        uint8_t *player = _CallGetPlayer(selTeamNumber, (uint16_t)i);
+        uint8_t *player = _GetPlayer(selTeamNumber, (uint16_t)i);
         trainingMatchSavedShirtNums[i] = player[GETPLAYER_SHIRTNUMBER_OFF];
     }
 }
@@ -266,7 +266,7 @@ int16_t _CheckIfTeamIsChanged(void)
 extern uint16_t isNationalSelector;
 extern TeamFileEx currentTeam;
 extern uint16_t _Rand2(void);
-extern uint8_t *_CGetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
 
 /* ================================================================
  * isPlayerBetterSwapCandidate (static)  (SWOS2.s line 36086)
@@ -344,7 +344,7 @@ static SubSwapResult findBestSubSwapCandidates(void)
     uint8_t *best2Ptr = 0;
 
     for (uint16_t i = 11; i != careerNumPlayers; i++) {
-        uint8_t *player = _CGetPlayerAtIndex(selTeamNumber, i);
+        uint8_t *player = _GetPlayerAtIndex(selTeamNumber, i);
         PlayerFile *pf = (PlayerFile *)(player + 76);
 
         /* Extract position from positionAndFace (bits 7:5) */

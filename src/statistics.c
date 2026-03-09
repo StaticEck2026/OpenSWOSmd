@@ -55,7 +55,7 @@ extern void _StatisticsOff(void);
 extern uint16_t _DrawMenuTextCentered(uint16_t x, uint16_t y, uint16_t color,
                                       uint8_t *text, uint8_t *charsTable);
 extern void _Int2Ascii(uint16_t value, uint8_t *outBuf);
-extern void _CDarkenRectangle(uint16_t sprIdx, uint16_t x, uint16_t y);
+extern void _DarkenRectangle(uint16_t sprIdx, uint16_t x, uint16_t y);
 
 /* ---- Constants ---- */
 #define SPR_SQUARE_GRID     1093
@@ -82,7 +82,7 @@ void _DrawGrid(uint16_t x, uint16_t y, uint16_t width, uint16_t height)
         cx = origX;
         for (c = (int16_t)cols; c >= 0; c--)
         {
-            _CDarkenRectangle(SPR_SQUARE_GRID, cx, cy);
+            _DarkenRectangle(SPR_SQUARE_GRID, cx, cy);
             cx += 16;
         }
         cy += 16;

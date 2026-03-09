@@ -5433,3 +5433,118 @@ struct DIYStage
 };
 #pragma pack(pop)
 
+/* 351 */
+#pragma pack(push, 2)
+struct AudioState
+{
+  unsigned __int8 *songPtr;
+  unsigned __int8 *bankSectionPtrs[7];
+  unsigned __int16 masterVolume;
+  unsigned __int16 modeFlags;
+  unsigned __int8 irqSubtick;
+  unsigned __int8 toggleFlag;
+  unsigned __int8 primaryChanEnable;
+  unsigned __int8 secondaryChanEnable;
+  unsigned __int8 channelVolume[4];
+  unsigned __int8 channelChangeFlags;
+  unsigned __int8 currentChannelIdx;
+};
+#pragma pack(pop)
+
+/* 353 */
+#pragma pack(push, 2)
+struct AudioChannel
+{
+  unsigned __int32 hwRegBase;
+  unsigned __int32 pvSampleBase;
+  unsigned __int32 pvPitchLfoPtr;
+  unsigned __int32 pvVolLfoPtr;
+  unsigned __int32 pvEnvDataPtr;
+  unsigned __int16 pvSampleSlot;
+  unsigned __int16 pvSampleOffset;
+  unsigned __int16 pvSampleLength;
+  unsigned __int16 pvPitchLfoLoop;
+  unsigned __int32 pvPitchLfoLen;
+  unsigned __int32 pvPitchLfoIdx;
+  unsigned __int16 pvVolLfoLoop;
+  unsigned __int32 pvVolLfoLen;
+  unsigned __int32 pvVolLfoIdx;
+  unsigned __int16 pvDmaBit;
+  unsigned __int16 pvVolScale;
+  unsigned __int16 pvCurVol;
+  unsigned __int16 pvBasePeriod;
+  unsigned __int16 pvCurPeriod;
+  unsigned __int8 pvStartFlag;
+  unsigned __int8 pvReloadFlag;
+  unsigned __int8 pvEnvState;
+  __int8 pvEnvDelta;
+  unsigned __int8 pvEnvCounter;
+  unsigned __int8 pvEnvDivisor;
+  unsigned __int8 pvEnvTarget;
+  unsigned __int8 pvEnvCurrent;
+  unsigned __int8 pvPitchslideCount;
+  unsigned __int8 _pad41;
+  unsigned __int32 pvPitchslideRate;
+  unsigned __int32 pvPitchslideAccum;
+  unsigned __int32 pvVariantDesc;
+  unsigned __int32 pvNoteScript;
+  unsigned __int32 pvWaveData;
+  unsigned __int8 pvStepPeriod;
+  unsigned __int8 pvScriptTimer;
+  unsigned __int8 pvRepeatPeriod;
+  unsigned __int8 pvPeriodCounter;
+  unsigned __int8 pvVariantId;
+  unsigned __int8 pvEnabled;
+  unsigned __int32 svSampleBase;
+  unsigned __int32 svPitchLfoPtr;
+  unsigned __int32 svVolLfoPtr;
+  unsigned __int32 svEnvDataPtr;
+  unsigned __int16 svSampleSlot;
+  unsigned __int16 svSampleOffset;
+  unsigned __int16 svSampleLength;
+  unsigned __int16 svPitchLfoLoop;
+  unsigned __int32 svPitchLfoLen;
+  unsigned __int32 svPitchLfoIdx;
+  unsigned __int16 svVolLfoLoop;
+  unsigned __int32 svVolLfoLen;
+  unsigned __int32 svVolLfoIdx;
+  unsigned __int16 svDmaBit;
+  unsigned __int16 svVolScale;
+  unsigned __int16 svCurVol;
+  unsigned __int16 svBasePeriod;
+  unsigned __int16 svCurPeriod;
+  unsigned __int8 svStartFlag;
+  unsigned __int8 svReloadFlag;
+  unsigned __int8 svEnvState;
+  __int8 svEnvDelta;
+  unsigned __int8 svEnvCounter;
+  unsigned __int8 svEnvDivisor;
+  unsigned __int8 svEnvTarget;
+  unsigned __int8 svEnvCurrent;
+  unsigned __int8 svPitchslideCount;
+  unsigned __int8 _pad99;
+  unsigned __int32 svPitchslideRate;
+  unsigned __int32 svPitchslideAccum;
+  unsigned __int32 svVariantDesc;
+  unsigned __int32 svWaveData;
+  unsigned __int8 svStepPeriod;
+  unsigned __int8 svScriptTimer;
+  unsigned __int8 svRepeatPeriod;
+  unsigned __int8 svPeriodCounter;
+  unsigned __int8 svVariantId;
+  unsigned __int8 _padAF;
+};
+#pragma pack(pop)
+
+/* 356 */
+enum AmigaRegisters
+{
+  _DMACON = 0x96,
+  _INTENA = 0x9A,
+  _INTREQ = 0x9C,
+  AUD0VOL = 0xA8,
+  AUD1VOL = 0xB8,
+  AUD2VOL = 0xC8,
+  AUD3VOL = 0xD8,
+};
+

@@ -669,13 +669,8 @@ extern uint16_t isGameFriendly;
 extern uint8_t  aTraining[];
 extern uint8_t  aFriendly_1[];
 
-/* C→asm bridges for register-convention functions */
-extern uint16_t _CShowPlayMatchMenu(int16_t controlFlags, int16_t maxSubs,
-    int16_t excludeFlags, int16_t isFirstPlayer, int16_t squadChanges,
-    uint8_t *team1, uint8_t *team2);
-extern void _CInitializeInGameTeamsAndStartGame(int16_t randomizePitch,
-    int16_t minSubs, int16_t maxSubs, int16_t paramD3, int16_t paramD7,
-    uint8_t *team1, uint8_t *team2);
+/* _ShowPlayMatchMenu declared in play_match_menu.h */
+/* _InitializeInGameTeamsAndStartGame declared in game_init.h */
 
 extern uint16_t _ShouldSetupPlayers(void);
 extern void _InitPlayerRemapTableForTeam(uint8_t *team, uint8_t *remapTable);
@@ -733,7 +728,7 @@ void _SetupPlayers(TeamFileEx *team1, TeamFileEx *team2, int16_t maxSubs,
         goto setup_team2;
 
     /* Show play match menu for first player */
-    d0 = _CShowPlayMatchMenu(3, maxSubs, excludeFlags, 1, allowSquadChanges,
+    d0 = _ShowPlayMatchMenu(3, maxSubs, excludeFlags, 1, allowSquadChanges,
                               (uint8_t *)team1, (uint8_t *)team2);
 
     if (exitGameFlag != 0) goto cancelled;
@@ -772,7 +767,7 @@ setup_team2:
     d0 = (topTeamPlayerNo | topTeamCoachNo) ^ 3;
 
     /* Show second player menu with teams swapped (team2 as first, team1 as second) */
-    d0 = _CShowPlayMatchMenu(d0, maxSubs, excludeFlags, 0, allowSquadChanges,
+    d0 = _ShowPlayMatchMenu(d0, maxSubs, excludeFlags, 0, allowSquadChanges,
                               (uint8_t *)team2, (uint8_t *)team1);
 
     if (exitGameFlag != 0) goto cancelled;

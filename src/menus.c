@@ -51,7 +51,7 @@ extern uint8_t swosMainMenu[];
 
 /* ZeroOutStars globals */
 extern uint8_t aResigned[];
-extern void InitSkinAndDefaultPointers(void); /* asm stub — used as end-of-strings marker */
+extern uint8_t stringDataEnd[]; /* memory boundary marker — end of strings region */
 
 /* SetDefaultOptions globals */
 extern uint16_t gameLength;
@@ -135,14 +135,14 @@ extern void _LoadOverlayToFrontbuffer(const uint8_t *path);
 /* ================================================================
  * ZeroOutStars  (SWOS2.s)
  *
- * Scans through strings from aResigned up to InitSkinAndDefaultPointers,
+ * Scans through strings from aResigned up to _InitSkinAndDefaultPointers,
  * replacing the first '*' character in each string with a null terminator.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _ZeroOutStars(void)
 {
     uint8_t *p = aResigned;
-    uint8_t *end = (uint8_t *)InitSkinAndDefaultPointers;
+    uint8_t *end = stringDataEnd;
 
     for (;;) {
         /* Scan string: look for '*' or end of string */
@@ -2272,7 +2272,7 @@ extern uint16_t friendlyOk;
 extern uint16_t selectNationalTeamMenuResult;
 extern uint8_t selectNationalTeamMenu[];
 
-extern void Friendly(void);
+extern void _Friendly(void);
 extern void EditCustomTeam(void);
 extern void _EditTactics(void);
 extern void CheckContinueAbortPrompt(void);   /* sets Z flag — but called via asm bridge */
@@ -2280,14 +2280,14 @@ extern void ShowDesignDIYLeagueMenu(void);
 extern void ShowDesignDIYCupMenu(void);
 extern void ShowDesignDIYTournamentMenu(void);
 
-/* FriendlyMenu — seed RNG, run Friendly, then update main menu (SWOS2.s line 68796) */
+/* FriendlyMenu — seed RNG, run _Friendly, then update main menu (SWOS2.s line 68796) */
 __attribute__((used, externally_visible))
 void _FriendlyMenu(void)
 {
     /* move.w (currentTick),(seed) — seeds both seed (high byte) + randXorIndex (low byte) */
     seed = (uint8_t)(currentTick >> 8);
     randXorIndex = (uint8_t)(currentTick & 0xFF);
-    Friendly();
+    _Friendly();
     _CommonMenuExit();
 }
 
@@ -2503,15 +2503,15 @@ extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
 extern int16_t  _CheckForTransferOffers(void);
 extern uint16_t _IsTournamentAllowingSquadChangesIfNotCareer(void);
 extern void _DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
-extern void Career_PostMatchUpdate(void);        /* still in asm */
-extern void _CCareer_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel); /* C bridge for asm */
-extern void SeasonFinished_ComputeSeasonReview(void); /* still in asm */
+extern void _Career_PostMatchUpdate(void);        /* still in asm */
+extern void _Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel); /* C bridge for asm */
+extern void _SeasonFinished_ComputeSeasonReview(void); /* still in asm */
 extern uint8_t *_ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers, uint16_t numTeams);
 extern uint8_t aSelectSquadToV[];   /* "SELECT SQUAD TO VIEW" */
 extern uint16_t diyNumberOfTeams;
 extern uint32_t diyTeamsBufferPtr;
 extern uint16_t numDiyTeams;
-extern void ChooseCompetitionMenu(void);         /* asm stub → _ChooseCompetitionMenu */
+extern void _ChooseCompetitionMenu(void);         /* asm stub → _ChooseCompetitionMenu */
 
 /* ScrollUpInGameList — decrement currentGame/listIndex with bounds (SWOS2.s line 60083) */
 __attribute__((used, externally_visible))
@@ -3111,7 +3111,7 @@ void _PlayMatchMenu(MenuEntry *callerEntry)
     if (gameType != GAME_TYPE_SEASON) {
         _UpdateCareerAfterMatch();
         if (youreSacked != 0) {
-            Career_PostMatchUpdate();
+            _Career_PostMatchUpdate();
             _ActivateMenu(contestMenu);
             return;
         }
@@ -3142,7 +3142,7 @@ void _NextMatch(MenuEntry *callerEntry)
     if (gameType != GAME_TYPE_SEASON) {
         _UpdateCareerAfterMatch();
         if (youreSacked != 0) {
-            Career_PostMatchUpdate();
+            _Career_PostMatchUpdate();
             _ActivateMenu(contestMenu);
             return;
         }
@@ -3216,10 +3216,10 @@ void _SeasonFinished(void)
 
     /* Career mode */
     if (isNationalSelector != 0) {
-        SeasonFinished_ComputeSeasonReview();
+        _SeasonFinished_ComputeSeasonReview();
         _MaybeSackManagerAfterSeasonReview();
         if (youreSacked != 0) {
-            Career_PostMatchUpdate();
+            _Career_PostMatchUpdate();
             _ActivateMenu(contestMenu);
             return;
         }
@@ -3252,11 +3252,11 @@ void _TransfersMenu(void)
 __attribute__((used, externally_visible))
 void _ViewWorldMenu(void)
 {
-    ChooseCompetitionMenu();
+    _ChooseCompetitionMenu();
     if (chooseTeamsResult == 0)
         return;
 
-    _CCareer_ViewOrEditCompetitionSlot((uint8_t *)selectedContest, contestLeagueNumber);
+    _Career_ViewOrEditCompetitionSlot((uint8_t *)selectedContest, contestLeagueNumber);
     _ContestMenuOnReturn();
 }
 
@@ -3277,11 +3277,11 @@ extern int16_t _CheckContinueAbortPrompt(uint8_t *header);
 extern void _ShowDesignDIYLeagueMenu(void);
 extern void _ShowDesignDIYCupMenu(void);
 extern void _ShowDesignDIYTournamentMenu(void);
-extern void SelectTeamsForPresetCompetition(void);   /* asm stub → _SelectTeamsForPresetCompetition */
+extern void _SelectTeamsForPresetCompetition(void);   /* asm stub → _SelectTeamsForPresetCompetition */
 extern void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest);
-extern void _CInitDIYCompetitionFromTableEntry(void); /* bridge: reads selectedContest + contestLeagueNumber */
-extern void _CInitDIYCupFromRecord(void);             /* bridge: reads selectedContest */
-extern void _CInitDIYLeagueFromRecord(void);           /* bridge: reads selectedContest */
+extern void _InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table);
+extern void _InitDIYCupFromRecord(uint8_t *cupRec);
+extern void _InitDIYLeagueFromRecord(uint8_t *leagueRec);
 extern void _InitTeams(void);
 extern void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
 extern void _asm_ShowDIYCupMenuWithParams(uint16_t d0, uint16_t d1, uint16_t d2);
@@ -3289,8 +3289,8 @@ extern void _DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t 
 extern void _DIY_RestoreCompetitionFileBufferFromDIYCompetition(void);
 extern void _DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt(void);
 extern void _DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer(void);
-extern void ChooseSeasonMenu(void);                    /* asm stub → _ChooseSeasonMenu */
-extern void _CInitNewSeason(void);                     /* bridge: reads selectedContest + contestLeagueNumber */
+extern void _ChooseSeasonMenu(void);                    /* asm stub → _ChooseSeasonMenu */
+extern void _InitNewSeason(uint8_t *src, uint16_t divisionIndex);
 extern int16_t _Asset_PromptInsertSaveDiskDf0(uint8_t *title);
 extern int16_t _SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename, uint8_t *menuTitleStr);
 extern int16_t _GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename, uint8_t *menuTitleStr);
@@ -3370,7 +3370,7 @@ void _PresetCompetitionMenu(void)
         return;
     }
 
-    SelectTeamsForPresetCompetition();
+    _SelectTeamsForPresetCompetition();
     if (chooseTeamsResult == 0) {
         _CommonMenuExit();
         return;
@@ -3383,7 +3383,7 @@ void _PresetCompetitionMenu(void)
     if (compType == 0) {
         /* League */
         _CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyLeagueTeamIds);
-        _CInitDIYCompetitionFromTableEntry();  /* bridge reads selectedContest + contestLeagueNumber */
+        _InitDIYCompetitionFromTableEntry(contestLeagueNumber, (uint8_t *)selectedContest);
         _InitTeams();
         _ShowDiyLeaguesTournamentMenu(0, 0, 0);
         _DIY_RestoreCompetitionFileBufferFromDIYCompetition();
@@ -3391,7 +3391,7 @@ void _PresetCompetitionMenu(void)
     } else if (compType == 1) {
         /* Cup */
         _CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyCupTeamIds);
-        _CInitDIYCupFromRecord();  /* bridge reads selectedContest */
+        _InitDIYCupFromRecord((uint8_t *)selectedContest);
         _InitTeams();
         _asm_ShowDIYCupMenuWithParams(0, 0, 0);
         _DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt();
@@ -3399,7 +3399,7 @@ void _PresetCompetitionMenu(void)
     } else {
         /* Tournament */
         _CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyTournamentTeamIds);
-        _CInitDIYLeagueFromRecord();  /* bridge reads selectedContest */
+        _InitDIYLeagueFromRecord((uint8_t *)selectedContest);
         _InitTeams();
         _DIY_EditCompetitionSlot(0, 0, 0);
         _DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer();
@@ -3421,14 +3421,14 @@ void _SeasonMenu(void)
         return;
     }
 
-    ChooseSeasonMenu();
+    _ChooseSeasonMenu();
     if (chooseTeamsResult == 0) {
         _CommonMenuExit();
         return;
     }
 
     _InitCareerVariables(3);
-    _CInitNewSeason();  /* bridge reads selectedContest + contestLeagueNumber */
+    _InitNewSeason((uint8_t *)selectedContest, contestLeagueNumber);
     _ShowMenu(contestMenu);
     _CommonMenuExit();
     if (gameType != GAME_TYPE_NO_GAME) {
@@ -3711,11 +3711,11 @@ fail: /* loc_14149A */
 
 /* ==========================================================================
  * Chunk 125 — Choose/Select Team Menu Functions
- * (ChooseCompetitionMenu, SelectTeamsForPresetCompetition, ChooseSeasonMenu,
+ * (_ChooseCompetitionMenu, _SelectTeamsForPresetCompetition, _ChooseSeasonMenu,
  *  GoGetTeamsForPlay)
  * ========================================================================== */
 
-extern void _CSelectTeamsFinalMenu(uint16_t mode); /* bridge: loads d0 from param, calls SelectTeamsFinalMenu */
+extern void _SelectTeamsFinalMenu(uint16_t mode); /* bridge: loads d0 from param, calls SelectTeamsFinalMenu */
 
 extern uint16_t teamsType;
 extern uint32_t gameTypeStr;
@@ -3738,7 +3738,7 @@ extern uint8_t  aChoosePresetCo[];
 extern uint8_t  aChooseSeason[];
 extern uint8_t  chooseTeamsMenu[];
 
-/* ChooseCompetitionMenu — choose competition setup (SWOS2.s line 63765) */
+/* _ChooseCompetitionMenu — choose competition setup (SWOS2.s line 63765) */
 __attribute__((used, externally_visible))
 void _ChooseCompetitionMenu(void)
 {
@@ -3752,10 +3752,10 @@ void _ChooseCompetitionMenu(void)
     showCupsAndOther = 1;
     playSeason = 0;
     chooseCompetitionOnly = 1;
-    _CSelectTeamsFinalMenu(255);
+    _SelectTeamsFinalMenu(255);
 }
 
-/* SelectTeamsForPresetCompetition — choose preset competition (SWOS2.s line 63782) */
+/* _SelectTeamsForPresetCompetition — choose preset competition (SWOS2.s line 63782) */
 __attribute__((used, externally_visible))
 void _SelectTeamsForPresetCompetition(void)
 {
@@ -3770,11 +3770,11 @@ void _SelectTeamsForPresetCompetition(void)
     playSeason = 0;
     chooseCompetitionOnly = 0;
     choosingPreset = 1;
-    _CSelectTeamsFinalMenu(255);
+    _SelectTeamsFinalMenu(255);
     choosingPreset = 0;
 }
 
-/* ChooseSeasonMenu — choose season setup (SWOS2.s line 63804) */
+/* _ChooseSeasonMenu — choose season setup (SWOS2.s line 63804) */
 __attribute__((used, externally_visible))
 void _ChooseSeasonMenu(void)
 {
@@ -3788,7 +3788,7 @@ void _ChooseSeasonMenu(void)
     showCupsAndOther = 0;
     playSeason = 1;
     chooseCompetitionOnly = 0;
-    _CSelectTeamsFinalMenu(255);
+    _SelectTeamsFinalMenu(255);
 }
 
 /* GoGetTeamsForPlay — set up team selection globals and show menu (SWOS2.s line 63830)
@@ -3817,7 +3817,7 @@ void _GoGetTeamsForPlay(uint8_t *gameTypeStrParam, uint8_t *playWhatStrParam,
     loadTeam = 1;
     playSeason = 0;
     chooseCompetitionOnly = 0;
-    _CSelectTeamsFinalMenu(255);
+    _SelectTeamsFinalMenu(255);
     _ShowInsertDisk2Dialog((uint8_t *)0);
 }
 
@@ -5079,7 +5079,7 @@ void _FriendlyPitchTypeProc(MenuEntry *entry)
 }
 
 /* ================================================================
- * Chunk 149: Friendly menu cluster
+ * Chunk 149: _Friendly menu cluster
  * ================================================================ */
 
 #define GAME_TYPE_NO_GAME  0
@@ -5108,7 +5108,7 @@ extern uint16_t friendlyOk;
 extern uint16_t minSubstitutes;
 extern uint16_t maxSubstitutes;
 
-/* Friendly: if no game in progress → show friendly menu, else ContestInProgress. */
+/* _Friendly: if no game in progress → show friendly menu, else ContestInProgress. */
 __attribute__((used, externally_visible))
 void _Friendly(void)
 {
@@ -5513,7 +5513,7 @@ void _ChooseTeamsDialog(uint16_t showClub, uint16_t showNational, uint16_t showO
         loadTeam = 1;
         showCupsAndOther = 0;
         playSeason = 0;
-        _CSelectTeamsFinalMenu(255);
+        _SelectTeamsFinalMenu(255);
     }
 }
 
@@ -5547,7 +5547,7 @@ void _ChooseTeamsDialogWithNationality(uint16_t nationality, uint16_t showClub,
         loadTeam = 1;
         showCupsAndOther = 0;
         playSeason = 0;
-        _CSelectTeamsFinalMenu(nationality);
+        _SelectTeamsFinalMenu(nationality);
     }
 }
 
