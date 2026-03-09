@@ -3155,24 +3155,8 @@ Player2StatusProc:
 ; ===== ProcessImageCommandStream =====
 ; Ported to C (_ProcessImageCommandStream in image_cmd.c)
 ; Register-to-stack forwarding stub for remaining asm callers.
-
-; ===== BlitDispatch =====
-; Ported to C (static blitDispatch in image_cmd.c)
-; No remaining asm callers; kept as dead stub for symbol safety.
-BlitDispatch:
-                rts
 currentSpriteIndex:
                 dc.w -1
-
-; ===== nullsub_2 =====
-; prototype: void nullsub_2(...)
-nullsub_2:
-                rts
-
-; ===== nullsub_3 =====
-; prototype: void nullsub_3(...)
-nullsub_3:
-                rts
 
 ; ===== ReturnFunction =====
 ; prototype: void __usercall ReturnFunction()
@@ -3203,11 +3187,6 @@ Int3Handler:
                 ;bra.w   SetTempStackPtr
 int_done:
                 rte
-
-; ===== nullsub_4 =====
-; prototype: void nullsub_4(...)
-nullsub_4:
-                rts
 
 ; ===== Int5Handler =====
 ; prototype: void __usercall Int5Handler()
@@ -3508,9 +3487,6 @@ CopySprite:
                 jsr     _CopySprite
                 lea     16(sp),sp
                 rts
-; blitter_begin — dead code (CopySprite now ported to C)
-blitter_begin:
-                rts
 
 ; ===== DrawSpriteHotspotInCameraView =====
 ; Ported to C: _DrawSpriteHotspotInCameraView in src/sprites.c
@@ -3542,11 +3518,6 @@ DrawSpriteInCameraView:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== RenderSpriteBandPlanePair =====
-; Now called only from C (_RenderSpriteBandsToCopperLists) — dead asm stub
-RenderSpriteBandPlanePair:
-                rts
-
 
 ; ===== InitDisplaySprites =====
 ; prototype: void __usercall InitDisplaySprites()
@@ -3571,12 +3542,6 @@ InitDisplaySprites:
 ;      D0 -  sprite number
 ;      A0 -> color conversion table
 ; 
-; Converts sprites to 8 colors.
-; ===== RectRowMaskedApplyScreenOffset =====
-; Ported to C: _RectRowMaskedApplyScreenOffset in src/blitter.c
-; 0 asm callers - all callers now use C directly
-RectRowMaskedApplyScreenOffset:
-                rts
 
 ; ===== FillRectangle =====
 ; Ported to C: _FillRectangle in src/blitter.c
@@ -3683,12 +3648,6 @@ DrawMenuTextCentered:
 ; Sets ebp to -1 unconditionally.
 ; Ported to C: _Text2Sprite in src/blitter.c
 ; in: d1=xOff, d2=yOff, d3=planeMask, d4=dstSpriteIndex, a0=text, a1=charsTable
-; out: d0=error (0=OK, 1=error), d1=totalWidth, Z flag
-
-; ===== BlitStringToFrontBuffer =====
-; prototype: void __usercall BlitStringToFrontBuffer(unsigned __int16 spriteIndex@<d0>, unsigned __int16 x@<d1>, unsigned __int16 y@<d2>, unsigned __int16 planeMask@<d3>)
-BlitStringToFrontBuffer:
-                rts
 bltconShiftBase:
                 dc.w $0000
 textBlitPlaneMask:
@@ -3701,14 +3660,6 @@ blitSrcA_MaskPtr:
 ; unsigned __int32 *
 blitSrcB_GlyphPtr:
                 dc.l $00000000
-
-; ===== BlitGlyphToSpriteBitmap =====
-; Ported to C: _BlitGlyphToSpriteBitmap in src/blitter.c
-; in: d0=glyphIndex, d1=xOff, d2=yOff, d3=planeMask, d4=dstSpriteIndex
-panic_bad_glyph_header:
-                rts
-panic_missing_bitplanes:
-                rts
 bltconShiftBase_glyph:
                 dc.w $0000
 glyphBlitPlaneMask:
@@ -3742,11 +3693,6 @@ assetLoaderWorkPtr:
                 dc.l $00000000
 assetLoaderAltPathReady:
                 dc.w $0000
-
-; ===== AssetSys_InitDiskImageSources =====
-; Ported to C: _AssetSys_InitDiskImageSources in src/asset_sys.c
-AssetSys_InitDiskImageSources:
-                rts
 
 ; ===== LoadFile =====
 ; prototype: unsigned __int16 __usercall LoadFile@<d0>(const char *filename@<a0>, void *dst@<a1>)
@@ -4134,12 +4080,6 @@ LoaderBootstrapBlobPI:
                 dc.b $B8,$34,$49,$81,$A7,$08,$90,$7D,$B3,$B2,$A7,$08,$90,$59,$4E,$71
                 dc.b $4E,$75
 
-; ===== AssetCacheAlloc =====
-; Ported to C (assetCacheAllocInternal in asset_loader.c, static)
-; No remaining asm callers — all callers ported to C.
-AssetCacheAlloc:
-                rts
-
 ; ===== AssetCacheFindByName =====
 ; Ported to C (_AssetCacheFindByName in asset_loader.c)
 ; No remaining asm callers — AssetCacheCopyByName also ported to C.
@@ -4157,12 +4097,6 @@ AssetCacheAlloc:
 ; Called from LoadFile (asm) with a0=name, a1=src, d1=size.
 
 ; RNC decompression: fully ported to C in rnc.c
-
-
-; ===== nullsub_5 =====
-; prototype: void nullsub_5(...)
-nullsub_5:
-                rts
 crowdEventFlags:
                 dc.w $0000
 sfxQueueCount:
@@ -4321,17 +4255,6 @@ PlayGoalKickOffSample:
                 jmp     _PlayGoalKickOffSample
 
 ; ===== PlayCornerKickSample =====
-; Ported to C (_PlayCornerKickSample in sfx_crowd.c)
-
-; ===== nullsub_6 =====
-; prototype: void nullsub_6(...)
-nullsub_6:
-                rts
-
-; ===== nullsub_22 =====
-; prototype: void nullsub_22(...)
-nullsub_22:
-                rts
 
 ; ===== Int4Handler =====
 ; prototype: void __usercall Int4Handler()
@@ -4438,8 +4361,6 @@ AudioChannelNoteOnOff:
                 addq.l  #8,sp
                 movem.l (sp)+,d0-d1/a0-a1
                 rts
-AudioChannelStop:
-                rts
 
 ; ===== AudioChannelQueueNextWaveIfEnabled =====
 ; prototype: void __usercall AudioChannelQueueNextWaveIfEnabled(unsigned int channel@<d0>, unsigned int waveId@<d1>)
@@ -4460,93 +4381,6 @@ AudioIRQUpdateChannels:
                 movem.l d1-d7/a0-a6,-(sp)
                 jsr     _AudioIRQUpdateChannels
                 movem.l (sp)+,d1-d7/a0-a6
-                rts
-
-; ===== AudioIRQServiceOneChannel =====
-; Dead code — inlined in C _AudioIRQUpdateChannels (Chunk 32)
-AudioIRQServiceOneChannel:
-                rts
-
-; ===== AudioIRQLoadAUDxPtrLenIfReloadNeeded =====
-; Dead code — ported to C in audio_irq.c (Chunk 32)
-AudioIRQLoadAUDxPtrLenIfReloadNeeded:
-                rts
-
-; ===== AudioIRQEnableDMAIfStartFlag =====
-; Dead code — ported to C in audio_irq.c (Chunk 32)
-AudioIRQEnableDMAIfStartFlag:
-                rts
-
-; ===== AudioDisableDMAForChannel =====
-; Dead code — ported to C as _AudioDisableDMAForChannel in src/audio.c (Chunk 44)
-; No remaining asm callers.
-AudioDisableDMAForChannel:
-                rts
-
-; ===== AudioIRQRunChannelScriptStep =====
-; Dead code — ported to C in audio_irq.c (Chunk 32)
-AudioIRQRunChannelScriptStep:
-                rts
-audioirq_script_loop:
-                rts
-audioirq_reload_timer_from_period:
-                rts
-
-; Remaining AudioIRQ functions stubbed — all ported to C (Chunk 32)
-; Preserving labels for any potential references
-AudioIRQScriptCmdJumpTable:
-                rts
-AudioIRQUpdateBeepVoiceParams:
-                rts
-AudioIRQApplyBeepVolumeAndWriteAUDxVOL:
-                rts
-AudioIRQBeepVolumeLfoStep:
-                rts
-AudioIRQBeepVolumeEnvStep:
-                rts
-AudioIRQBeepVolumeEnvForceDeltaZero:
-                rts
-AudioIRQBeepVolumeEnvStop:
-                rts
-AudioIRQBeepVolumeEnvLoadSegment:
-                rts
-AudioIRQInitVolumeEnvForNote:
-                rts
-AudioIRQBeepLFOAndPitchSlide:
-                rts
-AudioIRQNoteOnInitChannel:
-                rts
-AudioIRQSelectVariant:
-                rts
-AudioIRQLoadAUDxPtrLenIfReloadNeeded2:
-                rts
-AudioIRQEnableDMAIfStartFlag2:
-                rts
-AudioIRQRunModCommandStream:
-                rts
-AudioIRQDispatchModCommand:
-                rts
-AudioIRQServiceVolume:
-                rts
-AudioIRQApplyVolumeAndWriteAUDxVOL:
-                rts
-AudioIRQVolumeLfoStep:
-                rts
-AudioIRQVolumeEnvStep:
-                rts
-AudioIRQVolumeEnvForceDeltaZero:
-                rts
-AudioIRQVolumeEnvStop:
-                rts
-AudioIRQVolumeEnvLoadSegment:
-                rts
-AudioIRQInitVolumeEnv:
-                rts
-AudioIRQLFOAndPitchSlide:
-                rts
-AudioIRQInitPitchEnv:
-                rts
-AudioIRQSelectInstrument:
                 rts
 
 ; Dead code removed (old function bodies and local labels from Chunk 32 port)
@@ -4668,12 +4502,6 @@ CalculateDeltaXAndY:
 ;     goalScored
 ;     lastTeamScoredPtr
 ;     playerScoredPtr
-;     currentGameTick
-; 
-; Sets next picture frame for players. Also takes care of cheering after
-; scored goal.
-SetNextPlayerFrame:
-                rts
 
 ; ===== MovePlayer =====
 ; prototype: void __usercall MovePlayer(struct Sprite *player@<a0>)
@@ -4683,12 +4511,6 @@ SetNextPlayerFrame:
 ; globals:
 ;   read:
 ;      gameStatePl
-;      breakCameraMode
-;      
-; Update x and y coordinates based on deltas. If sprite has reached its
-; destination stop it, and set standing animation table.
-MovePlayer:
-                rts
 
 ; ===== SetPlayerAnimationTableAndPictureIndex =====
 ; prototype: void __usercall SetPlayerAnimationTableAndPictureIndex(const AnimTable *animTable@<a0>, Sprite *player@<a1>)
@@ -4735,23 +4557,11 @@ cameraYVelocity:
 ; prototype: void __usercall ReverseDestXDirection(Sprite *spr@<a0>, __int32 ballX@<d5>)
 ; in:
 ;      D5 -  ball x
-;      A0 -> ball sprite
-; 
-; Reverse dest x direction around x (by the same delta x amount).
-; Ported to C (static helper in ball_physics.c, only called from UpdateBall)
-ReverseDestXDirection:
-                rts
 
 ; ===== ReverseDestYDirection =====
 ; prototype: void __usercall ReverseDestYDirection(Sprite *spr@<a0>, __int32 ballY@<d6>)
 ; in:
 ;      D6 -  ball y
-;      A0 -> ball sprite
-; 
-; Reverse dest y direction around y (by the same delta y amount).
-; Ported to C (static helper in ball_physics.c, only called from UpdateBall)
-ReverseDestYDirection:
-                rts
 
 ; ===== DoGoalkeeperSprites =====
 ; prototype: void __usercall DoGoalkeeperSprites()
@@ -4953,16 +4763,6 @@ loc_109F2A:
                 ble.s   loc_109F20
 locret_109F34:
                 rts
-
-; ===== nullsub_21 =====
-; prototype: void nullsub_21(...)
-nullsub_21:
-                rts
-
-; ===== nullsub_20 =====
-; prototype: void nullsub_20(...)
-nullsub_20:
-                rts
 advertIndex:
                 dc.w $0000              ; Determines which advertisement is shown during the game, -1 = none
 advertSlideTimer:
@@ -5013,12 +4813,6 @@ bigSIndex:
 ; 
 ; out:
 ;      D6 - sprite index + 1
-; 
-; From player surname and number makes a sprite.
-; Ported to C: static makePlayerNameSprite() in src/player_sprites.c
-; Only called from MakeSpritesFromPlayerNames (also ported).
-MakePlayerNameSprite:
-                rts
 ; __int8[16]
 numberBuffer:
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -5249,12 +5043,6 @@ lastPlayerBeforeGoalkeeper:
                 dc.l $00000000
 
 ; ===== ClearSaveFlagForGoalSprites =====
-; Ported to C: _ClearSaveFlagForGoalSprites in src/game_state.c
-
-; ===== nullsub_8 =====
-; prototype: void nullsub_8(...)
-nullsub_8:
-                rts
 
 ; ===== ResetTime =====
 ; prototype: void __usercall ResetTime()
@@ -5513,20 +5301,10 @@ loc_10B796:
 BumpPlayersLastPlayedHalfAtHalfStart:
                 jmp     _BumpPlayersLastPlayedHalfAtHalfStart
 
-; ===== BumpPlayerLastPlayedHalfAtHalfStart =====
-; Dead code — now inlined in C _BumpPlayersLastPlayedHalfAtHalfStart
-BumpPlayerLastPlayedHalfAtHalfStart:
-                rts
-
 ; ===== BumpPlayersLastPlayedHalfAtHalfEnd =====
 ; Ported to C: _BumpPlayersLastPlayedHalfAtHalfEnd (game_state.c)
 BumpPlayersLastPlayedHalfAtHalfEnd:
                 jmp     _BumpPlayersLastPlayedHalfAtHalfEnd
-
-; ===== BumpPlayerLastPlayedHalfAtHalfEnd =====
-; Dead code — now inlined in C _BumpPlayersLastPlayedHalfAtHalfEnd
-BumpPlayerLastPlayedHalfAtHalfEnd:
-                rts
 copyTimeSprite:
                 dc.w $0000              ; 1 Only right before the game starts
                                         ; if true, in UpdateTime fill time placeholder sprite
@@ -6030,12 +5808,6 @@ loc_10C336:
 ; in: D0 = spriteIndexOrMarker (int16_t), D4 = x (uint16_t), D5 = y (uint16_t)
 
 ; ===== IncrementHilBufferPointer =====
-; prototype: unsigned __int8 *__usercall IncrementHilBufferPointer@<a1>(unsigned __int8 *cur@<a1>)
-; out:
-;      A1 -> current position in hil buffer
-; Dead stub — only called from within ported group (now all in C)
-IncrementHilBufferPointer:
-                rts
 
 ; ===== DrawReplayFrame =====
 ; prototype: void __usercall DrawReplayFrame()
@@ -6046,22 +5818,10 @@ IncrementHilBufferPointer:
 ; in:
 ;      A0 - current pointer in hil buffer, possibly out of bounds
 ; out:
-;      A0 - pointer guaranteed to point in hil buffer
-; 
-; Checks if it was safe to increment pointer. If not reset pointer to start of scene buffer.
-; Dead stub — only called from within ported group (now all in C)
-ValidateHilPointerAdd:
-                rts
 
 ; ===== ValidateHilPointerSub =====
 ; prototype: unsigned __int8 *__usercall ValidateHilPointerSub@<a0>(unsigned __int8 *p@<a0>)
 ; in:
-;      A0 - current pointer in hil buffer
-; 
-; Check is it safe to decrement pointer.
-; Dead stub — only called from within ported group (now all in C)
-ValidateHilPointerSub:
-                rts
 
 ; ===== ReplayUpdateCameraAndSwapBuffers =====
 ; prototype: void __usercall ReplayUpdateCameraAndSwapBuffers()
@@ -6093,10 +5853,6 @@ GoalScored:
                 jsr     _GoalScored
                 addq.l  #8,sp
                 movem.l (sp)+,d2-d7/a2-a6
-                rts
-goal_scored_exit:
-                rts
-goal_scored_exit_early:
                 rts
 aAsc_0:
                 dc.b "****",0,$00
@@ -7958,21 +7714,6 @@ team1Scorers:
                 dcb.b   528,0
 team2Scorers:
                 dcb.b   528,0
-
-; ===== LoaderIntroLoadHeroAudioBank =====
-; prototype: void __usercall LoaderIntroLoadHeroAudioBank()
-LoaderIntroLoadHeroAudioBank:
-                rts
-
-; ===== LoaderIntroEnsureMenuMusicPlaying =====
-; prototype: void __usercall LoaderIntroEnsureMenuMusicPlaying()
-LoaderIntroEnsureMenuMusicPlaying:
-                rts
-
-; ===== LoaderIntroStopMusicAndResetAudio =====
-; prototype: void __usercall LoaderIntroStopMusicAndResetAudio()
-LoaderIntroStopMusicAndResetAudio:
-                rts
 scorer_padding:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
@@ -8305,12 +8046,6 @@ WriteStatsNumber:
                 rts
 WriteStatsPercent:
                 rts
-
-; ===== DrawGrid =====
-; Ported to C: _DrawGrid (statistics.c)
-; Only called from DrawStatistics (now in C), so dead stub.
-DrawGrid:
-                rts
 ; __int8[6]
 statsNumber:
                 dc.b 0,0,0,0,0,0        ; For converting numbers in statistics
@@ -8583,12 +8318,6 @@ playerYQuadrantCoordinates:
 ;      A6 -> team (general)
 ; 
 ; This function is called when this player was tackled.
-; It sets player's state to tackled and sets animation
-; table. Also randomly sets injury and injury level.
-; Ported to C: _PlayerTackled in src/tackle_foul.c
-; Dead code — only caller was PlayerTacklingTestFoul, now also ported
-PlayerTackled:
-                rts
 ; __int8[7]
 kInjuryLevels:
                 dc.b 42,7,5,4,3,2,1
@@ -9094,29 +8823,11 @@ stoppageAuxFlag:
 ;     A1 -> player
 ;     A6 -> team
 ; 
-; Hitting flying or lob header. Only triggers on ball contact.
-
-; ===== DoFlyingHeader =====
-; prototype: void __usercall DoFlyingHeader(Sprite *player@<a1>, Sprite *ball@<a2>)
-DoFlyingHeader:
-                rts
 
 ; ===== DoLobHeader =====
-; prototype: void __usercall DoLobHeader(struct Sprite *player@<a1>, struct Sprite *ball@<a2>)
-; in:
-;     A1 -> player sprite
-;     A2 -> ball sprite
-DoLobHeader:
-                rts
 
 ; ===== SetPlayerJumpHeaderHitAnimationTable =====
 ; prototype: void __usercall SetPlayerJumpHeaderHitAnimationTable(Sprite *player@<a1>)
-; in:
-;     A1 -> player sprite
-; 
-; Table for flying and lob headers.
-SetPlayerJumpHeaderHitAnimationTable:
-                rts
 kHeaderLowJumpHeight:
                 dc.l $00020000          ; =2.0, For flying headers
 kHeaderHighJumpHeight:
@@ -9186,22 +8897,10 @@ cardAnimStatesWithFlag:
 ;      A1 -> player sprite
 ;      A6 -> team (general)
 ; out:
-;      zero flag = 1, D0 = 0, card given
-;      zero flag = 0, D0 = 1, card not given
-; Ported to C: _TryBookingThePlayer in src/tackle_foul.c
-; Dead code — only caller was PlayerTacklingTestFoul, now also ported
-TryBookingThePlayer:
-                rts
 
 ; ===== TrySendingOffThePlayer =====
 ; prototype: unsigned __int16 __usercall TrySendingOffThePlayer@<d0>(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
 ; in:
-;      A1 -> player (sprite)
-;      A6 -> team (general)
-; Ported to C: _TrySendingOffThePlayer in src/tackle_foul.c
-; Dead code — only caller was PlayerTacklingTestFoul, now also ported
-TrySendingOffThePlayer:
-                rts
 
 ; ===== SendPlayerAway =====
 ; prototype: void __usercall SendPlayerAway(Sprite *player@<a1>, TeamGeneralInfo *team@<a6>)
@@ -9235,12 +8934,6 @@ SendPlayerAway:
 ; 
 ; Does division D4/D0 using loops, without direct divide instruction.
 ; If they're exactly divisible it will return one more, e.g. 9/3 -> 4.
-; If D0 is less than 1, scales it up as well as the value which gets
-; subtracted from D4 in a loop, to limit the number of loops when D0 < 1.
-; It will fail for extremely low D0 values.
-; Called to calculate on both x and y directions.
-GetFramesNeededToCoverDistance:
-                rts
 
 ; ===== UpdateBallVariables =====
 ; prototype: __int16 __usercall UpdateBallVariables@<d0>(Sprite *playerSprite@<a1>, Sprite *ballSprite@<a2>, TeamGeneralInfo *teamInfo@<a6>)
@@ -9341,12 +9034,6 @@ GetFramesNeededToCoverDistance:
 ;      A0 -> ball factor table, depending on game state
 ; 
 ; Even indices are delta x, odd are delta y. They are added to ball
-; delta x and y. Tables are different for each type of game halt.
-; Called when player kicks the ball or does a pass.
-; ===== GetBallDestCoordinatesTable (ported to C: _GetBallDestCoordinatesTable in ball_possession.c) =====
-; Dead code: only callers were DoPass and PlayerKickingBall (both ported)
-GetBallDestCoordinatesTable:
-                rts
 
 ; ===== GetClosestNonControlledPlayerInDirection =====
 ; prototype: Sprite *__usercall GetClosestNonControlledPlayerInDirection@<a0>(unsigned __int16 direction@<d0>, TeamGeneralInfo *team@<a6>)
@@ -9357,12 +9044,6 @@ GetBallDestCoordinatesTable:
 ;      A0 -> player sprite
 ;      D2 -  ball distance
 ; 
-; Return pointer to player closest to the ball facing approximately given
-; direction. Also return his distance from the ball.
-; ===== GetClosestNonControlledPlayerInDirection (ported to C: _GetClosestNonControlledPlayerInDirection in ball_possession.c) =====
-; Dead code: only caller was DoPass (ported)
-GetClosestNonControlledPlayerInDirection:
-                rts
 
 ; ===== UpdateControllingPlayer =====
 ; prototype: void __usercall UpdateControllingPlayer(Sprite *player@<a1>)
@@ -9437,12 +9118,6 @@ ResetBothTeamSpinTimers:
 ;      A6 -> team that fouled (general info)
 ; 
 ; Foul has been made. See where, and make it a penalty or
-; free kick, depending on location. If not in appropriate
-; areas, it's an ordinary foul.
-; Ported to C: _TestFoulForPenaltyAndFreeKick in src/tackle_foul.c
-; Dead code — only callers were PlayerTacklingTestFoul, now also ported
-TestFoulForPenaltyAndFreeKick:
-                rts
 
 ; ===== NextPenalty =====
 ; prototype: void __usercall NextPenalty()
@@ -9481,24 +9156,12 @@ StartFirstExtraTime:
 EndFirstExtraTime:
                 jmp     _EndFirstExtraTime
 
-; ===== ResetPlayerPassingKicking =====
-; prototype: void __usercall ResetPlayerPassingKicking(TeamGeneralInfo *team@<a0>)
-; in:
-;      A0 -> team data
-ResetPlayerPassingKicking:
-                rts
 
 ; ===== StopAllPlayers =====
 ; prototype: void __usercall StopAllPlayers()
 StopAllPlayers:
                 jmp     _StopAllPlayers
 
-; ===== StopPlayers =====
-; prototype: void __usercall StopPlayers(TeamGeneralInfo *team@<a0>)
-; in:
-;      A0 -> team (general info)
-StopPlayers:
-                rts
 setup_goal_replay_for_bottom_team:
                 move.w  #2,d0
                 movea.l lastPlayerPlayed(pc),a0
@@ -20457,18 +20120,6 @@ usePlaneOffsetFlag:
 sub_11FBA2:
                 tst.w   (deadVar02).l
                 bne.w   *+4
-locret_11FBAC:
-                rts
-
-; ===== nullsub_9 =====
-; prototype: void nullsub_9(...)
-nullsub_9:
-                rts
-
-; ===== nullsub_10 =====
-; prototype: void nullsub_10(...)
-nullsub_10:
-                rts
                 rts
 fireCounter:
                 dc.w $0000              ; For any player input
@@ -20547,20 +20198,8 @@ numbersBuffer:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00
 shirtColorTable:
                 dc.b $01,$02,$03,$06,$0A,$0B,$0C,$0D,$0E,$0F
-
-; ===== sub_11FBF6 =====
-; prototype: void sub_11FBF6(...)
-; Dead code — never called, hex formatting done in C (panic.c)
-sub_11FBF6:
-                rts
 hexLongStringBuffer:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; Buffer for converting a 32-bit value to an 8-digit hex ASCII string with null terminator.
-
-; ===== PanicLookupMessagePtr =====
-; prototype: char *__usercall PanicLookupMessagePtr@<a0>(unsigned __int16 code@<d0>)
-; Dead code — hex formatting ported to C in panic.c (panicLookupMessagePtr static)
-PanicLookupMessagePtr:
-                rts
 hexWordStringBuffer:
                 dc.b $00,$00,$00,$00,$00,$00 ; Buffer for converting a 16-bit panic code to a 4-digit hex ASCII string.
 
@@ -20569,12 +20208,6 @@ hexWordStringBuffer:
 ; in:
 ;      A1 -> ptr to buffer where the menu will be unpacked
 ;            (usually g_currentMenu)
-;      A0 -> static menu for conversion
-; 
-; Unpacks static menu in A0 to screen menu (held in g_currentMenu).
-; Doesn't execute any of the menu functions, only does the unpacking.
-InitMenuEntry:
-                rts
 
 ; ===== MenuProc =====
 ; prototype: void __usercall MenuProc()
@@ -20699,16 +20332,6 @@ pl1SkipFireCounter:
 pl2SkipFireCounter:
                 dc.w $0000              ; Never written
 
-; ===== nullsub_1 =====
-; prototype: void nullsub_1(...)
-nullsub_1:
-                rts
-
-; ===== sub_120A10 =====
-; Dead code — unreferenced function, stubbed in Chunk 187
-sub_120A10:
-                rts
-
 ; ===== DrawMenuItemOuterFrame =====
 ; prototype: void __usercall DrawMenuItemOuterFrame(unsigned __int16 color@<d0>, unsigned __int16 x@<d1>, unsigned __int16 y@<d2>, unsigned __int16 width@<d3>, unsigned __int16 height@<d4>)
 ; in:
@@ -20734,12 +20357,6 @@ outerFrameColorsTable:
 ;      D4 - height
 ; 
 ; Draw rectangle on that coordinates.
-; No color conversion.
-
-; ===== sub_120B0A =====
-; Dead code — unreferenced function, stubbed in Chunk 187
-sub_120B0A:
-                rts
 
 ; ===== DrawMenuItemBackground =====
 ; prototype: void __usercall DrawMenuItemBackground(unsigned __int16 color@<d0>, unsigned __int16 x@<d1>, unsigned __int16 y@<d2>, unsigned __int16 width@<d3>, unsigned __int16 height@<d4>)
@@ -20896,18 +20513,6 @@ PrintFormatted:
 ; out:
 ;      zero flag - set from value of char
 ; 
-; destroys: eax, esi
-; 
-; Inserts character to string in inMenuKeyboardBuffer.
-; inMenuKeyboardBuffer must have enough room for one more character.
-InsertCharacter:
-                rts
-
-InputTextDeleteCharAtCursor:
-                rts
-
-InputTextFilterKey:
-                rts
 inputAllowedControlKeys:
                 dc.b $0D,$12,$13,$1B,$7F,$7E,$20,$2D,$2F,$2E,$FF,$00 ; Enter, left shift, right shift, escape,
                                         ; backspace, 'special'(?), space, '-', '/', '.', terminator
@@ -21029,8 +20634,6 @@ ShowMenu:
 ;      A5 -> old selected entry
 ;      A6 -> old menu to return to
 loc_1215BC:
-RestorePreviousMenu:
-                rts
 
 ; ===== SetExitMenuFlag =====
 ; prototype: void __usercall SetExitMenuFlag()
@@ -21099,11 +20702,6 @@ kTeamViewOffsetBaseLUT:
 ; out: D1 = team1 goals, D2 = team2 goals
                 move.w  (sp)+,d2        ; outTeam2Goals
                 movem.l (sp)+,d3-d7/a2-a6
-                rts
-
-; ===== ScaleViewIndexByTeamPriceRank =====
-; Dead — only called from CalculateViewResult which is now in C
-ScaleViewIndexByTeamPriceRank:
                 rts
 ; unsigned __int8[128]
 simGoalsByStrengthDiffTable:
@@ -21215,11 +20813,6 @@ simGoalScorerPairTable:
                 dc.b $43,$43,$43,$43,$43,$43,$43,$43,$42,$42,$42,$42,$42,$42,$42,$42
                 dc.b $32,$32,$32,$32,$32,$32,$41,$41,$41,$41,$31,$31,$31,$31,$21,$21
                 dc.b $30,$30,$20,$10,$65,$65,$65,$65,$76,$76,$76,$87,$87,$98,$A9,$BA
-
-; ===== AssignSimulatedGoalsToScorers =====
-; Dead — all callers ported to C (CalculateViewResult + ExtraTimeSecondPhaseScoring)
-AssignSimulatedGoalsToScorers:
-                rts
 ; unsigned __int8 (*[18])[12]
 goalScorerDistributionByBallOutTactic:
                 ; unsigned __int8 (*[18])[12]
@@ -21280,11 +20873,6 @@ goalScorerDistDefend:
 ; unsigned __int8 *
 currentGoalScorerDistPtr:
                 dc.l $00000000          ; Pointer to the currently active goal scorer distribution table
-
-; ===== ApplyRandomPlayerStatusAfterSim =====
-; Dead — only called from CalculateViewResult which is now in C
-ApplyRandomPlayerStatusAfterSim:
-                rts
 loc_122274:
                 sub.w   d6,d5
                 beq.w   locret_1223BC
@@ -21407,32 +20995,11 @@ locret_1223BC:
 ; Bridge: a1=team1, a2=team2 → C params
 
 ; ===== InitInGameTeams_WithMatchParam_Alt =====
-; Bridge: identical to WithMatchParam (same C function)
-
-; ===== CyclePlayerStatusFlagsForTeam =====
-; Dead code — only called by InitInGameTeams_* which are now in C
-CyclePlayerStatusFlagsForTeam:
-                rts
 
 ; ===== InitPlayerRemapTableForTeam =====
 ; Bridge: a0=team, a1=map → C function _InitPlayerRemapTableForTeam(team, map)
 playerStatusBucketThresholds:
                 dc.b $20,$08,$06,$05,$04,$08,$01,$00
-
-; ===== MaybeDecayPlayerStatusBucketForTeam =====
-; Dead code — only called by InitInGameTeams_* which are now in C
-MaybeDecayPlayerStatusBucketForTeam:
-                rts
-
-; ===== MaybeDecayPlayerStatusBucket =====
-; Dead code — only called by MaybeDecayPlayerStatusBucketForTeam
-MaybeDecayPlayerStatusBucket:
-                rts
-
-; ===== BuildAvailablePlayersRemapAndMask =====
-; Dead — only called from CalculateViewResult which is now in C
-BuildAvailablePlayersRemapAndMask:
-                rts
 availablePickCountByGoalsInTable:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$01,$01,$01,$01
                 dc.b $00,$00,$00,$01,$01,$01,$02,$02,$00,$00,$00,$01,$01,$01,$02,$02
@@ -21539,12 +21106,6 @@ playersPositionsByTactics:
                 dc.l tacticsPositionUSERD ; element[15]
                 dc.l tacticsPositionUSERE ; element[16]
                 dc.l tacticsPositionUSERF ; element[17]
-
-; ===== UpdatePlayerPositionAndReturnRole =====
-; Ported to C: _UpdatePlayerPositionAndReturnRole (match_sim.c, Chunk 187)
-; Dead — only called from C bridge _CUpdatePlayerPositionAndReturnRole
-UpdatePlayerPositionAndReturnRole:
-                rts
 
 ; ===== ComputeOldPlayerSkillForViewResult =====
 ; Bridge: a0=team, d0=goalsCount → d0=result
@@ -22717,12 +22278,6 @@ teamTacticsTable:
 ;      A1 -> player (file)
 ;      D7 = player number (position)
 ; out:
-;      D7 - player price
-;      
-; Ported to C: _GetPlayerPrice (match_sim.c, Chunk 187)
-; Dead — only called from now-ported UpdatePlayerPositionAndReturnRole
-GetPlayerPrice:
-                rts
 loc_1246F4:
                 move.w  d3,-(sp)
                 clr.w   d7
@@ -22942,13 +22497,6 @@ IsPlayerInjured:
                 tst.w   d0              ; set zero flag for callers
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-
-; CalcLeagueMatchGateReceiptsFactor, CalcCupMatchGateReceiptsFactor
-; Ported to C as static functions in career_status.c (called only from UpdateCareerFinancesAfterMatch)
-CalcLeagueMatchGateReceiptsFactor:
-                rts
-CalcCupMatchGateReceiptsFactor:
-                rts
 ; Data tables moved to static const in C
 leagueMatchReceiptsMultiplierTable:
                 dc.b $01,$90,$01,$2C,$00,$C8,$00,$96,$00,$7D,$00,$64
@@ -22965,14 +22513,6 @@ cupMatchReceiptsMultiplierTable:
 ; Ported to C: _MaybeSackManagerAfterSeasonReview (career_status.c)
 
 ; ===== UpdateCareerChairmanWarningsAfterMatch =====
-; Ported to C: _UpdateCareerChairmanWarningsAfterMatch (career_status.c)
-
-; SetOverdraftWarningCooldown, SetPerformanceWarningCooldown
-; Ported to C as static functions (only called from ported C code)
-SetOverdraftWarningCooldown:
-                rts
-SetPerformanceWarningCooldown:
-                rts
 
 ; ===== ApplyWeeklyFinancialDeductions =====
 ; Ported to C: _ApplyWeeklyFinancialDeductions (career_status.c)
@@ -22988,49 +22528,19 @@ InitializeCareerSeasonFinancials:
 ShouldApplyRandomPlayerStatusAfterSim:
                 jmp     _ShouldApplyRandomPlayerStatusAfterSim
 
-; ===== IsMajorInternationalTournament =====
-; Ported to C: _IsMajorInternationalTournament (career_status.c)
-; Dead — only called from now-ported C functions
-IsMajorInternationalTournament:
-                rts
-
 ; ===== UpdateBoardConfidenceScore =====
 ; Ported to C: _UpdateBoardConfidenceScore (career_status.c)
 
 ; ===== PushBoardConfidenceHistory =====
 ; Ported to C: _PushBoardConfidenceHistory (career_status.c)
-
-; ===== CalcBoardConfidenceDeltaPercent =====
-; Ported to C: calcBoardConfidenceDeltaPercent (static, career_status.c)
-; Dead — only called from now-ported C functions
-CalcBoardConfidenceDeltaPercent:
-                rts
 ; __int16[5]
 seasonReviewConfidenceDeltaTable:
                 ; __int16[5]
                 dc.w 50,25,0,-25,-50
-
-; ===== AddReputationFromBonusValueDiv4 =====
-; Ported to C: addReputationFromBonusValueDiv4 (static, career_status.c)
-; Dead — only called from now-ported C functions
-AddReputationFromBonusValueDiv4:
-                rts
-
-; ===== AddReputationFromBonusValueDiv8 =====
-; Ported to C: addReputationFromBonusValueDiv8 (static, career_status.c)
-; Dead — only called from now-ported C functions
-AddReputationFromBonusValueDiv8:
-                rts
 ; __int16[5]
 nationalSelectorSeasonReviewReputationDeltaTable:
                 ; __int16[5]
                 dc.w 5,2,0,-2,-5
-
-; ===== GetExpectedLeagueRankIndex =====
-; Ported to C: getExpectedLeagueRankIndex (static, career_status.c)
-; Dead — only called from now-ported C functions
-GetExpectedLeagueRankIndex:
-                rts
 
 ; ===== BeginContractNegotiationSequence =====
 ; prototype: void __usercall BeginContractNegotiationSequence()
@@ -23144,10 +22654,6 @@ loc_126744:
 ; Input: a1=team1, a2=team2, d5=firstLegTeam1, d6=firstLegTeam2
 ; Output: d4=packedGoals, d5=packedAggregate, d6=packedPenalty, d7=flags
                 rts
-
-; ===== GetCachedOrCalculateViewResult ===== (dead — only called from Process* above, now in C)
-GetCachedOrCalculateViewResult:
-                rts
 cachedViewResultTeam1Goals:
                 dc.w -1
 cachedViewResultTeam2Goals:
@@ -23162,29 +22668,6 @@ cachedPenaltyShootoutTeam2Score:
                 dc.w $0000
 pad_126A90:
                 dc.b $00,$00,$00,$00
-
-; ===== GetCachedOrCalculateExtraTimeResult ===== (dead — only called from Process* above, now in C)
-GetCachedOrCalculateExtraTimeResult:
-                rts
-
-; ===== GetCachedOrCalculatePenaltyShootoutResult ===== (dead — only called from Process* above, now in C)
-GetCachedOrCalculatePenaltyShootoutResult:
-                rts
-
-; ===== AdjustPlayerSkills ===== (ported to C → _AdjustPlayerSkills in match_sim.c)
-; Dead code — only caller was ApplyTeamTactics, now ported to C
-AdjustPlayerSkills:
-                rts
-
-; ===== GetPlayerPricePercentageChange ===== (ported to C → _GetPlayerPricePercentageChange in match_sim.c)
-; Dead code — only caller was AdjustPlayerSkills, now ported to C
-GetPlayerPricePercentageChange:
-                rts
-
-; ===== ScaleSkill ===== (ported to C → _ScaleSkill in match_sim.c)
-; Dead code — only caller was AdjustPlayerSkills, now ported to C
-ScaleSkill:
-                rts
 
 ; ===== GetTeamKitsSimilarityFactor =====
 ; prototype: unsigned __int16 __usercall GetTeamKitsSimilarityFactor@<d7>(unsigned __int8 team1ShirtType@<d0>, unsigned __int8 team1StripesColor@<d1>, unsigned __int8 team1BasicColor@<d2>, unsigned __int8 team1ShortsColor@<d3>, unsigned __int8 team2ShirtType@<d4>, unsigned __int8 team2StripesColor@<d5>, unsigned __int8 team2BasicColor@<d6>, unsigned __int8 team2ShortsColor@<d7>)
@@ -23206,15 +22689,6 @@ ScaleSkill:
 ; ===== AreBasicColorsConflicting =====
 ; prototype: void __usercall AreBasicColorsConflicting(unsigned __int8 color1@<d0>, unsigned __int8 color2@<d4>)
 ; in:
-;      D0 - team color 1 (0..9)
-;      D4 - team color 2 (0..9)
-; out:
-;      zero flag: set = OK, clear = conflict
-AreBasicColorsConflicting:
-                rts
-
-AreShortsAndStripeColorsConflicting:
-                rts
 ; unsigned __int16[10]
 conflictingBasicTeamColorsTable:
                 ; unsigned __int16[10]
@@ -23302,8 +22776,6 @@ nullsub_11:
 Int2StrWithCommas:
 ; Ported to C as static int2StrWithCommas() in string_utils.c (dead code — no asm callers)
 Int2AsciiLessThan100Check:
-Int2AsciiSaveD0:
-                rts
 
 ; ===== GetBankBalance =====
 ; prototype: void __usercall GetBankBalance(char *dst@<a1>)
@@ -23426,9 +22898,6 @@ InitTeams:
                 jsr     _InitTeams
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-; TeamInit merged into _InitTeams (only caller was InitTeams)
-TeamInit:
-                rts
 
 ; ===== InitAndPlayGame ===== (ported to C → _InitAndPlayGame)
 ; Bridge: a1=team1, a2=team2 → C
@@ -23525,36 +22994,12 @@ exitGameFlag:
 
 ; ===== SetInGameTeamsPrimaryColors =====
 ; prototype: void __usercall SetInGameTeamsPrimaryColors(struct TeamFile *topTeamFile@<a2>, struct TeamFile *bottomTeamFile@<a3>, unsigned __int8 *similarityFactors@<a6>)
-; in:
-;      A2 -> team1 (file)
-;      A3 -> team2 (file)
-
-IsSingleColorKitSimilar:
-                rts
-
-ConvertTeamKitColorsWithFixedColors:
-                rts
-
-ResolveTeamKitColorConflict:
-                rts
-
-SetInGameTeamColors:
-                rts
 
 ; ===== ConvertTeamKitColors =====
 ; prototype: void __usercall ConvertTeamKitColors(unsigned __int16 shirtType@<d0>, unsigned __int8 stripesColor@<d1>, unsigned __int8 basicColor@<d2>, unsigned __int8 shortsColor@<d3>, unsigned __int8 socksColor@<d4>, struct TeamGame *team@<a1>)
 ; in:
 ;     D0 -  primary shirt type
 ;     D1 -  primary shirt stripes color
-;     D2 -  primary basic shirt color
-;     D3 -  primary shorts color
-;     D4 -  primary socks color
-;     A1 -> team (game)
-ConvertTeamKitColors:
-                rts
-
-ConvertTeamColor:
-                rts
 teamKitTieBreakColors:
                 dc.b $04,$05,$01,$07,$09,$00,$03,$06,$08,$02,$FF,$00 ; Single color kit colors to try to resolve too similar team kits
 avgSelectedTeamsPlayerPrice:
@@ -23715,20 +23160,12 @@ diyTeamShuffleScratch:
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-
-; ===== DIY_BuildCompSpecificTeamShuffle ===== (ported to C, static)
-DIY_BuildCompSpecificTeamShuffle:
-                rts
 ; unsigned __int8[8]
 diyShuffleOrder8Teams:
                 dc.b $01,$04,$05,$00,$02,$07,$06,$03 ; Index mapping table {1,4,5,0,2,7,6,3} used to reorder 8 teams in DIY competition.
 ; unsigned __int8[4]
 diyShuffleOrder4Teams:
                 dc.b $00,$03,$01,$02    ; Index mapping table {0,3,1,2} used to reorder 4 teams in DIY competition.
-
-; ===== DIY_BuildCompSpecificTeamList ===== (ported to C, static)
-DIY_BuildCompSpecificTeamList:
-                rts
 ; __int8[16]
 diyLeagueTeamShuffleMap:
                 dc.b 4,-1,1,5,0,-1,3,11,2,-1,10,9,6,-1,8,7 ; Team index mapping for 16-team DIY league building.
@@ -23755,11 +23192,6 @@ diyTournamentInitTable:
                 dc.w $0005,$0018,$0006,$0004,$0010,$0000,$0010,$0008
                 dc.w $0000,$0008,$0004,$0000,$0004,$0002,$0000,$0002
                 dc.w $0001,$0001,$0001,$0001
-
-; ===== nullsub_12 =====
-; prototype: void nullsub_12(...)
-nullsub_12:
-                rts
 
 ; ===== DIY_BuildTeamSelectionPointerCache =====
 ; prototype: void __usercall DIY_BuildTeamSelectionPointerCache()
@@ -23977,10 +23409,6 @@ loc_12A388:
 DIY_ReorderTeamGridByOrderList:
                 jmp     _DIY_ReorderTeamGridByOrderList
 
-; ===== DIY_DecrementMissingTeamCountIfNotLoaded ===== (dead — only called from now-ported C)
-DIY_DecrementMissingTeamCountIfNotLoaded:
-                rts
-
 ; ===== DIY_GetCurrentMatchTeamSlots ===== (ported to C → _DIY_GetCurrentMatchTeamSlots)
 ; Bridge: outputs a1, a2 (slot pointers)
 
@@ -24025,12 +23453,6 @@ loc_12AB90:
                 dbf     d0,loc_12AB90
                 rts
 
-; ===== CopySelectedTeamNumbers ===== (ported to C → _CopySelectedTeamNumbers)
-; d0=count, a0=dest
-
-; ===== FindTeamInCache ===== (ported to C, inlined in _VerifyTeamLoaded)
-FindTeamInCache:
-                rts
 
 ; ===== VerifyTeamLoaded ===== (ported to C → _VerifyTeamLoaded)
 ; d0=teamNum, returns a0=team ptr
@@ -24177,21 +23599,6 @@ loc_12B22A:
                 bra.s   loc_12B22A
 locret_12B234:
                 rts
-
-; ===== Career_DrawRandomTeamFromPoolAndCopyGrid ===== (ported as static in career_eurocups.c)
-; Callers should use Career_DrawEuropeanCupTeamsAndCopyGrids instead.
-Career_DrawRandomTeamFromPoolAndCopyGrid:
-                rts
-
-; ===== Career_UpdateEuropeanChampionshipCompetitionSlot ===== (inlined into C)
-Career_UpdateEuropeanChampionshipCompetitionSlot:
-                rts
-
-; ===== Career_UpdateWorldCupCompetitionSlot =====
-; prototype: void __usercall Career_UpdateWorldCupCompetitionSlot(void *competition@<a4>, unsigned __int16 count@<d7>, void *out@<a5>)
-; ===== Career_UpdateWorldCupCompetitionSlot ===== (inlined into C)
-Career_UpdateWorldCupCompetitionSlot:
-                rts
 loc_12B63E:
                 movem.l d0-d7/a0-a6,-(sp)
                 jsr     Career_AutoAdvanceLeagueCompetitionFromRecord
@@ -24202,26 +23609,6 @@ loc_12B6AC:
 loc_12B6BA:
                 move.w  #$1992,(panicReasonCode).l
                 jsr     PanicHaltLoop
-Career_QualifyTeamForEuroCup_IfEligibleCompetition:
-                rts
-Career_QualifyTeamForCupWinnersCup_IfEligibleCompetition:
-                rts
-Career_QualifyTeamsForUefaCup_IfEligibleCompetition:
-                rts
-TryConsumeCompetitionIdFromList:
-                rts
-IsTeamInCupWinnersCupList:
-                rts
-IsTeamInUefaCupList:
-                rts
-Career_ClearEuropeanCupTitleHolderIfMatchTeam:
-                rts
-AppendTeamToEuroCupList:
-                rts
-AppendTeamToCupWinnersCupList:
-                rts
-AppendTeamToUefaCupList:
-                rts
 
 ; ===== Career_ProcessCompetitionForNextSeason =====
 ; prototype: void __usercall Career_ProcessCompetitionForNextSeason(unsigned __int8 comp@<d0>)
@@ -24274,16 +23661,6 @@ loc_12BCD0:
 
 ; ===== Career_ProcessTertiaryCompetitionForNextSeason =====
 ; prototype: void __usercall Career_ProcessTertiaryCompetitionForNextSeason(void *competition@<a4>)
-; ===== Career_ProcessTertiaryCompetitionForNextSeason ===== (ported to C)
-; in: a4 = competition record ptr
-
-; ===== Career_ProcessPrimaryCompetitionForNextSeason ===== (ported to C, dead)
-Career_ProcessPrimaryCompetitionForNextSeason:
-                rts
-
-; ===== Career_ProcessDiyLeagueQualificationEntry ===== (ported to C, dead)
-Career_ProcessDiyLeagueQualificationEntry:
-                rts
 
 ; ===== DIY_ApplyPromotionRelegationWeightsToScratch ===== (ported to C → _DIY_ApplyPromotionRelegationWeightsToScratch)
 ; a2=weights
@@ -24298,12 +23675,6 @@ DIY_LoadLeagueScratchFromTable:
 ; ===== DIY_SaveLeagueScratchToTable ===== (ported to C → _DIY_SaveLeagueScratchToTable)
 DIY_SaveLeagueScratchToTable:
                 jmp     _DIY_SaveLeagueScratchToTable
-
-; ===== Career_SetCupPickList_Oceania =====
-; prototype: void __usercall Career_SetCupPickList_Oceania()
-; ===== Career_SetCupPickList_Oceania ===== (ported to C, dead)
-Career_SetCupPickList_Oceania:
-                rts
 ; CompetitionCup *[5]
 cupPickOceaniaInviteFriendly:
                 ; CompetitionCup *[5]
@@ -24352,12 +23723,6 @@ cupPickOceaniaOceaniaCupFinalist:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
-
-; ===== Career_SetCupPickList_NorthAmerica =====
-; prototype: void __usercall Career_SetCupPickList_NorthAmerica()
-; ===== Career_SetCupPickList_NorthAmerica ===== (ported to C, dead)
-Career_SetCupPickList_NorthAmerica:
-                rts
 ; CompetitionCup *[5]
 cupPickNAmericaInviteFriendly:
                 ; CompetitionCup *[5]
@@ -24406,10 +23771,6 @@ cupPickNAmericaNaCupFinalist:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
-
-; ===== Career_SetCupPickList_Asia ===== (ported to C, dead)
-Career_SetCupPickList_Asia:
-                rts
 ; CompetitionCup *[5]
 cupPickAsiaInviteFriendly:
                 ; CompetitionCup *[5]
@@ -24458,10 +23819,6 @@ cupPickAsiaAsianCupFinalist:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
-
-; ===== Career_SetCupPickList_Africa ===== (ported to C, dead)
-Career_SetCupPickList_Africa:
-                rts
 ; CompetitionCup *[5]
 cupPickAfricaInviteFriendly:
                 ; CompetitionCup *[5]
@@ -24510,10 +23867,6 @@ cupPickAfricaAfricanCupFinalist:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
-
-; ===== Career_SetCupPickList_SouthAmerica ===== (ported to C, dead)
-Career_SetCupPickList_SouthAmerica:
-                rts
 ; CompetitionCup *[5]
 cupPickSAmericaInviteFriendly:
                 ; CompetitionCup *[5]
@@ -24562,10 +23915,6 @@ cupPickSAmericaCopaAmericaFinalist:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
-
-; ===== Career_SetCupPickList_Europe ===== (ported to C, dead)
-Career_SetCupPickList_Europe:
-                rts
 ; CompetitionCup *[8]
 ecQualifyingGroupsTable:
                 ; CompetitionCup *[8]
@@ -24641,14 +23990,6 @@ cupPickListEuropeInviteTournamentFriendlyAlt:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
-
-; ===== Career_SetupWorldCupQualifyingGroups ===== (ported to C, dead)
-Career_SetupWorldCupQualifyingGroups:
-                rts
-
-; ===== Career_FillWorldCupQualifyingGroupTeams ===== (ported to C, dead)
-Career_FillWorldCupQualifyingGroupTeams:
-                rts
 ; CompetitionCup *[8]
 worldCupQualifyingGroupsTable:
                 ; CompetitionCup *[8]
@@ -24670,18 +24011,6 @@ Career_SetCupPickList_ForSelectedRegion:
                 addq.l  #4,sp
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-
-; ===== Career_SetupFriendlyCupTeams ===== (ported to C, dead — only called from ported dispatcher)
-Career_SetupFriendlyCupTeams:
-                rts
-
-; ===== Career_SetupInvitationTournamentTeams ===== (ported to C, dead)
-Career_SetupInvitationTournamentTeams:
-                rts
-
-; ===== Career_SetupTourCupTeams ===== (ported to C, dead)
-Career_SetupTourCupTeams:
-                rts
 ; char *[6]
 tourStringTable:
                 ; char *[6]
@@ -24691,10 +24020,6 @@ tourStringTable:
                 dc.l aNorthAmericanT    ; element[3]
                 dc.l aAsianTour         ; element[4]
                 dc.l aOceaniaTour       ; element[5]
-
-; ===== Career_PickRandomNationalTeamId ===== (ported to C, dead — only called from ported functions)
-Career_PickRandomNationalTeamId:
-                rts
 
 ; ===== DIY_SelectCompetitionSlot4FromCurrentDivision =====
 ; prototype: void __usercall DIY_SelectCompetitionSlot4FromCurrentDivision()
@@ -24793,14 +24118,6 @@ Career_SetCurrentCompetitionSlot:
                 jsr     _Career_SetCurrentCompetitionSlot
                 lea     16(sp),sp
                 movem.l (sp)+,d1-d7/a2-a6
-                rts
-
-; ===== TeamSelectionKeyCache_AddNextRoundCupEntry ===== (dead — only caller ported to C)
-TeamSelectionKeyCache_AddNextRoundCupEntry:
-                rts
-
-; ===== TeamSelectionKeyCache_AddCupEntry ===== (dead — only caller ported to C)
-TeamSelectionKeyCache_AddCupEntry:
                 rts
 
 ; ===== DIY_UpdateCompetitionProgressOrAdvanceSlot ===== (ported to C)
@@ -25016,12 +24333,6 @@ loc_12D4B0:
 locret_12D4D8:
                 rts
 
-; ===== Career_UpdateStatsAfterMatch ===== (ported to C → _Career_UpdateStatsAfterMatch)
-; Register bridge: a1=team1, a2=team2, d0=compType, d4=packedGoals, d5=aggregate, d6=penalty, d7=flags
-
-; ===== DIY_AdvanceLeagueFixtureIndex ===== (dead — only caller ported to C)
-DIY_AdvanceLeagueFixtureIndex:
-                rts
 
 ; ===== DIY_AdvanceCupFixtureIndex ===== (dead — only caller ported to C)
 DIY_AdvanceCupFixtureIndex:
@@ -25875,12 +25186,6 @@ Career_AutoAdvanceLeagueCompetitionFromRecord:
 ;     A6 -> DIY competition
 ; out:
 ;     D1 -  index of that team in DIY competition, or -1 if not found
-; Chunk 173: ported to C (_FindTeamInDIY)
-; in: d0 = teamNo, a6 = comp pointer; out: d1 = index (or 0xFFFF)
-
-; ===== GetMoreExpensiveTeamsCountWrapper ===== (dead code — no callers)
-GetMoreExpensiveTeamsCountWrapper:
-                rts
 loc_12F0DC:
                 move.w  #$6006,(panicReasonCode).l
                 jsr     PanicHaltLoop
@@ -25929,17 +25234,6 @@ InitializeNewSeason_BuildTeamBudgetRankTable:
 ; Ported to C: _ShowChairmanOpinionAboutTheSeason in src/career_season.c
 
 ; ===== SeasonFinished_ComputeSeasonReview =====
-; Ported to C: _SeasonFinished_ComputeSeasonReview in src/career_season.c
-
-; ===== SeasonReview_AdjustWeightsForCompetition =====
-; Ported to C (static helper in career_season.c). Dead in asm — only caller was ComputeSeasonReview.
-SeasonReview_AdjustWeightsForCompetition:
-                rts
-
-; ===== SeasonReview_ComputeCategoryForCompetition =====
-; Ported to C (static helper in career_season.c). Dead in asm — only caller was ComputeSeasonReview.
-SeasonReview_ComputeCategoryForCompetition:
-                rts
 
 ; ===== ShowGreetingMessage =====
 ; Ported to C: _ShowGreetingMessage in src/career_status.c
@@ -26059,12 +25353,6 @@ team2NumAllowedInjuries:
 ; ===== DrawAnimatedPatterns =====
 ; prototype: void __usercall DrawAnimatedPatterns()
 ; This proc serves to draw some additional patterns, mostly fans jumping and cheering.
-; Called once every frame, also during replays.
-
-; ===== SwapTwoRandomIndicesFromAnimPatternsTable =====
-; prototype: char SwapTwoRandomIndicesFromAnimPatternsTable()
-SwapTwoRandomIndicesFromAnimPatternsTable:
-                rts
 animPatternsRandomTable:
                 dc.b $00,$01,$02,$03,$04,$05,$06,$07,$08,$09,$0A,$0B,$0C,$0D,$0E,$0F
                 dc.b $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$1A,$1B,$1C,$1D,$1E,$1F
@@ -26085,17 +25373,6 @@ otherTeamScored:
 animPatternsState:
                 dc.w $0000
 
-; ===== ResetAnimatedPatterns =====
-; Dead code - now inlined in C _ResetAnimatedPatternsForBothTeams
-ResetAnimatedPatterns:
-                rts
-
-; ===== DrawPatternFromIndex =====
-; prototype: void __usercall DrawPatternFromIndex(unsigned __int16 patternIndex@<d3>)
-; in:
-;      D3 - pattern index
-DrawPatternFromIndex:
-                rts
 
 ; ===== TrainingMatch_SaveSelectedPlayerId =====
 ; Ported to C: _TrainingMatch_SaveSelectedPlayerId in src/training_match.c
@@ -26152,42 +25429,10 @@ trainingPosOrder6:
 trainingPosOrder7:
                 dc.b $07,$06,$04,$05,$03,$01,$02,$00,$FF ; Training position priority order for outfield position 7, 0xFF-terminated.
 
-; ===== TrainingMatch_ApplyUseMatchTeamAndSwapSubs =====
-; prototype: void __usercall TrainingMatch_ApplyUseMatchTeamAndSwapSubs()
-TrainingMatch_ApplyUseMatchTeamAndSwapSubs:
-                rts
-
-; ===== TrainingMatch_FindBestSubSwapCandidates =====
-; prototype: void __usercall TrainingMatch_FindBestSubSwapCandidates()
-TrainingMatch_FindBestSubSwapCandidates:
-                rts
-
-; ===== TrainingMatch_IsPlayerBetterSwapCandidate =====
-; prototype: unsigned __int16 __usercall TrainingMatch_IsPlayerBetterSwapCandidate@<d0>(void *cur@<a0>, void *best@<a1>, signed __int8 bestSkill@<d0>)
-TrainingMatch_IsPlayerBetterSwapCandidate:
-                rts
-
 ; ===== TrainingMatch_AddTrialPlayersForNewSeason =====
 ; prototype: void __usercall TrainingMatch_AddTrialPlayersForNewSeason()
 TrainingMatch_AddTrialPlayersForNewSeason:
                 jmp     _TrainingMatch_AddTrialPlayersForNewSeason
-
-; ===== TrainingMatch_TryAddTrialPlayerAtPosition =====
-; prototype: void __usercall TrainingMatch_TryAddTrialPlayerAtPosition(unsigned __int16 position@<d0>)
-TrainingMatch_TryAddTrialPlayerAtPosition:
-                rts
-
-; ===== AddTrialPlayer =====
-; Ported to C: _AddTrialPlayer in src/career_status.c (Chunk 95)
-; Dead code — only called from CheckPlayersLeavingComing (now C)
-AddTrialPlayer:
-                rts
-
-; ===== TrainingMatch_AddTrialPlayerAtPosition =====
-; Ported to C: _TrainingMatch_AddTrialPlayerAtPosition in src/career_status.c (Chunk 95)
-; Dead code — only called from AddTrialPlayer (now C)
-TrainingMatch_AddTrialPlayerAtPosition:
-                rts
 
 ; ===== Career_ApplyPostMatchPlayerStatModsIfCareerTeam =====
 ; Ported to C: _Career_ApplyPostMatchPlayerStatModsIfCareerTeam in src/career_status.c (Chunk 95)
@@ -26196,24 +25441,6 @@ TrainingMatch_AddTrialPlayerAtPosition:
 ; ===== Career_UpdateSinglePlayerPostMatchStats =====
 ; Ported to C: _Career_UpdateSinglePlayerPostMatchStats in src/career_status.c (Chunk 95)
 ; Asm stub: a6=playerSlotPtr -> push as C arg
-
-; ===== PlayerJoinedClubOnTrial =====
-; Ported to C: _PlayerJoinedClubOnTrial in src/career_status.c (Chunk 95)
-; Dead code — only called from CheckPlayersLeavingComing (now C)
-PlayerJoinedClubOnTrial:
-                rts
-
-; ===== TrialPlayerLeftClubMessage =====
-; Ported to C: _TrialPlayerLeftClubMessage in src/career_status.c (Chunk 95)
-; Dead code — only called from CheckPlayersLeavingComing (now C)
-TrialPlayerLeftClubMessage:
-                rts
-
-; ===== ReservePlayerLeftClubMessage =====
-; Ported to C: _ReservePlayerLeftClubMessage in src/career_status.c (Chunk 95)
-; Dead code — only called from CheckPlayersLeavingComing (now C)
-ReservePlayerLeftClubMessage:
-                rts
 ; Menu_ChooseTeamsFriendly
 chooseTeamsFriendlyMenu:
                 ; Menu_ChooseTeamsFriendly
@@ -30001,11 +29228,6 @@ groupStringTable:
                 dc.l aGroupF            ; element[5]
                 dc.l aGroupG            ; element[6]
                 dc.l aGroupH            ; element[7]
-
-; ===== nullsub_15 =====
-; prototype: void nullsub_15(...)
-nullsub_15:
-                rts
 diyLeagueTournament_viewOptionsAvailable:
                 dc.w $0000
 diyLeagueTournament_fixtureRowHeight:
@@ -32386,20 +31608,6 @@ jmp_SetExitMenuFlag_5:
 DIYCupOnSelect9:
                 jmp     SetupDIYCompetitionStatsMenu
 
-; ===== DesignDIYCup_UpdateMatchListScrollAndRebuildStrings ===== (ported to C)
-; Returns d0: 0=no change, 1=rebuilt. Caller checks via tst.w d0.
-
-; ===== DesignDIYCup_AppendOrTeamNameToMenuEntry ===== (dead — inlined into C)
-DesignDIYCup_AppendOrTeamNameToMenuEntry:
-                rts
-
-; ===== DesignDIYCup_AppendTeamNameToMenuEntry ===== (dead — inlined into C)
-DesignDIYCup_AppendTeamNameToMenuEntry:
-                rts
-
-; ===== DIYCupOnSelectCommon ===== (dead — only called from now-ported OnSelect3-8)
-DIYCupOnSelectCommon:
-                rts
 
 ; ===== DesignDIYCup_UpdateCurrentMatchResultHeaderEntries =====
 ; prototype: void __usercall DesignDIYCup_UpdateCurrentMatchResultHeaderEntries()
@@ -35540,12 +34748,6 @@ maxSubstitutes:
                 dc.w $0000
 
 ; ===== EditCustomTeam =====
-; Bridge to C: _EditCustomTeam
-
-; ===== EditTeamsCallback ===== (ported to C → _EditTeamsCallback in edit_tactics.c)
-; Bridge: a0→stack param
-locret_1373A6:
-                rts
 ; Menu_EditTeams
 editTeamsMenu:
                 ; Menu_EditTeams
@@ -37007,11 +36209,6 @@ MarkSecondKitShirt:
 ;     A0 -> currently selected player
 EditTeamsGetPlayerPointer:
                 rts     ; dead — now called only from C
-
-; ===== nullsub_16 =====
-; prototype: void nullsub_16(...)
-nullsub_16:
-                rts
 ; TeamFile *
 editTeamsSelectedTeam:
                 dc.l $00000000
@@ -37022,67 +36219,21 @@ saveCustomTeams:
                                         ; edited and original teams differ
 teamIsImported:
                 dc.w $0000              ; In edit custom teams menu.
-; Ported to C: ShowCompetitionTopScorers (static) in src/statistics.c
-; Dead code — only called from StatsHighestScorerList (also ported)
-loc_1382F6:
-                rts
 
 ; ===== TopGoalScorersMenu_0 =====
 ; prototype: void __usercall TopGoalScorersMenu_0()
 ; Ported to C: _TopGoalScorersMenu_0 in src/statistics.c
 
-; ===== PopulateHighestScorersTableFromSelectedTeams =====
-; prototype: void __usercall PopulateHighestScorersTableFromSelectedTeams()
-; Ported to C: PopulateHighestScorersTableFromSelectedTeams (static) in src/statistics.c
-; Dead code — only called from now-ported C functions
-PopulateHighestScorersTableFromSelectedTeams:
-                rts
 
-; ===== InitHighestScorersTable =====
-; prototype: void __usercall InitHighestScorersTable()
-; Ported to C: InitHighestScorersTable (static) in src/statistics.c
-; Dead code — only called from now-ported C functions
-InitHighestScorersTable:
-                rts
 
-; ===== AddTeamScorersToHighestScorersTable =====
-; prototype: void __usercall AddTeamScorersToHighestScorersTable(__int16 statIndex@<d0>, void *team@<a0>)
-; Ported to C: AddTeamScorersToHighestScorersTable (static) in src/statistics.c
-; Dead code — only called from now-ported C functions
-AddTeamScorersToHighestScorersTable:
-                rts
 
-; ===== UpdateHighestScorersMinScoreAndCount =====
-; prototype: unsigned __int8 __usercall UpdateHighestScorersMinScoreAndCount@<d6>()
-; Ported to C: UpdateHighestScorersMinScoreAndCount (static) in src/statistics.c
-; Dead code — only called from now-ported C functions
-UpdateHighestScorersMinScoreAndCount:
-                rts
 
-; ===== FindReplaceableLowestScorerSlot =====
-; prototype: void __usercall FindReplaceableLowestScorerSlot()
-; Ported to C: FindReplaceableLowestScorerSlot (static) in src/statistics.c
-; Dead code — only called from now-ported C functions
-FindReplaceableLowestScorerSlot:
-                rts
 
-; ===== SortHighestScorerTable =====
-; prototype: void __usercall SortHighestScorerTable()
-; Ported to C: SortHighestScorerTable (static) in src/statistics.c
-; Dead code — only called from now-ported C functions
-SortHighestScorerTable:
-                rts
 
 ; ===== GetScorerSurname =====
 ; prototype: char *__usercall GetScorerSurname@<a6>(void *scorer@<a0>)
 ; in:
 ;      A0 = player in highest_scorers_table
-; out:
-;      A6 -> player surname
-; Ported to C: GetScorerSurname (static) in src/statistics.c
-; Dead code — only called from now-ported C functions
-GetScorerSurname:
-                rts
 ; Menu_CompetitionTopGoalScorers
 competitionTopGoalScorersMenu:
                 ; Menu_CompetitionTopGoalScorers
@@ -39591,11 +38742,6 @@ loc_139F26:
                 lea     $24(a6),a2
                 move.l  a2,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0)
                 rts
-
-; ===== SquadSwapPlayersAtIndices =====
-; Dead — only called from SquadCommon (now in C)
-SquadSwapPlayersAtIndices:
-                rts
 loc_13A0BE:
                 clr.w   d5
                 cmpi.w  #$B,d7
@@ -40340,12 +39486,6 @@ careerOverMenu:
 ; Ported to C: _CareerOverInit in src/menus.c
 
 ; ===== CareerOverFinish =====
-; Ported to C: _CareerOverFinish in src/menus.c
-
-; ===== CareerOverUpdateJobOffersEntry =====
-; Ported to C (static in menus.c, called from _CareerOverFinish)
-CareerOverUpdateJobOffersEntry:
-                rts
 
 ; ===== JobOffersMenuRetired =====
 ; Ported to C: _JobOffersMenuRetired in src/menus.c
@@ -40653,12 +39793,6 @@ offsetCoachOrPlayer:
 ; Ported to C: _CareerMenuInit in src/menus.c
 
 ; ===== CareerMenuFinish =====
-; Ported to C: _CareerMenuFinish in src/menus.c
-
-; ===== SetNationalityField =====
-; Ported to C (static in menus.c, called from _CareerMenuFinish and _ChangeNationality)
-SetNationalityField:
-                rts
 
 ; ===== C→asm bridge: _CSelectTeamToManage =====
 ; Calls SelectTeamToManage, returns a0 as C return value,
@@ -41623,8 +40757,6 @@ loc_13C020:
                 jsr     SetCurrentEntry
 locret_13C032:
                 rts
-locret_13C0A0:
-                rts
 loc_13C0A2:
                 lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a0
                 move.l  #aFinishSeason,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "FINISH SEASON" ...
@@ -41672,11 +40804,6 @@ loc_13C130:
 ; ===== SeasonLowerButtons ===== (ported to C → _SeasonLowerButtons)
 SeasonLowerButtons:
                 jmp     _SeasonLowerButtons
-
-; ===== ContestMenuOnReturn_NoOp =====
-; prototype: void ContestMenuOnReturn_NoOp(...)
-ContestMenuOnReturn_NoOp:
-                rts
 teamSelectionKeyCache_ListIndex:
                 dc.w $0000
 currentGame:
@@ -42449,12 +41576,6 @@ currentSeasonNumber:
 GetCurrentSeasonPointer:
                 jmp     _GetCurrentSeasonPointer
 
-; ===== Career_StorePromotionRelegationInSeasonInfo =====
-
-; ===== EncodeCompetitionPositionForSeasonInfo =====
-; Ported to C (static helper in statistics.c, called only from Career_FillCurrentSeasonInfo)
-EncodeCompetitionPositionForSeasonInfo:
-                rts
 
 ; ===== ChooseTeamForEditTactics =====
 ; prototype: void *__usercall ChooseTeamForEditTactics@<a0>(const char *menuName@<a0>, const unsigned __int16 *teamIds@<a1>, unsigned __int16 teamCount@<d0>)
@@ -46351,12 +45472,6 @@ selectFilesMenu:
 
 ; ===== AbortSaveFile =====
 ; Ported to C: _AbortSaveFile in src/menus.c
-
-; ===== CopyFilenameExtensionAndSetExitMenuFlag =====
-; Ported to C: static _CopyFilenameExtensionAndSetExitMenuFlag in src/file_io.c
-; Dead code — all asm callers ported. Keep stub for safety.
-CopyFilenameExtensionAndSetExitMenuFlag:
-                rts
 totalNumberOfFiles:
                 dc.w $0000              ; Total number of files in game directory
 savingFile:
@@ -46476,11 +45591,6 @@ diskMenu:
                 dc.w $0000              ; -= end entry 3 =-
                 dc.w -999               ; -= end menu =-
 
-; ===== DiskMenuRet =====
-; Ported to C: _DiskMenuRet in src/file_io.c (no-op)
-DiskMenuRet:
-                rts
-
 ; ===== FormatSaveDiskMenu =====
 ; Ported to C: _FormatSaveDiskMenu in src/file_io.c (menu callback)
 
@@ -46556,14 +45666,6 @@ continueMenu:
                 dc.l _ContinueMenuContinueSelected ; funcPtr
                 dc.w MENU_CMD_END       ; entry1_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
-
-; ===== ContinueInit =====
-; prototype: void __usercall ContinueInit()
-ContinueInit:
-                rts
-
-ContinueMenuContinueSelected:
-                rts
 ; Menu_ContinueAbort
 continueAbortMenu:
                 ; Menu_ContinueAbort
@@ -46655,17 +45757,6 @@ continueAbortMenu:
                 dc.l _AbortSelected     ; funcPtr
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
-
-; ===== ContinueAbortInit =====
-; prototype: __int16 ContinueAbortInit()
-ContinueAbortInit:
-                rts
-
-ContinueSelected:
-                rts
-
-AbortSelected:
-                rts
 errorPromptsEnabled:
                 dc.w $0000              ; If false, don't wait for the user to press continue button in continue menu,
                                         ; exit immediately (also set text background to gray and hide the button)
@@ -47145,22 +46236,6 @@ transferReplacementPriority_role7:
 
 ; ===== Career_RemovePlayerFromSelectedTeamRoster =====
 ; Ported to C: _Career_RemovePlayerFromSelectedTeamRoster in src/teams.c (Chunk 95)
-; Asm stub: save regs, push d1 (player index), call C, restore regs
-
-; ===== SelectBenchReplacementForStartingPlayer =====
-; Dead code — callers ported to C (Chunk 95)
-SelectBenchReplacementForStartingPlayer:
-                rts
-
-; ===== SelectReserveReplacementForBenchPlayer =====
-; Dead code — callers ported to C (Chunk 95)
-SelectReserveReplacementForBenchPlayer:
-                rts
-
-; ===== FindReplacementPlayerByPositionOrder =====
-; Dead code — callers ported to C (Chunk 95)
-FindReplacementPlayerByPositionOrder:
-                rts
 ; unsigned __int8 (*[8])[9]
 replacementPositionSearchOrderTable:
                 ; unsigned __int8 (*[8])[9]
@@ -47197,12 +46272,6 @@ replPosSearchOrderMid:
 replPosSearchOrderAtt:
                 dc.b $07,$06,$04,$05,$03,$01,$02,$00,$FF ; Replacement position search priority for Att, 0xFF-terminated.
 
-; ===== Career_InitTrialistAttributes =====
-; prototype: void __usercall Career_InitTrialistAttributes(void *player@<a3>, unsigned __int16 team@<d5>)
-; Career_InitTrialistAttributes — now handled internally by _Career_ConvertPlayerToTrialistFromName
-; Dead code — no external callers remain
-Career_InitTrialistAttributes:
-                rts
 ; unsigned __int8[20]
 trialistSkillDistribution:
                 dc.b $01,$01,$02,$02,$03,$04,$05,$08,$0E,$14,$0E,$08,$05,$04,$03,$02 ; Cumulative probability weights for trialist skill adjustment.
@@ -47246,17 +46315,6 @@ trialistSkillTemplates:
                 dc.b $00,$00,$00,$30,$07,$77,$76,$76,$07,$67,$77,$77,$07,$77,$76,$76
                 dc.b $07,$77,$77,$77,$07,$76,$77,$77,$07,$77,$77,$66,$06,$77,$76,$67
 
-; ===== Career_PickRandomTrialistOriginValue =====
-; prototype: char *__usercall Career_PickRandomTrialistOriginValue@<a2>(unsigned __int8 avoidTeamByte@<d0>, unsigned __int16 avoidTeamWord@<d3>)
-; Career_PickRandomTrialistOriginValue — now handled internally by _Career_GenerateTrialistForTeamPlayer / _Career_ConvertPlayerToTrialistFromName
-; Dead code — no external callers remain
-Career_PickRandomTrialistOriginValue:
-                rts
-
-; PickRandomTeamRecordAvoidingTeam — now static in transfer_market.c
-; Dead code — no external callers remain
-PickRandomTeamRecordAvoidingTeam:
-                rts
 ; char[23]
 trialistNameBuffer:
                 dcb.b $17,0
@@ -50663,11 +49721,6 @@ PlayerMarketBuildVisiblePlayerList:
                 jsr     _PlayerMarketBuildVisiblePlayerList
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-
-; ===== PlayerMarketPlayerMatchesFilters =====
-; Dead — only called from PlayerMarketBuildVisiblePlayerList (now in C)
-PlayerMarketPlayerMatchesFilters:
-                rts
 playerMarketFilterPosition:
                 dc.w $0000
 playerMarketFilterRatingIndex:
@@ -51321,11 +50374,6 @@ buyPlayerRedrawList:
 playerSelected:
                 dc.w $0000
 
-; ===== IsTeamIdForSelectedTeam =====
-; Dead code — no callers found in asm or C. Stubbed.
-IsTeamIdForSelectedTeam:
-                rts
-
 ; ===== FindTeamIdInDiyTeamsList =====
 ; Ported to C: _FindTeamIdInDiyTeamsList in src/transfer_market.c
 ; Bridge: a0=teamIdPtr → C param, returns Z flag from C return
@@ -51355,12 +50403,6 @@ viewFutureTeamModeFlag:
 ; Ported to C: _ProcessOfferExpiryCountdown in src/transfer_market.c
 
 ; ===== UpdateAndExpireTransferOffers =====
-; Ported to C: _UpdateAndExpireTransferOffers in src/transfer_market.c
-
-; ===== GenerateRandomTransferOffers =====
-; Ported to C: _GenerateRandomTransferOffers in src/transfer_market.c
-locret_145DEE:
-                rts
 
 ; ===== _CCreateRandomTransferOfferForPlayer =====
 ; C-callable bridge: uint16_t playerIndex → d1 for CreateRandomTransferOfferForPlayer
@@ -51429,17 +50471,6 @@ offerCandidateTeamIndexBuffer:
 ; ===== EvaluateTransferOfferNegotiation =====
 ; Ported to C: _EvaluateTransferOfferNegotiation in src/transfer_market.c
 ; Bridge: no params → returns d0 = transferPlayerMenuResult
-
-; ===== RemoveOfferPlayerFromMarketsAndCount =====
-; Ported to C: _RemoveOfferPlayerFromMarketsAndCount in src/transfer_market.c
-; Dead code - only caller (RemoveNegotiatedOfferPlayersFromMarkets) is now in C
-RemoveOfferPlayerFromMarketsAndCount:
-                rts
-
-; ===== nullsub_14 =====
-; prototype: void nullsub_14(...)
-nullsub_14:
-                rts
 
 ; ===== ApplyOfferDemandMultipliersForSwapAndExtraPlayers =====
 ; Ported to C: _ApplyOfferDemandMultipliersForSwapAndExtraPlayers in src/transfer_market.c
@@ -51518,12 +50549,6 @@ GetPlayerInfoBreakPosition:
 
 ; ===== AddInternationalPlayerAbroad =====
 ; Ported to C: _AddInternationalPlayerAbroad in src/menus.c
-; Bridge: a0=selectedTeam → C param
-
-; ===== Career_AddInternationalPlayerCommon =====
-; Ported to C: _Career_AddInternationalPlayerCommon in src/menus.c
-Career_AddInternationalPlayerCommon:
-                rts
 careerAddIntlPlayerResult:
                 dc.w $0000
 ; void *
@@ -53520,12 +52545,6 @@ sidePitchSurnamePositionsTable:
 ; Forwarding stub -> _SetCurrentSelectedPlayerIndexPointer in C
 
 ; ===== OnSwapPlayer =====
-; Forwarding stub -> _OnSwapPlayer in C (a5 = MenuEntry*)
-
-; ===== PlayMatchMenuSwapPlayers =====
-; Dead stub - only called from _OnSwapPlayer (C) which calls _PlayMatchMenuSwapPlayers directly
-PlayMatchMenuSwapPlayers:
-                rts
 
 ; ===== HandleSquadSwapSelectionToggle =====
 ; Forwarding stub -> _HandleSquadSwapSelectionToggle in C
@@ -65501,17 +64520,6 @@ teamIdSelectionProcessedFlags:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-; loc_15158E, loc_151628 — dead code (callers ported to C)
-loc_15158E:
-                rts
-loc_151628:
-                rts
-
-; ===== Career_TryAddRandomTeamByRegionToLists =====
-; Ported to C (inlined in fillCupTeamSelectionFromFile in src/career_teams.c)
-; Dead code — only caller was loc_151628, now also ported to C
-Career_TryAddRandomTeamByRegionToLists:
-                rts
 
 ; ===== Career_IsTeamIdNotInListOrReturnSentinel =====
 ; Ported to C: _Career_IsTeamIdNotInListOrReturnSentinel in src/diy_competition.c
@@ -65520,9 +64528,6 @@ Career_TryAddRandomTeamByRegionToLists:
 careerRegionPickWeightsTable:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$02,$02,$02,$03,$03,$04
-; loc_1517C2 — dead code (caller ported to C)
-loc_1517C2:
-                rts
 
 ; ===== Career_IsTeamIdNotInListOrReturnSentinel2 =====
 ; Ported to C: _Career_IsTeamIdNotInListOrReturnSentinel2 in src/diy_competition.c
@@ -65627,15 +64632,6 @@ LoadTeamFile:
                 movem.l (sp)+,d2-d7/a2-a6
                 tst.w   d0
                 rts
-
-; ===== SetLoadedTeamsGlobalNumbers =====
-; prototype: void __usercall SetLoadedTeamsGlobalNumbers()
-SetLoadedTeamsGlobalNumbers:
-                rts
-
-; ===== SetLeagueNumbers =====
-SetLeagueNumbers:
-                rts
 loc_151DB0:
                 movem.l d1-d7/a0-a6,-(sp)
                 jsr     GetAveragePlayerPrice
@@ -65670,8 +64666,6 @@ loc_151E02:
                 move.b  d0,TEAMFILE_LEAGUE(a0)
                 lea     TEAMFILE_SIZE+TEAMFILE_COUNTRYNUMBER(a0),a0
                 dbf     d7,loc_151DE4
-locret_151E0E:
-                rts
                 move.w  #$1938,(panicReasonCode).l
                 jsr     PanicHaltLoop
 
