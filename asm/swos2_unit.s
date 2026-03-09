@@ -35,7 +35,8 @@
         xref    _AssetPrecacheMenuPack
         xref    _AssetPrecacheOneMenu
         xref    _FrontEndMainLoop
-        xref    _mainAsm
+        xref    _mainC
+        xref    _ExitToDos
         xref    _ShowLoaderIntroSequence
         xref    _ReadTimerDelta
         xref    _FrontEndPreLoopSetup
@@ -3961,11 +3962,11 @@
 _startShim:
         move.l  sp,S_SavedSP
         movea.l #stackTop,sp
-        ;jmp     start
         jsr     _start
-        jsr     mainAsm
-        jsr     ExitToDos
+        jsr     _mainC
+        jsr     _ExitToDos
         movea.l S_SavedSP,sp
+        moveq   #0,d0
         rts
 
 _AssetSys_InitDiskImageSources:

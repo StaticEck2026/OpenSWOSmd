@@ -1,9 +1,19 @@
 #include "swos_sections.h"
 #include "swos_asm.h"
+#include "frontend.h"
+#include "game_utils.h"
+#include "fade.h"
+#include "display.h"
+#include "asset_loader.h"
+#include "loader_bootstrap.h"
+#include "loader_intro.h"
+#include "audio.h"
+#include "menus.h"
 
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned long uint32_t;
+typedef short int16_t;
 
 #define SWOS_CHIPMEMSIZE 0x00200000u
 #define SWOS_FASTMEMSIZE 0x00200000u
@@ -24,9 +34,9 @@ typedef unsigned long uint32_t;
 #define LEVEL_3_INTERRUPT_AUTOVECTOR 0x6Cu
 #define LEVEL_4_INTERRUPT_AUTOVECTOR 0x70u
 
-extern void SafeStart(void);
-extern void LoadDosLibrary(void);
-extern void DetachOSDisplay(void);
+extern void _SafeStart(void);
+extern void _LoadDosLibrary(void);
+extern void _DetachOSDisplay(void);
 extern void InitHardwareAtFrameStart(void);
 extern void SetupInterrupts(void);
 extern void Int2KeyboardHandler(void);
@@ -62,9 +72,9 @@ static void set_vector(uint32_t vbr, uint32_t offset, void (*handler)(void))
 
 __attribute__((used, externally_visible)) void _start(void)
 {
-    SafeStart();
-    LoadDosLibrary();
-    DetachOSDisplay();
+    _SafeStart();
+    _LoadDosLibrary();
+    _DetachOSDisplay();
     InitHardwareAtFrameStart();
 
     uint32_t bank_bitmap_ptr = (uint32_t)&loaderBankBitmap;
@@ -119,4 +129,139 @@ __attribute__((used, externally_visible)) void _start(void)
     *(volatile uint8_t *)CIAA_ICR_ADDR = 0x82u;
     *(volatile uint8_t *)CIAA_DDRA_ADDR |= 0x02u;
     *(volatile uint8_t *)CIAA_PRA_ADDR |= 0x02u;
+}
+
+/* ---- Timing constant ---- */
+#define FPS_50HZ 49
+
+/* ---- External globals for mainC ---- */
+extern uint16_t assetLoaderAltPathReady;
+extern uint16_t paletteIndex;
+extern uint16_t loaderModeFlag;
+extern uint16_t hilNumGoals;
+extern volatile uint16_t currentGameTick;
+
+extern uint8_t kTitleLogoColors[];
+extern uint8_t kTitleScreenColors[];
+extern uint8_t kTitleTextColors[];
+
+extern uint16_t titleLogoPalette[];
+extern uint16_t titleScreenPalette[];
+extern uint16_t titleTextPalette[];
+
+extern uint16_t bootTemp0;
+extern uint16_t bootTemp1;
+extern uint16_t bootTemp2;
+extern uint16_t bootTemp3;
+extern uint16_t bootTemp4;
+extern uint16_t bootTemp5;
+extern uint16_t bootTemp6;
+
+extern uint16_t introMenuImageScript[];
+extern uint8_t imageCmdWorkBuf[];
+extern uint32_t imageStreamCursor;
+extern uint32_t menuImageStreamBaseEnd;
+
+extern uint16_t g_quitToDos;
+
+extern void _AssetSys_InitDiskImageSources(void);
+extern int16_t _AssetSvcLoaderOp2(void);
+extern int16_t _AssetSvcLoaderOp3(void);
+extern void _ProcessImageCommandStream(const uint16_t *cmdBuf, uint8_t *workBuf);
+extern void _MenuProc(void);
+extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
+
+/* delay_ticks: reset game tick counter, busy-wait until target reached */
+static void delay_ticks(uint16_t ticks)
+{
+    currentGameTick = 0;
+    while (currentGameTick < ticks)
+        ;
+}
+
+/* ================================================================
+ * mainC  (was mainAsm in SWOS2.s / _mainAsm in frontend.c)
+ *
+ * Main game boot sequence. Initializes display, loads assets,
+ * shows loader intro, builds menu image stream, and enters
+ * the front-end main loop.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _mainC(void)
+{
+    /* ---- Phase 1: Hardware init ---- */
+    _AssetLoaderResetState();
+    assetLoaderAltPathReady = 0;
+    _InitDisplayAndCopper();
+    _AssetSys_InitDiskImageSources();
+    _InitSkinAndDefaultPointers();
+
+    /* ---- Phase 2: Build palettes ---- */
+    _BuildPaletteFromColors(kTitleLogoColors, titleLogoPalette);
+    _BuildPaletteFromColors(kTitleScreenColors, titleScreenPalette);
+    _BuildPaletteFromColors(kTitleTextColors, titleTextPalette);
+
+    /* ---- Phase 3: Boot temps ---- */
+    bootTemp0 = 1;
+    bootTemp1 = 0;
+    bootTemp2 = 0;
+    bootTemp3 = 0;
+    bootTemp4 = 0;
+    bootTemp5 = 0;
+    bootTemp6 = 0;
+
+    /* ---- Phase 4: Loader intro ---- */
+    loaderModeFlag = 1;
+    //_ShowLoaderIntroSequence();
+    _AssetLoaderInitAltPathAndBanks();
+    _AssetPrecacheCore();
+    _InstallAndInitLoaderBootstrap();
+    _FadeOutToBlack();
+    loaderModeFlag = 0;
+
+    /* ---- Phase 5: Show title screens ---- */
+    _DoubleBufferSwapSequence();
+    paletteIndex = 0;
+    _LoadOverlayToFrontbuffer((const uint8_t *)"grafs/olddisk1.raw");
+    _BlitterCopyPanelToScreen2();
+    _WaitForVSync();
+
+    _LoadOverlayToFrontbuffer((const uint8_t *)"grafs/disk22.raw");
+    paletteIndex = 0;
+    _FadeIn();
+
+    /* ---- Phase 6: Poll loader op3 with 50Hz delays ---- */
+    do
+    {
+        delay_ticks(FPS_50HZ);
+    } while (_AssetSvcLoaderOp3() != 0);
+
+    _InstallAndRunLoaderBootstrap_Op3();
+    _FadeOutToBlack();
+
+    /* ---- Phase 7: Poll loader op2 ---- */
+    if (_AssetSvcLoaderOp2() != 0)
+    {
+        _BlitterCopyPanelToScreen2();
+        _WaitForVSync();
+        paletteIndex = 0;
+        _FadeIn();
+
+        do
+        {
+            delay_ticks(FPS_50HZ);
+        } while (_AssetSvcLoaderOp2() != 0);
+
+        _FadeOutToBlack();
+    }
+
+    /* ---- Phase 8: Build intro menu assets ---- */
+    _ProcessImageCommandStream(introMenuImageScript, imageCmdWorkBuf);
+    menuImageStreamBaseEnd = imageStreamCursor;
+    _AssetPrecacheMenuPack();
+    assetLoaderAltPathReady = 1;
+    hilNumGoals = 0;
+
+    /* ---- Phase 9: Enter front-end loop ---- */
+    _FrontEndMainLoop();
 }

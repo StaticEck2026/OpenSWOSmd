@@ -6,7 +6,7 @@ typedef unsigned short uint16_t;
 typedef unsigned long uint32_t;
 typedef short int16_t;
 
-void _mainAsm(void);
+void _mainC(void);
 void _FrontEndMainLoop(void);
 void _LoadOverlayToFrontbuffer(const uint8_t *path);
 void _FrontEndPreLoopSetup(void);

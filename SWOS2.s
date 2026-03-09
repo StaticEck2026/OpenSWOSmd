@@ -10855,7 +10855,7 @@ kRefereeSpeed:
 kInjuryForeverSpeed:
                 dc.w $0300
 mainAsm:
-                jmp     _mainAsm
+                jmp     _mainC
 
 ; ===== ViewMatchSequence =====
 ; prototype: void __usercall ViewMatchSequence()
