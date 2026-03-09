@@ -646,9 +646,9 @@ fg_text_common:
 
     textColor = flags & STR_COLOR_MASK;
 
-    /* Check alignment bits */
-    if (flags & (1 << 13)) {
-        /* Bit 13 set: left-aligned */
+    /* Check alignment bits — asm: btst #15 → left, btst #14 → right */
+    if (flags & (1 << 15)) {
+        /* Bit 15 set: left-aligned */
         textX = entry->x;
         if (entry->background != NO_BACKGROUND)
             textX += 2;

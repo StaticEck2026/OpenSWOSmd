@@ -5413,36 +5413,36 @@ extern uint8_t aError[];           /* "ERROR" */
 __attribute__((used, externally_visible))
 void _CheckNumberOfTeams(void)
 {
-    /* Entry indices:
-     * 86 = "change teams" button (offset 0x1308/56)
-     * 87 = "play" button (offset 0x1378/56)
-     * 88 = "select N more/less" text (offset 0x13B0/56)
+    /* Entry indices (from asm offsets):
+     * 87 = "change teams" button (offset 0x1308)
+     * 89 = "play" button (offset 0x1378)
+     * 90 = "select N more/less" text (offset 0x13B0)
      */
     if (selectTeamsNoLimit) {
+        menuEntries[89].isInvisible = 1;
+        menuEntries[90].isInvisible = 1;
         menuEntries[87].isInvisible = 1;
-        menuEntries[88].isInvisible = 1;
-        menuEntries[86].isInvisible = 1;
         return;
     }
 
     int16_t diff = (int16_t)(numSelectedTeams - numNeededTeams);
     if (diff == 0) {
         /* Exact count: show "play" button, hide "select more/less" */
-        menuEntries[87].isInvisible = 0;
-        menuEntries[88].isInvisible = 1;
-        menuEntries[87].content = 2;
-        menuEntries[87].fg = playWhatStr;
+        menuEntries[89].isInvisible = 0;
+        menuEntries[90].isInvisible = 1;
+        menuEntries[89].content = 2;
+        menuEntries[89].fg = playWhatStr;
     } else {
         /* Wrong count: hide "play", show "select more/less" */
-        menuEntries[87].isInvisible = 1;
-        menuEntries[88].isInvisible = 0;
+        menuEntries[89].isInvisible = 1;
+        menuEntries[90].isInvisible = 0;
     }
 
-    /* Entry 86 ("change teams") visible only if at least 1 team selected */
-    menuEntries[86].isInvisible = (numSelectedTeams == 0) ? 1 : 0;
+    /* Entry 87 ("change teams") visible only if at least 1 team selected */
+    menuEntries[87].isInvisible = (numSelectedTeams == 0) ? 1 : 0;
 
-    /* Build status text in entry 88's string buffer */
-    uint8_t *outBuf = (uint8_t *)menuEntries[88].fg;
+    /* Build status text in entry 90's string buffer */
+    uint8_t *outBuf = (uint8_t *)menuEntries[90].fg;
     uint8_t *fmt;
     uint16_t absDiff;
 

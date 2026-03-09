@@ -223,7 +223,7 @@ void _SetGameStartButtonText(void) {
         e->fg = (uint32_t)aViewMatch;
     } else {
         e->fg = (uint32_t)aPlayCoachMatch;
-        if (t1[TEAMFILE_TEAMCONTROLS] == TEAM_PLAYER_COACH)
+        if (t1[TEAMFILE_TEAMCONTROLS] != TEAM_PLAYER_COACH)
             e->fg = (uint32_t)aCoachMatch;
     }
     setBgColor(e, (bgColor(e) & 0xFFF0) | RED_10);

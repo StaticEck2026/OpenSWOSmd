@@ -2021,8 +2021,8 @@ void _ChooseTeamsFriendlyCommon2(MenuEntry *entry)
             return;
         *tableEntry = 1;
         setEntryBgColor(entry, RED_10);
-        _AddTeamToBuffer(team);
-        *(team + 4) = 1;
+        uint8_t *copied = _AddTeamToBuffer(team);
+        *(copied + 4) = 1;
     } else if (ctrl == 1) {
         /* CPU → player coach */
         *tableEntry = 2;
@@ -2708,13 +2708,13 @@ void _ChooseTeamsInit(void)
     char *dst = (char *)headerEntry->fg;
     char *src = (char *)chooseTeamsHeader1stPart;
     if (src != 0) {
-        dst = _StringCopy(dst, src);
+        dst = (char *)_StringCopy((const uint8_t *)src, (uint8_t *)dst);
     } else {
-        dst = _StringCopy(dst, (char *)aChooseTeamsFor);
+        dst = (char *)_StringCopy(aChooseTeamsFor, (uint8_t *)dst);
     }
     src = (char *)gameTypeStr;
     if (src != 0) {
-        _StringCopy(dst, src);
+        _StringCopy((const uint8_t *)src, (uint8_t *)dst);
     }
 }
 
