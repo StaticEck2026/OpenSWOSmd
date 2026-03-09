@@ -3012,16 +3012,6 @@ keycodeLut:
                 dc.b $80,$81,$82,$83,$84,$85,$86,$87,$88,$89,$A8,$A9,$AF,$AA,$AB,$3F
                 dc.b $3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F
                 dc.b $3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F
-
-; ===== InitDisplayAndCopper =====
-; prototype: void __usercall InitDisplayAndCopper()
-InitDisplayAndCopper:
-                jmp     _InitDisplayAndCopper
-
-; ===== UpdatePlanePtrsAndBlitParams =====
-; prototype: void __usercall UpdatePlanePtrsAndBlitParams()
-UpdatePlanePtrsAndBlitParams:
-                jmp     _UpdatePlanePtrsAndBlitParams
 ; unsigned __int16[160]
 copperListTemplate:
                 ; unsigned __int16[160]
@@ -3046,15 +3036,8 @@ copperListTemplate:
                 dc.w $00E2,$0000,$00E4,$0000,$00E6,$0000,$00E8,$0000
                 dc.w $00EA,$0000,$00EC,$0000,$00EE,$0000,$FFFF,$FFFE
 
-; ===== SwapBuffersAndCameraViewState =====
-; prototype: void __usercall SwapBuffersAndCameraViewState()
-SwapBuffersAndCameraViewState:
-                jmp     _SwapBuffersAndCameraViewState
-
 ; ===== InitHardwareAtFrameStart =====
 ; Ported to C: _InitHardwareAtFrameStart in src/interrupts.c (Chunk 44)
-InitHardwareAtFrameStart:
-                jmp     _InitHardwareAtFrameStart
                 movem.l d0-d7/a0-a7,(panicRegDumpBlock).l
 loc_1023F6:
                 move.w  d0,(COLOR00).l
@@ -3131,8 +3114,6 @@ Player2StatusProc:
 
 ; ===== ProcessSpriteBlitQueue =====
 ; Ported to C: _ProcessSpriteBlitQueue in src/display.c
-ProcessSpriteBlitQueue:
-                jmp     _ProcessSpriteBlitQueue
 
 ; ===== LoadPitchMap =====
 ; Ported to C: _LoadPitchMap in src/pitch.c
@@ -3145,8 +3126,6 @@ LoadPitchMap:
 
 ; ===== FixupAndColorPitchFile =====
 ; Ported to C: _FixupAndColorPitchFile in src/pitch.c
-FixupAndColorPitchFile:
-                jmp     _FixupAndColorPitchFile
 
 ; ===== SetCameraCoordinates =====
 ; prototype: void __usercall SetCameraCoordinates(__int16 newX@<d1>, __int16 newY@<d2>)
@@ -3191,18 +3170,12 @@ MoveView:
 ;      D1 - camera x
 ;      D2 - camera y
 ; Ported to C: _ScrollToCurrent in src/camera.c
-ScrollToCurrent:
-                jmp     _ScrollToCurrent
 
 ; ===== ScrollXUpdateColumnsAndBlit =====
 ; Ported to C: _ScrollXUpdateColumnsAndBlit in src/scroll_blit.c
-ScrollXUpdateColumnsAndBlit:
-                jmp     _ScrollXUpdateColumnsAndBlit
 
 ; ===== ScrollYUpdateRowsAndBlit =====
 ; Ported to C: _ScrollYUpdateRowsAndBlit in src/scroll_blit.c
-ScrollYUpdateRowsAndBlit:
-                jmp     _ScrollYUpdateRowsAndBlit
 
 ; ===== ApplyFadeStep =====
 ; Ported to C: _ApplyFadeStep in src/fade.c
@@ -3215,28 +3188,9 @@ ApplyFadeStep:
 
 ; ===== FadeOutTick =====
 ; Ported to C: _FadeOutTick in src/fade.c
-FadeOutTick:
-                jmp     _FadeOutTick
 
 ; ===== FadeInTick =====
 ; Ported to C: _FadeInTick in src/fade.c
-FadeInTick:
-                jmp     _FadeInTick
-
-; ===== FadeIn =====
-; prototype: void __usercall FadeIn()
-FadeIn:
-                jmp     _FadeIn
-
-; ===== FadeOutToBlack =====
-; prototype: void __usercall FadeOutToBlack()
-FadeOutToBlack:
-                jmp     _FadeOutToBlack
-
-; ===== FadeOutAndIn =====
-; prototype: void __usercall FadeOutAndIn()
-FadeOutAndIn:
-                jmp     _FadeOutAndIn
 
 ; ===== ProcessImageCommandStream =====
 ; Ported to C (_ProcessImageCommandStream in image_cmd.c)
@@ -3284,8 +3238,6 @@ syncReadyFlag:
 
 ; ===== SetupInterrupts =====
 ; Ported to C: _SetupInterrupts in src/interrupts.c (Chunk 44)
-SetupInterrupts:
-                jmp     _SetupInterrupts
 int5SerialBusBufferFull:
                 dc.w $0000
 
@@ -3583,18 +3535,11 @@ BuildPaletteFromColors:
                 jsr     _BuildPaletteFromColors
                 addq.l  #8,sp
                 rts
-
-; ===== BlitterCopyOverlayToScreen =====
-; prototype: void __usercall BlitterCopyOverlayToScreen()
-BlitterCopyOverlayToScreen:
-                jmp     _BlitterCopyOverlayToScreen
 overlayActiveFlag:
                 dc.w $0000
 
 ; ===== BlitterCopyPanelToScreen =====
 ; Ported to C: _BlitterCopyPanelToScreen in src/display.c
-BlitterCopyPanelToScreen:
-                jmp     _BlitterCopyPanelToScreen
 
 ; ===== HWSprite_LoadFromSpriteGraphics =====
 ; Ported to C: _HWSprite_LoadFromSpriteGraphics in src/display.c
@@ -3789,11 +3734,6 @@ BuildSpriteBandAndGeneralRenderStacks:
 ; prototype: void __usercall InitDisplaySprites()
 InitDisplaySprites:
                 jmp     _InitDisplaySprites
-
-; ===== SortSprites =====
-; prototype: void __usercall SortSprites()
-SortSprites:
-                jmp     _SortSprites
 
 ; ===== DrawSprites =====
 ; Ported to C: _DrawSprites in src/sprites.c
@@ -4347,16 +4287,6 @@ loc_105D34:
                 lea     (dstRowAdvanceBytes+6)(pc),a0
                 rts
                 rts
-
-; ===== InstallAndRunLoaderBootstrap_Op3 =====
-; prototype: void __usercall InstallAndRunLoaderBootstrap_Op3()
-InstallAndRunLoaderBootstrap_Op3:
-                jmp     _InstallAndRunLoaderBootstrap_Op3
-
-; ===== InstallAndInitLoaderBootstrap =====
-; prototype: void __usercall InstallAndInitLoaderBootstrap()
-InstallAndInitLoaderBootstrap:
-                jmp     _InstallAndInitLoaderBootstrap
 ; unsigned __int8[2226]
 LoaderBootstrapBlobPI:
                 dc.b $26,$BC,$CF,$D1,$EF,$E7,$20,$13,$4E,$75,$26,$BC,$71,$58,$3E,$FC
@@ -4499,31 +4429,6 @@ LoaderBootstrapBlobPI:
                 dc.b $A7,$08,$90,$7D,$B4,$01,$A7,$08,$90,$7D,$B6,$01,$A7,$08,$90,$7D
                 dc.b $B8,$34,$49,$81,$A7,$08,$90,$7D,$B3,$B2,$A7,$08,$90,$59,$4E,$71
                 dc.b $4E,$75
-
-; ===== AssetSvcLoaderOp =====
-; prototype: void __usercall AssetSvcLoaderOp()
-AssetSvcLoaderOp:
-                jmp     _AssetSvcLoaderOp
-
-; ===== AssetSvcLoaderOp2 =====
-; prototype: void __usercall AssetSvcLoaderOp2()
-AssetSvcLoaderOp2:
-                jmp     _AssetSvcLoaderOp2
-
-; ===== AssetSvcLoaderOp3 =====
-; prototype: void __usercall AssetSvcLoaderOp3()
-AssetSvcLoaderOp3:
-                jmp     _AssetSvcLoaderOp3
-
-; ===== AssetLoaderResetState =====
-; prototype: void __usercall AssetLoaderResetState()
-AssetLoaderResetState:
-                jmp     _AssetLoaderResetState
-
-; ===== AssetLoaderInitAltPathAndBanks =====
-; prototype: void __usercall AssetLoaderInitAltPathAndBanks()
-AssetLoaderInitAltPathAndBanks:
-                jmp     _AssetLoaderInitAltPathAndBanks
 
 ; ===== AssetLoaderRegisterRegion =====
 ; prototype: void __usercall AssetLoaderRegisterRegion(unsigned int size@<d0>, void *region@<a0>)
@@ -4873,23 +4778,15 @@ pad_106D08:
 
 ; ===== CrowdResetMatchState =====
 ; Ported to C (_CrowdResetMatchState in sfx_crowd.c)
-CrowdResetMatchState:
-                jmp     _CrowdResetMatchState
 
 ; ===== TurnCrowdChantsOn =====
 ; Ported to C (_TurnCrowdChantsOn in sfx_crowd.c)
-TurnCrowdChantsOn:
-                jmp     _TurnCrowdChantsOn
 
 ; ===== TurnCrowdChantsOff =====
 ; Ported to C (_TurnCrowdChantsOff in sfx_crowd.c)
-TurnCrowdChantsOff:
-                jmp     _TurnCrowdChantsOff
 
 ; ===== PlayCrowdChants =====
 ; Ported to C (_PlayCrowdChants in sfx_crowd.c)
-PlayCrowdChants:
-                jmp     _PlayCrowdChants
 crowdSamples:
                 dc.w $0037,$0038,$003A,$003E
 currentCrowdSample:
@@ -4905,88 +4802,51 @@ crowdChantVolume:
 
 ; ===== MuteAllAudioChannelsWithDelay =====
 ; Ported to C (_MuteAllAudioChannelsWithDelay in sfx_crowd.c)
-MuteAllAudioChannelsWithDelay:
-                jmp     _MuteAllAudioChannelsWithDelay
 
 ; ===== AudioFadeCrowdDownThenPulseMusic =====
 ; Ported to C (_AudioFadeCrowdDownThenPulseMusic in sfx_crowd.c)
-AudioFadeCrowdDownThenPulseMusic:
-                jmp     _AudioFadeCrowdDownThenPulseMusic
 
 ; ===== AudioMuteAllWithFrameRamp =====
 ; Ported to C (_AudioMuteAllWithFrameRamp in sfx_crowd.c)
-AudioMuteAllWithFrameRamp:
-                jmp     _AudioMuteAllWithFrameRamp
-
-; ===== AudioBeepAllShort =====
-; prototype: void __usercall AudioBeepAllShort()
-AudioBeepAllShort:
-                jmp     _AudioBeepAllShort
 
 ; ===== LoadSfxResources =====
 ; Ported to C (_LoadSfxResources in audio.c)
-LoadSfxResources:
-                jmp     _LoadSfxResources
 
 ; ===== EnsureSfxLoadedAndStart =====
 ; Ported to C (_EnsureSfxLoadedAndStart in audio.c)
-EnsureSfxLoadedAndStart:
-                jmp     _EnsureSfxLoadedAndStart
 
 ; ===== ClearAudioActiveFlag =====
 ; Ported to C (_ClearAudioActiveFlag in audio.c)
-ClearAudioActiveFlag:
-                jmp     _ClearAudioActiveFlag
 
 ; ===== StopAudioAndClearFlags =====
 ; Ported to C (_StopAudioAndClearFlags in audio.c)
-StopAudioAndClearFlags:
-                jmp     _StopAudioAndClearFlags
 
 ; ===== InitMenuMusic =====
 ; Ported to C (_InitMenuMusic in audio.c)
-InitMenuMusic:
-                jmp     _InitMenuMusic
 
 ; ===== TryRestartingMusic =====
 ; Ported to C (_TryRestartingMusic in audio.c)
-TryRestartingMusic:
-                jmp     _TryRestartingMusic
 
 ; ===== TryPlayMusic =====
 ; Ported to C (_TryPlayMusic in audio.c)
-TryPlayMusic:
-                jmp     _TryPlayMusic
 
 ; ===== StopMusic =====
 ; Ported to C (_StopMusic in audio.c)
-StopMusic:
-                jmp     _StopMusic
 
 ; ===== PlayEnqueuedSamples =====
 ; Ported to C (_PlayEnqueuedSamples in sfx_crowd.c)
-PlayEnqueuedSamples:
-                jmp     _PlayEnqueuedSamples
 
 ; ===== PlayPenaltySample =====
 ; Ported to C (_PlayPenaltySample in sfx_crowd.c)
-PlayPenaltySample:
-                jmp     _PlayPenaltySample
 
 ; ===== PlaySample7IfNotTraining =====
 ; Ported to C (_PlaySample7IfNotTraining in sfx_crowd.c)
-PlaySample7IfNotTraining:
-                jmp     _PlaySample7IfNotTraining
 
 ; ===== sub_107260 =====
 ; Ported to C (_PlaySfxSample16 in sfx_crowd.c)
-sub_107260:
-                jmp     _PlaySfxSample16
 
 ; ===== PlayGoodPassSample =====
 ; Ported to C (_PlayGoodPassSample in sfx_crowd.c)
-PlayGoodPassSample:
-                jmp     _PlayGoodPassSample
 
 ; ===== PlayKickSample =====
 ; Ported to C (_PlayKickSample in sfx_crowd.c)
@@ -5009,8 +4869,6 @@ PlayRefereeWhistleSample:
 
 ; ===== PlayFoulWhistleSample =====
 ; Ported to C (_PlayFoulWhistleSample in sfx_crowd.c)
-PlayFoulWhistleSample:
-                jmp     _PlayFoulWhistleSample
 
 ; ===== PlayEndGameWhistleSample =====
 ; Ported to C (_PlayEndGameWhistleSample in sfx_crowd.c)
@@ -5019,43 +4877,27 @@ PlayEndGameWhistleSample:
 
 ; ===== PlaySample1IfNotTraining =====
 ; Ported to C (_PlaySample1IfNotTraining in sfx_crowd.c)
-PlaySample1IfNotTraining:
-                jmp     _PlaySample1IfNotTraining
 
 ; ===== PlaySample1 =====
 ; Ported to C (_PlaySample1 in sfx_crowd.c)
-PlaySample1:
-                jmp     _PlaySample1
 
 ; ===== PlaySample2IfNotTraining =====
 ; Ported to C (_PlaySample2IfNotTraining in sfx_crowd.c)
-PlaySample2IfNotTraining:
-                jmp     _PlaySample2IfNotTraining
 
 ; ===== PlaySample4IfNotTraining =====
 ; Ported to C (_PlaySample4IfNotTraining in sfx_crowd.c)
-PlaySample4IfNotTraining:
-                jmp     _PlaySample4IfNotTraining
 
 ; ===== PlaySample3IfNotTraining =====
 ; Ported to C (_PlaySample3IfNotTraining in sfx_crowd.c)
-PlaySample3IfNotTraining:
-                jmp     _PlaySample3IfNotTraining
 
 ; ===== PlayMissGoalSample =====
 ; Ported to C (_PlayMissGoalSample in sfx_crowd.c)
-PlayMissGoalSample:
-                jmp     _PlayMissGoalSample
 
 ; ===== PlayPenalty =====
 ; Ported to C (_PlayPenalty in sfx_crowd.c)
-PlayPenalty:
-                jmp     _PlayPenalty
 
 ; ===== PlayGameStateWhistleSample =====
 ; Ported to C (_PlayGameStateWhistleSample in sfx_crowd.c)
-PlayGameStateWhistleSample:
-                jmp     _PlayGameStateWhistleSample
 
 ; ===== PlayGoalReplayBottomSample =====
 ; Ported to C (_PlayGoalReplayBottomSample in sfx_crowd.c)
@@ -5069,8 +4911,6 @@ PlayGoalKickOffSample:
 
 ; ===== PlayCornerKickSample =====
 ; Ported to C (_PlayCornerKickSample in sfx_crowd.c)
-PlayCornerKickSample:
-                jmp     _PlayCornerKickSample
 
 ; ===== nullsub_6 =====
 ; prototype: void nullsub_6(...)
@@ -5442,8 +5282,6 @@ CalculateDeltaXAndY:
 ; ===== MovePlayers =====
 ; prototype: void __usercall MovePlayers()
 ; Update x and y coordinates and do animation.
-MovePlayers:
-                jmp     _MovePlayers
 
 ; ===== SetNextPlayerFrame =====
 ; prototype: void __usercall SetNextPlayerFrame(struct Sprite *player@<a0>)
@@ -5527,8 +5365,6 @@ SetBallPosition:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 ; Ported to C: _MoveCamera in src/move_camera.c
-MoveCamera:
-                jmp     _MoveCamera
                 nop
 cameraXVelocity:
                 dc.w $0000              ; -40..40
@@ -5538,8 +5374,6 @@ cameraYVelocity:
 ; ===== UpdateBall =====
 ; prototype: void __usercall UpdateBall()
 ; Ported to C: _UpdateBall in src/ball_physics.c
-UpdateBall:
-                jmp     _UpdateBall
 ; ===== ReverseDestXDirection =====
 ; prototype: void __usercall ReverseDestXDirection(Sprite *spr@<a0>, __int32 ballX@<d5>)
 ; in:
@@ -5565,13 +5399,9 @@ ReverseDestYDirection:
 ; ===== DoGoalkeeperSprites =====
 ; prototype: void __usercall DoGoalkeeperSprites()
 ; Ported to C: _DoGoalkeeperSprites in src/ball_physics.c
-DoGoalkeeperSprites:
-                jmp     _DoGoalkeeperSprites
 ; ===== RemoveReferee =====
 ; prototype: void __usercall RemoveReferee()
 ; Makes referee invisible.
-RemoveReferee:
-                jmp     _RemoveReferee
 
 ; ===== ActivateReferee =====
 ; prototype: void __usercall ActivateReferee()
@@ -5580,8 +5410,6 @@ RemoveReferee:
 ; current camera position. X coordinate is card coordinate +/- 0..7, sign
 ; depends on which vertical half camera is in.
 ; Ported to C: _ActivateReferee in src/referee.c
-ActivateReferee:
-                jmp     _ActivateReferee
 
 ; ===== SetRefereeToLeavingState =====
 ; prototype: void __usercall SetRefereeToLeavingState()
@@ -5608,8 +5436,6 @@ InitRefereeAnimationTable:
 ; prototype: void __usercall UpdateReferee()
 ; Also queue up sound samples.
 ; Ported to C: _UpdateReferee in src/referee.c
-UpdateReferee:
-                jmp     _UpdateReferee
 loc_109D38:
                 move.w  SPRITE_FRAMEINDEX(a0),d0
                 lsl.w   #1,d0
@@ -5788,38 +5614,26 @@ nullsub_20:
 ; ===== InjuryUpdateTickGuard =====
 ; prototype: void __usercall InjuryUpdateTickGuard()
 ; Ported to C: _InjuryUpdateTickGuard in src/ball_physics.c
-InjuryUpdateTickGuard:
-                jmp     _InjuryUpdateTickGuard
 
 ; ===== CopyAdvertisementsData =====
 ; prototype: void __usercall CopyAdvertisementsData()
 ; Ported to C: _CopyAdvertisementsData in src/adverts.c
-CopyAdvertisementsData:
-                jmp     _CopyAdvertisementsData
 
 ; ===== InitAdvertisements =====
 ; prototype: void __usercall InitAdvertisements()
 ; Ported to C: _InitAdvertisements in src/adverts.c
-InitAdvertisements:
-                jmp     _InitAdvertisements
 
 ; ===== SetAdvertisementsVisible =====
 ; prototype: void __usercall SetAdvertisementsVisible()
 ; Ported to C: _SetAdvertisementsVisible in src/adverts.c
-SetAdvertisementsVisible:
-                jmp     _SetAdvertisementsVisible
 
 ; ===== SetAdvertisementsInvisible =====
 ; prototype: void __usercall SetAdvertisementsInvisible()
 ; Ported to C: _SetAdvertisementsInvisible in src/adverts.c
-SetAdvertisementsInvisible:
-                jmp     _SetAdvertisementsInvisible
 
 ; ===== ManageAdvertisements =====
 ; prototype: void __usercall ManageAdvertisements()
 ; Ported to C: _ManageAdvertisements in src/adverts.c
-ManageAdvertisements:
-                jmp     _ManageAdvertisements
 advertIndex:
                 dc.w $0000              ; Determines which advertisement is shown during the game, -1 = none
 advertSlideTimer:
@@ -5838,8 +5652,6 @@ blockAdvertisements:
 ; ===== UpdateCornerFlagSprite =====
 ; prototype: void __usercall UpdateCornerFlagSprite()
 ; Ported to C: _UpdateCornerFlagSprite in src/adverts.c
-UpdateCornerFlagSprite:
-                jmp     _UpdateCornerFlagSprite
 cornerFlagPictureIndices:
                 dc.b $00,$00,$00,$00,$01,$01,$01,$01,$02,$02,$02,$02,$03,$03,$03,$03
                 dc.b $00,$00,$00,$00,$01,$01,$01,$01,$02,$02,$02,$02,$03,$03,$03,$03
@@ -5847,8 +5659,6 @@ cornerFlagPictureIndices:
 ; ===== SpinBig_S_Sprite =====
 ; prototype: void __usercall SpinBig_S_Sprite()
 ; Ported to C: _SpinBig_S_Sprite in src/adverts.c
-SpinBig_S_Sprite:
-                jmp     _SpinBig_S_Sprite
 ; __int16
 spinBigS:
                 dc.w 0
@@ -5894,8 +5704,6 @@ numberBuffer:
 ; ===== CopyPlayerNameLengths =====
 ; prototype: void __usercall CopyPlayerNameLengths()
 ; Ported to C: _CopyPlayerNameLengths (game_state.c)
-CopyPlayerNameLengths:
-                jmp     _CopyPlayerNameLengths
 ; unsigned __int16[3]
 normalPalette:
                 ; unsigned __int16[3]
@@ -5966,8 +5774,6 @@ InitGameSaveTeams:
 ;      A6 -> right team in-game struct
 ; 
 ; Also loads the game palette from pal.256.
-InitGameRestoreTeams:
-                jmp     _InitGameRestoreTeams
 
 ; ===== ConvertColorsAndTextSprites =====
 ; prototype: char __usercall ConvertColorsAndTextSprites@<d0>(struct TeamGame *team1@<a5>, struct TeamGame *team2@<a6>)
@@ -6087,14 +5893,10 @@ team2ReserveGoalieSkinType:
 ; reserve: 1005-1062, team2: main: 1063-1120, reserve: 1121-1178).
 ; Goalkeeper skin color is already applied.
 ; Ported to C: _InitializePlayerSpriteFrameIndices in src/player_sprites.c
-InitializePlayerSpriteFrameIndices:
-                jmp     _InitializePlayerSpriteFrameIndices
 
 ; ===== UpdateBookedPlayerNumberSprite =====
 ; prototype: void __usercall UpdateBookedPlayerNumberSprite()
 ; Ported to C: _UpdateBookedPlayerNumberSprite in src/referee.c
-UpdateBookedPlayerNumberSprite:
-                jmp     _UpdateBookedPlayerNumberSprite
 loc_10AF6A:
                 cmpi.b  #CARD_YELLOW,(a1,d0.w)
                 beq.s   loc_10AFB0
@@ -6154,18 +5956,12 @@ secondYellowTable:
 
 ; ===== UpdateControlledPlayerNumbers =====
 ; Ported to C: _UpdateControlledPlayerNumbers in src/game_hud.c
-UpdateControlledPlayerNumbers:
-                jmp     _UpdateControlledPlayerNumbers
 
 ; ===== MarkPlayer =====
 ; Ported to C: _MarkPlayer in src/game_hud.c
-MarkPlayer:
-                jmp     _MarkPlayer
 
 ; ===== SetCurrentPlayerName =====
 ; Ported to C: _SetCurrentPlayerName in src/game_hud.c
-SetCurrentPlayerName:
-                jmp     _SetCurrentPlayerName
 nobodysBallTimer:
                 dc.w $0000
 nobodysBallLastFrame:
@@ -6182,8 +5978,6 @@ lastPlayerBeforeGoalkeeper:
 
 ; ===== ClearSaveFlagForGoalSprites =====
 ; Ported to C: _ClearSaveFlagForGoalSprites in src/game_state.c
-ClearSaveFlagForGoalSprites:
-                jmp     _ClearSaveFlagForGoalSprites
 
 ; ===== nullsub_8 =====
 ; prototype: void nullsub_8(...)
@@ -6193,14 +5987,10 @@ nullsub_8:
 ; ===== ResetTime =====
 ; prototype: void __usercall ResetTime()
 ; Ported to C: _ResetTime (game_state.c)
-ResetTime:
-                jmp     _ResetTime
 
 ; ===== UpdateTime =====
 ; prototype: void __usercall UpdateTime()
 ; Ported to C: _UpdateTime (game_state.c)
-UpdateTime:
-                jmp     _UpdateTime
 loc_10B3BE:
                 move.w  #150,(timeVar).l
 loc_10B3C6:
@@ -6500,14 +6290,10 @@ endGameCounter:
 ; ===== ResetResultSprites =====
 ; prototype: void __usercall ResetResultSprites()
 ; Ported to C: _ResetResultSprites (game_state.c)
-ResetResultSprites:
-                jmp     _ResetResultSprites
 
 ; ===== ShowResult =====
 ; prototype: void __usercall ShowResult()
 ; Ported to C: _ShowResult (game_state.c)
-ShowResult:
-                jmp     _ShowResult
 loc_10B952:
                 move.w  #250,(resultTimer).l
                 bra.s   loc_10B964
@@ -6906,8 +6692,6 @@ savedNextGoalPtr:
 ; ===== SetPitchTypeAndNumber =====
 ; prototype: void __usercall SetPitchTypeAndNumber()
 ; Ported to C: _SetPitchTypeAndNumber in src/highlight.c
-SetPitchTypeAndNumber:
-                jmp     _SetPitchTypeAndNumber
 pitchNumberProbabilities:
                 dc.b $00,$00,$00,$00,$00,$01,$01,$01,$01,$01,$04,$04,$02,$02,$03,$03 ; Probabilities:
                                         ; pitch 1 - 31,25%
@@ -6922,14 +6706,10 @@ pitchNumberProbabilities:
 ; their in-game stuctures, and copies game titles
 ; to corresponding arrays.
 ; Ported to C: _CopyTeamsAndHeader in src/highlight.c
-CopyTeamsAndHeader:
-                jmp     _CopyTeamsAndHeader
 
 ; ===== SetHilFileHeader =====
 ; prototype: void __usercall SetHilFileHeader()
 ; Ported to C: _SetHilFileHeader in src/highlight.c
-SetHilFileHeader:
-                jmp     _SetHilFileHeader
 kHilFileSig:
                 dc.l $0000000C          ; Every *.hil file starts with this dword
 
@@ -6937,39 +6717,24 @@ kHilFileSig:
 ; prototype: void __usercall SaveHighlightsPointers()
 ; Saves pointers to highlight buffers.
 ; Ported to C: _SaveHighlightsPointers in src/highlight.c
-SaveHighlightsPointers:
-                jmp     _SaveHighlightsPointers
 
 ; ===== RestoreHighlightPointers =====
 ; prototype: void __usercall RestoreHighlightPointers()
 ; Ported to C: _RestoreHighlightPointers in src/highlight.c
-RestoreHighlightPointers:
-                jmp     _RestoreHighlightPointers
 
 ; ===== FadeAndSaveHighlightScene =====
 ; prototype: void __usercall FadeAndSaveHighlightScene()
 ; Ported to C: _FadeAndSaveHighlightScene in src/highlight.c
-FadeAndSaveHighlightScene:
-                jmp     _FadeAndSaveHighlightScene
 
 ; ===== SaveHighlightScene =====
 ; prototype: void __usercall SaveHighlightScene()
 ; Maximum number of highlights is 10. If there is no room,
 ; overwrite oldest highlight.
 ; Ported to C: _SaveHighlightScene in src/highlight.c
-SaveHighlightScene:
-                jmp     _SaveHighlightScene
-
-; ===== InitCurrentGoalHighlight =====
-; prototype: void __usercall InitCurrentGoalHighlight()
-InitCurrentGoalHighlight:
-                jmp     _InitCurrentGoalHighlight
 
 ; ===== ThrowInDeadProc =====
 ; prototype: void __usercall ThrowInDeadProc()
 ; Ported to C: _ThrowInDeadProc in src/highlight.c
-ThrowInDeadProc:
-                jmp     _ThrowInDeadProc
                 movea.l (goalBasePtr).l,a0
                 move.w  #4749,d0
 loc_10C336:
@@ -7015,8 +6780,6 @@ IncrementHilBufferPointer:
 ; ===== DrawReplayFrame =====
 ; prototype: void __usercall DrawReplayFrame()
 ; Ported to C: _DrawReplayFrame in src/highlight.c
-DrawReplayFrame:
-                jmp     _DrawReplayFrame
 
 ; ===== ValidateHilPointerAdd =====
 ; prototype: unsigned __int8 *__usercall ValidateHilPointerAdd@<a0>(unsigned __int8 *p@<a0>)
@@ -7058,14 +6821,10 @@ ReplayUpdateCameraAndSwapBuffers:
 ; ===== HandleInstantReplayStateSwitch =====
 ; prototype: void __usercall HandleInstantReplayStateSwitch()
 ; Ported to C: _HandleInstantReplayStateSwitch in src/highlight.c
-HandleInstantReplayStateSwitch:
-                jmp     _HandleInstantReplayStateSwitch
 
 ; ===== RestoreCameraPosition =====
 ; prototype: void __usercall RestoreCameraPosition()
 ; Ported to C: _RestoreCameraPosition in src/highlight.c
-RestoreCameraPosition:
-                jmp     _RestoreCameraPosition
 
 ; ===== GoalScored =====
 ; prototype: void __usercall GoalScored(__int16 scoringTeam@<d0>, struct Sprite *scorerSprite@<a0>)
@@ -7113,11 +6872,6 @@ firstGoalScoredTable:
                 dc.l aAsc_0             ; element[0]
                 dc.l aPen               ; element[1]
                 dc.l aOg                ; element[2]
-
-; ===== BenchCheckControls =====
-; prototype: void __usercall BenchCheckControls()
-BenchCheckControls:
-                jmp     _BenchCheckControls
 loc_10CA92:
                 movea.l (topTeamPtr).l,a0
                 cmpi.w  #1,TEAMGENERALINFO_PLAYERNUMBER(a6)
@@ -7385,18 +7139,11 @@ _10CF6C_exit_rts:
 loc_10CF6E:
                 clr.w   (deadBenchVar).l
                 rts
-LeaveSubsMenu:
-                jmp     _LeaveSubsMenu
 
 ; ===== BenchMenuHandleControls =====
 ; prototype: void __usercall BenchMenuHandleControls()
 BenchMenuHandleControls:
                 jmp     _BenchMenuHandleControls
-
-; ===== TrainingSwapBenchTeams =====
-; prototype: void __usercall TrainingSwapBenchTeams()
-TrainingSwapBenchTeams:
-                jmp     _TrainingSwapBenchTeams
 
 ; ===== IsThisPlayerOkToSelect =====
 ; prototype: signed __int16 __usercall IsThisPlayerOkToSelect@<d0>()
@@ -7411,28 +7158,6 @@ IsThisPlayerOkToSelect:
                 tst.w   d0
                 rts
 
-; ===== FirePressedInSubsMenu =====
-; prototype: void __usercall FirePressedInSubsMenu()
-FirePressedInSubsMenu:
-                jmp     _FirePressedInSubsMenu
-
-; ===== ShowFormationMenu =====
-; prototype: void __usercall ShowFormationMenu()
-; ===== ShowFormationMenu ===== (ported to C → _ShowFormationMenu)
-ShowFormationMenu:
-                jmp     _ShowFormationMenu
-
-; ===== SubsBenchOff =====
-; prototype: void __usercall SubsBenchOff()
-; ===== SubsBenchOff ===== (ported to C → _SubsBenchOff)
-SubsBenchOff:
-                jmp     _SubsBenchOff
-
-; ===== SelectPlayerToSubstituteMenuHandler =====
-; prototype: void __usercall SelectPlayerToSubstituteMenuHandler()
-SelectPlayerToSubstituteMenuHandler:
-                jmp     _SelectPlayerToSubstituteMenuHandler
-
 ; ===== CheckForThrowInAndGoalkeepersBall =====
 ; prototype: void __usercall CheckForThrowInAndGoalkeepersBall()
 CheckForThrowInAndGoalkeepersBall:
@@ -7442,36 +7167,6 @@ CheckForThrowInAndGoalkeepersBall:
 ; prototype: void __usercall SubstitutePlayer()
 SubstitutePlayer:
                 jmp     _SubstitutePlayer
-
-; ===== CallUpdateSubstitutePlayerIndices =====
-; prototype: void __usercall CallUpdateSubstitutePlayerIndices()
-CallUpdateSubstitutePlayerIndices:
-                jmp     _CallUpdateSubstitutePlayerIndices
-
-; ===== state3_handle_fire_press =====
-; prototype: void __usercall state3_handle_fire_press()
-state3_handle_fire_press:
-                jmp     _state3_handle_fire_press
-
-; ===== MarkPlayersMenuHandler =====
-; prototype: void __usercall MarkPlayersMenuHandler()
-MarkPlayersMenuHandler:
-                jmp     _MarkPlayersMenuHandler
-
-; ===== HandleFormationMenuControls =====
-; prototype: void __usercall HandleFormationMenuControls()
-HandleFormationMenuControls:
-                jmp     _HandleFormationMenuControls
-
-; ===== UpdateSubstitutePlayerIndices =====
-; prototype: void __usercall UpdateSubstitutePlayerIndices()
-UpdateSubstitutePlayerIndices:
-                jmp     _UpdateSubstitutePlayerIndices
-
-; ===== UpdatePlayerToBeSubstitutedPosition =====
-; prototype: void __usercall UpdatePlayerToBeSubstitutedPosition()
-UpdatePlayerToBeSubstitutedPosition:
-                jmp     _UpdatePlayerToBeSubstitutedPosition
 
 ; ===== IsPlayerOkToSubstitute =====
 ; prototype: unsigned __int16 __usercall IsPlayerOkToSubstitute@<d0>()
@@ -7485,19 +7180,12 @@ IsPlayerOkToSubstitute:
                 tst.w   d0              ; set Z flag for callers
                 rts
 
-; ===== HandleFormationMenuMovement =====
-; prototype: void __usercall HandleFormationMenuMovement()
-HandleFormationMenuMovement:
-                jmp     _HandleFormationMenuMovement
-
 ; ===== FindInitialPlayerToBeSubstituted =====
 ; prototype: void __usercall FindInitialPlayerToBeSubstituted()
 ; Search the whole team for a player with the same position as the one about to enter the game.
 ; If there's no exact match try approximate (RB,LB,D -> D, RW,LW,M -> M). If there isn't evan an
 ; approximate match, then just use first one available.
 ; This data will be used to mark the initial player when substitutes menu opens up for the first time.
-FindInitialPlayerToBeSubstituted:
-                jmp     _FindInitialPlayerToBeSubstituted
 
 ; ===== SwapPlayerNameData =====
 ; prototype: void __usercall SwapPlayerNameData(__int16 enterIndex@<d6>, __int16 leaveIndex@<d7>)
@@ -7514,11 +7202,6 @@ SwapPlayerNameData:
                 addq.l  #8,sp
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-
-; ===== DrawBenchAndSubsMenu =====
-; prototype: void __usercall DrawBenchAndSubsMenu()
-DrawBenchAndSubsMenu:
-                jmp     _DrawBenchAndSubsMenu
 loc_10DA7A:
                 move.w  (benchXLimit).l,d0
                 addq.w  #8,d0
@@ -8448,16 +8131,6 @@ kInjuryForeverSpeed:
 mainAsm:
                 rts                     ; dead — _startShim calls _mainC directly
 
-; ===== ViewMatchSequence =====
-; prototype: void __usercall ViewMatchSequence()
-ViewMatchSequence:
-                jmp     _ViewMatchSequence
-
-; ===== ViewHighlights =====
-; prototype: void __usercall ViewHighlights()
-ViewHighlights:
-                jmp     _ViewHighlights
-
 ; ===== StartMatchSequence =====
 ; prototype: void __usercall StartMatchSequence(void *topTeam@<a5>, void *bottomTeam@<a6>)
 StartMatchSequence:
@@ -8474,13 +8147,6 @@ StartMatchSequence:
 ; in:
 ;      A5 -> left team in-game struct
 ;      A6 -> right team in-game struct
-GameLoop:
-                jmp     _GameLoop
-
-; ===== KeepStatisticsOnScreen =====
-; prototype: void __usercall KeepStatisticsOnScreen()
-KeepStatisticsOnScreen:
-                jmp     _KeepStatisticsOnScreen
 
 ; ===== ViewHighLightsMain =====
 ; prototype: void __usercall ViewHighLightsMain(void *leftTeam@<a5>, void *rightTeam@<a6>)
@@ -8500,21 +8166,15 @@ ViewHighLightsMain:
 ; prototype: void __usercall PlayInstantReplayLoop()
 ; Plays an instant replay when player presses 'R' during the game.
 ; Doesn't return until it's either played fully or aborted.
-PlayInstantReplayLoop:
-                jmp     _PlayInstantReplayLoop
 
 ; ===== PlayHighlightsLoop =====
 ; prototype: void __usercall PlayHighlightsLoop()
 ; Doesn't return until the playback is done, either by playing all scenes
 ; or user aborting by pressing fire.
-PlayHighlightsLoop:
-                jmp     _PlayHighlightsLoop
 
 ; ===== ReadTimerDelta =====
 ; prototype: unsigned __int16 __usercall ReadTimerDelta@<d0>()
 ; Read timer difference and update time of last drawn frame.
-ReadTimerDelta:
-                jmp     _ReadTimerDelta
 normalReplayRunning:
                 dc.w $0000              ; 0  = Instant replay is running (show big spinning "R")
                                         ; !0 = standard replay running (don't show big "R")
@@ -9094,11 +8754,6 @@ MainKeysCheck:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== AssetPrecacheCore =====
-; prototype: void __usercall AssetPrecacheCore()
-AssetPrecacheCore:
-                jmp     _AssetPrecacheCore
-
 AssetPrecacheOneCore:
                 move.l  a0,-(sp)
                 jsr     _AssetPrecacheOneCore
@@ -9108,11 +8763,6 @@ corePrecacheTable:
                 dc.l aSoundSfxIn2       ; "sound/sfx.in2"
                 dc.l aGrafsSwcpich2M    ; "grafs/swcpich2.map"
                 dc.l -1                 ; raw
-
-; ===== AssetPrecacheMenuPack =====
-; prototype: void __usercall AssetPrecacheMenuPack()
-AssetPrecacheMenuPack:
-                jmp     _AssetPrecacheMenuPack
 
 AssetPrecacheOneMenu:
                 move.l  a0,-(sp)
@@ -9151,13 +8801,9 @@ aDataTeam008:
 ; ===== ReplayExitMenuAfterFriendly =====
 ; prototype: void __usercall ReplayExitMenuAfterFriendly()
 ; Ported to C: _ReplayExitMenuAfterFriendly in src/replay_menu.c
-ReplayExitMenuAfterFriendly:
-                jmp     _ReplayExitMenuAfterFriendly
 
 ; ===== DrawReplayOrExitMenu =====
 ; Ported to C: _DrawReplayOrExitMenu in src/replay_menu.c
-DrawReplayOrExitMenu:
-                jmp     _DrawReplayOrExitMenu
 
 ; ===== DrawMenuBack150x20 =====
 ; Ported to C: _DrawMenuBack150x20 in src/replay_menu.c
@@ -9274,8 +8920,6 @@ loaderModeFlag:
 ; Sub-functions (LoaderIntroShowFrameFadeInOut, LoaderIntroShowFrameWithMusic,
 ; LoaderIntroWaitForFireOrTimeout, LoaderIntroLoadFrameToFrontbufferAlt)
 ; are now static C functions in loader_intro.c.
-ShowLoaderIntroSequence:
-                jmp     _ShowLoaderIntroSequence
 
 ; team1Scorers / team2Scorers: ScorerInfo[8] buffers (66 bytes * 8 = 528 bytes each).
 ; Previously overlaid with the ShowLoaderIntroSequence code region (Pattern A
@@ -9334,14 +8978,10 @@ isGoalAttempt:
 ; ===== ResetGoalAttempt =====
 ; prototype: void __usercall ResetGoalAttempt()
 ; Ported to C: _ResetGoalAttempt (game_state.c)
-ResetGoalAttempt:
-                jmp     _ResetGoalAttempt
 
 ; ===== AllowStatistics =====
 ; prototype: void __usercall AllowStatistics()
 ; Ported to C: _AllowStatistics (game_state.c)
-AllowStatistics:
-                jmp     _AllowStatistics
 
 ; ===== StatisticsOff =====
 ; prototype: void __usercall StatisticsOff()
@@ -9352,8 +8992,6 @@ StatisticsOff:
 ; ===== UpdateAndDrawStatistics =====
 ; prototype: void __usercall UpdateAndDrawStatistics()
 ; Ported to C: _UpdateAndDrawStatistics (statistics.c)
-UpdateAndDrawStatistics:
-                jmp     _UpdateAndDrawStatistics
 check_showing_user_stats:
                 tst.w   (showingUserStats).l
                 beq.s   check_penalty_or_goal_attempt
@@ -9963,8 +9601,6 @@ pad_110F6C:
 ; ===== CalculateNextBallPosition =====
 ; prototype: void __usercall CalculateNextBallPosition()
 ; Ported to C: _CalculateNextBallPosition in src/ball_physics.c
-CalculateNextBallPosition:
-                jmp     _CalculateNextBallPosition
 ; ===== QueueMaskedSpriteBlitClipped =====
 ; Ported to C: _QueueMaskedSpriteBlitClipped in src/sprites.c (Chunk 54)
 QueueMaskedSpriteBlitClipped:
@@ -10508,11 +10144,6 @@ playerCardChancesPerGameLength:
 StartPenalties:
                 jmp     _StartPenalties
 
-; ===== InitTeamsData =====
-; prototype: void __usercall InitTeamsData()
-InitTeamsData:
-                jmp     _InitTeamsData
-
 ; ===== UpdateControlledPlayer =====
 ; prototype: void __usercall UpdateControlledPlayer(TeamGeneralInfo *team@<a6>)
 ; in:
@@ -10553,8 +10184,6 @@ stoppageAuxFlag:
 
 ; ===== UpdateAndApplyTeamControls =====
 ; Ported to C: _UpdateAndApplyTeamControls in src/team_control.c (Chunk 54)
-UpdateAndApplyTeamControls:
-                jmp     _UpdateAndApplyTeamControls
 
 ; ===== SetJumpHeaderHitAnimTable =====
 ; prototype: void __usercall SetJumpHeaderHitAnimTable(Sprite *player@<a1>)
@@ -11116,46 +10745,19 @@ GoalkeeperClaimedTheBall:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== StartingMatch =====
-; prototype: void __usercall StartingMatch()
-StartingMatch:
-                jmp     _StartingMatch
-
 ; ===== SetCameraMovingToShowerState =====
 ; prototype: void __usercall SetCameraMovingToShowerState()
 ; Called when first half is over.
-SetCameraMovingToShowerState:
-                jmp     _SetCameraMovingToShowerState
 
 ; ===== EndFirstHalf =====
 ; prototype: void __usercall EndFirstHalf()
 EndFirstHalf:
                 jmp     _EndFirstHalf
 
-; ===== FirstHalfJustEnded =====
-; prototype: void __usercall FirstHalfJustEnded()
-FirstHalfJustEnded:
-                jmp     _FirstHalfJustEnded
-
 ; ===== EndOfGame =====
 ; prototype: void __usercall EndOfGame()
 EndOfGame:
                 jmp     _EndOfGame
-
-; ===== PlayersLeavingPitch =====
-; prototype: void __usercall PlayersLeavingPitch()
-PlayersLeavingPitch:
-                jmp     _PlayersLeavingPitch
-
-; ===== GoToHalftime =====
-; prototype: void __usercall GoToHalftime()
-GoToHalftime:
-                jmp     _GoToHalftime
-
-; ===== GameOver =====
-; prototype: void __usercall GameOver()
-GameOver:
-                jmp     _GameOver
 
 ; ===== StartFirstExtraTime =====
 ; prototype: void __usercall StartFirstExtraTime()
@@ -11167,11 +10769,6 @@ StartFirstExtraTime:
 EndFirstExtraTime:
                 jmp     _EndFirstExtraTime
 
-; ===== PrepareForInitialKick =====
-; prototype: void __usercall PrepareForInitialKick()
-PrepareForInitialKick:
-                jmp     _PrepareForInitialKick
-
 ; ===== CheckIfGoalkeeperClaimedTheBall =====
 ; prototype: void __usercall CheckIfGoalkeeperClaimedTheBall()
 CheckIfGoalkeeperClaimedTheBall:
@@ -11179,11 +10776,6 @@ CheckIfGoalkeeperClaimedTheBall:
                 jsr     _CheckIfGoalkeeperClaimedTheBall
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-
-; ===== ResetBothTeamsPlayerPassingKicking =====
-; prototype: void __usercall ResetBothTeamsPlayerPassingKicking()
-ResetBothTeamsPlayerPassingKicking:
-                jmp     _ResetBothTeamsPlayerPassingKicking
 
 ; ===== ResetPlayerPassingKicking =====
 ; prototype: void __usercall ResetPlayerPassingKicking(TeamGeneralInfo *team@<a0>)
@@ -11203,11 +10795,6 @@ StopAllPlayers:
 ;      A0 -> team (general info)
 StopPlayers:
                 rts
-
-; ===== CheckIfBallOutOfPlay =====
-; prototype: void __usercall CheckIfBallOutOfPlay()
-CheckIfBallOutOfPlay:
-                jmp     _CheckIfBallOutOfPlay
 setup_goal_replay_for_bottom_team:
                 move.w  #2,d0
                 movea.l lastPlayerPlayed(pc),a0
@@ -11514,11 +11101,6 @@ bexit_rts:
                 rts
 playRefereeWhistle:
                 dc.w $0000
-
-; ===== InitPlayersBeforeEnteringPitch =====
-; prototype: void __usercall InitPlayersBeforeEnteringPitch()
-InitPlayersBeforeEnteringPitch:
-                jmp     _InitPlayersBeforeEnteringPitch
 ; Position[22]
 kTeamsStartingCoordinates:
                 ; Position[22]
@@ -22306,11 +21888,6 @@ PanicLookupMessagePtr:
 hexWordStringBuffer:
                 dc.b $00,$00,$00,$00,$00,$00 ; Buffer for converting a 16-bit panic code to a 4-digit hex ASCII string.
 
-; ===== ZeroOutStars =====
-; prototype: void __usercall ZeroOutStars()
-ZeroOutStars:
-                jmp     _ZeroOutStars
-
 ; ===== UnpackMenu =====
 ; prototype: void __usercall UnpackMenu(Menu *dstMenu@<a1>, const void *staticMenu@<a0>)
 ; in:
@@ -22333,8 +21910,6 @@ InitMenuEntry:
 ; prototype: void __usercall MenuProc()
 ; Draws currentMenu and loops waiting for a key.
 ; Refreshes keyboard/joypad variables.
-MenuProc:
-                jmp     _MenuProc
 aStackOverflow:
                 dc.b 'STACK OVERFLOW',0,0
                 even
@@ -22383,11 +21958,6 @@ _CallMenuFuncWithXY:
                 jsr     (a0)                    ; callback sees d1=x, d2=y
                 movem.l (sp)+,d0-d7/a0-a6       ; restore ALL original values incl. d2
                 rts
-
-; ===== UpdateBlinkingMenuText =====
-; prototype: void __usercall UpdateBlinkingMenuText()
-UpdateBlinkingMenuText:
-                jmp     _UpdateBlinkingMenuText
 nextEntryDirectionOffsets:
                 dc.w $0002,$0001,$0003,$0000
 
@@ -22395,13 +21965,6 @@ nextEntryDirectionOffsets:
 ; prototype: void __usercall InitMainMenuStuff()
 ; ===== InitMainMenuStuff =====
 ; Ported to C (_InitMainMenuStuff in menus.c)
-InitMainMenuStuff:
-                jmp     _InitMainMenuStuff
-
-; ===== SetDefaultNameAndSurname =====
-; prototype: void __usercall SetDefaultNameAndSurname()
-SetDefaultNameAndSurname:
-                jmp     _SetDefaultNameAndSurname
 ; char *[6]
 defaultNamesTable:
                 ; char *[6]
@@ -22445,15 +22008,8 @@ aDavid_0:
 aNottingham:
                 dc.b "NOTTINGHAM",0,$00
 
-; ===== InitUserTactics =====
-; prototype: void __usercall InitUserTactics()
-InitUserTactics:
-                jmp     _InitUserTactics
-
 ; ===== FrontEndPreLoopSetup =====
 ; Ported to C (_FrontEndPreLoopSetup in frontend.c)
-FrontEndPreLoopSetup:
-                jmp     _FrontEndPreLoopSetup
 
 ; ===== PrepareMenuForFadeIn =====
 ; prototype: void __usercall PrepareMenuForFadeIn()
@@ -22467,8 +22023,6 @@ PrepareMenuForFadeIn:
 ; prototype: void __usercall PrepareMenuBackground()
 ; ===== PrepareMenuBackground =====
 ; Ported to C (_PrepareMenuBackground in menus.c)
-PrepareMenuBackground:
-                jmp     _PrepareMenuBackground
 
 ; ===== LoadOverlayToFrontbuffer =====
 ; Ported to C (_LoadOverlayToFrontbuffer in frontend.c)
@@ -22478,21 +22032,6 @@ LoadOverlayToFrontbuffer:
                 jsr     _LoadOverlayToFrontbuffer
                 addq.l  #4,sp
                 rts
-
-; ===== FrontEndMainLoop =====
-; prototype: void __usercall FrontEndMainLoop()
-FrontEndMainLoop:
-                jmp     _FrontEndMainLoop
-
-; ===== DoubleBufferSwapSequence =====
-; prototype: void __usercall DoubleBufferSwapSequence()
-DoubleBufferSwapSequence:
-                jmp     _DoubleBufferSwapSequence
-
-; ===== MenuCheckControls =====
-; prototype: void __usercall MenuCheckControls()
-MenuCheckControls:
-                jmp     _MenuCheckControls
 allowShorterMenuItemsWithFrames:
                 dc.l $00000000          ; If this is true then menu items on the right side of the screen (x >= 160) will have outer
                                         ; frames even if their height is a bit shorter (>6 px), otherwise all items must have height
@@ -22616,11 +22155,6 @@ CopyWholeSprite:
                 jsr     _CopyWholeSprite
                 addq.l  #8,sp
                 rts
-
-; ===== BlitterCopyPanelToScreen2 =====
-; prototype: void __usercall BlitterCopyPanelToScreen2()
-BlitterCopyPanelToScreen2:
-                jmp     _BlitterCopyPanelToScreen2
 
 ; ===== Int2Ascii =====
 ; prototype: void __usercall Int2Ascii(unsigned __int16 value@<d0>, char *out@<a1>)
@@ -22938,8 +22472,6 @@ DrawMenuBackWithCheck:
 ;     A6 -> menu
 ; 
 ; Draws a frame around the currently selected item.
-DrawSelectedMenuItemFrame:
-                jmp     _DrawSelectedMenuItemFrame
 
 ; ===== DrawMenu =====
 ; prototype: void __usercall DrawMenu()
@@ -22990,11 +22522,6 @@ forceDrawTransparentMenuItems:
                 dc.w $0000              ; If this is true menu entries with background color 0 (transparent) will be
                                         ; rendered with background color 15 (yellow)
                                         ; it never seems to be set anywhere, it's most likely debug-only variable
-
-; ===== DrawMenuPanelBackground =====
-; prototype: void __usercall DrawMenuPanelBackground()
-DrawMenuPanelBackground:
-                jmp     _DrawMenuPanelBackground
 menuX:
                 dc.w $0000
 menuY:
@@ -23467,10 +22994,6 @@ InitInGameTeams_WithMatchParam_Alt:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== BuildCareerTeamUnavailablePlayerList =====
-BuildCareerTeamUnavailablePlayerList:
-                jmp     _BuildCareerTeamUnavailablePlayerList
-
 ; ===== CyclePlayerStatusFlagsForTeam =====
 ; Dead code — only called by InitInGameTeams_* which are now in C
 CyclePlayerStatusFlagsForTeam:
@@ -23488,10 +23011,6 @@ InitPlayerRemapTableForTeam:
                 rts
 playerStatusBucketThresholds:
                 dc.b $20,$08,$06,$05,$04,$08,$01,$00
-
-; ===== ClearCareerMatchPlayerStatusBucket =====
-ClearCareerMatchPlayerStatusBucket:
-                jmp     _ClearCareerMatchPlayerStatusBucket
 
 ; ===== MaybeDecayPlayerStatusBucketForTeam =====
 ; Dead code — only called by InitInGameTeams_* which are now in C
@@ -25114,11 +24633,6 @@ IsPlayerInjured:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== UpdateCareerAfterMatch =====
-; prototype: void __usercall UpdateCareerAfterMatch()
-UpdateCareerAfterMatch:
-                jmp     _UpdateCareerAfterMatch
-
 ; ===== UpdateCareerFinancesAfterMatch =====
 ; Ported to C: _UpdateCareerFinancesAfterMatch (career_status.c)
 ; prototype: void __usercall UpdateCareerFinancesAfterMatch(void *ctx@<a0>, TeamFile *team@<a1>)
@@ -25145,23 +24659,15 @@ cupMatchReceiptsMultiplierTable:
 
 ; ===== ClampNewBalanceAndUpdateClubStatus =====
 ; Ported to C: _ClampNewBalanceAndUpdateClubStatus (career_status.c)
-ClampNewBalanceAndUpdateClubStatus:
-                jmp     _ClampNewBalanceAndUpdateClubStatus
 
 ; ===== ClearOverdraftStateIfRecovered =====
 ; Ported to C: _ClearOverdraftStateIfRecovered (career_status.c)
-ClearOverdraftStateIfRecovered:
-                jmp     _ClearOverdraftStateIfRecovered
 
 ; ===== MaybeSackManagerAfterSeasonReview =====
 ; Ported to C: _MaybeSackManagerAfterSeasonReview (career_status.c)
-MaybeSackManagerAfterSeasonReview:
-                jmp     _MaybeSackManagerAfterSeasonReview
 
 ; ===== UpdateCareerChairmanWarningsAfterMatch =====
 ; Ported to C: _UpdateCareerChairmanWarningsAfterMatch (career_status.c)
-UpdateCareerChairmanWarningsAfterMatch:
-                jmp     _UpdateCareerChairmanWarningsAfterMatch
 
 ; SetOverdraftWarningCooldown, SetPerformanceWarningCooldown
 ; Ported to C as static functions (only called from ported C code)
@@ -25172,8 +24678,6 @@ SetPerformanceWarningCooldown:
 
 ; ===== ApplyWeeklyFinancialDeductions =====
 ; Ported to C: _ApplyWeeklyFinancialDeductions (career_status.c)
-ApplyWeeklyFinancialDeductions:
-                jmp     _ApplyWeeklyFinancialDeductions
 
 ; ===== InitializeCareerSeasonFinancials =====
 ; prototype: void __usercall InitializeCareerSeasonFinancials()
@@ -25220,20 +24724,11 @@ IsTournamentAllowingSquadChangesIfNotCareer:
                 tst.w   d0
                 rts
 
-; ===== GetBoardConfidenceScore =====
-; prototype: signed __int16 __usercall GetBoardConfidenceScore@<d0>()
-GetBoardConfidenceScore:
-                jmp     _GetBoardConfidenceScore
-
 ; ===== UpdateBoardConfidenceScore =====
 ; Ported to C: _UpdateBoardConfidenceScore (career_status.c)
-UpdateBoardConfidenceScore:
-                jmp     _UpdateBoardConfidenceScore
 
 ; ===== PushBoardConfidenceHistory =====
 ; Ported to C: _PushBoardConfidenceHistory (career_status.c)
-PushBoardConfidenceHistory:
-                jmp     _PushBoardConfidenceHistory
 
 ; ===== CalcBoardConfidenceDeltaPercent =====
 ; Ported to C: calcBoardConfidenceDeltaPercent (static, career_status.c)
@@ -25244,16 +24739,6 @@ CalcBoardConfidenceDeltaPercent:
 seasonReviewConfidenceDeltaTable:
                 ; __int16[5]
                 dc.w 50,25,0,-25,-50
-
-; ===== UpdateBoardConfidenceModifiers =====
-; prototype: void __usercall UpdateBoardConfidenceModifiers()
-UpdateBoardConfidenceModifiers:
-                jmp     _UpdateBoardConfidenceModifiers
-
-; ===== UpdateCareerReputationBonuses =====
-; prototype: void __usercall UpdateCareerReputationBonuses()
-UpdateCareerReputationBonuses:
-                jmp     _UpdateCareerReputationBonuses
 
 ; ===== AddReputationFromBonusValueDiv4 =====
 ; Ported to C: addReputationFromBonusValueDiv4 (static, career_status.c)
@@ -25270,11 +24755,6 @@ AddReputationFromBonusValueDiv8:
 nationalSelectorSeasonReviewReputationDeltaTable:
                 ; __int16[5]
                 dc.w 5,2,0,-2,-5
-
-; ===== InitializeStartingBalanceForNewSeason =====
-; prototype: void __usercall InitializeStartingBalanceForNewSeason()
-InitializeStartingBalanceForNewSeason:
-                jmp     _InitializeStartingBalanceForNewSeason
 
 ; ===== GetExpectedLeagueRankIndex =====
 ; Ported to C: getExpectedLeagueRankIndex (static, career_status.c)
@@ -25524,10 +25004,6 @@ GetPlayerPricePercentageChange:
 ; Dead code — only caller was AdjustPlayerSkills, now ported to C
 ScaleSkill:
                 rts
-
-; ===== CheckIsTeamNational ===== (ported to C → _CheckIsTeamNational in teams.c)
-CheckIsTeamNational:
-                jmp     _CheckIsTeamNational
 
 ; ===== GetTeamKitsSimilarityFactor =====
 ; prototype: unsigned __int16 __usercall GetTeamKitsSimilarityFactor@<d7>(unsigned __int8 team1ShirtType@<d0>, unsigned __int8 team1StripesColor@<d1>, unsigned __int8 team1BasicColor@<d2>, unsigned __int8 team1ShortsColor@<d3>, unsigned __int8 team2ShirtType@<d4>, unsigned __int8 team2StripesColor@<d5>, unsigned __int8 team2BasicColor@<d6>, unsigned __int8 team2ShortsColor@<d7>)
@@ -26036,21 +25512,6 @@ SetupPlayers:
 exitGameFlag:
                 dc.w $0000              ; Must be zero in order to start the game, if 1 SetupPlayers bails
 
-; ===== ShowHighlights =====
-; prototype: void __usercall ShowHighlights()
-ShowHighlights:
-                jmp     _ShowHighlights
-
-; ===== ShowMatchSequence =====
-; prototype: void __usercall ShowMatchSequence()
-ShowMatchSequence:
-                jmp     _ShowMatchSequence
-
-; ===== ViewHighlightsSaveCurrentMenu =====
-; prototype: void __usercall ViewHighlightsSaveCurrentMenu()
-ViewHighlightsSaveCurrentMenu:
-                jmp     _ViewHighlightsSaveCurrentMenu
-
 ; ===== InitializeInGameTeamsAndStartGame =====
 ; prototype: void __usercall InitializeInGameTeamsAndStartGame(__int16 randomizePitch@<d0>, __int16 minSubs@<d1>, __int16 maxSubs@<d2>, __int16 paramD3@<d3>, __int16 paramD7@<d7>, struct TeamFile *team1@<a1>, struct TeamFile *team2@<a2>)
 ; in:
@@ -26554,27 +26015,6 @@ DIY_ShuffleTeams:
                 addq.l  #8,sp
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-
-; ===== SaveDIYTournament ===== (ported to C → _SaveDIYTournament)
-SaveDIYTournament:
-                jmp     _SaveDIYTournament
-
-; ===== RestoreDIYTournament ===== (ported to C → _RestoreDIYTournament)
-RestoreDIYTournament:
-                jmp     _RestoreDIYTournament
-
-; ===== DIY_CopyCompetitionFileBufferToDiyFileBufferCopy ===== (ported to C)
-DIY_CopyCompetitionFileBufferToDiyFileBufferCopy:
-                jmp     _DIY_CopyCompetitionFileBufferToDiyFileBufferCopy
-
-; ===== DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer ===== (ported to C)
-DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer:
-                jmp     _DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer
-
-; ===== InitDIYTournament =====
-; prototype: void __usercall InitDIYTournament()
-InitDIYTournament:
-                jmp     _InitDIYTournament
 ; unsigned __int16[20]
 diyTournamentInitTable:
                 ; unsigned __int16[20]
@@ -26582,63 +26022,16 @@ diyTournamentInitTable:
                 dc.w $0000,$0008,$0004,$0000,$0004,$0002,$0000,$0002
                 dc.w $0001,$0001,$0001,$0001
 
-; ===== DIYTournament_RecalculateMatchesPerTeam =====
-; prototype: void __usercall DIYTournament_RecalculateMatchesPerTeam()
-DIYTournament_RecalculateMatchesPerTeam:
-                jmp     _DIYTournament_RecalculateMatchesPerTeam
-
-; ===== DIY_ResetAndLoadCurrentCompetitionSlot ===== (ported to C → _DIY_ResetAndLoadCurrentCompetitionSlot)
-DIY_ResetAndLoadCurrentCompetitionSlot:
-                jmp     _DIY_ResetAndLoadCurrentCompetitionSlot
-
 ; ===== nullsub_12 =====
 ; prototype: void nullsub_12(...)
 nullsub_12:
                 rts
-
-; ===== DIY_CopyCompetitionFileBufferToCompetitionStart ===== (ported to C)
-DIY_CopyCompetitionFileBufferToCompetitionStart:
-                jmp     _DIY_CopyCompetitionFileBufferToCompetitionStart
-
-; ===== DIY_CopyCompetitionStartToCompetitionFileBuffer ===== (ported to C)
-DIY_CopyCompetitionStartToCompetitionFileBuffer:
-                jmp     _DIY_CopyCompetitionStartToCompetitionFileBuffer
-
-; ===== DIY_CopyCompetitionFileBufferToCompetitionStart_Alt ===== (ported to C)
-DIY_CopyCompetitionFileBufferToCompetitionStart_Alt:
-                jmp     _DIY_CopyCompetitionFileBufferToCompetitionStart_Alt
-
-; ===== DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt ===== (ported to C)
-DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt:
-                jmp     _DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt
-
-; ===== InitDIYCup =====
-; prototype: void __usercall InitDIYCup()
-; ===== InitDIYCup ===== (ported to C → _InitDIYCup)
-InitDIYCup:
-                jmp     _InitDIYCup
-
-; ===== DIY_InitCupBracketState =====
-; prototype: void __usercall DIY_InitCupBracketState()
-; ===== DIY_InitCupBracketState ===== (ported to C → _DIY_InitCupBracketState)
-DIY_InitCupBracketState:
-                jmp     _DIY_InitCupBracketState
-
-; ===== DIY_InitCupFromTeamGridAndValidateTeams ===== (ported to C → _DIY_InitCupFromTeamGridAndValidateTeams)
-DIY_InitCupFromTeamGridAndValidateTeams:
-                jmp     _DIY_InitCupFromTeamGridAndValidateTeams
 
 ; ===== DIY_BuildTeamSelectionPointerCache =====
 ; prototype: void __usercall DIY_BuildTeamSelectionPointerCache()
 ; ===== DIY_BuildTeamSelectionPointerCache ===== (ported to C → _DIY_BuildTeamSelectionPointerCache)
 DIY_BuildTeamSelectionPointerCache:
                 jmp     _DIY_BuildTeamSelectionPointerCache
-
-; ===== DIY_ShuffleTeamOrderList =====
-; prototype: void __usercall DIY_ShuffleTeamOrderList()
-; ===== DIY_ShuffleTeamOrderList ===== (ported to C → _DIY_ShuffleTeamOrderList)
-DIY_ShuffleTeamOrderList:
-                jmp     _DIY_ShuffleTeamOrderList
 
 ; ===== DIY_UpdateCompetitionProgress ===== (ported to C → _DIY_UpdateCompetitionProgress)
 DIY_UpdateCompetitionProgress:
@@ -26859,27 +26252,9 @@ loc_12A388:
 DIY_ReorderTeamGridByOrderList:
                 jmp     _DIY_ReorderTeamGridByOrderList
 
-; ===== DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs =====
-; prototype: void __usercall DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs()
-; ===== DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs ===== (ported to C → _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs)
-DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs:
-                jmp     _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs
-
-; ===== DIY_RecountMissingTeamsInTeamGrid =====
-; prototype: void __usercall DIY_RecountMissingTeamsInTeamGrid()
-; ===== DIY_RecountMissingTeamsInTeamGrid ===== (ported to C → _DIY_RecountMissingTeamsInTeamGrid)
-DIY_RecountMissingTeamsInTeamGrid:
-                jmp     _DIY_RecountMissingTeamsInTeamGrid
-
 ; ===== DIY_DecrementMissingTeamCountIfNotLoaded ===== (dead — only called from now-ported C)
 DIY_DecrementMissingTeamCountIfNotLoaded:
                 rts
-
-; ===== DIY_ShuffleTeamGridPairs =====
-; prototype: void __usercall DIY_ShuffleTeamGridPairs()
-; ===== DIY_ShuffleTeamGridPairs ===== (ported to C → _DIY_ShuffleTeamGridPairs)
-DIY_ShuffleTeamGridPairs:
-                jmp     _DIY_ShuffleTeamGridPairs
 
 ; ===== DIY_GetCurrentMatchTeamSlots ===== (ported to C → _DIY_GetCurrentMatchTeamSlots)
 ; Bridge: outputs a1, a2 (slot pointers)
@@ -26916,47 +26291,6 @@ DIY_PlayCupMatchAndAdvance:
                 movem.l (sp)+,d2-d7/a2-a6
                 tst.w   d0
                 rts
-
-; ===== DIY_SyncProgressToDiyFileBufferCopy =====
-; prototype: void __usercall DIY_SyncProgressToDiyFileBufferCopy()
-; ===== DIY_SyncProgressToDiyFileBufferCopy ===== (ported to C → _DIY_SyncProgressToDiyFileBufferCopy)
-DIY_SyncProgressToDiyFileBufferCopy:
-                jmp     _DIY_SyncProgressToDiyFileBufferCopy
-
-; ===== SaveDIYLeague ===== (ported to C → _SaveDIYLeague)
-SaveDIYLeague:
-                jmp     _SaveDIYLeague
-
-; ===== RestoreDIYLeague ===== (ported to C → _RestoreDIYLeague)
-RestoreDIYLeague:
-                jmp     _RestoreDIYLeague
-
-; ===== DIY_SaveCompetitionFileBufferToDIYCompetition ===== (ported to C)
-DIY_SaveCompetitionFileBufferToDIYCompetition:
-                jmp     _DIY_SaveCompetitionFileBufferToDIYCompetition
-
-; ===== DIY_RestoreCompetitionFileBufferFromDIYCompetition ===== (ported to C)
-DIY_RestoreCompetitionFileBufferFromDIYCompetition:
-                jmp     _DIY_RestoreCompetitionFileBufferFromDIYCompetition
-
-; ===== DIY_ShuffleLeagueTeamOrder =====
-; prototype: void __usercall DIY_ShuffleLeagueTeamOrder()
-DIY_ShuffleLeagueTeamOrder:
-                jmp     _DIY_ShuffleLeagueTeamOrder
-
-; ===== DIY_InitCompetitionDefaults =====
-; prototype: void __usercall DIY_InitCompetitionDefaults()
-DIY_InitCompetitionDefaults:
-                jmp     _DIY_InitCompetitionDefaults
-
-; ===== DIY_RecomputeCompetitionDerivedFields ===== (ported to C → _DIY_RecomputeCompetitionDerivedFields)
-DIY_RecomputeCompetitionDerivedFields:
-                jmp     _DIY_RecomputeCompetitionDerivedFields
-
-; ===== DIY_ResetCompetitionProgressAndShuffle =====
-; prototype: void __usercall DIY_ResetCompetitionProgressAndShuffle()
-DIY_ResetCompetitionProgressAndShuffle:
-                jmp     _DIY_ResetCompetitionProgressAndShuffle
 loc_12AB5C:
                 lea     (diyCompetitionStart).l,a2
                 move.b  $38(a2),$2F(a2)
@@ -26980,11 +26314,6 @@ loc_12AB90:
                 adda.l  #$12,a2
                 dbf     d0,loc_12AB90
                 rts
-
-; ===== DIY_CacheSelectedTeamPointers =====
-; prototype: void __usercall DIY_CacheSelectedTeamPointers()
-DIY_CacheSelectedTeamPointers:
-                jmp     _DIY_CacheSelectedTeamPointers
 
 ; ===== CopySelectedTeamNumbers ===== (ported to C → _CopySelectedTeamNumbers)
 ; d0=count, a0=dest
@@ -27033,10 +26362,6 @@ DIY_AdvanceLeagueProgressAfterMatch:
                 addq.l  #8,sp
                 rts
 
-; ===== DIY_GetCurrentFixtureTeamClass ===== (ported to C → _DIY_GetCurrentFixtureTeamClass)
-DIY_GetCurrentFixtureTeamClass:
-                jmp     _DIY_GetCurrentFixtureTeamClass
-
 ; ===== DIY_PlayOrSimulateLeagueFixture ===== (ported to C → _DIY_PlayOrSimulateLeagueFixture)
 ; prototype: __int16 __usercall DIY_PlayOrSimulateLeagueFixture@<d0>(__int16 selector@<d7>)
 ; d6=allowSquadChanges (implicit), d7=selector → C params
@@ -27051,17 +26376,6 @@ DIY_PlayOrSimulateLeagueFixture:
                 movem.l (sp)+,d2-d7/a2-a6
                 tst.w   d0
                 rts
-
-; ===== DIY_SyncProgressToDiyFileBufferCopy_2 =====
-; prototype: void __usercall DIY_SyncProgressToDiyFileBufferCopy_2()
-; ===== DIY_SyncProgressToDiyFileBufferCopy_2 ===== (ported to C → _DIY_SyncProgressToDiyFileBufferCopy)
-DIY_SyncProgressToDiyFileBufferCopy_2:
-                jmp     _DIY_SyncProgressToDiyFileBufferCopy
-
-; ===== DIY_SortLeagueTableByStandings =====
-; prototype: void __usercall DIY_SortLeagueTableByStandings()
-DIY_SortLeagueTableByStandings:
-                jmp     _DIY_SortLeagueTableByStandings
 
 ; ===== SaveSelectedTeams =====
 ; prototype: void __usercall SaveSelectedTeams()
@@ -27177,21 +26491,6 @@ loc_12B22A:
 locret_12B234:
                 rts
 
-; ===== DIY_CachePrimaryQualifiedTeamsGrid =====
-; prototype: void __usercall DIY_CachePrimaryQualifiedTeamsGrid()
-DIY_CachePrimaryQualifiedTeamsGrid:
-                jmp     _DIY_CachePrimaryQualifiedTeamsGrid
-
-; ===== DIY_CacheSecondaryQualifiedTeamsGrid =====
-; prototype: void __usercall DIY_CacheSecondaryQualifiedTeamsGrid()
-DIY_CacheSecondaryQualifiedTeamsGrid:
-                jmp     _DIY_CacheSecondaryQualifiedTeamsGrid
-
-; ===== DIY_CacheTertiaryQualifiedTeamGrid =====
-; prototype: void __usercall DIY_CacheTertiaryQualifiedTeamGrid()
-DIY_CacheTertiaryQualifiedTeamGrid:
-                jmp     _DIY_CacheTertiaryQualifiedTeamGrid
-
 ; ===== Career_DrawEuropeanCupTeamsAndCopyGrids =====
 ; prototype: void __usercall Career_DrawEuropeanCupTeamsAndCopyGrids()
 ; ===== Career_DrawEuropeanCupTeamsAndCopyGrids ===== (ported to C)
@@ -27270,10 +26569,6 @@ DIY_BuildQualifiedTeamListFromDiyFileBuffer:
                 lea     8(sp),sp
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-
-; ===== DIY_SyncCompetitionTeamGridOrBuildBracket ===== (ported to C → _DIY_SyncCompetitionTeamGridOrBuildBracket)
-DIY_SyncCompetitionTeamGridOrBuildBracket:
-                jmp     _DIY_SyncCompetitionTeamGridOrBuildBracket
 loc_12B6AC:
                 move.w  #$1991,(panicReasonCode).l
                 jsr     PanicHaltLoop
@@ -27290,11 +26585,6 @@ Career_UpdateEuroCupCompetitionSlot:
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
 
-; ===== Career_CopyEuroCupTeamGridAndTitleHolder =====
-; prototype: void __usercall Career_CopyEuroCupTeamGridAndTitleHolder()
-Career_CopyEuroCupTeamGridAndTitleHolder:
-                jmp     _Career_CopyEuroCupTeamGridAndTitleHolder
-
 ; ===== Career_UpdateCupWinnersCupCompetitionSlot =====
 ; prototype: void __usercall Career_UpdateCupWinnersCupCompetitionSlot()
 ; ===== Career_UpdateCupWinnersCupCompetitionSlot ===== (ported to C → _Career_UpdateCupWinnersCupCompetitionSlot)
@@ -27304,11 +26594,6 @@ Career_UpdateCupWinnersCupCompetitionSlot:
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
 
-; ===== Career_CopyCupWinnersCupTeamGridAndTitleHolder =====
-; prototype: void __usercall Career_CopyCupWinnersCupTeamGridAndTitleHolder()
-Career_CopyCupWinnersCupTeamGridAndTitleHolder:
-                jmp     _Career_CopyCupWinnersCupTeamGridAndTitleHolder
-
 ; ===== Career_UpdateUefaCupCompetitionSlot =====
 ; prototype: void __usercall Career_UpdateUefaCupCompetitionSlot()
 ; ===== Career_UpdateUefaCupCompetitionSlot ===== (ported to C → _Career_UpdateUefaCupCompetitionSlot)
@@ -27317,21 +26602,6 @@ Career_UpdateUefaCupCompetitionSlot:
                 jsr     _Career_UpdateUefaCupCompetitionSlot
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
-
-; ===== Career_CopyUefaCupTeamGridAndTitleHolder =====
-; prototype: void __usercall Career_CopyUefaCupTeamGridAndTitleHolder()
-Career_CopyUefaCupTeamGridAndTitleHolder:
-                jmp     _Career_CopyUefaCupTeamGridAndTitleHolder
-
-; ===== Career_PrepareEuropeanCupQualificationState =====
-; prototype: void __usercall Career_PrepareEuropeanCupQualificationState()
-Career_PrepareEuropeanCupQualificationState:
-                jmp     _Career_PrepareEuropeanCupQualificationState
-
-; ===== Career_ProcessCompetitionForEuropeanCupQualification =====
-; prototype: void __usercall Career_ProcessCompetitionForEuropeanCupQualification()
-Career_ProcessCompetitionForEuropeanCupQualification:
-                jmp     _Career_ProcessCompetitionForEuropeanCupQualification
 Career_QualifyTeamForEuroCup_IfEligibleCompetition:
                 rts
 Career_QualifyTeamForCupWinnersCup_IfEligibleCompetition:
@@ -27490,10 +26760,6 @@ Career_FillRandomTeamListExcludingSelected:
                 lea     12(sp),sp
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-
-; ===== DIY_UpdatePromotionRelegationScratchCounts ===== (ported to C → _DIY_UpdatePromotionRelegationScratchCounts)
-DIY_UpdatePromotionRelegationScratchCounts:
-                jmp     _DIY_UpdatePromotionRelegationScratchCounts
 
 ; ===== DIY_LoadLeagueScratchFromTable ===== (ported to C → _DIY_LoadLeagueScratchFromTable)
 DIY_LoadLeagueScratchFromTable:
@@ -27854,10 +27120,6 @@ cupPickListEuropeInviteTournamentFriendlyAlt:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
-
-; ===== Career_RandomizeInvitationTournamentCup ===== (ported to C → _Career_RandomizeInvitationTournamentCup)
-Career_RandomizeInvitationTournamentCup:
-                jmp     _Career_RandomizeInvitationTournamentCup
 
 ; ===== Career_SetupWorldCupQualifyingGroups ===== (ported to C, dead)
 Career_SetupWorldCupQualifyingGroups:
@@ -28612,32 +27874,6 @@ Career_AdvanceToNextTeamSelectionKeyCacheEntry:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== Career_AutoSimulateLeagueFixturesUntilHumanTeam =====
-; prototype: void __usercall Career_AutoSimulateLeagueFixturesUntilHumanTeam()
-; ===== Career_AutoSimulateLeagueFixturesUntilHumanTeam ===== (ported to C → _Career_AutoSimulateLeagueFixturesUntilHumanTeam)
-Career_AutoSimulateLeagueFixturesUntilHumanTeam:
-                jmp     _Career_AutoSimulateLeagueFixturesUntilHumanTeam
-
-; ===== Career_AutoSimulateCupMatchesUntilHumanTeam ===== (ported to C → _Career_AutoSimulateCupMatchesUntilHumanTeam)
-Career_AutoSimulateCupMatchesUntilHumanTeam:
-                jmp     _Career_AutoSimulateCupMatchesUntilHumanTeam
-
-; ===== Career_AutoSimulatePendingMatchUntilHumanTeam ===== (ported to C → _Career_AutoSimulatePendingMatchUntilHumanTeam)
-Career_AutoSimulatePendingMatchUntilHumanTeam:
-                jmp     _Career_AutoSimulatePendingMatchUntilHumanTeam
-
-; ===== Career_AutoPlayOrSimulateLeagueFixtureLoop ===== (ported to C → _Career_AutoPlayOrSimulateLeagueFixtureLoop)
-Career_AutoPlayOrSimulateLeagueFixtureLoop:
-                jmp     _Career_AutoPlayOrSimulateLeagueFixtureLoop
-
-; ===== Career_AutoPlayCupMatchAndAdvanceLoop ===== (ported to C → _Career_AutoPlayCupMatchAndAdvanceLoop)
-Career_AutoPlayCupMatchAndAdvanceLoop:
-                jmp     _Career_AutoPlayCupMatchAndAdvanceLoop
-
-; ===== Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot ===== (ported to C)
-Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot:
-                jmp     _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot
-
 ; ===== Career_InitializeSelectedTeamAndStartingBalance =====
 ; Ported to C: _Career_InitializeSelectedTeamAndStartingBalance in src/career_init.c
 ; in: D0 = teamNumber, D1 = startingBalance
@@ -29307,25 +28543,6 @@ Career_AutoAdvanceLeagueCompetitionFromRecord:
 DIY_RecomputeCompetitionDerivedProgressionTable:
                 jmp     _DIY_RecomputeCompetitionDerivedProgressionTable
 
-; ===== DIY_InitCupBracketProgressionTable =====
-; prototype: void __usercall DIY_InitCupBracketProgressionTable()
-DIY_InitCupBracketProgressionTable:
-                jmp     _DIY_InitCupBracketProgressionTable
-
-; ===== DIYTournament_BuildMatchesPerTeamProgressionTable =====
-; prototype: void __usercall DIYTournament_BuildMatchesPerTeamProgressionTable()
-DIYTournament_BuildMatchesPerTeamProgressionTable:
-                jmp     _DIYTournament_BuildMatchesPerTeamProgressionTable
-
-; ===== Career_PostMatchUpdate =====
-; prototype: void __usercall Career_PostMatchUpdate()
-Career_PostMatchUpdate:
-                jmp     _Career_PostMatchUpdate
-
-; ===== Career_HandleRetirement ===== (ported to C → _Career_HandleRetirement)
-Career_HandleRetirement:
-                jmp     _Career_HandleRetirement
-
 ; ===== ContinueCareerNextSeason =====
 ; prototype: char __usercall ContinueCareerNextSeason@<d0>()
 ; ===== ContinueCareerNextSeason =====
@@ -29411,18 +28628,9 @@ InitializeNewSeason_BuildTeamBudgetRankTable:
 
 ; ===== ShowChairmanOpinionAboutTheSeason =====
 ; Ported to C: _ShowChairmanOpinionAboutTheSeason in src/career_season.c
-ShowChairmanOpinionAboutTheSeason:
-                jmp     _ShowChairmanOpinionAboutTheSeason
-
-; ===== ShowSeasonOpinion =====
-; prototype: void __usercall ShowSeasonOpinion()
-ShowSeasonOpinion:
-                jmp     _ShowSeasonOpinion
 
 ; ===== SeasonFinished_ComputeSeasonReview =====
 ; Ported to C: _SeasonFinished_ComputeSeasonReview in src/career_season.c
-SeasonFinished_ComputeSeasonReview:
-                jmp     _SeasonFinished_ComputeSeasonReview
 
 ; ===== SeasonReview_AdjustWeightsForCompetition =====
 ; Ported to C (static helper in career_season.c). Dead in asm — only caller was ComputeSeasonReview.
@@ -29597,8 +28805,6 @@ team2NumAllowedInjuries:
 ; prototype: void __usercall DrawAnimatedPatterns()
 ; This proc serves to draw some additional patterns, mostly fans jumping and cheering.
 ; Called once every frame, also during replays.
-DrawAnimatedPatterns:
-                jmp     _DrawAnimatedPatterns
 
 ; ===== SwapTwoRandomIndicesFromAnimPatternsTable =====
 ; prototype: char SwapTwoRandomIndicesFromAnimPatternsTable()
@@ -29624,20 +28830,10 @@ otherTeamScored:
 animPatternsState:
                 dc.w $0000
 
-; ===== ResetAnimatedPatternsForBothTeams =====
-; prototype: void __usercall ResetAnimatedPatternsForBothTeams()
-ResetAnimatedPatternsForBothTeams:
-                jmp     _ResetAnimatedPatternsForBothTeams
-
 ; ===== ResetAnimatedPatterns =====
 ; Dead code - now inlined in C _ResetAnimatedPatternsForBothTeams
 ResetAnimatedPatterns:
                 rts
-
-; ===== InitAnimatedPatterns =====
-; prototype: void __usercall InitAnimatedPatterns()
-InitAnimatedPatterns:
-                jmp     _InitAnimatedPatterns
 
 ; ===== DrawPatternFromIndex =====
 ; prototype: void __usercall DrawPatternFromIndex(unsigned __int16 patternIndex@<d3>)
@@ -30838,21 +30034,6 @@ ChooseTeamsFriendlyInitFinish:
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
 
-; ===== ViewSelected =====
-; prototype: void __usercall ViewSelected()
-ViewSelected:
-                jmp     _ViewSelected
-
-; ===== ExitChooseTeams2 =====
-; prototype: void __usercall ExitChooseTeams2()
-ExitChooseTeams2:
-                jmp     _ExitChooseTeams2
-
-; ===== ChooseTeamsPlayMatchSelected =====
-; prototype: void __usercall ChooseTeamsPlayMatchSelected()
-ChooseTeamsPlayMatchSelected:
-                jmp     _ChooseTeamsPlayMatchSelected
-
 ; ===== ChooseTeamsFriendlyCommon2 =====
 ; prototype: void __usercall ChooseTeamsFriendlyCommon2(struct MenuEntry *entry@<a5>)
 ChooseTeamsFriendlyCommon2:
@@ -30862,22 +30043,10 @@ ChooseTeamsFriendlyCommon2:
                 addq.l  #4,sp
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-
-; ===== ChooseTeamsSetHeader ===== (ported to C → _ChooseTeamsSetHeader in diy_competition.c)
-ChooseTeamsSetHeader:
-                jmp     _ChooseTeamsSetHeader
-
-; ===== Bureaucracy ===== (ported to C → _Bureaucracy in diy_competition.c)
-Bureaucracy:
-                jmp     _Bureaucracy
 ; __int16[5]
 bureaucracyMenuItems:
                 ; __int16[5]
                 dc.w 58,57,55,0,-1      ; Array of menu item indices (58, 57, 55, 0, -1) for the Bureaucracy menu screen.
-
-; ===== CheckNumTeamsAllowed ===== (ported to C → _CheckNumTeamsAllowed in diy_competition.c)
-CheckNumTeamsAllowed:
-                jmp     _CheckNumTeamsAllowed
 
 ; ===== ChooseTeamsFriendly_UpdateMenuEntryYLayout =====
 ; prototype: void __usercall ChooseTeamsFriendly_UpdateMenuEntryYLayout()
@@ -32257,21 +31426,6 @@ SetTeamEntriesStringsAndColors:
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
 
-; ===== ChangeTeams =====
-; prototype: void __usercall ChangeTeams()
-ChangeTeams:
-                jmp     _ChangeTeams
-
-; ===== AbortChooseTeamsFriendly =====
-; prototype: void __usercall AbortChooseTeamsFriendly()
-AbortChooseTeamsFriendly:
-                jmp     _AbortChooseTeamsFriendly
-
-; ===== ChooseTeamsFriendlyOnSelect76 =====
-; prototype: void __usercall ChooseTeamsFriendlyOnSelect76()
-ChooseTeamsFriendlyOnSelect76:
-                jmp     _ChooseTeamsFriendlyOnSelect76
-
 ; ===== ChooseTeamsFriendlyCommon =====
 ; prototype: __int16 __usercall ChooseTeamsFriendlyCommon@<d0>(struct MenuEntry *entry@<a5>)
 ; in:
@@ -32347,14 +31501,6 @@ teamNumbersIndices:
                                         ; its index is copied here.
 numSelectedTeamsCopy:
                 dc.w $0000
-
-; ===== ShowDesignDIYLeagueMenu ===== (ported to C → _ShowDesignDIYLeagueMenu)
-ShowDesignDIYLeagueMenu:
-                jmp     _ShowDesignDIYLeagueMenu
-
-; ===== ShowLeagueInfo ===== (ported to C → _ShowLeagueInfo)
-ShowLeagueInfo:
-                jmp     _ShowLeagueInfo
 
 ; ===== ShowDiyLeaguesTournamentMenu =====
 ; prototype: void __usercall ShowDiyLeaguesTournamentMenu(__int16 arg0@<d0>, __int16 arg1@<d1>, __int16 arg2@<d2>)
@@ -32928,35 +32074,9 @@ diyLeagueEndingMonthStrTable:
 asc_131FF2:
                 dc.b "-",0
 
-; ===== DesignDIYLeagueInit =====
-; prototype: void __usercall DesignDIYLeagueInit()
-DesignDIYLeagueInit:
-                jmp     _DesignDIYLeagueInit
-
-; ===== DesignDIYLeagueFinish =====
-; prototype: void __usercall DesignDIYLeagueFinish()
-DesignDIYLeagueFinish:
-                jmp     _DesignDIYLeagueFinish
-
 ; ===== DesignDIYLeagueUpdatePromotionRelegationText =====
 ; prototype: void __usercall DesignDIYLeagueUpdatePromotionRelegationText()
 ; DOS: cseg_47981
-DesignDIYLeagueUpdatePromotionRelegationText:
-                jmp     _DesignDIYLeagueUpdatePromotionRelegationText
-
-; ===== DIYLeagueSetVariousFields =====
-; prototype: void __usercall DIYLeagueSetVariousFields()
-DIYLeagueSetVariousFields:
-                jmp     _DIYLeagueSetVariousFields
-
-; ===== DIYLeagueOKSelected =====
-; prototype: void __usercall DIYLeagueOKSelected()
-DIYLeagueOKSelected:
-                jmp     _DIYLeagueOKSelected
-
-; ===== DesignDIYLeagueOK ===== (ported to C → _DesignDIYLeagueOK)
-DesignDIYLeagueOK:
-                jmp     _DesignDIYLeagueOK
 jmp_SetExitMenuFlag_6:
                 jmp     SetExitMenuFlag
 
@@ -32967,21 +32087,6 @@ DesignDIYLeagueSetName:
                 jsr     _DesignDIYLeagueSetName
                 addq.l  #4,sp
                 rts
-
-; ===== DesignDIYLeagueChooseTeams =====
-; prototype: void __usercall DesignDIYLeagueChooseTeams()
-DesignDIYLeagueChooseTeams:
-                jmp     _DesignDIYLeagueChooseTeams
-
-; ===== DIYSetMonthsOrPitchTypeEntries =====
-; prototype: void __usercall DIYSetMonthsOrPitchTypeEntries()
-DIYSetMonthsOrPitchTypeEntries:
-                jmp     _DIYSetMonthsOrPitchTypeEntries
-
-; ===== DIYLeagueChangePitchTypeOrSeason =====
-; prototype: void __usercall DIYLeagueChangePitchTypeOrSeason()
-DIYLeagueChangePitchTypeOrSeason:
-                jmp     _DIYLeagueChangePitchTypeOrSeason
 
 ; ===== DesignDIYLeagueChangePitchType =====
 ; prototype: void __usercall DesignDIYLeagueChangePitchType(struct MenuEntry *entry@<a5>)
@@ -33039,11 +32144,6 @@ DesignDIYLeagueChangeNumPointsForWin:
                 addq.l  #4,sp
                 rts
 
-; ===== ConvertMinMaxSubstitutesNumbers =====
-; prototype: void __usercall ConvertMinMaxSubstitutesNumbers()
-ConvertMinMaxSubstitutesNumbers:
-                jmp     _ConvertMinMaxSubstitutesNumbers
-
 ; ===== DesignDIYLeagueChangeMinSubstitutes =====
 ; prototype: void __usercall DesignDIYLeagueChangeMinSubstitutes(struct MenuEntry *entry@<a5>)
 DesignDIYLeagueChangeMinSubstitutes:
@@ -33059,10 +32159,6 @@ DesignDIYLeagueChangeMaxSubstitutes:
                 jsr     _DesignDIYLeagueChangeMaxSubstitutes
                 addq.l  #4,sp
                 rts
-
-; ===== SetNumberOfTeamsToSelect ===== (ported to C → _SetNumberOfTeamsToSelect)
-SetNumberOfTeamsToSelect:
-                jmp     _SetNumberOfTeamsToSelect
 diyPitchTypeOrSeason_1:
                 dc.w $0000
 diyLeagueStartingMonth:
@@ -33905,32 +33001,12 @@ diyLeagueTournamentMenu:
                 dc.w MENU_CMD_END       ; entry42_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== DIYLeagueTournamentInit ===== (ported to C → _DIYLeagueTournamentInit)
-DIYLeagueTournamentInit:
-                jmp     _DIYLeagueTournamentInit
-
 ; ===== DIYLeagueTournamentOnRestore ===== (ported to C → _DIYLeagueTournamentOnRestore)
 DIYLeagueTournamentOnRestore:
                 movem.l d0-d7/a0-a6,-(sp)
                 jsr     _DIYLeagueTournamentOnRestore
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
-
-; ===== jmp_SetExitMenuFlag_7 ===== (ported to C → _jmp_SetExitMenuFlag_7)
-jmp_SetExitMenuFlag_7:
-                jmp     _jmp_SetExitMenuFlag_7
-
-; ===== DIYLeagueTournamentStats ===== (ported to C → _DIYLeagueTournamentStats)
-DIYLeagueTournamentStats:
-                jmp     _DIYLeagueTournamentStats
-
-; ===== DIYLeagueTournamentExit ===== (ported to C → _DIYLeagueTournamentExit)
-DIYLeagueTournamentExit:
-                jmp     _DIYLeagueTournamentExit
-
-; ===== DIYLeagueTournament_UpdateViewOptionsAvailability ===== (ported to C)
-DIYLeagueTournament_UpdateViewOptionsAvailability:
-                jmp     _DIYLeagueTournament_UpdateViewOptionsAvailability
 
 ; ===== DIYLeagueTournamentMatch ===== (ported to C → _DIYLeagueTournamentMatch)
 DIYLeagueTournamentMatch:
@@ -33985,26 +33061,6 @@ DIYLeagueTournamentViewResult:
                 addq.l  #4,sp
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-
-; ===== DIYLeagueTournamentMatchCommon ===== (ported to C → _DIYLeagueTournamentMatchCommon)
-DIYLeagueTournamentMatchCommon:
-                jmp     _DIYLeagueTournamentMatchCommon
-
-; ===== DIYSetTeamNamesAndResults ===== (ported to C → _DIYSetTeamNamesAndResults)
-DIYSetTeamNamesAndResults:
-                jmp     _DIYSetTeamNamesAndResults
-
-; ===== DIYLeagueTournamentNextMatch ===== (ported to C → _DIYLeagueTournamentNextMatch)
-DIYLeagueTournamentNextMatch:
-                jmp     _DIYLeagueTournamentNextMatch
-
-; ===== DIYLeagueTournament_DrawPlayMatchAndFixtureHeader ===== (ported to C)
-DIYLeagueTournament_DrawPlayMatchAndFixtureHeader:
-                jmp     _DIYLeagueTournament_DrawPlayMatchAndFixtureHeader
-
-; ===== DIYLeagueTournament_SetupCurrentFixtureTeamNames ===== (ported to C)
-DIYLeagueTournament_SetupCurrentFixtureTeamNames:
-                jmp     _DIYLeagueTournament_SetupCurrentFixtureTeamNames
 loc_132E24:
                 bsr.w   DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus
                 lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$38)).l,a5
@@ -34036,26 +33092,10 @@ groupStringTable:
                 dc.l aGroupG            ; element[6]
                 dc.l aGroupH            ; element[7]
 
-; ===== DIYLeagueTournamentScrollUp ===== (ported to C → _DIYLeagueTournamentScrollUp)
-DIYLeagueTournamentScrollUp:
-                jmp     _DIYLeagueTournamentScrollUp
-
-; ===== DIYLeagueTournamentScrollDown ===== (ported to C → _DIYLeagueTournamentScrollDown)
-DIYLeagueTournamentScrollDown:
-                jmp     _DIYLeagueTournamentScrollDown
-
 ; ===== nullsub_15 =====
 ; prototype: void nullsub_15(...)
 nullsub_15:
                 rts
-
-; ===== DIYLeagueTournament_ScrollFixtureListToCurrentFixture ===== (ported to C)
-DIYLeagueTournament_ScrollFixtureListToCurrentFixture:
-                jmp     _DIYLeagueTournament_ScrollFixtureListToCurrentFixture
-
-; ===== DIYLeagueTournament_EnsureCurrentFixtureVisible ===== (ported to C)
-DIYLeagueTournament_EnsureCurrentFixtureVisible:
-                jmp     _DIYLeagueTournament_EnsureCurrentFixtureVisible
 diyLeagueTournament_viewOptionsAvailable:
                 dc.w $0000
 diyLeagueTournament_fixtureRowHeight:
@@ -34088,14 +33128,6 @@ diyRightTeamResult:
                 dc.w $0000
 pad_133328:
                 dc.b 0,0
-
-; ===== ShowDesignDIYCupMenu ===== (ported to C → _ShowDesignDIYCupMenu)
-ShowDesignDIYCupMenu:
-                jmp     _ShowDesignDIYCupMenu
-
-; ===== ShowCupInfo ===== (ported to C → _ShowCupInfo)
-ShowCupInfo:
-                jmp     _ShowCupInfo
 
 ; ===== ShowDIYCupMenuWithParams =====
 ; prototype: void __usercall ShowDIYCupMenuWithParams(__int16 a0@<d0>, __int16 a1@<d1>, __int16 a2@<d2>)
@@ -35422,31 +34454,13 @@ diyCupPenaltiesStringTable5:
 aHyphen:
                 dc.b "-",0
 
-; ===== DesignDIYCupInit =====
-; prototype: void __usercall DesignDIYCupInit()
-DesignDIYCupInit:
-                jmp     _DesignDIYCupInit
-
-; ===== DesignDIYCupReinit =====
-; prototype: void __usercall DesignDIYCupReinit()
-DesignDIYCupReinit:
-                jmp     _DesignDIYCupReinit
-
 ; ===== DesignDIYCup_UpdateStartEndMonthIndices =====
 ; prototype: void __usercall DesignDIYCup_UpdateStartEndMonthIndices()
 ; dos: cseg_44F40
-DesignDIYCup_UpdateStartEndMonthIndices:
-                jmp     _DesignDIYCup_UpdateStartEndMonthIndices
 
 ; ===== DesignDIYCup_SetupTeamsSelectionUI =====
 ; prototype: void __usercall DesignDIYCup_SetupTeamsSelectionUI()
 ; dos: cseg_44FE8
-DesignDIYCup_SetupTeamsSelectionUI:
-                jmp     _DesignDIYCup_SetupTeamsSelectionUI
-
-; ===== DesignDIYCupOK ===== (ported to C → _DesignDIYCupOK)
-DesignDIYCupOK:
-                jmp     _DesignDIYCupOK
 jmp_SetExitMenuFlag_4:
                 jmp     SetExitMenuFlag
 
@@ -35457,15 +34471,6 @@ DesignDIYCupOnSelect2:
                 jsr     _DesignDIYCupOnSelect2
                 addq.l  #4,sp
                 rts
-
-; ===== DesignDIYCupOnSelect48 ===== (ported to C: _DesignDIYCupOnSelect48 in diy_competition.c)
-DesignDIYCupOnSelect48:
-                jmp     _DesignDIYCupOnSelect48
-
-; ===== DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility =====
-; prototype: void __usercall DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility()
-DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility:
-                jmp     _DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility
 
 ; ===== DesignDIYCupOnSelect3 =====
 ; prototype: void __usercall DesignDIYCupOnSelect3(struct MenuEntry *entry@<a5>)
@@ -35515,10 +34520,6 @@ DesignDIYCupOnSelect11:
                 addq.l  #4,sp
                 rts
 
-; ===== DesignDIYCup_UpdateMinSubstitutesAndPointsStrings ===== (ported to C)
-DesignDIYCup_UpdateMinSubstitutesAndPointsStrings:
-                jmp     _DesignDIYCup_UpdateMinSubstitutesAndPointsStrings
-
 ; ===== DesignDIYCupOnSelect13 =====
 ; prototype: void __usercall DesignDIYCupOnSelect13(struct MenuEntry *entry@<a5>)
 DesignDIYCupOnSelect13:
@@ -35563,14 +34564,6 @@ DesignDIYCupOnSelect22:
 ; prototype: void __usercall DesignDIYCup_GetRoundIndexFromMenuEntry(struct MenuEntry *entry@<a5>)
 DesignDIYCup_GetRoundIndexFromMenuEntry:
                 rts                     ; only called from now-ported C code
-
-; ===== DesignDIYCup_UpdateSelectTeamsPrompt ===== (ported to C)
-DesignDIYCup_UpdateSelectTeamsPrompt:
-                jmp     _DesignDIYCup_UpdateSelectTeamsPrompt
-
-; ===== DesignDIYCupOnDraw ===== (ported to C: _DesignDIYCupOnDraw in diy_competition.c)
-DesignDIYCupOnDraw:
-                jmp     _DesignDIYCupOnDraw
 diyCupPitchTypeOrSeasonSelection:
                 dc.w $0000
 diyCupStartMonthIndex:
@@ -36569,65 +35562,15 @@ diyCupMenu:
                 dc.w MENU_CMD_END       ; entry66_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== DIYCupInit =====
-; prototype: void __usercall DIYCupInit()
-DIYCupInit:
-                jmp     _DIYCupInit
-
-; ===== DIYCupFinish =====
-; prototype: void __usercall DIYCupFinish()
-DIYCupFinish:
-                jmp     _DIYCupFinish
-
 ; ===== jmp_SetExitMenuFlag_5 =====
 ; prototype: void __usercall jmp_SetExitMenuFlag_5()
 jmp_SetExitMenuFlag_5:
                 jmp     SetExitMenuFlag
 
-; ===== DesignDIYCup_UpdateRoundOptionsVisibility ===== (ported to C)
-DesignDIYCup_UpdateRoundOptionsVisibility:
-                jmp     _DesignDIYCup_UpdateRoundOptionsVisibility
-
-; ===== DesignDIYCup_BuildMenuTitleString ===== (ported to C)
-DesignDIYCup_BuildMenuTitleString:
-                jmp     _DesignDIYCup_BuildMenuTitleString
-
-; ===== DIYCupOnSelect10 =====
-; prototype: void __usercall DIYCupOnSelect10()
-DIYCupOnSelect10:
-                jmp     _DIYCupOnSelect10
-
 ; ===== DIYCupOnSelect9 =====
 ; prototype: void __usercall DIYCupOnSelect9()
 DIYCupOnSelect9:
                 jmp     SetupDIYCompetitionStatsMenu
-
-; ===== DIYCupOnSelect16 =====
-; prototype: void __usercall DIYCupOnSelect16()
-DIYCupOnSelect16:
-                jmp     _DIYCupOnSelect16
-
-; ===== DIYCupOnSelect17 =====
-; prototype: void __usercall DIYCupOnSelect17()
-DIYCupOnSelect17:
-                jmp     _DIYCupOnSelect17
-
-; ===== DIYCupOnSelect1 =====
-; prototype: void __usercall DIYCupOnSelect1()
-DIYCupOnSelect1:
-                jmp     _DIYCupOnSelect1
-
-; ===== DesignDIYCup_DrawCurrentMatchTeamEntries ===== (ported to C)
-DesignDIYCup_DrawCurrentMatchTeamEntries:
-                jmp     _DesignDIYCup_DrawCurrentMatchTeamEntries
-
-; ===== DesignDIYCup_UpdateCurrentMatchTeamEntryStrings ===== (ported to C)
-DesignDIYCup_UpdateCurrentMatchTeamEntryStrings:
-                jmp     _DesignDIYCup_UpdateCurrentMatchTeamEntryStrings
-
-; ===== DesignDIYCup_UpdateMatchListAndRedrawIfNeeded ===== (ported to C)
-DesignDIYCup_UpdateMatchListAndRedrawIfNeeded:
-                jmp     _DesignDIYCup_UpdateMatchListAndRedrawIfNeeded
 
 ; ===== DesignDIYCup_UpdateMatchListScrollAndRebuildStrings ===== (ported to C)
 ; Returns d0: 0=no change, 1=rebuilt. Caller checks via tst.w d0.
@@ -36637,10 +35580,6 @@ DesignDIYCup_UpdateMatchListScrollAndRebuildStrings:
                 movem.l (sp)+,d2-d7/a2-a6
                 tst.w   d0
                 rts
-
-; ===== DesignDIYCup_HideCurrentMatchTeamEntries ===== (ported to C)
-DesignDIYCup_HideCurrentMatchTeamEntries:
-                jmp     _DesignDIYCup_HideCurrentMatchTeamEntries
 
 ; ===== DesignDIYCup_BuildMatchListEntryStrings ===== (ported to C → _DesignDIYCup_BuildMatchListEntryStrings)
 DesignDIYCup_BuildMatchListEntryStrings:
@@ -36713,8 +35652,6 @@ DIYCupOnSelectCommon:
 ; ===== DesignDIYCup_UpdateCurrentMatchResultHeaderEntries =====
 ; prototype: void __usercall DesignDIYCup_UpdateCurrentMatchResultHeaderEntries()
 ; (ported to C: _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries)
-DesignDIYCup_UpdateCurrentMatchResultHeaderEntries:
-                jmp     _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries
 diyCupMatchListScrollIndex:
                 dc.w $0000
 diyCupMenuArg0Copy:
@@ -36744,25 +35681,14 @@ diyCupLastMatchScoreTeam1:
 diyCupLastMatchScoreTeam2:
                 dc.w $0000
 
-; ===== SetDefaultOptions =====
-; prototype: void __usercall SetDefaultOptions()
-SetDefaultOptions:
-                jmp     _SetDefaultOptions
-
 ; ===== SaveOptions =====
 ; Ported to C: _SaveOptions in src/menus.c
-SaveOptions:
-                jmp     _SaveOptions
 
 ; ===== RestoreOptions =====
 ; Ported to C: _RestoreOptions in src/menus.c
-RestoreOptions:
-                jmp     _RestoreOptions
 
 ; ===== CycleMenuMusic =====
 ; Ported to C: _CycleMenuMusic in src/audio.c
-CycleMenuMusic:
-                jmp     _CycleMenuMusic
 ; Menu_Options
 optionsMenu:
                 ; Menu_Options
@@ -37129,8 +36055,6 @@ menuMusicStrTable:
 
 ; ===== OptionsMenuBeforeDraw =====
 ; Ported to C: _OptionsMenuBeforeDraw in src/menus.c
-OptionsMenuBeforeDraw:
-                jmp     _OptionsMenuBeforeDraw
 
 ; ===== ChangePitchType =====
 ; Ported to C: _ChangePitchType in src/menus.c
@@ -37179,22 +36103,8 @@ ChangeMenuMusic:
                 jsr     _ChangeMenuMusic
                 addq.l  #4,sp
                 rts
-
-; ===== ExitOptions =====
-; prototype: void __usercall ExitOptions()
-; ===== ExitOptions ===== (ported to C → _ExitOptions)
-ExitOptions:
-                jmp     _ExitOptions
 showPrereleaseCounter:
                 dc.w $0000
-
-; ===== ShowDesignDIYTournamentMenu ===== (ported to C → _ShowDesignDIYTournamentMenu)
-ShowDesignDIYTournamentMenu:
-                jmp     _ShowDesignDIYTournamentMenu
-
-; ===== ShowTournamentInfo ===== (ported to C → _ShowTournamentInfo)
-ShowTournamentInfo:
-                jmp     _ShowTournamentInfo
 ; Menu_DesignDiyTournament
 designDiyTournamentMenu:
                 ; Menu_DesignDiyTournament
@@ -39452,26 +38362,6 @@ diyStage6PlayCountStrTab:
                 dc.l aPlayEachTeamX2    ; "PLAY EACH TEAM X 2"
                 dc.l aPlayEachTeamX3    ; "PLAY EACH TEAM X 3"
                 dc.l aPlayEachTeamX4    ; "PLAY EACH TEAM X 4"
-
-; ===== DesignDIYTournamentInit ===== (ported to C → _DesignDIYTournamentInit)
-DesignDIYTournamentInit:
-                jmp     _DesignDIYTournamentInit
-
-; ===== DesignDIYTournamentReinit ===== (ported to C → _DesignDIYTournamentReinit)
-DesignDIYTournamentReinit:
-                jmp     _DesignDIYTournamentReinit
-
-; ===== DesignDIYTournament_UpdateMonthPageIndices ===== (ported to C → _DesignDIYTournament_UpdateMonthPageIndices)
-DesignDIYTournament_UpdateMonthPageIndices:
-                jmp     _DesignDIYTournament_UpdateMonthPageIndices
-
-; ===== DesignDIYTournament_ApplyInactiveMenuColors ===== (ported to C → _DesignDIYTournament_ApplyInactiveMenuColors)
-DesignDIYTournament_ApplyInactiveMenuColors:
-                jmp     _DesignDIYTournament_ApplyInactiveMenuColors
-
-; ===== DesignDIYTournamentOK ===== (ported to C → _DesignDIYTournamentOK)
-DesignDIYTournamentOK:
-                jmp     _DesignDIYTournamentOK
 DesignDIYTournamentOnSelect91:
                 jmp     SetExitMenuFlag
 
@@ -39481,15 +38371,6 @@ DesignDIYTournamentOnSelect2:
                 jsr     _DesignDIYTournamentOnSelect2
                 addq.l  #4,sp
                 rts
-
-; ===== DesignDIYTournamentOnSelect89 =====
-; prototype: void __usercall DesignDIYTournamentOnSelect89()
-DesignDIYTournamentOnSelect89:
-                jmp     _DesignDIYTournamentOnSelect89
-
-; ===== DesignDIYTournament_UpdatePitchTypeSeasonalUI ===== (ported to C → _DesignDIYTournament_UpdatePitchTypeSeasonalUI)
-DesignDIYTournament_UpdatePitchTypeSeasonalUI:
-                jmp     _DesignDIYTournament_UpdatePitchTypeSeasonalUI
 
 ; ===== DesignDIYTournamentOnSelect3 ===== (ported to C → _DesignDIYTournamentOnSelect3)
 DesignDIYTournamentOnSelect3:
@@ -39525,10 +38406,6 @@ DesignDIYTournamentOnSelect9:
                 jsr     _DesignDIYTournamentOnSelect9
                 addq.l  #4,sp
                 rts
-
-; ===== DesignDIYTournament_UpdateTwoNumericFieldsText ===== (ported to C)
-DesignDIYTournament_UpdateTwoNumericFieldsText:
-                jmp     _DesignDIYTournament_UpdateTwoNumericFieldsText
 
 ; ===== DesignDIYTournamentOnSelect11 ===== (ported to C → _DesignDIYTournamentOnSelect11)
 DesignDIYTournamentOnSelect11:
@@ -39589,14 +38466,6 @@ DesignDIYTournamentOnSelect28:
 ; ===== DesignDIYTournament_GetStageBlockFromMenuEntry ===== (replaced by static getTournamentStageBlock in C)
 DesignDIYTournament_GetStageBlockFromMenuEntry:
                 rts             ; dead — all callers ported to C
-
-; ===== DesignDIYTournament_UpdateSelectTeamsPrompt ===== (ported to C)
-DesignDIYTournament_UpdateSelectTeamsPrompt:
-                jmp     _DesignDIYTournament_UpdateSelectTeamsPrompt
-
-; ===== DesignDIYTournamentOnDraw ===== (ported to C → _DesignDIYTournamentOnDraw)
-DesignDIYTournamentOnDraw:
-                jmp     _DesignDIYTournamentOnDraw
 ; (old OnDraw body removed — ported to C)
 ; ===== DesignDIYTournament_CacheStageSelection ===== (ported to C → _DesignDIYTournament_CacheStageSelection)
 DesignDIYTournament_CacheStageSelection:
@@ -39737,26 +38606,6 @@ diyCompetitionMenu:
 
                 dc.w $0000              ; -= end entry 4 =-
                 dc.w -999               ; -= end menu =-
-
-; ===== SelectDiyLeagueMenu =====
-; prototype: void __usercall SelectDiyLeagueMenu()
-SelectDiyLeagueMenu:
-                jmp     _SelectDiyLeagueMenu
-
-; ===== SelectDiyCupMenu =====
-; prototype: void __usercall SelectDiyCupMenu()
-SelectDiyCupMenu:
-                jmp     _SelectDiyCupMenu
-
-; ===== SelectDiyTournamentMenu =====
-; prototype: void __usercall SelectDiyTournamentMenu()
-SelectDiyTournamentMenu:
-                jmp     _SelectDiyTournamentMenu
-
-; ===== SelectDiyExitMenu =====
-; prototype: void __usercall SelectDiyExitMenu()
-SelectDiyExitMenu:
-                jmp     _SelectDiyExitMenu
 diySelected:
                 dc.w $0000              ; 0  - League
                                         ; 1  - cup
@@ -39768,14 +38617,6 @@ pad_136DFA:
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0,0,0,0,0
-
-; ===== Friendly ===== (ported to C → _Friendly, includes ContestInProgress)
-Friendly:
-                jmp     _Friendly
-
-; ===== ShowFriendlyMenu ===== (ported to C → _ShowFriendlyMenu)
-ShowFriendlyMenu:
-                jmp     _ShowFriendlyMenu
 
 ; ===== ContestInProgress ===== (merged into _Friendly)
 ContestInProgress:
@@ -40061,42 +38902,14 @@ friendly_season_table:
                 dc.l aOct               ; "OCT"
                 dc.l aNov               ; "NOV"
                 dc.l aDec               ; "DEC"
-
-; ===== FriendlyMenuInit ===== (ported to C → _FriendlyMenuInit)
-FriendlyMenuInit:
-                jmp     _FriendlyMenuInit
-
-; ===== FriendlyMenuReinit ===== (ported to C → _FriendlyMenuReinit)
-FriendlyMenuReinit:
-                jmp     _FriendlyMenuReinit
-
-; ===== DrawNumbersOfSubstitutes ===== (ported to C → _DrawNumbersOfSubstitutes)
-DrawNumbersOfSubstitutes:
-                jmp     _DrawNumbersOfSubstitutes
-
-; ===== DisableEntries ===== (ported to C → _DisableEntries)
-DisableEntries:
-                jmp     _DisableEntries
-
-; ===== FriendlyOK ===== (ported to C → _FriendlyOK)
-FriendlyOK:
-                jmp     _FriendlyOK
 jmpSetExitMenuFlag:
                 jmp     SetExitMenuFlag
 
-; ===== ChooseTeamsMenu ===== (ported to C → _ChooseTeamsMenu)
-ChooseTeamsMenu:
-                jmp     _ChooseTeamsMenu
-
 ; ===== PitchTypeOrSeasonProc =====
 ; Ported to C: _PitchTypeOrSeasonProc in src/menus.c
-PitchTypeOrSeasonProc:
-                jmp     _PitchTypeOrSeasonProc
 
 ; ===== SetFriendlyPitchOrSeason =====
 ; Ported to C: _SetFriendlyPitchOrSeason in src/menus.c
-SetFriendlyPitchOrSeason:
-                jmp     _SetFriendlyPitchOrSeason
 
 ; ===== FriendlyPitchTypeProc =====
 ; Ported to C: _FriendlyPitchTypeProc in src/menus.c
@@ -40106,22 +38919,6 @@ FriendlyPitchTypeProc:
                 jsr     _FriendlyPitchTypeProc
                 addq.l  #4,sp
                 rts
-
-; ===== MinSubstitutes ===== (ported to C → _MinSubstitutes)
-MinSubstitutes:
-                jmp     _MinSubstitutes
-
-; ===== MaxSubstitutes ===== (ported to C → _MaxSubstitutes)
-MaxSubstitutes:
-                jmp     _MaxSubstitutes
-
-; ===== SetSelectTwoTeamsText ===== (ported to C → _SetSelectTwoTeamsText)
-SetSelectTwoTeamsText:
-                jmp     _SetSelectTwoTeamsText
-
-; ===== RandomlySwapTeams ===== (ported to C → _RandomlySwapTeams)
-RandomlySwapTeams:
-                jmp     _RandomlySwapTeams
 friendlyOk:
                 dc.w $0000              ; Initialised to 0
                                         ; set to 1 when ok is selected in friendly game menu
@@ -41583,15 +40380,6 @@ shirtTypesTable:
 shirtsIndexTable:
                 dc.b $00,$16,$00,$04,$00,$14,$00,$1C,$00,$1A,$00,$0E,$00,$18,$00,$1E
 
-; ===== EditTeamsInit =====
-; prototype: void __usercall EditTeamsInit()
-EditTeamsInit:
-                jmp     _EditTeamsInit
-
-; ===== EditTeamsFinish ===== (ported to C → _EditTeamsFinish)
-EditTeamsFinish:
-                jmp     _EditTeamsFinish
-
 ; ===== ImportTeamsMenu =====
 ; Bridge to C: _ImportTeamsMenu
 ImportTeamsMenu:
@@ -41603,43 +40391,6 @@ ImportTeamsMenu:
 ; ===== EditTeamsUndo =====
 ; prototype: void __usercall EditTeamsUndo()
 ; Restore team currently editing.
-EditTeamsUndo:
-                jmp     _EditTeamsUndo
-
-; ===== EditTeamsOK =====
-; prototype: void __usercall EditTeamsOK()
-EditTeamsOK:
-                jmp     _EditTeamsOK
-
-; ===== EditTeamsChangeShirtsPrimary =====
-; prototype: void __usercall EditTeamsChangeShirtsPrimary()
-EditTeamsChangeShirtsPrimary:
-                jmp     _EditTeamsChangeShirtsPrimary
-
-; ===== EditTeamsChangeShirtsSecondary =====
-; prototype: void __usercall EditTeamsChangeShirtsSecondary()
-EditTeamsChangeShirtsSecondary:
-                jmp     _EditTeamsChangeShirtsSecondary
-
-; ===== EditTeamsChangeShortsPrimary =====
-; prototype: void __usercall EditTeamsChangeShortsPrimary()
-EditTeamsChangeShortsPrimary:
-                jmp     _EditTeamsChangeShortsPrimary
-
-; ===== EditTeamsChangeShortsSecondary =====
-; prototype: void __usercall EditTeamsChangeShortsSecondary()
-EditTeamsChangeShortsSecondary:
-                jmp     _EditTeamsChangeShortsSecondary
-
-; ===== EditTeamsChangeSocksPrimary =====
-; prototype: void __usercall EditTeamsChangeSocksPrimary()
-EditTeamsChangeSocksPrimary:
-                jmp     _EditTeamsChangeSocksPrimary
-
-; ===== EditTeamsChangeSocksSecondary =====
-; prototype: void __usercall EditTeamsChangeSocksSecondary()
-EditTeamsChangeSocksSecondary:
-                jmp     _EditTeamsChangeSocksSecondary
 
 ; ===== EditTeamsSelectPrimaryShirtType =====
 ; prototype: void __usercall EditTeamsSelectPrimaryShirtType(MenuEntry *menu@<a5>)
@@ -41695,8 +40446,6 @@ EditTeamsChangePlayerFace:
 ; to team settings, for both kits.
 ; Also do some kind of color conversion.
 ; Reads all from edit teams selected team.
-InitEditTeamsMenu:
-                jmp     _InitEditTeamsMenu
 
 ; ===== EditTeamsPlayersBeforeDraw =====
 ; prototype: void __usercall EditTeamsPlayersBeforeDraw(MenuEntry *menu@<a5>)
@@ -41763,8 +40512,6 @@ loc_1382F6:
 ; ===== TopGoalScorersMenu_0 =====
 ; prototype: void __usercall TopGoalScorersMenu_0()
 ; Ported to C: _TopGoalScorersMenu_0 in src/statistics.c
-TopGoalScorersMenu_0:
-                jmp     _TopGoalScorersMenu_0
 
 ; ===== PopulateHighestScorersTableFromSelectedTeams =====
 ; prototype: void __usercall PopulateHighestScorersTableFromSelectedTeams()
@@ -42575,13 +41322,9 @@ competitionTopGoalScorersMenu:
 ; ===== CompetitionTopGoalScorersInit =====
 ; prototype: void __usercall CompetitionTopGoalScorersInit()
 ; Ported to C: _CompetitionTopGoalScorersInit in src/statistics.c
-CompetitionTopGoalScorersInit:
-                jmp     _CompetitionTopGoalScorersInit
 
 ; ===== CompetitionTopGoalScorersExit =====
 ; Ported to C: _CompetitionTopGoalScorersExit in src/menus.c
-CompetitionTopGoalScorersExit:
-                jmp     _CompetitionTopGoalScorersExit
 ; Menu_TopGoalScorers
 topGoalScorersMenu:
                 ; Menu_TopGoalScorers
@@ -42946,8 +41689,6 @@ topGoalScorersMenu:
 ; ===== TopGoalScorersInit =====
 ; prototype: void __usercall TopGoalScorersInit()
 ; Ported to C: _TopGoalScorersInit in src/statistics.c
-TopGoalScorersInit:
-                jmp     _TopGoalScorersInit
 
 ; ===== TopGoalScorersBeforeDrawCommon =====
 ; prototype: void __usercall TopGoalScorersBeforeDrawCommon(MenuEntry *entry@<a5>)
@@ -42961,8 +41702,6 @@ TopGoalScorersBeforeDrawCommon:
 
 ; ===== TopGoalScorersExit =====
 ; Ported to C: _TopGoalScorersExit in src/menus.c
-TopGoalScorersExit:
-                jmp     _TopGoalScorersExit
 diyStatsName:
                 dc.l $00000000          ; raw
 
@@ -44087,18 +42826,12 @@ SquadFinish:
 
 ; ===== SelectTraining =====
 ; Ported to C: _SelectTraining in src/menus.c
-SelectTraining:
-                jmp     _SelectTraining
 
 ; ===== SelectGoals =====
 ; Ported to C: _SelectGoals in src/menus.c
-SelectGoals:
-                jmp     _SelectGoals
 
 ; ===== SquadOnSelect11 =====
 ; Ported to C: _SquadOnSelect11 in src/menus.c
-SquadOnSelect11:
-                jmp     _SquadOnSelect11
 
 ; ===== j_SetExitMenuFlag =====
 ; prototype: void j_SetExitMenuFlag(...)
@@ -44107,13 +42840,9 @@ j_SetExitMenuFlag:
 
 ; ===== SquadOnSelect45 =====
 ; Ported to C: _SquadOnSelect45 in src/menus.c
-SquadOnSelect45:
-                jmp     _SquadOnSelect45
 
 ; ===== Squad45AfterDraw =====
 ; Ported to C: _Squad45AfterDraw in src/menus.c
-Squad45AfterDraw:
-                jmp     _Squad45AfterDraw
 
 ; ===== SquadUpdateGoalsMenuText =====
 ; Ported to C: _SquadUpdateGoalsMenuText in src/menus.c
@@ -44798,8 +43527,6 @@ loc_13A5F8:
 
 ; ===== SquadRedrawPlayerListAndCheckMark =====
 ; Ported to C: _SquadRedrawPlayerListAndCheckMark in src/menus.c
-SquadRedrawPlayerListAndCheckMark:
-                jmp     _SquadRedrawPlayerListAndCheckMark
 
 ; ===== SquadMenuSavePlayerPositions =====
 ; Ported to C: _SquadMenuSavePlayerPositions in src/menus.c
@@ -44811,8 +43538,6 @@ SquadMenuSavePlayerPositions:
 
 ; ===== SquadCommitPositionsAndUpdateSkill =====
 ; Ported to C: _SquadCommitPositionsAndUpdateSkill in src/menus.c
-SquadCommitPositionsAndUpdateSkill:
-                jmp     _SquadCommitPositionsAndUpdateSkill
 
 ; ===== UpdateBigCheckMark =====
 ; Ported to C: _UpdateBigCheckMark in src/menus.c
@@ -44995,13 +43720,9 @@ competitionStatsMenu:
 ; ===== StatsHighestScorerList =====
 ; prototype: void __usercall StatsHighestScorerList(__int16 mode@<d0>, const char *diyName@<a0>)
 ; Ported to C: _StatsHighestScorerList in src/statistics.c
-StatsHighestScorerList:
-                jmp     _StatsHighestScorerList
 
 ; ===== CompetitionInfo =====
 ; Ported to C: _CompetitionInfo in src/menus.c
-CompetitionInfo:
-                jmp     _CompetitionInfo
 
 ; ===== StatsViewSquads ===== (ported to C → _StatsViewSquads)
 StatsViewSquads:
@@ -45012,8 +43733,6 @@ StatsViewSquads:
 
 ; ===== StatsExit =====
 ; Ported to C: _StatsExit in src/menus.c
-StatsExit:
-                jmp     _StatsExit
 diyCompetitionType:
                 dc.w $0000
 diyUnknownWord_2C:
@@ -45219,42 +43938,20 @@ careerOverMenu:
 
 ; ===== CareerOverInit =====
 ; Ported to C: _CareerOverInit in src/menus.c
-CareerOverInit:
-                jmp     _CareerOverInit
 
 ; ===== CareerOverFinish =====
 ; Ported to C: _CareerOverFinish in src/menus.c
-CareerOverFinish:
-                jmp     _CareerOverFinish
 
 ; ===== CareerOverUpdateJobOffersEntry =====
 ; Ported to C (static in menus.c, called from _CareerOverFinish)
 CareerOverUpdateJobOffersEntry:
                 rts
 
-; ===== ViewCompetitionsMenuRetired ===== (ported to C → _ViewCompetitionsMenuRetired)
-ViewCompetitionsMenuRetired:
-                jmp     _ViewCompetitionsMenuRetired
-
 ; ===== JobOffersMenuRetired =====
 ; Ported to C: _JobOffersMenuRetired in src/menus.c
-JobOffersMenuRetired:
-                jmp     _JobOffersMenuRetired
-
-; ===== ContinueCareer ===== (ported to C → _ContinueCareer)
-ContinueCareer:
-                jmp     _ContinueCareer
-
-; ===== SaveCareer =====
-; prototype: __int16 __usercall SaveCareer@<d0>()
-; ===== SaveCareer ===== (ported to C → _SaveCareer)
-SaveCareer:
-                jmp     _SaveCareer
 
 ; ===== ExitCareerMenu =====
 ; Ported to C: _ExitCareerMenu in src/menus.c
-ExitCareerMenu:
-                jmp     _ExitCareerMenu
 
 ; ===== SelectTeamToManage =====
 ; Bridge to C: _SelectTeamToManage
@@ -45554,13 +44251,9 @@ offsetCoachOrPlayer:
 
 ; ===== CareerMenuInit =====
 ; Ported to C: _CareerMenuInit in src/menus.c
-CareerMenuInit:
-                jmp     _CareerMenuInit
 
 ; ===== CareerMenuFinish =====
 ; Ported to C: _CareerMenuFinish in src/menus.c
-CareerMenuFinish:
-                jmp     _CareerMenuFinish
 
 ; ===== SetNationalityField =====
 ; Ported to C (static in menus.c, called from _CareerMenuFinish and _ChangeNationality)
@@ -45582,14 +44275,6 @@ SetPlayerCoachFieldColor:
                 jsr     _SetPlayerCoachFieldColor
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
-
-; ===== ChooseTeamAndStartCareer ===== (ported to C → _ChooseTeamAndStartCareer in career_init.c)
-ChooseTeamAndStartCareer:
-                jmp     _ChooseTeamAndStartCareer
-
-; ===== LoadLiverpool ===== (ported to C → _LoadLiverpool in career_init.c)
-LoadLiverpool:
-                jmp     _LoadLiverpool
 
 ; ===== C→asm bridge: _CSelectTeamToManage =====
 ; Calls SelectTeamToManage, returns a0 as C return value,
@@ -45666,8 +44351,6 @@ CoachOrPlayerCoach:
 
 ; ===== j_SetExitMenuFlag2 =====
 ; Updated: direct jmp to C
-j_SetExitMenuFlag2:
-                jmp     _SetExitMenuFlag
 nationalityOrdinal:
                 dc.b $00
 pad_13B35F:
@@ -45876,29 +44559,9 @@ viewCompetitionsMenu:
 
 ; ===== ViewCompetitionsInit =====
 ; Ported to C: _ViewCompetitionsInit in src/menus.c
-ViewCompetitionsInit:
-                jmp     _ViewCompetitionsInit
 
 ; ===== ViewCompetitionsOnReturn =====
 ; Ported to C: _ViewCompetitionsOnReturn in src/menus.c
-ViewCompetitionsOnReturn:
-                jmp     _ViewCompetitionsOnReturn
-
-; ===== OpenDiyFromFile ===== (ported to C → _OpenDiyFromFile)
-OpenDiyFromFile:
-                jmp     _OpenDiyFromFile
-
-; ===== OpenDiyPreset1 ===== (ported to C → _OpenDiyPreset1)
-OpenDiyPreset1:
-                jmp     _OpenDiyPreset1
-
-; ===== OpenDiyPreset2 ===== (ported to C → _OpenDiyPreset2)
-OpenDiyPreset2:
-                jmp     _OpenDiyPreset2
-
-; ===== OpenDiyPreset3 ===== (ported to C → _OpenDiyPreset3)
-OpenDiyPreset3:
-                jmp     _OpenDiyPreset3
 
 ; ===== ShowDiyCompetitionForSource ===== (ported to C → _ShowDiyCompetitionForSource)
 ; C bridge: push a0 (header ptr), call C, clean stack
@@ -45912,17 +44575,9 @@ ShowDiyCompetitionForSource:
 
 ; ===== TopGoalScorersMenu =====
 ; Updated: direct jmp to C
-TopGoalScorersMenu:
-                jmp     _TopGoalScorersMenu_0
-
-; ===== ManagementRecordMenu ===== (ported to C → _ManagementRecordMenu)
-ManagementRecordMenu:
-                jmp     _ManagementRecordMenu
 
 ; ===== jmp_SetExitMenuFlag_2 =====
 ; Updated: direct jmp to C
-jmp_SetExitMenuFlag_2:
-                jmp     _SetExitMenuFlag
 ; Menu_Contest
 contestMenu:
                 ; Menu_Contest
@@ -46629,16 +45284,6 @@ contestMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== ContestMenuInit =====
-; prototype: void __usercall ContestMenuInit()
-ContestMenuInit:
-                jmp     _ContestMenuInit
-
-; ===== ContestMenuOnReturn =====
-; prototype: void __usercall ContestMenuOnReturn()
-ContestMenuOnReturn:
-                jmp     _ContestMenuOnReturn
-
 ; ===== PlayMatchMenu =====
 ; prototype: void __usercall PlayMatchMenu()
 PlayMatchMenu:
@@ -46655,11 +45300,6 @@ NextMatch:
                 addq.l  #4,sp
                 rts
 
-; ===== ViewCompetitionsMenu =====
-; prototype: void __usercall ViewCompetitionsMenu()
-ViewCompetitionsMenu:
-                jmp     _ViewCompetitionsMenu
-
 ; ===== SquadMenu =====
 ; ===== SquadMenu ===== (ported to C → _SquadMenu)
 SquadMenu:
@@ -46668,69 +45308,8 @@ SquadMenu:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== ClubBusinessMenu =====
-; prototype: void __usercall ClubBusinessMenu()
-ClubBusinessMenu:
-                jmp     _ClubBusinessMenu
-
-; ===== JobOffersMenu =====
-; prototype: void __usercall JobOffersMenu()
-JobOffersMenu:
-                jmp     _JobOffersMenu
-
-; ===== SeasonFinished =====
-; prototype: void __usercall SeasonFinished()
-SeasonFinished:
-                jmp     _SeasonFinished
-
-; ===== TransfersMenu =====
-; prototype: void __usercall TransfersMenu()
-TransfersMenu:
-                jmp     _TransfersMenu
-
-; ===== ViewWorldMenu =====
-; prototype: void __usercall ViewWorldMenu()
-ViewWorldMenu:
-                jmp     _ViewWorldMenu
-
-; ===== jmp_SetExitMenuFlag =====
-; prototype: void __usercall jmp_SetExitMenuFlag()
-jmp_SetExitMenuFlag:
-                jmp     _jmp_SetExitMenuFlag
-
-; ===== ContestMenuScrollUp ===== (ported to C → _ContestMenuScrollUp)
-ContestMenuScrollUp:
-                jmp     _ContestMenuScrollUp
-
-; ===== ScrollUpInGameList ===== (ported to C → _ScrollUpInGameList)
-ScrollUpInGameList:
-                jmp     _ScrollUpInGameList
-
-; ===== ContestMenuScrollDown ===== (ported to C → _ContestMenuScrollDown)
-ContestMenuScrollDown:
-                jmp     _ContestMenuScrollDown
-
-; ===== ScrollDownInGameList ===== (ported to C → _ScrollDownInGameList)
-ScrollDownInGameList:
-                jmp     _ScrollDownInGameList
-
-; ===== RestoreContestScrollPosition =====
-; prototype: void __usercall RestoreContestScrollPosition() (ported to C → _RestoreContestScrollPosition)
-RestoreContestScrollPosition:
-                jmp     _RestoreContestScrollPosition
-
-; ===== SelectActiveContestAndRound ===== (ported to C → _SelectActiveContestAndRound)
-SelectActiveContestAndRound:
-                jmp     _SelectActiveContestAndRound
-
 ; ===== CheckClubBusiness ===== (ported to C → _CheckClubBusiness)
 ; Note: asm used absolute address ($297E).w which was entry 6 in original binary
-CheckClubBusiness:
-                jmp     _CheckClubBusiness
-
-; ===== CheckJobOffers ===== (ported to C → _CheckJobOffers)
-CheckJobOffers:
-                jmp     _CheckJobOffers
 
 ; ===== ContestMenuOnReturn_SetButtonsAndDefaultSelection ===== (ported to C → _ContestMenuOnReturn_SetButtonsAndDefaultSelection)
 ContestMenuOnReturn_SetButtonsAndDefaultSelection:
@@ -46746,10 +45325,6 @@ loc_13C020:
                 jsr     SetCurrentEntry
 locret_13C032:
                 rts
-
-; ===== ContestSetButtons ===== (ported to C → _ContestSetButtons)
-ContestSetButtons:
-                jmp     _ContestSetButtons
 locret_13C0A0:
                 rts
 loc_13C0A2:
@@ -46800,28 +45375,10 @@ loc_13C130:
 SeasonLowerButtons:
                 jmp     _SeasonLowerButtons
 
-; ===== CheckTransfers ===== (ported to C → _CheckTransfers)
-CheckTransfers:
-                jmp     _CheckTransfers
-
-; ===== BuildGameListArrayFromTeamSelectionKeyCache ===== (ported to C → _BuildGameListArrayFromTeamSelectionKeyCache)
-BuildGameListArrayFromTeamSelectionKeyCache:
-                jmp     _BuildGameListArrayFromTeamSelectionKeyCache
-
-; ===== PrintNameAndSeason =====
-; prototype: void __usercall PrintNameAndSeason()
-PrintNameAndSeason:
-                jmp     _PrintNameAndSeason
-
 ; ===== ContestMenuOnReturn_NoOp =====
 ; prototype: void ContestMenuOnReturn_NoOp(...)
 ContestMenuOnReturn_NoOp:
                 rts
-
-; ===== SetNationalSelectorButtons =====
-; prototype: void __usercall SetNationalSelectorButtons()
-SetNationalSelectorButtons:
-                jmp     _SetNationalSelectorButtons
 
 ; ===== CareerGameListCommon =====
 ; prototype: void __usercall CareerGameListCommon(struct MenuEntry *item@<a5>)
@@ -47161,28 +45718,18 @@ managementRecordMenu:
 
 ; ===== ManagementRecordInit =====
 ; Ported to C: _ManagementRecordInit in src/statistics.c
-ManagementRecordInit:
-                jmp     _ManagementRecordInit
 
 ; ===== jmp_SetExitMenuFlag_3 =====
 ; Updated: direct jmp to C
-jmp_SetExitMenuFlag_3:
-                jmp     _SetExitMenuFlag
 
 ; ===== ManagementArrowUpSelect =====
 ; Ported to C: _ManagementArrowUpSelect in src/statistics.c
-ManagementArrowUpSelect:
-                jmp     _ManagementArrowUpSelect
 
 ; ===== ManagementArrowDownSelect =====
 ; Ported to C: _ManagementArrowDownSelect in src/statistics.c
-ManagementArrowDownSelect:
-                jmp     _ManagementArrowDownSelect
 
 ; ===== FillManagementRecordInfo =====
 ; Ported to C: _FillManagementRecordInfo in src/statistics.c
-FillManagementRecordInfo:
-                jmp     _FillManagementRecordInfo
 loc_13CD74:
                 cmpi.w  #$A,d2
                 bcs.s   loc_13CD82
@@ -47617,8 +46164,6 @@ GetCurrentSeasonPointer:
 
 ; ===== Career_StorePromotionRelegationInSeasonInfo =====
 ; Ported to C: _Career_StorePromotionRelegationInSeasonInfo in src/statistics.c
-Career_StorePromotionRelegationInSeasonInfo:
-                jmp     _Career_StorePromotionRelegationInSeasonInfo
 
 ; ===== Career_FillCurrentSeasonInfo =====
 ; Ported to C: _Career_FillCurrentSeasonInfo in src/statistics.c
@@ -48849,8 +47394,6 @@ SelTeamForTacticsInit:
 
 ; ===== SelTeamForTacticsExit =====
 ; Ported to C: _SelTeamForTacticsExit in src/menus.c
-SelTeamForTacticsExit:
-                jmp     _SelTeamForTacticsExit
 
 ; ===== SelTeamForTacticsCommon =====
 ; Ported to C: _SelTeamForTacticsCommon in src/menus.c (a5 bridge)
@@ -48862,8 +47405,6 @@ SelTeamForTacticsCommon:
 
 ; ===== SelTeamForTactics_ReflowTeamListLayout =====
 ; Ported to C: _SelTeamForTactics_ReflowTeamListLayout in src/menus.c
-SelTeamForTactics_ReflowTeamListLayout:
-                jmp     _SelTeamForTactics_ReflowTeamListLayout
 chooseTeamMenuName:
                 dc.l $00000000          ; Pointer to name of menu when selecting team for
                                         ; edit tactics
@@ -49042,24 +47583,9 @@ ChooseTeamsDialogWithNationality:
                 move.w  (selectedTeamCountryNumber).l,d0
                 movea.l (selectedTeamPtr).l,a0
                 rts
-
-; ===== ChooseCompetitionMenu =====
-; prototype: void __usercall ChooseCompetitionMenu()
-ChooseCompetitionMenu:
-                jmp     _ChooseCompetitionMenu
-
-; ===== SelectTeamsForPresetCompetition =====
-; prototype: void __usercall SelectTeamsForPresetCompetition()
-SelectTeamsForPresetCompetition:
-                jmp     _SelectTeamsForPresetCompetition
 choosingPreset:
                 dc.w $0000              ; Set to true when select teams menu is used for selecting
                                         ; preset competition
-
-; ===== ChooseSeasonMenu =====
-; prototype: void __usercall ChooseSeasonMenu()
-ChooseSeasonMenu:
-                jmp     _ChooseSeasonMenu
 
 ; ===== GoGetTeamsForPlay =====
 ; prototype: void __usercall GoGetTeamsForPlay(unsigned __int16 showClubTeams@<d2>, unsigned __int16 showNationalTeams@<d3>, unsigned __int16 showOrigCustomTeams@<d4>, const char *gameTypeStr@<a0>, const char *playWhatStr@<a1>, unsigned __int16 numNeededTeams@<d0>)
@@ -50538,30 +49064,15 @@ SelectTeamsReinit:
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
 
-; ===== SetLeagueNames =====
-; prototype: void __usercall SetLeagueNames()
-SetLeagueNames:
-                jmp     _SetLeagueNames
-
 ; ===== SetCountryNames =====
 ; prototype: void __usercall SetCountryNames()
 ; Also make non showing team entries invisible.
-SetCountryNames:
-                jmp     _SetCountryNames
-
-; ===== ViewSelectedTeams ===== (ported to C → _ViewSelectedTeams)
-ViewSelectedTeams:
-                jmp     _ViewSelectedTeams
 
 ; ===== ChooseTeamsPlayGame =====
 ; Ported to C: _ChooseTeamsPlayGame in src/menus.c
-ChooseTeamsPlayGame:
-                jmp     _ChooseTeamsPlayGame
 
 ; ===== ExitSelectTeams =====
 ; Ported to C: _ExitSelectTeams in src/menus.c
-ExitSelectTeams:
-                jmp     _ExitSelectTeams
 
 ; ===== SelectTeamsCommon =====
 ; Ported to C: _SelectTeamsCommon in src/menus.c (a5 bridge)
@@ -50592,8 +49103,6 @@ SetTeamsCoordinates:
 ; Set field of select n more teams if needed.
 ; 
 ; [select_teams_menu proc]
-CheckNumberOfTeams:
-                jmp     _CheckNumberOfTeams
 lastSelectedTeam:
                 dc.w $0000              ; Index of last selected team (or league) for game
 selectedTeamIndex:
@@ -50901,31 +49410,6 @@ ChooseTeamsInit:
                 jsr     _ChooseTeamsInit
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
-
-; ===== ClubTeams =====
-; prototype: void __usercall ClubTeams()
-ClubTeams:
-                jmp     _ClubTeams
-
-; ===== NationalTeams =====
-; prototype: void __usercall NationalTeams()
-NationalTeams:
-                jmp     _NationalTeams
-
-; ===== OriginalCustomTeams =====
-; prototype: void __usercall OriginalCustomTeams()
-OriginalCustomTeams:
-                jmp     _OriginalCustomTeams
-
-; ===== EditedCustomTeams =====
-; prototype: void __usercall EditedCustomTeams()
-EditedCustomTeams:
-                jmp     _EditedCustomTeams
-
-; ===== ExitChooseTeams =====
-; prototype: void __usercall ExitChooseTeams()
-ExitChooseTeams:
-                jmp     _ExitChooseTeams
 
 ; ===== ShowFsErrorByCode =====
 ; Ported to C: _ShowFsErrorByCode in src/file_io.c
@@ -51820,13 +50304,9 @@ SelFilesDrawItemDescription:
 
 ; ===== SelectFilenameToSaveAndExit =====
 ; Ported to C: _SelectFilenameToSaveAndExit in src/file_io.c
-SelectFilenameToSaveAndExit:
-                jmp     _SelectFilenameToSaveAndExit
 
 ; ===== AbortSaveFile =====
 ; Ported to C: _AbortSaveFile in src/menus.c
-AbortSaveFile:
-                jmp     _AbortSaveFile
 
 ; ===== SelectFilesInputSaveFilenameOnSelect =====
 ; prototype: void __usercall SelectFilesInputSaveFilenameOnSelect(struct MenuEntry *entry@<a5>)
@@ -51992,8 +50472,6 @@ DiskMenuRet:
 
 ; ===== FormatSaveDiskMenu =====
 ; Ported to C: _FormatSaveDiskMenu in src/file_io.c (menu callback)
-FormatSaveDiskMenu:
-                jmp     _FormatSaveDiskMenu
 
 aSwosu:
                 dc.b "SWOSU",0
@@ -52002,13 +50480,9 @@ saveFileBuffer:
 
 ; ===== DeleteFileMenu =====
 ; Ported to C: _DeleteFileMenu in src/file_io.c (menu callback)
-DeleteFileMenu:
-                jmp     _DeleteFileMenu
 
 ; ===== ExitDisk =====
 ; Ported to C: _ExitDisk in src/file_io.c (menu callback)
-ExitDisk:
-                jmp     _ExitDisk
 
 ; ===== ShowErrorMenu =====
 ; Ported to C: _ShowErrorMenu in src/menus.c
@@ -52576,77 +51050,8 @@ swosMainMenu:
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 aCjcHelp:
                 dc.b "CJC HELP",0,$00
-
-; ===== SWOSMainMenuInit ===== (ported to C → _SWOSMainMenuInit)
-SWOSMainMenuInit:
-                jmp     _SWOSMainMenuInit
 GlobalRetn:
                 rts
-
-; ===== CommonMenuExit =====
-; prototype: void __usercall CommonMenuExit()
-; ===== CommonMenuExit ===== (ported to C → _CommonMenuExit)
-CommonMenuExit:
-                jmp     _CommonMenuExit
-
-; ===== FriendlyMenu ===== (ported to C → _FriendlyMenu)
-FriendlyMenu:
-                jmp     _FriendlyMenu
-
-; ===== DIYCompetitionMenu =====
-; prototype: void __usercall DIYCompetitionMenu()
-DIYCompetitionMenu:
-                jmp     _DIYCompetitionMenu
-
-; ===== PresetCompetitionMenu =====
-; prototype: void __usercall PresetCompetitionMenu()
-PresetCompetitionMenu:
-                jmp     _PresetCompetitionMenu
-
-; ===== SeasonMenu =====
-; prototype: void __usercall SeasonMenu()
-SeasonMenu:
-                jmp     _SeasonMenu
-
-; ===== CareerMenu =====
-; prototype: void __usercall CareerMenu()
-CareerMenu:
-                jmp     _CareerMenu
-
-; ===== StartContest =====
-; prototype: void __usercall StartContest()
-StartContest:
-                jmp     _StartContest
-
-; ===== SaveContest =====
-; prototype: void __usercall SaveContest()
-SaveContest:
-                jmp     _SaveContest
-
-; ===== LoadOldCompetitionMenu =====
-; prototype: void __usercall LoadOldCompetitionMenu()
-LoadOldCompetitionMenu:
-                jmp     _LoadOldCompetitionMenu
-
-; ===== EditCustomTeamMenu ===== (ported to C → _EditCustomTeamMenu)
-EditCustomTeamMenu:
-                jmp     _EditCustomTeamMenu
-
-; ===== EditTacticsMenu ===== (ported to C → _EditTacticsMenu)
-EditTacticsMenu:
-                jmp     _EditTacticsMenu
-
-; ===== HighlightsMenu ===== (ported to C → _HighlightsMenu)
-HighlightsMenu:
-                jmp     _HighlightsMenu
-
-; ===== OptionsMenuSelected ===== (ported to C → _OptionsMenuSelected)
-OptionsMenuSelected:
-                jmp     _OptionsMenuSelected
-
-; ===== SaveDiskFilingMenu ===== (ported to C → _SaveDiskFilingMenu)
-SaveDiskFilingMenu:
-                jmp     _SaveDiskFilingMenu
 saveFileTitle:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
@@ -52715,16 +51120,6 @@ DIY_AdvanceFixtureIndex:
                 addq.l  #8,sp
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
-
-; ===== Career_ApplyForeignMarketPlayersToSelectedTeams =====
-; prototype: void __usercall Career_ApplyForeignMarketPlayersToSelectedTeams()
-Career_ApplyForeignMarketPlayersToSelectedTeams:
-                jmp     _Career_ApplyForeignMarketPlayersToSelectedTeams
-
-; ===== Career_ApplyPendingForeignMarketPlayersToSelectedTeams =====
-; prototype: void __usercall Career_ApplyPendingForeignMarketPlayersToSelectedTeams()
-Career_ApplyPendingForeignMarketPlayersToSelectedTeams:
-                jmp     _Career_ApplyPendingForeignMarketPlayersToSelectedTeams
 
 ; ===== Career_PatchTeamWithForeignMarketPlayers =====
 ; prototype: void __usercall Career_PatchTeamWithForeignMarketPlayers(void *teamPtr@<a0>)
@@ -53393,16 +51788,6 @@ FindPlayerOnTransferMarket:
                 movem.l (sp)+,d1-d7/a0-a6
                 tst.w   d0
                 rts
-
-; ===== ShowDomesticPlayerMarket ===== (ported to C → _ShowDomesticPlayerMarket)
-ShowDomesticPlayerMarket:
-                jmp     _ShowDomesticPlayerMarket
-
-; ===== ShowForeignPlayerMarket =====
-; prototype: void __usercall ShowForeignPlayerMarket()
-; ===== ShowForeignPlayerMarket ===== (ported to C → _ShowForeignPlayerMarket)
-ShowForeignPlayerMarket:
-                jmp     _ShowForeignPlayerMarket
 ; Menu_Offers
 offersMenu:
                 ; Menu_Offers
@@ -53592,11 +51977,6 @@ offersMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== OffersInit =====
-; prototype: void __usercall OffersInit()
-OffersInit:
-                jmp     _OffersInit
-
 ; ===== OffersCommon =====
 ; Ported to C: _OffersCommon in src/transfer_market.c
 OffersCommon:
@@ -53609,8 +51989,6 @@ OffersCommon:
 
 ; ===== j_SetExitMenuFlag_11 =====
 ; Ported to C: _j_SetExitMenuFlag_11 in src/transfer_market.c
-j_SetExitMenuFlag_11:
-                jmp     _j_SetExitMenuFlag_11
 
 ; ===== OffersAfterDrawCommon =====
 ; Ported to C: _OffersAfterDrawCommon in src/transfer_market.c
@@ -54076,18 +52454,12 @@ TransferPlayerInit:
 
 ; ===== TransferPlayerOnSelect10 =====
 ; Ported to C: _TransferPlayerOnSelect10 in src/transfer_market.c
-TransferPlayerOnSelect10:
-                jmp     _TransferPlayerOnSelect10
 
 ; ===== TransferPlayerOnSelect11 =====
 ; Ported to C: _TransferPlayerOnSelect11 in src/transfer_market.c
-TransferPlayerOnSelect11:
-                jmp     _TransferPlayerOnSelect11
 
 ; ===== TransferPlayerOnSelect12 =====
 ; Ported to C: _TransferPlayerOnSelect12 in src/transfer_market.c
-TransferPlayerOnSelect12:
-                jmp     _TransferPlayerOnSelect12
 
 ; ===== TransferPlayerAfterDrawCommon =====
 ; Ported to C: _TransferPlayerAfterDrawCommon in src/transfer_market.c
@@ -54563,35 +52935,20 @@ ThirdPartyOfferMenuInit:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== ThirdPartyOfferViewSquad =====
-; prototype: void __usercall ThirdPartyOfferViewSquad(MenuEntry *entry@<a5>)
-ThirdPartyOfferViewSquad:
-                jmp     _ThirdPartyOfferViewSquad
-
 ; ===== AcceptOffer =====
 ; Ported to C: _AcceptOffer in src/transfer_market.c
-AcceptOffer:
-                jmp     _AcceptOffer
 
 ; ===== RejectOffer =====
 ; Ported to C: _RejectOffer in src/transfer_market.c
-RejectOffer:
-                jmp     _RejectOffer
 
 ; ===== AskForMore =====
 ; Ported to C: _AskForMore in src/transfer_market.c
-AskForMore:
-                jmp     _AskForMore
 
 ; ===== ConsiderOffer =====
 ; Ported to C: _ConsiderOffer in src/transfer_market.c
-ConsiderOffer:
-                jmp     _ConsiderOffer
 
 ; ===== ThirdPartyOfferMenuExit =====
 ; Ported to C: _ThirdPartyOfferMenuExit in src/transfer_market.c
-ThirdPartyOfferMenuExit:
-                jmp     _ThirdPartyOfferMenuExit
 
 ; ===== ThirdPartyOfferMenuAfterDrawCommon =====
 ; Ported to C: _ThirdPartyOfferMenuAfterDrawCommon in src/transfer_market.c
@@ -55050,13 +53407,9 @@ playerOffersMenu:
 
 ; ===== PlayerOffersInit =====
 ; Ported to C: _PlayerOffersInit in src/transfer_market.c
-PlayerOffersInit:
-                jmp     _PlayerOffersInit
 
 ; ===== UpdatePlayerOfferMenuIndicators =====
 ; Ported to C: _UpdatePlayerOfferMenuIndicators in src/transfer_market.c
-UpdatePlayerOfferMenuIndicators:
-                jmp     _UpdatePlayerOfferMenuIndicators
 
 ; ===== PlayerOffersOnSelect8 =====
 ; Ported to C: _PlayerOffersOnSelect8 in src/transfer_market.c
@@ -55100,13 +53453,9 @@ PlayerOffersAdjustOfferAmount:
 
 ; ===== PlayerOffersUpdateOfferAmountText =====
 ; Ported to C: _PlayerOffersUpdateOfferAmountText in src/transfer_market.c
-PlayerOffersUpdateOfferAmountText:
-                jmp     _PlayerOffersUpdateOfferAmountText
 
 ; ===== PlayerOffersOnSelect13 =====
 ; Ported to C: _PlayerOffersOnSelect13 in src/transfer_market.c
-PlayerOffersOnSelect13:
-                jmp     _PlayerOffersOnSelect13
 
 ; ===== PlayerOffersAfterDrawCommon =====
 ; Ported to C: _PlayerOffersAfterDrawCommon in src/transfer_market.c
@@ -55666,26 +54015,15 @@ viewSquadMenu:
                 dc.w MENU_CMD_END       ; entry34_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== ViewSquadInit =====
-; prototype: void __usercall ViewSquadInit()
-ViewSquadInit:
-                jmp     _ViewSquadInit
-
 ; ===== ViewSquadExitContinue =====
 ; prototype: void __usercall ViewSquadExitContinue()
 ; Ported to C: _ViewSquadExitContinue in src/menus.c
-ViewSquadExitContinue:
-                jmp     _ViewSquadExitContinue
 
 ; ===== ViewSquadOnSelect21 =====
 ; Ported to C: _ViewSquadOnSelect21 in src/menus.c
-ViewSquadOnSelect21:
-                jmp     _ViewSquadOnSelect21
 
 ; ===== ViewSquad21AfterDraw =====
 ; Ported to C: _ViewSquad21AfterDraw in src/menus.c
-ViewSquad21AfterDraw:
-                jmp     _ViewSquad21AfterDraw
 
 ; ===== ViewSquadCommon =====
 ; prototype: void __usercall ViewSquadCommon()
@@ -56164,13 +54502,9 @@ buyOtherPlayersMenu:
 
 ; ===== BuyOtherPlayersInit =====
 ; Ported to C: _BuyOtherPlayersInit in src/transfer_market.c
-BuyOtherPlayersInit:
-                jmp     _BuyOtherPlayersInit
 
 ; ===== BuyOtherPlayersFinish =====
 ; Ported to C: _BuyOtherPlayersFinish in src/transfer_market.c
-BuyOtherPlayersFinish:
-                jmp     _BuyOtherPlayersFinish
 
 ; ===== j_SetExitMenuFlag_10 =====
 ; prototype: void __usercall j_SetExitMenuFlag_10()
@@ -56746,15 +55080,8 @@ positionGroupMidfielder:
 positionGroupAttacker:
                 dc.b $07,$FF            ; Position sub-indices for attacker filter: {7, 0xFF}.
 
-; ===== ShowPlayerMarketInit =====
-; prototype: void __usercall ShowPlayerMarketInit()
-ShowPlayerMarketInit:
-                jmp     _ShowPlayerMarketInit
-
 ; ===== ShowPlayerMarket =====
 ; Ported to C: _ShowPlayerMarket in src/transfer_market.c
-ShowPlayerMarket:
-                jmp     _ShowPlayerMarket
 loc_144EFC:
                 addq.w  #1,(playerMarketFilterPosition).l
                 cmpi.w  #4,(playerMarketFilterPosition).l
@@ -57143,24 +55470,6 @@ buyPlayerMenu:
                 dc.w MENU_CMD_END       ; end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== BuyPlayerInit =====
-; prototype: void __usercall BuyPlayerInit()
-; ===== BuyPlayerInit ===== (ported to C → _BuyPlayerInit)
-BuyPlayerInit:
-                jmp     _BuyPlayerInit
-
-; ===== ViewDomesticPlayerMarket =====
-; prototype: void __usercall ViewDomesticPlayerMarket()
-; ===== ViewDomesticPlayerMarket ===== (ported to C → _ViewDomesticPlayerMarket)
-ViewDomesticPlayerMarket:
-                jmp     _ViewDomesticPlayerMarket
-
-; ===== ViewForeignPlayerMarket =====
-; prototype: void __usercall ViewForeignPlayerMarket()
-; ===== ViewForeignPlayerMarket ===== (ported to C → _ViewForeignPlayerMarket)
-ViewForeignPlayerMarket:
-                jmp     _ViewForeignPlayerMarket
-
 ; ===== BuyOtherDomesticPlayer =====
 ; Bridge to C: _BuyOtherDomesticPlayer
 BuyOtherDomesticPlayer:
@@ -57177,15 +55486,8 @@ BuyOtherForeignPlayer:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== BuyPlayerViewSquad =====
-; prototype: __int16 __usercall BuyPlayerViewSquad@<d0>()
-BuyPlayerViewSquad:
-                jmp     _BuyPlayerViewSquad
-
 ; ===== BuyPlayerExit =====
 ; Ported to C: _BuyPlayerExit in src/menus.c
-BuyPlayerExit:
-                jmp     _BuyPlayerExit
 ; Menu_TransferMarket
 transferMarketMenu:
                 ; Menu_TransferMarket
@@ -57610,52 +55912,10 @@ transferMarketMenu:
                 dc.w MENU_CMD_END       ; entry25_end
                 dc.w MENU_MARK_END_MENU ; markEndMenu
 
-; ===== TransferMarketInit =====
-; prototype: void __usercall TransferMarketInit()
-TransferMarketInit:
-                jmp     _TransferMarketInit
-
-; ===== TransferMarketFinish =====
-; prototype: void __usercall TransferMarketFinish()
-; ===== TransferMarketFinish ===== (ported to C → _TransferMarketFinish)
-TransferMarketFinish:
-                jmp     _TransferMarketFinish
-
-; ===== TransferMenuSetBankState =====
-; prototype: char __usercall TransferMenuSetBankState@<d0>()
-; ===== TransferMenuSetBankState ===== (ported to C → _TransferMenuSetBankState)
-TransferMenuSetBankState:
-                jmp     _TransferMenuSetBankState
-
-; ===== BuyPlayerMenu =====
-; prototype: void __usercall BuyPlayerMenu()
-BuyPlayerMenu:
-                jmp     _BuyPlayerMenu
-
-; ===== PutPlayerOnMarketMenu =====
-; prototype: void __usercall PutPlayerOnMarketMenu()
-PutPlayerOnMarketMenu:
-                jmp     _PutPlayerOnMarketMenu
-
-; ===== ViewOffersMenu =====
-; prototype: void __usercall ViewOffersMenu()
-ViewOffersMenu:
-                jmp     _ViewOffersMenu
-
-; ===== GiveFreeTransfer =====
-; prototype: void __usercall GiveFreeTransfer()
-GiveFreeTransfer:
-                jmp     _GiveFreeTransfer
-
 ; ===== jmp_SetExitMenuFlag_8 =====
 ; prototype: void __usercall jmp_SetExitMenuFlag_8()
 jmp_SetExitMenuFlag_8:
                 jmp     SetExitMenuFlag
-
-; ===== TakeOffMarketMenu =====
-; prototype: void __usercall TakeOffMarketMenu()
-TakeOffMarketMenu:
-                jmp     _TakeOffMarketMenu
 
 ; ===== TransferMarketCommon =====
 ; prototype: void __usercall TransferMarketCommon()
@@ -57670,21 +55930,6 @@ TransferMarketCommon:
 buyPlayerRedrawList:
                 ; __int16[3]
                 dc.w 5,7,-1             ; List of menu entry indices to redraw in the buy player screen.
-
-; ===== CheckNumPlayersOnTransferMarket =====
-; prototype: void __usercall CheckNumPlayersOnTransferMarket()
-CheckNumPlayersOnTransferMarket:
-                jmp     _CheckNumPlayersOnTransferMarket
-
-; ===== CheckIfPlayerSelected =====
-; prototype: void __usercall CheckIfPlayerSelected()
-CheckIfPlayerSelected:
-                jmp     _CheckIfPlayerSelected
-
-; ===== EnableDisableOffers =====
-; prototype: void __usercall EnableDisableOffers()
-EnableDisableOffers:
-                jmp     _EnableDisableOffers
 
 ; ===== TransferMarketAfterDrawCommon =====
 ; prototype: void __usercall TransferMarketAfterDrawCommon()
@@ -57738,18 +55983,12 @@ viewFutureTeamModeFlag:
 
 ; ===== ProcessOfferExpiryCountdown =====
 ; Ported to C: _ProcessOfferExpiryCountdown in src/transfer_market.c
-ProcessOfferExpiryCountdown:
-                jmp     _ProcessOfferExpiryCountdown
 
 ; ===== UpdateAndExpireTransferOffers =====
 ; Ported to C: _UpdateAndExpireTransferOffers in src/transfer_market.c
-UpdateAndExpireTransferOffers:
-                jmp     _UpdateAndExpireTransferOffers
 
 ; ===== GenerateRandomTransferOffers =====
 ; Ported to C: _GenerateRandomTransferOffers in src/transfer_market.c
-GenerateRandomTransferOffers:
-                jmp     _GenerateRandomTransferOffers
 locret_145DEE:
                 rts
 
@@ -58100,8 +56339,6 @@ careerDefaultInternationalSquadSlotsTable:
 
 ; ===== ShowSelectRepresentationMenu ===== (ported to C → _ShowSelectRepresentationMenu)
 ; Returns d0 = selectNationalTeamMenuResult (GCC returns uint16_t in d0)
-ShowSelectRepresentationMenu:
-                jmp     _ShowSelectRepresentationMenu
 ; Menu_SelectNationalTeam
 selectNationalTeamMenu:
                 ; Menu_SelectNationalTeam
@@ -58709,10 +56946,6 @@ SelectNationalTeamFinish:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== Career_UpdateNationalTeamMenuEntries ===== (ported to C → _Career_UpdateNationalTeamMenuEntries in career_teams.c)
-Career_UpdateNationalTeamMenuEntries:
-                jmp     _Career_UpdateNationalTeamMenuEntries
-
 ; ===== Career_RebuildInternationalPlayerSelectionMasks =====
 ; Ported to C: _Career_RebuildInternationalPlayerSelectionMasks in src/menus.c
 Career_RebuildInternationalPlayerSelectionMasks:
@@ -58720,10 +56953,6 @@ Career_RebuildInternationalPlayerSelectionMasks:
                 jsr     _Career_RebuildInternationalPlayerSelectionMasks
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-
-; ===== Career_UpdateRemovePlayersMenuEntry ===== (ported to C → _Career_UpdateRemovePlayersMenuEntry in career_teams.c)
-Career_UpdateRemovePlayersMenuEntry:
-                jmp     _Career_UpdateRemovePlayersMenuEntry
 
 ; ===== NationalTeamAddPlayer =====
 ; Ported to C: _NationalTeamAddPlayer in src/menus.c
@@ -58744,8 +56973,6 @@ NationalTeamRemovePlayers:
 ; ===== SelectNationalTeamExit =====
 ; prototype: void __usercall SelectNationalTeamExit()
 ; Ported to C: _SelectNationalTeamExit in src/menus.c
-SelectNationalTeamExit:
-                jmp     _SelectNationalTeamExit
 
 ; ===== SelectNationalTeamAbort =====
 ; Ported to C: _SelectNationalTeamAbort in src/menus.c
@@ -58757,13 +56984,9 @@ SelectNationalTeamAbort:
 
 ; ===== SelectNationalTeamOnSelect25 =====
 ; Ported to C: _SelectNationalTeamOnSelect25 in src/menus.c
-SelectNationalTeamOnSelect25:
-                jmp     _SelectNationalTeamOnSelect25
 
 ; ===== SelectNationalTeam25AfterDraw =====
 ; Ported to C: _SelectNationalTeam25AfterDraw in src/menus.c
-SelectNationalTeam25AfterDraw:
-                jmp     _SelectNationalTeam25AfterDraw
 
 ; ===== SelectNationalTeamCommon =====
 ; Ported to C: _SelectNationalTeamCommon in src/menus.c
@@ -58913,21 +57136,6 @@ nationalTeamAddPlayerMenu:
 ; prototype: void __usercall NationalTeamAddPlayerInit()
 NationalTeamAddPlayerInit:
                 rts
-
-; ===== NationalTeamAddPlayerHomeOnSelect =====
-; prototype: void __usercall NationalTeamAddPlayerHomeOnSelect()
-NationalTeamAddPlayerHomeOnSelect:
-                jmp     _NationalTeamAddPlayerHomeOnSelect
-
-; ===== NationalTeamAddPlayerAbroadOnSelect =====
-; prototype: void __usercall NationalTeamAddPlayerAbroadOnSelect()
-NationalTeamAddPlayerAbroadOnSelect:
-                jmp     _NationalTeamAddPlayerAbroadOnSelect
-
-; ===== NationalTeamAddPlayerExit =====
-; prototype: void __usercall NationalTeamAddPlayerExit()
-NationalTeamAddPlayerExit:
-                jmp     _NationalTeamAddPlayerExit
 careerNationalTeamAddPlayerType:
                 dc.w $0000
 
@@ -61057,10 +59265,6 @@ JobOffersInit:
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
 
-; ===== JobOffersFinish ===== (ported to C → _JobOffersFinish)
-JobOffersFinish:
-                jmp     _JobOffersFinish
-
 ; ===== JobOffersCommon ===== (ported to C → _JobOffersCommon)
 ; C bridge: a5 = MenuEntry*, pass on stack
 JobOffersCommon:
@@ -61080,14 +59284,6 @@ OldJobOffersCommon:
                 addq.l  #4,sp
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-
-; ===== JobOffersExit ===== (ported to C → _JobOffersExit)
-JobOffersExit:
-                jmp     _JobOffersExit
-
-; ===== JobOffers_UpdateMenuEntryLayout ===== (ported to C → _JobOffers_UpdateMenuEntryLayout)
-JobOffers_UpdateMenuEntryLayout:
-                jmp     _JobOffers_UpdateMenuEntryLayout
 
 ; ===== JobOffers_DrawOldOfferLine =====
 ; Ported to C: _JobOffers_DrawOldOfferLine in src/job_offers.c
@@ -62002,8 +60198,6 @@ Career_InitializeNewSeasonFinances:
 ; ===== Career_CommitNewBalanceAndResetFinanceTotals =====
 ; prototype: void __usercall Career_CommitNewBalanceAndResetFinanceTotals()
 ; dos: cseg_5E2E0
-Career_CommitNewBalanceAndResetFinanceTotals:
-                jmp     _Career_CommitNewBalanceAndResetFinanceTotals
 
 ; ===== Career_UpdatePlayerWeeklyWageCache =====
 ; prototype: void __usercall Career_UpdatePlayerWeeklyWageCache(unsigned __int16 playerIndex@<d1>)
@@ -62123,8 +60317,6 @@ editTacticsTransitionActive:
 
 ; ===== EditTactics =====
 ; Ported to C: _EditTactics in src/edit_tactics.c
-EditTactics:
-                jmp     _EditTactics
 loc_14B4EA:
                 cmpi.b  #TEAM_COMPUTER,TEAMFILE_TEAMCONTROLS(a0)
                 beq.s   loc_14B4F8
@@ -65480,11 +63672,6 @@ HighlightsMenuCommon:
                 jsr     _HighlightsMenuCommon
                 movem.l (sp)+,d0-d7/a0-a6
                 rts
-
-; ===== JmpShowHighlights =====
-; prototype: void __usercall JmpShowHighlights()
-JmpShowHighlights:
-                jmp     _JmpShowHighlights
 
 ; ===== LoadHighlightsMenu =====
 ; Ported to C: _LoadHighlightsMenu in src/highlights_menu.c
@@ -73425,8 +71612,6 @@ Asset_PromptInsertSaveDiskDf0:
 
 ; ===== SaveCompetitionFile =====
 ; Ported to C: _SaveCompetitionFile in src/file_io.c
-SaveCompetitionFile:
-                jmp     _SaveCompetitionFile
 
 ; ===== LoadCompetitionFile =====
 ; Ported to C: _LoadCompetitionFile in src/file_io.c
@@ -73630,8 +71815,6 @@ locret_151E0E:
 
 ; ===== FatalError =====
 ; Ported to C: _FatalError in src/career_teams.c
-FatalError:
-                jmp     _FatalError
 aDataTeamNnn:
                 dc.b 'data/team.nnn',0
 aCustomsEdt:
@@ -76037,10 +74220,6 @@ a23OnAgg_0:
                 dc.b '      %2-%3 ON AGG.       ',0
 
 stringDataEnd:
-; ===== InitSkinAndDefaultPointers =====
-; prototype: void __usercall InitSkinAndDefaultPointers()
-InitSkinAndDefaultPointers:
-                jmp     _InitSkinAndDefaultPointers
 ; unsigned __int32 *
 goalBasePtr:
                 dc.l $00000000          ; Pointer to current goal in highlight file

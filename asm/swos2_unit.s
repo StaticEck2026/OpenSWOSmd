@@ -1,39 +1,17 @@
-        xref    g_quitToDos
-        xref    RobNorthenLoader
-        xref    S_VBR
+        xref    benchPlayerResultA0
         xref    S_SavedSP
         xref    _RncDecompressV1
         xref    _RncDecompressV2
         xref    _start
-        xref    _AssetLoaderResetState
         xref    _WaitForVSync
-        xref    _InitSkinAndDefaultPointers
         xref    _BuildPaletteFromColors
-        xref    _FadeOutToBlack
-        xref    _FadeIn
-        xref    _FadeOutAndIn
-        xref    _InitDisplayAndCopper
-        xref    _UpdatePlanePtrsAndBlitParams
-        xref    _SwapBuffersAndCameraViewState
         xref    _SetCameraCoordinates
-        xref    _DoubleBufferSwapSequence
-        xref    _BlitterCopyPanelToScreen2
         xref    _AssetLoaderRegisterRegion
-        xref    _AssetLoaderInitAltPathAndBanks
-        xref    _InstallAndInitLoaderBootstrap
-        xref    _InstallAndRunLoaderBootstrap_Op3
-        xref    _AssetPrecacheCore
         xref    _AssetPrecacheOneCore
-        xref    _AssetPrecacheMenuPack
         xref    _AssetPrecacheOneMenu
-        xref    _FrontEndMainLoop
         xref    _mainC
         xref    _ExitToDos
-        xref    _ShowLoaderIntroSequence
-        xref    _ReadTimerDelta
-        xref    _FrontEndPreLoopSetup
         xref    _LoadOverlayToFrontbuffer
-        xref    _InitMenuMusic
         xref    _InitializeInGameTeamsAndStartGame
         xref    _CreateRandomTransferOfferForPlayer
         xref    _EvaluateTransferOfferNegotiation
@@ -45,46 +23,23 @@
         xref    _SquadMenu
         xref    _SelectFilesInit
         xref    _SelectFilesOnReturn
-        xref    _TryPlayMusic
         xref    _Player1StatusProc
-        xref    _PrepareMenuBackground
-        xref    _InitMainMenuStuff
-        xref    _ZeroOutStars
-        xref    _SetDefaultOptions
-        xref    _SetDefaultNameAndSurname
         xref    _InitCareerVariables
-        xref    _InitUserTactics
         xref    _InitializeTacticsPositions
         xref    _Randomize2
-        xref    _AudioBeepAllShort
-        xref    _AssetSvcLoaderOp
-        xref    _AssetSvcLoaderOp2
-        xref    _AssetSvcLoaderOp3
         xref    _PlaySong
         xref    _AssetEnsureReadyWithRetry
         xref    _LoadRNCToBufferNoBlit
         xref    _Player2StatusProc
-        xref    _ClearAudioActiveFlag
-        xref    _StopAudioAndClearFlags
-        xref    _LoadSfxResources
-        xref    _EnsureSfxLoadedAndStart
-        xref    _TryRestartingMusic
-        xref    _StopMusic
         xref    _AssetCacheFindByName
         xref    _AssetCacheCopyByName
         xref    _AssetCacheLoadFromAssetSys
         xref    _AssetCacheStoreFromMemory
         xref    _PanicHaltLoop
         xref    _ProcessImageCommandStream
-        xref    _MenuProc
         xref    _ActivateMenu
         xref    _ShowMenu
-        xref    _RestorePreviousMenu
         xref    _DrawMenu
-        xref    _MenuCheckControls
-        xref    _DrawSelectedMenuItemFrame
-        xref    _UpdateBlinkingMenuText
-        xref    _DrawMenuPanelBackground
         xref    _SetExitMenuFlag
         xref    _CalcMenuEntryAddress
         xref    _UnpackMenu
@@ -97,7 +52,6 @@
         xref    _DrawMenuBackWithCheck
         xref    _DrawBackAllItems
         xref    _GetKey
-        xref    _BlitterCopyOverlayToScreen
         xref    _Int2Ascii
         xref    _SetCurrentEntry
         xref    _GetStringLength
@@ -124,12 +78,8 @@
         xref    _BlitSpritePlanar_Long_StridedDest
         xref    _BlitGlyphToSpriteBitmap
         xref    _Text2Sprite
-        xref    _SaveOptions
-        xref    _RestoreOptions
         xref    _ShowErrorMenu
-        xref    _CycleMenuMusic
         xref    _ShowFsErrorByCode
-        xref    _SaveCompetitionFile
         xref    _LoadCompetitionFile
         xref    _LoadCareerFile
         xref    _SaveCareerFile
@@ -158,65 +108,29 @@
         xref    _ExitDisk
         xref    _SelectFileToSaveDialog
         xref    _GetFilenameAndExtension
-        xref    _CrowdResetMatchState
-        xref    _TurnCrowdChantsOn
-        xref    _TurnCrowdChantsOff
-        xref    _PlayCrowdChants
-        xref    _MuteAllAudioChannelsWithDelay
-        xref    _AudioFadeCrowdDownThenPulseMusic
-        xref    _AudioMuteAllWithFrameRamp
-        xref    _PlayEnqueuedSamples
-        xref    _PlayPenaltySample
-        xref    _PlaySample7IfNotTraining
-        xref    _PlaySfxSample16
-        xref    _PlayGoodPassSample
         xref    _PlayKickSample
         xref    _GateKickSampleAndCrowd
         xref    _PlayRefereeWhistleSample
-        xref    _PlayFoulWhistleSample
         xref    _PlayEndGameWhistleSample
-        xref    _PlaySample1IfNotTraining
-        xref    _PlaySample1
-        xref    _PlaySample2IfNotTraining
-        xref    _PlaySample4IfNotTraining
-        xref    _PlaySample3IfNotTraining
-        xref    _PlayMissGoalSample
-        xref    _PlayPenalty
-        xref    _PlayGameStateWhistleSample
         xref    _PlayGoalReplayBottomSample
         xref    _PlayGoalKickOffSample
-        xref    _PlayCornerKickSample
         xref    _HandleKickSampleAndCrowd
         xref    _PlaySample
         xref    _ApplyFadeStep
-        xref    _FadeOutTick
-        xref    _FadeInTick
-        xref    _ProcessSpriteBlitQueue
-        xref    _BlitterCopyPanelToScreen
         xref    _HWSprite_LoadFromSpriteGraphics
         xref    _FlashColor0Delay
         xref    _LoadPitchMap
-        xref    _FixupAndColorPitchFile
         xref    _AdjustFanColor
         xref    _Rand
         xref    _Rand2
         xref    _GetRandomWord
         xref    _SaveRand2State
         xref    _RestoreRand2State
-        xref    _ResetGoalAttempt
-        xref    _AllowStatistics
         xref    _StatisticsOff
-        xref    _ResetTime
         xref    _BumpPlayersLastPlayedHalfAtHalfStart
         xref    _BumpPlayersLastPlayedHalfAtHalfEnd
-        xref    _CopyPlayerNameLengths
-        xref    _ClearSaveFlagForGoalSprites
         xref    _DrawMenuBack150x20
         xref    _DrawReplayContinueShiningFrame
-        xref    _DrawReplayOrExitMenu
-        xref    _ReplayExitMenuAfterFriendly
-        xref    _ResetResultSprites
-        xref    _ShowResult
         xref    _StopAllAudioChannels
         xref    _AudioSetChannelVolume
         xref    _AudioSetMode
@@ -224,35 +138,17 @@
         xref    _InitAudioState
         xref    _AudioApplyPresetToChannels
         xref    _AudioChannelNoteOnOff
-        xref    _AudioDisableDMAForChannel
         xref    _AudioChannelQueueNextWaveIfEnabled
         xref    _AudioIRQUpdateChannels
-        xref    _UpdateTime
-        xref    _UpdateAndDrawStatistics
         xref    _DrawStatistics
-        xref    _DrawGrid
-        xref    _CopyAdvertisementsData
-        xref    _InitAdvertisements
-        xref    _SetAdvertisementsVisible
-        xref    _SetAdvertisementsInvisible
-        xref    _ManageAdvertisements
-        xref    _UpdateCornerFlagSprite
-        xref    _SpinBig_S_Sprite
         xref    _InitCameraMoveView
         xref    _MoveView
-        xref    _ScrollToCurrent
         xref    _ExtractSurname
         xref    _CountFaces
         xref    _ConvertColorTableToSkinColor
         xref    _DetermineGoalieFaces
-        xref    _InitializePlayerSpriteFrameIndices
         xref    _MakeSpritesFromPlayerNames
         xref    _ConvertColorsAndTextSprites
-        xref    _UpdateControlledPlayerNumbers
-        xref    _MarkPlayer
-        xref    _SetCurrentPlayerName
-        xref    _InitCurrentGoalHighlight
-        xref    _SortSprites
         xref    _InitDisplaySprites
         xref    _DrawSpriteClipped
         xref    _DrawSprite_entry2
@@ -265,28 +161,14 @@
         xref    _RenderSpriteBandsToCopperLists
         xref    _BuildSpriteBandAndGeneralRenderStacks
         xref    _DrawSprites
-        xref    _InitTeamsData
         xref    _InitGameSaveTeams
         xref    _SetBallPosition
-        xref    _ResetBothTeamsPlayerPassingKicking
         xref    _StopAllPlayers
-        xref    _RemoveReferee
-        xref    _InitAnimatedPatterns
-        xref    _InitPlayersBeforeEnteringPitch
-        xref    _StartingMatch
-        xref    _SetCameraMovingToShowerState
         xref    _EndFirstHalf
-        xref    _FirstHalfJustEnded
         xref    _EndOfGame
-        xref    _PlayersLeavingPitch
-        xref    _GoToHalftime
-        xref    _GameOver
         xref    _StartFirstExtraTime
         xref    _EndFirstExtraTime
-        xref    _PrepareForInitialKick
         xref    _StartPenalties
-        xref    _InitGameRestoreTeams
-        xref    _MovePlayers
         xref    _SetPlayerAnimationTable
         xref    _SetPlayerAnimationTableAndPictureIndex
         xref    _GetTeamKitsSimilarityFactor
@@ -294,54 +176,23 @@
         xref    _SetInGameTeamsPrimaryColors
         xref    _SetTeamSecondaryColors
         xref    _InitRefereeAnimationTable
-        xref    _ActivateReferee
         xref    _SetRefereeToLeavingState
-        xref    _UpdateReferee
-        xref    _UpdateBookedPlayerNumberSprite
         xref    _PrintFormatted
         xref    _InputText
-        xref    _SetPitchTypeAndNumber
-        xref    _CopyTeamsAndHeader
-        xref    _SetHilFileHeader
-        xref    _SaveHighlightsPointers
-        xref    _RestoreHighlightPointers
-        xref    _FadeAndSaveHighlightScene
-        xref    _SaveHighlightScene
-        xref    _ThrowInDeadProc
         xref    _SaveCoordinatesForHighlights
-        xref    _DrawReplayFrame
         xref    _ReplayUpdateCameraAndSwapBuffers
-        xref    _HandleInstantReplayStateSwitch
-        xref    _RestoreCameraPosition
-        xref    _DrawAnimatedPatterns
-        xref    _ResetAnimatedPatternsForBothTeams
         xref    _GoalScored
-        xref    _BenchCheckControls
-        xref    _DrawBenchAndSubsMenu
-        xref    _ViewMatchSequence
-        xref    _ViewHighlights
         xref    _StartMatchSequence
-        xref    _GameLoop
-        xref    _KeepStatisticsOnScreen
         xref    _ViewHighLightsMain
-        xref    _PlayInstantReplayLoop
-        xref    _PlayHighlightsLoop
         xref    _MainKeysCheck
         xref    _AssignFakeGoalsToScorers
         xref    _CalculateDeltaXAndY
-        xref    _MoveCamera
-        xref    _UpdateBall
-        xref    _DoGoalkeeperSprites
-        xref    _InjuryUpdateTickGuard
-        xref    _CalculateNextBallPosition
         xref    _ResetBothTeamSpinTimers
         xref    _UpdateControllingPlayer
         xref    _UpdateBallWithControllingGoalkeeper
         xref    _UpdatePlayerWithBall
         xref    _SetThrowInPlayerDestinationCoordinates
         xref    _GetPlayerPointerFromShirtNumber
-        xref    _InitHardwareAtFrameStart
-        xref    _SetupInterrupts
         xref    _Int2KeyboardHandler
         xref    _Int3TimerHandler
         xref    _SetJumpHeaderHitAnimTable
@@ -353,14 +204,10 @@
 
         xref    _PlayerTackledTheBallWeak
         xref    _SetPlayerDowntimeAfterTackle
-        xref    _PlayerTackled
-        xref    _TryBookingThePlayer
-        xref    _TrySendingOffThePlayer
         xref    _SendPlayerAway
         xref    _PlayerTacklingTestFoul
         xref    _GoalkeeperCaughtTheBall
         xref    _PlayerTackledTheBallStrong
-        xref    _TestFoulForPenaltyAndFreeKick
 
         xref    _ShouldGoalkeeperDive
         xref    _GoalkeeperDeflectedBall
@@ -375,24 +222,18 @@
         xref    _ApplyBallAfterTouch
         xref    _SetPlayerWithNoBallDestination
         xref    _UpdateGameTimersAndCameraBreakMode
-        xref    _CheckIfBallOutOfPlay
         xref    _DoPass
         xref    _PlayerKickingBall
         xref    _CalculateIfPlayerWinsBall
         xref    _UpdatePlayerSpeed
         xref    _UpdatePlayerShotChanceTable
-        xref    _GetBallDestCoordinatesTable
-        xref    _GetClosestNonControlledPlayerInDirection
-        xref    _AI_SetDirectionTowardOpponentsGoal
         xref    _AI_Kick
-        xref    _AI_DecideWhetherToTriggerFire
         xref    _FindClosestPlayerToBallFacing
         xref    findClosestBallDist
         xref    _AI_SetControlsDirection
 
         xref    _UpdateControlledPlayer
         xref    _UpdatePlayerBeingPassedTo
-        xref    _UpdateAndApplyTeamControls
         xref    _QueueMaskedSpriteBlitClipped
 
         xref    UpdatePlayers
@@ -406,7 +247,6 @@
         xref    _Career_CopyTertiaryCompetitionContextToOrFromActive
         xref    _Career_CopyEuroCupsCompetitionContextToOrFromActive
         xref    _TeamSelectionKeyCache_GetListPtr
-        xref    _TeamSelectionKeyCache_GetListElementPtr
         xref    _TeamSelectionKeyCache_GetCurrentListPtr
         xref    _TeamSelectionKeyCache_GetCurrentSelectedElementPtr
         xref    _Career_UpdateCareerFinishedFlag
@@ -579,8 +419,6 @@
         xdef    didSwapThisFrame
         xdef    int5SerialBusBufferFull
 
-        xdef    _CDrawSpriteInCameraView
-        xdef    _CDrawSpriteHotspotInCameraView
 
         xdef    team1MostFrequentFace
         xdef    team2MostFrequentFace
@@ -603,7 +441,6 @@
         xdef    otherTeamScored
         xdef    ingameTeamPlayerOffsets
 
-        xdef    _CDrawSprite16Pixels
 
         xdef    inMenuKeyboardBuffer
         xdef    deadInputTextVar
@@ -621,10 +458,8 @@
         xdef    shirtColorTable
 
         xdef    j_start
-        xdef    InitHardwareAtFrameStart
         xdef    Int3TimerHandler
         xdef    Int4Handler
-        xdef    SetupInterrupts
         xdef    loaderBankBitmap
         xdef    chipRamBitmapEnd
         xdef    pitchDatBuffer
@@ -639,8 +474,6 @@
         xdef    stackTop
         xdef    g_earlyAllocCacheMem
         xdef    g_earlyAllocCacheSize
-        xdef    _startShim
-        xdef    DoubleBufferSwapSequence
         xdef    diskImageContext
         xdef    assetLoaderCacheFlag
         xdef    assetLoaderWorkPtr
@@ -798,7 +631,6 @@
         xdef    aGrafsMenubgRaw
         xdef    aResigned
         xdef    stringDataEnd
-        xdef    InitSkinAndDefaultPointers
         xdef    gameLength
         xdef    autoReplays
         xdef    autoSaveHighlights
@@ -1030,7 +862,6 @@
         xdef    patternsGoalCounter
         xdef    showFansCounter
         ; _CCrowdTickJump bridge removed in Chunk 25 (replaced by _AudioChannelQueueNextWaveIfEnabled)
-        xdef    _CInitDisplaySprites
         xdef    paletteTable
         xdef    swcPitchMapFiles
         xdef    fansSidesSwapped
@@ -1153,7 +984,6 @@
         xdef    statsNumber
         ;; _CEndFirstHalf, _CEndFirstExtraTime, _CEndOfGame, _CStartFirstExtraTime, _CStartPenalties
         ;; removed — now calling C directly: _EndFirstHalf, _EndFirstExtraTime, etc.
-        xdef    _CDarkenRectangle
         xdef    advertIndex
         xdef    advertSlideTimer
         xdef    currentAnimatedAdLine
@@ -1209,13 +1039,9 @@
         xdef    team1Filename
         xdef    team2Filename
         xdef    menuColorAndTextScript
-        xref    _ScrollXUpdateColumnsAndBlit
-        xref    _ScrollYUpdateRowsAndBlit
 ; --- career_status.c ---
         xref    _InitInGameTeams_PlayerControlled
         xref    _InitInGameTeams_WithMatchParam
-        xref    _BuildCareerTeamUnavailablePlayerList
-        xref    _ClearCareerMatchPlayerStatusBucket
         xref    _ShouldApplyRandomPlayerStatusAfterSim
         xref    _IsPlayerInjured
         xref    _GetNumberOfSubstitutes
@@ -1224,25 +1050,12 @@
         xref    _GetNumberOfAvailableSubstitutes
         xref    _GetNumberOfAvailableStartingPlayers
         xref    _GetAgeAdjustedPlayerFormFactor
-        xref    _ClampNewBalanceAndUpdateClubStatus
-        xref    _ClearOverdraftStateIfRecovered
         xref    _UpdateCareerFinancesAfterMatch
-        xref    _ApplyWeeklyFinancialDeductions
         xref    _InitializeCareerSeasonFinancials
-        xref    _MaybeSackManagerAfterSeasonReview
-        xref    _UpdateCareerChairmanWarningsAfterMatch
-        xref    _UpdateCareerAfterMatch
-        xref    _IsMajorInternationalTournament
         xref    _IsMajorTournamentAllowingRandomStatus
         xref    _IsMajorTournamentAllowingSquadChanges
         xref    _IsTournamentAllowingSquadChangesIfNotCareer
         xref    _ShouldSetupPlayers
-        xref    _GetBoardConfidenceScore
-        xref    _UpdateBoardConfidenceScore
-        xref    _PushBoardConfidenceHistory
-        xref    _UpdateBoardConfidenceModifiers
-        xref    _UpdateCareerReputationBonuses
-        xref    _InitializeStartingBalanceForNewSeason
 
 ; --- diy_competition.c Chunk 60 ---
         xref    _GetAveragePlayerPrice
@@ -1250,20 +1063,10 @@
         xref    _CountNearnessFactor
         xref    _DIY_ShuffleTeams
         xref    _DIY_SortAndShuffleTeamsByValue
-        xref    _DIY_ShuffleLeagueTeamOrder
-        xref    _InitDIYTournament
-        xref    _DIY_InitCompetitionDefaults
-        xref    _DIY_ResetCompetitionProgressAndShuffle
-        xref    _DIYTournament_RecalculateMatchesPerTeam
-        xref    _DIY_CacheSelectedTeamPointers
         xref    _DIY_CountUnselectedTeams
-        xref    _DIY_SortLeagueTableByStandings
         xref    _DIY_ComputeAverageTeamStrengthTier
-        xref    _DIY_InitCupBracketProgressionTable
-        xref    _DIYTournament_BuildMatchesPerTeamProgressionTable
 
 ; --- Chunk 61: teams.c, diy_competition.c, career_init.c ---
-        xref    _CheckIsTeamNational
         xref    _GetNextCupRoundStringIndex
         xref    _GetNextCupRoundString
         xref    _GetCupRoundStringIndex
@@ -1272,46 +1075,19 @@
         xref    _DIY_SaveLeagueScratchToTable
         xref    _Career_InitTransferMarketState
         xref    _Career_InitSeasonTransferMarketState
-        xref    _Career_RandomizeInvitationTournamentCup
 
 ; --- Chunk 62: diy_competition.c buffer copy functions ---
-        xref    _SaveDIYTournament
-        xref    _RestoreDIYTournament
-        xref    _DIY_CopyCompetitionFileBufferToDiyFileBufferCopy
-        xref    _DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer
-        xref    _DIY_CopyCompetitionFileBufferToCompetitionStart
-        xref    _DIY_CopyCompetitionStartToCompetitionFileBuffer
-        xref    _DIY_CopyCompetitionFileBufferToCompetitionStart_Alt
-        xref    _DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt
-        xref    _SaveDIYLeague
-        xref    _RestoreDIYLeague
-        xref    _DIY_SaveCompetitionFileBufferToDIYCompetition
-        xref    _DIY_RestoreCompetitionFileBufferFromDIYCompetition
 
 ; --- Chunk 63: diy_competition.c cup init & helpers ---
-        xref    _InitDIYCup
-        xref    _DIY_ShuffleTeamOrderList
-        xref    _DIY_ShuffleTeamGridPairs
-        xref    _DIY_SyncProgressToDiyFileBufferCopy
         xref    _DIY_ValidateLeagueScratchBuffer
 
 ; --- Chunk 64: diy_competition.c cup bracket & team grid ---
-        xref    _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs
         xref    _DIY_ReorderTeamGridByOrderList
-        xref    _DIY_RecountMissingTeamsInTeamGrid
         xref    _DIY_BuildTeamSelectionPointerCache
-        xref    _DIY_InitCupBracketState
 
         xdef    diyCupTeamIds
 
 ; --- Chunk 65: career_eurocups.c European Cup qualification & grid caching ---
-        xref    _DIY_CachePrimaryQualifiedTeamsGrid
-        xref    _DIY_CacheSecondaryQualifiedTeamsGrid
-        xref    _DIY_CacheTertiaryQualifiedTeamGrid
-        xref    _Career_CopyEuroCupTeamGridAndTitleHolder
-        xref    _Career_CopyCupWinnersCupTeamGridAndTitleHolder
-        xref    _Career_CopyUefaCupTeamGridAndTitleHolder
-        xref    _Career_ProcessCompetitionForEuropeanCupQualification
 
         xdef    euroCupTitleHolderTeamId
         xdef    cupWinnersCupTitleHolderTeamId
@@ -1348,10 +1124,8 @@
         xref    _CopySelectedTeamNumbers
         xref    _SaveSelectedTeams
         xref    _RestoreSelectedTeams
-        xref    _DIY_RecomputeCompetitionDerivedFields
         xref    _DIY_GetCurrentFixtureTeamPtrs
         xref    _DIY_AdvanceLeagueProgressAfterMatch
-        xref    _DIY_GetCurrentFixtureTeamClass
 
         xdef    europeanChampionships
         xdef    europeanChampionships2
@@ -1364,10 +1138,8 @@
 ; --- Chunk 67: competition grid, team list utilities, promotion/relegation ---
         xref    _DIY_BuildQualifiedTeamListFromSortedTable
         xref    _DIY_BuildQualifiedTeamListFromDiyFileBuffer
-        xref    _DIY_SyncCompetitionTeamGridOrBuildBracket
         xref    _DIY_CopyCompetitionTeamIndexTable
         xref    _Career_FillRandomTeamListExcludingSelected
-        xref    _Career_PrepareEuropeanCupQualificationState
         xref    _GetTeamValueBase
         xref    _CalcGateReceiptsBaseFromTeamValue
         xref    _IsTeamNational
@@ -1399,11 +1171,9 @@
         xref    _UpdateHomeMarketPlayers
         xref    _UpdateForeignMarketPlayers
         xref    _DIY_ApplyPromotionRelegationWeightsToScratch
-        xref    _DIY_UpdatePromotionRelegationScratchCounts
         xref    _FindTeamIdInDiyTeamsList
         xref    _IsOfferTeamPlayerPairUnique
         xref    _IsTeamEligibleForOfferByRefSkill
-        xref    _RemoveOfferPlayerFromMarketsAndCount
         xref    _RemoveNegotiatedOfferPlayersFromMarkets
         xref    _PickRandomEligibleExtraPlayerOrdinal
         xref    _PickRandomEligibleSwapPlayerOrdinalFromTeam
@@ -1415,11 +1185,8 @@
         xref    _AddPlayerToTransferMarket
         xref    _RemovePlayerFromTransferMarket
         xref    _CheckForTransferOffers
-        xref    _Career_CommitNewBalanceAndResetFinanceTotals
         xref    _AddCareerPoolPlayer
         xref    _Career_PatchTeamWithForeignMarketPlayers
-        xref    _Career_ApplyForeignMarketPlayersToSelectedTeams
-        xref    _Career_ApplyPendingForeignMarketPlayersToSelectedTeams
 ; --- Chunk 76 xrefs ---
         xref    _DIY_AdvanceFixtureIndex
         xref    _Career_RemovePlayerFromTeamInternal
@@ -1473,7 +1240,6 @@
         xref    _ConvertPlayerDressColor
         xref    _ChooseTacticsInit
         xref    _ShowStandardChooseTacticsMenu
-        xref    _EditTactics
         xref    _ChooseTeamForEditTactics
         xref    _EditTacticsAfterDrawPlayerNames
         xref    _EditTactics_ApplyPlayerRowHighlighting
@@ -1562,7 +1328,6 @@
         xref    _Career_SortTeamFilePtrsByAvgPlayerPrice
         xref    _LoadSomeEuroCup
         xref    _AppendTeamsToSelectionFromTmdOrTeamFile
-        xref    _FatalError
         xref    _Career_InitCompetitionTeamSelection_Dispatch
         xref    _Career_InitCompetitionTeamSelectionFromTableEntrySpec
         xref    _Career_AutoAdvanceInternationalCompetitionFixtures
@@ -1712,13 +1477,6 @@
         xdef    nationalTeams
         xdef    numNationalTeams
 
-        xdef    _CGetPlayerAtIndex
-        xdef    _CCallGetTeamPointer
-        xdef    _CCallSetBenchPlayersNumbers
-        xdef    _CCallEditTactics_CommitPlayerPositionsAndRecalcSkill
-        xdef    _CCallEditTacticsMenuSavePlayerPositions
-        xdef    _CCallInitLittlePlayerSprites
-        xdef    _CCallInitializeTacticsPositions
         xdef    fundsBuffer
         xdef    newPlayerSkill
         xdef    savedCurrentTactics
@@ -1738,9 +1496,6 @@
         xdef    aSaveEditedTact
         xdef    aSave
         xdef    aExit
-        xdef    _CCallDrawEditTacticsPitchAndPlayers
-        xdef    _CCallEditTactics_ApplyPlayerRowHighlighting
-        xdef    _CCallRotatePlayersLeft
 ; Chunk 85 xdefs
         xdef    editTacticsPitchStatus
         xdef    markedPlayerNumber
@@ -1952,8 +1707,6 @@
         xdef    kBallBounceFactorTable
         xdef    playerNormalStandingAnimTable
         xdef    refWaitingAnimTable
-        xdef    _CApplyTeamTactics
-        xdef    _CReplayUpdateCameraAndSwapBuffers
 
         xdef    numScenesInHilFile
         xdef    hilSceneNumber
@@ -1997,7 +1750,6 @@
         xdef    team1NumAllowedInjuries
         xdef    team2NumAllowedInjuries
         xdef    kAbortLossScorerWeightTable
-        xdef    _CDrawSprites
         xdef    ballOutOfGameTimer
         xdef    stoppageAuxFlag
         xdef    statsTeam1GoalsCopy2
@@ -2140,20 +1892,8 @@
         xdef    careerCompetitionSlotPtrTable
         xdef    careerMatchSimulatedFlag
         ; Chunk 94: asm stubs (forward to C)
-        xdef    Career_AutoSimulateLeagueFixturesUntilHumanTeam
-        xdef    Career_AutoSimulateCupMatchesUntilHumanTeam
-        xdef    Career_AutoSimulatePendingMatchUntilHumanTeam
-        xdef    Career_AutoPlayOrSimulateLeagueFixtureLoop
-        xdef    Career_AutoPlayCupMatchAndAdvanceLoop
-        xdef    Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot
         xdef    DIY_AdvanceToNextCompetitionSlot
         ; Chunk 94: C functions called from asm stubs
-        xref    _Career_AutoSimulateLeagueFixturesUntilHumanTeam
-        xref    _Career_AutoSimulateCupMatchesUntilHumanTeam
-        xref    _Career_AutoSimulatePendingMatchUntilHumanTeam
-        xref    _Career_AutoPlayOrSimulateLeagueFixtureLoop
-        xref    _Career_AutoPlayCupMatchAndAdvanceLoop
-        xref    _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot
         xref    _DIY_AdvanceToNextCompetitionSlot
         ; Chunk 94: asm bridge functions callable from C
         xdef    _asm_DIY_SimulateLeagueFixture
@@ -2164,22 +1904,14 @@
         xdef    diyMinSubstitutes
         ; Chunk 95: C functions called from asm stubs
         xref    _SetBenchPlayersNumbers
-        xref    _PlayerJoinedClubOnTrial
-        xref    _TrialPlayerLeftClubMessage
-        xref    _ReservePlayerLeftClubMessage
         xref    _Career_UpdateSinglePlayerPostMatchStats
         xref    _Career_ApplyPostMatchPlayerStatModsIfCareerTeam
         xref    _CheckPlayersLeavingComing
-        xref    _AddTrialPlayer
-        xref    _TrainingMatch_AddTrialPlayerAtPosition
         xref    _Career_RemovePlayerFromSelectedTeamRoster
         xref    _RemovePlayerFromTeam
         ; Chunk 95: xdefs
         xdef    removedPlayerStatAccum
         xdef    plNameForMessage
-        xdef    _CCareer_GenerateTrialistForTeamPlayer
-        xdef    _CCareer_ConvertPlayerToTrialistFromName
-        xdef    _CTrainingMatch_SaveSelectedPlayerId
         ; Chunk 96: C functions called from asm stubs
         xref    _DIY_EditCompetitionSlot
         xref    _DIY_UpdateCompetitionProgress
@@ -2187,7 +1919,6 @@
         xref    _DIY_RebuildCompetitionAndTeamSelectionCaches
         xref    _DIY_UpdateCompetitionProgressOrAdvanceSlot
         xref    _DIY_RecordLeagueFixtureResultAndAdvanceProgress
-        xref    _DIY_RecordCupBracketProgress
         ; Chunk 96: asm bridges for C to call asm
         xdef    _asm_Career_AutoAdvanceInternationalCompetitionFixtures
         xdef    _asm_ShowDiyLeaguesTournamentMenu
@@ -2204,8 +1935,6 @@
         xdef    _asm_DIY_EditCompetitionSlot_Career
         ; Chunk 97: C functions called from asm stubs
         xref    _DIY_LoadCurrentCompetitionSlot
-        xref    _DIY_ResetAndLoadCurrentCompetitionSlot
-        xref    _DIY_InitCupFromTeamGridAndValidateTeams
         xref    _DIY_ShuffleTeamsAndBuildCompTeamList
         xref    _DIY_BuildTeamGridAndIndexMaps
         xref    _DIY_CopyTeamGridFromCompToDIY
@@ -2216,7 +1945,6 @@
         xref    _PlayMatchMenuReinit
         xref    _SetCurrentSelectedPlayerIndexPointer
         xref    _OnSwapPlayer
-        xref    _PlayMatchMenuSwapPlayers
         xref    _HandleSquadSwapSelectionToggle
         xref    _PlayMatchChangeTactics
         xref    _ExitPlayMatch
@@ -2282,11 +2010,6 @@
         xdef    togglePlayerCoachRedrawItemList
         xdef    exitGameFlag
         ; Chunk 98: C-callable asm bridges
-        xdef    _CFormTopSkillsString
-        xdef    _CFormatPlayerValueOrStatusText
-        xdef    _CSetSquadMenuEntryStatusSprite
-        xdef    _CTrainingMatch_BuildCurrentTeamFromCareerTeam
-        xdef    _CTrainingMatch_ApplyUseMatchTeamAndSwapSubs
         ; Chunk 99: C functions called from asm stubs (job_offers.c)
         xref    _GotJobOfferInit
         xref    _GotJobOfferFinish
@@ -2335,9 +2058,6 @@
         xdef    aFromTheStartOf
         xdef    aWeLookForwardT_0
         ; Chunk 99: C-callable asm bridges
-        xdef    _CInt2Pounds
-        xdef    _CShowSquad
-        xdef    _CCareer_ViewOrEditCompetitionSlot
         ; Chunk 100: C functions (string_utils.c)
         xref    _Int2Pounds
         xref    _Int2PoundsSigned
@@ -2371,7 +2091,6 @@
         xdef    aSeasonPrompt
         xdef    aCareerPrompt
         ; Chunk 102: C-callable asm bridges
-        xdef    _CInitAndPlayGame
         ; Chunk 101: C functions (career_status.c)
         xref    _ClubBusinessInit
         xref    _Career_InitializeNewSeasonFinances
@@ -2571,7 +2290,6 @@
         xdef    playerStatusBucketThresholds
 ; --- Chunk 105: Skill adjustment & team tactics (match_sim.c) ---
         xref    _ApplyTeamTactics
-        xdef    _CGetPlayerPrice
         xdef    gameTeam1
         xdef    gameTeam2
 ; --- Chunk 106: BuildMatchResultString (match_sim.c) ---
@@ -2757,7 +2475,6 @@
         xref    _Career_ShowAddInternationalPlayerDialog
         xref    _AddInternationalPlayerHome
         xref    _AddInternationalPlayerAbroad
-        xref    _Career_AddInternationalPlayerCommon
         xref    _PlayerMarketBuildVisiblePlayerList
         xdef    PlayTrainingGame
         xdef    careerAddIntlPlayerResult
@@ -2806,12 +2523,10 @@
         xdef    squadPrevHighlightedMenuEntryPtr
 ; --- Chunk 112: Squad operations (menus.c) ---
         xref    _UpdateBigCheckMark
-        xref    _SquadRedrawPlayerListAndCheckMark
         xref    _SquadMenuSavePlayerPositions
 ; --- Chunk 208: Squad menu functions (menus.c) ---
         xref    _SquadUpdateGoalsMenuText
         xref    _SquadCommon
-        xref    _SquadCommitPositionsAndUpdateSkill
         xdef    teamSkillDiffAfterChange
 ; --- Chunk 209: SquadInit + SquadFinish (menus.c) ---
         xref    _SquadInit
@@ -2881,25 +2596,15 @@
         xref    _JobOffersCommon
         xref    _OldJobOffersCommon
         xref    _JobOffersExit
-        xref    _JobOffers_UpdateMenuEntryLayout
         xdef    managementRecordMenu
         xdef    viewCompetitionsMenu
         xdef    gotJobOfferMenu
         xdef    selectedOldJobOfferOrdinal
-        xdef    CommonMenuExit
 ; --- Chunk 117: Simple standalone functions ---
-        xref    _ShowFormationMenu
-        xref    _SubsBenchOff
-        xref    _TransferMenuSetBankState
         xref    _BuyPlayerInit
         xref    _TransferMarketFinish
         xref    _EditTeamsFinish
-        xdef    InitEditTeamsMenu
-        xdef    CheckNumPlayersOnTransferMarket
-        xdef    CheckIfPlayerSelected
-        xdef    EnableDisableOffers
 ; --- Chunk 118: CommonMenuExit ---
-        xref    _CommonMenuExit
         xdef    diyPresetNameOfCompetition
         xdef    aContinueA
         xdef    aReplayA
@@ -2914,12 +2619,7 @@
         xref    _HighlightsMenu
         xref    _OptionsMenuSelected
         xref    _SaveDiskFilingMenu
-        xref    _ShowFriendlyMenu
-        xref    _ShowSelectRepresentationMenu
-        xref    _Career_HandleRetirement
-        xdef    Friendly
         xdef    EditCustomTeam
-        xdef    EditTactics
         xdef    highlightsMenu
         xdef    optionsMenu
         xdef    diskMenu
@@ -2934,21 +2634,9 @@
         xdef    retired
         xdef    Career_MaybeGenerateJobOffer
 ; --- Chunk 120: DIY Design Menu functions + SetSelectTwoTeamsText ---
-        xref    _ShowDesignDIYLeagueMenu
-        xref    _ShowLeagueInfo
         xref    _DesignDIYLeagueOK
-        xref    _SetNumberOfTeamsToSelect
-        xref    _ShowDesignDIYCupMenu
-        xref    _ShowCupInfo
         xref    _DesignDIYCupOK
-        xref    _DesignDIYCup_UpdateMinSubstitutesAndPointsStrings
-        xref    _DesignDIYCup_UpdateSelectTeamsPrompt
-        xref    _ShowDesignDIYTournamentMenu
-        xref    _ShowTournamentInfo
         xref    _DesignDIYTournamentOK
-        xref    _DesignDIYTournament_UpdateTwoNumericFieldsText
-        xref    _DesignDIYTournament_UpdateSelectTeamsPrompt
-        xref    _SetSelectTwoTeamsText
         xdef    diyLeagueLookOnly
         xdef    diyLeagueSelectTeams
         xdef    designDiyLeagueMenu
@@ -2962,7 +2650,6 @@
 ; --- Chunk 121: FriendlyOK, ViewSelectedTeams, ShowDomesticPlayerMarket, ContestMenuScroll ---
         xref    _FriendlyOK
         xref    _ViewSelectedTeams
-        xref    _ShowDomesticPlayerMarket
         xref    _ContestMenuScrollUp
         xref    _ContestMenuScrollDown
         xdef    viewSelectedTeams
@@ -2972,23 +2659,9 @@
         xdef    exitSelectTeams
         xdef    showDomesticPlayerMarket
         xdef    showPlayerMarketMenu
-        xdef    ScrollUpInGameList
-        xdef    ScrollDownInGameList
-        xdef    BuildGameListArrayFromTeamSelectionKeyCache
 ; --- Chunk 122: Contest Menu Helpers ---
-        xref    _ScrollUpInGameList
-        xref    _ScrollDownInGameList
-        xref    _RestoreContestScrollPosition
-        xref    _SelectActiveContestAndRound
-        xref    _CheckClubBusiness
-        xref    _CheckJobOffers
         xref    _ContestMenuOnReturn_SetButtonsAndDefaultSelection
         xref    _SeasonLowerButtons
-        xref    _CheckTransfers
-        xref    _BuildGameListArrayFromTeamSelectionKeyCache
-        xref    _PrintNameAndSeason
-        xref    _SetNationalSelectorButtons
-        xref    _ContestSetButtons
         xref    _ContestMenuInit
         xref    _ContestMenuOnReturn
         xref    _CareerGameListCommon
@@ -3011,7 +2684,6 @@
         xref    _ViewCompetitionsMenu
         xref    _ClubBusinessMenu
         xref    _JobOffersMenu
-        xref    _SeasonFinished
         xref    _TransfersMenu
         xref    _ViewWorldMenu
         xref    _jmp_SetExitMenuFlag
@@ -3057,13 +2729,7 @@
         xdef    aNextMatch
         xdef    aSquad
 ; --- Chunk 123 xdefs ---
-        xdef    Career_PostMatchUpdate
-        xdef    SeasonFinished_ComputeSeasonReview
-        xdef    ChooseCompetitionMenu
 ; --- Chunk 125 xrefs ---
-        xref    _ChooseCompetitionMenu
-        xref    _SelectTeamsForPresetCompetition
-        xref    _ChooseSeasonMenu
         xref    _GoGetTeamsForPlay
 ; --- Chunk 125 xdefs ---
         xdef    gameTypeStr
@@ -3087,8 +2753,6 @@
         xdef    chooseTeamsMenu
         xdef    SelectTeamsFinalMenu
         xdef    GoGetTeamsForPlay
-        xdef    SelectTeamsForPresetCompetition
-        xdef    ChooseSeasonMenu
 ; --- Chunk 126 xrefs ---
         xref    _DesignDIYLeagueInit
         xref    _DesignDIYLeagueSetName
@@ -3099,20 +2763,15 @@
         xref    _SetPlayEachTeamString
         xref    _DesignDIYLeagueChangePlayEachTeam
         xref    _DesignDIYLeagueChangeNumPointsForWin
-        xref    _ConvertMinMaxSubstitutesNumbers
         xref    _DesignDIYLeagueChangeMinSubstitutes
         xref    _DesignDIYLeagueChangeMaxSubstitutes
 ; --- Chunk 126 xdefs ---
-        xdef    DesignDIYLeagueFinish
         xdef    diyLeagueStartingMonth
         xdef    diyLeagueEndingMonth
         xdef    diyLeagueMinSubstitutes
         xdef    diyLeagueMaxSubstitutes
         xdef    aX0
 ; --- Chunk 127 xrefs ---
-        xref    _DesignDIYCup_UpdateStartEndMonthIndices
-        xref    _DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility
-        xref    _DesignDIYCup_SetupTeamsSelectionUI
         xref    _DesignDIYCupReinit
         xref    _DesignDIYCupInit
         xref    _DesignDIYCupOnSelect2
@@ -3128,9 +2787,6 @@
         xref    _DesignDIYCupOnSelect21
         xref    _DesignDIYCupOnSelect22
 ; --- Chunk 128 xrefs ---
-        xref    _DesignDIYTournament_UpdateMonthPageIndices
-        xref    _DesignDIYTournament_ApplyInactiveMenuColors
-        xref    _DesignDIYTournament_UpdatePitchTypeSeasonalUI
         xref    _DesignDIYTournamentReinit
         xref    _DesignDIYTournamentInit
         xref    _DesignDIYTournamentOnSelect2
@@ -3151,17 +2807,12 @@
         xref    _DesignDIYTournamentOnSelect23
         xref    _DesignDIYTournamentOnSelect20
         xref    _DesignDIYTournament_AdjustStageQualifiers
-        xref    _DesignDIYTournament_CacheStageSelection
-        xref    _DesignDIYTournament_RedrawStageItemsFromBlock
-        xref    _DIYTournament_RecalculateNumStages
 ; --- Chunk 139 xrefs ---
         xref    _ClubTeams
         xref    _NationalTeams
         xref    _OriginalCustomTeams
         xref    _EditedCustomTeams
         xref    _ExitChooseTeams
-        xref    _SetLeagueNames
-        xref    _SetCountryNames
 ; --- Chunk 140 xrefs ---
         xref    _SelectFilenameToSaveAndExit
         xref    _AddExtension
@@ -3184,34 +2835,19 @@
         xref    _EditTeamsCallback
         xref    _ChooseTeamAndStartCareer
         xref    _LoadLiverpool
-        xref    _Career_UpdateNationalTeamMenuEntries
-        xref    _Career_UpdateRemovePlayersMenuEntry
-        xref    _ChooseTeamsSetHeader
-        xref    _CheckNumTeamsAllowed
-        xref    _Bureaucracy
 ; --- Chunk 149 xrefs ---
-        xref    _Friendly
         xref    _FriendlyMenuInit
         xref    _FriendlyMenuReinit
-        xref    _DrawNumbersOfSubstitutes
-        xref    _DisableEntries
         xref    _ChooseTeamsMenu
         xref    _MinSubstitutes
         xref    _MaxSubstitutes
-        xref    _RandomlySwapTeams
         xref    _ContinueCareer
 ; --- Chunk 150 xrefs ---
         xref    _jmp_SetExitMenuFlag_7
         xref    _DIYLeagueTournamentStats
         xref    _DIYLeagueTournamentExit
-        xref    _DIYLeagueTournament_UpdateViewOptionsAvailability
-        xref    _DIYSetTeamNamesAndResults
         xref    _DIYLeagueTournamentScrollUp
         xref    _DIYLeagueTournamentScrollDown
-        xref    _DIYLeagueTournament_ScrollFixtureListToCurrentFixture
-        xref    _DIYLeagueTournament_EnsureCurrentFixtureVisible
-        xref    _DIYLeagueTournament_SetupCurrentFixtureTeamNames
-        xref    _DIYLeagueTournament_DrawPlayMatchAndFixtureHeader
         xref    _DIYLeagueTournamentNextMatch
         xref    _DIYLeagueTournamentInit
 ; --- Chunk 151 xrefs ---
@@ -3229,33 +2865,20 @@
         xref    _DIYLeagueTournamentViewMatch
         xref    _DIYLeagueTournamentViewHighlights
         xref    _DIYLeagueTournamentViewResult
-        xref    _DIYLeagueTournamentMatchCommon
         xref    _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus
 ; --- Chunk 153 xrefs ---
         xref    _ShowDiyLeaguesTournamentMenu
         xref    _GetBenchPlayerPointer
-        xref    _UpdatePlayerToBeSubstitutedPosition
 ; --- Chunk 154 xrefs ---
         xref    _IsPlayerOkToSubstitute
-        xref    _FindInitialPlayerToBeSubstituted
 ; --- Chunk 155 xrefs ---
-        xref    _HandleFormationMenuMovement
         xref    _SwapPlayerNameData
 ; --- Chunk 156 xrefs ---
-        xref    _TrainingSwapBenchTeams
-        xref    _LeaveSubsMenu
         xref    _CheckForThrowInAndGoalkeepersBall
 ; --- Chunk 157 xrefs ---
         xref    _IsThisPlayerOkToSelect
-        xref    _FirePressedInSubsMenu
-        xref    _HandleFormationMenuControls
-        xref    _UpdateSubstitutePlayerIndices
-        xref    _CallUpdateSubstitutePlayerIndices
-        xref    _state3_handle_fire_press
 ; --- Chunk 158 xrefs ---
-        xref    _SelectPlayerToSubstituteMenuHandler
         xref    _SubstitutePlayer
-        xref    _MarkPlayersMenuHandler
 ; --- Chunk 159 xrefs ---
         xref    _BenchMenuHandleControls
 ; --- Chunk 144 xrefs ---
@@ -3263,19 +2886,12 @@
         xref    _BuyOtherPlayersInit
         xref    _BuyOtherPlayersFinish
         xref    _PitchTypeOrSeasonProc
-        xref    _SetFriendlyPitchOrSeason
         xref    _FriendlyPitchTypeProc
 ; --- Chunk 146 xrefs ---
-        xref    _ProcessOfferExpiryCountdown
-        xref    _UpdateAndExpireTransferOffers
-        xref    _GenerateRandomTransferOffers
 ; --- Chunk 145 xrefs ---
-        xref    _PlayerOffersUpdateOfferAmountText
-        xref    _UpdatePlayerOfferMenuIndicators
         xref    _PlayerOffersInit
         xref    _GetCompetitionAbbrevStr
 ; --- Chunk 144 xrefs ---
-        xref    _ShowForeignPlayerMarket
         xref    _ViewForeignPlayerMarket
 ; --- Chunk 138 xrefs ---
         xref    _FillManagementRecordInfo
@@ -3284,9 +2900,7 @@
         xref    _ManagementArrowUpSelect
         xref    _ManagementArrowDownSelect
         xref    _GetCurrentSeasonPointer
-        xref    _Career_StorePromotionRelegationInSeasonInfo
         xref    _Career_FillCurrentSeasonInfo
-        xref    _SelTeamForTactics_ReflowTeamListLayout
 ; --- Chunk 136 xrefs ---
         xref    _ViewCompetitionsInit
         xref    _ViewCompetitionsOnReturn
@@ -3326,7 +2940,6 @@
         xref    _EditTeamsSelectTeamName
         xref    _EditTeamsSelectCoachName
         xref    _EditTeamsChangePlayerFace
-        xref    _InitEditTeamsMenu
         xref    _EditTeamsPlayersBeforeDraw
 ; --- Chunk 132 xrefs ---
         xref    _DIYLeagueChangePitchTypeOrSeason
@@ -3339,10 +2952,6 @@
         xref    _DIYCupOnSelect8
         xref    _DesignDIYTournamentOnSelect89
 ; --- Chunk 131 xrefs ---
-        xref    _DIYSetMonthsOrPitchTypeEntries
-        xref    _DIYLeagueSetVariousFields
-        xref    _DIYLeagueOKSelected
-        xref    _DesignDIYLeagueUpdatePromotionRelegationText
         xref    _DesignDIYLeagueFinish
         xref    _DesignDIYLeagueChooseTeams
         xref    _ShowDIYCupMenuWithParams
@@ -3354,14 +2963,7 @@
 ; --- Chunk 130 xrefs ---
         xref    _DesignDIYCupOnDraw
         xref    _DesignDIYCupOnSelect48
-        xref    _DesignDIYCup_UpdateRoundOptionsVisibility
-        xref    _DesignDIYCup_BuildMenuTitleString
-        xref    _DesignDIYCup_UpdateCurrentMatchTeamEntryStrings
-        xref    _DesignDIYCup_DrawCurrentMatchTeamEntries
-        xref    _DesignDIYCup_HideCurrentMatchTeamEntries
         xref    _DesignDIYCup_UpdateMatchListScrollAndRebuildStrings
-        xref    _DesignDIYCup_UpdateMatchListAndRedrawIfNeeded
-        xref    _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries
 ; --- Chunk 228 xrefs ---
         xref    _DesignDIYCup_BuildMatchListEntryStrings
         xref    _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection
@@ -3369,13 +2971,9 @@
         xref    _DIYLeagueTournamentOnRestore
         xref    _DIYLeagueTournament16BeforeDraw
 ; --- Chunk 161 xrefs ---
-        xref    _ShowSeasonOpinion
 ; --- Chunk 174 xrefs ---
-        xref    _SeasonFinished_ComputeSeasonReview
-        xref    _ShowChairmanOpinionAboutTheSeason
 ; --- Chunk 175 xrefs ---
         xref    _DIY_RecomputeCompetitionDerivedProgressionTable
-        xref    _Career_PostMatchUpdate
 ; --- Chunk 176 xrefs ---
         xref    _TrainingMatch_AddTrialPlayersForNewSeason
 ; --- Chunk 179 xrefs ---
@@ -3391,23 +2989,16 @@
         xdef    englishLeagueCup
         xdef    englishLeagueCup_1
 ; --- Chunk 178 xrefs ---
-        xref    _CheckNumberOfTeams
 ; --- Chunk 177 xrefs ---
         xref    _PutPlayerOnMarketMenu
 ; --- Chunk 177 xdefs ---
         xdef    aPutPlayerOnTra
-        xref    _ShowHighlights
-        xref    _ShowMatchSequence
-        xref    _ViewHighlightsSaveCurrentMenu
         xref    _JmpShowHighlights
         xref    _ViewOffersMenu
 ; --- Chunk 161 xdefs ---
         xdef    stadiumMenu
         xdef    offersMenu
 ; --- Chunk 162 xrefs ---
-        xref    _CheckNumPlayersOnTransferMarket
-        xref    _CheckIfPlayerSelected
-        xref    _EnableDisableOffers
         xref    _TransferMarketInit
         xref    _BuyPlayerMenu
         xref    _GiveFreeTransfer
@@ -3671,7 +3262,6 @@
         xdef    diyLeagueTournament_fixtureRowHeight
         xdef    diyLeagueTournament_fixtureRowYStep
         xdef    groupStringTable
-        xdef    MenuCheckControls
 ; --- Chunk 133 xdefs ---
         xdef    editTeamsSelectedTeam
         xdef    saveCustomTeams
@@ -3697,7 +3287,6 @@
         xdef    aRparen
         xdef    aCup_10
 ; --- Chunk 153 xdefs ---
-        xdef    benchPlayerResultA0
         xdef    diyLeagueTournamentMenu
 ; --- Chunk 152 xdefs ---
         xdef    _asm_DIY_PlayOrSimulateLeagueFixture
@@ -3731,12 +3320,10 @@
         xdef    aTop0InEachGrou_0
         xdef    aTop0InEachGrou_1
 ; --- Chunk 128 xdefs ---
-        xdef    DesignDIYTournamentOnDraw
         xdef    diyTournamentUseSeasonalPitchEffective
         xdef    diyTournamentStartMonthPage
         xdef    diyTournamentEndMonthPage
 ; --- Chunk 127 xdefs ---
-        xdef    DesignDIYCupOnDraw
         xdef    diyCupPitchTypeOrSeasonSelection
         xdef    diyCupStartMonthIndex
         xdef    diyCupEndMonthIndex
@@ -3779,9 +3366,6 @@
         xdef    aDiyTournament
         xdef    aDiyLeague
         xdef    aDiyCup
-        xdef    _CCalcTeamPriceRankPercentOffset
-        xdef    _CUpdatePlayerPositionAndReturnRole
-        xdef    _CCareer_ApplyPostMatchPlayerStatModsIfCareerTeam
 ; --- Chunk 139 xdefs ---
         xdef    numLeaguesInCountry
         xdef    teamNames
@@ -3950,6 +3534,67 @@
         xdef    transferCompleted
         xdef    a0EndSeason
 
+        xdef    _CAddCareerTeamPlayer
+        xdef    _CApplyTeamTactics
+        xdef    _CCalcTeamPriceRankPercentOffset
+        xdef    _CCallDrawEditTacticsPitchAndPlayers
+        xdef    _CCallEditTacticsMenuSavePlayerPositions
+        xdef    _CCallEditTactics_ApplyPlayerRowHighlighting
+        xdef    _CCallEditTactics_CommitPlayerPositionsAndRecalcSkill
+        xdef    _CCallGetTeamPointer
+        xdef    _CCallInitLittlePlayerSprites
+        xdef    _CCallInitializeTacticsPositions
+        xdef    _CCallRotatePlayersLeft
+        xdef    _CCallSetBenchPlayersNumbers
+        xdef    _CCareer_AppendTeamToTmdTeamPool
+        xdef    _CCareer_ApplyPostMatchPlayerStatModsIfCareerTeam
+        xdef    _CCareer_AutoAdvanceCompetitionAndPersistSlotState
+        xdef    _CCareer_ConvertPlayerToTrialistFromName
+        xdef    _CCareer_GenerateTrialistForTeamPlayer
+        xdef    _CCareer_MaybeGenerateJobOffer
+        xdef    _CCareer_ProcessPrimaryCompetitionForNextSeason
+        xdef    _CCareer_ViewOrEditCompetitionSlot
+        xdef    _CCheckPlayersLeavingComing
+        xdef    _CDIY_BuildSeededBracketAndUpdateScores
+        xdef    _CDIY_CopyTeamGridFromCompToDIY
+        xdef    _CDIY_RecomputeCompetitionDerivedProgressionTable
+        xdef    _CDarkenRectangle
+        xdef    _CDrawSprite16Pixels
+        xdef    _CDrawSpriteHotspotInCameraView
+        xdef    _CDrawSpriteInCameraView
+        xdef    _CDrawSprites
+        xdef    _CFindTeamInDIY
+        xdef    _CFormTopSkillsString
+        xdef    _CFormatPlayerValueOrStatusText
+        xdef    _CGetMoreExpensiveTeamsCount
+        xdef    _CGetPlayerAtIndex
+        xdef    _CGetPlayerPrice
+        xdef    _CGetTeamValueBase
+        xdef    _CGetTeamValueForGateReceipts
+        xdef    _CInitAndPlayGame
+        xdef    _CInitDIYCompetitionFromTableEntry
+        xdef    _CInitDIYCompetitionFromTableEntryParam
+        xdef    _CInitDIYCupFromRecord
+        xdef    _CInitDIYCupFromRecordParam
+        xdef    _CInitDIYLeagueFromRecord
+        xdef    _CInitDIYLeagueFromRecordParam
+        xdef    _CInitDisplaySprites
+        xdef    _CInitNewSeason
+        xdef    _CInitializeInGameTeamsAndStartGame
+        xdef    _CInt2Pounds
+        xdef    _CReplayUpdateCameraAndSwapBuffers
+        xdef    _CSelectTeamsFinalMenu
+        xdef    _CSetSquadMenuEntryStatusSprite
+        xdef    _CShowChairmanMessage
+        xdef    _CShowPlayMatchMenu
+        xdef    _CShowSquad
+        xdef    _CTeamSelectionKeyCache_GetCurrentListPtr
+        xdef    _CTrainingMatch_ApplyUseMatchTeamAndSwapSubs
+        xdef    _CTrainingMatch_BuildCurrentTeamFromCareerTeam
+        xdef    _CTrainingMatch_SaveSelectedPlayerId
+        xdef    _CUpdatePlayerPositionAndReturnRole
+        xdef    _CallGetPlayer
+        xdef    _startShim
         include "../SWOS2.s"
 
         SECTION text,CODE
@@ -4041,7 +3686,6 @@ _CCareer_ApplyPostMatchPlayerStatModsIfCareerTeam:
 
 ; _CDIY_RecomputeCompetitionDerivedProgressionTable() -> void
 ; asm: void -> void, calls DIY_RecomputeCompetitionDerivedProgressionTable
-        xdef    _CDIY_RecomputeCompetitionDerivedProgressionTable
 _CDIY_RecomputeCompetitionDerivedProgressionTable:
         movem.l d2-d7/a2-a6,-(sp)
         jsr     DIY_RecomputeCompetitionDerivedProgressionTable
@@ -4054,7 +3698,6 @@ _CDIY_RecomputeCompetitionDerivedProgressionTable:
 ;      but if team==careerTeam returns totalTeamValue.l
 ;      For simplicity: accepts team ptr, reads team number from it,
 ;      then does VerifyTeamLoaded + GetAveragePlayerPrice, returns d0.
-        xdef    _CGetTeamValueForGateReceipts
 _CGetTeamValueForGateReceipts:
         movem.l d2-d7/a2-a6,-(sp)
         movea.l 48(sp),a0             ; team ptr
@@ -4067,7 +3710,6 @@ _CGetTeamValueForGateReceipts:
 
 ; _CGetTeamValueBase(uint16_t avgPrice) -> uint16_t
 ; asm: d0=avgPrice, returns d0
-        xdef    _CGetTeamValueBase
 _CGetTeamValueBase:
         movem.l d2-d7/a2-a6,-(sp)
         move.w  48(sp),d0              ; avgPrice
@@ -4076,13 +3718,11 @@ _CGetTeamValueBase:
         rts
 
 ; _CFindTeamInDIY: now just forwards to _FindTeamInDIY (both are C-ABI)
-        xdef    _CFindTeamInDIY
 _CFindTeamInDIY:
         jmp     _FindTeamInDIY
 
 ; _CGetMoreExpensiveTeamsCount(uint16_t teamNum, uint8_t *compBuf) -> uint16_t (d2 returned as d0)
 ; asm: d0=teamNum, a6=compBuf, returns d2
-        xdef    _CGetMoreExpensiveTeamsCount
 _CGetMoreExpensiveTeamsCount:
         movem.l d2-d7/a2-a6,-(sp)
         move.w  48(sp),d0              ; teamNum
@@ -4093,7 +3733,6 @@ _CGetMoreExpensiveTeamsCount:
         rts
 
 ; _CShowChairmanMessage() — no args
-        xdef    _CShowChairmanMessage
 _CShowChairmanMessage:
         movem.l d2-d7/a2-a6,-(sp)
         jsr     ShowChairmanMessage
@@ -4101,7 +3740,6 @@ _CShowChairmanMessage:
         rts
 
 ; _CAddCareerTeamPlayer() — no args
-        xdef    _CAddCareerTeamPlayer
 _CAddCareerTeamPlayer:
         movem.l d2-d7/a2-a6,-(sp)
         jsr     AddCareerTeamPlayer
@@ -4110,7 +3748,6 @@ _CAddCareerTeamPlayer:
 
 ; _CCheckPlayersLeavingComing() — no args
 ; Now calls C _CheckPlayersLeavingComing directly (Chunk 95)
-        xdef    _CCheckPlayersLeavingComing
 _CCheckPlayersLeavingComing:
         jmp     _CheckPlayersLeavingComing
 
@@ -4148,7 +3785,6 @@ _CTrainingMatch_SaveSelectedPlayerId:
 
 ; _CCareer_AppendTeamToTmdTeamPool(uint8_t *team) -> void
 ; Now calls C function _Career_AppendTeamToTmdTeamPool directly (Chunk 77)
-        xdef    _CCareer_AppendTeamToTmdTeamPool
 _CCareer_AppendTeamToTmdTeamPool:
         movem.l d2-d7/a2-a6,-(sp)
         move.l  48(sp),-(sp)          ; push team ptr
@@ -4159,7 +3795,6 @@ _CCareer_AppendTeamToTmdTeamPool:
 
 ; _CTeamSelectionKeyCache_GetCurrentListPtr() -> uint8_t *
 ; asm: returns a0
-        xdef    _CTeamSelectionKeyCache_GetCurrentListPtr
 _CTeamSelectionKeyCache_GetCurrentListPtr:
         movem.l d2-d7/a2-a6,-(sp)
         jsr     TeamSelectionKeyCache_GetCurrentListPtr
@@ -4171,7 +3806,6 @@ _CTeamSelectionKeyCache_GetCurrentListPtr:
 
 ; _CDIY_BuildSeededBracketAndUpdateScores(uint8_t *a2, uint8_t *a3, uint8_t *a4, uint8_t *a5)
 ; asm: a2,a3,a4,a5 set from stack params
-        xdef    _CDIY_BuildSeededBracketAndUpdateScores
 _CDIY_BuildSeededBracketAndUpdateScores:
         movem.l d2-d7/a2-a6,-(sp)
         movea.l 48(sp),a2
@@ -4184,7 +3818,6 @@ _CDIY_BuildSeededBracketAndUpdateScores:
 
 ; _CDIY_CopyTeamGridFromCompToDIY(uint8_t *a2, uint8_t *a3, uint8_t *a4, uint8_t *a5)
 ; asm: a2,a3,a4,a5 set from stack params
-        xdef    _CDIY_CopyTeamGridFromCompToDIY
 _CDIY_CopyTeamGridFromCompToDIY:
         movem.l d2-d7/a2-a6,-(sp)
         movea.l 48(sp),a2
@@ -4215,7 +3848,6 @@ _CGetPlayerAtIndex:
 ; _CallGetPlayer(uint16_t teamNumber, uint16_t playerIndex) -> uint8_t *
 ; asm GetPlayer: d0=teamNumber, d1=playerIndex → a0=player ptr (d1 preserved)
 ; C return: pointer in d0
-        xdef    _CallGetPlayer
 _CallGetPlayer:
         movem.l d2-d7/a2-a6,-(sp)
         move.l  48(sp),d0               ; teamNumber
@@ -4404,7 +4036,6 @@ _CInitAndPlayGame:
 
 ; _CInitDIYCompetitionFromTableEntry(void) -> void
 ; Reads selectedContest and contestLeagueNumber from globals, calls C impl
-        xdef    _CInitDIYCompetitionFromTableEntry
 _CInitDIYCompetitionFromTableEntry:
         movem.l d2-d7/a2-a6,-(sp)
         move.l  (selectedContest).l,-(sp)
@@ -4418,7 +4049,6 @@ _CInitDIYCompetitionFromTableEntry:
 
 ; _CInitDIYCupFromRecord(void) -> void
 ; Reads selectedContest from global, calls C impl
-        xdef    _CInitDIYCupFromRecord
 _CInitDIYCupFromRecord:
         movem.l d2-d7/a2-a6,-(sp)
         move.l  (selectedContest).l,-(sp)
@@ -4429,7 +4059,6 @@ _CInitDIYCupFromRecord:
 
 ; _CInitDIYLeagueFromRecord(void) -> void
 ; Reads selectedContest from global, calls C impl
-        xdef    _CInitDIYLeagueFromRecord
 _CInitDIYLeagueFromRecord:
         movem.l d2-d7/a2-a6,-(sp)
         move.l  (selectedContest).l,-(sp)
@@ -4441,7 +4070,6 @@ _CInitDIYLeagueFromRecord:
 ; _CInitNewSeason(void) -> void
 ; Reads selectedContest and contestLeagueNumber from globals
 ; InitNewSeason expects: a0=contest, d1.w=leagueNumber
-        xdef    _CInitNewSeason
 _CInitNewSeason:
         movem.l d2-d7/a2-a6,-(sp)
         movea.l (selectedContest).l,a0
@@ -4455,31 +4083,26 @@ _CInitNewSeason:
 ; --- Chunk 175 C-callable asm bridges ---
 
 ; _CCareer_AutoAdvanceCompetitionAndPersistSlotState — now just forwards to C impl
-        xdef    _CCareer_AutoAdvanceCompetitionAndPersistSlotState
 _CCareer_AutoAdvanceCompetitionAndPersistSlotState:
         jmp     _Career_AutoAdvanceCompetitionAndPersistSlotState
 
 ; _CInitDIYCupFromRecordParam(uint8_t *record) -> void
 ; Now just forwards to C impl
-        xdef    _CInitDIYCupFromRecordParam
 _CInitDIYCupFromRecordParam:
         jmp     _InitDIYCupFromRecord
 
 ; _CInitDIYLeagueFromRecordParam(uint8_t *record) -> void
 ; Now just forwards to C impl
-        xdef    _CInitDIYLeagueFromRecordParam
 _CInitDIYLeagueFromRecordParam:
         jmp     _InitDIYLeagueFromRecord
 
 ; _CInitDIYCompetitionFromTableEntryParam(uint16_t index, uint8_t *record) -> void
 ; Now just forwards to C impl
-        xdef    _CInitDIYCompetitionFromTableEntryParam
 _CInitDIYCompetitionFromTableEntryParam:
         jmp     _InitDIYCompetitionFromTableEntry
 
 ; _CSelectTeamsFinalMenu(uint16_t mode) -> void
 ; SelectTeamsFinalMenu expects: d0.b = mode
-        xdef    _CSelectTeamsFinalMenu
 _CSelectTeamsFinalMenu:
         movem.l d2-d7/a2-a6,-(sp)
         move.w  48(sp),d0              ; param: 44(saved regs) + 4(return addr) = offset 48
@@ -4489,7 +4112,6 @@ _CSelectTeamsFinalMenu:
 
 ; _CCareer_MaybeGenerateJobOffer() -> void
 ; C-callable wrapper for Career_MaybeGenerateJobOffer (still in assembly)
-        xdef    _CCareer_MaybeGenerateJobOffer
 _CCareer_MaybeGenerateJobOffer:
         movem.l d2-d7/a2-a6,-(sp)
         jsr     (Career_MaybeGenerateJobOffer).l
@@ -4498,7 +4120,6 @@ _CCareer_MaybeGenerateJobOffer:
 
 ; _CCareer_ProcessPrimaryCompetitionForNextSeason(uint8_t *competition) -> void
 ; C-callable wrapper — sets a4 from stack param, calls asm Career_ProcessPrimaryCompetitionForNextSeason
-        xdef    _CCareer_ProcessPrimaryCompetitionForNextSeason
 _CCareer_ProcessPrimaryCompetitionForNextSeason:
         movem.l d2-d7/a2-a6,-(sp)
         movea.l 48(sp),a4              ; param: 44(saved) + 4(ret) = 48
@@ -4511,7 +4132,6 @@ _CCareer_ProcessPrimaryCompetitionForNextSeason:
 ;     int16_t excludeFlags, int16_t isFirstPlayer, int16_t squadChanges,
 ;     uint8_t *team1, uint8_t *team2)
 ; Loads C params into d0, d1, d2, d5, d6, a1, a2 and calls ShowPlayMatchMenu.
-        xdef    _CShowPlayMatchMenu
 _CShowPlayMatchMenu:
         movem.l d2-d7/a2-a6,-(sp)      ; save 11 regs = 44 bytes
         ; Stack: sp+0=saved, sp+44=return_addr, sp+48=controlFlags, sp+52=maxSubs,
@@ -4531,6 +4151,5 @@ _CShowPlayMatchMenu:
 
 ; ===== C→C bridge: _CInitializeInGameTeamsAndStartGame =====
 ; Now just forwards to _InitializeInGameTeamsAndStartGame (same signature)
-        xdef    _CInitializeInGameTeamsAndStartGame
 _CInitializeInGameTeamsAndStartGame:
         jmp     (_InitializeInGameTeamsAndStartGame).l
