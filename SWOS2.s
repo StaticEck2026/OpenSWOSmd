@@ -23,10 +23,6 @@ FASTBITS = ((1<<(FASTMEMSIZE/$80000))-1)<<24
 
 unk_4                                   EQU $00000004
 unk_FC                                  EQU $000000FC
-
-; ===== TYPES / ENUMS (EQU) =====
-
-; ===== AMIGA CUSTOM REGISTERS (EQU) =====
 CUSTOM                                  EQU $00DFF000
 DMACONR                                 EQU $00DFF002
 VPOSR                                   EQU $00DFF004
@@ -45,32 +41,20 @@ AUD1LC                                  EQU $00DFF0B0
 AUD2LC                                  EQU $00DFF0C0
 AUD3LC                                  EQU $00DFF0D0
 COLOR00                                 EQU $00DFF180
-; ===== END AMIGA CUSTOM REGISTERS =====
-
-; ===== AMIGA CIAB REGISTERS (EQU) =====
 CIAB_PRB                                EQU $00BFD100
 CIAB_TALO                               EQU $00BFD400
 CIAB_TAHI                               EQU $00BFD500
 CIAB_ICR                                EQU $00BFDD00
 CIAB_CRA                                EQU $00BFDE00
-; ===== END AMIGA CIAB REGISTERS =====
-
-; ===== AMIGA CIAA REGISTERS (EQU) =====
 CIAA_PRA                                EQU $00BFE001
 CIAA_DDRA                               EQU $00BFE201
 CIAA_SDR                                EQU $00BFEC01
 CIAA_ICR                                EQU $00BFED01
 CIAA_CRA                                EQU $00BFEE01
-; ===== END AMIGA CIAA REGISTERS =====
-
-; ===== BSS REGION =====
 BSS_0_BASE                              EQU $00000400
 BSS_0_END                               EQU $00100000
 BSS_1_BASE                              EQU $0015736A
 BSS_1_END                               EQU $00200000
-; ===== END BSS REGION =====
-
-; ==== STRUCT: PLAYERINFOHEADER ====
 PLAYERINFOHEADER_SIZE                   EQU 103
 PLAYERINFOHEADER_HEADER                 EQU 0
 PLAYERINFOHEADER_HEADER_SIZE            EQU 42
@@ -2232,11 +2216,6 @@ MENU_MARK_START_TEMPLATE                EQU 64539
 MENU_MARK_INIT_ENTRY                    EQU 64540
 MENU_MARK_WIDE_COORDS                   EQU 65534
 MENU_MARK_BYTE_COORDS                   EQU 65535
-
-; ===== END TYPES / ENUMS =====
-
-; --- segment CHIP_RAM 00000000-001FFFFF ---
-; [INFO] scanning CHIP_RAM...
 NULL                                    EQU $0
                                         ; ; File Name   : D:\Systems\RE\SWOS2
                                         ; ; Format      : Binary file
@@ -2807,10 +2786,6 @@ g_earlyAllocCacheSize:
 
 assetLoaderMainRegion:
                 ds.b $0                 ; zero-size anchor (cache memory allocated at runtime via AllocMem)
-
-; ===== j_start =====
-; prototype: void __usercall j_start()
-
     SECTION text,CODE
 j_start:
                 jmp     start
@@ -3033,9 +3008,6 @@ copperListTemplate:
                 dc.w $00EE,$0000,$FFE1,$FFFE,$0001,$FFFE,$00E0,$0000
                 dc.w $00E2,$0000,$00E4,$0000,$00E6,$0000,$00E8,$0000
                 dc.w $00EA,$0000,$00EC,$0000,$00EE,$0000,$FFFF,$FFFE
-
-; ===== InitHardwareAtFrameStart =====
-; Ported to C: _InitHardwareAtFrameStart in src/interrupts.c (Chunk 44)
                 movem.l d0-d7/a0-a7,(panicRegDumpBlock).l
 loc_1023F6:
                 move.w  d0,(COLOR00).l
@@ -4535,15 +4507,6 @@ SetPlayerAnimationTable:
                 movem.l (sp)+,d2-d7/a2-a6
                 move.w  (sp)+,d0
                 rts
-
-; ===== SetBallPosition =====
-; prototype: void __usercall SetBallPosition(__int16 ballX@<d1>, __int16 ballY@<d2>)
-; in:
-;      D1 - ball x
-;      D2 - ball y
-; 
-; Stop ball and put it to the ground (z = 0).
-; Ported to C: _MoveCamera in src/move_camera.c
                 nop
 cameraXVelocity:
                 dc.w $0000              ; -40..40
@@ -5762,29 +5725,6 @@ pitchNumberProbabilities:
 ; Ported to C: _SetHilFileHeader in src/highlight.c
 kHilFileSig:
                 dc.l $0000000C          ; Every *.hil file starts with this dword
-
-; ===== SaveHighlightsPointers =====
-; prototype: void __usercall SaveHighlightsPointers()
-; Saves pointers to highlight buffers.
-; Ported to C: _SaveHighlightsPointers in src/highlight.c
-
-; ===== RestoreHighlightPointers =====
-; prototype: void __usercall RestoreHighlightPointers()
-; Ported to C: _RestoreHighlightPointers in src/highlight.c
-
-; ===== FadeAndSaveHighlightScene =====
-; prototype: void __usercall FadeAndSaveHighlightScene()
-; Ported to C: _FadeAndSaveHighlightScene in src/highlight.c
-
-; ===== SaveHighlightScene =====
-; prototype: void __usercall SaveHighlightScene()
-; Maximum number of highlights is 10. If there is no room,
-; overwrite oldest highlight.
-; Ported to C: _SaveHighlightScene in src/highlight.c
-
-; ===== ThrowInDeadProc =====
-; prototype: void __usercall ThrowInDeadProc()
-; Ported to C: _ThrowInDeadProc in src/highlight.c
                 movea.l (goalBasePtr).l,a0
                 move.w  #4749,d0
 loc_10C336:
@@ -7599,17 +7539,6 @@ menuPrecacheTable:
                 dc.l $FFFFFFFF          ; element[22]
 aDataTeam008:
                 dc.b 'data/team.008',0
-
-; ===== ReplayExitMenuAfterFriendly =====
-; prototype: void __usercall ReplayExitMenuAfterFriendly()
-; Ported to C: _ReplayExitMenuAfterFriendly in src/replay_menu.c
-
-; ===== DrawReplayOrExitMenu =====
-; Ported to C: _DrawReplayOrExitMenu in src/replay_menu.c
-
-; ===== DrawMenuBack150x20 =====
-; Ported to C: _DrawMenuBack150x20 in src/replay_menu.c
-; in: D0 = color, D1 = x, D2 = y
                 move.w  #150,d2
                 move.w  #20,d3
                 tst.w   d4
@@ -7653,14 +7582,6 @@ draw_menu_frame_segments:
                 jsr     FillRectangle
                 movem.l (sp)+,d0-d4
                 rts
-
-; ===== DrawReplayContinueShiningFrame =====
-; prototype: void __usercall DrawReplayContinueShiningFrame(__int16 x@<d0>, __int16 y@<d1>)
-; in:
-;      D0 - x
-;      D1 - y
-; Ported to C: _DrawReplayContinueShiningFrame in src/replay_menu.c
-; in: D0 = x, D1 = y
                 move.w  #1,d2
                 move.w  #$14,d3
                 movem.l d0-d6,-(sp)
@@ -8918,51 +8839,6 @@ SendPlayerAway:
                 addq.l  #8,sp
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-
-; ===== ShouldGoalkeeperDive =====
-; prototype: __int16 __usercall ShouldGoalkeeperDive@<d0>(Sprite *goalie@<a1>, Sprite *ball@<a2>, TeamGeneralInfo *team@<a6>)
-; D0 = Attempt Save
-
-; ===== GetFramesNeededToCoverDistance =====
-; prototype: unsigned __int16 __usercall GetFramesNeededToCoverDistance@<d7>(__int32 movementDeltaFp16_16@<d0>, unsigned __int16 distance@<d4>)
-; in:
-;      D0 - movement delta, distance in a single frame (fixed point)
-;           (absolute value is taken)
-;      D4 - distance to cover (integer)
-; out:
-;      D7 - frames needed to cover the given distance (integer)
-; 
-; Does division D4/D0 using loops, without direct divide instruction.
-; If they're exactly divisible it will return one more, e.g. 9/3 -> 4.
-
-; ===== UpdateBallVariables =====
-; prototype: __int16 __usercall UpdateBallVariables@<d0>(Sprite *playerSprite@<a1>, Sprite *ballSprite@<a2>, TeamGeneralInfo *teamInfo@<a6>)
-; in:
-;      A1 -> player sprite
-;      A2 -> ball sprite
-;      A6 -> team (general)
-
-; ===== PlayerTacklingTestFoul =====
-; prototype: void __usercall PlayerTacklingTestFoul(Sprite *playerSprite@<a1>, Sprite *ballSprite@<a2>, TeamGeneralInfo *teamInfo@<a6>)
-; in:
-;      A1 -> sprite (player)
-;      A2 -> sprite (ball)
-;      A6 -> team data
-; 
-; Check if the tackle ends up in faul, there must be a few conditions satisfied:
-; - opponent has a controlled player
-; - distance between them is more than 32 units
-
-; ===== GoalkeeperCaughtTheBall =====
-; prototype: void __usercall GoalkeeperCaughtTheBall(Sprite *keeper@<a1>, TeamGeneralInfo *team@<a6>)
-; There was a shot on goal, but goalkeeper managed to throw himself and catch
-; the ball (and save the day). (I think)
-
-; ===== GoalkeeperDeflectedBall =====
-; prototype: void __usercall GoalkeeperDeflectedBall(Sprite *ball@<a2>, TeamGeneralInfo *team@<a6>)
-; in:
-;      A2 -> ball sprite
-;      A6 -> player team (general)
                 lea     (goalieDeflectBallAnimTable).l,a0
                 jsr     SetPlayerAnimationTable
                 move.b  #$B,$C(a1)
@@ -20216,14 +20092,6 @@ hexWordStringBuffer:
 aStackOverflow:
                 dc.b 'STACK OVERFLOW',0,0
                 even
-
-; ===== _CallMenuCallback =====
-; C-callable wrapper: void _CallMenuCallback(void *funcPtr)
-; Saves all registers before calling the asm callback (which may clobber everything),
-; then restores them. This mirrors the original MenuProc behavior.
-; IMPORTANT: save regs FIRST with original values, then load args with +60 offset.
-; d2-d7/a2-a6 are callee-saved in GCC m68k ABI; modifying them before save would
-; corrupt the caller's state on restore.
                 xdef    _CallMenuCallback
 _CallMenuCallback:
                 movem.l d0-d7/a0-a6,-(sp)      ; save all regs (60 bytes)
@@ -20231,11 +20099,6 @@ _CallMenuCallback:
                 jsr     (a0)
                 movem.l (sp)+,d0-d7/a0-a6       ; restore original values
                 rts
-
-; ===== _CallMenuOnSelect =====
-; C-callable wrapper: void _CallMenuOnSelect(void *funcPtr, void *selectedEntry)
-; Like _CallMenuCallback but also sets a5 = selectedEntry before calling,
-; matching the original MenuProc which kept a5 pointing to the current entry.
                 xdef    _CallMenuOnSelect
 _CallMenuOnSelect:
                 movem.l d0-d7/a0-a6,-(sp)      ; save all regs with ORIGINAL values (60 bytes)
@@ -20246,12 +20109,6 @@ _CallMenuOnSelect:
                 addq.l  #4,sp                   ; clean up pushed arg
                 movem.l (sp)+,d0-d7/a0-a6       ; restore ALL original values incl. a5
                 rts
-
-; ===== _CallMenuFuncWithXY =====
-; C-callable wrapper: void _CallMenuFuncWithXY(void *funcPtr, uint16_t x, uint16_t y)
-; Calls an asm callback with d1=x, d2=y (register calling convention).
-; Used for ENTRY_FUNC1 (bg) and ENTRY_FUNC2 (fg) menu callbacks.
-; GCC m68k pushes uint16_t args as 32-bit longs on the stack.
                 xdef    _CallMenuFuncWithXY
 _CallMenuFuncWithXY:
                 movem.l d0-d7/a0-a6,-(sp)      ; save all regs with ORIGINAL values (60 bytes)
@@ -20388,19 +20245,6 @@ SetCurrentEntry:
                 jsr     _SetCurrentEntry
                 addq.l  #4,sp
                 rts
-
-; ===== CalcMenuEntryAddress =====
-; prototype: struct MenuEntry *__usercall CalcMenuEntryAddress@<a0>(unsigned __int16 ordinal@<d0>)
-; in:
-;      D0 - menu item ordinal that we're converting
-; 
-; returns:
-;      D0 -  offset to menu entry
-;      A0 -> pointer to menu entry
-; 
-; destroys:
-;      eax, ebx, edx, D0, A0
-;      [ebp safe]
                 adda.l  #MENUENTRY_SIZE,a0
                 rts
                 suba.l  #MENUENTRY_SIZE+MENUENTRY_ALREADYDRAWN,a0
@@ -20695,11 +20539,6 @@ kTeamViewOffsetBaseLUT:
                 dc.b -1,3,0,-2,0,1,5,3,-2,0,1,3,1,0,-1,-2
                 dc.b -1,0,2,4,1,0,-2,-4,-1,-5,-1,-2,-1,0,-1,3
                 dc.b -4,-6,-3,1,0,-1,-1,-3,0,3,-2,0,0,2,0,0
-
-; ===== CalculateViewResult =====
-; Bridge: a0=ctx, d0=modeFlag, d1=team1Goals, d2=team2Goals,
-;         d3=statColumnIndex, a1=team1, a2=team2
-; out: D1 = team1 goals, D2 = team2 goals
                 move.w  (sp)+,d2        ; outTeam2Goals
                 movem.l (sp)+,d3-d7/a2-a6
                 rts
@@ -22628,9 +22467,6 @@ GetAveragePlayerPrice:
                 addq.l  #4,sp
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-
-; ===== GetAveragePlayerPriceInSelectedTeams ===== (ported to C → _GetAveragePlayerPriceInSelectedTeams in teams.c)
-; out: D0.w = average price across selected teams
                 move.w  (a0),d0
                 clr.w   d2
                 clr.w   d3
@@ -22646,13 +22482,6 @@ loc_126744:
                 ext.l   d0
                 divu.w  #$27,d0         ; '''
                 rts
-
-; ===== ProcessDIYLeagueMatchResultAndCareerUpdates ===== (ported to C → _ProcessDIYLeagueMatchResultAndCareerUpdates in diy_competition.c)
-; Input: a1=team1, a2=team2  Output: d1=goals1, d2=goals2, d7=flags
-
-; ===== ProcessDIYKnockoutMatchResultAndCareerUpdates ===== (ported to C → _ProcessDIYKnockoutMatchResultAndCareerUpdates in diy_competition.c)
-; Input: a1=team1, a2=team2, d5=firstLegTeam1, d6=firstLegTeam2
-; Output: d4=packedGoals, d5=packedAggregate, d6=packedPenalty, d7=flags
                 rts
 cachedViewResultTeam1Goals:
                 dc.w -1
@@ -22668,20 +22497,6 @@ cachedPenaltyShootoutTeam2Score:
                 dc.w $0000
 pad_126A90:
                 dc.b $00,$00,$00,$00
-
-; ===== GetTeamKitsSimilarityFactor =====
-; prototype: unsigned __int16 __usercall GetTeamKitsSimilarityFactor@<d7>(unsigned __int8 team1ShirtType@<d0>, unsigned __int8 team1StripesColor@<d1>, unsigned __int8 team1BasicColor@<d2>, unsigned __int8 team1ShortsColor@<d3>, unsigned __int8 team2ShirtType@<d4>, unsigned __int8 team2StripesColor@<d5>, unsigned __int8 team2BasicColor@<d6>, unsigned __int8 team2ShortsColor@<d7>)
-; in:
-;      D0 - team1 shirt type
-;      D1 - team1 stripes color
-;      D2 - team1 basic color
-;      D3 - team1 shorts color
-;      D4 - team2 shirt type
-;      D5 - team2 stripes color
-;      D6 - team2 basic color
-;      D7 - team2 shorts color
-; out:
-;      D7 - team kit colors similarity factor
                 move.w  d0,d7
                 movem.l (sp)+,d2-d6/a0-a1
                 rts
@@ -22841,11 +22656,6 @@ loc_127466:
                 lea     (a1k).l,a0      ; "�%1K"
 loc_12746E:
                 jmp PrintFormatted(pc)
-
-; ===== InitCompetitionTeamSelectionFromTableEntry =====
-; prototype: unsigned __int16 __usercall InitCompetitionTeamSelectionFromTableEntry@<d0>(unsigned __int16 idx@<d0>, void *base@<a0>)
-; Ported to C: _InitCompetitionTeamSelectionFromTableEntry in career_init.c
-; Bridge: d0=idx, a0=base → C params, returns d0=0
                 ext.w   d0
                 move.w  d0,(numNeededTeams).l
                 clr.w   d0
@@ -24993,11 +24803,6 @@ careerTeamFlagsByRegionTable:
                 dc.l careerTeamFlagsBySeason1 ; element[3]
                 dc.l careerTeamFlagsBySeason1 ; element[4]
                 dc.l careerTeamFlagsBySeason1 ; element[5]
-
-; ===== InitNewSeason =====
-; Ported to C: _InitNewSeason in career_init.c (Chunk 197)
-; in: a0 = src comp record, d1 = divisionIndex
-                ; === dead code below (old body) ===
                 clr.w   (retired).l
                 move.b  2(a0),d7
                 move.w  d1,(currentDivisionIndex).l
@@ -25068,11 +24873,6 @@ loc_12E9D0:
                 move.b  (careerJobOfferPhaseBias).l,(viewRandomPhase).l
                 jsr InitTeams(pc)
                 rts
-
-; ===== Career_ViewOrEditCompetitionSlot =====
-; Ported to C: _Career_ViewOrEditCompetitionSlot in career_init.c (Chunk 198)
-; in: a0 = competition pointer, d0 = selection/divisionIndex
-                ; === dead code below (old body) ===
                 lea     ((nationalTeamCompetitionsAndQualifications1+$96)).l,a2
 loc_12E9E6:
                 lea     6(a2),a2
@@ -25195,11 +24995,6 @@ diyCompHasGroupStage:
                 dc.w $0000              ; Boolean flag for whether the DIY competition has a group/seeded stage.
 findTeamInDIY_SuppressSideEffectsFlag:
                 dc.w $0000
-
-; ===== GetMoreExpensiveTeamsCount =====
-; prototype: unsigned __int16 __usercall GetMoreExpensiveTeamsCount@<d2>(unsigned __int16 teamNo@<d0>, DIY_Competition *comp@<a6>)
-; Chunk 171: ported to C (_GetMoreExpensiveTeamsCount)
-; in: d0 = teamNo, a6 = comp pointer; out: d2 = count
                 lea     (competitionFileBuffer).l,a6
                 move.w  $32(a6),d6
                 lea     $12E(a6),a5
@@ -39788,15 +39583,6 @@ offsetCoachOrPlayer:
                 dc.w $0000
                 dc.l aCoach_0           ; "COACH"
                 dc.l aPlayerCoach_0     ; "PLAYER-COACH"
-
-; ===== CareerMenuInit =====
-; Ported to C: _CareerMenuInit in src/menus.c
-
-; ===== CareerMenuFinish =====
-
-; ===== C→asm bridge: _CSelectTeamToManage =====
-; Calls SelectTeamToManage, returns a0 as C return value,
-; stores d0 (team number) in _cSelectTeamToManageResult.
                 xdef    _CSelectTeamToManage
                 xdef    _cSelectTeamToManageResult
 _CSelectTeamToManage:
@@ -39808,9 +39594,6 @@ _CSelectTeamToManage:
                 rts
 _cSelectTeamToManageResult:
                 dc.w    0
-
-; ===== C→asm bridge: _CInitCareer =====
-; Takes uint16_t teamNo from stack, calls InitCareer with d0=teamNo.
                 xdef    _CInitCareer
 _CInitCareer:
                 movem.l d0-d7/a0-a6,-(sp)
@@ -46362,24 +46145,6 @@ FillCareerTeamPlayers:
                 jsr     _FillCareerTeamPlayers
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-
-; ===== AddPlayerToCareerContest =====
-; prototype: void __usercall AddPlayerToCareerContest(unsigned __int16 teamNumber@<d0>, unsigned __int8 playerOrdinal@<d1>)
-; in:
-;     D0 - team number
-;     D1 - player ordinal
-; out:
-;     zero flag: set = full, can't add
-;                clear = added OK
-
-; ===== IsPlayerInCareerContest =====
-; prototype: void __usercall IsPlayerInCareerContest(unsigned __int16 teamNumber@<d0>, unsigned __int8 playerOrdinal@<d1>)
-; in:
-;     D0 - team number
-;     D1 - player ordinal
-; out:
-;     zero flag: set = success, found
-;                clear = not found
 .not_found:
                 movem.l (sp)+,d2-d7/a2-a6
                 move.w  #1,d0
@@ -46392,20 +46157,6 @@ FillForeignMarketPlayers:
                 jsr     _FillForeignMarketPlayers
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-
-; ===== AddRandomForeignMarketPlayer =====
-; prototype: void __usercall AddRandomForeignMarketPlayer()
-; Add a random player to the foreign market. 25% chance to pick up a player
-; within the limits of the selected team (or slightly better).
-
-; ===== AddForeignMarketPlayer =====
-; prototype: void __usercall AddForeignMarketPlayer(unsigned __int16 teamId@<d0>, unsigned __int8 playerOrdinal@<d1>)
-; in:
-;     D0 - team id
-;     D1 - player ordinal
-; out:
-;     zero flag: set = not added, full
-;                clear = added OK
 .not_found_f:
                 movem.l (sp)+,d2-d7/a2-a6
                 move.w  #1,d0
@@ -55189,15 +54940,6 @@ loc_14C352:
                 lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$888)).l,a5
                 move.w  #6,d0
                 jmp     DrawMultipleItems
-
-; ===== EditTactics_ApplyPlayerRowHighlighting =====
-; prototype: void __usercall EditTactics_ApplyPlayerRowHighlighting(__int16 playerOrdinal@<d7>, MenuEntry *cur@<a5>)
-; in:
-;      D7 - player ordinal
-; dos: cseg_4F37E
-; Ported to C: _EditTactics_ApplyPlayerRowHighlighting in src/edit_tactics.c
-; Bridge: d7=ordinal, a5=cur → C params
-                ; dead code below
                 cmpi.w  #16,d7          ; player 16
                 bne.s   loc_14C38E
                 lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$888)).l,a0
@@ -64582,36 +64324,6 @@ j_LoadCareerFile:
 ; ===== j_SaveCareerFile =====
 j_SaveCareerFile:
                 bra.s   SaveCareerFile
-
-; ===== LoadPresetFile =====
-; Ported to C: _LoadPresetFile in src/file_io.c
-; in: a0 = filename
-; out: d0 = 0 success, 1 = error; Z flag set accordingly
-
-; ===== SavePresetCompetitionFile =====
-; Ported to C: _SavePresetCompetitionFile in src/file_io.c
-; in: a0 = filename
-; out: d0 = 0 success, 1 = error
-
-; ===== LoadDIYFile =====
-; Ported to C: _LoadDIYFile in src/file_io.c
-; in: a0 = filename
-; out: d0 = 0 success, 1 = error; Z flag set accordingly
-
-; ===== SaveDIYFile =====
-; Ported to C: _SaveDIYFile in src/file_io.c
-; in: a0 = filename
-; out: d0 = 0 success, 1 = error
-
-; ===== WriteTacticsFile =====
-; prototype: unsigned __int16 __usercall WriteTacticsFile@<d0>(const char *filename@<a0>, const void *buffer@<a1>)
-; in:  A0 -> filename
-;      A1 -> buffer
-; 
-; out: D0 = 0 - success
-;           1 - failure
-;      zero flag set - all ok
-;        -||-  clear - error
                 dc.w 0
                 dc.w 0
                 addi.l  #2254,d1        ; header
