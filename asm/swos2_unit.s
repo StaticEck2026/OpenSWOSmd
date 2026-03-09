@@ -1,14 +1,6 @@
         xref    g_quitToDos
-        xref    Access
-        ;xref    FixMemoryRoutine
-        xref    FixSnoopBug
-        xref    KBHook
         xref    RobNorthenLoader
-        xref    ExitToDos
         xref    S_VBR
-        xref    DetachOSDisplay
-        xref    LoadDosLibrary
-        xref    SafeStart
         xref    S_SavedSP
         xref    _RncDecompressV1
         xref    _RncDecompressV2
@@ -649,6 +641,7 @@
         xdef    g_earlyAllocCacheSize
         xdef    _startShim
         xdef    DoubleBufferSwapSequence
+        xdef    diskImageContext
         xdef    assetLoaderCacheFlag
         xdef    assetLoaderWorkPtr
         xdef    waitingInterrupt
@@ -731,7 +724,7 @@
         xdef    imageStreamCursor
         xdef    menuImageStreamBaseEnd
         xdef    irqCookieObfuscated
-        xdef    assetIndexStartBytes
+        ; assetIndexStartBytes now C global (asset_sys.c)
         xdef    surnameBuf
         xdef    assetLoaderMainRegion
         xdef    assetLoaderBank0Base
@@ -744,15 +737,8 @@
         xdef    memBoundaryMarker
         xdef    team1Scorers
         xdef    team2Scorers
-        xdef    _AssetSys_InitDiskImageSources
-        xdef    _CAssetSys_DispatchWrite
-        ; _StopAudio, _StartMenuMusic, _SetVolumeOrStopChants, _AudioApplyPresetToChannels
-        ; bridges removed in Chunk 25 (ported to C: _StopAllAudioChannels, _InitAudioState, _AudioSetChannelVolume, _AudioApplyPresetToChannels)
-        xdef    _CAssetSys_Dispatch
-        xdef    _CAssetSys_DispatchGetSize
-        xdef    assetCurrentIndex
-        xdef    assetCurrentSourceSlot
-        xdef    assetSourceVec
+        ; AssetSys bridges removed — now in C (asset_sys.c)
+        ; assetCurrentIndex, assetCurrentSourceSlot, assetSourceVec now C globals
         xdef    aSoundHeroSng
         xdef    aSoundHeroIns
         xdef    diyFileBufferCopy
@@ -3969,46 +3955,8 @@ _startShim:
         moveq   #0,d0
         rts
 
-_AssetSys_InitDiskImageSources:
-        movem.l d2-d7/a2-a6,-(sp)
-        jsr     AssetSys_InitDiskImageSources
-        movem.l (sp)+,d2-d7/a2-a6
-        rts
-
-_CAssetSys_DispatchWrite:
-        movem.l d2-d7/a2-a6,-(sp)
-        move.w  50(sp),d7
-        move.l  52(sp),a0
-        move.l  56(sp),a1
-        move.l  60(sp),d1
-        jsr     AssetSys_Dispatch
-        movem.l (sp)+,d2-d7/a2-a6
-        rts
-
-; Old bridges _StopAudio, _StartMenuMusic, _SetVolumeOrStopChants, _AudioApplyPresetToChannels
-; removed in Chunk 25 — replaced by direct C functions in audio.c
-
-_CAssetSys_Dispatch:
-        movem.l d2-d7/a2-a6,-(sp)
-        move.w  50(sp),d7
-        move.w  54(sp),d0
-        move.l  56(sp),a0
-        move.l  60(sp),a1
-        jsr     AssetSys_Dispatch
-        movem.l (sp)+,d2-d7/a2-a6
-        rts
-
-_CAssetSys_DispatchGetSize:
-        movem.l d2-d7/a2-a6,-(sp)
-        move.w  50(sp),d7
-        move.w  54(sp),d0
-        move.l  56(sp),a0
-        move.l  60(sp),a1
-        jsr     AssetSys_Dispatch
-        move.l  64(sp),a0
-        move.l  d1,(a0)
-        movem.l (sp)+,d2-d7/a2-a6
-        rts
+; AssetSys bridges removed — _CAssetSys_Dispatch, _CAssetSys_DispatchGetSize,
+; _CAssetSys_DispatchWrite, _AssetSys_InitDiskImageSources now in C (asset_sys.c)
 
 _CDrawSprite16Pixels:
         jmp     _DrawSprite16Pixels

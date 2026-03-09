@@ -18,9 +18,9 @@
 #define LEVEL_3_VEC     0x6Cu
 #define LEVEL_5_VEC     0x74u
 
-/* ---- External symbols from Resload.s ---- */
-extern void FixSnoopBug(void);
-extern uint8_t KBHook(void);       /* returns raw CIAA_SDR byte in d0 */
+/* ---- External symbols from resload.c ---- */
+extern void _FixSnoopBug(void);
+extern uint8_t _KBHook(void);       /* returns raw CIAA_SDR byte in d0 */
 extern uint32_t S_VBR;
 
 /* ---- External symbols from SWOS2.s (kept in asm) ---- */
@@ -67,7 +67,7 @@ void _InitHardwareAtFrameStart(void)
 {
     volatile uint16_t *custom = (volatile uint16_t *)CUSTOM_BASE;
 
-    FixSnoopBug();
+    _FixSnoopBug();
 
     /* Clear BPLCON0 */
     custom[BPLCON0_OFF / 2] = 0;
@@ -141,7 +141,7 @@ void _Int2KeyboardHandler(void)
         goto ack;
 
     /* KBHook reads CIAA_SDR, checks for DEL exit key, returns raw byte in d0 */
-    d0 = KBHook();
+    d0 = _KBHook();
 
     /* Start keyboard handshake: set bit 6 of CIAA_CRA */
     *(volatile uint8_t *)CIAA_CRA_ADDR |= (1u << 6);
