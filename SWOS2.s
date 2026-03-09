@@ -5610,14 +5610,6 @@ InitRefereeAnimationTable:
 ; Ported to C: _UpdateReferee in src/referee.c
 UpdateReferee:
                 jmp     _UpdateReferee
-                beq.w   locret_109ED0
-                tst.w   SPRITE_ONSCREEN(a0)
-                beq.w   loc_109ED2
-                subq.w  #1,SPRITE_CYCLEFRAMESTIMER(a0)
-                bne.s   loc_109D84
-                addq.w  #1,SPRITE_FRAMEINDEX(a0)
-                move.w  SPRITE_FRAMEDELAY(a0),SPRITE_CYCLEFRAMESTIMER(a0)
-                movea.l SPRITE_FRAMEINDICESTABLE(a0),a1
 loc_109D38:
                 move.w  SPRITE_FRAMEINDEX(a0),d0
                 lsl.w   #1,d0
@@ -6103,20 +6095,6 @@ InitializePlayerSpriteFrameIndices:
 ; Ported to C: _UpdateBookedPlayerNumberSprite in src/referee.c
 UpdateBookedPlayerNumberSprite:
                 jmp     _UpdateBookedPlayerNumberSprite
-                movea.l (bookedPlayer).l,a1
-                cmpi.b  #PL_BOOKED,SPRITE_PLAYERSTATE(a1)
-                bne.w   locret_10AFDC
-                move.w  (lastFrameTicks).l,d0
-                add.w   d0,(refTimer).l
-                move.w  (refTimer).l,d0
-                lsr.w   #3,d0
-                lea     (yellowCardTable).l,a1
-                cmpi.w  #CARD_YELLOW,(whichCard).l
-                beq.s   loc_10AF6A
-                lea     (redCardTable).l,a1
-                cmpi.w  #CARD_RED,(whichCard).l
-                beq.s   loc_10AF6A
-                lea     (secondYellowTable).l,a1
 loc_10AF6A:
                 cmpi.b  #CARD_YELLOW,(a1,d0.w)
                 beq.s   loc_10AFB0
@@ -6223,15 +6201,6 @@ ResetTime:
 ; Ported to C: _UpdateTime (game_state.c)
 UpdateTime:
                 jmp     _UpdateTime
-                tst.w   (timeVar).l
-                beq.w   time_invisible
-                bmi.w   make_time_invisible
-                cmpi.w  #31000,(timeVar).l
-                beq.s   loc_10B3BE      ; jump
-                cmpi.w  #32000,(timeVar).l
-                bne.w   loc_10B3DA      ; no jump
-                move.w  #30000,(timeVar).l
-                bra.s   loc_10B3C6      ; never reached
 loc_10B3BE:
                 move.w  #150,(timeVar).l
 loc_10B3C6:
@@ -6539,14 +6508,6 @@ ResetResultSprites:
 ; Ported to C: _ShowResult (game_state.c)
 ShowResult:
                 jmp     _ShowResult
-                cmpi.w  #30000,(resultTimer).l
-                beq.s   loc_10B952
-                cmpi.w  #31000,(resultTimer).l
-                beq.s   loc_10B95C
-                cmpi.w  #32000,(resultTimer).l
-                bne.w   loc_10BAB0
-                move.w  #29000,(resultTimer).l
-                bra.s   loc_10B964
 loc_10B952:
                 move.w  #250,(resultTimer).l
                 bra.s   loc_10B964
@@ -7157,13 +7118,6 @@ firstGoalScoredTable:
 ; prototype: void __usercall BenchCheckControls()
 BenchCheckControls:
                 jmp     _BenchCheckControls
-                tst.w   (inSubstitutesMenu).l
-                beq.w   loc_10CAEC
-                bmi.w   _10CF6C_exit_rts
-                movea.l (benchTeam).l,a6
-                tst.w   (subsTeamsSwapped).l
-                beq.s   loc_10CA92
-                movea.l TEAMGENERALINFO_OPPONENTSTEAM(a6),a6
 loc_10CA92:
                 movea.l (topTeamPtr).l,a0
                 cmpi.w  #1,TEAMGENERALINFO_PLAYERNUMBER(a6)
@@ -7565,16 +7519,6 @@ SwapPlayerNameData:
 ; prototype: void __usercall DrawBenchAndSubsMenu()
 DrawBenchAndSubsMenu:
                 jmp     _DrawBenchAndSubsMenu
-                tst.w   (inSubstitutesMenu).l
-                bne.s   loc_10DA7A
-                tst.w   (leavingSubsMenu).l
-                beq.w   locret_10DFA4
-                move.w  (benchXLimit).l,d0
-                addq.w  #8,d0
-                cmp.w   (cameraX).l,d0
-                bhi.s   loc_10DA7A
-                clr.w   (leavingSubsMenu).l
-                bra.w   locret_10DFA4
 loc_10DA7A:
                 move.w  (benchXLimit).l,d0
                 addq.w  #8,d0
@@ -9410,12 +9354,6 @@ StatisticsOff:
 ; Ported to C: _UpdateAndDrawStatistics (statistics.c)
 UpdateAndDrawStatistics:
                 jmp     _UpdateAndDrawStatistics
-                tst.w   (showStats).l
-                beq.s   check_showing_user_stats
-                clr.w   (showStats).l
-                move.w  #1,(showingUserStats).l
-                move.w  #32000,(statsTimer).l
-                bsr.w   DrawStatistics
 check_showing_user_stats:
                 tst.w   (showingUserStats).l
                 beq.s   check_penalty_or_goal_attempt
@@ -9539,60 +9477,6 @@ _110286_exit_rts:
 ; Ported to C: _DrawStatistics (statistics.c)
 DrawStatistics:
                 jmp     _DrawStatistics
-                move.w  #80,d1
-                move.w  #35,d2
-                move.w  #176,d3
-                move.w  #16,d4
-                bsr.w   DrawGrid
-                move.w  #16,d1
-                move.w  #55,d2
-                move.w  #304,d3
-                move.w  #16,d4
-                movem.l d1-d4,-(sp)
-                bsr.w   DrawGrid
-                movem.l (sp)+,d1-d4
-                addi.w  #18,d2
-                move.w  #16,d4
-                movem.l d1-d4,-(sp)
-                bsr.w   DrawGrid
-                movem.l (sp)+,d1-d4
-                addi.w  #18,d2
-                move.w  #16,d4
-                movem.l d1-d4,-(sp)
-                bsr.w   DrawGrid
-                movem.l (sp)+,d1-d4
-                addi.w  #18,d2
-                move.w  #16,d4
-                movem.l d1-d4,-(sp)
-                bsr.w   DrawGrid
-                movem.l (sp)+,d1-d4
-                addi.w  #18,d2
-                move.w  #16,d4
-                movem.l d1-d4,-(sp)
-                bsr.w   DrawGrid
-                movem.l (sp)+,d1-d4
-                addi.w  #18,d2
-                move.w  #16,d4
-                movem.l d1-d4,-(sp)
-                bsr.w   DrawGrid
-                movem.l (sp)+,d1-d4
-                addi.w  #18,d2
-                move.w  #16,d4
-                movem.l d1-d4,-(sp)
-                bsr.w   DrawGrid
-                movem.l (sp)+,d1-d4
-                addi.w  #18,d2
-                move.w  #16,d4
-                movem.l d1-d4,-(sp)
-                bsr.w   DrawGrid
-                movem.l (sp)+,d1-d4
-                addi.w  #18,d2
-                move.w  #16,d4
-                movem.l d1-d4,-(sp)
-                bsr.w   DrawGrid
-                movem.l (sp)+,d1-d4
-                addi.w  #18,d2
-                lea     (topTeamData).l,a5
 select_team_order_for_stats:
                 lea     (bottomTeamData).l,a6
                 cmpi.l  #topTeamInGame,TEAMGENERALINFO_INGAMETEAMPTR(a5)
@@ -11324,23 +11208,6 @@ StopPlayers:
 ; prototype: void __usercall CheckIfBallOutOfPlay()
 CheckIfBallOutOfPlay:
                 jmp     _CheckIfBallOutOfPlay
-                move.w  #1,(playRefereeWhistle).l
-                lea     (ballSprite).l,a6
-                move.w  SPRITE_X(a6),d1
-                move.w  SPRITE_Y(a6),d2
-                move.w  SPRITE_Z(a6),d3
-                subq.w  #1,d1
-                cmpi.w  #15,d3
-                bgt.w   not_in_goal_window
-                cmpi.w  #302,d1
-                blt.w   not_in_goal_window
-                cmpi.w  #366,d1
-                bgt.w   not_in_goal_window
-                cmpi.w  #449,d2
-                bgt.s   ball_below_centerline
-                lea     bottomTeamData(pc),a6
-                cmpi.w  #1,bottomTeamData+TEAMGENERALINFO_TEAMNUMBER-bottomTeamData(a6)
-                beq.s   setup_goal_replay_for_top_team
 setup_goal_replay_for_bottom_team:
                 move.w  #2,d0
                 movea.l lastPlayerPlayed(pc),a0
@@ -44560,24 +44427,6 @@ SquadAfterDrawCommon:
                 addq.l  #4,sp
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-; --- dead code below (original body replaced by C port) ---
-                move.w  2(a5),d7
-                subi.w  #$1C,d7
-                movea.l (squadTeamFilePtr).l,a6
-                cmpi.w  #$10,d7
-                bne.s   loc_13A0BE
-                move.w  #1,d5
-                lea     ($323E).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addq.w  #8,d0
-                move.w  d0,$1E(a0)
-                lea     ($32AE).w,a0
-                move.w  $1E(a0),d0
-                andi.w  #$FFF0,d0
-                addq.w  #8,d0
-                move.w  d0,$1E(a0)
-                bra.w   loc_13A1DC
 loc_13A0BE:
                 clr.w   d5
                 cmpi.w  #$B,d7
@@ -46901,32 +46750,6 @@ locret_13C032:
 ; ===== ContestSetButtons ===== (ported to C → _ContestSetButtons)
 ContestSetButtons:
                 jmp     _ContestSetButtons
-                ; === dead code below (old body) ===
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a0
-                move.l  #aPlayMatch,MENUENTRY_FG+ENTRYTYPE2UNION_STRING(a0) ; "PLAY MATCH" ...
-                move.w  MENUENTRY_STRINGFLAGS(a0),d0
-                bclr    #$D,d0
-                move.w  d0,MENUENTRY_STRINGFLAGS(a0)
-                cmpi.w  #GAME_TYPE_SEASON,(gameType).l
-                beq.w   loc_13C0DC
-                tst.w   (seasonFinished).l
-                bne.w   loc_13C0B0
-                clr.w   (menuEntries+MENUENTRY_ISINVISIBLE+$230).l
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$230)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addq.w  #ORANGE_TO_BROWN_4,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                tst.w   (careerFinished).l
-                bne.s   loc_13C0A2
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$188)).l,a0
-                tst.w   (isNationalSelector).l
-                bne.s   locret_13C0A0
-                tst.w   (teamSelectionKeyCacheEnd).l
-                beq.s   locret_13C0A0
-                move.w  MENUENTRY_STRINGFLAGS(a0),d0
-                bset    #$D,d0
-                move.w  d0,MENUENTRY_STRINGFLAGS(a0)
 locret_13C0A0:
                 rts
 loc_13C0A2:
@@ -47360,9 +47183,6 @@ ManagementArrowDownSelect:
 ; Ported to C: _FillManagementRecordInfo in src/statistics.c
 FillManagementRecordInfo:
                 jmp     _FillManagementRecordInfo
-                cmpi.w  #$64,d2         ; 'd'
-                bcs.s   loc_13CD74
-                subi.w  #$64,d2         ; 'd'
 loc_13CD74:
                 cmpi.w  #$A,d2
                 bcs.s   loc_13CD82
@@ -62305,17 +62125,6 @@ editTacticsTransitionActive:
 ; Ported to C: _EditTactics in src/edit_tactics.c
 EditTactics:
                 jmp     _EditTactics
-                ; dead code below
-                move.w  #1,(inEditTactics).l
-                lea     (careerTeam).l,a0
-                cmpi.w  #GAME_TYPE_CAREER,(gameType).l
-                beq.w   loc_14B566
-                move.w  (numSelectedTeams).l,d1
-                beq.s   loc_14B532
-                subq.w  #1,d1
-                lea     (selTeamsPtr).l,a0
-                lea     (editTacticsCountryBuffer).l,a1
-                clr.w   d0
 loc_14B4EA:
                 cmpi.b  #TEAM_COMPUTER,TEAMFILE_TEAMCONTROLS(a0)
                 beq.s   loc_14B4F8
@@ -63604,21 +63413,6 @@ EditTacticsAfterDrawPlayerNames:
                 addq.l  #4,sp
                 movem.l (sp)+,d2-d7/a2-a6
                 rts
-                ; dead code below
-                move.w  MENUENTRY_ORDINAL(a5),d7
-                subi.w  #$B,d7
-                movem.l d7,-(sp)
-                bsr.w   EditTactics_ApplyPlayerRowHighlighting
-                movem.l (sp)+,d7
-                cmpi.w  #$10,d7
-                bne.s   loc_14C170
-                move.w  #1,d5
-                lea     ((menuEntries+MENUENTRY_ALREADYDRAWN+$8F8)).l,a0
-                move.w  MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0),d0
-                andi.w  #$FFF0,d0
-                addq.w  #BLUE_TO_BLACK_8,d0
-                move.w  d0,MENUENTRY_BG+ENTRYTYPE1UNION_BACKANDFRAMECOLOR(a0)
-                bra.w   loc_14C1D8
 loc_14C170:
                 clr.w   d5
                 cmpi.w  #$B,d7
