@@ -1,4 +1,5 @@
 #include "text_render.h"
+#include "display.h"
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t *spriteGraphicsPtr;
@@ -9,40 +10,6 @@ extern volatile uint16_t panicReasonCode;
 
 extern void _PanicHaltLoop(void) __attribute__((noreturn));
 
-/* ---- Display constants ---- */
-#define SCREEN_WIDTH     336
-#define SCREEN_HEIGHT    272
-#define PLANE_STRIDE     44
-#define ROW_STRIDE_BYTES 176
-#define NUM_PLANES_SHIFT 2
-#define PITCH_DEST_MOD_UNALIGNED 132
-
-/* ---- Amiga hardware registers ---- */
-#define CUSTOM_BASE      0x00DFF000u
-#define DMACONR_ADDR     0x00DFF002u
-#define DMACON_ADDR      0x00DFF096u
-
-#define BLTCON0_OFF      64
-#define BLTCON1_OFF      66
-#define BLTAFWM_OFF      68
-#define BLTALWM_OFF      70
-#define BLTCPT_OFF       72
-#define BLTBPT_OFF       76
-#define BLTAPT_OFF       80
-#define BLTDPT_OFF       84
-#define BLTSIZE_OFF      88
-#define BLTCMOD_OFF      96
-#define BLTBMOD_OFF      98
-#define BLTAMOD_OFF      100
-#define BLTDMOD_OFF      102
-
-#define DMACON_BLT_ON    33792u
-#define DMACON_BLT_OFF   1024u
-#define DMACONR_BLTBUSY_BIT 6
-
-#define BLTCON0_BASE_LINKED  0x0FCA
-#define BLTCON0_CLEAR_MASK   0x0B0A
-#define BLTCON0_OR_MASK      0x0BFA
 
 /* ---- Helper: wait for blitter idle ---- */
 static void waitBlit(void)

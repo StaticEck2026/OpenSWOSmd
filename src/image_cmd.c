@@ -1,5 +1,6 @@
 #include "image_cmd.h"
 #include "game_types.h"
+#include "display.h"
 
 /* ---- External globals (all live in SWOS2.s) ----
  * imageStreamCursor, frontbufferBasePtr, spriteGraphicsPtr are pointers stored
@@ -21,14 +22,6 @@ extern uint8_t menuInsBank[];
 extern void _PanicHaltLoop(void) __attribute__((noreturn));
 extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
 
-/* ---- Constants matching SWOS2.s EQU definitions ---- */
-#define IMAGE_ROW_STRIDE_BYTES  160
-#define BITPLANE_ROW_BYTES       40
-#define NUM_PLANES                4
-#define NUM_PLANES_MINUS1         3
-#define NUM_PLANES_MINUS2         2
-#define NUM_PLANES_SHIFT_PLUS1    3
-#define FB_COPY_WORDS_MINUS1  23935  /* ((176*272)>>1)-1 = 23935 */
 
 /* ================================================================
  * blitDispatch  (SWOS2.s line 6481)
@@ -206,7 +199,7 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
                     uint16_t accum = *plane0;
                     uint16_t offset = planeWordStride;
                     uint16_t k;
-                    for (k = 0; k < NUM_PLANES_MINUS2; k++) {
+                    for (k = 0; k < NUM_PLANES_MINUS1; k++) {
                         accum |= *(uint16_t *)((uint8_t *)plane0 + offset);
                         offset += planeWordStride;
                     }

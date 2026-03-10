@@ -2612,8 +2612,8 @@ not_in_penalty:
             {
                 int32_t dummyDX, dummyDY;
                 int16_t fullDir = (int16_t)_CalculateDeltaXAndY(
-                    targetX, targetY,
                     player->x.s.i, player->y.s.i,
+                    targetX, targetY,
                     256, &dummyDX, &dummyDY);
                 if (fullDir < 0) fullDir = 0;
                 player->fullDirection = fullDir;

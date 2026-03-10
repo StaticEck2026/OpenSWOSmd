@@ -1,4 +1,5 @@
 #include "file_io.h"
+#include "display.h"
 #include "menus.h"
 #include "audio.h"
 #include "menu_system.h"
@@ -104,7 +105,6 @@ extern void _BlitterCopyOverlayToScreen(void);
 #define TACTICS_SIZE                370
 #define RNC_MAGIC_V1                0x524E4301u
 #define RNC_MAGIC_V2                0x524E4302u
-#define FRONTBUFFER_SIZE_TOTAL_BYTES 48048u
 
 /* ================================================================
  * LoadFile  (SWOS2.s line 8825)

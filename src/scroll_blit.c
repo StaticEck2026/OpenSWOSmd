@@ -9,6 +9,7 @@
  */
 
 #include "scroll_blit.h"
+#include "display.h"
 
 /* ---- External globals ---- */
 extern int16_t  cameraX;
@@ -22,50 +23,8 @@ extern volatile uint32_t frontbufferBasePtr;
 extern uint8_t  frontbufferMaskBuffer[];
 extern uint8_t  pitchDatBuffer[];
 
-/* ---- Hardware register addresses ---- */
-#define CUSTOM_BASE         0x00DFF000u
-#define DMACONR_ADDR        0x00DFF002u
-#define DMACON_ADDR         0x00DFF096u
-
-/* ---- Blitter register offsets from CUSTOM_BASE ---- */
-#define BLTCON0_OFF    64
-#define BLTCON1_OFF    66
-#define BLTAFWM_OFF    68
-#define BLTALWM_OFF    70
-#define BLTAPT_OFF     80
-#define BLTDPT_OFF     84
-#define BLTSIZE_OFF    88
-#define BLTAMOD_OFF    100
-#define BLTDMOD_OFF    102
-
-/* ---- DMA / Blitter constants ---- */
-#define DMACON_BLT_ON           33792u
-#define DMACON_BLT_OFF          1024u
-#define DMACONR_BLTBUSY_BIT     6
-#define BLT_FWM_ALL             0xFFFFu
-#define BLTCON0_USEA_USED_LF_F0 2544u
-
-/* ---- Display / tile constants ---- */
-#define SCREEN_HEIGHT               272
+/* ---- Scroll-blit-specific constants ---- */
 #define SCROLL_RIGHT_EDGE_X         335
-#define TILE_SHIFT_X                4
-#define TILE_HEIGHT                 16
-#define TILE_SIZE                   128   /* 16 * 8 */
-#define TILE_MASK                   15
-#define PITCH_PTR_ROW_BYTES         168   /* 42 * 4 */
-#define ROW_STRIDE_BYTES            176   /* 44 * 4 */
-#define PLANE_STRIDE                44
-#define PLANE_STRIDE_TIMES2         88
-#define PLANE_STRIDE_DIV2           22
-#define NUM_PLANES                  4
-#define NUM_PLANES_SHIFT_PLUS1      3
-#define SRC_SCANLINE_BYTES          8     /* 4 * 2 */
-#define BLTDMOD_PLANE_STEP          42
-#define BLTSIZE_TILE_COL            4097u /* ((16*4)<<6) | 1 */
-#define PITCH_DEST_MOD_UNALIGNED    132
-#define PITCH_DEST_MOD_ALIGNED      134
-#define FRONTBUFFER_SIZE_VISIBLE    47872u /* 176 * 272 */
-#define WORD_ALIGN_EVEN_MASK        0xFFFEu
 
 /* ---- Inline data for ScrollYUpdateRowsAndBlit ---- */
 static uint16_t blitWordCount;
@@ -398,10 +357,10 @@ void _ScrollYUpdateRowsAndBlit(void)
         /* Handle frontbuffer Y-wrap */
         d4 += 1;
         if (d4 == SCREEN_HEIGHT) {
-            a3 -= FRONTBUFFER_SIZE_VISIBLE;
-            a4 -= FRONTBUFFER_SIZE_VISIBLE;
-            a5 -= FRONTBUFFER_SIZE_VISIBLE;
-            a6_ptr -= FRONTBUFFER_SIZE_VISIBLE;
+            a3 -= FRONTBUFFER_SIZE_VISIBLE_BYTES;
+            a4 -= FRONTBUFFER_SIZE_VISIBLE_BYTES;
+            a5 -= FRONTBUFFER_SIZE_VISIBLE_BYTES;
+            a6_ptr -= FRONTBUFFER_SIZE_VISIBLE_BYTES;
             d4 = 0;
             maskBlitSecondStreamPtr = (uint32_t)a3;
             maskBlitPendingBytesB = 0;

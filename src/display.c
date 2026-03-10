@@ -490,19 +490,19 @@ void _BlitterCopyPanelToScreen2(void)
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
 
     /* Configure blitter for A→D copy */
-    *(volatile uint16_t *)(custom + BLT_BLTALWM) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLT_BLTAFWM) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLT_BLTCON1) = 0;
-    *(volatile uint16_t *)(custom + BLT_BLTCON0) = (uint16_t)BLTCON0_USEA_USED_LF_F0;
-    *(volatile uint16_t *)(custom + BLT_BLTAMOD) = 0;
-    *(volatile uint16_t *)(custom + BLT_BLTDMOD) = 0;
+    *(volatile uint16_t *)(custom + BLTALWM_OFF) = BLT_FWM_ALL;
+    *(volatile uint16_t *)(custom + BLTAFWM_OFF) = BLT_FWM_ALL;
+    *(volatile uint16_t *)(custom + BLTCON1_OFF) = 0;
+    *(volatile uint16_t *)(custom + BLTCON0_OFF) = (uint16_t)BLTCON0_USEA_USED_LF_F0;
+    *(volatile uint16_t *)(custom + BLTAMOD_OFF) = 0;
+    *(volatile uint16_t *)(custom + BLTDMOD_OFF) = 0;
 
     /* Set source and destination pointers */
-    *(volatile uint32_t *)(custom + BLT_BLTAPT) = (uint32_t)frontbufferMaskBuffer;
-    *(volatile uint32_t *)(custom + BLT_BLTDPT) = frontbufferBasePtr;
+    *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)frontbufferMaskBuffer;
+    *(volatile uint32_t *)(custom + BLTDPT_OFF) = frontbufferBasePtr;
 
     /* Kick the blit (writing BLTSIZE starts it) */
-    *(volatile uint16_t *)(custom + BLT_BLTSIZE) = (uint16_t)BLTSIZE_OVERLAY_PANEL;
+    *(volatile uint16_t *)(custom + BLTSIZE_OFF) = (uint16_t)BLTSIZE_OVERLAY_PANEL;
 
     /* Wait for blit to complete, then disable blitter DMA */
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
@@ -514,7 +514,7 @@ void _BlitterCopyPanelToScreen2(void)
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
 
     /* Reset blit size to small default */
-    *(volatile uint16_t *)(custom + BLT_BLTSIZE) = 0x0016u;
+    *(volatile uint16_t *)(custom + BLTSIZE_OFF) = 0x0016u;
 }
 
 /* ================================================================
@@ -540,10 +540,10 @@ void _ProcessSpriteBlitQueue(void)
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
 
     /* Set blitter config: A→D copy, full masks, no shift */
-    *(volatile uint16_t *)(custom + BLT_BLTAFWM) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLT_BLTALWM) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLT_BLTCON1) = 0;
-    *(volatile uint16_t *)(custom + BLT_BLTCON0) = (uint16_t)BLTCON0_USEA_USED_LF_F0;
+    *(volatile uint16_t *)(custom + BLTAFWM_OFF) = BLT_FWM_ALL;
+    *(volatile uint16_t *)(custom + BLTALWM_OFF) = BLT_FWM_ALL;
+    *(volatile uint16_t *)(custom + BLTCON1_OFF) = 0;
+    *(volatile uint16_t *)(custom + BLTCON0_OFF) = (uint16_t)BLTCON0_USEA_USED_LF_F0;
 
     queue = (volatile uint32_t *)spriteBlitQueue;
 
@@ -562,12 +562,12 @@ void _ProcessSpriteBlitQueue(void)
         if ((int32_t)srcPtr < 0)
             break; /* sentinel: end of queue */
 
-        *(volatile uint32_t *)(custom + BLT_BLTAPT) = srcPtr;
-        *(volatile uint32_t *)(custom + BLT_BLTDPT) = queue[1];
+        *(volatile uint32_t *)(custom + BLTAPT_OFF) = srcPtr;
+        *(volatile uint32_t *)(custom + BLTDPT_OFF) = queue[1];
         entry16 = (uint16_t *)queue;
-        *(volatile uint16_t *)(custom + BLT_BLTAMOD) = entry16[4]; /* +8 */
-        *(volatile uint16_t *)(custom + BLT_BLTDMOD) = entry16[4]; /* same mod for A and D */
-        *(volatile uint16_t *)(custom + BLT_BLTSIZE) = entry16[5]; /* +10, kicks blit */
+        *(volatile uint16_t *)(custom + BLTAMOD_OFF) = entry16[4]; /* +8 */
+        *(volatile uint16_t *)(custom + BLTDMOD_OFF) = entry16[4]; /* same mod for A and D */
+        *(volatile uint16_t *)(custom + BLTSIZE_OFF) = entry16[5]; /* +10, kicks blit */
 
         queue = (volatile uint32_t *)((uint8_t *)queue + 12);
     }
@@ -598,24 +598,24 @@ void _BlitterCopyPanelToScreen(void)
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
 
     /* Configure: A→D copy, full masks */
-    *(volatile uint16_t *)(custom + BLT_BLTALWM) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLT_BLTAFWM) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLT_BLTCON1) = 0;
-    *(volatile uint16_t *)(custom + BLT_BLTCON0) = (uint16_t)BLTCON0_USEA_USED_LF_F0;
-    *(volatile uint16_t *)(custom + BLT_BLTAMOD) = 0;
-    *(volatile uint16_t *)(custom + BLT_BLTDMOD) = 0;
+    *(volatile uint16_t *)(custom + BLTALWM_OFF) = BLT_FWM_ALL;
+    *(volatile uint16_t *)(custom + BLTAFWM_OFF) = BLT_FWM_ALL;
+    *(volatile uint16_t *)(custom + BLTCON1_OFF) = 0;
+    *(volatile uint16_t *)(custom + BLTCON0_OFF) = (uint16_t)BLTCON0_USEA_USED_LF_F0;
+    *(volatile uint16_t *)(custom + BLTAMOD_OFF) = 0;
+    *(volatile uint16_t *)(custom + BLTDMOD_OFF) = 0;
 
     /* Source = frontbufferMaskBuffer, Dest = frontbuffer */
-    *(volatile uint32_t *)(custom + BLT_BLTAPT) = (uint32_t)frontbufferMaskBuffer;
-    *(volatile uint32_t *)(custom + BLT_BLTDPT) = frontbufferBasePtr;
-    *(volatile uint16_t *)(custom + BLT_BLTSIZE) = (uint16_t)BLTSIZE_OVERLAY_PANEL;
+    *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)frontbufferMaskBuffer;
+    *(volatile uint32_t *)(custom + BLTDPT_OFF) = frontbufferBasePtr;
+    *(volatile uint16_t *)(custom + BLTSIZE_OFF) = (uint16_t)BLTSIZE_OVERLAY_PANEL;
 
     /* Wait, then kick small trailing blit */
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
     (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
     while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
-    *(volatile uint16_t *)(custom + BLT_BLTSIZE) = 0x0016u;
+    *(volatile uint16_t *)(custom + BLTSIZE_OFF) = 0x0016u;
 }
 
 /* ================================================================
@@ -647,22 +647,22 @@ void _HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
 
     /* Configure: D-only fill (LF=F0 with no source channels) */
-    *(volatile uint16_t *)(custom + BLT_BLTALWM) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLT_BLTAFWM) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLT_BLTCON1) = 0;
-    *(volatile uint16_t *)(custom + BLT_BLTCON0) = (uint16_t)BLTCON0_USED_LF_F0;
-    *(volatile uint16_t *)(custom + BLT_BLTADAT) = 0; /* fill with zeros */
-    *(volatile uint16_t *)(custom + BLT_BLTDMOD) = 0;
+    *(volatile uint16_t *)(custom + BLTALWM_OFF) = BLT_FWM_ALL;
+    *(volatile uint16_t *)(custom + BLTAFWM_OFF) = BLT_FWM_ALL;
+    *(volatile uint16_t *)(custom + BLTCON1_OFF) = 0;
+    *(volatile uint16_t *)(custom + BLTCON0_OFF) = (uint16_t)BLTCON0_USED_LF_F0;
+    *(volatile uint16_t *)(custom + BLTADAT_OFF) = 0; /* fill with zeros */
+    *(volatile uint16_t *)(custom + BLTDMOD_OFF) = 0;
 
     /* Dest = sprite data pointer (first long of sprite entry) */
     destPtr = *(uint32_t *)sprEntry;
-    *(volatile uint32_t *)(custom + BLT_BLTDPT) = destPtr;
+    *(volatile uint32_t *)(custom + BLTDPT_OFF) = destPtr;
 
     /* BLTSIZE = (height << 8) | stride */
     height = *(uint16_t *)(sprEntry + 12);
     stride = *(uint16_t *)(sprEntry + 14); /* TILE_STRIDE offset */
     blitSize = (uint16_t)((height << 8) | stride);
-    *(volatile uint16_t *)(custom + BLT_BLTSIZE) = blitSize;
+    *(volatile uint16_t *)(custom + BLTSIZE_OFF) = blitSize;
 }
 
 /* ================================================================

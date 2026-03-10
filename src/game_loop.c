@@ -5,16 +5,7 @@
 
 #include "game_loop.h"
 #include "game_types.h"
-
-/* ---- Hardware register addresses ---- */
-#define CUSTOM_BASE         0x00DFF000u
-#define DMACONR_ADDR        0x00DFF002u
-#define DMACON_ADDR         0x00DFF096u
-#define DMACON_BLT_ON       33792u
-#define DMACON_BLT_OFF      1024u
-#define DMACONR_BLTBUSY_BIT 6
-
-/* ---- Hardware constants not in game_types.h ---- */
+#include "display.h"
 
 /* ---- Extern globals (data section, exported from asm/Data.c) ---- */
 extern uint16_t gameCanceled;

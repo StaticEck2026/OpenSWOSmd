@@ -1,11 +1,8 @@
 #include "interrupts.h"
+#include "display.h"
 
-/* ---- Hardware register addresses ---- */
-#define CUSTOM_BASE     0x00DFF000u
-#define VPOSR_ADDR      0x00DFF004u
+/* ---- Hardware register addresses (interrupt-specific, not in display.h) ---- */
 #define INTREQR_OFF     0x1E    /* Interrupt Request read (offset from CUSTOM) */
-#define DMACON_ADDR     0x00DFF096u
-#define INTENA_ADDR     0x00DFF09Au
 #define INTREQ_ADDR     0x00DFF09Cu
 #define BPLCON0_OFF     0x100   /* Bitplane control 0 (offset from CUSTOM) */
 

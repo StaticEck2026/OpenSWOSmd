@@ -1,4 +1,5 @@
 #include "sprites.h"
+#include "display.h"
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t *spriteGraphicsPtr;
@@ -39,51 +40,6 @@ extern uint8_t bottomCornerLeftPositions;
 extern void _PanicHaltLoop(void) __attribute__((noreturn));
 extern void _SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint16_t y);
 
-/* ---- Screen constants ---- */
-#define SCREEN_WIDTH    336
-#define SCREEN_HEIGHT   272
-#define TILE_MASK       15
-#define TILE_SHIFT_X    4
-#define PLANE_STRIDE    44
-#define ROW_STRIDE_BYTES 176
-#define NUM_PLANES      4
-
-/* ---- Amiga hardware registers ---- */
-#define CUSTOM_BASE      0x00DFF000u
-#define DMACONR_ADDR     0x00DFF002u
-#define DMACON_ADDR      0x00DFF096u
-
-#define BLTCON0_OFF      64
-#define BLTCON1_OFF      66
-#define BLTAFWM_OFF      68
-#define BLTALWM_OFF      70
-#define BLTCPT_OFF       72
-#define BLTBPT_OFF       76
-#define BLTAPT_OFF       80
-#define BLTDPT_OFF       84
-#define BLTSIZE_OFF      88
-#define BLTADAT_OFF      116
-#define BLTCMOD_OFF      96
-#define BLTBMOD_OFF      98
-#define BLTAMOD_OFF      100
-#define BLTDMOD_OFF      102
-
-#define DMACON_BLT_ON    33792u
-#define DMACON_BLT_OFF   1024u
-#define DMACONR_BLTBUSY_BIT 6
-
-#define NUM_PLANES_SHIFT      2
-#define NUM_PLANES_SHIFT_PLUS1 3
-
-/* Blitter minterms */
-#define BLTCON0_BASE_LINKED  0x0FCA   /* D = A ? B : C (cookie cut) */
-#define BLTCON0_BASE_SINGLE  0x07CA   /* D = B (straight copy, USEA=0) */
-
-/* Copy bltcon0 for RenderSpriteBandsToCopperLists: use A only, LF=F0 */
-#define BLTCON0_USEA_USED_LF_F0  0x09F0
-
-/* Blitter queue sentinel */
-#define BLT_BLITQ_END  0xFFFFFFFFu
 
 /* ---- Helper: wait for blitter idle ---- */
 static void waitBlit(void)
@@ -484,8 +440,6 @@ void _InitDisplaySprites(void)
 
 /* ---- Sprite blitter constants ---- */
 #define SPRITE_MAX_Y_DRAW       257
-#define PLANE_STRIDE_MINUS2     (PLANE_STRIDE - 2)   /* 42 */
-#define PLANE_STRIDE_MINUS4     (PLANE_STRIDE - 4)   /* 40 */
 #define SPRITE_BLTSIZE_W1       3841  /* (15*4 << 6) | 1 */
 #define SPRITE_BLTSIZE_W2       3842  /* (15*4 << 6) | 2 */
 

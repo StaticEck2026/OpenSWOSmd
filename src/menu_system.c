@@ -1,4 +1,5 @@
 #include "menu_system.h"
+#include "display.h"
 #include "game_utils.h"
 #include "fade.h"
 #include "text_render.h"
@@ -116,29 +117,6 @@ extern void _PanicHaltLoop(void);
 /* ---- String constant for stack overflow ---- */
 extern uint8_t aStackOverflow[];
 
-/* ================================================================
- * Amiga hardware register access helpers
- * ================================================================ */
-#define CUSTOM_BASE      0x00DFF000
-#define DMACONR_ADDR     0x00DFF002
-#define DMACON_ADDR      0x00DFF096
-#define INTENA_ADDR      0x00DFF09A
-#define BLTCON0_OFF      64
-#define BLTCON1_OFF      66
-#define BLTAFWM_OFF      68
-#define BLTALWM_OFF      70
-#define BLTAPT_OFF       80
-#define BLTDPT_OFF       84
-#define BLTSIZE_OFF      88
-#define BLTAMOD_OFF      100
-#define BLTDMOD_OFF      102
-
-#define DMACON_BLT_ON    33792
-#define DMACON_BLT_OFF   1024
-#define DMACONR_BLTBUSY_BIT 14
-#define BLT_FWM_ALL      0xFFFF
-#define BLTCON0_USEA_USED_LF_F0 2544
-#define BLTSIZE_OVERLAY_PANEL 4374
 
 /* ================================================================
  * CalcMenuEntryAddress

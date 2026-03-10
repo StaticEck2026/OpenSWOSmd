@@ -1,7 +1,6 @@
 #include "camera.h"
 #include "game_types.h"
-
-#define SCREEN_WIDTH    336
+#include "display.h"
 
 /* ================================================================
  * cameraX/cameraY are 32-bit fixed-point values in memory (dc.l).

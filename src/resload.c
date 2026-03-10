@@ -5,20 +5,14 @@
  * Data (S_DosBase, S_VBR, etc.) stays in Resload.s (Phase 1).
  */
 #include "resload.h"
+#include "display.h"
 
-/* ---- Hardware register addresses ---- */
-#define DMACONR_ADDR   0x00DFF002u
-#define DMACON_ADDR    0x00DFF096u
-#define INTENA_ADDR    0x00DFF09Au
+/* ---- Hardware register addresses (resload-specific, not in display.h) ---- */
 #define ADKCON_ADDR    0x00DFF09Eu
 #define ADKCONR_ADDR   0x00DFF010u
 #define INTENAR_ADDR   0x00DFF01Cu
-#define COLOR00_ADDR   0x00DFF180u
-#define COP1LC_ADDR    0x00DFF080u
 #define COP2LC_ADDR    0x00DFF084u
-#define COPJMP1_ADDR   0x00DFF088u
 #define BPLCON0_OFF    0x100u
-#define CUSTOM_BASE    0x00DFF000u
 #define CIAA_SDR_ADDR  0x00BFEC01u
 
 /* ---- Interrupt vector offsets ---- */

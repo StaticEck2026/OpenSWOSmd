@@ -10,9 +10,7 @@
  */
 #include "asset_loader.h"
 #include "string_utils.h"
-
-/* ---- Hardware registers (for DoCriticalOp interrupt disable) ---- */
-#define INTENA_ADDR     0x00DFF09Au
+#include "display.h"
 
 /* ---- External globals (from SWOS2.s data) ---- */
 extern uint8_t diskImageContext;

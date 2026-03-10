@@ -1,5 +1,6 @@
 #include "pitch.h"
 #include "game_types.h"
+#include "display.h"
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint32_t swcPitchMapFiles[];     /* char *[6] -- pitch map filenames */
@@ -19,7 +20,6 @@ extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSi
 extern void _PanicHaltLoop(void) __attribute__((noreturn));
 
 /* ---- Constants ---- */
-#define PITCHFILE_MAX_SIZE      48048u  /* FRONTBUFFER_SIZE_TOTAL_BYTES */
 #define PITCH_POINTER_COUNT     2310    /* 9240 / 4 */
 #define FAN_PTR_TABLE_SIZE      21      /* 21 pointers per fan group */
 #define FAN_PTR_TABLE_OFFSET    0x54    /* second group starts here */

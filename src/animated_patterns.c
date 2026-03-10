@@ -13,6 +13,7 @@
 
 #include "animated_patterns.h"
 #include "game_types.h"
+#include "display.h"
 
 /* ---- external asm globals ---- */
 extern uint16_t replayState;
@@ -43,8 +44,6 @@ extern uint8_t  animPatternsRandomTable[];
 extern uint16_t patternStatic;
 extern uint16_t otherTeamScored;
 
-#define TILE_SIZE 128
-#define SCREEN_HEIGHT 272
 
 /* ---- external functions ---- */
 extern uint16_t _Rand(void);
