@@ -59,7 +59,7 @@ extern uint16_t writeOnly01;
 extern uint32_t gameTime;
 extern uint16_t cameraX;
 extern uint16_t cameraY;
-extern volatile uint16_t waitingInterrupt;
+extern volatile int16_t waitingInterrupt;
 extern uint32_t irqCookieObfuscated;
 extern uint16_t g_quitToDos;
 
@@ -165,6 +165,7 @@ static void waitVBlankSync(uint32_t xorMagic, uint32_t expected)
     volatile uint8_t  *dmaconr = (volatile uint8_t *)DMACONR_ADDR;
 
     *dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(*dmaconr & (1u << DMACONR_BLTBUSY_BIT));
     while (*dmaconr & (1u << DMACONR_BLTBUSY_BIT)) {}
     *dmacon = (uint16_t)DMACON_BLT_OFF;
 

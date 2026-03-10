@@ -83,7 +83,7 @@ extern volatile uint8_t keyBuffer[];
 extern uint8_t keycodeLut[];
 
 /* BlitterCopyOverlayToScreen globals */
-extern uint32_t frontbufferBasePtr;
+extern volatile uint32_t frontbufferBasePtr;
 extern uint8_t frontbufferBase[];
 extern uint8_t frontbufferBaseAlt[];
 extern uint8_t frontbufferMaskBuffer[];
@@ -255,7 +255,7 @@ read_next_key:
 __attribute__((used, externally_visible))
 void _BlitterCopyOverlayToScreen(void)
 {
-    volatile uint16_t *dmaconr = (volatile uint16_t *)DMACONR_ADDR;
+    volatile uint8_t  *dmaconr = (volatile uint8_t *)DMACONR_ADDR;
     volatile uint16_t *dmacon  = (volatile uint16_t *)DMACON_ADDR;
     volatile uint16_t *custom  = (volatile uint16_t *)CUSTOM_BASE;
     uint32_t srcAddr;
@@ -263,8 +263,9 @@ void _BlitterCopyOverlayToScreen(void)
     /* Enable blitter DMA */
     *dmacon = DMACON_BLT_ON;
 
-    /* Wait for blitter idle */
-    while (*dmaconr & (1 << DMACONR_BLTBUSY_BIT))
+    /* Wait for blitter idle (dummy read + busy-wait) */
+    (void)(*dmaconr & (1u << DMACONR_BLTBUSY_BIT));
+    while (*dmaconr & (1u << DMACONR_BLTBUSY_BIT))
         ;
 
     /* Disable blitter DMA for setup */
@@ -296,8 +297,9 @@ void _BlitterCopyOverlayToScreen(void)
     /* Enable blitter DMA */
     *dmacon = DMACON_BLT_ON;
 
-    /* Wait for blit to finish */
-    while (*dmaconr & (1 << DMACONR_BLTBUSY_BIT))
+    /* Wait for blit to finish (dummy read + busy-wait) */
+    (void)(*dmaconr & (1u << DMACONR_BLTBUSY_BIT));
+    while (*dmaconr & (1u << DMACONR_BLTBUSY_BIT))
         ;
 
     /* Disable blitter DMA */
@@ -1511,7 +1513,7 @@ void _RestorePreviousMenu(uint32_t oldSelectedEntry, uint8_t *oldPackedMenu)
 __attribute__((used, externally_visible))
 void _BlitMaskedRectAltToFront(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
-    extern uint32_t frontbufferBaseAltPtr;
+    extern volatile uint32_t frontbufferBaseAltPtr;
     _RectRowMaskedApplyScreenOffset(x, y, w, h, (uint8_t *)frontbufferBaseAltPtr, (uint8_t *)frontbufferBasePtr);
 }
 

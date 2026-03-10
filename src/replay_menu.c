@@ -6,7 +6,7 @@
 #include "fade.h"
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern volatile uint16_t waitingInterrupt;
+extern volatile int16_t waitingInterrupt;
 extern volatile uint16_t currentGameTick;
 extern uint16_t paletteIndex;
 extern uint16_t replaySelected;

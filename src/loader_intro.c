@@ -9,7 +9,7 @@ extern uint16_t paletteIndex;
 extern uint16_t g_quitToDos;
 extern volatile uint16_t currentGameTick;
 extern uint8_t pl1Fire;
-extern uint32_t frontbufferBaseAltPtr;
+extern volatile uint32_t frontbufferBaseAltPtr;
 extern uint32_t memBoundaryMarker;
 extern uint16_t audioBankLoaded;
 extern uint16_t audioActive;

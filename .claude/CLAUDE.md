@@ -414,6 +414,21 @@ For each chunk:
 
 ## Porting Notes / Rules of Thumb
 
+### Performance: Avoid 32-bit Multiplies on 68020
+
+GCC sometimes promotes 16-bit × 16-bit multiplies to slow 32-bit `muls.l`/`mulu.l` instructions. The original assembly uses fast `muls.w`/`mulu.w` (16×16→32). For performance-critical multiplications, use the inline assembly helpers from `gcc8_c_support.h`:
+
+```c
+#include "gcc8_c_support.h"
+uint32_t result = muluw(a, b);  // unsigned 16×16→32
+int32_t  result = mulsw(a, b);  // signed 16×16→32
+```
+
+This is especially important in hot loops (sprite rendering, physics, per-frame updates).
+
+### Build Flags
+
+Current optimized flags: `-Ofast -flto` (with `-fno-tree-loop-distribution` to prevent loop→memcpy transforms). Do NOT use `-fwhole-program` — it causes crashes. Minimal `memcpy`/`memset`/`memmove` stubs are provided in `main.c` for when LTO still converts loops to library calls.
 
 ## Reverse-Engineering Pitfalls and Hard-Coded Offset Bugs
 

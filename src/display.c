@@ -6,8 +6,8 @@
 extern uint8_t frontbufferBase[];
 extern uint8_t frontbufferBaseAlt[];
 extern uint8_t frontbufferMaskBuffer[];
-extern uint32_t frontbufferBasePtr;
-extern uint32_t frontbufferBaseAltPtr;
+extern volatile uint32_t frontbufferBasePtr;
+extern volatile uint32_t frontbufferBaseAltPtr;
 
 /* Bitplane bases (BSSInChip, 0x384 bytes each) */
 extern uint8_t bitPlane0Base[];
@@ -20,10 +20,10 @@ extern uint8_t bitPlane2BaseAlt[];
 extern uint8_t bitPlane3BaseAlt[];
 
 /* Bitplane base pointers */
-extern uint32_t bitPlane0BasePtr;
-extern uint32_t bitPlane1BasePtr;
-extern uint32_t bitPlane2BasePtr;
-extern uint32_t bitPlane3BasePtr;
+extern volatile uint32_t bitPlane0BasePtr;
+extern volatile uint32_t bitPlane1BasePtr;
+extern volatile uint32_t bitPlane2BasePtr;
+extern volatile uint32_t bitPlane3BasePtr;
 
 /* Copper list */
 extern uint8_t copperListTemplate[];
@@ -33,7 +33,7 @@ extern uint32_t copperZeroLong;
 /* Sprite blit queue sentinels (4 bytes each: 2-byte sentinel + padding/queue) */
 extern uint32_t kSpriteBlitQueueSentinel_A;
 extern uint32_t kSpriteBlitQueueSentinel_B;
-extern uint32_t spriteBlitQueue;
+extern volatile uint32_t spriteBlitQueue;
 
 /* Camera state */
 extern int16_t cameraX;          /* dc.l but word-accessed (big-endian high word) */
@@ -199,6 +199,7 @@ void _InitDisplayAndCopper(void)
 
     /* Enable blitter DMA, wait for idle, disable */
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
+    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
     while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT))
     {
         /* wait for blitter idle */
@@ -481,6 +482,7 @@ void _BlitterCopyPanelToScreen2(void)
 
     /* Enable blitter DMA and wait for idle */
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
+    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
     while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT))
     {
         /* wait */
@@ -504,6 +506,7 @@ void _BlitterCopyPanelToScreen2(void)
 
     /* Wait for blit to complete, then disable blitter DMA */
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
+    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
     while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT))
     {
         /* wait */
@@ -532,6 +535,7 @@ void _ProcessSpriteBlitQueue(void)
 
     /* Enable blitter and wait idle */
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
+    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
     while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
 
@@ -550,6 +554,7 @@ void _ProcessSpriteBlitQueue(void)
 
         /* Wait for blitter idle */
         *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
+        (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
         while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
         *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
 
@@ -588,6 +593,7 @@ void _BlitterCopyPanelToScreen(void)
 
     /* Wait for blitter idle */
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
+    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
     while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
 
@@ -606,6 +612,7 @@ void _BlitterCopyPanelToScreen(void)
 
     /* Wait, then kick small trailing blit */
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
+    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
     while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
     *(volatile uint16_t *)(custom + BLT_BLTSIZE) = 0x0016u;
@@ -635,6 +642,7 @@ void _HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
 
     /* Wait for blitter idle */
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
+    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
     while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
 

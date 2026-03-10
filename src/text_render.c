@@ -2,7 +2,7 @@
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t *spriteGraphicsPtr;
-extern uint32_t frontbufferBasePtr;
+extern volatile uint32_t frontbufferBasePtr;
 extern uint16_t cameraXMod320;
 extern uint16_t cameraYMod320;
 extern volatile uint16_t panicReasonCode;
@@ -48,6 +48,7 @@ extern void _PanicHaltLoop(void) __attribute__((noreturn));
 static void waitBlit(void)
 {
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
+    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
     while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT))
         ;
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;

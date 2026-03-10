@@ -10,7 +10,7 @@
 extern uint16_t assetCurrentIndex;
 extern uint32_t assetLoaderCacheFlag;
 extern uint16_t assetLoaderAltPathReady;
-extern uint32_t frontbufferBasePtr;
+extern volatile uint32_t frontbufferBasePtr;
 extern volatile uint16_t currentGameTick;
 extern volatile uint16_t panicReasonCode;
 extern uint16_t hilNumGoals;

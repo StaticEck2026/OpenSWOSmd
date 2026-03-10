@@ -8,8 +8,8 @@ extern uint32_t allSpritesArray[];     /* Null-terminated (0xFFFFFFFF) pointer a
 extern uint32_t sortedSprites[];       /* 78 entries max */
 extern uint16_t numSpritesToRender;
 
-extern uint32_t spriteBlitQueue;         /* 4-byte var holding pointer to blit queue */
-extern uint32_t frontbufferBasePtr;      /* 4-byte var holding pointer to frontbuffer */
+extern volatile uint32_t spriteBlitQueue;         /* 4-byte var holding pointer to blit queue */
+extern volatile uint32_t frontbufferBasePtr;      /* 4-byte var holding pointer to frontbuffer */
 extern uint8_t frontbufferMaskBuffer[];  /* BSS label: mask buffer base address */
 extern int16_t cameraX;
 extern int16_t cameraY;
@@ -26,10 +26,10 @@ extern uint32_t plane23RenderStackPtr;
 extern uint8_t plane23RenderStackBase[];
 
 /* Copper list plane pointers (4-byte vars) */
-extern uint32_t bitPlane0BasePtr;
-extern uint32_t bitPlane1BasePtr;
-extern uint32_t bitPlane2BasePtr;
-extern uint32_t bitPlane3BasePtr;
+extern volatile uint32_t bitPlane0BasePtr;
+extern volatile uint32_t bitPlane1BasePtr;
+extern volatile uint32_t bitPlane2BasePtr;
+extern volatile uint32_t bitPlane3BasePtr;
 extern uint32_t copperZeroLong;
 
 /* Player sprite range markers for DrawQueuedSprites — BSS labels */
@@ -89,6 +89,9 @@ extern void _SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t 
 static void waitBlit(void)
 {
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
+    /* First btst is a timing pad — the blitter busy bit may not be set yet
+       immediately after BLTSIZE write. This matches the asm double-check pattern. */
+    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
     while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT))
         ;
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
@@ -355,7 +358,7 @@ void _ConvertSpriteColors(uint16_t spriteIndex, uint16_t *colorTable)
                 uint16_t bit0 = (w0 >> 15) & 1;
                 w0 <<= 1;
 
-                colorIdx = (uint16_t)((bit3) | (bit2 << 1) | (bit1 << 2) | (bit0 << 3));
+                colorIdx = (uint16_t)((bit3 << 3) | (bit2 << 2) | (bit1 << 1) | bit0);
 
                 /* Skip transparent pixels in slow path */
                 if (skipTransparent && colorIdx == 0)
@@ -400,12 +403,14 @@ void _SortSprites(void)
         return;
 
     uint32_t *base = sortedSprites;
-    int16_t limit;
-    for (limit = n; limit >= 0; limit--) {
+
+    /* Assembly does NOT shrink the inner loop — always a full pass of n+1
+     * comparisons, repeating until no swaps occur (pure unoptimized bubble sort). */
+    for (;;) {
         int16_t swapped = 0;
         uint32_t *p = base;
         int16_t i;
-        for (i = limit; i >= 0; i--) {
+        for (i = n; i >= 0; i--) {
             Sprite *s1 = (Sprite *)p[0];
             Sprite *s2 = (Sprite *)p[1];
             int16_t y1 = s1->y.s.i;
@@ -548,7 +553,7 @@ void _QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         uint32_t *a3 = (uint32_t *)spriteBlitQueue;
         uint8_t *a1 = (uint8_t *)frontbufferBasePtr;
 
-        int16_t xWordOff = ((int16_t)((uint16_t)d1 >> TILE_SHIFT_X)) << 1;
+        int16_t xWordOff = (d1 >> TILE_SHIFT_X) << 1; /* asr.w + asl.w (signed) */
         int32_t xWordOffL = (int32_t)xWordOff; /* sign-extend */
         uint32_t yOff = (uint16_t)d2 * (uint32_t)ROW_STRIDE_BYTES;
         uint32_t destAddr = (uint32_t)a1 + yOff + (uint32_t)xWordOffL;
@@ -690,7 +695,7 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         }
 
         /* Compute destination pointer */
-        int16_t xWordOff = ((int16_t)((uint16_t)d1 >> TILE_SHIFT_X)) << 1;
+        int16_t xWordOff = (d1 >> TILE_SHIFT_X) << 1; /* asr.w + asl.w (signed) */
         int32_t xWordOffL = (int32_t)xWordOff;  /* sign-extended */
         uint32_t d6save = (uint32_t)xWordOffL;
         uint32_t yOff = (uint16_t)d2 * (uint32_t)ROW_STRIDE_BYTES;
@@ -839,7 +844,7 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         queuedLineCount = (uint16_t)d3;
 
         /* Compute destination pointer */
-        int16_t xByteOff = (int16_t)(((uint16_t)d1 >> TILE_SHIFT_X) << 1);
+        int16_t xByteOff = (d1 >> TILE_SHIFT_X) << 1; /* asr.w + asl.w (signed) */
         int32_t xByteOffL = (int32_t)xByteOff;
         uint32_t d6save = (uint32_t)xByteOffL;
         uint32_t yOff = (uint16_t)d2 * (uint32_t)ROW_STRIDE_BYTES;
@@ -1028,9 +1033,8 @@ void _DrawSprite_entry2(SpriteGraphics *a0, int16_t d1, int16_t d2)
 {
     uint32_t savedQueue = spriteBlitQueue;
     _DrawSpriteClipped(a0, d1, d2);
-    uint32_t newQueue = spriteBlitQueue;
     spriteBlitQueue = savedQueue;
-    *(uint32_t *)newQueue = BLT_BLITQ_END;
+    *(uint32_t *)savedQueue = BLT_BLITQ_END;
 }
 
 /* ================================================================
@@ -1369,11 +1373,13 @@ void _RenderSpriteBandsToCopperLists(void)
 static int16_t plane01BandTopY_local;
 static int16_t plane23BandTopY_local;
 
-/* Occlusion buckets: 5 words for base + 27 words for active (matching asm layout) */
-/* In asm these are contiguous: occlMinYBuckets (10 bytes = 5 words),
-   occlMinYBucketsActive (54 bytes = 27 words) */
-static int16_t occlMinYBuckets_local[5];
-static int16_t occlMinYBucketsActive_local[27];
+/* Occlusion buckets: In asm, occlMinYBuckets (5 words) and occlMinYBucketsActive
+   (26 words) are contiguous. Negative bucket indices (from sprites partially off
+   the left screen edge) read/write into the guard region (occlMinYBuckets).
+   We MUST keep them contiguous to avoid undefined behavior from index -1 writes. */
+static int16_t occlBuckets_combined[5 + 26]; /* 31 words, matching asm layout */
+#define occlMinYBuckets_local   (occlBuckets_combined)
+#define occlMinYBucketsActive_local (occlBuckets_combined + 5)
 
 __attribute__((used, externally_visible))
 void _BuildSpriteBandAndGeneralRenderStacks(void)
@@ -1386,18 +1392,12 @@ void _BuildSpriteBandAndGeneralRenderStacks(void)
     uint8_t *a5 = (uint8_t *)plane23RenderStackBase;
     uint8_t *a6loc = (uint8_t *)renderStackBase;
 
-    /* Initialize occlusion buckets to 0x7FFF */
+    /* Initialize all 31 occlusion bucket words to 0x7FFF (matching asm: 31 move.w's) */
     {
         int16_t i;
-        for (i = 0; i < 5; i++)
-            occlMinYBuckets_local[i] = 0x7FFF;
-        for (i = 0; i < 27; i++)
-            occlMinYBucketsActive_local[i] = 0x7FFF;
+        for (i = 0; i < 31; i++)
+            occlBuckets_combined[i] = 0x7FFF;
     }
-
-    /* In asm, occlMinYBuckets is 10 bytes (indices 0-4, 5 words) then
-       occlMinYBucketsActive is 54 bytes (27 words). The code uses
-       occlMinYBucketsActive for indexed access. We match that layout. */
 
     plane01BandTopY_local = 0x7D00;
     plane23BandTopY_local = 0x7D00;
@@ -1414,8 +1414,7 @@ void _BuildSpriteBandAndGeneralRenderStacks(void)
 
         int16_t sprIdx = a1->imageIndex;
         if (sprIdx < 0) {
-            /* Mark not on screen */
-            a1->onScreen = 0;
+            /* Asm: bmi.w dec_and_loop — skip without touching onScreen */
             d7--;
             if (d7 < 0) break;
             continue;

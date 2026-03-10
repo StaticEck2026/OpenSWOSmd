@@ -3,7 +3,7 @@
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t *spriteGraphicsPtr;
-extern uint32_t frontbufferBasePtr;
+extern volatile uint32_t frontbufferBasePtr;
 extern uint16_t cameraXMod320;
 extern uint16_t cameraYMod320;
 extern volatile uint16_t panicReasonCode;
@@ -754,9 +754,12 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
 
     /* ---- Blit passes 0-2 (3 iterations) ---- */
     for (i = 2; i >= 0; i--) {
+        /* ASM: lsr.w #1,d5 / bcc — checks the bit shifted OUT (carry flag).
+         * We must check the old LSB before shifting. */
+        uint16_t bit = planeMask & 1;
         planeMask >>= 1;
 
-        if (planeMask & 1) {
+        if (bit) {
             /* Cookie-cut: D = (A & B) | (~A & C), BLTCON0 = $FCA + shift */
             uint16_t con0 = bltconShift + BLTCON0_BASE_LINKED;
             *(volatile uint16_t *)(custom + BLTCON0_OFF) = con0;
@@ -784,9 +787,11 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     }
 
     /* ---- Final pass (plane 3): asymmetric ---- */
+    {
+    uint16_t bit3 = planeMask & 1;
     planeMask >>= 1;
 
-    if (planeMask & 1) {
+    if (bit3) {
         /* OR-mask: D = (A & B) | C, BLTCON0 = $BFA + shift */
         uint16_t con0 = bltconShift + BLTCON0_OR_MASK;
         *(volatile uint16_t *)(custom + BLTCON0_OFF) = con0;
@@ -805,6 +810,7 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
 
     /* Kick final blit (no wait — caller or next operation will sync) */
     *(volatile uint16_t *)(custom + BLTSIZE_OFF) = blitsize;
+    }
 }
 
 

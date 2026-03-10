@@ -7,7 +7,7 @@
  */
 extern uint32_t imageStreamCursor;          /* actually uint8_t*, match frontend.c */
 extern uint8_t frontbufferMaskBuffer[];
-extern uint32_t frontbufferBasePtr;         /* actually uint8_t*, match display.c */
+extern volatile uint32_t frontbufferBasePtr;         /* actually uint8_t*, match display.c */
 extern uint16_t panicReasonCode;
 extern uint8_t *spriteGraphicsPtr;          /* actually uint32_t*[], match game_utils.c */
 extern int16_t currentSpriteIndex;

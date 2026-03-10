@@ -36,7 +36,7 @@ extern TeamGame topTeamInGame;
 extern TeamGame bottomTeamInGame;
 extern uint8_t  *spriteGraphicsPtr;
 extern uint8_t  pitchDatBuffer[];
-extern uint32_t frontbufferBasePtr;
+extern volatile uint32_t frontbufferBasePtr;
 extern uint8_t  frontbufferMaskBuffer[];
 extern uint8_t  currentMenu[];
 extern uint8_t  animPatternsRandomTable[];

@@ -37,7 +37,7 @@ else
 	SDKDIR = $(abspath $(dir $(shell which $(CC)))../m68k-amiga-elf/sys-include)
 endif
 
-CCFLAGS   = -g -MP -MMD -m68020 -O2 -nostdlib -Wextra -Wno-unused-function -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -ffunction-sections -fdata-sections -Iinclude
+CCFLAGS   = -g -MP -MMD -m68020 -Ofast -nostdlib -Wextra -Wno-unused-function -Wno-volatile-register-var -Wno-stringop-overflow -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -ffunction-sections -fdata-sections -Iinclude
 CPPFLAGS  = $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS   = -mcpu=68020 -g --register-prefix-optional -I$(SDKDIR)
 LDFLAGS   = -Wl,--emit-relocs,--no-check-sections,-e,main,-Map=$(OUT).map,-T,$(LDSCRIPT)

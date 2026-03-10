@@ -211,11 +211,12 @@ void _Int3TimerHandler(void)
 
             waitingInterrupt = 0;
             didSwapThisFrame = 1;
-            goto clear_and_return;
+            /* ASM: bra.w *+4 falls through to isr_common_housekeeping
+             * (does NOT skip housekeeping on swap frames) */
         }
     }
 
-    /* isr_common_housekeeping */
+    /* isr_common_housekeeping — runs EVERY VBlank, including swap frames */
     _FadeOutTick();
     _FadeInTick();
 

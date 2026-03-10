@@ -274,7 +274,7 @@ typedef char _goalieskill_size_check[(sizeof(GoalieSkill) == 60) ? 1 : -1];
 /* ==================================================================
  * SpriteGraphics — 24 bytes
  * ================================================================== */
-struct __attribute__((packed)) SpriteGraphics {
+struct SpriteGraphics {
     uint32_t sprData;           /* 0: raw 68k ptr to pixel data */
     uint32_t maskPtr;           /* 4: raw 68k ptr to mask data (0 = no mask) */
     uint16_t type;              /* 8: 0=separate planes, nonzero=linked/interleaved */
@@ -295,7 +295,7 @@ typedef char _spritegfx_size_check[(sizeof(SpriteGraphics) == 24) ? 1 : -1];
  * CharsTableHeader — font/character rendering table header (14 bytes)
  * The conversion table data (uint8_t[]) follows immediately after.
  * ================================================================== */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  reserved[8];       /* 0-7: unknown/unused header data */
     int16_t  charSpacing;       /* 8 */
     int16_t  spaceWidth;        /* 10 */
@@ -402,7 +402,7 @@ typedef struct TeamFile TeamFile;
  * goalType: 0=normal, 1=penalty, 2=own goal
  * time: 4 bytes (ASCII digits, patched in from gameTime[])
  * ================================================================== */
-struct __attribute__((packed)) GoalInfo {
+struct GoalInfo {
     int16_t goalType;           /* 0 */
     int8_t  time[4];            /* 2: four ASCII digit bytes */
 };
@@ -412,7 +412,7 @@ typedef char _goalinfo_size_check[(sizeof(GoalInfo) == 6) ? 1 : -1];
 /* ==================================================================
  * ScorerInfo — 66 bytes, 8 slots per team (528 bytes total)
  * ================================================================== */
-struct __attribute__((packed)) ScorerInfo {
+struct ScorerInfo {
     int16_t  shirtNum;          /* 0: shirt number (or +100 for own goal) */
     int16_t  numSpritesTaken;   /* 2: number of sprite rows used */
     int16_t  numGoals;          /* 4: number of goals scored */
@@ -471,7 +471,7 @@ typedef char _teamfileex_size_check[(sizeof(TeamFileEx) == 684) ? 1 : -1];
  * Original IDA struct had opaque field_2[48] and field_3A[36];
  * sub-fields are broken out here based on actual access patterns.
  * ================================================================== */
-typedef struct __attribute__((packed)) DIY_Competition {
+typedef struct DIY_Competition {
     int16_t  competitionType;          /* 0x00 */
     /* --- field_2 sub-fields (48 bytes, 0x02-0x31) --- */
     uint8_t  field_2[0x26];            /* 0x02: first 38 bytes opaque/name data */
@@ -530,7 +530,7 @@ typedef char _joboffer_size_check[(sizeof(JobOffer) == 26) ? 1 : -1];
  * MarketPlayer — 42 bytes, pack(1)
  * Career foreign market player entry.
  * ================================================================== */
-typedef struct __attribute__((packed)) MarketPlayer {
+typedef struct MarketPlayer {
     uint16_t   teamId;             /* 0 */
     int8_t     playerOrdinal;      /* 2 */
     int8_t     padding;            /* 3 */
@@ -543,7 +543,7 @@ typedef char _marketplayer_size_check[(sizeof(MarketPlayer) == 42) ? 1 : -1];
  * PoolPlayer — 58 bytes, pack(1)
  * Pool player database entry (poolplyr.dat).
  * ================================================================== */
-typedef struct __attribute__((packed)) PoolPlayer {
+typedef struct PoolPlayer {
     uint16_t   teamId;             /* 0 */
     int8_t     playerOrdinal;      /* 2 */
     int8_t     teamName[17];       /* 3 */
@@ -556,7 +556,7 @@ typedef char _poolplayer_size_check[(sizeof(PoolPlayer) == 58) ? 1 : -1];
  * PlayerPositions — 35 bytes, pack(1)
  * 5 ball-location zones × 7 packed position bytes per zone.
  * ================================================================== */
-typedef struct __attribute__((packed)) PlayerPositions {
+typedef struct PlayerPositions {
     uint8_t positions[5][7];       /* packed x/y nibbles */
 } PlayerPositions;
 
@@ -567,7 +567,7 @@ typedef char _playerpositions_size_check[(sizeof(PlayerPositions) == 35) ? 1 : -
  * Formation/tactics definition: name + 10 outfield player positions
  * (5 ball zones × 7 quadrants each) + unk pairing table + redirect.
  * ================================================================== */
-typedef struct __attribute__((packed)) TeamTactics {
+typedef struct TeamTactics {
     int8_t           name[9];              /* 0: tactic name */
     PlayerPositions  positions[10];        /* 9: 10 players × 35 bytes = 350 */
     uint8_t          unkTable[10];         /* 359: pairing table */

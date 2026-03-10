@@ -18,7 +18,7 @@ extern int16_t  oldCameraY;
 extern uint16_t cameraXMod320;
 extern uint16_t cameraYMod320;
 extern uint16_t cameraCoordinatesValid;
-extern uint32_t frontbufferBasePtr;
+extern volatile uint32_t frontbufferBasePtr;
 extern uint8_t  frontbufferMaskBuffer[];
 extern uint8_t  pitchDatBuffer[];
 
@@ -78,6 +78,7 @@ static uint16_t maskBlitPendingBytesB;
 static void waitBlit(void)
 {
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
+    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
     while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT))
         ;
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
