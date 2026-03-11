@@ -1,3 +1,8 @@
+/*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
 /* game_loop.c — Game Loop, MainKeysCheck, Highlights Playback, AssignFakeGoalsToScorers
  *
  * Chunk 41: 10 functions (7 exported + 2 static + 1 helper)

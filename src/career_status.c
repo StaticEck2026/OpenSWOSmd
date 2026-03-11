@@ -1,3 +1,8 @@
+/*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
 /* career_status.c — Player status decay, availability, team init, career finances,
  * chairman warnings, board confidence, reputation bonuses.
  *

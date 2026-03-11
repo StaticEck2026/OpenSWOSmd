@@ -1,3 +1,8 @@
+/*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
 /* ai.c — AI helper functions
  *
  * Chunk 52: AI_SetDirectionTowardOpponentsGoal, AI_Kick,

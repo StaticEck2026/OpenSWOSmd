@@ -1,4 +1,9 @@
 /*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
+/*
  * asset_sys.c — C port of AssetSys_Dispatch and all AssetSys_* functions
  *
  * Previously these were the last block of live assembly code in SWOS2.s.

@@ -1,3 +1,8 @@
+/*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
 /* Auto-emitted by emit_initialized_c.py (IDA 9.x) */
 #include <stdint.h>
 #include "Data.h"

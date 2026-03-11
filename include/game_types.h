@@ -1,3 +1,8 @@
+/*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
 /* game_types.h — Shared game struct definitions for SWOS C port
  *
  * Adapted from data/SWOS2_IDA.h (IDA Pro export).

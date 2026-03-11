@@ -1,3 +1,8 @@
+/*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
 /* tactics_menu.c — Tactics selection menu callback functions.
  *
  * Chunk 80 (partial): 7 exported functions ported from SWOS2.s lines 86791-86831.

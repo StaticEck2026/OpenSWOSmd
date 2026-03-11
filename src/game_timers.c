@@ -1,3 +1,8 @@
+/*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
 /* game_timers.c — UpdateGameTimersAndCameraBreakMode + CheckIfBallOutOfPlay
  *
  * Chunk 49: 2 exported functions + internal helpers

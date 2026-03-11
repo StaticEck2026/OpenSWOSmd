@@ -1,4 +1,9 @@
 /*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
+/*
  * resload.c — C port of Resload.s
  *
  * AmigaOS library calls use inline asm with register-specified variables.

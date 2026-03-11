@@ -1,3 +1,8 @@
+/*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
 /* play_match_menu.c — Play Match Menu UI functions
  *
  * Chunk 98: PlayMatchMenuInit, PlayMatchMenuReinit, SetCurrentSelectedPlayerIndexPointer,

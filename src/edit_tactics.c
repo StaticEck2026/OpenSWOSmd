@@ -1,3 +1,8 @@
+/*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
 /* edit_tactics.c — Edit tactics menu functions.
  *
  * Chunk 82: ChooseTacticsInit, ShowStandardChooseTacticsMenu,

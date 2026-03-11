@@ -1,3 +1,8 @@
+/*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
 /* chairman_memo.c — Chairman memos and club business menu functions.
  *
  * Chunk 80 (partial): 5 exported functions ported from SWOS2.s lines 85420-85675.

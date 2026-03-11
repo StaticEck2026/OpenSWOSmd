@@ -1,3 +1,8 @@
+/*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
 /* career_eurocups.c — European Cup qualification, grid caching, title holder management.
  *
  * Chunk 65: 7 exported + 12 static functions ported from SWOS2.s.

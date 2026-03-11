@@ -1,3 +1,8 @@
+/*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
 /* animated_patterns.c — Chunk 38a: Animated crowd fan patterns
  *
  * Ported from SWOS2.s lines 53269-53624:

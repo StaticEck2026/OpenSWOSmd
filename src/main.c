@@ -1,3 +1,8 @@
+/*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
 #include "swos_asm.h"
 
 __attribute__((used, externally_visible)) volatile uint16_t *_panicReasonCode = &panicReasonCode;

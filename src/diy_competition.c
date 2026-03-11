@@ -1,3 +1,8 @@
+/*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
 /* diy_competition.c — DIY competition/tournament management, player pricing.
  *
  * Chunk 60: 16 functions ported from SWOS2.s.

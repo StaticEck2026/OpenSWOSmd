@@ -1,4 +1,9 @@
 /*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
+/*
  * scroll_blit.c — Scroll blitter system
  *
  * Handles updating the frontbuffer when the camera scrolls:

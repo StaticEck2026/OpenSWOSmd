@@ -1,3 +1,8 @@
+/*
+ * Amiga SWOS RE Project
+ * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
+ * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+ */
 #define FRONTBUFFER_SIZE_TOTAL_BYTES 0xbbb0
 #define DMACON_BLT_OFF 0x400
 #define DMACONR_BLTBUSY_BIT 0x6
