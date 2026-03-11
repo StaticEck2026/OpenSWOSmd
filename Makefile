@@ -99,7 +99,7 @@ CCFLAGS_NOLTO = $(subst -flto,,$(subst -fwhole-program,,$(CCFLAGS)))
 
 $(c_objects) : obj/%.o : %.c
 	$(info Compiling $<)
-	@$(CC) $(if $(filter obj/game_timers.o obj/update_players.o,$@),$(CCFLAGS_NOLTO),$(CCFLAGS)) -c -o $@ $(CURDIR)/$<
+	@$(CC) $(if $(filter obj/game_timers.o obj/update_players.o obj/sprite_data.o obj/menu_data.o,$@),$(CCFLAGS_NOLTO),$(CCFLAGS)) -c -o $@ $(CURDIR)/$<
 
 $(s_objects): obj/%.o : %.s
 	$(info Assembling $<)
