@@ -130,19 +130,9 @@ void _ScrollXUpdateColumnsAndBlit(void)
         /* d1 = row offset into tile source (lsl.w #3, ext.l) */
         uint16_t srcOff = d1 << NUM_PLANES_SHIFT_PLUS1;
 
-        /* bltsize: d3 rows * 4 planes, 1 word wide */
-        uint16_t bltsize = (d3 << 8) | 1;  /* d3 lsl.w #8, then addq #1 → actually (d3*4) << 6 | 1 ... */
-        /* Wait — re-reading the asm more carefully:
-         * lsl.w #NUM_PLANES_SHIFT_PLUS1, d1 → d1 = d1 * 8 (byte offset into tile)
-         * lsl.w #8, d3 → shifts height into BLTSIZE height field (but BLTSIZE format is h*64+w)
-         * Actually lsl.w #8 places d3 into bits 8-15. But BLTSIZE is (h<<6)|w.
-         * For NUM_PLANES=4: actual height = d3*4 rows interleaved. So:
-         * The asm does: d3 = TILE_HEIGHT - d1 (lines remaining in tile)
-         * Then lsl.w #8, d3 → d3 << 8
-         * Then addq.w #1, d3 → (d3 << 8) | 1
-         * BLTSIZE = (height << 6) | width → height = d3 << 2 = (TILE_HEIGHT-d1)*4, width = 1
-         * So (d3<<8)|1 = ((TILE_HEIGHT-d1)<<8)|1 which equals ((TILE_HEIGHT-d1)*4 << 6)|1 ✓
-         */
+        /* bltsize: d3 rows * NUM_PLANES, 1 word wide
+         * BLTSIZE = (height << 6) | width, height = d3 * NUM_PLANES */
+        uint16_t bltsize = ((d3 << NUM_PLANES_SHIFT) << 6) | 1;
 
         a0 = *(uint8_t **)a1 + srcOff;
         a1 += PITCH_PTR_ROW_BYTES;
@@ -191,7 +181,7 @@ void _ScrollXUpdateColumnsAndBlit(void)
     /* Partial bottom remainder */
     if (d2 != 0) {
         a0 = *(uint8_t **)a1;
-        uint16_t bltsize = (d2 << 8) | 1;  /* (d2*4 << 6) | 1 */
+        uint16_t bltsize = ((d2 << NUM_PLANES_SHIFT) << 6) | 1;
 
         waitBlit();
         *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)a0;
@@ -235,9 +225,11 @@ void _ScrollYUpdateRowsAndBlit(void)
     int16_t rowCount;
     uint8_t *a1;      /* pitch pointer table cursor */
     uint8_t *a3;      /* dest plane 0 */
+#ifndef AGA
     uint8_t *a4;      /* dest plane 1 */
     uint8_t *a5;      /* dest plane 2 */
     uint8_t *a6_ptr;  /* dest plane 3 */
+#endif
 
     /* Check if camera moved vertically */
     deltaY = cameraY - oldCameraY;
@@ -291,9 +283,11 @@ void _ScrollYUpdateRowsAndBlit(void)
     }
 
     /* ---- Init plane pointers ---- */
+#ifndef AGA
     a4 = a3 + PLANE_STRIDE;
     a5 = a3 + PLANE_STRIDE_TIMES2;
     a6_ptr = a3 + PITCH_DEST_MOD_UNALIGNED;  /* plane 3 = a3 + 132 */
+#endif
 
     /* ---- Compute wrapped dest Y position ---- */
     d4 = cameraYMod320 + d5;
@@ -322,6 +316,18 @@ void _ScrollYUpdateRowsAndBlit(void)
             uint8_t *tilePtr = *(uint8_t **)a1 + d3;
             a1 += 4;  /* next tile pointer */
 
+#ifdef AGA
+            /* Copy one word per plane (8 planes, offset from a3) */
+            {
+                int16_t p;
+                for (p = 0; p < NUM_PLANES; p++)
+                {
+                    *(uint16_t *)(a3 + p * PLANE_STRIDE) = *(uint16_t *)tilePtr;
+                    tilePtr += 2;
+                }
+            }
+            a3 += 2;
+#else
             /* Copy one word per plane (4 planes interleaved) */
             *(uint16_t *)a3 = *(uint16_t *)tilePtr; tilePtr += 2;
             a3 += 2;
@@ -331,6 +337,7 @@ void _ScrollYUpdateRowsAndBlit(void)
             a5 += 2;
             *(uint16_t *)a6_ptr = *(uint16_t *)tilePtr;
             a6_ptr += 2;
+#endif
 
             wordIdx--;
         } while (wordIdx >= 0);
@@ -350,17 +357,21 @@ void _ScrollYUpdateRowsAndBlit(void)
 
         /* Advance dest pointers by row stride */
         a3 += d7;
+#ifndef AGA
         a4 += d7;
         a5 += d7;
         a6_ptr += d7;
+#endif
 
         /* Handle frontbuffer Y-wrap */
         d4 += 1;
         if (d4 == SCREEN_HEIGHT) {
             a3 -= FRONTBUFFER_SIZE_VISIBLE_BYTES;
+#ifndef AGA
             a4 -= FRONTBUFFER_SIZE_VISIBLE_BYTES;
             a5 -= FRONTBUFFER_SIZE_VISIBLE_BYTES;
             a6_ptr -= FRONTBUFFER_SIZE_VISIBLE_BYTES;
+#endif
             d4 = 0;
             maskBlitSecondStreamPtr = (uint32_t)a3;
             maskBlitPendingBytesB = 0;

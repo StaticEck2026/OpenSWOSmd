@@ -1,4 +1,5 @@
 #include "fade.h"
+#include "display.h"
 
 typedef unsigned char uint8_t;
 typedef unsigned long uint32_t;
@@ -119,8 +120,10 @@ void _ApplyFadeStep(uint16_t fadeLevel)
     uint16_t shift;
     uint16_t mask;
     const uint16_t *palette;
+#ifndef AGA
     volatile uint16_t *palA;
     volatile uint16_t *palB;
+#endif
     int16_t i;
 
     idx = (fadeLevel >> 5) * 2; /* index into shift/mask pairs */
@@ -139,8 +142,38 @@ void _ApplyFadeStep(uint16_t fadeLevel)
     }
 
     palette = (const uint16_t *)paletteTable[paletteIndex];
-    palA = (volatile uint16_t *)(copperListBuffer + 0x72);
-    palB = (volatile uint16_t *)(copperListBuffer + 0xB2);
+
+#ifdef AGA
+    {
+        /* AGA: apply fade to 256 colors across 8 banks of 32 */
+        static const uint16_t bankValOffsets[8] = {
+            COP_PAL_B0_C0_VAL_OFF, COP_PAL_B1_C0_VAL_OFF,
+            COP_PAL_B2_C0_VAL_OFF, COP_PAL_B3_C0_VAL_OFF,
+            COP_PAL_B4_C0_VAL_OFF, COP_PAL_B5_C0_VAL_OFF,
+            COP_PAL_B6_C0_VAL_OFF, COP_PAL_B7_C0_VAL_OFF
+        };
+        int16_t bank;
+        for (bank = 0; bank < 8; bank++)
+        {
+            volatile uint16_t *dst = (volatile uint16_t *)(copperListBuffer + bankValOffsets[bank]);
+            for (i = 31; i >= 0; i--)
+            {
+                uint16_t color = *palette++;
+                color = (color >> shift) & mask;
+                if (loaderModeFlag != 0)
+                {
+                    uint16_t blue = color & 0x000F;
+                    if (blue < 2)
+                        color = (color & 0x0FF0) | 2;
+                }
+                *dst = color;
+                dst += 2; /* stride 4 bytes */
+            }
+        }
+    }
+#else
+    palA = (volatile uint16_t *)(copperListBuffer + COP_PAL_B0_C0_VAL_OFF);
+    palB = (volatile uint16_t *)(copperListBuffer + COP_PAL_B1_C0_VAL_OFF);
 
     if (loaderModeFlag == 0)
     {
@@ -174,6 +207,7 @@ void _ApplyFadeStep(uint16_t fadeLevel)
             palB += 2;
         }
     }
+#endif
 }
 
 /* ================================================================

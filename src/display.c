@@ -14,19 +14,36 @@ extern uint8_t bitPlane0Base[];
 extern uint8_t bitPlane1Base[];
 extern uint8_t bitPlane2Base[];
 extern uint8_t bitPlane3Base[];
+#ifdef AGA
+extern uint8_t bitPlane4Base[];
+extern uint8_t bitPlane5Base[];
+extern uint8_t bitPlane6Base[];
+extern uint8_t bitPlane7Base[];
+#endif
 extern uint8_t bitPlane0BaseAlt[];
 extern uint8_t bitPlane1BaseAlt[];
 extern uint8_t bitPlane2BaseAlt[];
 extern uint8_t bitPlane3BaseAlt[];
+#ifdef AGA
+extern uint8_t bitPlane4BaseAlt[];
+extern uint8_t bitPlane5BaseAlt[];
+extern uint8_t bitPlane6BaseAlt[];
+extern uint8_t bitPlane7BaseAlt[];
+#endif
 
 /* Bitplane base pointers */
 extern volatile uint32_t bitPlane0BasePtr;
 extern volatile uint32_t bitPlane1BasePtr;
 extern volatile uint32_t bitPlane2BasePtr;
 extern volatile uint32_t bitPlane3BasePtr;
+#ifdef AGA
+extern volatile uint32_t bitPlane4BasePtr;
+extern volatile uint32_t bitPlane5BasePtr;
+extern volatile uint32_t bitPlane6BasePtr;
+extern volatile uint32_t bitPlane7BasePtr;
+#endif
 
 /* Copper list */
-extern uint8_t copperListTemplate[];
 extern uint8_t copperListBuffer[];
 extern uint32_t copperZeroLong;
 
@@ -94,6 +111,156 @@ static void copper_write_word(uint8_t *addr, uint16_t val)
 }
 
 /* ================================================================
+ * Copper list template — const data, copied to copperListBuffer at init.
+ * OCS: 160 words (320 bytes), AGA: 658 words (1316 bytes).
+ * ================================================================ */
+static const uint16_t copperListTemplate[COPPERLIST_SIZE_BYTES / 2] = {
+#ifdef AGA
+    /* ===== AGA copper list template (8 planes, 256 colors) ===== */
+    0x1401, 0xFFFE,                     /* Wait vpos >= 0x14 */
+    /* 8 sprite pointer pairs */
+    0x0120, 0x0000, 0x0122, 0x0000,     /* SPR0 */
+    0x0124, 0x0000, 0x0126, 0x0000,     /* SPR1 */
+    0x0128, 0x0000, 0x012A, 0x0000,     /* SPR2 */
+    0x012C, 0x0000, 0x012E, 0x0000,     /* SPR3 */
+    0x0130, 0x0000, 0x0132, 0x0000,     /* SPR4 */
+    0x0134, 0x0000, 0x0136, 0x0000,     /* SPR5 */
+    0x0138, 0x0000, 0x013A, 0x0000,     /* SPR6 */
+    0x013C, 0x0000, 0x013E, 0x0000,     /* SPR7 */
+    0x0100, 0x0210,                     /* BPLCON0: 8 bitplanes (BPU3=1) + COLOR */
+    0x0102, 0x0000,                     /* BPLCON1 */
+    0x0104, 0x0024,                     /* BPLCON2 */
+    0x01FE, 0x0000,                     /* NO-OP (FMODE placeholder) */
+    0x01FE, 0x0000,                     /* NO-OP */
+    0x0108, 0x0000,                     /* BPL1MOD */
+    0x010A, 0x0000,                     /* BPL2MOD */
+    0x0092, 0x0028,                     /* DDFSTRT */
+    0x0094, 0x00D0,                     /* DDFSTOP */
+    0x008E, 0x2471,                     /* DIWSTRT */
+    0x0090, 0x34C1,                     /* DIWSTOP */
+    /* Bank 0 (colors 0..31) */
+    0x0106, 0x0C00,                     /* BPLCON3: bank 0 */
+    0x0180, 0, 0x0182, 0, 0x0184, 0, 0x0186, 0,
+    0x0188, 0, 0x018A, 0, 0x018C, 0, 0x018E, 0,
+    0x0190, 0, 0x0192, 0, 0x0194, 0, 0x0196, 0,
+    0x0198, 0, 0x019A, 0, 0x019C, 0, 0x019E, 0,
+    0x01A0, 0, 0x01A2, 0, 0x01A4, 0, 0x01A6, 0,
+    0x01A8, 0, 0x01AA, 0, 0x01AC, 0, 0x01AE, 0,
+    0x01B0, 0, 0x01B2, 0, 0x01B4, 0, 0x01B6, 0,
+    0x01B8, 0, 0x01BA, 0, 0x01BC, 0, 0x01BE, 0,
+    /* Bank 1 (colors 32..63) */
+    0x0106, 0x2C00,
+    0x0180, 0, 0x0182, 0, 0x0184, 0, 0x0186, 0,
+    0x0188, 0, 0x018A, 0, 0x018C, 0, 0x018E, 0,
+    0x0190, 0, 0x0192, 0, 0x0194, 0, 0x0196, 0,
+    0x0198, 0, 0x019A, 0, 0x019C, 0, 0x019E, 0,
+    0x01A0, 0, 0x01A2, 0, 0x01A4, 0, 0x01A6, 0,
+    0x01A8, 0, 0x01AA, 0, 0x01AC, 0, 0x01AE, 0,
+    0x01B0, 0, 0x01B2, 0, 0x01B4, 0, 0x01B6, 0,
+    0x01B8, 0, 0x01BA, 0, 0x01BC, 0, 0x01BE, 0,
+    /* Bank 2 (colors 64..95) */
+    0x0106, 0x4C00,
+    0x0180, 0, 0x0182, 0, 0x0184, 0, 0x0186, 0,
+    0x0188, 0, 0x018A, 0, 0x018C, 0, 0x018E, 0,
+    0x0190, 0, 0x0192, 0, 0x0194, 0, 0x0196, 0,
+    0x0198, 0, 0x019A, 0, 0x019C, 0, 0x019E, 0,
+    0x01A0, 0, 0x01A2, 0, 0x01A4, 0, 0x01A6, 0,
+    0x01A8, 0, 0x01AA, 0, 0x01AC, 0, 0x01AE, 0,
+    0x01B0, 0, 0x01B2, 0, 0x01B4, 0, 0x01B6, 0,
+    0x01B8, 0, 0x01BA, 0, 0x01BC, 0, 0x01BE, 0,
+    /* Bank 3 (colors 96..127) */
+    0x0106, 0x6C00,
+    0x0180, 0, 0x0182, 0, 0x0184, 0, 0x0186, 0,
+    0x0188, 0, 0x018A, 0, 0x018C, 0, 0x018E, 0,
+    0x0190, 0, 0x0192, 0, 0x0194, 0, 0x0196, 0,
+    0x0198, 0, 0x019A, 0, 0x019C, 0, 0x019E, 0,
+    0x01A0, 0, 0x01A2, 0, 0x01A4, 0, 0x01A6, 0,
+    0x01A8, 0, 0x01AA, 0, 0x01AC, 0, 0x01AE, 0,
+    0x01B0, 0, 0x01B2, 0, 0x01B4, 0, 0x01B6, 0,
+    0x01B8, 0, 0x01BA, 0, 0x01BC, 0, 0x01BE, 0,
+    /* Bank 4 (colors 128..159) */
+    0x0106, 0x8C00,
+    0x0180, 0, 0x0182, 0, 0x0184, 0, 0x0186, 0,
+    0x0188, 0, 0x018A, 0, 0x018C, 0, 0x018E, 0,
+    0x0190, 0, 0x0192, 0, 0x0194, 0, 0x0196, 0,
+    0x0198, 0, 0x019A, 0, 0x019C, 0, 0x019E, 0,
+    0x01A0, 0, 0x01A2, 0, 0x01A4, 0, 0x01A6, 0,
+    0x01A8, 0, 0x01AA, 0, 0x01AC, 0, 0x01AE, 0,
+    0x01B0, 0, 0x01B2, 0, 0x01B4, 0, 0x01B6, 0,
+    0x01B8, 0, 0x01BA, 0, 0x01BC, 0, 0x01BE, 0,
+    /* Bank 5 (colors 160..191) */
+    0x0106, 0xAC00,
+    0x0180, 0, 0x0182, 0, 0x0184, 0, 0x0186, 0,
+    0x0188, 0, 0x018A, 0, 0x018C, 0, 0x018E, 0,
+    0x0190, 0, 0x0192, 0, 0x0194, 0, 0x0196, 0,
+    0x0198, 0, 0x019A, 0, 0x019C, 0, 0x019E, 0,
+    0x01A0, 0, 0x01A2, 0, 0x01A4, 0, 0x01A6, 0,
+    0x01A8, 0, 0x01AA, 0, 0x01AC, 0, 0x01AE, 0,
+    0x01B0, 0, 0x01B2, 0, 0x01B4, 0, 0x01B6, 0,
+    0x01B8, 0, 0x01BA, 0, 0x01BC, 0, 0x01BE, 0,
+    /* Bank 6 (colors 192..223) */
+    0x0106, 0xCC00,
+    0x0180, 0, 0x0182, 0, 0x0184, 0, 0x0186, 0,
+    0x0188, 0, 0x018A, 0, 0x018C, 0, 0x018E, 0,
+    0x0190, 0, 0x0192, 0, 0x0194, 0, 0x0196, 0,
+    0x0198, 0, 0x019A, 0, 0x019C, 0, 0x019E, 0,
+    0x01A0, 0, 0x01A2, 0, 0x01A4, 0, 0x01A6, 0,
+    0x01A8, 0, 0x01AA, 0, 0x01AC, 0, 0x01AE, 0,
+    0x01B0, 0, 0x01B2, 0, 0x01B4, 0, 0x01B6, 0,
+    0x01B8, 0, 0x01BA, 0, 0x01BC, 0, 0x01BE, 0,
+    /* Bank 7 (colors 224..255) */
+    0x0106, 0xEC00,
+    0x0180, 0, 0x0182, 0, 0x0184, 0, 0x0186, 0,
+    0x0188, 0, 0x018A, 0, 0x018C, 0, 0x018E, 0,
+    0x0190, 0, 0x0192, 0, 0x0194, 0, 0x0196, 0,
+    0x0198, 0, 0x019A, 0, 0x019C, 0, 0x019E, 0,
+    0x01A0, 0, 0x01A2, 0, 0x01A4, 0, 0x01A6, 0,
+    0x01A8, 0, 0x01AA, 0, 0x01AC, 0, 0x01AE, 0,
+    0x01B0, 0, 0x01B2, 0, 0x01B4, 0, 0x01B6, 0,
+    0x01B8, 0, 0x01BA, 0, 0x01BC, 0, 0x01BE, 0,
+    /* Reset to bank 0 */
+    0x0106, 0x0C00,
+    0x2301, 0xFFFE,                     /* Wait vpos >= 0x23 */
+    /* BPL pointers block A (8 planes) */
+    0x00E0, 0, 0x00E2, 0, 0x00E4, 0, 0x00E6, 0,
+    0x00E8, 0, 0x00EA, 0, 0x00EC, 0, 0x00EE, 0,
+    0x00F0, 0, 0x00F2, 0, 0x00F4, 0, 0x00F6, 0,
+    0x00F8, 0, 0x00FA, 0, 0x00FC, 0, 0x00FE, 0,
+    /* Wait / BPL pointers block B */
+    0xFFE1, 0xFFFE,                     /* Wait vhpos */
+    0x0001, 0xFFFE,                     /* Wait */
+    /* BPL pointers block B (8 planes) */
+    0x00E0, 0, 0x00E2, 0, 0x00E4, 0, 0x00E6, 0,
+    0x00E8, 0, 0x00EA, 0, 0x00EC, 0, 0x00EE, 0,
+    0x00F0, 0, 0x00F2, 0, 0x00F4, 0, 0x00F6, 0,
+    0x00F8, 0, 0x00FA, 0, 0x00FC, 0, 0x00FE, 0,
+    0xFFFF, 0xFFFE                      /* End of copper list */
+#else
+    /* ===== OCS copper list template (4 planes, 16 colors) ===== */
+    0x1401, 0xFFFE, 0x0120, 0x0000, 0x0122, 0x0000, 0x0124, 0x0000,
+    0x0126, 0x0000, 0x0128, 0x0000, 0x012A, 0x0000, 0x012C, 0x0000,
+    0x012E, 0x0000, 0x0130, 0x0000, 0x0132, 0x0000, 0x0134, 0x0000,
+    0x0136, 0x0000, 0x0138, 0x0000, 0x013A, 0x0000, 0x013C, 0x0000,
+    0x013E, 0x0000, 0x0100, 0x4200, 0x0102, 0x0000, 0x0104, 0x0024,
+    0x01FE, 0x0000, 0x01FE, 0x0000, 0x0108, 0x0000, 0x010A, 0x0000,
+    0x0092, 0x0028, 0x0094, 0x00D0, 0x008E, 0x2471, 0x0090, 0x34C1,
+    0x0180, 0x0000, 0x0182, 0x0000, 0x0184, 0x0000, 0x0186, 0x0000,
+    0x0188, 0x0000, 0x018A, 0x0000, 0x018C, 0x0000, 0x018E, 0x0000,
+    0x0190, 0x0000, 0x0192, 0x0000, 0x0194, 0x0000, 0x0196, 0x0000,
+    0x0198, 0x0000, 0x019A, 0x0000, 0x019C, 0x0000, 0x019E, 0x0000,
+    0x01A0, 0x0000, 0x01A2, 0x0000, 0x01A4, 0x0000, 0x01A6, 0x0000,
+    0x01A8, 0x0000, 0x01AA, 0x0000, 0x01AC, 0x0000, 0x01AE, 0x0000,
+    0x01B0, 0x0000, 0x01B2, 0x0000, 0x01B4, 0x0000, 0x01B6, 0x0000,
+    0x01B8, 0x0000, 0x01BA, 0x0000, 0x01BC, 0x0000, 0x01BE, 0x0000,
+    0x2401, 0xFFFE, 0x00E0, 0x0000, 0x00E2, 0x0000, 0x00E4, 0x0000,
+    0x00E6, 0x0000, 0x00E8, 0x0000, 0x00EA, 0x0000, 0x00EC, 0x0000,
+    0x00EE, 0x0000, 0xFFE1, 0xFFFE, 0x0001, 0xFFFE, 0x00E0, 0x0000,
+    0x00E2, 0x0000, 0x00E4, 0x0000, 0x00E6, 0x0000, 0x00E8, 0x0000,
+    0x00EA, 0x0000, 0x00EC, 0x0000, 0x00EE, 0x0000, 0xFFFF, 0xFFFE
+#endif
+};
+
+/* ================================================================
  * InitDisplayAndCopper  (SWOS2.s line 5416)
  *
  * Sets up display: frontbuffer pointers, copper list, bitplanes,
@@ -112,9 +279,9 @@ void _InitDisplayAndCopper(void)
     kSpriteBlitQueueSentinel_A = 0xFFFFFFFFu;
     kSpriteBlitQueueSentinel_B = 0xFFFFFFFFu;
 
-    /* Copy copper list template → buffer (320 bytes) */
+    /* Copy copper list template → buffer */
     {
-        const uint8_t *src = copperListTemplate;
+        const uint8_t *src = (const uint8_t *)copperListTemplate;
         uint8_t *dst = copperListBuffer;
         for (i = COPPERLIST_SIZE_BYTES - 1; i >= 0; i--)
         {
@@ -141,9 +308,9 @@ void _InitDisplayAndCopper(void)
     /* Re-enable interrupts */
     *(volatile uint16_t *)INTENA_ADDR = 0xC000u;
 
-    /* Write copperZeroLong pointer into first 8 copper list entries */
+    /* Write copperZeroLong pointer into first 8 sprite pointer entries */
     {
-        uint8_t *entry = copperListBuffer + 4;
+        uint8_t *entry = copperListBuffer + COP_SPR_B0_OFF;
         uint32_t ptr = (uint32_t)&copperZeroLong;
         for (i = 7; i >= 0; i--)
         {
@@ -152,24 +319,42 @@ void _InitDisplayAndCopper(void)
         }
     }
 
-    /* Clear palette table A (16 entries at copperListBuffer+0x72, stride 4) */
+    /* Clear palette banks in copper list */
     {
-        uint8_t *p = copperListBuffer + 0x72;
+#ifdef AGA
+        /* AGA: clear all 8 banks x 32 colors */
+        static const uint16_t bankOffsets[8] = {
+            COP_PAL_B0_C0_VAL_OFF, COP_PAL_B1_C0_VAL_OFF,
+            COP_PAL_B2_C0_VAL_OFF, COP_PAL_B3_C0_VAL_OFF,
+            COP_PAL_B4_C0_VAL_OFF, COP_PAL_B5_C0_VAL_OFF,
+            COP_PAL_B6_C0_VAL_OFF, COP_PAL_B7_C0_VAL_OFF
+        };
+        int16_t bank;
+        for (bank = 0; bank < NUM_PAL_BANKS; bank++)
+        {
+            uint8_t *p = copperListBuffer + bankOffsets[bank];
+            for (i = COLORS_PER_BANK - 1; i >= 0; i--)
+            {
+                copper_write_word(p, 0);
+                p += 4;
+            }
+        }
+#else
+        /* OCS: clear 2 blocks x 16 colors */
+        uint8_t *p;
+        p = copperListBuffer + COP_PAL_B0_C0_VAL_OFF;
         for (i = 15; i >= 0; i--)
         {
             copper_write_word(p, 0);
-            p += 4; /* skip 4 bytes */
+            p += 4;
         }
-    }
-
-    /* Clear palette table B (16 entries at copperListBuffer+0xB2, stride 4) */
-    {
-        uint8_t *p = copperListBuffer + 0xB2;
+        p = copperListBuffer + COP_PAL_B1_C0_VAL_OFF;
         for (i = 15; i >= 0; i--)
         {
             copper_write_word(p, 0);
-            p += 4; /* skip 4 bytes */
+            p += 4;
         }
+#endif
     }
 
     /* Set bitplane base pointers */
@@ -177,12 +362,24 @@ void _InitDisplayAndCopper(void)
     bitPlane1BasePtr = (uint32_t)bitPlane1Base;
     bitPlane2BasePtr = (uint32_t)bitPlane2Base;
     bitPlane3BasePtr = (uint32_t)bitPlane3Base;
+#ifdef AGA
+    bitPlane4BasePtr = (uint32_t)bitPlane4Base;
+    bitPlane5BasePtr = (uint32_t)bitPlane5Base;
+    bitPlane6BasePtr = (uint32_t)bitPlane6Base;
+    bitPlane7BasePtr = (uint32_t)bitPlane7Base;
+#endif
 
     /* Clear first long of each bitplane */
     *(volatile uint32_t *)bitPlane0Base = copperZeroLong;
     *(volatile uint32_t *)bitPlane1Base = copperZeroLong;
     *(volatile uint32_t *)bitPlane2Base = copperZeroLong;
     *(volatile uint32_t *)bitPlane3Base = copperZeroLong;
+#ifdef AGA
+    *(volatile uint32_t *)bitPlane4Base = copperZeroLong;
+    *(volatile uint32_t *)bitPlane5Base = copperZeroLong;
+    *(volatile uint32_t *)bitPlane6Base = copperZeroLong;
+    *(volatile uint32_t *)bitPlane7Base = copperZeroLong;
+#endif
 
     /* Update plane pointers and blit parameters in copper list */
     _UpdatePlanePtrsAndBlitParams();
@@ -233,36 +430,42 @@ void _UpdatePlanePtrsAndBlitParams(void)
     uint16_t d1;
     int16_t i;
 
-    /* Write the 4 bitplane base pointers into copper list header (offsets 4, 0xC, 0x14, 0x1C) */
-    copper_write_ptr(copperListBuffer + 0x04, bitPlane0BasePtr);
-    copper_write_ptr(copperListBuffer + 0x0C, bitPlane1BasePtr);
-    copper_write_ptr(copperListBuffer + 0x14, bitPlane2BasePtr);
-    copper_write_ptr(copperListBuffer + 0x1C, bitPlane3BasePtr);
+    /* Write bitplane base pointers into copper list sprite pointer slots */
+    copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF, bitPlane0BasePtr);
+    copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF + 8, bitPlane1BasePtr);
+    copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF + 16, bitPlane2BasePtr);
+    copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF + 24, bitPlane3BasePtr);
+#ifdef AGA
+    copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF + 32, bitPlane4BasePtr);
+    copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF + 40, bitPlane5BasePtr);
+    copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF + 48, bitPlane6BasePtr);
+    copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF + 56, bitPlane7BasePtr);
+#endif
 
     /* Handle horizontal scroll alignment */
     d1 = cameraXMod320 & 0x0Fu;
     if (d1 == 0)
     {
         /* Aligned case */
-        copper_write_word(copperListBuffer + 0x5A, PITCH_DEST_MOD_ALIGNED);
-        copper_write_word(copperListBuffer + 0x5E, PITCH_DEST_MOD_ALIGNED);
-        copper_write_word(copperListBuffer + 0x62, 0x0030u);
-        copper_write_word(copperListBuffer + 0x4A, 0);
+        copper_write_word(copperListBuffer + COP_BPL1MOD_VAL_OFF, PITCH_DEST_MOD_ALIGNED);
+        copper_write_word(copperListBuffer + COP_BPL2MOD_VAL_OFF, PITCH_DEST_MOD_ALIGNED);
+        copper_write_word(copperListBuffer + COP_DDFSTRT_VAL_OFF, 0x0030u);
+        copper_write_word(copperListBuffer + COP_BPLCON1_VAL_OFF, 0);
     }
     else
     {
         /* Unaligned case */
         uint16_t shift = 0x10u - d1;
-        copper_write_word(copperListBuffer + 0x5A, PITCH_DEST_MOD_UNALIGNED);
-        copper_write_word(copperListBuffer + 0x5E, PITCH_DEST_MOD_UNALIGNED);
-        copper_write_word(copperListBuffer + 0x62, 0x0028u);
-        copper_write_word(copperListBuffer + 0x4A, (uint16_t)(shift | (shift << 4)));
+        copper_write_word(copperListBuffer + COP_BPL1MOD_VAL_OFF, PITCH_DEST_MOD_UNALIGNED);
+        copper_write_word(copperListBuffer + COP_BPL2MOD_VAL_OFF, PITCH_DEST_MOD_UNALIGNED);
+        copper_write_word(copperListBuffer + COP_DDFSTRT_VAL_OFF, 0x0028u);
+        copper_write_word(copperListBuffer + COP_BPLCON1_VAL_OFF, (uint16_t)(shift | (shift << 4)));
     }
 
-    /* Build plane pointer tables at copper offsets 0xF4 and 0x11C */
+    /* Build plane pointer tables at copper BPL pointer blocks A and B */
     {
-        uint8_t *tableA = copperListBuffer + 0xF4;
-        uint8_t *tableB = copperListBuffer + 0x11C;
+        uint8_t *tableA = copperListBuffer + COP_BPLPTR_BLOCKA_OFF;
+        uint8_t *tableB = copperListBuffer + COP_BPLPTR_BLOCKB_OFF;
         uint32_t baseOffset;
         uint32_t altOffset;
 
@@ -316,14 +519,14 @@ void _UpdatePlanePtrsAndBlitParams(void)
         uint16_t lineCount = SCREEN_HEIGHT - cameraYMod320 + 0x24u;
         if (lineCount > 0xFFu)
         {
-            copper_write_word(copperListBuffer + 0x114, 0xFFE1u);
+            copper_write_word(copperListBuffer + COP_WAIT_VHPOS, 0xFFE1u);
         }
         else
         {
-            copper_write_word(copperListBuffer + 0x114, 1);
+            copper_write_word(copperListBuffer + COP_WAIT_VHPOS, 1);
         }
         lineCount &= 0xFFu;
-        copper_write_word(copperListBuffer + 0x118, (uint16_t)((lineCount << 8) | 1u));
+        copper_write_word(copperListBuffer + COP_WAIT_WAIT, (uint16_t)((lineCount << 8) | 1u));
     }
 }
 
@@ -343,11 +546,23 @@ void _SwapBuffersAndCameraViewState(void)
         bitPlane1BasePtr = (uint32_t)bitPlane1BaseAlt;
         bitPlane2BasePtr = (uint32_t)bitPlane2BaseAlt;
         bitPlane3BasePtr = (uint32_t)bitPlane3BaseAlt;
+#ifdef AGA
+        bitPlane4BasePtr = (uint32_t)bitPlane4BaseAlt;
+        bitPlane5BasePtr = (uint32_t)bitPlane5BaseAlt;
+        bitPlane6BasePtr = (uint32_t)bitPlane6BaseAlt;
+        bitPlane7BasePtr = (uint32_t)bitPlane7BaseAlt;
+#endif
 
         *(volatile uint32_t *)bitPlane0BaseAlt = copperZeroLong;
         *(volatile uint32_t *)bitPlane1BaseAlt = copperZeroLong;
         *(volatile uint32_t *)bitPlane2BaseAlt = copperZeroLong;
         *(volatile uint32_t *)bitPlane3BaseAlt = copperZeroLong;
+#ifdef AGA
+        *(volatile uint32_t *)bitPlane4BaseAlt = copperZeroLong;
+        *(volatile uint32_t *)bitPlane5BaseAlt = copperZeroLong;
+        *(volatile uint32_t *)bitPlane6BaseAlt = copperZeroLong;
+        *(volatile uint32_t *)bitPlane7BaseAlt = copperZeroLong;
+#endif
 
         frontbufferBasePtr = (uint32_t)frontbufferBaseAlt;
         frontbufferBaseAltPtr = (uint32_t)frontbufferBase;
@@ -376,11 +591,23 @@ void _SwapBuffersAndCameraViewState(void)
         bitPlane1BasePtr = (uint32_t)bitPlane1Base;
         bitPlane2BasePtr = (uint32_t)bitPlane2Base;
         bitPlane3BasePtr = (uint32_t)bitPlane3Base;
+#ifdef AGA
+        bitPlane4BasePtr = (uint32_t)bitPlane4Base;
+        bitPlane5BasePtr = (uint32_t)bitPlane5Base;
+        bitPlane6BasePtr = (uint32_t)bitPlane6Base;
+        bitPlane7BasePtr = (uint32_t)bitPlane7Base;
+#endif
 
         *(volatile uint32_t *)bitPlane0Base = copperZeroLong;
         *(volatile uint32_t *)bitPlane1Base = copperZeroLong;
         *(volatile uint32_t *)bitPlane2Base = copperZeroLong;
         *(volatile uint32_t *)bitPlane3Base = copperZeroLong;
+#ifdef AGA
+        *(volatile uint32_t *)bitPlane4Base = copperZeroLong;
+        *(volatile uint32_t *)bitPlane5Base = copperZeroLong;
+        *(volatile uint32_t *)bitPlane6Base = copperZeroLong;
+        *(volatile uint32_t *)bitPlane7Base = copperZeroLong;
+#endif
 
         frontbufferBasePtr = (uint32_t)frontbufferBase;
         frontbufferBaseAltPtr = (uint32_t)frontbufferBaseAlt;
@@ -494,6 +721,35 @@ void _BlitterCopyPanelToScreen2(void)
     *(volatile uint16_t *)(custom + BLTAFWM_OFF) = BLT_FWM_ALL;
     *(volatile uint16_t *)(custom + BLTCON1_OFF) = 0;
     *(volatile uint16_t *)(custom + BLTCON0_OFF) = (uint16_t)BLTCON0_USEA_USED_LF_F0;
+
+#ifdef AGA
+    /* AGA: per-plane blit with interleaved stride */
+    *(volatile uint16_t *)(custom + BLTAMOD_OFF) = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
+    *(volatile uint16_t *)(custom + BLTDMOD_OFF) = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
+    {
+        uint8_t *srcPlane = frontbufferMaskBuffer;
+        uint8_t *dstPlane = (uint8_t *)frontbufferBasePtr;
+        int16_t plane;
+        for (plane = NUM_PLANES_MINUS1; plane >= 0; plane--)
+        {
+            *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
+            while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
+            *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
+
+            *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)srcPlane;
+            *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)dstPlane;
+            *(volatile uint16_t *)(custom + BLTSIZE_OFF) = (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN;
+
+            srcPlane += PLANE_STRIDE;
+            dstPlane += PLANE_STRIDE;
+        }
+    }
+    /* Wait for last blit */
+    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
+    while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
+    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
+#else
+    /* OCS: single full-buffer blit */
     *(volatile uint16_t *)(custom + BLTAMOD_OFF) = 0;
     *(volatile uint16_t *)(custom + BLTDMOD_OFF) = 0;
 
@@ -515,6 +771,7 @@ void _BlitterCopyPanelToScreen2(void)
 
     /* Reset blit size to small default */
     *(volatile uint16_t *)(custom + BLTSIZE_OFF) = 0x0016u;
+#endif
 }
 
 /* ================================================================
@@ -602,6 +859,34 @@ void _BlitterCopyPanelToScreen(void)
     *(volatile uint16_t *)(custom + BLTAFWM_OFF) = BLT_FWM_ALL;
     *(volatile uint16_t *)(custom + BLTCON1_OFF) = 0;
     *(volatile uint16_t *)(custom + BLTCON0_OFF) = (uint16_t)BLTCON0_USEA_USED_LF_F0;
+
+#ifdef AGA
+    /* AGA: per-plane blit with interleaved stride */
+    *(volatile uint16_t *)(custom + BLTAMOD_OFF) = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
+    *(volatile uint16_t *)(custom + BLTDMOD_OFF) = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
+    {
+        uint8_t *srcPlane = frontbufferMaskBuffer;
+        uint8_t *dstPlane = (uint8_t *)frontbufferBasePtr;
+        int16_t plane;
+        for (plane = NUM_PLANES_MINUS1; plane >= 0; plane--)
+        {
+            *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
+            while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
+            *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
+
+            *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)srcPlane;
+            *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)dstPlane;
+            *(volatile uint16_t *)(custom + BLTSIZE_OFF) = (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN;
+
+            srcPlane += PLANE_STRIDE;
+            dstPlane += PLANE_STRIDE;
+        }
+    }
+    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
+    while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
+    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
+#else
+    /* OCS: single full-buffer blit */
     *(volatile uint16_t *)(custom + BLTAMOD_OFF) = 0;
     *(volatile uint16_t *)(custom + BLTDMOD_OFF) = 0;
 
@@ -616,6 +901,7 @@ void _BlitterCopyPanelToScreen(void)
     while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
     *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
     *(volatile uint16_t *)(custom + BLTSIZE_OFF) = 0x0016u;
+#endif
 }
 
 /* ================================================================
@@ -661,7 +947,7 @@ void _HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
     /* BLTSIZE = (height << 8) | stride */
     height = *(uint16_t *)(sprEntry + 12);
     stride = *(uint16_t *)(sprEntry + 14); /* TILE_STRIDE offset */
-    blitSize = (uint16_t)((height << 8) | stride);
+    blitSize = (uint16_t)((height << (NUM_PLANES_SHIFT + 6)) | stride);
     *(volatile uint16_t *)(custom + BLTSIZE_OFF) = blitSize;
 }
 
@@ -675,7 +961,7 @@ __attribute__((used, externally_visible))
 void _FlashColor0Delay(uint32_t loopCount, uint16_t color)
 {
     volatile uint16_t *color00 = (volatile uint16_t *)COLOR00_ADDR;
-    volatile uint16_t *copperColor0 = (volatile uint16_t *)(copperListBuffer + 0x72);
+    volatile uint16_t *copperColor0 = (volatile uint16_t *)(copperListBuffer + COP_PAL_B0_C0_VAL_OFF);
 
     *color00 = color;
     while (--loopCount != 0)
@@ -684,3 +970,83 @@ void _FlashColor0Delay(uint32_t loopCount, uint16_t color)
     }
     *color00 = *copperColor0;
 }
+
+/* ================================================================
+ * WriteCopperPalette
+ *
+ * Writes a full palette into the copperListBuffer color value slots.
+ * AGA: 256 colors across 8 banks of 32 colors each.
+ * OCS: 16 colors into both palette blocks (B0 and B1).
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _WriteCopperPalette(const uint16_t *palette)
+{
+#ifdef AGA
+    static const uint16_t bankValOffsets[8] = {
+        COP_PAL_B0_C0_VAL_OFF, COP_PAL_B1_C0_VAL_OFF,
+        COP_PAL_B2_C0_VAL_OFF, COP_PAL_B3_C0_VAL_OFF,
+        COP_PAL_B4_C0_VAL_OFF, COP_PAL_B5_C0_VAL_OFF,
+        COP_PAL_B6_C0_VAL_OFF, COP_PAL_B7_C0_VAL_OFF
+    };
+    int16_t bank;
+    for (bank = 0; bank < 8; bank++)
+    {
+        uint8_t *dst = copperListBuffer + bankValOffsets[bank];
+        const uint16_t *src = palette + (bank * 32);
+        int16_t i;
+        for (i = 31; i >= 0; i--)
+        {
+            copper_write_word(dst, *src++);
+            dst += 4; /* stride: reg+val pairs = 4 bytes */
+        }
+    }
+#else
+    uint8_t *palA = copperListBuffer + COP_PAL_B0_C0_VAL_OFF;
+    uint8_t *palB = copperListBuffer + COP_PAL_B1_C0_VAL_OFF;
+    int16_t i;
+    for (i = 15; i >= 0; i--)
+    {
+        uint16_t color = *palette++;
+        copper_write_word(palA, color);
+        copper_write_word(palB, color);
+        palA += 4;
+        palB += 4;
+    }
+#endif
+}
+
+#ifdef AGA
+/* ================================================================
+ * WriteCopperPitchPalette (AGA only)
+ *
+ * Applies 9 pitch-specific color entries into gamePalette using
+ * paletteIndices, then pushes the full 256-color gamePalette into
+ * the copper buffer via WriteCopperPalette.
+ * ================================================================ */
+extern uint16_t gamePalette[];
+extern uint16_t pitchNumberAndType;
+extern uint32_t pitchPalettePtrs[];
+extern uint8_t paletteIndices[];
+
+__attribute__((used, externally_visible))
+void _WriteCopperPitchPalette(void)
+{
+    uint16_t pitchIdx = pitchNumberAndType;
+    const uint16_t *pitchPal;
+    int16_t i;
+
+    if (pitchIdx > 6)
+        pitchIdx = 4; /* default to "normal" if out of range */
+
+    pitchPal = (const uint16_t *)pitchPalettePtrs[pitchIdx];
+
+    /* Apply 9 entries into gamePalette */
+    for (i = 0; i < 9; i++)
+    {
+        uint16_t idx = paletteIndices[i];
+        gamePalette[idx] = pitchPal[i];
+    }
+
+    _WriteCopperPalette(gamePalette);
+}
+#endif

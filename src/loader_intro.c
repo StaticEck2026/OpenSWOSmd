@@ -132,12 +132,16 @@ static int16_t loaderIntroWaitForFireOrTimeout(int16_t timeout)
 static int16_t loaderIntroShowFrameFadeInOut(const uint8_t *filename, int16_t timeout)
 {
     loaderIntroLoadFrameToFrontbufferAlt(filename);
+#ifndef AGA
     _FadeIn();
+#endif
 
     if (loaderIntroWaitForFireOrTimeout(timeout) != 0)
         return 1;
 
+#ifndef AGA
     _FadeOutToBlack();
+#endif
     return 0;
 }
 
@@ -151,12 +155,16 @@ static int16_t loaderIntroShowFrameWithMusic(const uint8_t *filename, int16_t ti
 {
     loaderIntroLoadFrameToFrontbufferAlt(filename);
     loaderIntroEnsureMenuMusicPlaying();
+#ifndef AGA
     _FadeIn();
+#endif
 
     if (loaderIntroWaitForFireOrTimeout(timeout) != 0)
         return 1;
 
+#ifndef AGA
     _FadeOutToBlack();
+#endif
     return 0;
 }
 
@@ -203,8 +211,10 @@ void _ShowLoaderIntroSequence(void)
     if (pl1Fire != 0)
     {
         /* Fire pressed path: just show loader1.raw and fade in */
+#ifndef AGA
         paletteIndex = 3;
-        loaderIntroLoadFrameToFrontbufferAlt((const uint8_t *)"grafs/loader1.raw");
+#endif
+        loaderIntroLoadFrameToFrontbufferAlt((const uint8_t *)GRAFS "loader1.raw");
         _FadeIn();
         return;
     }
@@ -213,49 +223,57 @@ void _ShowLoaderIntroSequence(void)
     loaderIntroLoadHeroAudioBank();
 
     /* Show frame sequence */
+#ifndef AGA
     paletteIndex = 6;
+#endif
 
     /* Frame 0: loader00.raw */
-    if (loaderIntroShowFrameFadeInOut((const uint8_t *)"grafs/loader00.raw", 0xFA) != 0)
+    if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader00.raw", 0xFA) != 0)
         goto load_fail_early;
 
     /* Frame 1: loader01.raw */
-    if (loaderIntroShowFrameFadeInOut((const uint8_t *)"grafs/loader01.raw", 0xFA) != 0)
+    if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader01.raw", 0xFA) != 0)
         goto load_fail_early;
 
     /* Frame 2: loader1.raw (with music) */
+#ifndef AGA
     paletteIndex = 3;
-    if (loaderIntroShowFrameWithMusic((const uint8_t *)"grafs/loader1.raw", 0xFA) != 0)
+#endif
+    if (loaderIntroShowFrameWithMusic((const uint8_t *)GRAFS "loader1.raw", 0xFA) != 0)
         goto exit_cleanup;
 
     /* Frame 3: loader2.raw */
+#ifndef AGA
     paletteIndex = 5;
-    if (loaderIntroShowFrameFadeInOut((const uint8_t *)"grafs/loader2.raw", 0xFA) != 0)
+#endif
+    if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader2.raw", 0xFA) != 0)
         goto load_fail_mid;
 
     /* Frames 4-12: loader3..loader10 */
-    if (loaderIntroShowFrameFadeInOut((const uint8_t *)"grafs/loader3.raw", 0xFA) != 0)
+    if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader3.raw", 0xFA) != 0)
         goto load_fail_mid;
-    if (loaderIntroShowFrameFadeInOut((const uint8_t *)"grafs/loader4.raw", 0xFA) != 0)
+    if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader4.raw", 0xFA) != 0)
         goto load_fail_mid;
-    if (loaderIntroShowFrameFadeInOut((const uint8_t *)"grafs/loader5.raw", 0xFA) != 0)
+    if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader5.raw", 0xFA) != 0)
         goto load_fail_mid;
-    if (loaderIntroShowFrameFadeInOut((const uint8_t *)"grafs/loader6.raw", 0xFA) != 0)
+    if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader6.raw", 0xFA) != 0)
         goto load_fail_mid;
-    if (loaderIntroShowFrameFadeInOut((const uint8_t *)"grafs/loader7.raw", 0xFA) != 0)
+    if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader7.raw", 0xFA) != 0)
         goto load_fail_mid;
-    if (loaderIntroShowFrameFadeInOut((const uint8_t *)"grafs/loader8a.raw", 0xFA) != 0)
+    if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader8a.raw", 0xFA) != 0)
         goto load_fail_mid;
-    if (loaderIntroShowFrameFadeInOut((const uint8_t *)"grafs/loader8b.raw", 0xFA) != 0)
+    if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader8b.raw", 0xFA) != 0)
         goto load_fail_mid;
-    if (loaderIntroShowFrameFadeInOut((const uint8_t *)"grafs/loader9.raw", 0xFA) != 0)
+    if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader9.raw", 0xFA) != 0)
         goto load_fail_mid;
-    if (loaderIntroShowFrameFadeInOut((const uint8_t *)"grafs/loader10.raw", 0xFA) != 0)
+    if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader10.raw", 0xFA) != 0)
         goto load_fail_mid;
 
     /* Final frame: loader1.raw with extended timeout (0x6D6 = 1750 frames) */
+#ifndef AGA
     paletteIndex = 3;
-    loaderIntroShowFrameFadeInOut((const uint8_t *)"grafs/loader1.raw", 0x6D6);
+#endif
+    loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader1.raw", 0x6D6);
     /* Fall through to exit_cleanup (ignore return value) */
 
 exit_cleanup:
@@ -264,15 +282,19 @@ exit_cleanup:
 
 load_fail_mid:
     _FadeOutToBlack();
+#ifndef AGA
     paletteIndex = 3;
-    loaderIntroLoadFrameToFrontbufferAlt((const uint8_t *)"grafs/loader1.raw");
+#endif
+    loaderIntroLoadFrameToFrontbufferAlt((const uint8_t *)GRAFS "loader1.raw");
     _FadeIn();
     goto exit_cleanup;
 
 load_fail_early:
     _FadeOutToBlack();
+#ifndef AGA
     paletteIndex = 3;
-    loaderIntroLoadFrameToFrontbufferAlt((const uint8_t *)"grafs/loader1.raw");
+#endif
+    loaderIntroLoadFrameToFrontbufferAlt((const uint8_t *)GRAFS "loader1.raw");
     _FadeIn();
     return;
 }

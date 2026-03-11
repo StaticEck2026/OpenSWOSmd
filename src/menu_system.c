@@ -254,19 +254,44 @@ void _BlitterCopyOverlayToScreen(void)
     custom[BLTAFWM_OFF / 2] = BLT_FWM_ALL;
     custom[BLTCON1_OFF / 2] = 0;
     custom[BLTCON0_OFF / 2] = BLTCON0_USEA_USED_LF_F0;
+
+    /* Select source: if frontbuffer is Alt, use Base; else use Alt */
+    srcAddr = (uint32_t)frontbufferBase;
+    if (frontbufferBasePtr != (uint32_t)frontbufferBaseAlt)
+        srcAddr = (uint32_t)frontbufferBaseAlt;
+
+#ifdef AGA
+    /* AGA: per-plane blit with interleaved stride */
+    custom[BLTAMOD_OFF / 2] = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
+    custom[BLTDMOD_OFF / 2] = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
+    {
+        uint8_t *srcPlane = (uint8_t *)srcAddr;
+        uint8_t *dstPlane = (uint8_t *)frontbufferBasePtr;
+        int16_t plane;
+        for (plane = NUM_PLANES_MINUS1; plane >= 0; plane--)
+        {
+            *dmacon = DMACON_BLT_ON;
+            while (*dmaconr & (1u << DMACONR_BLTBUSY_BIT)) {}
+            *dmacon = DMACON_BLT_OFF;
+
+            *(volatile uint32_t *)&custom[BLTAPT_OFF / 2] = (uint32_t)srcPlane;
+            *(volatile uint32_t *)&custom[BLTDPT_OFF / 2] = (uint32_t)dstPlane;
+            custom[BLTSIZE_OFF / 2] = (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN;
+
+            srcPlane += PLANE_STRIDE;
+            dstPlane += PLANE_STRIDE;
+        }
+    }
+    /* Wait for last blit */
+    *dmacon = DMACON_BLT_ON;
+    while (*dmaconr & (1u << DMACONR_BLTBUSY_BIT)) {}
+    *dmacon = DMACON_BLT_OFF;
+#else
     custom[BLTAMOD_OFF / 2] = 0;
     custom[BLTDMOD_OFF / 2] = 0;
 
     /* Set destination to current frontbuffer */
     *(volatile uint32_t *)&custom[BLTDPT_OFF / 2] = frontbufferBasePtr;
-
-    /* Select source: if frontbuffer is Alt, use Base; else use Alt */
-    srcAddr = (uint32_t)frontbufferBase;
-    if (frontbufferBasePtr == (uint32_t)frontbufferBaseAlt)
-        srcAddr = (uint32_t)frontbufferBase;
-    else
-        srcAddr = (uint32_t)frontbufferBaseAlt;
-
     *(volatile uint32_t *)&custom[BLTAPT_OFF / 2] = srcAddr;
 
     /* Start blit */
@@ -285,6 +310,7 @@ void _BlitterCopyOverlayToScreen(void)
 
     /* Reset blit size */
     custom[BLTSIZE_OFF / 2] = 0x16;
+#endif
 }
 
 /* ================================================================

@@ -781,15 +781,31 @@ apply_palette_and_pitch:
     {
         /* Apply pitch palette */
         uint16_t pitchIdx = pitchNumberAndType & 0xFF;
-        uint16_t *palPtr = (uint16_t *)pitchPalettePtrs[pitchIdx];
 
         /* paletteTable[2] = &gamePalette (offset 8 in paletteTable is index 2) */
         paletteTable[2] = (uint32_t)gamePalette;
 
-        /* Copy 3 palette entries: [0] → gamePalette[0], [1] → gamePalette[7], [2] → gamePalette[9] */
-        *(uint16_t *)(gamePalette) = palPtr[0];
-        *(uint16_t *)(gamePalette + 0xE) = palPtr[1];
-        *(uint16_t *)(gamePalette + 0x12) = palPtr[2];
+#ifdef AGA
+        {
+            /* AGA: apply 9 pitch entries via paletteIndices, write full 256-color palette to copper */
+            extern uint8_t paletteIndices[];
+            const uint16_t *palPtr = (const uint16_t *)pitchPalettePtrs[pitchIdx];
+            int16_t pi;
+            for (pi = 0; pi < 9; pi++)
+            {
+                uint16_t idx = paletteIndices[pi];
+                ((uint16_t *)gamePalette)[idx] = palPtr[pi];
+            }
+        }
+#else
+        {
+            /* OCS: copy 3 palette entries to fixed positions */
+            uint16_t *palPtr = (uint16_t *)pitchPalettePtrs[pitchIdx];
+            *(uint16_t *)(gamePalette) = palPtr[0];
+            *(uint16_t *)(gamePalette + 0xE) = palPtr[1];
+            *(uint16_t *)(gamePalette + 0x12) = palPtr[2];
+        }
+#endif
 
         /* Pitch physics factors (pitchIdx >> 1 for word-indexed tables) */
         uint16_t physIdx = pitchIdx;

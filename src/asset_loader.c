@@ -1,4 +1,5 @@
 #include "asset_loader.h"
+#include "display.h"
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint32_t assetLoaderWorkPtr;
@@ -385,28 +386,28 @@ void _AssetLoaderInitAltPathAndBanks(void)
 
 static const uint8_t * const kCorePrecacheTable[] = {
     (const uint8_t *)"sound/sfx.in2",
-    (const uint8_t *)"grafs/swcpich2.map",
+    (const uint8_t *)GRAFS "swcpich2.map",
     (const uint8_t *)0  /* sentinel */
 };
 
 static const uint8_t * const kMenuPrecacheTable[] = {
-    (const uint8_t *)"grafs/menus.raw",
-    (const uint8_t *)"grafs/menus2.raw",
-    (const uint8_t *)"grafs/cjcgrafs.raw",
-    (const uint8_t *)"grafs/cjcbench.raw",
-    (const uint8_t *)"grafs/cjcbits.raw",
-    (const uint8_t *)"grafs/cjcteam1.raw",
-    (const uint8_t *)"grafs/cjcteam2.raw",
-    (const uint8_t *)"grafs/cjcteam3.raw",
-    (const uint8_t *)"grafs/cjcteamg.raw",
-    (const uint8_t *)"grafs/menubg.raw",
-    (const uint8_t *)"grafs/swcpich1.map",
-    (const uint8_t *)"grafs/swcpich3.map",
-    (const uint8_t *)"grafs/swcpich4.map",
-    (const uint8_t *)"grafs/swcpich5.map",
-    (const uint8_t *)"grafs/swcpich6.map",
+    (const uint8_t *)GRAFS "menus.raw",
+    (const uint8_t *)GRAFS "menus2.raw",
+    (const uint8_t *)GRAFS "cjcgrafs.raw",
+    (const uint8_t *)GRAFS "cjcbench.raw",
+    (const uint8_t *)GRAFS "cjcbits.raw",
+    (const uint8_t *)GRAFS "cjcteam1.raw",
+    (const uint8_t *)GRAFS "cjcteam2.raw",
+    (const uint8_t *)GRAFS "cjcteam3.raw",
+    (const uint8_t *)GRAFS "cjcteamg.raw",
+    (const uint8_t *)GRAFS "menubg.raw",
+    (const uint8_t *)GRAFS "swcpich1.map",
+    (const uint8_t *)GRAFS "swcpich3.map",
+    (const uint8_t *)GRAFS "swcpich4.map",
+    (const uint8_t *)GRAFS "swcpich5.map",
+    (const uint8_t *)GRAFS "swcpich6.map",
     (const uint8_t *)"data/poolplyr.dat",
-    (const uint8_t *)"grafs/soccer_s.raw",
+    (const uint8_t *)GRAFS "soccer_s.raw",
     (const uint8_t *)"sound/menu.sng",
     (const uint8_t *)"sound/menu.ins",
     (const uint8_t *)"sound/sfx.sng",

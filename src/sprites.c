@@ -258,31 +258,31 @@ void _ConvertSpriteColors(uint16_t spriteIndex, uint16_t *colorTable)
 
     /* Inter-plane skip: after processing one row's worth of words from each plane,
        each pointer has advanced by planeRowBytes. To reach the next row we need to
-       skip the remaining 3 planes: (wquads*4 - wquads) * 2 = wquads * 6 bytes */
+       skip the remaining (NUM_PLANES-1) planes */
     int32_t interplaneSkip;
 
     if (*colorTable != 0) {
         /* ---- Fast path: remap all pixels ---- */
-        interplaneSkip = (int32_t)((uint16_t)(wquads * 6));
+        interplaneSkip = (int32_t)((uint16_t)(wquads * (NUM_PLANES - 1) * 2));
     } else {
         /* ---- Slow path: bounds check ---- */
         if (wquads > 0x14) {
             panicReasonCode = 0x982;
             _PanicHaltLoop();
         }
-        interplaneSkip = (int32_t)((uint16_t)(wquads * 6));
+        interplaneSkip = (int32_t)((uint16_t)(wquads * (NUM_PLANES - 1) * 2));
         if (interplaneSkip < 0) {
             panicReasonCode = 0x987;
             _PanicHaltLoop();
         }
     }
 
-    /* Set up plane pointers for the 4 bitplanes */
+    /* Set up plane pointers */
     uint16_t *dataBase = (uint16_t *)spr->sprData;
-    uint16_t *p0 = dataBase;
-    uint16_t *p1 = (uint16_t *)((uint8_t *)p0 + planeRowBytes);
-    uint16_t *p2 = (uint16_t *)((uint8_t *)p1 + planeRowBytes);
-    uint16_t *p3 = (uint16_t *)((uint8_t *)p2 + planeRowBytes);
+    uint16_t *planes[NUM_PLANES];
+    int16_t pl;
+    for (pl = 0; pl < NUM_PLANES; pl++)
+        planes[pl] = (uint16_t *)((uint8_t *)dataBase + pl * planeRowBytes);
 
     uint16_t skipTransparent = (*colorTable == 0);
 
@@ -291,29 +291,19 @@ void _ConvertSpriteColors(uint16_t spriteIndex, uint16_t *colorTable)
         uint16_t quad;
         for (quad = 0; quad < wquads; quad++) {
             /* Read one word from each plane */
-            uint16_t w0 = *p0;
-            uint16_t w1 = *p1;
-            uint16_t w2 = *p2;
-            uint16_t w3 = *p3;
+            uint16_t w[NUM_PLANES];
+            for (pl = 0; pl < NUM_PLANES; pl++)
+                w[pl] = *planes[pl];
 
             /* Process 16 pixels (MSB to LSB) */
             uint16_t pixel;
             for (pixel = 0; pixel < 16; pixel++) {
-                /* Extract 4-bit color from MSBs of each plane word */
+                /* Extract N-bit color from MSBs of each plane word */
                 uint16_t colorIdx = 0;
-
-                /* Shift each plane word left, capturing MSB into colorIdx */
-                /* Order: plane3 -> bit0, plane2 -> bit1, plane1 -> bit2, plane0 -> bit3 */
-                uint16_t bit3 = (w3 >> 15) & 1;
-                w3 <<= 1;
-                uint16_t bit2 = (w2 >> 15) & 1;
-                w2 <<= 1;
-                uint16_t bit1 = (w1 >> 15) & 1;
-                w1 <<= 1;
-                uint16_t bit0 = (w0 >> 15) & 1;
-                w0 <<= 1;
-
-                colorIdx = (uint16_t)((bit3 << 3) | (bit2 << 2) | (bit1 << 1) | bit0);
+                for (pl = NUM_PLANES - 1; pl >= 0; pl--) {
+                    colorIdx = (colorIdx << 1) | ((w[pl] >> 15) & 1);
+                    w[pl] <<= 1;
+                }
 
                 /* Skip transparent pixels in slow path */
                 if (skipTransparent && colorIdx == 0)
@@ -323,24 +313,20 @@ void _ConvertSpriteColors(uint16_t spriteIndex, uint16_t *colorTable)
                 uint16_t newColor = colorTable[colorIdx];
 
                 /* Distribute new color bits back to plane words */
-                if (newColor & 1) w0 |= 1;
-                if (newColor & 2) w1 |= 1;
-                if (newColor & 4) w2 |= 1;
-                if (newColor & 8) w3 |= 1;
+                for (pl = 0; pl < NUM_PLANES; pl++) {
+                    if (newColor & (1 << pl))
+                        w[pl] |= 1;
+                }
             }
 
             /* Write back modified words */
-            *p0++ = w0;
-            *p1++ = w1;
-            *p2++ = w2;
-            *p3++ = w3;
+            for (pl = 0; pl < NUM_PLANES; pl++)
+                *planes[pl]++ = w[pl];
         }
 
-        /* Skip to next line (advance past remaining 3 planes) */
-        p0 = (uint16_t *)((uint8_t *)p0 + interplaneSkip);
-        p1 = (uint16_t *)((uint8_t *)p1 + interplaneSkip);
-        p2 = (uint16_t *)((uint8_t *)p2 + interplaneSkip);
-        p3 = (uint16_t *)((uint8_t *)p3 + interplaneSkip);
+        /* Skip to next line (advance past remaining planes) */
+        for (pl = 0; pl < NUM_PLANES; pl++)
+            planes[pl] = (uint16_t *)((uint8_t *)planes[pl] + interplaneSkip);
     }
 }
 
@@ -439,8 +425,7 @@ void _InitDisplaySprites(void)
 
 /* ---- Sprite blitter constants ---- */
 #define SPRITE_MAX_Y_DRAW       257
-#define SPRITE_BLTSIZE_W1       3841  /* (15*4 << 6) | 1 */
-#define SPRITE_BLTSIZE_W2       3842  /* (15*4 << 6) | 2 */
+/* SPRITE_BLTSIZE_W1, SPRITE_BLTSIZE_W2 now defined in display.h */
 
 /* ================================================================
  * QueueMaskedSpriteBlitClipped  (SWOS2.s line 13202)
@@ -864,40 +849,26 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         savedSrcPlaneB = (uint32_t)a4ptr;
         savedSrcPlaneA = (uint32_t)a5ptr;
 
-        /* Advance source and dest for remaining 3 planes */
+        /* Blit remaining planes (1..NUM_PLANES-1) */
         uint32_t srcPlaneStep = (uint32_t)(tileStride << 1);
         a2 += PLANE_STRIDE;
         a5ptr += srcPlaneStep;
 
-        /* Pass 2 */
-        waitBlit();
-        *(volatile uint32_t *)(custom + BLTCPT_OFF) = (uint32_t)a2;
-        *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)a2;
-        *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)a4ptr;
-        *(volatile uint32_t *)(custom + BLTBPT_OFF) = (uint32_t)a5ptr;
-        *(volatile uint16_t *)(custom + BLTSIZE_OFF) = bltsize1;
+        {
+            int16_t planeIdx;
+            for (planeIdx = NUM_PLANES_MINUS1; planeIdx > 0; planeIdx--)
+            {
+                waitBlit();
+                *(volatile uint32_t *)(custom + BLTCPT_OFF) = (uint32_t)a2;
+                *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)a2;
+                *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)a4ptr;
+                *(volatile uint32_t *)(custom + BLTBPT_OFF) = (uint32_t)a5ptr;
+                *(volatile uint16_t *)(custom + BLTSIZE_OFF) = bltsize1;
 
-        a2 += PLANE_STRIDE;
-        a5ptr += srcPlaneStep;
-
-        /* Pass 3 */
-        waitBlit();
-        *(volatile uint32_t *)(custom + BLTCPT_OFF) = (uint32_t)a2;
-        *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)a2;
-        *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)a4ptr;
-        *(volatile uint32_t *)(custom + BLTBPT_OFF) = (uint32_t)a5ptr;
-        *(volatile uint16_t *)(custom + BLTSIZE_OFF) = bltsize1;
-
-        a2 += PLANE_STRIDE;
-        a5ptr += srcPlaneStep;
-
-        /* Pass 4 */
-        waitBlit();
-        *(volatile uint32_t *)(custom + BLTCPT_OFF) = (uint32_t)a2;
-        *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)a2;
-        *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)a4ptr;
-        *(volatile uint32_t *)(custom + BLTBPT_OFF) = (uint32_t)a5ptr;
-        *(volatile uint16_t *)(custom + BLTSIZE_OFF) = bltsize1;
+                a2 += PLANE_STRIDE;
+                a5ptr += srcPlaneStep;
+            }
+        }
 
         /* Handle Y-wrap tail portion */
         if (d4 != 0) {
@@ -925,43 +896,29 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
             uint16_t tailBltsize1 = ((uint16_t)d4 << 6) | (blitWidthBytes >> 1);
             *(volatile uint16_t *)(custom + BLTSIZE_OFF) = tailBltsize1;
 
-            /* 4-plane blit size for queue */
-            uint16_t tailBltsize4 = ((uint16_t)d4 << NUM_PLANES_SHIFT << 6) | (blitWidthBytes >> 1);
-            *(uint16_t *)((uint8_t *)a3 + 10) = tailBltsize4;
+            /* N-plane blit size for queue */
+            uint16_t tailBltsizeN = ((uint16_t)d4 << NUM_PLANES_SHIFT << 6) | (blitWidthBytes >> 1);
+            *(uint16_t *)((uint8_t *)a3 + 10) = tailBltsizeN;
 
-            /* Advance for planes 1-3 */
+            /* Blit remaining tail planes (1..NUM_PLANES-1) */
             tailDest += PLANE_STRIDE;
             tailSrcA += srcPlaneStep;
 
-            /* Pass 2 */
-            waitBlit();
-            *(volatile uint32_t *)(custom + BLTCPT_OFF) = tailDest;
-            *(volatile uint32_t *)(custom + BLTDPT_OFF) = tailDest;
-            *(volatile uint32_t *)(custom + BLTAPT_OFF) = tailSrcB;
-            *(volatile uint32_t *)(custom + BLTBPT_OFF) = tailSrcA;
-            *(volatile uint16_t *)(custom + BLTSIZE_OFF) = tailBltsize1;
+            {
+                int16_t planeIdx;
+                for (planeIdx = NUM_PLANES_MINUS1; planeIdx > 0; planeIdx--)
+                {
+                    waitBlit();
+                    *(volatile uint32_t *)(custom + BLTCPT_OFF) = tailDest;
+                    *(volatile uint32_t *)(custom + BLTDPT_OFF) = tailDest;
+                    *(volatile uint32_t *)(custom + BLTAPT_OFF) = tailSrcB;
+                    *(volatile uint32_t *)(custom + BLTBPT_OFF) = tailSrcA;
+                    *(volatile uint16_t *)(custom + BLTSIZE_OFF) = tailBltsize1;
 
-            tailDest += PLANE_STRIDE;
-            tailSrcA += srcPlaneStep;
-
-            /* Pass 3 */
-            waitBlit();
-            *(volatile uint32_t *)(custom + BLTCPT_OFF) = tailDest;
-            *(volatile uint32_t *)(custom + BLTDPT_OFF) = tailDest;
-            *(volatile uint32_t *)(custom + BLTAPT_OFF) = tailSrcB;
-            *(volatile uint32_t *)(custom + BLTBPT_OFF) = tailSrcA;
-            *(volatile uint16_t *)(custom + BLTSIZE_OFF) = tailBltsize1;
-
-            tailDest += PLANE_STRIDE;
-            tailSrcA += srcPlaneStep;
-
-            /* Pass 4 */
-            waitBlit();
-            *(volatile uint32_t *)(custom + BLTCPT_OFF) = tailDest;
-            *(volatile uint32_t *)(custom + BLTDPT_OFF) = tailDest;
-            *(volatile uint32_t *)(custom + BLTAPT_OFF) = tailSrcB;
-            *(volatile uint32_t *)(custom + BLTBPT_OFF) = tailSrcA;
-            *(volatile uint16_t *)(custom + BLTSIZE_OFF) = tailBltsize1;
+                    tailDest += PLANE_STRIDE;
+                    tailSrcA += srcPlaneStep;
+                }
+            }
 
             /* Copy modulo from previous entry */
             *(uint16_t *)((uint8_t *)a3 + 8) = *(uint16_t *)((uint8_t *)a3 - 4);
@@ -1251,7 +1208,7 @@ void _RenderSpriteBandsToCopperLists(void)
     *(volatile uint16_t *)(custom + BLTAFWM_OFF) = 0xFFFF;
     *(volatile uint16_t *)(custom + BLTCON1_OFF) = 0;
     *(volatile uint16_t *)(custom + BLTCON0_OFF) = BLTCON0_USEA_USED_LF_F0;
-    *(volatile uint16_t *)(custom + BLTAMOD_OFF) = 4;
+    *(volatile uint16_t *)(custom + BLTAMOD_OFF) = (NUM_PLANES - 2) * 2;
     *(volatile uint16_t *)(custom + BLTDMOD_OFF) = 0;
 
     /* ---- Process plane 0/1 render stack ---- */

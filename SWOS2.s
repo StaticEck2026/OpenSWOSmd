@@ -2,6 +2,9 @@
 ; Reversed by Ben Baker (https://github.com/benbaker76)
 ;         and Zlatko Karakaš (https://github.com/zlatkok)
 
+; AGA mode switch: set to 1 for 8-plane 256-color AGA, 0 for 4-plane OCS
+AGA = 1
+
         xdef    jumpHeaderHitAnimTable
         xdef    jumpHeaderAttemptAnimTable
         xdef    staticHeaderAttemptAnimTable
@@ -1375,8 +1378,12 @@ ASSET_OP_SELECT_AND_OPEN                EQU 14
 ASSET_OP_OPEN_ANY_SOURCE                EQU 16
 
 ; ==== ENUM: COPPERLIST ====
+ IFNE AGA
+COPPERLIST_SIZE_BYTES                   EQU 1316
+ ELSE
 COPPERLIST_SIZE_BYTES                   EQU 320
-COPPERLIST_SIZE_BYTES_MINUS_ONE         EQU 319
+ ENDC
+COPPERLIST_SIZE_BYTES_MINUS_ONE         EQU (COPPERLIST_SIZE_BYTES-1)
 
 ; ==== ENUM: DISPLAYGEOMETRY ====
 SCREEN_WIDTH                            EQU 336
@@ -1402,18 +1409,24 @@ BLTSIZE_TILE_COL                        EQU (((TILE_HEIGHT*NUM_PLANES)<<6)|1)  ;
 BLTSIZE_COL_16LINES_ALLPLANES           EQU (((TILE_HEIGHT*NUM_PLANES)<<6)|1)  ; 4097
 PANEL_HEIGHT_LINES                      EQU 30
 BLTSIZE_OVERLAY_PANEL                   EQU (((PANEL_HEIGHT_LINES*NUM_PLANES)<<6)|PLANE_STRIDE_DIV2) ; 4374
+BLTSIZE_OVERLAY_TO_SCREEN               EQU ((SCREEN_HEIGHT<<6)|PLANE_STRIDE_DIV2)
 DMACON_BLT_ON                           EQU 33792
 DMACON_BLT_OFF                          EQU 1024
 DMACONR_BLTBUSY_BIT                     EQU 6
 WORD_ALIGN_EVEN_MASK                    EQU 65534
 
 ; ==== ENUM: BITPLANELAYOUT_BITSHIFT ====
+ IFNE AGA
+NUM_PLANES_SHIFT                        EQU 3
+NUM_PLANES_SHIFT_PLUS1                  EQU 4
+ ELSE
 NUM_PLANES_SHIFT                        EQU 2
 NUM_PLANES_SHIFT_PLUS1                  EQU 3
+ ENDC
 
 ; ==== ENUM: IMAGESTREAMLAYOUT ====
-IMAGE_ROW_STRIDE_BYTES                  EQU 160
 BITPLANE_ROW_BYTES                      EQU 40
+IMAGE_ROW_STRIDE_BYTES                  EQU (BITPLANE_ROW_BYTES*NUM_PLANES)
 
 ; ==== ENUM: BITPLANELAYOUT_TIMES ====
 PLANE_STRIDE_TIMES2                     EQU (PLANE_STRIDE*2)
@@ -1424,8 +1437,10 @@ PLANE_STRIDE_TIMES6                     EQU (PLANE_STRIDE*6)
 PLANE_STRIDE_TIMES7                     EQU (PLANE_STRIDE*7)
 
 ; ==== ENUM: SPRITEBLIT ====
-SPRITE_BLTSIZE_W1                       EQU 3841
-SPRITE_BLTSIZE_W2                       EQU 3842
+SPRITE_HEIGHT_LINES                     EQU 15
+SPRITE_BLIT_HEIGHT_LINES                EQU (SPRITE_HEIGHT_LINES*NUM_PLANES)
+SPRITE_BLTSIZE_W1                       EQU ((SPRITE_BLIT_HEIGHT_LINES<<6)|1)
+SPRITE_BLTSIZE_W2                       EQU ((SPRITE_BLIT_HEIGHT_LINES<<6)|2)
 
 ; ==== ENUM: BLITCON ====
 BLTCON0                                 EQU 64
@@ -1478,9 +1493,13 @@ FB_COPY_WORDS_MINUS1                    EQU ((FRONTBUFFER_SIZE_VISIBLE_BYTES>>1)
 FB_BLT_MOD_AFTER_1_WORD                 EQU (FRONTBUFFER_ROW_STRIDE_BYTES-2) ; 174
 
 ; ==== ENUM: BITPLANELAYOUT ====
-NUM_PLANES                              EQU 4 ; 4
-NUM_PLANES_MINUS1                       EQU (NUM_PLANES-1) ; 3
-NUM_PLANES_MINUS2                       EQU (NUM_PLANES-2) ; 2
+ IFNE AGA
+NUM_PLANES                              EQU 8
+ ELSE
+NUM_PLANES                              EQU 4
+ ENDC
+NUM_PLANES_MINUS1                       EQU (NUM_PLANES-1)
+NUM_PLANES_MINUS2                       EQU (NUM_PLANES-2)
 PLANE_STRIDE                            EQU 44
 PLANE_STRIDE_MINUS2                     EQU (PLANE_STRIDE-2)
 PLANE_STRIDE_MINUS4                     EQU (PLANE_STRIDE-4)
@@ -2244,7 +2263,11 @@ currentMenu:
                 ds.b $16
 ; MenuEntry[100]
 menuEntries:
+ IFNE AGA
+                ds.b $14000
+ ELSE
                 ds.b $15E0
+ ENDC
 BSS_00_417C:
                 ds.b $36E
 diyLeagueScratchBuffer:
@@ -2418,7 +2441,11 @@ BSS_00_1E35A:
                 ds.b $2
 ; unsigned __int8[48048]
 frontbufferBaseAlt:
+ IFNE AGA
+                ds.b $17760
+ ELSE
                 ds.b $BBB0
+ ENDC
 BSS_00_29F0C:
                 ds.b $2
 ; unsigned __int32[225]
@@ -2433,6 +2460,24 @@ bitPlane2Base:
 ; unsigned __int32[225]
 bitPlane3Base:
                 ds.b $384
+ IFNE AGA
+                xdef    bitPlane4Base
+                xdef    bitPlane5Base
+                xdef    bitPlane6Base
+                xdef    bitPlane7Base
+; unsigned __int32[225]
+bitPlane4Base:
+                ds.b $384
+; unsigned __int32[225]
+bitPlane5Base:
+                ds.b $384
+; unsigned __int32[225]
+bitPlane6Base:
+                ds.b $384
+; unsigned __int32[225]
+bitPlane7Base:
+                ds.b $384
+ ENDC
 ; unsigned __int32[225]
 bitPlane0BaseAlt:
                 ds.b $384
@@ -2445,6 +2490,24 @@ bitPlane2BaseAlt:
 ; unsigned __int32[225]
 bitPlane3BaseAlt:
                 ds.b $384
+ IFNE AGA
+                xdef    bitPlane4BaseAlt
+                xdef    bitPlane5BaseAlt
+                xdef    bitPlane6BaseAlt
+                xdef    bitPlane7BaseAlt
+; unsigned __int32[225]
+bitPlane4BaseAlt:
+                ds.b $384
+; unsigned __int32[225]
+bitPlane5BaseAlt:
+                ds.b $384
+; unsigned __int32[225]
+bitPlane6BaseAlt:
+                ds.b $384
+; unsigned __int32[225]
+bitPlane7BaseAlt:
+                ds.b $384
+ ENDC
 ; unsigned __int32*
 bitPlane0BasePtr:
                 ds.b $4
@@ -2457,8 +2520,26 @@ bitPlane2BasePtr:
 ; unsigned __int32*
 bitPlane3BasePtr:
                 ds.b $4
+ IFNE AGA
+                xdef    bitPlane4BasePtr
+                xdef    bitPlane5BasePtr
+                xdef    bitPlane6BasePtr
+                xdef    bitPlane7BasePtr
+; unsigned __int32*
+bitPlane4BasePtr:
+                ds.b $4
+; unsigned __int32*
+bitPlane5BasePtr:
+                ds.b $4
+; unsigned __int32*
+bitPlane6BasePtr:
+                ds.b $4
+; unsigned __int32*
+bitPlane7BasePtr:
+                ds.b $4
+ ENDC
 copperListBuffer:
-                ds.b $140
+                ds.b COPPERLIST_SIZE_BYTES
 copperZeroLong:
                 ds.b $4
 BSS_00_2BC82:
@@ -2620,7 +2701,11 @@ audioInstrumentBank:
                 ds.b $16C
                                         ; Buffer for audio instrument bank data loaded from sound/hero.ins via RNC decompression.
 imageCmdWorkBuf:
+ IFNE AGA
+                ds.b $3FFB0
+ ELSE
                 ds.b $FFDC
+ ENDC
 menuInsBank:
                 ds.b $4
 BSS_00_49132:
@@ -2712,7 +2797,11 @@ sfxSongData:
 BSS_00_8DB14:
                 ds.b $10B9
 frontbufferMaskBuffer:
+ IFNE AGA
+                ds.b $17760
+ ELSE
                 ds.b $BBB0
+ ENDC
 BSS_00_996C8:
                 ds.b $4
 highestScorersTable:
@@ -2810,11 +2899,47 @@ start:
                 rts
 
 ; [AssetSys code + FloppyAsset_DispatchOp removed — ported to C in asset_sys.c]
+ IFNE AGA
+; unsigned __int16[256]
+gamePalette:
+                dc.w $0750,$0999,$0FFF,$0000,$0620,$0B40,$0F60,$0650
+                dc.w $0020,$0550,$0F00,$000F,$0602,$099F,$00D0,$0FF0
+                dc.w $09C0,$0AAA,$0FFF,$0111,$0720,$0D40,$0F83,$08C0
+                dc.w $0030,$0CC0,$0F66,$077F,$0702,$0BBF,$00F0,$0FFB
+                dc.w $0680,$0777,$0DDD,$0000,$0410,$0720,$0B40,$0580
+                dc.w $0000,$0880,$0C00,$000C,$0301,$077C,$00A0,$0CC0
+                dc.w $0000,$0111,$0222,$0444,$0555,$0777,$0888,$0AAA
+                dc.w $0BBB,$0DDD,$0EEE,$0FFF,$0FDB,$0FB8,$0F84,$0F60
+                dc.w $0E50,$0C40,$0B40,$0930,$0820,$0620,$0000,$0007
+                dc.w $0008,$0009,$000A,$022C,$066E,$099E,$0CBA,$0B70
+                dc.w $0420,$0530,$0EEE,$0EDD,$0DCC,$0DBB,$0DAA,$0D99
+                dc.w $0C88,$0B77,$0966,$0755,$0533,$0322,$0111,$0000
+                dc.w $0FED,$0EDB,$0DB9,$0CA8,$0B96,$0975,$0764,$0653
+                dc.w $0543,$0211,$0530,$0B97,$0000,$0000,$0000,$0000
+                dc.w $009F,$0555,$0777,$0222,$0F00,$0F77,$0888,$0999
+                dc.w $0AAA,$0BBB,$0FBB,$0CCC,$0DDD,$0EEE,$0FFF,$0F44
+                dc.w $0320,$0555,$0CCC,$0000,$0200,$0720,$0C40,$0210
+                dc.w $0000,$0110,$0C00,$000C,$0000,$077C,$00A0,$0CC0
+                dc.w $0680,$0777,$0CCC,$0000,$0410,$0930,$0C62,$0580
+                dc.w $0000,$0880,$0C55,$055C,$0000,$099C,$00B0,$0CC9
+                dc.w $0340,$0333,$0999,$0000,$0000,$0310,$0720,$0240
+                dc.w $0000,$0440,$0900,$0009,$0000,$0559,$0070,$0980
+                dc.w $0000,$0000,$0000,$0000,$0222,$0333,$0444,$0666
+                dc.w $0777,$0999,$0AAA,$0CCC,$0CA9,$0C86,$0C63,$0C40
+                dc.w $0A30,$0830,$0720,$0510,$0410,$0200,$0000,$0003
+                dc.w $0004,$0005,$0006,$0118,$044A,$067A,$0887,$0740
+                dc.w $0000,$0210,$0AAA,$0A99,$0A99,$0988,$0977,$0966
+                dc.w $0966,$0755,$0533,$0322,$0111,$0000,$0000,$0000
+                dc.w $0CB9,$0A98,$0986,$0875,$0764,$0543,$0432,$0211
+                dc.w $0110,$0000,$0110,$0765,$0000,$0000,$0000,$0000
+                dc.w $007C,$0111,$0333,$0000,$0B00,$0B55,$0444,$0555
+                dc.w $0666,$0777,$0B88,$0888,$0999,$0AAA,$0BBB,$0C33
+ ELSE
 ; unsigned __int16[16]
 gamePalette:
-                ; unsigned __int16[16]
                 dc.w $0360,$0999,$0FFF,$0000,$0721,$0A40,$0F71,$0250
                 dc.w $0030,$0370,$0F00,$000F,$0702,$088F,$0380,$0FF0
+ ENDC
 kTitleLogoColors:
                 dc.b $00,$00,$22,$AA,$00,$00,$FF,$BB,$00,$33,$33,$33,$44,$33,$AA,$00
                 dc.b $88,$00,$CC,$CC,$CC,$88,$88,$88,$55,$55,$55,$FF,$FF,$99,$DD,$DD
@@ -2858,6 +2983,74 @@ aSoundSfxIn1:
                 dc.b 'sound/sfx.in1',0
 aSoundSfxIn2:
                 dc.b 'sound/sfx.in2',0
+ IFNE AGA
+aGrafsSoccerSRa:
+                dc.b 'grafs_aga/soccer_s.raw',0
+aDataPoolplyrDa:
+                dc.b 'data/poolplyr.dat',0
+aGrafsLoader00R:
+                dc.b 'grafs_aga/loader00.raw',0
+aGrafsLoader01R:
+                dc.b 'grafs_aga/loader01.raw',0
+aGrafsLoader1Ra:
+                dc.b 'grafs_aga/loader1.raw',0
+aGrafsLoader2Ra:
+                dc.b 'grafs_aga/loader2.raw',0
+aGrafsLoader3Ra:
+                dc.b 'grafs_aga/loader3.raw',0
+aGrafsLoader4Ra:
+                dc.b 'grafs_aga/loader4.raw',0
+aGrafsLoader5Ra:
+                dc.b 'grafs_aga/loader5.raw',0
+aGrafsLoader6Ra:
+                dc.b 'grafs_aga/loader6.raw',0
+aGrafsLoader7Ra:
+                dc.b 'grafs_aga/loader7.raw',0
+aGrafsLoader8aR:
+                dc.b 'grafs_aga/loader8a.raw',0
+aGrafsLoader8bR:
+                dc.b 'grafs_aga/loader8b.raw',0
+aGrafsLoader9Ra:
+                dc.b 'grafs_aga/loader9.raw',0
+aGrafsLoader10R:
+                dc.b 'grafs_aga/loader10.raw',0
+aGrafsMenubgRaw:
+                dc.b 'grafs_aga/menubg.raw',0
+aGrafsMenubg2Ra:
+                dc.b 'grafs_aga/menubg2.raw',0
+aGrafsMenusRaw:
+                dc.b 'grafs_aga/menus.raw',0
+aGrafsMenus2Raw:
+                dc.b 'grafs_aga/menus2.raw',0
+aGrafsCharsetRa:
+                dc.b 'grafs_aga/charset.raw',0
+aGrafsSwcpich1M:
+                dc.b 'grafs_aga/swcpich1.map',0
+aGrafsSwcpich2M:
+                dc.b 'grafs_aga/swcpich2.map',0
+aGrafsSwcpich3M:
+                dc.b 'grafs_aga/swcpich3.map',0
+aGrafsSwcpich4M:
+                dc.b 'grafs_aga/swcpich4.map',0
+aGrafsSwcpich5M:
+                dc.b 'grafs_aga/swcpich5.map',0
+aGrafsSwcpich6M:
+                dc.b 'grafs_aga/swcpich6.map',0
+aGrafsCjcbitsRa:
+                dc.b 'grafs_aga/cjcbits.raw',0
+aGrafsCjcteam1R:
+                dc.b 'grafs_aga/cjcteam1.raw',0
+aGrafsCjcteam2R:
+                dc.b 'grafs_aga/cjcteam2.raw',0
+aGrafsCjcteam3R:
+                dc.b 'grafs_aga/cjcteam3.raw',0
+aGrafsCjcteamgR:
+                dc.b 'grafs_aga/cjcteamg.raw',0
+aGrafsCjcgrafsR:
+                dc.b 'grafs_aga/cjcgrafs.raw',0
+aGrafsCjcbenchR:
+                dc.b 'grafs_aga/cjcbench.raw',0
+ ELSE
 aGrafsSoccerSRa:
                 dc.b 'grafs/soccer_s.raw',0
 aDataPoolplyrDa:
@@ -2924,6 +3117,19 @@ aGrafsCjcgrafsR:
                 dc.b 'grafs/cjcgrafs.raw',0
 aGrafsCjcbenchR:
                 dc.b 'grafs/cjcbench.raw',0
+ ENDC
+ IFNE AGA
+aGrafsWinscrnRa:
+                dc.b 'grafs_aga/winscrn.raw',0
+aGrafsTacticsRa:
+                dc.b 'grafs_aga/tactics.raw',0
+aGrafsDisk22Raw:
+                dc.b 'grafs_aga/disk22.raw',0
+aGrafsOlddisk1R:
+                dc.b 'grafs_aga/olddisk1.raw',0
+aGrafsSocpicRaw:
+                dc.b 'grafs_aga/socpic.raw',0,0
+ ELSE
 aGrafsWinscrnRa:
                 dc.b 'grafs/winscrn.raw',0
 aGrafsTacticsRa:
@@ -2934,6 +3140,7 @@ aGrafsOlddisk1R:
                 dc.b 'grafs/olddisk1.raw',0
 aGrafsSocpicRaw:
                 dc.b 'grafs/socpic.raw',0,0
+ ENDC
 team1Filename:
                 dc.l $00000000          ; raw
 team2Filename:
@@ -2976,29 +3183,7 @@ keycodeLut:
                 dc.b $80,$81,$82,$83,$84,$85,$86,$87,$88,$89,$A8,$A9,$AF,$AA,$AB,$3F
                 dc.b $3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F
                 dc.b $3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F
-; unsigned __int16[160]
-copperListTemplate:
-                ; unsigned __int16[160]
-                dc.w $1401,$FFFE,$0120,$0000,$0122,$0000,$0124,$0000
-                dc.w $0126,$0000,$0128,$0000,$012A,$0000,$012C,$0000
-                dc.w $012E,$0000,$0130,$0000,$0132,$0000,$0134,$0000
-                dc.w $0136,$0000,$0138,$0000,$013A,$0000,$013C,$0000
-                dc.w $013E,$0000,$0100,$4200,$0102,$0000,$0104,$0024
-                dc.w $01FE,$0000,$01FE,$0000,$0108,$0000,$010A,$0000
-                dc.w $0092,$0028,$0094,$00D0,$008E,$2471,$0090,$34C1
-                dc.w $0180,$0000,$0182,$0000,$0184,$0000,$0186,$0000
-                dc.w $0188,$0000,$018A,$0000,$018C,$0000,$018E,$0000
-                dc.w $0190,$0000,$0192,$0000,$0194,$0000,$0196,$0000
-                dc.w $0198,$0000,$019A,$0000,$019C,$0000,$019E,$0000
-                dc.w $01A0,$0000,$01A2,$0000,$01A4,$0000,$01A6,$0000
-                dc.w $01A8,$0000,$01AA,$0000,$01AC,$0000,$01AE,$0000
-                dc.w $01B0,$0000,$01B2,$0000,$01B4,$0000,$01B6,$0000
-                dc.w $01B8,$0000,$01BA,$0000,$01BC,$0000,$01BE,$0000
-                dc.w $2401,$FFFE,$00E0,$0000,$00E2,$0000,$00E4,$0000
-                dc.w $00E6,$0000,$00E8,$0000,$00EA,$0000,$00EC,$0000
-                dc.w $00EE,$0000,$FFE1,$FFFE,$0001,$FFFE,$00E0,$0000
-                dc.w $00E2,$0000,$00E4,$0000,$00E6,$0000,$00E8,$0000
-                dc.w $00EA,$0000,$00EC,$0000,$00EE,$0000,$FFFF,$FFFE
+; copperListTemplate moved to C (display.c)
 
 panicFormatStr:
                 dc.b '%a',0
@@ -3159,8 +3344,13 @@ aSwos4Dk2:
                 dc.b "swos4.dk2",0
 aSwos4Dku:
                 dc.b "swos4.dku",0
+ IFNE AGA
+aGrafsDisk2Raw:
+                dc.b 'grafs_aga/disk2.raw',0
+ ELSE
 aGrafsDisk2Raw:
                 dc.b 'grafs/disk2.raw',0
+ ENDC
 ; void *
 assetLoaderCacheFlag:
                 dc.l $00000000
@@ -3466,34 +3656,43 @@ bigSIndex:
 numberBuffer:
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
-; unsigned __int16[3]
+ IFNE AGA
+; AGA pitch palettes: 9 entries each (applied to gamePalette via paletteIndices)
 normalPalette:
-                ; unsigned __int16[3]
-                dc.w $0790,$0690,$0990
-; unsigned __int16[3]
+                dc.w $08A2,$0350,$0460,$0EEE,$0EDD,$0DCC,$0DBB,$0DAA,$0D99
 dryPalette:
-                ; unsigned __int16[3]
-                dc.w $0990,$0890,$0790
-; unsigned __int16[3]
+                dc.w $0350,$0460,$0EEE,$0EDD,$0DCC,$0DBB,$0DAA,$0D99,$0C88
 wetPalette:
-                ; unsigned __int16[3]
-                dc.w $0390,$0790,$0390
-; unsigned __int16[3]
+                dc.w $0390,$0F00,$000F,$0602,$099F,$00D0,$0FF0,$09C0,$0AAA
 softPalette:
-                ; unsigned __int16[3]
-                dc.w $0370,$0770,$0370
-; unsigned __int16[3]
+                dc.w $0BC9,$0592,$0240,$0350,$0EEE,$0EDD,$0DCC,$0DBB,$0DAA
 hardPalette:
-                ; unsigned __int16[3]
-                dc.w $0970,$0870,$0770
-; unsigned __int16[3]
+                dc.w $0640,$0EEE,$0EDD,$0DCC,$0DBB,$0DAA,$0D99,$0C88,$0B77
 frozenPalette:
-                ; unsigned __int16[3]
-                dc.w $0996,$0896,$0796
-; unsigned __int16[3]
+                dc.w $0996,$0999,$0FFF,$0000,$0620,$0B40,$0F60,$0896,$0020
 muddyPalette:
-                ; unsigned __int16[3]
+                dc.w $0650,$0020,$0550,$0F00,$000F,$0602,$099F,$00D0,$0FF0
+                xdef paletteIndices
+paletteIndices:
+                dc.b 0,7,9,78,79,80,81,106,107
+                even
+ ELSE
+; OCS pitch palettes: 3 entries each
+normalPalette:
+                dc.w $0790,$0690,$0990
+dryPalette:
+                dc.w $0990,$0890,$0790
+wetPalette:
+                dc.w $0390,$0790,$0390
+softPalette:
+                dc.w $0370,$0770,$0370
+hardPalette:
+                dc.w $0970,$0870,$0770
+frozenPalette:
+                dc.w $0996,$0896,$0796
+muddyPalette:
                 dc.w $0750,$0650,$0550
+ ENDC
 ; unsigned __int16 *[7]
 pitchPalettePtrs:
                 ; unsigned __int16 *[7]
@@ -22387,11 +22586,48 @@ ingameTeamPlayerOffsets:
                                         ; player offsets in in-game team structure (index * 61)
 kColorTableShine:
                 dc.w 2,2,1,1,7,7,1,1    ; This color table is used for shining selected menu entry frame
+                xdef    menuPalette
+ IFNE AGA
+; unsigned __int16[256]
+menuPalette:
+                dc.w $0002,$0BBB,$0FFF,$0000,$0620,$0B40,$0F60,$0666
+                dc.w $0222,$0444,$0F00,$000F,$0602,$099F,$0290,$0FF0
+                dc.w $0975,$0985,$0A86,$0B97,$0CA8,$0CB8,$0DC9,$0ECA
+                dc.w $0EDB,$0EDB,$0EDC,$0FED,$0FED,$0FEE,$0FFF,$0FFF
+                dc.w $0000,$0000,$0001,$0001,$0002,$0002,$0003,$0003
+                dc.w $0004,$0004,$0005,$0005,$0006,$0006,$0007,$0007
+                dc.w $0008,$0008,$0009,$0009,$000A,$000A,$000B,$000B
+                dc.w $000C,$000C,$000D,$000D,$000E,$000E,$000F,$000F
+                dc.w $0620,$0720,$0720,$0720,$0730,$0830,$0830,$0830
+                dc.w $0930,$0940,$0940,$0940,$0A40,$0A50,$0A50,$0B50
+                dc.w $0B60,$0B60,$0C60,$0C70,$0C70,$0C70,$0D70,$0D80
+                dc.w $0D80,$0E90,$0E90,$0E90,$0EA0,$0FA0,$0FA0,$0FB0
+                dc.w $0222,$0222,$0333,$0333,$0333,$0444,$0444,$0544
+                dc.w $0555,$0655,$0655,$0666,$0766,$0766,$0877,$0877
+                dc.w $0977,$0988,$0988,$0A88,$0A88,$0B99,$0B99,$0B99
+                dc.w $0C99,$0CAA,$0DAA,$0DAA,$0EAA,$0EAA,$0EBB,$0FBB
+                dc.w $0F00,$0F00,$0F00,$0F00,$0F00,$0F00,$0F11,$0F11
+                dc.w $0F11,$0F11,$0F22,$0F22,$0F22,$0F22,$0F33,$0F33
+                dc.w $0F33,$0F33,$0F44,$0F44,$0F44,$0F44,$0F55,$0F55
+                dc.w $0F55,$0F55,$0F66,$0F66,$0F66,$0F66,$0F77,$0F77
+                dc.w $0602,$0702,$0703,$0704,$0704,$0805,$0805,$0806
+                dc.w $0917,$0918,$0918,$0919,$0A2A,$0A2A,$0A2A,$092B
+                dc.w $093B,$093B,$093C,$094C,$094C,$094C,$095D,$085D
+                dc.w $086D,$086E,$086E,$087E,$087E,$088F,$088F,$099F
+                dc.w $000F,$000F,$001F,$001F,$002F,$003F,$003F,$014F
+                dc.w $014F,$015F,$016F,$016E,$027E,$027E,$027E,$028E
+                dc.w $028E,$029E,$039E,$03AE,$03AE,$03AE,$03BE,$03BE
+                dc.w $04BE,$04CD,$04CD,$04CD,$04CD,$04DD,$04DD,$05DD
+                dc.w $0120,$0120,$0130,$0140,$0150,$0150,$0160,$0270
+                dc.w $0270,$0280,$0290,$0390,$0390,$04A0,$05A0,$05A0
+                dc.w $06B0,$06B0,$07B0,$08C0,$08C0,$09C0,$0AD0,$0AD0
+                dc.w $0BD0,$0CE0,$0CE0,$0DE0,$0EF0,$0EF0,$0FF0,$0FF0
+ ELSE
 ; unsigned __int16[16]
 menuPalette:
-                ; unsigned __int16[16]
                 dc.w $0001,$0AAB,$0FFF,$0102,$0621,$0A40,$0F71,$0667
                 dc.w $0204,$0445,$0F00,$000F,$0702,$088F,$0380,$0FF0
+ ENDC
 aResigned:
                 dc.b '- RESIGNED -',0
 aRetired:

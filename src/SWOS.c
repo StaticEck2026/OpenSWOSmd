@@ -20,7 +20,7 @@ typedef short int16_t;
 #define SWOS_CHIPBITS (1<<(SWOS_CHIPMEMSIZE/0x80000))-1
 #define SWOS_FASTBITS ((1<<(SWOS_FASTMEMSIZE/0x80000))-1)<<24
 #define SWOS_MAGIC_VALUE 0x12345678u
-#define SWOS_FRONTBUFFER_SIZE_TOTAL_BYTES 48048u
+/* Note: use FRONTBUFFER_SIZE_TOTAL_BYTES from display.h instead of hardcoded OCS value */
 
 #define CIAA_PRA_ADDR 0x00BFE001u
 #define CIAA_DDRA_ADDR 0x00BFE201u
@@ -104,7 +104,7 @@ __attribute__((used, externally_visible)) void _start(void)
     volatile uint16_t *alt = &frontbufferBaseAlt;
     volatile uint16_t *mask = &frontbufferMaskBuffer;
 
-    for (uint32_t bytes = SWOS_FRONTBUFFER_SIZE_TOTAL_BYTES; bytes != 0u; bytes -= 2u)
+    for (uint32_t bytes = FRONTBUFFER_SIZE_TOTAL_BYTES; bytes != 0u; bytes -= 2u)
     {
         *front++ = 0xF0F0u;
         *alt++ = 0xF0F0u;
@@ -193,9 +193,16 @@ void _mainC(void)
     _InitSkinAndDefaultPointers();
 
     /* ---- Phase 2: Build palettes ---- */
+#ifdef AGA
+    {
+        extern uint16_t menuPalette[];
+        _WriteCopperPalette(menuPalette);
+    }
+#else
     _BuildPaletteFromColors(kTitleLogoColors, titleLogoPalette);
     _BuildPaletteFromColors(kTitleScreenColors, titleScreenPalette);
     _BuildPaletteFromColors(kTitleTextColors, titleTextPalette);
+#endif
 
     /* ---- Phase 3: Boot temps ---- */
     bootTemp0 = 1;
@@ -208,7 +215,7 @@ void _mainC(void)
 
     /* ---- Phase 4: Loader intro ---- */
     loaderModeFlag = 1;
-    //_ShowLoaderIntroSequence();
+    _ShowLoaderIntroSequence();
     _AssetLoaderInitAltPathAndBanks();
     _AssetPrecacheCore();
     _InstallAndInitLoaderBootstrap();
@@ -218,11 +225,11 @@ void _mainC(void)
     /* ---- Phase 5: Show title screens ---- */
     _DoubleBufferSwapSequence();
     paletteIndex = 0;
-    _LoadOverlayToFrontbuffer((const uint8_t *)"grafs/olddisk1.raw");
+    _LoadOverlayToFrontbuffer((const uint8_t *)GRAFS "olddisk1.raw");
     _BlitterCopyPanelToScreen2();
     _WaitForVSync();
 
-    _LoadOverlayToFrontbuffer((const uint8_t *)"grafs/disk22.raw");
+    _LoadOverlayToFrontbuffer((const uint8_t *)GRAFS "disk22.raw");
     paletteIndex = 0;
     _FadeIn();
 

@@ -489,7 +489,7 @@
         xdef    bitPlane1BasePtr
         xdef    bitPlane2BasePtr
         xdef    bitPlane3BasePtr
-        xdef    copperListTemplate
+        ; copperListTemplate moved to C (display.c)
         xdef    copperListBuffer
         xdef    copperZeroLong
         xdef    kSpriteBlitQueueSentinel_A

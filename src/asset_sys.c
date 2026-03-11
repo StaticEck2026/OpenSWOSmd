@@ -47,7 +47,7 @@ static uint8_t assetFilename[50];
 static const uint8_t kSwos4Dk1[] = "swos4.dk1";
 static const uint8_t kSwos4Dk2[] = "swos4.dk2";
 static const uint8_t kSwos4Dku[] = "swos4.dku";
-static const uint8_t kGrafsDisk2Raw[] = "grafs/disk2.raw";
+static const uint8_t kGrafsDisk2Raw[] = GRAFS "disk2.raw";
 
 /* ---- Helper: build full path into assetFilename ---- */
 static void assetSysPrepCopyParams(const uint8_t *filename)

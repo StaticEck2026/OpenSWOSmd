@@ -134,7 +134,7 @@ static void resetAnimatedPatterns(uint32_t *a0, int16_t count)
 
     for (i = count; i >= 0; i--) {
         uint32_t d0 = *a0 - baseAddr;
-        if (d0 != 0 && d0 <= 0xB00 && !(d0 & 0x80)) {
+        if (d0 != 0 && d0 <= MAX_FAN_TILE_OFFSET && !(d0 & TILE_SIZE)) {
             /* animated variant (even tile index) → subtract TILE_SIZE → static */
             *a0 -= TILE_SIZE;
         }
@@ -402,9 +402,9 @@ pattern_loop:
             /* read tile entry and check if it's an animated tile */
             tileVal = *tileEntryPtr;
             tileOffset = (int32_t)(tileVal - (uint32_t)currentMenu);
-            tileIndex = (int32_t)((uint32_t)tileOffset >> 7);
+            tileIndex = (int32_t)((uint32_t)tileOffset >> TILE_SIZE_SHIFT);
 
-            if (tileIndex == 0 || tileIndex > 22)
+            if (tileIndex == 0 || tileIndex > MAX_FAN_TILE_INDEX)
                 continue;
 
             {
@@ -423,7 +423,7 @@ pattern_loop:
                 }
 
                 animatedPatterns[7 - d7] = d3;
-                *tileEntryPtr = (uint32_t)currentMenu + ((uint32_t)newIndex << 7);
+                *tileEntryPtr = (uint32_t)currentMenu + ((uint32_t)newIndex << TILE_SIZE_SHIFT);
             }
         }
 

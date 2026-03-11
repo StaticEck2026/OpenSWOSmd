@@ -37,56 +37,48 @@ static uint16_t pitchFansConvertTable[16] = {
  * Recolors a 4-plane interleaved sprite (16 pixels wide, 16 rows)
  * by replacing each pixel's 4-bit color index via convTable.
  *
- * Sprite layout: 4 planes interleaved, each plane is 1 word per row.
- * Row stride = 8 bytes (4 planes × 2 bytes).
+ * Sprite layout: NUM_PLANES planes interleaved, each plane is 1 word per row.
+ * Row stride = NUM_PLANES * 2 bytes.
  *
  * Parameters (original asm swaps a0/a1):
  *   destPattern = pointer to planar sprite data
- *   convTable   = 16-entry uint16_t table: old_index → new_index
+ *   convTable   = color remap table: old_index → new_index
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _AdjustFanColor(uint8_t *destPattern, const uint16_t *convTable)
 {
-    int16_t row, pixel;
+    int16_t row, pixel, pl;
     uint16_t *plane0 = (uint16_t *)destPattern;
 
     for (row = 15; row >= 0; row--)
     {
-        uint16_t d1 = plane0[0];   /* plane 0 */
-        uint16_t d2 = plane0[1];   /* plane 1 */
-        uint16_t d3 = plane0[2];   /* plane 2 */
-        uint16_t d4 = plane0[3];   /* plane 3 */
+        uint16_t w[NUM_PLANES];
+        for (pl = 0; pl < NUM_PLANES; pl++)
+            w[pl] = plane0[pl];
 
         for (pixel = 15; pixel >= 0; pixel--)
         {
             uint16_t colorIdx = 0;
-            uint16_t newColor;
 
-            /* Extract 4-bit color from MSBs of each plane */
-            colorIdx = (uint16_t)((colorIdx << 1) | ((d4 >> 15) & 1));
-            d4 <<= 1;
-            colorIdx = (uint16_t)((colorIdx << 1) | ((d3 >> 15) & 1));
-            d3 <<= 1;
-            colorIdx = (uint16_t)((colorIdx << 1) | ((d2 >> 15) & 1));
-            d2 <<= 1;
-            colorIdx = (uint16_t)((colorIdx << 1) | ((d1 >> 15) & 1));
-            d1 <<= 1;
+            /* Extract N-bit color from MSBs of each plane */
+            for (pl = NUM_PLANES - 1; pl >= 0; pl--) {
+                colorIdx = (uint16_t)((colorIdx << 1) | ((w[pl] >> 15) & 1));
+                w[pl] <<= 1;
+            }
 
             /* Look up new color */
-            newColor = convTable[colorIdx];
+            uint16_t newColor = convTable[colorIdx];
 
             /* Insert new color bits into LSBs */
-            if (newColor & 1) d1 |= 1;
-            if (newColor & 2) d2 |= 1;
-            if (newColor & 4) d3 |= 1;
-            if (newColor & 8) d4 |= 1;
+            for (pl = 0; pl < NUM_PLANES; pl++) {
+                if (newColor & (1 << pl))
+                    w[pl] |= 1;
+            }
         }
 
-        plane0[0] = d1;
-        plane0[1] = d2;
-        plane0[2] = d3;
-        plane0[3] = d4;
-        plane0 += 4; /* advance to next row (8 bytes) */
+        for (pl = 0; pl < NUM_PLANES; pl++)
+            plane0[pl] = w[pl];
+        plane0 += NUM_PLANES;
     }
 }
 

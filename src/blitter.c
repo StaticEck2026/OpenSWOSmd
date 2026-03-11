@@ -182,9 +182,9 @@ static void blitterSpanCoreMasked(uint8_t *plane, uint16_t xBit, uint16_t width,
 
 
 /* ================================================================
- * blitterSpan4Planes  (static)
+ * blitterSpanAllPlanes  (static)
  *
- * Fills a horizontal span across all 4 bitplanes.
+ * Fills a horizontal span across all bitplanes.
  * Calls blitterSpanCoreMasked once per plane.
  *
  * In:
@@ -192,7 +192,7 @@ static void blitterSpanCoreMasked(uint8_t *plane, uint16_t xBit, uint16_t width,
  *   d1 = y pixel row
  *   d2 = width in pixels
  *   d3 = height in rows
- *   d4 = 4-bit color
+ *   d4 = color (NUM_PLANES-bit)
  *   a0 = framebuffer base
  * ================================================================ */
 static void blitterSpan4Planes(uint16_t x, uint16_t y, uint16_t width,
@@ -200,6 +200,7 @@ static void blitterSpan4Planes(uint16_t x, uint16_t y, uint16_t width,
 {
     uint16_t xBit;
     uint8_t *plane;
+    int16_t p;
 
     /* Compute plane base pointer */
     plane = buf + (uint32_t)y * ROW_STRIDE_BYTES;
@@ -217,20 +218,12 @@ static void blitterSpan4Planes(uint16_t x, uint16_t y, uint16_t width,
     blitterSpanCore(plane, xBit, width, height,
                     BLTCON0_USEA_LF_FC, BLTCON0_USED_LF_00);
 
-    /* Plane 0 */
-    blitterSpanCoreMasked(plane, xBit, width, height, color, 0);
-    plane += PLANE_STRIDE;
-
-    /* Plane 1 */
-    blitterSpanCoreMasked(plane, xBit, width, height, color >> 1, 0);
-    plane += PLANE_STRIDE;
-
-    /* Plane 2 */
-    blitterSpanCoreMasked(plane, xBit, width, height, color >> 2, 0);
-    plane += PLANE_STRIDE;
-
-    /* Plane 3 */
-    blitterSpanCoreMasked(plane, xBit, width, height, color >> 3, 0);
+    /* Per-plane pass */
+    for (p = 0; p < NUM_PLANES; p++)
+    {
+        blitterSpanCoreMasked(plane, xBit, width, height, color >> p, 0);
+        plane += PLANE_STRIDE;
+    }
 }
 
 
@@ -299,15 +292,15 @@ static void blitterRectRowMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
     /* First pass: fill the span in dest with color 0 (clear) */
     blitterSpan4Planes(x, y, w, h, 0, buf);
 
-    /* Scale y by 4 planes worth of stride */
+    /* Scale y by NUM_PLANES worth of stride */
     {
-        uint32_t offset = (uint32_t)(y << 2) * PLANE_STRIDE;
+        uint32_t offset = (uint32_t)(y << NUM_PLANES_SHIFT) * PLANE_STRIDE;
         mask += offset;
         buf += offset;
     }
 
-    /* Scale h by 4 planes */
-    h <<= 2;
+    /* Scale h by NUM_PLANES */
+    h <<= NUM_PLANES_SHIFT;
 
     /* Compute word boundaries */
     wordStart = x >> 4;
@@ -378,7 +371,7 @@ void _BlitSpritePlanar_Word(uint16_t spriteIndex)
     uint8_t *srcData;
     uint8_t *dstMask;
     uint16_t nlines, wquads;
-    uint16_t stride2, stride3, stride4;
+    uint16_t stride2;
     int32_t advance;
     int16_t row, col;
 
@@ -389,85 +382,75 @@ void _BlitSpritePlanar_Word(uint16_t spriteIndex)
     nlines = (uint16_t)hdr->nlines;
     wquads = (uint16_t)hdr->wquads;
 
-    stride2 = wquads * 2;
-    stride3 = stride2 + stride2;  /* stride2 * 2 = wquads * 4 */
-    stride4 = stride3 + stride2;  /* wquads * 6 */
+    stride2 = wquads * 2;  /* bytes per plane per row */
+    advance = (int32_t)(stride2 * NUM_PLANES);  /* bytes per full row (all planes) */
 
     if (type == 0) {
         /* ---- 1-plane output ---- */
         if (wquads == 2) {
             /* Fast path: longword access for 2-word-wide sprites.
-               Asm uses lsl #1 on wquads=2 to get stride2=4, then
-               stride3=8, stride4=12, advance=16.
+               OR all planes together into a single-plane mask.
                Note: dstMask is NOT advanced per row (matches asm behavior). */
-            int16_t r;
-            advance = (int32_t)(stride2 * 4);
+            int16_t r, p;
 
             for (r = nlines - 1; r >= 0; r--) {
                 uint32_t val = *(uint32_t *)srcData;
-                val |= *(uint32_t *)(srcData + stride2);
-                val |= *(uint32_t *)(srcData + stride3);
-                val |= *(uint32_t *)(srcData + stride4);
+                for (p = 1; p < NUM_PLANES; p++)
+                    val |= *(uint32_t *)(srcData + p * stride2);
                 *(uint32_t *)dstMask = val;
                 srcData += advance;
             }
         } else {
             /* General path: word-at-a-time */
             uint16_t wordsPerRow = wquads;
-            advance = (int32_t)(stride2 * 3);  /* skip 3 remaining planes after inner loop */
+            int32_t rowSkip = (int32_t)(stride2 * (NUM_PLANES - 1));
 
             for (row = nlines - 1; row >= 0; row--) {
                 for (col = wordsPerRow - 1; col >= 0; col--) {
                     uint16_t val = *(uint16_t *)srcData;
-                    val |= *(uint16_t *)(srcData + stride2);
-                    val |= *(uint16_t *)(srcData + stride3);
-                    val |= *(uint16_t *)(srcData + stride4);
+                    int16_t p;
+                    for (p = 1; p < NUM_PLANES; p++)
+                        val |= *(uint16_t *)(srcData + p * stride2);
                     *(uint16_t *)dstMask = val;
                     srcData += 2;
                     dstMask += 2;
                 }
-                srcData += advance;
+                srcData += rowSkip;
             }
         }
     } else {
-        /* ---- 4-plane output (type != 0) ---- */
+        /* ---- NUM_PLANES output (type != 0) ---- */
         if (wquads == 2) {
-            /* Fast path: longword access, output replicated to 4 planes */
-            int16_t r;
-            advance = (int32_t)(stride2 * 4);
+            /* Fast path: longword access, output replicated to all planes */
+            int16_t r, p;
 
             for (r = nlines - 1; r >= 0; r--) {
                 uint32_t val = *(uint32_t *)srcData;
-                val |= *(uint32_t *)(srcData + stride2);
-                val |= *(uint32_t *)(srcData + stride3);
-                val |= *(uint32_t *)(srcData + stride4);
-                *(uint32_t *)dstMask = val;
-                *(uint32_t *)(dstMask + stride2) = val;
-                *(uint32_t *)(dstMask + stride3) = val;
-                *(uint32_t *)(dstMask + stride4) = val;
+                for (p = 1; p < NUM_PLANES; p++)
+                    val |= *(uint32_t *)(srcData + p * stride2);
+                for (p = 0; p < NUM_PLANES; p++)
+                    *(uint32_t *)(dstMask + p * stride2) = val;
                 srcData += advance;
                 dstMask += advance;
             }
         } else {
-            /* General path: word-at-a-time, 4 output planes */
+            /* General path: word-at-a-time, all output planes */
             uint16_t wordsPerRow = wquads;
-            advance = (int32_t)(stride2 * 3);
+            int32_t rowSkip = (int32_t)(stride2 * (NUM_PLANES - 1));
 
             for (row = nlines - 1; row >= 0; row--) {
                 for (col = wordsPerRow - 1; col >= 0; col--) {
                     uint16_t val = *(uint16_t *)srcData;
-                    val |= *(uint16_t *)(srcData + stride2);
-                    val |= *(uint16_t *)(srcData + stride3);
-                    val |= *(uint16_t *)(srcData + stride4);
-                    *(uint16_t *)dstMask = val;
-                    *(uint16_t *)(dstMask + stride2) = val;
-                    *(uint16_t *)(dstMask + stride3) = val;
-                    *(uint16_t *)(dstMask + stride4) = val;
+                    int16_t p;
+                    for (p = 1; p < NUM_PLANES; p++)
+                        val |= *(uint16_t *)(srcData + p * stride2);
+                    for (p = 0; p < NUM_PLANES; p++)
+                        *(uint16_t *)(dstMask + p * stride2) = val;
                     srcData += 2;
                     dstMask += 2;
                 }
-                srcData += advance;
-                dstMask += advance;
+                srcData += rowSkip;
+                dstMask += rowSkip;
             }
         }
     }
@@ -499,33 +482,29 @@ void _BlitSpritePlanar_Word_StridedDest(uint16_t spriteIndex)
     nlines = (uint16_t)hdr->nlines;
 
     stride2 = (uint16_t)hdr->wquads * 2;
-    stride3 = stride2 + stride2;
-    stride4 = stride3 + stride2;
-    srcAdvance = (int32_t)(stride2 * 4);
+    srcAdvance = (int32_t)(stride2 * NUM_PLANES);
     dstAdvance = (int32_t)stride2;
 
     if (type == 0) {
         /* 1-plane output */
         for (row = nlines - 1; row >= 0; row--) {
             uint16_t val = *(uint16_t *)srcData;
-            val |= *(uint16_t *)(srcData + stride2);
-            val |= *(uint16_t *)(srcData + stride3);
-            val |= *(uint16_t *)(srcData + stride4);
+            int16_t p;
+            for (p = 1; p < NUM_PLANES; p++)
+                val |= *(uint16_t *)(srcData + p * stride2);
             *(uint16_t *)dstMask = val;
             srcData += srcAdvance;
             dstMask += dstAdvance;
         }
     } else {
-        /* 4-plane output */
+        /* NUM_PLANES output */
         for (row = nlines - 1; row >= 0; row--) {
             uint16_t val = *(uint16_t *)srcData;
-            val |= *(uint16_t *)(srcData + stride2);
-            val |= *(uint16_t *)(srcData + stride3);
-            val |= *(uint16_t *)(srcData + stride4);
-            *(uint16_t *)dstMask = val;
-            *(uint16_t *)(dstMask + stride2) = val;
-            *(uint16_t *)(dstMask + stride3) = val;
-            *(uint16_t *)(dstMask + stride4) = val;
+            int16_t p;
+            for (p = 1; p < NUM_PLANES; p++)
+                val |= *(uint16_t *)(srcData + p * stride2);
+            for (p = 0; p < NUM_PLANES; p++)
+                *(uint16_t *)(dstMask + p * stride2) = val;
             srcData += srcAdvance;
             dstMask += srcAdvance;
         }
@@ -547,7 +526,7 @@ void _BlitSpritePlanar_Long_StridedDest(uint16_t spriteIndex)
     uint16_t type;
     uint8_t *srcData, *dstMask;
     uint16_t nlines;
-    uint16_t stride2, stride3, stride4;
+    uint16_t stride2;
     int32_t srcAdvance, dstAdvance;
     int16_t row;
 
@@ -558,33 +537,29 @@ void _BlitSpritePlanar_Long_StridedDest(uint16_t spriteIndex)
     nlines = (uint16_t)hdr->nlines;
 
     stride2 = (uint16_t)hdr->wquads * 2;
-    stride3 = stride2 + stride2;
-    stride4 = stride3 + stride2;
-    srcAdvance = (int32_t)(stride2 * 4);
+    srcAdvance = (int32_t)(stride2 * NUM_PLANES);
     dstAdvance = (int32_t)stride2;
 
     if (type == 0) {
         /* 1-plane output */
         for (row = nlines - 1; row >= 0; row--) {
             uint32_t val = *(uint32_t *)srcData;
-            val |= *(uint32_t *)(srcData + stride2);
-            val |= *(uint32_t *)(srcData + stride3);
-            val |= *(uint32_t *)(srcData + stride4);
+            int16_t p;
+            for (p = 1; p < NUM_PLANES; p++)
+                val |= *(uint32_t *)(srcData + p * stride2);
             *(uint32_t *)dstMask = val;
             srcData += srcAdvance;
             dstMask += dstAdvance;
         }
     } else {
-        /* 4-plane output */
+        /* NUM_PLANES output */
         for (row = nlines - 1; row >= 0; row--) {
             uint32_t val = *(uint32_t *)srcData;
-            val |= *(uint32_t *)(srcData + stride2);
-            val |= *(uint32_t *)(srcData + stride3);
-            val |= *(uint32_t *)(srcData + stride4);
-            *(uint32_t *)dstMask = val;
-            *(uint32_t *)(dstMask + stride2) = val;
-            *(uint32_t *)(dstMask + stride3) = val;
-            *(uint32_t *)(dstMask + stride4) = val;
+            int16_t p;
+            for (p = 1; p < NUM_PLANES; p++)
+                val |= *(uint32_t *)(srcData + p * stride2);
+            for (p = 0; p < NUM_PLANES; p++)
+                *(uint32_t *)(dstMask + p * stride2) = val;
             srcData += srcAdvance;
             dstMask += srcAdvance;
         }
@@ -706,24 +681,24 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     /* Source A (mask) modulo: stride2 - blitWords */
     srcAMod = srcStride2 - blitWords;
 
-    /* Source B (glyph) modulo: stride2 * 4planes - blitWords */
-    srcBMod = srcStride2 * 4 - blitWords;
+    /* Source B (glyph) modulo: stride2 * NUM_PLANES - blitWords */
+    srcBMod = srcStride2 * NUM_PLANES - blitWords;
 
     *(volatile uint16_t *)(custom + BLTAMOD_OFF) = srcAMod;
     *(volatile uint16_t *)(custom + BLTBMOD_OFF) = srcBMod;
 
-    /* Dest modulo: dstRowBytes - blitWords + 3 * dstRowBytes = 4 * dstRowBytes - blitWords */
-    dstMod = dstRowBytes * 4 - blitWords;
+    /* Dest modulo: dstRowBytes * NUM_PLANES - blitWords */
+    dstMod = dstRowBytes * NUM_PLANES - blitWords;
     *(volatile uint16_t *)(custom + BLTCMOD_OFF) = dstMod;
     *(volatile uint16_t *)(custom + BLTDMOD_OFF) = dstMod;
 
-    /* Glyph data: a5 = data + srcStride2 (plane 1), a3 = data + 3*srcStride2 (plane 3) */
+    /* Glyph data: advance to plane 1, and compute last plane pointer */
     glyphData = (uint8_t *)srcHdr->sprData;      /* sprData (plane 0 start) */
     glyphData += (int32_t)srcStride2;            /* advance to plane 1 */
-    glyphPlane3 = glyphData + (int32_t)srcStride2 * 2;  /* plane 1 + 2*stride = plane 3 */
+    glyphPlane3 = glyphData + (int32_t)srcStride2 * (NUM_PLANES - 2);  /* last plane */
 
-    /* ---- Blit passes 0-2 (3 iterations) ---- */
-    for (i = 2; i >= 0; i--) {
+    /* ---- Blit passes 0 through NUM_PLANES-2 ---- */
+    for (i = NUM_PLANES - 2; i >= 0; i--) {
         /* ASM: lsr.w #1,d5 / bcc — checks the bit shifted OUT (carry flag).
          * We must check the old LSB before shifting. */
         uint16_t bit = planeMask & 1;
@@ -756,7 +731,7 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
         dstPtr += dstRowAdv;
     }
 
-    /* ---- Final pass (plane 3): asymmetric ---- */
+    /* ---- Final pass (last plane): asymmetric ---- */
     {
     uint16_t bit3 = planeMask & 1;
     planeMask >>= 1;
@@ -769,7 +744,7 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
         *(volatile uint32_t *)(custom + BLTCPT_OFF) = (uint32_t)dstPtr;
         *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)dstPtr;
     } else {
-        /* Cookie-cut with plane 3 data: D = (A & B) | (~A & C), use glyphPlane3 */
+        /* Cookie-cut with last plane data: D = (A & B) | (~A & C), use glyphPlane3 */
         uint16_t con0 = bltconShift + BLTCON0_BASE_LINKED;
         *(volatile uint16_t *)(custom + BLTCON0_OFF) = con0;
         *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)maskPtr;

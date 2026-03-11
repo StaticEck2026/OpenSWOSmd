@@ -708,6 +708,9 @@ _StartMatchSequence(TeamGame *topTeam, TeamGame *bottomTeam)
     _EnsureSfxLoadedAndStart();
     _SetPitchTypeAndNumber();
     _InitGameSaveTeams(topTeam, bottomTeam);
+#ifdef AGA
+    _WriteCopperPitchPalette();
+#endif
     _InitGameRestoreTeams();
     _GameLoop();
 }
