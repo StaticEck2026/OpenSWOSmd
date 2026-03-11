@@ -61,37 +61,19 @@ static const uint16_t lastWordMaskTable[16] = {
 
 
 /* ================================================================
- * BlitterSpanCoreMasked  (static)
+ * blitterSpanCore  (static)
  *
  * Programs the Amiga blitter to fill/clear a horizontal span on
  * a single bitplane. Handles left edge, middle words, and right edge.
  *
- * Params carried in/out:
- *   d0 = x bit position (xBit, 0-15)
- *   d1 = x bit offset within word (0-15)
- *   d2 = remaining pixel width
- *   d3 = height (rows)
- *   d4 = color mask (shifted right per plane)
- *   d5/d6 = bltcon0 codes (fill/clear)
- *   a0 = plane pointer
- *   a6 = CUSTOM base
+ * d5 = BLTCON0 for edge blits (left/right)
+ * d6 = BLTCON0 for middle words
  * ================================================================ */
-static void blitterSpanCoreMasked(uint8_t *plane, uint16_t xBit, uint16_t width,
-                                  uint16_t height, uint16_t colorBit, uint16_t custom_unused)
+static void blitterSpanCore(uint8_t *plane, uint16_t xBit, uint16_t width,
+                            uint16_t height, uint16_t d5, uint16_t d6)
 {
     volatile uint8_t *custom = (volatile uint8_t *)CUSTOM_BASE;
-    uint16_t d5, d6;
     uint16_t d7, d0;
-
-    /* Determine fill vs clear mode based on color bit */
-    if (colorBit & 1) {
-        d5 = BLTCON0_USEA_USED_LF_FC;
-        d6 = BLTCON0_USED_LF_FF;
-    } else {
-        d5 = BLTCON0_USEA_USED_LF_F0;
-        d6 = BLTCON0_USED_LF_00;
-    }
-    (void)custom_unused;
 
     /* ---- Left edge ---- */
     if (xBit != 0) {
@@ -107,10 +89,9 @@ static void blitterSpanCoreMasked(uint8_t *plane, uint16_t xBit, uint16_t width,
             width -= d0;
         }
 
-        /* Left edge: 1-word masked blit
-           NOTE: Known artifact — SET case (BLTBDAT with USEB=0) produces
-           colored blocks at the left edge. Root cause unknown — generated
-           code matches original asm exactly. To be investigated later. */
+        /* Left edge: 1-word masked blit.
+           BLTBDAT holds ~mask (span pixels) even though USEB=0;
+           the blitter uses BLTBDAT as constant B input in the minterm. */
         waitBlit();
         *(volatile uint16_t *)(custom + BLTAFWM_OFF) = d7;
         *(volatile uint16_t *)(custom + BLTALWM_OFF) = d7;
@@ -176,6 +157,29 @@ static void blitterSpanCoreMasked(uint8_t *plane, uint16_t xBit, uint16_t width,
     }
 }
 
+/* ================================================================
+ * blitterSpanCoreMasked  (static)
+ *
+ * Wrapper: selects d5/d6 based on color bit, then calls blitterSpanCore.
+ * ================================================================ */
+static void blitterSpanCoreMasked(uint8_t *plane, uint16_t xBit, uint16_t width,
+                                  uint16_t height, uint16_t colorBit, uint16_t custom_unused)
+{
+    uint16_t d5, d6;
+
+    (void)custom_unused;
+
+    if (colorBit & 1) {
+        d5 = BLTCON0_USEA_USED_LF_FC;
+        d6 = BLTCON0_USED_LF_FF;
+    } else {
+        d5 = BLTCON0_USEA_USED_LF_F0;
+        d6 = BLTCON0_USED_LF_00;
+    }
+
+    blitterSpanCore(plane, xBit, width, height, d5, d6);
+}
+
 
 /* ================================================================
  * blitterSpan4Planes  (static)
@@ -204,6 +208,14 @@ static void blitterSpan4Planes(uint16_t x, uint16_t y, uint16_t width,
     plane += (x >> 3) & 0xFFFE;   /* WORD_ALIGN_EVEN_MASK = ~1 */
 
     xBit = x & TILE_MASK;
+
+    /* Initial pass: prime plane 0 with USEA-only edges (no D write) and
+     * USED-only middle (clears to 0). Matches the ASM's extra call to
+     * align_and_prepare_left_mask before the 4 per-plane passes.
+     * Edge d5 = BLTCON0_USEA_LF_FC (USEA only, USED=0 → edges don't write).
+     * Middle d6 = BLTCON0_USED_LF_00 (USED=1, LF=00 → clears middle). */
+    blitterSpanCore(plane, xBit, width, height,
+                    BLTCON0_USEA_LF_FC, BLTCON0_USED_LF_00);
 
     /* Plane 0 */
     blitterSpanCoreMasked(plane, xBit, width, height, color, 0);

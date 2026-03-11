@@ -796,7 +796,7 @@ void _CheckIfBallOutOfPlay(void)
         }
 
         breakCameraMode = 0xFFFF;
-        a6 = throwTeam;
+        a6 = opTeam;  /* ASM: movea.l (a6),a6 — use the team GETTING the throw-in */
     }
 
     writeRestartGlobalsAndStopPlayers(a6, d1, d2, d3, d4);

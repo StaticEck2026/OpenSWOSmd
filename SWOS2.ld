@@ -2,11 +2,12 @@ ENTRY(main)
 
 SECTIONS
 {
-  text 0x00100000 : {
-        *(.text.startup.main) *(.text.main) *(.text.startup.*) *(text) *(TEXT) *(.text) *(.text.*) *(code) *(CODE) *(.rodata) *(.rodata.*) *(const)
+  .text 0x00100000 : {
+        *(.text.startup.main) *(.text.main) *(.text.startup.*) *(text) *(TEXT) *(.text) *(.text.*) *(code) *(CODE)
+*(.rodata) *(.rodata.*) *(const)
   }
 
-  data : {
+  .data : {
         *(data) *(DATA) *(.data) *(.data.*) *(.rodata) *(.rodata.*) *(const)
   }
 
@@ -15,7 +16,7 @@ SECTIONS
   }
 
   . = ALIGN(4);
-  bss (NOLOAD) : {
+  .bss (NOLOAD) : {
         *(bss) *(BSS) *(.bss) *(.bss.*) *(COMMON)
   }
 }
