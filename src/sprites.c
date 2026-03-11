@@ -33,9 +33,8 @@ extern volatile uint32_t bitPlane2BasePtr;
 extern volatile uint32_t bitPlane3BasePtr;
 extern uint32_t copperZeroLong;
 
-/* Player sprite range markers for DrawQueuedSprites — BSS labels */
+/* Player sprite identification for DrawQueuedSprites */
 extern Sprite goalie1Sprite;
-extern uint8_t bottomCornerLeftPositions;
 
 extern void _PanicHaltLoop(void) __attribute__((noreturn));
 extern void _SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint16_t y);
@@ -1142,9 +1141,10 @@ void _DrawQueuedSprites(void)
             _SaveCoordinatesForHighlights(d0, (uint16_t)d1, (uint16_t)d2);
         }
 
-        /* Check if a4 is a player sprite (between goalie1Sprite and bottomCornerLeftPositions) */
-        if ((uint32_t)a4 >= (uint32_t)&goalie1Sprite &&
-            (uint32_t)a4 < (uint32_t)&bottomCornerLeftPositions) {
+        /* Check if a4 is a player sprite (teamNumber 1 or 2).
+         * Original asm used address range check (goalie1Sprite..bottomCornerLeftPositions),
+         * but sprites moved from asm to C data sections so addresses are no longer contiguous. */
+        if (a4->teamNumber == 1 || a4->teamNumber == 2) {
             /* Player sprite: use masked blit.
              * QueueMaskedSpriteBlitClipped expects registers:
              * a0=spriteGfx, a4=spriteStruct, d1=x, d2=y

@@ -275,13 +275,6 @@
         xdef    team1Computer
         xdef    team2Computer
 
-        xdef    throwInPassAnimTable
-        xdef    throwInKickAnimTable
-        xdef    plGettingYellowCardAnimTable
-        xdef    plGettingRedCardAnimTable
-        xdef    plGetting2ndYellowCardAnimTable
-        xdef    playerLosingReactionAnimTable
-        xdef    playerWinningReactionAnimTable
         xdef    kGoalkeeperSpeedWhenGameStopped
         xdef    kGoalkeeperGameSpeed
         xdef    kGoalkeeperBurstSpeed
@@ -309,8 +302,6 @@
         xdef    throwInPassOrKick
         xdef    turnDirCopiedFromCameraCount
         xdef    cameraSnapToPlayerCount
-        xdef    playerRunningAnimTable
-        xdef    plInjuredAnimTable
         xdef    goalkeeperSkipFlag
 
         xdef    kBallSpeedPassingIncrease
@@ -876,37 +867,13 @@
         xdef    gameTime
         xdef    secondsSwitchAccumulator
         xdef    copyTimeSprite
-        xdef    currentTimeSprite
         xdef    plOrdinalsTable
         xdef    plNamesLengthTable
         xdef    plNamesLengthTableCopy
-        xdef    goal1TopSprite
-        xdef    goal2BottomSprite
         xdef    replaySelected
         xdef    aReplay
         xdef    aExit
         xdef    aGrafsMenubg2Ra
-        xdef    resultOnHalftimeSprite
-        xdef    resultAfterTheGameSprite
-        xdef    gridUpperRowLeftSprite
-        xdef    gridUpperRowRightSprite
-        xdef    gridMiddleRowLeftSprite
-        xdef    gridMiddleRowRightSprite
-        xdef    gridBottomRowLeftSprite
-        xdef    gridBottomRowRightSprite
-        xdef    team1NameSprite
-        xdef    team2NameSprite
-        xdef    team1GoalsDigit2Sprite
-        xdef    team1GoalsDigit1Sprite
-        xdef    team2GoalsDigit2Sprite
-        xdef    team2GoalsDigit1Sprite
-        xdef    team1TotalGoalsDigit2Sprite
-        xdef    team1TotalGoalsDigit1Sprite
-        xdef    team2TotalGoalsDigit2Sprite
-        xdef    team2TotalGoalsDigit1Sprite
-        xdef    dashSprite
-        xdef    team1Scorer1Sprite
-        xdef    team2Scorer1Sprite
         xdef    team1ScorerSpritesWidths
         xdef    team2ScorerSpritesWidths
         xdef    team1TotalGoals
@@ -941,11 +908,7 @@
         xdef    lastTeamPlayed
         xdef    ballInGoalkeeperArea
         xdef    strikeDestX
-        xdef    ballSprite
-        xdef    ballShadowSprite
-        xdef    goalie1Sprite
         xdef    bottomCornerLeftPositions
-        xdef    goalie2Sprite
         xdef    ballStaticFrameIndices
         xdef    ballMovingFrameIndices
         xdef    kBallGroundConstant
@@ -989,10 +952,7 @@
         xdef    advert2Pointers
         xdef    advert3Pointers
         xdef    blockAdvertisements
-        xdef    advertInGameSprites
-        xdef    cornerFlagSprite
         xdef    cornerFlagPictureIndices
-        xdef    big_S_Sprite
         xdef    spinBigS
         xdef    bigSIndex
         xdef    goalCameraMode
@@ -1008,8 +968,6 @@
         xdef    team2GoalieFaces
         xdef    team2GoalieSkinType
         xdef    team2ReserveGoalieSkinType
-        xdef    team1SpritesTable
-        xdef    team2SpritesTable
         xdef    numberBuffer
         xdef    topTeamPtr
         xdef    bottomTeamPtr
@@ -1025,10 +983,6 @@
         xdef    currentScorer
         xdef    lastTeamScored
         xdef    lastPlayerBeforeGoalkeeper
-        xdef    team1CurPlayerNumSprite
-        xdef    team2CurPlayerNumSprite
-        xdef    playerMarkSprite
-        xdef    currentPlayerNameSprite
         xdef    whichCard
         xdef    bookedPlayer
         xdef    lastTeamBooked
@@ -1577,7 +1531,6 @@
         xdef    throwInDeadVar
         xdef    sortedSprites
         xdef    numSpritesToRender
-        xdef    allSpritesArray
         xdef    goalScored
         xdef    lastTeamScoredNumber
         xdef    lastPlayerScored
@@ -1663,11 +1616,6 @@
         xdef    kGoalkeeperNearJumpSpeed
         xdef    kGoalkeeperFarJumpSpeed
         xdef    kGoalkeeperFarJumpSlowerSpeed
-        xdef    leftGoalieJumpingLowAnimTable
-        xdef    rightGoalieJumpingLowAnimTable
-        xdef    leftGoalieJumpingHighAnimTable
-        xdef    rightGoalieJumpingHighAnimTable
-        xdef    plTacklingAnimTable
         xdef    kPlayerTacklingSpeed
         xdef    playerXQuadrantsCoordinates
         xdef    playerYQuadrantCoordinates
@@ -1684,16 +1632,10 @@
         xdef    animatedPatterns
         xdef    animPatternsIndex
         xdef    refState
-        xdef    refereeSprite
         xdef    foulYCoordinate
         xdef    playRefereeWhistle
-        xdef    bookedPlayerCardOrNumberSprite
         xdef    refTimer
         xdef    kRefereeSpeed
-        xdef    refComingAnimTable
-        xdef    refYellowCardAnimTable
-        xdef    refRedCardAnimTable
-        xdef    refSecondYellowAnimTable
         xdef    yellowCardTable
         xdef    redCardTable
         xdef    secondYellowTable
@@ -1703,8 +1645,6 @@
         xdef    kPitchBallSpeedInfluence
         xdef    kBallSpeedBounceFactorTable
         xdef    kBallBounceFactorTable
-        xdef    playerNormalStandingAnimTable
-        xdef    refWaitingAnimTable
 
         xdef    numScenesInHilFile
         xdef    hilSceneNumber
@@ -1753,7 +1693,6 @@
         xdef    statsTeam1GoalsCopy2
         xdef    statsTeam2GoalsCopy2
         xdef    teamNumThatScored
-        xdef    aboutToThrowInAnimTable
         xdef    initialKickWriteOnlyTicks
         xdef    deadCameraBreakVar01
         xdef    deadCameraBreakVar02
@@ -1775,8 +1714,6 @@
         xdef    kInjuryRecoveryTime
         xdef    kTackleInjuryProbability
         xdef    kTackleInjuryProbabilityAlreadyInjured
-        xdef    playerTackledAnimTable
-        xdef    goalieCatchingBallAnimTable
         xdef    kGoalkeeperCatchSpeed
 ; --- career_status.c globals ---
         xdef    careerTeam
@@ -3157,6 +3094,379 @@
         xref    _ThirdPartyOfferViewSquad
         xref    _BuyPlayerViewSquad
         xref    _OffersInit
+        xref    aboutToThrowInAnimTable
+        xref    aboutToThrowInTeam1DownFrames
+        xref    aboutToThrowInTeam1DownLeftFrames
+        xref    aboutToThrowInTeam1DownRightFrames
+        xref    aboutToThrowInTeam1LeftFrames
+        xref    aboutToThrowInTeam1RightFrames
+        xref    aboutToThrowInTeam1UpFrames
+        xref    aboutToThrowInTeam1UpLeftFrames
+        xref    aboutToThrowInTeam1UpRightFrames
+        xref    aboutToThrowInTeam2DownFrames
+        xref    aboutToThrowInTeam2DownLeftFrames
+        xref    aboutToThrowInTeam2DownRightFrames
+        xref    aboutToThrowInTeam2LeftFrames
+        xref    aboutToThrowInTeam2RightFrames
+        xref    aboutToThrowInTeam2UpFrames
+        xref    aboutToThrowInTeam2UpLeftFrames
+        xref    aboutToThrowInTeam2UpRightFrames
+        xref    advertInGameSprites
+        xref    allSpritesArray
+        xref    ballShadowSprite
+        xref    ballSprite
+        xref    big_S_Sprite
+        xref    bookedPlayerCardOrNumberSprite
+        xref    cornerFlagSprite
+        xref    currentPlayerNameSprite
+        xref    currentTimeSprite
+        xref    dashSprite
+        xref    goal1TopSprite
+        xref    goal2BottomSprite
+        xref    goalie1CatchBallFacingDownFrames
+        xref    goalie1CatchBallFacingUpFrames
+        xref    goalie1DeflectBallFacingDownFrames
+        xref    goalie1DeflectBallFacingUpFrames
+        xref    goalie1DiveLandFacingDownFrames
+        xref    goalie1DiveLandFacingUpFrames
+        xref    goalie1GoalKickLeftFrames
+        xref    goalie1GoalKickRightFrames
+        xref    goalie1HighDiveHoldLeftFrames
+        xref    goalie1HighDiveHoldRightFrames
+        xref    goalie1HighDiveReachLeftFaceDownFrames
+        xref    goalie1HighDiveReachLeftFaceUpFrames
+        xref    goalie1HighDiveReachRightFaceDownFrames
+        xref    goalie1HighDiveReachRightFaceUpFrames
+        xref    goalie1LowDiveLeftFaceDownFrames
+        xref    goalie1LowDiveLeftFaceUpFrames
+        xref    goalie1LowDiveRightFaceDownFrames
+        xref    goalie1LowDiveRightFaceUpFrames
+        xref    goalie1Sprite
+        xref    goalie1StandingFacingDownFrames
+        xref    goalie1StandingFacingDownLeftFrames
+        xref    goalie1StandingFacingDownRightFrames
+        xref    goalie1StandingFacingLeftFrames
+        xref    goalie1StandingFacingRightFrames
+        xref    goalie1StandingFacingUpFrames
+        xref    goalie1StandingFacingUpLeftFrames
+        xref    goalie1StandingFacingUpRightFrames
+        xref    goalie2CatchBallFacingDownFrames
+        xref    goalie2CatchBallFacingUpFrames
+        xref    goalie2DeflectBallFacingDownFrames
+        xref    goalie2DeflectBallFacingUpFrames
+        xref    goalie2DiveLandFacingDownFrames
+        xref    goalie2DiveLandFacingUpFrames
+        xref    goalie2GoalKickLeftFrames
+        xref    goalie2GoalKickRightFrames
+        xref    goalie2HighDiveHoldLeftFrames
+        xref    goalie2HighDiveHoldRightFrames
+        xref    goalie2HighDiveReachLeftFaceDownFrames
+        xref    goalie2HighDiveReachLeftFaceUpFrames
+        xref    goalie2HighDiveReachRightFaceDownFrames
+        xref    goalie2HighDiveReachRightFaceUpFrames
+        xref    goalie2LowDiveLeftFaceDownFrames
+        xref    goalie2LowDiveLeftFaceUpFrames
+        xref    goalie2LowDiveRightFaceDownFrames
+        xref    goalie2LowDiveRightFaceUpFrames
+        xref    goalie2Sprite
+        xref    goalie2StandingFacingDownFrames
+        xref    goalie2StandingFacingDownLeftFrames
+        xref    goalie2StandingFacingDownRightFrames
+        xref    goalie2StandingFacingLeftFrames
+        xref    goalie2StandingFacingRightFrames
+        xref    goalie2StandingFacingUpFrames
+        xref    goalie2StandingFacingUpLeftFrames
+        xref    goalie2StandingFacingUpRightFrames
+        xref    goalieCatchingBallAnimTable
+        xref    goalieDeflectBallAnimTable
+        xref    goalieDiveHighHoldAnimTable
+        xref    goalieDiveLandAnimTable
+        xref    goalieGoalKickAnimTable
+        xref    goalkeeperRunningDownLeftTeam1
+        xref    goalkeeperRunningDownLeftTeam2
+        xref    goalkeeperRunningDownRightTeam1
+        xref    goalkeeperRunningDownRightTeam2
+        xref    goalkeeperRunningDownTeam1
+        xref    goalkeeperRunningDownTeam2
+        xref    goalkeeperRunningLeftTeam1
+        xref    goalkeeperRunningLeftTeam2
+        xref    goalkeeperRunningRightTeam1
+        xref    goalkeeperRunningRightTeam2
+        xref    goalkeeperRunningUpLeftTeam1
+        xref    goalkeeperRunningUpLeftTeam2
+        xref    goalkeeperRunningUpRightTeam1
+        xref    goalkeeperRunningUpRightTeam2
+        xref    goalkeeperRunningUpTeam1
+        xref    goalkeeperRunningUpTeam2
+        xref    gridBottomRowLeftSprite
+        xref    gridBottomRowRightSprite
+        xref    gridMiddleRowLeftSprite
+        xref    gridMiddleRowRightSprite
+        xref    gridUpperRowLeftSprite
+        xref    gridUpperRowRightSprite
+        xref    jumpHeaderAttemptAnimTable
+        xref    jumpHeaderAttemptTeam1DownFrames
+        xref    jumpHeaderAttemptTeam1DownLeftFrames
+        xref    jumpHeaderAttemptTeam1DownRightFrames
+        xref    jumpHeaderAttemptTeam1LeftFrames
+        xref    jumpHeaderAttemptTeam1RightFrames
+        xref    jumpHeaderAttemptTeam1UpFrames
+        xref    jumpHeaderAttemptTeam1UpLeftFrames
+        xref    jumpHeaderAttemptTeam1UpRightFrames
+        xref    jumpHeaderAttemptTeam2DownFrames
+        xref    jumpHeaderAttemptTeam2DownLeftFrames
+        xref    jumpHeaderAttemptTeam2DownRightFrames
+        xref    jumpHeaderAttemptTeam2LeftFrames
+        xref    jumpHeaderAttemptTeam2RightFrames
+        xref    jumpHeaderAttemptTeam2UpFrames
+        xref    jumpHeaderAttemptTeam2UpLeftFrames
+        xref    jumpHeaderAttemptTeam2UpRightFrames
+        xref    jumpHeaderHitAnimTable
+        xref    jumpHeaderHitTeam1DownFrames
+        xref    jumpHeaderHitTeam1DownLeftFrames
+        xref    jumpHeaderHitTeam1DownRightFrames
+        xref    jumpHeaderHitTeam1LeftFrames
+        xref    jumpHeaderHitTeam1RightFrames
+        xref    jumpHeaderHitTeam1UpLeftFrames
+        xref    jumpHeaderHitTeam1UpRightFrames
+        xref    jumpHeaderHitTeam2DownFrames
+        xref    jumpHeaderHitTeam2DownLeftFrames
+        xref    jumpHeaderHitTeam2DownRightFrames
+        xref    jumpHeaderHitTeam2LeftFrames
+        xref    jumpHeaderHitTeam2RightFrames
+        xref    jumpHeaderHitTeam2UpFrames
+        xref    jumpHeaderHitTeam2UpLeftFrames
+        xref    jumpHeaderHitTeam2UpRightFrames
+        xref    jumpHeaderTeam1UpFrames
+        xref    leftGoalieJumpingHighAnimTable
+        xref    leftGoalieJumpingLowAnimTable
+        xref    plGetting2ndYellowCardAnimTable
+        xref    plGettingRedCardAnimTable
+        xref    plGettingYellowCardAnimTable
+        xref    plInjuredAnimTable
+        xref    plTacklingAnimTable
+        xref    plTacklingAnimTable_2
+        xref    playerLosingReactionAnimTable
+        xref    playerMarkSprite
+        xref    playerNormalStandingAnimTable
+        xref    playerRunningAnimTable
+        xref    playerRunningDownLeftTeam1
+        xref    playerRunningDownLeftTeam2
+        xref    playerRunningDownRightTeam1
+        xref    playerRunningDownRightTeam2
+        xref    playerRunningDownTeam1
+        xref    playerRunningDownTeam2
+        xref    playerRunningLeftTeam1
+        xref    playerRunningLeftTeam2
+        xref    playerRunningRightTeam1
+        xref    playerRunningRightTeam2
+        xref    playerRunningUpLeftTeam1
+        xref    playerRunningUpLeftTeam2
+        xref    playerRunningUpRightTeam1
+        xref    playerRunningUpRightTeam2
+        xref    playerRunningUpTeam1
+        xref    playerRunningUpTeam2
+        xref    playerTackledAnimTable
+        xref    playerWinningReactionAnimTable
+        xref    refComingAnimTable
+        xref    refComingDownFrames
+        xref    refComingUpFrames
+        xref    refRedCardAnimTable
+        xref    refRedCardFrames
+        xref    refSecondYellowAnimTable
+        xref    refSecondYellowFrames
+        xref    refStandingFacingDownFrames
+        xref    refStandingFacingSideFrames
+        xref    refStandingFacingUpFrames
+        xref    refWaitingAnimTable
+        xref    refYellowCardAnimTable
+        xref    refYellowCardFrames
+        xref    refereeSprite
+        xref    resultAfterTheGameSprite
+        xref    resultOnHalftimeSprite
+        xref    rightGoalieJumpingHighAnimTable
+        xref    rightGoalieJumpingLowAnimTable
+        xref    staticHeaderAimAnimTable
+        xref    staticHeaderAimHitTeam1DownFrames
+        xref    staticHeaderAimHitTeam1DownLeftFrames
+        xref    staticHeaderAimHitTeam1DownRightFrames
+        xref    staticHeaderAimHitTeam1LeftFrames
+        xref    staticHeaderAimHitTeam1RightFrames
+        xref    staticHeaderAimHitTeam1UpFrames
+        xref    staticHeaderAimHitTeam1UpLeftFrames
+        xref    staticHeaderAimHitTeam1UpRightFrames
+        xref    staticHeaderAimHitTeam2DownFrames
+        xref    staticHeaderAimHitTeam2DownLeftFrames
+        xref    staticHeaderAimHitTeam2DownRightFrames
+        xref    staticHeaderAimHitTeam2LeftFrames
+        xref    staticHeaderAimHitTeam2RightFrames
+        xref    staticHeaderAimHitTeam2UpFrames
+        xref    staticHeaderAimHitTeam2UpLeftFrames
+        xref    staticHeaderAimHitTeam2UpRightFrames
+        xref    staticHeaderAttemptAnimTable
+        xref    staticHeaderAttemptTeam1DownFrames
+        xref    staticHeaderAttemptTeam1DownLeftFrames
+        xref    staticHeaderAttemptTeam1DownRightFrames
+        xref    staticHeaderAttemptTeam1LeftFrames
+        xref    staticHeaderAttemptTeam1RightFrames
+        xref    staticHeaderAttemptTeam1UpFrames
+        xref    staticHeaderAttemptTeam1UpLeftFrames
+        xref    staticHeaderAttemptTeam1UpRightFrames
+        xref    staticHeaderAttemptTeam2DownFrames
+        xref    staticHeaderAttemptTeam2DownLeftFrames
+        xref    staticHeaderAttemptTeam2DownRightFrames
+        xref    staticHeaderAttemptTeam2LeftFrames
+        xref    staticHeaderAttemptTeam2RightFrames
+        xref    staticHeaderAttemptTeam2UpFrames
+        xref    staticHeaderAttemptTeam2UpLeftFrames
+        xref    staticHeaderAttemptTeam2UpRightFrames
+        xref    staticHeaderHitAnimTable
+        xref    team1CurPlayerNumSprite
+        xref    team1GoalsDigit1Sprite
+        xref    team1GoalsDigit2Sprite
+        xref    team1InjuredPlayerTopLeftTable
+        xref    team1InjuredPlayerTopRightTable
+        xref    team1LosingReactionFrames
+        xref    team1NameSprite
+        xref    team1PlGetting2ndYellowCardFrames
+        xref    team1PlGettingYellowCardFrames
+        xref    team1Player10Sprite
+        xref    team1Player11Sprite
+        xref    team1Player2Sprite
+        xref    team1Player3Sprite
+        xref    team1Player4Sprite
+        xref    team1Player5Sprite
+        xref    team1Player6Sprite
+        xref    team1Player7Sprite
+        xref    team1Player8Sprite
+        xref    team1Player9Sprite
+        xref    team1PlayerGettingRedCardFrames
+        xref    team1PlayerStandingFacingBottomFrames
+        xref    team1PlayerStandingFacingBottomLeftFrames
+        xref    team1PlayerStandingFacingBottomRightFrames
+        xref    team1PlayerStandingFacingLeftFrames
+        xref    team1PlayerStandingFacingRightFrames
+        xref    team1PlayerStandingFacingTopLeftFrames
+        xref    team1PlayerStandingFacingUpFrames
+        xref    team1PlayerStandingFacingUpRightFrames
+        xref    team1Scorer1Sprite
+        xref    team1Scorer2Sprite
+        xref    team1Scorer3Sprite
+        xref    team1Scorer4Sprite
+        xref    team1Scorer5Sprite
+        xref    team1Scorer6Sprite
+        xref    team1Scorer7Sprite
+        xref    team1Scorer8Sprite
+        xref    team1SpritesTable
+        xref    team1TackledDownFrames
+        xref    team1TackledDownLeftFrames
+        xref    team1TackledDownRightFrames
+        xref    team1TackledLeftFrames
+        xref    team1TackledRightFrames
+        xref    team1TackledUpFrames
+        xref    team1TackledUpLeftFrames
+        xref    team1TackledUpRightFrames
+        xref    team1TacklingDownFrames
+        xref    team1TacklingDownLeftFrames
+        xref    team1TacklingDownRightFrames
+        xref    team1TacklingLeftFrames
+        xref    team1TacklingRightFrames
+        xref    team1TacklingUpFrames
+        xref    team1TacklingUpLeftFrames
+        xref    team1TacklingUpRightFrames
+        xref    team1TotalGoalsDigit1Sprite
+        xref    team1TotalGoalsDigit2Sprite
+        xref    team1WinningReactionFrames
+        xref    team2CurPlayerNumSprite
+        xref    team2GoalsDigit1Sprite
+        xref    team2GoalsDigit2Sprite
+        xref    team2InjuredPlayerTopLeftTable
+        xref    team2InjuredPlayerTopRightTable
+        xref    team2LosingReactionFrames
+        xref    team2NameSprite
+        xref    team2PlGetting2ndYellowCardFrames
+        xref    team2PlGettingYellowCardFrames
+        xref    team2Player10Sprite
+        xref    team2Player11Sprite
+        xref    team2Player2Sprite
+        xref    team2Player3Sprite
+        xref    team2Player4Sprite
+        xref    team2Player5Sprite
+        xref    team2Player6Sprite
+        xref    team2Player7Sprite
+        xref    team2Player8Sprite
+        xref    team2Player9Sprite
+        xref    team2PlayerGettingRedCardFrames
+        xref    team2PlayerStandingFacingDownFrames
+        xref    team2PlayerStandingFacingDownLeftFrames
+        xref    team2PlayerStandingFacingDownRightFrames
+        xref    team2PlayerStandingFacingLeftFrames
+        xref    team2PlayerStandingFacingRightFrames
+        xref    team2PlayerStandingFacingUpFrames
+        xref    team2PlayerStandingFacingUpLeftFrames
+        xref    team2PlayerStandingFacingUpRightFrames
+        xref    team2Scorer1Sprite
+        xref    team2Scorer2Sprite
+        xref    team2Scorer3Sprite
+        xref    team2Scorer4Sprite
+        xref    team2Scorer5Sprite
+        xref    team2Scorer6Sprite
+        xref    team2Scorer7Sprite
+        xref    team2Scorer8Sprite
+        xref    team2SpritesTable
+        xref    team2TackledDownFrames
+        xref    team2TackledDownLeftFrames
+        xref    team2TackledDownRightFrames
+        xref    team2TackledLeftFrames
+        xref    team2TackledRightFrames
+        xref    team2TackledUpFrames
+        xref    team2TackledUpLeftFrames
+        xref    team2TackledUpRightFrames
+        xref    team2TacklingDownFrames
+        xref    team2TacklingDownLeftFrames
+        xref    team2TacklingDownRightFrames
+        xref    team2TacklingLeftFrames
+        xref    team2TacklingRightFrames
+        xref    team2TacklingUpFrames
+        xref    team2TacklingUpLeftFrames
+        xref    team2TacklingUpRightFrames
+        xref    team2TotalGoalsDigit1Sprite
+        xref    team2TotalGoalsDigit2Sprite
+        xref    team2WinningReactionFrames
+        xref    throwInKickAnimTable
+        xref    throwInKickTeam1DownFrames
+        xref    throwInKickTeam1DownLeftFrames
+        xref    throwInKickTeam1DownRightFrames
+        xref    throwInKickTeam1LeftFrames
+        xref    throwInKickTeam1RightFrames
+        xref    throwInKickTeam1UpFrames
+        xref    throwInKickTeam1UpLeftFrames
+        xref    throwInKickTeam1UpRightFrames
+        xref    throwInKickTeam2DownFrames
+        xref    throwInKickTeam2DownLeftFrames
+        xref    throwInKickTeam2DownRightFrames
+        xref    throwInKickTeam2LeftFrames
+        xref    throwInKickTeam2RightFrames
+        xref    throwInKickTeam2UpFrames
+        xref    throwInKickTeam2UpLeftFrames
+        xref    throwInKickTeam2UpRightFrames
+        xref    throwInPassAnimTable
+        xref    throwInPassTeam1DownFrames
+        xref    throwInPassTeam1DownLeftFrames
+        xref    throwInPassTeam1DownRightFrames
+        xref    throwInPassTeam1LeftFrames
+        xref    throwInPassTeam1RightFrames
+        xref    throwInPassTeam1UpFrames
+        xref    throwInPassTeam1UpLeftFrames
+        xref    throwInPassTeam1UpRightFrames
+        xref    throwInPassTeam2DownFrames
+        xref    throwInPassTeam2DownLeftFrames
+        xref    throwInPassTeam2DownRightFrames
+        xref    throwInPassTeam2LeftFrames
+        xref    throwInPassTeam2RightFrames
+        xref    throwInPassTeam2UpFrames
+        xref    throwInPassTeam2UpLeftFrames
+        xref    throwInPassTeam2UpRightFrames
 ; --- Chunk 164 xdefs ---
         xdef    viewSquadMenu
         xdef    aViewSquad
@@ -3496,6 +3806,277 @@
         xdef    offerLifespanTable
         xdef    swapPlayerValueRandom
         xdef    extraPlayerValueRandom
+; --- Menu data xdefs (strings, tables, data) ---
+        xdef    aCup1
+        xdef    aCup2
+        xdef    aLge_0
+        xdef    aTot_0
+        xdef    diyAwayGoalsStrTab
+        xdef    diyCupExtraTimeStringTable0
+        xdef    diyCupExtraTimeStringTable1
+        xdef    diyCupExtraTimeStringTable2
+        xdef    diyCupExtraTimeStringTable3
+        xdef    diyCupExtraTimeStringTable4
+        xdef    diyCupExtraTimeStringTable5
+        xdef    diyCupLegsStringTable0
+        xdef    diyCupLegsStringTable1
+        xdef    diyCupLegsStringTable2
+        xdef    diyCupLegsStringTable3
+        xdef    diyCupLegsStringTable4
+        xdef    diyCupLegsStringTable5
+        xdef    diyCupPenaltiesStringTable0
+        xdef    diyCupPenaltiesStringTable1
+        xdef    diyCupPenaltiesStringTable2
+        xdef    diyCupPenaltiesStringTable3
+        xdef    diyCupPenaltiesStringTable4
+        xdef    diyCupPenaltiesStringTable5
+        xdef    diyEndMonthStrTab
+        xdef    diyPitchSeasonStrTab
+        xdef    diyStage1ExtraTimeStrTab
+        xdef    diyStage1LegsStrTab
+        xdef    diyStage1PenaltiesStrTab
+        xdef    diyStage1PlayCountStrTab
+        xdef    diyStage1PtsForWinStrTab
+        xdef    diyStage2ExtraTimeStrTab
+        xdef    diyStage2LegsStrTab
+        xdef    diyStage2PenaltiesStrTab
+        xdef    diyStage2PlayCountStrTab
+        xdef    diyStage2PtsForWinStrTab
+        xdef    diyStage3ExtraTimeStrTab
+        xdef    diyStage3LegsStrTab
+        xdef    diyStage3PenaltiesStrTab
+        xdef    diyStage3PlayCountStrTab
+        xdef    diyStage3PtsForWinStrTab
+        xdef    diyStage4ExtraTimeStrTab
+        xdef    diyStage4LegsStrTab
+        xdef    diyStage4PenaltiesStrTab
+        xdef    diyStage4PlayCountStrTab
+        xdef    diyStage4PtsForWinStrTab
+        xdef    diyStage5ExtraTimeStrTab
+        xdef    diyStage5LegsStrTab
+        xdef    diyStage5PenaltiesStrTab
+        xdef    diyStage5PlayCountStrTab
+        xdef    diyStage5PtsForWinStrTab
+        xdef    diyStage6ExtraTimeStrTab
+        xdef    diyStage6LegsStrTab
+        xdef    diyStage6PenaltiesStrTab
+        xdef    diyStage6PlayCountStrTab
+        xdef    diyStage6PtsForWinStrTab
+        xdef    diyStartMonthStrTab
+        xdef    a343
+        xdef    a352
+        xdef    a424
+        xdef    a433
+        xdef    a442
+        xdef    a451
+        xdef    a523
+        xdef    a532
+        xdef    a541
+        xdef    aA_0
+        xdef    aAccept
+        xdef    aAcceptOffer
+        xdef    aAddPlayer
+        xdef    aAdditionalInve_0
+        xdef    aAllMatches
+        xdef    aAllPlayerTeams
+        xdef    aAskForMore
+        xdef    aAttack
+        xdef    aAutoReplays
+        xdef    aAutoSaveHighli
+        xdef    aAwayGoals
+        xdef    aBankStatement
+        xdef    aBestRegards
+        xdef    aBuyPlayer
+        xdef    aCareerTotal
+        xdef    aChooseTeam
+        xdef    aChooseTeams
+        xdef    aClubBusiness
+        xdef    aClubTeams
+        xdef    aCoach
+        xdef    aCoach_3
+        xdef    aCoach_4
+        xdef    aCompetitionBon
+        xdef    aCompetitionInf
+        xdef    aComputer
+        xdef    aConfirmOffer
+        xdef    aConsider
+        xdef    aContinue
+        xdef    aContinueCareer
+        xdef    aCopy
+        xdef    aCriteria
+        xdef    aCup_3
+        xdef    aCups
+        xdef    aD
+        xdef    aDearSirMadam
+        xdef    aDefend
+        xdef    aDescription
+        xdef    aDesignDiyCup
+        xdef    aDesignDiyLeagu
+        xdef    aDesignDiyTourn
+        xdef    aDiyCompetition_0
+        xdef    aEditCustomTeam
+        xdef    aEditTactics
+        xdef    aEditedCustomTe_0
+        xdef    aExPlayerGoals
+        xdef    aExit
+        xdef    aF
+        xdef    aFilename
+        xdef    aFirstKit
+        xdef    aFixPitchType
+        xdef    aForm
+        xdef    aFriendlyDiyGam
+        xdef    aFriendly_1
+        xdef    aFrom
+        xdef    aGateReceipts
+        xdef    aGeneralRunning
+        xdef    aGiveFreeTransf
+        xdef    aGoals
+        xdef    aHighestScorerL
+        xdef    aHighlights
+        xdef    aHighlights_0
+        xdef    aHyphen
+        xdef    aImport
+        xdef    aImportTactics
+        xdef    aJobOffer
+        xdef    aJobOffers
+        xdef    aJobOffersBeing
+        xdef    aL
+        xdef    aLeadingCompeti
+        xdef    aLge
+        xdef    aList
+        xdef    aLoad
+        xdef    aLoadHighlights
+        xdef    aLoadLiverpool
+        xdef    aLoadOldCompeti
+        xdef    aMakeImprovedOf
+        xdef    aMakeOffer
+        xdef    aManagementReco_0
+        xdef    aMatch
+        xdef    aMemoFromTheClu
+        xdef    aMenuMusic
+        xdef    aName
+        xdef    aNat
+        xdef    aNationalTeams
+        xdef    aNationality
+        xdef    aNewBalance
+        xdef    aNextMatch
+        xdef    aNumberOfTeams
+        xdef    aOffers
+        xdef    aOk
+        xdef    aOldBalance
+        xdef    aOptions
+        xdef    aOriginalCustom
+        xdef    aOwnGoals
+        xdef    aPl
+        xdef    aPlayEachTeam
+        xdef    aPlayMatch
+        xdef    aPlayerCoach
+        xdef    aPlayerPurchase
+        xdef    aPlayerSales
+        xdef    aPlayerWagesBil
+        xdef    aPlayersCurrent
+        xdef    aPlus
+        xdef    aPointsForAWin
+        xdef    aPresetCompetit_0
+        xdef    aPts
+        xdef    aPutPlayerOnTra_0
+        xdef    aReject
+        xdef    aRejectOffer
+        xdef    aRemovePlayers
+        xdef    aResponseToOffe
+        xdef    aResult
+        xdef    aRounds
+        xdef    aSacked
+        xdef    aSave
+        xdef    aSaveCareer
+        xdef    aSaveDiskFiling
+        xdef    aSaveExit
+        xdef    aSaveHighlights
+        xdef    aSeason_1
+        xdef    aSecondKit
+        xdef    aSeeded
+        xdef    aSkills
+        xdef    aSquad
+        xdef    aStar
+        xdef    aStartCareerAs
+        xdef    aStatistics
+        xdef    aStats
+        xdef    aSubstitutes
+        xdef    aSweep
+        xdef    aSwosVersion152
+        xdef    aTakeOffMarket
+        xdef    aTeams
+        xdef    aThirdPartyOffe
+        xdef    aToReplace
+        xdef    aTopGoalScorers
+        xdef    aTot
+        xdef    aTotalProfit
+        xdef    aTraining
+        xdef    aTransferMarket
+        xdef    aTransfers
+        xdef    aType
+        xdef    aUndo
+        xdef    aUseMatchTeam
+        xdef    aV
+        xdef    aViewCompetitio
+        xdef    aViewDomesticPl
+        xdef    aViewForeignPla
+        xdef    aViewHighlights
+        xdef    aViewHighlights_0
+        xdef    aViewLeague
+        xdef    aViewMatch
+        xdef    aViewOffers
+        xdef    aViewOppo
+        xdef    aViewResult
+        xdef    aViewSelectedTe
+        xdef    aViewSquad
+        xdef    aViewSquads
+        xdef    aViewTeam
+        xdef    aViewWorld
+        xdef    aW
+        xdef    aYourCareerIsOv
+        xdef    aYourChairman
+        xdef    allPlTeamsEqualStrTable
+        xdef    asc_131FF2
+        xdef    asc_135D96
+        xdef    autoReplaysStrTable
+        xdef    autoSaveHlStrTable
+        xdef    diyCupAwayGoalsStringTable
+        xdef    diyCupEndMonthStringTable
+        xdef    diyCupPitchTypeOrSeasonStringTable
+        xdef    diyCupPitchTypeStringTable
+        xdef    diyCupStartMonthStringTable
+        xdef    diyLeagueEndingMonthStrTable
+        xdef    diyLeagueMonthsStrTable
+        xdef    diyLeaguePitchTypeStrTable
+        xdef    diyPitchTypeOrSeasonStrTable
+        xdef    diyPitchTypeStringTable
+        xdef    editTeamsPrimaryShirts
+        xdef    editTeamsSecondaryShirt
+        xdef    editTeamsSecondaryShorts
+        xdef    editTeamsSecondarySocks
+        xdef    editTeamsShorts
+        xdef    editTeamsSocks
+        xdef    flipStrTable
+        xdef    friendlyPitchTypeTable
+        xdef    gameLengthStrTable
+        xdef    managerNameBuffer
+        xdef    managerSexBuffer
+        xdef    managerSurnameBuffer
+        xdef    menuMusicStrTable
+        xdef    offsetCoachOrPlayer
+        xdef    pitchTypeOrSeasonTable
+        xdef    pitchTypeStrTable
+        xdef    positionFilterStringTable
+        xdef    saveFileTitle
+        xdef    skillFilterStringTable
+        xdef    stadiumMenuLittlePlayer
+        xdef    teamTacticsUSERA
+        xdef    teamTacticsUSERB
+        xdef    teamTacticsUSERC
+        xdef    teamTacticsUSERD
+        xdef    teamTacticsUSERE
+        xdef    teamTacticsUSERF
 ; --- Chunk 142 xdefs ---
         xdef    transferCompleted
         xdef    a0EndSeason

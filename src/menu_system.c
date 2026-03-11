@@ -705,13 +705,6 @@ void _UnpackMenu(uint8_t *packed, uint8_t *dest)
     uint16_t opcode;
     MenuEntry *curEntry;
 
-    /* Boundary check: dest + MENU_HEADER_SIZE must be <= diyLeagueScratchBuffer */
-    if ((uint32_t)(a1 + MENU_HEADER_SIZE) > (uint32_t)diyLeagueScratchBuffer) {
-        panicReasonCode = 0x9091;
-        _PanicHaltLoop();
-        return;
-    }
-
     menuX = 0;
     menuY = 0;
     initMenuEntry(tmpl);
@@ -822,12 +815,6 @@ convert_menu_switch:
         }
         curEntry->ordinal = entryCount;
         a1 += MENUENTRY_STRIDE;
-        /* Boundary check */
-        if ((uint32_t)(a1 + MENUENTRY_STRIDE) > (uint32_t)diyLeagueScratchBuffer) {
-            panicReasonCode = 0x9092;
-            _PanicHaltLoop();
-            return;
-        }
         entryCount++;
         goto parse_loop;
 
@@ -986,11 +973,6 @@ finish_menu:
                 *(uint32_t *)(a1 + 4) = 0x454E5554; /* 'ENUT' */
                 *(uint32_t *)(a1 + 8) = 0x45585400; /* 'EXT\0' */
                 a1 += 0x46;
-                if ((uint32_t)a1 > (uint32_t)diyLeagueScratchBuffer) {
-                    panicReasonCode = 0x9093;
-                    _PanicHaltLoop();
-                    return;
-                }
             }
             entryIter = (MenuEntry *)((uint8_t *)entryIter + MENUENTRY_STRIDE);
         }

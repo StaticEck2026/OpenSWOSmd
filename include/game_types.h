@@ -17,6 +17,7 @@ typedef long           int32_t;
 
 /* ---- Forward declarations ---- */
 typedef struct Sprite Sprite;
+typedef struct AnimTable AnimTable;
 typedef struct TeamGeneralInfo TeamGeneralInfo;
 typedef struct TeamStatisticsData TeamStatisticsData;
 typedef struct TeamGame TeamGame;
@@ -93,6 +94,36 @@ struct __attribute__((packed)) Sprite {
 typedef char _sprite_size_check[(sizeof(Sprite) == 110) ? 1 : -1];
 
 #define SPRITE_SIZE 110
+
+/* ==================================================================
+ * AnimTable — animation frame table variants
+ * Standard has 32 frame pointers, variants have fewer.
+ * ================================================================== */
+struct __attribute__((packed)) AnimTable {
+    int16_t  frameDelay;
+    int16_t *animFrames[32];
+};
+
+typedef struct __attribute__((packed)) {
+    int16_t  frameDelay;
+    int16_t *animFrames[20];
+} AnimTable_20;
+
+typedef struct __attribute__((packed)) {
+    int16_t  frameDelay;
+    int16_t *animFrames[12];
+} AnimTable_12;
+
+typedef struct __attribute__((packed)) {
+    int16_t  frameDelay;
+    int16_t *animFrames[8];
+} AnimTable_8;
+
+/* Compile-time size checks for AnimTable variants */
+typedef char _animtable_size_check[(sizeof(AnimTable) == 130) ? 1 : -1];
+typedef char _animtable20_size_check[(sizeof(AnimTable_20) == 82) ? 1 : -1];
+typedef char _animtable12_size_check[(sizeof(AnimTable_12) == 50) ? 1 : -1];
+typedef char _animtable8_size_check[(sizeof(AnimTable_8) == 34) ? 1 : -1];
 
 /* ==================================================================
  * TeamGeneralInfo — 144 bytes, pack(1)

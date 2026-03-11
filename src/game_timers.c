@@ -335,9 +335,12 @@ static void __attribute__((noinline)) handleBreakCameraMode(TeamGeneralInfo *a6)
             break;
         if (injuriesForever != 0)
             break;
-        sprTable = &team1SpritesTable[0];
-        for (i = 21; i >= 0; i--) {
-            a1 = *sprTable++;
+        /* Original asm iterated 22 entries starting from team1SpritesTable,
+         * relying on team2SpritesTable being contiguous in memory.
+         * With -fdata-sections, the tables are in separate sections and
+         * no longer adjacent. Iterate both tables explicitly. */
+        for (i = 0; i < 22; i++) {
+            a1 = (i < 11) ? team1SpritesTable[i] : team2SpritesTable[i - 11];
             if (gameState != ST_PLAYERS_TO_INITIAL_POSITIONS &&
                 gameState != ST_PENALTY &&
                 gameState != ST_PENALTIES) {

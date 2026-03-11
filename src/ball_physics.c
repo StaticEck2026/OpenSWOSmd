@@ -87,6 +87,7 @@ extern int16_t  kNormalKickBallSpeed;
 /* ---- Extern function declarations ---- */
 extern void _CheckIfBallOutOfPlay(void);
 extern void _PlaySample3IfNotTraining(void);
+extern void _PlaySfxSample16(void);
 extern int16_t _CalculateDeltaXAndY(int16_t destX, int16_t destY,
                                      int16_t srcX, int16_t srcY,
                                      int16_t speed,
@@ -663,8 +664,8 @@ has_picture:
             goto clear_deltaz;
         }
 
-        /* Play bounce sound */
-        _PlaySample3IfNotTraining();
+        /* Play bounce sound (sample 0x10, not crowd "oooh" 0x2C) */
+        _PlaySfxSample16();
         goto after_z;
 
     clear_deltaz:
