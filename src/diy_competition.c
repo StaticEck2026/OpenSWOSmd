@@ -2498,7 +2498,9 @@ outer_loop:
         /* Use diyFileBufferCopy round index */
         roundIdx = ((DIY_Competition *)diyFileBufferCopy)->currentRound;
     }
-    uint8_t compId = a2s->compId;
+    /* Asm does move.w $2C(a2),d0 / cmp.b (a6),d0 — uses low byte of word at 0x2C
+     * which on big-endian is byte at offset 0x2D, matching the cache builder */
+    uint8_t compId = (uint8_t)(*(uint16_t *)((uint8_t *)a2s + 0x2C));
 
     /* Search teamSelectionKeyCache for matching entry */
     uint8_t *cacheEntry = teamSelectionKeyCache;
@@ -2723,7 +2725,8 @@ void _DIY_RecordLeagueFixtureResultAndAdvanceProgress(void)
     uint8_t *cache = teamSelectionKeyCache;
     int16_t cacheCount = teamSelectionKeyCacheCount - 1;
     int16_t curRound = ((DIY_Competition *)diyFileBufferCopy)->currentRound;
-    uint8_t compId = a6s->compId;
+    /* Asm: move.w $2C(a6),d0 / cmp.b (a4),d0 — low byte of word = byte at 0x2D */
+    uint8_t compId = (uint8_t)(*(uint16_t *)((uint8_t *)a6s + 0x2C));
 
     while (cacheCount >= 0) {
         if (cache[0] == compId) {
@@ -5685,7 +5688,7 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
                     a3 = hideAndAdvance(a3);
             } else {
                 /* "V" label */
-                a3->content = (uint32_t)aV;
+                a3->fg = (uint32_t)aV;
                 a3->isInvisible = 0;
                 a3++;
 
@@ -5702,7 +5705,7 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
                             /* Team A won */
                             int8_t teamIdx = a2[(uint16_t)d4w];
                             uint8_t *name = getTeamNameFromIndex(teamIdx, a4);
-                            uint8_t *dst = (uint8_t *)a3->content;
+                            uint8_t *dst = (uint8_t *)a3->fg;
                             _StringCopy(name, dst);
                             a3->isInvisible = 0;
                             a3++;
@@ -5712,7 +5715,7 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
                             /* Team B won */
                             int8_t teamIdx = a2[(uint16_t)d4w + 1];
                             uint8_t *name = getTeamNameFromIndex(teamIdx, a4);
-                            uint8_t *dst = (uint8_t *)a3->content;
+                            uint8_t *dst = (uint8_t *)a3->fg;
                             _StringCopy(name, dst);
                             a3->isInvisible = 0;
                             a3++;
@@ -5723,7 +5726,7 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
                         /* No result — show both teams */
                         int8_t teamIdx1 = a2[(uint16_t)d4w];
                         uint8_t *name1 = getTeamNameFromIndex(teamIdx1, a4);
-                        uint8_t *dst = (uint8_t *)a3->content;
+                        uint8_t *dst = (uint8_t *)a3->fg;
                         _StringCopy(name1, dst);
                         a3->isInvisible = 0;
                         a3++;
@@ -5731,7 +5734,7 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
                         /* "OR teamName2" */
                         int8_t teamIdx2 = a2[(uint16_t)d4w + 1];
                         uint8_t *name2 = getTeamNameFromIndex(teamIdx2, a4);
-                        dst = (uint8_t *)a3->content;
+                        dst = (uint8_t *)a3->fg;
                         dst = _StringCopy((uint8_t *)aOr, dst);
                         _StringCopy(name2, dst);
                         a3->isInvisible = 0;
@@ -5770,9 +5773,9 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
             uint16_t d4 = d6 * 2;
 
             /* "V" or "-" label */
-            a3->content = (uint32_t)aV;
+            a3->fg = (uint32_t)aV;
             if (*a5 & 0x80)
-                a3->content = (uint32_t)aMinus;
+                a3->fg = (uint32_t)aMinus;
             a3->isInvisible = 0;
             a3++;
 
@@ -5780,7 +5783,7 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
             int8_t teamIdx1 = (int8_t)a6[0];
             uint8_t *name1 = getTeamNameFromIndex(teamIdx1, a4);
             diyCupMatchTeamNamePtr1 = (uint32_t)name1;
-            uint8_t *dst = (uint8_t *)a3->content;
+            uint8_t *dst = (uint8_t *)a3->fg;
             _StringCopy(name1, dst);
             a3->isInvisible = 0;
             a3++;
@@ -5793,7 +5796,7 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
             int8_t teamIdx2 = (int8_t)a6[1];
             uint8_t *name2 = getTeamNameFromIndex(teamIdx2, a4);
             diyCupMatchTeamNamePtr2 = (uint32_t)name2;
-            dst = (uint8_t *)a3->content;
+            dst = (uint8_t *)a3->fg;
             _StringCopy(name2, dst);
             a3->isInvisible = 0;
             a3++;
@@ -5806,12 +5809,12 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
                 /* Has result — show scores */
                 uint8_t *scoreBase = a4 + 0xCA;
                 int16_t score1 = (int8_t)scoreBase[d4];
-                *(int16_t *)&a3->content = score1;
+                *(int16_t *)&a3->fg = score1;
                 a3->isInvisible = 0;
                 a3++;
 
                 int16_t score2 = (int8_t)scoreBase[d4 + 1];
-                *(int16_t *)&a3->content = score2;
+                *(int16_t *)&a3->fg = score2;
                 a3->isInvisible = 0;
                 a3++;
             } else {
@@ -5839,7 +5842,7 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
                     (uint16_t)flags);
 
                 a3->isInvisible = 0;
-                dst = (uint8_t *)a3->content;
+                dst = (uint8_t *)a3->fg;
                 _StringCopy(resultStr, dst);
                 a3++;
             }
@@ -6287,7 +6290,7 @@ void _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection(void)
 
     if (field4A == 0) {
         if ((int16_t)diyCupMenuArg0Copy <= 0) {
-            menuEntries[1].content = (uint32_t)aNextMatch;
+            menuEntries[1].fg = (uint32_t)aNextMatch;
             goto show_entry1_hide_rest;
         }
         goto show_match_entries;
@@ -6295,31 +6298,31 @@ void _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection(void)
 
     if (field4A == 1) {
         fireResetFlag = 1;
-        menuEntries[1].content = (uint32_t)a2ndLegRound;
+        menuEntries[1].fg = (uint32_t)a2ndLegRound;
         goto show_entry1_hide_rest;
     }
 
     if (field4A == 2) {
         fireResetFlag = 1;
-        menuEntries[1].content = (uint32_t)aNextRoundDraw;
+        menuEntries[1].fg = (uint32_t)aNextRoundDraw;
         goto show_entry1_hide_rest;
     }
 
     if (field4A == 3) {
         fireResetFlag = 1;
-        menuEntries[1].content = (uint32_t)aPlayReplays;
+        menuEntries[1].fg = (uint32_t)aPlayReplays;
         goto show_entry1_hide_rest;
     }
 
     if (field4A == 4) {
         fireResetFlag = 1;
-        menuEntries[1].content = (uint32_t)aNextRound;
+        menuEntries[1].fg = (uint32_t)aNextRound;
         goto show_entry1_hide_rest;
     }
 
     /* Default: field4A >= 5 (but != 6) */
     fireResetFlag = 1;
-    menuEntries[1].content = (uint32_t)aNextRound;
+    menuEntries[1].fg = (uint32_t)aNextRound;
 
 show_entry1_hide_rest:
     menuEntries[1].isInvisible = 0;
@@ -6346,7 +6349,7 @@ show_match_entries:
             e6->isInvisible = 0;
             e6[1].isInvisible = 0;
             e6[2].isInvisible = 0;
-            menuEntries[4].isInvisible = 1;
+            menuEntries[7].isInvisible = 1;
             MenuEntry *e3 = &menuEntries[3];
             e3->isInvisible = 1;
             e3[1].isInvisible = 1;
@@ -6765,6 +6768,9 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
         a5->dwHeight = d4;
         *(uint16_t *)&a5->bg = d3;
         *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2C4);
+
+        /* Reset a5 back to entry 31 before drawing (asm reloads a5 here) */
+        a5 = &menuEntries[31];
 
         /* Draw fixture rows (9 items starting at entry 31) */
         _DrawMultipleItems(9, &menuEntries[31]);
@@ -7873,8 +7879,8 @@ void _DIYLeagueTournamentInit(void)
         menuEntries[9].isInvisible = 1;    /* 0x1F8/56=9 */
         menuEntries[10].isInvisible = 1;   /* 0x230/56=10 */
     }
-    /* Fall through (bra.w *+4 → FriendlyMenuReinit, but in context this is
-     * actually a bra to the next instruction = fall-through/nop) */
+    /* bra.w *+4 falls through to DIYLeagueTournamentOnRestore */
+    _DIYLeagueTournamentOnRestore();
 }
 
 /* ================================================================

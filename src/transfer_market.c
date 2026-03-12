@@ -517,7 +517,7 @@ void _FillForeignMarketPlayersData(void)
     if (count == 0)
         return;
 
-    countrySel = (uint8_t)selTeamNumber;        /* move.b (selTeamNumber).l,d5 */
+    countrySel = (uint8_t)(selTeamNumber >> 8);  /* move.b (selTeamNumber).l,d5 — high byte on big-endian */
     marketEntry = careerForeignMarketPlayers;
 
     for (i = count - 1; ; i--) {
@@ -616,7 +616,7 @@ void _AddCareerTeamPlayer(void)
     uint16_t playerOrd;
 
     highestPrice += 3;                                      /* addq.w #3,d5 */
-    homeCountry = (uint8_t)selTeamNumber;                   /* move.b (selTeamNumber).l,d3 */
+    homeCountry = (uint8_t)(selTeamNumber >> 8);             /* move.b (selTeamNumber).l,d3 — high byte on big-endian */
 
     attemptsLeft = 1;                                       /* move.w #1,d6 */
     rand = _Rand2();
@@ -728,7 +728,7 @@ void _AddRandomForeignMarketPlayer(void)
     uint8_t playerOrd;
 
     highestPrice += 3;                                      /* addq.w #3,d5 */
-    homeCountry = (uint8_t)selTeamNumber;
+    homeCountry = (uint8_t)(selTeamNumber >> 8);             /* move.b (selTeamNumber).l — high byte on big-endian */
 
     attemptsLeft = 1;                                       /* move.w #1,d6 */
     rand = _Rand2();
@@ -4221,7 +4221,7 @@ void _Career_GenerateTrialistForTeamPlayer(uint16_t playerIndex)
     uint8_t *base = _GetPlayer(selTeamNumber, 0);
     PlayerFile *pf = (PlayerFile *)(base + PF_OFF);
 
-    uint8_t avoidByte = (uint8_t)selTeamNumber;
+    uint8_t avoidByte = (uint8_t)(selTeamNumber >> 8);  /* move.b — high byte */
     uint16_t avoidWord = selTeamNumber;
 
     uint32_t result = pickRandomTrialistOriginValue(avoidByte, avoidWord);
@@ -4320,7 +4320,7 @@ static void careerInitTrialistAttributes(PlayerFile *pf, uint16_t sourceTeam)
             tidx >>= 8;
             tidx *= 0x2AC;
             randomTeam = &selTeamsPtr + tidx;
-        } while ((uint8_t)selTeamNumber == *randomTeam);
+        } while ((uint8_t)(selTeamNumber >> 8) != *randomTeam);  /* bne: loop until SAME country */
 
         uint16_t r = _Rand2();
         uint16_t pidx = (r & 0xF) * 0x26;

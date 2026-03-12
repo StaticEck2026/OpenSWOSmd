@@ -3208,7 +3208,7 @@ void _EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *c
     /* Save/restore tactics byte, get player info */
     uint8_t *teamBase = (uint8_t *)(uint32_t)chooseTacticsTeamPtr;
     uint8_t savedTactics = teamBase[24]; /* TEAMFILE_TACTICS */
-    teamBase[24] = ((uint8_t *)&editTacticsCurrentTactics)[TEAMTACTICS_BALLOUTOFPLAYTACTICS];
+    teamBase[24] = editTacticsCurrentTactics.ballOutOfPlayTactics;
 
     uint16_t slot, playerIndex;
     uint8_t *playerPtr = _GetPlayerInfoBreakPosition(teamBase, (uint16_t)playerOrdinal, &slot, &playerIndex);
@@ -3309,7 +3309,7 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     /* Get player info */
     uint8_t *teamBase = (uint8_t *)(uint32_t)chooseTacticsTeamPtr;
     uint8_t savedTactics = teamBase[24]; /* TEAMFILE_TACTICS */
-    teamBase[24] = ((uint8_t *)&editTacticsCurrentTactics)[TEAMTACTICS_BALLOUTOFPLAYTACTICS];
+    teamBase[24] = editTacticsCurrentTactics.ballOutOfPlayTactics;
 
     uint16_t d7_slot, d1_fileIdx;
     uint8_t *playerPtr = _GetPlayerInfoBreakPosition(teamBase, d7, &d7_slot, &d1_fileIdx);
@@ -3350,19 +3350,19 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
 
     /* Entry 41: player name (surname) */
     uint8_t *surname = _ExtractSurname(playerPtr + 0x4F, 0x800D);
-    e->content = (uint32_t)surname;
+    e->fg = (uint32_t)surname;
     e->y = entryY;
     e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 42 */
 
     /* Entry 42: position string */
     uint8_t posAndFace = playerPtr[0x66];
     uint16_t posIdx = ((uint16_t)posAndFace & 0xE0) >> 3;
-    e->content = playerPositionsStringTable[posIdx / 4];
+    e->fg = playerPositionsStringTable[posIdx / 4];
     e->y = entryY;
     e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 43 */
 
     /* Entry 43: top skills */
-    _FormTopSkillsString((uint8_t *)e->content, playerPtr);
+    _FormTopSkillsString((uint8_t *)e->fg, playerPtr);
     e->y = entryY;
     e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 44 */
 
@@ -3374,7 +3374,7 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
         _InitPlayerValueDisplayStruct(playerPtr, (uint8_t *)e);
     } else {
         _FormatPlayerValueOrStatusText(playerPtr, fundsBuffer);
-        e->content = (uint32_t)fundsBuffer;
+        e->fg = (uint32_t)fundsBuffer;
     }
     e->isInvisible = 0;
 

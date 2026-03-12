@@ -47,7 +47,7 @@
 #define TEAMFILE_PLAYERNUMBERS  60
 
 /* TeamTactics offsets */
-#define TEAMTACTICS_BALLOUTOFPLAYTACTICS  2
+#define TEAMTACTICS_BALLOUTOFPLAYTACTICS  369
 
 /* PlayerFile field offsets (within the 38-byte PlayerFile struct, at +76 from GetPlayer result) */
 #define PF_SHIRTNUMBER       2

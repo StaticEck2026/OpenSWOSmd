@@ -1814,7 +1814,7 @@ void _SquadFinish(void)
 
     /* Entry 21: set fg to country-specific position string */
     {
-        uint8_t countryIdx = (uint8_t)selTeamNumber;
+        uint8_t countryIdx = (uint8_t)(selTeamNumber >> 8);  /* move.b — high byte = country */
         uint8_t *countryEntry = (uint8_t *)countriesTable[countryIdx];
         int8_t langCode = (int8_t)countryEntry[0];
         int16_t langIdx = (int16_t)langCode;

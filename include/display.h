@@ -18,7 +18,7 @@ typedef long int32_t;
  * Uncomment to enable AGA (8 bitplanes, 256 colors).
  * When commented out, the build uses OCS (4 bitplanes, 16 colors).
  * ================================================================== */
-#define AGA
+//#define AGA
 
 /* ---- Graphics folder path ---- */
 #ifdef AGA

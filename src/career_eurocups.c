@@ -473,10 +473,10 @@ static void drawRandomTeamFromPoolAndCopyGrid(uint16_t titleHolder,
             continue;
 
         if (teamNoOfferAccepted != 0xFFFF) {
-            if (selectedCountry == (uint8_t)teamNoOfferAccepted)
+            if (selectedCountry == (uint8_t)(teamNoOfferAccepted >> 8))
                 continue;
         } else {
-            if (selectedCountry == (uint8_t)selTeamNumber)
+            if (selectedCountry == (uint8_t)(selTeamNumber >> 8))
                 continue;
         }
         break;

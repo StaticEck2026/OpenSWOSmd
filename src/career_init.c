@@ -967,7 +967,7 @@ void _InitializeNewSeason(void)
 
         /* Look up team flags from region table */
         uint32_t *regionTable = (uint32_t *)careerTeamFlagsByRegionTable;
-        uint16_t regionIdx = (uint8_t)selTeamNumber;
+        uint16_t regionIdx = (uint8_t)(selTeamNumber >> 8);  /* move.b — high byte = country */
         int16_t regionOffset = (int16_t)(int8_t)regionIdx - 80;
         uint8_t *flagsArray = (uint8_t *)regionTable[regionOffset];
         someTeamFlags = flagsArray[currentSeasonShowing];
@@ -988,7 +988,7 @@ void _InitializeNewSeason(void)
         compTablePtr = &careerCupPickList;
     } else {
         /* Club team */
-        nationalTeamFileCode = (uint8_t)selTeamNumber;
+        nationalTeamFileCode = (uint8_t)(selTeamNumber >> 8);  /* move.b — high byte */
 
         uint16_t tableIdx = selTeamNumber >> 8;
         compTablePtr = (uint32_t *)competitionsTable[tableIdx];

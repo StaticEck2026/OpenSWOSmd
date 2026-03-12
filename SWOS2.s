@@ -3,7 +3,7 @@
 ;         and Zlatko Karakaš (https://github.com/zlatkok)
 
 ; AGA mode switch: set to 1 for 8-plane 256-color AGA, 0 for 4-plane OCS
-AGA = 1
+AGA = 0
 
         xdef    jumpHeaderHitAnimTable
         xdef    jumpHeaderAttemptAnimTable
