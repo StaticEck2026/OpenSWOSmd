@@ -994,7 +994,7 @@ void _CompetitionTopGoalScorersInit(void)
             a5 += 1;
             {
                 uint8_t score = *(entry + 35);
-                a5->fg = (a5->fg & 0xFFFF0000u) | (uint16_t)score;
+                *(uint16_t *)&a5->fg = (uint16_t)score;  /* ENTRY_NUMBER: write high word */
             }
 
             a5 += 1;
@@ -1151,7 +1151,7 @@ void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         if (secondaryCompetitionPtr != 0)
         {
             d0val = *(playerPtr + 0x6D);     /* goalStats[0] */
-            a4->fg = (a4->fg & 0xFFFF0000u) | d0val;
+            *(uint16_t *)&a4->fg = d0val;  /* ENTRY_NUMBER: write high word */
             a4->y = yCoord;
             a4->isInvisible = 0;
         }
@@ -1162,7 +1162,7 @@ void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         if (secondaryCompetitionPtr != 0)
         {
             d0val = *(playerPtr + 0x6E);     /* goalStats[1] */
-            a4->fg = (a4->fg & 0xFFFF0000u) | d0val;
+            *(uint16_t *)&a4->fg = d0val;  /* ENTRY_NUMBER: write high word */
             a4->y = yCoord;
             a4->isInvisible = 0;
         }
@@ -1173,7 +1173,7 @@ void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         if (tertiaryCompetitionPtr != 0)
         {
             d0val = *(playerPtr + 0x6F);     /* goalStats[2] */
-            a4->fg = (a4->fg & 0xFFFF0000u) | d0val;
+            *(uint16_t *)&a4->fg = d0val;  /* ENTRY_NUMBER: write high word */
             a4->y = yCoord;
             a4->isInvisible = 0;
         }
@@ -1183,7 +1183,7 @@ void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         {
             uint8_t totalScore = *(scorerEntry + 35);
             d0val = totalScore;
-            a4->fg = (a4->fg & 0xFFFF0000u) | d0val;
+            *(uint16_t *)&a4->fg = d0val;  /* ENTRY_NUMBER: write high word */
             a4->y = yCoord;
             a4->isInvisible = 0;
         }
@@ -1310,34 +1310,6 @@ void _ManagementArrowDownSelect(void)
 }
 
 
-/* ================================================================
- * Career_StorePromotionRelegationInSeasonInfo  (SWOS2.s line 58429)
- *
- * Stores promotion (3) or relegation (4) flag at offset $68 (104)
- * in the current season info.
- * ================================================================ */
-__attribute__((used, externally_visible))
-void _Career_StorePromotionRelegationInSeasonInfo(void)
-{
-    uint8_t flag;
-
-    if (youreSacked != 0)
-        return;
-
-    if (playPromotedAnimation != 0)
-        flag = 3;
-    else if (playRelegatedAnimation != 0)
-        flag = 4;
-    else
-        return;
-
-    {
-        uint8_t *si = _GetCurrentSeasonPointer();
-        si[0x68] = flag;
-    }
-}
-
-
 /* SeasonInformations struct field offsets (from SWOS2.s EQUs) */
 #define SI_CLUBNO                0   /* uint16_t */
 #define SI_CLUBNAME              2   /* char[18] */
@@ -1367,6 +1339,33 @@ void _Career_StorePromotionRelegationInSeasonInfo(void)
 #define SI_TOURLOST            103   /* uint8_t */
 #define SI_TOURNAMENTSTATUS    104   /* uint8_t */
 #define SI_MANAGERSTATUS       105   /* int8_t */
+
+/* ================================================================
+ * Career_StorePromotionRelegationInSeasonInfo  (SWOS2.s line 58429)
+ *
+ * Stores promotion (3) or relegation (4) flag at offset $68 (104)
+ * in the current season info.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _Career_StorePromotionRelegationInSeasonInfo(void)
+{
+    uint8_t flag;
+
+    if (youreSacked != 0)
+        return;
+
+    if (playPromotedAnimation != 0)
+        flag = 3;
+    else if (playRelegatedAnimation != 0)
+        flag = 4;
+    else
+        return;
+
+    {
+        uint8_t *si = _GetCurrentSeasonPointer();
+        si[SI_TOURNAMENTSTATUS] = flag;
+    }
+}
 
 /* ================================================================
  * Chunk 199 — Career_FillCurrentSeasonInfo + EncodeCompetitionPositionForSeasonInfo
@@ -1620,8 +1619,9 @@ void _Career_FillCurrentSeasonInfo(void)
 
         while (i >= 0) {
             uint8_t *player = _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
-            uint16_t skill = (uint16_t)player[0x6D] + (uint16_t)player[0x6E]
-                           + (uint16_t)player[0x6F] + (uint16_t)player[0x70];
+            PlayerFile *pf = (PlayerFile *)(player + sizeof(TeamFile));
+            uint16_t skill = (uint16_t)pf->goalStats[0] + (uint16_t)pf->goalStats[1]
+                           + (uint16_t)pf->goalStats[2] + (uint16_t)pf->goalStats[3];
 
             if (skill > bestSkill) {
                 bestCount = 1;

@@ -1613,17 +1613,18 @@ extern const char a1k[];        /* "\x9C%1K" */
 __attribute__((used, externally_visible))
 void _FormatPlayerValueOrStatusText(uint8_t *base, uint8_t *dst)
 {
-    /* Check status byte at offset 0x71 */
-    if (base[0x71] == 0x9B) {
+    /* Check status byte (someFlag in PlayerFile) */
+    PlayerFile *pf = (PlayerFile *)(base + sizeof(TeamFile));
+    if ((uint8_t)pf->someFlag == 0x9B) {
         _StringCopy((const uint8_t *)aTrial, dst);
         return;
     }
-    if (base[0x71] == 0x9A) {
+    if ((uint8_t)pf->someFlag == 0x9A) {
         _StringCopy((const uint8_t *)aRes, dst);
         return;
     }
-    /* Check loan flag at offset 0x66, bit 1 */
-    if (base[0x66] & 0x02) {
+    /* Check loan flag (positionAndFace bit 1) */
+    if (pf->positionAndFace & 0x02) {
         _StringCopy((const uint8_t *)aLoan, dst);
         return;
     }

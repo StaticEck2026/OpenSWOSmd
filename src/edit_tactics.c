@@ -231,11 +231,11 @@ void _ShowStandardChooseTacticsMenu(uint8_t *teamPtr)
 __attribute__((used, externally_visible))
 void _EditTacticsInit(void)
 {
-    uint8_t *teamPtr = (uint8_t *)chooseTacticsTeamPtr;
-    _SetBenchPlayersNumbers(teamPtr);
+    TeamFileEx *teamEx = (TeamFileEx *)chooseTacticsTeamPtr;
+    _SetBenchPlayersNumbers((uint8_t *)teamEx);
 
     uint16_t numPlayers;
-    if (selTeamNumber == 0xFFFF || *(uint16_t *)teamPtr != selTeamNumber) {
+    if (selTeamNumber == 0xFFFF || *(uint16_t *)&teamEx->team.countryNumber != selTeamNumber) {
         numPlayers = 16;
     } else {
         numPlayers = careerNumPlayers;
@@ -2055,7 +2055,7 @@ uint8_t *_GetPlayerInfoBreakPosition(uint8_t *teamPtr, uint16_t requestedSlot,
         uint8_t *positions = (uint8_t *)positionsTable[formIdx];
         slot = (uint8_t)(positions[requestedSlot] - 1);
     }
-    uint16_t teamNumber = *(uint16_t *)teamPtr;
+    uint16_t teamNumber = *(uint16_t *)&((TeamFileEx *)teamPtr)->team.countryNumber;
     uint8_t *player = _GetPlayerAtIndex(teamNumber, slot);
     *outSlot = slot;
     *outPlayerIndex = _cGetPlayerAtIndexFileIdx;
@@ -2132,10 +2132,12 @@ void _EditTactics_SwapPlayersInSlots(uint16_t slot1, uint16_t slot2)
     }
 
     if (doPlayerSwap) {
-        uint16_t teamNumber = *(uint16_t *)teamEx;
+        uint16_t teamNumber = *(uint16_t *)&teamEx->team.countryNumber;
         uint8_t *player1 = _GetPlayerAtIndex(teamNumber, slot1);
+        PlayerFile *pf1 = (PlayerFile *)(player1 + 76);
         uint16_t fileIdx1 = _cGetPlayerAtIndexFileIdx;
         uint8_t *player2 = _GetPlayerAtIndex(teamNumber, slot2);
+        PlayerFile *pf2 = (PlayerFile *)(player2 + 76);
         uint16_t fileIdx2 = _cGetPlayerAtIndexFileIdx;
 
         /* Swap position bytes in playerPositionsArray */
@@ -2143,10 +2145,10 @@ void _EditTactics_SwapPlayersInSlots(uint16_t slot1, uint16_t slot2)
         (&playerPositionsArray)[fileIdx2] = (&playerPositionsArray)[fileIdx1];
         (&playerPositionsArray)[fileIdx1] = tmp;
 
-        /* Swap byte at offset 0x4E (78) in player records */
-        uint8_t tmp2 = player2[0x4E];
-        player2[0x4E] = player1[0x4E];
-        player1[0x4E] = tmp2;
+        /* Swap shirt numbers between players */
+        int8_t tmp2 = pf2->shirtNumber;
+        pf2->shirtNumber = pf1->shirtNumber;
+        pf1->shirtNumber = tmp2;
     }
 
     /* Swap entries in the player number mapping array */
@@ -2356,21 +2358,22 @@ extern uint16_t shirtTypesTable[];       /* 4 entries of 8 words each (4 shirt t
 extern uint16_t shirtsIndexTable[];      /* 8 word entries (byte offsets into color table) */
 extern uint32_t playerPositionsStringTable[];       /* 8 string pointers */
 
-/* EditTeamsGetPlayerPointer — return pointer to player N in selTeamsPtr */
-static uint8_t *EditTeamsGetPlayerPointerC(MenuEntry *entry)
+/* EditTeamsGetPlayerPointer — return PlayerFile pointer for player N in selTeamsPtr */
+static PlayerFile *EditTeamsGetPlayerFileC(MenuEntry *entry)
 {
     uint16_t idx = entry->ordinal - 23;
-    return &selTeamsPtr + idx * 38;
+    TeamFileEx *team = (TeamFileEx *)&selTeamsPtr;
+    return &team->players[idx];
 }
 
 /* PrimaryKitColorConversion — build primary shirt/shorts/socks color tables */
 static void PrimaryKitColorConversionC(void)
 {
-    uint8_t *team = &selTeamsPtr;
+    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
     uint16_t *colTable = editTeamsPrimaryShirtColTable;
-    uint16_t stripesCol = kTeamColorsTable[team[27]];  /* prStripesColor */
-    uint16_t basicCol = kTeamColorsTable[team[28]];    /* prBasicColor */
-    uint16_t *types = &shirtTypesTable[team[26] * 8];  /* prShirtType * 8 words */
+    uint16_t stripesCol = kTeamColorsTable[tf->prStripesColor];
+    uint16_t basicCol = kTeamColorsTable[tf->prBasicColor];
+    uint16_t *types = &shirtTypesTable[tf->prShirtType * 8];
     uint16_t *indices = shirtsIndexTable;
 
     for (int16_t i = 7; i >= 0; i--) {
@@ -2382,22 +2385,22 @@ static void PrimaryKitColorConversionC(void)
     }
 
     /* Shorts */
-    uint16_t shortsCol = kTeamColorsTable[team[29]];  /* prShortsColor */
+    uint16_t shortsCol = kTeamColorsTable[tf->prShortsColor];
     ((uint16_t *)((uint8_t *)editTeamsShortsColTable + 0x16))[0] = shortsCol;
 
     /* Socks */
-    uint16_t socksCol = kTeamColorsTable[team[30]];   /* prSocksColor */
+    uint16_t socksCol = kTeamColorsTable[tf->prSocksColor];
     ((uint16_t *)((uint8_t *)editTeamsSocksColTable + 0x16))[0] = socksCol;
 }
 
 /* SecondaryKitColorConversion — build secondary shirt/shorts/socks color tables */
 static void SecondaryKitColorConversionC(void)
 {
-    uint8_t *team = &selTeamsPtr;
+    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
     uint16_t *colTable = editTeamsSecondaryShirtColTable;
-    uint16_t stripesCol = kTeamColorsTable[team[32]];  /* secStripesColor */
-    uint16_t basicCol = kTeamColorsTable[team[33]];    /* secBasicColor */
-    uint16_t *types = &shirtTypesTable[team[31] * 8];  /* secShirtType * 8 words */
+    uint16_t stripesCol = kTeamColorsTable[tf->secStripesColor];
+    uint16_t basicCol = kTeamColorsTable[tf->secBasicColor];
+    uint16_t *types = &shirtTypesTable[tf->secShirtType * 8];
     uint16_t *indices = shirtsIndexTable;
 
     for (int16_t i = 7; i >= 0; i--) {
@@ -2409,20 +2412,20 @@ static void SecondaryKitColorConversionC(void)
     }
 
     /* Shorts */
-    uint16_t shortsCol = kTeamColorsTable[team[34]];  /* secShortsColor */
+    uint16_t shortsCol = kTeamColorsTable[tf->secShortsColor];
     ((uint16_t *)((uint8_t *)editTeamsSecondaryShortsColTable + 0x16))[0] = shortsCol;
 
     /* Socks */
-    uint16_t socksCol = kTeamColorsTable[team[35]];   /* secSocksColor */
+    uint16_t socksCol = kTeamColorsTable[tf->secSocksColor];
     ((uint16_t *)((uint8_t *)editTeamsSecondarySocksColTable + 0x16))[0] = socksCol;
 }
 
 /* MarkFirstKitShirt — highlight selected primary shirt type in menu */
 static void MarkFirstKitShirtC(void)
 {
-    uint8_t *team = &selTeamsPtr;
+    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
     MenuEntry *e = &menuEntries[0x348 / 56]; /* menuEntries + $348 / 56 = entry 15 */
-    uint8_t shirtType = team[26]; /* prShirtType */
+    uint8_t shirtType = tf->prShirtType;
 
     for (int16_t i = 3; i >= 0; i--) {
         *(uint16_t *)&e->bg = 9;  /* PINK_TO_BROWN_9 */
@@ -2435,9 +2438,9 @@ static void MarkFirstKitShirtC(void)
 /* MarkSecondKitShirt — highlight selected secondary shirt type in menu */
 static void MarkSecondKitShirtC(void)
 {
-    uint8_t *team = &selTeamsPtr;
+    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
     MenuEntry *e = &menuEntries[0x428 / 56]; /* entry 19 */
-    uint8_t shirtType = team[31]; /* secShirtType */
+    uint8_t shirtType = tf->secShirtType;
 
     for (int16_t i = 3; i >= 0; i--) {
         *(uint16_t *)&e->bg = 9;  /* PINK_TO_BROWN_9 */
@@ -2507,36 +2510,36 @@ void _EditTeamsOK(void)
 __attribute__((used, externally_visible))
 void _EditTeamsChangeShirtsPrimary(void)
 {
-    uint8_t *team = &selTeamsPtr;
+    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
     uint8_t d0;
 
     if (controlMask == 0x41) {          /* left+fire */
-        d0 = team[27];  /* prStripesColor */
+        d0 = tf->prStripesColor;
         d0 = (d0 == 0) ? 9 : d0 - 1;
-        team[27] = d0;
+        tf->prStripesColor = d0;
     } else if (controlMask == 0x81) {   /* right+fire */
-        d0 = team[27];
+        d0 = tf->prStripesColor;
         d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
-        team[27] = d0;
+        tf->prStripesColor = d0;
     } else if (controlMask == 0x101) {  /* up+fire */
-        if (team[26] == 0) {  /* SHIRT_ORDINARY */
-            d0 = team[27];
+        if (tf->prShirtType == 0) {  /* SHIRT_ORDINARY */
+            d0 = tf->prStripesColor;
             d0 = (d0 == 0) ? 9 : d0 - 1;
-            team[27] = d0;
+            tf->prStripesColor = d0;
         } else {
-            d0 = team[28];  /* prBasicColor */
+            d0 = tf->prBasicColor;
             d0 = (d0 == 0) ? 9 : d0 - 1;
-            team[28] = d0;
+            tf->prBasicColor = d0;
         }
     } else if (controlMask == 0x201) {  /* down+fire */
-        if (team[26] == 0) {  /* SHIRT_ORDINARY */
-            d0 = team[27];
+        if (tf->prShirtType == 0) {  /* SHIRT_ORDINARY */
+            d0 = tf->prStripesColor;
             d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
-            team[27] = d0;
+            tf->prStripesColor = d0;
         } else {
-            d0 = team[28];
+            d0 = tf->prBasicColor;
             d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
-            team[28] = d0;
+            tf->prBasicColor = d0;
         }
     } else {
         return;
@@ -2551,36 +2554,36 @@ void _EditTeamsChangeShirtsPrimary(void)
 __attribute__((used, externally_visible))
 void _EditTeamsChangeShirtsSecondary(void)
 {
-    uint8_t *team = &selTeamsPtr;
+    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
     uint8_t d0;
 
     if (controlMask == 0x41) {          /* left+fire */
-        d0 = team[32];  /* secStripesColor */
+        d0 = tf->secStripesColor;
         d0 = (d0 == 0) ? 9 : d0 - 1;
-        team[32] = d0;
+        tf->secStripesColor = d0;
     } else if (controlMask == 0x81) {   /* right+fire */
-        d0 = team[32];
+        d0 = tf->secStripesColor;
         d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
-        team[32] = d0;
+        tf->secStripesColor = d0;
     } else if (controlMask == 0x101) {  /* up+fire */
-        if (team[31] == 0) {
-            d0 = team[32];
+        if (tf->secShirtType == 0) {
+            d0 = tf->secStripesColor;
             d0 = (d0 == 0) ? 9 : d0 - 1;
-            team[32] = d0;
+            tf->secStripesColor = d0;
         } else {
-            d0 = team[33];  /* secBasicColor */
+            d0 = tf->secBasicColor;
             d0 = (d0 == 0) ? 9 : d0 - 1;
-            team[33] = d0;
+            tf->secBasicColor = d0;
         }
     } else if (controlMask == 0x201) {  /* down+fire */
-        if (team[31] == 0) {
-            d0 = team[32];
+        if (tf->secShirtType == 0) {
+            d0 = tf->secStripesColor;
             d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
-            team[32] = d0;
+            tf->secStripesColor = d0;
         } else {
-            d0 = team[33];
+            d0 = tf->secBasicColor;
             d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
-            team[33] = d0;
+            tf->secBasicColor = d0;
         }
     } else {
         return;
@@ -2595,8 +2598,8 @@ void _EditTeamsChangeShirtsSecondary(void)
 __attribute__((used, externally_visible))
 void _EditTeamsChangeShortsPrimary(void)
 {
-    uint8_t *team = &selTeamsPtr;
-    uint8_t d0 = team[29]; /* prShortsColor */
+    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    uint8_t d0 = tf->prShortsColor;
 
     if (controlMask == 0x41 || controlMask == 0x101) {
         d0 = (d0 == 0) ? 9 : d0 - 1;
@@ -2606,7 +2609,7 @@ void _EditTeamsChangeShortsPrimary(void)
         return;
     }
 
-    team[29] = d0;
+    tf->prShortsColor = d0;
     PrimaryKitColorConversionC();
     /* nullsub_16 */
     _CallDrawMultipleItems(1, &menuEntries[0x150 / 56]);
@@ -2616,8 +2619,8 @@ void _EditTeamsChangeShortsPrimary(void)
 __attribute__((used, externally_visible))
 void _EditTeamsChangeShortsSecondary(void)
 {
-    uint8_t *team = &selTeamsPtr;
-    uint8_t d0 = team[34]; /* secShortsColor */
+    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    uint8_t d0 = tf->secShortsColor;
 
     if (controlMask == 0x41 || controlMask == 0x101) {
         d0 = (d0 == 0) ? 9 : d0 - 1;
@@ -2627,7 +2630,7 @@ void _EditTeamsChangeShortsSecondary(void)
         return;
     }
 
-    team[34] = d0;
+    tf->secShortsColor = d0;
     SecondaryKitColorConversionC();
     /* nullsub_16 */
     _CallDrawMultipleItems(1, &menuEntries[0x230 / 56]);
@@ -2637,8 +2640,8 @@ void _EditTeamsChangeShortsSecondary(void)
 __attribute__((used, externally_visible))
 void _EditTeamsChangeSocksPrimary(void)
 {
-    uint8_t *team = &selTeamsPtr;
-    uint8_t d0 = team[30]; /* prSocksColor */
+    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    uint8_t d0 = tf->prSocksColor;
 
     if (controlMask == 0x41 || controlMask == 0x101) {
         d0 = (d0 == 0) ? 9 : d0 - 1;
@@ -2648,7 +2651,7 @@ void _EditTeamsChangeSocksPrimary(void)
         return;
     }
 
-    team[30] = d0;
+    tf->prSocksColor = d0;
     PrimaryKitColorConversionC();
     _CallDrawMultipleItems(1, &menuEntries[0x188 / 56]);
 }
@@ -2657,8 +2660,8 @@ void _EditTeamsChangeSocksPrimary(void)
 __attribute__((used, externally_visible))
 void _EditTeamsChangeSocksSecondary(void)
 {
-    uint8_t *team = &selTeamsPtr;
-    uint8_t d0 = team[35]; /* secSocksColor */
+    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    uint8_t d0 = tf->secSocksColor;
 
     if (controlMask == 0x41 || controlMask == 0x101) {
         d0 = (d0 == 0) ? 9 : d0 - 1;
@@ -2668,7 +2671,7 @@ void _EditTeamsChangeSocksSecondary(void)
         return;
     }
 
-    team[35] = d0;
+    tf->secSocksColor = d0;
     SecondaryKitColorConversionC();
     _CallDrawMultipleItems(1, &menuEntries[0x268 / 56]);
 }
@@ -2677,8 +2680,8 @@ void _EditTeamsChangeSocksSecondary(void)
 __attribute__((used, externally_visible))
 void _EditTeamsSelectPrimaryShirtType(MenuEntry *entry)
 {
-    uint8_t *team = &selTeamsPtr;
-    team[26] = (uint8_t)(entry->ordinal - 12); /* prShirtType */
+    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    tf->prShirtType = (uint8_t)(entry->ordinal - 12);
     MarkFirstKitShirtC();
     PrimaryKitColorConversionC();
     /* nullsub_16 */
@@ -2690,8 +2693,8 @@ void _EditTeamsSelectPrimaryShirtType(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _EditTeamsSelectSecondaryShirtType(MenuEntry *entry)
 {
-    uint8_t *team = &selTeamsPtr;
-    team[31] = (uint8_t)(entry->ordinal - 16); /* secShirtType */
+    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    tf->secShirtType = (uint8_t)(entry->ordinal - 16);
     MarkSecondKitShirtC();
     SecondaryKitColorConversionC();
     /* nullsub_16 */
@@ -2724,15 +2727,15 @@ void _EditTeamsSelectCoachName(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _EditTeamsChangePlayerFace(MenuEntry *entry)
 {
-    uint8_t *player = EditTeamsGetPlayerPointerC(entry);
-    uint8_t posAndFace = player[76 + 26]; /* PLAYERFILE_POSITIONANDFACE + 0x4C */
+    PlayerFile *pf = EditTeamsGetPlayerFileC(entry);
+    uint8_t posAndFace = pf->positionAndFace;
     uint16_t faceIdx = (posAndFace & 0x18) >> 3;
 
     faceIdx++;
     if (faceIdx == 3)
         faceIdx = 0;
 
-    player[76 + 26] = (posAndFace & 0xE7) | (uint8_t)(faceIdx << 3);
+    pf->positionAndFace = (posAndFace & 0xE7) | (uint8_t)(faceIdx << 3);
 
     /* Update menu entry sprite to show new face */
     *(uint16_t *)&entry->fg = (uint16_t)(faceIdx + 186);  /* SPR_PL_FACE_WHITE_GUY */
@@ -2748,13 +2751,13 @@ void _InitEditTeamsMenu(void)
     if (teamIsImported != 0)
         menuEntries[0x460 / 56].isInvisible = 1;
 
-    uint8_t *team = &selTeamsPtr;
+    TeamFileEx *teamEx = (TeamFileEx *)&selTeamsPtr;
 
     /* Team name → entry 0 */
-    menuEntries[0].fg = (uint32_t)(uint8_t *)(team + 5);
+    menuEntries[0].fg = (uint32_t)(uint8_t *)teamEx->team.teamName;
 
     /* Coach name → entry at offset 0xA8 */
-    menuEntries[0xA8 / 56].fg = (uint32_t)(uint8_t *)(team + 36);
+    menuEntries[0xA8 / 56].fg = (uint32_t)(uint8_t *)teamEx->team.coachName;
 
     PrimaryKitColorConversionC();
     SecondaryKitColorConversionC();
@@ -2764,18 +2767,16 @@ void _InitEditTeamsMenu(void)
     /* Set player faces and names */
     MenuEntry *faceEntry = &menuEntries[0x508 / 56];
     MenuEntry *nameEntry = &menuEntries[0x888 / 56];
-    uint8_t *playerPtr = team;
 
     for (int16_t i = 15; i >= 0; i--) {
-        uint8_t posAndFace = playerPtr[76 + 26];  /* PLAYERFILE_POSITIONANDFACE + 0x4C */
+        PlayerFile *pf = &teamEx->players[15 - i];
+        uint8_t posAndFace = pf->positionAndFace;
         uint16_t faceIdx = (posAndFace & 0x18) >> 3;
         *(uint16_t *)&faceEntry->fg = (uint16_t)(faceIdx + 186);  /* SPR_PL_FACE_WHITE_GUY */
         faceEntry = (MenuEntry *)((uint8_t *)faceEntry + 56);
 
-        nameEntry->fg = (uint32_t)(uint8_t *)(playerPtr + 76 + 3);  /* PLAYERFILE_PLAYERNAME + 0x4C */
+        nameEntry->fg = (uint32_t)(uint8_t *)pf->playerName;
         nameEntry = (MenuEntry *)((uint8_t *)nameEntry + 56);
-
-        playerPtr += 38;
     }
 }
 
@@ -2784,16 +2785,16 @@ __attribute__((used, externally_visible))
 void _EditTeamsPlayersBeforeDraw(MenuEntry *entry)
 {
     uint16_t playerIdx = entry->ordinal - 23;
-    uint8_t *team = &selTeamsPtr;
-    uint8_t *playerPtr = team + playerIdx * 38;
+    TeamFileEx *teamEx = (TeamFileEx *)&selTeamsPtr;
+    PlayerFile *pf = &teamEx->players[playerIdx];
 
-    uint8_t posAndFace = playerPtr[76 + 26];  /* PLAYERFILE_POSITIONANDFACE */
+    uint8_t posAndFace = pf->positionAndFace;
     int16_t y = entry->y;
 
     MenuEntry *e = &menuEntries[0xC08 / 56];
 
-    /* Player number (shirt number byte at offset 78 relative to player start = team + playerIdx*38 + 78) */
-    uint8_t shirtNum = playerPtr[78];
+    /* Player number (shirt number) */
+    uint8_t shirtNum = (uint8_t)pf->shirtNumber;
     *(uint16_t *)&e->fg = (uint16_t)shirtNum;
     e->y = y;
     e = (MenuEntry *)((uint8_t *)e + 56);
@@ -2803,8 +2804,7 @@ void _EditTeamsPlayersBeforeDraw(MenuEntry *entry)
     e = (MenuEntry *)((uint8_t *)e + 56);
 
     /* Position string */
-    uint8_t posField = playerPtr[102];  /* offset 76+26 = 102, PLAYERFILE_POSITIONANDFACE */
-    uint16_t posIdx = (posField & 0xE0) >> 3;  /* extract top 3 bits, shift to word index */
+    uint16_t posIdx = (posAndFace & 0xE0) >> 3;  /* extract top 3 bits, shift to word index */
     e->fg = playerPositionsStringTable[posIdx / 4];
     e->y = y;
     e = (MenuEntry *)((uint8_t *)e + 56);
@@ -2949,7 +2949,7 @@ void _ImportTeamsMenu(void)
 
     if ((int16_t)selectedTeamCountryNumber != -1) {
         /* Save selTeamsPtr team number and selTeamImportField, copy selected team data */
-        uint16_t savedTeamNum = *(uint16_t *)&selTeamsPtr;
+        uint16_t savedTeamNum = *(uint16_t *)&((TeamFileEx *)&selTeamsPtr)->team.countryNumber;
         uint8_t savedImportField = selTeamImportField;
 
         /* Copy 342 words (684 bytes) from selectedTeamPtr to selTeamsPtr */
@@ -2960,7 +2960,7 @@ void _ImportTeamsMenu(void)
 
         /* Restore saved values */
         selTeamImportField = savedImportField;
-        *(uint16_t *)&selTeamsPtr = savedTeamNum;
+        *(uint16_t *)&((TeamFileEx *)&selTeamsPtr)->team.countryNumber = savedTeamNum;
 
         teamIsImported = 1;
         _SetCurrentEntry(21);
@@ -3034,9 +3034,9 @@ uint8_t *_ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers,
     uint16_t i;
     for (i = 0; i < numTeams; i++) {
         uint16_t teamNum = teamNums[i];
-        uint8_t *teamPtr = _VerifyTeamLoaded(teamNum);
+        TeamFile *teamPtr = (TeamFile *)_VerifyTeamLoaded(teamNum);
         idxArray[i] = (uint8_t)count;
-        nameArray[count] = (uint32_t)(teamPtr + 5);
+        nameArray[count] = (uint32_t)teamPtr->teamName;
         count++;
     }
 
@@ -3118,16 +3118,16 @@ void _EditTactics(void)
     }
 
     {
-        uint8_t *selPtr = &selTeamsPtr;
+        TeamFileEx *selPtr = (TeamFileEx *)&selTeamsPtr;
         uint16_t *countryBuf = (uint16_t *)editTacticsCountryBuffer;
         uint16_t found = 0;
         uint8_t *lastNonComputer = (uint8_t *)0;
 
         for (uint16_t i = 0; i < numSelectedTeams; i++) {
-            uint8_t *t = selPtr + (uint32_t)i * 684;
-            if (t[4] != TEAM_COMPUTER) {  /* TEAMFILE_TEAMCONTROLS */
-                *countryBuf++ = *(uint16_t *)t;
-                lastNonComputer = t;
+            TeamFileEx *t = (TeamFileEx *)((uint8_t *)selPtr + (uint32_t)i * 684);
+            if (t->team.teamControls != TEAM_COMPUTER) {
+                *countryBuf++ = *(uint16_t *)&t->team.countryNumber;
+                lastNonComputer = (uint8_t *)t;
                 found++;
             }
         }
@@ -3206,19 +3206,19 @@ void _EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *c
     }
 
     /* Save/restore tactics byte, get player info */
-    uint8_t *teamBase = (uint8_t *)(uint32_t)chooseTacticsTeamPtr;
-    uint8_t savedTactics = teamBase[24]; /* TEAMFILE_TACTICS */
-    teamBase[24] = editTacticsCurrentTactics.ballOutOfPlayTactics;
+    TeamFileEx *teamBase = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    uint8_t savedTactics = teamBase->team.tactics;
+    teamBase->team.tactics = editTacticsCurrentTactics.ballOutOfPlayTactics;
 
     uint16_t slot, playerIndex;
-    uint8_t *playerPtr = _GetPlayerInfoBreakPosition(teamBase, (uint16_t)playerOrdinal, &slot, &playerIndex);
+    uint8_t *playerPtr = _GetPlayerInfoBreakPosition((uint8_t *)teamBase, (uint16_t)playerOrdinal, &slot, &playerIndex);
+    PlayerFile *pf = (PlayerFile *)(playerPtr + 76);
 
-    teamBase = (uint8_t *)(uint32_t)chooseTacticsTeamPtr;
-    teamBase[24] = savedTactics;
+    teamBase = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    teamBase->team.tactics = savedTactics;
 
-    /* Check position byte for injury - offset 0x67 from player base */
-    uint8_t posByte = playerPtr[0x67];
-    uint16_t posField = (uint16_t)posByte & 0xE0;
+    /* Check cardsInjuries for injury */
+    uint16_t posField = (uint16_t)pf->cardsInjuries & 0xE0;
     if (posField != 0 && posField != 0x20) {
         setBgColor(entry39, RED_10);
     }
@@ -3239,7 +3239,7 @@ void _EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *c
     /* Flip-on pair coloring */
     if (flipOnOff != 0) {
         if (slot != 0 && slot < 11) {
-            uint8_t *unkTable = (uint8_t *)&editTacticsCurrentTactics + 359; /* TEAMTACTICS_UNKTABLE */
+            uint8_t *unkTable = editTacticsCurrentTactics.unkTable;
             int8_t pairVal = (int8_t)unkTable[slot - 1];
             if (pairVal >= 0) {
                 uint16_t colorIdx = editTacticsFlipPairColorTable[pairVal];
@@ -3263,9 +3263,9 @@ void _EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *c
         uint8_t curPos = posArray[playerIndex];
         uint8_t oldPos = oldPosArray[playerIndex];
         if (curPos > oldPos) {
-            entry39->fg = (entry39->fg & 0xFFFF0000u) | SPR_CHECK_SMALL;
+            *(uint16_t *)&entry39->fg = SPR_CHECK_SMALL;  /* ENTRY_NUMBER: write high word */
         } else if (curPos < oldPos) {
-            entry39->fg = (entry39->fg & 0xFFFF0000u) | SPR_NOT_CHECK_SMALL;
+            *(uint16_t *)&entry39->fg = SPR_NOT_CHECK_SMALL;  /* ENTRY_NUMBER: write high word */
         }
     }
 }
@@ -3307,15 +3307,16 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     }
 
     /* Get player info */
-    uint8_t *teamBase = (uint8_t *)(uint32_t)chooseTacticsTeamPtr;
-    uint8_t savedTactics = teamBase[24]; /* TEAMFILE_TACTICS */
-    teamBase[24] = editTacticsCurrentTactics.ballOutOfPlayTactics;
+    TeamFileEx *teamBase = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    uint8_t savedTactics = teamBase->team.tactics;
+    teamBase->team.tactics = editTacticsCurrentTactics.ballOutOfPlayTactics;
 
     uint16_t d7_slot, d1_fileIdx;
-    uint8_t *playerPtr = _GetPlayerInfoBreakPosition(teamBase, d7, &d7_slot, &d1_fileIdx);
+    uint8_t *playerPtr = _GetPlayerInfoBreakPosition((uint8_t *)teamBase, d7, &d7_slot, &d1_fileIdx);
+    PlayerFile *pf = (PlayerFile *)(playerPtr + 76);
 
-    teamBase = (uint8_t *)(uint32_t)chooseTacticsTeamPtr;
-    teamBase[24] = savedTactics;
+    teamBase = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    teamBase->team.tactics = savedTactics;
 
     /* Check if player is injured */
     if (_IsPlayerInjured(playerPtr, (int16_t)inEditTactics)) {
@@ -3342,20 +3343,20 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     /* Entry 40: shirt number */
     e->isInvisible = 1;
     if (!d5) {
-        e->fg = (e->fg & 0xFFFF0000u) | (uint16_t)playerPtr[0x4E];
+        *(uint16_t *)&e->fg = (uint16_t)(uint8_t)pf->shirtNumber;  /* ENTRY_NUMBER: write high word */
         e->isInvisible = 0;
     }
     e->y = entryY;
     e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 41 */
 
     /* Entry 41: player name (surname) */
-    uint8_t *surname = _ExtractSurname(playerPtr + 0x4F, 0x800D);
+    uint8_t *surname = _ExtractSurname((uint8_t *)pf->playerName, 0x800D);
     e->fg = (uint32_t)surname;
     e->y = entryY;
     e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 42 */
 
     /* Entry 42: position string */
-    uint8_t posAndFace = playerPtr[0x66];
+    uint8_t posAndFace = pf->positionAndFace;
     uint16_t posIdx = ((uint16_t)posAndFace & 0xE0) >> 3;
     e->fg = playerPositionsStringTable[posIdx / 4];
     e->y = entryY;
@@ -3380,11 +3381,11 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
 
     /* Determine color for entry 44 based on player status */
     uint16_t colorVal;
-    if (playerPtr[0x71] == 0x9B) {
+    if ((uint8_t)pf->someFlag == 0x9B) {
         colorVal = 0xD;
-    } else if (playerPtr[0x71] == 0x9A) {
+    } else if ((uint8_t)pf->someFlag == 0x9A) {
         colorVal = 1;
-    } else if (playerPtr[0x66] & 0x02) {
+    } else if (pf->positionAndFace & 0x02) {
         colorVal = 2;
     } else {
         colorVal = 0xF;

@@ -1325,10 +1325,10 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
     } else {
         /* Not player's competition — auto-fill teams from qualification indices */
         uint16_t savedSelTeam = selTeamNumber;
-        uint8_t savedCtrl = careerTeam[4]; /* TEAMFILEEX_TEAM(0) + TEAMFILE_TEAMCONTROLS(4) */
+        uint8_t savedCtrl = ((TeamFileEx *)careerTeam)->team.teamControls;
 
         selTeamNumber = 0xFFFF;
-        careerTeam[4] = 1;
+        ((TeamFileEx *)careerTeam)->team.teamControls = 1;
 
         uint8_t nameOff = qualComp[7];
         if (nameOff == 0) {
@@ -1352,7 +1352,7 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         _Career_AutoAdvanceCupCompetitionFromRecord(qualComp);
         _DIY_ApplyPromotionRelegationWeightsToScratch(a2);
 
-        careerTeam[4] = savedCtrl;
+        ((TeamFileEx *)careerTeam)->team.teamControls = savedCtrl;
         selTeamNumber = savedSelTeam;
     }
 }

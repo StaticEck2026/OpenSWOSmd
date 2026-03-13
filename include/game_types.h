@@ -268,6 +268,7 @@ struct __attribute__((packed)) TeamGame {
 typedef char _teamgame_size_check[(sizeof(TeamGame) == 1018) ? 1 : -1];
 
 #define TEAMGAME_SIZE 1018
+#define TEAMGAME_PLAYERS_OFFSET 42  /* byte offset of players[] within TeamGame */
 
 /* ==================================================================
  * TeamStatisticsData — 14 bytes

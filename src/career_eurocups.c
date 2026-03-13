@@ -271,10 +271,11 @@ void _DIY_CachePrimaryQualifiedTeamsGrid(void)
     uint8_t *dst = primaryQualifiedTeamGrids;
     uint16_t *cachedIds = cachedPrimaryQualifiedTeamIds;
     uint8_t *comp = diyCompetitionStart;
+    DIY_Competition *diyComp = (DIY_Competition *)comp;
     uint16_t *leaguePositions = (uint16_t *)(comp + 0x6E);
     uint16_t *teamIdsTable = (uint16_t *)(comp + 0x12E);
     uint16_t count = 9;
-    uint16_t numTeams = *(uint16_t *)(comp + 0x32);
+    uint16_t numTeams = diyComp->numTeams;
     if (count > numTeams)
         count = numTeams;
     /* asm: subq.w #1,d2 then dbf → loops count times */

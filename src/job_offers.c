@@ -675,9 +675,9 @@ void _ViewFutureTeam(void) {
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _ViewFutureTeamLeague(void) {
-    uint8_t *teamPtr = (uint8_t *)teamOfferingJobPtr;
-    int16_t d7 = (int8_t)teamPtr[0x19];
-    uint8_t countryIdx = teamPtr[0] & 0xFF;
+    TeamFile *teamPtr = (TeamFile *)teamOfferingJobPtr;
+    int16_t d7 = (int8_t)teamPtr->league;
+    uint8_t countryIdx = teamPtr->countryNumber;
     uint32_t *compTable = (uint32_t *)competitionsTable;
     uint8_t *compEntry = (uint8_t *)compTable[countryIdx];
     uint8_t *comp = (uint8_t *)(*(uint32_t *)compEntry);
@@ -878,7 +878,7 @@ void _JobOffers_DrawOldOfferLine(void *entryPtr)
     MenuEntry *a3 = &menuEntries[13];
     uint16_t d3 = a3->stringFlags & 0xFFF0;
     a3->y = a5->y;
-    a3->fg = (uint32_t)(d7 + 1);
+    *(uint16_t *)&a3->fg = (uint16_t)(d7 + 1);  /* ENTRY_NUMBER: write high word */
 
     /* Entry 14 (a4): set stringFlags base, y, get dest buffer */
     MenuEntry *a4 = &menuEntries[14];
@@ -946,7 +946,7 @@ void _JobOffersAfterDrawCommon(void *entryPtr)
     uint16_t d3 = a3->stringFlags & 0xFFF0;
     a3->y = a5->y;
     uint16_t numVal = (uint16_t)d7 + 1;
-    a3->fg = (uint32_t)numVal;
+    *(uint16_t *)&a3->fg = numVal;  /* ENTRY_NUMBER: write high word */
 
     /* Entry 12 (a4): set stringFlags base, y, get dest buffer */
     MenuEntry *a4 = &menuEntries[12];
@@ -1145,14 +1145,15 @@ searchDomestic:
             a0 = &selTeamsPtr + (uint32_t)idx * 0x2AC;
 
             /* Skip custom teams (type 4) */
-            if (a0[0x19] == 4)
+            TeamFile *a0tf = (TeamFile *)a0;
+            if (a0tf->league == 4)
                 continue;
 
             /* Must be same division */
-            if (*(uint8_t *)((uint32_t)&selTeamNumber) != a0[0])
+            if (*(uint8_t *)((uint32_t)&selTeamNumber) != a0tf->countryNumber)
                 continue;
 
-            uint16_t teamId = *(uint16_t *)a0;
+            uint16_t teamId = a0tf->globalTeamNumber;
             if (teamId == selTeam)
                 continue;
 
@@ -1167,7 +1168,7 @@ searchDomestic:
 
             /* Check division index match */
             uint16_t divIdx = currentDivisionIndex;
-            if ((uint8_t)divIdx != a0[0x19]) {
+            if ((uint8_t)divIdx != a0tf->league) {
                 foundTeamId = teamId;
                 goto foundWithBalance;
             }
@@ -1198,12 +1199,13 @@ searchForeign:
             uint16_t idx = (uint16_t)((uint16_t)(rnd * careerFileBuffer) >> 8);
             uint8_t *a0 = base + (uint32_t)idx * 0x2AC;
 
-            if (a0[0x19] == 4)
+            TeamFile *a0tf = (TeamFile *)a0;
+            if (a0tf->league == 4)
                 continue;
-            if (*(uint8_t *)((uint32_t)&selTeamNumber) == a0[0])
+            if (*(uint8_t *)((uint32_t)&selTeamNumber) == a0tf->countryNumber)
                 continue;
 
-            uint16_t teamId = *(uint16_t *)a0;
+            uint16_t teamId = a0tf->globalTeamNumber;
             if (teamId == selTeam)
                 continue;
 
@@ -1277,10 +1279,11 @@ searchSacked:
             uint16_t idx = (uint16_t)((uint16_t)(rnd * numTeams) >> 8);
             uint8_t *a0 = (&teamFileBuffer + 2) + (uint32_t)idx * 0x2AC;
 
-            if (a0[0x19] == 4)
+            TeamFile *a0tf2 = (TeamFile *)a0;
+            if (a0tf2->league == 4)
                 continue;
 
-            uint16_t teamId = *(uint16_t *)a0;
+            uint16_t teamId = a0tf2->globalTeamNumber;
 
             uint16_t avgPrice = _GetAveragePlayerPrice(a0);
             if (avgPrice < repLow || avgPrice > repHigh)

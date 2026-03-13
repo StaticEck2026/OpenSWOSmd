@@ -1189,7 +1189,7 @@ cup_match_type1or2:
     {
         if (compType != 4) {
             /* compType 1 or 2: cup match */
-            if (*(int16_t *)a3 != 1) {
+            if (DIY_COMP(a3)->competitionType != 1) {
                 panicReasonCode = 0x9236;
                 _PanicHaltLoop();
                 return;
@@ -1210,12 +1210,12 @@ cup_match_type1or2:
 diy_comp_match:
     d7 = calcCupMatchGateReceiptsFactor(team, team);
     {
-        int16_t isDiy = *(int16_t *)(a3 + 0x48);
+        int16_t isDiy = DIY_COMP(a3)->hasGroups;
         if (isDiy == 0) {
             /* Non-DIY comp type 3 */
-            if (*(int16_t *)a3 == 0)
+            if (DIY_COMP(a3)->competitionType == 0)
                 goto compute_receipts;
-            if (*(int16_t *)a3 == 1) {
+            if (DIY_COMP(a3)->competitionType == 1) {
                 /* Cup match path */
                 int16_t totalRounds = *(int16_t *)(a3 + 0x5A);
                 int16_t currentRound = *(int16_t *)(a3 + 0x58);
@@ -3697,44 +3697,44 @@ void _Career_AutoAdvanceLeagueFixtures(void)
         }
     }
 
-    uint8_t *base = diyCompetitionStart;
+    DIY_Competition *base = DIY_COMP(diyCompetitionStart);
     uint8_t *lastMatchSlots = careerLastMatchIndexByCompetitionSlot;
-    uint8_t slotIdx = base[0x2E];
+    uint8_t slotIdx = base->field_2E;
     uint8_t *lastMatchPtr = lastMatchSlots + (uint16_t)slotIdx;
     uint8_t lastMatch = *lastMatchPtr;
 
     /* Inline DIY_AdvanceLeagueFixtureIndex: advance fixture and set d6 */
-    uint8_t viewRP = base[0x2F];
+    uint8_t viewRP = base->viewRandomPhase;
     _DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
     /* d6 tracking not needed — sim path (selector=0) ignores allowSquadChanges */
 
     /* Main simulation loop */
 main_loop:
-    if (currentPhase <= base[0x2F])
+    if (currentPhase <= base->viewRandomPhase)
         goto check_next_phase;
 
     /* Sim league fixtures until phase catches up */
     _DIY_PlayOrSimulateLeagueFixture(0, 0); /* allowSquadChanges=0, selector=0 (sim) */
 
-    if (*(uint16_t *)(base + 0x1C0) == 0)
+    if (*(uint16_t *)((uint8_t *)base + 0x1C0) == 0)
         goto main_loop; /* more matches pending in current fixture set */
 
-    if (*(uint16_t *)(base + 0x60) != 0) {
+    if (*(uint16_t *)((uint8_t *)base + 0x60) != 0) {  /* extended buffer */
         /* Advance fixture index and continue */
-        viewRP = base[0x2F];
+        viewRP = base->viewRandomPhase;
         _DIY_AdvanceFixtureIndex((uint16_t)(viewRP + 1), (uint16_t)viewRP);
         goto main_loop;
     }
 
     /* Check groups type */
-    if (*(uint16_t *)(base + 0x48) == 0)
+    if (base->hasGroups == 0)
         goto show_menu_check;
-    if (*(uint16_t *)(base + 0x48) == 2)
+    if (base->hasGroups == 2)
         goto show_menu_check;
     return; /* groups type 1/3 — return silently */
 
 check_next_phase:
-    if (nextPhase > base[0x2F])
+    if (nextPhase > base->viewRandomPhase)
         goto catch_up_phase;
 
 show_menu_check:
@@ -3753,16 +3753,16 @@ show_menu_check:
 
 catch_up_phase:
     /* Check if lastMatch matches current viewRandomPhase */
-    if (lastMatch == base[0x2F]) {
+    if (lastMatch == base->viewRandomPhase) {
         /* Catch-up loop: sim until 0x1C0 != 0 */
         do {
             _DIY_PlayOrSimulateLeagueFixture(0, 0);
-        } while (*(uint16_t *)(base + 0x1C0) == 0);
+        } while (*(uint16_t *)((uint8_t *)base + 0x1C0) == 0);
         goto show_menu_check;
     }
 
     /* Store current viewRandomPhase as last match index */
-    *lastMatchPtr = base[0x2F];
+    *lastMatchPtr = base->viewRandomPhase;
     if (highlightedLeagueTeamId != 0xFFFF) {
         _ShowDiyLeaguesTournamentMenu(1, 1, 0);
     } else {
@@ -3798,48 +3798,48 @@ void _Career_AutoAdvanceCupMatches(void)
         }
     }
 
-    uint8_t *base = diyCompetitionStart;
+    DIY_Competition *base = DIY_COMP(diyCompetitionStart);
     uint8_t *lastMatchSlots = careerLastMatchIndexByCompetitionSlot;
-    uint8_t slotIdx = base[0x2E];
+    uint8_t slotIdx = base->field_2E;
     uint8_t *lastMatchPtr = lastMatchSlots + (uint16_t)slotIdx;
     uint8_t lastMatch = *lastMatchPtr;
 
     /* Inline DIY_AdvanceCupFixtureIndex */
-    uint8_t viewRP = base[0x2F];
+    uint8_t viewRP = base->viewRandomPhase;
     _DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
 
     /* First check: if currentPhase <= viewRandomPhase, skip main loop */
-    if (currentPhase <= base[0x2F])
+    if (currentPhase <= base->viewRandomPhase)
         goto check_next_phase_cup;
 
     /* Main cup sim loop */
 cup_main_loop:
     _DIY_PlayCupMatchAndAdvance(0, 0); /* allowSquadChanges=0, mode=0 (sim) */
 
-    if (*(uint16_t *)(base + 0x54) == 0)
+    if (base->currentRound == 0)
         goto cup_main_loop; /* roundComplete == 0, keep going */
 
-    if (*(uint16_t *)(base + 0x56) != 0)
+    if (base->finishedFlag != 0)
         goto cup_finished; /* finishedFlag != 0 */
 
-    if (currentPhase <= base[0x2F])
+    if (currentPhase <= base->viewRandomPhase)
         goto check_next_phase_cup;
 
     /* Update competition progress and advance fixture */
     _DIY_UpdateCompetitionProgress();
-    viewRP = base[0x2F];
+    viewRP = base->viewRandomPhase;
     _DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
     goto cup_main_loop;
 
 cup_finished:
-    if (*(uint16_t *)(base + 0x48) == 0)
+    if (base->hasGroups == 0)
         goto cup_show_menu_check;
-    if (*(uint16_t *)(base + 0x48) == 2)
+    if (base->hasGroups == 2)
         goto cup_show_menu_check;
     return; /* groups type 1/3 — return silently */
 
 check_next_phase_cup:
-    if (nextPhase > base[0x2F])
+    if (nextPhase > base->viewRandomPhase)
         goto cup_catch_up;
 
 cup_show_menu_check:
@@ -3857,22 +3857,22 @@ cup_show_menu_check:
 
 cup_catch_up:
     /* If roundComplete, update progress and advance fixture */
-    if (*(uint16_t *)(base + 0x54) != 0) {
+    if (base->currentRound != 0) {
         _DIY_UpdateCompetitionProgress();
-        viewRP = base[0x2F];
+        viewRP = base->viewRandomPhase;
         _DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
     }
 
-    if (lastMatch == base[0x2F]) {
+    if (lastMatch == base->viewRandomPhase) {
         /* Catch-up loop */
         do {
             _DIY_PlayCupMatchAndAdvance(0, 0);
-        } while (*(uint16_t *)(base + 0x54) == 0);
+        } while (base->currentRound == 0);
         goto cup_show_menu_check;
     }
 
     /* Store current viewRandomPhase as last match index */
-    *lastMatchPtr = base[0x2F];
+    *lastMatchPtr = base->viewRandomPhase;
     if (highlightedLeagueTeamId != 0xFFFF) {
         _ShowDIYCupMenuWithParams(1, 1, 0);
     } else {

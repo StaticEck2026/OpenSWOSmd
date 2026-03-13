@@ -1018,10 +1018,10 @@ void _SquadCommitPositionsAndUpdateSkill(void)
     for (i = 0; i < 32; i++)
         dst[i] = src[i];
 
-    uint8_t *teamFile = (uint8_t *)squadTeamFilePtr;
-    teamFile[0x3B] = 1;
+    TeamFile *teamFile = (TeamFile *)squadTeamFilePtr;
+    teamFile->someFlag = 1;
 
-    _ComputeOldPlayerSkillForViewResult(teamFile, 5);
+    _ComputeOldPlayerSkillForViewResult((uint8_t *)teamFile, 5);
     _UpdateBigCheckMark();
 }
 
@@ -1047,27 +1047,27 @@ extern uint16_t _cGetPlayerAtIndexFileIdx;
 __attribute__((used, externally_visible))
 void _SquadUpdateGoalsMenuText(void)
 {
-    uint8_t *teamBase = (uint8_t *)squadTeamFilePtr;
-    uint8_t *playerList = teamBase + 0x3C;    /* TeamFile.playerNumbers */
+    TeamFile *tfBase = (TeamFile *)squadTeamFilePtr;
+    uint8_t *playerList = tfBase->playerNumbers;
     uint16_t count = 16;
     uint16_t totalGoals = 0;
 
     if ((int16_t)selTeamNumber != -1 &&
-        selTeamNumber == *(uint16_t *)teamBase) {
+        selTeamNumber == *(uint16_t *)tfBase) {
         playerList = currentMatchPlayers;
         count = careerNumPlayers;
         totalGoals = removedPlayerStatAccum;
     }
 
-    /* Add field at TeamFile offset 0x16 (writesZeroHere) */
-    totalGoals += (uint16_t)(uint8_t)teamBase[0x16];
+    /* Add own goals count from TeamFile.writesZeroHere */
+    totalGoals += (uint16_t)tfBase->writesZeroHere;
 
     count--;   /* subq.w #1,d7 for dbf loop */
     uint16_t i;
     for (i = count + 1; i > 0; i--) {
         int16_t idx = (int16_t)(int8_t)*playerList++;
-        uint8_t *blockPtr = teamBase + (uint32_t)(uint16_t)idx * 38;
-        PlayerFile *pf = (PlayerFile *)(blockPtr + 76);
+        TeamFileEx *tfx = (TeamFileEx *)tfBase;
+        PlayerFile *pf = &tfx->players[(uint16_t)idx];
         totalGoals += (uint16_t)pf->goalStats[0];
         totalGoals += (uint16_t)pf->goalStats[1];
         totalGoals += (uint16_t)pf->goalStats[2];
@@ -1130,7 +1130,7 @@ static void squadSwapPlayersAtIndices(uint16_t prevFileIdx, uint16_t currFileIdx
     if (gameType == 4) {   /* GAME_TYPE_CAREER */
         numArray = currentMatchPlayers;
     } else {
-        numArray = (uint8_t *)squadTeamFilePtr + 0x3C;  /* TeamFile.playerNumbers */
+        numArray = ((TeamFile *)squadTeamFilePtr)->playerNumbers;
     }
     uint8_t tmpNum = numArray[prevBreakPos];
     numArray[prevBreakPos] = numArray[currBreakPos];
@@ -1161,7 +1161,7 @@ void _SquadCommon(void *entryPtr)
                 squadPrevSelectedPlayerIndex, d7,
                 squadPrevSelectedBreakPos, d6);
             _SetBenchPlayersNumbers((uint8_t *)squadTeamFilePtr);
-            ((uint8_t *)squadTeamFilePtr)[0x3B] = 1;
+            ((TeamFile *)squadTeamFilePtr)->someFlag = 1;
             _SquadCommitPositionsAndUpdateSkill();
             squadPrevSelectedPlayerIndex = 0xFFFF;
             _DrawMenu();
@@ -1218,13 +1218,13 @@ __attribute__((used, externally_visible))
 void _SquadUpdateMenuState(void)
 {
     _UpdateBigCheckMark();
-    uint8_t *a6 = (uint8_t *)squadTeamFilePtr;
+    TeamFile *tf = (TeamFile *)squadTeamFilePtr;
 
     /* Entry 2: bg color based on team type byte (offset 4) */
     setBgColorIndex(&menuEntries[2], 12); /* ORANGE_TO_BROWN */
-    if (a6[4] != 1) {
+    if (tf->teamControls != 1) {
         setBgColorIndex(&menuEntries[2], 11); /* BLUE_TO_PURPLE */
-        if (a6[4] != 2) {
+        if (tf->teamControls != 2) {
             setBgColorIndex(&menuEntries[2], 13); /* BRIGHT_BLUE_TO_BLUE */
         }
     }
@@ -1232,7 +1232,7 @@ void _SquadUpdateMenuState(void)
     /* Entry 3: set fg string to "(COUNTRY)" */
     {
         uint8_t *dst = (uint8_t *)menuEntries[3].fg;
-        uint8_t countryIdx = a6[0];
+        uint8_t countryIdx = tf->countryNumber;
         uint8_t *countryStr = (uint8_t *)countriesTable[countryIdx];
         *dst++ = '(';
         dst = _StringCopy(countryStr + 1, dst);
@@ -1240,8 +1240,8 @@ void _SquadUpdateMenuState(void)
         *dst = 0;
     }
 
-    /* Entry 25: fg = team byte at offset 0x16 */
-    menuEntries[25].fg = (uint32_t)(uint16_t)(uint8_t)a6[0x16];
+    /* Entry 25: fg = team writesZeroHere field (ENTRY_NUMBER: write high word) */
+    *(uint16_t *)((uint8_t *)&menuEntries[25] + 38) = (uint16_t)(uint8_t)tf->writesZeroHere;
 
     /* Entries 15, 13 initially invisible */
     menuEntries[15].isInvisible = 1;
@@ -1253,8 +1253,7 @@ void _SquadUpdateMenuState(void)
     /* Entry 14 initially invisible */
     menuEntries[14].isInvisible = 1;
     {
-        uint8_t *teamPtr = (uint8_t *)squadTeamFilePtr;
-        if (teamPtr[0] >= 0x50 && teamPtr[0] <= 0x55) {
+        if (tf->countryNumber >= 0x50 && tf->countryNumber <= 0x55) {
             /* do nothing — keep invisible */
         } else if (isSquadViewMode == 0) {
             menuEntries[14].isInvisible = 0;
@@ -1266,7 +1265,7 @@ void _SquadUpdateMenuState(void)
         menuEntries[6].isInvisible = 1;
 
         if ((int16_t)selTeamNumber != -1 &&
-            selTeamNumber == *(uint16_t *)a6) {
+            selTeamNumber == tf->globalTeamNumber) {
             menuEntries[26].isInvisible = 0;
             menuEntries[27].isInvisible = 0;
             menuEntries[27].fg = (uint32_t)removedPlayerStatAccum;
@@ -1367,12 +1366,9 @@ void _SquadUpdateMenuState(void)
         setBgColorIndex(&menuEntries[6], 14); /* YELLOW_GREEN_BLACK */
         menuEntries[6].isDisabled = 0;
 
-        {
-            uint8_t *teamPtr = (uint8_t *)squadTeamFilePtr;
-            if (teamPtr[0x17] & 1) {
-                setBgColorIndex(&menuEntries[6], 9); /* PINK_TO_BROWN */
-                menuEntries[6].isDisabled = 1;
-            }
+        if (tf->andWith0xFE & 1) {
+            setBgColorIndex(&menuEntries[6], 9); /* PINK_TO_BROWN */
+            menuEntries[6].isDisabled = 1;
         }
 
         if ((int16_t)teamSkillDiffAfterChange >= 0) {
@@ -1383,9 +1379,8 @@ void _SquadUpdateMenuState(void)
             menuEntries[9].y = 0xDD;
 
             {
-                uint8_t *teamPtr = (uint8_t *)squadTeamFilePtr;
-                if (teamPtr[4] != 1 &&
-                    teamPtr[0] >= 0x50 && teamPtr[0] <= 0x55) {
+                if (tf->teamControls != 1 &&
+                    tf->countryNumber >= 0x50 && tf->countryNumber <= 0x55) {
                     menuEntries[9].x -= 14;
                 }
             }
@@ -1443,9 +1438,9 @@ afterEDE:
     menuEntries[12].isInvisible = 1;
 
 afterBankBalance:
-    /* Entry 2: fg = team name (offset 5), Entry 5: fg = manager (offset 0x24) */
-    menuEntries[2].fg = (uint32_t)(a6 + 5);
-    menuEntries[5].fg = (uint32_t)(a6 + 0x24);
+    /* Entry 2: fg = team name, Entry 5: fg = coach name */
+    menuEntries[2].fg = (uint32_t)tf->teamName;
+    menuEntries[5].fg = (uint32_t)tf->coachName;
     return;
 
 viewModeCompChecks:
@@ -1509,6 +1504,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
     MenuEntry *a5 = (MenuEntry *)entryPtr;
     uint16_t d7 = a5->ordinal - 0x1C;
     uint8_t *teamBase = (uint8_t *)squadTeamFilePtr;
+    TeamFile *tf = (TeamFile *)teamBase;
     uint16_t d5;
 
     /* Set row background colors based on row index and team type */
@@ -1519,14 +1515,14 @@ void _SquadAfterDrawCommon(void *entryPtr)
         d5 = 0;
         if (d7 >= 11) {
             /* Substitutes */
-            if (teamBase[4] == 1) {
+            if (tf->teamControls == 1) {
                 setColorPair46_48(12);
             } else {
                 setColorPair46_48(11);
             }
         } else {
             /* Starting 11 */
-            if (teamBase[4] == 1) {
+            if (tf->teamControls == 1) {
                 setColorPair46_48(10);
             } else if (d7 == 0) {
                 setColorPair46_48(14); /* goalkeeper */
@@ -1536,9 +1532,12 @@ void _SquadAfterDrawCommon(void *entryPtr)
         }
     }
 
-    /* Get player info at this row */
+    /* Get player info at this row.
+     * _GetPlayerInfoBreakPosition returns a base pointer;
+     * PlayerFile data starts sizeof(TeamFile) bytes in. */
     uint16_t d6_breakPos, d4_fileIdx;
     uint8_t *player = _GetPlayerInfoBreakPosition(teamBase, d7, &d6_breakPos, &d4_fileIdx);
+    PlayerFile *pf = (PlayerFile *)(player + sizeof(TeamFile));
 
     /* Check if injured */
     uint16_t injured = _IsPlayerInjured(player, (int16_t)squadRowMode);
@@ -1566,9 +1565,9 @@ void _SquadAfterDrawCommon(void *entryPtr)
         uint8_t curPos = playerPositionsArray[d4_fileIdx];
         uint8_t oldPos = oldPlayerPositionsArray[d4_fileIdx];
         if (curPos < oldPos) {
-            e->fg = 0xD1; /* down arrow */
+            *(uint16_t *)&e->fg = 0xD1; /* down arrow — ENTRY_SPRITE2: write high word */
         } else if (curPos > oldPos) {
-            e->fg = 0xD0; /* up arrow */
+            *(uint16_t *)&e->fg = 0xD0; /* up arrow — ENTRY_SPRITE2: write high word */
         }
     }
 
@@ -1576,20 +1575,23 @@ void _SquadAfterDrawCommon(void *entryPtr)
     e = &menuEntries[47];
     e->isInvisible = 1;
     if (d5 == 0) {
-        e->fg = (uint32_t)(uint16_t)(uint8_t)player[0x4E];
+        /* ENTRY_NUMBER renderer reads *(uint16_t *)((uint8_t *)entry + 38),
+         * which is the high word of fg on big-endian. Write only the high word
+         * to match asm: clr.w d0; move.b $4E(a6),d0; move.w d0,$26(a0) */
+        *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)(uint8_t)pf->shirtNumber;
         e->isInvisible = 0;
     }
     e->y = yPos;
 
     /* Entry 48: player name */
     e = &menuEntries[48];
-    e->fg = (uint32_t)(player + 0x4F);
+    e->fg = (uint32_t)(uint8_t *)pf->playerName;
     e->y = yPos;
 
     /* Entry 49: position string */
     e = &menuEntries[49];
     {
-        uint8_t posAndFace = player[0x66];
+        uint8_t posAndFace = pf->positionAndFace;
         uint16_t posIdx = (posAndFace & 0xE0) >> 3;
         e->fg = playerPositionsStringTable[posIdx / 4];
     }
@@ -1608,12 +1610,11 @@ void _SquadAfterDrawCommon(void *entryPtr)
 
     /* Entry 54: nationality — show if team NOT in [0x50..0x55] and not view mode */
     {
-        uint8_t *teamCheck = (uint8_t *)squadTeamFilePtr;
-        if (teamCheck[0] >= 0x50 && teamCheck[0] <= 0x55) {
+        if (tf->countryNumber >= 0x50 && tf->countryNumber <= 0x55) {
             /* team in range — skip nationality */
         } else if (isSquadViewMode == 0) {
             uint8_t *dst = (uint8_t *)menuEntries[54].fg;
-            uint8_t nat = player[0x4C];
+            uint8_t nat = (uint8_t)pf->nationality;
             uint16_t natIdx = (uint16_t)nat * 3;
             *dst++ = '(';
             dst[0] = shortCountryNames[natIdx];
@@ -1634,15 +1635,16 @@ void _SquadAfterDrawCommon(void *entryPtr)
         int16_t skillDiff = (int16_t)teamSkillDiffAfterChange;
         if (skillDiff < 0) {
             if (isNationalSquad == 0 && isSquadViewMode == 0) {
-                uint16_t sum = (uint16_t)(uint8_t)player[0x6D]
-                             + (uint16_t)(uint8_t)player[0x6E]
-                             + (uint16_t)(uint8_t)player[0x6F]
-                             + (uint16_t)(uint8_t)player[0x70];
-                e->fg = (uint32_t)sum;
+                uint16_t sum = (uint16_t)pf->goalStats[0]
+                             + (uint16_t)pf->goalStats[1]
+                             + (uint16_t)pf->goalStats[2]
+                             + (uint16_t)pf->goalStats[3];
+                /* ENTRY_NUMBER: renderer reads high word of fg */
+                *(uint16_t *)((uint8_t *)e + 38) = sum;
                 e->isInvisible = 0;
             }
         } else {
-            e->fg = (uint32_t)(uint16_t)(uint8_t)player[0x6D + skillDiff];
+            *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)pf->goalStats[skillDiff];
             e->isInvisible = 0;
         }
     }
@@ -1659,20 +1661,23 @@ void _SquadAfterDrawCommon(void *entryPtr)
         uint8_t *teamGeneral = (uint8_t *)squadTeamFilePtr;
         uint16_t isNat = _IsTeamNational(teamGeneral);
         if (isNat != 0) {
-            _InitPlayerValueDisplayStruct(player, teamGeneral);
+            /* dst must be the menu entry ptr (entry 57), NOT the team file.
+             * Asm: a1 = current entry (57), a0 = player data. Passing teamGeneral
+             * here would write to TeamFile+0x24, zeroing coachName[0..1]. */
+            _InitPlayerValueDisplayStruct(player, (uint8_t *)&menuEntries[57]);
         } else {
             _FormatPlayerValueOrStatusText(player, fundsBuffer);
             menuEntries[57].fg = (uint32_t)fundsBuffer;
         }
         menuEntries[57].isInvisible = 0;
 
-        /* Color based on player status byte 0x71 */
+        /* Color based on PlayerFile.someFlag and positionAndFace */
         uint16_t colorIdx = 2;
-        if (player[0x71] == 0x9B) {
+        if ((uint8_t)pf->someFlag == 0x9B) {
             colorIdx = 13;
-        } else if (player[0x71] == 0x9A) {
+        } else if ((uint8_t)pf->someFlag == 0x9A) {
             colorIdx = 1;
-        } else if (player[0x66] & 0x02) {
+        } else if (pf->positionAndFace & 0x02) {
             colorIdx = 15;
         }
         {
@@ -1713,7 +1718,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
         e = &menuEntries[59];
         e->isInvisible = 1;
         if ((quaternaryCompetitionPtr | secondaryCompetitionPtr | tertiaryCompetitionPtr) != 0) {
-            e->fg = (uint32_t)(uint16_t)(uint8_t)player[0x6D];
+            *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)pf->goalStats[0];
             e->isInvisible = 0;
         }
         e->y = yPos;
@@ -1722,7 +1727,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
         e = &menuEntries[60];
         e->isInvisible = 1;
         if (secondaryCompetitionPtr != 0) {
-            e->fg = (uint32_t)(uint16_t)(uint8_t)player[0x6E];
+            *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)pf->goalStats[1];
             e->isInvisible = 0;
         }
         e->y = yPos;
@@ -1731,7 +1736,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
         e = &menuEntries[61];
         e->isInvisible = 1;
         if (tertiaryCompetitionPtr != 0) {
-            e->fg = (uint32_t)(uint16_t)(uint8_t)player[0x6F];
+            *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)pf->goalStats[2];
             e->isInvisible = 0;
         }
         e->y = yPos;
@@ -1740,7 +1745,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
         e = &menuEntries[62];
         e->isInvisible = 1;
         if (quaternaryCompetitionPtr != 0) {
-            e->fg = (uint32_t)(uint16_t)(uint8_t)player[0x70];
+            *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)pf->goalStats[3];
             e->isInvisible = 0;
         }
         e->y = yPos;
@@ -1748,11 +1753,11 @@ void _SquadAfterDrawCommon(void *entryPtr)
         /* Entry 63: total goals (sum of all 4) */
         e = &menuEntries[63];
         {
-            uint16_t total = (uint16_t)(uint8_t)player[0x6D]
-                           + (uint16_t)(uint8_t)player[0x6E]
-                           + (uint16_t)(uint8_t)player[0x6F]
-                           + (uint16_t)(uint8_t)player[0x70];
-            e->fg = (uint32_t)total;
+            uint16_t total = (uint16_t)pf->goalStats[0]
+                           + (uint16_t)pf->goalStats[1]
+                           + (uint16_t)pf->goalStats[2]
+                           + (uint16_t)pf->goalStats[3];
+            *(uint16_t *)((uint8_t *)e + 38) = total;
             e->isInvisible = 0;
         }
         e->y = yPos;
@@ -1769,12 +1774,12 @@ void _SquadAfterDrawCommon(void *entryPtr)
 __attribute__((used, externally_visible))
 void _SquadFinish(void)
 {
-    uint8_t *teamPtr = (uint8_t *)squadTeamFilePtr;
+    TeamFile *teamPtr = (TeamFile *)squadTeamFilePtr;
 
-    /* If not national squad and team byte 0 in [0x50..0x55],
+    /* If not national squad and team countryNumber in [0x50..0x55],
      * shift entries 13, 55, 24, 25 left by 13 */
     if (isNationalSquad == 0) {
-        if (teamPtr[0] >= 0x50 && teamPtr[0] <= 0x55) {
+        if (teamPtr->countryNumber >= 0x50 && teamPtr->countryNumber <= 0x55) {
             menuEntries[13].x -= 13;
             menuEntries[55].x -= 13;
             menuEntries[24].x -= 13;
@@ -4916,15 +4921,16 @@ extern uint16_t _ShouldApplyRandomPlayerStatusAfterSim(void);
 __attribute__((used, externally_visible))
 void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, uint8_t *player, uint16_t flag)
 {
-    uint16_t d1 = player[0x66] & 0x18;
+    PlayerFile *pf = (PlayerFile *)(player + sizeof(TeamFile));
+    uint16_t d1 = pf->positionAndFace & 0x18;
     d1 >>= 3; /* face index 0-3 */
     uint16_t d2, d3;
     uint16_t sprite;
 
     if (flag == 0) {
         /* Path 0: during-match status */
-        d2 = player[0x67] & 0x1C;
-        d3 = player[0x67] & 0xE0;
+        d2 = pf->cardsInjuries & 0x1C;
+        d3 = pf->cardsInjuries & 0xE0;
 
         if (d2 == 0) {
             if (d3 == 0) {
@@ -4968,8 +4974,8 @@ void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, uint8_t *player, uint16_t 
     }
 
     /* Path 1: after-match status (flag != 0) */
-    d2 = player[0x67] & 0x03;
-    d3 = player[0x67] & 0xE0;
+    d2 = pf->cardsInjuries & 0x03;
+    d3 = pf->cardsInjuries & 0xE0;
 
     if (d2 == 0) {
         if (d3 == 0) {
@@ -5018,9 +5024,10 @@ void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, uint8_t *player)
         return;
     }
     /* After sim path — extract face and status for sprite */
-    uint16_t d1 = player[0x66] & 0x18;
+    PlayerFile *pf = (PlayerFile *)(player + sizeof(TeamFile));
+    uint16_t d1 = pf->positionAndFace & 0x18;
     d1 >>= 3;
-    uint16_t d3 = player[0x67] & 0xE0;
+    uint16_t d3 = pf->cardsInjuries & 0xE0;
 
     if (d3 == 0) {
         *(uint16_t *)&entry->fg = d1 + 0xBA;
@@ -6156,7 +6163,7 @@ void _StatsViewSquads(void)
 {
     uint16_t *teams = (uint16_t *)diyTeamsBufferPtr;
     uint16_t numTeams = diyNumberOfTeams;
-    uint16_t rowMode = *(uint16_t *)(diyCompetitionStart + 0x3C);
+    uint16_t rowMode = ((DIY_Competition *)diyCompetitionStart)->substitutesCount;
     _SelectAndShowSquadToView(teams, numTeams, rowMode);
 }
 

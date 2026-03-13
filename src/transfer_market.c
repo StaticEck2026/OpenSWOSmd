@@ -12,6 +12,9 @@
 #include "input_text.h"
 #include "teams.h"
 
+/* Offset from _GetPlayer() return value to actual PlayerFile data */
+#define PF_OFF              76  /* sizeof(TeamFile) */
+
 /* Transfer offer entry size: 14 bytes ($E) */
 #define OFFER_ENTRY_SIZE    14
 /* Home market player entry: 4 bytes (word teamNum + byte playerOrd + pad) */
@@ -990,9 +993,9 @@ int16_t _IsOfferTeamPlayerPairUnique(uint16_t teamId, uint16_t playerIdx)
 __attribute__((used, externally_visible))
 int16_t _IsTeamEligibleForOfferByRefSkill(uint8_t *team, uint16_t refSkill)
 {
-    uint16_t teamNum = *(uint16_t *)team;
+    TeamFileEx *tfx = (TeamFileEx *)team;
+    uint16_t teamNum = *(uint16_t *)team;  /* raw team number at offset 0 */
     uint16_t flags;
-    uint8_t *p;
     int16_t i;
     uint8_t ref = (uint8_t)refSkill;
 
@@ -1001,13 +1004,12 @@ int16_t _IsTeamEligibleForOfferByRefSkill(uint8_t *team, uint16_t refSkill)
         return 1;
 
     /* League type 4 → not eligible */
-    if (*(team + 0x19) == 4)
+    if (tfx->team.league == 4)
         return 1;
 
     flags = 0;
-    p = team;
     for (i = 15; i >= 0; i--) {
-        uint8_t skill = *(p + 0x6C);
+        uint8_t skill = (uint8_t)tfx->players[i].price;
         if (skill == ref)
             return 0;  /* exact match → eligible */
         if (ref > skill)
@@ -1016,7 +1018,6 @@ int16_t _IsTeamEligibleForOfferByRefSkill(uint8_t *team, uint16_t refSkill)
             flags |= 1;  /* player stronger than ref */
         if (flags == 3)
             return 0;  /* skill range spans ref → eligible */
-        p += 0x26;  /* next player (38 bytes) */
     }
     return 1;  /* not eligible */
 }
@@ -1079,26 +1080,29 @@ int16_t _PickRandomEligibleExtraPlayerOrdinal(uint16_t refSkill)
 
         player = _GetPlayerAtIndex(selTeamNumber, ordinal);
         fileIdx = _cGetPlayerAtIndexFileIdx;
+        {
+        PlayerFile *pf = (PlayerFile *)(player + PF_OFF);
 
         /* Skip if same as primary player */
         if (fileIdx == offerPrimaryPlayerOrdinal)
             continue;
 
-        /* Skip if on transfer list (bit 1 of byte at offset 0x66) */
-        if (player[0x66] & 0x02)
+        /* Skip if on transfer list (bit 1 of positionAndFace) */
+        if (pf->positionAndFace & 0x02)
             continue;
 
         /* Skip if sold (0x9B) or transferred (0x9A) */
-        if (player[0x71] == 0x9B)
+        if ((uint8_t)pf->someFlag == 0x9B)
             continue;
-        if (player[0x71] == 0x9A)
+        if ((uint8_t)pf->someFlag == 0x9A)
             continue;
 
         /* Skill must be <= refSkill (unsigned) */
-        if (player[0x6C] > ref)
+        if ((uint8_t)pf->price > ref)
             continue;
 
         return (int16_t)fileIdx;
+        }
     }
     return -1;  /* not found */
 }
@@ -1125,7 +1129,8 @@ int16_t _PickRandomEligibleSwapPlayerOrdinalFromTeam(uint8_t *teamBlock, int16_t
     /* Phase 1: Find min/max skill in selected team */
     for (i = (int16_t)(careerNumPlayers - 1); i >= 0; i--) {
         uint8_t *player = _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
-        uint8_t skill = player[0x6C];
+        PlayerFile *pf1 = (PlayerFile *)(player + PF_OFF);
+        uint8_t skill = (uint8_t)pf1->price;
         if (skill < minSkill)
             minSkill = skill;
         if (skill > maxSkill)
@@ -1136,26 +1141,25 @@ int16_t _PickRandomEligibleSwapPlayerOrdinalFromTeam(uint8_t *teamBlock, int16_t
     for (retries = 15; retries >= 0; retries--) {
         uint16_t rand = _Rand2();
         uint16_t idx = (uint16_t)((rand * 16) >> 8);
-        uint8_t *player;
         uint8_t skill;
 
         if ((int16_t)idx == excludeSlot)
             continue;
 
-        player = teamBlock + (uint32_t)idx * 0x26;
+        PlayerFile *pf2 = (PlayerFile *)(teamBlock + (uint32_t)idx * 0x26 + PF_OFF);
 
         /* Skip if on transfer list */
-        if (player[0x66] & 0x02)
+        if (pf2->positionAndFace & 0x02)
             continue;
 
         /* Skip if sold or transferred */
-        if (player[0x71] == 0x9B)
+        if ((uint8_t)pf2->someFlag == 0x9B)
             continue;
-        if (player[0x71] == 0x9A)
+        if ((uint8_t)pf2->someFlag == 0x9A)
             continue;
 
         /* Must be within selected team's skill range */
-        skill = player[0x6C];
+        skill = (uint8_t)pf2->price;
         if (skill < minSkill)
             continue;
         if (skill > maxSkill)
@@ -1278,8 +1282,8 @@ int16_t _CheckForTransferOffers(void)
 
     p = transferOfferTable;
     for (i = 0; i < count; i++) {
-        if (p[0x0D] == 0)
-            return 0;   /* found an active offer */
+        if (p[13] == 0)
+            return 0;   /* found an active offer (expired flag at byte 13) */
         p += OFFER_ENTRY_SIZE;
     }
     return 1;   /* no active offers */
@@ -1806,10 +1810,11 @@ void _GenerateRandomTransferOffers(void)
             return;
 
         uint8_t *player = _GetPlayerAtIndex(selTeamNumber, idx);
-        /* Check bit 1 of player[0x66] — skip if set */
-        if (!(player[0x66] & 0x02)) {
-            /* Skip players with status 0x9B or 0x9A at offset 0x71 */
-            if (player[0x71] != 0x9B && player[0x71] != 0x9A) {
+        PlayerFile *pf = (PlayerFile *)(player + PF_OFF);
+        /* Check bit 1 of positionAndFace — skip if on transfer list */
+        if (!(pf->positionAndFace & 0x02)) {
+            /* Skip players with sold (0x9B) or transferred (0x9A) status */
+            if ((uint8_t)pf->someFlag != 0x9B && (uint8_t)pf->someFlag != 0x9A) {
                 uint16_t threshold = 1;
                 /* _cGetPlayerAtIndexFileIdx holds the file index from last GetPlayerAtIndex call */
                 if (_FindPlayerOnTransferMarket(_cGetPlayerAtIndexFileIdx) == 0) {
@@ -1843,8 +1848,8 @@ void _UpdateAndExpireTransferOffers(void)
         uint16_t i = 0;
 
         while (i < numOffers) {
-            entry[0x0C]--;  /* decrement expiry counter at offset $C */
-            if (entry[0x0C] == 0) {
+            entry[12]--;  /* decrement expiry counter at offset $C */
+            if (entry[12] == 0) {
                 _RemoveTransferOfferAtIndex(i);
                 /* Don't advance — entry shifted down */
             } else {
@@ -2241,13 +2246,16 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
     /* Entry 1: Player number */
     a0->y = y;
     a0->isInvisible = 1;
-    a0->fg = (uint32_t)idx;
+    *(uint16_t *)&a0->fg = (uint16_t)idx;  /* ENTRY_NUMBER: write high word */
     if (idx >= 0)
         a0->isInvisible = 0;
     a0++;
 
+    /* Get PlayerFile pointer from team-base-offset pointer */
+    PlayerFile *pf = (PlayerFile *)(player + PF_OFF);
+
     /* Check if player name byte is 0xFF (empty/skip) */
-    if (player[0x4F] == 0xFF) {
+    if ((uint8_t)pf->playerName[0] == 0xFF) {
         int16_t count = 9;
         do {
             a0->isInvisible = 1;
@@ -2258,7 +2266,7 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
     }
 
     /* Entry 2: Status sprite */
-    _SetSquadMenuEntryStatusSprite_AfterSim(a0, player);
+    _SetSquadMenuEntryStatusSprite_AfterSim(a0, (uint8_t *)pf);
     a0->y = y;
     a0->isInvisible = 0;
     a0++;
@@ -2271,7 +2279,7 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
             maxNameLen = 0x10 - extraLen;
         }
         uint16_t extractParam = 0x0D + maxNameLen;
-        uint8_t *nameResult = _ExtractSurname(player + 0x4F, extractParam);
+        uint8_t *nameResult = _ExtractSurname((uint8_t *)pf->playerName, extractParam);
         a0->fg = (uint32_t)nameResult;
         a0->y = y;
         a0->isInvisible = 0;
@@ -2295,7 +2303,7 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
 
     /* Entry 5: Position */
     {
-        uint16_t posIdx = (player[0x66] & 0xE0) >> 3;
+        uint16_t posIdx = (pf->positionAndFace & 0xE0) >> 3;
         a0->fg = playerPositionsStringTable[posIdx / 4];
     }
     a0->y = y;
@@ -2326,7 +2334,7 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
     /* Entry 10: Country code "(ABC)" */
     {
         uint8_t *dst = (uint8_t *)a0->fg;
-        uint16_t countryIdx = player[0x4C] & 0xFF;
+        uint16_t countryIdx = (uint8_t)pf->nationality;
         uint16_t offset = countryIdx * 3;
         uint8_t *src = shortCountryNames + offset;
         *dst++ = '(';
@@ -2353,11 +2361,11 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
     /* Set status color in stringFlags */
     {
         uint16_t colorBits = 0xD;
-        if (player[0x71] == 0x9B) {
+        if ((uint8_t)pf->someFlag == 0x9B) {
             /* keep 0xD */
-        } else if (player[0x71] == 0x9A) {
+        } else if ((uint8_t)pf->someFlag == 0x9A) {
             colorBits = 1;
-        } else if (player[0x66] & 0x02) {
+        } else if (pf->positionAndFace & 0x02) {
             colorBits = 0xF;
         } else {
             colorBits = 2;
@@ -3014,11 +3022,12 @@ void _PlayerOffersOnSelect10(void)
         int16_t i = careerNumPlayers - 1;
         while (i >= 0) {
             uint8_t *player = _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
-            /* Check if player position is GK (0x9B) or substitute GK (0x9A) */
-            if (player[0x71] == 0x9B || player[0x71] == 0x9A) {
+            PlayerFile *plf = (PlayerFile *)(player + PF_OFF);
+            /* Check if player is sold (0x9B) or transferred (0x9A) */
+            if ((uint8_t)plf->someFlag == 0x9B || (uint8_t)plf->someFlag == 0x9A) {
                 d7mask |= (1u << i);
-            } else if (player[0x66] & 0x02) {
-                /* bit 1 of byte at offset 0x66: some status flag */
+            } else if (plf->positionAndFace & 0x02) {
+                /* on transfer list */
                 d7mask |= (1u << i);
             }
             i--;
@@ -3054,9 +3063,10 @@ void _PlayerOffersOnSelect11(void)
         int16_t i = careerNumPlayers - 1;
         while (i >= 0) {
             uint8_t *player = _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
-            if (player[0x71] == 0x9B || player[0x71] == 0x9A) {
+            PlayerFile *plf = (PlayerFile *)(player + PF_OFF);
+            if ((uint8_t)plf->someFlag == 0x9B || (uint8_t)plf->someFlag == 0x9A) {
                 d7mask |= (1u << i);
-            } else if (player[0x66] & 0x02) {
+            } else if (plf->positionAndFace & 0x02) {
                 d7mask |= (1u << i);
             }
             i--;
@@ -3493,8 +3503,8 @@ void _OffersAfterDrawCommon(void *entryPtr)
     menuEntries[10].y = a5->y + 7;
     menuEntries[10].isInvisible = 1;
 
-    /* Store offer index+1 in entry 10's fg field (stringFlags offset 0x26) */
-    menuEntries[10].fg = (uint32_t)(d7 + 1);
+    /* Store offer index+1 in entry 10's fg field (ENTRY_NUMBER: write high word) */
+    *(uint16_t *)((uint8_t *)&menuEntries[10] + 38) = (uint16_t)(d7 + 1);
 
     /* Mark current entry as disabled */
     a5->isDisabled = 1;
@@ -3512,9 +3522,9 @@ void _OffersAfterDrawCommon(void *entryPtr)
     menuEntries[9].isInvisible = 0;
     menuEntries[10].isInvisible = 0;
 
-    /* Set color based on offer byte 0xD (expired flag) */
+    /* Set color based on offer expired flag (byte 13) */
     uint16_t colorBits = 0;
-    if (offer[0xD] != 0)
+    if (offer[13] != 0)
         colorBits = 6;
 
     /* Apply color to stringFlags of entries 7-10 (low 4 bits) */
@@ -3542,8 +3552,8 @@ void _OffersAfterDrawCommon(void *entryPtr)
     exchangeFmtLine1b       = (uint32_t)aAExchangeOffer_2;
     exchangeFmtLine2b       = (uint32_t)aBAndC_0;
 
-    /* Check for "further improved" (offer[0xA] == 0xFFFF) */
-    if (*(uint16_t *)(offer + 0xA) == 0xFFFF) {
+    /* Check for "further improved" (offer word at offset 10 == 0xFFFF) */
+    if (*(uint16_t *)(offer + 10) == 0xFFFF) {
         offerFmtSinglePlayer   = (uint32_t)aAFurtherImprov;
         offerFmtTwoPlayers     = (uint32_t)aAFurtherImprov_0;
         exchangeFmtSinglePlayer = (uint32_t)aAFurtherImprov_1;
@@ -3589,7 +3599,8 @@ void _OffersAfterDrawCommon(void *entryPtr)
             fmtStr = (uint8_t *)exchangeFmtSinglePlayer;
 
         uint8_t *p = _GetPlayer(selTeamNumber, (uint16_t)(int8_t)offer[2]);
-        playerNameA = p + 0x4F;  /* player name */
+        PlayerFile *namePf = (PlayerFile *)(p + PF_OFF);
+        playerNameA = (uint8_t *)namePf->playerName;
     } else {
         /* Two players (offer[3] >= 0) */
         fmtStr = (uint8_t *)offerFmtTwoPlayers;
@@ -3597,10 +3608,12 @@ void _OffersAfterDrawCommon(void *entryPtr)
             fmtStr = (uint8_t *)exchangeFmtTwoPlayers;
 
         uint8_t *p1 = _GetPlayer(selTeamNumber, (uint16_t)(int8_t)offer[2]);
-        playerNameA = p1 + 0x4F;
+        PlayerFile *namePf1 = (PlayerFile *)(p1 + PF_OFF);
+        playerNameA = (uint8_t *)namePf1->playerName;
 
         uint8_t *p2 = _GetPlayer(selTeamNumber, (uint16_t)(int8_t)offer[3]);
-        playerNameB = p2 + 0x4F;
+        PlayerFile *namePf2 = (PlayerFile *)(p2 + PF_OFF);
+        playerNameB = (uint8_t *)namePf2->playerName;
     }
 
     /* Format the offer text into fundsBuffer using PrintFormatted
@@ -3696,9 +3709,6 @@ extern uint32_t _GetNumberOfAvailableSubstitutes(uint8_t *team, int16_t flag);
 extern uint32_t _GetNumberOfAvailableStartingPlayers(uint8_t *team, int16_t flag);
 extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
 extern void _PanicHaltLoop(void);
-
-/* Player data offset from GetPlayer result to actual PlayerFile fields */
-#define PF_OFF 76  /* sizeof(TeamFile) */
 
 /* ================================================================
  * Career_BuildForeignMarketPoolFromSelectedTeam  (SWOS2.s line 63218)
@@ -3834,8 +3844,9 @@ void _Career_TransferPlayerAndAddReplacedToMarketPool(uint16_t sourceTeam, uint1
         uint8_t *dstData = bestPlayer + PF_OFF;
 
         /* Save shirt numbers before copy */
-        uint8_t srcShirt = *(transferredBase + 0x4E);
-        uint8_t dstShirt = *(bestPlayer + 0x4E);
+        uint8_t srcShirt = (uint8_t)transferredPf->shirtNumber;
+        PlayerFile *bestReplacePf = (PlayerFile *)(bestPlayer + PF_OFF);
+        uint8_t dstShirt = (uint8_t)bestReplacePf->shirtNumber;
 
         /* Copy 0x26 bytes (19 words) of player data */
         uint8_t *s = srcData;
@@ -3847,8 +3858,8 @@ void _Career_TransferPlayerAndAddReplacedToMarketPool(uint16_t sourceTeam, uint1
         }
 
         /* Restore shirt numbers */
-        *(transferredBase + 0x4E) = srcShirt;
-        *(bestPlayer + 0x4E) = dstShirt;
+        transferredPf->shirtNumber = (int8_t)srcShirt;
+        bestReplacePf->shirtNumber = (int8_t)dstShirt;
 
         /* Mark replacement as trialist and clear flags */
         PlayerFile *bestPf = (PlayerFile *)(bestPlayer + PF_OFF);
@@ -4148,9 +4159,10 @@ restart:;
     uint16_t r = _Rand2();
     uint16_t playerIdx = (r & 0xF) * 0x26;
     uint8_t *playerBase = team + playerIdx;
-    nationality = *(playerBase + 0x4C);   /* nationality */
-    posFlags = *(playerBase + 0x66) & 0x18; /* position flags bits 3-4 */
-    uint8_t *name = playerBase + 0x4F;     /* player name */
+    PlayerFile *tpf = (PlayerFile *)(playerBase + PF_OFF);
+    nationality = (uint8_t)tpf->nationality;
+    posFlags = tpf->positionAndFace & 0x18; /* position flags bits 3-4 */
+    uint8_t *name = (uint8_t *)tpf->playerName;
 
     /* Copy characters from name to trialistNameBuffer */
     while (*name != 0) {
@@ -4167,9 +4179,10 @@ restart:;
         r = _Rand2();
         playerIdx = (r & 0xF) * 0x26;
         playerBase = team + playerIdx;
-        nationality = *(playerBase + 0x4C);
-        posFlags = *(playerBase + 0x66) & 0x18;
-        name = playerBase + 0x4F;
+        tpf = (PlayerFile *)(playerBase + PF_OFF);
+        nationality = (uint8_t)tpf->nationality;
+        posFlags = tpf->positionAndFace & 0x18;
+        name = (uint8_t *)tpf->playerName;
 
         /* Find end of name string */
         uint8_t *nameEnd = name;
@@ -4325,7 +4338,8 @@ static void careerInitTrialistAttributes(PlayerFile *pf, uint16_t sourceTeam)
         uint16_t r = _Rand2();
         uint16_t pidx = (r & 0xF) * 0x26;
         uint8_t *rp = randomTeam + pidx;
-        int16_t rpPrice = (int8_t)*(rp + 0x6C);  /* price, sign-extended */
+        PlayerFile *rpPf = (PlayerFile *)(rp + PF_OFF);
+        int16_t rpPrice = (int8_t)rpPf->price;
 
         /* Random skill distribution lookup */
         r = _Rand2();
@@ -4933,12 +4947,13 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
 
     /* Get player data and check injury */
     uint8_t *playerEntry = _GetPlayer(selTeamNumber, playerOrdinal);
-    uint16_t refSkill = (uint16_t)playerEntry[0x6C]; /* ref skill from player file, stored in d7 */
+    PlayerFile *pfEntry = (PlayerFile *)(playerEntry + PF_OFF);
+    uint16_t refSkill = (uint8_t)pfEntry->price;
     if (_IsPlayerInjured(playerEntry, -1) != 0)
         return;
 
     /* Get position mask */
-    uint16_t posMask = (uint16_t)playerEntry[0x66] & 0xE0;
+    uint16_t posMask = (uint16_t)pfEntry->positionAndFace & 0xE0;
     offerPrimaryPositionMask = posMask;
 
     /* Decide home vs foreign market */
@@ -5037,7 +5052,8 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
 
                     /* Get extra player entry and check injury + position */
                     uint8_t *extraEntry = _GetPlayer(selTeamNumber, (uint16_t)extraOrd);
-                    uint16_t extraPos = (uint16_t)extraEntry[0x66] & 0xE0;
+                    PlayerFile *extraPf = (PlayerFile *)(extraEntry + PF_OFF);
+                    uint16_t extraPos = (uint16_t)extraPf->positionAndFace & 0xE0;
                     offerExtraPositionMask = extraPos;
                     if (_IsPlayerInjured(extraEntry, -1) != 0)
                         return;
@@ -5295,11 +5311,13 @@ int16_t _EvaluateTransferOfferNegotiation(void)
 
         /* Get primary player's skill and check against threshold */
         uint8_t *primEntry = _GetPlayer(teamOffering, offerPrimaryPlayerOrdinal);
-        if (threshold >= primEntry[0x6C]) {
+        PlayerFile *primPf = (PlayerFile *)(primEntry + PF_OFF);
+        if (threshold >= (uint8_t)primPf->price) {
             /* Primary player below threshold, check extra */
             if (numExtraPlayersWanted >= 0) {
                 uint8_t *extraEntry = _GetPlayer(teamOffering, (uint16_t)numExtraPlayersWanted);
-                if (threshold < extraEntry[0x6C]) {
+                PlayerFile *extraPfEval = (PlayerFile *)(extraEntry + PF_OFF);
+                if (threshold < (uint8_t)extraPfEval->price) {
                     goto highDemand;
                 }
             }
@@ -5344,12 +5362,14 @@ checkMarket:
         /* At least one player NOT on market — check transfer list flag */
         {
             uint8_t *prim2 = _GetPlayer(teamOffering, offerPrimaryPlayerOrdinal);
-            if (prim2[0x67] & 0x04)
+            PlayerFile *primPf2 = (PlayerFile *)(prim2 + PF_OFF);
+            if (primPf2->cardsInjuries & 0x04)
                 goto onTransferList;
 
             if (numExtraPlayersWanted >= 0) {
                 uint8_t *extra2 = _GetPlayer(teamOffering, (uint16_t)numExtraPlayersWanted);
-                if (extra2[0x67] & 0x04)
+                PlayerFile *extraPf3 = (PlayerFile *)(extra2 + PF_OFF);
+                if (extraPf3->cardsInjuries & 0x04)
                     goto onTransferList;
             }
 

@@ -277,7 +277,7 @@ static void AssignSimulatedGoalsToScorers(uint8_t *team, uint8_t *remapTable,
 
         /* Special case: if d0 >= 0xF8, it's an own goal */
         if (d0 >= 0xF8) {
-            team[0x16]++;  /* increment own goals counter at offset 0x16 */
+            ((TeamFileEx *)team)->team.writesZeroHere++;  /* own goals counter (offset 0x16) */
             continue;
         }
 
@@ -813,7 +813,7 @@ void _CalculateViewResult(uint8_t *ctx, uint16_t modeFlag,
                           uint16_t *outTeam1Goals, uint16_t *outTeam2Goals) {
     /* Store parameters in module state */
     viewResultCtx = ctx;
-    inEditTactics = *(uint16_t *)(ctx + 0x3C);
+    inEditTactics = ((DIY_Competition *)ctx)->substitutesCount;
     viewResultModeFlag = modeFlag;
     viewResultTeam1GoalsIn = team1GoalsIn;
     viewResultTeam2GoalsIn = team2GoalsIn;
@@ -1112,10 +1112,8 @@ static void teamInit(TeamFileEx *tfex, uint16_t numPlayersMinus1)
     tfex->team.writesZeroHere = 0;
     tfex->team.andWith0xFE &= 0xFE;  /* bclr #0 */
 
-    uint8_t *p = (uint8_t *)tfex + 76;  /* start of PlayerFile array */
-
     for (int16_t i = (int16_t)numPlayersMinus1; i >= 0; i--) {
-        PlayerFile *pf = (PlayerFile *)p;
+        PlayerFile *pf = &tfex->players[i];
         pf->cardsInjuries = 0;
 
         if (tfex != &careerTeam || !stayingInOldClub) {
@@ -1128,8 +1126,6 @@ static void teamInit(TeamFileEx *tfex, uint16_t numPlayersMinus1)
         pf->goalStats[1] = 0;
         pf->goalStats[2] = 0;
         pf->goalStats[3] = 0;
-
-        p += PLAYERFILE_SIZE;
     }
 }
 
@@ -1167,9 +1163,8 @@ void _InitTeams(void)
 __attribute__((used, externally_visible))
 void _PlayFriendly(void)
 {
-    uint8_t *team1 = &selTeamsPtr;
-    uint8_t *team2 = &selTeamsPtr + sizeof(TeamFileEx);
-    _InitAndPlayGame(team1, team2);
+    TeamFileEx *teams = (TeamFileEx *)&selTeamsPtr;
+    _InitAndPlayGame((uint8_t *)&teams[0], (uint8_t *)&teams[1]);
 }
 
 /* ================================================================
@@ -1321,7 +1316,9 @@ void _AdjustPlayerSkills(uint16_t playerIdx, uint8_t *teamFile,
 {
     TeamFile *tf = (TeamFile *)teamFile;
     TeamFile *oppTf = (TeamFile *)oppTeamFile;
-    PlayerFile *pf = (PlayerFile *)(playerBase + 76);  /* skip TeamFile header */
+    /* playerBase points to start of team data for this player's slot;
+     * player file data starts after TeamFile header (76 bytes) */
+    PlayerFile *pf = (PlayerFile *)(playerBase + sizeof(TeamFile));
     int16_t d4;
 
     if (playerIdx == 0) {
@@ -1473,8 +1470,8 @@ void _ApplyTeamTactics(TeamGame *teamGame)
     for (uint16_t i = 0; i < 11; i++) {
         PlayerInfo *pi = &teamGame->players[i];
 
-        /* Get team number from team file word at offset 0 */
-        uint16_t teamNumber = *(uint16_t *)ownTeamFile;
+        /* Get packed team number: (countryNumber << 8) | teamOrdinal */
+        uint16_t teamNumber = ((uint16_t)tf->countryNumber << 8) | tf->teamOrdinal;
 
         /* Get player file index from PlayerInfo */
         int16_t playerFileIdx = (int16_t)(int8_t)pi->playerIndex;
@@ -1698,13 +1695,16 @@ uint8_t *_BuildMatchResultString(uint16_t control, uint16_t leg2, uint16_t leg1,
 __attribute__((used, externally_visible))
 int16_t _CalcTeamPriceRankPercentOffset(uint8_t *ctx, uint8_t *team)
 {
-    /* ctx[0] must be 0 (competition type check) */
-    if (*(int16_t *)ctx != 0)
+    DIY_Competition *comp = (DIY_Competition *)ctx;
+    TeamFile *tf = (TeamFile *)team;
+
+    /* competitionType must be 0 */
+    if (comp->competitionType != 0)
         return 0;
 
-    /* Check minimum number of entries at ctx+0x2B8 */
+    /* Check minimum number of entries at ctx+0x2B8 (beyond DIY_Competition struct) */
     uint16_t numEntries = *(uint16_t *)(ctx + 0x2B8);
-    if (team[4] == 1) {
+    if (tf->teamControls == TEAM_COMPUTER) {
         /* Cup: need at least 3 entries */
         if (numEntries < 3)
             return 0;
@@ -1714,14 +1714,15 @@ int16_t _CalcTeamPriceRankPercentOffset(uint8_t *ctx, uint8_t *team)
             return 0;
     }
 
-    uint16_t teamNum = *(uint16_t *)team;
-    uint16_t teamIndex = _FindTeamInDIY(teamNum, (DIY_Competition *)ctx);
-    uint16_t expensiveCount = _GetMoreExpensiveTeamsCount(teamNum, (DIY_Competition *)ctx);
+    /* Read first two bytes as a packed uint16_t: (countryNumber << 8) | teamOrdinal */
+    uint16_t teamNum = ((uint16_t)tf->countryNumber << 8) | tf->teamOrdinal;
+    uint16_t teamIndex = _FindTeamInDIY(teamNum, comp);
+    uint16_t expensiveCount = _GetMoreExpensiveTeamsCount(teamNum, comp);
 
     int16_t diff = (int16_t)(expensiveCount - teamIndex);
     int32_t scaled = (int32_t)diff * 100;
 
-    int16_t totalTeams = *(int16_t *)(ctx + 0x32);
+    int16_t totalTeams = comp->numTeams;
     int16_t divisor = totalTeams - 1;
     if (divisor == 0)
         return 0;
@@ -1780,11 +1781,12 @@ extern uint16_t _CountNearnessFactor(uint16_t curBallQuadrant, uint16_t dstBallQ
 __attribute__((used, externally_visible))
 int16_t _GetPlayerPrice(uint8_t *teamFile, uint8_t *playerBase, uint16_t playerNumber)
 {
-    /* Player data is at playerBase + TEAMFILE_PLAYERS (76) */
-    uint8_t *plData = playerBase + 76;
+    /* Player data is at playerBase + sizeof(TeamFile) */
+    PlayerFile *plFile = (PlayerFile *)(playerBase + sizeof(TeamFile));
+    TeamFile *tf = (TeamFile *)teamFile;
 
     /* Position type (0-7) from top 3 bits of positionAndFace */
-    uint16_t position = (plData[26] & 0xE0) >> 5;
+    uint16_t position = (plFile->positionAndFace & 0xE0) >> 5;
 
     /* Skill weights for this position.
      * Position 0 (GK) reads from dead code bytes 35 bytes before skillsPerQuadrant.
@@ -1794,13 +1796,15 @@ int16_t _GetPlayerPrice(uint8_t *teamFile, uint8_t *playerBase, uint16_t playerN
 
     /* Player skills packed: 4 bytes starting at passing (offset 28).
      * Big-endian: passing, shootingHeading, tacklingBallControl, speedFinishing */
-    uint32_t d5 = ((uint32_t)plData[28] << 24) | ((uint32_t)plData[29] << 16) |
-                  ((uint32_t)plData[30] << 8) | plData[31];
+    uint32_t d5 = ((uint32_t)(uint8_t)plFile->passing << 24) |
+                  ((uint32_t)(uint8_t)plFile->shootingHeading << 16) |
+                  ((uint32_t)(uint8_t)plFile->tacklingBallControl << 8) |
+                  (uint8_t)plFile->speedFinishing;
     d5 &= 0x07777777;   /* mask to 3 bits per nibble */
     d5 += 0x01111111;   /* add 1 to each nibble (range: 1-8) */
 
     /* Get tactics table for this team */
-    int16_t tacticsIdx = (int8_t)teamFile[24]; /* team->tactics, sign-extended */
+    int16_t tacticsIdx = (int8_t)tf->tactics;
     uint8_t *tacticsData = (uint8_t *)teamTacticsTable[tacticsIdx] + 9;
     plPositions = (uint32_t)tacticsData;
 
@@ -1822,7 +1826,7 @@ int16_t _GetPlayerPrice(uint8_t *teamFile, uint8_t *playerBase, uint16_t playerN
         ballQ = quadrantCoordinatesToBallQuadrant[ballQ];
 
         /* Count players at same quadrant (human teams only) */
-        if (teamFile[4] != 1 /* TEAM_COMPUTER */) {
+        if (tf->teamControls != TEAM_COMPUTER) {
             numPlayersAtQuadrant = 1;
             if (d3 >= 5 && d3 < 30 && d3 != 7) {
                 uint8_t *tacticsBase = (uint8_t *)plPositions;
@@ -1866,7 +1870,7 @@ int16_t _GetPlayerPrice(uint8_t *teamFile, uint8_t *playerBase, uint16_t playerN
         temp2 >>= 3;
 
         /* Divide by number of players at quadrant (human only, >1) */
-        if (teamFile[4] != 1) {
+        if (tf->teamControls != TEAM_COMPUTER) {
             uint16_t n = numPlayersAtQuadrant - 1;
             if (n != 0)
                 temp2 = temp2 / n;  /* divu.w: 32/16 */
@@ -1875,7 +1879,7 @@ int16_t _GetPlayerPrice(uint8_t *teamFile, uint8_t *playerBase, uint16_t playerN
         uint16_t d7val = (uint16_t)temp2;
 
         /* Apply nearness factor (human teams only) */
-        if (teamFile[4] != 1) {
+        if (tf->teamControls != TEAM_COMPUTER) {
             d7val = _CountNearnessFactor(d3, ballQ, d7val,
                                          distFactor, playerTactics,
                                          quadrantCoordinatesToBallQuadrant);
@@ -1901,7 +1905,7 @@ int16_t _GetPlayerPrice(uint8_t *teamFile, uint8_t *playerBase, uint16_t playerN
     /* Compare computed price index vs file price (byte-level operations).
      * sub.b: d0.b = (uint8_t)priceIdx - mem.b, sets flags on byte result.
      * bmi: branch if signed byte result < 0. */
-    uint8_t filePriceByte = plData[32];  /* PLAYERFILE_PRICE raw byte */
+    uint8_t filePriceByte = (uint8_t)plFile->price;
     uint8_t priceIdxLow = (uint8_t)priceIdx;
     int8_t byteDiff = (int8_t)(priceIdxLow - filePriceByte);
 
@@ -1937,42 +1941,41 @@ int16_t _GetPlayerPrice(uint8_t *teamFile, uint8_t *playerBase, uint16_t playerN
 __attribute__((used, externally_visible))
 uint32_t _UpdatePlayerPositionAndReturnRole(uint8_t *team, uint16_t playerIdx)
 {
+    TeamFileEx *tfex = (TeamFileEx *)team;
+
     /* Get player slot index based on whether this is the career team */
     int16_t slotIdx;
     if (team == (uint8_t *)&careerTeam) {
-        /* Career team: slot comes from currentMatchPlayers array (at careerTeam - 0x20) */
         slotIdx = (int8_t)currentMatchPlayers[playerIdx];
     } else {
-        /* Other teams: slot from team->playerNumbers (offset 60 = 0x3C) */
-        slotIdx = (int8_t)team[60 + playerIdx];
+        slotIdx = (int8_t)tfex->team.playerNumbers[playerIdx];
     }
 
     int16_t d6 = slotIdx;  /* save slot for playerPositionsArray indexing */
 
     /* Compute player base: team + slot * PLAYERFILE_SIZE (38) */
-    uint8_t *playerBase = team + (uint16_t)((uint16_t)slotIdx * 38);
-    /* Player data at playerBase + TEAMFILE_PLAYERS (76) */
-    uint8_t *plData = playerBase + 76;
+    uint8_t *playerBase = team + (uint16_t)((uint16_t)slotIdx * PLAYERFILE_SIZE);
+    /* Player file data starts after TeamFile header */
+    PlayerFile *pf = (PlayerFile *)(playerBase + sizeof(TeamFile));
 
-    /* Check someFlag (offset 0x3B = 59 from team) */
-    if (team[59] == 0) {
+    /* Check someFlag in TeamFile header */
+    if (tfex->team.someFlag == 0) {
         /* Simple path: return field_1 as position, store in array */
-        int16_t pos = (int8_t)plData[1];  /* PLAYERFILE_FIELD_1 */
-        uint16_t role = (plData[26] & 0xE0) >> 5;  /* PLAYERFILE_POSITIONANDFACE */
+        int16_t pos = (int8_t)pf->field_1;
+        uint16_t role = (pf->positionAndFace & 0xE0) >> 5;
         playerPositionsArray[d6] = (uint8_t)pos;
-        /* Return with role in high word, position in low word */
         return ((uint32_t)role << 16) | ((uint16_t)pos & 0xFFFF);
     }
 
     /* Complex path: someFlag != 0 */
-    uint16_t posType = (plData[26] & 0xE0) >> 5;  /* position type (0-7) */
+    uint16_t posType = (pf->positionAndFace & 0xE0) >> 5;
     int16_t d7val;
 
     if (playerIdx == 0) {
         /* Goalkeeper slot */
         if (posType == 0) {
             /* GK in GK slot: use file price, sign-extended */
-            d7val = (int8_t)plData[32];  /* PLAYERFILE_PRICE */
+            d7val = (int8_t)pf->price;
         } else {
             /* Non-GK in GK slot: price = 0 */
             d7val = 0;
@@ -1990,13 +1993,8 @@ uint32_t _UpdatePlayerPositionAndReturnRole(uint8_t *team, uint16_t playerIdx)
         }
     } else {
         /* Substitute (index >= 11) */
-        if (posType == 0) {
-            /* GK substitute: use file price, sign-extended */
-            d7val = (int8_t)plData[32];
-        } else {
-            /* Outfield substitute: use file price, sign-extended */
-            d7val = (int8_t)plData[32];
-        }
+        /* Both GK and outfield subs: use file price, sign-extended */
+        d7val = (int8_t)pf->price;
     }
 
     /* Ensure minimum price of 1 */
@@ -2004,9 +2002,9 @@ uint32_t _UpdatePlayerPositionAndReturnRole(uint8_t *team, uint16_t playerIdx)
         d7val = 1;
 
     /* Computer-controlled teams skip injury/sold checks */
-    if (team[4] != 1 /* TEAM_COMPUTER */) {
+    if (tfex->team.teamControls != TEAM_COMPUTER) {
         /* Check if player is "sold" (bit 1 of positionAndFace) */
-        if (plData[26] & 0x02) {
+        if (pf->positionAndFace & 0x02) {
             d7val = 1;  /* sold player = minimum price */
         }
 
@@ -2021,11 +2019,11 @@ storeResult:
     /* Store position value */
     {
         uint16_t posVal = (uint16_t)(int16_t)d7val;
-        plData[1] = (uint8_t)posVal;  /* PLAYERFILE_FIELD_1 */
+        pf->field_1 = (int8_t)(uint8_t)posVal;
         playerPositionsArray[d6] = (uint8_t)posVal;
 
         /* Get role from positionAndFace */
-        uint16_t role = (plData[26] & 0xE0) >> 5;
+        uint16_t role = (pf->positionAndFace & 0xE0) >> 5;
 
         return ((uint32_t)role << 16) | (posVal & 0xFFFF);
     }

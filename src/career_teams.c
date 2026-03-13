@@ -1646,12 +1646,12 @@ void _Career_AutoSimulateLeagueFixturesUntilHumanTeam(void)
         uint8_t *comp2 = fixtureTeam2CompPtr;
 
         /* Check team1: offset 0x2B4 is team pointer, selTeamsPtr-relative */
-        uint8_t *team1 = &selTeamsPtr + *(uint32_t *)(comp1 + 0x2B4);
-        if (team1[4] != 1) return;  /* human team found */
+        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + *(uint32_t *)(comp1 + 0x2B4));
+        if (team1->teamControls != 1) return;  /* human team found */
 
         /* Check team2 */
-        uint8_t *team2 = &selTeamsPtr + *(uint32_t *)(comp2 + 0x2B4);
-        if (team2[4] != 1) return;  /* human team found */
+        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + *(uint32_t *)(comp2 + 0x2B4));
+        if (team2->teamControls != 1) return;  /* human team found */
 
         /* Both AI: simulate */
         _DIY_PlayOrSimulateLeagueFixture(0, 0);
@@ -1694,12 +1694,12 @@ void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
         getCurrentMatchTeamSlots(&slot1, &slot2);
 
         /* Check team1: offset 0x344 is team pointer, selTeamsPtr-relative */
-        uint8_t *team1 = &selTeamsPtr + *(uint32_t *)(slot1 + 0x344);
-        if (team1[4] != 1) return;  /* human team found */
+        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + *(uint32_t *)(slot1 + 0x344));
+        if (team1->teamControls != 1) return;  /* human team found */
 
         /* Check team2 */
-        uint8_t *team2 = &selTeamsPtr + *(uint32_t *)(slot2 + 0x344);
-        if (team2[4] != 1) return;  /* human team found */
+        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + *(uint32_t *)(slot2 + 0x344));
+        if (team2->teamControls != 1) return;  /* human team found */
 
         /* Both AI: simulate */
         _DIY_PlayCupMatchAndAdvance(0, 0);
@@ -1715,8 +1715,9 @@ void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
 __attribute__((used, externally_visible))
 void _Career_AutoSimulatePendingMatchUntilHumanTeam(void)
 {
+    DIY_Competition *bufComp = (DIY_Competition *)diyFileBufferCopy;
     uint8_t *buf = diyFileBufferCopy;
-    uint16_t slotIdx = *(uint16_t *)(buf + 0x54);
+    uint16_t slotIdx = bufComp->currentRound;
     uint8_t *slot = buf + (uint32_t)slotIdx * 0x76;
 
     if (*(uint16_t *)(slot + 0x15E) != 0)
@@ -1737,7 +1738,7 @@ __attribute__((used, externally_visible))
 void _Career_AutoPlayOrSimulateLeagueFixtureLoop(void)
 {
     for (;;) {
-        uint16_t field1C0 = *(uint16_t *)(diyCompetitionStart + 0x1C0);
+        uint16_t field1C0 = *(uint16_t *)(diyCompetitionStart + 0x1C0);  /* extended buffer field */
         if (field1C0 != 0 && careerSlotProcessingInProgress != 0)
             return;
         _DIY_PlayOrSimulateLeagueFixture(0, 0);
@@ -2057,25 +2058,26 @@ void _Career_CopyUnavailablePlayerToCareerTeamSlot(uint8_t *srcPlayer, uint8_t *
     *(uint16_t *)(careerUnavailablePlayerLookupTable + offset) = srcTeamNumber;
     *(uint16_t *)(careerUnavailablePlayerLookupTable + offset + 2) = srcPlayerIndex;
 
-    /* Save byte at dstTeam+0x4E before overwriting with player data copy */
-    uint8_t savedByte = dstTeam[0x4E];
+    /* Save shirtNumber before overwriting with player data copy */
+    PlayerFile *dstPf = (PlayerFile *)(dstTeam + 76);  /* PlayerFile at TeamFileEx offset 0x4C */
+    PlayerFile *srcPf = (PlayerFile *)(srcPlayer + 76);
+    uint8_t savedShirtNumber = dstPf->shirtNumber;
 
-    /* Copy 19 words (38 bytes) from srcPlayer+0x4C to dstTeam+0x4C
-     * (one PlayerFile entry worth of data) */
-    uint16_t *src = (uint16_t *)(srcPlayer + 0x4C);
-    uint16_t *dst = (uint16_t *)(dstTeam + 0x4C);
+    /* Copy 19 words (38 bytes = one PlayerFile entry worth of data) */
+    uint16_t *src = (uint16_t *)srcPf;
+    uint16_t *dst = (uint16_t *)dstPf;
     for (int16_t i = 0x12; i >= 0; i--) {
         *dst++ = *src++;
     }
 
-    /* Restore saved byte (control byte preserved across copy) */
-    dstTeam[0x4E] = savedByte;
+    /* Restore shirtNumber (control byte preserved across copy) */
+    dstPf->shirtNumber = savedShirtNumber;
 
-    /* Clear player status bytes */
-    dstTeam[0x6D] = 0;
-    dstTeam[0x6E] = 0;
-    dstTeam[0x6F] = 0;
-    dstTeam[0x70] = 0;
+    /* Clear goal stats */
+    dstPf->goalStats[0] = 0;
+    dstPf->goalStats[1] = 0;
+    dstPf->goalStats[2] = 0;
+    dstPf->goalStats[3] = 0;
 
     /* Update bench player numbers for the career team */
     _SetBenchPlayersNumbers((uint8_t *)&careerTeam);
@@ -2148,11 +2150,14 @@ void _Career_RemoveInternationalPlayersByMask(uint32_t removeMask)
                 }
             }
 
-            /* Mark player as removed */
-            slot[0x4F] = 0xFF;
+            /* Mark player as removed (playerName[0] = 0xFF) */
+            {
+                PlayerFile *pf = (PlayerFile *)(slot + 76);
+                pf->playerName[0] = (int8_t)0xFF;
+            }
             careerNumPlayers--;
         }
-        slot += 0x26;  /* advance to next 38-byte player slot */
+        slot += PLAYERFILE_SIZE;  /* advance to next 38-byte player slot */
     }
 }
 
@@ -2165,10 +2170,10 @@ void _Career_RemoveInternationalPlayersByMask(uint32_t removeMask)
  *   - Clears the lookup table entry to 0xFFFF
  *   - Sets currentMatchPlayers[slot] = slot
  *   - Gets the player via GetPlayer(selTeamNumber, slot)
- *   - Marks player[0x4F] = 0xFF (removed)
- *   - For slots 0-10: assigns default position from
- *     careerDefaultInternationalSquadSlotsTable to player[0x4E]
- *   - Modifies player[0x66]: clears bits 5-7, then sets bits 5-6
+ *   - Marks playerName[0] = 0xFF (removed)
+ *   - For slots 0-10: assigns default squad slot from
+ *     careerDefaultInternationalSquadSlotsTable to shirtNumber
+ *   - Modifies positionAndFace: clears bits 5-7, then sets bits 5-6
  *     for all slots except 0 and 11
  * Finally resets careerNumPlayers to 0.
  *
@@ -2194,24 +2199,25 @@ void _Career_InitInternationalSquadAndLookupTablesForNewSeason(uint8_t *teamPtr)
 
         /* Get player pointer for this slot */
         uint8_t *player = _GetPlayer(selTeamNumber, i);
+        PlayerFile *pf = (PlayerFile *)(player + 76);  /* PlayerFile at TeamFileEx offset 0x4C */
 
-        /* Mark player as removed */
-        player[0x4F] = 0xFF;
+        /* Mark player as removed (playerName[0] = 0xFF) */
+        pf->playerName[0] = (int8_t)0xFF;
 
         /* For first 11 slots, assign default position from table */
         if (i < 11) {
-            player[0x4E] = squadSlots[squadSlotIdx++];
+            pf->shirtNumber = squadSlots[squadSlotIdx++];
         }
 
-        /* Modify player byte at offset 0x66:
+        /* Modify positionAndFace:
          * Clear bits 5-7 (andi.w #$FF1F clears bits 5-7 of low byte)
          * Then set bits 5-6 (0x60) for all slots except 0 and 11 */
-        uint8_t val = player[0x66];
+        uint8_t val = pf->positionAndFace;
         val &= 0x1F;
         if (i != 0 && i != 11) {
             val |= 0x60;
         }
-        player[0x66] = val;
+        pf->positionAndFace = val;
     }
 
     careerNumPlayers = 0;
@@ -2258,8 +2264,8 @@ static uint8_t *addNextRoundCupEntry(uint8_t **srcPtr, uint16_t idx, uint16_t to
     out[1] = *src;
     (*srcPtr)++;
 
-    /* GetNextCupRoundStringIndex(idx, total, base[0x5C]) */
-    uint16_t cupRoundIdx = _GetNextCupRoundStringIndex(idx, total, *(uint16_t *)(base + 0x5C));
+    /* GetNextCupRoundStringIndex(idx, total, subRoundCounter) */
+    uint16_t cupRoundIdx = _GetNextCupRoundStringIndex(idx, total, ((DIY_Competition *)base)->subRoundCounter);
     out[9] = (uint8_t)cupRoundIdx;
     out[7] = (uint8_t)idx;
     out[0] = (uint8_t)teamId;
@@ -2320,7 +2326,8 @@ static uint8_t *addCupEntry(uint8_t **srcPtr, uint16_t teamSlot, uint16_t roundI
 __attribute__((used, externally_visible))
 void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
 {
-    uint16_t type = *(uint16_t *)blk;
+    DIY_Competition *comp = (DIY_Competition *)blk;
+    uint16_t type = comp->competitionType;
 
     if (type == 0) {
         /* League type */
@@ -2330,7 +2337,7 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
         if (gameType == 4) {
             slotLen = 0x16;
         } else {
-            slotLen = *(uint16_t *)(base + 0x32);
+            slotLen = comp->numTeams;
             slotLen >>= 1;
             if (slotLen > 0x18)
                 slotLen = 0x18;
@@ -2362,10 +2369,10 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
         /* Cup type (single competition) */
         uint8_t *base = blk;         /* a6: constant base for AddNextRoundCupEntry */
         uint8_t *roundPtr = blk;     /* a3: per-round pointer, advances by 2 */
-        uint16_t teamId = *(uint16_t *)(base + 0x2C);
+        uint16_t teamId = *(uint16_t *)(base + 0x2C);  /* slot/team index */
         uint8_t *src = base + 0x338;
-        uint16_t numRounds = *(uint16_t *)(base + 0x5A);
-        uint16_t teamsPerRound = *(uint16_t *)(base + 0x32);
+        uint16_t numRounds = comp->numRounds;
+        uint16_t teamsPerRound = comp->numTeams;
         uint16_t roundIdx = 0;
 
         while (roundIdx != numRounds) {
@@ -2418,7 +2425,7 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
         uint16_t opt = *(uint16_t *)(base + 0x15A);   /* d4: opt param for GetCupRoundStringIndex */
         uint16_t teamSlot = *(uint16_t *)(base + 0x2C); /* d2: team slot index */
         uint8_t *out = teamSelectionKeyCache;
-        uint16_t numSlots = *(uint16_t *)(base + 0x52);
+        uint16_t numSlots = comp->totalRounds;
         uint16_t slotIdx = 0;
 
         while (slotIdx != numSlots) {

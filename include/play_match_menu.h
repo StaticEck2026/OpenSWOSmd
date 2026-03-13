@@ -46,17 +46,6 @@
 #define TEAMFILE_SOMEFLAG       59
 #define TEAMFILE_PLAYERNUMBERS  60
 
-/* TeamTactics offsets */
-#define TEAMTACTICS_BALLOUTOFPLAYTACTICS  369
-
-/* PlayerFile field offsets (within the 38-byte PlayerFile struct, at +76 from GetPlayer result) */
-#define PF_SHIRTNUMBER       2
-#define PF_PLAYERNAME        3
-#define PF_POSITIONANDFACE  26
-#define PF_PASSING          28
-#define PF_PRICE            32
-#define PF_SOMEFLAG         37
-
 /* --- Top skills string builder (Chunk 151) --- */
 void _FormTopSkillsString(uint8_t *dst, uint8_t *playerBase);
 
@@ -65,7 +54,7 @@ void _PlayMatchMenuInit(void);
 void _PlayMatchMenuReinit(void);
 void _SetCurrentSelectedPlayerIndexPointer(void);
 void _OnSwapPlayer(MenuEntry *menuEntry);
-void _PlayMatchMenuSwapPlayers(uint8_t *team, int16_t pos1, int16_t pos2, int16_t tactPos1, int16_t tactPos2);
+void _PlayMatchMenuSwapPlayers(uint8_t *teamRaw, int16_t pos1, int16_t pos2, int16_t tactPos1, int16_t tactPos2);
 int16_t _HandleSquadSwapSelectionToggle(int16_t menuPos);
 void _PlayMatchChangeTactics(MenuEntry *menuEntry);
 void _ExitPlayMatch(void);
@@ -94,6 +83,6 @@ void _TogglePlayerCoach(void);
 #define GAME_TYPE_SEASON     3
 int16_t _ShowPlayMatchMenu(int16_t controlFlags, int16_t maxSubstitutes,
                             int16_t excludeFlags, int16_t isFirstPlayer,
-                            int16_t squadChanges, uint8_t *team1, uint8_t *team2);
+                            int16_t squadChanges, TeamFile *team1, TeamFile *team2);
 
 #endif

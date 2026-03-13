@@ -207,9 +207,11 @@ apply_dir:
     int16_t destY = kDefaultDestinations[dirIdx + 1] + ball->y.s.i;
     ball->destY = destY;
 
-    /* Apply heading attribute speed increase */
-    uint8_t *playerInfo = _GetPlayerPointerFromShirtNumber(player, team);
-    PlayerInfo *pi = (PlayerInfo *)((uint8_t *)playerInfo + 42);
+    /* Apply heading attribute speed increase.
+     * _GetPlayerPointerFromShirtNumber returns a pointer into TeamGame that is
+     * TEAMGAME_PLAYERS_OFFSET (42) bytes before the PlayerInfo entry. */
+    uint8_t *playerInfoBase = _GetPlayerPointerFromShirtNumber(player, team);
+    PlayerInfo *pi = (PlayerInfo *)(playerInfoBase + TEAMGAME_PLAYERS_OFFSET);
     int8_t headingSkill = pi->heading;
     int16_t speedBonus = kPlayerHeaderSpeedIncrease[(int16_t)headingSkill];
     uint16_t ballSpeed = (uint16_t)ball->speed;
@@ -339,9 +341,11 @@ apply_hit:
     /* Set base ball speed for static header */
     ball->speed = (int16_t)kStaticHeaderBaseBallSpeed;
 
-    /* Apply heading attribute speed increase */
-    uint8_t *playerInfo = _GetPlayerPointerFromShirtNumber(player, team);
-    PlayerInfo *pi = (PlayerInfo *)((uint8_t *)playerInfo + 42);
+    /* Apply heading attribute speed increase.
+     * _GetPlayerPointerFromShirtNumber returns a pointer TEAMGAME_PLAYERS_OFFSET
+     * bytes before the PlayerInfo entry. */
+    uint8_t *playerInfoBase = _GetPlayerPointerFromShirtNumber(player, team);
+    PlayerInfo *pi = (PlayerInfo *)(playerInfoBase + TEAMGAME_PLAYERS_OFFSET);
     int8_t headingSkill = pi->heading;
     int16_t speedBonus = kPlayerHeaderSpeedIncrease[(int16_t)headingSkill];
     uint16_t ballSpeed = (uint16_t)ball->speed;

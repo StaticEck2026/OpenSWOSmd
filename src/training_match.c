@@ -88,18 +88,19 @@ void _TrainingMatch_RemoveSavedPlayerId(uint16_t value)
     if (foundIdx < 11) {
         /* Get position group of the removed player */
         uint8_t *targetPlayer = _GetPlayer(selTeamNumber, value);
-        uint8_t targetPosGroup = (targetPlayer[0x66] & 0xE0) >> 5;
+        PlayerFile *targetPf = (PlayerFile *)(targetPlayer + sizeof(TeamFile));
+        uint8_t targetPosGroup = (targetPf->positionAndFace & 0xE0) >> 5;
 
         /* Search substitutes (index 11 to careerNumPlayers-1) for best replacement */
         int8_t bestPrice = -1;   /* 0xFF as signed byte */
         int16_t bestIdx = -1;
         for (int16_t d4 = 11; d4 < numPl; d4++) {
             int16_t pIdx = (int16_t)(int8_t)trainingMatchSavedPlayers[d4];
-            uint8_t *p = (uint8_t *)&careerTeam + (uint16_t)((uint16_t)pIdx * 38);
-            uint8_t posGroup = (p[0x66] & 0xE0) >> 5;
+            PlayerFile *subPf = &((TeamFileEx *)&careerTeam)->players[pIdx];
+            uint8_t posGroup = (subPf->positionAndFace & 0xE0) >> 5;
             if (posGroup != targetPosGroup)
                 continue;
-            int8_t price = (int8_t)p[0x6C];
+            int8_t price = (int8_t)subPf->price;
             if (price > bestPrice) {
                 bestPrice = price;
                 bestIdx = d4;
@@ -513,11 +514,12 @@ void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
 {
     uint8_t *a5 = (uint8_t *)&careerTeam;
     uint8_t *a6 = (uint8_t *)&currentTeam;
+    TeamFileEx *teamEx = (TeamFileEx *)a6;
 
     currentTeamSelectedPlayerPosition = 0xFFFF;
 
     /* Save tactics byte from currentTeam before overwrite */
-    uint8_t savedTactics = a6[0x18]; /* TEAMFILEEX_TEAM(0) + TEAMFILE_TACTICS(24) */
+    uint8_t savedTactics = teamEx->team.tactics;
 
     /* Copy first 0x4C (76) bytes from careerTeam to currentTeam */
     {
@@ -528,12 +530,12 @@ void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
     }
 
     /* Restore tactics byte */
-    a6[0x18] = savedTactics;
+    teamEx->team.tactics = savedTactics;
 
     /* Copy non-injured player data from career team to current team */
     uint8_t *a4 = playerPositions;
     numPlayers = 0;
-    uint8_t *destPlayer = a6 + 0x4C; /* start of player data in currentTeam */
+    uint8_t *destPlayer = (uint8_t *)&teamEx->players[0];
     uint16_t d6 = 0; /* output player index */
     int16_t d7 = (int16_t)careerNumPlayers - 1;
 
@@ -558,12 +560,12 @@ void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
     }
 
     /* Set team metadata */
-    a6[1] = 0x99;
-    a6[4] = 1;
-    currentTeamNumber = *(uint16_t *)a6;
+    teamEx->team.teamOrdinal = 0x99;
+    teamEx->team.teamControls = 1;
+    currentTeamNumber = teamEx->team.globalTeamNumber;
 
     /* Look up tactics and position map */
-    int16_t tacticsIdx = (int8_t)a6[0x18];
+    int16_t tacticsIdx = (int8_t)teamEx->team.tactics;
     uint8_t *tacticsData = (uint8_t *)teamTacticsTable[(uint16_t)tacticsIdx];
     int16_t posMapIdx = (int8_t)tacticsData[0x171];
     uint8_t *posMap = (uint8_t *)tacticPosMapPtrs[(uint16_t)posMapIdx];

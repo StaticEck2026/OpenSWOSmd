@@ -296,10 +296,11 @@ void _UpdatePlayerInjuries(TeamGame *tg, uint8_t *teamFileBase)
         if (pi->isInjured == 0)
             continue;
 
-        /* Get the player in the team file */
+        /* Get the player in the team file.
+         * _GetPlayer returns a base pointer; PlayerFile starts sizeof(TeamFile) bytes in. */
         uint16_t teamNum = *(uint16_t *)teamFileBase;
         uint8_t *playerBase = _GetPlayer(teamNum, (uint16_t)(int8_t)pi->playerIndex);
-        PlayerFile *pf = (PlayerFile *)(playerBase + 76);
+        PlayerFile *pf = (PlayerFile *)(playerBase + sizeof(TeamFile));
 
         /* Merge injury bitfield: keep low 5 bits, replace high 3 bits */
         uint8_t injuries = (uint8_t)pi->injuriesBitfield;
@@ -332,10 +333,8 @@ void _AccumulateMatchGoalsIntoTeamFile(TeamGame *tg, uint8_t *teamFileBase,
 
         uint16_t teamNum = *(uint16_t *)teamFileBase;
         uint8_t *playerBase = _GetPlayer(teamNum, (uint16_t)(int8_t)pi->playerIndex);
-        /* goalStats are at offset 0x6D from playerBase in asm:
-         * playerBase + 76 (TeamFile header) + 33 (goalStats offset in PlayerFile) = 109 = 0x6D */
-        uint8_t *goalStatPtr = playerBase + 0x6D + statOffset;
-        *goalStatPtr += (uint8_t)goals;
+        PlayerFile *pf = (PlayerFile *)(playerBase + sizeof(TeamFile));
+        pf->goalStats[statOffset] += (uint8_t)goals;
     }
 }
 
@@ -353,7 +352,7 @@ void _AccumulateMatchGoalsIntoTeamFile(TeamGame *tg, uint8_t *teamFileBase,
 __attribute__((used, externally_visible))
 void _SetPlayerNameAndFace(uint8_t *playerBase, PlayerInfo *pi)
 {
-    PlayerFile *pf = (PlayerFile *)(playerBase + 76);
+    PlayerFile *pf = (PlayerFile *)(playerBase + sizeof(TeamFile));
 
     /* Copy full player name */
     _StringCopy((uint8_t *)pf->playerName, (uint8_t *)pi->fullName);
@@ -378,7 +377,7 @@ __attribute__((used, externally_visible))
 void _InitInGamePlayer(uint16_t playerIndex, uint16_t playerSlot,
                         uint8_t *playerBase, PlayerInfo *pi)
 {
-    PlayerFile *pf = (PlayerFile *)(playerBase + 76);
+    PlayerFile *pf = (PlayerFile *)(playerBase + sizeof(TeamFile));
 
     pi->playerIndex = (int8_t)playerIndex;
     pi->goalsScored = 0;
@@ -473,7 +472,7 @@ void _ApplyPlayerStatusAfterSim(TeamGame *tg, uint8_t *teamFileBase)
         uint8_t *playerBase = _GetPlayer(teamNum, (uint16_t)(int8_t)pi->playerIndex);
 
         uint8_t cardVal = (uint8_t)pi->numYellowCards;
-        PlayerFile *pf = (PlayerFile *)(playerBase + 76);
+        PlayerFile *pf = (PlayerFile *)(playerBase + sizeof(TeamFile));
 
         if (plgD3Param == 0) {
             /* League/friendly mode */
@@ -734,7 +733,7 @@ void _SetupPlayers(TeamFileEx *team1, TeamFileEx *team2, int16_t maxSubs,
 
     /* Show play match menu for first player */
     d0 = _ShowPlayMatchMenu(3, maxSubs, excludeFlags, 1, allowSquadChanges,
-                              (uint8_t *)team1, (uint8_t *)team2);
+                              &team1->team, &team2->team);
 
     if (exitGameFlag != 0) goto cancelled;
 
@@ -773,7 +772,7 @@ setup_team2:
 
     /* Show second player menu with teams swapped (team2 as first, team1 as second) */
     d0 = _ShowPlayMatchMenu(d0, maxSubs, excludeFlags, 0, allowSquadChanges,
-                              (uint8_t *)team2, (uint8_t *)team1);
+                              &team2->team, &team1->team);
 
     if (exitGameFlag != 0) goto cancelled;
 

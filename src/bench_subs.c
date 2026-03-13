@@ -164,7 +164,7 @@ extern uint8_t  playerNormalStandingAnimTable[];
  */
 static inline PlayerInfo *piFromOffset(TeamGame *tg, uint16_t off)
 {
-    return (PlayerInfo *)((uint8_t *)tg + off + 42);
+    return (PlayerInfo *)((uint8_t *)tg + off + TEAMGAME_PLAYERS_OFFSET);
 }
 
 /* ---- external data ---- */
@@ -2202,7 +2202,7 @@ void _FindInitialPlayerToBeSubstituted(void)
 
     for (uint16_t i = 0; i < 11; i++) {
         _GetBenchPlayerPointer(i);
-        PlayerInfo *pi = (PlayerInfo *)(benchPlayerResultA0 + 42);
+        PlayerInfo *pi = (PlayerInfo *)(benchPlayerResultA0 + TEAMGAME_PLAYERS_OFFSET);
 
         /* Skip red-carded players */
         if ((uint8_t)pi->numYellowCards >= 2)
@@ -2429,7 +2429,7 @@ int16_t _IsThisPlayerOkToSelect(void)
     /* Compute player data pointer: (benchPlayerIndex + 10) * 61 */
     uint16_t playerIdx = benchPlayerIndex + 10;
     uint32_t offset = (uint32_t)playerIdx * PLAYERINFO_SIZE;
-    PlayerInfo *pi = (PlayerInfo *)((uint8_t *)benchTeamGame + offset + 42);
+    PlayerInfo *pi = (PlayerInfo *)((uint8_t *)benchTeamGame + offset + TEAMGAME_PLAYERS_OFFSET);
 
     /* Already substituted? (pi->skip repurposed as substitution flag) */
     if (pi->skip != 0)
