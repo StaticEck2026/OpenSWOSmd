@@ -7,57 +7,98 @@ usage context, lists every file/line that accesses it, and suggests a struct.
 
 ---
 
-## 1. GameListEntry (Career Game List / Fixture Result Record)
+## 1. Team Selection Key Cache Entry (Career Game List)
 
-**Size:** 0x16 (22) bytes (entries are spaced 0x0C = 12 apart in the cache builder,
-but the full record including scores is 22 bytes).
+**Context:** The `teamSelectionKeyCache` is a shared BSS buffer (~20KB) that
+overlaps with `careerForeignMarketPlayers` (MarketPlayer[352]) — they are mutually
+exclusive at runtime. The cache holds variable-length entries, each containing a
+header and per-game fixture records.
 
-**Context:** Built by `_BuildGameListArrayFromTeamSelectionKeyCache` in
-`diy_competition.c` and `menus.c`. Each entry represents one fixture in the career
-game list. Read by `_CareerGameListCommon` (menus.c) and
-`_UpdateCareerFinancesAfterMatch` (career_status.c) to display/update match results.
+`gameListArray` (112 bytes) is **not** an array of these records. It stores 14
+pointer pairs `(cacheEntryPtr, gameRecordBasePtr)` used by the menu to display
+the game list. The actual data lives inside `teamSelectionKeyCache`.
 
-**Known fields:**
+**Memory layout (SWOS2.s):**
+
+```
+teamSelectionKeyCache:          ds.b $1       ; start of shared buffer
+careerJobOfferPhaseBias:        ds.b $1       ; independent byte variable (overlaps cache byte 1)
+BSS_01_1699A2:                  ds.b $74C     ; unnamed cache body
+careerForeignMarketPlayers:     ds.b $39C0    ; MarketPlayer[352] — overlaps cache, mutually exclusive
+BSS_01_16E082:                  ds.b $D20     ; unnamed cache tail
+teamSelectionKeyCacheEnd:       ds.b $2       ; 2-byte flag AND bounds-check address
+```
+
+`teamSelectionKeyCacheEnd` serves dual purpose: its **address** is the upper bound
+for cache growth (`cmpa.l #teamSelectionKeyCacheEnd,a4`), and it's also a 2-byte
+flag (`tst.w`, `move.w #1`, `clr.w`).
+
+**Cache Entry Header (10 bytes):**
 
 | Offset | Size | Name (proposed)  | Description |
 |--------|------|------------------|-------------|
-| 0x00   | 4    | team1SelOffset   | uint32_t offset into selTeamsPtr for team 1 |
-| 0x04   | 4    | team2SelOffset   | uint32_t offset into selTeamsPtr for team 2 |
-| 0x08   | 2    | field_08         | uint16_t (unknown) |
-| 0x0A   | 1    | homeAway         | uint8_t: 0=neutral, 1=home "(H)", 2=away "(A)" |
-| 0x0B   | 1    | resultFlags      | uint8_t: 0=not played, non-zero=match played |
-| 0x0C   | 2    | team1Id          | uint16_t globalTeamNumber of team 1 |
-| 0x0E   | 2    | team2Id          | uint16_t globalTeamNumber of team 2 |
-| 0x10   | 1    | score1           | int8_t goals scored by team 1 (leg 2 / latest) |
-| 0x11   | 1    | score2           | int8_t goals scored by team 2 (leg 2 / latest) |
-| 0x12   | 2    | leg1Scores       | uint16_t packed (hi=team1, lo=team2) leg 1 agg |
-| 0x14   | 2    | penaltyScores    | uint16_t packed penalty shootout scores |
+| 0x00   | 1    | slotType         | Competition slot (0=league, 1=cup1, 2=cup2, etc.) |
+| 0x01   | 1    | field_01         | Unknown (overlaps careerJobOfferPhaseBias for first entry) |
+| 0x02   | 2    | entrySize        | uint16_t stride to next cache entry |
+| 0x04   | 1    | teamControl      | Team control flag |
+| 0x05   | 1    | numGames         | Number of game records following |
+| 0x06   | 1    | remainingGames   | Games remaining to play |
+| 0x07   | 3    | padding          | Unknown |
+
+**Game Record (12 bytes each, starting at cache entry + 0x0A):**
+
+| Offset | Size | Name (proposed)  | Description |
+|--------|------|------------------|-------------|
+| 0x00   | 1    | homeAway         | 0=neutral, 1=home "(H)", 2=away "(A)" |
+| 0x01   | 1    | resultFlags      | 0=not played, non-zero=match played |
+| 0x02   | 2    | team1Id          | uint16_t globalTeamNumber of team 1 |
+| 0x04   | 2    | team2Id          | uint16_t globalTeamNumber of team 2 |
+| 0x06   | 2    | leg2Scores       | uint16_t packed (hi=team1, lo=team2) |
+| 0x08   | 2    | leg1Scores       | uint16_t packed aggregate |
+| 0x0A   | 2    | penaltyScores    | uint16_t packed penalty shootout scores |
+
+**How code accesses the data:**
+
+`gameListArray` stores pairs: `(a6=cacheEntryPtr, a4=cacheEntry + gameIdx*12)`.
+- Header fields via a6: `a6[0]` (slotType), `a6[5]` (numGames)
+- Game fields via a4 at offset 0x0A: `a4[0x0A]` (homeAway), `a4[0x0B]` (resultFlags),
+  `*(uint16_t*)(a4+0x0C)` (team1Id), etc.
+- For gameIdx=0, a4==a6 so `a4[0x0A]` = first game at cacheEntry+10.
+- For gameIdx=N, a4=a6+N*12 so `a4[0x0A]` = cacheEntry+10+N*12.
 
 **Files affected:**
 
-- `src/diy_competition.c:2585-2614` — `a5[0x0A]` (homeAway), `a5[0x0B]` (resultFlags)
-- `src/diy_competition.c:2772-2789` — `resultPtr[0x0A]`, `resultPtr[0x0B]`, `resultPtr + 0x0C/0x0E`
-- `src/menus.c:6297-6298` — `a4[0x0B]` (resultFlags)
+- `src/menus.c:2759` — `_BuildGameListArrayFromTeamSelectionKeyCache` (builds pointer pairs)
+- `src/menus.c:6268-6271` — reads pointer pairs, accesses via a6/a4
+- `src/menus.c:6288-6308` — `a4[0x0B]`, `a4+0x0C`, `a4+0x0E`, `a4+0x10`, `a4+0x12`, `a4+0x14`
 - `src/menus.c:6580` — `a4[0x0A]` (homeAway)
-- `src/menus.c:6619-6647` — `a4[0x0B]`, `a4[0x10]`, `a4[0x11]` (scores)
-- `src/career_status.c:3638-3641` — `team1[0x0B]`, `team1 + 0x10/0x12/0x14` (write result)
+- `src/diy_competition.c:2585-2614` — `a5[0x0A]`, `a5[0x0B]`, `a5+0x0C/0x0E` (building records)
+- `src/diy_competition.c:2772-2789` — `resultPtr[0x0A]`, `resultPtr[0x0B]`, `resultPtr+0x0C/0x0E`
+- `src/career_status.c:3638-3641` — `team1[0x0B]`, `team1+0x10/0x12/0x14` (write result)
 
-**Suggested struct:**
+**Suggested structs:**
 
 ```c
-typedef struct __attribute__((packed)) GameListEntry {
-    uint32_t team1SelOffset;   /* 0x00 */
-    uint32_t team2SelOffset;   /* 0x04 */
-    uint16_t field_08;         /* 0x08 */
-    uint8_t  homeAway;         /* 0x0A: 0=neutral, 1=home, 2=away */
-    uint8_t  resultFlags;      /* 0x0B: 0=unplayed, non-zero=played */
-    uint16_t team1Id;          /* 0x0C */
-    uint16_t team2Id;          /* 0x0E */
-    int8_t   score1;           /* 0x10: goals team 1 */
-    int8_t   score2;           /* 0x11: goals team 2 */
-    uint16_t leg1Scores;       /* 0x12: packed aggregate */
-    uint16_t penaltyScores;    /* 0x14: packed penalties */
-} GameListEntry;               /* 0x16 = 22 bytes */
+typedef struct __attribute__((packed)) GameRecord {
+    uint8_t  homeAway;         /* 0x00: 0=neutral, 1=home, 2=away */
+    uint8_t  resultFlags;      /* 0x01: 0=unplayed, non-zero=played */
+    uint16_t team1Id;          /* 0x02 */
+    uint16_t team2Id;          /* 0x04 */
+    uint16_t leg2Scores;       /* 0x06: packed scores */
+    uint16_t leg1Scores;       /* 0x08: packed aggregate */
+    uint16_t penaltyScores;    /* 0x0A: packed penalties */
+} GameRecord;                   /* 12 bytes */
+
+typedef struct __attribute__((packed)) CacheEntryHeader {
+    uint8_t  slotType;         /* 0x00 */
+    uint8_t  field_01;         /* 0x01 */
+    uint16_t entrySize;        /* 0x02: stride to next entry */
+    uint8_t  teamControl;      /* 0x04 */
+    uint8_t  numGames;         /* 0x05 */
+    uint8_t  remainingGames;   /* 0x06 */
+    uint8_t  padding[3];       /* 0x07-0x09 */
+    /* GameRecord games[]; */  /* 0x0A: variable-length array */
+} CacheEntryHeader;             /* 10 bytes + N*12 */
 ```
 
 ---
@@ -193,8 +234,9 @@ priority tables, and animation data that vary by formation.
 
 ## Action Items
 
-1. **GameListEntry** — Best candidate for immediate struct definition. All fields
-   are well-understood. Would clean up ~15 raw offset accesses across 3 files.
+1. **TeamSelectionKeyCache entries** — Define `CacheEntryHeader` (10 bytes) and
+   `GameRecord` (12 bytes) structs. Would clean up ~15 raw offset accesses across
+   3 files. Note the shared-memory overlap with `careerForeignMarketPlayers`.
 
 2. **CompetitionRecord** — Import `Competition`, `CompetitionLeague`, `Division`
    from `SWOS2_IDA.h` to `game_types.h`. Would clean up 3 accesses. The variable-
