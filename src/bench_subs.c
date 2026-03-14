@@ -1224,14 +1224,15 @@ static void updatePlayerToBeSubstitutedPosition(void)
 
 /* ================================================================
  * isPlayerOkToSubstitute (SWOS2.s line 12989)
- * Returns: 0 = OK to substitute, 1 = do not substitute
+ * Returns: 0 = select this player (stop scanning), 1 = skip (continue)
+ * Asm: d0=0 stops scan (bne loops on d0!=0), d0=1 keeps scanning.
  * ================================================================ */
 static uint16_t isPlayerOkToSubstitute(void)
 {
     if (subsState == 4) {
         if (plToBeSubstitutedOrd == 0)
-            return 0;   /* OK - formation slot */
-        return 1;       /* not OK */
+            return 1;   /* skip — position 0 in formation mode */
+        return 0;       /* select */
     }
 
     {
@@ -1239,17 +1240,17 @@ static uint16_t isPlayerOkToSubstitute(void)
         uint16_t off = ingameTeamPlayerOffsets[plToBeSubstitutedPos];
         PlayerInfo *pi = piFromOffset(btg, off);
 
-        /* red-carded players can be substituted */
+        /* sent-off players (2+ yellows) can't be substituted — skip */
         if ((uint8_t)pi->numYellowCards >= 2)
-            return 0;
+            return 1;
 
-        /* in state 3: check disallowSubs */
+        /* in state 3: disallowSubs flag set — skip */
         if (subsState == 3) {
             if ((int8_t)pi->field_B < 0)
-                return 0;
+                return 1;
         }
 
-        return 1;   /* not OK */
+        return 0;   /* select this player */
     }
 }
 

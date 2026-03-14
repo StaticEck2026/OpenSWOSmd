@@ -289,37 +289,15 @@ static int16_t assetSys_SelectAndOpen(uint16_t param)
 /* ================================================================
  * AssetSys_OpenAnySource  (opcode 16)
  *
- * Tries to open each source. On any failure, restores saved state
- * and returns 0xFF9C. Otherwise returns 0.
+ * Original: probes floppy drives via Op5ThenMaybe6 (cmd=5).
+ * In HDD mode, floppy probing always fails (no drives), so the
+ * function always returns 0 (success). Our C rob_get_file_size
+ * returns real HDD file sizes (non-zero), which would incorrectly
+ * trigger the failure path. Just return 0 for HDD mode.
  * ================================================================ */
 static int16_t assetSys_OpenAnySource(void)
 {
-    assetSavedSourceSlot = assetCurrentSourceSlot;
-    assetSavedIndex = assetCurrentIndex;
-    assetCurrentIndex = 4;
-    assetCurrentSourceSlot = 0;
-
-    if (assetSys_Op5ThenMaybe6((const uint8_t *)assetSource0) == 0)
-        goto fail_restore;
-
-    if (assetSource1 != 0)
-    {
-        if (assetSys_Op5ThenMaybe6((const uint8_t *)assetSource1) == 0)
-            goto fail_restore;
-    }
-
-    if (assetSource2 != 0)
-    {
-        if (assetSys_Op5ThenMaybe6((const uint8_t *)assetSource2) == 0)
-            goto fail_restore;
-    }
-
     return 0;
-
-fail_restore:
-    assetCurrentSourceSlot = assetSavedSourceSlot;
-    assetCurrentIndex = assetSavedIndex;
-    return (int16_t)0xFF9C;
 }
 
 /* ================================================================
