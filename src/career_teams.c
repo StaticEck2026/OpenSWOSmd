@@ -569,12 +569,18 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
 {
     uint8_t *flags = teamIdSelectionProcessedFlags;
 
-    /* Phase 1: Pre-scan — mark teams found in TMD cache */
+    /* Phase 1: Pre-scan — mark teams already loaded in cache.
+     * Asm uses FindTeamInCache (not SearchTeamInTmdFile!) to check
+     * currentTeam, careerTeam, and selTeamsPtr. Teams in TMD but not
+     * yet in the cache must NOT be marked, or they'll be skipped and
+     * never added to selTeamsPtr, causing VerifyTeamLoaded to panic. */
     uint16_t i;
+    TeamFileEx *tmpTeam;
+    uint16_t tmpIdx;
     for (i = 0; i < count; i++) {
         flags[i] = 0;
-        if (_SearchTeamInTmdFile(teamIds[i]) == 0)
-            flags[i] = 1;  /* found in TMD — mark as processed */
+        if (findTeamInCache(teamIds[i], &tmpTeam, &tmpIdx) == 0)
+            flags[i] = 1;  /* already in cache — mark as processed */
     }
 
     /* Phase 2: Process remaining teams */

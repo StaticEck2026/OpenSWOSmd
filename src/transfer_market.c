@@ -4542,15 +4542,16 @@ void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint1
                 uint8_t *p = _GetPlayerAtIndex(selTeamNumber, (uint16_t)d2);
                 PlayerFile *pf = (PlayerFile *)(p + PF_OFF);
                 uint16_t pos = ((uint16_t)pf->positionAndFace & 0xE0) >> 5;
-                if (pos != 0) {
-                    /* Not GK — check if trialist (bit 1 of positionAndFace) */
+                if (pos == 0) {
+                    /* GK — check if trialist (bit 1 of positionAndFace) */
                     if (pf->positionAndFace & 0x02)
                         goto removeAndRecheck1;
                 }
                 d2--;
                 continue;
             removeAndRecheck1:
-                _Career_RemovePlayerFromSelectedTeamRoster((uint16_t)d2);
+                /* Asm passes d1 (player number from GetPlayerAtIndex), not d2 (index) */
+                _Career_RemovePlayerFromSelectedTeamRoster(_cGetPlayerAtIndexFileIdx);
                 break;
             }
         }
@@ -4574,7 +4575,8 @@ void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint1
                 d2--;
                 continue;
             removeAndRecheck2:
-                _Career_RemovePlayerFromSelectedTeamRoster((uint16_t)d2);
+                /* Asm passes d1 (player number from GetPlayerAtIndex), not d2 (index) */
+                _Career_RemovePlayerFromSelectedTeamRoster(_cGetPlayerAtIndexFileIdx);
                 break;
             }
         }

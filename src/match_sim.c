@@ -788,7 +788,9 @@ uint16_t _ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t goalsCou
     uint8_t gkPosAndFace = gkRec->positionAndFace;
     uint16_t gkRole = (gkPosAndFace & 0xE0) >> 5;
 
-    if (gkRole == 0) {
+    if (gkRole != 0) {
+        /* Non-GK in goalkeeper slot: halve result as weakness penalty.
+         * Asm: beq.s loc_122D78 (skip halve for real GK); lsr.w #1,d0 */
         result >>= 1;
     }
 

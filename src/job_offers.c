@@ -1152,7 +1152,8 @@ searchDomestic:
             if (*(uint8_t *)((uint32_t)&selTeamNumber) != a0tf->countryNumber)
                 continue;
 
-            uint16_t teamId = a0tf->globalTeamNumber;
+            /* Asm: move.w (a0),d3 — reads packed team number at offset 0 */
+            uint16_t teamId = *(uint16_t *)&a0tf->countryNumber;
             if (teamId == selTeam)
                 continue;
 
@@ -1204,7 +1205,8 @@ searchForeign:
             if (*(uint8_t *)((uint32_t)&selTeamNumber) == a0tf->countryNumber)
                 continue;
 
-            uint16_t teamId = a0tf->globalTeamNumber;
+            /* Asm: move.w (a0),d3 — reads packed team number at offset 0 */
+            uint16_t teamId = *(uint16_t *)&a0tf->countryNumber;
             if (teamId == selTeam)
                 continue;
 
@@ -1282,7 +1284,8 @@ searchSacked:
             if (a0tf2->league == 4)
                 continue;
 
-            uint16_t teamId = a0tf2->globalTeamNumber;
+            /* Asm: move.w (a0),d3 — reads packed team number at offset 0 */
+            uint16_t teamId = *(uint16_t *)&a0tf2->countryNumber;
 
             uint16_t avgPrice = _GetAveragePlayerPrice((TeamFileEx *)a0);
             if (avgPrice < repLow || avgPrice > repHigh)

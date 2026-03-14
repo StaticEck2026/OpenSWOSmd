@@ -529,14 +529,18 @@ int16_t _SaveDIYFile(uint8_t *filename)
  * Checks if files with the given extension exist by dispatching
  * ASSET_OP_RESOLVE_ASSET_LIST through the asset system.
  *
+ * Asm callers set a1 = &numberOfFiles before calling. The asset
+ * dispatch writes the directory listing there: first word = count,
+ * followed by 32-byte filename entries (foundFilenamesBuffer).
+ *
  * Asm register convention:
- *   in:  a0 = extension string
+ *   in:  a0 = extension string, a1 = &numberOfFiles (dest buffer)
  *   out: d0 = result from dispatch
  * ================================================================ */
 __attribute__((used, externally_visible))
 int16_t _FindFilesExtensionPresent(uint8_t *ext)
 {
-    return _CAssetSys_Dispatch(ASSET_OP_RESOLVE_ASSET_LIST, 0, ext, (void *)0);
+    return _CAssetSys_Dispatch(ASSET_OP_RESOLVE_ASSET_LIST, 0, ext, (void *)&numberOfFiles);
 }
 
 /* ================================================================

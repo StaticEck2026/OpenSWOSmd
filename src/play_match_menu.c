@@ -369,7 +369,12 @@ void _ShowOrHidePlayMatchButton(void) {
     }
 
 cannotPlay:
-    /* Fall through to showPlayBtn (entry 9 visible = user sees "view result") */
+    /* loc_148748: bra.s loc_148768 — jump directly to showPlayBtn,
+     * bypassing canPlay's visibility-state check. When the player roster
+     * is invalid (not enough subs/players), the button is always shown
+     * so the user can still VIEW RESULT. */
+    goto showPlayBtn;
+
 canPlay:
     /* loc_14874A */
     if (playMatchTeam1Ptr == &currentTeam.team) {
@@ -378,7 +383,8 @@ canPlay:
     } else {
         playMatchButtonVisibilityState = 1;
     }
-    /* showPlayBtn: loc_148768 */
+showPlayBtn:
+    /* loc_148768 */
     menuEntries[9].isInvisible = 0;
     return;
 

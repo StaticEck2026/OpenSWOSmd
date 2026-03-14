@@ -1264,8 +1264,9 @@ void _SquadUpdateMenuState(void)
         /* ============ SQUAD VIEW MODE ============ */
         menuEntries[6].isInvisible = 1;
 
+        /* Asm: cmp.w (a6),d0 — compares selTeamNumber with packed team number at offset 0 */
         if ((int16_t)selTeamNumber != -1 &&
-            selTeamNumber == tf->globalTeamNumber) {
+            selTeamNumber == *(uint16_t *)&tf->countryNumber) {
             menuEntries[26].isInvisible = 0;
             menuEntries[27].isInvisible = 0;
             menuEntries[27].fg = (uint32_t)removedPlayerStatAccum;
