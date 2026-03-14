@@ -7,7 +7,7 @@
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint16_t audioBankLoaded;
-extern uint16_t audioActive;
+extern volatile uint16_t audioActive;
 extern uint8_t menuSongData[];
 extern uint8_t menuInsBank[];
 extern uint8_t aSoundMenuSng[];

@@ -77,8 +77,12 @@ extern void _RncDecompressV2(uint8_t *src, uint8_t *dst);
 /* ---- Local data ---- */
 static uint8_t data_path_buf[256];
 static const uint8_t progdir_prefix[] = "PROGDIR:";
-static uint8_t save_filename_buf[14];
-static const uint8_t save_filepath[] = "save/";
+/* save_path_buf: "save/" prefix (5 bytes) + filename (up to 14 bytes).
+ * fix_filename() copies the filename starting at offset 5 and returns
+ * the buffer start, producing "save/FILENAME.EXT".
+ * Original asm had these as two adjacent labels but in the wrong order
+ * (_save_filename before _save_filepath), which was a latent bug.  */
+static uint8_t save_path_buf[5 + 14] = { 's','a','v','e','/' };
 static const uint8_t savedir[] = "save";
 static uint8_t listdir_buf[2048 + 4];
 
@@ -1002,12 +1006,12 @@ static uint8_t *fix_filename(uint8_t *name)
     const uint32_t *ep;
     for (ep = ext_table; *ep; ep++) {
         if (*ep == ext) {
-            /* Save extension matched — copy filename to buffer and return save path */
+            /* Save extension matched — copy filename after "save/" prefix */
             uint8_t *src = a0;
-            uint8_t *dst = save_filename_buf;
+            uint8_t *dst = save_path_buf + 5; /* after "save/" */
             while ((*dst++ = *src++) != 0)
                 ;
-            return (uint8_t *)save_filepath;
+            return save_path_buf;
         }
     }
 

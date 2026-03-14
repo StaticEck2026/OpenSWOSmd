@@ -655,7 +655,7 @@ extern void _Career_MaybeGenerateJobOffer(void);
  * and potentially generates a new job offer.
  * a0=ctx (diyCompetitionStart), a1=team ptr passed through to UpdateCareerFinancesAfterMatch. */
 __attribute__((used, externally_visible))
-void _BeginContractNegotiationSequence(uint8_t *ctx, uint8_t *team)
+void _BeginContractNegotiationSequence(DIY_Competition *ctx, TeamFileEx *team)
 {
     contractNegotiationActive = 1;
     timeToNegotiate = 2;
@@ -663,7 +663,7 @@ void _BeginContractNegotiationSequence(uint8_t *ctx, uint8_t *team)
     offerNegotiationAttemptCount = 0;
     _Career_CommitNewBalanceAndResetFinanceTotals();
     financeTotalsNeedResetFlag = 1;
-    _UpdateCareerFinancesAfterMatch(ctx, team);
+    _UpdateCareerFinancesAfterMatch((uint8_t *)ctx, team);
     _ProcessOfferExpiryCountdown();
     _JobOffers_MaybeExpireSomeNewOffers();
     _Career_MaybeGenerateJobOffer();
@@ -774,7 +774,7 @@ extern uint16_t euroChampionshipQualTeam;
 extern uint16_t natTeamsRandLimit2;
 extern uint8_t nationalTeams[];
 extern uint32_t careerCupPickList[];
-extern uint8_t careerTeam[];
+extern TeamFileEx careerTeam;
 
 /* Competition qualification copies */
 extern uint8_t worldCupQualifyingGroup8Copy[];
@@ -1143,7 +1143,7 @@ static void setCupPickList_Europe(uint16_t **teamListPtr)
  * Fills the friendly competition team list with teams of similar strength. */
 static void setupFriendlyCupTeams(void)
 {
-    uint16_t avgPrice = _GetAveragePlayerPrice(careerTeam);
+    uint16_t avgPrice = _GetAveragePlayerPrice(&careerTeam);
     uint16_t minPrice = (uint16_t)((uint32_t)avgPrice * 75 / 100);
     uint16_t maxPrice = (uint16_t)((uint32_t)avgPrice * 125 / 100);
 
@@ -1167,7 +1167,7 @@ static void setupFriendlyCupTeams(void)
  * Fills the invitation tournament team list (same pattern as friendly). */
 static void setupInvitationTournamentTeams(void)
 {
-    uint16_t avgPrice = _GetAveragePlayerPrice(careerTeam);
+    uint16_t avgPrice = _GetAveragePlayerPrice(&careerTeam);
     uint16_t minPrice = (uint16_t)((uint32_t)avgPrice * 75 / 100);
     uint16_t maxPrice = (uint16_t)((uint32_t)avgPrice * 125 / 100);
 
@@ -1325,10 +1325,10 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
     } else {
         /* Not player's competition — auto-fill teams from qualification indices */
         uint16_t savedSelTeam = selTeamNumber;
-        uint8_t savedCtrl = ((TeamFileEx *)careerTeam)->team.teamControls;
+        uint8_t savedCtrl = careerTeam.team.teamControls;
 
         selTeamNumber = 0xFFFF;
-        ((TeamFileEx *)careerTeam)->team.teamControls = 1;
+        careerTeam.team.teamControls = 1;
 
         uint8_t nameOff = qualComp[7];
         if (nameOff == 0) {
@@ -1352,7 +1352,7 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         _Career_AutoAdvanceCupCompetitionFromRecord(qualComp);
         _DIY_ApplyPromotionRelegationWeightsToScratch(a2);
 
-        ((TeamFileEx *)careerTeam)->team.teamControls = savedCtrl;
+        careerTeam.team.teamControls = savedCtrl;
         selTeamNumber = savedSelTeam;
     }
 }

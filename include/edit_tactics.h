@@ -10,7 +10,7 @@
 
 /* --- Choose Tactics --- */
 void _ChooseTacticsInit(void);
-void _ShowStandardChooseTacticsMenu(uint8_t *teamPtr);
+void _ShowStandardChooseTacticsMenu(TeamFileEx *teamPtr);
 
 /* --- Edit Tactics Init/Restore --- */
 void _EditTacticsInit(void);
@@ -98,7 +98,7 @@ void _EditTacicsMovePlayersOrBall(void);
 void _CopyTactics(void);
 
 /* --- Player swap, pair linking & position lookup (Chunk 88) --- */
-uint8_t *_GetPlayerInfoBreakPosition(uint8_t *teamPtr, uint16_t requestedSlot,
+uint8_t *_GetPlayerInfoBreakPosition(TeamFileEx *teamPtr, uint16_t requestedSlot,
                                       uint16_t *outSlot, uint16_t *outPlayerIndex);
 uint16_t _EditTactics_FindFreePairId(void);
 void _EditTactics_ClearPairId(uint16_t value);
@@ -107,8 +107,8 @@ void _EditTacticsCommon(MenuEntry *cur);
 void _EditTacticsPlayerNamesCommon(MenuEntry *cur);
 
 /* --- Chunk 213: EditTactics, ChooseTeamForEditTactics, AfterDraw, Highlighting --- */
-uint8_t *_ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers,
-                                    uint16_t numTeams);
+TeamFileEx *_ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers,
+                                      uint16_t numTeams);
 void _EditTactics(void);
 void _EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *cur);
 void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur);
@@ -139,7 +139,7 @@ void _InitEditTeamsMenu(void);
 void _EditTeamsPlayersBeforeDraw(MenuEntry *entry);
 
 /* --- _EditTeamsCallback (Chunk 148) --- */
-void _EditTeamsCallback(uint8_t *team);
+void _EditTeamsCallback(TeamFileEx *team);
 
 /* --- Chunk 203: EditCustomTeam + ImportTeamsMenu --- */
 void _EditCustomTeam(void);

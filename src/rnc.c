@@ -107,7 +107,7 @@ static uint16_t v1DecodeSymbol(V1Bits *bs, uint8_t *tab)
     uint8_t d1, d2;
     uint16_t mask, match;
 
-    /* Search for matching entry */
+    /* Search for matching entry (unbounded, matches original asm) */
     for (;;) {
         mask  = ((uint16_t)p[0] << 8) | p[1];
         match = ((uint16_t)p[2] << 8) | p[3];

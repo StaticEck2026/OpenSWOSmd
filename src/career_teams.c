@@ -66,11 +66,11 @@ extern void _SetExitMenuFlag(void);
  *          index into selTeamsPtr via *indexOut,
  *          0 if found, 1 if not found.
  * ================================================================ */
-static int16_t findTeamInCache(uint16_t teamNum, uint8_t **teamOut, uint16_t *indexOut)
+static int16_t findTeamInCache(uint16_t teamNum, TeamFileEx **teamOut, uint16_t *indexOut)
 {
     /* Check currentTeam first */
     if (teamNum == currentTeamNumber) {
-        *teamOut = currentTeam;
+        *teamOut = (TeamFileEx *)currentTeam;
         *indexOut = 0;
         return 0;
     }
@@ -78,13 +78,13 @@ static int16_t findTeamInCache(uint16_t teamNum, uint8_t **teamOut, uint16_t *in
     /* Check careerTeam (when auto-advance in progress or matches selTeamNumber) */
     if (careerAutoAdvanceInProgress) {
         if (teamNum == *(uint16_t *)&careerTeam) {
-            *teamOut = (uint8_t *)&careerTeam;
+            *teamOut = &careerTeam;
             *indexOut = 0;
             return 0;
         }
     }
     if (teamNum == selTeamNumber) {
-        *teamOut = (uint8_t *)&careerTeam;
+        *teamOut = &careerTeam;
         *indexOut = 0;
         return 0;
     }
@@ -94,14 +94,14 @@ static int16_t findTeamInCache(uint16_t teamNum, uint8_t **teamOut, uint16_t *in
     if (count == 0)
         return 1;
 
-    uint8_t *ptr = &selTeamsPtr;
+    TeamFileEx *ptr = (TeamFileEx *)&selTeamsPtr;
     for (uint16_t i = 0; i < count; i++) {
-        if (*(uint16_t *)ptr == teamNum) {
+        if (*(uint16_t *)&ptr->team.countryNumber == teamNum) {
             *teamOut = ptr;
             *indexOut = i;
             return 0;
         }
-        ptr += sizeof(TeamFileEx);
+        ptr++;
     }
     return 1;
 }
@@ -113,9 +113,9 @@ static int16_t findTeamInCache(uint16_t teamNum, uint8_t **teamOut, uint16_t *in
  * Returns pointer to team data.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint8_t *_VerifyTeamLoaded(uint16_t teamNum)
+TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum)
 {
-    uint8_t *team;
+    TeamFileEx *team;
     uint16_t idx;
     if (findTeamInCache(teamNum, &team, &idx) != 0) {
         _PanicHaltLoop();
@@ -130,13 +130,13 @@ uint8_t *_VerifyTeamLoaded(uint16_t teamNum)
  * Search order: currentTeam → careerTeam → selTeamsPtr → TMD pool → team file.
  * If loaded from team file, applies foreign market player patches.
  * ================================================================ */
-extern void _Career_PatchTeamWithForeignMarketPlayers(uint8_t *teamPtr);
-static uint8_t *findTeamInTmdBuffer(uint16_t teamId);
+extern void _Career_PatchTeamWithForeignMarketPlayers(TeamFileEx *teamPtr);
+static TeamFileEx *findTeamInTmdBuffer(uint16_t teamId);
 
 __attribute__((used, externally_visible))
-uint8_t *_GetTeamPointer(uint16_t teamId)
+TeamFileEx *_GetTeamPointer(uint16_t teamId)
 {
-    uint8_t *teamOut;
+    TeamFileEx *teamOut;
     uint16_t indexOut;
 
     /* Check cached teams (currentTeam, careerTeam, selTeamsPtr) */
@@ -144,15 +144,18 @@ uint8_t *_GetTeamPointer(uint16_t teamId)
         return teamOut;
 
     /* Check TMD file (career team pool) */
-    uint8_t *tmd = findTeamInTmdBuffer(teamId);
+    TeamFileEx *tmd = findTeamInTmdBuffer(teamId);
     if (tmd)
         return tmd;
 
-    /* Load from team file and scan for matching team ID */
+    /* Load from team file and scan for matching team ID.
+     * teamFileBuffer contains TeamFileEx-sized records (684 bytes each).
+     * teamId is packed (countryNumber<<8 | teamOrdinal), matching the
+     * first word of each record. */
     _LoadTeamFile((uint16_t)(teamId >> 8));
-    uint8_t *ptr = (uint8_t *)(&teamFileBuffer) + 2;  /* skip 2-byte count header */
-    while (*(uint16_t *)ptr != teamId)
-        ptr += sizeof(TeamFileEx);
+    TeamFileEx *ptr = (TeamFileEx *)((uint8_t *)(&teamFileBuffer) + 2);  /* skip 2-byte count header */
+    while (*(uint16_t *)&ptr->team.countryNumber != teamId)
+        ptr++;
 
     /* Apply foreign market player patches */
     _Career_PatchTeamWithForeignMarketPlayers(ptr);
@@ -357,10 +360,10 @@ void _Career_RemoveTeamFromTmdTeamPool(uint16_t teamNo)
  * Copies sizeof(TeamFileEx) (684) bytes from team to end of pool.
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _Career_AppendTeamToTmdTeamPool(uint8_t *team)
+void _Career_AppendTeamToTmdTeamPool(TeamFileEx *team)
 {
     /* Verify team is not already in pool */
-    uint16_t teamNo = *(uint16_t *)team;
+    uint16_t teamNo = *(uint16_t *)&team->team.countryNumber;
     if (_SearchTeamInTmdFile(teamNo) == 0) {
         /* Already in pool — panic */
         panicReasonCode = 0x3443;
@@ -398,7 +401,7 @@ extern uint32_t _Career_IsTeamIdNotInListOrReturnSentinel2(uint16_t teamId, uint
 /* Simple found/not-found check without needing team pointer */
 static int16_t isTeamInCache(uint16_t teamNum)
 {
-    uint8_t *teamOut;
+    TeamFileEx *teamOut;
     uint16_t indexOut;
     return findTeamInCache(teamNum, &teamOut, &indexOut);
 }
@@ -413,16 +416,16 @@ static void copyTeamRecord(uint8_t *dst, const uint8_t *src)
 }
 
 /* Find team record in TMD file buffer, return pointer or NULL */
-static uint8_t *findTeamInTmdBuffer(uint16_t teamId)
+static TeamFileEx *findTeamInTmdBuffer(uint16_t teamId)
 {
-    uint8_t *ptr = &tmdFileBuffer;
+    TeamFileEx *ptr = (TeamFileEx *)&tmdFileBuffer;
     uint16_t count = careerFileBuffer;
     for (uint16_t i = 0; i < count; i++) {
-        if (*(uint16_t *)ptr == teamId)
+        if (*(uint16_t *)&ptr->team.countryNumber == teamId)
             return ptr;
-        ptr += sizeof(TeamFileEx);
+        ptr++;
     }
-    return (uint8_t *)0;
+    return (TeamFileEx *)0;
 }
 
 /* Find team record in team file buffer by team ID */
@@ -481,8 +484,8 @@ void _Career_SortTeamFilePtrsByAvgPlayerPrice(uint16_t extNumber)
         uint32_t *p = sortBuf;
         int16_t j;
         for (j = pass; j >= 0; j--) {
-            uint16_t price1 = _GetAveragePlayerPrice((uint8_t *)p[0]);
-            uint16_t price2 = _GetAveragePlayerPrice((uint8_t *)p[1]);
+            uint16_t price1 = _GetAveragePlayerPrice((TeamFileEx *)p[0]);
+            uint16_t price2 = _GetAveragePlayerPrice((TeamFileEx *)p[1]);
             if (price1 < price2) {
                 /* bcc.s: branch if carry clear = price1 >= price2 (unsigned) */
                 uint32_t tmp = p[0];
@@ -592,10 +595,10 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
         uint16_t teamId = teamIds[foundIdx];
 
         /* Try to find in TMD file buffer */
-        uint8_t *tmdTeam = findTeamInTmdBuffer(teamId);
+        TeamFileEx *tmdTeam = findTeamInTmdBuffer(teamId);
         if (tmdTeam) {
             /* Found in TMD — copy to selection */
-            copyTeamRecord(selDst, tmdTeam);
+            copyTeamRecord(selDst, (uint8_t *)tmdTeam);
             ((TeamFileEx *)selDst)->team.teamControls = 1;
             flags[foundIdx] = 1;
             numSelectedTeams++;
@@ -1517,8 +1520,9 @@ void _CareerPlayMatch(void)
         _PanicHaltLoop();
     }
 
-    if (careerSlotProcessingInProgress == 0)
+    if (careerSlotProcessingInProgress == 0) {
         _Career_ProcessCurrentCompetitionSlotAfterMatch();
+    }
 
     _Career_AdvanceToNextTeamSelectionKeyCacheEntry();
 
@@ -2043,7 +2047,7 @@ extern uint8_t careerUnavailablePlayerNames[];
 extern uint8_t careerUnavailablePlayerLookupTable[];
 
 extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
-extern void _SetBenchPlayersNumbers(uint8_t *teamPtr);
+extern void _SetBenchPlayersNumbers(TeamFileEx *team);
 
 __attribute__((used, externally_visible))
 void _Career_CopyUnavailablePlayerToCareerTeamSlot(uint8_t *srcPlayer, uint8_t *dstTeam,
@@ -2080,7 +2084,7 @@ void _Career_CopyUnavailablePlayerToCareerTeamSlot(uint8_t *srcPlayer, uint8_t *
     dstPf->goalStats[3] = 0;
 
     /* Update bench player numbers for the career team */
-    _SetBenchPlayersNumbers((uint8_t *)&careerTeam);
+    _SetBenchPlayersNumbers(&careerTeam);
 }
 
 /* ================================================================
@@ -2183,7 +2187,7 @@ extern uint8_t careerDefaultInternationalSquadSlotsTable[];
 extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
 
 __attribute__((used, externally_visible))
-void _Career_InitInternationalSquadAndLookupTablesForNewSeason(uint8_t *teamPtr)
+void _Career_InitInternationalSquadAndLookupTablesForNewSeason(TeamFileEx *teamPtr)
 {
     (void)teamPtr;  /* dead parameter in original asm */
 

@@ -17,7 +17,7 @@ extern uint8_t pl1Fire;
 extern volatile uint32_t frontbufferBaseAltPtr;
 extern uint32_t memBoundaryMarker;
 extern uint16_t audioBankLoaded;
-extern uint16_t audioActive;
+extern volatile uint16_t audioActive;
 extern uint8_t diyFileBufferCopy[];
 extern uint8_t audioInstrumentBank[];
 extern uint8_t aSoundHeroSng[];

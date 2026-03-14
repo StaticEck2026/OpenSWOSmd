@@ -711,7 +711,7 @@ not_in_penalty:
                             opp->spinTimer = (int16_t)0xFFFF;
                             if (ballSprite.speed > 1536)
                                 ballSprite.speed = 1536;
-                            _GoalkeeperJumping(d1, 0, d3, player, ball, team);
+                            _GoalkeeperJumping(d0, d1, d3, player, ball, team);
                             ballSpeedAfterSave = ballSprite.speed;
                             team->passKickTimer = 0;
                             team->passingKickingPlayer = (Sprite *)0;
@@ -762,7 +762,7 @@ not_in_penalty:
 
             apply_facing_then_jump:
                 player->direction = d0;
-                _GoalkeeperJumping(d1, 0, d3, player, ball, team);
+                _GoalkeeperJumping(d0, d1, d3, player, ball, team);
                 team->passKickTimer = 0;
                 team->passingKickingPlayer = (Sprite *)0;
                 goto clamp_keeper_y_min;
@@ -1327,7 +1327,7 @@ not_in_penalty:
     maybe_grant_possession_if_close:
         if (gameStatePl != ST_GAME_IN_PROGRESS)
             goto attempt_quick_pass;
-        if (team->quickFire)
+        if (team->quickFire || team->normalFire)  /* asm: tst.w covers both bytes */
             goto attempt_quick_pass;
         if (team->shooting)
             goto attempt_quick_pass;

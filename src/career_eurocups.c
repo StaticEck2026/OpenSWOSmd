@@ -50,8 +50,8 @@ extern uint32_t countriesTable[];
 extern uint16_t selTeamNumber;
 
 /* C-to-asm bridges */
-extern uint8_t *_VerifyTeamLoaded(uint16_t teamNum);
-extern void _Career_AppendTeamToTmdTeamPool(uint8_t *team);
+extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
+extern void _Career_AppendTeamToTmdTeamPool(TeamFileEx *team);
 
 /* Already-ported C functions */
 extern void _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs(void);
@@ -81,7 +81,7 @@ static void appendTeamToList(uint8_t *teamGrid, uint8_t **writePtrAddr, uint16_t
     *writePos = *(uint16_t *)teamGrid;
     *writePtrAddr = (uint8_t *)(writePos + 1);
     (*count)++;
-    _Career_AppendTeamToTmdTeamPool(teamGrid);
+    _Career_AppendTeamToTmdTeamPool((TeamFileEx *)teamGrid);
 }
 
 /* tryConsumeCompetitionIdFromList — searches byte list for currentCompetitionId,
@@ -286,8 +286,8 @@ void _DIY_CachePrimaryQualifiedTeamsGrid(void)
         slotIdx <<= 1;
         uint16_t teamNum = *(uint16_t *)((uint8_t *)teamIdsTable + slotIdx);
         *cachedIds++ = teamNum;
-        uint8_t *teamData = _VerifyTeamLoaded(teamNum);
-        copyTeamGridWords(teamData, dst, 0x155);
+        TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
+        copyTeamGridWords((uint8_t *)teamData, dst, 0x155);
         dst += sizeof(TeamFileEx);
     }
 }
@@ -309,8 +309,8 @@ void _DIY_CacheSecondaryQualifiedTeamsGrid(void)
         idx <<= 1;
         uint16_t teamNum = *(uint16_t *)((uint8_t *)teamIdsTable + idx);
         *cachedIds++ = teamNum;
-        uint8_t *teamData = _VerifyTeamLoaded(teamNum);
-        copyTeamGridWords(teamData, dst, 0x155);
+        TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
+        copyTeamGridWords((uint8_t *)teamData, dst, 0x155);
         dst += sizeof(TeamFileEx);
     }
 }
@@ -326,8 +326,8 @@ void _DIY_CacheTertiaryQualifiedTeamGrid(void)
     uint16_t *teamIdsTable = (uint16_t *)(comp + 0x24E);
     uint16_t teamNum = *(uint16_t *)((uint8_t *)teamIdsTable + idx);
     cachedTertiaryQualifiedTeamId = teamNum;
-    uint8_t *teamData = _VerifyTeamLoaded(teamNum);
-    copyTeamGridWords(teamData, tertiaryQualifiedTeamGrid, 0x155);
+    TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
+    copyTeamGridWords((uint8_t *)teamData, tertiaryQualifiedTeamGrid, 0x155);
 }
 
 /* ================================================================
@@ -345,8 +345,8 @@ static void copyTitleHolderGrid(uint16_t *titleHolderTeamId, uint8_t *titleHolde
     uint16_t *teamIdsTable = (uint16_t *)(comp + 0x24E);
     uint16_t teamNum = *(uint16_t *)((uint8_t *)teamIdsTable + idx);
     *titleHolderTeamId = teamNum;
-    uint8_t *teamData = _VerifyTeamLoaded(teamNum);
-    copyTeamGridWords(teamData, titleHolderGrid, 0x155);
+    TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
+    copyTeamGridWords((uint8_t *)teamData, titleHolderGrid, 0x155);
 }
 
 __attribute__((used, externally_visible))
@@ -442,7 +442,7 @@ extern uint16_t panicReasonCode;
 
 extern uint16_t _Rand2(void);
 extern void _Career_RemoveTeamFromTmdTeamPool(uint16_t teamNum);
-extern void _Career_AppendTeamToTmdTeamPool(uint8_t *grid);
+extern void _Career_AppendTeamToTmdTeamPool(TeamFileEx *grid);
 extern void _PanicHaltLoop(void);
 
 /* Career_DrawRandomTeamFromPoolAndCopyGrid (SWOS2.s line 31528)
@@ -489,7 +489,7 @@ static void drawRandomTeamFromPoolAndCopyGrid(uint16_t titleHolder,
 
     uint16_t savedCareerFile = careerFileBuffer;
     _Career_RemoveTeamFromTmdTeamPool(removedTeam);
-    _Career_AppendTeamToTmdTeamPool(dstGrid);
+    _Career_AppendTeamToTmdTeamPool((TeamFileEx *)dstGrid);
     if (savedCareerFile != careerFileBuffer) {
         panicReasonCode = 0x8997;
         _PanicHaltLoop();

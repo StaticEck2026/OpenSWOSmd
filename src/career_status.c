@@ -38,14 +38,14 @@
 /* ---- Assembly externs (functions still in asm) ---- */
 extern uint16_t _Rand(void);
 extern uint16_t _Rand2(void);
-extern uint8_t *_VerifyTeamLoaded(uint16_t teamNum);
-extern uint16_t _GetAveragePlayerPrice(uint8_t *team);
+extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
+extern uint16_t _GetAveragePlayerPrice(TeamFileEx *team);
 extern uint16_t _CalcGateReceiptsBaseFromTeamValue(uint16_t avgPrice);
 extern uint16_t _GetTeamValueBase(uint16_t avgPrice);
 
 /* Replaces _CGetTeamValueForGateReceipts asm bridge */
-static uint16_t getTeamValueForGateReceipts(uint8_t *team) {
-    uint16_t teamNum = *(uint16_t *)team;
+static uint16_t getTeamValueForGateReceipts(TeamFileEx *team) {
+    uint16_t teamNum = *(uint16_t *)team;  /* original: move.w (a0),d0 — reads first 2 bytes */
     _VerifyTeamLoaded(teamNum);
     uint16_t avgPrice = _GetAveragePlayerPrice(team);
     return _CalcGateReceiptsBaseFromTeamValue(avgPrice);
@@ -245,17 +245,17 @@ extern uint8_t    diyCompetitionStart[];
  * Returns the appropriate array (currentMatchPlayers, playerPositions,
  * or team->team.playerNumbers) and sets *outCount to the player count.
  * ================================================================ */
-static uint8_t *getPlayerList(uint8_t *team, uint16_t *outCount) {
-    if (team == (uint8_t *)&careerTeam) {
+static uint8_t *getPlayerList(TeamFileEx *team, uint16_t *outCount) {
+    if (team == &careerTeam) {
         *outCount = careerNumPlayers;
         return currentMatchPlayers;
     }
-    if (team == (uint8_t *)&currentTeam) {
+    if (team == &currentTeam) {
         *outCount = numPlayers;
         return playerPositions;
     }
     *outCount = 16;
-    return ((TeamFileEx *)team)->team.playerNumbers;
+    return team->team.playerNumbers;
 }
 
 /* ================================================================
@@ -311,19 +311,17 @@ static void maybeDecayPlayerStatusBucket(uint16_t bucketBits, PlayerFile *player
  * Iterates all players in a team and calls MaybeDecayPlayerStatusBucket
  * for those with nonzero status bucket bits.
  * ================================================================ */
-static void maybeDecayPlayerStatusBucketForTeam(uint8_t *team) {
-    TeamFileEx *teamEx = (TeamFileEx *)team;
-
+static void maybeDecayPlayerStatusBucketForTeam(TeamFileEx *team) {
     /* Skip computer-controlled teams */
-    if (teamEx->team.teamControls == 1)
+    if (team->team.teamControls == 1)
         return;
 
-    if (team == (uint8_t *)&careerTeam) {
+    if (team == &careerTeam) {
         /* Career team: use currentMatchPlayers for indirection */
         int16_t count = (int16_t)careerNumPlayers - 1;
         for (int16_t i = count; i >= 0; i--) {
             int16_t idx = (int8_t)currentMatchPlayers[i];
-            PlayerFile *pf = &teamEx->players[idx];
+            PlayerFile *pf = &team->players[idx];
             uint16_t bucket = (uint16_t)pf->cardsInjuries & CI_STATUS_BUCKET;
             if (bucket != 0) {
                 maybeDecayPlayerStatusBucket(bucket, pf);
@@ -331,7 +329,7 @@ static void maybeDecayPlayerStatusBucketForTeam(uint8_t *team) {
         }
     } else {
         /* Non-career: iterate 16 players sequentially */
-        PlayerFile *pf = teamEx->players;
+        PlayerFile *pf = team->players;
         for (int16_t i = 15; i >= 0; i--) {
             uint16_t bucket = (uint16_t)pf->cardsInjuries & CI_STATUS_BUCKET;
             if (bucket != 0) {
@@ -347,29 +345,27 @@ static void maybeDecayPlayerStatusBucketForTeam(uint8_t *team) {
  * Decays injury severity (mode==0) or card severity (mode!=0) for
  * all players in a team.
  * ================================================================ */
-static void cyclePlayerStatusFlagsForTeam(uint8_t *team, uint16_t mode) {
-    TeamFileEx *teamEx = (TeamFileEx *)team;
-
+static void cyclePlayerStatusFlagsForTeam(TeamFileEx *team, uint16_t mode) {
     /* Skip if training game or computer-controlled team */
     if (trainingGame != 0)
         return;
-    if (teamEx->team.teamControls == 1)
+    if (team->team.teamControls == 1)
         return;
 
     uint8_t *playerList;
     int16_t count;
 
-    if (team == (uint8_t *)&careerTeam) {
+    if (team == &careerTeam) {
         playerList = currentMatchPlayers;
         count = (int16_t)careerNumPlayers - 1;
     } else {
-        playerList = teamEx->team.playerNumbers;
+        playerList = team->team.playerNumbers;
         count = 15;
     }
 
     for (int16_t i = count; i >= 0; i--) {
         int16_t idx = (int8_t)playerList[i];
-        PlayerFile *pf = &teamEx->players[idx];
+        PlayerFile *pf = &team->players[idx];
         uint8_t ci = pf->cardsInjuries;
 
         if (mode == 0) {
@@ -414,7 +410,7 @@ static void cyclePlayerStatusFlagsForTeam(uint8_t *team, uint16_t mode) {
  * mode parameter is passed to CyclePlayerStatusFlagsForTeam.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitInGameTeams_PlayerControlled(uint8_t *team1, uint8_t *team2, uint16_t mode) {
+void _InitInGameTeams_PlayerControlled(TeamFileEx *team1, TeamFileEx *team2, uint16_t mode) {
     maybeDecayPlayerStatusBucketForTeam(team1);
     maybeDecayPlayerStatusBucketForTeam(team2);
     cyclePlayerStatusFlagsForTeam(team1, mode);
@@ -427,7 +423,7 @@ void _InitInGameTeams_PlayerControlled(uint8_t *team1, uint8_t *team2, uint16_t 
  * The Alt variant is an identical copy in the original game.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitInGameTeams_WithMatchParam(uint8_t *team1, uint8_t *team2) {
+void _InitInGameTeams_WithMatchParam(TeamFileEx *team1, TeamFileEx *team2) {
     uint16_t mode = DIY_COMP(diyCompetitionStart)->substitutesCount;
     maybeDecayPlayerStatusBucketForTeam(team1);
     maybeDecayPlayerStatusBucketForTeam(team2);
@@ -564,25 +560,24 @@ check_bucket:
  * Counts players with position == 0 (goalkeeper) in the team.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _GetNumberOfSubstitutes(uint8_t *team, uint16_t numPl) {
-    TeamFileEx *teamEx = (TeamFileEx *)team;
+uint16_t _GetNumberOfSubstitutes(TeamFileEx *team, uint16_t numPl) {
     int16_t iter = (int16_t)numPl - 1;
     uint8_t *playerList;
     uint16_t dummy;
 
     /* Three-way dispatch for player list source */
-    if (team == (uint8_t *)&careerTeam) {
+    if (team == &careerTeam) {
         playerList = currentMatchPlayers;
-    } else if (team == (uint8_t *)&currentTeam) {
+    } else if (team == &currentTeam) {
         playerList = playerPositions;
     } else {
-        playerList = teamEx->team.playerNumbers;
+        playerList = team->team.playerNumbers;
     }
 
     uint16_t count = 0;
     for (; iter >= 0; iter--) {
         int16_t idx = (int8_t)playerList[iter];
-        PlayerFile *pf = &teamEx->players[idx];
+        PlayerFile *pf = &team->players[idx];
         uint16_t position = ((uint16_t)pf->positionAndFace & PF_POSITION_MASK) >> PF_POSITION_SHIFT;
         if (position == 0)
             count++;
@@ -595,23 +590,22 @@ uint16_t _GetNumberOfSubstitutes(uint8_t *team, uint16_t numPl) {
  * Counts goalkeepers in selection list (indices 11 to extraCount+10).
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _GetNumberOfSubstitutesInSelectionList(uint8_t *team, uint16_t extraCount) {
-    TeamFileEx *teamEx = (TeamFileEx *)team;
+uint16_t _GetNumberOfSubstitutesInSelectionList(TeamFileEx *team, uint16_t extraCount) {
     int16_t iter = (int16_t)extraCount + 10;
     uint8_t *playerList;
 
-    if (team == (uint8_t *)&careerTeam) {
+    if (team == &careerTeam) {
         playerList = currentMatchPlayers;
-    } else if (team == (uint8_t *)&currentTeam) {
+    } else if (team == &currentTeam) {
         playerList = playerPositions;
     } else {
-        playerList = teamEx->team.playerNumbers;
+        playerList = team->team.playerNumbers;
     }
 
     uint16_t count = 0;
     for (; iter >= 11; iter--) {
         int16_t idx = (int8_t)playerList[iter];
-        PlayerFile *pf = &teamEx->players[idx];
+        PlayerFile *pf = &team->players[idx];
         uint16_t position = ((uint16_t)pf->positionAndFace & PF_POSITION_MASK) >> PF_POSITION_SHIFT;
         if (position == 0)
             count++;
@@ -658,19 +652,18 @@ static uint16_t isPlayerDisabled(PlayerFile *pf, int16_t excludeCardsFlag) {
  * Returns (disabled << 16) | (available & 0xFFFF).
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint32_t _GetNumberOfAvailablePlayers(uint8_t *team, int16_t excludeCardsFlag, uint16_t numPl) {
-    TeamFileEx *teamEx = (TeamFileEx *)team;
+uint32_t _GetNumberOfAvailablePlayers(TeamFileEx *team, int16_t excludeCardsFlag, uint16_t numPl) {
     uint8_t *playerList;
     uint16_t totalCount;
 
-    if (team == (uint8_t *)&careerTeam) {
+    if (team == &careerTeam) {
         playerList = currentMatchPlayers;
         totalCount = careerNumPlayers;
-    } else if (team == (uint8_t *)&currentTeam) {
+    } else if (team == &currentTeam) {
         playerList = playerPositions;
         totalCount = numPlayers;
     } else {
-        playerList = teamEx->team.playerNumbers;
+        playerList = team->team.playerNumbers;
         totalCount = 16;
     }
 
@@ -683,7 +676,7 @@ uint32_t _GetNumberOfAvailablePlayers(uint8_t *team, int16_t excludeCardsFlag, u
 
     for (; iter >= 0; iter--) {
         int16_t idx = (int8_t)playerList[iter];
-        PlayerFile *pf = &teamEx->players[idx];
+        PlayerFile *pf = &team->players[idx];
         if (isPlayerDisabled(pf, excludeCardsFlag)) {
             disabled++;
             available--;
@@ -699,19 +692,18 @@ uint32_t _GetNumberOfAvailablePlayers(uint8_t *team, int16_t excludeCardsFlag, u
  * Returns (disabled << 16) | (available & 0xFFFF).
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint32_t _GetNumberOfAvailableSubstitutes(uint8_t *team, int16_t flag) {
-    TeamFileEx *teamEx = (TeamFileEx *)team;
+uint32_t _GetNumberOfAvailableSubstitutes(TeamFileEx *team, int16_t flag) {
     uint8_t *playerList;
     uint16_t totalCount;
 
-    if (team == (uint8_t *)&careerTeam) {
+    if (team == &careerTeam) {
         playerList = currentMatchPlayers;
         totalCount = careerNumPlayers;
-    } else if (team == (uint8_t *)&currentTeam) {
+    } else if (team == &currentTeam) {
         playerList = playerPositions;
         totalCount = numPlayers;
     } else {
-        playerList = teamEx->team.playerNumbers;
+        playerList = team->team.playerNumbers;
         totalCount = 16;
     }
 
@@ -721,7 +713,7 @@ uint32_t _GetNumberOfAvailableSubstitutes(uint8_t *team, int16_t flag) {
 
     for (; iter >= 0; iter--) {
         int16_t idx = (int8_t)playerList[iter];
-        PlayerFile *pf = &teamEx->players[idx];
+        PlayerFile *pf = &team->players[idx];
 
         /* Check if goalkeeper (position == 0) */
         uint16_t position = ((uint16_t)pf->positionAndFace & PF_POSITION_MASK) >> PF_POSITION_SHIFT;
@@ -745,16 +737,15 @@ uint32_t _GetNumberOfAvailableSubstitutes(uint8_t *team, int16_t flag) {
  * Returns (disabled << 16) | (available & 0xFFFF).
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint32_t _GetNumberOfAvailableStartingPlayers(uint8_t *team, int16_t flag) {
-    TeamFileEx *teamEx = (TeamFileEx *)team;
+uint32_t _GetNumberOfAvailableStartingPlayers(TeamFileEx *team, int16_t flag) {
     uint8_t *playerList;
     uint16_t totalCount;
 
-    if (team == (uint8_t *)&careerTeam) {
+    if (team == &careerTeam) {
         playerList = currentMatchPlayers;
         totalCount = careerNumPlayers;
     } else {
-        playerList = teamEx->team.playerNumbers;
+        playerList = team->team.playerNumbers;
         totalCount = 16;
     }
 
@@ -764,7 +755,7 @@ uint32_t _GetNumberOfAvailableStartingPlayers(uint8_t *team, int16_t flag) {
 
     for (; iter >= 0; iter--) {
         int16_t idx = (int8_t)playerList[iter];
-        PlayerFile *pf = &teamEx->players[idx];
+        PlayerFile *pf = &team->players[idx];
 
         /* Check if NOT goalkeeper (position != 0) */
         uint16_t position = ((uint16_t)pf->positionAndFace & PF_POSITION_MASK) >> PF_POSITION_SHIFT;
@@ -997,11 +988,11 @@ uint16_t _ShouldSetupPlayers(void) {
  * Computes gate receipts factor for league matches from team values.
  * Returns factor in d7. Panics on 16-bit overflow.
  */
-static uint16_t calcLeagueMatchGateReceiptsFactor(uint8_t *team1, uint8_t *team2) {
+static uint16_t calcLeagueMatchGateReceiptsFactor(TeamFileEx *team1, TeamFileEx *team2) {
     uint32_t d0;
 
     /* team1 value */
-    if (team1 == (uint8_t *)&careerTeam) {
+    if (team1 == &careerTeam) {
         d0 = (uint32_t)totalTeamValue;
     } else {
         d0 = getTeamValueForGateReceipts(team1);
@@ -1011,7 +1002,7 @@ static uint16_t calcLeagueMatchGateReceiptsFactor(uint8_t *team1, uint8_t *team2
     uint32_t d7 = d0;
 
     /* team2 value */
-    if (team2 == (uint8_t *)&careerTeam) {
+    if (team2 == &careerTeam) {
         d0 = (uint32_t)totalTeamValue;
     } else {
         d0 = getTeamValueForGateReceipts(team2);
@@ -1043,10 +1034,10 @@ static uint16_t calcLeagueMatchGateReceiptsFactor(uint8_t *team1, uint8_t *team2
 /* CalcCupMatchGateReceiptsFactor (static)
  * Same as league but with different multipliers.
  */
-static uint16_t calcCupMatchGateReceiptsFactor(uint8_t *team1, uint8_t *team2) {
+static uint16_t calcCupMatchGateReceiptsFactor(TeamFileEx *team1, TeamFileEx *team2) {
     uint32_t d0;
 
-    if (team1 == (uint8_t *)&careerTeam) {
+    if (team1 == &careerTeam) {
         d0 = (uint32_t)totalTeamValue;
     } else {
         d0 = getTeamValueForGateReceipts(team1);
@@ -1055,7 +1046,7 @@ static uint16_t calcCupMatchGateReceiptsFactor(uint8_t *team1, uint8_t *team2) {
     d0 = (uint32_t)(uint16_t)d0 * 6000;   /* mulu #$1770 */
     uint32_t d7 = d0;
 
-    if (team2 == (uint8_t *)&careerTeam) {
+    if (team2 == &careerTeam) {
         d0 = (uint32_t)totalTeamValue;
     } else {
         d0 = getTeamValueForGateReceipts(team2);
@@ -1084,7 +1075,7 @@ static uint16_t calcCupMatchGateReceiptsFactor(uint8_t *team1, uint8_t *team2) {
  * Complex dispatcher that calculates gate receipts based on competition type.
  */
 __attribute__((used, externally_visible))
-void _UpdateCareerFinancesAfterMatch(uint8_t *ctx, uint8_t *team) {
+void _UpdateCareerFinancesAfterMatch(uint8_t *ctx, TeamFileEx *team) {
     if (isNationalSelector != 0)
         return;
 
@@ -1107,7 +1098,7 @@ void _UpdateCareerFinancesAfterMatch(uint8_t *ctx, uint8_t *team) {
     }
 
 league_match:
-    d7 = calcLeagueMatchGateReceiptsFactor(team, team + 0 /* a2 not used directly, see asm */);
+    d7 = calcLeagueMatchGateReceiptsFactor(team, team /* a2 not used directly, see asm */);
     /* Actually, asm passes a1=team, a2=team2 separately. For the C version,
        the league path doesn't use the factor from the cup table;
        instead it computes a full gate receipt factor from team rank. */
@@ -1173,7 +1164,7 @@ league_match:
         /* Multiply by crowd factor from ctx+0x30, divide by avg player price */
         int8_t crowdFactor = *(int8_t *)(a3 + 0x30);
         uint32_t product = (uint32_t)(uint16_t)receiptIndex * (uint16_t)(int16_t)crowdFactor;
-        uint16_t avgPrice = getTeamValueForGateReceipts((uint8_t *)&careerTeam);
+        uint16_t avgPrice = getTeamValueForGateReceipts(&careerTeam);
         if (avgPrice == 0) avgPrice = 1; /* safety */
         uint16_t priceRatio = (uint16_t)(product / (uint32_t)avgPrice);
         int16_t gateFactorResult = (int16_t)((int16_t)d7 * (int16_t)priceRatio) / 100;
@@ -1253,7 +1244,7 @@ diy_comp_match:
     }
 
 compute_receipts:
-    if (team == (uint8_t *)&careerTeam) {
+    if (team == &careerTeam) {
         d7 <<= 1;   /* double for career team home matches */
         seasonMatchReceiptsCount++;
     } else {
@@ -1999,7 +1990,7 @@ void _UpdateCareerReputationBonuses(void) {
     /* Club reputation from league rank */
     if (*(int16_t *)competitionFileBuffer != 2) {
         /* Not a pure cup — compute reputation from rank delta */
-        uint16_t avgPrice = getTeamValueForGateReceipts((uint8_t *)&careerTeam);
+        uint16_t avgPrice = getTeamValueForGateReceipts(&careerTeam);
         int16_t d7 = (int16_t)avgPrice;
 
         /* Find team rank in league table */
@@ -2065,7 +2056,7 @@ void _UpdateCareerReputationBonuses(void) {
 __attribute__((used, externally_visible))
 void _InitializeStartingBalanceForNewSeason(void) {
     /* Get team value base from avg player price */
-    uint16_t avgPrice = getTeamValueForGateReceipts((uint8_t *)&careerTeam);
+    uint16_t avgPrice = getTeamValueForGateReceipts(&careerTeam);
     uint16_t teamBase = _GetTeamValueBase(avgPrice);
     uint16_t d2 = teamBase;
 
@@ -2321,13 +2312,13 @@ void _ShowRetirementMessage(void)
  *
  * Asm: CalculateStartingBalance (d0=teamNumber → d1=balance)
  * ================================================================ */
-extern uint8_t *_GetTeamPointer(uint16_t teamId);
-extern uint16_t _GetAveragePlayerPrice(uint8_t *team);
+extern TeamFileEx *_GetTeamPointer(uint16_t teamId);
+extern uint16_t _GetAveragePlayerPrice(TeamFileEx *team);
 
 __attribute__((used, externally_visible))
 uint32_t _CalculateStartingBalance(uint16_t teamNumber)
 {
-    uint8_t *teamPtr = _GetTeamPointer(teamNumber);
+    TeamFileEx *teamPtr = _GetTeamPointer(teamNumber);
     uint16_t avgPrice = _GetAveragePlayerPrice(teamPtr);
     uint16_t baseValue = _GetTeamValueBase(avgPrice);
     uint16_t base3 = (uint16_t)(baseValue * 3);     /* mulu.w #3 + move.w truncation */
@@ -2469,13 +2460,14 @@ void _Career_UpdateSinglePlayerPostMatchStats(uint8_t *playerSlotPtr)
  * to use remap value as replacement modifier.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_ApplyPostMatchPlayerStatModsIfCareerTeam(uint8_t *team, uint8_t *mods)
+void _Career_ApplyPostMatchPlayerStatModsIfCareerTeam(TeamFileEx *team, uint8_t *mods)
 {
     if (isNationalSelector)
         return;
-    if (team != (uint8_t *)&careerTeam)
+    if (team != &careerTeam)
         return;
 
+    uint8_t *teamRaw = (uint8_t *)team;
     int16_t d7;
     for (d7 = 0x0A; d7 >= 0; d7--) {
         int8_t d6 = (int8_t)currentMatchPlayers[d7];
@@ -2492,7 +2484,7 @@ void _Career_ApplyPostMatchPlayerStatModsIfCareerTeam(uint8_t *team, uint8_t *mo
         {
             uint16_t d2 = (uint16_t)(uint8_t)d6;
             d2 = (uint16_t)(d2 * 38);  /* mulu.w #$26 */
-            uint8_t *playerSlotPtr = team + d2;
+            uint8_t *playerSlotPtr = teamRaw + d2;
             _Career_UpdateSinglePlayerPostMatchStats(playerSlotPtr);
         }
     }
@@ -2966,7 +2958,7 @@ void _Career_InitializeNewSeasonFinances(void)
         /* Calculate sponsorship amount based on team value */
         {
             _VerifyTeamLoaded(selTeamNumber);
-            uint16_t avgPrice = _GetAveragePlayerPrice((uint8_t *)&careerTeam);
+            uint16_t avgPrice = _GetAveragePlayerPrice(&careerTeam);
             uint32_t d0 = (uint32_t)_GetTeamValueBase(avgPrice);
             d0 = d0 * d7;
 
@@ -3090,10 +3082,10 @@ void _Career_PostMatchUpdate(void)
 
     /* Save and temporarily override selTeamNumber and teamControls */
     uint16_t savedSelTeam = selTeamNumber;
-    uint8_t savedControls = *((uint8_t *)&careerTeam + 4);  /* TEAMFILEEX_TEAM(0) + TEAMFILE_TEAMCONTROLS(4) */
+    uint8_t savedControls = careerTeam.team.teamControls;
 
     selTeamNumber = 0xFFFF;
-    *((uint8_t *)&careerTeam + 4) = 1;
+    careerTeam.team.teamControls = 1;
 
     /* Auto-advance all competition slots */
     _Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)currentCompetitionPtr);
@@ -3108,7 +3100,7 @@ void _Career_PostMatchUpdate(void)
         _Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)quaternaryCompetitionPtr);
 
     /* Restore saved values */
-    *((uint8_t *)&careerTeam + 4) = savedControls;
+    careerTeam.team.teamControls = savedControls;
     selTeamNumber = savedSelTeam;
 
     /* Fall through to Career_HandleRetirement (bra.w *+4) */
@@ -3302,7 +3294,7 @@ extern uint16_t avgPlayerPriceHalfClamped;
 extern uint8_t playerFormDeltaRandomTable[]; /* 144 bytes: 18×8 lookup table */
 
 __attribute__((used, externally_visible))
-void _UpdateCareerPlayersFormAfterMatch(uint8_t *compCtx, uint8_t *team1, uint8_t *team2,
+void _UpdateCareerPlayersFormAfterMatch(uint8_t *compCtx, TeamFileEx *team1, TeamFileEx *team2,
                                          uint16_t team1Goals, uint16_t team2Goals)
 {
     if (isNationalSelector)
@@ -3313,7 +3305,7 @@ void _UpdateCareerPlayersFormAfterMatch(uint8_t *compCtx, uint8_t *team1, uint8_
     uint8_t *goalCounter = team1GoalCounterByPlayer;
     uint16_t d1 = team1Goals;
     uint16_t d2 = team2Goals;
-    if (team1 != (uint8_t *)&careerTeam) {
+    if (team1 != &careerTeam) {
         uint16_t tmp = d1;
         d1 = d2;
         d2 = tmp;
@@ -3335,7 +3327,7 @@ void _UpdateCareerPlayersFormAfterMatch(uint8_t *compCtx, uint8_t *team1, uint8_
     d7 += 11;
 
     /* Get average player price for career team, halve and clamp to 17 */
-    uint16_t avgPrice = _GetAveragePlayerPrice((uint8_t *)&careerTeam);
+    uint16_t avgPrice = _GetAveragePlayerPrice(&careerTeam);
     avgPrice >>= 1;
     if (avgPrice > 0x11)
         avgPrice = 0x11;
@@ -3498,6 +3490,8 @@ nextPlayer:
  *   d6 = penalty score packed (team1<<8 | team2)
  *   d7 = flags (bit 3 = went to penalties; low byte stored to result)
  * =================================================================== */
+extern uint8_t teamSelectionKeyCache[];
+extern uint16_t teamSelectionKeyCacheOffset;
 extern uint16_t boardConfidenceMod0;
 extern uint16_t boardConfidenceMod1;
 extern uint16_t boardConfidenceMod2;
@@ -3523,7 +3517,7 @@ extern uint32_t aEuropeanTour;  /* string label — used as address boundary */
 extern uint32_t aOceaniaTour;   /* string label — used as address boundary */
 
 __attribute__((used, externally_visible))
-void _Career_UpdateStatsAfterMatch(uint8_t *team1, uint8_t *team2, uint16_t compType,
+void _Career_UpdateStatsAfterMatch(TeamFileEx *team1, TeamFileEx *team2, uint16_t compType,
                                     uint16_t packedGoals, uint16_t aggregate,
                                     uint16_t penalty, uint16_t flags)
 {
@@ -3540,7 +3534,7 @@ void _Career_UpdateStatsAfterMatch(uint8_t *team1, uint8_t *team2, uint16_t comp
 
     int16_t result;  /* 1=win, -1=loss, 0=draw */
 
-    if (team1 == (uint8_t *)&careerTeam) {
+    if (team1 == &careerTeam) {
         /* Career team is team1: career goals = high byte, opponent = low byte */
         boardConfidenceMod0++;
         gamesPlayed++;
@@ -3563,7 +3557,7 @@ void _Career_UpdateStatsAfterMatch(uint8_t *team1, uint8_t *team2, uint16_t comp
                 result = -1;  /* Loss on penalties */
             }
         }
-    } else if (team2 == (uint8_t *)&careerTeam) {
+    } else if (team2 == &careerTeam) {
         /* Career team is team2: career goals = low byte, opponent = high byte */
         boardConfidenceMod0++;
         gamesPlayed++;
@@ -3631,14 +3625,21 @@ void _Career_UpdateStatsAfterMatch(uint8_t *team1, uint8_t *team2, uint16_t comp
     }
 
 skipStats:
-    /* Store match result into competition slot record */
-    if (team1[4] != 1 || team2[4] != 1) {
+    /* Store match result into competition slot record.
+     * ASM: a1 is overwritten by GetCurrentSelectedElementPtr (returns in a1).
+     * The base cache entry (a0) gets its counter decremented,
+     * while the selected element (a1) receives match result data. */
+    if (team1->team.teamControls != 1 || team2->team.teamControls != 1) {
+        /* Base cache entry (a0 in asm) — decrement byte[6] */
+        uint8_t *base_entry = teamSelectionKeyCache + teamSelectionKeyCacheOffset;
+        base_entry[6] -= 1;
+
+        /* Selected element (a1 in asm) — store match results */
         uint8_t *elem = _TeamSelectionKeyCache_GetCurrentSelectedElementPtr();
-        *(uint8_t *)(elem + 6) -= 1;
-        team1[0x0B] = (uint8_t)flags;
-        *(uint16_t *)(team1 + 0x10) = packedGoals;
-        *(uint16_t *)(team1 + 0x12) = aggregate;
-        *(uint16_t *)(team1 + 0x14) = penalty;
+        elem[0x0B] = (uint8_t)flags;
+        *(uint16_t *)(elem + 0x10) = packedGoals;
+        *(uint16_t *)(elem + 0x12) = aggregate;
+        *(uint16_t *)(elem + 0x14) = penalty;
     }
 
     /* Set career slot processing variable */

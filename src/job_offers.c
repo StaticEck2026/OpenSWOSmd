@@ -61,7 +61,7 @@ extern uint16_t careerFileBuffer;
 extern uint8_t  tmdFileBuffer;
 
 extern uint16_t _Rand(void);
-extern uint16_t _GetAveragePlayerPrice(uint8_t *team);
+extern uint16_t _GetAveragePlayerPrice(TeamFileEx *team);
 extern int16_t  _IsNewJobOffer(uint16_t teamNumber);
 extern int16_t  _IsOldJobOffer(uint16_t teamNumber);
 extern void     _AddJobOffer(uint16_t teamNumber, uint32_t initialFunds);
@@ -125,14 +125,13 @@ extern uint16_t currentSeasonShowing;
 /* ---- C-ported function externs ---- */
 extern void _SetExitMenuFlag(void);
 extern void _SetCurrentEntry(uint16_t index);
-extern uint8_t *_GetTeamPointer(uint16_t teamId);
+extern TeamFileEx *_GetTeamPointer(uint16_t teamId);
 extern void _PrintFormatted(const uint8_t *fmt, uint8_t *out,
                      uint16_t n0, uint16_t n1, uint16_t n2, uint16_t n3,
                      uint16_t n4, uint16_t n5, uint16_t n6,
                      const uint8_t *strA, const uint8_t *strB, const uint8_t *strC);
 
 /* ---- C-callable ASM bridges ---- */
-extern uint8_t *_GetTeamPointer(uint16_t teamNumber);
 extern void _Int2Pounds(uint32_t value, uint8_t *dst);
 extern int16_t _ShowSquad(uint8_t *teamPtr, uint8_t *title, uint32_t maskLo, uint32_t maskHi, uint16_t arg2, uint16_t arg3);
 extern void _Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel);
@@ -338,8 +337,8 @@ void _JobOffers_FillMissingNewOfferTeamNames(void)
             continue;
 
         /* Look up team pointer and copy name */
-        uint8_t *teamPtr = _GetTeamPointer(offer->teamNo);
-        _StringCopy((uint8_t *)((TeamFile *)teamPtr)->teamName, (uint8_t *)offer->teamName);
+        TeamFileEx *teamPtr = _GetTeamPointer(offer->teamNo);
+        _StringCopy((uint8_t *)teamPtr->team.teamName, (uint8_t *)offer->teamName);
     }
 }
 
@@ -1157,7 +1156,7 @@ searchDomestic:
             if (teamId == selTeam)
                 continue;
 
-            uint16_t avgPrice = _GetAveragePlayerPrice(a0);
+            uint16_t avgPrice = _GetAveragePlayerPrice((TeamFileEx *)a0);
             if (avgPrice < repLow || avgPrice > repHigh)
                 continue;
 
@@ -1209,7 +1208,7 @@ searchForeign:
             if (teamId == selTeam)
                 continue;
 
-            uint16_t avgPrice = _GetAveragePlayerPrice(a0);
+            uint16_t avgPrice = _GetAveragePlayerPrice((TeamFileEx *)a0);
             if (avgPrice < repLow || avgPrice > repHigh)
                 continue;
 
@@ -1285,7 +1284,7 @@ searchSacked:
 
             uint16_t teamId = a0tf2->globalTeamNumber;
 
-            uint16_t avgPrice = _GetAveragePlayerPrice(a0);
+            uint16_t avgPrice = _GetAveragePlayerPrice((TeamFileEx *)a0);
             if (avgPrice < repLow || avgPrice > repHigh)
                 continue;
 

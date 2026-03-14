@@ -362,7 +362,7 @@ uint16_t _InitCompetitionTeamSelectionFromAltTableHeader(uint8_t *base)
  * Asm: d0=teamNumber (uint16), d1=startingBalance (int32)
  * ================================================================ */
 extern int16_t _GetTeamLeague(uint16_t teamNumber);
-extern uint8_t *_GetTeamPointer(uint16_t teamId);
+extern TeamFileEx *_GetTeamPointer(uint16_t teamId);
 
 __attribute__((used, externally_visible))
 void _Career_InitializeSelectedTeamAndStartingBalance(uint16_t teamNumber, int32_t balance)
@@ -376,7 +376,7 @@ void _Career_InitializeSelectedTeamAndStartingBalance(uint16_t teamNumber, int32
     careerTeamLeague = (uint16_t)_GetTeamLeague(teamNumber);
 
     /* Get pointer to team file data and copy to both buffers */
-    uint8_t *teamPtr = _GetTeamPointer(teamNumber);
+    TeamFileEx *teamPtr = _GetTeamPointer(teamNumber);
     selTeamNumber = teamNumber;
 
     /* Copy 342 words (684 bytes = one TeamFileEx) to both careerTeam and selTeamsPtr */
@@ -398,7 +398,7 @@ void _Career_InitializeSelectedTeamAndStartingBalance(uint16_t teamNumber, int32
 
     /* Copy 16 bytes of playerOrder (offset 60 in TeamFile) to currentMatchPlayers */
     teamPtr = _GetTeamPointer(selTeamNumber);
-    uint8_t *playerOrderSrc = teamPtr + 60;
+    uint8_t *playerOrderSrc = (uint8_t *)teamPtr + 60;
     for (int16_t i = 15; i >= 0; i--) {
         currentMatchPlayers[i] = playerOrderSrc[i];
     }
@@ -597,7 +597,7 @@ extern uint8_t  nationalTeamFileCode;
 
 extern uint8_t *_GetCurrentSeasonPointer(void);
 extern void _DIY_SaveLeagueScratchToTable(void);
-extern uint8_t *_VerifyTeamLoaded(uint16_t teamNo);
+extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNo);
 extern void _InitTeams(void);
 extern void _FillForeignMarketPlayers(void);
 extern void _FillCareerTeamPlayers(void);
@@ -905,12 +905,12 @@ void _InitializeNewSeason(void)
     _StringCopy(teamNameSrc, seasonInfo + 2);
 
     /* Verify team loaded and get current division index */
-    uint8_t *teamFile = _VerifyTeamLoaded(selTeamNumber);
-    uint16_t globalTeamNo = *(uint16_t *)(teamFile + 2);  /* TEAMFILE_GLOBALTEAMNUMBER */
+    TeamFileEx *teamFile = _VerifyTeamLoaded(selTeamNumber);
+    uint16_t globalTeamNo = teamFile->team.globalTeamNumber;
     int8_t diyLeagueState = (int8_t)diyLeagueSeasonStateTable[globalTeamNo];
     int16_t divIdx = (int16_t)diyLeagueState + (int16_t)careerTeamLeague;
     currentDivisionIndex = (uint16_t)divIdx;
-    teamFile[25] = (uint8_t)divIdx;  /* TEAMFILE_LEAGUE */
+    teamFile->team.league = (uint8_t)divIdx;
 
     contractNegotiationActive = 0;
     removedPlayerStatAccum = 0;
@@ -1102,7 +1102,7 @@ void _InitializeNewSeason(void)
     /* Copy manager name to team data (offset 0x24 in team file) */
     teamFile = _VerifyTeamLoaded(selTeamNumber);
     {
-        uint8_t *namePos = teamFile + 0x24;
+        uint8_t *namePos = (uint8_t *)teamFile + 0x24;
         _StringCopy(managerNameBuffer, namePos);
         /* Find end of copied name and add space + surname */
         while (*namePos != 0)

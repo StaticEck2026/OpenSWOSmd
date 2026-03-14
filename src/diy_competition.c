@@ -57,6 +57,8 @@ extern uint16_t diySelected;
 extern volatile uint16_t panicReasonCode;
 extern uint16_t teamsLoaded;
 extern uint8_t teamFileBuffer[];
+extern void _PanicHaltLoop(void) __attribute__((noreturn));
+extern void _FlashColor0Delay(uint32_t loopCount, uint16_t color);
 
 /* ASM data tables */
 extern uint32_t cupRoundStringTable[];
@@ -71,7 +73,7 @@ extern uint8_t euroCupsCompetitionContext[];
 extern uint16_t diyCupTeamIds[];
 
 /* ---- C bridges to asm functions ---- */
-extern uint8_t *_VerifyTeamLoaded(uint16_t teamNum);
+extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
 extern void _DIY_RecomputeCompetitionDerivedProgressionTable(void);
 
 /* ---- ASM functions still in asm (called via bridge) ---- */
@@ -131,12 +133,11 @@ static const uint16_t diyTournamentInitTable[20] = {
  * asm: a0=team ptr (from VerifyTeamLoaded), returns d0=avg
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _GetAveragePlayerPrice(uint8_t *team)
+uint16_t _GetAveragePlayerPrice(TeamFileEx *team)
 {
-    TeamFileEx *t = (TeamFileEx *)team;
     uint16_t total = 0;
     for (int16_t i = 0; i < 16; i++) {
-        total += (uint8_t)t->players[i].price;
+        total += (uint8_t)team->players[i].price;
     }
     /* ext.l d0; divu.w #16,d0 — returns quotient in low word */
     return total / 16;
@@ -244,13 +245,13 @@ void _DIY_SortAndShuffleTeamsByValue(uint8_t *diy, uint8_t *slot)
             /* Get avg price for team at p[0] */
             int16_t idx0 = (int8_t)p[0];
             uint16_t teamNum0 = teamIds[idx0];
-            uint8_t *team0 = _VerifyTeamLoaded(teamNum0);
+            TeamFileEx *team0 = _VerifyTeamLoaded(teamNum0);
             uint16_t price0 = _GetAveragePlayerPrice(team0);
 
             /* Get avg price for team at p[1] */
             int16_t idx1 = (int8_t)p[1];
             uint16_t teamNum1 = teamIds[idx1];
-            uint8_t *team1 = _VerifyTeamLoaded(teamNum1);
+            TeamFileEx *team1 = _VerifyTeamLoaded(teamNum1);
             uint16_t price1 = _GetAveragePlayerPrice(team1);
 
             /* Swap if price0 < price1 (sort descending) */
@@ -478,12 +479,12 @@ void _DIY_CacheSelectedTeamPointers(void)
     for (int16_t i = (int16_t)count - 1; i >= 0; i--) {
         int8_t idx = (int8_t)teamIndices[i];
         uint16_t teamNum = teamIds[(uint16_t)(int16_t)idx];
-        uint8_t *teamPtr = _VerifyTeamLoaded(teamNum);
+        TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
 
         /* Store relative pointer: teamPtr - &selTeamsPtr (asm: suba.l #selTeamsPtr,a0) */
         uint16_t entryIdx = (uint16_t)(int16_t)idx;
         uint8_t *entry = a2raw + entryIdx * 0x12;
-        *(uint32_t *)(entry + 0x2B4) = (uint32_t)(teamPtr - &selTeamsPtr);
+        *(uint32_t *)(entry + 0x2B4) = (uint32_t)((uint8_t *)teamPtr - &selTeamsPtr);
     }
 }
 
@@ -575,9 +576,8 @@ uint32_t _DIY_ComputeAverageTeamStrengthTier(uint16_t count, uint8_t *table)
     uint32_t totalSkill = 0;
 
     for (int16_t t = (int16_t)count - 1; t >= 0; t--) {
-        uint8_t *team = _VerifyTeamLoaded(teamIds[t]);
+        TeamFileEx *tf = _VerifyTeamLoaded(teamIds[t]);
         /* Read skill byte at offset 0x6C for each of 16 players, stride 0x26 (38) */
-        TeamFileEx *tf = (TeamFileEx *)team;
         for (int16_t p = 15; p >= 0; p--) {
             totalSkill += (uint8_t)tf->players[p].price;
         }
@@ -1375,8 +1375,8 @@ static void decrementMissingIfNotLoaded(uint8_t *comp, uint16_t *teamIds, uint16
     DIY_Competition *compS = (DIY_Competition *)comp;
     gridByte &= 0xFF;
     uint16_t teamNum = teamIds[gridByte];
-    uint8_t *teamPtr = _VerifyTeamLoaded(teamNum);
-    if (teamPtr[4] != 1) {
+    TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
+    if (teamPtr->team.teamControls != 1) {
         compS->nonNationalCount -= 1;
     }
 }
@@ -1462,8 +1462,8 @@ void _DIY_BuildTeamSelectionPointerCache(void)
     for (int16_t i = (int16_t)count - 1; i >= 0; i--) {
         int16_t gridIdx = (int8_t)*gridPtr++;   /* ext.w d6: sign-extend */
         uint16_t teamNum = teamIds[gridIdx];
-        uint8_t *teamPtr = _VerifyTeamLoaded(teamNum);
-        uint32_t relPtr = (uint32_t)(teamPtr - &selTeamsPtr);
+        TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
+        uint32_t relPtr = (uint32_t)((uint8_t *)teamPtr - &selTeamsPtr);
         *(uint32_t *)(a2 + (uint16_t)gridIdx * 4 + 0x344) = relPtr;  /* extended */
     }
 
@@ -1478,8 +1478,8 @@ void _DIY_BuildTeamSelectionPointerCache(void)
     for (int16_t j = (int16_t)count - 1; j >= 0; j--) {
         uint16_t gridByte = (uint8_t)*gridPtr++;  /* andi.w #$FF: zero-extend */
         uint16_t teamNum = teamIds[gridByte];
-        uint8_t *teamPtr = _VerifyTeamLoaded(teamNum);
-        if (teamPtr[4] != 1) {
+        TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
+        if (teamPtr->team.teamControls != 1) {
             a2s->nonNationalCount += 1;
         }
     }
@@ -1923,12 +1923,12 @@ void _DIY_ApplyPromotionRelegationWeightsToScratch(const uint8_t *weights)
             /* Look up team ID from cup team IDs */
             uint16_t teamId = diyCupTeamIds[idx];
             /* VerifyTeamLoaded returns the team pointer */
-            uint8_t *team = _VerifyTeamLoaded(teamId);
+            TeamFileEx *team = _VerifyTeamLoaded(teamId);
             /* Add weight to scratch at country number index */
-            uint16_t countryNum = *(uint16_t *)(team + 2);
+            uint16_t countryNum = team->team.globalTeamNumber;
             scratch[countryNum] += (uint8_t)weight;
             /* Check if this is the career team */
-            if (team == (uint8_t *)&careerTeam) {
+            if (team == &careerTeam) {
                 if (weight < 0) {
                     playPromotedAnimation = 1;
                 } else {
@@ -3527,8 +3527,8 @@ build_comp_list:
         for (; count >= 0; count--) {
             uint16_t idx = (uint8_t)*teamList++;
             uint16_t teamNum = teamIds[idx];
-            uint8_t *teamPtr = _VerifyTeamLoaded(teamNum);
-            if (teamPtr[4] != 1) {
+            TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
+            if (teamPtr->team.teamControls != 1) {
                 diyS->hasGroups += 1;
             }
         }
@@ -3820,8 +3820,8 @@ void _DIY_InitCupFromTeamGridAndValidateTeams(void)
     for (int16_t i = (int16_t)numTeams - 1; i >= 0; i--) {
         uint16_t idx = (uint8_t)*orderList++;
         uint16_t teamNum = teamGrid[idx];
-        uint8_t *teamPtr = _VerifyTeamLoaded(teamNum);
-        if (teamPtr[4] != 1) {
+        TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
+        if (teamPtr->team.teamControls != 1) {
             a2s->nonNationalCount += 1;
         }
     }
@@ -6673,6 +6673,26 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
         /* Get team pointer: a4[0x2B4] + selTeamsPtr base */
         uint8_t *teamPtr = (uint8_t *)((uint32_t)(*(uint32_t *)(a4 + 0x2B4)) + (uint32_t)&selTeamsPtr);
 
+        /* DEBUG: Validate team name bytes are printable ASCII.
+         * If corruption detected, flash color and halt so debugger can inspect.
+         * teamPtr+5 = TEAMFILE_TEAMNAME (up to 19 chars, null/space padded). */
+        {
+            uint8_t *nameCheck = teamPtr + 5;
+            uint16_t ci;
+            for (ci = 0; ci < 19; ci++) {
+                uint8_t b = nameCheck[ci];
+                if (b == 0) break;  /* null terminator is OK */
+                if (b < 0x20) {
+                    /* Non-printable byte found — corruption!
+                     * panicReasonCode encodes: 0xCC00 | team d5 in high nibble, byte index in low byte.
+                     * Set breakpoint on _PanicHaltLoop to inspect teamPtr, nameCheck, the buffer. */
+                    panicReasonCode = (uint16_t)(0xCC00u | ((d5 & 0xF) << 4) | ci);
+                    _FlashColor0Delay(500000, 0x0F00);  /* flash RED */
+                    _PanicHaltLoop();
+                }
+            }
+        }
+
         /* Set color based on team controls */
         uint16_t *bgColor = (uint16_t *)&a5->bg;
         uint8_t teamControls = teamPtr[4]; /* TEAMFILE_TEAMCONTROLS */
@@ -8864,7 +8884,7 @@ void _InitializeNewSeason_BuildTeamBudgetRankTable(void)
  *
  * Asm: in d0 = teamNo, a6 = competition pointer; out d2 = count
  * ================================================================ */
-extern uint16_t _GetAveragePlayerPrice(uint8_t *team);
+extern uint16_t _GetAveragePlayerPrice(TeamFileEx *team);
 
 __attribute__((used, externally_visible))
 uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, DIY_Competition *comp)
@@ -8883,7 +8903,7 @@ uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, DIY_Competition *comp)
     }
 
     /* Get our team's average player price */
-    uint8_t *myTeam = _VerifyTeamLoaded(teamNo);
+    TeamFileEx *myTeam = _VerifyTeamLoaded(teamNo);
     uint16_t myPrice = _GetAveragePlayerPrice(myTeam);
 
     /* Count teams with higher average price */
@@ -8892,7 +8912,7 @@ uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, DIY_Competition *comp)
         uint16_t otherId = teamIds[i];
         if (otherId == teamNo)
             continue;
-        uint8_t *otherTeam = _VerifyTeamLoaded(otherId);
+        TeamFileEx *otherTeam = _VerifyTeamLoaded(otherId);
         uint16_t otherPrice = _GetAveragePlayerPrice(otherTeam);
         if (otherPrice > myPrice)
             count++;
@@ -8974,8 +8994,8 @@ static void getCachedOrCalcViewResult(TeamFileEx *team1, TeamFileEx *team2,
         cachedViewResultTeam1Goals = -1;
         return;
     }
-    _CalculateViewResult(comp, modeFlag, goalsIn1, goalsIn2, statCol,
-                         (uint8_t *)team1, (uint8_t *)team2, outGoals1, outGoals2);
+    _CalculateViewResult((DIY_Competition *)comp, modeFlag, goalsIn1, goalsIn2, statCol,
+                         team1, team2, outGoals1, outGoals2);
 }
 
 static void getCachedOrCalcExtraTimeResult(uint16_t *outD3, uint16_t *outD4)
@@ -9011,10 +9031,10 @@ static void updateCareerAfterResult(TeamFileEx *team1, TeamFileEx *team2,
         return;
 
     /* Update player form: a0=diyCompetitionStart, a1=team1, a2=team2, d1=goals1, d2=goals2 */
-    _UpdateCareerPlayersFormAfterMatch(diyCompetitionStart, (uint8_t *)team1, (uint8_t *)team2, d1, d2);
+    _UpdateCareerPlayersFormAfterMatch(diyCompetitionStart, team1, team2, d1, d2);
 
     /* Begin contract negotiation: a0=diyCompetitionStart, a1=team1 */
-    _BeginContractNegotiationSequence(diyCompetitionStart, (uint8_t *)team1);
+    _BeginContractNegotiationSequence((DIY_Competition *)diyCompetitionStart, team1);
 
     careerTeamLostMatch = 0;
 
@@ -9727,7 +9747,7 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
                 return 1;
         }
         /* Play sim match */
-        _InitInGameTeams_WithMatchParam((uint8_t *)team1, (uint8_t *)team2);
+        _InitInGameTeams_WithMatchParam(team1, team2);
     } else if (mode == 1) {
         if (_PlayDIYCupFixtureAndCacheResult(team1, team2, allowSquadChanges, 0) != 0)
             return 1;
@@ -9809,7 +9829,7 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
 
     /* Career stat updates if applicable */
     if (careerLoadedFlag == 0 && (gameType == 4 || gameType == 3)) {
-        _Career_UpdateStatsAfterMatch((uint8_t *)team1, (uint8_t *)team2,
+        _Career_UpdateStatsAfterMatch(team1, team2,
             1, packedGoals, packedAggregate, packedPenalty, resultFlags);
     }
 
@@ -9912,7 +9932,7 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
                 return 1;
         }
         /* Sim match */
-        _InitInGameTeams_WithMatchParam((uint8_t *)team1, (uint8_t *)team2);
+        _InitInGameTeams_WithMatchParam(team1, team2);
     } else if (selector == 1) {
         if (_PlayDIYLeagueMatchAndCacheResult(team1, team2, allowSquadChanges, 0) != 0)
             return 1;
@@ -9945,7 +9965,7 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
     /* Career stat updates if applicable */
     if (careerLoadedFlag == 0 && (gameType == 4 || gameType == 3)) {
         uint16_t packedGoals = (goals1 << 8) + goals2;
-        _Career_UpdateStatsAfterMatch((uint8_t *)team1, (uint8_t *)team2,
+        _Career_UpdateStatsAfterMatch(team1, team2,
             0, packedGoals, 0, 0, flags);
     }
 
@@ -10036,6 +10056,15 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
             }
         }
     }
+
+    /* Store team pointers and results for DIYSetTeamNamesAndResults.
+     * In asm, a1/a2/d1/d2 survive as register outputs and are stored
+     * by the caller (DIYLeagueTournamentMatchCommon). In C we must
+     * store them here since register values don't persist. */
+    diyLeftTeamPtr = (uint32_t)team1;
+    diyRightTeamPtr = (uint32_t)team2;
+    diyLeftTeamResult = goals1;
+    diyRightTeamResult = goals2;
 
     return 0;
 }

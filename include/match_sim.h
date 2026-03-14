@@ -16,10 +16,10 @@
 
 /* Main entry point — called from asm bridge with register params.
  * Returns team1Goals in *outTeam1Goals, team2Goals in *outTeam2Goals. */
-void _CalculateViewResult(uint8_t *ctx, uint16_t modeFlag,
+void _CalculateViewResult(DIY_Competition *ctx, uint16_t modeFlag,
                           uint16_t team1GoalsIn, uint16_t team2GoalsIn,
                           uint16_t statColumnIndex,
-                          uint8_t *team1, uint8_t *team2,
+                          TeamFileEx *team1, TeamFileEx *team2,
                           uint16_t *outTeam1Goals, uint16_t *outTeam2Goals);
 
 /* Second phase scoring — called from GetCachedOrCalculateExtraTimeResult */
@@ -35,20 +35,20 @@ int16_t _CheckContinueAbortPrompt(uint8_t *header);
 
 /* --- Skill adjustment & team tactics (Chunk 105) --- */
 uint16_t _ScaleSkill(uint16_t skill, int16_t factor, TeamGame *teamGame);
-int16_t _GetPlayerPricePercentageChange(int16_t factor, uint8_t *teamFile,
+int16_t _GetPlayerPricePercentageChange(int16_t factor, TeamFile *teamFile,
                                         uint16_t callerD0);
-void _AdjustPlayerSkills(uint16_t playerIdx, uint8_t *teamFile,
-                         uint8_t *oppTeamFile, TeamGame *teamGame,
+void _AdjustPlayerSkills(uint16_t playerIdx, TeamFile *teamFile,
+                         TeamFile *oppTeamFile, TeamGame *teamGame,
                          uint8_t *playerBase, PlayerInfo *pi,
                          uint16_t callerD0);
 void _ApplyTeamTactics(TeamGame *teamGame);
 
 /* --- CalcTeamPriceRankPercentOffset (Chunk 180) --- */
-int16_t _CalcTeamPriceRankPercentOffset(uint8_t *ctx, uint8_t *team);
+int16_t _CalcTeamPriceRankPercentOffset(DIY_Competition *comp, TeamFile *team);
 
 /* --- GetPlayerPrice + UpdatePlayerPositionAndReturnRole (Chunk 187) --- */
-int16_t _GetPlayerPrice(uint8_t *teamFile, uint8_t *playerBase, uint16_t playerNumber);
-uint32_t _UpdatePlayerPositionAndReturnRole(uint8_t *team, uint16_t playerIdx);
+int16_t _GetPlayerPrice(TeamFile *teamFile, uint8_t *playerBase, uint16_t playerNumber);
+uint32_t _UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx);
 
 /* --- BuildMatchResultString (Chunk 106) --- */
 uint8_t *_BuildMatchResultString(uint16_t control, uint16_t leg2, uint16_t leg1,

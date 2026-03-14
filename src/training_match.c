@@ -490,7 +490,7 @@ extern uint16_t friendlyPitchType;
 extern uint16_t friendlySeason;
 extern uint16_t minSubstitutes;
 extern uint16_t maxSubstitutes;
-extern void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16_t baseCount, uint8_t *teamPtr);
+extern void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16_t baseCount, TeamFileEx *teamPtr);
 extern void _InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2);
 extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
 extern uint16_t _IsPlayerInjured(uint8_t *playerBase, int16_t mode);
@@ -562,7 +562,8 @@ void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
     /* Set team metadata */
     teamEx->team.teamOrdinal = 0x99;
     teamEx->team.teamControls = 1;
-    currentTeamNumber = teamEx->team.globalTeamNumber;
+    /* Asm: move.w (a6),(currentTeamNumber) — reads first word = packed (countryNumber<<8 | teamOrdinal) */
+    currentTeamNumber = *(uint16_t *)&teamEx->team.countryNumber;
 
     /* Look up tactics and position map */
     int16_t tacticsIdx = (int8_t)teamEx->team.tactics;
@@ -697,7 +698,7 @@ void _PlayTrainingGame(void)
 {
     trainingGame = 1;
 
-    _TrainingMatch_AdjustSelectedTeamRosterForTrialists(1, 2, (uint8_t *)&careerTeam);
+    _TrainingMatch_AdjustSelectedTeamRosterForTrialists(1, 2, &careerTeam);
     _TrainingMatch_SaveLastMatchState();
     _TrainingMatch_RestoreSavedTeamSelectionState();
     _TrainingMatch_BuildCurrentTeamFromCareerTeam();

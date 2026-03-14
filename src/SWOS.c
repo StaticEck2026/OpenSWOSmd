@@ -82,7 +82,7 @@ __attribute__((used, externally_visible)) void _start(void)
     uint32_t bank_bitmap_end = (uint32_t)&chipRamBitmapEnd;
     do
     {
-        *(volatile uint16_t *)bank_bitmap_ptr = 0x5555u;
+        *(volatile uint16_t *)bank_bitmap_ptr = 0x0000u;
         bank_bitmap_ptr += 2u;
     } while (bank_bitmap_ptr != bank_bitmap_end);
 
@@ -90,7 +90,7 @@ __attribute__((used, externally_visible)) void _start(void)
     uint32_t menu_ptr = (uint32_t)&currentMenu;
     do
     {
-        *(volatile uint16_t *)pitch_ptr = 0xBBBBu;
+        *(volatile uint16_t *)pitch_ptr = 0x0000u;
         pitch_ptr += 2u;
     } while (pitch_ptr != menu_ptr);
 

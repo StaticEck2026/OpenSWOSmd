@@ -9,8 +9,8 @@
 #include "game_types.h"
 
 /* --- Team initialization for match (decay status + cycle flags) --- */
-void _InitInGameTeams_PlayerControlled(uint8_t *team1, uint8_t *team2, uint16_t mode);
-void _InitInGameTeams_WithMatchParam(uint8_t *team1, uint8_t *team2);
+void _InitInGameTeams_PlayerControlled(TeamFileEx *team1, TeamFileEx *team2, uint16_t mode);
+void _InitInGameTeams_WithMatchParam(TeamFileEx *team1, TeamFileEx *team2);
 
 /* --- Career-specific utilities --- */
 void _BuildCareerTeamUnavailablePlayerList(void);
@@ -21,17 +21,17 @@ uint16_t _ShouldApplyRandomPlayerStatusAfterSim(void);
 uint16_t _IsPlayerInjured(uint8_t *playerBase, int16_t mode);
 
 /* --- Player count utilities --- */
-uint16_t _GetNumberOfSubstitutes(uint8_t *team, uint16_t numPl);
-uint16_t _GetNumberOfSubstitutesInSelectionList(uint8_t *team, uint16_t extraCount);
-uint32_t _GetNumberOfAvailablePlayers(uint8_t *team, int16_t excludeCardsFlag, uint16_t numPl);
-uint32_t _GetNumberOfAvailableSubstitutes(uint8_t *team, int16_t flag);
-uint32_t _GetNumberOfAvailableStartingPlayers(uint8_t *team, int16_t flag);
+uint16_t _GetNumberOfSubstitutes(TeamFileEx *team, uint16_t numPl);
+uint16_t _GetNumberOfSubstitutesInSelectionList(TeamFileEx *team, uint16_t extraCount);
+uint32_t _GetNumberOfAvailablePlayers(TeamFileEx *team, int16_t excludeCardsFlag, uint16_t numPl);
+uint32_t _GetNumberOfAvailableSubstitutes(TeamFileEx *team, int16_t flag);
+uint32_t _GetNumberOfAvailableStartingPlayers(TeamFileEx *team, int16_t flag);
 int16_t _GetAgeAdjustedPlayerFormFactor(uint8_t *playerBase);
 
 /* --- Financial management --- */
 void _ClampNewBalanceAndUpdateClubStatus(void);
 void _ClearOverdraftStateIfRecovered(void);
-void _UpdateCareerFinancesAfterMatch(uint8_t *ctx, uint8_t *team);
+void _UpdateCareerFinancesAfterMatch(uint8_t *ctx, TeamFileEx *team);
 void _ApplyWeeklyFinancialDeductions(void);
 void _InitializeCareerSeasonFinancials(void);
 
@@ -68,7 +68,7 @@ void _PlayerJoinedClubOnTrial(uint8_t *name);
 void _TrialPlayerLeftClubMessage(uint8_t *name);
 void _ReservePlayerLeftClubMessage(uint8_t *name);
 void _Career_UpdateSinglePlayerPostMatchStats(uint8_t *playerSlotPtr);
-void _Career_ApplyPostMatchPlayerStatModsIfCareerTeam(uint8_t *team, uint8_t *mods);
+void _Career_ApplyPostMatchPlayerStatModsIfCareerTeam(TeamFileEx *team, uint8_t *mods);
 uint8_t *_AddTrialPlayer(void);
 uint8_t *_TrainingMatch_AddTrialPlayerAtPosition(uint16_t position);
 void _CheckPlayersLeavingComing(void);
@@ -106,10 +106,10 @@ void _Career_AutoAdvanceCompetitionSlots(void);
 void _Career_SetCurrentCompetitionSlot(uint8_t *comp, uint16_t slot, uint16_t divisionIndex, uint16_t hasSelectedTeams);
 
 /* --- Career player form update (Chunk 188) --- */
-void _UpdateCareerPlayersFormAfterMatch(uint8_t *compCtx, uint8_t *team1, uint8_t *team2,
+void _UpdateCareerPlayersFormAfterMatch(uint8_t *compCtx, TeamFileEx *team1, TeamFileEx *team2,
                                          uint16_t team1Goals, uint16_t team2Goals);
 
 /* --- Career stats update after match (Chunk 189) --- */
-void _Career_UpdateStatsAfterMatch(uint8_t *team1, uint8_t *team2, uint16_t compType,
+void _Career_UpdateStatsAfterMatch(TeamFileEx *team1, TeamFileEx *team2, uint16_t compType,
                                     uint16_t packedGoals, uint16_t aggregate,
                                     uint16_t penalty, uint16_t flags);

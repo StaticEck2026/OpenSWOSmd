@@ -11,7 +11,7 @@
 uint16_t _IsNationalTeamCompetitionOrQualification(uint32_t key);
 
 /* --- Player Price Utilities --- */
-uint16_t _GetAveragePlayerPrice(uint8_t *team);
+uint16_t _GetAveragePlayerPrice(TeamFileEx *team);
 uint32_t _GetLowestAndHighestPlayerPrice(void);
 uint16_t _CountNearnessFactor(uint16_t curBallQuadrant, uint16_t dstBallQuadrant,
                               uint16_t price, const uint8_t *curQuadDistFactor,

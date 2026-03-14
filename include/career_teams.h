@@ -11,8 +11,8 @@
 int16_t _GetTeamLeague(uint16_t teamNumber);
 
 /* --- Team lookup --- */
-uint8_t *_GetTeamPointer(uint16_t teamId);
-uint8_t *_VerifyTeamLoaded(uint16_t teamNum);
+TeamFileEx *_GetTeamPointer(uint16_t teamId);
+TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
 void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest);
 
 /* --- Save/Restore --- */
@@ -25,7 +25,7 @@ uint8_t *_TeamSelectionKeyCache_InsertSpaceSorted(uint16_t key, uint16_t inserti
 /* --- TMD team pool management (Chunk 77) --- */
 int16_t _SearchTeamInTmdFile(uint16_t teamNo);
 void _Career_RemoveTeamFromTmdTeamPool(uint16_t teamNo);
-void _Career_AppendTeamToTmdTeamPool(uint8_t *team);
+void _Career_AppendTeamToTmdTeamPool(TeamFileEx *team);
 
 /* --- Career competition team selection (Chunk 90) --- */
 void _Career_SortTeamFilePtrsByAvgPlayerPrice(uint16_t extNumber);
@@ -91,7 +91,7 @@ uint16_t _GetPlayerPositionFromCurrent(uint16_t playerIndex);
 void _Career_RemoveInternationalPlayersByMask(uint32_t removeMask);
 
 /* --- Career_InitInternationalSquadAndLookupTablesForNewSeason (Chunk 172) --- */
-void _Career_InitInternationalSquadAndLookupTablesForNewSeason(uint8_t *teamPtr);
+void _Career_InitInternationalSquadAndLookupTablesForNewSeason(TeamFileEx *teamPtr);
 
 /* --- TeamSelectionKeyCache builders (Chunk 196) --- */
 void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk);

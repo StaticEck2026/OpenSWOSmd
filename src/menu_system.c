@@ -569,7 +569,7 @@ void _DrawMenuItem(MenuEntry *entry)
         mlY = entry->y + (uint16_t)lineSpacing;
         lineSpacing += *(uint16_t *)(charTable + CHARTABLE_CHARHEIGHT);
 
-        numLines -= 2; /* dbf-style loop: n-1 iterations, then one more adjustment for 0-based */
+        numLines -= 1; /* dbf-style: asm does addq #1 (for div), then subq #2, so counter = numLines-1 */
 
         {
             int16_t i;

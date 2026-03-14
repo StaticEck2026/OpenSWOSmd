@@ -49,11 +49,11 @@ void _UpdateForeignMarketPlayers(void);
 /* ---- Transfer offer helpers (Chunk 74) ---- */
 int16_t _FindTeamIdInDiyTeamsList(uint16_t *teamIdPtr);
 int16_t _IsOfferTeamPlayerPairUnique(uint16_t teamId, uint16_t playerIdx);
-int16_t _IsTeamEligibleForOfferByRefSkill(uint8_t *team, uint16_t refSkill);
+int16_t _IsTeamEligibleForOfferByRefSkill(TeamFileEx *team, uint16_t refSkill);
 void _RemoveOfferPlayerFromMarketsAndCount(uint16_t teamId, uint16_t playerIndex);
 void _RemoveNegotiatedOfferPlayersFromMarkets(void);
 int16_t _PickRandomEligibleExtraPlayerOrdinal(uint16_t refSkill);
-int16_t _PickRandomEligibleSwapPlayerOrdinalFromTeam(uint8_t *teamBlock, int16_t excludeSlot);
+int16_t _PickRandomEligibleSwapPlayerOrdinalFromTeam(TeamFileEx *teamBlock, int16_t excludeSlot);
 
 /* ---- Transfer market list (Chunk 75) ---- */
 int16_t _FindPlayerOnTransferMarket(uint16_t playerId);
@@ -66,7 +66,7 @@ void _Career_CommitNewBalanceAndResetFinanceTotals(void);
 
 /* ---- Career pool & foreign market patching (Chunk 75) ---- */
 void _AddCareerPoolPlayer(uint16_t teamNumber, uint16_t playerOrdinal, uint8_t *teamFilePtr);
-void _Career_PatchTeamWithForeignMarketPlayers(uint8_t *teamPtr);
+void _Career_PatchTeamWithForeignMarketPlayers(TeamFileEx *teamPtr);
 void _Career_ApplyForeignMarketPlayersToSelectedTeams(void);
 void _Career_ApplyPendingForeignMarketPlayersToSelectedTeams(void);
 
@@ -170,7 +170,7 @@ void _Career_RemovePlayerAndAddAsTrialist(uint16_t sourceTeam, uint16_t playerOr
 void _Career_GenerateTrialistForTeamPlayer(uint16_t playerIndex);
 void _Career_ConvertPlayerToTrialistFromName(uint16_t sourceTeam, uint16_t playerOrd);
 void _TrainingMatch_AddTrialPlayerToSelectedTeam(uint16_t role);
-void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16_t baseCount, uint8_t *teamPtr);
+void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16_t baseCount, TeamFileEx *teamPtr);
 
 /* --- PutPlayerOnMarketMenu (Chunk 177) --- */
 void _PutPlayerOnMarketMenu(void);

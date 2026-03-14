@@ -35,13 +35,13 @@ typedef long int32_t;
 typedef struct {
     uint8_t *songPtr;              /* +0x00 */
     uint8_t *bankSectionPtrs[7];   /* +0x04..+0x1F */
-    uint16_t masterVolume;         /* +0x20 */
+    volatile uint16_t masterVolume;         /* +0x20 — volatile: shared with VBlank ISR */
     uint16_t modeFlags;            /* +0x22 */
     uint8_t  irqSubtick;           /* +0x24 */
     uint8_t  toggleFlag;           /* +0x25 */
     uint8_t  primaryChanEnable;    /* +0x26 */
     uint8_t  secondaryChanEnable;  /* +0x27 */
-    uint8_t  channelVolume[4];     /* +0x28..+0x2B */
+    volatile uint8_t  channelVolume[4];     /* +0x28..+0x2B — volatile: shared with VBlank ISR */
     uint8_t  channelChangeFlags;   /* +0x2C */
     uint8_t  currentChannelIdx;    /* +0x2D */
 } AudioState;

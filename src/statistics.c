@@ -460,7 +460,7 @@ extern uint16_t selTeamNumber;
 extern uint8_t  selTeamsPtr;             /* start of selected teams, stride=684 */
 extern uint16_t gameType;
 extern uint16_t careerLoadedFlag;
-extern uint8_t  careerTeam;              /* start of career team (684 bytes) */
+extern TeamFileEx careerTeam;
 extern uint16_t careerNumPlayers;
 extern uint32_t secondaryCompetitionPtr;
 extern uint32_t tertiaryCompetitionPtr;
@@ -478,11 +478,11 @@ extern uint8_t  topGoalScorersMenu[];
 /* ---- External functions ---- */
 extern void _ShowMenu(uint8_t *menu);
 extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
-extern uint8_t *_GetTeamPointer(uint16_t teamNumber);
+extern TeamFileEx *_GetTeamPointer(uint16_t teamNumber);
 extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
 extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
 extern uint16_t _FindTeamIdInDiyTeamsList(uint16_t teamId);
-extern uint8_t *_VerifyTeamLoaded(uint16_t teamNumber, uint16_t playerIdx);
+extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNumber);
 extern uint8_t *_ExtractSurname(uint8_t *name, uint16_t maxLen);
 extern void _DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
 
@@ -579,8 +579,8 @@ static uint8_t *FindReplaceableLowestScorerSlot(uint8_t *base, uint8_t minScore)
                 uint16_t d0 = teamId;
                 uint8_t d1 = *(ptr + 34);  /* playerIdx */
                 int16_t d1w = (int8_t)d1;  /* ext.w d1 */
-                uint8_t *teamPtr = _VerifyTeamLoaded(d0, (uint16_t)d1w);
-                if (*(teamPtr + 4) == 1)   /* isInDIYTeam == 1 */
+                TeamFileEx *teamPtr = _VerifyTeamLoaded(d0);
+                if (teamPtr->team.teamControls == 1)   /* isInDIYTeam == 1 */
                     return ptr;
             }
         }
@@ -752,7 +752,7 @@ static void PopulateHighestScorersTableFromSelectedTeams(int16_t statIndex)
     {
         if (careerLoadedFlag != 0)
             return;
-        AddTeamScorersToHighestScorersTable(statIndex, &careerTeam);
+        AddTeamScorersToHighestScorersTable(statIndex, (uint8_t *)&careerTeam);
     }
 }
 
@@ -958,14 +958,14 @@ void _CompetitionTopGoalScorersInit(void)
             uint16_t teamId = *(uint16_t *)(entry + 32);
             uint8_t playerIdxByte = *(entry + 34);
             int16_t playerIdxSigned = (int8_t)playerIdxByte;
-            uint8_t *teamData;
+            TeamFileEx *teamData;
             uint8_t *teamName;
             uint8_t *playerPtr;
             uint8_t *dest;
 
             /* Get team name */
             teamData = _GetTeamPointer(teamId);
-            teamName = teamData + 5;  /* team name at offset 5 */
+            teamName = teamData->team.teamName;
 
             /* Get player name */
             playerPtr = _GetPlayer(teamId, (uint16_t)playerIdxSigned);
@@ -1111,7 +1111,7 @@ void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         uint16_t teamId = *(uint16_t *)(scorerEntry + 32);
         uint8_t playerIdxByte = *(scorerEntry + 34);
         int16_t playerIdxSigned = (int8_t)playerIdxByte;
-        uint8_t *teamData;
+        TeamFileEx *teamData;
         uint8_t *teamName;
         uint8_t *playerPtr;  /* result of GetPlayer, a5 in asm */
         uint8_t *surnameBuf;
@@ -1119,7 +1119,7 @@ void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         uint16_t d0val;
 
         teamData = _GetTeamPointer(teamId);
-        teamName = teamData + 5;
+        teamName = teamData->team.teamName;
 
         playerPtr = _GetPlayer(teamId, (uint16_t)playerIdxSigned);
 
