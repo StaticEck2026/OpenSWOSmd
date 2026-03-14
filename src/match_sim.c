@@ -115,8 +115,8 @@ int16_t _GetPlayerPrice(TeamFile *teamFile, uint8_t *playerBase, uint16_t player
 /* Extern globals for Chunk 105 */
 extern uint16_t pl1Tactics;
 extern uint16_t pl2Tactics;
-extern uint32_t gameTeam1;
-extern uint32_t gameTeam2;
+extern TeamFile *gameTeam1;
+extern TeamFile *gameTeam2;
 extern uint16_t team1AppPercent;
 extern uint16_t team2AppPercent;
 extern uint16_t plgD0Param;
@@ -128,7 +128,7 @@ extern uint8_t  diyCompetitionStart[];
 extern void _SaveRand2State(void);
 extern void _RestoreRand2State(void);
 extern void _Randomize2(uint16_t seed);
-extern int16_t _GetPlayerRandomNum(void);
+extern uint16_t _GetPlayerRandomNum(uint8_t *teamEntry);
 extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
 
 /* ---- Module-local state ---- */
@@ -1454,12 +1454,12 @@ void _ApplyTeamTactics(TeamGame *teamGame)
 
     if (teamGame == &topTeamInGame) {
         tactics = pl1Tactics;
-        ownTeamFile = (TeamFile *)gameTeam1;
-        oppTeamFile = (TeamFile *)gameTeam2;
+        ownTeamFile = gameTeam1;
+        oppTeamFile = gameTeam2;
     } else {
         tactics = pl2Tactics;
-        ownTeamFile = (TeamFile *)gameTeam2;
-        oppTeamFile = (TeamFile *)gameTeam1;
+        ownTeamFile = gameTeam2;
+        oppTeamFile = gameTeam1;
     }
 
     /* Save and temporarily override tactics byte in team file */
@@ -1485,7 +1485,7 @@ void _ApplyTeamTactics(TeamGame *teamGame)
          * GetPlayerPricePercentageChange as an additional random factor. */
         _SaveRand2State();
 
-        int16_t playerRand = _GetPlayerRandomNum();
+        int16_t playerRand = (int16_t)_GetPlayerRandomNum(playerBase);
         uint16_t seed = (uint16_t)playerRand ^ gameRandValue;
         _Randomize2(seed);
 

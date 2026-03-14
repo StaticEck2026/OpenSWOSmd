@@ -72,7 +72,7 @@ extern int16_t lastControls;
 extern uint16_t controlsHeldTimer;
 extern uint16_t longFireTime;
 extern uint16_t longFireFlag;
-extern uint16_t allowShorterMenuItemsWithFrames[];
+extern uint32_t allowShorterMenuItemsWithFrames;
 
 /* UnpackMenu globals */
 extern uint16_t menuX;
@@ -1178,11 +1178,11 @@ void _MenuCheckControls(void)
         }
 
         if (pl1Fire == 0) {
-            if (allowShorterMenuItemsWithFrames[1] != 0) {
+            if ((allowShorterMenuItemsWithFrames & 0xFFFF) != 0) {
                 pl1SkipFireCounter++;
                 pl1Fire = ((uint8_t)pl1SkipFireCounter) & 1;
             }
-            if (allowShorterMenuItemsWithFrames[0] != 0) {
+            if ((allowShorterMenuItemsWithFrames >> 16) != 0) {
                 pl1Fire = 1;
             }
         }

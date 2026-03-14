@@ -1206,9 +1206,7 @@ extern uint8_t shortCountryNames[];
 
 /* Helper: set the low nibble of the bg field's high word (68k big-endian color index) */
 static void setBgColorIndex(MenuEntry *e, uint16_t colorIdx) {
-    uint16_t bgHigh = (uint16_t)(e->bg >> 16);
-    bgHigh = (bgHigh & 0xFFF0) | colorIdx;
-    e->bg = ((uint32_t)bgHigh << 16) | (e->bg & 0xFFFF);
+    setBgColorIdx(e, colorIdx);
 }
 
 /* _SquadUpdateMenuState (SWOS2.s line 48491)
@@ -2655,7 +2653,7 @@ void _CheckJobOffers(void)
         return;
     MenuEntry *entry = &menuEntries[5]; /* JOB OFFERS entry */
     /* Reset background color */
-    { uint16_t *bgHi = (uint16_t *)&entry->bg; *bgHi = (*bgHi & 0xFFF0) + COLOR_BLUE_TO_PURPLE_11; }
+    setBgColorIdx(entry, COLOR_BLUE_TO_PURPLE_11);
     entry->isDisabled = 0;
     uint16_t flags = entry->stringFlags;
     flags &= ~(1 << 13);
@@ -2680,7 +2678,7 @@ void _CheckJobOffers(void)
     /* No offers at all */
     entry->fg = (uint32_t)aNoJobOffers;
     entry->isDisabled = 1;
-    { uint16_t *bgHi = (uint16_t *)&entry->bg; *bgHi = (*bgHi & 0xFFF0) + COLOR_PINK_TO_BROWN_7; }
+    setBgColorIdx(entry, COLOR_PINK_TO_BROWN_7);
     entry->stringFlags = flags;
 }
 
@@ -2727,7 +2725,7 @@ void _CheckTransfers(void)
     /* Enable transfers entry */
     {
         MenuEntry *entry = &menuEntries[4];
-        { uint16_t *bgHi = (uint16_t *)&entry->bg; *bgHi = (*bgHi & 0xFFF0) + COLOR_BLUE_TO_BLACK_8; }
+        setBgColorIdx(entry, COLOR_BLUE_TO_BLACK_8);
         entry->isDisabled = 0;
         if (timeToNegotiate != 0) {
             if (_CheckForTransferOffers() == 0) {
@@ -2743,7 +2741,7 @@ void _CheckTransfers(void)
 disableEntry:
     {
         MenuEntry *entry = &menuEntries[4];
-        { uint16_t *bgHi = (uint16_t *)&entry->bg; *bgHi = (*bgHi & 0xFFF0) + COLOR_PINK_TO_BROWN_9; }
+        setBgColorIdx(entry, COLOR_PINK_TO_BROWN_9);
         entry->isDisabled = 1;
     }
 clearBlink:
@@ -2888,11 +2886,11 @@ void _SetNationalSelectorButtons(void)
 
     /* Entry 12 (national selector actions) */
     MenuEntry *entry12 = &menuEntries[12];
-    { uint16_t *bgHi = (uint16_t *)&entry12->bg; *bgHi = (*bgHi & 0xFFF0) + COLOR_ORANGE_TO_BROWN_4; }
+    setBgColorIdx(entry12, COLOR_ORANGE_TO_BROWN_4);
     entry12->isDisabled = 0;
 
     if (_IsTournamentAllowingSquadChangesIfNotCareer() != 0) {
-        { uint16_t *bgHi = (uint16_t *)&entry12->bg; *bgHi = (*bgHi & 0xFFF0) + COLOR_PINK_TO_BROWN_9; }
+        setBgColorIdx(entry12, COLOR_PINK_TO_BROWN_9);
         entry12->isDisabled = 1;
     }
 
@@ -2904,22 +2902,22 @@ void _SetNationalSelectorButtons(void)
 
     /* Not enough players — disable most entries */
     MenuEntry *entry8 = &menuEntries[8];  /* SQUAD */
-    { uint16_t *bgHi = (uint16_t *)&entry8->bg; *bgHi = (*bgHi & 0xFFF0) + COLOR_PINK_TO_BROWN_9; }
+    setBgColorIdx(entry8, COLOR_PINK_TO_BROWN_9);
     entry8->isDisabled = 1;
 
     MenuEntry *entry7 = &menuEntries[7];  /* PLAY MATCH */
-    { uint16_t *bgHi = (uint16_t *)&entry7->bg; *bgHi = (*bgHi & 0xFFF0) + COLOR_PINK_TO_BROWN_9; }
+    setBgColorIdx(entry7, COLOR_PINK_TO_BROWN_9);
     entry7->isDisabled = 1;
 
     MenuEntry *entry10 = &menuEntries[10]; /* NEXT MATCH */
-    { uint16_t *bgHi = (uint16_t *)&entry10->bg; *bgHi = (*bgHi & 0xFFF0) + COLOR_PINK_TO_BROWN_9; }
+    setBgColorIdx(entry10, COLOR_PINK_TO_BROWN_9);
     entry10->isDisabled = 1;
 
     MenuEntry *entry11 = &menuEntries[11]; /* VIEW COMPETITIONS */
-    { uint16_t *bgHi = (uint16_t *)&entry11->bg; *bgHi = (*bgHi & 0xFFF0) + COLOR_PINK_TO_BROWN_9; }
+    setBgColorIdx(entry11, COLOR_PINK_TO_BROWN_9);
     entry11->isDisabled = 1;
 
-    { uint16_t *bgHi = (uint16_t *)&entry12->bg; *bgHi = (*bgHi & 0xFFF0) + COLOR_PINK_TO_BROWN_9; }
+    setBgColorIdx(entry12, COLOR_PINK_TO_BROWN_9);
     entry12->isDisabled = 1;
 }
 
@@ -2934,7 +2932,7 @@ void _ContestSetButtons(void)
     if (gameType == GAME_TYPE_SEASON) {
         /* Season mode */
         MenuEntry *entry13 = &menuEntries[13];
-        { uint16_t *bgHi = (uint16_t *)&entry13->bg; *bgHi = (*bgHi & 0xFFF0) + COLOR_ORANGE_TO_BROWN_4; }
+        setBgColorIdx(entry13, COLOR_ORANGE_TO_BROWN_4);
         entry13->isDisabled = 0;
         if (seasonNumberOfSquads == 0) {
             entry7->fg = (uint32_t)aNextMatch;
@@ -2958,7 +2956,7 @@ void _ContestSetButtons(void)
     menuEntries[10].isInvisible = 0;
     {
         MenuEntry *entry10 = &menuEntries[10];
-        { uint16_t *bgHi = (uint16_t *)&entry10->bg; *bgHi = (*bgHi & 0xFFF0) + COLOR_ORANGE_TO_BROWN_4; }
+        setBgColorIdx(entry10, COLOR_ORANGE_TO_BROWN_4);
     }
     if (careerFinished != 0) {
         entry7->fg = (uint32_t)aFinishSeason;
@@ -2976,7 +2974,7 @@ careerFinished_label:
     entry7->fg = (uint32_t)aFinishSeason;
     {
         MenuEntry *entry10 = &menuEntries[10];
-        { uint16_t *bgHi = (uint16_t *)&entry10->bg; *bgHi = (*bgHi & 0xFFF0) + COLOR_PINK_TO_BROWN_9; }
+        setBgColorIdx(entry10, COLOR_PINK_TO_BROWN_9);
         entry10->isDisabled = 1;
     }
     return;
@@ -6240,7 +6238,7 @@ extern uint8_t  aReplay[];      /* "REPLAY" */
 extern uint8_t  aPlayoffs[];    /* "PLAYOFFS" */
 extern uint8_t  aCup_1[];       /* "CUP" */
 extern uint8_t  aCup_2[];       /* "CUP" */
-extern uint32_t careerCompetitionSlotPtrTable[];
+extern uint8_t *careerCompetitionSlotPtrTable[];
 
 __attribute__((used, externally_visible))
 void _CareerGameListCommon(MenuEntry *item)
@@ -6365,8 +6363,7 @@ pastTeamLoad:
     {
         /* Get competition slot ptr table entry
          * careerCompetitionSlotPtrTable is really an array of 5 pointers (20 bytes) */
-        uint32_t *slotPtrTable = (uint32_t *)careerCompetitionSlotPtrTable;
-        uint8_t *a3slot = (uint8_t *)slotPtrTable[slotType];
+        uint8_t *a3slot = careerCompetitionSlotPtrTable[slotType];
         uint16_t slotVal = *(uint16_t *)a3slot;
 
         if (slotVal == 0) {

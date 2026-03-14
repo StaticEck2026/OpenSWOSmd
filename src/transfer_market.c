@@ -2494,15 +2494,13 @@ __attribute__((used, externally_visible))
 void _PlayerMarketUpdateFilterMenuEntryState(void)
 {
     MenuEntry *entry = &menuEntries[6]; /* 0x150/56 = 6 */
-    uint16_t *bgColor = (uint16_t *)&entry->bg;
-
     if (playerMarketFilterPosition != 0) {
         /* Active: bright blue, enabled */
-        *bgColor = (*bgColor & 0xFFF0) | 13; /* BRIGHT_BLUE_TO_BLUE_13 */
+        setBgColorIdx(entry, 13); /* BRIGHT_BLUE_TO_BLUE_13 */
         entry->isDisabled = 0;
     } else {
         /* Inactive: pink/brown, disabled */
-        *bgColor = (*bgColor & 0xFFF0) | 9; /* PINK_TO_BROWN_9 */
+        setBgColorIdx(entry, 9); /* PINK_TO_BROWN_9 */
         entry->isDisabled = 1;
     }
 }

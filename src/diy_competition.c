@@ -4310,13 +4310,11 @@ void _DesignDIYCupReinit(void)
         *(uint16_t *)(diyCompetitionStart + 54) = pitchType;
 
         /* Grey out entry[3] */
-        uint16_t *bgColor3 = (uint16_t *)&menuEntries[3].bg;
-        *bgColor3 = (*bgColor3 & 0xFFF0) | 9;  /* PINK_TO_BROWN_9 */
+        setBgColorIdx(&menuEntries[3], 9);  /* PINK_TO_BROWN_9 */
         menuEntries[3].isDisabled = 1;
 
         /* Grey out entry[4] */
-        uint16_t *bgColor4 = (uint16_t *)&menuEntries[4].bg;
-        *bgColor4 = (*bgColor4 & 0xFFF0) | 9;
+        setBgColorIdx(&menuEntries[4], 9);
         menuEntries[4].isDisabled = 1;
     }
 
@@ -4335,8 +4333,7 @@ void _DesignDIYCupReinit(void)
         uint16_t startIdx = val * 5 + 0x12;
         MenuEntry *e = _CalcMenuEntryAddress(startIdx);
         for (int16_t i = 4; i >= 0; i--) {
-            uint16_t *bgColor = (uint16_t *)&e->bg;
-            *bgColor = (*bgColor & 0xFFF0) | 0xB;
+            setBgColorIdx(e, 0xB);
             e++;
         }
         _SetCurrentEntry(0x32);
@@ -4609,13 +4606,11 @@ void _DesignDIYTournamentReinit(void)
         *(uint16_t *)(diyFileBufferCopy + 54) = pitchType;
 
         /* Grey out entry[3] */
-        uint16_t *bgColor3 = (uint16_t *)&menuEntries[3].bg;
-        *bgColor3 = (*bgColor3 & 0xFFF0) | 9;
+        setBgColorIdx(&menuEntries[3], 9);
         menuEntries[3].isDisabled = 1;
 
         /* Grey out entry[4] */
-        uint16_t *bgColor4 = (uint16_t *)&menuEntries[4].bg;
-        *bgColor4 = (*bgColor4 & 0xFFF0) | 9;
+        setBgColorIdx(&menuEntries[4], 9);
         menuEntries[4].isDisabled = 1;
     }
 
@@ -5646,7 +5641,7 @@ extern uint8_t aReplays[]; /* "REPLAYS" */
 extern uint8_t a1stLeg[];  /* "1ST LEG" */
 extern uint8_t a2ndLeg[];  /* "2ND LEG" */
 extern uint8_t aPlayCup[]; /* "PLAY CUP" */
-extern uint32_t rndStringTable[];     /* const char *[15] */
+extern const char *rndStringTable[];     /* const char *[15] */
 extern uint32_t replayStringTable[];  /* const char *[3] */
 
 extern void _MenuCheckControls(void);
@@ -6056,11 +6051,11 @@ void _DesignDIYCup_BuildMenuTitleString(void)
                 replayStr = aReplays; /* "REPLAYS" */
         } else {
             /* Table lookup: 1-3 replays */
-            uint32_t *table;
+            const char **table;
             if (a2s->totalRounds == 1)
                 table = &rndStringTable[12]; /* rndStringTable+$30 = element 12 */
             else
-                table = replayStringTable;
+                table = (const char **)replayStringTable;
             replayStr = (const uint8_t *)table[replayCount - 1];
         }
 
@@ -6431,10 +6426,7 @@ void _DIYLeagueTournamentOnRestore(void)
     /* If halfTeams == 1, adjust bg color of entry 16 */
     if (compS->halfTeams == 1) {
         MenuEntry *a0 = &menuEntries[16];
-        uint16_t *bgColor = (uint16_t *)&a0->bg;
-        uint16_t d0 = *bgColor & 0xFFF0;
-        d0 += 0; /* PINK_TO_BROWN_0 = 0 */
-        *bgColor = d0;
+        setBgColorIdx(a0, 0); /* PINK_TO_BROWN_0 = 0 */
     }
 
     /* Branch on diyFixtureViewMode */
@@ -6694,16 +6686,15 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
         }
 
         /* Set color based on team controls */
-        uint16_t *bgColor = (uint16_t *)&a5->bg;
         uint8_t teamControls = teamPtr[4]; /* TEAMFILE_TEAMCONTROLS */
         if (teamControls == 1)
-            *bgColor = 10; /* COLOR_RED */
+            setBgColorWord(a5, 10); /* COLOR_RED */
         else if (teamControls == 2)
-            *bgColor = 11; /* COLOR_PURPLISH */
+            setBgColorWord(a5, 11); /* COLOR_PURPLISH */
         else if (teamControls == 3)
-            *bgColor = 13; /* COLOR_LIGHT_BLUE */
+            setBgColorWord(a5, 13); /* COLOR_LIGHT_BLUE */
         else
-            *bgColor = 14; /* COLOR_ORANGE */
+            setBgColorWord(a5, 14); /* COLOR_ORANGE */
 
         /* Set team name string */
         a5->fg = (uint32_t)(teamPtr + 5); /* TEAMFILE_TEAMNAME */
@@ -6752,7 +6743,7 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
 
                 /* If team is player-controlled, apply zone color */
                 if (applyToPlayer && teamPtr[4] == 1)
-                    *bgColor = d3;
+                    setBgColorWord(a5, d3);
                 zoneHandled = 1;
             }
         }
@@ -6765,50 +6756,50 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
         }
         /* Highlight player's team */
         if (highlightedLeagueTeamId == *(uint16_t *)teamPtr)
-            *bgColor = 12; /* ORANGE_TO_BROWN_12 */
+            setBgColorWord(a5, 12); /* ORANGE_TO_BROWN_12 */
 
         a5++;
 
         /* Stats columns (7 entries): played, won, drawn, lost, GF, GA, points */
         a5->y = d2;
         a5->dwHeight = d4;
-        *(uint16_t *)&a5->bg = d3;
+        setBgColorWord(a5, d3);
         *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2B8);
         a5++;
 
         a5->y = d2;
         a5->dwHeight = d4;
-        *(uint16_t *)&a5->bg = d3;
+        setBgColorWord(a5, d3);
         *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2BA);
         a5++;
 
         a5->y = d2;
         a5->dwHeight = d4;
-        *(uint16_t *)&a5->bg = d3;
+        setBgColorWord(a5, d3);
         *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2BC);
         a5++;
 
         a5->y = d2;
         a5->dwHeight = d4;
-        *(uint16_t *)&a5->bg = d3;
+        setBgColorWord(a5, d3);
         *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2BE);
         a5++;
 
         a5->y = d2;
         a5->dwHeight = d4;
-        *(uint16_t *)&a5->bg = d3;
+        setBgColorWord(a5, d3);
         *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2C0);
         a5++;
 
         a5->y = d2;
         a5->dwHeight = d4;
-        *(uint16_t *)&a5->bg = d3;
+        setBgColorWord(a5, d3);
         *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2C2);
         a5++;
 
         a5->y = d2;
         a5->dwHeight = d4;
-        *(uint16_t *)&a5->bg = d3;
+        setBgColorWord(a5, d3);
         *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2C4);
 
         /* Reset a5 back to entry 31 before drawing (asm reloads a5 here) */

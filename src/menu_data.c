@@ -4191,7 +4191,7 @@ Menu_TopGoalScorers topGoalScorersMenu = {
     { -9, 18, 12, 24 },
     {
         MENU_CMD_MULTILINE,
-        { 0x0 },
+        0x0,
         aLge_0,
     },
     MENU_CMD_END,
@@ -4200,7 +4200,7 @@ Menu_TopGoalScorers topGoalScorersMenu = {
           { 262, 18, 12, 24 },
           {
               MENU_CMD_MULTILINE,
-              { 0x0 },
+              0x0,
               aCup1,
           },
           MENU_CMD_END,
@@ -4209,7 +4209,7 @@ Menu_TopGoalScorers topGoalScorersMenu = {
             { 277, 18, 12, 24 },
             {
                 MENU_CMD_MULTILINE,
-                { 0x0 },
+                0x0,
                 aCup2,
             },
             MENU_CMD_END,
@@ -4218,7 +4218,7 @@ Menu_TopGoalScorers topGoalScorersMenu = {
             { 292, 18, 12, 24 },
             {
                 MENU_CMD_MULTILINE,
-                { 0x0 },
+                0x0,
                 aTot_0,
             },
             MENU_CMD_END,
@@ -6479,7 +6479,7 @@ Menu_ContinueAbort continueAbortMenu = {
     { MENU_CMD_COLORS, 0x4 },
     {
         MENU_CMD_MULTILINE,
-        { 0x0 },
+        0x0,
         0,
     },
     MENU_CMD_END,
@@ -8305,7 +8305,7 @@ Menu_PlayMatch playMatchMenu = {
     { MENU_CMD_COLORS, 0xD },
     {
         MENU_CMD_MULTILINE,
-        { 0x0 },
+        0x0,
         0,
     },
     { MENU_CMD_ONSELECT_FIRE, _TogglePlayerCoach },

@@ -57,6 +57,22 @@ typedef struct __attribute__((packed)) {
     uint32_t afterDrawCb;    /* 52 */
 } MenuEntry;
 
+/* Helpers to access the upper 16 bits of MenuEntry.bg without taking address
+ * of a packed member (avoids -Waddress-of-packed-member warnings).
+ * On 68k big-endian, (uint16_t *)&e->bg points to the upper 16 bits. */
+static inline uint16_t getBgColorWord(MenuEntry *e) {
+    return (uint16_t)(e->bg >> 16);
+}
+static inline void setBgColorWord(MenuEntry *e, uint16_t v) {
+    e->bg = ((uint32_t)v << 16) | (e->bg & 0xFFFF);
+}
+/* Set only the low nibble (color index) of the bg color word */
+static inline void setBgColorIdx(MenuEntry *e, uint16_t colorIdx) {
+    uint16_t w = (uint16_t)(e->bg >> 16);
+    w = (w & 0xFFF0) | colorIdx;
+    e->bg = ((uint32_t)w << 16) | (e->bg & 0xFFFF);
+}
+
 /* Compile-time size checks */
 typedef char _menu_size_check[(sizeof(Menu) == 22) ? 1 : -1];
 typedef char _menuentry_size_check[(sizeof(MenuEntry) == 56) ? 1 : -1];

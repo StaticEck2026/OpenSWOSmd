@@ -62,12 +62,12 @@
 extern MenuEntry menuEntries[];
 
 /* ---- Tactics data (defined in asm) ---- */
-extern uint8_t teamTacticsUSERA;    /* start of USER A tactics (name at offset 0) */
-extern uint8_t teamTacticsUSERB;
-extern uint8_t teamTacticsUSERC;
-extern uint8_t teamTacticsUSERD;
-extern uint8_t teamTacticsUSERE;
-extern uint8_t teamTacticsUSERF;
+extern TeamTactics teamTacticsUSERA;    /* start of USER A tactics (name at offset 0) */
+extern TeamTactics teamTacticsUSERB;
+extern TeamTactics teamTacticsUSERC;
+extern TeamTactics teamTacticsUSERD;
+extern TeamTactics teamTacticsUSERE;
+extern TeamTactics teamTacticsUSERF;
 
 extern uint32_t teamTacticsTable[];  /* pointer table indexed by chosenTactics */
 extern TeamTactics editTacticsCurrentTactics;  /* 370-byte tactics buffer */
@@ -2013,8 +2013,7 @@ void _CopyTactics(void)
 {
     if (editTacticsTransitionActive == 0) {
         /* Set entry 4's bg color to pink */
-        uint16_t *bgColor4 = (uint16_t *)&menuEntries[4].bg;
-        *bgColor4 = (*bgColor4 & 0xFFF0) | COLOR_PINK_TO_BROWN;
+        setBgColorIdx(&menuEntries[4], COLOR_PINK_TO_BROWN);
         _CallDrawMenuItem(&menuEntries[4]);
         _EditTacticsMenuSavePlayerPositions();
         _DrawPlayerNamesAndFaces();
@@ -2025,8 +2024,7 @@ void _CopyTactics(void)
         return;
     _CallDrawMenuItem(&menuEntries[2]);
     /* Restore entry 4's bg color to yellow-green */
-    uint16_t *bgColor4 = (uint16_t *)&menuEntries[4].bg;
-    *bgColor4 = (*bgColor4 & 0xFFF0) | COLOR_YELLOW_GREEN_BLK;
+    setBgColorIdx(&menuEntries[4], COLOR_YELLOW_GREEN_BLK);
     _SetCurrentEntry(COLOR_ORANGE_TO_BROWN);
     _CallDrawMenuItem(&menuEntries[4]);
     _EditTactics_CommitPlayerPositionsAndRecalcSkill();
@@ -2994,11 +2992,9 @@ void _ImportTeamsMenu(void)
     _InitEditTeamsMenu();
 }
 
-/* Helper: set bg color index (high word of bg, low nibble) */
+/* Helper: set bg color index — delegates to shared setBgColorIdx */
 static void setBgColor(MenuEntry *e, uint16_t colorIdx) {
-    uint16_t bgHigh = (uint16_t)(e->bg >> 16);
-    bgHigh = (bgHigh & 0xFFF0) | colorIdx;
-    e->bg = ((uint32_t)bgHigh << 16) | (e->bg & 0xFFFF);
+    setBgColorIdx(e, colorIdx);
 }
 
 /* ================================================================

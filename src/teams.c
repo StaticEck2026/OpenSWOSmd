@@ -117,7 +117,7 @@ extern uint16_t chooseCompetitionOnly;
 extern uint16_t countryNumber;
 extern uint16_t leagueNumber;
 extern uint16_t contestLeagueNumber;
-extern uint32_t divisionStringTable[];
+extern const char *divisionStringTable[];
 extern uint8_t  selectTeamsMenu[];
 extern uint8_t  chooseTeamsFriendlyMenu[];
 extern uint8_t  chooseTeamsFriendlyMenu2[];
@@ -1690,7 +1690,7 @@ extern uint8_t aSelect0LessTea[];
 extern uint8_t aError[];
 extern int16_t chooseTeamsFriendly_changeTeamsPromptDrawList[];
 
-static inline void setEntryBgColor(MenuEntry *e, uint16_t v) { *(uint16_t *)&e->bg = v; }
+static inline void setEntryBgColor(MenuEntry *e, uint16_t v) { setBgColorWord(e, v); }
 
 __attribute__((used, externally_visible))
 void _ChooseTeamsFriendly_UpdateMenuEntryYLayout(void)

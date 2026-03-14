@@ -549,12 +549,12 @@ extern uint32_t secondaryCompetitionPtr;
 extern uint32_t tertiaryCompetitionPtr;
 extern uint32_t quaternaryCompetitionPtr;
 extern uint32_t diyCompetitionPtr;
-extern uint32_t competitionFileBuffer;
+extern uint8_t competitionFileBuffer[];
 extern uint32_t competitionContext;
 extern uint32_t tertiaryCompetitionContext;
 extern uint32_t euroCupsCompetitionContext;
 extern uint32_t diyCompetitionContext;
-extern uint32_t careerCompetitionSlotPtrTable[];
+extern uint8_t *careerCompetitionSlotPtrTable[];
 extern uint16_t teamSelectionKeyCacheCount;
 extern uint16_t teamSelectionKeyCacheIndex;
 extern uint16_t teamSelectionKeyCacheOffset;
@@ -578,7 +578,7 @@ extern uint8_t  uefaCupCopy[];
 extern uint32_t competitionsTable[];
 /* careerCupPickList: declared at top of file (line 39) */
 extern uint16_t euroCupSlotIndex;
-extern uint32_t diyCompetitionTablePtr;
+extern uint32_t *diyCompetitionTablePtr;
 extern uint8_t  careerJobOfferPhaseBias;
 extern uint8_t  viewRandomPhase;
 extern uint8_t  lastFinancialWeekIndex;
@@ -609,7 +609,7 @@ extern void _ShowLastSeasonMessage(void);
 extern void _ShowGreetingMessage(void);
 extern void _ShowLeavingMessage(void);
 extern void _TrainingMatch_AddTrialPlayersForNewSeason(void);
-extern void _Career_InitInternationalSquadAndLookupTablesForNewSeason(void);
+extern void _Career_InitInternationalSquadAndLookupTablesForNewSeason(TeamFileEx *teamPtr);
 extern void _Career_SetCupPickList_ForSelectedRegion(uint16_t *teamList);
 extern void _Career_UpdateLastNationalityCall(void);
 extern void _InitializeNewSeason_BuildTeamBudgetRankTable(void);
@@ -832,7 +832,7 @@ void _DIY_SelectCompetitionSlot4FromCurrentDivision(void)
     /* Follow the DIY link */
     uint8_t *diyEntry = entry + 0x12 + diyOffset;
     uint8_t *diyComp = *(uint8_t **)diyEntry;
-    diyCompetitionTablePtr = *(uint32_t *)(diyEntry + 4);
+    diyCompetitionTablePtr = *(uint32_t **)(diyEntry + 4);
 
     _Career_SetCurrentCompetitionSlot(diyComp, 4, 0, 0);
 }
@@ -932,11 +932,11 @@ void _InitializeNewSeason(void)
     }
 
     /* Initialize competition slot pointer table */
-    careerCompetitionSlotPtrTable[0] = (uint32_t)&competitionFileBuffer;
-    careerCompetitionSlotPtrTable[1] = (uint32_t)&competitionContext;
-    careerCompetitionSlotPtrTable[2] = (uint32_t)&tertiaryCompetitionContext;
-    careerCompetitionSlotPtrTable[3] = (uint32_t)&euroCupsCompetitionContext;
-    careerCompetitionSlotPtrTable[4] = (uint32_t)&diyCompetitionContext;
+    careerCompetitionSlotPtrTable[0] = (uint8_t *)&competitionFileBuffer;
+    careerCompetitionSlotPtrTable[1] = (uint8_t *)&competitionContext;
+    careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContext;
+    careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContext;
+    careerCompetitionSlotPtrTable[4] = (uint8_t *)&diyCompetitionContext;
 
     /* Clear all competition pointers */
     currentCompetitionPtr = 0;
@@ -1135,7 +1135,7 @@ void _InitializeNewSeason(void)
     if (stayingInOldClub == 0) {
         _TrainingMatch_AddTrialPlayersForNewSeason();
         if (isNationalSelector != 0) {
-            _Career_InitInternationalSquadAndLookupTablesForNewSeason();
+            _Career_InitInternationalSquadAndLookupTablesForNewSeason((TeamFileEx *)0);
         }
     }
 }
@@ -1157,11 +1157,11 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
     currentDivisionIndex = divisionIndex;
 
     /* Initialize competition slot pointer table */
-    careerCompetitionSlotPtrTable[0] = (uint32_t)&competitionFileBuffer;
-    careerCompetitionSlotPtrTable[1] = (uint32_t)&competitionContext;
-    careerCompetitionSlotPtrTable[2] = (uint32_t)&tertiaryCompetitionContext;
-    careerCompetitionSlotPtrTable[3] = (uint32_t)&euroCupsCompetitionContext;
-    careerCompetitionSlotPtrTable[4] = (uint32_t)&diyCompetitionContext;
+    careerCompetitionSlotPtrTable[0] = (uint8_t *)&competitionFileBuffer;
+    careerCompetitionSlotPtrTable[1] = (uint8_t *)&competitionContext;
+    careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContext;
+    careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContext;
+    careerCompetitionSlotPtrTable[4] = (uint8_t *)&diyCompetitionContext;
 
     currentCompetitionPtr = 0;
     secondaryCompetitionPtr = 0;

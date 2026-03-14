@@ -33,7 +33,7 @@ extern uint8_t aCj0611143807[];   /* "CJ0611143807" magic string */
 
 /* File buffers and sizes */
 extern uint16_t careerFileBuffer;
-extern uint16_t competitionFileBuffer;
+extern uint8_t competitionFileBuffer[];
 extern uint16_t numSelectedTeams;
 extern uint16_t numDiyTeams;
 

@@ -481,7 +481,7 @@ extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
 extern TeamFileEx *_GetTeamPointer(uint16_t teamNumber);
 extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
 extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
-extern uint16_t _FindTeamIdInDiyTeamsList(uint16_t teamId);
+extern int16_t _FindTeamIdInDiyTeamsList(uint16_t *teamIdPtr);
 extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNumber);
 extern uint8_t *_ExtractSurname(uint8_t *name, uint16_t maxLen);
 extern void _DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
@@ -621,7 +621,7 @@ static void AddTeamScorersToHighestScorersTable(int16_t statIndex,
     {
         if (gameType == 3 || gameType == 4)
         {
-            if (_FindTeamIdInDiyTeamsList(*(uint16_t *)teamPtr) != 0)
+            if (_FindTeamIdInDiyTeamsList((uint16_t *)teamPtr) != 0)
                 return;  /* team not in DIY list, skip */
         }
     }
@@ -1399,7 +1399,7 @@ extern uint32_t currentCompetitionPtr;
 extern uint32_t secondaryCompetitionPtr;
 extern uint32_t tertiaryCompetitionPtr;
 extern uint32_t quaternaryCompetitionPtr;
-extern uint32_t competitionFileBuffer;
+extern uint8_t competitionFileBuffer[];
 extern uint32_t competitionContext;
 extern uint32_t tertiaryCompetitionContext;
 extern uint32_t euroCupsCompetitionContext;

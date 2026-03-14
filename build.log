@@ -1,0 +1,240 @@
+Compiling src/file_io.c
+Compiling src/input_text.c
+Compiling src/resload.c
+Compiling src/pitch.c
+Compiling src/input.c
+Compiling src/loader_intro.c
+Compiling src/transfer_market.c
+Compiling src/referee.c
+Compiling src/goal_scored.c
+Compiling src/game_hud.c
+Compiling src/team_colors.c
+Compiling src/play_match_menu.c
+Compiling src/random.c
+Compiling src/diy_competition.c
+Compiling src/job_offers.c
+Compiling src/update_players.c
+Compiling src/highlight.c
+Compiling src/player_anim.c
+Compiling src/ball_physics.c
+Compiling src/animated_patterns.c
+Compiling src/career_init.c
+Compiling src/string_utils.c
+Compiling src/edit_tactics.c
+Compiling src/tactics_menu.c
+Compiling src/asset_loader.c
+Compiling src/ball_possession.c
+Compiling src/move_camera.c
+Compiling src/goalkeeper.c
+Compiling src/frontend.c
+Compiling src/text_render.c
+Compiling src/main.c
+Compiling src/fade.c
+Compiling src/game_loop.c
+Compiling src/camera.c
+Compiling src/career_eurocups.c
+Compiling src/career_teams.c
+Compiling src/statistics.c
+Compiling src/blitter.c
+Compiling src/player_positioning.c
+Compiling src/career_season.c
+Compiling src/math68k.c
+Compiling src/sprites.c
+Compiling src/bench_subs.c
+Compiling src/chairman_memo.c
+Compiling src/player_sprites.c
+Compiling src/audio.c
+Compiling src/team_control.c
+Compiling src/menu_data.c
+Compiling src/sprite_data.c
+Compiling src/rnc.c
+Compiling src/audio_irq.c
+Compiling src/menu_system.c
+Compiling src/loader_bootstrap.c
+Compiling src/training_match.c
+Compiling src/game_init.c
+Compiling src/ai.c
+Compiling src/match_sim.c
+Compiling src/image_cmd.c
+Compiling src/replay_menu.c
+Compiling src/match_setup.c
+Compiling src/career_status.c
+Compiling src/scroll_blit.c
+Compiling src/menus.c
+Compiling src/tackle_foul.c
+Compiling src/game_state.c
+Compiling src/headers.c
+Compiling src/asset_sys.c
+Compiling src/interrupts.c
+Compiling src/display.c
+Compiling src/teams.c
+Compiling src/SWOS.c
+Compiling src/color_sprites.c
+Compiling src/sfx_crowd.c
+Compiling src/game_timers.c
+Compiling src/adverts.c
+Compiling src/game_utils.c
+Compiling src/panic.c
+Compiling src/highlights_menu.c
+Assembling support/gcc8_a_support.s
+Assembling asm/swos2_unit.s
+Assembling asm/resload_unit.s
+
+warning 22: target data type overflow (32 bits)
+Linking uae/dh0/data/SWOS2.elf
+C:/Projects/AI/SWOS/SWOS_C/src/move_camera.c:19:16: warning: type of 'cameraYFP' does not match original declaration [-Wlto-type-mismatch]
+   19 | extern int32_t cameraYFP __asm__("cameraY");
+      |                ^
+C:/Projects/AI/SWOS/SWOS_C/src/pitch.c:16:16: note: type 'int16_t' should match type 'int32_t'
+   16 | extern int16_t cameraY;
+      |                ^
+C:/Projects/AI/SWOS/SWOS_C/src/pitch.c:16:16: note: 'cameraY' was previously declared here
+C:/Projects/AI/SWOS/SWOS_C/src/pitch.c:16:16: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+C:/Projects/AI/SWOS/SWOS_C/src/move_camera.c:18:16: warning: type of 'cameraXFP' does not match original declaration [-Wlto-type-mismatch]
+   18 | extern int32_t cameraXFP __asm__("cameraX");
+      |                ^
+C:/Projects/AI/SWOS/SWOS_C/src/pitch.c:15:16: note: type 'int16_t' should match type 'int32_t'
+   15 | extern int16_t cameraX;
+      |                ^
+C:/Projects/AI/SWOS/SWOS_C/src/pitch.c:15:16: note: 'cameraX' was previously declared here
+C:/Projects/AI/SWOS/SWOS_C/src/pitch.c:15:16: note: code may be misoptimized unless '-fno-strict-aliasing' is used
+lto-wrapper.exe: warning: using serial compilation of 10 LTRANS jobs
+lto-wrapper.exe: note: see the '-flto' option documentation for more information
+C:/Projects/AI/SWOS/SWOS_C/src/resload.c: In function 'fix_filename':
+C:/Projects/AI/SWOS/SWOS_C/src/resload.c:1019:1: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+ 1019 | }
+      | ^
+C:/Projects/AI/SWOS/SWOS_C/src/resload.c: In function 'file_GetFileSize':
+C:/Projects/AI/SWOS/SWOS_C/src/resload.c:947:1: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+  947 | }
+      | ^
+C:/Projects/AI/SWOS/SWOS_C/src/resload.c: In function 'file_LoadFile':
+C:/Projects/AI/SWOS/SWOS_C/src/resload.c:955:1: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+  955 | }
+      | ^
+C:/Projects/AI/SWOS/SWOS_C/src/transfer_market.c: In function 'pickRandomTrialistOriginValue':
+C:/Projects/AI/SWOS/SWOS_C/src/transfer_market.c:4215:1: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+ 4215 | }
+      | ^
+At top level:
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+C:/Projects/AI/SWOS/SWOS_C/src/diy_competition.c: In function 'getCurrentFixtureTeamPtrs':
+C:/Projects/AI/SWOS/SWOS_C/src/diy_competition.c:1673:1: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+ 1673 | }
+      | ^
+At top level:
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+C:/Projects/AI/SWOS/SWOS_C/src/career_eurocups.c: In function 'drawRandomTeamFromPoolAndCopyGrid':
+C:/Projects/AI/SWOS/SWOS_C/src/career_eurocups.c:497:1: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+  497 | }
+      | ^
+C:/Projects/AI/SWOS/SWOS_C/src/career_eurocups.c: In function 'copyTitleHolderGrid':
+C:/Projects/AI/SWOS/SWOS_C/src/career_eurocups.c:350:1: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+  350 | }
+      | ^
+At top level:
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+C:/Projects/AI/SWOS/SWOS_C/src/rnc.c: In function 'v1DecodeBlock':
+C:/Projects/AI/SWOS/SWOS_C/src/rnc.c:363:1: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+  363 | }
+      | ^
+At top level:
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+C:/Projects/AI/SWOS/SWOS_C/src/career_status.c: In function 'maybeDecayPlayerStatusBucketForTeam':
+C:/Projects/AI/SWOS/SWOS_C/src/career_status.c:341:1: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+  341 | }
+      | ^
+At top level:
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+C:/Projects/AI/SWOS/SWOS_C/src/asset_sys.c: In function 'assetSys_ResolveAssetList':
+C:/Projects/AI/SWOS/SWOS_C/src/asset_sys.c:231:1: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+  231 | }
+      | ^
+At top level:
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+lto1.exe: warning: visibility attribute not supported in this configuration; ignored [-Wattributes]
+Elf2Hunk uae/dh0/data/SWOS2

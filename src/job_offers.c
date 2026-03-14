@@ -49,7 +49,7 @@ extern uint16_t selTeamNumber;
 extern uint16_t numSelectedTeams;
 extern uint8_t  selTeamsPtr;
 extern uint16_t currentDivisionIndex;
-extern uint16_t competitionFileBuffer;
+extern uint8_t competitionFileBuffer[];
 extern uint16_t numDiyTeams;
 extern uint16_t diyTeamMinDivisionIndex;
 extern uint16_t diyTeamMaxDivisionOffset;
@@ -139,8 +139,8 @@ extern void _Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel);
 /* Helper: menu entry from byte offset */
 
 /* Helper: access bg as the high 16 bits (big-endian BACKANDFRAMECOLOR) */
-static inline uint16_t bgColor(MenuEntry *e) { return *(uint16_t *)&e->bg; }
-static inline void setBgColor(MenuEntry *e, uint16_t v) { *(uint16_t *)&e->bg = v; }
+static inline uint16_t bgColor(MenuEntry *e) { return getBgColorWord(e); }
+static inline void setBgColor(MenuEntry *e, uint16_t v) { setBgColorWord(e, v); }
 
 /* Helper: GetCurrentSeasonPointer */
 static inline uint8_t *getCurrentSeasonPointer(void) {

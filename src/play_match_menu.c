@@ -47,7 +47,7 @@ extern uint16_t newPlayerSkill;
 
 extern TeamFileEx currentTeam;
 extern TeamFileEx careerTeam;
-extern TeamFileEx selTeamsPtr;
+extern uint8_t selTeamsPtr;
 extern uint8_t playerPositions[];
 extern uint8_t currentMatchPlayers[];
 extern uint8_t playerPositionsArray[];
@@ -128,7 +128,7 @@ extern uint8_t *_GetPlayerInfoBreakPosition(TeamFileEx *teamPtr, uint16_t reques
                                              uint16_t *outSlot, uint16_t *outPlayerIndex);
 extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
 extern uint16_t _cGetPlayerAtIndexFileIdx;
-extern void _ComputeOldPlayerSkillForViewResult(uint16_t maxSubs);
+extern uint16_t _ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t goalsCount);
 extern void _ShowStandardChooseTacticsMenu(TeamFileEx *team);
 extern void _TrainingMatch_RestoreLastMatchState(void);
 extern void _TrainingMatch_RestoreSavedTeamSelectionState(void);
@@ -142,8 +142,8 @@ extern void _TrainingMatch_ApplyUseMatchTeamAndSwapSubs(void);
 /* ---- Helper: menu entry from byte offset ---- */
 
 /* Helper: access bg as the high 16 bits (big-endian BACKANDFRAMECOLOR) */
-static inline uint16_t bgColor(MenuEntry *e) { return *(uint16_t *)&e->bg; }
-static inline void setBgColor(MenuEntry *e, uint16_t v) { *(uint16_t *)&e->bg = v; }
+static inline uint16_t bgColor(MenuEntry *e) { return getBgColorWord(e); }
+static inline void setBgColor(MenuEntry *e, uint16_t v) { setBgColorWord(e, v); }
 
 /* ================================================================
  * GetPlayerPosition  (SWOS2.s line 79648)
@@ -209,7 +209,7 @@ void _SavePositionsAndUpdateLittleCheckmark(void) {
     int16_t i; for (i = 0; i < 32; i++) oldPlayerPositionsArray[i] = playerPositionsArray[i];
     TeamFile *team = playMatchTeam1Ptr;
     team->someFlag = 1;
-    _ComputeOldPlayerSkillForViewResult(maxSubstitutesEntries);
+    _ComputeOldPlayerSkillForViewResult((TeamFileEx *)playMatchTeam1Ptr, maxSubstitutesEntries);
     _UpdateCheckMarkSprite();
 }
 
@@ -1060,7 +1060,7 @@ void _TogglePlayerCoach(void) {
             coachOrPlayer ^= 1;
             uint8_t nc = coachOrPlayer ? TEAM_PLAYER_COACH : TEAM_COACH;
             careerTeam.team.teamControls = nc;
-            selTeamsPtr.team.teamControls = nc;
+            ((TeamFileEx *)&selTeamsPtr)->team.teamControls = nc;
             if (trainingGame)
                 currentTeam.team.teamControls = 1;
         }

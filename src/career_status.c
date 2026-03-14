@@ -195,7 +195,7 @@ extern uint16_t   worldCupQualifyingTeam;
 extern uint16_t   worldCupHostTeam;
 extern uint16_t   euroChampionshipQualTeam;
 extern uint16_t   ballSpeed;
-extern uint32_t   currentGameTick;
+extern volatile uint16_t   currentGameTick;
 extern uint8_t    lastFinancialWeekIndex;
 extern uint8_t    diyFileBufferCopy[];
 
@@ -2680,8 +2680,8 @@ extern uint16_t _GetTeamValueBase(uint16_t avgPrice);
 /* Helper: menu entry from byte offset */
 
 /* Helper: access bg as the high 16 bits (big-endian BACKANDFRAMECOLOR) */
-static inline uint16_t bgColor_cs(MenuEntry *e) { return *(uint16_t *)&e->bg; }
-static inline void setBgColor_cs(MenuEntry *e, uint16_t v) { *(uint16_t *)&e->bg = v; }
+static inline uint16_t bgColor_cs(MenuEntry *e) { return getBgColorWord(e); }
+static inline void setBgColor_cs(MenuEntry *e, uint16_t v) { setBgColorWord(e, v); }
 
 /* Compute total profit/loss from all financial components */
 static inline int32_t computeTotalProfitLoss(void) {
