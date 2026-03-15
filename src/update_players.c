@@ -1081,7 +1081,9 @@ not_in_penalty:
             }
 
             /* flag_goalie_intervention_and_slow_player */
-            team->field_46 = 1;
+            /* Asm does move.b #1,$46(a6) — sets HIGH byte on big-endian.
+             * Value must be 0x0100 so that &= 0xFF correctly clears it. */
+            team->field_46 = 0x0100;
             {
                 int16_t spd = player->speed;
                 if (player->playerState == PL_GOALIE_DIVING_HIGH)
