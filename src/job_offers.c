@@ -854,33 +854,33 @@ void _JobOffers_DrawOldOfferLine(void *entryPtr)
 
     a5->isDisabled = 0;
 
-    /* Show entries 13 and 14 */
-    menuEntries[13].isInvisible = 0;
-    menuEntries[14].isInvisible = 0;
+    /* Show entries 15 and 16 (asm offsets $348/$380) */
+    menuEntries[15].isInvisible = 0;
+    menuEntries[16].isInvisible = 0;
 
     /* d5 = highlight color (0 = normal, 0xD = selected) */
     uint16_t d5 = 0;
     if ((uint16_t)d7 == selectedOldJobOfferOrdinal)
         d5 = 0xD;
 
-    /* Apply d5 to bg color bits (low 4) of entries 13 and 14 */
+    /* Apply d5 to bg color bits (low 4) of entries 15 and 16 */
     {
-        uint32_t bg13 = menuEntries[13].bg;
-        menuEntries[13].bg = (bg13 & 0xFFF0FFFF) | ((uint32_t)d5 << 16);
+        uint32_t bg15 = menuEntries[15].bg;
+        menuEntries[15].bg = (bg15 & 0xFFF0FFFF) | ((uint32_t)d5 << 16);
     }
     {
-        uint32_t bg14 = menuEntries[14].bg;
-        menuEntries[14].bg = (bg14 & 0xFFF0FFFF) | ((uint32_t)d5 << 16);
+        uint32_t bg16 = menuEntries[16].bg;
+        menuEntries[16].bg = (bg16 & 0xFFF0FFFF) | ((uint32_t)d5 << 16);
     }
 
-    /* Entry 13 (a3): set stringFlags base, y, number */
-    MenuEntry *a3 = &menuEntries[13];
+    /* Entry 15 (a3): set stringFlags base, y, number */
+    MenuEntry *a3 = &menuEntries[15];
     uint16_t d3 = a3->stringFlags & 0xFFF0;
     a3->y = a5->y;
     *(uint16_t *)&a3->fg = (uint16_t)(d7 + 1);  /* ENTRY_NUMBER: write high word */
 
-    /* Entry 14 (a4): set stringFlags base, y, get dest buffer */
-    MenuEntry *a4 = &menuEntries[14];
+    /* Entry 16 (a4): set stringFlags base, y, get dest buffer */
+    MenuEntry *a4 = &menuEntries[16];
     uint16_t d4 = a4->stringFlags & 0xFFF0;
     a4->y = a5->y;
     uint8_t *destBuf = (uint8_t *)a4->fg;
@@ -909,8 +909,8 @@ void _JobOffers_DrawOldOfferLine(void *entryPtr)
     a3->stringFlags = d3;
     a4->stringFlags = d4;
 
-    /* Draw entries 13-14 */
-    _DrawMultipleItems(2, &menuEntries[13]);
+    /* Draw entries 15-16 */
+    _DrawMultipleItems(2, &menuEntries[15]);
 }
 
 /* ================================================================
@@ -936,19 +936,19 @@ void _JobOffersAfterDrawCommon(void *entryPtr)
 
     a5->isDisabled = 0;
 
-    /* Show entries 11 and 12 */
-    menuEntries[11].isInvisible = 0;
-    menuEntries[12].isInvisible = 0;
+    /* Show entries 13 and 14 (asm offsets $2D8/$310) */
+    menuEntries[13].isInvisible = 0;
+    menuEntries[14].isInvisible = 0;
 
-    /* Entry 11 (a3): set stringFlags base, y, number */
-    MenuEntry *a3 = &menuEntries[11];
+    /* Entry 13 (a3): set stringFlags base, y, number */
+    MenuEntry *a3 = &menuEntries[13];
     uint16_t d3 = a3->stringFlags & 0xFFF0;
     a3->y = a5->y;
     uint16_t numVal = (uint16_t)d7 + 1;
     *(uint16_t *)&a3->fg = numVal;  /* ENTRY_NUMBER: write high word */
 
-    /* Entry 12 (a4): set stringFlags base, y, get dest buffer */
-    MenuEntry *a4 = &menuEntries[12];
+    /* Entry 14 (a4): set stringFlags base, y, get dest buffer */
+    MenuEntry *a4 = &menuEntries[14];
     uint16_t d4 = a4->stringFlags & 0xFFF0;
     a4->y = a5->y;
     uint8_t *destBuf = (uint8_t *)a4->fg;
@@ -977,8 +977,8 @@ void _JobOffersAfterDrawCommon(void *entryPtr)
     a3->stringFlags = d3;
     a4->stringFlags = d4;
 
-    /* Draw entries 11-12 */
-    _DrawMultipleItems(2, &menuEntries[11]);
+    /* Draw entries 13-14 */
+    _DrawMultipleItems(2, &menuEntries[13]);
 }
 
 /* ================================================================

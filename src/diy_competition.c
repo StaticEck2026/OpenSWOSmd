@@ -9696,6 +9696,10 @@ done:
 
 /* Externs for Chunk 193 */
 extern uint16_t careerMatchSimulatedFlag;
+extern uint32_t diyCupLastMatchTeam1Ptr;
+extern uint32_t diyCupLastMatchTeam2Ptr;
+extern uint16_t diyCupLastMatchScoreTeam1;
+extern uint16_t diyCupLastMatchScoreTeam2;
 
 /* DIY_PlayCupMatchAndAdvance
  *
@@ -9766,6 +9770,14 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
     uint16_t packedGoals, packedAggregate, packedPenalty, resultFlags;
     _ProcessDIYKnockoutMatchResultAndCareerUpdates(team1, team2, firstLeg1, firstLeg2,
         &packedGoals, &packedAggregate, &packedPenalty, &resultFlags);
+
+    /* Asm returns team ptrs in a1/a2 and scores in d1/d2 for caller
+     * (DIYCupOnSelectCommon stores them into diyCupLastMatch* globals).
+     * Since C doesn't preserve register side effects, store them here. */
+    diyCupLastMatchTeam1Ptr = (uint32_t)team1;
+    diyCupLastMatchTeam2Ptr = (uint32_t)team2;
+    diyCupLastMatchScoreTeam1 = packedGoals >> 8;
+    diyCupLastMatchScoreTeam2 = packedGoals & 0xFF;
 
     uint8_t *a3 = base;
 

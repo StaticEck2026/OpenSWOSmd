@@ -5291,7 +5291,7 @@ void _ViewSquadInit(void)
     if (teamNum != 0xFFFF) {
         uint8_t *teamPtr = (uint8_t *)squadTeamPtr;
         if (teamNum == *(uint16_t *)teamPtr) {
-            if (careerNumPlayers != 16) {
+            if (careerNumPlayers == 16) {
                 goto skipEntryShow;
             }
             menuEntries[20].isInvisible = 0; /* 0x460/56 = 20 */

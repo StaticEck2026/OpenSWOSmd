@@ -2564,7 +2564,9 @@ uint8_t *_TrainingMatch_AddTrialPlayerAtPosition(uint16_t position)
         insertOffset += 0x0B;
     }
 
-    /* Shift entries up to make room at insertOffset */
+    /* Shift entries up to make room at insertOffset.
+     * ASM: a0 = arr + careerNumPlayers, copies a0[-1]→a0[0], a0--, repeat.
+     * This expands the array by one, shifting elements rightward. */
     {
         uint8_t *arr = currentMatchPlayers;
         uint16_t endIdx = careerNumPlayers;
@@ -2573,7 +2575,7 @@ uint8_t *_TrainingMatch_AddTrialPlayerAtPosition(uint16_t position)
         if (count > 0) {
             uint16_t i;
             for (i = 0; i < count; i++) {
-                endPtr[-1 - (int16_t)i] = endPtr[-2 - (int16_t)i];
+                endPtr[-(int16_t)i] = endPtr[-1 - (int16_t)i];
             }
         }
         arr[insertOffset] = (uint8_t)freeSlot;
@@ -3630,12 +3632,16 @@ skipStats:
      * The base cache entry (a0) gets its counter decremented,
      * while the selected element (a1) receives match result data. */
     if (team1->team.teamControls != 1 || team2->team.teamControls != 1) {
-        /* Base cache entry (a0 in asm) — decrement byte[6] */
+        /* Asm calls GetCurrentSelectedElementPtr FIRST (returns a0=base, a1=elem),
+         * THEN decrements byte[6] of base. Order matters: the element pointer
+         * depends on (byte[5] - byte[6]) * 12. */
+        uint8_t *elem = _TeamSelectionKeyCache_GetCurrentSelectedElementPtr();
+
+        /* Base cache entry (a0 in asm) — decrement byte[6] AFTER getting element */
         uint8_t *base_entry = teamSelectionKeyCache + teamSelectionKeyCacheOffset;
         base_entry[6] -= 1;
 
         /* Selected element (a1 in asm) — store match results */
-        uint8_t *elem = _TeamSelectionKeyCache_GetCurrentSelectedElementPtr();
         elem[0x0B] = (uint8_t)flags;
         *(uint16_t *)(elem + 0x10) = packedGoals;
         *(uint16_t *)(elem + 0x12) = aggregate;
