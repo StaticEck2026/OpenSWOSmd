@@ -45,8 +45,14 @@ __attribute__((used, externally_visible))
 void _MoveView(int16_t newScreenX, int16_t newScreenY)
 {
     /* ---- Phase 1: move X ---- */
-    while (cameraX != newScreenX) {
+    /* Original asm uses do-while: ScrollToCurrent fires before the exit
+     * check, so it always runs at least once and also runs at the final
+     * target position.  This ensures the last tile boundary crossing is
+     * blitted — critical for replay camera panning. */
+    for (;;) {
         _ScrollToCurrent();
+        if (cameraX == newScreenX)
+            break;
         if (cameraX < newScreenX) {
             /* Move right */
             cameraX += 1;
@@ -63,8 +69,10 @@ void _MoveView(int16_t newScreenX, int16_t newScreenY)
     }
 
     /* ---- Phase 2: move Y ---- */
-    while (cameraY != newScreenY) {
+    for (;;) {
         _ScrollToCurrent();
+        if (cameraY == newScreenY)
+            break;
         if (cameraY < newScreenY) {
             /* Move down */
             cameraY += 1;
