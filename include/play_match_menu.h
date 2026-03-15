@@ -54,7 +54,7 @@ void _PlayMatchMenuInit(void);
 void _PlayMatchMenuReinit(void);
 void _SetCurrentSelectedPlayerIndexPointer(void);
 void _OnSwapPlayer(MenuEntry *menuEntry);
-void _PlayMatchMenuSwapPlayers(TeamFile *teamRaw, int16_t pos1, int16_t pos2, int16_t tactPos1, int16_t tactPos2);
+void _PlayMatchMenuSwapPlayers(TeamFile *teamRaw, int16_t selectedSlot, int16_t destSlot);
 int16_t _HandleSquadSwapSelectionToggle(int16_t menuPos);
 void _PlayMatchChangeTactics(MenuEntry *menuEntry);
 void _ExitPlayMatch(void);

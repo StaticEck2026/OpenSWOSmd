@@ -127,6 +127,7 @@ extern int16_t _CheckIfTeamIsChanged(void);
 extern uint8_t *_GetPlayerInfoBreakPosition(TeamFileEx *teamPtr, uint16_t requestedSlot,
                                              uint16_t *outSlot, uint16_t *outPlayerIndex);
 extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
 extern uint16_t _cGetPlayerAtIndexFileIdx;
 extern uint16_t _ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t goalsCount);
 extern void _ShowStandardChooseTacticsMenu(TeamFileEx *team);
@@ -758,8 +759,7 @@ void _OnSwapPlayer(MenuEntry *a5) {
                 if (!_HandleSquadSwapSelectionToggle(d6)) return;
             } else {
                 TeamFile *team = playMatchTeam1Ptr;
-                _PlayMatchMenuSwapPlayers(team, selectedPlayerPosition, d7,
-                                          selectedPlayerTacticsPosition, d6);
+                _PlayMatchMenuSwapPlayers(team, selectedPlayerTacticsPosition, d6);
                 _SetBenchPlayersNumbers((TeamFileEx *)team);
                 team->someFlag = 1;
                 _SavePositionsAndUpdateLittleCheckmark();
@@ -810,21 +810,33 @@ cpuPath:
 
 /* ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayMatchMenuSwapPlayers(TeamFile *team, int16_t d1, int16_t d2, int16_t d3, int16_t d4) {
-    if (d3 >= 16 || d4 >= 16) {
-        if (d3 < 11 && d4 >= 11) goto secondarySwap;
-        if (d3 >= 11 && d4 < 11) goto secondarySwap;
+void _PlayMatchMenuSwapPlayers(TeamFile *team, int16_t d3, int16_t d4) {
+    /* Original asm only takes D3 (selected slot) and D4 (dest slot).
+     * Primary swap runs when the two slots are in different groups
+     * (one starting, one bench) OR either slot >= 16 (extended squad). */
+    int skipPrimary = 0;
+    if ((uint16_t)d3 < 16 && (uint16_t)d4 < 16) {
+        /* Both < 16: skip primary if same group */
+        if ((uint16_t)d3 < 11 && (uint16_t)d4 < 11)
+            skipPrimary = 1;  /* both starting 11 */
+        else if ((uint16_t)d3 >= 11 && (uint16_t)d4 >= 11)
+            skipPrimary = 1;  /* both bench */
+    }
 
-        /* Swap playerPositionsArray and shirt numbers */
+    if (!skipPrimary) {
+        /* Primary swap: playerPositionsArray + shirt numbers.
+         * Asm calls GetPlayerAtIndex(teamNum, d3/d4) which translates
+         * through playerPositions/currentMatchPlayers/playerNumbers,
+         * then uses the translated file indices to index playerPositionsArray. */
         uint16_t tNum = *(uint16_t *)&team->countryNumber;
         uint8_t *p1 = _GetPlayerAtIndex(tNum, (uint16_t)d3);
-        uint16_t p1Idx = _cGetPlayerAtIndexFileIdx;
+        uint16_t fileIdx1 = _cGetPlayerAtIndexFileIdx;
         uint8_t *p2 = _GetPlayerAtIndex(tNum, (uint16_t)d4);
-        uint16_t p2Idx = _cGetPlayerAtIndexFileIdx;
+        uint16_t fileIdx2 = _cGetPlayerAtIndexFileIdx;
 
-        uint8_t tmp = playerPositionsArray[p2Idx];
-        playerPositionsArray[p2Idx] = playerPositionsArray[p1Idx];
-        playerPositionsArray[p1Idx] = tmp;
+        uint8_t tmp = playerPositionsArray[fileIdx2];
+        playerPositionsArray[fileIdx2] = playerPositionsArray[fileIdx1];
+        playerPositionsArray[fileIdx1] = tmp;
 
         PlayerFile *pf1 = (PlayerFile *)(p1 + 76);
         PlayerFile *pf2 = (PlayerFile *)(p2 + 76);
@@ -833,25 +845,26 @@ void _PlayMatchMenuSwapPlayers(TeamFile *team, int16_t d1, int16_t d2, int16_t d
         pf1->shirtNumber = ts;
     }
 
-secondarySwap:
-    if (team == &currentTeam.team) {
-        uint8_t t = playerPositions[d2];
-        playerPositions[d2] = playerPositions[d1];
-        playerPositions[d1] = t;
-    } else if (gameType == GAME_TYPE_CAREER && team == &careerTeam.team) {
-        uint8_t t = currentMatchPlayers[d2];
-        currentMatchPlayers[d2] = currentMatchPlayers[d1];
-        currentMatchPlayers[d1] = t;
-    } else {
-        uint8_t *pn = team->playerNumbers;
-        uint8_t t = pn[d2]; pn[d2] = pn[d1]; pn[d1] = t;
-        return;
+    /* Secondary swap: swap in playerPositions/currentMatchPlayers/playerNumbers
+     * using d3/d4 (slot positions) */
+    {
+        uint8_t *pn;
+        if (team == &currentTeam.team) {
+            pn = (uint8_t *)playerPositions;
+        } else if (gameType == GAME_TYPE_CAREER && team == &careerTeam.team) {
+            pn = (uint8_t *)currentMatchPlayers;
+        } else {
+            pn = team->playerNumbers;
+        }
+        uint8_t t = pn[(uint16_t)d4];
+        pn[(uint16_t)d4] = pn[(uint16_t)d3];
+        pn[(uint16_t)d3] = t;
     }
 
     if (trainingGame && !is_A_team) {
         uint16_t lim = 11 + maxSubstitutesEntries;
-        if ((d1 < (int16_t)lim && d2 >= (int16_t)lim) ||
-            (d1 >= (int16_t)lim && d2 < (int16_t)lim))
+        if ((d3 < (int16_t)lim && d4 >= (int16_t)lim) ||
+            (d3 >= (int16_t)lim && d4 < (int16_t)lim))
             _TrainingMatch_BuildCurrentTeamFromCareerTeam();
     }
 }
@@ -881,7 +894,9 @@ int16_t _HandleSquadSwapSelectionToggle(int16_t d6) {
     if (curSel == (int16_t)*selPos) {
         curSel = -1;
     } else {
-        uint8_t *pl = _GetPlayerAtIndex(tNum, (uint16_t)selectedPlayerPosition);
+        /* Asm calls GetPlayer (not GetPlayerAtIndex) — selectedPlayerPosition
+         * is already a file index, no translation needed. */
+        uint8_t *pl = _GetPlayer(tNum, (uint16_t)selectedPlayerPosition);
         PlayerFile *plPf = (PlayerFile *)(pl + 76);
         if (((plPf->positionAndFace & 0xE0) >> 5) == 0) return 0;
     }
