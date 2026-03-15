@@ -11,6 +11,9 @@ typedef unsigned short uint16_t;
 typedef unsigned long uint32_t;
 typedef short int16_t;
 
+struct TeamFile;
+typedef struct TeamFile TeamFile;
+
 void _PrepareMenuBackground(void);
 void _InitMainMenuStuff(void);
 void _ZeroOutStars(void);
@@ -226,7 +229,7 @@ void _MaxSubstitutes(void);
 void _RandomlySwapTeams(void);
 
 /* --- ShowSquad (Chunk 164) --- */
-int16_t _ShowSquad(uint8_t *teamPtr, uint8_t *title, uint32_t maskLo,
+int16_t _ShowSquad(TeamFile *teamPtr, uint8_t *title, uint32_t maskLo,
                     uint32_t maskHi, uint16_t arg2, uint16_t arg3);
 
 /* --- ViewSquad Init/Common/AfterDraw (Chunk 163) --- */

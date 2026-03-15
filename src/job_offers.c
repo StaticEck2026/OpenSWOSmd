@@ -133,7 +133,7 @@ extern void _PrintFormatted(const uint8_t *fmt, uint8_t *out,
 
 /* ---- C-callable ASM bridges ---- */
 extern void _Int2Pounds(uint32_t value, uint8_t *dst);
-extern int16_t _ShowSquad(uint8_t *teamPtr, uint8_t *title, uint32_t maskLo, uint32_t maskHi, uint16_t arg2, uint16_t arg3);
+extern int16_t _ShowSquad(TeamFile *teamPtr, uint8_t *title, uint32_t maskLo, uint32_t maskHi, uint16_t arg2, uint16_t arg3);
 extern void _Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel);
 
 /* Helper: menu entry from byte offset */
@@ -662,9 +662,8 @@ void _RejectJobOffer(void) {
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _ViewFutureTeam(void) {
-    uint8_t *team = (uint8_t *)teamOfferingJobPtr;
     viewFutureTeamModeFlag = 1;
-    _ShowSquad(team, aViewTeam, 0, 0, 1, -1);
+    _ShowSquad((TeamFile *)teamOfferingJobPtr, aViewTeam, 0, 0, 1, -1);
     viewFutureTeamModeFlag = 0;
     _GotJobOfferFinish();
 }

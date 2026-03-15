@@ -2735,7 +2735,7 @@ void _BuyOtherPlayersAfterDrawCommon(void *entryPtr)
 
 extern TeamFileEx careerTeam;
 extern uint8_t aViewSquad[];
-extern int16_t _ShowSquad(uint8_t *teamPtr, uint8_t *title, uint32_t maskLo,
+extern int16_t _ShowSquad(TeamFile *teamPtr, uint8_t *title, uint32_t maskLo,
                            uint32_t maskHi, uint16_t arg2, uint16_t arg3);
 
 /* Helper: build bitmask of players on transfer market, then show squad */
@@ -2748,7 +2748,7 @@ static void showSquadWithTransferMarketMask(void)
         for (i = 0; i < n; i++)
             mask |= (1u << playersOnTransferMarket[i]);
     }
-    _ShowSquad((uint8_t *)&careerTeam, aViewSquad, mask, 0, 1, 0xFFFF);
+    _ShowSquad((TeamFile *)&careerTeam, aViewSquad, mask, 0, 1, 0xFFFF);
 }
 
 /* ThirdPartyOfferViewSquad (Chunk 164) */
@@ -2995,7 +2995,7 @@ void _PlayerOffersOnSelect8(void)
         numExtraPlayersWanted = -1;
     } else {
         /* Show squad to pick a player */
-        int16_t result = _ShowSquad((uint8_t *)teamPtr, title, maskLo, maskHi,
+        int16_t result = _ShowSquad((TeamFile *)teamPtr, title, maskLo, maskHi,
                                      0, 0xFFFF);
         if (result >= 0) {
             numExtraPlayersWanted = result;
@@ -3032,7 +3032,7 @@ void _PlayerOffersOnSelect10(void)
         }
 
         TeamFileEx *teamPtr = _GetTeamPointer(selTeamNumber);
-        int16_t result = _ShowSquad((uint8_t *)teamPtr, aSelectPlayerTo_0,
+        int16_t result = _ShowSquad((TeamFile *)teamPtr, aSelectPlayerTo_0,
                                      d7mask, 0, 0, 0xFFFF);
         if (result >= 0) {
             offerSwapPlayerOrdinal = result;
@@ -3071,7 +3071,7 @@ void _PlayerOffersOnSelect11(void)
         }
 
         TeamFileEx *teamPtr = _GetTeamPointer(selTeamNumber);
-        int16_t result = _ShowSquad((uint8_t *)teamPtr, aSelectPlayerTo_0,
+        int16_t result = _ShowSquad((TeamFile *)teamPtr, aSelectPlayerTo_0,
                                      d7mask, 0, 0, 0xFFFF);
         if (result >= 0) {
             offerExtraPlayerOrdinal = result;
@@ -4656,7 +4656,7 @@ void _PutPlayerOnMarketMenu(void)
 
         /* Show squad selection (clears viewSquadFlags as per ShowSquad entry point) */
         viewSquadFlags = 0;
-        int16_t selected = _ShowSquad((uint8_t *)teamPtr, aPutPlayerOnTra, eligible, marketMask, 0, preselect);
+        int16_t selected = _ShowSquad((TeamFile *)teamPtr, aPutPlayerOnTra, eligible, marketMask, 0, preselect);
         preselect = (uint16_t)viewSquadSelectedTeam;
 
         /* If cancelled (viewSquadSelectedTeam < 0), exit loop */

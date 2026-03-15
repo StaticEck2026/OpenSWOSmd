@@ -2116,7 +2116,7 @@ extern uint16_t currentSeasonShowing;
 extern uint16_t numNewJobOffers;
 extern uint16_t numJobOffers;
 extern uint16_t youreSacked;
-extern uint32_t squadTeamPtr;
+extern TeamFile *squadTeamPtr;
 extern TeamFileEx careerTeam;
 
 /* CareerOverInit (line 58154): set default menu entry based on career state */
@@ -5289,8 +5289,7 @@ void _ViewSquadInit(void)
 {
     uint16_t teamNum = selTeamNumber;
     if (teamNum != 0xFFFF) {
-        uint8_t *teamPtr = (uint8_t *)squadTeamPtr;
-        if (teamNum == *(uint16_t *)teamPtr) {
+        if (teamNum == *(uint16_t *)&squadTeamPtr->countryNumber) {
             if (careerNumPlayers == 16) {
                 goto skipEntryShow;
             }
@@ -5303,8 +5302,7 @@ void _ViewSquadInit(void)
 skipEntryShow:
 
     menuEntries[0].fg = viewSquadTitle;
-    uint8_t *teamPtr2 = (uint8_t *)squadTeamPtr;
-    menuEntries[1].fg = (uint32_t)(teamPtr2 + 5);
+    menuEntries[1].fg = (uint32_t)squadTeamPtr->teamName;
 
     if (viewSquadArg2) {
         menuEntries[2].isInvisible = 1;  /* 0x70/56 = 2 */
@@ -5401,10 +5399,10 @@ extern uint8_t viewSquadMenu[];
  * Asm: a0=teamPtr, a1=title, d0=maskLo, d1=maskHi, d2=arg2, d3=arg3
  * Returns: d0 = viewSquadSelectedPlayer, d3 = viewSquadSelectedTeam */
 __attribute__((used, externally_visible))
-int16_t _ShowSquad(uint8_t *teamPtr, uint8_t *title, uint32_t maskLo,
+int16_t _ShowSquad(TeamFile *teamPtr, uint8_t *title, uint32_t maskLo,
                     uint32_t maskHi, uint16_t arg2, uint16_t arg3)
 {
-    squadTeamPtr = (uint32_t)teamPtr;
+    squadTeamPtr = teamPtr;
     viewSquadTitle = (uint32_t)title;
     viewSquadMaskLo = maskLo;
     viewSquadMaskHi = maskHi;
@@ -5595,7 +5593,7 @@ extern uint16_t careerUnavailablePlayerList[];
 extern uint16_t careerUnavailablePlayerLookupTable[];
 extern uint8_t  currentMatchPlayers[];
 extern TeamFileEx *_GetTeamPointer(uint16_t teamId);
-extern int16_t  _ShowSquad(uint8_t *teamPtr, uint8_t *title, uint32_t maskLo,
+extern int16_t  _ShowSquad(TeamFile *teamPtr, uint8_t *title, uint32_t maskLo,
                             uint32_t maskHi, uint16_t arg2, uint16_t arg3);
 extern void _Career_CopyUnavailablePlayerToCareerTeamSlot(uint8_t *srcPlayer,
     uint8_t *dstTeam, uint8_t *srcName, uint16_t srcTeamNumber,
@@ -5689,7 +5687,7 @@ void _Career_AddInternationalPlayerCommon(uint8_t *selectedTeam, uint8_t *title)
     careerAddIntlPlayerResult = 0xFFFF;
     careerSquadScreenDidSelectPlayerFlag = 0;
     viewSquadFlags = unavailMask;
-    int16_t selected = _ShowSquad((uint8_t *)teamEx, title, natMask, 0, 0, 0xFFFF);
+    int16_t selected = _ShowSquad((TeamFile *)teamEx, title, natMask, 0, 0, 0xFFFF);
 
     if (selected < 0)
         return;
