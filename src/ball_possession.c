@@ -58,7 +58,7 @@ extern int16_t  kLowerRightCornerBallDestDelta[];
 
 /* Already-ported functions */
 /* Returns (TeamGame *) + ingameTeamPlayerOffsets[idx]: add 42 to get PlayerInfo * */
-extern uint8_t *_GetPlayerPointerFromShirtNumber(Sprite *playerSprite, TeamGeneralInfo *teamData);
+extern PlayerInfo *_GetPlayerPointerFromShirtNumber(Sprite *playerSprite, TeamGeneralInfo *teamData);
 extern void _ResetBothTeamSpinTimers(void);
 extern void _PlayGoodPassSample(void);
 extern void _PlayKickSample(void);
@@ -165,7 +165,7 @@ _DoPass(Sprite *player, TeamGeneralInfo *team)
 {
     int16_t  dir = player->direction;
     int16_t  savedDir = dir;
-    uint8_t *a4;
+    PlayerInfo *a4;
     Sprite  *targetPlayer;
     Sprite  *ball;
     int16_t  d1;
@@ -189,7 +189,7 @@ _DoPass(Sprite *player, TeamGeneralInfo *team)
     /* AI failed pass check: only during game in progress, only for CPU team */
     if (gameStatePl == ST_GAME_IN_PROGRESS &&
         team->playerNumber == 0) {
-        PlayerInfo *pi = (PlayerInfo *)((uint8_t *)a4 + 42);
+        PlayerInfo *pi = a4;
         int16_t passingSkill = pi->passing;
         int16_t idx = passingSkill * 2;
         int16_t threshold;
@@ -276,7 +276,7 @@ set_pass_speed:
 
         /* Adjust for passing skill */
         {
-            PlayerInfo *pi = (PlayerInfo *)((uint8_t *)a4 + 42);
+            PlayerInfo *pi = a4;
             speed += kBallSpeedPassingIncrease[pi->passing];
         }
         ball->speed = speed;
@@ -326,7 +326,7 @@ _PlayerKickingBall(Sprite *player, TeamGeneralInfo *team)
     int16_t  dir = player->direction;
     int16_t *dt;
     int16_t  idx;
-    uint8_t *a4;
+    PlayerInfo *a4;
     Sprite  *ball;
 
     /* Store direction for later shot-on-goal check */
@@ -384,7 +384,7 @@ check_shot_on_goal:
         /* its_a_finishing_shot */
         a4 = _GetPlayerPointerFromShirtNumber(player, team);
         {
-            PlayerInfo *pi = (PlayerInfo *)((uint8_t *)a4 + 42);
+            PlayerInfo *pi = a4;
             int16_t finSkill = pi->finishing;
             int16_t bonus    = kBallSpeedFinishing[finSkill];
             ball->speed += bonus;
@@ -394,7 +394,7 @@ check_shot_on_goal:
     its_a_long_shot:
         a4 = _GetPlayerPointerFromShirtNumber(player, team);
         {
-            PlayerInfo *pi = (PlayerInfo *)((uint8_t *)a4 + 42);
+            PlayerInfo *pi = a4;
             int16_t shootSkill = pi->shooting;
             int16_t bonus      = kBallSpeedKicking[shootSkill];
             ball->speed += bonus;
@@ -447,7 +447,7 @@ void __attribute__((used, externally_visible))
 _CalculateIfPlayerWinsBall(uint16_t dir, Sprite *player, TeamGeneralInfo *team)
 {
     Sprite *ball;
-    uint8_t *a4;
+    PlayerInfo *a4;
 
     team->passInProgress = 0;
 
@@ -480,7 +480,7 @@ _CalculateIfPlayerWinsBall(uint16_t dir, Sprite *player, TeamGeneralInfo *team)
                a1 = opponent's controlled player, a6 = our team (cross-team!) */
             a4 = _GetPlayerPointerFromShirtNumber(oppControlled, a6_reg);
             {
-                PlayerInfo *pi = (PlayerInfo *)((uint8_t *)a4 + 42);
+                PlayerInfo *pi = a4;
                 d1_skill = (uint8_t)((pi->tackling + pi->ballControl) >> 1);
             }
 
@@ -498,7 +498,7 @@ _CalculateIfPlayerWinsBall(uint16_t dir, Sprite *player, TeamGeneralInfo *team)
                 a4 = _GetPlayerPointerFromShirtNumber(oppControlled2, a6_reg);
             }
             {
-                PlayerInfo *pi = (PlayerInfo *)((uint8_t *)a4 + 42);
+                PlayerInfo *pi = a4;
                 d0_skill = (uint8_t)((pi->tackling + pi->ballControl) >> 1);
             }
 
@@ -571,7 +571,7 @@ calculate_ball_destination:
     {
         int16_t speedDelta = 0;
         if (currentTick & 2) {  /* btst #1,currentTick+1 */
-            PlayerInfo *pi  = (PlayerInfo *)((uint8_t *)a4 + 42);
+            PlayerInfo *pi = a4;
             int16_t bcSkill = pi->ballControl;
             speedDelta = kBallSpeedDeltaWhenControlled[bcSkill];
         }
@@ -600,7 +600,7 @@ calculate_ball_destination:
 
         /* Check turn threshold based on ball control skill */
         {
-            PlayerInfo *pi   = (PlayerInfo *)((uint8_t *)a4 + 42);
+            PlayerInfo *pi = a4;
             int16_t bcSkill  = pi->ballControl;
             int16_t threshold = ballControlTurnThresholds[bcSkill];
             if (threshold > team->unkBallTimer)
@@ -623,7 +623,7 @@ finalize:
 void __attribute__((used, externally_visible))
 _UpdatePlayerSpeed(Sprite *player, TeamGeneralInfo *team)
 {
-    uint8_t    *a4;
+    PlayerInfo *a4;
     PlayerInfo *pi;
     int16_t     speed;
     int16_t     speedSkill;
@@ -642,7 +642,7 @@ _UpdatePlayerSpeed(Sprite *player, TeamGeneralInfo *team)
 
     /* Look up base speed from player speed skill */
     a4 = _GetPlayerPointerFromShirtNumber(player, team);
-    pi = (PlayerInfo *)((uint8_t *)a4 + 42);
+    pi = a4;
     speedSkill = pi->speed;
     if (gameStatePl == ST_GAME_IN_PROGRESS)
         speed = kPlayerSpeedsGameInProgress[speedSkill];
@@ -769,8 +769,7 @@ calculate_acceleration:
 void __attribute__((used, externally_visible))
 _UpdatePlayerShotChanceTable(Sprite *player, TeamGeneralInfo *team)
 {
-    uint8_t    *a4 = _GetPlayerPointerFromShirtNumber(player, team);
-    PlayerInfo *pi = (PlayerInfo *)((uint8_t *)a4 + 42);
+    PlayerInfo *pi = _GetPlayerPointerFromShirtNumber(player, team);
 
     if (pi->position != 0) {
         /* Not a goalkeeper -- use default outfield table */

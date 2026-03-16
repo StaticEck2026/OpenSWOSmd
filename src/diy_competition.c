@@ -5837,18 +5837,20 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
                 a3++;
             }
 
-            /* Match result string */
+            /* Match result string.
+             * ASM loads: d4 = goals (0xCA), d5 = aggregate (0x14E), d6 = penalty (0x1CE).
+             * BuildMatchResultString expects: d4=leg2(goals), d5=leg1(agg), d6=pens(penalty). */
             {
-                uint16_t *leg2Ptr = (uint16_t *)(a4 + 0x1CE);
-                uint16_t leg2 = leg2Ptr[d4 / 2];
-                uint16_t *leg1Ptr = (uint16_t *)(a4 + 0x14E);
-                uint16_t leg1 = leg1Ptr[d4 / 2];
-                uint16_t *scorePtr = (uint16_t *)(a4 + 0xCA);
-                uint16_t pens = scorePtr[d4 / 2];
+                uint16_t *goalsPtr = (uint16_t *)(a4 + 0xCA);
+                uint16_t goals = goalsPtr[d4 / 2];
+                uint16_t *aggPtr = (uint16_t *)(a4 + 0x14E);
+                uint16_t agg = aggPtr[d4 / 2];
+                uint16_t *penPtr = (uint16_t *)(a4 + 0x1CE);
+                uint16_t pen = penPtr[d4 / 2];
                 uint8_t flags = *a5;
 
                 uint8_t *resultStr = _BuildMatchResultString(
-                    0, leg2, leg1, pens,
+                    0, goals, agg, pen,
                     (uint8_t *)diyCupMatchTeamNamePtr1,
                     (uint8_t *)diyCupMatchTeamNamePtr2,
                     (uint16_t)flags);

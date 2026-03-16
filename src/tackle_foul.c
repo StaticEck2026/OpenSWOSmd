@@ -82,7 +82,7 @@ extern void     _ResetBothTeamSpinTimers(void);
 extern void     _StopAllPlayers(void);
 extern void     _ActivateReferee(void);
 extern uint16_t _Rand(void);
-extern uint8_t *_GetPlayerPointerFromShirtNumber(Sprite *player, TeamGeneralInfo *team);
+extern PlayerInfo *_GetPlayerPointerFromShirtNumber(Sprite *player, TeamGeneralInfo *team);
 extern void     _SetPlayerAnimationTable(uint8_t *animTable, uint8_t *sprite);
 
 /* ========================================================================
@@ -162,8 +162,7 @@ _PlayerTackledTheBallWeak(Sprite *player, TeamGeneralInfo *team)
 void __attribute__((used, externally_visible))
 _SetPlayerDowntimeAfterTackle(Sprite *player, TeamGeneralInfo *team)
 {
-    uint8_t *pihBase = _GetPlayerPointerFromShirtNumber(player, team);
-    PlayerInfo *pi = (PlayerInfo *)(pihBase + 42);
+    PlayerInfo *pi = _GetPlayerPointerFromShirtNumber(player, team);
     int16_t *table;
     int16_t tackleSkill;
     int16_t downtime;

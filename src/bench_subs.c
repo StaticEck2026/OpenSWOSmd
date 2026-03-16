@@ -164,7 +164,7 @@ extern uint8_t  playerNormalStandingAnimTable[];
  */
 static inline PlayerInfo *piFromOffset(TeamGame *tg, uint16_t off)
 {
-    return (PlayerInfo *)((uint8_t *)tg + off + TEAMGAME_PLAYERS_OFFSET);
+    return &tg->players[off / sizeof(PlayerInfo)];
 }
 
 /* ---- external data ---- */

@@ -730,7 +730,7 @@ void _SetupPlayers(TeamFileEx *team1, TeamFileEx *team2, int16_t maxSubs,
 
     /* Show play match menu for first player */
     d0 = _ShowPlayMatchMenu(3, maxSubs, excludeFlags, 1, allowSquadChanges,
-                              &team1->team, &team2->team);
+                              team1, team2);
 
     if (exitGameFlag != 0) goto cancelled;
 
@@ -769,7 +769,7 @@ setup_team2:
 
     /* Show second player menu with teams swapped (team2 as first, team1 as second) */
     d0 = _ShowPlayMatchMenu(d0, maxSubs, excludeFlags, 0, allowSquadChanges,
-                              &team2->team, &team1->team);
+                              team2, team1);
 
     if (exitGameFlag != 0) goto cancelled;
 

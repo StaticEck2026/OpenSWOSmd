@@ -45,7 +45,9 @@
       "Bash(wc:*)",
       "Bash(gawk:*)",
       "Read(//c//**)",
-      "Bash(HOME=/home/bbaker /tmp/build_swos.sh:*)"
+      "Bash(HOME=/home/bbaker /tmp/build_swos.sh:*)",
+      "Bash(/tmp/build_swos.sh -j4 program=uae/dh0/data/SWOS2 2>&1 | tail -3)",
+      "Bash(rm:*)"
     ]
   }
 }

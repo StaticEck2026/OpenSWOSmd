@@ -684,11 +684,11 @@ not_in_penalty:
                 int16_t finishingSkill = 0;
                 Sprite *attacker = opp->lastHeadingTacklingPlayer;
                 if (attacker != (Sprite *)0) {
-                    PlayerInfo *attackerInfo = (PlayerInfo *)_GetPlayerPointerFromShirtNumber(attacker, team);
+                    PlayerInfo *attackerInfo = _GetPlayerPointerFromShirtNumber(attacker, team);
                     finishingSkill = attackerInfo->finishing;
                 }
                 {
-                    PlayerInfo *goalieInfo = (PlayerInfo *)_GetPlayerPointerFromShirtNumber(player, team);
+                    PlayerInfo *goalieInfo = _GetPlayerPointerFromShirtNumber(player, team);
                     finishingSkill -= goalieInfo->goalieSkill;
                 }
                 {

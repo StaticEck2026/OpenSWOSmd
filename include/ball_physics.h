@@ -19,7 +19,7 @@ void _UpdateControllingPlayer(Sprite *playerSprite);
 void _UpdateBallWithControllingGoalkeeper(Sprite *playerSprite);
 void _UpdatePlayerWithBall(Sprite *playerSprite);
 void _SetThrowInPlayerDestinationCoordinates(Sprite *playerSprite);
-uint8_t *_GetPlayerPointerFromShirtNumber(Sprite *playerSprite, TeamGeneralInfo *teamData);
+PlayerInfo *_GetPlayerPointerFromShirtNumber(Sprite *playerSprite, TeamGeneralInfo *teamData);
 
 /* ---- Chunk 53 additions ---- */
 void _UpdateBallVariables(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team);

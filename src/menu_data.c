@@ -8,6 +8,7 @@
 extern void _SetExitMenuFlag(void);
 extern void _TopGoalScorersMenu_0(void);
 extern void _SetupDIYCompetitionStatsMenu(void);
+extern uint8_t diyCompetitionStart[];
 
 /* ---- Stub functions (trivial wrappers removed from SWOS2.s) ---- */
 void _GlobalRetn(void) { }
@@ -1497,7 +1498,7 @@ Menu_DesignDIYLeague designDiyLeagueMenu = {
     { 0, 0, 304, 15 },
     { MENU_CMD_INVISIBLE },
     { MENU_CMD_COLORS, 0x17 },
-    { MENU_CMD_TEXT_PTR, 0x0, (int8_t*)0x2DEF4 },
+    { MENU_CMD_TEXT_PTR, 0x0, (int8_t*)(diyCompetitionStart + 4) },
     MENU_CMD_END,
     { MENU_MARK_START_MENU, 0, 8 },
     MENU_MARK_BYTE_COORDS,
@@ -1505,7 +1506,7 @@ Menu_DesignDIYLeague designDiyLeagueMenu = {
         { 31, 20, -15, 15 },
         { MENU_CMD_NAV, -1, -1, -1, 9 },
         { MENU_CMD_COLORS, 0x1D },
-        { MENU_CMD_TEXT_PTR, 0x0, (int8_t*)0x2DEF4 },
+        { MENU_CMD_TEXT_PTR, 0x0, (int8_t*)(diyCompetitionStart + 4) },
         { MENU_CMD_ONSELECT_FIRE, _DesignDIYLeagueSetName },
         MENU_CMD_END,
     },
@@ -1948,13 +1949,13 @@ Menu_DesignDIYCup designDiyCupMenu = {
     { 0, 0, 304, 15 },
     { MENU_CMD_INVISIBLE },
     { MENU_CMD_COLORS, 0x17 },
-    { MENU_CMD_TEXT_PTR, 0x0, (int8_t*)0x2DEF4 },
+    { MENU_CMD_TEXT_PTR, 0x0, (int8_t*)(diyCompetitionStart + 4) },
     MENU_CMD_END,
     { MENU_MARK_START_MENU, 0, 15 },
     { 0, 5, 304, 15 },
     { MENU_CMD_NAV, -1, -1, -1, 3 },
     { MENU_CMD_COLORS, 0x1D },
-    { MENU_CMD_TEXT_PTR, 0x0, (int8_t*)0x2DEF4 },
+    { MENU_CMD_TEXT_PTR, 0x0, (int8_t*)(diyCompetitionStart + 4) },
     { MENU_CMD_ONSELECT_FIRE, _DesignDIYCupOnSelect2 },
     MENU_CMD_END,
     MENU_MARK_BYTE_COORDS,

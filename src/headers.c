@@ -30,7 +30,7 @@ extern Sprite ballSprite;
 /* Functions from other modules */
 extern void _SetPlayerAnimationTable(uint8_t *animTable, Sprite *sprite);
 extern void _SetPlayerAnimationTableAndPictureIndex(uint8_t *animTable, Sprite *sprite);
-extern uint8_t *_GetPlayerPointerFromShirtNumber(Sprite *playerSprite, TeamGeneralInfo *teamData);
+extern PlayerInfo *_GetPlayerPointerFromShirtNumber(Sprite *playerSprite, TeamGeneralInfo *teamData);
 extern void _PlayKickSample(void);
 extern void _ResetBothTeamSpinTimers(void);
 
@@ -207,11 +207,8 @@ apply_dir:
     int16_t destY = kDefaultDestinations[dirIdx + 1] + ball->y.s.i;
     ball->destY = destY;
 
-    /* Apply heading attribute speed increase.
-     * _GetPlayerPointerFromShirtNumber returns a pointer into TeamGame that is
-     * TEAMGAME_PLAYERS_OFFSET (42) bytes before the PlayerInfo entry. */
-    uint8_t *playerInfoBase = _GetPlayerPointerFromShirtNumber(player, team);
-    PlayerInfo *pi = (PlayerInfo *)(playerInfoBase + TEAMGAME_PLAYERS_OFFSET);
+    /* Apply heading attribute speed increase. */
+    PlayerInfo *pi = _GetPlayerPointerFromShirtNumber(player, team);
     int8_t headingSkill = pi->heading;
     int16_t speedBonus = kPlayerHeaderSpeedIncrease[(int16_t)headingSkill];
     uint16_t ballSpeed = (uint16_t)ball->speed;
@@ -341,11 +338,8 @@ apply_hit:
     /* Set base ball speed for static header */
     ball->speed = (int16_t)kStaticHeaderBaseBallSpeed;
 
-    /* Apply heading attribute speed increase.
-     * _GetPlayerPointerFromShirtNumber returns a pointer TEAMGAME_PLAYERS_OFFSET
-     * bytes before the PlayerInfo entry. */
-    uint8_t *playerInfoBase = _GetPlayerPointerFromShirtNumber(player, team);
-    PlayerInfo *pi = (PlayerInfo *)(playerInfoBase + TEAMGAME_PLAYERS_OFFSET);
+    /* Apply heading attribute speed increase. */
+    PlayerInfo *pi = _GetPlayerPointerFromShirtNumber(player, team);
     int8_t headingSkill = pi->heading;
     int16_t speedBonus = kPlayerHeaderSpeedIncrease[(int16_t)headingSkill];
     uint16_t ballSpeed = (uint16_t)ball->speed;

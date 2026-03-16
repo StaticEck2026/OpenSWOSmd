@@ -54,7 +54,7 @@ void _PlayMatchMenuInit(void);
 void _PlayMatchMenuReinit(void);
 void _SetCurrentSelectedPlayerIndexPointer(void);
 void _OnSwapPlayer(MenuEntry *menuEntry);
-void _PlayMatchMenuSwapPlayers(TeamFile *teamRaw, int16_t selectedSlot, int16_t destSlot);
+void _PlayMatchMenuSwapPlayers(TeamFileEx *team, int16_t selectedSlot, int16_t destSlot);
 int16_t _HandleSquadSwapSelectionToggle(int16_t menuPos);
 void _PlayMatchChangeTactics(MenuEntry *menuEntry);
 void _ExitPlayMatch(void);
@@ -83,6 +83,6 @@ void _TogglePlayerCoach(void);
 #define GAME_TYPE_SEASON     3
 int16_t _ShowPlayMatchMenu(int16_t controlFlags, int16_t maxSubstitutes,
                             int16_t excludeFlags, int16_t isFirstPlayer,
-                            int16_t squadChanges, TeamFile *team1, TeamFile *team2);
+                            int16_t squadChanges, TeamFileEx *team1, TeamFileEx *team2);
 
 #endif

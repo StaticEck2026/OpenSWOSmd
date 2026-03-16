@@ -132,16 +132,18 @@ _ResetBothTeamSpinTimers(void)
 /* ==================================================================
  * _GetPlayerPointerFromShirtNumber
  *   in: playerSprite (A1), teamData (A6)
- *   out: pointer to player info entry (A4 in asm)
+ *   out: PlayerInfo pointer for this player
+ *
+ * ASM returns a4 = teamGamePtr + shirtIdx*61 (42 bytes before PlayerInfo).
+ * C version returns the PlayerInfo directly using TeamGame struct access.
  * ================================================================== */
-uint8_t * __attribute__((used, externally_visible))
+PlayerInfo * __attribute__((used, externally_visible))
 _GetPlayerPointerFromShirtNumber(Sprite *playerSprite, TeamGeneralInfo *teamData)
 {
     uint16_t ord = (uint16_t)playerSprite->playerOrdinal;
     uint16_t idx = ord - 1;
-    uint16_t offset = ingameTeamPlayerOffsets[idx];
-    uint8_t *teamPtr = (uint8_t *)teamData->inGameTeamPtr;
-    return teamPtr + offset;
+    TeamGame *tg = (TeamGame *)teamData->inGameTeamPtr;
+    return &tg->players[idx];
 }
 
 
