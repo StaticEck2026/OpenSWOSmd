@@ -16,7 +16,7 @@
 
 /* Main entry point — called from asm bridge with register params.
  * Returns team1Goals in *outTeam1Goals, team2Goals in *outTeam2Goals. */
-void _CalculateViewResult(DIY_Competition *ctx, uint16_t modeFlag,
+void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
                           uint16_t team1GoalsIn, uint16_t team2GoalsIn,
                           uint16_t statColumnIndex,
                           TeamFileEx *team1, TeamFileEx *team2,
@@ -44,7 +44,7 @@ void _AdjustPlayerSkills(uint16_t playerIdx, TeamFile *teamFile,
 void _ApplyTeamTactics(TeamGame *teamGame);
 
 /* --- CalcTeamPriceRankPercentOffset (Chunk 180) --- */
-int16_t _CalcTeamPriceRankPercentOffset(DIY_Competition *comp, TeamFile *team);
+int16_t _CalcTeamPriceRankPercentOffset(DIYCompetition *comp, TeamFile *team);
 
 /* --- GetPlayerPrice + UpdatePlayerPositionAndReturnRole (Chunk 187) --- */
 int16_t _GetPlayerPrice(TeamFile *teamFile, uint8_t *playerBase, uint16_t playerNumber);

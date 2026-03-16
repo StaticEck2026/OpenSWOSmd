@@ -1,8 +1,3 @@
-/*
- * Amiga SWOS RE Project
- * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
- * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
- */
 /* Auto-emitted prototypes (IDA 9.x) */
 #pragma once
 #include <stdint.h>
@@ -118,9 +113,9 @@ extern uint16_t homeMarketRandomPickRetries;
 extern uint16_t offerSearchRetryCount;
 extern uint16_t goalkeeperDiveAttemptCount;
 extern void * nearestTeammatePtr;
-extern DIY_Competition diyFileBufferCopy;
+extern DIYCompetition diyFileBufferCopy;
 extern uint16_t diyTournamentTeamIds[451];
-extern DIY_Competition diyCompetitionStart;
+extern DIYCompetition diyCompetitionStart;
 extern uint16_t diyMinSubstitutes;
 extern uint16_t diyPointsForAWin;
 extern uint16_t diyLeagueMinSubstitutes;
@@ -2167,8 +2162,8 @@ extern uint16_t isFirstPlayerChoosingTeam;
 extern uint16_t * currentSelectedPlayerIndexPtr;
 extern uint16_t showingCpuTeams;
 extern uint16_t squadChangesAllowed;
-extern TeamFile * playMatchTeam1Ptr;
-extern TeamFile * playMatchTeam2Ptr;
+extern TeamFileEx * playMatchTeam1Ptr;
+extern TeamFileEx * playMatchTeam2Ptr;
 extern uint16_t maxSubstitutesEntries;
 extern uint16_t pmMenuNumPlayers;
 extern uint16_t numPlayersToShowInMenu;

@@ -68,7 +68,7 @@ extern void     _AddJobOffer(uint16_t teamNumber, uint32_t initialFunds);
 extern int16_t  _GetBoardConfidenceScore(void);
 extern int16_t  _IsTeamCodeOkForNationalSelector(uint16_t code);
 extern int16_t  _IsPlayerOkForNationalSelector(void);
-extern uint16_t _FindTeamInDIY(uint16_t teamId, DIY_Competition *compBuffer);
+extern uint16_t _FindTeamInDIY(uint16_t teamId, DIYCompetition *compBuffer);
 extern uint32_t _CalculateStartingBalance(uint16_t teamId);
 extern void     _LoadTeamFile(uint16_t code);
 
@@ -1083,7 +1083,7 @@ searchDomestic:
         uint16_t high150 = (uint16_t)((uint16_t)(mtb * 0x96) / 100);
 
         /* Find team position in DIY table */
-        int16_t pos = _FindTeamInDIY(selTeamNumber, (DIY_Competition *)&competitionFileBuffer);
+        int16_t pos = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)&competitionFileBuffer);
 
         uint16_t posPct = (uint16_t)((uint16_t)((uint16_t)pos * 100) / (numDiyTeams - 1));
         uint16_t invPct = 100 - posPct;
@@ -1173,7 +1173,7 @@ searchDomestic:
             }
 
             /* Same division — check league position */
-            _FindTeamInDIY(teamId, (DIY_Competition *)&competitionFileBuffer);
+            _FindTeamInDIY(teamId, (DIYCompetition *)&competitionFileBuffer);
             uint16_t minDiv = diyTeamMinDivisionIndex + diyTeamMaxDivisionOffset;
             if ((uint16_t)divIdx < minDiv)
                 continue;

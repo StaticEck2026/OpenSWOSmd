@@ -115,7 +115,7 @@ extern uint16_t   overdraftWarningCooldown;
 extern uint16_t   performanceWarningCooldown;
 extern uint16_t   clubBusinessActive;
 extern uint16_t   youreSacked;
-extern uint16_t   currentMessage;
+extern volatile uint16_t   currentMessage;
 extern uint16_t   stayingInOldClub;
 extern uint16_t   careerTeamLostMatch;
 extern uint16_t   competitionSlotUpdatedFlag;
@@ -227,7 +227,7 @@ extern uint8_t    majorTrophyOrCupBonusValue;
 extern uint8_t    diyCompetitionStart[];
 
 /* DIY competition struct cast for diyFileBufferCopy / diyCompetitionStart access */
-#define DIY_COMP(ptr)  ((DIY_Competition *)(ptr))
+#define DIY_COMP(ptr)  ((DIYCompetition *)(ptr))
 
 #define GAME_TYPE_CAREER 4
 
@@ -1106,7 +1106,7 @@ league_match:
         int16_t isDiy = *(int16_t *)(a3 + 0x48);
         if (isDiy != 0) {
             /* DIY league: check group state */
-            uint16_t groupIdxField = (uint16_t)DIY_COMP(diyFileBufferCopy)->currentRound;
+            uint16_t groupIdxField = (uint16_t)DIY_COMP(diyFileBufferCopy)->roundComplete;
             uint16_t offset = groupIdxField * 0x76;
             uint8_t *groupPtr = a3 + offset;
             if (*(int16_t *)(groupPtr + 0x15E) != 0)
@@ -1225,10 +1225,10 @@ diy_comp_match:
              * NOTE: IDA bug at original L28446-28454. The original used
              * lea ($2DAD0).l,a0 which should be diyFileBufferCopy.
              * Also the second currentRound read used a0=cupMatchReceiptsMultiplierTable
-             * but should have been diyFileBufferCopy->currentRound (offset $54).
+             * but should have been diyFileBufferCopy->roundComplete (offset $54).
              */
-            uint16_t totalRoundsField = (uint16_t)DIY_COMP(diyFileBufferCopy)->totalRounds;
-            uint16_t curRoundField = (uint16_t)DIY_COMP(diyFileBufferCopy)->currentRound;
+            uint16_t totalRoundsField = (uint16_t)DIY_COMP(diyFileBufferCopy)->totalMatchesInRound;
+            uint16_t curRoundField = (uint16_t)DIY_COMP(diyFileBufferCopy)->roundComplete;
             int16_t roundIndex = (int16_t)(totalRoundsField - 1 - curRoundField);
             d7 = (uint16_t)((uint32_t)(d7 * cupMatchReceiptsMultiplierTable[roundIndex]) / 100);
 
@@ -3704,7 +3704,7 @@ void _Career_AutoAdvanceLeagueFixtures(void)
         }
     }
 
-    DIY_Competition *base = DIY_COMP(diyCompetitionStart);
+    DIYCompetition *base = DIY_COMP(diyCompetitionStart);
     uint8_t *lastMatchSlots = careerLastMatchIndexByCompetitionSlot;
     uint8_t slotIdx = base->field_2E;
     uint8_t *lastMatchPtr = lastMatchSlots + (uint16_t)slotIdx;
@@ -3805,7 +3805,7 @@ void _Career_AutoAdvanceCupMatches(void)
         }
     }
 
-    DIY_Competition *base = DIY_COMP(diyCompetitionStart);
+    DIYCompetition *base = DIY_COMP(diyCompetitionStart);
     uint8_t *lastMatchSlots = careerLastMatchIndexByCompetitionSlot;
     uint8_t slotIdx = base->field_2E;
     uint8_t *lastMatchPtr = lastMatchSlots + (uint16_t)slotIdx;
@@ -3823,10 +3823,10 @@ void _Career_AutoAdvanceCupMatches(void)
 cup_main_loop:
     _DIY_PlayCupMatchAndAdvance(0, 0); /* allowSquadChanges=0, mode=0 (sim) */
 
-    if (base->currentRound == 0)
+    if (base->roundComplete == 0)
         goto cup_main_loop; /* roundComplete == 0, keep going */
 
-    if (base->finishedFlag != 0)
+    if (base->competitionFinished != 0)
         goto cup_finished; /* finishedFlag != 0 */
 
     if (currentPhase <= base->viewRandomPhase)
@@ -3864,7 +3864,7 @@ cup_show_menu_check:
 
 cup_catch_up:
     /* If roundComplete, update progress and advance fixture */
-    if (base->currentRound != 0) {
+    if (base->roundComplete != 0) {
         _DIY_UpdateCompetitionProgress();
         viewRP = base->viewRandomPhase;
         _DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
@@ -3874,7 +3874,7 @@ cup_catch_up:
         /* Catch-up loop */
         do {
             _DIY_PlayCupMatchAndAdvance(0, 0);
-        } while (base->currentRound == 0);
+        } while (base->roundComplete == 0);
         goto cup_show_menu_check;
     }
 

@@ -1417,7 +1417,7 @@ extern uint8_t  ecQualifyingGroup8Copy[];
 extern void _UpdateBoardConfidenceModifiers(void);
 extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
 extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
-extern uint16_t _FindTeamInDIY(uint16_t teamNo, DIY_Competition *comp);
+extern uint16_t _FindTeamInDIY(uint16_t teamNo, DIYCompetition *comp);
 
 
 /* ================================================================
@@ -1465,7 +1465,7 @@ static int16_t EncodeCompetitionPositionForSeasonInfo_impl(
         /* --- Cup path --- */
         if (*(int16_t *)(compBuf + 0x56) == 0) {
             /* Cup not finished — check if team is still in it */
-            _FindTeamInDIY(selTeamNumber, (DIY_Competition *)compBuf);
+            _FindTeamInDIY(selTeamNumber, (DIYCompetition *)compBuf);
             if (diyFoundTeamIndex == 0)
                 return -104;   /* team not found in cup */
         }
@@ -1494,7 +1494,7 @@ static int16_t EncodeCompetitionPositionForSeasonInfo_impl(
     /* --- Tournament/Groups path (type >= 2) --- */
     if (*(int16_t *)(compBuf + 0x58) == 0) {
         /* Tournament not finished — check if team is still in it */
-        _FindTeamInDIY(selTeamNumber, (DIY_Competition *)compBuf);
+        _FindTeamInDIY(selTeamNumber, (DIYCompetition *)compBuf);
         if (diyFoundTeamIndex == 0)
             return -104;   /* team not found */
     }
@@ -1656,7 +1656,7 @@ void _Career_FillCurrentSeasonInfo(void)
     /* Primary competition */
     {
         d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
-                                      (DIY_Competition *)&competitionFileBuffer);
+                                      (DIYCompetition *)&competitionFileBuffer);
         uint8_t *compDef = (uint8_t *)(uint32_t)currentCompetitionPtr;
 
         if (d1 >= 0) {
@@ -1688,7 +1688,7 @@ void _Career_FillCurrentSeasonInfo(void)
     /* Secondary competition */
     if (*(uint32_t *)(a5 + SI_STRPTR1) != 0) {
         d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
-                                      (DIY_Competition *)&competitionContext);
+                                      (DIYCompetition *)&competitionContext);
         uint8_t *compDef = (uint8_t *)(uint32_t)secondaryCompetitionPtr;
         d1 = EncodeCompetitionPositionForSeasonInfo_impl(
             d1, (uint8_t *)&competitionContext, compDef);
@@ -1698,7 +1698,7 @@ void _Career_FillCurrentSeasonInfo(void)
     /* Tertiary competition */
     if (*(uint32_t *)(a5 + SI_STRPTR2) != 0) {
         d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
-                                      (DIY_Competition *)&tertiaryCompetitionContext);
+                                      (DIYCompetition *)&tertiaryCompetitionContext);
         uint8_t *compDef = (uint8_t *)(uint32_t)tertiaryCompetitionPtr;
         d1 = EncodeCompetitionPositionForSeasonInfo_impl(
             d1, (uint8_t *)&tertiaryCompetitionContext, compDef);
@@ -1708,7 +1708,7 @@ void _Career_FillCurrentSeasonInfo(void)
     /* Quaternary competition */
     if (*(uint32_t *)(a5 + SI_STRPTR3) != 0) {
         d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
-                                      (DIY_Competition *)&euroCupsCompetitionContext);
+                                      (DIYCompetition *)&euroCupsCompetitionContext);
         uint8_t *compDef = (uint8_t *)(uint32_t)quaternaryCompetitionPtr;
         d1 = EncodeCompetitionPositionForSeasonInfo_impl(
             d1, (uint8_t *)&euroCupsCompetitionContext, compDef);

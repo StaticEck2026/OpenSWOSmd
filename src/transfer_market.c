@@ -1931,7 +1931,7 @@ void _ViewOffersMenu(void)
  * ================================================================ */
 
 extern uint16_t playerSelected;
-extern uint16_t currentMessage;
+extern volatile uint16_t currentMessage;
 extern uint8_t  buyPlayerMenu[];
 extern uint8_t  buyPlayerRedrawList[];
 extern uint8_t  aNoOffers[];
@@ -3675,7 +3675,7 @@ drawAndReturn:
 extern uint8_t  tempTeamBuffer[];          /* 0x2AC-byte team buffer */
 extern uint8_t  selTeamPlayerIndices[];    /* 16-byte player index mapping */
 extern uint32_t transferReplacementPriorityTable[]; /* 8 pointers to priority lists */
-extern uint16_t currentMessage;
+extern volatile uint16_t currentMessage;
 extern uint16_t trainingGame;
 extern uint16_t careerFileBuffer;          /* count of teams in TMD pool */
 extern uint8_t  tmdFileBuffer;             /* start of TMD team pool */

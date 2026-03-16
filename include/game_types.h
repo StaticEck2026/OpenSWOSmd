@@ -501,24 +501,25 @@ typedef struct __attribute__((packed)) TeamFileEx {
 typedef char _teamfileex_size_check[(sizeof(TeamFileEx) == 684) ? 1 : -1];
 
 /* ==================================================================
- * DIY_Competition — 96 bytes (0x60), base competition descriptor.
+ * DIYCompetition — 96 bytes (0x60), base competition descriptor.
  * Used for diyFileBufferCopy and as the first 0x60 bytes of
  * diyCompetitionStart (which is actually 0x5C8 bytes total).
  *
  * Original IDA struct had opaque field_2[48] and field_3A[36];
  * sub-fields are broken out here based on actual access patterns.
  * ================================================================== */
-typedef struct DIY_Competition {
+typedef struct DIYCompetition {
     int16_t  competitionType;          /* 0x00 */
     /* --- field_2 sub-fields (48 bytes, 0x02-0x31) --- */
-    uint8_t  field_2[0x26];            /* 0x02: first 38 bytes opaque/name data */
+    uint16_t isActive;                 /* 0x02: 0=inactive, 1=in use */
+    int8_t   competitionName[36];      /* 0x04: competition name string buffer */
     uint32_t namePtr;                  /* 0x28: raw 68k ptr to competition name string */
     uint8_t  compId;                   /* 0x2C: competition ID byte */
-    uint8_t  field_2D;                 /* 0x2D */
-    uint8_t  field_2E;                 /* 0x2E */
-    uint8_t  viewRandomPhase;          /* 0x2F: copy of startMonth for view phase */
-    uint8_t  avgSkill;                 /* 0x30: average team skill */
-    uint8_t  strengthTier;             /* 0x31: strength tier */
+    uint8_t  slotId;                   /* 0x2D: competition slot index for cache matching */
+    uint8_t  field_2E;                 /* 0x2E: team configuration byte */
+    uint8_t  viewRandomPhase;          /* 0x2F: current month/phase for scheduling */
+    uint8_t  avgSkill;                 /* 0x30: average team skill level */
+    uint8_t  strengthTier;             /* 0x31: strength bracket tier */
     /* --- end field_2 --- */
     int16_t  numTeams;                 /* 0x32 */
     int16_t  pitchTypeOrSeason;        /* 0x34 */
@@ -526,29 +527,29 @@ typedef struct DIY_Competition {
     int8_t   startMonth;               /* 0x38 */
     int8_t   endMonth;                 /* 0x39 */
     /* --- field_3A sub-fields (36 bytes, 0x3A-0x5D) --- */
-    int16_t  resultCode;               /* 0x3A: match result code */
-    int16_t  substitutesCount;         /* 0x3C */
-    int16_t  progressField4;           /* 0x3E: copied in progress sync */
-    int16_t  progressField6;           /* 0x40: copied in progress sync */
-    int16_t  progressField8;           /* 0x42: copied in progress sync */
-    int16_t  progressFieldA;           /* 0x44: international tournament flag A */
-    int16_t  progressFieldC;           /* 0x46: international tournament flag B */
-    int16_t  hasGroups;                /* 0x48: tournament slot/has groups indicator */
-    int16_t  field4A;                  /* 0x4A */
-    int16_t  nonNationalCount;         /* 0x4C */
-    int16_t  field4E;                  /* 0x4E */
-    int16_t  halfTeams;                /* 0x50: round size / half teams */
-    int16_t  totalRounds;              /* 0x52: teams per round / total rounds */
-    int16_t  currentRound;             /* 0x54: current round index */
-    int16_t  finishedFlag;             /* 0x56: competition finished marker */
-    int16_t  exitFlag;                 /* 0x58: abort/exit flag */
-    int16_t  numRounds;                /* 0x5A: round count */
-    int16_t  subRoundCounter;          /* 0x5C */
+    int16_t  resultCode;               /* 0x3A: match/competition result code, init 0xFFFF */
+    int16_t  substitutesCount;         /* 0x3C: number of substitutes allowed */
+    int16_t  slotStateA;               /* 0x3E: competition slot state A / menu ordinal, init 3 */
+    int16_t  slotStateB;               /* 0x40: competition slot state B, init 2 */
+    int16_t  slotStateC;               /* 0x42: competition slot state C / menu ordinal, init 8 */
+    int16_t  matchStarted;             /* 0x44: 1 when match processing begins */
+    int16_t  careerTeamInvolved;       /* 0x46: 1 when career team participates */
+    int16_t  hasGroups;                /* 0x48: 0=no, 1=groups, 2=groups with final */
+    int16_t  menuState;                /* 0x4A: cup menu state (0-6) */
+    int16_t  roundIterator;            /* 0x4C: round iteration counter */
+    int16_t  numTeamsInStage;          /* 0x4E: teams in current stage */
+    int16_t  matchPairsPerRound;       /* 0x50: match pairs per round (half teams) */
+    int16_t  totalMatchesInRound;      /* 0x52: total matches/fixtures in round */
+    int16_t  roundComplete;            /* 0x54: 0=in progress, 1=round just completed */
+    int16_t  competitionFinished;      /* 0x56: 1 when competition is fully complete */
+    int16_t  currentRoundIndex;        /* 0x58: incremented after each completed round */
+    int16_t  numRounds;                /* 0x5A: total rounds in competition */
+    int16_t  subRoundCounter;          /* 0x5C: sub-round counter for multi-fixture rounds */
     /* --- end field_3A --- */
     int16_t  playEachTeam;             /* 0x5E */
-} DIY_Competition;
+} DIYCompetition;
 
-typedef char _diy_competition_size_check[(sizeof(DIY_Competition) == 0x60) ? 1 : -1];
+typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x60) ? 1 : -1];
 
 /* ==================================================================
  * JobOffer — 26 bytes, pack(2)

@@ -1481,12 +1481,12 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
     if (type == 1) {
         /* Cup */
         _ShowDIYCupMenuWithParams(1, 0, d2);
-        if (((DIY_Competition *)diyCompetitionStart)->currentRound != 0)
+        if (((DIYCompetition *)diyCompetitionStart)->roundComplete != 0)
             _DIY_UpdateCompetitionProgress();
     } else if (type == 2) {
         /* Hybrid */
         _DIY_EditCompetitionSlot(1, 0, d2);
-        if (((DIY_Competition *)diyFileBufferCopy)->finishedFlag != 0)
+        if (((DIYCompetition *)diyFileBufferCopy)->competitionFinished != 0)
             _DIY_AdvanceToNextCompetitionSlot();
     } else {
         /* League */
@@ -1725,9 +1725,9 @@ void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
 __attribute__((used, externally_visible))
 void _Career_AutoSimulatePendingMatchUntilHumanTeam(void)
 {
-    DIY_Competition *bufComp = (DIY_Competition *)diyFileBufferCopy;
+    DIYCompetition *bufComp = (DIYCompetition *)diyFileBufferCopy;
     uint8_t *buf = diyFileBufferCopy;
-    uint16_t slotIdx = bufComp->currentRound;
+    uint16_t slotIdx = bufComp->roundComplete;
     uint8_t *slot = buf + (uint32_t)slotIdx * 0x76;
 
     if (*(uint16_t *)(slot + 0x15E) != 0)
@@ -1766,7 +1766,7 @@ __attribute__((used, externally_visible))
 void _Career_AutoPlayCupMatchAndAdvanceLoop(void)
 {
     for (;;) {
-        uint16_t field54 = ((DIY_Competition *)diyCompetitionStart)->currentRound;
+        uint16_t field54 = ((DIYCompetition *)diyCompetitionStart)->roundComplete;
         if (field54 != 0 && careerSlotProcessingInProgress != 0) {
             _DIY_UpdateCompetitionProgress();
             return;
@@ -1787,20 +1787,20 @@ void _Career_AutoPlayCupMatchAndAdvanceLoop(void)
 __attribute__((used, externally_visible))
 void _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot(void)
 {
-    DIY_Competition *bufComp = (DIY_Competition *)diyFileBufferCopy;
+    DIYCompetition *bufComp = (DIYCompetition *)diyFileBufferCopy;
     uint8_t *buf = diyFileBufferCopy;
-    uint16_t slotIdx = bufComp->currentRound;
+    uint16_t slotIdx = bufComp->roundComplete;
     uint8_t *slot = buf + (uint32_t)slotIdx * 0x76;
 
-    DIY_Competition *comp = (DIY_Competition *)diyCompetitionStart;
+    DIYCompetition *comp = (DIYCompetition *)diyCompetitionStart;
 
     if (*(uint16_t *)(slot + 0x15E) != 0) {
         /* League type slot */
         _Career_AutoPlayOrSimulateLeagueFixtureLoop();
 
         /* Copy progress fields: comp→buf */
-        bufComp->progressFieldA = comp->progressFieldA;
-        bufComp->progressFieldC = comp->progressFieldC;
+        bufComp->matchStarted = comp->matchStarted;
+        bufComp->careerTeamInvolved = comp->careerTeamInvolved;
         bufComp->resultCode     = comp->resultCode;
 
         /* Advance if diyMinSubstitutes == 0 */
@@ -1811,13 +1811,13 @@ void _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot(void)
         _Career_AutoPlayCupMatchAndAdvanceLoop();
 
         /* Copy progress fields: comp→buf (4 fields) */
-        bufComp->progressFieldA  = comp->progressFieldA;
-        bufComp->progressFieldC  = comp->progressFieldC;
+        bufComp->matchStarted  = comp->matchStarted;
+        bufComp->careerTeamInvolved  = comp->careerTeamInvolved;
         bufComp->resultCode      = comp->resultCode;
-        bufComp->hasGroups       = comp->nonNationalCount;
+        bufComp->hasGroups       = comp->roundIterator;
 
         /* Advance if competition finished */
-        if (comp->finishedFlag != 0)
+        if (comp->competitionFinished != 0)
             _DIY_AdvanceToNextCompetitionSlot();
     }
 }
@@ -1835,19 +1835,19 @@ __attribute__((used, externally_visible))
 void _DIY_AdvanceToNextCompetitionSlot(void)
 {
     uint8_t *buf = diyFileBufferCopy;
-    DIY_Competition *bufComp = (DIY_Competition *)buf;
+    DIYCompetition *bufComp = (DIYCompetition *)buf;
 
     /* Already at end? */
-    if (bufComp->exitFlag != 0)
+    if (bufComp->currentRoundIndex != 0)
         return;
 
-    uint16_t currentSlot = bufComp->currentRound;
-    uint16_t maxSlots = bufComp->totalRounds;
+    uint16_t currentSlot = bufComp->roundComplete;
+    uint16_t maxSlots = bufComp->totalMatchesInRound;
 
     if ((uint16_t)(currentSlot + 1) == maxSlots) {
         /* Reached max slots: mark competition finished */
         *(uint16_t *)(buf + 2) = 2;                     /* DIY_COMPETITION_FIELD_2 */
-        bufComp->exitFlag = 1;
+        bufComp->currentRoundIndex = 1;
         return;
     }
 
@@ -1864,7 +1864,7 @@ void _DIY_AdvanceToNextCompetitionSlot(void)
     }
 
     /* Increment current slot index */
-    bufComp->currentRound = currentSlot + 1;
+    bufComp->roundComplete = currentSlot + 1;
 
     /* Load the new slot */
     _DIY_LoadCurrentCompetitionSlot();
@@ -2275,7 +2275,7 @@ static uint8_t *addNextRoundCupEntry(uint8_t **srcPtr, uint16_t idx, uint16_t to
     (*srcPtr)++;
 
     /* GetNextCupRoundStringIndex(idx, total, subRoundCounter) */
-    uint16_t cupRoundIdx = _GetNextCupRoundStringIndex(idx, total, ((DIY_Competition *)base)->subRoundCounter);
+    uint16_t cupRoundIdx = _GetNextCupRoundStringIndex(idx, total, ((DIYCompetition *)base)->subRoundCounter);
     out[9] = (uint8_t)cupRoundIdx;
     out[7] = (uint8_t)idx;
     out[0] = (uint8_t)teamId;
@@ -2336,7 +2336,7 @@ static uint8_t *addCupEntry(uint8_t **srcPtr, uint16_t teamSlot, uint16_t roundI
 __attribute__((used, externally_visible))
 void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
 {
-    DIY_Competition *comp = (DIY_Competition *)blk;
+    DIYCompetition *comp = (DIYCompetition *)blk;
     uint16_t type = comp->competitionType;
 
     if (type == 0) {
@@ -2435,7 +2435,7 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
         uint16_t opt = *(uint16_t *)(base + 0x15A);   /* d4: opt param for GetCupRoundStringIndex */
         uint16_t teamSlot = *(uint16_t *)(base + 0x2C); /* d2: team slot index */
         uint8_t *out = teamSelectionKeyCache;
-        uint16_t numSlots = comp->totalRounds;
+        uint16_t numSlots = comp->totalMatchesInRound;
         uint16_t slotIdx = 0;
 
         while (slotIdx != numSlots) {

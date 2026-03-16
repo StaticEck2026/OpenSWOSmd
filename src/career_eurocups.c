@@ -271,7 +271,7 @@ void _DIY_CachePrimaryQualifiedTeamsGrid(void)
     uint8_t *dst = primaryQualifiedTeamGrids;
     uint16_t *cachedIds = cachedPrimaryQualifiedTeamIds;
     uint8_t *comp = diyCompetitionStart;
-    DIY_Competition *diyComp = (DIY_Competition *)comp;
+    DIYCompetition *diyComp = (DIYCompetition *)comp;
     uint16_t *leaguePositions = (uint16_t *)(comp + 0x6E);
     uint16_t *teamIdsTable = (uint16_t *)(comp + 0x12E);
     uint16_t count = 9;

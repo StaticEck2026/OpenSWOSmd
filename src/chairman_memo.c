@@ -16,7 +16,7 @@
 extern MenuEntry menuEntries[];
 extern uint16_t fireResetFlag;
 extern uint16_t isNationalSelector;
-extern uint16_t currentMessage;
+extern volatile uint16_t currentMessage;
 extern uint8_t *plNameForMessage;
 extern volatile uint16_t currentGameTick;
 extern uint16_t clubBusinessActive;

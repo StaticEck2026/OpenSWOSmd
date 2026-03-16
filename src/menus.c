@@ -2467,7 +2467,7 @@ extern uint8_t  seasonPlaying;
 extern uint16_t selTeamNumber;
 extern uint8_t  teamSelectionKeyCache[];
 extern uint16_t numOffers;
-extern uint16_t currentMessage;
+extern volatile uint16_t currentMessage;
 extern uint16_t primaryCompSquadViewParam;
 extern uint16_t seasonSquadTeamNumbers[];
 extern uint32_t selectedContest;
@@ -6159,7 +6159,7 @@ void _StatsViewSquads(void)
 {
     uint16_t *teams = (uint16_t *)diyTeamsBufferPtr;
     uint16_t numTeams = diyNumberOfTeams;
-    uint16_t rowMode = ((DIY_Competition *)diyCompetitionStart)->substitutesCount;
+    uint16_t rowMode = ((DIYCompetition *)diyCompetitionStart)->substitutesCount;
     _SelectAndShowSquadToView(teams, numTeams, rowMode);
 }
 

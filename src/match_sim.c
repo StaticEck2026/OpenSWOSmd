@@ -32,8 +32,8 @@ extern uint16_t _Rand2(void);
 extern uint16_t _ShouldApplyRandomPlayerStatusAfterSim(void);
 
 /* C functions (defined in diy_competition.c) */
-extern uint16_t _FindTeamInDIY(uint16_t teamNo, DIY_Competition *comp);
-extern uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, DIY_Competition *comp);
+extern uint16_t _FindTeamInDIY(uint16_t teamNo, DIYCompetition *comp);
+extern uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, DIYCompetition *comp);
 
 /* C-callable bridges to asm functions (defined in swos2_unit.s) */
 /* Forward declaration: _UpdatePlayerPositionAndReturnRole (Chunk 187) */
@@ -132,7 +132,7 @@ extern uint16_t _GetPlayerRandomNum(uint8_t *teamEntry);
 extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
 
 /* ---- Module-local state ---- */
-static DIY_Competition *viewResultCtx;
+static DIYCompetition *viewResultCtx;
 static uint16_t  viewResultModeFlag;
 static uint16_t  viewResultStatColumnIndex;
 static uint16_t  viewResultTeam1GoalsIn;
@@ -808,7 +808,7 @@ uint16_t _ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t goalsCou
  * _CalculateViewResult — main entry point
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _CalculateViewResult(DIY_Competition *ctx, uint16_t modeFlag,
+void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
                           uint16_t team1GoalsIn, uint16_t team2GoalsIn,
                           uint16_t statColumnIndex,
                           TeamFileEx *team1, TeamFileEx *team2,
@@ -1281,7 +1281,7 @@ int16_t _GetPlayerPricePercentageChange(int16_t factor, TeamFile *teamFile,
             d4 += (int16_t)callerD0;
 
             /* Add price rank offset */
-            int16_t pctOff = _CalcTeamPriceRankPercentOffset((DIY_Competition *)diyCompetitionStart, teamFile);
+            int16_t pctOff = _CalcTeamPriceRankPercentOffset((DIYCompetition *)diyCompetitionStart, teamFile);
             d4 += pctOff;
         }
     }
@@ -1694,13 +1694,13 @@ uint8_t *_BuildMatchResultString(uint16_t control, uint16_t leg2, uint16_t leg1,
  * a0 = competition context, a1 = team file pointer.
  * Returns half of the clamped [-50, +50] percentage offset. */
 __attribute__((used, externally_visible))
-int16_t _CalcTeamPriceRankPercentOffset(DIY_Competition *comp, TeamFile *team)
+int16_t _CalcTeamPriceRankPercentOffset(DIYCompetition *comp, TeamFile *team)
 {
     /* competitionType must be 0 */
     if (comp->competitionType != 0)
         return 0;
 
-    /* Check minimum number of entries at ctx+0x2B8 (beyond DIY_Competition struct) */
+    /* Check minimum number of entries at ctx+0x2B8 (beyond DIYCompetition struct) */
     uint16_t numEntries = *(uint16_t *)((uint8_t *)comp + 0x2B8);
     if (team->teamControls == TEAM_COMPUTER) {
         /* Cup: need at least 3 entries */

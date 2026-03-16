@@ -302,13 +302,13 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry);
 void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
 
 /* --- GetMoreExpensiveTeamsCount (Chunk 171) --- */
-uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, DIY_Competition *comp);
+uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, DIYCompetition *comp);
 
 /* --- InitializeNewSeason_BuildTeamBudgetRankTable (Chunk 172) --- */
 void _InitializeNewSeason_BuildTeamBudgetRankTable(void);
 
 /* --- FindTeamInDIY (Chunk 173) --- */
-uint16_t _FindTeamInDIY(uint16_t teamNo, DIY_Competition *comp);
+uint16_t _FindTeamInDIY(uint16_t teamNo, DIYCompetition *comp);
 
 /* --- DIY_RecomputeCompetitionDerivedProgressionTable (Chunk 175) --- */
 void _DIY_RecomputeCompetitionDerivedProgressionTable(void);

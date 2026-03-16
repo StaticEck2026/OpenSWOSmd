@@ -542,7 +542,7 @@ extern uint16_t careerMatchSimulatedFlag;
 extern uint16_t numNewJobOffers;
 extern uint16_t numJobOffers;
 extern uint16_t careerTeamLostMatch;
-extern uint16_t currentMessage;
+extern volatile uint16_t currentMessage;
 extern uint8_t  careerLastMatchIndexByCompetitionSlot[];
 extern uint32_t currentCompetitionPtr;
 extern uint32_t secondaryCompetitionPtr;
