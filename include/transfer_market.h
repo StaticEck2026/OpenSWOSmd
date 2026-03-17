@@ -65,7 +65,7 @@ int16_t _CheckForTransferOffers(void);
 void _Career_CommitNewBalanceAndResetFinanceTotals(void);
 
 /* ---- Career pool & foreign market patching (Chunk 75) ---- */
-void _AddCareerPoolPlayer(uint16_t teamNumber, uint16_t playerOrdinal, uint8_t *teamFilePtr);
+void _AddCareerPoolPlayer(uint16_t teamNumber, uint16_t playerOrdinal, PlayerFile *playerFile);
 void _Career_PatchTeamWithForeignMarketPlayers(TeamFileEx *teamPtr);
 void _Career_ApplyForeignMarketPlayersToSelectedTeams(void);
 void _Career_ApplyPendingForeignMarketPlayersToSelectedTeams(void);

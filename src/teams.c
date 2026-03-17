@@ -460,9 +460,9 @@ uint16_t _GetAveragePlayerPriceInSelectedTeams(void)
  *   clobbers: d1, a0
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _GetPlayerRandomNum(uint8_t *teamEntry)
+uint16_t _GetPlayerRandomNum(PlayerFile *playerFile)
 {
-    PlayerFile *pf = (PlayerFile *)(teamEntry + 76);
+    PlayerFile *pf = &playerFile[2];
     uint8_t d0, d1;
 
     d0 = (uint8_t)pf->price;                       /* move.b PLAYERFILE_PRICE+$4C(a0),d0 */

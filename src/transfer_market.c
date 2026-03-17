@@ -1323,7 +1323,7 @@ void _Career_CommitNewBalanceAndResetFinanceTotals(void)
  *   in:  d0.w = teamNumber, d1.b = playerOrdinal, a0 = teamFilePtr
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _AddCareerPoolPlayer(uint16_t teamNumber, uint16_t playerOrdinal, uint8_t *teamFilePtr)
+void _AddCareerPoolPlayer(uint16_t teamNumber, uint16_t playerOrdinal, PlayerFile *playerFile)
 {
     uint16_t idx = numForeignMarketPlayers2;
     MarketPlayer *entry = &careerForeignMarketPlayers[idx];
@@ -1338,7 +1338,7 @@ void _AddCareerPoolPlayer(uint16_t teamNumber, uint16_t playerOrdinal, uint8_t *
 
     /* Copy 19 words (38 bytes) of player data from players[] offset */
     dst = (volatile uint16_t *)&entry->player;
-    src = (uint16_t *)((TeamFileEx *)teamFilePtr)->players;
+    src = (uint16_t *)&playerFile[2];
     for (i = 0; i < 19; i++)
         dst[i] = src[i];
 
@@ -2191,8 +2191,8 @@ extern uint16_t isNationalSelector;
 extern uint16_t viewFutureTeamModeFlag;
 
 extern uint8_t *_ExtractSurname(uint8_t *name, uint16_t maxLenAndFlags);
-extern void _FormTopSkillsString(uint8_t *dst, uint8_t *playerBase);
-extern void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, uint8_t *player);
+extern void _FormTopSkillsString(uint8_t *dst, PlayerFile *playerFile);
+extern void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, PlayerFile *playerFile);
 extern void _InitPlayerValueDisplayStruct(uint8_t *playerEntry, uint8_t *dst);
 extern void _FormatPlayerValueOrStatusText(uint8_t *base, uint8_t *dst);
 
@@ -2266,7 +2266,7 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
     }
 
     /* Entry 2: Status sprite */
-    _SetSquadMenuEntryStatusSprite_AfterSim(a0, (uint8_t *)pf);
+    _SetSquadMenuEntryStatusSprite_AfterSim(a0, pf);
     a0->y = y;
     a0->isInvisible = 0;
     a0++;
@@ -2311,7 +2311,7 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
     a0++;
 
     /* Entry 6: Top skills */
-    _FormTopSkillsString((uint8_t *)a0->fg, player);
+    _FormTopSkillsString((uint8_t *)a0->fg, (PlayerFile *)player);
     a0->y = y;
     a0->isInvisible = 0;
     a0++;
@@ -3693,7 +3693,7 @@ extern TeamFileEx *_GetTeamPointer(uint16_t teamNumber);
 extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
 extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
 extern void _Career_RemovePlayerFromTeamInternal(uint16_t teamNumber, uint16_t playerOrd);
-extern void _AddCareerPoolPlayer(uint16_t teamNumber, uint16_t playerOrdinal, uint8_t *teamFilePtr);
+extern void _AddCareerPoolPlayer(uint16_t teamNumber, uint16_t playerOrdinal, PlayerFile *playerFile);
 extern void _Career_RemovePlayerFromSelectedTeamRoster(uint16_t playerIndex);
 extern void _SetBenchPlayersNumbers(TeamFileEx *team);
 extern void _TrainingMatch_SaveSelectedPlayerId(uint16_t value);
@@ -3765,7 +3765,7 @@ void _Career_BuildForeignMarketPoolFromSelectedTeam(void)
         pf->cardsInjuries = 0;
         pf->positionAndFace &= ~0x01;  /* bclr #0 */
         pf->someFlag = 0;
-        _AddCareerPoolPlayer(selTeamNumber, (uint16_t)i, p);
+        _AddCareerPoolPlayer(selTeamNumber, (uint16_t)i, (PlayerFile *)p);
     }
 
     /* If team found in TMD file, remove and re-add with updated data */
@@ -3871,7 +3871,7 @@ void _Career_TransferPlayerAndAddReplacedToMarketPool(uint16_t sourceTeam, uint1
 
         /* Remove from source team and add to career pool */
         _Career_RemovePlayerFromTeamInternal(d6, bestOrdinal);
-        _AddCareerPoolPlayer(d6, bestOrdinal, bestPlayer);
+        _AddCareerPoolPlayer(d6, bestOrdinal, (PlayerFile *)bestPlayer);
         offerSwapSlotsUsed++;
 
         /* Remove from selected team roster */
@@ -4456,7 +4456,7 @@ void _Career_ConvertPlayerToTrialistFromName(uint16_t sourceTeam, uint16_t playe
         pf->positionAndFace &= ~0x01;  /* bclr #0 */
     } else {
         /* Different team: add to career pool */
-        _AddCareerPoolPlayer(d5, d6, base);
+        _AddCareerPoolPlayer(d5, d6, (PlayerFile *)base);
         transferPoolSlotsUsed++;
     }
 }
@@ -4928,13 +4928,13 @@ extern uint16_t offerNegotiationStep2Amount;
 extern uint16_t swapPlayerValueRandom;
 extern uint16_t extraPlayerValueRandom;
 
-extern uint16_t _IsPlayerInjured(uint8_t *playerBase, int16_t mode);
+extern uint16_t _IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
 extern uint16_t _SnapToNearestAvgTeamValueBase(uint16_t value);
 extern uint16_t _SnapUpToAvgTeamValueBase(uint16_t value);
 extern void _SaveRand2State(void);
 extern void _RestoreRand2State(void);
 extern void _Randomize2(uint16_t seed);
-extern uint16_t _GetPlayerRandomNum(uint8_t *teamEntry);
+extern uint16_t _GetPlayerRandomNum(PlayerFile *playerFile);
 
 __attribute__((used, externally_visible))
 void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
@@ -4949,7 +4949,7 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
     uint8_t *playerEntry = _GetPlayer(selTeamNumber, playerOrdinal);
     PlayerFile *pfEntry = (PlayerFile *)(playerEntry + PF_OFF);
     uint16_t refSkill = (uint8_t)pfEntry->price;
-    if (_IsPlayerInjured(playerEntry, -1) != 0)
+    if (_IsPlayerInjured((PlayerFile *)playerEntry, -1) != 0)
         return;
 
     /* Get position mask */
@@ -5055,7 +5055,7 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
                     PlayerFile *extraPf = (PlayerFile *)(extraEntry + PF_OFF);
                     uint16_t extraPos = (uint16_t)extraPf->positionAndFace & 0xE0;
                     offerExtraPositionMask = extraPos;
-                    if (_IsPlayerInjured(extraEntry, -1) != 0)
+                    if (_IsPlayerInjured((PlayerFile *)extraEntry, -1) != 0)
                         return;
                 }
             }
@@ -5212,7 +5212,7 @@ int16_t _EvaluateTransferOfferNegotiation(void)
     _SaveRand2State();
 
     uint8_t *playerEntry = _GetPlayer(teamOffering, offerPrimaryPlayerOrdinal);
-    uint16_t playerRand = _GetPlayerRandomNum(playerEntry);
+    uint16_t playerRand = _GetPlayerRandomNum((PlayerFile *)playerEntry);
     _Randomize2(playerRand);
 
     uint16_t d2 = _Rand2();  /* save for later XOR */

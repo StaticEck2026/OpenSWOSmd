@@ -493,7 +493,7 @@ extern uint16_t maxSubstitutes;
 extern void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16_t baseCount, TeamFileEx *teamPtr);
 extern void _InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2);
 extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
-extern uint16_t _IsPlayerInjured(uint8_t *playerBase, int16_t mode);
+extern uint16_t _IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
 extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
 extern uint16_t _GetStringLength(const uint8_t *str);
 extern void _PanicHaltLoop(void);
@@ -543,7 +543,7 @@ void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
     while ((uint16_t)d7 >= 13) {
         uint8_t *playerBase = _GetPlayerAtIndex(selTeamNumber, (uint16_t)d7);
 
-        if (_IsPlayerInjured(playerBase, 0) == 0) {
+        if (_IsPlayerInjured((PlayerFile *)playerBase, 0) == 0) {
             /* Not injured — copy 38 bytes (sizeof(PlayerFile)) from player data */
             PlayerFile *srcPf = (PlayerFile *)(playerBase + 76);
             volatile uint8_t *srcV = (volatile uint8_t *)srcPf;

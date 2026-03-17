@@ -521,8 +521,8 @@ void _ClearCareerMatchPlayerStatusBucket(void) {
  * Returns 1 if injured, 0 if not.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _IsPlayerInjured(uint8_t *playerBase, int16_t mode) {
-    PlayerFile *pf = (PlayerFile *)(playerBase + 76);
+uint16_t _IsPlayerInjured(PlayerFile *playerFile, int16_t mode) {
+    PlayerFile *pf = &playerFile[2];
     uint8_t ci = pf->cardsInjuries;
 
     if (trainingGame != 0)
@@ -3353,7 +3353,7 @@ void _UpdateCareerPlayersFormAfterMatch(uint8_t *compCtx, TeamFileEx *team1, Tea
         int8_t d4;  /* form delta to apply */
 
         /* Check if player is injured */
-        if (_IsPlayerInjured(a0, (int16_t)d6)) {
+        if (_IsPlayerInjured((PlayerFile *)a0, (int16_t)d6)) {
             /* Injured: 33% chance of -1 form */
             if (_Rand2() > 0x33)
                 goto clampForm;

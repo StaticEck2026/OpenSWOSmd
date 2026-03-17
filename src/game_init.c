@@ -92,7 +92,7 @@ extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
 extern uint16_t _cGetPlayerAtIndexFileIdx;
 extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
 extern uint8_t *_ExtractSurname(uint8_t *name, uint16_t maxLenAndFlags);
-extern uint16_t _IsPlayerInjured(uint8_t *playerBase, int16_t mode);
+extern uint16_t _IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
 extern int16_t _ShouldApplyRandomPlayerStatusAfterSim(void);
 extern void _Career_UpdateSinglePlayerPostMatchStats(uint8_t *playerFileBase);
 extern uint16_t _GetAveragePlayerPrice(TeamFileEx *teamFileBase);
@@ -399,7 +399,7 @@ void _InitInGamePlayer(uint16_t playerIndex, uint16_t playerSlot,
     /* Check if player is injured/unavailable (bench slots 11+) */
     if (playerSlot >= 11) {
         int16_t mode = (int16_t)plgD3Param;
-        uint16_t injured = _IsPlayerInjured(playerBase, mode);
+        uint16_t injured = _IsPlayerInjured((PlayerFile *)playerBase, mode);
         if (injured != 0) {
             /* Player is injured — mark as unavailable */
             pi->position = (int8_t)0xFF;

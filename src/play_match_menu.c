@@ -117,7 +117,7 @@ extern uint8_t *_ExtractSurname(uint8_t *name, uint16_t maxLenAndFlags);
 extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
 extern uint16_t _IsTeamNational(TeamFileEx *team);
 extern void _InitPlayerValueDisplayStruct(uint8_t *playerEntry, uint8_t *dst);
-extern uint16_t _IsPlayerInjured(uint8_t *playerBase, int16_t mode);
+extern uint16_t _IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
 extern uint16_t _GetNumberOfSubstitutes(uint8_t *team, uint16_t numPl);
 extern uint16_t _GetNumberOfSubstitutesInSelectionList(uint8_t *team, uint16_t extraCount);
 extern uint32_t _GetNumberOfAvailablePlayers(uint8_t *team, int16_t excludeCardsFlag, uint16_t numPl);
@@ -134,9 +134,9 @@ extern void _ShowStandardChooseTacticsMenu(TeamFileEx *team);
 extern void _TrainingMatch_RestoreLastMatchState(void);
 extern void _TrainingMatch_RestoreSavedTeamSelectionState(void);
 
-extern void _FormTopSkillsString(uint8_t *dst, uint8_t *playerBase);
+extern void _FormTopSkillsString(uint8_t *dst, PlayerFile *playerFile);
 extern void _FormatPlayerValueOrStatusText(uint8_t *base, uint8_t *dst);
-extern void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, uint8_t *player, uint16_t flag);
+extern void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, PlayerFile *playerFile, uint16_t flag);
 extern void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void);
 extern void _TrainingMatch_ApplyUseMatchTeamAndSwapSubs(void);
 
@@ -1143,7 +1143,7 @@ void _DrawPlayerEntries(MenuEntry *a5) {
 
     /* Injured check */
     if (!viewingOpponentTeam) {
-        if (_IsPlayerInjured(player, playMatchExcludeFlags)) {
+        if (_IsPlayerInjured((PlayerFile *)player, playMatchExcludeFlags)) {
             setBgColor(bgE, (bgColor(bgE) & 0xFFF0) | RED_10);
             setBgColor(numE, (bgColor(numE) & 0xFFF0) | RED_10);
         }
@@ -1158,7 +1158,7 @@ void _DrawPlayerEntries(MenuEntry *a5) {
     bgE->y = a5->y;
 
     /* Status sprite */
-    _SetSquadMenuEntryStatusSprite(bgE, player, (uint16_t)playMatchExcludeFlags);
+    _SetSquadMenuEntryStatusSprite(bgE, (PlayerFile *)player, (uint16_t)playMatchExcludeFlags);
 
     /* Position change arrows */
     if (!viewingOpponentTeam && d4 < 11) {
@@ -1215,7 +1215,7 @@ void _DrawPlayerEntries(MenuEntry *a5) {
 
     /* Skills string (entry 35) */
     MenuEntry *skE = posE + 1;
-    _FormTopSkillsString((uint8_t *)skE->fg, player);
+    _FormTopSkillsString((uint8_t *)skE->fg, (PlayerFile *)player);
     skE->y = a5->y;
 
     /* Value/status (entry 36) */
@@ -1271,11 +1271,11 @@ extern uint32_t topSkillBitRotEven[];   /* 7 pointers to byte arrays */
 extern uint32_t topSkillBitRotOdd[];
 
 __attribute__((used, externally_visible))
-void _FormTopSkillsString(uint8_t *dst, uint8_t *playerBase)
+void _FormTopSkillsString(uint8_t *dst, PlayerFile *playerFile)
 {
-    /* playerBase = a6 in asm = GetPlayer-style pointer (teamBase + fileIdx*38).
-     * PlayerFile data is at playerBase + 76. */
-    PlayerFile *pf = (PlayerFile *)(playerBase + 76);
+    /* playerFile = GetPlayer-style pointer (teamBase + fileIdx*38) cast to PlayerFile *.
+     * PlayerFile data is at playerFile[2] (2 * 38 = 76 bytes in). */
+    PlayerFile *pf = &playerFile[2];
 
     uint16_t posGroup = (pf->positionAndFace & 0xE0) >> 5;
     if (posGroup == 0) {

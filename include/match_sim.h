@@ -47,7 +47,7 @@ void _ApplyTeamTactics(TeamGame *teamGame);
 int16_t _CalcTeamPriceRankPercentOffset(DIYCompetition *comp, TeamFile *team);
 
 /* --- GetPlayerPrice + UpdatePlayerPositionAndReturnRole (Chunk 187) --- */
-int16_t _GetPlayerPrice(TeamFile *teamFile, uint8_t *playerBase, uint16_t playerNumber);
+int16_t _GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t playerNumber);
 uint32_t _UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx);
 
 /* --- BuildMatchResultString (Chunk 106) --- */

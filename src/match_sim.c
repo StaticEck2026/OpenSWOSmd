@@ -43,7 +43,7 @@ extern void _Career_ApplyPostMatchPlayerStatModsIfCareerTeam(TeamFileEx *team, u
 /* GetNumberOfAvailable* — return packed: d6 in low word, d7 in upper bits */
 extern uint32_t _GetNumberOfAvailablePlayers(uint8_t *team, int16_t excludeCardsFlag, uint16_t numPl);
 extern uint32_t _GetNumberOfAvailableSubstitutes(uint8_t *team, int16_t flag);
-extern uint16_t _IsPlayerInjured(uint8_t *playerBase, int16_t mode);
+extern uint16_t _IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
 
 /* ---- Data externs (still in asm) ---- */
 extern TeamFileEx careerTeam;
@@ -110,7 +110,7 @@ extern uint8_t  aAWin01OnPensRe[];
 static uint16_t buildMatchResultStringControl;
 
 /* Forward declaration: _GetPlayerPrice (Chunk 187) */
-int16_t _GetPlayerPrice(TeamFile *teamFile, uint8_t *playerBase, uint16_t playerNumber);
+int16_t _GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t playerNumber);
 
 /* Extern globals for Chunk 105 */
 extern uint16_t pl1Tactics;
@@ -128,7 +128,7 @@ extern uint8_t  diyCompetitionStart[];
 extern void _SaveRand2State(void);
 extern void _RestoreRand2State(void);
 extern void _Randomize2(uint16_t seed);
-extern uint16_t _GetPlayerRandomNum(uint8_t *teamEntry);
+extern uint16_t _GetPlayerRandomNum(PlayerFile *playerFile);
 extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
 
 /* ---- Module-local state ---- */
@@ -1327,7 +1327,7 @@ void _AdjustPlayerSkills(uint16_t playerIdx, TeamFile *teamFile,
         d4 = (int16_t)(int8_t)pf->price;
     } else {
         /* Field player: calculate price via GetPlayerPrice */
-        d4 = _GetPlayerPrice(teamFile, playerBase, playerIdx);
+        d4 = _GetPlayerPrice(teamFile, (PlayerFile *)playerBase, playerIdx);
     }
 
     /* Compute percentage: (calculatedPrice * 100) / filePrice */
@@ -1485,7 +1485,7 @@ void _ApplyTeamTactics(TeamGame *teamGame)
          * GetPlayerPricePercentageChange as an additional random factor. */
         _SaveRand2State();
 
-        int16_t playerRand = (int16_t)_GetPlayerRandomNum(playerBase);
+        int16_t playerRand = (int16_t)_GetPlayerRandomNum((PlayerFile *)playerBase);
         uint16_t seed = (uint16_t)playerRand ^ gameRandValue;
         _Randomize2(seed);
 
@@ -1759,7 +1759,7 @@ extern uint16_t numPlayersAtQuadrant;        /* count of players sharing a quadr
 extern uint8_t currentMatchPlayers[];
 extern uint8_t playerPositionsArray[];
 extern uint16_t inEditTactics;
-extern uint16_t _IsPlayerInjured(uint8_t *playerBase, int16_t mode);
+extern uint16_t _IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
 extern uint16_t _CountNearnessFactor(uint16_t curBallQuadrant, uint16_t dstBallQuadrant,
                                      uint16_t price, const uint8_t *curQuadDistFactor,
                                      const uint8_t *playerPositions, const uint8_t *coordToQuad);
@@ -1777,10 +1777,10 @@ extern uint16_t _CountNearnessFactor(uint16_t curBallQuadrant, uint16_t dstBallQ
  * Returns: price value (d7 in asm) as int16_t
  */
 __attribute__((used, externally_visible))
-int16_t _GetPlayerPrice(TeamFile *teamFile, uint8_t *playerBase, uint16_t playerNumber)
+int16_t _GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t playerNumber)
 {
-    /* Player data is at playerBase + sizeof(TeamFile) */
-    PlayerFile *plFile = (PlayerFile *)(playerBase + sizeof(TeamFile));
+    /* Player data is at playerFile[2] (2 * 38 = 76 bytes = sizeof(TeamFile)) */
+    PlayerFile *plFile = &playerFile[2];
     TeamFile *tf = teamFile;
 
     /* Position type (0-7) from top 3 bits of positionAndFace */
@@ -1985,7 +1985,7 @@ uint32_t _UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx
             goto storeResult;
         } else {
             /* Outfield player in outfield slot: calculate full price */
-            d7val = _GetPlayerPrice(&team->team, playerBase, playerIdx);
+            d7val = _GetPlayerPrice(&team->team, (PlayerFile *)playerBase, playerIdx);
         }
     } else {
         /* Substitute (index >= 11) */
@@ -2006,7 +2006,7 @@ uint32_t _UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx
 
         /* Check if player is injured.
          * Asm does exg a0,a1 so IsPlayerInjured gets a0=playerBase (team+slot*38) */
-        if (_IsPlayerInjured(playerBase, (int16_t)inEditTactics)) {
+        if (_IsPlayerInjured((PlayerFile *)playerBase, (int16_t)inEditTactics)) {
             d7val = 0;  /* injured = price 0 */
         }
     }

@@ -47,7 +47,7 @@
 #define TEAMFILE_PLAYERNUMBERS  60
 
 /* --- Top skills string builder (Chunk 151) --- */
-void _FormTopSkillsString(uint8_t *dst, uint8_t *playerBase);
+void _FormTopSkillsString(uint8_t *dst, PlayerFile *playerFile);
 
 /* --- Chunk 98: Play Match Menu Functions --- */
 void _PlayMatchMenuInit(void);

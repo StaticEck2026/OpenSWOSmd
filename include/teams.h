@@ -23,7 +23,7 @@ uint16_t _CalcGateReceiptsBaseFromTeamValue(uint16_t avgPrice);
 uint16_t _GetAveragePlayerPriceInSelectedTeams(void);
 
 /* ---- Player display value utilities ---- */
-uint16_t _GetPlayerRandomNum(uint8_t *teamEntry);
+uint16_t _GetPlayerRandomNum(PlayerFile *playerFile);
 uint16_t _GetDisplayedPlayerValue(uint8_t *ptr);
 void _InitPlayerValueDisplayStruct(uint8_t *playerEntry, uint8_t *dst);
 

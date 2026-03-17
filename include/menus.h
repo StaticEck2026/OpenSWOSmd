@@ -13,6 +13,8 @@ typedef short int16_t;
 
 struct TeamFile;
 typedef struct TeamFile TeamFile;
+struct PlayerFile;
+typedef struct PlayerFile PlayerFile;
 
 void _PrepareMenuBackground(void);
 void _InitMainMenuStuff(void);
@@ -201,15 +203,15 @@ void _SetCountryNames(void);
 
 /* ---- Menu Entry Utilities (Chunk 141) ---- */
 #include "menu_system.h"
-void _SetMenuEntryPlayerFace(MenuEntry *entry, uint8_t *teamData);
+void _SetMenuEntryPlayerFace(MenuEntry *entry, PlayerFile *playerFile);
 
 /* --- SaveCareer (Chunk 142) --- */
 void _SaveCareer(void);
 
 /* --- ExitOptions + SquadMenuStatusSprite (Chunk 143) --- */
 void _ExitOptions(void);
-void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, uint8_t *player, uint16_t flag);
-void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, uint8_t *player);
+void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, PlayerFile *playerFile, uint16_t flag);
+void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, PlayerFile *playerFile);
 
 /* --- _Friendly pitch/season menu callbacks (Chunk 147) --- */
 void _SetFriendlyPitchOrSeason(void);

@@ -18,7 +18,7 @@ void _ClearCareerMatchPlayerStatusBucket(void);
 
 /* --- Status checks --- */
 uint16_t _ShouldApplyRandomPlayerStatusAfterSim(void);
-uint16_t _IsPlayerInjured(uint8_t *playerBase, int16_t mode);
+uint16_t _IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
 
 /* --- Player count utilities --- */
 uint16_t _GetNumberOfSubstitutes(TeamFileEx *team, uint16_t numPl);

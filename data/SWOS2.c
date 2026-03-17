@@ -31962,7 +31962,7 @@ LAB_001229a8:
 ushort __usercall UpdatePlayerPositionAndReturnRole(TeamFile *team,ushort playerIndex)
 
 {
-  byte *playerEntry;
+  PlayerFile *playerFile;
   short sVar1;
   ushort uVar3;
   bool bVar4;
@@ -31975,48 +31975,48 @@ ushort __usercall UpdatePlayerPositionAndReturnRole(TeamFile *team,ushort player
     bVar2 = team->playerNumbers[(short)playerIndex];
   }
   sVar1 = (short)(char)bVar2;
-  playerEntry = team->teamName + (short)(sVar1 * 0x26) + -5;
+  playerFile = (PlayerFile *)(team->teamName + (short)(sVar1 * 0x26) + -5);
   if (team->someFlag == 0) {
-    bVar2 = playerEntry[0x4d];
+    bVar2 = playerFile[2].field_1;
     playerPositionsArray[sVar1] = bVar2;
     return (short)(char)bVar2;
   }
-  bVar2 = playerEntry[0x66] >> 5;
+  bVar2 = playerFile[2].positionAndFace >> 5;
   if (playerIndex == 0) {
     if (bVar2 != 0) {
       uVar3 = 0;
       goto LAB_00122cb8;
     }
-    uVar3 = (ushort)(char)playerEntry[0x6c];
+    uVar3 = (ushort)(char)playerFile[2].price;
   }
   else if (playerIndex < 0xb) {
     if (bVar2 == 0) {
       uVar3 = 0;
       goto LAB_00122cb8;
     }
-    uVar3 = GetPlayerPrice(team,playerEntry,playerIndex);
+    uVar3 = GetPlayerPrice(team,playerFile,playerIndex);
   }
   else if (bVar2 == 0) {
-    uVar3 = (ushort)(char)playerEntry[0x6c];
+    uVar3 = (ushort)(char)playerFile[2].price;
   }
   else {
-    uVar3 = (ushort)(char)playerEntry[0x6c];
+    uVar3 = (ushort)(char)playerFile[2].price;
   }
   if (uVar3 == 0) {
     uVar3 = 1;
   }
   if (team->teamControls != 1) {
-    if ((playerEntry[0x66] & 2) != 0) {
+    if ((playerFile[2].positionAndFace & 2) != 0) {
       uVar3 = 1;
     }
     bVar4 = inEditTactics == 0;
-    IsPlayerInjured(playerEntry,inEditTactics);
+    IsPlayerInjured(playerFile,inEditTactics);
     if (!bVar4) {
       uVar3 = 0;
     }
   }
 LAB_00122cb8:
-  playerEntry[0x4d] = (byte)uVar3;
+  playerFile[2].field_1 = (byte)uVar3;
   playerPositionsArray[sVar1] = (byte)uVar3;
   return uVar3;
 }
@@ -32091,7 +32091,7 @@ ushort __usercall ComputeOldPlayerSkillForViewResult(TeamFile *team,ushort count
 //      
 // Calculate and return player's price. Deduce tactics from player's team.
 
-ushort __usercall GetPlayerPrice(TeamFile *team,void *playerEntry,ushort position)
+ushort __usercall GetPlayerPrice(TeamFile *team,PlayerFile *playerFile,ushort position)
 
 {
   uchar *playerPositions;
@@ -32107,8 +32107,11 @@ ushort __usercall GetPlayerPrice(TeamFile *team,void *playerEntry,ushort positio
   uchar *curQuadDistFactor;
   void *pvVar9;
   
-  bVar1 = *(byte *)((int)playerEntry + 0x66);
-  uVar7 = *(uint *)((int)playerEntry + 0x68);
+  bVar1 = playerFile[2].positionAndFace;
+  uVar7._0_1_ = playerFile[2].passing;
+  uVar7._1_1_ = playerFile[2].shootingHeading;
+  uVar7._2_1_ = playerFile[2].tacklingBallControl;
+  uVar7._3_1_ = playerFile[2].speedFinishing;
   plPositions = (void *)(*(int *)((int)teamTacticsTable +
                                  (int)(short)((short)(char)team->tactics << 2)) + 9);
   playerPositions = (uchar *)((int)plPositions + (int)(short)((position - 1) * 0x23));
@@ -32172,10 +32175,10 @@ ushort __usercall GetPlayerPrice(TeamFile *team,void *playerEntry,ushort positio
     uVar7 = 0x31;
   }
   uVar6 = (ushort)uVar7;
-  bVar1 = (char)uVar7 - *(char *)((int)playerEntry + 0x6c);
+  bVar1 = (char)uVar7 - playerFile[2].price;
   uVar2 = (undefined3)(uVar7 >> 8);
   if (-1 < (short)((ushort)bVar1 << 8)) {
-    uVar6 = (ushort)CONCAT31(uVar2,*(char *)((int)playerEntry + 0x6c) +
+    uVar6 = (ushort)CONCAT31(uVar2,playerFile[2].price +
                                    plPricesIncreaseTable[(short)CONCAT31(uVar2,bVar1)]);
   }
   return uVar6;
@@ -32286,7 +32289,7 @@ void __usercall UpdateCareerPlayersFormAfterMatch(void *team,TeamFileEx *teamRef
       if ((careerTeam.team.players[0].goalStats[iVar1 + 4] != 0x9b) &&
          (careerTeam.team.players[0].goalStats[iVar1 + 4] != 0x9a)) {
         bVar13 = mode == 0;
-        IsPlayerInjured(careerTeam.team.teamName + iVar1 + -5,mode);
+        IsPlayerInjured((PlayerFile *)(careerTeam.team.teamName + iVar1 + -5),mode);
         if (bVar13) {
           if (wVar8 == 0) {
             uVar5 = Rand2();
@@ -32530,24 +32533,24 @@ void __usercall GetNumberOfAvailableStartingPlayers(TeamFile *team,short flag)
 //      DO - 1 is injured, 0 not
 //      zero flag - clear is injured, set is not
 
-ushort __usercall IsPlayerInjured(void *playerEntry,short mode)
+ushort __usercall IsPlayerInjured(PlayerFile *playerFile,short mode)
 
 {
   if (trainingGame == 0) {
     if (mode != 1) {
-      if (((*(byte *)((int)playerEntry + 0x67) & 0x1c) != 0) &&
-         ((*(byte *)((int)playerEntry + 0x67) & 0x1c) != 4)) {
+      if (((playerFile[2].cardsInjuries & 0x1c) != 0) && ((playerFile[2].cardsInjuries & 0x1c) != 4)
+         ) {
         return 1;
       }
       if (-1 < mode) goto LAB_00125076;
     }
-    if ((*(byte *)((int)playerEntry + 0x67) & 3) != 0) {
+    if ((playerFile[2].cardsInjuries & 3) != 0) {
       return 1;
     }
   }
 LAB_00125076:
-  if (((*(byte *)((int)playerEntry + 0x67) & 0xe0) != 0) &&
-     ((*(byte *)((int)playerEntry + 0x67) & 0xe0) != 0x20)) {
+  if (((playerFile[2].cardsInjuries & 0xe0) != 0) && ((playerFile[2].cardsInjuries & 0xe0) != 0x20))
+  {
     return 1;
   }
   return 0;
@@ -33692,16 +33695,15 @@ void __usercall GetLowestAndHighestPlayerPrice(void)
 // 
 // Get random number bound to player.
 
-char __usercall GetPlayerRandomNum(void *playerEntry)
+char __usercall GetPlayerRandomNum(PlayerFile *playerFile)
 
 {
   return kRandomTable
          [(short)(ushort)(byte)(newRandomSeedCopy ^
                                (byte)currentSeasonShowing ^
-                               *(byte *)((int)playerEntry + 0x59) ^
-                               *(byte *)((int)playerEntry + 0x4f) ^
-                               *(byte *)((int)playerEntry + 0x66) & 0xfb ^
-                               *(byte *)((int)playerEntry + 0x6c))];
+                               playerFile[2].playerName[10] ^
+                               playerFile[2].playerName[0] ^
+                               playerFile[2].positionAndFace & 0xfb ^ playerFile[2].price)];
 }
 
 
@@ -46342,7 +46344,7 @@ void __usercall TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
   short sVar9;
   uint uVar10;
   TeamFileEx *pTVar11;
-  void *pvVar12;
+  PlayerFile *pPVar12;
   void *pvVar13;
   byte *pbVar14;
   TeamFileEx *pTVar16;
@@ -46350,7 +46352,8 @@ void __usercall TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
   PlayerFile *pPVar18;
   char *pcVar19;
   word *pwVar20;
-  bool bVar21;
+  void *pvVar21;
+  bool bVar22;
   word *pwVar15;
   
   currentTeamSelectedPlayerPosition = 0xffff;
@@ -46369,19 +46372,19 @@ void __usercall TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
   uVar6 = careerNumPlayers - 1;
   pwVar15 = playerPositions;
   do {
-    pvVar12 = GetPlayerAtIndex(selTeamNumber,uVar6);
-    bVar21 = true;
-    IsPlayerInjured(pvVar12,0);
+    pPVar12 = GetPlayerAtIndex(selTeamNumber,uVar6);
+    bVar22 = true;
+    IsPlayerInjured(pPVar12,0);
     pwVar20 = pwVar15;
-    if (bVar21) {
+    if (bVar22) {
       sVar4 = 0x25;
-      pbVar14 = (byte *)((int)pvVar12 + 0x4c);
+      pPVar12 = pPVar12 + 2;
       pPVar17 = pPVar18;
       do {
         pPVar18 = (PlayerFile *)&pPVar17->field_1;
-        pPVar17->nationality = *pbVar14;
+        pPVar17->nationality = pPVar12->nationality;
         sVar4 = sVar4 + -1;
-        pbVar14 = pbVar14 + 1;
+        pPVar12 = (PlayerFile *)&pPVar12->field_1;
         pPVar17 = pPVar18;
       } while (sVar4 != -1);
       pwVar20 = (word *)((int)pwVar15 + 1);
@@ -46426,28 +46429,28 @@ void __usercall TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
         }
         uVar6 = numPlayers - 1;
         cVar7 = -1;
-        pvVar12 = (void *)0x0;
+        pvVar21 = (void *)0x0;
         do {
           if (((uVar10 & 1 << (uVar6 & 0x1f)) == 0) &&
              (pvVar13 = GetPlayerAtIndex(currentTeamNumber,uVar6),
              bVar1 == *(byte *)((int)pvVar13 + 0x66) >> 5)) {
-            if (pvVar12 == (void *)0x0) {
+            if (pvVar21 == (void *)0x0) {
 LAB_00130120:
               if (*(char *)((int)pvVar13 + 0x6c) < cVar7) goto LAB_0013012e;
             }
             else {
               if ((*(char *)((int)pvVar13 + 0x71) == -0x65) ||
                  (*(char *)((int)pvVar13 + 0x71) == -0x66)) {
-                if ((*(char *)((int)pvVar12 + 0x71) != -0x65) &&
-                   (*(char *)((int)pvVar12 + 0x71) != -0x66)) goto LAB_0013012e;
+                if ((*(char *)((int)pvVar21 + 0x71) != -0x65) &&
+                   (*(char *)((int)pvVar21 + 0x71) != -0x66)) goto LAB_0013012e;
                 goto LAB_00130120;
               }
-              if ((*(char *)((int)pvVar12 + 0x71) != -0x65) &&
-                 (*(char *)((int)pvVar12 + 0x71) != -0x66)) goto LAB_00130120;
+              if ((*(char *)((int)pvVar21 + 0x71) != -0x65) &&
+                 (*(char *)((int)pvVar21 + 0x71) != -0x66)) goto LAB_00130120;
             }
             unaff_D3 = uVar6 & 0xff;
             cVar7 = *(char *)((int)pvVar13 + 0x6c);
-            pvVar12 = pvVar13;
+            pvVar21 = pvVar13;
           }
 LAB_0013012e:
           uVar6 = uVar6 - 1;
@@ -46464,9 +46467,9 @@ LAB_0013012e:
             uVar6 = 0xc;
             do {
               wVar3 = currentTeamNumber;
-              pvVar12 = GetPlayerAtIndex(currentTeamNumber,uVar6);
-              *(char *)((int)pvVar12 + 0x4e) = (char)uVar6;
-              *(char *)((int)pvVar12 + 0x4e) = *(char *)((int)pvVar12 + 0x4e) + '\x01';
+              pvVar21 = GetPlayerAtIndex(currentTeamNumber,uVar6);
+              *(char *)((int)pvVar21 + 0x4e) = (char)uVar6;
+              *(char *)((int)pvVar21 + 0x4e) = *(char *)((int)pvVar21 + 0x4e) + '\x01';
               uVar6 = uVar6 - 1;
             } while (uVar6 != 0xffff);
             StringCopy((char *)careerTeam.team.teamName,(char *)teamAName);
@@ -52980,81 +52983,84 @@ void __usercall TopGoalScorersExit(void)
 // 
 // Form that weird 3-letter string that comes after player name in play match menu.
 
-void __usercall FormTopSkillsString(char *dest,void *playerEntry)
+void __usercall FormTopSkillsString(char *dest,PlayerFile *playerFile)
 
 {
-  ushort uVar1;
-  short sVar2;
-  byte bVar3;
-  uint3 uVar4;
+  int iVar1;
+  ushort uVar2;
+  short sVar3;
+  byte bVar4;
+  uint3 uVar5;
   undefined4 unaff_D1;
-  uint uVar5;
   uint uVar6;
-  undefined4 unaff_D2;
   uint uVar7;
+  undefined4 unaff_D2;
   uint uVar8;
-  undefined4 unaff_D3;
   uint uVar9;
-  short sVar10;
-  uint uVar11;
+  undefined4 unaff_D3;
+  uint uVar10;
+  short sVar11;
   char *pcVar12;
   undefined **ppuVar13;
   undefined1 *puVar14;
   undefined **ppuVar15;
   byte *pbVar16;
   
-  uVar1 = (ushort)(*(byte *)((int)playerEntry + 0x66) >> 5);
-  if (uVar1 != 0) {
-    sVar2 = (uVar1 - 1) * 4;
+  uVar2 = (ushort)(playerFile[2].positionAndFace >> 5);
+  if (uVar2 != 0) {
+    sVar3 = (uVar2 - 1) * 4;
     ppuVar13 = topSkillLettersEven;
     ppuVar15 = topSkillBitRotEven;
-    if (((*(byte *)((int)playerEntry + 0x50) ^
-         *(byte *)((int)playerEntry + 0x4f) ^ *(byte *)((int)playerEntry + 0x6c)) & 1) != 0) {
+    if (((playerFile[2].playerName[1] ^ playerFile[2].playerName[0] ^ playerFile[2].price) & 1) != 0
+       ) {
       ppuVar13 = topSkillLettersOdd;
       ppuVar15 = topSkillBitRotOdd;
     }
-    puVar14 = *(undefined1 **)((int)ppuVar13 + (int)sVar2);
-    uVar9 = CONCAT31((int3)((uint)unaff_D3 >> 8),0xff);
-    uVar11 = *(int *)((int)playerEntry + 0x68) << 4;
-    sVar10 = 6;
-    uVar5 = CONCAT31((int3)((uint)unaff_D1 >> 8),0xff);
-    uVar7 = CONCAT31((int3)((uint)unaff_D2 >> 8),0xff);
-    pbVar16 = *(byte **)((int)ppuVar15 + (int)sVar2);
+    puVar14 = *(undefined1 **)((int)ppuVar13 + (int)sVar3);
+    uVar10 = CONCAT31((int3)((uint)unaff_D3 >> 8),0xff);
+    iVar1._0_1_ = playerFile[2].passing;
+    iVar1._1_1_ = playerFile[2].shootingHeading;
+    iVar1._2_1_ = playerFile[2].tacklingBallControl;
+    iVar1._3_1_ = playerFile[2].speedFinishing;
+    sVar11 = 6;
+    uVar6 = CONCAT31((int3)((uint)unaff_D1 >> 8),0xff);
+    uVar8 = CONCAT31((int3)((uint)unaff_D2 >> 8),0xff);
+    pbVar16 = *(byte **)((int)ppuVar15 + (int)sVar3);
     do {
-      bVar3 = ((byte)(uVar11 << (*pbVar16 & 0x3f)) | (byte)(uVar11 >> 0x20 - (*pbVar16 & 0x3f))) & 7
-      ;
-      if ((char)uVar5 < (char)bVar3) {
-        uVar4 = (uint3)(((uint)bVar3 << 0x10) >> 8);
-        uVar6 = CONCAT31(uVar4,*puVar14) << 0x10 | (uint)(uVar4 >> 8);
-        uVar8 = uVar5;
-        uVar9 = uVar7;
+      bVar4 = ((byte)((iVar1 << 4) << (*pbVar16 & 0x3f)) |
+              (byte)((uint)(iVar1 << 4) >> 0x20 - (*pbVar16 & 0x3f))) & 7;
+      if ((char)uVar6 < (char)bVar4) {
+        uVar5 = (uint3)(((uint)bVar4 << 0x10) >> 8);
+        uVar7 = CONCAT31(uVar5,*puVar14) << 0x10 | (uint)(uVar5 >> 8);
+        uVar9 = uVar6;
+        uVar10 = uVar8;
       }
       else {
-        uVar6 = uVar5;
-        if ((char)uVar7 < (char)bVar3) {
-          uVar4 = (uint3)(((uint)bVar3 << 0x10) >> 8);
-          uVar8 = CONCAT31(uVar4,*puVar14) << 0x10 | (uint)(uVar4 >> 8);
-          uVar9 = uVar7;
+        uVar7 = uVar6;
+        if ((char)uVar8 < (char)bVar4) {
+          uVar5 = (uint3)(((uint)bVar4 << 0x10) >> 8);
+          uVar9 = CONCAT31(uVar5,*puVar14) << 0x10 | (uint)(uVar5 >> 8);
+          uVar10 = uVar8;
         }
         else {
-          uVar8 = uVar7;
-          if ((char)uVar9 < (char)bVar3) {
-            uVar4 = (uint3)(((uint)bVar3 << 0x10) >> 8);
-            uVar9 = CONCAT31(uVar4,*puVar14) << 0x10 | (uint)(uVar4 >> 8);
+          uVar9 = uVar8;
+          if ((char)uVar10 < (char)bVar4) {
+            uVar5 = (uint3)(((uint)bVar4 << 0x10) >> 8);
+            uVar10 = CONCAT31(uVar5,*puVar14) << 0x10 | (uint)(uVar5 >> 8);
           }
         }
       }
       puVar14 = puVar14 + 1;
-      sVar10 = sVar10 + -1;
-      uVar5 = uVar6;
-      uVar7 = uVar8;
+      sVar11 = sVar11 + -1;
+      uVar6 = uVar7;
+      uVar8 = uVar9;
       pbVar16 = pbVar16 + 1;
-    } while (sVar10 != -1);
-    *dest = (char)(uVar6 >> 0x10);
+    } while (sVar11 != -1);
+    *dest = (char)(uVar7 >> 0x10);
     pcVar12 = dest + 2;
-    dest[1] = (char)(uVar8 >> 0x10);
+    dest[1] = (char)(uVar9 >> 0x10);
     dest = dest + 3;
-    *pcVar12 = (char)(uVar9 >> 0x10);
+    *pcVar12 = (char)(uVar10 >> 0x10);
   }
   *dest = '\0';
   return;
@@ -53642,7 +53648,7 @@ short __usercall SquadAfterDrawCommon(void)
   undefined2 uVar3;
   entryType2Union eVar4;
   ushort uVar5;
-  TeamFile *playerEntry;
+  TeamFile *playerFile;
   char *pcVar6;
   int unaff_A5;
   bool bVar7;
@@ -53680,9 +53686,9 @@ short __usercall SquadAfterDrawCommon(void)
     }
   }
   uVar3 = menuEntries[0x30].bg.backAndFrameColor;
-  playerEntry = GetPlayerInfoBreakPosition(squadTeamFilePtr,requestedSlot);
+  playerFile = GetPlayerInfoBreakPosition(squadTeamFilePtr,requestedSlot);
   bVar7 = squadRowMode == 0;
-  IsPlayerInjured(playerEntry,squadRowMode);
+  IsPlayerInjured((PlayerFile *)playerFile,squadRowMode);
   if (!bVar7) {
     menuEntries[0x2e].bg._0_2_ = (menuEntries[0x2e].bg.backAndFrameColor & 0xfff0) + 10;
     menuEntries[0x30].bg._0_2_ = (menuEntries[0x30].bg.backAndFrameColor & 0xfff0) + 10;
@@ -53693,9 +53699,9 @@ short __usercall SquadAfterDrawCommon(void)
   }
   wVar2 = *(word *)(unaff_A5 + 0x16);
   menuEntries[0x2e].y = wVar2;
-  squadSelectedPlayerPtr = (dword)playerEntry;
+  squadSelectedPlayerPtr = (dword)playerFile;
   squadSelectedPlayerIndex = requestedSlot;
-  SetSquadMenuEntryStatusSprite(squadRowMode,menuEntries + 0x2e,playerEntry);
+  SetSquadMenuEntryStatusSprite(squadRowMode,menuEntries + 0x2e,(PlayerFile *)playerFile);
   if ((ushort)uVar3 < 0xb) {
     if (oldPlayerPositionsArray[(short)requestedSlot] < playerPositionsArray[(short)requestedSlot])
     {
@@ -53707,18 +53713,18 @@ short __usercall SquadAfterDrawCommon(void)
     }
   }
   if (!bVar8) {
-    menuEntries[0x2f].fg._0_2_ = ZEXT12(playerEntry->players[0].shirtNumber);
+    menuEntries[0x2f].fg._0_2_ = ZEXT12(playerFile->players[0].shirtNumber);
   }
   menuEntries[0x2f].isInvisible = (word)bVar8;
-  menuEntries[0x30].fg.func2 = (dword)playerEntry->players[0].playerName;
+  menuEntries[0x30].fg.func2 = (dword)playerFile->players[0].playerName;
   menuEntries[0x31].fg =
        *(entryType2Union *)
         ((int)&playerPositionsStringTable +
-        (int)(short)((playerEntry->players[0].positionAndFace & 0xe0) >> 3));
+        (int)(short)((playerFile->players[0].positionAndFace & 0xe0) >> 3));
   menuEntries[0x2f].y = wVar2;
   menuEntries[0x30].y = wVar2;
   menuEntries[0x31].y = wVar2;
-  FormTopSkillsString((char *)menuEntries[0x32].fg,playerEntry);
+  FormTopSkillsString((char *)menuEntries[0x32].fg,(PlayerFile *)playerFile);
   eVar4 = menuEntries[0x36].fg;
   menuEntries[0x33].isInvisible = 1;
   menuEntries[0x34].isInvisible = 1;
@@ -53730,7 +53736,7 @@ short __usercall SquadAfterDrawCommon(void)
   menuEntries[0x35].y = wVar2;
   if (((squadTeamFilePtr->countryNumber < 0x50) || (0x55 < squadTeamFilePtr->countryNumber)) &&
      (isSquadViewMode == 0)) {
-    iVar1 = (int)(short)((ushort)playerEntry->players[0].nationality * 3);
+    iVar1 = (int)(short)((ushort)playerFile->players[0].nationality * 3);
     pcVar6 = (char *)(menuEntries[0x36].fg.func2 + 1);
     *(undefined1 *)menuEntries[0x36].fg = 0x28;
     *pcVar6 = shortCountryNames[iVar1];
@@ -53744,17 +53750,17 @@ short __usercall SquadAfterDrawCommon(void)
   if ((short)teamSkillDiffAfterChange < 0) {
     if ((isNationalSquad == 0) && (isSquadViewMode == 0)) {
       menuEntries[0x37].fg._0_2_ =
-           (ushort)playerEntry->players[0].goalStats[3] +
-           (ushort)playerEntry->players[0].goalStats[2] +
-           (ushort)playerEntry->players[0].goalStats[1] +
-           (ushort)playerEntry->players[0].goalStats[0];
+           (ushort)playerFile->players[0].goalStats[3] +
+           (ushort)playerFile->players[0].goalStats[2] +
+           (ushort)playerFile->players[0].goalStats[1] + (ushort)playerFile->players[0].goalStats[0]
+      ;
       goto LAB_0013a3da;
     }
   }
   else {
     menuEntries[0x37].fg._0_2_ =
          CONCAT11((char)(teamSkillDiffAfterChange >> 8),
-                  playerEntry->players[0].goalStats[(short)teamSkillDiffAfterChange]);
+                  playerFile->players[0].goalStats[(short)teamSkillDiffAfterChange]);
 LAB_0013a3da:
     menuEntries[0x37].isInvisible = 0;
   }
@@ -53767,7 +53773,7 @@ LAB_0013a3da:
   if (bVar8) {
     IsTeamNational(squadTeamFilePtr);
     if (bVar8) {
-      FormatPlayerValueOrStatusText(playerEntry,(char *)fundsBuffer);
+      FormatPlayerValueOrStatusText(playerFile,(char *)fundsBuffer);
       menuEntries[0x39].fg.func2 = (dword)fundsBuffer;
     }
     else {
@@ -53775,9 +53781,9 @@ LAB_0013a3da:
     }
     menuEntries[0x39].isInvisible = 0;
     uVar5 = 0xd;
-    if (((playerEntry->players[0].someFlag != 0x9b) &&
-        (uVar5 = 1, playerEntry->players[0].someFlag != 0x9a)) &&
-       (uVar5 = 2, (playerEntry->players[0].positionAndFace & 2) != 0)) {
+    if (((playerFile->players[0].someFlag != 0x9b) &&
+        (uVar5 = 1, playerFile->players[0].someFlag != 0x9a)) &&
+       (uVar5 = 2, (playerFile->players[0].positionAndFace & 2) != 0)) {
       uVar5 = 0xf;
     }
     menuEntries[0x39].stringFlags = uVar5 | menuEntries[0x39].stringFlags & 0xfff0;
@@ -53802,7 +53808,7 @@ LAB_0013a532:
     if (tertiaryCompetitionPtr != (CompetitionCup *)0x0 ||
         (secondaryCompetitionPtr != (CompetitionCup *)0x0 ||
         quaternaryCompetitionPtr != (CompetitionCup *)0x0)) {
-      menuEntries[0x3b].fg._0_2_ = ZEXT12(playerEntry->players[0].goalStats[0]);
+      menuEntries[0x3b].fg._0_2_ = ZEXT12(playerFile->players[0].goalStats[0]);
       menuEntries[0x3b].y = wVar2;
     }
     menuEntries[0x3b].isInvisible =
@@ -53810,25 +53816,24 @@ LAB_0013a532:
                (secondaryCompetitionPtr == (CompetitionCup *)0x0 &&
                quaternaryCompetitionPtr == (CompetitionCup *)0x0));
     if (secondaryCompetitionPtr != (CompetitionCup *)0x0) {
-      menuEntries[0x3c].fg._0_2_ = ZEXT12(playerEntry->players[0].goalStats[1]);
+      menuEntries[0x3c].fg._0_2_ = ZEXT12(playerFile->players[0].goalStats[1]);
       menuEntries[0x3c].y = wVar2;
     }
     menuEntries[0x3c].isInvisible = (word)(secondaryCompetitionPtr == (CompetitionCup *)0x0);
     if (tertiaryCompetitionPtr != (CompetitionCup *)0x0) {
-      menuEntries[0x3d].fg._0_2_ = ZEXT12(playerEntry->players[0].goalStats[2]);
+      menuEntries[0x3d].fg._0_2_ = ZEXT12(playerFile->players[0].goalStats[2]);
       menuEntries[0x3d].y = wVar2;
     }
     menuEntries[0x3d].isInvisible = (word)(tertiaryCompetitionPtr == (CompetitionCup *)0x0);
     if (quaternaryCompetitionPtr != (CompetitionCup *)0x0) {
-      menuEntries[0x3e].fg._0_2_ = ZEXT12(playerEntry->players[0].goalStats[3]);
+      menuEntries[0x3e].fg._0_2_ = ZEXT12(playerFile->players[0].goalStats[3]);
       menuEntries[0x3e].y = wVar2;
     }
     menuEntries[0x3e].isInvisible = (word)(quaternaryCompetitionPtr == (CompetitionCup *)0x0);
     menuEntries[0x3f].fg._0_2_ =
-         (ushort)playerEntry->players[0].goalStats[3] +
-         (ushort)playerEntry->players[0].goalStats[2] +
-         (ushort)playerEntry->players[0].goalStats[1] + (ushort)playerEntry->players[0].goalStats[0]
-    ;
+         (ushort)playerFile->players[0].goalStats[3] +
+         (ushort)playerFile->players[0].goalStats[2] +
+         (ushort)playerFile->players[0].goalStats[1] + (ushort)playerFile->players[0].goalStats[0];
     menuEntries[0x3f].isInvisible = 0;
     goto LAB_0013a5f8;
   }
@@ -53976,7 +53981,7 @@ void __usercall RotatePlayersLeft(TeamFile *team,short maxSubs)
 
 
 
-void __usercall SetSquadMenuEntryStatusSprite(short rowMode,MenuEntry *entry,void *playerEntry)
+void __usercall SetSquadMenuEntryStatusSprite(short rowMode,MenuEntry *entry,PlayerFile *playerFile)
 
 {
   byte bVar1;
@@ -53987,11 +53992,11 @@ void __usercall SetSquadMenuEntryStatusSprite(short rowMode,MenuEntry *entry,voi
   bool bVar6;
   
   if (rowMode != 0) {
-    uVar5 = (*(byte *)((int)playerEntry + 0x66) & 0x18) >> 3;
-    uVar2 = *(byte *)((int)playerEntry + 0x67) & 3;
-    bVar1 = *(byte *)((int)playerEntry + 0x67);
+    uVar5 = (playerFile[2].positionAndFace & 0x18) >> 3;
+    uVar2 = playerFile[2].cardsInjuries & 3;
+    bVar1 = playerFile[2].cardsInjuries;
     uVar3 = bVar1 & 0xe0;
-    if ((*(byte *)((int)playerEntry + 0x67) & 3) == 0) {
+    if ((playerFile[2].cardsInjuries & 3) == 0) {
       if ((bVar1 & 0xe0) == 0) {
         wVar4 = uVar5 + 0xba;
 LAB_0013a8a2:
@@ -54008,8 +54013,8 @@ LAB_0013a8a2:
       wVar4 = uVar2 + 0x91;
       goto LAB_0013a890;
     }
-    if ((((void *)((int)currentMatchPlayers + 0x1fU) < playerEntry) &&
-        (bVar6 = playerEntry == &careerNumPlayers, playerEntry < &careerNumPlayers)) &&
+    if ((((PlayerFile *)((int)currentMatchPlayers + 0x1fU) < playerFile) &&
+        (bVar6 = playerFile == (PlayerFile *)&careerNumPlayers, playerFile < &careerNumPlayers)) &&
        (ShouldApplyRandomPlayerStatusAfterSim(), bVar6)) {
       wVar4 = 0x98;
     }
@@ -54021,11 +54026,11 @@ LAB_0013a890:
     (entry->bg).backAndFrameColor = (entry->bg).backAndFrameColor & 0xfff0;
     return;
   }
-  uVar5 = (*(byte *)((int)playerEntry + 0x66) & 0x18) >> 3;
-  uVar2 = *(byte *)((int)playerEntry + 0x67) & 0x1c;
-  bVar1 = *(byte *)((int)playerEntry + 0x67);
+  uVar5 = (playerFile[2].positionAndFace & 0x18) >> 3;
+  uVar2 = playerFile[2].cardsInjuries & 0x1c;
+  bVar1 = playerFile[2].cardsInjuries;
   uVar3 = bVar1 & 0xe0;
-  if ((*(byte *)((int)playerEntry + 0x67) & 0x1c) == 0) {
+  if ((playerFile[2].cardsInjuries & 0x1c) == 0) {
     if ((bVar1 & 0xe0) == 0) {
       wVar4 = uVar5 + 0xba;
 LAB_0013a7fa:
@@ -54042,8 +54047,8 @@ LAB_0013a7fa:
     wVar4 = ((ushort)(uVar2 - 4) >> 2) + 0x91;
     goto LAB_0013a7e8;
   }
-  if ((((void *)((int)currentMatchPlayers + 0x1fU) < playerEntry) &&
-      (bVar6 = playerEntry == &careerNumPlayers, playerEntry < &careerNumPlayers)) &&
+  if ((((PlayerFile *)((int)currentMatchPlayers + 0x1fU) < playerFile) &&
+      (bVar6 = playerFile == (PlayerFile *)&careerNumPlayers, playerFile < &careerNumPlayers)) &&
      (ShouldApplyRandomPlayerStatusAfterSim(), bVar6)) {
     wVar4 = 0x98;
   }
@@ -54058,7 +54063,7 @@ LAB_0013a7e8:
 
 
 
-void __usercall SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry,void *playerEntry)
+void __usercall SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry,PlayerFile *playerFile)
 
 {
   ushort uVar1;
@@ -54068,12 +54073,12 @@ void __usercall SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry,void *pl
   
   ShouldApplyRandomPlayerStatusAfterSim();
   if ((bool)in_ZF) {
-    SetSquadMenuEntryStatusSprite(0,entry,playerEntry);
+    SetSquadMenuEntryStatusSprite(0,entry,playerFile);
     return;
   }
-  uVar3 = (*(byte *)((int)playerEntry + 0x66) & 0x18) >> 3;
-  uVar1 = *(byte *)((int)playerEntry + 0x67) & 0xe0;
-  if ((*(byte *)((int)playerEntry + 0x67) & 0xe0) == 0) {
+  uVar3 = (playerFile[2].positionAndFace & 0x18) >> 3;
+  uVar1 = playerFile[2].cardsInjuries & 0xe0;
+  if ((playerFile[2].cardsInjuries & 0xe0) == 0) {
     wVar2 = uVar3 + 0xba;
   }
   else if (uVar1 == 0x20) {
@@ -54092,10 +54097,10 @@ void __usercall SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry,void *pl
 //      A0 -> menu entry to set sprite
 //      A6 -> team header + player offset
 
-void __usercall SetMenuEntryPlayerFace(MenuEntry *entry,void *playerEntry)
+void __usercall SetMenuEntryPlayerFace(MenuEntry *entry,PlayerFile *playerFile)
 
 {
-  (entry->fg).sprite2 = ((*(byte *)((int)playerEntry + 0x66) & 0x18) >> 3) + SPR_PL_FACE_WHITE_GUY;
+  (entry->fg).sprite2 = ((playerFile[2].positionAndFace & 0x18) >> 3) + SPR_PL_FACE_WHITE_GUY;
   return;
 }
 
@@ -59671,6 +59676,7 @@ void __usercall Career_BuildForeignMarketPoolFromSelectedTeam(void)
   byte *pbVar5;
   TeamFile *pTVar6;
   byte *pbVar7;
+  PlayerFile *playerFile;
   byte *pbVar8;
   word *pwVar9;
   bool bVar10;
@@ -59722,12 +59728,12 @@ void __usercall Career_BuildForeignMarketPoolFromSelectedTeam(void)
   uVar2 = 0xf;
   do {
     teamNumber = selTeamNumber;
-    pvVar4 = GetPlayerAtIndex(selTeamNumber,uVar2);
-    *(byte *)((int)pvVar4 + 0x66) = *(byte *)((int)pvVar4 + 0x66) & 0xfd;
-    *(undefined1 *)((int)pvVar4 + 0x67) = 0;
-    *(byte *)((int)pvVar4 + 0x66) = *(byte *)((int)pvVar4 + 0x66) & 0xfe;
-    *(undefined1 *)((int)pvVar4 + 0x71) = 0;
-    AddCareerPoolPlayer(teamNumber,(uchar)uVar2,pvVar4);
+    playerFile = GetPlayerAtIndex(selTeamNumber,uVar2);
+    playerFile[2].positionAndFace = playerFile[2].positionAndFace & 0xfd;
+    playerFile[2].cardsInjuries = 0;
+    playerFile[2].positionAndFace = playerFile[2].positionAndFace & 0xfe;
+    playerFile[2].someFlag = 0;
+    AddCareerPoolPlayer(teamNumber,(uchar)uVar2,playerFile);
     uVar2 = uVar2 - 1;
   } while (uVar2 != 0xffff);
   bVar10 = selTeamNumber == 0;
@@ -59746,27 +59752,30 @@ void __usercall Career_BuildForeignMarketPoolFromSelectedTeam(void)
 //     D1 - player ordinal in team
 //     A1 -> team (file)
 
-short __usercall AddCareerPoolPlayer(ushort teamNumber,uchar playerOrdinal,void *playerEntry)
+short __usercall AddCareerPoolPlayer(ushort teamNumber,uchar playerOrdinal,PlayerFile *playerFile)
 
 {
   int iVar1;
-  short sVar2;
-  undefined2 *puVar3;
-  byte *pbVar4;
+  byte bVar2;
+  short sVar3;
+  PlayerFile *pPVar4;
+  byte *pbVar5;
   
   iVar1 = (int)(short)(numForeignMarketPlayers2 * 0x2a);
   careerForeignMarketPlayers[0].player.playerName[iVar1 + -4] = viewRandomPhase;
   *(ushort *)(careerForeignMarketPlayers[0].player.playerName + iVar1 + -7) = teamNumber;
   careerForeignMarketPlayers[0].player.playerName[iVar1 + -5] = playerOrdinal;
-  sVar2 = 0x12;
-  puVar3 = (undefined2 *)((int)playerEntry + 0x4c);
-  pbVar4 = careerForeignMarketPlayers[0].player.playerName + iVar1 + -3;
+  sVar3 = 0x12;
+  pPVar4 = playerFile + 2;
+  pbVar5 = careerForeignMarketPlayers[0].player.playerName + iVar1 + -3;
   do {
-    *(undefined2 *)pbVar4 = *puVar3;
-    sVar2 = sVar2 + -1;
-    puVar3 = puVar3 + 1;
-    pbVar4 = pbVar4 + 2;
-  } while (sVar2 != -1);
+    bVar2 = pPVar4->field_1;
+    pbVar5[0] = pPVar4->nationality;
+    pbVar5[1] = bVar2;
+    sVar3 = sVar3 + -1;
+    pPVar4 = (PlayerFile *)&pPVar4->shirtNumber;
+    pbVar5 = pbVar5 + 2;
+  } while (sVar3 != -1);
   numForeignMarketPlayers2 = numForeignMarketPlayers2 + 1;
   pendingForeignPlayerCount = pendingForeignPlayerCount + 1;
   lastLoadedExtNumber = 0xff;
@@ -60205,75 +60214,78 @@ void __usercall Career_AcceptOffer_BuyPlayer(void)
 void __usercall Career_TransferPlayerAndAddReplacedToMarketPool(ushort team,ushort arg)
 
 {
-  byte bVar1;
-  short sVar2;
+  undefined2 uVar1;
+  byte bVar2;
+  short sVar3;
   ushort arg1;
   ushort unaff_D2w;
-  ushort uVar3;
-  byte bVar4;
-  void *pvVar5;
-  byte *pbVar6;
-  byte *pbVar7;
-  undefined2 *puVar8;
-  byte *pbVar9;
-  byte *unaff_A3;
+  ushort uVar4;
+  byte bVar5;
+  void *pvVar6;
+  PlayerFile *pPVar7;
+  PlayerFile *pPVar8;
+  undefined2 *puVar9;
+  PlayerFile *unaff_A3;
+  byte *pbVar10;
   
   Career_RemovePlayerFromTeamInternal(selTeamNumber,arg,unaff_D2w);
-  pvVar5 = GetPlayer(selTeamNumber,arg);
-  pbVar9 = *(byte **)((int)&transferReplacementPriorityTable +
-                     (int)(short)((*(byte *)((int)pvVar5 + 0x66) & 0xe0) >> 3));
-  pbVar6 = GetTeamPointer(team);
+  pvVar6 = GetPlayer(selTeamNumber,arg);
+  pbVar10 = *(byte **)((int)&transferReplacementPriorityTable +
+                      (int)(short)((*(byte *)((int)pvVar6 + 0x66) & 0xe0) >> 3));
+  pPVar7 = GetTeamPointer(team);
   arg1 = arg;
   do {
-    if ((char)*pbVar9 < '\0') {
+    if ((char)*pbVar10 < '\0') {
       panicReasonCode = 0x7272;
       PanicHaltLoop();
-      *pbVar6 = *pbVar6 | 0xd0;
-      *pbVar6 = *pbVar6 | 0xd9;
-      *pbVar6 = *pbVar6 | 0xe2;
-      *pbVar6 = *pbVar6 | 0xeb;
-      *pbVar6 = *pbVar6 | 0xf4;
-      *pbVar6 = *pbVar6 | 0xfd;
-      *pbVar6 = *pbVar6 | 6;
-      *pbVar6 = *pbVar6 | 0xf;
+      pPVar7->nationality = pPVar7->nationality | 0xd0;
+      pPVar7->nationality = pPVar7->nationality | 0xd9;
+      pPVar7->nationality = pPVar7->nationality | 0xe2;
+      pPVar7->nationality = pPVar7->nationality | 0xeb;
+      pPVar7->nationality = pPVar7->nationality | 0xf4;
+      pPVar7->nationality = pPVar7->nationality | 0xfd;
+      pPVar7->nationality = pPVar7->nationality | 6;
+      pPVar7->nationality = pPVar7->nationality | 0xf;
                     // WARNING: Bad instruction - Truncating control flow here
       halt_baddata();
     }
-    bVar4 = 0xff;
-    uVar3 = 0;
-    pbVar7 = pbVar6;
+    bVar5 = 0xff;
+    uVar4 = 0;
+    pPVar8 = pPVar7;
     do {
-      if ((*pbVar9 == pbVar7[0x66] >> 5) && (pbVar7[0x6c] <= bVar4)) {
-        bVar4 = pbVar7[0x6c];
-        unaff_A3 = pbVar7;
-        arg1 = uVar3;
+      if ((*pbVar10 == pPVar8[2].positionAndFace >> 5) && (pPVar8[2].price <= bVar5)) {
+        bVar5 = pPVar8[2].price;
+        unaff_A3 = pPVar8;
+        arg1 = uVar4;
       }
-      pbVar7 = pbVar7 + 0x26;
-      uVar3 = uVar3 + 1;
-    } while (uVar3 != 0x10);
-    pbVar9 = pbVar9 + 1;
-  } while (bVar4 == 0xff);
-  bVar4 = *(byte *)((int)pvVar5 + 0x4e);
-  bVar1 = unaff_A3[0x4e];
-  sVar2 = 0x12;
-  puVar8 = (undefined2 *)((int)pvVar5 + 0x4c);
-  pbVar9 = unaff_A3 + 0x4c;
+      pPVar8 = pPVar8 + 1;
+      uVar4 = uVar4 + 1;
+    } while (uVar4 != 0x10);
+    pbVar10 = pbVar10 + 1;
+  } while (bVar5 == 0xff);
+  bVar5 = *(byte *)((int)pvVar6 + 0x4e);
+  bVar2 = unaff_A3[2].shirtNumber;
+  sVar3 = 0x12;
+  puVar9 = (undefined2 *)((int)pvVar6 + 0x4c);
+  pPVar7 = unaff_A3 + 2;
   do {
-    *(undefined2 *)pbVar9 = *puVar8;
-    sVar2 = sVar2 + -1;
-    puVar8 = puVar8 + 1;
-    pbVar9 = pbVar9 + 2;
-  } while (sVar2 != -1);
-  *(byte *)((int)pvVar5 + 0x4e) = bVar4;
-  unaff_A3[0x4e] = bVar1;
-  unaff_A3[0x66] = unaff_A3[0x66] | 4;
-  unaff_A3[0x66] = unaff_A3[0x66] & 0xfe;
-  unaff_A3[0x71] = 0;
-  unaff_A3[0x6d] = 0;
-  unaff_A3[0x6e] = 0;
-  unaff_A3[0x6f] = 0;
-  unaff_A3[0x70] = 0;
-  Career_RemovePlayerFromTeamInternal(team,arg1,(ushort)bVar4);
+    uVar1 = *puVar9;
+    pPVar7->nationality = (char)((ushort)uVar1 >> 8);
+    pPVar7->field_1 = (char)uVar1;
+    sVar3 = sVar3 + -1;
+    puVar9 = puVar9 + 1;
+    pPVar7 = (PlayerFile *)&pPVar7->shirtNumber;
+  } while (sVar3 != -1);
+  *(byte *)((int)pvVar6 + 0x4e) = bVar5;
+  unaff_A3[2].shirtNumber = bVar2;
+  unaff_A3[2].positionAndFace = unaff_A3[2].positionAndFace | 4;
+  unaff_A3[2].positionAndFace = unaff_A3[2].positionAndFace & 0xfe;
+  unaff_A3[2].someFlag = 0;
+  unaff_A3[2].goalStats[0] = 0;
+  unaff_A3[2].goalStats[1] = 0;
+  unaff_A3[2].goalStats[2] = 0;
+  unaff_A3[2].goalStats[3] = 0;
+  Career_RemovePlayerFromTeamInternal(team,arg1,(ushort)bVar5);
   AddCareerPoolPlayer(team,(uchar)arg1,unaff_A3);
   offerSwapSlotsUsed = offerSwapSlotsUsed + 1;
   Career_RemovePlayerFromSelectedTeamRoster(arg);
@@ -60685,31 +60697,31 @@ void __usercall Career_GenerateTrialistForTeamPlayer(ushort playerIndex,char *sr
 void __usercall Career_ConvertPlayerToTrialistFromName(ushort team,ushort playerIndex,char *srcName)
 
 {
-  uchar avoidTeamByte;
-  void *player;
+  byte avoidTeamByte;
+  PlayerFile *playerFile;
   char *src;
   
-  player = GetPlayer(team,playerIndex);
-  avoidTeamByte = (uchar)(team >> 8);
+  playerFile = GetPlayer(team,playerIndex);
+  avoidTeamByte = (byte)(team >> 8);
   src = Career_PickRandomTrialistOriginValue(avoidTeamByte,team);
-  *(uchar *)((int)player + 0x4c) = avoidTeamByte;
-  *(byte *)((int)player + 0x66) = (byte)team | *(byte *)((int)player + 0x66) & 0xe7;
-  StringCopy(src,(char *)((int)player + 0x4f));
-  *(undefined1 *)((int)player + 0x6d) = 0;
-  *(undefined1 *)((int)player + 0x6e) = 0;
-  *(undefined1 *)((int)player + 0x6f) = 0;
-  *(undefined1 *)((int)player + 0x70) = 0;
-  *(undefined1 *)((int)player + 0x67) = 0;
-  Career_InitTrialistAttributes(player,team);
+  playerFile[2].nationality = avoidTeamByte;
+  playerFile[2].positionAndFace = (byte)team | playerFile[2].positionAndFace & 0xe7;
+  StringCopy(src,(char *)playerFile[2].playerName);
+  playerFile[2].goalStats[0] = 0;
+  playerFile[2].goalStats[1] = 0;
+  playerFile[2].goalStats[2] = 0;
+  playerFile[2].goalStats[3] = 0;
+  playerFile[2].cardsInjuries = 0;
+  Career_InitTrialistAttributes(playerFile,team);
   if (team != selTeamNumber) {
-    AddCareerPoolPlayer(team,(uchar)playerIndex,player);
+    AddCareerPoolPlayer(team,(uchar)playerIndex,playerFile);
     transferPoolSlotsUsed = transferPoolSlotsUsed + 1;
     return;
   }
-  *(undefined1 *)((int)player + 0x71) = 0x9b;
-  *(byte *)((int)player + 0x66) = *(byte *)((int)player + 0x66) & 0xfd;
-  *(byte *)((int)player + 0x66) = *(byte *)((int)player + 0x66) & 0xfb;
-  *(byte *)((int)player + 0x66) = *(byte *)((int)player + 0x66) & 0xfe;
+  playerFile[2].someFlag = 0x9b;
+  playerFile[2].positionAndFace = playerFile[2].positionAndFace & 0xfd;
+  playerFile[2].positionAndFace = playerFile[2].positionAndFace & 0xfb;
+  playerFile[2].positionAndFace = playerFile[2].positionAndFace & 0xfe;
   return;
 }
 
@@ -63701,14 +63713,14 @@ void __usercall GenerateRandomTransferOffers(void)
 void __usercall CreateRandomTransferOfferForPlayer(ushort playerIndex)
 
 {
-  uchar refSkill;
+  byte refSkill;
   ushort uVar2;
   ushort uVar3;
   short sVar4;
   int iVar1;
   word wVar5;
   short sVar6;
-  void *pvVar7;
+  PlayerFile *pPVar7;
   TeamFile **ppTVar8;
   byte *team;
   byte *pbVar9;
@@ -63716,14 +63728,14 @@ void __usercall CreateRandomTransferOfferForPlayer(ushort playerIndex)
   
   offerPrimaryPlayerOrdinal = playerIndex;
   offerValueBaseSum = GetAvgTeamValueBaseForCurrentPlayer();
-  pvVar7 = GetPlayer(selTeamNumber,playerIndex);
-  refSkill = *(uchar *)((int)pvVar7 + 0x6c);
+  pPVar7 = GetPlayer(selTeamNumber,playerIndex);
+  refSkill = pPVar7[2].price;
   bVar10 = false;
-  IsPlayerInjured(pvVar7,-1);
+  IsPlayerInjured(pPVar7,-1);
   if (!bVar10) {
     return;
   }
-  offerPrimaryPositionMask = *(byte *)((int)pvVar7 + 0x66) & 0xe0;
+  offerPrimaryPositionMask = pPVar7[2].positionAndFace & 0xe0;
   uVar2 = Rand2();
   if (uVar2 < 8) {
     offerSearchRetryCount = offerSearchRetryCount + 1;
@@ -63785,10 +63797,10 @@ void __usercall CreateRandomTransferOfferForPlayer(ushort playerIndex)
     else {
       uVar3 = GetAvgTeamValueBaseForCurrentPlayer();
       offerValueBaseSum = uVar3 + offerValueBaseSum;
-      pvVar7 = GetPlayer(selTeamNumber,uVar2);
-      offerExtraPositionMask = *(byte *)((int)pvVar7 + 0x66) & 0xe0;
+      pPVar7 = GetPlayer(selTeamNumber,uVar2);
+      offerExtraPositionMask = pPVar7[2].positionAndFace & 0xe0;
       bVar10 = false;
-      IsPlayerInjured(pvVar7,-1);
+      IsPlayerInjured(pPVar7,-1);
       if (!bVar10) {
         return;
       }
@@ -64008,6 +64020,7 @@ short __usercall EvaluateTransferOfferNegotiation(void)
   ushort uVar4;
   ushort uVar5;
   ushort uVar7;
+  PlayerFile *playerFile;
   void *pvVar8;
   bool bVar9;
   
@@ -64028,8 +64041,8 @@ short __usercall EvaluateTransferOfferNegotiation(void)
   }
   SaveRand2State();
   wVar2 = teamOffering;
-  pvVar8 = GetPlayer(teamOffering,offerPrimaryPlayerOrdinal);
-  cVar6 = GetPlayerRandomNum(pvVar8);
+  playerFile = GetPlayer(teamOffering,offerPrimaryPlayerOrdinal);
+  cVar6 = GetPlayerRandomNum(playerFile);
   uVar7 = CONCAT11((char)(wVar2 >> 8),cVar6);
   Randomize2(uVar7);
   uVar4 = Rand2();
@@ -66267,7 +66280,7 @@ void __usercall DrawPlayerEntries(MenuEntry *entry)
   ushort uVar3;
   ushort uVar4;
   TeamFileEx *teamPtr;
-  TeamFile *playerEntry;
+  TeamFile *playerFile;
   bool bVar5;
   bool bVar6;
   
@@ -66333,10 +66346,10 @@ void __usercall DrawPlayerEntries(MenuEntry *entry)
   if (viewingOpponentTeam != 0) {
     teamPtr = playMatchTeam2Ptr;
   }
-  playerEntry = GetPlayerInfoBreakPosition(&teamPtr->team,uVar4);
+  playerFile = GetPlayerInfoBreakPosition(&teamPtr->team,uVar4);
   if (viewingOpponentTeam == 0) {
     bVar5 = playMatchExcludeFlags == 0;
-    IsPlayerInjured(playerEntry,playMatchExcludeFlags);
+    IsPlayerInjured((PlayerFile *)playerFile,playMatchExcludeFlags);
     if (!bVar5) {
       menuEntries[0x1f].bg._0_2_ = (menuEntries[0x1f].bg.backAndFrameColor & 0xfff0) + RED_10;
       menuEntries[0x21].bg._0_2_ = (menuEntries[0x21].bg.backAndFrameColor & 0xfff0) + RED_10;
@@ -66350,7 +66363,7 @@ void __usercall DrawPlayerEntries(MenuEntry *entry)
   }
   wVar1 = entry->y;
   menuEntries[0x1f].y = wVar1;
-  SetSquadMenuEntryStatusSprite(playMatchExcludeFlags,menuEntries + 0x1f,playerEntry);
+  SetSquadMenuEntryStatusSprite(playMatchExcludeFlags,menuEntries + 0x1f,(PlayerFile *)playerFile);
   if ((viewingOpponentTeam == 0) && ((ushort)uVar2 < 0xb)) {
     if (oldPlayerPositionsArray[(short)uVar4] < playerPositionsArray[(short)uVar4]) {
       menuEntries[0x1f].fg.sprite2 = SPR_CHECK_SMALL;
@@ -66371,35 +66384,35 @@ void __usercall DrawPlayerEntries(MenuEntry *entry)
     menuEntries[0x25].fg.sprite2 = menuEntries[0x1f].fg.sprite2;
   }
   if (!bVar6) {
-    menuEntries[0x20].fg._0_2_ = ZEXT12(playerEntry->players[0].shirtNumber);
+    menuEntries[0x20].fg._0_2_ = ZEXT12(playerFile->players[0].shirtNumber);
   }
   menuEntries[0x20].isInvisible = (word)bVar6;
   menuEntries[0x20].y = wVar1;
   menuEntries[0x21].fg =
-       (entryType2Union)ExtractSurname((char *)playerEntry->players[0].playerName,0x800d);
+       (entryType2Union)ExtractSurname((char *)playerFile->players[0].playerName,0x800d);
   menuEntries[0x22].fg =
        *(entryType2Union *)
         ((int)&playerPositionsStringTable +
-        (int)(short)((playerEntry->players[0].positionAndFace & 0xe0) >> 3));
+        (int)(short)((playerFile->players[0].positionAndFace & 0xe0) >> 3));
   menuEntries[0x21].y = wVar1;
   menuEntries[0x22].y = wVar1;
-  FormTopSkillsString((char *)menuEntries[0x23].fg,playerEntry);
+  FormTopSkillsString((char *)menuEntries[0x23].fg,(PlayerFile *)playerFile);
   menuEntries[0x24].isInvisible = 1;
   bVar6 = wVar1 == 0;
   menuEntries[0x23].y = wVar1;
   menuEntries[0x24].y = wVar1;
   IsTeamNational(playMatchTeam1Ptr);
   if (bVar6) {
-    FormatPlayerValueOrStatusText(playerEntry,(char *)fundsBuffer);
+    FormatPlayerValueOrStatusText(playerFile,(char *)fundsBuffer);
     menuEntries[0x24].fg.func2 = (dword)fundsBuffer;
   }
   else {
     InitPlayerValueDisplayStruct(menuEntries + 0x24);
   }
   uVar4 = 0xd;
-  if (((playerEntry->players[0].someFlag != 0x9b) &&
-      (uVar4 = 1, playerEntry->players[0].someFlag != 0x9a)) &&
-     (uVar4 = 0xf, (playerEntry->players[0].positionAndFace & 2) == 0)) {
+  if (((playerFile->players[0].someFlag != 0x9b) &&
+      (uVar4 = 1, playerFile->players[0].someFlag != 0x9a)) &&
+     (uVar4 = 0xf, (playerFile->players[0].positionAndFace & 2) == 0)) {
     uVar4 = 2;
   }
   menuEntries[0x24].stringFlags = uVar4 | menuEntries[0x24].stringFlags & 0xfff0;
@@ -68879,7 +68892,7 @@ short __usercall EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
   pTVar5 = GetPlayerInfoBreakPosition(pTVar5,uVar4);
   chooseTacticsTeamPtr->tactics = bVar2;
   bVar6 = inEditTactics == 0;
-  IsPlayerInjured(pTVar5,inEditTactics);
+  IsPlayerInjured((PlayerFile *)pTVar5,inEditTactics);
   if (!bVar6) {
     menuEntries[0x29].bg._0_2_ = (menuEntries[0x29].bg.backAndFrameColor & 0xfff0) + RED_10;
   }
@@ -68906,7 +68919,7 @@ short __usercall EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
         (int)(short)((pTVar5->players[0].positionAndFace & 0xe0) >> 3));
   menuEntries[0x29].y = wVar1;
   menuEntries[0x2a].y = wVar1;
-  FormTopSkillsString((char *)menuEntries[0x2b].fg,pTVar5);
+  FormTopSkillsString((char *)menuEntries[0x2b].fg,(PlayerFile *)pTVar5);
   menuEntries[0x2c].isInvisible = 1;
   bVar7 = wVar1 == 0;
   menuEntries[0x2b].y = wVar1;
@@ -68999,7 +69012,7 @@ void __usercall EditTactics_ApplyPlayerRowHighlighting(short playerOrdinal,MenuE
     }
   }
   menuEntries[0x27].y = cur->y;
-  SetMenuEntryPlayerFace(menuEntries + 0x27,pTVar3);
+  SetMenuEntryPlayerFace(menuEntries + 0x27,(PlayerFile *)pTVar3);
   if ((ushort)uVar2 < 0xb) {
     if (oldPlayerPositionsArray[playerOrdinal] < playerPositionsArray[playerOrdinal]) {
       menuEntries[0x27].fg.sprite2 = SPR_CHECK_SMALL;

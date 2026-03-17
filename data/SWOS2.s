@@ -48104,7 +48104,7 @@ teamTacticsTable:
                 dc.l editTacticsCurrentTactics ; element[18]
 
 ; ===== GetPlayerPrice =====
-; prototype: unsigned __int16 __usercall GetPlayerPrice@<d7>(TeamFile *team@<a0>, void *playerEntry@<a1>, unsigned __int16 position@<d7>)
+; prototype: unsigned __int16 __usercall GetPlayerPrice@<d7>(TeamFile *team@<a0>, PlayerFile *playerFile@<a1>, unsigned __int16 position@<d7>)
 ; in:
 ;      A0 -> team (file)
 ;      A1 -> player (file)
@@ -48115,13 +48115,13 @@ teamTacticsTable:
 ; Calculate and return player's price. Deduce tactics from player's team.
 GetPlayerPrice:
                 move.l  a1,-(sp)
-                move.b  $66(a1),d0
+                move.b  PLAYERFILE_POSITIONANDFACE+$4C(a1),d0
                 andi.w  #$E0,d0
                 lsr.w   #5,d0
                 mulu.w  #35,d0
                 lea     skillsPerQuadrant(pc),a5
                 lea     loc_122D6A+1-skillsPerQuadrant(a5,d0.w),a5
-                move.l  $68(a1),d5
+                move.l  PLAYERFILE_PASSING+$4C(a1),d5
                 andi.l  #$7777777,d5
                 addi.l  #$1111111,d5
                 move.b  24(a0),d0
@@ -48962,7 +48962,7 @@ loc_125038:
                 rts
 
 ; ===== IsPlayerInjured =====
-; prototype: unsigned __int16 __usercall IsPlayerInjured@<d0>(void *playerEntry@<a0>, __int16 mode@<d0>)
+; prototype: unsigned __int16 __usercall IsPlayerInjured@<d0>(PlayerFile *playerFile@<a0>, __int16 mode@<d0>)
 ; in:
 ;      D0 -
 ;      A0 -> player struct + sizeof(header)
@@ -48975,7 +48975,7 @@ IsPlayerInjured:
                 move.w  d0,d1
                 cmpi.w  #1,d1
                 beq.s   loc_125068
-                move.b  $67(a0),d0
+                move.b  PLAYERFILE_CARDSINJURIES+$4C(a0),d0
                 andi.w  #$1C,d0
                 cmpi.w  #0,d0
                 beq.s   loc_125064
@@ -48985,12 +48985,12 @@ loc_125064:
                 tst.w   d1
                 bpl.s   loc_125076
 loc_125068:
-                move.b  $67(a0),d0
+                move.b  PLAYERFILE_CARDSINJURIES+$4C(a0),d0
                 andi.w  #3,d0
                 cmpi.w  #0,d0
                 bne.s   loc_12508E
 loc_125076:
-                move.b  $67(a0),d0
+                move.b  PLAYERFILE_CARDSINJURIES+$4C(a0),d0
                 andi.w  #$E0,d0
                 cmpi.w  #0,d0
                 beq.s   loc_12508A
@@ -50405,7 +50405,7 @@ loc_126468:
                 rts
 
 ; ===== GetPlayerRandomNum =====
-; prototype: char __usercall GetPlayerRandomNum@<d0>(void *playerEntry@<a0>)
+; prototype: char __usercall GetPlayerRandomNum@<d0>(PlayerFile *playerFile@<a0>)
 ; in:
 ;      A0 -> team (file struct)
 ; out:
@@ -50413,13 +50413,13 @@ loc_126468:
 ; 
 ; Get random number bound to player.
 GetPlayerRandomNum:
-                move.b  $6C(a0),d0
-                move.b  $66(a0),d1
+                move.b  PLAYERFILE_PRICE+$4C(a0),d0
+                move.b  PLAYERFILE_POSITIONANDFACE+$4C(a0),d1
                 andi.b  #$FB,d1
                 eor.b   d1,d0
-                move.b  $4F(a0),d1
+                move.b  PLAYERFILE_PLAYERNAME+$4C(a0),d1
                 eor.b   d1,d0
-                move.b  $59(a0),d1
+                move.b  PLAYERFILE_PLAYERNAME+$56(a0),d1
                 eor.b   d1,d0
                 move.w  (currentSeasonShowing).l,d1
                 eor.b   d1,d0
@@ -81526,7 +81526,7 @@ diyStatsName:
                 dc.l $00000000          ; raw
 
 ; ===== FormTopSkillsString =====
-; prototype: void __usercall FormTopSkillsString(char *dest@<a1>, void *playerEntry@<a6>)
+; prototype: void __usercall FormTopSkillsString(char *dest@<a1>, PlayerFile *playerFile@<a6>)
 ; in:
 ;     A1 -> destination buffer
 ;     A6 -> player (file) + header
@@ -81534,7 +81534,7 @@ diyStatsName:
 ; Form that weird 3-letter string that comes after player name in play match menu.
 FormTopSkillsString:
                 movem.l d0-d7/a0-a6,-(sp)
-                move.b  $66(a6),d0
+                move.b  PLAYERFILE_POSITIONANDFACE+$4C(a6),d0
                 andi.w  #%11100000,d0
                 lsr.w   #5,d0
                 cmpi.w  #0,d0
@@ -81543,10 +81543,10 @@ FormTopSkillsString:
                 lsl.w   #2,d0
                 lea     (topSkillLettersEven).l,a2
                 lea     (topSkillBitRotEven).l,a3
-                move.b  $6C(a6),d1
-                move.b  $4F(a6),d2
+                move.b  PLAYERFILE_PRICE+$4C(a6),d1
+                move.b  PLAYERFILE_PLAYERNAME+$4C(a6),d2
                 eor.b   d2,d1
-                move.b  $50(a6),d2
+                move.b  PLAYERFILE_PLAYERNAME+$4D(a6),d2
                 eor.b   d2,d1
                 btst    #0,d1
                 beq.s   loc_138DA4
@@ -81558,7 +81558,7 @@ loc_138DA4:
                 move.b  #$FF,d1
                 move.b  #$FF,d2
                 move.b  #$FF,d3
-                move.l  $68(a6),d7
+                move.l  PLAYERFILE_PASSING+$4C(a6),d7
                 lsl.l   #4,d7
                 move.w  #6,d4
 loc_138DC2:
@@ -83925,16 +83925,16 @@ loc_13A73C:
                 rts
 
 ; ===== SetSquadMenuEntryStatusSprite =====
-; prototype: void __usercall SetSquadMenuEntryStatusSprite(__int16 rowMode@<d0>, MenuEntry *entry@<a0>, void *playerEntry@<a6>)
+; prototype: void __usercall SetSquadMenuEntryStatusSprite(__int16 rowMode@<d0>, MenuEntry *entry@<a0>, PlayerFile *playerFile@<a6>)
 SetSquadMenuEntryStatusSprite:
                 tst.w   d0
                 bne.w   loc_13A800
-                move.b  $66(a6),d1
+                move.b  PLAYERFILE_POSITIONANDFACE+$4C(a6),d1
                 andi.w  #$18,d1
                 lsr.w   #3,d1
-                move.b  $67(a6),d2
+                move.b  PLAYERFILE_CARDSINJURIES+$4C(a6),d2
                 andi.w  #$1C,d2
-                move.b  $67(a6),d3
+                move.b  PLAYERFILE_CARDSINJURIES+$4C(a6),d3
                 andi.w  #$E0,d3
                 cmpi.w  #0,d2
                 bne.s   loc_13A77C
@@ -83997,12 +83997,12 @@ loc_13A7FA:
                 move.w  d0,$26(a0)
                 rts
 loc_13A800:
-                move.b  $66(a6),d1
+                move.b  PLAYERFILE_POSITIONANDFACE+$4C(a6),d1
                 andi.w  #$18,d1
                 lsr.w   #3,d1
-                move.b  $67(a6),d2
+                move.b  PLAYERFILE_CARDSINJURIES+$4C(a6),d2
                 andi.w  #3,d2
-                move.b  $67(a6),d3
+                move.b  PLAYERFILE_CARDSINJURIES+$4C(a6),d3
                 andi.w  #$E0,d3
                 cmpi.w  #0,d2
                 bne.s   loc_13A82E
@@ -84062,17 +84062,17 @@ loc_13A8A2:
                 rts
 
 ; ===== SetSquadMenuEntryStatusSprite_AfterSim =====
-; prototype: void __usercall SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry@<a0>, void *playerEntry@<a6>)
+; prototype: void __usercall SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry@<a0>, PlayerFile *playerFile@<a6>)
 SetSquadMenuEntryStatusSprite_AfterSim:
                 jsr     ShouldApplyRandomPlayerStatusAfterSim
                 bne.s   loc_13A8B6
                 clr.w   d0
                 bra.w   SetSquadMenuEntryStatusSprite
 loc_13A8B6:
-                move.b  $66(a6),d1
+                move.b  PLAYERFILE_POSITIONANDFACE+$4C(a6),d1
                 andi.w  #$18,d1
                 lsr.w   #3,d1
-                move.b  $67(a6),d3
+                move.b  PLAYERFILE_CARDSINJURIES+$4C(a6),d3
                 andi.w  #$E0,d3
                 cmpi.w  #0,d3
                 bne.s   loc_13A8D6
@@ -84095,12 +84095,12 @@ loc_13A8F0:
                 rts
 
 ; ===== SetMenuEntryPlayerFace =====
-; prototype: void __usercall SetMenuEntryPlayerFace(MenuEntry *entry@<a0>, void *playerEntry@<a6>)
+; prototype: void __usercall SetMenuEntryPlayerFace(MenuEntry *entry@<a0>, PlayerFile *playerFile@<a6>)
 ; in:
 ;      A0 -> menu entry to set sprite
 ;      A6 -> team header + player offset
 SetMenuEntryPlayerFace:
-                move.b  $66(a6),d0
+                move.b  PLAYERFILE_POSITIONANDFACE+$4C(a6),d0
                 andi.w  #$18,d0
                 lsr.w   #3,d0
                 addi.w  #SPR_PL_FACE_WHITE_GUY,d0
@@ -96196,7 +96196,7 @@ locret_141628:
                 rts
 
 ; ===== AddCareerPoolPlayer =====
-; prototype: __int16 __usercall AddCareerPoolPlayer@<d0>(unsigned __int16 teamNumber@<d0>, unsigned __int8 playerOrdinal@<d1>, void *playerEntry@<a0>)
+; prototype: __int16 __usercall AddCareerPoolPlayer@<d0>(unsigned __int16 teamNumber@<d0>, unsigned __int8 playerOrdinal@<d1>, PlayerFile *playerFile@<a0>)
 ; in:
 ;     D0 - team number
 ;     D1 - player ordinal in team
@@ -96210,7 +96210,7 @@ AddCareerPoolPlayer:
                 move.w  d0,(a6)
                 move.b  d1,2(a6)
                 lea     4(a6),a1
-                lea     $4C(a0),a0
+                lea     PLAYERFILE_NATIONALITY+$4C(a0),a0
                 move.w  #$12,d0
 loc_141658:
                 move.w  (a0)+,(a1)+

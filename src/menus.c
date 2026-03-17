@@ -1539,7 +1539,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
     PlayerFile *pf = (PlayerFile *)(player + sizeof(TeamFile));
 
     /* Check if injured */
-    uint16_t injured = _IsPlayerInjured(player, (int16_t)squadRowMode);
+    uint16_t injured = _IsPlayerInjured((PlayerFile *)player, (int16_t)squadRowMode);
     if (injured != 0) {
         setColorPair46_48(10);
     }
@@ -1557,7 +1557,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
     /* Entry 46: status sprite */
     MenuEntry *e = &menuEntries[46];
     e->y = yPos;
-    _SetSquadMenuEntryStatusSprite(e, player, (uint16_t)squadRowMode);
+    _SetSquadMenuEntryStatusSprite(e, (PlayerFile *)player, (uint16_t)squadRowMode);
 
     /* Check position arrow (up/down indicator) */
     if (d6_breakPos < 11) {
@@ -1598,7 +1598,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
 
     /* Entry 50: top skills string */
     e = &menuEntries[50];
-    _FormTopSkillsString((uint8_t *)e->fg, player);
+    _FormTopSkillsString((uint8_t *)e->fg, (PlayerFile *)player);
     e->y = yPos;
 
     /* Entries 51-54: invisible */
@@ -4855,13 +4855,11 @@ next_entry:
 }
 
 /* ---- Chunk 141: SetMenuEntryPlayerFace ---- */
-#define TEAMFILE_PLAYERS           76
-#define PLAYERFILE_POSITIONANDFACE 26
 #define SPR_PL_FACE_WHITE_GUY     186
 
 __attribute__((used, externally_visible))
-void _SetMenuEntryPlayerFace(MenuEntry *entry, uint8_t *teamData) {
-    uint16_t d0 = teamData[TEAMFILE_PLAYERS + PLAYERFILE_POSITIONANDFACE];
+void _SetMenuEntryPlayerFace(MenuEntry *entry, PlayerFile *playerFile) {
+    uint16_t d0 = playerFile[2].positionAndFace;
     d0 &= 0x18;
     d0 >>= 3;
     d0 += SPR_PL_FACE_WHITE_GUY;
@@ -4918,9 +4916,9 @@ void _ExitOptions(void)
 extern uint16_t _ShouldApplyRandomPlayerStatusAfterSim(void);
 
 __attribute__((used, externally_visible))
-void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, uint8_t *player, uint16_t flag)
+void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, PlayerFile *playerFile, uint16_t flag)
 {
-    PlayerFile *pf = (PlayerFile *)(player + sizeof(TeamFile));
+    PlayerFile *pf = &playerFile[2];
     uint16_t d1 = pf->positionAndFace & 0x18;
     d1 >>= 3; /* face index 0-3 */
     uint16_t d2, d3;
@@ -4959,7 +4957,7 @@ void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, uint8_t *player, uint16_t 
             }
         }
     injury_0:
-        if (player >= (uint8_t *)&careerTeam && player < (uint8_t *)&careerNumPlayers) {
+        if ((uint8_t *)playerFile >= (uint8_t *)&careerTeam && (uint8_t *)playerFile < (uint8_t *)&careerNumPlayers) {
             if (_ShouldApplyRandomPlayerStatusAfterSim() == 0) {
                 sprite = 0x98;
                 goto write_fg_bg_0;
@@ -5001,7 +4999,7 @@ void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, uint8_t *player, uint16_t 
         }
     }
 injury_1:
-    if (player >= (uint8_t *)&careerTeam && player < (uint8_t *)&careerNumPlayers) {
+    if ((uint8_t *)playerFile >= (uint8_t *)&careerTeam && (uint8_t *)playerFile < (uint8_t *)&careerNumPlayers) {
         if (_ShouldApplyRandomPlayerStatusAfterSim() == 0) {
             sprite = 0x98;
             goto write_fg_bg_1;
@@ -5016,14 +5014,14 @@ write_fg_bg_1:
 /* ---- Chunk 143: SetSquadMenuEntryStatusSprite_AfterSim ---- */
 /* SWOS2.s line 55022 — after-sim variant: check random status first */
 __attribute__((used, externally_visible))
-void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, uint8_t *player)
+void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, PlayerFile *playerFile)
 {
     if (_ShouldApplyRandomPlayerStatusAfterSim() == 0) {
-        _SetSquadMenuEntryStatusSprite(entry, player, 0);
+        _SetSquadMenuEntryStatusSprite(entry, playerFile, 0);
         return;
     }
     /* After sim path — extract face and status for sprite */
-    PlayerFile *pf = (PlayerFile *)(player + sizeof(TeamFile));
+    PlayerFile *pf = &playerFile[2];
     uint16_t d1 = pf->positionAndFace & 0x18;
     d1 >>= 3;
     uint16_t d3 = pf->cardsInjuries & 0xE0;

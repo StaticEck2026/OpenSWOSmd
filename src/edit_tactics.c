@@ -3251,7 +3251,7 @@ void _EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *c
 
     /* Copy Y position and set player face */
     entry39->y = cur->y;
-    _SetMenuEntryPlayerFace(entry39, playerPtr);
+    _SetMenuEntryPlayerFace(entry39, (PlayerFile *)playerPtr);
 
     /* Check position changes (only for first 11 players) */
     if (slot < 11) {
@@ -3316,7 +3316,7 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     teamBase->team.tactics = savedTactics;
 
     /* Check if player is injured */
-    if (_IsPlayerInjured(playerPtr, (int16_t)inEditTactics)) {
+    if (_IsPlayerInjured((PlayerFile *)playerPtr, (int16_t)inEditTactics)) {
         setBgColor(entry41, RED_10);
     }
 
@@ -3360,7 +3360,7 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 43 */
 
     /* Entry 43: top skills */
-    _FormTopSkillsString((uint8_t *)e->fg, playerPtr);
+    _FormTopSkillsString((uint8_t *)e->fg, (PlayerFile *)playerPtr);
     e->y = entryY;
     e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 44 */
 
