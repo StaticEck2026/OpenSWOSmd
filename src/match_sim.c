@@ -19,6 +19,7 @@
 
 #include "match_sim.h"
 #include "game_types.h"
+#include "deterministic.h"
 
 /* Team control type constants (matching play_match_menu.h) */
 #ifndef TEAM_COMPUTER
@@ -1238,8 +1239,10 @@ uint16_t _ScaleSkill(uint16_t skill, int16_t factor, TeamGame *teamGame)
     else
         d3 = team2AppPercent;
 
-    /* d2 = factor * appPercent / 100 */
-    d2 = (uint16_t)((uint16_t)d2 * d3) / 100;
+    /* d2 = factor * appPercent / 100
+     * ASM: mulu.w d3,d2 (16x16→32) then divu.w #100,d2 (32÷16).
+     * Must NOT truncate the 32-bit product before dividing. */
+    d2 = (int16_t)(((uint32_t)(uint16_t)d2 * (uint32_t)d3) / 100);
 
     /* d0 = skill * d2 / 100 */
     uint32_t product = (uint16_t)skill * (uint16_t)d2;
@@ -1335,7 +1338,8 @@ void _AdjustPlayerSkills(uint16_t playerIdx, TeamFile *teamFile,
     if (filePrice == 0)
         filePrice = 1;
 
-    d4 = (uint16_t)((uint16_t)d4 * 100) / (uint16_t)filePrice;
+    /* ASM: mulu.w #100,d4 (16x16→32) then divu.w d3,d4 (32÷16) */
+    d4 = (int16_t)(((uint32_t)(uint16_t)d4 * 100) / (uint16_t)filePrice);
 
     /* Computer-controlled teams always use 100% */
     if (tf->teamControls == TEAM_COMPUTER)

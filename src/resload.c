@@ -542,11 +542,10 @@ static void swap_int2_to_game(void)
 }
 
 /* Wait for blitter idle */
-static void wait_blitter(void)
+static inline __attribute__((always_inline)) void wait_blitter(void)
 {
-    volatile uint16_t *dmaconr = (volatile uint16_t *)DMACONR_ADDR;
-    (void)(*dmaconr & (1u << 14)); /* dummy read/sync */
-    while (*dmaconr & (1u << 14))
+    (void)(custom->dmaconr & (1u << 14));
+    while (custom->dmaconr & (1u << 14))
         ;
 }
 
@@ -615,16 +614,16 @@ void _DetachOSDisplay(void)
     os_GfxWaitTOF(gfxBase);
 
     /* Save DMACONR/INTENAR/ADKCONR with SET bit for later restore */
-    S_SavedDmaCon = *(volatile uint16_t *)DMACONR_ADDR | 0x8000u;
-    S_SavedIntEna = *(volatile uint16_t *)INTENAR_ADDR | 0x8000u;
-    S_SavedAdkCon = *(volatile uint16_t *)ADKCONR_ADDR | 0x8000u;
+    S_SavedDmaCon = custom->dmaconr | 0x8000u;
+    S_SavedIntEna = custom->intenar | 0x8000u;
+    S_SavedAdkCon = custom->adkconr | 0x8000u;
 
     /* Wait for blitter idle */
     wait_blitter();
 
     /* Disable all DMA and interrupts */
-    *(volatile uint16_t *)DMACON_ADDR = 0x01FFu;
-    *(volatile uint16_t *)INTENA_ADDR = 0x3FFFu;
+    custom->dmacon = 0x01FFu;
+    custom->intena = 0x3FFFu;
 }
 
 
@@ -680,14 +679,14 @@ void _ExitToDos(void)
 
     /* Restore copper list from gfx base */
     void *gfxBase = (void *)S_GfxBase;
-    *(volatile uint32_t *)COP1LC_ADDR = *(uint32_t *)((uint8_t *)gfxBase + GFX_COPINIT);
-    *(volatile uint32_t *)COP2LC_ADDR = *(uint32_t *)((uint8_t *)gfxBase + GFX_LOFLIST);
-    *(volatile uint16_t *)COPJMP1_ADDR = 0;
+    custom->cop1lc = *(uint32_t *)((uint8_t *)gfxBase + GFX_COPINIT);
+    custom->cop2lc = *(uint32_t *)((uint8_t *)gfxBase + GFX_LOFLIST);
+    custom->copjmp1 = 0;
 
     /* Restore DMA / interrupts / ADKCON */
-    *(volatile uint16_t *)DMACON_ADDR = S_SavedDmaCon;
-    *(volatile uint16_t *)INTENA_ADDR = S_SavedIntEna;
-    *(volatile uint16_t *)ADKCON_ADDR = S_SavedAdkCon;
+    custom->dmacon = S_SavedDmaCon;
+    custom->intena = S_SavedIntEna;
+    custom->adkcon = S_SavedAdkCon;
 
     /* Restore original view via graphics.library */
     void *savedView = (void *)S_SavedView;
@@ -742,7 +741,7 @@ static uint32_t resload_loadfile(uint8_t *name, uint8_t *dest, uint32_t *outErro
 
     uint32_t handle = os_DosOpen(dosBase, name, MODE_OLDFILE);
     if (handle == 0) {
-        *(volatile uint16_t *)COLOR00_ADDR = 0x0F00u; /* red flash */
+        custom->color[0] = 0x0F00u; /* red flash */
         print_file_error(name);
         if (outError) *outError = 1;
         return 0;
@@ -752,7 +751,7 @@ static uint32_t resload_loadfile(uint8_t *name, uint8_t *dest, uint32_t *outErro
     os_DosClose(dosBase, handle);
 
     if (bytesRead <= 0) {
-        *(volatile uint16_t *)COLOR00_ADDR = 0x0F00u;
+        custom->color[0] = 0x0F00u;
         print_file_error(name);
         if (outError) *outError = 1;
         return 0;
@@ -1142,6 +1141,7 @@ uint32_t _RobNorthenLoader_C(uint32_t cmd, uint32_t arg1, uint8_t *name, uint8_t
 __attribute__((used, externally_visible))
 void _FixSnoopBug(void)
 {
+    /* BPLCON0 is at offset 0x100, not in struct Custom — use absolute address */
     *(volatile uint16_t *)(CUSTOM_BASE + BPLCON0_OFF) = 0x0200u;
 }
 

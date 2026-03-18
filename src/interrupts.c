@@ -5,6 +5,7 @@
  */
 #include "interrupts.h"
 #include "display.h"
+#include "deterministic.h"
 
 /* ---- Hardware register addresses (interrupt-specific, not in display.h) ---- */
 #define INTREQR_OFF     0x1E    /* Interrupt Request read (offset from CUSTOM) */
@@ -67,25 +68,22 @@ extern uint8_t _AudioIRQUpdateChannels(void);
 __attribute__((used, externally_visible))
 void _InitHardwareAtFrameStart(void)
 {
-    volatile uint16_t *custom = (volatile uint16_t *)CUSTOM_BASE;
-
     _FixSnoopBug();
 
-    /* Clear BPLCON0 */
-    custom[BPLCON0_OFF / 2] = 0;
+    /* Clear BPLCON0 — use absolute address (not in struct, at offset 0x100) */
+    *(volatile uint16_t *)(CUSTOM_BASE + BPLCON0_OFF) = 0;
 
     /* Wait for raster position <= 0x0A (top of frame) */
-    volatile uint32_t *vposr = (volatile uint32_t *)VPOSR_ADDR;
     uint32_t pos;
     do
     {
-        pos = (*vposr & 0x1FFFFu) >> 8;
+        pos = (*(volatile uint32_t *)&custom->vposr & 0x1FFFFu) >> 8;
     } while (pos > 0x0Au);
 
     /* Disable all interrupts and DMA */
-    *(volatile uint16_t *)INTENA_ADDR = 0x7FFF;
-    *(volatile uint16_t *)INTREQ_ADDR = 0x7FFF;
-    *(volatile uint16_t *)DMACON_ADDR = 0x7FFF;
+    custom->intena = 0x7FFF;
+    custom->intreq = 0x7FFF;
+    custom->dmacon = 0x7FFF;
     *(volatile uint8_t *)CIAA_ICR_ADDR = 0x7F;
     *(volatile uint8_t *)CIAB_ICR_ADDR = 0x7F;
 }
@@ -115,7 +113,7 @@ void _SetupInterrupts(void)
 
     /* Enable: SET(15) + Master(14) + RBF(11) + VERTB(5) + SOFTINT(2)
      * Binary: 1100 1000 0010 0100 = 0xC824 */
-    *(volatile uint16_t *)INTENA_ADDR = 0xC824;
+    custom->intena = 0xC824;
 }
 
 /* ================================================================
@@ -128,10 +126,8 @@ void _SetupInterrupts(void)
 __attribute__((used, externally_visible))
 void _Int2KeyboardHandler(void)
 {
-    volatile uint16_t *custom = (volatile uint16_t *)CUSTOM_BASE;
-
     /* Check INTREQR bit 3 (I/O Ports and timers) */
-    uint16_t intreq = custom[INTREQR_OFF / 2];
+    uint16_t intreq = custom->intreqr;
     if (!(intreq & (1u << 3)))
         return;
 
@@ -150,11 +146,10 @@ void _Int2KeyboardHandler(void)
 
     /* Timing delay: poll VPOSR 301 times */
     {
-        volatile uint32_t *vposr = (volatile uint32_t *)VPOSR_ADDR;
         int16_t i;
         for (i = 300; i >= 0; i--)
         {
-            (void)*vposr;
+            (void)*(volatile uint32_t *)&custom->vposr;
         }
     }
 
@@ -183,7 +178,7 @@ void _Int2KeyboardHandler(void)
 
 ack:
     /* Acknowledge I/O ports interrupt */
-    custom[0x9C / 2] = 8;
+    custom->intreq = 8;
 }
 
 /* ================================================================
@@ -257,5 +252,5 @@ void _Int3TimerHandler(void)
 
 clear_and_return:
     /* Clear software initiated interrupt */
-    *(volatile uint16_t *)INTREQ_ADDR = 0x0004;
+    custom->intreq = 0x0004;
 }

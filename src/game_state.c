@@ -49,8 +49,8 @@ extern Sprite   team1TotalGoalsDigit1Sprite;
 extern Sprite   team2TotalGoalsDigit2Sprite;
 extern Sprite   team2TotalGoalsDigit1Sprite;
 extern Sprite   dashSprite;
-extern Sprite   team1Scorer1Sprite[8];
-extern Sprite   team2Scorer1Sprite[8];
+extern Sprite   team1ScorerSprite[8];
+extern Sprite   team2ScorerSprite[8];
 
 extern uint16_t team1ScorerSpritesWidths[];  /* 8 entries */
 extern uint16_t team2ScorerSpritesWidths[];  /* 8 entries */
@@ -338,8 +338,8 @@ void _ResetResultSprites(void)
     team1NameSprite.visible = 0;    /* redundant in original asm */
     dashSprite.visible = 0;
 
-    s1 = team1Scorer1Sprite;
-    s2 = team2Scorer1Sprite;
+    s1 = team1ScorerSprite;
+    s2 = team2ScorerSprite;
     sc1 = team1Scorers;
     sc2 = team2Scorers;
     w1 = team1ScorerSpritesWidths;
@@ -447,7 +447,7 @@ show_sprites:
     dashSprite.visible = 1;
 
     /* Team 1 scorer sprites -- break on width==0 or dontShowScorers */
-    s = team1Scorer1Sprite;
+    s = team1ScorerSprite;
     for (d0 = 7; d0 >= 0; d0--)
     {
         if (team1ScorerSpritesWidths[7 - d0] == 0)
@@ -459,7 +459,7 @@ show_sprites:
     }
 
     /* Team 2 scorer sprites -- break on width==0 or dontShowScorers */
-    s = team2Scorer1Sprite;
+    s = team2ScorerSprite;
     for (d0 = 7; d0 >= 0; d0--)
     {
         if (team2ScorerSpritesWidths[7 - d0] == 0)
@@ -514,8 +514,8 @@ hide_result:
 
     /* Hide scorer sprites */
     {
-        Sprite *sa = team1Scorer1Sprite;
-        Sprite *sb = team2Scorer1Sprite;
+        Sprite *sa = team1ScorerSprite;
+        Sprite *sb = team2ScorerSprite;
         for (d0 = 7; d0 >= 0; d0--)
         {
             sa->visible = 0;
@@ -672,7 +672,7 @@ position_sprites:
 
     /* --- Team 1 scorer sprites --- */
     {
-        Sprite *spr = team1Scorer1Sprite;
+        Sprite *spr = team1ScorerSprite;
         uint16_t *widths = team1ScorerSpritesWidths;
         d1 = 263 + d7;
         for (d0 = 7; d0 >= 0; d0--)
@@ -690,7 +690,7 @@ position_sprites:
 
     /* --- Team 2 scorer sprites --- */
     {
-        Sprite *spr = team2Scorer1Sprite;
+        Sprite *spr = team2ScorerSprite;
         uint16_t *widths = team2ScorerSpritesWidths;
         d1 = 263 + d7;
         for (d0 = 7; d0 >= 0; d0--)

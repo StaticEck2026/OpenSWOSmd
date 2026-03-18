@@ -189,7 +189,6 @@ void _Int2Ascii(uint16_t value, uint8_t *out)
 __attribute__((used, externally_visible))
 uint16_t _GetKey(void)
 {
-    volatile uint16_t *intena = (volatile uint16_t *)INTENA_ADDR;
     uint16_t d0;
 
     d0 = 0;
@@ -200,7 +199,7 @@ uint16_t _GetKey(void)
 
 read_next_key:
     /* Disable keyboard interrupt */
-    *intena = 8;
+    custom->intena = 8;
 
     d0 = (uint16_t)keyBuffer[0];
 
@@ -218,7 +217,7 @@ read_next_key:
     keyCount--;
 
     /* Re-enable keyboard interrupt */
-    *intena = 0x8008;
+    custom->intena = 0x8008;
 
     d0 = (uint16_t)keycodeLut[d0];
     if (d0 == 0x3F) {
@@ -238,27 +237,24 @@ read_next_key:
 __attribute__((used, externally_visible))
 void _BlitterCopyOverlayToScreen(void)
 {
-    volatile uint8_t  *dmaconr = (volatile uint8_t *)DMACONR_ADDR;
-    volatile uint16_t *dmacon  = (volatile uint16_t *)DMACON_ADDR;
-    volatile uint16_t *custom  = (volatile uint16_t *)CUSTOM_BASE;
     uint32_t srcAddr;
 
     /* Enable blitter DMA */
-    *dmacon = DMACON_BLT_ON;
+    custom->dmacon = (uint16_t)DMACON_BLT_ON;
 
     /* Wait for blitter idle (dummy read + busy-wait) */
-    (void)(*dmaconr & (1u << DMACONR_BLTBUSY_BIT));
-    while (*dmaconr & (1u << DMACONR_BLTBUSY_BIT))
+    (void)(custom->dmaconr & (1u << 14));
+    while (custom->dmaconr & (1u << 14))
         ;
 
     /* Disable blitter DMA for setup */
-    *dmacon = DMACON_BLT_OFF;
+    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Setup blitter registers */
-    custom[BLTALWM_OFF / 2] = BLT_FWM_ALL;
-    custom[BLTAFWM_OFF / 2] = BLT_FWM_ALL;
-    custom[BLTCON1_OFF / 2] = 0;
-    custom[BLTCON0_OFF / 2] = BLTCON0_USEA_USED_LF_F0;
+    custom->bltalwm = BLT_FWM_ALL;
+    custom->bltafwm = BLT_FWM_ALL;
+    custom->bltcon1 = 0;
+    custom->bltcon0 = BLTCON0_USEA_USED_LF_F0;
 
     /* Select source: if frontbuffer is Alt, use Base; else use Alt */
     srcAddr = (uint32_t)frontbufferBase;
@@ -267,54 +263,54 @@ void _BlitterCopyOverlayToScreen(void)
 
 #ifdef AGA
     /* AGA: per-plane blit with interleaved stride */
-    custom[BLTAMOD_OFF / 2] = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
-    custom[BLTDMOD_OFF / 2] = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
+    custom->bltamod = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
+    custom->bltdmod = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
     {
         uint8_t *srcPlane = (uint8_t *)srcAddr;
         uint8_t *dstPlane = (uint8_t *)frontbufferBasePtr;
         int16_t plane;
         for (plane = NUM_PLANES_MINUS1; plane >= 0; plane--)
         {
-            *dmacon = DMACON_BLT_ON;
-            while (*dmaconr & (1u << DMACONR_BLTBUSY_BIT)) {}
-            *dmacon = DMACON_BLT_OFF;
+            custom->dmacon = (uint16_t)DMACON_BLT_ON;
+            while (custom->dmaconr & (1u << 14)) {}
+            custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
-            *(volatile uint32_t *)&custom[BLTAPT_OFF / 2] = (uint32_t)srcPlane;
-            *(volatile uint32_t *)&custom[BLTDPT_OFF / 2] = (uint32_t)dstPlane;
-            custom[BLTSIZE_OFF / 2] = (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN;
+            custom->bltapt = (uint32_t)srcPlane;
+            custom->bltdpt = (uint32_t)dstPlane;
+            custom->bltsize = (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN;
 
             srcPlane += PLANE_STRIDE;
             dstPlane += PLANE_STRIDE;
         }
     }
     /* Wait for last blit */
-    *dmacon = DMACON_BLT_ON;
-    while (*dmaconr & (1u << DMACONR_BLTBUSY_BIT)) {}
-    *dmacon = DMACON_BLT_OFF;
+    custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    while (custom->dmaconr & (1u << 14)) {}
+    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 #else
-    custom[BLTAMOD_OFF / 2] = 0;
-    custom[BLTDMOD_OFF / 2] = 0;
+    custom->bltamod = 0;
+    custom->bltdmod = 0;
 
     /* Set destination to current frontbuffer */
-    *(volatile uint32_t *)&custom[BLTDPT_OFF / 2] = frontbufferBasePtr;
-    *(volatile uint32_t *)&custom[BLTAPT_OFF / 2] = srcAddr;
+    custom->bltdpt = frontbufferBasePtr;
+    custom->bltapt = srcAddr;
 
     /* Start blit */
-    custom[BLTSIZE_OFF / 2] = BLTSIZE_OVERLAY_PANEL;
+    custom->bltsize = BLTSIZE_OVERLAY_PANEL;
 
     /* Enable blitter DMA */
-    *dmacon = DMACON_BLT_ON;
+    custom->dmacon = (uint16_t)DMACON_BLT_ON;
 
     /* Wait for blit to finish (dummy read + busy-wait) */
-    (void)(*dmaconr & (1u << DMACONR_BLTBUSY_BIT));
-    while (*dmaconr & (1u << DMACONR_BLTBUSY_BIT))
+    (void)(custom->dmaconr & (1u << 14));
+    while (custom->dmaconr & (1u << 14))
         ;
 
     /* Disable blitter DMA */
-    *dmacon = DMACON_BLT_OFF;
+    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Reset blit size */
-    custom[BLTSIZE_OFF / 2] = 0x16;
+    custom->bltsize = 0x16;
 #endif
 }
 

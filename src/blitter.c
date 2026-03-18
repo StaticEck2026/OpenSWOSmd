@@ -19,15 +19,13 @@ extern void _PanicHaltLoop(void) __attribute__((noreturn));
 /* CharsTableHeader is defined in game_types.h */
 
 
-static void waitBlit(void)
+static inline __attribute__((always_inline)) void waitBlit(void)
 {
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
-    /* First read: dummy read to prime Agnus pipeline (matches asm pattern) */
-    (void)(*(volatile uint8_t *)DMACONR_ADDR);
-    /* Second read: actual busy-wait loop */
-    while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT))
+    custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(custom->dmaconr & (1u << 14));
+    while (custom->dmaconr & (1u << 14))
         ;
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
+    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 }
 
 /* ================================================================
@@ -77,7 +75,6 @@ static const uint16_t lastWordMaskTable[16] = {
 static void blitterSpanCore(uint8_t *plane, uint16_t xBit, uint16_t width,
                             uint16_t height, uint16_t d5, uint16_t d6)
 {
-    volatile uint8_t *custom = (volatile uint8_t *)CUSTOM_BASE;
     uint16_t d7, d0;
 
     /* ---- Left edge ---- */
@@ -98,19 +95,19 @@ static void blitterSpanCore(uint8_t *plane, uint16_t xBit, uint16_t width,
            BLTBDAT holds ~mask (span pixels) even though USEB=0;
            the blitter uses BLTBDAT as constant B input in the minterm. */
         waitBlit();
-        *(volatile uint16_t *)(custom + BLTAFWM_OFF) = d7;
-        *(volatile uint16_t *)(custom + BLTALWM_OFF) = d7;
+        custom->bltafwm = d7;
+        custom->bltalwm = d7;
         d7 = ~d7;
-        *(volatile uint16_t *)(custom + BLTBDAT_OFF) = d7;
-        *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)plane;
-        *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)plane;
-        *(volatile uint16_t *)(custom + BLTAMOD_OFF) = FB_BLT_MOD_AFTER_1_WORD;
-        *(volatile uint16_t *)(custom + BLTDMOD_OFF) = FB_BLT_MOD_AFTER_1_WORD;
-        *(volatile uint16_t *)(custom + BLTCON0_OFF) = d5;
-        *(volatile uint16_t *)(custom + BLTCON1_OFF) = 0;
+        custom->bltbdat = d7;
+        custom->bltapt = (uint32_t)plane;
+        custom->bltdpt = (uint32_t)plane;
+        custom->bltamod = FB_BLT_MOD_AFTER_1_WORD;
+        custom->bltdmod = FB_BLT_MOD_AFTER_1_WORD;
+        custom->bltcon0 = d5;
+        custom->bltcon1 = 0;
         {
             uint16_t blitsize = (height << 6) | 1;
-            *(volatile uint16_t *)(custom + BLTSIZE_OFF) = blitsize;
+            custom->bltsize = blitsize;
         }
 
         plane += 2;
@@ -125,13 +122,13 @@ static void blitterSpanCore(uint8_t *plane, uint16_t xBit, uint16_t width,
         uint16_t mod = ROW_STRIDE_BYTES - d0 * 2;
 
         waitBlit();
-        *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)plane;
-        *(volatile uint16_t *)(custom + BLTDMOD_OFF) = mod;
-        *(volatile uint16_t *)(custom + BLTCON0_OFF) = d6;
-        *(volatile uint16_t *)(custom + BLTCON1_OFF) = 0;
+        custom->bltdpt = (uint32_t)plane;
+        custom->bltdmod = mod;
+        custom->bltcon0 = d6;
+        custom->bltcon1 = 0;
         {
             uint16_t blitsize = (height << 6) | d0;
-            *(volatile uint16_t *)(custom + BLTSIZE_OFF) = blitsize;
+            custom->bltsize = blitsize;
         }
 
         plane += d0 * 2;
@@ -144,19 +141,19 @@ static void blitterSpanCore(uint8_t *plane, uint16_t xBit, uint16_t width,
             d7 = ~tailMaskTable[tail];
 
             waitBlit();
-            *(volatile uint16_t *)(custom + BLTAFWM_OFF) = d7;
-            *(volatile uint16_t *)(custom + BLTALWM_OFF) = d7;
+            custom->bltafwm = d7;
+            custom->bltalwm = d7;
             d7 = ~d7;
-            *(volatile uint16_t *)(custom + BLTBDAT_OFF) = d7;
-            *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)plane;
-            *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)plane;
-            *(volatile uint16_t *)(custom + BLTAMOD_OFF) = FB_BLT_MOD_AFTER_1_WORD;
-            *(volatile uint16_t *)(custom + BLTDMOD_OFF) = FB_BLT_MOD_AFTER_1_WORD;
-            *(volatile uint16_t *)(custom + BLTCON0_OFF) = d5;
-            *(volatile uint16_t *)(custom + BLTCON1_OFF) = 0;
+            custom->bltbdat = d7;
+            custom->bltapt = (uint32_t)plane;
+            custom->bltdpt = (uint32_t)plane;
+            custom->bltamod = FB_BLT_MOD_AFTER_1_WORD;
+            custom->bltdmod = FB_BLT_MOD_AFTER_1_WORD;
+            custom->bltcon0 = d5;
+            custom->bltcon1 = 0;
             {
                 uint16_t blitsize = (height << 6) | 1;
-                *(volatile uint16_t *)(custom + BLTSIZE_OFF) = blitsize;
+                custom->bltsize = blitsize;
             }
         }
     }
@@ -288,7 +285,6 @@ void _FillRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t col
 static void blitterRectRowMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
                                  uint8_t *mask, uint8_t *buf)
 {
-    volatile uint8_t *custom = (volatile uint8_t *)CUSTOM_BASE;
     uint16_t wordStart, wordEnd, wordSpan;
     uint16_t fwm, lwm;
     uint16_t mod;
@@ -325,22 +321,22 @@ static void blitterRectRowMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
 
     wordSpan += 1;
 
-    *(volatile uint16_t *)(custom + BLTCON0_OFF) = BLTCON0_USEA_USEB_USED_LF_FC;
-    *(volatile uint16_t *)(custom + BLTCON1_OFF) = 0;
-    *(volatile uint16_t *)(custom + BLTAFWM_OFF) = fwm;
-    *(volatile uint16_t *)(custom + BLTALWM_OFF) = lwm;
-    *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)mask;
-    *(volatile uint32_t *)(custom + BLTBPT_OFF) = (uint32_t)buf;
-    *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)buf;
+    custom->bltcon0 = BLTCON0_USEA_USEB_USED_LF_FC;
+    custom->bltcon1 = 0;
+    custom->bltafwm = fwm;
+    custom->bltalwm = lwm;
+    custom->bltapt = (uint32_t)mask;
+    custom->bltbpt = (uint32_t)buf;
+    custom->bltdpt = (uint32_t)buf;
 
     mod = PLANE_STRIDE - wordSpan * 2;
-    *(volatile uint16_t *)(custom + BLTAMOD_OFF) = mod;
-    *(volatile uint16_t *)(custom + BLTBMOD_OFF) = mod;
-    *(volatile uint16_t *)(custom + BLTDMOD_OFF) = mod;
+    custom->bltamod = mod;
+    custom->bltbmod = mod;
+    custom->bltdmod = mod;
 
     {
         uint16_t blitsize = (h << 6) | wordSpan;
-        *(volatile uint16_t *)(custom + BLTSIZE_OFF) = blitsize;
+        custom->bltsize = blitsize;
     }
 }
 
@@ -590,7 +586,6 @@ __attribute__((used, externally_visible))
 void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
                               uint16_t planeMask, uint16_t dstSpriteIndex)
 {
-    volatile uint8_t *custom = (volatile uint8_t *)CUSTOM_BASE;
     uint8_t *base = spriteGraphicsPtr;
     SpriteGraphics *srcHdr, *dstHdr;
     uint8_t *dstBase;
@@ -652,12 +647,12 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
         blitWords -= 1;
     }
 
-    *(volatile uint16_t *)(custom + BLTALWM_OFF) = lastWordMask;
-    *(volatile uint16_t *)(custom + BLTAFWM_OFF) = 0xFFFF;
+    custom->bltalwm = lastWordMask;
+    custom->bltafwm = 0xFFFF;
 
     /* Shift amount → bltcon1 (descending=0, shift in bits 12-15 of con0) */
     bltconShift = xBit << 12;
-    *(volatile uint16_t *)(custom + BLTCON1_OFF) = bltconShift;
+    custom->bltcon1 = bltconShift;
 
     /* Validate mask pointer exists */
     maskPtr = (uint8_t *)srcHdr->maskPtr;
@@ -689,13 +684,13 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     /* Source B (glyph) modulo: stride2 * NUM_PLANES - blitWords */
     srcBMod = srcStride2 * NUM_PLANES - blitWords;
 
-    *(volatile uint16_t *)(custom + BLTAMOD_OFF) = srcAMod;
-    *(volatile uint16_t *)(custom + BLTBMOD_OFF) = srcBMod;
+    custom->bltamod = srcAMod;
+    custom->bltbmod = srcBMod;
 
     /* Dest modulo: dstRowBytes * NUM_PLANES - blitWords */
     dstMod = dstRowBytes * NUM_PLANES - blitWords;
-    *(volatile uint16_t *)(custom + BLTCMOD_OFF) = dstMod;
-    *(volatile uint16_t *)(custom + BLTDMOD_OFF) = dstMod;
+    custom->bltcmod = dstMod;
+    custom->bltdmod = dstMod;
 
     /* Glyph data: advance to plane 1, and compute last plane pointer */
     glyphData = (uint8_t *)srcHdr->sprData;      /* sprData (plane 0 start) */
@@ -712,22 +707,22 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
         if (bit) {
             /* Cookie-cut: D = (A & B) | (~A & C), BLTCON0 = $FCA + shift */
             uint16_t con0 = bltconShift + BLTCON0_BASE_LINKED;
-            *(volatile uint16_t *)(custom + BLTCON0_OFF) = con0;
-            *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)maskPtr;
-            *(volatile uint32_t *)(custom + BLTBPT_OFF) = (uint32_t)glyphData;
-            *(volatile uint32_t *)(custom + BLTCPT_OFF) = (uint32_t)dstPtr;
-            *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)dstPtr;
+            custom->bltcon0 = con0;
+            custom->bltapt = (uint32_t)maskPtr;
+            custom->bltbpt = (uint32_t)glyphData;
+            custom->bltcpt = (uint32_t)dstPtr;
+            custom->bltdpt = (uint32_t)dstPtr;
         } else {
             /* Clear-through-mask: D = ~A & C, BLTCON0 = $B0A + shift */
             uint16_t con0 = bltconShift + BLTCON0_CLEAR_MASK;
-            *(volatile uint16_t *)(custom + BLTCON0_OFF) = con0;
-            *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)maskPtr;
-            *(volatile uint32_t *)(custom + BLTCPT_OFF) = (uint32_t)dstPtr;
-            *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)dstPtr;
+            custom->bltcon0 = con0;
+            custom->bltapt = (uint32_t)maskPtr;
+            custom->bltcpt = (uint32_t)dstPtr;
+            custom->bltdpt = (uint32_t)dstPtr;
         }
 
         /* Kick blit */
-        *(volatile uint16_t *)(custom + BLTSIZE_OFF) = blitsize;
+        custom->bltsize = blitsize;
 
         /* Wait for blit to complete */
         waitBlit();
@@ -744,22 +739,22 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     if (bit3) {
         /* OR-mask: D = (A & B) | C, BLTCON0 = $BFA + shift */
         uint16_t con0 = bltconShift + BLTCON0_OR_MASK;
-        *(volatile uint16_t *)(custom + BLTCON0_OFF) = con0;
-        *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)maskPtr;
-        *(volatile uint32_t *)(custom + BLTCPT_OFF) = (uint32_t)dstPtr;
-        *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)dstPtr;
+        custom->bltcon0 = con0;
+        custom->bltapt = (uint32_t)maskPtr;
+        custom->bltcpt = (uint32_t)dstPtr;
+        custom->bltdpt = (uint32_t)dstPtr;
     } else {
         /* Cookie-cut with last plane data: D = (A & B) | (~A & C), use glyphPlane3 */
         uint16_t con0 = bltconShift + BLTCON0_BASE_LINKED;
-        *(volatile uint16_t *)(custom + BLTCON0_OFF) = con0;
-        *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)maskPtr;
-        *(volatile uint32_t *)(custom + BLTBPT_OFF) = (uint32_t)glyphPlane3;
-        *(volatile uint32_t *)(custom + BLTCPT_OFF) = (uint32_t)dstPtr;
-        *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)dstPtr;
+        custom->bltcon0 = con0;
+        custom->bltapt = (uint32_t)maskPtr;
+        custom->bltbpt = (uint32_t)glyphPlane3;
+        custom->bltcpt = (uint32_t)dstPtr;
+        custom->bltdpt = (uint32_t)dstPtr;
     }
 
     /* Kick final blit (no wait — caller or next operation will sync) */
-    *(volatile uint16_t *)(custom + BLTSIZE_OFF) = blitsize;
+    custom->bltsize = blitsize;
     }
 }
 

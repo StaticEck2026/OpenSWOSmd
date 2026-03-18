@@ -5,6 +5,9 @@
  */
 #include "display.h"
 
+/* Custom chip base pointer — set once, used by all HW register access */
+volatile struct Custom *custom = (volatile struct Custom *)0xDFF000;
+
 /* ---- External globals (all live in SWOS2.s) ---- */
 
 /* Frontbuffer pointers */
@@ -298,20 +301,20 @@ void _InitDisplayAndCopper(void)
     copperZeroLong = 0;
 
     /* Disable interrupts during vblank sync */
-    *(volatile uint16_t *)INTENA_ADDR = 0x4000u;
+    custom->intena = 0x4000u;
 
     /* Wait for beam position <= line 10 (top of frame) */
     {
         uint32_t vpos;
         do
         {
-            vpos = *(volatile uint32_t *)VPOSR_ADDR;
+            vpos = *(volatile uint32_t *)&custom->vposr;
             vpos = (vpos & 0x1FFFFu) >> 8;
         } while (vpos > 0x0Au);
     }
 
     /* Re-enable interrupts */
-    *(volatile uint16_t *)INTENA_ADDR = 0xC000u;
+    custom->intena = 0xC000u;
 
     /* Write copperZeroLong pointer into first 8 sprite pointer entries */
     {
@@ -390,34 +393,34 @@ void _InitDisplayAndCopper(void)
     _UpdatePlanePtrsAndBlitParams();
 
     /* Install copper list */
-    *(volatile uint32_t *)COP1LC_ADDR = (uint32_t)copperListBuffer;
+    custom->cop1lc = (uint32_t)copperListBuffer;
 
     /* Strobe copper to start — original asm does: move.w (COPJMP1).l,d0
      * This is a pure read strobe; any access triggers copper PC reload. */
     {
-        volatile uint16_t dummy = *(volatile uint16_t *)COPJMP1_ADDR;
+        volatile uint16_t dummy = custom->copjmp1;
         (void)dummy;
     }
 
     /* Enable blitter DMA, wait for idle, disable */
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
-    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
-    while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT))
+    custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(custom->dmaconr & (1u << 14));
+    while (custom->dmaconr & (1u << 14))
     {
         /* wait for blitter idle */
     }
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
+    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Enable copper + bitplane DMA */
-    *(volatile uint16_t *)DMACON_ADDR = 0x8280u;
+    custom->dmacon = 0x8280u;
     /* Enable sprite DMA */
-    *(volatile uint16_t *)DMACON_ADDR = 0x8220u;
+    custom->dmacon = 0x8220u;
 
     /* Re-strobe copper after DMA is fully enabled.
      * Some emulators (FS-UAE) may ignore the pre-DMA strobe,
      * so re-trigger to ensure the copper starts from COP1LC. */
     {
-        volatile uint16_t dummy = *(volatile uint16_t *)COPJMP1_ADDR;
+        volatile uint16_t dummy = custom->copjmp1;
         (void)dummy;
     }
 }
@@ -710,72 +713,70 @@ void _DoubleBufferSwapSequence(void)
 __attribute__((used, externally_visible))
 void _BlitterCopyPanelToScreen2(void)
 {
-    volatile uint8_t *custom = (volatile uint8_t *)CUSTOM_BASE;
-
     /* Enable blitter DMA and wait for idle */
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
-    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
-    while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT))
+    custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(custom->dmaconr & (1u << 14));
+    while (custom->dmaconr & (1u << 14))
     {
         /* wait */
     }
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
+    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Configure blitter for A→D copy */
-    *(volatile uint16_t *)(custom + BLTALWM_OFF) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLTAFWM_OFF) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLTCON1_OFF) = 0;
-    *(volatile uint16_t *)(custom + BLTCON0_OFF) = (uint16_t)BLTCON0_USEA_USED_LF_F0;
+    custom->bltalwm = BLT_FWM_ALL;
+    custom->bltafwm = BLT_FWM_ALL;
+    custom->bltcon1 = 0;
+    custom->bltcon0 = (uint16_t)BLTCON0_USEA_USED_LF_F0;
 
 #ifdef AGA
     /* AGA: per-plane blit with interleaved stride */
-    *(volatile uint16_t *)(custom + BLTAMOD_OFF) = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
-    *(volatile uint16_t *)(custom + BLTDMOD_OFF) = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
+    custom->bltamod = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
+    custom->bltdmod = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
     {
         uint8_t *srcPlane = frontbufferMaskBuffer;
         uint8_t *dstPlane = (uint8_t *)frontbufferBasePtr;
         int16_t plane;
         for (plane = NUM_PLANES_MINUS1; plane >= 0; plane--)
         {
-            *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
-            while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
-            *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
+            custom->dmacon = (uint16_t)DMACON_BLT_ON;
+            while (custom->dmaconr & (1u << 14)) {}
+            custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
-            *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)srcPlane;
-            *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)dstPlane;
-            *(volatile uint16_t *)(custom + BLTSIZE_OFF) = (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN;
+            custom->bltapt = (uint32_t)srcPlane;
+            custom->bltdpt = (uint32_t)dstPlane;
+            custom->bltsize = (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN;
 
             srcPlane += PLANE_STRIDE;
             dstPlane += PLANE_STRIDE;
         }
     }
     /* Wait for last blit */
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
-    while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
+    custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    while (custom->dmaconr & (1u << 14)) {}
+    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 #else
     /* OCS: single full-buffer blit */
-    *(volatile uint16_t *)(custom + BLTAMOD_OFF) = 0;
-    *(volatile uint16_t *)(custom + BLTDMOD_OFF) = 0;
+    custom->bltamod = 0;
+    custom->bltdmod = 0;
 
     /* Set source and destination pointers */
-    *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)frontbufferMaskBuffer;
-    *(volatile uint32_t *)(custom + BLTDPT_OFF) = frontbufferBasePtr;
+    custom->bltapt = (uint32_t)frontbufferMaskBuffer;
+    custom->bltdpt = frontbufferBasePtr;
 
     /* Kick the blit (writing BLTSIZE starts it) */
-    *(volatile uint16_t *)(custom + BLTSIZE_OFF) = (uint16_t)BLTSIZE_OVERLAY_PANEL;
+    custom->bltsize = (uint16_t)BLTSIZE_OVERLAY_PANEL;
 
     /* Wait for blit to complete, then disable blitter DMA */
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
-    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
-    while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT))
+    custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(custom->dmaconr & (1u << 14));
+    while (custom->dmaconr & (1u << 14))
     {
         /* wait */
     }
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
+    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Reset blit size to small default */
-    *(volatile uint16_t *)(custom + BLTSIZE_OFF) = 0x0016u;
+    custom->bltsize = 0x0016u;
 #endif
 }
 
@@ -792,20 +793,19 @@ void _BlitterCopyPanelToScreen2(void)
 __attribute__((used, externally_visible))
 void _ProcessSpriteBlitQueue(void)
 {
-    volatile uint8_t *custom = (volatile uint8_t *)CUSTOM_BASE;
     volatile uint32_t *queue;
 
     /* Enable blitter and wait idle */
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
-    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
-    while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
+    custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(custom->dmaconr & (1u << 14));
+    while (custom->dmaconr & (1u << 14)) {}
+    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Set blitter config: A→D copy, full masks, no shift */
-    *(volatile uint16_t *)(custom + BLTAFWM_OFF) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLTALWM_OFF) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLTCON1_OFF) = 0;
-    *(volatile uint16_t *)(custom + BLTCON0_OFF) = (uint16_t)BLTCON0_USEA_USED_LF_F0;
+    custom->bltafwm = BLT_FWM_ALL;
+    custom->bltalwm = BLT_FWM_ALL;
+    custom->bltcon1 = 0;
+    custom->bltcon0 = (uint16_t)BLTCON0_USEA_USED_LF_F0;
 
     queue = (volatile uint32_t *)spriteBlitQueue;
 
@@ -815,21 +815,21 @@ void _ProcessSpriteBlitQueue(void)
         uint16_t *entry16;
 
         /* Wait for blitter idle */
-        *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
-        (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
-        while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
-        *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
+        custom->dmacon = (uint16_t)DMACON_BLT_ON;
+        (void)(custom->dmaconr & (1u << 14));
+        while (custom->dmaconr & (1u << 14)) {}
+        custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
         srcPtr = queue[0];
         if ((int32_t)srcPtr < 0)
             break; /* sentinel: end of queue */
 
-        *(volatile uint32_t *)(custom + BLTAPT_OFF) = srcPtr;
-        *(volatile uint32_t *)(custom + BLTDPT_OFF) = queue[1];
+        custom->bltapt = srcPtr;
+        custom->bltdpt = queue[1];
         entry16 = (uint16_t *)queue;
-        *(volatile uint16_t *)(custom + BLTAMOD_OFF) = entry16[4]; /* +8 */
-        *(volatile uint16_t *)(custom + BLTDMOD_OFF) = entry16[4]; /* same mod for A and D */
-        *(volatile uint16_t *)(custom + BLTSIZE_OFF) = entry16[5]; /* +10, kicks blit */
+        custom->bltamod = entry16[4]; /* +8 */
+        custom->bltdmod = entry16[4]; /* same mod for A and D */
+        custom->bltsize = entry16[5]; /* +10, kicks blit */
 
         queue = (volatile uint32_t *)((uint8_t *)queue + 12);
     }
@@ -851,61 +851,59 @@ void _ProcessSpriteBlitQueue(void)
 __attribute__((used, externally_visible))
 void _BlitterCopyPanelToScreen(void)
 {
-    volatile uint8_t *custom = (volatile uint8_t *)CUSTOM_BASE;
-
     /* Wait for blitter idle */
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
-    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
-    while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
+    custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(custom->dmaconr & (1u << 14));
+    while (custom->dmaconr & (1u << 14)) {}
+    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Configure: A→D copy, full masks */
-    *(volatile uint16_t *)(custom + BLTALWM_OFF) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLTAFWM_OFF) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLTCON1_OFF) = 0;
-    *(volatile uint16_t *)(custom + BLTCON0_OFF) = (uint16_t)BLTCON0_USEA_USED_LF_F0;
+    custom->bltalwm = BLT_FWM_ALL;
+    custom->bltafwm = BLT_FWM_ALL;
+    custom->bltcon1 = 0;
+    custom->bltcon0 = (uint16_t)BLTCON0_USEA_USED_LF_F0;
 
 #ifdef AGA
     /* AGA: per-plane blit with interleaved stride */
-    *(volatile uint16_t *)(custom + BLTAMOD_OFF) = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
-    *(volatile uint16_t *)(custom + BLTDMOD_OFF) = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
+    custom->bltamod = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
+    custom->bltdmod = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
     {
         uint8_t *srcPlane = frontbufferMaskBuffer;
         uint8_t *dstPlane = (uint8_t *)frontbufferBasePtr;
         int16_t plane;
         for (plane = NUM_PLANES_MINUS1; plane >= 0; plane--)
         {
-            *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
-            while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
-            *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
+            custom->dmacon = (uint16_t)DMACON_BLT_ON;
+            while (custom->dmaconr & (1u << 14)) {}
+            custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
-            *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)srcPlane;
-            *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)dstPlane;
-            *(volatile uint16_t *)(custom + BLTSIZE_OFF) = (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN;
+            custom->bltapt = (uint32_t)srcPlane;
+            custom->bltdpt = (uint32_t)dstPlane;
+            custom->bltsize = (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN;
 
             srcPlane += PLANE_STRIDE;
             dstPlane += PLANE_STRIDE;
         }
     }
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
-    while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
+    custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    while (custom->dmaconr & (1u << 14)) {}
+    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 #else
     /* OCS: single full-buffer blit */
-    *(volatile uint16_t *)(custom + BLTAMOD_OFF) = 0;
-    *(volatile uint16_t *)(custom + BLTDMOD_OFF) = 0;
+    custom->bltamod = 0;
+    custom->bltdmod = 0;
 
     /* Source = frontbufferMaskBuffer, Dest = frontbuffer */
-    *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)frontbufferMaskBuffer;
-    *(volatile uint32_t *)(custom + BLTDPT_OFF) = frontbufferBasePtr;
-    *(volatile uint16_t *)(custom + BLTSIZE_OFF) = (uint16_t)BLTSIZE_OVERLAY_PANEL;
+    custom->bltapt = (uint32_t)frontbufferMaskBuffer;
+    custom->bltdpt = frontbufferBasePtr;
+    custom->bltsize = (uint16_t)BLTSIZE_OVERLAY_PANEL;
 
     /* Wait, then kick small trailing blit */
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
-    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
-    while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
-    *(volatile uint16_t *)(custom + BLTSIZE_OFF) = 0x0016u;
+    custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(custom->dmaconr & (1u << 14));
+    while (custom->dmaconr & (1u << 14)) {}
+    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    custom->bltsize = 0x0016u;
 #endif
 }
 
@@ -921,7 +919,6 @@ void _BlitterCopyPanelToScreen(void)
 __attribute__((used, externally_visible))
 void _HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
 {
-    volatile uint8_t *custom = (volatile uint8_t *)CUSTOM_BASE;
     uint32_t *gfxTable = (uint32_t *)spriteGraphicsPtr;
     uint8_t *sprEntry;
     uint32_t destPtr;
@@ -932,28 +929,28 @@ void _HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
     sprEntry = (uint8_t *)gfxTable[spriteIndex];
 
     /* Wait for blitter idle */
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
-    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
-    while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT)) {}
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
+    custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(custom->dmaconr & (1u << 14));
+    while (custom->dmaconr & (1u << 14)) {}
+    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Configure: D-only fill (LF=F0 with no source channels) */
-    *(volatile uint16_t *)(custom + BLTALWM_OFF) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLTAFWM_OFF) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLTCON1_OFF) = 0;
-    *(volatile uint16_t *)(custom + BLTCON0_OFF) = (uint16_t)BLTCON0_USED_LF_F0;
-    *(volatile uint16_t *)(custom + BLTADAT_OFF) = 0; /* fill with zeros */
-    *(volatile uint16_t *)(custom + BLTDMOD_OFF) = 0;
+    custom->bltalwm = BLT_FWM_ALL;
+    custom->bltafwm = BLT_FWM_ALL;
+    custom->bltcon1 = 0;
+    custom->bltcon0 = (uint16_t)BLTCON0_USED_LF_F0;
+    custom->bltadat = 0; /* fill with zeros */
+    custom->bltdmod = 0;
 
     /* Dest = sprite data pointer (first long of sprite entry) */
     destPtr = *(uint32_t *)sprEntry;
-    *(volatile uint32_t *)(custom + BLTDPT_OFF) = destPtr;
+    custom->bltdpt = destPtr;
 
     /* BLTSIZE = (height << 8) | stride */
     height = *(uint16_t *)(sprEntry + 12);
     stride = *(uint16_t *)(sprEntry + 14); /* TILE_STRIDE offset */
     blitSize = (uint16_t)((height << (NUM_PLANES_SHIFT + 6)) | stride);
-    *(volatile uint16_t *)(custom + BLTSIZE_OFF) = blitSize;
+    custom->bltsize = blitSize;
 }
 
 /* ================================================================
@@ -965,15 +962,14 @@ void _HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
 __attribute__((used, externally_visible))
 void _FlashColor0Delay(uint32_t loopCount, uint16_t color)
 {
-    volatile uint16_t *color00 = (volatile uint16_t *)COLOR00_ADDR;
     volatile uint16_t *copperColor0 = (volatile uint16_t *)(copperListBuffer + COP_PAL_B0_C0_VAL_OFF);
 
-    *color00 = color;
+    custom->color[0] = color;
     while (--loopCount != 0)
     {
-        *color00 = color; /* keep writing to prevent optimizer from removing */
+        custom->color[0] = color; /* keep writing to prevent optimizer from removing */
     }
-    *color00 = *copperColor0;
+    custom->color[0] = *copperColor0;
 }
 
 /* ================================================================

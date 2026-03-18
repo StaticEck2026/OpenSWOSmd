@@ -38,8 +38,8 @@ extern uint16_t penalty;
 extern uint16_t panicReasonCode;
 extern ScorerInfo      team1Scorers[];
 extern ScorerInfo      team2Scorers[];
-extern Sprite          team1Scorer1Sprite[];
-extern Sprite          team2Scorer1Sprite[];
+extern Sprite          team1ScorerSprite[];
+extern Sprite          team2ScorerSprite[];
 extern uint16_t team1ScorerSpritesWidths[];
 extern uint16_t team2ScorerSpritesWidths[];
 extern TeamGame       *topTeamPtr;
@@ -92,7 +92,7 @@ _GoalScored(int16_t scoringTeam, Sprite *scorerSprite)
     TeamGame       *a2;         /* team file data: scorer's team (for player lookup) */
     TeamGame       *a1_team;    /* team file data: opponent team (for own goal stat) */
     ScorerInfo     *scorers;    /* a3: team1Scorers or team2Scorers */
-    Sprite         *scorerSprites; /* a4: team1Scorer1Sprite or team2Scorer1Sprite */
+    Sprite         *scorerSprites; /* a4: team1ScorerSprite or team2ScorerSprite */
     uint16_t       *sprWidths;  /* a6: scorer sprite widths array */
     TeamGame       *inGameTeam; /* a3 temp: in-game team struct */
     int16_t         goalType;   /* d1: 0=normal, 1=penalty, 2=own goal */
@@ -181,14 +181,14 @@ skip_if_penalties:
     /* ---- select scorer tables by team ---- */
     if (scoringTeam == 1) {
         scorers = team1Scorers;
-        scorerSprites = team1Scorer1Sprite;
+        scorerSprites = team1ScorerSprite;
         sprWidths = team1ScorerSpritesWidths;
         if (goalType == GT_OWN_GOAL)
             goto own_goal_ptrs;
         goto normal_ptrs;
     } else {
         scorers = team2Scorers;
-        scorerSprites = team2Scorer1Sprite;
+        scorerSprites = team2ScorerSprite;
         sprWidths = team2ScorerSpritesWidths;
         if (goalType == GT_OWN_GOAL)
             goto normal_ptrs;

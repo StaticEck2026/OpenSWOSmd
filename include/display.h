@@ -27,7 +27,7 @@ typedef long int32_t;
 #define GRAFS "grafs/"
 #endif
 
-/* ---- Hardware register addresses ---- */
+/* ---- Hardware register addresses (for code that can't use struct Custom) ---- */
 #define CUSTOM_BASE         0x00DFF000u
 #define DMACONR_ADDR        0x00DFF002u
 #define VPOSR_ADDR          0x00DFF004u
@@ -35,24 +35,86 @@ typedef long int32_t;
 #define COPJMP1_ADDR        0x00DFF088u
 #define DMACON_ADDR         0x00DFF096u
 #define INTENA_ADDR         0x00DFF09Au
+#define INTREQ_ADDR         0x00DFF09Cu
 #define COLOR00_ADDR        0x00DFF180u
 
-/* ---- Blitter register offsets from CUSTOM_BASE ---- */
-#define BLTCON0_OFF         64
-#define BLTCON1_OFF         66
-#define BLTAFWM_OFF         68
-#define BLTALWM_OFF         70
-#define BLTCPT_OFF          72
-#define BLTBPT_OFF          76
-#define BLTAPT_OFF          80
-#define BLTDPT_OFF          84
-#define BLTSIZE_OFF         88
-#define BLTCMOD_OFF         96
-#define BLTBMOD_OFF         98
-#define BLTAMOD_OFF         100
-#define BLTDMOD_OFF         102
-#define BLTBDAT_OFF         114
-#define BLTADAT_OFF         116
+/* ==================================================================
+ * Amiga Custom Chip Register Map (struct for register-relative access)
+ *
+ * Using volatile struct Custom * gives the compiler struct layout info,
+ * enabling efficient offset(An) addressing instead of absolute long.
+ * ================================================================== */
+struct Custom {
+    uint16_t bltddat;       /* 0x000 */
+    uint16_t dmaconr;       /* 0x002 */
+    uint16_t vposr;         /* 0x004 */
+    uint16_t vhposr;        /* 0x006 */
+    uint16_t pad_008[4];    /* 0x008-0x00E */
+    uint16_t adkconr;       /* 0x010 */
+    uint16_t pad_012[5];    /* 0x012-0x01A */
+    uint16_t intenar;       /* 0x01C */
+    uint16_t intreqr;       /* 0x01E */
+    uint16_t pad_020[16];   /* 0x020-0x03E */
+    uint16_t bltcon0;       /* 0x040 */
+    uint16_t bltcon1;       /* 0x042 */
+    uint16_t bltafwm;       /* 0x044 */
+    uint16_t bltalwm;       /* 0x046 */
+    uint32_t bltcpt;        /* 0x048 */
+    uint32_t bltbpt;        /* 0x04C */
+    uint32_t bltapt;        /* 0x050 */
+    uint32_t bltdpt;        /* 0x054 */
+    uint16_t bltsize;       /* 0x058 */
+    uint16_t pad_05A[3];    /* 0x05A-0x05E */
+    uint16_t bltcmod;       /* 0x060 */
+    uint16_t bltbmod;       /* 0x062 */
+    uint16_t bltamod;       /* 0x064 */
+    uint16_t bltdmod;       /* 0x066 */
+    uint16_t pad_068[4];    /* 0x068-0x06E */
+    uint16_t bltcdat;       /* 0x070 */
+    uint16_t bltbdat;       /* 0x072 */
+    uint16_t bltadat;       /* 0x074 */
+    uint16_t pad_076[4];    /* 0x076-0x07C */
+    uint16_t pad_07E;       /* 0x07E */
+    uint32_t cop1lc;        /* 0x080 */
+    uint32_t cop2lc;        /* 0x084 */
+    uint16_t copjmp1;       /* 0x088 */
+    uint16_t copjmp2;       /* 0x08A */
+    uint16_t pad_08C[5];    /* 0x08C-0x094 */
+    uint16_t dmacon;        /* 0x096 */
+    uint16_t pad_098;       /* 0x098 */
+    uint16_t intena;        /* 0x09A */
+    uint16_t intreq;        /* 0x09C */
+    uint16_t adkcon;        /* 0x09E */
+    /* Audio channels 0xA0-0xDF, then 0xE0-0xFF display regs */
+    uint16_t pad_0A0[112];  /* 0x0A0-0x17E */
+    uint16_t color[32];     /* 0x180-0x1BE */
+};
+
+/* Global custom chip base pointer.
+ * Must be volatile so reads/writes to HW registers aren't optimized away.
+ * NOT packed — GCC generates byte-by-byte access for packed volatile structs.
+ * The struct is naturally word-aligned (all Amiga custom regs are). */
+extern volatile struct Custom *custom;
+
+/* ---- Blitter register offsets from CUSTOM_BASE (kept for asm compat) ---- */
+#define BLTCON0_OFF         0x40
+#define BLTCON1_OFF         0x42
+#define BLTAFWM_OFF         0x44
+#define BLTALWM_OFF         0x46
+#define BLTCPT_OFF          0x48
+#define BLTBPT_OFF          0x4C
+#define BLTAPT_OFF          0x50
+#define BLTDPT_OFF          0x54
+#define BLTSIZE_OFF         0x58
+#define BLTCMOD_OFF         0x60
+#define BLTBMOD_OFF         0x62
+#define BLTAMOD_OFF         0x64
+#define BLTDMOD_OFF         0x66
+#define BLTCDAT_OFF         0x70
+#define BLTBDAT_OFF         0x72
+#define BLTADAT_OFF         0x74
+#define DMACONR_OFF         0x02
+#define DMACON_OFF          0x96
 
 /* ---- DMA / Blitter control ---- */
 #define DMACON_BLT_ON               33792u

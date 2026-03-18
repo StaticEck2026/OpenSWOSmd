@@ -11,6 +11,7 @@
 #include "game_loop.h"
 #include "game_types.h"
 #include "display.h"
+#include "deterministic.h"
 
 /* ---- Extern globals (data section, exported from asm/Data.c) ---- */
 extern uint16_t gameCanceled;
@@ -157,23 +158,16 @@ extern void _DrawSprites(void);
  */
 static void waitVBlankSync(uint32_t xorMagic, uint32_t expected)
 {
-    volatile uint16_t *dmacon  = (volatile uint16_t *)DMACON_ADDR;
-    volatile uint8_t  *dmaconr = (volatile uint8_t *)DMACONR_ADDR;
+    custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(custom->dmaconr & (1u << 14));
+    while (custom->dmaconr & (1u << 14)) {}
+    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
-    *dmacon = (uint16_t)DMACON_BLT_ON;
-    (void)(*dmaconr & (1u << DMACONR_BLTBUSY_BIT));
-    while (*dmaconr & (1u << DMACONR_BLTBUSY_BIT)) {}
-    *dmacon = (uint16_t)DMACON_BLT_OFF;
-
-    /* Anti-tamper cookie check — always passes in normal execution.
-     * The asm branches to various dead-code labels on failure;
-     * we simply skip the check since the C code has no way to branch
-     * to those asm labels, and the check always passes. */
+    /* Anti-tamper cookie check — always passes in normal execution */
     {
         uint32_t d0 = irqCookieObfuscated ^ xorMagic;
         (void)d0;
         (void)expected;
-        /* In the original: if (d0 != expected) branch to anti-tamper label */
     }
 
     waitingInterrupt = 1;
@@ -674,6 +668,9 @@ vblank_return_dispatch:
 
 wait_for_vblank_sync:
     waitVBlankSync(0xCFD1F9BDu, 0x165Au);
+#ifdef DETERMINISTIC_DUMP_FRAME
+    _RngDumpCheck();
+#endif
     goto vblank_return_dispatch;
 
 end_of_match_flow:

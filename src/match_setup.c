@@ -5,6 +5,7 @@
  */
 #include "match_setup.h"
 #include "game_types.h"
+#include "deterministic.h"
 
 /* ---- External globals (in SWOS2.s code/BSS sections) ---- */
 extern Sprite             ballSprite;
@@ -344,7 +345,7 @@ void _InitPlayersBeforeEnteringPitch(void)
 
             sprite->destX            = sprite->x.s.i;
             sprite->destY            = sprite->y.s.i;
-            sprite->z.raw            = 0;
+            sprite->z.s.i            = 0;  /* ASM: clr.w SPRITE_Z — only clears integer part */
             sprite->speed            = 0;
             sprite->playerState      = 0;
             sprite->playerDownTimer  = 0;
@@ -759,6 +760,15 @@ void _InitGameRestoreTeams(void)
 
     _InitializePlayerSpriteFrameIndices();
 
+#ifdef DETERMINISTIC_MODE
+    {
+        extern uint16_t currentGameTick;
+        extern uint16_t currentTick;
+        currentGameTick = 0;
+        currentTick = 0;
+        _InitDeterministicMode();
+    }
+#endif
     gameRandValue = _Rand();
 
     /* Apply tactics for both teams */

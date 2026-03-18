@@ -330,22 +330,8 @@ extern Sprite team1TotalGoalsDigit1Sprite;
 extern Sprite team2TotalGoalsDigit2Sprite;
 extern Sprite team2TotalGoalsDigit1Sprite;
 extern Sprite dashSprite;
-extern Sprite team1Scorer1Sprite;
-extern Sprite team1Scorer2Sprite;
-extern Sprite team1Scorer3Sprite;
-extern Sprite team1Scorer4Sprite;
-extern Sprite team1Scorer5Sprite;
-extern Sprite team1Scorer6Sprite;
-extern Sprite team1Scorer7Sprite;
-extern Sprite team1Scorer8Sprite;
-extern Sprite team2Scorer1Sprite;
-extern Sprite team2Scorer2Sprite;
-extern Sprite team2Scorer3Sprite;
-extern Sprite team2Scorer4Sprite;
-extern Sprite team2Scorer5Sprite;
-extern Sprite team2Scorer6Sprite;
-extern Sprite team2Scorer7Sprite;
-extern Sprite team2Scorer8Sprite;
+extern Sprite team1ScorerSprite[8];   /* contiguous array — iterated with ptr++ */
+extern Sprite team2ScorerSprite[8];   /* contiguous array — iterated with ptr++ */
 extern Sprite goal1TopSprite;
 extern Sprite goal2BottomSprite;
 extern Sprite ballSprite;

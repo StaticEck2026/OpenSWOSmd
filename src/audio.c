@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "audio.h"
+#include "display.h"
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint16_t audioBankLoaded;
@@ -61,19 +62,17 @@ static uint8_t *accessRelocate(uint8_t *ptr)
 __attribute__((used, externally_visible))
 void _StopAllAudioChannels(void)
 {
-    volatile uint16_t *custom = (volatile uint16_t *)CUSTOM_BASE;
-
     audioState.masterVolume = 0;
     audioState.modeFlags = 0;
 
     /* Disable DMA for all 4 audio channels (bits 0-3 of DMACON) */
-    custom[DMACON_OFF / 2] = 0x000F;
+    custom->dmacon = 0x000F;
 
-    /* Zero all 4 channel volumes */
-    custom[AUD0VOL_OFF / 2] = 0;
-    custom[AUD1VOL_OFF / 2] = 0;
-    custom[AUD2VOL_OFF / 2] = 0;
-    custom[AUD3VOL_OFF / 2] = 0;
+    /* Zero all 4 channel volumes — use absolute addresses (not in struct) */
+    *(volatile uint16_t *)(CUSTOM_BASE + AUD0VOL_OFF) = 0;
+    *(volatile uint16_t *)(CUSTOM_BASE + AUD1VOL_OFF) = 0;
+    *(volatile uint16_t *)(CUSTOM_BASE + AUD2VOL_OFF) = 0;
+    *(volatile uint16_t *)(CUSTOM_BASE + AUD3VOL_OFF) = 0;
 }
 
 /* ================================================================
@@ -271,8 +270,7 @@ void _InitAudioState(uint8_t *bankBase, uint8_t *songPtr)
 __attribute__((used, externally_visible))
 void _AudioDisableDMAForChannel(AudioChannel *chan)
 {
-    volatile uint16_t *dmacon = (volatile uint16_t *)(CUSTOM_BASE + DMACON_OFF);
-    *dmacon = chan->pvDmaBit;
+    custom->dmacon = chan->pvDmaBit;
 }
 
 /* ================================================================

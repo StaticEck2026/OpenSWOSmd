@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "game_utils.h"
+#include "deterministic.h"
 
 extern uint32_t assetLoaderCacheFlag;
 extern uint32_t assetLoaderWorkPtr;

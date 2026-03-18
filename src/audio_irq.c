@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "audio_irq.h"
+#include "display.h"
 
 /* ---- External data (SWOS2.s code section) ---- */
 extern AudioState audioState;
@@ -51,7 +52,7 @@ static inline void writeAudxVol(volatile uint8_t *audx, uint16_t vol)
 
 static inline void writeDMACON(uint16_t val)
 {
-    *(volatile uint16_t *)(CUSTOM_BASE + DMACON_OFF) = val;
+    custom->dmacon = val;
 }
 
 /* =================================================================

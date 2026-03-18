@@ -14,6 +14,7 @@
 #include "loader_intro.h"
 #include "audio.h"
 #include "menus.h"
+#include "deterministic.h"
 
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
@@ -103,7 +104,7 @@ __attribute__((used, externally_visible)) void _start(void)
     *(volatile uint32_t *)&loaderBankBitmap = 0;
     loaderParam = SWOS_FASTBITS;
 
-    *(volatile uint16_t *)COLOR00_ADDR = 0x0u;
+    custom->color[0] = 0x0u;
 
     volatile uint16_t *front = &frontbufferBase;
     volatile uint16_t *alt = &frontbufferBaseAlt;
@@ -116,17 +117,21 @@ __attribute__((used, externally_visible)) void _start(void)
         *mask++ = 0xF0F0u;
     }
 
-    *(volatile uint16_t *)DMACON_ADDR = 0x8340u;
-    *(volatile uint16_t *)DMACON_ADDR = DMACON_BLT_OFF;
+    custom->dmacon = 0x8340u;
+    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     set_vector(S_VBR, LEVEL_2_INTERRUPT_AUTOVECTOR, Int2KeyboardHandler);
     set_vector(S_VBR, LEVEL_3_INTERRUPT_AUTOVECTOR, Int3TimerHandler);
+
+#ifdef DETERMINISTIC_MODE
+    _InitDeterministicMode();
+#endif
     set_vector(S_VBR, LEVEL_4_INTERRUPT_AUTOVECTOR, Int4Handler);
 
     _SetupInterrupts();
 
     *(volatile uint8_t *)CIAA_ICR_ADDR = 0x88u;
-    *(volatile uint16_t *)INTENA_ADDR = 0xC008u;
+    custom->intena = 0xC008u;
     *(volatile uint8_t *)CIAA_ICR_ADDR = 0x82u;
     *(volatile uint8_t *)CIAA_DDRA_ADDR |= 0x02u;
     *(volatile uint8_t *)CIAA_PRA_ADDR |= 0x02u;

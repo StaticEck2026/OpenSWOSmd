@@ -7,7 +7,7 @@
  *
  * Adapted from data/SWOS2_IDA.h (IDA Pro export).
  * All IDA annotations stripped, types mapped to stdint-style typedefs.
- * Packing via __attribute__((packed)) to match 68k memory layout.
+ * Packing via __attribute__((packed, aligned(2))) to match 68k memory layout.
  */
 #ifndef GAME_TYPES_H
 #define GAME_TYPES_H
@@ -48,7 +48,7 @@ typedef char _fixedpoint_size_check[(sizeof(FixedPoint) == 4) ? 1 : -1];
 /* ==================================================================
  * Sprite — 110 bytes, pack(2)
  * ================================================================== */
-struct __attribute__((packed)) Sprite {
+struct __attribute__((packed, aligned(2))) Sprite {
     int16_t    teamNumber;          /* 0 */
     int16_t    playerOrdinal;       /* 2 */
     int16_t    frameOffset;         /* 4 */
@@ -104,22 +104,22 @@ typedef char _sprite_size_check[(sizeof(Sprite) == 110) ? 1 : -1];
  * AnimTable — animation frame table variants
  * Standard has 32 frame pointers, variants have fewer.
  * ================================================================== */
-struct __attribute__((packed)) AnimTable {
+struct AnimTable {
     int16_t  frameDelay;
     int16_t *animFrames[32];
 };
 
-typedef struct __attribute__((packed)) {
+typedef struct __attribute__((packed, aligned(2))) {
     int16_t  frameDelay;
     int16_t *animFrames[20];
 } AnimTable_20;
 
-typedef struct __attribute__((packed)) {
+typedef struct __attribute__((packed, aligned(2))) {
     int16_t  frameDelay;
     int16_t *animFrames[12];
 } AnimTable_12;
 
-typedef struct __attribute__((packed)) {
+typedef struct __attribute__((packed, aligned(2))) {
     int16_t  frameDelay;
     int16_t *animFrames[8];
 } AnimTable_8;
@@ -133,7 +133,7 @@ typedef char _animtable8_size_check[(sizeof(AnimTable_8) == 34) ? 1 : -1];
 /* ==================================================================
  * TeamGeneralInfo — 144 bytes, pack(1)
  * ================================================================== */
-struct __attribute__((packed)) TeamGeneralInfo {
+struct TeamGeneralInfo {
     TeamGeneralInfo   *opponentsTeam;              /* 0 */
     int16_t            playerNumber;               /* 4 */
     int16_t            playerCoachNumber;           /* 6 */
@@ -211,7 +211,7 @@ typedef char _tgi_size_check[(sizeof(TeamGeneralInfo) == 144) ? 1 : -1];
 /* ==================================================================
  * PlayerInfo — 61 bytes (embedded in TeamGame)
  * ================================================================== */
-struct __attribute__((packed)) PlayerInfo {
+struct PlayerInfo {
     int8_t  skip;               /* 0 */
     int8_t  playerIndex;        /* 1 */
     int8_t  goalsScored;        /* 2 */
@@ -246,7 +246,7 @@ typedef char _playerinfo_size_check[(sizeof(PlayerInfo) == 61) ? 1 : -1];
 /* ==================================================================
  * TeamGame — 1018 bytes (0x3FA)
  * ================================================================== */
-struct __attribute__((packed)) TeamGame {
+struct TeamGame {
     int16_t    prShirtType;     /* 0 */
     int16_t    prShirtCol;      /* 2 */
     int16_t    prStripesCol;    /* 4 */
@@ -404,7 +404,7 @@ typedef char _charstblhdr_size_check[(sizeof(CharsTableHeader) == 14) ? 1 : -1];
  * TeamFile — on-disk team data format (header portion, 76 bytes)
  * Full entry is 684 bytes including player data that follows.
  * ================================================================== */
-struct __attribute__((packed)) TeamFile {
+struct __attribute__((packed, aligned(2))) TeamFile {
     uint8_t  countryNumber;      /* 0 */
     uint8_t  teamOrdinal;        /* 1 */
     int16_t  globalTeamNumber;   /* 2 */
@@ -468,7 +468,7 @@ typedef char _scorerinfo_size_check[(sizeof(ScorerInfo) == 66) ? 1 : -1];
 /* ==================================================================
  * PlayerFile — 38 bytes per player within a team file
  * ================================================================== */
-typedef struct __attribute__((packed)) PlayerFile {
+typedef struct __attribute__((packed, aligned(2))) PlayerFile {
     int8_t   nationality;          /* 0 */
     int8_t   field_1;              /* 1 */
     int8_t   shirtNumber;          /* 2 */
@@ -493,7 +493,7 @@ typedef char _playerfile_size_check[(sizeof(PlayerFile) == 38) ? 1 : -1];
  * TeamFileEx — TeamFile header (76 bytes) + 16 PlayerFile entries
  * Total: 684 bytes. Used for careerTeam, currentTeam, etc.
  * ================================================================== */
-typedef struct __attribute__((packed)) TeamFileEx {
+typedef struct __attribute__((packed, aligned(2))) TeamFileEx {
     TeamFile   team;               /* 0-75  (76 bytes) */
     PlayerFile players[16];        /* 76-683 (608 bytes) */
 } TeamFileEx;
@@ -555,7 +555,7 @@ typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x60) ? 1 : -
  * JobOffer — 26 bytes, pack(2)
  * Queue entry for career mode job offers.
  * ================================================================== */
-typedef struct __attribute__((packed)) JobOffer {
+typedef struct JobOffer {
     uint16_t teamNo;               /* 0 */
     int8_t   teamName[18];         /* 2: 0xFF = unset */
     uint32_t amountOffered;        /* 20 */

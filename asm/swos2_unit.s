@@ -4,6 +4,10 @@
         xref    _WaitForVSync
         xref    _BuildPaletteFromColors
         xref    _SetCameraCoordinates
+        xref    _UpdatePlanePtrsAndBlitParams
+        xref    _SwapBuffersAndCameraViewState
+        xref    _FadeOutTick
+        xref    _FadeInTick
         xref    _AssetLoaderRegisterRegion
         xref    _AssetPrecacheOneCore
         xref    _AssetPrecacheOneMenu
@@ -448,6 +452,11 @@
 
         xdef    j_start
         xdef    Int3TimerHandler
+        xdef    FadeOutTick
+        xdef    FadeInTick
+        xdef    UpdatePlanePtrsAndBlitParams
+        xdef    SwapBuffersAndCameraViewState
+        xdef    SetCameraCoordinates
         xdef    Int4Handler
         xdef    loaderBankBitmap
         xdef    chipRamBitmapEnd
@@ -3349,14 +3358,7 @@
         xref    team1PlayerStandingFacingTopLeftFrames
         xref    team1PlayerStandingFacingUpFrames
         xref    team1PlayerStandingFacingUpRightFrames
-        xref    team1Scorer1Sprite
-        xref    team1Scorer2Sprite
-        xref    team1Scorer3Sprite
-        xref    team1Scorer4Sprite
-        xref    team1Scorer5Sprite
-        xref    team1Scorer6Sprite
-        xref    team1Scorer7Sprite
-        xref    team1Scorer8Sprite
+        xref    team1ScorerSprite
         xref    team1SpritesTable
         xref    team1TackledDownFrames
         xref    team1TackledDownLeftFrames
@@ -3405,14 +3407,7 @@
         xref    team2PlayerStandingFacingUpFrames
         xref    team2PlayerStandingFacingUpLeftFrames
         xref    team2PlayerStandingFacingUpRightFrames
-        xref    team2Scorer1Sprite
-        xref    team2Scorer2Sprite
-        xref    team2Scorer3Sprite
-        xref    team2Scorer4Sprite
-        xref    team2Scorer5Sprite
-        xref    team2Scorer6Sprite
-        xref    team2Scorer7Sprite
-        xref    team2Scorer8Sprite
+        xref    team2ScorerSprite
         xref    team2SpritesTable
         xref    team2TackledDownFrames
         xref    team2TackledDownLeftFrames

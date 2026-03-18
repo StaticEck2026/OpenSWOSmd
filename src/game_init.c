@@ -577,6 +577,7 @@ void _InitInGameTeamStructure(TeamFileEx *teamFileBase, TeamGame *tg,
         }
 
         uint8_t *playerBase = _GetPlayerAtIndex(teamNum, d1);
+        d1 = _cGetPlayerAtIndexFileIdx;  /* GetPlayerAtIndex remaps ordinal → file index in d1 */
         PlayerInfo *pi = &tg->players[d2];
 
         _InitInGamePlayer(d1, d2, playerBase, pi);

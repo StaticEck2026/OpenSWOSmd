@@ -39,13 +39,13 @@ static uint32_t maskBlitSecondStreamPtr;
 static uint16_t maskBlitPendingBytesB;
 
 /* ---- Wait for blitter idle ---- */
-static void waitBlit(void)
+static inline __attribute__((always_inline)) void waitBlit(void)
 {
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_ON;
-    (void)(*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT));
-    while (*(volatile uint8_t *)DMACONR_ADDR & (1u << DMACONR_BLTBUSY_BIT))
+    custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(custom->dmaconr & (1u << 14));
+    while (custom->dmaconr & (1u << 14))
         ;
-    *(volatile uint16_t *)DMACON_ADDR = (uint16_t)DMACON_BLT_OFF;
+    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 }
 
 /* ================================================================
@@ -58,7 +58,6 @@ static void waitBlit(void)
 __attribute__((used, externally_visible))
 void _ScrollXUpdateColumnsAndBlit(void)
 {
-    volatile uint8_t *custom = (volatile uint8_t *)CUSTOM_BASE;
     int16_t d0, d1;
     uint16_t d2, d3, d5;
     uint8_t *a0;
@@ -115,13 +114,13 @@ void _ScrollXUpdateColumnsAndBlit(void)
 
     /* Set up blitter for column copy (A → D, no shift) */
     waitBlit();
-    *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)a0;
-    *(volatile uint16_t *)(custom + BLTAMOD_OFF) = 0;
-    *(volatile uint16_t *)(custom + BLTDMOD_OFF) = BLTDMOD_PLANE_STEP;
-    *(volatile uint16_t *)(custom + BLTAFWM_OFF) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLTALWM_OFF) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLTCON1_OFF) = 0;
-    *(volatile uint16_t *)(custom + BLTCON0_OFF) = BLTCON0_USEA_USED_LF_F0;
+    custom->bltdpt = (uint32_t)a0;
+    custom->bltamod = 0;
+    custom->bltdmod = BLTDMOD_PLANE_STEP;
+    custom->bltafwm = BLT_FWM_ALL;
+    custom->bltalwm = BLT_FWM_ALL;
+    custom->bltcon1 = 0;
+    custom->bltcon0 = BLTCON0_USEA_USED_LF_F0;
 
     /* ---- Phase 1: top of frontbuffer (from cameraYMod320 to SCREEN_HEIGHT) ---- */
     d2 = cameraYMod320;
@@ -143,8 +142,8 @@ void _ScrollXUpdateColumnsAndBlit(void)
         a1 += PITCH_PTR_ROW_BYTES;
 
         waitBlit();
-        *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)a0;
-        *(volatile uint16_t *)(custom + BLTSIZE_OFF) = bltsize;
+        custom->bltapt = (uint32_t)a0;
+        custom->bltsize = bltsize;
     }
 
     /* Blit full tiles until we reach SCREEN_HEIGHT */
@@ -153,8 +152,8 @@ void _ScrollXUpdateColumnsAndBlit(void)
         a1 += PITCH_PTR_ROW_BYTES;
 
         waitBlit();
-        *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)a0;
-        *(volatile uint16_t *)(custom + BLTSIZE_OFF) = BLTSIZE_TILE_COL;
+        custom->bltapt = (uint32_t)a0;
+        custom->bltsize = BLTSIZE_TILE_COL;
         d2 += TILE_HEIGHT;
     }
 
@@ -167,7 +166,7 @@ void _ScrollXUpdateColumnsAndBlit(void)
     }
 
     waitBlit();
-    *(volatile uint32_t *)(custom + BLTDPT_OFF) = (uint32_t)a0;
+    custom->bltdpt = (uint32_t)a0;
 
     /* Blit full tiles from wrap point down to cameraYMod320 */
     d2 = cameraYMod320;
@@ -177,8 +176,8 @@ void _ScrollXUpdateColumnsAndBlit(void)
             a1 += PITCH_PTR_ROW_BYTES;
 
             waitBlit();
-            *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)a0;
-            *(volatile uint16_t *)(custom + BLTSIZE_OFF) = BLTSIZE_TILE_COL;
+            custom->bltapt = (uint32_t)a0;
+            custom->bltsize = BLTSIZE_TILE_COL;
             d2 -= TILE_HEIGHT;
         } while (d2 >= TILE_HEIGHT);
     }
@@ -189,8 +188,8 @@ void _ScrollXUpdateColumnsAndBlit(void)
         uint16_t bltsize = ((d2 << NUM_PLANES_SHIFT) << 6) | 1;
 
         waitBlit();
-        *(volatile uint32_t *)(custom + BLTAPT_OFF) = (uint32_t)a0;
-        *(volatile uint16_t *)(custom + BLTSIZE_OFF) = bltsize;
+        custom->bltapt = (uint32_t)a0;
+        custom->bltsize = bltsize;
     }
 
     /* ---- Phase 3: copy column from frontbuffer to mask buffer ---- */
@@ -201,15 +200,15 @@ void _ScrollXUpdateColumnsAndBlit(void)
         uint32_t dstAddr = srcAddr - frontbufferBasePtr + (uint32_t)frontbufferMaskBuffer;
 
         waitBlit();
-        *(volatile uint32_t *)(custom + BLTAPT_OFF) = srcAddr;
-        *(volatile uint32_t *)(custom + BLTDPT_OFF) = dstAddr;
-        *(volatile uint16_t *)(custom + BLTAMOD_OFF) = BLTDMOD_PLANE_STEP;
-        *(volatile uint16_t *)(custom + BLTSIZE_OFF) = BLTSIZE_TILE_COL;
+        custom->bltapt = srcAddr;
+        custom->bltdpt = dstAddr;
+        custom->bltamod = BLTDMOD_PLANE_STEP;
+        custom->bltsize = BLTSIZE_TILE_COL;
     }
 
     /* ---- Final: 1-word dummy blit ---- */
     waitBlit();
-    *(volatile uint16_t *)(custom + BLTSIZE_OFF) = 1;
+    custom->bltsize = 1;
 }
 
 /* ================================================================
@@ -222,7 +221,6 @@ void _ScrollXUpdateColumnsAndBlit(void)
 __attribute__((used, externally_visible))
 void _ScrollYUpdateRowsAndBlit(void)
 {
-    volatile uint8_t *custom = (volatile uint8_t *)CUSTOM_BASE;
     int16_t deltaY;
     uint16_t d4, d5, d6;
     int32_t d3;       /* src scanline offset within tile (ext.l) */
@@ -387,15 +385,15 @@ void _ScrollYUpdateRowsAndBlit(void)
 
     /* ---- Blitter mask copy: frontbuffer → mask buffer ---- */
     waitBlit();
-    *(volatile uint16_t *)(custom + BLTAFWM_OFF) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLTALWM_OFF) = BLT_FWM_ALL;
-    *(volatile uint16_t *)(custom + BLTCON1_OFF) = 0;
-    *(volatile uint16_t *)(custom + BLTCON0_OFF) = BLTCON0_USEA_USED_LF_F0;
+    custom->bltafwm = BLT_FWM_ALL;
+    custom->bltalwm = BLT_FWM_ALL;
+    custom->bltcon1 = 0;
+    custom->bltcon0 = BLTCON0_USEA_USED_LF_F0;
 
     {
         uint16_t modVal = (PLANE_STRIDE_DIV2 - blitWordCount) * 2;
-        *(volatile uint16_t *)(custom + BLTAMOD_OFF) = modVal;
-        *(volatile uint16_t *)(custom + BLTDMOD_OFF) = modVal;
+        custom->bltamod = modVal;
+        custom->bltdmod = modVal;
     }
 
     /* If there's a second stream, subtract its bytes from stream A */
@@ -409,8 +407,8 @@ void _ScrollYUpdateRowsAndBlit(void)
         uint32_t dstAddr = srcAddr - frontbufferBasePtr + (uint32_t)frontbufferMaskBuffer;
 
         waitBlit();
-        *(volatile uint32_t *)(custom + BLTAPT_OFF) = srcAddr;
-        *(volatile uint32_t *)(custom + BLTDPT_OFF) = dstAddr;
+        custom->bltapt = srcAddr;
+        custom->bltdpt = dstAddr;
     }
 
     /* ---- Stream A: blit in batches of max 0x400 rows ---- */
@@ -425,7 +423,7 @@ void _ScrollYUpdateRowsAndBlit(void)
         uint16_t bltsize = (batch << 6) | blitWordCount;
 
         waitBlit();
-        *(volatile uint16_t *)(custom + BLTSIZE_OFF) = bltsize;
+        custom->bltsize = bltsize;
     }
 
     /* ---- Stream B (if Y-wrap occurred) ---- */
@@ -439,8 +437,8 @@ void _ScrollYUpdateRowsAndBlit(void)
         uint32_t dstAddr = srcAddr - frontbufferBasePtr + (uint32_t)frontbufferMaskBuffer;
 
         waitBlit();
-        *(volatile uint32_t *)(custom + BLTAPT_OFF) = srcAddr;
-        *(volatile uint32_t *)(custom + BLTDPT_OFF) = dstAddr;
+        custom->bltapt = srcAddr;
+        custom->bltdpt = dstAddr;
     }
 
     /* ---- Stream B batches ---- */
@@ -455,6 +453,6 @@ void _ScrollYUpdateRowsAndBlit(void)
         uint16_t bltsize = (batch << 6) | blitWordCount;
 
         waitBlit();
-        *(volatile uint16_t *)(custom + BLTSIZE_OFF) = bltsize;
+        custom->bltsize = bltsize;
     }
 }

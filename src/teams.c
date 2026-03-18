@@ -6,6 +6,7 @@
 #include "teams.h"
 #include "career_teams.h"
 #include "file_io.h"
+#include "deterministic.h"
 #include "menus.h"
 #include "string_utils.h"
 #include "input_text.h"
