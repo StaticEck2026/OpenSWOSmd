@@ -10,6 +10,7 @@
 
 #include "highlight.h"
 #include "game_types.h"
+#include "deterministic.h"
 
 /* ---- Sprite constants ---- */
 #define SPR_REPLAY_FRAME_00  1095
@@ -201,6 +202,11 @@ void _SetPitchTypeAndNumber(void)
         d0 = 0x500;
 
     pitchNumberAndType = (uint16_t)pitchType + d0;
+
+#ifdef DETERMINISTIC_MODE
+    /* Force fixed pitch to ensure ASM and C versions match */
+    pitchNumberAndType = 0x0004;  /* pitch 0, type 4 (normal) */
+#endif
 }
 
 /* ============================================================

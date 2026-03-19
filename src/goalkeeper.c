@@ -5,6 +5,7 @@
  */
 #include "goalkeeper.h"
 #include "game_types.h"
+#include "player_anim.h"
 
 /* ==================================================================
  * Chunk 48 — Goalkeeper Physics + Penalty System
@@ -79,12 +80,10 @@ extern int16_t  kGoalkeeperFarJumpSlowerSpeed;
 extern int16_t  ballNotHighZ;
 
 /* Animation tables */
-extern uint8_t  leftGoalieJumpingLowAnimTable[];
-extern uint8_t  rightGoalieJumpingLowAnimTable[];
-extern uint8_t  leftGoalieJumpingHighAnimTable[];
-extern uint8_t  rightGoalieJumpingHighAnimTable[];
-
-extern void _SetPlayerAnimationTable(uint8_t *animTable, uint8_t *sprite);
+extern AnimTable leftGoalieJumpingLowAnimTable;
+extern AnimTable rightGoalieJumpingLowAnimTable;
+extern AnimTable leftGoalieJumpingHighAnimTable;
+extern AnimTable rightGoalieJumpingHighAnimTable;
 
 /* Data tables */
 extern int16_t  kKeeperPenaltySaveDistanceFar;
@@ -538,16 +537,16 @@ _GoalkeeperJumping(int16_t diveDir, int16_t speedVariant, int16_t destDir,
         /* High dive */
         keeper->playerState = (uint8_t)PL_GOALIE_DIVING_HIGH;
         if (team == &bottomTeamData)
-            _SetPlayerAnimationTable(rightGoalieJumpingHighAnimTable, (uint8_t *)keeper);
+            _SetPlayerAnimationTable(&rightGoalieJumpingHighAnimTable, keeper);
         else
-            _SetPlayerAnimationTable(leftGoalieJumpingHighAnimTable, (uint8_t *)keeper);
+            _SetPlayerAnimationTable(&leftGoalieJumpingHighAnimTable, keeper);
     } else {
         /* Low dive */
         keeper->playerState = (uint8_t)PL_GOALIE_DIVING_LOW;
         if (team == &bottomTeamData)
-            _SetPlayerAnimationTable(rightGoalieJumpingLowAnimTable, (uint8_t *)keeper);
+            _SetPlayerAnimationTable(&rightGoalieJumpingLowAnimTable, keeper);
         else
-            _SetPlayerAnimationTable(leftGoalieJumpingLowAnimTable, (uint8_t *)keeper);
+            _SetPlayerAnimationTable(&leftGoalieJumpingLowAnimTable, keeper);
     }
 
     /* Set downtime and controlled player direction */

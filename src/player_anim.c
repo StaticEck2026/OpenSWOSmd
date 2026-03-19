@@ -21,7 +21,7 @@ extern Sprite           *lastPlayerScored;
 extern uint16_t          currentGameTick;
 extern uint16_t          gameStatePl;
 extern uint16_t          breakCameraMode;
-extern uint8_t           playerNormalStandingAnimTable[];
+extern AnimTable         playerNormalStandingAnimTable;
 extern uint16_t          panicReasonCode;
 
 /* ---- External C functions ---- */
@@ -195,8 +195,8 @@ static void movePlayer(Sprite *s)
     }
 
     /* Switch to standing anim if not already using it */
-    if (s->animationTable != (uint32_t)playerNormalStandingAnimTable) {
-        _SetPlayerAnimationTable(playerNormalStandingAnimTable, s);
+    if (s->animationTable != &playerNormalStandingAnimTable) {
+        _SetPlayerAnimationTable(&playerNormalStandingAnimTable, s);
     }
 }
 
@@ -248,15 +248,15 @@ static uint16_t computeAnimSlot(Sprite *s)
  * Sets animation table and resets frame state for restart.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SetPlayerAnimationTable(uint8_t *animTable, Sprite *s)
+void _SetPlayerAnimationTable(AnimTable *animTable, Sprite *s)
 {
-    s->animationTable = (uint32_t)animTable;
+    s->animationTable = animTable;
 
     uint16_t slotOffset = computeAnimSlot(s);
 
-    s->frameDelay = *(int16_t *)animTable;
+    s->frameDelay = animTable->frameDelay;
 
-    uint32_t frameIndicesPtr = *(uint32_t *)(animTable + 2 + slotOffset);
+    uint32_t frameIndicesPtr = (uint32_t)animTable->animFrames[slotOffset >> 2];
     s->frameIndicesTable = frameIndicesPtr;
 
     if (frameIndicesPtr == 0) {
@@ -278,15 +278,15 @@ void _SetPlayerAnimationTable(uint8_t *animTable, Sprite *s)
  * immediately updates imageIndex from current frame.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SetPlayerAnimationTableAndPictureIndex(uint8_t *animTable, Sprite *s)
+void _SetPlayerAnimationTableAndPictureIndex(AnimTable *animTable, Sprite *s)
 {
-    s->animationTable = (uint32_t)animTable;
+    s->animationTable = animTable;
 
     uint16_t slotOffset = computeAnimSlot(s);
 
-    s->frameDelay = *(int16_t *)animTable;
+    s->frameDelay = animTable->frameDelay;
 
-    uint32_t frameIndicesPtr = *(uint32_t *)(animTable + 2 + slotOffset);
+    uint32_t frameIndicesPtr = (uint32_t)animTable->animFrames[slotOffset >> 2];
     s->frameIndicesTable = frameIndicesPtr;
 
     if (frameIndicesPtr == 0) {

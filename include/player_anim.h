@@ -9,7 +9,7 @@
 #include "game_types.h"
 
 void _MovePlayers(void);
-void _SetPlayerAnimationTable(uint8_t *animTable, Sprite *sprite);
-void _SetPlayerAnimationTableAndPictureIndex(uint8_t *animTable, Sprite *sprite);
+void _SetPlayerAnimationTable(AnimTable *animTable, Sprite *sprite);
+void _SetPlayerAnimationTableAndPictureIndex(AnimTable *animTable, Sprite *sprite);
 
 #endif

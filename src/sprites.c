@@ -1316,6 +1316,10 @@ void _BuildSpriteBandAndGeneralRenderStacks(void)
     uint32_t *a2 = sortedSprites + d7;
     d7--;
 
+#if defined(DETERMINISTIC_MODE) && DETERMINISTIC_SPRITE_LIMIT > 0
+    int16_t spritesEnqueued = 0;
+#endif
+
     while ((uint32_t)a2 != (uint32_t)sortedSprites) {
         a2--;
         Sprite *a1 = (Sprite *)(*a2);
@@ -1362,6 +1366,17 @@ void _BuildSpriteBandAndGeneralRenderStacks(void)
                 continue;
             }
         }
+
+#if defined(DETERMINISTIC_MODE) && DETERMINISTIC_SPRITE_LIMIT > 0
+        /* Cap enqueued sprites per frame to keep C and ASM frame timing in sync.
+         * Still mark as onScreen=1 so game logic continues to update them. */
+        if (spritesEnqueued >= DETERMINISTIC_SPRITE_LIMIT) {
+            a1->onScreen = 1;
+            d7--;
+            if (d7 < 0) break;
+            continue;
+        }
+#endif
 
         /* Check if overlay is active or sprite is wider than 16px */
         if (overlayActiveFlag != 0 || a0->pixWidth > 16) {
@@ -1438,6 +1453,9 @@ post_enqueue:
 
         /* Mark sprite as on-screen */
         a1->onScreen = 1;
+#if defined(DETERMINISTIC_MODE) && DETERMINISTIC_SPRITE_LIMIT > 0
+        spritesEnqueued++;
+#endif
         d7--;
         if (d7 < 0) break;
         continue;

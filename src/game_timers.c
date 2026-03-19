@@ -90,8 +90,8 @@ extern uint16_t cameraXVelocity;
 extern uint16_t cameraYVelocity;
 extern TeamGeneralInfo *lastTeamPlayed;
 
-extern uint8_t  playerNormalStandingAnimTable[];
-extern uint8_t  aboutToThrowInAnimTable[];
+extern AnimTable playerNormalStandingAnimTable;
+extern AnimTable aboutToThrowInAnimTable;
 
 /* ---- Extern function declarations ---- */
 extern void _NextPenalty(void);
@@ -106,7 +106,7 @@ extern void _GameOver(void);
 extern void _SetBallPosition(int16_t ballX, int16_t ballY);
 extern void _ResetAnimatedPatternsForBothTeams(void);
 extern void _CheckIfGoalkeeperClaimedTheBall(void);
-extern void _SetPlayerAnimationTable(uint8_t *animTable, uint8_t *spritePtr);
+extern void _SetPlayerAnimationTable(AnimTable *animTable, Sprite *sprite);
 extern void _PlayRefereeWhistleSample(void);
 extern void _PanicHaltLoop(void);
 extern void _GoalScored(int16_t teamGoalType, Sprite *lastPlayer);
@@ -389,9 +389,9 @@ static void __attribute__((noinline)) handleBreakCameraMode(TeamGeneralInfo *a6)
             break;
         a1 = a6->controlledPlayer;
         if (a1->playerState == PL_THROW_IN)
-            _SetPlayerAnimationTable(aboutToThrowInAnimTable, (uint8_t *)a1);
+            _SetPlayerAnimationTable(&aboutToThrowInAnimTable, a1);
         else
-            _SetPlayerAnimationTable(playerNormalStandingAnimTable, (uint8_t *)a1);
+            _SetPlayerAnimationTable(&playerNormalStandingAnimTable, a1);
         a6->ballOutOfPlay = 1;
         breakCameraMode = 8;
         if (gameState == ST_KEEPER_HOLDS_BALL)

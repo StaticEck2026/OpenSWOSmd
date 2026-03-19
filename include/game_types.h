@@ -52,7 +52,7 @@ struct __attribute__((packed, aligned(2))) Sprite {
     int16_t    teamNumber;          /* 0 */
     int16_t    playerOrdinal;       /* 2 */
     int16_t    frameOffset;         /* 4 */
-    uint32_t   animationTable;      /* 6: raw 68k ptr to AnimTable */
+    AnimTable *animationTable;       /* 6: pointer to AnimTable */
     int16_t    startingDirection;   /* 10 */
     uint8_t    playerState;         /* 12 */
     int8_t     playerDownTimer;     /* 13 */

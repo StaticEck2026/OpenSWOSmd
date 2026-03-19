@@ -74,7 +74,7 @@ extern uint8_t    playerPositions[32];
 extern uint16_t   numPlayers;
 extern uint16_t   trainingGame;
 extern uint16_t   gameType;
-extern uint16_t   isNationalSelector;
+extern volatile uint16_t   isNationalSelector;
 extern uint8_t    careerUnavailablePlayerList[16];
 extern uint8_t    careerUnavailablePlayerLookupTable[];
 extern uint8_t    playerFormModifiers[32];
@@ -114,7 +114,7 @@ extern uint16_t   performanceWarningState;
 extern uint16_t   overdraftWarningCooldown;
 extern uint16_t   performanceWarningCooldown;
 extern uint16_t   clubBusinessActive;
-extern uint16_t   youreSacked;
+extern volatile uint16_t   youreSacked;
 extern volatile uint16_t   currentMessage;
 extern uint16_t   stayingInOldClub;
 extern uint16_t   careerTeamLostMatch;
@@ -3940,7 +3940,7 @@ restart:
  * ================================================================ */
 
 extern uint8_t *careerCompetitionSlotPtrTable[];
-extern uint16_t isNationalSelector;
+extern volatile uint16_t isNationalSelector;
 extern uint16_t diyCupTeamIds[];
 extern uint16_t diyLeagueTeamIds[];
 extern uint16_t diyTournamentTeamIds[];

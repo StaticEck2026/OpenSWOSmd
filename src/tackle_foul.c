@@ -61,9 +61,9 @@ extern uint8_t  cardAnimStatesNoFlag[];
 extern uint8_t  cardAnimStatesWithFlag[];
 
 /* Animation tables */
-extern uint8_t  playerTackledAnimTable[];
-extern uint8_t  plTacklingAnimTable[];
-extern uint8_t  goalieCatchingBallAnimTable[];
+extern AnimTable_20 playerTackledAnimTable;
+extern AnimTable    plTacklingAnimTable;
+extern AnimTable    goalieCatchingBallAnimTable;
 extern int16_t  kGoalkeeperCatchSpeed;
 extern int16_t  kPlayerTacklingSpeed;
 
@@ -83,7 +83,7 @@ extern void     _StopAllPlayers(void);
 extern void     _ActivateReferee(void);
 extern uint16_t _Rand(void);
 extern PlayerInfo *_GetPlayerPointerFromShirtNumber(Sprite *player, TeamGeneralInfo *team);
-extern void     _SetPlayerAnimationTable(uint8_t *animTable, uint8_t *sprite);
+extern void     _SetPlayerAnimationTable(AnimTable *animTable, Sprite *sprite);
 
 /* ========================================================================
  * PlayerTackledTheBallWeak
@@ -274,7 +274,7 @@ apply_injury:
 set_tackled:
     player->playerState = (uint8_t)PL_TACKLED;
     player->playerDownTimer = (int8_t)0x32;
-    _SetPlayerAnimationTable(playerTackledAnimTable, (uint8_t *)player);
+    _SetPlayerAnimationTable((AnimTable *)&playerTackledAnimTable, player);
 }
 
 /* ========================================================================
@@ -646,7 +646,7 @@ _GoalkeeperCaughtTheBall(Sprite *keeper, TeamGeneralInfo *team)
         keeper->direction = (int16_t)0;
 
     team->goalkeeperDivingLeft = 0;
-    _SetPlayerAnimationTable(goalieCatchingBallAnimTable, (uint8_t *)keeper);
+    _SetPlayerAnimationTable(&goalieCatchingBallAnimTable, keeper);
     keeper->playerState = (uint8_t)PL_GOALIE_CATCHING_BALL;
     keeper->playerDownTimer = (int8_t)15;
     keeper->speed = kGoalkeeperCatchSpeed;
@@ -862,7 +862,7 @@ _PlayerBeginTackling(int16_t pressedDir, Sprite *player, TeamGeneralInfo *team)
     team->controlledPlDirection = pressedDir;
     player->direction = pressedDir;
 
-    _SetPlayerAnimationTable(plTacklingAnimTable, (uint8_t *)player);
+    _SetPlayerAnimationTable(&plTacklingAnimTable, player);
     player->playerState = (uint8_t)PL_TACKLING;
     player->playerDownTimer = (int8_t)50;
 

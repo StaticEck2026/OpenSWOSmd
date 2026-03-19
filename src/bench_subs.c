@@ -129,7 +129,7 @@ extern uint8_t  plOrdinalsTable[];
 extern uint8_t  plNamesLengthTableCopy[];
 extern uint16_t ingameTeamPlayerOffsets[];
 extern uint32_t positionsTable[];
-extern uint8_t  playerNormalStandingAnimTable[];
+extern AnimTable playerNormalStandingAnimTable;
 
 /* ---- Game state constants (ST_GAME_IN_PROGRESS, ST_KEEPER_HOLDS_BALL,
  *   ST_STARTING_GAME, ST_GAME_ENDED, ST_STOPPED all from game_types.h) ---- */
@@ -196,7 +196,7 @@ extern void _InitCurrentGoalHighlight(void);
 extern void _CheckIfGoalkeeperClaimedTheBall(void);
 extern void _InitializePlayerSpriteFrameIndices(void);
 extern void _ApplyTeamTactics(TeamGame *teamGame);
-extern void _SetPlayerAnimationTable(uint8_t *animTable, Sprite *sprite);
+/* _SetPlayerAnimationTable declared in player_anim.h */
 extern void _StopAllPlayers(void);
 extern void _DrawSprite16Pixels(uint16_t spriteIndex, uint16_t x, uint16_t y);
 extern void _DrawSpriteInCameraView(uint16_t spriteIndex, uint16_t x, uint16_t y);
@@ -894,7 +894,7 @@ static void checkForThrowInAndGoalkeepersBall(void)
         if (a1->playerState == PL_THROW_IN) {
             hideBall = 0;
             a1->playerState = PL_NORMAL;
-            _SetPlayerAnimationTable(playerNormalStandingAnimTable, a1);
+            _SetPlayerAnimationTable(&playerNormalStandingAnimTable, a1);
         }
     }
 
@@ -2399,7 +2399,7 @@ void _CheckForThrowInAndGoalkeepersBall(void)
         if (player->playerState == PL_THROW_IN) {
             hideBall = 0;
             player->playerState = PL_NORMAL;
-            _SetPlayerAnimationTable(playerNormalStandingAnimTable, player);
+            _SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
         }
     }
     _CheckIfGoalkeeperClaimedTheBall();

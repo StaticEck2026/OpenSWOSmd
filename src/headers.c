@@ -17,19 +17,18 @@ extern uint32_t kHeaderHighJumpHeight;
 extern uint16_t kStaticHeaderBaseBallSpeed;
 extern uint16_t kStaticHeaderPlayerSpeed;
 
-/* Animation tables (asm data section labels) */
-extern uint8_t jumpHeaderHitAnimTable;
-extern uint8_t jumpHeaderAttemptAnimTable;
-extern uint8_t staticHeaderAttemptAnimTable;
-extern uint8_t staticHeaderAimAnimTable;
-extern uint8_t staticHeaderHitAnimTable;
+/* Animation tables (in sprite_data.c) */
+extern AnimTable jumpHeaderHitAnimTable;
+extern AnimTable jumpHeaderAttemptAnimTable;
+extern AnimTable staticHeaderAttemptAnimTable;
+extern AnimTable staticHeaderAimAnimTable;
+extern AnimTable staticHeaderHitAnimTable;
 
 /* Ball sprite */
 extern Sprite ballSprite;
 
 /* Functions from other modules */
-extern void _SetPlayerAnimationTable(uint8_t *animTable, Sprite *sprite);
-extern void _SetPlayerAnimationTableAndPictureIndex(uint8_t *animTable, Sprite *sprite);
+#include "player_anim.h"
 extern PlayerInfo *_GetPlayerPointerFromShirtNumber(Sprite *playerSprite, TeamGeneralInfo *teamData);
 extern void _PlayKickSample(void);
 extern void _ResetBothTeamSpinTimers(void);
@@ -96,7 +95,7 @@ static void doLobHeader(Sprite *player, Sprite *ball)
 void __attribute__((used, externally_visible))
 _SetJumpHeaderHitAnimTable(Sprite *player)
 {
-    if (player->animationTable == (uint32_t)&jumpHeaderHitAnimTable)
+    if (player->animationTable == &jumpHeaderHitAnimTable)
         return;
     if (player->heading != 0)
         return;
@@ -280,7 +279,7 @@ _PlayerHittingStaticHeader(Sprite *player, TeamGeneralInfo *team)
     team->passInProgress = 0;
 
     /* Skip direction adjustment if already in hit anim */
-    if (player->animationTable == (uint32_t)&staticHeaderHitAnimTable)
+    if (player->animationTable == &staticHeaderHitAnimTable)
         goto apply_hit;
 
     /* Compare input direction with player direction */

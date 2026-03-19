@@ -8,6 +8,7 @@
 #include "game_types.h"
 #include "frontend.h"
 #include "menu_system.h"
+#include "deterministic.h"
 #include "string_utils.h"
 #include "text_render.h"
 #include "edit_tactics.h"
@@ -356,8 +357,12 @@ void _InitUserTactics(void)
 __attribute__((used, externally_visible))
 void _InitCareerVariables(uint16_t gameTypeParam)
 {
+#ifdef DETERMINISTIC_MODE
+    _InitDeterministicMode();
+#else
     randomSeed = currentTick;
     newRandomSeedCopy = (uint8_t)(currentTick & 0xFF);
+#endif
     gameType = gameTypeParam;
     contestStarted = 0;
     teamsLoaded = 0;
@@ -2286,9 +2291,11 @@ extern void _EditTactics(void);
 __attribute__((used, externally_visible))
 void _FriendlyMenu(void)
 {
+#ifndef DETERMINISTIC_MODE
     /* move.w (currentTick),(seed) — seeds both seed (high byte) + randXorIndex (low byte) */
     seed = (uint8_t)(currentTick >> 8);
     randXorIndex = (uint8_t)(currentTick & 0xFF);
+#endif
     _Friendly();
     _CommonMenuExit();
 }
@@ -3338,7 +3345,9 @@ extern uint8_t  saveFileTitle[];
 __attribute__((used, externally_visible))
 void _DIYCompetitionMenu(void)
 {
+#ifndef DETERMINISTIC_MODE
     *(volatile uint16_t *)(volatile void *)&seed = currentTick;  /* word write seeds both seed and adjacent randXorIndex */
+#endif
     if (_CheckContinueAbortPrompt(aDiyCompetition_0) != 0)
         goto exit;
 
@@ -3366,7 +3375,9 @@ exit:
 __attribute__((used, externally_visible))
 void _PresetCompetitionMenu(void)
 {
+#ifndef DETERMINISTIC_MODE
     *(volatile uint16_t *)(volatile void *)&seed = currentTick;  /* word write seeds both seed and adjacent randXorIndex */
+#endif
     if (_CheckContinueAbortPrompt(aPresetCompetit_0) != 0) {
         _CommonMenuExit();
         return;
@@ -3417,7 +3428,9 @@ void _PresetCompetitionMenu(void)
 __attribute__((used, externally_visible))
 void _SeasonMenu(void)
 {
+#ifndef DETERMINISTIC_MODE
     *(volatile uint16_t *)(volatile void *)&seed = currentTick;  /* word write seeds both seed and adjacent randXorIndex */
+#endif
     if (_CheckContinueAbortPrompt(aSeason_1) != 0) {
         _CommonMenuExit();
         return;
@@ -3442,7 +3455,9 @@ void _SeasonMenu(void)
 __attribute__((used, externally_visible))
 void _CareerMenu(void)
 {
+#ifndef DETERMINISTIC_MODE
     *(volatile uint16_t *)(volatile void *)&seed = currentTick;  /* word write seeds both seed and adjacent randXorIndex */
+#endif
     if (_CheckContinueAbortPrompt(aCareer_1) != 0) {
         _CommonMenuExit();
         return;

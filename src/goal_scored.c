@@ -122,8 +122,9 @@ _GoalScored(int16_t scoringTeam, Sprite *scorerSprite)
         a2 = (TeamGame *)bottomTeamData.inGameTeamPtr;
 
     /* a2 should be the TeamGame that matches the scorer's side;
-     * lastTeamScored stores the TeamGeneralInfo pointer for the scoring team */
-    if (scorerSprite->teamNumber == 1)
+     * lastTeamScored stores the TeamGeneralInfo pointer for the scoring team.
+     * ASM uses inGameTeamPtr comparison (not teamNumber) to handle teamPlayingUp swap. */
+    if ((uint32_t)inGameTeam == (uint32_t)topTeamData.inGameTeamPtr)
         lastTeamScored = &topTeamData;
     else
         lastTeamScored = &bottomTeamData;

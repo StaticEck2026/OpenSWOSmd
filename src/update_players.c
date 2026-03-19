@@ -76,6 +76,22 @@ extern int16_t      statsTimer;
 extern int16_t      timeVar;
 extern int16_t      resultTimer;
 extern int16_t      breakState;
+
+#ifdef DETERMINISTIC_MODE
+#include "deterministic.h"
+extern volatile uint16_t panicReasonCode;
+extern void _PanicHaltLoop(void);
+extern Sprite *team2SpritesTable[];
+/* Trap: detect when t2p6 destX > 600 — encode line number in panic code */
+#define T2P6_DESTX_TRAP(lineid) do { \
+    if (frameCount > 400 && player == team2SpritesTable[6] && player->destX > 600) { \
+        panicReasonCode = (uint16_t)(lineid); \
+        _PanicHaltLoop(); \
+    } \
+} while(0)
+#else
+#define T2P6_DESTX_TRAP(lineid)
+#endif
 extern int16_t      inGameCounter;
 extern int16_t      nobodysBallTimer;
 extern int16_t      whichCard;
@@ -135,19 +151,19 @@ extern int16_t      kDefaultDestinations[];
 extern int16_t      kBallFriction[];
 extern SpriteGraphics *spriteGraphicsPtr;
 
-/* Animation tables (in asm data section) */
-extern uint8_t      playerNormalStandingAnimTable;
-extern uint8_t      playerRunningAnimTable;
-extern uint8_t      aboutToThrowInAnimTable;
-extern uint8_t      throwInPassAnimTable;
-extern uint8_t      throwInKickAnimTable;
-extern uint8_t      plInjuredAnimTable;
-extern uint8_t      plGettingYellowCardAnimTable;
-extern uint8_t      plGettingRedCardAnimTable;
-extern uint8_t      plGetting2ndYellowCardAnimTable;
-extern uint8_t      playerLosingReactionAnimTable;
-extern uint8_t      playerWinningReactionAnimTable;
-extern uint32_t     jumpHeaderAttemptAnimTable;
+/* Animation tables (in sprite_data.c) */
+extern AnimTable    playerNormalStandingAnimTable;
+extern AnimTable    playerRunningAnimTable;
+extern AnimTable    aboutToThrowInAnimTable;
+extern AnimTable    throwInPassAnimTable;
+extern AnimTable    throwInKickAnimTable;
+extern AnimTable    plInjuredAnimTable;
+extern AnimTable    plGettingYellowCardAnimTable;
+extern AnimTable    plGettingRedCardAnimTable;
+extern AnimTable    plGetting2ndYellowCardAnimTable;
+extern AnimTable    playerLosingReactionAnimTable;
+extern AnimTable    playerWinningReactionAnimTable;
+extern AnimTable    jumpHeaderAttemptAnimTable;
 
 /* Restart positioning tables (arrays of pointers) */
 extern int16_t     *bottomBallOutOfPlayPositions[];
@@ -1908,7 +1924,7 @@ not_in_penalty:
 
         if (player->speed != 0) {
             _SetJumpHeaderHitAnimTable(player);
-            if (player->animationTable == jumpHeaderAttemptAnimTable) {
+            if (player->animationTable == &jumpHeaderAttemptAnimTable) {
                 if ((uint8_t)player->playerDownTimer > 37)
                     goto apply_air_drag;
             } else {
@@ -2382,11 +2398,12 @@ not_in_penalty:
         if (playingPenalties) {
             ballX = foulXCoordinate;
             ballY = foulYCoordinate;
-            goto prep_out_of_play;
+            goto prep_out_of_play_penalties;
         }
 
         if (gameStatePl == ST_GAME_IN_PROGRESS) {
             _SetPlayerWithNoBallDestination(player, team, ball->x.s.i, ball->y.s.i);
+            T2P6_DESTX_TRAP(0xD002);
             goto enforce_free_kick_distance;
         }
 
@@ -2395,9 +2412,16 @@ not_in_penalty:
         ballY = foulYCoordinate;
         {
             int16_t gs;
+            goto prep_out_of_play_normal;
+
+        prep_out_of_play_penalties:
+            gs = ST_PENALTIES;
+            goto prep_out_of_play;
+
+        prep_out_of_play_normal:
+            gs = gameState;
 
         prep_out_of_play:
-            gs = gameState;
             if (gameState == ST_FIRST_HALF_ENDED || gameState == ST_GAME_ENDED)
                 goto finalize;
             if (gameState == ST_KEEPER_HOLDS_BALL ||
@@ -2530,6 +2554,7 @@ not_in_penalty:
                         }
                         player->destX = dx;
                         player->destY = dy;
+                        T2P6_DESTX_TRAP(0xD001);
                         goto finalize;
                     }
                 }

@@ -123,8 +123,8 @@ extern TeamGame *topTeamPtr;
 extern TeamGame *bottomTeamPtr;
 extern uint16_t pl1Tactics;
 extern uint16_t pl2Tactics;
-extern uint32_t refWaitingAnimTable;
-extern uint32_t playerNormalStandingAnimTable;
+extern AnimTable_12 refWaitingAnimTable;
+extern AnimTable playerNormalStandingAnimTable;
 
 /* ---- External C functions (already ported) ---- */
 extern void _InitTeamsData(void);
@@ -145,7 +145,7 @@ extern void _UpdatePlanePtrsAndBlitParams(void);
 extern uint16_t _Rand(void);
 
 /* ---- C-to-asm bridges (for unported asm functions) ---- */
-extern void _SetPlayerAnimationTable(uint8_t *animTable, Sprite *sprite);
+extern void _SetPlayerAnimationTable(AnimTable *animTable, Sprite *sprite);
 extern void _InitRefereeAnimationTable(uint8_t *animTable);
 extern void _ApplyTeamTactics(uint8_t *playerInfos);
 extern void _NextPenalty(void);
@@ -267,7 +267,7 @@ void _RemoveReferee(void)
     refereeSprite.imageIndex    = (int16_t)0xFFFF;
     refereeSprite.direction     = 0;
     refereeSprite.onScreen      = 1;
-    _InitRefereeAnimationTable((uint8_t *)&refWaitingAnimTable);
+    _InitRefereeAnimationTable((uint8_t *)&refWaitingAnimTable); /* TODO: update when _InitRefereeAnimationTable takes AnimTable* */
 }
 
 /* ================================================================
@@ -362,19 +362,17 @@ void _InitPlayersBeforeEnteringPitch(void)
             }
 
             _SetPlayerAnimationTable(
-                (uint8_t *)&playerNormalStandingAnimTable,
+                &playerNormalStandingAnimTable,
                 sprite
             );
         }
 
-        /* Second pass: other team */
+        /* Second pass: other team (coords continues from where it left off) */
         if (teamPlayingUp == 2) {
             spritesTableA = team1SpritesTable;
         } else {
             spritesTableA = team2SpritesTable;
         }
-        /* Reset coords for second team */
-        coords = kTeamsStartingCoordinates;
     }
 }
 

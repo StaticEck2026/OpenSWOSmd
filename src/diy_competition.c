@@ -12,6 +12,7 @@
 #include "game_types.h"
 #include "string_utils.h"
 #include "random.h"
+#include "deterministic.h"
 #include "panic.h"
 #include "menu_system.h"
 #include "text_render.h"
@@ -431,8 +432,12 @@ __attribute__((used, externally_visible))
 void _DIY_ResetCompetitionProgressAndShuffle(void)
 {
     /* Reseed random from current tick */
+#ifdef DETERMINISTIC_MODE
+    _InitDeterministicMode();
+#else
     randomSeed = currentTick;
     newRandomSeedCopy = (uint8_t)(currentTick >> 8);
+#endif
 
     DIYCompetition *a2 = (DIYCompetition *)diyCompetitionStart;
     uint8_t *a2raw = (uint8_t *)a2;
@@ -674,8 +679,8 @@ void _DIY_InitCupBracketProgressionTable(void)
 
     for (int16_t r = (int16_t)numRounds - 1; r >= 0; r--) {
         totalMatches += 2;
-        if (roundFormats[r] == 2) {
-            /* Format 2: check round legs */
+        if (roundFormats[r] != 2) {
+            /* Format != 2: check round legs for extra match */
             lastRoundHasExtraMatch = 1;
             if (roundLegs[r] == 1) {
                 lastRoundHasExtraMatch = 0;
@@ -3715,8 +3720,12 @@ __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patte
 void _DIY_ResetAndLoadCurrentCompetitionSlot(void)
 {
     /* Reseed random from current tick */
+#ifdef DETERMINISTIC_MODE
+    _InitDeterministicMode();
+#else
     randomSeed = currentTick;
     newRandomSeedCopy = (uint8_t)(currentTick >> 8);
+#endif
 
     /* Clear flags in diyFileBufferCopy */
     {
@@ -3751,8 +3760,12 @@ __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patte
 void _DIY_InitCupFromTeamGridAndValidateTeams(void)
 {
     /* Reseed random from current tick */
+#ifdef DETERMINISTIC_MODE
+    _InitDeterministicMode();
+#else
     randomSeed = currentTick;
     newRandomSeedCopy = (uint8_t)(currentTick >> 8);
+#endif
 
     uint8_t *a2 = diyCompetitionStart;
     DIYCompetition *a2s = (DIYCompetition *)a2;
@@ -8440,7 +8453,10 @@ void _DIYLeagueTournamentViewResult(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _DIYLeagueTournamentMatchCommon(uint16_t action)
 {
-    uint16_t result = _DIY_PlayOrSimulateLeagueFixture(0, action);
+    /* ASM passes d6 (allowSquadChanges) implicitly via register preservation
+     * from the outer caller. diyTournamentType==1 for career (squad changes allowed),
+     * 0 for standalone DIY (no squad changes). */
+    uint16_t result = _DIY_PlayOrSimulateLeagueFixture(diyTournamentType, action);
     if (result != 0)
         return;
 

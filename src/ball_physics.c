@@ -629,8 +629,7 @@ has_picture:
                 int16_t bz = ball->z.s.i;
                 if (bz == 5) goto clear_deltaz;
                 if ((uint16_t)bz < 6) {
-                    /* RE bug fix: original had frontbufferBaseAlt+$1CAA, correct is 0x00010002 */
-                    dz = 0x00010002;
+                    dz = 0x00020004;
                 } else {
                     dz = (int32_t)0xFFFEFFFE;
                 }
@@ -869,10 +868,12 @@ skip_goal_collision:
                 goto goalpost_speed_reduce;
             }
 
-            /* Weak Y velocity -> side deflection */
-            reverseDestYDirection(ball, savedY);
-            _ResetBothTeamSpinTimers();
-            ball->destY = ball->destY + d4;
+            /* Weak Y velocity at crossbar height -> crossbar bounce.
+             * ASM: neg.l SPRITE_DELTAZ, restore Z from savedZ, bump savedY +1.
+             * This bounces the ball off the crossbar. */
+            ball->deltaZ.raw = -ball->deltaZ.raw;
+            ball->z.raw = savedZ;
+            savedY += 0x10000;
             goto goalpost_speed_reduce;
         }
 

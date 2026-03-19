@@ -175,9 +175,11 @@ uint8_t  rngLogVal[RNG_LOG_MAX];
 uint16_t rngDumpFrameCounter = 0;
 uint16_t rngDumpActive = 0;
 
-/* Per-frame state log: 8 bytes per frame (tick, ball x/y/z integer parts) */
+/* Per-frame state log: 72 bytes per frame (36 x int16_t) */
+#define FRAME_LOG_FIELDS 36
 #define FRAME_LOG_MAX DETERMINISTIC_DUMP_FRAME
-static int16_t frameLog[FRAME_LOG_MAX * 4];  /* 4 int16_t per frame */
+static int16_t frameLog[FRAME_LOG_MAX * FRAME_LOG_FIELDS];
+
 static uint16_t frameLogCount = 0;
 
 extern void _PanicHaltLoop(void) __attribute__((noreturn));
@@ -188,7 +190,17 @@ extern uint32_t S_VBR;
 extern uint32_t S_SavedInt2;
 extern void Int2KeyboardHandler(void);
 extern Sprite ballSprite;
+extern Sprite goalie1Sprite;
+extern Sprite team1Player2Sprite;
+extern Sprite goalie2Sprite;
+extern Sprite team2Player2Sprite;
 extern uint16_t currentGameTick;
+extern TeamGame topTeamInGame;
+extern TeamGame bottomTeamInGame;
+extern Sprite *team1SpritesTable[];
+extern Sprite *team2SpritesTable[];
+extern TeamGeneralInfo topTeamData;
+extern TeamGeneralInfo bottomTeamData;
 #define LEVEL_2_VEC 0x68
 #define MODE_NEWFILE 1006
 
@@ -216,20 +228,75 @@ static inline void dumpDosClose(uint32_t handle) {
     __asm volatile ("jsr -36(%%a6)" : "=r"(_d0), "+r"(_d1) : "r"(_a6) : "a0","a1","memory");
 }
 
+/* Dump raw sprite memory for all 22 players at a specific frame */
+static void dumpSpriteSnapshot(uint16_t frameNum)
+{
+    if (frameNum != 490) return;
+
+    volatile uint32_t *vec = (volatile uint32_t *)(S_VBR + 0x68);
+    *vec = S_SavedInt2;
+
+    uint32_t fh = dumpDosOpen((const uint8_t *)"PROGDIR:sprite_snap.bin", 1006);
+    if (fh != 0) {
+        int16_t p;
+        for (p = 0; p < 11; p++)
+            dumpDosWrite(fh, (const void *)team1SpritesTable[p], 110);
+        for (p = 0; p < 11; p++)
+            dumpDosWrite(fh, (const void *)team2SpritesTable[p], 110);
+        dumpDosClose(fh);
+    }
+
+    *vec = (uint32_t)Int2KeyboardHandler;
+}
+
 __attribute__((used, externally_visible))
 void _RngDumpCheck(void)
 {
     if (!rngDumpActive)
         return;
 
-    /* Log per-frame state: tick, ball_x, sprite_count, ball_y */
+    dumpSpriteSnapshot(frameLogCount);
+
+    /* Log per-frame state */
     if (frameLogCount < FRAME_LOG_MAX) {
-        extern uint16_t numSpritesToRender;
-        uint16_t idx = frameLogCount * 4;
+        uint16_t idx = frameLogCount * FRAME_LOG_FIELDS;
+        /* Ball state */
         frameLog[idx + 0] = (int16_t)currentGameTick;
         frameLog[idx + 1] = ballSprite.x.s.i;
-        frameLog[idx + 2] = (int16_t)numSpritesToRender;
-        frameLog[idx + 3] = ballSprite.y.s.i;
+        frameLog[idx + 2] = ballSprite.y.s.i;
+        frameLog[idx + 3] = ballSprite.speed;
+        frameLog[idx + 4] = ballSprite.destX;
+        frameLog[idx + 5] = ballSprite.destY;
+        frameLog[idx + 6] = (int16_t)(ballSprite.deltaX.raw >> 16);
+        frameLog[idx + 7] = (int16_t)(ballSprite.deltaY.raw >> 16);
+        /* All 22 player Y positions (slots 8-29) — using named globals
+         * to avoid potential table pointer issues */
+        frameLog[idx +  8] = goalie1Sprite.y.s.i;
+        frameLog[idx +  9] = team1Player2Sprite.y.s.i;
+        {
+            /* team1 players 3-11 via table (indices 2-10) */
+            int16_t p;
+            for (p = 2; p < 11; p++)
+                frameLog[idx + 8 + p] = team1SpritesTable[p]->y.s.i;
+        }
+        frameLog[idx + 19] = goalie2Sprite.y.s.i;
+        frameLog[idx + 20] = team2Player2Sprite.y.s.i;
+        {
+            /* team2 players 3-11 via table (indices 2-10) */
+            int16_t p;
+            for (p = 2; p < 11; p++)
+                frameLog[idx + 19 + p] = team2SpritesTable[p]->y.s.i;
+        }
+        /* AI state + ball Z + t2p6 dest (slots 30-35) */
+        {
+            frameLog[idx + 30] = topTeamData.AI_timer;
+            frameLog[idx + 31] = bottomTeamData.AI_timer;
+            frameLog[idx + 32] = ballSprite.z.s.i;
+            frameLog[idx + 33] = (int16_t)((topTeamData.fireThisFrame << 8) |
+                                           (uint8_t)bottomTeamData.fireThisFrame);
+            frameLog[idx + 34] = team2SpritesTable[6]->destX;
+            frameLog[idx + 35] = team2SpritesTable[6]->destY;
+        }
         frameLogCount++;
     }
 
@@ -244,7 +311,7 @@ void _RngDumpCheck(void)
     /* Write frame state dump */
     uint32_t fh = dumpDosOpen((const uint8_t *)"PROGDIR:state_dump.bin", MODE_NEWFILE);
     if (fh != 0) {
-        dumpDosWrite(fh, frameLog, frameLogCount * 8);
+        dumpDosWrite(fh, frameLog, frameLogCount * FRAME_LOG_FIELDS * 2);
         dumpDosClose(fh);
     }
 

@@ -4634,13 +4634,15 @@ void _PutPlayerOnMarketMenu(void)
     uint16_t preselect = 0xFFFF;
 
     for (;;) {
-        /* Build eligible player bitfield (bit 1 of positionAndFace set) */
+        /* Build eligible player bitfield (bit 1 of positionAndFace set).
+         * ASM uses the FILE INDEX (d1 from GetPlayerAtIndex) for the bitfield,
+         * not the loop counter. _cGetPlayerAtIndexFileIdx holds this value. */
         uint32_t eligible = 0;
         for (int16_t i = (int16_t)(careerNumPlayers - 1); i >= 0; i--) {
             uint8_t *player = _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
             PlayerFile *pf = (PlayerFile *)(player + 76);
             if (pf->positionAndFace & 0x02)
-                eligible |= (1u << (uint16_t)i);
+                eligible |= (1u << (uint16_t)_cGetPlayerAtIndexFileIdx);
         }
 
         /* Get team pointer */

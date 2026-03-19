@@ -22,7 +22,7 @@
 #define DETERMINISTIC_H
 
 /* Uncomment to enable deterministic mode */
-#define DETERMINISTIC_MODE
+//#define DETERMINISTIC_MODE
 
 /* Seed value — change for different reproducible sequences */
 #define DETERMINISTIC_SEED 0x1234
@@ -30,7 +30,12 @@
 /* Uncomment and set frame count to dump RNG calls after N game frames.
  * After DETERMINISTIC_DUMP_FRAME frames, the game halts and writes
  * DH0:rng_dump.bin containing all RNG calls made during those frames. */
-#define DETERMINISTIC_DUMP_FRAME 1500
+//#define DETERMINISTIC_DUMP_FRAME 1500
+
+/* Maximum number of sprites enqueued to render stacks per frame.
+ * Caps blitter work so C and ASM versions have matching frame timing.
+ * Set to 0 to disable the limit. */
+#define DETERMINISTIC_SPRITE_LIMIT 0
 
 #ifdef DETERMINISTIC_MODE
 void _InitDeterministicMode(void);
