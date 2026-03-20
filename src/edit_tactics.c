@@ -399,8 +399,10 @@ void _SetBigCheckSprite(void)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void _CopyCurrentTactics(void)
 {
-    uint8_t *src = (uint8_t *)teamTacticsTable[chosenTactics];
-    uint8_t *dst = (uint8_t *)&editTacticsCurrentTactics;
+    /* volatile: LTO with -Ofast may eliminate this copy because
+     * teamTacticsTable[18] aliases editTacticsCurrentTactics. */
+    volatile uint8_t *src = (volatile uint8_t *)(uint32_t)teamTacticsTable[chosenTactics];
+    volatile uint8_t *dst = (volatile uint8_t *)&editTacticsCurrentTactics;
 
     for (int16_t i = 369; i >= 0; i--) {
         *dst++ = *src++;
@@ -417,8 +419,8 @@ void _CopyCurrentTactics(void)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void _ApplyCurrentEditedTactics(void)
 {
-    uint8_t *dst = (uint8_t *)teamTacticsTable[chosenTactics];
-    uint8_t *src = (uint8_t *)&editTacticsCurrentTactics;
+    volatile uint8_t *dst = (volatile uint8_t *)(uint32_t)teamTacticsTable[chosenTactics];
+    volatile uint8_t *src = (volatile uint8_t *)&editTacticsCurrentTactics;
 
     for (int16_t i = 369; i >= 0; i--) {
         *dst++ = *src++;
@@ -436,8 +438,8 @@ void _ApplyCurrentEditedTactics(void)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void _SaveCurrentTactics(void)
 {
-    uint8_t *src = (uint8_t *)&editTacticsCurrentTactics;
-    uint8_t *dst = &savedCurrentTactics;
+    volatile uint8_t *src = (volatile uint8_t *)&editTacticsCurrentTactics;
+    volatile uint8_t *dst = (volatile uint8_t *)&savedCurrentTactics;
 
     for (int16_t i = 369; i >= 0; i--) {
         *dst++ = *src++;
@@ -453,8 +455,8 @@ void _SaveCurrentTactics(void)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void _RestoreTactics(void)
 {
-    uint8_t *src = &savedCurrentTactics;
-    uint8_t *dst = (uint8_t *)&editTacticsCurrentTactics;
+    volatile uint8_t *src = (volatile uint8_t *)&savedCurrentTactics;
+    volatile uint8_t *dst = (volatile uint8_t *)&editTacticsCurrentTactics;
 
     for (int16_t i = 369; i >= 0; i--) {
         *dst++ = *src++;

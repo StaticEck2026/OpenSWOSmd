@@ -20,7 +20,7 @@ extern volatile uint32_t frontbufferBasePtr;
 extern volatile uint16_t currentGameTick;
 extern volatile uint16_t panicReasonCode;
 extern uint16_t hilNumGoals;
-extern uint8_t editTacticsCurrentTactics[];
+extern uint8_t editTacticsCurrentTactics[370]; /* TeamTactics — must match edit_tactics.c */
 extern uint8_t hilFileBuffer[];
 
 /* Save file header fields (all within careerFileBuffer/competitionFileBuffer region) */
@@ -559,7 +559,20 @@ int16_t _ReadTacticsFile(uint8_t *filename)
     int16_t result;
     int16_t i;
 
-    result = _LoadFileEx(filename, (uint8_t *)frontbufferBasePtr, (uint32_t *)0);
+    /* ASM ReadTacticsFile calls raw LoadFile which loads to frontbuffer,
+     * then copies to editTacticsCurrentTactics, then blits the overlay.
+     * _LoadFileEx wraps LoadFile and calls BlitterCopyOverlayToScreen
+     * internally (for assetCurrentIndex != 4), which destroys the
+     * frontbuffer data before we can copy it. Force direct dispatch
+     * by temporarily setting assetCurrentIndex = 4. */
+    uint16_t savedIdx = assetCurrentIndex;
+    assetCurrentIndex = 4;
+    result = _CAssetSys_DispatchGetSize(ASSET_OP_INIT_SOURCE0, 0,
+                                         filename,
+                                         (uint8_t *)frontbufferBasePtr,
+                                         (uint32_t *)0);
+    assetCurrentIndex = savedIdx;
+
     if (result != 0) {
         _BlitterCopyOverlayToScreen();
         _ShowFsErrorByCode((uint16_t)result);

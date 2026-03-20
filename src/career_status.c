@@ -2336,9 +2336,9 @@ uint32_t _CalculateStartingBalance(uint16_t teamNumber)
  * ================================================================ */
 
 /* Message ID constants for chairman messages */
-#define MSG_PLAYER_JOINED_CLUB_ON_TRIAL   38
-#define MSG_TRIAL_PLAYER_LEFT_CLUB        39
-#define MSG_RESERVE_PLAYER_LEFT_CLUB      40
+#define MSG_TRIAL_PLAYER_LEFT_CLUB        24
+#define MSG_RESERVE_PLAYER_LEFT_CLUB      25
+#define MSG_PLAYER_JOINED_CLUB_ON_TRIAL   26
 
 extern uint8_t *plNameForMessage;
 extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
