@@ -297,6 +297,11 @@ static int16_t assetSys_SelectAndOpen(uint16_t param)
  * ================================================================ */
 static int16_t assetSys_OpenAnySource(void)
 {
+    /* Original ASM probes floppy drives. On HDD (no floppies), all probes
+     * fail, leaving assetCurrentIndex = 4 (set before probing). This
+     * enables direct file dispatch (no frontbuffer staging) which is
+     * required for files larger than the frontbuffer (e.g. career saves). */
+    assetCurrentIndex = 4;
     return 0;
 }
 

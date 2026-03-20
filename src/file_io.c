@@ -559,20 +559,7 @@ int16_t _ReadTacticsFile(uint8_t *filename)
     int16_t result;
     int16_t i;
 
-    /* ASM ReadTacticsFile calls raw LoadFile which loads to frontbuffer,
-     * then copies to editTacticsCurrentTactics, then blits the overlay.
-     * _LoadFileEx wraps LoadFile and calls BlitterCopyOverlayToScreen
-     * internally (for assetCurrentIndex != 4), which destroys the
-     * frontbuffer data before we can copy it. Force direct dispatch
-     * by temporarily setting assetCurrentIndex = 4. */
-    uint16_t savedIdx = assetCurrentIndex;
-    assetCurrentIndex = 4;
-    result = _CAssetSys_DispatchGetSize(ASSET_OP_INIT_SOURCE0, 0,
-                                         filename,
-                                         (uint8_t *)frontbufferBasePtr,
-                                         (uint32_t *)0);
-    assetCurrentIndex = savedIdx;
-
+    result = _LoadFileEx(filename, (uint8_t *)frontbufferBasePtr, (uint32_t *)0);
     if (result != 0) {
         _BlitterCopyOverlayToScreen();
         _ShowFsErrorByCode((uint16_t)result);
