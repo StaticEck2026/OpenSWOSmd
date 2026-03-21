@@ -81,7 +81,7 @@ extern int16_t  ballNextYGroundY;
 extern int16_t  ballNextZDeadVar;
 
 /* ---- Spin/aftertouch tables ---- */
-extern int16_t  kKickSpinFactor[];         /* 8 dirs × 4 entries = 32 words */
+extern int8_t   kKickSpinFactor[];         /* 8 dirs × 4 entries × 2 = 64 bytes (dc.b, NOT dc.w!) */
 extern int16_t  kPassingSpinFactor[];      /* 8 dirs × 4 entries = 32 words */
 extern int16_t  kSpinMultiplierFactor[];   /* 10 entries */
 extern int32_t  kHighKickDeltaZ;
