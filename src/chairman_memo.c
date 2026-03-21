@@ -82,7 +82,12 @@ void _ChairmanMemosOnReturn(void)
                     0, 0, 0, 0, 0, 0, 0,
                     managerSexBuffer, managerSurnameBuffer, (void *)0);
 
-    /* Look up message pair from clubMessagesTable (1-based, 2 pointers per message) */
+    /* Look up message pair from clubMessagesTable (1-based, 2 pointers per message).
+     * Guard against currentMessage being 0 or out of range (38 messages max).
+     * Can happen if the chairman memo menu is triggered with stale state. */
+    if (currentMessage == 0 || currentMessage > 38)
+        return;
+
     int16_t msgIdx = (int16_t)(currentMessage - 1) * 2;
 
     /* Format message line 1 into entry 2's text buffer */

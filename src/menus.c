@@ -2041,7 +2041,7 @@ void _ChangeMenuMusic(MenuEntry *entry)
  * Simple menu exit/draw callbacks (Chunk 114)
  * ================================================================ */
 
-extern uint16_t viewSquadSelectedPlayer;
+extern volatile uint16_t viewSquadSelectedPlayer;
 extern uint16_t selectNationalTeamMenuResult;
 extern uint16_t teamSelected;
 extern uint8_t selectedFilename[];
@@ -5035,11 +5035,13 @@ void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, PlayerFile *playe
         _SetSquadMenuEntryStatusSprite(entry, playerFile, 0);
         return;
     }
-    /* After sim path — extract face and status for sprite */
-    PlayerFile *pf = &playerFile[2];
-    uint16_t d1 = pf->positionAndFace & 0x18;
+    /* After sim path — extract face and status for sprite.
+     * ASM reads PLAYERFILE_POSITIONANDFACE+$4C(a6) where a6 is the raw
+     * player pointer. Since playerFile is already player+PF_OFF (76),
+     * we access playerFile directly (offset 26+76=102 from raw player). */
+    uint16_t d1 = playerFile->positionAndFace & 0x18;
     d1 >>= 3;
-    uint16_t d3 = pf->cardsInjuries & 0xE0;
+    uint16_t d3 = playerFile->cardsInjuries & 0xE0;
 
     if (d3 == 0) {
         *(uint16_t *)&entry->fg = d1 + 0xBA;
@@ -5286,7 +5288,7 @@ extern uint32_t viewSquadMaskLo;
 extern uint32_t viewSquadMaskHi;
 extern uint16_t viewSquadArg2;
 extern uint16_t viewSquadArg3;
-extern uint16_t viewSquadSelectedTeam;
+extern volatile uint16_t viewSquadSelectedTeam;
 
 extern uint8_t *_GetPlayerInfoBreakPosition(TeamFileEx *teamPtr, uint16_t requestedSlot,
                                               uint16_t *outSlot, uint16_t *outPlayerIndex);
@@ -5370,6 +5372,11 @@ void _ViewSquadAfterDrawCommon(void *entryPtr)
     uint16_t outSlot, outPlayerIndex;
     uint8_t *player = _GetPlayerInfoBreakPosition(
         (TeamFileEx *)squadTeamPtr, d1, &outSlot, &outPlayerIndex);
+
+    /* ASM: GetPlayerInfoBreakPosition overwrites d1 with the file index.
+     * The mask checks below must use the file index, not the display row.
+     * Mask to 0-31 to match ASM btst behavior (btst uses d1 mod 32). */
+    d1 = outPlayerIndex & 0x1F;
 
     uint16_t style = 0;
     a5->isDisabled = 0;

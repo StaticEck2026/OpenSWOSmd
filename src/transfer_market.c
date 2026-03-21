@@ -4625,7 +4625,7 @@ void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint1
  * 5 players are on market. Then updates transfer market UI state.
  * ================================================================ */
 extern uint32_t viewSquadFlags;
-extern int16_t viewSquadSelectedTeam;
+extern volatile int16_t viewSquadSelectedTeam;
 extern uint8_t aPutPlayerOnTra[];  /* "PUT PLAYER ON TRANSFER MARKET" */
 
 __attribute__((used, externally_visible))
@@ -4661,8 +4661,9 @@ void _PutPlayerOnMarketMenu(void)
         int16_t selected = _ShowSquad((TeamFile *)teamPtr, aPutPlayerOnTra, eligible, marketMask, 0, preselect);
         preselect = (uint16_t)viewSquadSelectedTeam;
 
-        /* If cancelled (viewSquadSelectedTeam < 0), exit loop */
-        if ((int16_t)viewSquadSelectedTeam < 0)
+        /* If cancelled (ShowSquad returns d0 < 0), exit loop.
+         * ASM checks d0 (viewSquadSelectedPlayer) via bmi, not d3 (viewSquadSelectedTeam). */
+        if (selected < 0)
             break;
 
         /* Toggle player on/off transfer market */
@@ -5064,10 +5065,12 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
         }
     }
 
-    /* Calculate target value (random 85-119% of value sum) */
+    /* Calculate target value (random 85-119% of value sum).
+     * ASM uses mulu.w (16×16→32) then divu.w (32÷16). Must use 32-bit
+     * intermediate to avoid overflow for players valued > £650K. */
     rnd = _Rand2();
     uint16_t pct = (uint16_t)((uint16_t)(rnd * 0x23) >> 8) + 0x55;
-    uint16_t targetVal = (uint16_t)((uint16_t)(pct * offerValueBaseSum) / 100);
+    uint16_t targetVal = (uint16_t)((uint32_t)pct * (uint32_t)offerValueBaseSum / 100);
     offerTargetValueBase = targetVal;
 
     /* Initialize swap player fields */
@@ -5127,7 +5130,7 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
     if (rnd & 1) {
         /* Step 1: random 105-112% of offer amount */
         uint16_t step1pct = (uint16_t)((uint16_t)(rnd * 0x14) >> 8) + 0x69;
-        uint16_t step1 = (uint16_t)((uint16_t)(step1pct * offerAmount) / 100);
+        uint16_t step1 = (uint16_t)((uint32_t)step1pct * (uint32_t)offerAmount / 100);
         step1 = _SnapToNearestAvgTeamValueBase(step1);
         if (step1 != offerAmount) {
             offerNegotiationStep1Amount = step1;
@@ -5136,7 +5139,7 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
             if (rnd & 1) {
                 /* Step 2: random 105-112% of step1 */
                 uint16_t step2pct = (uint16_t)((uint16_t)(rnd * 0x14) >> 8) + 0x69;
-                uint16_t step2 = (uint16_t)((uint16_t)(step2pct * offerNegotiationStep1Amount) / 100);
+                uint16_t step2 = (uint16_t)((uint32_t)step2pct * (uint32_t)offerNegotiationStep1Amount / 100);
                 step2 = _SnapToNearestAvgTeamValueBase(step2);
                 if (step2 != offerNegotiationStep1Amount) {
                     offerNegotiationStep2Amount = step2;
