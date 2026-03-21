@@ -81,7 +81,9 @@ extern int16_t  ballNextYGroundY;
 extern int16_t  ballNextZDeadVar;
 
 /* ---- Spin/aftertouch tables ---- */
-extern int8_t   kKickSpinFactor[];         /* 8 dirs × 4 entries × 2 = 64 bytes (dc.b, NOT dc.w!) */
+extern int16_t  kKickSpinFactor[];         /* 8 dirs × 2 entries (left/right) × 2 (dx,dy) = 32 words.
+                                             * ASM data uses dc.b but reads with move.w — byte pairs
+                                             * form big-endian int16_t values. int16_t[] is correct. */
 extern int16_t  kPassingSpinFactor[];      /* 8 dirs × 4 entries = 32 words */
 extern int16_t  kSpinMultiplierFactor[];   /* 10 entries */
 extern int32_t  kHighKickDeltaZ;
