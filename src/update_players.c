@@ -1259,8 +1259,12 @@ not_in_penalty:
         team->allowedDirections = team->playerHasBall;
         team->playerHasBall = 0;
 
+        /* ASM: tst.w SPRITE_DELTAY(a6) — IDA mislabeled this as ball deltaY,
+         * but a6 is the TEAM pointer. Offset 50 in TeamGeneralInfo is
+         * firePressed(50) + fireThisFrame(51), tested as a word. Clear
+         * shooting when BOTH fire inputs are released (word == 0). */
         if (team->shooting) {
-            if (ball->deltaY.raw == 0)
+            if (team->firePressed == 0 && team->fireThisFrame == 0)
                 team->shooting = 0;
         }
 
