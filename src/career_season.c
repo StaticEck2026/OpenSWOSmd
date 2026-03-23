@@ -1269,7 +1269,7 @@ void _Career_SetCupPickList_ForSelectedRegion(uint16_t *teamList)
 /* ---- ASM externs for Chunk 186 ---- */
 extern uint16_t playPromotedAnimation;
 extern uint16_t playRelegatedAnimation;
-extern uint16_t seasonUpdateInProgress;
+extern volatile uint16_t seasonUpdateInProgress;
 extern uint16_t careerFileBuffer;
 extern uint16_t euroCupQualifiedTeamCount;
 extern uint16_t cupWinnersCupQualifiedTeamCount;

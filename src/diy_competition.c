@@ -5642,7 +5642,7 @@ extern uint32_t diyCupLastMatchTeam2Ptr;
 extern uint16_t diyCupLastMatchScoreTeam1;
 extern uint16_t diyCupLastMatchScoreTeam2;
 extern uint16_t chooseTeamsResult;
-extern uint16_t seasonUpdateInProgress;
+extern volatile uint16_t seasonUpdateInProgress;
 extern uint16_t fire;
 
 /* ASM string constants for Chunk 130 */
@@ -7577,7 +7577,7 @@ extern uint16_t diyFixtureViewMode;
 extern uint16_t diyTournamentViewOnly;
 extern uint16_t diyLeagueTournament_viewOptionsAvailable;
 extern uint16_t diyMinSubstitutes;
-extern uint16_t seasonUpdateInProgress;
+extern volatile uint16_t seasonUpdateInProgress;
 extern uint32_t diyLeftTeamPtr;
 extern uint32_t diyRightTeamPtr;
 extern uint16_t diyLeftTeamResult;

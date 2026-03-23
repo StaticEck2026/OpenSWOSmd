@@ -41,7 +41,7 @@ extern uint16_t menuStatus;
 extern uint16_t menuFade;
 extern uint16_t exitMenu;
 extern uint16_t fireResetFlag;
-extern uint16_t seasonUpdateInProgress;
+extern volatile uint16_t seasonUpdateInProgress;
 extern uint16_t internationalAutoAdvanceFlag;
 extern uint16_t highlightedLeagueTeamId;
 extern uint16_t writeOnlyVar01;

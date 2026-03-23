@@ -149,7 +149,7 @@ extern uint8_t    competitionContext[];
 extern uint8_t    tertiaryCompetitionContext[];
 extern uint8_t    euroCupsCompetitionContext[];
 extern uint8_t    competitionFileBuffer[];
-extern uint16_t   seasonUpdateInProgress;
+extern volatile uint16_t   seasonUpdateInProgress;
 extern uint16_t   teamsLoaded;
 extern uint16_t   numSelectedTeams;
 
