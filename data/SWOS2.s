@@ -121151,7 +121151,7 @@ greekLeague:
                 dc.b $37                ; compNumber
                 dc.b $00                ; type
                 dc.b $0F                ; teamNumber
-                dc.b $40                ; beginMonth
+                dc.b $38                ; beginMonth
                 dc.b $28                ; endMonth
                 dc.b $00                ; unk1
                 dc.b $00                ; unk2
@@ -123341,8 +123341,8 @@ greekCup:
                 dc.b $7F                ; compNumber
                 dc.b $01                ; type
                 dc.b $0F                ; teamNumber
-                dc.b $00                ; beginMonth
-                dc.b $20                ; endMonth
+                dc.b $40                ; beginMonth
+                dc.b $28                ; endMonth
                 dc.b $00                ; unk1
                 dc.b $00                ; unk2
                 dc.b $00                ; unk3
