@@ -5643,7 +5643,7 @@ extern uint16_t diyCupLastMatchScoreTeam1;
 extern uint16_t diyCupLastMatchScoreTeam2;
 extern uint16_t chooseTeamsResult;
 extern volatile uint16_t seasonUpdateInProgress;
-extern uint16_t fire;
+extern volatile uint16_t fire;
 
 /* ASM string constants for Chunk 130 */
 extern uint8_t aV[];       /* "V" */

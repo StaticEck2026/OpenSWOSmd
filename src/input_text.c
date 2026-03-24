@@ -16,7 +16,7 @@
 extern volatile uint16_t panicReasonCode;
 extern uint8_t inMenuKeyboardBuffer[100];
 extern uint16_t currentKey;
-extern uint16_t shortFire;
+extern volatile uint16_t shortFire;
 extern uint16_t deadVar02;
 extern uint16_t deadInputTextVar;
 extern uint16_t allowExtraCharsFlag;

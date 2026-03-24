@@ -35,7 +35,7 @@ extern uint16_t goalScored;
 extern uint16_t goalCameraMode;
 extern uint16_t autoSaveHighlights;
 extern uint16_t autoReplays;
-extern uint16_t saveHighlightScene;
+extern volatile uint16_t saveHighlightScene;
 extern uint16_t userRequestedReplay;
 extern uint16_t instantReplayFlag;
 extern uint32_t currentScorer;

@@ -18,7 +18,7 @@ extern uint16_t panicReasonCode;
 extern uint8_t *spriteGraphicsPtr;          /* actually uint32_t*[], match game_utils.c */
 extern int16_t currentSpriteIndex;
 extern uint16_t playGame;
-extern uint16_t playHighlightFlag;
+extern volatile uint16_t playHighlightFlag;
 extern uint16_t useIndividualPlayerSkinColor;
 extern uint32_t imageStreamBytesLeft;
 extern uint8_t menuInsBank[];

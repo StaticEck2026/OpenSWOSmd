@@ -16,7 +16,7 @@ extern volatile uint16_t currentGameTick;
 extern uint16_t paletteIndex;
 extern uint16_t replaySelected;
 extern uint16_t menuControlsDirection;
-extern uint16_t fire;
+extern volatile uint16_t fire;
 
 extern uint8_t frontbufferMaskBuffer[];
 extern uint8_t bigCharsTable[];

@@ -125,7 +125,7 @@ extern uint32_t editTacticsPlayerNumbers;       /* pointer stored as uint32_t */
 extern int16_t playerAreas[];                   /* 35 entries: 0..34 */
 extern uint16_t menuControlsDirection;
 extern uint16_t menuControlsDirection2;
-extern uint16_t fire;
+extern volatile uint16_t fire;
 extern uint16_t currentGameTick;
 extern uint16_t panicReasonCode;
 

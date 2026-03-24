@@ -60,7 +60,7 @@ extern uint16_t playerCardChance;
 extern uint16_t overlayActiveFlag;
 extern uint16_t gameRandValue;
 extern uint16_t paletteIndex;
-extern uint16_t playHighlightFlag;
+extern volatile uint16_t playHighlightFlag;
 extern uint8_t  gamePalette[];
 extern uint32_t paletteTable[];
 extern uint16_t pitchBallSpeedFactor;
