@@ -25,7 +25,7 @@
 #define K_HIL_FILE_MAXSZ  192254u
 
 /* ---- External globals ---- */
-extern uint16_t numScenesInHilFile;
+extern volatile uint16_t numScenesInHilFile;
 extern uint16_t gamePitchTypeOrSeason;
 extern int16_t  gamePitchType;
 extern uint16_t gameSeason;
@@ -53,7 +53,7 @@ extern uint8_t *goalBasePtr;
 extern uint8_t *nextGoalPtr;
 extern uint8_t *currentHilPtr;
 extern uint8_t *currentGoalPtr;
-extern uint16_t goIntoHighlightsLoop;
+extern volatile uint16_t goIntoHighlightsLoop;
 extern uint16_t hilSceneNumber;
 extern uint32_t savedCurrentHilPtr;
 extern uint32_t savedCurrentGoalPtr;

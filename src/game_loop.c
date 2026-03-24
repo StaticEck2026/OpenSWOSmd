@@ -16,12 +16,12 @@
 /* ---- Extern globals (data section, exported from asm/Data.c) ---- */
 extern uint16_t gameCanceled;
 extern uint16_t instantReplayFlag;
-extern uint16_t saveHighlightScene;
-extern uint16_t fadeAndSaveHighlightScene;
+extern volatile uint16_t saveHighlightScene;
+extern volatile uint16_t fadeAndSaveHighlightScene;
 extern uint16_t spaceReplayTimer;
 extern uint16_t subsWriteOnly;
 extern uint16_t playGame;
-extern uint16_t playHighlightFlag;
+extern volatile uint16_t playHighlightFlag;
 extern uint16_t normalReplayRunning;
 extern uint16_t userRequestedReplay;
 extern uint16_t overlayFlagBackup;
@@ -35,7 +35,7 @@ extern uint16_t currentKey;
 extern uint16_t frameCount;
 extern uint16_t fadeState;
 extern uint16_t fadeInitFlag;
-extern uint16_t goIntoHighlightsLoop;
+extern volatile uint16_t goIntoHighlightsLoop;
 extern uint16_t replayState;
 extern uint16_t showingUserStats;
 extern uint16_t trainingGame;
@@ -83,7 +83,7 @@ extern uint16_t pl2Tactics;
 extern uint32_t playersPositionsByTactics[18];
 
 extern uint16_t hilSceneNumber;
-extern uint16_t numScenesInHilFile;
+extern volatile uint16_t numScenesInHilFile;
 extern uint32_t hilStartOfGoalsBuffer;
 extern uint8_t *goalBasePtr;
 extern uint8_t *currentHilPtr;
