@@ -689,18 +689,20 @@ void _InitCareer(uint16_t teamNo)
     _LoadSomeEuroCup(cupWinnersCup);
     _LoadSomeEuroCup(uefaCup);
 
-    /* Copy careerContests table entries: {src, dest, count} until src==0xFFFFFFFF */
+    /* Copy careerContests table entries: {src, dest, count} until src==0xFFFFFFFF.
+     * Uses volatile to prevent LTO from eliminating the ROM→BSS copies
+     * (same pattern as the tactic copy bug). */
     uint8_t *tbl = careerContests;
     for (;;) {
         uint32_t srcAddr = *(uint32_t *)tbl;
         tbl += 4;
         if (srcAddr == 0xFFFFFFFF)
             break;
-        uint8_t *dst = *(uint8_t **)tbl;
+        volatile uint8_t *dst = *(volatile uint8_t **)tbl;
         tbl += 4;
         uint16_t count = *(uint16_t *)tbl;
         tbl += 2;
-        uint8_t *src = (uint8_t *)srcAddr;
+        volatile uint8_t *src = (volatile uint8_t *)srcAddr;
         for (int16_t i = count - 1; i >= 0; i--)
             *dst++ = *src++;
     }
