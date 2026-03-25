@@ -1446,13 +1446,21 @@ void _Career_AdvanceToNextSeason_UpdateCompetitions(void)
 
     careerFileBuffer = 0;
 
+    /* DIAGNOSTIC: season advancement progress counter.
+     * Watch variable `dbg_seasonProgress` in debugger.
+     * 1=entering player comp, 2=entering remap loop, 3=loop done, 4=draw done.
+     * If frozen: value tells you which stage hung. */
+    volatile uint16_t dbg_seasonProgress = 0;
+
     if (!isNationalSelector) {
+        dbg_seasonProgress = 1;
         uint16_t compId = (uint8_t)(selTeamNumber >> 8);
         _Career_ProcessCompetitionForNextSeason(compId);
         _Career_ProcessCompetitionForEuropeanCupQualification();
     }
 
     /* Loop through all competition IDs in the remap table */
+    dbg_seasonProgress = 2;
     uint8_t *remapPtr = careerCompetitionIdRemapTable;
     for (;;) {
         uint8_t compByte = *remapPtr++;
@@ -1464,6 +1472,7 @@ void _Career_AdvanceToNextSeason_UpdateCompetitions(void)
         _Career_ProcessCompetitionForEuropeanCupQualification();
     }
 
+    dbg_seasonProgress = 3;
     if (careerFileBuffer == 0x50) {
         _Career_DrawEuropeanCupTeamsAndCopyGrids();
         seasonUpdateInProgress = 0;
