@@ -1062,20 +1062,6 @@ void _InitializeNewSeason(void)
         }
     }
 
-    /* DIAGNOSTIC: Report euro cup state after slot selection.
-     * 0xD2xx: high nibble of xx = euroCupCopy[7] (team list offset, should be 39=0x27),
-     *         low nibble = (quaternaryCompetitionPtr != 0) ? 1 : 0
-     * If 0xD200: euroCupCopy[7] is 0 AND no quaternary slot → data not copied
-     * If 0xD2x0: euroCupCopy[7] is valid but team not in any cup → expected sometimes
-     * If 0xD2x1: quaternary slot IS set up → slot initialized OK */
-    {
-        extern volatile uint16_t panicReasonCode;
-        uint8_t ecOff = euroCupCopy[7];
-        uint8_t qSet = (quaternaryCompetitionPtr != 0) ? 1 : 0;
-        panicReasonCode = 0xD200 | (uint8_t)((ecOff & 0xF0) | qSet);
-        _PanicHaltLoop();
-    }
-
     /* Set up DIY competition for slot 4 */
     _DIY_SelectCompetitionSlot4FromCurrentDivision();
 
