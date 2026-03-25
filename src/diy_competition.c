@@ -64,7 +64,7 @@ extern void _FlashColor0Delay(uint32_t loopCount, uint16_t color);
 /* ASM data tables */
 extern uint32_t cupRoundStringTable[];
 extern uint8_t diyLeagueSeasonStateTable[];
-extern uint8_t diyLeagueScratchBuffer[];
+extern volatile uint8_t diyLeagueScratchBuffer[];
 extern uint8_t competitionFileBuffer[];
 extern uint8_t competitionContext[];
 extern uint8_t tertiaryCompetitionContext[];

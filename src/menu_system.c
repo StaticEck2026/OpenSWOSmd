@@ -103,7 +103,7 @@ extern uint8_t numbersBuffer[];
 extern uint32_t smallCharsTable[];
 
 /* diyLeagueScratchBuffer boundary marker */
-extern uint8_t diyLeagueScratchBuffer[];
+extern volatile uint8_t diyLeagueScratchBuffer[];
 
 /* loc_1215BC label (anti-tamper jump target in RestorePreviousMenu stub) */
 extern void loc_1215BC(void);
