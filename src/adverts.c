@@ -41,7 +41,7 @@ extern uint32_t advert2Pointers[8];
 extern uint32_t advert3Pointers[8];
 extern uint16_t blockAdvertisements;
 extern uint16_t gameStatePl;
-extern uint16_t goalCameraMode;
+extern volatile uint16_t goalCameraMode;
 extern uint16_t foulXCoordinate;
 extern uint16_t spinBigS;
 extern uint16_t bigSIndex;

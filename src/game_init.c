@@ -20,7 +20,7 @@ extern uint32_t lastKeeperPlayed;
 extern TeamGeneralInfo *lastTeamPlayed;
 extern Sprite  *lastPlayerPlayed;
 extern uint16_t penalty;
-extern uint16_t goalCameraMode;
+extern volatile uint16_t goalCameraMode;
 extern uint16_t goalOut;
 extern uint16_t gameNotInProgressCounterWriteOnly;
 extern uint16_t fireBlocked;

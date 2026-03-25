@@ -32,7 +32,7 @@ extern uint16_t showFansCounter;
 extern uint16_t breakCameraMode;
 extern uint16_t breakState;
 extern uint16_t goalScored;
-extern uint16_t goalCameraMode;
+extern volatile uint16_t goalCameraMode;
 extern uint16_t autoSaveHighlights;
 extern uint16_t autoReplays;
 extern volatile uint16_t saveHighlightScene;

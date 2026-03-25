@@ -172,10 +172,10 @@ TeamFileEx *_GetTeamPointer(uint16_t teamId)
 __attribute__((used, externally_visible))
 void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest)
 {
-    uint8_t *src = &selTeamsPtr;
-    uint16_t *dst = (uint16_t *)dest;
+    volatile uint8_t *src = (volatile uint8_t *)&selTeamsPtr;
+    volatile uint16_t *dst = (volatile uint16_t *)dest;
     for (int16_t i = (int16_t)(count - 1); i >= 0; i--) {
-        *dst++ = *(uint16_t *)src;
+        *dst++ = *(volatile uint16_t *)src;
         src += sizeof(TeamFileEx);
     }
 }

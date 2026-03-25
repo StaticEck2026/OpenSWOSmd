@@ -48,7 +48,7 @@ extern uint16_t currentPlayerIndicatorPosition;
 extern uint16_t bench1Called;
 extern uint16_t bench2Called;
 extern uint16_t fireBlocked;
-extern uint16_t goalCameraMode;
+extern volatile uint16_t goalCameraMode;
 extern uint16_t isGameFriendly;
 extern uint16_t replaySelected;
 extern uint16_t team1NumAllowedInjuries;
