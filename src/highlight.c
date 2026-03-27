@@ -264,19 +264,6 @@ void _SetHilFileHeader(void)
 
     hilNumGoals = numScenesInHilFile;
 
-    /* DIAGNOSTIC: Report highlight state at end of match.
-     * Panic code 0xD1xx where xx = numScenesInHilFile (0 = none saved).
-     * Only triggers if no scenes were saved (the bug case). */
-    if (numScenesInHilFile == 0 && (statsTeam1Goals > 0 || statsTeam2Goals > 0)) {
-        /* Goals were scored but no highlights saved — report diagnostic info.
-         * High byte: 0xD1 = highlight diagnostic
-         * Low byte: (dbg_hlSaveCallCount << 4) | dbg_hlScanFoundCount
-         * If both are 0: _SaveHighlightScene was never called
-         * If save>0 but found==0: called but scan always failed */
-        panicReasonCode = 0xD100 | (uint8_t)((dbg_hlSaveCallCount << 4) | (dbg_hlScanFoundCount & 0xF));
-        _PanicHaltLoop();
-    }
-
     hilTeam1Goals = statsTeam1Goals;
     hilTeam2Goals = statsTeam2Goals;
     hilPitchNumber = pitchNumberAndType;

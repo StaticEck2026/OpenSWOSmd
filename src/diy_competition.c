@@ -1261,9 +1261,10 @@ void _DIY_SyncProgressToDiyFileBufferCopy(void)
 __attribute__((used, externally_visible))
 void _DIY_ValidateLeagueScratchBuffer(void)
 {
-    /* Part 1: checksum entire 2000-byte scratch buffer */
+    /* Part 1: checksum entire 2000-byte scratch buffer.
+     * Use volatile to prevent LTO from optimizing the checksum loop. */
     uint8_t checksum = 0;
-    uint8_t *p = diyLeagueScratchBuffer;
+    volatile uint8_t *p = diyLeagueScratchBuffer;
     for (int16_t i = 0x7CF; i >= 0; i--) {
         checksum += *p++;
     }
@@ -1276,9 +1277,10 @@ void _DIY_ValidateLeagueScratchBuffer(void)
     if (teamsLoaded == 0)
         return;
 
-    uint16_t count = *(uint16_t *)teamFileBuffer;
-    uint16_t offset = *(uint16_t *)(teamFileBuffer + 4);
-    uint8_t *teamData = diyLeagueScratchBuffer + offset;
+    volatile uint16_t *tfb = (volatile uint16_t *)teamFileBuffer;
+    uint16_t count = tfb[0];
+    uint16_t offset = tfb[2];  /* word at offset 4 = index 2 */
+    volatile uint8_t *teamData = diyLeagueScratchBuffer + offset;
 
     checksum = 0;
     for (int16_t i = (int16_t)(count - 1); i >= 0; i--) {
@@ -1912,7 +1914,7 @@ void _DIY_ApplyPromotionRelegationWeightsToScratch(const uint8_t *weights)
 {
     _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
 
-    uint8_t *scratch = diyLeagueScratchBuffer;
+    volatile uint8_t *scratch = diyLeagueScratchBuffer;
     DIYCompetition *comps = (DIYCompetition *)diyCompetitionStart;
     uint8_t *comp = (uint8_t *)comps;
     uint16_t numTeams = (uint16_t)comps->numTeams;
@@ -1974,7 +1976,7 @@ void _DIY_UpdatePromotionRelegationScratchCounts(void)
     if (comps->competitionType != 0)
         return;
 
-    uint8_t *scratch = diyLeagueScratchBuffer;
+    volatile uint8_t *scratch = diyLeagueScratchBuffer;
 
     /* Process promoted teams (from top of table) */
     uint16_t promotedCount = (uint16_t)comps->roundComplete;
