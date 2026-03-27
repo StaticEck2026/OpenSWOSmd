@@ -1287,7 +1287,11 @@ void _DIY_ValidateLeagueScratchBuffer(void)
         checksum += *teamData++;
     }
     if (checksum != 0) {
-        panicReasonCode = 0x5555;
+        /* DIAGNOSTIC: report count from teamFileBuffer.
+         * 0xD3xx where xx = count high byte.
+         * Expected: count should be small (< 2000). If count is 0x5555, teamFileBuffer has BSS fill.
+         * If count is 0, teamFileBuffer wasn't loaded. */
+        panicReasonCode = 0xD300 | (uint8_t)(count >> 8);
         _PanicHaltLoop();
     }
 }
