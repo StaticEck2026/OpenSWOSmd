@@ -467,6 +467,15 @@ Common sources of failure:
 - After: `d3 = 0x00010002` (literal constant in C port)
 - Why: 0x00010002 is the positive counterpart of 0xFFFEFFFE used for the Z>5 branch. The two branches handle ball rising vs falling: Z<5 needs positive delta (push ball up), Z>5 needs negative (bring ball down). Exact negation: 0x00010002 = 65538, ~65538+1 = 0xFFFEFFFE. Map file confirmed frontbufferBaseAlt=0x623ae, so 0x623ae+0x1CAA=0x64058 which is nonsensical as a physics value.
 
+#### Bug #2 — GCC `-Ofast` miscompiles nested interleave loop in DIY_BuildTeamGridAndIndexMaps
+- Date: 2026-03-30
+- Location: `src/diy_competition.c`, `_DIY_BuildTeamGridAndIndexMaps`, interleave loop (~line 3356-3399)
+- Symptom: European Champions Cup in career mode showed "AUXERRE" for all 16 teams instead of the correct 16 different team names
+- Root cause: GCC `-Ofast` miscompiled a nested loop with computed array indexing (`dst[d1] = *src++`) where the index `d1` is advanced by a variable stride (`d1 += numGroupSlots`) and wrapped (`while (d1 >= numTeams) d1 -= numTeams`). The loop also has dead-code branches (`d5 = -1`, making `d4 == d5` always false) that the optimizer tried to eliminate. The result: 16 iterations collapsed to 1, writing only 1 of 16 team indices.
+- Fix: `__attribute__((optimize("O1")))` on `_DIY_BuildTeamGridAndIndexMaps` prevents the miscompilation
+- Why it was hard to find: The team IDs in the saved competition context were correct. The team data in `selTeamsPtr` was correct. The Load/Store cycle preserved data correctly. The corruption appeared to be in the saved context offsets (showed BSS-fill pattern), but was actually caused by the interleave writing only 1 of 16 team indices to the shuffle scratch buffer — making 15 of 16 fixture table entries point to the same team.
+- Lesson: **When a complex loop with computed indexing produces wrong results, suspect `-Ofast` miscompilation.** Test by adding `__attribute__((optimize("O1")))` to the function. Nested loops with variable strides, wrap-around arithmetic, and dead-code branches are particularly vulnerable. Dump intermediate buffers to disk (`_DebugDumpToFile`) to compare expected vs actual values.
+
 - Preserve behavior first, refactor later.
 - Treat `uint16_t` vs `int16_t` seriously (branch conditions depend on signedness).
 - Prefer explicit casts when mixing widths.
