@@ -11,13 +11,13 @@
  * imageStreamCursor, frontbufferBasePtr, spriteGraphicsPtr are pointers stored
  * as uint32_t in asm. We declare them matching other C files and cast in use.
  */
-extern uint32_t imageStreamCursor;          /* actually uint8_t*, match frontend.c */
+extern uint32_t imageStreamCursor;           /* actually uint8_t*, match frontend.c */
 extern uint8_t frontbufferMaskBuffer[];
 extern volatile uint32_t frontbufferBasePtr;         /* actually uint8_t*, match display.c */
 extern uint16_t panicReasonCode;
 extern uint8_t *spriteGraphicsPtr;          /* actually uint32_t*[], match game_utils.c */
 extern int16_t currentSpriteIndex;
-extern uint16_t playGame;
+extern volatile uint16_t playGame;
 extern volatile uint16_t playHighlightFlag;
 extern uint16_t useIndividualPlayerSkinColor;
 extern uint32_t imageStreamBytesLeft;

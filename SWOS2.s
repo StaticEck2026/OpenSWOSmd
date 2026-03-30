@@ -5,6 +5,1279 @@
 ; AGA mode switch: set to 1 for 8-plane 256-color AGA, 0 for 4-plane OCS
 AGA = 0
 
+; Data module flags: set to 1 to use C data, 0 to use ASM data.
+; These defaults are overridden by -D flags from the Makefile.
+ IFND COMPETITION_DATA_C
+COMPETITION_DATA_C = 0
+ ENDC
+ IFND TACTICS_DATA_C
+TACTICS_DATA_C = 0
+ ENDC
+ IFND FIXTURE_DATA_C
+FIXTURE_DATA_C = 0
+ ENDC
+ IFND SIMULATION_DATA_C
+SIMULATION_DATA_C = 0
+ ENDC
+ IFND PLAYER_DATA_C
+PLAYER_DATA_C = 0
+ ENDC
+ IFND RENDER_DATA_C
+RENDER_DATA_C = 0
+ ENDC
+ IFND PALETTE_DATA_C
+PALETTE_DATA_C = 0
+ ENDC
+ IFND STRINGS_DATA_C
+STRINGS_DATA_C = 0
+ ENDC
+ IFND GENERAL_DATA_C
+GENERAL_DATA_C = 0
+ ENDC
+
+; When data modules are in C, import symbols that asm code still references
+ IFNE COMPETITION_DATA_C
+        xref    africaTable
+        xref    africaWorldCupQualification
+        xref    africaWorldCupQualificationCopy
+        xref    africanNationsCup
+        xref    africanNationsCupCopy
+        xref    albaniaTable
+        xref    albanianCup
+        xref    albanianLeague
+        xref    algeriaTable
+        xref    algerianCup
+        xref    algerianLeague
+        xref    allCountriesList
+        xref    americanLeague
+        xref    argentinaTable
+        xref    argentinianLeague
+        xref    asiaTable
+        xref    asiaWorldCupQualification
+        xref    asiaWorldCupQualificationCopy
+        xref    asianCup
+        xref    asianCupCopy
+        xref    australiaTable
+        xref    australianCup
+        xref    australianLeague
+        xref    austriaTable
+        xref    austrianCup
+        xref    austrianLeague
+        xref    belarusTable
+        xref    belarusianCup
+        xref    belarussiaLleague
+        xref    belgianCup
+        xref    belgianLeague
+        xref    belgiumTable
+        xref    boliviaTable
+        xref    bolivianLeague
+        xref    brasilTable
+        xref    brasilianLeague
+        xref    bulgariaTable
+        xref    bulgarianCup
+        xref    bulgarianLeague
+        xref    careerCompetitionIdRemapTable
+        xref    careerContests
+        xref    careerRegionPickWeightsTable
+        xref    careerRegionPickWeightsTable2
+        xref    careerTeamFlagsBySeason0
+        xref    careerTeamFlagsBySeason1
+        xref    chileTable
+        xref    chileanLeague
+        xref    colombiaTable
+        xref    colombianLeague
+        xref    continentalCups
+        xref    copaAmerica
+        xref    copaAmericaCopy
+        xref    croatiaTable
+        xref    croatianCup
+        xref    croatianLeague
+        xref    cupPickAfricaAfricanCupFinalist
+        xref    cupPickAfricaAfricanCupFriendly
+        xref    cupPickAfricaAfricanCupNonFinalist
+        xref    cupPickAfricaInviteFriendly
+        xref    cupPickAfricaWorldCupFriendly
+        xref    cupPickAfricaWorldCupInvite
+        xref    cupPickAsiaAsianCupFinalist
+        xref    cupPickAsiaAsianCupFriendly
+        xref    cupPickAsiaAsianCupNonFinalist
+        xref    cupPickAsiaInviteFriendly
+        xref    cupPickAsiaWorldCupFriendly
+        xref    cupPickAsiaWorldCupInvite
+        xref    cupPickEuropeNoCupFriendly
+        xref    cupPickEuropeNoCupFriendlyAlt
+        xref    cupPickLisEuropeEuroChampsFriendly
+        xref    cupPickLisEuropeWorldCupInviteFriendly
+        xref    cupPickListEuropeEuroChampsInviteFriendly
+        xref    cupPickListEuropeInviteTournamentFriendly
+        xref    cupPickListEuropeInviteTournamentFriendlyAlt
+        xref    cupPickListEuropeWorldCupFriendly
+        xref    cupPickNAmericaInviteFriendly
+        xref    cupPickNAmericaNaCupFinalist
+        xref    cupPickNAmericaNaCupFriendly
+        xref    cupPickNAmericaNaCupNonFinalist
+        xref    cupPickNAmericaWorldCupFriendly
+        xref    cupPickNAmericaWorldCupInvite
+        xref    cupPickOceaniaInviteFriendly
+        xref    cupPickOceaniaOceaniaCupFinalist
+        xref    cupPickOceaniaOceaniaCupFriendly
+        xref    cupPickOceaniaOceaniaCupNonFinalist
+        xref    cupPickOceaniaWorldCupFriendly
+        xref    cupPickOceaniaWorldCupInvite
+        xref    cupPickSAmericaCopaAmericaFinalist
+        xref    cupPickSAmericaCopaAmericaFriendly
+        xref    cupPickSAmericaCopaAmericaNonFinalist
+        xref    cupPickSAmericaInviteFriendly
+        xref    cupPickSAmericaWorldCupFriendly
+        xref    cupPickSAmericaWorldCupInvite
+        xref    cupWinnersCup
+        xref    cupWinnersCupCopy
+        xref    customsLeague
+        xref    customsTable
+        xref    cypriotCup
+        xref    cypriotLeague
+        xref    cyprusTable
+        xref    czechCup
+        xref    czechLeague
+        xref    czechRepublicTable
+        xref    danishCup
+        xref    danishLeague
+        xref    denmarkTable
+        xref    div1Playoffs
+        xref    div2Playoffs
+        xref    div3Playoffs
+        xref    diyCupExtraTimeChoice0
+        xref    diyCupExtraTimeChoice1
+        xref    diyCupExtraTimeChoice2
+        xref    diyCupExtraTimeChoice3
+        xref    diyCupExtraTimeChoice4
+        xref    diyCupExtraTimeChoice5
+        xref    diyCupLegsChoice0
+        xref    diyCupLegsChoice1
+        xref    diyCupLegsChoice2
+        xref    diyCupLegsChoice3
+        xref    diyCupLegsChoice4
+        xref    diyCupLegsChoice5
+        xref    diyCupPenaltiesChoice0
+        xref    diyCupPenaltiesChoice1
+        xref    diyCupPenaltiesChoice2
+        xref    diyCupPenaltiesChoice3
+        xref    diyCupPenaltiesChoice4
+        xref    diyCupPenaltiesChoice5
+        xref    diyEditParamB
+        xref    diyEditParamC
+        xref    dutchCup
+        xref    dutchLeague
+        xref    dutchLeagues1
+        xref    dutchPlayoffs
+        xref    ecQualifyingGroup1
+        xref    ecQualifyingGroup1Copy
+        xref    ecQualifyingGroup2
+        xref    ecQualifyingGroup2Copy
+        xref    ecQualifyingGroup3
+        xref    ecQualifyingGroup3Copy
+        xref    ecQualifyingGroup4
+        xref    ecQualifyingGroup4Copy
+        xref    ecQualifyingGroup5
+        xref    ecQualifyingGroup5Copy
+        xref    ecQualifyingGroup6
+        xref    ecQualifyingGroup6Copy
+        xref    ecQualifyingGroup7
+        xref    ecQualifyingGroup7Copy
+        xref    ecQualifyingGroup8
+        xref    ecQualifyingGroup8Copy
+        xref    ecQualifyingGroups
+        xref    ecQualifyingGroupsTable
+        xref    ecuadorLeague
+        xref    ecuadorTable
+        xref    elSalvadorLeague
+        xref    elSalvadorTable
+        xref    englandTable
+        xref    englishCup
+        xref    englishCup_1
+        xref    englishLeagueCup
+        xref    englishLeagueCup_1
+        xref    englishLeagues
+        xref    englishLeagues1
+        xref    englishLeagues2
+        xref    englishLeagues3
+        xref    estoniaTable
+        xref    estonianCup
+        xref    estonianLeague
+        xref    euroCup
+        xref    euroCupCopy
+        xref    euroCupQualSeedBucket15
+        xref    euroCupQualSeedBucket18
+        xref    euroCupQualSeedBucket22
+        xref    euroCupQualSeedBucket22Full
+        xref    euroCupQualSeedList11
+        xref    euroCupQualSeedList22
+        xref    euroCupQualSeedList4
+        xref    euroCupQualSeedList6
+        xref    euroCupQualSeedListReduced11
+        xref    euroCupQualSeedListReduced22
+        xref    euroCupQualSeedListReduced4
+        xref    euroCupQualSeedListReduced6
+        xref    europeTable
+        xref    europeanChampionships
+        xref    europeanChampionships2
+        xref    europeanChampionships2Copy
+        xref    faroeIslandsTable
+        xref    faroeIslesCup
+        xref    faroeIslesLeague
+        xref    finlandTable
+        xref    finnishCup
+        xref    finnishLeague
+        xref    franceTable
+        xref    frenchCup
+        xref    frenchLeague
+        xref    friendly
+        xref    friendlyCopy
+        xref    germanCup
+        xref    germanLeague
+        xref    germanyTable
+        xref    ghanaLeague
+        xref    ghanaTable
+        xref    greeceTable
+        xref    greekCup
+        xref    greekLeague
+        xref    hollandTable
+        xref    hungarianCup
+        xref    hungarianLeague
+        xref    hungaryTable
+        xref    icelandTable
+        xref    icelandicCup
+        xref    icelandicLeague
+        xref    indiaTable
+        xref    indianLeague
+        xref    invitationTournament
+        xref    invitationTournamentCopy
+        xref    irishCup
+        xref    irishLeague
+        xref    israelTable
+        xref    israeliCup
+        xref    israeliLeague
+        xref    italianCup
+        xref    italianLeague
+        xref    italyTable
+        xref    japanTable
+        xref    japaneseCup
+        xref    japaneseEmperorsCup
+        xref    japaneseLeague
+        xref    latviaTable
+        xref    latvianCup
+        xref    latvianLeague
+        xref    lithuaniaTable
+        xref    lithuanianCup
+        xref    lithuanianLeague
+        xref    luxembourgCup
+        xref    luxembourgLeague
+        xref    luxembourgTable
+        xref    maltaTable
+        xref    malteseCup
+        xref    malteseLeague
+        xref    mexicanLeague
+        xref    mexicoTable
+        xref    nationalSelectorSeasonMaskA
+        xref    nationalSelectorSeasonMaskB
+        xref    nationalTeamCompetitionsAndQualifications
+        xref    newZealandLeague
+        xref    newZealandTable
+        xref    northAmericaTable
+        xref    northAmericaWorldCupQualification
+        xref    northAmericaWorldCupQualificationCopy
+        xref    northAmericanCup
+        xref    northAmericanCupCopy
+        xref    northernIrelandTable
+        xref    northernIrishCup
+        xref    northernIrishLeague
+        xref    norwayTable
+        xref    norwegianCup
+        xref    norwegianLeague
+        xref    oceaniaCup
+        xref    oceaniaCupCopy
+        xref    oceaniaTable
+        xref    oceaniaWorldCupQualification
+        xref    oceaniaWorldCupQualificationCopy
+        xref    paraguayTable
+        xref    paraguayanLeague
+        xref    peruTable
+        xref    peruvianLeague
+        xref    polandTable
+        xref    polishCup
+        xref    polishLeague
+        xref    portugalTable
+        xref    portugeseCup
+        xref    portugeseLeague
+        xref    republicIrelandTable
+        xref    romaniaTable
+        xref    romanianCup
+        xref    romanianLeague
+        xref    russiaTable
+        xref    russianCup
+        xref    russianLeague
+        xref    sanMarinoCup
+        xref    sanMarinoLeague
+        xref    sanMarinoTable
+        xref    scotlandTable
+        xref    scottishCup
+        xref    scottishLeague
+        xref    scottishLeague1
+        xref    scottishLeagueCup
+        xref    scottishPlayoffs
+        xref    seasonCycleNationalFlagsA
+        xref    seasonCycleNationalFlagsB
+        xref    slovakiaTable
+        xref    slovakianCup
+        xref    slovakianLeague
+        xref    sloveniaTable
+        xref    slovenianCup
+        xref    slovenianLeague
+        xref    southAfricaTable
+        xref    southAfricanCup
+        xref    southAfricanLeague
+        xref    southAmericaTable
+        xref    southAmericaWorldCupQualification
+        xref    southAmericaWorldCupQualificationCopy
+        xref    spainTable
+        xref    spanishCup
+        xref    spanishLeague
+        xref    spanishLeague1
+        xref    spanishPlayoffs
+        xref    surinamLeague
+        xref    surinamTable
+        xref    swedenTable
+        xref    swedishCup
+        xref    swedishLeague
+        xref    swissCup
+        xref    swissLeague
+        xref    switzerlandTable
+        xref    taiwanTable
+        xref    taiwaneseCup
+        xref    taiwaneseLeague
+        xref    tour
+        xref    tourCopy
+        xref    tourStringTable
+        xref    transferReplacementPriorityTable
+        xref    transferReplacementPriority_role0
+        xref    transferReplacementPriority_role1
+        xref    transferReplacementPriority_role2
+        xref    transferReplacementPriority_role3
+        xref    transferReplacementPriority_role4
+        xref    transferReplacementPriority_role5
+        xref    transferReplacementPriority_role6
+        xref    transferReplacementPriority_role7
+        xref    turkeyTable
+        xref    turkishCup
+        xref    turkishLeague
+        xref    uefaCup
+        xref    uefaCupCopy
+        xref    ukraineTable
+        xref    ukrainianCup
+        xref    ukrainianLeague
+        xref    uruguayTable
+        xref    uruguayanLeague
+        xref    uruguayanLeague1
+        xref    uruguayanPlayoffs
+        xref    usaTable
+        xref    venezuelaTable
+        xref    venezuelanLeague
+        xref    walesTable
+        xref    welshCup
+        xref    welshLeague
+        xref    worldCup
+        xref    worldCup2
+        xref    worldCup2Copy
+        xref    worldCupQualifyingGroup1
+        xref    worldCupQualifyingGroup1Copy
+        xref    worldCupQualifyingGroup2
+        xref    worldCupQualifyingGroup2Copy
+        xref    worldCupQualifyingGroup3
+        xref    worldCupQualifyingGroup3Copy
+        xref    worldCupQualifyingGroup4
+        xref    worldCupQualifyingGroup4Copy
+        xref    worldCupQualifyingGroup5
+        xref    worldCupQualifyingGroup5Copy
+        xref    worldCupQualifyingGroup6
+        xref    worldCupQualifyingGroup6Copy
+        xref    worldCupQualifyingGroup7
+        xref    worldCupQualifyingGroup7Copy
+        xref    worldCupQualifyingGroup8
+        xref    worldCupQualifyingGroup8Copy
+        xref    worldCupQualifyingGroups
+        xref    worldCupQualifyingGroupsTable
+        xref    worldTable
+        xref    yugoslaviaTable
+        xref    yugoslavianCup
+        xref    yugoslavianLeague
+ ENDC
+ IFNE FIXTURE_DATA_C
+        xref    fixtureSchedule10Teams
+        xref    fixtureSchedule11Teams
+        xref    fixtureSchedule12Teams
+        xref    fixtureSchedule13Teams
+        xref    fixtureSchedule14Teams
+        xref    fixtureSchedule15Teams
+        xref    fixtureSchedule16Teams
+        xref    fixtureSchedule17Teams
+        xref    fixtureSchedule18Teams
+        xref    fixtureSchedule19Teams
+        xref    fixtureSchedule20Teams
+        xref    fixtureSchedule21Teams
+        xref    fixtureSchedule22Teams
+        xref    fixtureSchedule23Teams
+        xref    fixtureSchedule24Teams
+        xref    fixtureSchedule2Teams
+        xref    fixtureSchedule3Teams
+        xref    fixtureSchedule4Teams
+        xref    fixtureSchedule5Teams
+        xref    fixtureSchedule6Teams
+        xref    fixtureSchedule7Teams
+        xref    fixtureSchedule8Teams
+        xref    fixtureSchedule9Teams
+ ENDC
+ IFNE GENERAL_DATA_C
+        xref    aStackOverflow
+        xref    audioCounter
+        xref    audioFlags
+        xref    audioPresetChannelCmdTable
+        xref    int5SerialBusBufferFull
+        xref    isrTrampolineGuard
+        xref    oldStackPtr
+        xref    pad_102555
+        xref    pad_106CFE
+        xref    pad_106D03
+        xref    pad_106D08
+        xref    pad_10E512
+        xref    pad_10E53C
+        xref    pad_10E560
+        xref    pad_10E598
+        xref    pad_10E59C
+        xref    pad_10E5DE
+        xref    pad_10F0D1
+        xref    pad_10F0E9
+        xref    pad_10F101
+        xref    pad_10F110
+        xref    pad_10F14C
+        xref    pad_10F1CE
+        xref    pad_10F1D8
+        xref    pad_10F1DE
+        xref    pad_10F1E6
+        xref    pad_10F1EE
+        xref    pad_10F1F2
+        xref    pad_10F441
+        xref    pad_10FBE2
+        xref    pad_110F6C
+        xref    pad_111673
+        xref    pad_11826C
+        xref    pad_11D00A
+        xref    pad_120F68
+        xref    pad_121558
+        xref    pad_12487C
+        xref    pad_12654E
+        xref    pad_126A90
+        xref    pad_128EDC
+        xref    pad_133328
+        xref    pad_136DFA
+        xref    pad_13B35F
+        xref    pad_1448F2
+        xref    pad_145360
+        xref    pad_145364
+        xref    pad_14A1D4
+        xref    paletteIndices
+        xref    panicFormatStr
+        xref    syncReadyFlag
+        xref    syncWaitFlag
+        xref    tmpStackPtr
+ ENDC
+ IFNE PALETTE_DATA_C
+        xref    blackPalette
+        xref    dryPalette
+        xref    frozenPalette
+        xref    hardPalette
+        xref    muddyPalette
+        xref    normalPalette
+        xref    panicPalette
+        xref    softPalette
+        xref    wetPalette
+ ENDC
+ IFNE PLAYER_DATA_C
+        xref    playerAgeToFormDivisorTable
+        xref    posFilledFlags
+        xref    posSearchOrderAtt
+        xref    posSearchOrderDef
+        xref    posSearchOrderGk
+        xref    posSearchOrderLb
+        xref    posSearchOrderLeft
+        xref    posSearchOrderMid
+        xref    posSearchOrderRb
+        xref    posSearchOrderRight
+        xref    positionGroupAttacker
+        xref    positionGroupDefender
+        xref    positionGroupGoalkeeper
+        xref    positionGroupMidfielder
+        xref    positions343
+        xref    positions352
+        xref    positions424
+        xref    positions433
+        xref    positions451
+        xref    positions523
+        xref    positions532
+        xref    positions541
+        xref    positionsAttack
+        xref    positionsDefault
+        xref    positionsDefend
+        xref    positionsSweep
+        xref    sidePitchPositionsAttack
+        xref    sidePitchPositionsDefault
+        xref    sidePitchPositionsDefend
+        xref    sidePitchPositionsSweep
+        xref    sidePitchPositions_3_4_3
+        xref    sidePitchPositions_3_5_2
+        xref    sidePitchPositions_4_2_4
+        xref    sidePitchPositions_4_3_3
+        xref    sidePitchPositions_4_5_1
+        xref    sidePitchPositions_5_2_3
+        xref    sidePitchPositions_5_3_2
+        xref    sidePitchPositions_5_4_1
+        xref    skillBitRotEven1
+        xref    skillBitRotEven2
+        xref    skillBitRotEven3
+        xref    skillBitRotEven4
+        xref    skillBitRotEven5
+        xref    skillBitRotEven6
+        xref    skillBitRotEven7
+        xref    skillBitRotOdd1
+        xref    skillBitRotOdd2
+        xref    skillBitRotOdd3
+        xref    skillBitRotOdd4
+        xref    skillBitRotOdd5
+        xref    skillBitRotOdd6
+        xref    skillBitRotOdd7
+        xref    tacticPosMap0
+        xref    tacticPosMap1
+        xref    tacticPosMap10
+        xref    tacticPosMap11
+        xref    tacticPosMap2
+        xref    tacticPosMap3
+        xref    tacticPosMap4
+        xref    tacticPosMap5
+        xref    tacticPosMap6
+        xref    tacticPosMap7
+        xref    tacticPosMap8
+        xref    tacticPosMap9
+        xref    trainingPosOrder0
+        xref    trainingPosOrder1
+        xref    trainingPosOrder2
+        xref    trainingPosOrder3
+        xref    trainingPosOrder4
+        xref    trainingPosOrder5
+        xref    trainingPosOrder6
+        xref    trainingPosOrder7
+        xref    transferReplacementPriority_role0
+        xref    transferReplacementPriority_role1
+        xref    transferReplacementPriority_role2
+        xref    transferReplacementPriority_role3
+        xref    transferReplacementPriority_role4
+        xref    transferReplacementPriority_role5
+        xref    transferReplacementPriority_role6
+        xref    transferReplacementPriority_role7
+ ENDC
+ IFNE RENDER_DATA_C
+        xref    blitSrcA_MaskPtr
+        xref    blitSrcA_MaskPtr_glyph
+        xref    blitSrcB_GlyphPtr
+        xref    blitSrcB_GlyphPtr_glyph
+        xref    bltconShiftBase
+        xref    bltconShiftBase_glyph
+        xref    corePrecacheTable
+        xref    dstRowAdvanceBytes
+        xref    dstRowBytesPerPlane
+        xref    glyphBlitPlaneMask
+        xref    glyphHeightLinesCache
+        xref    hexLongStringBuffer
+        xref    hexWordStringBuffer
+        xref    littlePlayerSpriteGeneric
+        xref    scorer_padding
+        xref    textBlitHeightLines
+        xref    textBlitPlaneMask
+ ENDC
+ IFNE SIMULATION_DATA_C
+        xref    goalScorerDist343
+        xref    goalScorerDist352
+        xref    goalScorerDist424
+        xref    goalScorerDist433
+        xref    goalScorerDist442
+        xref    goalScorerDist451
+        xref    goalScorerDist523
+        xref    goalScorerDist532
+        xref    goalScorerDist541
+        xref    goalScorerDistAttack
+        xref    goalScorerDistDefend
+        xref    goalScorerDistSweep
+        xref    goalkeeperDeflectBallSpeeds
+        xref    goalkeeperDeflectDeltaZ
+        xref    kMenuIrqCookieFailTrap
+        xref    playerAgeToFormDivisorTable
+        xref    playerCardChances10min
+        xref    playerCardChances3min
+        xref    playerCardChances5min
+        xref    playerCardChances7min
+        xref    replayContTbl
+        xref    simExtraGoalProbThreshA
+        xref    simExtraGoalProbThreshB
+        xref    simExtraGoalProbThreshC
+        xref    simExtraGoalProbThreshD
+        xref    simExtraGoalProbThreshE
+        xref    simGoalProbThreshA
+        xref    simGoalProbThreshB
+        xref    simGoalProbThreshC
+        xref    simGoalProbThreshD
+        xref    simGoalProbThreshE
+ ENDC
+ IFNE STRINGS_DATA_C
+        xref    a0611961355Asm6
+        xref    a100k
+        xref    a10Mins
+        xref    a10m
+        xref    a150k
+        xref    a15m
+        xref    a15m_0
+        xref    a1Leg
+        xref    a1Liga
+        xref    a1m
+        xref    a1stDivision
+        xref    a1stLeg01_0
+        xref    a200k
+        xref    a23OnAgg_0
+        xref    a25k
+        xref    a2Gk
+        xref    a2Legs
+        xref    a2Liga
+        xref    a2PtsForAWin
+        xref    a2m
+        xref    a2ndReplay
+        xref    a2ndReplays
+        xref    a300k
+        xref    a3Gk
+        xref    a3MatchesToTurn
+        xref    a3Mins
+        xref    a3PtsForAWin
+        xref    a3m
+        xref    a3rd
+        xref    a3rdReplay
+        xref    a3rdReplays
+        xref    a4Gk
+        xref    a500k
+        xref    a50k
+        xref    a5Mins
+        xref    a5m
+        xref    a750k
+        xref    a75k
+        xref    a7Mins
+        xref    aAET90Mins23Rep_0
+        xref    aAET90Mins23_0
+        xref    aAETReplay_0
+        xref    aAET_0
+        xref    aAGoodSeasonAWe
+        xref    aAGoodSeasonAWe_0
+        xref    aAVeryDisappoin
+        xref    aAVeryDisappoin_0
+        xref    aAWin01OnPensAE_0
+        xref    aAWin01OnPensAE_2
+        xref    aAWin01OnPensAE_4
+        xref    aAWin01OnPensAE_6
+        xref    aAWin01OnPensAE_7
+        xref    aAWin01OnPens_0
+        xref    aAWin01OnPens_1
+        xref    aAWin01OnPens_2
+        xref    aAWin23OnAggAET_0
+        xref    aAWin23OnAgg_0
+        xref    aAWinOnAwayGoal
+        xref    aAWinOnAwayGoal_0
+        xref    aA_1
+        xref    aAc
+        xref    aAfr
+        xref    aAfr_0
+        xref    aAfrica
+        xref    aAfrican
+        xref    aAfricanCup
+        xref    aAfricanNations
+        xref    aAfricanTour
+        xref    aAfrican_0
+        xref    aAfter90Mins
+        xref    aAfterExtraTime
+        xref    aAlbania
+        xref    aAlgeria
+        xref    aAnUpAndDownSea
+        xref    aAnUpAndDownSea_0
+        xref    aAnc
+        xref    aAndWeWillAccep
+        xref    aAndWeWillAccep_0
+        xref    aAny
+        xref    aAnyFurtherPlay
+        xref    aAnyFurtherPlay_0
+        xref    aApproxValue
+        xref    aApr
+        xref    aArgentina
+        xref    aAsThesePlayers
+        xref    aAsThisPlayerIs
+        xref    aAsc_0
+        xref    aAsc_1
+        xref    aAsc_2
+        xref    aAsi
+        xref    aAsi_0
+        xref    aAsia
+        xref    aAsian
+        xref    aAsianCup
+        xref    aAsianCup_0
+        xref    aAsianTour
+        xref    aAsian_0
+        xref    aAttack_0
+        xref    aAttacker
+        xref    aAug
+        xref    aAustralia
+        xref    aAustria
+        xref    aBHasLeftTheClu
+        xref    aBHasLeftTheClu_0
+        xref    aBallControl
+        xref    aBallInPlay
+        xref    aBallOutOfPlay
+        xref    aBeforeHandingT
+        xref    aBeforeHandingT_0
+        xref    aBelarus
+        xref    aBelgium
+        xref    aBolivia
+        xref    aBoxall
+        xref    aBrazil
+        xref    aBulgaria
+        xref    aButWeWouldBeHa
+        xref    aCa
+        xref    aCanImproveOnTh
+        xref    aCanImproveOnTh_0
+        xref    aCanOnlySaveMax
+        xref    aCancel
+        xref    aCareer
+        xref    aCareer_0
+        xref    aCentral
+        xref    aCentralRegion
+        xref    aChapman
+        xref    aChile
+        xref    aChris
+        xref    aCjcHelp
+        xref    aClearTheOverdr
+        xref    aCoach_0
+        xref    aCoach_2
+        xref    aCodedByAndiSmi
+        xref    aColombia
+        xref    aComeOnAWeCanno
+        xref    aCopa
+        xref    aCopaAmerica
+        xref    aCopaAmerica_0
+        xref    aCopa_0
+        xref    aCoppa
+        xref    aCoppaItalia
+        xref    aCopyrightC1994
+        xref    aCopyrightC1994_0
+        xref    aCoupe
+        xref    aCoupeDeFrance
+        xref    aCroatia
+        xref    aCup
+        xref    aCup_4
+        xref    aCup_5
+        xref    aCup_6
+        xref    aCup_7
+        xref    aCup_8
+        xref    aCup_9
+        xref    aCustom
+        xref    aCyprus
+        xref    aCzechRepublic
+        xref    aDFBPokal
+        xref    aD_0
+        xref    aDataTeam008
+        xref    aDavid
+        xref    aDavid_0
+        xref    aDearsley
+        xref    aDec
+        xref    aDecidedToRelie
+        xref    aDecidedToRelie_0
+        xref    aDefend_0
+        xref    aDefender
+        xref    aDemandsMuchBet
+        xref    aDenmark
+        xref    aDeuxieme
+        xref    aDeuxiemeDivisi
+        xref    aDiscardOffer
+        xref    aDistinguishedC
+        xref    aDistinguishedC_0
+        xref    aDiv1
+        xref    aDiv1Playoffs
+        xref    aDiv2
+        xref    aDiv2Playoffs
+        xref    aDiv3
+        xref    aDiv3Playoffs
+        xref    aDivision1
+        xref    aDivision1_0
+        xref    aDivision2
+        xref    aDivision2_0
+        xref    aDivision3
+        xref    aDivision3_0
+        xref    aDivisionOne
+        xref    aDivisionThree
+        xref    aDivisionTwo
+        xref    aDiy
+        xref    aDiyCompetition
+        xref    aDry
+        xref    aECFinals
+        xref    aECQualifier
+        xref    aECQualifier_0
+        xref    aECQualifyingGr
+        xref    aECQualifyingGr_0
+        xref    aECQualifyingGr_1
+        xref    aECQualifyingGr_2
+        xref    aECQualifyingGr_3
+        xref    aECQualifyingGr_4
+        xref    aECQualifyingGr_5
+        xref    aECQualifyingGr_6
+        xref    aETIfReplay
+        xref    aEc
+        xref    aEcq
+        xref    aEcuador
+        xref    aEditedCustoms
+        xref    aElSalvadore
+        xref    aEmpCup
+        xref    aEmperorSCup
+        xref    aEngland
+        xref    aEngland_0
+        xref    aEnglish
+        xref    aEnsureThatItIs
+        xref    aEnsureThatWeCl
+        xref    aEstonia
+        xref    aEufaCup
+        xref    aEufaCup_0
+        xref    aEur
+        xref    aEuro
+        xref    aEuroCwCup
+        xref    aEuro_0
+        xref    aEurope
+        xref    aEuropean
+        xref    aEuropeanChampi_0
+        xref    aEuropeanChampi_1
+        xref    aEuropeanChampionship
+        xref    aEuropeanCup
+        xref    aEuropeanCupWin
+        xref    aEuropean_0
+        xref    aExtraTime
+        xref    aFaroeIslands
+        xref    aFavourableOffe
+        xref    aFeb
+        xref    aFifthRound
+        xref    aFinal
+        xref    aFinalGroup
+        xref    aFinalGroup_0
+        xref    aFinalGroups
+        xref    aFinalGroups_0
+        xref    aFinal_0
+        xref    aFinal_1
+        xref    aFinal_2
+        xref    aFinal_3
+        xref    aFinishing
+        xref    aFinland
+        xref    aFirstRound
+        xref    aFitness
+        xref    aFlipOff
+        xref    aFlipOn
+        xref    aFollowingACris
+        xref    aFollowingAVote
+        xref    aFourthRound
+        xref    aFr
+        xref    aFrance
+        xref    aFrench
+        xref    aFriendly_0
+        xref    aFrozen
+        xref    aG
+        xref    aGameLength
+        xref    aGerman
+        xref    aGermany
+        xref    aGhana
+        xref    aGoalkeeper
+        xref    aGraeme
+        xref    aGrafsCharsetRa
+        xref    aGrafsCjcbenchR
+        xref    aGrafsCjcbitsRa
+        xref    aGrafsCjcgrafsR
+        xref    aGrafsCjcteam1R
+        xref    aGrafsCjcteam2R
+        xref    aGrafsCjcteam3R
+        xref    aGrafsCjcteamgR
+        xref    aGrafsDisk22Raw
+        xref    aGrafsDisk2Raw
+        xref    aGrafsLoader00R
+        xref    aGrafsLoader01R
+        xref    aGrafsLoader10R
+        xref    aGrafsLoader1Ra
+        xref    aGrafsLoader2Ra
+        xref    aGrafsLoader3Ra
+        xref    aGrafsLoader4Ra
+        xref    aGrafsLoader5Ra
+        xref    aGrafsLoader6Ra
+        xref    aGrafsLoader7Ra
+        xref    aGrafsLoader8aR
+        xref    aGrafsLoader8bR
+        xref    aGrafsLoader9Ra
+        xref    aGrafsMenus2Raw
+        xref    aGrafsMenusRaw
+        xref    aGrafsOlddisk1R
+        xref    aGrafsSoccerSRa
+        xref    aGrafsSocpicRaw
+        xref    aGrafsSwcpich1M
+        xref    aGrafsSwcpich2M
+        xref    aGrafsSwcpich3M
+        xref    aGrafsSwcpich4M
+        xref    aGrafsSwcpich5M
+        xref    aGrafsSwcpich6M
+        xref    aGrafsTacticsRa
+        xref    aGrafsWinscrnRa
+        xref    aGreece
+        xref    aGroupA
+        xref    aGroupB
+        xref    aGroupC
+        xref    aGroupD
+        xref    aGroupE
+        xref    aGroupF
+        xref    aGroupG
+        xref    aGroupH
+        xref    aHard
+        xref    aHare
+        xref    aHasJoinedTheCl
+        xref    aHeading
+        xref    aHigh
+        xref    aHolland
+        xref    aHungary
+        xref    aIceland
+        xref    aImproveOnOurPe
+        xref    aImproveTheTeam
+        xref    aIndia
+        xref    aInsertSwosDisk
+        xref    aInt
+        xref    aInt_0
+        xref    aInvTournament
+        xref    aInvitationTour
+        xref    aIsrael
+        xref    aItIsWithGreatR
+        xref    aItIsWithGreatR_0
+        xref    aItIsWithGreatR_1
+        xref    aItalian
+        xref    aItaly
+        xref    aJLeague
+        xref    aJLeague_0
+        xref    aJan
+        xref    aJapan
+        xref    aJon
+        xref    aJul
+        xref    aJun
+        xref    aJustANoteToWis
+        xref    aJustANoteToWis_0
+        xref    aJustAReminderT
+        xref    aLanguage
+        xref    aLatvia
+        xref    aLb
+        xref    aLeague
+        xref    aLeagueCup
+        xref    aLeagueCup_0
+        xref    aLeagueCup_1
+        xref    aLeagueCup_2
+        xref    aLeague_0
+        xref    aLeague_2
+        xref    aLeague_3
+        xref    aLithuania
+        xref    aLuxembourg
+        xref    aLw
+        xref    aM
+        xref    aMakeNewCompeti
+        xref    aMakeNewDiyCup
+        xref    aMakeNewDiyLeag
+        xref    aMakeNewDiyTour
+        xref    aMalta
+        xref    aManageMatch
+        xref    aMar
+        xref    aMark
+        xref    aMay
+        xref    aMexico
+        xref    aMidfielder
+        xref    aMoreTimeToNego
+        xref    aMuchBetterFrom
+        xref    aMuchSuccessFro
+        xref    aMuddy
+        xref    aNAmericanCup
+        xref    aNac
+        xref    aNam
+        xref    aNam_0
+        xref    aNewSeason
+        xref    aNewSeason_0
+        xref    aNewZealand
+        xref    aNoExtraTime
+        xref    aNoPenalties
+        xref    aNormal
+        xref    aNorthAmerica
+        xref    aNorthAmerican
+        xref    aNorthAmericanC
+        xref    aNorthAmericanT
+        xref    aNorthAmerican_0
+        xref    aNorthern
+        xref    aNorthernIreland
+        xref    aNorthernRegion
+        xref    aNorway
+        xref    aNotAVeryGoodSe
+        xref    aNotAVeryGoodSe_0
+        xref    aNottingham
+        xref    aNov
+        xref    aNsw
+        xref    aNswDivision
+        xref    aOc
+        xref    aOce
+        xref    aOce_0
+        xref    aOceania
+        xref    aOceaniaCup
+        xref    aOceaniaCup_0
+        xref    aOceanian
+        xref    aOceanian_0
+        xref    aOct
+        xref    aOff
+        xref    aOg
+        xref    aOn
+        xref    aOrTheWageBillW
+        xref    aOrWeWillHaveTo
+        xref    aParaguay
+        xref    aPassing
+        xref    aPen
+        xref    aPen_0
+        xref    aPenalties
+        xref    aPensIfReplay
+        xref    aPeru
+        xref    aPitchType
+        xref    aPlay
+        xref    aPlayEachTeamX1
+        xref    aPlayEachTeamX2
+        xref    aPlayEachTeamX3
+        xref    aPlayEachTeamX4
+        xref    aPlayer
+        xref    aPlayerCoach_0
+        xref    aPlayer_0
+        xref    aPleaseNoteATha
+        xref    aPleaseNoteATha_0
+        xref    aPleaseNoteATha_1
+        xref    aPleaseNoteATha_2
+        xref    aPleaseTakeNote
+        xref    aPleaseTakeNote_0
+        xref    aPleasedWithYou
+        xref    aPleasedWithYou_0
+        xref    aPokal
+        xref    aPoland
+        xref    aPortugal
+        xref    aPremDiv
+        xref    aPremier
+        xref    aPremierDivisio
+        xref    aPremierLeague
+        xref    aPremiere
+        xref    aPremiereDivisi
+        xref    aPreset
+        xref    aPresetCompetit
+        xref    aPrimera
+        xref    aPrimeraDivisio
+        xref    aQF
+        xref    aQFinal
+        xref    aQueensland
+        xref    aQueenslandDivi
+        xref    aRandom
+        xref    aRb
+        xref    aRememberUnless
+        xref    aRenewYourContr
+        xref    aReplay_1
+        xref    aRepublicIreland
+        xref    aRnd1
+        xref    aRnd2
+        xref    aRnd3
+        xref    aRnd4
+        xref    aRnd5
+        xref    aRnd6
+        xref    aRomania
+        xref    aRound1
+        xref    aRound2
+        xref    aRound3
+        xref    aRound4
+        xref    aRound5
+        xref    aRound6
+        xref    aRussia
+        xref    aRw
+        xref    aSF
+        xref    aSFinal
+        xref    aSam
+        xref    aSam_0
+        xref    aSanMarino
+        xref    aScotland
+        xref    aSeason
+        xref    aSeasonInManage
+        xref    aSeasonInManage_0
+        xref    aSeason_0
+        xref    aSeasonal
+        xref    aSecondRound
+        xref    aSegunda
+        xref    aSegundaDivisio
+        xref    aSelectDiyCompe
+        xref    aSensibleWorldO
+        xref    aSep
+        xref    aSerieA
+        xref    aSerieB
+        xref    aShooting
+        xref    aSixthRound
+        xref    aSlovakia
+        xref    aSlovenia
+        xref    aSoft
+        xref    aSorryAAreUnwil
+        xref    aSorryAAreUnwil_0
+        xref    aSorryAButTheCl
+        xref    aSorryAButTheDi
+        xref    aSouthAfrica
+        xref    aSouthAmerica
+        xref    aSouthAmerican
+        xref    aSouthAmericanC
+        xref    aSouthAmericanT
+        xref    aSouthAmerican_0
+        xref    aSouthDivision
+        xref    aSouthDivision_0
+        xref    aSouthern
+        xref    aSouthernRegion
+        xref    aSpain
+        xref    aSpanish
+        xref    aSpeed
+        xref    aSuccessFromOur
+        xref    aSurinam
+        xref    aSweden
+        xref    aSwitzerland
+        xref    aSwos4Dk1
+        xref    aSwos4Dk2
+        xref    aSwosDate0
+        xref    aTackling
+        xref    aTact
+        xref    aTactics
+        xref    aTaiwan
+        xref    aThanksForAllYo
+        xref    aThanksForAllYo_0
+        xref    aThesePlayersFr
+        xref    aThirdPlacePlay
+        xref    aThirdRound
+        xref    aThisPlayerFrom
+        xref    aThisSeasonAndW
+        xref    aThisSeasonAndW_0
+        xref    aTnm
+        xref    aTour
+        xref    aTournament
+        xref    aTr
+        xref    aTspvhcfstpvhcf
+        xref    aTurkey
+        xref    aUSA
+        xref    aUkraine
+        xref    aUruguay
+        xref    aVenezuela
+        xref    aWCQualifier
+        xref    aWCQualifier_0
+        xref    aWales
+        xref    aWc
+        xref    aWcq
+        xref    aWeAllHopeYouEn
+        xref    aWeAllHopeYouEn_0
+        xref    aWeAllWishYouTh
+        xref    aWeAllWishYouTh_0
+        xref    aWeHereAtAAreHa
+        xref    aWeHereAtAAreHa_0
+        xref    aWeWillHaveToRe
+        xref    aWelcomeAWeHope
+        xref    aWelcomeAWeLook
+        xref    aWelcomeToOurCl
+        xref    aWelcomeToOurCl_0
+        xref    aWellDoneAYouDi
+        xref    aWellDoneAYouDi_0
+        xref    aWet
+        xref    aWilkin
+        xref    aWinners_0
+        xref    aWorld
+        xref    aWorldClub
+        xref    aWorldClubChamp
+        xref    aWorldCup
+        xref    aWorldCupQualif
+        xref    aWorldCupQualif_1
+        xref    aWorldCupQualif_2
+        xref    aWorldCupQualif_3
+        xref    aWorldCupQualif_4
+        xref    aWorldCupQualif_5
+        xref    aWorldCupQualif_6
+        xref    aWorldCupQualif_7
+        xref    aWorldCupQualif_8
+        xref    aWorldCupQualif_9
+        xref    aWorldCupQualification
+        xref    aWorldCup_0
+        xref    aWorld_0
+        xref    aWorld_1
+        xref    aYouWellInYourN
+        xref    aYouWellInYourN_0
+        xref    aYugoslavia
+ ENDC
+ IFNE TACTICS_DATA_C
+        xref    editTacticsCurrentTactics
+        xref    formationMenuX
+        xref    importTacticsFilename
+        xref    oldPlayerPositionsArray
+        xref    opponentCoachFrames
+        xref    ourCoachFrames
+        xref    playerPositionsArray
+        xref    playersPositionsByTactics
+        xref    priceSkillPonders
+        xref    quadrantCoordinatesToBallQuadrant
+        xref    quadrantDistanceFactor
+        xref    savedCurrentTactics
+        xref    selectedFormationEntry
+        xref    skillQuadrantAdjustDeltas
+        xref    skillsPerQuadrant
+        xref    tacticsPosition343
+        xref    tacticsPosition352
+        xref    tacticsPosition424
+        xref    tacticsPosition433
+        xref    tacticsPosition442
+        xref    tacticsPosition451
+        xref    tacticsPosition523
+        xref    tacticsPosition532
+        xref    tacticsPosition541
+        xref    tacticsPositionAttack
+        xref    tacticsPositionDefend
+        xref    tacticsPositionSweep
+        xref    tacticsPositionUSERA
+        xref    tacticsPositionUSERB
+        xref    tacticsPositionUSERC
+        xref    tacticsPositionUSERD
+        xref    tacticsPositionUSERE
+        xref    tacticsPositionUSERF
+        xref    teamTactics343
+        xref    teamTactics352
+        xref    teamTactics424
+        xref    teamTactics433
+        xref    teamTactics442
+        xref    teamTactics451
+        xref    teamTactics523
+        xref    teamTactics532
+        xref    teamTactics541
+        xref    teamTacticsAttack
+        xref    teamTacticsDefend
+        xref    teamTacticsSweep
+        xref    teamTacticsTable
+        xref    teamTacticsUSERA
+        xref    teamTacticsUSERB
+        xref    teamTacticsUSERC
+        xref    teamTacticsUSERD
+        xref    teamTacticsUSERE
+        xref    teamTacticsUSERF
+ ENDC
+
         xdef    jumpHeaderHitAnimTable
         xdef    jumpHeaderAttemptAnimTable
         xdef    staticHeaderAttemptAnimTable
@@ -2301,12 +3574,18 @@ competitionFilename:
                 ds.b $E
 hilFilename:
                 ds.b $E
+ IFEQ TACTICS_DATA_C
 importTacticsFilename:
                 ds.b $E
+ ENDC
+ IFEQ TACTICS_DATA_C
 playerPositionsArray:
                 ds.b $20
+ ENDC
+ IFEQ TACTICS_DATA_C
 oldPlayerPositionsArray:
                 ds.b $20
+ ENDC
 teamFileDataSize:
                 ds.b $4
                                         ; Total byte size of loaded team file data, computed as teamCount * 684 + 2.
@@ -2342,59 +3621,95 @@ gameRound:
 BSS_00_CD54:
                 ds.b $63
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPosition442:
                 ds.b $B
+ ENDC
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPosition541:
                 ds.b $B
+ ENDC
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPosition451:
                 ds.b $B
+ ENDC
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPosition532:
                 ds.b $B
+ ENDC
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPosition352:
                 ds.b $B
+ ENDC
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPosition433:
                 ds.b $B
+ ENDC
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPosition424:
                 ds.b $B
+ ENDC
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPosition343:
                 ds.b $B
+ ENDC
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPositionSweep:
                 ds.b $B
+ ENDC
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPosition523:
                 ds.b $B
+ ENDC
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPositionAttack:
                 ds.b $B
+ ENDC
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPositionDefend:
                 ds.b $B
+ ENDC
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPositionUSERA:
                 ds.b $B
+ ENDC
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPositionUSERB:
                 ds.b $B
+ ENDC
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPositionUSERC:
                 ds.b $B
+ ENDC
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPositionUSERD:
                 ds.b $B
+ ENDC
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPositionUSERE:
                 ds.b $B
+ ENDC
 ; TacticsPosition
+ IFEQ TACTICS_DATA_C
 tacticsPositionUSERF:
                 ds.b $B
+ ENDC
 teamsTable:
                 ds.b $64
 teamsIndex:
@@ -2402,11 +3717,15 @@ teamsIndex:
 teamsPtrTable:
                 ds.b $190
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 editTacticsCurrentTactics:
                 ds.b $172
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 savedCurrentTactics:
                 ds.b $172
+ ENDC
 teamPointers:
                 ds.b $100
 dwArrayCountries:
@@ -2880,16 +4199,24 @@ assetLoaderMainRegion:
     SECTION text,CODE
 j_start:
                 jmp     start
+ IFEQ STRINGS_DATA_C
 aSensibleWorldO:
                 dc.b 'SENSIBLE WORLD OF SOCCER',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCopyrightC1994:
                 dc.b 'Copyright (C) 1994/1995 Sensible Software (6/11/1996)',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCopyrightC1994_0:
                 dc.b 'Copyright (C) 1994/1995 Chris Chapman (6/11/1996)',0
+ ENDC
 aSwosVersion152:
                 dc.b 'SWOS VERSION 152',0
+ IFEQ STRINGS_DATA_C
 a0611961355Asm6:
                 dc.b '(06/11/96 13.55) ASM 6/11/1996',0,0
+ ENDC
 aCj0611143807:
                 dc.b 'CJ0611143807'
 
@@ -2952,9 +4279,11 @@ kTitleTextColors:
                 dc.b $00,$00,$22,$FF,$00,$44,$FF,$00,$44,$00,$00,$44,$FF,$00,$44,$FF
                 dc.b $00,$44,$FF,$00,$44,$FF,$00,$44,$00,$00,$66,$FF,$FF,$99,$DD,$DD
                 dc.b $88,$BB,$BB,$77,$99,$99,$66,$77,$77,$44,$55,$55,$33,$33,$33,$22
+ IFEQ PALETTE_DATA_C
 blackPalette:
                 dc.w $0000,$0000,$0000,$0000,$0000,$0000,$0000,$0000
                 dc.w $0000,$0000,$0000,$0000,$0000,$0000,$0000,$0000
+ ENDC
 titleLogoPalette:
                 dc.w $0000,$0000,$0000,$0000,$0000,$0000,$0000,$0000
                 dc.w $0000,$0000,$0000,$0000,$0000,$0000,$0000,$0000
@@ -2964,9 +4293,11 @@ titleScreenPalette:
 titleTextPalette:
                 dc.w $0000,$0000,$0000,$0000,$0000,$0000,$0000,$0000
                 dc.w $0000,$0000,$0000,$0000,$0000,$0000,$0000,$0000
+ IFEQ PALETTE_DATA_C
 panicPalette:
                 dc.w $0000,$0000,$0000,$0000,$0000,$0000,$0000,$0000
                 dc.w $0000,$0000,$0000,$0000,$0000,$0000,$0000,$000F
+ ENDC
 fadeStep:
                 dc.w $0020
 aSoundMenuSng:
@@ -3051,72 +4382,132 @@ aGrafsCjcgrafsR:
 aGrafsCjcbenchR:
                 dc.b 'grafs_aga/cjcbench.raw',0
  ELSE
+ IFEQ STRINGS_DATA_C
 aGrafsSoccerSRa:
                 dc.b 'grafs/soccer_s.raw',0
+ ENDC
 aDataPoolplyrDa:
                 dc.b 'data/poolplyr.dat',0
+ IFEQ STRINGS_DATA_C
 aGrafsLoader00R:
                 dc.b 'grafs/loader00.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsLoader01R:
                 dc.b 'grafs/loader01.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsLoader1Ra:
                 dc.b 'grafs/loader1.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsLoader2Ra:
                 dc.b 'grafs/loader2.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsLoader3Ra:
                 dc.b 'grafs/loader3.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsLoader4Ra:
                 dc.b 'grafs/loader4.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsLoader5Ra:
                 dc.b 'grafs/loader5.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsLoader6Ra:
                 dc.b 'grafs/loader6.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsLoader7Ra:
                 dc.b 'grafs/loader7.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsLoader8aR:
                 dc.b 'grafs/loader8a.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsLoader8bR:
                 dc.b 'grafs/loader8b.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsLoader9Ra:
                 dc.b 'grafs/loader9.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsLoader10R:
                 dc.b 'grafs/loader10.raw',0
+ ENDC
 aGrafsMenubgRaw:
                 dc.b 'grafs/menubg.raw',0
 aGrafsMenubg2Ra:
                 dc.b 'grafs/menubg2.raw',0
+ IFEQ STRINGS_DATA_C
 aGrafsMenusRaw:
                 dc.b 'grafs/menus.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsMenus2Raw:
                 dc.b 'grafs/menus2.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsCharsetRa:
                 dc.b 'grafs/charset.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsSwcpich1M:
                 dc.b 'grafs/swcpich1.map',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsSwcpich2M:
                 dc.b 'grafs/swcpich2.map',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsSwcpich3M:
                 dc.b 'grafs/swcpich3.map',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsSwcpich4M:
                 dc.b 'grafs/swcpich4.map',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsSwcpich5M:
                 dc.b 'grafs/swcpich5.map',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsSwcpich6M:
                 dc.b 'grafs/swcpich6.map',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsCjcbitsRa:
                 dc.b 'grafs/cjcbits.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsCjcteam1R:
                 dc.b 'grafs/cjcteam1.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsCjcteam2R:
                 dc.b 'grafs/cjcteam2.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsCjcteam3R:
                 dc.b 'grafs/cjcteam3.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsCjcteamgR:
                 dc.b 'grafs/cjcteamg.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsCjcgrafsR:
                 dc.b 'grafs/cjcgrafs.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsCjcbenchR:
                 dc.b 'grafs/cjcbench.raw',0
+ ENDC
  ENDC
  IFNE AGA
 aGrafsWinscrnRa:
@@ -3130,16 +4521,26 @@ aGrafsOlddisk1R:
 aGrafsSocpicRaw:
                 dc.b 'grafs_aga/socpic.raw',0,0
  ELSE
+ IFEQ STRINGS_DATA_C
 aGrafsWinscrnRa:
                 dc.b 'grafs/winscrn.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsTacticsRa:
                 dc.b 'grafs/tactics.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsDisk22Raw:
                 dc.b 'grafs/disk22.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsOlddisk1R:
                 dc.b 'grafs/olddisk1.raw',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGrafsSocpicRaw:
                 dc.b 'grafs/socpic.raw',0,0
+ ENDC
  ENDC
 team1Filename:
                 dc.l $00000000          ; raw
@@ -3173,6 +4574,10 @@ Int3TimerHandler:
                 movem.l (sp)+,d0-d7/a0-a6
                 rte
 
+                ; Reserved for debug (keep exports valid)
+dbg_watchArmed: dc.w    0
+dbg_watchSaved: dc.l    0
+
 ; unsigned __int8[128]
 keycodeLut:
                 dc.b $27,$31,$32,$33,$34,$35,$36,$37,$38,$39,$30,$2D,$3D,$5C,$3F,$B0
@@ -3185,12 +4590,16 @@ keycodeLut:
                 dc.b $3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F,$3F
 ; copperListTemplate moved to C (display.c)
 
+ IFEQ GENERAL_DATA_C
 panicFormatStr:
                 dc.b '%a',0
+ ENDC
 panicOutBuf:
                 dcb.b $60,0
+ IFEQ GENERAL_DATA_C
 pad_102555:
                 dc.b $00,$00,$00,$00,$00,$C0,$FC,$00,$0A
+ ENDC
 
 currentSpriteIndex:
                 dc.w -1
@@ -3203,15 +4612,21 @@ loc_103988:
                 tst.w   (syncWaitFlag).l
                 beq.s   ReturnFunction
                 bra.s   loc_103988
+ IFEQ GENERAL_DATA_C
 syncWaitFlag:
                 dc.w $0001              ; Synchronization flag in dead code; initialized to 1, spin loop tests it waiting for 0.
+ ENDC
+ IFEQ GENERAL_DATA_C
 syncReadyFlag:
                 dc.w $0000              ; Synchronization signal in dead code; set to 1 to indicate readiness.
+ ENDC
 
 ; ===== SetupInterrupts =====
 ; Ported to C: _SetupInterrupts in src/interrupts.c (Chunk 44)
+ IFEQ GENERAL_DATA_C
 int5SerialBusBufferFull:
                 dc.w $0000
+ ENDC
 
 ; ===== Int3Handler =====
 ; prototype: void __usercall Int3Handler()
@@ -3251,11 +4666,16 @@ SetTempStackPtr:
                 movem.l (sp)+,d0-d7/a0-a6
                 rte
 ; unsigned __int32 *
+ IFEQ GENERAL_DATA_C
 oldStackPtr:
                 dc.l $00000000
+ ENDC
 ; unsigned __int32 *
+ IFEQ GENERAL_DATA_C
 tmpStackPtr:
                 dc.l ReturnFromFunction
+ ENDC
+ IFEQ GENERAL_DATA_C
 isrTrampolineGuard:
                 dc.w $0000,$0000,$0000,$0000,$0000,$0000,$0000,$0000
                 dc.w $0000,$0000,$0000,$0000,$0000,$0000,$0000,$0000
@@ -3283,6 +4703,7 @@ isrTrampolineGuard:
                 dc.w $0000,$0000,$0000,$0000,$0000,$0000,$0000,$0000
                 dc.w $0000,$0000,$0000,$0000,$0000,$0000,$0000,$0000
                 dc.w $0000
+ ENDC
 ReturnFromFunction:
                 jmp ReturnFunction(pc)
 leftMaskTable:
@@ -3309,47 +4730,77 @@ lastWordMaskTable:
 overlayActiveFlag:
                 dc.w $0000
 
+ IFEQ RENDER_DATA_C
 bltconShiftBase:
                 dc.w $0000
+ ENDC
+ IFEQ RENDER_DATA_C
 textBlitPlaneMask:
                 dc.w $0000
+ ENDC
+ IFEQ RENDER_DATA_C
 textBlitHeightLines:
                 dc.w $0000
+ ENDC
 ; unsigned __int32 *
+ IFEQ RENDER_DATA_C
 blitSrcA_MaskPtr:
                 dc.l $00000000
+ ENDC
 ; unsigned __int32 *
+ IFEQ RENDER_DATA_C
 blitSrcB_GlyphPtr:
                 dc.l $00000000
+ ENDC
+ IFEQ RENDER_DATA_C
 bltconShiftBase_glyph:
                 dc.w $0000
+ ENDC
+ IFEQ RENDER_DATA_C
 glyphBlitPlaneMask:
                 dc.w $0000
+ ENDC
+ IFEQ RENDER_DATA_C
 glyphHeightLinesCache:
                 dc.w $0000
+ ENDC
+ IFEQ RENDER_DATA_C
 blitSrcA_MaskPtr_glyph:
                 dc.l $00000000          ; raw
+ ENDC
+ IFEQ RENDER_DATA_C
 blitSrcB_GlyphPtr_glyph:
                 dc.l $00000000          ; raw
+ ENDC
+ IFEQ RENDER_DATA_C
 dstRowBytesPerPlane:
                 dc.w $0000
+ ENDC
+ IFEQ RENDER_DATA_C
 dstRowAdvanceBytes:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSwos4Dk1:
                 dc.b "swos4.dk1",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSwos4Dk2:
                 dc.b "swos4.dk2",0
+ ENDC
 aSwos4Dku:
                 dc.b "swos4.dku",0
  IFNE AGA
 aGrafsDisk2Raw:
                 dc.b 'grafs_aga/disk2.raw',0
  ELSE
+ IFEQ STRINGS_DATA_C
 aGrafsDisk2Raw:
                 dc.b 'grafs/disk2.raw',0
+ ENDC
  ENDC
 ; void *
 assetLoaderCacheFlag:
@@ -3522,20 +4973,26 @@ crowdChantsOn:
                 dc.w 1
 cameraMoveToShowerLatch:
                 dc.w -1
+ IFEQ GENERAL_DATA_C
 pad_106CFE:
                 dc.b 0,0
+ ENDC
 lastKickSampleTick:
                 dc.w -1
 audioDbgFlagA:
                 dc.b $00
+ IFEQ GENERAL_DATA_C
 pad_106D03:
                 dc.b $00
+ ENDC
 audioActive:
                 dc.w $0000
 audioBankLoaded:
                 dc.w $0000
+ IFEQ GENERAL_DATA_C
 pad_106D08:
                 dc.b 0,0
+ ENDC
 
 crowdSamples:
                 dc.w $0037,$0038,$003A,$003E
@@ -3555,8 +5012,10 @@ crowdChantVolume:
 Int4Handler:
                 rte
 
+ IFEQ STRINGS_DATA_C
 aCodedByAndiSmi:
                 dc.b 'CODED BY ANDI SMITHERS, VECTORDEAN (C) MILLENNIUM 1992',0,0
+ ENDC
 
 ; Dead code removed (old function bodies and local labels from Chunk 32 port)
 kAmigaNotePeriodTable:
@@ -3615,13 +5074,19 @@ audioChannel3:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 audioState:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+ IFEQ GENERAL_DATA_C
 audioPresetChannelCmdTable:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $00,$00,$00,$00,$00,$00
+ ENDC
+ IFEQ GENERAL_DATA_C
 audioCounter:
                 dc.b $00
+ ENDC
+ IFEQ GENERAL_DATA_C
 audioFlags:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+ ENDC
 cameraXVelocity:
                 dc.w $0000              ; -40..40
 cameraYVelocity:
@@ -3673,25 +5138,41 @@ frozenPalette:
 muddyPalette:
                 dc.w $0650,$0020,$0550,$0F00,$000F,$0602,$099F,$00D0,$0FF0
                 xdef paletteIndices
+ IFEQ GENERAL_DATA_C
 paletteIndices:
                 dc.b 0,7,9,78,79,80,81,106,107
                 even
+ ENDC
  ELSE
 ; OCS pitch palettes: 3 entries each
+ IFEQ PALETTE_DATA_C
 normalPalette:
                 dc.w $0790,$0690,$0990
+ ENDC
+ IFEQ PALETTE_DATA_C
 dryPalette:
                 dc.w $0990,$0890,$0790
+ ENDC
+ IFEQ PALETTE_DATA_C
 wetPalette:
                 dc.w $0390,$0790,$0390
+ ENDC
+ IFEQ PALETTE_DATA_C
 softPalette:
                 dc.w $0370,$0770,$0370
+ ENDC
+ IFEQ PALETTE_DATA_C
 hardPalette:
                 dc.w $0970,$0870,$0770
+ ENDC
+ IFEQ PALETTE_DATA_C
 frozenPalette:
                 dc.w $0996,$0896,$0796
+ ENDC
+ IFEQ PALETTE_DATA_C
 muddyPalette:
                 dc.w $0750,$0650,$0550
+ ENDC
  ENDC
 ; unsigned __int16 *[7]
 pitchPalettePtrs:
@@ -3854,18 +5335,30 @@ pitchNumberProbabilities:
 kHilFileSig:
                 dc.l $0000000C          ; Every *.hil file starts with this dword
 
+ IFEQ STRINGS_DATA_C
 aAsc_0:
                 dc.b "****",0,$00
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAsc_1:
                 dc.b "****,",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPen:
                 dc.b "****(PEN)",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPen_0:
                 dc.b "****(PEN),",0,$00
+ ENDC
+ IFEQ STRINGS_DATA_C
 aOg:
                 dc.b "****(OG)",0,$00
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAsc_2:
                 dc.b "****,",0
+ ENDC
 ; char *[3]
 alreadyScoredTable:
                 ; char *[3]
@@ -3895,15 +5388,21 @@ subsMenuHighlightColor:
                                         ; also border color for tactics icon sprite in formation menu
 subsMenuEntryFrameColor:
                 dc.w $0000              ; Entry frame color of formation/substitutes title menu entry during the game
+ IFEQ TACTICS_DATA_C
 ourCoachFrames:
                 dc.w $0002,$0001,$0000,$0002,$0000,$0001,$0000,$0001
                 dc.w $0002,$0002,$0001,$0001,$0000,$0002,$0001,$0000
+ ENDC
+ IFEQ TACTICS_DATA_C
 opponentCoachFrames:
                 dc.w $0002,$0001,$0002,$0002,$0001,$0002,$0000,$0001
                 dc.w $0002,$0000,$0001,$0001,$0001,$0000,$0001,$0002
+ ENDC
 
+ IFEQ GENERAL_DATA_C
 pad_10E512:
                 dc.b 1,0
+ ENDC
 ; unsigned __int16[2]
 kGoalkeeperBurstSpeed:
                 ; unsigned __int16[2]
@@ -3924,25 +5423,33 @@ kGoalkeeperWeakDeflectBallSpeed:
                 dc.w $0200
 kGoalkeeperDeflectDeltaZ:
                 dc.l $0000C000          ; raw
+ IFEQ SIMULATION_DATA_C
 goalkeeperDeflectDeltaZ:
                 dc.l $00020000          ; Fixed-point delta Z value applied to ball when goalkeeper deflects it.
+ ENDC
+ IFEQ SIMULATION_DATA_C
 goalkeeperDeflectBallSpeeds:
                 dc.w 512,128,-128,-640  ; Table of ball speed values for goalkeeper deflections; values: 512, 128, -128, -640.
+ ENDC
 kGoalKeeperRecoveryStepBase:
                 dc.w $0070
 kGoalKeeperRecoveryStepAlt:
                 dc.w $00C0              ; Speed delta when goalie caught the ball on the ground
 kGoalKeeperRecoveryStepFar:
                 dc.w $0080              ; Goalkeeper speed delta while diving for the ball
+ IFEQ GENERAL_DATA_C
 pad_10E53C:
                 dc.b 1,0
+ ENDC
 kShotAtGoalMinumumSpeed:
                 dc.w $0200
 kGoalkeeperDiveDeltas:
                 dc.l $00030000,$00038000,$00040000,$00048000,$00050000,$00058000,$00060000,$00068000 ; Fixed point values:
                                         ; 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6
+ IFEQ GENERAL_DATA_C
 pad_10E560:
                 dc.w $0000
+ ENDC
 kKeeperEaseBallTable:
                 dc.w 1,4,3,3,3,2,2,2
 kKeeperPenaltySaveDistanceFar:
@@ -3953,12 +5460,16 @@ kKeeperPenaltySaveDistanceNear:
                 dc.w 2560
 kSubstitutedPlayerSpeed:
                 dc.w $0600              ; =6.0
+ IFEQ GENERAL_DATA_C
 pad_10E598:
                 dc.w $0500
+ ENDC
 kGoalkeeperSpeedWhenGameStopped:
                 dc.w $0400              ; =4.0
+ IFEQ GENERAL_DATA_C
 pad_10E59C:
                 dc.b 1,-128
+ ENDC
 kBallGroundConstant:
                 dc.w $0010              ; Applied when some player is controlling the ball
 kBallAirConstant:
@@ -3987,6 +5498,7 @@ kPitchBallSpeedInfluence:
 kGravityConstant:
                 dc.l $00001200          ; = 0.0502166748046875 (~0.05)
                                         ; Subtract from ball delta z
+ IFEQ GENERAL_DATA_C
 pad_10E5DE:
                 dc.w 0,6144,1089,1024,1089,1088,1216,1216
                 dc.w 1024,1089,1088,1216,1216,1216,1216,1216
@@ -3994,6 +5506,7 @@ pad_10E5DE:
                 dc.w 0,0,0,0,0,0,0,0
                 dc.w 0,0,0,0,0,0,896,64
                 dc.w 64,64,64,1024
+ ENDC
 kGoalkeeperGameSpeed:
                 dc.w $0400              ; =4.0
 kPlayerTacklingSpeed:
@@ -4116,8 +5629,10 @@ opponentBenchY:
 subsMenuX:
                 dc.w $0000              ; X coordinate of substitutes menu during the game (= 100)
                                         ; actually it's coordinate for the shadow, real menu starts 2 pixels left (98)
+ IFEQ TACTICS_DATA_C
 formationMenuX:
                 dc.w $0000              ; X coordinate of formation menu during the game
+ ENDC
 plLeavingX:
                 dc.w $0000
 plComingYTmp:
@@ -4154,8 +5669,10 @@ subsState:
                                         ; 3 = seems unused (never assigned) (draw subs menu without the header)
                                         ; 4 = listing players, above is formations entry
                                         ; -1 = undefined (when drawing opponent's bench)
+ IFEQ TACTICS_DATA_C
 selectedFormationEntry:
                 dc.w $0000
+ ENDC
 plToBeSubstitutedOrd:
                 dc.w $0000              ; When in subs menu fire is pressed, and bench player is standing, waiting
                                         ; for some player from team to be selected
@@ -4214,8 +5731,10 @@ subsDirection:
                                         ; Matches player directions.
 subsFire:
                 dc.b $00
+ IFEQ GENERAL_DATA_C
 pad_10F0D1:
                 dc.b $00
+ ENDC
 subsFireTimer:
                 dc.w $0000              ; Times how long fire is being pressed while in subs menu
 selectedPlayerInSubs:
@@ -4258,8 +5777,10 @@ pl1DownPress:
                 dc.b $00
 pl1ShortFire:
                 dc.b $00
+ IFEQ GENERAL_DATA_C
 pad_10F0E9:
                 dc.b $00
+ ENDC
 pl1FireCounter:
                 dc.w $0000
 pl1Direction:
@@ -4302,8 +5823,10 @@ pl2DownPress:
                 dc.b $00
 pl2ShortFire:
                 dc.b $00
+ IFEQ GENERAL_DATA_C
 pad_10F101:
                 dc.b $00
+ ENDC
 pl2FireCounter:
                 dc.w $0000
 pl2Direction:
@@ -4319,8 +5842,10 @@ currentTick:
                 dc.w 0
 lastFrameTicks:
                 dc.w $0000
+ IFEQ GENERAL_DATA_C
 pad_10F110:
                 dc.b $00
+ ENDC
 keyIn:
                 dc.b $00
 currentKey:
@@ -4385,8 +5910,10 @@ overlayFlagBackup:
                 dc.w $0000
 forceLeftTeam:
                 dc.w $0002
+ IFEQ GENERAL_DATA_C
 pad_10F14C:
                 dc.b 0,1
+ ENDC
 currentPlayerIndicatorPosition:
                 dc.w $0004
 hilLeftTeamGoals:
@@ -4479,8 +6006,10 @@ paletteTable:
                 dc.l panicPalette       ; element[4]
                 dc.l titleTextPalette   ; element[5]
                 dc.l titleLogoPalette   ; element[6]
+ IFEQ GENERAL_DATA_C
 pad_10F1CE:
                 dc.b $12,$34
+ ENDC
 cameraSnapToPlayerCount:
                 dc.w $0000
 turnDirCopiedFromCameraCount:
@@ -4489,30 +6018,40 @@ deadCameraBreakVar04:
                 dc.w $0000
 deadThrowInDirectionVar:
                 dc.w $0000
+ IFEQ GENERAL_DATA_C
 pad_10F1D8:
                 dc.b 0,0
+ ENDC
 initialKickWriteOnlyTicks:
                 dc.w $0000
 disallowedTurnFlagsCounter:
                 dc.w $0000
+ IFEQ GENERAL_DATA_C
 pad_10F1DE:
                 dc.b 0,0,0,0,0,0
+ ENDC
 writeOnlyVar04:
                 dc.w $0000
+ IFEQ GENERAL_DATA_C
 pad_10F1E6:
                 dc.b 0,0
+ ENDC
 deadCameraBreakVar01:
                 dc.w $0000
 deadCameraBreakVar02:
                 dc.w $1234
 deadCameraBreakVar03:
                 dc.w $1234
+ IFEQ GENERAL_DATA_C
 pad_10F1EE:
                 dc.b 18,52
+ ENDC
 AI_maxStoppageTime:
                 dc.w $0000
+ IFEQ GENERAL_DATA_C
 pad_10F1F2:
                 dc.b 0,0
+ ENDC
 goalkeeperSkipFlag:
                 dc.w $0000              ; When non-zero, goalkeeper processing is bypassed in goalkeeper control code.
 lastCameraDirection:
@@ -4552,13 +6091,17 @@ randXorIndex:
                 dc.b $00
 randXorKey:
                 dc.b $00
+ IFEQ GENERAL_DATA_C
 pad_10F441:
                 dc.b $00
+ ENDC
 
+ IFEQ RENDER_DATA_C
 corePrecacheTable:
                 dc.l aSoundSfxIn2       ; "sound/sfx.in2"
                 dc.l aGrafsSwcpich2M    ; "grafs/swcpich2.map"
                 dc.l -1                 ; raw
+ ENDC
 ; char *[23]
 menuPrecacheTable:
                 ; char *[23]
@@ -4585,16 +6128,22 @@ menuPrecacheTable:
                 dc.l aSoundSfxIn1       ; element[20]
                 dc.l aDataTeam008       ; element[21]
                 dc.l $FFFFFFFF          ; element[22]
+ IFEQ STRINGS_DATA_C
 aDataTeam008:
                 dc.b 'data/team.008',0
+ ENDC
 
+ IFEQ SIMULATION_DATA_C
 replayContTbl:
                 dc.w 0,1,2,3,4,5,6,7
                 dc.w 8,9,0,11,12,13,14,15
+ ENDC
+ IFEQ GENERAL_DATA_C
 pad_10FBE2:
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0
+ ENDC
 replaySelected:
                 dc.w $0000
 
@@ -4629,6 +6178,7 @@ team1Scorers:
                 dcb.b   528,0
 team2Scorers:
                 dcb.b   528,0
+ IFEQ RENDER_DATA_C
 scorer_padding:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
@@ -4643,6 +6193,7 @@ scorer_padding:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $00,$00
+ ENDC
 team1ScorerSpritesWidths:
                 dc.w $0000,$0000,$0000,$0000,$0000,$0000,$0000,$0000
 team2ScorerSpritesWidths:
@@ -4832,8 +6383,10 @@ ballNextX:
                 dc.w $0000
 ballNextY:
                 dc.w $0000
+ IFEQ GENERAL_DATA_C
 pad_110F6C:
                 dc.b 0,0,0,0
+ ENDC
 
 ; ===== CalculateNextBallPosition =====
 ballQuadrantIndex:
@@ -5172,8 +6725,10 @@ cameraDirection:
 playerTurnFlags:
                 dc.b $00                ; Bit set represents allowed directions when the player puts
                                         ; the ball back into play (throw in, penalty..) - bits 0..7
+ IFEQ GENERAL_DATA_C
 pad_111673:
                 dc.b $00
+ ENDC
 inGameCounter:
                 dc.w $0000              ; Counts when the ball is in play
                                         ; halted when the game is stopped
@@ -5315,18 +6870,26 @@ playerCardChance:
                 dc.w $0000              ; CurrentGameTick bits 1-4 need to be greater than this in order
                                         ; for the referee to give out a card when there's a foul;
                                         ; gotten from the tables below
+ IFEQ SIMULATION_DATA_C
 playerCardChances3min:
                 dc.w $0004,$0004,$0004,$0004,$0005,$0005,$0005,$0005
                 dc.w $0006,$0006,$0006,$0007,$0007,$0008,$0009,$000A
+ ENDC
+ IFEQ SIMULATION_DATA_C
 playerCardChances5min:
                 dc.w $0002,$0002,$0003,$0003,$0003,$0003,$0003,$0003
                 dc.w $0004,$0004,$0004,$0004,$0004,$0005,$0005,$0006
+ ENDC
+ IFEQ SIMULATION_DATA_C
 playerCardChances7min:
                 dc.w $0001,$0001,$0002,$0002,$0002,$0002,$0002,$0002
                 dc.w $0003,$0003,$0003,$0003,$0003,$0004,$0004,$0004
+ ENDC
+ IFEQ SIMULATION_DATA_C
 playerCardChances10min:
                 dc.w $0001,$0001,$0001,$0001,$0001,$0002,$0002,$0002
                 dc.w $0002,$0002,$0002,$0002,$0002,$0002,$0003,$0003
+ ENDC
 playerCardChancesPerGameLength:
                 dc.l playerCardChances3min
                 dc.l playerCardChances5min
@@ -5772,8 +7335,10 @@ aiResumePlayTimer:
                 dc.w $0000              ; When AI puts the ball back into play this counts down from 15 to 0
 aiRand:
                 dc.w $0000              ; Random number generated each time DoAI is called; 0..255
+ IFEQ GENERAL_DATA_C
 pad_11826C:
                 dc.b $00,$00
+ ENDC
 ; __int16[2]
 aiRandomRotateTable:
                 ; __int16[2]
@@ -7041,10 +8606,12 @@ ballMovingFrameIndices:
 ballStaticFrameIndices:
                 ; __int16[3]
                 dc.w 1068,1068,-1
+ IFEQ GENERAL_DATA_C
 pad_11D00A:
                 dc.w $00E3,$00E4,$00E5,$00E6,$00E7,$00E8,$00E9,$00EA
                 dc.w $00EB,$00EC,$00ED,$00EE,$0212,$0213,$0214,$0215
                 dc.w $0216,$0217,$0218,$0219,$021A,$021B,$021C,$021D
+ ENDC
 ; Position[11]
 bottomCornerLeftPositions:
                 ; Position[11]
@@ -9176,13 +10743,19 @@ numbersBuffer:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00
 shirtColorTable:
                 dc.b $01,$02,$03,$06,$0A,$0B,$0C,$0D,$0E,$0F
+ IFEQ RENDER_DATA_C
 hexLongStringBuffer:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; Buffer for converting a 32-bit value to an 8-digit hex ASCII string with null terminator.
+ ENDC
+ IFEQ RENDER_DATA_C
 hexWordStringBuffer:
                 dc.b $00,$00,$00,$00,$00,$00 ; Buffer for converting a 16-bit panic code to a 4-digit hex ASCII string.
+ ENDC
+ IFEQ GENERAL_DATA_C
 aStackOverflow:
                 dc.b 'STACK OVERFLOW',0,0
                 even
+ ENDC
                 xdef    _CallMenuCallback
 _CallMenuCallback:
                 movem.l d0-d7/a0-a6,-(sp)      ; save all regs (60 bytes)
@@ -9230,30 +10803,54 @@ defaultSurnamesTable:
                 dc.l aDearsley          ; element[3]
                 dc.l aWilkin            ; element[4]
                 dc.l aNottingham        ; element[5]
+ IFEQ STRINGS_DATA_C
 aChris:
                 dc.b "CHRIS",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aChapman:
                 dc.b "CHAPMAN",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aJon:
                 dc.b "JON",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aHare:
                 dc.b "HARE",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGraeme:
                 dc.b "GRAEME",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aBoxall:
                 dc.b "BOXALL",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aMark:
                 dc.b "MARK",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDearsley:
                 dc.b "DEARSLEY",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDavid:
                 dc.b "DAVID",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWilkin:
                 dc.b "WILKIN",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDavid_0:
                 dc.b "DAVID",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNottingham:
                 dc.b "NOTTINGHAM",0,$00
+ ENDC
 
 allowShorterMenuItemsWithFrames:
                 dc.l $00000000          ; If this is true then menu items on the right side of the screen (x >= 160) will have outer
@@ -9274,14 +10871,20 @@ inputAllowedControlKeys:
                                         ; backspace, 'special'(?), space, '-', '/', '.', terminator
 allowExtraCharsFlag:
                 dc.w $0000              ; If true, allows '.' when typing in... at least in theory
+ IFEQ GENERAL_DATA_C
 pad_120F68:
                 dc.b "S@"
+ ENDC
 
+ IFEQ STRINGS_DATA_C
 aSwosDate0:
                 dc.b 'SWOS DATE: %0',0
+ ENDC
+ IFEQ GENERAL_DATA_C
 pad_121558:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $00,$00,$00,$00
+ ENDC
 
 forceDrawTransparentMenuItems:
                 dc.w $0000              ; If this is true menu entries with background color 0 (transparent) will be
@@ -9303,11 +10906,13 @@ kAbortLossScorerWeightTable:
 
 kUserTeamOffsetBiasLUT:
                 dc.b -3,0,1,-1,-2,-2,-3,-2
+ IFEQ SIMULATION_DATA_C
 kMenuIrqCookieFailTrap:
                 dc.b -1,0,0,2,3,3,2,1,-1,-3,-2,-2,0,1,2,3
                 dc.b 3,2,1,1,0,-2,-1,1,2,3,1,0,-1,-3,-2,-1
                 dc.b 0,-2,-3,-1,0,2,1,2,2,1,-1,0,-2,-1,0,-1
                 dc.b -2,0,2,2,2,0,-1,-2
+ ENDC
 kTeamViewOffsetBaseLUT:
                 dc.b 0,0,1,2,1,1,3,1,0,1,5,3,1,2,4,0
                 dc.b -1,-6,-2,0,1,6,2,5,-1,-3,-1,2,4,1,0,0
@@ -9382,35 +10987,55 @@ simExtraGoalProbByTacticPtrs:
                 dc.l simExtraGoalProbThreshE ; element[14]
                 dc.l simExtraGoalProbThreshE ; element[15]
 ; unsigned __int8[5]
+ IFEQ SIMULATION_DATA_C
 simGoalProbThreshA:
                 dc.b $76,$64,$1E,$07,$01 ; Cumulative probability thresholds for goal scoring, referenced by tactic indices 0-1.
+ ENDC
 ; unsigned __int8[3]
+ IFEQ SIMULATION_DATA_C
 simExtraGoalProbThreshA:
                 dc.b $A0,$40,$20        ; Cumulative probability thresholds for extra goal scoring, tactic indices 0-1.
+ ENDC
 ; unsigned __int8[5]
+ IFEQ SIMULATION_DATA_C
 simGoalProbThreshB:
                 dc.b $76,$64,$1E,$07,$01 ; Cumulative probability thresholds for goal scoring, tactic indices 2-3.
+ ENDC
 ; unsigned __int8[3]
+ IFEQ SIMULATION_DATA_C
 simExtraGoalProbThreshB:
                 dc.b $A0,$60,$00        ; Cumulative probability thresholds for extra goal scoring, tactic indices 2-3.
+ ENDC
 ; unsigned __int8[5]
+ IFEQ SIMULATION_DATA_C
 simGoalProbThreshC:
                 dc.b $78,$65,$1F,$04,$00 ; Cumulative probability thresholds for goal scoring, tactic indices 4-6.
+ ENDC
 ; unsigned __int8[3]
+ IFEQ SIMULATION_DATA_C
 simExtraGoalProbThreshC:
                 dc.b $00,$00,$00        ; Cumulative probability thresholds for extra goals, tactic indices 4-6. All zero
+ ENDC
 ; unsigned __int8[5]
+ IFEQ SIMULATION_DATA_C
 simGoalProbThreshD:
                 dc.b $89,$6D,$0A,$00,$00 ; Cumulative probability thresholds for goal scoring, tactic indices 7-9.
+ ENDC
 ; unsigned __int8[3]
+ IFEQ SIMULATION_DATA_C
 simExtraGoalProbThreshD:
                 dc.b $00,$00,$00        ; Cumulative probability thresholds for extra goals, tactic indices 7-9. All zero.
+ ENDC
 ; unsigned __int8[5]
+ IFEQ SIMULATION_DATA_C
 simGoalProbThreshE:
                 dc.b $9C,$64,$00,$00,$00 ; Cumulative probability thresholds for goal scoring, tactic indices 10-17.
+ ENDC
 ; unsigned __int8[3]
+ IFEQ SIMULATION_DATA_C
 simExtraGoalProbThreshE:
                 dc.b $00,$00,$00        ; Cumulative probability thresholds for extra goals, tactic indices 10-15. All zero.
+ ENDC
 ; loc_121E56 — ExtraTimeSecondPhaseScoring bridge
 ; Called from GetCachedOrCalculateExtraTimeResult via bra
 ; Returns d3 (team1 extra goals) and d4 (team2 extra goals)
@@ -9460,41 +11085,65 @@ goalScorerDistributionByBallOutTactic:
                 dc.l goalScorerDist442  ; element[16]
                 dc.l goalScorerDist442  ; element[17]
 ; unsigned __int8[12]
+ IFEQ SIMULATION_DATA_C
 goalScorerDist442:
                 dc.b $2D,$28,$08,$0F,$05,$08,$02,$01,$01,$02,$7C,$04 ; Goal scorer probability distribution for 4-4-2 tactic.
+ ENDC
 ; unsigned __int8[12]
+ IFEQ SIMULATION_DATA_C
 goalScorerDist541:
                 dc.b $36,$0C,$1E,$0C,$0C,$02,$01,$01,$01,$02,$7C,$04 ; Goal scorer probability distribution for 5-4-1 tactic.
+ ENDC
 ; unsigned __int8[12]
+ IFEQ SIMULATION_DATA_C
 goalScorerDist451:
                 dc.b $36,$0A,$16,$16,$0A,$03,$02,$01,$01,$02,$7C,$04 ; Goal scorer probability distribution for 4-5-1 tactic.
+ ENDC
 ; unsigned __int8[12]
+ IFEQ SIMULATION_DATA_C
 goalScorerDist532:
                 dc.b $2D,$28,$09,$11,$09,$01,$02,$02,$01,$01,$7C,$04 ; Goal scorer probability distribution for 5-3-2 tactic.
+ ENDC
 ; unsigned __int8[12]
+ IFEQ SIMULATION_DATA_C
 goalScorerDist352:
                 dc.b $2F,$2A,$07,$0F,$03,$03,$07,$01,$01,$01,$7C,$04 ; Goal scorer probability distribution for 3-5-2 tactic.
+ ENDC
 ; unsigned __int8[12]
+ IFEQ SIMULATION_DATA_C
 goalScorerDist433:
                 dc.b $2D,$1D,$1D,$05,$08,$05,$02,$01,$01,$02,$7C,$04 ; Goal scorer probability distribution for 4-3-3 tactic.
+ ENDC
 ; unsigned __int8[12]
+ IFEQ SIMULATION_DATA_C
 goalScorerDist424:
                 dc.b $0B,$32,$29,$0B,$05,$05,$01,$01,$01,$01,$7C,$04 ; Goal scorer probability distribution for 4-2-4 tactic.
+ ENDC
 ; unsigned __int8[12]
+ IFEQ SIMULATION_DATA_C
 goalScorerDist343:
                 dc.b $2C,$1C,$1C,$06,$0A,$02,$06,$01,$01,$01,$7C,$04 ; Goal scorer probability distribution for 3-4-3 tactic.
+ ENDC
 ; unsigned __int8[12]
+ IFEQ SIMULATION_DATA_C
 goalScorerDistSweep:
                 dc.b $2D,$28,$08,$0F,$05,$08,$02,$01,$01,$02,$7C,$04 ; Goal scorer probability distribution for sweep tactic.
+ ENDC
 ; unsigned __int8[12]
+ IFEQ SIMULATION_DATA_C
 goalScorerDist523:
                 dc.b $14,$32,$14,$0F,$0F,$02,$01,$01,$01,$02,$7C,$04 ; Goal scorer probability distribution for 5-2-3 tactic.
+ ENDC
 ; unsigned __int8[12]
+ IFEQ SIMULATION_DATA_C
 goalScorerDistAttack:
                 dc.b $08,$2A,$25,$16,$08,$05,$02,$01,$01,$01,$7C,$04 ; Goal scorer probability distribution for attack tactic.
+ ENDC
 ; unsigned __int8[12]
+ IFEQ SIMULATION_DATA_C
 goalScorerDistDefend:
                 dc.b $3C,$2D,$08,$08,$01,$01,$01,$01,$01,$01,$7C,$04 ; Goal scorer probability distribution for defend tactic.
+ ENDC
 ; unsigned __int8 *
 currentGoalScorerDistPtr:
                 dc.l $00000000          ; Pointer to the currently active goal scorer distribution table
@@ -9587,6 +11236,7 @@ team2GoalCounterByPlayer:
 careerTeamViewOffsetX:
                 dc.w $0000              ; X view offset for the career team during match result simulation.
 ; TacticsPosition *[18]
+ IFEQ TACTICS_DATA_C
 playersPositionsByTactics:
                 ; TacticsPosition *[18]
                 dc.l tacticsPosition442 ; element[0]
@@ -9607,9 +11257,11 @@ playersPositionsByTactics:
                 dc.l tacticsPositionUSERD ; element[15]
                 dc.l tacticsPositionUSERE ; element[16]
                 dc.l tacticsPositionUSERF ; element[17]
+ ENDC
 oldPlayerSkillDivisor:
                 dc.w $0000
 ; unsigned __int8[245]
+ IFEQ TACTICS_DATA_C
 skillsPerQuadrant:
                 dc.b 4,4,4,3,3,4,4,4,3,3,4,4,3,3,3,4 ; 7 X 35
                 dc.b 4,3,3,3,3,3,2,2,2,3,2,1,1,2,3,1
@@ -9628,12 +11280,16 @@ skillsPerQuadrant:
                 dc.b 1,2,3,4,3,2,3,4,4,4,3,3,4,4,4,3
                 dc.b 3,4,4,4,3
                 dc.b $33,$33
+ ENDC
 ; __int8[37]
+ IFEQ TACTICS_DATA_C
 skillQuadrantAdjustDeltas:
                 dc.b 1,0,-1,0,1,0,-1,0,1,0,-1,0,1,0,-1,0 ; Array of skill adjustment delta values for quadrant-based player skill processing.
                 dc.b 1,0,-1,0,1,0,-1,0,1,0,-1,0,1,0,-1,0
                 dc.b 1,0,-1,68,68
+ ENDC
 ; unsigned __int8[1226]
+ IFEQ TACTICS_DATA_C
 quadrantDistanceFactor:
                 dc.b 32,24,16,8,2,24,24,16,8,2,16,16,16,8,2,8
                 dc.b 8,8,8,2,2,2,2,2,2,1,1,1,1,1,0,0
@@ -9712,13 +11368,17 @@ quadrantDistanceFactor:
                 dc.b 24,8,16,24,32,24,0,0,0,0,0,1,1,1,1,1
                 dc.b 2,2,2,2,2,2,8,8,8,8,2,8,16,16,16,2
                 dc.b 8,16,24,24,2,8,16,24,32,0
+ ENDC
+ IFEQ TACTICS_DATA_C
 priceSkillPonders:
                 dc.l $00005020,$00024010,$00034000,$00024010,$00005020,$01003030,$01013020,$00024010
                 dc.l $01013020,$01003030,$02002030,$02013010,$01013000,$02013010,$02002030,$02010130
                 dc.l $02013000,$03011000,$02013000,$02010130,$02001230,$03000220,$04100200,$03000220
                 dc.l $02001230,$03000240,$02210220,$03230312,$02210220,$03000240,$03000330,$02200221
                 dc.l $01220124,$02200221,$03000330
+ ENDC
 ; __int8[240]
+ IFEQ TACTICS_DATA_C
 quadrantCoordinatesToBallQuadrant:
                 dc.b 0,0,0,5,5,10,10,15,15,20,20,25,25,30,30,30
                 dc.b 0,0,0,5,5,10,10,15,15,20,20,25,25,30,30,30
@@ -9735,7 +11395,9 @@ quadrantCoordinatesToBallQuadrant:
                 dc.b 4,4,4,9,9,14,14,19,19,24,24,29,29,34,34,34
                 dc.b 4,4,4,9,9,14,14,19,19,24,24,29,29,34,34,34
                 dc.b 4,4,4,9,9,14,14,19,19,24,24,29,29,34,34,34
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTactics442:
                 ; TeamTactics
                 dc.b $34                ; name[0]
@@ -9818,7 +11480,9 @@ teamTactics442:
                 dc.b -1                 ; unkTable[8]
                 dc.b -1                 ; unkTable[9]
                 dc.b $00                ; ballOutOfPlayTactics
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTactics541:
                 ; TeamTactics
                 dc.b $35                ; name[0]
@@ -9901,7 +11565,9 @@ teamTactics541:
                 dc.b -1                 ; unkTable[8]
                 dc.b -1                 ; unkTable[9]
                 dc.b $01                ; ballOutOfPlayTactics
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTactics451:
                 ; TeamTactics
                 dc.b $34                ; name[0]
@@ -9984,7 +11650,9 @@ teamTactics451:
                 dc.b $02                ; unkTable[8]
                 dc.b -1                 ; unkTable[9]
                 dc.b $02                ; ballOutOfPlayTactics
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTactics532:
                 ; TeamTactics
                 dc.b $35                ; name[0]
@@ -10067,7 +11735,9 @@ teamTactics532:
                 dc.b $03                ; unkTable[8]
                 dc.b $03                ; unkTable[9]
                 dc.b $03                ; ballOutOfPlayTactics
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTactics352:
                 ; TeamTactics
                 dc.b $33                ; name[0]
@@ -10150,7 +11820,9 @@ teamTactics352:
                 dc.b $03                ; unkTable[8]
                 dc.b $03                ; unkTable[9]
                 dc.b $04                ; ballOutOfPlayTactics
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTactics433:
                 ; TeamTactics
                 dc.b $34                ; name[0]
@@ -10233,7 +11905,9 @@ teamTactics433:
                 dc.b -1                 ; unkTable[8]
                 dc.b -1                 ; unkTable[9]
                 dc.b $05                ; ballOutOfPlayTactics
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTactics424:
                 ; TeamTactics
                 dc.b $34                ; name[0]
@@ -10316,7 +11990,9 @@ teamTactics424:
                 dc.b -1                 ; unkTable[8]
                 dc.b -1                 ; unkTable[9]
                 dc.b $06                ; ballOutOfPlayTactics
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTactics343:
                 ; TeamTactics
                 dc.b $33                ; name[0]
@@ -10399,7 +12075,9 @@ teamTactics343:
                 dc.b -1                 ; unkTable[8]
                 dc.b -1                 ; unkTable[9]
                 dc.b $07                ; ballOutOfPlayTactics
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTacticsSweep:
                 ; TeamTactics
                 dc.b $53                ; name[0]
@@ -10482,7 +12160,9 @@ teamTacticsSweep:
                 dc.b -1                 ; unkTable[8]
                 dc.b -1                 ; unkTable[9]
                 dc.b $08                ; ballOutOfPlayTactics
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTactics523:
                 ; TeamTactics
                 dc.b $35                ; name[0]
@@ -10565,7 +12245,9 @@ teamTactics523:
                 dc.b $03                ; unkTable[8]
                 dc.b -1                 ; unkTable[9]
                 dc.b $09                ; ballOutOfPlayTactics
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTacticsAttack:
                 ; TeamTactics
                 dc.b $41                ; name[0]
@@ -10648,7 +12330,9 @@ teamTacticsAttack:
                 dc.b $03                ; unkTable[8]
                 dc.b $03                ; unkTable[9]
                 dc.b $0A                ; ballOutOfPlayTactics
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTacticsDefend:
                 ; TeamTactics
                 dc.b $44                ; name[0]
@@ -10731,7 +12415,9 @@ teamTacticsDefend:
                 dc.b -1                 ; unkTable[8]
                 dc.b -1                 ; unkTable[9]
                 dc.b $0B                ; ballOutOfPlayTactics
+ ENDC
 ; TeamTactics *[19]
+ IFEQ TACTICS_DATA_C
 teamTacticsTable:
                 ; TeamTactics *[19]
                 dc.l teamTactics442     ; element[0]
@@ -10753,6 +12439,7 @@ teamTacticsTable:
                 dc.l teamTacticsUSERE   ; element[16]
                 dc.l teamTacticsUSERF   ; element[17]
                 dc.l editTacticsCurrentTactics ; element[18]
+ ENDC
 
 skillValuePonders:
                 dc.b $00,$01,$03,$06,$0A,$0F,$15,$1C ; Multiply value of skill with this
@@ -10761,8 +12448,10 @@ plPricesIncreaseTable:
                 dc.b $09,$09,$09,$09,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A
                 dc.b $0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A,$0A
                 dc.b $0A,$0A
+ IFEQ GENERAL_DATA_C
 pad_12487C:
                 dc.l skillQuadrantAdjustDeltas
+ ENDC
 ; void *
 plPositions:
                 dc.l $00000000
@@ -10773,11 +12462,13 @@ numPlayersAtQuadrant:
 
 ; ===== GetAgeAdjustedPlayerFormFactor =====
 ; Bridge: a0=playerBase → C param, returns d0
+ IFEQ SIMULATION_DATA_C
 playerAgeToFormDivisorTable:
                 dc.b $04,$04,$04,$04,$04,$04,$04,$04,$04,$04,$04,$04,$05,$05,$05,$05
                 dc.b $05,$05,$06,$06,$07,$07,$07,$07,$07,$07,$07,$07,$07,$08,$08,$08
                 dc.b $08,$08,$08,$09,$09,$09,$0A,$0A,$0C,$0C,$0C,$0F,$0F,$0F,$0F,$0F
                 dc.b $0F,$0F
+ ENDC
 
 ; unsigned __int8[144]
 playerFormDeltaRandomTable:
@@ -10819,8 +12510,10 @@ seasonReviewConfidenceDeltaTable:
 nationalSelectorSeasonReviewReputationDeltaTable:
                 ; __int16[5]
                 dc.w 5,2,0,-2,-5
+ IFEQ GENERAL_DATA_C
 pad_12654E:
                 dc.b $00,$00
+ ENDC
 
 ; ===== GetDisplayedPlayerValue ===== (ported to C → _GetDisplayedPlayerValue in teams.c)
 ; in: A0 = team entry ptr, out: D0.w = displayed value (1-80)
@@ -10854,8 +12547,10 @@ cachedPenaltyShootoutTeam1Score:
                 dc.w -1
 cachedPenaltyShootoutTeam2Score:
                 dc.w $0000
+ IFEQ GENERAL_DATA_C
 pad_126A90:
                 dc.b $00,$00,$00,$00
+ ENDC
                 move.w  d0,d7
                 movem.l (sp)+,d2-d6/a0-a1
                 rts
@@ -10928,15 +12623,21 @@ team1AppPercent:
                                         ; formula: sel. teams app * 100 / this team app + 6
 team2AppPercent:
                 dc.w $0000
+ IFEQ GENERAL_DATA_C
 pad_128EDC:
                 dc.b 'cd_dZdUdPdKdFdAdcd_dZdUdPdKdFdAd',0,$00
+ ENDC
 
 diyEditParamA:
                 dc.w $0000
+ IFEQ COMPETITION_DATA_C
 diyEditParamB:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyEditParamC:
                 dc.w $0000
+ ENDC
 ; unsigned __int8[64]
 diyTeamShuffleScratch:
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
@@ -11024,6 +12725,7 @@ diyQualifiedTeamIndices:
                 dc.w $0000,$0000,$0000,$0000,$0000,$0000,$0000,$0000
 
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickOceaniaInviteFriendly:
                 ; CompetitionCup *[5]
                 dc.l invitationTournamentCopy ; element[0]
@@ -11031,7 +12733,9 @@ cupPickOceaniaInviteFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickOceaniaOceaniaCupFriendly:
                 ; CompetitionCup *[5]
                 dc.l oceaniaCupCopy     ; element[0]
@@ -11039,7 +12743,9 @@ cupPickOceaniaOceaniaCupFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickOceaniaWorldCupFriendly:
                 ; CompetitionCup *[5]
                 dc.l worldCup2Copy      ; element[0]
@@ -11047,7 +12753,9 @@ cupPickOceaniaWorldCupFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickOceaniaWorldCupInvite:
                 ; CompetitionCup *[5]
                 dc.l worldCup2Copy      ; element[0]
@@ -11055,7 +12763,9 @@ cupPickOceaniaWorldCupInvite:
                 dc.l invitationTournamentCopy ; element[2]
                 dc.l friendlyCopy       ; element[3]
                 dc.l $FFFFFFFF          ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickOceaniaOceaniaCupNonFinalist:
                 ; CompetitionCup *[5]
                 dc.l 0                  ; element[0]
@@ -11063,7 +12773,9 @@ cupPickOceaniaOceaniaCupNonFinalist:
                 dc.l oceaniaCupCopy     ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickOceaniaOceaniaCupFinalist:
                 ; CompetitionCup *[5]
                 dc.l oceaniaCupCopy     ; element[0]
@@ -11071,7 +12783,9 @@ cupPickOceaniaOceaniaCupFinalist:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickNAmericaInviteFriendly:
                 ; CompetitionCup *[5]
                 dc.l invitationTournamentCopy ; element[0]
@@ -11079,7 +12793,9 @@ cupPickNAmericaInviteFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickNAmericaNaCupFriendly:
                 ; CompetitionCup *[5]
                 dc.l northAmericanCupCopy ; element[0]
@@ -11087,7 +12803,9 @@ cupPickNAmericaNaCupFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickNAmericaWorldCupFriendly:
                 ; CompetitionCup *[5]
                 dc.l worldCup2Copy      ; element[0]
@@ -11095,7 +12813,9 @@ cupPickNAmericaWorldCupFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickNAmericaWorldCupInvite:
                 ; CompetitionCup *[5]
                 dc.l worldCup2Copy      ; element[0]
@@ -11103,7 +12823,9 @@ cupPickNAmericaWorldCupInvite:
                 dc.l invitationTournamentCopy ; element[2]
                 dc.l friendlyCopy       ; element[3]
                 dc.l $FFFFFFFF          ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickNAmericaNaCupNonFinalist:
                 ; CompetitionCup *[5]
                 dc.l 0                  ; element[0]
@@ -11111,7 +12833,9 @@ cupPickNAmericaNaCupNonFinalist:
                 dc.l northAmericanCupCopy ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickNAmericaNaCupFinalist:
                 ; CompetitionCup *[5]
                 dc.l northAmericanCupCopy ; element[0]
@@ -11119,7 +12843,9 @@ cupPickNAmericaNaCupFinalist:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickAsiaInviteFriendly:
                 ; CompetitionCup *[5]
                 dc.l invitationTournamentCopy ; element[0]
@@ -11127,7 +12853,9 @@ cupPickAsiaInviteFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickAsiaAsianCupFriendly:
                 ; CompetitionCup *[5]
                 dc.l asianCupCopy       ; element[0]
@@ -11135,7 +12863,9 @@ cupPickAsiaAsianCupFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickAsiaWorldCupFriendly:
                 ; CompetitionCup *[5]
                 dc.l worldCup2Copy      ; element[0]
@@ -11143,7 +12873,9 @@ cupPickAsiaWorldCupFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickAsiaWorldCupInvite:
                 ; CompetitionCup *[5]
                 dc.l worldCup2Copy      ; element[0]
@@ -11151,7 +12883,9 @@ cupPickAsiaWorldCupInvite:
                 dc.l invitationTournamentCopy ; element[2]
                 dc.l friendlyCopy       ; element[3]
                 dc.l $FFFFFFFF          ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickAsiaAsianCupNonFinalist:
                 ; CompetitionCup *[5]
                 dc.l 0                  ; element[0]
@@ -11159,7 +12893,9 @@ cupPickAsiaAsianCupNonFinalist:
                 dc.l asianCupCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickAsiaAsianCupFinalist:
                 ; CompetitionCup *[5]
                 dc.l asianCupCopy       ; element[0]
@@ -11167,7 +12903,9 @@ cupPickAsiaAsianCupFinalist:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickAfricaInviteFriendly:
                 ; CompetitionCup *[5]
                 dc.l invitationTournamentCopy ; element[0]
@@ -11175,7 +12913,9 @@ cupPickAfricaInviteFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickAfricaAfricanCupFriendly:
                 ; CompetitionCup *[5]
                 dc.l africanNationsCupCopy ; element[0]
@@ -11183,7 +12923,9 @@ cupPickAfricaAfricanCupFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickAfricaWorldCupFriendly:
                 ; CompetitionCup *[5]
                 dc.l worldCup2Copy      ; element[0]
@@ -11191,7 +12933,9 @@ cupPickAfricaWorldCupFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickAfricaWorldCupInvite:
                 ; CompetitionCup *[5]
                 dc.l worldCup2Copy      ; element[0]
@@ -11199,7 +12943,9 @@ cupPickAfricaWorldCupInvite:
                 dc.l invitationTournamentCopy ; element[2]
                 dc.l friendlyCopy       ; element[3]
                 dc.l $FFFFFFFF          ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickAfricaAfricanCupNonFinalist:
                 ; CompetitionCup *[5]
                 dc.l 0                  ; element[0]
@@ -11207,7 +12953,9 @@ cupPickAfricaAfricanCupNonFinalist:
                 dc.l africanNationsCupCopy ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickAfricaAfricanCupFinalist:
                 ; CompetitionCup *[5]
                 dc.l africanNationsCupCopy ; element[0]
@@ -11215,7 +12963,9 @@ cupPickAfricaAfricanCupFinalist:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickSAmericaInviteFriendly:
                 ; CompetitionCup *[5]
                 dc.l invitationTournamentCopy ; element[0]
@@ -11223,7 +12973,9 @@ cupPickSAmericaInviteFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickSAmericaCopaAmericaFriendly:
                 ; CompetitionCup *[5]
                 dc.l copaAmericaCopy    ; element[0]
@@ -11231,7 +12983,9 @@ cupPickSAmericaCopaAmericaFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickSAmericaWorldCupFriendly:
                 ; CompetitionCup *[5]
                 dc.l worldCup2Copy      ; element[0]
@@ -11239,7 +12993,9 @@ cupPickSAmericaWorldCupFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickSAmericaWorldCupInvite:
                 ; CompetitionCup *[5]
                 dc.l worldCup2Copy      ; element[0]
@@ -11247,7 +13003,9 @@ cupPickSAmericaWorldCupInvite:
                 dc.l invitationTournamentCopy ; element[2]
                 dc.l friendlyCopy       ; element[3]
                 dc.l $FFFFFFFF          ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickSAmericaCopaAmericaNonFinalist:
                 ; CompetitionCup *[5]
                 dc.l 0                  ; element[0]
@@ -11255,7 +13013,9 @@ cupPickSAmericaCopaAmericaNonFinalist:
                 dc.l copaAmericaCopy    ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickSAmericaCopaAmericaFinalist:
                 ; CompetitionCup *[5]
                 dc.l copaAmericaCopy    ; element[0]
@@ -11263,7 +13023,9 @@ cupPickSAmericaCopaAmericaFinalist:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[8]
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroupsTable:
                 ; CompetitionCup *[8]
                 dc.l ecQualifyingGroup1Copy ; element[0]
@@ -11274,7 +13036,9 @@ ecQualifyingGroupsTable:
                 dc.l ecQualifyingGroup6Copy ; element[5]
                 dc.l ecQualifyingGroup7Copy ; element[6]
                 dc.l ecQualifyingGroup8Copy ; element[7]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickEuropeNoCupFriendly:
                 ; CompetitionCup *[5]
                 dc.l 0                  ; element[0]
@@ -11282,7 +13046,9 @@ cupPickEuropeNoCupFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickListEuropeInviteTournamentFriendly:
                 ; CompetitionCup *[5]
                 dc.l invitationTournamentCopy ; element[0]
@@ -11290,7 +13056,9 @@ cupPickListEuropeInviteTournamentFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickLisEuropeEuroChampsFriendly:
                 ; CompetitionCup *[5]
                 dc.l europeanChampionships2Copy ; element[0]
@@ -11298,7 +13066,9 @@ cupPickLisEuropeEuroChampsFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickListEuropeEuroChampsInviteFriendly:
                 ; CompetitionCup *[5]
                 dc.l europeanChampionships2Copy ; element[0]
@@ -11306,7 +13076,9 @@ cupPickListEuropeEuroChampsInviteFriendly:
                 dc.l invitationTournamentCopy ; element[2]
                 dc.l friendlyCopy       ; element[3]
                 dc.l $FFFFFFFF          ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickListEuropeWorldCupFriendly:
                 ; CompetitionCup *[5]
                 dc.l worldCup2Copy      ; element[0]
@@ -11314,7 +13086,9 @@ cupPickListEuropeWorldCupFriendly:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickLisEuropeWorldCupInviteFriendly:
                 ; CompetitionCup *[5]
                 dc.l worldCup2Copy      ; element[0]
@@ -11322,7 +13096,9 @@ cupPickLisEuropeWorldCupInviteFriendly:
                 dc.l invitationTournamentCopy ; element[2]
                 dc.l friendlyCopy       ; element[3]
                 dc.l $FFFFFFFF          ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickEuropeNoCupFriendlyAlt:
                 ; CompetitionCup *[5]
                 dc.l 0                  ; element[0]
@@ -11330,7 +13106,9 @@ cupPickEuropeNoCupFriendlyAlt:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[5]
+ IFEQ COMPETITION_DATA_C
 cupPickListEuropeInviteTournamentFriendlyAlt:
                 ; CompetitionCup *[5]
                 dc.l invitationTournamentCopy ; element[0]
@@ -11338,7 +13116,9 @@ cupPickListEuropeInviteTournamentFriendlyAlt:
                 dc.l friendlyCopy       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
                 dc.l 0                  ; element[4]
+ ENDC
 ; CompetitionCup *[8]
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroupsTable:
                 ; CompetitionCup *[8]
                 dc.l worldCupQualifyingGroup1Copy ; element[0]
@@ -11349,8 +13129,10 @@ worldCupQualifyingGroupsTable:
                 dc.l worldCupQualifyingGroup6Copy ; element[5]
                 dc.l worldCupQualifyingGroup7Copy ; element[6]
                 dc.l worldCupQualifyingGroup8Copy ; element[7]
+ ENDC
 
 ; char *[6]
+ IFEQ COMPETITION_DATA_C
 tourStringTable:
                 ; char *[6]
                 dc.l aEuropeanTour      ; element[0]
@@ -11359,6 +13141,7 @@ tourStringTable:
                 dc.l aNorthAmericanT    ; element[3]
                 dc.l aAsianTour         ; element[4]
                 dc.l aOceaniaTour       ; element[5]
+ ENDC
 
 competitionTeamIdScratchList4:
                 dc.w $0000,$0000,$0000,$0000
@@ -11499,29 +13282,45 @@ trainingPosOrderTables:
                 dc.l trainingPosOrder6  ; element[6]
                 dc.l trainingPosOrder7  ; element[7]
 ; unsigned __int8[9]
+ IFEQ PLAYER_DATA_C
 trainingPosOrder0:
                 dc.b $00,$03,$06,$07,$01,$02,$04,$05,$FF ; Training position priority order for outfield position 0, 0xFF-terminated.
+ ENDC
 ; unsigned __int8[9]
+ IFEQ PLAYER_DATA_C
 trainingPosOrder1:
                 dc.b $01,$03,$04,$06,$07,$02,$05,$00,$FF ; Training position priority order for outfield position 1, 0xFF-terminated.
+ ENDC
 ; unsigned __int8[9]
+ IFEQ PLAYER_DATA_C
 trainingPosOrder2:
                 dc.b $02,$03,$05,$06,$07,$01,$04,$00,$FF ; Training position priority order for outfield position 2, 0xFF-terminated.
+ ENDC
 ; unsigned __int8[9]
+ IFEQ PLAYER_DATA_C
 trainingPosOrder3:
                 dc.b $03,$01,$02,$06,$07,$04,$05,$00,$FF ; Training position priority order for outfield position 3, 0xFF-terminated.
+ ENDC
 ; unsigned __int8[9]
+ IFEQ PLAYER_DATA_C
 trainingPosOrder4:
                 dc.b $04,$06,$07,$01,$03,$05,$02,$00,$FF ; Training position priority order for outfield position 4, 0xFF-terminated.
+ ENDC
 ; unsigned __int8[9]
+ IFEQ PLAYER_DATA_C
 trainingPosOrder5:
                 dc.b $05,$06,$07,$02,$03,$04,$01,$00,$FF ; Training position priority order for outfield position 5, 0xFF-terminated.
+ ENDC
 ; unsigned __int8[9]
+ IFEQ PLAYER_DATA_C
 trainingPosOrder6:
                 dc.b $06,$04,$05,$03,$07,$01,$02,$00,$FF ; Training position priority order for outfield position 6, 0xFF-terminated.
+ ENDC
 ; unsigned __int8[9]
+ IFEQ PLAYER_DATA_C
 trainingPosOrder7:
                 dc.b $07,$06,$04,$05,$03,$01,$02,$00,$FF ; Training position priority order for outfield position 7, 0xFF-terminated.
+ ENDC
 
 ; __int16[5]
 bureaucracyMenuItems:
@@ -11684,45 +13483,83 @@ diyLeftTeamResult:
                 dc.w $0000
 diyRightTeamResult:
                 dc.w $0000
+ IFEQ GENERAL_DATA_C
 pad_133328:
                 dc.b 0,0
+ ENDC
 
+ IFEQ COMPETITION_DATA_C
 diyCupLegsChoice0:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyCupExtraTimeChoice0:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyCupPenaltiesChoice0:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyCupLegsChoice1:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyCupExtraTimeChoice1:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyCupPenaltiesChoice1:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyCupLegsChoice2:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyCupExtraTimeChoice2:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyCupPenaltiesChoice2:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyCupLegsChoice3:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyCupExtraTimeChoice3:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyCupPenaltiesChoice3:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyCupLegsChoice4:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyCupExtraTimeChoice4:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyCupPenaltiesChoice4:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyCupLegsChoice5:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyCupExtraTimeChoice5:
                 dc.w $0000
+ ENDC
+ IFEQ COMPETITION_DATA_C
 diyCupPenaltiesChoice5:
                 dc.w $0000
+ ENDC
 diyCupPitchTypeOrSeasonStringTable:
                 dc.l diyCupPitchTypeOrSeasonSelection
                 dc.w $0000
@@ -12383,12 +14220,14 @@ diySelected:
                                         ; 1  - cup
                                         ; 2  - tournament
                                         ; -1 - leave DIY menu
+ IFEQ GENERAL_DATA_C
 pad_136DFA:
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0,0,0,0,0
+ ENDC
 
 pitchTypeOrSeasonTable:
                 dc.l pitchTypeOrSeason
@@ -12531,32 +14370,59 @@ topSkillBitRotEven:
                 dc.l skillBitRotEven1,skillBitRotEven2,skillBitRotEven3,skillBitRotEven4,skillBitRotEven5,skillBitRotEven6,skillBitRotEven7 ; Pointers to bit-rotation arrays (even variant) per position group.
 topSkillBitRotOdd:
                 dc.l skillBitRotOdd1,skillBitRotOdd2,skillBitRotOdd3,skillBitRotOdd4,skillBitRotOdd5,skillBitRotOdd6,skillBitRotOdd7 ; Pointers to bit-rotation arrays (odd variant) per position group.
+ IFEQ PLAYER_DATA_C
 skillBitRotEven1:
                 dc.b $10,$18,$04,$08,$0C,$14,$1C ; Bit-rotation priority for position group 1 (even variant).
+ ENDC
+ IFEQ PLAYER_DATA_C
 skillBitRotOdd1:
                 dc.b $18,$10,$04,$08,$0C,$14,$1C ; Bit-rotation priority for position group 1 (odd variant).
+ ENDC
+ IFEQ PLAYER_DATA_C
 skillBitRotEven2:
                 dc.b $10,$18,$04,$08,$0C,$14,$1C ; Bit-rotation priority for position group 2 (even variant).
+ ENDC
+ IFEQ PLAYER_DATA_C
 skillBitRotOdd2:
                 dc.b $18,$10,$04,$08,$0C,$14,$1C ; Bit-rotation priority for position group 2 (odd variant).
+ ENDC
+ IFEQ PLAYER_DATA_C
 skillBitRotEven3:
                 dc.b $0C,$10,$04,$18,$08,$14,$1C ; Bit-rotation priority for position group 3 (even variant).
+ ENDC
+ IFEQ PLAYER_DATA_C
 skillBitRotOdd3:
                 dc.b $10,$0C,$04,$18,$08,$14,$1C ; Bit-rotation priority for position group 3 (odd variant).
+ ENDC
+ IFEQ PLAYER_DATA_C
 skillBitRotEven4:
                 dc.b $14,$18,$04,$10,$0C,$1C,$08 ; Bit-rotation priority for position group 4 (even variant).
+ ENDC
+ IFEQ PLAYER_DATA_C
 skillBitRotOdd4:
                 dc.b $18,$14,$04,$10,$0C,$1C,$08 ; Bit-rotation priority for position group 4 (odd variant).
+ ENDC
+ IFEQ PLAYER_DATA_C
 skillBitRotEven5:
                 dc.b $14,$18,$04,$10,$0C,$1C,$08 ; Bit-rotation priority for position group 5 (even variant).
+ ENDC
+ IFEQ PLAYER_DATA_C
 skillBitRotOdd5:
                 dc.b $18,$14,$04,$10,$0C,$1C,$08 ; Bit-rotation priority for position group 5 (odd variant).
+ ENDC
+ IFEQ PLAYER_DATA_C
 skillBitRotEven6:
                 dc.b $04,$10,$14,$0C,$08,$18,$1C ; Bit-rotation priority for position group 6 (even variant).
+ ENDC
+ IFEQ PLAYER_DATA_C
 skillBitRotOdd6:
                 dc.b $10,$04,$14,$0C,$08,$18,$1C ; Bit-rotation priority for position group 6 (odd variant).
+ ENDC
+ IFEQ PLAYER_DATA_C
 skillBitRotEven7:
                 dc.b $0C,$1C,$18,$08,$14,$04,$10 ; Bit-rotation priority for position group 7 (even variant).
+ ENDC
+ IFEQ PLAYER_DATA_C
 skillBitRotOdd7:
                 dc.b $1C,$0C,$18,$08,$14,$04,$10,$43,$F9 ; Bit-rotation priority for position group 7 (odd variant).
                 dc.l posFilledFlags
@@ -12596,6 +14462,7 @@ skillBitRotOdd7:
                 dc.b $10,$28,$00,$66,$02,$40,$00,$E0,$EA,$48,$B0,$12,$66,$0C,$B6,$28
                 dc.b $00,$6C,$6C,$06,$16,$28,$00,$6C,$38,$02,$52,$42,$B4,$47,$65,$CA
                 dc.b $4A,$44,$6A,$06,$52,$8A,$4A,$12,$6A,$B6,$4A,$44,$4E,$75
+ ENDC
 ; unsigned __int8 (*[8])[9]
 posSearchOrderPtrs:
                 ; unsigned __int8 (*[8])[9]
@@ -12608,32 +14475,50 @@ posSearchOrderPtrs:
                 dc.l posSearchOrderMid  ; element[6]
                 dc.l posSearchOrderAtt  ; element[7]
 ; unsigned __int8[9]
+ IFEQ PLAYER_DATA_C
 posSearchOrderGk:
                 dc.b $00,$03,$06,$07,$01,$02,$04,$05,$FF ; Position search fallback order for Gk, 0xFF-terminated.
+ ENDC
 ; unsigned __int8[9]
+ IFEQ PLAYER_DATA_C
 posSearchOrderRb:
                 dc.b $01,$03,$02,$04,$06,$05,$07,$00,$FF ; Position search fallback order for Rb, 0xFF-terminated.
+ ENDC
 ; unsigned __int8[9]
+ IFEQ PLAYER_DATA_C
 posSearchOrderLb:
                 dc.b $02,$03,$01,$05,$06,$04,$07,$00,$FF ; Position search fallback order for Lb, 0xFF-terminated.
+ ENDC
 ; unsigned __int8[9]
+ IFEQ PLAYER_DATA_C
 posSearchOrderDef:
                 dc.b $03,$01,$02,$06,$04,$05,$07,$00,$FF ; Position search fallback order for Def, 0xFF-terminated.
+ ENDC
 ; unsigned __int8[9]
+ IFEQ PLAYER_DATA_C
 posSearchOrderRight:
                 dc.b $04,$06,$05,$03,$01,$02,$07,$00,$FF ; Position search fallback order for Right, 0xFF-terminated.
+ ENDC
 ; unsigned __int8[9]
+ IFEQ PLAYER_DATA_C
 posSearchOrderLeft:
                 dc.b $05,$06,$04,$03,$02,$01,$07,$00,$FF ; Position search fallback order for Left, 0xFF-terminated.
+ ENDC
 ; unsigned __int8[9]
+ IFEQ PLAYER_DATA_C
 posSearchOrderMid:
                 dc.b $06,$04,$05,$03,$01,$02,$07,$00,$FF ; Position search fallback order for Mid, 0xFF-terminated.
+ ENDC
 ; unsigned __int8[9]
+ IFEQ PLAYER_DATA_C
 posSearchOrderAtt:
                 dc.b $07,$06,$04,$05,$03,$01,$02,$00,$FF ; Position search fallback order for Att, 0xFF-terminated.
+ ENDC
 ; unsigned __int8[12]
+ IFEQ PLAYER_DATA_C
 posFilledFlags:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00 ; Working buffer for position-filled tracking during auto-squad selection.
+ ENDC
 ; unsigned __int8 (*[18])[11]
 tacticPosMapPtrs:
                 ; unsigned __int8 (*[18])[11]
@@ -12656,41 +14541,65 @@ tacticPosMapPtrs:
                 dc.l tacticPosMap0      ; element[16]
                 dc.l tacticPosMap0      ; element[17]
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 tacticPosMap0:
                 dc.b $00,$01,$03,$03,$02,$04,$06,$06,$05,$07,$07 ; Position group mapping for tactic 0.
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 tacticPosMap1:
                 dc.b $00,$01,$03,$03,$02,$04,$03,$06,$05,$06,$07 ; Position group mapping for tactic 1.
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 tacticPosMap2:
                 dc.b $00,$01,$03,$03,$02,$04,$06,$06,$05,$06,$07 ; Position group mapping for tactic 2.
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 tacticPosMap3:
                 dc.b $00,$01,$03,$03,$02,$04,$03,$06,$05,$07,$07 ; Position group mapping for tactic 3.
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 tacticPosMap4:
                 dc.b $00,$01,$03,$06,$02,$04,$06,$06,$05,$07,$07 ; Position group mapping for tactic 4.
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 tacticPosMap5:
                 dc.b $00,$01,$03,$03,$02,$04,$06,$07,$05,$07,$07 ; Position group mapping for tactic 5.
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 tacticPosMap6:
                 dc.b $00,$01,$03,$03,$02,$04,$06,$06,$05,$07,$07 ; Position group mapping for tactic 6.
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 tacticPosMap7:
                 dc.b $00,$01,$03,$06,$02,$04,$06,$07,$05,$07,$07 ; Position group mapping for tactic 7.
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 tacticPosMap8:
                 dc.b $00,$01,$03,$03,$02,$04,$06,$06,$05,$07,$07 ; Position group mapping for tactic 8.
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 tacticPosMap9:
                 dc.b $00,$01,$03,$03,$02,$04,$03,$06,$05,$06,$07 ; Position group mapping for tactic 9.
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 tacticPosMap10:
                 dc.b $00,$01,$03,$06,$02,$04,$06,$07,$05,$07,$07 ; Position group mapping for tactic 10.
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 tacticPosMap11:
                 dc.b $00,$01,$03,$03,$02,$04,$06,$06,$05,$06,$07 ; Position group mapping for tactic 11.
+ ENDC
 ; ===== SelectAndShowSquadToView ===== (ported to C → _SelectAndShowSquadToView)
 ; Bridge: a1=teamNumbers, d0=numTeams, d1=rowMode
 ; ===== loc_1391AC ===== (ported to C → _SelectAndShowSquadToView_Direct)
@@ -12754,8 +14663,10 @@ offsetCoachOrPlayer:
 ; Updated: direct jmp to C
 nationalityOrdinal:
                 dc.b $00
+ IFEQ GENERAL_DATA_C
 pad_13B35F:
                 dc.b $00
+ ENDC
 
 
 teamSelectionKeyCache_ListIndex:
@@ -13158,8 +15069,10 @@ contAbortDefault:
 contAbortResult:
                 dc.w $0000              ; Contains result from continue/abort prompt
                                         ; 0 = continue, 1 = abort
+ IFEQ STRINGS_DATA_C
 aCjcHelp:
                 dc.b "CJC HELP",0,$00
+ ENDC
 GlobalRetn:
                 rts
 saveFileTitle:
@@ -13193,6 +15106,7 @@ transferCompleted:
                 dc.w $0000              ; Flag set to 1 when a player transfer is completed.
 
 ; unsigned __int8 (*[8])[9]
+ IFEQ COMPETITION_DATA_C
 transferReplacementPriorityTable:
                 ; unsigned __int8 (*[8])[9]
                 dc.l transferReplacementPriority_role0 ; element[0]
@@ -13203,30 +15117,47 @@ transferReplacementPriorityTable:
                 dc.l transferReplacementPriority_role5 ; element[5]
                 dc.l transferReplacementPriority_role6 ; element[6]
                 dc.l transferReplacementPriority_role7 ; element[7]
+ ENDC
 ; unsigned __int8[9]
+ IFEQ COMPETITION_DATA_C
 transferReplacementPriority_role0:
                 dc.b $00,$03,$06,$07,$01,$02,$04,$05,$FF
+ ENDC
 ; unsigned __int8[9]
+ IFEQ COMPETITION_DATA_C
 transferReplacementPriority_role1:
                 dc.b $01,$03,$06,$07,$04,$02,$05,$00,$FF
+ ENDC
 ; unsigned __int8[9]
+ IFEQ COMPETITION_DATA_C
 transferReplacementPriority_role2:
                 dc.b $02,$03,$06,$07,$05,$01,$04,$00,$FF
+ ENDC
 ; unsigned __int8[9]
+ IFEQ COMPETITION_DATA_C
 transferReplacementPriority_role3:
                 dc.b $03,$06,$07,$01,$02,$04,$05,$00,$FF
+ ENDC
 ; unsigned __int8[9]
+ IFEQ COMPETITION_DATA_C
 transferReplacementPriority_role4:
                 dc.b $04,$06,$03,$07,$01,$05,$02,$00,$FF
+ ENDC
 ; unsigned __int8[9]
+ IFEQ COMPETITION_DATA_C
 transferReplacementPriority_role5:
                 dc.b $05,$06,$03,$07,$02,$04,$01,$00,$FF
+ ENDC
 ; unsigned __int8[9]
+ IFEQ COMPETITION_DATA_C
 transferReplacementPriority_role6:
                 dc.b $06,$03,$07,$04,$05,$01,$02,$00,$FF
+ ENDC
 ; unsigned __int8[9]
+ IFEQ COMPETITION_DATA_C
 transferReplacementPriority_role7:
                 dc.b $07,$06,$03,$04,$05,$01,$02,$00,$FF
+ ENDC
 
 ; ===== SetBenchPlayersNumbers =====
 ; Ported to C: _SetBenchPlayersNumbers in src/teams.c (Chunk 95)
@@ -13439,8 +15370,10 @@ viewSquadArg2:
                 dc.w $0000
 viewSquadArg3:
                 dc.w $0000
+ IFEQ GENERAL_DATA_C
 pad_1448F2:
                 dc.b 0,0
+ ENDC
 viewSquadSelectedPlayer:
                 dc.w $0000
 viewSquadSelectedTeam:
@@ -13486,17 +15419,25 @@ positionGroupTable:
                 dc.l positionGroupMidfielder
                 dc.l positionGroupAttacker
 ; unsigned __int8[2]
+ IFEQ PLAYER_DATA_C
 positionGroupGoalkeeper:
                 dc.b $00,$FF            ; Position sub-indices for goalkeeper filter: {0, 0xFF}.
+ ENDC
 ; unsigned __int8[4]
+ IFEQ PLAYER_DATA_C
 positionGroupDefender:
                 dc.b $01,$02,$03,$FF    ; Position sub-indices for defender filter: {1, 2, 3, 0xFF}.
+ ENDC
 ; unsigned __int8[4]
+ IFEQ PLAYER_DATA_C
 positionGroupMidfielder:
                 dc.b $04,$05,$06,$FF    ; Position sub-indices for midfielder filter: {4, 5, 6, 0xFF}.
+ ENDC
 ; unsigned __int8[2]
+ IFEQ PLAYER_DATA_C
 positionGroupAttacker:
                 dc.b $07,$FF            ; Position sub-indices for attacker filter: {7, 0xFF}.
+ ENDC
 
 ; __int16[3]
 filterMenuRedrawList:
@@ -13517,14 +15458,18 @@ playerMarketVisibleItemCount:
                 dc.w $0000
 playerMarketTotalMatchCount:
                 dc.w $0000
+ IFEQ GENERAL_DATA_C
 pad_145360:
                 dc.b 0,-1
+ ENDC
 playerMarketVisibleItems:
                 dc.w $0000
+ IFEQ GENERAL_DATA_C
 pad_145364:
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
                 dc.b 0,0,0,0,0,0
+ ENDC
 
 ; ===== BuyOtherDomesticPlayer =====
 ; Bridge to C: _BuyOtherDomesticPlayer
@@ -13658,78 +15603,102 @@ careerNationalTeamAddPlayerType:
 ;      
 ; out:
 ;      D0 - player number that started
+ IFEQ PLAYER_DATA_C
 sidePitchPositionsDefault:
                 dc.w $0042,$0006,$0000,$0003,$0023,$8000,$003F,$0019
                 dc.w $4000,$0045,$0019,$8000,$0081,$0023,$4000,$0003
                 dc.w $004B,$8000,$0042,$0037,$0000,$0042,$0041,$0000
                 dc.w $0081,$004B,$4000,$003F,$0064,$4000,$0045,$0064
                 dc.w $8000
+ ENDC
+ IFEQ PLAYER_DATA_C
 sidePitchPositions_5_4_1:
                 dc.w $0042,$0006,$0000,$0003,$0028,$8000,$0042,$0014
                 dc.w $0000,$0045,$001E,$8000,$0081,$0028,$4000,$003F
                 dc.w $0041,$4000,$003F,$001E,$4000,$0042,$0037,$0000
                 dc.w $0045,$0041,$8000,$0042,$004B,$0000,$0042,$0064
                 dc.w $0000
+ ENDC
+ IFEQ PLAYER_DATA_C
 sidePitchPositions_4_5_1:
                 dc.w $0042,$0006,$0000,$0003,$0023,$8000,$003F,$0019
                 dc.w $4000,$0045,$0019,$8000,$0081,$0023,$4000,$0003
                 dc.w $004B,$8000,$0042,$0037,$0000,$0045,$0041,$8000
                 dc.w $0081,$004B,$4000,$003F,$0041,$4000,$0042,$0064
                 dc.w $0000
+ ENDC
+ IFEQ PLAYER_DATA_C
 sidePitchPositions_5_3_2:
                 dc.w $0042,$0006,$0000,$0003,$0028,$8000,$0042,$0014
                 dc.w $0000,$0045,$001E,$8000,$0081,$0028,$4000,$0003
                 dc.w $003C,$8000,$003F,$001E,$4000,$0042,$0046,$0000
                 dc.w $0081,$003C,$4000,$003F,$0064,$4000,$0045,$0064
                 dc.w $8000
+ ENDC
+ IFEQ PLAYER_DATA_C
 sidePitchPositions_3_5_2:
                 dc.w $0042,$0006,$0000,$003F,$0023,$4000,$0042,$0019
                 dc.w $0000,$0045,$0037,$8000,$0045,$0023,$8000,$0003
                 dc.w $0041,$8000,$003F,$0037,$4000,$0042,$004B,$0000
                 dc.w $0081,$0041,$4000,$003F,$0064,$4000,$0045,$0064
                 dc.w $8000
+ ENDC
+ IFEQ PLAYER_DATA_C
 sidePitchPositions_4_3_3:
                 dc.w $0042,$0006,$0000,$0003,$0023,$8000,$003F,$0019
                 dc.w $4000,$0045,$0019,$8000,$0081,$0023,$4000,$0003
                 dc.w $0046,$8000,$0042,$003C,$0000,$0045,$005F,$8000
                 dc.w $0081,$0046,$4000,$003F,$005F,$4000,$0042,$0069
                 dc.w $0000
+ ENDC
+ IFEQ PLAYER_DATA_C
 sidePitchPositions_4_2_4:
                 dc.w $0042,$0006,$0000,$0003,$0023,$8000,$003F,$0019
                 dc.w $4000,$0045,$0019,$8000,$0081,$0023,$4000,$0003
                 dc.w $005A,$8000,$003F,$003C,$4000,$0045,$003C,$8000
                 dc.w $0081,$005A,$4000,$0042,$0064,$0000,$0042,$006E
                 dc.w $0000
+ ENDC
+ IFEQ PLAYER_DATA_C
 sidePitchPositions_3_4_3:
                 dc.w $0042,$0006,$0000,$003F,$0023,$4000,$0042,$0019
                 dc.w $0000,$0042,$0037,$0000,$0045,$0023,$8000,$0003
                 dc.w $004B,$8000,$0042,$0041,$0000,$0045,$005F,$8000
                 dc.w $0081,$004B,$4000,$003F,$005F,$4000,$0042,$0069
                 dc.w $0000
+ ENDC
+ IFEQ PLAYER_DATA_C
 sidePitchPositionsSweep:
                 dc.w $0042,$0006,$0000,$0003,$0028,$8000,$0042,$0014
                 dc.w $0000,$0042,$001E,$0000,$0081,$0028,$4000,$0003
                 dc.w $004B,$8000,$0042,$0037,$0000,$0042,$0041,$0000
                 dc.w $0081,$004B,$4000,$003F,$0064,$4000,$0045,$0064
                 dc.w $8000
+ ENDC
+ IFEQ PLAYER_DATA_C
 sidePitchPositions_5_2_3:
                 dc.w $0042,$0006,$0000,$0003,$0028,$8000,$0042,$0014
                 dc.w $0000,$0045,$001E,$8000,$0081,$0028,$4000,$0003
                 dc.w $005F,$8000,$003F,$001E,$4000,$0045,$003C,$8000
                 dc.w $0081,$005F,$4000,$003F,$003C,$4000,$0042,$0069
                 dc.w $0000
+ ENDC
+ IFEQ PLAYER_DATA_C
 sidePitchPositionsAttack:
                 dc.w $0042,$0006,$0000,$003F,$0023,$4000,$0042,$0019
                 dc.w $0000,$003F,$003C,$4000,$0045,$0023,$8000,$0003
                 dc.w $0064,$8000,$0045,$003C,$8000,$0042,$005A,$0000
                 dc.w $0081,$0064,$4000,$003F,$006E,$4000,$0045,$006E
                 dc.w $8000
+ ENDC
+ IFEQ PLAYER_DATA_C
 sidePitchPositionsDefend:
                 dc.w $0042,$0006,$0000,$003F,$001E,$4000,$003F,$0014
                 dc.w $4000,$0045,$0014,$8000,$0045,$001E,$8000,$0003
                 dc.w $0028,$8000,$003F,$003C,$4000,$0045,$003C,$8000
                 dc.w $0081,$0028,$4000,$0042,$0046,$0000,$0042,$0064
                 dc.w $0000
+ ENDC
 sidePitchSurnamePositionsTable:
                 dc.l sidePitchPositionsDefault ; This table contains player surname positions and string flags for side pitch in play menu,
                                         ; it's indexed by the tactics; format is, for each player (11 total):
@@ -13887,8 +15856,10 @@ nationalTeams:
 
 ; ===== OldJobOffersCommon ===== (ported to C → _OldJobOffersCommon)
 ; C bridge: a5 = MenuEntry*, pass on stack
+ IFEQ GENERAL_DATA_C
 pad_14A1D4:
                 dc.b 0,0
+ ENDC
 selectedOldJobOfferOrdinal:
                 dc.w $0000
 jobOffersFromRetired:
@@ -14144,8 +16115,10 @@ tacticsPositionDefensiveness:
                 dc.w 0,0,0
 stadiumMenuLittlePlayer:
                 dc.w $0000
+ IFEQ RENDER_DATA_C
 littlePlayerSpriteGeneric:
                 dc.w $00D6
+ ENDC
 littlePlayersColorTable:
                 dc.b $00,$00,$00,$01,$00,$02,$00,$03,$00,$04,$00,$05,$00,$06,$00,$07 ; For sprites above
                 dc.b $00,$08,$00,$09,$00,$0A,$00,$0B,$00,$0C,$00,$0D,$00,$0E,$00,$0F
@@ -14202,230 +16175,380 @@ teamsCountryNumbers:
                 dc.w 1730,1730,1730,1730,1730,1730,1730,1730
                 dc.w 1730,1730,1730,1730,1730,1730,1730,1730
 ; const char[18]
+ IFEQ STRINGS_DATA_C
 aAlbania:
                 dc.b 0,'ALBANIA',0,'ALBANIAN',0
+ ENDC
 ; const char[18]
+ IFEQ STRINGS_DATA_C
 aAustria:
                 dc.b 0,'AUSTRIA',0,'AUSTRIAN',0
+ ENDC
 ; const char[17]
+ IFEQ STRINGS_DATA_C
 aBelgium:
                 dc.b 0,'BELGIUM',0,'BELGIAN',0
+ ENDC
 ; const char[20]
+ IFEQ STRINGS_DATA_C
 aBulgaria:
                 dc.b 0,'BULGARIA',0,'BULGARIAN',0
+ ENDC
 ; const char[18]
+ IFEQ STRINGS_DATA_C
 aCroatia:
                 dc.b 0,'CROATIA',0,'CROATIAN',0
+ ENDC
 ; const char[16]
+ IFEQ STRINGS_DATA_C
 aCyprus:
                 dc.b 0,'CYPRUS',0,'CYPRIOT',0
+ ENDC
 ; const char[22]
+ IFEQ STRINGS_DATA_C
 aCzechRepublic:
                 dc.b 0,'CZECH REPUBLIC',0,'CZECH',0
+ ENDC
 ; const char[16]
+ IFEQ STRINGS_DATA_C
 aDenmark:
                 dc.b 0,'DENMARK',0,'DANISH',0
+ ENDC
 ; const char[17]
+ IFEQ STRINGS_DATA_C
 aEngland:
                 dc.b 0,'ENGLAND',0,'ENGLISH',0
+ ENDC
 ; const char[17]
+ IFEQ STRINGS_DATA_C
 aEngland_0:
                 dc.b 0,'ENGLAND',0,'ENGLISH',0
+ ENDC
 ; const char[18]
+ IFEQ STRINGS_DATA_C
 aEstonia:
                 dc.b 0,'ESTONIA',0,'ESTONIAN',0
+ ENDC
 ; const char[27]
+ IFEQ STRINGS_DATA_C
 aFaroeIslands:
                 dc.b 0,'FAROE ISLANDS',0,'FAROE ISLES',0
+ ENDC
 ; const char[17]
+ IFEQ STRINGS_DATA_C
 aFinland:
                 dc.b 0,'FINLAND',0,'FINNISH',0
+ ENDC
 ; const char[15]
+ IFEQ STRINGS_DATA_C
 aFrance:
                 dc.b 0,'FRANCE',0,'FRENCH',0
+ ENDC
 ; const char[16]
+ IFEQ STRINGS_DATA_C
 aGermany:
                 dc.b 0,'GERMANY',0,'GERMAN',0
+ ENDC
 ; const char[14]
+ IFEQ STRINGS_DATA_C
 aGreece:
                 dc.b 0,'GREECE',0,'GREEK',0
+ ENDC
 ; const char[19]
+ IFEQ STRINGS_DATA_C
 aHungary:
                 dc.b 0,'HUNGARY',0,'HUNGARIAN',0
+ ENDC
 ; const char[19]
+ IFEQ STRINGS_DATA_C
 aIceland:
                 dc.b 0,'ICELAND',0,'ICELANDIC',0
+ ENDC
 ; const char[24]
+ IFEQ STRINGS_DATA_C
 aRepublicIreland:
                 dc.b 0,'REPUBLIC IRELAND',0,'IRISH',0
+ ENDC
 ; const char[16]
+ IFEQ STRINGS_DATA_C
 aIsrael:
                 dc.b 0,'ISRAEL',0,'ISRAELI',0
+ ENDC
 ; const char[15]
+ IFEQ STRINGS_DATA_C
 aItaly:
                 dc.b 0,'ITALY',0,'ITALIAN',0
+ ENDC
 ; const char[16]
+ IFEQ STRINGS_DATA_C
 aLatvia:
                 dc.b 0,'LATVIA',0,'LATVIAN',0
+ ENDC
 ; const char[22]
+ IFEQ STRINGS_DATA_C
 aLithuania:
                 dc.b 0,'LITHUANIA',0,'LITHUANIAN',0
+ ENDC
 ; const char[23]
+ IFEQ STRINGS_DATA_C
 aLuxembourg:
                 dc.b 0,'LUXEMBOURG',0,'LUXEMBOURG',0
+ ENDC
 ; const char[15]
+ IFEQ STRINGS_DATA_C
 aMalta:
                 dc.b 0,'MALTA',0,'MALTESE',0
+ ENDC
 ; const char[15]
+ IFEQ STRINGS_DATA_C
 aHolland:
                 dc.b 0,'HOLLAND',0,'DUTCH',0
+ ENDC
 ; const char[33]
+ IFEQ STRINGS_DATA_C
 aNorthernIreland:
                 dc.b 0,'NORTHERN IRELAND',0,'NORTHERN IRISH',0
+ ENDC
 ; const char[18]
+ IFEQ STRINGS_DATA_C
 aNorway:
                 dc.b 0,'NORWAY',0,'NORWEGIAN',0
+ ENDC
 ; const char[15]
+ IFEQ STRINGS_DATA_C
 aPoland:
                 dc.b 0,'POLAND',0,'POLISH',0
+ ENDC
 ; const char[20]
+ IFEQ STRINGS_DATA_C
 aPortugal:
                 dc.b 0,'PORTUGAL',0,'PORTUGESE',0
+ ENDC
 ; const char[18]
+ IFEQ STRINGS_DATA_C
 aRomania:
                 dc.b 0,'ROMANIA',0,'ROMANIAN',0
+ ENDC
 ; const char[16]
+ IFEQ STRINGS_DATA_C
 aRussia:
                 dc.b 0,'RUSSIA',0,'RUSSIAN',0
+ ENDC
 ; const char[23]
+ IFEQ STRINGS_DATA_C
 aSanMarino:
                 dc.b 0,'SAN MARINO',0,'SAN MARINO',0
+ ENDC
 ; const char[19]
+ IFEQ STRINGS_DATA_C
 aScotland:
                 dc.b 0,'SCOTLAND',0,'SCOTTISH',0
+ ENDC
 ; const char[20]
+ IFEQ STRINGS_DATA_C
 aSlovenia:
                 dc.b 0,'SLOVENIA',0,'SLOVENIAN',0
+ ENDC
 ; const char[15]
+ IFEQ STRINGS_DATA_C
 aSpain:
                 dc.b 0,'SPAIN',0,'SPANISH',0
+ ENDC
 ; const char[16]
+ IFEQ STRINGS_DATA_C
 aSweden:
                 dc.b 0,'SWEDEN',0,'SWEDISH',0
+ ENDC
 ; const char[19]
+ IFEQ STRINGS_DATA_C
 aSwitzerland:
                 dc.b 0,'SWITZERLAND',0,'SWISS',0
+ ENDC
 ; const char[16]
+ IFEQ STRINGS_DATA_C
 aTurkey:
                 dc.b 0,'TURKEY',0,'TURKISH',0
+ ENDC
 ; const char[19]
+ IFEQ STRINGS_DATA_C
 aUkraine:
                 dc.b 0,'UKRAINE',0,'UKRAINIAN',0
+ ENDC
 ; const char[13]
+ IFEQ STRINGS_DATA_C
 aWales:
                 dc.b 0,'WALES',0,'WELSH',0
+ ENDC
 ; const char[24]
+ IFEQ STRINGS_DATA_C
 aYugoslavia:
                 dc.b 0,'YUGOSLAVIA',0,'YUGOSLAVIAN',0
+ ENDC
 ; const char[21]
+ IFEQ STRINGS_DATA_C
 aBelarus:
                 dc.b 0,'BELARUS',0,'BELARUSSIAN',0
+ ENDC
 ; const char[20]
+ IFEQ STRINGS_DATA_C
 aSlovakia:
                 dc.b 0,'SLOVAKIA',0,'SLOVAKIAN',0
+ ENDC
 ; const char[18]
+ IFEQ STRINGS_DATA_C
 aAlgeria:
                 dc.b 5,'ALGERIA',0,'ALGERIAN',0
+ ENDC
 ; const char[28]
+ IFEQ STRINGS_DATA_C
 aSouthAfrica:
                 dc.b 5,'SOUTH AFRICA',0,'SOUTH AFRICAN',0
+ ENDC
 ; const char[13]
+ IFEQ STRINGS_DATA_C
 aGhana:
                 dc.b 5,'GHANA',0,'GHANA',0
+ ENDC
 ; const char[23]
+ IFEQ STRINGS_DATA_C
 aArgentina:
                 dc.b 2,'ARGENTINA',0,'ARGENTINIAN',0
+ ENDC
 ; const char[18]
+ IFEQ STRINGS_DATA_C
 aBolivia:
                 dc.b 2,'BOLIVIA',0,'BOLIVIAN',0
+ ENDC
 ; const char[18]
+ IFEQ STRINGS_DATA_C
 aBrazil:
                 dc.b 2,'BRAZIL',0,'BRAZILIAN',0
+ ENDC
 ; const char[15]
+ IFEQ STRINGS_DATA_C
 aChile:
                 dc.b 2,'CHILE',0,'CHILEAN',0
+ ENDC
 ; const char[20]
+ IFEQ STRINGS_DATA_C
 aColombia:
                 dc.b 2,'COLOMBIA',0,'COLOMBIAN',0
+ ENDC
 ; const char[17]
+ IFEQ STRINGS_DATA_C
 aEcuador:
                 dc.b 2,'ECUADOR',0,'ECUADOR',0
+ ENDC
 ; const char[21]
+ IFEQ STRINGS_DATA_C
 aParaguay:
                 dc.b 2,'PARAGUAY',0,'PARAGUAYAN',0
+ ENDC
 ; const char[15]
+ IFEQ STRINGS_DATA_C
 aPeru:
                 dc.b 2,'PERU',0,'PERUVIAN',0
+ ENDC
 ; const char[17]
+ IFEQ STRINGS_DATA_C
 aSurinam:
                 dc.b 2,'SURINAM',0,'SURINAM',0
+ ENDC
 ; const char[19]
+ IFEQ STRINGS_DATA_C
 aUruguay:
                 dc.b 2,'URUGUAY',0,'URUGUAYAN',0
+ ENDC
 ; const char[22]
+ IFEQ STRINGS_DATA_C
 aVenezuela:
                 dc.b 2,'VENEZUELA',0,'VENEZUELAN',0
+ ENDC
 ; const char[25]
+ IFEQ STRINGS_DATA_C
 aElSalvadore:
                 dc.b 1,'EL SALVADOR',0,'EL SALVADOR',0
+ ENDC
 ; const char[16]
+ IFEQ STRINGS_DATA_C
 aMexico:
                 dc.b 1,'MEXICO',0,'MEXICAN',0
+ ENDC
 ; const char[17]
+ IFEQ STRINGS_DATA_C
 aUSA:
                 dc.b 1,'U.S.A.',0,'AMERICAN',0
+ ENDC
 ; const char[16]
+ IFEQ STRINGS_DATA_C
 aJapan:
                 dc.b 3,'JAPAN',0,'JAPANESE',0
+ ENDC
 ; const char[18]
+ IFEQ STRINGS_DATA_C
 aTaiwan:
                 dc.b 3,'TAIWAN',0,'TAIWANESE',0
+ ENDC
 ; const char[14]
+ IFEQ STRINGS_DATA_C
 aIndia:
                 dc.b 3,'INDIA',0,'INDIAN',0
+ ENDC
 ; const char[22]
+ IFEQ STRINGS_DATA_C
 aAustralia:
                 dc.b 4,'AUSTRALIA',0,'AUSTRALIAN',0
+ ENDC
 ; const char[25]
+ IFEQ STRINGS_DATA_C
 aNewZealand:
                 dc.b 4,'NEW ZEALAND',0,'NEW ZEALAND',0
+ ENDC
 ; const char[10]
+ IFEQ STRINGS_DATA_C
 aCustom:
                 dc.b 0,'CUSTOM',0,'-',0
+ ENDC
 ; const char[17]
+ IFEQ STRINGS_DATA_C
 aEurope:
                 dc.b 0,'EUROPE',0,'EUROPEAN',0
+ ENDC
 ; const char[16]
+ IFEQ STRINGS_DATA_C
 aAfrica:
                 dc.b 5,'AFRICA',0,'AFRICAN',0
+ ENDC
 ; const char[30]
+ IFEQ STRINGS_DATA_C
 aSouthAmerica:
                 dc.b 2,'SOUTH AMERICA',0,'SOUTH AMERICAN',0
+ ENDC
 ; const char[30]
+ IFEQ STRINGS_DATA_C
 aNorthAmerica:
                 dc.b 1,'NORTH AMERICA',0,'NORTH AMERICAN',0
+ ENDC
 ; const char[12]
+ IFEQ STRINGS_DATA_C
 aAsia:
                 dc.b 3,'ASIA',0,'ASIAN',0
+ ENDC
 ; const char[18]
+ IFEQ STRINGS_DATA_C
 aOceania:
                 dc.b 4,'OCEANIA',0,'OCEANIAN',0
+ ENDC
 ; const char[18]
+ IFEQ STRINGS_DATA_C
 aEditedCustoms:
                 dc.b 0,'EDITED CUSTOMS',0,'-',0
+ ENDC
 ; const char[13]
+ IFEQ STRINGS_DATA_C
 aWorld_1:
                 dc.b $FF,'WORLD',0,'WORLD',0
+ ENDC
 ; const char *[262]
 countriesTable:
                 ; const char *[262]
@@ -14691,18 +16814,30 @@ countriesTable:
                 dc.l aAsian_0           ; element[259]
                 dc.l aOceanian_0        ; element[260]
                 dc.l aAfrican_0         ; element[261]
+ IFEQ STRINGS_DATA_C
 aEuropean_0:
                 dc.b "EUROPEAN",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNorthAmerican_0:
                 dc.b 'NORTH AMERICAN',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSouthAmerican_0:
                 dc.b 'SOUTH AMERICAN',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAsian_0:
                 dc.b "ASIAN",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aOceanian_0:
                 dc.b "OCEANIAN",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAfrican_0:
                 dc.b "AFRICAN",0
+ ENDC
 shortCountryNames:
                 dc.b 'ALBAUTBELBULCROCYPTCHDENENGESTFARFINFRAGERGREHUNISLISRITALATLIT'
                 dc.b 'LUXMLTHOLNIRNORPOLPORROMRUSSMRSCOSLOSWETURUKRWALYUGBLSSVKESPARM'
@@ -14712,121 +16847,236 @@ shortCountryNames:
                 dc.b 'EGYTANNIGETHGABSIEBENCONGUISRLMARGAMMLWJAPTAIINDBANBRUIRAJORSRI'
                 dc.b 'SYRKORIRNVIEMLYSAUYEMKUWLAONKROMAPAKPHICHISGPMAUMYAPAPTADUZBQAT'
                 dc.b 'UAEAUSNZLFIJSOLCUS',0,'3DPv',$94,$99
+ IFEQ STRINGS_DATA_C
 aPremierLeague:
                 dc.b 'PREMIER LEAGUE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPremier:
                 dc.b "PREMIER",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDivisionOne:
                 dc.b 'DIVISION ONE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDivisionTwo:
                 dc.b 'DIVISION TWO',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDivisionThree:
                 dc.b 'DIVISION THREE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCup_4:
                 dc.b "CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCup_5:
                 dc.b "CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aLeagueCup:
                 dc.b "LEAGUE CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aLeagueCup_0:
                 dc.b "LEAGUE CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDiv1Playoffs:
                 dc.b 'DIV 1 PLAYOFFS',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDiv2Playoffs:
                 dc.b 'DIV 2 PLAYOFFS',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDiv3Playoffs:
                 dc.b 'DIV 3 PLAYOFFS',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCup_6:
                 dc.b "CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCup_7:
                 dc.b "CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aLeagueCup_1:
                 dc.b "LEAGUE CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aLeagueCup_2:
                 dc.b "LEAGUE CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSerieA:
                 dc.b "SERIE A",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSerieB:
                 dc.b "SERIE B",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCoppaItalia:
                 dc.b 'COPPA ITALIA',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCoppa:
                 dc.b "COPPA",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPremiereDivisi:
                 dc.b 'PREMIERE DIVISION',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPremiere:
                 dc.b "PREMIERE",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDeuxiemeDivisi:
                 dc.b 'DEUXIEME DIVISION',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDeuxieme:
                 dc.b "DEUXIEME",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCoupeDeFrance:
                 dc.b 'COUPE DE FRANCE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCoupe:
                 dc.b "COUPE",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 a1Liga:
                 dc.b "1. LIGA",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 a2Liga:
                 dc.b "2. LIGA",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDFBPokal:
                 dc.b 'D.F.B. POKAL',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPokal:
                 dc.b "POKAL",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPrimeraDivisio:
                 dc.b 'PRIMERA DIVISION',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPrimera:
                 dc.b "PRIMERA",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSegundaDivisio:
                 dc.b 'SEGUNDA DIVISION',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSegunda:
                 dc.b "SEGUNDA",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCopa:
                 dc.b "COPA",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCopa_0:
                 dc.b "COPA",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aJLeague:
                 dc.b "J. LEAGUE",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aJLeague_0:
                 dc.b "J. LEAGUE",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aLeague_2:
                 dc.b "LEAGUE",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aLeague_3:
                 dc.b "LEAGUE",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCup_8:
                 dc.b "CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCup_9:
                 dc.b "CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aEmperorSCup:
                 dc.b 'EMPEROR''S CUP',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aEmpCup:
                 dc.b "EMP. CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNorthernRegion:
                 dc.b 'NORTHERN REGION',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNorthern:
                 dc.b "NORTHERN",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCentralRegion:
                 dc.b 'CENTRAL REGION',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCentral:
                 dc.b "CENTRAL",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSouthernRegion:
                 dc.b 'SOUTHERN REGION',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSouthern:
                 dc.b "SOUTHERN",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 a1stDivision:
                 dc.b '1ST DIVISION',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSouthDivision:
                 dc.b 'SOUTH DIVISION',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSouthDivision_0:
                 dc.b 'SOUTH DIVISION',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNswDivision:
                 dc.b 'NSW DIVISION',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNsw:
                 dc.b "NSW",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aQueenslandDivi:
                 dc.b 'QUEENSLAND DIVISION',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aQueensland:
                 dc.b "QUEENSLAND",0
+ ENDC
 ; Competition *[39]
+ IFEQ COMPETITION_DATA_C
 nationalTeamCompetitionsAndQualifications:
                 ; Competition *[39]
                 dc.l worldCup           ; element[0]
@@ -14868,7 +17118,9 @@ nationalTeamCompetitionsAndQualifications:
                 dc.l asiaWorldCupQualificationCopy ; element[36]
                 dc.l oceaniaWorldCupQualificationCopy ; element[37]
                 dc.l $FFFFFFFF          ; element[38]
+ ENDC
 ; CompetitionCup *[7]
+ IFEQ COMPETITION_DATA_C
 continentalCups:
                 ; CompetitionCup *[7]
                 dc.l europeanChampionships ; element[0]
@@ -14878,6 +17130,7 @@ continentalCups:
                 dc.l asianCup           ; element[4]
                 dc.l oceaniaCup         ; element[5]
                 dc.l $FFFFFFFF          ; element[6]
+ ENDC
 ; CompetitionCup *[46]
 europeanCupsandNationalTeamCompetitionsAndQualifications:
                 ; CompetitionCup *[46]
@@ -14970,6 +17223,7 @@ nationalTeamCompetitionsAndQualifications1:
                 dc.l tourCopy           ; element[37]
                 dc.l $FFFFFFFF          ; element[38]
 ; CompetitionCareer[34]
+ IFEQ COMPETITION_DATA_C
 careerContests:
                 ; CompetitionCareer[34]
                 ; element[0]
@@ -15143,6 +17397,7 @@ careerContests:
                 dc.l oceaniaWorldCupQualificationCopy ; competitionCopy
                 dc.w $0024              ; length
                 dc.l -1                 ; raw
+ ENDC
 aDataEurocupTmd:
                 dc.b 'data/eurocup.tmd',0
 aDataEurocwcTmd:
@@ -15150,6 +17405,7 @@ aDataEurocwcTmd:
 aDataUefacupTmd:
                 dc.b 'data/uefacup.tmd',0,0
 ; CompetitionCup2_4_2_32
+ IFEQ COMPETITION_DATA_C
 euroCup:
                 ; CompetitionCup2_4_2_32
                 ; compCup (struct)
@@ -15233,7 +17489,9 @@ euroCup:
                 dc.b $00                ; unk1[29]
                 dc.b $1D                ; unk1[30]
                 dc.b $0C                ; unk1[31]
+ ENDC
 ; CompetitionCup_6_2_64
+ IFEQ COMPETITION_DATA_C
 cupWinnersCup:
                 ; CompetitionCup_6_2_64
                 ; comp (struct)
@@ -15324,7 +17582,9 @@ cupWinnersCup:
                 dc.b $06                ; unk1[61]
                 dc.b $0D                ; unk1[62]
                 dc.b $1E                ; unk1[63]
+ ENDC
 ; CompetitionCup_6_2_64
+ IFEQ COMPETITION_DATA_C
 uefaCup:
                 ; CompetitionCup_6_2_64
                 ; comp (struct)
@@ -15415,7 +17675,9 @@ uefaCup:
                 dc.b $17                ; unk1[61]
                 dc.b $0E                ; unk1[62]
                 dc.b $19                ; unk1[63]
+ ENDC
 ; CompetitionCup2_6_2_64
+ IFEQ COMPETITION_DATA_C
 worldCup2:
                 ; CompetitionCup2_6_2_64
                 ; compCup (struct)
@@ -15533,7 +17795,9 @@ worldCup2:
                 dc.b $00                ; unk1[61]
                 dc.b $00                ; unk1[62]
                 dc.b $00                ; unk1[63]
+ ENDC
 ; CompetitionCup2_6_2_48
+ IFEQ COMPETITION_DATA_C
 worldCup:
                 ; CompetitionCup2_6_2_48
                 ; compCup (struct)
@@ -15635,7 +17899,9 @@ worldCup:
                 dc.b $13                ; unk1[45]
                 dc.b $54                ; unk1[46]
                 dc.b $16                ; unk1[47]
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroup1:
                 ; CompetitionCup_6_2_12
                 ; comp (struct)
@@ -15674,7 +17940,9 @@ worldCupQualifyingGroup1:
                 dc.b $00                ; unk1[9]
                 dc.b $00                ; unk1[10]
                 dc.b $00                ; unk1[11]
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroup2:
                 ; CompetitionCup_6_2_12
                 ; comp (struct)
@@ -15713,7 +17981,9 @@ worldCupQualifyingGroup2:
                 dc.b $00                ; unk1[9]
                 dc.b $00                ; unk1[10]
                 dc.b $00                ; unk1[11]
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroup3:
                 ; CompetitionCup_6_2_12
                 ; comp (struct)
@@ -15752,7 +18022,9 @@ worldCupQualifyingGroup3:
                 dc.b $00                ; unk1[9]
                 dc.b $00                ; unk1[10]
                 dc.b $00                ; unk1[11]
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroup4:
                 ; CompetitionCup_6_2_12
                 ; comp (struct)
@@ -15791,7 +18063,9 @@ worldCupQualifyingGroup4:
                 dc.b $00                ; unk1[9]
                 dc.b $00                ; unk1[10]
                 dc.b $00                ; unk1[11]
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroup5:
                 ; CompetitionCup_6_2_12
                 ; comp (struct)
@@ -15830,7 +18104,9 @@ worldCupQualifyingGroup5:
                 dc.b $00                ; unk1[9]
                 dc.b $00                ; unk1[10]
                 dc.b $00                ; unk1[11]
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroup6:
                 ; CompetitionCup_6_2_12
                 ; comp (struct)
@@ -15869,7 +18145,9 @@ worldCupQualifyingGroup6:
                 dc.b $00                ; unk1[9]
                 dc.b $00                ; unk1[10]
                 dc.b $00                ; unk1[11]
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroup7:
                 ; CompetitionCup_6_2_12
                 ; comp (struct)
@@ -15908,7 +18186,9 @@ worldCupQualifyingGroup7:
                 dc.b $00                ; unk1[9]
                 dc.b $00                ; unk1[10]
                 dc.b $00                ; unk1[11]
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroup8:
                 ; CompetitionCup_6_2_12
                 ; comp (struct)
@@ -15947,7 +18227,9 @@ worldCupQualifyingGroup8:
                 dc.b $00                ; unk1[9]
                 dc.b $00                ; unk1[10]
                 dc.b $00                ; unk1[11]
+ ENDC
 ; CompetitionCup2_6_2_24
+ IFEQ COMPETITION_DATA_C
 northAmericaWorldCupQualification:
                 ; CompetitionCup2_6_2_24
                 ; compCup (struct)
@@ -16025,7 +18307,9 @@ northAmericaWorldCupQualification:
                 dc.b $00                ; unk1[21]
                 dc.b $00                ; unk1[22]
                 dc.b $00                ; unk1[23]
+ ENDC
 ; CompetitionCup2_6_2_16
+ IFEQ COMPETITION_DATA_C
 southAmericaWorldCupQualification:
                 ; CompetitionCup2_6_2_16
                 ; compCup (struct)
@@ -16095,7 +18379,9 @@ southAmericaWorldCupQualification:
                 dc.b $00                ; unk1[13]
                 dc.b $00                ; unk1[14]
                 dc.b $00                ; unk1[15]
+ ENDC
 ; CompetitionCup2_6_2_64
+ IFEQ COMPETITION_DATA_C
 africaWorldCupQualification:
                 ; CompetitionCup2_6_2_64
                 ; compCup (struct)
@@ -16213,7 +18499,9 @@ africaWorldCupQualification:
                 dc.b $00                ; unk1[61]
                 dc.b $00                ; unk1[62]
                 dc.b $00                ; unk1[63]
+ ENDC
 ; CompetitionCup2_6_2_60
+ IFEQ COMPETITION_DATA_C
 asiaWorldCupQualification:
                 ; CompetitionCup2_6_2_60
                 ; compCup (struct)
@@ -16327,7 +18615,9 @@ asiaWorldCupQualification:
                 dc.b $00                ; unk1[57]
                 dc.b $00                ; unk1[58]
                 dc.b $00                ; unk1[59]
+ ENDC
 ; CompetitionCup_6_2_8
+ IFEQ COMPETITION_DATA_C
 oceaniaWorldCupQualification:
                 ; CompetitionCup_6_2_8
                 ; comp (struct)
@@ -16362,7 +18652,9 @@ oceaniaWorldCupQualification:
                 dc.b $00                ; unk1[5]
                 dc.b $00                ; unk1[6]
                 dc.b $00                ; unk1[7]
+ ENDC
 ; CompetitionCup_6_2_8
+ IFEQ COMPETITION_DATA_C
 invitationTournament:
                 ; CompetitionCup_6_2_8
                 ; comp (struct)
@@ -16397,7 +18689,9 @@ invitationTournament:
                 dc.b $00                ; unk1[5]
                 dc.b $00                ; unk1[6]
                 dc.b $00                ; unk1[7]
+ ENDC
 ; CompetitionCup_6_2_8
+ IFEQ COMPETITION_DATA_C
 tour:
                 ; CompetitionCup_6_2_8
                 ; comp (struct)
@@ -16432,7 +18726,9 @@ tour:
                 dc.b $00                ; unk1[5]
                 dc.b $00                ; unk1[6]
                 dc.b $00                ; unk1[7]
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 friendly:
                 ; CompetitionCup_6_2_12
                 ; comp (struct)
@@ -16471,7 +18767,9 @@ friendly:
                 dc.b $00                ; unk1[9]
                 dc.b $00                ; unk1[10]
                 dc.b $00                ; unk1[11]
+ ENDC
 ; CompetitionCup2_4_2_32
+ IFEQ COMPETITION_DATA_C
 europeanChampionships2:
                 ; CompetitionCup2_4_2_32
                 ; compCup (struct)
@@ -16555,7 +18853,9 @@ europeanChampionships2:
                 dc.b $00                ; unk1[29]
                 dc.b $00                ; unk1[30]
                 dc.b $00                ; unk1[31]
+ ENDC
 ; CompetitionCup2_4_2_32
+ IFEQ COMPETITION_DATA_C
 europeanChampionships:
                 ; CompetitionCup2_4_2_32
                 ; compCup (struct)
@@ -16639,7 +18939,9 @@ europeanChampionships:
                 dc.b $2D                ; unk1[29]
                 dc.b $50                ; unk1[30]
                 dc.b $07                ; unk1[31]
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroup1:
                 ; CompetitionCup_6_2_12
                 ; comp (struct)
@@ -16678,7 +18980,9 @@ ecQualifyingGroup1:
                 dc.b $00                ; unk1[9]
                 dc.b $00                ; unk1[10]
                 dc.b $00                ; unk1[11]
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroup2:
                 ; CompetitionCup_6_2_12
                 ; comp (struct)
@@ -16717,7 +19021,9 @@ ecQualifyingGroup2:
                 dc.b $00                ; unk1[9]
                 dc.b $00                ; unk1[10]
                 dc.b $00                ; unk1[11]
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroup3:
                 ; CompetitionCup_6_2_12
                 ; comp (struct)
@@ -16756,7 +19062,9 @@ ecQualifyingGroup3:
                 dc.b $00                ; unk1[9]
                 dc.b $00                ; unk1[10]
                 dc.b $00                ; unk1[11]
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroup4:
                 ; CompetitionCup_6_2_12
                 ; comp (struct)
@@ -16795,7 +19103,9 @@ ecQualifyingGroup4:
                 dc.b $00                ; unk1[9]
                 dc.b $00                ; unk1[10]
                 dc.b $00                ; unk1[11]
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroup5:
                 ; CompetitionCup_6_2_12
                 ; comp (struct)
@@ -16834,7 +19144,9 @@ ecQualifyingGroup5:
                 dc.b $00                ; unk1[9]
                 dc.b $00                ; unk1[10]
                 dc.b $00                ; unk1[11]
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroup6:
                 ; CompetitionCup_6_2_12
                 ; comp (struct)
@@ -16873,7 +19185,9 @@ ecQualifyingGroup6:
                 dc.b $00                ; unk1[9]
                 dc.b $00                ; unk1[10]
                 dc.b $00                ; unk1[11]
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroup7:
                 ; CompetitionCup_6_2_12
                 ; comp (struct)
@@ -16912,7 +19226,9 @@ ecQualifyingGroup7:
                 dc.b $00                ; unk1[9]
                 dc.b $00                ; unk1[10]
                 dc.b $00                ; unk1[11]
+ ENDC
 ; CompetitionCup_6_2_8
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroup8:
                 ; CompetitionCup_6_2_8
                 ; comp (struct)
@@ -16947,7 +19263,9 @@ ecQualifyingGroup8:
                 dc.b $00                ; unk1[5]
                 dc.b $00                ; unk1[6]
                 dc.b $00                ; unk1[7]
+ ENDC
 ; CompetitionCup2_4_2_24
+ IFEQ COMPETITION_DATA_C
 copaAmerica:
                 ; CompetitionCup2_4_2_24
                 ; compCup (struct)
@@ -17023,7 +19341,9 @@ copaAmerica:
                 dc.b $06                ; unk1[21]
                 dc.b $52                ; unk1[22]
                 dc.b $07                ; unk1[23]
+ ENDC
 ; CompetitionCup2_6_2
+ IFEQ COMPETITION_DATA_C
 africanNationsCup:
                 ; CompetitionCup2_6_2
                 ; compCup (struct)
@@ -17076,7 +19396,9 @@ africanNationsCup:
                 dc.b $00                ; roundSettings[5]
                 dc.l aAfricanNations    ; text[0]
                 dc.l aAfricanCup        ; text[1]
+ ENDC
 ; CompetitionCup2_4_2
+ IFEQ COMPETITION_DATA_C
 northAmericanCup:
                 ; CompetitionCup2_4_2
                 ; compCup (struct)
@@ -17128,7 +19450,9 @@ northAmericanCup:
                 dc.b $14                ; roundSettings[3]
                 dc.l aNorthAmericanC    ; text[0]
                 dc.l aNAmericanCup      ; text[1]
+ ENDC
 ; CompetitionCup2_6_2
+ IFEQ COMPETITION_DATA_C
 asianCup:
                 ; CompetitionCup2_6_2
                 ; compCup (struct)
@@ -17181,7 +19505,9 @@ asianCup:
                 dc.b $00                ; roundSettings[5]
                 dc.l aAsianCup          ; text[0]
                 dc.l aAsianCup_0        ; text[1]
+ ENDC
 ; CompetitionCup_6_2
+ IFEQ COMPETITION_DATA_C
 oceaniaCup:
                 ; CompetitionCup_6_2
                 ; comp (struct)
@@ -17208,7 +19534,9 @@ oceaniaCup:
                 dc.b $00                ; rounds[5]
                 dc.l aOceaniaCup        ; text[0]
                 dc.l aOceaniaCup_0      ; text[1]
+ ENDC
 ; CompetitionLeague_3_6
+ IFEQ COMPETITION_DATA_C
 customsLeague:
                 ; CompetitionLeague_3_6
                 ; comp (struct)
@@ -17254,7 +19582,9 @@ customsLeague:
                 dc.l aDivision2         ; text[3]
                 dc.l aDivision3         ; text[4]
                 dc.l aDivision3         ; text[5]
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 albanianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -17280,7 +19610,9 @@ albanianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 austrianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -17306,7 +19638,9 @@ austrianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 belarussiaLleague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -17332,7 +19666,9 @@ belarussiaLleague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 belgianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -17358,7 +19694,9 @@ belgianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 bulgarianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -17384,7 +19722,9 @@ bulgarianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 croatianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -17410,7 +19750,9 @@ croatianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 cypriotLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -17436,7 +19778,9 @@ cypriotLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 czechLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -17462,7 +19806,9 @@ czechLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 danishLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -17488,7 +19834,9 @@ danishLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_4_8_2_24
+ IFEQ COMPETITION_DATA_C
 englishLeagues:
                 ; CompetitionLeague_4_8_2_24
                 ; comp (struct)
@@ -17569,7 +19917,9 @@ englishLeagues:
                 dc.b $00                ; unk3[21]
                 dc.b $00                ; unk3[22]
                 dc.b $00                ; unk3[23]
+ ENDC
 ; Leagues_4_2_24
+ IFEQ COMPETITION_DATA_C
 englishLeagues1:
                 ; Leagues_4_2_24
                 ; leagues (struct)
@@ -17635,7 +19985,9 @@ englishLeagues1:
                 dc.b $00                ; unk2[21]
                 dc.b $00                ; unk2[22]
                 dc.b $00                ; unk2[23]
+ ENDC
 ; Leagues_4_2_24
+ IFEQ COMPETITION_DATA_C
 englishLeagues2:
                 ; Leagues_4_2_24
                 ; leagues (struct)
@@ -17701,7 +20053,9 @@ englishLeagues2:
                 dc.b $00                ; unk2[21]
                 dc.b $00                ; unk2[22]
                 dc.b $00                ; unk2[23]
+ ENDC
 ; Leagues_4
+ IFEQ COMPETITION_DATA_C
 englishLeagues3:
                 ; Leagues_4
                 dc.l englishLeagues     ; text1
@@ -17740,7 +20094,9 @@ englishLeagues3:
                 dc.b $00                ; unk4[5]
                 dc.b $00                ; unk4[6]
                 dc.b $02                ; unk4[7]
+ ENDC
 ; Playoffs_8
+ IFEQ COMPETITION_DATA_C
 div1Playoffs:
                 ; Playoffs_8
                 dc.b $2F                ; unk1[0]
@@ -17769,7 +20125,9 @@ div1Playoffs:
                 dc.b $00                ; unk2[5]
                 dc.b $00                ; unk2[6]
                 dc.b $00                ; unk2[7]
+ ENDC
 ; Playoffs_8
+ IFEQ COMPETITION_DATA_C
 div2Playoffs:
                 ; Playoffs_8
                 dc.b $30                ; unk1[0]
@@ -17798,7 +20156,9 @@ div2Playoffs:
                 dc.b $00                ; unk2[5]
                 dc.b $00                ; unk2[6]
                 dc.b $00                ; unk2[7]
+ ENDC
 ; Playoffs_8
+ IFEQ COMPETITION_DATA_C
 div3Playoffs:
                 ; Playoffs_8
                 dc.b $31                ; unk1[0]
@@ -17827,7 +20187,9 @@ div3Playoffs:
                 dc.b $00                ; unk2[5]
                 dc.b $00                ; unk2[6]
                 dc.b $00                ; unk2[7]
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 estonianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -17853,7 +20215,9 @@ estonianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 faroeIslesLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -17879,7 +20243,9 @@ faroeIslesLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 finnishLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -17905,7 +20271,9 @@ finnishLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_2_4
+ IFEQ COMPETITION_DATA_C
 frenchLeague:
                 ; CompetitionLeague_2_4
                 ; comp (struct)
@@ -17942,7 +20310,9 @@ frenchLeague:
                 dc.l aPremiere          ; text[1]
                 dc.l aDeuxiemeDivisi    ; text[2]
                 dc.l aDeuxieme          ; text[3]
+ ENDC
 ; CompetitionLeague_2_4
+ IFEQ COMPETITION_DATA_C
 germanLeague:
                 ; CompetitionLeague_2_4
                 ; comp (struct)
@@ -17979,7 +20349,9 @@ germanLeague:
                 dc.l a1Liga             ; text[1]
                 dc.l a2Liga             ; text[2]
                 dc.l a2Liga             ; text[3]
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 greekLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18005,7 +20377,9 @@ greekLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_2_2_24
+ IFEQ COMPETITION_DATA_C
 dutchLeague:
                 ; CompetitionLeague_2_2_24
                 ; comp (struct)
@@ -18064,7 +20438,9 @@ dutchLeague:
                 dc.b $00                ; unk2[21]
                 dc.b $01                ; unk2[22]
                 dc.b $00                ; unk2[23]
+ ENDC
 ; Leagues_4
+ IFEQ COMPETITION_DATA_C
 dutchLeagues1:
                 ; Leagues_4
                 dc.l dutchLeague        ; text1
@@ -18103,7 +20479,9 @@ dutchLeagues1:
                 dc.b $00                ; unk4[5]
                 dc.b $00                ; unk4[6]
                 dc.b $00                ; unk4[7]
+ ENDC
 ; Playoffs_8
+ IFEQ COMPETITION_DATA_C
 dutchPlayoffs:
                 ; Playoffs_8
                 dc.b $39                ; unk1[0]
@@ -18132,7 +20510,9 @@ dutchPlayoffs:
                 dc.b $00                ; unk2[5]
                 dc.b $00                ; unk2[6]
                 dc.b $00                ; unk2[7]
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 hungarianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18158,7 +20538,9 @@ hungarianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 icelandicLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18184,7 +20566,9 @@ icelandicLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 israeliLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18210,7 +20594,9 @@ israeliLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_2_4
+ IFEQ COMPETITION_DATA_C
 italianLeague:
                 ; CompetitionLeague_2_4
                 ; comp (struct)
@@ -18247,7 +20633,9 @@ italianLeague:
                 dc.l aSerieA            ; text[1]
                 dc.l aSerieB            ; text[2]
                 dc.l aSerieB            ; text[3]
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 latvianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18273,7 +20661,9 @@ latvianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 lithuanianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18299,7 +20689,9 @@ lithuanianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 luxembourgLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18325,7 +20717,9 @@ luxembourgLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 malteseLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18351,7 +20745,9 @@ malteseLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 northernIrishLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18377,7 +20773,9 @@ northernIrishLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 norwegianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18403,7 +20801,9 @@ norwegianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 polishLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18429,7 +20829,9 @@ polishLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 portugeseLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18455,7 +20857,9 @@ portugeseLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 irishLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18481,7 +20885,9 @@ irishLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 romanianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18507,7 +20913,9 @@ romanianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 russianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18533,7 +20941,9 @@ russianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 sanMarinoLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18559,7 +20969,9 @@ sanMarinoLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_4_2_8
+ IFEQ COMPETITION_DATA_C
 scottishLeague:
                 ; CompetitionLeague_4_2_8
                 ; comp (struct)
@@ -18616,7 +21028,9 @@ scottishLeague:
                 dc.b -1                 ; unk2[5]
                 dc.b $01                ; unk2[6]
                 dc.b $00                ; unk2[7]
+ ENDC
 ; Leagues_2
+ IFEQ COMPETITION_DATA_C
 scottishLeague1:
                 ; Leagues_2
                 dc.l scottishLeague     ; compLeague1
@@ -18637,7 +21051,9 @@ scottishLeague1:
                 dc.b $00                ; unk2[5]
                 dc.b $00                ; unk2[6]
                 dc.b $00                ; unk2[7]
+ ENDC
 ; Playoffs_4
+ IFEQ COMPETITION_DATA_C
 scottishPlayoffs:
                 ; Playoffs_4
                 dc.b $4B                ; unk1[0]
@@ -18662,7 +21078,9 @@ scottishPlayoffs:
                 dc.b $00                ; unk2[1]
                 dc.b $00                ; unk2[2]
                 dc.b $00                ; unk2[3]
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 slovakianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18688,7 +21106,9 @@ slovakianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 slovenianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18714,7 +21134,9 @@ slovenianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_2_4_2_24
+ IFEQ COMPETITION_DATA_C
 spanishLeague:
                 ; CompetitionLeague_2_4_2_24
                 ; comp (struct)
@@ -18777,7 +21199,9 @@ spanishLeague:
                 dc.b $00                ; unk3[21]
                 dc.b $01                ; unk3[22]
                 dc.b $00                ; unk3[23]
+ ENDC
 ; Leagues_4
+ IFEQ COMPETITION_DATA_C
 spanishLeague1:
                 ; Leagues_4
                 dc.l spanishLeague      ; text1
@@ -18816,7 +21240,9 @@ spanishLeague1:
                 dc.b $00                ; unk4[5]
                 dc.b $00                ; unk4[6]
                 dc.b $00                ; unk4[7]
+ ENDC
 ; Playoffs_8
+ IFEQ COMPETITION_DATA_C
 spanishPlayoffs:
                 ; Playoffs_8
                 dc.b $4F                ; unk1[0]
@@ -18845,7 +21271,9 @@ spanishPlayoffs:
                 dc.b $00                ; unk2[5]
                 dc.b $00                ; unk2[6]
                 dc.b $00                ; unk2[7]
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 swedishLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18871,7 +21299,9 @@ swedishLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 swissLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18897,7 +21327,9 @@ swissLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 turkishLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18923,7 +21355,9 @@ turkishLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 ukrainianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18949,7 +21383,9 @@ ukrainianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 welshLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -18975,7 +21411,9 @@ welshLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 yugoslavianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -19001,7 +21439,9 @@ yugoslavianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 algerianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -19027,7 +21467,9 @@ algerianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_2
+ IFEQ COMPETITION_DATA_C
 argentinianLeague:
                 ; CompetitionLeague_2
                 ; comp (struct)
@@ -19060,7 +21502,9 @@ argentinianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_4_8
+ IFEQ COMPETITION_DATA_C
 australianLeague:
                 ; CompetitionLeague_4_8
                 ; comp (struct)
@@ -19115,7 +21559,9 @@ australianLeague:
                 dc.l aNsw               ; text[5]
                 dc.l aQueenslandDivi    ; text[6]
                 dc.l aQueensland        ; text[7]
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 bolivianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -19141,7 +21587,9 @@ bolivianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 brasilianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -19167,7 +21615,9 @@ brasilianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 chileanLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -19193,7 +21643,9 @@ chileanLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 colombianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -19219,7 +21671,9 @@ colombianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 ecuadorLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -19245,7 +21699,9 @@ ecuadorLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_4
+ IFEQ COMPETITION_DATA_C
 elSalvadorLeague:
                 ; CompetitionLeague_4
                 ; comp (struct)
@@ -19292,7 +21748,9 @@ elSalvadorLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 indianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -19318,7 +21776,9 @@ indianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_2_4
+ IFEQ COMPETITION_DATA_C
 japaneseLeague:
                 ; CompetitionLeague_2_4
                 ; comp (struct)
@@ -19355,7 +21815,9 @@ japaneseLeague:
                 dc.l aJLeague_0         ; text[1]
                 dc.l aLeague_2          ; text[2]
                 dc.l aLeague_3          ; text[3]
+ ENDC
 ; CompetitionLeague_2
+ IFEQ COMPETITION_DATA_C
 mexicanLeague:
                 ; CompetitionLeague_2
                 ; comp (struct)
@@ -19388,7 +21850,9 @@ mexicanLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_3_6
+ IFEQ COMPETITION_DATA_C
 newZealandLeague:
                 ; CompetitionLeague_3_6
                 ; comp (struct)
@@ -19434,7 +21898,9 @@ newZealandLeague:
                 dc.l aCentral           ; text[3]
                 dc.l aSouthernRegion    ; text[4]
                 dc.l aSouthern          ; text[5]
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 paraguayanLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -19460,7 +21926,9 @@ paraguayanLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 peruvianLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -19486,7 +21954,9 @@ peruvianLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 southAfricanLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -19512,7 +21982,9 @@ southAfricanLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 surinamLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -19538,7 +22010,9 @@ surinamLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 taiwaneseLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -19564,7 +22038,9 @@ taiwaneseLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_2_2_8
+ IFEQ COMPETITION_DATA_C
 uruguayanLeague:
                 ; CompetitionLeague_2_2_8
                 ; comp (struct)
@@ -19607,7 +22083,9 @@ uruguayanLeague:
                 dc.b -1                 ; unk3[5]
                 dc.b $01                ; unk3[6]
                 dc.b $00                ; unk3[7]
+ ENDC
 ; Leagues_2
+ IFEQ COMPETITION_DATA_C
 uruguayanLeague1:
                 ; Leagues_2
                 dc.l uruguayanLeague    ; compLeague1
@@ -19628,7 +22106,9 @@ uruguayanLeague1:
                 dc.b $00                ; unk2[5]
                 dc.b $00                ; unk2[6]
                 dc.b $00                ; unk2[7]
+ ENDC
 ; Playoffs_4
+ IFEQ COMPETITION_DATA_C
 uruguayanPlayoffs:
                 ; Playoffs_4
                 dc.b $69                ; unk1[0]
@@ -19653,7 +22133,9 @@ uruguayanPlayoffs:
                 dc.b $00                ; unk2[1]
                 dc.b $00                ; unk2[2]
                 dc.b $00                ; unk2[3]
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 americanLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -19679,7 +22161,9 @@ americanLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 venezuelanLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -19705,7 +22189,9 @@ venezuelanLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionLeague_1
+ IFEQ COMPETITION_DATA_C
 ghanaLeague:
                 ; CompetitionLeague_1
                 ; comp (struct)
@@ -19731,7 +22217,9 @@ ghanaLeague:
                 dc.b $00                ; relegatedPo
                 dc.b $00                ; unk1
                 dc.b $00                ; unk1
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 albanianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -19754,7 +22242,9 @@ albanianCup:
                 dc.b $54                ; rounds[1]
                 dc.b -108               ; rounds[2]
                 dc.b $14                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 austrianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -19777,7 +22267,9 @@ austrianCup:
                 dc.b $54                ; rounds[1]
                 dc.b $14                ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 belarusianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -19800,7 +22292,9 @@ belarusianCup:
                 dc.b $54                ; rounds[1]
                 dc.b $54                ; rounds[2]
                 dc.b $14                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 belgianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -19823,7 +22317,9 @@ belgianCup:
                 dc.b $54                ; rounds[1]
                 dc.b -108               ; rounds[2]
                 dc.b $14                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 bulgarianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -19846,7 +22342,9 @@ bulgarianCup:
                 dc.b -108               ; rounds[1]
                 dc.b -108               ; rounds[2]
                 dc.b $14                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 croatianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -19869,7 +22367,9 @@ croatianCup:
                 dc.b -108               ; rounds[1]
                 dc.b -108               ; rounds[2]
                 dc.b -108               ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 cypriotCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -19892,7 +22392,9 @@ cypriotCup:
                 dc.b -108               ; rounds[1]
                 dc.b $14                ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 czechCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -19915,7 +22417,9 @@ czechCup:
                 dc.b $54                ; rounds[1]
                 dc.b $54                ; rounds[2]
                 dc.b $14                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 danishCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -19938,7 +22442,9 @@ danishCup:
                 dc.b -108               ; rounds[1]
                 dc.b $14                ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; CompetitionCup_6_2
+ IFEQ COMPETITION_DATA_C
 englishCup:
                 ; CompetitionCup_6_2
                 ; comp (struct)
@@ -19965,7 +22471,9 @@ englishCup:
                 dc.b $28                ; rounds[5]
                 dc.l aCup_4             ; text[0]
                 dc.l aCup_5             ; text[1]
+ ENDC
 ; CompetitionCup_6_2
+ IFEQ COMPETITION_DATA_C
 englishLeagueCup:
                 ; CompetitionCup_6_2
                 ; comp (struct)
@@ -19992,7 +22500,9 @@ englishLeagueCup:
                 dc.b $28                ; rounds[5]
                 dc.l aLeagueCup         ; text[0]
                 dc.l aLeagueCup_0       ; text[1]
+ ENDC
 ; CompetitionCup_6_2
+ IFEQ COMPETITION_DATA_C
 englishCup_1:
                 ; CompetitionCup_6_2
                 ; comp (struct)
@@ -20019,7 +22529,9 @@ englishCup_1:
                 dc.b $00                ; rounds[5]
                 dc.l aCup_4             ; text[0]
                 dc.l aCup_5             ; text[1]
+ ENDC
 ; CompetitionCup_6_2
+ IFEQ COMPETITION_DATA_C
 englishLeagueCup_1:
                 ; CompetitionCup_6_2
                 ; comp (struct)
@@ -20046,7 +22558,9 @@ englishLeagueCup_1:
                 dc.b $00                ; rounds[5]
                 dc.l aLeagueCup         ; text[0]
                 dc.l aLeagueCup_0       ; text[1]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 estonianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20069,7 +22583,9 @@ estonianCup:
                 dc.b -108               ; rounds[1]
                 dc.b $14                ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 faroeIslesCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20092,7 +22608,9 @@ faroeIslesCup:
                 dc.b -108               ; rounds[1]
                 dc.b $14                ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 finnishCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20115,7 +22633,9 @@ finnishCup:
                 dc.b $54                ; rounds[1]
                 dc.b $14                ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; CompetitionCup_6_2
+ IFEQ COMPETITION_DATA_C
 frenchCup:
                 ; CompetitionCup_6_2
                 ; comp (struct)
@@ -20142,7 +22662,9 @@ frenchCup:
                 dc.b $00                ; rounds[5]
                 dc.l aCoupeDeFrance     ; text[0]
                 dc.l aCoupe             ; text[1]
+ ENDC
 ; CompetitionCup_6_2
+ IFEQ COMPETITION_DATA_C
 germanCup:
                 ; CompetitionCup_6_2
                 ; comp (struct)
@@ -20169,7 +22691,9 @@ germanCup:
                 dc.b $00                ; rounds[5]
                 dc.l aDFBPokal          ; text[0]
                 dc.l aPokal             ; text[1]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 greekCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20192,7 +22716,9 @@ greekCup:
                 dc.b -108               ; rounds[1]
                 dc.b -108               ; rounds[2]
                 dc.b $14                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 hungarianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20215,7 +22741,9 @@ hungarianCup:
                 dc.b -108               ; rounds[1]
                 dc.b -108               ; rounds[2]
                 dc.b -108               ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 icelandicCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20238,7 +22766,9 @@ icelandicCup:
                 dc.b $54                ; rounds[1]
                 dc.b $14                ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 irishCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20261,7 +22791,9 @@ irishCup:
                 dc.b $68                ; rounds[1]
                 dc.b $28                ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 israeliCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20284,7 +22816,9 @@ israeliCup:
                 dc.b $54                ; rounds[1]
                 dc.b $54                ; rounds[2]
                 dc.b $14                ; rounds[3]
+ ENDC
 ; CompetitionCup_6_2
+ IFEQ COMPETITION_DATA_C
 italianCup:
                 ; CompetitionCup_6_2
                 ; comp (struct)
@@ -20311,7 +22845,9 @@ italianCup:
                 dc.b $00                ; rounds[5]
                 dc.l aCoppaItalia       ; text[0]
                 dc.l aCoppa             ; text[1]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 latvianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20334,7 +22870,9 @@ latvianCup:
                 dc.b -108               ; rounds[1]
                 dc.b $14                ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 lithuanianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20357,7 +22895,9 @@ lithuanianCup:
                 dc.b -108               ; rounds[1]
                 dc.b $14                ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 luxembourgCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20380,7 +22920,9 @@ luxembourgCup:
                 dc.b $54                ; rounds[1]
                 dc.b $14                ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 malteseCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20403,7 +22945,9 @@ malteseCup:
                 dc.b $54                ; rounds[1]
                 dc.b $14                ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; CompetitionCup_6
+ IFEQ COMPETITION_DATA_C
 dutchCup:
                 ; CompetitionCup_6
                 ; comp (struct)
@@ -20428,7 +22972,9 @@ dutchCup:
                 dc.b $54                ; rounds[3]
                 dc.b $14                ; rounds[4]
                 dc.b $00                ; rounds[5]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 northernIrishCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20451,7 +22997,9 @@ northernIrishCup:
                 dc.b $68                ; rounds[1]
                 dc.b $68                ; rounds[2]
                 dc.b $28                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 norwegianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20474,7 +23022,9 @@ norwegianCup:
                 dc.b $54                ; rounds[1]
                 dc.b $14                ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 polishCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20497,7 +23047,9 @@ polishCup:
                 dc.b -108               ; rounds[1]
                 dc.b -108               ; rounds[2]
                 dc.b $14                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 portugeseCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20520,7 +23072,9 @@ portugeseCup:
                 dc.b $54                ; rounds[1]
                 dc.b $54                ; rounds[2]
                 dc.b $14                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 romanianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20543,7 +23097,9 @@ romanianCup:
                 dc.b -108               ; rounds[1]
                 dc.b -108               ; rounds[2]
                 dc.b $14                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 russianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20566,7 +23122,9 @@ russianCup:
                 dc.b $54                ; rounds[1]
                 dc.b $54                ; rounds[2]
                 dc.b $14                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 sanMarinoCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20589,7 +23147,9 @@ sanMarinoCup:
                 dc.b $54                ; rounds[1]
                 dc.b $14                ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; CompetitionCup_6_2
+ IFEQ COMPETITION_DATA_C
 scottishCup:
                 ; CompetitionCup_6_2
                 ; comp (struct)
@@ -20616,7 +23176,9 @@ scottishCup:
                 dc.b $00                ; rounds[5]
                 dc.l aCup_6             ; text[0]
                 dc.l aCup_7             ; text[1]
+ ENDC
 ; CompetitionCup_6_2
+ IFEQ COMPETITION_DATA_C
 scottishLeagueCup:
                 ; CompetitionCup_6_2
                 ; comp (struct)
@@ -20643,7 +23205,9 @@ scottishLeagueCup:
                 dc.b $00                ; rounds[5]
                 dc.l aLeagueCup_1       ; text[0]
                 dc.l aLeagueCup_2       ; text[1]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 slovakianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20666,7 +23230,9 @@ slovakianCup:
                 dc.b -108               ; rounds[1]
                 dc.b $14                ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 slovenianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20689,7 +23255,9 @@ slovenianCup:
                 dc.b $54                ; rounds[1]
                 dc.b $54                ; rounds[2]
                 dc.b $14                ; rounds[3]
+ ENDC
 ; CompetitionCup_6_2
+ IFEQ COMPETITION_DATA_C
 spanishCup:
                 ; CompetitionCup_6_2
                 ; comp (struct)
@@ -20716,7 +23284,9 @@ spanishCup:
                 dc.b $00                ; rounds[5]
                 dc.l aCopa              ; text[0]
                 dc.l aCopa_0            ; text[1]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 swedishCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20739,7 +23309,9 @@ swedishCup:
                 dc.b $54                ; rounds[1]
                 dc.b $54                ; rounds[2]
                 dc.b $14                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 swissCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20762,7 +23334,9 @@ swissCup:
                 dc.b $54                ; rounds[1]
                 dc.b $14                ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 turkishCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20785,7 +23359,9 @@ turkishCup:
                 dc.b $54                ; rounds[1]
                 dc.b -108               ; rounds[2]
                 dc.b -108               ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 ukrainianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20808,7 +23384,9 @@ ukrainianCup:
                 dc.b -108               ; rounds[1]
                 dc.b -108               ; rounds[2]
                 dc.b $14                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 welshCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20831,7 +23409,9 @@ welshCup:
                 dc.b $68                ; rounds[1]
                 dc.b -108               ; rounds[2]
                 dc.b $28                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 yugoslavianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20854,7 +23434,9 @@ yugoslavianCup:
                 dc.b -108               ; rounds[1]
                 dc.b -108               ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 algerianCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20877,7 +23459,9 @@ algerianCup:
                 dc.b $54                ; rounds[1]
                 dc.b -108               ; rounds[2]
                 dc.b $14                ; rounds[3]
+ ENDC
 ; CompetitionCup_6
+ IFEQ COMPETITION_DATA_C
 australianCup:
                 ; CompetitionCup_6
                 ; comp (struct)
@@ -20902,7 +23486,9 @@ australianCup:
                 dc.b $54                ; rounds[3]
                 dc.b $14                ; rounds[4]
                 dc.b $00                ; rounds[5]
+ ENDC
 ; CompetitionCup_4_2
+ IFEQ COMPETITION_DATA_C
 japaneseCup:
                 ; CompetitionCup_4_2
                 ; comp (struct)
@@ -20927,7 +23513,9 @@ japaneseCup:
                 dc.b $00                ; rounds[3]
                 dc.l aCup_8             ; text[0]
                 dc.l aCup_9             ; text[1]
+ ENDC
 ; CompetitionCup_4_2
+ IFEQ COMPETITION_DATA_C
 japaneseEmperorsCup:
                 ; CompetitionCup_4_2
                 ; comp (struct)
@@ -20952,7 +23540,9 @@ japaneseEmperorsCup:
                 dc.b $14                ; rounds[3]
                 dc.l aEmperorSCup       ; text[0]
                 dc.l aEmpCup            ; text[1]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 southAfricanCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20975,7 +23565,9 @@ southAfricanCup:
                 dc.b $54                ; rounds[1]
                 dc.b $54                ; rounds[2]
                 dc.b $14                ; rounds[3]
+ ENDC
 ; CompetitionCup_4
+ IFEQ COMPETITION_DATA_C
 taiwaneseCup:
                 ; CompetitionCup_4
                 ; comp (struct)
@@ -20998,26 +23590,39 @@ taiwaneseCup:
                 dc.b $54                ; rounds[1]
                 dc.b $14                ; rounds[2]
                 dc.b $00                ; rounds[3]
+ ENDC
 ; __int16[5]
+ IFEQ COMPETITION_DATA_C
 seasonCycleNationalFlagsA:
                 ; __int16[5]
                 dc.w -1,-1,-1,-1,-1     ; Season-cycle-indexed word flags for national competition scheduling.
+ ENDC
 ; unsigned __int16[5]
+ IFEQ COMPETITION_DATA_C
 seasonCycleNationalFlagsB:
                 ; unsigned __int16[5]
                 dc.w $5005,$5025,$5022,$5011,$500B ; Season-cycle-indexed word flags for alternate national competition scheduling.
+ ENDC
 ; unsigned __int8[20]
+ IFEQ COMPETITION_DATA_C
 careerTeamFlagsBySeason0:
                 dc.b $40,$80,$01,$02,$40,$80,$01,$02,$40,$80,$01,$02,$40,$80,$01,$02 ; Per-season team availability flags for region 0.
                 dc.b $40,$80,$01,$02
+ ENDC
 ; unsigned __int8[20]
+ IFEQ COMPETITION_DATA_C
 careerTeamFlagsBySeason1:
                 dc.b $42,$80,$02,$00,$42,$80,$02,$00,$42,$80,$02,$00,$42,$80,$02,$00 ; Per-season team availability flags for regions 1-5.
                 dc.b $42,$80,$02,$00
+ ENDC
+ IFEQ COMPETITION_DATA_C
 nationalSelectorSeasonMaskA:
                 dc.l $0002AAAA          ; Bitmask for national team selector eligibility by season.
+ ENDC
+ IFEQ COMPETITION_DATA_C
 nationalSelectorSeasonMaskB:
                 dc.l $0002EEEE          ; Bitmask for national team selector eligibility by season (alternate).
+ ENDC
 ; Competition *[256]
 competitionsTable:
                 ; Competition *[256]
@@ -21278,6 +23883,7 @@ competitionsTable:
                 dc.l worldTable         ; element[254]
                 dc.l 0                  ; element[255]
 ; QualifyingGroup_9_2
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroups:
                 ; QualifyingGroup_9_2
                 dc.l worldCupQualifyingGroup1 ; compCup[0]
@@ -21291,7 +23897,9 @@ worldCupQualifyingGroups:
                 dc.l $FFFFFFFF          ; compCup[8]
                 dc.b 255                ; countries[0]
                 dc.b CN_ALBANIA         ; countries[1]
+ ENDC
 ; QualifyingGroup_9_2
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroups:
                 ; QualifyingGroup_9_2
                 dc.l ecQualifyingGroup1 ; compCup[0]
@@ -21305,13 +23913,17 @@ ecQualifyingGroups:
                 dc.l $FFFFFFFF          ; compCup[8]
                 dc.b 255                ; countries[0]
                 dc.b CN_ALBANIA         ; countries[1]
+ ENDC
 ; QualifyingGroup_3
+ IFEQ COMPETITION_DATA_C
 customsTable:
                 ; QualifyingGroup_3
                 dc.l customsLeague      ; compCup[0]
                 dc.l $FFFFFFFE          ; compCup[1]
                 dc.l $FFFFFFFF          ; compCup[2]
+ ENDC
 ; QualifyingGroup_2_8
+ IFEQ COMPETITION_DATA_C
 worldTable:
                 ; QualifyingGroup_2_8
                 dc.l worldCup           ; compCup[0]
@@ -21324,7 +23936,9 @@ worldTable:
                 dc.b CN_OCEANIA         ; countries[5]
                 dc.b 255                ; countries[6]
                 dc.b CN_ALBANIA         ; countries[7]
+ ENDC
 ; QualifyingGroup_6_44
+ IFEQ COMPETITION_DATA_C
 europeTable:
                 ; QualifyingGroup_6_44
                 dc.l unk_FC             ; compCup[0]
@@ -21377,7 +23991,9 @@ europeTable:
                 dc.b CN_WALES           ; countries[41]
                 dc.b CN_YUGOSLAVIA      ; countries[42]
                 dc.b 255                ; countries[43]
+ ENDC
 ; QualifyingGroup_3_4
+ IFEQ COMPETITION_DATA_C
 africaTable:
                 ; QualifyingGroup_3_4
                 dc.l africaWorldCupQualification ; compCup[0]
@@ -21387,7 +24003,9 @@ africaTable:
                 dc.b CN_GHANA           ; countries[1]
                 dc.b CN_SOUTH_AFRICA    ; countries[2]
                 dc.b 255                ; countries[3]
+ ENDC
 ; QualifyingGroup_3_12
+ IFEQ COMPETITION_DATA_C
 southAmericaTable:
                 ; QualifyingGroup_3_12
                 dc.l southAmericaWorldCupQualification ; compCup[0]
@@ -21405,7 +24023,9 @@ southAmericaTable:
                 dc.b CN_URUGUAY         ; countries[9]
                 dc.b CN_VENEZUELA       ; countries[10]
                 dc.b 255                ; countries[11]
+ ENDC
 ; QualifyingGroup_3_4
+ IFEQ COMPETITION_DATA_C
 northAmericaTable:
                 ; QualifyingGroup_3_4
                 dc.l northAmericaWorldCupQualification ; compCup[0]
@@ -21415,7 +24035,9 @@ northAmericaTable:
                 dc.b CN_MEXICO          ; countries[1]
                 dc.b CN_USA             ; countries[2]
                 dc.b 255                ; countries[3]
+ ENDC
 ; QualifyingGroup_3_4
+ IFEQ COMPETITION_DATA_C
 asiaTable:
                 ; QualifyingGroup_3_4
                 dc.l asiaWorldCupQualification ; compCup[0]
@@ -21425,7 +24047,9 @@ asiaTable:
                 dc.b CN_JAPAN           ; countries[1]
                 dc.b CN_TAIWAN          ; countries[2]
                 dc.b 255                ; countries[3]
+ ENDC
 ; QualifyingGroup_3_4
+ IFEQ COMPETITION_DATA_C
 oceaniaTable:
                 ; QualifyingGroup_3_4
                 dc.l oceaniaWorldCupQualification ; compCup[0]
@@ -21435,70 +24059,90 @@ oceaniaTable:
                 dc.b CN_NEW_ZEALAND     ; countries[1]
                 dc.b 255                ; countries[2]
                 dc.b CN_ALBANIA         ; countries[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 albaniaTable:
                 ; Competition *[4]
                 dc.l albanianLeague     ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l albanianCup        ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 austriaTable:
                 ; Competition *[4]
                 dc.l austrianLeague     ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l austrianCup        ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 belgiumTable:
                 ; Competition *[4]
                 dc.l belgianLeague      ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l belgianCup         ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 belarusTable:
                 ; Competition *[4]
                 dc.l belarussiaLleague  ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l belarusianCup      ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 bulgariaTable:
                 ; Competition *[4]
                 dc.l bulgarianLeague    ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l bulgarianCup       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 croatiaTable:
                 ; Competition *[4]
                 dc.l croatianLeague     ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l croatianCup        ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 cyprusTable:
                 ; Competition *[4]
                 dc.l cypriotLeague      ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l cypriotCup         ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 czechRepublicTable:
                 ; Competition *[4]
                 dc.l czechLeague        ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l czechCup           ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 denmarkTable:
                 ; Competition *[4]
                 dc.l danishLeague       ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l danishCup          ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[5]
+ IFEQ COMPETITION_DATA_C
 englandTable:
                 ; Competition *[5]
                 dc.l englishLeagues     ; element[0]
@@ -21506,168 +24150,216 @@ englandTable:
                 dc.l englishCup         ; element[2]
                 dc.l englishLeagueCup   ; element[3]
                 dc.l $FFFFFFFF          ; element[4]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 estoniaTable:
                 ; Competition *[4]
                 dc.l estonianLeague     ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l estonianCup        ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 faroeIslandsTable:
                 ; Competition *[4]
                 dc.l faroeIslesLeague   ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l faroeIslesCup      ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 finlandTable:
                 ; Competition *[4]
                 dc.l finnishLeague      ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l finnishCup         ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 franceTable:
                 ; Competition *[4]
                 dc.l frenchLeague       ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l frenchCup          ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 germanyTable:
                 ; Competition *[4]
                 dc.l germanLeague       ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l germanCup          ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 greeceTable:
                 ; Competition *[4]
                 dc.l greekLeague        ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l greekCup           ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 hungaryTable:
                 ; Competition *[4]
                 dc.l hungarianLeague    ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l hungarianCup       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 icelandTable:
                 ; Competition *[4]
                 dc.l icelandicLeague    ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l icelandicCup       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 republicIrelandTable:
                 ; Competition *[4]
                 dc.l irishLeague        ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l irishCup           ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 israelTable:
                 ; Competition *[4]
                 dc.l israeliLeague      ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l israeliCup         ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 italyTable:
                 ; Competition *[4]
                 dc.l italianLeague      ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l italianCup         ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 latviaTable:
                 ; Competition *[4]
                 dc.l latvianLeague      ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l latvianCup         ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 lithuaniaTable:
                 ; Competition *[4]
                 dc.l lithuanianLeague   ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l lithuanianCup      ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 luxembourgTable:
                 ; Competition *[4]
                 dc.l luxembourgLeague   ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l luxembourgCup      ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 maltaTable:
                 ; Competition *[4]
                 dc.l malteseLeague      ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l malteseCup         ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 hollandTable:
                 ; Competition *[4]
                 dc.l dutchLeague        ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l dutchCup           ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 northernIrelandTable:
                 ; Competition *[4]
                 dc.l northernIrishLeague ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l northernIrishCup   ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 norwayTable:
                 ; Competition *[4]
                 dc.l norwegianLeague    ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l norwegianCup       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 polandTable:
                 ; Competition *[4]
                 dc.l polishLeague       ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l polishCup          ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 portugalTable:
                 ; Competition *[4]
                 dc.l portugeseLeague    ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l portugeseCup       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 romaniaTable:
                 ; Competition *[4]
                 dc.l romanianLeague     ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l romanianCup        ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 russiaTable:
                 ; Competition *[4]
                 dc.l russianLeague      ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l russianCup         ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 sanMarinoTable:
                 ; Competition *[4]
                 dc.l sanMarinoLeague    ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l sanMarinoCup       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[5]
+ IFEQ COMPETITION_DATA_C
 scotlandTable:
                 ; Competition *[5]
                 dc.l scottishLeague     ; element[0]
@@ -21675,132 +24367,172 @@ scotlandTable:
                 dc.l scottishCup        ; element[2]
                 dc.l scottishLeagueCup  ; element[3]
                 dc.l $FFFFFFFF          ; element[4]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 slovakiaTable:
                 ; Competition *[4]
                 dc.l slovakianLeague    ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l slovakianCup       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 sloveniaTable:
                 ; Competition *[4]
                 dc.l slovenianLeague    ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l slovenianCup       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 spainTable:
                 ; Competition *[4]
                 dc.l spanishLeague      ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l spanishCup         ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 swedenTable:
                 ; Competition *[4]
                 dc.l swedishLeague      ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l swedishCup         ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 switzerlandTable:
                 ; Competition *[4]
                 dc.l swissLeague        ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l swissCup           ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 turkeyTable:
                 ; Competition *[4]
                 dc.l turkishLeague      ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l turkishCup         ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 ukraineTable:
                 ; Competition *[4]
                 dc.l ukrainianLeague    ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l ukrainianCup       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 walesTable:
                 ; Competition *[4]
                 dc.l welshLeague        ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l welshCup           ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 yugoslaviaTable:
                 ; Competition *[4]
                 dc.l yugoslavianLeague  ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l yugoslavianCup     ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 algeriaTable:
                 ; Competition *[4]
                 dc.l algerianLeague     ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l algerianCup        ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[3]
+ IFEQ COMPETITION_DATA_C
 argentinaTable:
                 ; Competition *[3]
                 dc.l argentinianLeague  ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l $FFFFFFFF          ; element[2]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 australiaTable:
                 ; Competition *[4]
                 dc.l australianLeague   ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l australianCup      ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[3]
+ IFEQ COMPETITION_DATA_C
 boliviaTable:
                 ; Competition *[3]
                 dc.l bolivianLeague     ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l $FFFFFFFF          ; element[2]
+ ENDC
 ; Competition *[3]
+ IFEQ COMPETITION_DATA_C
 brasilTable:
                 ; Competition *[3]
                 dc.l brasilianLeague    ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l $FFFFFFFF          ; element[2]
+ ENDC
 ; Competition *[3]
+ IFEQ COMPETITION_DATA_C
 chileTable:
                 ; Competition *[3]
                 dc.l chileanLeague      ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l $FFFFFFFF          ; element[2]
+ ENDC
 ; Competition *[3]
+ IFEQ COMPETITION_DATA_C
 colombiaTable:
                 ; Competition *[3]
                 dc.l colombianLeague    ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l $FFFFFFFF          ; element[2]
+ ENDC
 ; Competition *[3]
+ IFEQ COMPETITION_DATA_C
 ecuadorTable:
                 ; Competition *[3]
                 dc.l ecuadorLeague      ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l $FFFFFFFF          ; element[2]
+ ENDC
 ; Competition *[3]
+ IFEQ COMPETITION_DATA_C
 elSalvadorTable:
                 ; Competition *[3]
                 dc.l elSalvadorLeague   ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l $FFFFFFFF          ; element[2]
+ ENDC
 ; Competition *[3]
+ IFEQ COMPETITION_DATA_C
 indiaTable:
                 ; Competition *[3]
                 dc.l indianLeague       ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l $FFFFFFFF          ; element[2]
+ ENDC
 ; Competition *[5]
+ IFEQ COMPETITION_DATA_C
 japanTable:
                 ; Competition *[5]
                 dc.l japaneseLeague     ; element[0]
@@ -21808,75 +24540,99 @@ japanTable:
                 dc.l japaneseCup        ; element[2]
                 dc.l japaneseEmperorsCup ; element[3]
                 dc.l $FFFFFFFF          ; element[4]
+ ENDC
 ; Competition *[3]
+ IFEQ COMPETITION_DATA_C
 mexicoTable:
                 ; Competition *[3]
                 dc.l mexicanLeague      ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l $FFFFFFFF          ; element[2]
+ ENDC
 ; Competition *[3]
+ IFEQ COMPETITION_DATA_C
 newZealandTable:
                 ; Competition *[3]
                 dc.l newZealandLeague   ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l $FFFFFFFF          ; element[2]
+ ENDC
 ; Competition *[3]
+ IFEQ COMPETITION_DATA_C
 paraguayTable:
                 ; Competition *[3]
                 dc.l paraguayanLeague   ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l $FFFFFFFF          ; element[2]
+ ENDC
 ; Competition *[3]
+ IFEQ COMPETITION_DATA_C
 peruTable:
                 ; Competition *[3]
                 dc.l peruvianLeague     ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l $FFFFFFFF          ; element[2]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 southAfricaTable:
                 ; Competition *[4]
                 dc.l southAfricanLeague ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l southAfricanCup    ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[3]
+ IFEQ COMPETITION_DATA_C
 surinamTable:
                 ; Competition *[3]
                 dc.l surinamLeague      ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l $FFFFFFFF          ; element[2]
+ ENDC
 ; Competition *[4]
+ IFEQ COMPETITION_DATA_C
 taiwanTable:
                 ; Competition *[4]
                 dc.l taiwaneseLeague    ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l taiwaneseCup       ; element[2]
                 dc.l $FFFFFFFF          ; element[3]
+ ENDC
 ; Competition *[3]
+ IFEQ COMPETITION_DATA_C
 uruguayTable:
                 ; Competition *[3]
                 dc.l uruguayanLeague    ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l $FFFFFFFF          ; element[2]
+ ENDC
 ; Competition *[3]
+ IFEQ COMPETITION_DATA_C
 usaTable:
                 ; Competition *[3]
                 dc.l americanLeague     ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l $FFFFFFFF          ; element[2]
+ ENDC
 ; Competition *[3]
+ IFEQ COMPETITION_DATA_C
 venezuelaTable:
                 ; Competition *[3]
                 dc.l venezuelanLeague   ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l $FFFFFFFF          ; element[2]
+ ENDC
 ; Competition *[3]
+ IFEQ COMPETITION_DATA_C
 ghanaTable:
                 ; Competition *[3]
                 dc.l ghanaLeague        ; element[0]
                 dc.l $FFFFFFFE          ; element[1]
                 dc.l $FFFFFFFF          ; element[2]
+ ENDC
 ; CountryNumbers[66]
+ IFEQ COMPETITION_DATA_C
 allCountriesList:
                 ; CountryNumbers[66]
                 dc.b CN_BRAZIL,CN_ALBANIA,CN_AUSTRIA,CN_BELGIUM,CN_BELARUS,CN_BULGARIA,CN_CROATIA,CN_CYPRUS,CN_CZECH_REPUBLIC,CN_DENMARK,CN_ENGLAND,CN_ESTONIA,CN_FAROE_ISLANDS,CN_FINLAND,CN_FRANCE,CN_GERMANY
@@ -21884,13 +24640,16 @@ allCountriesList:
                 dc.b CN_RUSSIA,CN_SAN_MARINO,CN_SCOTLAND,CN_SLOVAKIA,CN_SLOVENIA,CN_SPAIN,CN_SWEDEN,CN_SWITZERLAND,CN_TURKEY,CN_UKRAINE,CN_WALES,CN_YUGOSLAVIA,CN_ALGERIA,CN_SOUTH_AFRICA,CN_GHANA,CN_ARGENTINA
                 dc.b CN_BOLIVIA,CN_BRAZIL,CN_CHILE,CN_COLOMBIA,CN_ECUADOR,CN_PARAGUAY,CN_PERU,CN_SURINAM,CN_URUGUAY,CN_VENEZUELA,CN_EL_SALVADOR,CN_MEXICO,CN_USA,CN_JAPAN,CN_TAIWAN,CN_INDIA
                 dc.b CN_AUSTRALIA,CN_NEW_ZEALAND
+ ENDC
 ; unsigned __int8[66]
+ IFEQ COMPETITION_DATA_C
 careerCompetitionIdRemapTable:
                 dc.b $00,$01,$4C,$02,$03,$04,$05,$06,$07,$08,$0A,$0B,$0C,$0D,$0E,$0F
                 dc.b $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$1A,$1B,$1C,$1D,$1E,$1F
                 dc.b $20,$21,$4E,$22,$23,$24,$25,$26,$27,$28,$29,$2A,$4F,$45,$2B,$2D
                 dc.b $2E,$30,$31,$32,$40,$41,$42,$47,$4D,$33,$3C,$49,$4B,$37,$43,$2C
                 dc.b $3E,$FF
+ ENDC
 euroCupQualGroupSeedLists_4_6_11:
                 dc.l euroCupQualSeedList4
                 dc.b $00,$04,$00,$04
@@ -21900,15 +24659,23 @@ euroCupQualGroupSeedLists_4_6_11:
                 dc.b $00,$0B,$00,$05
                 dc.l euroCupQualSeedList22
                 dc.b $00,$16,$00,$02,$FF,$FF,$FF,$FF
+ IFEQ COMPETITION_DATA_C
 euroCupQualSeedList4:
                 dc.b $0E,$14,$23,$08
+ ENDC
+ IFEQ COMPETITION_DATA_C
 euroCupQualSeedList6:
                 dc.b $02,$0D,$1D,$1E,$1F,$29
+ ENDC
+ IFEQ COMPETITION_DATA_C
 euroCupQualSeedList11:
                 dc.b $01,$03,$06,$07,$0F,$19,$1C,$21,$24,$25,$26
+ ENDC
+ IFEQ COMPETITION_DATA_C
 euroCupQualSeedList22:
                 dc.b $10,$0C,$00,$11,$05,$1B,$1A,$18,$12,$17,$04,$0A,$0B,$13,$15,$16
                 dc.b $20,$22,$27,$28,$4C,$4E,$00
+ ENDC
 euroCupQualGroupSeedListsReduced_4_6_11:
                 dc.l euroCupQualSeedListReduced4
                 dc.b $00,$04,$00,$04
@@ -21919,18 +24686,26 @@ euroCupQualGroupSeedListsReduced_4_6_11:
                 dc.l euroCupQualSeedListReduced22
                 dc.b $00,$16,$00,$0B,$FF,$FF,$FF,$FF
 ; unsigned __int8[4]
+ IFEQ COMPETITION_DATA_C
 euroCupQualSeedListReduced4:
                 dc.b $0E,$14,$23,$08    ; Euro cup qualifying seed list for pot of 4 teams.
+ ENDC
 ; unsigned __int8[6]
+ IFEQ COMPETITION_DATA_C
 euroCupQualSeedListReduced6:
                 dc.b $02,$0D,$1D,$1E,$1F,$29 ; Euro cup qualifying seed list for pot of 6 teams.
+ ENDC
 ; unsigned __int8[11]
+ IFEQ COMPETITION_DATA_C
 euroCupQualSeedListReduced11:
                 dc.b $01,$03,$06,$07,$0F,$19,$1C,$21,$24,$25,$26 ; Euro cup qualifying seed list for pot of 11 teams.
+ ENDC
 ; unsigned __int8[23]
+ IFEQ COMPETITION_DATA_C
 euroCupQualSeedListReduced22:
                 dc.b $10,$0C,$00,$11,$05,$1B,$1A,$18,$12,$17,$04,$0A,$0B,$13,$15,$16 ; Euro cup qualifying seed list for pot of 22 teams.
                 dc.b $20,$22,$27,$28,$4C,$4E,$00
+ ENDC
 euroCupQualGroupSeedBuckets_15_18_22:
                 dc.l euroCupQualSeedBucket15
                 dc.b $00,$0F,$00,$0A
@@ -21941,20 +24716,28 @@ euroCupQualGroupSeedBuckets_15_18_22:
                 dc.l euroCupQualSeedBucket22Full
                 dc.b $00,$16,$00,$04,$FF,$FF,$FF,$FF
 ; unsigned __int8[15]
+ IFEQ COMPETITION_DATA_C
 euroCupQualSeedBucket15:
                 dc.b $0E,$0E,$0E,$0E,$14,$14,$14,$14,$23,$23,$23,$23,$08,$08,$08 ; Expanded seed bucket for euro cup qualifying draw.
+ ENDC
 ; unsigned __int8[18]
+ IFEQ COMPETITION_DATA_C
 euroCupQualSeedBucket18:
                 dc.b $02,$02,$02,$0D,$0D,$0D,$1D,$1D,$1D,$1E,$1E,$1E,$1F,$1F,$1F,$29 ; Expanded seed bucket for euro cup qualifying draw.
                 dc.b $29,$29
+ ENDC
 ; unsigned __int8[22]
+ IFEQ COMPETITION_DATA_C
 euroCupQualSeedBucket22:
                 dc.b $01,$01,$03,$03,$06,$06,$07,$07,$0F,$0F,$19,$19,$1C,$1C,$21,$21 ; Expanded seed bucket for euro cup qualifying draw.
                 dc.b $24,$24,$25,$25,$26,$26
+ ENDC
 ; unsigned __int8[23]
+ IFEQ COMPETITION_DATA_C
 euroCupQualSeedBucket22Full:
                 dc.b $10,$0C,$00,$11,$05,$1B,$1A,$18,$12,$17,$04,$0A,$0B,$13,$15,$16 ; Full seed bucket for euro cup qualifying draw.
                 dc.b $20,$22,$27,$28,$4C,$4E,$FF
+ ENDC
 
 teamIdSelectionProcessedFlags:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
@@ -21966,17 +24749,21 @@ teamIdSelectionProcessedFlags:
 ; Ported to C: _Career_IsTeamIdNotInListOrReturnSentinel in src/diy_competition.c
 ; Bridge: d0=teamId, a2=endPtr → C params; returns d0 with bit 16 as sentinel
 ; unsigned __int8[32]
+ IFEQ COMPETITION_DATA_C
 careerRegionPickWeightsTable:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$02,$02,$02,$03,$03,$04
+ ENDC
 
 ; ===== Career_IsTeamIdNotInListOrReturnSentinel2 =====
 ; Ported to C: _Career_IsTeamIdNotInListOrReturnSentinel2 in src/diy_competition.c
 ; Bridge: d0=teamId, a2=endPtr → C params; returns d0 with bit 16 as sentinel
 ; unsigned __int8[32]
+ IFEQ COMPETITION_DATA_C
 careerRegionPickWeightsTable2:
                 dc.b $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
                 dc.b $01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$02,$02,$02,$03,$03,$04
+ ENDC
 
 aDataTeamNnn:
                 dc.b 'data/team.nnn',0
@@ -22011,41 +24798,65 @@ positionsTable:
                 dc.l positionsDefault   ; element[16]
                 dc.l positionsDefault   ; element[17]
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 positionsDefault:
                 dc.b $01,$02,$03,$04,$05,$06,$07,$08,$09,$0A,$0B
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 positions541:
                 dc.b $01,$02,$03,$04,$07,$05,$06,$08,$0A,$09,$0B
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 positions451:
                 dc.b $01,$02,$03,$04,$05,$06,$07,$08,$0A,$09,$0B
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 positions532:
                 dc.b $01,$02,$03,$04,$07,$05,$06,$08,$09,$0A,$0B
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 positions352:
                 dc.b $01,$02,$03,$05,$06,$04,$07,$08,$09,$0A,$0B
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 positions433:
                 dc.b $01,$02,$03,$04,$05,$06,$07,$09,$08,$0A,$0B
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 positions424:
                 dc.b $01,$02,$03,$04,$05,$07,$08,$06,$0A,$0B,$09
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 positions343:
                 dc.b $01,$02,$03,$05,$06,$04,$07,$09,$08,$0A,$0B
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 positionsSweep:
                 dc.b $01,$02,$03,$04,$05,$06,$07,$08,$09,$0A,$0B
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 positions523:
                 dc.b $01,$02,$03,$04,$07,$05,$08,$0A,$06,$0B,$09
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 positionsAttack:
                 dc.b $01,$02,$03,$05,$04,$07,$06,$08,$0A,$0B,$09
+ ENDC
 ; unsigned __int8[11]
+ IFEQ PLAYER_DATA_C
 positionsDefend:
                 dc.b $01,$06,$02,$03,$04,$05,$09,$07,$08,$0A,$0B
+ ENDC
 ; const char *[4]
 divisionStringTable:
                 ; const char *[4]
@@ -22174,41 +24985,58 @@ tacticsStringTable:
                 dc.l aUSER_E            ; element[16]
                 dc.l aUSER_F            ; element[17]
 ; __int8[2]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule2Teams:
                 dc.b 0,1
+ ENDC
 ; __int8[6]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule3Teams:
                 dc.b 0,1,2,0,1,2
+ ENDC
 ; __int8[12]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule4Teams:
                 dc.b 0,1,2,3,0,2,1,3,3,0,1,2
+ ENDC
 ; __int8[20]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule5Teams:
                 dc.b 0,1,2,3,4,0,1,2,3,4,0,2,1,3,4,1
                 dc.b 3,0,2,4
+ ENDC
 ; __int8[30]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule6Teams:
                 dc.b 0,1,2,3,4,5,0,2,1,4,3,5,3,0,5,1
                 dc.b 2,4,4,0,1,3,5,2,0,5,1,2,3,4
+ ENDC
 ; __int8[42]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule7Teams:
                 dc.b 0,1,2,3,4,5,6,0,1,2,3,4,5,6,0,2
                 dc.b 1,3,4,6,5,0,1,4,2,5,3,6,0,3,5,1
                 dc.b 2,4,6,1,4,0,6,2,3,5
+ ENDC
 ; __int8[56]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule8Teams:
                 dc.b 0,1,2,3,4,5,6,7,0,2,1,3,4,6,5,7
                 dc.b 3,0,1,2,7,4,5,6,0,4,1,5,2,6,3,7
                 dc.b 5,0,4,1,7,2,6,3,6,0,7,1,2,4,3,5
                 dc.b 0,7,1,6,2,5,3,4
+ ENDC
 ; __int8[72]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule9Teams:
                 dc.b 0,1,2,3,4,5,6,7,8,0,1,2,3,4,5,6
                 dc.b 7,8,0,2,1,3,4,6,5,7,8,1,3,0,2,4
                 dc.b 5,8,6,0,7,0,1,4,2,5,3,6,7,1,8,2
                 dc.b 3,5,4,7,6,8,0,4,1,5,2,6,7,3,8,3
                 dc.b 0,5,6,1,2,7,4,8
+ ENDC
 ; __int8[90]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule10Teams:
                 dc.b 0,1,2,3,4,5,6,7,8,9,0,2,1,3,4,6
                 dc.b 5,8,7,9,3,0,1,2,7,4,9,5,6,8,0,4
@@ -22216,7 +25044,9 @@ fixtureSchedule10Teams:
                 dc.b 9,6,6,0,7,1,8,2,3,5,4,9,0,7,1,8
                 dc.b 9,2,4,3,5,6,8,0,9,1,2,4,6,3,7,5
                 dc.b 0,9,1,6,2,5,3,7,4,8
+ ENDC
 ; __int8[110]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule11Teams:
                 dc.b 0,1,2,3,4,5,6,7,8,9,10,0,1,2,3,4
                 dc.b 5,6,7,8,9,10,0,2,1,3,4,6,5,7,8,10
@@ -22225,7 +25055,9 @@ fixtureSchedule11Teams:
                 dc.b 9,2,10,2,0,4,1,5,3,7,6,9,8,1,10,3
                 dc.b 5,0,4,8,6,10,7,0,9,3,1,6,2,7,4,9
                 dc.b 5,10,8,2,0,6,7,1,3,8,10,4,5,9
+ ENDC
 ; __int8[132]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule12Teams:
                 dc.b 0,1,2,3,4,5,6,7,8,9,10,11,0,2,1,3
                 dc.b 4,6,5,7,8,10,9,11,3,0,1,2,7,4,5,6
@@ -22236,7 +25068,9 @@ fixtureSchedule12Teams:
                 dc.b 0,9,1,8,2,7,3,6,4,11,5,10,10,0,11,1
                 dc.b 2,4,3,5,6,8,7,9,0,11,1,10,5,2,4,3
                 dc.b 9,6,8,7
+ ENDC
 ; __int8[156]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule13Teams:
                 dc.b 0,1,2,3,4,5,6,7,8,9,10,11,12,0,1,2
                 dc.b 3,4,5,6,7,8,9,10,11,12,0,2,1,3,4,6
@@ -22248,7 +25082,9 @@ fixtureSchedule13Teams:
                 dc.b 4,9,8,11,10,2,12,4,0,6,7,1,5,10,8,0
                 dc.b 9,1,11,4,12,5,2,8,3,9,6,11,7,12,10,3
                 dc.b 0,7,1,8,9,2,4,10,5,11,6,12
+ ENDC
 ; __int8[182]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule14Teams:
                 dc.b 0,1,2,3,4,5,6,7,8,9,10,11,12,13,0,2
                 dc.b 1,3,4,6,5,7,8,10,9,12,11,13,3,0,1,2
@@ -22262,7 +25098,9 @@ fixtureSchedule14Teams:
                 dc.b 2,5,3,12,4,8,6,10,7,9,12,0,10,1,13,2
                 dc.b 4,3,9,5,11,6,8,7,0,13,1,11,2,12,3,5
                 dc.b 4,9,6,8,7,10
+ ENDC
 ; __int8[210]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule15Teams:
                 dc.b 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,0
                 dc.b 1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,2
@@ -22278,7 +25116,9 @@ fixtureSchedule15Teams:
                 dc.b 9,0,12,3,13,5,14,6,9,1,2,10,4,11,7,13
                 dc.b 8,14,12,4,8,0,10,1,2,9,3,11,5,12,6,13
                 dc.b 7,14
+ ENDC
 ; __int8[240]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule16Teams:
                 dc.b 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
                 dc.b 0,2,1,3,4,6,5,7,8,10,9,11,12,14,13,15
@@ -22295,7 +25135,9 @@ fixtureSchedule16Teams:
                 dc.b 0,13,1,12,2,15,3,14,4,9,5,8,6,11,7,10
                 dc.b 14,0,15,1,12,2,13,3,10,4,11,5,8,6,9,7
                 dc.b 0,15,1,14,2,13,3,12,4,11,5,10,6,9,7,8
+ ENDC
 ; __int8[272]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule17Teams:
                 dc.b 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
                 dc.b 16,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14
@@ -22314,7 +25156,9 @@ fixtureSchedule17Teams:
                 dc.b 0,8,2,10,3,11,4,12,7,14,9,16,13,3,15,6
                 dc.b 0,9,1,10,2,11,4,13,5,14,7,15,8,16,12,2
                 dc.b 10,0,1,9,12,3,11,4,5,13,6,14,16,7,8,15
+ ENDC
 ; __int8[306]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule18Teams:
                 dc.b 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
                 dc.b 16,17,0,2,1,3,4,6,5,7,8,10,9,11,12,14
@@ -22336,7 +25180,9 @@ fixtureSchedule18Teams:
                 dc.b 17,1,12,2,3,15,11,4,5,10,13,6,8,7,9,14
                 dc.b 0,17,1,16,2,13,9,3,4,10,5,12,6,8,7,15
                 dc.b 14,11
+ ENDC
 ; __int8[342]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule19Teams:
                 dc.b 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
                 dc.b 16,17,18,0,1,2,3,4,5,6,7,8,9,10,11,12
@@ -22360,7 +25206,9 @@ fixtureSchedule19Teams:
                 dc.b 16,6,18,8,0,10,1,11,4,13,5,14,7,16,9,18
                 dc.b 12,1,15,5,17,6,11,0,2,12,3,13,14,4,7,17
                 dc.b 8,15,9,16,10,18
+ ENDC
 ; __int8[380]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule20Teams:
                 dc.b 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
                 dc.b 16,17,18,19,0,2,1,3,4,6,5,7,8,10,9,11
@@ -22386,7 +25234,9 @@ fixtureSchedule20Teams:
                 dc.b 15,10,14,11,18,0,19,1,12,2,13,3,10,4,11,5
                 dc.b 14,6,15,7,16,8,17,9,0,19,1,18,2,13,3,12
                 dc.b 4,11,5,10,6,15,7,14,8,17,9,16
+ ENDC
 ; __int8[420]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule21Teams:
                 dc.b 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
                 dc.b 16,17,18,19,20,0,1,2,3,4,5,6,7,8,9,10
@@ -22415,7 +25265,9 @@ fixtureSchedule21Teams:
                 dc.b 3,13,4,14,16,5,6,15,7,18,10,19,12,0,17,5
                 dc.b 20,10,1,12,2,13,3,14,15,4,6,17,7,16,8,18
                 dc.b 9,19,11,20
+ ENDC
 ; __int8[462]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule22Teams:
                 dc.b 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
                 dc.b 16,17,18,19,20,21,0,2,1,3,4,6,5,7,8,10
@@ -22446,7 +25298,9 @@ fixtureSchedule22Teams:
                 dc.b 16,12,20,0,21,1,2,18,12,3,16,4,5,14,10,6
                 dc.b 7,11,8,19,9,15,13,17,0,21,1,20,19,2,3,18
                 dc.b 17,4,5,15,6,9,8,7,10,13,11,12,14,16
+ ENDC
 ; __int8[506]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule23Teams:
                 dc.b 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
                 dc.b 16,17,18,19,20,21,22,0,1,2,3,4,5,6,7,8
@@ -22480,7 +25334,9 @@ fixtureSchedule23Teams:
                 dc.b 12,0,1,13,15,3,4,16,7,18,17,9,10,20,11,21
                 dc.b 14,1,19,7,22,10,0,13,2,14,16,3,4,15,5,17
                 dc.b 18,6,8,19,9,21,11,20,12,22
+ ENDC
 ; __int8[552]
+ IFEQ FIXTURE_DATA_C
 fixtureSchedule24Teams:
                 dc.b 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
                 dc.b 16,17,18,19,20,21,22,23,0,2,1,3,4,6,5,7
@@ -22517,6 +25373,7 @@ fixtureSchedule24Teams:
                 dc.b 4,10,5,11,6,8,7,9,12,18,13,19,14,16,15,17
                 dc.b 0,23,1,22,2,21,3,20,11,4,10,5,9,6,8,7
                 dc.b 19,12,18,13,17,14,16,15
+ ENDC
 ; __int8 *[23]
 fixtureSchedulePtrTable:
                 ; __int8 *[23]
@@ -22698,60 +25555,108 @@ aCoachMatch:
                 dc.b "COACH MATCH",0
 aPlayCoachMatch:
                 dc.b 'PLAY/COACH MATCH',0
+ IFEQ STRINGS_DATA_C
 aItIsWithGreatR:
                 dc.b 'IT IS WITH GREAT REGRET THAT WE HAVE DECIDED NOT TO',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aRenewYourContr:
                 dc.b 'RENEW YOUR CONTRACT FOR NEXT SEASON - GOOD LUCK',0
+ ENDC
 aAndWeLookForwa:
                 dc.b 'AND WE LOOK FORWARD TO SEEING YOU SOON',0
 aMemoFromThePre:
                 dc.b 'MEMO FROM THE PRESIDENT',0
 aThePresident:
                 dc.b 'THE PRESIDENT',0
+ IFEQ STRINGS_DATA_C
 aWellDoneAYouDi:
                 dc.b 'WELL DONE %a, YOU DID AN EXCELLENT JOB',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aThisSeasonAndW:
                 dc.b 'THIS SEASON AND WE ALL APPRECIATE IT',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAGoodSeasonAWe:
                 dc.b 'A GOOD SEASON %a, WE ARE ALL VERY',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPleasedWithYou:
                 dc.b 'PLEASED WITH YOU, KEEP UP THE GOOD WORK',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAnUpAndDownSea:
                 dc.b 'AN UP AND DOWN SEASON %a, WE ALL HOPE YOU',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCanImproveOnTh:
                 dc.b 'CAN IMPROVE ON THIS IN THE NEAR FUTURE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNotAVeryGoodSe:
                 dc.b 'NOT A VERY GOOD SEASON %a, WE HOPE YOU CAN',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aImproveOnOurPe:
                 dc.b 'IMPROVE ON OUR PERFORMANCE NEXT SEASON',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAVeryDisappoin:
                 dc.b 'A VERY DISAPPOINTING SEASON %a, WE DEMAND',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aMuchBetterFrom:
                 dc.b 'MUCH BETTER FROM YOU NEXT SEASON',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aThanksForAllYo:
                 dc.b 'THANKS FOR ALL YOUR HELP %a, WE ALL WISH',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aYouWellInYourN:
                 dc.b 'YOU WELL IN YOUR NEW JOB',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWelcomeAWeLook:
                 dc.b 'WELCOME %a, WE LOOK FORWARD TO MUCH',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSuccessFromOur:
                 dc.b 'SUCCESS FROM OUR NEW PARTNERSHIP',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWelcomeAWeHope:
                 dc.b 'WELCOME %a, WE HOPE YOU ENJOY YOUR LAST',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSeasonInManage:
                 dc.b 'SEASON IN MANAGEMENT HERE BEFORE YOUR RETIREMENT',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aJustANoteToWis:
                 dc.b 'JUST A NOTE TO WISH YOU EVERY SUCCESS IN THE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNewSeason:
                 dc.b "NEW SEASON",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWeAllHopeYouEn:
                 dc.b 'WE ALL HOPE YOU ENJOY YOUR LAST SEASON IN MANAGEMENT',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aBeforeHandingT:
                 dc.b 'BEFORE HANDING THE REINS OVER TO A YOUNGER MAN',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWeAllWishYouTh:
                 dc.b 'WE ALL WISH YOU THE VERY BEST AT THE END OF YOUR',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDistinguishedC:
                 dc.b 'DISTINGUISHED CAREER - ENJOY YOUR RETIREMENT',0
+ ENDC
 aViewOtherTeam:
                 dc.b 'VIEW OTHER TEAM',0
 aTheMembersOfTh:
@@ -22782,30 +25687,54 @@ aInternationalJ:
                 dc.b 'INTERNATIONAL JOB OFFER',0
 aInternationalJ_0:
                 dc.b 'INTERNATIONAL JOB OFFER FROM %a',0
+ IFEQ STRINGS_DATA_C
 aFr:
                 dc.b "FR",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWc:
                 dc.b "WC",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWcq:
                 dc.b "WCQ",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aEc:
                 dc.b "EC",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aEcq:
                 dc.b "ECQ",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNac:
                 dc.b "NAC",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCa:
                 dc.b "CA",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAnc:
                 dc.b "ANC",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAc:
                 dc.b "AC",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aOc:
                 dc.b "OC",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aTnm:
                 dc.b "TNM",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aTr:
                 dc.b "TR",0
+ ENDC
 aClubs:
                 dc.b "CLUBS",0
 aAddInternation:
@@ -22846,164 +25775,294 @@ aViewBTeam:
                 dc.b "VIEW B TEAM",0
 aUseMatchTeam:
                 dc.b 'USE MATCH TEAM',0
+ IFEQ STRINGS_DATA_C
 aPleaseNoteATha:
                 dc.b 'PLEASE NOTE %a THAT THE TRIAL PLAYER',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aBHasLeftTheClu:
                 dc.b '%b HAS LEFT THE CLUB',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPleaseNoteATha_0:
                 dc.b 'PLEASE NOTE %a THAT THE RESERVE PLAYER',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aBHasLeftTheClu_0:
                 dc.b '%b HAS LEFT THE CLUB',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPleaseNoteATha_1:
                 dc.b 'PLEASE NOTE %a THAT %b',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aHasJoinedTheCl:
                 dc.b 'HAS JOINED THE CLUB ON TRIAL',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aTspvhcfstpvhcf:
                 dc.b 'TSPVHCFSTPVHCFTSPVHCFSTPVHCFTHPSVCFHTPSVCFCSPTHFVSCPTHFVCSPTHFV'
                 dc.b 'SCPTHFVPTCHVSFTPCHVSFHFSVCPTFHSVCPTEUROPEAN CHAMPIONSHIP QUALIF'
                 dc.b 'IERS',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aECQualifier:
                 dc.b 'E.C. QUALIFIER',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWorldCupQualif:
                 dc.b 'WORLD CUP QUALIFIERS (EUROPE)',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWCQualifier:
                 dc.b 'W.C. QUALIFIER',0
+ ENDC
 aEuropeanTour:
                 dc.b 'EUROPEAN TOUR',0
+ IFEQ STRINGS_DATA_C
 aAfricanTour:
                 dc.b 'AFRICAN TOUR',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSouthAmericanT:
                 dc.b 'SOUTH AMERICAN TOUR',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNorthAmericanT:
                 dc.b 'NORTH AMERICAN TOUR',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAsianTour:
                 dc.b "ASIAN TOUR",0
+ ENDC
 aOceaniaTour:
                 dc.b 'OCEANIA TOUR',0
+ IFEQ STRINGS_DATA_C
 aTour:
                 dc.b "TOUR",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aInvitationTour:
                 dc.b 'INVITATION TOURNAMENT',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aInvTournament:
                 dc.b 'INV TOURNAMENT',0
+ ENDC
 aFriendly:
                 dc.b "FRIENDLY",0
+ IFEQ STRINGS_DATA_C
 aFriendly_0:
                 dc.b "FRIENDLY",0
+ ENDC
 aFriendlies:
                 dc.b "FRIENDLIES",0
+ IFEQ STRINGS_DATA_C
 aWorldCupQualification:
                 dc.b $FF,'WORLD CUP QUALIFICATION',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWorld:
                 dc.b "WORLD",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aEuropeanChampionship:
                 dc.b $FF,'EUROPEAN CHAMPIONSHIP',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWorld_0:
                 dc.b "WORLD",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aEuropeanChampi_0:
                 dc.b 'EUROPEAN CHAMPIONSHIPS',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aECQualifyingGr:
                 dc.b 'E.C. QUALIFYING GROUP 1',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aECQualifyingGr_0:
                 dc.b 'E.C. QUALIFYING GROUP 2',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aECQualifyingGr_1:
                 dc.b 'E.C. QUALIFYING GROUP 3',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aECQualifyingGr_2:
                 dc.b 'E.C. QUALIFYING GROUP 4',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aECQualifyingGr_3:
                 dc.b 'E.C. QUALIFYING GROUP 5',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aECQualifyingGr_4:
                 dc.b 'E.C. QUALIFYING GROUP 6',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aECQualifyingGr_5:
                 dc.b 'E.C. QUALIFYING GROUP 7',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aECQualifyingGr_6:
                 dc.b 'E.C. QUALIFYING GROUP 8',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aECFinals:
                 dc.b "E.C. FINALS",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aECQualifier_0:
                 dc.b 'E.C. QUALIFIER',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCopaAmerica:
                 dc.b 'COPA AMERICA',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCopaAmerica_0:
                 dc.b 'COPA AMERICA',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAfricanNations:
                 dc.b 'AFRICAN NATIONS CUP',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAfricanCup:
                 dc.b "AFRICAN CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNorthAmericanC:
                 dc.b 'NORTH AMERICAN CUP',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNAmericanCup:
                 dc.b 'N AMERICAN CUP',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAsianCup:
                 dc.b "ASIAN CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAsianCup_0:
                 dc.b "ASIAN CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aOceaniaCup:
                 dc.b "OCEANIA CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aOceaniaCup_0:
                 dc.b "OCEANIA CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWorldCup:
                 dc.b "WORLD CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWorldCupQualif_1:
                 dc.b 'WORLD CUP QUALIFICATION',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWorldCupQualif_2:
                 dc.b 'WORLD CUP QUALIFYING GROUP 1',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWorldCupQualif_3:
                 dc.b 'WORLD CUP QUALIFYING GROUP 2',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWorldCupQualif_4:
                 dc.b 'WORLD CUP QUALIFYING GROUP 3',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWorldCupQualif_5:
                 dc.b 'WORLD CUP QUALIFYING GROUP 4',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWorldCupQualif_6:
                 dc.b 'WORLD CUP QUALIFYING GROUP 5',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWorldCupQualif_7:
                 dc.b 'WORLD CUP QUALIFYING GROUP 6',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWorldCupQualif_8:
                 dc.b 'WORLD CUP QUALIFYING GROUP 7',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWorldCupQualif_9:
                 dc.b 'WORLD CUP QUALIFYING GROUP 8',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWorldCup_0:
                 dc.b "WORLD CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWCQualifier_0:
                 dc.b 'W.C. QUALIFIER',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFinalGroups:
                 dc.b 'FINAL GROUPS',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFinalGroups_0:
                 dc.b 'FINAL GROUPS',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPlayer:
                 dc.b "PLAYER",0
+ ENDC
 aPlayerCoach:
                 dc.b 'PLAYER-COACH',0
 aCoach:
                 dc.b "COACH",0
+ IFEQ STRINGS_DATA_C
 aCoach_0:
                 dc.b "COACH",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPlayerCoach_0:
                 dc.b 'PLAYER-COACH',0
+ ENDC
 aStartCareerAs:
                 dc.b 'START CAREER AS',0
+ IFEQ STRINGS_DATA_C
 aPlayer_0:
                 dc.b "PLAYER:",0
+ ENDC
 ; const char[8]
 aCoach_1:
                 dc.b 1,'COACH:',0
 ; const char[8]
 aPlayer_1:
                 dc.b 2,'PLAYER',0
+ IFEQ STRINGS_DATA_C
 aCoach_2:
                 dc.b "-COACH:",0
+ ENDC
 aViewResult:
                 dc.b "VIEW RESULT",0
 aMatch:
                 dc.b "- MATCH -",0
 aResult:
                 dc.b "- RESULT -",0
+ IFEQ STRINGS_DATA_C
 aDivision1:
                 dc.b "DIVISION 1",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDivision2:
                 dc.b "DIVISION 2",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDivision3:
                 dc.b "DIVISION 3",0
+ ENDC
 aFileSavedByDif:
                 dc.b 'FILE SAVED BY DIFFERENT S.W.O.S. VERSION',0
 aFileSavedOnDif:
@@ -23012,20 +26071,32 @@ aAllPlayerTeams:
                 dc.b 'ALL PLAYER TEAMS EQUAL',0
 aFriendlyDiyGam:
                 dc.b 'FRIENDLY/DIY GAME LENGTH',0
+ IFEQ STRINGS_DATA_C
 aFollowingAVote:
                 dc.b 'FOLLOWING A VOTE OF CONFIDENCE, YOU HAVE NO MORE THAN',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 a3MatchesToTurn:
                 dc.b '3 MATCHES TO TURN THIS CLUB AROUND OR YOU WILL BE SACKED',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFollowingACris:
                 dc.b 'FOLLOWING A CRISIS BOARD MEETING, WE MUST INSIST YOU',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aClearTheOverdr:
                 dc.b 'CLEAR THE OVERDRAFT IMMEDIATELY OR YOU''RE SACKED',0
+ ENDC
 aContinueCareer:
                 dc.b 'CONTINUE CAREER',0
+ IFEQ STRINGS_DATA_C
 aWelcomeToOurCl:
                 dc.b 'WELCOME TO OUR CLUB, WE LOOK FORWARD TO',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aMuchSuccessFro:
                 dc.b 'MUCH SUCCESS FROM OUR NEW PARTNERSHIP',0
+ ENDC
 aYourCareerIsOv:
                 dc.b 'YOUR CAREER IS OVER',0
 aInsertGameSave:
@@ -23040,8 +26111,10 @@ aViewHighlights:
                 dc.b 'VIEW HIGHLIGHTS',0
 aNotAHighlights:
                 dc.b 'NOT A HIGHLIGHTS FILE',0
+ IFEQ STRINGS_DATA_C
 aHigh:
                 dc.b "HIGH",0
+ ENDC
 aFormation:
                 dc.b "FORMATION",0
 aNotACompetitio:
@@ -23064,38 +26137,68 @@ aRetire:
                 dc.b "RETIRE",0
 aSaveCareer:
                 dc.b "SAVE CAREER",0
+ IFEQ STRINGS_DATA_C
 aRnd1:
                 dc.b "RND 1",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aRnd2:
                 dc.b "RND 2",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aRnd3:
                 dc.b "RND 3",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aRnd4:
                 dc.b "RND 4",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aRnd5:
                 dc.b "RND 5",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aRnd6:
                 dc.b "RND 6",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aQF:
                 dc.b "Q/F",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSF:
                 dc.b "S/F",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFinal:
                 dc.b "FINAL",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFinal_0:
                 dc.b "FINAL",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 a3rd:
                 dc.b "3RD",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFinal_1:
                 dc.b "FINAL",0
+ ENDC
 aYourChairman:
                 dc.b 'YOUR CHAIRMAN',0
+ IFEQ STRINGS_DATA_C
 a2Gk:
                 dc.b "2 + GK",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 a3Gk:
                 dc.b "3 + GK",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 a4Gk:
                 dc.b "4 + GK",0
+ ENDC
 aLoan:
                 dc.b "LOAN",0
 aContinueA:
@@ -23128,54 +26231,102 @@ a0m:
 ; const char[8]
 a01m:
                 dc.b $9C,'%0.%1M',0
+ IFEQ STRINGS_DATA_C
 aSorryAButTheCl:
                 dc.b 'SORRY %a BUT THE CLUB IS UNWILLING TO MAKE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAnyFurtherPlay:
                 dc.b 'ANY FURTHER PLAYER PURCHASES THIS SEASON',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPleaseNoteATha_2:
                 dc.b 'PLEASE NOTE %a THAT WE WILL NOT PERMIT',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAnyFurtherPlay_0:
                 dc.b 'ANY FURTHER PLAYER SALES THIS SEASON',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPleaseTakeNote:
                 dc.b 'PLEASE TAKE NOTE OF OUR CURRENT BANK BALANCE AND',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aEnsureThatWeCl:
                 dc.b 'ENSURE THAT WE CLEAR OUR OVERDRAFT AS SOON AS POSSIBLE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aJustAReminderT:
                 dc.b 'JUST A REMINDER TO DEAL WITH THE OVERDRAFT SITUATION',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aOrWeWillHaveTo:
                 dc.b 'OR WE WILL HAVE TO RECONSIDER YOUR POSITION AS MANAGER',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aItIsWithGreatR_0:
                 dc.b 'IT IS WITH GREAT REGRET THAT THE BOARD AND I HAVE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDecidedToRelie:
                 dc.b 'DECIDED TO RELIEVE YOU OF YOUR DUTIES - YOU''RE SACKED',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPleaseTakeNote_0:
                 dc.b 'PLEASE TAKE NOTE OF OUR CURRENT LEAGUE POSITION AND',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aEnsureThatItIs:
                 dc.b 'ENSURE THAT IT IS IMPROVED UPON AS SOON AS POSSIBLE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aRememberUnless:
                 dc.b 'REMEMBER, UNLESS OUR LEAGUE PLACING SOON IMPROVES',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWeWillHaveToRe:
                 dc.b 'WE WILL HAVE TO RECONSIDER YOUR POSITION AS MANAGER',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aItIsWithGreatR_1:
                 dc.b 'IT IS WITH GREAT REGRET THAT THE BOARD AND I HAVE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDecidedToRelie_0:
                 dc.b 'DECIDED TO RELIEVE YOU OF YOUR DUTIES - YOU''RE SACKED',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aJustANoteToWis_0:
                 dc.b 'JUST A NOTE TO WISH YOU EVERY SUCCESS IN THE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNewSeason_0:
                 dc.b "NEW SEASON",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWeAllHopeYouEn_0:
                 dc.b 'WE ALL HOPE YOU ENJOY YOUR LAST SEASON IN MANAGEMENT',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aBeforeHandingT_0:
                 dc.b 'BEFORE HANDING THE REINS OVER TO A YOUNGER MAN',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWelcomeToOurCl_0:
                 dc.b 'WELCOME TO OUR CLUB, WE HOPE YOU ENJOY YOUR LAST',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSeasonInManage_0:
                 dc.b 'SEASON IN MANAGEMENT HERE BEFORE YOUR RETIREMENT',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWeAllWishYouTh_0:
                 dc.b 'WE ALL WISH YOU THE VERY BEST AT THE END OF YOUR',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDistinguishedC_0:
                 dc.b 'DISTINGUISHED CAREER - ENJOY YOUR RETIREMENT',0
+ ENDC
 aMATCHSTATS:
                 dc.b 'M A T C H   S T A T S',0
 aPossession:
@@ -23332,32 +26483,56 @@ aWeHereAtARefus:
                 dc.b 'WE HERE AT %a REFUSE TO FURTHER',0
 aImproveOnOurOf:
                 dc.b 'IMPROVE ON OUR OFFER TO BUY',0
+ IFEQ STRINGS_DATA_C
 aWeHereAtAAreHa:
                 dc.b 'WE HERE AT %a ARE HAPPY TO SELL',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWeHereAtAAreHa_0:
                 dc.b 'WE HERE AT %a ARE HAPPY TO EXCHANGE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSorryAAreUnwil:
                 dc.b 'SORRY %a ARE UNWILLING TO SELL',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSorryAAreUnwil_0:
                 dc.b 'SORRY %a ARE UNWILLING TO EXCHANGE',0
+ ENDC
 aInADealWithAFo:
                 dc.b 'IN A DEAL WITH %a FOR',0
+ IFEQ STRINGS_DATA_C
 aAsThisPlayerIs:
                 dc.b 'AS THIS PLAYER IS NOT FOR SALE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAsThesePlayers:
                 dc.b 0,'AS THESE PLAYERS ARE NOT FOR SALE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAndWeWillAccep:
                 dc.b 0,'AND WE WILL ACCEPT NO MORE OFFERS ON',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aThisPlayerFrom:
                 dc.b 'THIS PLAYER FROM YOUR CLUB',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAndWeWillAccep_0:
                 dc.b 'AND WE WILL ACCEPT NO MORE OFFERS ON',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aThesePlayersFr:
                 dc.b 'THESE PLAYERS FROM YOUR CLUB',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aButWeWouldBeHa:
                 dc.b 'BUT WE WOULD BE HAPPY TO LOOK AT A MORE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFavourableOffe:
                 dc.b 'FAVOURABLE OFFER',0
+ ENDC
 aUnlessTheOffer:
                 dc.b 'UNLESS THE OFFER IS RAISED BY %a',0
 aWeHereAtAWould:
@@ -23388,38 +26563,70 @@ aDearAB_0:
                 dc.b "DEAR %a %b",0
 aBestRegards:
                 dc.b 'BEST REGARDS',0
+ IFEQ STRINGS_DATA_C
 aComeOnAWeCanno:
                 dc.b 'COME ON %a WE CANNOT KEEP TOO LARGE A SQUAD',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aOrTheWageBillW:
                 dc.b 'OR THE WAGE BILL WILL GO THROUGH THE ROOF',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSorryAButTheDi:
                 dc.b 'SORRY %a BUT THE DIRECTORS AND I HAVE NO',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aMoreTimeToNego:
                 dc.b 'MORE TIME TO NEGOTIATE BEFORE OUR NEXT GAME',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWellDoneAYouDi_0:
                 dc.b 'WELL DONE %a, YOU DID AN EXCELLENT JOB',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aThisSeasonAndW_0:
                 dc.b 'THIS SEASON AND WE ALL APPRECIATE IT',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAGoodSeasonAWe_0:
                 dc.b 'A GOOD SEASON %a, WE ARE ALL VERY',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPleasedWithYou_0:
                 dc.b 'PLEASED WITH YOU, KEEP UP THE GOOD WORK',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAnUpAndDownSea_0:
                 dc.b 'AN UP AND DOWN SEASON %a, WE ALL HOPE YOU',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCanImproveOnTh_0:
                 dc.b 'CAN IMPROVE ON THIS IN THE NEAR FUTURE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNotAVeryGoodSe_0:
                 dc.b 'NOT A VERY GOOD SEASON %a, WE HOPE YOU CAN',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aImproveTheTeam:
                 dc.b 'IMPROVE THE TEAM''S PERFORMANCE NEXT SEASON',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAVeryDisappoin_0:
                 dc.b 'A VERY DISAPPOINTING SEASON %a, THE CLUB',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDemandsMuchBet:
                 dc.b 'DEMANDS MUCH BETTER FROM YOU NEXT SEASON',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aThanksForAllYo_0:
                 dc.b 'THANKS FOR ALL YOUR HELP %a, WE ALL WISH',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aYouWellInYourN_0:
                 dc.b 'YOU WELL IN YOUR NEW JOB',0
+ ENDC
 aBankStatement:
                 dc.b 'BANK STATEMENT',0
 aOldBalance:
@@ -23456,8 +26663,10 @@ aPlayerWagesBil:
                 dc.b 'PLAYER WAGES BILL:',0
 aInsertBlankDis:
                 dc.b 1,'INSERT BLANK DISK IN DF0:',0
+ IFEQ STRINGS_DATA_C
 aInsertSwosDisk:
                 dc.b 1,'INSERT SWOS DISK 1 IN ANY DRIVE',0
+ ENDC
 aInsertSwosDisk_0:
                 dc.b 1,'INSERT SWOS DISK 2 IN ANY DRIVE',0
 aCustomTeamsChanged:
@@ -23468,30 +26677,48 @@ aEditedTacticsWillBeLost:
                 dc.b 1,'EDITED TACTICS WILL BE LOST',0
 aDiyCompetitionPrompt:
                 dc.b 2,'  YOU ARE ABOUT TO LOSE CURRENT  ',0
+ IFEQ STRINGS_DATA_C
 aDiyCompetition:
                 dc.b '         DIY COMPETITION         ',0
+ ENDC
 aPresetCompetitionPrompt:
                 dc.b 2,'  YOU ARE ABOUT TO LOSE CURRENT  ',0
+ IFEQ STRINGS_DATA_C
 aPresetCompetit:
                 dc.b '       PRESET COMPETITION        ',0
+ ENDC
 aSeasonPrompt:
                 dc.b 2,'  YOU ARE ABOUT TO LOSE CURRENT  ',0
+ IFEQ STRINGS_DATA_C
 aSeason:
                 dc.b '             SEASON              ',0
+ ENDC
 aCareerPrompt:
                 dc.b 2,'  YOU ARE ABOUT TO LOSE CURRENT  ',0
+ IFEQ STRINGS_DATA_C
 aCareer:
                 dc.b '             CAREER              ',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDiy:
                 dc.b "DIY",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPreset:
                 dc.b "PRESET",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSeason_0:
                 dc.b "SEASON",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCareer_0:
                 dc.b "CAREER",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aTact:
                 dc.b "TACT",0
+ ENDC
 aName:
                 dc.b "NAME",0
 aMr:
@@ -23500,14 +26727,22 @@ aMs:
                 dc.b "MS",0
 aOr:
                 dc.b "OR ",0
+ IFEQ STRINGS_DATA_C
 aPlayEachTeamX1:
                 dc.b 'PLAY EACH TEAM X 1',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPlayEachTeamX2:
                 dc.b 'PLAY EACH TEAM X 2',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPlayEachTeamX3:
                 dc.b 'PLAY EACH TEAM X 3',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPlayEachTeamX4:
                 dc.b 'PLAY EACH TEAM X 4',0
+ ENDC
 aKnockout:
                 dc.b "KNOCKOUT",0
 a1GroupOf1:
@@ -23588,14 +26823,22 @@ aReplay:
                 dc.b "REPLAY",0
 aReplays:
                 dc.b "REPLAYS",0
+ IFEQ STRINGS_DATA_C
 a2ndReplay:
                 dc.b "2ND REPLAY",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 a3rdReplay:
                 dc.b "3RD REPLAY",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 a2ndReplays:
                 dc.b "2ND REPLAYS",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 a3rdReplays:
                 dc.b "3RD REPLAYS",0
+ ENDC
 aComputer:
                 dc.b "COMPUTER",0
 aSelect0Teams:
@@ -23642,20 +26885,32 @@ aSelectSquadToV:
                 dc.b 'SELECT SQUAD TO VIEW',0
 aFriendly_1:
                 dc.b "FRIENDLY",0
+ IFEQ STRINGS_DATA_C
 aMakeNewCompeti:
                 dc.b 'MAKE NEW COMPETITION',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aMakeNewDiyTour:
                 dc.b 'MAKE NEW DIY TOURNAMENT',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aMakeNewDiyLeag:
                 dc.b 'MAKE NEW DIY LEAGUE',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aMakeNewDiyCup:
                 dc.b 'MAKE NEW DIY CUP',0
+ ENDC
 aContinue:
                 dc.b "CONTINUE",0
+ IFEQ STRINGS_DATA_C
 aOn:
                 dc.b "ON",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aOff:
                 dc.b "OFF",0
+ ENDC
 aOk:
                 dc.b "OK",0
 aCopy:
@@ -23664,18 +26919,26 @@ aUndo:
                 dc.b "UNDO",0
 aExit:
                 dc.b "EXIT",0
+ IFEQ STRINGS_DATA_C
 aCancel:
                 dc.b "CANCEL",0
+ ENDC
 aImport:
                 dc.b "IMPORT",0
+ IFEQ STRINGS_DATA_C
 aFlipOn:
                 dc.b "FLIP ON",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFlipOff:
                 dc.b "FLIP OFF",0
+ ENDC
 aDiyCompetition_0:
                 dc.b 'DIY COMPETITION',0
+ IFEQ STRINGS_DATA_C
 aSelectDiyCompe:
                 dc.b 'SELECT DIY COMPETITION TYPE',0
+ ENDC
 aDiyLeague:
                 dc.b "DIY LEAGUE",0
 aDiyCup:
@@ -23690,8 +26953,10 @@ aDesignDiyTourn:
                 dc.b 'DESIGN DIY TOURNAMENT',0
 aAbort:
                 dc.b "ABORT",0
+ IFEQ STRINGS_DATA_C
 aWinners_0:
                 dc.b "WINNERS",0
+ ENDC
 aV:
                 dc.b "V",0
 aPlus:
@@ -23718,16 +26983,22 @@ aSquad:
                 dc.b "SQUAD",0
 aSquads:
                 dc.b "SQUADS",0
+ IFEQ STRINGS_DATA_C
 aTactics:
                 dc.b "TACTICS",0
+ ENDC
 aEditTactics:
                 dc.b 'EDIT TACTICS',0
 aEditTacticsSel:
                 dc.b 'EDIT TACTICS - SELECT TEAM',0
+ IFEQ STRINGS_DATA_C
 aBallInPlay:
                 dc.b 'BALL IN PLAY',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aBallOutOfPlay:
                 dc.b 'BALL OUT OF PLAY',0
+ ENDC
 aImportTactics:
                 dc.b 'IMPORT TACTICS',0
 aLoadEditedTact:
@@ -23748,10 +27019,14 @@ aPlayEachTeam:
                 dc.b 'PLAY EACH TEAM',0
 aPointsForAWin:
                 dc.b 'POINTS FOR A WIN',0
+ IFEQ STRINGS_DATA_C
 a2PtsForAWin:
                 dc.b '2 PTS FOR A WIN',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 a3PtsForAWin:
                 dc.b '3 PTS FOR A WIN',0
+ ENDC
 aX0:
                 dc.b "X %0",0
 aSubstitutes:
@@ -23766,54 +27041,100 @@ aLeg1:
                 dc.b "LEG 1",0
 aLeg2:
                 dc.b "LEG 2",0
+ IFEQ STRINGS_DATA_C
 a1Leg:
                 dc.b "1 LEG",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 a2Legs:
                 dc.b "2 LEGS",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNoExtraTime:
                 dc.b 'NO EXTRA TIME',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aExtraTime:
                 dc.b "EXTRA TIME",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aETIfReplay:
                 dc.b 'E.T. IF REPLAY',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNoPenalties:
                 dc.b 'NO PENALTIES',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPenalties:
                 dc.b "PENALTIES",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPensIfReplay:
                 dc.b 'PENS IF REPLAY',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAfter90Mins:
                 dc.b 'AFTER 90 MINS',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAfterExtraTime:
                 dc.b 'AFTER EXTRA TIME',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPitchType:
                 dc.b "PITCH TYPE",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aRandom:
                 dc.b "RANDOM",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFrozen:
                 dc.b "FROZEN",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aMuddy:
                 dc.b "MUDDY",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWet:
                 dc.b "WET",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSoft:
                 dc.b "SOFT",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNormal:
                 dc.b "NORMAL",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDry:
                 dc.b "DRY",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aHard:
                 dc.b "HARD",0
+ ENDC
 aAwayGoals:
                 dc.b "AWAY GOALS",0
+ IFEQ STRINGS_DATA_C
 aTournament:
                 dc.b "TOURNAMENT",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aLeague:
                 dc.b "LEAGUE",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aCup:
                 dc.b "CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aLeague_0:
                 dc.b "LEAGUE",0
+ ENDC
 aCup_0:
                 dc.b "CUP",0
 aCup_1:
@@ -23824,22 +27145,38 @@ aLeague_1:
                 dc.b "LEAGUE",0
 aPlayoffs:
                 dc.b "PLAYOFFS",0
+ IFEQ STRINGS_DATA_C
 aPremierDivisio:
                 dc.b 'PREMIER DIVISION',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDivision1_0:
                 dc.b "DIVISION 1",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDivision2_0:
                 dc.b "DIVISION 2",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDivision3_0:
                 dc.b "DIVISION 3",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPremDiv:
                 dc.b "PREM DIV",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDiv1:
                 dc.b "DIV 1",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDiv2:
                 dc.b "DIV 2",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDiv3:
                 dc.b "DIV 3",0
+ ENDC
 aChooseTeam:
                 dc.b "CHOOSE TEAM",0
 aChooseTeams:
@@ -23848,50 +27185,94 @@ aChangeTeams:
                 dc.b 'CHANGE TEAMS',0
 aRounds:
                 dc.b "ROUNDS",0
+ IFEQ STRINGS_DATA_C
 aGroupA:
                 dc.b "GROUP A",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGroupB:
                 dc.b "GROUP B",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGroupC:
                 dc.b "GROUP C",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGroupD:
                 dc.b "GROUP D",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGroupE:
                 dc.b "GROUP E",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGroupF:
                 dc.b "GROUP F",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGroupG:
                 dc.b "GROUP G",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGroupH:
                 dc.b "GROUP H",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAttack_0:
                 dc.b "ATTACK",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDefend_0:
                 dc.b "DEFEND",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aG:
                 dc.b "G",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aRb:
                 dc.b "RB",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aLb:
                 dc.b "LB",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aD_0:
                 dc.b "D",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aRw:
                 dc.b "RW",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aLw:
                 dc.b "LW",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aM:
                 dc.b "M",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aA_1:
                 dc.b "A",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGoalkeeper:
                 dc.b "GOALKEEPER",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDefender:
                 dc.b "DEFENDER",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aMidfielder:
                 dc.b "MIDFIELDER",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAttacker:
                 dc.b "ATTACKER",0
+ ENDC
 aFirstKit:
                 dc.b "FIRST KIT",0
 aSecondKit:
@@ -23906,8 +27287,10 @@ aViewMatch:
                 dc.b "VIEW MATCH",0
 aViewHighlights_0:
                 dc.b 'VIEW HIGHLIGHTS',0
+ IFEQ STRINGS_DATA_C
 aManageMatch:
                 dc.b 'MANAGE MATCH',0
+ ENDC
 aStats:
                 dc.b "STATS",0
 aLeadingCompeti:
@@ -23928,8 +27311,10 @@ aManagementReco_0:
                 dc.b 'MANAGEMENT RECORD',0
 aSeason_1:
                 dc.b "SEASON",0
+ IFEQ STRINGS_DATA_C
 aSeasonal:
                 dc.b "SEASONAL",0
+ ENDC
 aEditCustomTeam:
                 dc.b 'EDIT CUSTOM TEAMS',0
 aPresetCompetit_0:
@@ -23944,72 +27329,130 @@ aH:
                 dc.b "(H)",0
 aA_2:
                 dc.b "(A)",0
+ IFEQ STRINGS_DATA_C
 aFirstRound:
                 dc.b "FIRST ROUND",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSecondRound:
                 dc.b 'SECOND ROUND',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aThirdRound:
                 dc.b "THIRD ROUND",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFourthRound:
                 dc.b 'FOURTH ROUND',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFifthRound:
                 dc.b "FIFTH ROUND",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSixthRound:
                 dc.b "SIXTH ROUND",0
+ ENDC
 aQuarterFinal:
                 dc.b 'QUARTER-FINAL',0
 aSemiFinal:
                 dc.b "SEMI-FINAL",0
+ IFEQ STRINGS_DATA_C
 aFinal_2:
                 dc.b "FINAL",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFinalGroup:
                 dc.b "FINAL GROUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aThirdPlacePlay:
                 dc.b 'THIRD PLACE PLAY-OFF',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aRound1:
                 dc.b "ROUND 1",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aRound2:
                 dc.b "ROUND 2",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aRound3:
                 dc.b "ROUND 3",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aRound4:
                 dc.b "ROUND 4",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aRound5:
                 dc.b "ROUND 5",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aRound6:
                 dc.b "ROUND 6",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aQFinal:
                 dc.b "Q-FINAL",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSFinal:
                 dc.b "S-FINAL",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFinal_3:
                 dc.b "FINAL",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFinalGroup_0:
                 dc.b "FINAL GROUP",0
+ ENDC
 a3rdPlayOff:
                 dc.b '3RD PLAY-OFF',0
 aFinal_4:
                 dc.b "FINAL",0
+ IFEQ STRINGS_DATA_C
 aEnglish:
                 dc.b "ENGLISH",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGerman:
                 dc.b "GERMAN",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFrench:
                 dc.b "FRENCH",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aItalian:
                 dc.b "ITALIAN",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSpanish:
                 dc.b "SPANISH",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 a3Mins:
                 dc.b "3 MINS",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 a5Mins:
                 dc.b "5 MINS",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 a7Mins:
                 dc.b "7 MINS",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 a10Mins:
                 dc.b "10 MINS",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aGameLength:
                 dc.b "GAME LENGTH",0
+ ENDC
 aFixPitchType:
                 dc.b 'FIX PITCH TYPE',0
 aAutoReplays:
@@ -24018,10 +27461,14 @@ aAutoSaveHighli:
                 dc.b 'AUTO SAVE HIGHLIGHTS',0
 aMenuMusic:
                 dc.b "MENU MUSIC",0
+ IFEQ STRINGS_DATA_C
 aLanguage:
                 dc.b "LANGUAGE",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPlay:
                 dc.b "PLAY",0
+ ENDC
 aGoals:
                 dc.b "GOALS",0
 aForm:
@@ -24032,38 +27479,64 @@ aCups:
                 dc.b "CUPS",0
 aCup_3:
                 dc.b "CUP",0
+ IFEQ STRINGS_DATA_C
 aInt:
                 dc.b "INT",0
+ ENDC
 aTot:
                 dc.b "TOT",0
 aOwnGoals:
                 dc.b "OWN GOALS",0
 aExPlayerGoals:
                 dc.b 'EX. PLAYER GOALS',0
+ IFEQ STRINGS_DATA_C
 aJan:
                 dc.b "JAN",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFeb:
                 dc.b "FEB",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aMar:
                 dc.b "MAR",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aApr:
                 dc.b "APR",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aMay:
                 dc.b "MAY",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aJun:
                 dc.b "JUN",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aJul:
                 dc.b "JUL",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAug:
                 dc.b "AUG",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSep:
                 dc.b "SEP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aOct:
                 dc.b "OCT",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNov:
                 dc.b "NOV",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aDec:
                 dc.b "DEC",0
+ ENDC
 aLoadOldCompeti:
                 dc.b 'LOAD OLD COMPETITION',0
 aLoad:
@@ -24090,32 +27563,52 @@ aNotATacticsFil:
                 dc.b 'NOT A TACTICS FILE',0
 aEditedCustomTe:
                 dc.b 'EDITED CUSTOM TEAMS FILE NOT FOUND',0
+ IFEQ STRINGS_DATA_C
 aCanOnlySaveMax:
                 dc.b 'CAN ONLY SAVE MAXIMUM 45 FILES ON DISK',0
+ ENDC
 aSaveDiskFiling:
                 dc.b 'SAVE DISK FILING',0
 aFormatSaveDisk:
                 dc.b 'FORMAT SAVE DISK',0
 aDeleteFile:
                 dc.b "DELETE FILE",0
+ IFEQ STRINGS_DATA_C
 aAny:
                 dc.b "ANY",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aPassing:
                 dc.b "PASSING",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aShooting:
                 dc.b "SHOOTING",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aHeading:
                 dc.b "HEADING",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aTackling:
                 dc.b "TACKLING",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aBallControl:
                 dc.b 'BALL CONTROL',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSpeed:
                 dc.b "SPEED",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFinishing:
                 dc.b "FINISHING",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aFitness:
                 dc.b "FITNESS",0
+ ENDC
 aCriteria:
                 dc.b "CRITERIA",0
 aPlayersOnDomes:
@@ -24124,8 +27617,10 @@ aPlayersOnForei:
                 dc.b 'PLAYERS ON FOREIGN MARKET',0
 aType:
                 dc.b "TYPE",0
+ IFEQ STRINGS_DATA_C
 aApproxValue:
                 dc.b 'APPROX VALUE',0
+ ENDC
 aSkills:
                 dc.b "SKILLS",0
 aList:
@@ -24144,8 +27639,10 @@ aViewForeignPla:
                 dc.b 'VIEW FOREIGN PLAYER MARKET',0
 aOffers:
                 dc.b "OFFERS",0
+ IFEQ STRINGS_DATA_C
 aDiscardOffer:
                 dc.b 'DISCARD OFFER',0
+ ENDC
 aMakeOffer:
                 dc.b "MAKE OFFER",0
 aGiveFreeTransf:
@@ -24184,98 +27681,184 @@ aViewTeam:
                 dc.b "VIEW TEAM",0
 aViewLeague:
                 dc.b "VIEW LEAGUE",0,$9C
+ IFEQ STRINGS_DATA_C
 a25k:
                 dc.b "25K",0,$9C
+ ENDC
+ IFEQ STRINGS_DATA_C
 a50k:
                 dc.b "50K",0,$9C
+ ENDC
+ IFEQ STRINGS_DATA_C
 a75k:
                 dc.b "75K",0,$9C
+ ENDC
+ IFEQ STRINGS_DATA_C
 a100k:
                 dc.b "100K",0,$9C
+ ENDC
+ IFEQ STRINGS_DATA_C
 a150k:
                 dc.b "150K",0,$9C
+ ENDC
+ IFEQ STRINGS_DATA_C
 a200k:
                 dc.b "200K",0,$9C
+ ENDC
+ IFEQ STRINGS_DATA_C
 a300k:
                 dc.b "300K",0,$9C
+ ENDC
+ IFEQ STRINGS_DATA_C
 a500k:
                 dc.b "500K",0,$9C
+ ENDC
+ IFEQ STRINGS_DATA_C
 a750k:
                 dc.b "750K",0,$9C
+ ENDC
+ IFEQ STRINGS_DATA_C
 a1m:
                 dc.b "1M",0,$9C
+ ENDC
+ IFEQ STRINGS_DATA_C
 a15m:
                 dc.b "1.5M",0,$9C
+ ENDC
+ IFEQ STRINGS_DATA_C
 a2m:
                 dc.b "2M",0,$9C
+ ENDC
+ IFEQ STRINGS_DATA_C
 a3m:
                 dc.b "3M",0,$9C
+ ENDC
+ IFEQ STRINGS_DATA_C
 a5m:
                 dc.b "5M",0,$9C
+ ENDC
+ IFEQ STRINGS_DATA_C
 a10m:
                 dc.b "10M",0,$9C
+ ENDC
+ IFEQ STRINGS_DATA_C
 a15m_0:
                 dc.b "15M",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aEuropean:
                 dc.b "EUROPEAN",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNorthAmerican:
                 dc.b 'NORTH AMERICAN',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSouthAmerican:
                 dc.b 'SOUTH AMERICAN',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAsian:
                 dc.b "ASIAN",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aOceanian:
                 dc.b "OCEANIAN",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAfrican:
                 dc.b "AFRICAN",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aEur:
                 dc.b "EUR",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aNam:
                 dc.b "NAM",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSam:
                 dc.b "SAM",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAsi:
                 dc.b "ASI",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aOce:
                 dc.b "OCE",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aAfr:
                 dc.b "AFR",0
+ ENDC
 ; const char[9]
+ IFEQ STRINGS_DATA_C
 aEuro:
                 dc.b 4,'E',0,'U',0,'R',0,'O',0
+ ENDC
 ; const char[9]
+ IFEQ STRINGS_DATA_C
 aNam_0:
                 dc.b 4,'N',0,'A',0,'M',0,' ',0
+ ENDC
 ; const char[9]
+ IFEQ STRINGS_DATA_C
 aSam_0:
                 dc.b 4,'S',0,'A',0,'M',0,' ',0
+ ENDC
 ; const char[9]
+ IFEQ STRINGS_DATA_C
 aAsi_0:
                 dc.b 4,'A',0,'S',0,'I',0,' ',0
+ ENDC
 ; const char[9]
+ IFEQ STRINGS_DATA_C
 aOce_0:
                 dc.b 4,'O',0,'C',0,'E',0,' ',0
+ ENDC
 ; const char[9]
+ IFEQ STRINGS_DATA_C
 aAfr_0:
                 dc.b 4,'A',0,'F',0,'R',0,' ',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWorldClubChamp:
                 dc.b 'WORLD CLUB CHAMPIONSHIP',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aWorldClub:
                 dc.b "WORLD CLUB",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aEuropeanChampi_1:
                 dc.b 'EUROPEAN CHAMPIONS CUP',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aEuropeanCup:
                 dc.b 'EUROPEAN CUP',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aEufaCup:
                 dc.b "EUFA CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aEufaCup_0:
                 dc.b "EUFA CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aEuropeanCupWin:
                 dc.b 'EUROPEAN CUP-WINNERS CUP',0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aEuroCwCup:
                 dc.b "EURO CW CUP",0
+ ENDC
+ IFEQ STRINGS_DATA_C
 aSouthAmericanC:
                 dc.b 'SOUTH AMERICAN CUP',0
+ ENDC
 ; const char[9]
 aLge_0:
                 dc.b 4,'L',0,'G',0,'E',0,' ',0
@@ -24289,90 +27872,132 @@ aCup1:
 aCup2:
                 dc.b 4,'C',0,'U',0,'P',0,'2',0
 ; const char[9]
+ IFEQ STRINGS_DATA_C
 aEuro_0:
                 dc.b 4,'E',0,'U',0,'R',0,'O',0
+ ENDC
 ; const char[9]
+ IFEQ STRINGS_DATA_C
 aInt_0:
                 dc.b 4,'I',0,'N',0,'T',0,' ',0
+ ENDC
 ; const char[9]
 aTot_0:
                 dc.b 4,'T',0,'O',0,'T',0,' ',0
 aReplay_0:
                 dc.b '              (REPLAY)              ',0
+ IFEQ STRINGS_DATA_C
 aReplay_1:
                 dc.b '         (REPLAY)         ',0
+ ENDC
 aAET:
                 dc.b '               A.E.T.               ',0
+ IFEQ STRINGS_DATA_C
 aAET_0:
                 dc.b '          A.E.T.          ',0
+ ENDC
 aAET90Mins23:
                 dc.b '        A.E.T. 90 MINS %2-%3        ',0
+ IFEQ STRINGS_DATA_C
 aAET90Mins23_0:
                 dc.b '   A.E.T. 90 MINS %2-%3   ',0
+ ENDC
 aAWin01OnPens:
                 dc.b '        %a WIN %0-%1 ON PENS        ',0
+ IFEQ STRINGS_DATA_C
 aAWin01OnPens_0:
                 dc.b '   %a WIN %0-%1 ON PENS   ',0
+ ENDC
 aAWin01OnPensAE:
                 dc.b '    %a WIN %0-%1 ON PENS A.E.T.     ',0
+ IFEQ STRINGS_DATA_C
 aAWin01OnPensAE_0:
                 dc.b '%a WIN %0-%1 ON PENS A.E.T.',0
+ ENDC
 aAWin01OnPensAE_1:
                 dc.b '%a WIN %0-%1 ON PENS A.E.T. 90 MINS %2-%3',0
+ IFEQ STRINGS_DATA_C
 aAWin01OnPensAE_2:
                 dc.b '%a WIN %0-%1 ON PENS A.E.T.',0
+ ENDC
 aAETReplay:
                 dc.b '          A.E.T. (REPLAY)           ',0
+ IFEQ STRINGS_DATA_C
 aAETReplay_0:
                 dc.b '     A.E.T. (REPLAY)      ',0
+ ENDC
 aAET90Mins23Rep:
                 dc.b '   A.E.T. 90 MINS %2-%3 (REPLAY)    ',0
+ IFEQ STRINGS_DATA_C
 aAET90Mins23Rep_0:
                 dc.b 'A.E.T. 90 MINS %2-%3 (REPLAY)',0
+ ENDC
 aAWin01OnPensRe:
                 dc.b '   %a WIN %0-%1 ON PENS (REPLAY)    ',0
+ IFEQ STRINGS_DATA_C
 aAWin01OnPens_1:
                 dc.b '   %a WIN %0-%1 ON PENS   ',0
+ ENDC
 aAWin01OnPensAE_3:
                 dc.b '%a WIN %0-%1 ON PENS A.E.T. (REPLAY)',0
+ IFEQ STRINGS_DATA_C
 aAWin01OnPensAE_4:
                 dc.b '%a WIN %0-%1 ON PENS A.E.T.',0
+ ENDC
 aAWin01OnPensAE_5:
                 dc.b '%a WIN %0-%1 ON PENS A.E.T. 90 MINS %2-%3',0
+ IFEQ STRINGS_DATA_C
 aAWin01OnPensAE_6:
                 dc.b '%a WIN %0-%1 ON PENS A.E.T.',0
+ ENDC
 a1stLeg01:
                 dc.b '      1ST LEG %0-%1       ',0
+ IFEQ STRINGS_DATA_C
 a1stLeg01_0:
                 dc.b '      1ST LEG %0-%1       ',0
+ ENDC
 aAWin23OnAgg:
                 dc.b '        %a WIN %2-%3 ON AGG.        ',0
+ IFEQ STRINGS_DATA_C
 aAWin23OnAgg_0:
                 dc.b '   %a WIN %2-%3 ON AGG.   ',0
+ ENDC
 aAWin23OnAggAET:
                 dc.b '    %a WIN %2-%3 ON AGG. A.E.T.     ',0
+ IFEQ STRINGS_DATA_C
 aAWin23OnAggAET_0:
                 dc.b '%a WIN %2-%3 ON AGG. A.E.T.',0
+ ENDC
 a23OnAggAWinOnA:
                 dc.b ' %2-%3 ON AGG. %a WIN ON AWAY GOALS ',0
+ IFEQ STRINGS_DATA_C
 aAWinOnAwayGoal:
                 dc.b '   %a WIN ON AWAY GOALS   ',0
+ ENDC
 a23OnAggAWinOnA_0:
                 dc.b '%2-%3 ON AGG. %a WIN ON AWAY GOALS A.E.T.',0
+ IFEQ STRINGS_DATA_C
 aAWinOnAwayGoal_0:
                 dc.b '%a WIN ON AWAY GOALS A.E.T.',0
+ ENDC
 a23OnAggAWin01O:
                 dc.b ' %2-%3 ON AGG. %a WIN %0-%1 ON PENS ',0
+ IFEQ STRINGS_DATA_C
 aAWin01OnPens_2:
                 dc.b '   %a WIN %0-%1 ON PENS   ',0
+ ENDC
 a23OnAggAWin01O_0:
                 dc.b '%2-%3 ON AGG. %a WIN %0-%1 ON PENS A.E.T.',0
+ IFEQ STRINGS_DATA_C
 aAWin01OnPensAE_7:
                 dc.b '%a WIN %0-%1 ON PENS A.E.T.',0
+ ENDC
 a23OnAgg:
                 dc.b '           %2-%3 ON AGG.            ',0
+ IFEQ STRINGS_DATA_C
 a23OnAgg_0:
                 dc.b '      %2-%3 ON AGG.       ',0
+ ENDC
 
 stringDataEnd:
 ; unsigned __int32 *
@@ -25056,107 +28681,175 @@ teamBudgetRankTable:
 BSS_01_168B24:
                 ds.b $7F
 ; CompetitionCup2_4_2_32
+ IFEQ COMPETITION_DATA_C
 euroCupCopy:
                 ds.b $4E
+ ENDC
 ; CompetitionCup_6_2_64
+ IFEQ COMPETITION_DATA_C
 cupWinnersCupCopy:
                 ds.b $5C
+ ENDC
 ; CompetitionCup_6_2_64
+ IFEQ COMPETITION_DATA_C
 uefaCupCopy:
                 ds.b $5C
+ ENDC
 ; CompetitionCup_6_2_8
+ IFEQ COMPETITION_DATA_C
 invitationTournamentCopy:
                 ds.b $24
+ ENDC
 ; CompetitionCup_6_2_8
+ IFEQ COMPETITION_DATA_C
 tourCopy:
                 ds.b $24
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 friendlyCopy:
                 ds.b $28
+ ENDC
 ; CompetitionCup2_4_2_32
+ IFEQ COMPETITION_DATA_C
 europeanChampionships2Copy:
                 ds.b $4E
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroup1Copy:
                 ds.b $28
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroup2Copy:
                 ds.b $28
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroup3Copy:
                 ds.b $28
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroup4Copy:
                 ds.b $28
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroup5Copy:
                 ds.b $28
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroup6Copy:
                 ds.b $28
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroup7Copy:
                 ds.b $28
+ ENDC
 ; CompetitionCup_6_2_8
+ IFEQ COMPETITION_DATA_C
 ecQualifyingGroup8Copy:
                 ds.b $24
+ ENDC
 ; CompetitionCup2_4_2_24
+ IFEQ COMPETITION_DATA_C
 copaAmericaCopy:
                 ds.b $46
+ ENDC
 ; CompetitionCup2_6_2
+ IFEQ COMPETITION_DATA_C
 africanNationsCupCopy:
                 ds.b $30
+ ENDC
 ; CompetitionCup2_4_2
+ IFEQ COMPETITION_DATA_C
 northAmericanCupCopy:
                 ds.b $2E
+ ENDC
 ; CompetitionCup2_6_2
+ IFEQ COMPETITION_DATA_C
 asianCupCopy:
                 ds.b $30
+ ENDC
 ; CompetitionCup_6_2
+ IFEQ COMPETITION_DATA_C
 oceaniaCupCopy:
                 ds.b $1C
+ ENDC
 ; CompetitionCup2_6_2_64
+ IFEQ COMPETITION_DATA_C
 worldCup2Copy:
                 ds.b $70
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroup1Copy:
                 ds.b $28
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroup2Copy:
                 ds.b $28
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroup3Copy:
                 ds.b $28
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroup4Copy:
                 ds.b $28
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroup5Copy:
                 ds.b $28
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroup6Copy:
                 ds.b $28
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroup7Copy:
                 ds.b $28
+ ENDC
 ; CompetitionCup_6_2_12
+ IFEQ COMPETITION_DATA_C
 worldCupQualifyingGroup8Copy:
                 ds.b $28
+ ENDC
 ; CompetitionCup2_6_2_24
+ IFEQ COMPETITION_DATA_C
 northAmericaWorldCupQualificationCopy:
                 ds.b $48
+ ENDC
 ; CompetitionCup2_6_2_16
+ IFEQ COMPETITION_DATA_C
 southAmericaWorldCupQualificationCopy:
                 ds.b $40
+ ENDC
 ; CompetitionCup2_6_2_64
+ IFEQ COMPETITION_DATA_C
 africaWorldCupQualificationCopy:
                 ds.b $70
+ ENDC
 ; CompetitionCup2_6_2_60
+ IFEQ COMPETITION_DATA_C
 asiaWorldCupQualificationCopy:
                 ds.b $6C
+ ENDC
 ; CompetitionCup_6_2_8
+ IFEQ COMPETITION_DATA_C
 oceaniaWorldCupQualificationCopy:
                 ds.b $24
+ ENDC
 teamSelectionKeyCacheIndex:
                 ds.b $2
 teamSelectionKeyCacheOffset:
@@ -25272,23 +28965,35 @@ contestStarted:
 careerLoadedFlag:
                 ds.b $2
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTacticsUSERA:
                 ds.b $172
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTacticsUSERB:
                 ds.b $172
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTacticsUSERC:
                 ds.b $172
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTacticsUSERD:
                 ds.b $172
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTacticsUSERE:
                 ds.b $172
+ ENDC
 ; TeamTactics
+ IFEQ TACTICS_DATA_C
 teamTacticsUSERF:
                 ds.b $172
+ ENDC
 ; __int16
 gameLength:
                 ds.b $2

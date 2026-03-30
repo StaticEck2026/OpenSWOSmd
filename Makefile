@@ -7,6 +7,19 @@ ifdef OS
 	SHELL = cmd.exe
 endif
 
+# Data module flags: set to 1 to use C data, 0 to use ASM data
+COMPETITION_DATA_C ?= 0
+TACTICS_DATA_C     ?= 0
+FIXTURE_DATA_C     ?= 0
+SIMULATION_DATA_C  ?= 0
+PLAYER_DATA_C      ?= 0
+RENDER_DATA_C      ?= 0
+PALETTE_DATA_C     ?= 0
+STRINGS_DATA_C     ?= 0
+GENERAL_DATA_C     ?= 0
+
+DATA_FLAGS = -DCOMPETITION_DATA_C=$(COMPETITION_DATA_C) -DTACTICS_DATA_C=$(TACTICS_DATA_C) -DFIXTURE_DATA_C=$(FIXTURE_DATA_C) -DSIMULATION_DATA_C=$(SIMULATION_DATA_C) -DPLAYER_DATA_C=$(PLAYER_DATA_C) -DRENDER_DATA_C=$(RENDER_DATA_C) -DPALETTE_DATA_C=$(PALETTE_DATA_C) -DSTRINGS_DATA_C=$(STRINGS_DATA_C) -DGENERAL_DATA_C=$(GENERAL_DATA_C)
+
 subdirs := $(filter-out data/,$(wildcard */))
 VPATH = $(subdirs)
 cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
@@ -37,11 +50,11 @@ else
 	SDKDIR = $(abspath $(dir $(shell which $(CC)))../m68k-amiga-elf/sys-include)
 endif
 
-CCFLAGS   = -g -MP -MMD -m68020 -Ofast -nostdlib -Wextra -Wno-unused-function -Wno-volatile-register-var -Wno-stringop-overflow -fomit-frame-pointer -fno-tree-loop-distribution -fno-strict-aliasing -flto -fwhole-program -fno-exceptions -ffunction-sections -fdata-sections -Iinclude
+CCFLAGS   = -g -MP -MMD -m68020 -Ofast -nostdlib -Wextra -Wno-unused-function -Wno-volatile-register-var -Wno-stringop-overflow -fomit-frame-pointer -fno-tree-loop-distribution -fno-strict-aliasing -flto -fwhole-program -fno-exceptions -ffunction-sections -fdata-sections -Iinclude $(DATA_FLAGS)
 CPPFLAGS  = $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS   = -mcpu=68020 -g --register-prefix-optional -I$(SDKDIR)
 LDFLAGS   = -Wl,--emit-relocs,--no-check-sections,-e,main,-Map=$(OUT).map,-T,$(LDSCRIPT)
-VASMFLAGS = -m68020 -Felf -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -I$(SDKDIR)
+VASMFLAGS = -m68020 -Felf -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -I$(SDKDIR) $(DATA_FLAGS)
 
 all: $(OUT)
 
@@ -99,7 +112,7 @@ CCFLAGS_NOLTO = $(subst -flto,,$(subst -fwhole-program,,$(CCFLAGS)))
 
 $(c_objects) : obj/%.o : %.c
 	$(info Compiling $<)
-	@$(CC) $(if $(filter obj/game_timers.o obj/update_players.o obj/sprite_data.o obj/menu_data.o,$@),$(CCFLAGS_NOLTO),$(CCFLAGS)) -c -o $@ $(CURDIR)/$<
+	@$(CC) $(if $(filter obj/game_timers.o obj/update_players.o obj/sprite_data.o obj/menu_data.o obj/competition_data.o obj/tactics_data.o obj/fixture_data.o obj/simulation_data.o obj/player_data.o obj/render_data.o obj/palette_data.o obj/strings_data.o obj/general_data.o,$@),$(CCFLAGS_NOLTO),$(CCFLAGS)) -c -o $@ $(CURDIR)/$<
 
 $(s_objects): obj/%.o : %.s
 	$(info Assembling $<)

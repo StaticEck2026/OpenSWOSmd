@@ -115,7 +115,8 @@ void _ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
     team2Filename = fnTable[d0];
 
     /* Process image command stream (colors menu graphics) */
-    _ProcessImageCommandStream(menuColorAndTextScript, (uint8_t *)menuImageStreamBaseEnd);
+    /* Force read from memory — LTO must not use a stale cached value */
+    _ProcessImageCommandStream(menuColorAndTextScript, (uint8_t *)*(volatile uint32_t *)&menuImageStreamBaseEnd);
 
     /* Copy advertisement sprite data pointers */
     _CopyAdvertisementsData();

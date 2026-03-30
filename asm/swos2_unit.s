@@ -469,6 +469,10 @@
         xdef    frontbufferBaseAlt
         xdef    frontbufferMaskBuffer
         xdef    panicReasonCode
+        xdef    dbg_watchArmed
+        xdef    dbg_watchSaved
+
+        ; (debug dump uses _DebugDumpToFile in resload.c)
         xdef    stackTop
         xdef    g_earlyAllocCacheMem
         xdef    g_earlyAllocCacheSize

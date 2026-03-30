@@ -41,7 +41,7 @@ extern uint16_t cameraXVelocity;
 extern uint16_t cameraYVelocity;
 extern uint16_t cameraMoveToShowerLatch;
 extern uint16_t hideBall;
-extern uint16_t playGame;
+extern volatile uint16_t playGame;
 extern uint16_t trainingGame;
 extern uint16_t goalCounter;
 extern uint16_t endOfHalfWriteOnly;

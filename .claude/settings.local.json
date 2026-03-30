@@ -47,7 +47,12 @@
       "Read(//c//**)",
       "Bash(HOME=/home/bbaker /tmp/build_swos.sh:*)",
       "Bash(/tmp/build_swos.sh -j4 program=uae/dh0/data/SWOS2 2>&1 | tail -3)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(for label:*)",
+      "Bash(do echo:*)",
+      "Read(//tmp/**)",
+      "Bash(rm -f /mnt/c/Projects/AI/SWOS/SWOS_C/obj/*.d /mnt/c/Projects/AI/SWOS/SWOS_C/obj/*.o)",
+      "Bash(/tmp/build_swos.sh -j4 program=uae/dh0/data/SWOS2)"
     ]
   }
 }

@@ -489,8 +489,10 @@ void _DIY_CacheSelectedTeamPointers(void)
         /* Store relative pointer: teamPtr - &selTeamsPtr (asm: suba.l #selTeamsPtr,a0) */
         uint16_t entryIdx = (uint16_t)(int16_t)idx;
         uint8_t *entry = a2raw + entryIdx * 0x12;
-        *(uint32_t *)(entry + 0x2B4) = (uint32_t)((uint8_t *)teamPtr - &selTeamsPtr);
+        *(volatile uint32_t *)(entry + 0x2B4) = (uint32_t)((uint8_t *)teamPtr - &selTeamsPtr);
     }
+
+    /* diagnostic removed */
 }
 
 /* ================================================================
@@ -1287,11 +1289,7 @@ void _DIY_ValidateLeagueScratchBuffer(void)
         checksum += *teamData++;
     }
     if (checksum != 0) {
-        /* DIAGNOSTIC: report count from teamFileBuffer.
-         * 0xD3xx where xx = count high byte.
-         * Expected: count should be small (< 2000). If count is 0x5555, teamFileBuffer has BSS fill.
-         * If count is 0, teamFileBuffer wasn't loaded. */
-        panicReasonCode = 0xD300 | (uint8_t)(count >> 8);
+        panicReasonCode = 0x5555;
         _PanicHaltLoop();
     }
 }
@@ -3312,7 +3310,7 @@ check_worldcup:
  *
  * asm: a2=diy, a3=slot, a4=unused, a5=comp(diyCompetitionStart)
  * ================================================================ */
-__attribute__((used, externally_visible))
+__attribute__((used, externally_visible, optimize("O1")))
 void _DIY_BuildTeamGridAndIndexMaps(uint8_t *diy, uint8_t *slot,
                                      uint8_t *comp4, uint8_t *comp)
 {
@@ -3393,6 +3391,8 @@ void _DIY_BuildTeamGridAndIndexMaps(uint8_t *diy, uint8_t *slot,
         }
 
     copy_and_index:
+        /* diagnostics removed */
+
         /* Copy scratch back to diy team list */
         {
             uint8_t *src = diyTeamShuffleScratch;
@@ -6683,6 +6683,8 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
         /* Entry for team name */
         a5->y = d2;
         a5->dwHeight = d4;
+
+        /* diagnostic removed */
 
         /* Get team pointer: a4[0x2B4] + selTeamsPtr base */
         uint8_t *teamPtr = (uint8_t *)((uint32_t)(*(uint32_t *)(a4 + 0x2B4)) + (uint32_t)&selTeamsPtr);

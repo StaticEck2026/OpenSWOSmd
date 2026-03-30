@@ -88,10 +88,6 @@ extern void _ResetAnimatedPatternsForBothTeams(void);
 extern void _DrawAnimatedPatterns(void);
 extern uint16_t panicReasonCode;
 
-/* ---- DIAGNOSTIC: highlight debug counters (remove after testing) ---- */
-static volatile uint16_t dbg_hlSaveCallCount = 0;   /* times _SaveHighlightScene entered */
-static volatile uint16_t dbg_hlScanFoundCount = 0;   /* times scan found a marker */
-
 /* ---- Local probability tables (matching asm data) ---- */
 
 /* pitchTypeSeasonalProbabilities: 12 seasons * 7 types = 84 bytes
@@ -322,9 +318,6 @@ void _FadeAndSaveHighlightScene(void)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void _SaveHighlightScene(void)
 {
-    /* DIAGNOSTIC: track calls */
-    dbg_hlSaveCallCount++;
-
     /* Asm: move.w #10,d0; beq locret — the beq is dead (10 != 0). Omitted. */
 
     if (numScenesInHilFile == HIL_MAX_SCENES) {
@@ -348,7 +341,7 @@ void _SaveHighlightScene(void)
 
     for (;;) {
         if (count == HIL_SCENE_BYTES)
-            return;  /* Not found within range — DIAGNOSTIC: dbg_hlScanFoundCount NOT incremented */
+            return;  /* Not found within range */
         count += 4;
         p += 4;
         if (p == nextGoalPtr)
@@ -356,9 +349,6 @@ void _SaveHighlightScene(void)
         if (*p & 0x80)
             break;  /* Found frame-start marker */
     }
-
-    /* DIAGNOSTIC: scan succeeded */
-    dbg_hlScanFoundCount++;
 
     /* Copy 19000 bytes from ring buffer (starting at p) into goals buffer slot */
     uint32_t *dest = (uint32_t *)(hilStartOfGoalsBuffer +

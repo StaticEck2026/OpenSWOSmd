@@ -26,7 +26,7 @@ extern uint16_t initialKickWriteOnlyTicks;
 extern int16_t  resultTimer;
 extern uint16_t timeVar;
 extern int16_t  statsTimer;
-extern uint16_t playGame;
+extern volatile uint16_t playGame;
 extern uint16_t stoppageEventTimer;
 extern uint16_t showFansCounter;
 extern uint16_t breakCameraMode;

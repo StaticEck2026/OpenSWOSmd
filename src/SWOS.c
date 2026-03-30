@@ -270,7 +270,9 @@ void _mainC(void)
 
     /* ---- Phase 8: Build intro menu assets ---- */
     _ProcessImageCommandStream(introMenuImageScript, imageCmdWorkBuf);
-    menuImageStreamBaseEnd = imageStreamCursor;
+    /* Force this write through to memory — LTO must not eliminate it.
+     * menuImageStreamBaseEnd is read later by _ConvertColorsAndTextSprites. */
+    *(volatile uint32_t *)&menuImageStreamBaseEnd = *(volatile uint32_t *)&imageStreamCursor;
     _AssetPrecacheMenuPack();
     assetLoaderAltPathReady = 1;
     hilNumGoals = 0;

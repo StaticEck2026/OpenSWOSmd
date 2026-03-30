@@ -20,7 +20,7 @@ extern volatile uint16_t saveHighlightScene;
 extern volatile uint16_t fadeAndSaveHighlightScene;
 extern uint16_t spaceReplayTimer;
 extern uint16_t subsWriteOnly;
-extern uint16_t playGame;
+extern volatile uint16_t playGame;
 extern volatile uint16_t playHighlightFlag;
 extern uint16_t normalReplayRunning;
 extern uint16_t userRequestedReplay;

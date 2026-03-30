@@ -550,6 +550,38 @@ static inline __attribute__((always_inline)) void wait_blitter(void)
         ;
 }
 
+/* Disable the game's VBlank ISR, wait for any in-progress ISR to complete,
+ * then allow safe file I/O. Re-enable after I/O is done.
+ *
+ * Sequence:
+ * 1. Disable VERTB (bit 5) in INTENA — prevents NEW VBlank interrupts
+ * 2. Wait for blitter idle — if ISR was mid-blit, this waits for it to finish
+ * 3. Brief delay — let ISR complete any non-blitter work
+ * 4. Final blitter wait — in case ISR had a second blit pending
+ *
+ * After this, no ISR can fire and any previous ISR has completed. */
+static void disable_vblank_and_wait(void)
+{
+    /* Disable VBlank interrupt (clear bit 5 — writing without SET bit clears) */
+    custom->intena = (1u << 5);
+
+    /* Wait for blitter to finish — ISR may have started a blit */
+    wait_blitter();
+
+    /* Brief delay to let any in-flight ISR finish non-blitter work */
+    (void)(*(volatile uint16_t *)0xDFF006u);
+    (void)(*(volatile uint16_t *)0xDFF006u);
+
+    /* Final blitter wait */
+    wait_blitter();
+}
+
+static void enable_vblank(void)
+{
+    /* Re-enable VBlank interrupt (SET bit + bit 5) */
+    custom->intena = 0x8000u | (1u << 5);
+}
+
 
 /* ================================================================
  * SafeStart
@@ -933,47 +965,68 @@ static uint32_t resload_listfiles(uint32_t buffersize, uint8_t *dirname, uint8_t
 }
 
 
+/* Debug dump: write raw buffer to file */
+__attribute__((used, externally_visible))
+void _DebugDumpToFile(uint8_t *filename, uint8_t *data, uint32_t size)
+{
+    disable_vblank_and_wait();
+    swap_int2_to_os();
+    resload_savefile(size, filename, data, (uint32_t *)0);
+    swap_int2_to_game();
+    enable_vblank();
+}
+
 /* ================================================================
  * File I/O wrappers (swap interrupt vectors around DOS calls)
  * ================================================================ */
 
 static void file_GetFileSize(uint8_t *name)
 {
+    disable_vblank_and_wait();
     swap_int2_to_os();
     uint32_t sz = resload_getfilesize(name);
     swap_int2_to_game();
+    enable_vblank();
     /* d0 = sz, d1 = error — not used by callers, size stored by caller */
     size = sz;
 }
 
 static void file_LoadFile(uint8_t *name, uint8_t *dest)
 {
+    disable_vblank_and_wait();
     swap_int2_to_os();
     uint32_t len = resload_loadfile(name, dest, (uint32_t *)0);
     swap_int2_to_game();
+    enable_vblank();
     size = len;
 }
 
 static void file_SaveFile(uint32_t fileSize, uint8_t *name, uint8_t *src)
 {
+    disable_vblank_and_wait();
     swap_int2_to_os();
     resload_savefile(fileSize, name, src, (uint32_t *)0);
     swap_int2_to_game();
+    enable_vblank();
     size = fileSize;
 }
 
 static void file_Deletefile(uint8_t *name)
 {
+    disable_vblank_and_wait();
     swap_int2_to_os();
     resload_deletefile(name, (uint32_t *)0);
     swap_int2_to_game();
+    enable_vblank();
 }
 
 static void file_ListFiles(uint32_t buffersize, uint8_t *dirname, uint8_t *buffer)
 {
+    disable_vblank_and_wait();
     swap_int2_to_os();
     uint32_t count = resload_listfiles(buffersize, dirname, buffer, (uint32_t *)0);
     swap_int2_to_game();
+    enable_vblank();
     /* Store count as word in high 16 bits of size (big-endian) — matching asm behavior */
     *(uint16_t *)&size = (uint16_t)count;
 }
