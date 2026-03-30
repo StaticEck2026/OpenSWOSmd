@@ -1062,8 +1062,6 @@ void _InitializeNewSeason(void)
         }
     }
 
-    /* diagnostic removed */
-
     /* Set up DIY competition for slot 4 */
     _DIY_SelectCompetitionSlot4FromCurrentDivision();
 
@@ -1144,7 +1142,6 @@ void _InitializeNewSeason(void)
         }
     }
 
-    /* diagnostic removed */
 }
 
 /* ================================================================

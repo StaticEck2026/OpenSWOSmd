@@ -232,7 +232,7 @@ void _DIY_ShuffleTeams(uint8_t *diy, uint8_t *slot)
  * shuffle within groups
  * asm: a2=diy buffer, a3=competition slot
  * ================================================================ */
-__attribute__((used, externally_visible))
+__attribute__((used, externally_visible, optimize("O1")))
 void _DIY_SortAndShuffleTeamsByValue(uint8_t *diy, uint8_t *slot)
 {
     uint16_t *teamIds = (uint16_t *)(diy + 0x9A);
@@ -492,7 +492,6 @@ void _DIY_CacheSelectedTeamPointers(void)
         *(volatile uint32_t *)(entry + 0x2B4) = (uint32_t)((uint8_t *)teamPtr - &selTeamsPtr);
     }
 
-    /* diagnostic removed */
 }
 
 /* ================================================================
@@ -3337,7 +3336,7 @@ void _DIY_BuildTeamGridAndIndexMaps(uint8_t *diy, uint8_t *slot,
         uint16_t field54 = (uint16_t)diyS->roundComplete;
         uint16_t field50 = (uint16_t)diyS->matchPairsPerRound;
 
-        if (field54 == 0 && field50 == 0)
+        if (field54 == 0 && field50 != 0)
             goto build_index_maps;
 
         uint16_t seedingType = *(uint16_t *)(slot + 0x160);
@@ -3391,8 +3390,6 @@ void _DIY_BuildTeamGridAndIndexMaps(uint8_t *diy, uint8_t *slot,
         }
 
     copy_and_index:
-        /* diagnostics removed */
-
         /* Copy scratch back to diy team list */
         {
             uint8_t *src = diyTeamShuffleScratch;
@@ -6683,8 +6680,6 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
         /* Entry for team name */
         a5->y = d2;
         a5->dwHeight = d4;
-
-        /* diagnostic removed */
 
         /* Get team pointer: a4[0x2B4] + selTeamsPtr base */
         uint8_t *teamPtr = (uint8_t *)((uint32_t)(*(uint32_t *)(a4 + 0x2B4)) + (uint32_t)&selTeamsPtr);
