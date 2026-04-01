@@ -232,7 +232,7 @@ void _DIY_ShuffleTeams(uint8_t *diy, uint8_t *slot)
  * shuffle within groups
  * asm: a2=diy buffer, a3=competition slot
  * ================================================================ */
-__attribute__((used, externally_visible, optimize("O1")))
+__attribute__((used, externally_visible))
 void _DIY_SortAndShuffleTeamsByValue(uint8_t *diy, uint8_t *slot)
 {
     uint16_t *teamIds = (uint16_t *)(diy + 0x9A);
@@ -3309,7 +3309,7 @@ check_worldcup:
  *
  * asm: a2=diy, a3=slot, a4=unused, a5=comp(diyCompetitionStart)
  * ================================================================ */
-__attribute__((used, externally_visible, optimize("O1")))
+__attribute__((used, externally_visible))
 void _DIY_BuildTeamGridAndIndexMaps(uint8_t *diy, uint8_t *slot,
                                      uint8_t *comp4, uint8_t *comp)
 {

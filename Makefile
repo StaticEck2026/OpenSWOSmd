@@ -110,9 +110,12 @@ $(cpp_objects) : obj/%.o : %.cpp
 # game_timers.c triggers GCC ICE in LTO CCP pass — compile without LTO
 CCFLAGS_NOLTO = $(subst -flto,,$(subst -fwhole-program,,$(CCFLAGS)))
 
+# diy_competition.c has complex nested loops that -Ofast miscompiles — use -O2
+CCFLAGS_O2 = $(subst -Ofast,-O2,$(CCFLAGS))
+
 $(c_objects) : obj/%.o : %.c
 	$(info Compiling $<)
-	@$(CC) $(if $(filter obj/game_timers.o obj/update_players.o obj/sprite_data.o obj/menu_data.o obj/competition_data.o obj/tactics_data.o obj/fixture_data.o obj/simulation_data.o obj/player_data.o obj/render_data.o obj/palette_data.o obj/strings_data.o obj/general_data.o,$@),$(CCFLAGS_NOLTO),$(CCFLAGS)) -c -o $@ $(CURDIR)/$<
+	@$(CC) $(if $(filter obj/diy_competition.o,$@),$(CCFLAGS_O2),$(if $(filter obj/game_timers.o obj/update_players.o obj/sprite_data.o obj/menu_data.o obj/competition_data.o obj/tactics_data.o obj/fixture_data.o obj/simulation_data.o obj/player_data.o obj/render_data.o obj/palette_data.o obj/strings_data.o obj/general_data.o,$@),$(CCFLAGS_NOLTO),$(CCFLAGS))) -c -o $@ $(CURDIR)/$<
 
 $(s_objects): obj/%.o : %.s
 	$(info Assembling $<)
