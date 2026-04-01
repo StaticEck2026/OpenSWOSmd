@@ -1288,10 +1288,6 @@ void _DIY_ValidateLeagueScratchBuffer(void)
         checksum += *teamData++;
     }
     if (checksum != 0) {
-        /* DIAGNOSTIC: dump current scratch buffer for comparison with loaded version */
-        extern void _DebugDumpToFile(uint8_t *filename, uint8_t *data, uint32_t size);
-        _DebugDumpToFile((uint8_t *)"save/scratch_atpanic.bin",
-                         (uint8_t *)diyLeagueScratchBuffer, 2000);
         panicReasonCode = 0x5555;
         _PanicHaltLoop();
     }
