@@ -1426,14 +1426,6 @@ void _Career_AdvanceToNextSeason_UpdateCompetitions(void)
 {
     _DIY_LoadLeagueScratchFromTable();
 
-    /* DIAGNOSTIC: dump scratch buffer right after load, before any processing */
-    {
-        extern void _DebugDumpToFile(uint8_t *filename, uint8_t *data, uint32_t size);
-        extern volatile uint8_t diyLeagueScratchBuffer[];
-        _DebugDumpToFile((uint8_t *)"save/scratch_loaded.bin",
-                         (uint8_t *)diyLeagueScratchBuffer, 2000);
-    }
-
     playPromotedAnimation = 0;
     playRelegatedAnimation = 0;
 

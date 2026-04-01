@@ -1288,14 +1288,7 @@ void _DIY_ValidateLeagueScratchBuffer(void)
         checksum += *teamData++;
     }
     if (checksum != 0) {
-        /* DIAGNOSTIC: dump scratch buffer + teamFileBuffer header at panic */
-        extern void _DebugDumpToFile(uint8_t *filename, uint8_t *data, uint32_t size);
-        extern uint8_t currentCompetitionId;
-        _DebugDumpToFile((uint8_t *)"save/scratch_fail.bin",
-                         (uint8_t *)diyLeagueScratchBuffer, 2000);
-        _DebugDumpToFile((uint8_t *)"save/tfb_fail.bin", teamFileBuffer, 8);
-        /* Encode: competition ID + checksum value */
-        panicReasonCode = 0x5500 | (currentCompetitionId & 0xFF);
+        panicReasonCode = 0x5555;
         _PanicHaltLoop();
     }
 }
@@ -3600,8 +3593,10 @@ void _DIY_LoadCurrentCompetitionSlot(void)
         uint16_t d0field = *(uint16_t *)(a3 + 0x164);
         int32_t d0ext = (int16_t)d0field;
         uint16_t divisor = *(uint16_t *)(a3 + 0x16A);
-        uint16_t quotient = (uint16_t)((uint32_t)(uint16_t)d0ext / divisor);
-        uint16_t remainder = (uint16_t)((uint32_t)(uint16_t)d0ext % divisor);
+        /* ASM: ext.l d0 then divu.w — sign-extend to 32-bit then unsigned divide.
+         * Must NOT truncate to uint16_t before dividing (loses sign extension). */
+        uint16_t quotient = (uint16_t)((uint32_t)d0ext / divisor);
+        uint16_t remainder = (uint16_t)((uint32_t)d0ext % divisor);
 
         a5s->roundComplete = (int16_t)quotient;  /* 0x54 */
         if (remainder != 0) {
