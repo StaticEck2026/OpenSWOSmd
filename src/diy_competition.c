@@ -1288,7 +1288,14 @@ void _DIY_ValidateLeagueScratchBuffer(void)
         checksum += *teamData++;
     }
     if (checksum != 0) {
-        panicReasonCode = 0x5555;
+        /* DIAGNOSTIC: dump scratch buffer + teamFileBuffer header at panic */
+        extern void _DebugDumpToFile(uint8_t *filename, uint8_t *data, uint32_t size);
+        extern uint8_t currentCompetitionId;
+        _DebugDumpToFile((uint8_t *)"save/scratch_fail.bin",
+                         (uint8_t *)diyLeagueScratchBuffer, 2000);
+        _DebugDumpToFile((uint8_t *)"save/tfb_fail.bin", teamFileBuffer, 8);
+        /* Encode: competition ID + checksum value */
+        panicReasonCode = 0x5500 | (currentCompetitionId & 0xFF);
         _PanicHaltLoop();
     }
 }

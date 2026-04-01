@@ -1454,29 +1454,10 @@ void _Career_AdvanceToNextSeason_UpdateCompetitions(void)
 
     careerFileBuffer = 0;
 
-    /* DIAGNOSTIC: track region checksum after each competition */
-    extern volatile uint8_t diyLeagueScratchBuffer[];
-    volatile uint8_t dbg_compLog[64];
-    volatile uint8_t dbg_csumLog[64];
-    volatile uint16_t dbg_idx = 0;
-
-    /* Helper: compute checksum of region (offset 114, 93 bytes) */
-    #define DBG_LOG_CHECKSUM(compId) do { \
-        if (dbg_idx < 64) { \
-            volatile uint8_t *_rgn = diyLeagueScratchBuffer + 114; \
-            uint8_t _cs = 0; \
-            for (int16_t _k = 92; _k >= 0; _k--) _cs += *_rgn++; \
-            dbg_compLog[dbg_idx] = (compId); \
-            dbg_csumLog[dbg_idx] = _cs; \
-            dbg_idx++; \
-        } \
-    } while(0)
-
     if (!isNationalSelector) {
         uint16_t compId = (uint8_t)(selTeamNumber >> 8);
         _Career_ProcessCompetitionForNextSeason(compId);
         _Career_ProcessCompetitionForEuropeanCupQualification();
-        DBG_LOG_CHECKSUM((uint8_t)compId);
     }
 
     /* Loop through all competition IDs in the remap table */
@@ -1489,18 +1470,7 @@ void _Career_AdvanceToNextSeason_UpdateCompetitions(void)
             continue;
         _Career_ProcessCompetitionForNextSeason((uint16_t)compByte);
         _Career_ProcessCompetitionForEuropeanCupQualification();
-        DBG_LOG_CHECKSUM(compByte);
     }
-
-    /* Dump logs before validation (which might panic) */
-    {
-        extern void _DebugDumpToFile(uint8_t *filename, uint8_t *data, uint32_t size);
-        _DebugDumpToFile((uint8_t *)"save/complog.bin",
-                         (uint8_t *)dbg_compLog, (uint32_t)dbg_idx);
-        _DebugDumpToFile((uint8_t *)"save/csumlog.bin",
-                         (uint8_t *)dbg_csumLog, (uint32_t)dbg_idx);
-    }
-    #undef DBG_LOG_CHECKSUM
 
     if (careerFileBuffer == 0x50) {
         _Career_DrawEuropeanCupTeamsAndCopyGrids();
