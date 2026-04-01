@@ -3465,7 +3465,7 @@ void _DIY_ShuffleTeamsAndBuildCompTeamList(uint8_t *diy, uint8_t *slot,
         uint16_t field54 = (uint16_t)diyS->roundComplete;
         uint16_t field50 = (uint16_t)diyS->matchPairsPerRound;
 
-        if (field54 != 0 || field50 != 0) {
+        if (field54 != 0 || field50 == 0) {
             uint16_t seedingType = *(uint16_t *)(slot + 0x160);
             if (seedingType == 0) {
                 _DIY_ShuffleTeams(diy, slot);
