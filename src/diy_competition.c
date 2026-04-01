@@ -1288,20 +1288,11 @@ void _DIY_ValidateLeagueScratchBuffer(void)
         checksum += *teamData++;
     }
     if (checksum != 0) {
-        /* DIAGNOSTIC: dump teamFileBuffer header + scratch region for analysis */
+        /* DIAGNOSTIC: dump current scratch buffer for comparison with loaded version */
         extern void _DebugDumpToFile(uint8_t *filename, uint8_t *data, uint32_t size);
-        extern uint8_t currentCompetitionId;
-        /* Dump: teamFileBuffer first 8 bytes (count + padding + offset) */
-        _DebugDumpToFile((uint8_t *)"save/tfbhdr.bin", teamFileBuffer, 8);
-        /* Dump: the scratch region that failed (count bytes at offset) */
-        uint32_t dumpSize = (count > 2000) ? 2000 : count;
-        _DebugDumpToFile((uint8_t *)"save/badregion.bin",
-                         (uint8_t *)(diyLeagueScratchBuffer + offset), dumpSize);
-        /* Dump: full scratch buffer */
-        _DebugDumpToFile((uint8_t *)"save/scratch2k.bin",
+        _DebugDumpToFile((uint8_t *)"save/scratch_atpanic.bin",
                          (uint8_t *)diyLeagueScratchBuffer, 2000);
-        /* Panic with comp ID and checksum */
-        panicReasonCode = 0x5500 | (currentCompetitionId & 0xFF);
+        panicReasonCode = 0x5555;
         _PanicHaltLoop();
     }
 }
