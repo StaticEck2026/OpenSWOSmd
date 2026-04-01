@@ -1461,15 +1461,39 @@ void _Career_AdvanceToNextSeason_UpdateCompetitions(void)
     }
 
     /* Loop through all competition IDs in the remap table */
-    uint8_t *remapPtr = careerCompetitionIdRemapTable;
-    for (;;) {
-        uint8_t compByte = *remapPtr++;
-        if (compByte == 0xFF)
-            break;
-        if (!isNationalSelector && compByte == (uint8_t)(selTeamNumber >> 8))
-            continue;
-        _Career_ProcessCompetitionForNextSeason((uint16_t)compByte);
-        _Career_ProcessCompetitionForEuropeanCupQualification();
+    {
+        extern void _DebugDumpToFile(uint8_t *filename, uint8_t *data, uint32_t size);
+        extern volatile uint8_t diyLeagueScratchBuffer[];
+        /* Track checksum of the failing region (offset 114, 93 bytes) after each comp */
+        static uint8_t dbg_compLog[64];  /* compId for each processed competition */
+        static uint8_t dbg_csumLog[64];  /* checksum after each */
+        uint16_t dbg_compIdx = 0;
+
+        uint8_t *remapPtr = careerCompetitionIdRemapTable;
+        for (;;) {
+            uint8_t compByte = *remapPtr++;
+            if (compByte == 0xFF)
+                break;
+            if (!isNationalSelector && compByte == (uint8_t)(selTeamNumber >> 8))
+                continue;
+            _Career_ProcessCompetitionForNextSeason((uint16_t)compByte);
+            _Career_ProcessCompetitionForEuropeanCupQualification();
+
+            /* Log the checksum after this competition */
+            if (dbg_compIdx < 64) {
+                volatile uint8_t *rgn = diyLeagueScratchBuffer + 114;
+                uint8_t cs = 0;
+                for (int16_t k = 92; k >= 0; k--)
+                    cs += *rgn++;
+                dbg_compLog[dbg_compIdx] = compByte;
+                dbg_csumLog[dbg_compIdx] = cs;
+                dbg_compIdx++;
+            }
+        }
+
+        /* Dump the logs */
+        _DebugDumpToFile((uint8_t *)"save/complog.bin", dbg_compLog, dbg_compIdx);
+        _DebugDumpToFile((uint8_t *)"save/csumlog.bin", dbg_csumLog, dbg_compIdx);
     }
 
     if (careerFileBuffer == 0x50) {
