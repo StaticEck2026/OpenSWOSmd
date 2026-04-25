@@ -1,0 +1,39 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build",
+            "type": "process",
+            "command": "C:/cygwin64/bin/bash.exe",
+            "args": [
+                "-lc",
+                "cd \"$(cygpath -u \"${workspaceFolder}\")\" && make all"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Build (Debug)",
+            "type": "process",
+            "command": "C:/cygwin64/bin/bash.exe",
+            "args": [
+                "-lc",
+                "cd \"$(cygpath -u \"${workspaceFolder}\")\" && make debug"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Clean",
+            "type": "process",
+            "command": "C:/cygwin64/bin/bash.exe",
+            "args": [
+                "-lc",
+                "cd \"$(cygpath -u \"${workspaceFolder}\")\" && make clean"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}
