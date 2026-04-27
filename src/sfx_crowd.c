@@ -5,6 +5,7 @@
  */
 #include "sfx_crowd.h"
 #include "audio.h"
+#include "sfx_ids.h"
 
 #define ST_PENALTY 14
 
@@ -327,7 +328,7 @@ void _PlayPenaltySample(void)
 {
     if (trainingGame != 0)
         return;
-    _PlaySample(6);
+    _PlaySample(SFX_PRESET_PENALTY);
 }
 
 /* ================================================================
@@ -340,7 +341,7 @@ void _PlaySample7IfNotTraining(void)
 {
     if (trainingGame != 0)
         return;
-    _PlaySample(7);
+    _PlaySample(SFX_PRESET_NOT_TRAINING_7);
 }
 
 /* ================================================================
@@ -351,7 +352,7 @@ void _PlaySample7IfNotTraining(void)
 __attribute__((used, externally_visible))
 void _PlaySfxSample16(void)
 {
-    _GateKickSampleAndCrowd(3, 0x10);
+    _GateKickSampleAndCrowd(3, SFX_KICK_SAMPLE16);
 }
 
 /* ================================================================
@@ -362,7 +363,7 @@ void _PlaySfxSample16(void)
 __attribute__((used, externally_visible))
 void _PlayGoodPassSample(void)
 {
-    _GateKickSampleAndCrowd(3, 0x27);
+    _GateKickSampleAndCrowd(3, SFX_GOOD_PASS);
 }
 
 /* ================================================================
@@ -374,11 +375,11 @@ void _PlayGoodPassSample(void)
 __attribute__((used, externally_visible))
 void _PlayKickSample(void)
 {
-    uint16_t sfxId = 0x25;
+    uint16_t sfxId = SFX_KICK_25;
 
     /* btst #1,(currentGameTick+1) tests bit 1 of the low byte */
     if (((uint8_t)currentGameTick) & 0x02)
-        sfxId = 0x28;
+        sfxId = SFX_KICK_28;
 
     _GateKickSampleAndCrowd(3, sfxId);
 }
@@ -393,10 +394,12 @@ void _PlayKickSample(void)
 __attribute__((used, externally_visible))
 void _GateKickSampleAndCrowd(uint16_t channel, uint16_t sfxId)
 {
-    /* If audioDbgFlagA bit 7 is set, apply gating */
+    /* If audioDbgFlagA bit 7 is set, apply gating: only allow kicks when
+     * the last triggered SFX was MISSGOAL_1 or MISSGOAL_2 (the "aww" / kickoff
+     * sentinel values). */
     if (audioDbgFlagA & 0x80)
     {
-        if (lastKickSampleTick != 0x000F && lastKickSampleTick != 0x0012)
+        if (lastKickSampleTick != SFX_MISSGOAL_1 && lastKickSampleTick != SFX_MISSGOAL_2)
             return;
     }
 
@@ -409,7 +412,7 @@ void _GateKickSampleAndCrowd(uint16_t channel, uint16_t sfxId)
 __attribute__((used, externally_visible))
 void _PlayRefereeWhistleSample(void)
 {
-    _HandleKickSampleAndCrowd(3, 0x31);
+    _HandleKickSampleAndCrowd(3, SFX_REFEREE_WHISTLE);
 }
 
 /* ================================================================
@@ -418,7 +421,7 @@ void _PlayRefereeWhistleSample(void)
 __attribute__((used, externally_visible))
 void _PlayFoulWhistleSample(void)
 {
-    _HandleKickSampleAndCrowd(3, 4);
+    _HandleKickSampleAndCrowd(3, SFX_FOUL_WHISTLE);
 }
 
 /* ================================================================
@@ -427,7 +430,7 @@ void _PlayFoulWhistleSample(void)
 __attribute__((used, externally_visible))
 void _PlayEndGameWhistleSample(void)
 {
-    _HandleKickSampleAndCrowd(3, 0x16);
+    _HandleKickSampleAndCrowd(3, SFX_END_GAME_WHISTLE);
 }
 
 /* ================================================================
@@ -438,7 +441,7 @@ void _PlaySample1IfNotTraining(void)
 {
     if (trainingGame != 0)
         return;
-    _PlaySample(1);
+    _PlaySample(SFX_PRESET_NOT_TRAINING_1);
 }
 
 /* ================================================================
@@ -447,7 +450,7 @@ void _PlaySample1IfNotTraining(void)
 __attribute__((used, externally_visible))
 void _PlaySample1(void)
 {
-    _PlaySample(1);
+    _PlaySample(SFX_PRESET_NOT_TRAINING_1);
 }
 
 /* ================================================================
@@ -462,7 +465,7 @@ void _PlaySample2IfNotTraining(void)
     if (trainingGame != 0)
         return;
     pendingSampleId3_4 = 0x3E8;
-    _PlaySample(3);
+    _PlaySample(SFX_PRESET_NOT_TRAINING_2);
 }
 
 /* ================================================================
@@ -477,7 +480,7 @@ void _PlaySample4IfNotTraining(void)
     if (trainingGame != 0)
         return;
     pendingSampleId3_4 = 0x190;
-    _PlaySample(4);
+    _PlaySample(SFX_PRESET_NOT_TRAINING_4);
 }
 
 /* ================================================================
@@ -491,7 +494,7 @@ void _PlaySample3IfNotTraining(void)
     if (trainingGame != 0)
         return;
     sfxQueueCount = 0x0A;
-    _GateKickSampleAndCrowd(3, 0x2C);
+    _GateKickSampleAndCrowd(3, SFX_NOT_TRAINING_3);
 }
 
 /* ================================================================
@@ -505,7 +508,7 @@ void _PlayMissGoalSample(void)
     if (trainingGame != 0)
         return;
     sfxQueueCount = 0x0A;
-    _HandleKickSampleAndCrowd(3, 0x26);
+    _HandleKickSampleAndCrowd(3, SFX_MISSGOAL);
 }
 
 /* ================================================================
@@ -572,7 +575,7 @@ void _PlayGoalKickOffSample(void)
 {
     if (trainingGame != 0)
         return;
-    if (_HandleKickSampleAndCrowd(3, 0x12) != 0)
+    if (_HandleKickSampleAndCrowd(3, SFX_MISSGOAL_2) != 0)
         return;
     crowdEventFlags = 0x39;
 }
@@ -588,7 +591,7 @@ void _PlayCornerKickSample(void)
 {
     if (trainingGame != 0)
         return;
-    if (_HandleKickSampleAndCrowd(3, 0x0F) != 0)
+    if (_HandleKickSampleAndCrowd(3, SFX_MISSGOAL_1) != 0)
         return;
     crowdEventFlags = 0x32;
 }
@@ -604,7 +607,9 @@ void _PlayCornerKickSample(void)
 __attribute__((used, externally_visible))
 int16_t _HandleKickSampleAndCrowd(uint16_t mode, uint16_t sfxId)
 {
-    if (sfxId != 0x16)
+    /* SFX_END_GAME_WHISTLE bypasses the crowd-event gate so the final whistle
+     * always plays regardless of any in-flight crowd reaction. */
+    if (sfxId != SFX_END_GAME_WHISTLE)
     {
         if (crowdEventFlags != 0)
             return 1;  /* blocked */

@@ -48,8 +48,10 @@
 /* ---- Whistles, end-of-game, scored (0x16..0x2C) — TODO confirm by ear ---- */
 #define SFX_END_GAME_WHISTLE   0x16    /* [src] ENDGAMEW — _PlayEndGameWhistleSample */
 #define SFX_VOICE_LINE_21      0x21    /* [?spec] 3.44s voice line — closest match COMBROWN (3.19s) */
+#define SFX_KICK_25            0x25    /* [src] _PlayKickSample (alternates with 0x28 each tick) */
 #define SFX_MISSGOAL           0x26    /* [src] MISSGOAL — _PlayMissGoalSample */
 #define SFX_GOOD_PASS          0x27    /* [src] crowd appreciation — _PlayGoodPassSample */
+#define SFX_KICK_28            0x28    /* [src] _PlayKickSample (alternates with 0x25 each tick) */
 #define SFX_SUB_CALL           0x29    /* [?spec] 0.96s speech-like — closest match EASY/HOMESUBL */
 #define SFX_REF_WHISTLE_2A     0x2A    /* [?spec] 0.20s short whistle blip */
 #define SFX_REF_WHISTLE_2B     0x2B    /* [?spec] 0.22s short whistle blip */
