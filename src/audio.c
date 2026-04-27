@@ -12,6 +12,8 @@
 extern int  AudioSDL_StartSong(const uint8_t *song_data, int song_size,
                                const uint8_t *ins_data,  int ins_size,
                                int subsong);
+extern int  AudioSDL_LoadSfxBank(const uint8_t *song_data, int song_size,
+                                 const uint8_t *ins_data,  int ins_size);
 extern void AudioSDL_StopSong(void);
 extern void AudioSDL_SetMasterVolume(int vol_0_64);
 
@@ -19,6 +21,13 @@ extern void AudioSDL_SetMasterVolume(int vol_0_64);
  * The RJP1 loader only uses these to bounds-check the .sng layout. */
 #define MENU_SONG_DATA_BYTES  (8  * 1024)
 #define MENU_INS_BANK_BYTES   (64 * 1024)
+/* SFX bank: sfx.sng is small (~2.3 KB) but sfx.in1 is sample-heavy.
+ * sfxSongData is sized 8 KB; poolplyrDatBuffer is 0x14000 = 80 KB
+ * (see swos_amiga_data_stubs.c for the size rationale — sfx.in1 is
+ * 71.5 KB and the original 0xCBE8 / 52 KB allocation overflowed into
+ * imageCmdWorkBuf, clobbering chars sprites). */
+#define SFX_SONG_DATA_BYTES   (8  * 1024)
+#define SFX_INS_BANK_BYTES    (0x14000)
 #endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
@@ -387,10 +396,12 @@ __attribute__((used, externally_visible))
 void _AudioApplyPresetToChannels(uint16_t presetId)
 {
 #ifdef SWOS_SDL_BUILD
-    /* Bank data is 68k big-endian; on SDL we haven't wired up the
-     * byte-swap layer yet, so note/preset lookups dereference bogus
-     * pointers. Silent audio for now. */
-    (void)presetId;
+    /* Walk the preset table just like the Amiga byte-poking engine:
+     * one 4-byte preset record = one noteId per channel; each non-zero
+     * noteId fires a sample on its channel after a song_data[3]+[5]
+     * indirection. AudioSDL_TriggerSfxPreset does the whole walk. */
+    extern void AudioSDL_TriggerSfxPreset(int preset_id);
+    AudioSDL_TriggerSfxPreset((int)(presetId & 0x3F));   /* 6-bit preset id, see Amiga &= 0x3F */
     return;
 #else
     uint8_t *presetTable;
@@ -436,6 +447,14 @@ void _AudioApplyPresetToChannels(uint16_t presetId)
 __attribute__((used, externally_visible))
 void _AudioChannelQueueNextWaveIfEnabled(uint16_t channel, uint16_t waveId)
 {
+#ifdef SWOS_SDL_BUILD
+    /* Mirror Amiga: bankSectionPtrs[4]+[6] indirection on waveId.
+     * Without this, kicks come out as whistles and vice-versa.
+     * AudioSDL_TriggerSfxByWaveId does the lookup + trigger. */
+    extern void AudioSDL_TriggerSfxByWaveId(int channel, int wave_id);
+    AudioSDL_TriggerSfxByWaveId((int)(channel & 3), (int)waveId);
+    return;
+#else
     AudioChannel *chan;
     uint8_t *waveTable;
     uint32_t waveOffset;
@@ -462,6 +481,7 @@ void _AudioChannelQueueNextWaveIfEnabled(uint16_t channel, uint16_t waveId)
     chan->svStepPeriod = 6;
     chan->svScriptTimer = 1;
     chan->svPeriodCounter = 1;
+#endif /* !SWOS_SDL_BUILD */
 }
 
 /* ================================================================
@@ -607,6 +627,15 @@ retry:
         goto retry;
     if (_PlaySong(aSoundSfxIn2, sfxInsBank2) != 0)
         goto retry;
+
+#ifdef SWOS_SDL_BUILD
+    /* Hand the loaded bank to the RJP1 player so AudioSDL_TriggerSfx
+     * (called from _AudioApplyPresetToChannels / _AudioChannelQueueNextWaveIfEnabled)
+     * has samples to fire. The Amiga byte-poking engine in audio_irq.c
+     * is stubbed on SDL — this is what makes in-match SFX audible. */
+    AudioSDL_LoadSfxBank(sfxSongData, SFX_SONG_DATA_BYTES,
+                         poolplyrDatBuffer, SFX_INS_BANK_BYTES);
+#endif
 }
 
 /* ================================================================

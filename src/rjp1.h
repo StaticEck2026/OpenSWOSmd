@@ -121,4 +121,27 @@ void RJP1_HandleTick(RJP1_Player *p);
  * first; this function does the per-channel mix-and-clip. */
 void RJP1_MixSamples(RJP1_Player *p, int sample_rate, int8_t *buf, int len);
 
+/* Start a sequence on `channel` by note id — equivalent to the
+ * Amiga `AudioChannelNoteOnOff(channel, noteId)`. Does the
+ * song_data[3]+[5] → first-byte → song_data[4]+[6] indirection
+ * (same as RJP1's internal start_sequence used by music). The
+ * resolved sequence_data is fed to the regular play_channel /
+ * play_song_sequence pipeline so the SFX plays exactly the same
+ * way music does. No-op if the player isn't loaded.
+ *
+ * noteId == 0 stops the channel (Amiga convention). */
+void RJP1_StartSequenceByNoteId(RJP1_Player *p, int channel, int noteId);
+
+/* Start a wave sequence on `channel` by wave id — equivalent to
+ * the Amiga `AudioChannelQueueNextWaveIfEnabled(channel, waveId)`.
+ * Skips the song_data[3]+[5] step and goes directly:
+ *   sequence_data = song_data[4]+[6]+(BE32 at song_data[4]+waveId*4)
+ *
+ * waveId == 0 stops the channel. */
+void RJP1_StartSequenceByWaveId(RJP1_Player *p, int channel, int waveId);
+
+/* Returns a 4-byte preset record (channel_noteIds[0..3]) from
+ * song_data[2] + presetId*4. Used by _AudioApplyPresetToChannels. */
+void RJP1_PresetEntry(RJP1_Player *p, int presetId, uint8_t out_note_ids[4]);
+
 #endif /* RJP1_H */

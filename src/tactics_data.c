@@ -76,12 +76,17 @@ TeamTactics teamTacticsDefend = { { 68, 69, 70, 69, 78, 68, 0, 0, 0 }, { { { { {
  * User-defined tactics (BSS — zeroed at init, loaded from save files)
  * ====================================================================== */
 
-TeamTactics teamTacticsUSERA __attribute__((used, externally_visible));
-TeamTactics teamTacticsUSERB __attribute__((used, externally_visible));
-TeamTactics teamTacticsUSERC __attribute__((used, externally_visible));
-TeamTactics teamTacticsUSERD __attribute__((used, externally_visible));
-TeamTactics teamTacticsUSERE __attribute__((used, externally_visible));
-TeamTactics teamTacticsUSERF __attribute__((used, externally_visible));
+/* teamTacticsUSER[A-F]: aliased to careerFileBufferBuf + 96220..98070
+ * in swos_globals_career_overlay.c. On Amiga the user-tactics live
+ * inside the career save run so saving/loading a career persists them
+ * automatically. The standalone definitions that used to live here
+ * sat outside the run, so saved careers had zeroed user tactics. */
+extern TeamTactics teamTacticsUSERA;
+extern TeamTactics teamTacticsUSERB;
+extern TeamTactics teamTacticsUSERC;
+extern TeamTactics teamTacticsUSERD;
+extern TeamTactics teamTacticsUSERE;
+extern TeamTactics teamTacticsUSERF;
 
 /* ======================================================================
  * Pointer table for all 19 tactics (18 formations + editor copy)

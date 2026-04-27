@@ -194,6 +194,91 @@ void AudioSDL_StopSong(void)
     SDL_UnlockMutex(s_mtx);
 }
 
+/* ---- SFX ---- *
+ *
+ * The SFX bank (sound/sfx.sng + sound/sfx.in1) uses the same RJP1
+ * file format as music. SWOS' Amiga m68k audio engine (audio.c +
+ * audio_irq.c) is the byte-poking engine that would normally parse
+ * the bank section pointers and trigger samples — that engine is
+ * stubbed out on SDL because the bank layout is big-endian and we
+ * haven't byte-swapped it. Instead of porting all of audio_irq.c
+ * we short-circuit the trigger calls into the existing RJP1 player
+ * via RJP1_TriggerSample.
+ *
+ * We re-use the single s_player instance: when LoadSfxBank is called
+ * (after sound/sfx.sng/in1 are read into BSS) it overwrites whatever
+ * music was loaded. This matches the Amiga, which routes both music
+ * and SFX through the same channel state — entering match mode
+ * stops the menu music and hands the player to SFX. If we ever want
+ * music _during_ a match we'll need a second RJP1_Player. */
+int AudioSDL_LoadSfxBank(const uint8_t *song_data, int song_size,
+                         const uint8_t *ins_data,  int ins_size)
+{
+    SDL_LockMutex(s_mtx);
+
+    int ok = RJP1_Load(&s_player, song_data, song_size, ins_data, ins_size);
+    if (!ok) {
+        fprintf(stderr, "[audio] SFX RJP1_Load failed (song_size=%d ins_size=%d)\n",
+                song_size, ins_size);
+        s_player_active = 0;
+        SDL_UnlockMutex(s_mtx);
+        return -1;
+    }
+
+    /* SFX bank stays "active" so RJP1_HandleTick runs each frame and
+     * advances envelopes / period modulation for any in-flight sample.
+     * Without this the player ticks but never plays — even after a
+     * trigger sets channel.active=1, play_channel only runs when
+     * RJP1_HandleTick is invoked, which is gated on s_player_active. */
+    s_player_active = 1;
+
+    /* Drop residual queued audio from any prior song so the next mix
+     * tick starts clean (otherwise the first SFX is preceded by the
+     * tail of whatever music was buffered). */
+    if (s_audio_dev)
+        SDL_ClearQueuedAudio(s_audio_dev);
+
+    SDL_UnlockMutex(s_mtx);
+    return 0;
+}
+
+/* Trigger an SFX by note id (the Amiga _AudioChannelNoteOnOff path). */
+void AudioSDL_TriggerSfxByNoteId(int channel, int note_id)
+{
+    SDL_LockMutex(s_mtx);
+    if (s_player_active)
+        RJP1_StartSequenceByNoteId(&s_player, channel, note_id);
+    SDL_UnlockMutex(s_mtx);
+}
+
+/* Trigger an SFX by wave id (the Amiga _AudioChannelQueueNextWaveIfEnabled
+ * path). Skips the note-record indirection. */
+void AudioSDL_TriggerSfxByWaveId(int channel, int wave_id)
+{
+    SDL_LockMutex(s_mtx);
+    if (s_player_active)
+        RJP1_StartSequenceByWaveId(&s_player, channel, wave_id);
+    SDL_UnlockMutex(s_mtx);
+}
+
+/* Trigger an SFX preset (the Amiga _AudioApplyPresetToChannels path).
+ * Reads the 4-byte preset record (one noteId per channel) and fires
+ * each non-zero entry on its corresponding channel via the noteId
+ * sequence start. */
+void AudioSDL_TriggerSfxPreset(int preset_id)
+{
+    SDL_LockMutex(s_mtx);
+    if (s_player_active) {
+        uint8_t note_ids[4];
+        RJP1_PresetEntry(&s_player, preset_id, note_ids);
+        for (int ch = 0; ch < 4; ++ch) {
+            if (note_ids[ch] != 0)
+                RJP1_StartSequenceByNoteId(&s_player, ch, note_ids[ch]);
+        }
+    }
+    SDL_UnlockMutex(s_mtx);
+}
+
 void AudioSDL_SetMasterVolume(int vol_0_64)
 {
     if (vol_0_64 < 0) vol_0_64 = 0;

@@ -1229,6 +1229,65 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
 }
 
 /* ================================================================
+ * _RebuildPointersAfterLoad  (no asm equivalent — new code)
+ *
+ * The .CAR save format is a raw memory dump of the careerFileBuffer
+ * overlay region (see SAVE_DATA.md). Several fields in that region
+ * are typed as absolute pointers — they were valid when the save was
+ * written but reference addresses that don't exist in any subsequent
+ * binary build (or any other machine). After `_LoadCareerFile`
+ * reads the raw bytes back into careerFileBuffer, this function
+ * walks every known pointer field and re-derives it from a stable
+ * identity (current run's buffer address, competition ID, etc.).
+ *
+ * Fields handled (see SAVE_DATA.md "Pointer-field summary for .CAR"):
+ *
+ *   careerCompetitionSlotPtrTable[5]  — five competition slot bases.
+ *      Re-derived from `&competitionFileBuffer / &competitionContext /
+ *      &tertiaryCompetitionContext / &euroCupsCompetitionContext /
+ *      &diyCompetitionContext` in the current build's BSS (now
+ *      aliased into careerFileBufferBuf by the overlay).
+ *
+ * Not yet handled (will be layered in as we hit menus that read
+ * them):
+ *
+ *   currentCompetitionPtr / secondaryCompetitionPtr /
+ *   tertiaryCompetitionPtr / quaternaryCompetitionPtr /
+ *   diyCompetitionPtr      — would re-derive from saved compIds.
+ *   *CompStringOffset      — would re-derive from string-table
+ *                              lookup by competition.
+ *   diyCompetitionTablePtr — points at one of the static cup tables.
+ *   tmdFileBuffer/careerTeam runtime pointers
+ *                          — should be zeroed; rebuilt at match start.
+ *
+ * On the Amiga C port (post back-port) this function is identical —
+ * neither port pins data at fixed addresses anymore, so both need the
+ * same rebuild.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _RebuildPointersAfterLoad(void)
+{
+    /* Step 1: refresh careerCompetitionSlotPtrTable[0..4]. Same five
+     * lines as `_InitNewSeason` lines 1165-1169 — but this time after
+     * load, so the saved (now stale) pointer values get replaced with
+     * the current run's competition-buffer addresses. */
+    careerCompetitionSlotPtrTable[0] = (uint8_t *)&competitionFileBuffer;
+    careerCompetitionSlotPtrTable[1] = (uint8_t *)&competitionContext;
+    careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContext;
+    careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContext;
+    careerCompetitionSlotPtrTable[4] = (uint8_t *)&diyCompetitionContext;
+
+    /* Step 5 (DIY-runtime repopulation) is *not* needed here:
+     * `_Career_OpenCompetitionSlotMenuAndApplyChanges` already calls
+     * `_Career_LoadCompetitionSlotStateFromBuffer(slotPtr)` when the
+     * user navigates into a competition slot menu, which copies the
+     * loaded competition bytes from the careerFileBuffer overlay
+     * (now reachable via the refreshed table above) into
+     * diyCompetitionStart. So fixing step 1 is sufficient to unblock
+     * VIEW SQUADS. */
+}
+
+/* ================================================================
  * Chunk 198: Career_ViewOrEditCompetitionSlot  (SWOS2.s line 32242)
  *
  * Views or edits a competition slot: maps the competition pointer

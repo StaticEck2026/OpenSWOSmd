@@ -190,6 +190,18 @@ static void play_song_sequence(RJP1_Player *p, RJP1_Channel *ch)
                     switch (d0 & 7) {
                     case 0: {
                         const uint8_t *a2 = ch->sequence_offsets;
+                        /* The SFX wave-id trigger path (RJP1_StartSequenceByWaveId)
+                         * doesn't visit a note record, so it has no list of
+                         * subsequent wave-ids to chain to — sequence_offsets
+                         * is NULL. End the channel cleanly when an opcode
+                         * tries to chain. */
+                        if (!a2) {
+                            a1 = NULL;
+                            ch->active = 0;
+                            p->vars.active_channels_mask &= (uint8_t)~(1u << p->vars.current_channel);
+                            loop = 0;
+                            break;
+                        }
                         ch->loop_seq2_count = 1;
                         for (;;) {
                             d0 = *a2++;
@@ -428,6 +440,89 @@ void RJP1_HandleTick(RJP1_Player *p)
         p->vars.current_channel = (uint8_t)i;
         play_channel(p, &p->channels[i]);
     }
+}
+
+void RJP1_PresetEntry(RJP1_Player *p, int presetId, uint8_t out_note_ids[4])
+{
+    out_note_ids[0] = out_note_ids[1] = out_note_ids[2] = out_note_ids[3] = 0;
+    if (!p->loaded) return;
+    if (presetId < 0) return;
+    /* Preset table at song_data[2] — 4 bytes per preset, mirroring
+     * what Amiga _AudioApplyPresetToChannels reads. song_data[2] is
+     * sized as `subsongs_count * 4`; bounds-check against that. */
+    if (presetId >= p->subsongs_count) return;
+    const uint8_t *src = p->vars.song_data[2] + (uint32_t)presetId * 4;
+    out_note_ids[0] = src[0];
+    out_note_ids[1] = src[1];
+    out_note_ids[2] = src[2];
+    out_note_ids[3] = src[3];
+}
+
+/* Forward decl — turn_off_channel is defined later in this file. */
+static void turn_off_channel(RJP1_Channel *ch);
+
+/* Common channel setup once `sequence_data` has been pointed at the
+ * resolved script blob. Mirrors the tail of `start_sequence`. */
+static void start_sequence_with_data(RJP1_Player *p, RJP1_Channel *ch,
+                                     int channel, const uint8_t *seq_data,
+                                     const uint8_t *seq_offsets)
+{
+    ch->sequence_data    = seq_data;
+    ch->sequence_offsets = seq_offsets;
+    ch->loop_seq_count   = 6;
+    ch->loop_seq_cur     = 1;
+    ch->loop_seq2_cur    = 1;
+    ch->active           = 1;
+    p->vars.active_channels_mask |= (uint8_t)(1u << channel);
+}
+
+void RJP1_StartSequenceByNoteId(RJP1_Player *p, int channel, int noteId)
+{
+    if (!p->loaded) return;
+    if (channel < 0 || channel >= RJP1_NUM_CHANNELS) return;
+    RJP1_Channel *ch = &p->channels[channel];
+
+    if (noteId == 0) {
+        ch->active = 0;
+        turn_off_channel(ch);
+        return;
+    }
+
+    /* Same shape as the existing start_sequence (used by music): one
+     * indirection through song_data[3]+[5] to reach the note record,
+     * its first byte selects a wave/sequence whose data lives in
+     * song_data[4]+[6]. The post-increment puts sequence_offsets at
+     * the byte AFTER the wave-id selector so play_song_sequence's
+     * "next sequence" walk reads downstream bytes for chained plays. */
+    const uint8_t *a1 = (const uint8_t *)((uintptr_t)be32(p->vars.song_data[3] + (uint32_t)noteId * 4)
+                                          + (uintptr_t)p->vars.song_data[5]);
+    uint8_t d1 = *a1++;
+    const uint8_t *seq_data = (const uint8_t *)((uintptr_t)be32(p->vars.song_data[4] + (uint32_t)d1 * 4)
+                                                + (uintptr_t)p->vars.song_data[6]);
+    start_sequence_with_data(p, ch, channel, seq_data, a1);
+}
+
+void RJP1_StartSequenceByWaveId(RJP1_Player *p, int channel, int waveId)
+{
+    if (!p->loaded) return;
+    if (channel < 0 || channel >= RJP1_NUM_CHANNELS) return;
+    RJP1_Channel *ch = &p->channels[channel];
+
+    if (waveId == 0) {
+        ch->active = 0;
+        turn_off_channel(ch);
+        return;
+    }
+
+    /* Direct path — `_AudioChannelQueueNextWaveIfEnabled` skips the
+     * note-record indirection and goes straight from waveId to a
+     * wave-script pointer. There's no sequence_offsets in this path
+     * because no note record was visited; play_song_sequence's
+     * case-0 opcode handler short-circuits when sequence_offsets
+     * is NULL and ends the channel. */
+    const uint8_t *seq_data = (const uint8_t *)((uintptr_t)be32(p->vars.song_data[4] + (uint32_t)waveId * 4)
+                                                + (uintptr_t)p->vars.song_data[6]);
+    start_sequence_with_data(p, ch, channel, seq_data, NULL);
 }
 
 void RJP1_MixSamples(RJP1_Player *p, int sample_rate, int8_t *buf, int len)

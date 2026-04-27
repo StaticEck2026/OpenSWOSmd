@@ -307,6 +307,12 @@ uint16_t _GetTextWidth(uint8_t *text, uint8_t *charsTable)
     uint16_t width = 0;
     uint8_t ch;
 
+    /* TEMP diagnostic — narrow to the player-name path: smallCharsTable
+     * (sprIdxOff=0), text starting with a digit, and only print the
+     * first 8 unique strings. The match-init makePlayerNameSprite
+     * calls produce bogus widths even though identical lookups via
+     * the frontend menus return sane values, which suggests sprite
+     * slots that hold glyphs get reloaded between phases. */
     while ((ch = *text++) != 0) {
         if (ch == ' ') {
             width += spaceWidth;

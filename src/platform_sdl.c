@@ -71,10 +71,21 @@ static const double  k_frame_secs = 1.0 / 50.0;
  * without calling _WaitForVSync. */
 static volatile Uint32 s_last_main_render_ms;
 
-/* F12 screenshot: set by pump_events_any_thread on KEYDOWN(F12), cleared
- * after Platform_RenderFrame writes the frame to disk. */
+/* Screenshot triggers:
+ *   - Hotkeys F9 / F11 / F12 / PrintScreen — set s_screenshot_request from
+ *     pump_events_any_thread on KEYDOWN. F12 is the historical default but
+ *     gets intercepted by some window managers (WSL, GNOME); F9/F11/PrtSc
+ *     are alternates that survive most setups.
+ *   - Env var SWOS_SCREENSHOT_INTERVAL=N — write every Nth rendered frame
+ *     to swos_shotNNN.png, capped at 200 files. Useful when no hotkey
+ *     reaches the app (in-match focus, screen recorder grabbing all
+ *     function keys, headless test runs).
+ * In all cases the request is processed inside Platform_RenderFrame while
+ * the render mutex is held, so the captured ARGB buffer is consistent. */
 static volatile int s_screenshot_request;
 static int          s_screenshot_index;
+static int          s_screenshot_interval;   /* 0 = disabled, N>0 = every N frames */
+static int          s_screenshot_auto_count; /* number written by interval mode */
 
 /* Headless smoke-test: dump every Nth converted frame to /tmp as a PPM. */
 static int           s_dump_frames;
@@ -191,6 +202,22 @@ int Platform_Init(int win_scale)
 
     s_render_mtx = SDL_CreateMutex();
     s_dump_frames = (getenv("SWOS_DUMP_FRAMES") != NULL);
+
+    {
+        const char *si = getenv("SWOS_SCREENSHOT_INTERVAL");
+        if (si && *si) {
+            int n = atoi(si);
+            if (n > 0) {
+                s_screenshot_interval = n;
+                fprintf(stderr,
+                    "[screenshot] interval mode: writing every %d frame(s) "
+                    "(swos_shotNNN.png), capped at 200 files\n", n);
+            }
+        }
+    }
+    fprintf(stderr,
+        "[screenshot] hotkeys: F9 / F11 / F12 / PrintScreen "
+        "(env SWOS_SCREENSHOT_INTERVAL=N for auto-capture every N frames)\n");
 
     /* 20 ms = 50 Hz, the PAL VBlank rate the game expects. */
     SDL_InitSubSystem(SDL_INIT_TIMER);
@@ -400,10 +427,15 @@ static void pump_events_any_thread(void)
                 Platform_RequestQuit();
             break;
         case SDL_KEYDOWN:
-            if (ev.key.keysym.sym == SDLK_ESCAPE)
+            if (ev.key.keysym.sym == SDLK_ESCAPE) {
                 Platform_RequestQuit();
-            else if (ev.key.keysym.sym == SDLK_F12 && ev.key.repeat == 0)
+            } else if (ev.key.repeat == 0 &&
+                       (ev.key.keysym.sym == SDLK_F9 ||
+                        ev.key.keysym.sym == SDLK_F11 ||
+                        ev.key.keysym.sym == SDLK_F12 ||
+                        ev.key.keysym.sym == SDLK_PRINTSCREEN)) {
                 s_screenshot_request = 1;
+            }
             /* fallthrough */
         case SDL_KEYUP:
         case SDL_CONTROLLERBUTTONDOWN:
@@ -459,6 +491,21 @@ void Platform_RenderFrame(void)
         if (s_screenshot_request && (pitch == PLATFORM_SCREEN_W * 4)) {
             write_screenshot((uint32_t *)pixels);
             s_screenshot_request = 0;
+        }
+        if (s_screenshot_interval > 0 && (pitch == PLATFORM_SCREEN_W * 4)) {
+            static int frame_mod;
+            if (++frame_mod >= s_screenshot_interval) {
+                frame_mod = 0;
+                if (s_screenshot_auto_count < 200) {
+                    write_screenshot((uint32_t *)pixels);
+                    s_screenshot_auto_count++;
+                } else if (s_screenshot_auto_count == 200) {
+                    fprintf(stderr,
+                        "[screenshot] interval mode hit 200-shot cap; disabling\n");
+                    s_screenshot_interval = 0;
+                    s_screenshot_auto_count++;
+                }
+            }
         }
         SDL_UnlockTexture(s_texture);
     }

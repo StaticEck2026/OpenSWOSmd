@@ -392,6 +392,8 @@ int16_t _LoadCompetitionFile(void)
  *
  * Returns: 0 = success, 1 = error
  * ================================================================ */
+extern void _RebuildPointersAfterLoad(void);
+
 __attribute__((used, externally_visible))
 int16_t _LoadCareerFile(uint8_t *filename)
 {
@@ -412,6 +414,12 @@ int16_t _LoadCareerFile(uint8_t *filename)
         _InitUserTactics();
         return 1;
     }
+
+    /* The .CAR format contains absolute pointer fields (see SAVE_DATA.md).
+     * Re-derive them from the current build's BSS layout — without this,
+     * stale pointer values from the saving binary cause crashes when
+     * dereferenced in any subsequent rebuild or on a different machine. */
+    _RebuildPointersAfterLoad();
 
     _CycleMenuMusic();
     return 0;

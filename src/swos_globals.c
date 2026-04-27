@@ -427,22 +427,13 @@ __asm__(".globl editTeamsPrimaryShirts\n"
  *
  * Same pattern + fix as `currentMenu`/`menuEntries`, `stadiumMenuLittlePlayerBackingBuf`,
  * and the edit-teams sprite-copy blocks above. */
-__attribute__((used, aligned(4)))
-uint8_t selTeamsBackingBuf[45146];
-__asm__(".globl selTeamsPtr\n"
-        ".equ   selTeamsPtr, selTeamsBackingBuf\n"
-        ".globl selTeamIsComputerFlag\n"
-        ".equ   selTeamIsComputerFlag, selTeamsBackingBuf + 4\n"
-        ".globl selTeamNameBase\n"
-        ".equ   selTeamNameBase, selTeamsBackingBuf + 5\n"
-        ".globl selTeamImportField\n"
-        ".equ   selTeamImportField, selTeamsBackingBuf + 25\n"
-        ".globl selTeamSocksColor\n"
-        ".equ   selTeamSocksColor, selTeamsBackingBuf + 30\n"
-        ".globl selTeamPlayerIndices\n"
-        ".equ   selTeamPlayerIndices, selTeamsBackingBuf + 60\n"
-        ".globl editTeamsBuffer\n"
-        ".equ   editTeamsBuffer, selTeamsBackingBuf + 1368\n");
+/* selTeamsPtr / selTeamIsComputerFlag / selTeamNameBase / selTeamImportField /
+ * selTeamSocksColor / selTeamPlayerIndices / editTeamsBuffer:
+ * moved into swos_globals_career_overlay.c at careerFileBufferBuf + 98478
+ * onwards. On Amiga these labels sit immediately after numSelectedTeams in
+ * the same BSS run, so writing &careerFileBuffer for the full save size
+ * captures the team-data array automatically. The old standalone
+ * selTeamsBackingBuf left bytes 98478..120365 of the save file as zeros. */
 
 /* ---- Highlight scene ring buffer (hilStartOfGoalsBuffer + inGameHilBuffer)
  *
@@ -727,9 +718,12 @@ __attribute__((used, aligned(4))) uint8_t diyCompetitionStartBuf[4096];
 __asm__(".globl diyCompetitionStart\n"
         ".equ   diyCompetitionStart, diyCompetitionStartBuf\n");
 
-__attribute__((used, aligned(4))) uint8_t competitionFileBufferBuf[4096];
-__asm__(".globl competitionFileBuffer\n"
-        ".equ   competitionFileBuffer, competitionFileBufferBuf\n");
+/* competitionFileBuffer: overlays careerFileBufferBuf at offset 93308.
+ * Aliased in swos_globals_career_overlay.c. The 4 KB standalone backing
+ * buffer that used to live here meant DIY/preset writes never reached
+ * the career save body — and `_LoadPresetFile` would load a 4 KB file
+ * into a buffer that overflows past everything else. The overlay puts
+ * it back inside the 256 KB careerFileBufferBuf at the right offset. */
 
 /* diyLeagueTeamIds: on Amiga, the label sits at
  * `diyCompetitionStart + 0x12E` — the same memory the
@@ -758,52 +752,19 @@ __asm__(".globl diyTeamEntryOffsetsByIndex\n"
         ".globl diyTeamShuffleIndices\n"
         ".equ   diyTeamShuffleIndices, diyCompetitionStartBuf + 0xEE\n");
 
-/* diyPresetNameOfCompetition: 36-byte buffer holding the primary
- * competition name. On Amiga BSS this label sits at
- * `competitionFileBuffer + 4` (after competitionFileBuffer's 2-byte
- * type stub and competitionOver's 2-byte stub). It overlaps the
- * `competitionName` field at offset 4 of the DIYCompetition struct,
- * so when slot 0's state is stored into competitionFileBuffer the
- * name automatically ends up here. SDL must mirror this overlap or
- * the View Competitions menu shows a blank primary-comp button. */
-__asm__(".globl diyPresetNameOfCompetition\n"
-        ".equ   diyPresetNameOfCompetition, competitionFileBufferBuf + 4\n");
+/* diyPresetNameOfCompetition: aliased in swos_globals_career_overlay.c
+ * at careerFileBufferBuf + 93312 (== competitionFileBuffer + 4 in the
+ * Amiga overlay). The standalone alias here was redundant with the
+ * generated overlay block. */
 
-/* careerFileBuffer + saveFile* header globals.
- * On Amiga the careerFileBuffer label is a 2-byte stub at the head
- * of a ~98 KB BSS run that the save file content overlays. The
- * save-header globals (saveFileVersion, three 4-byte magic words,
- * saveFileAmigaType) sit at fixed byte offsets WITHIN that run —
- * computed by walking the ds.b allocations in SWOS2.s:
- *   saveFileVersion    : careerFileBuffer + 98458
- *   saveFileMagic1..3  : +98460, +98464, +98468 (4 bytes each)
- *   saveFileAmigaType  : +98472
+/* careerFileBufferBuf + the entire ~98 KB careerFileBuffer overlay
+ * (careerFileBuffer through numSelectedTeams, plus all 332 named
+ * globals in between) is now defined in swos_globals_career_overlay.c.
  *
- * `_SaveCompetitionFile` writes via the named globals; `_LoadFileEx`
- * loads the file into careerFileBuffer and `_LoadCompetitionFile`
- * reads the header back via the globals. Both paths require the
- * globals to live INSIDE careerFileBuffer or the magic check fails.
- * Without this overlap the SDL build also overflows: a 100 KB save
- * loaded into a 2-byte stub stomps anything in the linker's path
- * (most visibly magicValue, which makes _MenuProc panic as soon as
- * the error menu tries to draw on top of the corrupted state).
- *
- * 256 KB covers a full career (header 98476 + up to 64 × 684 + 2). */
-__attribute__((used, aligned(4))) uint8_t careerFileBufferBuf[256 * 1024];
-__asm__(".globl careerFileBuffer\n"
-        ".equ   careerFileBuffer, careerFileBufferBuf\n"
-        ".globl saveFileVersion\n"
-        ".equ   saveFileVersion,   careerFileBufferBuf + 98458\n"
-        ".globl saveFileMagic1\n"
-        ".equ   saveFileMagic1,    careerFileBufferBuf + 98460\n"
-        ".globl saveFileMagic2\n"
-        ".equ   saveFileMagic2,    careerFileBufferBuf + 98464\n"
-        ".globl saveFileMagic3\n"
-        ".equ   saveFileMagic3,    careerFileBufferBuf + 98468\n"
-        ".globl saveFileAmigaType\n"
-        ".equ   saveFileAmigaType, careerFileBufferBuf + 98472\n"
-        ".globl numSelectedTeams\n"
-        ".equ   numSelectedTeams,  careerFileBufferBuf + 98476\n");
+ * The buffer must live in the same TU as the .equ aliases or the
+ * assembler emits no symbol for them: `.equ alias, undefined+offset`
+ * stays a relocatable expression that never lands in the .o symbol
+ * table (gcc/binutils — verified with `nm`). */
 
 /* numberOfFiles + foundFilenamesBuffer: contiguous BSS run on Amiga.
  * AssetSys_ResolveAssetList receives &numberOfFiles as the destination
@@ -822,54 +783,32 @@ __asm__(".globl numberOfFiles\n"
         ".globl foundFilenamesBuffer\n"
         ".equ   foundFilenamesBuffer, numberOfFilesBuf + 4\n");
 
-/* careerTeam: 1292 bytes (TeamFile 76 + 32 × PlayerFile 38) — see
- * comment in swos_data_typed_stubs.c. The C TeamFileEx struct only
- * declares 16 players, but `teamInit(&careerTeam, 31)` reaches index
- * 31. .equ exposes the symbol; field accesses still go through the
- * struct, the extended player slots are accessed via pointer
- * arithmetic that the compiler doesn't bounds-check. */
-__attribute__((used, aligned(4))) uint8_t careerTeamBuf[0x50C];
-__asm__(".globl careerTeam\n"
-        ".equ   careerTeam, careerTeamBuf\n");
+/* careerTeam: aliased in swos_globals_career_overlay.c to
+ * careerFileBufferBuf + 56190. On Amiga it lives inside the career
+ * save run as a 1292-byte (TeamFile 76 + 32 × PlayerFile 38) region.
+ * `teamInit(&careerTeam, 31)` reaches index 31 — the C TeamFileEx
+ * struct only declares 16 players, but the extended player slots are
+ * accessed via pointer arithmetic the compiler doesn't bounds-check. */
 
-/* Slot 1/2/3/4 competition context buffers. On Amiga each label is a
- * tiny stub at the head of a multi-KB BSS run, and
- * `_Career_StoreCompetitionSlotStateToBuffer` writes up to 2900 bytes
- * (type=2+) into the slot state. SDL must give each its own
- * properly-sized backing buffer or the writes overflow into adjacent
- * globals (last seen: diyCompetitionContext stomping careerNumPlayers). */
-__attribute__((used, aligned(4))) uint8_t competitionContextBuf[4096];
-__asm__(".globl competitionContext\n"
-        ".equ   competitionContext, competitionContextBuf\n");
+/* Slot 1/2/3/4 competition context buffers: aliased in
+ * swos_globals_career_overlay.c into careerFileBufferBuf at
+ *   competitionContext           +63340
+ *   tertiaryCompetitionContext   +66240
+ *   diyCompetitionContext        +67332
+ *   euroCupsCompetitionContext   +68424
+ * On Amiga each label sits inside the career save run; the contexts
+ * span up to ~2900 bytes (type=2+), and the next named global doesn't
+ * appear until ~2900 bytes later — so the 4 KB standalone buffers we
+ * used before were just emulating the Amiga BSS spacing. The overlay
+ * now puts them back inside careerFileBufferBuf, which both restores
+ * save round-trips and matches the original adjacency. */
 
-__attribute__((used, aligned(4))) uint8_t tertiaryCompetitionContextBuf[4096];
-__asm__(".globl tertiaryCompetitionContext\n"
-        ".equ   tertiaryCompetitionContext, tertiaryCompetitionContextBuf\n");
-
-__attribute__((used, aligned(4))) uint8_t euroCupsCompetitionContextBuf[4096];
-__asm__(".globl euroCupsCompetitionContext\n"
-        ".equ   euroCupsCompetitionContext, euroCupsCompetitionContextBuf\n");
-
-__attribute__((used, aligned(4))) uint8_t diyCompetitionContextBuf[4096];
-__asm__(".globl diyCompetitionContext\n"
-        ".equ   diyCompetitionContext, diyCompetitionContextBuf\n");
-
-/* ---- teamSelectionKeyCache + teamSelectionKeyCacheEnd ----
- * Cache of competition slot keys built by
- * `_TeamSelectionKeyCache_BuildFromCompetitionBlock`. On Amiga the
- * symbol `teamSelectionKeyCache` is a 1-byte ds.b stub at the start of
- * a ~16 KB BSS run, and `teamSelectionKeyCacheEnd` sits just past the
- * far end. The builder fills variable-length entries forward from
- * teamSelectionKeyCache and InsertSpaceSorted bounds-checks against
- * teamSelectionKeyCacheEnd. A typical league has ~34 × 22-118-byte
- * entries — i.e. several hundred bytes to multiple KB.
- *
- * On SDL each global is its own .o symbol, so the original 1-byte stub
- * caused every cache write to overflow into adjacent globals (most
- * visibly stomping `teamSelectionKeyCacheCount` to 0). Use one 64 KB
- * backing buffer and expose both names via `.equ` aliases. */
-__attribute__((used, aligned(4))) uint8_t teamSelectionKeyCacheBuf[64 * 1024];
-__asm__(".globl teamSelectionKeyCache\n"
-        ".equ   teamSelectionKeyCache, teamSelectionKeyCacheBuf\n"
-        ".globl teamSelectionKeyCacheEnd\n"
-        ".equ   teamSelectionKeyCacheEnd, teamSelectionKeyCacheBuf + (64 * 1024) - 2\n");
+/* teamSelectionKeyCache / teamSelectionKeyCacheEnd: aliased in
+ * swos_globals_career_overlay.c to careerFileBufferBuf + 73292 and
+ * + 93306 — the same offsets the Amiga BSS used. The 20014-byte gap
+ * between the two labels is the working area for variable-length
+ * cache entries (typically 34 × 22..118 bytes). On Amiga that gap
+ * also contained `careerForeignMarketPlayers` (offset 75162) — the
+ * original code reused the same memory because the cache and the
+ * market list operate at different times. The overlay restores that
+ * adjacency: both labels now share the careerFileBuffer save region. */

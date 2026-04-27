@@ -65,8 +65,7 @@ extern TeamGeneralInfo bottomTeamData;
 extern Sprite          ballSprite;
 extern Sprite          goalie1Sprite;
 extern Sprite          goalie2Sprite;
-extern Sprite         *team1SpritesTable[];
-extern Sprite         *team2SpritesTable[];
+extern Sprite         *teamSpritesTable[];
 
 extern uint8_t  pl1Fire;
 extern uint8_t  pl2Fire;
@@ -340,12 +339,8 @@ static void __attribute__((noinline)) handleBreakCameraMode(TeamGeneralInfo *a6)
             break;
         if (injuriesForever != 0)
             break;
-        /* Original asm iterated 22 entries starting from team1SpritesTable,
-         * relying on team2SpritesTable being contiguous in memory.
-         * With -fdata-sections, the tables are in separate sections and
-         * no longer adjacent. Iterate both tables explicitly. */
         for (i = 0; i < 22; i++) {
-            a1 = (i < 11) ? team1SpritesTable[i] : team2SpritesTable[i - 11];
+            a1 = teamSpritesTable[i];
             if (gameState != ST_PLAYERS_TO_INITIAL_POSITIONS &&
                 gameState != ST_PENALTY &&
                 gameState != ST_PENALTIES) {

@@ -28,11 +28,14 @@ int8_t avgTeamValues[131] = { 5, 5, 6, 8, 10, 13, 15, 17, 20, 21, 23, 25, 26, 28
 uint8_t candidatePlayersByGoalsInTable[160] = { 0xB, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xB, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xB, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xB, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xB, 0xC, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xC, 0xB, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xC, 0xB, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xC, 0xB, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xB, 0xC, 0xD, 0x0, 0x0, 0x0, 0x0, 0x0, 0xC, 0xB, 0xD, 0x0, 0x0, 0x0, 0x0, 0x0, 0xD, 0xC, 0xB, 0x0, 0x0, 0x0, 0x0, 0x0, 0xC, 0xD, 0xB, 0x0, 0x0, 0x0, 0x0, 0x0, 0xB, 0xC, 0xD, 0x0, 0x0, 0x0, 0x0, 0x0, 0xE, 0xC, 0xB, 0xD, 0x0, 0x0, 0x0, 0x0, 0xD, 0xE, 0xC, 0xB, 0x0, 0x0, 0x0, 0x0, 0xC, 0xD, 0xB, 0xE, 0x0, 0x0, 0x0, 0x0, 0xB, 0xC, 0xD, 0xE, 0x0, 0x0, 0x0, 0x0, 0xE, 0xC, 0xF, 0xB, 0xD, 0x0, 0x0, 0x0, 0xF, 0xD, 0xE, 0xC, 0xB, 0x0, 0x0, 0x0, 0xC, 0xF, 0xD, 0xB, 0xE, 0x0, 0x0, 0x0 };
 uint8_t cardAnimStatesNoFlag[5] = { 0, 1, 3, 3, 3 };
 uint8_t cardAnimStatesWithFlag[5] = { 1, 2, 4, 4, 4 };
-uint8_t careerCompetitionSlotPtrTable[20];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): careerCompetitionSlotPtrTable */
+// uint8_t careerCompetitionSlotPtrTable[20];
 uint8_t careerIntlPlayerSelectedPlayerDataCopy[26] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 uint8_t careerIntlPlayerSelectedTeamName[18] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-uint8_t careerLastMatchIndexByCompetitionSlot[162];
-uint8_t careerUnavailablePlayerList[16];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): careerLastMatchIndexByCompetitionSlot */
+// uint8_t careerLastMatchIndexByCompetitionSlot[162];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): careerUnavailablePlayerList */
+// uint8_t careerUnavailablePlayerList[16];
 /* competitionFileBuffer: backing storage moved to swos_globals.c
  * (see diyFileBufferCopyBuf comment) — sized big enough for the
  * 2900-byte word-copy in _SaveDIYTournament. */
@@ -40,7 +43,8 @@ uint8_t competitionFilename[14];
 uint8_t cornerFlagPictureIndices[32] = { 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3 };
 uint8_t countriesStack[10] = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
 uint8_t cupWinnersCupEligibleCompetitionIds[33] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-uint8_t currentMatchPlayers[32];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): currentMatchPlayers */
+// uint8_t currentMatchPlayers[32];
 /* diyCompetitionContext: 62-byte stub; backing storage in
  * swos_globals.c. On Amiga it heads a ~1 KB adjacent BSS run, and
  * `_Career_StoreCompetitionSlotStateToBuffer(slotState)` writes up to
@@ -52,7 +56,8 @@ uint8_t currentMatchPlayers[32];
  * in _DIY_BuildTeamSelectionPointerCache etc. */
 uint8_t diyGroupPatternLookup[76] = { 15, 0, 2, 3, 1, 23, 1, 2, 0, 3, 39, 1, 2, 0, 3, 27, 1, 2, 0, 3, 43, 1, 2, 0, 3, 51, 1, 2, 0, 3, 29, 0, 1, 2, 3, 45, 0, 1, 2, 3, 53, 3, 1, 0, 2, 57, 3, 1, 0, 2, 30, 0, 1, 2, 3, 46, 0, 1, 2, 3, 54, 0, 2, 1, 3, 58, 0, 2, 1, 3, 60, 3, 0, 1, 2, 255 };
 uint8_t diyLeagueScratchBuffer[2000];
-uint8_t diyLeagueSeasonStateTable[2000];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): diyLeagueSeasonStateTable */
+// uint8_t diyLeagueSeasonStateTable[2000];
 /* diyLeagueTeamIds: backing storage moved to swos_globals.c — on
  * Amiga BSS this label sits at `diyCompetitionStart + 0x12E`, so the
  * ASM-translated code that writes here and the code that reads via
@@ -65,9 +70,12 @@ int8_t diyLeagueTeamShuffleMap[16] = { 4, -1, 1, 5, 0, -1, 3, 11, 2, -1, 10, 9, 
  * state copy populates the name. */
 uint8_t diyShuffleOrder4Teams[4] = { 0, 3, 1, 2 };
 uint8_t diyShuffleOrder8Teams[8] = { 1, 4, 5, 0, 2, 7, 6, 3 };
-uint8_t diyTeamIdListType0[288];
-uint8_t diyTeamIdListType1[2310];
-uint8_t diyTeamIdListType2[148];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): diyTeamIdListType0 */
+// uint8_t diyTeamIdListType0[288];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): diyTeamIdListType1 */
+// uint8_t diyTeamIdListType1[2310];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): diyTeamIdListType2 */
+// uint8_t diyTeamIdListType2[148];
 uint8_t diyTeamShuffleScratch[64] = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
 uint8_t diyTournamentShuffleOrder8[8] = { 6, 1, 5, 4, 2, 3, 7, 0 };
 uint16_t diyTournamentTeamIds[451];
@@ -85,7 +93,8 @@ int8_t euroChampFixtureData[28] = { 1, 0, 3, 2, 2, 1, 0, 3, 1, 3, 0, 2, 5, 10, 1
 uint8_t euroCupEligibleCompetitionIds[17] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 uint8_t extensionsBuffer[180] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 uint8_t facesFrequency[4] = { 0x0, 0x0, 0x0, 0x0 };
-uint8_t foreignMarketPlayers[60];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): foreignMarketPlayers */
+// uint8_t foreignMarketPlayers[60];
 /* foundFilenamesBuffer: backing storage moved to swos_globals.c —
  * aliased to `numberOfFilesBuf + 4` so it overlaps the file-list
  * entries written by AssetSys_ResolveAssetList (which receives
@@ -100,7 +109,8 @@ uint8_t hilFileBuffer[2044];
 uint8_t hilFilename[14];
 uint8_t hilGameName[100];
 uint8_t hilGameRound[100];
-uint8_t homeMarketPlayers[100];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): homeMarketPlayers */
+// uint8_t homeMarketPlayers[100];
 uint8_t inMenuKeyboardBuffer[100];
 uint8_t indexCountries[64] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 uint8_t inputAllowedControlKeys[12] = { 0xD, 0x12, 0x13, 0x1B, 0x7F, 0x7E, 0x20, 0x2D, 0x2F, 0x2E, 0xFF, 0x0 };
@@ -133,10 +143,14 @@ int8_t kTackleInjuryProbabilityAlreadyInjured[4] = { 96, 57, 41, 28 };
 uint8_t kTeamViewOffsetBaseLUT[256] = { 0, 0, 1, 2, 1, 1, 3, 1, 0, 1, 5, 3, 1, 2, 4, 0, 255, 250, 254, 0, 1, 6, 2, 5, 255, 253, 255, 2, 4, 1, 0, 0, 3, 5, 252, 0, 1, 253, 4, 6, 3, 255, 0, 253, 2, 0, 3, 252, 2, 3, 0, 254, 254, 255, 254, 254, 0, 1, 1, 0, 253, 4, 254, 0, 255, 251, 253, 254, 252, 255, 0, 255, 2, 3, 0, 0, 255, 254, 255, 0, 2, 4, 1, 0, 254, 252, 255, 251, 253, 251, 4, 255, 254, 252, 1, 2, 1, 0, 255, 255, 0, 3, 254, 0, 255, 3, 252, 250, 253, 1, 0, 1, 254, 253, 255, 254, 255, 253, 0, 0, 0, 2, 1, 2, 2, 2, 0, 0, 0, 0, 1, 2, 1, 0, 1, 1, 0, 253, 4, 254, 1, 2, 4, 253, 251, 4, 255, 254, 254, 254, 252, 255, 0, 255, 251, 253, 255, 254, 252, 0, 255, 2, 3, 0, 2, 1, 2, 1, 1, 2, 2, 0, 1, 254, 253, 0, 1, 6, 2, 3, 5, 252, 0, 253, 2, 0, 3, 252, 2, 5, 0, 0, 0, 255, 250, 254, 255, 253, 255, 2, 4, 1, 0, 1, 253, 4, 6, 3, 255, 3, 0, 254, 0, 1, 5, 3, 254, 0, 1, 3, 1, 0, 255, 254, 255, 0, 2, 4, 1, 0, 254, 252, 255, 251, 255, 254, 255, 0, 255, 3, 252, 250, 253, 1, 0, 255, 255, 253, 0, 3, 254, 0, 0, 2, 0, 0 };
 uint8_t keyBuffer[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 uint8_t keycodeLut[128] = { 0x27, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30, 0x2D, 0x3D, 0x5C, 0x3F, 0xB0, 0x51, 0x57, 0x45, 0x52, 0x54, 0x59, 0x55, 0x49, 0x4F, 0x50, 0x5B, 0x5D, 0x3F, 0xB1, 0xB2, 0xB3, 0x41, 0x53, 0x44, 0x46, 0x47, 0x48, 0x4A, 0x4B, 0x4C, 0x3B, 0x27, 0x3F, 0x3F, 0xB4, 0xB5, 0xB6, 0x3F, 0x5A, 0x58, 0x43, 0x56, 0x42, 0x4E, 0x4D, 0x2C, 0x2E, 0x2F, 0x3F, 0x3F, 0xB7, 0xB8, 0xB9, 0x20, 0x7F, 0x3F, 0xD, 0xD, 0x1B, 0x7E, 0x3F, 0x3F, 0x3F, 0xAD, 0x3F, 0x10, 0x11, 0x12, 0x13, 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0xA8, 0xA9, 0xAF, 0xAA, 0xAB, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F };
-uint8_t lastMatchPlayers[32];
-uint8_t lastMatchSavedShirtNums[32];
-uint8_t managerNameBuffer[9];
-uint8_t managerSurnameBuffer[13];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): lastMatchPlayers */
+// uint8_t lastMatchPlayers[32];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): lastMatchSavedShirtNums */
+// uint8_t lastMatchSavedShirtNums[32];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): managerNameBuffer */
+// uint8_t managerNameBuffer[9];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): managerSurnameBuffer */
+// uint8_t managerSurnameBuffer[13];
 uint8_t nationalityOrdinalsArray[64] = { 0x8, 0x1F, 0x24, 0x18, 0x2E, 0x0, 0x1, 0x2, 0x26, 0x3, 0x4, 0x5, 0x7, 0x28, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0x17, 0xF, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x20, 0x1E, 0x2D, 0x27, 0x21, 0x6, 0x22, 0x23, 0x38, 0x34, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4F, 0x4B, 0x4C, 0x4D, 0x50, 0x58, 0x51, 0x78, 0x76, 0x77, 0x94, 0x95, 0xFF };
 int8_t numberBuffer[16] = { 0 };
 uint8_t numbersBuffer[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -150,21 +164,28 @@ uint8_t plPricesIncreaseTable[50] = { 0, 1, 2, 3, 4, 4, 5, 5, 6, 6, 7, 7, 7, 8, 
 uint8_t plane01RenderStackBase[360];
 uint8_t plane23RenderStackBase[360];
 uint8_t playerFormDeltaRandomTable[144] = { 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 2, 1, 1, 1, 1, 0, 0, 0, 2, 1, 1, 1, 1, 1, 0, 0, 2, 1, 1, 1, 1, 1, 0, 0, 2, 2, 1, 1, 1, 1, 0, 0, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 1, 1, 1, 2, 2, 2, 0, 1, 1, 1, 1, 2, 2, 2, 0, 1, 1, 1, 1, 2, 2, 2, 0, 1, 1, 1, 1, 2, 2, 3, 0, 1, 1, 1, 1, 2, 2, 3, 0, 1, 1, 1, 2, 2, 2, 3 };
-uint8_t playerFormModifiers[32];
-uint8_t playerPositions[32];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): playerFormModifiers */
+// uint8_t playerFormModifiers[32];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): playerPositions */
+// uint8_t playerPositions[32];
 int8_t playerRatingFilterThresholds[17] = { 1, 4, 6, 8, 11, 14, 16, 19, 24, 28, 31, 35, 38, 41, 46, 48, 0 };
 uint8_t playerStatusBucketThresholds[8] = { 0x20, 0x8, 0x6, 0x5, 0x4, 0x8, 0x1, 0x0 };
-uint8_t playersOnTransferMarket[10];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): playersOnTransferMarket */
+// uint8_t playersOnTransferMarket[10];
 uint8_t preferredTacticsSlotsByRole[64] = { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 4, 5, 6, 1, 1, 2, 2, 3, 4, 5, 6, 1, 1, 2, 2, 3, 4, 5, 6, 4, 5, 5, 6, 6, 7, 7, 8, 4, 5, 5, 6, 6, 7, 7, 8, 4, 5, 5, 6, 6, 7, 7, 8, 7, 8, 8, 9, 9, 10, 10, 10 };
-uint8_t quaternaryCompetitionName[36];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): quaternaryCompetitionName */
+// uint8_t quaternaryCompetitionName[36];
 int8_t redCardTable[30] = { 0, 9, 0, 9, 0, 9, 0, 9, 0, 9, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1 };
 uint8_t renderStackBase[840];
 uint8_t resultString[70];
 uint8_t saveFileTitle[70] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-uint8_t seasonInformationsArray[2120];
-uint16_t seasonSquadTeamNumbers[24];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): seasonInformationsArray */
+// uint8_t seasonInformationsArray[2120];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): seasonSquadTeamNumbers */
+// uint16_t seasonSquadTeamNumbers[24];
 int8_t secondYellowTable[46] = { 0, 9, 0, 9, 0, 9, 0, 9, 0, 9, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0 };
-int8_t secondaryCompetitionName[36];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): secondaryCompetitionName */
+// int8_t secondaryCompetitionName[36];
 /* selTeamPlayerIndices: alias into selTeamsBackingBuf + 60 (see swos_globals.c) */
 uint8_t selectedFilename[13] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 uint8_t shirtTypesTable[64] = { 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 2, 0, 2, 0, 2, 0, 2, 0, 1, 0, 2, 0, 1, 0, 2, 0, 1, 0, 2, 0, 1, 0, 2, 0, 1, 0, 1, 0, 2, 0, 2, 0, 1, 0, 1, 0, 2, 0, 2 };
@@ -193,16 +214,21 @@ uint8_t teamSortBuffer[256];
 uint8_t teamsIndex[100];
 uint8_t teamsPtrTable[400];
 uint8_t teamsTable[100];
-int8_t tertiaryCompetitionName[36];
-uint8_t trainingMatchSavedPlayers[32];
-uint8_t trainingMatchSavedShirtNums[32];
-uint8_t transferOfferTable[70];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): tertiaryCompetitionName */
+// int8_t tertiaryCompetitionName[36];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): trainingMatchSavedPlayers */
+// uint8_t trainingMatchSavedPlayers[32];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): trainingMatchSavedShirtNums */
+// uint8_t trainingMatchSavedShirtNums[32];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): transferOfferTable */
+// uint8_t transferOfferTable[70];
 char trialistNameBuffer[23] = "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000";
 uint8_t trialistSkillBitMasks[32] = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x80, 0x80, 0x0, 0x0, 0x80, 0x80, 0x0, 0x8, 0x80, 0x0, 0x0, 0x0, 0x8, 0x80, 0x0, 0x0, 0x8, 0x80, 0x8, 0x0, 0x80, 0x0, 0x0, 0x8, 0x0, 0x8 };
 uint8_t trialistSkillDistribution[20] = { 0x1, 0x1, 0x2, 0x2, 0x3, 0x4, 0x5, 0x8, 0xE, 0x14, 0xE, 0x8, 0x5, 0x4, 0x3, 0x2, 0x2, 0x1, 0x1, 0x0 };
 uint8_t trialistSkillTemplates[512] = { 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 16, 0, 0, 1, 0, 16, 0, 0, 0, 4, 0, 1, 17, 16, 1, 0, 32, 2, 0, 16, 33, 0, 0, 0, 16, 16, 1, 16, 16, 16, 2, 16, 16, 0, 1, 2, 16, 1, 0, 0, 0, 6, 1, 1, 33, 17, 2, 16, 0, 16, 1, 18, 32, 16, 0, 1, 1, 65, 0, 0, 33, 17, 3, 0, 1, 0, 0, 16, 17, 18, 0, 0, 0, 8, 1, 32, 33, 64, 1, 1, 49, 33, 2, 33, 16, 0, 1, 1, 49, 33, 2, 33, 2, 16, 2, 33, 48, 1, 1, 19, 1, 17, 0, 0, 0, 11, 1, 2, 65, 19, 1, 16, 67, 64, 1, 3, 18, 50, 2, 16, 49, 32, 1, 19, 3, 49, 2, 34, 32, 19, 1, 21, 18, 34, 0, 0, 0, 14, 1, 20, 66, 49, 0, 16, 83, 50, 1, 34, 19, 50, 3, 34, 18, 48, 1, 19, 36, 20, 3, 17, 99, 32, 1, 34, 17, 38, 0, 0, 0, 16, 1, 17, 99, 51, 2, 33, 50, 98, 3, 37, 65, 17, 1, 33, 21, 113, 3, 33, 51, 49, 4, 50, 80, 20, 1, 50, 51, 36, 0, 0, 0, 19, 2, 33, 82, 114, 3, 53, 49, 65, 2, 51, 115, 19, 1, 36, 37, 52, 2, 33, 22, 114, 6, 19, 65, 33, 2, 51, 67, 37, 0, 0, 0, 24, 3, 49, 82, 114, 3, 37, 98, 66, 2, 51, 101, 51, 3, 49, 50, 98, 2, 53, 39, 68, 4, 34, 100, 66, 2, 38, 68, 38, 0, 0, 0, 28, 2, 67, 116, 100, 4, 35, 66, 114, 2, 71, 115, 52, 4, 36, 51, 115, 2, 66, 55, 116, 7, 68, 97, 50, 4, 55, 35, 53, 0, 0, 0, 31, 5, 67, 83, 115, 2, 66, 116, 116, 5, 55, 113, 53, 4, 53, 70, 98, 3, 65, 87, 117, 7, 82, 115, 52, 2, 54, 52, 71, 0, 0, 0, 35, 5, 54, 115, 116, 4, 65, 116, 116, 3, 87, 117, 85, 4, 84, 53, 115, 4, 50, 103, 117, 7, 83, 116, 68, 5, 71, 52, 55, 0, 0, 0, 38, 5, 84, 117, 116, 5, 83, 117, 117, 4, 87, 117, 102, 5, 86, 55, 117, 4, 69, 87, 116, 7, 69, 117, 83, 5, 87, 84, 87, 0, 0, 0, 41, 6, 102, 116, 118, 5, 86, 117, 115, 5, 71, 118, 69, 5, 70, 103, 118, 6, 86, 87, 117, 7, 86, 118, 99, 5, 87, 102, 87, 0, 0, 0, 46, 6, 102, 118, 118, 6, 102, 118, 118, 6, 103, 118, 102, 6, 102, 103, 118, 6, 102, 103, 118, 7, 102, 118, 102, 6, 103, 102, 103, 0, 0, 0, 48, 7, 119, 118, 118, 7, 103, 119, 119, 7, 119, 118, 118, 7, 119, 119, 119, 7, 118, 119, 119, 7, 119, 119, 102, 6, 119, 118, 103 };
 uint8_t uefaCupEligibleCompetitionIds[33] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-uint8_t weeklyWageByPlayerIndex[128];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): weeklyWageByPlayerIndex */
+// uint8_t weeklyWageByPlayerIndex[128];
 int8_t yellowCardTable[30] = { 0, 9, 0, 9, 0, 9, 0, 9, 0, 9, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1 };
 
 /* ---------------- Arrays sourced from SWOS2.s ----------------

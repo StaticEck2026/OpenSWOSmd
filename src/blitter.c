@@ -271,13 +271,28 @@ void _FillRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t col
     uint16_t wrapRows;
     int16_t overflow;
 
+#ifndef SWOS_SDL_BUILD
+    /* Amiga: hardware-scroll wrap offsets are part of how the display
+     * pans its bitplane base pointer — coordinates need to be shifted
+     * by the current wrap offset to land in the right physical row.
+     * On SDL we redraw the whole frontbuffer each frame and dstX/dstY
+     * are already in final screen coords, so adding the wrap offsets
+     * misaligns rectangles relative to text/sprites (whose blits
+     * already skip these offsets — see blitChunkySprite and
+     * blitGlyphBitplanes). Without this guard, in-match menu rows
+     * (substitutes panel, formation menu, bench overlays) had their
+     * coloured backgrounds shifted ~7 pixels lower than the text
+     * inside them. */
     x += cameraXMod320;
     y += cameraYMod320;
 
     if (y >= SCREEN_HEIGHT)
         y -= SCREEN_HEIGHT;
+#endif
 
-    /* Check for vertical wrap */
+    /* Check for vertical wrap (still needed on SDL when a caller asks
+     * for a rectangle that straddles the bottom edge — rare, but the
+     * wrap math is harmless when y starts in-range). */
     wrapRows = 0;
     overflow = (int16_t)(y + h - SCREEN_HEIGHT);
     if (overflow > 0) {

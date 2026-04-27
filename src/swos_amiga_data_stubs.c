@@ -422,7 +422,8 @@ char audioInstrumentBank[512 * 1024];
 /* careerDefaultInternationalSquadSlotsTable: typed definition in swos_data_typed_stubs.c */
 /* careerFileBuffer: typed definition in swos_data_typed_stubs.c */
 /* careerFinished: typed definition in swos_data_typed_stubs.c */
-char careerForeignMarketPlayers[0x39C0];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): careerForeignMarketPlayers */
+// char careerForeignMarketPlayers[0x39C0];
 /* careerGameBottomTeamName: real data in swos_amiga_data_imports.c */
 /* careerGameListTeamControl: real data in swos_amiga_data_imports.c */
 /* careerGameTopTeamName: real data in swos_amiga_data_imports.c */
@@ -746,7 +747,8 @@ char careerForeignMarketPlayers[0x39C0];
 /* editTeamsBuffer: alias into selTeamsBackingBuf + 1368 (see swos_globals.c) */
 /* editTeamsPrimaryShirtColTable: real data in swos_data_bulk_imports.c */
 /* editTeamsPrimaryShirts: typed definition in swos_data_typed_stubs.c */
-char editTeamsSaveVarsArea[0x520A];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): editTeamsSaveVarsArea */
+// char editTeamsSaveVarsArea[0x520A];
 /* editTeamsSecondaryShirt: typed definition in swos_data_typed_stubs.c */
 /* editTeamsSecondaryShirtColTable: real data in swos_data_bulk_imports.c */
 /* editTeamsSecondaryShorts: typed definition in swos_data_typed_stubs.c */
@@ -1394,7 +1396,22 @@ char imageCmdWorkBuf[0x200000];
 /* pmMenuNumPlayers: real data in swos_amiga_data_imports.c */
 /* pmSelectedPlayerEntry: real data in swos_amiga_data_imports.c */
 /* poolPlayerStrideRef: typed definition in swos_data_typed_stubs.c */
-char poolplyrDatBuffer[0xCBE8];
+/* poolplyrDatBuffer: file-load destination for `sound/sfx.in1` (the
+ * sound-effects instrument bank 1). The Amiga `ds.b $CBE8` (52,200 bytes)
+ * is undersized — sfx.in1 is 71,500 bytes on disk. On Amiga the overflow
+ * happened to spill into ~6 KB of unused BSS padding (`BSS_00_75D30`)
+ * plus whatever followed. On SDL the linker placed `imageCmdWorkBuf`
+ * just 24 bytes after this buffer, so the overflow wrote directly into
+ * the small-char glyph sprites loaded by `introMenuImageScript` — every
+ * substitutes-menu text rendered as blank because slot 9..43 headers
+ * were stomped (verified via per-slot SpriteGraphics dump showing
+ * `pw=2 h=6 wq=1` flip to garbage immediately after `_LoadSfxResources`).
+ *
+ * Size to comfortably hold sfx.in1 with headroom for any future asset
+ * tweak. The asset-loader writes exactly file-size bytes, so 0x14000
+ * (80 KB) gives ~8.5 KB of safety margin past the current 71,500-byte
+ * file. Back-port to the Amiga C port: same fix, same reason. */
+char poolplyrDatBuffer[0x14000];
 /* poolplyrLoaded: typed definition in swos_data_typed_stubs.c */
 /* positionFilterStringTable: real data in swos_amiga_ptr_imports.c */
 /* positionGroupTable: real data in swos_amiga_ptr_imports.c */
@@ -1756,7 +1773,8 @@ char teamFileBuffer[0xFA0E];
 /* titleLogoPalette: real data in swos_amiga_data_imports.c */
 /* titleScreenPalette: real data in swos_amiga_data_imports.c */
 /* titleTextPalette: real data in swos_amiga_data_imports.c */
-char tmdFileBuffer[0xD5C0];
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): tmdFileBuffer */
+// char tmdFileBuffer[0xD5C0];
 /* togglePlayerCoachRedrawItemList: real data in swos_globals.c */
 /* topBallOutOfPlayPositions: typed definition in swos_data_typed_stubs.c */
 /* topOfStackMark: real data in swos_amiga_data_imports.c */

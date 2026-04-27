@@ -7,6 +7,82 @@
 - Use the original Amiga data files located in bin
 - Keep the input system as close to the original as possible but using SDL for our input instead
 
+## Long-term roadmap
+
+We have **two** SWOS C ports in flight: this SDL port (here, `SWOS_C_SDL`) and the
+Amiga C port at `C:\Projects\AI\SWOS\SWOS_C`. Both are derived from the original
+Amiga SWOS2.s. The end goal:
+
+1. **Stabilize this SDL port first.** Get the full game working — match loop,
+   career mode, save/load, transfer market, edit teams, all UI flows.
+2. **Back-port to the Amiga C port.** Once stable here, every fix and design
+   change made on the SDL side gets propagated to the Amiga C port.
+   `SWOS_C/SWOS2.s` is then **retired** — the Amiga build runs entirely from C.
+3. **Untangle the data overlays.** The current code mirrors the Amiga's BSS
+   layout faithfully — adjacent-globals reuse, careerFileBuffer-style
+   overlays, `selTeamsPtr` aliased onto its own data, etc. (see
+   "Adjacent-globals BSS pattern" below). Once both ports run on C, those
+   overlays become **proper structs** with named fields. No more `.equ`
+   aliases, no more "this label is the next label's label", no more
+   adjacent-reads-into-the-following-global. Memory is structured.
+4. **Replace the save format.** The current `.CAR` format is a raw memory
+   dump of the careerFileBuffer overlay region — fragile against any layout
+   change, and contains absolute pointers (see "Pointer-to-disk problem"
+   below). Eventually replace with a structured format (likely JSON or a
+   tagged binary) that serializes named fields, not memory addresses. This
+   change happens *together* on both ports.
+
+What this means for current decisions:
+
+- **"Compatible with Amiga" means our Amiga C port, not original SWOS2.s.**
+  Save-file format changes that we make and back-port are fine — the original
+  Amiga binary is not a compatibility target. SWOS2.s is a *reference*, not a
+  *spec*.
+- **Adjacent-globals workarounds and `.equ` aliases are a transitional
+  scaffold.** They exist so the SDL port can run today against the same C
+  code the Amiga port runs. When step 3 happens, we delete every alias and
+  replace every "label-into-next-label" read with a struct field access.
+  Don't write *new* code that depends on adjacency — fix the call site to
+  use a proper struct field instead.
+- **Don't preserve format details that exist only because m68k did them.**
+  Big-endian byte order in the on-disk save, raw pointer fields, the precise
+  98476-byte career-header size — these are all artifacts of the Amiga
+  memory dump, not deliberate format design. They're fair game to change in
+  step 4. Until then we use the BE_*/PACK_BE helpers to keep the SDL build
+  reading the Amiga byte order.
+- **The Amiga side is not stalled while we work on SDL.** The Amiga C port
+  receives the same fixes via back-port; it just lags behind in time. Don't
+  introduce SDL-only divergences without a back-port plan.
+
+## Pointer-to-disk problem
+
+The careerFileBuffer overlay (see `swos_globals_career_overlay.c`) contains
+several BSS labels typed as pointers — `currentCompetitionPtr`,
+`secondaryCompetitionPtr`, `careerCompetitionSlotPtrTable[5]`,
+`*CompStringOffset`, `diyCompetitionTablePtr`, plus runtime-only pointers
+inside `tmdFileBuffer` (`inGameTeamPtr`, `spritesTable`, etc.). Because
+`_SaveCareerFile` is a raw memory dump of the overlay region, those pointer
+*values* end up in the .CAR file. After a rebuild (or load on a different
+machine), the linker places the destination buffers at different addresses
+and the saved pointers become stale.
+
+**Original SWOS2.s ignored this problem** — the Amiga binary loaded at a
+fixed address with a stable BSS layout, so saved pointer values stayed
+valid across runs of the same binary. `LoadCareerFile` does no pointer
+fixups at all (`LoadCompetitionFile` is just a magic-bytes verifier). This
+is one of the bugs we *don't* inherit: our Amiga C port no longer places
+data at fixed addresses either, so the same fixup is needed on both ports.
+
+**Until the JSON-format rewrite lands**, the right fix is post-load
+re-derivation: a `_RebuildPointersAfterLoad()` hook that recomputes every
+pointer field from a stable identity (competition ID → static cup struct
+lookup, careerFileBuffer offsets → `&competitionFileBuffer` etc., runtime
+fields zeroed) and repopulates the runtime DIY struct
+(`diyCompetitionStart`) from the loaded competition slot bytes. Wire it
+into `_LoadCareerFile` after the magic check passes. This keeps the .CAR
+format unchanged, fixes save round-trips, and gets back-ported verbatim to
+the Amiga C port.
+
 ## Data
 
 - bin/data - Amiga game data

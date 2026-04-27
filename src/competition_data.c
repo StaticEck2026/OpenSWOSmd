@@ -707,40 +707,74 @@ CompetitionCup_4_2 japaneseEmperorsCup = { { { -97, 1, 55, 88, 0, 13, 0, 0, 0 },
  * Competition "Copy" variables (used at runtime for career/season)
  * ====================================================================== */
 
-CompetitionCup2_4_2_32 euroCupCopy;
-CompetitionCup_6_2_64 cupWinnersCupCopy;
-CompetitionCup_6_2_64 uefaCupCopy;
-CompetitionCup_6_2_8 invitationTournamentCopy;
-CompetitionCup_6_2_8 tourCopy;
-CompetitionCup_6_2_12 friendlyCopy;
-CompetitionCup2_4_2_32 europeanChampionships2Copy;
-CompetitionCup_6_2_12 ecQualifyingGroup1Copy;
-CompetitionCup_6_2_12 ecQualifyingGroup2Copy;
-CompetitionCup_6_2_12 ecQualifyingGroup3Copy;
-CompetitionCup_6_2_12 ecQualifyingGroup4Copy;
-CompetitionCup_6_2_12 ecQualifyingGroup5Copy;
-CompetitionCup_6_2_12 ecQualifyingGroup6Copy;
-CompetitionCup_6_2_12 ecQualifyingGroup7Copy;
-CompetitionCup_6_2_8 ecQualifyingGroup8Copy;
-CompetitionCup2_4_2_24 copaAmericaCopy;
-CompetitionCup2_6_2 africanNationsCupCopy;
-CompetitionCup2_4_2 northAmericanCupCopy;
-CompetitionCup2_6_2 asianCupCopy;
-CompetitionCup_6_2 oceaniaCupCopy;
-CompetitionCup2_6_2_64 worldCup2Copy;
-CompetitionCup_6_2_12 worldCupQualifyingGroup1Copy;
-CompetitionCup_6_2_12 worldCupQualifyingGroup2Copy;
-CompetitionCup_6_2_12 worldCupQualifyingGroup3Copy;
-CompetitionCup_6_2_12 worldCupQualifyingGroup4Copy;
-CompetitionCup_6_2_12 worldCupQualifyingGroup5Copy;
-CompetitionCup_6_2_12 worldCupQualifyingGroup6Copy;
-CompetitionCup_6_2_12 worldCupQualifyingGroup7Copy;
-CompetitionCup_6_2_12 worldCupQualifyingGroup8Copy;
-CompetitionCup2_6_2_24 northAmericaWorldCupQualificationCopy;
-CompetitionCup2_6_2_16 southAmericaWorldCupQualificationCopy;
-CompetitionCup2_6_2_64 africaWorldCupQualificationCopy;
-CompetitionCup2_6_2_60 asiaWorldCupQualificationCopy;
-CompetitionCup_6_2_8 oceaniaWorldCupQualificationCopy;
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): euroCupCopy */
+extern CompetitionCup2_4_2_32 euroCupCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): cupWinnersCupCopy */
+extern CompetitionCup_6_2_64 cupWinnersCupCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): uefaCupCopy */
+extern CompetitionCup_6_2_64 uefaCupCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): invitationTournamentCopy */
+extern CompetitionCup_6_2_8 invitationTournamentCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): tourCopy */
+extern CompetitionCup_6_2_8 tourCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): friendlyCopy */
+extern CompetitionCup_6_2_12 friendlyCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): europeanChampionships2Copy */
+extern CompetitionCup2_4_2_32 europeanChampionships2Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup1Copy */
+extern CompetitionCup_6_2_12 ecQualifyingGroup1Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup2Copy */
+extern CompetitionCup_6_2_12 ecQualifyingGroup2Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup3Copy */
+extern CompetitionCup_6_2_12 ecQualifyingGroup3Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup4Copy */
+extern CompetitionCup_6_2_12 ecQualifyingGroup4Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup5Copy */
+extern CompetitionCup_6_2_12 ecQualifyingGroup5Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup6Copy */
+extern CompetitionCup_6_2_12 ecQualifyingGroup6Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup7Copy */
+extern CompetitionCup_6_2_12 ecQualifyingGroup7Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup8Copy */
+extern CompetitionCup_6_2_8 ecQualifyingGroup8Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): copaAmericaCopy */
+extern CompetitionCup2_4_2_24 copaAmericaCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): africanNationsCupCopy */
+extern CompetitionCup2_6_2 africanNationsCupCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): northAmericanCupCopy */
+extern CompetitionCup2_4_2 northAmericanCupCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): asianCupCopy */
+extern CompetitionCup2_6_2 asianCupCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): oceaniaCupCopy */
+extern CompetitionCup_6_2 oceaniaCupCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCup2Copy */
+extern CompetitionCup2_6_2_64 worldCup2Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup1Copy */
+extern CompetitionCup_6_2_12 worldCupQualifyingGroup1Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup2Copy */
+extern CompetitionCup_6_2_12 worldCupQualifyingGroup2Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup3Copy */
+extern CompetitionCup_6_2_12 worldCupQualifyingGroup3Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup4Copy */
+extern CompetitionCup_6_2_12 worldCupQualifyingGroup4Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup5Copy */
+extern CompetitionCup_6_2_12 worldCupQualifyingGroup5Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup6Copy */
+extern CompetitionCup_6_2_12 worldCupQualifyingGroup6Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup7Copy */
+extern CompetitionCup_6_2_12 worldCupQualifyingGroup7Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup8Copy */
+extern CompetitionCup_6_2_12 worldCupQualifyingGroup8Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): northAmericaWorldCupQualificationCopy */
+extern CompetitionCup2_6_2_24 northAmericaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): southAmericaWorldCupQualificationCopy */
+extern CompetitionCup2_6_2_16 southAmericaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): africaWorldCupQualificationCopy */
+extern CompetitionCup2_6_2_64 africaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): asiaWorldCupQualificationCopy */
+extern CompetitionCup2_6_2_60 asiaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): oceaniaWorldCupQualificationCopy */
+extern CompetitionCup_6_2_8 oceaniaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
 
 /* ======================================================================
  * Career Contests

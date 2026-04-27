@@ -996,15 +996,45 @@ Sprite team2Player11Sprite = { 2, 11, 0, (AnimTable *)-1, -1, 0xFF, 0, 0, 0, 0, 
     5, 1, 0, { 0 }, { 0 }, { 0 }, 0, 0, { 0 }, { 0 }, { 0 }, 0, 0,
     { 0x0, 0x0, 0x0, 0x0, 0x0, 0x1 }, 1, -1, 0, 0, 0, 0, 0, 1, 0, 0, 0, -1, 0,
     0, 0, 0, 0, 0, 0, 0 };
-Sprite* team1SpritesTable[11] = { &goalie1Sprite, &team1Player2Sprite,
-    &team1Player3Sprite, &team1Player4Sprite, &team1Player5Sprite,
-    &team1Player6Sprite, &team1Player7Sprite, &team1Player8Sprite,
-    &team1Player9Sprite, &team1Player10Sprite, &team1Player11Sprite };
-Sprite* team2SpritesTable[11] = { &goalie2Sprite, &team2Player2Sprite,
-    &team2Player3Sprite, &team2Player4Sprite, &team2Player5Sprite,
-    &team2Player6Sprite, &team2Player7Sprite, &team2Player8Sprite,
-    &team2Player9Sprite, &team2Player10Sprite, &team2Player11Sprite };
-Sprite* allSpritesArray[79] = { &ballShadowSprite, &ballSprite, &goal1TopSprite,
+/* teamSpritesTable: 101 sprite pointers covering team1SpritesTable[11],
+ * team2SpritesTable[11], and allSpritesArray[79] in that exact order.
+ *
+ * On Amiga BSS these were three adjacent `dc.l` blocks (SWOS2.s line
+ * 42863 / 42877 / 42891). Bench/subs draw code reads
+ * `spritesTable[d7]` for d7 = 11..15 (the substitute about to enter
+ * the game) which is OOB for the 11-entry team table — Amiga code
+ * relied on the next BSS table being right after. We mirror that
+ * adjacency by overlaying all three names onto one initialized array:
+ *
+ *   team1SpritesTable = teamSpritesTable + 0     [11 entries]
+ *   team2SpritesTable = teamSpritesTable + 44    [11 entries]
+ *   allSpritesArray   = teamSpritesTable + 88    [79 entries]
+ *
+ * With this layout:
+ *   team1SpritesTable[11..21] reads team2SpritesTable[0..10]
+ *   team2SpritesTable[11..15] reads allSpritesArray[0..4]
+ *
+ * exactly as the Amiga did. `spr->injuryLevel == 0xFFFE` checks on
+ * those OOB slots return false (the sprites pointed at aren't
+ * "permanently injured"), so no UI affordance changes — just no
+ * SIGSEGV.
+ *
+ * The `.equ` aliases must live in the same TU as the array definition
+ * or GAS won't emit a global symbol for them (same gotcha as
+ * careerFileBufferBuf — see swos_globals_career_overlay.c). */
+Sprite* teamSpritesTable[101] = {
+    /* [0..10]  — team1SpritesTable */
+    &goalie1Sprite, &team1Player2Sprite, &team1Player3Sprite,
+    &team1Player4Sprite, &team1Player5Sprite, &team1Player6Sprite,
+    &team1Player7Sprite, &team1Player8Sprite, &team1Player9Sprite,
+    &team1Player10Sprite, &team1Player11Sprite,
+    /* [11..21] — team2SpritesTable */
+    &goalie2Sprite, &team2Player2Sprite, &team2Player3Sprite,
+    &team2Player4Sprite, &team2Player5Sprite, &team2Player6Sprite,
+    &team2Player7Sprite, &team2Player8Sprite, &team2Player9Sprite,
+    &team2Player10Sprite, &team2Player11Sprite,
+    /* [22..100] — allSpritesArray */
+    &ballShadowSprite, &ballSprite, &goal1TopSprite,
     &goal2BottomSprite, &goalie1Sprite, &team1Player2Sprite,
     &team1Player3Sprite, &team1Player4Sprite, &team1Player5Sprite,
     &team1Player6Sprite, &team1Player7Sprite, &team1Player8Sprite,
@@ -1036,4 +1066,11 @@ Sprite* allSpritesArray[79] = { &ballShadowSprite, &ballSprite, &goal1TopSprite,
     &advertInGameSprites[0x1], &advertInGameSprites[0x2],
     &advertInGameSprites[0x3], &advertInGameSprites[0x4],
     &advertInGameSprites[0x5], &advertInGameSprites[0x6],
-    &advertInGameSprites[0x7], (Sprite*)-1 };
+    &advertInGameSprites[0x7], (Sprite*)-1,
+};
+__asm__(".globl team1SpritesTable\n"
+        ".equ   team1SpritesTable, teamSpritesTable\n"
+        ".globl team2SpritesTable\n"
+        ".equ   team2SpritesTable, teamSpritesTable + 44\n"
+        ".globl allSpritesArray\n"
+        ".equ   allSpritesArray,   teamSpritesTable + 88\n");

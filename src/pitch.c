@@ -304,14 +304,6 @@ void _DrawChunkyPitch(void)
     uint8_t  *fb        = (uint8_t *)(uintptr_t)frontbufferBasePtr;
     if (!fb) return;
 
-    /* Trace every 32 frames so we can see if camera is moving. */
-    {
-        static int g_cnt = 0;
-        if ((g_cnt++ & 31) == 0) {
-            fprintf(stderr, "[pitch] cameraX.s.i=%d cameraY.s.i=%d\n", (int)cameraX.s.i, (int)cameraY.s.i);
-        }
-    }
-
     const int fbW = FRONTBUFFER_ROW_STRIDE_BYTES;   /* SDL = SCREEN_WIDTH = 320 */
     const int fbH = SCREEN_HEIGHT;                  /* 200 */
 
