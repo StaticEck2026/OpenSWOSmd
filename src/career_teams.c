@@ -173,10 +173,19 @@ TeamFileEx *_GetTeamPointer(uint16_t teamId)
 __attribute__((used, externally_visible))
 void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest)
 {
+    /* Each TeamFileEx in the selTeamsPtr buffer starts with (countryNumber,
+     * teamOrdinal) as two adjacent bytes. The Amiga m68k `move.w (a0)` read
+     * those as a single big-endian word, so the team id is
+     * `(countryNumber << 8) | teamOrdinal`. A naive `*(uint16_t *)src` on a
+     * little-endian SDL host swaps the bytes — an Italian team
+     * (countryNumber=0x0E, teamOrdinal=0x2C, real id 0x0E2C / 3628) reads
+     * back as 0x2C0E (11278) and _VerifyTeamLoaded panics on the bogus id.
+     * Use PACK_BE_U16 so both builds produce the BE-flavour id every other
+     * site (findTeamInCache / _VerifyTeamLoaded etc.) compares against. */
     volatile uint8_t *src = (volatile uint8_t *)&selTeamsPtr;
     volatile uint16_t *dst = (volatile uint16_t *)dest;
     for (int16_t i = (int16_t)(count - 1); i >= 0; i--) {
-        *dst++ = *(volatile uint16_t *)src;
+        *dst++ = PACK_BE_U16(src[0], src[1]);
         src += sizeof(TeamFileEx);
     }
 }
