@@ -48,6 +48,11 @@ static int8_t            s_mix_buf[48000 * 2 / 50 + 128];
 
 int AudioSDL_Init(void)
 {
+#if SWOS_AUDIO_DISABLED
+    /* Audio disabled at compile time — return success so platform init
+     * continues; s_audio_dev stays 0 and AudioSDL_Tick early-returns. */
+    return 0;
+#endif
     s_mtx = SDL_CreateMutex();
 
     SDL_AudioSpec want;
@@ -161,6 +166,10 @@ int AudioSDL_StartSong(const uint8_t *song_data, int song_size,
                        const uint8_t *ins_data,  int ins_size,
                        int subsong)
 {
+#if SWOS_AUDIO_DISABLED
+    (void)song_data; (void)song_size; (void)ins_data; (void)ins_size; (void)subsong;
+    return 0;
+#endif
     SDL_LockMutex(s_mtx);
 
     int ok = RJP1_Load(&s_player, song_data, song_size, ins_data, ins_size);
@@ -187,6 +196,9 @@ int AudioSDL_StartSong(const uint8_t *song_data, int song_size,
 
 void AudioSDL_StopSong(void)
 {
+#if SWOS_AUDIO_DISABLED
+    return;
+#endif
     SDL_LockMutex(s_mtx);
     if (s_player_active)
         RJP1_StopAll(&s_player);
@@ -214,6 +226,10 @@ void AudioSDL_StopSong(void)
 int AudioSDL_LoadSfxBank(const uint8_t *song_data, int song_size,
                          const uint8_t *ins_data,  int ins_size)
 {
+#if SWOS_AUDIO_DISABLED
+    (void)song_data; (void)song_size; (void)ins_data; (void)ins_size;
+    return 0;
+#endif
     SDL_LockMutex(s_mtx);
 
     int ok = RJP1_Load(&s_player, song_data, song_size, ins_data, ins_size);
@@ -245,6 +261,10 @@ int AudioSDL_LoadSfxBank(const uint8_t *song_data, int song_size,
 /* Trigger an SFX by note id (the Amiga _AudioChannelNoteOnOff path). */
 void AudioSDL_TriggerSfxByNoteId(int channel, int note_id)
 {
+#if SWOS_AUDIO_DISABLED
+    (void)channel; (void)note_id;
+    return;
+#endif
     SDL_LockMutex(s_mtx);
     if (s_player_active)
         RJP1_StartSequenceByNoteId(&s_player, channel, note_id);
@@ -255,6 +275,10 @@ void AudioSDL_TriggerSfxByNoteId(int channel, int note_id)
  * path). Skips the note-record indirection. */
 void AudioSDL_TriggerSfxByWaveId(int channel, int wave_id)
 {
+#if SWOS_AUDIO_DISABLED
+    (void)channel; (void)wave_id;
+    return;
+#endif
     SDL_LockMutex(s_mtx);
     if (s_player_active)
         RJP1_StartSequenceByWaveId(&s_player, channel, wave_id);
@@ -267,6 +291,10 @@ void AudioSDL_TriggerSfxByWaveId(int channel, int wave_id)
  * sequence start. */
 void AudioSDL_TriggerSfxPreset(int preset_id)
 {
+#if SWOS_AUDIO_DISABLED
+    (void)preset_id;
+    return;
+#endif
     SDL_LockMutex(s_mtx);
     if (s_player_active) {
         uint8_t note_ids[4];
