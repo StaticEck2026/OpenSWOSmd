@@ -1248,6 +1248,15 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
  *      &diyCompetitionContext` in the current build's BSS (now
  *      aliased into careerFileBufferBuf by the overlay).
  *
+ *   diyCompetitionStart — runtime DIY working buffer (separate 4 KB
+ *      BSS, NOT inside the careerFileBuffer overlay). Repopulated
+ *      from the loaded slot-0 (primary competition) state, which
+ *      after step 1 is reachable via competitionFileBuffer.
+ *      Without this, anything reading diyCompetitionStart (the
+ *      Play Match / Next Match upcoming-fixture list, in particular)
+ *      sees whatever the previous in-memory career left behind —
+ *      not the just-loaded TEST.CAR state.
+ *
  * Not yet handled (will be layered in as we hit menus that read
  * them):
  *
@@ -1264,6 +1273,8 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
  * neither port pins data at fixed addresses anymore, so both need the
  * same rebuild.
  * ================================================================ */
+extern void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
+
 __attribute__((used, externally_visible))
 void _RebuildPointersAfterLoad(void)
 {
@@ -1277,14 +1288,21 @@ void _RebuildPointersAfterLoad(void)
     careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContext;
     careerCompetitionSlotPtrTable[4] = (uint8_t *)&diyCompetitionContext;
 
-    /* Step 5 (DIY-runtime repopulation) is *not* needed here:
-     * `_Career_OpenCompetitionSlotMenuAndApplyChanges` already calls
-     * `_Career_LoadCompetitionSlotStateFromBuffer(slotPtr)` when the
-     * user navigates into a competition slot menu, which copies the
-     * loaded competition bytes from the careerFileBuffer overlay
-     * (now reachable via the refreshed table above) into
-     * diyCompetitionStart. So fixing step 1 is sufficient to unblock
-     * VIEW SQUADS. */
+    /* Step 2: repopulate diyCompetitionStart (the runtime working
+     * struct outside the careerFileBuffer overlay) from the primary
+     * slot's saved bytes. Without this, the upcoming-match list
+     * shows fixtures generated against whatever competition the
+     * previous in-memory state held — typically the player team
+     * "playing" every other team at home, with 00'00 kickoff times,
+     * because the league fixture order/times live in
+     * diyCompetitionStart and not in the saved overlay slot.
+     *
+     * VIEW SQUADS already worked without this step because that path
+     * goes through `_Career_OpenCompetitionSlotMenuAndApplyChanges`,
+     * which calls _Career_LoadCompetitionSlotStateFromBuffer itself.
+     * The Play Match / Next Match menus skip that helper, so we
+     * have to populate diyCompetitionStart up-front at load time. */
+    _Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&competitionFileBuffer);
 }
 
 /* ================================================================
