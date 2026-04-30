@@ -20,6 +20,7 @@ extern volatile uint16_t currentMessage;
 extern uint8_t *plNameForMessage;
 extern volatile uint16_t currentGameTick;
 extern uint16_t clubBusinessActive;
+extern void _WaitForVSync(void);
 
 /* ---- ASM externs (data labels) ---- */
 extern uint8_t chairmanMemosMenu[];
@@ -105,11 +106,13 @@ void _ChairmanMemosOnReturn(void)
     /* Draw the menu */
     _DrawMenu();
 
-    /* Wait 100 VBlanks */
+    /* Wait 100 VBlanks before showing the Continue button. The original
+     * Amiga code spun on `currentGameTick` (cleared by the VBlank IRQ);
+     * on SDL we go through _WaitForVSync so the buffer swap, event pump,
+     * and 50 Hz pacing all happen on the main thread instead of relying
+     * on the SDL_Timer thread to make progress while we busy-spin. */
     for (int16_t i = 99; i >= 0; i--) {
-        uint16_t tick = currentGameTick;
-        while (currentGameTick == tick)
-            ;
+        _WaitForVSync();
     }
 
     /* Show the "Continue" button (entry 6, clear isInvisible) */
