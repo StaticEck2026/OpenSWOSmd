@@ -13,6 +13,7 @@
 extern uint16_t paletteIndex;
 extern uint16_t g_quitToDos;
 extern volatile uint16_t currentGameTick;
+extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 extern uint8_t pl1Fire;
 extern volatile uint32_t frontbufferBaseAltPtr;
 extern uint32_t memBoundaryMarker;
@@ -114,12 +115,7 @@ static int16_t loaderIntroWaitForFireOrTimeout(int16_t timeout)
         if (g_quitToDos != 0)
             return 1;
 
-        /* Wait 1 game tick (d1=0 → dbf loops once) */
-        tick = currentGameTick;
-        while (currentGameTick == tick)
-        {
-            /* spin */
-        }
+        _WaitForVSync();
 
         remaining--;
     }

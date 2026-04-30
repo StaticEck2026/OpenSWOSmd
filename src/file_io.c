@@ -28,6 +28,7 @@ extern volatile uint32_t frontbufferBaseAltPtr;
 extern uint8_t frontbufferBaseAlt[];
 #endif
 extern volatile uint16_t currentGameTick;
+extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 extern volatile uint16_t panicReasonCode;
 extern uint16_t hilNumGoals;
 extern uint8_t editTacticsCurrentTactics[370]; /* TeamTactics — must match edit_tactics.c */
@@ -227,8 +228,7 @@ int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
 
             /* Wait 50 ticks before retry */
             for (i = FPS_50HZ; i >= 0; i--) {
-                tick = currentGameTick;
-                while (currentGameTick == tick) {}
+                _WaitForVSync();
             }
             continue; /* retry LoadFile */
         }

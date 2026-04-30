@@ -8,6 +8,7 @@
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint32_t assetLoaderWorkPtr;
+extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 extern uint32_t assetLoaderCacheFlag;
 extern volatile uint16_t panicReasonCode;
 extern uint16_t assetLoaderAltPathReady;
@@ -610,10 +611,8 @@ int16_t _PlaySong(uint8_t *name, uint8_t *dest)
             return result;
 
         /* Wait 50 ticks before retry */
-        for (i = FPS_50HZ; i >= 0; i--)
-        {
-            tick = currentGameTick;
-            while (currentGameTick == tick) {}
+        for (i = FPS_50HZ; i >= 0; i--) {
+            _WaitForVSync();
         }
     }
 }
@@ -653,10 +652,8 @@ int16_t _AssetEnsureReadyWithRetry(uint8_t *name, uint8_t *dest)
             return result;
 
         /* Wait 50 ticks before retry */
-        for (i = FPS_50HZ; i >= 0; i--)
-        {
-            tick = currentGameTick;
-            while (currentGameTick == tick) {}
+        for (i = FPS_50HZ; i >= 0; i--) {
+            _WaitForVSync();
         }
     }
 }
@@ -684,10 +681,8 @@ int16_t _LoadRNCToBufferNoBlit(uint8_t *name, uint8_t *dest)
             return result;
 
         /* Wait 50 ticks then fall back to LoadFile */
-        for (i = 49; i >= 0; i--)
-        {
-            tick = currentGameTick;
-            while (currentGameTick == tick) {}
+        for (i = 49; i >= 0; i--) {
+            _WaitForVSync();
         }
         return _LoadFileEx(name, dest, (uint32_t *)0);
     }

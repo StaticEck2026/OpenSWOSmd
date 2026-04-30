@@ -20,6 +20,7 @@ extern uint16_t gameState;
 extern uint16_t patternsGoalCounter;
 extern uint16_t showFansCounter;
 extern volatile uint16_t currentGameTick;
+extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 
 /* ---- Embedded data labels in SWOS2.s code section ---- */
 extern uint16_t pendingSampleId3_4;
@@ -181,18 +182,11 @@ __attribute__((used, externally_visible))
 void _MuteAllAudioChannelsWithDelay(void)
 {
     uint16_t vol;
-    uint16_t tick;
 
     for (vol = 0; vol <= 0x40; vol += 4)
     {
         _AudioSetChannelVolume(0xFFFF, vol);
-
-        /* Wait 1 tick (dbf d1 with d1=0 loops once) */
-        tick = currentGameTick;
-        while (currentGameTick == tick)
-        {
-            /* spin */
-        }
+        _WaitForVSync();
     }
 }
 
@@ -207,7 +201,6 @@ __attribute__((used, externally_visible))
 void _AudioFadeCrowdDownThenPulseMusic(void)
 {
     int16_t vol;
-    uint16_t tick;
 
     /* Phase 1: Fade crowd channel down */
     vol = (int16_t)crowdChantVolume;
@@ -216,13 +209,7 @@ void _AudioFadeCrowdDownThenPulseMusic(void)
         while (vol >= 0)
         {
             _AudioSetChannelVolume(2, (uint16_t)vol);
-
-            tick = currentGameTick;
-            while (currentGameTick == tick)
-            {
-                /* spin */
-            }
-
+            _WaitForVSync();
             vol -= 2;
         }
         _AudioSetChannelVolume(2, 0);
@@ -234,12 +221,7 @@ void _AudioFadeCrowdDownThenPulseMusic(void)
         _AudioSetChannelVolume(0, (uint16_t)vol);
         _AudioSetChannelVolume(1, (uint16_t)vol);
         _AudioSetChannelVolume(3, (uint16_t)vol);
-
-        tick = currentGameTick;
-        while (currentGameTick == tick)
-        {
-            /* spin */
-        }
+        _WaitForVSync();
     }
 
     /* Final: all channels to 0 */
@@ -256,17 +238,11 @@ __attribute__((used, externally_visible))
 void _AudioMuteAllWithFrameRamp(void)
 {
     int16_t vol;
-    uint16_t tick;
 
     for (vol = 0x40; vol >= 0; vol -= 2)
     {
         _AudioSetChannelVolume(0xFFFF, (uint16_t)vol);
-
-        tick = currentGameTick;
-        while (currentGameTick == tick)
-        {
-            /* spin */
-        }
+        _WaitForVSync();
     }
 
     _AudioSetChannelVolume(0xFFFF, 0);

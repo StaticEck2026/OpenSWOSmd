@@ -44,6 +44,7 @@ extern uint8_t aSoundSfxSng[];
 extern uint8_t aSoundSfxIn1[];
 extern uint8_t aSoundSfxIn2[];
 extern volatile uint16_t currentGameTick;
+extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 
 /* Audio system data (PC-relative in SWOS2.s code section) */
 extern AudioState audioState;
@@ -497,18 +498,14 @@ void _AudioBeepAllShort(void)
 
     for (vol = 0x40; vol >= 0; vol--)
     {
-        uint16_t tick;
         int16_t i;
 
         _AudioSetChannelVolume(0xFFFF, (uint16_t)vol);
 
-        for (i = 1; i >= 0; i--)
-        {
-            tick = currentGameTick;
-            while (currentGameTick == tick)
-            {
-                /* spin */
-            }
+        /* 2 vblanks per step. _WaitForVSync (vs. raw spin on currentGameTick)
+         * keeps AudioSDL_Tick fed during the fade so the queue doesn't drain. */
+        for (i = 1; i >= 0; i--) {
+            _WaitForVSync();
         }
     }
 
@@ -560,8 +557,7 @@ void _TryPlayMusic(void)
 
     for (vol = 0; vol <= 0x22; vol += 2) {
         _AudioSetChannelVolume(0xFFFF, vol);
-        tick = currentGameTick;
-        while (currentGameTick == tick) { /* spin */ }
+        _WaitForVSync();
     }
     _AudioSetChannelVolume(0xFFFF, 0x23);
     return;
@@ -580,12 +576,7 @@ void _TryPlayMusic(void)
     for (vol = 0; vol <= 0x22; vol += 2)
     {
         _AudioSetChannelVolume(0xFFFF, vol);
-
-        tick = currentGameTick;
-        while (currentGameTick == tick)
-        {
-            /* spin */
-        }
+        _WaitForVSync();
     }
 
     _AudioSetChannelVolume(0xFFFF, 0x23);
@@ -671,13 +662,8 @@ void _StopMusic(void)
 
         _AudioSetChannelVolume(0xFFFF, (uint16_t)vol);
 
-        for (i = 1; i >= 0; i--)
-        {
-            uint16_t tick = currentGameTick;
-            while (currentGameTick == tick)
-            {
-                /* spin */
-            }
+        for (i = 1; i >= 0; i--) {
+            _WaitForVSync();
         }
     }
 
