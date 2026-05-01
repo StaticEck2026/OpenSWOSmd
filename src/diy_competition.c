@@ -1159,8 +1159,8 @@ void _InitDIYCup(void)
         a0 += 2;
     }
 
-    /* Initialize 64 team indices (0..63) at offset 0x2CE */
-    uint8_t *indices = a2raw + 0x2CE;
+    /* Initialize 64 team indices (0..63) at teamGridPairings */
+    uint8_t *indices = ((DIYCompetitionEx *)a2raw)->teamGridPairings;
     uint8_t idx = 0;
     for (int16_t i = 0x3F; i >= 0; i--) {
         *indices++ = idx++;
@@ -1179,9 +1179,9 @@ void _InitDIYCup(void)
 __attribute__((used, externally_visible))
 void _DIY_ShuffleTeamOrderList(void)
 {
-    DIYCompetition *a1s = &diyCompetitionStart.base;
-    uint8_t *a1 = (uint8_t *)a1s;
-    uint8_t *orderList = a1 + 0x30E;  /* extended */
+    DIYCompetitionEx *comp = &diyCompetitionStart;
+    DIYCompetition *a1s = &comp->base;
+    uint8_t *orderList = comp->teamShuffleOrder;
     uint16_t count = (uint16_t)a1s->matchPairsPerRound;
 
     /* Initialize sequential order: 0, 1, 2, ..., count-1 */
@@ -1191,7 +1191,7 @@ void _DIY_ShuffleTeamOrderList(void)
     }
 
     /* Fisher-Yates shuffle */
-    orderList = a1 + 0x30E;
+    orderList = comp->teamShuffleOrder;
     for (int16_t j = (int16_t)count - 1; j >= 0; j--) {
         uint16_t r = _Rand2();
         uint16_t k = (uint16_t)(((uint32_t)r * count) >> 8);
@@ -1212,9 +1212,9 @@ void _DIY_ShuffleTeamOrderList(void)
 __attribute__((used, externally_visible))
 void _DIY_ShuffleTeamGridPairs(void)
 {
-    DIYCompetition *a2s = &diyCompetitionStart.base;
-    uint8_t *a2 = (uint8_t *)a2s;
-    uint8_t *gridPairs = a2 + 0x2CE;  /* extended */
+    DIYCompetitionEx *comp = &diyCompetitionStart;
+    DIYCompetition *a2s = &comp->base;
+    uint8_t *gridPairs = comp->teamGridPairings;
     uint16_t count = (uint16_t)a2s->matchPairsPerRound;
     uint16_t numEntries = count * 2;
 
@@ -1347,9 +1347,9 @@ void _DIY_ReorderTeamGridByOrderList(void)
 {
     _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
 
-    DIYCompetition *a0s = &diyCompetitionStart.base;
-    uint8_t *a0 = (uint8_t *)a0s;
-    uint8_t *grid = a0 + 0x2CE;  /* extended */
+    DIYCompetitionEx *comp = &diyCompetitionStart;
+    DIYCompetition *a0s = &comp->base;
+    uint8_t *grid = comp->teamGridPairings;
     uint16_t count = (uint16_t)a0s->matchPairsPerRound;
 
     /* Copy grid[0..count-1] to temp (volatile to prevent memcpy optimization) */
@@ -1361,8 +1361,8 @@ void _DIY_ReorderTeamGridByOrderList(void)
     }
 
     /* Reorder: grid[i] = temp[orderList[i]] */
-    uint8_t *orderList = a0 + 0x30E;
-    uint8_t *dst = a0 + 0x2CE;
+    uint8_t *orderList = comp->teamShuffleOrder;
+    uint8_t *dst = comp->teamGridPairings;
     for (int16_t j = (int16_t)count - 1; j >= 0; j--) {
         uint16_t idx = *orderList++;
         idx &= 0xFF;
@@ -1400,11 +1400,12 @@ static void decrementMissingIfNotLoaded(uint8_t *comp, uint16_t *teamIds, uint16
 __attribute__((used, externally_visible))
 void _DIY_RecountMissingTeamsInTeamGrid(void)
 {
-    DIYCompetition *a6s = &diyCompetitionStart.base;
+    DIYCompetitionEx *comp = &diyCompetitionStart;
+    DIYCompetition *a6s = &comp->base;
     uint8_t *a6 = (uint8_t *)a6s;
-    uint16_t *teamIds = (uint16_t *)(a6 + 0x24E);  /* extended */
-    uint8_t *grid = a6 + 0x2CE;  /* extended */
-    uint8_t *flags = a6 + 0x8A;  /* extended */
+    uint16_t *teamIds = comp->cupTeamIds;
+    uint8_t *grid = comp->teamGridPairings;
+    uint8_t *flags = comp->matchData.cup.cupRoundResults;  /* parent 0x8A */
 
     if (a6s->hasGroups != 0) {
         /* Tournament slot path */
@@ -1461,31 +1462,30 @@ mainLoop:
 __attribute__((used, externally_visible))
 void _DIY_BuildTeamSelectionPointerCache(void)
 {
-    DIYCompetition *a2s = &diyCompetitionStart.base;
+    DIYCompetitionEx *comp = &diyCompetitionStart;
+    DIYCompetition *a2s = &comp->base;
     uint8_t *a2 = (uint8_t *)a2s;
-    uint8_t *gridPtr = a2 + 0x2CE;            /* extended */
-    uint16_t *teamIds = (uint16_t *)(a2 + 0x24E);  /* extended */
+    uint8_t *gridPtr = comp->teamGridPairings;
+    uint16_t *teamIds = comp->cupTeamIds;
     uint16_t count = (uint16_t)a2s->numTeams;
 
-    /* Part 1: build relative pointer cache */
+    /* Part 1: build relative pointer cache (table at base+0x344, inside teamShuffleOrder) */
     for (int16_t i = (int16_t)count - 1; i >= 0; i--) {
         int16_t gridIdx = (int8_t)*gridPtr++;   /* ext.w d6: sign-extend */
         uint16_t teamNum = teamIds[gridIdx];
         TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
         uint32_t relPtr = (uint32_t)((uint8_t *)teamPtr - &selTeamsPtr);
-        *(uint32_t *)(a2 + (uint16_t)gridIdx * 4 + 0x344) = relPtr;  /* extended */
+        *(uint32_t *)(a2 + (uint16_t)gridIdx * 4 + 0x344) = relPtr;
     }
 
     /* Part 2: count non-national teams */
-    a2s = &diyCompetitionStart.base;
-    a2 = (uint8_t *)a2s;
     a2s->roundIterator = 0;
-    gridPtr = a2 + 0x2CE;              /* extended */
-    teamIds = (uint16_t *)(a2 + 0x24E);  /* extended */
+    gridPtr = comp->teamGridPairings;
+    teamIds = comp->cupTeamIds;
     count = (uint16_t)a2s->numTeams;
 
     for (int16_t j = (int16_t)count - 1; j >= 0; j--) {
-        uint16_t gridByte = (uint8_t)*gridPtr++;  /* andi.w #$FF: zero-extend */
+        uint16_t gridByte = (uint8_t)*gridPtr++;
         uint16_t teamNum = teamIds[gridByte];
         TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
         if (teamPtr->team.teamControls != 1) {
