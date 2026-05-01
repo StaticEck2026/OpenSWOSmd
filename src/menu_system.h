@@ -57,37 +57,39 @@ typedef struct __attribute__((packed)) {
     uint32_t afterDrawCb;    /* 52 */
 } MenuEntry;
 
-/* Helpers to access the bg-color word at offset 30 of MenuEntry.
- * The unpacker writes and _DrawMenuItem reads via
- *   *(uint16_t *)((uint8_t *)e + 30)
- * which is endian-agnostic — on Amiga (BE) it lands in the upper 16
- * bits of the uint32 `bg` field, on x86 (LE) it lands in the lower
- * 16 bits. The earlier helpers used `e->bg >> 16` which is correct
- * on BE but wrong on LE: runtime color overrides written via the
- * helper went to the upper half while the draw read the lower half,
- * so the entry kept its unpack-time template color. Match the field
- * access that the renderer uses. */
+/* Helpers to access the low memory word of MenuEntry.bg / MenuEntry.fg.
+ * The unpacker writes and _DrawMenuItem reads the first 2 bytes of these
+ * uint32 slots in memory order — on Amiga (BE) that's the upper 16 bits
+ * of the field value, on x86 (LE) it's the lower 16 bits. We don't care
+ * which "half" of the value it is, only that the bytes match across
+ * writer and reader.
+ *
+ * Earlier helpers used `e->bg >> 16` which is correct on BE but wrong
+ * on LE: runtime color overrides written via the helper went to the
+ * upper half while the draw read the lower half, so the entry kept its
+ * unpack-time template color. Use `*(uint16_t *)&e->bg` so the compiler
+ * computes the field's offset (portable to 64-bit) and we still hit the
+ * low memory bytes the renderer reads. */
 static inline uint16_t getBgColorWord(MenuEntry *e) {
-    return *(uint16_t *)((uint8_t *)e + 30);
+    return *(uint16_t *)&e->bg;
 }
 static inline void setBgColorWord(MenuEntry *e, uint16_t v) {
-    *(uint16_t *)((uint8_t *)e + 30) = v;
+    *(uint16_t *)&e->bg = v;
 }
 /* Set only the low nibble (color index) of the bg color word */
 static inline void setBgColorIdx(MenuEntry *e, uint16_t colorIdx) {
-    uint16_t *w = (uint16_t *)((uint8_t *)e + 30);
+    uint16_t *w = (uint16_t *)&e->bg;
     *w = (*w & 0xFFF0) | colorIdx;
 }
 
-/* Same shape but for the fg slot at offset 38 — the unpacker writes a
- * 16-bit content payload (sprite index, number, etc.) into the low half
- * of the uint32 fg in memory order; renderers read it back the same
- * way. Keep the byte-level access so endianness is irrelevant. */
+/* Same shape for the fg slot — the unpacker stores a 16-bit content
+ * payload (sprite index, number, etc.) and the renderer reads it back
+ * the same way. */
 static inline uint16_t getFgWord(MenuEntry *e) {
-    return *(uint16_t *)((uint8_t *)e + 38);
+    return *(uint16_t *)&e->fg;
 }
 static inline void setFgWord(MenuEntry *e, uint16_t v) {
-    *(uint16_t *)((uint8_t *)e + 38) = v;
+    *(uint16_t *)&e->fg = v;
 }
 
 /* Compile-time size checks */
