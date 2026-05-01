@@ -289,7 +289,7 @@ static void initVolumeEnvForNote(AudioChannel *chan)
  * Asm: AudioIRQNoteOnInitChannel (line 9480) */
 static void noteOnInitChannel(AudioChannel *chan, uint16_t amigaPeriod)
 {
-    uint8_t *variantDesc = (uint8_t *)chan->pvVariantDesc;
+    VariantDescriptor *variantDesc = (VariantDescriptor *)chan->pvVariantDesc;
     uint8_t *envData;
     uint8_t *sampleBase;
     volatile uint8_t *audx;
@@ -298,9 +298,8 @@ static void noteOnInitChannel(AudioChannel *chan, uint16_t amigaPeriod)
     chan->pvCurPeriod = amigaPeriod;
     chan->pvPitchslideAccum = 0;
 
-    /* a3 = bankSectionPtrs[1] + word at variantDesc+0x0C
-     * asm uses adda.w which sign-extends the 16-bit operand */
-    envData = audioState.bankSectionPtrs[1] + (int16_t)*(uint16_t *)(variantDesc + 0x0C);
+    /* a3 = bankSectionPtrs[1] + envDataOffset (sign-extended via adda.w in asm) */
+    envData = audioState.bankSectionPtrs[1] + variantDesc->envDataOffset;
     chan->pvEnvDataPtr = (uint32_t)envData;
 
     /* Init envelope: target = envData[1], delta = envData[1] - envData[0] */
@@ -313,23 +312,23 @@ static void noteOnInitChannel(AudioChannel *chan, uint16_t amigaPeriod)
     /* Disable DMA: write DMA bit without SET flag */
     writeDMACON(chan->pvDmaBit);
 
-    /* Set up sample: a4 = sampleBase + word at variantDesc+0x10 */
+    /* Set up first-time sample: a4 = sampleBase + firstSampleOffset */
     audx = audxBase(chan);
     sampleBase = (uint8_t *)chan->pvSampleBase;
-    sampleBase += (uint32_t)*(uint16_t *)(variantDesc + 0x10);
+    sampleBase += variantDesc->firstSampleOffset;
 
     /* clr.w (a4) — clear first word of sample */
     *(uint16_t *)sampleBase = 0;
 
     writeAudxPtr(audx, (uint32_t)sampleBase);
-    writeAudxLen(audx, *(uint16_t *)(variantDesc + 0x12));
+    writeAudxLen(audx, variantDesc->firstSampleLength);
     chan->pvStartFlag = 0xFF; /* st $38(a0) */
 }
 
 /* SelectVariant — selects instrument variant for primary voice */
 static void selectVariant(AudioChannel *chan, uint8_t variantId)
 {
-    uint8_t *desc;
+    VariantDescriptor *desc;
 
     if (variantId == chan->pvVariantId)
         return;
@@ -337,33 +336,29 @@ static void selectVariant(AudioChannel *chan, uint8_t variantId)
     chan->pvVariantId = variantId;
 
     /* desc = bankSectionPtrs[0] + variantId * 32 */
-    desc = audioState.bankSectionPtrs[0] + ((uint16_t)variantId << 5);
+    desc = (VariantDescriptor *)(audioState.bankSectionPtrs[0] + ((uint16_t)variantId << 5));
     chan->pvVariantDesc = (uint32_t)desc;
 
-    /* Copy descriptor fields to channel */
-    chan->pvSampleSlot   = *(uint16_t *)(desc + 0x12);
-    chan->pvSampleOffset = *(uint16_t *)(desc + 0x14);
-    chan->pvSampleLength = *(uint16_t *)(desc + 0x16);
-    chan->pvVolScale     = *(uint16_t *)(desc + 0x0E);
-    chan->pvPitchLfoLoop = *(uint16_t *)(desc + 0x18);
+    /* Copy descriptor fields to channel. The pvSample{Slot,Offset,Length}
+     * channel-side names correspond to the loop fields (steady-state DMA),
+     * not the first-play fields used by noteOnInitChannel. */
+    chan->pvSampleSlot   = desc->firstSampleLength;  /* +0x12 — name-only mismatch */
+    chan->pvSampleOffset = desc->loopSampleOffset;   /* +0x14 */
+    chan->pvSampleLength = desc->loopSampleLength;   /* +0x16 */
+    chan->pvVolScale     = desc->volScale;
+    chan->pvPitchLfoLoop = desc->pitchLfoLoop;
 
     chan->pvPitchLfoIdx = 0;
-    {
-        uint32_t len = (uint32_t)*(uint16_t *)(desc + 0x1A);
-        chan->pvPitchLfoLen = len + len;
-    }
+    chan->pvPitchLfoLen = (uint32_t)desc->pitchLfoLen * 2;
 
-    chan->pvVolLfoLoop = *(uint16_t *)(desc + 0x1C);
+    chan->pvVolLfoLoop = desc->volLfoLoop;
     chan->pvVolLfoIdx = 0;
-    {
-        uint32_t len = (uint32_t)*(uint16_t *)(desc + 0x1E);
-        chan->pvVolLfoLen = len + len;
-    }
+    chan->pvVolLfoLen = (uint32_t)desc->volLfoLen * 2;
 
     /* Copy 3 pointers from descriptor */
-    chan->pvSampleBase   = *(uint32_t *)(desc + 0x00);
-    chan->pvPitchLfoPtr  = *(uint32_t *)(desc + 0x04);
-    chan->pvVolLfoPtr    = *(uint32_t *)(desc + 0x08);
+    chan->pvSampleBase  = desc->sampleBasePtr;
+    chan->pvPitchLfoPtr = desc->pitchLfoPtr;
+    chan->pvVolLfoPtr   = desc->volLfoPtr;
 }
 
 /* =================================================================
@@ -782,10 +777,9 @@ static void lfoAndPitchSlide(AudioChannel *chan)
 /* InitPitchEnv — secondary voice note init (analogous to NoteOnInitChannel) */
 static void initPitchEnv(AudioChannel *chan, uint16_t amigaPeriod)
 {
-    uint8_t *variantDesc = (uint8_t *)chan->svVariantDesc;
+    VariantDescriptor *variantDesc = (VariantDescriptor *)chan->svVariantDesc;
     uint8_t *envData;
     uint8_t *sampleBase;
-    uint32_t sampleOff;
     volatile uint8_t *audx;
 
     chan->svBasePeriod = amigaPeriod;
@@ -793,7 +787,7 @@ static void initPitchEnv(AudioChannel *chan, uint16_t amigaPeriod)
     chan->svPitchslideAccum = 0;
 
     /* adda.w sign-extends the 16-bit operand before adding to address */
-    envData = audioState.bankSectionPtrs[1] + (int16_t)*(uint16_t *)(variantDesc + 0x0C);
+    envData = audioState.bankSectionPtrs[1] + variantDesc->envDataOffset;
     chan->svEnvDataPtr = (uint32_t)envData;
 
     chan->svEnvTarget = envData[1];
@@ -809,15 +803,14 @@ static void initPitchEnv(AudioChannel *chan, uint16_t amigaPeriod)
     /* Disable DMA */
     writeDMACON(chan->svDmaBit);
 
-    /* Set up sample */
+    /* Set up first-time sample */
     audx = audxBase(chan);
     sampleBase = (uint8_t *)chan->svSampleBase;
-    sampleOff = *(uint16_t *)(variantDesc + 0x10);
-    sampleBase += sampleOff;
+    sampleBase += variantDesc->firstSampleOffset;
 
     *(uint16_t *)sampleBase = 0;
     writeAudxPtr(audx, (uint32_t)sampleBase);
-    writeAudxLen(audx, *(uint16_t *)(variantDesc + 0x12));
+    writeAudxLen(audx, variantDesc->firstSampleLength);
     chan->svStartFlag = 0xFF;
 }
 
@@ -838,38 +831,34 @@ static void initVolumeEnv(AudioChannel *chan)
 /* SelectInstrument — selects instrument for secondary voice */
 static void selectInstrument(AudioChannel *chan, uint8_t instrId)
 {
-    uint8_t *desc;
+    VariantDescriptor *desc;
 
     if (instrId == chan->svVariantId)
         return;
 
     chan->svVariantId = instrId;
 
-    desc = audioState.bankSectionPtrs[0] + ((uint16_t)instrId << 5);
+    desc = (VariantDescriptor *)(audioState.bankSectionPtrs[0] + ((uint16_t)instrId << 5));
     chan->svVariantDesc = (uint32_t)desc;
 
-    chan->svSampleSlot     = *(uint16_t *)(desc + 0x12);
-    chan->svSampleOffset   = *(uint16_t *)(desc + 0x14);
-    chan->svSampleLength   = *(uint16_t *)(desc + 0x16);
-    chan->svVolScale       = *(uint16_t *)(desc + 0x0E);
-    chan->svPitchLfoLoop   = *(uint16_t *)(desc + 0x18);
+    /* Same name-only mismatch as the PV side: sv*Sample{Slot,Offset,Length}
+     * actually correspond to the loop fields, not the first-play fields. */
+    chan->svSampleSlot   = desc->firstSampleLength;  /* +0x12 */
+    chan->svSampleOffset = desc->loopSampleOffset;
+    chan->svSampleLength = desc->loopSampleLength;
+    chan->svVolScale     = desc->volScale;
+    chan->svPitchLfoLoop = desc->pitchLfoLoop;
 
     chan->svPitchLfoIdx = 0;
-    {
-        uint32_t len = (uint32_t)*(uint16_t *)(desc + 0x1A);
-        chan->svPitchLfoLen = len + len;
-    }
+    chan->svPitchLfoLen = (uint32_t)desc->pitchLfoLen * 2;
 
-    chan->svVolLfoLoop = *(uint16_t *)(desc + 0x1C);
+    chan->svVolLfoLoop = desc->volLfoLoop;
     chan->svVolLfoIdx = 0;
-    {
-        uint32_t len = (uint32_t)*(uint16_t *)(desc + 0x1E);
-        chan->svVolLfoLen = len + len;
-    }
+    chan->svVolLfoLen = (uint32_t)desc->volLfoLen * 2;
 
-    chan->svSampleBase    = *(uint32_t *)(desc + 0x00);
-    chan->svPitchLfoPtr   = *(uint32_t *)(desc + 0x04);
-    chan->svVolLfoPtr     = *(uint32_t *)(desc + 0x08);
+    chan->svSampleBase  = desc->sampleBasePtr;
+    chan->svPitchLfoPtr = desc->pitchLfoPtr;
+    chan->svVolLfoPtr   = desc->volLfoPtr;
 }
 
 /* =================================================================
