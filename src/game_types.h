@@ -557,8 +557,13 @@ typedef struct DIYCompetition {
 typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x60) ? 1 : -1];
 
 /* ==================================================================
- * DIYTeamStats — 18 bytes
- * Per-team league standings entry within DIYCompetitionEx.
+ * DIYTeamStats / DIYLeagueTableRow — 18 bytes
+ * Per-team league standings entry written by clearLeagueTableStats
+ * starting at diyCompetitionStart + 0x2B4. Each row is one teamSelPtr
+ * (NOT cleared by the loop) plus 7 stats fields cleared per row.
+ * 64 rows total; the table extends to offset 0x734 — past the end of
+ * the 0x5C8-byte struct, into audioInstrumentBank's address range.
+ * Intentional shared-memory overlay; see DIYCOMPETITIONEX_AUDIT.md.
  * ================================================================== */
 typedef struct __attribute__((packed, aligned(2))) DIYTeamStats {
     uint32_t teamSelPtr;            /* 0x00: offset from selTeamsPtr to team record */
@@ -571,45 +576,62 @@ typedef struct __attribute__((packed, aligned(2))) DIYTeamStats {
     uint16_t points;                /* 0x10 */
 } DIYTeamStats;
 
+typedef DIYTeamStats DIYLeagueTableRow;
 typedef char _diyteamstats_size_check[(sizeof(DIYTeamStats) == 18) ? 1 : -1];
 
 /* ==================================================================
- * DIYCompetitionEx_CacheView — 0xF0 bytes
- * Alternate view of the first part of the overlap region: raw bytes
- * for the first 8 team stats entries, plus a teamPtrCache array.
+ * DIYTournamentSlot — 118 bytes (0x76)
+ *
+ * Tournament-format slot record. SWOS2.s does not name this type, but
+ * the C code in src/diy_competition.c iterates over a 6-element array
+ * of these records embedded inside `diyTournamentTeamIds`, starting
+ * at offset 0xC0 (= diyFileBufferCopy + 0x15A) with a stride of 0x76.
+ *
+ * Accessed via `slot = (uint8_t *)diyFileBufferCopy + slotIdx*0x76`
+ * with field offsets +0x15A..+0x172 (24-byte field range), +0x174
+ * (matchesPerSlot), +0x176 (progression month bytes tail).
+ *
+ * Field offsets within this struct begin at 0; the +0x15A bias from
+ * the diyFileBufferCopy base is not represented here.
+ *
+ * See DIYCOMPETITIONEX_AUDIT.md for the per-field investigation.
  * ================================================================== */
-typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx_CacheView {
-    uint8_t  _teamStats0_7[144];        /* 0x00: raw bytes covering teamStats[0..7] */
-    uint32_t teamPtrCache[24];          /* 0x90: cached team pointers */
-} DIYCompetitionEx_CacheView;
+typedef struct __attribute__((packed, aligned(2))) DIYTournamentSlot {
+    uint8_t  _pad_00[2];            /* 0x00 (slot+0x15A): cleared to 0 in init, purpose unknown */
+    uint16_t doubleCount;           /* 0x02 (slot+0x15C): cup-bracket doubled count flag */
+    uint16_t isCup;                 /* 0x04 (slot+0x15E): nonzero=cup, 0=league */
+    uint16_t seedingType;           /* 0x06 (slot+0x160) */
+    uint16_t numTeams;              /* 0x08 (slot+0x162) */
+    uint16_t divisionFactor;        /* 0x0A (slot+0x164): "next slot" / division factor */
+    uint16_t playEachTeam;          /* 0x0C (slot+0x166) */
+    uint16_t initConst168;          /* 0x0E (slot+0x168): init=2 */
+    uint16_t groups;                /* 0x10 (slot+0x16A) */
+    uint16_t teamsPerGroup;         /* 0x12 (slot+0x16C) */
+    uint16_t formatFlag16E;         /* 0x14 (slot+0x16E): 1=normal, 2=skip */
+    uint16_t initConst170;          /* 0x16 (slot+0x170): init=1 */
+    uint16_t formatFlag172;         /* 0x18 (slot+0x172): 1=halve */
+    uint16_t matchesPerSlot;        /* 0x1A (slot+0x174): computed matches-per-team this slot */
+    uint8_t  progressionTable[90];  /* 0x1C (slot+0x176): month bytes — fills to 118 (0x76) */
+} DIYTournamentSlot;
 
-typedef char _diycacheview_size_check[(sizeof(DIYCompetitionEx_CacheView) == 0xF0) ? 1 : -1];
+typedef char _diyslot_size_check[(sizeof(DIYTournamentSlot) == 0x76) ? 1 : -1];
 
 /* ==================================================================
- * DIYCompetitionEx_Overlap — 0x1B0 bytes (union)
- * Shared memory region at offset 0x360 within DIYCompetitionEx.
- * Can be accessed as team stats, cache view, or raw bytes.
- * ================================================================== */
-typedef union __attribute__((packed, aligned(2))) DIYCompetitionEx_Overlap {
-    DIYTeamStats teamStats[24];                 /* 24 × 18 = 432 bytes */
-    DIYCompetitionEx_CacheView cacheView;       /* alternate view with teamPtrCache */
-    uint8_t overlapRaw[432];                    /* raw byte access */
-} DIYCompetitionEx_Overlap;
-
-typedef char _diyoverlap_size_check[(sizeof(DIYCompetitionEx_Overlap) == 0x1B0) ? 1 : -1];
-
-/* ==================================================================
- * DIYCompetitionEx_CupView — 0xEA bytes
- * Cup competition interpretation of the match data region (0x64-0x14E).
- * Used when competitionType == 1 (cup) or compId == 1/2/4.
+ * DIYCompetitionEx_CupView — 0xEA bytes (matchData cup interpretation)
+ * Region at parent 0x64..0x14D when the competition is a cup
+ * (competitionType == 1 or compId in {1, 2, 4}).
  * ================================================================== */
 typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx_CupView {
     uint16_t currentMatchIndex;         /* 0x00 (parent 0x64) */
-    uint16_t roundLegs[6];             /* 0x02 (parent 0x66) */
-    uint16_t roundExtraTime[6];        /* 0x0E (parent 0x72) */
-    uint16_t roundPenalties[6];        /* 0x1A (parent 0x7E) */
-    uint8_t  matchResultFlags[64];     /* 0x26 (parent 0x8A) */
-    uint16_t matchGoals[66];           /* 0x66 (parent 0xCA) */
+    uint16_t roundLegs[6];              /* 0x02 (parent 0x66): cup roundLegs[0..5] */
+    uint16_t roundExtraTime[6];         /* 0x0E (parent 0x72): cup roundExtraTime[0..5] */
+    uint16_t roundPenalties[6];         /* 0x1A (parent 0x7E): cup roundPenalties[0..5] */
+    uint8_t  cupRoundResults[100];      /* 0x26 (parent 0x8A): diyCupRoundResults */
+    uint8_t  _shuffleIndicesAlias[2];   /* 0x8A (parent 0xEE): aliases diyTeamShuffleIndices */
+    uint8_t  _bss_2E01E[62];            /* 0x8C (parent 0xF0): BSS_00_2E01E (purpose unclear) */
+    uint16_t leagueTeamIdsAlias[14];    /* 0xCA (parent 0x12E): aliases diyLeagueTeamIds */
+    uint16_t competitionFormat;         /* 0xE6 (parent 0x14A): aliases diyCompetitionFormat */
+    uint16_t roundFormat;               /* 0xE8 (parent 0x14C): aliases diyRoundFormat */
 } DIYCompetitionEx_CupView;
 
 typedef char _diycupview_size_check[(sizeof(DIYCompetitionEx_CupView) == 0xEA) ? 1 : -1];
@@ -623,13 +645,13 @@ typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx_LeagueView {
     uint16_t leagueMinSubstitutes;      /* 0x00 (parent 0x64) */
     uint16_t leagueMaxSubstitutes;      /* 0x02 (parent 0x66) */
     uint16_t hasGroupsDiy;              /* 0x04 (parent 0x68) */
-    uint8_t  _gap_06[4];               /* 0x06 (parent 0x6A) */
-    uint16_t teamEntryOffsets[14];      /* 0x0A (parent 0x6E): sorted by standings, value/18 = team index */
-    uint8_t  cupRoundResults[100];      /* 0x26 (parent 0x8A) */
-    uint8_t  shuffleAndPad[64];         /* 0x8A (parent 0xEE): diyTeamShuffleIndices(2) + BSS(62) */
-    uint16_t leagueTeamIds[14];         /* 0xCA (parent 0x12E) */
-    uint16_t competitionFormat;          /* 0xE6 (parent 0x14A) */
-    uint16_t roundFormat;                /* 0xE8 (parent 0x14C) */
+    uint8_t  _gap_06[4];                /* 0x06 (parent 0x6A): BSS_00_2DF5E (totalMatchesPerSection in derived-fields path) */
+    uint16_t teamEntryOffsets[14];      /* 0x0A (parent 0x6E): aliases diyTeamEntryOffsetsByIndex; sorted by standings, value/18 = team index */
+    uint8_t  cupRoundResults[100];      /* 0x26 (parent 0x8A): same memory as cup view */
+    uint8_t  shuffleAndPad[64];         /* 0x8A (parent 0xEE): diyTeamShuffleIndices(2) + BSS_00_2E01E(62) */
+    uint16_t leagueTeamIds[14];         /* 0xCA (parent 0x12E): aliases diyLeagueTeamIds */
+    uint16_t competitionFormat;         /* 0xE6 (parent 0x14A): aliases diyCompetitionFormat */
+    uint16_t roundFormat;               /* 0xE8 (parent 0x14C): aliases diyRoundFormat */
 } DIYCompetitionEx_LeagueView;
 
 typedef char _diyleagueview_size_check[(sizeof(DIYCompetitionEx_LeagueView) == 0xEA) ? 1 : -1];
@@ -648,48 +670,79 @@ typedef union __attribute__((packed, aligned(2))) DIYCompetitionEx_MatchData {
 typedef char _diymatchdata_size_check[(sizeof(DIYCompetitionEx_MatchData) == 0xEA) ? 1 : -1];
 
 /* ==================================================================
- * DIYCompetitionEx — 0x5E4 bytes (extended competition record)
- * Full competition buffer including base header + fixture data +
- * team stats + grid/order arrays.
+ * DIYCompetitionEx_LeagueSectionState — 136 bytes (0x88)
+ * BSS_00_2E13E broken out: per-section progression counters and the
+ * phase-start-month table used by the league progression path in
+ * _DIY_RecomputeCompetitionDerivedFields and friends.
+ * ================================================================== */
+typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx_LeagueSectionState {
+    uint16_t halfGroupCount;            /* 0x00 (parent 0x1C6) */
+    uint16_t matchesPerHalf;            /* 0x02 (parent 0x1C8) */
+    uint16_t halfGroupsCounter;         /* 0x04 (parent 0x1CA): == matchesPerHalf triggers boundary */
+    uint16_t sectionMatchesProgress;    /* 0x06 (parent 0x1CC) */
+    uint8_t  phaseStartMonths[128];     /* 0x08 (parent 0x1CE..0x24D): viewRandomPhase[phaseIdx] source */
+} DIYCompetitionEx_LeagueSectionState;
+
+typedef char _diysecstate_size_check[
+    (sizeof(DIYCompetitionEx_LeagueSectionState) == 0x88) ? 1 : -1];
+
+/* ==================================================================
+ * DIYCompetitionEx — 0x5C8 bytes (1480), the extended runtime DIY
+ * competition record at &diyCompetitionStart.
  *
- * diyCompetitionStart points to a DIYCompetitionEx.
- * diyFileBufferCopy is a separate buffer that shares layout for
- * the first 0x60 bytes (DIYCompetition base) with extended data
- * at different offsets (team IDs at 0x9A, indices at 0x5A).
+ * Layout matches the SWOS2.s `ds.b` walk starting at line 2840
+ * (diyCompetitionStart). The backing buffer (`diyCompetitionStartBuf`)
+ * is 4096 bytes; this struct is a typed view of the first 0x5C8 bytes.
+ *
+ * NB: the league standings table written by clearLeagueTableStats
+ * extends 1152 bytes from offset 0x2B4 to offset 0x734 — past the end
+ * of this struct, into audioInstrumentBank's address range. That is
+ * intentional shared-memory overlay (audio bank not loaded during DIY
+ * init) and is not represented as a struct field; it is reached only
+ * via the raw `clearLeagueTableStats` byte arithmetic.
+ *
+ * `diyFileBufferCopy` is a SEPARATE buffer that shares only the first
+ * 0x60 bytes of layout (DIYCompetition base). Its post-base region has
+ * a different adjacent-globals layout (BSS_00_2DB6A, then
+ * diyTournamentTeamIds), so this struct does NOT model it past byte
+ * 0x60. The 6-element DIYTournamentSlot array embedded inside
+ * diyTournamentTeamIds is reached via raw pointer arithmetic, not
+ * through this struct.
  * ================================================================== */
 typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx {
-    DIYCompetition base;                /* 0x00-0x5F: competition header */
-    uint16_t minSubstitutes;            /* 0x60 */
-    uint16_t pointsForAWin;             /* 0x62 */
-    DIYCompetitionEx_MatchData matchData; /* 0x64: cup/league union (0xEA bytes) */
-    uint16_t leagueTeamIds[14];         /* 0x14E */
-    uint16_t twoLegSubRound;            /* 0x16A */
-    uint16_t roundFormatType;           /* 0x16C */
-    uint16_t aggregateGoals[64];        /* 0x16E */
-    uint16_t penaltyGoals[64];          /* 0x1EE */
-    uint16_t leagueMatchesPlayed;       /* 0x26E */
-    uint16_t phaseChangeFlag;           /* 0x270 */
-    uint16_t phaseIndex;                /* 0x272 */
-    uint16_t matchesPerSeason;          /* 0x274 */
-    uint16_t halfGroupCount;            /* 0x276 */
-    uint16_t matchesPerPhase;           /* 0x278 */
-    uint16_t matchInPhase;              /* 0x27A */
-    uint16_t leagueRoundCounter;        /* 0x27C */
-    uint8_t  monthProgressTable[98];    /* 0x27E */
-    uint16_t cupTeamIds[64];            /* 0x2E0 */
-    DIYCompetitionEx_Overlap overlap;   /* 0x360: team stats / cache view union */
-    uint8_t  teamGrid[64];             /* 0x510 */
-    uint8_t  teamOrder[32];            /* 0x550 */
-    uint16_t unselectedTeamCount;       /* 0x570 */
-    uint16_t replayFlag;                /* 0x572 */
-    uint16_t matchesPlayedInRound;      /* 0x574 */
-    uint16_t totalMonthEntries;         /* 0x576 */
-    uint16_t currentMonthIndex;         /* 0x578 */
-    uint8_t  cupMonthTable[12];         /* 0x57A */
-    uint8_t  gap_586[94];              /* 0x586: padding to 0x5E4 */
+    DIYCompetition base;                /* 0x00..0x5F: competition header */
+
+    /* --- 0x60..0x63: SWOS2.s named diyMinSubstitutes / diyPointsForAWin --- */
+    uint16_t minSubstitutes;            /* 0x60: diyMinSubstitutes (also overridden = playEachTeam in derived-fields recompute) */
+    uint16_t pointsForAWin;             /* 0x62: diyPointsForAWin */
+
+    /* --- 0x64..0x14D: cup/league shared region (aliased view) --- */
+    DIYCompetitionEx_MatchData matchData;
+
+    /* --- 0x14E..0x1BD: BSS_00_2E0AE (112 bytes, purpose unclear; sparse uses) --- */
+    uint8_t _bss_2E0AE[112];            /* 0x14E */
+
+    /* --- 0x1BE..0x1C5: SWOS2.s named diy{MatchesPlayed,LeagueCurrentSlot,
+     *                                   LeagueMatchProgress,LeagueTotalMatches} --- */
+    uint16_t matchesPlayedCount;        /* 0x1BE: diyMatchesPlayedCount */
+    uint16_t leagueCurrentSlot;         /* 0x1C0: diyLeagueCurrentSlot (also section-progression flag) */
+    uint16_t leagueMatchProgress;       /* 0x1C2: diyLeagueMatchProgress (also phase index) */
+    uint16_t leagueTotalMatches;        /* 0x1C4: diyLeagueTotalMatches (also matchesPerSeason) */
+
+    /* --- 0x1C6..0x24D: BSS_00_2E13E broken out (league section state) --- */
+    DIYCompetitionEx_LeagueSectionState leagueSectionState;
+
+    /* --- 0x24E..0x2CD: SWOS2.s named diyCupTeamIds[64] --- */
+    uint16_t cupTeamIds[64];            /* 0x24E */
+
+    /* --- 0x2CE..0x30D: SWOS2.s named diyTeamGridPairings[64] --- */
+    uint8_t teamGridPairings[64];       /* 0x2CE */
+
+    /* --- 0x30E..0x5C7: SWOS2.s named diyTeamShuffleOrder[698] --- */
+    uint8_t teamShuffleOrder[698];      /* 0x30E */
 } DIYCompetitionEx;
 
-typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5E4) ? 1 : -1];
+typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5C8) ? 1 : -1];
 
 /* ==================================================================
  * JobOffer — 26 bytes, pack(2)
