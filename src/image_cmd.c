@@ -90,7 +90,7 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
 
     /* ---- Write sprite table entry pointer ---- */
     headerBase = (SpriteGraphics *)imageStreamCursor;
-    ((uint32_t *)spriteGraphicsPtr)[spriteIndex] = (uint32_t)headerBase;
+    ((SpriteGraphics **)spriteGraphicsPtr)[spriteIndex] = headerBase;
 #ifdef SWOS_SDL_BUILD
     {
         extern int g_debug_sprite_load;
@@ -236,7 +236,7 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
 
     if ((int16_t)maskSel > 0) {
         /* Positive maskSel: copy mask pointer from another sprite */
-        SpriteGraphics *otherSprite = (SpriteGraphics *)(((uint32_t *)spriteGraphicsPtr)[maskSel]);
+        SpriteGraphics *otherSprite = ((SpriteGraphics **)spriteGraphicsPtr)[maskSel];
         headerBase->maskPtr = otherSprite->maskPtr;
         goto update_cursor;
     }

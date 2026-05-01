@@ -76,7 +76,7 @@ void _CopySprite(uint16_t srcSprite, uint16_t dstSprite,
                  uint16_t xOffset, uint16_t yOffset)
 {
 
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)(uint32_t)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
 
     /* Load destination sprite header */
     SpriteGraphics *dstHdr = sprGfxTable[dstSprite];
@@ -256,7 +256,7 @@ void _CopyWholeSprite(uint16_t srcSprite, uint16_t dstSprite)
 __attribute__((used, externally_visible))
 void _ConvertSpriteColors(uint16_t spriteIndex, uint16_t *colorTable)
 {
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)(uint32_t)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
 
 #ifdef SWOS_SDL_BUILD
@@ -1018,7 +1018,7 @@ void _DrawSprite_entry2(SpriteGraphics *a0, int16_t d1, int16_t d2)
 __attribute__((used, externally_visible))
 void _DrawSprite16Pixels(uint16_t spriteIndex, int16_t x, int16_t y)
 {
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)(uint32_t)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
     _DrawSprite_entry2(spr, x, y);
 }
@@ -1032,7 +1032,7 @@ void _DrawSprite16Pixels(uint16_t spriteIndex, int16_t x, int16_t y)
 __attribute__((used, externally_visible))
 void _DrawSpriteCentered(uint16_t spriteIndex, int16_t x, int16_t y)
 {
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)(uint32_t)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
     x -= spr->centerX;
     y -= spr->centerY;
@@ -1048,7 +1048,7 @@ void _DrawSpriteCentered(uint16_t spriteIndex, int16_t x, int16_t y)
 __attribute__((used, externally_visible))
 void _DrawSpriteInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
 {
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)(uint32_t)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
 
     x -= cameraX.s.i;
@@ -1082,7 +1082,7 @@ void _DrawSpriteInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
 __attribute__((used, externally_visible))
 void _DrawSpriteHotspotInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
 {
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)(uint32_t)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
 
     x -= spr->centerX;
@@ -1122,7 +1122,7 @@ void _DrawSpriteHotspotInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
 __attribute__((used, externally_visible))
 void _DarkenRectangle(uint16_t spriteIndex, int16_t x, int16_t y)
 {
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)(uint32_t)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
     _DrawSpriteClipped(spr, x, y);
 }
@@ -1392,7 +1392,7 @@ void _BuildSpriteBandAndGeneralRenderStacks(void)
         }
 
         /* Look up sprite graphics */
-        SpriteGraphics **sprGfxTable = (SpriteGraphics **)(uint32_t)spriteGraphicsPtr;
+        SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
         SpriteGraphics *a0 = sprGfxTable[(uint16_t)sprIdx];
 
         /* Camera-relative position with hotspot adjustment */
