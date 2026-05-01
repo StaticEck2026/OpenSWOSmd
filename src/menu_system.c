@@ -660,9 +660,8 @@ void _DrawMenuItem(MenuEntry *entry)
 
 fg_sprite_draw:
     {
-        uint8_t *sprGfx = spriteGraphicsPtr;
-        uint8_t *sprEntry;
-        uint16_t sprPixW, sprNLines;
+        SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
+        SpriteGraphics *sprEntry;
         uint16_t cx, cy;
 
 #ifdef SWOS_SDL_BUILD
@@ -671,17 +670,14 @@ fg_sprite_draw:
          * wired up that pipeline, so the table is a zero-filled stub.
          * Skip the sprite draw rather than dereferencing a null
          * entry pointer. */
-        if (!sprGfx) goto post_draw_callback;
-        sprEntry = *(uint8_t **)(sprGfx + (uint32_t)sprIdx * 4);
+        if (!sprGfxTable) goto post_draw_callback;
+        sprEntry = sprGfxTable[sprIdx];
         if (!sprEntry) goto post_draw_callback;
 #else
-        sprEntry = *(uint8_t **)(sprGfx + (uint32_t)sprIdx * 4);
+        sprEntry = sprGfxTable[sprIdx];
 #endif
-        sprPixW = *(uint16_t *)(sprEntry + SPRITEGRAPHICS_PIXWIDTH);
-        sprNLines = *(uint16_t *)(sprEntry + SPRITEGRAPHICS_NLINES);
-
-        cx = (entry->dwWidth >> 1) + entry->x - (sprPixW >> 1);
-        cy = (entry->dwHeight >> 1) + entry->y - (sprNLines >> 1);
+        cx = (entry->dwWidth >> 1) + entry->x - ((uint16_t)sprEntry->pixWidth >> 1);
+        cy = (entry->dwHeight >> 1) + entry->y - ((uint16_t)sprEntry->nlines >> 1);
 
         _DrawSprite16Pixels(sprIdx, cx, cy);
         goto post_draw_callback;

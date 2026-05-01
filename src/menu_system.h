@@ -70,15 +70,20 @@ typedef struct __attribute__((packed)) {
  * unpack-time template color. Use `*(uint16_t *)&e->bg` so the compiler
  * computes the field's offset (portable to 64-bit) and we still hit the
  * low memory bytes the renderer reads. */
+/* The (uint8_t *) launder before the uint16_t * cast silences GCC's
+ * -Waddress-of-packed-member: bg/fg sit at packed offsets 30/38, so a
+ * direct (uint16_t *)&e->bg would warn about a potentially misaligned
+ * pointer. The byte-launder hides the packed origin; on x86 this is
+ * a no-op, on stricter archs the compiler will pick a safe access path. */
 static inline uint16_t getBgColorWord(MenuEntry *e) {
-    return *(uint16_t *)&e->bg;
+    return *(uint16_t *)((uint8_t *)&e->bg);
 }
 static inline void setBgColorWord(MenuEntry *e, uint16_t v) {
-    *(uint16_t *)&e->bg = v;
+    *(uint16_t *)((uint8_t *)&e->bg) = v;
 }
 /* Set only the low nibble (color index) of the bg color word */
 static inline void setBgColorIdx(MenuEntry *e, uint16_t colorIdx) {
-    uint16_t *w = (uint16_t *)&e->bg;
+    uint16_t *w = (uint16_t *)((uint8_t *)&e->bg);
     *w = (*w & 0xFFF0) | colorIdx;
 }
 
@@ -86,10 +91,10 @@ static inline void setBgColorIdx(MenuEntry *e, uint16_t colorIdx) {
  * payload (sprite index, number, etc.) and the renderer reads it back
  * the same way. */
 static inline uint16_t getFgWord(MenuEntry *e) {
-    return *(uint16_t *)&e->fg;
+    return *(uint16_t *)((uint8_t *)&e->fg);
 }
 static inline void setFgWord(MenuEntry *e, uint16_t v) {
-    *(uint16_t *)&e->fg = v;
+    *(uint16_t *)((uint8_t *)&e->fg) = v;
 }
 
 /* Compile-time size checks */
