@@ -79,6 +79,17 @@ static inline void setBgColorIdx(MenuEntry *e, uint16_t colorIdx) {
     *w = (*w & 0xFFF0) | colorIdx;
 }
 
+/* Same shape but for the fg slot at offset 38 — the unpacker writes a
+ * 16-bit content payload (sprite index, number, etc.) into the low half
+ * of the uint32 fg in memory order; renderers read it back the same
+ * way. Keep the byte-level access so endianness is irrelevant. */
+static inline uint16_t getFgWord(MenuEntry *e) {
+    return *(uint16_t *)((uint8_t *)e + 38);
+}
+static inline void setFgWord(MenuEntry *e, uint16_t v) {
+    *(uint16_t *)((uint8_t *)e + 38) = v;
+}
+
 /* Compile-time size checks */
 typedef char _menu_size_check[(sizeof(Menu) == 22) ? 1 : -1];
 typedef char _menuentry_size_check[(sizeof(MenuEntry) == 56) ? 1 : -1];

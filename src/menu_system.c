@@ -507,7 +507,7 @@ void _DrawMenuItem(MenuEntry *entry)
             uint16_t y = entry->y;
             uint16_t w = entry->dwWidth;
             uint16_t h = entry->dwHeight;
-            uint16_t bgColor = *(uint16_t *)((uint8_t *)entry + 30) & 0xF;
+            uint16_t bgColor = getBgColorWord(entry) & 0xF;
 
             if (bgColor == 0) {
                 if (forceDrawTransparentMenuItems) {
@@ -525,18 +525,20 @@ void _DrawMenuItem(MenuEntry *entry)
 
                 /* Inner frame if high nibble is non-zero */
                 {
-                    uint16_t frameColor = (*(uint16_t *)((uint8_t *)entry + 30) & 0xF0) >> 4;
+                    uint16_t frameColor = (getBgColorWord(entry) & 0xF0) >> 4;
                     if (frameColor != 0) {
                         _DrawMenuItemInnerFrame(frameColor, x + 1, y + 1, w - 2, h - 2);
                     }
                 }
             }
         } else if (bg == ENTRY_SPRITE1) {
-            uint16_t sprIdx = *(uint16_t *)((uint8_t *)entry + 30);
+            uint16_t sprIdx = getBgColorWord(entry);
             _DrawSprite16Pixels(sprIdx, entry->x, entry->y);
         } else if (bg == ENTRY_FUNC1) {
-            /* Original asm passes x in d1, y in d2 as register params */
-            _CallMenuFuncWithXY((void *)(*(uint32_t *)((uint8_t *)entry + 30)), entry->x, entry->y);
+            /* Original asm passes x in d1, y in d2 as register params.
+             * The unpacker stored the function pointer as a 32-bit value
+             * in the bg slot; reading the field directly is portable. */
+            _CallMenuFuncWithXY((void *)entry->bg, entry->x, entry->y);
         } else {
             panicReasonCode = 0x1209;
             _PanicHaltLoop();
@@ -563,7 +565,7 @@ void _DrawMenuItem(MenuEntry *entry)
     }
 
     if (content == ENTRY_SPRITE2) {
-        sprIdx = *(uint16_t *)((uint8_t *)entry + 38);
+        sprIdx = getFgWord(entry);
         goto fg_sprite_draw;
     }
 
@@ -628,7 +630,7 @@ void _DrawMenuItem(MenuEntry *entry)
     }
 
     if (content == ENTRY_NUMBER) {
-        _Int2Ascii(*(uint16_t *)((uint8_t *)entry + 38), numbersBuffer);
+        _Int2Ascii(getFgWord(entry), numbersBuffer);
         textPtr = numbersBuffer;
         goto fg_text_common;
     }
