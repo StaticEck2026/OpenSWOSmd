@@ -242,10 +242,22 @@ void _ManageAdvertisements(void)
             spr->z.s.i = 0;
             /* Set nlines to 6 */
             gfx->nlines = 6;
-            /* Compute data offset: currentAnimatedAdLine * wquads * 8 + advert pointer base */
+            /* Compute data offset: scroll the source image down by one
+             * scanline per `currentAnimatedAdLine` step. The byte stride
+             * per scanline differs by format:
+             *   Amiga bitplane: wquads * 8  (4 planes * 2 bytes/word)
+             *   SDL    chunky:  wquads * 16 (1 byte/pixel * 16 px/wquad)
+             * Using the Amiga formula on chunky data shifts only half a
+             * scanline per increment, producing visible diagonal motion
+             * (8 px right + half a row down) instead of vertical scroll. */
             {
                 uint16_t wquads = (uint16_t)gfx->wquads;
-                uint32_t offset = (uint32_t)currentAnimatedAdLine * (uint32_t)wquads * 8;
+#ifdef SWOS_SDL_BUILD
+                uint32_t lineBytes = (uint32_t)wquads * 16;
+#else
+                uint32_t lineBytes = (uint32_t)wquads * 8;
+#endif
+                uint32_t offset = (uint32_t)currentAnimatedAdLine * lineBytes;
                 offset += a6[d2];
                 gfx->sprData = offset;
             }
