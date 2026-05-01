@@ -599,7 +599,7 @@ typedef char _diyteamstats_size_check[(sizeof(DIYTeamStats) == 18) ? 1 : -1];
 typedef struct __attribute__((packed, aligned(2))) DIYTournamentSlot {
     uint8_t  _pad_00[2];            /* 0x00 (slot+0x15A): cleared to 0 in init, purpose unknown */
     uint16_t doubleCount;           /* 0x02 (slot+0x15C): cup-bracket doubled count flag */
-    uint16_t isCup;                 /* 0x04 (slot+0x15E): nonzero=cup, 0=league */
+    uint16_t isLeagueFormat;        /* 0x04 (slot+0x15E): nonzero=league/grouped, 0=cup */
     uint16_t seedingType;           /* 0x06 (slot+0x160) */
     uint16_t numTeams;              /* 0x08 (slot+0x162) */
     uint16_t divisionFactor;        /* 0x0A (slot+0x164): "next slot" / division factor */
