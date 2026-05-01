@@ -872,6 +872,7 @@ extern uint16_t deadVarAlways0;
 extern uint16_t gameLength;
 extern uint16_t gameLengthInGame;
 extern volatile uint16_t currentGameTick;
+extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 extern uint8_t  stadiumMenu[];
 
 /* C function declarations for called routines */
@@ -1002,13 +1003,15 @@ void _InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
     /* Show stadium menu */
     _ShowMenu(stadiumMenu);
 
-    /* Wait 150 frames (~3 seconds at 50Hz) */
+    /* Wait 150 frames (~3 seconds at 50Hz). Original was a busy spin on
+     * currentGameTick; on SDL that starves the timer thread on WSL2 and
+     * the wait can hang indefinitely (caught by user with SIGINT). Use
+     * _WaitForVSync so the main thread yields each frame and pumps
+     * events / audio. */
     {
         int16_t i;
         for (i = 0x95; i >= 0; i--) {
-            d0 = currentGameTick;
-            while (currentGameTick == d0)
-                ;
+            _WaitForVSync();
         }
     }
 

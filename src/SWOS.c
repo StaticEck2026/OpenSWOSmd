@@ -180,12 +180,16 @@ extern void _ProcessImageCommandStream(const uint16_t *cmdBuf, uint8_t *workBuf)
 extern void _MenuProc(void);
 extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
 
-/* delay_ticks: reset game tick counter, busy-wait until target reached */
+/* delay_ticks: reset game tick counter, wait N vblanks via _WaitForVSync.
+ * Original Amiga was a busy spin on currentGameTick; on SDL that starves
+ * the timer thread on WSL2 and hangs indefinitely. */
+extern void _WaitForVSync(void);
+
 static void delay_ticks(uint16_t ticks)
 {
     currentGameTick = 0;
     while (currentGameTick < ticks)
-        ;
+        _WaitForVSync();
 }
 
 /* ================================================================
