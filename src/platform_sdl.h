@@ -27,6 +27,15 @@ int  Platform_VBlank(void);
  * Safe to call from the SDL_AddTimer thread. */
 void Platform_RenderFrame(void);
 
+/* Run the Amiga Level-3 VBlank ISR body, throttled to ~50 Hz max and
+ * mutex-guarded so concurrent calls from the timer thread and the main
+ * thread serialise. Use this from main-thread spin loops on flags the
+ * ISR sets (fadeState, currentGameTick, waitingInterrupt) when calling
+ * _WaitForVSync isn't appropriate (e.g. you don't want to render a
+ * frame). On WSL2 the SDL_Timer thread can be starved indefinitely by
+ * a busy main thread, so the spin needs to drive the ISR itself. */
+void _RunInt3HandlerThrottled(void);
+
 /* Force a quit (set by SDL_QUIT or escape). The Amiga code polls
  * `g_quitToDos` -- we set it from here. */
 void Platform_RequestQuit(void);

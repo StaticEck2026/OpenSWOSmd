@@ -6,9 +6,31 @@
 #include "fade.h"
 #include "display.h"
 
+#ifdef SWOS_SDL_BUILD
+#include "platform_sdl.h"
+#include <SDL.h>
+#endif
+
 typedef unsigned char uint8_t;
 typedef unsigned int uint32_t;
 typedef short int16_t;
+
+#ifdef SWOS_SDL_BUILD
+/* Helper: yield CPU briefly while driving the Amiga Level-3 ISR. The
+ * fade-in / fade-out spin loops below wait for fadeState to flip,
+ * which is updated by _FadeInTick / _FadeOutTick inside the ISR. On
+ * WSL2 the SDL_Timer thread that normally runs the ISR can be starved
+ * by main-thread spinning, so we run the ISR ourselves (throttled to
+ * 50 Hz) and SDL_Delay to yield CPU. */
+static inline void fade_wait_one_isr_tick(void)
+{
+    _RunInt3HandlerThrottled();
+    SDL_Delay(2);
+}
+#define FADE_SPIN_BODY() fade_wait_one_isr_tick()
+#else
+#define FADE_SPIN_BODY() ((void)0)
+#endif
 
 extern volatile uint16_t fadeState;
 extern volatile uint16_t fadeCommand;
@@ -32,7 +54,7 @@ void _FadeOutToBlack(void)
     {
         while (fadeState == 0)
         {
-            /* spin — wait for fade-in to finish */
+            FADE_SPIN_BODY();
         }
     }
 
@@ -44,7 +66,7 @@ void _FadeOutToBlack(void)
 
     while (fadeState != 0)
     {
-        /* spin — wait for fade-out to complete */
+        FADE_SPIN_BODY();
     }
 }
 
@@ -62,7 +84,7 @@ void _FadeIn(void)
     {
         while (fadeState != 0)
         {
-            /* spin — wait for current fade-out to complete */
+            FADE_SPIN_BODY();
         }
         _FadeOutToBlack();
     }
@@ -75,7 +97,7 @@ void _FadeIn(void)
 
     while (fadeState == 0)
     {
-        /* spin — wait for fade-in to complete */
+        FADE_SPIN_BODY();
     }
 }
 

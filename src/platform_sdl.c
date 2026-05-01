@@ -107,6 +107,35 @@ extern void _Int3TimerHandler(void);   /* the real Amiga VBlank ISR body */
 static void pump_quit_only(void);      /* defined below; used by tick_timer_cb */
 
 static SDL_TimerID s_tick_timer;
+static SDL_mutex  *s_isr_mtx;          /* serialises _Int3TimerHandler */
+static Uint32      s_last_isr_ms;      /* last ISR fire time, for throttle */
+
+/* Run the Amiga Level-3 VBlank ISR body, throttled to ~50 Hz max and
+ * guarded by a mutex so callers from different threads serialise. The
+ * Amiga IRQ was hardware-preemptive at 50 Hz; on SDL we approximate that
+ * by calling this from BOTH the SDL_Timer worker thread (every 20 ms by
+ * default) AND from Platform_VBlank on the main thread (so any
+ * _WaitForVSync also drives the ISR). Whichever thread fires first wins
+ * for that 20 ms window; the other call returns immediately via the
+ * throttle. This guarantees fade ticks, currentGameTick, and audio
+ * housekeeping make progress even when one thread is starved (most
+ * commonly the SDL_Timer thread on WSL2, where main-thread spin loops
+ * can monopolise CPU). */
+void _RunInt3HandlerThrottled(void)
+{
+    Uint32 now = SDL_GetTicks();
+    /* Cheap pre-check before the lock — most calls will be too soon. */
+    if (now - s_last_isr_ms < 18) return;
+    if (!s_isr_mtx) return;            /* not initialised yet */
+    if (SDL_TryLockMutex(s_isr_mtx) != 0) return;  /* other thread already in */
+    /* Re-check after lock acquired (the other thread may have just run it). */
+    now = SDL_GetTicks();
+    if (now - s_last_isr_ms >= 18) {
+        s_last_isr_ms = now;
+        _Int3TimerHandler();
+    }
+    SDL_UnlockMutex(s_isr_mtx);
+}
 
 static Uint32 SDLCALL tick_timer_cb(Uint32 interval, void *param)
 {
@@ -114,8 +143,10 @@ static Uint32 SDLCALL tick_timer_cb(Uint32 interval, void *param)
     /* The original Amiga Int3 (Level-3 VBlank) ISR did all per-frame
      * housekeeping: bump currentGameTick / currentTick, run fade ticks,
      * pump audio, do buffer swap if waitingInterrupt was set, etc.
-     * On the SDL host we run it from the SDL_Timer thread at 50 Hz. */
-    _Int3TimerHandler();
+     * On the SDL host we run it from the SDL_Timer thread at 50 Hz, with
+     * Platform_VBlank on the main thread also driving it as a fallback
+     * for when the timer thread gets starved (common on WSL2). */
+    _RunInt3HandlerThrottled();
 
     /* The loader-intro path waits on `currentGameTick` rather than
      * `_WaitForVSync`, so the main thread never reaches our render
@@ -201,6 +232,7 @@ int Platform_Init(int win_scale)
     s_next_frame_perf = SDL_GetPerformanceCounter();
 
     s_render_mtx = SDL_CreateMutex();
+    s_isr_mtx    = SDL_CreateMutex();
     s_dump_frames = (getenv("SWOS_DUMP_FRAMES") != NULL);
 
     {
@@ -230,6 +262,7 @@ void Platform_Shutdown(void)
 {
     if (s_tick_timer) { SDL_RemoveTimer(s_tick_timer); s_tick_timer = 0; }
     if (s_render_mtx) { SDL_DestroyMutex(s_render_mtx); s_render_mtx = NULL; }
+    if (s_isr_mtx)    { SDL_DestroyMutex(s_isr_mtx);    s_isr_mtx    = NULL; }
     InputSDL_Shutdown();
     AudioSDL_Shutdown();
 
@@ -522,6 +555,12 @@ void Platform_RenderFrame(void)
  * here (main thread only) before rendering the frame. */
 int Platform_VBlank(void)
 {
+    /* Drive the Amiga Level-3 ISR from the main thread too, in case the
+     * SDL_Timer worker thread is starved (common on WSL2 where main-
+     * thread spin loops can monopolise CPU). The throttle inside the
+     * wrapper means double-firing from both threads is harmless. */
+    _RunInt3HandlerThrottled();
+
     /* Stamp first so the async timer callback sees a recent main-thread
      * render as soon as we enter RenderFrame — prevents the timer from
      * firing a concurrent render while we're holding the mutex. */
