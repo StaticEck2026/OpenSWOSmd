@@ -2618,11 +2618,22 @@ void _CheckPlayersLeavingComing(void)
         }
     }
 
-    /* Scan roster backwards for players that might leave */
+    /* Scan roster backwards for players that might leave.
+     *
+     * Asm passes the *file index* (= currentMatchPlayers[d2]) to
+     * RemovePlayerFromTeam, not the ordinal d2 — GetPlayerAtIndex
+     * returns d1=fileIndex, and the asm uses that d1 directly across
+     * the form check and into RemovePlayerFromTeam.
+     *
+     * Passing d2 (the ordinal) here would try to remove a career-roster
+     * slot that may not exist (a "hole" left by previous removals),
+     * causing GetPlayerSlotIndexByPlayerNumber to panic searching for
+     * the missing value. */
     {
         int16_t d2;
         for (d2 = (int16_t)(careerNumPlayers - 1); d2 >= 0; d2--) {
             uint8_t *player = _GetPlayerAtIndex(selTeamNumber, (uint16_t)d2);
+            uint16_t fileIndex = (uint16_t)currentMatchPlayers[d2];
             PlayerFile *pf = (PlayerFile *)(player + 76);
             uint8_t form = (uint8_t)pf->someFlag;
 
@@ -2645,7 +2656,7 @@ void _CheckPlayersLeavingComing(void)
             continue;
 
         remove:
-            _RemovePlayerFromTeam((uint16_t)d2);
+            _RemovePlayerFromTeam(fileIndex);
             return;  /* Only one removal per call */
         }
     }
