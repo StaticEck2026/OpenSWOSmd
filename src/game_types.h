@@ -645,7 +645,8 @@ typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx_LeagueView {
     uint16_t leagueMinSubstitutes;      /* 0x00 (parent 0x64) */
     uint16_t leagueMaxSubstitutes;      /* 0x02 (parent 0x66) */
     uint16_t hasGroupsDiy;              /* 0x04 (parent 0x68) */
-    uint8_t  _gap_06[4];                /* 0x06 (parent 0x6A): BSS_00_2DF5E (totalMatchesPerSection in derived-fields path) */
+    uint16_t totalMatchesPerSection;     /* 0x06 (parent 0x6A): BSS_00_2DF5E reset value */
+    uint16_t totalMatchesPerSectionLive; /* 0x08 (parent 0x6C): BSS_00_2DF5E live counter, decrements per match */
     uint16_t teamEntryOffsets[14];      /* 0x0A (parent 0x6E): aliases diyTeamEntryOffsetsByIndex; sorted by standings, value/18 = team index */
     uint8_t  cupRoundResults[100];      /* 0x26 (parent 0x8A): same memory as cup view */
     uint8_t  shuffleAndPad[64];         /* 0x8A (parent 0xEE): diyTeamShuffleIndices(2) + BSS_00_2E01E(62) */

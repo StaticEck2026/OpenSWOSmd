@@ -454,7 +454,7 @@ void _DIY_ResetCompetitionProgressAndShuffle(void)
     comp->leagueMatchProgress = 0;
     comp->leagueCurrentSlot = 0;
     /* Copy reset value to live counter (BSS_00_2DF5E totalMatchesPerSection) */
-    *(uint16_t *)(a2raw + 0x6C) = *(uint16_t *)(a2raw + 0x6A);
+    comp->matchData.league.totalMatchesPerSectionLive = comp->matchData.league.totalMatchesPerSection;
     comp->minSubstitutes = (uint16_t)a2->playEachTeam;  /* repurposed as section counter */
 
     /* Clear league table stats for 64 entries */
@@ -1605,10 +1605,8 @@ void _DIY_RecomputeCompetitionDerivedFields(void)
 
     /* totalMatchesPerSection = (groupsPerRound - 1) * groupsPerRound / 2 */
     uint16_t totalMatchesPerSection = (uint16_t)(((uint16_t)(groupsPerRound - 1) * groupsPerRound) >> 1);
-    /* a2+0x6A and a2+0x6C lie in the league-view _gap_06 region (BSS_00_2DF5E):
-     * reset value at +0x6A and live counter at +0x6C — both written here. */
-    *(uint16_t *)(a2 + 0x6A) = totalMatchesPerSection;
-    *(uint16_t *)(a2 + 0x6C) = totalMatchesPerSection;
+    comp->matchData.league.totalMatchesPerSection = totalMatchesPerSection;
+    comp->matchData.league.totalMatchesPerSectionLive = totalMatchesPerSection;
 
     /* matchesPerSeason = totalMatchesPerSection / halfGroups * playEachTeam */
     int16_t totalSigned = (int16_t)totalMatchesPerSection;
@@ -1740,18 +1738,17 @@ void _DIY_AdvanceLeagueProgressAfterMatch(uint8_t *team1, uint8_t *team2)
         viewRandomPhase = a0s->viewRandomPhase;
     }
 
-    /* a0+0x6A/0x6C are in BSS_00_2DF5E (totalMatchesPerSection {reset, counter}) */
-    *(uint16_t *)(a0 + 0x6C) -= 1;
-    if (*(uint16_t *)(a0 + 0x6C) != 0)
+    comp->matchData.league.totalMatchesPerSectionLive -= 1;
+    if (comp->matchData.league.totalMatchesPerSectionLive != 0)
         return;
 
-    /* a0+0x60 = minSubstitutes, repurposed as section-progression counter */
+    /* minSubstitutes repurposed as section-progression counter */
     comp->minSubstitutes -= 1;
     if (comp->minSubstitutes == 0)
         return;
 
     /* Reset for next section */
-    *(uint16_t *)(a0 + 0x6C) = *(uint16_t *)(a0 + 0x6A);
+    comp->matchData.league.totalMatchesPerSectionLive = comp->matchData.league.totalMatchesPerSection;
     comp->leagueSectionState.sectionMatchesProgress = 0;
 }
 
@@ -2848,8 +2845,7 @@ static void diy_ResetCompetitionStatsAndProgress(void)
     comp->leagueSectionState.halfGroupsCounter = 0;
     comp->leagueMatchProgress = 0;
     comp->leagueCurrentSlot = 0;
-    /* a2+0x6A/0x6C = BSS_00_2DF5E (totalMatchesPerSection {reset, counter}) */
-    WR16(a2, 0x6C, RD16(a2, 0x6A));
+    comp->matchData.league.totalMatchesPerSectionLive = comp->matchData.league.totalMatchesPerSection;
     comp->minSubstitutes = (uint16_t)a2s->playEachTeam;
 
     /* Reset per-team stats: 64 entries, stride 0x12 */
