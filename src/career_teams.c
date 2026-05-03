@@ -1469,9 +1469,12 @@ void _Career_ProcessCurrentCompetitionSlotAfterMatch(void)
         /* Type 0: league */
         _Career_AutoPlayOrSimulateLeagueFixtureLoop();
         _Career_StoreCompetitionSlotStateToBuffer(slotPtr);
-        if (*(uint16_t *)(slotPtr + 0x2C) != 0)
+        /* slotPtr+0x2C = compId/slotId word (DIYCompetition.compId field) */
+        if (*(uint16_t *)&((DIYCompetition *)slotPtr)->compId != 0)
             return;
-        if (*(uint16_t *)(slotPtr + 0x60) != 0)
+        /* slotPtr+0x60 = first byte of competition's extended (DIYCompetitionEx)
+         * region = minSubstitutes */
+        if (((DIYCompetitionEx *)slotPtr)->minSubstitutes != 0)
             return;
         _DIY_RebuildCompetitionAndTeamSelectionCaches();
     }
@@ -1524,11 +1527,11 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
     }
 
     /* Rebuild caches if competition is done (type==0, no round/phase left) */
-    if (*(uint16_t *)(slotPtr + 0x2C) != 0)
+    if (*(uint16_t *)&((DIYCompetition *)slotPtr)->compId != 0)
         return;
     if (BE_READ_U16(slotPtr) != 0)
         return;
-    if (*(uint16_t *)(slotPtr + 0x60) != 0)
+    if (((DIYCompetitionEx *)slotPtr)->minSubstitutes != 0)
         return;
     _DIY_RebuildCompetitionAndTeamSelectionCaches();
 }
@@ -1627,8 +1630,9 @@ void _Career_NextMatch(void)
     int16_t slotIdx = (int16_t)(int8_t)entry[0];
     uint8_t *slotPtr = careerCompetitionSlotPtrTable[slotIdx];
 
-    /* If type==0 (league) and word at 0x68 != 0, use PlayMatchMenuLoop */
-    if (BE_READ_U16(slotPtr) == 0 && *(uint16_t *)(slotPtr + 0x68) != 0) {
+    /* If type==0 (league) and league.hasGroupsDiy != 0, use PlayMatchMenuLoop */
+    if (BE_READ_U16(slotPtr) == 0 &&
+        ((DIYCompetitionEx *)slotPtr)->matchData.league.hasGroupsDiy != 0) {
         _Career_PlayMatchMenuLoop();
         return;
     }
@@ -1677,12 +1681,12 @@ void _Career_AutoSimulateLeagueFixturesUntilHumanTeam(void)
         uint8_t *comp1 = fixtureTeam1CompPtr;
         uint8_t *comp2 = fixtureTeam2CompPtr;
 
-        /* Check team1: offset 0x2B4 is team pointer, selTeamsPtr-relative */
-        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + *(uint32_t *)(comp1 + 0x2B4));
+        /* Check team1: DIYTeamStats teamSelPtr (+0x2B4) is selTeamsPtr-relative */
+        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + ((DIYTeamStats *)(comp1 + 0x2B4))->teamSelPtr);
         if (team1->teamControls != 1) return;  /* human team found */
 
         /* Check team2 */
-        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + *(uint32_t *)(comp2 + 0x2B4));
+        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + ((DIYTeamStats *)(comp2 + 0x2B4))->teamSelPtr);
         if (team2->teamControls != 1) return;  /* human team found */
 
         /* Both AI: simulate */
@@ -1702,13 +1706,24 @@ static void getCurrentMatchTeamSlots(uint8_t **slot1Out, uint8_t **slot2Out)
     uint8_t *base = (uint8_t *)&diyCompetitionStart;
     uint16_t matchIdx = diyCompetitionStart.matchData.cup.currentMatchIndex;
     uint16_t off = matchIdx * 2;
-    uint8_t *cupTeamGrid = base + 0x2CE;  /* cup bracket grid, distinct from teamGrid at 0x510 */
+    uint8_t *cupTeamGrid = diyCompetitionStart.teamGridPairings;
 
     int8_t t1 = (int8_t)cupTeamGrid[off];
     *slot1Out = base + (int16_t)t1 * 4;
 
     int8_t t2 = (int8_t)cupTeamGrid[off + 1];
     *slot2Out = base + (int16_t)t2 * 4;
+}
+
+/* Like getCurrentMatchTeamSlots, but returns clean slot indices for use
+ * with bracketScratch.teamPtrTable[] instead of the asm-style "fake"
+ * pointers `base + slotIdx*4`. */
+static void getCurrentMatchTeamSlotIndices(int16_t *slot1Idx, int16_t *slot2Idx)
+{
+    uint16_t matchIdx = diyCompetitionStart.matchData.cup.currentMatchIndex;
+    uint8_t *grid = diyCompetitionStart.teamGridPairings;
+    *slot1Idx = (int16_t)(int8_t)grid[matchIdx * 2];
+    *slot2Idx = (int16_t)(int8_t)grid[matchIdx * 2 + 1];
 }
 
 /* ================================================================
@@ -1722,15 +1737,15 @@ __attribute__((used, externally_visible))
 void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
 {
     for (;;) {
-        uint8_t *slot1, *slot2;
-        getCurrentMatchTeamSlots(&slot1, &slot2);
+        int16_t slot1Idx, slot2Idx;
+        getCurrentMatchTeamSlotIndices(&slot1Idx, &slot2Idx);
 
-        /* Check team1: offset 0x344 is team pointer, selTeamsPtr-relative */
-        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + *(uint32_t *)(slot1 + 0x344));
+        /* Read team pointer from bracketScratch.teamPtrTable[slotIdx] */
+        DIYCompetitionEx *baseEx = &diyCompetitionStart;
+        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + baseEx->bracketScratch.teamPtrTable[slot1Idx]);
         if (team1->teamControls != 1) return;  /* human team found */
 
-        /* Check team2 */
-        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + *(uint32_t *)(slot2 + 0x344));
+        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + baseEx->bracketScratch.teamPtrTable[slot2Idx]);
         if (team2->teamControls != 1) return;  /* human team found */
 
         /* Both AI: simulate */
@@ -1750,9 +1765,9 @@ void _Career_AutoSimulatePendingMatchUntilHumanTeam(void)
     DIYCompetition *bufComp = (DIYCompetition *)diyFileBufferCopy;
     uint8_t *buf = diyFileBufferCopy;
     uint16_t slotIdx = bufComp->roundComplete;
-    uint8_t *slot = buf + (uint32_t)slotIdx * 0x76;
+    DIYTournamentSlot *slot = (DIYTournamentSlot *)(buf + (uint32_t)slotIdx * 0x76 + 0x15A);
 
-    if (*(uint16_t *)(slot + 0x15E) != 0)
+    if (slot->isLeagueFormat != 0)
         _Career_AutoSimulateLeagueFixturesUntilHumanTeam();
     else
         _Career_AutoSimulateCupMatchesUntilHumanTeam();
@@ -1770,7 +1785,7 @@ __attribute__((used, externally_visible))
 void _Career_AutoPlayOrSimulateLeagueFixtureLoop(void)
 {
     for (;;) {
-        uint16_t field1C0 = *(uint16_t *)((uint8_t *)&diyCompetitionStart + 0x1C0);  /* extended buffer field */
+        uint16_t field1C0 = diyCompetitionStart.leagueCurrentSlot;
         if (field1C0 != 0 && careerSlotProcessingInProgress != 0)
             return;
         _DIY_PlayOrSimulateLeagueFixture(0, 0);
@@ -1812,11 +1827,11 @@ void _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot(void)
     DIYCompetition *bufComp = (DIYCompetition *)diyFileBufferCopy;
     uint8_t *buf = diyFileBufferCopy;
     uint16_t slotIdx = bufComp->roundComplete;
-    uint8_t *slot = buf + (uint32_t)slotIdx * 0x76;
+    DIYTournamentSlot *slot = (DIYTournamentSlot *)(buf + (uint32_t)slotIdx * 0x76 + 0x15A);
 
     DIYCompetition *comp = &diyCompetitionStart.base;
 
-    if (*(uint16_t *)(slot + 0x15E) != 0) {
+    if (slot->isLeagueFormat != 0) {
         /* League type slot */
         _Career_AutoPlayOrSimulateLeagueFixtureLoop();
 
@@ -1868,16 +1883,17 @@ void _DIY_AdvanceToNextCompetitionSlot(void)
 
     if ((uint16_t)(currentSlot + 1) == maxSlots) {
         /* Reached max slots: mark competition finished */
-        *(uint16_t *)(buf + 2) = 2;                     /* DIY_COMPETITION_FIELD_2 */
+        bufComp->isActive = 2;
         bufComp->currentRoundIndex = 1;
         return;
     }
 
     /* Determine slot type */
     uint8_t *slot = buf + (uint32_t)currentSlot * 0x76;
+    DIYTournamentSlot *slotRec = (DIYTournamentSlot *)(slot + 0x15A);
     uint8_t *comp = (uint8_t *)&diyCompetitionStart;
 
-    if (*(uint16_t *)(slot + 0x15E) != 0) {
+    if (slotRec->isLeagueFormat != 0) {
         /* League type: build seeded bracket */
         _DIY_BuildSeededBracketAndUpdateScores(buf, slot, comp, comp);
     } else {
@@ -2331,11 +2347,13 @@ static uint8_t *addCupEntry(uint8_t **srcPtr, uint16_t teamSlot, uint16_t roundI
     out[1] = *src;
     (*srcPtr)++;
 
-    /* GetCupRoundStringIndex: d0=round, d1=base[0x15E], d2=total, d3=base[0x162], d4=opt */
+    /* GetCupRoundStringIndex: d0=round, d1=slot.isLeagueFormat, d2=total,
+     * d3=slot.numTeams, d4=opt. base+0x15A = current slot record. */
+    DIYTournamentSlot *slotRec = (DIYTournamentSlot *)(base + 0x15A);
     uint16_t cupRoundIdx = _GetCupRoundStringIndex(roundIdx,
-                                                    *(uint16_t *)(base + 0x15E),
+                                                    slotRec->isLeagueFormat,
                                                     total,
-                                                    *(uint16_t *)(base + 0x162),
+                                                    slotRec->numTeams,
                                                     opt);
     out[9] = (uint8_t)cupRoundIdx;
     out[7] = (uint8_t)roundIdx;
@@ -2366,7 +2384,7 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
 
     if (type == 0) {
         /* League type */
-        uint8_t *base = blk;
+        DIYCompetitionEx *baseEx = (DIYCompetitionEx *)blk;
         uint16_t slotLen;
 
         if (gameType == 4) {
@@ -2379,9 +2397,10 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
             slotLen = slotLen * 0xC + 0xA;
         }
 
-        uint8_t *src = base + 0x1CE;
-        uint16_t count = *(uint16_t *)(base + 0x1C4);
-        uint16_t teamSlot = *(uint16_t *)(base + 0x2C);
+        /* +0x1CE = leagueSectionState.phaseStartMonths (per-round month bytes) */
+        uint8_t *src = baseEx->leagueSectionState.phaseStartMonths;
+        uint16_t count = baseEx->leagueTotalMatches;
+        uint16_t teamSlot = *(uint16_t *)&baseEx->base.compId;  /* slot/team index */
         int16_t i = (int16_t)count - 1;
 
         while (i >= 0) {
@@ -2402,10 +2421,11 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
 
     if (type == 1) {
         /* Cup type (single competition) */
+        DIYCompetitionEx *baseEx = (DIYCompetitionEx *)blk;
         uint8_t *base = blk;         /* a6: constant base for AddNextRoundCupEntry */
-        uint8_t *roundPtr = blk;     /* a3: per-round pointer, advances by 2 */
-        uint16_t teamId = *(uint16_t *)(base + 0x2C);  /* slot/team index */
-        uint8_t *src = base + 0x338;
+        uint16_t teamId = *(uint16_t *)&baseEx->base.compId;  /* slot/team index */
+        /* +0x338 = bracketScratch.progTable */
+        uint8_t *src = baseEx->bracketScratch.progTable;
         uint16_t numRounds = comp->numRounds;
         uint16_t teamsPerRound = comp->numTeams;
         uint16_t roundIdx = 0;
@@ -2425,7 +2445,9 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
 
             uint8_t *out = addNextRoundCupEntry(&src, roundIdx, numRounds, teamId, slotLen, base);
 
-            if (*(uint16_t *)(roundPtr + 0x66) == 2) {
+            /* roundPtr+0x66 advances by 2 each iteration → cup roundLegs[roundIdx]
+             * roundPtr+0x7E with stride 2 → cup roundPenalties[roundIdx] */
+            if (baseEx->matchData.cup.roundLegs[roundIdx] == 2) {
                 /* Two-leg match */
                 out[8] = 1;
                 out += *(uint16_t *)(out + 2);
@@ -2436,7 +2458,7 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
                 /* Single leg */
                 out[8] = 0;
                 out += *(uint16_t *)(out + 2);
-                if (*(uint16_t *)(roundPtr + 0x7E) == 1) {
+                if (baseEx->matchData.cup.roundPenalties[roundIdx] == 1) {
                     /* No replay match */
                 } else {
                     /* Replay match */
@@ -2447,7 +2469,6 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
                 }
             }
 
-            roundPtr += 2;  /* lea 2(a3),a3 — advance per-round pointer */
             roundIdx++;
             teamsPerRound = halved;  /* teamsPerRound halves each round */
         }
@@ -2457,39 +2478,43 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
     /* Type 2+ — multi-slot competition */
     {
         uint8_t *base = blk;
-        uint16_t opt = *(uint16_t *)(base + 0x15A);   /* d4: opt param for GetCupRoundStringIndex */
-        uint16_t teamSlot = *(uint16_t *)(base + 0x2C); /* d2: team slot index */
+        DIYCompetitionEx *baseEx = (DIYCompetitionEx *)blk;
+        /* +0x15A = first slot's _pad_00 word (used as opt for GetCupRoundStringIndex) */
+        DIYTournamentSlot *firstSlot = (DIYTournamentSlot *)(base + 0x15A);
+        uint16_t opt = *(uint16_t *)firstSlot->_pad_00;
+        uint16_t teamSlot = *(uint16_t *)&baseEx->base.compId;
         uint8_t *out = teamSelectionKeyCache;
         uint16_t numSlots = comp->totalMatchesInRound;
         uint16_t slotIdx = 0;
 
         while (slotIdx != numSlots) {
             uint16_t slotLen;
+            DIYTournamentSlot *slotRec = (DIYTournamentSlot *)(base + 0x15A);
 
             if (gameType == 4) {
                 slotLen = 0x16;
             } else {
-                slotLen = *(uint16_t *)(base + 0x162);
+                slotLen = slotRec->numTeams;
                 slotLen >>= 1;
                 if (slotLen > 0x18)
                     slotLen = 0x18;
                 slotLen = slotLen * 0xC + 0xA;
             }
 
-            uint8_t *src = base + 0x176;
+            uint8_t *src = slotRec->progressionTable;
 
-            if (*(uint16_t *)(base + 0x15E) == 0) {
+            if (slotRec->isLeagueFormat == 0) {
                 /* Cup sub-slot */
                 out = addCupEntry(&src, teamSlot, slotIdx, numSlots, slotLen, base, opt);
 
-                if (*(uint16_t *)(base + 0x16E) == 2) {
+                if (slotRec->formatFlag16E == 2) {
                     /* Two-leg */
                     out[8] = 1;
                     out = addCupEntry(&src, teamSlot, slotIdx, numSlots, slotLen, base, opt);
                     out[8] = 2;
                 } else {
                     out[8] = 0;
-                    if (*(uint16_t *)(base + 0x172) != 1) {
+                    if (slotRec->formatFlag172 != 1) {
                         /* Has replay */
                         out = addCupEntry(&src, teamSlot, slotIdx, numSlots, slotLen, base, opt);
                         out[8] = 3;
@@ -2498,7 +2523,7 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
                 }
             } else {
                 /* League sub-slot */
-                uint16_t leagueRounds = *(uint16_t *)(base + 0x174);
+                uint16_t leagueRounds = slotRec->matchesPerSlot;
                 int16_t j = (int16_t)leagueRounds - 1;
                 while (j >= 0) {
                     out = addCupEntry(&src, teamSlot, slotIdx, numSlots, slotLen, base, opt);
