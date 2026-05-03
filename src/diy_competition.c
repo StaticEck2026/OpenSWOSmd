@@ -1426,8 +1426,9 @@ void _DIY_RecountMissingTeamsInTeamGrid(void)
         }
         if (s->divisionFactor == 1)
             goto mainLoop;
-        /* slot+0x1D2 = next slot's doubleCount field (0x76 stride peek) */
-        if (*(uint16_t *)(slot + 0x1D2) == 0)
+        /* +0x1D2 from slot byte base = +0x78 from DIYTournamentSlot start
+         * = next slot's doubleCount (0x76 stride + +0x02). */
+        if (s[1].doubleCount == 0)
             goto mainLoop;
         return;
     }
@@ -2678,9 +2679,9 @@ void _DIY_PostLoadCompetitionDispatch(void)
         return;
 
     uint16_t currentRound = fbCopy->roundComplete;
-    uint8_t *slot = (uint8_t *)fbCopy + (uint16_t)(currentRound * 0x76);
+    DIYTournamentSlot *slot = (DIYTournamentSlot *)((uint8_t *)fbCopy + (uint16_t)(currentRound * 0x76) + 0x15A);
 
-    if (*(uint16_t *)(slot + 0x15E) == 0) {
+    if (slot->isLeagueFormat == 0) {
         /* Cup path */
         _DIY_RecordCupBracketProgress();
     } else {
@@ -3260,8 +3261,8 @@ copy_back:
 
         /* Check if pair swap needed */
         if (s->divisionFactor == 1) return;
-        /* slot+0x1D2 = next slot's doubleCount field (0x76 stride peek) */
-        if (*(uint16_t *)(slot + 0x1D2) == 0) return;
+        /* slot+0x1D2 = next-slot doubleCount (0x76 stride + +0x02 within slot) */
+        if (s[1].doubleCount == 0) return;
 
         /* Swap first pair in diy team list */
         uint8_t *pairStart = diy + 0x5A;
@@ -3297,12 +3298,12 @@ void _DIY_CopyTeamGridFromCompToDIY(uint8_t *diy, uint8_t *slot,
             goto do_pair_swap;
         }
         if (legs == 1) goto check_worldcup;
-        /* slot+0x1D2 = next slot's doubleCount field (0x76 stride peek) */
-        if (*(uint16_t *)(slot + 0x1D2) == 0) goto check_worldcup;
+        /* slot+0x1D2 = next-slot doubleCount (0x76 stride + +0x02 within slot) */
+        if (s[1].doubleCount == 0) goto check_worldcup;
 
     do_pair_swap:
         {
-            uint8_t *grid = comp + 0x2CE;
+            uint8_t *grid = ((DIYCompetitionEx *)comp)->teamGridPairings;
             uint8_t tmp = grid[0];
             grid[0] = grid[1];
             grid[1] = tmp;
@@ -3373,7 +3374,8 @@ void _DIY_BuildTeamGridAndIndexMaps(uint8_t *diy, uint8_t *slot,
 
         /* Seeded bracket */
         int16_t d5 = -1;
-        if (field54 != 0 && *(uint16_t *)(slot + 0xE8) != 0) {
+        /* slot+0xE8 = previous slot's isLeagueFormat (0x76 stride peek-back) */
+        if (field54 != 0 && s[-1].isLeagueFormat != 0) {
             d5 = 0;
         } else {
             _DIY_SortAndShuffleTeamsByValue(diy, slot);
@@ -3385,7 +3387,8 @@ void _DIY_BuildTeamGridAndIndexMaps(uint8_t *diy, uint8_t *slot,
             uint8_t *dst = diyTeamShuffleScratch;
 
             if (d5 >= 0) {
-                d5 = *(int16_t *)(slot + 0xF4);
+                /* slot+0xF4 = previous slot's groups field */
+                d5 = (int16_t)s[-1].groups;
             }
 
             uint16_t numGroupSlots = s->teamsPerGroup;
@@ -3499,9 +3502,10 @@ void _DIY_ShuffleTeamsAndBuildCompTeamList(uint8_t *diy, uint8_t *slot,
                 goto build_comp_list;
             }
 
-            /* Seeded: check if sort needed */
+            /* Seeded: check if sort needed.
+             * slot+0xE8/+0xEA = previous slot's isLeagueFormat / seedingType */
             if (field54 != 0) {
-                if (*(uint16_t *)(slot + 0xE8) != 0 || *(uint16_t *)(slot + 0xEA) != 0)
+                if (s[-1].isLeagueFormat != 0 || s[-1].seedingType != 0)
                     goto after_sort;
             }
             _DIY_SortAndShuffleTeamsByValue(diy, slot);
@@ -8800,16 +8804,17 @@ tournament_entry:
                 uint16_t stageConfig = (uint16_t)comp->roundComplete;
                 uint16_t stageOffset = stageConfig * 118;
                 uint8_t *stagePtr = raw + stageOffset;
+                DIYTournamentSlot *stageSlot = (DIYTournamentSlot *)(stagePtr + 0x15A);
 
                 if (comp->currentRoundIndex != 0) {
                     /* Has group stage */
-                    uint16_t threshold = *(uint16_t *)(stagePtr + 0x162);
+                    uint16_t threshold = stageSlot->numTeams;
                     if ((uint16_t)d1 < threshold) {
                         /* Team is in group stage — switch to secondary competition */
                         raw += 0x420;
                         comp = (DIYCompetition *)raw;
                         numTeams = (uint16_t)comp->numTeams;
-                        if (*(uint16_t *)(stagePtr + 0x15E) == 0)
+                        if (stageSlot->isLeagueFormat == 0)
                             goto cup_search;
                         else
                             goto league_search;
@@ -8820,13 +8825,15 @@ tournament_entry:
 
             tournament_post:
                 {
-                    uint16_t threshold = *(uint16_t *)(stagePtr + 0x162);
+                    uint16_t threshold = stageSlot->numTeams;
                     if ((uint16_t)d1 < threshold) {
                         return threshold / 2 - 1;
                     }
 
                     diyFoundTeamIndex = 1;
 
+                    /* raw+0x15A = stageSlot record at slotIdx 0; reads its _pad_00
+                     * but original asm checks an unrelated flag here. */
                     if (*(uint16_t *)(raw + 0x15A) != 0) {
                         if ((uint16_t)d1 == 3 || (uint16_t)d1 == 4)
                             return (uint16_t)d1;
@@ -8834,14 +8841,16 @@ tournament_entry:
 
                     /* Walk through stage blocks to find which stage the team is in */
                     uint16_t pos = (uint16_t)d1;
-                    uint8_t *sp = raw;
+                    DIYTournamentSlot *spSlot = (DIYTournamentSlot *)(raw + 0x15A);
                     uint16_t stageThreshold;
                     do {
-                        sp += 118;
-                        stageThreshold = *(uint16_t *)(sp + 0x162);
+                        spSlot = (DIYTournamentSlot *)((uint8_t *)spSlot + 0x76);
+                        stageThreshold = spSlot->numTeams;
                     } while (pos < stageThreshold);
 
-                    uint16_t stageNumTeams = *(uint16_t *)(sp + 0xEC);
+                    /* sp+0xEC = previous slot's numTeams (looking back one stride);
+                     * spSlot[-1].numTeams. */
+                    uint16_t stageNumTeams = spSlot[-1].numTeams;
 
                     if (findTeamInDIY_SuppressSideEffectsFlag != 0) {
                         uint16_t rank = _GetMoreExpensiveTeamsCount(teamNo, (DIYCompetition *)raw);
