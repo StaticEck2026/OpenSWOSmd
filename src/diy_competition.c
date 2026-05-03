@@ -634,11 +634,13 @@ void _InitDIYTournament(void)
     a2->roundIterator = 3;            /* 0x4C */
     a2->numTeamsInStage = 5;                     /* 0x4E */
     a2->menuState = 0;                     /* 0x4A */
-    *(uint16_t *)(a2raw + 0x15A) = 0;   /* extended */
 
-    /* Initialize 6 competition slots from init table */
+    /* Initialize 6 competition slots from init table.
+     * The first slot's _pad_00 doubles as a "doubled cup-bracket"
+     * flag during init; clear it before populating. */
     const uint16_t *initTbl = diyTournamentInitTable;
     DIYTournamentSlot *slot = (DIYTournamentSlot *)(a2raw + 0x15A);
+    *(uint16_t *)slot->_pad_00 = 0;
 
     a2->totalMatchesInRound = (int16_t)*initTbl++;   /* total teams: 0x52 */
     a2->roundComplete = 0;                    /* 0x54 */
@@ -2242,13 +2244,16 @@ void _DIY_ReorderTeamsBySelectionFlags(void)
 {
     DIYCompetitionEx *comp = &diyCompetitionStart;
     DIYCompetition *a0s = &comp->base;
-    uint8_t *a0 = (uint8_t *)a0s;
     uint8_t *teamGrid = comp->teamGridPairings;                    /* a3 */
     uint8_t *selFlags = comp->matchData.cup.cupRoundResults;       /* a2 */
-    /* a1: scoreTab1 region — also indexed at +0x84 (BSS_00_2E0AE)
-     * and +0x104 (leagueSectionState.phaseStartMonths). Original asm
-     * walks contiguous memory across multiple named regions. */
-    uint8_t *scoreTab1 = a0 + 0xCA;
+    /* Three parallel uint16 score arrays held at:
+     *   scoreTab1     (parent +0xCA): cupRoundResults+0x40 (knockout score region)
+     *   aggregateBuf  (parent +0x14E): _bss_2E0AE base (second-leg agg score)
+     *   penaltyBuf    (parent +0x1CE): leagueSectionState.phaseStartMonths (penalty score)
+     */
+    int16_t *scoreTab1    = (int16_t *)&comp->matchData.cup.cupRoundResults[0x40];
+    int16_t *aggregateBuf = (int16_t *)&comp->_bss_2E0AE[0];
+    int16_t *penaltyBuf   = (int16_t *)&comp->leagueSectionState.phaseStartMonths[0];
     int16_t d1 = 0;
     int16_t d2 = 0;
 
@@ -2262,31 +2267,28 @@ void _DIY_ReorderTeamsBySelectionFlags(void)
         }
 
         /* Swap entries at d1 and d2 in all parallel arrays */
-        /* Team grid (word entries) */
         {
-            int16_t idx1 = d1 * 2;
-            int16_t idx2 = d2 * 2;
             int16_t tmp;
 
             /* teamGrid at word offsets */
-            tmp = *(int16_t *)(teamGrid + idx1);
-            *(int16_t *)(teamGrid + idx1) = *(int16_t *)(teamGrid + idx2);
-            *(int16_t *)(teamGrid + idx2) = tmp;
+            tmp = *(int16_t *)(teamGrid + d1 * 2);
+            *(int16_t *)(teamGrid + d1 * 2) = *(int16_t *)(teamGrid + d2 * 2);
+            *(int16_t *)(teamGrid + d2 * 2) = tmp;
 
             /* scoreTab1 at word offsets */
-            tmp = *(int16_t *)(scoreTab1 + idx1);
-            *(int16_t *)(scoreTab1 + idx1) = *(int16_t *)(scoreTab1 + idx2);
-            *(int16_t *)(scoreTab1 + idx2) = tmp;
+            tmp = scoreTab1[d1];
+            scoreTab1[d1] = scoreTab1[d2];
+            scoreTab1[d2] = tmp;
 
-            /* scoreTab1 + 0x84 at word offsets */
-            tmp = *(int16_t *)(scoreTab1 + idx1 + 0x84);
-            *(int16_t *)(scoreTab1 + idx1 + 0x84) = *(int16_t *)(scoreTab1 + idx2 + 0x84);
-            *(int16_t *)(scoreTab1 + idx2 + 0x84) = tmp;
+            /* aggregateBuf at word offsets */
+            tmp = aggregateBuf[d1];
+            aggregateBuf[d1] = aggregateBuf[d2];
+            aggregateBuf[d2] = tmp;
 
-            /* scoreTab1 + 0x104 at word offsets */
-            tmp = *(int16_t *)(scoreTab1 + idx1 + 0x104);
-            *(int16_t *)(scoreTab1 + idx1 + 0x104) = *(int16_t *)(scoreTab1 + idx2 + 0x104);
-            *(int16_t *)(scoreTab1 + idx2 + 0x104) = tmp;
+            /* penaltyBuf at word offsets */
+            tmp = penaltyBuf[d1];
+            penaltyBuf[d1] = penaltyBuf[d2];
+            penaltyBuf[d2] = tmp;
         }
 
         /* Selection flags (byte entries) */
@@ -2909,8 +2911,14 @@ void _DIY_RebuildCompetitionAndTeamSelectionCaches(void)
              * reads divIndex from tablePtr stream, looks up team ID at
              * competition+0x1AE + idx*2 */
             uint32_t idx = *(uint32_t *)((uint8_t *)tablePtr - 4);  /* re-read d0 */
-            uint8_t *dest = competitionFileBuffer;
-            uint16_t teamId = *(uint16_t *)(dest + 0x1AE + (uint16_t)divIndex * 2);
+            (void)idx;
+            /* +0x1AE is inside _bss_2E0AE in DIYCompetitionEx (BSS_00_2E0AE
+             * region holds an array of qualified team IDs in
+             * competitionFileBuffer's view). divIndex indexes a uint16
+             * array starting at offset 0x1AE - 0x14E = 0x60 inside
+             * the _bss_2E0AE block. */
+            DIYCompetitionEx *destEx = (DIYCompetitionEx *)competitionFileBuffer;
+            uint16_t teamId = *(uint16_t *)&destEx->_bss_2E0AE[0x60 + (uint16_t)divIndex * 2];
             *a5++ = teamId;
         } else {
             /* Not current — auto-advance international fixtures */
@@ -2920,15 +2928,15 @@ void _DIY_RebuildCompetitionAndTeamSelectionCaches(void)
             _RestoreSelectedTeams();
             internationalAutoAdvanceFlag = 0;
 
-            /* Copy from diyCompetitionStart */
-            uint16_t teamId = *(uint16_t *)((uint8_t *)&diyCompetitionStart + 0x1AE + (uint16_t)divIndex * 2);  /* extended */
+            /* Copy from diyCompetitionStart's _bss_2E0AE qualified-teams array */
+            uint16_t teamId = *(uint16_t *)&diyCompetitionStart._bss_2E0AE[0x60 + (uint16_t)divIndex * 2];
             *a5++ = teamId;
         }
     }
 
     /* Append teams to selection */
     a5 = competitionTeamIdScratchList4;
-    uint16_t *teamIdDest = (uint16_t *)(ctx + 0x24E);  /* extended */
+    uint16_t *teamIdDest = ((DIYCompetitionEx *)ctx)->cupTeamIds;
     int16_t teamCount = ctxS->numTeams;
     _AppendTeamsToSelectionFromTmdOrTeamFile(teamIdDest, a5, teamCount);
 
@@ -3671,8 +3679,9 @@ void _DIY_LoadCurrentCompetitionSlot(void)
         {
             DIYCompetitionEx *a5Ex = (DIYCompetitionEx *)a5;
             a5Ex->pointsForAWin = s->initConst168;
-            a5Ex->matchData.league.leagueMinSubstitutes = *(uint16_t *)(a2 + 58 + 0x12);
-            a5Ex->matchData.league.leagueMaxSubstitutes = *(uint16_t *)(a2 + 58 + 0x14);
+            /* a2+0x4C = bufCopy's roundIterator, a2+0x4E = bufCopy's numTeamsInStage */
+            a5Ex->matchData.league.leagueMinSubstitutes = (uint16_t)((DIYCompetition *)a2)->roundIterator;
+            a5Ex->matchData.league.leagueMaxSubstitutes = (uint16_t)((DIYCompetition *)a2)->numTeamsInStage;
         }
 
         /* Copy progression month bytes — a5+58+0x194 = a5+0x1CE = inside
@@ -5669,7 +5678,7 @@ restore_first:
         return;
 
 restore_prev:
-        *(uint16_t *)(a2 + 0x164) = diyTournamentPrevValueBackup;
+        slotA2->divisionFactor = diyTournamentPrevValueBackup;
         return;
     }
 }
@@ -6074,7 +6083,8 @@ void _DesignDIYCup_BuildMenuTitleString(void)
         uint16_t d1 = 0;
         uint16_t d2 = (uint16_t)bufS->totalMatchesInRound;  /* 0x52 */
         uint16_t d3 = (uint16_t)a2s->totalMatchesInRound * 2;
-        uint16_t d4 = *(uint16_t *)(diyFileBufferCopy + 0x15A);  /* extended buffer */
+        /* +0x15A = first slot record's _pad_00 word */
+        uint16_t d4 = *(uint16_t *)((DIYTournamentSlot *)(diyFileBufferCopy + 0x15A))->_pad_00;
         const char *roundStr = _GetCupRoundString(d0, d1, d2, d3, d4);
         dst = _StringCopy((const uint8_t *)roundStr, dst);
         /* Fall through to replay/leg check */
@@ -8851,9 +8861,9 @@ tournament_entry:
 
                     diyFoundTeamIndex = 1;
 
-                    /* raw+0x15A = stageSlot record at slotIdx 0; reads its _pad_00
-                     * but original asm checks an unrelated flag here. */
-                    if (*(uint16_t *)(raw + 0x15A) != 0) {
+                    /* raw+0x15A = first slot record's _pad_00 word — flag set
+                     * during _InitDIYTournament when any stage is doubled. */
+                    if (*(uint16_t *)((DIYTournamentSlot *)(raw + 0x15A))->_pad_00 != 0) {
                         if ((uint16_t)d1 == 3 || (uint16_t)d1 == 4)
                             return (uint16_t)d1;
                     }
@@ -9388,11 +9398,27 @@ careerUpdate:
  *
  * Original asm returns a1, a2 as the two slot pointers.
  */
+/* Internal helper: return the two team slot indices (signed bytes) for
+ * the current match. Used by the C-side callers — converts the
+ * "fake pointer" `base + slotIdx*4` returned by the externally-visible
+ * `_DIY_GetCurrentMatchTeamSlots` into a clean (slotIdx1, slotIdx2)
+ * pair so that callers can use `bracketScratch.teamPtrTable[slotIdx]`
+ * directly. */
+static void getCurrentMatchTeamSlotIndices(int16_t *outSlot1, int16_t *outSlot2)
+{
+    DIYCompetitionEx *baseEx = &diyCompetitionStart;
+    uint16_t matchIdx = baseEx->matchData.cup.currentMatchIndex;
+    uint8_t *grid = baseEx->teamGridPairings;
+    *outSlot1 = (int16_t)(int8_t)grid[matchIdx * 2];
+    *outSlot2 = (int16_t)(int8_t)grid[matchIdx * 2 + 1];
+}
+
 __attribute__((used, externally_visible))
 void _DIY_GetCurrentMatchTeamSlots(uint8_t **outSlot1, uint8_t **outSlot2) {
-    uint8_t *base = (uint8_t *)&diyCompetitionStart;
-    uint16_t matchIdx = *(uint16_t *)(base + 0x64);
-    uint8_t *grid = base + 0x2CE;
+    DIYCompetitionEx *baseEx = &diyCompetitionStart;
+    uint8_t *base = (uint8_t *)baseEx;
+    uint16_t matchIdx = baseEx->matchData.cup.currentMatchIndex;
+    uint8_t *grid = baseEx->teamGridPairings;
 
     int8_t slot1 = (int8_t)grid[matchIdx * 2];
     int8_t slot2 = (int8_t)grid[matchIdx * 2 + 1];
@@ -9413,12 +9439,13 @@ void _DIY_GetCurrentMatchTeamSlots(uint8_t **outSlot1, uint8_t **outSlot2) {
  */
 __attribute__((used, externally_visible))
 uint16_t _DIY_CompareCurrentMatchTeamCategories(void) {
-    uint8_t *slot1, *slot2;
-    _DIY_GetCurrentMatchTeamSlots(&slot1, &slot2);
+    int16_t slot1Idx, slot2Idx;
+    getCurrentMatchTeamSlotIndices(&slot1Idx, &slot2Idx);
 
-    /* Load team pointer from slot: offset 0x344 is selTeamsPtr-relative */
-    TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + *(uint32_t *)(slot1 + 0x344));
-    TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + *(uint32_t *)(slot2 + 0x344));
+    /* Load team pointer from bracketScratch.teamPtrTable[slotIdx] (selTeamsPtr-relative) */
+    DIYCompetitionEx *baseEx = &diyCompetitionStart;
+    TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + baseEx->bracketScratch.teamPtrTable[slot1Idx]);
+    TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + baseEx->bracketScratch.teamPtrTable[slot2Idx]);
 
     int16_t ctrl1 = (int16_t)(int8_t)team1->team.teamControls;
     int16_t ctrl2 = (int16_t)(int8_t)team2->team.teamControls;
@@ -9805,14 +9832,14 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
 
     _DIY_SyncProgressToDiyFileBufferCopy();
 
-    /* Get current match team slots → team pointers.
-     * slot1/slot2 are fake "base + slotIdx*4" pointers — slot+0x344 reads
-     * bracketScratch.teamPtrTable[slotIdx] from the byte arithmetic. */
-    uint8_t *slot1, *slot2;
-    _DIY_GetCurrentMatchTeamSlots(&slot1, &slot2);
+    /* Get current match team slot indices → team pointers via
+     * bracketScratch.teamPtrTable[slotIdx]. */
+    int16_t slot1Idx, slot2Idx;
+    getCurrentMatchTeamSlotIndices(&slot1Idx, &slot2Idx);
 
-    TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + *(uint32_t *)(slot1 + 0x344));
-    TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + *(uint32_t *)(slot2 + 0x344));
+    DIYCompetitionEx *baseExForSlot = &diyCompetitionStart;
+    TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + baseExForSlot->bracketScratch.teamPtrTable[slot1Idx]);
+    TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + baseExForSlot->bracketScratch.teamPtrTable[slot2Idx]);
 
     /* Route match based on mode */
     if (mode == 0) {
@@ -9876,13 +9903,16 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
     uint16_t mIdx2 = matchIdx * 2;
     *(uint16_t *)&a3Ex->matchData.cup.cupRoundResults[0x40 + mIdx2] = packedGoals;
 
-    /* If competitionFormat == 0, store aggregate at base + 0x14E + matchIndex*2 */
+    /* If competitionFormat == 0, store aggregate at +0x14E (BSS_00_2E0AE)
+     * + matchIndex*2 — second-leg aggregate score buffer. */
     if (a3Ex->matchData.cup.competitionFormat == 0) {
-        *(uint16_t *)(a3 + 0x14E + mIdx2) = packedAggregate;
+        *(uint16_t *)&a3Ex->_bss_2E0AE[mIdx2] = packedAggregate;
     }
 
-    /* Store penalty at base + 0x1CE + matchIndex*2 (inside leagueSectionState.phaseStartMonths) */
-    *(uint16_t *)(a3 + 0x1CE + mIdx2) = packedPenalty;
+    /* Store penalty at +0x1CE + matchIndex*2 — uses
+     * leagueSectionState.phaseStartMonths memory as a penalty score
+     * buffer (this region is repurposed depending on competition mode). */
+    *(uint16_t *)&a3Ex->leagueSectionState.phaseStartMonths[mIdx2] = packedPenalty;
 
     /* Increment match counter */
     a3Ex->bracketScratch.matchCount += 1;
