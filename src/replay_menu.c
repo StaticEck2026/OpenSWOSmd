@@ -29,6 +29,7 @@ extern uint8_t aExit[];             /* "EXIT" */
 
 /* ---- External functions ---- */
 extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
+extern void _LoadOverlayToFrontbuffer(const uint8_t *path);
 
 /* ================================================================
  * DrawMenuBack150x20  (SWOS2.s line 18456)
@@ -119,8 +120,15 @@ void _DrawReplayOrExitMenu(void)
 __attribute__((used, externally_visible))
 void _ReplayExitMenuAfterFriendly(void)
 {
-    /* Load menu background image */
-    _LoadFileEx(aGrafsMenubg2Ra, frontbufferMaskBuffer, (uint32_t *)0);
+    /* Load menu background image. On Amiga, _LoadFileEx writes bitplane
+     * data directly into frontbufferMaskBuffer (which is bitplane-format
+     * there). On SDL, frontbufferMaskBuffer is chunky 8bpp, so we have to
+     * route through _LoadOverlayToFrontbuffer, which decompresses to a
+     * staging buffer and decodes bitplane → chunky into the mask buffer.
+     * The previous direct LoadFileEx call left the top of the buffer
+     * holding raw bitplane bytes (visible as noise) and the bottom
+     * holding stale memory (visible as the previous-frame stadium). */
+    _LoadOverlayToFrontbuffer(aGrafsMenubg2Ra);
 
     _ProcessSpriteBlitQueue();
     _BlitterCopyPanelToScreen();
