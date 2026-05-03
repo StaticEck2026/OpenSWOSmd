@@ -2325,48 +2325,45 @@ void _DIY_ReorderTeamsBySelectionFlags(void)
 __attribute__((used, externally_visible))
 void _DIY_UpdateCompetitionProgress(void)
 {
+    DIYCompetitionEx *comp = &diyCompetitionStart;
+    DIYCompetition *a0s = &comp->base;
+
     /* Check finished flag — field_3A+$1C = offset 0x56 */
-    if ((&diyCompetitionStart.base)->competitionFinished != 0)
+    if (a0s->competitionFinished != 0)
         return;
 
-    DIYCompetition *a0s = &diyCompetitionStart.base;
-    uint8_t *a0 = (uint8_t *)a0s;
-
     /* Check competition flow:
-     * If offset 0x14A == 1 → cup knock-out path
-     * Else if $14C == 2 → 2-leg path
+     * If competitionFormat == 1 → cup knock-out path
+     * Else if roundFormat == 2 → 2-leg path
      */
-    if (RD16(a0, 0x14A) == 1) {
+    if (comp->matchData.cup.competitionFormat == 1) {
         /* Fall through to knockout path */
-    } else if (RD16(a0, 0x14C) == 2) {
+    } else if (comp->matchData.cup.roundFormat == 2) {
         /* 2-leg cup path */
         goto two_leg_path;
     }
 
     /* Knockout / main path */
-    if (RD16(a0, 0x32E) != 0) {
+    if (comp->bracketScratch.secondLegCounter != 0) {
         /* Second leg path */
         goto second_leg_path;
     }
 
     /* Reorder team grid by order list */
     _DIY_ReorderTeamGridByOrderList();
-    a0s = &diyCompetitionStart.base;  /* reload after call */
-    a0 = (uint8_t *)a0s;
 
     /* Check if sub-round counter needs extra increment.
      * ASM: cmpi.w #2,DIY_COMPETITION_FIELD_2+$14A(a0) = offset $14C (round format type). */
-    if (RD16(a0, 0x14C) != 2 && RD16(a0, 0x330) == 0) {
+    if (comp->matchData.cup.roundFormat != 2 && comp->bracketScratch.groupSectionFlag == 0) {
         int16_t roundIdx = a0s->currentRoundIndex;
-        int16_t roundTypeOfs = roundIdx * 2;
-        if (RD16(a0, 0x7E + roundTypeOfs) != 1) {
+        if (comp->matchData.cup.roundPenalties[roundIdx] != 1) {
             /* Add extra match counter */
-            WR16(a0, 0x336, RD16(a0, 0x336) + 1);
+            comp->bracketScratch.curMonthIdx += 1;
         }
     }
 
     /* Advance counters */
-    WR16(a0, 0x336, RD16(a0, 0x336) + 1);  /* extended */
+    comp->bracketScratch.curMonthIdx += 1;
     a0s->currentRoundIndex += 1;
 
     /* Halve round size */
@@ -2377,26 +2374,26 @@ void _DIY_UpdateCompetitionProgress(void)
     }
 
     /* Reset fixture index and set round type */
-    WR16(a0, 0x64, 0);  /* extended */
+    comp->matchData.cup.currentMatchIndex = 0;
     {
-        int16_t rndIdx = a0s->currentRoundIndex * 2;
-        WR16(a0, 0x14C, RD16(a0, 0x66 + rndIdx));  /* extended */
+        int16_t rndIdx = a0s->currentRoundIndex;
+        comp->matchData.cup.roundFormat = comp->matchData.cup.roundLegs[rndIdx];
     }
 
     /* If only 1 team left and round type != 2, clear round type */
-    if (a0s->matchPairsPerRound == 1 && RD16(a0, 0x14C) != 2) {
-        WR16(a0, 0x14C, 0);  /* extended */
+    if (a0s->matchPairsPerRound == 1 && comp->matchData.cup.roundFormat != 2) {
+        comp->matchData.cup.roundFormat = 0;
     }
 
     /* Clear group/second-leg flags */
-    WR16(a0, 0x330, 0);  /* extended */
-    WR16(a0, 0x32E, 0);  /* extended */
+    comp->bracketScratch.groupSectionFlag = 0;
+    comp->bracketScratch.secondLegCounter = 0;
     a0s->roundComplete = 0;
-    WR16(a0, 0x14A, 0);  /* extended */
+    comp->matchData.cup.competitionFormat = 0;
 
     /* Clear selection flags: fill 0x8A..0x8A+0x1F with 0 (longword stores to avoid memset) */
     {
-        uint32_t *p = (uint32_t *)diyCompetitionStart.matchData.cup.cupRoundResults;
+        uint32_t *p = (uint32_t *)comp->matchData.cup.cupRoundResults;
         p[0] = 0; p[1] = 0; p[2] = 0; p[3] = 0;
         p[4] = 0; p[5] = 0; p[6] = 0; p[7] = 0;
     }
@@ -2405,17 +2402,19 @@ void _DIY_UpdateCompetitionProgress(void)
 
 two_leg_path:
     /* 2-leg round: advance sub-round and fixture, rotate scores */
-    WR16(a0, 0x336, RD16(a0, 0x336) + 1);  /* extended */
-    WR16(a0, 0x14A, RD16(a0, 0x14A) + 1);  /* extended */
-    WR16(a0, 0x64, 0);  /* extended */
+    comp->bracketScratch.curMonthIdx += 1;
+    comp->matchData.cup.competitionFormat += 1;
+    comp->matchData.cup.currentMatchIndex = 0;
     a0s->roundComplete = 0;
 
     {
-        uint8_t *scores = a0 + 0xCA;     /* a1: scoreTab1, walks into BSS_00_2E0AE region */
-        uint8_t *scores2 = a0 + 0x14E;   /* a2: BSS_00_2E0AE — kept raw pending investigation */
-        uint8_t *grid = diyCompetitionStart.teamGridPairings;
-        uint8_t *flags = diyCompetitionStart.matchData.cup.cupRoundResults;
-        int16_t count = a0s->totalMatchesInRound - 1;
+        /* a1: scoreTab1 (parent +0xCA = cupRoundResults+0x40 score region)
+         * a2: BSS_00_2E0AE — second-leg score buffer, kept raw pending naming */
+        uint8_t *scores  = (uint8_t *)&comp->matchData.cup.cupRoundResults[0x40];
+        uint8_t *scores2 = (uint8_t *)comp + 0x14E;
+        uint8_t *grid    = comp->teamGridPairings;
+        uint8_t *flags   = comp->matchData.cup.cupRoundResults;
+        int16_t count    = a0s->totalMatchesInRound - 1;
 
         for (int16_t i = 0; i <= count; i++) {
             flags[i] = 0x20;  /* ' ' */
@@ -2435,37 +2434,35 @@ two_leg_path:
 second_leg_path:
     /* Group stage second leg */
     _DIY_ReorderTeamsBySelectionFlags();
-    a0s = &diyCompetitionStart.base;
-    a0 = (uint8_t *)a0s;
 
     /* Check counters for extra match increment */
-    if (RD16(a0, 0x330) == 0 && RD16(a0, 0x14C) != 2) {  /* extended */
-        WR16(a0, 0x336, RD16(a0, 0x336) + 1);  /* extended */
+    if (comp->bracketScratch.groupSectionFlag == 0 && comp->matchData.cup.roundFormat != 2) {
+        comp->bracketScratch.curMonthIdx += 1;
     }
 
     /* Set teams per round from second leg count */
-    a0s->totalMatchesInRound = (int16_t)RD16(a0, 0x32E);  /* extended */
+    a0s->totalMatchesInRound = (int16_t)comp->bracketScratch.secondLegCounter;
 
     /* If round type was 2, clear it */
-    if (RD16(a0, 0x14C) == 2) {  /* extended */
-        WR16(a0, 0x14C, 0);
+    if (comp->matchData.cup.roundFormat == 2) {
+        comp->matchData.cup.roundFormat = 0;
     }
 
-    WR16(a0, 0x14A, 0);  /* extended */
-    WR16(a0, 0x330, RD16(a0, 0x330) + 1);  /* extended */
-    WR16(a0, 0x64, 0);  /* extended */
+    comp->matchData.cup.competitionFormat = 0;
+    comp->bracketScratch.groupSectionFlag += 1;
+    comp->matchData.cup.currentMatchIndex = 0;
     a0s->roundComplete = 0;
 
     {
-        uint8_t *grid = diyCompetitionStart.teamGridPairings;
+        uint8_t *grid = comp->teamGridPairings;
         int16_t count = a0s->totalMatchesInRound;
         uint8_t d1val = 0;
 
-        if (RD16(a0, 0x330) != 0) {
+        if (comp->bracketScratch.groupSectionFlag != 0) {
             d1val |= 0x40;  /* bset #6 */
         }
 
-        uint8_t *flags = diyCompetitionStart.matchData.cup.cupRoundResults;
+        uint8_t *flags = comp->matchData.cup.cupRoundResults;
         for (int16_t i = 0; i < count; i++) {
             flags[i] = d1val;
             /* ror.w #8 on grid */
@@ -2506,14 +2503,15 @@ void _DIY_RecordCupBracketProgress(void)
 
 outer_loop:
     ;
-    DIYCompetition *a2s = &diyCompetitionStart.base;
+    DIYCompetitionEx *comp = &diyCompetitionStart;
+    DIYCompetition *a2s = &comp->base;
     uint8_t *a2 = (uint8_t *)a2s;
 
     /* Check promotion count (0x56) — if nonzero, done */
     if (a2s->competitionFinished != 0)
         return;
     /* Check sub-round counter (0x14A) */
-    if (RD16(a2, 0x14A) == 1)  /* extended */
+    if (comp->matchData.cup.competitionFormat == 1)
         return;
 
     /* Get round index and competition ID */
@@ -2557,7 +2555,7 @@ found_entry:
     if (cacheEntry[8] == 1)
         goto process_fixtures;
 
-    if (RD16(a2, 0x330) == 0) {  /* extended */
+    if (comp->bracketScratch.groupSectionFlag == 0) {
         if (cacheEntry[8] == 3)
             goto try_next;
     } else {
@@ -2572,19 +2570,17 @@ process_fixtures:
     cacheEntry[5] = 0;
     cacheEntry[6] = 0;
 
-    uint8_t *teamGrid = a2 + 0x2CE;  /* a1 points here */
+    uint8_t *teamGrid = comp->teamGridPairings;  /* a1 points here */
     int16_t numTeams = a2s->totalMatchesInRound;
 
     for (int16_t i = 0; i < numTeams; i++) {
         /* Read two team indices from grid */
         int8_t idx1 = (int8_t)*teamGrid++;
-        int16_t off1 = (int16_t)idx1 * 4;
-        uint8_t *team1 = &selTeamsPtr + RD32U(a2, 0x344 + off1);
+        uint8_t *team1 = &selTeamsPtr + comp->bracketScratch.teamPtrTable[(int16_t)idx1];
         uint16_t teamId1 = *(uint16_t *)team1;
 
         int8_t idx2 = (int8_t)*teamGrid++;
-        int16_t off2 = (int16_t)idx2 * 4;
-        uint8_t *team2 = &selTeamsPtr + RD32U(a2, 0x344 + off2);
+        uint8_t *team2 = &selTeamsPtr + comp->bracketScratch.teamPtrTable[(int16_t)idx2];
         uint16_t teamId2 = *(uint16_t *)team2;
 
         /* If d7 > 0 (second pass), swap teams */
@@ -2604,7 +2600,7 @@ process_fixtures:
                 goto next_fixture;
 
             /* Check competition name for FRIENDLY or playEachTeam */
-            if (RD16(a2, 0x14C) == 0) {  /* extended */
+            if (comp->matchData.cup.roundFormat == 0) {
                 a5[0x0A] = 0;
             } else {
                 if (a2s->namePtr == aFriendly ||
@@ -2617,7 +2613,7 @@ process_fixtures:
             }
         } else {
             /* Non-human team1 */
-            if (RD16(a2, 0x14C) == 0) {  /* extended */
+            if (comp->matchData.cup.roundFormat == 0) {
                 a5[0x0A] = 0;
             } else {
                 if (a2s->namePtr == aFriendly ||
