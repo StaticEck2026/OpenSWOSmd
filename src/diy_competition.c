@@ -2779,9 +2779,9 @@ process_next:
     /* Advance league progress */
     _DIY_AdvanceLeagueProgressAfterMatch(team1Comp, team2Comp);
 
-    /* Get selected team pointers */
-    uint8_t *sel1 = &selTeamsPtr + RD32U(team1Comp, 0x2B4);
-    uint8_t *sel2 = &selTeamsPtr + RD32U(team2Comp, 0x2B4);
+    /* Get selected team pointers from DIYTeamStats teamSelPtr (+0x2B4) */
+    uint8_t *sel1 = &selTeamsPtr + ((DIYTeamStats *)(team1Comp + 0x2B4))->teamSelPtr;
+    uint8_t *sel2 = &selTeamsPtr + ((DIYTeamStats *)(team2Comp + 0x2B4))->teamSelPtr;
 
     /* Check if team1 is human-controlled (category == 1) */
     if (sel1[4] == 1) {
@@ -4528,7 +4528,7 @@ __attribute__((used, externally_visible))
 void _DesignDIYCupOnSelect20(MenuEntry *entry)
 {
     uint16_t wordOff = getCupRoundWordOffset(entry);
-    *(uint16_t *)((uint8_t *)&diyCompetitionStart + 0x66 + wordOff) ^= 3;
+    diyCompetitionStart.matchData.cup.roundLegs[wordOff >> 1] ^= 3;
     _DesignDIYCupOnDraw();
     _CallDrawMenuItem(entry);
     _CallDrawMultipleItems(2, &menuEntries[8]);
@@ -8117,7 +8117,7 @@ void _InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table)
     a6s->namePtr = (uint32_t)nameSource;  /* 0x28 */
     a1 = _StringCopy(nameSource, a1);
 
-    *(int16_t *)(a6 + 0x62) = (int8_t)a5[0xB];  /* extended buffer, beyond DIYCompetition struct */
+    ((DIYCompetitionEx *)a6)->pointsForAWin = (int16_t)(int8_t)a5[0xB];
 
     int8_t typeVal = (int8_t)a5[0xA];
     if (typeVal < 0)
@@ -8125,8 +8125,8 @@ void _InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table)
     a6s->playEachTeam = (int16_t)typeVal;  /* 0x5E */
 
     uint16_t c = a5[0xC];
-    *(uint16_t *)(a6 + 0x64) = (c & 0xF0) >> 4;  /* extended buffer, beyond DIYCompetition struct */
-    *(uint16_t *)(a6 + 0x66) = c & 0x0F;  /* extended buffer, beyond DIYCompetition struct */
+    ((DIYCompetitionEx *)a6)->matchData.league.leagueMinSubstitutes = (c & 0xF0) >> 4;
+    ((DIYCompetitionEx *)a6)->matchData.league.leagueMaxSubstitutes = c & 0x0F;
 
     _DIY_RecomputeCompetitionDerivedFields();
     _DIY_ShuffleLeagueTeamOrder();
@@ -8174,8 +8174,8 @@ void _InitDIYCupFromRecord(uint8_t *cupRec)
     a6s->playEachTeam = (int8_t)a5[0xB];  /* 0x5E */
 
     uint16_t c = a5[0xC];
-    *(uint16_t *)(a6 + 0x60) = (c & 0xF0) >> 4;  /* extended buffer, beyond DIYCompetition struct */
-    *(uint16_t *)(a6 + 0x62) = c & 0x0F;          /* extended buffer, beyond DIYCompetition struct */
+    ((DIYCompetitionEx *)a6)->minSubstitutes = (c & 0xF0) >> 4;
+    ((DIYCompetitionEx *)a6)->pointsForAWin = c & 0x0F;
 
     /* Count number of rounds: log2(numTeams/2) */
     uint16_t d2 = 0;
@@ -8188,14 +8188,13 @@ void _InitDIYCupFromRecord(uint8_t *cupRec)
 
     /* Unpack round flags from record byte 0xE onwards */
     uint8_t *recPtr = a5;
-    uint8_t *compPtr = a6;
-    for (int16_t i = (int16_t)d2; i >= 0; i--) {
+    DIYCompetitionEx *compEx = (DIYCompetitionEx *)a6;
+    for (int16_t i = 0; i <= (int16_t)d2; i++) {
         uint8_t flags = recPtr[0xE];
-        *(uint16_t *)(compPtr + 0x66) = (flags >> 6) & 3;
-        *(uint16_t *)(compPtr + 0x72) = (flags >> 4) & 3;
-        *(uint16_t *)(compPtr + 0x7E) = (flags >> 2) & 3;
+        compEx->matchData.cup.roundLegs[i]      = (flags >> 6) & 3;
+        compEx->matchData.cup.roundExtraTime[i] = (flags >> 4) & 3;
+        compEx->matchData.cup.roundPenalties[i] = (flags >> 2) & 3;
         recPtr++;
-        compPtr += 2;
     }
 
     _DIY_InitCupBracketState();
@@ -9098,16 +9097,17 @@ __attribute__((used, externally_visible))
 void _ProcessDIYLeagueMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileEx *team2,
     uint16_t *outGoals1, uint16_t *outGoals2, uint16_t *outFlags)
 {
-    DIYCompetition *diy = &diyCompetitionStart.base;
-    uint8_t *comp = (uint8_t *)&diyCompetitionStart;
+    DIYCompetitionEx *compEx = &diyCompetitionStart;
+    DIYCompetition *diy = &compEx->base;
+    uint8_t *comp = (uint8_t *)compEx;
 
     /* d0: seq from playEachTeam comparison — 0xFF if playEachTeam==1, else 0x00 */
     uint16_t modeFlag = 0;
     if (diy->playEachTeam == 1)
         modeFlag = 0x00FF;  /* seq sets byte to 0xFF, high byte stays 0 */
 
-    uint16_t goalsIn1 = *(uint16_t *)(comp + 0x64);  /* extended area */
-    uint16_t goalsIn2 = *(uint16_t *)(comp + 0x66);  /* extended area */
+    uint16_t goalsIn1 = compEx->matchData.league.leagueMinSubstitutes;
+    uint16_t goalsIn2 = compEx->matchData.league.leagueMaxSubstitutes;
     uint16_t statCol  = *(uint16_t *)&diy->compId;  /* word read of compId+slotId at 0x2C */
 
     uint16_t d1, d2;
