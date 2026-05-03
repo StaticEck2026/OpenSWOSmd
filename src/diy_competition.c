@@ -7240,7 +7240,7 @@ state_check_replays:
     goto state_check;
 
 check_32E:
-    if (*(uint16_t *)(a0 + 0x32E) != 0)  /* extended buffer, beyond DIYCompetition struct */
+    if (((DIYCompetitionEx *)a0)->bracketScratch.secondLegCounter != 0)
         goto check_32E_nonzero;
 
     if (a0s->hasGroups != 0) {  /* 0x48 */
@@ -7251,7 +7251,7 @@ check_32E:
         goto state_check;
     }
 
-    if (*(uint16_t *)(a0 + 0x330) != 0)  /* extended buffer */
+    if (((DIYCompetitionEx *)a0)->bracketScratch.groupSectionFlag != 0)
         goto state_check_finished;
 
     {
@@ -7262,7 +7262,7 @@ check_32E:
     goto state2;
 
 check_32E_nonzero:
-    if (*(uint16_t *)(a0 + 0x330) != 0)  /* extended buffer */
+    if (((DIYCompetitionEx *)a0)->bracketScratch.groupSectionFlag != 0)
         goto state3;
     if (a0s->hasGroups != 0)  /* 0x48 */
         goto state3;
@@ -7373,7 +7373,7 @@ void _DIYCupOnSelect1(void)
         _DesignDIYCup_UpdateRoundOptionsVisibility();
         if (diyCupMenuArg0 != 0) {
             a0s->menuState = 6;
-        } else if (*(uint16_t *)(a0 + 0x32E) != 0) {  /* extended buffer */
+        } else if (((DIYCompetitionEx *)a0)->bracketScratch.secondLegCounter != 0) {
             a0s->menuState = 3;
         } else {
             a0s->menuState = 4;
@@ -9150,7 +9150,7 @@ void _ProcessDIYKnockoutMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileE
     uint16_t d3 = 0, d4 = 0;   /* aggregate or temp */
     uint16_t d5 = inFirstLegTeam1, d6 = inFirstLegTeam2;  /* first-leg or penalty */
 
-    if (*(uint16_t *)(raw + 0x330) != 0)
+    if (((DIYCompetitionEx *)raw)->bracketScratch.groupSectionFlag != 0)
         goto singleLegWithBit6;
 
     if (*(uint16_t *)(raw + 0x14C) != 2)
@@ -9263,7 +9263,7 @@ singleLeg:
         goto checkPenalties;
     if (*(uint16_t *)(a5 + 0x72) == 1)
         goto singleExtraTime;
-    if (*(uint16_t *)(raw + 0x330) == 0)
+    if (((DIYCompetitionEx *)raw)->bracketScratch.groupSectionFlag == 0)
         goto checkPenalties;
 
 singleExtraTime:
@@ -9284,7 +9284,7 @@ checkPenalties:
         goto drawResult;
     if (*(uint16_t *)(a5 + 0x7E) == 1)
         goto doPenalties;
-    if (*(uint16_t *)(raw + 0x330) == 0)
+    if (((DIYCompetitionEx *)raw)->bracketScratch.groupSectionFlag == 0)
         goto drawResult;
 
 doPenalties:
@@ -9305,7 +9305,7 @@ returnLegCheckPenalties:
         goto drawResult;
     if (*(uint16_t *)(a5 + 0x7E) == 1)
         goto doPenaltiesReturnLeg;
-    if (*(uint16_t *)(raw + 0x330) == 0)
+    if (((DIYCompetitionEx *)raw)->bracketScratch.groupSectionFlag == 0)
         goto drawResult;
 
 doPenaltiesReturnLeg:
@@ -9578,7 +9578,7 @@ uint16_t _PlayDIYCupFixtureAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
     }
 
     /* Append replay/leg suffix to round string */
-    uint16_t replayField = *(uint16_t *)(a6 + 0x330);
+    uint16_t replayField = ((DIYCompetitionEx *)a6)->bracketScratch.groupSectionFlag;
 
     if (replayField != 0) {
         /* Replay suffix: rndStringTable[12+replay-1] for replay <= 3, else "REPLAY" */
@@ -9848,7 +9848,7 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
     *(uint16_t *)(a3 + 0x1CE + mIdx2) = packedPenalty;
 
     /* Increment match counter */
-    *(uint16_t *)(a3 + 0x332) += 1;
+    a3Ex->bracketScratch.matchCount += 1;
 
     /* Check if career team was in this match */
     if (team1 == &careerTeam || team2 == &careerTeam) {
@@ -9871,9 +9871,9 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
         *(uint16_t *)(a3 + 0x64) = 0;  /* extended buffer: reset matchIndex */
 
         /* Update viewRandomPhase for next round from month table */
-        uint8_t *monthTable = a3 + 0x338;
-        uint16_t curMonthIdx = *(uint16_t *)(a3 + 0x336);
-        uint16_t totalMonths = *(uint16_t *)(a3 + 0x334);
+        uint8_t *monthTable = a3Ex->bracketScratch.progTable;
+        uint16_t curMonthIdx = a3Ex->bracketScratch.curMonthIdx;
+        uint16_t totalMonths = a3Ex->bracketScratch.totalMatches;
         if (curMonthIdx + 1 != totalMonths) {
             baseS->viewRandomPhase = monthTable[curMonthIdx + 1];  /* 0x2F */
             viewRandomPhase = baseS->viewRandomPhase;
@@ -9907,7 +9907,7 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
             /* More rounds: recount, check unselected, shuffle */
             _DIY_RecountMissingTeamsInTeamGrid();
             _DIY_CountUnselectedTeams();
-            if (*(uint16_t *)(a3 + 0x330) == 0)
+            if (a3Ex->bracketScratch.groupSectionFlag == 0)
                 _DIY_ShuffleTeamOrderList();
             return 0;
         }
