@@ -460,13 +460,13 @@ static void pump_events_any_thread(void)
                 Platform_RequestQuit();
             break;
         case SDL_KEYDOWN:
-            if (ev.key.keysym.sym == SDLK_ESCAPE) {
-                Platform_RequestQuit();
-            } else if (ev.key.repeat == 0 &&
-                       (ev.key.keysym.sym == SDLK_F9 ||
-                        ev.key.keysym.sym == SDLK_F11 ||
-                        ev.key.keysym.sym == SDLK_F12 ||
-                        ev.key.keysym.sym == SDLK_PRINTSCREEN)) {
+            /* ESC is reserved for in-game use (pause/end-match menu); the
+             * window close button (X) and SDL_QUIT are the only quit paths. */
+            if (ev.key.repeat == 0 &&
+                (ev.key.keysym.sym == SDLK_F9 ||
+                 ev.key.keysym.sym == SDLK_F11 ||
+                 ev.key.keysym.sym == SDLK_F12 ||
+                 ev.key.keysym.sym == SDLK_PRINTSCREEN)) {
                 s_screenshot_request = 1;
             }
             /* fallthrough */
