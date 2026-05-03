@@ -1773,9 +1773,9 @@ uint16_t _DIY_GetCurrentFixtureTeamClass(void)
     uint8_t *team1, *team2;
     getCurrentFixtureTeamPtrs(&team1, &team2);
 
-    /* Follow pointer at offset 0x2B4 + selTeamsPtr base */
-    uint8_t *sel1 = &selTeamsPtr + *(uint32_t *)(team1 + 0x2B4);
-    uint8_t *sel2 = &selTeamsPtr + *(uint32_t *)(team2 + 0x2B4);
+    /* Follow pointer at DIYTeamStats teamSelPtr (+0x2B4) + selTeamsPtr base */
+    uint8_t *sel1 = &selTeamsPtr + ((DIYTeamStats *)(team1 + 0x2B4))->teamSelPtr;
+    uint8_t *sel2 = &selTeamsPtr + ((DIYTeamStats *)(team2 + 0x2B4))->teamSelPtr;
 
     int16_t class1 = (int8_t)sel1[4];
     int16_t class2 = (int8_t)sel2[4];
@@ -1866,10 +1866,11 @@ void _DIY_SyncCompetitionTeamGridOrBuildBracket(void)
     uint8_t *a2 = (uint8_t *)(DIYCompetition *)diyFileBufferCopy;
     uint16_t offset = (uint16_t)((DIYCompetition *)diyFileBufferCopy)->roundComplete;
     uint8_t *a3 = a2 + (uint32_t)offset * 0x76;
+    DIYTournamentSlot *a3Slot = (DIYTournamentSlot *)(a3 + 0x15A);
     uint8_t *a4 = (uint8_t *)&diyCompetitionStart.base;
     uint8_t *a5 = (uint8_t *)&diyCompetitionStart.base;
 
-    if (*(uint16_t *)(a3 + 0x15E) != 0) {  /* extended */
+    if (a3Slot->isLeagueFormat != 0) {
         _DIY_BuildSeededBracketAndUpdateScores(a2, a3, a4, a5);
     } else {
         _DIY_CopyTeamGridFromCompToDIY(a2, a3, a4, a5);
@@ -1997,8 +1998,8 @@ void _DIY_UpdatePromotionRelegationScratchCounts(void)
         for (int16_t i = (int16_t)(promotedCount - 1); i >= 0; i--) {
             uint16_t entryOff = *indices++;
             uint8_t *entry = comp + entryOff;
-            /* Follow pointer at 0x2B4 and add selTeamsPtr base */
-            uint32_t selOff = *(uint32_t *)(entry + 0x2B4);
+            /* Follow DIYTeamStats teamSelPtr (+0x2B4) and add selTeamsPtr base */
+            uint32_t selOff = ((DIYTeamStats *)(entry + 0x2B4))->teamSelPtr;
             uint8_t *team = &selTeamsPtr + selOff;
             /* Read country number and decrement scratch */
             uint16_t countryNum = *(uint16_t *)(team + 2);
@@ -2020,7 +2021,7 @@ void _DIY_UpdatePromotionRelegationScratchCounts(void)
     for (int16_t i = (int16_t)(relegatedCount - 1); i >= 0; i--) {
         uint16_t entryOff = *(--bottomIndices);
         uint8_t *entry = comp + entryOff;
-        uint32_t selOff = *(uint32_t *)(entry + 0x2B4);
+        uint32_t selOff = ((DIYTeamStats *)(entry + 0x2B4))->teamSelPtr;
         uint8_t *team = &selTeamsPtr + selOff;
         uint16_t countryNum = *(uint16_t *)(team + 2);
         scratch[countryNum]++;
@@ -3634,10 +3635,11 @@ void _DIY_LoadCurrentCompetitionSlot(void)
             a5s->competitionFinished = 1;  /* 0x56 */
         }
 
-        /* Copy team ID table */
+        /* Copy team ID table from diyTournamentTeamIds (a2+0x9A) into
+         * matchData.league.leagueTeamIds (a5+0x12E). */
         {
-            uint16_t *src = (uint16_t *)(a2 + 0x9A);  /* extended buffer, beyond DIYCompetition struct */
-            uint16_t *dst = (uint16_t *)(a5 + 2 + 0x12C);  /* extended buffer, beyond DIYCompetition struct */
+            uint16_t *src = (uint16_t *)(a2 + 0x9A);
+            uint16_t *dst = ((DIYCompetitionEx *)a5)->matchData.league.leagueTeamIds;
             uint16_t count = (uint16_t)a2s->numTeams;
             for (int16_t i = (int16_t)count - 1; i >= 0; i--)
                 *dst++ = *src++;
@@ -3662,15 +3664,24 @@ void _DIY_LoadCurrentCompetitionSlot(void)
         a5s->endMonth = a2s->endMonth;          /* 0x39 */
         a5s->substitutesCount = a2s->substitutesCount;  /* 0x3C */
 
-        /* Extended fields from slot */
-        *(uint16_t *)(a5 + 2 + 0x60) = s->initConst168;
-        *(uint16_t *)(a5 + 2 + 0x62) = *(uint16_t *)(a2 + 58 + 0x12);
-        *(uint16_t *)(a5 + 2 + 0x64) = *(uint16_t *)(a2 + 58 + 0x14);
-
-        /* Copy progression month bytes */
+        /* Extended fields from slot — write league.{pointsForAWin alias is
+         * actually parent +0x62, but here we're at +0x62/+0x64/+0x66
+         * which are pointsForAWin / league.leagueMinSubstitutes /
+         * league.leagueMaxSubstitutes. */
         {
+            DIYCompetitionEx *a5Ex = (DIYCompetitionEx *)a5;
+            a5Ex->pointsForAWin = s->initConst168;
+            a5Ex->matchData.league.leagueMinSubstitutes = *(uint16_t *)(a2 + 58 + 0x12);
+            a5Ex->matchData.league.leagueMaxSubstitutes = *(uint16_t *)(a2 + 58 + 0x14);
+        }
+
+        /* Copy progression month bytes — a5+58+0x194 = a5+0x1CE = inside
+         * leagueSectionState.phaseStartMonths. */
+        {
+            DIYCompetitionEx *a5Ex = (DIYCompetitionEx *)a5;
             uint8_t *src = s->progressionTable;
-            uint8_t *dst = (uint8_t *)(a5 + 58 + 0x194);
+            /* phaseStartMonths starts at parent 0x1CE = leagueSectionState +0x08 */
+            uint8_t *dst = a5Ex->leagueSectionState.phaseStartMonths;
             uint16_t count = s->matchesPerSlot;
             for (int16_t i = (int16_t)count - 1; i >= 0; i--)
                 *dst++ = *src++;
@@ -3694,16 +3705,20 @@ void _DIY_LoadCurrentCompetitionSlot(void)
         a4s->numRounds = 1;  /* 0x5A */
         *(uint16_t *)&a4s->compId = *(uint16_t *)&a2s->compId;  /* 0x2C */
 
-        /* Cup-specific fields from slot */
-        a4s->numTeams = (int16_t)s->numTeams;
-        *(uint16_t *)(a4 + 2 + 0x64) = s->formatFlag16E;
-        *(uint16_t *)(a4 + 2 + 0x70) = s->initConst170;
-        *(uint16_t *)(a4 + 2 + 0x7C) = s->formatFlag172;
-
-        /* Copy team grid from file buffer */
+        /* Cup-specific fields from slot — write into cup roundLegs[0] (parent +0x66),
+         * roundExtraTime[0] (+0x72), roundPenalties[0] (+0x7E). */
         {
-            uint16_t *src = (uint16_t *)(a2 + 58 + 0x60);  /* extended buffer, beyond DIYCompetition struct */
-            uint16_t *dst = (uint16_t *)(a4 + 2 + 0x24C);  /* extended buffer, beyond DIYCompetition struct */
+            DIYCompetitionEx *a4Ex = (DIYCompetitionEx *)a4;
+            a4s->numTeams = (int16_t)s->numTeams;
+            a4Ex->matchData.cup.roundLegs[0]      = s->formatFlag16E;
+            a4Ex->matchData.cup.roundExtraTime[0] = s->initConst170;
+            a4Ex->matchData.cup.roundPenalties[0] = s->formatFlag172;
+        }
+
+        /* Copy team grid from diyTournamentTeamIds (a2+0x9A) into cupTeamIds (a4+0x24E). */
+        {
+            uint16_t *src = (uint16_t *)(a2 + 0x9A);
+            uint16_t *dst = ((DIYCompetitionEx *)a4)->cupTeamIds;
             uint16_t count = (uint16_t)a2s->numTeams;
             for (int16_t i = (int16_t)count - 1; i >= 0; i--)
                 *dst++ = *src++;
@@ -3730,8 +3745,8 @@ void _DIY_LoadCurrentCompetitionSlot(void)
 
         /* Cup bracket fields */
         a4s->playEachTeam = a2s->menuState;    /* 0x5E = 0x4A */
-        *(uint16_t *)(a4 + 96) = (uint16_t)a2s->roundIterator;   /* 0x60 = 0x4C, extended buffer */
-        *(uint16_t *)(a4 + 2 + 0x60) = (uint16_t)a2s->numTeamsInStage;  /* extended buffer, beyond DIYCompetition struct */
+        ((DIYCompetitionEx *)a4)->minSubstitutes = (uint16_t)a2s->roundIterator;
+        ((DIYCompetitionEx *)a4)->pointsForAWin = (uint16_t)a2s->numTeamsInStage;
 
         /* Copy progression month bytes into bracketScratch */
         {
