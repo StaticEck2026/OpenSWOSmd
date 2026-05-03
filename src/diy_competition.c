@@ -301,11 +301,10 @@ void _DIY_SortAndShuffleTeamsByValue(uint8_t *diy, uint8_t *slot)
 __attribute__((used, externally_visible))
 void _DIY_ShuffleLeagueTeamOrder(void)
 {
-    DIYCompetition *comp = &diyCompetitionStart.base;
-    uint8_t *compRaw = (uint8_t *)comp;
+    DIYCompetitionEx *comp = &diyCompetitionStart;
     uint8_t *shuffleIdx = diyTeamShuffleIndices;
-    uint16_t *teamOffsets = (uint16_t *)(compRaw + 0x6E);
-    uint16_t count = (uint16_t)comp->numTeams;
+    uint16_t *teamOffsets = comp->matchData.league.teamEntryOffsets;
+    uint16_t count = (uint16_t)comp->base.numTeams;
 
     for (int16_t i = (int16_t)count - 1; i >= 0; i--) {
         uint16_t r = _Rand2();
@@ -484,10 +483,11 @@ void _DIY_ResetCompetitionProgressAndShuffle(void)
 __attribute__((used, externally_visible))
 void _DIY_CacheSelectedTeamPointers(void)
 {
-    DIYCompetition *a2 = &diyCompetitionStart.base;
+    DIYCompetitionEx *comp = &diyCompetitionStart;
+    DIYCompetition *a2 = &comp->base;
     uint8_t *a2raw = (uint8_t *)a2;
-    uint8_t *teamIndices = a2raw + 0xEE;    /* extended */
-    uint16_t *teamIds = (uint16_t *)(a2raw + 0x12E);  /* extended */
+    uint8_t *teamIndices = a2raw + 0xEE;    /* diyTeamShuffleIndices alias */
+    uint16_t *teamIds = comp->matchData.league.leagueTeamIds;
     uint16_t count = (uint16_t)a2->numTeams;
 
     for (int16_t i = (int16_t)count - 1; i >= 0; i--) {
@@ -510,15 +510,15 @@ void _DIY_CacheSelectedTeamPointers(void)
 __attribute__((used, externally_visible))
 void _DIY_SortLeagueTableByStandings(void)
 {
-    DIYCompetition *a4s = &diyCompetitionStart.base;
+    DIYCompetitionEx *comp = &diyCompetitionStart;
+    DIYCompetition *a4s = &comp->base;
     uint8_t *a4 = (uint8_t *)a4s;
     uint16_t numGroups = (uint16_t)a4s->matchPairsPerRound;
     uint16_t teamsPerGroup = (uint16_t)a4s->totalMatchesInRound;
-    uint16_t groupStride = teamsPerGroup * 2;  /* word entries */
-    uint16_t groupOffset = 0;
+    uint16_t entryBase = 0;  /* word index into teamEntryOffsets */
 
     for (int16_t g = (int16_t)numGroups - 1; g >= 0; g--) {
-        uint16_t *p1 = (uint16_t *)(a4 + 0x6E + groupOffset);
+        uint16_t *p1 = comp->matchData.league.teamEntryOffsets + entryBase;
 
         for (int16_t pass = (int16_t)teamsPerGroup - 2; pass >= 0; pass--) {
             uint16_t *p2 = p1 + 1;
@@ -568,7 +568,7 @@ void _DIY_SortLeagueTableByStandings(void)
             }
             p1++;  /* advance to next position after each pass */
         }
-        groupOffset += groupStride;
+        entryBase += teamsPerGroup;
     }
 }
 
@@ -1804,9 +1804,9 @@ void _DIY_BuildQualifiedTeamListFromSortedTable(uint16_t count, uint8_t *out)
 {
     _DIY_SortLeagueTableByStandings();
 
-    uint8_t *comp = (uint8_t *)&diyCompetitionStart.base;
-    uint16_t *sortedIndices = (uint16_t *)(comp + 0x6E);  /* extended */
-    uint16_t *teamIds = (uint16_t *)(comp + 0x12E);       /* extended */
+    DIYCompetitionEx *comp = &diyCompetitionStart;
+    uint16_t *sortedIndices = comp->matchData.league.teamEntryOffsets;
+    uint16_t *teamIds = comp->matchData.league.leagueTeamIds;
     uint16_t *dst = (uint16_t *)out;
 
     for (int16_t i = (int16_t)(count - 1); i >= 0; i--) {
@@ -1978,7 +1978,8 @@ void _DIY_ApplyPromotionRelegationWeightsToScratch(const uint8_t *weights)
 __attribute__((used, externally_visible))
 void _DIY_UpdatePromotionRelegationScratchCounts(void)
 {
-    DIYCompetition *comps = &diyCompetitionStart.base;
+    DIYCompetitionEx *compEx = &diyCompetitionStart;
+    DIYCompetition *comps = &compEx->base;
     uint8_t *comp = (uint8_t *)comps;
     /* Only process for league competitions (type == 0) */
     if (comps->competitionType != 0)
@@ -1989,7 +1990,7 @@ void _DIY_UpdatePromotionRelegationScratchCounts(void)
     /* Process promoted teams (from top of table) */
     uint16_t promotedCount = (uint16_t)comps->roundComplete;
     if (promotedCount != 0) {
-        uint16_t *indices = (uint16_t *)(comp + 0x6E);  /* extended */
+        uint16_t *indices = compEx->matchData.league.teamEntryOffsets;
         for (int16_t i = (int16_t)(promotedCount - 1); i >= 0; i--) {
             uint16_t entryOff = *indices++;
             uint8_t *entry = comp + entryOff;
@@ -2012,7 +2013,7 @@ void _DIY_UpdatePromotionRelegationScratchCounts(void)
         return;
 
     uint16_t numTeams = (uint16_t)comps->numTeams;
-    uint16_t *bottomIndices = (uint16_t *)(comp + 0x6E) + numTeams;  /* extended */
+    uint16_t *bottomIndices = compEx->matchData.league.teamEntryOffsets + numTeams;
     for (int16_t i = (int16_t)(relegatedCount - 1); i >= 0; i--) {
         uint16_t entryOff = *(--bottomIndices);
         uint8_t *entry = comp + entryOff;
@@ -3092,7 +3093,8 @@ void _DIY_AdjustWorldCupBracketScores(uint8_t *diy, uint8_t *slot, uint8_t *comp
     int32_t d3ext = (int16_t)s->divisionFactor;
     uint16_t quotient = (uint16_t)((uint32_t)(uint16_t)d3ext / s->groups);
 
-    uint16_t *tableOffsets = (uint16_t *)(comp + 0x6E);  /* extended buffer, beyond DIYCompetition struct */
+    DIYCompetitionEx *compEx = (DIYCompetitionEx *)comp;
+    uint16_t *tableOffsets = compEx->matchData.league.teamEntryOffsets;
     int16_t d4 = 0x2328;
     int16_t d1 = 0;
 
@@ -3126,7 +3128,10 @@ void _DIY_AdjustWorldCupBracketScores(uint8_t *diy, uint8_t *slot, uint8_t *comp
     /* Apply group position bonuses */
     uint8_t *groupMap = diy + 0x11A;  /* extended buffer, beyond DIYCompetition struct */
     int16_t d2count = 3;
-    uint16_t *a1sorted = (uint16_t *)(comp + 0x86);  /* extended buffer, beyond DIYCompetition struct */
+    /* +0x86 = sorted offsets array, past teamEntryOffsets[14]; reads 4 entries
+     * walking into matchData.raw[0x22..0x29]. Original asm aliases the same
+     * memory via `comp + 0x86`. */
+    uint16_t *a1sorted = (uint16_t *)&compEx->matchData.raw[0x86 - 0x64];
 
     for (; d2count >= 0; d2count--) {
         uint16_t offset = *a1sorted++;
@@ -3155,7 +3160,8 @@ void _DIY_BuildSeededBracketAndUpdateScores(uint8_t *diy, uint8_t *slot,
 {
     (void)comp4; /* a4 not used in this function's body */
     DIYCompetition *diyS = (DIYCompetition *)diy;
-    DIYCompetition *compS = (DIYCompetition *)comp;
+    DIYCompetitionEx *compEx = (DIYCompetitionEx *)comp;
+    DIYCompetition *compS = &compEx->base;
     DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + 0x15A);
 
     /* Check if world cup competition */
@@ -3177,7 +3183,7 @@ void _DIY_BuildSeededBracketAndUpdateScores(uint8_t *diy, uint8_t *slot,
             d3quot = q;
         }
 
-        uint16_t *tableOffsets = (uint16_t *)(comp + 0x6E);  /* extended buffer, beyond DIYCompetition struct */
+        uint16_t *tableOffsets = compEx->matchData.league.teamEntryOffsets;
         int16_t d5 = 0x7D00;
         uint16_t numGroups = (uint16_t)compS->matchPairsPerRound;
         uint16_t teamsInGroup = (uint16_t)compS->totalMatchesInRound;
@@ -3210,7 +3216,7 @@ void _DIY_BuildSeededBracketAndUpdateScores(uint8_t *diy, uint8_t *slot,
         uint8_t *groupMap = diy + 0x11A;  /* extended buffer, beyond DIYCompetition struct */
         if (d3rem != 0) {
             uint16_t skipEntries = d3quot * teamsPerGroup;
-            uint16_t *a1 = (uint16_t *)(comp + 0x6E) + skipEntries;  /* extended buffer, beyond DIYCompetition struct */
+            uint16_t *a1 = compEx->matchData.league.teamEntryOffsets + skipEntries;
             uint16_t entryStride = 0x12 * s->teamsPerGroup;
 
             for (int16_t i = (int16_t)d3rem - 1; i >= 0; i--) {
@@ -3232,8 +3238,8 @@ void _DIY_BuildSeededBracketAndUpdateScores(uint8_t *diy, uint8_t *slot,
 copy_back:
     {
         /* Copy sorted offsets to team order, then to team list */
-        uint16_t *sortedOffsets = (uint16_t *)(comp + 0x6E);  /* extended buffer, beyond DIYCompetition struct */
-        uint8_t *teamOrder = comp + 0xEE;  /* extended buffer, beyond DIYCompetition struct */
+        uint16_t *sortedOffsets = compEx->matchData.league.teamEntryOffsets;
+        uint8_t *teamOrder = comp + 0xEE;  /* diyTeamShuffleIndices alias */
         uint16_t numTeams = (uint16_t)compS->numTeams;
 
         for (int16_t i = (int16_t)numTeams - 1; i >= 0; i--) {
@@ -3420,9 +3426,10 @@ void _DIY_BuildTeamGridAndIndexMaps(uint8_t *diy, uint8_t *slot,
 build_index_maps:
     {
         /* Build team order and offset maps */
+        DIYCompetitionEx *compEx = (DIYCompetitionEx *)comp;
         uint8_t *teamList = diy + 0x5A;
         uint8_t *teamOrder = comp + 0xEE;
-        uint16_t *teamOffsets = (uint16_t *)(comp + 0x6E);
+        uint16_t *teamOffsets = compEx->matchData.league.teamEntryOffsets;
         uint16_t numTeams = s->numTeams;
 
         for (int16_t i = (int16_t)numTeams - 1; i >= 0; i--) {
@@ -6685,7 +6692,7 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
 
     do {
         /* Get fixture entry pointer */
-        uint16_t fixtureOff = *(uint16_t *)(comp + 0x6E + teamIdx);
+        uint16_t fixtureOff = diyCompetitionStart.matchData.league.teamEntryOffsets[teamIdx >> 1];
         uint8_t *a4 = comp + fixtureOff;
 
         /* Entry for team number */
@@ -10048,10 +10055,12 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
     if (diyMinSubstitutes == 0) {
         _DIY_SortLeagueTableByStandings();
 
-        uint8_t *a5 = (uint8_t *)&diyCompetitionStart;
-        DIYCompetition *a5s = (DIYCompetition *)a5;
-        uint16_t *standingsLookup = (uint16_t *)(a5 + 0x12E); /* extended buffer: standings lookup table */
+        DIYCompetitionEx *compEx = &diyCompetitionStart;
+        uint8_t *a5 = (uint8_t *)compEx;
+        DIYCompetition *a5s = &compEx->base;
+        uint16_t *standingsLookup = compEx->matchData.league.leagueTeamIds;
         uint16_t *promRelOutput = (uint16_t *)(a5 + 0x1AE);   /* extended buffer: promotions/relegations output */
+        int16_t *rankings = (int16_t *)compEx->matchData.league.teamEntryOffsets;
 
         /* Determine winner */
         int16_t doWinner = 1;
@@ -10063,7 +10072,7 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
                 doWinner = 0;
         }
         if (doWinner) {
-            int16_t ranking = *(int16_t *)(a5 + 0x6E);  /* extended buffer */
+            int16_t ranking = rankings[0];
             uint16_t idx = (uint16_t)((uint32_t)(uint16_t)ranking / 18);
             a5s->resultCode = (int16_t)standingsLookup[idx];  /* 0x3A */
         }
@@ -10072,7 +10081,6 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
         {
             uint16_t numPromotions = (uint16_t)a5s->competitionFinished;  /* 0x56 */
             if (numPromotions != 0) {
-                int16_t *rankings = (int16_t *)(a5 + 0x6E);  /* extended buffer */
                 uint16_t promOffset = (uint16_t)a5s->roundComplete;  /* 0x54 */
                 int16_t *src = rankings + promOffset;
                 for (uint16_t i = 0; i < numPromotions; i++) {
@@ -10087,7 +10095,6 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
         {
             uint16_t numRelegations = (uint16_t)a5s->numRounds;  /* 0x5A */
             if (numRelegations != 0) {
-                int16_t *rankings = (int16_t *)(a5 + 0x6E);  /* extended buffer */
                 uint16_t totalEntries = (uint16_t)a5s->numTeams;  /* 0x32 */
                 uint16_t field58 = (uint16_t)a5s->currentRoundIndex;  /* 0x58 */
                 uint16_t relOffset = totalEntries - field58 - numRelegations;
