@@ -1704,8 +1704,10 @@ int16_t _CalcTeamPriceRankPercentOffset(DIYCompetition *comp, TeamFile *team)
     if (comp->competitionType != 0)
         return 0;
 
-    /* Check minimum number of entries at ctx+0x2B8 (beyond DIYCompetition struct) */
-    uint16_t numEntries = *(uint16_t *)((uint8_t *)comp + 0x2B8);
+    /* Check minimum number of entries: row[0].gamesPlayed
+     * (DIYTeamStats[0] starts at parent +0x2B4, gamesPlayed at +0x2B8). */
+    DIYTeamStats *row0 = (DIYTeamStats *)((uint8_t *)comp + 0x2B4);
+    uint16_t numEntries = row0->gamesPlayed;
     if (team->teamControls == TEAM_COMPUTER) {
         /* Cup: need at least 3 entries */
         if (numEntries < 3)
