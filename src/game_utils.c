@@ -70,7 +70,16 @@ void _InitSkinAndDefaultPointers(void)
 {
     useIndividualPlayerSkinColor = 1;
     goalBasePtr = goalBase;
-    nextGoalPtr = (uint8_t *)&nextGoal;
+    /* On Amiga, `nextGoal` was the label immediately following the 19000-byte
+     * `goalBase` buffer, so &nextGoal == goalBase+19000 was the natural
+     * "end-of-buffer" sentinel for highlight pointer wrapping. On SDL the
+     * linker places `nextGoal` anywhere in BSS, so the wrap test
+     * `if (a1 == nextGoalPtr)` in _SaveCoordinatesForHighlights never matches
+     * and `currentHilPtr` walks past goalBase's end, stomping adjacent
+     * globals (e.g. renderStackBase) and producing bogus sprite pointers.
+     * Match _HandleInstantReplayStateSwitch (game_loop.c:1005) which uses
+     * baseAddr+19000 explicitly. */
+    nextGoalPtr = goalBase + 19000;
     spriteGraphicsPtr = spriteGraphics;
 }
 
