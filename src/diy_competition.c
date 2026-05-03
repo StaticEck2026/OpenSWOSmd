@@ -4582,6 +4582,14 @@ static uint8_t *getTournamentStageBlock(MenuEntry *entry)
     return diyFileBufferCopy + offset;
 }
 
+/* Static helper: get the typed DIYTournamentSlot record for the entry's
+ * stage. The stage-block byte offset has the slot record embedded at
+ * +0x15A, so this just composes the two helpers. */
+static DIYTournamentSlot *getTournamentSlotRecord(MenuEntry *entry)
+{
+    return (DIYTournamentSlot *)(getTournamentStageBlock(entry) + 0x15A);
+}
+
 /* DesignDIYTournament_UpdateMonthPageIndices — compute month page indices (SWOS2.s line 49585) */
 __attribute__((used, externally_visible))
 void _DesignDIYTournament_UpdateMonthPageIndices(void)
@@ -4812,61 +4820,58 @@ void _DesignDIYTournamentOnSelect13(MenuEntry *entry)
     _CallDrawMenuItem(&menuEntries[11]);  /* redraw companion entry */
 }
 
-/* DesignDIYTournamentOnSelect21 — toggle stage field at +0x160 (SWOS2.s line 49806) */
+/* DesignDIYTournamentOnSelect21 — toggle slot.seedingType (SWOS2.s line 49806) */
 __attribute__((used, externally_visible))
 void _DesignDIYTournamentOnSelect21(MenuEntry *entry)
 {
-    uint8_t *stageBlock = getTournamentStageBlock(entry);
-    *(uint16_t *)(stageBlock + 0x160) ^= 1;
+    DIYTournamentSlot *slot = getTournamentSlotRecord(entry);
+    slot->seedingType ^= 1;
     _DesignDIYTournamentOnDraw();
     _CallDrawMenuItem(entry);
 }
 
-/* DesignDIYTournamentOnSelect24 — cycle stage qualifiers 0-2 at +0x170 (SWOS2.s line 49829) */
+/* DesignDIYTournamentOnSelect24 — cycle slot.initConst170 0-2 (SWOS2.s line 49829) */
 __attribute__((used, externally_visible))
 void _DesignDIYTournamentOnSelect24(MenuEntry *entry)
 {
-    uint8_t *stageBlock = getTournamentStageBlock(entry);
-    uint16_t *field = (uint16_t *)(stageBlock + 0x170);
-    *field += 1;
-    if (*field == 3)
-        *field = 0;
+    DIYTournamentSlot *slot = getTournamentSlotRecord(entry);
+    slot->initConst170 += 1;
+    if (slot->initConst170 == 3)
+        slot->initConst170 = 0;
     _DesignDIYTournamentOnDraw();
     _CallDrawMenuItem(entry);
 }
 
-/* DesignDIYTournamentOnSelect25 — cycle stage byes 0-2 at +0x172 (SWOS2.s line 49841) */
+/* DesignDIYTournamentOnSelect25 — cycle slot.formatFlag172 0-2 (SWOS2.s line 49841) */
 __attribute__((used, externally_visible))
 void _DesignDIYTournamentOnSelect25(MenuEntry *entry)
 {
-    uint8_t *stageBlock = getTournamentStageBlock(entry);
-    uint16_t *field = (uint16_t *)(stageBlock + 0x172);
-    *field += 1;
-    if (*field == 3)
-        *field = 0;
+    DIYTournamentSlot *slot = getTournamentSlotRecord(entry);
+    slot->formatFlag172 += 1;
+    if (slot->formatFlag172 == 3)
+        slot->formatFlag172 = 0;
     _DesignDIYTournamentOnDraw();
     _CallDrawMenuItem(entry);
 }
 
-/* DesignDIYTournamentOnSelect26 — toggle stage field at +0x168 (SWOS2.s line 49853) */
+/* DesignDIYTournamentOnSelect26 — toggle slot.initConst168 (SWOS2.s line 49853) */
 __attribute__((used, externally_visible))
 void _DesignDIYTournamentOnSelect26(MenuEntry *entry)
 {
-    uint8_t *stageBlock = getTournamentStageBlock(entry);
-    *(uint16_t *)(stageBlock + 0x168) ^= 1;
+    DIYTournamentSlot *slot = getTournamentSlotRecord(entry);
+    slot->initConst168 ^= 1;
     _DesignDIYTournamentOnDraw();
     _CallDrawMenuItem(entry);
 }
 
-/* DesignDIYTournamentOnSelect28 — cycle stage count 1-4 at +0x166 (SWOS2.s line 49861) */
+/* DesignDIYTournamentOnSelect28 — cycle slot.playEachTeam 1-4 (SWOS2.s line 49861) */
 __attribute__((used, externally_visible))
 void _DesignDIYTournamentOnSelect28(MenuEntry *entry)
 {
-    uint8_t *stageBlock = getTournamentStageBlock(entry);
-    uint16_t *field = (uint16_t *)(stageBlock + 0x166);
-    *field += 1;
-    if (*field == 5)
-        *field = 1;
+    DIYTournamentSlot *slot = getTournamentSlotRecord(entry);
+    slot->playEachTeam += 1;
+    if (slot->playEachTeam == 5)
+        slot->playEachTeam = 1;
     _DesignDIYTournamentOnDraw();
     _CallDrawMenuItem(entry);
 }
@@ -5079,16 +5084,16 @@ restart_search:
 }
 
 /* --- _DIYTournament_RecalculateNumStages (SWOS2.s line 50128) ---
- * Counts stages until one has field +0x164 == 1 (terminal stage), max 6 */
+ * Counts stages until one has slot.divisionFactor == 1 (terminal stage), max 6 */
 __attribute__((used, externally_visible))
 void _DIYTournament_RecalculateNumStages(void)
 {
-    uint8_t *a0 = diyFileBufferCopy;
+    DIYTournamentSlot *slot = (DIYTournamentSlot *)(diyFileBufferCopy + 0x15A);
     uint16_t d0 = 1;
     while (d0 < 6) {
-        if (*(uint16_t *)(a0 + 0x164) == 1)
+        if (slot->divisionFactor == 1)
             break;
-        a0 += 0x76;
+        slot = (DIYTournamentSlot *)((uint8_t *)slot + 0x76);
         d0++;
     }
     ((DIYCompetition *)diyFileBufferCopy)->totalMatchesInRound = (int16_t)d0;
@@ -5129,20 +5134,20 @@ void _DesignDIYTournament_RedrawStageItemsFromBlock(uint8_t *blk, uint16_t count
 __attribute__((used, externally_visible))
 void _DesignDIYTournamentOnDraw(void)
 {
-    uint8_t *a2 = diyFileBufferCopy;
+    DIYTournamentSlot *slot = (DIYTournamentSlot *)(diyFileBufferCopy + 0x15A);
     uint16_t numStages = (uint16_t)((DIYCompetition *)diyFileBufferCopy)->totalMatchesInRound;
     int16_t scanCount = (int16_t)numStages - 1;
     int16_t found3rdPlayoff = 0;
 
-    /* Pre-scan: find knockout stage (isGroupStage==0) with type==2 */
+    /* Pre-scan: find knockout stage (isLeagueFormat==0) with formatFlag16E==2 */
     for (int16_t i = scanCount; i >= 0; i--) {
-        if (*(uint16_t *)(a2 + 0x15E) == 0) {
-            if (*(uint16_t *)(a2 + 0x16E) == 2) {
+        if (slot->isLeagueFormat == 0) {
+            if (slot->formatFlag16E == 2) {
                 found3rdPlayoff = 1;
                 break;
             }
         }
-        a2 += 0x76;
+        slot = (DIYTournamentSlot *)((uint8_t *)slot + 0x76);
     }
 
     if (!found3rdPlayoff) {
@@ -5151,20 +5156,22 @@ void _DesignDIYTournamentOnDraw(void)
         menuEntries[8].isInvisible = 1;
     } else {
         /* Show entries 9 and 8. Note: asm used ($2A26).w which is menuEntries[9] */
-        a2 = diyFileBufferCopy;
         menuEntries[9].isInvisible = 0;
         menuEntries[8].isInvisible = 0;
     }
 
     /* Main loop: configure entries for each of 6 stage slots */
     MenuEntry *a4 = &menuEntries[17]; /* menuEntries+$3B8 */
-    a2 = diyFileBufferCopy;
+    slot = (DIYTournamentSlot *)(diyFileBufferCopy + 0x15A);
     int16_t d7 = 0;
 
     for (d7 = 0; d7 < 6; d7++) {
         /* Check if this slot is past the last active stage */
         if (d7 == (int16_t)numStages) {
-            if (*(uint16_t *)(a2 + 0xEC) == 2)
+            /* +0xEC peeks back at previous slot's numTeams field
+             * (slot[d7-1].numTeams = current_slot - 0x76 + 0x162 = current_slot + 0xEC). */
+            DIYTournamentSlot *prevSlot = (DIYTournamentSlot *)((uint8_t *)slot - 0x76);
+            if (prevSlot->numTeams == 2)
                 goto fill_remaining_invisible_1;
         }
 
@@ -5176,15 +5183,15 @@ void _DesignDIYTournamentOnDraw(void)
         /* Conditionally hide based on stage 5 or elimination type */
         if (d7 == 5) {
             a4->isInvisible = 1;
-        } else if (*(uint16_t *)(a2 + 0x162) == 2) {
-            if (*(uint16_t *)(a2 + 0x15C) == 0)
+        } else if (slot->numTeams == 2) {
+            if (slot->doubleCount == 0)
                 a4->isInvisible = 1;
         }
 
         /* Next entry: show, set content to numTeamsInGroup */
         a4++;
         a4->isInvisible = 0;
-        *(uint16_t *)&a4->fg = *(uint16_t *)(a2 + 0x162);
+        *(uint16_t *)&a4->fg = slot->numTeams;
 
         /* Next entry: advance */
         a4++;
@@ -5197,29 +5204,25 @@ void _DesignDIYTournamentOnDraw(void)
         a4->isInvisible = 0;
         {
             uint8_t *dst = (uint8_t *)(uint32_t)a4->fg;
-            if (*(uint16_t *)(a2 + 0x15E) == 0) {
+            if (slot->isLeagueFormat == 0) {
                 /* Knockout stage: determine round name */
                 const uint8_t *name;
-                uint16_t val15C = *(uint16_t *)(a2 + 0x15C);
-                if (val15C != 0) {
+                if (slot->doubleCount != 0) {
                     name = a3rdPlayOff; /* "3RD PLAY-OFF" */
+                } else if (slot->numTeams == 2) {
+                    name = aFinal_4; /* "FINAL" */
+                } else if (slot->numTeams == 4) {
+                    name = aSemiFinal; /* "SEMI-FINAL" */
+                } else if (slot->numTeams == 8) {
+                    name = aQuarterFinal; /* "QUARTER-FINAL" */
                 } else {
-                    uint16_t val162 = *(uint16_t *)(a2 + 0x162);
-                    if (val162 == 2) {
-                        name = aFinal_4; /* "FINAL" */
-                    } else if (val162 == 4) {
-                        name = aSemiFinal; /* "SEMI-FINAL" */
-                    } else if (val162 == 8) {
-                        name = aQuarterFinal; /* "QUARTER-FINAL" */
-                    } else {
-                        name = aKnockout; /* "KNOCKOUT" */
-                    }
+                    name = aKnockout; /* "KNOCKOUT" */
                 }
                 _StringCopy(name, dst);
             } else {
                 /* Group stage: "%0 GROUPS OF %1" or "1 GROUP OF %1" */
-                uint16_t numGrp = *(uint16_t *)(a2 + 0x16A);
-                uint16_t grpSize = *(uint16_t *)(a2 + 0x16C);
+                uint16_t numGrp = slot->groups;
+                uint16_t grpSize = slot->teamsPerGroup;
                 const uint8_t *fmt;
                 if (numGrp == 1) {
                     fmt = a1GroupOf1; /* "1 GROUP OF %1" */
@@ -5233,7 +5236,7 @@ void _DesignDIYTournamentOnDraw(void)
         /* Next entry: home/away star indicator */
         a4++;
         a4->isInvisible = 0;
-        if (*(uint16_t *)(a2 + 0x160) != 0) {
+        if (slot->seedingType != 0) {
             a4->fg = (uint32_t)(uint32_t)aStar;  /* "*" */
         } else {
             a4->fg = (uint32_t)(uint32_t)asc_135D9A; /* "-" */
@@ -5244,19 +5247,16 @@ void _DesignDIYTournamentOnDraw(void)
         a4->isInvisible = 0;
         {
             uint8_t *dst = (uint8_t *)(uint32_t)a4->fg;
-            if (*(uint16_t *)(a2 + 0x15E) == 0) {
+            if (slot->isLeagueFormat == 0) {
                 /* Knockout qualification text */
-                uint16_t val16E = *(uint16_t *)(a2 + 0x16E);
-                if (val16E != 2) {
-                    uint16_t val164 = *(uint16_t *)(a2 + 0x164);
-                    if (val164 == 1) {
+                if (slot->formatFlag16E != 2) {
+                    if (slot->divisionFactor == 1) {
                         _StringCopy(aMatchWinnerWin, dst); /* "(MATCH WINNER WINS TOURNAMENT)" */
                     } else {
                         _StringCopy(aMatchWinnersQu, dst); /* "(MATCH WINNERS QUALIFY)" */
                     }
                 } else {
-                    uint16_t val164 = *(uint16_t *)(a2 + 0x164);
-                    if (val164 == 1) {
+                    if (slot->divisionFactor == 1) {
                         _StringCopy(aMatchWinnerOnA, dst); /* "(MATCH WINNER ON AGGREGATE WINS TOURNAM..." */
                     } else {
                         _StringCopy(aMatchWinnersOn, dst); /* "(MATCH WINNERS ON AGGREGATE QUALIFY)" */
@@ -5264,8 +5264,8 @@ void _DesignDIYTournamentOnDraw(void)
                 }
             } else {
                 /* Group qualification text */
-                uint16_t d2 = *(uint16_t *)(a2 + 0x16A);
-                uint16_t d0 = *(uint16_t *)(a2 + 0x164);
+                uint16_t d2 = slot->groups;
+                uint16_t d0 = slot->divisionFactor;
                 const uint8_t *fmt;
 
                 if (d0 == 1) {
@@ -5319,25 +5319,25 @@ after_qual_text: ;
 
         /* Next entry: knockout-specific fields (legs/scoring) */
         a4++;
-        if (*(uint16_t *)(a2 + 0x15E) == 0) {
+        if (slot->isLeagueFormat == 0) {
             /* Knockout path: show 4 entries for legs/play/goals config */
             a4->isInvisible = 0;
             {
                 /* Set number value via double-indirection: fg → ptr → write */
                 uint16_t **pp = (uint16_t **)(uint32_t)a4->fg;
-                **pp = *(uint16_t *)(a2 + 0x16E);
+                **pp = slot->formatFlag16E;
             }
             a4++;
             a4->isInvisible = 0;
             {
                 uint16_t **pp = (uint16_t **)(uint32_t)a4->fg;
-                **pp = *(uint16_t *)(a2 + 0x170);
+                **pp = slot->initConst170;
             }
             a4++;
             a4->isInvisible = 0;
             {
                 uint16_t **pp = (uint16_t **)(uint32_t)a4->fg;
-                **pp = *(uint16_t *)(a2 + 0x172);
+                **pp = slot->formatFlag172;
             }
             a4++;
             a4->isInvisible = 1; /* hide separator */
@@ -5364,7 +5364,7 @@ after_qual_text: ;
             a4->isInvisible = 0;
             {
                 uint16_t **pp = (uint16_t **)(uint32_t)a4->fg;
-                **pp = *(uint16_t *)(a2 + 0x168);
+                **pp = slot->initConst168;
             }
             a4++;
             /* Set navigation links */
@@ -5378,13 +5378,13 @@ after_qual_text: ;
             a4->isInvisible = 0;
             {
                 uint16_t **pp = (uint16_t **)(uint32_t)a4->fg;
-                **pp = *(uint16_t *)(a2 + 0x166);
+                **pp = slot->playEachTeam;
             }
             a4++;
         }
 
         /* Advance to next stage block */
-        a2 += 0x76;
+        slot = (DIYTournamentSlot *)((uint8_t *)slot + 0x76);
         continue;
 
 fill_remaining_hidden:
@@ -5478,12 +5478,13 @@ fill_remaining_loop:
 }
 
 /* --- _DesignDIYTournamentOnSelect23 (SWOS2.s line 49637) ---
- * Toggle aggregate flag (+0x16E) XOR 3, then redraw stage */
+ * Toggle aggregate flag slot.formatFlag16E ^= 3, then redraw stage */
 __attribute__((used, externally_visible))
 void _DesignDIYTournamentOnSelect23(MenuEntry *entry)
 {
     uint8_t *stageBlock = getTournamentStageBlock(entry);
-    *(uint16_t *)(stageBlock + 0x16E) ^= 3;
+    DIYTournamentSlot *slot = (DIYTournamentSlot *)(stageBlock + 0x15A);
+    slot->formatFlag16E ^= 3;
     _DesignDIYTournamentOnDraw();
     _DesignDIYTournament_RedrawStageItemsFromBlock(stageBlock, 1);
     _CallDrawMultipleItems(2, &menuEntries[8]); /* menuEntries+$1C0 = entry 8 */
