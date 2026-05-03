@@ -124,21 +124,14 @@ uint16_t goalkeeperDiveAttemptCount;
  * aliases pointing at the backing buffers so all the
  *   `extern DIYCompetitionEx diyFileBufferCopy;` / `.base.field`
  * struct-style access still works unchanged. */
-uint16_t diyMinSubstitutes;
-uint16_t diyPointsForAWin;
-uint16_t diyLeagueMinSubstitutes;
-uint16_t diyLeagueMaxSubstitutes;
-uint16_t diyHasGroups;
-/* diyTeamEntryOffsetsByIndex / diyTeamShuffleIndices: backing storage
- * moved to swos_globals.c. On Amiga BSS these labels sit inside the
- * `diyCompetitionStart` run — diyTeamEntryOffsetsByIndex at offset
- * 0x6E (overlapping the league teamEntryOffsets field that
- * _FindTeamInDIY reads as `comp + 0x6E`), and diyTeamShuffleIndices at
- * 0xEE. The writes spill across the run on both labels, so the global
- * stores AND `comp + offset` reads must hit the same memory. */
-uint16_t diyLeagueCurrentSlot;
-uint16_t diyLeagueMatchProgress;
-uint16_t diyLeagueTotalMatches;
+/* diyMinSubstitutes / diyPointsForAWin / diyLeagueMinSubstitutes /
+ * diyLeagueMaxSubstitutes / diyHasGroups / diyLeagueCurrentSlot /
+ * diyLeagueMatchProgress / diyLeagueTotalMatches: aliased onto
+ * diyCompetitionStartBuf at the right offsets in swos_globals.c per the
+ * SWOS2.s BSS layout. Standalone definitions removed because the asm
+ * code reads/writes the same memory through both the named global and
+ * `diyCompetitionStart + offset`. See the alias block in
+ * swos_globals.c. */
 TeamFile tempTeamBuffer;
 /* numberOfFiles: backing storage moved to swos_globals.c. On Amiga
  * the label overlaps the start of foundFilenamesBuffer's BSS run —

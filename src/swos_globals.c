@@ -752,6 +752,36 @@ __asm__(".globl diyTeamEntryOffsetsByIndex\n"
         ".globl diyTeamShuffleIndices\n"
         ".equ   diyTeamShuffleIndices, diyCompetitionStartBuf + 0xEE\n");
 
+/* The named diy* uint16 globals at offsets 0x60..0x68 and 0x1BE..0x1C4
+ * also overlap diyCompetitionStart per the SWOS2.s BSS layout. Without
+ * these aliases, writes via the struct view (e.g.
+ * `comp->leagueCurrentSlot = 1`) and reads via the global name (e.g.
+ * `careerSlotProcessingInProgress = diyLeagueCurrentSlot`) hit
+ * different memory — the auto-play loop never observes the phase
+ * boundary and runs forever. */
+__asm__(".globl diyMinSubstitutes\n"
+        ".equ   diyMinSubstitutes, diyCompetitionStartBuf + 0x60\n"
+        ".globl diyPointsForAWin\n"
+        ".equ   diyPointsForAWin, diyCompetitionStartBuf + 0x62\n"
+        ".globl diyLeagueMinSubstitutes\n"
+        ".equ   diyLeagueMinSubstitutes, diyCompetitionStartBuf + 0x64\n"
+        ".globl diyLeagueMaxSubstitutes\n"
+        ".equ   diyLeagueMaxSubstitutes, diyCompetitionStartBuf + 0x66\n"
+        ".globl diyHasGroups\n"
+        ".equ   diyHasGroups, diyCompetitionStartBuf + 0x68\n"
+        ".globl diyMatchesPlayedCount\n"
+        ".equ   diyMatchesPlayedCount, diyCompetitionStartBuf + 0x1BE\n"
+        ".globl diyLeagueCurrentSlot\n"
+        ".equ   diyLeagueCurrentSlot, diyCompetitionStartBuf + 0x1C0\n"
+        ".globl diyLeagueMatchProgress\n"
+        ".equ   diyLeagueMatchProgress, diyCompetitionStartBuf + 0x1C2\n"
+        ".globl diyLeagueTotalMatches\n"
+        ".equ   diyLeagueTotalMatches, diyCompetitionStartBuf + 0x1C4\n"
+        ".globl diyCompetitionFormat\n"
+        ".equ   diyCompetitionFormat, diyCompetitionStartBuf + 0x14A\n"
+        ".globl diyRoundFormat\n"
+        ".equ   diyRoundFormat, diyCompetitionStartBuf + 0x14C\n");
+
 /* diyPresetNameOfCompetition: aliased in swos_globals_career_overlay.c
  * at careerFileBufferBuf + 93312 (== competitionFileBuffer + 4 in the
  * Amiga overlay). The standalone alias here was redundant with the
