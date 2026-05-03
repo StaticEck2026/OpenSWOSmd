@@ -5497,17 +5497,18 @@ void _DesignDIYTournamentOnSelect20(MenuEntry *entry)
 {
     _DesignDIYTournament_CacheStageSelection(entry);
     uint8_t *a3 = (uint8_t *)(uint32_t)diyTournamentSelectedStagePtr;
+    DIYTournamentSlot *slot = (DIYTournamentSlot *)(a3 + 0x15A);
 
-    uint16_t d1 = *(uint16_t *)(a3 + 0x16A);
-    uint16_t d2 = *(uint16_t *)(a3 + 0x16C);
-    uint16_t d6 = *(uint16_t *)(a3 + 0x164);
+    uint16_t d1 = slot->groups;
+    uint16_t d2 = slot->teamsPerGroup;
+    uint16_t d6 = slot->divisionFactor;
 
     /* Adjust group layout for max teams */
     uint16_t d7 = diyTournamentSelectedStageIndex1Based;
     GroupLayoutValues v = adjustGroupLayoutForMaxTeams(d1, d2, d6, d7);
-    *(uint16_t *)(a3 + 0x15E) = v.numGroups;
-    *(uint16_t *)(a3 + 0x16A) = v.numGroups;
-    *(uint16_t *)(a3 + 0x16C) = v.groupSize;
+    slot->isLeagueFormat = v.numGroups;
+    slot->groups = v.numGroups;
+    slot->teamsPerGroup = v.groupSize;
 
     _DesignDIYTournamentOnDraw();
     _DesignDIYTournament_RedrawStageItemsFromBlock(a3, 1);
@@ -5524,6 +5525,8 @@ void _DesignDIYTournament_AdjustStageQualifiers(MenuEntry *entry)
     uint16_t d7 = diyTournamentSelectedStageIndex1Based;
     uint8_t *a3 = (uint8_t *)(uint32_t)diyTournamentSelectedStagePtr;
     uint8_t *a2 = a3 - 0x76; /* previous stage */
+    DIYTournamentSlot *slotA3 = (DIYTournamentSlot *)(a3 + 0x15A);
+    DIYTournamentSlot *slotA2 = (DIYTournamentSlot *)(a2 + 0x15A);
 
     if (d7 == 1) {
         /* First stage: adjust numTeams at a3+0x32 */
@@ -5553,16 +5556,16 @@ void _DesignDIYTournament_AdjustStageQualifiers(MenuEntry *entry)
             /* Compute new group layout */
             {
                 uint16_t candidate = (uint16_t)a3s->numTeams;
-                uint16_t current = *(uint16_t *)(a3 + 0x164);  /* extended buffer, beyond DIYCompetition struct */
+                uint16_t current = slotA3->divisionFactor;
                 GroupLayoutResult r = computeGroupLayoutForTeams(candidate, current, d7);
                 if (!r.valid)
                     continue; /* try again */
 
                 a3s->numTeams = (int16_t)candidate;
-                *(uint16_t *)(a3 + 0x162) = (uint16_t)a3s->numTeams;  /* extended buffer */
-                *(uint16_t *)(a3 + 0x15E) = r.numGroups;
-                *(uint16_t *)(a3 + 0x16A) = r.numGroups;
-                *(uint16_t *)(a3 + 0x16C) = r.groupSize;
+                slotA3->numTeams = (uint16_t)a3s->numTeams;
+                slotA3->isLeagueFormat = r.numGroups;
+                slotA3->groups = r.numGroups;
+                slotA3->teamsPerGroup = r.groupSize;
             }
 
             _DIYTournament_RecalculateNumStages();
@@ -5581,69 +5584,65 @@ restore_first:
         }
     }
 
-    /* Subsequent stages (d7 > 1): adjust pass-through count at a2+0x164 */
-    diyTournamentPrevValueBackup = *(uint16_t *)(a2 + 0x164);
+    /* Subsequent stages (d7 > 1): adjust pass-through count at slotA2->divisionFactor */
+    diyTournamentPrevValueBackup = slotA2->divisionFactor;
 
     for (;;) {
         uint16_t ctrl = controlMask;
         if (ctrl == 0x81 || ctrl == 0x101) {
             /* Right/down: increment */
-            *(uint16_t *)(a2 + 0x164) += 1;
-            uint16_t newVal = *(uint16_t *)(a2 + 0x164);
-            if (newVal == *(uint16_t *)(a2 + 0x162))
+            slotA2->divisionFactor += 1;
+            if (slotA2->divisionFactor == slotA2->numTeams)
                 goto restore_prev;
         } else if (ctrl == 0x41 || ctrl == 0x201) {
             /* Left/up: decrement */
-            *(uint16_t *)(a2 + 0x164) -= 1;
-            if ((int16_t)*(uint16_t *)(a2 + 0x164) < 0)
+            slotA2->divisionFactor -= 1;
+            if ((int16_t)slotA2->divisionFactor < 0)
                 goto restore_prev;
-            if (*(uint16_t *)(a2 + 0x164) < *(uint16_t *)(a2 + 0x16A))
+            if (slotA2->divisionFactor < slotA2->groups)
                 goto restore_prev;
         } else {
             return; /* no recognized input */
         }
 
         /* Check if value actually changed */
-        if (*(uint16_t *)(a2 + 0x164) == diyTournamentPrevValueBackup)
+        if (slotA2->divisionFactor == diyTournamentPrevValueBackup)
             return;
 
         /* Compute new group layout for next stage */
         {
-            uint16_t candidate = *(uint16_t *)(a2 + 0x164);
-            uint16_t current = *(uint16_t *)(a3 + 0x164);
+            uint16_t candidate = slotA2->divisionFactor;
+            uint16_t current = slotA3->divisionFactor;
             GroupLayoutResult r = computeGroupLayoutForTeams(candidate, current, d7);
             if (!r.valid)
                 continue; /* try again */
 
-            *(uint16_t *)(a3 + 0x15E) = r.numGroups;
-            *(uint16_t *)(a3 + 0x16A) = r.numGroups;
-            *(uint16_t *)(a3 + 0x16C) = r.groupSize;
+            slotA3->isLeagueFormat = r.numGroups;
+            slotA3->groups = r.numGroups;
+            slotA3->teamsPerGroup = r.groupSize;
 
             /* Adjust previous stage's group layout if it was knockout */
-            if (*(uint16_t *)(a2 + 0x15E) == 0) {
-                uint16_t d1a = *(uint16_t *)(a2 + 0x16A);
-                uint16_t d2a = *(uint16_t *)(a2 + 0x16C);
-                uint16_t d6a = *(uint16_t *)(a2 + 0x164);
+            if (slotA2->isLeagueFormat == 0) {
+                uint16_t d1a = slotA2->groups;
+                uint16_t d2a = slotA2->teamsPerGroup;
+                uint16_t d6a = slotA2->divisionFactor;
                 GroupLayoutValues v = adjustGroupLayoutForMaxTeams(d1a, d2a, d6a, d7);
-                *(uint16_t *)(a2 + 0x15E) = v.numGroups;
-                *(uint16_t *)(a2 + 0x16A) = v.numGroups;
-                *(uint16_t *)(a2 + 0x16C) = v.groupSize;
+                slotA2->isLeagueFormat = v.numGroups;
+                slotA2->groups = v.numGroups;
+                slotA2->teamsPerGroup = v.groupSize;
             }
 
-            *(uint16_t *)(a2 + 0x162) = *(uint16_t *)(a2 + 0x164);
-            /* Note: asm has: move.w $164(a2),$162(a3) - but the code before already
-             * set a3 fields. Looking more carefully, this sets a3+0x162 = a2+0x164.
-             * Wait, the asm is: move.w $164(a2),$162(a3) */
+            slotA2->numTeams = slotA2->divisionFactor;
         }
-        /* Actually re-read: line 50046: move.w $164(a2),$162(a3) */
-        *(uint16_t *)(a3 + 0x162) = *(uint16_t *)(a2 + 0x164);
+        /* asm line 50046: move.w $164(a2),$162(a3) */
+        slotA3->numTeams = slotA2->divisionFactor;
 
         _DIYTournament_RecalculateNumStages();
         _DesignDIYTournamentOnDraw();
 
         {
             uint16_t redrawCount = 2;
-            if (d7 != 6 && *(uint16_t *)(a3 + 0x164) == 1)
+            if (d7 != 6 && slotA3->divisionFactor == 1)
                 redrawCount = 3;
             _DesignDIYTournament_RedrawStageItemsFromBlock(a2, redrawCount);
         }
