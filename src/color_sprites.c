@@ -212,9 +212,19 @@ void _ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
         convertSpriteRange(429, 530, team1PlayersColorTable);
     }
 
-    /* Team 1 goalkeeper: convert sprites 833-890 */
-    if (useIndividualPlayerSkinColor != 0)
-        _ConvertColorTableToSkinColor((uint16_t)(uint8_t)team1GoalieFaces[0], team1PlayersColorTable);
+    /* Team 1 goalkeeper: convert sprites 833-890.
+     * team1GoalieFaces[0] == 0xFF means _DetermineGoalieFaces didn't assign
+     * a face slot. Mirroring the reserve-GK guard below, skip the conversion
+     * — otherwise _ConvertColorTableToSkinColor sign-extends 0xFF to -1 and
+     * indexes the 3-entry skinAndHairColorConversionTable[] out-of-bounds,
+     * walking random memory writing (idx,value) pairs and corrupting
+     * unrelated globals (we hit `bigCharsTable + 64`, which silently broke
+     * the 'R' and 'S' glyph lookups). */
+    if (useIndividualPlayerSkinColor != 0) {
+        int8_t face = (int8_t)team1GoalieFaces[0];
+        if (face >= 0)
+            _ConvertColorTableToSkinColor((uint16_t)(uint8_t)face, team1PlayersColorTable);
+    }
     convertSpriteRange(833, 891, team1PlayersColorTable);
 
     /* Team 1 goalkeeper reserve: sprites 891-948
@@ -258,9 +268,13 @@ void _ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
         convertSpriteRange(0x2DC, 833, team2PlayersColorTable);
     }
 
-    /* Team 2 goalkeeper: convert sprites 949-1006 */
-    if (useIndividualPlayerSkinColor != 0)
-        _ConvertColorTableToSkinColor((uint16_t)team2GoalieSkinType[0], team2PlayersColorTable);
+    /* Team 2 goalkeeper: convert sprites 949-1006.
+     * Same 0xFF-sentinel guard as team 1's main goalkeeper above. */
+    if (useIndividualPlayerSkinColor != 0) {
+        int8_t face = (int8_t)team2GoalieSkinType[0];
+        if (face >= 0)
+            _ConvertColorTableToSkinColor((uint16_t)(uint8_t)face, team2PlayersColorTable);
+    }
     convertSpriteRange(949, 1007, team2PlayersColorTable);
 
     /* Team 2 goalkeeper reserve: sprites 1007-1064
