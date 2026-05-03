@@ -171,24 +171,54 @@ void _FixupAndColorPitchFile(void)
 #ifdef SWOS_SDL_BUILD
     /* Step 1b (SDL only): decode each 128-byte 4-bitplane tile to a
      * 256-byte 8bpp chunky tile. Chunky tiles live in pitchChunkyBuffer,
-     * indexed by pointer slot. After this pass, pitchPtrs[i] points at
-     * chunky bytes so the renderer is a plain memcpy.
+     * indexed by **original Amiga tile index** (offset / 128) — NOT by
+     * pointer slot. Indexing by tile-type means many pitch entries that
+     * reference the same tile share one chunky copy, AND the
+     * `(entry - chunkyBase) / 256` math used by _DrawAnimatedPatterns
+     * recovers the same tile index the Amiga path computed via
+     * `(entry - currentMenu) / 128`. That keeps the fan-tile animation
+     * (toggling tile pairs (1,2),(3,4),...,(21,22) between static and
+     * animated variants) functional.
      *
      * Bitplane tile layout: 16 scanlines × (4 planes × 2 bytes) = 128 bytes.
      * Each scanline is `plane0_word, plane1_word, plane2_word, plane3_word`
      * packing 16 horizontal pixels as bit N of each plane word. */
     {
         extern uint8_t pitchChunkyBuffer[];
-        uint8_t *bufStart = pitchDatBuffer;
-        uint8_t *bufEnd   = pitchDatBuffer + 64 * 1024;
+        uint8_t *bufStart    = pitchDatBuffer;
+        uint8_t *bufEnd      = pitchDatBuffer + 64 * 1024;
+        uint8_t *tileDataBase = pitchDatBuffer + PITCH_POINTER_COUNT * 4;
+        /* Track which tile-type indices have been decoded already. */
+        static uint8_t tileDecoded[PITCH_POINTER_COUNT];
+        for (i = 0; i < PITCH_POINTER_COUNT; i++)
+            tileDecoded[i] = 0;
+
         for (i = 0; i < PITCH_POINTER_COUNT; i++) {
             uint8_t *bitplane = (uint8_t *)(uintptr_t)pitchPtrs[i];
-            uint8_t *chunky   = pitchChunkyBuffer + (size_t)i * 256;
             /* Guard against bogus pointers (shouldn't happen, but the
              * file could be malformed or the stub still indexed). */
-            if (bitplane < bufStart || bitplane + 128 > bufEnd) {
+            if (bitplane < tileDataBase || bitplane + 128 > bufEnd) {
+                /* Fall back to per-entry indexing for invalid pointers
+                 * so we at least don't share garbage between tiles. */
+                uint32_t safeIdx = (uint32_t)i;
+                uint8_t *chunky = pitchChunkyBuffer + safeIdx * 256;
                 for (int k = 0; k < 256; k++) chunky[k] = 0;
-            } else {
+                pitchPtrs[i] = (uint32_t)(uintptr_t)chunky;
+                continue;
+            }
+
+            uint32_t tileIdx = (uint32_t)((bitplane - tileDataBase) / 128);
+            if (tileIdx >= PITCH_POINTER_COUNT) {
+                /* offset out of bounds → safe fallback */
+                uint8_t *chunky = pitchChunkyBuffer + (size_t)i * 256;
+                for (int k = 0; k < 256; k++) chunky[k] = 0;
+                pitchPtrs[i] = (uint32_t)(uintptr_t)chunky;
+                continue;
+            }
+
+            uint8_t *chunky = pitchChunkyBuffer + (size_t)tileIdx * 256;
+
+            if (!tileDecoded[tileIdx]) {
                 for (int row = 0; row < 16; row++) {
                     const uint8_t *rowSrc = bitplane + row * 8;
                     /* Read 4 plane words (big-endian from file) */
@@ -206,6 +236,7 @@ void _FixupAndColorPitchFile(void)
                         dst[px] = idx;
                     }
                 }
+                tileDecoded[tileIdx] = 1;
             }
             pitchPtrs[i] = (uint32_t)(uintptr_t)chunky;
         }

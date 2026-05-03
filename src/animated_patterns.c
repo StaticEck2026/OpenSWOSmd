@@ -45,6 +45,23 @@ extern uint8_t  pitchDatBuffer[];
 extern volatile uint32_t frontbufferBasePtr;
 extern uint8_t  frontbufferMaskBuffer[];
 extern uint8_t  currentMenu[];
+#ifdef SWOS_SDL_BUILD
+extern uint8_t  pitchChunkyBuffer[];
+/* On SDL the pitch tile pointers live in pitchChunkyBuffer with 256-byte
+ * stride per tile (vs Amiga's 128-byte bitplane stride in currentMenu).
+ * Pitch.c arranges chunky tiles to be indexed by the *original* Amiga
+ * tile index (offset / 128), so the same `(entry - base) / stride` math
+ * still recovers the tile-pair index used by the static/animated swap. */
+#define ANIM_TILE_BASE        ((uint32_t)pitchChunkyBuffer)
+#define ANIM_TILE_SIZE        256u
+#define ANIM_TILE_SIZE_SHIFT  8
+#define ANIM_MAX_TILE_OFFSET  (MAX_FAN_TILE_INDEX * ANIM_TILE_SIZE)
+#else
+#define ANIM_TILE_BASE        ((uint32_t)currentMenu)
+#define ANIM_TILE_SIZE        TILE_SIZE
+#define ANIM_TILE_SIZE_SHIFT  TILE_SIZE_SHIFT
+#define ANIM_MAX_TILE_OFFSET  MAX_FAN_TILE_OFFSET
+#endif
 /* animPatternsRandomTable: 64-byte permutation table (entries 0..62
  * plus a trailing 0) that `_DrawAnimatedPatterns` walks to pick pitch
  * tile indices for the per-frame fan animations. The table is shuffled
@@ -147,13 +164,13 @@ static void drawPatternFromIndex(uint16_t patternIndex)
 static void resetAnimatedPatterns(uint32_t *a0, int16_t count)
 {
     int16_t i;
-    uint32_t baseAddr = (uint32_t)currentMenu;
+    uint32_t baseAddr = ANIM_TILE_BASE;
 
     for (i = count; i >= 0; i--) {
         uint32_t d0 = *a0 - baseAddr;
-        if (d0 != 0 && d0 <= MAX_FAN_TILE_OFFSET && !(d0 & TILE_SIZE)) {
-            /* animated variant (even tile index) → subtract TILE_SIZE → static */
-            *a0 -= TILE_SIZE;
+        if (d0 != 0 && d0 <= ANIM_MAX_TILE_OFFSET && !(d0 & ANIM_TILE_SIZE)) {
+            /* animated variant (even tile index) → subtract one tile → static */
+            *a0 -= ANIM_TILE_SIZE;
         }
         a0++;
     }
@@ -200,7 +217,8 @@ _DrawAnimatedPatterns(void)
     int16_t d6;       /* max patterns to update */
     uint16_t d0;      /* animate flag (0 = de-animate, non-zero = animate) */
     int16_t d7;       /* loop counter */
-    uint32_t baseAddr = (uint32_t)currentMenu;
+    uint32_t baseAddr = ANIM_TILE_BASE;
+    (void)baseAddr;
 
     /* ---- state 0: replayState == 0 → no game ---- */
     if (replayState == 0) {
@@ -427,8 +445,8 @@ pattern_loop:
 
             /* read tile entry and check if it's an animated tile */
             tileVal = *tileEntryPtr;
-            tileOffset = (int32_t)(tileVal - (uint32_t)currentMenu);
-            tileIndex = (int32_t)((uint32_t)tileOffset >> TILE_SIZE_SHIFT);
+            tileOffset = (int32_t)(tileVal - ANIM_TILE_BASE);
+            tileIndex = (int32_t)((uint32_t)tileOffset >> ANIM_TILE_SIZE_SHIFT);
 
             if (tileIndex == 0 || tileIndex > MAX_FAN_TILE_INDEX)
                 continue;
@@ -449,7 +467,7 @@ pattern_loop:
                 }
 
                 animatedPatterns[7 - d7] = d3;
-                *tileEntryPtr = (uint32_t)currentMenu + ((uint32_t)newIndex << TILE_SIZE_SHIFT);
+                *tileEntryPtr = ANIM_TILE_BASE + ((uint32_t)newIndex << ANIM_TILE_SIZE_SHIFT);
             }
         }
 
