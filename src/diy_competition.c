@@ -5936,8 +5936,8 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
 __attribute__((used, externally_visible))
 void _DesignDIYCupOnDraw(void)
 {
-    DIYCompetition *a2s = &diyCompetitionStart.base;
-    uint8_t *a2 = (uint8_t *)&diyCompetitionStart;
+    DIYCompetitionEx *comp = &diyCompetitionStart;
+    DIYCompetition *a2s = &comp->base;
     MenuEntry *entry9 = &menuEntries[9];   /* menuEntries+$1F8 */
 
     /* Entry 9: show and write play-each-team value via double indirection */
@@ -5976,23 +5976,23 @@ void _DesignDIYCupOnDraw(void)
             /* Knockout type: double indirection write */
             a4->isInvisible = 0;
             numericPtr = *(uint16_t **)(uint32_t)a4->fg;
-            *numericPtr = *(uint16_t *)(a2 + 0x66 + d7);
+            *numericPtr = comp->matchData.cup.roundLegs[roundIdx];
             a4++;
 
             /* Check if knockout type == 2 (aggregate) */
-            if (*(uint16_t *)(a2 + 0x66 + d7) == 2)
+            if (comp->matchData.cup.roundLegs[roundIdx] == 2)
                 d5 = 1;
 
             /* Qualifiers: double indirection write */
             a4->isInvisible = 0;
             numericPtr = *(uint16_t **)(uint32_t)a4->fg;
-            *numericPtr = *(uint16_t *)(a2 + 0x72 + d7);
+            *numericPtr = comp->matchData.cup.roundExtraTime[roundIdx];
             a4++;
 
             /* Byes: double indirection write */
             a4->isInvisible = 0;
             numericPtr = *(uint16_t **)(uint32_t)a4->fg;
-            *numericPtr = *(uint16_t *)(a2 + 0x7E + d7);
+            *numericPtr = comp->matchData.cup.roundPenalties[roundIdx];
             a4++;
         } else {
             /* Inactive round: hide all 5 entries */
@@ -6131,10 +6131,10 @@ void _DesignDIYCup_BuildMenuTitleString(void)
     }
 
     /* Check for leg suffix */
-    if (*(uint16_t *)(a2 + 0x14A) == 1) {
+    if (((DIYCompetitionEx *)a2)->matchData.cup.competitionFormat == 1) {
         *dst++ = ' ';
         dst = _StringCopy(a2ndLeg, dst); /* "2ND LEG" */
-    } else if (*(uint16_t *)(a2 + 0x14C) == 2) {
+    } else if (((DIYCompetitionEx *)a2)->matchData.cup.roundFormat == 2) {
         *dst++ = ' ';
         dst = _StringCopy(a1stLeg, dst); /* "1ST LEG" */
     }
@@ -6150,7 +6150,7 @@ void _DesignDIYCup_UpdateCurrentMatchTeamEntryStrings(void)
     /* Inline DIY_GetCurrentMatchTeamSlots: compute two team slot pointers */
     DIYCompetitionEx *baseEx = &diyCompetitionStart;
     uint8_t *base = (uint8_t *)baseEx;
-    uint16_t idx = *(uint16_t *)(base + 0x64);
+    uint16_t idx = baseEx->matchData.cup.currentMatchIndex;
     uint16_t idx2 = idx * 2;
     int8_t slot1 = (int8_t)baseEx->teamGridPairings[idx2];
     int8_t slot2 = (int8_t)baseEx->teamGridPairings[idx2 + 1];
@@ -6716,6 +6716,7 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
         /* Get fixture entry pointer */
         uint16_t fixtureOff = diyCompetitionStart.matchData.league.teamEntryOffsets[teamIdx >> 1];
         uint8_t *a4 = comp + fixtureOff;
+        DIYTeamStats *a4row = (DIYTeamStats *)(a4 + 0x2B4);
 
         /* Entry for team number */
         a5->y = d2;
@@ -6726,8 +6727,8 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
         a5->y = d2;
         a5->dwHeight = d4;
 
-        /* Get team pointer: a4[0x2B4] + selTeamsPtr base */
-        uint8_t *teamPtr = (uint8_t *)((uint32_t)(*(uint32_t *)(a4 + 0x2B4)) + (uint32_t)&selTeamsPtr);
+        /* Get team pointer: row->teamSelPtr + selTeamsPtr base */
+        uint8_t *teamPtr = (uint8_t *)((uint32_t)a4row->teamSelPtr + (uint32_t)&selTeamsPtr);
 
         /* DEBUG: Validate team name bytes are printable ASCII.
          * If corruption detected, flash color and halt so debugger can inspect.
@@ -6828,43 +6829,43 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
         a5->y = d2;
         a5->dwHeight = d4;
         setBgColorWord(a5, d3);
-        *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2B8);
+        *(uint16_t *)&a5->fg = a4row->gamesPlayed;
         a5++;
 
         a5->y = d2;
         a5->dwHeight = d4;
         setBgColorWord(a5, d3);
-        *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2BA);
+        *(uint16_t *)&a5->fg = a4row->wins;
         a5++;
 
         a5->y = d2;
         a5->dwHeight = d4;
         setBgColorWord(a5, d3);
-        *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2BC);
+        *(uint16_t *)&a5->fg = a4row->draws;
         a5++;
 
         a5->y = d2;
         a5->dwHeight = d4;
         setBgColorWord(a5, d3);
-        *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2BE);
+        *(uint16_t *)&a5->fg = a4row->losses;
         a5++;
 
         a5->y = d2;
         a5->dwHeight = d4;
         setBgColorWord(a5, d3);
-        *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2C0);
+        *(uint16_t *)&a5->fg = a4row->goalsFor;
         a5++;
 
         a5->y = d2;
         a5->dwHeight = d4;
         setBgColorWord(a5, d3);
-        *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2C2);
+        *(uint16_t *)&a5->fg = a4row->goalsAgainst;
         a5++;
 
         a5->y = d2;
         a5->dwHeight = d4;
         setBgColorWord(a5, d3);
-        *(uint16_t *)&a5->fg = *(uint16_t *)(a4 + 0x2C4);
+        *(uint16_t *)&a5->fg = a4row->points;
 
         /* Reset a5 back to entry 31 before drawing (asm reloads a5 here) */
         a5 = &menuEntries[31];
@@ -7248,9 +7249,9 @@ static void DIYCupOnSelectCommonC(uint16_t mode)
     }
 
 state_check_replays:
-    if (*(uint16_t *)(a0 + 0x14A) != 0)  /* extended buffer, beyond DIYCompetition struct */
+    if (((DIYCompetitionEx *)a0)->matchData.cup.competitionFormat != 0)
         goto check_32E;
-    if (*(uint16_t *)(a0 + 0x14C) != 2)  /* extended buffer, beyond DIYCompetition struct */
+    if (((DIYCompetitionEx *)a0)->matchData.cup.roundFormat != 2)
         goto check_32E;
     if (diyCupMenuArg0 != 0)
         goto state6;
@@ -7881,16 +7882,16 @@ void _DIYLeagueTournament_SetupCurrentFixtureTeamNames(void)
 
     e++;  /* entry 12 */
     e->isInvisible = 0;
-    /* a1=$2B4(team1) → pointer at offset 0x2B4, add selTeamNameBase */
+    /* DIYTeamStats teamSelPtr (+0x2B4) → name offset, add selTeamNameBase */
     {
-        uint32_t nameOff = *(uint32_t *)(team1 + 0x2B4);
+        uint32_t nameOff = ((DIYTeamStats *)(team1 + 0x2B4))->teamSelPtr;
         e->fg = (uint32_t)(&selTeamNameBase + nameOff);
     }
 
     e++;  /* entry 13 */
     e->isInvisible = 0;
     {
-        uint32_t nameOff = *(uint32_t *)(team2 + 0x2B4);
+        uint32_t nameOff = ((DIYTeamStats *)(team2 + 0x2B4))->teamSelPtr;
         e->fg = (uint32_t)(&selTeamNameBase + nameOff);
     }
 
@@ -8087,7 +8088,7 @@ void _InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table)
     a6s->endMonth = a5[4];     /* 0x39 */
 
     if ((int16_t)*(uint16_t *)(a5 + 0xA) < 0)
-        *(uint16_t *)(a6 + 0x68) = 1;  /* extended buffer, beyond DIYCompetition struct */
+        ((DIYCompetitionEx *)a6)->matchData.league.hasGroupsDiy = 1;
 
     setPitchTypeFields(a6);
 
@@ -8314,14 +8315,16 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
     a6s->roundIterator = (dc & 0xF0) >> 4;    /* 0x4C */
     a6s->numTeamsInStage = dc & 0x0F;                     /* 0x4E */
 
-    *(uint16_t *)(a6 + 0x15A) = 0;
+    DIYTournamentSlot *firstSlot = (DIYTournamentSlot *)(a6 + 0x15A);
+    firstSlot->_pad_00[0] = 0;
+    firstSlot->_pad_00[1] = 0;
 
     int16_t d7 = (int8_t)a5[0xC];
     int16_t d6 = (int8_t)a5[0xB];
 
     uint8_t *a2 = a5 + 0x22;
     uint8_t *stageRec = a5 + 0xE;
-    uint8_t *a0 = a6;
+    DIYTournamentSlot *slot = firstSlot;
 
     /* First stage header — a0 == a6 here, so within struct */
     int8_t numStages = (int8_t)*stageRec++;
@@ -8333,32 +8336,32 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
     int16_t d2 = a6s->totalMatchesInRound - 1;  /* 0x52 */
 
     for (; d2 >= 0; d2--) {
-        *(int16_t *)(a0 + 0x160) = (int8_t)a5[9];
-        *(int16_t *)(a0 + 0x168) = d7;
-        *(int16_t *)(a0 + 0x166) = d6;
+        slot->seedingType  = (int8_t)a5[9];
+        slot->initConst168 = d7;
+        slot->playEachTeam = d6;
 
-        uint16_t groupTeams = 0;
-        uint8_t groupByte = *stageRec++;
-        groupTeams = groupByte;
-        *(uint16_t *)(a0 + 0x162) = groupTeams;
+        uint16_t groupTeams = *stageRec++;
+        slot->numTeams = groupTeams;
 
-        *(uint16_t *)(a0 + 0x15C) = 0;
+        slot->doubleCount = 0;
         uint8_t cupFlag = *stageRec;
         if ((int8_t)cupFlag < 0) {
-            *(uint16_t *)(a6 + 0x15A) = 1;
-            *(uint16_t *)(a0 + 0x15C) = 1;
+            /* High bit signals "doubled cup-bracket count" — also flagged
+             * on the first slot's _pad_00 word. */
+            *(uint16_t *)firstSlot->_pad_00 = 1;
+            slot->doubleCount = 1;
             cupFlag = 0;
         }
-        *(uint16_t *)(a0 + 0x15E) = cupFlag;
+        slot->isLeagueFormat = cupFlag;
 
         uint8_t matchesVal = *stageRec++;
-        *(uint16_t *)(a0 + 0x16A) = matchesVal;
+        slot->groups = matchesVal;
 
         uint8_t groupCount = *stageRec++;
-        *(uint16_t *)(a0 + 0x16C) = groupCount;
+        slot->teamsPerGroup = groupCount;
 
         /* Validate: if cup mode and group count is odd, panic */
-        if (*(uint16_t *)(a0 + 0x15E) != 0) {
+        if (slot->isLeagueFormat != 0) {
             if (groupCount & 1) {
                 panicReasonCode = 0x1313;
                 _PanicHaltLoop();
@@ -8366,21 +8369,22 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
         }
 
         uint8_t qualifiers = *stageRec;
-        *(uint16_t *)(a0 + 0x164) = qualifiers;
+        slot->divisionFactor = qualifiers;
 
         /* Unpack round flags from a2 */
         uint8_t flags = *a2++;
-        *(uint16_t *)(a0 + 0x16E) = (flags >> 6) & 3;
-        *(uint16_t *)(a0 + 0x170) = (flags >> 4) & 3;
-        *(uint16_t *)(a0 + 0x172) = (flags >> 2) & 3;
+        slot->formatFlag16E = (flags >> 6) & 3;
+        slot->initConst170  = (flags >> 4) & 3;
+        slot->formatFlag172 = (flags >> 2) & 3;
 
-        a0 += 0x76;
+        slot = (DIYTournamentSlot *)((uint8_t *)slot + 0x76);
     }
 
     /* Post-loop check: if totalRounds == 6, skip */
     if (a6s->totalMatchesInRound != 6) {  /* 0x52 (= 0x3A + 0x18) */
-        /* Copy field from offset 0xEE to 0x162 in the last stage slot */
-        *(uint16_t *)(a0 + 0x162) = *(uint16_t *)(a0 + 0xEE);
+        /* slot is now the slot AFTER the last initialized one.
+         * a0+0xEE = slot[-1].numTeams (peek-back), a0+0x162 = slot[0].numTeams. */
+        slot->numTeams = slot[-1].numTeams;
     }
 
     _DIYTournament_RecalculateMatchesPerTeam();
