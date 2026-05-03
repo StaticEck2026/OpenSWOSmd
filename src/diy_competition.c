@@ -9167,30 +9167,30 @@ void _ProcessDIYKnockoutMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileE
     uint16_t *outPackedGoals, uint16_t *outPackedAggregate,
     uint16_t *outPackedPenalty, uint16_t *outFlags)
 {
-    DIYCompetition *diy = &diyCompetitionStart.base;
-    uint8_t *raw = (uint8_t *)&diyCompetitionStart;
+    DIYCompetitionEx *compEx = &diyCompetitionStart;
+    DIYCompetition *diy = &compEx->base;
+    uint8_t *raw = (uint8_t *)compEx;
     uint16_t slotIdx = (uint16_t)diy->currentRoundIndex;
-    uint8_t *a5 = raw + (slotIdx << 1);
 
     uint16_t d7 = 0;
     uint16_t d1 = 0, d2 = 0;   /* this match goals */
     uint16_t d3 = 0, d4 = 0;   /* aggregate or temp */
     uint16_t d5 = inFirstLegTeam1, d6 = inFirstLegTeam2;  /* first-leg or penalty */
 
-    if (((DIYCompetitionEx *)raw)->bracketScratch.groupSectionFlag != 0)
+    if (compEx->bracketScratch.groupSectionFlag != 0)
         goto singleLegWithBit6;
 
-    if (*(uint16_t *)(raw + 0x14C) != 2)
+    if (compEx->matchData.cup.roundFormat != 2)
         goto singleLeg;
 
-    if (*(uint16_t *)(raw + 0x14A) != 0)
+    if (compEx->matchData.cup.competitionFormat != 0)
         goto returnLeg;
 
-    /* === First leg of two ($14A==0) === */
+    /* === First leg of two (competitionFormat==0) === */
     {
-        uint8_t *comp = (uint8_t *)&diyCompetitionStart;
+        uint8_t *comp = (uint8_t *)compEx;
         getCachedOrCalcViewResult(team1, team2, comp, 0,
-            *(uint16_t *)(comp + 0x60), *(uint16_t *)(comp + 0x62),  /* extended buffer */
+            compEx->minSubstitutes, compEx->pointsForAWin,
             *(uint16_t *)&diy->compId, &d1, &d2);  /* word read of compId+slotId at 0x2C */
     }
     if (d1 == d2)
@@ -9198,12 +9198,12 @@ void _ProcessDIYKnockoutMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileE
     goto finalizeResult;
 
 returnLeg:
-    /* === Return leg ($14A!=0) === */
+    /* === Return leg (competitionFormat != 0) === */
     d7 |= 0x20;  /* bset #5 */
     {
-        uint8_t *comp = (uint8_t *)&diyCompetitionStart;
+        uint8_t *comp = (uint8_t *)compEx;
         getCachedOrCalcViewResult(team1, team2, comp, 0,
-            *(uint16_t *)(comp + 0x60), *(uint16_t *)(comp + 0x62),  /* extended buffer */
+            compEx->minSubstitutes, compEx->pointsForAWin,
             *(uint16_t *)&diy->compId, &d1, &d2);  /* word read of compId+slotId at 0x2C */
     }
     d3 = d1 + d5;  /* aggregate team1 */
@@ -9222,10 +9222,10 @@ returnLeg:
     goto team1WinsReturnLeg;
 
 returnLegExtraTime:
-    /* Check if extra time is enabled */
-    if (*(uint16_t *)(a5 + 0x72) == 0)
+    /* Check if extra time is enabled — roundExtraTime[slotIdx] */
+    if (compEx->matchData.cup.roundExtraTime[slotIdx] == 0)
         goto returnLegCheckPenalties;
-    if (*(uint16_t *)(a5 + 0x72) != 1)
+    if (compEx->matchData.cup.roundExtraTime[slotIdx] != 1)
         goto returnLegCheckPenalties;
 
     d7 |= 4;  /* bset #2: went to extra time */
@@ -9272,11 +9272,11 @@ singleLeg:
     d7 &= ~0x20;  /* bclr #5 */
     {
         uint16_t mode = 0;
-        if (*(uint16_t *)(raw + 0x14C) == 0)
+        if (compEx->matchData.cup.roundFormat == 0)
             mode = 0x00FF;  /* seq d0 */
-        uint8_t *comp = (uint8_t *)&diyCompetitionStart;
+        uint8_t *comp = (uint8_t *)compEx;
         getCachedOrCalcViewResult(team1, team2, comp, mode,
-            *(uint16_t *)(comp + 0x60), *(uint16_t *)(comp + 0x62),  /* extended buffer */
+            compEx->minSubstitutes, compEx->pointsForAWin,
             *(uint16_t *)&diy->compId, &d1, &d2);  /* word read of compId+slotId at 0x2C */
     }
     if (d1 != d2)
@@ -9285,12 +9285,12 @@ singleLeg:
     d3 = d1;
     d4 = d2;
 
-    /* Check extra time */
-    if (*(uint16_t *)(a5 + 0x72) == 0)
+    /* Check extra time — roundExtraTime[slotIdx] */
+    if (compEx->matchData.cup.roundExtraTime[slotIdx] == 0)
         goto checkPenalties;
-    if (*(uint16_t *)(a5 + 0x72) == 1)
+    if (compEx->matchData.cup.roundExtraTime[slotIdx] == 1)
         goto singleExtraTime;
-    if (((DIYCompetitionEx *)raw)->bracketScratch.groupSectionFlag == 0)
+    if (compEx->bracketScratch.groupSectionFlag == 0)
         goto checkPenalties;
 
 singleExtraTime:
@@ -9307,11 +9307,12 @@ singleExtraTime:
         goto finalizeResult;
 
 checkPenalties:
-    if (*(uint16_t *)(a5 + 0x7E) == 0)
+    /* roundPenalties[slotIdx] */
+    if (compEx->matchData.cup.roundPenalties[slotIdx] == 0)
         goto drawResult;
-    if (*(uint16_t *)(a5 + 0x7E) == 1)
+    if (compEx->matchData.cup.roundPenalties[slotIdx] == 1)
         goto doPenalties;
-    if (((DIYCompetitionEx *)raw)->bracketScratch.groupSectionFlag == 0)
+    if (compEx->bracketScratch.groupSectionFlag == 0)
         goto drawResult;
 
 doPenalties:
@@ -9328,11 +9329,12 @@ doPenalties:
     goto team1WinsFinal;
 
 returnLegCheckPenalties:
-    if (*(uint16_t *)(a5 + 0x7E) == 0)
+    /* roundPenalties[slotIdx] */
+    if (compEx->matchData.cup.roundPenalties[slotIdx] == 0)
         goto drawResult;
-    if (*(uint16_t *)(a5 + 0x7E) == 1)
+    if (compEx->matchData.cup.roundPenalties[slotIdx] == 1)
         goto doPenaltiesReturnLeg;
-    if (((DIYCompetitionEx *)raw)->bracketScratch.groupSectionFlag == 0)
+    if (compEx->bracketScratch.groupSectionFlag == 0)
         goto drawResult;
 
 doPenaltiesReturnLeg:
@@ -9567,12 +9569,15 @@ uint16_t _PlayDIYCupFixtureAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
         isCareer = 1;
 
     /* a6 = diyCompetitionStart */
-    uint8_t *a6 = (uint8_t *)&diyCompetitionStart;
-    DIYCompetition *diy = (DIYCompetition *)a6;
+    DIYCompetitionEx *compEx = &diyCompetitionStart;
+    uint8_t *a6 = (uint8_t *)compEx;
+    DIYCompetition *diy = &compEx->base;
 
-    /* a5 = a6 + exitFlag * 2 (competition progress pointer) */
+    /* a5 = a6 + exitFlag * 2 — exitFlagVal indexes into the cup
+     * roundLegs/roundExtraTime/roundPenalties arrays. */
     int16_t exitFlagVal = diy->currentRoundIndex;
     uint8_t *a5 = a6 + exitFlagVal * 2;
+    uint16_t cupRoundIdx = (uint16_t)exitFlagVal;
 
     /* --- String building section --- */
     int16_t d2; /* tracks d2 through string building for later caching */
@@ -9592,7 +9597,8 @@ uint16_t _PlayDIYCupFixtureAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
         d2 = bufCopyS->totalMatchesInRound;                       /* 0x52 */
         uint16_t d3 = (uint16_t)diy->totalMatchesInRound;         /* 0x52 from main */
         d3 <<= 1;
-        uint16_t d4 = *(uint16_t *)(bufCopy + 0x15A);
+        /* +0x15A = first slot record's _pad_00 (read as uint16). */
+        uint16_t d4 = *(uint16_t *)((DIYTournamentSlot *)(bufCopy + 0x15A))->_pad_00;
         const char *roundStr = _GetCupRoundString(d0, d1, (uint16_t)d2, d3, d4);
         strDst = _StringCopy((const uint8_t *)roundStr, strDst);
     } else {
@@ -9617,8 +9623,8 @@ uint16_t _PlayDIYCupFixtureAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
         strDst = _StringCopy(suffixStr, strDst);
     } else {
         /* Check two-leg conditions */
-        uint16_t field14A = *(uint16_t *)(a6 + 0x14A);
-        uint16_t field14C = *(uint16_t *)(a6 + 0x14C);
+        uint16_t field14A = compEx->matchData.cup.competitionFormat;
+        uint16_t field14C = compEx->matchData.cup.roundFormat;
         if (field14A == 1) {
             *strDst++ = ' ';
             strDst = _StringCopy(a2ndLeg, strDst);
@@ -9648,15 +9654,15 @@ uint16_t _PlayDIYCupFixtureAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
     /* Common values for InitializeInGameTeamsAndStartGame */
     int16_t d7val = (int16_t)PACK_BE_U16(diy->compId, diy->slotId);  /* word read of compId+slotId at 0x2C */
 
-    /* Determine play path based on a5[0x66], replayField, field14A */
-    int16_t a5_66 = *(int16_t *)(a5 + 0x66);
+    /* Determine play path based on roundLegs[cupRoundIdx], replayField, competitionFormat */
+    int16_t a5_66 = (int16_t)compEx->matchData.cup.roundLegs[cupRoundIdx];
 
     if (a5_66 == 0 || a5_66 == 1)
         goto path_C;
     if (replayField != 0)
         goto path_C;
 
-    if (*(uint16_t *)(a6 + 0x14A) != 0)
+    if (compEx->matchData.cup.competitionFormat != 0)
         goto path_B;
 
     /* === Path A: first leg (a5_66 > 1, replayField == 0, field14A == 0) === */
@@ -9676,18 +9682,19 @@ path_B: /* === Second leg === */
     {
         secondLeg = 1;
 
-        /* Extra time condition: a5[0x72] */
-        int16_t a5_72 = *(int16_t *)(a5 + 0x72);
+        /* Extra time condition: roundExtraTime[cupRoundIdx] */
+        int16_t a5_72 = (int16_t)compEx->matchData.cup.roundExtraTime[cupRoundIdx];
         if (a5_72 == 1 || (a5_72 > 1 && replayField != 0))
             extraTimeState = 1;
 
-        /* Penalties condition: a5[0x7E] */
-        int16_t a5_7E = *(int16_t *)(a5 + 0x7E);
+        /* Penalties condition: roundPenalties[cupRoundIdx] */
+        int16_t a5_7E = (int16_t)compEx->matchData.cup.roundPenalties[cupRoundIdx];
         if (a5_7E == 1 || (a5_7E > 1 && replayField != 0))
             penaltiesState = 1;
 
-        /* Load first-leg goals from table at a6+0x14E */
-        uint16_t matchIdx = *(uint16_t *)(a6 + 0x64);
+        /* Load first-leg goals from table at a6+0x14E (BSS_00_2E0AE region,
+         * holds second-leg score data) */
+        uint16_t matchIdx = compEx->matchData.cup.currentMatchIndex;
         uint8_t *goalsTable = a6 + 0x14E;
         team1GoalsFirstLeg = goalsTable[matchIdx * 2];
         team2GoalsFirstLeg = goalsTable[matchIdx * 2 + 1];
@@ -9722,18 +9729,18 @@ path_B: /* === Second leg === */
 
 path_C: /* === Auto-play/sim path === */
     {
-        /* Extra time condition: a5[0x72] */
-        int16_t a5_72 = *(int16_t *)(a5 + 0x72);
+        /* Extra time condition: roundExtraTime[cupRoundIdx] */
+        int16_t a5_72 = (int16_t)compEx->matchData.cup.roundExtraTime[cupRoundIdx];
         if (a5_72 == 1 || (a5_72 > 1 && replayField != 0))
             extraTimeState = 1;
 
-        /* Penalties condition: a5[0x7E] */
-        int16_t a5_7E = *(int16_t *)(a5 + 0x7E);
+        /* Penalties condition: roundPenalties[cupRoundIdx] */
+        int16_t a5_7E = (int16_t)compEx->matchData.cup.roundPenalties[cupRoundIdx];
         if (a5_7E == 1 || (a5_7E > 1 && replayField != 0))
             penaltiesState = 1;
 
-        /* seq d0: clr.w d0; tst.w 0x14C(a6); seq d0 → d0.w = 0x00FF if field14C==0 */
-        uint16_t field14C = *(uint16_t *)(a6 + 0x14C);
+        /* seq d0: clr.w d0; tst.w cup.roundFormat; seq d0 → 0x00FF if roundFormat==0 */
+        uint16_t field14C = compEx->matchData.cup.roundFormat;
         int16_t randomizePitch = (field14C == 0) ? 0xFF : 0;
 
         /* Play the match */
@@ -9798,7 +9805,9 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
 
     _DIY_SyncProgressToDiyFileBufferCopy();
 
-    /* Get current match team slots → team pointers */
+    /* Get current match team slots → team pointers.
+     * slot1/slot2 are fake "base + slotIdx*4" pointers — slot+0x344 reads
+     * bracketScratch.teamPtrTable[slotIdx] from the byte arithmetic. */
     uint8_t *slot1, *slot2;
     _DIY_GetCurrentMatchTeamSlots(&slot1, &slot2);
 
@@ -9835,9 +9844,10 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
 
     /* Load first-leg goals (d5/d6) if two-leg enabled */
     uint16_t firstLeg1 = 0, firstLeg2 = 0;
-    if (*(uint16_t *)(base + 0x14A) != 0) {
-        uint16_t mIdx = *(uint16_t *)(base + 0x64);
-        uint8_t *goalsTable = base + 0x14E;
+    DIYCompetitionEx *baseEx = (DIYCompetitionEx *)base;
+    if (baseEx->matchData.cup.competitionFormat != 0) {
+        uint16_t mIdx = baseEx->matchData.cup.currentMatchIndex;
+        uint8_t *goalsTable = base + 0x14E;  /* BSS_00_2E0AE: second-leg score buffer */
         firstLeg1 = goalsTable[mIdx * 2];
         firstLeg2 = goalsTable[mIdx * 2 + 1];
     }
@@ -9856,22 +9866,22 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
     diyCupLastMatchScoreTeam2 = packedGoals & 0xFF;
 
     uint8_t *a3 = base;
-    DIYCompetitionEx *a3Ex = (DIYCompetitionEx *)base;
+    DIYCompetitionEx *a3Ex = baseEx;
 
     /* Store result flags byte in cupRoundResults[matchIndex] */
-    uint16_t matchIdx = *(uint16_t *)(a3 + 0x64);
+    uint16_t matchIdx = a3Ex->matchData.cup.currentMatchIndex;
     a3Ex->matchData.cup.cupRoundResults[matchIdx] = (uint8_t)resultFlags;
 
     /* Store packed goals at cupRoundResults+0x40 + matchIndex*2 (score region) */
     uint16_t mIdx2 = matchIdx * 2;
     *(uint16_t *)&a3Ex->matchData.cup.cupRoundResults[0x40 + mIdx2] = packedGoals;
 
-    /* If field14A == 0, store aggregate at base + 0x14E + matchIndex*2 */
-    if (*(uint16_t *)(a3 + 0x14A) == 0) {
+    /* If competitionFormat == 0, store aggregate at base + 0x14E + matchIndex*2 */
+    if (a3Ex->matchData.cup.competitionFormat == 0) {
         *(uint16_t *)(a3 + 0x14E + mIdx2) = packedAggregate;
     }
 
-    /* Store penalty at base + 0x1CE + matchIndex*2 */
+    /* Store penalty at base + 0x1CE + matchIndex*2 (inside leagueSectionState.phaseStartMonths) */
     *(uint16_t *)(a3 + 0x1CE + mIdx2) = packedPenalty;
 
     /* Increment match counter */
@@ -9886,16 +9896,16 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
     _DIY_SyncProgressToDiyFileBufferCopy();
 
     /* Advance match index */
-    *(uint16_t *)(a3 + 0x64) += 1;  /* extended buffer, beyond DIYCompetition struct */
+    a3Ex->matchData.cup.currentMatchIndex += 1;
     baseS->roundComplete = 0;  /* 0x54: clear currentRound flag */
 
-    uint16_t newMatchIdx = *(uint16_t *)(a3 + 0x64);  /* extended buffer */
+    uint16_t newMatchIdx = a3Ex->matchData.cup.currentMatchIndex;
     uint16_t totalRounds = (uint16_t)baseS->totalMatchesInRound;  /* 0x52 */
 
     if (newMatchIdx == totalRounds) {
         /* All matches in this round completed */
         baseS->roundComplete = 1;  /* 0x54 */
-        *(uint16_t *)(a3 + 0x64) = 0;  /* extended buffer: reset matchIndex */
+        a3Ex->matchData.cup.currentMatchIndex = 0;
 
         /* Update viewRandomPhase for next round from month table */
         uint8_t *monthTable = a3Ex->bracketScratch.progTable;
@@ -9918,8 +9928,8 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
         return 0;
 
     /* Two-leg check: if 2-leg format and first leg wasn't played yet, stop */
-    if (*(uint16_t *)(a3 + 0x14C) == 2) {  /* extended buffer */
-        if (*(uint16_t *)(a3 + 0x14A) != 1)  /* extended buffer */
+    if (a3Ex->matchData.cup.roundFormat == 2) {
+        if (a3Ex->matchData.cup.competitionFormat != 1)
             return 0;
     }
 
@@ -9960,11 +9970,11 @@ final_or_groups:
 
     /* Determine competition winner from grid bracket */
     {
-        int8_t slotIdx = (int8_t)a3[0x2CE]; /* first grid slot */
-        if (a3[0x8A] & 0x01)  /* bit 0 of match result flags[0] */
-            slotIdx = (int8_t)a3[0x2CF]; /* second grid slot */
+        int8_t slotIdx = (int8_t)a3Ex->teamGridPairings[0];  /* first grid slot */
+        if (a3Ex->matchData.cup.cupRoundResults[0] & 0x01)
+            slotIdx = (int8_t)a3Ex->teamGridPairings[1]; /* second grid slot */
         int16_t slotWord = (int16_t)slotIdx;
-        baseS->resultCode = *(int16_t *)(a3 + 0x24E + slotWord * 2);  /* 0x3A: resultCode from extended buffer */
+        baseS->resultCode = (int16_t)a3Ex->cupTeamIds[slotWord];
     }
 
     return 0;
@@ -9996,9 +10006,9 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
     uint8_t *compPtr1 = fixtureTeam1CompPtr;
     uint8_t *compPtr2 = fixtureTeam2CompPtr;
 
-    /* Build team file pointers from comp ptr offsets */
-    TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + *(uint32_t *)(compPtr1 + 0x2B4));
-    TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + *(uint32_t *)(compPtr2 + 0x2B4));
+    /* Build team file pointers from DIYTeamStats teamSelPtr (+0x2B4) */
+    TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + ((DIYTeamStats *)(compPtr1 + 0x2B4))->teamSelPtr);
+    TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + ((DIYTeamStats *)(compPtr2 + 0x2B4))->teamSelPtr);
 
     /* Route match based on selector */
     if (selector == 0) {
