@@ -347,18 +347,24 @@ uint16_t _DIY_CountUnselectedTeams(void)
     return *(uint16_t *)(compRaw + 0x32E);
 }
 
-/* Helper: clear league table stats for 64 entries */
+/* Helper: clear league table stats for 64 entries.
+ * Iterates DIYTeamStats rows starting at base+0x2B4; teamSelPtr (the
+ * 4-byte head of each row) is intentionally NOT cleared — only the 7
+ * stats words. The 64-row × 18-byte span runs from 0x2B4 to 0x734
+ * (the end of audioInstrumentBank's address range — intentional
+ * shared-memory overlay; see DIYCOMPETITIONEX_AUDIT.md). */
 static void clearLeagueTableStats(uint8_t *base)
 {
+    DIYTeamStats *row = (DIYTeamStats *)(base + 0x2B4);
     for (int16_t i = 0x3F; i >= 0; i--) {
-        *(uint16_t *)(base + 0x2B8) = 0;
-        *(uint16_t *)(base + 0x2BA) = 0;
-        *(uint16_t *)(base + 0x2BC) = 0;
-        *(uint16_t *)(base + 0x2BE) = 0;
-        *(uint16_t *)(base + 0x2C0) = 0;
-        *(uint16_t *)(base + 0x2C2) = 0;
-        *(uint16_t *)(base + 0x2C4) = 0;
-        base += 0x12;
+        row->gamesPlayed  = 0;
+        row->wins         = 0;
+        row->draws        = 0;
+        row->losses       = 0;
+        row->goalsFor     = 0;
+        row->goalsAgainst = 0;
+        row->points       = 0;
+        row++;
     }
 }
 
@@ -520,32 +526,27 @@ void _DIY_SortLeagueTableByStandings(void)
             for (int16_t j = pass; j >= 0; j--) {
                 uint8_t *teamA = a4 + *p1;
                 uint8_t *teamB = a4 + *p2;
+                DIYTeamStats *rowA = (DIYTeamStats *)(teamA + 0x2B4);
+                DIYTeamStats *rowB = (DIYTeamStats *)(teamB + 0x2B4);
 
-                /* Compare points (0x2C4) — higher is better */
-                uint16_t ptsA = *(uint16_t *)(teamA + 0x2C4);
-                uint16_t ptsB = *(uint16_t *)(teamB + 0x2C4);
-
-                if (ptsA > ptsB) goto no_swap;
-                if (ptsA < ptsB) goto do_swap;
+                /* Compare points — higher is better */
+                if (rowA->points > rowB->points) goto no_swap;
+                if (rowA->points < rowB->points) goto do_swap;
 
                 /* Points equal — compare goal difference */
-                int16_t gdA = (int16_t)*(uint16_t *)(teamA + 0x2C0) -
-                              (int16_t)*(uint16_t *)(teamA + 0x2C2);
-                int16_t gdB = (int16_t)*(uint16_t *)(teamB + 0x2C0) -
-                              (int16_t)*(uint16_t *)(teamB + 0x2C2);
+                int16_t gdA = (int16_t)rowA->goalsFor - (int16_t)rowA->goalsAgainst;
+                int16_t gdB = (int16_t)rowB->goalsFor - (int16_t)rowB->goalsAgainst;
                 if (gdA > gdB) goto no_swap;
                 if (gdA < gdB) goto do_swap;
 
                 /* Goal diff equal — compare goals scored */
-                uint16_t gfA = *(uint16_t *)(teamA + 0x2C0);
-                uint16_t gfB = *(uint16_t *)(teamB + 0x2C0);
-                if (gfA > gfB) goto no_swap;
-                if (gfA < gfB) goto do_swap;
+                if (rowA->goalsFor > rowB->goalsFor) goto no_swap;
+                if (rowA->goalsFor < rowB->goalsFor) goto do_swap;
 
                 /* Goals scored equal — alphabetical comparison */
                 {
-                    uint8_t *nameA = &selTeamNameBase + *(uint32_t *)(teamA + 0x2B4);
-                    uint8_t *nameB = &selTeamNameBase + *(uint32_t *)(teamB + 0x2B4);
+                    uint8_t *nameA = &selTeamNameBase + rowA->teamSelPtr;
+                    uint8_t *nameB = &selTeamNameBase + rowB->teamSelPtr;
                     for (;;) {
                         uint8_t cA = *nameA++;
                         if (cA == 0) goto no_swap;
@@ -1707,10 +1708,12 @@ void _DIY_AdvanceLeagueProgressAfterMatch(uint8_t *team1, uint8_t *team2)
     DIYCompetitionEx *comp = &diyCompetitionStart;
     DIYCompetition *a0s = &comp->base;
     uint8_t *a0 = (uint8_t *)a0s;
+    DIYTeamStats *row1 = (DIYTeamStats *)(team1 + 0x2B4);
+    DIYTeamStats *row2 = (DIYTeamStats *)(team2 + 0x2B4);
 
     /* Increment matches played for both teams */
-    *(uint16_t *)(team1 + 0x2B8) += 1;
-    *(uint16_t *)(team2 + 0x2B8) += 1;
+    row1->gamesPlayed += 1;
+    row2->gamesPlayed += 1;
 
     /* Reset match counter if phase-change flag set */
     if (comp->leagueCurrentSlot) {
@@ -2848,16 +2851,19 @@ static void diy_ResetCompetitionStatsAndProgress(void)
     comp->matchData.league.totalMatchesPerSectionLive = comp->matchData.league.totalMatchesPerSection;
     comp->minSubstitutes = (uint16_t)a2s->playEachTeam;
 
-    /* Reset per-team stats: 64 entries, stride 0x12 */
-    for (int16_t i = 0; i <= 0x3F; i++) {
-        WR16(a2, 0x2B8, 0);
-        WR16(a2, 0x2BA, 0);
-        WR16(a2, 0x2BC, 0);
-        WR16(a2, 0x2BE, 0);
-        WR16(a2, 0x2C0, 0);
-        WR16(a2, 0x2C2, 0);
-        WR16(a2, 0x2C4, 0);
-        a2 += 0x12;
+    /* Reset per-team stats: 64 entries (DIYTeamStats rows from base+0x2B4) */
+    {
+        DIYTeamStats *row = (DIYTeamStats *)(a2 + 0x2B4);
+        for (int16_t i = 0; i <= 0x3F; i++) {
+            row->gamesPlayed  = 0;
+            row->wins         = 0;
+            row->draws        = 0;
+            row->losses       = 0;
+            row->goalsFor     = 0;
+            row->goalsAgainst = 0;
+            row->points       = 0;
+            row++;
+        }
     }
 }
 
@@ -3098,12 +3104,11 @@ void _DIY_AdjustWorldCupBracketScores(uint8_t *diy, uint8_t *slot, uint8_t *comp
         uint16_t *a1 = tableOffsets;
         for (; d2 < (int16_t)teamsInGroup; d2++) {
             uint16_t offset = *a1++;
+            DIYTeamStats *row = (DIYTeamStats *)(comp + offset + 0x2B4);
             if (d2 == quotient) {
-                /* Exact match: bonus 1000 */
-                *(uint16_t *)(comp + offset + 0x2C4) += 0x3E8;  /* extended buffer, beyond DIYCompetition struct */
+                row->points += 0x3E8;  /* exact match bonus */
             } else if (d2 < quotient) {
-                /* Below quotient: decreasing bonus */
-                *(uint16_t *)(comp + offset + 0x2C4) += (uint16_t)d4;  /* extended buffer, beyond DIYCompetition struct */
+                row->points += (uint16_t)d4;  /* decreasing bonus */
                 d4 -= 100;
             }
             /* d2 > quotient: no bonus */
@@ -3125,13 +3130,13 @@ void _DIY_AdjustWorldCupBracketScores(uint8_t *diy, uint8_t *slot, uint8_t *comp
 
     for (; d2count >= 0; d2count--) {
         uint16_t offset = *a1sorted++;
-        uint8_t *entry = comp + offset;
+        DIYTeamStats *row = (DIYTeamStats *)(comp + offset + 0x2B4);
         int32_t offExt = (int32_t)offset;
         uint16_t entryIdx = (uint16_t)((uint32_t)(uint16_t)offExt / 0x12);
         int8_t grpVal = (int8_t)groupMap[entryIdx];
         int16_t grpExt = (int16_t)grpVal;
         int16_t bonus = (6 - grpExt) * 100;
-        *(uint16_t *)(entry + 0x2C4) += (uint16_t)bonus;  /* extended buffer, beyond DIYCompetition struct */
+        row->points += (uint16_t)bonus;
     }
 
     /* Sort again */
@@ -3182,12 +3187,11 @@ void _DIY_BuildSeededBracketAndUpdateScores(uint8_t *diy, uint8_t *slot,
             int16_t d2 = 0;
             for (; d2 < (int16_t)teamsInGroup; d2++) {
                 uint16_t offset = *tableOffsets++;
+                DIYTeamStats *row = (DIYTeamStats *)(comp + offset + 0x2B4);
                 if (d2 == d3quot) {
-                    /* Exact match: bonus 2000 */
-                    *(uint16_t *)(comp + offset + 0x2C4) += 0x7D0;  /* extended buffer, beyond DIYCompetition struct */
+                    row->points += 0x7D0;  /* exact match bonus */
                 } else if (d2 < d3quot) {
-                    /* Below: decreasing bonus */
-                    *(uint16_t *)(comp + offset + 0x2C4) += (uint16_t)d4;  /* extended buffer, beyond DIYCompetition struct */
+                    row->points += (uint16_t)d4;  /* decreasing bonus */
                     d4 -= 0x3E8;
                 }
                 /* Above: no bonus */
@@ -3211,13 +3215,13 @@ void _DIY_BuildSeededBracketAndUpdateScores(uint8_t *diy, uint8_t *slot,
 
             for (int16_t i = (int16_t)d3rem - 1; i >= 0; i--) {
                 uint16_t offset = *a1++;
-                uint8_t *entry = comp + offset;
+                DIYTeamStats *row = (DIYTeamStats *)(comp + offset + 0x2B4);
                 int32_t offExt = (int32_t)offset;
                 uint16_t entryIdx = (uint16_t)((uint32_t)(uint16_t)offExt / 0x12);
                 int8_t grpVal = (int8_t)groupMap[entryIdx];
                 int16_t grpExt = (int16_t)grpVal;
                 int16_t bonus = (8 - grpExt) * 25;
-                *(uint16_t *)(entry + 0x2C4) += (uint16_t)bonus;  /* extended buffer, beyond DIYCompetition struct */
+                row->points += (uint16_t)bonus;
             }
 
             /* Sort again */
@@ -10011,32 +10015,34 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
     baseEx->matchesPlayedCount += 1;
 
     /* League table updates */
+    DIYTeamStats *r1 = (DIYTeamStats *)(compPtr1 + 0x2B4);
+    DIYTeamStats *r2 = (DIYTeamStats *)(compPtr2 + 0x2B4);
     uint16_t d1 = goals1, d2 = goals2;
     if (d1 != d2) {
         if (d1 > d2) {
             /* Team 1 wins */
-            *(uint16_t *)(compPtr1 + 0x2BA) += 1; /* wins */
-            *(uint16_t *)(compPtr2 + 0x2BE) += 1; /* losses */
-            *(uint16_t *)(compPtr1 + 0x2C4) += baseEx->pointsForAWin; /* points += pointsForAWin */
+            r1->wins   += 1;
+            r2->losses += 1;
+            r1->points += baseEx->pointsForAWin;
         } else {
             /* Team 2 wins */
-            *(uint16_t *)(compPtr1 + 0x2BE) += 1; /* losses */
-            *(uint16_t *)(compPtr2 + 0x2BA) += 1; /* wins */
-            *(uint16_t *)(compPtr2 + 0x2C4) += baseEx->pointsForAWin; /* points += pointsForAWin */
+            r1->losses += 1;
+            r2->wins   += 1;
+            r2->points += baseEx->pointsForAWin;
         }
     } else {
         /* Draw */
-        *(uint16_t *)(compPtr1 + 0x2BC) += 1; /* draws */
-        *(uint16_t *)(compPtr2 + 0x2BC) += 1; /* draws */
-        *(uint16_t *)(compPtr1 + 0x2C4) += 1; /* points += 1 */
-        *(uint16_t *)(compPtr2 + 0x2C4) += 1; /* points += 1 */
+        r1->draws  += 1;
+        r2->draws  += 1;
+        r1->points += 1;
+        r2->points += 1;
     }
 
     /* Goals always update */
-    *(uint16_t *)(compPtr1 + 0x2C0) += d1; /* goalsFor */
-    *(uint16_t *)(compPtr1 + 0x2C2) += d2; /* goalsAgainst */
-    *(uint16_t *)(compPtr2 + 0x2C0) += d2; /* goalsFor */
-    *(uint16_t *)(compPtr2 + 0x2C2) += d1; /* goalsAgainst */
+    r1->goalsFor     += d1;
+    r1->goalsAgainst += d2;
+    r2->goalsFor     += d2;
+    r2->goalsAgainst += d1;
 
     /* Sort standings and process promotions/relegations if diyMinSubstitutes == 0 */
     if (diyMinSubstitutes == 0) {
