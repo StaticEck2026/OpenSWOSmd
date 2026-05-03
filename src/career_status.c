@@ -944,7 +944,8 @@ uint16_t _IsMajorTournamentAllowingRandomStatus(void) {
     uint16_t isMajor = _IsMajorInternationalTournament(&ctx);
     if (isMajor == 0)
         return 0;
-    return *(uint16_t *)(ctx + 0x44);
+    /* +0x44 = matchStarted in DIYCompetition base */
+    return (uint16_t)((DIYCompetition *)ctx)->matchStarted;
 }
 
 /* IsMajorTournamentAllowingSquadChanges
@@ -956,7 +957,8 @@ uint16_t _IsMajorTournamentAllowingSquadChanges(void) {
     uint16_t isMajor = _IsMajorInternationalTournament(&ctx);
     if (isMajor == 0)
         return 0;
-    return *(uint16_t *)(ctx + 0x46);
+    /* +0x46 = careerTeamInvolved in DIYCompetition base */
+    return (uint16_t)((DIYCompetition *)ctx)->careerTeamInvolved;
 }
 
 /* IsTournamentAllowingSquadChangesIfNotCareer */
@@ -1107,11 +1109,10 @@ league_match:
         if (isDiy != 0) {
             /* DIY league: check group state via file buffer stride */
             uint16_t groupIdxField = (uint16_t)((DIYCompetition *)diyFileBufferCopy)->roundComplete;
-            uint16_t offset = groupIdxField * 0x76;
-            uint8_t *groupPtr = (uint8_t *)comp + offset;
-            if (*(int16_t *)(groupPtr + 0x15E) != 0)
+            DIYTournamentSlot *slot = (DIYTournamentSlot *)((uint8_t *)comp + groupIdxField * 0x76 + 0x15A);
+            if (slot->isLeagueFormat != 0)
                 goto compute_receipts;
-            if (*(int16_t *)(groupPtr + 0x16E) == 2)
+            if (slot->formatFlag16E == 2)
                 goto compute_receipts;
             goto increment_count;
         }
@@ -1228,11 +1229,10 @@ diy_comp_match:
             d7 = (uint16_t)((uint32_t)(d7 * cupMatchReceiptsMultiplierTable[roundIndex]) / 100);
 
             /* Use curRoundField as group index to check match state via file buffer stride */
-            uint16_t strideOffset = curRoundField * 0x76;
-            uint8_t *groupPtr = (uint8_t *)comp + strideOffset;
-            if (*(int16_t *)(groupPtr + 0x15E) != 0)
+            DIYTournamentSlot *slot = (DIYTournamentSlot *)((uint8_t *)comp + curRoundField * 0x76 + 0x15A);
+            if (slot->isLeagueFormat != 0)
                 goto compute_receipts;
-            if (*(int16_t *)(groupPtr + 0x16E) == 2)
+            if (slot->formatFlag16E == 2)
                 goto compute_receipts;
             goto increment_count;
         }
@@ -1571,20 +1571,24 @@ update_and_clamp:
  * a6 = competition context buffer, uses d2 from GetMoreExpensiveTeamsCount.
  */
 static uint16_t getExpectedLeagueRankIndex(uint8_t *ctx, uint16_t moreExpensiveCount) {
-    uint16_t d3 = *(uint16_t *)(ctx + 0x32);
-    uint16_t compType = *(uint16_t *)ctx;
+    DIYCompetitionEx *ctxEx = (DIYCompetitionEx *)ctx;
+    DIYCompetition *ctxBase = &ctxEx->base;
+    uint16_t d3 = (uint16_t)ctxBase->numTeams;
+    uint16_t compType = (uint16_t)ctxBase->competitionType;
 
     if (compType == 0) {
-        /* League: (numTeams-1) * multiplier from offset 0x5E */
+        /* League: (numTeams-1) * playEachTeam */
         uint16_t d7 = d3 - 1;
-        d7 = (uint16_t)(d7 * *(uint16_t *)(ctx + 0x5E));
+        d7 = (uint16_t)(d7 * (uint16_t)ctxBase->playEachTeam);
         return d7;
     }
 
     if (compType == 1) {
-        /* Cup: walk through rounds halving d3, counting d7 */
+        /* Cup: walk through rounds halving d3, counting d7. roundPtr starts
+         * at cup roundLegs[0] and advances by stride 2 (so roundPtr[i] iterates
+         * through roundLegs[i]). */
         uint16_t d7 = 0;
-        uint16_t *roundPtr = (uint16_t *)(ctx + 0x66);
+        uint16_t *roundPtr = ctxEx->matchData.cup.roundLegs;
         for (;;) {
             d7++;
             if (*roundPtr++ == 2)
@@ -1599,22 +1603,23 @@ static uint16_t getExpectedLeagueRankIndex(uint8_t *ctx, uint16_t moreExpensiveC
 
     /* DIY (compType >= 2): walk through groups */
     {
-        uint16_t numGroups = *(uint16_t *)(ctx + 0x52);
+        uint16_t numGroups = (uint16_t)ctxBase->totalMatchesInRound;
         uint8_t *groupPtr = ctx;
         uint16_t d7 = 0;
 
         for (uint16_t i = numGroups; i > 0; i--) {
-            if (*(int16_t *)(groupPtr + 0x15E) != 0) {
-                uint16_t numRounds = *(uint16_t *)(groupPtr + 0x16C);
-                uint16_t multiplier = *(uint16_t *)(groupPtr + 0x166);
+            DIYTournamentSlot *slot = (DIYTournamentSlot *)(groupPtr + 0x15A);
+            if (slot->isLeagueFormat != 0) {
+                uint16_t numRounds = slot->teamsPerGroup;
+                uint16_t multiplier = slot->playEachTeam;
                 uint16_t val = (numRounds - 1) * multiplier;
                 d7 += val;
             } else {
                 d7++;
-                if (*(int16_t *)(groupPtr + 0x16E) == 2)
+                if (slot->formatFlag16E == 2)
                     d7++;
             }
-            if (moreExpensiveCount >= *(uint16_t *)(groupPtr + 0x164))
+            if (moreExpensiveCount >= slot->divisionFactor)
                 return d7;
             groupPtr += 0x76;
         }
@@ -1705,7 +1710,7 @@ static int16_t calcBoardConfidenceDeltaPercent(void) {
     /* Club manager: compute from league rank delta */
     uint16_t teamRank = _FindTeamInDIY(selTeamNumber, competitionFileBuffer);
     int16_t d0 = (int16_t)expectedLeagueRankIndex - (int16_t)teamRank;
-    int16_t numTeams = *(int16_t *)(competitionFileBuffer + 0x32);
+    int16_t numTeams = ((DIYCompetitionEx *)competitionFileBuffer)->base.numTeams;
     d0 = (int16_t)(((int32_t)d0 * 100) / (int32_t)numTeams);
     return d0;
 }
@@ -1983,25 +1988,27 @@ void _UpdateCareerReputationBonuses(void) {
     }
 
     /* Club reputation from league rank */
-    if (*(int16_t *)competitionFileBuffer != 2) {
+    DIYCompetitionEx *cfbEx = (DIYCompetitionEx *)competitionFileBuffer;
+    if (cfbEx->base.competitionType != 2) {
         /* Not a pure cup — compute reputation from rank delta */
         uint16_t avgPrice = getTeamValueForGateReceipts(&careerTeam);
         int16_t d7 = (int16_t)avgPrice;
 
         /* Find team rank in league table */
-        uint16_t *leagueTable = (uint16_t *)(competitionFileBuffer + 0x12E);
-        int16_t d1 = -2;
+        uint16_t *leagueTable = cfbEx->matchData.league.leagueTeamIds;
+        int16_t *teamEntryOffsets = (int16_t *)cfbEx->matchData.league.teamEntryOffsets;
+        int16_t d1 = -1;
         do {
-            d1 += 2;
-            int16_t entry = *(int16_t *)(competitionFileBuffer + 0x6E + d1);
+            d1++;
+            int16_t entry = teamEntryOffsets[d1];
             int32_t extended = (int32_t)entry;
             uint16_t divided = (uint16_t)((uint32_t)extended / 18);
-            uint16_t shifted = divided << 1;
-        } while (leagueTable[(uint16_t)((uint32_t)(int32_t)(*(int16_t *)(competitionFileBuffer + 0x6E + d1)) / 18)] != selTeamNumber);
-        d1 >>= 1;
+            (void)divided;
+        } while (leagueTable[(uint16_t)((uint32_t)(int32_t)teamEntryOffsets[d1] / 18)] != selTeamNumber);
+        /* d1 is now the rank (0-based index into teamEntryOffsets) */
 
         int16_t rankDelta = (int16_t)expectedLeagueRankIndex - d1;
-        int16_t numTeams = *(int16_t *)(competitionFileBuffer + 0x32);
+        int16_t numTeams = cfbEx->base.numTeams;
         int16_t pct = (int16_t)(((int32_t)rankDelta * 100) / (int32_t)numTeams);
         int16_t repDelta = (int16_t)(((int32_t)pct * (int32_t)d7) / 200);
         careerReputationPoints += repDelta;
@@ -2549,12 +2556,11 @@ uint8_t *_TrainingMatch_AddTrialPlayerAtPosition(uint16_t position)
     /* Determine insertion point in currentMatchPlayers */
     uint16_t insertOffset;
     {
-        uint8_t *compBuf = competitionFileBuffer;
-        uint16_t compType = *(uint16_t *)compBuf;
-        if (compType == 2) {
-            insertOffset = *(uint16_t *)(compBuf + 0x4E);
+        DIYCompetitionEx *compBufEx = (DIYCompetitionEx *)competitionFileBuffer;
+        if (compBufEx->base.competitionType == 2) {
+            insertOffset = (uint16_t)compBufEx->base.numTeamsInStage;
         } else {
-            insertOffset = *(uint16_t *)(compBuf + 0x66);
+            insertOffset = compBufEx->matchData.cup.roundLegs[0];
         }
         insertOffset += 0x0B;
     }
@@ -3729,10 +3735,10 @@ main_loop:
     /* Sim league fixtures until phase catches up */
     _DIY_PlayOrSimulateLeagueFixture(0, 0); /* allowSquadChanges=0, selector=0 (sim) */
 
-    if (*(uint16_t *)((uint8_t *)base + 0x1C0) == 0)
+    if (((DIYCompetitionEx *)base)->leagueCurrentSlot == 0)
         goto main_loop; /* more matches pending in current fixture set */
 
-    if (*(uint16_t *)((uint8_t *)base + 0x60) != 0) {  /* extended buffer */
+    if (((DIYCompetitionEx *)base)->minSubstitutes != 0) {
         /* Advance fixture index and continue */
         viewRP = base->viewRandomPhase;
         _DIY_AdvanceFixtureIndex((uint16_t)(viewRP + 1), (uint16_t)viewRP);
@@ -3767,10 +3773,10 @@ show_menu_check:
 catch_up_phase:
     /* Check if lastMatch matches current viewRandomPhase */
     if (lastMatch == base->viewRandomPhase) {
-        /* Catch-up loop: sim until 0x1C0 != 0 */
+        /* Catch-up loop: sim until leagueCurrentSlot != 0 */
         do {
             _DIY_PlayOrSimulateLeagueFixture(0, 0);
-        } while (*(uint16_t *)((uint8_t *)base + 0x1C0) == 0);
+        } while (((DIYCompetitionEx *)base)->leagueCurrentSlot == 0);
         goto show_menu_check;
     }
 
@@ -3909,16 +3915,17 @@ void _Career_AutoAdvanceCompetitionSlots(void)
 restart:
     ;
     uint8_t *bufCopy = diyFileBufferCopy;
-    uint16_t slotIndex = *(uint16_t *)(bufCopy + 0x54);
-    uint8_t *slotRecord = bufCopy + (uint32_t)slotIndex * 0x76;
+    DIYCompetition *bufCopyBase = (DIYCompetition *)bufCopy;
+    uint16_t slotIndex = (uint16_t)bufCopyBase->roundComplete;
+    DIYTournamentSlot *slotRec = (DIYTournamentSlot *)(bufCopy + (uint32_t)slotIndex * 0x76 + 0x15A);
     DIYCompetitionEx *compEx = &diyCompetitionStart;
 
     /* Determine hasGroups value based on slot position */
     uint16_t hasGroups = 1;
-    if (slotIndex + 1 == *(uint16_t *)(bufCopy + 0x52))
+    if (slotIndex + 1 == (uint16_t)bufCopyBase->totalMatchesInRound)
         hasGroups = 2; /* last slot */
 
-    if (*(uint16_t *)(slotRecord + 0x15E) != 0) {
+    if (slotRec->isLeagueFormat != 0) {
         /* League path */
         compEx->base.hasGroups = (int16_t)hasGroups;
         _Career_AutoAdvanceLeagueFixtures();
@@ -3926,7 +3933,7 @@ restart:
             return; /* hasGroups went negative → done */
         _DIY_SortLeagueTableByStandings();
         _DIY_AdvanceToNextCompetitionSlot();
-        if (*(uint16_t *)(bufCopy + 0x58) == 0)
+        if (bufCopyBase->currentRoundIndex == 0)
             goto restart; /* more slots remain */
     } else {
         /* Cup path */
@@ -3935,7 +3942,7 @@ restart:
         if (compEx->base.hasGroups < 0)
             return; /* hasGroups went negative → done */
         _DIY_AdvanceToNextCompetitionSlot();
-        if (*(uint16_t *)(bufCopy + 0x58) == 0)
+        if (bufCopyBase->currentRoundIndex == 0)
             goto restart; /* more slots remain */
     }
 }
@@ -3986,9 +3993,10 @@ void _Career_SetCurrentCompetitionSlot(uint8_t *comp, uint16_t slot, uint16_t di
     uint32_t *compPtrArray = &currentCompetitionPtr;
     compPtrArray[slot] = (uint32_t)comp;
 
-    /* Get the slot state pointer from careerCompetitionSlotPtrTable */
+    /* Get the slot state pointer from careerCompetitionSlotPtrTable.
+     * +0x2C = compId/slotId word in DIYCompetition base. */
     uint8_t *slotState = careerCompetitionSlotPtrTable[slot];
-    *(uint16_t *)(slotState + 0x2C) = slot;
+    *(uint16_t *)&((DIYCompetition *)slotState)->compId = slot;
 
     /* Load competition slot state from buffer */
     /* asm: exg a0,a1 → a0=slotState for the call, then exg back */
@@ -4063,8 +4071,9 @@ init_competition:
      * then exg back to restore d0=slot */
     _InitCompetitionFromRecord(divisionIndex, comp);
 
-    /* Store slot index to both diyFileBufferCopy and diyCompetitionStart */
-    *(uint16_t *)(diyFileBufferCopy + 2 + 0x2A) = slot;
+    /* Store slot index to both diyFileBufferCopy and diyCompetitionStart.
+     * +0x2C = compId/slotId word in DIYCompetition base. */
+    *(uint16_t *)&((DIYCompetition *)diyFileBufferCopy)->compId = slot;
     *(uint16_t *)&diyCompetitionStart.base.compId = slot;  /* writes compId+slotId as word */
 
     /* Write comp type to slot state header */
