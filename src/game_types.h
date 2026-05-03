@@ -739,8 +739,29 @@ typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx {
     /* --- 0x2CE..0x30D: SWOS2.s named diyTeamGridPairings[64] --- */
     uint8_t teamGridPairings[64];       /* 0x2CE */
 
-    /* --- 0x30E..0x5C7: SWOS2.s named diyTeamShuffleOrder[698] --- */
-    uint8_t teamShuffleOrder[698];      /* 0x30E */
+    /* --- 0x30E..0x5C7: SWOS2.s named diyTeamShuffleOrder[698].
+     *
+     * The first 0x20 bytes hold raw shuffled team-byte indices, but the
+     * rest of the array is reused as a scratch region for bracket-state
+     * counters, the cup-progression month table, and the per-team
+     * selTeamsPtr offset cache used by ApplyHomeAwaySwap and friends.
+     * Anonymous union so existing `teamShuffleOrder[i]` callers keep
+     * working while typed scratch-field access is also available via
+     * `bracketScratch.<field>`. */
+    union {
+        uint8_t teamShuffleOrder[698];                   /* 0x30E */
+        struct __attribute__((packed, aligned(2))) {
+            uint8_t  shuffleHead[0x20];                  /* 0x30E..0x32D: raw shuffle bytes */
+            uint16_t secondLegCounter;                    /* 0x32E */
+            uint16_t groupSectionFlag;                    /* 0x330 */
+            uint16_t matchCount;                          /* 0x332 */
+            uint16_t totalMatches;                        /* 0x334 */
+            uint16_t curMonthIdx;                         /* 0x336 */
+            uint8_t  progTable[0xC];                      /* 0x338..0x343: month-progression bytes */
+            uint32_t teamPtrTable[64];                    /* 0x344..0x443: per-team selTeamsPtr offsets */
+            uint8_t  scratchTail[0x184];                  /* 0x444..0x5C7: bracket scratch tail */
+        } bracketScratch;
+    };
 } DIYCompetitionEx;
 
 typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5C8) ? 1 : -1];

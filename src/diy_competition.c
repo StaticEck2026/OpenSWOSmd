@@ -332,19 +332,18 @@ uint16_t _DIY_CountUnselectedTeams(void)
 {
     DIYCompetitionEx *compEx = &diyCompetitionStart;
     DIYCompetition *comp = &compEx->base;
-    uint8_t *compRaw = (uint8_t *)compEx;
-    *(uint16_t *)(compRaw + 0x32E) = 0;
+    compEx->bracketScratch.secondLegCounter = 0;
 
     uint8_t *flags = compEx->matchData.cup.cupRoundResults;
     uint16_t numTeams = (uint16_t)comp->totalMatchesInRound;
 
     for (int16_t i = (int16_t)numTeams - 1; i >= 0; i--) {
         if (!(flags[i] & 2)) {
-            *(uint16_t *)(compRaw + 0x32E) += 1;
+            compEx->bracketScratch.secondLegCounter += 1;
         }
     }
 
-    return *(uint16_t *)(compRaw + 0x32E);
+    return compEx->bracketScratch.secondLegCounter;
 }
 
 /* Helper: clear league table stats for 64 entries.
@@ -674,10 +673,10 @@ void _InitDIYTournament(void)
 __attribute__((used, externally_visible))
 void _DIY_InitCupBracketProgressionTable(void)
 {
-    DIYCompetition *a0s = &diyCompetitionStart.base;
-    uint8_t *a0 = (uint8_t *)a0s;
-    uint16_t *roundFormats = (uint16_t *)(a0 + 0x66);  /* extended */
-    uint16_t *roundLegs = (uint16_t *)(a0 + 0x7E);     /* extended */
+    DIYCompetitionEx *comp = &diyCompetitionStart;
+    DIYCompetition *a0s = &comp->base;
+    uint16_t *roundFormats = comp->matchData.cup.roundLegs;       /* parent +0x66 */
+    uint16_t *roundLegs = comp->matchData.cup.roundPenalties;     /* parent +0x7E */
     uint16_t numRounds = (uint16_t)a0s->numRounds;
 
     uint16_t totalMatches = 0;
@@ -695,12 +694,12 @@ void _DIY_InitCupBracketProgressionTable(void)
         }
     }
 
-    *(uint16_t *)(a0 + 0x334) = totalMatches;  /* extended */
+    comp->bracketScratch.totalMatches = totalMatches;
     uint16_t matchCount = totalMatches - lastRoundHasExtraMatch;
 
     uint8_t startMonth = (uint8_t)a0s->startMonth;
     uint8_t endMonth = (uint8_t)a0s->endMonth;
-    uint8_t *progTable = a0 + 0x338;  /* extended */
+    uint8_t *progTable = comp->bracketScratch.progTable;
 
     if (matchCount == 1) {
         progTable[0] = startMonth;
@@ -1471,13 +1470,13 @@ void _DIY_BuildTeamSelectionPointerCache(void)
     uint16_t *teamIds = comp->cupTeamIds;
     uint16_t count = (uint16_t)a2s->numTeams;
 
-    /* Part 1: build relative pointer cache (table at base+0x344, inside teamShuffleOrder) */
+    /* Part 1: build relative pointer cache (teamPtrTable inside bracketScratch) */
     for (int16_t i = (int16_t)count - 1; i >= 0; i--) {
         int16_t gridIdx = (int8_t)*gridPtr++;   /* ext.w d6: sign-extend */
         uint16_t teamNum = teamIds[gridIdx];
         TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
         uint32_t relPtr = (uint32_t)((uint8_t *)teamPtr - &selTeamsPtr);
-        *(uint32_t *)(a2 + (uint16_t)gridIdx * 4 + 0x344) = relPtr;
+        comp->bracketScratch.teamPtrTable[(uint16_t)gridIdx] = relPtr;
     }
 
     /* Part 2: count non-national teams */
@@ -1547,10 +1546,10 @@ void _DIY_InitCupBracketState(void)
     }
 
     /* Clear counters */
-    *(uint16_t *)(a2 + 0x330) = 0;  /* extended */
-    *(uint16_t *)(a2 + 0x32E) = 0;  /* extended */
-    *(uint16_t *)(a2 + 0x336) = 0;  /* extended */
-    *(uint16_t *)(a2 + 0x332) = 0;  /* extended */
+    comp->bracketScratch.groupSectionFlag = 0;
+    comp->bracketScratch.secondLegCounter = 0;
+    comp->bracketScratch.curMonthIdx = 0;
+    comp->bracketScratch.matchCount = 0;
 
     /* Clear 32 bytes of flags at offset 0x8A (volatile to prevent memset optimization) */
     volatile uint8_t *flagPtr = comp->matchData.cup.cupRoundResults;
@@ -3732,12 +3731,13 @@ void _DIY_LoadCurrentCompetitionSlot(void)
         *(uint16_t *)(a4 + 96) = (uint16_t)a2s->roundIterator;   /* 0x60 = 0x4C, extended buffer */
         *(uint16_t *)(a4 + 2 + 0x60) = (uint16_t)a2s->numTeamsInStage;  /* extended buffer, beyond DIYCompetition struct */
 
-        /* Copy progression month bytes */
+        /* Copy progression month bytes into bracketScratch */
         {
+            DIYCompetitionEx *a4Ex = (DIYCompetitionEx *)a4;
             uint8_t *src = s->progressionTable;
-            uint8_t *dst = (uint8_t *)(a4 + 56 + 0x300);
+            uint8_t *dst = a4Ex->bracketScratch.progTable;
             uint16_t count = s->matchesPerSlot;
-            *(uint16_t *)(a4 + 52 + 0x300) = count;
+            a4Ex->bracketScratch.totalMatches = count;
             for (int16_t i = (int16_t)count - 1; i >= 0; i--)
                 *dst++ = *src++;
         }
@@ -3836,10 +3836,10 @@ void _DIY_InitCupFromTeamGridAndValidateTeams(void)
     }
 
     /* Clear more state */
-    *(uint16_t *)(a2 + 0x330) = 0;
-    *(uint16_t *)(a2 + 0x32E) = 0;
-    *(uint16_t *)(a2 + 0x336) = 0;
-    *(uint16_t *)(a2 + 0x332) = 0;
+    diyCompetitionStart.bracketScratch.groupSectionFlag = 0;
+    diyCompetitionStart.bracketScratch.secondLegCounter = 0;
+    diyCompetitionStart.bracketScratch.curMonthIdx = 0;
+    diyCompetitionStart.bracketScratch.matchCount = 0;
 
     /* Initialize 64-byte sequential team order at 0x2CE */
     {
@@ -5706,10 +5706,8 @@ extern void _GoGetTeamsForPlay(uint8_t *gameTypeStr, uint8_t *playWhatStr,
  * d0 = byte index, a4 = diyCompetitionStart base */
 static uint8_t *getTeamNameFromIndex(int8_t idx, uint8_t *comp)
 {
-    int16_t d0 = (int16_t)idx;
-    uint32_t off = (uint16_t)(d0 * 4);
-    uint32_t *teamPtrTable = (uint32_t *)(comp + 0x344);
-    uint8_t *teamEntry = (uint8_t *)teamPtrTable[off / 4];
+    DIYCompetitionEx *compEx = (DIYCompetitionEx *)comp;
+    uint8_t *teamEntry = (uint8_t *)(uintptr_t)compEx->bracketScratch.teamPtrTable[(uint16_t)(int16_t)idx];
     return teamEntry + (uint32_t)&selTeamNameBase;
 }
 
@@ -6087,8 +6085,8 @@ void _DesignDIYCup_BuildMenuTitleString(void)
         /* Fall through to replay/leg check */
     }
 
-    /* Check for replay suffix */
-    uint16_t replayCount = *(uint16_t *)(a2 + 0x330);  /* extended buffer, beyond DIYCompetition struct */
+    /* Check for replay suffix (groupSectionFlag doubles as replay counter here) */
+    uint16_t replayCount = ((DIYCompetitionEx *)a2)->bracketScratch.groupSectionFlag;
     if (replayCount != 0) {
         const uint8_t *replayStr;
 
@@ -6132,13 +6130,12 @@ __attribute__((used, externally_visible))
 void _DesignDIYCup_UpdateCurrentMatchTeamEntryStrings(void)
 {
     /* Inline DIY_GetCurrentMatchTeamSlots: compute two team slot pointers */
-    uint8_t *base = (uint8_t *)&diyCompetitionStart;
+    DIYCompetitionEx *baseEx = &diyCompetitionStart;
+    uint8_t *base = (uint8_t *)baseEx;
     uint16_t idx = *(uint16_t *)(base + 0x64);
     uint16_t idx2 = idx * 2;
-    int8_t slot1 = (int8_t)base[0x2CE + idx2];
-    int8_t slot2 = (int8_t)base[0x2CE + idx2 + 1];
-    uint8_t *a1 = base + (int16_t)slot1 * 4;
-    uint8_t *a2 = base + (int16_t)slot2 * 4;
+    int8_t slot1 = (int8_t)baseEx->teamGridPairings[idx2];
+    int8_t slot2 = (int8_t)baseEx->teamGridPairings[idx2 + 1];
 
     MenuEntry *e = &menuEntries[11]; /* menuEntries+$268 */
 
@@ -6149,13 +6146,13 @@ void _DesignDIYCup_UpdateCurrentMatchTeamEntryStrings(void)
 
     /* Entry 12: team 1 name, visible */
     e->isInvisible = 0;
-    uint8_t *teamName1 = (uint8_t *)((uint32_t)*(uint32_t *)(a1 + 0x344) + (uint32_t)&selTeamNameBase);
+    uint8_t *teamName1 = (uint8_t *)(uintptr_t)baseEx->bracketScratch.teamPtrTable[(int16_t)slot1] + (uint32_t)&selTeamNameBase;
     e->fg = (uint32_t)teamName1;
     e++;
 
     /* Entry 13: team 2 name, visible */
     e->isInvisible = 0;
-    uint8_t *teamName2 = (uint8_t *)((uint32_t)*(uint32_t *)(a2 + 0x344) + (uint32_t)&selTeamNameBase);
+    uint8_t *teamName2 = (uint8_t *)(uintptr_t)baseEx->bracketScratch.teamPtrTable[(int16_t)slot2] + (uint32_t)&selTeamNameBase;
     e->fg = (uint32_t)teamName2;
     e++;
 
