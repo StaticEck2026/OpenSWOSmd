@@ -5,6 +5,7 @@
  */
 #include "game_state.h"
 #include "game_types.h"
+#include "endian_helpers.h"
 
 /* ---- External globals ---- */
 extern uint16_t isGoalAttempt;
@@ -787,16 +788,21 @@ void _UpdateTime(void)
 
     /* --- check_game_end --- */
 check_game_end:
-    /* Minute 1: mark half-start */
-    if (gameTime == 0x00000001)
+    /* Minute 1: mark half-start.
+     * gameTime is written byte-by-byte via the GAMETIME_* macros (m68k BCD
+     * layout: byte[1]=hundreds, byte[2]=tens, byte[3]=ones), but compared
+     * here as a uint32_t. The constants below are in the m68k BE form
+     * (e.g. 0x900 = minute 90); HOST_TO_BE32 swaps them on LE so the
+     * uint32_t comparison sees the correct byte pattern. */
+    if (gameTime == HOST_TO_BE32(0x00000001))
         _BumpPlayersLastPlayedHalfAtHalfStart();
 
     /* Minute 46: mark second-half start */
-    if (gameTime == 0x00000406)
+    if (gameTime == HOST_TO_BE32(0x00000406))
         _BumpPlayersLastPlayedHalfAtHalfStart();
 
     /* Minute 45: half-time */
-    if (gameTime == 0x00000405)
+    if (gameTime == HOST_TO_BE32(0x00000405))
     {
         if ((int16_t)gameSeconds >= 0)
             goto last_cycle;
@@ -808,7 +814,7 @@ check_game_end:
     }
 
     /* Minute 90: full-time */
-    if (gameTime == 0x00000900)
+    if (gameTime == HOST_TO_BE32(0x00000900))
     {
         if ((int16_t)gameSeconds >= 0)
             goto last_cycle;
@@ -860,7 +866,7 @@ check_game_end:
     }
 
     /* Minute 105: end of first extra time */
-    if (gameTime == 0x00010005)
+    if (gameTime == HOST_TO_BE32(0x00010005))
     {
         if ((int16_t)gameSeconds >= 0)
             goto last_cycle;
@@ -871,7 +877,7 @@ check_game_end:
     }
 
     /* Minute 120: end of second extra time */
-    if (gameTime == 0x00010200)
+    if (gameTime == HOST_TO_BE32(0x00010200))
     {
         if ((int16_t)gameSeconds >= 0)
             goto last_cycle;
