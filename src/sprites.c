@@ -83,6 +83,41 @@ void _CopySprite(uint16_t srcSprite, uint16_t dstSprite,
     /* Load source sprite header */
     SpriteGraphics *srcHdr = sprGfxTable[srcSprite];
 
+#ifdef SWOS_SDL_BUILD
+    /* Chunky 8bpp byte copy. The Amiga blitter path below programs
+     * `custom->blt*` registers which on SDL go to a stub buffer
+     * doing nothing observable, so without this path sprite[dstSprite]
+     * never actually receives sprite[srcSprite]'s pixel data and the
+     * subsequent _ConvertSpriteColors operates on whatever stale bytes
+     * are in slot dstSprite. Symptom: stadium-menu little-player
+     * sprites all rendered with the SAME shape regardless of team
+     * shirt-type, and color conversion produced inconsistent results.
+     *
+     * Both src and dst are post-_ProcessImageCommandStream chunky 8bpp;
+     * each row is `wquads * 16` bytes wide, `nlines` tall. The Amiga
+     * caller passes (xOffset, yOffset) in pixels for compositing; the
+     * stadium-menu / edit-tactics callers all use (0, 0). A simple
+     * unclipped row-by-row memcpy at the offset covers those uses. */
+    {
+        uint16_t srcW = (uint16_t)srcHdr->pixWidth;
+        uint16_t srcH = (uint16_t)srcHdr->nlines;
+        uint16_t dstStride = (uint16_t)dstHdr->wquads * 16;
+        uint8_t *dst = (uint8_t *)(uintptr_t)dstHdr->sprData
+                     + (size_t)yOffset * dstStride
+                     + (size_t)xOffset;
+        const uint8_t *src = (const uint8_t *)(uintptr_t)srcHdr->sprData;
+        uint16_t srcStride = (uint16_t)srcHdr->wquads * 16;
+        for (uint16_t row = 0; row < srcH; row++) {
+            for (uint16_t col = 0; col < srcW; col++) {
+                dst[col] = src[col];
+            }
+            dst += dstStride;
+            src += srcStride;
+        }
+        return;
+    }
+#endif
+
     /* Destination tile stride in bytes (per plane row) */
     uint16_t dstStrideBytes = (uint16_t)dstHdr->wquads << 1;
     /* Destination sprite data pointer */
