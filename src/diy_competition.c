@@ -1886,22 +1886,32 @@ void _DIY_SyncCompetitionTeamGridOrBuildBracket(void)
  * to the destination. Count is the sum of words at offsets 0x56
  * and 0x5A. If count is 0, does nothing.
  *
- * Asm: a3 = dst
+ * Asm: a3 = dst, advances a3 in-place via `move.w (a0)+,(a3)+`.
+ * The caller (Career_ProcessPrimaryCompetitionForNextSeason) sets
+ * a3 = diyQualifiedTeamIndices ONCE before its per-division loop, so
+ * each call APPENDS to the cumulative buffer rather than overwriting
+ * from base. Without this advancement, the qualification-entry loop
+ * later only sees div N-1's promotion list (the last write), and
+ * teams from earlier divisions go missing — leading to scratch
+ * imbalance in _DIY_ValidateLeagueScratchBuffer.
+ *
+ * Return the new cursor so the caller can chain calls.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DIY_CopyCompetitionTeamIndexTable(uint8_t *dst)
+uint8_t *_DIY_CopyCompetitionTeamIndexTable(uint8_t *dst)
 {
     DIYCompetition *comps = &diyCompetitionStart.base;
     uint8_t *comp = (uint8_t *)comps;
     uint16_t count = (uint16_t)comps->competitionFinished + (uint16_t)comps->numRounds;
     if (count == 0)
-        return;
+        return dst;
 
     uint16_t *src = (uint16_t *)(comp + 0x1AE);  /* extended */
     uint16_t *d = (uint16_t *)dst;
     for (int16_t i = (int16_t)(count - 1); i >= 0; i--) {
         *d++ = *src++;
     }
+    return (uint8_t *)d;
 }
 
 /* ================================================================

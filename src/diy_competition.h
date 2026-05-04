@@ -96,7 +96,9 @@ void _DIY_BuildQualifiedTeamListFromDiyFileBuffer(uint16_t count, uint8_t *out);
 void _DIY_SyncCompetitionTeamGridOrBuildBracket(void);
 
 /* --- Competition Team Index & Promotion/Relegation --- */
-void _DIY_CopyCompetitionTeamIndexTable(uint8_t *dst);
+/* Returns advanced cursor; caller chains across per-division calls so
+ * promotion lists accumulate rather than overwrite. See definition. */
+uint8_t *_DIY_CopyCompetitionTeamIndexTable(uint8_t *dst);
 void _DIY_ApplyPromotionRelegationWeightsToScratch(const uint8_t *weights);
 void _DIY_UpdatePromotionRelegationScratchCounts(void);
 

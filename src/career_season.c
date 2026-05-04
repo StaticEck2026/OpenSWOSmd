@@ -1409,9 +1409,22 @@ static void processPrimaryCompetitionForNextSeason(uint8_t *competition)
         return;
     }
 
-    /* League competition — loop through all divisions */
+    /* League competition — loop through all divisions.
+     *
+     * `qualCursor` mirrors the asm's a3 register: set ONCE before the
+     * loop, advanced inside DIY_CopyCompetitionTeamIndexTable on each
+     * iteration. This way each division's promotion list APPENDS to
+     * diyQualifiedTeamIndices rather than overwriting from base, so
+     * the per-division qualification entries below see the cumulative
+     * list (matches Career_ProcessPrimaryCompetitionForNextSeason at
+     * SWOS2.s line 57992 / loc_12BDC8). Resetting to base each call
+     * caused only the last division's data to be visible — and the
+     * qualification-loop's _Career_AutoAdvanceCupCompetitionFromRecord
+     * picked teams from the wrong division, putting promotion weights
+     * into wrong scratch slots and tripping the 0x5555 validate panic. */
     uint8_t numDivisions = competition[9];
     uint16_t d7;
+    uint8_t *qualCursor = (uint8_t *)diyQualifiedTeamIndices;
 
     for (d7 = 0; d7 < numDivisions; d7++) {
         if ((uint32_t)competition == currentCompetitionPtr &&
@@ -1430,7 +1443,7 @@ static void processPrimaryCompetitionForNextSeason(uint8_t *competition)
                 _DIY_CachePrimaryQualifiedTeamsGrid();
         }
         _DIY_UpdatePromotionRelegationScratchCounts();
-        _DIY_CopyCompetitionTeamIndexTable((uint8_t *)diyQualifiedTeamIndices);
+        qualCursor = _DIY_CopyCompetitionTeamIndexTable(qualCursor);
     }
 
     /* Process qualification entries for all divisions */
