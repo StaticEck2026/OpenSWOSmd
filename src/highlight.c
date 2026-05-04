@@ -12,6 +12,7 @@
 #include "game_types.h"
 #include "deterministic.h"
 #include "panic.h"
+#include "endian_helpers.h"
 
 /* ---- Sprite constants ---- */
 #define SPR_REPLAY_FRAME_00  1095
@@ -381,14 +382,17 @@ void _SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint
     uint8_t *a1 = currentHilPtr;
 
     if (spriteIndexOrMarker >= 0) {
-        /* Pack sprite data: (index << 20) | (x << 10) | y, with bit 31 clear */
+        /* Pack sprite data: (index << 20) | (x << 10) | y, with bit 31 clear.
+         * Stored big-endian so the high byte (which holds bit 31, the
+         * frame-marker discriminator vs sprite-data) lands at offset 0
+         * regardless of host endianness — matching the Amiga byte layout. */
         uint32_t packed = (uint32_t)(uint16_t)spriteIndexOrMarker;
         packed <<= 10;
         packed |= (x & 0x3FF);
         packed <<= 10;
         packed |= (y & 0x3FF);
         packed &= ~(1u << 31);  /* bclr #31 */
-        *(uint32_t *)a1 = packed;
+        BE_WRITE_U32(a1, packed);
         a1 += 4;
         if (a1 == nextGoalPtr)
             a1 = goalBasePtr;
@@ -397,41 +401,40 @@ void _SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint
     }
 
     if ((uint16_t)spriteIndexOrMarker == 0xFFFE) {
-        /* End-of-segment marker: write -1 */
-        *(uint32_t *)a1 = 0xFFFFFFFF;
+        /* End-of-segment marker: write -1 (byte pattern is identical
+         * either endian, but BE_WRITE_U32 keeps the policy consistent). */
+        BE_WRITE_U32(a1, 0xFFFFFFFFu);
         return;
     }
 
     /* Frame-start marker (d0 < 0, not -2): write camera coords with bit 31
-     * (= bit 15 of high uint16 = marker) set. The Amiga code wrote two
-     * uint16s `x | 0x8000` and `y`, which on big-endian m68k put the 0x80
-     * marker byte at offset 0 of the entry — matching both the byte-level
-     * marker scan in _HandleInstantReplayStateSwitch and the uint32 bit-31
-     * test in _DrawReplayFrame. On x86 LE that two-uint16 write puts the
-     * 0x80 in byte 1, not byte 0 / bit 31, so neither detector fires and
-     * replays never trigger. Pack as a single uint32 instead so bit 31
-     * lands in the correct byte regardless of endianness. */
-    *(uint32_t *)a1 = ((uint32_t)((uint16_t)x | 0x8000u) << 16) |
-                      (uint32_t)(uint16_t)y;
+     * (= bit 15 of high uint16 = marker) set. Two BE_WRITE_U16 calls match
+     * the original Amiga byte format exactly — on Amiga m68k the BE_WRITE
+     * macros are no-ops so this is identical to the prior asm-to-C port,
+     * and on x86 LE the byte-swap puts the 0x80 marker byte at offset 0
+     * where _HandleInstantReplayStateSwitch's `*p & 0x80` scan and
+     * _DrawReplayFrame's BE-uint32 bit-31 test both detect it. */
+    BE_WRITE_U16(a1,     (uint16_t)x | 0x8000u);
+    BE_WRITE_U16(a1 + 2, (uint16_t)y);
     a1 += 4;
     a1 = wrapHilPtr(a1);
     currentHilPtr = a1;
 
-    /* Write team goals */
-    *(uint16_t *)a1 = team1TotalGoals;
-    *(uint16_t *)(a1 + 2) = team2TotalGoals;
+    /* Write team goals (BE for cross-build .HIL file interchange) */
+    BE_WRITE_U16(a1,     team1TotalGoals);
+    BE_WRITE_U16(a1 + 2, team2TotalGoals);
     a1 += 4;
     a1 = wrapHilPtr(a1);
 
     /* Write animated patterns state (duplicated in both words) */
-    *(uint16_t *)a1 = animPatternsState;
-    *(uint16_t *)(a1 + 2) = animPatternsState;
+    BE_WRITE_U16(a1,     animPatternsState);
+    BE_WRITE_U16(a1 + 2, animPatternsState);
     a1 += 4;
     a1 = wrapHilPtr(a1);
     currentHilPtr = a1;
 
     /* Write end-of-frame marker */
-    *(uint32_t *)a1 = 0xFFFFFFFF;
+    BE_WRITE_U32(a1, 0xFFFFFFFFu);
 }
 
 /* ============================================================
@@ -455,8 +458,10 @@ void _DrawReplayFrame(void)
         savedCameraX = cameraX.s.i;
         savedCameraY = cameraY.s.i;
 
-        /* Read first frame data (without advancing a0) for camera init */
-        uint32_t val = *(uint32_t *)a0;
+        /* Read first frame data (without advancing a0) for camera init.
+         * Buffer is stored big-endian — BE_READ_U32 is a no-op on Amiga
+         * and a byte-swap on x86 LE. */
+        uint32_t val = BE_READ_U32(a0);
         val &= ~(1u << 31);  /* bclr #31 */
 
         _ResetAnimatedPatternsForBothTeams();
@@ -465,7 +470,7 @@ void _DrawReplayFrame(void)
     }
 
     /* loc_10C434: read entry */
-    d0 = *(uint32_t *)a0;
+    d0 = BE_READ_U32(a0);
     a0 += 4;
     if (!(d0 & (1u << 31)))
         goto sprite_decode;
@@ -476,23 +481,23 @@ void _DrawReplayFrame(void)
     _MoveView((int16_t)(d0 >> 16), (int16_t)(d0 & 0xFFFF));
 
     /* Read team goals */
-    hilLeftTeamGoals = *(uint16_t *)a0;
-    hilRightTeamGoals = *(uint16_t *)(a0 + 2);
+    hilLeftTeamGoals = BE_READ_U16(a0);
+    hilRightTeamGoals = BE_READ_U16(a0 + 2);
     a0 += 4;
     a0 = wrapPointerFwd(a0);
 
     /* Read animated patterns state (stored as two identical words) */
-    animPatternsState = *(uint16_t *)a0;
-    animPatternsState = *(uint16_t *)(a0 + 2);
+    animPatternsState = BE_READ_U16(a0);
+    animPatternsState = BE_READ_U16(a0 + 2);
     a0 += 4;
     a0 = wrapPointerFwd(a0);
 
     _DrawAnimatedPatterns();
 
     /* Read next entry after frame marker */
-    d0 = *(uint32_t *)a0;
+    d0 = BE_READ_U32(a0);
     a0 += 4;
-    if (d0 == 0xFFFFFFFF)
+    if (d0 == 0xFFFFFFFFu)
         goto end_replay;
     goto check_next;
 
@@ -511,9 +516,9 @@ sprite_decode:
     }
 
     /* Read next entry after sprite */
-    d0 = *(uint32_t *)a0;
+    d0 = BE_READ_U32(a0);
     a0 += 4;
-    if (d0 == 0xFFFFFFFF)
+    if (d0 == 0xFFFFFFFFu)
         goto end_replay;
     /* fall through to check_next */
 
@@ -609,11 +614,11 @@ void _HandleInstantReplayStateSwitch(void)
 {
     if (replayState == 0) {
         /* Search for frame-start marker in ring buffer.
-         * Each entry is a 4-byte uint32 with bit 31 set on frame markers
-         * and clear on packed sprite data. Reading as uint32 makes the
-         * marker-bit test endian-stable; the Amiga `*p & 0x80` byte-read
-         * worked only because m68k put the high byte of the uint32 at
-         * offset 0. */
+         * Entries are stored big-endian (see frame-marker write in
+         * _SaveCoordinatesForHighlights), so the high byte of the uint32
+         * — which carries bit 31 — sits at byte offset 0 regardless of
+         * host endian. `*p & 0x80` therefore detects the marker on both
+         * BE (Amiga) and LE (SDL) hosts. */
         uint32_t count = 0;
         uint8_t *p = currentHilPtr;
 
@@ -624,7 +629,7 @@ void _HandleInstantReplayStateSwitch(void)
             p += 4;
             if (p == nextGoalPtr)
                 p = goalBasePtr;
-            if (*(uint32_t *)p & (1u << 31)) {
+            if (*p & 0x80) {
                 /* Found frame start */
                 currentGoalPtr = p;
                 replayState = 1;
