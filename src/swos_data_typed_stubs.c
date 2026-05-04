@@ -98,7 +98,11 @@ TeamGame bottomTeamSaved;
 TeamGame topTeamInGame;
 TeamGame bottomTeamInGame;
 uint32_t magicValue;
-uint8_t gameRound;
+/* gameRound: backing buffer in swos_globals.c. On Amiga the label is 1 byte
+ * but is followed by an unnamed 99-byte BSS region (BSS_00_CD54 in SWOS2.s)
+ * that the round-name string ("FIRST ROUND", etc.) overflows into. Without a
+ * proper backing buffer the _StringCopy at PlayDIYLeagueMatchAndCacheResult
+ * stomps magicValue. See alias in swos_globals.c. */
 uint8_t diskImageContext;
 uint16_t nextGoal;
 uint16_t bootTemp0;

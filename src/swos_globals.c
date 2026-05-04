@@ -710,6 +710,18 @@ uint32_t kGoalieSkillTables[8] = {
  * expose the named symbols via .equ so existing
  *   `extern DIYCompetitionEx diyFileBufferCopy;` / `.base.field`
  * accesses keep working unchanged. */
+/* gameRound: on Amiga the 1-byte gameRound label is followed by an
+ * unnamed 99-byte BSS region (BSS_00_CD54 in SWOS2.s) that the
+ * round-name string buffer extends into. _StringCopy(roundStr, &gameRound)
+ * in PlayDIYLeagueMatchAndCacheResult writes "FIRST ROUND" / "QUARTER FINAL"
+ * etc., overrunning the 1-byte typed definition and stomping magicValue
+ * (which sits adjacent on SDL). highlight.c also iterates 40 bytes
+ * between gameRound and hilGameRound. Provide a 100-byte buffer to
+ * match the Amiga round-string capacity. */
+__attribute__((used, aligned(4))) uint8_t gameRoundBuf[100];
+__asm__(".globl gameRound\n"
+        ".equ   gameRound, gameRoundBuf\n");
+
 __attribute__((used, aligned(4))) uint8_t diyFileBufferCopyBuf[4096];
 __asm__(".globl diyFileBufferCopy\n"
         ".equ   diyFileBufferCopy, diyFileBufferCopyBuf\n");
