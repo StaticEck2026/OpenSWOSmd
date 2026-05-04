@@ -14,6 +14,7 @@
 #include "career_status.h"
 #include "career_teams.h"
 #include "diy_competition.h"
+#include "endian_helpers.h"
 #include "game_types.h"
 #include "job_offers.h"
 #include "panic.h"
@@ -1341,8 +1342,17 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         int8_t count = *(int8_t *)(qualComp + 0xA);
         int16_t cnt = (int16_t)count - 1;
 
+        /* The qualification index pairs in the source struct (e.g.
+         * englishLeagues.unk3) are byte-array literals authored as BE
+         * uint16 pairs ({ 0, 0, 0, 3, 0, 1, ... } means qIdx values
+         * 0, 3, 1, ...). The asm reads them via `move.w (a2)+,d0`
+         * which is BE on m68k; on SDL the same memory accessed as
+         * native uint16 byte-swaps the value (3 → 0x0300), indexing
+         * way past the end of diyQualifiedTeamIndices and grabbing
+         * garbage team IDs. Use BE_READ_U16 to recover the intended
+         * qIdx on both platforms. */
         for (int16_t i = cnt; i >= 0; i--) {
-            uint16_t qIdx = *(uint16_t *)a2;
+            uint16_t qIdx = BE_READ_U16(a2);
             a2 += 2;
             *(uint16_t *)teamData = diyQualifiedTeamIndices[qIdx];
             teamData += 2;
