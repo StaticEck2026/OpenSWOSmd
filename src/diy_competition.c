@@ -8043,12 +8043,23 @@ static void checkEuropeanCupsAndClear3C(uint8_t *record, uint8_t *comp)
 }
 
 /* Helper: if not a national team competition, prepend country name + space to dst.
- * Returns updated dst pointer. */
+ * Returns updated dst pointer.
+ *
+ * Records like euroCup/cupWinnersCup/uefaCup carry teamNumber = -1 (= 0xFF) at
+ * record[2], meaning "no specific country". countriesTable[255] is NULL (the
+ * Amiga binary leaves that slot as `dc.l 0`). The original 68k code dereferenced
+ * NULL+1 anyway and got back zero bytes from the system vector area, so the
+ * empty walk terminated immediately and StringCopy copied an empty string — a
+ * latent bug that doesn't fault on Amiga because low memory is mapped there.
+ * On SDL low memory is unmapped and the read SIGSEGVs, so we have to bail out
+ * explicitly when there's no valid country slot. */
 static uint8_t *prependCountryNameIfClub(uint8_t *record, uint8_t *dst)
 {
     if (_IsNationalTeamCompetitionOrQualification((uint32_t)record) != 0) {
         uint16_t countryIdx = record[2];
         uint8_t *countryEntry = (uint8_t *)countriesTable[countryIdx];
+        if (countryEntry == 0)
+            return dst;
         uint8_t *namePtr = countryEntry + 1;
         while (*namePtr) namePtr++;
         namePtr++; /* past null — points to second string */
