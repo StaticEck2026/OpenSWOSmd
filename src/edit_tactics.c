@@ -620,6 +620,17 @@ __attribute__((used, externally_visible))
 void _FillSkinColorConversionTable(uint16_t skinColor, uint16_t *convertTable)
 {
     int16_t idx = (int16_t)(int8_t)(uint8_t)skinColor;  /* ext.w d0 */
+    /* Same 0xFF-sentinel guard as _ConvertColorTableToSkinColor: the
+     * skinAndHairColorConversionTable has only 3 entries (skin tones 0/1/2),
+     * so a face value of 0xFF (sign-extended to -1) reads
+     * skinAndHairColorConversionTable[-1] OOB, returns a garbage pointer,
+     * and the (idx,value) walk corrupts random memory — including the
+     * caller's convertTable, mapping shirt/shorts/socks/skin all to
+     * whatever happens to be there (we observed every player body part
+     * rendering as palette 0 except the eyes, which survived because
+     * the garbage walk didn't touch their palette index). */
+    if (idx < 0)
+        return;
     int16_t *subtable = (int16_t *)skinAndHairColorConversionTable[idx];
 
     for (;;) {
