@@ -304,8 +304,17 @@ extern char ecQualifyingGroup7Copy[];
 extern char ecQualifyingGroup8Copy[];
 extern char euroCupCopy[];
 extern char euroCupQualSeedBucket15[];
+extern char euroCupQualSeedBucket18[];
+extern char euroCupQualSeedBucket22[];
+extern char euroCupQualSeedBucket22Full[];
 extern char euroCupQualSeedList4[];
+extern char euroCupQualSeedList6[];
+extern char euroCupQualSeedList11[];
+extern char euroCupQualSeedList22[];
 extern char euroCupQualSeedListReduced4[];
+extern char euroCupQualSeedListReduced6[];
+extern char euroCupQualSeedListReduced11[];
+extern char euroCupQualSeedListReduced22[];
 extern char euroCup[];
 extern char europeanChampionships2Copy[];
 extern char europeanChampionships[];
@@ -1227,14 +1236,50 @@ uint32_t nationalTeamCompetitionsAndQualifications1[39] = {
     (uint32_t)(uintptr_t)tourCopy,
     0xFFFFFFFFu,
 };
-uint32_t euroCupQualGroupSeedLists_4_6_11[1] = {
-    (uint32_t)(uintptr_t)euroCupQualSeedList4,
+/* Each Amiga euroCupQual* "group seed list" table is a sequence of
+ * 8-byte entries plus a 4-byte 0xFFFFFFFF terminator. Per SWOS2.s
+ * (line 125058 etc.):
+ *
+ *   dc.l <seedListPtr>     ; 4 bytes BE pointer
+ *   dc.b 0,sz,0,cnt        ; size and copy-count as 16-bit BE words
+ *   ... repeated ...
+ *   dc.b $FF,$FF,$FF,$FF   ; terminator
+ *
+ * _Career_FillRandomTeamListExcludingSelected reads (ptr, size, count)
+ * tuples and breaks on 0xFFFFFFFF. The previous SDL stub had only the
+ * first ptr and no metadata or terminator, so the function read garbage
+ * size/count words, ran the inner shuffle on bogus indices, and SIGSEGV'd
+ * walking off the end. Reconstruct the table as a packed C struct array
+ * with terminator. Host-order writes work directly because the function
+ * uses host uint16_t / uint32_t reads. */
+typedef struct __attribute__((packed)) SeedListGroupEntry {
+    uint32_t ptr;
+    uint16_t size;
+    uint16_t count;
+} SeedListGroupEntry;
+
+SeedListGroupEntry euroCupQualGroupSeedLists_4_6_11[5] = {
+    { (uint32_t)(uintptr_t)euroCupQualSeedList4,  4,  4 },
+    { (uint32_t)(uintptr_t)euroCupQualSeedList6,  6,  5 },
+    { (uint32_t)(uintptr_t)euroCupQualSeedList11, 11, 5 },
+    { (uint32_t)(uintptr_t)euroCupQualSeedList22, 22, 2 },
+    { 0xFFFFFFFFu, 0, 0 },
 };
-uint32_t euroCupQualGroupSeedListsReduced_4_6_11[1] = {
-    (uint32_t)(uintptr_t)euroCupQualSeedListReduced4,
+
+SeedListGroupEntry euroCupQualGroupSeedListsReduced_4_6_11[5] = {
+    { (uint32_t)(uintptr_t)euroCupQualSeedListReduced4,  4,  4  },
+    { (uint32_t)(uintptr_t)euroCupQualSeedListReduced6,  6,  6  },
+    { (uint32_t)(uintptr_t)euroCupQualSeedListReduced11, 11, 11 },
+    { (uint32_t)(uintptr_t)euroCupQualSeedListReduced22, 22, 11 },
+    { 0xFFFFFFFFu, 0, 0 },
 };
-uint32_t euroCupQualGroupSeedBuckets_15_18_22[1] = {
-    (uint32_t)(uintptr_t)euroCupQualSeedBucket15,
+
+SeedListGroupEntry euroCupQualGroupSeedBuckets_15_18_22[5] = {
+    { (uint32_t)(uintptr_t)euroCupQualSeedBucket15,     15, 10 },
+    { (uint32_t)(uintptr_t)euroCupQualSeedBucket18,     18, 10 },
+    { (uint32_t)(uintptr_t)euroCupQualSeedBucket22,     22, 8  },
+    { (uint32_t)(uintptr_t)euroCupQualSeedBucket22Full, 22, 4  },
+    { 0xFFFFFFFFu, 0, 0 },
 };
 uint32_t positionsTable[18] = {
     (uint32_t)(uintptr_t)positionsDefault,
