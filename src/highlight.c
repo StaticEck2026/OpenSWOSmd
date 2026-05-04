@@ -402,9 +402,17 @@ void _SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint
         return;
     }
 
-    /* Frame-start marker (d0 < 0, not -2): write camera coords with bit 15 set in x */
-    *(uint16_t *)a1 = x | 0x8000;
-    *(uint16_t *)(a1 + 2) = y;
+    /* Frame-start marker (d0 < 0, not -2): write camera coords with bit 31
+     * (= bit 15 of high uint16 = marker) set. The Amiga code wrote two
+     * uint16s `x | 0x8000` and `y`, which on big-endian m68k put the 0x80
+     * marker byte at offset 0 of the entry — matching both the byte-level
+     * marker scan in _HandleInstantReplayStateSwitch and the uint32 bit-31
+     * test in _DrawReplayFrame. On x86 LE that two-uint16 write puts the
+     * 0x80 in byte 1, not byte 0 / bit 31, so neither detector fires and
+     * replays never trigger. Pack as a single uint32 instead so bit 31
+     * lands in the correct byte regardless of endianness. */
+    *(uint32_t *)a1 = ((uint32_t)((uint16_t)x | 0x8000u) << 16) |
+                      (uint32_t)(uint16_t)y;
     a1 += 4;
     a1 = wrapHilPtr(a1);
     currentHilPtr = a1;
@@ -600,7 +608,12 @@ __attribute__((used, externally_visible))
 void _HandleInstantReplayStateSwitch(void)
 {
     if (replayState == 0) {
-        /* Search for frame-start marker in ring buffer */
+        /* Search for frame-start marker in ring buffer.
+         * Each entry is a 4-byte uint32 with bit 31 set on frame markers
+         * and clear on packed sprite data. Reading as uint32 makes the
+         * marker-bit test endian-stable; the Amiga `*p & 0x80` byte-read
+         * worked only because m68k put the high byte of the uint32 at
+         * offset 0. */
         uint32_t count = 0;
         uint8_t *p = currentHilPtr;
 
@@ -611,7 +624,7 @@ void _HandleInstantReplayStateSwitch(void)
             p += 4;
             if (p == nextGoalPtr)
                 p = goalBasePtr;
-            if (*p & 0x80) {
+            if (*(uint32_t *)p & (1u << 31)) {
                 /* Found frame start */
                 currentGoalPtr = p;
                 replayState = 1;
