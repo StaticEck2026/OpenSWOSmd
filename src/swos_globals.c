@@ -714,6 +714,17 @@ __attribute__((used, aligned(4))) uint8_t diyFileBufferCopyBuf[4096];
 __asm__(".globl diyFileBufferCopy\n"
         ".equ   diyFileBufferCopy, diyFileBufferCopyBuf\n");
 
+/* diyTournamentTeamIds: on Amiga the label sits at `diyFileBufferCopy + 0x9A`.
+ * _PresetCompetitionMenu writes selected team IDs via the named global
+ * (_CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyTournamentTeamIds))
+ * while _DIY_LoadCurrentCompetitionSlot reads them as
+ * (uint16_t *)(diyFileBufferCopy + 0x9A) when copying into the runtime
+ * teamShuffleOrder. Same memory on Amiga; alias here so the SDL build sees
+ * the writes. Without this, the load path reads zeros and
+ * _VerifyTeamLoaded(0) panics on the first cached team pointer. */
+__asm__(".globl diyTournamentTeamIds\n"
+        ".equ   diyTournamentTeamIds, diyFileBufferCopyBuf + 0x9A\n");
+
 __attribute__((used, aligned(4))) uint8_t diyCompetitionStartBuf[4096];
 __asm__(".globl diyCompetitionStart\n"
         ".equ   diyCompetitionStart, diyCompetitionStartBuf\n");

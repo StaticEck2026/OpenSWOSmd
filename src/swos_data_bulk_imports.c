@@ -78,7 +78,14 @@ uint8_t diyShuffleOrder8Teams[8] = { 1, 4, 5, 0, 2, 7, 6, 3 };
 // uint8_t diyTeamIdListType2[148];
 uint8_t diyTeamShuffleScratch[64] = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
 uint8_t diyTournamentShuffleOrder8[8] = { 6, 1, 5, 4, 2, 3, 7, 0 };
-uint16_t diyTournamentTeamIds[451];
+/* diyTournamentTeamIds: on Amiga the label sits at `diyFileBufferCopy + 0x9A`
+ * — the same memory the `(uint16_t *)(a2 + 0x9A)` reads in
+ * _DIY_LoadCurrentCompetitionSlot's team-ID copy resolve to. Without the
+ * overlap, _PresetCompetitionMenu's _CopySelectedTeamNumbers writes to a
+ * standalone global and the load-slot path reads zeros from
+ * diyFileBufferCopy+0x9A → leagueTeamIds[idx] = 0 →
+ * _VerifyTeamLoaded(0) panic. Alias to the same bytes. */
+/* uint16_t diyTournamentTeamIds[451];  -- see swos_globals.c .equ alias */
 uint8_t dwArrayCountries[256];
 uint8_t editTacticsCountryBuffer[128] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 uint8_t editTacticsDirectionDeltaTable[16] = { 0x0, 0xFF, 0x1, 0xFF, 0x1, 0x0, 0x1, 0x1, 0x0, 0x1, 0xFF, 0x1, 0xFF, 0x0, 0xFF, 0xFF };
