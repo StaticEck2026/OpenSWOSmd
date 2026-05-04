@@ -11,6 +11,7 @@
 #include "career_eurocups.h"
 #include "game_types.h"
 #include "diy_competition.h"
+#include "endian_helpers.h"
 #include "career_status.h"
 #include "career_teams.h"
 #include "panic.h"
@@ -164,14 +165,24 @@ static void qualifyTeamForEuroCup(void)
     if (!tryConsumeCompetitionIdFromList(euroCupEligibleCompetitionIds))
         return;
     uint8_t *a5 = primaryQualifiedTeamGrids;
-    uint16_t team = *(uint16_t *)a5;
+    /* See note on BE_READ_U16 in qualifyTeamForCupWinnersCup. */
+    uint16_t team = BE_READ_U16(a5);
     clearEuropeanCupTitleHolderIfMatchTeam(team);
     appendTeamToEuroCupList(a5);
 }
 
 /* qualifyTeamForCupWinnersCup — if competition is eligible, find a non-primary,
  * non-Euro-Cup-holder team from the grid for the Cup Winners' Cup.
- * Asm: Career_QualifyTeamForCupWinnersCup_IfEligibleCompetition */
+ * Asm: Career_QualifyTeamForCupWinnersCup_IfEligibleCompetition.
+ *
+ * Team identity is read from the grid record's first two bytes
+ * (countryNumber, teamOrdinal). On Amiga BE `move.w (a5)` produced
+ * `(country<<8)|ordinal` — the same BE-packed form used by
+ * cachedPrimaryQualifiedTeamIds and euroCupTitleHolderTeamId. On LE
+ * x86 a raw `*(uint16_t *)a5` byte-swaps it, the duplicate-detection
+ * never matches, and the function picks a slot that's already in the
+ * TMD pool from Euro Cup processing — tripping
+ * _Career_AppendTeamToTmdTeamPool's 0x3443 panic. Use BE_READ_U16. */
 static void qualifyTeamForCupWinnersCup(void)
 {
     if (!tryConsumeCompetitionIdFromList(cupWinnersCupEligibleCompetitionIds))
@@ -182,14 +193,14 @@ static void qualifyTeamForCupWinnersCup(void)
     uint8_t *a5 = primaryQualifiedTeamGrids + (8 * sizeof(TeamFileEx));
     for (;;) {
         a5 += sizeof(TeamFileEx);
-        uint16_t team = *(uint16_t *)a5;
+        uint16_t team = BE_READ_U16(a5);
         if (team == cachedPrimaryQualifiedTeamIds[0])
             continue;
         if (team == euroCupTitleHolderTeamId)
             continue;
         break;
     }
-    uint16_t team = *(uint16_t *)a5;
+    uint16_t team = BE_READ_U16(a5);
     clearEuropeanCupTitleHolderIfMatchTeam(team);
     appendTeamToCupWinnersCupList(a5);
 }
@@ -213,7 +224,8 @@ static void qualifyTeamsForUefaCup(void)
             if (a5 == euroCupTitleHolderGrid) {
                 a5 = primaryQualifiedTeamGrids + sizeof(TeamFileEx); /* wrap to slot 1 */
             }
-            uint16_t team = *(uint16_t *)a5;
+            /* See note on BE_READ_U16 in qualifyTeamForCupWinnersCup. */
+            uint16_t team = BE_READ_U16(a5);
             if (team == cachedPrimaryQualifiedTeamIds[0])
                 continue;
             if (team == cachedSecondaryQualifiedTeamIds[0])
@@ -228,7 +240,7 @@ static void qualifyTeamsForUefaCup(void)
                 continue;
             break;
         }
-        uint16_t team = *(uint16_t *)a5;
+        uint16_t team = BE_READ_U16(a5);
         clearEuropeanCupTitleHolderIfMatchTeam(team);
         appendTeamToUefaCupList(a5);
     }
