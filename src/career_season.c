@@ -1350,11 +1350,23 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
          * native uint16 byte-swaps the value (3 → 0x0300), indexing
          * way past the end of diyQualifiedTeamIndices and grabbing
          * garbage team IDs. Use BE_READ_U16 to recover the intended
-         * qIdx on both platforms. */
+         * qIdx on both platforms.
+         *
+         * The team-id WRITE into the qualComp's qualification grid
+         * (e.g. div1Playoffs.unk2) needs to be BE too: the downstream
+         * _AppendTeamsToSelectionFromTmdOrTeamFile reads the grid
+         * with BE_READ_U16(&teamIds[k]) because the static competition
+         * data (europeanChampionships etc.) stores team IDs as BE
+         * `{country, ordinal}` byte pairs. A naive host-order write
+         * here gives 0x0844 (England team 68) → memory [0x44,0x08] →
+         * BE_READ_U16 = 0x4408 → extNum = 68 → tries to load
+         * data/team.068 (gap country, file doesn't exist) → infinite
+         * retry loop in _LoadFileEx. Match the BE wire format by
+         * writing the team id as BE bytes. */
         for (int16_t i = cnt; i >= 0; i--) {
             uint16_t qIdx = BE_READ_U16(a2);
             a2 += 2;
-            *(uint16_t *)teamData = diyQualifiedTeamIndices[qIdx];
+            BE_WRITE_U16(teamData, diyQualifiedTeamIndices[qIdx]);
             teamData += 2;
         }
 
