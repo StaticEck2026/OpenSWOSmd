@@ -538,38 +538,81 @@ CompetitionLeague_3_6 newZealandLeague = {
  * Complex leagues with playoffs
  * ====================================================================== */
 
-CompetitionLeague_4_8_2_24 englishLeagues = {
-    { { 46, 0, 8, 56, 32, 33, 0, 0, 0 }, 4, 2, 3, 51 },
-    { { 20, 0, 0, 3, 0, 0 }, { 24, 2, 4, 4, 0, 46 }, { 24, 3, 4, 4, 0, 120 }, { 24, 3, 4, 0, 0, -62 } }, 0,
-    { aPremierLeague, aPremier, aDivisionOne, aDivisionOne, aDivisionTwo, aDivisionTwo, aDivisionThree, aDivisionThree },
-    { (char *)&div1Playoffs, (char *)&englishLeagues1 },
-    { 0, 0, 0, 3, 0, 1, 0, 2, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+/* On Amiga, englishLeagues / englishLeagues1 / englishLeagues2 /
+ * englishLeagues3 sit consecutively in BSS (102 + 80 + 80 + 48 bytes).
+ * processDiyLeagueQualificationEntry walks past the end of the
+ * englishLeagues struct using the per-division qualification offset
+ * stored in `divisions[i].unk1`, expecting to land inside englishLeagues1
+ * or englishLeagues2 (whose `playoffs` field at offset +48 supplies the
+ * actual qualification competition pointer). On SDL the linker scatters
+ * the four structs to different addresses, so the past-the-end read
+ * lands in unrelated memory and qualComp = garbage → SIGSEGV.
+ *
+ * Force the Amiga layout by embedding all four into one packed
+ * composite struct and exposing each via a global alias to a fixed
+ * offset within the composite. The .equ aliases keep the existing
+ * `englishLeagues` / `englishLeagues1` / etc. extern decls working
+ * unchanged. */
+typedef struct __attribute__((packed)) {
+    CompetitionLeague_4_8_2_24 _main;
+    Leagues_4_2_24             _div1;
+    Leagues_4_2_24             _div2;
+    Leagues_4                  _div3;
+} EnglishLeaguesBlock;
+
+#define ENGLISH_BLOCK_OFFSET_MAIN  0
+#define ENGLISH_BLOCK_OFFSET_DIV1  (sizeof(CompetitionLeague_4_8_2_24))
+#define ENGLISH_BLOCK_OFFSET_DIV2  (ENGLISH_BLOCK_OFFSET_DIV1 + sizeof(Leagues_4_2_24))
+#define ENGLISH_BLOCK_OFFSET_DIV3  (ENGLISH_BLOCK_OFFSET_DIV2 + sizeof(Leagues_4_2_24))
+
+extern CompetitionLeague_4_8_2_24 englishLeagues;
+extern Leagues_4_2_24 englishLeagues1;
+extern Leagues_4_2_24 englishLeagues2;
+extern Leagues_4 englishLeagues3;
+
+EnglishLeaguesBlock englishLeaguesBlock = {
+    ._main = {
+        { { 46, 0, 8, 56, 32, 33, 0, 0, 0 }, 4, 2, 3, 51 },
+        { { 20, 0, 0, 3, 0, 0 }, { 24, 2, 4, 4, 0, 46 }, { 24, 3, 4, 4, 0, 120 }, { 24, 3, 4, 0, 0, -62 } }, 0,
+        { aPremierLeague, aPremier, aDivisionOne, aDivisionOne, aDivisionTwo, aDivisionTwo, aDivisionThree, aDivisionThree },
+        { (char *)&div1Playoffs, (char *)&englishLeagues1 },
+        { 0, 0, 0, 3, 0, 1, 0, 2, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    },
+    ._div1 = {
+        { (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 0 },
+          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 3 },
+          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 1 },
+          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 2 } },
+        &div2Playoffs, (Leagues_4 *)&englishLeagues2,
+        { 0, 4, 0, 7, 0, 5, 0, 6, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    },
+    ._div2 = {
+        { (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 0 },
+          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 3 },
+          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 1 },
+          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 2 } },
+        &div3Playoffs, &englishLeagues3,
+        { 0, 8, 0, 11, 0, 9, 0, 10, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    },
+    ._div3 = {
+        (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 0 },
+        (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 3 },
+        (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 1 },
+        (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 2 }
+    }
 };
 
-Leagues_4_2_24 englishLeagues1 = {
-    { (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 0 },
-      (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 3 },
-      (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 1 },
-      (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 2 } },
-    &div2Playoffs, (Leagues_4 *)&englishLeagues2,
-    { 0, 4, 0, 7, 0, 5, 0, 6, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
-};
-
-Leagues_4_2_24 englishLeagues2 = {
-    { (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 0 },
-      (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 3 },
-      (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 1 },
-      (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 2 } },
-    &div3Playoffs, &englishLeagues3,
-    { 0, 8, 0, 11, 0, 9, 0, 10, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
-};
-
-Leagues_4 englishLeagues3 = {
-    (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 0 },
-    (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 3 },
-    (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 1 },
-    (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 2 }
-};
+__asm__(".globl englishLeagues\n"
+        ".equ   englishLeagues, englishLeaguesBlock\n");
+/* offset 102 = sizeof(CompetitionLeague_4_8_2_24) */
+__asm__(".globl englishLeagues1\n"
+        ".equ   englishLeagues1, englishLeaguesBlock + 102\n");
+/* offset 182 = 102 + 80 */
+__asm__(".globl englishLeagues2\n"
+        ".equ   englishLeagues2, englishLeaguesBlock + 182\n");
+/* offset 262 = 102 + 80 + 80 */
+__asm__(".globl englishLeagues3\n"
+        ".equ   englishLeagues3, englishLeaguesBlock + 262\n");
 
 Playoffs_8 div1Playoffs = { { 47, 1, 8, -128, -124, 11, 0, 17, 1, 0, 4, 1, 51, 1, -108, 20 }, { aDiv1Playoffs, aPlayoffs }, { 0 } };
 Playoffs_8 div2Playoffs = { { 48, 1, 8, -128, -124, 11, 0, 17, 1, 0, 4, 1, 51, 1, -108, 20 }, { aDiv2Playoffs, aPlayoffs }, { 0 } };
