@@ -700,7 +700,16 @@ static void AddTeamScorersToHighestScorersTable(int16_t statIndex,
             uint8_t *slot = FindReplaceableLowestScorerSlot(base, minScore);
             slot[35] = (uint8_t)score;       /* store score */
             slot[34] = (uint8_t)playerIdx;   /* store playerIdx */
-            *(uint16_t *)(slot + 32) = teamNumber;  /* store teamId */
+            /* teamNumber is the BE-packed (countryNumber<<8)|teamOrdinal
+             * value (read via BE_READ_U16(teamBase) above). Store via
+             * BE_WRITE_U16 so the byte layout matches the team-file
+             * convention and BE_READ_U16 retrievals at lines 578/777/
+             * 819-820/965/1118 see the same value on both BE and LE
+             * hosts. (Native uint16 store on LE byte-swaps relative to
+             * the BE reads, producing a corrupted teamId — e.g. team
+             * "VFB STUTTGART" 0x0E27 was read back as 0x000E=14, hitting
+             * _VerifyTeamLoaded panic.) */
+            BE_WRITE_U16(slot + 32, teamNumber);
 
             if ((uint8_t)score != minScore)
             {
@@ -774,7 +783,7 @@ static void PopulateHighestScorersTableFromSelectedTeams(int16_t statIndex)
 /* GetScorerSurname: returns pointer to last word (surname) in player name */
 static uint8_t *GetScorerSurname(uint8_t *entryBase)
 {
-    uint16_t teamId = *(uint16_t *)(entryBase + 32);
+    uint16_t teamId = BE_READ_U16(entryBase + 32);
     uint8_t playerIdx = *(entryBase + 34);
     int16_t idxSigned = (int8_t)playerIdx;
     uint8_t *playerPtr;
@@ -816,8 +825,8 @@ static void SortHighestScorerTable(void)
             uint8_t *entryA = base + cmp[0];  /* current */
             uint8_t *entryB = base + cmp[1];  /* next */
 
-            uint16_t teamIdA = *(uint16_t *)(entryA + 32);
-            uint16_t teamIdB = *(uint16_t *)(entryB + 32);
+            uint16_t teamIdA = BE_READ_U16(entryA + 32);
+            uint16_t teamIdB = BE_READ_U16(entryB + 32);
 
             /* Empty entries (teamId == -1) sort to end */
             if (teamIdA == 0xFFFF)
@@ -962,7 +971,7 @@ void _CompetitionTopGoalScorersInit(void)
 
         /* Valid entry */
         {
-            uint16_t teamId = *(uint16_t *)(entry + 32);
+            uint16_t teamId = BE_READ_U16(entry + 32);
             uint8_t playerIdxByte = *(entry + 34);
             int16_t playerIdxSigned = (int8_t)playerIdxByte;
             TeamFileEx *teamData;
@@ -1115,7 +1124,7 @@ void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
 
     /* Valid scorer entry */
     {
-        uint16_t teamId = *(uint16_t *)(scorerEntry + 32);
+        uint16_t teamId = BE_READ_U16(scorerEntry + 32);
         uint8_t playerIdxByte = *(scorerEntry + 34);
         int16_t playerIdxSigned = (int8_t)playerIdxByte;
         TeamFileEx *teamData;
