@@ -42,6 +42,8 @@ extern uint8_t  ciaa_pra;
  * directly here from SDL_KEYDOWN. */
 extern volatile uint8_t  keyBuffer[12];
 extern volatile uint16_t keyCount;
+extern volatile uint8_t  keyIn;
+extern volatile int16_t  keyDelay;
 
 /* ---- Amiga raw-scancode table (full set, used by both
  * keyState[] and keyBuffer FIFO). keycodeLut[] in
@@ -180,23 +182,26 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         int a = sdl_to_amiga(e->key.keysym.sym);
         if (a >= 0) {
             keyState[a] = 1;
-            /* Push into the FIFO consumed by _GetKey(). The Amiga
-             * keyboard hardware auto-repeats held keys at ~10-20Hz
-             * after a ~500ms initial delay, and the menu system
-             * relies on that — e.g. the season-end cup result menus
-             * cascade by reading repeated 0xD (Enter) events from
-             * keyBuffer in MenuCheckControls (currentKey == 0xD →
-             * fire = 1). Without repeats the user has to click
-             * fire once per menu and "auto-advance" doesn't work.
+            /* Match the Amiga keyboard ISR: push the scan code into the
+             * FIFO AND set keyIn / keyDelay so Int3TimerHandler's
+             * auto-repeat can re-push the same key every 4 frames after
+             * a 12-frame initial delay. The menu-input system depends
+             * on that auto-repeat — e.g. season-end cup-result menus
+             * cascade because keyBuffer fills with repeated 0xD (Enter)
+             * events while Enter is held, and MenuCheckControls
+             * converts each to fire=1 (line 44058 in SWOS2.s). Without
+             * keyIn/keyDelay set, the timer's repeat path is dead and
+             * each menu in the chain demands a fresh manual click.
              *
-             * SDL's OS-level KEYDOWN repeat fires at the desktop's
-             * configured rate (typically ~30ms / 33Hz after a 500ms
-             * delay), close enough to the Amiga semantics. Accept
-             * repeats — text-input runaway is mitigated by the
-             * buffer-full guard. */
-            if (keyCount < (sizeof(keyBuffer) - 3)) {
+             * Only do this for the initial KEYDOWN (e->key.repeat==0)
+             * — SDL's OS-level repeats are redundant once the Amiga
+             * timer-repeat takes over, and accepting them too would
+             * push the buffer too aggressively. */
+            if (e->key.repeat == 0 && keyCount < (sizeof(keyBuffer) - 3)) {
                 keyBuffer[keyCount] = (uint8_t)a;
                 keyCount++;
+                keyIn = (uint8_t)a;
+                keyDelay = (int16_t)0x800C;  /* matches Amiga keyboard ISR */
             }
         }
         switch (e->key.keysym.sym) {
@@ -215,6 +220,14 @@ void InputSDL_HandleEvent(const SDL_Event *e)
     case SDL_KEYUP: {
         int a = sdl_to_amiga(e->key.keysym.sym);
         if (a >= 0) keyState[a] = 0;
+        /* Stop the Amiga timer-repeat for this key — match the keyboard
+         * ISR's behaviour where a release event (high bit set in the
+         * raw scan code) clears keyDelay back to 0 so Int3TimerHandler
+         * stops re-pushing the key. Without this, holding Enter for
+         * 500ms then releasing would still fire repeats for ~150ms
+         * after the release. */
+        if (a >= 0 && keyIn == (uint8_t)a)
+            keyDelay = 0;
         switch (e->key.keysym.sym) {
         case SDLK_UP:    s_kbd_up    = 0; break;
         case SDLK_DOWN:  s_kbd_down  = 0; break;
