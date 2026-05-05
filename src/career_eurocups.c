@@ -75,11 +75,18 @@ static int16_t isTeamInList(uint16_t team, uint8_t *listPtr, uint16_t count)
 }
 
 /* appendTeamToList — appends team number to a word list and adds to TMD pool.
- * Asm: loc_12B20A. teamGrid points to the team grid data (first word = team number). */
+ * Asm: loc_12B20A. teamGrid points to the team grid data (first word = team number).
+ *
+ * The first two bytes of teamGrid are {country, ordinal}; we want to
+ * store the BE-packed `(country<<8)|ordinal` form so isTeamInList's
+ * `list[i] == team` comparison (where team is also BE-packed) works
+ * on both endians. A naive `*(uint16_t *)teamGrid` writes the bytes
+ * in host-LE order, giving (ordinal<<8)|country on x86 — which never
+ * equals the BE-packed team id every consumer compares against. */
 static void appendTeamToList(uint8_t *teamGrid, uint8_t **writePtrAddr, uint16_t *count)
 {
     uint16_t *writePos = (uint16_t *)(*writePtrAddr);
-    *writePos = *(uint16_t *)teamGrid;
+    *writePos = BE_READ_U16(teamGrid);
     *writePtrAddr = (uint8_t *)(writePos + 1);
     (*count)++;
     _Career_AppendTeamToTmdTeamPool((TeamFileEx *)teamGrid);
