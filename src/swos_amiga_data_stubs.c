@@ -1425,7 +1425,7 @@ char poolplyrDatBuffer[0x14000];
 /* primaryCompSquadViewParam: typed definition in swos_data_typed_stubs.c */
 /* primaryCompStringOffset: typed definition in swos_data_typed_stubs.c */
 /* primaryCompWinnerTeam: typed definition in swos_data_typed_stubs.c */
-char primaryQualifiedTeamGrids[0x1AB8];
+/* primaryQualifiedTeamGrids: aliased onto qualifiedTeamGridsBlock in swos_globals.c */
 /* promptHeader: real data in swos_amiga_data_imports.c */
 /* qualifyingStage1PendingFlag0: typed definition in swos_data_typed_stubs.c */
 /* qualifyingStage1PendingFlag1: typed definition in swos_data_typed_stubs.c */

@@ -710,6 +710,42 @@ uint32_t kGoalieSkillTables[8] = {
  * expose the named symbols via .equ so existing
  *   `extern DIYCompetitionEx diyFileBufferCopy;` / `.base.field`
  * accesses keep working unchanged. */
+/* primaryQualifiedTeamGrids / tertiary / euroCupTitleHolderGrid /
+ * cupWinnersCupTitleHolderGrid / uefaCupTitleHolderGrid sit
+ * consecutively in Amiga BSS (SWOS2.s lines 2534-2555):
+ *
+ *   primaryQualifiedTeamGrids: ds.b $1AB8  (10 × 684 = 10 grid slots)
+ *   BSS_00_695C:               ds.b $558   (2 unnamed grid slots)
+ *   tertiaryQualifiedTeamGrid: ds.b $2AC   (1 grid slot)
+ *   euroCupTitleHolderGrid:    ds.b $2AC
+ *   cupWinnersCupTitleHolderGrid: ds.b $2AC
+ *   uefaCupTitleHolderGrid:    ds.b $2AC
+ *
+ * qualifyTeamsForUefaCup walks `a5` forward through these slots and
+ * relies on `a5 == euroCupTitleHolderGrid` as the wrap-to-primary[1]
+ * boundary. On SDL the linker scattered the grids (primary in one
+ * BSS region, the four title-holder/tertiary grids in another at
+ * 0x2C0-byte stride), so the walker stepped past tertiary into
+ * unrelated globals (diyCompetitionStartBuf etc.), read garbage as
+ * team ids, and tripped _Career_AppendTeamToTmdTeamPool's 0x3443
+ * panic. Pack the whole region into one buffer matching the Amiga
+ * BSS run and expose each slot via inline-asm .equ alias. */
+__attribute__((used, aligned(4))) uint8_t qualifiedTeamGridsBlock[0x2AC0];
+__asm__(".globl primaryQualifiedTeamGrids\n"
+        ".equ   primaryQualifiedTeamGrids, qualifiedTeamGridsBlock\n");
+/* offset 0x2010 = 0x1AB8 + 0x558 (10 primary slots + 2 unnamed slots) */
+__asm__(".globl tertiaryQualifiedTeamGrid\n"
+        ".equ   tertiaryQualifiedTeamGrid, qualifiedTeamGridsBlock + 0x2010\n");
+/* offset 0x22BC = 0x2010 + 0x2AC */
+__asm__(".globl euroCupTitleHolderGrid\n"
+        ".equ   euroCupTitleHolderGrid, qualifiedTeamGridsBlock + 0x22BC\n");
+/* offset 0x2568 = 0x22BC + 0x2AC */
+__asm__(".globl cupWinnersCupTitleHolderGrid\n"
+        ".equ   cupWinnersCupTitleHolderGrid, qualifiedTeamGridsBlock + 0x2568\n");
+/* offset 0x2814 = 0x2568 + 0x2AC */
+__asm__(".globl uefaCupTitleHolderGrid\n"
+        ".equ   uefaCupTitleHolderGrid, qualifiedTeamGridsBlock + 0x2814\n");
+
 /* gameRound: on Amiga the 1-byte gameRound label is followed by an
  * unnamed 99-byte BSS region (BSS_00_CD54 in SWOS2.s) that the
  * round-name string buffer extends into. _StringCopy(roundStr, &gameRound)
