@@ -1091,10 +1091,47 @@ uint8_t euroCupQualSeedListReduced6[6]  = { 2, 13, 29, 30, 31, 41 };
 uint8_t euroCupQualSeedListReduced11[11] = { 1, 3, 6, 7, 15, 25, 28, 33, 36, 37, 38 };
 uint8_t euroCupQualSeedListReduced22[23] = { 16, 12, 0, 17, 5, 27, 26, 24, 18, 23, 4, 10, 11, 19, 21, 22, 32, 34, 39, 40, 76, 78, 0 };
 
-uint8_t euroCupQualSeedBucket15[15] = { 14, 14, 14, 14, 20, 20, 20, 20, 35, 35, 35, 35, 8, 8, 8 };
-uint8_t euroCupQualSeedBucket18[18] = { 2, 2, 2, 13, 13, 13, 29, 29, 29, 30, 30, 30, 31, 31, 31, 41, 41, 41 };
-uint8_t euroCupQualSeedBucket22[22] = { 1, 1, 3, 3, 6, 6, 7, 7, 15, 15, 25, 25, 28, 28, 33, 33, 36, 36, 37, 37, 38, 38 };
-uint8_t euroCupQualSeedBucket22Full[23] = { 16, 12, 0, 17, 5, 27, 26, 24, 18, 23, 4, 10, 11, 19, 21, 22, 32, 34, 39, 40, 76, 78, 255 };
+/* Pack all four buckets into one contiguous block. The bucket-walk in
+ * Career_PrepareEuropeanCupQualificationState scans
+ * `euroCupQualGroupSeedBuckets_15_18_22[0].ptr` (= bucket15) byte-by-byte
+ * looking for the user's country code, terminating only at the 0xFF
+ * sentinel at the end of bucket22Full. On Amiga the four buckets sit
+ * consecutively in BSS (15+18+22+23 = 78 bytes ending in 0xFF), so the
+ * scan walks the full set. On SDL the linker scattered them — bucket15
+ * actually came LAST in memory layout — so the scan walked off the end
+ * of bucket15 into unrelated globals, hitting some random 0xFF and
+ * miscounting the user's country occurrences. Result: for non-European
+ * careers like Ghana the replacement loop accidentally wrote one
+ * Ghana-coded entry into uefaCupEligibleCompetitionIds, no European
+ * country ever consumed it, UEFA Cup ended up 1 short of 32, and
+ * Career_AdvanceToNextSeason_UpdateCompetitions's careerFileBuffer ==
+ * 0x50 invariant tripped panic 0x8999. Pack into one struct and expose
+ * each via .equ alias. */
+typedef struct __attribute__((packed)) {
+    uint8_t bucket15[15];
+    uint8_t bucket18[18];
+    uint8_t bucket22[22];
+    uint8_t bucket22Full[23];
+} EuroCupQualSeedBucketBlock;
+
+EuroCupQualSeedBucketBlock euroCupQualSeedBucketBlock = {
+    .bucket15     = { 14, 14, 14, 14, 20, 20, 20, 20, 35, 35, 35, 35, 8, 8, 8 },
+    .bucket18     = { 2, 2, 2, 13, 13, 13, 29, 29, 29, 30, 30, 30, 31, 31, 31, 41, 41, 41 },
+    .bucket22     = { 1, 1, 3, 3, 6, 6, 7, 7, 15, 15, 25, 25, 28, 28, 33, 33, 36, 36, 37, 37, 38, 38 },
+    .bucket22Full = { 16, 12, 0, 17, 5, 27, 26, 24, 18, 23, 4, 10, 11, 19, 21, 22, 32, 34, 39, 40, 76, 78, 255 }
+};
+
+__asm__(".globl euroCupQualSeedBucket15\n"
+        ".equ   euroCupQualSeedBucket15, euroCupQualSeedBucketBlock\n");
+/* offset 15 */
+__asm__(".globl euroCupQualSeedBucket18\n"
+        ".equ   euroCupQualSeedBucket18, euroCupQualSeedBucketBlock + 15\n");
+/* offset 33 = 15 + 18 */
+__asm__(".globl euroCupQualSeedBucket22\n"
+        ".equ   euroCupQualSeedBucket22, euroCupQualSeedBucketBlock + 33\n");
+/* offset 55 = 15 + 18 + 22 */
+__asm__(".globl euroCupQualSeedBucket22Full\n"
+        ".equ   euroCupQualSeedBucket22Full, euroCupQualSeedBucketBlock + 55\n");
 
 /* ======================================================================
  * Cup Pick Tables (per-region competition selection for career)
