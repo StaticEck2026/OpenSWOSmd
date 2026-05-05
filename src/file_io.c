@@ -317,7 +317,6 @@ int16_t _WriteFile(uint8_t *filename, uint8_t *src, uint32_t size)
 __attribute__((used, externally_visible))
 void _ShowFsErrorByCode(uint16_t errCode)
 {
-    fprintf(stderr, "[FsError] code=0x%04x\n", errCode);
     uint8_t *msg;
 
     if (errCode == 0x1C)
@@ -600,8 +599,6 @@ __attribute__((used, externally_visible))
 int16_t _FindFilesExtensionPresent(uint8_t *ext)
 {
     int16_t r = _CAssetSys_Dispatch(ASSET_OP_RESOLVE_ASSET_LIST, 0, ext, (void *)&numberOfFiles);
-    fprintf(stderr, "[FFEP] _FindFilesExtensionPresent ext=%p ret=%d numberOfFiles=%u\n",
-            (void*)ext, (int)r, (unsigned)numberOfFiles);
     return r;
 }
 
@@ -780,13 +777,11 @@ int16_t _Asset_PromptInsertSaveDiskDf0(uint8_t *title)
     for (;;) {
         result = _DoContinueAbortMenu(title, aInsertGameSave,
                                       aOk, (uint8_t *)aAbort, 0);
-        fprintf(stderr, "[PromptDisk] DoContinueAbortMenu=%d\n", (int)result);
         if (result != 0)
             return result; /* user aborted */
 
         result = _CAssetSys_Dispatch(ASSET_OP_OPEN_ANY_SOURCE, 0,
                                      (void *)0, (void *)0);
-        fprintf(stderr, "[PromptDisk] OPEN_ANY_SOURCE=%d\n", (int)result);
         if (result == 0)
             return 0; /* disk opened successfully */
         /* disk error — retry the prompt */
@@ -1018,9 +1013,6 @@ int16_t _GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename
     numMatchedFiles = 0;
     count = numberOfFiles;
 
-    fprintf(stderr, "[GetFNExt] preferredExt=0x%08x numberOfFiles=%u foundFilenamesBuffer=%p\n",
-            (unsigned)preferredExt, (unsigned)count, (void*)foundFilenamesBuffer);
-
     if (count != 0) {
         count--;
         fileEntry = foundFilenamesBuffer;
@@ -1038,9 +1030,6 @@ int16_t _GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename
                   ((uint32_t)scan[1] << 16) |
                   ((uint32_t)scan[2] << 8) |
                   (uint32_t)scan[3];
-
-            fprintf(stderr, "[GetFNExt]   slot %u name='%.28s' ext=0x%08x\n",
-                    (unsigned)(numberOfFiles - 1 - i), (char *)fileEntry, (unsigned)ext);
 
             /* Check against known extensions */
             if (ext == 0x2E444959u || /* .DIY */
@@ -1060,9 +1049,6 @@ int16_t _GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename
             if (i == 0) break;
         }
     }
-
-    fprintf(stderr, "[GetFNExt] total=%u matched=%u\n",
-            (unsigned)totalNumberOfFiles, (unsigned)numMatchedFiles);
 
     savingFile = 0;
     _ShowMenu(selectFilesMenu);

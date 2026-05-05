@@ -10,7 +10,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-int g_debug_sprite_load = 1;  /* flip to 1 in gdb to trace extracts */
+int g_debug_sprite_load = 0;  /* flip to 1 in gdb to trace extracts */
 __attribute__((constructor))
 static void _unbuf_stderr(void) { setbuf(stderr, NULL); }
 #endif

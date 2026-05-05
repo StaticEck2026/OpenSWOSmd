@@ -167,24 +167,19 @@ static uint32_t fs_delete(const char *path)
  * the number of entries. */
 static uint32_t fs_listdir(const char *dirpath, uint8_t *out, uint32_t out_sz)
 {
-    fprintf(stderr, "[fs_listdir] enter dirpath=%s\n", dirpath);
     DIR *d = opendir(dirpath);
     if (!d) {
         fprintf(stderr, "[fs_listdir] opendir(%s) failed: errno=%d (%s)\n",
                 dirpath, errno, strerror(errno));
         return 0;
     }
-    fprintf(stderr, "[fs_listdir] opendir ok\n");
 
     struct dirent *de;
     uint8_t *p = out;
     uint8_t *end = out + out_sz - 2;
     uint32_t n = 0;
-    int seen = 0;
 
     while ((errno = 0, de = readdir(d)) != NULL) {
-        seen++;
-        fprintf(stderr, "[fs_listdir]   readdir: '%s'\n", de->d_name);
         if (de->d_name[0] == '.') continue;
         size_t len = strlen(de->d_name);
         if (p + len + 1 >= end) break;
@@ -192,8 +187,6 @@ static uint32_t fs_listdir(const char *dirpath, uint8_t *out, uint32_t out_sz)
         p += len + 1;
         ++n;
     }
-    fprintf(stderr, "[fs_listdir] done seen=%d kept=%u readdir-errno=%d (%s)\n",
-            seen, (unsigned)n, errno, errno ? strerror(errno) : "");
     *p = 0;
     closedir(d);
     return n;
@@ -251,16 +244,6 @@ static uint32_t rob_list_directory(uint8_t *name, uint8_t *callerBuf)
     (void)name;
     /* The Amiga implementation always listed "save/". Match that. */
     uint32_t count = fs_listdir("save", s_listdir_buf, sizeof(s_listdir_buf));
-    {
-        char cwd[512] = {0};
-        if (!getcwd(cwd, sizeof(cwd))) cwd[0] = 0;
-        fprintf(stderr, "[listdir] cwd=%s count=%u callerBuf=%p\n", cwd, (unsigned)count, (void*)callerBuf);
-        uint8_t *p = s_listdir_buf;
-        for (uint32_t i = 0; i < count && i < 8; i++) {
-            fprintf(stderr, "[listdir]   '%s'\n", (char*)p);
-            p += strlen((char*)p) + 1;
-        }
-    }
     if (count == 0) {
         _rnl_d1_return = 0;
         size = 0;
