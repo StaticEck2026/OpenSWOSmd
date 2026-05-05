@@ -1050,10 +1050,16 @@ finish_menu:
             if (entryIter->content == ENTRY_STRING && entryIter->fg == 0xFFFFFFFF) {
                 /* Allocate buffer space for dynamic menu text */
                 entryIter->fg = (uint32_t)a1;
-                /* Write "STDMENUTEXT\0" marker */
-                *(uint32_t *)a1 = 0x5354444D; /* 'STDM' */
-                *(uint32_t *)(a1 + 4) = 0x454E5554; /* 'ENUT' */
-                *(uint32_t *)(a1 + 8) = 0x45585400; /* 'EXT\0' */
+                /* Write "STDMENUTEXT\0" marker. Original asm used four
+                 * `move.l #'STDM',(a0)+` etc. — m68k char literals pack
+                 * BE so the bytes landed [S,T,D,M,E,N,U,T,E,X,T,0] in
+                 * memory. A naive 32-bit hex constant on LE host
+                 * byte-swaps to "MDTSTUNEEXT" — exactly what we saw in
+                 * the career menu's competition slots when the entry
+                 * fg was still the 0xFFFFFFFF deferred sentinel. Use
+                 * memcpy so the bytes hit memory in the intended order
+                 * on both endians. */
+                memcpy(a1, "STDMENUTEXT", 12);
                 a1 += 0x46;
             }
             entryIter = (MenuEntry *)((uint8_t *)entryIter + MENUENTRY_STRIDE);
