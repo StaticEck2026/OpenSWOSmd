@@ -1510,6 +1510,20 @@ void _ActivateMenu(uint8_t *packedMenu)
 __attribute__((used, externally_visible))
 void _ShowMenu(uint8_t *packedMenu)
 {
+    /* If a quit was already requested, skip rendering this menu entirely
+     * and propagate exitMenu = 1 to any outer ShowMenu still on the
+     * stack. Without this, a click on the SDL window's X (or any path
+     * that sets g_quitToDos) only exits the innermost menu — the outer
+     * loop then re-enters its own MenuProc and the user sees every
+     * pending menu in the nested chain flash by one at a time before
+     * the program actually exits. The same cascade is also visible on
+     * the season-transition path where multiple cup result menus
+     * stack up. */
+    if (g_quitToDos) {
+        exitMenu = 1;
+        return;
+    }
+
     Menu *menu = (Menu *)currentMenu;
     /* volatile as safety: _CallMenuCallback saves/restores all regs around asm
        callbacks, but keep volatile in case any callback path is missed. */
@@ -1528,7 +1542,10 @@ void _ShowMenu(uint8_t *packedMenu)
     }
 
     menuStatus = 1;
-    exitMenu = 0;
+    /* Don't clear exitMenu if quit propagation is in flight — leave it
+     * set so the outer ShowMenu's `while (exitMenu == 0)` exits too. */
+    if (!g_quitToDos)
+        exitMenu = 0;
 
     _RestorePreviousMenu(oldSelectedEntry, (uint8_t *)oldPackedMenu);
 }
