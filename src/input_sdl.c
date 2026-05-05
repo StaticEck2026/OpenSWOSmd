@@ -180,13 +180,21 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         int a = sdl_to_amiga(e->key.keysym.sym);
         if (a >= 0) {
             keyState[a] = 1;
-            /* Push into the FIFO consumed by _GetKey() — but only on
-             * the initial press (SDL re-fires KEYDOWN for OS key-repeat,
-             * and the Amiga ISR uses its own keyDelay/repeat logic that
-             * we don't currently emulate; ignoring repeats prevents
-             * runaway double-inserts in InputText). Drop the event when
-             * the buffer is full. */
-            if (e->key.repeat == 0 && keyCount < (sizeof(keyBuffer) - 3)) {
+            /* Push into the FIFO consumed by _GetKey(). The Amiga
+             * keyboard hardware auto-repeats held keys at ~10-20Hz
+             * after a ~500ms initial delay, and the menu system
+             * relies on that — e.g. the season-end cup result menus
+             * cascade by reading repeated 0xD (Enter) events from
+             * keyBuffer in MenuCheckControls (currentKey == 0xD →
+             * fire = 1). Without repeats the user has to click
+             * fire once per menu and "auto-advance" doesn't work.
+             *
+             * SDL's OS-level KEYDOWN repeat fires at the desktop's
+             * configured rate (typically ~30ms / 33Hz after a 500ms
+             * delay), close enough to the Amiga semantics. Accept
+             * repeats — text-input runaway is mitigated by the
+             * buffer-full guard. */
+            if (keyCount < (sizeof(keyBuffer) - 3)) {
                 keyBuffer[keyCount] = (uint8_t)a;
                 keyCount++;
             }
