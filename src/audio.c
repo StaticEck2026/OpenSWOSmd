@@ -209,6 +209,34 @@ void _InitAudioState(uint8_t *bankBase, uint8_t *songPtr)
     }
     audioState.masterVolume = 0;
     audioState.modeFlags    = 0;
+
+    /* Even though we don't parse the bank, the IRQ ticks will run and
+     * may dispatch to channels later (e.g. after _AudioSetMode flips
+     * the enable bytes). hwRegBase must point at valid storage or the
+     * AUDx writes inside loadAUDxPtrLenIfReloadNeeded* SIGSEGV. The
+     * AUDxLC_ADDR macros resolve to (custom + 0xA0/B0/C0/D0) which is
+     * already-allocated s_custom_storage on the SDL host. */
+    ensureChannelPtrs();
+
+    clearAudioChannelStruct(&audioChannel0);
+    audioChannel0.hwRegBase = AUD0LC_ADDR;
+    audioChannel0.pvDmaBit = 1;
+    audioChannel0.svDmaBit = 1;
+
+    clearAudioChannelStruct(&audioChannel1);
+    audioChannel1.hwRegBase = AUD1LC_ADDR;
+    audioChannel1.pvDmaBit = 2;
+    audioChannel1.svDmaBit = 2;
+
+    clearAudioChannelStruct(&audioChannel2);
+    audioChannel2.hwRegBase = AUD2LC_ADDR;
+    audioChannel2.pvDmaBit = 4;
+    audioChannel2.svDmaBit = 4;
+
+    clearAudioChannelStruct(&audioChannel3);
+    audioChannel3.hwRegBase = AUD3LC_ADDR;
+    audioChannel3.pvDmaBit = 8;
+    audioChannel3.svDmaBit = 8;
     return;
 #else
     uint8_t *src;

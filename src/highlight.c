@@ -229,6 +229,22 @@ void _CopyTeamsAndHeader(void)
         ((uint8_t *)&topTeamInGame)[i] = src[i];
     }
 
+    /* The TeamGame header has 11 int16 fields at offsets 0..21 (kit
+     * colours + markedPlayer). They're stored big-endian on disk to
+     * match Amiga m68k; byteswap to host order so prShirtType etc.
+     * index correctly into the little-player sprite table when the
+     * stadium menu draws. The remaining 996 bytes are byte-sized
+     * (teamName + per-player fields) and don't need swapping.
+     * BE16_TO_HOST is a no-op on the Amiga BE build. */
+    {
+        int16_t *topHdr = (int16_t *)&topTeamInGame;
+        int16_t *botHdr = (int16_t *)&bottomTeamInGame;
+        for (i = 0; i < 11; i++) {
+            topHdr[i] = BE16_TO_HOST((uint16_t)topHdr[i]);
+            botHdr[i] = BE16_TO_HOST((uint16_t)botHdr[i]);
+        }
+    }
+
     /* Copy game name and round */
     for (i = 0; i < 40; i++) {
         gameName[i] = hilGameName[i];
@@ -242,13 +258,27 @@ void _CopyTeamsAndHeader(void)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void _SetHilFileHeader(void)
 {
-    *(uint32_t *)hilFileBuffer = K_HIL_FILE_SIG;
-    *(uint32_t *)&hilFileBuffer[4] = K_HIL_FILE_MAXSZ;
+    /* HIL header is big-endian on disk to match Amiga m68k. BE_WRITE_U32
+     * is a no-op on Amiga BE host, byteswap on x86 LE — so saves from the
+     * SDL build are now Amiga-compatible. */
+    BE_WRITE_U32(hilFileBuffer, K_HIL_FILE_SIG);
+    BE_WRITE_U32(&hilFileBuffer[4], K_HIL_FILE_MAXSZ);
 
-    /* Pack team data into hil file buffer at offset 8 */
+    /* Pack team data into hil file buffer at offset 8. The first 22 bytes
+     * of each TeamGame are 11 int16 kit/marker fields — byteswap host→BE
+     * as we copy so the on-disk format matches Amiga m68k. The remaining
+     * 996 bytes are byte-sized and copy verbatim. */
     uint8_t *dst = &hilFileBuffer[8];
     uint16_t i;
-    for (i = 0; i < 1018; i++) {
+    {
+        int16_t *topHdr = (int16_t *)&topTeamInGame;
+        int16_t *botHdr = (int16_t *)&bottomTeamInGame;
+        for (i = 0; i < 11; i++) {
+            ((uint16_t *)dst)[i]            = HOST_TO_BE16((uint16_t)topHdr[i]);
+            ((uint16_t *)(dst + 1018))[i]   = HOST_TO_BE16((uint16_t)botHdr[i]);
+        }
+    }
+    for (i = 22; i < 1018; i++) {
         dst[1018 + i] = ((uint8_t *)&bottomTeamInGame)[i];
         dst[i] = ((uint8_t *)&topTeamInGame)[i];
     }

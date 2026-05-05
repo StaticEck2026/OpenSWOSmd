@@ -16,12 +16,17 @@
 #include "file_io.h"
 #include "menus.h"
 #include "highlights_menu.h"
+#include "endian_helpers.h"
 
 /* ---- Menu entries (defined in asm) ---- */
 extern MenuEntry menuEntries[];
 
 /* ---- Globals (defined in asm) ---- */
 extern uint16_t hilNumGoals;
+extern uint16_t hilTeam1Goals;
+extern uint16_t hilTeam2Goals;
+extern uint16_t hilPitchNumber;
+extern uint16_t hilMaxSubstitutes;
 extern uint32_t extension;
 extern uint8_t selectedFilename[];
 extern uint8_t hilFileBuffer[];
@@ -137,11 +142,23 @@ void _LoadHighlightsMenu(void)
     if (_LoadHilFile(selectedFilename) != 0)
         goto cleanup;
 
-    if (*(uint32_t *)hilFileBuffer != kHilFileSig) {
+    /* HIL file header is big-endian (Amiga m68k); BE_READ_U32 is a no-op
+     * on the Amiga build and a byteswap on x86. */
+    if (BE_READ_U32(hilFileBuffer) != kHilFileSig) {
         _ShowErrorMenu(aCannotPlayOldV);
         hilNumGoals = 0;
         goto cleanup;
     }
+
+    /* Byteswap the 5 header uint16 fields BE→host so the rest of the
+     * code can read them naturally. The fields sit at the end of the
+     * 2254-byte HIL header (offsets 2244..2253) — backed by hilBackingBuf
+     * via .equ aliases in swos_globals.c. No-ops on the Amiga BE host. */
+    hilNumGoals       = BE16_TO_HOST(hilNumGoals);
+    hilTeam1Goals     = BE16_TO_HOST(hilTeam1Goals);
+    hilTeam2Goals     = BE16_TO_HOST(hilTeam2Goals);
+    hilPitchNumber    = BE16_TO_HOST(hilPitchNumber);
+    hilMaxSubstitutes = BE16_TO_HOST(hilMaxSubstitutes);
 
     _StringCopy(selectedFilename, hilFilename);
 

@@ -31,6 +31,10 @@ extern volatile uint16_t currentGameTick;
 extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 extern volatile uint16_t panicReasonCode;
 extern uint16_t hilNumGoals;
+extern uint16_t hilTeam1Goals;
+extern uint16_t hilTeam2Goals;
+extern uint16_t hilPitchNumber;
+extern uint16_t hilMaxSubstitutes;
 extern uint8_t editTacticsCurrentTactics[370]; /* TeamTactics — must match edit_tactics.c */
 extern uint8_t hilFileBuffer[];
 
@@ -698,7 +702,25 @@ int16_t _DoSaveHighlights(uint8_t *filename)
     int16_t result;
 
     size = (uint32_t)hilNumGoals * 19000u + 2254u;
+
+    /* HIL file header is big-endian on disk for Amiga compatibility.
+     * Swap the 5 uint16 header fields host→BE for the duration of the
+     * write, then swap back so in-memory state stays in host order for
+     * the rest of the game. No-op on the Amiga BE build. */
+    hilNumGoals       = HOST_TO_BE16(hilNumGoals);
+    hilTeam1Goals     = HOST_TO_BE16(hilTeam1Goals);
+    hilTeam2Goals     = HOST_TO_BE16(hilTeam2Goals);
+    hilPitchNumber    = HOST_TO_BE16(hilPitchNumber);
+    hilMaxSubstitutes = HOST_TO_BE16(hilMaxSubstitutes);
+
     result = _WriteFile(filename, hilFileBuffer, size);
+
+    hilNumGoals       = BE16_TO_HOST(hilNumGoals);
+    hilTeam1Goals     = BE16_TO_HOST(hilTeam1Goals);
+    hilTeam2Goals     = BE16_TO_HOST(hilTeam2Goals);
+    hilPitchNumber    = BE16_TO_HOST(hilPitchNumber);
+    hilMaxSubstitutes = BE16_TO_HOST(hilMaxSubstitutes);
+
     if (result == 0)
         return 0;
 

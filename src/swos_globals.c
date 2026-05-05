@@ -435,29 +435,59 @@ __asm__(".globl editTeamsPrimaryShirts\n"
  * captures the team-data array automatically. The old standalone
  * selTeamsBackingBuf left bytes 98478..120365 of the save file as zeros. */
 
-/* ---- Highlight scene ring buffer (hilStartOfGoalsBuffer + inGameHilBuffer)
+/* ---- Highlight file buffer + scene ring buffer (one BSS run)
  *
- * On Amiga these are two adjacent BSS labels (SWOS2.s line 2779..2781):
- *   hilStartOfGoalsBuffer: $4A38 bytes  (19000 — one "goal" scene slot)
- *   inGameHilBuffer:       $29BF8 bytes (170488 — 8.97 additional slots)
+ * On Amiga these are 10 adjacent BSS labels (SWOS2.s line 3034..3056):
+ *   hilFileBuffer:         $7FC bytes  (2044 — sig + 2 teams)
+ *   hilGameName:           $64 bytes   (100)
+ *   hilGameRound:          $64 bytes   (100)
+ *   hilNumGoals:           $2 bytes
+ *   hilTeam1Goals:         $2 bytes
+ *   hilTeam2Goals:         $2 bytes
+ *   hilPitchNumber:        $2 bytes
+ *   hilMaxSubstitutes:     $2 bytes
+ *   hilStartOfGoalsBuffer: $4A38 bytes (19000 — one "goal" scene slot)
+ *   inGameHilBuffer:       $29BF8 bytes (171000 — 9 additional slots)
  *
- * The highlight system addresses both as one combined pool:
+ * Total = 2254 + 19000 + 171000 = 192254 bytes (= K_HIL_FILE_MAXSZ).
+ *
+ * `_LoadHilFile` calls `_LoadFileEx(hilFileBuffer, …)` which writes the
+ * entire HIL file starting at `hilFileBuffer`. The first 8 bytes are the
+ * magic-sig and max-size, the next 2036 are the two teams, the next 200
+ * are gameName+gameRound, the next 10 bytes are the per-match header
+ * (numGoals/team1Goals/team2Goals/pitchNumber/maxSubstitutes), and the
+ * remaining bytes are the goal scenes. The Amiga build relies on these
+ * being one contiguous BSS run — separate stubs leave hilNumGoals at
+ * zero after load, disabling the VIEW HIGHLIGHTS entry.
+ *
+ * The highlight system also addresses hilStartOfGoalsBuffer/inGameHilBuffer
+ * as one combined pool:
  *   _SaveHighlightScene writes 19000-byte scenes at
  *     `hilStartOfGoalsBuffer + N * 19000` for N in 0..HIL_MAX_SCENES-1, and
- *   game_loop.c:1003 sets goalBasePtr to the same offset for replay.
- *
- * On SDL each label was a separate stub, so writing scene 1+ past the
- * 19000-byte hilStartOfGoalsBuffer stomped whatever the linker placed
- * next (goalBase, editTeamsSaveVarsArea, sprite-pool overflow). Merge
- * them into one contiguous buffer with asm aliases, matching the Amiga
- * BSS layout — same pattern as `selTeamsBackingBuf` above. */
-#define HIL_BACKING_BUF_SIZE (0x4A38 + 0x29BF8)
+ *   game_loop.c:1003 sets goalBasePtr to the same offset for replay. */
+#define HIL_BACKING_BUF_SIZE 192254
 __attribute__((used, aligned(4)))
 uint8_t hilBackingBuf[HIL_BACKING_BUF_SIZE];
-__asm__(".globl hilStartOfGoalsBuffer\n"
-        ".equ   hilStartOfGoalsBuffer, hilBackingBuf\n"
+__asm__(".globl hilFileBuffer\n"
+        ".equ   hilFileBuffer, hilBackingBuf\n"
+        ".globl hilGameName\n"
+        ".equ   hilGameName, hilBackingBuf + 2044\n"
+        ".globl hilGameRound\n"
+        ".equ   hilGameRound, hilBackingBuf + 2144\n"
+        ".globl hilNumGoals\n"
+        ".equ   hilNumGoals, hilBackingBuf + 2244\n"
+        ".globl hilTeam1Goals\n"
+        ".equ   hilTeam1Goals, hilBackingBuf + 2246\n"
+        ".globl hilTeam2Goals\n"
+        ".equ   hilTeam2Goals, hilBackingBuf + 2248\n"
+        ".globl hilPitchNumber\n"
+        ".equ   hilPitchNumber, hilBackingBuf + 2250\n"
+        ".globl hilMaxSubstitutes\n"
+        ".equ   hilMaxSubstitutes, hilBackingBuf + 2252\n"
+        ".globl hilStartOfGoalsBuffer\n"
+        ".equ   hilStartOfGoalsBuffer, hilBackingBuf + 2254\n"
         ".globl inGameHilBuffer\n"
-        ".equ   inGameHilBuffer, hilBackingBuf + 0x4A38\n");
+        ".equ   inGameHilBuffer, hilBackingBuf + 2254 + 0x4A38\n");
 #undef HIL_BACKING_BUF_SIZE
 
 /* ---- Audio buffers: sized to hold the real Amiga sound files.

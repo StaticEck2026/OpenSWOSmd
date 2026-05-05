@@ -84,7 +84,7 @@ extern uint32_t playersPositionsByTactics[18];
 
 extern uint16_t hilSceneNumber;
 extern volatile uint16_t numScenesInHilFile;
-extern uint32_t hilStartOfGoalsBuffer;
+extern uint8_t hilStartOfGoalsBuffer[];
 extern uint8_t *goalBasePtr;
 extern uint8_t *currentHilPtr;
 extern uint8_t *nextGoalPtr;

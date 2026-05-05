@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include "game_types.h"
 #include "menu_system.h"
+#include "audio.h"
 
 /* Forward type declarations needed by this file only. Our headers
  * already define TeamFile/TeamFileEx/TeamGame/TeamGeneralInfo/
@@ -161,11 +162,12 @@ uint32_t menuFreeSpace;
 MenuEntry templateMenuEntry;
 uint16_t exitMenu;
 uint16_t numSpritesToRender;
-uint16_t hilNumGoals;
-uint16_t hilTeam1Goals;
-uint16_t hilTeam2Goals;
-uint16_t hilPitchNumber;
-uint16_t hilMaxSubstitutes;
+/* hilNumGoals / hilTeam1Goals / hilTeam2Goals / hilPitchNumber /
+ * hilMaxSubstitutes: aliased into hilBackingBuf in swos_globals.c — they
+ * sit immediately after hilGameName/hilGameRound in the Amiga BSS run
+ * and _LoadHilFile relies on overflowing hilFileBuffer through them to
+ * deserialize the HIL header (otherwise hilNumGoals stays 0 after load
+ * and VIEW HIGHLIGHTS stays greyed out). */
 uint8_t audioDbgFlagA  = 0;
 uint8_t team1GoalieFaces  = 0;
 uint8_t team2GoalieSkinType  = 0;
@@ -836,6 +838,13 @@ uint8_t careerDefaultInternationalSquadSlotsTable[11] = {
     0x01, 0x42, 0x05, 0x06, 0x03, 0x49, 0x04, 0x07, 0x0B, 0x4A, 0x08
 };
 void * spriteBlitQueue;
+
+/* audioState: properly-sized AudioState struct (0x2E = 46 bytes). The
+ * auto-extractor truncated the BSS dump to 12 bytes, so writes/reads at
+ * offsets 0x26 (primaryChanEnable) and 0x27 (secondaryChanEnable) were
+ * sliding into the next BSS symbol — non-deterministically letting the
+ * audio IRQ enter the secondary-voice path with garbage state. */
+AudioState audioState;
 
 /* editTeams* sprite-copy blocks and their ColTable counterparts live
  * in swos_globals.c as six 36-byte adjacent-globals backing buffers —
