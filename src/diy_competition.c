@@ -7097,8 +7097,6 @@ void _DesignDIYLeagueChooseTeams(void)
 }
 
 /* ShowDIYCupMenuWithParams — store params, show cup menu (SWOS2.s line 43290) */
-extern uint32_t allowShorterMenuItemsWithFrames;
-
 __attribute__((used, externally_visible))
 void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2)
 {
@@ -7114,22 +7112,7 @@ void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2)
         } while (fire != 0);
     }
 
-    /* During season update the cup result menus are meant to flash by
-     * — show each result for ~1s and auto-advance, no user click. The
-     * Amiga has an auto-fire mechanism gated on
-     * `allowShorterMenuItemsWithFrames` that's never explicitly turned
-     * on in SWOS2.s; setting the high word here drives MenuCheckControls
-     * to pulse pl1Fire every other frame, which fires the EXIT entry
-     * (selected by _DIYCupInit when seasonUpdate is set) and exits the
-     * menu naturally. Restore on return so other menu paths aren't
-     * affected. */
-    uint32_t savedAuto = allowShorterMenuItemsWithFrames;
-    if (seasonUpdateInProgress != 0)
-        allowShorterMenuItemsWithFrames |= 0x00010000u;
-
     _ShowMenu(diyCupMenu);
-
-    allowShorterMenuItemsWithFrames = savedAuto;
     writeOnlyVar01 = 0;
 }
 
