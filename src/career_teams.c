@@ -321,8 +321,19 @@ int16_t _SearchTeamInTmdFile(uint16_t teamNo)
         return 1;
 
     uint8_t *ptr = &tmdFileBuffer;
+    /* teamNo is BE-packed `(country<<8)|ordinal` (the form PACK_BE_U16
+     * produces, used everywhere — _CopySelectedTeamNumbers, the
+     * cached*QualifiedTeamIds globals, the Title-Holder TeamId
+     * globals). Each TMD entry stores countryNumber and teamOrdinal
+     * as adjacent bytes 0/1 of TeamFileEx. On Amiga BE `move.w (ptr)`
+     * gave the same BE-packed value; on x86 LE a raw uint16 cast
+     * byte-swaps it, so e.g. teamNo=0x0801 (England team 1) FALSELY
+     * matched TMD[1] = Austria team 8 (bytes [0x01, 0x08] read LE =
+     * 0x0801). Result: every "is this team in pool?" check returned
+     * the wrong answer for asymmetric (a,b) teamId pairs. Use
+     * BE_READ_U16 to recover the BE-packed identity. */
     for (uint16_t i = 0; i < count; i++) {
-        if (*(uint16_t *)ptr == teamNo)
+        if (BE_READ_U16(ptr) == teamNo)
             return 0;  /* found */
         ptr += sizeof(TeamFileEx);
     }
@@ -343,8 +354,10 @@ void _Career_RemoveTeamFromTmdTeamPool(uint16_t teamNo)
         return;
 
     uint8_t *ptr = &tmdFileBuffer;
+    /* See note in _SearchTeamInTmdFile — same BE-packed teamNo vs
+     * adjacent {country, ordinal} bytes. Use BE_READ_U16. */
     for (uint16_t i = 0; i < count; i++) {
-        if (*(uint16_t *)ptr == teamNo) {
+        if (BE_READ_U16(ptr) == teamNo) {
             /* Found — shift remaining entries left */
             uint16_t remaining = count - 1 - i;
             if (remaining > 0) {
