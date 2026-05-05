@@ -2145,21 +2145,29 @@ extern uint16_t youreSacked;
 extern TeamFile *squadTeamPtr;
 extern TeamFileEx careerTeam;
 
-/* CareerOverInit (line 58154): set default menu entry based on career state */
+/* CareerOverInit (line 58154): set default menu entry based on career state.
+ *
+ * The Amiga ends every branch (including the empty fall-through case) with
+ * `bra.w *+4` which lands on the immediately-following CareerOverFinish
+ * label — the function deliberately falls through into its onReturn
+ * counterpart so both run on init. Without this, entries 0/1/2 (manager
+ * name / team name / season-year slots at the top of the careerOver menu)
+ * never get populated and stay as the STDMENUTEXT placeholder allocated
+ * by _UnpackMenu. */
+extern void _CareerOverFinish(void);
+
 __attribute__((used, externally_visible))
 void _CareerOverInit(void)
 {
     if (currentSeasonShowing == 0x13) {
         _SetCurrentEntry(6);
-        return;
-    }
-    if (numNewJobOffers != 0 || numJobOffers != 0) {
+    } else if (numNewJobOffers != 0 || numJobOffers != 0) {
         _SetCurrentEntry(5);
-        return;
-    }
-    if (youreSacked != 0) {
+    } else if (youreSacked != 0) {
         _SetCurrentEntry(8);
     }
+    /* fall through to CareerOverFinish (Amiga: bra.w *+4) */
+    _CareerOverFinish();
 }
 
 /* ViewSquadOnSelect21 (line 73995): rotate players and redraw entry 20 */
