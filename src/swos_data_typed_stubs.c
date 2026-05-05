@@ -85,11 +85,25 @@ Position topPenaltiesPositions[11] = { { 250, 2 }, { 260, 277 }, { 280, 266 }, {
 Position * bottomBallOutOfPlayPositions[32] = { bottomStartingPositions, bottomGoalOutLeftPositions, bottomGoalOutRightPositions, bottomKeeperHoldsBallPositions, bottomCornerLeftPositions, bottomCornerRightPositions, bottomFreeKickLeft1Positions, bottomFreeKickLeft2Positions, bottomFreeKickLeft3Positions, bottomFreeKickCenterPositions, bottomFreeKickRight1Positions, bottomFreeKickRight2Positions, bottomFreeKickRight3Positions, 0, bottomPenaltyPositions, bottomThrowInForwardRightPositions, bottomThrowInCenterRightPositions, bottomThrowInBackRightPositions, bottomThrowInForwardLeftPositions, bottomThrowInCenterLeftPositions, bottomThrowInBackLeftPositions, bottomStartingGamePositions, bottomStartingGamePositions, bottomLeavingPitchPositions, bottomLeavingPitchPositions, bottomLeavingPitchPositions, bottomLeavingPitchPositions, bottomFirstExtraStartingPositions, bottomFirstExtraStartingPositions, 0, 0, bottomPenaltiesPositions };
 Position * topBallOutOfPlayPositions[32] = { topStartingPositions, topGoalOutLeftPositions, topGoalOutRightPositions, topKeeperHoldsBallPositions, topCornerLeftPositions, topCornerRightPositions, topFreeKickLeft1Positions, topFreeKickLeft2Positions, topFreeKickLeft3Positions, topFreeKickCenterPositions, topFreeKickRight1Positions, topFreeKickRight2Positions, topFreeKickRight3Positions, 0, topPenaltyPositions, 0, 0, 0, 0, 0, 0, topStartingGamePositions, topStartingGamePositions, topLeavingPitchPositions, topLeavingPitchPositions, topLeavingPitchPositions, topLeavingPitchPositions, topFirstExtraStartingPositions, topFirstExtraStartingPositions, 0, 0, topPenaltiesPositions };
 
-/* ---- 446 formerly-stubbed globals: typed storage + the real values that had them ---- */
-TeamFile tertiaryQualifiedTeamGrid;
-TeamFile euroCupTitleHolderGrid;
-TeamFile cupWinnersCupTitleHolderGrid;
-TeamFile uefaCupTitleHolderGrid;
+/* ---- 446 formerly-stubbed globals: typed storage + the real values that had them ----
+ *
+ * The four title-holder / qualified-team grids are written via
+ * copyTeamGridWords with wordCount = 0x155 (341 words = 682 bytes — a
+ * full TeamFileEx record, minus 2 trailing bytes). They were typed as
+ * TeamFile (76-byte header), so each copy spilled ~600 bytes past the
+ * declared end into whichever neighbour the linker placed next. With
+ * the four sitting consecutively at 0x60-byte spacing in our binary,
+ * a UEFA copy at uefaCupTitleHolderGrid stomped both the cup-winners
+ * and euro grids that came before it — leaving them holding the UEFA
+ * team data, then later zeros, and finally tripping the TMD-pool
+ * "duplicate" panic when DrawEuropeanCupTeamsAndCopyGrids appended
+ * an empty grid (teamId 0x0000 = Albania team 0 = already in pool).
+ *
+ * Use TeamFileEx so each grid has the full 684 bytes the copy writes. */
+TeamFileEx tertiaryQualifiedTeamGrid;
+TeamFileEx euroCupTitleHolderGrid;
+TeamFileEx cupWinnersCupTitleHolderGrid;
+TeamFileEx uefaCupTitleHolderGrid;
 uint32_t teamFileDataSize;
 uint16_t teamFileTeamCount;
 uint8_t lastLoadedExtNumber;
