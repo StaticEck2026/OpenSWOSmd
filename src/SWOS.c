@@ -232,13 +232,7 @@ void _mainC(void)
 
     /* ---- Phase 4: Loader intro ---- */
     loaderModeFlag = 1;
-#ifndef SWOS_SDL_BUILD
     _ShowLoaderIntroSequence();
-#else
-    /* Skipped on SDL during bring-up: the intro works but takes
-     * ~100 s to play and the user will not press fire in headless
-     * tests. Re-enable once the menu/match paths are stable. */
-#endif
     _AssetLoaderInitAltPathAndBanks();
     _AssetPrecacheCore();
     _InstallAndInitLoaderBootstrap();
