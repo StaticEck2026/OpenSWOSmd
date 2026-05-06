@@ -666,12 +666,38 @@ retry:
         goto retry;
 
 #ifdef SWOS_SDL_BUILD
-    /* Hand the loaded bank to the RJP1 player so AudioSDL_TriggerSfx
-     * (called from _AudioApplyPresetToChannels / _AudioChannelQueueNextWaveIfEnabled)
-     * has samples to fire. The Amiga byte-poking engine in audio_irq.c
-     * is stubbed on SDL — this is what makes in-match SFX audible. */
+    /* The original Amiga relies on `poolplyrDatBuffer` (= SFX.IN1) and
+     * `sfxInsBank2` (= SFX.IN2) being adjacent in BSS — RJP1
+     * instrument records carry 32-bit byte offsets that index into
+     * the combined IN1+IN2 blob (see rjp1player main.cpp:215, which
+     * concatenates them on load). Our SDL linker places IN1 and IN2
+     * in different translation units, so they're scattered across
+     * BSS and offsets that should reach into IN2 land in unrelated
+     * memory — producing the intermittent "clicking loop" the user
+     * heard on chants like 0x3E whose sample lives past IN1's end.
+     *
+     * Fix: rebuild a contiguous IN1+IN2 blob and hand THAT to the
+     * RJP1 player. We use _LoadFileEx (rather than _PlaySong) because
+     * it returns the file size, which we need to know where IN2
+     * starts. Sized 256 KB to comfortably hold both banks
+     * (71500 + 81068 = 152568 bytes today, with headroom). */
+    extern int16_t _LoadFileEx(uint8_t *, uint8_t *, uint32_t *);
+    static uint8_t s_sfx_combined_ins[256 * 1024];
+    uint32_t in1_size = 0, in2_size = 0;
+    if (_LoadFileEx(aSoundSfxIn1, s_sfx_combined_ins, &in1_size) != 0)
+        goto retry;
+    if (in1_size + 1 >= sizeof(s_sfx_combined_ins))
+        goto retry;   /* impossible with sized files, but defensive */
+    if (_LoadFileEx(aSoundSfxIn2, s_sfx_combined_ins + in1_size, &in2_size) != 0)
+        goto retry;
+
+    /* Hand the combined bank to the RJP1 player so AudioSDL_TriggerSfx
+     * (called from _AudioApplyPresetToChannels /
+     * _AudioChannelQueueNextWaveIfEnabled) has samples to fire. The
+     * Amiga byte-poking engine in audio_irq.c is stubbed on SDL —
+     * this is what makes in-match SFX audible. */
     AudioSDL_LoadSfxBank(sfxSongData, SFX_SONG_DATA_BYTES,
-                         poolplyrDatBuffer, SFX_INS_BANK_BYTES);
+                         s_sfx_combined_ins, in1_size + in2_size);
 #endif
 }
 
