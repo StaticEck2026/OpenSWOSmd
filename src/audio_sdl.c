@@ -181,7 +181,14 @@ int AudioSDL_StartSong(const uint8_t *song_data, int song_size,
         return -1;
     }
 
-    if (subsong <= 0) subsong = 1;
+    /* Pass the caller's subsong number through verbatim — RJP1_StartSong
+     * treats it as a 0-based index into the subsong table (matching the
+     * cyxx reference player). The previous "if (subsong <= 0) subsong = 1"
+     * remap clobbered the loader-intro's deliberate subsong=0 selection
+     * for HERO, picking subsong-1 instead — and HERO's record-1 has the
+     * vocal channel sequence byte zeroed, so the female vocals went
+     * silent. RJP1_StartSong has its own clamp for out-of-range values. */
+    if (subsong < 0) subsong = 0;
     RJP1_StartSong(&s_player, (uint8_t)subsong);
     s_player_active = 1;
 
