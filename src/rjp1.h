@@ -41,6 +41,13 @@ typedef struct RJP1_PaulaChannel {
     uint32_t repeat_pos;
     uint32_t repeat_len;
     uint32_t pos;
+    /* 3-stage cascaded one-pole low-pass filter state, modelling the
+     * Amiga A1200 analog RC chain. Without this the broadband loop-end
+     * transients in some RJP1 samples produce a buzzy click that
+     * masks the underlying tone — most audible on the vocal samples
+     * in HERO.SNG, where it sounded like the singing channel was
+     * outright missing. Cyxx player upstream uses the same filter. */
+    float    filter_state[3];
 } RJP1_PaulaChannel;
 
 typedef struct RJP1_Channel {

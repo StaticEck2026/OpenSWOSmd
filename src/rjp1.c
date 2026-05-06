@@ -15,6 +15,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <math.h>   /* tan() for filter coefficient setup */
 
 /* ---- Big-endian readers --------------------------------------------
  * The .sng/.ins payloads are Amiga BE; our host is x86 LE. Same
@@ -530,6 +531,25 @@ void RJP1_MixSamples(RJP1_Player *p, int sample_rate, int8_t *buf, int len)
     if (!p->loaded) return;
     /* Amiga channel → stereo lane mapping (cyxx player): 1,2 = left ; 0,3 = right */
     static const int amiga_channel_map[] = { 1, 0, 0, 1 };
+
+    /* Per-voice low-pass filter coefficient. Recomputed lazily when the
+     * sample rate changes. 6000 Hz cutoff matches A1200 analog chain (and
+     * the cyxx reference player's default). Bilinear-corrected:
+     *   omega = 2*pi*cutoff/rate
+     *   omega = 2 * tan(omega/2)
+     *   a     = 1 / (1 + 1/omega) */
+    static float s_filter_a    = 0.0f;
+    static int   s_filter_rate = 0;
+    if (sample_rate != s_filter_rate) {
+        s_filter_rate = sample_rate;
+        const double cutoff = 6000.0;
+        double omega = 2.0 * 3.14159265358979 * cutoff / (double)sample_rate;
+        omega = 2.0 * tan(omega * 0.5);
+        s_filter_a = (float)(1.0 / (1.0 + 1.0 / omega));
+    }
+    const float a    = s_filter_a;
+    const float oneA = 1.0f - s_filter_a;
+
     for (int i = 0; i < RJP1_NUM_CHANNELS; ++i) {
         RJP1_PaulaChannel *hw = &p->channels[i].hw_channel;
         if (!hw->active || hw->len <= 2 || !hw->data || hw->per == 0) continue;
@@ -552,7 +572,32 @@ void RJP1_MixSamples(RJP1_Player *p, int sample_rate, int8_t *buf, int len)
                 hw->len = hw->repeat_pos + hw->repeat_len;
                 pos     = hw->pos >> RJP1_FRAC_BITS;
             }
-            b += hw->data[pos] * hw->vol / 64;
+
+            /* Linear interpolation between current and next sample.
+             * Without this, sustained voiced samples (HERO vocal track
+             * lives on a channel that uses one of these) become a
+             * stair-step waveform whose harmonic content gets aliased
+             * away when the host sample-rate-converter low-passes,
+             * leaving an inaudible / heavily-attenuated channel. */
+            uint32_t pos_next = pos + 1;
+            if (pos_next >= hw->len) {
+                pos_next = (hw->repeat_len > 2) ? hw->repeat_pos : pos;
+            }
+            int s0   = hw->data[pos];
+            int s1   = hw->data[pos_next];
+            uint32_t frac = hw->pos & ((1u << RJP1_FRAC_BITS) - 1u);
+            int sample_lerp = s0 + ((s1 - s0) * (int)frac >> RJP1_FRAC_BITS);
+            int raw  = sample_lerp * hw->vol / 64;
+
+            /* 3-stage cascaded one-pole low-pass — matches the analog
+             * chain on real Amigas more closely. */
+            float fy = (float)raw;
+            hw->filter_state[0] = a * fy                  + oneA * hw->filter_state[0];
+            hw->filter_state[1] = a * hw->filter_state[0] + oneA * hw->filter_state[1];
+            hw->filter_state[2] = a * hw->filter_state[1] + oneA * hw->filter_state[2];
+            fy = hw->filter_state[2];
+
+            b += (int)fy;
             if (b < -128) b = -128;
             else if (b > 127) b = 127;
             buf[q + amiga_channel_map[i]] = (int8_t)b;
