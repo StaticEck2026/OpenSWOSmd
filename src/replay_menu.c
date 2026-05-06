@@ -172,10 +172,14 @@ void _ReplayExitMenuAfterFriendly(void)
                 needsRedraw = 0;
             }
 
-            /* Wait for VBlank */
-            waitingInterrupt = 1;
-            while (waitingInterrupt != 0)
-                ;
+            /* Wait for VBlank. Use _WaitForVSync (which routes to
+             * Platform_VBlank on SDL) instead of the raw
+             * waitingInterrupt spin so SDL events get pumped on the
+             * main thread — without this the user can't move the
+             * cursor on Windows. Same fix pattern as the other
+             * site in this file and the season-transition debounce
+             * loops in commit f6a0a47. */
+            _WaitForVSync();
 
             /* Draw shining frame on selected item */
             if (replaySelected != 0)
