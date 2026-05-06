@@ -157,10 +157,14 @@ void _DrawStatistics(void)
     /* Draw title grid (80, 35, 176, 16) */
     _DrawGrid(80, 35, 176, 16);
 
-    /* Draw 10 data rows starting at y=55, each 304 wide, 16 tall, spaced 18 apart */
+    /* Draw 9 data rows starting at y=55, each 304 wide, 16 tall,
+     * spaced 18 apart. (1 title row + 9 data rows = 10 _DrawGrid
+     * calls total, matching SWOS2.s line 22799-22850. The previous
+     * code had a 10th data row that left a visible empty band below
+     * SENDINGS OFF.) Rows host: team names, GOALS, POSSESSION, GOAL
+     * ATTEMPTS, ON TARGET, CORNERS WON, FOULS CONCEDED, BOOKINGS,
+     * SENDINGS OFF. */
     y = 55;
-    _DrawGrid(16, y, 304, 16);
-    y += 18;
     _DrawGrid(16, y, 304, 16);
     y += 18;
     _DrawGrid(16, y, 304, 16);

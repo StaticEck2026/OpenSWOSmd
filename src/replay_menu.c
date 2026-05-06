@@ -10,6 +10,8 @@
 #include "display.h"
 #include "fade.h"
 
+extern void _WaitForVSync(void);   /* game_utils.c — pumps SDL events on SDL */
+
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern volatile int16_t waitingInterrupt;
 extern volatile uint16_t currentGameTick;
@@ -103,10 +105,14 @@ void _DrawReplayOrExitMenu(void)
         /* "EXIT" text centered (x center=176, y=142, color index=2) */
         _DrawMenuTextCentered(176, 142, 2, aExit, bigCharsTable);
 
-        /* Wait for VBlank */
-        waitingInterrupt = 1;
-        while (waitingInterrupt != 0)
-            ;
+        /* Wait for VBlank. Use _WaitForVSync (which routes to
+         * Platform_VBlank on SDL) instead of the raw waitingInterrupt
+         * spin — Platform_VBlank pumps SDL events, so keyboard
+         * up/down gets processed; without it the user couldn't move
+         * the cursor on Windows because the only event-pump path was
+         * the SDL_Timer thread's >60ms-since-render fallback, which
+         * never fires from a tight menu loop. */
+        _WaitForVSync();
     }
 }
 
