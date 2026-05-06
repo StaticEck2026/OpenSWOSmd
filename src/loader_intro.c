@@ -34,6 +34,8 @@ extern uint32_t memBoundaryMarker;
 extern uint16_t audioBankLoaded;
 extern volatile uint16_t audioActive;
 extern uint16_t fireResetFlag;
+extern volatile uint16_t keyCount;
+extern volatile uint16_t currentKey;
 extern uint8_t diyFileBufferCopy[];
 extern uint8_t audioInstrumentBank[];
 extern uint8_t aSoundHeroSng[];
@@ -405,8 +407,21 @@ exit_cleanup:
      * this, the next MenuProc iteration sees fire=1 and immediately
      * fires the highlighted main-menu entry (FRIENDLY GAME by
      * default). fireResetFlag tells _MenuCheckControls to suppress
-     * fire/shortFire until the key is released, then auto-clears. */
+     * fire/shortFire until the key is released, then auto-clears.
+     *
+     * Also drain the keyboard FIFO. The skip ENTER landed as
+     * AKEY_ENTER in keyBuffer when SDL pumped the KEYDOWN event, and
+     * nothing called _GetKey() during the rest of the loader phases
+     * (asset precache / disk-image fade / op3 polling) — so the
+     * scancode is still queued when MenuProc finally runs. The
+     * `currentKey == 0x0D` path inside _MenuCheckControls runs AFTER
+     * the fireResetFlag clear and would set fire=1 from that stale
+     * scancode, which is what dropped the user into FRIENDLY GAME on
+     * intro skip. Zero the count + currentKey so the buffer can't
+     * retroactively trigger anything. */
     fireResetFlag = 1;
+    keyCount = 0;
+    currentKey = 0;
     return;
 
 load_fail_mid:
@@ -433,5 +448,7 @@ load_fail_early:
     }
     /* See exit_cleanup for the rationale. */
     fireResetFlag = 1;
+    keyCount = 0;
+    currentKey = 0;
     return;
 }
