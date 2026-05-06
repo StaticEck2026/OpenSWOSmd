@@ -3762,12 +3762,14 @@ show_menu_check:
     if (careerAutoAdvanceInProgress != 0)
         return;
 
-    /* Show league menu */
-    if (highlightedLeagueTeamId == 0xFFFF) {
-        _ShowDiyLeaguesTournamentMenu(1, 0, 0);
-    } else {
-        _ShowDiyLeaguesTournamentMenu(1, 1, 0);
-    }
+    /* Show league menu. SWOS2.s loc_12D754/loc_12D764 calls (1,1,0)
+     * unconditionally here — the highlightedLeagueTeamId check belongs
+     * only on the catch_up_phase first-time path (loc_12D790).
+     * arg1=1 is required so DIYLeagueTournamentInit's seasonUpdate-pre-
+     * select-entry-42 isn't overridden by the menuState fallback in
+     * UpdateMenuEntryVisibilityAndFocus, which would otherwise drop the
+     * controlMask=0xFFFF auto-skip the season transition relies on. */
+    _ShowDiyLeaguesTournamentMenu(1, 1, 0);
     return;
 
 catch_up_phase:
@@ -3867,11 +3869,15 @@ cup_show_menu_check:
     if (careerAutoAdvanceInProgress != 0)
         return;
 
-    if (highlightedLeagueTeamId == 0xFFFF) {
-        _ShowDIYCupMenuWithParams(1, 0, 0);
-    } else {
-        _ShowDIYCupMenuWithParams(1, 1, 0);
-    }
+    /* Show cup menu. SWOS2.s loc_12D884/loc_12D894 calls (1,1,0)
+     * unconditionally here — the highlightedLeagueTeamId check belongs
+     * only on the catch_up_phase first-time path (loc_12D8D6).
+     * arg1=1 is required so DIYCupInit's seasonUpdate-pre-select-entry-
+     * 66 isn't overridden by the menuState fallback in
+     * DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection, which would
+     * otherwise drop the controlMask=0xFFFF auto-skip the season
+     * transition relies on. */
+    _ShowDIYCupMenuWithParams(1, 1, 0);
     return;
 
 cup_catch_up:

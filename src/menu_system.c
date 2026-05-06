@@ -24,6 +24,24 @@ extern uint32_t currentMenuPtr;
 extern volatile uint16_t menuStatus;
 extern uint16_t menuFade;
 extern volatile uint16_t exitMenu;
+extern volatile uint16_t seasonUpdateInProgress;
+
+#include <stdint.h>
+#include "auto_skip_debug.h"
+
+/* Season-update menu hold: on Amiga, the slow CPU + blitter naturally
+ * stretched each cup/league result menu render to ~0.5-1 s. On x86 the
+ * controlMask=0xFFFF auto-fire dispatches in the first MenuProc iteration,
+ * so the season-transition chain visually skips in milliseconds. Hold each
+ * menu for SEASON_UPDATE_MENU_HOLD_FRAMES iterations (50 Hz pacing) so the
+ * user can read each result like on the original.
+ *
+ * Counter resets in _ActivateMenu (per-menu boundary); _MenuProc gates the
+ * auto-fire dispatch behind it when seasonUpdateInProgress is set. Only
+ * applies to controlMask==0xFFFF entries — every other dispatch path
+ * (normal fire-only, navigation, etc.) is unaffected. */
+#define SEASON_UPDATE_MENU_HOLD_FRAMES 50
+static uint16_t s_seasonUpdateHoldCounter;
 extern uint16_t menuCursorFrame;
 extern uint16_t menuTextBlinkCounter;
 extern uint16_t controlMask;
@@ -88,6 +106,42 @@ extern uint8_t *spriteGraphicsPtr;
  * X button click. _ShowMenu loops check it to break out of nested menus. */
 extern uint16_t g_quitToDos;
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+/* Map a packed-menu pointer to a human name for the autoskip log. */
+extern uint8_t diyCupMenu[], diyLeagueTournamentMenu[], chairmanMemosMenu[];
+extern uint8_t careerMenu[], contestMenu[], careerOverMenu[], continueMenu[];
+extern uint8_t continueAbortMenu[], chooseTeamsMenu[], selectFilesMenu[];
+extern uint8_t designDiyCupMenu[], designDiyLeagueMenu[], clubBusinessMenu[];
+extern uint8_t topGoalScorersMenu[], competitionTopGoalScorersMenu[];
+extern uint8_t squadMenu[], competitionStatsMenu[], viewCompetitionsMenu[];
+extern uint8_t managementRecordMenu[];
+static const char *swos_autoskip_menu_name(const void *p)
+{
+    if (p == diyCupMenu) return "diyCupMenu";
+    if (p == diyLeagueTournamentMenu) return "diyLeagueTournamentMenu";
+    if (p == chairmanMemosMenu) return "chairmanMemosMenu";
+    if (p == careerMenu) return "careerMenu";
+    if (p == contestMenu) return "contestMenu";
+    if (p == careerOverMenu) return "careerOverMenu";
+    if (p == continueMenu) return "continueMenu";
+    if (p == continueAbortMenu) return "continueAbortMenu";
+    if (p == chooseTeamsMenu) return "chooseTeamsMenu";
+    if (p == selectFilesMenu) return "selectFilesMenu";
+    if (p == designDiyCupMenu) return "designDiyCupMenu";
+    if (p == designDiyLeagueMenu) return "designDiyLeagueMenu";
+    if (p == clubBusinessMenu) return "clubBusinessMenu";
+    if (p == topGoalScorersMenu) return "topGoalScorersMenu";
+    if (p == competitionTopGoalScorersMenu) return "competitionTopGoalScorersMenu";
+    if (p == squadMenu) return "squadMenu";
+    if (p == competitionStatsMenu) return "competitionStatsMenu";
+    if (p == viewCompetitionsMenu) return "viewCompetitionsMenu";
+    if (p == managementRecordMenu) return "managementRecordMenu";
+    return "unknown";
+}
+#else
+static inline const char *swos_autoskip_menu_name(const void *p) { (void)p; return ""; }
+#endif
+
 /* GetKey globals */
 extern volatile uint16_t keyCount;
 extern volatile uint8_t keyBuffer[];
@@ -143,6 +197,8 @@ MenuEntry *_CalcMenuEntryAddress(uint16_t ordinal)
 __attribute__((used, externally_visible))
 void _SetExitMenuFlag(void)
 {
+    SWOS_AUTOSKIP_LOG("SetExitMenuFlag: caller=%p exitMenu now 1",
+                      __builtin_return_address(0));
     exitMenu = 1;
 }
 
@@ -155,6 +211,10 @@ void _SetCurrentEntry(uint16_t index)
     MenuEntry *entry = _CalcMenuEntryAddress(index);
     Menu *menu = (Menu *)currentMenu;
     menu->selectedEntry = (uint32_t)entry;
+    SWOS_AUTOSKIP_LOG("SetCurrentEntry(%u) caller=%p ctrlMask=0x%04x onSelect=%p",
+                      (unsigned)index, __builtin_return_address(0),
+                      (unsigned)entry->controlMask,
+                      (void *)(uintptr_t)entry->onSelect);
 }
 
 /* ================================================================
@@ -1415,17 +1475,44 @@ void _MenuProc(void)
         }
     }
 
+    {
+        int ord = swos_autoskip_entry_ordinal((void *)selectedEntry, menuEntries);
+        SWOS_AUTOSKIP_LOG("MenuProc: dispatch entry=%d ctrlMask=0x%04x d7=0x%04x onSelect=%p "
+                          "(short-circuit=%s)",
+                          ord,
+                          (unsigned)selectedEntry->controlMask,
+                          (unsigned)d7,
+                          (void *)(uintptr_t)onSelectPtr,
+                          selectedEntry->controlMask == 0xFFFF ? "yes" : "no");
+    }
+
     if (selectedEntry->controlMask != 0xFFFF) {
         d7 &= selectedEntry->controlMask;
-        if (d7 == 0)
+        if (d7 == 0) {
+            SWOS_AUTOSKIP_LOG("MenuProc: skipping onSelect (d7 & mask == 0)");
             goto no_event_or_done;
+        }
+    } else if (seasonUpdateInProgress != 0) {
+        /* Hold the menu visible for ~1 s so the user can read each
+         * cup/league result during a season transition. Without this the
+         * controlMask=0xFFFF entry fires on iteration 1 and the chain
+         * flashes by in milliseconds — see Amiga visual reference. */
+        if (s_seasonUpdateHoldCounter < SEASON_UPDATE_MENU_HOLD_FRAMES) {
+            s_seasonUpdateHoldCounter++;
+            SWOS_AUTOSKIP_LOG("MenuProc: holding (counter=%u/%u)",
+                              (unsigned)s_seasonUpdateHoldCounter,
+                              (unsigned)SEASON_UPDATE_MENU_HOLD_FRAMES);
+            goto no_event_or_done;
+        }
     }
 
     controlMask = d7;
+    SWOS_AUTOSKIP_LOG("MenuProc: -> _CallMenuOnSelect (exitMenu before=%u)", (unsigned)exitMenu);
     /* Original asm MenuProc kept a5 = selectedEntry when calling onSelect.
        Many callbacks (SelectTeamsCommon, SelectLeaguesCommon etc.) read a5
        to get the entry's ordinal and string pointer. */
     _CallMenuOnSelect((void *)onSelectPtr, (void *)selectedEntry);
+    SWOS_AUTOSKIP_LOG("MenuProc: <- _CallMenuOnSelect (exitMenu after=%u)", (unsigned)exitMenu);
 
 no_event_or_done:
     if (fire != 0)
@@ -1483,6 +1570,7 @@ void _ActivateMenu(uint8_t *packedMenu)
     uint32_t onInitPtr;
 
     currentMenuPtr = (uint32_t)packedMenu;
+    s_seasonUpdateHoldCounter = 0;
 
     _UnpackMenu(packedMenu, currentMenu);
 
@@ -1520,6 +1608,8 @@ void _ShowMenu(uint8_t *packedMenu)
      * the season-transition path where multiple cup result menus
      * stack up. */
     if (g_quitToDos) {
+        SWOS_AUTOSKIP_LOG("ShowMenu: SKIPPED packedMenu=%p (%s) — g_quitToDos set",
+                          packedMenu, swos_autoskip_menu_name(packedMenu));
         exitMenu = 1;
         return;
     }
@@ -1533,13 +1623,30 @@ void _ShowMenu(uint8_t *packedMenu)
     menuStatus = 0;
     exitMenu = 0;
 
+    SWOS_AUTOSKIP_LOG("ShowMenu: ENTER packedMenu=%p (%s)", packedMenu,
+                      swos_autoskip_menu_name(packedMenu));
     _ActivateMenu(packedMenu);
+    SWOS_AUTOSKIP_LOG("ShowMenu: post-Activate exitMenu=%u", (unsigned)exitMenu);
 
     if (exitMenu == 0) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+        unsigned proc_iters = 0;
+#endif
         do {
             _MenuProc();
+#ifdef SWOS_DEBUG_AUTOSKIP
+            proc_iters++;
+            if (proc_iters <= 3 || proc_iters == 50 || proc_iters == 200 || proc_iters % 1000 == 0) {
+                Menu *m = (Menu *)currentMenu;
+                int ord = swos_autoskip_entry_ordinal((void *)m->selectedEntry, menuEntries);
+                SWOS_AUTOSKIP_LOG("  proc iter=%u exitMenu=%u sel=%d fire=%u shortFire=%u",
+                                  proc_iters, (unsigned)exitMenu, ord,
+                                  (unsigned)fire, (unsigned)shortFire);
+            }
+#endif
         } while (exitMenu == 0);
     }
+    SWOS_AUTOSKIP_LOG("ShowMenu: loop exited exitMenu=%u", (unsigned)exitMenu);
 
     menuStatus = 1;
     /* Don't clear exitMenu if quit propagation is in flight — leave it

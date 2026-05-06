@@ -9,6 +9,7 @@
  */
 
 #include "diy_competition.h"
+#include "auto_skip_debug.h"
 #include "endian_helpers.h"
 #include "game_types.h"
 #include "string_utils.h"
@@ -7096,10 +7097,14 @@ void _DesignDIYLeagueChooseTeams(void)
     _SetExitMenuFlag();
 }
 
+extern volatile uint16_t shortFire; /* for debug logging */
 /* ShowDIYCupMenuWithParams — store params, show cup menu (SWOS2.s line 43290) */
 __attribute__((used, externally_visible))
 void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2)
 {
+    SWOS_AUTOSKIP_LOG("ShowDIYCupMenuWithParams: ENTER arg0=%u arg1=%u arg2=%u seasonUpdate=%u",
+                      (unsigned)arg0, (unsigned)arg1, (unsigned)arg2,
+                      (unsigned)seasonUpdateInProgress);
     writeOnlyVar01 = 1;
     diyCupMenuArg0 = arg0;
     diyCupMenuArg0Copy = arg0;
@@ -7107,12 +7112,25 @@ void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2)
     diyCupMenuArg2 = arg2;
 
     if (seasonUpdateInProgress != 0) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+        unsigned debounce_iters = 0;
+#endif
         do {
             _MenuCheckControls();
+#ifdef SWOS_DEBUG_AUTOSKIP
+            debounce_iters++;
+            if (debounce_iters <= 3 || debounce_iters == 100 || debounce_iters % 1000 == 0) {
+                SWOS_AUTOSKIP_LOG("  debounce iter=%u fire=%u shortFire=%u",
+                                  debounce_iters, (unsigned)fire, (unsigned)shortFire);
+            }
+#endif
         } while (fire != 0);
+        SWOS_AUTOSKIP_LOG("ShowDIYCupMenuWithParams: debounce exited fire=%u", (unsigned)fire);
     }
 
+    SWOS_AUTOSKIP_LOG("ShowDIYCupMenuWithParams: -> _ShowMenu(diyCupMenu)");
     _ShowMenu(diyCupMenu);
+    SWOS_AUTOSKIP_LOG("ShowDIYCupMenuWithParams: <- _ShowMenu returned");
     writeOnlyVar01 = 0;
 }
 
@@ -7138,9 +7156,20 @@ void _DIYCupFinish(void)
 }
 
 /* DIYCupInit — init cup menu state, then fall through to finish (SWOS2.s line 45770) */
+extern uint8_t currentMenu[]; /* needed by SWOS_AUTOSKIP_LOG sites */
 __attribute__((used, externally_visible))
 void _DIYCupInit(void)
 {
+    SWOS_AUTOSKIP_LOG("DIYCupInit: ENTER seasonUpdate=%u arg0=%u arg1=%u arg2=%u "
+                      "menuState=%u roundComplete=%u competitionFinished=%u hasGroups=%u",
+                      (unsigned)seasonUpdateInProgress,
+                      (unsigned)diyCupMenuArg0, (unsigned)diyCupMenuArg1,
+                      (unsigned)diyCupMenuArg2,
+                      (unsigned)*(uint16_t *)&diyCompetitionStart.base.menuState,
+                      (unsigned)*(uint16_t *)&diyCompetitionStart.base.roundComplete,
+                      (unsigned)*(uint16_t *)&diyCompetitionStart.base.competitionFinished,
+                      (unsigned)*(uint16_t *)&diyCompetitionStart.base.hasGroups);
+
     diyCupMatchListScrollIndex = 0;
 
     if (diyCupMenuArg0 != 0) {
@@ -7159,6 +7188,7 @@ void _DIYCupInit(void)
     }
 
     if (diyCupMenuArg1 != 0) {
+        SWOS_AUTOSKIP_LOG("DIYCupInit: arg1!=0 branch -> SetCurrentEntry(10)");
         diyCupMenuArg0Copy = 0;
         _SetCurrentEntry(10);
     }
@@ -7167,14 +7197,31 @@ void _DIYCupInit(void)
     diyCupMatchListDrawModeFlag = 0;
 
     if (seasonUpdateInProgress != 0) {
+        SWOS_AUTOSKIP_LOG("DIYCupInit: seasonUpdate!=0 branch -> SetCurrentEntry(0x42=66)");
         diyCupMenuArg0Copy = 0;
         _SetCurrentEntry(0x42); /* 66 */
         menuEntries[9].isInvisible = 1;
         menuEntries[10].isInvisible = 1;
     }
 
+    {
+        Menu *m = (Menu *)currentMenu;
+        SWOS_AUTOSKIP_LOG("DIYCupInit: pre-Finish selectedEntry=%d",
+                          swos_autoskip_entry_ordinal((void *)m->selectedEntry, menuEntries));
+    }
+
     /* Original asm falls through to DIYCupFinish via bra.w *+4 */
     _DIYCupFinish();
+
+    {
+        Menu *m = (Menu *)currentMenu;
+        MenuEntry *sel = (MenuEntry *)m->selectedEntry;
+        int ord = swos_autoskip_entry_ordinal((void *)m->selectedEntry, menuEntries);
+        SWOS_AUTOSKIP_LOG("DIYCupInit: EXIT selectedEntry=%d controlMask=0x%04x onSelect=%p",
+                          ord,
+                          sel ? (unsigned)sel->controlMask : 0u,
+                          sel ? (void *)(uintptr_t)sel->onSelect : (void *)0);
+    }
 }
 
 /* DIYCupOnSelect10 — cup select/play callback (SWOS2.s line 45845) */
@@ -7968,9 +8015,19 @@ void _DIYLeagueTournamentNextMatch(void)
  *
  * Initialize DIY league/tournament menu state.
  * ================================================================ */
+extern uint16_t diyTournamentType; /* used by SWOS_AUTOSKIP_LOG */
 __attribute__((used, externally_visible))
 void _DIYLeagueTournamentInit(void)
 {
+    SWOS_AUTOSKIP_LOG("DIYLeagueInit: ENTER seasonUpdate=%u type=%u viewOnly=%u focusOverride=%u "
+                      "minSubs=%u hasGroups=%u",
+                      (unsigned)seasonUpdateInProgress,
+                      (unsigned)diyTournamentType,
+                      (unsigned)diyTournamentViewOnly,
+                      (unsigned)diyInitFocusOverride,
+                      (unsigned)diyMinSubstitutes,
+                      (unsigned)(&diyCompetitionStart.base)->hasGroups);
+
     currentDiyLine = 0;
     diyAllMatchesPlayed = 0;
     _DIYLeagueTournament_UpdateViewOptionsAvailability();
@@ -7984,6 +8041,7 @@ void _DIYLeagueTournamentInit(void)
     }
 
     if (diyTournamentViewOnly != 0) {
+        SWOS_AUTOSKIP_LOG("DIYLeagueInit: viewOnly!=0 -> SetCurrentEntry(10)");
         diyFixtureViewMode = 0;
         _SetCurrentEntry(10);
     }
@@ -7992,13 +8050,31 @@ void _DIYLeagueTournamentInit(void)
     *(uint16_t *)&diyCompetitionStart.base.isActive = 1;
 
     if (seasonUpdateInProgress != 0) {
+        SWOS_AUTOSKIP_LOG("DIYLeagueInit: seasonUpdate!=0 -> SetCurrentEntry(42)");
         diyFixtureViewMode = 0;
         _SetCurrentEntry(42);
         menuEntries[9].isInvisible = 1;    /* 0x1F8/56=9 */
         menuEntries[10].isInvisible = 1;   /* 0x230/56=10 */
     }
+
+    {
+        Menu *m = (Menu *)currentMenu;
+        SWOS_AUTOSKIP_LOG("DIYLeagueInit: pre-OnRestore selectedEntry=%d",
+                          swos_autoskip_entry_ordinal((void *)m->selectedEntry, menuEntries));
+    }
+
     /* bra.w *+4 falls through to DIYLeagueTournamentOnRestore */
     _DIYLeagueTournamentOnRestore();
+
+    {
+        Menu *m = (Menu *)currentMenu;
+        MenuEntry *sel = (MenuEntry *)m->selectedEntry;
+        int ord = swos_autoskip_entry_ordinal((void *)m->selectedEntry, menuEntries);
+        SWOS_AUTOSKIP_LOG("DIYLeagueInit: EXIT selectedEntry=%d controlMask=0x%04x onSelect=%p",
+                          ord,
+                          sel ? (unsigned)sel->controlMask : 0u,
+                          sel ? (void *)(uintptr_t)sel->onSelect : (void *)0);
+    }
 }
 
 /* ================================================================
@@ -8717,6 +8793,9 @@ extern uint8_t diyLeagueTournamentMenu[];
 __attribute__((used, externally_visible))
 void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride)
 {
+    SWOS_AUTOSKIP_LOG("ShowDiyLeaguesTournamentMenu: ENTER type=%u viewOnly=%u focus=%u seasonUpdate=%u",
+                      (unsigned)type, (unsigned)viewOnly, (unsigned)focusOverride,
+                      (unsigned)seasonUpdateInProgress);
     writeOnlyVar01 = 1;
     diyTournamentType = type;
     diyFixtureViewMode = type;
@@ -8725,12 +8804,25 @@ void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t fo
     _DIY_SortLeagueTableByStandings();
 
     if (seasonUpdateInProgress != 0) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+        unsigned debounce_iters = 0;
+#endif
         do {
             _MenuCheckControls();
+#ifdef SWOS_DEBUG_AUTOSKIP
+            debounce_iters++;
+            if (debounce_iters <= 3 || debounce_iters == 100 || debounce_iters % 1000 == 0) {
+                SWOS_AUTOSKIP_LOG("  debounce iter=%u fire=%u shortFire=%u",
+                                  debounce_iters, (unsigned)fire, (unsigned)shortFire);
+            }
+#endif
         } while (fire != 0);
+        SWOS_AUTOSKIP_LOG("ShowDiyLeaguesTournamentMenu: debounce exited fire=%u", (unsigned)fire);
     }
 
+    SWOS_AUTOSKIP_LOG("ShowDiyLeaguesTournamentMenu: -> _ShowMenu(diyLeagueTournamentMenu)");
     _ShowMenu((uint8_t *)&diyLeagueTournamentMenu);
+    SWOS_AUTOSKIP_LOG("ShowDiyLeaguesTournamentMenu: <- _ShowMenu returned");
     writeOnlyVar01 = 0;
 }
 
@@ -9864,10 +9956,24 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
 
     /* Route match based on mode */
     if (mode == 0) {
-        /* Sim path: check if any team is human/coach (teamControls == 2 or 3) */
+        /* Sim path: check if any team is human/coach (teamControls == 2 or 3).
+         *
+         * DEVIATION FROM ASM: skip SetupPlayers entirely during a season
+         * transition (seasonUpdateInProgress != 0). The asm `SetupPlayers`
+         * has no such guard and would show playMatchMenu here — but on the
+         * Amiga the team data loaded for non-player cups via
+         * Career_AutoAdvanceCupCompetitionFromRecord apparently has
+         * teamControls == TEAM_COMPUTER for every slot, so this branch is
+         * never taken. On our C build the player's careerTeam (with
+         * teamControls=2 or 3) lingers in selTeamsPtr from the previous
+         * competition's load, so the auto-advance trips SetupPlayers and
+         * the season-transition chain stalls on playMatchMenu. Suppressing
+         * the menu here matches the observable Amiga behaviour and lets
+         * the cup/league result chain auto-skip uninterrupted. */
         uint8_t ctrl1 = *((uint8_t *)team1 + 4); /* teamControls byte */
         uint8_t ctrl2 = *((uint8_t *)team2 + 4);
-        if (ctrl1 == 2 || ctrl2 == 2 || ctrl1 == 3 || ctrl2 == 3) {
+        if ((ctrl1 == 2 || ctrl2 == 2 || ctrl1 == 3 || ctrl2 == 3) &&
+            seasonUpdateInProgress == 0) {
             /* At least one human/coach team — show SetupPlayers with no squad changes */
             _SetupPlayers(team1, team2, *(int16_t *)diyPointsForAWin,
                           baseS->substitutesCount, 0, 0);  /* 0x3C */
@@ -10063,10 +10169,13 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
 
     /* Route match based on selector */
     if (selector == 0) {
-        /* Sim path: check if any team is human/coach (teamControls == 2 or 3) */
+        /* Sim path: check if any team is human/coach (teamControls == 2 or 3).
+         * DEVIATION FROM ASM: skip during seasonUpdateInProgress — see
+         * matching guard in _DIY_PlayCupMatchAndAdvance for rationale. */
         uint8_t ctrl1 = *((uint8_t *)team1 + 4);
         uint8_t ctrl2 = *((uint8_t *)team2 + 4);
-        if (ctrl1 == 2 || ctrl2 == 2 || ctrl1 == 3 || ctrl2 == 3) {
+        if ((ctrl1 == 2 || ctrl2 == 2 || ctrl1 == 3 || ctrl2 == 3) &&
+            seasonUpdateInProgress == 0) {
             /* At least one human/coach team — show SetupPlayers */
             _SetupPlayers(team1, team2, (int16_t)diyLeagueMaxSubstitutes,
                           baseS->substitutesCount, 0, 0);  /* 0x3C */

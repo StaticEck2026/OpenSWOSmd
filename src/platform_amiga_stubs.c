@@ -115,6 +115,10 @@ uint16_t g_quitToDos = 0;
 
 void Platform_RequestQuit(void)
 {
+#ifdef SWOS_DEBUG_AUTOSKIP
+    if (!g_quitToDos)
+        fprintf(stderr, "[autoskip] Platform_RequestQuit: g_quitToDos was 0, now setting 1\n");
+#endif
     g_quitToDos = 1;
 }
 
@@ -139,6 +143,13 @@ extern uint16_t chooseTeamsResult;
 void Platform_CheckQuitRequest(void)
 {
     if (!g_quitToDos) return;
+#ifdef SWOS_DEBUG_AUTOSKIP
+    static int once;
+    if (!once) {
+        once = 1;
+        fprintf(stderr, "[autoskip] Platform_CheckQuitRequest: FIRST observation that g_quitToDos=1\n");
+    }
+#endif
     exitMenu = 1;
     abortSelectTeams = 1;
     chooseTeamsResult = 0;

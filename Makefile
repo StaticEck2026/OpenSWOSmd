@@ -50,7 +50,7 @@ DATA_FLAGS := -DCOMPETITION_DATA_C=1 -DTACTICS_DATA_C=1 -DFIXTURE_DATA_C=1 \
               -DPALETTE_DATA_C=1 -DSTRINGS_DATA_C=1 -DGENERAL_DATA_C=1
 
 CFLAGS  := $(ARCHFLAGS) -O2 -g -std=gnu11 -fno-strict-aliasing -fno-builtin \
-           -D_FILE_OFFSET_BITS=64 \
+           -D_FILE_OFFSET_BITS=64 -DSWOS_DEBUG_AUTOSKIP=1 \
            -Wall -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable \
            -Wno-attributes -Wno-multichar -Wno-builtin-declaration-mismatch \
            -Wno-pointer-sign -Wno-int-conversion -Wno-incompatible-pointer-types \
