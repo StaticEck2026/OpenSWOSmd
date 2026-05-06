@@ -132,6 +132,16 @@ void _AudioSetChannelVolume(uint16_t channelOrAll, uint16_t volume)
     else
     {
         audioState.channelVolume[channelOrAll & 3] = vol;
+#ifdef SWOS_SDL_BUILD
+        /* Without this the per-channel volume only updated the
+         * Amiga-side state byte and never reached the SDL audio
+         * engine — so e.g. the chant fade-out path (which sets
+         * channel-2 volume to 0 over 128 frames) silently did
+         * nothing and SFX_CROWD_CHANT_2 looped forever at full
+         * volume because its wave had repeat_len > 0. */
+        extern void AudioSDL_SetChannelVolume(int channel, int vol_0_64);
+        AudioSDL_SetChannelVolume(channelOrAll & 3, vol);
+#endif
     }
 }
 

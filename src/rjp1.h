@@ -110,6 +110,11 @@ typedef struct RJP1_Player {
     int          subsongs_count;
     int          instruments_count;
     int          loaded;
+    /* Per-channel post-attenuation, 0..64. Applied in the mixer on top
+     * of the wave-script's hw->vol so the host can scale individual
+     * channels (e.g. fade the crowd-chant channel) without poking the
+     * RJP1 internals. Default 64 = unity. */
+    int          channel_attenuation[RJP1_NUM_CHANNELS];
 } RJP1_Player;
 
 /* Returns 1 on success, 0 on failure. */
@@ -150,5 +155,12 @@ void RJP1_StartSequenceByWaveId(RJP1_Player *p, int channel, int waveId);
 /* Returns a 4-byte preset record (channel_noteIds[0..3]) from
  * song_data[2] + presetId*4. Used by _AudioApplyPresetToChannels. */
 void RJP1_PresetEntry(RJP1_Player *p, int presetId, uint8_t out_note_ids[4]);
+
+/* Set per-channel post-attenuation (0..64). 64 = unity, 0 = mute.
+ * Applied in the mixer on top of the wave-script's hw->vol — this is
+ * the hook for per-channel volume control from outside the player
+ * (e.g. _AudioSetChannelVolume's chant fade-in/fade-out path).
+ * Out-of-range channels and out-of-range volumes are clamped. */
+void RJP1_SetChannelAttenuation(RJP1_Player *p, int channel, int vol_0_64);
 
 #endif /* RJP1_H */

@@ -88,6 +88,11 @@ int RJP1_Load(RJP1_Player *p,
     memset(p->channels, 0, sizeof(p->channels));
     p->vars.active_channels_mask = 0;
     p->vars.current_channel      = 0;
+    /* Default per-channel attenuation to unity (64 = full volume).
+     * The host scales individual channels by writing a smaller value
+     * via RJP1_SetChannelAttenuation. */
+    for (int i = 0; i < RJP1_NUM_CHANNELS; ++i)
+        p->channel_attenuation[i] = 64;
     p->loaded = 1;
     return 1;
 }
@@ -443,6 +448,14 @@ void RJP1_HandleTick(RJP1_Player *p)
     }
 }
 
+void RJP1_SetChannelAttenuation(RJP1_Player *p, int channel, int vol_0_64)
+{
+    if (channel < 0 || channel >= RJP1_NUM_CHANNELS) return;
+    if (vol_0_64 < 0)  vol_0_64 = 0;
+    if (vol_0_64 > 64) vol_0_64 = 64;
+    p->channel_attenuation[channel] = vol_0_64;
+}
+
 void RJP1_PresetEntry(RJP1_Player *p, int presetId, uint8_t out_note_ids[4])
 {
     out_note_ids[0] = out_note_ids[1] = out_note_ids[2] = out_note_ids[3] = 0;
@@ -553,6 +566,11 @@ void RJP1_MixSamples(RJP1_Player *p, int sample_rate, int8_t *buf, int len)
     for (int i = 0; i < RJP1_NUM_CHANNELS; ++i) {
         RJP1_PaulaChannel *hw = &p->channels[i].hw_channel;
         if (!hw->active || hw->len <= 2 || !hw->data || hw->per == 0) continue;
+        /* Skip channels muted by the host (attenuation 0). Saves the
+         * per-sample work and stops a looping wave's filter state from
+         * accumulating. */
+        const int chAtten = p->channel_attenuation[i];
+        if (chAtten == 0) continue;
         const uint32_t pos_inc = (uint32_t)((((uint64_t)RJP1_PAULA_FREQ / (uint32_t)hw->per) << RJP1_FRAC_BITS) / (uint32_t)sample_rate);
         for (int q = 0; q < len; q += 2) {
             int b = buf[q + amiga_channel_map[i]];
@@ -587,7 +605,11 @@ void RJP1_MixSamples(RJP1_Player *p, int sample_rate, int8_t *buf, int len)
             int s1   = hw->data[pos_next];
             uint32_t frac = hw->pos & ((1u << RJP1_FRAC_BITS) - 1u);
             int sample_lerp = s0 + ((s1 - s0) * (int)frac >> RJP1_FRAC_BITS);
-            int raw  = sample_lerp * hw->vol / 64;
+            /* Two-stage volume: wave-script's hw->vol scales the raw
+             * sample, then per-channel attenuation gates the channel.
+             * The chant fade-in/out path drives chAtten; the
+             * wave-script's set_volume drives hw->vol. */
+            int raw  = sample_lerp * hw->vol * chAtten / (64 * 64);
 
             /* 3-stage cascaded one-pole low-pass — matches the analog
              * chain on real Amigas more closely. */

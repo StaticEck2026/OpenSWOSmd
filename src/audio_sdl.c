@@ -321,3 +321,20 @@ void AudioSDL_SetMasterVolume(int vol_0_64)
     /* int write is atomic enough for a volume gate — no need to lock. */
     s_master_volume = vol_0_64;
 }
+
+/* Per-channel volume gate (Amiga 0..0x40). Routes to RJP1's per-channel
+ * attenuation so the chant fade-in/out (and any other single-channel
+ * volume control) actually scales the audible output, instead of
+ * silently updating audioState.channelVolume[ch] only — the bug that
+ * made SFX_CROWD_CHANT_2 appear to loop forever at full volume. */
+void AudioSDL_SetChannelVolume(int channel, int vol_0_64)
+{
+#if SWOS_AUDIO_DISABLED
+    (void)channel; (void)vol_0_64;
+    return;
+#endif
+    SDL_LockMutex(s_mtx);
+    if (s_player_active)
+        RJP1_SetChannelAttenuation(&s_player, channel, vol_0_64);
+    SDL_UnlockMutex(s_mtx);
+}
