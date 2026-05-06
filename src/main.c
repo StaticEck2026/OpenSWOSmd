@@ -22,7 +22,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <direct.h>          /* _chdir */
+#define chdir(p) _chdir(p)
+#else
+#include <unistd.h>          /* readlink, chdir */
+#endif
 
 #include "platform_sdl.h"
 
@@ -39,19 +46,42 @@ static void chdir_to_binary(const char *argv0)
 {
     char path[4096];
     char *dir;
+    int got_path = 0;
 
-    /* On Linux, /proc/self/exe is the absolute path to the running binary. */
+#ifdef _WIN32
+    /* Windows: GetModuleFileNameA(NULL, ...) returns the running .exe path. */
+    DWORD n = GetModuleFileNameA(NULL, path, (DWORD)sizeof(path) - 1);
+    if (n > 0 && n < sizeof(path)) {
+        path[n] = 0;
+        got_path = 1;
+    }
+#else
+    /* Linux: /proc/self/exe is a symlink to the running binary. */
     ssize_t n = readlink("/proc/self/exe", path, sizeof(path) - 1);
     if (n > 0) {
         path[n] = 0;
-    } else if (argv0) {
+        got_path = 1;
+    }
+#endif
+
+    if (!got_path) {
+        if (!argv0) return;
         /* Fallback: copy argv[0] (may be relative). */
         snprintf(path, sizeof(path), "%s", argv0);
-    } else {
-        return;
     }
 
-    dir = strrchr(path, '/');
+    /* Strip the trailing component. Windows accepts both '/' and '\\'
+     * in paths, and GetModuleFileNameA returns backslashes — handle
+     * either, taking whichever appears later in the string. */
+    {
+        char *slash = strrchr(path, '/');
+#ifdef _WIN32
+        char *bslash = strrchr(path, '\\');
+        if (bslash && (!slash || bslash > slash))
+            slash = bslash;
+#endif
+        dir = slash;
+    }
     if (!dir)
         return;
     *dir = 0;
