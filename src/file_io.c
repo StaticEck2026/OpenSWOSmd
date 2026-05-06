@@ -396,6 +396,7 @@ int16_t _LoadCompetitionFile(void)
  * Returns: 0 = success, 1 = error
  * ================================================================ */
 extern void _RebuildPointersAfterLoad(void);
+extern void _TranslateAmigaAddressesAfterLoad(void);
 
 __attribute__((used, externally_visible))
 int16_t _LoadCareerFile(uint8_t *filename)
@@ -418,10 +419,22 @@ int16_t _LoadCareerFile(uint8_t *filename)
         return 1;
     }
 
-    /* The .CAR format contains absolute pointer fields (see SAVE_DATA.md).
-     * Re-derive them from the current build's BSS layout — without this,
-     * stale pointer values from the saving binary cause crashes when
-     * dereferenced in any subsequent rebuild or on a different machine. */
+    /* Pointer-fixup runs in two passes. See SAVE_DATA.md
+     * "Cross-build pointer LUT".
+     *
+     * Pass 1 — Amiga LUT translation. Rewrites every saved pointer
+     * field whose value falls in the original-Amiga address range
+     * [0x00100000, 0x00200000) to the current build's address of the
+     * same symbol. Saves written by the original Amiga binary (or by
+     * pre-LUT SDL builds whose addresses happened to overlap) get
+     * remapped; saves with current-build addresses (typical SDL→SDL
+     * round-trip) pass through untouched.
+     *
+     * Pass 2 — Field-specific re-derivation. Catches pointers the LUT
+     * doesn't know how to translate (cup-record nameSource fallbacks,
+     * BSS region anchors that should always point at the current
+     * build's per-slot buffers, runtime DIY workspace, etc.). */
+    _TranslateAmigaAddressesAfterLoad();
     _RebuildPointersAfterLoad();
 
     _CycleMenuMusic();

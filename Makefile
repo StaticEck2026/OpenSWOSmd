@@ -23,7 +23,7 @@ TARGET := $(BINDIR)/$(TARGET_NAME)
 
 # ---- Sources ----
 SRCDIR  := src
-SOURCES := $(wildcard $(SRCDIR)/*.c)
+SOURCES := $(wildcard $(SRCDIR)/*.c) $(wildcard $(SRCDIR)/generated/*.c)
 OBJECTS := $(SOURCES:.c=.o)
 DEPS    := $(SOURCES:.c=.d)
 

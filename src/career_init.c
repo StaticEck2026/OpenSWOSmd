@@ -1242,30 +1242,37 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
  *
  * Fields handled (see SAVE_DATA.md "Pointer-field summary for .CAR"):
  *
- *   careerCompetitionSlotPtrTable[5]  — five competition slot bases.
+ *   1. careerCompetitionSlotPtrTable[5]  — five competition slot bases.
  *      Re-derived from `&competitionFileBuffer / &competitionContext /
  *      &tertiaryCompetitionContext / &euroCupsCompetitionContext /
  *      &diyCompetitionContext` in the current build's BSS (now
  *      aliased into careerFileBufferBuf by the overlay).
  *
- *   diyCompetitionStart — runtime DIY working buffer (separate 4 KB
+ *   2. diyCompetitionStart — runtime DIY working buffer (separate 4 KB
  *      BSS, NOT inside the careerFileBuffer overlay). Repopulated
- *      from the loaded slot-0 (primary competition) state, which
- *      after step 1 is reachable via competitionFileBuffer.
- *      Without this, anything reading diyCompetitionStart (the
- *      Play Match / Next Match upcoming-fixture list, in particular)
- *      sees whatever the previous in-memory career left behind —
- *      not the just-loaded TEST.CAR state.
+ *      from the loaded slot-0 (primary competition) state.
+ *
+ *   3. Embedded `nameSource` pointers inside each cup *Copy record at
+ *      offset (5 + nameOffset). Copied from the matching static cup
+ *      template via the careerContests table.
+ *
+ *   4. Top-level competition pointers
+ *      `currentCompetitionPtr / secondaryCompetitionPtr /
+ *      tertiaryCompetitionPtr / diyCompetitionPtr /
+ *      diyCompetitionTablePtr`. Re-derived from competitionsTable +
+ *      saved selTeamNumber (or careerCupPickList for national
+ *      selectors), mirroring `_InitializeNewSeason` lines 994-1067
+ *      but without re-initialising slot state.
  *
  * Not yet handled (will be layered in as we hit menus that read
  * them):
  *
- *   currentCompetitionPtr / secondaryCompetitionPtr /
- *   tertiaryCompetitionPtr / quaternaryCompetitionPtr /
- *   diyCompetitionPtr      — would re-derive from saved compIds.
  *   *CompStringOffset      — would re-derive from string-table
  *                              lookup by competition.
- *   diyCompetitionTablePtr — points at one of the static cup tables.
+ *   quaternaryCompetitionPtr (slot-3 euro cup) — needs a saved-state
+ *                              probe to disambiguate which cup. NULLed
+ *                              for now; the slot is reachable via
+ *                              careerCompetitionSlotPtrTable[3].
  *   tmdFileBuffer/careerTeam runtime pointers
  *                          — should be zeroed; rebuilt at match start.
  *
@@ -1274,6 +1281,111 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
  * same rebuild.
  * ================================================================ */
 extern void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
+/* declared at top of file (line 615) — uint16_t *teamList */
+
+/* Step 3 helper: walk careerContests and re-derive each *Copy
+ * record's embedded nameSource pointer.
+ *
+ * Each cup record carries a signed `nameOffset` byte at offset 5. If
+ * non-zero, there's a 4-byte pointer at (record + 5 + nameOffset)
+ * pointing to the cup's static name string (e.g. `aLeague_1`). The
+ * static template carries the canonical pointer value for the current
+ * build; the saved *Copy carries a stale value from the saving build.
+ * Copy the canonical pointer from src→dest. */
+static void _Rebuild_CupRecordNameSourcePointers(void)
+{
+    uint8_t *tbl = careerContests;
+    for (;;) {
+        uint32_t srcAddr = *(uint32_t *)tbl;
+        if (srcAddr == 0xFFFFFFFFu)
+            break;
+        uint8_t *src  = (uint8_t *)srcAddr;
+        uint8_t *dest = *(uint8_t **)(tbl + 4);
+        int8_t nameOffset = (int8_t)src[5];
+        if (nameOffset != 0) {
+            *(uint32_t *)(dest + 5 + nameOffset) =
+                *(uint32_t *)(src + 5 + nameOffset);
+        }
+        tbl += 10;
+    }
+}
+
+/* Step 4 helper: re-derive the top-level competition slot pointers.
+ *
+ * Mirrors the lookup in `_InitializeNewSeason` (lines 994-1067) but
+ * does NOT call `_Career_SetCurrentCompetitionSlot` — that helper is
+ * destructive (resets slot state from the static comp template,
+ * losing the loaded season's progress). Here we only re-establish
+ * the pointer values; the slot state itself is already correctly
+ * loaded from the .CAR.
+ *
+ * National-selector careers populate these pointers via
+ * `careerCupPickList` instead of competitionsTable. The pickList is
+ * inside the saved overlay, so its entries are stale too — rebuild
+ * via `_Career_SetCupPickList_ForSelectedRegion(0)` first. */
+static void _Rebuild_CompetitionSlotPointers(void)
+{
+    uint32_t *compTablePtr;
+
+    if (isNationalSelector != 0) {
+        _Career_SetCupPickList_ForSelectedRegion(0);
+        compTablePtr = &careerCupPickList;
+    } else {
+        uint16_t tableIdx = selTeamNumber >> 8;
+        compTablePtr = (uint32_t *)competitionsTable[tableIdx];
+    }
+    if (!compTablePtr)
+        return;
+
+    /* Slot 0 (primary): always present. */
+    currentCompetitionPtr = *compTablePtr;
+    compTablePtr++;
+    /* 4-byte filler after the primary entry, mirroring the
+     * `compTablePtr += 4` skip at line 1022 of _InitializeNewSeason. */
+    compTablePtr = (uint32_t *)((uint8_t *)compTablePtr + 4);
+
+    /* Slot 1 (secondary): may be -1 sentinel. */
+    if (*(int32_t *)compTablePtr != (int32_t)0xFFFFFFFF) {
+        secondaryCompetitionPtr = *compTablePtr;
+        compTablePtr++;
+
+        if (*(int32_t *)compTablePtr != (int32_t)0xFFFFFFFF) {
+            tertiaryCompetitionPtr = *compTablePtr;
+        } else {
+            tertiaryCompetitionPtr = 0;
+        }
+    } else {
+        secondaryCompetitionPtr = 0;
+        tertiaryCompetitionPtr = 0;
+    }
+
+    /* Slot 4 (DIY) — derive from primary comp's DIY link. Mirrors
+     * `_DIY_SelectCompetitionSlot4FromCurrentDivision`. */
+    diyCompetitionPtr = 0;
+    diyCompetitionTablePtr = (uint32_t *)0;
+    if (currentCompetitionPtr != 0) {
+        uint8_t *primary = (uint8_t *)currentCompetitionPtr;
+        if (primary[1] == 0) {
+            uint16_t off = currentDivisionIndex * 6;
+            uint8_t *entry = primary + off;
+            uint8_t diyOffset = entry[0x12];
+            if (diyOffset != 0) {
+                uint8_t *diyEntry = entry + 0x12 + diyOffset;
+                diyCompetitionPtr = *(uint32_t *)diyEntry;
+                diyCompetitionTablePtr = *(uint32_t **)(diyEntry + 4);
+            }
+        }
+    }
+
+    /* Slot 3 (quaternary, euro cups) — would need to inspect the
+     * saved slot-3 state to decide which of euroCupCopy /
+     * cupWinnersCupCopy / uefaCupCopy was active. The
+     * careerCompetitionSlotPtrTable[3] (already fixed in step 1) is
+     * the active path most code uses; quaternaryCompetitionPtr is
+     * only consulted by `_Career_ViewOrEditCompetitionSlot` and the
+     * nat-selector euro logic. NULLed for now. */
+    quaternaryCompetitionPtr = 0;
+}
 
 __attribute__((used, externally_visible))
 void _RebuildPointersAfterLoad(void)
@@ -1303,6 +1415,21 @@ void _RebuildPointersAfterLoad(void)
      * The Play Match / Next Match menus skip that helper, so we
      * have to populate diyCompetitionStart up-front at load time. */
     _Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&competitionFileBuffer);
+
+    /* Step 3: walk careerContests and rewrite each *Copy record's
+     * embedded nameSource pointer at (record + 5 + nameOffset).
+     * Without this, `_InitDIYLeagueFromRecord` SIGSEGVs on a stale
+     * string pointer when auto-advancing euroCupCopy /
+     * cupWinnersCupCopy / uefaCupCopy after a cross-build load. */
+    _Rebuild_CupRecordNameSourcePointers();
+
+    /* Step 4: re-derive top-level competition slot pointers
+     * (`currentCompetitionPtr` / `secondaryCompetitionPtr` /
+     * `tertiaryCompetitionPtr` / `diyCompetitionPtr` /
+     * `diyCompetitionTablePtr`) from competitionsTable +
+     * selTeamNumber. Saved values were stale BSS addresses from the
+     * saving build. */
+    _Rebuild_CompetitionSlotPointers();
 }
 
 /* ================================================================
