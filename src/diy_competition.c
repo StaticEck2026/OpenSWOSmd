@@ -7117,9 +7117,19 @@ void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2)
 #endif
         do {
             _MenuCheckControls();
+            /* Pace at 50 Hz AND pump SDL events. _MenuCheckControls
+             * reads pl1Fire from `ciaa_pra` which is only updated by
+             * `InputSDL_PostFrame` on the SDL event-pump path; without
+             * driving Platform_VBlank here the loop spins reading the
+             * cached "fire pressed" state forever. On Linux the
+             * SDL_Timer thread incidentally rescues us by full-pumping
+             * events when the main thread looks idle, but on Windows
+             * that backstop doesn't fire and the loop hangs. */
+            extern int Platform_VBlank(void);
+            Platform_VBlank();
 #ifdef SWOS_DEBUG_AUTOSKIP
             debounce_iters++;
-            if (debounce_iters <= 3 || debounce_iters == 100 || debounce_iters % 1000 == 0) {
+            if (debounce_iters <= 3 || debounce_iters == 100 || debounce_iters % 100 == 0) {
                 SWOS_AUTOSKIP_LOG("  debounce iter=%u fire=%u shortFire=%u",
                                   debounce_iters, (unsigned)fire, (unsigned)shortFire);
             }
@@ -8809,9 +8819,14 @@ void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t fo
 #endif
         do {
             _MenuCheckControls();
+            /* See _ShowDIYCupMenuWithParams: Platform_VBlank both
+             * paces at 50 Hz and pumps SDL events so KEYUP for the
+             * just-pressed CONTINUE actually reaches ciaa_pra. */
+            extern int Platform_VBlank(void);
+            Platform_VBlank();
 #ifdef SWOS_DEBUG_AUTOSKIP
             debounce_iters++;
-            if (debounce_iters <= 3 || debounce_iters == 100 || debounce_iters % 1000 == 0) {
+            if (debounce_iters <= 3 || debounce_iters == 100 || debounce_iters % 100 == 0) {
                 SWOS_AUTOSKIP_LOG("  debounce iter=%u fire=%u shortFire=%u",
                                   debounce_iters, (unsigned)fire, (unsigned)shortFire);
             }
