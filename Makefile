@@ -40,7 +40,19 @@ SDL2_LIBS   := $(shell $(PKGCONF) --libs sdl2 2>/dev/null || sdl2-config --libs 
 # -fno-strict-aliasing matches the original Amiga build (heavy type punning).
 # Warnings dialed back: the imported Amiga code triggers many style warnings
 # that are not bugs on x86/x64 but would otherwise drown the output.
+#
+# MSYS2/MINGW64 ships 64-bit-only libs and has no multilib, so -m32 fails
+# at link time ("skipping incompatible libmingw32.a"). Detect the
+# 64-bit-only mingw target via `gcc -dumpmachine` and drop -m32 there.
+# Testers wanting an actual 32-bit Windows binary should use MSYS2
+# MINGW32 (gcc already 32-bit; -m32 is a no-op) or Cygwin's 32-bit
+# toolchain.
+GCC_MACHINE := $(shell $(CC) -dumpmachine 2>/dev/null)
+ifeq ($(GCC_MACHINE),x86_64-w64-mingw32)
+ARCHFLAGS :=
+else
 ARCHFLAGS := -m32
+endif
 # All Amiga "data module" toggles set to 1 so the C versions of
 # the leagues, palettes, sprites, fixtures, etc. are compiled in
 # (replacing the SWOS2.s data section). This eliminates a large
