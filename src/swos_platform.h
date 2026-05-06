@@ -31,7 +31,7 @@
 /* Disable all audio output. The SDL audio device is never opened, the
  * RJP1 player is never loaded, and every AudioSDL_* trigger is a no-op.
  * Useful for isolating audio-related issues during testing. */
-#define SWOS_AUDIO_DISABLED 1
+#define SWOS_AUDIO_DISABLED 0
 
 /* The Amiga code uses its own typedefs (unsigned char uint8_t, etc.).
  * Make sure stdint.h is NOT pulled in indirectly to prevent typedef
