@@ -193,20 +193,20 @@ before save / runtime-rebuilt after load.
 | 63244 | `currentCompetitionPtr` | `uint32_t` (ptr) | `competitionsTable[selTeamNumber>>8][0]` | ✅ |
 | 63248 | `secondaryCompetitionPtr` | `uint32_t` (ptr) | `competitionsTable[…][1]` | ✅ |
 | 63252 | `tertiaryCompetitionPtr` | `uint32_t` (ptr) | `competitionsTable[…][2]` | ✅ |
-| 63256 | `quaternaryCompetitionPtr` | `uint32_t` (ptr) | euro-cup slot inspection | ⚠ NULL'd, TODO |
+| 63256 | `quaternaryCompetitionPtr` | `uint32_t` (ptr) | `euroCupSlotIndex` → euroCupCopy / cupWinnersCupCopy / uefaCupCopy | ✅ |
 | 63260 | `diyCompetitionPtr` | `uint32_t` (ptr) | derived from primary comp DIY link | ✅ |
 | 63320 | `careerCompetitionSlotPtrTable[0]` | `uint8_t *` | `&competitionFileBuffer` | ✅ |
 | 63324 | `careerCompetitionSlotPtrTable[1]` | `uint8_t *` | `&competitionContext` | ✅ |
 | 63328 | `careerCompetitionSlotPtrTable[2]` | `uint8_t *` | `&tertiaryCompetitionContext` | ✅ |
 | 63332 | `careerCompetitionSlotPtrTable[3]` | `uint8_t *` | `&euroCupsCompetitionContext` | ✅ |
 | 63336 | `careerCompetitionSlotPtrTable[4]` | `uint8_t *` | `&diyCompetitionContext` | ✅ |
-| 63380 | `secondaryCompStringOffset` | `uint32_t` (ptr) | string-table lookup by competition ID | ❌ TODO |
-| 68464 | `quaternaryCompStringOffset` | `uint32_t` (ptr) | string-table lookup by competition ID | ❌ TODO |
-| 93348 | `primaryCompStringOffset` | `uint32_t` (ptr) | string-table lookup by competition ID | ❌ TODO |
-| various | tertiaryCompStringOffset | `uint32_t` (ptr) | string-table lookup | ❌ TODO |
-| varies | cup-record `nameSource` ptr at `(*Copy + 5 + nameOffset)` | `uint32_t` (ptr) | careerContests table src→dest | ✅ |
+| 63380 | `secondaryCompStringOffset` | `uint32_t` (ptr) | zeroed on load (consumer tolerates NULL) | ✅ |
+| 68464 | `quaternaryCompStringOffset` | `uint32_t` (ptr) | zeroed on load | ✅ |
+| 93348 | `primaryCompStringOffset` | `uint32_t` (ptr) | zeroed on load | ✅ |
+| 66280 | `tertiaryCompStringOffset` | `uint32_t` (ptr) | zeroed on load | ✅ |
+| varies | cup-record `text[2]` at `(*Copy + 5 + nameOffset)` | 2× `uint32_t` (ptr) | careerContests table src→dest, both pointers | ✅ |
 | 55086 | `careerCupPickList[]` | `uint32_t *` | rebuilt for nat-selectors via `_Career_SetCupPickList_ForSelectedRegion(0)` | ✅ |
-| various inside copy structs | trailing 4-byte slots | TBD | needs per-struct audit | ❌ |
+| trailing inside copy structs | `unk1[]` bytes | scalar lookup tables | n/a (not pointers) | ✅ |
 
 **Plus runtime-only fields that should be zeroed before save** (or after
 load): everything in any TeamFile slot at field offsets

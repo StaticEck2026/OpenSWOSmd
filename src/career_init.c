@@ -1284,14 +1284,17 @@ extern void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
 /* declared at top of file (line 615) — uint16_t *teamList */
 
 /* Step 3 helper: walk careerContests and re-derive each *Copy
- * record's embedded nameSource pointer.
+ * record's embedded text[] pointer pair.
  *
- * Each cup record carries a signed `nameOffset` byte at offset 5. If
- * non-zero, there's a 4-byte pointer at (record + 5 + nameOffset)
- * pointing to the cup's static name string (e.g. `aLeague_1`). The
- * static template carries the canonical pointer value for the current
- * build; the saved *Copy carries a stale value from the saving build.
- * Copy the canonical pointer from src→dest. */
+ * Each cup record carries a signed `nameOffset` byte at offset 5. At
+ * `record + 5 + nameOffset` lives an inline `text[2]` array — two
+ * 4-byte pointers to static name strings (e.g. text[0] = "EUROPEAN
+ * CHAMPIONS", text[1] = "EUROPEAN CUP"). The remaining bytes after
+ * those 8 are the `unk1[]` lookup table (scalars, not pointers).
+ *
+ * The static template carries the canonical pointer values for the
+ * current build; the saved *Copy carries stale values from the
+ * saving build. Copy both pointers from src→dest. */
 static void _Rebuild_CupRecordNameSourcePointers(void)
 {
     uint8_t *tbl = careerContests;
@@ -1303,8 +1306,10 @@ static void _Rebuild_CupRecordNameSourcePointers(void)
         uint8_t *dest = *(uint8_t **)(tbl + 4);
         int8_t nameOffset = (int8_t)src[5];
         if (nameOffset != 0) {
-            *(uint32_t *)(dest + 5 + nameOffset) =
-                *(uint32_t *)(src + 5 + nameOffset);
+            uint32_t *srcPtrs  = (uint32_t *)(src  + 5 + nameOffset);
+            uint32_t *destPtrs = (uint32_t *)(dest + 5 + nameOffset);
+            destPtrs[0] = srcPtrs[0];   /* text[0] */
+            destPtrs[1] = srcPtrs[1];   /* text[1] */
         }
         tbl += 10;
     }
@@ -1377,14 +1382,45 @@ static void _Rebuild_CompetitionSlotPointers(void)
         }
     }
 
-    /* Slot 3 (quaternary, euro cups) — would need to inspect the
-     * saved slot-3 state to decide which of euroCupCopy /
-     * cupWinnersCupCopy / uefaCupCopy was active. The
-     * careerCompetitionSlotPtrTable[3] (already fixed in step 1) is
-     * the active path most code uses; quaternaryCompetitionPtr is
-     * only consulted by `_Career_ViewOrEditCompetitionSlot` and the
-     * nat-selector euro logic. NULLed for now. */
-    quaternaryCompetitionPtr = 0;
+    /* Slot 3 (quaternary, euro cups) — re-derive from the saved
+     * `euroCupSlotIndex` scalar (0 = euroCup, 1 = cupWinnersCup,
+     * 2 = uefaCup). Mirrors the assignment in
+     * `_Career_SelectEuroCupSlotIfTeamParticipates` (career_init.c
+     * line 812) which sets euroCupSlotIndex alongside
+     * `_Career_SetCurrentCompetitionSlot(cupCopy, 3, 0, 0)`. Any
+     * out-of-range value (incl. 0xFFFF, the "no euro cup" sentinel)
+     * leaves the pointer NULL. */
+    if (euroCupSlotIndex == 0) {
+        quaternaryCompetitionPtr = (uint32_t)euroCupCopy;
+    } else if (euroCupSlotIndex == 1) {
+        quaternaryCompetitionPtr = (uint32_t)cupWinnersCupCopy;
+    } else if (euroCupSlotIndex == 2) {
+        quaternaryCompetitionPtr = (uint32_t)uefaCupCopy;
+    } else {
+        quaternaryCompetitionPtr = 0;
+    }
+}
+
+/* Step 5 helper: zero the four *CompStringOffset fields on load.
+ *
+ * These are stale absolute pointers into the strings table (saved
+ * verbatim from the saving binary's runtime address space). The only
+ * consumer is `_InitializeNewSeason` which copies them into the
+ * SeasonInformations buffer at offsets 0x16/0x1A/0x1E/0x22 to display
+ * the previous season's competition names on the season-end summary.
+ * If we zero them, the summary may show empty strings for the prior
+ * season's results, but no crash from dereferencing a stale pointer.
+ *
+ * Future improvement: re-derive each from its slot's compId by
+ * looking up the comp record's `text[0]` field (same source as the
+ * cup-record nameSource). Deferred until we have a save that exposes
+ * a visible regression here. */
+static void _Rebuild_CompStringOffsets(void)
+{
+    primaryCompStringOffset    = 0;
+    secondaryCompStringOffset  = 0;
+    tertiaryCompStringOffset   = 0;
+    quaternaryCompStringOffset = 0;
 }
 
 __attribute__((used, externally_visible))
@@ -1425,11 +1461,17 @@ void _RebuildPointersAfterLoad(void)
 
     /* Step 4: re-derive top-level competition slot pointers
      * (`currentCompetitionPtr` / `secondaryCompetitionPtr` /
-     * `tertiaryCompetitionPtr` / `diyCompetitionPtr` /
-     * `diyCompetitionTablePtr`) from competitionsTable +
-     * selTeamNumber. Saved values were stale BSS addresses from the
-     * saving build. */
+     * `tertiaryCompetitionPtr` / `quaternaryCompetitionPtr` /
+     * `diyCompetitionPtr` / `diyCompetitionTablePtr`) from
+     * competitionsTable + selTeamNumber + euroCupSlotIndex. Saved
+     * values were stale BSS addresses from the saving build. */
     _Rebuild_CompetitionSlotPointers();
+
+    /* Step 5: zero the four *CompStringOffset fields. They held
+     * stale absolute pointers into the strings table; downstream
+     * consumers (_InitializeNewSeason → SeasonInformations) will
+     * tolerate NULL by displaying empty text. */
+    _Rebuild_CompStringOffsets();
 }
 
 /* ================================================================
