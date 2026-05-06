@@ -11,6 +11,15 @@
 #ifdef SWOS_SDL_BUILD
 #include <string.h>
 extern uint8_t rawAssetLoadBuffer[];
+extern int  AudioSDL_StartSong(const uint8_t *song_data, int song_size,
+                               const uint8_t *ins_data,  int ins_size,
+                               int subsong);
+extern void _AudioSetChannelVolume(uint16_t mask, uint16_t vol);
+/* Sizes of the buffers used to stage hero.sng / hero.ins. The actual
+ * file payload is smaller; RJP1_Load parses headers internally and
+ * uses only what it needs. */
+#define HERO_SONG_BUFFER_BYTES   (4 * 1024)        /* diyFileBufferCopyBuf */
+#define HERO_INS_BANK_BYTES      (512 * 1024)      /* audioInstrumentBank */
 #endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
@@ -44,6 +53,34 @@ extern int16_t _LoadRNCToBufferNoBlit(uint8_t *name, uint8_t *dest);     /* asse
  * ================================================================ */
 static void loaderIntroEnsureMenuMusicPlaying(void)
 {
+#ifdef SWOS_SDL_BUILD
+    /* SDL build: route through the RJP1 player + SDL audio callback
+     * (same mechanism _TryPlayMusic uses for the menu song). The Amiga
+     * `_InitAudioState` is stubbed on SDL because it parses a 68k-BE
+     * bank header we don't byte-swap, so calling it here would leave
+     * the hero music silent. Hand the loaded hero.sng / hero.ins to
+     * the player instead, then ramp the master volume in. */
+    if (audioBankLoaded == 0) {
+        _StopAllAudioChannels();
+        if (AudioSDL_StartSong(diyFileBufferCopy, HERO_SONG_BUFFER_BYTES,
+                               audioInstrumentBank, HERO_INS_BANK_BYTES, 1) != 0) {
+            /* Load failed — keep audio silent but mark "loaded" so we
+             * don't hammer the player every vblank. */
+        }
+        audioBankLoaded = 1;
+    }
+
+    _AudioSetChannelVolume(0xFFFF, 0);
+    audioActive = 1;
+    /* Ramp the master volume from 0 to 0x23 over a few vblanks so the
+     * song fades in instead of starting at full volume mid-note. Mirror
+     * of _TryPlayMusic's ramp on the menu song. */
+    for (uint16_t vol = 0; vol <= 0x22; vol += 2) {
+        _AudioSetChannelVolume(0xFFFF, vol);
+        _WaitForVSync();
+    }
+    _AudioSetChannelVolume(0xFFFF, 0x23);
+#else
     if (audioBankLoaded == 0)
     {
         _StopAllAudioChannels();
@@ -52,6 +89,7 @@ static void loaderIntroEnsureMenuMusicPlaying(void)
     }
     _AudioApplyPresetToChannels(0);
     audioActive = 1;
+#endif
 }
 
 /* ================================================================
