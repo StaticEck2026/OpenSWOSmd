@@ -8,6 +8,10 @@
 #include "display.h"
 #include "input.h"
 #include "audio.h"
+#ifdef SWOS_SDL_BUILD
+#include <string.h>
+extern uint8_t rawAssetLoadBuffer[];
+#endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint16_t paletteIndex;
@@ -84,10 +88,46 @@ retry:
  * LoaderIntroLoadFrameToFrontbufferAlt  (SWOS2.s line 21365)
  *
  * Loads a raw image file into the alternate frontbuffer.
+ *
+ * Amiga: bitplane data goes straight into the alt frontbuffer
+ *   (which is itself bitplane-format) — display picks it up as-is.
+ *
+ * SDL:   the alt frontbuffer is 8bpp chunky (palette index per
+ *   byte) so writing raw bitplane bytes there makes
+ *   `chunky_to_rgba` paint garbage. Stage the file through
+ *   `rawAssetLoadBuffer` and decode NUM_PLANES interleaved planes
+ *   into chunky bytes — same loop _LoadOverlayToFrontbuffer uses
+ *   for menubg.raw. Frame layout matches the menu BG: PLANE_STRIDE
+ *   bytes/plane row, NUM_PLANES planes, decode SCREEN_WIDTH pixels
+ *   per scanline.
  * ================================================================ */
 static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
 {
+#ifdef SWOS_SDL_BUILD
+    _LoadFileEx((uint8_t *)filename, rawAssetLoadBuffer, (uint32_t *)0);
+
+    uint8_t *dest = (uint8_t *)frontbufferBaseAltPtr;
+    if (!dest)
+        return;
+
+    memset(dest, 0, FRONTBUFFER_SIZE_TOTAL_BYTES);
+    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+        const uint8_t *rowSrc = rawAssetLoadBuffer + (size_t)y * ROW_STRIDE_BYTES;
+        uint8_t       *rowDst = dest + (size_t)y * FRONTBUFFER_ROW_STRIDE_BYTES;
+        for (int px = 0; px < SCREEN_WIDTH; px++) {
+            int bit  = 7 - (px & 7);
+            int byte = px >> 3;
+            uint8_t idx = 0;
+            for (int p = 0; p < NUM_PLANES; p++) {
+                uint8_t planeByte = rowSrc[p * PLANE_STRIDE + byte];
+                idx |= (uint8_t)(((planeByte >> bit) & 1u) << p);
+            }
+            rowDst[px] = idx;
+        }
+    }
+#else
     _LoadFileEx((uint8_t *)filename, (uint8_t *)frontbufferBaseAltPtr, (uint32_t *)0);
+#endif
 }
 
 /* ================================================================
