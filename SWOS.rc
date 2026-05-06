@@ -1,0 +1,7 @@
+/* Windows resource file — only used by the MinGW build via windres.
+ * Icon ID 1 is the default the OS picks for the .exe icon (in
+ * Explorer / file listings) and SDL2 picks for the window/taskbar
+ * icon when no explicit SDL_SetWindowIcon() has been called.
+ *
+ * The 16x16 SWOS.ico in the project root is the source. */
+1 ICON "SWOS.ico"

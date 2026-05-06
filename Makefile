@@ -27,6 +27,18 @@ SOURCES := $(wildcard $(SRCDIR)/*.c) $(wildcard $(SRCDIR)/generated/*.c)
 OBJECTS := $(SOURCES:.c=.o)
 DEPS    := $(SOURCES:.c=.d)
 
+# ---- Windows resource (icon) ----
+# On MinGW we compile SWOS.rc → SWOS.res.o via windres and link it in,
+# which gives the .exe the SWOS.ico for both the file icon (Explorer)
+# and the SDL window/taskbar icon (SDL2 picks up resource ID 1 when
+# no SDL_SetWindowIcon is called).
+GCC_MACHINE := $(shell $(CC) -dumpmachine 2>/dev/null)
+WINDRES ?= windres
+ifneq (,$(findstring mingw,$(GCC_MACHINE)))
+WIN_RES_OBJ := SWOS.res.o
+OBJECTS     += $(WIN_RES_OBJ)
+endif
+
 # ---- Helpers ----
 PKGCONF := pkg-config
 
@@ -47,7 +59,6 @@ SDL2_LIBS   := $(shell $(PKGCONF) --libs sdl2 2>/dev/null || sdl2-config --libs 
 # Testers wanting an actual 32-bit Windows binary should use MSYS2
 # MINGW32 (gcc already 32-bit; -m32 is a no-op) or Cygwin's 32-bit
 # toolchain.
-GCC_MACHINE := $(shell $(CC) -dumpmachine 2>/dev/null)
 ifeq ($(GCC_MACHINE),x86_64-w64-mingw32)
 ARCHFLAGS :=
 else
@@ -91,5 +102,10 @@ $(BINDIR):
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# Compile the Windows resource file (icon) on MinGW builds. The output
+# is COFF-format and gets linked into the final exe.
+SWOS.res.o: SWOS.rc SWOS.ico
+	$(WINDRES) -O coff $< $@
+
 clean:
-	rm -f $(TARGET) $(OBJECTS)
+	rm -f $(TARGET) $(OBJECTS) SWOS.res.o

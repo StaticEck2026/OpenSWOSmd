@@ -574,6 +574,14 @@ void _TryPlayMusic(void)
     uint16_t vol;
     uint16_t tick;
 
+    /* Don't kick off music if the user just hit the X button. Without
+     * this gate, pressing X mid-match causes the menu unwind to call
+     * _CycleMenuMusic → _TryPlayMusic, starting the menu song just
+     * before the process exits — audible as a brief musical blip. */
+    extern uint16_t g_quitToDos;
+    if (g_quitToDos != 0)
+        return;
+
     if (audioActive != 0)
         return;
 

@@ -454,10 +454,18 @@ static void pump_events_any_thread(void)
         switch (ev.type) {
         case SDL_QUIT:
             Platform_RequestQuit();
+            /* Hide the window immediately so the main-menu unwind
+             * after a mid-match X-press happens off-screen instead
+             * of flashing the menu UI for a frame or two. The audio
+             * gate in _TryPlayMusic stops the menu music from
+             * starting; this kills the visual half. */
+            if (s_window) SDL_HideWindow(s_window);
             break;
         case SDL_WINDOWEVENT:
-            if (ev.window.event == SDL_WINDOWEVENT_CLOSE)
+            if (ev.window.event == SDL_WINDOWEVENT_CLOSE) {
                 Platform_RequestQuit();
+                if (s_window) SDL_HideWindow(s_window);
+            }
             break;
         case SDL_KEYDOWN:
             /* ESC is reserved for in-game use (pause/end-match menu); the
