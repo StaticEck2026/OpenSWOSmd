@@ -20,6 +20,7 @@ extern volatile uint16_t currentGameTick;
 extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 extern uint8_t pl1Fire;
 extern volatile uint32_t frontbufferBaseAltPtr;
+extern volatile uint32_t frontbufferBasePtr;
 extern uint32_t memBoundaryMarker;
 extern uint16_t audioBankLoaded;
 extern volatile uint16_t audioActive;
@@ -106,14 +107,14 @@ static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
 #ifdef SWOS_SDL_BUILD
     _LoadFileEx((uint8_t *)filename, rawAssetLoadBuffer, (uint32_t *)0);
 
-    uint8_t *dest = (uint8_t *)frontbufferBaseAltPtr;
-    if (!dest)
-        return;
+    uint8_t *dstAlt  = (uint8_t *)frontbufferBaseAltPtr;
+    uint8_t *dstBase = (uint8_t *)frontbufferBasePtr;
+    if (!dstAlt) return;
 
-    memset(dest, 0, FRONTBUFFER_SIZE_TOTAL_BYTES);
+    memset(dstAlt, 0, FRONTBUFFER_SIZE_TOTAL_BYTES);
     for (int y = 0; y < SCREEN_HEIGHT; y++) {
         const uint8_t *rowSrc = rawAssetLoadBuffer + (size_t)y * ROW_STRIDE_BYTES;
-        uint8_t       *rowDst = dest + (size_t)y * FRONTBUFFER_ROW_STRIDE_BYTES;
+        uint8_t       *rowDst = dstAlt + (size_t)y * FRONTBUFFER_ROW_STRIDE_BYTES;
         for (int px = 0; px < SCREEN_WIDTH; px++) {
             int bit  = 7 - (px & 7);
             int byte = px >> 3;
@@ -124,6 +125,17 @@ static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
             }
             rowDst[px] = idx;
         }
+    }
+
+    /* Mirror alt → base so the post-swap frame the renderer reads is
+     * always the decoded image, not whatever stale chunky data was in
+     * the other buffer. _LoadFileEx does the same mirror when dest is
+     * alt; we have to do it ourselves here because we staged through
+     * rawAssetLoadBuffer to run the bitplane decode. Without this the
+     * intro frame appears for ~1/50 s then gets replaced by the prior
+     * buffer contents on the next vsync swap → visible flicker. */
+    if (dstBase && dstBase != dstAlt) {
+        memcpy(dstBase, dstAlt, FRONTBUFFER_SIZE_TOTAL_BYTES);
     }
 #else
     _LoadFileEx((uint8_t *)filename, (uint8_t *)frontbufferBaseAltPtr, (uint32_t *)0);
@@ -172,6 +184,8 @@ static int16_t loaderIntroWaitForFireOrTimeout(int16_t timeout)
  * ================================================================ */
 static int16_t loaderIntroShowFrameFadeInOut(const uint8_t *filename, int16_t timeout)
 {
+    if (g_quitToDos != 0) return 1;
+
     loaderIntroLoadFrameToFrontbufferAlt(filename);
 #ifndef AGA
     _FadeIn();
@@ -181,7 +195,10 @@ static int16_t loaderIntroShowFrameFadeInOut(const uint8_t *filename, int16_t ti
         return 1;
 
 #ifndef AGA
-    _FadeOutToBlack();
+    /* Skip the fade-out if the user closed the window — it just adds
+     * ~1 s of unresponsive black-screen between the click and exit. */
+    if (g_quitToDos == 0)
+        _FadeOutToBlack();
 #endif
     return 0;
 }
@@ -194,6 +211,8 @@ static int16_t loaderIntroShowFrameFadeInOut(const uint8_t *filename, int16_t ti
  * ================================================================ */
 static int16_t loaderIntroShowFrameWithMusic(const uint8_t *filename, int16_t timeout)
 {
+    if (g_quitToDos != 0) return 1;
+
     loaderIntroLoadFrameToFrontbufferAlt(filename);
     loaderIntroEnsureMenuMusicPlaying();
 #ifndef AGA
@@ -204,7 +223,8 @@ static int16_t loaderIntroShowFrameWithMusic(const uint8_t *filename, int16_t ti
         return 1;
 
 #ifndef AGA
-    _FadeOutToBlack();
+    if (g_quitToDos == 0)
+        _FadeOutToBlack();
 #endif
     return 0;
 }
@@ -322,20 +342,26 @@ exit_cleanup:
     return;
 
 load_fail_mid:
-    _FadeOutToBlack();
+    /* Fire pressed → show loader1 splash and continue.
+     * Window-X pressed → bypass the splash and exit fast. */
+    if (g_quitToDos == 0) {
+        _FadeOutToBlack();
 #ifndef AGA
-    paletteIndex = 3;
+        paletteIndex = 3;
 #endif
-    loaderIntroLoadFrameToFrontbufferAlt((const uint8_t *)GRAFS "loader1.raw");
-    _FadeIn();
+        loaderIntroLoadFrameToFrontbufferAlt((const uint8_t *)GRAFS "loader1.raw");
+        _FadeIn();
+    }
     goto exit_cleanup;
 
 load_fail_early:
-    _FadeOutToBlack();
+    if (g_quitToDos == 0) {
+        _FadeOutToBlack();
 #ifndef AGA
-    paletteIndex = 3;
+        paletteIndex = 3;
 #endif
-    loaderIntroLoadFrameToFrontbufferAlt((const uint8_t *)GRAFS "loader1.raw");
-    _FadeIn();
+        loaderIntroLoadFrameToFrontbufferAlt((const uint8_t *)GRAFS "loader1.raw");
+        _FadeIn();
+    }
     return;
 }
