@@ -33,6 +33,7 @@ extern volatile uint32_t frontbufferBasePtr;
 extern uint32_t memBoundaryMarker;
 extern uint16_t audioBankLoaded;
 extern volatile uint16_t audioActive;
+extern uint16_t fireResetFlag;
 extern uint8_t diyFileBufferCopy[];
 extern uint8_t audioInstrumentBank[];
 extern uint8_t aSoundHeroSng[];
@@ -101,10 +102,28 @@ static void loaderIntroEnsureMenuMusicPlaying(void)
  *
  * Beeps all channels down to silence, stops audio, and clears
  * the active/loaded flags.
+ *
+ * SDL deviation: the asm `_AudioBeepAllShort` jumps master volume
+ * to 0x40 (max) and ramps down to 0 — emitting a brief loud blip
+ * that's part of the original Amiga's "click" between intro and
+ * menu music. On SDL with our queued audio path that blip lands as
+ * a 0x23 → 0x40 step (LOUDER than playback) followed by a long
+ * fade. Ramp from the current 0x23 down to 0 instead so the music
+ * just fades cleanly on skip. The ramp also keeps AudioSDL_Tick
+ * fed so the queue doesn't underrun during the fade.
  * ================================================================ */
 static void loaderIntroStopMusicAndResetAudio(void)
 {
+#ifdef SWOS_SDL_BUILD
+    for (int16_t vol = 0x23; vol >= 0; vol--) {
+        _AudioSetChannelVolume(0xFFFF, (uint16_t)vol);
+        _WaitForVSync();
+        if (g_quitToDos) break;
+    }
+    _AudioSetChannelVolume(0xFFFF, 0);
+#else
     _AudioBeepAllShort();
+#endif
     _StopAllAudioChannels();
     audioActive = 0;
     audioBankLoaded = 0;
@@ -381,6 +400,13 @@ void _ShowLoaderIntroSequence(void)
 
 exit_cleanup:
     loaderIntroStopMusicAndResetAudio();
+    /* The user pressed ENTER (or whatever fires) to skip the intro and
+     * is likely still holding the key when control returns. Without
+     * this, the next MenuProc iteration sees fire=1 and immediately
+     * fires the highlighted main-menu entry (FRIENDLY GAME by
+     * default). fireResetFlag tells _MenuCheckControls to suppress
+     * fire/shortFire until the key is released, then auto-clears. */
+    fireResetFlag = 1;
     return;
 
 load_fail_mid:
@@ -405,5 +431,7 @@ load_fail_early:
         loaderIntroLoadFrameToFrontbufferAlt((const uint8_t *)GRAFS "loader1.raw");
         _FadeIn();
     }
+    /* See exit_cleanup for the rationale. */
+    fireResetFlag = 1;
     return;
 }
