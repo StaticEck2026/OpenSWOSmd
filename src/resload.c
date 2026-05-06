@@ -31,6 +31,13 @@
 #include <errno.h>
 #include <unistd.h>
 
+#ifdef _WIN32
+#include <direct.h>          /* _mkdir on MinGW/MSVC */
+#define swos_mkdir(path)  _mkdir(path)
+#else
+#define swos_mkdir(path)  mkdir((path), 0755)
+#endif
+
 extern void _RncDecompressV1(uint8_t *src, uint8_t *dst);
 extern void _RncDecompressV2(uint8_t *src, uint8_t *dst);
 
@@ -146,7 +153,7 @@ static uint32_t fs_save(const char *path, const uint8_t *src, uint32_t n)
     char *slash = strrchr(buf, '/');
     if (slash) {
         *slash = 0;
-        mkdir(buf, 0755);
+        swos_mkdir(buf);
     }
 
     FILE *f = fopen(path, "wb");
