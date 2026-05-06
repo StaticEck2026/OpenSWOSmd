@@ -62,8 +62,12 @@ static void loaderIntroEnsureMenuMusicPlaying(void)
      * the player instead, then ramp the master volume in. */
     if (audioBankLoaded == 0) {
         _StopAllAudioChannels();
+        /* HERO has 5 subsongs; the reference rjp1player plays subsong 0
+         * (the full mix with vocals). Subsong 1 has the singing channel
+         * sequence byte zeroed, so passing 1 here was the cause of the
+         * "music plays but no singing" symptom. */
         if (AudioSDL_StartSong(diyFileBufferCopy, HERO_SONG_BUFFER_BYTES,
-                               audioInstrumentBank, HERO_INS_BANK_BYTES, 1) != 0) {
+                               audioInstrumentBank, HERO_INS_BANK_BYTES, 0) != 0) {
             /* Load failed — keep audio silent but mark "loaded" so we
              * don't hammer the player every vblank. */
         }
