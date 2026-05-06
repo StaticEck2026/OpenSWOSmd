@@ -21,6 +21,7 @@
 
 #include "platform_sdl.h"
 #include "rjp1.h"
+#include "sfx_debug.h"
 
 #include <SDL.h>
 #include <stdio.h>
@@ -272,6 +273,7 @@ void AudioSDL_TriggerSfxByNoteId(int channel, int note_id)
     (void)channel; (void)note_id;
     return;
 #endif
+    SWOS_SFX_LOG_TRIGGER_NOTE(channel, note_id);
     SDL_LockMutex(s_mtx);
     if (s_player_active)
         RJP1_StartSequenceByNoteId(&s_player, channel, note_id);
@@ -286,6 +288,7 @@ void AudioSDL_TriggerSfxByWaveId(int channel, int wave_id)
     (void)channel; (void)wave_id;
     return;
 #endif
+    SWOS_SFX_LOG_TRIGGER_WAVE(channel, wave_id);
     SDL_LockMutex(s_mtx);
     if (s_player_active)
         RJP1_StartSequenceByWaveId(&s_player, channel, wave_id);
@@ -306,6 +309,9 @@ void AudioSDL_TriggerSfxPreset(int preset_id)
     if (s_player_active) {
         uint8_t note_ids[4];
         RJP1_PresetEntry(&s_player, preset_id, note_ids);
+        SWOS_SFX_LOG_TRIGGER_PRESET(preset_id,
+                                    note_ids[0], note_ids[1],
+                                    note_ids[2], note_ids[3]);
         for (int ch = 0; ch < 4; ++ch) {
             if (note_ids[ch] != 0)
                 RJP1_StartSequenceByNoteId(&s_player, ch, note_ids[ch]);
