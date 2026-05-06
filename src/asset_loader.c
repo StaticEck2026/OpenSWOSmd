@@ -6,6 +6,15 @@
 #include "asset_loader.h"
 #include "display.h"
 
+#ifdef SWOS_SDL_BUILD
+/* fprintf(stderr, ...) for cacheload debug logging. Manual externs
+ * worked on glibc (stderr is a real exported FILE*), but on MinGW
+ * stderr is a macro `(__acrt_iob_func(2))` so the manual extern
+ * referenced an unresolvable symbol. Including <stdio.h> picks up
+ * the platform's correct definition. */
+#include <stdio.h>
+#endif
+
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint32_t assetLoaderWorkPtr;
 extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
@@ -239,8 +248,6 @@ int16_t _AssetCacheLoadFromAssetSys(const uint8_t *name)
     result = _CAssetSys_DispatchGetSize(ASSET_OP_5_THEN_MAYBE_6, 0, (void *)name, (void *)0, &fileSize);
     if (result != 0) {
 #ifdef SWOS_SDL_BUILD
-        extern int fprintf(void *, const char *, ...);
-        extern void *stderr;
         fprintf(stderr, "[cacheload] %s: size-query failed r=%d\n", (const char *)name, result);
 #endif
         return (int16_t)0xFF;
@@ -250,8 +257,6 @@ int16_t _AssetCacheLoadFromAssetSys(const uint8_t *name)
     node = assetCacheAllocInternal(fileSize);
     if (node == (uint8_t *)0) {
 #ifdef SWOS_SDL_BUILD
-        extern int fprintf(void *, const char *, ...);
-        extern void *stderr;
         fprintf(stderr, "[cacheload] %s: alloc failed for %u bytes\n", (const char *)name, fileSize);
 #endif
         return 1;
@@ -262,8 +267,6 @@ int16_t _AssetCacheLoadFromAssetSys(const uint8_t *name)
     result = _CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE0, 0, (void *)name, payload);
     if (result != 0) {
 #ifdef SWOS_SDL_BUILD
-        extern int fprintf(void *, const char *, ...);
-        extern void *stderr;
         fprintf(stderr, "[cacheload] %s: load failed r=%d\n", (const char *)name, result);
 #endif
         return (int16_t)0xFF;
