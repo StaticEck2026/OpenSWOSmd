@@ -22,52 +22,48 @@
 #define SWOS_SFX_IDS_H
 
 /* ---- Background ambience (crowd ID range 1..9) ---- */
-#define SFX_BG_CROWD_1         0x01    /* [ear] BGCRD3L low background crowd */
-#define SFX_BG_CROWD_2         0x02    /* [ear] BGCRD3L variant or duplicate */
-#define SFX_CROWD_CHEER_1      0x03    /* [ear] HOMEGOAL or chant */
-#define SFX_FOUL_WHISTLE       0x04    /* [src+ear] FOUL — _PlayFoulWhistleSample */
-#define SFX_CROWD_CHEER_2      0x05    /* [ear] chant */
-#define SFX_CROWD_CHEER_3      0x06    /* [ear] chant */
-/*      SFX_???_07              0x07     [?] untested */
-#define SFX_CROWD_FADE_1       0x08    /* [ear] crowd-chant tail → background */
-#define SFX_CROWD_FADE_2       0x09    /* [ear] same as 0x08 */
-/*      SFX_???_0A              0x0A     [?] untested */
-/*      SFX_???_0B              0x0B     [?] untested */
+#define SFX_CROWD_BG_1      			0x01    /* Crowd background noise */
+#define SFX_CROWD_BG_2     			    0x02    /* Crowd background noise variant */
+//#define -----------------------------   0x03    /*  */
+#define SFX_WHISTLE_FOUL_1    			0x04    /* Referee whistles for a foul */
+#define SFX_CROWD_GOAL_CHEER		   	0x05    /* Goal scored */
+#define SFX_CROWD_MATCH_ENGINE_START    0x06    /* MATCH ENGINE STARTED, you see the lower crowd and camera starts rolling */
+/*      SFX_???_07              		0x07     [?] untested */
+#define SFX_CROWD_REFEREE_CARD_FADEOUT	0x08    /* Crowd fadeout after referee shows yellow/red card */
+#define SFX_CROWD_CHEER_FADEOUT         0x09    /* Crowd fadeout after goal cheer & match engine start */
+/*      SFX_???_0A              		0x0A     [?] untested */
+/*      SFX_???_0B              		0x0B     [?] untested */
 
 /* ---- Match-event range (0x0C..0x14) ---- */
-#define SFX_KICK_1             0x0C    /* [ear] KICKX */
-#define SFX_BOUNCE_HARD        0x0D    /* [ear] BOUNCEX hard */
-#define SFX_BOUNCE_CLICK       0x0E    /* [ear] BOUNCEX soft / tackle click */
-#define SFX_MISSGOAL_1         0x0F    /* [src+ear] MISSGOAL ("aww") — _PlayCornerKickSample (function name suspect) */
-#define SFX_KICK_SAMPLE16      0x10    /* [src+ear] _PlaySfxSample16; user heard soft bounce */
-#define SFX_BOUNCE_HARD_2      0x11    /* [ear] hard bounce */
-#define SFX_MISSGOAL_2         0x12    /* [src+ear] "aww" — _PlayGoalKickOffSample (function name suspect) */
-/*      SFX_???_13              0x13     [?spec] silent in renderer — likely null inst */
-/*      SFX_???_14              0x14     [?spec] silent in renderer — likely null inst */
+#define SFX_BALL_KEEPER_SAFE_1 0x0C    /*  */
+#define SFX_BALL_BOUNCE_2      0x0D    /* Ball bounce variant 2 */
+#define SFX_BALL_TACKLED_FOUL  0x0E    /* Ball sound with a tackle and foul */
+#define SFX_CROWD_KEEPERSAVES  0x0F    /* Keeper saves a shot ("aaah") */
+#define SFX_BALL_BOUNCE_1      0x10    /* Ball bounce default */
+//#define -------------------------      0x11    /* Sample only 2kb of size, nothing to hear */
+#define SFX_CROWD_NEARMISS     0x12    /* Ball goes just wide "oooh" */
+#define SFX_CROWD_REFEREE_CARD 0x14    /* Crowd is in uproar, referee about to show a card */
 
 /* ---- Whistles, end-of-game, scored (0x16..0x2C) — TODO confirm by ear ---- */
-#define SFX_END_GAME_WHISTLE   0x16    /* [src] ENDGAMEW — _PlayEndGameWhistleSample */
-#define SFX_VOICE_LINE_21      0x21    /* [?spec] 3.44s voice line — closest match COMBROWN (3.19s) */
-#define SFX_KICK_25            0x25    /* [src] _PlayKickSample (alternates with 0x28 each tick) */
-#define SFX_MISSGOAL           0x26    /* [src] MISSGOAL — _PlayMissGoalSample */
-#define SFX_GOOD_PASS          0x27    /* [src] crowd appreciation — _PlayGoodPassSample */
-#define SFX_KICK_28            0x28    /* [src] _PlayKickSample (alternates with 0x25 each tick) */
-#define SFX_SUB_CALL           0x29    /* [?spec] 0.96s speech-like — closest match EASY/HOMESUBL */
-#define SFX_REF_WHISTLE_2A     0x2A    /* [?spec] 0.20s short whistle blip */
-#define SFX_REF_WHISTLE_2B     0x2B    /* [?spec] 0.22s short whistle blip */
-#define SFX_NOT_TRAINING_3     0x2C    /* [src] _PlaySample3IfNotTraining (purpose unknown) */
-#define SFX_BOUNCE_2D          0x2D    /* [?spec] 0.12s — fingerprint matches BOUNCEX */
-#define SFX_BOUNCE_2E          0x2E    /* [?spec] 0.12s — fingerprint matches BOUNCEX */
-
-/* ---- Goal cheer (0x32) ---- */
-#define SFX_HOME_GOAL          0x32    /* [?spec] 10.92s — near-identical fingerprint to HOMEGOAL.WAV (11.48s) */
+#define SFX_WHISTLE_ENDGAME           0x16    /* Halftime and Endgame whistle */
+//#define -------------------------     0x21    /* Drum chant, unused in game. Recording broken. */
+#define SFX_BALL_KEEPER_SAFE_2        0x25    /* Keeper saves the ball */
+#define SFX_BALL_HEADER_STANDING      0x26    /* Player performs a standing header */
+#define SFX_BALL_PASSED_OR_TACKLED    0x27    /* Player passes the ball or hits it with a sliding tackle */
+#define SFX_BALL_SHOT_HEADER_LOW      0x28    /* Player shoots or flying-heads the ball (low shot, not high) */
+#define SFX_WHISTLE_HALFTIME          0x29    /* ++Unused++ whistle, would be nice for halftime. */
+#define SFX_WHISTLE_FOUL_2            0x2A    /* Ref whistles for a foul */
+//#define -------------------------     0x2B    /* Unused in the game */
+#define SFX_BALL_BOUNCE_3             0x2C    /* Ball bounce variant 3 */
+#define SFX_BALL_BOUNCE_4             0x2D    /* Ball bounce variant 4 */
+#define SFX_BALL_BOUNCE_5             0x2E    /* Ball bounce variant 5*/
 
 /* ---- Referee whistles & chants (0x31..0x3E) ---- */
-#define SFX_REFEREE_WHISTLE    0x31    /* [src] REF_WH/WHISTLE — _PlayRefereeWhistleSample */
-#define SFX_CHANT_4L           0x37    /* [src] crowdSamples[0] */
-#define SFX_CHANT_8L           0x38    /* [src] crowdSamples[1] */
-#define SFX_CHANT_10L          0x3A    /* [src] crowdSamples[2] */
-#define SFX_EREWEGO            0x3E    /* [src] crowdSamples[3] */
+#define SFX_WHISTLE_KICKOFF    0x31    /* Referee whistles for kickoff, 0th/45th min or after a goal */
+#define SFX_CROWD_CHANT_1      0x37    /* Crowd chant variant 1 */
+#define SFX_CROWD_CHANT_2      0x38    /* Crowd chant variant 2 */
+#define SFX_CROWD_CHANT_3      0x3A    /* Crowd chant variant 3 */
+#define SFX_CROWD_CHANT_4      0x3E    /* Crowd chant variant 4 */
 
 /* ---- Preset IDs (route through _AudioApplyPresetToChannels) ---- */
 #define SFX_PRESET_NOT_TRAINING_1   1       /* [src] _PlaySample1IfNotTraining / _PlaySample1 */

@@ -328,7 +328,7 @@ void _PlaySample7IfNotTraining(void)
 __attribute__((used, externally_visible))
 void _PlaySfxSample16(void)
 {
-    _GateKickSampleAndCrowd(3, SFX_KICK_SAMPLE16);
+    _GateKickSampleAndCrowd(3, SFX_BALL_BOUNCE_1);
 }
 
 /* ================================================================
@@ -339,7 +339,7 @@ void _PlaySfxSample16(void)
 __attribute__((used, externally_visible))
 void _PlayGoodPassSample(void)
 {
-    _GateKickSampleAndCrowd(3, SFX_GOOD_PASS);
+    _GateKickSampleAndCrowd(3, SFX_BALL_PASSED_OR_TACKLED);
 }
 
 /* ================================================================
@@ -351,11 +351,11 @@ void _PlayGoodPassSample(void)
 __attribute__((used, externally_visible))
 void _PlayKickSample(void)
 {
-    uint16_t sfxId = SFX_KICK_25;
+    uint16_t sfxId = SFX_BALL_KEEPER_SAFE_2;
 
     /* btst #1,(currentGameTick+1) tests bit 1 of the low byte */
     if (((uint8_t)currentGameTick) & 0x02)
-        sfxId = SFX_KICK_28;
+        sfxId = SFX_BALL_SHOT_HEADER_LOW;
 
     _GateKickSampleAndCrowd(3, sfxId);
 }
@@ -371,11 +371,12 @@ __attribute__((used, externally_visible))
 void _GateKickSampleAndCrowd(uint16_t channel, uint16_t sfxId)
 {
     /* If audioDbgFlagA bit 7 is set, apply gating: only allow kicks when
-     * the last triggered SFX was MISSGOAL_1 or MISSGOAL_2 (the "aww" / kickoff
-     * sentinel values). */
+     * the last triggered SFX was CROWD_KEEPERSAVES (0x0F "aaah") or
+     * CROWD_NEARMISS (0x12 "oooh") — both are crowd reactions that
+     * should "unlock" the next kick sample. */
     if (audioDbgFlagA & 0x80)
     {
-        if (lastKickSampleTick != SFX_MISSGOAL_1 && lastKickSampleTick != SFX_MISSGOAL_2)
+        if (lastKickSampleTick != SFX_CROWD_KEEPERSAVES && lastKickSampleTick != SFX_CROWD_NEARMISS)
             return;
     }
 
@@ -388,7 +389,7 @@ void _GateKickSampleAndCrowd(uint16_t channel, uint16_t sfxId)
 __attribute__((used, externally_visible))
 void _PlayRefereeWhistleSample(void)
 {
-    _HandleKickSampleAndCrowd(3, SFX_REFEREE_WHISTLE);
+    _HandleKickSampleAndCrowd(3, SFX_WHISTLE_KICKOFF);
 }
 
 /* ================================================================
@@ -397,7 +398,7 @@ void _PlayRefereeWhistleSample(void)
 __attribute__((used, externally_visible))
 void _PlayFoulWhistleSample(void)
 {
-    _HandleKickSampleAndCrowd(3, SFX_FOUL_WHISTLE);
+    _HandleKickSampleAndCrowd(3, SFX_WHISTLE_FOUL_1);
 }
 
 /* ================================================================
@@ -406,7 +407,7 @@ void _PlayFoulWhistleSample(void)
 __attribute__((used, externally_visible))
 void _PlayEndGameWhistleSample(void)
 {
-    _HandleKickSampleAndCrowd(3, SFX_END_GAME_WHISTLE);
+    _HandleKickSampleAndCrowd(3, SFX_WHISTLE_ENDGAME);
 }
 
 /* ================================================================
@@ -470,7 +471,7 @@ void _PlaySample3IfNotTraining(void)
     if (trainingGame != 0)
         return;
     sfxQueueCount = 0x0A;
-    _GateKickSampleAndCrowd(3, SFX_NOT_TRAINING_3);
+    _GateKickSampleAndCrowd(3, SFX_BALL_BOUNCE_3);
 }
 
 /* ================================================================
@@ -484,7 +485,7 @@ void _PlayMissGoalSample(void)
     if (trainingGame != 0)
         return;
     sfxQueueCount = 0x0A;
-    _HandleKickSampleAndCrowd(3, SFX_MISSGOAL);
+    _HandleKickSampleAndCrowd(3, SFX_BALL_HEADER_STANDING);
 }
 
 /* ================================================================
@@ -551,7 +552,7 @@ void _PlayGoalKickOffSample(void)
 {
     if (trainingGame != 0)
         return;
-    if (_HandleKickSampleAndCrowd(3, SFX_MISSGOAL_2) != 0)
+    if (_HandleKickSampleAndCrowd(3, SFX_CROWD_NEARMISS) != 0)
         return;
     crowdEventFlags = 0x39;
 }
@@ -567,7 +568,7 @@ void _PlayCornerKickSample(void)
 {
     if (trainingGame != 0)
         return;
-    if (_HandleKickSampleAndCrowd(3, SFX_MISSGOAL_1) != 0)
+    if (_HandleKickSampleAndCrowd(3, SFX_CROWD_KEEPERSAVES) != 0)
         return;
     crowdEventFlags = 0x32;
 }
@@ -583,9 +584,9 @@ void _PlayCornerKickSample(void)
 __attribute__((used, externally_visible))
 int16_t _HandleKickSampleAndCrowd(uint16_t mode, uint16_t sfxId)
 {
-    /* SFX_END_GAME_WHISTLE bypasses the crowd-event gate so the final whistle
+    /* SFX_WHISTLE_ENDGAME bypasses the crowd-event gate so the final whistle
      * always plays regardless of any in-flight crowd reaction. */
-    if (sfxId != SFX_END_GAME_WHISTLE)
+    if (sfxId != SFX_WHISTLE_ENDGAME)
     {
         if (crowdEventFlags != 0)
             return 1;  /* blocked */
