@@ -323,7 +323,8 @@ void _PlaySample7IfNotTraining(void)
 /* ================================================================
  * PlaySfxSample16  (SWOS2.s line 9406, sub_107260)
  *
- * GateKickSampleAndCrowd with sfxId=$10, channel=3.
+ * Plays SFX_BALL_BOUNCE_1 (default ball bounce) on channel 3,
+ * gated through GateKickSampleAndCrowd.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _PlaySfxSample16(void)
@@ -334,7 +335,10 @@ void _PlaySfxSample16(void)
 /* ================================================================
  * PlayGoodPassSample  (SWOS2.s line 9414)
  *
- * GateKickSampleAndCrowd with sfxId=$27, channel=3.
+ * Plays SFX_BALL_PASSED_OR_TACKLED (pass or sliding-tackle ball
+ * thump) on channel 3, gated through GateKickSampleAndCrowd. The
+ * "good pass" name is the original asm symbol; in practice the
+ * sample also plays for tackles, hence the renamed wave id.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _PlayGoodPassSample(void)
@@ -345,8 +349,12 @@ void _PlayGoodPassSample(void)
 /* ================================================================
  * PlayKickSample  (SWOS2.s line 9422)
  *
- * Alternates between sfxId $25 and $28 based on currentGameTick bit 1.
- * Then calls GateKickSampleAndCrowd(3, sfxId).
+ * Alternates between SFX_BALL_KEEPER_SAFE_2 (0x25, keeper saves)
+ * and SFX_BALL_SHOT_HEADER_LOW (0x28, low shot / flying header)
+ * based on currentGameTick bit 1, then routes through
+ * GateKickSampleAndCrowd on channel 3. Despite the asm-derived
+ * "kick" name, the per-tick alternation makes this fire on a mix
+ * of shot/save events depending on game state.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _PlayKickSample(void)
@@ -363,9 +371,18 @@ void _PlayKickSample(void)
 /* ================================================================
  * GateKickSampleAndCrowd  (SWOS2.s line 9432)
  *
- * Gates the kick sample through audioDbgFlagA bit 7 check
- * and lastKickSampleTick comparison. If gate passes, calls
- * HandleKickSampleAndCrowd.
+ * Gates a ball/kick/shot sample through the audioDbgFlagA bit 7
+ * check and the lastKickSampleTick comparison: when the gate is
+ * armed, only allow the next sample if the previous one was a
+ * crowd reaction (CROWD_KEEPERSAVES "aaah" or CROWD_NEARMISS
+ * "oooh"). This pacing rule prevents back-to-back ball thumps
+ * from drowning out the crowd response. If the gate passes,
+ * HandleKickSampleAndCrowd does the actual trigger.
+ *
+ * Asm name kept for back-port traceability — these IDs aren't
+ * strictly "kicks" any more (we now know the wave-ids include
+ * passes, tackles, headers, saves) but the function symbol still
+ * matches SWOS2.s line 12017.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _GateKickSampleAndCrowd(uint16_t channel, uint16_t sfxId)
@@ -385,6 +402,11 @@ void _GateKickSampleAndCrowd(uint16_t channel, uint16_t sfxId)
 
 /* ================================================================
  * PlayRefereeWhistleSample  (SWOS2.s line 9444)
+ *
+ * Plays SFX_WHISTLE_KICKOFF (0x31, kickoff whistle — minute 0/45
+ * or after a goal) on channel 3 via HandleKickSampleAndCrowd.
+ * "Referee whistle" is the original asm symbol; the actual sample
+ * is specifically the kickoff whistle.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _PlayRefereeWhistleSample(void)
@@ -463,7 +485,8 @@ void _PlaySample4IfNotTraining(void)
 /* ================================================================
  * PlaySample3IfNotTraining  (SWOS2.s line 9502)
  *
- * If not training: set sfxQueueCount=$A, GateKick($2C, 3).
+ * If not training: set sfxQueueCount=$A, then GateKick on channel 3
+ * with SFX_BALL_BOUNCE_3 (ball bounce variant 3).
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _PlaySample3IfNotTraining(void)
@@ -477,7 +500,10 @@ void _PlaySample3IfNotTraining(void)
 /* ================================================================
  * PlayMissGoalSample  (SWOS2.s line 9514)
  *
- * If not training: set sfxQueueCount=$A, HandleKick($26, 3).
+ * If not training: set sfxQueueCount=$A, then HandleKick on channel
+ * 3 with SFX_BALL_HEADER_STANDING (standing header). The "miss
+ * goal" name is the original asm symbol; the actual wave is the
+ * standing-header ball thump.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _PlayMissGoalSample(void)
@@ -544,8 +570,11 @@ void _PlayGoalReplayBottomSample(void)
 /* ================================================================
  * PlayGoalKickOffSample  (SWOS2.s line 9563)
  *
- * If not training: HandleKick($12, 3). If played (return 0),
- * set crowdEventFlags = $39.
+ * If not training: HandleKick on channel 3 with SFX_CROWD_NEARMISS
+ * ("oooh, just wide"). If the gate plays it (return 0), arm the
+ * crowd-event window with crowdEventFlags = $39. The asm name
+ * "GoalKickOff" is misleading — the wave id is the near-miss
+ * crowd reaction, not a kickoff.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _PlayGoalKickOffSample(void)
@@ -560,8 +589,11 @@ void _PlayGoalKickOffSample(void)
 /* ================================================================
  * PlayCornerKickSample  (SWOS2.s line 9579)
  *
- * If not training: HandleKick($F, 3). If played (return 0),
- * set crowdEventFlags = $32.
+ * If not training: HandleKick on channel 3 with
+ * SFX_CROWD_KEEPERSAVES ("aaah" keeper saves a shot). If the gate
+ * plays it (return 0), arm the crowd-event window with
+ * crowdEventFlags = $32. The asm name "CornerKick" is misleading —
+ * the wave id is the keeper-saves crowd reaction.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _PlayCornerKickSample(void)
