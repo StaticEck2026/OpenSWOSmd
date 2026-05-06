@@ -1387,16 +1387,32 @@ static void _Rebuild_CompetitionSlotPointers(void)
      * 2 = uefaCup). Mirrors the assignment in
      * `_Career_SelectEuroCupSlotIfTeamParticipates` (career_init.c
      * line 812) which sets euroCupSlotIndex alongside
-     * `_Career_SetCurrentCompetitionSlot(cupCopy, 3, 0, 0)`. Any
-     * out-of-range value (incl. 0xFFFF, the "no euro cup" sentinel)
-     * leaves the pointer NULL. */
-    if (euroCupSlotIndex == 0) {
+     * `_Career_SetCurrentCompetitionSlot(cupCopy, 3, 0, 0)`.
+     *
+     * IMPORTANT: euroCupSlotIndex is only *written* when a cup is
+     * selected. If the team didn't qualify for any euro cup, the
+     * variable retains its stale previous value (often 0). Trusting
+     * it unconditionally would set quaternaryCompetitionPtr to
+     * &euroCupCopy in that case, and downstream code (e.g.
+     * _ShowChairmanOpinionAboutTheSeason → _FindTeamInDIY at
+     * career_season.c:617) would panic because the team isn't
+     * actually in any euro cup slot. So we only derive when the
+     * SAVED quaternaryCompetitionPtr was non-zero — that's the
+     * authoritative "slot 3 was active" signal from the saving
+     * binary, which the LUT translation pass leaves alone for
+     * SDL-built saves (Linux/Windows pointer values fall outside
+     * the Amiga range, so translate_one is a no-op). */
+    if (quaternaryCompetitionPtr == 0) {
+        /* Slot was inactive in the saved state — leave it inactive. */
+    } else if (euroCupSlotIndex == 0) {
         quaternaryCompetitionPtr = (uint32_t)euroCupCopy;
     } else if (euroCupSlotIndex == 1) {
         quaternaryCompetitionPtr = (uint32_t)cupWinnersCupCopy;
     } else if (euroCupSlotIndex == 2) {
         quaternaryCompetitionPtr = (uint32_t)uefaCupCopy;
     } else {
+        /* Active slot but out-of-range index (shouldn't happen) —
+         * NULL it rather than dereference garbage. */
         quaternaryCompetitionPtr = 0;
     }
 }
