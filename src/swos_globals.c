@@ -256,8 +256,8 @@ uint16_t menuColorAndTextScript[5166] = {
  * `menuEntries` symbol at offset +22 within the same storage. */
 __attribute__((used, aligned(4)))
 uint8_t currentMenu[8 * 1024 + 80 * 1024];
-__asm__(".globl menuEntries\n"
-        ".equ   menuEntries, currentMenu + 22\n");
+__asm__(".globl " _ASM_PFX "menuEntries\n"
+        ".equ   " _ASM_PFX "menuEntries, " _ASM_PFX "currentMenu + 22\n");
 
 /* ---- Stadium-menu little-player sprite-copy block --------------------
  * The stadium menu (pre-match lineup screen) draws one mini-player
@@ -292,12 +292,12 @@ uint8_t stadiumMenuLittlePlayerBackingBuf[36] = {
     0x08, 0x00, 0x09, 0x00, 0x0A, 0x00, 0x0B, 0x00,
     0x0C, 0x00, 0x0D, 0x00, 0x0E, 0x00, 0x0F, 0x00,
 };
-__asm__(".globl stadiumMenuLittlePlayer\n"
-        ".equ   stadiumMenuLittlePlayer, stadiumMenuLittlePlayerBackingBuf\n"
-        ".globl littlePlayerSpriteGeneric\n"
-        ".equ   littlePlayerSpriteGeneric, stadiumMenuLittlePlayerBackingBuf + 2\n"
-        ".globl littlePlayersColorTable\n"
-        ".equ   littlePlayersColorTable, stadiumMenuLittlePlayerBackingBuf + 4\n");
+__asm__(".globl " _ASM_PFX "stadiumMenuLittlePlayer\n"
+        ".equ   " _ASM_PFX "stadiumMenuLittlePlayer, " _ASM_PFX "stadiumMenuLittlePlayerBackingBuf\n"
+        ".globl " _ASM_PFX "littlePlayerSpriteGeneric\n"
+        ".equ   " _ASM_PFX "littlePlayerSpriteGeneric, " _ASM_PFX "stadiumMenuLittlePlayerBackingBuf + 2\n"
+        ".globl " _ASM_PFX "littlePlayersColorTable\n"
+        ".equ   " _ASM_PFX "littlePlayersColorTable, " _ASM_PFX "stadiumMenuLittlePlayerBackingBuf + 4\n");
 
 /* ---- Edit-teams kit-editor sprite-copy blocks -----------------------
  * Six MENU_CMD_SPRITE_COPY blocks that preview the primary/secondary
@@ -365,30 +365,30 @@ uint8_t editTeamsSecondarySocksSpriteCopyBuf[36]  = EDIT_TEAMS_BUF(192, 198, COL
 #undef COL_SHIRT
 #undef COL_SHORTS
 
-__asm__(".globl editTeamsPrimaryShirts\n"
-        ".equ   editTeamsPrimaryShirts, editTeamsPrimaryShirtsSpriteCopyBuf\n"
-        ".globl editTeamsPrimaryShirtColTable\n"
-        ".equ   editTeamsPrimaryShirtColTable, editTeamsPrimaryShirtsSpriteCopyBuf + 4\n"
-        ".globl editTeamsShorts\n"
-        ".equ   editTeamsShorts, editTeamsShortsSpriteCopyBuf\n"
-        ".globl editTeamsShortsColTable\n"
-        ".equ   editTeamsShortsColTable, editTeamsShortsSpriteCopyBuf + 4\n"
-        ".globl editTeamsSocks\n"
-        ".equ   editTeamsSocks, editTeamsSocksSpriteCopyBuf\n"
-        ".globl editTeamsSocksColTable\n"
-        ".equ   editTeamsSocksColTable, editTeamsSocksSpriteCopyBuf + 4\n"
-        ".globl editTeamsSecondaryShirt\n"
-        ".equ   editTeamsSecondaryShirt, editTeamsSecondaryShirtSpriteCopyBuf\n"
-        ".globl editTeamsSecondaryShirtColTable\n"
-        ".equ   editTeamsSecondaryShirtColTable, editTeamsSecondaryShirtSpriteCopyBuf + 4\n"
-        ".globl editTeamsSecondaryShorts\n"
-        ".equ   editTeamsSecondaryShorts, editTeamsSecondaryShortsSpriteCopyBuf\n"
-        ".globl editTeamsSecondaryShortsColTable\n"
-        ".equ   editTeamsSecondaryShortsColTable, editTeamsSecondaryShortsSpriteCopyBuf + 4\n"
-        ".globl editTeamsSecondarySocks\n"
-        ".equ   editTeamsSecondarySocks, editTeamsSecondarySocksSpriteCopyBuf\n"
-        ".globl editTeamsSecondarySocksColTable\n"
-        ".equ   editTeamsSecondarySocksColTable, editTeamsSecondarySocksSpriteCopyBuf + 4\n");
+__asm__(".globl " _ASM_PFX "editTeamsPrimaryShirts\n"
+        ".equ   " _ASM_PFX "editTeamsPrimaryShirts, " _ASM_PFX "editTeamsPrimaryShirtsSpriteCopyBuf\n"
+        ".globl " _ASM_PFX "editTeamsPrimaryShirtColTable\n"
+        ".equ   " _ASM_PFX "editTeamsPrimaryShirtColTable, " _ASM_PFX "editTeamsPrimaryShirtsSpriteCopyBuf + 4\n"
+        ".globl " _ASM_PFX "editTeamsShorts\n"
+        ".equ   " _ASM_PFX "editTeamsShorts, " _ASM_PFX "editTeamsShortsSpriteCopyBuf\n"
+        ".globl " _ASM_PFX "editTeamsShortsColTable\n"
+        ".equ   " _ASM_PFX "editTeamsShortsColTable, " _ASM_PFX "editTeamsShortsSpriteCopyBuf + 4\n"
+        ".globl " _ASM_PFX "editTeamsSocks\n"
+        ".equ   " _ASM_PFX "editTeamsSocks, " _ASM_PFX "editTeamsSocksSpriteCopyBuf\n"
+        ".globl " _ASM_PFX "editTeamsSocksColTable\n"
+        ".equ   " _ASM_PFX "editTeamsSocksColTable, " _ASM_PFX "editTeamsSocksSpriteCopyBuf + 4\n"
+        ".globl " _ASM_PFX "editTeamsSecondaryShirt\n"
+        ".equ   " _ASM_PFX "editTeamsSecondaryShirt, " _ASM_PFX "editTeamsSecondaryShirtSpriteCopyBuf\n"
+        ".globl " _ASM_PFX "editTeamsSecondaryShirtColTable\n"
+        ".equ   " _ASM_PFX "editTeamsSecondaryShirtColTable, " _ASM_PFX "editTeamsSecondaryShirtSpriteCopyBuf + 4\n"
+        ".globl " _ASM_PFX "editTeamsSecondaryShorts\n"
+        ".equ   " _ASM_PFX "editTeamsSecondaryShorts, " _ASM_PFX "editTeamsSecondaryShortsSpriteCopyBuf\n"
+        ".globl " _ASM_PFX "editTeamsSecondaryShortsColTable\n"
+        ".equ   " _ASM_PFX "editTeamsSecondaryShortsColTable, " _ASM_PFX "editTeamsSecondaryShortsSpriteCopyBuf + 4\n"
+        ".globl " _ASM_PFX "editTeamsSecondarySocks\n"
+        ".equ   " _ASM_PFX "editTeamsSecondarySocks, " _ASM_PFX "editTeamsSecondarySocksSpriteCopyBuf\n"
+        ".globl " _ASM_PFX "editTeamsSecondarySocksColTable\n"
+        ".equ   " _ASM_PFX "editTeamsSecondarySocksColTable, " _ASM_PFX "editTeamsSecondarySocksSpriteCopyBuf + 4\n");
 
 /* ---- selTeamsPtr buffer + adjacent aliases ---------------------------
  * SWOS2.s reserves a single ~45 KB contiguous BSS region starting at
@@ -468,26 +468,26 @@ __asm__(".globl editTeamsPrimaryShirts\n"
 #define HIL_BACKING_BUF_SIZE 192254
 __attribute__((used, aligned(4)))
 uint8_t hilBackingBuf[HIL_BACKING_BUF_SIZE];
-__asm__(".globl hilFileBuffer\n"
-        ".equ   hilFileBuffer, hilBackingBuf\n"
-        ".globl hilGameName\n"
-        ".equ   hilGameName, hilBackingBuf + 2044\n"
-        ".globl hilGameRound\n"
-        ".equ   hilGameRound, hilBackingBuf + 2144\n"
-        ".globl hilNumGoals\n"
-        ".equ   hilNumGoals, hilBackingBuf + 2244\n"
-        ".globl hilTeam1Goals\n"
-        ".equ   hilTeam1Goals, hilBackingBuf + 2246\n"
-        ".globl hilTeam2Goals\n"
-        ".equ   hilTeam2Goals, hilBackingBuf + 2248\n"
-        ".globl hilPitchNumber\n"
-        ".equ   hilPitchNumber, hilBackingBuf + 2250\n"
-        ".globl hilMaxSubstitutes\n"
-        ".equ   hilMaxSubstitutes, hilBackingBuf + 2252\n"
-        ".globl hilStartOfGoalsBuffer\n"
-        ".equ   hilStartOfGoalsBuffer, hilBackingBuf + 2254\n"
-        ".globl inGameHilBuffer\n"
-        ".equ   inGameHilBuffer, hilBackingBuf + 2254 + 0x4A38\n");
+__asm__(".globl " _ASM_PFX "hilFileBuffer\n"
+        ".equ   " _ASM_PFX "hilFileBuffer, " _ASM_PFX "hilBackingBuf\n"
+        ".globl " _ASM_PFX "hilGameName\n"
+        ".equ   " _ASM_PFX "hilGameName, " _ASM_PFX "hilBackingBuf + 2044\n"
+        ".globl " _ASM_PFX "hilGameRound\n"
+        ".equ   " _ASM_PFX "hilGameRound, " _ASM_PFX "hilBackingBuf + 2144\n"
+        ".globl " _ASM_PFX "hilNumGoals\n"
+        ".equ   " _ASM_PFX "hilNumGoals, " _ASM_PFX "hilBackingBuf + 2244\n"
+        ".globl " _ASM_PFX "hilTeam1Goals\n"
+        ".equ   " _ASM_PFX "hilTeam1Goals, " _ASM_PFX "hilBackingBuf + 2246\n"
+        ".globl " _ASM_PFX "hilTeam2Goals\n"
+        ".equ   " _ASM_PFX "hilTeam2Goals, " _ASM_PFX "hilBackingBuf + 2248\n"
+        ".globl " _ASM_PFX "hilPitchNumber\n"
+        ".equ   " _ASM_PFX "hilPitchNumber, " _ASM_PFX "hilBackingBuf + 2250\n"
+        ".globl " _ASM_PFX "hilMaxSubstitutes\n"
+        ".equ   " _ASM_PFX "hilMaxSubstitutes, " _ASM_PFX "hilBackingBuf + 2252\n"
+        ".globl " _ASM_PFX "hilStartOfGoalsBuffer\n"
+        ".equ   " _ASM_PFX "hilStartOfGoalsBuffer, " _ASM_PFX "hilBackingBuf + 2254\n"
+        ".globl " _ASM_PFX "inGameHilBuffer\n"
+        ".equ   " _ASM_PFX "inGameHilBuffer, " _ASM_PFX "hilBackingBuf + 2254 + 0x4A38\n");
 #undef HIL_BACKING_BUF_SIZE
 
 /* ---- Audio buffers: sized to hold the real Amiga sound files.
@@ -761,20 +761,20 @@ uint32_t kGoalieSkillTables[8] = {
  * panic. Pack the whole region into one buffer matching the Amiga
  * BSS run and expose each slot via inline-asm .equ alias. */
 __attribute__((used, aligned(4))) uint8_t qualifiedTeamGridsBlock[0x2AC0];
-__asm__(".globl primaryQualifiedTeamGrids\n"
-        ".equ   primaryQualifiedTeamGrids, qualifiedTeamGridsBlock\n");
+__asm__(".globl " _ASM_PFX "primaryQualifiedTeamGrids\n"
+        ".equ   " _ASM_PFX "primaryQualifiedTeamGrids, " _ASM_PFX "qualifiedTeamGridsBlock\n");
 /* offset 0x2010 = 0x1AB8 + 0x558 (10 primary slots + 2 unnamed slots) */
-__asm__(".globl tertiaryQualifiedTeamGrid\n"
-        ".equ   tertiaryQualifiedTeamGrid, qualifiedTeamGridsBlock + 0x2010\n");
+__asm__(".globl " _ASM_PFX "tertiaryQualifiedTeamGrid\n"
+        ".equ   " _ASM_PFX "tertiaryQualifiedTeamGrid, " _ASM_PFX "qualifiedTeamGridsBlock + 0x2010\n");
 /* offset 0x22BC = 0x2010 + 0x2AC */
-__asm__(".globl euroCupTitleHolderGrid\n"
-        ".equ   euroCupTitleHolderGrid, qualifiedTeamGridsBlock + 0x22BC\n");
+__asm__(".globl " _ASM_PFX "euroCupTitleHolderGrid\n"
+        ".equ   " _ASM_PFX "euroCupTitleHolderGrid, " _ASM_PFX "qualifiedTeamGridsBlock + 0x22BC\n");
 /* offset 0x2568 = 0x22BC + 0x2AC */
-__asm__(".globl cupWinnersCupTitleHolderGrid\n"
-        ".equ   cupWinnersCupTitleHolderGrid, qualifiedTeamGridsBlock + 0x2568\n");
+__asm__(".globl " _ASM_PFX "cupWinnersCupTitleHolderGrid\n"
+        ".equ   " _ASM_PFX "cupWinnersCupTitleHolderGrid, " _ASM_PFX "qualifiedTeamGridsBlock + 0x2568\n");
 /* offset 0x2814 = 0x2568 + 0x2AC */
-__asm__(".globl uefaCupTitleHolderGrid\n"
-        ".equ   uefaCupTitleHolderGrid, qualifiedTeamGridsBlock + 0x2814\n");
+__asm__(".globl " _ASM_PFX "uefaCupTitleHolderGrid\n"
+        ".equ   " _ASM_PFX "uefaCupTitleHolderGrid, " _ASM_PFX "qualifiedTeamGridsBlock + 0x2814\n");
 
 /* gameRound: on Amiga the 1-byte gameRound label is followed by an
  * unnamed 99-byte BSS region (BSS_00_CD54 in SWOS2.s) that the
@@ -785,12 +785,12 @@ __asm__(".globl uefaCupTitleHolderGrid\n"
  * between gameRound and hilGameRound. Provide a 100-byte buffer to
  * match the Amiga round-string capacity. */
 __attribute__((used, aligned(4))) uint8_t gameRoundBuf[100];
-__asm__(".globl gameRound\n"
-        ".equ   gameRound, gameRoundBuf\n");
+__asm__(".globl " _ASM_PFX "gameRound\n"
+        ".equ   " _ASM_PFX "gameRound, " _ASM_PFX "gameRoundBuf\n");
 
 __attribute__((used, aligned(4))) uint8_t diyFileBufferCopyBuf[4096];
-__asm__(".globl diyFileBufferCopy\n"
-        ".equ   diyFileBufferCopy, diyFileBufferCopyBuf\n");
+__asm__(".globl " _ASM_PFX "diyFileBufferCopy\n"
+        ".equ   " _ASM_PFX "diyFileBufferCopy, " _ASM_PFX "diyFileBufferCopyBuf\n");
 
 /* diyTournamentTeamIds: on Amiga the label sits at `diyFileBufferCopy + 0x9A`.
  * _PresetCompetitionMenu writes selected team IDs via the named global
@@ -800,12 +800,12 @@ __asm__(".globl diyFileBufferCopy\n"
  * teamShuffleOrder. Same memory on Amiga; alias here so the SDL build sees
  * the writes. Without this, the load path reads zeros and
  * _VerifyTeamLoaded(0) panics on the first cached team pointer. */
-__asm__(".globl diyTournamentTeamIds\n"
-        ".equ   diyTournamentTeamIds, diyFileBufferCopyBuf + 0x9A\n");
+__asm__(".globl " _ASM_PFX "diyTournamentTeamIds\n"
+        ".equ   " _ASM_PFX "diyTournamentTeamIds, " _ASM_PFX "diyFileBufferCopyBuf + 0x9A\n");
 
 __attribute__((used, aligned(4))) uint8_t diyCompetitionStartBuf[4096];
-__asm__(".globl diyCompetitionStart\n"
-        ".equ   diyCompetitionStart, diyCompetitionStartBuf\n");
+__asm__(".globl " _ASM_PFX "diyCompetitionStart\n"
+        ".equ   " _ASM_PFX "diyCompetitionStart, " _ASM_PFX "diyCompetitionStartBuf\n");
 
 /* competitionFileBuffer: overlays careerFileBufferBuf at offset 93308.
  * Aliased in swos_globals_career_overlay.c. The 4 KB standalone backing
@@ -820,8 +820,8 @@ __asm__(".globl diyCompetitionStart\n"
  * _DIY_CacheSelectedTeamPointers / DIY_RecomputeCompetitionDerivedFields
  * resolve to. SDL must mirror this overlap so writes via the global
  * and reads via the offset hit the same bytes. */
-__asm__(".globl diyLeagueTeamIds\n"
-        ".equ   diyLeagueTeamIds, diyCompetitionStartBuf + 0x12E\n");
+__asm__(".globl " _ASM_PFX "diyLeagueTeamIds\n"
+        ".equ   " _ASM_PFX "diyLeagueTeamIds, " _ASM_PFX "diyCompetitionStartBuf + 0x12E\n");
 
 /* diyCupTeamIds: same Amiga BSS overlap pattern. The cup-init paths
  * write team IDs via the named global (e.g. _AppendTeamsToSelection
@@ -829,17 +829,17 @@ __asm__(".globl diyLeagueTeamIds\n"
  * _DIY_BuildTeamSelectionPointerCache reads them as
  * `(uint16_t *)(diyCompetitionStart + 0x24E)`. Alias to the same
  * bytes so populate-then-cache works. */
-__asm__(".globl diyCupTeamIds\n"
-        ".equ   diyCupTeamIds, diyCompetitionStartBuf + 0x24E\n");
+__asm__(".globl " _ASM_PFX "diyCupTeamIds\n"
+        ".equ   " _ASM_PFX "diyCupTeamIds, " _ASM_PFX "diyCompetitionStartBuf + 0x24E\n");
 
 /* diyTeamEntryOffsetsByIndex (offset 0x6E) and diyTeamShuffleIndices
  * (offset 0xEE) overlap diyCompetitionStart per the Amiga BSS layout.
  * Without this alias, _FindTeamInDIY reads zeros at `comp + 0x6E` and
  * fails to locate the player's team. */
-__asm__(".globl diyTeamEntryOffsetsByIndex\n"
-        ".equ   diyTeamEntryOffsetsByIndex, diyCompetitionStartBuf + 0x6E\n"
-        ".globl diyTeamShuffleIndices\n"
-        ".equ   diyTeamShuffleIndices, diyCompetitionStartBuf + 0xEE\n");
+__asm__(".globl " _ASM_PFX "diyTeamEntryOffsetsByIndex\n"
+        ".equ   " _ASM_PFX "diyTeamEntryOffsetsByIndex, " _ASM_PFX "diyCompetitionStartBuf + 0x6E\n"
+        ".globl " _ASM_PFX "diyTeamShuffleIndices\n"
+        ".equ   " _ASM_PFX "diyTeamShuffleIndices, " _ASM_PFX "diyCompetitionStartBuf + 0xEE\n");
 
 /* The named diy* uint16 globals at offsets 0x60..0x68 and 0x1BE..0x1C4
  * also overlap diyCompetitionStart per the SWOS2.s BSS layout. Without
@@ -848,28 +848,28 @@ __asm__(".globl diyTeamEntryOffsetsByIndex\n"
  * `careerSlotProcessingInProgress = diyLeagueCurrentSlot`) hit
  * different memory — the auto-play loop never observes the phase
  * boundary and runs forever. */
-__asm__(".globl diyMinSubstitutes\n"
-        ".equ   diyMinSubstitutes, diyCompetitionStartBuf + 0x60\n"
-        ".globl diyPointsForAWin\n"
-        ".equ   diyPointsForAWin, diyCompetitionStartBuf + 0x62\n"
-        ".globl diyLeagueMinSubstitutes\n"
-        ".equ   diyLeagueMinSubstitutes, diyCompetitionStartBuf + 0x64\n"
-        ".globl diyLeagueMaxSubstitutes\n"
-        ".equ   diyLeagueMaxSubstitutes, diyCompetitionStartBuf + 0x66\n"
-        ".globl diyHasGroups\n"
-        ".equ   diyHasGroups, diyCompetitionStartBuf + 0x68\n"
-        ".globl diyMatchesPlayedCount\n"
-        ".equ   diyMatchesPlayedCount, diyCompetitionStartBuf + 0x1BE\n"
-        ".globl diyLeagueCurrentSlot\n"
-        ".equ   diyLeagueCurrentSlot, diyCompetitionStartBuf + 0x1C0\n"
-        ".globl diyLeagueMatchProgress\n"
-        ".equ   diyLeagueMatchProgress, diyCompetitionStartBuf + 0x1C2\n"
-        ".globl diyLeagueTotalMatches\n"
-        ".equ   diyLeagueTotalMatches, diyCompetitionStartBuf + 0x1C4\n"
-        ".globl diyCompetitionFormat\n"
-        ".equ   diyCompetitionFormat, diyCompetitionStartBuf + 0x14A\n"
-        ".globl diyRoundFormat\n"
-        ".equ   diyRoundFormat, diyCompetitionStartBuf + 0x14C\n");
+__asm__(".globl " _ASM_PFX "diyMinSubstitutes\n"
+        ".equ   " _ASM_PFX "diyMinSubstitutes, " _ASM_PFX "diyCompetitionStartBuf + 0x60\n"
+        ".globl " _ASM_PFX "diyPointsForAWin\n"
+        ".equ   " _ASM_PFX "diyPointsForAWin, " _ASM_PFX "diyCompetitionStartBuf + 0x62\n"
+        ".globl " _ASM_PFX "diyLeagueMinSubstitutes\n"
+        ".equ   " _ASM_PFX "diyLeagueMinSubstitutes, " _ASM_PFX "diyCompetitionStartBuf + 0x64\n"
+        ".globl " _ASM_PFX "diyLeagueMaxSubstitutes\n"
+        ".equ   " _ASM_PFX "diyLeagueMaxSubstitutes, " _ASM_PFX "diyCompetitionStartBuf + 0x66\n"
+        ".globl " _ASM_PFX "diyHasGroups\n"
+        ".equ   " _ASM_PFX "diyHasGroups, " _ASM_PFX "diyCompetitionStartBuf + 0x68\n"
+        ".globl " _ASM_PFX "diyMatchesPlayedCount\n"
+        ".equ   " _ASM_PFX "diyMatchesPlayedCount, " _ASM_PFX "diyCompetitionStartBuf + 0x1BE\n"
+        ".globl " _ASM_PFX "diyLeagueCurrentSlot\n"
+        ".equ   " _ASM_PFX "diyLeagueCurrentSlot, " _ASM_PFX "diyCompetitionStartBuf + 0x1C0\n"
+        ".globl " _ASM_PFX "diyLeagueMatchProgress\n"
+        ".equ   " _ASM_PFX "diyLeagueMatchProgress, " _ASM_PFX "diyCompetitionStartBuf + 0x1C2\n"
+        ".globl " _ASM_PFX "diyLeagueTotalMatches\n"
+        ".equ   " _ASM_PFX "diyLeagueTotalMatches, " _ASM_PFX "diyCompetitionStartBuf + 0x1C4\n"
+        ".globl " _ASM_PFX "diyCompetitionFormat\n"
+        ".equ   " _ASM_PFX "diyCompetitionFormat, " _ASM_PFX "diyCompetitionStartBuf + 0x14A\n"
+        ".globl " _ASM_PFX "diyRoundFormat\n"
+        ".equ   " _ASM_PFX "diyRoundFormat, " _ASM_PFX "diyCompetitionStartBuf + 0x14C\n");
 
 /* diyPresetNameOfCompetition: aliased in swos_globals_career_overlay.c
  * at careerFileBufferBuf + 93312 (== competitionFileBuffer + 4 in the
@@ -897,10 +897,10 @@ __asm__(".globl diyMinSubstitutes\n"
  * sized this run as numberOfFiles(2) + 2 pad + foundFilenamesBuffer($77E)
  * = 0x782 bytes total. */
 __attribute__((used, aligned(4))) uint8_t numberOfFilesBuf[0x782];
-__asm__(".globl numberOfFiles\n"
-        ".equ   numberOfFiles, numberOfFilesBuf\n"
-        ".globl foundFilenamesBuffer\n"
-        ".equ   foundFilenamesBuffer, numberOfFilesBuf + 4\n");
+__asm__(".globl " _ASM_PFX "numberOfFiles\n"
+        ".equ   " _ASM_PFX "numberOfFiles, " _ASM_PFX "numberOfFilesBuf\n"
+        ".globl " _ASM_PFX "foundFilenamesBuffer\n"
+        ".equ   " _ASM_PFX "foundFilenamesBuffer, " _ASM_PFX "numberOfFilesBuf + 4\n");
 
 /* careerTeam: aliased in swos_globals_career_overlay.c to
  * careerFileBufferBuf + 56190. On Amiga it lives inside the career

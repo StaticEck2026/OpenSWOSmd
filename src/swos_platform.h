@@ -12,6 +12,22 @@
 /* The SDL build is hosted on x86/x64 with little-endian ordering. */
 #define SWOS_SDL_BUILD 1
 
+/* On Win32 PE-COFF the C compiler prepends '_' to every C global symbol
+ * at the assembler level (so a C `foo` becomes `_foo` in the .o file).
+ * ELF (Linux/macOS) does not. Many files alias buffers via inline asm
+ * (`.globl name; .equ name, base + offset`) which by default emits the
+ * unprefixed name — that links on Linux but not on Win32. Use _ASM_PFX
+ * inside __asm__ string literals to prefix the symbol name correctly.
+ *
+ *   __asm__(".globl " _ASM_PFX "foo\n"
+ *           ".equ "  _ASM_PFX "foo, " _ASM_PFX "base + 42\n");
+ *
+ * GCC's __USER_LABEL_PREFIX__ is "_" on platforms that prefix and empty
+ * elsewhere — stringify it via two-step macro expansion. */
+#define _SWOS_ASM_STR1(x) #x
+#define _SWOS_ASM_STR(x)  _SWOS_ASM_STR1(x)
+#define _ASM_PFX          _SWOS_ASM_STR(__USER_LABEL_PREFIX__)
+
 /* Disable all audio output. The SDL audio device is never opened, the
  * RJP1 player is never loaded, and every AudioSDL_* trigger is a no-op.
  * Useful for isolating audio-related issues during testing. */

@@ -1068,9 +1068,9 @@ Sprite* teamSpritesTable[101] = {
     &advertInGameSprites[0x5], &advertInGameSprites[0x6],
     &advertInGameSprites[0x7], (Sprite*)-1,
 };
-__asm__(".globl team1SpritesTable\n"
-        ".equ   team1SpritesTable, teamSpritesTable\n"
-        ".globl team2SpritesTable\n"
-        ".equ   team2SpritesTable, teamSpritesTable + 44\n"
-        ".globl allSpritesArray\n"
-        ".equ   allSpritesArray,   teamSpritesTable + 88\n");
+__asm__(".globl " _ASM_PFX "team1SpritesTable\n"
+        ".equ   " _ASM_PFX "team1SpritesTable, " _ASM_PFX "teamSpritesTable\n"
+        ".globl " _ASM_PFX "team2SpritesTable\n"
+        ".equ   " _ASM_PFX "team2SpritesTable, " _ASM_PFX "teamSpritesTable + 44\n"
+        ".globl " _ASM_PFX "allSpritesArray\n"
+        ".equ   " _ASM_PFX "allSpritesArray,   " _ASM_PFX "teamSpritesTable + 88\n");

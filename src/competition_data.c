@@ -602,17 +602,17 @@ EnglishLeaguesBlock englishLeaguesBlock = {
     }
 };
 
-__asm__(".globl englishLeagues\n"
-        ".equ   englishLeagues, englishLeaguesBlock\n");
+__asm__(".globl " _ASM_PFX "englishLeagues\n"
+        ".equ   " _ASM_PFX "englishLeagues, " _ASM_PFX "englishLeaguesBlock\n");
 /* offset 102 = sizeof(CompetitionLeague_4_8_2_24) */
-__asm__(".globl englishLeagues1\n"
-        ".equ   englishLeagues1, englishLeaguesBlock + 102\n");
+__asm__(".globl " _ASM_PFX "englishLeagues1\n"
+        ".equ   " _ASM_PFX "englishLeagues1, " _ASM_PFX "englishLeaguesBlock + 102\n");
 /* offset 182 = 102 + 80 */
-__asm__(".globl englishLeagues2\n"
-        ".equ   englishLeagues2, englishLeaguesBlock + 182\n");
+__asm__(".globl " _ASM_PFX "englishLeagues2\n"
+        ".equ   " _ASM_PFX "englishLeagues2, " _ASM_PFX "englishLeaguesBlock + 182\n");
 /* offset 262 = 102 + 80 + 80 */
-__asm__(".globl englishLeagues3\n"
-        ".equ   englishLeagues3, englishLeaguesBlock + 262\n");
+__asm__(".globl " _ASM_PFX "englishLeagues3\n"
+        ".equ   " _ASM_PFX "englishLeagues3, " _ASM_PFX "englishLeaguesBlock + 262\n");
 
 Playoffs_8 div1Playoffs = { { 47, 1, 8, -128, -124, 11, 0, 17, 1, 0, 4, 1, 51, 1, -108, 20 }, { aDiv1Playoffs, aPlayoffs }, { 0 } };
 Playoffs_8 div2Playoffs = { { 48, 1, 8, -128, -124, 11, 0, 17, 1, 0, 4, 1, 51, 1, -108, 20 }, { aDiv2Playoffs, aPlayoffs }, { 0 } };
@@ -1121,17 +1121,17 @@ EuroCupQualSeedBucketBlock euroCupQualSeedBucketBlock = {
     .bucket22Full = { 16, 12, 0, 17, 5, 27, 26, 24, 18, 23, 4, 10, 11, 19, 21, 22, 32, 34, 39, 40, 76, 78, 255 }
 };
 
-__asm__(".globl euroCupQualSeedBucket15\n"
-        ".equ   euroCupQualSeedBucket15, euroCupQualSeedBucketBlock\n");
+__asm__(".globl " _ASM_PFX "euroCupQualSeedBucket15\n"
+        ".equ   " _ASM_PFX "euroCupQualSeedBucket15, " _ASM_PFX "euroCupQualSeedBucketBlock\n");
 /* offset 15 */
-__asm__(".globl euroCupQualSeedBucket18\n"
-        ".equ   euroCupQualSeedBucket18, euroCupQualSeedBucketBlock + 15\n");
+__asm__(".globl " _ASM_PFX "euroCupQualSeedBucket18\n"
+        ".equ   " _ASM_PFX "euroCupQualSeedBucket18, " _ASM_PFX "euroCupQualSeedBucketBlock + 15\n");
 /* offset 33 = 15 + 18 */
-__asm__(".globl euroCupQualSeedBucket22\n"
-        ".equ   euroCupQualSeedBucket22, euroCupQualSeedBucketBlock + 33\n");
+__asm__(".globl " _ASM_PFX "euroCupQualSeedBucket22\n"
+        ".equ   " _ASM_PFX "euroCupQualSeedBucket22, " _ASM_PFX "euroCupQualSeedBucketBlock + 33\n");
 /* offset 55 = 15 + 18 + 22 */
-__asm__(".globl euroCupQualSeedBucket22Full\n"
-        ".equ   euroCupQualSeedBucket22Full, euroCupQualSeedBucketBlock + 55\n");
+__asm__(".globl " _ASM_PFX "euroCupQualSeedBucket22Full\n"
+        ".equ   " _ASM_PFX "euroCupQualSeedBucket22Full, " _ASM_PFX "euroCupQualSeedBucketBlock + 55\n");
 
 /* ======================================================================
  * Cup Pick Tables (per-region competition selection for career)
