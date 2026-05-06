@@ -105,14 +105,22 @@ void RJP1_StartSong(RJP1_Player *p, uint8_t song)
 {
     if (!p->loaded) return;
 
-    /* The upstream cyxx player rejects song=0 and remaps to song=1, but
-     * for single-subsong files (like SWOS's MENU.SNG, where sizes[2]==4
-     * → subsongs_count==1) the only valid entry is at index 0 and that
-     * remap reads past the table. Clamp into [0, subsongs_count - 1]
-     * with the understanding that the caller passed a 1-based number. */
+    /* Caller passes a 1-based subsong number (matching the cyxx
+     * upstream convention and the SWOS asm). Convert to a 0-based
+     * table index and clamp into [0, subsongs_count - 1].
+     *
+     * The earlier code used `idx = song` (0-based), which for
+     * single-subsong files like MENU.SNG (subsongs_count == 1)
+     * coincidentally clamped back to 0 and worked. For multi-subsong
+     * files like HERO.SNG, song=1 produced idx=1 which picks the
+     * SECOND subsong record — and that record's per-channel sequence
+     * bytes typically have one channel zeroed out (the singing
+     * channel in HERO), so the song played but with that channel
+     * silent. Subtracting 1 here picks subsong-1 = entry 0 = the
+     * full mix. */
     if (p->subsongs_count <= 0) return;
-    int idx = (int)song;
-    if (idx <= 0) idx = 0;
+    int idx = (int)song - 1;
+    if (idx < 0) idx = 0;
     if (idx >= p->subsongs_count) idx = p->subsongs_count - 1;
 
     /* Clear any in-flight playback. */
