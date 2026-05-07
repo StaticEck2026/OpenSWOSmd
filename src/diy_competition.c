@@ -8371,13 +8371,28 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
             _PanicHaltLoop();
         }
 
-        uint16_t *seedTable = (uint16_t *)(a5 + 7 + seedOff);
+        /* The seed table is the static competition's unk1[] array of
+         * packed (country, ordinal) byte pairs. On Amiga m68k a
+         * `move.w (an)+,d0` reads it as a big-endian uint16 — the same
+         * format every other team-id consumer expects (e.g. the values
+         * `_CopySelectedTeamNumbers` just wrote into diyTournamentTeamIds
+         * via PACK_BE_U16). Reading as raw `*(uint16_t *)` on the SDL LE
+         * host byte-swaps each entry, the find-loop below never matches,
+         * the reorder no-ops, and the cup grid stays in selTeamsPtr
+         * resolution order — exactly the "preset WC wrong groups"
+         * symptom (Group A draws as Romania/Russia/Sweden/Switzerland
+         * because those are selTeamsPtr[0..3] from batched file load,
+         * instead of unk1[0..3] which is Colombia/Romania/Switzerland/
+         * Trinidad-Tobago). Decode each entry once via BE_READ_U16 so
+         * the comparison sees the right value on both hosts. */
+        const uint8_t *seedTable = (const uint8_t *)(a5 + 7 + seedOff);
         uint8_t *a3 = a6 + 0x5A;
         int16_t count = (int8_t)a5[0xF] - 1;
         uint16_t numTeams16 = (uint16_t)a6s->numTeams;  /* 0x32 */
 
         for (int16_t i = count; i >= 0; i--) {
-            uint16_t seedId = *seedTable++;
+            uint16_t seedId = BE_READ_U16(seedTable);
+            seedTable += 2;
             uint16_t *teamIds = (uint16_t *)(a6 + 0x9A);
             uint16_t d1 = 0;
 
