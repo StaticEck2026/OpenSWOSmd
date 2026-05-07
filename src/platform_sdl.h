@@ -15,8 +15,17 @@
 #define PLATFORM_SCREEN_H 272
 
 /* ---- Lifecycle ----------------------------------------------------- */
-int  Platform_Init(int win_scale);
+/* `start_fullscreen` selects fullscreen-desktop mode at window creation —
+ * the SDL renderer's logical size handles letterboxing automatically so
+ * the original 336x272 frame stays pixel-perfect inside whatever
+ * resolution the desktop is running at. The user can also toggle at
+ * runtime via Alt+Enter (handled in this file). */
+int  Platform_Init(int win_scale, int start_fullscreen);
 void Platform_Shutdown(void);
+
+/* Toggle / set fullscreen at runtime. Alt+Enter calls this internally;
+ * exposed here in case a future settings menu needs a programmatic hook. */
+void Platform_ToggleFullscreen(void);
 
 /* Full-fat vblank: pump events, render the bitplanes, present, and
  * pace to the next 50 Hz boundary. Intended to run on the main thread

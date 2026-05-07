@@ -90,9 +90,35 @@ static void chdir_to_binary(const char *argv0)
     }
 }
 
+static void print_usage(const char *argv0)
+{
+    fprintf(stderr,
+        "Usage: %s [options]\n"
+        "\n"
+        "Options:\n"
+        "  -f, --fullscreen   Start in fullscreen-desktop mode (letterboxed).\n"
+        "                     Toggle at runtime with Alt+Enter.\n"
+        "  -h, --help         Show this help and exit.\n",
+        argv0 ? argv0 : "SWOS");
+}
+
 int main(int argc, char **argv)
 {
-    (void)argc;
+    int start_fullscreen = 0;
+
+    for (int i = 1; i < argc; ++i) {
+        const char *a = argv[i];
+        if (strcmp(a, "-f") == 0 || strcmp(a, "--fullscreen") == 0) {
+            start_fullscreen = 1;
+        } else if (strcmp(a, "-h") == 0 || strcmp(a, "--help") == 0) {
+            print_usage(argv[0]);
+            return 0;
+        } else {
+            fprintf(stderr, "Unknown argument: %s\n", a);
+            print_usage(argv[0]);
+            return 1;
+        }
+    }
 
     chdir_to_binary(argv ? argv[0] : NULL);
 
@@ -117,7 +143,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    if (Platform_Init(WIN_SCALE) != 0) {
+    if (Platform_Init(WIN_SCALE, start_fullscreen) != 0) {
         fprintf(stderr, "Platform_Init failed\n");
         SDL_Quit();
         return 1;

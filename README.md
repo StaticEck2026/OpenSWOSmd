@@ -119,6 +119,16 @@ its own directory so `data/`, `grafs/`, `sound/`, and `save/` resolve
 correctly. `stderr` is auto-redirected to `SWOS.log` next to the binary
 (set `SWOS_NO_LOG=1` in the environment to disable).
 
+### Command-line options
+
+```
+-f, --fullscreen   Start in fullscreen-desktop mode (letterboxed —
+                   keeps the desktop resolution, scales 336×272 up to
+                   fit, black bars on the sides). Toggle at runtime
+                   with Alt+Enter.
+-h, --help         Show usage and exit.
+```
+
 ## Controls
 
 ### Menus
@@ -155,6 +165,7 @@ be hot-plugged; new pads fill the lowest empty slot.
 
 | Key          | Action                                  |
 |--------------|-----------------------------------------|
+| Alt + Enter  | Toggle fullscreen / windowed            |
 | F9 / F11 / F12 / PrintScreen | Save screenshot to `bin/swos_shotNNN.png` |
 
 ### Gamepad not detected?

@@ -175,7 +175,7 @@ extern void Platform_RewireCustom(void);
 extern void Platform_PreArmIsrGlobals(void);
 
 /* ---- Lifecycle ----------------------------------------------------- */
-int Platform_Init(int win_scale)
+int Platform_Init(int win_scale, int start_fullscreen)
 {
     if (win_scale < 1) win_scale = 1;
     /* Repoint `custom` at our stub storage *before* the tick timer
@@ -183,11 +183,20 @@ int Platform_Init(int win_scale)
     Platform_RewireCustom();
     Platform_PreArmIsrGlobals();
 
+    Uint32 wflags = SDL_WINDOW_SHOWN;
+    if (start_fullscreen) {
+        /* FULLSCREEN_DESKTOP keeps the desktop resolution and lets
+         * SDL_RenderSetLogicalSize letterbox the 336x272 frame inside —
+         * no resolution change, no mode switch, fast Alt-Tab back to
+         * windowed. */
+        wflags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+    }
+
     s_window = SDL_CreateWindow(
         "SWOS",
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         PLATFORM_SCREEN_W * win_scale, PLATFORM_SCREEN_H * win_scale,
-        SDL_WINDOW_SHOWN);
+        wflags);
     if (!s_window) {
         fprintf(stderr, "SDL_CreateWindow: %s\n", SDL_GetError());
         return -1;
@@ -279,6 +288,19 @@ void Platform_Shutdown(void)
     if (s_texture)  { SDL_DestroyTexture(s_texture);   s_texture = NULL; }
     if (s_renderer) { SDL_DestroyRenderer(s_renderer); s_renderer = NULL; }
     if (s_window)   { SDL_DestroyWindow(s_window);     s_window = NULL; }
+}
+
+void Platform_ToggleFullscreen(void)
+{
+    if (!s_window) return;
+    Uint32 flags = SDL_GetWindowFlags(s_window);
+    int going_fullscreen = (flags & SDL_WINDOW_FULLSCREEN_DESKTOP) == 0;
+    SDL_SetWindowFullscreen(s_window,
+        going_fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+    /* Hide the cursor in fullscreen, show it in windowed. The SDL window
+     * is small (336*scale × 272*scale) so the cursor is useful for the
+     * window-close button; in fullscreen there's nothing to click. */
+    SDL_ShowCursor(going_fullscreen ? SDL_DISABLE : SDL_ENABLE);
 }
 
 /* ---- Palette refresh ---------------------------------------------- */
@@ -486,6 +508,16 @@ static void pump_events_any_thread(void)
                  ev.key.keysym.sym == SDLK_F12 ||
                  ev.key.keysym.sym == SDLK_PRINTSCREEN)) {
                 s_screenshot_request = 1;
+            }
+            /* Alt+Enter: toggle fullscreen. Swallow the event so it
+             * doesn't also reach the menu input layer as ENTER (which
+             * would fire the currently-selected button). */
+            if (ev.key.repeat == 0 &&
+                (ev.key.keysym.sym == SDLK_RETURN ||
+                 ev.key.keysym.sym == SDLK_KP_ENTER) &&
+                (ev.key.keysym.mod & KMOD_ALT)) {
+                Platform_ToggleFullscreen();
+                continue;
             }
             /* fallthrough */
         case SDL_KEYUP:
