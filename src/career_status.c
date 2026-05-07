@@ -1081,7 +1081,13 @@ void _UpdateCareerFinancesAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team) {
     if (isNationalSelector != 0)
         return;
 
-    int16_t compType = (int16_t)PACK_BE_U16(comp->base.compId, comp->base.slotId);  /* word at 0x2C: (compId << 8) | slotId */
+    /* Read the (compId, slotId) word at +0x2C. *(uint16_t *) gives the
+     * value that was written via *(uint16_t *)&compId = slot regardless
+     * of host endian. PACK_BE_U16(compId, slotId) is wrong on SDL LE
+     * because the byte layout is reversed (slot ends up in compId byte,
+     * not slotId byte) — that produced compType = slot << 8 and made
+     * every match dispatch to the panic branch. */
+    int16_t compType = (int16_t)*(uint16_t *)&comp->base.compId;
     uint32_t d7;
 
     if (compType == 0) {

@@ -2536,9 +2536,13 @@ outer_loop:
         /* Use diyFileBufferCopy round index */
         roundIdx = ((DIYCompetition *)diyFileBufferCopy)->roundComplete;
     }
-    /* Asm does move.w $2C(a2),d0 / cmp.b (a6),d0 — uses low byte of word at 0x2C
-     * which on big-endian is byte at offset 0x2D (slotId), matching the cache builder */
-    uint8_t compId = a2s->slotId;
+    /* Read low byte of (compId, slotId) word at +0x2C — same fix pattern
+     * as _DIY_RecordLeagueFixtureResultAndAdvanceProgress: a2s->slotId
+     * on SDL LE is always 0 because the slot index got written into the
+     * compId byte instead. *(uint16_t *) gives the same value on both
+     * hosts. Without this, cup-bracket progress for CL/UEFA/CWC reads
+     * the wrong cache entry on SDL. */
+    uint8_t compId = (uint8_t)*(uint16_t *)&a2s->compId;
 
     /* Search teamSelectionKeyCache for matching entry */
     uint8_t *cacheEntry = teamSelectionKeyCache;
@@ -2763,9 +2767,19 @@ void _DIY_RecordLeagueFixtureResultAndAdvanceProgress(void)
     uint8_t *cache = teamSelectionKeyCache;
     int16_t cacheCount = teamSelectionKeyCacheCount - 1;
     int16_t curRound = ((DIYCompetition *)diyFileBufferCopy)->roundComplete;
-    /* Asm: move.w $2C(a6),d0 / cmp.b (a4),d0 — low byte of word at 0x2C on
-     * big-endian is byte at 0x2D (slotId), matching the cache builder */
-    uint8_t compId = a6s->slotId;
+    /* Asm: move.w $2C(a6),d0 / cmp.b (a4),d0 — read the (compId, slotId)
+     * word at +0x2C, then compare its low byte to the cache header's
+     * teamSlot byte. On Amiga BE the word's low byte is the slotId
+     * field at +0x2D (which the cache builder also reads as
+     * *(uint16_t *)&compId via the same low-byte-of-word path). On SDL
+     * LE the word's low byte is the compId field at +0x2C — different
+     * memory location, but the same VALUE because *(uint16_t *) on LE
+     * gives the same number that was written. The previous version
+     * read `a6s->slotId` directly which on SDL LE is always zero (slot
+     * value got written into compId byte instead), so cache lookups
+     * for any slot > 0 silently matched slot 0's cache entries —
+     * causing Juventus's CL fixtures to overwrite Serie A's. */
+    uint8_t compId = (uint8_t)*(uint16_t *)&a6s->compId;
 
     while (cacheCount >= 0) {
         if (cache[0] == compId) {
@@ -9691,7 +9705,13 @@ uint16_t _PlayDIYLeagueMatchAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
     isGameFriendly = 0;
 
     /* d7 = word at offset 0x2C (compId|slotId) */
-    int16_t d7val = (int16_t)PACK_BE_U16(diy->compId, diy->slotId);  /* word read of compId+slotId at 0x2C */
+    /* Read (compId, slotId) word at +0x2C. Don't use PACK_BE_U16 here:
+     * the word was written via *(uint16_t *)&compId = slot, so on
+     * SDL LE the compId byte holds `slot` and slotId holds 0 (Amiga BE
+     * is the reverse). Reading via *(uint16_t *) preserves the value
+     * across hosts; PACK_BE_U16(compId, slotId) gives `slot << 8` on
+     * SDL instead of `slot`. */
+    int16_t d7val = (int16_t)*(uint16_t *)&diy->compId;
 
     /* d0 = (playEachTeam == 1) ? 0xFF : 0 */
     int16_t d0val = (diy->playEachTeam == 1) ? 0xFF : 0;
@@ -9822,7 +9842,13 @@ uint16_t _PlayDIYCupFixtureAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
     cachedViewResultTeam2Goals = (int16_t)d2;
 
     /* Common values for InitializeInGameTeamsAndStartGame */
-    int16_t d7val = (int16_t)PACK_BE_U16(diy->compId, diy->slotId);  /* word read of compId+slotId at 0x2C */
+    /* Read (compId, slotId) word at +0x2C. Don't use PACK_BE_U16 here:
+     * the word was written via *(uint16_t *)&compId = slot, so on
+     * SDL LE the compId byte holds `slot` and slotId holds 0 (Amiga BE
+     * is the reverse). Reading via *(uint16_t *) preserves the value
+     * across hosts; PACK_BE_U16(compId, slotId) gives `slot << 8` on
+     * SDL instead of `slot`. */
+    int16_t d7val = (int16_t)*(uint16_t *)&diy->compId;
 
     /* Determine play path based on roundLegs[cupRoundIdx], replayField, competitionFormat */
     int16_t a5_66 = (int16_t)compEx->matchData.cup.roundLegs[cupRoundIdx];
