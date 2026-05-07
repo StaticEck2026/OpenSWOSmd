@@ -271,7 +271,14 @@ int16_t _IsPlayerInCareerContest(uint16_t teamNumber, uint16_t playerOrdinal)
 
     entry = homeMarketPlayers;
     for (i = 0; i < numHomeMarketPlayers; i++) {
-        if (*(uint16_t *)entry == teamNumber && entry[2] == (uint8_t)playerOrdinal)
+        /* Each entry stores [countryByte, ordinalByte, playerOrdByte, _].
+         * Read as PACK_BE_U16 so the resulting uint16 has country in
+         * the high byte (matching findTeamInCache's PACK_BE_U16 lookup
+         * convention) — a raw `*(uint16_t *)entry` would byte-swap on
+         * LE and the comparison against PACK_BE_U16-formatted
+         * teamNumber would never match. */
+        if (PACK_BE_U16(entry[0], entry[1]) == teamNumber &&
+            entry[2] == (uint8_t)playerOrdinal)
             return (int16_t)i;                      /* found at index i */
         entry += MARKET_ENTRY_SIZE;
     }
@@ -300,7 +307,12 @@ uint16_t _AddPlayerToCareerContest(uint16_t teamNumber, uint16_t playerOrdinal)
 
     offset = (uint32_t)numHomeMarketPlayers * MARKET_ENTRY_SIZE;
     entry = homeMarketPlayers + offset;
-    *(uint16_t *)entry = teamNumber;                /* move.w d0,(a1) */
+    /* teamNumber is in PACK_BE_U16 format (country << 8 | ordinal).
+     * Write byte-wise so byte[0]=country, byte[1]=ordinal, matching
+     * the file format — a `*(uint16_t *)entry = teamNumber` on LE
+     * would byte-swap and put ordinal at byte[0]. */
+    entry[0] = (uint8_t)(teamNumber >> 8);          /* country */
+    entry[1] = (uint8_t)teamNumber;                  /* ordinal */
     entry[2] = (uint8_t)playerOrdinal;              /* move.b d1,2(a1) */
     numHomeMarketPlayers++;                          /* addq.w #1 → clears Z */
 
@@ -360,7 +372,9 @@ int16_t _FindForeignMarketPlayer(uint16_t teamId, uint16_t playerOrdinal)
 
     entry = foreignMarketPlayers;
     for (i = 0; i < numForeignMarketPlayers; i++) {
-        if (*(uint16_t *)entry == teamId && entry[2] == (uint8_t)playerOrdinal)
+        /* PACK_BE_U16 read — see _IsPlayerInCareerContest comment. */
+        if (PACK_BE_U16(entry[0], entry[1]) == teamId &&
+            entry[2] == (uint8_t)playerOrdinal)
             return (int16_t)i;                      /* found at index i */
         entry += MARKET_ENTRY_SIZE;
     }
@@ -389,7 +403,9 @@ uint16_t _AddForeignMarketPlayer(uint16_t teamId, uint16_t playerOrdinal)
 
     offset = (uint32_t)numForeignMarketPlayers * MARKET_ENTRY_SIZE;
     entry = foreignMarketPlayers + offset;
-    *(uint16_t *)entry = teamId;                    /* move.w d0,(a1) */
+    /* Byte-wise PACK_BE_U16 write — see _AddPlayerToCareerContest. */
+    entry[0] = (uint8_t)(teamId >> 8);              /* country */
+    entry[1] = (uint8_t)teamId;                      /* ordinal */
     entry[2] = (uint8_t)playerOrdinal;              /* move.b d1,2(a1) */
     numForeignMarketPlayers++;
 
@@ -640,10 +656,17 @@ retry:
     teamIdx = (uint16_t)((uint32_t)teamIdx * sizeof(TeamFileEx));
     teamEntry = &selTeamsPtr + teamIdx;
 
-    /* Must be same country but different team */
+    /* Must be same country but different team. teamEntry points at
+     * a TeamFile so byte[0]=country, byte[1]=ordinal. Read teamNum
+     * as PACK_BE_U16 (country << 8 | ordinal) so it's comparable to
+     * selTeamNumber and survives findTeamInCache lookup later. The
+     * raw `*(uint16_t *)` read on LE would byte-swap and produce a
+     * format mismatch — both with the selTeamNumber check here AND
+     * with downstream consumers via _AddPlayerToCareerContest →
+     * homeMarketPlayers → _PlayerMarketBuildVisiblePlayerList. */
     if (*teamEntry != homeCountry)                          /* cmp.b (a0),d3 */
         goto retry;
-    teamNum = *(uint16_t *)teamEntry;                       /* move.w (a0),d1 */
+    teamNum = PACK_BE_U16(teamEntry[0], teamEntry[1]);
     if (teamNum == selTeamNumber)                            /* cmp.w (selTeamNumber).l,d1 */
         goto retry;
 
@@ -842,7 +865,7 @@ restart:
             {
                 uint16_t pickIdx = (uint16_t)(((uint32_t)rand * numHomeMarketPlayers) >> 8);
                 uint8_t *entry = homeMarketPlayers + (uint32_t)pickIdx * MARKET_ENTRY_SIZE;
-                uint16_t teamNum = *(uint16_t *)entry;
+                uint16_t teamNum = PACK_BE_U16(entry[0], entry[1]);
                 uint8_t playerOrd = entry[2];
                 _RemovePlayerFromCareerContest(teamNum, playerOrd);
             }
@@ -900,7 +923,7 @@ restart:
             {
                 uint16_t pickIdx = (uint16_t)(((uint32_t)rand * numForeignMarketPlayers) >> 8);
                 uint8_t *entry = foreignMarketPlayers + (uint32_t)pickIdx * MARKET_ENTRY_SIZE;
-                uint16_t teamId = *(uint16_t *)entry;
+                uint16_t teamId = PACK_BE_U16(entry[0], entry[1]);
                 uint8_t playerOrd = entry[2];
                 _RemoveForeignMarketPlayer(teamId, playerOrd);
             }
@@ -969,7 +992,8 @@ int16_t _IsOfferTeamPlayerPairUnique(uint16_t teamId, uint16_t playerIdx)
 
     entry = transferOfferTable;
     for (i = count - 1; i >= 0; i--) {
-        if (*(uint16_t *)entry == teamId) {
+        /* PACK_BE_U16 read — entry layout matches market entries. */
+        if (PACK_BE_U16(entry[0], entry[1]) == teamId) {
             if (entry[2] == pidx)
                 return 0;  /* duplicate */
             if (entry[3] == pidx)
@@ -2612,7 +2636,7 @@ void _PlayerMarketItemOnSelect(MenuEntry *entry)
 
     /* Get the visible item pointer */
     uint8_t *item = (uint8_t *)playerMarketVisibleItems[relIdx];
-    uint16_t teamNum = *(uint16_t *)item;
+    uint16_t teamNum = PACK_BE_U16(item[0], item[1]);
     int16_t playerOrd = (int8_t)item[2];
 
     _ShowPlayerOfferMenuForPlayer(teamNum, (uint16_t)playerOrd);
@@ -2647,14 +2671,14 @@ void _PlayerMarketItemBeforeDraw(MenuEntry *entry)
 
         if (showDomesticPlayerMarket) {
             /* Domestic player */
-            uint16_t teamNum = *(uint16_t *)item;
+            uint16_t teamNum = PACK_BE_U16(item[0], item[1]);
             TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
             extra = (uint8_t *)teamData->team.teamName; /* team name area */
             uint8_t ordinal = item[2];
             player = (uint8_t *)teamData + (uint16_t)ordinal * 0x26;
         } else {
             /* Foreign player */
-            uint16_t teamNum = *(uint16_t *)item;
+            uint16_t teamNum = PACK_BE_U16(item[0], item[1]);
             uint8_t playerOrd = item[2];
             PoolPlayer *pp = _FindPoolplyrDatPlayer(teamNum, playerOrd);
             extra = (uint8_t *)pp + 3; /* name area */
@@ -4870,7 +4894,14 @@ void _PlayerMarketBuildVisiblePlayerList(void)
             return;
         uint16_t i = count;
         do {
-            uint16_t teamNum = *(uint16_t *)a1;
+            /* a1 points at a homeMarketPlayers entry: byte[0]=country,
+             * byte[1]=ordinal, byte[2]=playerOrd. Read teamNum as
+             * PACK_BE_U16 so it matches the format _VerifyTeamLoaded /
+             * findTeamInCache use to look up team entries — a raw
+             * `*(uint16_t *)a1` on LE would byte-swap the country and
+             * ordinal, producing a teamNum that's never in the cache
+             * and panicking. */
+            uint16_t teamNum = PACK_BE_U16(a1[0], a1[1]);
             TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
             uint16_t ordinal = (uint16_t)(uint8_t)a1[2];
             uint8_t *blockPtr = (uint8_t *)teamData + (uint32_t)ordinal * 38;  /* mulu #$26 */
@@ -4896,7 +4927,8 @@ void _PlayerMarketBuildVisiblePlayerList(void)
             return;
         uint16_t i = count;
         do {
-            uint16_t teamId = *(uint16_t *)a1;
+            /* PACK_BE_U16 read — see earlier comment in domestic loop. */
+            uint16_t teamId = PACK_BE_U16(a1[0], a1[1]);
             uint8_t ordinal = a1[2];
             PoolPlayer *pool = _FindPoolplyrDatPlayer(teamId, (uint16_t)ordinal);
             uint8_t *blockPtr = (uint8_t *)pool - 0x38;   /* lea -$38(a0),a0 */
