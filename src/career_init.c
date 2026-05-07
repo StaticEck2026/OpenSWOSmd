@@ -15,6 +15,7 @@
 #include "random.h"
 #include "string_utils.h"
 #include "panic.h"
+#include "auto_skip_debug.h"
 
 /* ---- External globals (all in SWOS2.s BSS) ---- */
 extern uint16_t numPlayersOnTransferMarket;
@@ -805,6 +806,11 @@ uint16_t _Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t 
 
 found:
     {
+#ifdef SWOS_DEBUG_AUTOSKIP
+        SWOS_AUTOSKIP_LOG("[eurocup] team 0x%04X qualifies euroCupIndex=%u (cupCopy=%p) "
+                          "-> activating slot 3",
+                          (unsigned)target, (unsigned)euroCupIndex, (void *)cupCopy);
+#endif
         /* Save quaternary slot state */
         uint16_t savedA = quaternaryCompSlotStateA;
         uint16_t savedB = quaternaryCompSlotStateB;

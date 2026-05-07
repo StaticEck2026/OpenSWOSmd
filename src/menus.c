@@ -5,6 +5,10 @@
  */
 #include "menus.h"
 #include "endian_helpers.h"
+#include "auto_skip_debug.h"
+#ifdef SWOS_DEBUG_AUTOSKIP
+#include <stdio.h>
+#endif
 #include "game_utils.h"
 #include "game_types.h"
 #include "frontend.h"
@@ -6336,6 +6340,18 @@ void _CareerGameListCommon(MenuEntry *item)
          * so the LE host produces the `(country<<8)|ordinal` value
          * findTeamInCache / _VerifyTeamLoaded compare against. */
         uint16_t topTeamIdx = BE_READ_U16(a4 + 0x0C);
+#ifdef SWOS_DEBUG_AUTOSKIP
+        /* Trace which fixture entry we're verifying so we can match a
+         * panic back to a competition slot and a specific game. */
+        fprintf(stderr,
+                "[gamelist] entry d0=%u contest=%p game=%p slotType=%u "
+                "topRaw=(0x%02X 0x%02X) topId=0x%04X botRaw=(0x%02X 0x%02X) botId=0x%04X\n",
+                (unsigned)d0,
+                (void *)a6, (void *)a4, (unsigned)(a6[0] & 0xFF),
+                (unsigned)a4[0x0C], (unsigned)a4[0x0D], (unsigned)topTeamIdx,
+                (unsigned)a4[0x0E], (unsigned)a4[0x0F],
+                (unsigned)BE_READ_U16(a4 + 0x0E));
+#endif
         TeamFileEx *topTeamData = _VerifyTeamLoaded(topTeamIdx);
         careerGameTopTeamName = (char *)topTeamData->team.teamName;
 
