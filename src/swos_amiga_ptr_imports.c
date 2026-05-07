@@ -1023,11 +1023,75 @@ uint32_t sellExchangeStrings[4] = {
     (uint32_t)(uintptr_t)aSorryAAreUnwil,
     (uint32_t)(uintptr_t)aSorryAAreUnwil_0,
 };
-uint32_t positionFilterStringTable[1] = {
-    (uint32_t)(uintptr_t)playerMarketFilterPosition,
+/* positionFilterStringTable / skillFilterStringTable / countryFilterStringTable
+ * — same auto-extractor truncation as the diyCup* tables: only the
+ * first 4 bytes (the indexPtr) were emitted, but the menu engine
+ * (menu_system.c:632 ENTRY_STRING_TABLE) reads at +0 (indexPtr),
+ * +4 (base, i16), and +6 (4-byte string pointers indexed by
+ * `*indexPtr - base`). With the truncated form, the +6 read landed
+ * in adjacent BSS and produced NULL/garbage — _DrawMenuTextCentered
+ * (entry 4 of the player-market menu) crashed on the position
+ * filter when ShowPlayerMarketInit ran.
+ *
+ * Layouts recovered from SWOS2.s line 102593-102620. The country
+ * filter table immediately follows skillFilterStringTable in the
+ * original (no separate label) — we expose it as its own symbol
+ * since nothing in our menu_data.c references it via stride. */
+/* playerMarketFilterPosition / playerMarketFilterAgeGroup are
+ * already extern-declared earlier in this file as `char[]`; the
+ * actual definition is `uint16_t[1]` in swos_amiga_data_imports.c.
+ * We just need their address — the menu engine reads through it as
+ * `*(uint16_t *)indexPtr` regardless of declared type. */
+extern char playerMarketFilterCountry[];
+extern const char aAny[];
+extern const char aGoalkeeper[], aDefender[], aMidfielder[], aAttacker[];
+extern const char aPassing[], aShooting[], aHeading[], aTackling[];
+extern const char aBallControl[], aSpeed[], aFinishing[];
+extern const char aEuropean[], aNorthAmerican[], aSouthAmerican[];
+extern const char aAfrican[], aAsian[], aOceanian[];
+
+struct __attribute__((packed)) {
+    uint32_t indexPtr; uint16_t base; uint32_t entries[5];
+} positionFilterStringTable = {
+    (uint32_t)(uintptr_t)playerMarketFilterPosition, (uint16_t)-1,
+    {
+        (uint32_t)(uintptr_t)aAny,
+        (uint32_t)(uintptr_t)aGoalkeeper,
+        (uint32_t)(uintptr_t)aDefender,
+        (uint32_t)(uintptr_t)aMidfielder,
+        (uint32_t)(uintptr_t)aAttacker,
+    }
 };
-uint32_t skillFilterStringTable[1] = {
-    (uint32_t)(uintptr_t)playerMarketFilterAgeGroup,
+
+struct __attribute__((packed)) {
+    uint32_t indexPtr; uint16_t base; uint32_t entries[8];
+} skillFilterStringTable = {
+    (uint32_t)(uintptr_t)playerMarketFilterAgeGroup, (uint16_t)-1,
+    {
+        (uint32_t)(uintptr_t)aAny,
+        (uint32_t)(uintptr_t)aPassing,
+        (uint32_t)(uintptr_t)aShooting,
+        (uint32_t)(uintptr_t)aHeading,
+        (uint32_t)(uintptr_t)aTackling,
+        (uint32_t)(uintptr_t)aBallControl,
+        (uint32_t)(uintptr_t)aSpeed,
+        (uint32_t)(uintptr_t)aFinishing,
+    }
+};
+
+struct __attribute__((packed)) {
+    uint32_t indexPtr; uint16_t base; uint32_t entries[7];
+} countryFilterStringTable = {
+    (uint32_t)(uintptr_t)playerMarketFilterCountry, 0,
+    {
+        (uint32_t)(uintptr_t)aEuropean,
+        (uint32_t)(uintptr_t)aNorthAmerican,
+        (uint32_t)(uintptr_t)aSouthAmerican,
+        (uint32_t)(uintptr_t)aAfrican,
+        (uint32_t)(uintptr_t)aAsian,
+        (uint32_t)(uintptr_t)aOceanian,
+        (uint32_t)(uintptr_t)aAny,
+    }
 };
 uint32_t positionGroupTable[4] = {
     (uint32_t)(uintptr_t)positionGroupGoalkeeper,
