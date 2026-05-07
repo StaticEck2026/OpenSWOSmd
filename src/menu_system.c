@@ -520,12 +520,35 @@ void _DrawBackAllItems(uint16_t maxItems, MenuEntry *firstEntry)
 __attribute__((used, externally_visible))
 void _CallDrawMenuItem(MenuEntry *entry)
 {
+#ifdef SWOS_SDL_BUILD
+    /* The Amiga "double-flush" pattern (draw, vsync, draw, vsync) is
+     * how the original code keeps both buffers in sync after a partial
+     * redraw — each draw goes to one buffer; the swap inside vsync
+     * makes the OTHER buffer the new drawing target, so a second draw
+     * lands in it too.
+     *
+     * On SDL each `_WaitForVSync` is a visible frame present. Doing
+     * the double-flush emits TWO present cycles per partial redraw,
+     * and a transition like _PlayMatchChangeTactics chains 5+ of
+     * these — every present shows slightly different intermediate
+     * state and the user sees flicker.
+     *
+     * Same end-state, fewer visible frames: draw once, vsync (which
+     * presents the new state), then memcpy the displayed buffer to
+     * the now-drawing-target buffer so both are in sync. No second
+     * present required. */
+    _DrawMenuBackWithCheck(entry);
+    _DrawMenuItem(entry);
+    _WaitForVSync();
+    _BlitterCopyOverlayToScreen();
+#else
     _DrawMenuBackWithCheck(entry);
     _DrawMenuItem(entry);
     _WaitForVSync();
     _DrawMenuBackWithCheck(entry);
     _DrawMenuItem(entry);
     _WaitForVSync();
+#endif
 }
 
 /* ================================================================
@@ -1771,10 +1794,19 @@ void _DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry)
 __attribute__((used, externally_visible))
 void _DrawMenuItemsWaitForVSync(const int16_t *list)
 {
+#ifdef SWOS_SDL_BUILD
+    /* See _CallDrawMenuItem comment — collapse the Amiga double-flush
+     * to single vsync + memcpy sync on SDL so we present once instead
+     * of twice per partial redraw. */
+    _DrawMenuItemsFromList(list);
+    _WaitForVSync();
+    _BlitterCopyOverlayToScreen();
+#else
     _DrawMenuItemsFromList(list);
     _WaitForVSync();
     _DrawMenuItemsFromList(list);
     _WaitForVSync();
+#endif
 }
 
 /* ================================================================
@@ -1788,10 +1820,17 @@ void _DrawMenuItemsWaitForVSync(const int16_t *list)
 __attribute__((used, externally_visible))
 void _CallDrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry)
 {
+#ifdef SWOS_SDL_BUILD
+    /* See _CallDrawMenuItem comment — collapse double-flush. */
+    _DrawMultipleItems(maxItems, firstEntry);
+    _WaitForVSync();
+    _BlitterCopyOverlayToScreen();
+#else
     _DrawMultipleItems(maxItems, firstEntry);
     _WaitForVSync();
     _DrawMultipleItems(maxItems, firstEntry);
     _WaitForVSync();
+#endif
 }
 
 /* ================================================================
