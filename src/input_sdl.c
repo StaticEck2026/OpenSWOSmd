@@ -147,19 +147,40 @@ static int sdl_to_amiga(SDL_Keycode k)
 /* ---- Tracked keyboard state for joystick/fire synthesis ---- */
 static int s_kbd_up, s_kbd_down, s_kbd_left, s_kbd_right, s_kbd_fire;
 
-static SDL_GameController *s_pad;
+/* Up to two game controllers, mapped to players 1 and 2 respectively.
+ * Pad 0 is shared with the keyboard for player 1; pad 1 drives player 2
+ * exclusively (no keyboard binding for P2 — matches the Amiga which
+ * always read P2 from physical Port 0). New pads fill the lowest empty
+ * slot, so plugging a single pad always lands on P1. */
+#define INPUTSDL_NUM_PADS 2
+static SDL_GameController *s_pads[INPUTSDL_NUM_PADS];
+
+static int pad_open_into_first_empty(int joystick_index)
+{
+    for (int i = 0; i < INPUTSDL_NUM_PADS; ++i) {
+        if (!s_pads[i]) {
+            SDL_GameController *p = SDL_GameControllerOpen(joystick_index);
+            if (p) {
+                s_pads[i] = p;
+                return i;
+            }
+            return -1;
+        }
+    }
+    return -1;
+}
 
 int InputSDL_Init(void)
 {
     memset(keyState, 0, sizeof(keyState));
     joy0Dat = 0;
     joy1Dat = 0;
-    ciaa_pra = 0xFF;                  /* fire bit set (idle) */
+    ciaa_pra = 0xFF;                  /* both fire bits set (idle) */
 
     for (int i = 0; i < SDL_NumJoysticks(); ++i) {
         if (SDL_IsGameController(i)) {
-            s_pad = SDL_GameControllerOpen(i);
-            if (s_pad) break;
+            if (pad_open_into_first_empty(i) < 0)
+                break;                /* both slots full */
         }
     }
     return 0;
@@ -167,9 +188,11 @@ int InputSDL_Init(void)
 
 void InputSDL_Shutdown(void)
 {
-    if (s_pad) {
-        SDL_GameControllerClose(s_pad);
-        s_pad = NULL;
+    for (int i = 0; i < INPUTSDL_NUM_PADS; ++i) {
+        if (s_pads[i]) {
+            SDL_GameControllerClose(s_pads[i]);
+            s_pads[i] = NULL;
+        }
     }
 }
 
@@ -243,12 +266,16 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         }
     } break;
     case SDL_CONTROLLERDEVICEADDED:
-        if (!s_pad) s_pad = SDL_GameControllerOpen(e->cdevice.which);
+        pad_open_into_first_empty(e->cdevice.which);
         break;
     case SDL_CONTROLLERDEVICEREMOVED:
-        if (s_pad && SDL_GameControllerFromInstanceID(e->cdevice.which) == s_pad) {
-            SDL_GameControllerClose(s_pad);
-            s_pad = NULL;
+        for (int i = 0; i < INPUTSDL_NUM_PADS; ++i) {
+            if (s_pads[i] &&
+                SDL_GameControllerFromInstanceID(e->cdevice.which) == s_pads[i]) {
+                SDL_GameControllerClose(s_pads[i]);
+                s_pads[i] = NULL;
+                break;
+            }
         }
         break;
     default:
@@ -256,74 +283,86 @@ void InputSDL_HandleEvent(const SDL_Event *e)
     }
 }
 
+/* Read directional + fire state from a single pad. NULL pad → all zero. */
+static void read_pad_state(SDL_GameController *pad,
+                           int *up, int *down, int *left, int *right, int *fire)
+{
+    if (!pad) return;
+    Sint16 ax = SDL_GameControllerGetAxis(pad, SDL_CONTROLLER_AXIS_LEFTX);
+    Sint16 ay = SDL_GameControllerGetAxis(pad, SDL_CONTROLLER_AXIS_LEFTY);
+    if (ay < -8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_UP))    *up    = 1;
+    if (ay >  8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_DOWN))  *down  = 1;
+    if (ax < -8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_LEFT))  *left  = 1;
+    if (ax >  8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_RIGHT)) *right = 1;
+    if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_A) ||
+        SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_B))
+        *fire = 1;
+}
+
+/* Encode an up/down/left/right + fire state into Paula's JOY*DAT word.
+ *
+ * JOY*DAT uses 2-bit Gray-code quadrature per axis. SWOS decodes it as
+ * (input.c:_Player1StatusProc / _Player2StatusProc):
+ *   right = bit 1
+ *   left  = bit 9
+ *   down  = bit 0 XOR bit 1
+ *   up    = bit 8 XOR bit 9
+ *
+ * Correct per-axis encoding:
+ *   horizontal axis pair bits 1 (high) + 0 (low):
+ *     bit 1 = right_pressed
+ *     bit 0 = bit 1 XOR down_pressed
+ *   vertical axis pair bits 9 (high) + 8 (low):
+ *     bit 9 = left_pressed
+ *     bit 8 = bit 9 XOR up_pressed
+ *
+ * Verification of all 9 cases (none + 4 cardinals + 4 diagonals):
+ *   none:        v = 0x000  ->  R=0 L=0 D=0^0=0 U=0^0=0  ✓
+ *   right:       v = 0x003  ->  R=1 L=0 D=1^1=0 U=0^0=0  ✓
+ *   left:        v = 0x300  ->  R=0 L=1 D=0^0=0 U=1^1=0  ✓
+ *   up:          v = 0x100  ->  R=0 L=0 D=0    U=0^1=1  ✓
+ *   down:        v = 0x001  ->  R=0 L=0 D=1^0=1 U=0^0=0  ✓
+ *   right+down:  v = 0x002  ->  R=1 L=0 D=0^1=1 U=0      ✓
+ *   right+up:    v = 0x103  ->  R=1 L=0 D=1^1=0 U=0^1=1  ✓
+ *   left+down:   v = 0x301  ->  R=0 L=1 D=0^1=1 U=1^1=0  ✓
+ *   left+up:     v = 0x200  ->  R=0 L=1 D=0^0=0 U=1^1=1  ✓
+ */
+static uint16_t encode_joydat(int up, int down, int left, int right)
+{
+    uint16_t v = 0;
+    if (right)                  v |= (1u << 1);
+    if (right ^ (down ? 1 : 0)) v |= (1u << 0);
+    if (left)                   v |= (1u << 9);
+    if (left  ^ (up   ? 1 : 0)) v |= (1u << 8);
+    return v;
+}
+
 void InputSDL_PostFrame(void)
 {
-    /* Combine keyboard + optional pad into player-1 direction/fire. */
-    int up = s_kbd_up, down = s_kbd_down, left = s_kbd_left, right = s_kbd_right;
-    int fire = s_kbd_fire;
+    /* Player 1: keyboard + pad 0 (combined). */
+    int p1_up = s_kbd_up, p1_down = s_kbd_down, p1_left = s_kbd_left, p1_right = s_kbd_right;
+    int p1_fire = s_kbd_fire;
+    read_pad_state(s_pads[0], &p1_up, &p1_down, &p1_left, &p1_right, &p1_fire);
 
-    if (s_pad) {
-        Sint16 ax = SDL_GameControllerGetAxis(s_pad, SDL_CONTROLLER_AXIS_LEFTX);
-        Sint16 ay = SDL_GameControllerGetAxis(s_pad, SDL_CONTROLLER_AXIS_LEFTY);
-        if (ay < -8000 || SDL_GameControllerGetButton(s_pad, SDL_CONTROLLER_BUTTON_DPAD_UP))    up = 1;
-        if (ay >  8000 || SDL_GameControllerGetButton(s_pad, SDL_CONTROLLER_BUTTON_DPAD_DOWN))  down = 1;
-        if (ax < -8000 || SDL_GameControllerGetButton(s_pad, SDL_CONTROLLER_BUTTON_DPAD_LEFT))  left = 1;
-        if (ax >  8000 || SDL_GameControllerGetButton(s_pad, SDL_CONTROLLER_BUTTON_DPAD_RIGHT)) right = 1;
-        if (SDL_GameControllerGetButton(s_pad, SDL_CONTROLLER_BUTTON_A) ||
-            SDL_GameControllerGetButton(s_pad, SDL_CONTROLLER_BUTTON_B))
-            fire = 1;
-    }
+    /* Player 2: pad 1 only. No keyboard binding — keeping the keyboard
+     * single-player avoids hijacking arrow / fire keys when a P2 pad is
+     * plugged in but unused. */
+    int p2_up = 0, p2_down = 0, p2_left = 0, p2_right = 0, p2_fire = 0;
+    read_pad_state(s_pads[1], &p2_up, &p2_down, &p2_left, &p2_right, &p2_fire);
 
-    /* Paula JOY1DAT uses 2-bit Gray-code quadrature per axis. SWOS
-     * decodes it as (input.c:_Player1StatusProc):
-     *   right = bit 1
-     *   left  = bit 9
-     *   down  = bit 0 XOR bit 1
-     *   up    = bit 8 XOR bit 9
-     *
-     * The XOR coupling means the OR-encoded form the previous code
-     * used silently merges DOWN+RIGHT into RIGHT-only and UP+LEFT
-     * into LEFT-only — both diagonals were lost on the SDL host
-     * (player wouldn't crouch/duck on right+down, free-kick aim
-     * stuck horizontally, holding LEFT and pressing UP transiently
-     * latched the same direction long enough to look like a UP-tap
-     * which then tripped the bench double-tap detector).
-     *
-     * Correct per-axis encoding:
-     *   horizontal axis pair bits 1 (high) + 0 (low):
-     *     bit 1 = right_pressed
-     *     bit 0 = bit 1 XOR down_pressed
-     *   vertical axis pair bits 9 (high) + 8 (low):
-     *     bit 9 = left_pressed
-     *     bit 8 = bit 9 XOR up_pressed
-     *
-     * Verification of all 9 cases (none + 4 cardinals + 4 diagonals):
-     *
-     *   none:        v = 0x000  ->  R=0 L=0 D=0^0=0 U=0^0=0  ✓
-     *   right:       v = 0x003  ->  R=1 L=0 D=1^1=0 U=0^0=0  ✓
-     *   left:        v = 0x300  ->  R=0 L=1 D=0^0=0 U=1^1=0  ✓
-     *   up:          v = 0x100  ->  R=0 L=0 D=0    U=0^1=1  ✓
-     *   down:        v = 0x001  ->  R=0 L=0 D=1^0=1 U=0^0=0  ✓
-     *   right+down:  v = 0x002  ->  R=1 L=0 D=0^1=1 U=0      ✓ (was 0x003 = right only)
-     *   right+up:    v = 0x103  ->  R=1 L=0 D=1^1=0 U=0^1=1  ✓
-     *   left+down:   v = 0x301  ->  R=0 L=1 D=0^1=1 U=1^1=0  ✓
-     *   left+up:     v = 0x200  ->  R=0 L=1 D=0^0=0 U=1^1=0... wait
-     *
-     * Re-check left+up: bit_9=1 (left), bit_8 = bit_9 XOR up = 1^1 = 0.
-     *   joy_bits = 0x200. SWOS reads up = bit_8 XOR bit_9 = 0 XOR 1 = 1. ✓
-     *
-     * SWOS uses Amiga Port 1 for Player 1, so we write joy1Dat. */
-    uint16_t v = 0;
-    if (right)      v |= (1u << 1);                       /* bit 1 */
-    if (right ^ (down ? 1 : 0)) v |= (1u << 0);           /* bit 0 = bit_1 XOR down */
-    if (left)       v |= (1u << 9);                       /* bit 9 */
-    if (left  ^ (up   ? 1 : 0)) v |= (1u << 8);           /* bit 8 = bit_9 XOR up */
-    joy1Dat = v;
-    joy0Dat = 0;   /* unused by SWOS but keep clean */
+    /* SWOS reads P1 from JOY1DAT (Amiga Port 1) and P2 from JOY0DAT
+     * (Port 0). The port numbering is reversed from the player number —
+     * see input.c _Player1StatusProc/_Player2StatusProc. */
+    joy1Dat = encode_joydat(p1_up, p1_down, p1_left, p1_right);
+    joy0Dat = encode_joydat(p2_up, p2_down, p2_left, p2_right);
 
-    /* CIAA Port A bit 7 is the port-0 fire button, active low.
-     * Clear to signal press; set to signal release. All other bits
+    /* CIAA Port A fire bits (active low):
+     *   bit 7 = Port 0 fire = Player 1 fire
+     *   bit 6 = Port 1 fire = Player 2 fire
+     * Clear bit to signal press; set to signal release. Other bits
      * stay at their default (1). */
-    if (fire) ciaa_pra &= (uint8_t)~(1u << 7);
-    else      ciaa_pra |= (uint8_t)(1u << 7);
+    if (p1_fire) ciaa_pra &= (uint8_t)~(1u << 7);
+    else         ciaa_pra |= (uint8_t)(1u << 7);
+    if (p2_fire) ciaa_pra &= (uint8_t)~(1u << 6);
+    else         ciaa_pra |= (uint8_t)(1u << 6);
 }
