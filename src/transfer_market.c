@@ -606,21 +606,29 @@ PoolPlayer *_FindPoolplyrDatPlayer(uint16_t teamId, uint16_t playerOrdinal)
 {
     PoolPlayer *entry = poolPlayerStrideRef;
 
-    for (;;) {
+    /* poolplyr.dat decompresses to exactly 900 PoolPlayer records
+     * (52200 bytes / 58 each). The original Amiga assumed every
+     * caller-supplied (teamId, playerOrdinal) was present and
+     * walked unbounded. On SDL we can hit stale foreignMarketPlayers
+     * entries from a TEST.CAR saved before commit 5b18eb8 (when
+     * poolplyrDatBuffer was being clobbered by the SFX load); those
+     * saves contain garbage teamIds that don't exist in the real
+     * pool. Bound the loop and return NULL so the caller can skip
+     * the entry instead of walking off the end and SIGSEGV'ing. */
+    for (int i = 0; i < POOLPLAYER_COUNT; i++) {
         entry++;                                /* lea 58(a0),a0 (advance first) */
         /* poolplyr.dat stores teamId as the BE byte pair
          * [country, ordinal]. On BE Amiga `entry->teamId` reads as
          * country<<8|ordinal = PACK_BE_U16; on LE x86 the same field
          * read byte-swaps to ordinal<<8|country and the comparison
          * against the PACK_BE_U16-formatted `teamId` parameter never
-         * matches — _FindPoolplyrDatPlayer then walks the buffer
-         * forever and SIGSEGVs past its end. Convert through
-         * BE16_TO_HOST so the compare sees the same format on both
-         * endians. */
+         * matches. Convert through BE16_TO_HOST so the compare sees
+         * the same format on both endians. */
         if (BE16_TO_HOST(entry->teamId) == teamId &&
             entry->playerOrdinal == (int8_t)playerOrdinal)
             return entry;
     }
+    return (PoolPlayer *)0;
 }
 
 /* ================================================================
@@ -2699,8 +2707,16 @@ void _PlayerMarketItemBeforeDraw(MenuEntry *entry)
             uint16_t teamNum = PACK_BE_U16(item[0], item[1]);
             uint8_t playerOrd = item[2];
             PoolPlayer *pp = _FindPoolplyrDatPlayer(teamNum, playerOrd);
-            extra = (uint8_t *)pp + 3; /* name area */
-            player = (uint8_t *)pp - 0x38;
+            if (pp) {
+                extra = (uint8_t *)pp + 3; /* name area */
+                player = (uint8_t *)pp - 0x38;
+            } else {
+                /* Stale market entry — pool entry no longer exists
+                 * (legacy bad-saved data). Disable this row rather
+                 * than dereference NULL. */
+                entry->isDisabled = 1;
+                player = 0;
+            }
         }
     }
 
@@ -4949,6 +4965,15 @@ void _PlayerMarketBuildVisiblePlayerList(void)
             uint16_t teamId = PACK_BE_U16(a1[0], a1[1]);
             uint8_t ordinal = a1[2];
             PoolPlayer *pool = _FindPoolplyrDatPlayer(teamId, (uint16_t)ordinal);
+            if (!pool) {
+                /* Stale foreignMarketPlayers entry whose team isn't
+                 * in the loaded pool (legacy bad-saved data — see
+                 * _FindPoolplyrDatPlayer). Skip it instead of
+                 * dereferencing NULL in the filter check. */
+                a1 += 4;
+                i--;
+                continue;
+            }
             uint8_t *blockPtr = (uint8_t *)pool - 0x38;   /* lea -$38(a0),a0 */
             if (playerMarketPlayerMatchesFilters(blockPtr, ratingThreshold,
                                                   countryRange, positionList,
