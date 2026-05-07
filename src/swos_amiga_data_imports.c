@@ -440,7 +440,7 @@ uint16_t maxSubstitutes[1] = { 0x0000 };
 uint16_t importMenuSelectedTactics[1] = { 0x0000               };
 uint16_t cameraXMod320[1] = { 0x0000 };
 uint16_t playSeason[1] = { 0x0000               };
-uint16_t offerNegotiationStep1Amount[1] = { 0x0000 };
+/* offerNegotiationStep1Amount: now part of offerOrdinalsBackingBuf in swos_globals.c */
 uint32_t menuTitle[1] = { 0x00000000           };
 uint16_t blockAdvertisements[1] = { 0x0000               };
 uint16_t careerAutoAdvanceInProgress[1] = { 0x0000 };
@@ -564,7 +564,7 @@ uint16_t kLowerLeftCornerBallDestDelta[16] = { 250,-1000,1000,-350,1000,-150,100
 uint16_t leagueNumbersTable[10] = { 0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 0x0000,0x0000 };
 uint16_t kPassingSpeed_62500_90000[1] = { 2048                };
 uint16_t team2MostFrequentFace[1] = { 0x0000 };
-uint16_t offerSwapPlayerOrdinal[1] = { 0x0000 };
+/* offerSwapPlayerOrdinal: now part of offerOrdinalsBackingBuf in swos_globals.c */
 uint16_t lastTeamScoredNumber[1] = { 0x0000               };
 uint16_t fireCounter[1] = { 0x0000               };
 uint16_t resultTimer[1] = { 0x0000 };
@@ -678,7 +678,7 @@ uint16_t lastVBlankServiceTick[1] = { 0x0000 };
 uint16_t aiRotateRightTable[3] = { 1,2,3 };
 uint16_t timeDelta[1] = { 0x0000               };
 uint16_t numPlayersToShowInMenu[1] = { 0x0000 };
-uint16_t offerExtraPlayerOrdinal[1] = { 0x0000 };
+/* offerExtraPlayerOrdinal: now part of offerOrdinalsBackingBuf in swos_globals.c */
 uint16_t kPitchBallSpeedInfluence[7] = { -2,2,3,0,0,-1,-1    };
 uint16_t uefaCupQualifiedTeamCount[1] = { 0x0000 };
 uint32_t team1Filename[1] = { 0x00000000           };
@@ -758,7 +758,7 @@ uint16_t ballSpeedBounceFactor[1] = { 0x0000               };
 uint16_t tacticsPositionDefensiveness[11] = { 0,0,0,0,0,0,0,0, 0,0,0 };
 uint16_t diyCupSelectTeams[1] = { 0x0000 };
 uint16_t breakCameraMode[1] = { 0x0000               };
-uint16_t offerAmount[1] = { 0x0000               };
+/* offerAmount: now part of offerOrdinalsBackingBuf in swos_globals.c */
 uint32_t lastKeeperPlayed[1] = { 0x00000000           };
 uint16_t inSubstitutesMenu[1] = { 0x0000               };
 uint16_t kBallAirConstant[1] = { 0x000A               };
@@ -770,7 +770,7 @@ uint16_t menuY[1] = { 0x0000 };
 uint16_t currentTick[1] = { 0 };
 uint16_t penaltiesTimer[1] = { 0x0000               };
 uint16_t editTacticsLastTick[1] = { 0x0000               };
-uint16_t offerPrimaryPlayerOrdinal[1] = { 0x0000 };
+/* offerPrimaryPlayerOrdinal: now part of offerOrdinalsBackingBuf in swos_globals.c */
 uint32_t careerAddIntlPlayerSelectedSrcPlayerPtr[1] = { 0x00000000 };
 uint32_t diyTournamentSelectedStagePtr[1] = { 0x00000000 };
 uint16_t chooseTeamsResult[1] = { 0x0000               };
@@ -827,7 +827,7 @@ uint16_t chosenTactics[1] = { 0x0000               };
 uint16_t ballStaticFrameIndices[3] = { 1068,1068,-1 };
 uint16_t contestEntryHeight[1] = { 0x0000 };
 uint16_t team1AppPercent[1] = { 0x0000               };
-uint16_t numExtraPlayersWanted[1] = { 0x0000               };
+/* numExtraPlayersWanted: now part of offerOrdinalsBackingBuf in swos_globals.c */
 uint16_t subsPrevPl2Direction[1] = { -1 };
 uint16_t oldCameraYSaved0[1] = { 0x0000 };
 uint16_t diyCompHasGroupStage[1] = { 0x0000               };
@@ -856,7 +856,7 @@ uint16_t subsMenuBackgroundColor[1] = { 0x0000               };
 uint16_t cupWinnersCupQualifiedTeamCount[1] = { 0x0000 };
 uint16_t cachedExtraTimeTeam2Goals[1] = { 0x0000 };
 uint32_t penaltyShooterSprite[1] = { 0x00000000           };
-uint16_t teamOffering[1] = { 0x0000               };
+/* teamOffering: now part of offerOrdinalsBackingBuf in swos_globals.c */
 uint16_t euroCupQualifiedTeamCount[1] = { 0x0000 };
 uint16_t numDiyResults[1] = { 0x0000               };
 uint16_t runSlower[1] = { 0x0000               };

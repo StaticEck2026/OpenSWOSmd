@@ -299,6 +299,45 @@ __asm__(".globl " _ASM_PFX "stadiumMenuLittlePlayer\n"
         ".globl " _ASM_PFX "littlePlayersColorTable\n"
         ".equ   " _ASM_PFX "littlePlayersColorTable, " _ASM_PFX "stadiumMenuLittlePlayerBackingBuf + 4\n");
 
+/* ---- Transfer-offer ordinals (must be adjacent) --------------------
+ *
+ * SWOS2.s line 96267..96280 defines these 7 uint16 globals back-to-back:
+ *
+ *   +0  teamOffering
+ *   +2  offerPrimaryPlayerOrdinal
+ *   +4  numExtraPlayersWanted
+ *   +6  offerSwapPlayerOrdinal
+ *   +8  offerExtraPlayerOrdinal
+ *   +A  offerAmount
+ *   +C  offerNegotiationStep1Amount
+ *
+ * `offerAfterDrawCommonShared` (transfer_market.c) walks the four
+ * player-ordinal slots as a contiguous int16_t array starting at
+ * `&offerPrimaryPlayerOrdinal`, indexing 0..3 to fetch
+ * primary / numExtra / swap / extra in turn. On Amiga that's the
+ * literal BSS layout. On SDL these were 5 separate definitions in
+ * swos_amiga_data_imports.c at linker-determined addresses — the
+ * walk read garbage for indices 1..3, so the MAKE OFFER menu drew
+ * stale "extra players to buy" and "swap players" rows even though
+ * `_ShowPlayerOfferMenuForPlayer` had explicitly set those globals
+ * to -1. Restore the Amiga layout via .equ aliases. */
+__attribute__((used, aligned(2)))
+uint8_t offerOrdinalsBackingBuf[14] = {0};
+__asm__(".globl " _ASM_PFX "teamOffering\n"
+        ".equ   " _ASM_PFX "teamOffering, "                _ASM_PFX "offerOrdinalsBackingBuf\n"
+        ".globl " _ASM_PFX "offerPrimaryPlayerOrdinal\n"
+        ".equ   " _ASM_PFX "offerPrimaryPlayerOrdinal, "   _ASM_PFX "offerOrdinalsBackingBuf + 2\n"
+        ".globl " _ASM_PFX "numExtraPlayersWanted\n"
+        ".equ   " _ASM_PFX "numExtraPlayersWanted, "       _ASM_PFX "offerOrdinalsBackingBuf + 4\n"
+        ".globl " _ASM_PFX "offerSwapPlayerOrdinal\n"
+        ".equ   " _ASM_PFX "offerSwapPlayerOrdinal, "      _ASM_PFX "offerOrdinalsBackingBuf + 6\n"
+        ".globl " _ASM_PFX "offerExtraPlayerOrdinal\n"
+        ".equ   " _ASM_PFX "offerExtraPlayerOrdinal, "     _ASM_PFX "offerOrdinalsBackingBuf + 8\n"
+        ".globl " _ASM_PFX "offerAmount\n"
+        ".equ   " _ASM_PFX "offerAmount, "                 _ASM_PFX "offerOrdinalsBackingBuf + 10\n"
+        ".globl " _ASM_PFX "offerNegotiationStep1Amount\n"
+        ".equ   " _ASM_PFX "offerNegotiationStep1Amount, " _ASM_PFX "offerOrdinalsBackingBuf + 12\n");
+
 /* ---- Edit-teams kit-editor sprite-copy blocks -----------------------
  * Six MENU_CMD_SPRITE_COPY blocks that preview the primary/secondary
  * shirt/shorts/socks in the kit editor. Each is a 36-byte struct:
