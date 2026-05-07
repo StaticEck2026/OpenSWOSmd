@@ -178,7 +178,24 @@ void InputSDL_HandleEvent(const SDL_Event *e)
     switch (e->type) {
     case SDL_KEYDOWN: {
         int a = sdl_to_amiga(e->key.keysym.sym);
-        if (a >= 0) {
+        /* Arrow keys drive joy1Dat directly (s_kbd_up/down/left/right
+         * below) so we DON'T also push their Amiga scancodes into
+         * keyBuffer — `_GetKey()` then `keycodeLut` maps the arrow
+         * scancodes to 0x10/0x11/0x12/0x13, the same numeric range
+         * that `_MainKeysCheck` interprets as the bench-call hotkey
+         * (0x10 = bench2, 0x11 = bench1) and that menu nav uses for
+         * up/right/down/left. On Amiga the player used a joystick
+         * in-game so arrow scancodes never fired during play; on
+         * SDL we double-purpose the same physical keys. Without
+         * this filter, holding DOWN arrow to control the keeper
+         * fires bench1 every time the keypress lands in keyBuffer.
+         * Menu navigation still works because the joystick path
+         * drives menuControlsDirection from pl1Direction. */
+        int is_movement_arrow = (e->key.keysym.sym == SDLK_UP   ||
+                                  e->key.keysym.sym == SDLK_DOWN ||
+                                  e->key.keysym.sym == SDLK_LEFT ||
+                                  e->key.keysym.sym == SDLK_RIGHT);
+        if (a >= 0 && !is_movement_arrow) {
             keyState[a] = 1;
             /* Push into the FIFO consumed by _GetKey() — but only on
              * the initial press (SDL re-fires KEYDOWN for OS key-repeat,
@@ -190,6 +207,11 @@ void InputSDL_HandleEvent(const SDL_Event *e)
                 keyBuffer[keyCount] = (uint8_t)a;
                 keyCount++;
             }
+        } else if (a >= 0) {
+            /* Arrow keys: still record key-down in keyState (some game
+             * code polls keyState[AKEY_UP] etc.) but skip the keyBuffer
+             * FIFO so _GetKey doesn't see them as menu/hotkey input. */
+            keyState[a] = 1;
         }
         switch (e->key.keysym.sym) {
         case SDLK_UP:    s_kbd_up    = 1; break;

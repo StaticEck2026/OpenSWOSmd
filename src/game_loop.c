@@ -203,13 +203,40 @@ static void waitVBlankSync(uint32_t xorMagic, uint32_t expected)
 #endif
 }
 
-/* ---- Pause spin-wait: waits 1 tick (dbf d1 with d1=0 → 1 iteration) ---- */
+/* ---- Pause spin-wait: waits 1 tick (dbf d1 with d1=0 → 1 iteration) ----
+ *
+ * Original Amiga: busy-spin on `currentTick`. The Amiga's VBlank ISR
+ * advances currentTick AND services keyboard input natively, so a
+ * busy spin works.
+ *
+ * On SDL the `currentTick` advance happens on the SDL_Timer thread
+ * but keyboard events are dispatched only when something pumps the
+ * SDL event queue. The timer thread CAN do a full event pump when
+ * the main thread looks idle (>60ms since last render) but on
+ * Linux some setups schedule the busy main thread aggressively
+ * enough that the timer thread can starve, locking us in the pause
+ * loop forever (Linux tester report: "pause hangs, can't unpause").
+ *
+ * Replace the busy spin with Platform_VBlank() — it does the
+ * 50 Hz pacing via SDL_Delay (which yields to the OS), pumps SDL
+ * events on the main thread (so keypresses reliably reach
+ * keyBuffer), and runs the throttled ISR housekeeping. The
+ * Platform_VBlank path also re-renders the same frontbuffer so
+ * the paused frame stays on screen. */
+#ifdef SWOS_SDL_BUILD
+extern int Platform_VBlank(void);
+#endif
+
 static void pauseSpinWaitOneTick(void)
 {
+#ifdef SWOS_SDL_BUILD
+    Platform_VBlank();
+#else
     uint16_t d0;
     /* dbf d1 with d1=0 means 1 iteration */
     d0 = currentTick;
     while (currentTick == d0) {}
+#endif
 }
 
 /* ====================================================================
