@@ -185,10 +185,13 @@ int Platform_Init(int win_scale, int start_fullscreen)
 
     Uint32 wflags = SDL_WINDOW_SHOWN;
     if (start_fullscreen) {
-        /* FULLSCREEN_DESKTOP keeps the desktop resolution and lets
-         * SDL_RenderSetLogicalSize letterbox the 336x272 frame inside —
-         * no resolution change, no mode switch, fast Alt-Tab back to
-         * windowed. */
+        /* SDL_WINDOW_FULLSCREEN_DESKTOP = borderless window sized to
+         * the current desktop. Crucially, *no resolution change* — the
+         * monitor stays at whatever the desktop is set to, we just
+         * stretch a borderless window over it and let
+         * SDL_RenderSetLogicalSize letterbox the 336×272 frame inside.
+         * Distinct from plain SDL_WINDOW_FULLSCREEN, which DOES change
+         * the display mode and is exactly what we don't want. */
         wflags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
     }
 
