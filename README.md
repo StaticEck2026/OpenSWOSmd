@@ -137,7 +137,7 @@ correctly. `stderr` is auto-redirected to `SWOS.log` next to the binary
 |--------------|--------------------|----------------------|
 | Navigate     | Arrow keys         | D-pad / left stick   |
 | Select       | Right Ctrl / Right Alt / Space / Left Ctrl / Enter | A or B button |
-| Quit         | Window close (✕)   | —                    |
+| Quit         | Esc (only at the top-level main menu) or window close (✕) | — |
 
 ### In-match (Player 1)
 

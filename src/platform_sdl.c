@@ -503,8 +503,18 @@ static void pump_events_any_thread(void)
             }
             break;
         case SDL_KEYDOWN:
-            /* ESC is reserved for in-game use (pause/end-match menu); the
-             * window close button (X) and SDL_QUIT are the only quit paths. */
+            /* ESC at the top-level main menu quits the game; everywhere
+             * else it stays passed through to the menu/game-loop layer
+             * (in-game pause/end-match menu, sub-menus' EXIT, etc.). */
+            if (ev.key.repeat == 0 && ev.key.keysym.sym == SDLK_ESCAPE) {
+                extern volatile uint32_t currentMenuPtr;
+                extern uint8_t swosMainMenu[];
+                if (currentMenuPtr == (uint32_t)(uintptr_t)swosMainMenu) {
+                    Platform_RequestQuit();
+                    if (s_window) SDL_HideWindow(s_window);
+                    continue;   /* swallow — don't also reach the menu */
+                }
+            }
             if (ev.key.repeat == 0 &&
                 (ev.key.keysym.sym == SDLK_F9 ||
                  ev.key.keysym.sym == SDLK_F11 ||
