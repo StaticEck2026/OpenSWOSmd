@@ -127,6 +127,24 @@ void _AudioSetChannelVolume(uint16_t channelOrAll, uint16_t volume)
         audioState.channelVolume[3] = vol;
 #ifdef SWOS_SDL_BUILD
         AudioSDL_SetMasterVolume(vol);
+        /* Also push the per-channel attenuation to the RJP1 player so a
+         * previous single-channel fade-out (e.g. the crowd-chant code
+         * writing channel 2 to 0) doesn't survive into the next match.
+         * On Amiga, _AudioSetChannelVolume(0xFFFF, 0x40) wrote AUD0VOL..
+         * AUD3VOL hardware registers — clobbering whatever fade state
+         * each channel was in. The SDL backend keeps per-channel
+         * attenuation in software (RJP1_SetChannelAttenuation) and we
+         * have to mirror the hardware-register semantics by hand:
+         * without this, restart-after-match plays out of the left side
+         * only because channel 2 (right-panned) stayed at 0 from the
+         * previous match's chant fade-out. */
+        {
+            extern void AudioSDL_SetChannelVolume(int channel, int vol_0_64);
+            AudioSDL_SetChannelVolume(0, vol);
+            AudioSDL_SetChannelVolume(1, vol);
+            AudioSDL_SetChannelVolume(2, vol);
+            AudioSDL_SetChannelVolume(3, vol);
+        }
 #endif
     }
     else
