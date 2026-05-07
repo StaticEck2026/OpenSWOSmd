@@ -233,9 +233,9 @@ uint8_t skillValuePonders[8] = { 0x0, 0x1, 0x3, 0x6, 0xA, 0xF, 0x15, 0x1C };
 int8_t statsNumber[6] = { 0 };
 uint8_t surnameBuf[24];
 uint8_t team1GoalCounterByPlayer[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-uint8_t team1GoalieFaceToPosition[3] = { 0, 0, 0 };
+/* team1GoalieFaceToPosition: aliased into goalieFacesBackingBuf in swos_globals.c */
 uint8_t team2GoalCounterByPlayer[64] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-uint8_t team2GoalieFaceToPosition[3] = { 0, 0, 0 };
+/* team2GoalieFaceToPosition: aliased into goalieFacesBackingBuf in swos_globals.c */
 uint8_t teamAName[17] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 uint8_t teamBName[17] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 uint8_t teamFilenameBuffer[50];

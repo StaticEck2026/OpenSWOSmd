@@ -169,8 +169,13 @@ uint16_t numSpritesToRender;
  * deserialize the HIL header (otherwise hilNumGoals stays 0 after load
  * and VIEW HIGHLIGHTS stays greyed out). */
 uint8_t audioDbgFlagA  = 0;
-uint8_t team1GoalieFaces  = 0;
-uint8_t team2GoalieSkinType  = 0;
+/* team1GoalieFaces / team2GoalieSkinType: aliased into goalieFacesBackingBuf
+ * in swos_globals.c. The Amiga BSS lays out 6 contiguous bytes here
+ * (team1GoalieFaceToPosition[3], team2GoalieFaceToPosition[3],
+ *  team1GoalieFaces, team2GoalieFaces, team2GoalieSkinType,
+ *  team2ReserveGoalieSkinType) and _DetermineGoalieFaces relies on
+ * writing past the end of the "main" symbol to land on the "reserve"
+ * one; on SDL we restore that layout with .equ aliases. */
 uint8_t subsFire  = 0;
 uint8_t pl1WasLeft  = 0;
 uint8_t pl1WasRight  = 0;
