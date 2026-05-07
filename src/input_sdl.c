@@ -177,10 +177,38 @@ int InputSDL_Init(void)
     joy1Dat = 0;
     ciaa_pra = 0xFF;                  /* both fire bits set (idle) */
 
-    for (int i = 0; i < SDL_NumJoysticks(); ++i) {
-        if (SDL_IsGameController(i)) {
-            if (pad_open_into_first_empty(i) < 0)
-                break;                /* both slots full */
+    /* Load extra controller mappings if the user dropped a
+     * gamecontrollerdb.txt next to the binary. Without a matching
+     * mapping, SDL_IsGameController() returns false for the device and
+     * we silently skip it — that's the most common reason a pad
+     * "isn't working". The file is the community-maintained mapping
+     * DB (https://github.com/gabomdq/SDL_GameControllerDB). Built-in
+     * SDL mappings cover popular pads (Xbox, PS4/5, Switch Pro, most
+     * Logitechs); the file is for everything else. */
+    {
+        int loaded = SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt");
+        if (loaded > 0)
+            fprintf(stderr, "[input] loaded %d controller mappings from gamecontrollerdb.txt\n",
+                    loaded);
+        else if (loaded < 0)
+            /* missing file is fine; SDL only sets the error on parse failure */
+            fprintf(stderr, "[input] gamecontrollerdb.txt not loaded: %s\n", SDL_GetError());
+    }
+
+    int n = SDL_NumJoysticks();
+    fprintf(stderr, "[input] SDL_NumJoysticks=%d\n", n);
+    for (int i = 0; i < n; ++i) {
+        const char *name = SDL_JoystickNameForIndex(i);
+        int is_gc = SDL_IsGameController(i);
+        fprintf(stderr, "[input]   joystick %d: \"%s\" %s\n",
+                i, name ? name : "(null)",
+                is_gc ? "→ game controller" : "→ raw joystick (no mapping)");
+        if (is_gc) {
+            int slot = pad_open_into_first_empty(i);
+            if (slot >= 0)
+                fprintf(stderr, "[input]     opened as P%d\n", slot + 1);
+            else
+                fprintf(stderr, "[input]     skipped (both pad slots full or open failed)\n");
         }
     }
     return 0;
@@ -265,15 +293,35 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         default: break;
         }
     } break;
-    case SDL_CONTROLLERDEVICEADDED:
-        pad_open_into_first_empty(e->cdevice.which);
-        break;
+    case SDL_CONTROLLERDEVICEADDED: {
+        const char *name = SDL_GameControllerNameForIndex(e->cdevice.which);
+        int slot = pad_open_into_first_empty(e->cdevice.which);
+        fprintf(stderr, "[input] hot-plug: \"%s\" %s\n",
+                name ? name : "(null)",
+                slot >= 0 ? (slot == 0 ? "→ P1" : "→ P2") : "(no free slot)");
+    } break;
+    case SDL_JOYDEVICEADDED: {
+        /* Fires for every joystick — even ones SDL recognises as a
+         * GameController (CONTROLLERDEVICEADDED fires too in that
+         * case). Log the joystick view so the user can see whether
+         * SDL has a mapping for the device or not. */
+        int idx = e->jdevice.which;
+        const char *name = SDL_JoystickNameForIndex(idx);
+        if (!SDL_IsGameController(idx)) {
+            fprintf(stderr,
+                    "[input] joystick attached without a GameController mapping: \"%s\" "
+                    "(idx=%d) — drop gamecontrollerdb.txt next to the binary or use "
+                    "https://generalarcade.com/gamepadtool/ to make one.\n",
+                    name ? name : "(null)", idx);
+        }
+    } break;
     case SDL_CONTROLLERDEVICEREMOVED:
         for (int i = 0; i < INPUTSDL_NUM_PADS; ++i) {
             if (s_pads[i] &&
                 SDL_GameControllerFromInstanceID(e->cdevice.which) == s_pads[i]) {
                 SDL_GameControllerClose(s_pads[i]);
                 s_pads[i] = NULL;
+                fprintf(stderr, "[input] pad P%d removed\n", i + 1);
                 break;
             }
         }
