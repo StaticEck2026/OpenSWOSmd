@@ -252,26 +252,50 @@ void InputSDL_PostFrame(void)
             fire = 1;
     }
 
-    /* Paula JOY1DAT uses 2-bit quadrature per axis. SWOS reads it as:
+    /* Paula JOY1DAT uses 2-bit Gray-code quadrature per axis. SWOS
+     * decodes it as (input.c:_Player1StatusProc):
      *   right = bit 1
      *   left  = bit 9
      *   down  = bit 0 XOR bit 1
      *   up    = bit 8 XOR bit 9
-     * For a clean static direction we need to set the pair so the XOR
-     * comes out the way we want:
-     *   RIGHT only → bits 1+0  set (= 0x003): right=1, down=0^1=1?... no
-     * Actually:
-     *   RIGHT only → bit 1 set, bit 0 = bit 1 (= 0x003): right=1, down=1^1=0 ✓
-     *   LEFT  only → bit 9 set, bit 8 = bit 9 (= 0x300): left=1, up=1^1=0 ✓
-     *   DOWN  only → bit 0 set, bit 1 = 0    (= 0x001): right=0, down=0^1=1 ✓
-     *   UP    only → bit 8 set, bit 9 = 0    (= 0x100): left=0, up=0^1=1 ✓
-     * Diagonals combine the pairs (e.g. UP+RIGHT = 0x103). SWOS uses Amiga
-     * Port 1 for Player 1, so we write joy1Dat. */
+     *
+     * The XOR coupling means the OR-encoded form the previous code
+     * used silently merges DOWN+RIGHT into RIGHT-only and UP+LEFT
+     * into LEFT-only — both diagonals were lost on the SDL host
+     * (player wouldn't crouch/duck on right+down, free-kick aim
+     * stuck horizontally, holding LEFT and pressing UP transiently
+     * latched the same direction long enough to look like a UP-tap
+     * which then tripped the bench double-tap detector).
+     *
+     * Correct per-axis encoding:
+     *   horizontal axis pair bits 1 (high) + 0 (low):
+     *     bit 1 = right_pressed
+     *     bit 0 = bit 1 XOR down_pressed
+     *   vertical axis pair bits 9 (high) + 8 (low):
+     *     bit 9 = left_pressed
+     *     bit 8 = bit 9 XOR up_pressed
+     *
+     * Verification of all 9 cases (none + 4 cardinals + 4 diagonals):
+     *
+     *   none:        v = 0x000  ->  R=0 L=0 D=0^0=0 U=0^0=0  ✓
+     *   right:       v = 0x003  ->  R=1 L=0 D=1^1=0 U=0^0=0  ✓
+     *   left:        v = 0x300  ->  R=0 L=1 D=0^0=0 U=1^1=0  ✓
+     *   up:          v = 0x100  ->  R=0 L=0 D=0    U=0^1=1  ✓
+     *   down:        v = 0x001  ->  R=0 L=0 D=1^0=1 U=0^0=0  ✓
+     *   right+down:  v = 0x002  ->  R=1 L=0 D=0^1=1 U=0      ✓ (was 0x003 = right only)
+     *   right+up:    v = 0x103  ->  R=1 L=0 D=1^1=0 U=0^1=1  ✓
+     *   left+down:   v = 0x301  ->  R=0 L=1 D=0^1=1 U=1^1=0  ✓
+     *   left+up:     v = 0x200  ->  R=0 L=1 D=0^0=0 U=1^1=0... wait
+     *
+     * Re-check left+up: bit_9=1 (left), bit_8 = bit_9 XOR up = 1^1 = 0.
+     *   joy_bits = 0x200. SWOS reads up = bit_8 XOR bit_9 = 0 XOR 1 = 1. ✓
+     *
+     * SWOS uses Amiga Port 1 for Player 1, so we write joy1Dat. */
     uint16_t v = 0;
-    if (right) v |= 0x003;    /* bits 0 and 1 */
-    if (left)  v |= 0x300;    /* bits 8 and 9 */
-    if (down)  v |= 0x001;    /* bit 0 */
-    if (up)    v |= 0x100;    /* bit 8 */
+    if (right)      v |= (1u << 1);                       /* bit 1 */
+    if (right ^ (down ? 1 : 0)) v |= (1u << 0);           /* bit 0 = bit_1 XOR down */
+    if (left)       v |= (1u << 9);                       /* bit 9 */
+    if (left  ^ (up   ? 1 : 0)) v |= (1u << 8);           /* bit 8 = bit_9 XOR up */
     joy1Dat = v;
     joy0Dat = 0;   /* unused by SWOS but keep clean */
 
