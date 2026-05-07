@@ -660,10 +660,22 @@ retry:
     audioBankLoaded = 0;
     if (_PlaySong(aSoundSfxSng, sfxSongData) != 0)
         goto retry;
+#ifndef SWOS_SDL_BUILD
+    /* Amiga path: SFX.IN1 / SFX.IN2 are loaded into poolplyrDatBuffer
+     * and sfxInsBank2 (which are BSS-adjacent on Amiga, forming the
+     * single contiguous instrument blob RJP1 expects). On SDL we
+     * load both into s_sfx_combined_ins below — and we MUST NOT load
+     * SFX.IN1 into poolplyrDatBuffer here, because that buffer is
+     * also used as the destination for `data/poolplyr.dat` (the
+     * foreign-player pool). Loading SFX over it corrupts the pool
+     * and the next foreign-market visit walks SFX bytes interpreted
+     * as PoolPlayer records, eventually SIGSEGV'ing in
+     * _FindPoolplyrDatPlayer past the buffer end. */
     if (_PlaySong(aSoundSfxIn1, poolplyrDatBuffer) != 0)
         goto retry;
     if (_PlaySong(aSoundSfxIn2, sfxInsBank2) != 0)
         goto retry;
+#endif
 
 #ifdef SWOS_SDL_BUILD
     /* The original Amiga relies on `poolplyrDatBuffer` (= SFX.IN1) and
