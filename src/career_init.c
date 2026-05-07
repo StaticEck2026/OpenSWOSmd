@@ -769,7 +769,17 @@ uint16_t _Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t 
 {
     /* Get start of team list: base + 7 + base[7] */
     uint8_t numEntries = cupCopy[7];
-    uint16_t *teamList = (uint16_t *)(cupCopy + 7 + numEntries);
+    /* The team list is the static competition's unk1[] array of packed
+     * (country, ordinal) byte pairs in Amiga big-endian order. Read
+     * each entry via BE_READ_U16 — a raw `*(uint16_t *)` on SDL LE
+     * byte-swaps each value relative to selTeamNumber (which is stored
+     * as PACK_BE_U16(country, ordinal) everywhere else), the
+     * comparison below never matches, and the user's career is
+     * silently NOT enrolled in the cup they qualified for. Symptom:
+     * Juventus career has no Champions League fixtures even though
+     * the static euroCup unk1[] explicitly contains (20, 22) =
+     * Italy/Juventus. */
+    const uint8_t *teamList = (const uint8_t *)(cupCopy + 7 + numEntries);
 
     /* Get number of teams based on competition type (byte at offset 1) */
     uint8_t compType = cupCopy[1];
@@ -786,7 +796,9 @@ uint16_t _Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t 
     uint16_t target = selTeamNumber;
     numTeams--;
     for (int16_t i = numTeams; i >= 0; i--) {
-        if (*teamList++ == target)
+        uint16_t entry = BE_READ_U16(teamList);
+        teamList += 2;
+        if (entry == target)
             goto found;
     }
     return 1;  /* not found */
