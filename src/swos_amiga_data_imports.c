@@ -455,7 +455,16 @@ uint16_t selectedPlayerPosition[1] = { 0x0000 };
 uint16_t team2PenaltyGoals[1] = { 0x0000 };
 uint16_t audioBankLoaded[1] = { 0x0000 };
 uint16_t secondsSwitchAccumulator[1] = { 0x0000               };
-uint16_t playerMarketVisibleItems[1] = { 0x0000 };
+/* Sized to hold up to 10 4-byte pointers to the visible market entries
+ * (one per displayed list row). The auto-extractor only emitted the
+ * first 2 bytes (`dc.w $0000` at SWOS2.s line 103049) because the
+ * Amiga relied on pad_145364's 38 trailing bytes for the rest of the
+ * array — see the "Adjacent-globals BSS pattern" memory. On SDL each
+ * symbol lives in its own .o, so writes past entry 0 stomp adjacent
+ * BSS and reads past entry 0 return garbage. Sized as
+ * uint32_t[10] = 40 bytes, matching the original 2 + 38 footprint
+ * exactly. */
+uint32_t playerMarketVisibleItems[10] = { 0 };
 uint16_t diyLeagueTournament_viewOptionsAvailable[1] = { 0x0000 };
 uint16_t hilLeftTeamGoals[1] = { 0x0000 };
 uint16_t team1TotalGoals[1] = { 0x0000 };
