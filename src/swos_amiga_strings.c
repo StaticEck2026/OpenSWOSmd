@@ -491,7 +491,28 @@ char aCup1[9]                     = "\004C\000U\000P\0001";
 char aCup2[9]                     = "\004C\000U\000P\0002";
 char aCup_10[9]                   = "\004C\000U\000P\000 ";
 char aLge_0[9]                    = "\004L\000G\000E\000 ";
-char aPlayer_1[8]                 = "\002PLAYER";
+/* aPlayer_1 is a 2-line MULTILINE menu string. Format is
+ * `[lineCount][line1\0][line2\0]...`. The original Amiga at
+ * SWOS2.s line 127065 declares it as `dc.b 2, 'PLAYER', 0` —
+ * 8 bytes ending with the line-1 NUL — and immediately follows
+ * it with `aCoach_2: dc.b "-COACH:", 0` (8 more bytes), so the
+ * multiline parser reads the second line by continuing past the
+ * declared 8-byte aPlayer_1 into the adjacent aCoach_2 storage.
+ *
+ * On SDL each label is its own symbol and the linker doesn't
+ * preserve that adjacency — the parser walks aPlayer_1 + 8 into
+ * unrelated BSS and renders garbage as the second line (the
+ * red+blue artefact under "PLAYER" on the play-match menu's
+ * PLAYER/COACH button that looked like a sock sprite).
+ *
+ * Fix: hold both lines inline in aPlayer_1 itself. aCoach_2 is
+ * still defined elsewhere as a const string but isn't referenced
+ * by code — its only role was to be the byte-string immediately
+ * following aPlayer_1 on Amiga BSS. */
+char aPlayer_1[16] = {
+    2, 'P','L','A','Y','E','R', 0,
+    '-','C','O','A','C','H',':', 0
+};
 char aPound[2]                    = "\234";
 char aTot_0[9]                    = "\004T\000O\000T\000 ";
 
