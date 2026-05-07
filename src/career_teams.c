@@ -644,6 +644,16 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
     for (uint16_t k = 0; k < count; k++)
         teamIdsLE[k] = BE_READ_U16(&teamIds[k]);
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+    fprintf(stderr, "[append] count=%u, requested teamIds:\n", (unsigned)count);
+    for (uint16_t k = 0; k < count; k++) {
+        fprintf(stderr, "[append]   in[%2u] = 0x%04X (country=%u ordinal=%u)\n",
+                (unsigned)k, (unsigned)teamIdsLE[k],
+                (unsigned)((teamIdsLE[k] >> 8) & 0xFF),
+                (unsigned)(teamIdsLE[k] & 0xFF));
+    }
+#endif
+
     /* Phase 1: Pre-scan — mark teams already loaded in cache. */
     uint16_t i;
     TeamFileEx *tmpTeam;
@@ -681,17 +691,41 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
         _LoadTeamFile(extNum);
         uint8_t loadedExt = lastLoadedExtNumber;
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+        fprintf(stderr, "[append] loaded TEAM.%03u (ext=%u) for teamId=0x%04X\n",
+                (unsigned)loadedExt, (unsigned)loadedExt, (unsigned)teamId);
+#endif
+
         for (i = 0; i < count; i++) {
             if (flags[i] != 0) continue;
             if ((uint8_t)(teamIdsLE[i] >> 8) != loadedExt) continue;
 
             uint8_t *tfTeam = findTeamInTeamFileBuffer(teamIdsLE[i]);
+#ifdef SWOS_DEBUG_AUTOSKIP
+            if (tfTeam) {
+                fprintf(stderr, "[append]   resolved 0x%04X -> '%.16s'\n",
+                        (unsigned)teamIdsLE[i],
+                        (const char *)((TeamFileEx *)tfTeam)->team.teamName);
+            } else {
+                fprintf(stderr, "[append]   NO MATCH for 0x%04X in TEAM.%03u\n",
+                        (unsigned)teamIdsLE[i], (unsigned)loadedExt);
+            }
+#endif
             if (tfTeam) {
                 copyTeamRecord(selDst, tfTeam);
                 ((TeamFileEx *)selDst)->team.teamControls = 1;
                 flags[i] = 1;
                 numSelectedTeams++;
                 selDst += sizeof(TeamFileEx);
+            } else {
+                /* CRITICAL: leaving flags[i]=0 when the lookup failed
+                 * makes the outer for(;;) re-pick this same team next
+                 * iteration → infinite loop. Mark it processed so we
+                 * skip it instead of hanging. The team won't appear in
+                 * the resulting selection, which is what the SDL build
+                 * would otherwise show as "wrong/missing teams" in the
+                 * preset WC menu. */
+                flags[i] = 1;
             }
         }
     }
