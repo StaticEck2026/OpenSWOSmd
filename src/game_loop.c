@@ -13,6 +13,10 @@
 #include "display.h"
 #include "deterministic.h"
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+#include <stdio.h>
+#endif
+
 /* ---- Extern globals (data section, exported from asm/Data.c) ---- */
 extern uint16_t gameCanceled;
 extern uint16_t instantReplayFlag;
@@ -286,24 +290,30 @@ _MainKeysCheck(uint16_t key)
         return;
     }
 
-    /* 0x10 — request bottom team substitutions */
+    /* 0x10 (Amiga 'Q') — request bottom team substitutions */
     if (key == 0x10) {
         if (replayState != 0)
             return;
         if (bottomTeamData.playerNumber == 0 &&
             bottomTeamData.playerCoachNumber == 0)
             return;
+#ifdef SWOS_DEBUG_AUTOSKIP
+        fprintf(stderr, "[bench] HOTKEY 0x10 (Q) -> bench2Called\n");
+#endif
         bench2Called = 1;
         return;
     }
 
-    /* 0x11 — request top team substitutions */
+    /* 0x11 (Amiga 'W') — request top team substitutions */
     if (key == 0x11) {
         if (replayState != 0)
             return;
         if (topTeamData.playerNumber == 0 &&
             topTeamData.playerCoachNumber == 0)
             return;
+#ifdef SWOS_DEBUG_AUTOSKIP
+        fprintf(stderr, "[bench] HOTKEY 0x11 (W) -> bench1Called\n");
+#endif
         bench1Called = 1;
         return;
     }
