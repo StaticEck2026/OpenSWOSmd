@@ -72,8 +72,16 @@ DATA_FLAGS := -DCOMPETITION_DATA_C=1 -DTACTICS_DATA_C=1 -DFIXTURE_DATA_C=1 \
               -DSIMULATION_DATA_C=1 -DPLAYER_DATA_C=1 -DRENDER_DATA_C=1 \
               -DPALETTE_DATA_C=1 -DSTRINGS_DATA_C=1 -DGENERAL_DATA_C=1
 
+# Diagnostic logging defaults to OFF. The bring-up loggers (autoskip
+# menu trace, SFX trigger trace) are still in the source — gated on
+# SWOS_DEBUG_AUTOSKIP / SWOS_DEBUG_SFX — so a tester chasing a
+# regression can re-enable with `make SWOS_DEBUG=1`.
+ifdef SWOS_DEBUG
+DEBUG_FLAGS := -DSWOS_DEBUG_AUTOSKIP=1 -DSWOS_DEBUG_SFX=1
+endif
+
 CFLAGS  := $(ARCHFLAGS) -O2 -g -std=gnu11 -fno-strict-aliasing -fno-builtin \
-           -D_FILE_OFFSET_BITS=64 -DSWOS_DEBUG_AUTOSKIP=1 -DSWOS_DEBUG_SFX=1 \
+           -D_FILE_OFFSET_BITS=64 $(DEBUG_FLAGS) \
            -Wall -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable \
            -Wno-attributes -Wno-multichar -Wno-builtin-declaration-mismatch \
            -Wno-pointer-sign -Wno-int-conversion -Wno-incompatible-pointer-types \
