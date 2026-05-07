@@ -726,9 +726,44 @@ void _DoubleBufferSwapSequence(void)
 __attribute__((used, externally_visible))
 void _BlitterCopyPanelToScreen2(void)
 {
+    /* Paint the menu BG into BOTH buffers, not just the drawing target.
+     *
+     * Long-standing flicker bug (since the C port — present on both the
+     * Amiga C port and this SDL port): on some menu transitions and
+     * within-menu redraws (e.g. play-match → result, lineup formation
+     * change), the user briefly sees the OLD menu's content showing
+     * under the new menu's entries for 1–2 frames. Two screenshots
+     * confirmed: mid-transition shows new top + bottom strips with the
+     * old menu's middle visible, and a formation change momentarily
+     * loses the tactic grid entirely.
+     *
+     * Mechanism: _DrawMenu paints panel BG into the drawing target
+     * (basePtr), draws entries on top, then _WaitForVSync swaps. The
+     * just-drawn buffer becomes displayed. _BlitterCopyOverlayToScreen
+     * copies the displayed frame back to the new drawing target so both
+     * stay in sync — but until that copy runs, the OTHER buffer still
+     * holds whatever the previous menu painted. Any draw path or async
+     * present that touches the other buffer in this brief window
+     * (timer-thread render, DrawSelectedMenuItemFrame, partial
+     * _CallDrawMenuItem on either side of a swap) shows the stale
+     * content.
+     *
+     * The original Amiga code relied on hardware bitplane-pointer
+     * swap semantics that made the same flow atomic; the C port
+     * doesn't get that for free. The cheapest defensive fix is to
+     * paint the BG into BOTH buffers up front — neither side can show
+     * old content because both are now the same clean BG.
+     *
+     * Cost: one extra full-frame memcpy on every menu draw (~91 KB).
+     * Negligible at 50 Hz. */
+    if (!frontbufferMaskBuffer)
+        return;
     uint8_t *dst = (uint8_t *)frontbufferBasePtr;
-    if (dst && frontbufferMaskBuffer)
+    if (dst)
         memcpy(dst, frontbufferMaskBuffer, FRONTBUFFER_SIZE_TOTAL_BYTES);
+    uint8_t *altDst = (uint8_t *)frontbufferBaseAltPtr;
+    if (altDst && altDst != dst)
+        memcpy(altDst, frontbufferMaskBuffer, FRONTBUFFER_SIZE_TOTAL_BYTES);
 }
 #else
 __attribute__((used, externally_visible))
