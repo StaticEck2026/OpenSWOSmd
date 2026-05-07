@@ -604,19 +604,24 @@ void _LoadPoolplyrDat(void)
 __attribute__((used, externally_visible))
 PoolPlayer *_FindPoolplyrDatPlayer(uint16_t teamId, uint16_t playerOrdinal)
 {
-    PoolPlayer *entry = poolPlayerStrideRef;
-
-    /* poolplyr.dat decompresses to exactly 900 PoolPlayer records
-     * (52200 bytes / 58 each). The original Amiga assumed every
-     * caller-supplied (teamId, playerOrdinal) was present and
-     * walked unbounded. On SDL we can hit stale foreignMarketPlayers
-     * entries from a TEST.CAR saved before commit 5b18eb8 (when
-     * poolplyrDatBuffer was being clobbered by the SFX load); those
-     * saves contain garbage teamIds that don't exist in the real
-     * pool. Bound the loop and return NULL so the caller can skip
-     * the entry instead of walking off the end and SIGSEGV'ing. */
+    /* The original Amiga starts iteration at `poolPlayerStrideRef`
+     * (a 1-byte BSS marker) and does `entry++` (= +58) before the
+     * first comparison, so the first entry visited is at
+     * `poolPlayerStrideRef + 58`. The Amiga BSS layout pins
+     * poolPlayerStrideRef EXACTLY 58 bytes before poolplyrDatBuffer
+     * — making the +58 land precisely at poolplyrDatBuffer[0]. On
+     * SDL each symbol lives in its own .o; the two are NOT 58 bytes
+     * apart, so the Amiga trick reads from arbitrary unrelated BSS
+     * (or, in the user's session, walks off into unmapped memory
+     * and SIGSEGVs).
+     *
+     * Iterate from poolplyrDatBuffer directly. Bounded at
+     * POOLPLAYER_COUNT (the .dat decompresses to exactly 900
+     * 58-byte records) so a not-found lookup returns NULL instead
+     * of walking off the end. Callers handle NULL by skipping /
+     * disabling the row. */
+    PoolPlayer *entry = poolplyrDatBuffer;
     for (int i = 0; i < POOLPLAYER_COUNT; i++) {
-        entry++;                                /* lea 58(a0),a0 (advance first) */
         /* poolplyr.dat stores teamId as the BE byte pair
          * [country, ordinal]. On BE Amiga `entry->teamId` reads as
          * country<<8|ordinal = PACK_BE_U16; on LE x86 the same field
@@ -627,6 +632,7 @@ PoolPlayer *_FindPoolplyrDatPlayer(uint16_t teamId, uint16_t playerOrdinal)
         if (BE16_TO_HOST(entry->teamId) == teamId &&
             entry->playerOrdinal == (int8_t)playerOrdinal)
             return entry;
+        entry++;
     }
     return (PoolPlayer *)0;
 }
