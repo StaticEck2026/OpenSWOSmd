@@ -151,21 +151,52 @@ static int s_kbd_up, s_kbd_down, s_kbd_left, s_kbd_right, s_kbd_fire;
  * Pad 0 is shared with the keyboard for player 1; pad 1 drives player 2
  * exclusively (no keyboard binding for P2 — matches the Amiga which
  * always read P2 from physical Port 0). New pads fill the lowest empty
- * slot, so plugging a single pad always lands on P1. */
+ * slot, so plugging a single pad always lands on P1.
+ *
+ * Each slot can be either an SDL_GameController (high-level mapped pad)
+ * or a raw SDL_Joystick (no mapping in SDL's DB — we read axes/buttons
+ * by index). The raw fallback is what makes generic "Gameport to USB"
+ * adapters and other DIY pads work without the user having to author a
+ * gamecontrollerdb.txt entry. */
 #define INPUTSDL_NUM_PADS 2
 static SDL_GameController *s_pads[INPUTSDL_NUM_PADS];
+static SDL_Joystick       *s_raw_pads[INPUTSDL_NUM_PADS];   /* one of pads[i] / raw_pads[i] is set */
+static SDL_JoystickID      s_pad_instance_id[INPUTSDL_NUM_PADS]; /* for matching DEVICEREMOVED */
 
 static int pad_open_into_first_empty(int joystick_index)
 {
     for (int i = 0; i < INPUTSDL_NUM_PADS; ++i) {
-        if (!s_pads[i]) {
-            SDL_GameController *p = SDL_GameControllerOpen(joystick_index);
-            if (p) {
-                s_pads[i] = p;
-                return i;
+        if (!s_pads[i] && !s_raw_pads[i]) {
+            if (SDL_IsGameController(joystick_index)) {
+                SDL_GameController *p = SDL_GameControllerOpen(joystick_index);
+                if (p) {
+                    s_pads[i] = p;
+                    s_pad_instance_id[i] = SDL_JoystickInstanceID(
+                        SDL_GameControllerGetJoystick(p));
+                    return i;
+                }
+            } else {
+                /* No GameController mapping — open as a raw joystick.
+                 * Standard "two axes + one fire" gameport pads (the
+                 * Amiga/Atari shape SWOS expects) fall through here. */
+                SDL_Joystick *j = SDL_JoystickOpen(joystick_index);
+                if (j) {
+                    s_raw_pads[i] = j;
+                    s_pad_instance_id[i] = SDL_JoystickInstanceID(j);
+                    return i;
+                }
             }
             return -1;
         }
+    }
+    return -1;
+}
+
+static int pad_find_slot_for_instance(SDL_JoystickID id)
+{
+    for (int i = 0; i < INPUTSDL_NUM_PADS; ++i) {
+        if ((s_pads[i] || s_raw_pads[i]) && s_pad_instance_id[i] == id)
+            return i;
     }
     return -1;
 }
@@ -203,13 +234,12 @@ int InputSDL_Init(void)
         fprintf(stderr, "[input]   joystick %d: \"%s\" %s\n",
                 i, name ? name : "(null)",
                 is_gc ? "→ game controller" : "→ raw joystick (no mapping)");
-        if (is_gc) {
-            int slot = pad_open_into_first_empty(i);
-            if (slot >= 0)
-                fprintf(stderr, "[input]     opened as P%d\n", slot + 1);
-            else
-                fprintf(stderr, "[input]     skipped (both pad slots full or open failed)\n");
-        }
+        int slot = pad_open_into_first_empty(i);
+        if (slot >= 0)
+            fprintf(stderr, "[input]     opened as P%d (%s)\n",
+                    slot + 1, is_gc ? "GameController" : "raw Joystick");
+        else
+            fprintf(stderr, "[input]     skipped (both pad slots full or open failed)\n");
     }
     return 0;
 }
@@ -221,6 +251,11 @@ void InputSDL_Shutdown(void)
             SDL_GameControllerClose(s_pads[i]);
             s_pads[i] = NULL;
         }
+        if (s_raw_pads[i]) {
+            SDL_JoystickClose(s_raw_pads[i]);
+            s_raw_pads[i] = NULL;
+        }
+        s_pad_instance_id[i] = 0;
     }
 }
 
@@ -293,58 +328,96 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         default: break;
         }
     } break;
-    case SDL_CONTROLLERDEVICEADDED: {
-        const char *name = SDL_GameControllerNameForIndex(e->cdevice.which);
-        int slot = pad_open_into_first_empty(e->cdevice.which);
-        fprintf(stderr, "[input] hot-plug: \"%s\" %s\n",
-                name ? name : "(null)",
-                slot >= 0 ? (slot == 0 ? "→ P1" : "→ P2") : "(no free slot)");
-    } break;
     case SDL_JOYDEVICEADDED: {
-        /* Fires for every joystick — even ones SDL recognises as a
-         * GameController (CONTROLLERDEVICEADDED fires too in that
-         * case). Log the joystick view so the user can see whether
-         * SDL has a mapping for the device or not. */
+        /* SDL fires JOYDEVICEADDED for every device. CONTROLLERDEVICEADDED
+         * fires *additionally* for devices that have a GameController
+         * mapping. We do all our opening here so a single code path
+         * handles both mapped and unmapped pads — the
+         * pad_open_into_first_empty helper picks the right SDL API
+         * based on SDL_IsGameController. Skipping CONTROLLERDEVICEADDED
+         * avoids opening the same device twice. */
         int idx = e->jdevice.which;
         const char *name = SDL_JoystickNameForIndex(idx);
-        if (!SDL_IsGameController(idx)) {
-            fprintf(stderr,
-                    "[input] joystick attached without a GameController mapping: \"%s\" "
-                    "(idx=%d) — drop gamecontrollerdb.txt next to the binary or use "
-                    "https://generalarcade.com/gamepadtool/ to make one.\n",
-                    name ? name : "(null)", idx);
+        int is_gc = SDL_IsGameController(idx);
+        int slot = pad_open_into_first_empty(idx);
+        fprintf(stderr, "[input] hot-plug: \"%s\" (%s) %s\n",
+                name ? name : "(null)",
+                is_gc ? "GameController" : "raw Joystick",
+                slot >= 0 ? (slot == 0 ? "→ P1" : "→ P2") : "(no free slot)");
+    } break;
+    case SDL_JOYDEVICEREMOVED: {
+        int slot = pad_find_slot_for_instance(e->jdevice.which);
+        if (slot >= 0) {
+            if (s_pads[slot]) {
+                SDL_GameControllerClose(s_pads[slot]);
+                s_pads[slot] = NULL;
+            }
+            if (s_raw_pads[slot]) {
+                SDL_JoystickClose(s_raw_pads[slot]);
+                s_raw_pads[slot] = NULL;
+            }
+            s_pad_instance_id[slot] = 0;
+            fprintf(stderr, "[input] pad P%d removed\n", slot + 1);
         }
     } break;
-    case SDL_CONTROLLERDEVICEREMOVED:
-        for (int i = 0; i < INPUTSDL_NUM_PADS; ++i) {
-            if (s_pads[i] &&
-                SDL_GameControllerFromInstanceID(e->cdevice.which) == s_pads[i]) {
-                SDL_GameControllerClose(s_pads[i]);
-                s_pads[i] = NULL;
-                fprintf(stderr, "[input] pad P%d removed\n", i + 1);
-                break;
-            }
-        }
-        break;
     default:
         break;
     }
 }
 
-/* Read directional + fire state from a single pad. NULL pad → all zero. */
-static void read_pad_state(SDL_GameController *pad,
+/* Read directional + fire state from a single pad slot. */
+static void read_pad_state(int slot,
                            int *up, int *down, int *left, int *right, int *fire)
 {
-    if (!pad) return;
-    Sint16 ax = SDL_GameControllerGetAxis(pad, SDL_CONTROLLER_AXIS_LEFTX);
-    Sint16 ay = SDL_GameControllerGetAxis(pad, SDL_CONTROLLER_AXIS_LEFTY);
-    if (ay < -8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_UP))    *up    = 1;
-    if (ay >  8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_DOWN))  *down  = 1;
-    if (ax < -8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_LEFT))  *left  = 1;
-    if (ax >  8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_RIGHT)) *right = 1;
-    if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_A) ||
-        SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_B))
-        *fire = 1;
+    SDL_GameController *pad = s_pads[slot];
+    SDL_Joystick *raw = s_raw_pads[slot];
+
+    if (pad) {
+        Sint16 ax = SDL_GameControllerGetAxis(pad, SDL_CONTROLLER_AXIS_LEFTX);
+        Sint16 ay = SDL_GameControllerGetAxis(pad, SDL_CONTROLLER_AXIS_LEFTY);
+        if (ay < -8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_UP))    *up    = 1;
+        if (ay >  8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_DOWN))  *down  = 1;
+        if (ax < -8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_LEFT))  *left  = 1;
+        if (ax >  8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_RIGHT)) *right = 1;
+        if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_A) ||
+            SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_B))
+            *fire = 1;
+        return;
+    }
+
+    if (raw) {
+        /* Raw joystick path: no GameController mapping in SDL's DB.
+         * The classic Amiga / gameport-shaped pad has 2 axes + 1+ fire
+         * buttons. Read axes 0 (X) and 1 (Y) and treat any pressed
+         * button as fire — keeps generic gameport-to-USB adapters
+         * working without a hand-authored mapping. Also probe a hat
+         * (POV) if the device has one (some converters expose
+         * direction as a hat instead of axes). */
+        int naxes  = SDL_JoystickNumAxes(raw);
+        int nbtns  = SDL_JoystickNumButtons(raw);
+        int nhats  = SDL_JoystickNumHats(raw);
+        if (naxes >= 2) {
+            Sint16 ax = SDL_JoystickGetAxis(raw, 0);
+            Sint16 ay = SDL_JoystickGetAxis(raw, 1);
+            if (ax < -8000) *left  = 1;
+            if (ax >  8000) *right = 1;
+            if (ay < -8000) *up    = 1;
+            if (ay >  8000) *down  = 1;
+        }
+        if (nhats >= 1) {
+            Uint8 h = SDL_JoystickGetHat(raw, 0);
+            if (h & SDL_HAT_UP)    *up    = 1;
+            if (h & SDL_HAT_DOWN)  *down  = 1;
+            if (h & SDL_HAT_LEFT)  *left  = 1;
+            if (h & SDL_HAT_RIGHT) *right = 1;
+        }
+        for (int b = 0; b < nbtns; ++b) {
+            if (SDL_JoystickGetButton(raw, b)) {
+                *fire = 1;
+                break;
+            }
+        }
+    }
 }
 
 /* Encode an up/down/left/right + fire state into Paula's JOY*DAT word.
@@ -390,13 +463,13 @@ void InputSDL_PostFrame(void)
     /* Player 1: keyboard + pad 0 (combined). */
     int p1_up = s_kbd_up, p1_down = s_kbd_down, p1_left = s_kbd_left, p1_right = s_kbd_right;
     int p1_fire = s_kbd_fire;
-    read_pad_state(s_pads[0], &p1_up, &p1_down, &p1_left, &p1_right, &p1_fire);
+    read_pad_state(0, &p1_up, &p1_down, &p1_left, &p1_right, &p1_fire);
 
     /* Player 2: pad 1 only. No keyboard binding — keeping the keyboard
      * single-player avoids hijacking arrow / fire keys when a P2 pad is
      * plugged in but unused. */
     int p2_up = 0, p2_down = 0, p2_left = 0, p2_right = 0, p2_fire = 0;
-    read_pad_state(s_pads[1], &p2_up, &p2_down, &p2_left, &p2_right, &p2_fire);
+    read_pad_state(1, &p2_up, &p2_down, &p2_left, &p2_right, &p2_fire);
 
     /* SWOS reads P1 from JOY1DAT (Amiga Port 1) and P2 from JOY0DAT
      * (Port 0). The port numbering is reversed from the player number —

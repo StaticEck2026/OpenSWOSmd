@@ -228,6 +228,16 @@ int Platform_Init(int win_scale)
     (void)AudioSDL_Init();
     (void)InputSDL_Init();
 
+    /* Bump the OS timer resolution so SDL_Delay() doesn't oversleep.
+     * Windows' default scheduler tick is 15.6 ms, which means a 20 ms
+     * sleep often becomes 30+ ms — making the 50 Hz pacing loop alternate
+     * between 20 ms and 30 ms frames and producing the "choppy / uneven
+     * framerate" testers report. SDL_HINT_TIMER_RESOLUTION asks the
+     * underlying platform timer to drop to 1 ms granularity (on Windows
+     * this is `timeBeginPeriod(1)` under the hood). Linux is already
+     * fine but the hint is harmless there. */
+    SDL_SetHint(SDL_HINT_TIMER_RESOLUTION, "1");
+
     s_perf_freq = SDL_GetPerformanceFrequency();
     s_next_frame_perf = SDL_GetPerformanceCounter();
 
@@ -484,6 +494,8 @@ static void pump_events_any_thread(void)
         case SDL_CONTROLLERAXISMOTION:
         case SDL_CONTROLLERDEVICEADDED:
         case SDL_CONTROLLERDEVICEREMOVED:
+        case SDL_JOYDEVICEADDED:
+        case SDL_JOYDEVICEREMOVED:
             InputSDL_HandleEvent(&ev);
             break;
         default:
@@ -575,15 +587,40 @@ int Platform_VBlank(void)
     s_last_main_render_ms = SDL_GetTicks();
     Platform_RenderFrame();
 
-    /* 50 Hz pacing — sleep until the next frame boundary. */
+    /* 50 Hz pacing — wait until the next frame boundary on the
+     * high-resolution counter. Hybrid sleep + spin: SDL_Delay() for the
+     * bulk of the wait (cheap on CPU, releases the core), then a busy
+     * spin for the last ~2 ms to land on the deadline accurately. Even
+     * with SDL_HINT_TIMER_RESOLUTION=1, SDL_Delay can still wake up
+     * 1–2 ms late depending on what the OS scheduler is doing, and that
+     * jitter is exactly what looks like "uneven framerate" to a player.
+     *
+     * Catch-up cap: if we fell behind by more than one frame (e.g. the
+     * main thread blocked on a slow asset load), reset the deadline to
+     * "now" instead of trying to render N frames back-to-back to catch
+     * up — which would just make the next batch of frames feel even
+     * more uneven. The 50 Hz audio tick is locked to the same loop so
+     * skipping a catch-up keeps music time-aligned with game state. */
     s_next_frame_perf += (Uint64)((double)s_perf_freq * k_frame_secs);
     Uint64 now = SDL_GetPerformanceCounter();
-    if (now < s_next_frame_perf) {
-        double secs = (double)(s_next_frame_perf - now) / (double)s_perf_freq;
-        Uint32 ms = (Uint32)(secs * 1000.0);
-        if (ms > 0) SDL_Delay(ms);
-    } else {
+
+    if ((Sint64)(now - s_next_frame_perf) > (Sint64)((double)s_perf_freq * k_frame_secs)) {
+        /* More than a full frame behind — give up on catching up. */
         s_next_frame_perf = now;
+    } else {
+        /* Sleep almost-to-deadline, leaving a 2 ms margin for the spin. */
+        const Uint64 spin_margin = (Uint64)((double)s_perf_freq * 0.002);
+        if (s_next_frame_perf > now + spin_margin) {
+            double secs = (double)(s_next_frame_perf - now - spin_margin)
+                          / (double)s_perf_freq;
+            Uint32 ms = (Uint32)(secs * 1000.0);
+            if (ms > 0) SDL_Delay(ms);
+        }
+        /* Spin out the remainder. SDL_Delay typically wakes 0–2 ms late
+         * with TIMER_RESOLUTION=1; this loop is at most ~2 ms of spin. */
+        while (SDL_GetPerformanceCounter() < s_next_frame_perf) {
+            /* tight loop — SDL_GetPerformanceCounter is a CPU register read */
+        }
     }
 
     return g_quitToDos ? 1 : 0;
