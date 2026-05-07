@@ -96,6 +96,20 @@ int main(int argc, char **argv)
 
     chdir_to_binary(argv ? argv[0] : NULL);
 
+    /* Redirect stderr to SWOS.log alongside the binary. Saves the
+     * tester from having to remember `2> SWOS.log` on every launch
+     * and works the same whether the program is started from gdb,
+     * Explorer, or a terminal. Disable by setting SWOS_NO_LOG=1 in
+     * the environment if you want stderr to go back to the
+     * console. unbuffered so log lines flush immediately and we
+     * don't lose context when the program crashes. */
+    if (getenv("SWOS_NO_LOG") == NULL) {
+        FILE *log = freopen("SWOS.log", "w", stderr);
+        if (log) {
+            setvbuf(log, NULL, _IONBF, 0);
+        }
+    }
+
     SDL_SetMainReady();
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER) != 0) {
         fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
