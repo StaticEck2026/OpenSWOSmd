@@ -608,7 +608,16 @@ PoolPlayer *_FindPoolplyrDatPlayer(uint16_t teamId, uint16_t playerOrdinal)
 
     for (;;) {
         entry++;                                /* lea 58(a0),a0 (advance first) */
-        if (entry->teamId == teamId &&
+        /* poolplyr.dat stores teamId as the BE byte pair
+         * [country, ordinal]. On BE Amiga `entry->teamId` reads as
+         * country<<8|ordinal = PACK_BE_U16; on LE x86 the same field
+         * read byte-swaps to ordinal<<8|country and the comparison
+         * against the PACK_BE_U16-formatted `teamId` parameter never
+         * matches — _FindPoolplyrDatPlayer then walks the buffer
+         * forever and SIGSEGVs past its end. Convert through
+         * BE16_TO_HOST so the compare sees the same format on both
+         * endians. */
+        if (BE16_TO_HOST(entry->teamId) == teamId &&
             entry->playerOrdinal == (int8_t)playerOrdinal)
             return entry;
     }
@@ -772,11 +781,20 @@ retry:
     poolIdx = (uint16_t)((uint32_t)rand * POOLPLAYER_COUNT >> 16);  /* mulu #900; lsr.l #8; lsr.l #8 */
     poolEntry = &poolplyrDatBuffer[poolIdx];
 
-    /* Must be different country */
+    /* Must be different country. Byte access at offset 0 is endian-
+     * safe (the file format stores [country, ordinal] bytes). */
     if (*(uint8_t *)&poolEntry->teamId == homeCountry)      /* cmp.b (a0),d3 */
         goto retry;
 
-    teamId = poolEntry->teamId;
+    /* Convert poolEntry->teamId (file-format native = byte-swapped on
+     * LE) into PACK_BE_U16 format (country << 8 | ordinal) to match
+     * the format the foreign-market write/find helpers now expect.
+     * Without this conversion, passing the LE-native value
+     * downstream would put the wrong bytes into foreignMarketPlayers
+     * and the next _PlayerMarketBuildVisiblePlayerList →
+     * _FindPoolplyrDatPlayer would walk the pool buffer forever and
+     * SIGSEGV (which is exactly what the user hit). */
+    teamId = BE16_TO_HOST(poolEntry->teamId);
     playerOrd = (uint8_t)poolEntry->playerOrdinal;
 
     /* If attempts remain (price filtering), check price range */
