@@ -612,8 +612,22 @@ after_decode:
         _DarkenRectangle(SPR_BIG_0_ALT + units, bx, by);
     }
 
-    /* State 3 timing: wait 2 game ticks when not paused */
+    /* State 3 timing: stretch each replay frame across 2 extra ticks
+     * (≈ half-speed slomo). On Amiga the busy-spin on `currentGameTick`
+     * was harmless because the VBlank ISR ticked it AND drove audio
+     * pre-emptively. On SDL the tick is advanced by the SDL_Timer
+     * thread, but audio production runs on the *main* thread inside
+     * Platform_VBlank → AudioSDL_Tick. A pure busy-spin on the main
+     * thread starves the audio queue for 40 ms per replay frame,
+     * which is exactly the stutter testers hear during R-then-R
+     * slomo. Use Platform_VBlank instead so we both pace at 50 Hz AND
+     * keep AudioSDL_Tick firing on every wait iteration. */
     if (replayState == 3 && paused == 0) {
+#ifdef SWOS_SDL_BUILD
+        extern int Platform_VBlank(void);
+        Platform_VBlank();
+        Platform_VBlank();
+#else
         uint16_t i;
         for (i = 0; i < 2; i++) {
             volatile uint16_t *tickPtr = &currentGameTick;
@@ -621,6 +635,7 @@ after_decode:
             while (*tickPtr == tick)
                 ;  /* busy-wait for next tick */
         }
+#endif
     }
 }
 
