@@ -15,6 +15,10 @@
 #include "game_types.h"
 #include "panic.h"
 #include "teams.h"
+
+#ifdef SWOS_DEBUG_AUTOSKIP
+#include <stdio.h>
+#endif
 #include "diy_competition.h"
 #include "file_io.h"
 
@@ -119,6 +123,32 @@ TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum)
     TeamFileEx *team;
     uint16_t idx;
     if (findTeamInCache(teamNum, &team, &idx) != 0) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+        /* Dump context so we can see what's actually in selTeamsPtr
+         * vs what the caller expected. The crash means the caller
+         * trusted a teamNum that no longer corresponds to any cached
+         * team — usually because something cleared the cache between
+         * save and lookup, or because `numSelectedTeams` is wrong. */
+        extern uint8_t selTeamsPtr;
+        extern uint16_t numSelectedTeams;
+        extern uint16_t selTeamNumber;
+        fprintf(stderr,
+                "[verify] _VerifyTeamLoaded(0x%04X) FAIL: country=0x%02X team=0x%02X "
+                "selTeamNumber=0x%04X numSelectedTeams=%u\n",
+                (unsigned)teamNum,
+                (unsigned)((teamNum >> 8) & 0xFF), (unsigned)(teamNum & 0xFF),
+                (unsigned)selTeamNumber, (unsigned)numSelectedTeams);
+        TeamFileEx *firstFew = (TeamFileEx *)&selTeamsPtr;
+        unsigned dumpN = numSelectedTeams;
+        if (dumpN > 8) dumpN = 8;
+        for (unsigned i = 0; i < dumpN; i++) {
+            fprintf(stderr,
+                    "[verify]   selTeamsPtr[%u] country=0x%02X ordinal=0x%02X\n",
+                    i,
+                    (unsigned)firstFew[i].team.countryNumber,
+                    (unsigned)firstFew[i].team.teamOrdinal);
+        }
+#endif
         _PanicHaltLoop();
     }
     return team;

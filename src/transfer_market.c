@@ -2476,7 +2476,17 @@ void _ShowPlayerOfferMenuForPlayer(uint16_t teamNumber, uint16_t playerOrdinal)
     _ShowMenu(playerOffersMenu);
 }
 
-/* ShowPlayerMarketInit (Chunk 163) */
+/* ShowPlayerMarketInit (Chunk 163)
+ *
+ * In SWOS2.s line 102649 this function ends with `bra.w *+4` — a
+ * branch to PC+4 that falls through to the very next instruction,
+ * which is the start of ShowPlayerMarket. So the init resets the
+ * filter state AND THEN runs the title/balance-setup code in
+ * ShowPlayerMarket. Without the explicit fall-through call, our
+ * SDL port returned after the init and showPlayerMarketMenu's
+ * title (entry 0) and balance buffer (entry 1) never got
+ * populated — entry 1's STDMENUTEXT placeholder buffer leaked
+ * through to the screen. */
 __attribute__((used, externally_visible))
 void _ShowPlayerMarketInit(void)
 {
@@ -2487,6 +2497,7 @@ void _ShowPlayerMarketInit(void)
     playerMarketTotalMatchCount = 0;
     playerMarketVisibleItemCount = 0;
     playerMarketListScrollOffset = 0;
+    _ShowPlayerMarket();   /* SWOS2.s `bra.w *+4` fall-through */
 }
 
 /* PlayerMarketUpdateFilterMenuEntryState (Chunk 163)
