@@ -27,6 +27,7 @@ int  InputSDL_Init(void);
 void InputSDL_Shutdown(void);
 void InputSDL_HandleEvent(const SDL_Event *e);
 void InputSDL_PostFrame(void);
+void InputSDL_ClearKeyState(void);
 
 /* ---- Game-side globals we read each frame --------------------------
  * The displayed image lives in `frontbufferBase` (or `Alt` after a
@@ -559,6 +560,21 @@ static void pump_events_any_thread(void)
             if (ev.window.event == SDL_WINDOWEVENT_CLOSE) {
                 Platform_RequestQuit();
                 if (s_window) SDL_HideWindow(s_window);
+            } else if (ev.window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
+                /* Alt-Tab takes focus before SDL delivers KEYUP for the
+                 * Alt that triggered the switch — so without clearing
+                 * here our keyState[AKEY_LALT] / keyBuffer FIFO entry
+                 * stay "pressed" indefinitely. On focus return the
+                 * loader-intro key-skip and the menu fire-poll see that
+                 * stuck press and (a) skip the intro and (b) fire the
+                 * highlighted menu entry. Drop everything; new presses
+                 * after focus returns will repopulate via KEYDOWN. */
+                InputSDL_ClearKeyState();
+            } else if (ev.window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
+                /* Defence-in-depth: also clear on regain in case any
+                 * KEYDOWN slipped in between FOCUS_LOST and the actual
+                 * loss of input focus. Cheap to do. */
+                InputSDL_ClearKeyState();
             }
             break;
         case SDL_KEYDOWN:

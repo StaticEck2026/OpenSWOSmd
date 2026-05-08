@@ -458,6 +458,28 @@ static uint16_t encode_joydat(int up, int down, int left, int right)
     return v;
 }
 
+/* Drop every kind of "key/button is currently down" state. Called on
+ * SDL_WINDOWEVENT_FOCUS_LOST so an Alt-Tab away doesn't leave Alt
+ * stuck pressed, which would (a) skip the intro on focus return and
+ * (b) instantly fire the currently-highlighted menu entry as a "click".
+ *
+ * The Alt-Tab sequence on Windows takes focus away before SDL gets a
+ * KEYUP for the Alt key, so without this clear our keyState[AKEY_LALT]
+ * (and the keyBuffer FIFO entry that SDL_KEYDOWN pushed) stay set
+ * indefinitely. The very first thing the menu/loader-intro does on
+ * focus return is poll those, and acts as if the user was holding the
+ * fire/select button down. */
+void InputSDL_ClearKeyState(void)
+{
+    memset(keyState, 0, sizeof(keyState));
+    memset((void *)keyBuffer, 0, sizeof(keyBuffer));
+    keyCount = 0;
+    s_kbd_up = s_kbd_down = s_kbd_left = s_kbd_right = s_kbd_fire = 0;
+    /* joy0Dat / joy1Dat / ciaa_pra are recomputed each frame by
+     * InputSDL_PostFrame from the cleared s_kbd_* + read_pad_state, so
+     * they don't need explicit clearing here. */
+}
+
 void InputSDL_PostFrame(void)
 {
     /* Player 1: keyboard + pad 0 (combined). */
