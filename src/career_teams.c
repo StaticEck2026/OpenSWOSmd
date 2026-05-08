@@ -1500,7 +1500,7 @@ void _Career_ProcessCurrentCompetitionSlotForMatch(void)
 
     _Career_LoadCompetitionSlotStateFromBuffer(slotPtr);
 
-    uint16_t type = BE_READ_U16(slotPtr);
+    uint16_t type = *(uint16_t *)slotPtr;
     if (type == 1)
         _Career_AutoSimulateCupMatchesUntilHumanTeam();
     else if (type == 2)
@@ -1535,7 +1535,7 @@ void _Career_ProcessCurrentCompetitionSlotAfterMatch(void)
 
     _Career_LoadCompetitionSlotStateFromBuffer(slotPtr);
 
-    uint16_t type = BE_READ_U16(slotPtr);
+    uint16_t type = *(uint16_t *)slotPtr;
     if (type == 1) {
         _Career_AutoPlayCupMatchAndAdvanceLoop();
         _Career_StoreCompetitionSlotStateToBuffer(slotPtr);
@@ -1579,7 +1579,12 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
 
     _Career_LoadCompetitionSlotStateFromBuffer(slotPtr);
 
-    uint16_t type = BE_READ_U16(slotPtr);
+    /* Slot type is stored as a native uint16 word — same byte order
+     * that _Career_LoadCompetitionSlotStateFromBuffer / _Career_StoreCompetitionSlotStateToBuffer
+     * read/write. Using BE_READ_U16 here mis-routes cup slots to the
+     * league menu on LE hosts, which then crashes sorting an
+     * uninitialized league table. */
+    uint16_t type = *(uint16_t *)slotPtr;
     if (type == 1) {
         /* Cup */
         _ShowDIYCupMenuWithParams(1, 0, d2);
@@ -1606,7 +1611,7 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
     /* Rebuild caches if competition is done (type==0, no round/phase left) */
     if (*(uint16_t *)&((DIYCompetition *)slotPtr)->compId != 0)
         return;
-    if (BE_READ_U16(slotPtr) != 0)
+    if (*(uint16_t *)slotPtr != 0)
         return;
     if (((DIYCompetitionEx *)slotPtr)->minSubstitutes != 0)
         return;
@@ -1708,7 +1713,7 @@ void _Career_NextMatch(void)
     uint8_t *slotPtr = careerCompetitionSlotPtrTable[slotIdx];
 
     /* If type==0 (league) and league.hasGroupsDiy != 0, use PlayMatchMenuLoop */
-    if (BE_READ_U16(slotPtr) == 0 &&
+    if (*(uint16_t *)slotPtr == 0 &&
         ((DIYCompetitionEx *)slotPtr)->matchData.league.hasGroupsDiy != 0) {
         _Career_PlayMatchMenuLoop();
         return;
