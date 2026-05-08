@@ -2812,20 +2812,32 @@ process_next:
     uint8_t *sel1 = &selTeamsPtr + ((DIYTeamStats *)(team1Comp + 0x2B4))->teamSelPtr;
     uint8_t *sel2 = &selTeamsPtr + ((DIYTeamStats *)(team2Comp + 0x2B4))->teamSelPtr;
 
-    /* Check if team1 is human-controlled (category == 1) */
+    /* Check if team1 is human-controlled (category == 1) and write
+     * the home/away marker to fixture[+0x0A].
+     *
+     * Asm (SWOS2.s line 59780-59800) logic:
+     *   - FRIENDLY                   → always set marker (1 or 2)
+     *   - else playEachTeam == 1     → clear marker (single-leg league:
+     *                                  no H/A indicator)
+     *   - else                       → set marker
+     *
+     * The previous SDL translation had the playEachTeam check inverted
+     * (`== 1` instead of `!= 1`), which CLEARED the marker for normal
+     * league competitions where playEachTeam is 2 (home + away). That's
+     * why the career main screen showed (H)/(A) only on Coppa /
+     * European Cup rows and never on Serie A — tester report. */
     if (sel1[4] == 1) {
         if (sel2[4] == 1) {
             /* Both human — skip recording */
             goto check_continue;
         }
-        /* Check FRIENDLY string */
-        if (a6s->namePtr == aFriendly || a6s->playEachTeam == 1) {
+        if (a6s->namePtr == aFriendly || a6s->playEachTeam != 1) {
             resultPtr[0x0A] = 2;
         } else {
             resultPtr[0x0A] = 0;
         }
     } else {
-        if (a6s->namePtr == aFriendly || a6s->playEachTeam == 1) {
+        if (a6s->namePtr == aFriendly || a6s->playEachTeam != 1) {
             resultPtr[0x0A] = 1;
         } else {
             resultPtr[0x0A] = 0;
