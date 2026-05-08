@@ -849,6 +849,7 @@ _ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
     {
         extern void _Player1StatusProc(void);
         extern void _Player2StatusProc(void);
+        extern void _WaitForVSync(void);
         extern uint8_t pl1Fire;
         extern uint8_t pl2Fire;
         for (;;) {
