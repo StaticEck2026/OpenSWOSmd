@@ -2130,6 +2130,54 @@ void _DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC)
     uint8_t *bufCopyRaw = (uint8_t *)bufCopy;
     uint8_t *compRaw = (uint8_t *)comp;
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+    /* Diagnostic for the WC94TEST.PRE round-trip: dump the head of both
+     * competitionFileBuffer (what the .PRE was loaded into / saved from)
+     * and diyFileBufferCopy (the active runtime state), at slot 0 + slot 1
+     * head + the slot-1 tournament-fields overlay region. If these
+     * diverge after _SaveDIYTournament has run we know the 1450-word copy
+     * is the bug. */
+    {
+        extern uint8_t competitionFileBuffer[];
+        const uint8_t *cfb = competitionFileBuffer;
+        const uint8_t *dfb = (const uint8_t *)diyFileBufferCopy;
+        SWOS_AUTOSKIP_LOG("EditCompSlot: paramA=%u paramB=%u paramC=%u slotIdx(buf)=%u",
+                          (unsigned)paramA, (unsigned)paramB, (unsigned)paramC,
+                          (unsigned)bufCopy->roundComplete);
+        SWOS_AUTOSKIP_LOG("EditCompSlot: cfb[0x00..0x1F]=%02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x",
+                          cfb[0x00], cfb[0x01], cfb[0x02], cfb[0x03], cfb[0x04], cfb[0x05], cfb[0x06], cfb[0x07],
+                          cfb[0x08], cfb[0x09], cfb[0x0A], cfb[0x0B], cfb[0x0C], cfb[0x0D], cfb[0x0E], cfb[0x0F],
+                          cfb[0x10], cfb[0x11], cfb[0x12], cfb[0x13], cfb[0x14], cfb[0x15], cfb[0x16], cfb[0x17],
+                          cfb[0x18], cfb[0x19], cfb[0x1A], cfb[0x1B], cfb[0x1C], cfb[0x1D], cfb[0x1E], cfb[0x1F]);
+        SWOS_AUTOSKIP_LOG("EditCompSlot: dfb[0x00..0x1F]=%02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x",
+                          dfb[0x00], dfb[0x01], dfb[0x02], dfb[0x03], dfb[0x04], dfb[0x05], dfb[0x06], dfb[0x07],
+                          dfb[0x08], dfb[0x09], dfb[0x0A], dfb[0x0B], dfb[0x0C], dfb[0x0D], dfb[0x0E], dfb[0x0F],
+                          dfb[0x10], dfb[0x11], dfb[0x12], dfb[0x13], dfb[0x14], dfb[0x15], dfb[0x16], dfb[0x17],
+                          dfb[0x18], dfb[0x19], dfb[0x1A], dfb[0x1B], dfb[0x1C], dfb[0x1D], dfb[0x1E], dfb[0x1F]);
+        /* Slot 1 head (offset 0x76) and slot-1 tournament fields (offset 0x76+0x15A=0x1D0) */
+        SWOS_AUTOSKIP_LOG("EditCompSlot: cfb[0x76..0x95]=%02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x",
+                          cfb[0x76], cfb[0x77], cfb[0x78], cfb[0x79], cfb[0x7A], cfb[0x7B], cfb[0x7C], cfb[0x7D],
+                          cfb[0x7E], cfb[0x7F], cfb[0x80], cfb[0x81], cfb[0x82], cfb[0x83], cfb[0x84], cfb[0x85],
+                          cfb[0x86], cfb[0x87], cfb[0x88], cfb[0x89], cfb[0x8A], cfb[0x8B], cfb[0x8C], cfb[0x8D],
+                          cfb[0x8E], cfb[0x8F], cfb[0x90], cfb[0x91], cfb[0x92], cfb[0x93], cfb[0x94], cfb[0x95]);
+        SWOS_AUTOSKIP_LOG("EditCompSlot: dfb[0x76..0x95]=%02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x",
+                          dfb[0x76], dfb[0x77], dfb[0x78], dfb[0x79], dfb[0x7A], dfb[0x7B], dfb[0x7C], dfb[0x7D],
+                          dfb[0x7E], dfb[0x7F], dfb[0x80], dfb[0x81], dfb[0x82], dfb[0x83], dfb[0x84], dfb[0x85],
+                          dfb[0x86], dfb[0x87], dfb[0x88], dfb[0x89], dfb[0x8A], dfb[0x8B], dfb[0x8C], dfb[0x8D],
+                          dfb[0x8E], dfb[0x8F], dfb[0x90], dfb[0x91], dfb[0x92], dfb[0x93], dfb[0x94], dfb[0x95]);
+        SWOS_AUTOSKIP_LOG("EditCompSlot: cfb[0x1D0..0x1EF]=%02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x",
+                          cfb[0x1D0], cfb[0x1D1], cfb[0x1D2], cfb[0x1D3], cfb[0x1D4], cfb[0x1D5], cfb[0x1D6], cfb[0x1D7],
+                          cfb[0x1D8], cfb[0x1D9], cfb[0x1DA], cfb[0x1DB], cfb[0x1DC], cfb[0x1DD], cfb[0x1DE], cfb[0x1DF],
+                          cfb[0x1E0], cfb[0x1E1], cfb[0x1E2], cfb[0x1E3], cfb[0x1E4], cfb[0x1E5], cfb[0x1E6], cfb[0x1E7],
+                          cfb[0x1E8], cfb[0x1E9], cfb[0x1EA], cfb[0x1EB], cfb[0x1EC], cfb[0x1ED], cfb[0x1EE], cfb[0x1EF]);
+        SWOS_AUTOSKIP_LOG("EditCompSlot: dfb[0x1D0..0x1EF]=%02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x",
+                          dfb[0x1D0], dfb[0x1D1], dfb[0x1D2], dfb[0x1D3], dfb[0x1D4], dfb[0x1D5], dfb[0x1D6], dfb[0x1D7],
+                          dfb[0x1D8], dfb[0x1D9], dfb[0x1DA], dfb[0x1DB], dfb[0x1DC], dfb[0x1DD], dfb[0x1DE], dfb[0x1DF],
+                          dfb[0x1E0], dfb[0x1E1], dfb[0x1E2], dfb[0x1E3], dfb[0x1E4], dfb[0x1E5], dfb[0x1E6], dfb[0x1E7],
+                          dfb[0x1E8], dfb[0x1E9], dfb[0x1EA], dfb[0x1EB], dfb[0x1EC], dfb[0x1ED], dfb[0x1EE], dfb[0x1EF]);
+    }
+#endif
+
 restart_loop:
     ;
     /* a3 = bufCopy + bufCopy[0x54] * 0x76 (current slot base) */
@@ -3058,6 +3106,26 @@ static void buildCompSpecificTeamList(uint8_t *diy)
     uint16_t field54 = (uint16_t)diyS->roundComplete;
     uint8_t *src = diy + 0x5A;  /* byte array starting at numRounds, used as raw team index buffer */
     uint8_t *dst = diyTeamShuffleScratch;
+#ifdef SWOS_DEBUG_AUTOSKIP
+    SWOS_AUTOSKIP_LOG("buildCompSpecificTeamList: ENTER field54=%u compType=%d numTeams=%d "
+                      "compId=%u slotId=%u namePtr=0x%lx",
+                      (unsigned)field54, (int)diyS->competitionType,
+                      (int)diyS->numTeams, (unsigned)diyS->compId,
+                      (unsigned)diyS->slotId, (unsigned long)diyS->namePtr);
+    SWOS_AUTOSKIP_LOG("buildCompSpecificTeamList: src[0..15]=%02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x",
+                      src[0], src[1], src[2], src[3], src[4], src[5], src[6], src[7],
+                      src[8], src[9], src[10], src[11], src[12], src[13], src[14], src[15]);
+    SWOS_AUTOSKIP_LOG("buildCompSpecificTeamList: divTbl(0x66)[0..15]=%02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x",
+                      diy[0x66], diy[0x67], diy[0x68], diy[0x69],
+                      diy[0x6A], diy[0x6B], diy[0x6C], diy[0x6D],
+                      diy[0x6E], diy[0x6F], diy[0x70], diy[0x71],
+                      diy[0x72], diy[0x73], diy[0x74], diy[0x75]);
+    SWOS_AUTOSKIP_LOG("buildCompSpecificTeamList: groupMap(0x11A)[0..15]=%02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x",
+                      diy[0x11A], diy[0x11B], diy[0x11C], diy[0x11D],
+                      diy[0x11E], diy[0x11F], diy[0x120], diy[0x121],
+                      diy[0x122], diy[0x123], diy[0x124], diy[0x125],
+                      diy[0x126], diy[0x127], diy[0x128], diy[0x129]);
+#endif
 
     if (field54 == 0) {
         /* Case 0: copy 24 teams straight */
@@ -3076,11 +3144,19 @@ static void buildCompSpecificTeamList(uint8_t *diy)
             int16_t grpExt = (int8_t)grp;
             d1 |= (1 << grpExt);
         }
+#ifdef SWOS_DEBUG_AUTOSKIP
+        SWOS_AUTOSKIP_LOG("buildCompSpecificTeamList: case1 d1=0x%02x (looking up in diyGroupPatternLookup)",
+                          (unsigned)d1);
+#endif
         /* Search diyGroupPatternLookup for matching bitmask */
         uint8_t *lookup = diyGroupPatternLookup;
         for (;;) {
             if ((int8_t)*lookup < 0) {
                 /* End of table — panic */
+#ifdef SWOS_DEBUG_AUTOSKIP
+                SWOS_AUTOSKIP_LOG("buildCompSpecificTeamList: PANIC 0x8034 — d1=0x%02x not found in diyGroupPatternLookup",
+                                  (unsigned)d1);
+#endif
                 panicReasonCode = 0x8034;
                 extern void _PanicHaltLoop(void);
                 _PanicHaltLoop();
@@ -3496,6 +3572,16 @@ build_index_maps:
         uint8_t *groupMap = diy + 0x11A;
         uint16_t numGroupSlots = s->teamsPerGroup;
         uint16_t numGroups = s->groups;
+#ifdef SWOS_DEBUG_AUTOSKIP
+        SWOS_AUTOSKIP_LOG("LoadSlot: populate groupMap: numGroups=%u teamsPerGroup=%u numTeams=%u",
+                          (unsigned)numGroups, (unsigned)numGroupSlots,
+                          (unsigned)s->numTeams);
+        SWOS_AUTOSKIP_LOG("LoadSlot: teamList(0x5A)[0..15]=%02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x",
+                          teamList[0], teamList[1], teamList[2], teamList[3],
+                          teamList[4], teamList[5], teamList[6], teamList[7],
+                          teamList[8], teamList[9], teamList[10], teamList[11],
+                          teamList[12], teamList[13], teamList[14], teamList[15]);
+#endif
 
         uint8_t grpIdx = 0;
         for (uint16_t g = 0; g < numGroups; g++) {
@@ -3636,6 +3722,15 @@ void _DIY_LoadCurrentCompetitionSlot(void)
     uint16_t slotIdx = (uint16_t)a2s->roundComplete;  /* 0x54 */
     a3 += (uint32_t)slotIdx * 118;
     DIYTournamentSlot *s = (DIYTournamentSlot *)(a3 + 0x15A);
+#ifdef SWOS_DEBUG_AUTOSKIP
+    SWOS_AUTOSKIP_LOG("LoadSlot: ENTER slotIdx=%u isLeagueFormat=%u numTeams=%u groups=%u teamsPerGroup=%u "
+                      "compType(buf)=%d numTeams(buf)=%d compId(buf)=%u",
+                      (unsigned)slotIdx, (unsigned)s->isLeagueFormat,
+                      (unsigned)s->numTeams, (unsigned)s->groups,
+                      (unsigned)s->teamsPerGroup,
+                      (int)a2s->competitionType, (int)a2s->numTeams,
+                      (unsigned)a2s->compId);
+#endif
 
     uint8_t *a4 = (uint8_t *)&diyCompetitionStart;
     uint8_t *a5 = (uint8_t *)&diyCompetitionStart;
