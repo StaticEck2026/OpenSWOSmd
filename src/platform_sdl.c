@@ -22,6 +22,7 @@
 int  AudioSDL_Init(int mono);
 void AudioSDL_Shutdown(void);
 void AudioSDL_Tick(void);
+void AudioSDL_PauseAndClear(void);
 
 int  InputSDL_Init(void);
 void InputSDL_Shutdown(void);
@@ -200,30 +201,41 @@ extern void Platform_RewireCustom(void);
 extern void Platform_PreArmIsrGlobals(void);
 
 /* ---- Lifecycle ----------------------------------------------------- */
+/* Persisted across the run so Alt+Enter / +/- keys can read them. */
+static int                    s_win_scale_current = 1;   /* clamp 1..4 */
+static PlatformFullscreenMode s_fullscreen_mode   = PLATFORM_FULLSCREEN_NONE;
+
 int Platform_Init(const PlatformInitOptions *opts)
 {
-    int win_scale       = opts ? opts->win_scale       : 1;
-    int start_fullscreen = opts ? opts->start_fullscreen : 0;
+    int win_scale = opts ? opts->win_scale : 1;
+    PlatformFullscreenMode fs_mode =
+        opts ? opts->fullscreen : PLATFORM_FULLSCREEN_NONE;
     PlatformRendererMode renderer_mode =
         opts ? opts->renderer : PLATFORM_RENDERER_ACCEL;
-    int vsync = opts ? opts->vsync : 1;
+    int vsync = opts ? opts->vsync : 0;
 
     if (win_scale < 1) win_scale = 1;
+    if (win_scale > 4) win_scale = 4;
+    s_win_scale_current = win_scale;
+    s_fullscreen_mode   = fs_mode;
     /* Repoint `custom` at our stub storage *before* the tick timer
      * starts -- the first VBlank ISR firing reads custom->intreqr. */
     Platform_RewireCustom();
     Platform_PreArmIsrGlobals();
 
     Uint32 wflags = SDL_WINDOW_SHOWN;
-    if (start_fullscreen) {
-        /* SDL_WINDOW_FULLSCREEN_DESKTOP = borderless window sized to
-         * the current desktop. Crucially, *no resolution change* — the
-         * monitor stays at whatever the desktop is set to, we just
-         * stretch a borderless window over it and let
-         * SDL_RenderSetLogicalSize letterbox the 336×272 frame inside.
-         * Distinct from plain SDL_WINDOW_FULLSCREEN, which DOES change
-         * the display mode and is exactly what we don't want. */
+    if (fs_mode == PLATFORM_FULLSCREEN_DESKTOP) {
+        /* Borderless window sized to the desktop, no display-mode
+         * change. SDL_RenderSetLogicalSize letterboxes 336x272 inside
+         * whatever resolution the desktop is at. Fast to toggle. On
+         * Windows XP the taskbar can occasionally show through above
+         * a borderless window — use --fullscreen=exclusive there. */
         wflags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+    } else if (fs_mode == PLATFORM_FULLSCREEN_EXCLUSIVE) {
+        /* True fullscreen with display-mode change. Always covers the
+         * taskbar (even XP). Slower toggle, may flicker on multi-monitor
+         * rigs, and the desktop resolution is restored on exit. */
+        wflags |= SDL_WINDOW_FULLSCREEN;
     }
 
     s_window = SDL_CreateWindow(
@@ -357,13 +369,46 @@ void Platform_ToggleFullscreen(void)
 {
     if (!s_window) return;
     Uint32 flags = SDL_GetWindowFlags(s_window);
-    int going_fullscreen = (flags & SDL_WINDOW_FULLSCREEN_DESKTOP) == 0;
-    SDL_SetWindowFullscreen(s_window,
-        going_fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-    /* Hide the cursor in fullscreen, show it in windowed. The SDL window
-     * is small (336*scale × 272*scale) so the cursor is useful for the
-     * window-close button; in fullscreen there's nothing to click. */
-    SDL_ShowCursor(going_fullscreen ? SDL_DISABLE : SDL_ENABLE);
+    int currently_fullscreen =
+        (flags & (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_FULLSCREEN_DESKTOP)) != 0;
+
+    if (currently_fullscreen) {
+        SDL_SetWindowFullscreen(s_window, 0);
+        /* Restore windowed size from the persisted scale. */
+        SDL_SetWindowSize(s_window,
+            PLATFORM_SCREEN_W * s_win_scale_current,
+            PLATFORM_SCREEN_H * s_win_scale_current);
+        SDL_ShowCursor(SDL_ENABLE);
+    } else {
+        /* Toggle into the flavour the user launched with. If they
+         * launched windowed, default to DESKTOP-style fullscreen since
+         * that's the friendlier of the two. */
+        Uint32 fs_flag = (s_fullscreen_mode == PLATFORM_FULLSCREEN_EXCLUSIVE)
+                         ? SDL_WINDOW_FULLSCREEN
+                         : SDL_WINDOW_FULLSCREEN_DESKTOP;
+        SDL_SetWindowFullscreen(s_window, fs_flag);
+        SDL_ShowCursor(SDL_DISABLE);
+    }
+}
+
+void Platform_SetWindowScale(int scale)
+{
+    if (!s_window) return;
+    if (scale < 1) scale = 1;
+    if (scale > 4) scale = 4;
+    s_win_scale_current = scale;
+    /* Only resize when actually windowed — fullscreen ignores the size
+     * (SDL_RenderSetLogicalSize handles letterboxing for us). */
+    Uint32 flags = SDL_GetWindowFlags(s_window);
+    if ((flags & (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_FULLSCREEN_DESKTOP)) == 0) {
+        SDL_SetWindowSize(s_window,
+            PLATFORM_SCREEN_W * scale,
+            PLATFORM_SCREEN_H * scale);
+        /* Re-centre on the desktop after a size change so a 4× window
+         * doesn't end up clipped against the bottom-right of the screen. */
+        SDL_SetWindowPosition(s_window,
+            SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    }
 }
 
 /* ---- Palette refresh ---------------------------------------------- */
@@ -555,11 +600,17 @@ static void pump_events_any_thread(void)
              * gate in _TryPlayMusic stops the menu music from
              * starting; this kills the visual half. */
             if (s_window) SDL_HideWindow(s_window);
+            /* Pause + clear audio at the driver. SDL queues ~80-250 ms
+             * of samples ahead of the playback cursor, so without this
+             * the crowd chant or whatever's playing leaks past the X
+             * click while the game loop unwinds. */
+            AudioSDL_PauseAndClear();
             break;
         case SDL_WINDOWEVENT:
             if (ev.window.event == SDL_WINDOWEVENT_CLOSE) {
                 Platform_RequestQuit();
                 if (s_window) SDL_HideWindow(s_window);
+                AudioSDL_PauseAndClear();
             } else if (ev.window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
                 /* Alt-Tab takes focus before SDL delivers KEYUP for the
                  * Alt that triggered the switch — so without clearing
@@ -587,6 +638,7 @@ static void pump_events_any_thread(void)
                 if (currentMenuPtr == (uint32_t)(uintptr_t)swosMainMenu) {
                     Platform_RequestQuit();
                     if (s_window) SDL_HideWindow(s_window);
+                    AudioSDL_PauseAndClear();
                     continue;   /* swallow — don't also reach the menu */
                 }
             }
@@ -605,6 +657,25 @@ static void pump_events_any_thread(void)
                  ev.key.keysym.sym == SDLK_KP_ENTER) &&
                 (ev.key.keysym.mod & KMOD_ALT)) {
                 Platform_ToggleFullscreen();
+                continue;
+            }
+            /* +/- keys: cycle the windowed scale 1..4. Both the typing-
+             * row keys and the keypad ones work. SDLK_EQUALS is the
+             * same physical key as SDLK_PLUS on most layouts (US),
+             * so we accept either. Swallowed so they don't reach the
+             * menu/game layer. No-op while fullscreen (the runtime
+             * scaler ignores the size change). */
+            if (ev.key.repeat == 0 &&
+                (ev.key.keysym.sym == SDLK_EQUALS ||
+                 ev.key.keysym.sym == SDLK_PLUS   ||
+                 ev.key.keysym.sym == SDLK_KP_PLUS)) {
+                Platform_SetWindowScale(s_win_scale_current + 1);
+                continue;
+            }
+            if (ev.key.repeat == 0 &&
+                (ev.key.keysym.sym == SDLK_MINUS ||
+                 ev.key.keysym.sym == SDLK_KP_MINUS)) {
+                Platform_SetWindowScale(s_win_scale_current - 1);
                 continue;
             }
             /* fallthrough */
@@ -635,6 +706,7 @@ static void pump_quit_only(void)
     while (SDL_PeepEvents(&ev, 1, SDL_GETEVENT,
                           SDL_QUIT, SDL_QUIT) > 0) {
         Platform_RequestQuit();
+        AudioSDL_PauseAndClear();
     }
     while (SDL_PeepEvents(&ev, 1, SDL_GETEVENT,
                           SDL_WINDOWEVENT, SDL_WINDOWEVENT) > 0) {

@@ -89,9 +89,28 @@ int AudioSDL_Init(int mono)
     return 0;
 }
 
+/* Silence the audio device immediately. Use this on SDL_QUIT so that
+ * crowd chants / music don't continue playing while the game loop
+ * unwinds back to Platform_Shutdown — the SDL audio driver buffers
+ * 80–250 ms of samples, which is audible enough to leak past the
+ * window close. Pausing + clearing the queue stops sound at the
+ * driver instantly. The player state (s_player_active, RJP1 channels)
+ * is left intact so any post-close cleanup that wants to interact
+ * with audio still has a valid device until AudioSDL_Shutdown
+ * actually closes it. */
+void AudioSDL_PauseAndClear(void)
+{
+    if (s_audio_dev) {
+        SDL_PauseAudioDevice(s_audio_dev, 1);
+        SDL_ClearQueuedAudio(s_audio_dev);
+    }
+}
+
 void AudioSDL_Shutdown(void)
 {
     if (s_audio_dev) {
+        SDL_PauseAudioDevice(s_audio_dev, 1);
+        SDL_ClearQueuedAudio(s_audio_dev);
         SDL_CloseAudioDevice(s_audio_dev);
         s_audio_dev = 0;
     }

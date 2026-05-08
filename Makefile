@@ -1,5 +1,21 @@
 # ---- Toolchain ----
+# Cross-compile to ARM 32-bit (armv7-a / armhf) with `make ARM=1`. Picks
+# the standard Debian/Ubuntu cross-toolchain prefix; override with
+# `make ARM=1 CC=...` if your distro uses a different name. The build
+# expects libsdl2-dev:armhf installed (or a sysroot containing SDL2),
+# discoverable via `arm-linux-gnueabihf-pkg-config`. The Amiga struct
+# size_check[] asserts assume 32-bit pointers, which armhf already
+# provides — no -m32 needed.
+ifdef ARM
+# Make's default CC is `cc`, which is implicitly assigned (not via ?=
+# semantics that we can override with the same), so use := to force
+# our cross-compiler. Override with `make ARM=1 CC=...` if your distro
+# uses a different prefix.
+CC := arm-linux-gnueabihf-gcc
+PKGCONF := arm-linux-gnueabihf-pkg-config
+else
 CC := gcc
+endif
 SHELL := /bin/bash
 
 # ---- Platform ----
@@ -40,7 +56,7 @@ OBJECTS     += $(WIN_RES_OBJ)
 endif
 
 # ---- Helpers ----
-PKGCONF := pkg-config
+PKGCONF ?= pkg-config
 
 SDL2_CFLAGS := $(shell $(PKGCONF) --cflags sdl2 2>/dev/null || sdl2-config --cflags 2>/dev/null)
 SDL2_LIBS   := $(shell $(PKGCONF) --libs sdl2 2>/dev/null || sdl2-config --libs 2>/dev/null)
@@ -59,7 +75,12 @@ SDL2_LIBS   := $(shell $(PKGCONF) --libs sdl2 2>/dev/null || sdl2-config --libs 
 # Testers wanting an actual 32-bit Windows binary should use MSYS2
 # MINGW32 (gcc already 32-bit; -m32 is a no-op) or Cygwin's 32-bit
 # toolchain.
-ifeq ($(GCC_MACHINE),x86_64-w64-mingw32)
+ifdef ARM
+# armhf is already 32-bit (ILP32) — no -m32 needed; passing it would
+# fail with "unrecognized command-line option '-m32'" on most ARM gcc
+# builds. Force armv7-a to keep things uniform across Pi 2/3/4 etc.
+ARCHFLAGS := -march=armv7-a -mfpu=neon -mfloat-abi=hard
+else ifeq ($(GCC_MACHINE),x86_64-w64-mingw32)
 ARCHFLAGS :=
 else
 ARCHFLAGS := -m32

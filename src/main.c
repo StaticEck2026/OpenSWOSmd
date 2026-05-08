@@ -96,8 +96,19 @@ static void print_usage(const char *argv0)
         "Usage: %s [options]\n"
         "\n"
         "Options:\n"
-        "  -f, --fullscreen          Start in fullscreen-desktop mode (letterboxed).\n"
-        "                            Toggle at runtime with Alt+Enter.\n"
+        "  -f, --fullscreen          Shorthand for --fullscreen=desktop. Off by\n"
+        "                            default. Toggle at runtime with Alt+Enter.\n"
+        "  --fullscreen=<desktop|exclusive>\n"
+        "                            Fullscreen mode at startup.\n"
+        "                            'desktop' = borderless letterbox, no display-\n"
+        "                            mode change (default flavour). On Windows XP\n"
+        "                            the taskbar can sometimes show through this\n"
+        "                            borderless window.\n"
+        "                            'exclusive' = true fullscreen with display-\n"
+        "                            mode change, always covers the taskbar (the\n"
+        "                            XP fix). Slower toggle.\n"
+        "  --scale=<1|2|3|4>         Windowed scale at startup. Default: 3.\n"
+        "                            Adjust at runtime with + and - keys.\n"
         "  --renderer=<software|accel>\n"
         "                            Choose SDL renderer. Default: accel.\n"
         "                            'accel' uses the platform's hardware backend\n"
@@ -105,11 +116,10 @@ static void print_usage(const char *argv0)
         "                            fallback for hosts where the hardware path\n"
         "                            misbehaves.\n"
         "  --vsync=<on|off>          Sync frame presents to monitor vblank.\n"
-        "                            Default: on. Only applies to --renderer=accel;\n"
-        "                            software renderers ignore vsync.\n"
-        "                            On a 50 Hz display this gives perfect pacing\n"
-        "                            for free. On 60+ Hz the manual 50 Hz game-tick\n"
-        "                            pace remains as a backstop.\n"
+        "                            Default: off. Only applies to --renderer=accel.\n"
+        "                            Turn on if you see screen tearing; the manual\n"
+        "                            50 Hz game-tick pace runs as a backstop\n"
+        "                            regardless.\n"
         "  --audio=<mono|stereo>     Audio output mode. Default: mono.\n"
         "                            The Amiga's 4 audio channels are hard-panned\n"
         "                            (1,2 → left, 0,3 → right) which sounds\n"
@@ -133,17 +143,32 @@ static const char *match_kv(const char *arg, const char *key)
 int main(int argc, char **argv)
 {
     PlatformInitOptions opts;
-    opts.win_scale        = WIN_SCALE;
-    opts.start_fullscreen = 0;
-    opts.renderer         = PLATFORM_RENDERER_ACCEL;
-    opts.vsync            = 1;
-    opts.audio_mono       = 1;
+    opts.win_scale  = WIN_SCALE;
+    opts.fullscreen = PLATFORM_FULLSCREEN_NONE;
+    opts.renderer   = PLATFORM_RENDERER_ACCEL;
+    opts.vsync      = 0;          /* default off — opt-in only */
+    opts.audio_mono = 1;
 
     for (int i = 1; i < argc; ++i) {
         const char *a = argv[i];
         const char *v;
         if (strcmp(a, "-f") == 0 || strcmp(a, "--fullscreen") == 0) {
-            opts.start_fullscreen = 1;
+            opts.fullscreen = PLATFORM_FULLSCREEN_DESKTOP;
+        } else if ((v = match_kv(a, "fullscreen")) != NULL) {
+            if (strcmp(v, "desktop") == 0)        opts.fullscreen = PLATFORM_FULLSCREEN_DESKTOP;
+            else if (strcmp(v, "exclusive") == 0) opts.fullscreen = PLATFORM_FULLSCREEN_EXCLUSIVE;
+            else if (strcmp(v, "off") == 0)       opts.fullscreen = PLATFORM_FULLSCREEN_NONE;
+            else {
+                fprintf(stderr, "Invalid --fullscreen value '%s' (expected desktop|exclusive|off)\n", v);
+                return 1;
+            }
+        } else if ((v = match_kv(a, "scale")) != NULL) {
+            int n = atoi(v);
+            if (n < 1 || n > 4) {
+                fprintf(stderr, "Invalid --scale value '%s' (expected 1|2|3|4)\n", v);
+                return 1;
+            }
+            opts.win_scale = n;
         } else if ((v = match_kv(a, "renderer")) != NULL) {
             if (strcmp(v, "software") == 0)      opts.renderer = PLATFORM_RENDERER_SOFTWARE;
             else if (strcmp(v, "accel") == 0)    opts.renderer = PLATFORM_RENDERER_ACCEL;

@@ -112,6 +112,22 @@ callback) because WSL2 + PulseAudio has very uneven scheduling on the SDL
 audio callback thread; the queue path is paced from the main game loop and
 is stable.
 
+### ARM 32-bit (Raspberry Pi etc.)
+
+Cross-build to armhf with:
+
+```
+sudo apt install gcc-arm-linux-gnueabihf libsdl2-dev:armhf
+make ARM=1
+```
+
+The Makefile picks `arm-linux-gnueabihf-gcc` and
+`arm-linux-gnueabihf-pkg-config`, builds for `armv7-a` with NEON (covers
+Pi 2 / 3 / 4 / 5 in 32-bit mode), and skips the `-m32` flag because
+armhf is already a 32-bit ABI. Override with `make ARM=1 CC=...` if
+your distro uses a different cross-compiler prefix. Pass `SWOS_DEBUG=1`
+alongside to get the diagnostic loggers compiled in.
+
 ## Running
 
 Launch the binary from anywhere — the program automatically `chdir()`s to
@@ -122,19 +138,32 @@ correctly. `stderr` is auto-redirected to `SWOS.log` next to the binary
 ### Command-line options
 
 ```
--f, --fullscreen          Start in fullscreen-desktop mode (letterboxed —
-                          keeps the desktop resolution, scales 336×272 up
-                          to fit, black bars on the sides). Toggle at
-                          runtime with Alt+Enter.
+-f, --fullscreen          Shorthand for --fullscreen=desktop. Off by
+                          default. Toggle at runtime with Alt+Enter.
+--fullscreen=<desktop|exclusive|off>
+                          Fullscreen mode at startup. Off by default.
+                          'desktop' = borderless letterbox over the
+                          current desktop, no resolution change. Fast
+                          to toggle; on Windows XP the taskbar can
+                          occasionally show through this borderless
+                          window.
+                          'exclusive' = true fullscreen with a display-
+                          mode change. Always covers the taskbar (the
+                          XP fix). Slower toggle, may flicker on
+                          multi-monitor rigs.
+--scale=<1|2|3|4>         Windowed pixel scale at startup. Default: 3.
+                          Adjust at runtime with the + and - keys.
 --renderer=<software|accel>
                           Choose the SDL renderer. Default: accel.
                           'accel' uses the platform's hardware backend
                           (D3D / OpenGL / Metal). 'software' is a CPU-only
                           fallback for hosts where the hardware path
                           misbehaves.
---vsync=<on|off>          Sync frame presents to monitor vblank. Default: on.
-                          Only meaningful with --renderer=accel; software
-                          renderers ignore vsync.
+--vsync=<on|off>          Sync frame presents to monitor vblank.
+                          Default: off. Only meaningful with
+                          --renderer=accel. Turn on if you see screen
+                          tearing; the manual 50 Hz game-tick pace
+                          runs as a backstop regardless.
 --audio=<mono|stereo>     Audio output mode. Default: mono.
                           The Amiga's 4 audio channels are hard-panned
                           (1,2 → left, 0,3 → right) by Paula, which
@@ -151,18 +180,12 @@ SWOS' game logic runs at a fixed 50 Hz (the original PAL VBlank rate).
 How smooth that looks on a given monitor depends on whether each frame
 present aligns with the display's refresh:
 
-| Monitor refresh | Best mode                | Result                                                                |
-|-----------------|--------------------------|-----------------------------------------------------------------------|
-| 50 Hz           | `--renderer=accel --vsync=on` (default) | Perfect 1:1 pacing. Each game frame lands on a vblank.    |
-| 60 Hz / 75 Hz   | default                  | Manual 50 Hz pace gates the game; presents land on the monitor's vblanks. The 50 → 60 pulldown is irreducible. |
-| 144 Hz / 240 Hz | default                  | Same as above; presents land on the next vblank, the manual pace fills the rest. |
-| Anything (host has a buggy hardware backend) | `--renderer=software` | Drops to the CPU path. No vsync, manual pace only. |
-
-If the picture looks like it's beating in and out of sync every couple of
-seconds (especially on a 50 Hz screen), try the default first; if the
-issue was a software-renderer drift it'll go away. If the hardware
-backend is unstable on your host, `--renderer=software` brings back the
-old behaviour.
+| Monitor refresh | Suggested flags                              | Result                                                                                       |
+|-----------------|----------------------------------------------|----------------------------------------------------------------------------------------------|
+| 50 Hz           | `--vsync=on`                                 | Perfect 1:1 pacing. Each game frame lands on a vblank.                                       |
+| 60 Hz / 75 Hz   | default (`--vsync=off`) or `--vsync=on` if you see tearing | Manual 50 Hz pace gates the game; the 50 → 60 pulldown is inherent.              |
+| 144 Hz / 240 Hz | default                                      | Same as above; the manual pace fills the slack between vblanks.                              |
+| Buggy hardware backend | `--renderer=software`                  | Drops to the CPU path. No monitor sync, manual pace only.                                    |
 
 ## Controls
 
@@ -198,10 +221,11 @@ be hot-plugged; new pads fill the lowest empty slot.
 
 ### Function keys
 
-| Key          | Action                                  |
-|--------------|-----------------------------------------|
-| Alt + Enter  | Toggle fullscreen / windowed            |
-| F9 / F11 / F12 / PrintScreen | Save screenshot to `bin/swos_shotNNN.png` |
+| Key          | Action                                                           |
+|--------------|------------------------------------------------------------------|
+| Alt + Enter  | Toggle fullscreen / windowed (uses the launch `--fullscreen` flavour) |
+| `+` / `-`    | Increase / decrease windowed scale (1× → 2× → 3× → 4×). Ignored while fullscreen. |
+| F9 / F11 / F12 / PrintScreen | Save screenshot to `bin/swos_shotNNN.png`            |
 
 ### Gamepad not detected?
 

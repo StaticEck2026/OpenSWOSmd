@@ -40,20 +40,45 @@ typedef enum {
     PLATFORM_RENDERER_ACCEL    = 1,
 } PlatformRendererMode;
 
+/* Fullscreen mode selector.
+ *
+ * NONE:      Windowed at win_scale (Alt+Enter toggles to DESKTOP at runtime).
+ * DESKTOP:   SDL_WINDOW_FULLSCREEN_DESKTOP — borderless window sized to the
+ *            current desktop, letterboxed via SDL_RenderSetLogicalSize. No
+ *            display-mode change. Fast to toggle, but on Windows XP the
+ *            taskbar can occasionally show through above this borderless
+ *            window — use EXCLUSIVE if you need the screen completely
+ *            covered there.
+ * EXCLUSIVE: SDL_WINDOW_FULLSCREEN — true fullscreen with display-mode
+ *            change. Always covers the taskbar. Slower toggle, may flicker
+ *            on dual-monitor setups, and the desktop resolution is
+ *            restored on exit. */
+typedef enum {
+    PLATFORM_FULLSCREEN_NONE      = 0,
+    PLATFORM_FULLSCREEN_DESKTOP   = 1,
+    PLATFORM_FULLSCREEN_EXCLUSIVE = 2,
+} PlatformFullscreenMode;
+
 typedef struct {
-    int                  win_scale;        /* 1, 2, 3, ... */
-    int                  start_fullscreen; /* 0 = windowed, 1 = fullscreen-desktop */
-    PlatformRendererMode renderer;         /* software / accelerated */
-    int                  vsync;            /* 0 = off, 1 = on (only meaningful for accel) */
-    int                  audio_mono;       /* 1 = down-mix to mono (default), 0 = Amiga hard-panned stereo */
+    int                    win_scale;        /* 1, 2, 3, 4 */
+    PlatformFullscreenMode fullscreen;       /* none / desktop / exclusive */
+    PlatformRendererMode   renderer;         /* software / accelerated */
+    int                    vsync;            /* 0 = off (default), 1 = on (accel only) */
+    int                    audio_mono;       /* 1 = down-mix to mono (default), 0 = Amiga panned */
 } PlatformInitOptions;
 
 int  Platform_Init(const PlatformInitOptions *opts);
 void Platform_Shutdown(void);
 
 /* Toggle / set fullscreen at runtime. Alt+Enter calls this internally;
- * exposed here in case a future settings menu needs a programmatic hook. */
+ * exposed here in case a future settings menu needs a programmatic hook.
+ * Toggles between windowed and the fullscreen flavour the user launched
+ * with (--fullscreen=desktop or =exclusive). */
 void Platform_ToggleFullscreen(void);
+
+/* Set the windowed-mode integer scale factor (1..4) at runtime. Called
+ * from the +/- key handlers. No-op while fullscreen. */
+void Platform_SetWindowScale(int scale);
 
 /* Full-fat vblank: pump events, render the bitplanes, present, and
  * pace to the next 50 Hz boundary. Intended to run on the main thread
