@@ -6635,8 +6635,13 @@ check_arg2:
          * the game" — landing on EXIT means the user has to navigate
          * to MATCH manually, defeating the point of PLAY MATCH being
          * a shortcut. In career mode put the cursor on slotStateA
-         * (= 3 = aMatch); outside career stay asm-faithful. */
-        if (careerLoadedFlag != 0)
+         * (= 3 = aMatch); outside career stay asm-faithful.
+         *
+         * Use gameType == GAME_TYPE_CAREER (4), NOT careerLoadedFlag
+         * — that flag is only set by the season auto-advance helpers
+         * and is 0 during the user's own match. */
+        extern uint16_t gameType;
+        if (gameType == 4 /* GAME_TYPE_CAREER */)
             _SetCurrentEntry((uint16_t)diyCompetitionStart.base.slotStateA);
         else
             _SetCurrentEntry(10);
