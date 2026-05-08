@@ -3354,6 +3354,7 @@ extern void _DIY_SaveCompetitionFileBufferToDIYCompetition(void);
 extern void _DIY_CopyCompetitionFileBufferToDiyFileBufferCopy(void);
 extern void _DIY_CopyCompetitionFileBufferToCompetitionStart_Alt(void);
 extern void _DIY_ResetAndLoadCurrentCompetitionSlot(void);
+extern void _DIY_LoadCurrentCompetitionSlot(void);
 extern void _DIY_InitCupFromTeamGridAndValidateTeams(void);
 extern void _DIY_ResetCompetitionProgressAndShuffle(void);
 
