@@ -133,17 +133,19 @@ echo 'deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ jammy main universe
 sudo sed -i -E 's,^(deb )(http),\1[arch=amd64] \2,' /etc/apt/sources.list
 
 sudo apt update
-sudo apt install gcc-arm-linux-gnueabihf pkg-config-arm-linux-gnueabihf libsdl2-dev:armhf
+sudo apt install gcc-arm-linux-gnueabihf libsdl2-dev:armhf
 
 make ARM=1
 ```
 
-The Makefile picks `arm-linux-gnueabihf-gcc` and
-`arm-linux-gnueabihf-pkg-config`, builds for `armv7-a` with NEON (covers
-Pi 2 / 3 / 4 / 5 in 32-bit mode), and skips the `-m32` flag because
-armhf is already a 32-bit ABI. Override with `make ARM=1 CC=...` if
-your distro uses a different cross-compiler prefix. Pass `SWOS_DEBUG=1`
-alongside to get the diagnostic loggers compiled in.
+The Makefile picks `arm-linux-gnueabihf-gcc` and runs the host
+`pkg-config` with `PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig`
+so it returns the armhf SDL2 paths instead of the amd64 ones. Builds
+for `armv7-a` with NEON (covers Pi 2 / 3 / 4 / 5 in 32-bit mode), and
+skips the `-m32` flag because armhf is already a 32-bit ABI. Override
+with `make ARM=1 CC=...` if your distro uses a different cross-compiler
+prefix. Pass `SWOS_DEBUG=1` alongside to get the diagnostic loggers
+compiled in.
 
 Building **on the Pi natively** is simpler — install the regular
 `build-essential libsdl2-dev` packages and run `make ARM=1`. The

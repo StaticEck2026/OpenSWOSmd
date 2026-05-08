@@ -18,7 +18,13 @@ CC := gcc
 PKGCONF := pkg-config
 else
 CC := arm-linux-gnueabihf-gcc
-PKGCONF := arm-linux-gnueabihf-pkg-config
+# Ubuntu/Debian don't ship an arm-linux-gnueabihf-pkg-config wrapper —
+# use the regular pkg-config but force it to look at the armhf
+# pkgconfig directory only (PKG_CONFIG_LIBDIR overrides the default
+# /usr/lib/pkgconfig:/usr/share/pkgconfig search path that would
+# otherwise return amd64 SDL2 paths). libsdl2-dev:armhf installs its
+# .pc into /usr/lib/arm-linux-gnueabihf/pkgconfig.
+PKGCONF := PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig pkg-config
 endif
 else
 CC := gcc
