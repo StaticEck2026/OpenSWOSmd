@@ -13,9 +13,7 @@
 #include "display.h"
 #include "deterministic.h"
 
-#ifdef SWOS_DEBUG_AUTOSKIP
 #include <stdio.h>
-#endif
 
 /* ---- Extern globals (data section, exported from asm/Data.c) ---- */
 extern uint16_t gameCanceled;
@@ -820,11 +818,20 @@ _KeepStatisticsOnScreen(void)
 void __attribute__((used, externally_visible))
 _ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
 {
+    fprintf(stderr, "[hil] _ViewHighLightsMain ENTER left=%p right=%p\n",
+            (void *)leftTeam, (void *)rightTeam);
+    fflush(stderr);
+
     playHighlightFlag = 1;
+    fprintf(stderr, "[hil] -> CopyTeamsAndHeader\n"); fflush(stderr);
     _CopyTeamsAndHeader();
+    fprintf(stderr, "[hil] -> InitGameSaveTeams\n"); fflush(stderr);
     _InitGameSaveTeams(leftTeam, rightTeam);
+    fprintf(stderr, "[hil] -> ReplayUpdateCameraAndSwapBuffers\n"); fflush(stderr);
     _ReplayUpdateCameraAndSwapBuffers(168, 313);
+    fprintf(stderr, "[hil] -> UpdatePlanePtrsAndBlitParams\n"); fflush(stderr);
     _UpdatePlanePtrsAndBlitParams();
+    fprintf(stderr, "[hil] -> ReadTimerDelta\n"); fflush(stderr);
     _ReadTimerDelta();
 
     /* Wait for no key pressed.
@@ -852,8 +859,14 @@ _ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
 #ifdef SWOS_SDL_BUILD
     {
         extern void _WaitForVSync(void);
-        for (int i = 0; i < 75; ++i)   /* 75 vblanks at 50 Hz = 1.5 s */
+        fprintf(stderr, "[hil] -> 75-vsync hold start\n"); fflush(stderr);
+        for (int i = 0; i < 75; ++i) {
+            if ((i % 10) == 0) {
+                fprintf(stderr, "[hil] hold iter %d/75\n", i); fflush(stderr);
+            }
             _WaitForVSync();
+        }
+        fprintf(stderr, "[hil] -> 75-vsync hold done\n"); fflush(stderr);
     }
 #else
     do {
@@ -861,10 +874,16 @@ _ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
     } while (currentKey != 0);
 #endif
 
+    fprintf(stderr, "[hil] -> SaveHighlightsPointers\n"); fflush(stderr);
     _SaveHighlightsPointers();
+    fprintf(stderr, "[hil] -> goto sync_to_vblank\n"); fflush(stderr);
     goto sync_to_vblank;
 
 frame_loop:
+    fprintf(stderr, "[hil] frame_loop iter (frameCount=%u, playFlag=%u, goLoop=%u)\n",
+            (unsigned)frameCount, (unsigned)playHighlightFlag,
+            (unsigned)goIntoHighlightsLoop);
+    fflush(stderr);
     _ReadTimerDelta();
     frameCount += 1;
     _ProcessSpriteBlitQueue();
@@ -873,12 +892,15 @@ frame_loop:
     /* nullsub_10, nullsub_9 — no-ops */
 
     if (playHighlightFlag == 0) {
+        fprintf(stderr, "[hil] playHighlightFlag=0 -> fade out + return\n"); fflush(stderr);
         _FadeOutToBlack();
         return;
     }
 
     if (goIntoHighlightsLoop != 0) {
+        fprintf(stderr, "[hil] -> _PlayHighlightsLoop\n"); fflush(stderr);
         _PlayHighlightsLoop();
+        fprintf(stderr, "[hil] <- _PlayHighlightsLoop returned\n"); fflush(stderr);
         playHighlightFlag = 0;
         /* bra.w *+4 → falls through to sync */
     }
