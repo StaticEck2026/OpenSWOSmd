@@ -7,12 +7,19 @@
 # size_check[] asserts assume 32-bit pointers, which armhf already
 # provides — no -m32 needed.
 ifdef ARM
-# Make's default CC is `cc`, which is implicitly assigned (not via ?=
-# semantics that we can override with the same), so use := to force
-# our cross-compiler. Override with `make ARM=1 CC=...` if your distro
-# uses a different prefix.
+# Native ARM builds (e.g. on a Raspberry Pi) use the system gcc.
+# Cross-builds from x86_64 → armhf use the standard Debian/Ubuntu
+# arm-linux-gnueabihf- toolchain. Detect by host architecture; user
+# can override with `make ARM=1 CC=...` if the distro's prefix is
+# different.
+ARM_HOST_MACHINE := $(shell uname -m)
+ifneq (,$(filter arm% aarch64,$(ARM_HOST_MACHINE)))
+CC := gcc
+PKGCONF := pkg-config
+else
 CC := arm-linux-gnueabihf-gcc
 PKGCONF := arm-linux-gnueabihf-pkg-config
+endif
 else
 CC := gcc
 endif

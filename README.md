@@ -114,10 +114,27 @@ is stable.
 
 ### ARM 32-bit (Raspberry Pi etc.)
 
-Cross-build to armhf with:
+Cross-build to armhf from an x86_64 Debian/Ubuntu host. First enable
+the foreign architecture and update the package index — Ubuntu's
+default sources for `amd64` don't include armhf packages, so you
+also need to point `apt` at `ports.ubuntu.com`:
 
 ```
-sudo apt install gcc-arm-linux-gnueabihf libsdl2-dev:armhf
+sudo dpkg --add-architecture armhf
+
+# Add an armhf source pointing at ports.ubuntu.com (which actually
+# carries arm packages). Replace 'jammy' with your Ubuntu codename
+# (jammy = 22.04, noble = 24.04). On Debian use deb.debian.org as
+# normal — Debian's main mirrors cover all release architectures.
+echo 'deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ jammy main universe' \
+  | sudo tee /etc/apt/sources.list.d/ports-armhf.list
+
+# Restrict the existing amd64 entries so apt doesn't try ports for them.
+sudo sed -i -E 's,^(deb )(http),\1[arch=amd64] \2,' /etc/apt/sources.list
+
+sudo apt update
+sudo apt install gcc-arm-linux-gnueabihf pkg-config-arm-linux-gnueabihf libsdl2-dev:armhf
+
 make ARM=1
 ```
 
@@ -127,6 +144,11 @@ Pi 2 / 3 / 4 / 5 in 32-bit mode), and skips the `-m32` flag because
 armhf is already a 32-bit ABI. Override with `make ARM=1 CC=...` if
 your distro uses a different cross-compiler prefix. Pass `SWOS_DEBUG=1`
 alongside to get the diagnostic loggers compiled in.
+
+Building **on the Pi natively** is simpler — install the regular
+`build-essential libsdl2-dev` packages and run `make ARM=1`. The
+ARM=1 flag still picks the right `-march=armv7-a -mfpu=neon` flags
+and skips `-m32`, but uses the native gcc.
 
 ## Running
 
