@@ -32,6 +32,9 @@
 #endif
 
 #include "platform_sdl.h"
+#include "swos_settings.h"
+
+#define SWOS_INI_PATH "SWOS.ini"
 
 #define WIN_SCALE 3
 
@@ -142,6 +145,14 @@ static const char *match_kv(const char *arg, const char *key)
 
 int main(int argc, char **argv)
 {
+    /* Anchor CWD to the binary's directory FIRST so SWOS.ini / SWOS.log
+     * and the data/ grafs/ sound/ trees all resolve relative to the
+     * exe regardless of where the user launched from. Done before
+     * Settings_Load so SWOS.ini lookup hits the right file. */
+    chdir_to_binary(argv ? argv[0] : NULL);
+
+    /* 1) Hard-coded defaults — used when SWOS.ini doesn't exist yet
+     * and no CLI flags override. */
     PlatformInitOptions opts;
     opts.win_scale  = WIN_SCALE;
     opts.fullscreen = PLATFORM_FULLSCREEN_NONE;
@@ -149,6 +160,11 @@ int main(int argc, char **argv)
     opts.vsync      = 0;          /* default off — opt-in only */
     opts.audio_mono = 1;
 
+    /* 2) SWOS.ini overrides defaults. Missing file is fine — Settings_Save
+     * at clean shutdown will create one. */
+    Settings_Load(&opts, SWOS_INI_PATH);
+
+    /* 3) CLI overrides INI (highest precedence — explicit user intent). */
     for (int i = 1; i < argc; ++i) {
         const char *a = argv[i];
         const char *v;
@@ -200,8 +216,6 @@ int main(int argc, char **argv)
         }
     }
 
-    chdir_to_binary(argv ? argv[0] : NULL);
-
     /* Redirect stderr to SWOS.log alongside the binary. Saves the
      * tester from having to remember `2> SWOS.log` on every launch
      * and works the same whether the program is started from gdb,
@@ -233,6 +247,12 @@ int main(int argc, char **argv)
      * (hardware init -- now no-ops via stubs) then _mainC() which is the
      * actual game loop. The game pumps SDL via Platform_VBlank() callbacks. */
     _startShim();
+
+    /* Snapshot runtime-mutable settings (window scale, fullscreen mode)
+     * via the Platform_Get* getters and persist back to SWOS.ini. Done
+     * BEFORE Platform_Shutdown destroys the window, since the getters
+     * read SDL window flags. */
+    Settings_Save(&opts, SWOS_INI_PATH);
 
     Platform_Shutdown();
     SDL_Quit();

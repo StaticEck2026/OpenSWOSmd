@@ -157,6 +157,28 @@ its own directory so `data/`, `grafs/`, `sound/`, and `save/` resolve
 correctly. `stderr` is auto-redirected to `SWOS.log` next to the binary
 (set `SWOS_NO_LOG=1` in the environment to disable).
 
+### Settings file (`SWOS.ini`)
+
+Display + audio settings persist between runs in `SWOS.ini`, written
+next to the binary. The file is created on first clean shutdown if it
+doesn't exist; missing keys fall back to the hard-coded defaults.
+
+Resolution order at launch is: **defaults → SWOS.ini → command-line
+flags** — so a flag always wins over the file, but a value you only
+set in the file (or via runtime keys like `+`/`-` and Alt+Enter) is
+remembered.
+
+```ini
+[video]
+renderer=accel        ; software | accel
+vsync=off             ; on | off
+fullscreen=off        ; off | desktop | exclusive
+scale=3               ; 1..4 (windowed only)
+
+[audio]
+mode=mono             ; mono | stereo
+```
+
 ### Command-line options
 
 ```

@@ -80,6 +80,13 @@ void Platform_ToggleFullscreen(void);
  * from the +/- key handlers. No-op while fullscreen. */
 void Platform_SetWindowScale(int scale);
 
+/* Snapshot the current windowed scale (1..4) and current fullscreen
+ * mode. Used by the settings-save path so SWOS.ini round-trips reflect
+ * runtime adjustments (Alt+Enter, +/-) — not just whatever was on the
+ * command line at launch. */
+int                    Platform_GetWindowScale(void);
+PlatformFullscreenMode Platform_GetFullscreenMode(void);
+
 /* Full-fat vblank: pump events, render the bitplanes, present, and
  * pace to the next 50 Hz boundary. Intended to run on the main thread
  * from game-loop waits. Returns non-zero if the user closed the window. */

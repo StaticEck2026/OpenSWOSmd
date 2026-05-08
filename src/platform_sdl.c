@@ -391,6 +391,30 @@ void Platform_ToggleFullscreen(void)
     }
 }
 
+int Platform_GetWindowScale(void)
+{
+    return s_win_scale_current;
+}
+
+PlatformFullscreenMode Platform_GetFullscreenMode(void)
+{
+    /* Return the *current* mode, not the launch one — Alt+Enter at
+     * runtime can land us in fullscreen even if we launched windowed,
+     * and we want SWOS.ini to remember that. The mode value reflects
+     * the SDL window flags right now. */
+    if (s_window) {
+        Uint32 flags = SDL_GetWindowFlags(s_window);
+        if (flags & SDL_WINDOW_FULLSCREEN) {
+            /* Distinguish DESKTOP (FULLSCREEN_DESKTOP includes FULLSCREEN
+             * bit) from EXCLUSIVE (FULLSCREEN bit set, DESKTOP bit not). */
+            if ((flags & SDL_WINDOW_FULLSCREEN_DESKTOP) == SDL_WINDOW_FULLSCREEN_DESKTOP)
+                return PLATFORM_FULLSCREEN_DESKTOP;
+            return PLATFORM_FULLSCREEN_EXCLUSIVE;
+        }
+    }
+    return PLATFORM_FULLSCREEN_NONE;
+}
+
 void Platform_SetWindowScale(int scale)
 {
     if (!s_window) return;
