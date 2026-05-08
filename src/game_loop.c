@@ -13,7 +13,9 @@
 #include "display.h"
 #include "deterministic.h"
 
+#ifdef SWOS_DEBUG_AUTOSKIP
 #include <stdio.h>
+#endif
 
 /* ---- Extern globals (data section, exported from asm/Data.c) ---- */
 extern uint16_t gameCanceled;
@@ -818,72 +820,30 @@ _KeepStatisticsOnScreen(void)
 void __attribute__((used, externally_visible))
 _ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
 {
-    fprintf(stderr, "[hil] _ViewHighLightsMain ENTER left=%p right=%p\n",
-            (void *)leftTeam, (void *)rightTeam);
-    fflush(stderr);
-
     playHighlightFlag = 1;
-    fprintf(stderr, "[hil] -> CopyTeamsAndHeader\n"); fflush(stderr);
     _CopyTeamsAndHeader();
-    fprintf(stderr, "[hil] -> InitGameSaveTeams\n"); fflush(stderr);
     _InitGameSaveTeams(leftTeam, rightTeam);
-    fprintf(stderr, "[hil] -> ReplayUpdateCameraAndSwapBuffers\n"); fflush(stderr);
     _ReplayUpdateCameraAndSwapBuffers(168, 313);
-    fprintf(stderr, "[hil] -> UpdatePlanePtrsAndBlitParams\n"); fflush(stderr);
     _UpdatePlanePtrsAndBlitParams();
-    fprintf(stderr, "[hil] -> ReadTimerDelta\n"); fflush(stderr);
     _ReadTimerDelta();
 
-    /* Wait for no key pressed.
-     *
-     * On Amiga this is the loop that gives the stadium "VS" screen its
-     * visible duration: the keyboard ISR pushes auto-repeats while the
-     * user is still holding the fire button they just pressed in the
-     * highlights menu, so currentKey stays non-zero for ~0.5-1 second
-     * (until they release). The screen stays on whatever was last drawn
-     * (= the stadium menu) for that whole time.
-     *
-     * On SDL we keep the Amiga drain loop, but it can hang on Windows —
-     * SDL key-repeat behaviour differs by host (tester saw the loop
-     * spin indefinitely on Windows holding right-Ctrl, while Linux
-     * drained naturally). Plus the drain loop has no _WaitForVSync, so
-     * no event pump runs inside it: if anything in the keyBuffer keeps
-     * the count non-zero, we'd never recover.
-     *
-     * On SDL skip the drain entirely and just hold for a fixed number
-     * of vsync ticks so the user can read the lineups. Each
-     * _WaitForVSync pumps events, so any held key release lands during
-     * the hold and any keyBuffer entries are consumed normally by the
-     * next _GetKey() in the highlight loop. ~1.5 s matches the typical
-     * Amiga duration. */
-#ifdef SWOS_SDL_BUILD
-    {
-        extern void _WaitForVSync(void);
-        fprintf(stderr, "[hil] -> 75-vsync hold start\n"); fflush(stderr);
-        for (int i = 0; i < 75; ++i) {
-            if ((i % 10) == 0) {
-                fprintf(stderr, "[hil] hold iter %d/75\n", i); fflush(stderr);
-            }
-            _WaitForVSync();
-        }
-        fprintf(stderr, "[hil] -> 75-vsync hold done\n"); fflush(stderr);
-    }
-#else
+    /* Drain the keyBuffer — original Amiga waits here while the user
+     * holds the fire button they just pressed (keyboard ISR pushes
+     * auto-repeats so currentKey stays non-zero). On Amiga this also
+     * gave the stadium "VS" screen its visible duration. On SDL the
+     * actual VS-duration wait happens just upstream in
+     * _InitGameSaveTeams' "wait for fire release" loop (which is
+     * properly pumped via _WaitForVSync there), so by the time we
+     * reach this drain the user has already released and the buffer
+     * is empty. Drain anyway to match Amiga semantics. */
     do {
         _GetKey();
     } while (currentKey != 0);
-#endif
 
-    fprintf(stderr, "[hil] -> SaveHighlightsPointers\n"); fflush(stderr);
     _SaveHighlightsPointers();
-    fprintf(stderr, "[hil] -> goto sync_to_vblank\n"); fflush(stderr);
     goto sync_to_vblank;
 
 frame_loop:
-    fprintf(stderr, "[hil] frame_loop iter (frameCount=%u, playFlag=%u, goLoop=%u)\n",
-            (unsigned)frameCount, (unsigned)playHighlightFlag,
-            (unsigned)goIntoHighlightsLoop);
-    fflush(stderr);
     _ReadTimerDelta();
     frameCount += 1;
     _ProcessSpriteBlitQueue();
@@ -892,15 +852,12 @@ frame_loop:
     /* nullsub_10, nullsub_9 — no-ops */
 
     if (playHighlightFlag == 0) {
-        fprintf(stderr, "[hil] playHighlightFlag=0 -> fade out + return\n"); fflush(stderr);
         _FadeOutToBlack();
         return;
     }
 
     if (goIntoHighlightsLoop != 0) {
-        fprintf(stderr, "[hil] -> _PlayHighlightsLoop\n"); fflush(stderr);
         _PlayHighlightsLoop();
-        fprintf(stderr, "[hil] <- _PlayHighlightsLoop returned\n"); fflush(stderr);
         playHighlightFlag = 0;
         /* bra.w *+4 → falls through to sync */
     }

@@ -257,7 +257,39 @@ void _InitGameSaveTeams(TeamGame *leftTeam, TeamGame *rightTeam)
     _FixupAndColorPitchFile();
     _ConvertColorsAndTextSprites(leftTeam, rightTeam);
 
-    /* Wait for both fire buttons released */
+    /* Wait for both fire buttons released.
+     *
+     * On Amiga _Player1StatusProc / _Player2StatusProc read hardware
+     * joystick registers (JOY1DAT, CIAA_PRA) directly — the controller
+     * updates them in real time so this tight spin sees fire release as
+     * soon as the user lets go.
+     *
+     * On SDL joy1Dat / ciaa_pra are software globals updated by
+     * InputSDL_PostFrame inside Platform_VBlank. Without
+     * _WaitForVSync inside the spin, no event pump runs and the fire
+     * bits never clear — the program hangs here whenever the user is
+     * still holding fire (e.g. they pressed VIEW HIGHLIGHTS and held
+     * the key for any noticeable time). Tester reproducer: hold
+     * right-Ctrl after clicking VIEW HIGHLIGHTS on Windows.
+     *
+     * Fix: drive _WaitForVSync each iteration on SDL so PostFrame runs
+     * and the fire state can update. The hold doubles as the
+     * stadium-screen visible duration the original Amiga gets for
+     * free from the same release-wait. */
+#ifdef SWOS_SDL_BUILD
+    {
+        extern void _WaitForVSync(void);
+        for (;;) {
+            _WaitForVSync();
+            _Player1StatusProc();
+            if (pl1Fire)
+                continue;
+            _Player2StatusProc();
+            if (!pl2Fire)
+                break;
+        }
+    }
+#else
     for (;;) {
         _Player1StatusProc();
         if (pl1Fire)
@@ -266,6 +298,7 @@ void _InitGameSaveTeams(TeamGame *leftTeam, TeamGame *rightTeam)
         if (!pl2Fire)
             break;
     }
+#endif
 
     _FadeOutToBlack();
     paletteIndex = 2;
