@@ -842,29 +842,21 @@ _ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
      * screen flashes by in milliseconds. Tester-reported as "VS screen
      * doesn't show long enough vs Amiga".
      *
-     * Restore the same observable behaviour by ALSO polling fire state
-     * directly: spin while the buffer has anything OR fire is still
-     * held. Same result as Amiga's natural keyboard-repeat drain. */
-#ifdef SWOS_SDL_BUILD
-    {
-        extern void _Player1StatusProc(void);
-        extern void _Player2StatusProc(void);
-        extern void _WaitForVSync(void);
-        extern uint8_t pl1Fire;
-        extern uint8_t pl2Fire;
-        for (;;) {
-            _GetKey();
-            _Player1StatusProc();
-            _Player2StatusProc();
-            if (currentKey == 0 && pl1Fire == 0 && pl2Fire == 0)
-                break;
-            _WaitForVSync();
-        }
-    }
-#else
+     * Add a fixed minimum hold to give the user time to read the
+     * lineups before highlights start. ~1.5 s matches the typical
+     * Amiga duration. Drain the keyBuffer first (so any pending key
+     * doesn't carry into the highlight) then sleep for VS_HOLD_FRAMES
+     * vsync ticks. */
     do {
         _GetKey();
     } while (currentKey != 0);
+
+#ifdef SWOS_SDL_BUILD
+    {
+        extern void _WaitForVSync(void);
+        for (int i = 0; i < 75; ++i)   /* 75 vblanks at 50 Hz = 1.5 s */
+            _WaitForVSync();
+    }
 #endif
 
     _SaveHighlightsPointers();
