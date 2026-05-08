@@ -3513,6 +3513,12 @@ void _StartContest(void)
 {
     contestStarted = 0;
     uint16_t gt = gameType;
+#ifdef SWOS_DEBUG_AUTOSKIP
+    extern uint8_t competitionFileBuffer[];
+    SWOS_AUTOSKIP_LOG("StartContest: ENTER gameType=%u competitionOver=%u cfb[0]=%u (compType)",
+                      (unsigned)gt, (unsigned)competitionOver,
+                      (unsigned)competitionFileBuffer[0]);
+#endif
 
     if (gt == GAME_TYPE_DIY_COMPETITION) {
         if (competitionOver == 1)
