@@ -827,10 +827,44 @@ _ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
     _UpdatePlanePtrsAndBlitParams();
     _ReadTimerDelta();
 
-    /* Wait for no key pressed */
+    /* Wait for no key pressed.
+     *
+     * On Amiga this is the loop that gives the stadium "VS" screen its
+     * visible duration: the keyboard ISR pushes auto-repeats while the
+     * user is still holding the fire button they just pressed in the
+     * highlights menu, so currentKey stays non-zero for ~0.5-1 second
+     * (until they release). The screen stays on whatever was last drawn
+     * (= the stadium menu) for that whole time.
+     *
+     * On SDL we deliberately filter `e->key.repeat == 0` in
+     * input_sdl.c so the keyBuffer doesn't run away on InputText input,
+     * which means this loop drains in 1-2 iterations and the stadium
+     * screen flashes by in milliseconds. Tester-reported as "VS screen
+     * doesn't show long enough vs Amiga".
+     *
+     * Restore the same observable behaviour by ALSO polling fire state
+     * directly: spin while the buffer has anything OR fire is still
+     * held. Same result as Amiga's natural keyboard-repeat drain. */
+#ifdef SWOS_SDL_BUILD
+    {
+        extern void _Player1StatusProc(void);
+        extern void _Player2StatusProc(void);
+        extern uint8_t pl1Fire;
+        extern uint8_t pl2Fire;
+        for (;;) {
+            _GetKey();
+            _Player1StatusProc();
+            _Player2StatusProc();
+            if (currentKey == 0 && pl1Fire == 0 && pl2Fire == 0)
+                break;
+            _WaitForVSync();
+        }
+    }
+#else
     do {
         _GetKey();
     } while (currentKey != 0);
+#endif
 
     _SaveHighlightsPointers();
     goto sync_to_vblank;
