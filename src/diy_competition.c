@@ -3292,6 +3292,19 @@ void _DIY_BuildSeededBracketAndUpdateScores(uint8_t *diy, uint8_t *slot,
 
     /* Check if world cup competition */
     uint8_t compNum = diyS->field_2E;
+#ifdef SWOS_DEBUG_AUTOSKIP
+    {
+        const uint8_t *teamList = diy + 0x5A;
+        SWOS_AUTOSKIP_LOG("BuildSeededBracket: ENTER compNum=0x%02x WC?=%d numTeams=%d roundComplete=%d",
+                          (unsigned)compNum, (int)(compNum == worldCup[0]),
+                          (int)compS->numTeams, (int)diyS->roundComplete);
+        SWOS_AUTOSKIP_LOG("BuildSeededBracket: teamList(0x5A)[0..15] BEFORE=%02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x",
+                          teamList[0], teamList[1], teamList[2], teamList[3],
+                          teamList[4], teamList[5], teamList[6], teamList[7],
+                          teamList[8], teamList[9], teamList[10], teamList[11],
+                          teamList[12], teamList[13], teamList[14], teamList[15]);
+    }
+#endif
     if (compNum == worldCup[0]) {
         _DIY_AdjustWorldCupBracketScores(diy, slot, comp);
         goto copy_back;
@@ -3392,6 +3405,16 @@ copy_back:
         pairStart[0] = pairStart[1];
         pairStart[1] = tmp;
     }
+#ifdef SWOS_DEBUG_AUTOSKIP
+    {
+        const uint8_t *teamList = diy + 0x5A;
+        SWOS_AUTOSKIP_LOG("BuildSeededBracket: teamList(0x5A)[0..15] AFTER=%02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x",
+                          teamList[0], teamList[1], teamList[2], teamList[3],
+                          teamList[4], teamList[5], teamList[6], teamList[7],
+                          teamList[8], teamList[9], teamList[10], teamList[11],
+                          teamList[12], teamList[13], teamList[14], teamList[15]);
+    }
+#endif
 }
 
 /* ================================================================
