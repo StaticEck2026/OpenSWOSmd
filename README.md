@@ -164,7 +164,7 @@ old behaviour.
 | Action       | Keyboard           | Gamepad (any pad)    |
 |--------------|--------------------|----------------------|
 | Navigate     | Arrow keys         | D-pad / left stick   |
-| Select       | Right Ctrl / Right Alt / Space / Left Ctrl / Enter | A or B button |
+| Select       | Right Ctrl / Space / Left Ctrl / Enter | A or B button |
 | Quit         | Esc (only at the top-level main menu) or window close (✕) | — |
 
 ### In-match (Player 1)
@@ -172,7 +172,7 @@ old behaviour.
 | Action       | Keyboard           | Gamepad 1            |
 |--------------|--------------------|----------------------|
 | Move         | Arrow keys         | D-pad / left stick   |
-| Kick / shoot / pass / tackle | Right Ctrl / Right Alt / Space / Left Ctrl / Enter | A or B |
+| Kick / shoot / pass / tackle | Right Ctrl / Space / Left Ctrl / Enter | A or B |
 | Call substitution menu | Triple-tap any direction OR `Q` (away) / `W` (home) | Triple-tap |
 | Pause / unpause | `P`              | —                    |
 

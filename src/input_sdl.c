@@ -281,7 +281,21 @@ void InputSDL_HandleEvent(const SDL_Event *e)
                                   e->key.keysym.sym == SDLK_DOWN ||
                                   e->key.keysym.sym == SDLK_LEFT ||
                                   e->key.keysym.sym == SDLK_RIGHT);
-        if (a >= 0 && !is_movement_arrow) {
+        /* Alt is dropped from the input layer entirely. The OS owns
+         * Alt-Tab and Alt+space (window menu) and these complete in
+         * orders SDL can't always linearise — the Alt KEYDOWN reaches
+         * us, the game polls keyBuffer / keyState before SDL gets the
+         * matching KEYUP, and the loader-intro is skipped + the
+         * highlighted menu entry "clicked" on focus return. The fire
+         * role is still covered by RCTRL / LCTRL / SPACE / ENTER, and
+         * Alt+Enter for fullscreen reads KMOD_ALT off the modifier mask
+         * (not our keyState), so it keeps working. */
+        int is_alt = (e->key.keysym.sym == SDLK_LALT ||
+                      e->key.keysym.sym == SDLK_RALT);
+        if (is_alt) {
+            /* Don't record keyState, don't push to keyBuffer, don't
+             * trigger fire. Alt is purely a modifier on this build. */
+        } else if (a >= 0 && !is_movement_arrow) {
             keyState[a] = 1;
             /* Push into the FIFO consumed by _GetKey() — but only on
              * the initial press (SDL re-fires KEYDOWN for OS key-repeat,
@@ -304,7 +318,6 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         case SDLK_DOWN:  s_kbd_down  = 1; break;
         case SDLK_LEFT:  s_kbd_left  = 1; break;
         case SDLK_RIGHT: s_kbd_right = 1; break;
-        case SDLK_RALT:
         case SDLK_RCTRL:
         case SDLK_SPACE:
         case SDLK_LCTRL:
@@ -314,13 +327,14 @@ void InputSDL_HandleEvent(const SDL_Event *e)
     } break;
     case SDL_KEYUP: {
         int a = sdl_to_amiga(e->key.keysym.sym);
-        if (a >= 0) keyState[a] = 0;
+        int is_alt = (e->key.keysym.sym == SDLK_LALT ||
+                      e->key.keysym.sym == SDLK_RALT);
+        if (!is_alt && a >= 0) keyState[a] = 0;
         switch (e->key.keysym.sym) {
         case SDLK_UP:    s_kbd_up    = 0; break;
         case SDLK_DOWN:  s_kbd_down  = 0; break;
         case SDLK_LEFT:  s_kbd_left  = 0; break;
         case SDLK_RIGHT: s_kbd_right = 0; break;
-        case SDLK_RALT:
         case SDLK_RCTRL:
         case SDLK_SPACE:
         case SDLK_LCTRL:
