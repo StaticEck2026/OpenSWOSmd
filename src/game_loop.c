@@ -836,27 +836,29 @@ _ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
      * (until they release). The screen stays on whatever was last drawn
      * (= the stadium menu) for that whole time.
      *
-     * On SDL we deliberately filter `e->key.repeat == 0` in
-     * input_sdl.c so the keyBuffer doesn't run away on InputText input,
-     * which means this loop drains in 1-2 iterations and the stadium
-     * screen flashes by in milliseconds. Tester-reported as "VS screen
-     * doesn't show long enough vs Amiga".
+     * On SDL we keep the Amiga drain loop, but it can hang on Windows —
+     * SDL key-repeat behaviour differs by host (tester saw the loop
+     * spin indefinitely on Windows holding right-Ctrl, while Linux
+     * drained naturally). Plus the drain loop has no _WaitForVSync, so
+     * no event pump runs inside it: if anything in the keyBuffer keeps
+     * the count non-zero, we'd never recover.
      *
-     * Add a fixed minimum hold to give the user time to read the
-     * lineups before highlights start. ~1.5 s matches the typical
-     * Amiga duration. Drain the keyBuffer first (so any pending key
-     * doesn't carry into the highlight) then sleep for VS_HOLD_FRAMES
-     * vsync ticks. */
-    do {
-        _GetKey();
-    } while (currentKey != 0);
-
+     * On SDL skip the drain entirely and just hold for a fixed number
+     * of vsync ticks so the user can read the lineups. Each
+     * _WaitForVSync pumps events, so any held key release lands during
+     * the hold and any keyBuffer entries are consumed normally by the
+     * next _GetKey() in the highlight loop. ~1.5 s matches the typical
+     * Amiga duration. */
 #ifdef SWOS_SDL_BUILD
     {
         extern void _WaitForVSync(void);
         for (int i = 0; i < 75; ++i)   /* 75 vblanks at 50 Hz = 1.5 s */
             _WaitForVSync();
     }
+#else
+    do {
+        _GetKey();
+    } while (currentKey != 0);
 #endif
 
     _SaveHighlightsPointers();
