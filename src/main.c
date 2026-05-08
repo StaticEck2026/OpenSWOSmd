@@ -96,20 +96,62 @@ static void print_usage(const char *argv0)
         "Usage: %s [options]\n"
         "\n"
         "Options:\n"
-        "  -f, --fullscreen   Start in fullscreen-desktop mode (letterboxed).\n"
-        "                     Toggle at runtime with Alt+Enter.\n"
-        "  -h, --help         Show this help and exit.\n",
+        "  -f, --fullscreen          Start in fullscreen-desktop mode (letterboxed).\n"
+        "                            Toggle at runtime with Alt+Enter.\n"
+        "  --renderer=<software|accel>\n"
+        "                            Choose SDL renderer. Default: accel.\n"
+        "                            'accel' uses the platform's hardware backend\n"
+        "                            (D3D/OpenGL/Metal); 'software' is a CPU-only\n"
+        "                            fallback for hosts where the hardware path\n"
+        "                            misbehaves.\n"
+        "  --vsync=<on|off>          Sync frame presents to monitor vblank.\n"
+        "                            Default: on. Only applies to --renderer=accel;\n"
+        "                            software renderers ignore vsync.\n"
+        "                            On a 50 Hz display this gives perfect pacing\n"
+        "                            for free. On 60+ Hz the manual 50 Hz game-tick\n"
+        "                            pace remains as a backstop.\n"
+        "  -h, --help                Show this help and exit.\n",
         argv0 ? argv0 : "SWOS");
+}
+
+/* Parse `--key=value` from `arg` against expected `key`. Returns the
+ * value-side string, or NULL if `arg` doesn't start with `--key=`. */
+static const char *match_kv(const char *arg, const char *key)
+{
+    size_t klen = strlen(key);
+    if (strncmp(arg, "--", 2) != 0) return NULL;
+    if (strncmp(arg + 2, key, klen) != 0) return NULL;
+    if (arg[2 + klen] != '=') return NULL;
+    return arg + 2 + klen + 1;
 }
 
 int main(int argc, char **argv)
 {
-    int start_fullscreen = 0;
+    PlatformInitOptions opts;
+    opts.win_scale        = WIN_SCALE;
+    opts.start_fullscreen = 0;
+    opts.renderer         = PLATFORM_RENDERER_ACCEL;
+    opts.vsync            = 1;
 
     for (int i = 1; i < argc; ++i) {
         const char *a = argv[i];
+        const char *v;
         if (strcmp(a, "-f") == 0 || strcmp(a, "--fullscreen") == 0) {
-            start_fullscreen = 1;
+            opts.start_fullscreen = 1;
+        } else if ((v = match_kv(a, "renderer")) != NULL) {
+            if (strcmp(v, "software") == 0)      opts.renderer = PLATFORM_RENDERER_SOFTWARE;
+            else if (strcmp(v, "accel") == 0)    opts.renderer = PLATFORM_RENDERER_ACCEL;
+            else {
+                fprintf(stderr, "Invalid --renderer value '%s' (expected software|accel)\n", v);
+                return 1;
+            }
+        } else if ((v = match_kv(a, "vsync")) != NULL) {
+            if (strcmp(v, "on") == 0 || strcmp(v, "1") == 0)       opts.vsync = 1;
+            else if (strcmp(v, "off") == 0 || strcmp(v, "0") == 0) opts.vsync = 0;
+            else {
+                fprintf(stderr, "Invalid --vsync value '%s' (expected on|off)\n", v);
+                return 1;
+            }
         } else if (strcmp(a, "-h") == 0 || strcmp(a, "--help") == 0) {
             print_usage(argv[0]);
             return 0;
@@ -143,7 +185,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    if (Platform_Init(WIN_SCALE, start_fullscreen) != 0) {
+    if (Platform_Init(&opts) != 0) {
         fprintf(stderr, "Platform_Init failed\n");
         SDL_Quit();
         return 1;

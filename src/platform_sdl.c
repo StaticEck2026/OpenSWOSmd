@@ -91,6 +91,12 @@ static int          s_screenshot_auto_count; /* number written by interval mode 
 static int           s_dump_frames;
 static int           s_frame_count;
 
+/* Renderer mode chosen at Platform_Init. The SDL_AddTimer worker only
+ * issues a fallback Platform_RenderFrame when the renderer is software —
+ * hardware (D3D / GL / Metal) contexts are thread-bound. */
+static int           s_renderer_is_hw;
+static int           s_vsync_enabled;
+
 /* ---- VBlank tick driver ------------------------------------------- *
  * The Amiga VBlank ISR (Int3TimerHandler) was responsible for bumping
  * `currentGameTick` once per frame. The game polls that counter in
@@ -162,7 +168,14 @@ static Uint32 SDLCALL tick_timer_cb(Uint32 interval, void *param)
      * pump from the render means the X button responds within 20 ms. */
     Uint32 now_ms = SDL_GetTicks();
     Uint32 since  = now_ms - s_last_main_render_ms;
-    if (s_last_main_render_ms == 0 || since > 60) {
+    /* Only software renderers tolerate render calls from this worker
+     * thread. Hardware (D3D / OpenGL / Metal) contexts are bound to the
+     * creating thread and silently drop or corrupt cross-thread calls;
+     * for hardware mode the loader-intro path is the cost — the screen
+     * may briefly look frozen during big asset decompresses, but that
+     * is purely cosmetic. */
+    if (!s_renderer_is_hw &&
+        (s_last_main_render_ms == 0 || since > 60)) {
         Platform_RenderFrame();
     } else {
         pump_quit_only();
@@ -175,8 +188,14 @@ extern void Platform_RewireCustom(void);
 extern void Platform_PreArmIsrGlobals(void);
 
 /* ---- Lifecycle ----------------------------------------------------- */
-int Platform_Init(int win_scale, int start_fullscreen)
+int Platform_Init(const PlatformInitOptions *opts)
 {
+    int win_scale       = opts ? opts->win_scale       : 1;
+    int start_fullscreen = opts ? opts->start_fullscreen : 0;
+    PlatformRendererMode renderer_mode =
+        opts ? opts->renderer : PLATFORM_RENDERER_ACCEL;
+    int vsync = opts ? opts->vsync : 1;
+
     if (win_scale < 1) win_scale = 1;
     /* Repoint `custom` at our stub storage *before* the tick timer
      * starts -- the first VBlank ISR firing reads custom->intreqr. */
@@ -205,20 +224,49 @@ int Platform_Init(int win_scale, int start_fullscreen)
         return -1;
     }
 
-    /* Software renderer: the SDL_AddTimer callback runs on a worker
-     * thread and also issues SDL_RenderCopy / Present. Hardware GL
-     * renderers are bound to the creating thread and will silently
-     * drop cross-thread calls; software has no such restriction.
-     * If the user wants acceleration, `SWOS_ACCEL=1` overrides. */
-    Uint32 rflags = SDL_RENDERER_SOFTWARE;
-    if (getenv("SWOS_ACCEL"))
-        rflags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
+    /* Renderer choice. Hardware (accelerated) is the default — vsync
+     * gives a 50 Hz monitor user free perfect pacing. Software is
+     * available as an opt-in for hosts where the hardware backend
+     * misbehaves; it permits cross-thread RenderFrame calls from the
+     * SDL_AddTimer worker (used as a fallback during loader-intro
+     * spins). */
+    Uint32 rflags;
+    if (renderer_mode == PLATFORM_RENDERER_SOFTWARE) {
+        rflags = SDL_RENDERER_SOFTWARE;
+        s_renderer_is_hw = 0;
+        s_vsync_enabled  = 0;            /* software ignores PRESENTVSYNC */
+    } else {
+        rflags = SDL_RENDERER_ACCELERATED;
+        if (vsync) rflags |= SDL_RENDERER_PRESENTVSYNC;
+        s_renderer_is_hw = 1;
+        s_vsync_enabled  = vsync;
+    }
+
     s_renderer = SDL_CreateRenderer(s_window, -1, rflags);
-    if (!s_renderer)
+    if (!s_renderer) {
+        /* Fall back to software if the requested mode failed. */
+        fprintf(stderr,
+            "SDL_CreateRenderer (%s%s) failed: %s — falling back to software\n",
+            renderer_mode == PLATFORM_RENDERER_ACCEL ? "accel" : "software",
+            (renderer_mode == PLATFORM_RENDERER_ACCEL && vsync) ? "+vsync" : "",
+            SDL_GetError());
         s_renderer = SDL_CreateRenderer(s_window, -1, SDL_RENDERER_SOFTWARE);
+        s_renderer_is_hw = 0;
+        s_vsync_enabled  = 0;
+    }
     if (!s_renderer) {
         fprintf(stderr, "SDL_CreateRenderer: %s\n", SDL_GetError());
         return -1;
+    }
+
+    {
+        SDL_RendererInfo info;
+        if (SDL_GetRendererInfo(s_renderer, &info) == 0) {
+            fprintf(stderr, "[render] driver=%s flags=0x%x vsync=%s hw=%d\n",
+                    info.name ? info.name : "?", info.flags,
+                    s_vsync_enabled ? "on" : "off",
+                    s_renderer_is_hw);
+        }
     }
 
     SDL_RenderSetLogicalSize(s_renderer, PLATFORM_SCREEN_W, PLATFORM_SCREEN_H);

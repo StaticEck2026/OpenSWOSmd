@@ -15,12 +15,39 @@
 #define PLATFORM_SCREEN_H 272
 
 /* ---- Lifecycle ----------------------------------------------------- */
-/* `start_fullscreen` selects fullscreen-desktop mode at window creation —
- * the SDL renderer's logical size handles letterboxing automatically so
- * the original 336x272 frame stays pixel-perfect inside whatever
- * resolution the desktop is running at. The user can also toggle at
- * runtime via Alt+Enter (handled in this file). */
-int  Platform_Init(int win_scale, int start_fullscreen);
+/* Renderer selection.
+ *
+ * Software (PLATFORM_RENDERER_SOFTWARE):
+ *   SDL_RENDERER_SOFTWARE. The SDL_AddTimer worker thread is allowed to
+ *   call Platform_RenderFrame as a fallback during loader-intro spins
+ *   that don't go through _WaitForVSync. Cross-thread render is safe
+ *   because software renderers aren't context-bound. PRESENTVSYNC has
+ *   no effect on software renderers — frames are not synced to monitor
+ *   refresh, so 50 Hz monitor users see a slow drift / beat pattern.
+ *
+ * Accelerated (PLATFORM_RENDERER_ACCEL):
+ *   SDL_RENDERER_ACCELERATED, optionally with SDL_RENDERER_PRESENTVSYNC.
+ *   Hardware contexts (D3D / OpenGL / Metal) are bound to the creating
+ *   thread, so the cross-thread fallback render is suppressed; only
+ *   Platform_VBlank from the main thread issues GL calls. With vsync
+ *   the monitor's vblank gates SDL_RenderPresent, giving free perfect
+ *   pacing on a 50 Hz display. The 50 Hz manual SDL_Delay loop in
+ *   Platform_VBlank stays as a backstop so 60+ Hz monitors still gate
+ *   the game at 50 ticks/sec.
+ */
+typedef enum {
+    PLATFORM_RENDERER_SOFTWARE = 0,
+    PLATFORM_RENDERER_ACCEL    = 1,
+} PlatformRendererMode;
+
+typedef struct {
+    int                  win_scale;        /* 1, 2, 3, ... */
+    int                  start_fullscreen; /* 0 = windowed, 1 = fullscreen-desktop */
+    PlatformRendererMode renderer;         /* software / accelerated */
+    int                  vsync;            /* 0 = off, 1 = on (only meaningful for accel) */
+} PlatformInitOptions;
+
+int  Platform_Init(const PlatformInitOptions *opts);
 void Platform_Shutdown(void);
 
 /* Toggle / set fullscreen at runtime. Alt+Enter calls this internally;

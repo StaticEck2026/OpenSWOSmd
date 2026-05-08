@@ -122,12 +122,40 @@ correctly. `stderr` is auto-redirected to `SWOS.log` next to the binary
 ### Command-line options
 
 ```
--f, --fullscreen   Start in fullscreen-desktop mode (letterboxed —
-                   keeps the desktop resolution, scales 336×272 up to
-                   fit, black bars on the sides). Toggle at runtime
-                   with Alt+Enter.
--h, --help         Show usage and exit.
+-f, --fullscreen          Start in fullscreen-desktop mode (letterboxed —
+                          keeps the desktop resolution, scales 336×272 up
+                          to fit, black bars on the sides). Toggle at
+                          runtime with Alt+Enter.
+--renderer=<software|accel>
+                          Choose the SDL renderer. Default: accel.
+                          'accel' uses the platform's hardware backend
+                          (D3D / OpenGL / Metal). 'software' is a CPU-only
+                          fallback for hosts where the hardware path
+                          misbehaves.
+--vsync=<on|off>          Sync frame presents to monitor vblank. Default: on.
+                          Only meaningful with --renderer=accel; software
+                          renderers ignore vsync.
+-h, --help                Show usage and exit.
 ```
+
+#### Choosing a render mode
+
+SWOS' game logic runs at a fixed 50 Hz (the original PAL VBlank rate).
+How smooth that looks on a given monitor depends on whether each frame
+present aligns with the display's refresh:
+
+| Monitor refresh | Best mode                | Result                                                                |
+|-----------------|--------------------------|-----------------------------------------------------------------------|
+| 50 Hz           | `--renderer=accel --vsync=on` (default) | Perfect 1:1 pacing. Each game frame lands on a vblank.    |
+| 60 Hz / 75 Hz   | default                  | Manual 50 Hz pace gates the game; presents land on the monitor's vblanks. The 50 → 60 pulldown is irreducible. |
+| 144 Hz / 240 Hz | default                  | Same as above; presents land on the next vblank, the manual pace fills the rest. |
+| Anything (host has a buggy hardware backend) | `--renderer=software` | Drops to the CPU path. No vsync, manual pace only. |
+
+If the picture looks like it's beating in and out of sync every couple of
+seconds (especially on a 50 Hz screen), try the default first; if the
+issue was a software-renderer drift it'll go away. If the hardware
+backend is unstable on your host, `--renderer=software` brings back the
+old behaviour.
 
 ## Controls
 
