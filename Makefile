@@ -43,6 +43,12 @@ else ifeq ($(UNAME_S),MINGW32_NT)
 TARGET_NAME := SWOS.exe
 else ifeq ($(UNAME_S),MINGW64_NT)
 TARGET_NAME := SWOS.exe
+else ifdef ARM
+# Distinguish the cross-built ARM binary so it doesn't overwrite a
+# native x86 bin/SWOS in the same checkout. Native ARM builds (on a
+# Pi) also get the .armhf suffix — `file bin/SWOS.armhf` confirms the
+# ELF arch either way.
+TARGET_NAME := SWOS.armhf
 else
 TARGET_NAME := SWOS
 endif
