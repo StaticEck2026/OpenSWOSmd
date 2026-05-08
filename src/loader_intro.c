@@ -372,7 +372,8 @@ void _ShowLoaderIntroSequence(void)
 #endif
     if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader2.raw", 0xFA) != 0)
         goto load_fail_mid;
-
+    if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader76.raw", 0xFA) != 0)
+        goto load_fail_mid;
     /* Frames 4-12: loader3..loader10 */
     if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader3.raw", 0xFA) != 0)
         goto load_fail_mid;

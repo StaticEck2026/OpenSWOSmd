@@ -101,7 +101,7 @@ the Amiga C port.
 ## Files
 
 - C:\Projects\AI\SWOS\SWOS_C\data\Data.c - C data structures exported from IDA Amiga SWOS
-- C:\Projects\AI\SWOS\SWOS_C\data\SWOS.s - Original Amiga SWOS 68k asm
+- C:\Projects\AI\SWOS\SWOS_C\data\SWOS2.s - Original Amiga SWOS 68k asm
 - C:\Projects\GitHub\SwosGfx\SwosGfx\AmigaTools.cs - Contains routines to parse and manage Amiga SWOS sprites, pitch and palettes
 - C:\Projects\GitHub\SwosGfx\SwosGfx\bin\Debug\net8.0\Amiga_Images_16 - Extracted graphics from Amiga SWOS in 8bpp BMP format
 

@@ -1,0 +1,4 @@
+[render] driver=opengl flags=0xa vsync=on hw=1
+[input] gamecontrollerdb.txt not loaded: Invalid RWops
+[input] SDL_NumJoysticks=0
+[screenshot] hotkeys: F9 / F11 / F12 / PrintScreen (env SWOS_SCREENSHOT_INTERVAL=N for auto-capture every N frames)
