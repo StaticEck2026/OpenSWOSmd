@@ -867,22 +867,55 @@ __attribute__((used, aligned(4))) uint8_t gameRoundBuf[100];
 __asm__(".globl " _ASM_PFX "gameRound\n"
         ".equ   " _ASM_PFX "gameRound, " _ASM_PFX "gameRoundBuf\n");
 
-__attribute__((used, aligned(4))) uint8_t diyFileBufferCopyBuf[4096];
+/* diyFileBufferCopy + diyCompetitionStart share one BSS run on Amiga:
+ *
+ *   2830 diyFileBufferCopy:    ds.b $60     ; +0x000
+ *   2833 BSS_00_2DB6A:         ds.b $3A     ; +0x060
+ *   2836 diyTournamentTeamIds: ds.b $386    ; +0x09A
+ *   2840 diyCompetitionStart:  ds.b $60     ; +0x420
+ *   2842 diyMinSubstitutes ... diyTeamShuffleOrder ... audioInstrumentBank
+ *        — the "extended" diyCompetitionStart region runs to +0x420 + 0x734
+ *
+ * The 1450-word (2900-byte = 0xB54) DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer
+ * copy, which the tournament-preset save flow uses, deliberately covers
+ * BOTH buffers because they're contiguous: writes to diyCompetitionStart
+ * + 0x2B4 (league standings) land at diyFileBufferCopy + 0x6D4, and that
+ * offset is within the 0xB54-byte copy.
+ *
+ * If we keep diyFileBufferCopyBuf and diyCompetitionStartBuf as TWO
+ * standalone arrays, the standings live in a region the Copy never
+ * touches — the saved .PRE file ends up with zeros where the Group A
+ * standings should be (Colombia 1W lost on save → loads as fresh
+ * competition). Mirror the Amiga BSS adjacency by aliasing
+ * diyCompetitionStartBuf to diyFileBufferCopyBuf + 0x420; one big
+ * backing buffer holds both, the existing aliases (diyLeagueTeamIds at
+ * +0x12E, diyCupTeamIds at +0x24E, etc.) all resolve through, and
+ * Copy's reach naturally includes the standings region.
+ *
+ * Sizing: 0x420 (diyFileBufferCopy region) + 0x734 (diyCompetitionStart
+ * extended region) = 0xB54 minimum. Round up to 0x2000 (8192) for
+ * defensive headroom — the 1450-word copy reaches 0xB54 anyway. */
+__attribute__((used, aligned(4))) uint8_t diyFileBufferCopyBuf[8192];
 __asm__(".globl " _ASM_PFX "diyFileBufferCopy\n"
         ".equ   " _ASM_PFX "diyFileBufferCopy, " _ASM_PFX "diyFileBufferCopyBuf\n");
 
-/* diyTournamentTeamIds: on Amiga the label sits at `diyFileBufferCopy + 0x9A`.
+/* diyTournamentTeamIds: Amiga `diyFileBufferCopy + 0x9A`.
  * _PresetCompetitionMenu writes selected team IDs via the named global
  * (_CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyTournamentTeamIds))
  * while _DIY_LoadCurrentCompetitionSlot reads them as
  * (uint16_t *)(diyFileBufferCopy + 0x9A) when copying into the runtime
- * teamShuffleOrder. Same memory on Amiga; alias here so the SDL build sees
- * the writes. Without this, the load path reads zeros and
- * _VerifyTeamLoaded(0) panics on the first cached team pointer. */
+ * teamShuffleOrder. */
 __asm__(".globl " _ASM_PFX "diyTournamentTeamIds\n"
         ".equ   " _ASM_PFX "diyTournamentTeamIds, " _ASM_PFX "diyFileBufferCopyBuf + 0x9A\n");
 
-__attribute__((used, aligned(4))) uint8_t diyCompetitionStartBuf[4096];
+/* diyCompetitionStartBuf is now an alias into diyFileBufferCopyBuf, NOT
+ * a separate array. All the `.equ ... diyCompetitionStartBuf + N` aliases
+ * below resolve through to diyFileBufferCopyBuf + 0x420 + N, matching
+ * the Amiga BSS layout and ensuring league standings (at +0x2B4 within
+ * the diyCompetitionStart region) end up at diyFileBufferCopyBuf +
+ * 0x6D4 — inside the save-time Copy's reach. */
+__asm__(".globl " _ASM_PFX "diyCompetitionStartBuf\n"
+        ".equ   " _ASM_PFX "diyCompetitionStartBuf, " _ASM_PFX "diyFileBufferCopyBuf + 0x420\n");
 __asm__(".globl " _ASM_PFX "diyCompetitionStart\n"
         ".equ   " _ASM_PFX "diyCompetitionStart, " _ASM_PFX "diyCompetitionStartBuf\n");
 
