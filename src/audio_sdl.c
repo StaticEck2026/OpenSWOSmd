@@ -90,8 +90,13 @@ void AudioSDL_Shutdown(void)
     if (s_mtx) { SDL_DestroyMutex(s_mtx); s_mtx = NULL; }
 }
 
-/* Produce audio from the main thread and queue it into SDL. Called once
- * per rendered frame (50 Hz) from Platform_RenderFrame.
+/* Produce audio and queue it into SDL. Called once per game tick
+ * (50 Hz) from BOTH the main thread (via Platform_RenderFrame) and the
+ * SDL_AddTimer worker (tick_timer_cb). Either thread is sufficient;
+ * having both means audio keeps flowing even when one is blocked
+ * (e.g. main is stuck inside SDL_RenderPresent waiting for monitor
+ * vblank with --vsync=on, which can occasionally exceed one game frame
+ * on a 60 Hz monitor due to 50→60 pulldown).
  *
  * Rationale for queue mode over callback mode: on WSL2 + PulseAudio the
  * SDL audio callback thread gets scheduled extremely unevenly — we saw
@@ -104,31 +109,37 @@ void AudioSDL_Shutdown(void)
  * and is extremely reliable. We only enqueue as much as we need to
  * keep roughly QUEUE_TARGET_MS of audio ahead of the playback cursor,
  * so latency stays low and the queue can absorb short main-thread
- * stalls without underrunning. */
+ * stalls without underrunning.
+ *
+ * Concurrency: the queue-fill check and the RJP1 song-advance step
+ * (RJP1_HandleTick) are wrapped in s_mtx as one critical section.
+ * If both threads arrive simultaneously, the loser sees the queue
+ * already topped up and bails out — guaranteeing the song state
+ * advances at most once per "queue underflow event", not twice. */
 void AudioSDL_Tick(void)
 {
     if (!s_audio_dev) return;
 
     const int freq = s_audio_spec.freq ? s_audio_spec.freq : AUDIO_SAMPLE_RATE;
-
-    /* How much audio is already queued, in bytes? */
-    Uint32 queued_bytes  = SDL_GetQueuedAudioSize(s_audio_dev);
-    Uint32 target_bytes  = (Uint32)freq * 2 * QUEUE_TARGET_MS / 1000;
-
-    if (queued_bytes >= target_bytes) return;   /* already buffered enough */
-
-    /* Generate one game tick of audio (50 Hz == one RJP1 pattern step). */
     const int bytes_per_tick = (freq * 2) / 50;
     if (bytes_per_tick > (int)sizeof(s_mix_buf)) return;   /* safety */
 
+    Uint32 target_bytes = (Uint32)freq * 2 * QUEUE_TARGET_MS / 1000;
+    int    have_audio   = 0;     /* 1 if we filled s_mix_buf with music */
+
     SDL_LockMutex(s_mtx);
-    if (!s_player_active) {
+
+    /* Re-check the queue inside the lock — if the other thread just
+     * topped it up, we're done. This is what prevents two threads from
+     * both calling RJP1_HandleTick for the same tick (which would
+     * double-step the song state). */
+    Uint32 queued_bytes = SDL_GetQueuedAudioSize(s_audio_dev);
+    if (queued_bytes >= target_bytes) {
         SDL_UnlockMutex(s_mtx);
-        /* Still queue silence so the driver keeps ticking forward and
-         * SDL_GetQueuedAudioSize returns sensible values when music
-         * starts. */
-        SDL_memset(s_mix_buf, 0, (size_t)bytes_per_tick);
-    } else {
+        return;
+    }
+
+    if (s_player_active) {
         SDL_memset(s_mix_buf, 0, (size_t)bytes_per_tick);
         RJP1_HandleTick(&s_player);
         RJP1_MixSamples(&s_player, freq, s_mix_buf, bytes_per_tick);
@@ -140,9 +151,17 @@ void AudioSDL_Tick(void)
                 s_mix_buf[i] = (int8_t)(((int)s_mix_buf[i] * scale) / 64);
             }
         }
-        SDL_UnlockMutex(s_mtx);
+        have_audio = 1;
+    } else {
+        /* Queue silence so the driver keeps ticking forward and
+         * SDL_GetQueuedAudioSize returns sensible values when music
+         * starts. */
+        SDL_memset(s_mix_buf, 0, (size_t)bytes_per_tick);
     }
 
+    /* Enqueue inside the lock so a concurrent caller's queue re-check
+     * sees the new size. SDL_QueueAudio is internally locked; nesting
+     * our s_mtx around it is safe. */
     SDL_QueueAudio(s_audio_dev, s_mix_buf, (Uint32)bytes_per_tick);
 
     /* If we'd gotten WAY behind (e.g. a 2-second main-thread stall), we
@@ -155,6 +174,9 @@ void AudioSDL_Tick(void)
         SDL_memset(s_mix_buf, 0, (size_t)bytes_per_tick);
         SDL_QueueAudio(s_audio_dev, s_mix_buf, (Uint32)bytes_per_tick);
     }
+
+    SDL_UnlockMutex(s_mtx);
+    (void)have_audio;
 }
 
 /* ---- Public API for audio.c --------------------------------------- *

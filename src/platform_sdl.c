@@ -154,6 +154,17 @@ static Uint32 SDLCALL tick_timer_cb(Uint32 interval, void *param)
      * for when the timer thread gets starved (common on WSL2). */
     _RunInt3HandlerThrottled();
 
+    /* Pump audio production from the worker thread regardless of
+     * renderer mode. With --vsync=on the main thread can occasionally
+     * spend longer than one game frame inside SDL_RenderPresent (the
+     * irreducible 50→60 pulldown jitter on a 60 Hz monitor); without an
+     * independent producer the audio queue would drain during those
+     * long presents and you'd hear short pauses in the music. The
+     * queue-fill check inside AudioSDL_Tick is mutex-guarded so
+     * main + worker calling it concurrently doesn't double-advance the
+     * RJP1 song state. */
+    AudioSDL_Tick();
+
     /* The loader-intro path waits on `currentGameTick` rather than
      * `_WaitForVSync`, so the main thread never reaches our render
      * hook. Drive a render directly from the timer thread only when
