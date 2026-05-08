@@ -36,6 +36,13 @@ static SDL_mutex        *s_mtx;
 static RJP1_Player       s_player;
 static int               s_player_active;   /* 1 = RJP1_Load succeeded and a song is selected */
 static int               s_master_volume;   /* 0..64, scales final output */
+/* Down-mix flag. The Amiga's 4 channels are hard-panned (1,2 → left ;
+ * 0,3 → right) by Paula and so by the cyxx player ported to rjp1.c. On
+ * speakers without strong stereo separation that hard pan sounds
+ * unbalanced — set this to 1 (the default) to average L+R back into
+ * each lane after the mix. --audio=stereo restores the original Amiga
+ * panning. */
+static int               s_audio_mono = 1;
 
 /* Queue-mode mix scratch. Sized for one game tick (50 Hz) of stereo S8
  * at the highest plausible negotiated rate (48 kHz) plus a little slack. */
@@ -47,8 +54,9 @@ static int8_t            s_mix_buf[48000 * 2 / 50 + 128];
  * noticeable latency between music events and what you hear. */
 #define QUEUE_TARGET_MS  80
 
-int AudioSDL_Init(void)
+int AudioSDL_Init(int mono)
 {
+    s_audio_mono = mono ? 1 : 0;
 #if SWOS_AUDIO_DISABLED
     /* Audio disabled at compile time — return success so platform init
      * continues; s_audio_dev stays 0 and AudioSDL_Tick early-returns. */
@@ -143,6 +151,21 @@ void AudioSDL_Tick(void)
         SDL_memset(s_mix_buf, 0, (size_t)bytes_per_tick);
         RJP1_HandleTick(&s_player);
         RJP1_MixSamples(&s_player, freq, s_mix_buf, bytes_per_tick);
+
+        /* Down-mix to mono (default). Amiga channels 1,2 are hard-left
+         * and 0,3 are hard-right in the cyxx mapping inside rjp1.c —
+         * pleasant on stereo headphones, lopsided on cheap speakers or
+         * a single laptop speaker. Average each L/R pair back into
+         * both lanes. The /2 is to avoid clipping when both lanes were
+         * already near peak; the same total energy is preserved. */
+        if (s_audio_mono) {
+            for (int i = 0; i + 1 < bytes_per_tick; i += 2) {
+                int sum = (int)s_mix_buf[i] + (int)s_mix_buf[i + 1];
+                int8_t m = (int8_t)(sum / 2);
+                s_mix_buf[i]     = m;
+                s_mix_buf[i + 1] = m;
+            }
+        }
 
         /* Apply master volume (0..64) in place. */
         if (s_master_volume < 64) {

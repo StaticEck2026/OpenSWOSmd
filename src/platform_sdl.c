@@ -19,7 +19,7 @@
 #include <string.h>
 
 /* ---- Forward decls from audio_sdl.c / input_sdl.c ----------------- */
-int  AudioSDL_Init(void);
+int  AudioSDL_Init(int mono);
 void AudioSDL_Shutdown(void);
 void AudioSDL_Tick(void);
 
@@ -297,7 +297,7 @@ int Platform_Init(const PlatformInitOptions *opts)
 
     /* Bring up the audio + input subsystems. Failures here are non-fatal —
      * we'd still rather see graphics than nothing. */
-    (void)AudioSDL_Init();
+    (void)AudioSDL_Init(opts ? opts->audio_mono : 1);
     (void)InputSDL_Init();
 
     /* Bump the OS timer resolution so SDL_Delay() doesn't oversleep.

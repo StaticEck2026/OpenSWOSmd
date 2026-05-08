@@ -135,6 +135,13 @@ correctly. `stderr` is auto-redirected to `SWOS.log` next to the binary
 --vsync=<on|off>          Sync frame presents to monitor vblank. Default: on.
                           Only meaningful with --renderer=accel; software
                           renderers ignore vsync.
+--audio=<mono|stereo>     Audio output mode. Default: mono.
+                          The Amiga's 4 audio channels are hard-panned
+                          (1,2 → left, 0,3 → right) by Paula, which
+                          sounds lopsided on most modern speakers /
+                          single-speaker laptops. 'stereo' restores
+                          the original Amiga panning if you'd rather
+                          hear it that way (e.g. on headphones).
 -h, --help                Show usage and exit.
 ```
 

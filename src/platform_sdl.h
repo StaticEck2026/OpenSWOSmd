@@ -45,6 +45,7 @@ typedef struct {
     int                  start_fullscreen; /* 0 = windowed, 1 = fullscreen-desktop */
     PlatformRendererMode renderer;         /* software / accelerated */
     int                  vsync;            /* 0 = off, 1 = on (only meaningful for accel) */
+    int                  audio_mono;       /* 1 = down-mix to mono (default), 0 = Amiga hard-panned stereo */
 } PlatformInitOptions;
 
 int  Platform_Init(const PlatformInitOptions *opts);

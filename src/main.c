@@ -110,6 +110,11 @@ static void print_usage(const char *argv0)
         "                            On a 50 Hz display this gives perfect pacing\n"
         "                            for free. On 60+ Hz the manual 50 Hz game-tick\n"
         "                            pace remains as a backstop.\n"
+        "  --audio=<mono|stereo>     Audio output mode. Default: mono.\n"
+        "                            The Amiga's 4 audio channels are hard-panned\n"
+        "                            (1,2 → left, 0,3 → right) which sounds\n"
+        "                            lopsided on most modern playback setups.\n"
+        "                            'stereo' restores the original Amiga panning.\n"
         "  -h, --help                Show this help and exit.\n",
         argv0 ? argv0 : "SWOS");
 }
@@ -132,6 +137,7 @@ int main(int argc, char **argv)
     opts.start_fullscreen = 0;
     opts.renderer         = PLATFORM_RENDERER_ACCEL;
     opts.vsync            = 1;
+    opts.audio_mono       = 1;
 
     for (int i = 1; i < argc; ++i) {
         const char *a = argv[i];
@@ -150,6 +156,13 @@ int main(int argc, char **argv)
             else if (strcmp(v, "off") == 0 || strcmp(v, "0") == 0) opts.vsync = 0;
             else {
                 fprintf(stderr, "Invalid --vsync value '%s' (expected on|off)\n", v);
+                return 1;
+            }
+        } else if ((v = match_kv(a, "audio")) != NULL) {
+            if (strcmp(v, "mono") == 0)        opts.audio_mono = 1;
+            else if (strcmp(v, "stereo") == 0) opts.audio_mono = 0;
+            else {
+                fprintf(stderr, "Invalid --audio value '%s' (expected mono|stereo)\n", v);
                 return 1;
             }
         } else if (strcmp(a, "-h") == 0 || strcmp(a, "--help") == 0) {
