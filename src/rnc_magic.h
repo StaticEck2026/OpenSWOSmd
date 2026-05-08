@@ -14,13 +14,26 @@
 #ifndef RNC_MAGIC_H
 #define RNC_MAGIC_H
 
-#if defined(__i386__) || defined(__x86_64__) || defined(__LITTLE_ENDIAN__) || \
-    defined(_M_IX86) || defined(_M_X64) || defined(_MSC_VER)
+/* Use the standard GCC/Clang predefined byte-order macros instead of
+ * the ad-hoc x86/MSVC list — that list missed ARM Linux (which is
+ * little-endian by default but defines neither __i386__ nor
+ * __x86_64__), so on the armhf cross-build the LE constant fell
+ * through to the BE branch and `_LoadRNCToBufferNoBlit` panicked
+ * loading sound/hero.ins on every Pi 3 run.
+ *
+ * MSVC doesn't define __BYTE_ORDER__, so keep an explicit fallback
+ * for it. */
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#  define RNC_MAGIC_V1 0x01434E52u
+#  define RNC_MAGIC_V2 0x02434E52u
+#elif defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#  define RNC_MAGIC_V1 0x524E4301u
+#  define RNC_MAGIC_V2 0x524E4302u
+#elif defined(_MSC_VER) || defined(_M_IX86) || defined(_M_X64)
 #  define RNC_MAGIC_V1 0x01434E52u
 #  define RNC_MAGIC_V2 0x02434E52u
 #else
-#  define RNC_MAGIC_V1 0x524E4301u
-#  define RNC_MAGIC_V2 0x524E4302u
+#  error "rnc_magic.h: cannot determine host byte order; please add a case for your toolchain"
 #endif
 
 #endif /* RNC_MAGIC_H */
