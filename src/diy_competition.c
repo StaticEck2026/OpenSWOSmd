@@ -6627,7 +6627,19 @@ check_arg2:
     if (diyCupMenuArg2 != 0) {
         diyCupMenuArg2 = 0;
         fireResetFlag = 0;
-        _SetCurrentEntry(10);
+        /* arg2=1 is set by Career_PlayMatchMenuLoop (via d2=1 → arg2=1
+         * in _ShowDIYCupMenuWithParams). The original asm slams the
+         * cursor to entry 10 (aExit) here. For the modern user the
+         * expected behaviour is "PLAY MATCH brings up the cup fixture
+         * menu with the cursor on MATCH so a second fire press starts
+         * the game" — landing on EXIT means the user has to navigate
+         * to MATCH manually, defeating the point of PLAY MATCH being
+         * a shortcut. In career mode put the cursor on slotStateA
+         * (= 3 = aMatch); outside career stay asm-faithful. */
+        if (careerLoadedFlag != 0)
+            _SetCurrentEntry((uint16_t)diyCompetitionStart.base.slotStateA);
+        else
+            _SetCurrentEntry(10);
     }
 }
 
