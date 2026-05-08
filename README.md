@@ -122,15 +122,24 @@ also need to point `apt` at `ports.ubuntu.com`:
 ```
 sudo dpkg --add-architecture armhf
 
-# Add an armhf source pointing at ports.ubuntu.com (which actually
-# carries arm packages). Replace 'jammy' with your Ubuntu codename
-# (jammy = 22.04, noble = 24.04). On Debian use deb.debian.org as
-# normal — Debian's main mirrors cover all release architectures.
-echo 'deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ jammy main universe' \
-  | sudo tee /etc/apt/sources.list.d/ports-armhf.list
-
-# Restrict the existing amd64 entries so apt doesn't try ports for them.
+# Restrict your existing amd64 sources so apt doesn't try ports for them.
 sudo sed -i -E 's,^(deb )(http),\1[arch=amd64] \2,' /etc/apt/sources.list
+
+# Add armhf sources pointing at ports.ubuntu.com (which actually carries
+# arm packages). You need ALL FOUR pockets — main universe + -updates +
+# -security + -backports — otherwise apt finds the old base-pocket
+# libc6:armhf and refuses to install libsdl2-dev:armhf because of
+# version mismatches across the dependency chain.
+# Replace 'jammy' with your Ubuntu codename (`lsb_release -cs` to check;
+# jammy = 22.04, noble = 24.04). Debian users: skip these steps —
+# deb.debian.org carries all release architectures by default.
+CODENAME=$(lsb_release -cs)
+sudo tee /etc/apt/sources.list.d/ports-armhf.list <<EOF
+deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ $CODENAME main universe
+deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ $CODENAME-updates main universe
+deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ $CODENAME-security main universe
+deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ $CODENAME-backports main universe
+EOF
 
 sudo apt update
 sudo apt install gcc-arm-linux-gnueabihf libsdl2-dev:armhf
