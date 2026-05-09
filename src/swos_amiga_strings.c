@@ -516,16 +516,28 @@ char aPlayer_1[16] = {
 char aPound[2]                    = "\234";
 char aTot_0[9]                    = "\004T\000O\000T\000 ";
 
-/* SWOS2.s leading-byte format (display flag 1=single, 2=multi-line bullet). */
-char aCareerPrompt[]              = "\002  YOU ARE ABOUT TO LOSE CURRENT  ";
+/* SWOS2.s leading-byte format (display flag 1=single, 2=multi-line bullet).
+ *
+ * The format-2 prompts are followed in SWOS2.s by an unnamed second-line
+ * label that is rendered after the prompt's null terminator (the renderer
+ * walks past the null when it sees format byte 2). On Amiga the adjacent
+ * `dc.b ...,0` declarations guarantee the bytes are contiguous; on SDL
+ * each `char[]` is a separate symbol with no adjacency guarantee, so the
+ * post-null read picked up either zeros or unrelated data and the second
+ * line came out blank ("YOU ARE ABOUT TO LOSE CURRENT" with no
+ * "CAREER" / "SEASON" / etc. underneath).
+ *
+ * Fix: embed the second line inside the same `char[]` buffer with an
+ * explicit `\0` separator, mirroring the Amiga layout exactly. */
+char aCareerPrompt[]              = "\002  YOU ARE ABOUT TO LOSE CURRENT  \0             CAREER              ";
 char aCustomTeamsChanged[]        = "\001CUSTOM TEAMS HAVE BEEN CHANGED";
-char aDiyCompetitionPrompt[]      = "\002  YOU ARE ABOUT TO LOSE CURRENT  ";
+char aDiyCompetitionPrompt[]      = "\002  YOU ARE ABOUT TO LOSE CURRENT  \0         DIY COMPETITION         ";
 char aEditedTacticsWillBeLost[]   = "\001EDITED TACTICS WILL BE LOST";
 char aInsertBlankDis[]            = "\001INSERT BLANK DISK IN DF0:";
 char aInsertGameSave[]            = "\001INSERT GAME SAVE DISK IN DF0:";
 char aInsertSwosDisk_0[]          = "\001INSERT SWOS DISK 2 IN ANY DRIVE";
-char aPresetCompetitionPrompt[]   = "\002  YOU ARE ABOUT TO LOSE CURRENT  ";
-char aSeasonPrompt[]              = "\002  YOU ARE ABOUT TO LOSE CURRENT  ";
+char aPresetCompetitionPrompt[]   = "\002  YOU ARE ABOUT TO LOSE CURRENT  \0       PRESET COMPETITION        ";
+char aSeasonPrompt[]              = "\002  YOU ARE ABOUT TO LOSE CURRENT  \0             SEASON              ";
 char aTacticsHaveBeenChanged[]    = "\001TACTICS HAVE BEEN CHANGED";
 char aWeHereAtAWould[]            = "\000WE HERE AT %a WOULD LIKE TO OFFER YOU THE";
 char aWeLookForwardT_0[]          = "\000WE LOOK FORWARD TO SEEING YOU SOON";
