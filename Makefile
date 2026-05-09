@@ -125,9 +125,22 @@ CFLAGS  := $(ARCHFLAGS) -O2 -g -std=gnu11 -fno-strict-aliasing -fno-builtin \
            -Wall -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable \
            -Wno-attributes -Wno-multichar -Wno-builtin-declaration-mismatch \
            -Wno-pointer-sign -Wno-int-conversion -Wno-incompatible-pointer-types \
+           -Wno-braces -Wno-address-of-packed-member \
+           -Wno-strict-aliasing -Wno-array-bounds \
            $(DATA_FLAGS) \
            -include $(SRCDIR)/swos_platform.h \
            -I$(SRCDIR) $(SDL2_CFLAGS)
+# -Wno-braces:                 tactics_data.c auto-extractor wraps scalar
+#                              initialisers in `{ }`; intentional, ~4200 hits.
+# -Wno-address-of-packed-member: packed structs mirror Amiga byte layout
+#                              everywhere; we take &field deliberately.
+# -Wno-strict-aliasing:        we already pass -fno-strict-aliasing for the
+#                              same reason; this just silences the diag.
+# -Wno-array-bounds:           Amiga BSS adjacency reads (e.g. extern
+#                              uint8_t selTeamsPtr; then read [4]) intentionally
+#                              walk past the declared end of 1-byte stubs.
+#                              Real adjacency bugs surface as runtime panics —
+#                              this warning is too noisy to be useful.
 LDFLAGS := $(ARCHFLAGS)
 LDLIBS  := $(SDL2_LIBS) -lm
 
