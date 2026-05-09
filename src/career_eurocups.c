@@ -15,7 +15,6 @@
 #include "career_status.h"
 #include "career_teams.h"
 #include "panic.h"
-#include <stdio.h>
 
 /* ---- ASM externs (globals defined in assembly) ---- */
 extern DIYCompetitionEx diyCompetitionStart;
@@ -64,12 +63,21 @@ extern void _DIY_SortLeagueTableByStandings(void);
  * ================================================================ */
 
 /* isTeamInList — checks if team number is in a word list.
- * Asm: loc_12B1F4. Returns 1 if found, 0 if not. */
+ * Asm: loc_12B1F4. Returns 1 if found, 0 if not.
+ *
+ * The list stores team IDs as BE byte pairs (matching Amiga `move.w`
+ * semantics and the static `unk1[]` seed format) so the same bytes
+ * survive a careerFileBuffer save/load round-trip on either endian
+ * host. `team` is a host-native value `(country<<8)|ordinal` produced
+ * by BE_READ_U16, so each list slot must also be decoded with
+ * BE_READ_U16 before comparison. A naive `list[i] == team` compares
+ * (ordinal<<8|country) on x86 against (country<<8|ordinal), which
+ * never matches and lets duplicates slip through, eventually tripping
+ * the 0x3443 TMD-pool panic when the same team is appended twice. */
 static int16_t isTeamInList(uint16_t team, uint8_t *listPtr, uint16_t count)
 {
-    uint16_t *list = (uint16_t *)listPtr;
     for (uint16_t i = 0; i < count; i++) {
-        if (list[i] == team)
+        if (BE_READ_U16(&listPtr[i * 2]) == team)
             return 1;
     }
     return 0;
@@ -78,32 +86,22 @@ static int16_t isTeamInList(uint16_t team, uint8_t *listPtr, uint16_t count)
 /* appendTeamToList — appends team number to a word list and adds to TMD pool.
  * Asm: loc_12B20A. teamGrid points to the team grid data (first word = team number).
  *
- * The first two bytes of teamGrid are {country, ordinal}; we want to
- * store the BE-packed `(country<<8)|ordinal` form so isTeamInList's
- * `list[i] == team` comparison (where team is also BE-packed) works
- * on both endians. A naive `*(uint16_t *)teamGrid` writes the bytes
- * in host-LE order, giving (ordinal<<8)|country on x86 — which never
- * equals the BE-packed team id every consumer compares against. */
+ * teamGrid[0..1] are the team's `{country, ordinal}` byte pair in
+ * Amiga BE order. Preserve that byte order in the list — i.e. write
+ * teamGrid[0] then teamGrid[1] — so the list ends up as a sequence of
+ * BE byte pairs matching the static `unk1[]` seed format. The Amiga's
+ * `move.w (a5),(a2)+` does exactly this on a BE host; on x86 we have
+ * to do it explicitly because a host-native uint16 store would write
+ * the bytes in LE order, and downstream consumers (the spec reader's
+ * BE_READ_U16, isTeamInList, drawRandomTeamFromPoolAndCopyGrid, and
+ * the careerFileBuffer save/load round-trip) all expect BE bytes. */
 static void appendTeamToList(uint8_t *teamGrid, uint8_t **writePtrAddr, uint16_t *count)
 {
-    uint16_t *writePos = (uint16_t *)(*writePtrAddr);
-    uint16_t teamId = BE_READ_U16(teamGrid);
-    *writePos = teamId;
-    *writePtrAddr = (uint8_t *)(writePos + 1);
+    uint8_t *writePos = *writePtrAddr;
+    writePos[0] = teamGrid[0];
+    writePos[1] = teamGrid[1];
+    *writePtrAddr = writePos + 2;
     (*count)++;
-    extern uint8_t currentCompetitionId;
-    uint32_t gridOff = (uint32_t)((uint8_t *)teamGrid - (uint8_t *)primaryQualifiedTeamGrids);
-    fprintf(stderr,
-            "[qualif] currentComp=0x%02X writing teamId=0x%04X (country=%u ordinal=%u) "
-            "from grid[%lu] (slot %lu) name='%.16s'\n",
-            (unsigned)currentCompetitionId,
-            (unsigned)teamId,
-            (unsigned)((teamId >> 8) & 0xFF),
-            (unsigned)(teamId & 0xFF),
-            (unsigned long)gridOff,
-            (unsigned long)(gridOff / sizeof(TeamFileEx)),
-            (const char *)((TeamFileEx *)teamGrid)->team.teamName);
-    fflush(stderr);
     _Career_AppendTeamToTmdTeamPool((TeamFileEx *)teamGrid);
 }
 
@@ -492,6 +490,10 @@ static void drawRandomTeamFromPoolAndCopyGrid(uint16_t titleHolder,
         return;
 
     uint8_t titleHolderCountry = (uint8_t)(titleHolder >> 8);
+    /* teamList stores BE byte pairs (see appendTeamToList). Read each slot
+     * with BE_READ_U16 to get the (country<<8)|ordinal value the rest of
+     * the function works in. */
+    uint8_t *listBytes = (uint8_t *)teamList;
 
     uint16_t randIdx;
     uint16_t selectedTeam;
@@ -500,7 +502,7 @@ static void drawRandomTeamFromPoolAndCopyGrid(uint16_t titleHolder,
     for (;;) {
         randIdx = _Rand2();
         randIdx = (uint16_t)((uint32_t)randIdx * count >> 8);
-        selectedTeam = teamList[randIdx];
+        selectedTeam = BE_READ_U16(&listBytes[randIdx * 2]);
         selectedCountry = (uint8_t)(selectedTeam >> 8);
 
         if (selectedCountry == titleHolderCountry)
@@ -516,9 +518,10 @@ static void drawRandomTeamFromPoolAndCopyGrid(uint16_t titleHolder,
         break;
     }
 
-    /* Swap: put title holder in the selected slot, take the selected team out */
-    uint16_t removedTeam = teamList[randIdx];
-    teamList[randIdx] = titleHolder;
+    /* Swap: put title holder in the selected slot, take the selected team out.
+     * Write the title holder back as BE bytes to match the list's encoding. */
+    uint16_t removedTeam = BE_READ_U16(&listBytes[randIdx * 2]);
+    BE_WRITE_U16(&listBytes[randIdx * 2], titleHolder);
 
     uint16_t savedCareerFile = careerFileBuffer;
     _Career_RemoveTeamFromTmdTeamPool(removedTeam);
