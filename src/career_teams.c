@@ -706,11 +706,30 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
                 fprintf(stderr, "[append]   resolved 0x%04X -> '%.16s'\n",
                         (unsigned)teamIdsLE[i],
                         (const char *)((TeamFileEx *)tfTeam)->team.teamName);
-            } else {
-                fprintf(stderr, "[append]   NO MATCH for 0x%04X in TEAM.%03u\n",
-                        (unsigned)teamIdsLE[i], (unsigned)loadedExt);
             }
 #endif
+            if (!tfTeam) {
+                /* Always log misses — silent drops are how we got the
+                 * "9 of 16 teams loaded" panic for the eurocup advance.
+                 * Include the file's team count and first/last ordinals
+                 * so we can tell whether the team is genuinely absent
+                 * (out-of-range ordinal written by qualifier) or whether
+                 * the file lookup is bogus. */
+                uint16_t tfCount = *(uint16_t *)&teamFileBuffer;
+                uint8_t *tfBase = &teamFileBuffer;
+                uint8_t *first = tfBase + 2;
+                uint8_t *last = (tfCount > 0)
+                    ? tfBase + 2 + ((uint32_t)tfCount - 1) * sizeof(TeamFileEx)
+                    : first;
+                fprintf(stderr,
+                        "[append]   NO MATCH for 0x%04X in TEAM.%03u "
+                        "(file has %u teams; first=0x%02X%02X last=0x%02X%02X)\n",
+                        (unsigned)teamIdsLE[i], (unsigned)loadedExt,
+                        (unsigned)tfCount,
+                        (unsigned)first[0], (unsigned)first[1],
+                        (unsigned)last[0], (unsigned)last[1]);
+                fflush(stderr);
+            }
             if (tfTeam) {
                 copyTeamRecord(selDst, tfTeam);
                 ((TeamFileEx *)selDst)->team.teamControls = 1;
