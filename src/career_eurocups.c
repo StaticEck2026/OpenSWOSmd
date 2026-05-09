@@ -15,6 +15,7 @@
 #include "career_status.h"
 #include "career_teams.h"
 #include "panic.h"
+#include <stdio.h>
 
 /* ---- ASM externs (globals defined in assembly) ---- */
 extern DIYCompetitionEx diyCompetitionStart;
@@ -86,9 +87,23 @@ static int16_t isTeamInList(uint16_t team, uint8_t *listPtr, uint16_t count)
 static void appendTeamToList(uint8_t *teamGrid, uint8_t **writePtrAddr, uint16_t *count)
 {
     uint16_t *writePos = (uint16_t *)(*writePtrAddr);
-    *writePos = BE_READ_U16(teamGrid);
+    uint16_t teamId = BE_READ_U16(teamGrid);
+    *writePos = teamId;
     *writePtrAddr = (uint8_t *)(writePos + 1);
     (*count)++;
+    extern uint8_t currentCompetitionId;
+    uint32_t gridOff = (uint32_t)((uint8_t *)teamGrid - (uint8_t *)primaryQualifiedTeamGrids);
+    fprintf(stderr,
+            "[qualif] currentComp=0x%02X writing teamId=0x%04X (country=%u ordinal=%u) "
+            "from grid[%lu] (slot %lu) name='%.16s'\n",
+            (unsigned)currentCompetitionId,
+            (unsigned)teamId,
+            (unsigned)((teamId >> 8) & 0xFF),
+            (unsigned)(teamId & 0xFF),
+            (unsigned long)gridOff,
+            (unsigned long)(gridOff / sizeof(TeamFileEx)),
+            (const char *)((TeamFileEx *)teamGrid)->team.teamName);
+    fflush(stderr);
     _Career_AppendTeamToTmdTeamPool((TeamFileEx *)teamGrid);
 }
 
