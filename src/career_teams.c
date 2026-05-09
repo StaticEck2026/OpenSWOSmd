@@ -16,9 +16,7 @@
 #include "panic.h"
 #include "teams.h"
 
-#ifdef SWOS_DEBUG_AUTOSKIP
 #include <stdio.h>
-#endif
 #include "diy_competition.h"
 #include "file_io.h"
 
@@ -123,15 +121,13 @@ TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum)
     TeamFileEx *team;
     uint16_t idx;
     if (findTeamInCache(teamNum, &team, &idx) != 0) {
-#ifdef SWOS_DEBUG_AUTOSKIP
-        /* Dump context so we can see what's actually in selTeamsPtr
-         * vs what the caller expected. The crash means the caller
-         * trusted a teamNum that no longer corresponds to any cached
-         * team — usually because something cleared the cache between
-         * save and lookup, or because `numSelectedTeams` is wrong. */
+        /* Always dump context on panic — we're crashing anyway and the
+         * cache contents tell us whether the caller trusted a stale
+         * teamNum or whether numSelectedTeams is wrong. */
         extern uint8_t selTeamsPtr;
         extern uint16_t numSelectedTeams;
         extern uint16_t selTeamNumber;
+        extern uint16_t diyTournamentTeamIds[];
         fprintf(stderr,
                 "[verify] _VerifyTeamLoaded(0x%04X) FAIL: country=0x%02X team=0x%02X "
                 "selTeamNumber=0x%04X numSelectedTeams=%u\n",
@@ -140,7 +136,7 @@ TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum)
                 (unsigned)selTeamNumber, (unsigned)numSelectedTeams);
         TeamFileEx *firstFew = (TeamFileEx *)&selTeamsPtr;
         unsigned dumpN = numSelectedTeams;
-        if (dumpN > 8) dumpN = 8;
+        if (dumpN > 16) dumpN = 16;
         for (unsigned i = 0; i < dumpN; i++) {
             fprintf(stderr,
                     "[verify]   selTeamsPtr[%u] country=0x%02X ordinal=0x%02X\n",
@@ -148,7 +144,11 @@ TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum)
                     (unsigned)firstFew[i].team.countryNumber,
                     (unsigned)firstFew[i].team.teamOrdinal);
         }
-#endif
+        fprintf(stderr, "[verify] diyTournamentTeamIds[0..15] =");
+        for (unsigned i = 0; i < 16; i++)
+            fprintf(stderr, " %04X", (unsigned)diyTournamentTeamIds[i]);
+        fprintf(stderr, "\n");
+        fflush(stderr);
         _PanicHaltLoop();
     }
     return team;
