@@ -110,7 +110,11 @@ static FILE *open_case_insensitive(const char *path, const char *mode)
     DIR *d = opendir(dir);
     if (!d) return NULL;
     struct dirent *de;
-    char alt[512];
+    /* Big enough for `dir` (PATH_MAX-ish) + '/' + `d_name` (NAME_MAX=255)
+     * + NUL — silences -Wformat-truncation. The 512-byte buffer the
+     * sibling code used was technically too small for a worst-case
+     * compose; bump to 1024. */
+    char alt[1024];
     while ((de = readdir(d)) != NULL) {
         if (strcasecmp(de->d_name, base) == 0) {
             snprintf(alt, sizeof(alt), "%s/%s", dir, de->d_name);

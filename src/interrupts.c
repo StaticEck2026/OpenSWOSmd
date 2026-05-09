@@ -10,7 +10,7 @@
 
 /* ---- Hardware register addresses (interrupt-specific, not in display.h) ---- */
 #define INTREQR_OFF     0x1E    /* Interrupt Request read (offset from CUSTOM) */
-#define INTREQ_ADDR     0x00DFF09Cu
+/* INTREQ_ADDR comes from display.h. */
 #define BPLCON0_OFF     0x100   /* Bitplane control 0 (offset from CUSTOM) */
 
 #define CIAA_ICR_ADDR   0x00BFED01u
@@ -251,7 +251,9 @@ void _Int3TimerHandler(void)
         }
     }
 
-clear_and_return:
-    /* Clear software initiated interrupt */
+    /* Clear software initiated interrupt. The asm reached this via
+     * `clear_and_return:` from several early-return paths; the C
+     * version structures the early-return as nested-if so the label
+     * is no longer needed. */
     custom->intreq = 0x0004;
 }

@@ -239,7 +239,7 @@ _SetStaticHeaderDirection(Sprite *player, TeamGeneralInfo *team)
         return;
     if ((uint8_t)player->playerDownTimer > 18)
         return;
-    if (player->animationTable != (uint32_t)&staticHeaderAttemptAnimTable)
+    if (player->animationTable != &staticHeaderAttemptAnimTable)
         return;
 
     int16_t delta = inputDir - player->direction;

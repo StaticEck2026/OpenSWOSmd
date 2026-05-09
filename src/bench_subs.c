@@ -138,13 +138,7 @@ extern AnimTable playerNormalStandingAnimTable;
 /* ---- Game state constants (ST_GAME_IN_PROGRESS, ST_KEEPER_HOLDS_BALL,
  *   ST_STARTING_GAME, ST_GAME_ENDED, ST_STOPPED all from game_types.h) ---- */
 
-/* ---- Position constants ---- */
-#define POS_RIGHT_BACK          1
-#define POS_LEFT_BACK           2
-#define POS_DEFENDER            3
-#define POS_RIGHT_WING          4
-#define POS_LEFT_WING           5
-#define POS_MIDFIELDER          6
+/* Position constants (POS_*) come from game_types.h. */
 
 /* ---- Sprite constants ---- */
 #define SPR_SELECT_SUBSTITUTE_ARROW 1170

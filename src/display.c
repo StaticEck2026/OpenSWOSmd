@@ -756,8 +756,8 @@ void _BlitterCopyPanelToScreen2(void)
      *
      * Cost: one extra full-frame memcpy on every menu draw (~91 KB).
      * Negligible at 50 Hz. */
-    if (!frontbufferMaskBuffer)
-        return;
+    /* (frontbufferMaskBuffer is a static array, so its address is always
+     * non-null — historical NULL guard removed.) */
     uint8_t *dst = (uint8_t *)frontbufferBasePtr;
     if (dst)
         memcpy(dst, frontbufferMaskBuffer, FRONTBUFFER_SIZE_TOTAL_BYTES);
@@ -910,7 +910,8 @@ __attribute__((used, externally_visible))
 void _BlitterCopyPanelToScreen(void)
 {
     uint8_t *dst = (uint8_t *)frontbufferBasePtr;
-    if (dst && frontbufferMaskBuffer)
+    /* (frontbufferMaskBuffer is a static array, address always non-null.) */
+    if (dst)
         memcpy(dst, frontbufferMaskBuffer, FRONTBUFFER_SIZE_TOTAL_BYTES);
 }
 #else

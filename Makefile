@@ -126,7 +126,7 @@ CFLAGS  := $(ARCHFLAGS) -O2 -g -std=gnu11 -fno-strict-aliasing -fno-builtin \
            -Wno-attributes -Wno-multichar -Wno-builtin-declaration-mismatch \
            -Wno-pointer-sign -Wno-int-conversion -Wno-incompatible-pointer-types \
            -Wno-braces -Wno-address-of-packed-member \
-           -Wno-strict-aliasing -Wno-array-bounds \
+           -Wno-strict-aliasing -Wno-array-bounds -Wno-stringop-overflow \
            $(DATA_FLAGS) \
            -include $(SRCDIR)/swos_platform.h \
            -I$(SRCDIR) $(SDL2_CFLAGS)
@@ -141,6 +141,11 @@ CFLAGS  := $(ARCHFLAGS) -O2 -g -std=gnu11 -fno-strict-aliasing -fno-builtin \
 #                              walk past the declared end of 1-byte stubs.
 #                              Real adjacency bugs surface as runtime panics —
 #                              this warning is too noisy to be useful.
+# -Wno-stringop-overflow:      same root cause as -Wno-array-bounds but for
+#                              the WRITE side (`((uint8_t *)&selTeamsPtr)[4] = x`).
+#                              The compiler sees a 1-byte stub and flags any
+#                              wider write; we know the real backing is much
+#                              larger.
 LDFLAGS := $(ARCHFLAGS)
 LDLIBS  := $(SDL2_LIBS) -lm
 

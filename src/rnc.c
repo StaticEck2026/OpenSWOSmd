@@ -438,7 +438,9 @@ main_entry:                          /* loc_106C7E */
      * In our model, v2Bit handles refill transparently, so we just proceed
      * to match decode. */
 
-match_start:                         /* loc_106C8A */
+    /* `match_start:` (loc_106C8A in asm) — left as a comment-only
+     * waypoint; the C structuring fell through naturally and no goto
+     * targets this label. */
     d0 = 2;
     d1 = 0;
     c = v2Bit(&bs);
