@@ -3710,6 +3710,35 @@ void _SaveContest(void)
         if (_SelectFileToSaveDialog(ext, competitionFilename, saveFileTitle) != 0)
             goto done;
 
+        /* Sync the live working state into competitionFileBuffer
+         * before writing it to disk. SAVE is invoked from inside the
+         * tournament/league/cup menu — at this point the menu hasn't
+         * exited yet, so the end-of-menu Copy that normally mirrors
+         * the working buffer back hasn't run. Without this sync the
+         * .PRE / .DIY contains the bytes that were in
+         * competitionFileBuffer at menu *entry*, missing every match
+         * result the user just played in the same session.
+         *
+         * Pick the right copy based on the competition format word
+         * at competitionFileBuffer[0]:
+         *   0 = league  → diyCompetitionStart → competitionFileBuffer
+         *   1 = cup     → ditto via the cup-style copy
+         *   2 = tournament → diyFileBufferCopy → competitionFileBuffer
+         *
+         * The tournament case is what surfaced the bug (mid-session
+         * .PRE round-trip wiping a played match). The league + cup
+         * cases get the same fix for free since they're the same
+         * "live state lives elsewhere" pattern. */
+        if (gt == GAME_TYPE_DIY_COMPETITION || gt == GAME_TYPE_PRESET_COMPETITION) {
+            uint16_t ct = *(uint16_t *)competitionFileBuffer;
+            if (ct == 0)
+                _DIY_RestoreCompetitionFileBufferFromDIYCompetition();
+            else if (ct == 1)
+                _DIY_CopyCompetitionStartToCompetitionFileBuffer();
+            else
+                _DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer();
+        }
+
         if (gt == GAME_TYPE_DIY_COMPETITION) {
             result = _SaveDIYFile(selectedFilename);
         } else if (gt == GAME_TYPE_PRESET_COMPETITION) {
