@@ -115,6 +115,9 @@ extern uint8_t designDiyCupMenu[], designDiyLeagueMenu[], clubBusinessMenu[];
 extern uint8_t topGoalScorersMenu[], competitionTopGoalScorersMenu[];
 extern uint8_t squadMenu[], competitionStatsMenu[], viewCompetitionsMenu[];
 extern uint8_t managementRecordMenu[];
+extern uint8_t offersMenu[];
+extern uint8_t swosMainMenu[];
+extern uint8_t gotJobOfferMenu[];
 static const char *swos_autoskip_menu_name(const void *p)
 {
     if (p == diyCupMenu) return "diyCupMenu";
@@ -136,6 +139,9 @@ static const char *swos_autoskip_menu_name(const void *p)
     if (p == competitionStatsMenu) return "competitionStatsMenu";
     if (p == viewCompetitionsMenu) return "viewCompetitionsMenu";
     if (p == managementRecordMenu) return "managementRecordMenu";
+    if (p == offersMenu) return "offersMenu";
+    if (p == swosMainMenu) return "swosMainMenu";
+    if (p == gotJobOfferMenu) return "gotJobOfferMenu";
     return "unknown";
 }
 #else

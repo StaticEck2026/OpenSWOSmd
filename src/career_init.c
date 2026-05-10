@@ -740,19 +740,32 @@ void _InitCareer(uint16_t teamNo)
 __attribute__((used, externally_visible))
 void _ContinueCareerNextSeason(void)
 {
+    extern uint16_t gameType;
+    SWOS_AUTOSKIP_LOG("[bug1] ContinueCareerNextSeason ENTER: youreSacked=%u "
+                      "teamNoOfferAccepted=0x%04X gameType=%u",
+                      (unsigned)youreSacked,
+                      (unsigned)teamNoOfferAccepted,
+                      (unsigned)gameType);
     if (teamNoOfferAccepted != 0xFFFF) {
         if (youreSacked == 0) {
             _ShowLeavingMessage();
         }
+        SWOS_AUTOSKIP_LOG("[bug1] ContinueCareerNextSeason: offer-accepted branch");
         _Career_AdvanceToNextSeason_UpdateCompetitions();
         _Career_ContinueToNextSeasonInitTeamAndFunds(teamNoOfferAccepted, teamFundsAccepted);
         _InitializeNewSeason();
     } else {
+        SWOS_AUTOSKIP_LOG("[bug1] ContinueCareerNextSeason: chairman branch (no offer accepted)");
         _ShowChairmanOpinionAboutTheSeason();
+        SWOS_AUTOSKIP_LOG("[bug1] back from ShowChairmanOpinion: youreSacked=%u", (unsigned)youreSacked);
         _Career_AdvanceToNextSeason_UpdateCompetitions();
+        SWOS_AUTOSKIP_LOG("[bug1] back from AdvanceToNextSeason: youreSacked=%u", (unsigned)youreSacked);
         _InitializeStartingBalanceForNewSeason();
+        SWOS_AUTOSKIP_LOG("[bug1] back from InitStartingBalance: youreSacked=%u", (unsigned)youreSacked);
         _InitializeNewSeason();
+        SWOS_AUTOSKIP_LOG("[bug1] back from InitializeNewSeason: youreSacked=%u", (unsigned)youreSacked);
     }
+    SWOS_AUTOSKIP_LOG("[bug1] ContinueCareerNextSeason EXIT");
 }
 
 /* ================================================================
@@ -872,6 +885,11 @@ void _DIY_SelectCompetitionSlot4FromCurrentDivision(void)
 __attribute__((used, externally_visible))
 void _InitializeNewSeason(void)
 {
+    SWOS_AUTOSKIP_LOG("[bug1] InitializeNewSeason ENTER: youreSacked=%u "
+                      "teamNoOfferAccepted=0x%04X selTeamNumber=0x%04X",
+                      (unsigned)youreSacked,
+                      (unsigned)teamNoOfferAccepted,
+                      (unsigned)selTeamNumber);
     teamsLoaded = 0;
     currentSeasonShowing++;
     if (currentSeasonShowing == 20)

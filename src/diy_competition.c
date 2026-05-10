@@ -7919,6 +7919,14 @@ void _DIYLeagueTournamentExit(void)
     int16_t field48 = *(int16_t *)&a0[0x48];   /* hasGroups */
     int16_t field60 = *(int16_t *)&a0[0x60];
 
+    extern uint16_t youreSacked;
+    extern uint16_t gameType;
+    SWOS_AUTOSKIP_LOG("[bug1] _DIYLeagueTournamentExit CALLED: field48=0x%04X field60=0x%04X "
+                      "youreSacked=%u gameType=%u diyTournamentViewOnly=%u",
+                      (unsigned)(uint16_t)field48, (unsigned)(uint16_t)field60,
+                      (unsigned)youreSacked, (unsigned)gameType,
+                      (unsigned)diyTournamentViewOnly);
+
     if (field48 == 0) {
         /* field48 == 0 path */
         if (field60 != 0)
@@ -7927,6 +7935,7 @@ void _DIYLeagueTournamentExit(void)
         if (diyTournamentViewOnly != 0) {
             /* fall through to exit */
         }
+        SWOS_AUTOSKIP_LOG("[bug1] _DIYLeagueTournamentExit: path A — SetExitMenuFlag");
         _SetExitMenuFlag();
         return;
     }
@@ -7935,6 +7944,7 @@ void _DIYLeagueTournamentExit(void)
         if (diyTournamentViewOnly != 0) {
             /* fall through */
         }
+        SWOS_AUTOSKIP_LOG("[bug1] _DIYLeagueTournamentExit: path B — SetExitMenuFlag");
         _SetExitMenuFlag();
         return;
     }
@@ -7943,6 +7953,7 @@ set_ff_and_exit:
     if (field48 != 0) {
         *(int16_t *)&a0[0x48] = (int16_t)0xFFFF;
     }
+    SWOS_AUTOSKIP_LOG("[bug1] _DIYLeagueTournamentExit: path C — set 0x48=0xFFFF, SetExitMenuFlag");
     _SetExitMenuFlag();
 }
 
@@ -8784,6 +8795,12 @@ void _DIYLeagueTournamentViewHighlights(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _DIYLeagueTournamentViewResult(MenuEntry *entry)
 {
+    extern uint16_t youreSacked;
+    extern uint16_t gameType;
+    SWOS_AUTOSKIP_LOG("[bug1] _DIYLeagueTournamentViewResult CALLED: ordinal=%u "
+                      "youreSacked=%u gameType=%u",
+                      (unsigned)entry->ordinal,
+                      (unsigned)youreSacked, (unsigned)gameType);
     *(uint16_t *)&diyCompetitionStart.base.slotStateC = entry->ordinal;
     _DIYLeagueTournamentMatchCommon(0);
 }
