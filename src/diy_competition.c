@@ -10399,25 +10399,44 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
      * offset is out of range for selTeamsPtr during
      * careerAutoAdvanceInProgress / seasonUpdateInProgress, the
      * standings table at diyCompetitionStart+0x2B4 is garbage (uninit
-     * competition context for a slot the user isn't really in) — bail
-     * silently rather than dereferencing.
+     * competition context for a slot the user isn't really in).
      *
-     * IMPORTANT: do NOT apply this guard during interactive play
-     * (user clicked MATCH or VIEW RESULT) — bailing silently there
-     * makes the buttons appear dead. If interactive play hits bogus
-     * offsets, that's a real bug to fix upstream, not paper over. */
+     * On bail we must:
+     *   1. NOT dereference the garbage TeamFileEx pointer.
+     *   2. Force the caller's `while (leagueCurrentSlot == 0)` loop in
+     *      `_Career_AutoAdvanceLeagueFixtures` to exit — otherwise it
+     *      re-calls us forever.
+     *   3. Log only on the first bail per process (a static flag);
+     *      the auto-advance can call us hundreds of times per match
+     *      and we don't want to overrun the log writer.
+     *
+     * IMPORTANT: do NOT apply this guard during interactive play —
+     * bailing silently there makes the MATCH / VIEW RESULT buttons
+     * appear dead. */
     extern uint16_t numSelectedTeams;
     if (careerAutoAdvanceInProgress != 0 || seasonUpdateInProgress != 0) {
         uint32_t maxOff = (uint32_t)numSelectedTeams * (uint32_t)sizeof(TeamFileEx);
         if (teamSelOff1 >= maxOff || teamSelOff2 >= maxOff) {
-            SWOS_AUTOSKIP_LOG("[bug1] PlayOrSimLeague: bail — bogus teamSelPtr "
-                              "(team1off=%u team2off=%u maxOff=%u numSelTeams=%u "
-                              "careerAutoAdv=%u seasonUpd=%u selector=%d)",
-                              (unsigned)teamSelOff1, (unsigned)teamSelOff2,
-                              (unsigned)maxOff, (unsigned)numSelectedTeams,
-                              (unsigned)careerAutoAdvanceInProgress,
-                              (unsigned)seasonUpdateInProgress,
-                              (int)selector);
+#ifdef SWOS_DEBUG_AUTOSKIP
+            static int s_bug1_bail_logged = 0;
+            if (!s_bug1_bail_logged) {
+                s_bug1_bail_logged = 1;
+                SWOS_AUTOSKIP_LOG("[bug1] PlayOrSimLeague: bail (first occurrence) — "
+                                  "bogus teamSelPtr (team1off=%u team2off=%u maxOff=%u "
+                                  "numSelTeams=%u careerAutoAdv=%u seasonUpd=%u selector=%d)",
+                                  (unsigned)teamSelOff1, (unsigned)teamSelOff2,
+                                  (unsigned)maxOff, (unsigned)numSelectedTeams,
+                                  (unsigned)careerAutoAdvanceInProgress,
+                                  (unsigned)seasonUpdateInProgress,
+                                  (int)selector);
+            }
+#endif
+            /* Force the outer auto-advance loop to exit instead of
+             * retrying the same bogus fixture. Setting
+             * leagueCurrentSlot != 0 makes
+             * `while (leagueCurrentSlot == 0)` in
+             * _Career_AutoAdvanceLeagueFixtures break. */
+            baseEx->leagueCurrentSlot = 1;
             return 1;
         }
     }
