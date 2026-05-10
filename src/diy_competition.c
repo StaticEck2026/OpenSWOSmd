@@ -10193,8 +10193,14 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
         uint8_t ctrl1 = *((uint8_t *)team1 + 4); /* teamControls byte */
         uint8_t ctrl2 = *((uint8_t *)team2 + 4);
         if ((ctrl1 == 2 || ctrl2 == 2 || ctrl1 == 3 || ctrl2 == 3) &&
-            seasonUpdateInProgress == 0) {
-            /* At least one human/coach team — show SetupPlayers with no squad changes */
+            seasonUpdateInProgress == 0 &&
+            careerAutoAdvanceInProgress == 0) {
+            /* At least one human/coach team — show SetupPlayers with no squad changes.
+             * careerAutoAdvanceInProgress guard added for the same reason as the
+             * matching deviation in _DIY_PlayOrSimulateLeagueFixture: a stale ctrl=2
+             * in selTeamsPtr from a previous interactive load would otherwise stall
+             * Career_PostMatchUpdate's auto-advance on a playMatchMenu for a cup
+             * the user isn't even participating in. */
             _SetupPlayers(team1, team2, *(int16_t *)diyPointsForAWin,
                           baseS->substitutesCount, 0, 0);  /* 0x3C */
             if (exitGameFlag != 0)
@@ -10390,12 +10396,27 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
     /* Route match based on selector */
     if (selector == 0) {
         /* Sim path: check if any team is human/coach (teamControls == 2 or 3).
-         * DEVIATION FROM ASM: skip during seasonUpdateInProgress — see
-         * matching guard in _DIY_PlayCupMatchAndAdvance for rationale. */
+         *
+         * DEVIATION FROM ASM: skip SetupPlayers during seasonUpdateInProgress
+         * AND during careerAutoAdvanceInProgress. The asm has NO guard here
+         * because it relies on the team data feeding into the auto-advance
+         * always having teamControls=1 (computer-only) — both
+         * `_Career_PostMatchUpdate` and the season-transition path
+         * temporarily set careerTeam.teamControls=1 around their
+         * auto-advance calls. On our SDL build the player's team can still
+         * land in selTeamsPtr with teamControls=2 from a previous
+         * interactive load (preset competition / DIY), and the auto-advance
+         * pulls that ctrl=2 in, tripping SetupPlayers and stalling the
+         * career post-match flow on a playMatchMenu the user can't exit
+         * (team1==team2 because the fixture being auto-advanced is for a
+         * competition the user isn't even in — Spanish Cup in the
+         * tester's repro). Both guards collapse the menu pop-up to its
+         * intended Amiga behaviour: "auto-advance is silent". */
         uint8_t ctrl1 = *((uint8_t *)team1 + 4);
         uint8_t ctrl2 = *((uint8_t *)team2 + 4);
         if ((ctrl1 == 2 || ctrl2 == 2 || ctrl1 == 3 || ctrl2 == 3) &&
-            seasonUpdateInProgress == 0) {
+            seasonUpdateInProgress == 0 &&
+            careerAutoAdvanceInProgress == 0) {
             /* At least one human/coach team — show SetupPlayers */
             _SetupPlayers(team1, team2, (int16_t)diyLeagueMaxSubstitutes,
                           baseS->substitutesCount, 0, 0);  /* 0x3C */
