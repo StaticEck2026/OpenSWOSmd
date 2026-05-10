@@ -10395,29 +10395,31 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
     TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + teamSelOff1);
     TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + teamSelOff2);
 
-    /* Safety guard: if either teamSelPtr offset is out of range for
-     * selTeamsPtr (numSelectedTeams * sizeof(TeamFileEx) max), the
-     * standings table at diyCompetitionStart+0x2B4 is garbage — most
-     * likely an uninitialised competition context that
-     * Career_AutoAdvanceCompetitionAndPersistSlotState was asked to
-     * load for a competition the user isn't actually in. Bail out
-     * silently rather than dereferencing a garbage TeamFileEx
-     * pointer. The asm doesn't need this guard because its data flow
-     * keeps the contexts in sync; we hit it on the SDL build via the
-     * Career_PostMatchUpdate -> spanishCup -> AutoAdvanceLeagueFixtures
-     * crash path. */
+    /* Safety guard ONLY for auto-advance paths. If either teamSelPtr
+     * offset is out of range for selTeamsPtr during
+     * careerAutoAdvanceInProgress / seasonUpdateInProgress, the
+     * standings table at diyCompetitionStart+0x2B4 is garbage (uninit
+     * competition context for a slot the user isn't really in) — bail
+     * silently rather than dereferencing.
+     *
+     * IMPORTANT: do NOT apply this guard during interactive play
+     * (user clicked MATCH or VIEW RESULT) — bailing silently there
+     * makes the buttons appear dead. If interactive play hits bogus
+     * offsets, that's a real bug to fix upstream, not paper over. */
     extern uint16_t numSelectedTeams;
-    uint32_t maxOff = (uint32_t)numSelectedTeams * (uint32_t)sizeof(TeamFileEx);
-    if (teamSelOff1 >= maxOff || teamSelOff2 >= maxOff) {
-        SWOS_AUTOSKIP_LOG("[bug1] PlayOrSimLeague: bail — bogus teamSelPtr "
-                          "(team1off=%u team2off=%u maxOff=%u numSelTeams=%u "
-                          "careerAutoAdv=%u seasonUpd=%u selector=%d)",
-                          (unsigned)teamSelOff1, (unsigned)teamSelOff2,
-                          (unsigned)maxOff, (unsigned)numSelectedTeams,
-                          (unsigned)careerAutoAdvanceInProgress,
-                          (unsigned)seasonUpdateInProgress,
-                          (int)selector);
-        return 1;
+    if (careerAutoAdvanceInProgress != 0 || seasonUpdateInProgress != 0) {
+        uint32_t maxOff = (uint32_t)numSelectedTeams * (uint32_t)sizeof(TeamFileEx);
+        if (teamSelOff1 >= maxOff || teamSelOff2 >= maxOff) {
+            SWOS_AUTOSKIP_LOG("[bug1] PlayOrSimLeague: bail — bogus teamSelPtr "
+                              "(team1off=%u team2off=%u maxOff=%u numSelTeams=%u "
+                              "careerAutoAdv=%u seasonUpd=%u selector=%d)",
+                              (unsigned)teamSelOff1, (unsigned)teamSelOff2,
+                              (unsigned)maxOff, (unsigned)numSelectedTeams,
+                              (unsigned)careerAutoAdvanceInProgress,
+                              (unsigned)seasonUpdateInProgress,
+                              (int)selector);
+            return 1;
+        }
     }
 
     /* Route match based on selector */
