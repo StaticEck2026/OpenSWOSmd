@@ -3559,13 +3559,16 @@ diy_over: /* loc_140FDC — DIY competition over */
             _CommonMenuExit();
             goto final_check;
         } else {
-            /* Tournament */
+            /* Tournament — match the asm at loc_140FDC: no LoadCurrentCompetitionSlot.
+             * The cfb→diyFileBufferCopy copy in _SaveDIYTournament also
+             * populates diyCompetitionStart's struct region because
+             * diyCompetitionStartBuf is aliased onto diyFileBufferCopyBuf+0x420
+             * (Amiga BSS adjacency mirrored in src/swos_globals.c) — so the
+             * 1450-word copy restores both. Calling LoadCurrentCompetitionSlot
+             * here would re-run _InitDIYCup / _DIY_InitCupBracketState and
+             * wipe the just-restored cup match results, which is the
+             * "first match score erased to 0" bug on .DIY save round-trips. */
             _SaveDIYTournament();
-            /* See preset_over tournament path: populate diyCompetitionStart
-             * from the current slot so BuildSeededBracket has a valid
-             * numTeams when the user clicks NEXT ROUND on a freshly-loaded
-             * DIY save. */
-            _DIY_LoadCurrentCompetitionSlot();
             _DIY_EditCompetitionSlot(0, 0, 0);
             _RestoreDIYTournament();
             _CommonMenuExit();
@@ -3591,20 +3594,14 @@ preset_over: /* loc_141050 — preset competition over */
             _CommonMenuExit();
             goto final_check;
         } else {
-            /* Tournament */
+            /* Tournament — match the asm at loc_141050: no LoadCurrentCompetitionSlot.
+             * Same reasoning as the diy_over tournament path above —
+             * diyCompetitionStartBuf is aliased onto diyFileBufferCopyBuf+0x420,
+             * so the 1450-word cfb→diyFileBufferCopy copy also populates
+             * diyCompetitionStart's struct region. Calling LoadCurrentCompetitionSlot
+             * here re-runs _InitDIYCup and wipes cup match results, which is
+             * the "first match score erased to 0" bug on .PRE save round-trips. */
             _DIY_CopyCompetitionFileBufferToDiyFileBufferCopy();
-            /* Populate diyCompetitionStart from the current slot. The
-             * original asm relies on diyCompetitionStart being non-zero
-             * from earlier in the session (the design-competition flow
-             * left it populated). On a fresh launch where the user
-             * goes straight to LOAD OLD COMPETITION, diyCompetitionStart
-             * is zero-initialised — BuildSeededBracket would then read
-             * compS->numTeams = 0 and skip the team-list rewrite,
-             * leaving slot 1 to read garbage and panic in
-             * buildCompSpecificTeamList. Use plain LoadCurrent (NOT
-             * ResetAndLoad) so the saved roundComplete + team grid stay
-             * intact — we want to RESUME, not restart. */
-            _DIY_LoadCurrentCompetitionSlot();
             _DIY_EditCompetitionSlot(0, 0, 0);
             _DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer();
             _CommonMenuExit();
