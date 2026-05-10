@@ -12,6 +12,7 @@
 #include "career_teams.h"
 #include "input_text.h"
 #include "teams.h"
+#include "auto_skip_debug.h"
 
 /* Offset from _GetPlayer() return value to actual PlayerFile data */
 #define PF_OFF              76  /* sizeof(TeamFile) */
@@ -1862,25 +1863,63 @@ void _GenerateRandomTransferOffers(void)
     uint16_t idx = startIdx;
     int16_t count = careerNumPlayers - 1;
 
+    SWOS_AUTOSKIP_LOG("[bug2] GenerateRandomTransferOffers ENTER: careerNumPlayers=%u "
+                      "numOffers=%u numPlayersOnTransferMarket=%u startIdx=%u",
+                      (unsigned)careerNumPlayers, (unsigned)numOffers,
+                      (unsigned)numPlayersOnTransferMarket, (unsigned)startIdx);
+    /* Show what player ordinals the user has listed */
+    for (uint16_t k = 0; k < numPlayersOnTransferMarket; k++) {
+        SWOS_AUTOSKIP_LOG("[bug2]   playersOnTransferMarket[%u] = %u",
+                          (unsigned)k, (unsigned)playersOnTransferMarket[k]);
+    }
+
+    int boostedFound = 0;
+    int offersCreated = 0;
     while (count >= 0) {
-        if (numOffers == 5)
+        if (numOffers == 5) {
+            SWOS_AUTOSKIP_LOG("[bug2]   numOffers reached 5, stopping");
             return;
+        }
 
         uint8_t *player = _GetPlayerAtIndex(selTeamNumber, idx);
         PlayerFile *pf = (PlayerFile *)(player + PF_OFF);
+        uint16_t fileIdx = _cGetPlayerAtIndexFileIdx;
         /* Check bit 1 of positionAndFace — skip if on transfer list */
         if (!(pf->positionAndFace & 0x02)) {
             /* Skip players with sold (0x9B) or transferred (0x9A) status */
             if ((uint8_t)pf->someFlag != 0x9B && (uint8_t)pf->someFlag != 0x9A) {
                 uint16_t threshold = 1;
+                int onMarket = 0;
                 /* _cGetPlayerAtIndexFileIdx holds the file index from last GetPlayerAtIndex call */
-                if (_FindPlayerOnTransferMarket(_cGetPlayerAtIndexFileIdx) == 0) {
+                if (_FindPlayerOnTransferMarket(fileIdx) == 0) {
                     threshold = 11;
+                    onMarket = 1;
+                    boostedFound++;
                 }
                 uint16_t roll = _Rand2();
                 if (roll < threshold) {
-                    _CreateRandomTransferOfferForPlayer(_cGetPlayerAtIndexFileIdx);
+                    SWOS_AUTOSKIP_LOG("[bug2]   idx=%u fileIdx=%u onMarket=%d roll=%u th=%u -> CREATE OFFER",
+                                      (unsigned)idx, (unsigned)fileIdx, onMarket,
+                                      (unsigned)roll, (unsigned)threshold);
+                    _CreateRandomTransferOfferForPlayer(fileIdx);
+                    offersCreated++;
+                } else if (onMarket) {
+                    /* Only log misses for players who were boosted, otherwise log
+                     * floods every match with all 16 players' default 1/256 rolls. */
+                    SWOS_AUTOSKIP_LOG("[bug2]   idx=%u fileIdx=%u onMarket=1 roll=%u th=11 -> miss",
+                                      (unsigned)idx, (unsigned)fileIdx, (unsigned)roll);
                 }
+            } else {
+                if (_FindPlayerOnTransferMarket(fileIdx) == 0) {
+                    SWOS_AUTOSKIP_LOG("[bug2]   idx=%u fileIdx=%u onMarket=1 SKIPPED someFlag=0x%02X",
+                                      (unsigned)idx, (unsigned)fileIdx, (unsigned)(uint8_t)pf->someFlag);
+                }
+            }
+        } else {
+            if (_FindPlayerOnTransferMarket(fileIdx) == 0) {
+                SWOS_AUTOSKIP_LOG("[bug2]   idx=%u fileIdx=%u onMarket=1 SKIPPED positionAndFace bit1 set (0x%02X)",
+                                  (unsigned)idx, (unsigned)fileIdx,
+                                  (unsigned)pf->positionAndFace);
             }
         }
 
@@ -1889,6 +1928,8 @@ void _GenerateRandomTransferOffers(void)
             idx = 0;
         count--;
     }
+    SWOS_AUTOSKIP_LOG("[bug2] GenerateRandomTransferOffers EXIT: boostedFound=%d offersCreated=%d numOffers=%u",
+                      boostedFound, offersCreated, (unsigned)numOffers);
 }
 
 /* ---- Chunk 146: UpdateAndExpireTransferOffers ---- */

@@ -20,6 +20,7 @@
 #include "match_sim.h"
 #include "game_types.h"
 #include "deterministic.h"
+#include "auto_skip_debug.h"
 
 /* Team control type constants (matching play_match_menu.h) */
 #ifndef TEAM_COMPUTER
@@ -978,6 +979,22 @@ void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
     /* Return the simulated goals from first phase */
     *outTeam1Goals = team1SimulatedGoalsOut;
     *outTeam2Goals = team2SimulatedGoalsOut;
+
+    SWOS_AUTOSKIP_LOG("[bug3] CalcViewResult: team1='%.16s' tactics=%d ctrl=%d "
+                      "team2='%.16s' tactics=%d ctrl=%d "
+                      "team1ViewBaseIdx=%d team2ViewBaseIdx=%d "
+                      "team1OffX=%d team1OffY=%d team2OffX=%d team2OffY=%d "
+                      "RESULT %u-%u",
+                      (const char *)team1->team.teamName,
+                      (int)(int8_t)team1->team.tactics,
+                      (int)team1->team.teamControls,
+                      (const char *)team2->team.teamName,
+                      (int)(int8_t)team2->team.tactics,
+                      (int)team2->team.teamControls,
+                      (int)team1ViewBaseIndex, (int)team2ViewBaseIndex,
+                      (int)team1ViewOffsetX, (int)team1ViewOffsetY,
+                      (int)team2ViewOffsetX, (int)team2ViewOffsetY,
+                      (unsigned)*outTeam1Goals, (unsigned)*outTeam2Goals);
 }
 
 /* ================================================================
