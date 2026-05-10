@@ -5086,8 +5086,11 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
     uint8_t *playerEntry = _GetPlayer(selTeamNumber, playerOrdinal);
     PlayerFile *pfEntry = (PlayerFile *)(playerEntry + PF_OFF);
     uint16_t refSkill = (uint8_t)pfEntry->price;
-    if (_IsPlayerInjured((PlayerFile *)playerEntry, -1) != 0)
+    if (_IsPlayerInjured((PlayerFile *)playerEntry, -1) != 0) {
+        SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: BAILED — injured",
+                          (unsigned)playerOrdinal);
         return;
+    }
 
     /* Get position mask */
     uint16_t posMask = (uint16_t)pfEntry->positionAndFace & 0xE0;
@@ -5139,8 +5142,15 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
         teamCount = d5;
     }
 
-    if (teamCount == 0)
+    if (teamCount == 0) {
+        SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: BAILED — no eligible buyer team "
+                          "(numSelectedTeams=%u refSkill=%u home/foreign rnd=%u)",
+                          (unsigned)playerOrdinal,
+                          (unsigned)numSelectedTeams,
+                          (unsigned)refSkill,
+                          (unsigned)rnd);
         return;
+    }
 
     /* Pick a random team from candidates */
     rnd = _Rand2();
@@ -5150,8 +5160,12 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
 
     /* Check uniqueness */
     uint16_t offTeamId = *(uint16_t *)teamBlock;
-    if (_IsOfferTeamPlayerPairUnique(offTeamId, offerPrimaryPlayerOrdinal) == 0)
+    if (_IsOfferTeamPlayerPairUnique(offTeamId, offerPrimaryPlayerOrdinal) == 0) {
+        SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: BAILED — duplicate offer "
+                          "(team=0x%04X already has offer)",
+                          (unsigned)playerOrdinal, (unsigned)offTeamId);
         return;
+    }
 
     teamOffering = offTeamId;
     offerExtraPositionMask = 0xFFFF;
@@ -5292,8 +5306,13 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
             rosterDelta++;  /* gaining extra swap player */
     }
     int16_t newTotal = rosterDelta + (int16_t)careerNumPlayers;
-    if (newTotal > 30)
+    if (newTotal > 30) {
+        SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: BAILED — roster overflow "
+                          "(newTotal=%d careerNumPlayers=%u)",
+                          (unsigned)playerOrdinal,
+                          (int)newTotal, (unsigned)careerNumPlayers);
         return;
+    }
 
     /* Write offer to table */
     uint16_t offerIdx = numOffers;
@@ -5313,6 +5332,10 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
     entry[13] = 0;
 
     numOffers++;
+    SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: STORED — team=0x%04X amount=%u numOffers=%u",
+                      (unsigned)offerPrimaryPlayerOrdinal,
+                      (unsigned)teamOffering, (unsigned)offerAmount,
+                      (unsigned)numOffers);
 }
 
 /* ================================================================
