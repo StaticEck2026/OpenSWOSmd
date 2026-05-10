@@ -33,6 +33,7 @@
 #include "career_teams.h"
 #include "game_types.h"
 #include "menu_system.h"
+#include "auto_skip_debug.h"
 #include "string_utils.h"
 #include "job_offers.h"
 
@@ -3157,6 +3158,48 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
 
     /* Dispatch by competition type (byte at offset 1) */
     uint8_t compType = ctx[1];
+
+    /* Sanity-check the loaded competition state. If numTeams or
+     * totalMatchesInRound is out of range, the context buffer was
+     * never properly populated for this slot — most likely the
+     * competition pointers in this CAR/save reference a competition
+     * the user isn't really in (FIRED.CAR repro had spanishLeague /
+     * spanishCup pointing here for a manager who never owned a
+     * Spanish team). Running the auto-advance with garbage causes
+     * either a SIGSEGV inside getCurrentFixtureTeamPtrs (huge
+     * totalMatchesInRound makes d5 = subRoundCounter * totalMatches
+     * overflow into invalid memory) or an infinite loop in
+     * Career_AutoAdvanceLeagueFixtures' main_loop (state never
+     * progresses past the loop's break conditions).
+     *
+     * Skip the dispatch entirely on garbage state — the
+     * persist-back at the bottom still runs so we don't corrupt
+     * the context further, but the actual sim is bypassed. One-shot
+     * log so we know which competition was bad. */
+    {
+        DIYCompetition *dcs = &diyCompetitionStart.base;
+        int16_t numTeams = dcs->numTeams;
+        int16_t totalInRound = dcs->totalMatchesInRound;
+        if (numTeams <= 0 || numTeams > 32 ||
+            totalInRound <= 0 || totalInRound > 32) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+            static int s_bad_state_logged = 0;
+            if (!s_bad_state_logged) {
+                s_bad_state_logged = 1;
+                SWOS_AUTOSKIP_LOG("[bug1] AutoAdvanceCompetition: bail (first occurrence) — "
+                                  "compPtr=%p ctx=%p compType=%u numTeams=%d "
+                                  "totalMatchesInRound=%d",
+                                  (void *)compPtr, (void *)ctx,
+                                  (unsigned)compType,
+                                  (int)numTeams, (int)totalInRound);
+            }
+#endif
+            _Career_StoreCompetitionSlotStateToBuffer(ctx);
+            careerAutoAdvanceInProgress = 0;
+            return;
+        }
+    }
+
     if (compType == 1) {
         _Career_AutoAdvanceCupMatches();
     } else if (compType == 2) {
