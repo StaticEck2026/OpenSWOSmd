@@ -6739,15 +6739,27 @@ afterHeader:
 
     /* Score entries — depends on whether match was played */
     if (a4[0x0B] != 0) {
-        /* Match played — show scores */
+        /* Match played — show scores.
+         *
+         * packedGoals at a4[0x10] is stored host-native (writer at
+         * career_status.c:3741). (packed>>8) is team1Score (fixture top
+         * team at +0x0C), (packed&0xFF) is team2Score (bottom at +0x0E).
+         * The previous code did byte access — a4[0x10] / a4[0x11] —
+         * which assumed BE byte order; on LE x86 that swapped the
+         * scores so the career fixture row showed the user team's
+         * score in the opponent column ("AC MILAN 4-1 LAZIO" when
+         * reality was LAZIO 4-1 AC MILAN). */
+        uint16_t packedScore = *(uint16_t *)&a4[0x10];
+        int8_t team1Score = (int8_t)(packedScore >> 8);
+        int8_t team2Score = (int8_t)(packedScore & 0xFF);
+
         /* Top score — write as uint16_t to match asm move.w to offset $26 */
         a5->y = d2;
         {
-            int8_t topScore;
-            if (careerGameListTeamControl == 0)
-                topScore = (int8_t)a4[0x10];
-            else
-                topScore = (int8_t)a4[0x11];
+            /* careerGameListTeamControl==0 means top fixture team is user
+             * (player-controlled). The display puts the user team first, so
+             * topScore should be the user's score. */
+            int8_t topScore = (careerGameListTeamControl == 0) ? team1Score : team2Score;
             *(uint16_t *)&a5->fg = (uint16_t)(int16_t)topScore;
         }
         a5->isInvisible = 0;
@@ -6762,11 +6774,7 @@ afterHeader:
         /* Bottom score — write as uint16_t to match asm move.w to offset $26 */
         a5->y = d2;
         {
-            int8_t botScore;
-            if (careerGameListTeamControl == 0)
-                botScore = (int8_t)a4[0x11];
-            else
-                botScore = (int8_t)a4[0x10];
+            int8_t botScore = (careerGameListTeamControl == 0) ? team2Score : team1Score;
             *(uint16_t *)&a5->fg = (uint16_t)(int16_t)botScore;
         }
         a5->isInvisible = 0;

@@ -6044,14 +6044,20 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
             a3++;
 
             if (*a5 & 0x80) {
-                /* Has result — show scores: cupRoundResults+0x40 (second-half score region) */
+                /* Has result — show scores: cupRoundResults+0x40 (second-half score region).
+                 * packedGoals was written here host-native via *(uint16_t *)&...=packedGoals
+                 * (diy_competition.c:10257), so (packed>>8)=team1Score, (packed&0xFF)=team2Score.
+                 * The previous byte access (scoreBase[d4], scoreBase[d4+1]) assumed Amiga BE
+                 * byte order — on LE x86 that returned the scores swapped, so the cup match
+                 * list showed "LAZIO 1-4 AC MILAN" when reality was LAZIO 4-1 AC MILAN. */
                 uint8_t *scoreBase = (uint8_t *)&diyCompetitionStart.matchData.cup.cupRoundResults[0x40];
-                int16_t score1 = (int8_t)scoreBase[d4];
+                uint16_t packed = *(uint16_t *)&scoreBase[d4];
+                int16_t score1 = (int8_t)(packed >> 8);
                 *(int16_t *)&a3->fg = score1;
                 a3->isInvisible = 0;
                 a3++;
 
-                int16_t score2 = (int8_t)scoreBase[d4 + 1];
+                int16_t score2 = (int8_t)(packed & 0xFF);
                 *(int16_t *)&a3->fg = score2;
                 a3->isInvisible = 0;
                 a3++;
