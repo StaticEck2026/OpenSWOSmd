@@ -980,21 +980,33 @@ void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
     *outTeam1Goals = team1SimulatedGoalsOut;
     *outTeam2Goals = team2SimulatedGoalsOut;
 
-    SWOS_AUTOSKIP_LOG("[bug3] CalcViewResult: team1='%.16s' tactics=%d ctrl=%d "
-                      "team2='%.16s' tactics=%d ctrl=%d "
-                      "team1ViewBaseIdx=%d team2ViewBaseIdx=%d "
-                      "team1OffX=%d team1OffY=%d team2OffX=%d team2OffY=%d "
-                      "RESULT %u-%u",
-                      (const char *)team1->team.teamName,
-                      (int)(int8_t)team1->team.tactics,
-                      (int)team1->team.teamControls,
-                      (const char *)team2->team.teamName,
-                      (int)(int8_t)team2->team.tactics,
-                      (int)team2->team.teamControls,
-                      (int)team1ViewBaseIndex, (int)team2ViewBaseIndex,
-                      (int)team1ViewOffsetX, (int)team1ViewOffsetY,
-                      (int)team2ViewOffsetX, (int)team2ViewOffsetY,
-                      (unsigned)*outTeam1Goals, (unsigned)*outTeam2Goals);
+    /* Rate-limit [bug3] log: a season-end auto-advance simulates tens of
+     * thousands of matches, and unrestricted fprintf here turns the
+     * season transition into a multi-minute log-writer crawl. First 200
+     * lines is enough to diagnose Bug 3 (VIEW RESULT underperforms) for
+     * a single match the user actually clicks; the season-end auto-sim
+     * doesn't need to flood the log with every fixture for 65 leagues. */
+#ifdef SWOS_DEBUG_AUTOSKIP
+    static int s_bug3_log_count = 0;
+    if (s_bug3_log_count < 200) {
+        s_bug3_log_count++;
+        SWOS_AUTOSKIP_LOG("[bug3] CalcViewResult: team1='%.16s' tactics=%d ctrl=%d "
+                          "team2='%.16s' tactics=%d ctrl=%d "
+                          "team1ViewBaseIdx=%d team2ViewBaseIdx=%d "
+                          "team1OffX=%d team1OffY=%d team2OffX=%d team2OffY=%d "
+                          "RESULT %u-%u",
+                          (const char *)team1->team.teamName,
+                          (int)(int8_t)team1->team.tactics,
+                          (int)team1->team.teamControls,
+                          (const char *)team2->team.teamName,
+                          (int)(int8_t)team2->team.tactics,
+                          (int)team2->team.teamControls,
+                          (int)team1ViewBaseIndex, (int)team2ViewBaseIndex,
+                          (int)team1ViewOffsetX, (int)team1ViewOffsetY,
+                          (int)team2ViewOffsetX, (int)team2ViewOffsetY,
+                          (unsigned)*outTeam1Goals, (unsigned)*outTeam2Goals);
+    }
+#endif
 }
 
 /* ================================================================
