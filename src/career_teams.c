@@ -78,9 +78,14 @@ static int16_t findTeamInCache(uint16_t teamNum, TeamFileEx **teamOut, uint16_t 
         return 0;
     }
 
-    /* Check careerTeam (when auto-advance in progress or matches selTeamNumber) */
+    /* Check careerTeam (when auto-advance in progress or matches selTeamNumber).
+     * careerTeam.team's first two bytes are the {countryNumber, teamOrdinal}
+     * byte pair from the loaded TMD record. teamNum is BE-packed
+     * (country<<8 | ordinal) like selTeamNumber, so use PACK_BE_U16 — a raw
+     * *(uint16_t *)& would read the bytes swapped on LE and never match. */
     if (careerAutoAdvanceInProgress) {
-        if (teamNum == *(uint16_t *)&careerTeam) {
+        if (teamNum == PACK_BE_U16(careerTeam.team.countryNumber,
+                                   careerTeam.team.teamOrdinal)) {
             *teamOut = &careerTeam;
             *indexOut = 0;
             return 0;
