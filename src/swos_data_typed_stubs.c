@@ -139,7 +139,12 @@ uint16_t goalkeeperDiveAttemptCount;
  * code reads/writes the same memory through both the named global and
  * `diyCompetitionStart + offset`. See the alias block in
  * swos_globals.c. */
-TeamFile tempTeamBuffer;
+/* tempTeamBuffer: must be sized as TeamFileEx (684 bytes), not TeamFile (76).
+ * _Career_BuildForeignMarketPoolFromSelectedTeam in transfer_market.c copies
+ * careerTeam (a TeamFileEx, 0x2AC=684 bytes) into here. The 76-byte definition
+ * overflowed 608 bytes past the end and stomped magicValue at +0x70, panicking
+ * MenuProc with reasonCode=0x9999 (aStackOverflow). Now sized correctly. */
+TeamFileEx tempTeamBuffer;
 /* numberOfFiles: backing storage moved to swos_globals.c. On Amiga
  * the label overlaps the start of foundFilenamesBuffer's BSS run —
  * AssetSys_ResolveAssetList writes the file count at &numberOfFiles
