@@ -3180,18 +3180,52 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
         DIYCompetition *dcs = &diyCompetitionStart.base;
         int16_t numTeams = dcs->numTeams;
         int16_t totalInRound = dcs->totalMatchesInRound;
-        if (numTeams <= 0 || numTeams > 32 ||
-            totalInRound <= 0 || totalInRound > 32) {
+        int bail = 0;
+        const char *bailReason = 0;
+        uint32_t bailTeamSelPtr = 0;
+
+        if (numTeams <= 0 || numTeams > 32) {
+            bail = 1;
+            bailReason = "numTeams out of range";
+        } else if (totalInRound <= 0 || totalInRound > 32) {
+            bail = 1;
+            bailReason = "totalMatchesInRound out of range";
+        } else {
+            /* Also validate the standings table at diyCompetitionStart+0x2B4.
+             * Each row is 18 bytes; teamSelPtr (uint32) at offset 0 of each
+             * row is a byte-offset into selTeamsPtr. A valid offset is small
+             * (numSelectedTeams * 684, typically <50 KB); the corrupt
+             * spanishLeague state hits ~17 MB. Scan all numTeams rows for
+             * any teamSelPtr >= 64*684 = 43776 (a generous upper bound for
+             * any plausible career squad). One bad row means the whole
+             * table is uninit garbage. */
+            const uint32_t maxPlausibleOff = 64u * 684u;
+            uint8_t *rowsBase = (uint8_t *)&diyCompetitionStart + 0x2B4;
+            for (int16_t i = 0; i < numTeams; i++) {
+                uint32_t teamSelOff = *(uint32_t *)(rowsBase + i * 18);
+                if (teamSelOff >= maxPlausibleOff) {
+                    bail = 1;
+                    bailReason = "standings row teamSelPtr out of range";
+                    bailTeamSelPtr = teamSelOff;
+                    break;
+                }
+            }
+        }
+
+        if (bail) {
 #ifdef SWOS_DEBUG_AUTOSKIP
             static int s_bad_state_logged = 0;
             if (!s_bad_state_logged) {
                 s_bad_state_logged = 1;
                 SWOS_AUTOSKIP_LOG("[bug1] AutoAdvanceCompetition: bail (first occurrence) — "
                                   "compPtr=%p ctx=%p compType=%u numTeams=%d "
-                                  "totalMatchesInRound=%d",
+                                  "totalMatchesInRound=%d reason='%s' "
+                                  "bailTeamSelPtr=0x%08X",
                                   (void *)compPtr, (void *)ctx,
                                   (unsigned)compType,
-                                  (int)numTeams, (int)totalInRound);
+                                  (int)numTeams, (int)totalInRound,
+                                  bailReason ? bailReason : "?",
+                                  (unsigned)bailTeamSelPtr);
             }
 #endif
             _Career_StoreCompetitionSlotStateToBuffer(ctx);
