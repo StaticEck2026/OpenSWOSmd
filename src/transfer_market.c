@@ -4216,7 +4216,15 @@ static uint8_t *pickRandomTeamRecordAvoidingTeam(uint16_t avoidTeamWord, uint8_t
     uint16_t retries = 100;
 
     while (1) {
-        /* Try TMD file first if non-empty */
+        /* Try TMD file first if non-empty.
+         *
+         * Reading the candidate team's id as a host-native uint16
+         * (*(uint16_t *)result) gives (ordinal<<8)|country on LE,
+         * which never matches the BE-packed avoidTeamWord — the
+         * word-level avoid then never fires and the only thing
+         * filtering candidates is the byte-level country check
+         * below. PACK_BE_U16 of the (countryNumber, teamOrdinal)
+         * byte pair produces the correct id on both hosts. */
         if (careerFileBuffer != 0) {
             uint16_t r = _Rand2();
             uint32_t idx = (uint32_t)r * (uint32_t)careerFileBuffer;
@@ -4224,7 +4232,8 @@ static uint8_t *pickRandomTeamRecordAvoidingTeam(uint16_t avoidTeamWord, uint8_t
             idx *= 0x2AC;
             result = &tmdFileBuffer + idx;
 
-            if (*(uint16_t *)result != avoidTeamWord) {
+            uint16_t candTeamId = PACK_BE_U16(result[0], result[1]);
+            if (candTeamId != avoidTeamWord) {
                 if (*result != avoidTeamByte)
                     return result;
             }
@@ -4232,14 +4241,15 @@ static uint8_t *pickRandomTeamRecordAvoidingTeam(uint16_t avoidTeamWord, uint8_t
                 return result;
         }
 
-        /* Try selected teams */
+        /* Try selected teams — same byte-pair fix as above. */
         uint16_t r = _Rand2();
         uint32_t idx = (uint32_t)r * (uint32_t)numSelectedTeams;
         idx >>= 8;
         idx *= 0x2AC;
         result = &selTeamsPtr + idx;
 
-        if (*(uint16_t *)result != avoidTeamWord) {
+        uint16_t candTeamId2 = PACK_BE_U16(result[0], result[1]);
+        if (candTeamId2 != avoidTeamWord) {
             if (*result != avoidTeamByte)
                 return result;
         }
