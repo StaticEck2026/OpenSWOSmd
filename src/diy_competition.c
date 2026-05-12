@@ -2185,6 +2185,28 @@ restart_loop:
     uint8_t *slot = bufCopyRaw + (uint16_t)(slotIdx * 0x76);
     DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + 0x15A);
 
+    /* Propagate tournament-identity fields from bufCopy (where
+     * _InitDIYLeagueFromRecord wrote them) to comp before showing the
+     * menu. The downstream menu init (_DIYLeagueTournamentOnRestore
+     * for the play menu, the design-menu header) reads the title from
+     * `comp + 4` (= diyCompetitionStart.base.competitionName), but
+     * the PRESET / season entry points hit this function without
+     * going through `_DIY_LoadCurrentCompetitionSlot` first, so the
+     * name lives only in bufCopy and the title bar comes up blank
+     * for World Cup PRESET / similar tournament-mode menus.
+     *
+     * The DIY-tournament play entry point at diy_competition.c:7699
+     * does call `_DIY_LoadCurrentCompetitionSlot` which copies these
+     * fields; doing the same copy here ensures every caller's title
+     * is consistent. Bulk-copy `field_2` (offset 2..0x31, 48 bytes)
+     * mirrors what LoadSlot does for the name + namePtr + compId +
+     * surrounding identity bytes. */
+    {
+        uint8_t *bufRaw = (uint8_t *)bufCopy;
+        for (uint16_t k = 2; k <= 0x31; k++)
+            compRaw[k] = bufRaw[k];
+    }
+
     /* Check if slot is cup (isLeagueFormat=0) — cup path takes this branch */
     if (s->isLeagueFormat == 0) {
         /* Cup path (slot not active / cup-type competition) */
