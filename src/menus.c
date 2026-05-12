@@ -1130,8 +1130,19 @@ static void squadSwapPlayersAtIndices(uint16_t prevFileIdx, uint16_t currFileIdx
     }
 
     if (needFullSwap) {
-        /* Full swap: get player pointers via GetPlayerAtIndex */
-        uint16_t teamNum = *(uint16_t *)(uint32_t)squadTeamFilePtr;
+        /* Full swap: get player pointers via GetPlayerAtIndex.
+         * teamNum must be the BE-packed (country<<8)|ordinal that
+         * _GetPlayerAtIndex compares against selTeamNumber. The first
+         * two bytes of TeamFile are the {countryNumber, teamOrdinal}
+         * byte pair — reading them as a host-native uint16 returns
+         * (ordinal<<8)|country on LE, which never matches selTeamNumber.
+         * The lookup then falls through to the non-user-team branch
+         * and panics 0x1146 whenever prevBreakPos or currBreakPos
+         * is >= 16 — i.e. any swap involving the bench/trialist
+         * slots, including subbing an injured player back in. */
+        TeamFileEx *squadTf = (TeamFileEx *)squadTeamFilePtr;
+        uint16_t teamNum = PACK_BE_U16(squadTf->team.countryNumber,
+                                       squadTf->team.teamOrdinal);
         uint8_t *prevBlockPtr = _GetPlayerAtIndex(teamNum, prevBreakPos);
         uint16_t prevFIdx = _cGetPlayerAtIndexFileIdx;
 
