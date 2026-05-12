@@ -4289,6 +4289,29 @@ restart:;
     posFlags = tpf->positionAndFace & 0x18; /* position flags bits 3-4 */
     uint8_t *name = (uint8_t *)tpf->playerName;
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+    /* [bug11] Capture the SOURCE player chosen for the trialist name's
+     * initial. The "*. SURNAME" symptom requires this player's name to
+     * literally start with "*. ". Log the first 8 bytes plus the team
+     * id so we can correlate against tmdFileBuffer / selTeamsPtr to
+     * find where the asterisk-prefixed names are coming from. */
+    SWOS_AUTOSKIP_LOG("[bug11] trialistSrc1: team=%p teamId=0x%04X playerIdx=%u "
+                      "playerName=%02X %02X %02X %02X %02X %02X %02X %02X (\"%c%c%c%c%c%c\")",
+                      (void *)team,
+                      (unsigned)((team[0] << 8) | team[1]),
+                      (unsigned)(playerIdx / 0x26),
+                      (unsigned)(uint8_t)name[0], (unsigned)(uint8_t)name[1],
+                      (unsigned)(uint8_t)name[2], (unsigned)(uint8_t)name[3],
+                      (unsigned)(uint8_t)name[4], (unsigned)(uint8_t)name[5],
+                      (unsigned)(uint8_t)name[6], (unsigned)(uint8_t)name[7],
+                      name[0] >= 0x20 && name[0] < 0x7F ? (char)name[0] : '?',
+                      name[1] >= 0x20 && name[1] < 0x7F ? (char)name[1] : '?',
+                      name[2] >= 0x20 && name[2] < 0x7F ? (char)name[2] : '?',
+                      name[3] >= 0x20 && name[3] < 0x7F ? (char)name[3] : '?',
+                      name[4] >= 0x20 && name[4] < 0x7F ? (char)name[4] : '?',
+                      name[5] >= 0x20 && name[5] < 0x7F ? (char)name[5] : '?');
+#endif
+
     /* Copy characters from name to trialistNameBuffer */
     while (*name != 0) {
         if (*name == ' ')
