@@ -161,7 +161,15 @@ uint16_t savedCameraX;
 uint16_t savedCameraY;
 uint16_t teamsLoaded;
 uint16_t poolplyrLoaded;
-uint8_t highestScorersTable;
+/* highestScorersTable: 92-byte struct (see statistics.c:450-457 layout).
+ * The auto-extractor labeled the Amiga symbol as ds.b $1 because the
+ * label is followed by an unnamed BSS_00_996E6 continuation that holds
+ * the rest of the table. On the SDL build a 1-byte definition lets the
+ * statistics.c writers overflow 91 bytes past the symbol and stomp
+ * poolplyrLoaded / teamsLoaded / savedCameraX/Y / replayState (which
+ * sat at +2, +4, ... after the original auto-extractor squashed them
+ * adjacent). Allocate the full 92 bytes here. */
+uint8_t highestScorersTable[92];
 uint32_t menuDataOffset;
 uint32_t menuFreeSpace;
 MenuEntry templateMenuEntry;
