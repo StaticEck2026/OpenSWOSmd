@@ -1148,8 +1148,13 @@ searchDomestic:
             if (a0tf->league == 4)
                 continue;
 
-            /* Must be same division */
-            if (*(uint8_t *)((uint32_t)&selTeamNumber) != a0tf->countryNumber)
+            /* Must be same division (country). selTeamNumber MSB = country.
+             * Pre-fix `*(uint8_t *)&selTeamNumber` read LE byte[0] = ordinal,
+             * which rarely matched any team's country byte — so the 99-try
+             * home-country job-offer search effectively never found a
+             * candidate, and offers only ever showed up via the
+             * `searchForeign` fallback that triggers when youreSacked. */
+            if ((uint8_t)(selTeamNumber >> 8) != a0tf->countryNumber)
                 continue;
 
             /* Asm: move.w (a0),d3 — reads packed team number at offset 0 */
@@ -1202,7 +1207,12 @@ searchForeign:
             TeamFile *a0tf = (TeamFile *)a0;
             if (a0tf->league == 4)
                 continue;
-            if (*(uint8_t *)((uint32_t)&selTeamNumber) == a0tf->countryNumber)
+            /* Foreign job-offer search — skip teams from the user's own
+             * country. MSB of selTeamNumber is the country byte; the LE
+             * byte-read pre-fix used the ordinal, so the skip rarely
+             * fired and same-country teams accidentally counted as
+             * foreign candidates. */
+            if ((uint8_t)(selTeamNumber >> 8) == a0tf->countryNumber)
                 continue;
 
             /* Asm: move.w (a0),d3 — reads packed team number at offset 0 */

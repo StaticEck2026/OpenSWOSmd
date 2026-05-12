@@ -5108,8 +5108,14 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
         teamsBase = a0;
         uint16_t d5 = 0;
         uint16_t d4 = 0;
+        /* selTeamNumber MSB is the country (BE-packed: country<<8 | ordinal).
+         * Amiga m68k `move.b selTeamNumber.l,d0` reads the MSB, so the byte
+         * being compared against a0tf->countryNumber is the country. On LE
+         * x86 *(uint8_t *)&selTeamNumber would read the *ordinal* instead
+         * and the home-market scan would almost never match, leaving
+         * teamCount=0 and the function bailing at "no eligible buyer". */
+        uint8_t selTeamByte = (uint8_t)(selTeamNumber >> 8);
         while (d4 < numSelectedTeams) {
-            uint8_t selTeamByte = *(uint8_t *)((uint32_t)&selTeamNumber);
             if (selTeamByte == *a0) {
                 if (_IsTeamEligibleForOfferByRefSkill((TeamFileEx *)a0, refSkill) == 0) {
                     offerCandidateTeamIndexBuffer[d5] = (uint8_t)d4;
@@ -5128,8 +5134,13 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
         uint16_t d5 = 0;
         uint16_t d4 = 0;
         uint16_t numCareerTeams = careerFileBuffer;
+        /* MSB of selTeamNumber = country byte (see same fix in home-market
+         * branch above). The foreign path wants country != candidate, so the
+         * pre-fix LE byte read mostly accepted anything (ordinal byte rarely
+         * coincides with another country code) and the foreign offer rate
+         * was only "broken into mostly working", but it's still wrong. */
+        uint8_t selTeamByte = (uint8_t)(selTeamNumber >> 8);
         while (d4 < numCareerTeams) {
-            uint8_t selTeamByte = *(uint8_t *)((uint32_t)&selTeamNumber);
             if (selTeamByte != *a0) {
                 if (_IsTeamEligibleForOfferByRefSkill((TeamFileEx *)a0, refSkill) == 0) {
                     offerCandidateTeamIndexBuffer[d5] = (uint8_t)d4;
@@ -5463,9 +5474,13 @@ int16_t _EvaluateTransferOfferNegotiation(void)
     /* Determine selling team's asking price (d5) */
     uint16_t askingPrice;
 
-    /* Check if offering team is from a different division than career team */
+    /* Check if offering team is from a different division than career team.
+     * Both sides need the country byte (MSB). Pre-fix the right-hand side
+     * read LE byte[0] = ordinal, so the cross-division check fired for
+     * any team whose country byte differed from the user's ordinal — i.e.
+     * almost every offer routed through the "different division" branch. */
     uint16_t offTeamHigh = teamOffering >> 8;
-    uint8_t selTeamByte = *(uint8_t *)((uint32_t)&selTeamNumber);
+    uint8_t selTeamByte = (uint8_t)(selTeamNumber >> 8);
     if (offTeamHigh != selTeamByte) {
         /* Different division — check average player price */
         uint16_t avgPrice = _GetAveragePlayerPrice(&careerTeam);
