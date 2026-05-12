@@ -850,7 +850,11 @@ static uint16_t pickRandomNationalTeamId(uint16_t minPrice, uint16_t maxPrice,
         uint32_t idx = (uint32_t)r * natTeamsRandLimit2;
         idx >>= 8;
         uint8_t *entry = nationalTeams + (uint16_t)(idx * 6);
-        uint16_t teamId = *(uint16_t *)entry;
+        /* entry[0..1] = {countryNumber, teamOrdinal} byte pair. teamId
+         * is compared against selTeamNumber (BE-packed) and the high
+         * byte is region-filtered, so use PACK_BE_U16 to get the
+         * correct packed form on both hosts. */
+        uint16_t teamId = PACK_BE_U16(entry[0], entry[1]);
 
         if (regionFilter != 0) {
             if ((uint8_t)(teamId >> 8) != regionFilter)

@@ -5202,8 +5202,13 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
     uint8_t teamIdx = offerCandidateTeamIndexBuffer[idx];
     uint8_t *teamBlock = teamsBase + (uint32_t)teamIdx * 0x2AC;
 
-    /* Check uniqueness */
-    uint16_t offTeamId = *(uint16_t *)teamBlock;
+    /* Check uniqueness. teamBlock[0..1] = {countryNumber, teamOrdinal}
+     * byte pair. teamOffering / _IsOfferTeamPlayerPairUnique expect a
+     * BE-packed team id, so read via PACK_BE_U16 — *(uint16_t *)teamBlock
+     * gives the swapped (ordinal<<8|country) value on LE and the
+     * downstream offer record is then stored with the wrong country
+     * byte at offset 0. */
+    uint16_t offTeamId = PACK_BE_U16(teamBlock[0], teamBlock[1]);
     if (_IsOfferTeamPlayerPairUnique(offTeamId, offerPrimaryPlayerOrdinal) == 0) {
         SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: BAILED — duplicate offer "
                           "(team=0x%04X already has offer)",

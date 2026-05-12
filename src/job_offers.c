@@ -1245,7 +1245,11 @@ searchNational:
                 uint16_t idx = (uint16_t)(idx32 >> 8);
                 uint8_t *entry = nationalTeams + (uint32_t)idx * 6;
 
-                uint16_t teamId = *(uint16_t *)entry;
+                /* entry[0..1] = {countryNumber, teamOrdinal} byte pair.
+                 * teamId is compared against selTeamNumber (BE-packed)
+                 * below, so use PACK_BE_U16 to read the matching form
+                 * on both hosts. */
+                uint16_t teamId = PACK_BE_U16(entry[0], entry[1]);
                 uint16_t skill = *(uint16_t *)(entry + 4);
 
                 if (skill < repLow || skill > repHigh)

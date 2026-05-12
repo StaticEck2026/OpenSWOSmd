@@ -782,7 +782,11 @@ TeamFileEx *_FindTeam(TeamFileEx *teamToFind, uint16_t *outRemainingCount)
     TeamFileEx *ptr = (TeamFileEx *)&selTeamsPtr;
     uint16_t remaining = count;
     while (1) {
-        if (*(uint16_t *)ptr == teamId) {
+        /* First 2 bytes of each TeamFileEx are {countryNumber, teamOrdinal}.
+         * teamId is BE-packed (country<<8 | ordinal); read the byte pair
+         * via PACK_BE_U16 to get the same packed form on both hosts —
+         * *(uint16_t *)ptr would give (ordinal<<8|country) on LE. */
+        if (PACK_BE_U16(((uint8_t *)ptr)[0], ((uint8_t *)ptr)[1]) == teamId) {
             if (outRemainingCount)
                 *outRemainingCount = remaining;
             return ptr;
@@ -950,7 +954,11 @@ uint8_t *_GetNationalityRecordPtr(uint16_t teamFileAndOrdinal)
     uint8_t *ptr = nationalTeams;
     uint16_t count = numNationalTeams;
     for (uint16_t i = 0; i < count; i++) {
-        if (*(uint16_t *)ptr == teamFileAndOrdinal)
+        /* nationalTeams entries start with {countryNumber, teamOrdinal}
+         * byte pair (caller passes the BE-packed pair). PACK_BE_U16
+         * produces the matching id on either host endianness — see
+         * the same fix in _GetTeamPointer. */
+        if (PACK_BE_U16(ptr[0], ptr[1]) == teamFileAndOrdinal)
             return ptr;
         ptr += 6;
     }
@@ -2354,7 +2362,14 @@ void _ChooseTeamsFriendlyInitFinish(void)
 
     for (i = 0; i < numTeamsInFile; i++) {
         if (*(teamRecord + TEAMFILE_LEAGUE) == league) {
-            if (inFriendlyMenu != 0 || *(uint16_t *)teamRecord != selNum) {
+            /* teamRecord[0..1] = {countryNumber, teamOrdinal} byte pair.
+             * selNum is BE-packed (country<<8 | ordinal); compare via
+             * PACK_BE_U16 so the user's own team is correctly skipped
+             * out of the friendly-menu list on LE hosts (raw
+             * *(uint16_t *)teamRecord gives ordinal<<8|country and
+             * the skip never fires). */
+            if (inFriendlyMenu != 0 ||
+                PACK_BE_U16(teamRecord[0], teamRecord[1]) != selNum) {
                 *idx++ = (uint8_t)count;
                 *ptrs++ = (uint32_t)teamRecord;
                 count++;
