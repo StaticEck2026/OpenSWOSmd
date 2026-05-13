@@ -292,9 +292,30 @@ char asc_135D96[2] = "-";
 char asc_135D9A[2] = "-";
 char nullString_0[1] = { 0 };
 
-/* kUserTeamOffsetBiasLUT: signed 8-byte direction→bias LUT used by
- * match simulation (match_sim.c kUserTeamOffsetBiasLUT[biasIdx]). */
-int8_t kUserTeamOffsetBiasLUT[8] = { -3, 0, 1, -1, -2, -2, -3, -2 };
+/* kUserTeamOffsetBiasLUT: 64 bytes — the original Amiga `dc.b` block at
+ * SWOS2.s:45562 declared 8 bytes here, followed IMMEDIATELY by
+ * kMenuIrqCookieFailTrap's 56 bytes (SWOS2.s:45564). The view-result
+ * code (match_sim.c:212) masks `biasIdx & 0x3F` and reads up to index
+ * 63 of this LUT, relying on Amiga BSS adjacency to pick up the
+ * trap-data bytes as the second half of the table. On SDL the two
+ * symbols are separately allocated and indices 8..63 read OOB garbage,
+ * giving wildly wrong VIEW RESULT outcomes for user teams (Inter Milan
+ * with maxed-out custom tactics finished 12th on SDL vs 2nd on Amiga
+ * with the same setup). The original 8 entries are kept here, with
+ * the 56-byte FailTrap data appended so all 64 reads pick up the
+ * intended Amiga values. The standalone kMenuIrqCookieFailTrap symbol
+ * in simulation_data.c is left in place — it's a code jump-target for
+ * the IRQ-cookie tamper-detection path. */
+int8_t kUserTeamOffsetBiasLUT[64] = {
+    -3,  0,  1, -1, -2, -2, -3, -2,    /* original 8 entries */
+    -1,  0,  0,  2,  3,  3,  2,  1,    /* +8 (Amiga adjacent kMenuIrqCookieFailTrap row 0) */
+    -1, -3, -2, -2,  0,  1,  2,  3,
+     3,  2,  1,  1,  0, -2, -1,  1,
+     2,  3,  1,  0, -1, -3, -2, -1,
+     0, -2, -3, -1,  0,  2,  1,  2,
+     2,  1, -1,  0, -2, -1,  0, -1,
+    -2,  0,  2,  2,  2,  0, -1, -2     /* total 64 */
+};
 
 /* nationalTeams: 54 × 16 = 864 bytes. Each entry 6 bytes (5 + something) — indexed by country ordinal × 6 (see career_season.c / job_offers.c). From SWOS2.s. */
 uint8_t nationalTeams[864] = {
