@@ -4322,6 +4322,16 @@ restart:;
                       name[5] >= 0x20 && name[5] < 0x7F ? (char)name[5] : '?');
 #endif
 
+    /* Skip source players whose name starts with '*' — that's the
+     * "*ERR* " marker left by _Career_RemovePlayerFromSelectedTeamRoster
+     * on a freshly-removed slot (teams.c:1348, matches Amiga
+     * SWOS2.s:97253). Without this guard the trialist generator copies
+     * "*ERR*" into trialistNameBuffer and the new trialist's playerName
+     * becomes "*ERR* SURNAME", which then propagates further on the next
+     * cycle when this trialist's slot is sampled as a source. */
+    if (*name == '*')
+        goto restart;
+
     /* Copy characters from name to trialistNameBuffer */
     while (*name != 0) {
         if (*name == ' ')
@@ -4341,6 +4351,12 @@ restart:;
         nationality = (uint8_t)tpf->nationality;
         posFlags = tpf->positionAndFace & 0x18;
         name = (uint8_t *)tpf->playerName;
+
+        /* Same '*ERR* ' marker guard as the first-source pick above —
+         * skip a "*X" source so the trialist doesn't pick up the last
+         * word "ERR*" as its surname. */
+        if (*name == '*')
+            goto restart;
 
         /* Find end of name string */
         uint8_t *nameEnd = name;
