@@ -10443,8 +10443,20 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
      * appear dead. */
     extern uint16_t numSelectedTeams;
     if (careerAutoAdvanceInProgress != 0 || seasonUpdateInProgress != 0) {
-        uint32_t maxOff = (uint32_t)numSelectedTeams * (uint32_t)sizeof(TeamFileEx);
-        if (teamSelOff1 >= maxOff || teamSelOff2 >= maxOff) {
+        /* teamSelPtr is used as a 32-bit pointer offset
+         * (&selTeamsPtr + teamSelPtr) and the USER'S OWN careerTeam
+         * lives elsewhere in the careerFileBuffer overlay, so its
+         * teamSelPtr is encoded as a large negative int32 (e.g.
+         * 0xFFFFA110 = -23792). Treat the field as int32 and accept
+         * [-128 KB, +(numSelectedTeams * 684)]; anything outside is
+         * genuinely uninit garbage (matches the dispatcher's
+         * standings-row guard in career_status.c:3204). */
+        int32_t maxPos = (int32_t)((uint32_t)numSelectedTeams * (uint32_t)sizeof(TeamFileEx));
+        int32_t minNeg = -(int32_t)(128 * 1024);
+        int32_t off1 = (int32_t)teamSelOff1;
+        int32_t off2 = (int32_t)teamSelOff2;
+        if (off1 > maxPos || off1 < minNeg ||
+            off2 > maxPos || off2 < minNeg) {
 #ifdef SWOS_DEBUG_AUTOSKIP
             static int s_bug1_bail_logged = 0;
             if (!s_bug1_bail_logged) {
