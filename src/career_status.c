@@ -3193,20 +3193,28 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
         } else {
             /* Also validate the standings table at diyCompetitionStart+0x2B4.
              * Each row is 18 bytes; teamSelPtr (uint32) at offset 0 of each
-             * row is a byte-offset into selTeamsPtr. A valid offset is small
-             * (numSelectedTeams * 684, typically <50 KB); the corrupt
-             * spanishLeague state hits ~17 MB. Scan all numTeams rows for
-             * any teamSelPtr >= 64*684 = 43776 (a generous upper bound for
-             * any plausible career squad). One bad row means the whole
-             * table is uninit garbage. */
-            const uint32_t maxPlausibleOff = 64u * 684u;
+             * row is a byte-offset into selTeamsPtr that's USED via pointer
+             * arithmetic — `&selTeamsPtr + teamSelOff` recovers the team
+             * pointer with natural 32-bit wraparound. Positive offsets up
+             * to ~50 KB cover the selTeamsPtr array proper, but the user's
+             * own careerTeam lives elsewhere in the careerFileBuffer
+             * overlay (at offset 56190 vs selTeamsPtr at 98478), so its
+             * teamSelPtr is the NEGATIVE difference (~-42288 = 0xFFFF5AD0
+             * as uint32) and is a legitimate value, not garbage.
+             *
+             * Treat the field as int32: positive offsets within the
+             * selTeamsPtr region, or negative offsets within ~100 KB
+             * (the careerFileBuffer overlay span). Anything outside
+             * that range is uninit garbage from a corrupt slot. */
+            const int32_t maxPositive = 64 * 684;       /* +43776 */
+            const int32_t maxNegative = -(128 * 1024);  /* -131072 */
             uint8_t *rowsBase = (uint8_t *)&diyCompetitionStart + 0x2B4;
             for (int16_t i = 0; i < numTeams; i++) {
-                uint32_t teamSelOff = *(uint32_t *)(rowsBase + i * 18);
-                if (teamSelOff >= maxPlausibleOff) {
+                int32_t teamSelOff = *(int32_t *)(rowsBase + i * 18);
+                if (teamSelOff > maxPositive || teamSelOff < maxNegative) {
                     bail = 1;
                     bailReason = "standings row teamSelPtr out of range";
-                    bailTeamSelPtr = teamSelOff;
+                    bailTeamSelPtr = (uint32_t)teamSelOff;
                     break;
                 }
             }
