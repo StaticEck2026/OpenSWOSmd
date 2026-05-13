@@ -2925,11 +2925,19 @@ retry:
         uint16_t teamCount = *(uint16_t *)teamFileBuffer;
         uint32_t fileSize = (uint32_t)teamCount * 684 + 2;
 #ifdef SWOS_SDL_BUILD
+        /* Convert host-native → BE in-place before write. Pre-fix bug
+         * (commit f9b750d) used byteswap_loaded_team_file in both
+         * directions, but that function reads the loop count via
+         * BE_READ_U16, which on host-native input mis-decodes to
+         * ~12288 and the loop stomps ~8 MB past the buffer. */
+        extern void byteswap_team_file_to_disk(void);
         extern void byteswap_loaded_team_file(void);
-        byteswap_loaded_team_file();
+        byteswap_team_file_to_disk();
 #endif
         int16_t result = _WriteFile(aCustomsEdt, teamFileBuffer, fileSize);
 #ifdef SWOS_SDL_BUILD
+        /* Restore host-native after write — buffer is BE-on-disk now
+         * (just-written bytes), so re-swap with the load-time helper. */
         byteswap_loaded_team_file();
 #endif
         if (result != 0) {

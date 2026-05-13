@@ -263,10 +263,7 @@ static void setLoadedTeamsGlobalNumbers(void)
  * Note: (countryNumber, teamOrdinal) at offsets 0/1 of each record are
  * two SEPARATE single-byte fields. Callers that want the 16-bit packed
  * team id must use PACK_BE_U16(), not a cast — see endian_helpers.h. */
-/* Non-static so edit_tactics.c can call it around _WriteFile(aCustomsEdt,...)
- * to convert teamFileBuffer back to BE on-disk format before saving and
- * restore host-native after. The function is its own inverse when applied
- * to a swap-paired buffer. */
+/* BE → host-native (called after load). */
 void byteswap_loaded_team_file(void);
 void byteswap_loaded_team_file(void)
 {
@@ -278,6 +275,27 @@ void byteswap_loaded_team_file(void)
         *(uint16_t *)(rec + 2) = BE_READ_U16(rec + 2);
         rec += 684;
     }
+}
+
+/* host-native → BE (called by edit_tactics.c before _WriteFile(aCustomsEdt))
+ * Naively calling byteswap_loaded_team_file twice does NOT undo the load
+ * swap — the function reads its loop count via BE_READ_U16(buf), so on
+ * host-native input it sees the byte-swapped count (e.g. 0x3000 / 12288
+ * teams) and iterates ~8 MB past the buffer end. Use a dedicated function
+ * that reads count host-native, swaps each per-team globalTeamNumber to BE,
+ * then swaps the count itself. */
+void byteswap_team_file_to_disk(void);
+void byteswap_team_file_to_disk(void)
+{
+    uint8_t *buf = teamFileBuffer;
+    uint16_t count = *(uint16_t *)buf;             /* host-native read */
+    uint8_t *rec = buf + 2;
+    for (uint16_t i = 0; i < count; i++) {
+        uint16_t gtn = *(uint16_t *)(rec + 2);     /* host-native */
+        BE_WRITE_U16(rec + 2, gtn);
+        rec += 684;
+    }
+    BE_WRITE_U16(buf, count);                       /* swap count last */
 }
 #endif
 
