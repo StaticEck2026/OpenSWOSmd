@@ -2788,7 +2788,11 @@ void _CheckTransfers(void)
             }
         }
     }
-    goto clearBlink;
+    /* Done — RETURN here. The Amiga (SWOS2.s:87142 locret_13C1C8 rts)
+     * falls out of the function after enabling/setting blink. A pre-fix
+     * `goto clearBlink` immediately cleared the bit we just set, so
+     * the TRANSFERS button never blinked when offers arrived. */
+    return;
 
 disableEntry:
     {
@@ -2796,7 +2800,8 @@ disableEntry:
         setBgColorIdx(entry, COLOR_PINK_TO_BROWN_9);
         entry->isDisabled = 1;
     }
-clearBlink:
+    /* Disabled path: clear blink so a stale bit from a prior enable
+     * doesn't keep the button flashing. */
     {
         MenuEntry *entry = &menuEntries[4];
         uint16_t flags = entry->stringFlags;

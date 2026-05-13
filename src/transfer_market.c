@@ -3505,17 +3505,27 @@ void _ThirdPartyOfferMenuInit(void *entryPtr)
     if (offerExtraPlayerOrdinal >= 0)
         menuEntries[7].isInvisible = 0;
 
-    /* Handle offerStatus < 0 (negative): withdrawn offer — hide most entries */
+    /* Handle offerStatus < 0 (negative): withdrawn offer — hide most entries.
+     *
+     * The Amiga asm (SWOS2.s:99942+, the offerStatus-negative branch)
+     * also hides entries 10, 11, 12 — ACCEPT OFFER, ASK FOR MORE,
+     * REJECT OFFER. Without that, the user can still see and click
+     * those three action buttons even though the offer has been
+     * withdrawn, instead of being left with only EXIT as the Amiga
+     * intended. */
     if ((int16_t)offerStatus < 0) {
         menuEntries[4].isInvisible = 1;
-        menuEntries[8].isInvisible = 1;
-        menuEntries[17].isInvisible = 1;
-        menuEntries[18].isInvisible = 1;
         menuEntries[6].isInvisible = 1;
         menuEntries[7].isInvisible = 1;
-        menuEntries[13].isInvisible = 1;
+        menuEntries[8].isInvisible = 1;
         menuEntries[9].isInvisible = 1;
-        menuEntries[14].isInvisible = 0;
+        menuEntries[10].isInvisible = 1; /* ACCEPT OFFER */
+        menuEntries[11].isInvisible = 1; /* ASK FOR MORE */
+        menuEntries[12].isInvisible = 1; /* REJECT OFFER */
+        menuEntries[13].isInvisible = 1;
+        menuEntries[17].isInvisible = 1;
+        menuEntries[18].isInvisible = 1;
+        menuEntries[14].isInvisible = 0; /* EXIT */
         _SetCurrentEntry(14);
     }
 
