@@ -2910,11 +2910,28 @@ retry:
     if (_Asset_PromptInsertSaveDiskDf0(aEditCustomTeam) != 0)
         goto retry;
 
-    /* Write team file: size = teamCount * 684 + 2 (for the count word) */
+    /* Write team file: size = teamCount * 684 + 2 (for the count word).
+     *
+     * teamFileBuffer was byte-swapped to host-native after load (see
+     * byteswap_loaded_team_file in teams.c), so on LE x86 the count
+     * word and each TeamFile.globalTeamNumber sit in LE byte order.
+     * The on-disk .EDT format is BE (Amiga m68k native) and the load
+     * path swaps BE→host-native unconditionally, so writing the
+     * host-native bytes verbatim produces a file whose count and
+     * globalTeamNumbers re-swap to garbage on the next load. Pre-swap
+     * back to BE before _WriteFile and restore host-native after, so
+     * any subsequent in-game uses of teamFileBuffer keep working. */
     {
         uint16_t teamCount = *(uint16_t *)teamFileBuffer;
         uint32_t fileSize = (uint32_t)teamCount * 684 + 2;
+#ifdef SWOS_SDL_BUILD
+        extern void byteswap_loaded_team_file(void);
+        byteswap_loaded_team_file();
+#endif
         int16_t result = _WriteFile(aCustomsEdt, teamFileBuffer, fileSize);
+#ifdef SWOS_SDL_BUILD
+        byteswap_loaded_team_file();
+#endif
         if (result != 0) {
             _ShowFsErrorByCode((uint16_t)result);
             goto retry;

@@ -263,7 +263,12 @@ static void setLoadedTeamsGlobalNumbers(void)
  * Note: (countryNumber, teamOrdinal) at offsets 0/1 of each record are
  * two SEPARATE single-byte fields. Callers that want the 16-bit packed
  * team id must use PACK_BE_U16(), not a cast — see endian_helpers.h. */
-static void byteswap_loaded_team_file(void)
+/* Non-static so edit_tactics.c can call it around _WriteFile(aCustomsEdt,...)
+ * to convert teamFileBuffer back to BE on-disk format before saving and
+ * restore host-native after. The function is its own inverse when applied
+ * to a swap-paired buffer. */
+void byteswap_loaded_team_file(void);
+void byteswap_loaded_team_file(void)
 {
     uint8_t *buf = teamFileBuffer;
     uint16_t count = BE_READ_U16(buf);
