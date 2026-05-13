@@ -797,7 +797,14 @@ TeamFileEx *_AddTeamToBuffer(TeamFileEx *team)
 __attribute__((used, externally_visible))
 TeamFileEx *_FindTeam(TeamFileEx *teamToFind, uint16_t *outRemainingCount)
 {
-    uint16_t teamId = *(uint16_t *)teamToFind;  /* first word: countryNumber + teamOrdinal */
+    /* teamId is the BE-packed (country<<8|ordinal) form used by the
+     * loop comparison below. Pre-fix this read was *(uint16_t *)
+     * teamToFind which on LE gives (ordinal<<8|country) — once the
+     * loop side was converted to PACK_BE_U16 in commit 91c1b70 the
+     * two sides stopped matching and selecting any team for friendly
+     * panicked with reasonCode 0x6987. */
+    uint16_t teamId = PACK_BE_U16(((uint8_t *)teamToFind)[0],
+                                  ((uint8_t *)teamToFind)[1]);
     uint16_t count = numSelectedTeams;
     if (count == 0)
         goto panic;
