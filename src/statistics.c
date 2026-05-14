@@ -9,6 +9,7 @@
 #include "play_match_menu.h"
 #include "input_text.h"
 #include "endian_helpers.h"
+#include "auto_skip_debug.h"
 
 /* ---- External globals ---- */
 extern uint16_t showStats;
@@ -625,13 +626,23 @@ static void AddTeamScorersToHighestScorersTable(int16_t statIndex,
     int16_t numPlayers;
     int16_t playerIdx;
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+    uint16_t debug_teamId = BE_READ_U16(teamPtr);
+    int debug_scorersAdded = 0;
+#endif
+
     /* For DIY game types with negative statIndex, verify team is in DIY list */
     if (statIndex < 0)
     {
         if (gameType == 3 || gameType == 4)
         {
-            if (_FindTeamIdInDiyTeamsList((uint16_t *)teamPtr) != 0)
+            if (_FindTeamIdInDiyTeamsList((uint16_t *)teamPtr) != 0) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+                SWOS_AUTOSKIP_LOG("[bug2-scorers]     AddTeamScorers teamId=0x%04X SKIP (not in DIY list)",
+                                  (unsigned)debug_teamId);
+#endif
                 return;  /* team not in DIY list, skip */
+            }
         }
     }
 
@@ -701,6 +712,9 @@ static void AddTeamScorersToHighestScorersTable(int16_t statIndex,
 
         /* Find a slot to replace */
         {
+#ifdef SWOS_DEBUG_AUTOSKIP
+            debug_scorersAdded++;
+#endif
             uint8_t *slot = FindReplaceableLowestScorerSlot(base, minScore);
             slot[35] = (uint8_t)score;       /* store score */
             slot[34] = (uint8_t)playerIdx;   /* store playerIdx */
@@ -735,6 +749,10 @@ next_player:
         }
         playerIdx++;
     }
+#ifdef SWOS_DEBUG_AUTOSKIP
+    SWOS_AUTOSKIP_LOG("[bug2-scorers]     AddTeamScorers teamId=0x%04X DONE scorersAdded=%d",
+                      (unsigned)debug_teamId, debug_scorersAdded);
+#endif
 }
 
 
@@ -752,6 +770,10 @@ static void PopulateHighestScorersTableFromSelectedTeams(int16_t statIndex)
     uint16_t numTeams = numSelectedTeams;
     uint16_t careerTeamNum;
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+    SWOS_AUTOSKIP_LOG("[bug2-scorers]   PopulateFromSelectedTeams statIdx=%d numSelectedTeams=%u",
+                      (int)statIndex, (unsigned)numTeams);
+#endif
     if (numTeams == 0)
         return;
 
@@ -911,9 +933,38 @@ static void ShowCompetitionTopScorers(int16_t statIndex, uint8_t *namePtr)
 __attribute__((used, externally_visible))
 void _TopGoalScorersMenu_0(void)
 {
+#ifdef SWOS_DEBUG_AUTOSKIP
+    {
+        extern uint8_t  competitionFileBuffer[];
+        extern uint16_t numDiyTeams;
+        uint16_t compTypeWord = *(uint16_t *)competitionFileBuffer;
+        SWOS_AUTOSKIP_LOG("[bug2-scorers] _TopGoalScorersMenu_0 ENTER statIdx=-1 "
+                          "numSelectedTeams=%u numDiyTeams=%u gameType=%u "
+                          "careerLoadedFlag=%u compTypeWord=0x%04X selTeamNumber=0x%04X",
+                          (unsigned)numSelectedTeams, (unsigned)numDiyTeams,
+                          (unsigned)gameType, (unsigned)careerLoadedFlag,
+                          (unsigned)compTypeWord, (unsigned)selTeamNumber);
+    }
+#endif
     InitHighestScorersTable();
     PopulateHighestScorersTableFromSelectedTeams(-1);
     SortHighestScorerTable();
+#ifdef SWOS_DEBUG_AUTOSKIP
+    {
+        uint8_t *base = highestScorersTable;
+        uint16_t *sortArray = (uint16_t *)base;
+        int validCount = 0;
+        int totalGoals = 0;
+        for (int i = 0; i < 15; i++) {
+            uint8_t *entry = base + sortArray[i];
+            uint16_t teamId = *(uint16_t *)(entry + 32);
+            uint8_t score   = *(entry + 35);
+            if (teamId != 0xFFFF) { validCount++; totalGoals += score; }
+        }
+        SWOS_AUTOSKIP_LOG("[bug2-scorers] _TopGoalScorersMenu_0 EXIT "
+                          "filledEntries=%d/15 totalGoals=%d", validCount, totalGoals);
+    }
+#endif
     _ShowMenu(topGoalScorersMenu);
 }
 

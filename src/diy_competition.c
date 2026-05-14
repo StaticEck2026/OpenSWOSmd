@@ -1758,6 +1758,16 @@ void _DIY_AdvanceLeagueProgressAfterMatch(uint8_t *team1, uint8_t *team2)
         uint16_t phaseIdx = comp->leagueMatchProgress;
         a0s->viewRandomPhase = comp->leagueSectionState.phaseStartMonths[phaseIdx];
         viewRandomPhase = a0s->viewRandomPhase;
+#ifdef SWOS_DEBUG_AUTOSKIP
+        SWOS_AUTOSKIP_LOG("[bug3-league]   PhaseBoundary compId=0x%04X new_leagueMatchProgress=%u "
+                          "new_viewRandomPhase=%u(phaseStartMonths[%u]) "
+                          "sectionsLeft(minSubs)=%u totalMatchesPerSectionLive=%d",
+                          (unsigned)*(uint16_t *)&a0s->compId,
+                          (unsigned)comp->leagueMatchProgress,
+                          (unsigned)a0s->viewRandomPhase, (unsigned)phaseIdx,
+                          (unsigned)comp->minSubstitutes,
+                          (int)comp->matchData.league.totalMatchesPerSectionLive);
+#endif
     }
 
     comp->matchData.league.totalMatchesPerSectionLive -= 1;
@@ -1766,6 +1776,11 @@ void _DIY_AdvanceLeagueProgressAfterMatch(uint8_t *team1, uint8_t *team2)
 
     /* minSubstitutes repurposed as section-progression counter */
     comp->minSubstitutes -= 1;
+#ifdef SWOS_DEBUG_AUTOSKIP
+    SWOS_AUTOSKIP_LOG("[bug3-league]   SectionEnd compId=0x%04X "
+                      "sectionsLeft(minSubs)=%u (decremented from prev+1)",
+                      (unsigned)*(uint16_t *)&a0s->compId, (unsigned)comp->minSubstitutes);
+#endif
     if (comp->minSubstitutes == 0)
         return;
 

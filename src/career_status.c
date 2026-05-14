@@ -3805,6 +3805,28 @@ void _Career_AutoAdvanceLeagueFixtures(void)
     uint8_t *lastMatchPtr = lastMatchSlots + (uint16_t)slotIdx;
     uint8_t lastMatch = *lastMatchPtr;
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+    {
+        DIYCompetitionEx *bex = &diyCompetitionStart;
+        SWOS_AUTOSKIP_LOG("[bug3-league] AutoAdvanceLeague ENTER compId=0x%04X slotIdx=%u "
+                          "currentPhase=%u nextPhase=%u viewRandomPhase=%u "
+                          "lastMatch=%u leagueMatchProgress=%u sectionsLeft(minSubs)=%u "
+                          "leagueCurrentSlot=%u totalMatchesPerSectionLive=%d "
+                          "totalMatchesInRound=%d subRoundCounter=%d "
+                          "seasonFinished=%u",
+                          (unsigned)*(uint16_t *)&base->compId, (unsigned)slotIdx,
+                          (unsigned)currentPhase, (unsigned)nextPhase,
+                          (unsigned)base->viewRandomPhase,
+                          (unsigned)lastMatch, (unsigned)bex->leagueMatchProgress,
+                          (unsigned)bex->minSubstitutes,
+                          (unsigned)bex->leagueCurrentSlot,
+                          (int)bex->matchData.league.totalMatchesPerSectionLive,
+                          (int)base->totalMatchesInRound,
+                          (int)base->subRoundCounter,
+                          (unsigned)seasonFinished);
+    }
+#endif
+
     /* Inline DIY_AdvanceLeagueFixtureIndex: advance fixture and set d6 */
     uint8_t viewRP = base->viewRandomPhase;
     _DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
@@ -3845,6 +3867,22 @@ show_menu_check:
     if (careerAutoAdvanceInProgress != 0)
         return;
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+    {
+        DIYCompetitionEx *bex = &diyCompetitionStart;
+        SWOS_AUTOSKIP_LOG("[bug3-league] AutoAdvanceLeague EXIT(show_menu) compId=0x%04X "
+                          "viewRandomPhase=%u leagueMatchProgress=%u sectionsLeft=%u "
+                          "leagueCurrentSlot=%u totalMatchesPerSectionLive=%d subRoundCounter=%d",
+                          (unsigned)*(uint16_t *)&base->compId,
+                          (unsigned)base->viewRandomPhase,
+                          (unsigned)bex->leagueMatchProgress,
+                          (unsigned)bex->minSubstitutes,
+                          (unsigned)bex->leagueCurrentSlot,
+                          (int)bex->matchData.league.totalMatchesPerSectionLive,
+                          (int)base->subRoundCounter);
+    }
+#endif
+
     /* Show league menu. SWOS2.s loc_12D754/loc_12D764 calls (1,1,0)
      * unconditionally here — the highlightedLeagueTeamId check belongs
      * only on the catch_up_phase first-time path (loc_12D790).
@@ -3856,6 +3894,13 @@ show_menu_check:
     return;
 
 catch_up_phase:
+#ifdef SWOS_DEBUG_AUTOSKIP
+    SWOS_AUTOSKIP_LOG("[bug3-league] AutoAdvanceLeague catch_up_phase compId=0x%04X "
+                      "lastMatch=%u viewRandomPhase=%u (eq=%d)",
+                      (unsigned)*(uint16_t *)&base->compId,
+                      (unsigned)lastMatch, (unsigned)base->viewRandomPhase,
+                      (int)(lastMatch == base->viewRandomPhase));
+#endif
     /* Check if lastMatch matches current viewRandomPhase */
     if (lastMatch == base->viewRandomPhase) {
         /* Catch-up loop: sim until leagueCurrentSlot != 0 */

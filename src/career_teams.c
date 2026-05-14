@@ -13,6 +13,7 @@
 #include "career_teams.h"
 #include "endian_helpers.h"
 #include "game_types.h"
+#include "auto_skip_debug.h"
 #include "panic.h"
 #include "teams.h"
 
@@ -1454,6 +1455,11 @@ void _Career_AdvanceToNextTeamSelectionKeyCacheEntry(void)
     for (;;) {
         d0++;
         if (d0 == teamSelectionKeyCacheCount) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+            SWOS_AUTOSKIP_LOG("[bug3-league] AdvanceToNext: END-OF-CACHE — setting seasonFinished=1 "
+                              "careerFinished=1 keyCacheCount=%u",
+                              (unsigned)teamSelectionKeyCacheCount);
+#endif
             seasonFinished = 1;
             careerFinished = 1;
             _Career_FillCurrentSeasonInfo();
