@@ -1355,8 +1355,17 @@ void _Career_RemovePlayerFromSelectedTeamRoster(uint16_t index)
             pf1->shirtNumber = tmpShirt;
         }
 
-        d1 = (uint16_t)(int8_t)currentMatchPlayers[d3];
+        /* Asm reads d1 from the reserve slot (where the to-remove player
+         * now lives after the swap). In this C function the variable
+         * mapping is flipped vs the asm — d3 holds the bench slot here,
+         * d2 holds the reserve slot — so reorder: reassign d3 = reserve
+         * first, then read d1. Reading currentMatchPlayers[d3] before
+         * the reassignment grabbed the REPLACEMENT's ord instead, which
+         * caused TrainingMatch_RemoveSavedPlayerId() to panic 0x1231 on
+         * ACCEPT OFFER (replacement reserve not in saved-players list)
+         * and *ERR*-stomped the wrong player's name. */
         d3 = d2;  /* d3 = reserve slot to compact from */
+        d1 = (uint16_t)(int8_t)currentMatchPlayers[d3];
         goto compact;
     }
 
