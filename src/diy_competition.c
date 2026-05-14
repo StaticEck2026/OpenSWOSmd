@@ -10094,11 +10094,13 @@ path_B: /* === Second leg === */
             penaltiesState = 1;
 
         /* Load first-leg goals from table at a6+0x14E (BSS_00_2E0AE region,
-         * holds second-leg score data) */
+         * holds second-leg score data). Host-native uint16 + byte-extract:
+         * see the matching read in _DIY_PlayCupMatchAndAdvance for why a
+         * byte-pair load gives swapped scores on LE x86. */
         uint16_t matchIdx = compEx->matchData.cup.currentMatchIndex;
-        uint8_t *goalsTable = a6 + 0x14E;
-        team1GoalsFirstLeg = goalsTable[matchIdx * 2];
-        team2GoalsFirstLeg = goalsTable[matchIdx * 2 + 1];
+        uint16_t packedLeg1 = *(uint16_t *)(a6 + 0x14E + matchIdx * 2);
+        team1GoalsFirstLeg = (packedLeg1 >> 8) & 0xFF;
+        team2GoalsFirstLeg = packedLeg1 & 0xFF;
 
         /* playing2ndGame = playEachTeam */
         playing2ndGame = (uint16_t)diy->playEachTeam;
@@ -10263,14 +10265,22 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
 
     /* === Post-match processing === */
 
-    /* Load first-leg goals (d5/d6) if two-leg enabled */
+    /* Load first-leg goals (d5/d6) if two-leg enabled.
+     *
+     * two_leg_path rotates first-leg packedGoals into _bss_2E0AE via a
+     * host-native read + ror#8 + host-native write. On LE x86 the
+     * physical byte layout of the stored value is therefore inverted vs
+     * the Amiga BE layout, so the Amiga's byte-pair load (byte0/byte1)
+     * returns the scores swapped for the second-leg perspective. Read
+     * host-native and split high/low byte instead — that yields the
+     * same logical value on either endian. */
     uint16_t firstLeg1 = 0, firstLeg2 = 0;
     DIYCompetitionEx *baseEx = (DIYCompetitionEx *)base;
     if (baseEx->matchData.cup.competitionFormat != 0) {
         uint16_t mIdx = baseEx->matchData.cup.currentMatchIndex;
-        uint8_t *goalsTable = base + 0x14E;  /* BSS_00_2E0AE: second-leg score buffer */
-        firstLeg1 = goalsTable[mIdx * 2];
-        firstLeg2 = goalsTable[mIdx * 2 + 1];
+        uint16_t packed = *(uint16_t *)(base + 0x14E + mIdx * 2);
+        firstLeg1 = (packed >> 8) & 0xFF;
+        firstLeg2 = packed & 0xFF;
     }
 
     /* Process knockout match result → d4/d5/d6/d7 */
