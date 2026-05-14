@@ -1617,12 +1617,27 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
          * sees a CPU-vs-CPU pair (both teamControls=1), returns 1, and
          * _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection takes the
          * VIEW branch — landing the cursor on aViewResult instead of aMatch.
-         * The original asm runs this auto-sim after the menu (in
-         * Career_ProcessCurrentCompetitionSlotForMatch); doing it here too
-         * just means the same matches get simulated one cycle earlier, with
-         * the upside that the menu opens with the cursor already on the
-         * career fixture. */
-        _Career_AutoSimulateCupMatchesUntilHumanTeam();
+         *
+         * Gate on entry[6] (count of human-team fixtures in this round).
+         * AutoSimulateCupMatchesUntilHumanTeam exits only when a human-
+         * controlled team appears in the next fixture — if the player has
+         * been eliminated from this cup, *no* future fixture has a human
+         * team and the loop runs forever (cup result display freeze on
+         * NEXT MATCH at end of season). When entry[6] == 0 there is no
+         * player fixture to scroll the cursor onto anyway, so skipping
+         * the deviation costs nothing; the asm's ProcessAfterMatch path
+         * (via AutoPlayCupMatchAndAdvanceLoop) handles the elimination
+         * round correctly because UpdateStatsAfterMatch sets
+         * careerSlotProcessingInProgress = roundComplete after every
+         * match, including CPU-only ones, giving that loop a real exit.
+         *
+         * The original asm runs auto-sim only after the menu (in
+         * Career_ProcessCurrentCompetitionSlotForMatch, reached only when
+         * entry[6] > 0). Gating here matches that condition. */
+        uint8_t *cacheEntry = _TeamSelectionKeyCache_GetCurrentListPtr();
+        if (cacheEntry[6] != 0) {
+            _Career_AutoSimulateCupMatchesUntilHumanTeam();
+        }
         _ShowDIYCupMenuWithParams(1, 0, d2);
         if (diyCompetitionStart.base.roundComplete != 0)
             _DIY_UpdateCompetitionProgress();
