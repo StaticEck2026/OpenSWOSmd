@@ -500,7 +500,20 @@ void _DIY_CacheSelectedTeamPointers(void)
         /* Store relative pointer: teamPtr - &selTeamsPtr (asm: suba.l #selTeamsPtr,a0) */
         uint16_t entryIdx = (uint16_t)(int16_t)idx;
         uint8_t *entry = a2raw + entryIdx * 0x12;
-        *(volatile uint32_t *)(entry + 0x2B4) = (uint32_t)((uint8_t *)teamPtr - &selTeamsPtr);
+        int32_t off = (int32_t)((uint8_t *)teamPtr - &selTeamsPtr);
+#ifdef SWOS_DEBUG_AUTOSKIP
+        /* [bug8w] Trace every standings teamSelPtr write so we can
+         * correlate the bail log's bogus value to the actual write
+         * that produced it. Covers all `i` so we see the full table
+         * each time _DIY_CacheSelectedTeamPointers runs. */
+        SWOS_AUTOSKIP_LOG("[bug8w] CacheTeamPtrs i=%d idx=%d entryIdx=%u teamNum=0x%04X "
+                          "teamPtr=%p selTeamsPtr=%p off=%d numTeams=%u",
+                          (int)i, (int)idx, (unsigned)entryIdx,
+                          (unsigned)teamNum, (void *)teamPtr,
+                          (void *)&selTeamsPtr, (int)off,
+                          (unsigned)count);
+#endif
+        *(volatile uint32_t *)(entry + 0x2B4) = (uint32_t)off;
     }
 
 }
