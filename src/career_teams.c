@@ -1875,6 +1875,19 @@ static void getCurrentMatchTeamSlotIndices(int16_t *slot1Idx, int16_t *slot2Idx)
 __attribute__((used, externally_visible))
 void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
 {
+#ifdef SWOS_DEBUG_AUTOSKIP
+    int iter = 0;
+    DIYCompetitionEx *bex0 = &diyCompetitionStart;
+    SWOS_AUTOSKIP_LOG("[bug4-cup] AutoSimUntilHuman ENTER compId=0x%04X "
+                      "roundIdx=%d/%d matchIdx=%d/%d roundComplete=%d "
+                      "competitionFinished=%d",
+                      (unsigned)*(uint16_t *)&bex0->base.compId,
+                      (int)bex0->base.currentRoundIndex, (int)bex0->base.numRounds,
+                      (int)bex0->matchData.cup.currentMatchIndex,
+                      (int)bex0->base.totalMatchesInRound,
+                      (int)bex0->base.roundComplete,
+                      (int)bex0->base.competitionFinished);
+#endif
     for (;;) {
         int16_t slot1Idx, slot2Idx;
         getCurrentMatchTeamSlotIndices(&slot1Idx, &slot2Idx);
@@ -1882,12 +1895,34 @@ void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
         /* Read team pointer from bracketScratch.teamPtrTable[slotIdx] */
         DIYCompetitionEx *baseEx = &diyCompetitionStart;
         TeamFile *team1 = (TeamFile *)(&selTeamsPtr + baseEx->bracketScratch.teamPtrTable[slot1Idx]);
-        if (team1->teamControls != 1) return;  /* human team found */
+        if (team1->teamControls != 1) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+            SWOS_AUTOSKIP_LOG("[bug4-cup] AutoSimUntilHuman EXIT (team1 human/coach) "
+                              "iter=%d slot1=%d team1Ctrl=%d", iter,
+                              (int)slot1Idx, (int)team1->teamControls);
+#endif
+            return;
+        }
 
         TeamFile *team2 = (TeamFile *)(&selTeamsPtr + baseEx->bracketScratch.teamPtrTable[slot2Idx]);
-        if (team2->teamControls != 1) return;  /* human team found */
+        if (team2->teamControls != 1) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+            SWOS_AUTOSKIP_LOG("[bug4-cup] AutoSimUntilHuman EXIT (team2 human/coach) "
+                              "iter=%d slot2=%d team2Ctrl=%d", iter,
+                              (int)slot2Idx, (int)team2->teamControls);
+#endif
+            return;
+        }
 
         /* Both AI: simulate */
+#ifdef SWOS_DEBUG_AUTOSKIP
+        iter++;
+        if (iter > 200) {
+            SWOS_AUTOSKIP_LOG("[bug4-cup] AutoSimUntilHuman EMERGENCY BAIL iter>%d — "
+                              "infinite loop suspected, returning to avoid hang", iter);
+            return;
+        }
+#endif
         _DIY_PlayCupMatchAndAdvance(0, 0);
     }
 }
@@ -1941,12 +1976,40 @@ void _Career_AutoPlayOrSimulateLeagueFixtureLoop(void)
 __attribute__((used, externally_visible))
 void _Career_AutoPlayCupMatchAndAdvanceLoop(void)
 {
+#ifdef SWOS_DEBUG_AUTOSKIP
+    int iter = 0;
+    DIYCompetitionEx *bex0 = &diyCompetitionStart;
+    SWOS_AUTOSKIP_LOG("[bug4-cup] AutoPlayCupLoop ENTER compId=0x%04X "
+                      "roundIdx=%d/%d matchIdx=%d/%d roundComplete=%d "
+                      "competitionFinished=%d careerSlotProcessingInProgress=%d",
+                      (unsigned)*(uint16_t *)&bex0->base.compId,
+                      (int)bex0->base.currentRoundIndex, (int)bex0->base.numRounds,
+                      (int)bex0->matchData.cup.currentMatchIndex,
+                      (int)bex0->base.totalMatchesInRound,
+                      (int)bex0->base.roundComplete,
+                      (int)bex0->base.competitionFinished,
+                      (int)careerSlotProcessingInProgress);
+#endif
     for (;;) {
         uint16_t field54 = (uint16_t)diyCompetitionStart.base.roundComplete;
         if (field54 != 0 && careerSlotProcessingInProgress != 0) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+            SWOS_AUTOSKIP_LOG("[bug4-cup] AutoPlayCupLoop EXIT (round complete + processing) "
+                              "iter=%d", iter);
+#endif
             _DIY_UpdateCompetitionProgress();
             return;
         }
+#ifdef SWOS_DEBUG_AUTOSKIP
+        iter++;
+        if (iter > 200) {
+            SWOS_AUTOSKIP_LOG("[bug4-cup] AutoPlayCupLoop EMERGENCY BAIL iter>%d — "
+                              "infinite loop suspected; roundComplete=%d "
+                              "careerSlotProcessingInProgress=%d",
+                              iter, (int)field54, (int)careerSlotProcessingInProgress);
+            return;
+        }
+#endif
         _DIY_PlayCupMatchAndAdvance(0, 0);
     }
 }

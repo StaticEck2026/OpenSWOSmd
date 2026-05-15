@@ -2442,9 +2442,27 @@ void _DIY_UpdateCompetitionProgress(void)
     DIYCompetitionEx *comp = &diyCompetitionStart;
     DIYCompetition *a0s = &comp->base;
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+    SWOS_AUTOSKIP_LOG("[bug4-cup] UpdateCompetitionProgress ENTER compId=0x%04X "
+                      "currentRoundIdx=%d/%d competitionFormat=%d roundFormat=%d "
+                      "secondLegCounter=%d competitionFinished=%d",
+                      (unsigned)*(uint16_t *)&a0s->compId,
+                      (int)a0s->currentRoundIndex, (int)a0s->numRounds,
+                      (int)comp->matchData.cup.competitionFormat,
+                      (int)comp->matchData.cup.roundFormat,
+                      (int)comp->bracketScratch.secondLegCounter,
+                      (int)a0s->competitionFinished);
+#endif
+
     /* Check finished flag — field_3A+$1C = offset 0x56 */
-    if (a0s->competitionFinished != 0)
+    if (a0s->competitionFinished != 0) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+        SWOS_AUTOSKIP_LOG("[bug4-cup] UpdateCompetitionProgress EXIT early "
+                          "(competitionFinished=1) compId=0x%04X",
+                          (unsigned)*(uint16_t *)&a0s->compId);
+#endif
         return;
+    }
 
     /* Check competition flow:
      * If competitionFormat == 1 → cup knock-out path
@@ -10218,6 +10236,26 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
     uint8_t *base = (uint8_t *)&diyCompetitionStart;
     DIYCompetition *baseS = (DIYCompetition *)base;
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+    {
+        DIYCompetitionEx *bex = &diyCompetitionStart;
+        SWOS_AUTOSKIP_LOG("[bug4-cup] PlayCupMatch ENTER compId=0x%04X "
+                          "roundIdx=%d/%d matchIdx=%d/%d roundFormat=%d "
+                          "competitionFormat=%d roundComplete=%d "
+                          "competitionFinished=%d careerTeamInvolved=%d mode=%d",
+                          (unsigned)*(uint16_t *)&baseS->compId,
+                          (int)baseS->currentRoundIndex, (int)baseS->numRounds,
+                          (int)bex->matchData.cup.currentMatchIndex,
+                          (int)baseS->totalMatchesInRound,
+                          (int)bex->matchData.cup.roundFormat,
+                          (int)bex->matchData.cup.competitionFormat,
+                          (int)baseS->roundComplete,
+                          (int)baseS->competitionFinished,
+                          (int)baseS->careerTeamInvolved,
+                          (int)mode);
+    }
+#endif
+
     /* Set progressFieldA = 1 */
     baseS->matchStarted = 1;  /* 0x44 */
 
@@ -10372,6 +10410,20 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
             1, packedGoals, packedAggregate, packedPenalty, resultFlags);
     }
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+    {
+        int careerInvolved = (team1 == &careerTeam || team2 == &careerTeam);
+        SWOS_AUTOSKIP_LOG("[bug4-cup]   PlayCupMatch played compId=0x%04X "
+                          "newMatchIdx=%d roundComplete=%d competitionFinished=%d "
+                          "packedGoals=0x%04X flags=0x%02X careerInvolved=%d",
+                          (unsigned)*(uint16_t *)&baseS->compId,
+                          (int)newMatchIdx, (int)baseS->roundComplete,
+                          (int)baseS->competitionFinished,
+                          (unsigned)packedGoals, (unsigned)(resultFlags & 0xFF),
+                          careerInvolved);
+    }
+#endif
+
     /* Check if round is complete */
     if (baseS->roundComplete == 0)  /* 0x54 */
         return 0;
@@ -10405,6 +10457,13 @@ final_or_groups:
     if (_DIY_CountUnselectedTeams() != 0)
         return 0;
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+    SWOS_AUTOSKIP_LOG("[bug4-cup]   PlayCupMatch SETS competitionFinished=1 "
+                      "compId=0x%04X currentRoundIdx=%d/numRounds=%d hasGroups=%d",
+                      (unsigned)*(uint16_t *)&baseS->compId,
+                      (int)baseS->currentRoundIndex, (int)baseS->numRounds,
+                      (int)baseS->hasGroups);
+#endif
     /* All teams accounted for — competition/stage finished */
     baseS->competitionFinished = 1;  /* 0x56 */
 

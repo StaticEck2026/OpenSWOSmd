@@ -3953,6 +3953,23 @@ void _Career_AutoAdvanceCupMatches(void)
     uint8_t *lastMatchPtr = lastMatchSlots + (uint16_t)slotIdx;
     uint8_t lastMatch = *lastMatchPtr;
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+    int debug_cup_iters = 0;
+    SWOS_AUTOSKIP_LOG("[bug4-cup] AutoAdvanceCupMatches ENTER compId=0x%04X "
+                      "currentPhase=%u nextPhase=%u viewRandomPhase=%u lastMatch=%u "
+                      "currentRoundIdx=%d/%d matchIdx=%d/%d roundComplete=%d "
+                      "competitionFinished=%d hasGroups=%d",
+                      (unsigned)*(uint16_t *)&base->compId,
+                      (unsigned)currentPhase, (unsigned)nextPhase,
+                      (unsigned)base->viewRandomPhase, (unsigned)lastMatch,
+                      (int)base->currentRoundIndex, (int)base->numRounds,
+                      (int)diyCompetitionStart.matchData.cup.currentMatchIndex,
+                      (int)base->totalMatchesInRound,
+                      (int)base->roundComplete,
+                      (int)base->competitionFinished,
+                      (int)base->hasGroups);
+#endif
+
     /* Inline DIY_AdvanceCupFixtureIndex */
     uint8_t viewRP = base->viewRandomPhase;
     _DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
@@ -3963,6 +3980,19 @@ void _Career_AutoAdvanceCupMatches(void)
 
     /* Main cup sim loop */
 cup_main_loop:
+#ifdef SWOS_DEBUG_AUTOSKIP
+    if (++debug_cup_iters > 500) {
+        SWOS_AUTOSKIP_LOG("[bug4-cup] AutoAdvanceCupMatches EMERGENCY BAIL "
+                          "iter>%d compId=0x%04X viewRandomPhase=%u currentPhase=%u "
+                          "roundComplete=%d competitionFinished=%d",
+                          debug_cup_iters,
+                          (unsigned)*(uint16_t *)&base->compId,
+                          (unsigned)base->viewRandomPhase, (unsigned)currentPhase,
+                          (int)base->roundComplete,
+                          (int)base->competitionFinished);
+        return;
+    }
+#endif
     _DIY_PlayCupMatchAndAdvance(0, 0); /* allowSquadChanges=0, mode=0 (sim) */
 
     if (base->roundComplete == 0)
@@ -3981,6 +4011,13 @@ cup_main_loop:
     goto cup_main_loop;
 
 cup_finished:
+#ifdef SWOS_DEBUG_AUTOSKIP
+    SWOS_AUTOSKIP_LOG("[bug4-cup] AutoAdvanceCupMatches cup_finished compId=0x%04X "
+                      "iters=%d hasGroups=%d viewRandomPhase=%u",
+                      (unsigned)*(uint16_t *)&base->compId,
+                      debug_cup_iters, (int)base->hasGroups,
+                      (unsigned)base->viewRandomPhase);
+#endif
     if (base->hasGroups == 0)
         goto cup_show_menu_check;
     if (base->hasGroups == 2)
@@ -3996,6 +4033,17 @@ cup_show_menu_check:
         return;
     if (careerAutoAdvanceInProgress != 0)
         return;
+
+#ifdef SWOS_DEBUG_AUTOSKIP
+    SWOS_AUTOSKIP_LOG("[bug4-cup] AutoAdvanceCupMatches EXIT (show_menu) compId=0x%04X "
+                      "iters=%d currentRoundIdx=%d viewRandomPhase=%u "
+                      "roundComplete=%d competitionFinished=%d",
+                      (unsigned)*(uint16_t *)&base->compId,
+                      debug_cup_iters, (int)base->currentRoundIndex,
+                      (unsigned)base->viewRandomPhase,
+                      (int)base->roundComplete,
+                      (int)base->competitionFinished);
+#endif
 
     /* Show cup menu. SWOS2.s loc_12D884/loc_12D894 calls (1,1,0)
      * unconditionally here — the highlightedLeagueTeamId check belongs
