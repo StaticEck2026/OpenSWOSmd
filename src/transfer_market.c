@@ -995,7 +995,17 @@ int16_t _FindTeamIdInDiyTeamsList(uint16_t *teamIdPtr)
         list = diyTeamIdListType0;
 
     count = (int16_t)(numDiyTeams - 1);
-    target = *teamIdPtr;
+    /* teamIdPtr points at a TeamFile's leading {country, ordinal} byte
+     * pair (the Amiga BE memory layout for the team id). The diy list
+     * was populated via host-native `*(uint16_t *) = (country<<8)|ord`
+     * writes, so on LE x86 its physical bytes are [ord, country] and
+     * reading it as `*list` gives `(country<<8)|ord`. The previous
+     * code read target as `*teamIdPtr` host-native, which on LE
+     * decodes the team file's [country, ord] bytes as `(ord<<8)|country`
+     * — different value, so every team failed the membership test
+     * and TOP GOAL SCORERS came out empty in career mode.
+     * BE_READ_U16 normalises to `(country<<8)|ord` on either host. */
+    target = BE_READ_U16((uint8_t *)teamIdPtr);
 
     for (; count >= 0; count--) {
         if (*list++ == target)
