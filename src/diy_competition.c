@@ -10514,17 +10514,29 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
     uint8_t *compPtr1 = fixtureTeam1CompPtr;
     uint8_t *compPtr2 = fixtureTeam2CompPtr;
 
-    /* Build team file pointers from DIYTeamStats teamSelPtr (+0x2B4) */
-    uint32_t teamSelOff1 = ((DIYTeamStats *)(compPtr1 + 0x2B4))->teamSelPtr;
-    uint32_t teamSelOff2 = ((DIYTeamStats *)(compPtr2 + 0x2B4))->teamSelPtr;
+    /* Build team file pointers from DIYTeamStats teamSelPtr (+0x2B4).
+     * teamSelPtr is a SIGNED byte-offset into selTeamsPtr — positive
+     * values index forward (other teams), negative values index back
+     * (careerTeam lives below selTeamsPtr in memory). */
+    int32_t teamSelOff1 = (int32_t)((DIYTeamStats *)(compPtr1 + 0x2B4))->teamSelPtr;
+    int32_t teamSelOff2 = (int32_t)((DIYTeamStats *)(compPtr2 + 0x2B4))->teamSelPtr;
     TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + teamSelOff1);
     TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + teamSelOff2);
 
     /* Safety guard ONLY for auto-advance paths. If either teamSelPtr
-     * offset is out of range for selTeamsPtr during
+     * offset is genuinely out of range for selTeamsPtr during
      * careerAutoAdvanceInProgress / seasonUpdateInProgress, the
      * standings table at diyCompetitionStart+0x2B4 is garbage (uninit
      * competition context for a slot the user isn't really in).
+     *
+     * The previous unsigned `>= maxOff` test misclassified legitimate
+     * negative offsets (careerTeam, e.g. -42288 = 0xFFFF5AD0) as
+     * corruption — the bail then prevented the player's competitions
+     * from auto-advancing and froze the post-sack chairman-memo flow
+     * (Playaveli's first-season AC Milan repro). Use a sign-aware
+     * range that still catches the 17 MB-class positive corruption but
+     * accepts plausible negative careerTeam offsets up to ~1 MB
+     * backward.
      *
      * On bail we must:
      *   1. NOT dereference the garbage TeamFileEx pointer.
@@ -10540,17 +10552,19 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
      * appear dead. */
     extern uint16_t numSelectedTeams;
     if (careerAutoAdvanceInProgress != 0 || seasonUpdateInProgress != 0) {
-        uint32_t maxOff = (uint32_t)numSelectedTeams * (uint32_t)sizeof(TeamFileEx);
-        if (teamSelOff1 >= maxOff || teamSelOff2 >= maxOff) {
+        int32_t maxPositive = (int32_t)numSelectedTeams * (int32_t)sizeof(TeamFileEx);
+        const int32_t maxNegative = -1 * 1024 * 1024;
+        if (teamSelOff1 > maxPositive || teamSelOff1 < maxNegative ||
+            teamSelOff2 > maxPositive || teamSelOff2 < maxNegative) {
 #ifdef SWOS_DEBUG_AUTOSKIP
             static int s_bug1_bail_logged = 0;
             if (!s_bug1_bail_logged) {
                 s_bug1_bail_logged = 1;
                 SWOS_AUTOSKIP_LOG("[bug1] PlayOrSimLeague: bail (first occurrence) — "
-                                  "bogus teamSelPtr (team1off=%u team2off=%u maxOff=%u "
+                                  "bogus teamSelPtr (team1off=%d team2off=%d maxPositive=%d "
                                   "numSelTeams=%u careerAutoAdv=%u seasonUpd=%u selector=%d)",
-                                  (unsigned)teamSelOff1, (unsigned)teamSelOff2,
-                                  (unsigned)maxOff, (unsigned)numSelectedTeams,
+                                  (int)teamSelOff1, (int)teamSelOff2,
+                                  (int)maxPositive, (unsigned)numSelectedTeams,
                                   (unsigned)careerAutoAdvanceInProgress,
                                   (unsigned)seasonUpdateInProgress,
                                   (int)selector);
