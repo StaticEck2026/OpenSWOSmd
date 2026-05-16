@@ -3192,21 +3192,29 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
             bailReason = "totalMatchesInRound out of range";
         } else {
             /* Also validate the standings table at diyCompetitionStart+0x2B4.
-             * Each row is 18 bytes; teamSelPtr (uint32) at offset 0 of each
-             * row is a byte-offset into selTeamsPtr. A valid offset is small
-             * (numSelectedTeams * 684, typically <50 KB); the corrupt
-             * spanishLeague state hits ~17 MB. Scan all numTeams rows for
-             * any teamSelPtr >= 64*684 = 43776 (a generous upper bound for
-             * any plausible career squad). One bad row means the whole
-             * table is uninit garbage. */
-            const uint32_t maxPlausibleOff = 64u * 684u;
+             * Each row is 18 bytes; teamSelPtr at offset 0 of each row is a
+             * SIGNED byte-offset into selTeamsPtr. Positive offsets index
+             * forward through the selected-teams array (numSelectedTeams *
+             * 684, typically < 50 KB); negative offsets are legitimate too
+             * — careerTeam lives BELOW selTeamsPtr in memory, so its
+             * standings row stores a negative offset (e.g. -42288 = 0xFFFF5AD0
+             * when read as uint32). The previous unsigned check incorrectly
+             * lumped those legit negatives in with the 17 MB corruption that
+             * originally motivated the validator: PostMatchUpdate then bailed
+             * out of auto-advancing the player's competitions after a sack,
+             * leaving the cups frozen at SF / FINAL in the season-end loop.
+             * Use a sign-aware range: still catches the 17 MB positive
+             * corruption and any wild negative, but accepts plausible
+             * careerTeam offsets up to ~1 MB backward. */
+            const int32_t maxPositive = 64 * 684;
+            const int32_t maxNegative = -1 * 1024 * 1024;
             uint8_t *rowsBase = (uint8_t *)&diyCompetitionStart + 0x2B4;
             for (int16_t i = 0; i < numTeams; i++) {
-                uint32_t teamSelOff = *(uint32_t *)(rowsBase + i * 18);
-                if (teamSelOff >= maxPlausibleOff) {
+                int32_t teamSelOff = *(int32_t *)(rowsBase + i * 18);
+                if (teamSelOff > maxPositive || teamSelOff < maxNegative) {
                     bail = 1;
                     bailReason = "standings row teamSelPtr out of range";
-                    bailTeamSelPtr = teamSelOff;
+                    bailTeamSelPtr = (uint32_t)teamSelOff;
                     break;
                 }
             }
