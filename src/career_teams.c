@@ -1235,6 +1235,23 @@ void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src)
         for (int16_t i = 0x5A9; i >= 0; i--)
             *d++ = *s++;
     }
+
+#ifdef SWOS_DEBUG_AUTOSKIP
+    {
+        DIYCompetitionEx *bex = &diyCompetitionStart;
+        SWOS_AUTOSKIP_LOG("[bug20-load] LoadSlotState src=%p type=%u "
+                          "compId=0x%04X minSubstitutes=%u playEachTeam=%u "
+                          "leagueMatchProgress=%u leagueCurrentSlot=%u "
+                          "totalMatchesPerSectionLive=%d",
+                          (void *)src, (unsigned)type,
+                          (unsigned)*(uint16_t *)&bex->base.compId,
+                          (unsigned)bex->minSubstitutes,
+                          (unsigned)bex->base.playEachTeam,
+                          (unsigned)bex->leagueMatchProgress,
+                          (unsigned)bex->leagueCurrentSlot,
+                          (int)bex->matchData.league.totalMatchesPerSectionLive);
+    }
+#endif
 }
 
 /* ================================================================

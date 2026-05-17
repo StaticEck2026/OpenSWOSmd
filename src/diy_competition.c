@@ -2837,6 +2837,22 @@ __attribute__((used, externally_visible))
 void _DIY_UpdateCompetitionProgressOrAdvanceSlot(uint8_t *blk)
 {
     int16_t type = *(int16_t *)blk;
+#ifdef SWOS_DEBUG_AUTOSKIP
+    {
+        DIYCompetitionEx *bex = &diyCompetitionStart;
+        SWOS_AUTOSKIP_LOG("[bug20-update] UpdateCompetitionProgressOrAdvanceSlot ENTER "
+                          "blk=%p type=%d compId=0x%04X minSubstitutes=%u "
+                          "leagueMatchProgress=%u leagueCurrentSlot=%u "
+                          "totalMatchesPerSectionLive=%d hasGroups=%d",
+                          (void *)blk, (int)type,
+                          (unsigned)*(uint16_t *)&bex->base.compId,
+                          (unsigned)bex->minSubstitutes,
+                          (unsigned)bex->leagueMatchProgress,
+                          (unsigned)bex->leagueCurrentSlot,
+                          (int)bex->matchData.league.totalMatchesPerSectionLive,
+                          (int)bex->base.hasGroups);
+    }
+#endif
 
     if (type == 0) {
         _DIY_RecordLeagueFixtureResultAndAdvanceProgress();
@@ -2874,6 +2890,23 @@ void _DIY_RecordLeagueFixtureResultAndAdvanceProgress(void)
     DIYCompetitionEx *a6Ex = &diyCompetitionStart;
     DIYCompetition *a6s = &a6Ex->base;
     uint8_t *a6 = (uint8_t *)a6s;
+
+#ifdef SWOS_DEBUG_AUTOSKIP
+    SWOS_AUTOSKIP_LOG("[bug20-record] RecordLeagueFixtureResult ENTER compId=0x%04X "
+                      "minSubstitutes=%u (bail iff 0) playEachTeam=%u "
+                      "leagueMatchProgress=%u leagueCurrentSlot=%u "
+                      "totalMatchesPerSectionLive=%d totalMatchesInRound=%d "
+                      "subRoundCounter=%d numTeams=%d",
+                      (unsigned)*(uint16_t *)&a6s->compId,
+                      (unsigned)a6Ex->minSubstitutes,
+                      (unsigned)a6s->playEachTeam,
+                      (unsigned)a6Ex->leagueMatchProgress,
+                      (unsigned)a6Ex->leagueCurrentSlot,
+                      (int)a6Ex->matchData.league.totalMatchesPerSectionLive,
+                      (int)a6s->totalMatchesInRound,
+                      (int)a6s->subRoundCounter,
+                      (int)a6s->numTeams);
+#endif
 
     /* Check if there are results to process (minSubstitutes repurposed as section counter) */
     if (a6Ex->minSubstitutes == 0)
