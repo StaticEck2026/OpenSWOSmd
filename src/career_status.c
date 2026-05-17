@@ -3095,8 +3095,23 @@ void _Career_PostMatchUpdate(void)
         _Career_MaybeGenerateJobOffer();
     }
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+    SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate ENTER isNationalSelector=%u "
+                      "currentCompPtr=%p secondaryCompPtr=%p tertiaryCompPtr=%p "
+                      "quaternaryCompPtr=%p youreSacked=%u",
+                      (unsigned)isNationalSelector,
+                      (void *)(uintptr_t)currentCompetitionPtr,
+                      (void *)(uintptr_t)secondaryCompetitionPtr,
+                      (void *)(uintptr_t)tertiaryCompetitionPtr,
+                      (void *)(uintptr_t)quaternaryCompetitionPtr,
+                      (unsigned)youreSacked);
+#endif
+
     /* If national selector, skip competition auto-advance */
     if (isNationalSelector != 0) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+        SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate EXIT (isNationalSelector — no auto-advance)");
+#endif
         _Career_HandleRetirement();
         return;
     }
@@ -3109,20 +3124,43 @@ void _Career_PostMatchUpdate(void)
     careerTeam.team.teamControls = 1;
 
     /* Auto-advance all competition slots */
+#ifdef SWOS_DEBUG_AUTOSKIP
+    SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate -> AutoAdvance(currentCompetitionPtr=%p)",
+                      (void *)(uintptr_t)currentCompetitionPtr);
+#endif
     _Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)currentCompetitionPtr);
 
-    if (secondaryCompetitionPtr != 0)
+    if (secondaryCompetitionPtr != 0) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+        SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate -> AutoAdvance(secondaryCompetitionPtr=%p)",
+                          (void *)(uintptr_t)secondaryCompetitionPtr);
+#endif
         _Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)secondaryCompetitionPtr);
+    }
 
-    if (tertiaryCompetitionPtr != 0)
+    if (tertiaryCompetitionPtr != 0) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+        SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate -> AutoAdvance(tertiaryCompetitionPtr=%p)",
+                          (void *)(uintptr_t)tertiaryCompetitionPtr);
+#endif
         _Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)tertiaryCompetitionPtr);
+    }
 
-    if (quaternaryCompetitionPtr != 0)
+    if (quaternaryCompetitionPtr != 0) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+        SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate -> AutoAdvance(quaternaryCompetitionPtr=%p)",
+                          (void *)(uintptr_t)quaternaryCompetitionPtr);
+#endif
         _Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)quaternaryCompetitionPtr);
+    }
 
     /* Restore saved values */
     careerTeam.team.teamControls = savedControls;
     selTeamNumber = savedSelTeam;
+
+#ifdef SWOS_DEBUG_AUTOSKIP
+    SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate EXIT (after all 4 AutoAdvance calls)");
+#endif
 
     /* Fall through to Career_HandleRetirement (bra.w *+4) */
     _Career_HandleRetirement();
@@ -3222,13 +3260,15 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
 
         if (bail) {
 #ifdef SWOS_DEBUG_AUTOSKIP
-            static int s_bad_state_logged = 0;
-            if (!s_bad_state_logged) {
-                s_bad_state_logged = 1;
-                SWOS_AUTOSKIP_LOG("[bug1] AutoAdvanceCompetition: bail (first occurrence) — "
+            /* Log up to 20 bails (not just first) so we can see whether the
+             * player's secondary/tertiary cups are bailing silently. */
+            static int s_bad_state_count = 0;
+            if (s_bad_state_count++ < 20) {
+                SWOS_AUTOSKIP_LOG("[bug1] AutoAdvanceCompetition: bail #%d — "
                                   "compPtr=%p ctx=%p compType=%u numTeams=%d "
                                   "totalMatchesInRound=%d reason='%s' "
                                   "bailTeamSelPtr=0x%08X",
+                                  s_bad_state_count,
                                   (void *)compPtr, (void *)ctx,
                                   (unsigned)compType,
                                   (int)numTeams, (int)totalInRound,
