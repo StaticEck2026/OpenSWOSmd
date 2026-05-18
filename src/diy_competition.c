@@ -1693,13 +1693,52 @@ static void getCurrentFixtureTeamPtrs(uint8_t **team1Out, uint8_t **team2Out)
     uint8_t *team2 = a0 + offsetB;
 
     /* Home/away swap if flag bit 0 is set */
-    if (a0[0x61] & 1) {  /* extended */
+    uint8_t swapFlag = (uint8_t)(a0[0x61] & 1);
+    if (swapFlag) {  /* extended */
         *team1Out = team2;
         *team2Out = team1;
     } else {
         *team1Out = team1;
         *team2Out = team2;
     }
+
+#ifdef SWOS_DEBUG_AUTOSKIP
+    {
+        DIYTeamStats *r1 = (DIYTeamStats *)(*team1Out + 0x2B4);
+        DIYTeamStats *r2 = (DIYTeamStats *)(*team2Out + 0x2B4);
+        int32_t selOff1 = (int32_t)r1->teamSelPtr;
+        int32_t selOff2 = (int32_t)r2->teamSelPtr;
+        uint16_t t1Id = 0, t2Id = 0;
+        uint8_t t1Ctrl = 0xFF, t2Ctrl = 0xFF;
+        uint8_t *sel1Ptr = (uint8_t *)&selTeamsPtr + selOff1;
+        uint8_t *sel2Ptr = (uint8_t *)&selTeamsPtr + selOff2;
+        const int32_t maxPositive = 64 * 684;
+        const int32_t maxNegative = -1 * 1024 * 1024;
+        int selOk1 = (selOff1 >= maxNegative && selOff1 <= maxPositive);
+        int selOk2 = (selOff2 >= maxNegative && selOff2 <= maxPositive);
+        if (selOk1) { t1Id = BE_READ_U16(sel1Ptr); t1Ctrl = sel1Ptr[4]; }
+        if (selOk2) { t2Id = BE_READ_U16(sel2Ptr); t2Ctrl = sel2Ptr[4]; }
+        SWOS_AUTOSKIP_LOG("[bug20-fixture] GetFixturePtrs compId=0x%04X subRound=%d "
+                          "matchesInRound=%d sectionProgress=%u posA=%u posB=%u "
+                          "gridA=%d gridB=%d swap=%u "
+                          "team1Off=0x%lx team2Off=0x%lx "
+                          "selOff1=%ld selOff2=%ld selOk1=%d selOk2=%d "
+                          "t1Id=0x%04X t1Ctrl=%u t2Id=0x%04X t2Ctrl=%u",
+                          (unsigned)*(uint16_t *)&a0s->compId,
+                          (int)a0s->subRoundCounter,
+                          (int)a0s->totalMatchesInRound,
+                          (unsigned)roundIdx,
+                          (unsigned)posA, (unsigned)posB,
+                          (int)gridIdxA, (int)gridIdxB,
+                          (unsigned)swapFlag,
+                          (unsigned long)(*team1Out - a0),
+                          (unsigned long)(*team2Out - a0),
+                          (long)selOff1, (long)selOff2,
+                          selOk1, selOk2,
+                          (unsigned)t1Id, (unsigned)t1Ctrl,
+                          (unsigned)t2Id, (unsigned)t2Ctrl);
+    }
+#endif
 }
 
 /* Globals for asm bridge — written by _DIY_GetCurrentFixtureTeamPtrs,
@@ -2961,6 +3000,23 @@ process_next:
     uint8_t *sel1 = &selTeamsPtr + ((DIYTeamStats *)(team1Comp + 0x2B4))->teamSelPtr;
     uint8_t *sel2 = &selTeamsPtr + ((DIYTeamStats *)(team2Comp + 0x2B4))->teamSelPtr;
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+    SWOS_AUTOSKIP_LOG("[bug20-fixture] RecLoop iter compId=0x%04X "
+                      "minSubs=%u curSlot=%u secMatchProg=%u matchesPerSecLive=%d "
+                      "sel1=%p t1=0x%04X ctrl1=%u sel2=%p t2=0x%04X ctrl2=%u "
+                      "namePtr=%p isFriendly=%d playEach=%u resultPtrOff=0x%lx",
+                      (unsigned)*(uint16_t *)&a6s->compId,
+                      (unsigned)a6Ex->minSubstitutes,
+                      (unsigned)a6Ex->leagueCurrentSlot,
+                      (unsigned)a6Ex->leagueSectionState.sectionMatchesProgress,
+                      (int)a6Ex->matchData.league.totalMatchesPerSectionLive,
+                      (void *)sel1, (unsigned)BE_READ_U16(sel1), (unsigned)sel1[4],
+                      (void *)sel2, (unsigned)BE_READ_U16(sel2), (unsigned)sel2[4],
+                      (void *)a6s->namePtr, (int)(a6s->namePtr == aFriendly),
+                      (unsigned)a6s->playEachTeam,
+                      (unsigned long)(resultPtr - cache));
+#endif
+
     /* Check if team1 is human-controlled (category == 1) and write
      * the home/away marker to fixture[+0x0A].
      *
@@ -2978,6 +3034,13 @@ process_next:
     if (sel1[4] == 1) {
         if (sel2[4] == 1) {
             /* Both human — skip recording */
+#ifdef SWOS_DEBUG_AUTOSKIP
+            SWOS_AUTOSKIP_LOG("[bug20-fixture]   SKIP both-human compId=0x%04X "
+                              "t1=0x%04X t2=0x%04X",
+                              (unsigned)*(uint16_t *)&a6s->compId,
+                              (unsigned)BE_READ_U16(sel1),
+                              (unsigned)BE_READ_U16(sel2));
+#endif
             goto check_continue;
         }
         if (a6s->namePtr == aFriendly || a6s->playEachTeam != 1) {
@@ -3004,6 +3067,15 @@ process_next:
      * the original Amiga produced. */
     BE_WRITE_U16(resultPtr + 0x0C, BE_READ_U16(sel1));
     BE_WRITE_U16(resultPtr + 0x0E, BE_READ_U16(sel2));
+#ifdef SWOS_DEBUG_AUTOSKIP
+    SWOS_AUTOSKIP_LOG("[bug20-fixture]   WROTE compId=0x%04X resultOff=0x%lx "
+                      "t1=0x%04X t2=0x%04X marker=%u",
+                      (unsigned)*(uint16_t *)&a6s->compId,
+                      (unsigned long)(resultPtr - cache),
+                      (unsigned)BE_READ_U16(sel1),
+                      (unsigned)BE_READ_U16(sel2),
+                      (unsigned)resultPtr[0x0A]);
+#endif
     resultPtr += 0x0C;
 
 check_continue:
