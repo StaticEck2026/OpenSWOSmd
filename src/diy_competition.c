@@ -3083,16 +3083,31 @@ check_continue:
     if (a6Ex->leagueCurrentSlot == 0)
         goto process_next;
     if (a6Ex->minSubstitutes != 0) {
-        /* More to process — continue searching cache */
-        cache += *(uint16_t *)(cache + 2);
-        cacheCount--;
-        if (cacheCount >= 0) {
-            if (cache[0] == compId) {
-                if (a6s->hasGroups == 0 || cache[7] == (uint8_t)curRound) {
-                    resultPtr = cache;
-                    goto process_next;
-                }
-            }
+        /* Asm (SWOS2.s loc_12D2AA): `adda.w 2(a4),a4; dbf d7,loc_12D29A`
+         * — walks subsequent cache entries one-by-one until a matching
+         * entry is found, panicking 0x7777 only if all entries are
+         * exhausted with no match. Our previous SDL translation only
+         * advanced ONE entry and exited silently on miss, which broke
+         * multi-round processing for hasGroups (Champions Cup group
+         * stage): after round 0's cache entries were exhausted, the
+         * walker stopped at round 1's first entry (cache[7]!=curRound)
+         * and exited, leaving rounds 2+ unprocessed. Tester report:
+         * only the first CL group match showed on the career main
+         * screen — schedule "jumps from the match before to the match
+         * after" because rounds 2-6 had team IDs zero. Loop until match
+         * found or cache exhausted, matching the asm. */
+        for (;;) {
+            cache += *(uint16_t *)(cache + 2);
+            cacheCount--;
+            if (cacheCount < 0)
+                return;  /* Asm panics here; in our path the wider career
+                          * flow continues, so exit silently. */
+            if (cache[0] != compId)
+                continue;
+            if (a6s->hasGroups != 0 && cache[7] != (uint8_t)curRound)
+                continue;
+            resultPtr = cache;
+            goto process_next;
         }
     }
 }
