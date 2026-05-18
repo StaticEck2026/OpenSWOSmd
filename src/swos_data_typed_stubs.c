@@ -260,17 +260,10 @@ uint8_t currentCompetitionId  = 0;
  * legs(0), extraTime(2), penalties(4), ptsForWin(6), playCount(8). */
 DIYStage diyTournamentStages[6];
 
-/* diyTournamentCompetition: a third DIY_Competition struct living at
- * Amiga BSS offset 0x2DAD0 — same layout as `diyCompetitionStart` but
- * used by the TOURNAMENT designer (designDiyTournamentMenu). The Amiga
- * label was unnamed (referenced as `lea ($2DAD0).l,a0` in disasm) so
- * the auto-extractor never created a symbol; the menu data hardcodes
- * `dc.l $2DAD4` as the competitionName text pointer (offset 4 of the
- * struct), and that literal got faithfully copied into menu_data.c as
- * `(int8_t*)0x2DAD4` — pointing at unmapped memory in our build. Give
- * it a real DIYCompetitionEx allocation here and have menu_data.c
- * reference `&diyTournamentCompetition.base.competitionName` instead. */
-DIYCompetitionEx diyTournamentCompetition;
+/* diyTournamentCompetition: aliased to diyFileBufferCopyBuf in
+ * swos_globals.c (must live in the same TU as the diyFileBufferCopyBuf
+ * definition for .equ to resolve). See the comment there for the full
+ * BSS_00_2DAD0 disassembler-split story. */
 /* diyCompetitionMenu: real packed-menu blob in menu_data.c (same
  * auto-extractor mis-classification as diskMenu). */
 uint8_t nationalityOrdinal  = 0;

@@ -919,6 +919,23 @@ __asm__(".globl " _ASM_PFX "diyCompetitionStartBuf\n"
 __asm__(".globl " _ASM_PFX "diyCompetitionStart\n"
         ".equ   " _ASM_PFX "diyCompetitionStart, " _ASM_PFX "diyCompetitionStartBuf\n");
 
+/* diyTournamentCompetition: the designDiyTournamentMenu's title text
+ * pointer was hardcoded in the Amiga binary to `dc.l $2DAD4`, which is
+ * `diyFileBufferCopy + 4` — i.e. the competitionName field of the
+ * already-populated tournament file buffer. The IDA disassembler split
+ * the first 28 bytes of diyFileBufferCopy into a phantom
+ * `BSS_00_2DAD0` label because no asm path accesses that prefix
+ * directly, so the auto-extractor never resolved $2DAD4 to a named
+ * struct field. The SDL port worked around this by giving
+ * `diyTournamentCompetition` its own DIYCompetitionEx allocation —
+ * but nothing ever writes to that struct, so the View Competitions >
+ * European Cup > Competition Info title rendered blank instead of
+ * "EUROPEAN CHAMPIONS CUP". Alias it onto diyFileBufferCopyBuf so the
+ * cup-data copy that already lands in diyFileBufferCopy is visible to
+ * the menu via diyTournamentCompetition.base.competitionName. */
+__asm__(".globl " _ASM_PFX "diyTournamentCompetition\n"
+        ".equ   " _ASM_PFX "diyTournamentCompetition, " _ASM_PFX "diyFileBufferCopyBuf\n");
+
 /* competitionFileBuffer: overlays careerFileBufferBuf at offset 93308.
  * Aliased in swos_globals_career_overlay.c. The 4 KB standalone backing
  * buffer that used to live here meant DIY/preset writes never reached
