@@ -1507,7 +1507,16 @@ static int16_t EncodeCompetitionPositionForSeasonInfo_impl(
     int16_t pos, uint8_t *compBuf, uint8_t *compDef)
 {
     int16_t d1 = pos + 1;
-    uint8_t type = compBuf[1]; /* low byte of competitionType (big-endian int16) */
+    /* Asm reads `1(a6)` — on m68k BE that's the LOW byte of the uint16
+     * competitionType (the actual 0/1/2 enum value). On x86 LE the
+     * byte at offset 1 is the HIGH byte, always zero for legal types,
+     * so the previous translation collapsed every comp into the league
+     * path and produced positional results (1, 2, ...) for cups
+     * instead of the negative -100/-101/-102 codes the renderer turns
+     * into WINNERS/RUNNER-UP/REACHED SEMI-FINAL labels. Same family as
+     * the AutoAdvance dispatch fix in `_Career_AutoAdvanceCompetition
+     * AndPersistSlotState` — see project memory `low-byte-of-uint16-field`. */
+    uint8_t type = (uint8_t)*(uint16_t *)compBuf;
 
     if (type == 0) {
         /* --- League path --- */
