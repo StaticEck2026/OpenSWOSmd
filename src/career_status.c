@@ -3194,8 +3194,14 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
 
     _Career_LoadCompetitionSlotStateFromBuffer(ctx);
 
-    /* Dispatch by competition type (byte at offset 1) */
-    uint8_t compType = ctx[1];
+    /* Dispatch by competition type. The asm reads `1(a0)` which on m68k
+     * BE is the LOW byte of the uint16 type word — i.e. the actual type
+     * value (0=league, 1=cup, 2=hybrid). On x86 LE the same byte index
+     * picks the HIGH byte instead, which is always zero for legal types,
+     * so the previous `ctx[1]` always evaluated to 0 and every comp was
+     * mis-dispatched to AutoAdvanceLeagueFixtures. Read as a host-native
+     * uint16 and take the low byte — works on both endians. */
+    uint8_t compType = (uint8_t)*(uint16_t *)ctx;
 
     /* Sanity-check the loaded competition state. If numTeams or
      * totalMatchesInRound is out of range, the context buffer was
@@ -3228,22 +3234,35 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
         } else if (totalInRound <= 0 || totalInRound > 32) {
             bail = 1;
             bailReason = "totalMatchesInRound out of range";
-        } else {
-            /* Also validate the standings table at diyCompetitionStart+0x2B4.
-             * Each row is 18 bytes; teamSelPtr at offset 0 of each row is a
-             * SIGNED byte-offset into selTeamsPtr. Positive offsets index
-             * forward through the selected-teams array (numSelectedTeams *
-             * 684, typically < 50 KB); negative offsets are legitimate too
-             * — careerTeam lives BELOW selTeamsPtr in memory, so its
-             * standings row stores a negative offset (e.g. -42288 = 0xFFFF5AD0
-             * when read as uint32). The previous unsigned check incorrectly
-             * lumped those legit negatives in with the 17 MB corruption that
-             * originally motivated the validator: PostMatchUpdate then bailed
-             * out of auto-advancing the player's competitions after a sack,
-             * leaving the cups frozen at SF / FINAL in the season-end loop.
-             * Use a sign-aware range: still catches the 17 MB positive
-             * corruption and any wild negative, but accepts plausible
-             * careerTeam offsets up to ~1 MB backward. */
+        } else if (compType == 0) {
+            /* Standings-row validation only applies to LEAGUE comps
+             * (type=0). For cup (type=1) and hybrid (type=2) comps,
+             * `diyCompetitionStart+0x2B4` overlays diyCupTeamIds /
+             * diyTeamGridPairings / diyTeamShuffleOrder / audioInstrumentBank
+             * — see project memory `diycomp_league_table_overlay`. Reading
+             * the first 4 bytes of that region as an int32 "teamSelPtr"
+             * for a cup yields garbage like 0x0D0C0B0A (sequential team
+             * grid indices), which would fail any sane offset range and
+             * mis-flag the cup as corrupt. The Coppa Italia and European
+             * Cup post-sack auto-advance regressions trace to exactly
+             * this false positive: Playaveli's repro showed bail #1
+             * compType=0 numTeams=32 bailTeamSelPtr=0x1A151E0B (Coppa)
+             * and bail #2 compType=0 numTeams=8 bailTeamSelPtr=0x0D0C0B0A
+             * (CL hybrid). Both reports had compType=0 wrongly because
+             * of the byte-order bug fixed above; with the real type now
+             * dispatched correctly, this guard naturally limits itself
+             * to leagues where the standings rows actually exist.
+             *
+             * Each row is 18 bytes; teamSelPtr at offset 0 is a SIGNED
+             * byte-offset into selTeamsPtr. Positive offsets index
+             * forward through the selected-teams array (numSelectedTeams
+             * * 684, typically < 50 KB); negative offsets are legitimate
+             * too — careerTeam lives BELOW selTeamsPtr in memory, so its
+             * standings row stores a negative offset (e.g. -42288 =
+             * 0xFFFF5AD0 when read as uint32). Use a sign-aware range
+             * that catches the 17 MB-class corruption that motivated
+             * the validator but accepts plausible careerTeam offsets up
+             * to ~1 MB backward. */
             const int32_t maxPositive = 64 * 684;
             const int32_t maxNegative = -1 * 1024 * 1024;
             uint8_t *rowsBase = (uint8_t *)&diyCompetitionStart + 0x2B4;
