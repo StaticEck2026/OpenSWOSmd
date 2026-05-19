@@ -523,6 +523,14 @@ void _ClearCareerMatchPlayerStatusBucket(void) {
  * ================================================================ */
 __attribute__((used, externally_visible))
 uint16_t _IsPlayerInjured(PlayerFile *playerFile, int16_t mode) {
+#ifdef SWOS_TEST_NO_INJURIES_CARDS
+    /* Beta-test mode: nobody is ever unavailable, regardless of what's
+     * persisted in cardsInjuries. Catches any injury/card/bucket source
+     * the per-write-site gates may have missed (loaded saves with
+     * pre-existing injury bits, edit-tactics writes, etc.). */
+    (void)playerFile; (void)mode;
+    return 0;
+#endif
     PlayerFile *pf = &playerFile[2];
     uint8_t ci = pf->cardsInjuries;
 
