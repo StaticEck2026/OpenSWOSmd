@@ -338,6 +338,13 @@ static void AssignSimulatedGoalsToScorers(TeamFileEx *team, uint8_t *remapTable,
 static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTable) {
     if (trainingGame) return;
     if (team->team.teamControls == 1) return;
+#ifdef SWOS_TEST_NO_INJURIES_CARDS
+    /* Beta-test mode: never assign post-match injuries / cards so the
+     * tester can VIEW RESULT through a season without substitution
+     * prompts. */
+    (void)remapTable;
+    return;
+#endif
 
     /* Get number of available players */
     uint32_t result = _GetNumberOfAvailablePlayers((uint8_t *)team, -1, 0);

@@ -120,6 +120,15 @@ ifdef SWOS_DEBUG
 DEBUG_FLAGS := -DSWOS_DEBUG_AUTOSKIP=1 -DSWOS_DEBUG_SFX=1
 endif
 
+# Beta-testing convenience: build with `make SWOS_TEST_NO_INJURIES_CARDS=1`
+# to suppress in-match yellow/red cards and post-match random injuries.
+# Lets the tester hit VIEW RESULT uninterruptedly through a season — no
+# substitution menus, no booking prompts. Intentionally compile-time only
+# so production builds never accidentally ship with it on.
+ifdef SWOS_TEST_NO_INJURIES_CARDS
+DEBUG_FLAGS += -DSWOS_TEST_NO_INJURIES_CARDS=1
+endif
+
 CFLAGS  := $(ARCHFLAGS) -O2 -g -std=gnu11 -fno-strict-aliasing -fno-builtin \
            -D_FILE_OFFSET_BITS=64 $(DEBUG_FLAGS) \
            -Wall -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable \
