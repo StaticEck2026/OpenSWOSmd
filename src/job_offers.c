@@ -750,7 +750,13 @@ void _JobOffersFinish(void)
     _JobOffers_UpdateMenuEntryLayout();
 }
 
-/* JobOffersCommon — handle clicking on a new job offer entry (SWOS2.s line 81281) */
+/* JobOffersCommon — handle clicking on a new job offer entry (SWOS2.s line 81281).
+ * Asm flow: ACCEPT or no-offers-left → SetExitMenuFlag (close the JOB
+ * OFFERS menu); otherwise SetCurrentEntry(0xC). Our previous translation
+ * only set the exit flag on the ACCEPT branch and silently fell through
+ * for "all offers rejected, list now empty" — leaving the JOB OFFERS
+ * menu open with disabled (but still selectable) blank rows that
+ * re-fired _JobOffersCommon on the stale newJobOffers[0] entry. */
 __attribute__((used, externally_visible))
 void _JobOffersCommon(MenuEntry *entry)
 {
@@ -768,9 +774,11 @@ void _JobOffersCommon(MenuEntry *entry)
         _SetCurrentEntry(0xC);
         return;
     }
+    _SetExitMenuFlag();
 }
 
-/* OldJobOffersCommon — handle clicking on an old job offer entry (SWOS2.s line 81305) */
+/* OldJobOffersCommon — handle clicking on an old job offer entry (SWOS2.s line 81305).
+ * Mirror exit semantics of JobOffersCommon — see comment above. */
 __attribute__((used, externally_visible))
 void _OldJobOffersCommon(MenuEntry *entry)
 {
@@ -788,6 +796,7 @@ void _OldJobOffersCommon(MenuEntry *entry)
         _SetCurrentEntry(0xC);
         return;
     }
+    _SetExitMenuFlag();
 }
 
 /* JobOffersExit — remove expired offers and exit menu (SWOS2.s line 81328) */
