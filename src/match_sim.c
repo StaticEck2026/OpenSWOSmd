@@ -503,10 +503,21 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
 /* ================================================================
  * InitPlayerRemapTableForTeam
  * Assigns random status buckets to players based on match factors.
+ * The status bucket lives in cardsInjuries bits 5-7; _IsPlayerInjured
+ * returns "injured" for any bucket above the minor (0x20) tier, so this
+ * function is a second source of post-match unavailability that the
+ * substitution / VIEW RESULT prompt treats the same as a real injury.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _InitPlayerRemapTableForTeam(TeamFileEx *team, uint8_t *remapTable) {
     if (team->team.teamControls == 1) return;
+#ifdef SWOS_TEST_NO_INJURIES_CARDS
+    /* Beta-test mode: never assign post-match status buckets so the
+     * tester can VIEW RESULT through a season without IsPlayerInjured
+     * flagging anyone unavailable. */
+    (void)remapTable;
+    return;
+#endif
 
     uint32_t result = _GetNumberOfAvailablePlayers((uint8_t *)team, -1, 0);
     uint16_t availCount = (uint16_t)(result >> 16); /* d6 */
