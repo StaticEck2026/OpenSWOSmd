@@ -219,9 +219,16 @@ void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest)
      * Use PACK_BE_U16 so both builds produce the BE-flavour id every other
      * site (findTeamInCache / _VerifyTeamLoaded etc.) compares against. */
     volatile uint8_t *src = (volatile uint8_t *)&selTeamsPtr;
-    volatile uint16_t *dst = (volatile uint16_t *)dest;
+    uint8_t *dst = dest;
     for (int16_t i = (int16_t)(count - 1); i >= 0; i--) {
-        *dst++ = PACK_BE_U16(src[0], src[1]);
+        /* Asm `move.w (a0),(a1)+` preserves the BE `{country, ordinal}`
+         * byte pair to dst on m68k. Use BE_WRITE_U16 so dst ends up
+         * with the same in-memory layout on LE — matching the
+         * BE-packed convention the diyLeagueTeamIds / diyCupTeamIds /
+         * diyTournamentTeamIds arrays use and that
+         * _DIY_ComputeAverageTeamStrengthTier consumes via BE_READ_U16. */
+        BE_WRITE_U16(dst, PACK_BE_U16(src[0], src[1]));
+        dst += 2;
         src += sizeof(TeamFileEx);
     }
 }
@@ -764,11 +771,17 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
         }
     }
 
-    /* Phase 3: Copy resolved team IDs (LE-native) to the output. The
-     * output is also consumed by code that reads it as native uint16,
-     * so write in native order. */
-    for (i = 0; i < count; i++)
-        *out++ = teamIdsLE[i];
+    /* Phase 3: Copy resolved team IDs to the output. The output arrays
+     * (diyLeagueTeamIds / diyCupTeamIds / diyTournamentTeamIds) hold
+     * BE-packed `{country, ordinal}` byte pairs — the same convention
+     * the static dc.b competition data uses and that downstream code
+     * like _DIY_ComputeAverageTeamStrengthTier reads via BE_READ_U16
+     * to match m68k `move.w` semantics. Write BE bytes so both endians
+     * land at the same in-memory layout the asm produces. */
+    for (i = 0; i < count; i++) {
+        BE_WRITE_U16(out, teamIdsLE[i]);
+        out++;
+    }
 }
 
 /* ================================================================

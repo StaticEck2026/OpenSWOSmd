@@ -596,21 +596,24 @@ void _DIY_SortLeagueTableByStandings(void)
 __attribute__((used, externally_visible))
 uint32_t _DIY_ComputeAverageTeamStrengthTier(uint16_t count, uint8_t *table)
 {
-    uint16_t *teamIds = (uint16_t *)table;
     uint16_t totalPlayers = count * 16;
     uint32_t totalSkill = 0;
 
     for (int16_t t = (int16_t)count - 1; t >= 0; t--) {
-        /* table holds LE-host-native uint16 packed ids — the format
-         * _AppendTeamsToSelectionFromTmdOrTeamFile and _CopySelectedTeamNumbers
-         * write (`*dst++ = teamIdsLE[i]` / host-native PACK_BE_U16 value).
-         * The previous BE_READ_U16 fix (9c530d7) only matched stale
-         * BE-byte data persisted by older builds in pre-fix saves —
-         * fresh writes by current code use host-native, so the BE read
-         * came out byte-swapped on LE (Playaveli's GERMANY second-
-         * season repro: VerifyTeamLoaded(0x1D50) panic on bytes 1D 50
-         * that the writer intended as the LE-host uint16 0x501D). */
-        TeamFileEx *tf = _VerifyTeamLoaded(teamIds[t]);
+        /* table holds BE-packed `{country, ordinal}` byte pairs — the
+         * asm-faithful format used by static dc.b competition data and
+         * runtime writers that mirror m68k `move.w` semantics (16-bit
+         * BE stores). Asm `move.w (a0,d0.w),d0` returns the packed
+         * `(country<<8)|ordinal` id; host-native `teamIds[t]` flips the
+         * bytes on LE. Use BE_READ_U16 for the m68k-compatible read.
+         *
+         * (Earlier revert was wrong: the LE-byte tables that surfaced
+         * via Playaveli's intermediate crash were produced by a
+         * separate writer-side bug; this read site needs to stay
+         * asm-faithful — that's what the live data in europeanChampi
+         * 2Copy.unk1 → diyTournamentTeamIds copy uses.) */
+        uint16_t teamId = BE_READ_U16(table + (uint16_t)t * 2);
+        TeamFileEx *tf = _VerifyTeamLoaded(teamId);
         /* Read skill byte at offset 0x6C for each of 16 players, stride 0x26 (38) */
         for (int16_t p = 15; p >= 0; p--) {
             totalSkill += (uint8_t)tf->players[p].price;
