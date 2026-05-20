@@ -596,21 +596,21 @@ void _DIY_SortLeagueTableByStandings(void)
 __attribute__((used, externally_visible))
 uint32_t _DIY_ComputeAverageTeamStrengthTier(uint16_t count, uint8_t *table)
 {
+    uint16_t *teamIds = (uint16_t *)table;
     uint16_t totalPlayers = count * 16;
     uint32_t totalSkill = 0;
 
     for (int16_t t = (int16_t)count - 1; t >= 0; t--) {
-        /* Table holds BE-packed `{country, ordinal}` byte pairs (the
-         * same layout used in diyTournamentTeamIds / diyCupTeamIds and
-         * the static competition team lists). Asm `move.w (a0,d0.w),d0`
-         * gives the packed id on m68k BE; host-native `teamIds[t]`
-         * flips the bytes on LE. Surfaced via Playaveli's GERMANY
-         * second-season CONTINUE CAREER repro: VerifyTeamLoaded(0x2950)
-         * panic — diyTournamentTeamIds started with `50 25 50 23 50 29`
-         * (national-team ids 0x5025 / 0x5023 / 0x5029) and the LE read
-         * flipped 0x5029 to 0x2950. */
-        uint16_t teamId = BE_READ_U16(table + (uint16_t)t * 2);
-        TeamFileEx *tf = _VerifyTeamLoaded(teamId);
+        /* table holds LE-host-native uint16 packed ids — the format
+         * _AppendTeamsToSelectionFromTmdOrTeamFile and _CopySelectedTeamNumbers
+         * write (`*dst++ = teamIdsLE[i]` / host-native PACK_BE_U16 value).
+         * The previous BE_READ_U16 fix (9c530d7) only matched stale
+         * BE-byte data persisted by older builds in pre-fix saves —
+         * fresh writes by current code use host-native, so the BE read
+         * came out byte-swapped on LE (Playaveli's GERMANY second-
+         * season repro: VerifyTeamLoaded(0x1D50) panic on bytes 1D 50
+         * that the writer intended as the LE-host uint16 0x501D). */
+        TeamFileEx *tf = _VerifyTeamLoaded(teamIds[t]);
         /* Read skill byte at offset 0x6C for each of 16 players, stride 0x26 (38) */
         for (int16_t p = 15; p >= 0; p--) {
             totalSkill += (uint8_t)tf->players[p].price;
