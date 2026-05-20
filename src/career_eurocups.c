@@ -615,7 +615,11 @@ void _Career_UpdateEuropeanChampionshipCompetitions(void)
     uint8_t *a5 = europeanChampionships2Copy;
     uint8_t offset = a5[7];
     a5 = a5 + 7 + offset;
-    *(uint16_t *)a5 = euroChampionshipQualTeam;
+    /* Asm `move.w euroChampionshipQualTeam,(a5)+` writes BE on m68k.
+     * Use BE_WRITE_U16 so the destination byte order matches the rest
+     * of europeanChampionships2Copy.unk1 (BE-packed `{country, ordinal}`
+     * per the 4e5f378 convention). */
+    BE_WRITE_U16(a5, euroChampionshipQualTeam);
     a5 += 2;
 
     /* a5 is preserved across slot calls (asm bridge saves/restores a2-a6).
@@ -677,7 +681,9 @@ void _Career_UpdateWorldCupCompetitions(void)
     uint8_t *a5 = worldCup2Copy;
     uint8_t offset = a5[7];
     a5 = a5 + 7 + offset;
-    *(uint16_t *)a5 = worldCupHostTeam;
+    /* BE write — matches the eurochampionship variant above and the
+     * BE-packed convention for *.unk1 team-id lists (4e5f378). */
+    BE_WRITE_U16(a5, worldCupHostTeam);
     a5 += 2;
 
     /* a5 is preserved across slot calls (asm bridge saves/restores a2-a6) */

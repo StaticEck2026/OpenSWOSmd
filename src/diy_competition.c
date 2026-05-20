@@ -247,15 +247,18 @@ void _DIY_SortAndShuffleTeamsByValue(uint8_t *diy, uint8_t *slot)
     for (int16_t outer = (int16_t)numTeams - 2; outer >= 0; outer--) {
         uint8_t *p = teamIndices;
         for (int16_t inner = outer; inner >= 0; inner--) {
-            /* Get avg price for team at p[0] */
+            /* Get avg price for team at p[0]. teamIds (at diy+0x9A =
+             * diyTournamentTeamIds) is BE-packed per the 4e5f378
+             * convention; use BE_READ_U16 so the value passed to
+             * VerifyTeamLoaded is the packed `(country<<8)|ordinal`. */
             int16_t idx0 = (int8_t)p[0];
-            uint16_t teamNum0 = teamIds[idx0];
+            uint16_t teamNum0 = BE_READ_U16(&teamIds[idx0]);
             TeamFileEx *team0 = _VerifyTeamLoaded(teamNum0);
             uint16_t price0 = _GetAveragePlayerPrice(team0);
 
             /* Get avg price for team at p[1] */
             int16_t idx1 = (int8_t)p[1];
-            uint16_t teamNum1 = teamIds[idx1];
+            uint16_t teamNum1 = BE_READ_U16(&teamIds[idx1]);
             TeamFileEx *team1 = _VerifyTeamLoaded(teamNum1);
             uint16_t price1 = _GetAveragePlayerPrice(team1);
 
@@ -494,7 +497,9 @@ void _DIY_CacheSelectedTeamPointers(void)
 
     for (int16_t i = (int16_t)count - 1; i >= 0; i--) {
         int8_t idx = (int8_t)teamIndices[i];
-        uint16_t teamNum = teamIds[(uint16_t)(int16_t)idx];
+        /* leagueTeamIds stores BE-packed `{country, ordinal}` byte
+         * pairs to match the asm-faithful layout (see 4e5f378). */
+        uint16_t teamNum = BE_READ_U16(&teamIds[(uint16_t)(int16_t)idx]);
         TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
 
         /* Store relative pointer: teamPtr - &selTeamsPtr (asm: suba.l #selTeamsPtr,a0) */
@@ -2031,8 +2036,8 @@ void _DIY_ApplyPromotionRelegationWeightsToScratch(const uint8_t *weights)
         int8_t weight = (int8_t)w[idx];
 
         if (weight != 0) {
-            /* Look up team ID from cup team IDs */
-            uint16_t teamId = diyCupTeamIds[idx];
+            /* Look up team ID from cup team IDs (BE-packed per 4e5f378). */
+            uint16_t teamId = BE_READ_U16(&diyCupTeamIds[idx]);
             /* VerifyTeamLoaded returns the team pointer */
             TeamFileEx *team = _VerifyTeamLoaded(teamId);
             /* Add weight to scratch at country number index */
@@ -3921,7 +3926,8 @@ build_comp_list:
 
         for (; count >= 0; count--) {
             uint16_t idx = (uint8_t)*teamList++;
-            uint16_t teamNum = teamIds[idx];
+            /* teamIds (diy+0x9A = diyTournamentTeamIds) is BE-packed. */
+            uint16_t teamNum = BE_READ_U16(&teamIds[idx]);
             TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
             if (teamPtr->team.teamControls != 1) {
                 diyS->hasGroups += 1;
@@ -8774,9 +8780,12 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
             uint16_t *teamIds = (uint16_t *)(a6 + 0x9A);
             uint16_t d1 = 0;
 
-            /* Find seedId in team list */
+            /* Find seedId in team list. teamIds (a6+0x9A =
+             * diyTournamentTeamIds) is BE-packed; compare against the
+             * BE_READ_U16 seedId so both sides are in the same
+             * packed-value space on either host endian. */
             while (d1 < numTeams16) {
-                if (*teamIds == seedId)
+                if (BE_READ_U16(teamIds) == seedId)
                     break;
                 teamIds++;
                 d1++;
