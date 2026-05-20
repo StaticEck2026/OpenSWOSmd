@@ -1416,7 +1416,8 @@ static void decrementMissingIfNotLoaded(uint8_t *comp, uint16_t *teamIds, uint16
 {
     DIYCompetition *compS = (DIYCompetition *)comp;
     gridByte &= 0xFF;
-    uint16_t teamNum = teamIds[gridByte];
+    /* teamIds is cupTeamIds — BE-packed per 4e5f378. */
+    uint16_t teamNum = BE_READ_U16(&teamIds[gridByte]);
     TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
     if (teamPtr->team.teamControls != 1) {
         compS->roundIterator -= 1;
@@ -1505,10 +1506,12 @@ void _DIY_BuildTeamSelectionPointerCache(void)
     uint16_t *teamIds = comp->cupTeamIds;
     uint16_t count = (uint16_t)a2s->numTeams;
 
-    /* Part 1: build relative pointer cache (teamPtrTable inside bracketScratch) */
+    /* Part 1: build relative pointer cache (teamPtrTable inside
+     * bracketScratch). cupTeamIds holds BE-packed `{country, ordinal}`
+     * byte pairs (4e5f378 convention) — read via BE_READ_U16. */
     for (int16_t i = (int16_t)count - 1; i >= 0; i--) {
         int16_t gridIdx = (int8_t)*gridPtr++;   /* ext.w d6: sign-extend */
-        uint16_t teamNum = teamIds[gridIdx];
+        uint16_t teamNum = BE_READ_U16(&teamIds[gridIdx]);
         TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
         uint32_t relPtr = (uint32_t)((uint8_t *)teamPtr - &selTeamsPtr);
         comp->bracketScratch.teamPtrTable[(uint16_t)gridIdx] = relPtr;
@@ -1522,7 +1525,7 @@ void _DIY_BuildTeamSelectionPointerCache(void)
 
     for (int16_t j = (int16_t)count - 1; j >= 0; j--) {
         uint16_t gridByte = (uint8_t)*gridPtr++;
-        uint16_t teamNum = teamIds[gridByte];
+        uint16_t teamNum = BE_READ_U16(&teamIds[gridByte]);
         TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
         if (teamPtr->team.teamControls != 1) {
             a2s->roundIterator += 1;
@@ -4256,7 +4259,8 @@ void _DIY_InitCupFromTeamGridAndValidateTeams(void)
 
     for (int16_t i = (int16_t)numTeams - 1; i >= 0; i--) {
         uint16_t idx = (uint8_t)*orderList++;
-        uint16_t teamNum = teamGrid[idx];
+        /* teamGrid (cupTeamIds) is BE-packed per 4e5f378. */
+        uint16_t teamNum = BE_READ_U16(&teamGrid[idx]);
         TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
         if (teamPtr->team.teamControls != 1) {
             a2s->roundIterator += 1;
@@ -9301,7 +9305,9 @@ league_search:
             d1 += 2;
             int16_t rawIdx = *(int16_t *)(raw + 110 + d1);
             uint16_t teamIdx = (uint16_t)((uint32_t)(int32_t)rawIdx / 18u);
-            if (leagueTeamIds[teamIdx] == teamNo)
+            /* leagueTeamIds is BE-packed (4e5f378) — compare against
+             * host-native teamNo via BE_READ_U16. */
+            if (BE_READ_U16(&leagueTeamIds[teamIdx]) == teamNo)
                 return (uint16_t)(d1 >> 1);
         }
         goto not_found;
@@ -9320,7 +9326,8 @@ cup_search:
         while (rem-- > 0) {
             d1++;
             int16_t idx = (int16_t)(int8_t)cupIndexTable[d1];
-            if (cupTeamIds[idx] == teamNo) {
+            /* cupTeamIds is BE-packed (4e5f378). */
+            if (BE_READ_U16(&cupTeamIds[idx]) == teamNo) {
                 /* Found in cup — post-processing */
                 if (comp->competitionFinished != 0 && (uint16_t)d1 < 2) {
                     /* Group stage, position 0 or 1 */
@@ -9364,7 +9371,8 @@ tournament_entry:
         while (rem-- > 0) {
             d1++;
             int16_t idx = (int16_t)(int8_t)tournIndexTable[d1];
-            if (tournTeamIds[idx] == teamNo) {
+            /* tournTeamIds is BE-packed (4e5f378). */
+            if (BE_READ_U16(&tournTeamIds[idx]) == teamNo) {
                 /* Found in tournament */
                 uint16_t stageConfig = (uint16_t)comp->roundComplete;
                 uint16_t stageOffset = stageConfig * 118;
@@ -10623,7 +10631,10 @@ final_or_groups:
         if (a3Ex->matchData.cup.cupRoundResults[0] & 0x01)
             slotIdx = (int8_t)a3Ex->teamGridPairings[1]; /* second grid slot */
         int16_t slotWord = (int16_t)slotIdx;
-        baseS->resultCode = (int16_t)a3Ex->cupTeamIds[slotWord];
+        /* cupTeamIds is BE-packed (4e5f378) — read the winner's id
+         * with BE_READ_U16 so resultCode holds the packed value
+         * downstream comparisons expect. */
+        baseS->resultCode = (int16_t)BE_READ_U16(&a3Ex->cupTeamIds[slotWord]);
     }
 
     return 0;
