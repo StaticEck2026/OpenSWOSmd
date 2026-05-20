@@ -573,10 +573,19 @@ void _Career_SortTeamFilePtrsByAvgPlayerPrice(uint16_t extNumber)
     /* Copy sorted team IDs back to start of teamSortBuffer.
      * The asm uses a6 (teamSortBuffer) as both source (pointer array) and dest (ID array).
      * The pointers are 4 bytes each; IDs are 2 bytes. Since we write IDs sequentially and
-     * read pointers sequentially, and 2 < 4, the writes don't corrupt unread pointers. */
+     * read pointers sequentially, and 2 < 4, the writes don't corrupt unread pointers.
+     *
+     * Each TeamFileEx's leading 2 bytes are the BE-packed team id
+     * `{countryByte, ordinalByte}` (offsets 0/1 of TeamFile). Asm
+     * `move.w (a1),(a6)+` reads that as a single uint16 on m68k BE.
+     * Host-native `*(uint16_t *)` on x86 LE flips the bytes — Playaveli's
+     * GERMANY.CAR EC-qualifying-year repro then crashed in
+     * VerifyTeamLoaded(0x1150) because the European national-team
+     * 0x5011 came out byte-swapped here. Use BE_READ_U16 so the in-memory
+     * uint16 we store is the packed-id form downstream code expects. */
     uint16_t *idBuf = (uint16_t *)teamSortBuffer;
     for (i = 0; i < count; i++) {
-        idBuf[i] = *(uint16_t *)((uint8_t *)sortBuf[i]);
+        idBuf[i] = BE_READ_U16((uint8_t *)sortBuf[i]);
     }
 }
 
