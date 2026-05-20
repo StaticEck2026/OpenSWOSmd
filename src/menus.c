@@ -5932,7 +5932,19 @@ extern void _Career_RemoveInternationalPlayersByMask(uint32_t removeMask);
 
 /* SelectNationalTeamInit — onInit for the national team selection menu.
  * Clears remove mask and pending add flag. If squad not full, enables
- * "add player" button (entry 3). */
+ * "add player" button (entry 3).
+ *
+ * Asm SelectNationalTeamInit ends with `bra.w *+4` — a literal
+ * branch-to-PC+4 that on Amiga's sequential code layout falls through
+ * into the SelectNationalTeamFinish function laid out immediately
+ * after. So Init implicitly chains into Finish, which is what
+ * populates the menu title ("GERMANY SQUAD") and the
+ * "SELECT N MORE INTERNATIONAL SQUAD PLAYERS" subtitle via
+ * Career_UpdateNationalTeamMenuEntries. Our C translation initially
+ * treated Init and Finish as two separate callbacks, so on first show
+ * the title stayed at the "STDMENUTEXT" placeholder and the red
+ * subtitle bar said "TO REPLACE" (Playaveli's GERMANY.CAR SELECT
+ * SQUAD repro). Mirror the fall-through explicitly. */
 __attribute__((used, externally_visible))
 void _SelectNationalTeamInit(void)
 {
@@ -5941,6 +5953,7 @@ void _SelectNationalTeamInit(void)
     if (careerNumPlayers != 20) {
         _SetCurrentEntry(3);
     }
+    _SelectNationalTeamFinish();
 }
 
 /* SelectNationalTeamFinish — onReturn for the national team selection menu.
