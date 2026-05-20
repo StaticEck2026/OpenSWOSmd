@@ -1009,7 +1009,14 @@ int16_t _GetNationalTeamNumber(uint16_t nationality)
     uint16_t count = numNationalTeams;
     for (uint16_t i = 0; i < count; i++) {
         if (ptr[2] == (uint8_t)nationality)
-            return (int16_t)(*(uint16_t *)ptr);
+            /* Same BE-vs-LE byte-order bug as
+             * _GetNationalTeamNumberFromTeamFileId: the packed
+             * national-team ID lives as [country, ordinal] bytes in
+             * nationalTeams; reading host-native uint16 on LE flips them.
+             * This is the in-season offer-generation path Playaveli
+             * was hitting AFTER his .CAR was patched — the previous fix
+             * only covered the team-file-id lookup. */
+            return (int16_t)BE_READ_U16(ptr);
         ptr += 6;
     }
     return -1;
