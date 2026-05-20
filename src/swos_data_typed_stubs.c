@@ -834,19 +834,17 @@ char    * errorMessagePtr;
  * didn't match the ~45 KB buffer the game actually writes through it. */
 ScorerInfo team1Scorers[8];
 ScorerInfo team2Scorers[8];
-/* careerDefaultInternationalSquadSlotsTable: 11 shirt-numbers assigned
- * to the starting XI of a freshly-initialised international team. IDA's
- * sparse-ASM exporter mis-classified the table as executable code (the
- * `prototype: void …(void)` comment in SWOS2.s line 104747 is an export
- * artefact) and reassembled the 12 bytes back as 6 × move-word-sized
- * instructions: `btst d0,d2 / btst d2,d6 / movep.w $407(a1),d1 /
- * movep.w $800(a2),d5` — opcode bytes 01 42 05 06 03 49 04 07 0B 4A 08
- * 00. The game reads the first 11 of those bytes as shirt numbers in
- * `_Career_InitInternationalSquadAndLookupTablesForNewSeason`
- * (career_teams.c:2220). Using the decoded bytes preserves what the
- * Amiga binary actually shipped with. */
-uint8_t careerDefaultInternationalSquadSlotsTable[11] = {
-    0x01, 0x42, 0x05, 0x06, 0x03, 0x49, 0x04, 0x07, 0x0B, 0x4A, 0x08
+/* careerDefaultInternationalSquadSlotsTable: 12 shirt-numbers assigned
+ * to the starting XI of a freshly-initialised international team. The
+ * actual bytes from SWOS2.s line 105503 are
+ * `dc.b $01,$02,$05,$06,$03,$09,$04,$07,$0B,$0A,$08,$00` — real shirt
+ * numbers 1-11. Previous translation guessed at the data by treating
+ * IDA's `prototype:` export artefact as the surrounding executable
+ * code and used the assembled opcode bytes (0x42, 0x49, 0x4A) instead,
+ * which Playaveli's GERMANY national-team squad surfaced as shirt
+ * numbers "65/66/73/74" on the first matchday. */
+uint8_t careerDefaultInternationalSquadSlotsTable[12] = {
+    0x01, 0x02, 0x05, 0x06, 0x03, 0x09, 0x04, 0x07, 0x0B, 0x0A, 0x08, 0x00
 };
 void * spriteBlitQueue;
 
