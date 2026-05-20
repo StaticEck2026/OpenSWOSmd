@@ -776,6 +776,7 @@ extern uint16_t natTeamsRandLimit2;
 extern uint8_t nationalTeams[];
 extern uint32_t careerCupPickList[];
 extern TeamFileEx careerTeam;
+extern uint8_t teamSortBuffer[];
 
 /* Competition qualification copies */
 extern uint8_t worldCupQualifyingGroup8Copy[];
@@ -894,6 +895,11 @@ static void fillWorldCupQualifyingGroupTeams(uint8_t regionCode, uint8_t *group,
                                               uint16_t **teamListPtr)
 {
     _Career_SortTeamFilePtrsByAvgPlayerPrice(regionCode);
+    /* Sort leaves a6=teamSortBuffer in the asm; re-point our explicit
+     * teamListPtr at the same buffer the sort just populated so the
+     * `*(*teamListPtr)++` reads walk the sorted team ids for this
+     * region. See setCupPickList_Europe for the full rationale. */
+    *teamListPtr = (uint16_t *)teamSortBuffer;
     uint8_t *origGroup = group;
     uint8_t compType = group[1];
     int16_t teamCount;
@@ -960,6 +966,10 @@ static void setupWorldCupQualifyingGroups(uint16_t **teamListPtr)
     worldCupQualifyingGroup8Copy[0xD] = (uint8_t)d5;
 
     _Career_SortTeamFilePtrsByAvgPlayerPrice(0x50);
+    /* Sort leaves a6=teamSortBuffer in the asm — see comment in
+     * fillWorldCupQualifyingGroupTeams. Re-point teamListPtr at the
+     * just-populated buffer. */
+    *teamListPtr = (uint16_t *)teamSortBuffer;
     uint16_t randOff = _Rand2() & 0x1C;
     uint8_t *selectedGroup = (uint8_t *)worldCupQualifyingGroupsTable[randOff >> 2];
     int16_t slotsRemaining = 0x30 - 6 + d5;
@@ -1101,6 +1111,14 @@ static void setCupPickList_Europe(uint16_t **teamListPtr)
         return;
 
     _Career_SortTeamFilePtrsByAvgPlayerPrice(0x50);
+    /* Asm "register-return" pattern: Career_SortTeamFilePtrsByAvgPlayerPrice's
+     * final instruction is `lea (teamSortBuffer).l,a6` and its movem doesn't
+     * restore a6, so the sort intentionally leaks a6 = teamSortBuffer to the
+     * caller. Career_SetCupPickList_Europe's group-fill loop then reads
+     * `(a6)+` to consume the just-sorted team id list. Our C translation
+     * threaded a teamListPtr through but the outer caller passes NULL — fix
+     * by pointing it at teamSortBuffer here, after the sort populates it. */
+    *teamListPtr = (uint16_t *)teamSortBuffer;
     uint16_t randIdx = (uint16_t)((uint32_t)_Rand2() * 7 >> 8);
     uint8_t *selectedGroup = (uint8_t *)ecQualifyingGroupsTable[randIdx];
     int16_t slotsRemaining = 0x2E; /* 46 */
