@@ -875,10 +875,16 @@ static uint16_t pickRandomNationalTeamId(uint16_t minPrice, uint16_t maxPrice,
         if (countSoFar == 0)
             return teamId;
 
+        /* currentList holds BE-packed team ids (setupFriendlyCupTeams /
+         * setupInvitationTournamentTeams / setupTourCupTeams now use
+         * BE_WRITE_U16 to match the dc.b storage). Read the same way
+         * so the host-native teamId compares equal to the matching
+         * entry on both endians. */
         int16_t dup = 0;
         uint16_t *p = currentList;
         for (uint16_t i = countSoFar; i > 0; i--) {
-            if (*p++ == teamId) { dup = 1; break; }
+            if (BE_READ_U16(p) == teamId) { dup = 1; break; }
+            p++;
         }
         if (!dup)
             return teamId;
@@ -931,7 +937,15 @@ static void fillWorldCupQualifyingGroupTeams(uint8_t regionCode, uint8_t *group,
                  firstTeam == worldCupQualifyingTeam);
     }
 
-    *teamSlots++ = firstTeam;
+    /* Slot writes use BE byte order to match the static-init `dc.b
+     * country,ordinal` competition data — downstream
+     * _AppendTeamsToSelectionFromTmdOrTeamFile reads each slot with
+     * BE_READ_U16, so host-native writes on LE produced byte-swapped
+     * ids (Playaveli's GERMANY.CAR repro: VerifyTeamLoaded(0x0350)
+     * panic after the new sort fix had stored the correct 0x5003 in
+     * teamSortBuffer). asm `move.w` writes BE on m68k; mirror with
+     * BE_WRITE_U16 so both endians match the dc.b layout. */
+    BE_WRITE_U16(teamSlots, firstTeam); teamSlots++;
     for (int16_t i = teamCount - 1; i > 0; i--) {
         uint16_t teamId;
         do {
@@ -939,7 +953,7 @@ static void fillWorldCupQualifyingGroupTeams(uint8_t regionCode, uint8_t *group,
         } while (teamId == selTeamNumber ||
                  teamId == worldCupHostTeam ||
                  teamId == worldCupQualifyingTeam);
-        *teamSlots++ = teamId;
+        BE_WRITE_U16(teamSlots, teamId); teamSlots++;
     }
 }
 
@@ -1003,7 +1017,8 @@ static void setupWorldCupQualifyingGroups(uint16_t **teamListPtr)
                 } while (teamId == selTeamNumber);
             }
 
-            *slot = teamId;
+            /* BE write — see fillWorldCupQualifyingGroupTeams comment. */
+            BE_WRITE_U16(slot, teamId);
             if (--slotsRemaining == 0)
                 goto wc_groups_done;
         }
@@ -1154,7 +1169,8 @@ static void setCupPickList_Europe(uint16_t **teamListPtr)
                 } while (teamId == selTeamNumber);
             }
 
-            *slot = teamId;
+            /* BE write — see fillWorldCupQualifyingGroupTeams comment. */
+            BE_WRITE_U16(slot, teamId);
             if (--slotsRemaining == 0)
                 return;
         }
@@ -1176,12 +1192,16 @@ static void setupFriendlyCupTeams(void)
     uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF));
     uint16_t *listBase = teamList;
 
-    *teamList++ = selTeamNumber;
+    /* BE writes so the slot bytes match the static-init dc.b layout
+     * (downstream _AppendTeamsToSelectionFromTmdOrTeamFile reads with
+     * BE_READ_U16). pickRandomNationalTeamId's dup-check also reads
+     * via BE_READ_U16. */
+    BE_WRITE_U16(teamList, selTeamNumber); teamList++;
     uint16_t countSoFar = 1;
 
     for (int16_t i = teamCount - 2; i >= 0; i--) {
         uint16_t teamId = pickRandomNationalTeamId(minPrice, maxPrice, 0, listBase, countSoFar);
-        *teamList++ = teamId;
+        BE_WRITE_U16(teamList, teamId); teamList++;
         countSoFar++;
     }
 }
@@ -1200,12 +1220,13 @@ static void setupInvitationTournamentTeams(void)
     uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF));
     uint16_t *listBase = teamList;
 
-    *teamList++ = selTeamNumber;
+    /* BE writes — see setupFriendlyCupTeams comment. */
+    BE_WRITE_U16(teamList, selTeamNumber); teamList++;
     uint16_t countSoFar = 1;
 
     for (int16_t i = teamCount - 2; i >= 0; i--) {
         uint16_t teamId = pickRandomNationalTeamId(minPrice, maxPrice, 0, listBase, countSoFar);
-        *teamList++ = teamId;
+        BE_WRITE_U16(teamList, teamId); teamList++;
         countSoFar++;
     }
 }
@@ -1226,12 +1247,13 @@ static void setupTourCupTeams(void)
     uint16_t *teamList = (uint16_t *)(tour + 7 + (hdrSize & 0xFF));
     uint16_t *listBase = teamList;
 
-    *teamList++ = selTeamNumber;
+    /* BE writes — see setupFriendlyCupTeams comment. */
+    BE_WRITE_U16(teamList, selTeamNumber); teamList++;
     uint16_t countSoFar = 1;
 
     for (int16_t i = teamCount - 2; i >= 0; i--) {
         uint16_t teamId = pickRandomNationalTeamId(0, 0x31, regionCode, listBase, countSoFar);
-        *teamList++ = teamId;
+        BE_WRITE_U16(teamList, teamId); teamList++;
         countSoFar++;
     }
 }
