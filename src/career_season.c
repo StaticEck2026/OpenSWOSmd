@@ -527,11 +527,24 @@ void _SeasonFinished_ComputeSeasonReview(void)
         }
     }
 
-    /* Weighted average with rounding: (d6 + d5/2) / d5 */
-    d6 += (d5 >> 1);
-    /* ext.l d6; divu.w d5,d6 — sign-extend d6 word to long, unsigned divide */
-    uint32_t d6_32 = (uint32_t)(int32_t)(int16_t)d6;
-    d6 = (uint16_t)(d6_32 / (uint32_t)d5);
+    /* Weighted average with rounding: (d6 + d5/2) / d5.
+     * Asm `divu.w d5,d6` on a zero divisor triggers a m68k trap #5;
+     * the Amiga default handler resumes seamlessly with d6 unchanged
+     * (in our path d6 is also 0 because no comp contributed a
+     * category, so the implicit result is 0). On x86 the same divide
+     * raises SIGFPE — guard it. Reached on national-selector mode
+     * when neither the primary nor secondary comp's team list
+     * contains selTeamNumber (e.g. first FINISH SEASON for GERMANY
+     * managing only national selector with no qualified-team match
+     * yet — Playaveli's repro). */
+    if (d5 != 0) {
+        d6 += (d5 >> 1);
+        /* ext.l d6; divu.w d5,d6 — sign-extend d6 word to long, unsigned divide */
+        uint32_t d6_32 = (uint32_t)(int32_t)(int16_t)d6;
+        d6 = (uint16_t)(d6_32 / (uint32_t)d5);
+    } else {
+        d6 = 0;
+    }
 
     /* Bonus: World Cup win → best rating; Continental Cup win → -2 */
     if (wonWorldCup != 0) {
