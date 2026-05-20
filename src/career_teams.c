@@ -188,15 +188,37 @@ TeamFileEx *_GetTeamPointer(uint16_t teamId)
     /* Load from team file and scan for matching team ID.
      * teamFileBuffer contains TeamFileEx-sized records (684 bytes each).
      * teamId is packed (countryNumber<<8 | teamOrdinal), matching the
-     * first word of each record. */
+     * first word of each record.
+     *
+     * Asm has no bounds check — it relies on the Amiga BSS being
+     * contiguous so an off-the-end walk just reads zero pages until it
+     * happens to match (effectively garbage but never SIGSEGV). On SDL
+     * each global is at its own linker-determined address, so walking
+     * past the loaded file's record count hits unmapped memory.
+     *
+     * Bound the walk to the file's header count and panic on miss so
+     * the failure surfaces with the offending teamId rather than as a
+     * raw SIGSEGV deep inside the walk. */
     _LoadTeamFile((uint16_t)(teamId >> 8));
+    uint16_t count = *(uint16_t *)&teamFileBuffer;
     TeamFileEx *ptr = (TeamFileEx *)((uint8_t *)(&teamFileBuffer) + 2);  /* skip 2-byte count header */
-    while (PACK_BE_U16(ptr->team.countryNumber, ptr->team.teamOrdinal) != teamId)
+    for (uint16_t i = 0; i < count; i++) {
+        if (PACK_BE_U16(ptr->team.countryNumber, ptr->team.teamOrdinal) == teamId) {
+            _Career_PatchTeamWithForeignMarketPlayers(ptr);
+            return ptr;
+        }
         ptr++;
+    }
 
-    /* Apply foreign market player patches */
-    _Career_PatchTeamWithForeignMarketPlayers(ptr);
-    return ptr;
+    fprintf(stderr,
+            "[GetTeamPointer] team 0x%04X (country=%u ordinal=%u) not in "
+            "TEAM.%03u (count=%u) — would SIGSEGV; panicking instead\n",
+            (unsigned)teamId, (unsigned)(teamId >> 8),
+            (unsigned)(teamId & 0xFF), (unsigned)(teamId >> 8),
+            (unsigned)count);
+    panicReasonCode = 0x4751;  /* "GQ" mnemonic */
+    _PanicHaltLoop();
+    return (TeamFileEx *)0;
 }
 
 /* ================================================================

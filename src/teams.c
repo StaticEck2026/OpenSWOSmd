@@ -1029,7 +1029,16 @@ int16_t _GetNationalTeamNumberFromTeamFileId(uint16_t teamFileId)
     uint16_t count = numNationalTeams;
     for (uint16_t i = 0; i < count; i++) {
         if (ptr[3] == (uint8_t)teamFileId)
-            return (int16_t)(*(uint16_t *)ptr);
+            /* Asm: `move.w (a0),d0` — on m68k BE this reads the
+             * `(country<<8)|ordinal` packed national-team ID stored as
+             * two adjacent bytes [country, ordinal]. Host-native
+             * `*(uint16_t *)` flips that on LE, returning ordinal-in-
+             * high-byte (e.g. byte pair {0x50, 0x11} comes back as
+             * 0x1150 instead of 0x5011). Downstream `_GetTeamPointer`
+             * then loads TEAM.017 and walks off the end looking for
+             * country-17 ordinal-80 — Playaveli's NATIONAL TEAM job
+             * offer SIGSEGV (crash backtrace _GetTeamPointer:195). */
+            return (int16_t)BE_READ_U16(ptr);
         ptr += 6;
     }
     return -1;
