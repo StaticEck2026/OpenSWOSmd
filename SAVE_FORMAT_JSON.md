@@ -1,178 +1,184 @@
-# SWOS Save Format — JSON Migration
+# SWOS Save Format — JSON Migration Roadmap
 
-## Why we're moving
+Living roadmap and progress log for the JSON save-format migration.
+Update this file as each phase completes so we can resume any time.
 
-The legacy `.CAR/.SEA/.PRE/.DIY/.HIL/.TAC` save format is a raw dump of
-`careerFileBuffer` (and friends) — every byte of the Amiga BSS layout
-including absolute pointer values. That works fine on Amiga where the
-binary loads at a fixed address, but on SDL every rebuild relocates the
-strings/arrays and any saved pointer becomes a stale address. We've
-been patching this with field-by-field translation in
-`save_pointer_lut.c`, but each rebuild surfaces another pointer site we
-hadn't enumerated and the testers' saves keep crashing.
+## Why we're moving (recap)
 
-JSON solves this permanently:
+Legacy `.CAR/.SEA/.PRE/.DIY/.HIL/.TAC` is a raw dump of `careerFileBuffer`
+and friends — every byte of the Amiga BSS layout including absolute
+pointer values. On Amiga that worked because the binary loaded at a
+fixed address. On SDL every rebuild relocates the strings/arrays so
+saved pointers become stale and crash on dereference. We fixed
+individual offenders for months in `save_pointer_lut.c`; each new
+field surfaced a fresh crash. JSON removes the problem at the format
+level: pointers are stored as stable string IDs, not addresses.
 
-- No pointers on disk — comp identities become string IDs / numeric
-  refs, not addresses. Same save loads on any binary, any platform.
-- 64-bit migration becomes trivial. Today's 32-bit pointer fields just
-  become string IDs; no struct layout to redesign.
-- Schema can evolve without breaking old saves (add a field, old
-  loaders ignore it; remove a field, new loaders default it).
-- A human can `cat` a save and see what's wrong.
+## Library choice
 
-## Library — mjson
-
-We use [cesanta/mjson](https://github.com/cesanta/mjson):
-- Single ~600 LOC C file, public domain.
-- No allocations — caller provides all buffers. Amiga-friendly.
-- Both parser (path queries, callbacks) and writer (`mjson_printf`).
-
-Drop `mjson.h` + `mjson.c` into `src/`. Makefile picks them up
-automatically via `$(wildcard src/*.c)`.
+[cesanta/mjson](https://github.com/cesanta/mjson) — single ~600 LOC
+public-domain file, no allocations on the hot path (output goes
+through a caller-provided write callback), parser + writer in one.
+Drop `src/mjson.{c,h}`.
 
 ## Build flag
 
-`make SWOS_SAVE_FORMAT_JSON=1` enables JSON writes. Default off until
-the schema is complete. The *load* path is always auto-detect — first
-non-whitespace byte of `{` → JSON, else legacy. Existing saves keep
-loading regardless of the flag.
+`make SWOS_SAVE_FORMAT_JSON=1` enables JSON writes. Loads always
+auto-detect — `{` as first non-whitespace byte → JSON, else legacy.
 
-Once all save types are migrated and round-trip-tested, flip the
-default and (after a release cycle) delete the legacy paths.
-
-## Filename
-
-Same as today: `*.CAR / *.SEA / *.PRE / *.DIY / *.HIL / *.TAC`. The
-load path identifies the format from the file's first byte, not its
-extension. Files written by older builds keep loading until the user
-re-saves, at which point they upgrade to JSON in place.
-
-## Schema (work in progress)
-
-Conventions:
-
-- Top-level: `{ "schema_version": 1, "file_kind": "career"|"preset"|... , ... }`
-- `lowercase_with_underscores` field names, mirroring Amiga global
-  symbol names where possible.
-- Integers as JSON numbers; uint32 fits exactly in IEEE 754 double.
-- Pointer fields become:
-  - Competition-name string ID (`"ec_qualifying_group_7"`) — when the
-    field is a comp-name pointer (the seasonInformations STRPTRs).
-  - Competition record reference (`{ "kind": "ec_qual", "index": 7 }`)
-    — when the field is a pointer to one of the `*Copy` competition
-    structs.
-  - `null` when the field is unset / not applicable for the current
-    career state.
-- Byte arrays stay as JSON arrays of small integers. Large opaque
-  blobs (team records, tactic data) are objects with named sub-fields,
-  not base64 — readability matters.
-
-### Career (.CAR) top-level
+## Top-level format
 
 ```jsonc
 {
   "schema_version": 1,
   "file_kind": "career",
+  "num_selected_teams": 11,
 
-  // Player + career meta
-  "current_season_number": 0,
-  "career_team": { /* TeamFileEx */ },
-  "season_informations": [
-    {
-      "club_no": 80,
-      "club_name": "GERMANY",
-      // Competition name string IDs — replaces the raw pointers at
-      // legacy offsets 22/26/30.
-      "primary_comp":   "ec_qualifying_group_7",
-      "secondary_comp": null,
-      "tertiary_comp":  null,
-      "comp_1_result":  2,
-      // ... rest of the 106-byte record fields ...
-    }
-    // up to 20 entries
-  ],
+  // Catch-all blob for fields not yet promoted to semantic JSON.
+  // Shrinks as each sub-region is promoted. Round-trip stays safe
+  // because semantic fields apply ON TOP of the decoded blob.
+  "opaque_data": "<base64 of legacy raw region>",
 
-  // Competition slots — see careerCompetitionSlotPtrTable[5]
-  "current_competition":   { "kind": "ec_qual", "index": 7 },
-  "secondary_competition": null,
-  "tertiary_competition":  null,
-  "quaternary_competition": null,
-  "diy_competition":       null,
-
-  // The 16-team selection cache (selTeamsPtr region)
-  "num_selected_teams": 16,
-  "selected_teams": [ /* 16x TeamFileEx */ ],
-
-  // ... many more sections — see implementation TODO
+  // Each promoted sub-region appears as a sibling field with named
+  // sub-objects and stable-identity pointer fields.
+  "season_informations": [ /* 20 entries */ ]
 }
 ```
 
-### Other file types
+### Pointer encoding (stable across rebuilds)
 
-- `.SEA / .PRE` (preset competition): `competitionFileBuffer` only —
-  subset of the career schema.
-- `.DIY` (DIY competition): single competition object with cup/league
-  layout, no career wrapper.
-- `.HIL` (highlights): replay state — sprite positions, frame indices.
-- `.TAC` (tactics): trivial — 11-position formation grid with a name.
+```jsonc
+"some_pointer": null                                  // unset
+"some_pointer": { "sym": "europeanChampionships2" }   // base address of symbol
+"some_pointer": { "sym": "europeanChampionships2", "off": 16 }  // mid-symbol
+"some_pointer": { "str": "DIV 1" }                    // string by content (planned)
+```
 
-## Migration
+Symbol-name encoding goes through `g_amiga_addr_map` in
+`src/generated/amiga_address_map.c`. String-content encoding (next
+phase) covers comp-name string pointers that the LUT doesn't index.
 
-- New writes always produce JSON (when flag is on).
-- Legacy loads keep working — header detection routes them to the
-  existing `_LoadCareerFile` etc. body.
-- On the next save after loading a legacy file, the file is written
-  back as JSON. No explicit conversion step.
-- For Playaveli's `NATIONAL.CAR`: stale cross-build pointers in
-  `seasonInformationsArray` can't be recovered semantically (we don't
-  know what comp each past season was). Migration will write `null`
-  for those — management record of past seasons shows blank comp
-  lines instead of crashing. Current season's comp pointer is still
-  valid because it was written this session.
+## Progress checklist
 
-## Implementation phases
+### Foundation
+- [x] `SAVE_FORMAT_JSON.md` design doc (this file)
+- [x] `SWOS_SAVE_FORMAT_JSON` build flag in Makefile
+- [x] Drop mjson into `src/`
+- [x] `src/save_format_json.{c,h}` skeleton with API stubs
+- [x] `file_io.c` header-detect dispatcher (`{` → JSON, else legacy)
+- [x] Symbol resolver helpers (`sym_from_ptr`, `ptr_from_sym`) on top
+      of `g_amiga_addr_map`
 
-1. ✅ **Foundation** — skeleton files, dispatcher wired into `file_io.c`,
-   schema doc, build flag.
-2. ✅ **`.CAR` round-trip via opaque base64** — JSON envelope with
-   `schema_version`, `file_kind`, `num_selected_teams`, and the
-   careerFileBuffer payload base64-encoded as `opaque_data`. Builds
-   produce byte-perfect round-trips.
-3. ✅ **Promote `seasonInformationsArray`** — 20-entry semantic array
-   with stable symbol-name pointers (`{ "sym": "aECFinals", "off": 0 }`)
-   for the four STRPTR fields. The comp-name pointer LUT crash on
-   cross-build saves is closed: any pointer that doesn't resolve via
-   `g_amiga_addr_map` emits as JSON `null` and the legacy code path
-   short-circuits on NULL (statistics.c:1930). ← *we are here*
-4. **Continue promoting `.CAR` fields**: the `*Copy` competition
-   slots (lots of pointer-typed fields), `selTeamsPtr` team file
-   records, finance state, career meta, transfer-market state.
-   Highest-impact remaining: `currentCompetitionPtr` and the rest of
-   `careerCompetitionSlotPtrTable[5]`, since those also break across
-   rebuilds.
-4. **`.SEA / .PRE`** — re-use career sub-schema for the competition
-   block. Likely just `competitionFileBuffer` opaque + the same
-   competition-slot semantic promotion.
-5. **`.DIY`** — diyFileBufferCopy schema.
-6. **`.HIL`** — replay schema.
-7. **`.TAC`** — trivial — 11-position formation + name.
-8. **Cut over** — flip default flag, delete legacy paths after a
-   release cycle.
+### `.CAR` (career)
+- [x] Opaque round-trip — entire careerFileBuffer save region as
+      base64 `opaque_data`. Round-trip byte-perfect.
+- [x] `season_informations` promoted to full semantic — all 18
+      fields per record × 20 records. Four STRPTR pointers use
+      symbol-name encoding.
+- [x] **String-symbol resolution** — pointers that aren't in
+      `g_amiga_addr_map` but look like valid in-process addresses
+      get encoded as `{ "str": "<content>" }`. On load the string
+      is copied into a private `s_string_pool` and the slot gets
+      the pool address. Works for the ~114 comp-name strings
+      (`aDiv1`, `aFACup`, `aBundesliga`, etc.) without expanding
+      the LUT generator. Stale cross-build pointers fail
+      `looks_readable` and emit as `null`.
+- [ ] Promote `currentCompetitionPtr` + `careerCompetitionSlotPtrTable[5]`
+- [ ] Promote `careerCupPickList[5]`
+- [ ] Promote `*CompStringOffset` family (4 fields)
+- [ ] Promote `diyCompetitionTablePtr`
+- [ ] Promote the `*Copy` competition records (cup record
+      nameSource pointers inside each)
+- [ ] Promote `selTeamsPtr` — 16 × `TeamFileEx` records (684 bytes
+      each)
+- [ ] Promote career meta (currentSeasonNumber, careerTeam,
+      careerTeam stats etc.)
+- [ ] Promote finance state (overdraftStreak, balances, weekly
+      costs, etc.)
+- [ ] Promote `tmdFileBuffer` (transfer market data — large block
+      at the very start of careerFileBuffer)
+- [ ] Promote misc career flags/state (currentSeasonShowing,
+      youreSacked, retired, ...)
+- [ ] Verify opaque_data shrinks to empty / can be removed
+- [ ] Round-trip integration test (load legacy `.CAR` → save JSON →
+      reload JSON → diff in-memory state, expect zero deltas
+      outside the unresolvable-pointer fields)
 
-When the `opaque_data` blob shrinks to zero, the schema is complete.
-Until then every field stays round-trippable via the blob while we
-incrementally promote sub-regions to semantic.
+### `.SEA / .PRE` (preset competition)
+- [ ] Skeleton write/load behind dispatcher in `file_io.c`
+- [ ] `competitionFileBuffer` opaque blob
+- [ ] Re-use career sub-schema for the comp records
 
-## What this replaces
+### `.DIY` (DIY competition)
+- [ ] Skeleton write/load
+- [ ] `diyFileBufferCopy` opaque blob
+- [ ] Promote teamGrid / matchData / standings
 
-When fully cut over, we delete:
-- `src/save_pointer_lut.c` (translate_one, _TranslateAmigaAddressesAfterLoad)
-- `src/generated/amiga_address_map.c` (only used by the Amiga LUT)
-- The cross-build pointer-fixup parts of `_RebuildPointersAfterLoad`
-- The legacy bodies of `_SaveCareerFile`, `_LoadCareerFile`,
-  `_SavePresetCompetitionFile`, `_LoadPresetFile`, `_SaveDIYFile`,
-  `_LoadDIYFile`, `_DoSaveHighlights`, `_LoadHilFile`,
-  `_ReadTacticsFile`, `_WriteTacticsFile`.
+### `.HIL` (highlights / replay)
+- [ ] Skeleton write/load
+- [ ] Replay frame state schema
 
-The dispatcher wrappers stay (renamed if you prefer).
+### `.TAC` (tactics)
+- [ ] Trivial — 11 position slots + name
+
+### Cleanup (post-migration)
+- [ ] Default `SWOS_SAVE_FORMAT_JSON=1` after one release cycle of
+      dual-format support
+- [ ] Delete legacy bodies of `_SaveCareerFile`, `_LoadCareerFile`,
+      `_SavePresetCompetitionFile`, `_LoadPresetFile`,
+      `_SaveDIYFile`, `_LoadDIYFile`, `_DoSaveHighlights`,
+      `_LoadHilFile`, `_ReadTacticsFile`, `_WriteTacticsFile`
+- [ ] Delete `src/save_pointer_lut.c`
+- [ ] Decide whether `src/generated/amiga_address_map.c` still has a
+      role (Amiga ↔ SDL save sharing? cross-port testing?)
+- [ ] Delete the cross-build pointer-fixup parts of
+      `_RebuildPointersAfterLoad`
+
+## Open design decisions
+
+- **String-symbol encoding** — `{ "str": "DIV 1" }` (content-based,
+  rebuild-stable) vs extending `g_amiga_addr_map` to index `.rodata`
+  strings. Leaning content-based: smaller LUT, robust to string
+  reordering by the linker, debuggable.
+- **What happens to `currentCompetitionPtr` & friends when they
+  point into `competitionFileBuffer`** — these are pointers into a
+  buffer that itself contains the comp record. After the buffer is
+  base64-decoded back into memory, the symbol resolver needs to
+  know about `competitionFileBuffer + N`. Already in
+  `g_amiga_addr_map`, should resolve once string-symbol gap is
+  closed.
+- **64-bit migration** — when we eventually port to 64-bit, the
+  on-disk format stays unchanged (numbers are ints, pointers are
+  string IDs). Internal struct layouts change but the JSON schema
+  is the contract.
+
+## Testing notes
+
+- `make SWOS_SAVE_FORMAT_JSON=1` writes JSON, default `make` writes
+  legacy. Load is auto-detect either way.
+- Verify a written `.CAR` with `python3 -m json.tool FILE.CAR`.
+- Decode a specific field path with mjson's own test helpers, or
+  with jq: `jq '.season_informations[0]' FILE.CAR`.
+- Diffing two saves: `diff <(jq -S . a.CAR) <(jq -S . b.CAR)`.
+
+## Resuming work
+
+Pick the next unchecked box in the appropriate section. The mechanics
+are:
+
+1. Identify the byte range in the legacy save covered by the new
+   semantic representation (e.g. `seasonInformationsArray` is at
+   offset 57488, length 2120 bytes).
+2. Add an `emit_*` function that walks the in-memory state and
+   `mjson_printf`s the JSON.
+3. Add a `load_*` function that pulls each field via
+   `mjson_get_*` and writes to the same byte range in memory,
+   AFTER the opaque_data has been decoded.
+4. Wire both into `SaveJson_WriteCareer` / `SaveJson_LoadCareer`.
+5. Update this file's checklist.
+
+Last update: 2026-05-20. Next session pick-up: promote
+`currentCompetitionPtr` + `careerCompetitionSlotPtrTable[5]` to
+semantic JSON. These point at *Copy competition records inside
+`competitionFileBuffer`, so the LUT already covers them — should be
+a straightforward addition.

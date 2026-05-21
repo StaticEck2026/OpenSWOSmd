@@ -78,6 +78,51 @@ static uint32_t ptr_from_sym(const char *name, uint32_t offset)
     return 0u;
 }
 
+/* String pool for save-load round-trips of .rodata string pointers
+ * that aren't in g_amiga_addr_map (comp-name strings like "DIV 1",
+ * "BUNDESLIGA", "EC FINALS" — 114 of these live in competition_data.c).
+ * On load, JSON `{ "str": "DIV 1" }` fields get a string copied into
+ * this pool and the resulting pool address is what we write into the
+ * pointer slot. The display code (_StringCopy etc.) just walks bytes
+ * to NUL, so any valid backing memory works. Pool is reset at the
+ * start of each load. */
+#define STRING_POOL_SIZE 8192u
+static char     s_string_pool[STRING_POOL_SIZE];
+static uint32_t s_string_pool_used = 0;
+
+static void string_pool_reset(void)
+{
+    s_string_pool_used = 0;
+}
+
+static uint32_t string_pool_intern(const char *s)
+{
+    uint32_t len = (uint32_t)strlen(s);
+    if (s_string_pool_used + len + 1 > STRING_POOL_SIZE)
+        return 0u;
+    char *dst = &s_string_pool[s_string_pool_used];
+    memcpy(dst, s, (size_t)len + 1);
+    s_string_pool_used += len + 1;
+    return (uint32_t)(uintptr_t)dst;
+}
+
+/* Heuristic readability check for `.rodata` string pointers we
+ * encounter at save time. We use the address of any known LUT entry
+ * (`g_amiga_addr_map[0].current_addr`) as a probe and accept pointers
+ * within ±16 MB of it — that comfortably covers .text + .rodata on
+ * MinGW/Cygwin/Linux without risk of touching unmapped memory.
+ *
+ * Returns 1 if `val` looks like a valid in-process address, 0 if it
+ * looks stale / unmapped (older build's address). */
+static int looks_readable(uint32_t val)
+{
+    if (val == 0u || val == 0xFFFFFFFFu) return 0;
+    if (g_amiga_addr_map_count == 0) return 0;
+    uint32_t probe = (uint32_t)(uintptr_t)g_amiga_addr_map[0].current_addr;
+    uint32_t diff  = (val > probe) ? (val - probe) : (probe - val);
+    return diff < 0x01000000u; /* ±16 MB */
+}
+
 /* ---------- format constants ---------- */
 
 #define SAVE_JSON_SCHEMA_VERSION 1
@@ -181,8 +226,13 @@ static int json_out_emit(const char *chunk, int chunk_len, void *ud)
 #define SAVE_SI_TOURNAMENTSTATUS 104u
 #define SAVE_SI_MANAGERSTATUS    105u
 
-/* Emit a single 32-bit pointer field as either a `{ "sym": ..., "off": ... }`
- * object or JSON null. */
+/* Emit a single 32-bit pointer field as one of:
+ *   - JSON null                          (val == 0 or unresolvable)
+ *   - `{ "sym": "name" [, "off": N] }`   (resolved via g_amiga_addr_map)
+ *   - `{ "str": "<content>" }`           (string pointer not in LUT —
+ *                                         covers the ~114 comp-name
+ *                                         strings)
+ */
 static int emit_ptr_field(mjson_print_fn_t fn, void *fnd, const char *key,
                           uint32_t val)
 {
@@ -191,37 +241,59 @@ static int emit_ptr_field(mjson_print_fn_t fn, void *fnd, const char *key,
     }
     uint32_t off = 0;
     const AmigaAddrLutEntry *e = sym_from_ptr(val, &off);
-    if (!e) {
-        /* Unresolved — emit null so the loader skips the field. This
-         * is what salvages legacy → JSON migration where the saved
-         * raw address is stale from a different build. */
-        return mjson_printf(fn, fnd, "%Q:null", key);
+    if (e) {
+        if (off == 0)
+            return mjson_printf(fn, fnd, "%Q:{%Q:%Q}", key, "sym", e->name);
+        return mjson_printf(fn, fnd, "%Q:{%Q:%Q,%Q:%u}",
+                            key, "sym", e->name, "off", (unsigned)off);
     }
-    if (off == 0) {
-        return mjson_printf(fn, fnd, "%Q:{%Q:%Q}", key, "sym", e->name);
+    /* Not in the LUT — could be a comp-name string in .rodata. If
+     * the pointer falls in a plausible in-process range, dereference
+     * it and emit the C string content. */
+    if (looks_readable(val)) {
+        const char *s = (const char *)(uintptr_t)val;
+        /* Scan for NUL up to a sane length to avoid pathological
+         * runaway reads on a non-string region that happens to land
+         * in our heuristic range. */
+        size_t n = 0;
+        while (n < 128u && s[n] != '\0') n++;
+        if (n > 0 && n < 128u) {
+            return mjson_printf(fn, fnd, "%Q:{%Q:%.*Q}",
+                                key, "str", (int)n, s);
+        }
     }
-    return mjson_printf(fn, fnd, "%Q:{%Q:%Q,%Q:%u}",
-                        key, "sym", e->name, "off", (unsigned)off);
+    /* Truly unresolved — emit null so the loader leaves the field
+     * empty. statistics.c:1930 short-circuits on NULL. */
+    return mjson_printf(fn, fnd, "%Q:null", key);
 }
 
-/* Parse a single { sym, off } JSON object at the given path into a
- * current-build pointer. Sets *out to 0 on null / unresolved / parse
- * error. */
+/* Parse one of `{ "sym": ..., "off": ... }`, `{ "str": ... }`, or
+ * null. Sets *out to 0 on null / unresolved / parse error. */
 static void load_ptr_field(const char *buf, int buflen, const char *path,
                            uint32_t *out)
 {
     *out = 0;
-    char sym_path[128];
-    char off_path[128];
-    char sym[64] = {0};
-    double off_val = 0.0;
-    snprintf(sym_path, sizeof(sym_path), "%s.sym", path);
-    snprintf(off_path, sizeof(off_path), "%s.off", path);
-    if (mjson_get_string(buf, buflen, sym_path, sym, sizeof(sym)) <= 0)
+    char child_path[128];
+    char tmp[128] = {0};
+
+    /* Try "sym" form first. */
+    snprintf(child_path, sizeof(child_path), "%s.sym", path);
+    if (mjson_get_string(buf, buflen, child_path, tmp, sizeof(tmp)) > 0) {
+        double off_val = 0.0;
+        snprintf(child_path, sizeof(child_path), "%s.off", path);
+        if (mjson_get_number(buf, buflen, child_path, &off_val) <= 0)
+            off_val = 0.0;
+        *out = ptr_from_sym(tmp, (uint32_t)off_val);
         return;
-    if (mjson_get_number(buf, buflen, off_path, &off_val) <= 0)
-        off_val = 0.0;
-    *out = ptr_from_sym(sym, (uint32_t)off_val);
+    }
+
+    /* Fall through to "str" form — copy content into our pool. */
+    snprintf(child_path, sizeof(child_path), "%s.str", path);
+    if (mjson_get_string(buf, buflen, child_path, tmp, sizeof(tmp)) > 0) {
+        *out = string_pool_intern(tmp);
+        return;
+    }
+    /* Neither form present — null / unresolved. *out stays 0. */
 }
 
 static void emit_string_field(mjson_print_fn_t fn, void *fnd, const char *key,
@@ -321,6 +393,8 @@ static void emit_season_informations(mjson_print_fn_t fn, void *fnd)
  * bytes (including stale pointers) with semantic values. */
 static void load_season_informations(const char *buf, int buflen)
 {
+    string_pool_reset();
+
     char path[128];
     double num = 0.0;
     for (uint32_t i = 0; i < SAVE_SI_ENTRY_COUNT; i++) {
