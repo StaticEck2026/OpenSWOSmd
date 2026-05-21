@@ -25,6 +25,7 @@
 extern uint8_t  careerFileBuffer;
 extern uint16_t numSelectedTeams;
 extern uint8_t  selTeamsPtr;
+extern uint8_t  seasonInformationsArray[];
 
 /* Externs for the other save buffers — used by future sub-files but
  * referenced here so the linker keeps the symbols available. */
@@ -34,6 +35,48 @@ extern uint8_t  diyFileBufferCopy[];
 /* file_io.c writer helper. */
 extern int16_t _WriteFile(uint8_t *filename, uint8_t *src, uint32_t size);
 extern void    _ShowFsErrorByCode(uint16_t code);
+
+/* g_amiga_addr_map from generated/amiga_address_map.c — used to
+ * convert pointer values to/from stable symbol-name identifiers. */
+typedef struct AmigaAddrLutEntry {
+    const char *name;
+    void       *current_addr;
+    uint32_t    amiga_addr;
+    uint32_t    size;
+} AmigaAddrLutEntry;
+extern const AmigaAddrLutEntry g_amiga_addr_map[];
+extern const size_t g_amiga_addr_map_count;
+
+/* Resolve a current-build pointer to a stable symbol identity.
+ * Returns the entry whose [current_addr, current_addr+size) range
+ * contains `val`, with *out_offset set to (val - entry->current_addr).
+ * Returns NULL if no entry covers `val` (stale cross-build pointer or
+ * non-symbol value). */
+static const AmigaAddrLutEntry *sym_from_ptr(uint32_t val, uint32_t *out_offset)
+{
+    for (size_t i = 0; i < g_amiga_addr_map_count; i++) {
+        const AmigaAddrLutEntry *e = &g_amiga_addr_map[i];
+        uint32_t base = (uint32_t)(uintptr_t)e->current_addr;
+        uint32_t end  = base + (e->size ? e->size : 1u);
+        if (val >= base && val < end) {
+            if (out_offset) *out_offset = val - base;
+            return e;
+        }
+    }
+    return NULL;
+}
+
+/* Resolve a stable symbol name back to a current-build pointer. */
+static uint32_t ptr_from_sym(const char *name, uint32_t offset)
+{
+    for (size_t i = 0; i < g_amiga_addr_map_count; i++) {
+        const AmigaAddrLutEntry *e = &g_amiga_addr_map[i];
+        if (strcmp(e->name, name) == 0) {
+            return (uint32_t)(uintptr_t)e->current_addr + offset;
+        }
+    }
+    return 0u;
+}
 
 /* ---------- format constants ---------- */
 
@@ -95,6 +138,273 @@ static int json_out_emit(const char *chunk, int chunk_len, void *ud)
     return chunk_len;
 }
 
+/* ---------- seasonInformationsArray semantic encoder/decoder ----------
+ *
+ * Each 106-byte record is laid out per the SI_* defines in
+ * statistics.c. Pointer fields (offsets 22/26/30/34) become stable
+ * symbol identities in JSON — `{ "sym": "aECFinals", "off": 0 }` —
+ * so saves survive rebuilds. Unrecognized pointers (stale cross-build
+ * values from older binaries) emit as JSON null; the legacy code path
+ * already short-circuits on NULL pointers (statistics.c:1930).
+ *
+ * Field offsets — kept private to this file. Mirrors the legacy
+ * SI_* defines but local so we don't drag statistics.c into the
+ * include graph. */
+#define SAVE_SI_ENTRY_SIZE       106u
+#define SAVE_SI_ENTRY_COUNT       20u
+#define SAVE_SI_CLUBNO             0u
+#define SAVE_SI_CLUBNAME           2u
+#define SAVE_SI_TROPHYFLAGS       20u
+#define SAVE_SI_LEAGUESTRPTR      22u
+#define SAVE_SI_STRPTR1           26u
+#define SAVE_SI_STRPTR2           30u
+#define SAVE_SI_STRPTR3           34u
+#define SAVE_SI_BESTSCORERNUMGOALS 38u
+#define SAVE_SI_BESTSCORERNAME    40u
+#define SAVE_SI_2NDSCORERNAME     63u
+#define SAVE_SI_COMP1RESULT       86u
+#define SAVE_SI_COMP2RESULT       87u
+#define SAVE_SI_COMP3RESULT       88u
+#define SAVE_SI_COMP4RESULT       89u
+#define SAVE_SI_TOTALGOALSSCORED  90u
+#define SAVE_SI_TOTALGOALSTAKEN   92u
+#define SAVE_SI_TOTALGAMES        94u
+#define SAVE_SI_TOTALWINS         95u
+#define SAVE_SI_TOTALDRAWN        96u
+#define SAVE_SI_TOTALLOST         97u
+#define SAVE_SI_FRIENDLYWINS      98u
+#define SAVE_SI_FRIENDLYDRAWS     99u
+#define SAVE_SI_FRIENDLYLOST     100u
+#define SAVE_SI_TOURWINS         101u
+#define SAVE_SI_TOURDRAWS        102u
+#define SAVE_SI_TOURLOST         103u
+#define SAVE_SI_TOURNAMENTSTATUS 104u
+#define SAVE_SI_MANAGERSTATUS    105u
+
+/* Emit a single 32-bit pointer field as either a `{ "sym": ..., "off": ... }`
+ * object or JSON null. */
+static int emit_ptr_field(mjson_print_fn_t fn, void *fnd, const char *key,
+                          uint32_t val)
+{
+    if (val == 0u) {
+        return mjson_printf(fn, fnd, "%Q:null", key);
+    }
+    uint32_t off = 0;
+    const AmigaAddrLutEntry *e = sym_from_ptr(val, &off);
+    if (!e) {
+        /* Unresolved — emit null so the loader skips the field. This
+         * is what salvages legacy → JSON migration where the saved
+         * raw address is stale from a different build. */
+        return mjson_printf(fn, fnd, "%Q:null", key);
+    }
+    if (off == 0) {
+        return mjson_printf(fn, fnd, "%Q:{%Q:%Q}", key, "sym", e->name);
+    }
+    return mjson_printf(fn, fnd, "%Q:{%Q:%Q,%Q:%u}",
+                        key, "sym", e->name, "off", (unsigned)off);
+}
+
+/* Parse a single { sym, off } JSON object at the given path into a
+ * current-build pointer. Sets *out to 0 on null / unresolved / parse
+ * error. */
+static void load_ptr_field(const char *buf, int buflen, const char *path,
+                           uint32_t *out)
+{
+    *out = 0;
+    char sym_path[128];
+    char off_path[128];
+    char sym[64] = {0};
+    double off_val = 0.0;
+    snprintf(sym_path, sizeof(sym_path), "%s.sym", path);
+    snprintf(off_path, sizeof(off_path), "%s.off", path);
+    if (mjson_get_string(buf, buflen, sym_path, sym, sizeof(sym)) <= 0)
+        return;
+    if (mjson_get_number(buf, buflen, off_path, &off_val) <= 0)
+        off_val = 0.0;
+    *out = ptr_from_sym(sym, (uint32_t)off_val);
+}
+
+static void emit_string_field(mjson_print_fn_t fn, void *fnd, const char *key,
+                              const uint8_t *src, uint32_t maxlen)
+{
+    /* The SWOS strings are NUL-terminated within a fixed-width slot.
+     * Trim to the shorter of strlen or maxlen for the JSON emit. */
+    uint32_t n = 0;
+    while (n < maxlen && src[n] != 0) n++;
+    mjson_printf(fn, fnd, "%Q:%.*Q", key, (int)n, (const char *)src);
+}
+
+static void load_string_field(const char *buf, int buflen, const char *path,
+                              uint8_t *dst, uint32_t maxlen)
+{
+    /* Zero the slot first so unset fields keep the NUL terminator. */
+    memset(dst, 0, maxlen);
+    char tmp[128];
+    int got = mjson_get_string(buf, buflen, path,
+                               tmp, (int)sizeof(tmp));
+    if (got <= 0) return;
+    uint32_t n = (uint32_t)got;
+    if (n > maxlen - 1) n = maxlen - 1;
+    memcpy(dst, tmp, n);
+}
+
+/* Write season_informations as a JSON array of 20 entries. */
+static void emit_season_informations(mjson_print_fn_t fn, void *fnd)
+{
+    mjson_printf(fn, fnd, "%Q:[", "season_informations");
+    for (uint32_t i = 0; i < SAVE_SI_ENTRY_COUNT; i++) {
+        const uint8_t *e = seasonInformationsArray + i * SAVE_SI_ENTRY_SIZE;
+
+        if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+        mjson_printf(fn, fnd, "%s", "{");
+
+        /* Scalars. Multi-byte fields are read as the host stored them
+         * (game writes are host-native on numSelectedTeams etc.). */
+        mjson_printf(fn, fnd, "%Q:%u,",
+                     "club_no", (unsigned)*(uint16_t *)(e + SAVE_SI_CLUBNO));
+        emit_string_field(fn, fnd, "club_name", e + SAVE_SI_CLUBNAME, 18);
+        mjson_printf(fn, fnd, ",%Q:%u,",
+                     "trophy_flags",
+                     (unsigned)*(uint16_t *)(e + SAVE_SI_TROPHYFLAGS));
+
+        /* The four comp-name pointers — this is the whole point of
+         * the seasonInformations promotion. */
+        emit_ptr_field(fn, fnd, "league_str", *(uint32_t *)(e + SAVE_SI_LEAGUESTRPTR));
+        mjson_printf(fn, fnd, "%s", ",");
+        emit_ptr_field(fn, fnd, "str_1", *(uint32_t *)(e + SAVE_SI_STRPTR1));
+        mjson_printf(fn, fnd, "%s", ",");
+        emit_ptr_field(fn, fnd, "str_2", *(uint32_t *)(e + SAVE_SI_STRPTR2));
+        mjson_printf(fn, fnd, "%s", ",");
+        emit_ptr_field(fn, fnd, "str_3", *(uint32_t *)(e + SAVE_SI_STRPTR3));
+
+        mjson_printf(fn, fnd, ",%Q:%u,",
+                     "best_scorer_goals",
+                     (unsigned)*(uint16_t *)(e + SAVE_SI_BESTSCORERNUMGOALS));
+        emit_string_field(fn, fnd, "best_scorer_name", e + SAVE_SI_BESTSCORERNAME, 23);
+        mjson_printf(fn, fnd, "%s", ",");
+        emit_string_field(fn, fnd, "second_scorer_name", e + SAVE_SI_2NDSCORERNAME, 23);
+
+        mjson_printf(fn, fnd,
+            ",%Q:%d,%Q:%d,%Q:%d,%Q:%d,"
+            "%Q:%u,%Q:%u,"
+            "%Q:%u,%Q:%u,%Q:%u,%Q:%u,"
+            "%Q:%u,%Q:%u,%Q:%u,"
+            "%Q:%u,%Q:%u,%Q:%u,"
+            "%Q:%u,%Q:%d}",
+            "comp_1_result", (int)(int8_t)e[SAVE_SI_COMP1RESULT],
+            "comp_2_result", (int)(int8_t)e[SAVE_SI_COMP2RESULT],
+            "comp_3_result", (int)(int8_t)e[SAVE_SI_COMP3RESULT],
+            "comp_4_result", (int)(int8_t)e[SAVE_SI_COMP4RESULT],
+            "total_goals_scored",
+                (unsigned)*(uint16_t *)(e + SAVE_SI_TOTALGOALSSCORED),
+            "total_goals_taken",
+                (unsigned)*(uint16_t *)(e + SAVE_SI_TOTALGOALSTAKEN),
+            "total_games",   (unsigned)e[SAVE_SI_TOTALGAMES],
+            "total_wins",    (unsigned)e[SAVE_SI_TOTALWINS],
+            "total_drawn",   (unsigned)e[SAVE_SI_TOTALDRAWN],
+            "total_lost",    (unsigned)e[SAVE_SI_TOTALLOST],
+            "friendly_wins",  (unsigned)e[SAVE_SI_FRIENDLYWINS],
+            "friendly_draws", (unsigned)e[SAVE_SI_FRIENDLYDRAWS],
+            "friendly_lost",  (unsigned)e[SAVE_SI_FRIENDLYLOST],
+            "tour_wins",   (unsigned)e[SAVE_SI_TOURWINS],
+            "tour_draws",  (unsigned)e[SAVE_SI_TOURDRAWS],
+            "tour_lost",   (unsigned)e[SAVE_SI_TOURLOST],
+            "tournament_status", (unsigned)e[SAVE_SI_TOURNAMENTSTATUS],
+            "manager_status", (int)(int8_t)e[SAVE_SI_MANAGERSTATUS]);
+    }
+    mjson_printf(fn, fnd, "%s", "]");
+}
+
+/* Parse `season_informations` array from JSON, overwriting the 20
+ * records in memory at `seasonInformationsArray`. Called AFTER the
+ * opaque_data base64 has been decoded so we override the affected
+ * bytes (including stale pointers) with semantic values. */
+static void load_season_informations(const char *buf, int buflen)
+{
+    char path[128];
+    double num = 0.0;
+    for (uint32_t i = 0; i < SAVE_SI_ENTRY_COUNT; i++) {
+        uint8_t *e = seasonInformationsArray + i * SAVE_SI_ENTRY_SIZE;
+
+        /* Probe the entry to see if it exists. A missing index just
+         * leaves the opaque_data bytes in place. */
+        snprintf(path, sizeof(path), "$.season_informations[%u].club_no",
+                 (unsigned)i);
+        if (mjson_get_number(buf, buflen, path, &num) <= 0)
+            continue;
+
+        *(uint16_t *)(e + SAVE_SI_CLUBNO) = (uint16_t)num;
+
+        load_string_field(buf, buflen,
+            ({ snprintf(path, sizeof(path), "$.season_informations[%u].club_name",
+                       (unsigned)i); path; }),
+            e + SAVE_SI_CLUBNAME, 18);
+
+        snprintf(path, sizeof(path), "$.season_informations[%u].trophy_flags", (unsigned)i);
+        if (mjson_get_number(buf, buflen, path, &num) > 0)
+            *(uint16_t *)(e + SAVE_SI_TROPHYFLAGS) = (uint16_t)num;
+
+        snprintf(path, sizeof(path), "$.season_informations[%u].league_str", (unsigned)i);
+        load_ptr_field(buf, buflen, path, (uint32_t *)(e + SAVE_SI_LEAGUESTRPTR));
+        snprintf(path, sizeof(path), "$.season_informations[%u].str_1", (unsigned)i);
+        load_ptr_field(buf, buflen, path, (uint32_t *)(e + SAVE_SI_STRPTR1));
+        snprintf(path, sizeof(path), "$.season_informations[%u].str_2", (unsigned)i);
+        load_ptr_field(buf, buflen, path, (uint32_t *)(e + SAVE_SI_STRPTR2));
+        snprintf(path, sizeof(path), "$.season_informations[%u].str_3", (unsigned)i);
+        load_ptr_field(buf, buflen, path, (uint32_t *)(e + SAVE_SI_STRPTR3));
+
+        snprintf(path, sizeof(path), "$.season_informations[%u].best_scorer_goals", (unsigned)i);
+        if (mjson_get_number(buf, buflen, path, &num) > 0)
+            *(uint16_t *)(e + SAVE_SI_BESTSCORERNUMGOALS) = (uint16_t)num;
+
+        load_string_field(buf, buflen,
+            ({ snprintf(path, sizeof(path), "$.season_informations[%u].best_scorer_name",
+                       (unsigned)i); path; }),
+            e + SAVE_SI_BESTSCORERNAME, 23);
+        load_string_field(buf, buflen,
+            ({ snprintf(path, sizeof(path), "$.season_informations[%u].second_scorer_name",
+                       (unsigned)i); path; }),
+            e + SAVE_SI_2NDSCORERNAME, 23);
+
+#define LOAD_BYTE(field, dst_off)                                                    \
+        do {                                                                         \
+            snprintf(path, sizeof(path),                                             \
+                     "$.season_informations[%u]." field, (unsigned)i);               \
+            if (mjson_get_number(buf, buflen, path, &num) > 0)                       \
+                e[dst_off] = (uint8_t)(int8_t)(int)num;                              \
+        } while (0)
+
+#define LOAD_U16(field, dst_off)                                                     \
+        do {                                                                         \
+            snprintf(path, sizeof(path),                                             \
+                     "$.season_informations[%u]." field, (unsigned)i);               \
+            if (mjson_get_number(buf, buflen, path, &num) > 0)                       \
+                *(uint16_t *)(e + dst_off) = (uint16_t)num;                          \
+        } while (0)
+
+        LOAD_BYTE("comp_1_result",     SAVE_SI_COMP1RESULT);
+        LOAD_BYTE("comp_2_result",     SAVE_SI_COMP2RESULT);
+        LOAD_BYTE("comp_3_result",     SAVE_SI_COMP3RESULT);
+        LOAD_BYTE("comp_4_result",     SAVE_SI_COMP4RESULT);
+        LOAD_U16 ("total_goals_scored", SAVE_SI_TOTALGOALSSCORED);
+        LOAD_U16 ("total_goals_taken",  SAVE_SI_TOTALGOALSTAKEN);
+        LOAD_BYTE("total_games",       SAVE_SI_TOTALGAMES);
+        LOAD_BYTE("total_wins",        SAVE_SI_TOTALWINS);
+        LOAD_BYTE("total_drawn",       SAVE_SI_TOTALDRAWN);
+        LOAD_BYTE("total_lost",        SAVE_SI_TOTALLOST);
+        LOAD_BYTE("friendly_wins",     SAVE_SI_FRIENDLYWINS);
+        LOAD_BYTE("friendly_draws",    SAVE_SI_FRIENDLYDRAWS);
+        LOAD_BYTE("friendly_lost",     SAVE_SI_FRIENDLYLOST);
+        LOAD_BYTE("tour_wins",         SAVE_SI_TOURWINS);
+        LOAD_BYTE("tour_draws",        SAVE_SI_TOURDRAWS);
+        LOAD_BYTE("tour_lost",         SAVE_SI_TOURLOST);
+        LOAD_BYTE("tournament_status", SAVE_SI_TOURNAMENTSTATUS);
+        LOAD_BYTE("manager_status",    SAVE_SI_MANAGERSTATUS);
+#undef LOAD_BYTE
+#undef LOAD_U16
+    }
+}
+
 /* ---------- .CAR writer ---------- */
 
 int16_t SaveJson_WriteCareer(uint8_t *filename)
@@ -102,21 +412,26 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     uint32_t data_size = career_data_size();
     JsonOutBuf out = { NULL, 0, 0, 0 };
 
-    /* Top-level object. The opaque_data field carries the legacy raw
-     * bytes base64-encoded — this guarantees round-trip until each
-     * sub-region is promoted to a semantic JSON field in a follow-up
-     * commit. See SAVE_FORMAT_JSON.md for the promotion TODO. */
+    /* Top-level object. opaque_data carries the legacy raw bytes
+     * base64-encoded for fields not yet promoted to semantic JSON.
+     * Promoted fields (currently: season_informations) are also
+     * written semantically and OVERRIDE the corresponding bytes when
+     * loaded — see SaveJson_LoadCareer. As more fields get promoted
+     * the opaque_data blob shrinks. */
     mjson_printf(json_out_emit, &out,
         "{\n"
         "  %Q: %d,\n"
         "  %Q: %Q,\n"
         "  %Q: %d,\n"
-        "  %Q: %V\n"
-        "}\n",
+        "  %Q: %V,\n  ",
         "schema_version", SAVE_JSON_SCHEMA_VERSION,
         "file_kind",      KIND_CAREER,
         "num_selected_teams", (int)numSelectedTeams,
         "opaque_data",    (int)data_size, (const char *)&careerFileBuffer);
+
+    emit_season_informations(json_out_emit, &out);
+
+    mjson_printf(json_out_emit, &out, "%s", "\n}\n");
 
     if (out.oom || !out.ptr) {
         if (out.ptr) free(out.ptr);
@@ -182,6 +497,13 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src, uint32_t src_
     }
     memcpy(&careerFileBuffer, tmp, (size_t)got);
     free(tmp);
+
+    /* Apply semantic field overrides AFTER the opaque blob, so the
+     * semantic representation wins. This is what makes saves stable
+     * across rebuilds: even though the opaque blob has the original
+     * raw pointer values, load_season_informations overwrites them
+     * with currentbuild addresses resolved from stable symbol names. */
+    load_season_informations((const char *)src, (int)src_size);
 
     return 0;
 }

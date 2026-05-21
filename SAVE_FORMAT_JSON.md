@@ -138,12 +138,19 @@ Conventions:
 2. ✅ **`.CAR` round-trip via opaque base64** — JSON envelope with
    `schema_version`, `file_kind`, `num_selected_teams`, and the
    careerFileBuffer payload base64-encoded as `opaque_data`. Builds
-   produce byte-perfect round-trips today. ← *we are here*
-3. **Promote `.CAR` fields to semantic JSON** — replace chunks of
-   `opaque_data` with named fields. Highest-priority chunk is
-   `seasonInformationsArray[20]` (its STRPTR fields are what triggered
-   this rewrite). After that: the `*Copy` competition slots,
-   `selTeamsPtr` team file records, finance state, career meta.
+   produce byte-perfect round-trips.
+3. ✅ **Promote `seasonInformationsArray`** — 20-entry semantic array
+   with stable symbol-name pointers (`{ "sym": "aECFinals", "off": 0 }`)
+   for the four STRPTR fields. The comp-name pointer LUT crash on
+   cross-build saves is closed: any pointer that doesn't resolve via
+   `g_amiga_addr_map` emits as JSON `null` and the legacy code path
+   short-circuits on NULL (statistics.c:1930). ← *we are here*
+4. **Continue promoting `.CAR` fields**: the `*Copy` competition
+   slots (lots of pointer-typed fields), `selTeamsPtr` team file
+   records, finance state, career meta, transfer-market state.
+   Highest-impact remaining: `currentCompetitionPtr` and the rest of
+   `careerCompetitionSlotPtrTable[5]`, since those also break across
+   rebuilds.
 4. **`.SEA / .PRE`** — re-use career sub-schema for the competition
    block. Likely just `competitionFileBuffer` opaque + the same
    competition-slot semantic promotion.
