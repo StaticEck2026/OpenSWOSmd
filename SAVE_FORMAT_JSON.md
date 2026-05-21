@@ -73,6 +73,11 @@ phase) covers comp-name string pointers that the LUT doesn't index.
 ### `.CAR` (career)
 - [x] Opaque round-trip — entire careerFileBuffer save region as
       base64 `opaque_data`. Round-trip byte-perfect.
+- [x] Address-based scalar table — FieldDesc entries take `&symbol`
+      rather than a literal offset. 64-bit-stable for standalone
+      overlay globals; offsets are constant expressions (relocatable
+      addresses) so the table remains a `static const`. Same machinery
+      applies to future struct-field promotions via `offsetof`.
 - [x] `season_informations` promoted to full semantic — all 18
       fields per record × 20 records. Four STRPTR pointers use
       symbol-name encoding.

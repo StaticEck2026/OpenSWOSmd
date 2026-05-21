@@ -710,245 +710,478 @@ typedef enum {
 
 typedef struct {
     const char *name;
-    uint32_t    offset;     /* relative to &careerFileBuffer */
+    void       *addr;       /* absolute address — taken via &symbol;
+                             * 64-bit-stable for standalone overlay
+                             * globals, and survives layout shifts in
+                             * the careerFileBuffer overlay */
     uint32_t    size;       /* for FLD_STR / FLD_BYTES; ignored for scalars */
     FieldType   type;
 } FieldDesc;
 
-/* Career meta / flags / finance / market state — covers offsets
- * 54722..56189 except the regions already promoted elsewhere
- * (careerCupPickList[5] at 55086, comp-string offsets, etc.). */
+/* extern declarations for all overlay symbols referenced by the
+ * tables below. The .equ aliases in swos_globals_career_overlay.c
+ * make these visible to the linker; taking their address gives a
+ * stable relocatable address resolvable at link time, so the table
+ * entries below remain valid static initializers. */
+extern uint16_t currentSeasonShowing;
+extern uint16_t stayingInOldClub;
+extern uint16_t overdraftStreak;
+extern uint16_t overdraftWarningState;
+extern uint16_t performanceWarningState;
+extern uint16_t overdraftWarningCooldown;
+extern uint16_t performanceWarningCooldown;
+extern uint16_t youreSacked;
+extern uint16_t retired;
+extern uint16_t competitionSlotUpdatedFlag;
+extern uint16_t careerTeamLostMatch;
+extern uint16_t clubBusinessActive;
+extern int32_t  newBalance;
+extern int32_t  old_balance;
+extern int32_t  playerPurchases;
+extern int32_t  playerSales;
+extern int32_t  generalRunningCosts;
+extern int32_t  playerWagesBill;
+extern int32_t  gateReceipts;
+extern int32_t  startingBalance;
+extern int32_t  startingBalanceCopy;
+extern int32_t  competitionBonuses;
+extern int32_t  sensisoftPlcSponsorship;
+extern uint16_t financeTotalsNeedResetFlag;
+extern uint32_t weeklyRunningCosts;
+extern uint32_t weeklyPlayerWages;
+extern int32_t  totalTeamValue;
+extern uint8_t  weeklyWageByPlayerIndex[];
+extern uint8_t  playerFormModifiers[];
+extern uint16_t sensisoftPlcSponsorshipFactor;
+extern int32_t  additionalInvestments;
+extern uint16_t teamValueDivisor;
+extern uint16_t expectedLeagueRankIndex;
+extern uint16_t boardConfidenceHistory0;
+extern uint16_t boardConfidenceScore;
+extern uint16_t previousBoardConfidence;
+extern uint16_t playWinCupAnimation;
+extern uint16_t minorTrophyBonusActive;
+extern uint16_t leagueTitleBonusActive;
+extern uint16_t majorTrophyBonusActive;
+extern uint16_t cupBonus1Active;
+extern uint16_t cupBonus2Active;
+extern uint16_t wonWorldCup;
+extern uint16_t wonContinentalCup;
+extern uint16_t wonInvitationTournament;
+extern uint16_t qualifyingStage1PendingFlag0;
+extern uint16_t qualifyingStage1PendingFlag1;
+extern uint16_t qualifyingStage2PendingFlag0;
+extern uint16_t qualifyingStage2PendingFlag1;
+extern uint16_t isCareer;
+extern uint16_t careerMatchSimulatedFlag;
+extern uint16_t gamesPlayed;
+extern uint16_t numWins;
+extern uint16_t numDrawn;
+extern uint16_t numLost;
+extern uint16_t goalsScored;
+extern uint16_t goalsTaken;
+extern uint16_t boardConfidenceMod0;
+extern uint16_t boardConfidenceValue0;
+extern uint16_t boardConfidenceValue1;
+extern uint16_t contractNegotiationActive;
+extern uint16_t wageScalingDivisor;
+extern uint16_t teamNoOfferAccepted;
+extern int32_t  teamFundsAccepted;
+extern uint16_t isNationalSelector;
+extern uint16_t someTeamFlags;
+extern uint16_t lastNationalityCall;
+extern uint8_t  nationalTeamNationality;
+extern uint8_t  nationalTeamFileId;
+extern uint16_t sameNationalCallFlag;
+extern uint16_t sackedReputationScore;
+extern uint16_t nationalSelectorReputationPoints;
+extern uint16_t nationalTeamFileCode;
+extern uint16_t seasonReview;
+extern uint16_t worldCupHostTeam;
+extern uint16_t worldCupQualifyingTeam;
+extern uint16_t euroChampionshipQualTeam;
+extern uint16_t selTeamNumber;
+extern uint16_t coachOrPlayer;
+extern uint16_t careerTeamLeague;
+extern uint16_t currentDivisionIndex;
+extern uint16_t leagueFirstRoundNumber;
+extern uint16_t playPromotedAnimation;
+extern uint16_t playRelegatedAnimation;
+extern uint16_t mrOrMs;
+extern uint8_t  managerSexBuffer[];
+extern uint8_t  managerNameBuffer[];
+extern uint8_t  managerSurnameBuffer[];
+extern uint16_t plNationality;
+extern uint16_t winCupBonusCount;
+extern uint16_t minorTrophyBonusCount;
+extern uint16_t majorTrophyBonusCount;
+extern int16_t  careerReputationPoints;
+extern uint16_t removedOfferPlayersFromSelectedTeamCount;
+extern uint16_t removedOfferPlayersFromOtherTeamsCount;
+extern uint16_t homeMarketUpdateBacklog;
+extern uint16_t foreignMarketUpdateBacklog;
+extern uint16_t offerExpiryIterationsRemaining;
+extern uint16_t numForeignMarketPlayers;
+extern uint16_t numHomeMarketPlayers;
+extern uint16_t numOffers;
+extern uint16_t careerSeasonsCompleted;
+extern uint16_t numForeignMarketPlayers2;
+extern uint16_t pendingForeignPlayerCount;
+extern uint16_t seasonTransferQuota;
+extern uint16_t transferPoolSlotLimit;
+extern uint16_t offerSwapSlotLimit;
+extern uint16_t transferPoolSlotsUsed;
+extern uint16_t offerSwapSlotsUsed;
+extern uint16_t numNewJobOffers;
+extern uint16_t numJobOffers;
+extern uint16_t timeToNegotiate;
+extern uint16_t numPlayersOnTransferMarket;
+extern uint16_t lastOfferPrimaryPlayerOrdinal;
+extern uint16_t lastOfferExtraPlayersWanted;
+extern uint16_t lastOfferSwapPlayerOrdinal;
+extern uint16_t lastOfferExtraPlayerOrdinal;
+extern uint16_t offerNegotiationAttemptCount;
+extern uint16_t transferMarketRandOffset0;
+extern uint16_t transferMarketRandOffset1;
+extern uint16_t transferMarketRandOffset2;
+extern uint16_t transferMarketPhase;
+extern uint16_t careerNumPlayers;
+extern uint16_t selTeamSelectedPlayerPosition;
+extern uint16_t lastFinancialWeekIndex;
+extern uint16_t numPlayers;
+extern uint16_t currentTeamNumber;
+extern uint16_t currentTeamSelectedPlayerPosition;
+extern uint16_t trainingMatchSavedPlayerPos;
+extern uint16_t lastMatchSavedPlayerPos;
+extern uint16_t lastMatchSavedCoachOrPlayer;
+extern uint8_t  currentTactics;
+extern uint8_t  lastMatchSavedTeamControls;
+extern uint16_t seasonFinished;
+extern uint16_t careerFinished;
+extern uint16_t euroCupSlotIndex;
+extern uint16_t seasonNumberOfSquads;
+extern uint16_t teamSelectionKeyCacheIndex;
+extern uint16_t teamSelectionKeyCacheOffset;
+extern uint16_t teamSelectionKeyCacheCount;
+extern uint16_t careerSlotProcessingInProgress;
+extern uint16_t teamSelectionKeyCacheEnd;
+extern uint16_t competitionOver;
+extern uint8_t  diyPresetNameOfCompetition[];
+extern uint16_t majorTrophyBonusValue;
+extern uint16_t numDiyTeams;
+extern uint16_t primaryCompWinnerTeam;
+extern uint16_t primaryCompSquadViewParam;
+extern uint16_t primaryCompSlotStateA;
+extern uint16_t primaryCompSlotStateB;
+extern uint16_t primaryCompSlotStateC;
+extern uint16_t diyTeamMinDivisionIndex;
+extern uint16_t diyTeamMaxDivisionOffset;
+extern uint16_t leaguePromotionCount;
+extern uint16_t leagueRelegationCount;
+extern uint16_t leagueWarningsEnabled;
+extern uint8_t  viewRandomPhase;
+extern uint8_t  seasonPlaying;
+extern uint16_t inFriendlyMenu;
+extern uint16_t isNationalTeam;
+extern uint16_t gameType;
+extern uint16_t contestStarted;
+extern uint16_t careerLoadedFlag;
+extern uint16_t gameLength;
+extern uint16_t autoReplays;
+extern uint16_t menuMusic;
+extern uint16_t autoSaveHighlights;
+extern uint16_t allPlayerTeamsEqual;
+extern uint16_t pitchType;
+extern uint8_t  seed2;
+extern uint8_t  randXorIndex2;
+extern uint8_t  randXorKey2;
+extern uint8_t  newRandomSeedCopy;
+extern uint16_t randomSeed;
+extern uint16_t saveFileVersion;
+extern uint32_t saveFileAmigaType;
+/* numSelectedTeams already declared at file top. */
+
+extern uint8_t  secondaryCompetitionName[];
+extern uint16_t minorTrophyBonusValue;
+extern uint16_t secondaryCompWinnerTeam;
+extern uint16_t secondaryCompSlotStateA;
+extern uint16_t secondaryCompSlotStateB;
+extern uint16_t secondaryCompSlotStateC;
+extern uint16_t secondaryCompFinished;
+extern uint8_t  tertiaryCompetitionName[];
+extern uint16_t leagueTitleBonusValue;
+extern uint16_t tertiaryCompWinnerTeam;
+extern uint16_t tertiaryCompSlotStateA;
+extern uint16_t tertiaryCompSlotStateB;
+extern uint16_t tertiaryCompSlotStateC;
+extern uint16_t tertiaryCompFinished;
+extern uint16_t diyCompSlotStateA;
+extern uint16_t diyCompSlotStateB;
+extern uint16_t diyCompSlotStateC;
+extern uint8_t  quaternaryCompetitionName[];
+extern uint16_t majorTrophyOrCupBonusValue;
+extern uint16_t quaternaryCompWinnerTeam;
+extern uint16_t quaternaryCompSlotStateA;
+extern uint16_t quaternaryCompSlotStateB;
+extern uint16_t quaternaryCompSlotStateC;
+extern uint16_t removedPlayerStatAccum;
+extern uint8_t  careerUnavailablePlayerList[];
+extern uint8_t  currentMatchPlayers[];
+extern uint8_t  seasonSquadTeamNumbers[];
+extern uint8_t  playerPositions[];
+extern uint8_t  trainingMatchSavedPlayers[];
+extern uint8_t  trainingMatchSavedShirtNums[];
+extern uint8_t  trainingMatchSavedTactics[];
+extern uint8_t  lastMatchPlayers[];
+extern uint8_t  lastMatchSavedShirtNums[];
+extern uint8_t  careerLastMatchIndexByCompetitionSlot[];
+extern uint8_t  teamBudgetRankTable[];
+extern uint8_t  playersOnTransferMarket[];
+extern uint8_t  foreignMarketPlayers[];
+extern uint8_t  homeMarketPlayers[];
+extern uint8_t  transferOfferTable[];
+extern uint8_t  newJobOffers[];
+extern uint8_t  jobOffers[];
+
+/* Career meta / flags / finance / market state.
+ * Address-based: each entry takes &symbol so the table is
+ * resilient to overlay layout shifts (e.g. eventual 64-bit move)
+ * and self-documenting. The compile-time address-constant rule
+ * applies — `&overdraftStreak` is valid in a static initializer. */
+#define FX(name, sym, type) { name, (void *)&sym, 0, type }
+#define FA(name, sym, len, type) { name, (void *)&sym, len, type }
+
 static const FieldDesc s_career_scalars[] = {
-    { "current_season_showing",          54722, 0, FLD_U16 },
-    { "staying_in_old_club",             54724, 0, FLD_U16 },
-    { "overdraft_streak",                54726, 0, FLD_U16 },
-    { "overdraft_warning_state",         54728, 0, FLD_U16 },
-    { "performance_warning_state",       54730, 0, FLD_U16 },
-    { "overdraft_warning_cooldown",      54732, 0, FLD_U16 },
-    { "performance_warning_cooldown",    54734, 0, FLD_U16 },
-    { "youre_sacked",                    54736, 0, FLD_U16 },
-    { "retired",                         54738, 0, FLD_U16 },
-    { "competition_slot_updated_flag",   54740, 0, FLD_U16 },
-    { "career_team_lost_match",          54742, 0, FLD_U16 },
-    { "club_business_active",            54744, 0, FLD_U16 },
-    { "new_balance",                     54746, 0, FLD_S32 },
-    { "old_balance",                     54750, 0, FLD_S32 },
-    { "player_purchases",                54754, 0, FLD_S32 },
-    { "player_sales",                    54758, 0, FLD_S32 },
-    { "general_running_costs",           54762, 0, FLD_S32 },
-    { "player_wages_bill",               54766, 0, FLD_S32 },
-    { "gate_receipts",                   54770, 0, FLD_S32 },
-    { "starting_balance",                54774, 0, FLD_S32 },
-    { "starting_balance_copy",           54778, 0, FLD_S32 },
-    { "competition_bonuses",             54782, 0, FLD_S32 },
-    { "sensisoft_plc_sponsorship",       54786, 0, FLD_S32 },
-    { "finance_totals_need_reset_flag",  54790, 0, FLD_U16 },
-    { "weekly_running_costs",            54796, 0, FLD_U32 },
-    { "weekly_player_wages",             54800, 0, FLD_U32 },
-    { "total_team_value",                54804, 0, FLD_S32 },
-    { "weekly_wage_by_player_index",     54808, 128, FLD_BYTES },
-    { "player_form_modifiers",           54936, 32, FLD_BYTES },
-    { "sensisoft_plc_sponsorship_factor",54968, 0, FLD_U16 },
-    { "additional_investments",          54970, 0, FLD_S32 },  /* 6 bytes — actually 2x u16/u32? Use 4B for now, rest opaque */
-    { "team_value_divisor",              54976, 0, FLD_U16 },
-    { "expected_league_rank_index",      54978, 0, FLD_U16 },
-    { "board_confidence_history",        54980, 8, FLD_BYTES }, /* 4 × u16 */
-    { "board_confidence_score",          54988, 0, FLD_U16 },
-    { "previous_board_confidence",       54990, 0, FLD_U16 },
-    { "play_win_cup_animation",          54992, 0, FLD_U16 },
-    { "minor_trophy_bonus_active",       54994, 0, FLD_U16 },
-    { "league_title_bonus_active",       54996, 0, FLD_U16 },
-    { "major_trophy_bonus_active",       54998, 0, FLD_U16 },
-    { "cup_bonus_1_active",              55000, 0, FLD_U16 },
-    { "cup_bonus_2_active",              55002, 0, FLD_U16 },
-    { "won_world_cup",                   55004, 0, FLD_U16 },
-    { "won_continental_cup",             55006, 0, FLD_U16 },
-    { "won_invitation_tournament",       55008, 0, FLD_U16 },
-    { "qualifying_stage_1_pending_flag0",55010, 0, FLD_U16 },
-    { "qualifying_stage_1_pending_flag1",55012, 0, FLD_U16 },
-    { "qualifying_stage_2_pending_flag0",55014, 0, FLD_U16 },
-    { "qualifying_stage_2_pending_flag1",55016, 0, FLD_U16 },
-    { "is_career",                       55018, 0, FLD_U16 },
-    { "career_match_simulated_flag",     55020, 0, FLD_U16 },
-    { "games_played",                    55022, 0, FLD_U16 },
-    { "num_wins",                        55024, 0, FLD_U16 },
-    { "num_drawn",                       55026, 0, FLD_U16 },
-    { "num_lost",                        55028, 0, FLD_U16 },
-    { "goals_scored",                    55030, 0, FLD_U16 },
-    { "goals_taken",                     55032, 0, FLD_U16 },
-    { "board_confidence_mods",           55034, 20, FLD_BYTES }, /* 10 × u16 — boardConfidenceMod0..9 */
-    { "board_confidence_value_0",        55042, 0, FLD_U16 }, /* overlaps board_confidence_mods — kept for symmetry */
-    { "board_confidence_value_1",        55044, 0, FLD_U16 },
-    { "contract_negotiation_active",     55058, 0, FLD_U16 },
-    { "wage_scaling_divisor",            55060, 0, FLD_U16 },
-    { "team_no_offer_accepted",          55062, 0, FLD_U16 },
-    { "team_funds_accepted",             55064, 0, FLD_S32 },
-    { "is_national_selector",            55068, 0, FLD_U16 },
-    { "some_team_flags",                 55070, 0, FLD_U16 },
-    { "last_nationality_call",           55072, 0, FLD_U16 },
-    { "national_team_nationality",       55074, 0, FLD_U8  },
-    { "national_team_file_id",           55075, 0, FLD_U8  },
-    { "same_national_call_flag",         55076, 0, FLD_U16 },
-    { "sacked_reputation_score",         55078, 0, FLD_U16 },
-    { "national_selector_reputation_points",55080,0,FLD_U16 },
-    { "national_team_file_code",         55082, 0, FLD_U16 },
-    { "season_review",                   55084, 0, FLD_U16 },
-    { "world_cup_host_team",             55106, 0, FLD_U16 },
-    { "world_cup_qualifying_team",       55108, 0, FLD_U16 },
-    { "euro_championship_qual_team",     55110, 0, FLD_U16 },
-    { "sel_team_number",                 55112, 0, FLD_U16 },
-    { "coach_or_player",                 55114, 0, FLD_U16 },
-    { "career_team_league",              55116, 0, FLD_U16 },
-    { "current_division_index",          55118, 0, FLD_U16 },
-    { "league_first_round_number",       55120, 0, FLD_U16 },
-    { "play_promoted_animation",         55122, 0, FLD_U16 },
-    { "play_relegated_animation",        55124, 0, FLD_U16 },
-    { "mr_or_ms",                        55126, 0, FLD_U16 },
-    { "manager_sex_buffer",              55128, 4,  FLD_STR },
-    { "manager_name_buffer",             55132, 9,  FLD_STR },
-    { "manager_surname_buffer",          55141, 13, FLD_STR },
-    { "pl_nationality",                  55154, 0, FLD_U16 },
-    { "win_cup_bonus_count",             55156, 0, FLD_U16 },
-    { "minor_trophy_bonus_count",        55158, 0, FLD_U16 },
-    { "major_trophy_bonus_count",        55160, 0, FLD_U16 },
-    { "career_reputation_points",        55162, 0, FLD_S16 },
-    { "removed_offer_players_from_selected_team_count",55164,0,FLD_U16 },
-    { "removed_offer_players_from_other_teams_count",  55166,0,FLD_U16 },
-    { "home_market_update_backlog",      55168, 0, FLD_U16 },
-    { "foreign_market_update_backlog",   55170, 0, FLD_U16 },
-    { "offer_expiry_iterations_remaining",55172,0,FLD_U16 },
-    { "num_foreign_market_players",      55174, 0, FLD_U16 },
-    { "num_home_market_players",         55176, 0, FLD_U16 },
-    { "num_offers",                      55178, 0, FLD_U16 },
-    { "career_seasons_completed",        55410, 0, FLD_U16 },
-    { "num_foreign_market_players_2",    55412, 0, FLD_U16 },
-    { "pending_foreign_player_count",    55414, 0, FLD_U16 },
-    { "season_transfer_quota",           55416, 0, FLD_U16 },
-    { "transfer_pool_slot_limit",        55418, 0, FLD_U16 },
-    { "offer_swap_slot_limit",           55420, 0, FLD_U16 },
-    { "transfer_pool_slots_used",        55422, 0, FLD_U16 },
-    { "offer_swap_slots_used",           55424, 0, FLD_U16 },
-    { "num_new_job_offers",              55426, 0, FLD_U16 },
-    { "num_job_offers",                  55558, 0, FLD_U16 },
-    { "time_to_negotiate",               55690, 0, FLD_U16 },
-    { "num_players_on_transfer_market",  55692, 0, FLD_U16 },
-    { "last_offer_primary_player_ordinal",55704,0,FLD_U16 },
-    { "last_offer_extra_players_wanted", 55706, 0, FLD_U16 },
-    { "last_offer_swap_player_ordinal",  55708, 0, FLD_U16 },
-    { "last_offer_extra_player_ordinal", 55710, 0, FLD_U16 },
-    { "offer_negotiation_attempt_count", 55712, 0, FLD_U16 },
-    { "transfer_market_rand_offset_0",   55714, 0, FLD_U16 },
-    { "transfer_market_rand_offset_1",   55716, 0, FLD_U16 },
-    { "transfer_market_rand_offset_2",   55718, 0, FLD_U16 },
-    { "transfer_market_phase",           55720, 0, FLD_U16 },
-    { "career_num_players",              57482, 0, FLD_U16 },
-    { "sel_team_selected_player_position",57484,0, FLD_U16 },
-    { "last_financial_week_index",       59608, 0, FLD_U16 },
-    { "num_players",                     62934, 0, FLD_U16 },
-    { "current_team_number",             62936, 0, FLD_U16 },
-    { "current_team_selected_player_position",62938,0,FLD_U16 },
-    { "training_match_saved_player_pos", 62940, 0, FLD_U16 },
-    { "last_match_saved_player_pos",     63008, 0, FLD_U16 },
-    { "last_match_saved_coach_or_player",63010, 0, FLD_U16 },
-    { "current_tactics",                 63076, 0, FLD_U8  },
-    { "last_match_saved_team_controls",  63077, 0, FLD_U8  },
-    { "season_finished",                 63240, 0, FLD_U16 },
-    { "career_finished",                 63242, 0, FLD_U16 },
-    { "euro_cup_slot_index",             63264, 0, FLD_U16 },
-    { "season_number_of_squads",         63270, 0, FLD_U16 },
-    { "team_selection_key_cache_index",  73284, 0, FLD_U16 },
-    { "team_selection_key_cache_offset", 73286, 0, FLD_U16 },
-    { "team_selection_key_cache_count",  73288, 0, FLD_U16 },
-    { "career_slot_processing_in_progress",73290,0,FLD_U16 },
-    { "team_selection_key_cache_end",    93306, 0, FLD_U16 },
-    { "competition_over",                93310, 0, FLD_U16 },
-    { "diy_preset_name_of_competition",  93312, 36, FLD_STR },
-    { "major_trophy_bonus_value",        93356, 0, FLD_U16 },
-    { "num_diy_teams",                   93358, 0, FLD_U16 },
-    { "primary_comp_winner_team",        93366, 0, FLD_U16 },
-    { "primary_comp_squad_view_param",   93368, 0, FLD_U16 },
-    { "primary_comp_slot_state_a",       93370, 0, FLD_U16 },
-    { "primary_comp_slot_state_b",       93372, 0, FLD_U16 },
-    { "primary_comp_slot_state_c",       93374, 0, FLD_U16 },
-    { "diy_team_min_division_index",     93392, 0, FLD_U16 },
-    { "diy_team_max_division_offset",    93394, 0, FLD_U16 },
-    { "league_promotion_count",          93396, 0, FLD_U16 },
-    { "league_relegation_count",         93398, 0, FLD_U16 },
-    { "league_warnings_enabled",         93404, 0, FLD_U16 },
-    { "view_random_phase",               96208, 0, FLD_U8  },
-    { "season_playing",                  96209, 0, FLD_U8  },
-    { "in_friendly_menu",                96210, 0, FLD_U16 },
-    { "is_national_team",                96212, 0, FLD_U16 },
-    { "game_type",                       96214, 0, FLD_U16 },
-    { "contest_started",                 96216, 0, FLD_U16 },
-    { "career_loaded_flag",              96218, 0, FLD_U16 },
-    { "game_length",                     98440, 0, FLD_U16 },
-    { "auto_replays",                    98442, 0, FLD_U16 },
-    { "menu_music",                      98444, 0, FLD_U16 },
-    { "auto_save_highlights",            98446, 0, FLD_U16 },
-    { "all_player_teams_equal",          98448, 0, FLD_U16 },
-    { "pitch_type",                      98450, 0, FLD_U16 },
-    { "seed_2",                          98452, 0, FLD_U8  },
-    { "rand_xor_index_2",                98453, 0, FLD_U8  },
-    { "rand_xor_key_2",                  98454, 0, FLD_U8  },
-    { "new_random_seed_copy",            98455, 0, FLD_U8  },
-    { "random_seed",                     98456, 0, FLD_U16 },
-    { "save_file_version",               98458, 0, FLD_U16 },
-    { "save_file_amiga_type",            98472, 0, FLD_U32 },
-    { "num_selected_teams_inner",        98476, 0, FLD_U16 },
+    FX("current_season_showing",          currentSeasonShowing,        FLD_U16),
+    FX("staying_in_old_club",             stayingInOldClub,            FLD_U16),
+    FX("overdraft_streak",                overdraftStreak,             FLD_U16),
+    FX("overdraft_warning_state",         overdraftWarningState,       FLD_U16),
+    FX("performance_warning_state",       performanceWarningState,     FLD_U16),
+    FX("overdraft_warning_cooldown",      overdraftWarningCooldown,    FLD_U16),
+    FX("performance_warning_cooldown",    performanceWarningCooldown,  FLD_U16),
+    FX("youre_sacked",                    youreSacked,                 FLD_U16),
+    FX("retired",                         retired,                     FLD_U16),
+    FX("competition_slot_updated_flag",   competitionSlotUpdatedFlag,  FLD_U16),
+    FX("career_team_lost_match",          careerTeamLostMatch,         FLD_U16),
+    FX("club_business_active",            clubBusinessActive,          FLD_U16),
+    FX("new_balance",                     newBalance,                  FLD_S32),
+    FX("old_balance",                     old_balance,                 FLD_S32),
+    FX("player_purchases",                playerPurchases,             FLD_S32),
+    FX("player_sales",                    playerSales,                 FLD_S32),
+    FX("general_running_costs",           generalRunningCosts,         FLD_S32),
+    FX("player_wages_bill",               playerWagesBill,             FLD_S32),
+    FX("gate_receipts",                   gateReceipts,                FLD_S32),
+    FX("starting_balance",                startingBalance,             FLD_S32),
+    FX("starting_balance_copy",           startingBalanceCopy,         FLD_S32),
+    FX("competition_bonuses",             competitionBonuses,          FLD_S32),
+    FX("sensisoft_plc_sponsorship",       sensisoftPlcSponsorship,     FLD_S32),
+    FX("finance_totals_need_reset_flag",  financeTotalsNeedResetFlag,  FLD_U16),
+    FX("weekly_running_costs",            weeklyRunningCosts,          FLD_U32),
+    FX("weekly_player_wages",             weeklyPlayerWages,           FLD_U32),
+    FX("total_team_value",                totalTeamValue,              FLD_S32),
+    FA("weekly_wage_by_player_index",     weeklyWageByPlayerIndex, 128,FLD_BYTES),
+    FA("player_form_modifiers",           playerFormModifiers,     32, FLD_BYTES),
+    FX("sensisoft_plc_sponsorship_factor",sensisoftPlcSponsorshipFactor,FLD_U16),
+    FX("additional_investments",          additionalInvestments,       FLD_S32),
+    FX("team_value_divisor",              teamValueDivisor,            FLD_U16),
+    FX("expected_league_rank_index",      expectedLeagueRankIndex,     FLD_U16),
+    FA("board_confidence_history",        boardConfidenceHistory0, 8,  FLD_BYTES),
+    FX("board_confidence_score",          boardConfidenceScore,        FLD_U16),
+    FX("previous_board_confidence",       previousBoardConfidence,     FLD_U16),
+    FX("play_win_cup_animation",          playWinCupAnimation,         FLD_U16),
+    FX("minor_trophy_bonus_active",       minorTrophyBonusActive,      FLD_U16),
+    FX("league_title_bonus_active",       leagueTitleBonusActive,      FLD_U16),
+    FX("major_trophy_bonus_active",       majorTrophyBonusActive,      FLD_U16),
+    FX("cup_bonus_1_active",              cupBonus1Active,             FLD_U16),
+    FX("cup_bonus_2_active",              cupBonus2Active,             FLD_U16),
+    FX("won_world_cup",                   wonWorldCup,                 FLD_U16),
+    FX("won_continental_cup",             wonContinentalCup,           FLD_U16),
+    FX("won_invitation_tournament",       wonInvitationTournament,     FLD_U16),
+    FX("qualifying_stage_1_pending_flag0",qualifyingStage1PendingFlag0,FLD_U16),
+    FX("qualifying_stage_1_pending_flag1",qualifyingStage1PendingFlag1,FLD_U16),
+    FX("qualifying_stage_2_pending_flag0",qualifyingStage2PendingFlag0,FLD_U16),
+    FX("qualifying_stage_2_pending_flag1",qualifyingStage2PendingFlag1,FLD_U16),
+    FX("is_career",                       isCareer,                    FLD_U16),
+    FX("career_match_simulated_flag",     careerMatchSimulatedFlag,    FLD_U16),
+    FX("games_played",                    gamesPlayed,                 FLD_U16),
+    FX("num_wins",                        numWins,                     FLD_U16),
+    FX("num_drawn",                       numDrawn,                    FLD_U16),
+    FX("num_lost",                        numLost,                     FLD_U16),
+    FX("goals_scored",                    goalsScored,                 FLD_U16),
+    FX("goals_taken",                     goalsTaken,                  FLD_U16),
+    FA("board_confidence_mods",           boardConfidenceMod0, 20,     FLD_BYTES),
+    FX("board_confidence_value_0",        boardConfidenceValue0,       FLD_U16),
+    FX("board_confidence_value_1",        boardConfidenceValue1,       FLD_U16),
+    FX("contract_negotiation_active",     contractNegotiationActive,   FLD_U16),
+    FX("wage_scaling_divisor",            wageScalingDivisor,          FLD_U16),
+    FX("team_no_offer_accepted",          teamNoOfferAccepted,         FLD_U16),
+    FX("team_funds_accepted",             teamFundsAccepted,           FLD_S32),
+    FX("is_national_selector",            isNationalSelector,          FLD_U16),
+    FX("some_team_flags",                 someTeamFlags,               FLD_U16),
+    FX("last_nationality_call",           lastNationalityCall,         FLD_U16),
+    FX("national_team_nationality",       nationalTeamNationality,     FLD_U8 ),
+    FX("national_team_file_id",           nationalTeamFileId,          FLD_U8 ),
+    FX("same_national_call_flag",         sameNationalCallFlag,        FLD_U16),
+    FX("sacked_reputation_score",         sackedReputationScore,       FLD_U16),
+    FX("national_selector_reputation_points",nationalSelectorReputationPoints,FLD_U16),
+    FX("national_team_file_code",         nationalTeamFileCode,        FLD_U16),
+    FX("season_review",                   seasonReview,                FLD_U16),
+    FX("world_cup_host_team",             worldCupHostTeam,            FLD_U16),
+    FX("world_cup_qualifying_team",       worldCupQualifyingTeam,      FLD_U16),
+    FX("euro_championship_qual_team",     euroChampionshipQualTeam,    FLD_U16),
+    FX("sel_team_number",                 selTeamNumber,               FLD_U16),
+    FX("coach_or_player",                 coachOrPlayer,               FLD_U16),
+    FX("career_team_league",              careerTeamLeague,            FLD_U16),
+    FX("current_division_index",          currentDivisionIndex,        FLD_U16),
+    FX("league_first_round_number",       leagueFirstRoundNumber,      FLD_U16),
+    FX("play_promoted_animation",         playPromotedAnimation,       FLD_U16),
+    FX("play_relegated_animation",        playRelegatedAnimation,      FLD_U16),
+    FX("mr_or_ms",                        mrOrMs,                      FLD_U16),
+    FA("manager_sex_buffer",              managerSexBuffer, 4,         FLD_STR ),
+    FA("manager_name_buffer",             managerNameBuffer, 9,        FLD_STR ),
+    FA("manager_surname_buffer",          managerSurnameBuffer, 13,    FLD_STR ),
+    FX("pl_nationality",                  plNationality,               FLD_U16),
+    FX("win_cup_bonus_count",             winCupBonusCount,            FLD_U16),
+    FX("minor_trophy_bonus_count",        minorTrophyBonusCount,       FLD_U16),
+    FX("major_trophy_bonus_count",        majorTrophyBonusCount,       FLD_U16),
+    FX("career_reputation_points",        careerReputationPoints,      FLD_S16),
+    FX("removed_offer_players_from_selected_team_count",removedOfferPlayersFromSelectedTeamCount,FLD_U16),
+    FX("removed_offer_players_from_other_teams_count",  removedOfferPlayersFromOtherTeamsCount,  FLD_U16),
+    FX("home_market_update_backlog",      homeMarketUpdateBacklog,     FLD_U16),
+    FX("foreign_market_update_backlog",   foreignMarketUpdateBacklog,  FLD_U16),
+    FX("offer_expiry_iterations_remaining",offerExpiryIterationsRemaining,FLD_U16),
+    FX("num_foreign_market_players",      numForeignMarketPlayers,     FLD_U16),
+    FX("num_home_market_players",         numHomeMarketPlayers,        FLD_U16),
+    FX("num_offers",                      numOffers,                   FLD_U16),
+    FX("career_seasons_completed",        careerSeasonsCompleted,      FLD_U16),
+    FX("num_foreign_market_players_2",    numForeignMarketPlayers2,    FLD_U16),
+    FX("pending_foreign_player_count",    pendingForeignPlayerCount,   FLD_U16),
+    FX("season_transfer_quota",           seasonTransferQuota,         FLD_U16),
+    FX("transfer_pool_slot_limit",        transferPoolSlotLimit,       FLD_U16),
+    FX("offer_swap_slot_limit",           offerSwapSlotLimit,          FLD_U16),
+    FX("transfer_pool_slots_used",        transferPoolSlotsUsed,       FLD_U16),
+    FX("offer_swap_slots_used",           offerSwapSlotsUsed,          FLD_U16),
+    FX("num_new_job_offers",              numNewJobOffers,             FLD_U16),
+    FX("num_job_offers",                  numJobOffers,                FLD_U16),
+    FX("time_to_negotiate",               timeToNegotiate,             FLD_U16),
+    FX("num_players_on_transfer_market",  numPlayersOnTransferMarket,  FLD_U16),
+    FX("last_offer_primary_player_ordinal",lastOfferPrimaryPlayerOrdinal,FLD_U16),
+    FX("last_offer_extra_players_wanted", lastOfferExtraPlayersWanted, FLD_U16),
+    FX("last_offer_swap_player_ordinal",  lastOfferSwapPlayerOrdinal,  FLD_U16),
+    FX("last_offer_extra_player_ordinal", lastOfferExtraPlayerOrdinal, FLD_U16),
+    FX("offer_negotiation_attempt_count", offerNegotiationAttemptCount,FLD_U16),
+    FX("transfer_market_rand_offset_0",   transferMarketRandOffset0,   FLD_U16),
+    FX("transfer_market_rand_offset_1",   transferMarketRandOffset1,   FLD_U16),
+    FX("transfer_market_rand_offset_2",   transferMarketRandOffset2,   FLD_U16),
+    FX("transfer_market_phase",           transferMarketPhase,         FLD_U16),
+    FX("career_num_players",              careerNumPlayers,            FLD_U16),
+    FX("sel_team_selected_player_position",selTeamSelectedPlayerPosition,FLD_U16),
+    FX("last_financial_week_index",       lastFinancialWeekIndex,      FLD_U16),
+    FX("num_players",                     numPlayers,                  FLD_U16),
+    FX("current_team_number",             currentTeamNumber,           FLD_U16),
+    FX("current_team_selected_player_position",currentTeamSelectedPlayerPosition,FLD_U16),
+    FX("training_match_saved_player_pos", trainingMatchSavedPlayerPos, FLD_U16),
+    FX("last_match_saved_player_pos",     lastMatchSavedPlayerPos,     FLD_U16),
+    FX("last_match_saved_coach_or_player",lastMatchSavedCoachOrPlayer, FLD_U16),
+    FX("current_tactics",                 currentTactics,              FLD_U8 ),
+    FX("last_match_saved_team_controls",  lastMatchSavedTeamControls,  FLD_U8 ),
+    FX("season_finished",                 seasonFinished,              FLD_U16),
+    FX("career_finished",                 careerFinished,              FLD_U16),
+    FX("euro_cup_slot_index",             euroCupSlotIndex,            FLD_U16),
+    FX("season_number_of_squads",         seasonNumberOfSquads,        FLD_U16),
+    FX("team_selection_key_cache_index",  teamSelectionKeyCacheIndex,  FLD_U16),
+    FX("team_selection_key_cache_offset", teamSelectionKeyCacheOffset, FLD_U16),
+    FX("team_selection_key_cache_count",  teamSelectionKeyCacheCount,  FLD_U16),
+    FX("career_slot_processing_in_progress",careerSlotProcessingInProgress,FLD_U16),
+    FX("team_selection_key_cache_end",    teamSelectionKeyCacheEnd,    FLD_U16),
+    FX("competition_over",                competitionOver,             FLD_U16),
+    FA("diy_preset_name_of_competition",  diyPresetNameOfCompetition, 36, FLD_STR),
+    FX("major_trophy_bonus_value",        majorTrophyBonusValue,       FLD_U16),
+    FX("num_diy_teams",                   numDiyTeams,                 FLD_U16),
+    FX("primary_comp_winner_team",        primaryCompWinnerTeam,       FLD_U16),
+    FX("primary_comp_squad_view_param",   primaryCompSquadViewParam,   FLD_U16),
+    FX("primary_comp_slot_state_a",       primaryCompSlotStateA,       FLD_U16),
+    FX("primary_comp_slot_state_b",       primaryCompSlotStateB,       FLD_U16),
+    FX("primary_comp_slot_state_c",       primaryCompSlotStateC,       FLD_U16),
+    FX("diy_team_min_division_index",     diyTeamMinDivisionIndex,     FLD_U16),
+    FX("diy_team_max_division_offset",    diyTeamMaxDivisionOffset,    FLD_U16),
+    FX("league_promotion_count",          leaguePromotionCount,        FLD_U16),
+    FX("league_relegation_count",         leagueRelegationCount,       FLD_U16),
+    FX("league_warnings_enabled",         leagueWarningsEnabled,       FLD_U16),
+    FX("view_random_phase",               viewRandomPhase,             FLD_U8 ),
+    FX("season_playing",                  seasonPlaying,               FLD_U8 ),
+    FX("in_friendly_menu",                inFriendlyMenu,              FLD_U16),
+    FX("is_national_team",                isNationalTeam,              FLD_U16),
+    FX("game_type",                       gameType,                    FLD_U16),
+    FX("contest_started",                 contestStarted,              FLD_U16),
+    FX("career_loaded_flag",              careerLoadedFlag,            FLD_U16),
+    FX("game_length",                     gameLength,                  FLD_U16),
+    FX("auto_replays",                    autoReplays,                 FLD_U16),
+    FX("menu_music",                      menuMusic,                   FLD_U16),
+    FX("auto_save_highlights",            autoSaveHighlights,          FLD_U16),
+    FX("all_player_teams_equal",          allPlayerTeamsEqual,         FLD_U16),
+    FX("pitch_type",                      pitchType,                   FLD_U16),
+    FX("seed_2",                          seed2,                       FLD_U8 ),
+    FX("rand_xor_index_2",                randXorIndex2,               FLD_U8 ),
+    FX("rand_xor_key_2",                  randXorKey2,                 FLD_U8 ),
+    FX("new_random_seed_copy",            newRandomSeedCopy,           FLD_U8 ),
+    FX("random_seed",                     randomSeed,                  FLD_U16),
+    FX("save_file_version",               saveFileVersion,             FLD_U16),
+    FX("save_file_amiga_type",            saveFileAmigaType,           FLD_U32),
+    FX("num_selected_teams_inner",        numSelectedTeams,            FLD_U16),
 
-    /* Comp context names + slot states (secondary/tertiary/quaternary).
-     * The +0x6E inside each comp context holds the user-facing display
-     * name; +0x90 holds the string-offset pointer (already promoted as
-     * a pointer above). */
-    { "secondary_competition_name",      63344, 36, FLD_STR },
-    { "minor_trophy_bonus_value",        63388, 0, FLD_U16 },
-    { "secondary_comp_winner_team",      63398, 0, FLD_U16 },
-    { "secondary_comp_slot_state_a",     63402, 0, FLD_U16 },
-    { "secondary_comp_slot_state_b",     63404, 0, FLD_U16 },
-    { "secondary_comp_slot_state_c",     63406, 0, FLD_U16 },
-    { "secondary_comp_finished",         63416, 0, FLD_U16 },
-    { "tertiary_competition_name",       66244, 36, FLD_STR },
-    { "league_title_bonus_value",        66288, 0, FLD_U16 },
-    { "tertiary_comp_winner_team",       66298, 0, FLD_U16 },
-    { "tertiary_comp_slot_state_a",      66302, 0, FLD_U16 },
-    { "tertiary_comp_slot_state_b",      66304, 0, FLD_U16 },
-    { "tertiary_comp_slot_state_c",      66306, 0, FLD_U16 },
-    { "tertiary_comp_finished",          66316, 0, FLD_U16 },
-    { "diy_comp_slot_state_a",           67394, 0, FLD_U16 },
-    { "diy_comp_slot_state_b",           67396, 0, FLD_U16 },
-    { "diy_comp_slot_state_c",           67398, 0, FLD_U16 },
-    { "quaternary_competition_name",     68428, 36, FLD_STR },
-    { "major_trophy_or_cup_bonus_value", 68472, 0, FLD_U16 },
-    { "quaternary_comp_winner_team",     68482, 0, FLD_U16 },
-    { "quaternary_comp_slot_state_a",    68486, 0, FLD_U16 },
-    { "quaternary_comp_slot_state_b",    68488, 0, FLD_U16 },
-    { "quaternary_comp_slot_state_c",    68490, 0, FLD_U16 },
+    /* Comp context names + slot states (secondary/tertiary/quaternary). */
+    FA("secondary_competition_name",      secondaryCompetitionName, 36,FLD_STR),
+    FX("minor_trophy_bonus_value",        minorTrophyBonusValue,       FLD_U16),
+    FX("secondary_comp_winner_team",      secondaryCompWinnerTeam,     FLD_U16),
+    FX("secondary_comp_slot_state_a",     secondaryCompSlotStateA,     FLD_U16),
+    FX("secondary_comp_slot_state_b",     secondaryCompSlotStateB,     FLD_U16),
+    FX("secondary_comp_slot_state_c",     secondaryCompSlotStateC,     FLD_U16),
+    FX("secondary_comp_finished",         secondaryCompFinished,       FLD_U16),
+    FA("tertiary_competition_name",       tertiaryCompetitionName, 36, FLD_STR),
+    FX("league_title_bonus_value",        leagueTitleBonusValue,       FLD_U16),
+    FX("tertiary_comp_winner_team",       tertiaryCompWinnerTeam,      FLD_U16),
+    FX("tertiary_comp_slot_state_a",      tertiaryCompSlotStateA,      FLD_U16),
+    FX("tertiary_comp_slot_state_b",      tertiaryCompSlotStateB,      FLD_U16),
+    FX("tertiary_comp_slot_state_c",      tertiaryCompSlotStateC,      FLD_U16),
+    FX("tertiary_comp_finished",          tertiaryCompFinished,        FLD_U16),
+    FX("diy_comp_slot_state_a",           diyCompSlotStateA,           FLD_U16),
+    FX("diy_comp_slot_state_b",           diyCompSlotStateB,           FLD_U16),
+    FX("diy_comp_slot_state_c",           diyCompSlotStateC,           FLD_U16),
+    FA("quaternary_competition_name",     quaternaryCompetitionName, 36,FLD_STR),
+    FX("major_trophy_or_cup_bonus_value", majorTrophyOrCupBonusValue,  FLD_U16),
+    FX("quaternary_comp_winner_team",     quaternaryCompWinnerTeam,    FLD_U16),
+    FX("quaternary_comp_slot_state_a",    quaternaryCompSlotStateA,    FLD_U16),
+    FX("quaternary_comp_slot_state_b",    quaternaryCompSlotStateB,    FLD_U16),
+    FX("quaternary_comp_slot_state_c",    quaternaryCompSlotStateC,    FLD_U16),
 
-    /* Misc small arrays / records. */
-    { "removed_player_stat_accum",       57486, 2, FLD_BYTES },
-    { "career_unavailable_player_list",  55722, 16, FLD_BYTES },
-    { "current_match_players",           56158, 32, FLD_BYTES },
-    { "season_squad_team_numbers",       63272, 48, FLD_BYTES },
-    { "player_positions",                62902, 32, FLD_BYTES },
-    { "training_match_saved_players",    62942, 32, FLD_BYTES },
-    { "training_match_saved_shirt_nums", 62974, 32, FLD_BYTES },
-    { "training_match_saved_tactics",    63006, 2,  FLD_BYTES },
-    { "last_match_players",              63012, 32, FLD_BYTES },
-    { "last_match_saved_shirt_nums",     63044, 32, FLD_BYTES },
-    { "career_last_match_index_by_competition_slot", 63078, 162, FLD_BYTES },
-    { "team_budget_rank_table",          71324, 128, FLD_BYTES },
-    { "players_on_transfer_market",      55694, 10, FLD_BYTES },
+    /* Small named arrays / packed records. */
+    FA("removed_player_stat_accum",       removedPlayerStatAccum, 2,   FLD_BYTES),
+    FA("career_unavailable_player_list",  careerUnavailablePlayerList, 16, FLD_BYTES),
+    FA("current_match_players",           currentMatchPlayers, 32,     FLD_BYTES),
+    FA("season_squad_team_numbers",       seasonSquadTeamNumbers, 48,  FLD_BYTES),
+    FA("player_positions",                playerPositions, 32,         FLD_BYTES),
+    FA("training_match_saved_players",    trainingMatchSavedPlayers, 32, FLD_BYTES),
+    FA("training_match_saved_shirt_nums", trainingMatchSavedShirtNums, 32, FLD_BYTES),
+    FA("training_match_saved_tactics",    trainingMatchSavedTactics, 2,FLD_BYTES),
+    FA("last_match_players",              lastMatchPlayers, 32,        FLD_BYTES),
+    FA("last_match_saved_shirt_nums",     lastMatchSavedShirtNums, 32, FLD_BYTES),
+    FA("career_last_match_index_by_competition_slot",
+                                          careerLastMatchIndexByCompetitionSlot, 162, FLD_BYTES),
+    FA("team_budget_rank_table",          teamBudgetRankTable, 128,    FLD_BYTES),
+    FA("players_on_transfer_market",      playersOnTransferMarket, 10, FLD_BYTES),
 
     /* Market player slot tables — byte arrays of compact records. */
-    { "foreign_market_players",          55180, 60,  FLD_BYTES },
-    { "home_market_players",             55240, 100, FLD_BYTES },
-    { "transfer_offer_table",            55340, 70,  FLD_BYTES },
-    { "new_job_offers",                  55428, 130, FLD_BYTES },
-    { "job_offers",                      55560, 130, FLD_BYTES },
+    FA("foreign_market_players",          foreignMarketPlayers, 60,    FLD_BYTES),
+    FA("home_market_players",             homeMarketPlayers, 100,      FLD_BYTES),
+    FA("transfer_offer_table",            transferOfferTable, 70,      FLD_BYTES),
+    FA("new_job_offers",                  newJobOffers, 130,           FLD_BYTES),
+    FA("job_offers",                      jobOffers, 130,              FLD_BYTES),
 
-    { NULL, 0, 0, FLD_END },
+    { NULL, NULL, 0, FLD_END },
 };
+#undef FX
+#undef FA
 
 static void emit_scalar_table(mjson_print_fn_t fn, void *fnd,
                               const char *section_key,
@@ -959,7 +1192,7 @@ static void emit_scalar_table(mjson_print_fn_t fn, void *fnd,
     for (const FieldDesc *f = table; f->type != FLD_END; f++) {
         if (!first) mjson_printf(fn, fnd, "%s", ",");
         first = 0;
-        const uint8_t *p = (&careerFileBuffer) + f->offset;
+        const uint8_t *p = (const uint8_t *)f->addr;
         switch (f->type) {
         case FLD_U8:
             mjson_printf(fn, fnd, "%Q:%u", f->name, (unsigned)*p);
@@ -1010,7 +1243,7 @@ static void load_scalar_table(const char *buf, int buflen,
 
     for (const FieldDesc *f = table; f->type != FLD_END; f++) {
         snprintf(path, sizeof(path), "$.%s.%s", section_key, f->name);
-        uint8_t *p = (&careerFileBuffer) + f->offset;
+        uint8_t *p = (uint8_t *)f->addr;
         switch (f->type) {
         case FLD_U8: case FLD_S8:
             if (mjson_get_number(buf, buflen, path, &num) > 0)
