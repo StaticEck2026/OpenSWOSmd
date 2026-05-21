@@ -398,19 +398,43 @@ int16_t _LoadCompetitionFile(void)
 extern void _RebuildPointersAfterLoad(void);
 extern void _TranslateAmigaAddressesAfterLoad(void);
 
+#include "save_format_json.h"
+
 __attribute__((used, externally_visible))
 int16_t _LoadCareerFile(uint8_t *filename)
 {
     int16_t result;
+    uint32_t fileSize = 0;
 
     _SaveOptions();
 
-    result = _LoadFileEx(filename, (uint8_t *)&careerFileBuffer, (uint32_t *)0);
+    result = _LoadFileEx(filename, (uint8_t *)&careerFileBuffer, &fileSize);
     if (result != 0) {
         _ShowFsErrorByCode((uint16_t)result);
         _RestoreOptions();
         _InitUserTactics();
         return 1;
+    }
+
+    /* Format detection — if the file starts with '{' (after any
+     * whitespace) it's a JSON save written by a SWOS_SAVE_FORMAT_JSON
+     * build. Otherwise fall through to the legacy raw-memory-dump
+     * path. See SAVE_FORMAT_JSON.md. */
+    if (SaveJson_BufferIsJson((uint8_t *)&careerFileBuffer, fileSize)) {
+        int16_t jr = SaveJson_LoadCareer(filename,
+                                         (uint8_t *)&careerFileBuffer,
+                                         fileSize);
+        if (jr != 0) {
+            /* JSON path not implemented yet — surface error. Once the
+             * mjson schema lands this branch becomes the primary
+             * path. */
+            _ShowErrorMenu(aFileSavedByDif);
+            _RestoreOptions();
+            _InitUserTactics();
+            return 1;
+        }
+        _CycleMenuMusic();
+        return 0;
     }
 
     if (_LoadCompetitionFile() != 0) {
@@ -457,6 +481,19 @@ int16_t _SaveCareerFile(uint8_t *filename)
 {
     uint32_t fileSize;
     int16_t result;
+
+#ifdef SWOS_SAVE_FORMAT_JSON
+    /* JSON write is gated on the build flag so testers can opt in
+     * before the legacy path is removed. See SAVE_FORMAT_JSON.md. */
+    {
+        int16_t jr = SaveJson_WriteCareer(filename);
+        if (jr == 0)
+            return 0;
+        /* jr != 0 = JSON path not implemented yet for this region.
+         * Fall through to the legacy writer so saves still work
+         * during the dual-format transition. */
+    }
+#endif
 
     _SaveCompetitionFile();
 

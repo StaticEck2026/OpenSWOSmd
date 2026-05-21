@@ -129,6 +129,17 @@ ifdef SWOS_TEST_NO_INJURIES_CARDS
 DEBUG_FLAGS += -DSWOS_TEST_NO_INJURIES_CARDS=1
 endif
 
+# Save-file format toggle. Default OFF — saves are written in the
+# legacy raw-memory-dump format the original Amiga SWOS used. Build
+# with `make SWOS_SAVE_FORMAT_JSON=1` to write new saves as JSON via
+# mjson (see src/save_format_json.c). Load auto-detects format from
+# the file header so existing saves keep working in either mode.
+# Cleanup: once JSON is proven for all save types we delete the
+# legacy paths and the toggle.
+ifdef SWOS_SAVE_FORMAT_JSON
+DEBUG_FLAGS += -DSWOS_SAVE_FORMAT_JSON=1
+endif
+
 CFLAGS  := $(ARCHFLAGS) -O2 -g -std=gnu11 -fno-strict-aliasing -fno-builtin \
            -D_FILE_OFFSET_BITS=64 $(DEBUG_FLAGS) \
            -Wall -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable \
