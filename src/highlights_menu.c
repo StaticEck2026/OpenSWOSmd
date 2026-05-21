@@ -150,15 +150,9 @@ void _LoadHighlightsMenu(void)
         goto cleanup;
     }
 
-    /* Byteswap the 5 header uint16 fields BE→host so the rest of the
-     * code can read them naturally. The fields sit at the end of the
-     * 2254-byte HIL header (offsets 2244..2253) — backed by hilBackingBuf
-     * via .equ aliases in swos_globals.c. No-ops on the Amiga BE host. */
-    hilNumGoals       = BE16_TO_HOST(hilNumGoals);
-    hilTeam1Goals     = BE16_TO_HOST(hilTeam1Goals);
-    hilTeam2Goals     = BE16_TO_HOST(hilTeam2Goals);
-    hilPitchNumber    = BE16_TO_HOST(hilPitchNumber);
-    hilMaxSubstitutes = BE16_TO_HOST(hilMaxSubstitutes);
+    /* BE→host swap for the 5 u16 header fields now lives inside
+     * _LoadHilFile's legacy load branch so the JSON load path can
+     * skip it. Both source formats converge on host-native here. */
 
     _StringCopy(selectedFilename, hilFilename);
 

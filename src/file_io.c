@@ -790,8 +790,20 @@ int16_t _LoadHilFile(uint8_t *filename)
     }
 
     result = _LoadFileEx(filename, hilFileBuffer, (uint32_t *)0);
-    if (result == 0)
+    if (result == 0) {
+        /* Legacy on-disk format stores the 5 header u16s in BE (Amiga
+         * m68k). The original loader left them BE in memory and
+         * highlights_menu.c followed up with an in-place BE_TO_HOST
+         * swap. Doing the swap right here means JSON loads — which
+         * write host-native directly — can skip it, and there's a
+         * single canonical place for the byte-order normalisation. */
+        hilNumGoals       = BE16_TO_HOST(hilNumGoals);
+        hilTeam1Goals     = BE16_TO_HOST(hilTeam1Goals);
+        hilTeam2Goals     = BE16_TO_HOST(hilTeam2Goals);
+        hilPitchNumber    = BE16_TO_HOST(hilPitchNumber);
+        hilMaxSubstitutes = BE16_TO_HOST(hilMaxSubstitutes);
         return 0;
+    }
 
     hilNumGoals = 0;
     _ShowFsErrorByCode((uint16_t)result);

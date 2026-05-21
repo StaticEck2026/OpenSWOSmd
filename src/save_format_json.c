@@ -3000,11 +3000,16 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
         memcpy(hdr->game_round, tmp, n);
     }
 
+    /* The 5 u16 header fields are written host-native here. The
+     * legacy load path keeps bytes BE and _LoadHilFile applies a
+     * single BE16_TO_HOST swap on success (moved out of
+     * highlights_menu.c so both paths converge on host-native
+     * fields ready for the game to read). */
     uint16_t num_goals = 0;
     if (mjson_get_number((const char *)src, (int)src_size,
                          "$.num_goals", &num) > 0) num_goals = (uint16_t)num;
     hdr->num_goals = num_goals;
-    hilNumGoals = num_goals;
+    hilNumGoals    = num_goals;
 
 #define HDR_U16(key, field) do { \
         if (mjson_get_number((const char *)src, (int)src_size, \
