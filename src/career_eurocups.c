@@ -630,15 +630,19 @@ void _Career_UpdateEuropeanChampionshipCompetitions(void)
     BE_WRITE_U16(a5, euroChampionshipQualTeam);
     a5 += 2;
 
-    /* a5 is preserved across slot calls (asm bridge saves/restores a2-a6).
-     * All groups write qualified team IDs to the same output position. */
-    updateECSlot(ecQualifyingGroup1Copy, 2, a5);
-    updateECSlot(ecQualifyingGroup2Copy, 2, a5);
-    updateECSlot(ecQualifyingGroup3Copy, 2, a5);
-    updateECSlot(ecQualifyingGroup4Copy, 2, a5);
-    updateECSlot(ecQualifyingGroup5Copy, 2, a5);
-    updateECSlot(ecQualifyingGroup6Copy, 2, a5);
-    updateECSlot(ecQualifyingGroup7Copy, 2, a5);
+    /* Asm uses `(a5)+` inside DIY_BuildQualifiedTeamListFromSortedTable_EC,
+     * advancing a5 by `count * 2` bytes across each slot call. The m68k
+     * register is shared between caller and callee; in C we have to
+     * advance the caller's pointer explicitly after each call. Without
+     * this, all 8 group calls overwrite the same first slots and entries
+     * past index 2 stay stale. */
+    updateECSlot(ecQualifyingGroup1Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(ecQualifyingGroup2Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(ecQualifyingGroup3Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(ecQualifyingGroup4Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(ecQualifyingGroup5Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(ecQualifyingGroup6Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(ecQualifyingGroup7Copy, 2, a5); a5 += 2 * 2;
     updateECSlot(ecQualifyingGroup8Copy, 1, a5);
 }
 
@@ -694,18 +698,22 @@ void _Career_UpdateWorldCupCompetitions(void)
     BE_WRITE_U16(a5, worldCupHostTeam);
     a5 += 2;
 
-    /* a5 is preserved across slot calls (asm bridge saves/restores a2-a6) */
-    updateWCSlot(worldCupQualifyingGroup1Copy, 2, a5);
-    updateWCSlot(worldCupQualifyingGroup2Copy, 2, a5);
-    updateWCSlot(worldCupQualifyingGroup3Copy, 2, a5);
-    updateWCSlot(worldCupQualifyingGroup4Copy, 2, a5);
-    updateWCSlot(worldCupQualifyingGroup5Copy, 2, a5);
-    updateWCSlot(worldCupQualifyingGroup6Copy, 2, a5);
-    updateWCSlot(worldCupQualifyingGroup7Copy, 2, a5);
-    updateWCSlot(worldCupQualifyingGroup8Copy, 2, a5);
-    updateWCSlot(northAmericaWorldCupQualificationCopy, 3, a5);
-    updateWCSlot(southAmericaWorldCupQualificationCopy, 4, a5);
-    updateWCSlot(africaWorldCupQualificationCopy, 5, a5);
-    updateWCSlot(asiaWorldCupQualificationCopy, 2, a5);
+    /* a5 is shared across slot calls in the m68k version because the
+     * post-increment writes happen via the register inside
+     * DIY_BuildQualifiedTeamListFromSortedTable_WC / FromDiyFileBuffer.
+     * Advance the C pointer by `count * 2` bytes after each call so all
+     * 13 group qualifiers land in distinct slots of worldCup2Copy.unk1. */
+    updateWCSlot(worldCupQualifyingGroup1Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(worldCupQualifyingGroup2Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(worldCupQualifyingGroup3Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(worldCupQualifyingGroup4Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(worldCupQualifyingGroup5Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(worldCupQualifyingGroup6Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(worldCupQualifyingGroup7Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(worldCupQualifyingGroup8Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(northAmericaWorldCupQualificationCopy, 3, a5); a5 += 3 * 2;
+    updateWCSlot(southAmericaWorldCupQualificationCopy, 4, a5); a5 += 4 * 2;
+    updateWCSlot(africaWorldCupQualificationCopy, 5, a5); a5 += 5 * 2;
+    updateWCSlot(asiaWorldCupQualificationCopy, 2, a5); a5 += 2 * 2;
     updateWCSlot(oceaniaWorldCupQualificationCopy, 1, a5);
 }
