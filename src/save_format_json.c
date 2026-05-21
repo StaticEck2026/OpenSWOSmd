@@ -226,12 +226,27 @@ static int json_out_emit(const char *chunk, int chunk_len, void *ud)
 #define SAVE_SI_TOURNAMENTSTATUS 104u
 #define SAVE_SI_MANAGERSTATUS    105u
 
+/* Heuristic for sentinel pointer values used in competition tables:
+ * `(CompetitionCup *)-1`, `-2`, `0xFC`, etc. These aren't real
+ * addresses — they're flags meaning "end of list" / "skip" / etc.,
+ * and they MUST round-trip bit-exact. Any unsigned value at the
+ * extreme top of the 32-bit range or below the lowest plausible
+ * mapped address is treated as a sentinel. */
+static int looks_sentinel(uint32_t val)
+{
+    return val >= 0xFFFFFF00u || val < 0x00001000u;
+}
+
 /* Emit a single 32-bit pointer field as one of:
- *   - JSON null                          (val == 0 or unresolvable)
+ *   - JSON null                          (val == 0)
  *   - `{ "sym": "name" [, "off": N] }`   (resolved via g_amiga_addr_map)
  *   - `{ "str": "<content>" }`           (string pointer not in LUT —
  *                                         covers the ~114 comp-name
  *                                         strings)
+ *   - `{ "raw": N }`                     (sentinel value used by
+ *                                         comp tables: -1, -2, 0xFC,
+ *                                         etc.)
+ *   - JSON null                          (stale cross-build pointer)
  */
 static int emit_ptr_field(mjson_print_fn_t fn, void *fnd, const char *key,
                           uint32_t val)
@@ -246,6 +261,12 @@ static int emit_ptr_field(mjson_print_fn_t fn, void *fnd, const char *key,
             return mjson_printf(fn, fnd, "%Q:{%Q:%Q}", key, "sym", e->name);
         return mjson_printf(fn, fnd, "%Q:{%Q:%Q,%Q:%u}",
                             key, "sym", e->name, "off", (unsigned)off);
+    }
+    /* Sentinel before string-readability — sentinels could
+     * accidentally look "readable" by the ±16MB heuristic and emit
+     * garbage. */
+    if (looks_sentinel(val)) {
+        return mjson_printf(fn, fnd, "%Q:{%Q:%u}", key, "raw", (unsigned)val);
     }
     /* Not in the LUT — could be a comp-name string in .rodata. If
      * the pointer falls in a plausible in-process range, dereference
@@ -287,13 +308,21 @@ static void load_ptr_field(const char *buf, int buflen, const char *path,
         return;
     }
 
-    /* Fall through to "str" form — copy content into our pool. */
+    /* "str" form — copy content into our pool. */
     snprintf(child_path, sizeof(child_path), "%s.str", path);
     if (mjson_get_string(buf, buflen, child_path, tmp, sizeof(tmp)) > 0) {
         *out = string_pool_intern(tmp);
         return;
     }
-    /* Neither form present — null / unresolved. *out stays 0. */
+
+    /* "raw" form — bit-exact sentinel passthrough. */
+    snprintf(child_path, sizeof(child_path), "%s.raw", path);
+    double raw_val = 0.0;
+    if (mjson_get_number(buf, buflen, child_path, &raw_val) > 0) {
+        *out = (uint32_t)raw_val;
+        return;
+    }
+    /* None of the forms present — null / unresolved. *out stays 0. */
 }
 
 static void emit_string_field(mjson_print_fn_t fn, void *fnd, const char *key,
@@ -479,6 +508,178 @@ static void load_season_informations(const char *buf, int buflen)
     }
 }
 
+/* ---------- careerFileBuffer top-level pointer fields ----------
+ *
+ * Bytes that need symbol-stable encoding so saves survive rebuilds.
+ * Offsets are into careerFileBuffer (= careerFileBufferBuf).
+ *
+ *   currentCompetitionPtr            +63244  (uint32_t)
+ *   secondaryCompetitionPtr          +63248
+ *   tertiaryCompetitionPtr           +63252
+ *   quaternaryCompetitionPtr         +63256
+ *   diyCompetitionPtr                +63260
+ *   diyCompetitionTablePtr           +63266
+ *   careerCompetitionSlotPtrTable[5] +63320  (5 × uint32_t)
+ *   careerCupPickList[5]             +55086  (5 × uint32_t, terminator-
+ *                                              based comp table)
+ *   primaryCompStringOffset          +93348
+ *   secondaryCompStringOffset        +63380
+ *   tertiaryCompStringOffset         +66280
+ *   quaternaryCompStringOffset       +68464
+ */
+
+#define CFB_CURRENT_COMP_PTR_OFF        63244u
+#define CFB_SECONDARY_COMP_PTR_OFF      63248u
+#define CFB_TERTIARY_COMP_PTR_OFF       63252u
+#define CFB_QUATERNARY_COMP_PTR_OFF     63256u
+#define CFB_DIY_COMP_PTR_OFF            63260u
+#define CFB_DIY_COMP_TABLE_PTR_OFF      63266u
+#define CFB_CAREER_COMP_SLOT_TBL_OFF    63320u
+#define CFB_CAREER_CUP_PICK_LIST_OFF    55086u
+#define CFB_PRIMARY_COMP_STR_OFF        93348u
+#define CFB_SECONDARY_COMP_STR_OFF      63380u
+#define CFB_TERTIARY_COMP_STR_OFF       66280u
+#define CFB_QUATERNARY_COMP_STR_OFF     68464u
+
+/* Convenience to read a uint32 from careerFileBuffer + off. */
+static uint32_t cfb_u32(uint32_t off)
+{
+    return *(uint32_t *)((&careerFileBuffer) + off);
+}
+
+static void cfb_set_u32(uint32_t off, uint32_t val)
+{
+    *(uint32_t *)((&careerFileBuffer) + off) = val;
+}
+
+static void emit_career_pointers(mjson_print_fn_t fn, void *fnd)
+{
+    emit_ptr_field(fn, fnd, "current_competition_ptr",
+                   cfb_u32(CFB_CURRENT_COMP_PTR_OFF));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_ptr_field(fn, fnd, "secondary_competition_ptr",
+                   cfb_u32(CFB_SECONDARY_COMP_PTR_OFF));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_ptr_field(fn, fnd, "tertiary_competition_ptr",
+                   cfb_u32(CFB_TERTIARY_COMP_PTR_OFF));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_ptr_field(fn, fnd, "quaternary_competition_ptr",
+                   cfb_u32(CFB_QUATERNARY_COMP_PTR_OFF));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_ptr_field(fn, fnd, "diy_competition_ptr",
+                   cfb_u32(CFB_DIY_COMP_PTR_OFF));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_ptr_field(fn, fnd, "diy_competition_table_ptr",
+                   cfb_u32(CFB_DIY_COMP_TABLE_PTR_OFF));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_ptr_field(fn, fnd, "primary_comp_string_offset",
+                   cfb_u32(CFB_PRIMARY_COMP_STR_OFF));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_ptr_field(fn, fnd, "secondary_comp_string_offset",
+                   cfb_u32(CFB_SECONDARY_COMP_STR_OFF));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_ptr_field(fn, fnd, "tertiary_comp_string_offset",
+                   cfb_u32(CFB_TERTIARY_COMP_STR_OFF));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_ptr_field(fn, fnd, "quaternary_comp_string_offset",
+                   cfb_u32(CFB_QUATERNARY_COMP_STR_OFF));
+
+    /* careerCompetitionSlotPtrTable[5] */
+    mjson_printf(fn, fnd, ",%Q:[", "career_competition_slot_ptr_table");
+    for (uint32_t i = 0; i < 5; i++) {
+        if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+        /* emit_ptr_field requires a key — for array elements we
+         * inline the same logic minus the key prefix. */
+        uint32_t val = cfb_u32(CFB_CAREER_COMP_SLOT_TBL_OFF + i * 4);
+        uint32_t off = 0;
+        const AmigaAddrLutEntry *e = sym_from_ptr(val, &off);
+        if (val == 0u) {
+            mjson_printf(fn, fnd, "%s", "null");
+        } else if (e) {
+            if (off == 0) mjson_printf(fn, fnd, "{%Q:%Q}", "sym", e->name);
+            else mjson_printf(fn, fnd, "{%Q:%Q,%Q:%u}",
+                              "sym", e->name, "off", (unsigned)off);
+        } else if (looks_sentinel(val)) {
+            mjson_printf(fn, fnd, "{%Q:%u}", "raw", (unsigned)val);
+        } else if (looks_readable(val)) {
+            const char *s = (const char *)(uintptr_t)val;
+            size_t n = 0; while (n < 128u && s[n] != '\0') n++;
+            if (n > 0 && n < 128u)
+                mjson_printf(fn, fnd, "{%Q:%.*Q}", "str", (int)n, s);
+            else
+                mjson_printf(fn, fnd, "%s", "null");
+        } else {
+            mjson_printf(fn, fnd, "%s", "null");
+        }
+    }
+    mjson_printf(fn, fnd, "%s", "]");
+
+    /* careerCupPickList[5] — same shape as the slot table. */
+    mjson_printf(fn, fnd, ",%Q:[", "career_cup_pick_list");
+    for (uint32_t i = 0; i < 5; i++) {
+        if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+        uint32_t val = cfb_u32(CFB_CAREER_CUP_PICK_LIST_OFF + i * 4);
+        uint32_t off = 0;
+        const AmigaAddrLutEntry *e = sym_from_ptr(val, &off);
+        if (val == 0u) {
+            mjson_printf(fn, fnd, "%s", "null");
+        } else if (e) {
+            if (off == 0) mjson_printf(fn, fnd, "{%Q:%Q}", "sym", e->name);
+            else mjson_printf(fn, fnd, "{%Q:%Q,%Q:%u}",
+                              "sym", e->name, "off", (unsigned)off);
+        } else if (looks_sentinel(val)) {
+            mjson_printf(fn, fnd, "{%Q:%u}", "raw", (unsigned)val);
+        } else if (looks_readable(val)) {
+            const char *s = (const char *)(uintptr_t)val;
+            size_t n = 0; while (n < 128u && s[n] != '\0') n++;
+            if (n > 0 && n < 128u)
+                mjson_printf(fn, fnd, "{%Q:%.*Q}", "str", (int)n, s);
+            else
+                mjson_printf(fn, fnd, "%s", "null");
+        } else {
+            mjson_printf(fn, fnd, "%s", "null");
+        }
+    }
+    mjson_printf(fn, fnd, "%s", "]");
+}
+
+static void load_career_pointers(const char *buf, int buflen)
+{
+    uint32_t val = 0;
+
+    load_ptr_field(buf, buflen, "$.current_competition_ptr", &val);
+    cfb_set_u32(CFB_CURRENT_COMP_PTR_OFF, val);
+    load_ptr_field(buf, buflen, "$.secondary_competition_ptr", &val);
+    cfb_set_u32(CFB_SECONDARY_COMP_PTR_OFF, val);
+    load_ptr_field(buf, buflen, "$.tertiary_competition_ptr", &val);
+    cfb_set_u32(CFB_TERTIARY_COMP_PTR_OFF, val);
+    load_ptr_field(buf, buflen, "$.quaternary_competition_ptr", &val);
+    cfb_set_u32(CFB_QUATERNARY_COMP_PTR_OFF, val);
+    load_ptr_field(buf, buflen, "$.diy_competition_ptr", &val);
+    cfb_set_u32(CFB_DIY_COMP_PTR_OFF, val);
+    load_ptr_field(buf, buflen, "$.diy_competition_table_ptr", &val);
+    cfb_set_u32(CFB_DIY_COMP_TABLE_PTR_OFF, val);
+    load_ptr_field(buf, buflen, "$.primary_comp_string_offset", &val);
+    cfb_set_u32(CFB_PRIMARY_COMP_STR_OFF, val);
+    load_ptr_field(buf, buflen, "$.secondary_comp_string_offset", &val);
+    cfb_set_u32(CFB_SECONDARY_COMP_STR_OFF, val);
+    load_ptr_field(buf, buflen, "$.tertiary_comp_string_offset", &val);
+    cfb_set_u32(CFB_TERTIARY_COMP_STR_OFF, val);
+    load_ptr_field(buf, buflen, "$.quaternary_comp_string_offset", &val);
+    cfb_set_u32(CFB_QUATERNARY_COMP_STR_OFF, val);
+
+    char path[64];
+    for (uint32_t i = 0; i < 5; i++) {
+        snprintf(path, sizeof(path), "$.career_competition_slot_ptr_table[%u]", i);
+        load_ptr_field(buf, buflen, path, &val);
+        cfb_set_u32(CFB_CAREER_COMP_SLOT_TBL_OFF + i * 4, val);
+
+        snprintf(path, sizeof(path), "$.career_cup_pick_list[%u]", i);
+        load_ptr_field(buf, buflen, path, &val);
+        cfb_set_u32(CFB_CAREER_CUP_PICK_LIST_OFF + i * 4, val);
+    }
+}
+
 /* ---------- .CAR writer ---------- */
 
 int16_t SaveJson_WriteCareer(uint8_t *filename)
@@ -504,6 +705,8 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
         "opaque_data",    (int)data_size, (const char *)&careerFileBuffer);
 
     emit_season_informations(json_out_emit, &out);
+    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+    emit_career_pointers(json_out_emit, &out);
 
     mjson_printf(json_out_emit, &out, "%s", "\n}\n");
 
@@ -575,9 +778,10 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src, uint32_t src_
     /* Apply semantic field overrides AFTER the opaque blob, so the
      * semantic representation wins. This is what makes saves stable
      * across rebuilds: even though the opaque blob has the original
-     * raw pointer values, load_season_informations overwrites them
-     * with currentbuild addresses resolved from stable symbol names. */
+     * raw pointer values, load_* overwrites them with current-build
+     * addresses resolved from stable symbol names. */
     load_season_informations((const char *)src, (int)src_size);
+    load_career_pointers((const char *)src, (int)src_size);
 
     return 0;
 }

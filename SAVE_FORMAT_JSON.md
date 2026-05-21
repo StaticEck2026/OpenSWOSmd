@@ -51,7 +51,8 @@ auto-detect — `{` as first non-whitespace byte → JSON, else legacy.
 "some_pointer": null                                  // unset
 "some_pointer": { "sym": "europeanChampionships2" }   // base address of symbol
 "some_pointer": { "sym": "europeanChampionships2", "off": 16 }  // mid-symbol
-"some_pointer": { "str": "DIV 1" }                    // string by content (planned)
+"some_pointer": { "str": "DIV 1" }                    // string by content
+"some_pointer": { "raw": 4294967295 }                 // sentinel value (-1, -2, 0xFC, ...)
 ```
 
 Symbol-name encoding goes through `g_amiga_addr_map` in
@@ -83,10 +84,10 @@ phase) covers comp-name string pointers that the LUT doesn't index.
       (`aDiv1`, `aFACup`, `aBundesliga`, etc.) without expanding
       the LUT generator. Stale cross-build pointers fail
       `looks_readable` and emit as `null`.
-- [ ] Promote `currentCompetitionPtr` + `careerCompetitionSlotPtrTable[5]`
-- [ ] Promote `careerCupPickList[5]`
-- [ ] Promote `*CompStringOffset` family (4 fields)
-- [ ] Promote `diyCompetitionTablePtr`
+- [x] Promote `currentCompetitionPtr` + `careerCompetitionSlotPtrTable[5]`
+- [x] Promote `careerCupPickList[5]`
+- [x] Promote `*CompStringOffset` family (4 fields)
+- [x] Promote `diyCompetitionTablePtr`
 - [ ] Promote the `*Copy` competition records (cup record
       nameSource pointers inside each)
 - [ ] Promote `selTeamsPtr` — 16 × `TeamFileEx` records (684 bytes
@@ -177,8 +178,9 @@ are:
 4. Wire both into `SaveJson_WriteCareer` / `SaveJson_LoadCareer`.
 5. Update this file's checklist.
 
-Last update: 2026-05-20. Next session pick-up: promote
-`currentCompetitionPtr` + `careerCompetitionSlotPtrTable[5]` to
-semantic JSON. These point at *Copy competition records inside
-`competitionFileBuffer`, so the LUT already covers them — should be
-a straightforward addition.
+Last update: 2026-05-20. Next session pick-up: promote the `*Copy`
+competition records inside `competitionFileBuffer` (each holds a
+cup-record `nameSource` pointer at offset +5 + record[5] that needs
+symbolic encoding). After that, the bigger chunks: `selTeamsPtr`
+team file records (16 × 684 bytes), career meta, finance state, and
+`tmdFileBuffer`.
