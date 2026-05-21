@@ -15,6 +15,7 @@
 #include "career_status.h"
 #include "career_teams.h"
 #include "panic.h"
+#include <stdio.h>
 
 /* ---- ASM externs (globals defined in assembly) ---- */
 extern DIYCompetitionEx diyCompetitionStart;
@@ -601,15 +602,60 @@ extern void _Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record,
  * If active competition, edit interactively; else auto-advance. */
 static void updateECSlot(uint8_t *competition, uint16_t count, uint8_t *out)
 {
-    if ((uint32_t)competition == currentCompetitionPtr) {
+    int interactive = ((uint32_t)competition == currentCompetitionPtr);
+    if (interactive) {
         _RestoreSelectedTeams();
         _Career_CopyCompetitionFileBufferToOrFromActive();
         _ShowDiyLeaguesTournamentMenu(1, 1, 0);
-        _DIY_BuildQualifiedTeamListFromSortedTable(count, out);
-        _SaveSelectedTeams();
     } else {
         _Career_AutoAdvanceInternationalCompetitionFixtures(competition, 0);
-        _DIY_BuildQualifiedTeamListFromSortedTable(count, out);
+    }
+
+    /* [ec-trace] Log leagueTeamIds + sorted indices so we can see why
+     * group7's two output entries land with LE-host-native bytes in
+     * europeanChampionships2Copy.unk1 (NEW ZEALAND SOUTHERN REGION
+     * crash on second-season transition). */
+    {
+        DIYCompetitionEx *comp = &diyCompetitionStart;
+        uint16_t numTeams = (uint16_t)comp->base.numTeams;
+        uint16_t *sortedIndices = comp->matchData.league.teamEntryOffsets;
+        uint16_t *teamIds = comp->matchData.league.leagueTeamIds;
+        uint8_t *raw = (uint8_t *)teamIds;
+        fprintf(stderr, "[ec-trace] comp=%p interactive=%d count=%u numTeams=%u out=%p\n",
+                (void *)competition, interactive, (unsigned)count,
+                (unsigned)numTeams, (void *)out);
+        fprintf(stderr, "[ec-trace]   leagueTeamIds (BE-packed expected):\n");
+        for (uint16_t k = 0; k < 16; k++) {
+            fprintf(stderr, "[ec-trace]     [%2u] bytes=(%02X,%02X) host=0x%04X BE=0x%04X\n",
+                    (unsigned)k,
+                    (unsigned)raw[k*2], (unsigned)raw[k*2+1],
+                    (unsigned)teamIds[k],
+                    (unsigned)BE_READ_U16(&raw[k*2]));
+        }
+        fprintf(stderr, "[ec-trace]   sortedIndices[0..%u]:", (unsigned)numTeams);
+        for (uint16_t k = 0; k < numTeams && k < 16; k++)
+            fprintf(stderr, " %u", (unsigned)sortedIndices[k]);
+        fprintf(stderr, "\n");
+        fflush(stderr);
+    }
+
+    _DIY_BuildQualifiedTeamListFromSortedTable(count, out);
+
+    /* Dump what got written */
+    {
+        uint8_t *raw = out;
+        fprintf(stderr, "[ec-trace]   wrote %u entries to out=%p:\n",
+                (unsigned)count, (void *)out);
+        for (uint16_t k = 0; k < count; k++)
+            fprintf(stderr, "[ec-trace]     out[%u] bytes=(%02X,%02X) BE=0x%04X\n",
+                    (unsigned)k,
+                    (unsigned)raw[k*2], (unsigned)raw[k*2+1],
+                    (unsigned)BE_READ_U16(&raw[k*2]));
+        fflush(stderr);
+    }
+
+    if (interactive) {
+        _SaveSelectedTeams();
     }
 }
 
