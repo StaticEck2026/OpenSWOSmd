@@ -1978,18 +1978,507 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
     return 0;
 }
 
-/* ---------- other save types: still stubbed ---------- */
+/* ---------- .SEA / .PRE / .DIY (preset / DIY competition) ----------
+ *
+ * Cover the bytes [&competitionFileBuffer, &numSelectedTeams + 2)
+ * plus `numDiyTeams * 684` trailing TeamFileEx records at
+ * &selTeamsPtr. Re-uses the careerFileBuffer scalar/blob tables
+ * with an address range filter so we only emit entries that fall
+ * inside the preset save region.
+ */
 
-int16_t SaveJson_WritePreset(uint8_t *filename)     { (void)filename; return 1; }
-int16_t SaveJson_LoadPreset (uint8_t *filename, const uint8_t *src, uint32_t src_size)
-                                                    { (void)filename; (void)src; (void)src_size; return 1; }
-int16_t SaveJson_WriteDIY   (uint8_t *filename)     { (void)filename; return 1; }
-int16_t SaveJson_LoadDIY    (uint8_t *filename, const uint8_t *src, uint32_t src_size)
-                                                    { (void)filename; (void)src; (void)src_size; return 1; }
-int16_t SaveJson_WriteHighlights(uint8_t *filename) { (void)filename; return 1; }
-int16_t SaveJson_LoadHighlights (uint8_t *filename, const uint8_t *src, uint32_t src_size)
-                                                    { (void)filename; (void)src; (void)src_size; return 1; }
+extern uint8_t  competitionFileBuffer;
+extern uint32_t primaryCompStringOffset;
+
+static int field_in_range(const FieldDesc *f,
+                          const uint8_t *lo, const uint8_t *hi)
+{
+    const uint8_t *p = (const uint8_t *)f->addr;
+    return p >= lo && p < hi;
+}
+
+static int blob_in_range(const BlobDesc *b,
+                         const uint8_t *lo, const uint8_t *hi)
+{
+    const uint8_t *p = (const uint8_t *)b->addr;
+    return p >= lo && (p + b->size) <= hi;
+}
+
+static void emit_scalar_table_range(mjson_print_fn_t fn, void *fnd,
+                                    const char *section_key,
+                                    const FieldDesc *table,
+                                    const uint8_t *lo, const uint8_t *hi)
+{
+    mjson_printf(fn, fnd, "%Q:{", section_key);
+    int first = 1;
+    for (const FieldDesc *f = table; f->type != FLD_END; f++) {
+        if (!field_in_range(f, lo, hi)) continue;
+        if (!first) mjson_printf(fn, fnd, "%s", ",");
+        first = 0;
+        const uint8_t *p = (const uint8_t *)f->addr;
+        switch (f->type) {
+        case FLD_U8:
+            mjson_printf(fn, fnd, "%Q:%u", f->name, (unsigned)*p); break;
+        case FLD_S8:
+            mjson_printf(fn, fnd, "%Q:%d", f->name, (int)*(int8_t *)p); break;
+        case FLD_U16:
+            mjson_printf(fn, fnd, "%Q:%u", f->name, (unsigned)*(uint16_t *)p); break;
+        case FLD_S16:
+            mjson_printf(fn, fnd, "%Q:%d", f->name, (int)*(int16_t *)p); break;
+        case FLD_U32:
+            mjson_printf(fn, fnd, "%Q:%lu", f->name, (long)(uint32_t)*(uint32_t *)p); break;
+        case FLD_S32:
+            mjson_printf(fn, fnd, "%Q:%ld", f->name, (long)*(int32_t *)p); break;
+        case FLD_STR: {
+            uint32_t n = 0;
+            while (n < f->size && p[n] != '\0') n++;
+            mjson_printf(fn, fnd, "%Q:%.*Q", f->name, (int)n, (const char *)p);
+            break;
+        }
+        case FLD_BYTES:
+            mjson_printf(fn, fnd, "%Q:[", f->name);
+            for (uint32_t i = 0; i < f->size; i++) {
+                if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+                mjson_printf(fn, fnd, "%u", (unsigned)p[i]);
+            }
+            mjson_printf(fn, fnd, "%s", "]");
+            break;
+        default:
+            break;
+        }
+    }
+    mjson_printf(fn, fnd, "%s", "}");
+}
+
+static void emit_named_blobs_range(mjson_print_fn_t fn, void *fnd,
+                                   const uint8_t *lo, const uint8_t *hi)
+{
+    mjson_printf(fn, fnd, "%Q:{", "blobs");
+    int first = 1;
+    for (const BlobDesc *b = s_career_blobs; b->name; b++) {
+        if (!blob_in_range(b, lo, hi)) continue;
+        if (!first) mjson_printf(fn, fnd, "%s", ",");
+        first = 0;
+        mjson_printf(fn, fnd, "%Q:%V", b->name,
+                     (int)b->size, (const char *)b->addr);
+    }
+    mjson_printf(fn, fnd, "%s", "}");
+}
+
+static void load_scalar_table_range(const char *buf, int buflen,
+                                    const char *section_key,
+                                    const FieldDesc *table,
+                                    const uint8_t *lo, const uint8_t *hi)
+{
+    char path[160];
+    char tmp[64];
+    double num = 0.0;
+    for (const FieldDesc *f = table; f->type != FLD_END; f++) {
+        if (!field_in_range(f, lo, hi)) continue;
+        snprintf(path, sizeof(path), "$.%s.%s", section_key, f->name);
+        uint8_t *p = (uint8_t *)f->addr;
+        switch (f->type) {
+        case FLD_U8: case FLD_S8:
+            if (mjson_get_number(buf, buflen, path, &num) > 0) *p = (uint8_t)(int)num;
+            break;
+        case FLD_U16: case FLD_S16:
+            if (mjson_get_number(buf, buflen, path, &num) > 0) *(uint16_t *)p = (uint16_t)(int)num;
+            break;
+        case FLD_U32: case FLD_S32:
+            if (mjson_get_number(buf, buflen, path, &num) > 0) *(uint32_t *)p = (uint32_t)(int32_t)num;
+            break;
+        case FLD_STR:
+            memset(p, 0, f->size);
+            if (mjson_get_string(buf, buflen, path, tmp, sizeof(tmp)) > 0) {
+                uint32_t n = (uint32_t)strlen(tmp);
+                if (n >= f->size) n = f->size - 1;
+                memcpy(p, tmp, n);
+            }
+            break;
+        case FLD_BYTES:
+            load_bytes_at(buf, buflen, path, p, 0, f->size);
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+static void load_named_blobs_range(const char *buf, int buflen,
+                                   const uint8_t *lo, const uint8_t *hi)
+{
+    char path[160];
+    for (const BlobDesc *b = s_career_blobs; b->name; b++) {
+        if (!blob_in_range(b, lo, hi)) continue;
+        snprintf(path, sizeof(path), "$.blobs.%s", b->name);
+        mjson_get_base64(buf, buflen, path, (char *)b->addr, (int)b->size);
+    }
+}
+
+/* Shared write body for preset / DIY — they share competitionFileBuffer
+ * layout, only the file_kind string differs. */
+static int16_t write_competition_buf(uint8_t *filename, const char *kind)
+{
+    const uint8_t *lo = &competitionFileBuffer;
+    const uint8_t *hi = (const uint8_t *)&numSelectedTeams +
+                        sizeof(numSelectedTeams);  /* +2 for the count word */
+    JsonOutBuf out = { NULL, 0, 0, 0 };
+
+    mjson_printf(json_out_emit, &out,
+        "{\n  %Q:%d,\n  %Q:%Q,\n  %Q:%u,\n  ",
+        "schema_version", SAVE_JSON_SCHEMA_VERSION,
+        "file_kind",      kind,
+        "num_diy_teams",  (unsigned)numDiyTeams);
+
+    /* primary_comp_string_offset is the only career pointer that
+     * lives inside the preset range. Emit it independently. */
+    emit_ptr_field(json_out_emit, &out, "primary_comp_string_offset",
+                   *(uint32_t *)&primaryCompStringOffset);
+    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+
+    emit_scalar_table_range(json_out_emit, &out,
+                            "comp_scalars", s_career_scalars, lo, hi);
+    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+    emit_named_blobs_range(json_out_emit, &out, lo, hi);
+
+    /* DIY teams array — numDiyTeams TeamFileEx records at
+     * &selTeamsPtr. Same record layout as the career selected_teams. */
+    mjson_printf(json_out_emit, &out, ",\n  %Q:[", "diy_teams");
+    for (uint16_t i = 0; i < numDiyTeams; i++) {
+        if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
+        emit_team_file_ex_body(json_out_emit, &out,
+                               (&selTeamsPtr) + (uint32_t)i * 684u);
+    }
+    mjson_printf(json_out_emit, &out, "%s", "]\n}\n");
+
+    if (out.oom || !out.ptr) {
+        if (out.ptr) free(out.ptr);
+        return 1;
+    }
+    int16_t r = _WriteFile(filename, (uint8_t *)out.ptr, (uint32_t)out.len);
+    free(out.ptr);
+    if (r != 0) {
+        _ShowFsErrorByCode((uint16_t)r);
+        return 1;
+    }
+    return 0;
+}
+
+static int16_t load_competition_buf(uint8_t *filename, const char *kind)
+{
+    uint8_t *src = NULL;
+    uint32_t src_size = 0;
+    if (read_save_file_heap(filename, &src, &src_size) != 0)
+        return 1;
+
+    double version = 0.0;
+    if (mjson_get_number((const char *)src, (int)src_size,
+                         "$.schema_version", &version) <= 0 ||
+        (int)version != SAVE_JSON_SCHEMA_VERSION) {
+        free(src);
+        return 1;
+    }
+    char file_kind[16] = {0};
+    if (mjson_get_string((const char *)src, (int)src_size,
+                         "$.file_kind", file_kind, sizeof(file_kind)) <= 0 ||
+        strcmp(file_kind, kind) != 0) {
+        free(src);
+        return 1;
+    }
+
+    const uint8_t *lo = &competitionFileBuffer;
+    const uint8_t *hi = (const uint8_t *)&numSelectedTeams +
+                        sizeof(numSelectedTeams);
+    uint32_t want = (uint32_t)(hi - lo);
+    memset((void *)lo, 0, want);
+
+    load_named_blobs_range((const char *)src, (int)src_size, lo, hi);
+
+    /* primary_comp_string_offset */
+    uint32_t pval = 0;
+    load_ptr_field((const char *)src, (int)src_size,
+                   "$.primary_comp_string_offset", &pval);
+    primaryCompStringOffset = pval;
+
+    load_scalar_table_range((const char *)src, (int)src_size,
+                            "comp_scalars", s_career_scalars, lo, hi);
+
+    /* DIY teams */
+    char tpath[64];
+    for (uint16_t i = 0; i < numDiyTeams; i++) {
+        snprintf(tpath, sizeof(tpath), "$.diy_teams[%u]", (unsigned)i);
+        load_team_file_ex((const char *)src, (int)src_size, tpath,
+                          (&selTeamsPtr) + (uint32_t)i * 684u);
+    }
+
+    free(src);
+    return 0;
+}
+
+int16_t SaveJson_WritePreset(uint8_t *filename)
+{
+    return write_competition_buf(filename, KIND_PRESET);
+}
+
+int16_t SaveJson_LoadPreset(uint8_t *filename, const uint8_t *src_unused,
+                            uint32_t src_size_unused)
+{
+    (void)src_unused; (void)src_size_unused;
+    return load_competition_buf(filename, KIND_PRESET);
+}
+
+int16_t SaveJson_WriteDIY(uint8_t *filename)
+{
+    return write_competition_buf(filename, KIND_DIY);
+}
+
+int16_t SaveJson_LoadDIY(uint8_t *filename, const uint8_t *src_unused,
+                         uint32_t src_size_unused)
+{
+    (void)src_unused; (void)src_size_unused;
+    return load_competition_buf(filename, KIND_DIY);
+}
+
+/* ---------- .HIL (highlights / match replay) ----------
+ *
+ * 2254-byte header + numGoals × 19000-byte goal-scene blobs. Header
+ * has BE u16 fields (numGoals, team1Goals, team2Goals, pitchNumber,
+ * maxSubstitutes) and a 4-byte BE signature + 4-byte max-size at
+ * offsets 0..7. The legacy save path swaps in/out around the write;
+ * the legacy load path leaves bytes raw and highlights_menu.c does
+ * the BE_TO_HOST swap after.
+ *
+ * For JSON we ride the same byte-format on disk: emit the entire
+ * file as a single base64 blob plus a few human-readable semantic
+ * fields. On load we decode the blob straight into hilFileBuffer
+ * so the subsequent BE_TO_HOST swap in highlights_menu.c runs as
+ * normal — no double-swap risk.
+ */
+
+extern uint8_t  hilFileBuffer[];
+extern uint16_t hilNumGoals;
+extern uint8_t  hilGameName[];
+extern uint8_t  hilGameRound[];
+
+#define HIL_HEADER_SIZE   2254u
+#define HIL_SCENE_SIZE   19000u
+#define HIL_NUMGOALS_OFF  2244u
+#define HIL_GAMENAME_OFF  2044u
+#define HIL_GAMEROUND_OFF 2144u
+
+int16_t SaveJson_WriteHighlights(uint8_t *filename)
+{
+    /* Read numGoals from the live u16 — it's host-native at this
+     * point (the legacy BE swap hasn't run yet because we dispatch
+     * before it in _DoSaveHighlights). */
+    uint16_t num_goals = hilNumGoals;
+    uint32_t data_size = HIL_HEADER_SIZE + (uint32_t)num_goals * HIL_SCENE_SIZE;
+
+    JsonOutBuf out = { NULL, 0, 0, 0 };
+    mjson_printf(json_out_emit, &out,
+        "{\n  %Q:%d,\n  %Q:%Q,\n  %Q:%u,\n  ",
+        "schema_version", SAVE_JSON_SCHEMA_VERSION,
+        "file_kind",      KIND_HIGHLIGHTS,
+        "num_goals",      (unsigned)num_goals);
+
+    /* Game name / round are NUL-padded char[100] in hilBackingBuf —
+     * read straight from there (they don't go through the BE
+     * dance). */
+    {
+        const uint8_t *p = hilFileBuffer + HIL_GAMENAME_OFF;
+        size_t n = 0;
+        while (n < 100 && p[n] != '\0') n++;
+        mjson_printf(json_out_emit, &out, "%Q:%.*Q,\n  ",
+                     "game_name", (int)n, (const char *)p);
+    }
+    {
+        const uint8_t *p = hilFileBuffer + HIL_GAMEROUND_OFF;
+        size_t n = 0;
+        while (n < 100 && p[n] != '\0') n++;
+        mjson_printf(json_out_emit, &out, "%Q:%.*Q,\n  ",
+                     "game_round", (int)n, (const char *)p);
+    }
+
+    /* Whole file region as one base64 blob. Round-trips bit-exactly,
+     * including the BE u16 header fields and the goal scene frames.
+     * Semantic promotion of individual scenes can happen later. */
+    mjson_printf(json_out_emit, &out, "%Q:%V\n}\n",
+                 "hil_data", (int)data_size, (const char *)hilFileBuffer);
+
+    if (out.oom || !out.ptr) {
+        if (out.ptr) free(out.ptr);
+        return 1;
+    }
+    int16_t r = _WriteFile(filename, (uint8_t *)out.ptr, (uint32_t)out.len);
+    free(out.ptr);
+    if (r != 0) {
+        _ShowFsErrorByCode((uint16_t)r);
+        return 1;
+    }
+    return 0;
+}
+
+int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
+                                uint32_t src_size_unused)
+{
+    (void)src_unused; (void)src_size_unused;
+
+    uint8_t *src = NULL;
+    uint32_t src_size = 0;
+    if (read_save_file_heap(filename, &src, &src_size) != 0)
+        return 1;
+
+    double version = 0.0;
+    if (mjson_get_number((const char *)src, (int)src_size,
+                         "$.schema_version", &version) <= 0 ||
+        (int)version != SAVE_JSON_SCHEMA_VERSION) {
+        free(src); return 1;
+    }
+    char kind[16] = {0};
+    if (mjson_get_string((const char *)src, (int)src_size,
+                         "$.file_kind", kind, sizeof(kind)) <= 0 ||
+        strcmp(kind, KIND_HIGHLIGHTS) != 0) {
+        free(src); return 1;
+    }
+
+    /* Decode hil_data straight into hilFileBuffer. The HIL_BACKING
+     * buffer is 192254 bytes — more than enough for any realistic
+     * 2254 + numGoals * 19000. */
+    extern uint8_t hilBackingBuf[];
+    int got = mjson_get_base64((const char *)src, (int)src_size,
+                               "$.hil_data", (char *)hilBackingBuf,
+                               192254);
+    free(src);
+    if (got <= 0) return 1;
+    return 0;
+}
+/* ---------- .TAC (tactics) ----------
+ *
+ * A single 370-byte TeamTactics struct: 9-byte name + 10 ×
+ * PlayerPositions (each 5 × 7 bytes of packed x/y nibbles) + 10-byte
+ * pairing table + 1-byte ballOutOfPlayTactics field.
+ */
+
+#define SAVE_TAC_DATA_SIZE 370u
+
+static int16_t write_tactics_buf(uint8_t *filename, const uint8_t *src)
+{
+    JsonOutBuf out = { NULL, 0, 0, 0 };
+
+    mjson_printf(json_out_emit, &out,
+        "{\n  %Q:%d,\n  %Q:%Q,\n  ",
+        "schema_version", SAVE_JSON_SCHEMA_VERSION,
+        "file_kind",      KIND_TACTICS);
+
+    /* name (9 bytes, NUL-padded) */
+    {
+        size_t n = 0;
+        while (n < 9 && src[offsetof(TeamTactics, name) + n] != '\0') n++;
+        mjson_printf(json_out_emit, &out, "%Q:%.*Q",
+                     "name", (int)n,
+                     (const char *)(src + offsetof(TeamTactics, name)));
+    }
+
+    /* 10 × 35-byte PlayerPositions arrays. Flat byte arrays for
+     * compactness — interpretation is packed x/y nibbles per ball
+     * zone, which the editor / match sim know how to unpack. */
+    mjson_printf(json_out_emit, &out, ",\n  %Q:[", "player_positions");
+    for (int i = 0; i < 10; i++) {
+        if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
+        const uint8_t *p = src + offsetof(TeamTactics, positions)
+                              + (size_t)i * sizeof(PlayerPositions);
+        mjson_printf(json_out_emit, &out, "%s", "[");
+        for (int j = 0; j < (int)sizeof(PlayerPositions); j++) {
+            if (j > 0) mjson_printf(json_out_emit, &out, "%s", ",");
+            mjson_printf(json_out_emit, &out, "%u", (unsigned)p[j]);
+        }
+        mjson_printf(json_out_emit, &out, "%s", "]");
+    }
+    mjson_printf(json_out_emit, &out, "%s", "]");
+
+    /* unk_table (10 bytes) + ball_out_of_play_tactics (1 byte) */
+    mjson_printf(json_out_emit, &out, ",\n  %Q:[", "unk_table");
+    for (int i = 0; i < 10; i++) {
+        if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
+        mjson_printf(json_out_emit, &out, "%u",
+                     (unsigned)src[offsetof(TeamTactics, unkTable) + i]);
+    }
+    mjson_printf(json_out_emit, &out, "%s", "],\n  ");
+    mjson_printf(json_out_emit, &out, "%Q:%u\n}\n",
+                 "ball_out_of_play_tactics",
+                 (unsigned)src[offsetof(TeamTactics, ballOutOfPlayTactics)]);
+
+    if (out.oom || !out.ptr) {
+        if (out.ptr) free(out.ptr);
+        return 1;
+    }
+    int16_t r = _WriteFile(filename, (uint8_t *)out.ptr, (uint32_t)out.len);
+    free(out.ptr);
+    if (r != 0) {
+        _ShowFsErrorByCode((uint16_t)r);
+        return 1;
+    }
+    return 0;
+}
+
+static int16_t load_tactics_buf(const char *src, int src_size, uint8_t *dst)
+{
+    double version = 0.0;
+    if (mjson_get_number(src, src_size, "$.schema_version", &version) <= 0 ||
+        (int)version != SAVE_JSON_SCHEMA_VERSION)
+        return 1;
+
+    char kind[16] = {0};
+    if (mjson_get_string(src, src_size, "$.file_kind", kind, sizeof(kind)) <= 0 ||
+        strcmp(kind, KIND_TACTICS) != 0)
+        return 1;
+
+    memset(dst, 0, SAVE_TAC_DATA_SIZE);
+
+    /* name (9 bytes max) */
+    char tmpname[16] = {0};
+    if (mjson_get_string(src, src_size, "$.name", tmpname, sizeof(tmpname)) > 0) {
+        size_t n = strlen(tmpname);
+        if (n > 8) n = 8;
+        memcpy(dst + offsetof(TeamTactics, name), tmpname, n);
+    }
+
+    /* 10 × 35-byte position arrays */
+    for (int i = 0; i < 10; i++) {
+        char path[64];
+        snprintf(path, sizeof(path), "$.player_positions[%d]", i);
+        load_bytes_at(src, src_size, path,
+                      dst, offsetof(TeamTactics, positions)
+                            + (size_t)i * sizeof(PlayerPositions),
+                      sizeof(PlayerPositions));
+    }
+
+    load_bytes_at(src, src_size, "$.unk_table",
+                  dst, offsetof(TeamTactics, unkTable), 10);
+
+    double num = 0.0;
+    if (mjson_get_number(src, src_size, "$.ball_out_of_play_tactics", &num) > 0)
+        dst[offsetof(TeamTactics, ballOutOfPlayTactics)] = (uint8_t)(int)num;
+
+    return 0;
+}
+
 int16_t SaveJson_WriteTactics(uint8_t *filename, const uint8_t *src, uint32_t src_size)
-                                                    { (void)filename; (void)src; (void)src_size; return 1; }
-int16_t SaveJson_LoadTactics (uint8_t *filename, uint8_t *dst, uint32_t dst_capacity)
-                                                    { (void)filename; (void)dst; (void)dst_capacity; return 1; }
+{
+    if (src_size < SAVE_TAC_DATA_SIZE) return 1;
+    return write_tactics_buf(filename, src);
+}
+
+int16_t SaveJson_LoadTactics(uint8_t *filename, uint8_t *dst, uint32_t dst_capacity)
+{
+    if (dst_capacity < SAVE_TAC_DATA_SIZE) return 1;
+
+    uint8_t *src = NULL;
+    uint32_t src_size = 0;
+    if (read_save_file_heap(filename, &src, &src_size) != 0)
+        return 1;
+
+    int16_t r = load_tactics_buf((const char *)src, (int)src_size, dst);
+    free(src);
+    return r;
+}

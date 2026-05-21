@@ -129,21 +129,32 @@ phase) covers comp-name string pointers that the LUT doesn't index.
       outside the unresolvable-pointer fields)
 
 ### `.SEA / .PRE` (preset competition)
-- [ ] Skeleton write/load behind dispatcher in `file_io.c`
-- [ ] `competitionFileBuffer` opaque blob
-- [ ] Re-use career sub-schema for the comp records
+- [x] JSON write/load wired into `_LoadPresetFile` / `_SavePresetCompetitionFile`.
+      Re-uses career scalar table + blob table filtered by address
+      range `[&competitionFileBuffer, &numSelectedTeams+2)`. DIY
+      teams (`numDiyTeams` × TeamFileEx) emitted as `diy_teams[]`.
+- [ ] Run a verify pass for `.SEA` byte-coverage.
 
 ### `.DIY` (DIY competition)
-- [ ] Skeleton write/load
-- [ ] `diyFileBufferCopy` opaque blob
-- [ ] Promote teamGrid / matchData / standings
+- [x] JSON write/load wired into `_LoadDIYFile` / `_SaveDIYFile`.
+      Shares all machinery with `.SEA` — only `file_kind` differs
+      (`"diy"` vs `"preset"`).
+- [ ] Run a verify pass for `.DIY` byte-coverage.
 
 ### `.HIL` (highlights / replay)
-- [ ] Skeleton write/load
-- [ ] Replay frame state schema
+- [x] JSON write/load wired into `_LoadHilFile` / `_DoSaveHighlights`.
+      Saves header bytes + numGoals × 19000-byte scenes as one
+      base64 blob, plus semantic `num_goals`, `game_name`,
+      `game_round` for inspection. JSON dispatch happens BEFORE the
+      legacy BE-swap dance so the JSON writer captures host-native
+      u16 header values.
+- [ ] Promote individual goal scenes to typed encoders later.
 
 ### `.TAC` (tactics)
-- [ ] Trivial — 11 position slots + name
+- [x] JSON write/load wired into `_ReadTacticsFile` /
+      `_WriteTacticsFile`. 370-byte TeamTactics fully semantic
+      (name, 10 × 35-byte position arrays, 10-byte unk_table,
+      ball_out_of_play_tactics).
 
 ### Cleanup (post-migration)
 - [ ] Default `SWOS_SAVE_FORMAT_JSON=1` after one release cycle of
@@ -201,13 +212,14 @@ are:
 4. Wire both into `SaveJson_WriteCareer` / `SaveJson_LoadCareer`.
 5. Update this file's checklist.
 
-Last update: 2026-05-21. `.CAR` save format is now pure JSON —
-opaque_data dropped from the writer after byte-coverage verify
-passed at 0 mismatches across 120366 bytes. Loader still
-decodes opaque_data when present so saves written during the
-transition keep loading. Next session pick-up: extend the same
-mjson + offsetof() machinery to `.SEA / .PRE / .DIY / .HIL /
-.TAC`. Then promote individual blob regions to typed encoders
-— best ROI: comp_copy_region (each *Copy gets a proper
+Last update: 2026-05-21. All five save types now have JSON
+read/write paths. `.CAR` is the only one with byte-coverage
+verify done; `.SEA / .PRE / .DIY / .HIL / .TAC` still need
+their own verify passes to confirm zero-mismatch round-trip.
+Next session pick-up: run verify on each remaining save type
+(extend SWOS_SAVE_FORMAT_JSON_VERIFY to all five paths, save
++ reload one of each in-game, confirm 0 mismatches). Then
+promote individual blob regions to typed encoders — best ROI:
+comp_copy_region (each *Copy gets a proper
 CompetitionCup/Cup2/League encoder using offsetof()) and
 tmdFileBuffer (transfer-market schema design).

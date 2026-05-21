@@ -519,6 +519,18 @@ int16_t _LoadPresetFile(uint8_t *filename)
 
     _SaveOptions();
 
+    if (SaveJson_FileIsJson(filename) == 1) {
+        int16_t jr = SaveJson_LoadPreset(filename, NULL, 0);
+        if (jr != 0) {
+            _ShowErrorMenu(aFileSavedByDif);
+            _RestoreOptions();
+            _InitUserTactics();
+            return 1;
+        }
+        _CycleMenuMusic();
+        return 0;
+    }
+
     result = _LoadFileEx(filename, (uint8_t *)&competitionFileBuffer, (uint32_t *)0);
     if (result != 0) {
         _ShowFsErrorByCode((uint16_t)result);
@@ -554,6 +566,13 @@ int16_t _SavePresetCompetitionFile(uint8_t *filename)
     uint32_t fileSize;
     int16_t result;
 
+#ifdef SWOS_SAVE_FORMAT_JSON
+    {
+        int16_t jr = SaveJson_WritePreset(filename);
+        if (jr == 0) return 0;
+    }
+#endif
+
     _SaveCompetitionFile();
 
     fileSize = (uint32_t)((uint8_t *)&numSelectedTeams - (uint8_t *)&competitionFileBuffer)
@@ -581,6 +600,18 @@ int16_t _LoadDIYFile(uint8_t *filename)
     int16_t result;
 
     _SaveOptions();
+
+    if (SaveJson_FileIsJson(filename) == 1) {
+        int16_t jr = SaveJson_LoadDIY(filename, NULL, 0);
+        if (jr != 0) {
+            _ShowErrorMenu(aFileSavedByDif);
+            _RestoreOptions();
+            _InitUserTactics();
+            return 1;
+        }
+        _CycleMenuMusic();
+        return 0;
+    }
 
     result = _LoadFileEx(filename, (uint8_t *)&competitionFileBuffer, (uint32_t *)0);
     if (result != 0) {
@@ -613,6 +644,13 @@ int16_t _SaveDIYFile(uint8_t *filename)
 {
     uint32_t fileSize;
     int16_t result;
+
+#ifdef SWOS_SAVE_FORMAT_JSON
+    {
+        int16_t jr = SaveJson_WriteDIY(filename);
+        if (jr == 0) return 0;
+    }
+#endif
 
     _SaveCompetitionFile();
 
@@ -664,6 +702,17 @@ int16_t _ReadTacticsFile(uint8_t *filename)
     int16_t result;
     int16_t i;
 
+    /* JSON path: parse directly from disk into editTacticsCurrentTactics. */
+    if (SaveJson_FileIsJson(filename) == 1) {
+        int16_t jr = SaveJson_LoadTactics(filename, editTacticsCurrentTactics,
+                                          TACTICS_SIZE);
+        if (jr != 0) {
+            _ShowErrorMenu(aFileSavedByDif);
+            return 1;
+        }
+        return 0;
+    }
+
     result = _LoadFileEx(filename, (uint8_t *)frontbufferBasePtr, (uint32_t *)0);
     if (result != 0) {
         _BlitterCopyOverlayToScreen();
@@ -697,6 +746,16 @@ int16_t _WriteTacticsFile(uint8_t *filename, uint8_t *buffer)
 {
     int16_t result;
 
+#ifdef SWOS_SAVE_FORMAT_JSON
+    {
+        int16_t jr = SaveJson_WriteTactics(filename, buffer, TACTICS_SIZE);
+        if (jr == 0)
+            return 0;
+        /* JSON path failed — fall through to legacy writer so we
+         * still produce something on disk. */
+    }
+#endif
+
     result = _WriteFile(filename, buffer, TACTICS_SIZE);
     if (result == 0)
         return 0;
@@ -719,6 +778,16 @@ __attribute__((used, externally_visible))
 int16_t _LoadHilFile(uint8_t *filename)
 {
     int16_t result;
+
+    if (SaveJson_FileIsJson(filename) == 1) {
+        int16_t jr = SaveJson_LoadHighlights(filename, NULL, 0);
+        if (jr != 0) {
+            hilNumGoals = 0;
+            _ShowErrorMenu(aFileSavedByDif);
+            return 1;
+        }
+        return 0;
+    }
 
     result = _LoadFileEx(filename, hilFileBuffer, (uint32_t *)0);
     if (result == 0)
@@ -743,6 +812,15 @@ int16_t _DoSaveHighlights(uint8_t *filename)
 {
     uint32_t size;
     int16_t result;
+
+#ifdef SWOS_SAVE_FORMAT_JSON
+    /* Dispatch BEFORE the legacy BE swap dance so the JSON writer
+     * sees the live host-native u16 header values. */
+    {
+        int16_t jr = SaveJson_WriteHighlights(filename);
+        if (jr == 0) return 0;
+    }
+#endif
 
     size = (uint32_t)hilNumGoals * 19000u + 2254u;
 
