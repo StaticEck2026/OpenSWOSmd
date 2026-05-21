@@ -1658,7 +1658,20 @@ typedef struct {
 } BlobDesc;
 
 static const BlobDesc s_career_blobs[] = {
-    { "tmd_file_buffer",                       tmdFileBuffer,                  54720 },
+    /* tmd_file_buffer extended back by 2 bytes — the symbol
+     * tmdFileBuffer is at &careerFileBuffer + 2, but bytes 0..1 of
+     * the buffer carry a 2-byte length/count prefix that the
+     * Amiga code reads/writes alongside the TMD payload. */
+    { "tmd_file_buffer",                       &careerFileBuffer,              54722 },
+    /* Extra 608 bytes after careerTeam / currentTeam — these are
+     * 16 additional PlayerFile entries (reserves / subs roster).
+     * TeamFileEx is 684 bytes (TeamFile + 16 players); the on-disk
+     * career/current team slots are 1292 bytes (TeamFile + 32
+     * players). emit_team_file_ex covers the first 16, blobs
+     * cover the second 16 here until a proper extended schema
+     * lands. */
+    { "career_team_reserves",                  (uint8_t *)&careerTeam  + 684,  608 },
+    { "current_team_reserves",                 (uint8_t *)&currentTeam + 684,  608 },
     { "career_unavailable_player_lookup_table",careerUnavailablePlayerLookupTable, 80 },
     { "career_unavailable_player_names",       careerUnavailablePlayerNames,    340 },
     { "diy_league_season_state_table",         diyLeagueSeasonStateTable,      2000 },
