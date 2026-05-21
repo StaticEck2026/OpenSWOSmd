@@ -680,6 +680,79 @@ static void load_career_pointers(const char *buf, int buflen)
     }
 }
 
+/* ---------- *Copy cup-record nameSource pointers ----------
+ *
+ * Each entry in the static careerContests table maps a template
+ * competition record to its runtime *Copy inside competitionFileBuffer.
+ * Each *Copy carries a `nameSource` pointer at offset
+ * `record[5] + 5` (the byte at record[5] is the offset of the
+ * nameSource field within the record). Those pointers are saved with
+ * the *Copy buffer and need symbolic encoding to survive rebuilds.
+ *
+ * Layout per careerContests entry (10 bytes):
+ *   +0 src  ptr  (template static record — not saved)
+ *   +4 dest ptr  (the *Copy in competitionFileBuffer — not saved)
+ *   +8 size word (byte count — not saved)
+ *
+ * The 0xFFFFFFFF src value terminates the table.
+ */
+
+extern uint8_t careerContests[];
+
+static void emit_cup_record_name_sources(mjson_print_fn_t fn, void *fnd)
+{
+    mjson_printf(fn, fnd, "%Q:{", "cup_record_name_sources");
+    uint8_t *tbl = careerContests;
+    int first = 1;
+    for (;;) {
+        uint32_t srcAddr = *(uint32_t *)tbl;
+        if (srcAddr == 0xFFFFFFFFu)
+            break;
+        uint8_t *dest = *(uint8_t **)(tbl + 4);
+        int8_t  nameOffset = (int8_t)dest[5];
+        if (nameOffset != 0) {
+            /* Look up the dest's symbol name so the JSON key is
+             * self-describing. */
+            uint32_t off = 0;
+            const AmigaAddrLutEntry *e =
+                sym_from_ptr((uint32_t)(uintptr_t)dest, &off);
+            const char *key = e ? e->name : "unknown";
+            if (!first) mjson_printf(fn, fnd, "%s", ",");
+            first = 0;
+            uint32_t val = *(uint32_t *)(dest + 5 + nameOffset);
+            emit_ptr_field(fn, fnd, key, val);
+        }
+        tbl += 10;
+    }
+    mjson_printf(fn, fnd, "%s", "}");
+}
+
+static void load_cup_record_name_sources(const char *buf, int buflen)
+{
+    char path[160];
+    uint8_t *tbl = careerContests;
+    for (;;) {
+        uint32_t srcAddr = *(uint32_t *)tbl;
+        if (srcAddr == 0xFFFFFFFFu)
+            break;
+        uint8_t *dest = *(uint8_t **)(tbl + 4);
+        int8_t  nameOffset = (int8_t)dest[5];
+        if (nameOffset != 0) {
+            uint32_t off = 0;
+            const AmigaAddrLutEntry *e =
+                sym_from_ptr((uint32_t)(uintptr_t)dest, &off);
+            if (e) {
+                snprintf(path, sizeof(path),
+                         "$.cup_record_name_sources.%s", e->name);
+                uint32_t val = 0;
+                load_ptr_field(buf, buflen, path, &val);
+                *(uint32_t *)(dest + 5 + nameOffset) = val;
+            }
+        }
+        tbl += 10;
+    }
+}
+
 /* ---------- .CAR writer ---------- */
 
 int16_t SaveJson_WriteCareer(uint8_t *filename)
@@ -707,6 +780,8 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     emit_season_informations(json_out_emit, &out);
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
     emit_career_pointers(json_out_emit, &out);
+    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+    emit_cup_record_name_sources(json_out_emit, &out);
 
     mjson_printf(json_out_emit, &out, "%s", "\n}\n");
 
@@ -782,6 +857,7 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src, uint32_t src_
      * addresses resolved from stable symbol names. */
     load_season_informations((const char *)src, (int)src_size);
     load_career_pointers((const char *)src, (int)src_size);
+    load_cup_record_name_sources((const char *)src, (int)src_size);
 
     return 0;
 }

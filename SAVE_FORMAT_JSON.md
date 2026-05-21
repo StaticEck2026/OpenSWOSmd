@@ -88,8 +88,8 @@ phase) covers comp-name string pointers that the LUT doesn't index.
 - [x] Promote `careerCupPickList[5]`
 - [x] Promote `*CompStringOffset` family (4 fields)
 - [x] Promote `diyCompetitionTablePtr`
-- [ ] Promote the `*Copy` competition records (cup record
-      nameSource pointers inside each)
+- [x] Promote `*Copy` cup-record `nameSource` pointers (one per
+      careerContests entry, ~30 fields)
 - [ ] Promote `selTeamsPtr` — 16 × `TeamFileEx` records (684 bytes
       each)
 - [ ] Promote career meta (currentSeasonNumber, careerTeam,
@@ -178,9 +178,12 @@ are:
 4. Wire both into `SaveJson_WriteCareer` / `SaveJson_LoadCareer`.
 5. Update this file's checklist.
 
-Last update: 2026-05-20. Next session pick-up: promote the `*Copy`
-competition records inside `competitionFileBuffer` (each holds a
-cup-record `nameSource` pointer at offset +5 + record[5] that needs
-symbolic encoding). After that, the bigger chunks: `selTeamsPtr`
-team file records (16 × 684 bytes), career meta, finance state, and
-`tmdFileBuffer`.
+Last update: 2026-05-20. All pointer-typed fields in the .CAR save
+are now semantically encoded. Next session pick-up: switch from
+"pointer safety" mode to "data semantics" — promote non-pointer
+data so the opaque_data blob can start shrinking. Highest payoff:
+career meta (currentSeasonNumber, currentSeasonShowing, careerTeam,
+selTeamNumber, etc.) and finance state (overdraftStreak, balances,
+weekly costs). After that: the 16 × 684-byte TeamFileEx records
+under selTeamsPtr, and the large tmdFileBuffer transfer-market
+block at the very start of careerFileBuffer.
