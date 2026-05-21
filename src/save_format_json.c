@@ -15,6 +15,7 @@
 #include "save_format_json.h"
 #include "mjson.h"
 #include "game_types.h"
+#include "endian_helpers.h"
 
 #include <stddef.h>  /* offsetof */
 #include <stdio.h>
@@ -2428,18 +2429,33 @@ int16_t SaveJson_LoadDIY(uint8_t *filename, const uint8_t *src_unused,
 
 /* ---------- .HIL (highlights / match replay) ----------
  *
- * 2254-byte header + numGoals × 19000-byte goal-scene blobs. Header
- * has BE u16 fields (numGoals, team1Goals, team2Goals, pitchNumber,
- * maxSubstitutes) and a 4-byte BE signature + 4-byte max-size at
- * offsets 0..7. The legacy save path swaps in/out around the write;
- * the legacy load path leaves bytes raw and highlights_menu.c does
- * the BE_TO_HOST swap after.
+ * Fully semantic encoding (no opaque blobs). On-disk layout:
+ *   +0      sig          u32 BE
+ *   +4      max_size     u32 BE
+ *   +8      topTeamInGame    1018-byte TeamGame (BE int16 header)
+ *   +1026   bottomTeamInGame 1018-byte TeamGame
+ *   +2044   gameName[100]
+ *   +2144   gameRound[100]
+ *   +2244   numGoals          u16 (BE on disk, host-native at our
+ *                                  dispatch point — _DoSaveHighlights
+ *                                  hasn't applied its swap yet)
+ *   +2246   team1Goals        u16
+ *   +2248   team2Goals        u16
+ *   +2250   pitchNumber       u16
+ *   +2252   maxSubstitutes    u16
+ *   +2254   scenes[numGoals]  each scene = 19000-byte ring of frames
  *
- * For JSON we ride the same byte-format on disk: emit the entire
- * file as a single base64 blob plus a few human-readable semantic
- * fields. On load we decode the blob straight into hilFileBuffer
- * so the subsequent BE_TO_HOST swap in highlights_menu.c runs as
- * normal — no double-swap risk.
+ * Scene format (per _SaveCoordinatesForHighlights / _DrawReplayFrame):
+ *   - Sequence of u32-aligned entries, BE on disk.
+ *   - bit 31 set = frame marker:
+ *       [marker u32 = 0x80000000 | (cam_x << 16) | cam_y]
+ *       [u32 = (team1_goals << 16) | team2_goals]
+ *       [u32 = (anim_state << 16) | anim_state]  // duplicated
+ *   - bit 31 clear = sprite entry:
+ *       [u32 = (sprite_index << 20) | (x << 10) | y]
+ *   - 0xFFFFFFFF = end-of-segment sentinel; anything after up to
+ *     19000 bytes is garbage from the ring buffer (preserved here
+ *     as a "trailing" byte array so round-trip is bit-exact).
  */
 
 extern uint8_t  hilFileBuffer[];
@@ -2447,50 +2463,463 @@ extern uint16_t hilNumGoals;
 extern uint8_t  hilGameName[];
 extern uint8_t  hilGameRound[];
 
-#define HIL_HEADER_SIZE   2254u
+/* On-disk .HIL header — 2254 bytes total. Matches the byte layout
+ * the legacy save/load and _SetHilFileHeader / _SaveCoordinatesForHighlights
+ * write at the start of hilFileBuffer. Using offsetof() against this
+ * struct replaces every hardcoded byte offset that used to live in
+ * this file. Note: signature/max_size/TeamGame kit fields are BE on
+ * disk; numGoals + neighbours are host-native at our save dispatch
+ * point (the legacy BE swap dance hasn't run yet). */
+typedef struct __attribute__((packed)) HilFileHeader {
+    uint32_t  signature;          /* +0   BE on disk */
+    uint32_t  max_size;           /* +4   BE on disk */
+    TeamGame  top_team;           /* +8   1018 bytes (BE int16 header) */
+    TeamGame  bottom_team;        /* +1026 1018 bytes */
+    uint8_t   game_name[100];     /* +2044 */
+    uint8_t   game_round[100];    /* +2144 */
+    uint16_t  num_goals;          /* +2244 */
+    uint16_t  team_1_goals;       /* +2246 */
+    uint16_t  team_2_goals;       /* +2248 */
+    uint16_t  pitch_number;       /* +2250 */
+    uint16_t  max_substitutes;    /* +2252 */
+} HilFileHeader;
+
+typedef char _hilheader_size_check[(sizeof(HilFileHeader) == 2254) ? 1 : -1];
+
+#define HIL_HEADER_SIZE  ((uint32_t)sizeof(HilFileHeader))
 #define HIL_SCENE_SIZE   19000u
-#define HIL_NUMGOALS_OFF  2244u
-#define HIL_GAMENAME_OFF  2044u
-#define HIL_GAMEROUND_OFF 2144u
+
+/* ---------- TeamGame emit/load ----------
+ *
+ * In hilFileBuffer (memory and on disk), the 11 × int16 fields are
+ * BE-encoded by _SetHilFileHeader. We read via BE_READ_U16 to get
+ * the live host-native values, emit as JSON numbers, and on load
+ * write back via HOST_TO_BE16.
+ */
+static void emit_team_game(mjson_print_fn_t fn, void *fnd,
+                           const char *key, const uint8_t *tg)
+{
+    mjson_printf(fn, fnd, "%Q:{", key);
+
+    mjson_printf(fn, fnd,
+        "%Q:{"
+        "%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,"
+        "%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u},",
+        "kit",
+        "pr_shirt_type",  (unsigned)BE_READ_U16(tg + offsetof(TeamGame, prShirtType)),
+        "pr_shirt_col",   (unsigned)BE_READ_U16(tg + offsetof(TeamGame, prShirtCol)),
+        "pr_stripes_col", (unsigned)BE_READ_U16(tg + offsetof(TeamGame, prStripesCol)),
+        "pr_shorts_col",  (unsigned)BE_READ_U16(tg + offsetof(TeamGame, prShortsCol)),
+        "pr_socks_col",   (unsigned)BE_READ_U16(tg + offsetof(TeamGame, prSocksCol)),
+        "sec_shirt_type", (unsigned)BE_READ_U16(tg + offsetof(TeamGame, secShirtType)),
+        "sec_shirt_col",  (unsigned)BE_READ_U16(tg + offsetof(TeamGame, secShirtCol)),
+        "sec_stripes",    (unsigned)BE_READ_U16(tg + offsetof(TeamGame, secStripesCol)),
+        "sec_shorts",     (unsigned)BE_READ_U16(tg + offsetof(TeamGame, secShortsCol)),
+        "sec_socks",      (unsigned)BE_READ_U16(tg + offsetof(TeamGame, secSocksCol)));
+
+    mjson_printf(fn, fnd, "%Q:%u,", "marked_player",
+                 (unsigned)BE_READ_U16(tg + offsetof(TeamGame, markedPlayer)));
+    emit_str_at(fn, fnd, "team_name", (uint8_t *)tg, offsetof(TeamGame, teamName), 17);
+    mjson_printf(fn, fnd, ",%Q:%u,%Q:%u,%Q:%u",
+                 "unk1",          (unsigned)tg[offsetof(TeamGame, unk1)],
+                 "num_own_goals", (unsigned)tg[offsetof(TeamGame, numOwnGoals)],
+                 "unk3",          (unsigned)tg[offsetof(TeamGame, unk3)]);
+
+    mjson_printf(fn, fnd, ",%Q:[", "players");
+    for (int i = 0; i < 16; i++) {
+        if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+        const uint8_t *p = tg + offsetof(TeamGame, players)
+                              + (size_t)i * sizeof(struct PlayerInfo);
+        mjson_printf(fn, fnd,
+            "{%Q:%d,%Q:%d,%Q:%d,%Q:%d,%Q:%d,%Q:%d,%Q:%d,"
+            "%Q:%d,%Q:%d,%Q:%d,%Q:%d,%Q:%d,",
+            "skip",          (int)(int8_t)p[offsetof(struct PlayerInfo, skip)],
+            "player_index",  (int)(int8_t)p[offsetof(struct PlayerInfo, playerIndex)],
+            "goals_scored",  (int)(int8_t)p[offsetof(struct PlayerInfo, goalsScored)],
+            "shirt_number",  (int)(int8_t)p[offsetof(struct PlayerInfo, shirtNumber)],
+            "position",      (int)(int8_t)p[offsetof(struct PlayerInfo, position)],
+            "face",          (int)(int8_t)p[offsetof(struct PlayerInfo, face)],
+            "is_injured",    (int)(int8_t)p[offsetof(struct PlayerInfo, isInjured)],
+            "field_7",       (int)(int8_t)p[offsetof(struct PlayerInfo, field_7)],
+            "field_8",       (int)(int8_t)p[offsetof(struct PlayerInfo, field_8)],
+            "previous_cards",(int)(int8_t)p[offsetof(struct PlayerInfo, previousCards)],
+            "num_yellow_cards",(int)(int8_t)p[offsetof(struct PlayerInfo, numYellowCards)],
+            "field_b",       (int)(int8_t)p[offsetof(struct PlayerInfo, field_B)]);
+        emit_str_at(fn, fnd, "short_name", (uint8_t *)p,
+                    offsetof(struct PlayerInfo, shortName), 15);
+        mjson_printf(fn, fnd,
+            ",%Q:%d,%Q:%d,%Q:%d,%Q:%d,%Q:%d,%Q:%d,%Q:%d,"
+            "%Q:%d,%Q:%d,%Q:%d,%Q:%d,",
+            "passing",       (int)(int8_t)p[offsetof(struct PlayerInfo, passing)],
+            "shooting",      (int)(int8_t)p[offsetof(struct PlayerInfo, shooting)],
+            "heading",       (int)(int8_t)p[offsetof(struct PlayerInfo, heading)],
+            "tackling",      (int)(int8_t)p[offsetof(struct PlayerInfo, tackling)],
+            "ball_control",  (int)(int8_t)p[offsetof(struct PlayerInfo, ballControl)],
+            "speed",         (int)(int8_t)p[offsetof(struct PlayerInfo, speed)],
+            "finishing",     (int)(int8_t)p[offsetof(struct PlayerInfo, finishing)],
+            "goalie_skill",  (int)(int8_t)p[offsetof(struct PlayerInfo, goalieSkill)],
+            "injuries_bits", (int)(int8_t)p[offsetof(struct PlayerInfo, injuriesBitfield)],
+            "half_played",   (int)(int8_t)p[offsetof(struct PlayerInfo, halfPlayed)],
+            "face_2",        (int)(int8_t)p[offsetof(struct PlayerInfo, face2)]);
+        emit_str_at(fn, fnd, "full_name", (uint8_t *)p,
+                    offsetof(struct PlayerInfo, fullName), 23);
+        mjson_printf(fn, fnd, "%s", "}");
+    }
+    mjson_printf(fn, fnd, "%s", "]}");
+}
+
+static void load_team_game(const char *buf, int buflen,
+                           const char *path_prefix, uint8_t *tg)
+{
+    char path[200];
+    double num = 0.0;
+
+    /* Zero the buffer up front — fields not present in JSON stay
+     * defined as zero. */
+    memset(tg, 0, sizeof(TeamGame));
+
+#define LOAD_BE16(key, field) do { \
+        snprintf(path, sizeof(path), "%s.kit.%s", path_prefix, key); \
+        if (mjson_get_number(buf, buflen, path, &num) > 0) \
+            BE_WRITE_U16(tg + offsetof(TeamGame, field), (uint16_t)(int)num); \
+    } while (0)
+    LOAD_BE16("pr_shirt_type",  prShirtType);
+    LOAD_BE16("pr_shirt_col",   prShirtCol);
+    LOAD_BE16("pr_stripes_col", prStripesCol);
+    LOAD_BE16("pr_shorts_col",  prShortsCol);
+    LOAD_BE16("pr_socks_col",   prSocksCol);
+    LOAD_BE16("sec_shirt_type", secShirtType);
+    LOAD_BE16("sec_shirt_col",  secShirtCol);
+    LOAD_BE16("sec_stripes",    secStripesCol);
+    LOAD_BE16("sec_shorts",     secShortsCol);
+    LOAD_BE16("sec_socks",      secSocksCol);
+#undef LOAD_BE16
+
+    snprintf(path, sizeof(path), "%s.marked_player", path_prefix);
+    if (mjson_get_number(buf, buflen, path, &num) > 0)
+        BE_WRITE_U16(tg + offsetof(TeamGame, markedPlayer), (uint16_t)(int)num);
+
+    snprintf(path, sizeof(path), "%s.team_name", path_prefix);
+    load_str_at(buf, buflen, path, tg, offsetof(TeamGame, teamName), 17);
+
+#define LOAD_B(key, field) do { \
+        snprintf(path, sizeof(path), "%s.%s", path_prefix, key); \
+        if (mjson_get_number(buf, buflen, path, &num) > 0) \
+            tg[offsetof(TeamGame, field)] = (uint8_t)(int)num; \
+    } while (0)
+    LOAD_B("unk1",          unk1);
+    LOAD_B("num_own_goals", numOwnGoals);
+    LOAD_B("unk3",          unk3);
+#undef LOAD_B
+
+    for (int i = 0; i < 16; i++) {
+        uint8_t *p = tg + offsetof(TeamGame, players)
+                        + (size_t)i * sizeof(struct PlayerInfo);
+#define LOAD_PB(key, field) do { \
+            snprintf(path, sizeof(path), "%s.players[%d].%s", path_prefix, i, key); \
+            if (mjson_get_number(buf, buflen, path, &num) > 0) \
+                p[offsetof(struct PlayerInfo, field)] = (uint8_t)(int)(int8_t)(int)num; \
+        } while (0)
+        LOAD_PB("skip",            skip);
+        LOAD_PB("player_index",    playerIndex);
+        LOAD_PB("goals_scored",    goalsScored);
+        LOAD_PB("shirt_number",    shirtNumber);
+        LOAD_PB("position",        position);
+        LOAD_PB("face",            face);
+        LOAD_PB("is_injured",      isInjured);
+        LOAD_PB("field_7",         field_7);
+        LOAD_PB("field_8",         field_8);
+        LOAD_PB("previous_cards",  previousCards);
+        LOAD_PB("num_yellow_cards",numYellowCards);
+        LOAD_PB("field_b",         field_B);
+        snprintf(path, sizeof(path), "%s.players[%d].short_name", path_prefix, i);
+        load_str_at(buf, buflen, path, p, offsetof(struct PlayerInfo, shortName), 15);
+        LOAD_PB("passing",         passing);
+        LOAD_PB("shooting",        shooting);
+        LOAD_PB("heading",         heading);
+        LOAD_PB("tackling",        tackling);
+        LOAD_PB("ball_control",    ballControl);
+        LOAD_PB("speed",           speed);
+        LOAD_PB("finishing",       finishing);
+        LOAD_PB("goalie_skill",    goalieSkill);
+        LOAD_PB("injuries_bits",   injuriesBitfield);
+        LOAD_PB("half_played",     halfPlayed);
+        LOAD_PB("face_2",          face2);
+        snprintf(path, sizeof(path), "%s.players[%d].full_name", path_prefix, i);
+        load_str_at(buf, buflen, path, p, offsetof(struct PlayerInfo, fullName), 23);
+#undef LOAD_PB
+    }
+}
+
+/* ---------- scene emit/load ----------
+ *
+ * A scene is 19000 bytes of 4-byte BE entries. Parse into a list of
+ * frames + sprites; emit any bytes after the end-of-segment sentinel
+ * as a trailing byte array so we round-trip bit-exactly. */
+static void emit_scene(mjson_print_fn_t fn, void *fnd,
+                       const uint8_t *scene)
+{
+    mjson_printf(fn, fnd, "%s", "{\"frames\":[");
+
+    uint32_t off = 0;
+    int frame_open = 0;
+    int frame_first_sprite = 1;
+    int frames_emitted = 0;
+    uint32_t eos_off = HIL_SCENE_SIZE;
+
+    while (off + 4 <= HIL_SCENE_SIZE) {
+        uint32_t entry = BE_READ_U32(scene + off);
+        if (entry == 0xFFFFFFFFu) {
+            eos_off = off + 4;
+            break;
+        }
+        if (entry & 0x80000000u) {
+            /* Close previous frame */
+            if (frame_open) {
+                mjson_printf(fn, fnd, "%s", "]}");
+            }
+
+            /* New frame: read 3 × u32. camera x|0x8000, camera y, goals u16+u16, anim u16+u16 (dup). */
+            uint16_t cam_x = (entry >> 16) & 0x7FFFu;  /* drop bit 31 */
+            uint16_t cam_y = entry & 0xFFFFu;
+            uint32_t goals  = (off + 8  <= HIL_SCENE_SIZE) ? BE_READ_U32(scene + off + 4) : 0;
+            uint32_t anim   = (off + 12 <= HIL_SCENE_SIZE) ? BE_READ_U32(scene + off + 8) : 0;
+            uint16_t team1_goals = (uint16_t)(goals >> 16);
+            uint16_t team2_goals = (uint16_t)(goals & 0xFFFF);
+            uint16_t anim_state  = (uint16_t)(anim >> 16);  /* low half duplicates high */
+
+            if (frames_emitted > 0) mjson_printf(fn, fnd, "%s", ",");
+            mjson_printf(fn, fnd,
+                "{%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:[",
+                "cam_x", (unsigned)cam_x,
+                "cam_y", (unsigned)cam_y,
+                "team_1_goals", (unsigned)team1_goals,
+                "team_2_goals", (unsigned)team2_goals,
+                "anim_patterns_state", (unsigned)anim_state,
+                "sprites");
+            frame_open = 1;
+            frame_first_sprite = 1;
+            frames_emitted++;
+            off += 12;
+        } else {
+            /* Sprite entry: bit 31 clear, encoded (idx << 20) | (x << 10) | y. */
+            uint32_t idx = (entry >> 20) & 0xFFFu;
+            uint32_t x   = (entry >> 10) & 0x3FFu;
+            uint32_t y   = entry & 0x3FFu;
+            if (!frame_open) {
+                /* Sprite without a preceding frame — preserve as a
+                 * leading-sprites array on a synthetic frame. Rare but
+                 * possible if the scene starts mid-frame. */
+                if (frames_emitted > 0) mjson_printf(fn, fnd, "%s", ",");
+                mjson_printf(fn, fnd, "%s",
+                    "{\"cam_x\":0,\"cam_y\":0,\"team_1_goals\":0,"
+                    "\"team_2_goals\":0,\"anim_patterns_state\":0,"
+                    "\"_synthetic_no_frame_marker\":true,\"sprites\":[");
+                frame_open = 1;
+                frame_first_sprite = 1;
+                frames_emitted++;
+            }
+            if (!frame_first_sprite) mjson_printf(fn, fnd, "%s", ",");
+            frame_first_sprite = 0;
+            mjson_printf(fn, fnd, "{%Q:%u,%Q:%u,%Q:%u}",
+                         "index", (unsigned)idx,
+                         "x",     (unsigned)x,
+                         "y",     (unsigned)y);
+            off += 4;
+        }
+    }
+
+    if (frame_open) {
+        mjson_printf(fn, fnd, "%s", "]}");
+    }
+    mjson_printf(fn, fnd, "%s", "]");
+
+    /* Trailing bytes: everything from eos_off..HIL_SCENE_SIZE (the
+     * ring-buffer garbage past the active region). Emit as a byte
+     * array for bit-exact round-trip. */
+    mjson_printf(fn, fnd, ",%Q:%u,%Q:[",
+                 "eos_offset", (unsigned)eos_off, "trailing");
+    for (uint32_t i = eos_off; i < HIL_SCENE_SIZE; i++) {
+        if (i > eos_off) mjson_printf(fn, fnd, "%s", ",");
+        mjson_printf(fn, fnd, "%u", (unsigned)scene[i]);
+    }
+    mjson_printf(fn, fnd, "%s", "]}");
+}
+
+static void load_scene(const char *buf, int buflen,
+                       const char *path_prefix, uint8_t *scene)
+{
+    memset(scene, 0, HIL_SCENE_SIZE);
+
+    uint32_t off = 0;
+    double num = 0.0;
+    char path[160];
+
+#if MJSON_ENABLE_NEXT
+    snprintf(path, sizeof(path), "%s.frames", path_prefix);
+    const char *arr = NULL;
+    int arr_len = 0;
+    if (mjson_find(buf, buflen, path, &arr, &arr_len) == MJSON_TOK_ARRAY) {
+        int koff, klen, voff, vlen, vt;
+        int pos = 0;
+        int frame_idx = 0;
+        while ((pos = mjson_next(arr, arr_len, pos,
+                                 &koff, &klen, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_OBJECT) { frame_idx++; continue; }
+
+            /* Frame header */
+            uint16_t cam_x = 0, cam_y = 0, t1 = 0, t2 = 0, anim = 0;
+            int is_synthetic = 0;
+            snprintf(path, sizeof(path),
+                     "%s.frames[%d].cam_x", path_prefix, frame_idx);
+            if (mjson_get_number(buf, buflen, path, &num) > 0) cam_x = (uint16_t)num;
+            snprintf(path, sizeof(path),
+                     "%s.frames[%d].cam_y", path_prefix, frame_idx);
+            if (mjson_get_number(buf, buflen, path, &num) > 0) cam_y = (uint16_t)num;
+            snprintf(path, sizeof(path),
+                     "%s.frames[%d].team_1_goals", path_prefix, frame_idx);
+            if (mjson_get_number(buf, buflen, path, &num) > 0) t1 = (uint16_t)num;
+            snprintf(path, sizeof(path),
+                     "%s.frames[%d].team_2_goals", path_prefix, frame_idx);
+            if (mjson_get_number(buf, buflen, path, &num) > 0) t2 = (uint16_t)num;
+            snprintf(path, sizeof(path),
+                     "%s.frames[%d].anim_patterns_state", path_prefix, frame_idx);
+            if (mjson_get_number(buf, buflen, path, &num) > 0) anim = (uint16_t)num;
+            snprintf(path, sizeof(path),
+                     "%s.frames[%d]._synthetic_no_frame_marker", path_prefix, frame_idx);
+            {
+                int bval = 0;
+                if (mjson_get_bool(buf, buflen, path, &bval) > 0 && bval)
+                    is_synthetic = 1;
+            }
+
+            if (!is_synthetic) {
+                if (off + 12 > HIL_SCENE_SIZE) break;
+                /* Frame marker */
+                uint32_t marker = 0x80000000u
+                                | ((uint32_t)cam_x << 16)
+                                | (uint32_t)cam_y;
+                BE_WRITE_U32(scene + off, marker);
+                /* Goals */
+                BE_WRITE_U32(scene + off + 4,
+                             ((uint32_t)t1 << 16) | (uint32_t)t2);
+                /* Anim patterns (duplicated u16) */
+                BE_WRITE_U32(scene + off + 8,
+                             ((uint32_t)anim << 16) | (uint32_t)anim);
+                off += 12;
+            }
+
+            /* Sprites */
+            int sprite_idx = 0;
+            for (;;) {
+                snprintf(path, sizeof(path),
+                         "%s.frames[%d].sprites[%d].index",
+                         path_prefix, frame_idx, sprite_idx);
+                if (mjson_get_number(buf, buflen, path, &num) <= 0) break;
+                uint32_t s_idx = (uint32_t)num & 0xFFFu;
+                uint32_t s_x = 0, s_y = 0;
+                snprintf(path, sizeof(path),
+                         "%s.frames[%d].sprites[%d].x",
+                         path_prefix, frame_idx, sprite_idx);
+                if (mjson_get_number(buf, buflen, path, &num) > 0)
+                    s_x = (uint32_t)num & 0x3FFu;
+                snprintf(path, sizeof(path),
+                         "%s.frames[%d].sprites[%d].y",
+                         path_prefix, frame_idx, sprite_idx);
+                if (mjson_get_number(buf, buflen, path, &num) > 0)
+                    s_y = (uint32_t)num & 0x3FFu;
+                if (off + 4 > HIL_SCENE_SIZE) break;
+                uint32_t packed = (s_idx << 20) | (s_x << 10) | s_y;
+                BE_WRITE_U32(scene + off, packed);
+                off += 4;
+                sprite_idx++;
+            }
+            frame_idx++;
+        }
+    }
+#else
+    (void)buf; (void)buflen; (void)path_prefix;
+#endif
+
+    /* EOS sentinel */
+    uint32_t eos_off = off;
+    snprintf(path, sizeof(path), "%s.eos_offset", path_prefix);
+    if (mjson_get_number(buf, buflen, path, &num) > 0) {
+        uint32_t hinted = (uint32_t)num;
+        if (hinted >= 4 && hinted <= HIL_SCENE_SIZE)
+            eos_off = hinted;
+    }
+    if (eos_off >= 4 && eos_off <= HIL_SCENE_SIZE) {
+        BE_WRITE_U32(scene + eos_off - 4, 0xFFFFFFFFu);
+    }
+
+    /* Trailing bytes (post-EOS garbage) */
+    snprintf(path, sizeof(path), "%s.trailing", path_prefix);
+    load_bytes_at(buf, buflen, path, scene, eos_off, HIL_SCENE_SIZE - eos_off);
+}
 
 int16_t SaveJson_WriteHighlights(uint8_t *filename)
 {
-    /* Read numGoals from the live u16 — it's host-native at this
-     * point (the legacy BE swap hasn't run yet because we dispatch
-     * before it in _DoSaveHighlights). */
     uint16_t num_goals = hilNumGoals;
     uint32_t data_size = HIL_HEADER_SIZE + (uint32_t)num_goals * HIL_SCENE_SIZE;
 
     JsonOutBuf out = { NULL, 0, 0, 0 };
-    mjson_printf(json_out_emit, &out,
-        "{\n  %Q:%d,\n  %Q:%Q,\n  %Q:%u,\n  ",
-        "schema_version", SAVE_JSON_SCHEMA_VERSION,
-        "file_kind",      KIND_HIGHLIGHTS,
-        "num_goals",      (unsigned)num_goals);
+    string_pool_reset();
 
-    /* Game name / round are NUL-padded char[100] in hilBackingBuf —
-     * read straight from there (they don't go through the BE
-     * dance). */
+    mjson_printf(json_out_emit, &out,
+        "{\n  %Q:%d,\n  %Q:%Q,\n  ",
+        "schema_version", SAVE_JSON_SCHEMA_VERSION,
+        "file_kind",      KIND_HIGHLIGHTS);
+
+    /* sig + max_size — u32 BE on disk, but our dispatch reads
+     * straight from hilFileBuffer where they're already stored BE. */
+    mjson_printf(json_out_emit, &out, "%Q:%lu,\n  %Q:%lu,\n  ",
+                 "signature",
+                 (long)(uint32_t)BE_READ_U32((uint8_t *)hilFileBuffer
+                                             + offsetof(HilFileHeader, signature)),
+                 "max_size",
+                 (long)(uint32_t)BE_READ_U32((uint8_t *)hilFileBuffer
+                                             + offsetof(HilFileHeader, max_size)));
+
+    HilFileHeader *hdr = (HilFileHeader *)hilFileBuffer;
+
+    emit_team_game(json_out_emit, &out, "top_team",
+                   (uint8_t *)&hdr->top_team);
+    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+    emit_team_game(json_out_emit, &out, "bottom_team",
+                   (uint8_t *)&hdr->bottom_team);
+
     {
-        const uint8_t *p = hilFileBuffer + HIL_GAMENAME_OFF;
-        size_t n = 0;
-        while (n < 100 && p[n] != '\0') n++;
-        mjson_printf(json_out_emit, &out, "%Q:%.*Q,\n  ",
+        const uint8_t *p = hdr->game_name;
+        size_t n = 0; while (n < sizeof(hdr->game_name) && p[n] != '\0') n++;
+        mjson_printf(json_out_emit, &out, ",\n  %Q:%.*Q",
                      "game_name", (int)n, (const char *)p);
     }
     {
-        const uint8_t *p = hilFileBuffer + HIL_GAMEROUND_OFF;
-        size_t n = 0;
-        while (n < 100 && p[n] != '\0') n++;
-        mjson_printf(json_out_emit, &out, "%Q:%.*Q,\n  ",
+        const uint8_t *p = hdr->game_round;
+        size_t n = 0; while (n < sizeof(hdr->game_round) && p[n] != '\0') n++;
+        mjson_printf(json_out_emit, &out, ",\n  %Q:%.*Q",
                      "game_round", (int)n, (const char *)p);
     }
 
-    /* Whole file region as one base64 blob. Round-trips bit-exactly,
-     * including the BE u16 header fields and the goal scene frames.
-     * Semantic promotion of individual scenes can happen later. */
-    mjson_printf(json_out_emit, &out, "%Q:%V\n}\n",
-                 "hil_data", (int)data_size, (const char *)hilFileBuffer);
+    /* Header u16s are host-native here (pre-swap-dance dispatch). */
+    mjson_printf(json_out_emit, &out,
+        ",\n  %Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u",
+        "num_goals",       (unsigned)num_goals,
+        "team_1_goals",    (unsigned)hdr->team_1_goals,
+        "team_2_goals",    (unsigned)hdr->team_2_goals,
+        "pitch_number",    (unsigned)hdr->pitch_number,
+        "max_substitutes", (unsigned)hdr->max_substitutes);
+
+    /* Scenes */
+    mjson_printf(json_out_emit, &out, ",\n  %Q:[", "scenes");
+    for (uint16_t i = 0; i < num_goals; i++) {
+        if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
+        emit_scene(json_out_emit, &out,
+                   hilFileBuffer + HIL_HEADER_SIZE
+                                 + (uint32_t)i * HIL_SCENE_SIZE);
+    }
+    mjson_printf(json_out_emit, &out, "%s", "]\n}\n");
 
     if (out.oom || !out.ptr) {
         if (out.ptr) free(out.ptr);
@@ -2535,15 +2964,68 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
         free(src); return 1;
     }
 
-    /* Decode hil_data straight into hilFileBuffer. The HIL_BACKING
-     * buffer is 192254 bytes — more than enough for any realistic
-     * 2254 + numGoals * 19000. */
-    extern uint8_t hilBackingBuf[];
-    int got = mjson_get_base64((const char *)src, (int)src_size,
-                               "$.hil_data", (char *)hilBackingBuf,
-                               192254);
+    string_pool_reset();
+    double num = 0.0;
+
+    HilFileHeader *hdr = (HilFileHeader *)hilFileBuffer;
+
+    if (mjson_get_number((const char *)src, (int)src_size,
+                         "$.signature", &num) > 0)
+        BE_WRITE_U32((uint8_t *)&hdr->signature, (uint32_t)num);
+    if (mjson_get_number((const char *)src, (int)src_size,
+                         "$.max_size", &num) > 0)
+        BE_WRITE_U32((uint8_t *)&hdr->max_size,  (uint32_t)num);
+
+    load_team_game((const char *)src, (int)src_size,
+                   "$.top_team",    (uint8_t *)&hdr->top_team);
+    load_team_game((const char *)src, (int)src_size,
+                   "$.bottom_team", (uint8_t *)&hdr->bottom_team);
+
+    memset(hdr->game_name,  0, sizeof(hdr->game_name));
+    memset(hdr->game_round, 0, sizeof(hdr->game_round));
+    char tmp[100];
+    if (mjson_get_string((const char *)src, (int)src_size,
+                         "$.game_name", tmp, sizeof(tmp)) > 0) {
+        size_t n = strlen(tmp);
+        if (n > sizeof(hdr->game_name)) n = sizeof(hdr->game_name);
+        memcpy(hdr->game_name, tmp, n);
+    }
+    if (mjson_get_string((const char *)src, (int)src_size,
+                         "$.game_round", tmp, sizeof(tmp)) > 0) {
+        size_t n = strlen(tmp);
+        if (n > sizeof(hdr->game_round)) n = sizeof(hdr->game_round);
+        memcpy(hdr->game_round, tmp, n);
+    }
+
+    uint16_t num_goals = 0;
+    if (mjson_get_number((const char *)src, (int)src_size,
+                         "$.num_goals", &num) > 0) num_goals = (uint16_t)num;
+    hdr->num_goals = num_goals;
+    hilNumGoals = num_goals;
+
+#define HDR_U16(key, field) do { \
+        if (mjson_get_number((const char *)src, (int)src_size, \
+                             "$." key, &num) > 0) \
+            hdr->field = (uint16_t)num; \
+    } while (0)
+    HDR_U16("team_1_goals",    team_1_goals);
+    HDR_U16("team_2_goals",    team_2_goals);
+    HDR_U16("pitch_number",    pitch_number);
+    HDR_U16("max_substitutes", max_substitutes);
+#undef HDR_U16
+
+    /* Zero scene area then decode each scene. */
+    memset(hilFileBuffer + HIL_HEADER_SIZE, 0,
+           (size_t)num_goals * HIL_SCENE_SIZE);
+    char scene_path[80];
+    for (uint16_t i = 0; i < num_goals; i++) {
+        snprintf(scene_path, sizeof(scene_path), "$.scenes[%u]", (unsigned)i);
+        load_scene((const char *)src, (int)src_size, scene_path,
+                   hilFileBuffer + HIL_HEADER_SIZE
+                                 + (uint32_t)i * HIL_SCENE_SIZE);
+    }
+
     free(src);
-    if (got <= 0) return 1;
     return 0;
 }
 /* ---------- .TAC (tactics) ----------
