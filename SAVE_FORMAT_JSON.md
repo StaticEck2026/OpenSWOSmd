@@ -115,7 +115,10 @@ phase) covers comp-name string pointers that the LUT doesn't index.
 - [ ] Promote tmdFileBuffer (transfer market data) — needs
       schema design.
 - [ ] Promote competition contexts (the slot state buffers).
-- [ ] Verify byte coverage and remove `opaque_data` safety net.
+- [x] Verify byte coverage (`SWOS_SAVE_FORMAT_JSON_VERIFY=1` ran
+      with `0 mismatches across 120366 bytes`) and remove
+      `opaque_data` from the writer. Loader still decodes it for
+      backwards-compat with saves written during the transition.
 - [ ] Promote `tmdFileBuffer` (transfer market data — large block
       at the very start of careerFileBuffer)
 - [ ] Promote misc career flags/state (currentSeasonShowing,
@@ -198,12 +201,13 @@ are:
 4. Wire both into `SaveJson_WriteCareer` / `SaveJson_LoadCareer`.
 5. Update this file's checklist.
 
-Last update: 2026-05-21. Every byte of careerFileBuffer is now
-inside either a typed field or a named blob; opaque_data is
-technically redundant but still rides as a safety net. Next
-session pick-up: verify byte-coverage via a round-trip diff
-(load legacy → save JSON → load JSON → save legacy → diff bytes)
-and remove opaque_data. Then promote individual blob regions to
-typed encoders — best ROI: comp_copy_region (each *Copy gets a
-proper CompetitionCup/Cup2/League encoder using offsetof()) and
+Last update: 2026-05-21. `.CAR` save format is now pure JSON —
+opaque_data dropped from the writer after byte-coverage verify
+passed at 0 mismatches across 120366 bytes. Loader still
+decodes opaque_data when present so saves written during the
+transition keep loading. Next session pick-up: extend the same
+mjson + offsetof() machinery to `.SEA / .PRE / .DIY / .HIL /
+.TAC`. Then promote individual blob regions to typed encoders
+— best ROI: comp_copy_region (each *Copy gets a proper
+CompetitionCup/Cup2/League encoder using offsetof()) and
 tmdFileBuffer (transfer-market schema design).

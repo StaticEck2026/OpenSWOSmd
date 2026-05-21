@@ -1807,22 +1807,20 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     uint32_t data_size = career_data_size();
     JsonOutBuf out = { NULL, 0, 0, 0 };
 
-    /* Top-level object. opaque_data carries the legacy raw bytes
-     * base64-encoded for fields not yet promoted to semantic JSON.
-     * Promoted fields (currently: season_informations) are also
-     * written semantically and OVERRIDE the corresponding bytes when
-     * loaded — see SaveJson_LoadCareer. As more fields get promoted
-     * the opaque_data blob shrinks. */
+    /* Top-level object. Every byte of careerFileBuffer is now
+     * covered by either a typed semantic field or a named blob
+     * (verified at runtime with SWOS_SAVE_FORMAT_JSON_VERIFY before
+     * opaque_data was dropped — see SAVE_FORMAT_JSON.md). Save files
+     * are now pointer-portable and 64-bit-friendly by construction. */
+    (void)data_size;
     mjson_printf(json_out_emit, &out,
         "{\n"
         "  %Q: %d,\n"
         "  %Q: %Q,\n"
-        "  %Q: %d,\n"
-        "  %Q: %V,\n  ",
+        "  %Q: %d,\n  ",
         "schema_version", SAVE_JSON_SCHEMA_VERSION,
         "file_kind",      KIND_CAREER,
-        "num_selected_teams", (int)numSelectedTeams,
-        "opaque_data",    (int)data_size, (const char *)&careerFileBuffer);
+        "num_selected_teams", (int)numSelectedTeams);
 
     emit_season_informations(json_out_emit, &out);
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
@@ -1960,75 +1958,21 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
         return 1;
     }
 
-    /* Read opaque_data base64 → careerFileBuffer in place. We need a
-     * temporary holding region because the decoder writes bytes
-     * incrementally; using careerFileBuffer as the destination
-     * directly is safe though since src now lives on the heap. */
+    /* opaque_data has been retired (verified zero-mismatch with
+     * SWOS_SAVE_FORMAT_JSON_VERIFY before removal). For
+     * backwards-compat with saves written before the cutover, try
+     * decoding it if present so old TEST.CAR files keep loading;
+     * otherwise pre-zero the save region and let blobs+semantic
+     * populate every byte from named JSON fields. */
     uint32_t want = career_data_size();
-    int got = mjson_get_base64((const char *)src, (int)src_size,
-                               "$.opaque_data", (char *)&careerFileBuffer,
-                               (int)want);
-    if (got <= 0) {
-        free(src);
-        return 1;
-    }
-    if ((uint32_t)got > want) {
-        free(src);
-        return 1;
+    int legacy_got = mjson_get_base64((const char *)src, (int)src_size,
+                                      "$.opaque_data",
+                                      (char *)&careerFileBuffer, (int)want);
+    if (legacy_got <= 0) {
+        memset(&careerFileBuffer, 0, want);
     }
 
-    /* Apply semantic field overrides AFTER the opaque blob, so the
-     * semantic representation wins. This is what makes saves stable
-     * across rebuilds: even though the opaque blob has the original
-     * raw pointer values, load_* overwrites them with current-build
-     * addresses resolved from stable symbol names. */
     apply_semantic_load((const char *)src, (int)src_size);
-
-#ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
-    /* Snapshot the post-opaque+semantic state before the verify
-     * rerun so we can restore it afterwards (the verify path zeroes
-     * careerFileBuffer to do the diff). */
-#endif
-
-#ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
-    /* Coverage verification: at this point careerFileBuffer holds
-     * the bytes from opaque_data PLUS every semantic override that
-     * sits on top of it. Snapshot it as the "golden" reference,
-     * then re-run the semantic-only path (no opaque_data) into the
-     * same buffer and diff. A zero-mismatch result means the named
-     * blobs + typed fields together cover every meaningful byte and
-     * opaque_data can be dropped. */
-    {
-        uint32_t want = career_data_size();
-        uint8_t *golden = (uint8_t *)malloc(want);
-        if (golden) {
-            memcpy(golden, &careerFileBuffer, want);
-            memset(&careerFileBuffer, 0, want);
-            apply_semantic_load((const char *)src, (int)src_size);
-
-            size_t mismatches = 0, first = (size_t)-1;
-            for (uint32_t i = 0; i < want; i++) {
-                if (((uint8_t *)&careerFileBuffer)[i] != golden[i]) {
-                    if (mismatches < 20) {
-                        if (first == (size_t)-1) first = i;
-                        fprintf(stderr,
-                                "[json-verify] mismatch at +%u: semantic=0x%02X golden=0x%02X\n",
-                                (unsigned)i, (unsigned)((uint8_t *)&careerFileBuffer)[i],
-                                (unsigned)golden[i]);
-                    }
-                    mismatches++;
-                }
-            }
-            fprintf(stderr,
-                    "[json-verify] %zu mismatches across %u bytes (first at +%zu)\n",
-                    mismatches, (unsigned)want, first);
-            /* Restore the golden image so the game runs with the
-             * verified-correct state. */
-            memcpy(&careerFileBuffer, golden, want);
-            free(golden);
-        }
-    }
-#endif
 
     free(src);
     return 0;
