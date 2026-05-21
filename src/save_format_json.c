@@ -37,6 +37,67 @@ extern uint8_t  diyFileBufferCopy[];
 extern int16_t _WriteFile(uint8_t *filename, uint8_t *src, uint32_t size);
 extern void    _ShowFsErrorByCode(uint16_t code);
 
+#ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
+/* Generic round-trip verify: snapshot a memory region, zero it,
+ * call the just-written file's loader, then diff against the
+ * snapshot. Used by each Write* path to confirm the JSON schema
+ * round-trips bit-exactly for that save type. */
+typedef int16_t (*VerifyReloadFn)(uint8_t *filename);
+
+static void verify_roundtrip_region(const char *label,
+                                    uint8_t *region, uint32_t size,
+                                    VerifyReloadFn reload,
+                                    uint8_t *filename)
+{
+    uint8_t *snap = (uint8_t *)malloc(size);
+    if (!snap) return;
+    memcpy(snap, region, size);
+    memset(region, 0, size);
+
+    reload(filename);
+
+    size_t mismatches = 0;
+    size_t first = (size_t)-1;
+    for (uint32_t i = 0; i < size; i++) {
+        if (region[i] != snap[i]) {
+            if (mismatches < 20) {
+                if (first == (size_t)-1) first = i;
+                fprintf(stderr,
+                        "[json-verify-%s] mismatch at +%u: loaded=0x%02X saved=0x%02X\n",
+                        label, (unsigned)i,
+                        (unsigned)region[i], (unsigned)snap[i]);
+            }
+            mismatches++;
+        }
+    }
+    fprintf(stderr,
+            "[json-verify-%s] %zu mismatches across %u bytes (first at +%zu)\n",
+            label, mismatches, (unsigned)size, first);
+
+    memcpy(region, snap, size);
+    free(snap);
+}
+
+/* Reload wrappers with the simpler `(filename)` signature so the
+ * verify helper can take a uniform function pointer. */
+static int16_t verify_reload_career(uint8_t *f)
+{
+    return SaveJson_LoadCareer(f, NULL, 0);
+}
+static int16_t verify_reload_preset(uint8_t *f)
+{
+    return SaveJson_LoadPreset(f, NULL, 0);
+}
+static int16_t verify_reload_diy(uint8_t *f)
+{
+    return SaveJson_LoadDIY(f, NULL, 0);
+}
+static int16_t verify_reload_highlights(uint8_t *f)
+{
+    return SaveJson_LoadHighlights(f, NULL, 0);
+}
+#endif
+
 /* Direct stdio load helper. JSON saves can grow to several hundred
  * KB (>3x the legacy binary size from base64 expansion + key text),
  * which overflows the careerFileBuffer destination if we route
@@ -1862,6 +1923,13 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
         _ShowFsErrorByCode((uint16_t)result);
         return 1;
     }
+
+#ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
+    verify_roundtrip_region("career",
+                            (uint8_t *)&careerFileBuffer, data_size,
+                            verify_reload_career, filename);
+#endif
+
     return 0;
 }
 
@@ -2161,6 +2229,21 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
         _ShowFsErrorByCode((uint16_t)r);
         return 1;
     }
+
+#ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
+    {
+        const uint8_t *lo = &competitionFileBuffer;
+        const uint8_t *hi = (const uint8_t *)&numSelectedTeams +
+                            sizeof(numSelectedTeams) +
+                            (uint32_t)numDiyTeams * 684u;
+        VerifyReloadFn fn = (strcmp(kind, KIND_DIY) == 0)
+                              ? verify_reload_diy
+                              : verify_reload_preset;
+        verify_roundtrip_region(kind, (uint8_t *)lo,
+                                (uint32_t)(hi - lo), fn, filename);
+    }
+#endif
+
     return 0;
 }
 
@@ -2315,6 +2398,13 @@ int16_t SaveJson_WriteHighlights(uint8_t *filename)
         _ShowFsErrorByCode((uint16_t)r);
         return 1;
     }
+
+#ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
+    verify_roundtrip_region("highlights",
+                            hilFileBuffer, data_size,
+                            verify_reload_highlights, filename);
+#endif
+
     return 0;
 }
 
@@ -2418,6 +2508,34 @@ static int16_t write_tactics_buf(uint8_t *filename, const uint8_t *src)
         _ShowFsErrorByCode((uint16_t)r);
         return 1;
     }
+
+#ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
+    /* TeamTactics is a caller-provided buffer (not a global), so we
+     * snapshot the 370 bytes locally and round-trip through the
+     * load path with a scratch destination. */
+    {
+        uint8_t scratch[SAVE_TAC_DATA_SIZE];
+        memset(scratch, 0, sizeof(scratch));
+        if (SaveJson_LoadTactics(filename, scratch, sizeof(scratch)) == 0) {
+            size_t mismatches = 0, first = (size_t)-1;
+            for (uint32_t i = 0; i < SAVE_TAC_DATA_SIZE; i++) {
+                if (scratch[i] != src[i]) {
+                    if (mismatches < 20) {
+                        if (first == (size_t)-1) first = i;
+                        fprintf(stderr,
+                                "[json-verify-tactics] mismatch at +%u: loaded=0x%02X saved=0x%02X\n",
+                                (unsigned)i, scratch[i], src[i]);
+                    }
+                    mismatches++;
+                }
+            }
+            fprintf(stderr,
+                    "[json-verify-tactics] %zu mismatches across %u bytes (first at +%zu)\n",
+                    mismatches, (unsigned)SAVE_TAC_DATA_SIZE, first);
+        }
+    }
+#endif
+
     return 0;
 }
 
