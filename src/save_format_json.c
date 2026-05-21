@@ -2884,88 +2884,90 @@ static void load_scene(const char *buf, int buflen,
 
     uint32_t off = 0;
     double num = 0.0;
-    char path[160];
+
+    /* Resolve the scene's object slice once (e.g. "$[3]" against
+     * the scenes_arr slice). All subsequent finds run against this
+     * scene-bounded buffer (~20-30 KB), not the full file. */
+    const char *scene_buf = NULL;
+    int scene_buflen = 0;
+    if (mjson_find(buf, buflen, path_prefix,
+                   &scene_buf, &scene_buflen) != MJSON_TOK_OBJECT)
+        return;
 
 #if MJSON_ENABLE_NEXT
-    snprintf(path, sizeof(path), "%s.frames", path_prefix);
-    const char *arr = NULL;
-    int arr_len = 0;
-    if (mjson_find(buf, buflen, path, &arr, &arr_len) == MJSON_TOK_ARRAY) {
+    const char *frames_arr = NULL;
+    int frames_arr_len = 0;
+    if (mjson_find(scene_buf, scene_buflen, "$.frames",
+                   &frames_arr, &frames_arr_len) == MJSON_TOK_ARRAY) {
         int koff, klen, voff, vlen, vt;
         int pos = 0;
-        int frame_idx = 0;
-        while ((pos = mjson_next(arr, arr_len, pos,
+        while ((pos = mjson_next(frames_arr, frames_arr_len, pos,
                                  &koff, &klen, &voff, &vlen, &vt)) != 0) {
-            if (vt != MJSON_TOK_OBJECT) { frame_idx++; continue; }
+            if (vt != MJSON_TOK_OBJECT) continue;
 
-            /* Frame header */
+            /* mjson_next yields the frame's slice directly — use it
+             * as the buffer for the field/sprite lookups. Cuts the
+             * scene load from O(F²·S²) to O(F·S). */
+            const char *fb = frames_arr + voff;
+            int fl = vlen;
+
             uint16_t cam_x = 0, cam_y = 0, t1 = 0, t2 = 0, anim = 0;
             int is_synthetic = 0;
-            snprintf(path, sizeof(path),
-                     "%s.frames[%d].cam_x", path_prefix, frame_idx);
-            if (mjson_get_number(buf, buflen, path, &num) > 0) cam_x = (uint16_t)num;
-            snprintf(path, sizeof(path),
-                     "%s.frames[%d].cam_y", path_prefix, frame_idx);
-            if (mjson_get_number(buf, buflen, path, &num) > 0) cam_y = (uint16_t)num;
-            snprintf(path, sizeof(path),
-                     "%s.frames[%d].team_1_goals", path_prefix, frame_idx);
-            if (mjson_get_number(buf, buflen, path, &num) > 0) t1 = (uint16_t)num;
-            snprintf(path, sizeof(path),
-                     "%s.frames[%d].team_2_goals", path_prefix, frame_idx);
-            if (mjson_get_number(buf, buflen, path, &num) > 0) t2 = (uint16_t)num;
-            snprintf(path, sizeof(path),
-                     "%s.frames[%d].anim_patterns_state", path_prefix, frame_idx);
-            if (mjson_get_number(buf, buflen, path, &num) > 0) anim = (uint16_t)num;
-            snprintf(path, sizeof(path),
-                     "%s.frames[%d]._synthetic_no_frame_marker", path_prefix, frame_idx);
+
+            if (mjson_get_number(fb, fl, "$.cam_x",          &num) > 0) cam_x = (uint16_t)num;
+            if (mjson_get_number(fb, fl, "$.cam_y",          &num) > 0) cam_y = (uint16_t)num;
+            if (mjson_get_number(fb, fl, "$.team_1_goals",   &num) > 0) t1   = (uint16_t)num;
+            if (mjson_get_number(fb, fl, "$.team_2_goals",   &num) > 0) t2   = (uint16_t)num;
+            if (mjson_get_number(fb, fl, "$.anim_patterns_state", &num) > 0) anim = (uint16_t)num;
             {
                 int bval = 0;
-                if (mjson_get_bool(buf, buflen, path, &bval) > 0 && bval)
+                if (mjson_get_bool(fb, fl, "$._synthetic_no_frame_marker",
+                                   &bval) > 0 && bval)
                     is_synthetic = 1;
             }
 
             if (!is_synthetic) {
                 if (off + 12 > HIL_SCENE_SIZE) break;
-                /* Frame marker */
                 uint32_t marker = 0x80000000u
                                 | ((uint32_t)cam_x << 16)
                                 | (uint32_t)cam_y;
                 BE_WRITE_U32(scene + off, marker);
-                /* Goals */
                 BE_WRITE_U32(scene + off + 4,
                              ((uint32_t)t1 << 16) | (uint32_t)t2);
-                /* Anim patterns (duplicated u16) */
                 BE_WRITE_U32(scene + off + 8,
                              ((uint32_t)anim << 16) | (uint32_t)anim);
                 off += 12;
             }
 
-            /* Sprites */
-            int sprite_idx = 0;
-            for (;;) {
-                snprintf(path, sizeof(path),
-                         "%s.frames[%d].sprites[%d].index",
-                         path_prefix, frame_idx, sprite_idx);
-                if (mjson_get_number(buf, buflen, path, &num) <= 0) break;
-                uint32_t s_idx = (uint32_t)num & 0xFFFu;
-                uint32_t s_x = 0, s_y = 0;
-                snprintf(path, sizeof(path),
-                         "%s.frames[%d].sprites[%d].x",
-                         path_prefix, frame_idx, sprite_idx);
-                if (mjson_get_number(buf, buflen, path, &num) > 0)
-                    s_x = (uint32_t)num & 0x3FFu;
-                snprintf(path, sizeof(path),
-                         "%s.frames[%d].sprites[%d].y",
-                         path_prefix, frame_idx, sprite_idx);
-                if (mjson_get_number(buf, buflen, path, &num) > 0)
-                    s_y = (uint32_t)num & 0x3FFu;
-                if (off + 4 > HIL_SCENE_SIZE) break;
-                uint32_t packed = (s_idx << 20) | (s_x << 10) | s_y;
-                BE_WRITE_U32(scene + off, packed);
-                off += 4;
-                sprite_idx++;
+            /* Sprites — iterate the array via mjson_next instead of
+             * indexed path lookups. Each sprite decode is then O(1)
+             * in array position, not O(idx²). */
+            const char *sprites_arr = NULL;
+            int sprites_arr_len = 0;
+            if (mjson_find(fb, fl, "$.sprites",
+                           &sprites_arr, &sprites_arr_len) == MJSON_TOK_ARRAY) {
+                int spos = 0;
+                int s_koff, s_klen, s_voff, s_vlen, s_vt;
+                while ((spos = mjson_next(sprites_arr, sprites_arr_len, spos,
+                                          &s_koff, &s_klen, &s_voff, &s_vlen, &s_vt)) != 0) {
+                    if (s_vt != MJSON_TOK_OBJECT) continue;
+                    const char *sb = sprites_arr + s_voff;
+                    int sl = s_vlen;
+
+                    uint32_t s_idx = 0, s_x = 0, s_y = 0;
+                    if (mjson_get_number(sb, sl, "$.index", &num) > 0)
+                        s_idx = (uint32_t)num & 0xFFFu;
+                    if (mjson_get_number(sb, sl, "$.x", &num) > 0)
+                        s_x = (uint32_t)num & 0x3FFu;
+                    if (mjson_get_number(sb, sl, "$.y", &num) > 0)
+                        s_y = (uint32_t)num & 0x3FFu;
+                    if (off + 4 > HIL_SCENE_SIZE) goto sprites_done;
+                    uint32_t packed = (s_idx << 20) | (s_x << 10) | s_y;
+                    BE_WRITE_U32(scene + off, packed);
+                    off += 4;
+                }
+            sprites_done:;
             }
-            frame_idx++;
         }
     }
 #else
@@ -2974,8 +2976,7 @@ static void load_scene(const char *buf, int buflen,
 
     /* EOS sentinel */
     uint32_t eos_off = off;
-    snprintf(path, sizeof(path), "%s.eos_offset", path_prefix);
-    if (mjson_get_number(buf, buflen, path, &num) > 0) {
+    if (mjson_get_number(scene_buf, scene_buflen, "$.eos_offset", &num) > 0) {
         uint32_t hinted = (uint32_t)num;
         if (hinted >= 4 && hinted <= HIL_SCENE_SIZE)
             eos_off = hinted;
@@ -2985,8 +2986,8 @@ static void load_scene(const char *buf, int buflen,
     }
 
     /* Trailing bytes (post-EOS garbage) */
-    snprintf(path, sizeof(path), "%s.trailing", path_prefix);
-    load_bytes_at(buf, buflen, path, scene, eos_off, HIL_SCENE_SIZE - eos_off);
+    load_bytes_at(scene_buf, scene_buflen, "$.trailing",
+                  scene, eos_off, HIL_SCENE_SIZE - eos_off);
 }
 
 int16_t SaveJson_WriteHighlights(uint8_t *filename)
