@@ -1365,7 +1365,9 @@ static void load_scalar_table(const char *buf, int buflen,
             memset(p, 0, f->size);
             if (mjson_get_string(buf, buflen, path, tmp, sizeof(tmp)) > 0) {
                 uint32_t n = (uint32_t)strlen(tmp);
-                if (n >= f->size) n = f->size - 1;
+                /* Fields can fill all `f->size` bytes — see comment
+                 * in load_str_at. Don't reserve a NUL slot. */
+                if (n > f->size) n = f->size;
                 memcpy(p, tmp, n);
             }
             break;
@@ -1502,7 +1504,10 @@ static void load_str_at(const char *buf, int buflen, const char *path,
     char tmp[64];
     if (mjson_get_string(buf, buflen, path, tmp, sizeof(tmp)) > 0) {
         size_t n = strlen(tmp);
-        if (n > maxlen - 1) n = maxlen - 1;
+        /* Fields can fill all `maxlen` bytes with no NUL terminator
+         * (e.g. a 22-char playerName that maxes out the slot). Copy
+         * up to maxlen bytes — don't reserve a NUL slot. */
+        if (n > maxlen) n = maxlen;
         memcpy(p, tmp, n);
     }
 }
@@ -2184,7 +2189,9 @@ static void load_scalar_table_range(const char *buf, int buflen,
             memset(p, 0, f->size);
             if (mjson_get_string(buf, buflen, path, tmp, sizeof(tmp)) > 0) {
                 uint32_t n = (uint32_t)strlen(tmp);
-                if (n >= f->size) n = f->size - 1;
+                /* Fields can fill all `f->size` bytes — see comment
+                 * in load_str_at. Don't reserve a NUL slot. */
+                if (n > f->size) n = f->size;
                 memcpy(p, tmp, n);
             }
             break;
