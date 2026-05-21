@@ -22,6 +22,25 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <time.h>
+
+/* Profile helpers — only emit when SWOS_SAVE_FORMAT_JSON_PROFILE is
+ * defined. Times each labeled phase in microseconds via clock(),
+ * which is good enough resolution for the kind of work we're
+ * measuring (multi-millisecond JSON parse / file I/O). */
+#ifdef SWOS_SAVE_FORMAT_JSON_PROFILE
+#define PROF_START(name) clock_t prof_##name = clock()
+#define PROF_END(name, label) do { \
+    clock_t _e = clock(); \
+    double _ms = (double)(_e - prof_##name) * 1000.0 / (double)CLOCKS_PER_SEC; \
+    fprintf(stderr, "[json-prof-%s] %s: %.2f ms\n", \
+            (label), #name, _ms); \
+    fflush(stderr); \
+} while (0)
+#else
+#define PROF_START(name) ((void)0)
+#define PROF_END(name, label) ((void)0)
+#endif
 
 /* Externs from the careerFileBuffer overlay. */
 extern uint8_t  careerFileBuffer;
@@ -2972,19 +2991,19 @@ static void load_scene(const char *buf, int buflen,
 
 int16_t SaveJson_WriteHighlights(uint8_t *filename)
 {
+    PROF_START(total);
     uint16_t num_goals = hilNumGoals;
     uint32_t data_size = HIL_HEADER_SIZE + (uint32_t)num_goals * HIL_SCENE_SIZE;
 
     JsonOutBuf out = { NULL, 0, 0, 0 };
     string_pool_reset();
 
+    PROF_START(header);
     mjson_printf(json_out_emit, &out,
         "{\n  %Q:%d,\n  %Q:%Q,\n  ",
         "schema_version", SAVE_JSON_SCHEMA_VERSION,
         "file_kind",      KIND_HIGHLIGHTS);
 
-    /* sig + max_size — u32 BE on disk, but our dispatch reads
-     * straight from hilFileBuffer where they're already stored BE. */
     mjson_printf(json_out_emit, &out, "%Q:%lu,\n  %Q:%lu,\n  ",
                  "signature",
                  (long)(uint32_t)BE_READ_U32((uint8_t *)hilFileBuffer
@@ -3002,11 +3021,6 @@ int16_t SaveJson_WriteHighlights(uint8_t *filename)
                    (uint8_t *)&hdr->bottom_team);
 
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
-    /* emit_str_at zeros post-NUL bytes in place — matches what the
-     * loader will round-trip back. Without this, the 100-byte slot
-     * keeps stale buffer bytes after the NUL terminator and verify
-     * reports them as mismatches (190 such bytes on a typical
-     * .HIL). */
     emit_str_at(json_out_emit, &out, "game_name",
                 (uint8_t *)hilFileBuffer,
                 offsetof(HilFileHeader, game_name),
@@ -3017,7 +3031,6 @@ int16_t SaveJson_WriteHighlights(uint8_t *filename)
                 offsetof(HilFileHeader, game_round),
                 sizeof(hdr->game_round));
 
-    /* Header u16s are host-native here (pre-swap-dance dispatch). */
     mjson_printf(json_out_emit, &out,
         ",\n  %Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u",
         "num_goals",       (unsigned)num_goals,
@@ -3025,8 +3038,9 @@ int16_t SaveJson_WriteHighlights(uint8_t *filename)
         "team_2_goals",    (unsigned)hdr->team_2_goals,
         "pitch_number",    (unsigned)hdr->pitch_number,
         "max_substitutes", (unsigned)hdr->max_substitutes);
+    PROF_END(header, "highlights-write");
 
-    /* Scenes */
+    PROF_START(scenes);
     mjson_printf(json_out_emit, &out, ",\n  %Q:[", "scenes");
     for (uint16_t i = 0; i < num_goals; i++) {
         if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
@@ -3035,17 +3049,28 @@ int16_t SaveJson_WriteHighlights(uint8_t *filename)
                                  + (uint32_t)i * HIL_SCENE_SIZE);
     }
     mjson_printf(json_out_emit, &out, "%s", "]\n}\n");
+    PROF_END(scenes, "highlights-write");
 
     if (out.oom || !out.ptr) {
         if (out.ptr) free(out.ptr);
         return 1;
     }
+
+    PROF_START(write_file);
     int16_t r = _WriteFile(filename, (uint8_t *)out.ptr, (uint32_t)out.len);
+    PROF_END(write_file, "highlights-write");
+
+#ifdef SWOS_SAVE_FORMAT_JSON_PROFILE
+    fprintf(stderr, "[json-prof-highlights-write] file_size: %u bytes\n",
+            (unsigned)out.len);
+#endif
     free(out.ptr);
     if (r != 0) {
         _ShowFsErrorByCode((uint16_t)r);
         return 1;
     }
+
+    PROF_END(total, "highlights-write");
 
 #ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
     verify_roundtrip_region("highlights",
@@ -3061,11 +3086,21 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
 {
     (void)src_unused; (void)src_size_unused;
 
+    PROF_START(total);
+
+    PROF_START(read_file);
     uint8_t *src = NULL;
     uint32_t src_size = 0;
     if (read_save_file_heap(filename, &src, &src_size) != 0)
         return 1;
+    PROF_END(read_file, "highlights-load");
 
+#ifdef SWOS_SAVE_FORMAT_JSON_PROFILE
+    fprintf(stderr, "[json-prof-highlights-load] file_size: %u bytes\n",
+            (unsigned)src_size);
+#endif
+
+    PROF_START(validate);
     double version = 0.0;
     if (mjson_get_number((const char *)src, (int)src_size,
                          "$.schema_version", &version) <= 0 ||
@@ -3078,12 +3113,14 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
         strcmp(kind, KIND_HIGHLIGHTS) != 0) {
         free(src); return 1;
     }
+    PROF_END(validate, "highlights-load");
 
     string_pool_reset();
     double num = 0.0;
 
     HilFileHeader *hdr = (HilFileHeader *)hilFileBuffer;
 
+    PROF_START(header);
     if (mjson_get_number((const char *)src, (int)src_size,
                          "$.signature", &num) > 0)
         BE_WRITE_U32((uint8_t *)&hdr->signature, (uint32_t)num);
@@ -3095,6 +3132,7 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
                    "$.top_team",    (uint8_t *)&hdr->top_team);
     load_team_game((const char *)src, (int)src_size,
                    "$.bottom_team", (uint8_t *)&hdr->bottom_team);
+    PROF_END(header, "highlights-load");
 
     memset(hdr->game_name,  0, sizeof(hdr->game_name));
     memset(hdr->game_round, 0, sizeof(hdr->game_round));
@@ -3140,6 +3178,7 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
     memset(hilFileBuffer + HIL_HEADER_SIZE, 0,
            (size_t)num_goals * HIL_SCENE_SIZE);
 
+    PROF_START(scenes);
     const char *scenes_arr = NULL;
     int scenes_arr_len = 0;
     if (mjson_find((const char *)src, (int)src_size, "$.scenes",
@@ -3152,8 +3191,11 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
                                      + (uint32_t)i * HIL_SCENE_SIZE);
         }
     }
+    PROF_END(scenes, "highlights-load");
 
     free(src);
+
+    PROF_END(total, "highlights-load");
     return 0;
 }
 /* ---------- .TAC (tactics) ----------

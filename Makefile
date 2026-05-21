@@ -150,6 +150,13 @@ ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
 DEBUG_FLAGS += -DSWOS_SAVE_FORMAT_JSON_VERIFY=1
 endif
 
+# Profile flag: prints per-phase wall-clock timings (`[json-prof-*]`
+# lines) so you can see where load/save time is going. Useful when
+# the format feels slow.
+ifdef SWOS_SAVE_FORMAT_JSON_PROFILE
+DEBUG_FLAGS += -DSWOS_SAVE_FORMAT_JSON_PROFILE=1
+endif
+
 CFLAGS  := $(ARCHFLAGS) -O2 -g -std=gnu11 -fno-strict-aliasing -fno-builtin \
            -D_FILE_OFFSET_BITS=64 $(DEBUG_FLAGS) \
            -Wall -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable \
