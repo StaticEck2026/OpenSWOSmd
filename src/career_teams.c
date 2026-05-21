@@ -822,14 +822,20 @@ static void fillLeagueTeamSelectionFromFile(uint16_t extNumber, uint16_t leagueF
      * fields; the original asm reads them as a single big-endian
      * uint16. Use BE_READ_U16 so the LE host produces the same
      * `(country << 8) | ordinal` value that findTeamInCache and
-     * isTeamInCache compare against. */
+     * isTeamInCache compare against.
+     *
+     * The output array (diyLeagueTeamIds) uses the BE-packed byte-pair
+     * convention from 4e5f378 — consumers read via BE_READ_U16. Mirror
+     * the asm `move.w (a0),(a1)+` pattern with BE_WRITE_U16 so the
+     * stored bytes match. */
     uint8_t *selDst = &selTeamsPtr + (uint32_t)numSelectedTeams * sizeof(TeamFileEx);
     uint16_t *idOut = diyLeagueTeamIds;
     p = tfBase;
     for (j = 0; j < tfCount; j++) {
         if (((TeamFileEx *)p)->team.league == (uint8_t)leagueFilter) {
             uint16_t teamId = BE_READ_U16(p);
-            *idOut++ = teamId;
+            BE_WRITE_U16(idOut, teamId);
+            idOut++;
             if (isTeamInCache(teamId) != 0) {
                 /* Not in cache — add to selection */
                 selDst = appendTeamToSelection(selDst, p);
@@ -873,7 +879,9 @@ static void tryAddRandomTeamByRegion_Cup(uint16_t **pIdOut, uint8_t **pSelOut,
     if ((result & 0x10000) == 0)
         return;  /* already in list */
 
-    *(*pIdOut)++ = teamId;
+    /* BE-write convention (4e5f378). */
+    BE_WRITE_U16(*pIdOut, teamId);
+    (*pIdOut)++;
     (*pRemaining)--;
 
     if (isTeamInCache(teamId) == 0)
@@ -903,9 +911,10 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
 
     uint8_t *selDst = &selTeamsPtr + (uint32_t)numSelectedTeams * sizeof(TeamFileEx);
 
+    /* BE-write convention for diyCupTeamIds (4e5f378). */
     /* If not career loaded and gameType==4, add selected team first */
     if (careerLoadedFlag == 0 && gameType == 4) {
-        *idOut++ = selTeamNumber;
+        BE_WRITE_U16(idOut, selTeamNumber); idOut++;
         remaining--;
         if (remaining == 0)
             return;
@@ -926,7 +935,7 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
                 uint32_t sentinel = _Career_IsTeamIdNotInListOrReturnSentinel(teamId, idOut);
                 if ((sentinel & 0x10000) == 0)
                     continue;  /* already in list */
-                *idOut++ = teamId;
+                BE_WRITE_U16(idOut, teamId); idOut++;
                 remaining--;
                 if (remaining == 0)
                     return;
@@ -944,7 +953,7 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
                 uint16_t teamId = BE_READ_U16(selTeam);
                 uint32_t sentinel = _Career_IsTeamIdNotInListOrReturnSentinel(teamId, idOut);
                 if ((sentinel & 0x10000) != 0) {
-                    *idOut++ = teamId;
+                    BE_WRITE_U16(idOut, teamId); idOut++;
                     remaining--;
                     if (remaining == 0)
                         return;
@@ -1007,9 +1016,10 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
 
     uint8_t *selDst = &selTeamsPtr + (uint32_t)numSelectedTeams * sizeof(TeamFileEx);
 
+    /* BE-write convention for diyTournamentTeamIds (4e5f378). */
     /* If not career loaded and gameType==4, add selected team first */
     if (careerLoadedFlag == 0 && gameType == 4) {
-        *idOut++ = selTeamNumber;
+        BE_WRITE_U16(idOut, selTeamNumber); idOut++;
         remaining--;
         if (remaining == 0)
             return;
@@ -1030,7 +1040,7 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
                 uint32_t sentinel = _Career_IsTeamIdNotInListOrReturnSentinel2(teamId, idOut);
                 if ((sentinel & 0x10000) == 0)
                     continue;
-                *idOut++ = teamId;
+                BE_WRITE_U16(idOut, teamId); idOut++;
                 remaining--;
                 if (remaining == 0)
                     return;
@@ -1060,7 +1070,7 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
             if ((sentinel & 0x10000) == 0)
                 continue;
 
-            *idOut++ = teamId;
+            BE_WRITE_U16(idOut, teamId); idOut++;
             remaining--;
 
             if (isTeamInCache(teamId) == 0)

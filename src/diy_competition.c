@@ -2143,7 +2143,8 @@ uint32_t _Career_IsTeamIdNotInListOrReturnSentinel(uint16_t teamId, uint16_t *en
 {
     uint16_t *ptr = diyCupTeamIds;
     while (ptr != endPtr) {
-        if (*ptr == teamId)
+        /* diyCupTeamIds stores BE-packed byte pairs (4e5f378). */
+        if (BE_READ_U16(ptr) == teamId)
             return (uint32_t)teamId;  /* found */
         ptr++;
     }
@@ -2160,7 +2161,8 @@ uint32_t _Career_IsTeamIdNotInListOrReturnSentinel2(uint16_t teamId, uint16_t *e
 {
     uint16_t *ptr = diyTournamentTeamIds;
     while (ptr != endPtr) {
-        if (*ptr == teamId)
+        /* diyTournamentTeamIds stores BE-packed byte pairs (4e5f378). */
+        if (BE_READ_U16(ptr) == teamId)
             return (uint32_t)teamId;  /* found */
         ptr++;
     }
