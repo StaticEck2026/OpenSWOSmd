@@ -896,6 +896,57 @@ static const FieldDesc s_career_scalars[] = {
     { "save_file_version",               98458, 0, FLD_U16 },
     { "save_file_amiga_type",            98472, 0, FLD_U32 },
     { "num_selected_teams_inner",        98476, 0, FLD_U16 },
+
+    /* Comp context names + slot states (secondary/tertiary/quaternary).
+     * The +0x6E inside each comp context holds the user-facing display
+     * name; +0x90 holds the string-offset pointer (already promoted as
+     * a pointer above). */
+    { "secondary_competition_name",      63344, 36, FLD_STR },
+    { "minor_trophy_bonus_value",        63388, 0, FLD_U16 },
+    { "secondary_comp_winner_team",      63398, 0, FLD_U16 },
+    { "secondary_comp_slot_state_a",     63402, 0, FLD_U16 },
+    { "secondary_comp_slot_state_b",     63404, 0, FLD_U16 },
+    { "secondary_comp_slot_state_c",     63406, 0, FLD_U16 },
+    { "secondary_comp_finished",         63416, 0, FLD_U16 },
+    { "tertiary_competition_name",       66244, 36, FLD_STR },
+    { "league_title_bonus_value",        66288, 0, FLD_U16 },
+    { "tertiary_comp_winner_team",       66298, 0, FLD_U16 },
+    { "tertiary_comp_slot_state_a",      66302, 0, FLD_U16 },
+    { "tertiary_comp_slot_state_b",      66304, 0, FLD_U16 },
+    { "tertiary_comp_slot_state_c",      66306, 0, FLD_U16 },
+    { "tertiary_comp_finished",          66316, 0, FLD_U16 },
+    { "diy_comp_slot_state_a",           67394, 0, FLD_U16 },
+    { "diy_comp_slot_state_b",           67396, 0, FLD_U16 },
+    { "diy_comp_slot_state_c",           67398, 0, FLD_U16 },
+    { "quaternary_competition_name",     68428, 36, FLD_STR },
+    { "major_trophy_or_cup_bonus_value", 68472, 0, FLD_U16 },
+    { "quaternary_comp_winner_team",     68482, 0, FLD_U16 },
+    { "quaternary_comp_slot_state_a",    68486, 0, FLD_U16 },
+    { "quaternary_comp_slot_state_b",    68488, 0, FLD_U16 },
+    { "quaternary_comp_slot_state_c",    68490, 0, FLD_U16 },
+
+    /* Misc small arrays / records. */
+    { "removed_player_stat_accum",       57486, 2, FLD_BYTES },
+    { "career_unavailable_player_list",  55722, 16, FLD_BYTES },
+    { "current_match_players",           56158, 32, FLD_BYTES },
+    { "season_squad_team_numbers",       63272, 48, FLD_BYTES },
+    { "player_positions",                62902, 32, FLD_BYTES },
+    { "training_match_saved_players",    62942, 32, FLD_BYTES },
+    { "training_match_saved_shirt_nums", 62974, 32, FLD_BYTES },
+    { "training_match_saved_tactics",    63006, 2,  FLD_BYTES },
+    { "last_match_players",              63012, 32, FLD_BYTES },
+    { "last_match_saved_shirt_nums",     63044, 32, FLD_BYTES },
+    { "career_last_match_index_by_competition_slot", 63078, 162, FLD_BYTES },
+    { "team_budget_rank_table",          71324, 128, FLD_BYTES },
+    { "players_on_transfer_market",      55694, 10, FLD_BYTES },
+
+    /* Market player slot tables — byte arrays of compact records. */
+    { "foreign_market_players",          55180, 60,  FLD_BYTES },
+    { "home_market_players",             55240, 100, FLD_BYTES },
+    { "transfer_offer_table",            55340, 70,  FLD_BYTES },
+    { "new_job_offers",                  55428, 130, FLD_BYTES },
+    { "job_offers",                      55560, 130, FLD_BYTES },
+
     { NULL, 0, 0, FLD_END },
 };
 
