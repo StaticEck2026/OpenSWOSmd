@@ -613,17 +613,21 @@ static void load_season_informations(const char *buf, int buflen)
                    &arr, &arr_len) != MJSON_TOK_ARRAY)
         return;
 
-    char ipath[40];
+    /* Walk the array via mjson_next so each iteration is O(1) in
+     * array position. Indexed "$[i]" finds re-walk from the start
+     * each time → O(n²) over the whole array. */
     double num = 0.0;
-    for (uint32_t i = 0; i < SAVE_SI_ENTRY_COUNT; i++) {
-        snprintf(ipath, sizeof(ipath), "$[%u]", (unsigned)i);
-        const char *e_slice = NULL;
-        int e_slen = 0;
-        if (mjson_find(arr, arr_len, ipath,
-                       &e_slice, &e_slen) != MJSON_TOK_OBJECT)
-            break;
+    int pos = 0, koff, klen, voff, vlen, vt;
+    uint32_t i = 0;
+    while (i < SAVE_SI_ENTRY_COUNT &&
+           (pos = mjson_next(arr, arr_len, pos,
+                             &koff, &klen, &voff, &vlen, &vt)) != 0) {
+        if (vt != MJSON_TOK_OBJECT) { i++; continue; }
+        const char *e_slice = arr + voff;
+        int e_slen = vlen;
 
         uint8_t *e = seasonInformationsArray + i * SAVE_SI_ENTRY_SIZE;
+        i++;
 
         if (mjson_get_number(e_slice, e_slen, "$.club_no", &num) <= 0)
             continue;
@@ -1793,15 +1797,25 @@ static void load_team_file_ex_slice(const char *buf, int buflen,
 #undef LOAD_STR
 #undef LOAD_BYTES
 
-    /* Per-player: slice each players[i] object once, then 14 field
-     * lookups against that ~250-byte sub-slice instead of ~3 KB. */
-    for (int i = 0; i < 16; i++) {
+    /* Per-player: iterate the players array via mjson_next so each
+     * step is O(1) in array position; field lookups within each
+     * player run against its ~250-byte slice instead of ~3 KB. */
+    const char *players_arr = NULL; int players_arr_len = 0;
+    if (mjson_find(buf, buflen, "$.players",
+                   &players_arr, &players_arr_len) != MJSON_TOK_ARRAY)
+        return;
+
+    int pos = 0, koff, klen, voff, vlen, vt;
+    int i = 0;
+    while (i < 16 &&
+           (pos = mjson_next(players_arr, players_arr_len, pos,
+                             &koff, &klen, &voff, &vlen, &vt)) != 0) {
+        if (vt != MJSON_TOK_OBJECT) { i++; continue; }
         uint8_t *p = base + offsetof(TeamFileEx, players)
                           + (size_t)i * sizeof(PlayerFile);
-        snprintf(path, sizeof(path), "$.players[%d]", i);
-        const char *ps = NULL; int psl = 0;
-        if (mjson_find(buf, buflen, path, &ps, &psl) != MJSON_TOK_OBJECT)
-            continue;
+        const char *ps = players_arr + voff;
+        int psl = vlen;
+        i++;
 
 #define LOAD_PU8(field, jsonkey) \
         load_u8_at(ps, psl, "$." jsonkey, p, offsetof(PlayerFile, field))
@@ -2144,15 +2158,17 @@ static void apply_semantic_load(const char *src, int src_size)
     int teams_arr_len = 0;
     if (mjson_find(src, src_size, "$.selected_teams",
                    &teams_arr, &teams_arr_len) == MJSON_TOK_ARRAY) {
-        char ipath[24];
-        for (uint16_t i = 0; i < numSelectedTeams; i++) {
-            snprintf(ipath, sizeof(ipath), "$[%u]", (unsigned)i);
-            const char *ts = NULL; int tsl = 0;
-            if (mjson_find(teams_arr, teams_arr_len, ipath,
-                           &ts, &tsl) != MJSON_TOK_OBJECT)
-                break;
-            load_team_file_ex_slice(ts, tsl,
+        /* Iterate via mjson_next instead of "$[i]" indexed finds
+         * — same speedup pattern as load_scene. */
+        int pos = 0, koff, klen, voff, vlen, vt;
+        uint16_t i = 0;
+        while (i < numSelectedTeams &&
+               (pos = mjson_next(teams_arr, teams_arr_len, pos,
+                                 &koff, &klen, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_OBJECT) { i++; continue; }
+            load_team_file_ex_slice(teams_arr + voff, vlen,
                                     (&selTeamsPtr) + (uint32_t)i * 684u);
+            i++;
         }
     }
 }
@@ -2484,21 +2500,21 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
     load_scalar_table_range((const char *)src, (int)src_size,
                             "comp_scalars", s_career_scalars, lo, hi);
 
-    /* DIY teams — slice array once, then iterate. Same speedup
-     * pattern as the career selected_teams loop. */
+    /* DIY teams — walk array via mjson_next so each iteration is
+     * O(1) in array position. */
     const char *teams_arr = NULL;
     int teams_arr_len = 0;
     if (mjson_find((const char *)src, (int)src_size, "$.diy_teams",
                    &teams_arr, &teams_arr_len) == MJSON_TOK_ARRAY) {
-        char ipath[24];
-        for (uint16_t i = 0; i < numDiyTeams; i++) {
-            snprintf(ipath, sizeof(ipath), "$[%u]", (unsigned)i);
-            const char *ts = NULL; int tsl = 0;
-            if (mjson_find(teams_arr, teams_arr_len, ipath,
-                           &ts, &tsl) != MJSON_TOK_OBJECT)
-                break;
-            load_team_file_ex_slice(ts, tsl,
+        int pos = 0, koff, klen, voff, vlen, vt;
+        uint16_t i = 0;
+        while (i < numDiyTeams &&
+               (pos = mjson_next(teams_arr, teams_arr_len, pos,
+                                 &koff, &klen, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_OBJECT) { i++; continue; }
+            load_team_file_ex_slice(teams_arr + voff, vlen,
                                     (&selTeamsPtr) + (uint32_t)i * 684u);
+            i++;
         }
     }
 
@@ -2720,20 +2736,24 @@ static void load_team_game_slice(const char *buf, int buflen, uint8_t *tg)
     LOAD_B("unk3",          unk3);
 #undef LOAD_B
 
-    /* Slice the players array once, then walk per-player slices. */
+    /* Walk the players array via mjson_next — same O(N) pattern
+     * as elsewhere. */
     const char *players = NULL; int players_len = 0;
     if (mjson_find(buf, buflen, "$.players",
                    &players, &players_len) != MJSON_TOK_ARRAY)
         return;
 
-    for (int i = 0; i < 16; i++) {
+    int pos = 0, koff, klen, voff, vlen, vt;
+    int i = 0;
+    while (i < 16 &&
+           (pos = mjson_next(players, players_len, pos,
+                             &koff, &klen, &voff, &vlen, &vt)) != 0) {
+        if (vt != MJSON_TOK_OBJECT) { i++; continue; }
         uint8_t *p = tg + offsetof(TeamGame, players)
                         + (size_t)i * sizeof(struct PlayerInfo);
-        snprintf(path, sizeof(path), "$[%d]", i);
-        const char *ps = NULL; int psl = 0;
-        if (mjson_find(players, players_len, path,
-                       &ps, &psl) != MJSON_TOK_OBJECT)
-            break;
+        const char *ps = players + voff;
+        int psl = vlen;
+        i++;
 
 #define LOAD_PB(key, field) do { \
             if (mjson_get_number(ps, psl, "$." key, &num) > 0) \
@@ -2877,22 +2897,30 @@ static void emit_scene(mjson_print_fn_t fn, void *fnd,
     mjson_printf(fn, fnd, "%s", "]}");
 }
 
+/* Forward decl — caller-provides slice variant. */
+static void load_scene_slice(const char *scene_buf, int scene_buflen,
+                             uint8_t *scene);
+
 static void load_scene(const char *buf, int buflen,
                        const char *path_prefix, uint8_t *scene)
+{
+    /* Path wrapper — locate slice then delegate. */
+    const char *scene_buf = NULL;
+    int scene_buflen = 0;
+    if (mjson_find(buf, buflen, path_prefix,
+                   &scene_buf, &scene_buflen) == MJSON_TOK_OBJECT)
+        load_scene_slice(scene_buf, scene_buflen, scene);
+    else
+        memset(scene, 0, HIL_SCENE_SIZE);
+}
+
+static void load_scene_slice(const char *scene_buf, int scene_buflen,
+                             uint8_t *scene)
 {
     memset(scene, 0, HIL_SCENE_SIZE);
 
     uint32_t off = 0;
     double num = 0.0;
-
-    /* Resolve the scene's object slice once (e.g. "$[3]" against
-     * the scenes_arr slice). All subsequent finds run against this
-     * scene-bounded buffer (~20-30 KB), not the full file. */
-    const char *scene_buf = NULL;
-    int scene_buflen = 0;
-    if (mjson_find(buf, buflen, path_prefix,
-                   &scene_buf, &scene_buflen) != MJSON_TOK_OBJECT)
-        return;
 
 #if MJSON_ENABLE_NEXT
     const char *frames_arr = NULL;
@@ -3184,12 +3212,18 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
     int scenes_arr_len = 0;
     if (mjson_find((const char *)src, (int)src_size, "$.scenes",
                    &scenes_arr, &scenes_arr_len) == MJSON_TOK_ARRAY) {
-        char ipath[24];
-        for (uint16_t i = 0; i < num_goals; i++) {
-            snprintf(ipath, sizeof(ipath), "$[%u]", (unsigned)i);
-            load_scene(scenes_arr, scenes_arr_len, ipath,
-                       hilFileBuffer + HIL_HEADER_SIZE
-                                     + (uint32_t)i * HIL_SCENE_SIZE);
+        /* Walk scenes via mjson_next so per-scene access is O(1)
+         * in array position rather than O(i²·scene_size). */
+        int pos = 0, koff, klen, voff, vlen, vt;
+        uint16_t i = 0;
+        while (i < num_goals &&
+               (pos = mjson_next(scenes_arr, scenes_arr_len, pos,
+                                 &koff, &klen, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_OBJECT) { i++; continue; }
+            load_scene_slice(scenes_arr + voff, vlen,
+                             hilFileBuffer + HIL_HEADER_SIZE
+                                           + (uint32_t)i * HIL_SCENE_SIZE);
+            i++;
         }
     }
     PROF_END(scenes, "highlights-load");
