@@ -9490,7 +9490,10 @@ void _InitializeNewSeason_BuildTeamBudgetRankTable(void)
 
     for (uint16_t i = 0; i < numTeams; i++) {
         int16_t idx = (int16_t)(int8_t)indexTable[i];  /* sign-extend byte to word */
-        uint16_t teamNo = teamIdArray[idx];
+        /* teamIdArray entries are BE-packed `{country, ordinal}` per the
+         * 4e5f378 convention; read via BE_READ_U16 so we pass the
+         * (country<<8)|ordinal id everything downstream expects. */
+        uint16_t teamNo = BE_READ_U16(&teamIdArray[idx]);
         uint16_t rank = _GetMoreExpensiveTeamsCount(teamNo, comp);
         teamBudgetRankTable[idx] = (uint8_t)rank;
     }
