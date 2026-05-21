@@ -408,26 +408,14 @@ int16_t _LoadCareerFile(uint8_t *filename)
 
     _SaveOptions();
 
-    result = _LoadFileEx(filename, (uint8_t *)&careerFileBuffer, &fileSize);
-    if (result != 0) {
-        _ShowFsErrorByCode((uint16_t)result);
-        _RestoreOptions();
-        _InitUserTactics();
-        return 1;
-    }
-
-    /* Format detection — if the file starts with '{' (after any
-     * whitespace) it's a JSON save written by a SWOS_SAVE_FORMAT_JSON
-     * build. Otherwise fall through to the legacy raw-memory-dump
-     * path. See SAVE_FORMAT_JSON.md. */
-    if (SaveJson_BufferIsJson((uint8_t *)&careerFileBuffer, fileSize)) {
-        int16_t jr = SaveJson_LoadCareer(filename,
-                                         (uint8_t *)&careerFileBuffer,
-                                         fileSize);
+    /* Probe format BEFORE the full load — JSON saves can be several
+     * hundred KB (base64 expansion + key text), exceeding the
+     * destination buffer that _LoadFileEx would write into. The
+     * probe is a 16-byte stdio peek; SaveJson_LoadCareer then
+     * re-opens the file via stdio into a heap buffer it manages. */
+    if (SaveJson_FileIsJson(filename) == 1) {
+        int16_t jr = SaveJson_LoadCareer(filename, NULL, 0);
         if (jr != 0) {
-            /* JSON path not implemented yet — surface error. Once the
-             * mjson schema lands this branch becomes the primary
-             * path. */
             _ShowErrorMenu(aFileSavedByDif);
             _RestoreOptions();
             _InitUserTactics();
@@ -435,6 +423,14 @@ int16_t _LoadCareerFile(uint8_t *filename)
         }
         _CycleMenuMusic();
         return 0;
+    }
+
+    result = _LoadFileEx(filename, (uint8_t *)&careerFileBuffer, &fileSize);
+    if (result != 0) {
+        _ShowFsErrorByCode((uint16_t)result);
+        _RestoreOptions();
+        _InitUserTactics();
+        return 1;
     }
 
     if (_LoadCompetitionFile() != 0) {

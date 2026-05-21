@@ -28,6 +28,12 @@ extern "C" {
  * reads the file into the destination buffer. */
 int  SaveJson_BufferIsJson(const uint8_t *buf, uint32_t size);
 
+/* Same check via stdio on `save/<filename>` — used when the file
+ * size could exceed careerFileBuffer's capacity (JSON saves can be
+ * several hundred KB). Returns 1 if JSON, 0 if not, -1 on open
+ * error so the caller can fall back to the legacy load path. */
+int  SaveJson_FileIsJson(const uint8_t *filename);
+
 /* Per-file-type save/load. Each returns 0 on success, non-zero on
  * error (caller shows the appropriate error menu). */
 int16_t SaveJson_WriteCareer(uint8_t *filename);

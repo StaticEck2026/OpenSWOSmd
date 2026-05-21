@@ -37,6 +37,41 @@ extern uint8_t  diyFileBufferCopy[];
 extern int16_t _WriteFile(uint8_t *filename, uint8_t *src, uint32_t size);
 extern void    _ShowFsErrorByCode(uint16_t code);
 
+/* Direct stdio load helper. JSON saves can grow to several hundred
+ * KB (>3x the legacy binary size from base64 expansion + key text),
+ * which overflows the careerFileBuffer destination if we route
+ * through _LoadFileEx. The save directory is `save/<filename>` per
+ * resload.c's resolve_path; replicate that path construction here
+ * so we can bypass the asset-loader staging and read straight into
+ * a heap buffer sized to the file. */
+static int read_save_file_heap(const uint8_t *filename,
+                               uint8_t **out_buf, uint32_t *out_size)
+{
+    char path[512];
+    const char *src = (const char *)filename;
+    const char *colon = strchr(src, ':');
+    if (colon) src = colon + 1;
+    snprintf(path, sizeof(path), "save/%s", src);
+
+    FILE *f = fopen(path, "rb");
+    if (!f) return 1;
+    fseek(f, 0, SEEK_END);
+    long n = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (n <= 0) { fclose(f); return 1; }
+
+    uint8_t *buf = (uint8_t *)malloc((size_t)n + 1);
+    if (!buf) { fclose(f); return 1; }
+    size_t got = fread(buf, 1, (size_t)n, f);
+    fclose(f);
+    if (got != (size_t)n) { free(buf); return 1; }
+    buf[n] = '\0';
+
+    *out_buf  = buf;
+    *out_size = (uint32_t)n;
+    return 0;
+}
+
 /* g_amiga_addr_map from generated/amiga_address_map.c — used to
  * convert pointer values to/from stable symbol-name identifiers. */
 typedef struct AmigaAddrLutEntry {
@@ -1812,6 +1847,33 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     return 0;
 }
 
+/* Probe the first bytes of the named save file via stdio. Used by
+ * the file_io.c dispatcher to decide which loader to invoke without
+ * having to stage the whole file through _LoadFileEx (which the
+ * JSON-format size would overflow). Returns 1 if the file begins
+ * with `{` (after whitespace), 0 otherwise, or -1 on open error. */
+int SaveJson_FileIsJson(const uint8_t *filename)
+{
+    char path[512];
+    const char *src = (const char *)filename;
+    const char *colon = strchr(src, ':');
+    if (colon) src = colon + 1;
+    snprintf(path, sizeof(path), "save/%s", src);
+
+    FILE *f = fopen(path, "rb");
+    if (!f) return -1;
+    uint8_t probe[16];
+    size_t got = fread(probe, 1, sizeof(probe), f);
+    fclose(f);
+    if (got == 0) return 0;
+    for (size_t i = 0; i < got; i++) {
+        uint8_t c = probe[i];
+        if (c == ' ' || c == '\t' || c == '\r' || c == '\n') continue;
+        return (c == '{') ? 1 : 0;
+    }
+    return 0;
+}
+
 /* ---------- .CAR loader ---------- */
 
 /* Helper that runs the named-blob + semantic field loaders in
@@ -1840,17 +1902,29 @@ static void apply_semantic_load(const char *src, int src_size)
     }
 }
 
-int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src, uint32_t src_size)
+int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
+                            uint32_t src_size_unused)
 {
-    (void)filename;
+    /* JSON saves can be several hundred KB after base64 expansion —
+     * larger than careerFileBuffer can hold as a destination — so
+     * we ignore the legacy in-place `src` buffer and read the file
+     * fresh from disk into a heap allocation sized to the file. */
+    (void)src_unused; (void)src_size_unused;
+
+    uint8_t *src = NULL;
+    uint32_t src_size = 0;
+    if (read_save_file_heap(filename, &src, &src_size) != 0)
+        return 1;
 
     /* Verify schema_version. */
     double version = 0.0;
     if (mjson_get_number((const char *)src, (int)src_size,
                          "$.schema_version", &version) <= 0) {
+        free(src);
         return 1;
     }
     if ((int)version != SAVE_JSON_SCHEMA_VERSION) {
+        free(src);
         return 1;
     }
 
@@ -1858,36 +1932,30 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src, uint32_t src_
     char kind[32] = {0};
     if (mjson_get_string((const char *)src, (int)src_size,
                          "$.file_kind", kind, sizeof(kind)) <= 0) {
+        free(src);
         return 1;
     }
     if (strcmp(kind, KIND_CAREER) != 0) {
+        free(src);
         return 1;
     }
 
     /* Read opaque_data base64 → careerFileBuffer in place. We need a
-     * temporary holding region because src points at careerFileBuffer
-     * itself (the legacy load path put the file there). Allocate a
-     * heap buffer sized to the on-disk data (legacy max ≈ 109 KB). */
+     * temporary holding region because the decoder writes bytes
+     * incrementally; using careerFileBuffer as the destination
+     * directly is safe though since src now lives on the heap. */
     uint32_t want = career_data_size();
-    uint8_t *tmp = (uint8_t *)malloc(want > 4 ? want : 4);
-    if (!tmp) return 1;
-
     int got = mjson_get_base64((const char *)src, (int)src_size,
-                               "$.opaque_data", (char *)tmp, (int)want);
+                               "$.opaque_data", (char *)&careerFileBuffer,
+                               (int)want);
     if (got <= 0) {
-        free(tmp);
+        free(src);
         return 1;
     }
-
-    /* numSelectedTeams isn't yet populated — figure out how many bytes
-     * the writer actually emitted. The base64 decoder returns the
-     * decoded byte count; trust that as the canonical extent. */
     if ((uint32_t)got > want) {
-        free(tmp);
+        free(src);
         return 1;
     }
-    memcpy(&careerFileBuffer, tmp, (size_t)got);
-    free(tmp);
 
     /* Apply semantic field overrides AFTER the opaque blob, so the
      * semantic representation wins. This is what makes saves stable
@@ -1895,6 +1963,12 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src, uint32_t src_
      * raw pointer values, load_* overwrites them with current-build
      * addresses resolved from stable symbol names. */
     apply_semantic_load((const char *)src, (int)src_size);
+
+#ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
+    /* Snapshot the post-opaque+semantic state before the verify
+     * rerun so we can restore it afterwards (the verify path zeroes
+     * careerFileBuffer to do the diff). */
+#endif
 
 #ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
     /* Coverage verification: at this point careerFileBuffer holds
@@ -1936,6 +2010,7 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src, uint32_t src_
     }
 #endif
 
+    free(src);
     return 0;
 }
 
