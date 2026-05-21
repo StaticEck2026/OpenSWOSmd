@@ -16,6 +16,7 @@
 #include "mjson.h"
 #include "game_types.h"
 
+#include <stddef.h>  /* offsetof */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1296,6 +1297,279 @@ static void load_scalar_table(const char *buf, int buflen,
     }
 }
 
+/* ---------- TeamFileEx semantic encoder/decoder ----------
+ *
+ * TeamFileEx is a 684-byte struct: 76-byte TeamFile header + 16
+ * 38-byte PlayerFile entries. Used for careerTeam, currentTeam, and
+ * the selTeamsPtr array (16 TeamFileEx records following
+ * numSelectedTeams). Encoded as:
+ *
+ *   { "team": { ... 14 named fields ... },
+ *     "players": [ 16 × { ... 13 named fields ... } ] }
+ *
+ * Offsets via offsetof() — survives the 64-bit migration because
+ * both struct layouts are packed (no padding to shift).
+ */
+
+extern uint8_t careerTeam;       /* TeamFileEx at careerFileBuffer + 56190 */
+extern uint8_t currentTeam;      /* TeamFileEx at careerFileBuffer + 61610 */
+
+/* Helpers for writing/reading fields at struct offsets. */
+static void emit_str_at(mjson_print_fn_t fn, void *fnd,
+                        const char *key, const uint8_t *base,
+                        size_t off, size_t maxlen)
+{
+    const uint8_t *p = base + off;
+    size_t n = 0;
+    while (n < maxlen && p[n] != '\0') n++;
+    mjson_printf(fn, fnd, "%Q:%.*Q", key, (int)n, (const char *)p);
+}
+
+static void emit_u8_at(mjson_print_fn_t fn, void *fnd,
+                       const char *key, const uint8_t *base, size_t off)
+{
+    mjson_printf(fn, fnd, "%Q:%u", key, (unsigned)base[off]);
+}
+
+static void emit_s8_at(mjson_print_fn_t fn, void *fnd,
+                       const char *key, const uint8_t *base, size_t off)
+{
+    mjson_printf(fn, fnd, "%Q:%d", key, (int)(int8_t)base[off]);
+}
+
+static void emit_s16_at(mjson_print_fn_t fn, void *fnd,
+                        const char *key, const uint8_t *base, size_t off)
+{
+    mjson_printf(fn, fnd, "%Q:%d", key, (int)*(int16_t *)(base + off));
+}
+
+static void emit_bytes_at(mjson_print_fn_t fn, void *fnd,
+                          const char *key, const uint8_t *base,
+                          size_t off, size_t len)
+{
+    mjson_printf(fn, fnd, "%Q:[", key);
+    for (size_t i = 0; i < len; i++) {
+        if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+        mjson_printf(fn, fnd, "%u", (unsigned)base[off + i]);
+    }
+    mjson_printf(fn, fnd, "%s", "]");
+}
+
+static void load_str_at(const char *buf, int buflen, const char *path,
+                        uint8_t *base, size_t off, size_t maxlen)
+{
+    uint8_t *p = base + off;
+    memset(p, 0, maxlen);
+    char tmp[64];
+    if (mjson_get_string(buf, buflen, path, tmp, sizeof(tmp)) > 0) {
+        size_t n = strlen(tmp);
+        if (n > maxlen - 1) n = maxlen - 1;
+        memcpy(p, tmp, n);
+    }
+}
+
+static void load_u8_at(const char *buf, int buflen, const char *path,
+                       uint8_t *base, size_t off)
+{
+    double num = 0.0;
+    if (mjson_get_number(buf, buflen, path, &num) > 0)
+        base[off] = (uint8_t)(int)num;
+}
+
+static void load_s16_at(const char *buf, int buflen, const char *path,
+                        uint8_t *base, size_t off)
+{
+    double num = 0.0;
+    if (mjson_get_number(buf, buflen, path, &num) > 0)
+        *(int16_t *)(base + off) = (int16_t)num;
+}
+
+static void load_bytes_at(const char *buf, int buflen, const char *path,
+                          uint8_t *base, size_t off, size_t len)
+{
+#if MJSON_ENABLE_NEXT
+    const char *arr = NULL;
+    int arr_len = 0;
+    if (mjson_find(buf, buflen, path, &arr, &arr_len) == MJSON_TOK_ARRAY) {
+        int koff, klen, voff, vlen, vt;
+        size_t i = 0;
+        int o = 0;
+        while (i < len &&
+               (o = mjson_next(arr, arr_len, o,
+                               &koff, &klen, &voff, &vlen, &vt)) != 0) {
+            if (vt == MJSON_TOK_NUMBER) {
+                char nbuf[32];
+                int n = vlen < (int)sizeof(nbuf) - 1 ? vlen : (int)sizeof(nbuf) - 1;
+                memcpy(nbuf, arr + voff, (size_t)n);
+                nbuf[n] = '\0';
+                base[off + i] = (uint8_t)atoi(nbuf);
+            }
+            i++;
+        }
+    }
+#else
+    (void)buf; (void)buflen; (void)path; (void)base; (void)off; (void)len;
+#endif
+}
+
+static void emit_team_file_ex_body(mjson_print_fn_t fn, void *fnd,
+                                   const uint8_t *base)
+{
+    const uint8_t *team = base + offsetof(TeamFileEx, team);
+    mjson_printf(fn, fnd, "{%Q:{", "team");
+    emit_u8_at  (fn, fnd, "country_number",     team, offsetof(TeamFile, countryNumber));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at  (fn, fnd, "team_ordinal",       team, offsetof(TeamFile, teamOrdinal));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_s16_at (fn, fnd, "global_team_number", team, offsetof(TeamFile, globalTeamNumber));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at  (fn, fnd, "team_controls",      team, offsetof(TeamFile, teamControls));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_str_at (fn, fnd, "team_name",          team, offsetof(TeamFile, teamName), 17);
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at  (fn, fnd, "writes_zero_here",   team, offsetof(TeamFile, writesZeroHere));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at  (fn, fnd, "and_with_0xfe",      team, offsetof(TeamFile, andWith0xFE));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at  (fn, fnd, "tactics",            team, offsetof(TeamFile, tactics));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at  (fn, fnd, "league",             team, offsetof(TeamFile, league));
+    mjson_printf(fn, fnd, "%s", ",");
+    /* 10 colors as one array — easier to read than 10 fields. */
+    emit_bytes_at(fn, fnd, "kit_colors",        team, offsetof(TeamFile, prShirtType), 10);
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_str_at (fn, fnd, "coach_name",         team, offsetof(TeamFile, coachName), 23);
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at  (fn, fnd, "some_flag",          team, offsetof(TeamFile, someFlag));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_bytes_at(fn, fnd,"player_numbers",     team, offsetof(TeamFile, playerNumbers), 16);
+    mjson_printf(fn, fnd, "%s", "}");
+
+    mjson_printf(fn, fnd, ",%Q:[", "players");
+    for (int i = 0; i < 16; i++) {
+        const uint8_t *p = base + offsetof(TeamFileEx, players)
+                                + (size_t)i * sizeof(PlayerFile);
+        if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+        mjson_printf(fn, fnd, "%s", "{");
+        emit_s8_at  (fn, fnd, "nationality",          p, offsetof(PlayerFile, nationality));
+        mjson_printf(fn, fnd, "%s", ",");
+        emit_s8_at  (fn, fnd, "field_1",              p, offsetof(PlayerFile, field_1));
+        mjson_printf(fn, fnd, "%s", ",");
+        emit_s8_at  (fn, fnd, "shirt_number",         p, offsetof(PlayerFile, shirtNumber));
+        mjson_printf(fn, fnd, "%s", ",");
+        emit_str_at (fn, fnd, "player_name",          p, offsetof(PlayerFile, playerName), 22);
+        mjson_printf(fn, fnd, "%s", ",");
+        emit_s8_at  (fn, fnd, "field_19",             p, offsetof(PlayerFile, field_19));
+        mjson_printf(fn, fnd, "%s", ",");
+        emit_u8_at  (fn, fnd, "position_and_face",    p, offsetof(PlayerFile, positionAndFace));
+        mjson_printf(fn, fnd, "%s", ",");
+        emit_u8_at  (fn, fnd, "cards_injuries",       p, offsetof(PlayerFile, cardsInjuries));
+        mjson_printf(fn, fnd, "%s", ",");
+        emit_s8_at  (fn, fnd, "passing",              p, offsetof(PlayerFile, passing));
+        mjson_printf(fn, fnd, "%s", ",");
+        emit_s8_at  (fn, fnd, "shooting_heading",     p, offsetof(PlayerFile, shootingHeading));
+        mjson_printf(fn, fnd, "%s", ",");
+        emit_s8_at  (fn, fnd, "tackling_ball_control",p, offsetof(PlayerFile, tacklingBallControl));
+        mjson_printf(fn, fnd, "%s", ",");
+        emit_s8_at  (fn, fnd, "speed_finishing",      p, offsetof(PlayerFile, speedFinishing));
+        mjson_printf(fn, fnd, "%s", ",");
+        emit_s8_at  (fn, fnd, "price",                p, offsetof(PlayerFile, price));
+        mjson_printf(fn, fnd, "%s", ",");
+        emit_bytes_at(fn, fnd,"goal_stats",           p, offsetof(PlayerFile, goalStats), 4);
+        mjson_printf(fn, fnd, "%s", ",");
+        emit_s8_at  (fn, fnd, "some_flag",            p, offsetof(PlayerFile, someFlag));
+        mjson_printf(fn, fnd, "%s", "}");
+    }
+    mjson_printf(fn, fnd, "%s", "]}");
+}
+
+static void emit_team_file_ex(mjson_print_fn_t fn, void *fnd,
+                              const char *key, const uint8_t *base)
+{
+    mjson_printf(fn, fnd, "%Q:", key);
+    emit_team_file_ex_body(fn, fnd, base);
+}
+
+static void load_team_file_ex(const char *buf, int buflen,
+                              const char *path_prefix, uint8_t *base)
+{
+    uint8_t *team = base + offsetof(TeamFileEx, team);
+    char path[160];
+    double num = 0.0;
+
+#define LOAD_U8(field, jsonkey) do { \
+        snprintf(path, sizeof(path), "%s.team.%s", path_prefix, jsonkey); \
+        load_u8_at(buf, buflen, path, team, offsetof(TeamFile, field)); \
+    } while (0)
+#define LOAD_S16(field, jsonkey) do { \
+        snprintf(path, sizeof(path), "%s.team.%s", path_prefix, jsonkey); \
+        load_s16_at(buf, buflen, path, team, offsetof(TeamFile, field)); \
+    } while (0)
+#define LOAD_STR(field, jsonkey, maxlen) do { \
+        snprintf(path, sizeof(path), "%s.team.%s", path_prefix, jsonkey); \
+        load_str_at(buf, buflen, path, team, offsetof(TeamFile, field), maxlen); \
+    } while (0)
+#define LOAD_BYTES(field, jsonkey, len) do { \
+        snprintf(path, sizeof(path), "%s.team.%s", path_prefix, jsonkey); \
+        load_bytes_at(buf, buflen, path, team, offsetof(TeamFile, field), len); \
+    } while (0)
+
+    LOAD_U8 (countryNumber,    "country_number");
+    LOAD_U8 (teamOrdinal,      "team_ordinal");
+    LOAD_S16(globalTeamNumber, "global_team_number");
+    LOAD_U8 (teamControls,     "team_controls");
+    LOAD_STR(teamName,         "team_name", 17);
+    LOAD_U8 (writesZeroHere,   "writes_zero_here");
+    LOAD_U8 (andWith0xFE,      "and_with_0xfe");
+    LOAD_U8 (tactics,          "tactics");
+    LOAD_U8 (league,           "league");
+    LOAD_BYTES(prShirtType,    "kit_colors", 10);
+    LOAD_STR(coachName,        "coach_name", 23);
+    LOAD_U8 (someFlag,         "some_flag");
+    LOAD_BYTES(playerNumbers,  "player_numbers", 16);
+#undef LOAD_U8
+#undef LOAD_S16
+#undef LOAD_STR
+#undef LOAD_BYTES
+
+    for (int i = 0; i < 16; i++) {
+        uint8_t *p = base + offsetof(TeamFileEx, players)
+                          + (size_t)i * sizeof(PlayerFile);
+
+#define LOAD_PU8(field, jsonkey) do { \
+        snprintf(path, sizeof(path), "%s.players[%d].%s", path_prefix, i, jsonkey); \
+        load_u8_at(buf, buflen, path, p, offsetof(PlayerFile, field)); \
+    } while (0)
+#define LOAD_PSTR(field, jsonkey, maxlen) do { \
+        snprintf(path, sizeof(path), "%s.players[%d].%s", path_prefix, i, jsonkey); \
+        load_str_at(buf, buflen, path, p, offsetof(PlayerFile, field), maxlen); \
+    } while (0)
+#define LOAD_PBYTES(field, jsonkey, len) do { \
+        snprintf(path, sizeof(path), "%s.players[%d].%s", path_prefix, i, jsonkey); \
+        load_bytes_at(buf, buflen, path, p, offsetof(PlayerFile, field), len); \
+    } while (0)
+
+        LOAD_PU8(nationality,         "nationality");
+        LOAD_PU8(field_1,             "field_1");
+        LOAD_PU8(shirtNumber,         "shirt_number");
+        LOAD_PSTR(playerName,         "player_name", 22);
+        LOAD_PU8(field_19,            "field_19");
+        LOAD_PU8(positionAndFace,     "position_and_face");
+        LOAD_PU8(cardsInjuries,       "cards_injuries");
+        LOAD_PU8(passing,             "passing");
+        LOAD_PU8(shootingHeading,     "shooting_heading");
+        LOAD_PU8(tacklingBallControl, "tackling_ball_control");
+        LOAD_PU8(speedFinishing,      "speed_finishing");
+        LOAD_PU8(price,               "price");
+        LOAD_PBYTES(goalStats,        "goal_stats", 4);
+        LOAD_PU8(someFlag,            "some_flag");
+#undef LOAD_PU8
+#undef LOAD_PSTR
+#undef LOAD_PBYTES
+    }
+    (void)num;
+}
+
 /* ---------- *Copy cup-record nameSource pointers ----------
  *
  * Each entry in the static careerContests table maps a template
@@ -1401,6 +1675,22 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
     emit_scalar_table(json_out_emit, &out, "career_scalars", s_career_scalars);
 
+    /* Two top-level TeamFileEx records (careerTeam, currentTeam) and
+     * the variable-length selTeamsPtr array following
+     * numSelectedTeams in the save. */
+    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+    emit_team_file_ex(json_out_emit, &out, "career_team",  &careerTeam);
+    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+    emit_team_file_ex(json_out_emit, &out, "current_team", &currentTeam);
+
+    mjson_printf(json_out_emit, &out, ",\n  %Q:[", "selected_teams");
+    for (uint16_t i = 0; i < numSelectedTeams; i++) {
+        if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
+        emit_team_file_ex_body(json_out_emit, &out,
+                               (&selTeamsPtr) + (uint32_t)i * 684u);
+    }
+    mjson_printf(json_out_emit, &out, "%s", "]");
+
     mjson_printf(json_out_emit, &out, "%s", "\n}\n");
 
     if (out.oom || !out.ptr) {
@@ -1477,6 +1767,21 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src, uint32_t src_
     load_career_pointers((const char *)src, (int)src_size);
     load_cup_record_name_sources((const char *)src, (int)src_size);
     load_scalar_table((const char *)src, (int)src_size, "career_scalars", s_career_scalars);
+
+    load_team_file_ex((const char *)src, (int)src_size,
+                      "$.career_team",  &careerTeam);
+    load_team_file_ex((const char *)src, (int)src_size,
+                      "$.current_team", &currentTeam);
+
+    /* numSelectedTeams was just loaded via career_scalars
+     * (num_selected_teams_inner field at &numSelectedTeams). Read it
+     * now to size the selected_teams array load. */
+    char selpath[80];
+    for (uint16_t i = 0; i < numSelectedTeams; i++) {
+        snprintf(selpath, sizeof(selpath), "$.selected_teams[%u]", (unsigned)i);
+        load_team_file_ex((const char *)src, (int)src_size, selpath,
+                          (&selTeamsPtr) + (uint32_t)i * 684u);
+    }
 
     return 0;
 }

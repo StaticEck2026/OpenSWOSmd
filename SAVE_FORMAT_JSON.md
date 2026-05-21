@@ -95,12 +95,14 @@ phase) covers comp-name string pointers that the LUT doesn't index.
 - [x] Promote `diyCompetitionTablePtr`
 - [x] Promote `*Copy` cup-record `nameSource` pointers (one per
       careerContests entry, ~30 fields)
-- [ ] Promote `selTeamsPtr` — 16 × `TeamFileEx` records (684 bytes
-      each)
-- [ ] Promote career meta (currentSeasonNumber, careerTeam,
-      careerTeam stats etc.)
-- [ ] Promote finance state (overdraftStreak, balances, weekly
-      costs, etc.)
+- [x] Promote `selTeamsPtr` — variable-length array of `TeamFileEx`
+      records sized by `numSelectedTeams`. Uses `offsetof()` for
+      struct field positions so 64-bit migration just works.
+- [x] Promote `careerTeam` and `currentTeam` TeamFileEx records
+      with full per-field semantic JSON (14 team header fields +
+      16 player records of 14 fields each).
+- [x] Promote finance state (overdraftStreak, balances, weekly
+      costs, etc.) via the address-based scalar table.
 - [ ] Promote `tmdFileBuffer` (transfer market data — large block
       at the very start of careerFileBuffer)
 - [ ] Promote misc career flags/state (currentSeasonShowing,
@@ -183,12 +185,13 @@ are:
 4. Wire both into `SaveJson_WriteCareer` / `SaveJson_LoadCareer`.
 5. Update this file's checklist.
 
-Last update: 2026-05-20. All pointer-typed fields in the .CAR save
-are now semantically encoded. Next session pick-up: switch from
-"pointer safety" mode to "data semantics" — promote non-pointer
-data so the opaque_data blob can start shrinking. Highest payoff:
-career meta (currentSeasonNumber, currentSeasonShowing, careerTeam,
-selTeamNumber, etc.) and finance state (overdraftStreak, balances,
-weekly costs). After that: the 16 × 684-byte TeamFileEx records
-under selTeamsPtr, and the large tmdFileBuffer transfer-market
-block at the very start of careerFileBuffer.
+Last update: 2026-05-21. careerTeam, currentTeam, and the
+selTeamsPtr TeamFileEx array are now fully semantic via
+`offsetof()`-driven encoding. Remaining large blocks before
+`opaque_data` can be removed: tmdFileBuffer (54720 bytes — biggest
+chunk; needs schema design for transfer market state),
+careerForeignMarketPlayers (18144 bytes), diy/euroCups competition
+contexts, *Copy slot bodies (the nameSource pointers are promoted
+but each record's other bytes still ride in opaque_data),
+teamSelectionKeyCache, teamTacticsUSER A-F, editTeamsBuffer +
+editTeamsSaveVarsArea (the latter two are ~66 KB combined).
