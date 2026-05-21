@@ -10858,7 +10858,11 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
         if (doWinner) {
             int16_t ranking = rankings[0];
             uint16_t idx = (uint16_t)((uint32_t)(uint16_t)ranking / 18);
-            a5s->resultCode = (int16_t)standingsLookup[idx];  /* 0x3A */
+            /* standingsLookup (leagueTeamIds) is BE-packed per 4e5f378.
+             * resultCode is compared host-native elsewhere (e.g. cup
+             * result-flip detection) so unpack into the host-native
+             * packed value here. */
+            a5s->resultCode = (int16_t)BE_READ_U16(&standingsLookup[idx]);  /* 0x3A */
         }
 
         /* Process promotions */
@@ -10870,7 +10874,14 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
                 for (uint16_t i = 0; i < numPromotions; i++) {
                     int16_t rank = *src++;
                     uint16_t lookupIdx = (uint16_t)((uint32_t)(uint16_t)rank / 18);
-                    *promRelOutput++ = standingsLookup[lookupIdx];
+                    /* Preserve BE byte order from standingsLookup into the
+                     * promotion output region. diyQualifiedTeamIndices —
+                     * the eventual consumer via
+                     * _DIY_CopyCompetitionTeamIndexTable — expects BE
+                     * bytes per 4e5f378. */
+                    uint16_t teamId = BE_READ_U16(&standingsLookup[lookupIdx]);
+                    BE_WRITE_U16(promRelOutput, teamId);
+                    promRelOutput++;
                 }
             }
         }
@@ -10886,7 +10897,10 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
                 for (uint16_t i = 0; i < numRelegations; i++) {
                     int16_t rank = *src++;
                     uint16_t lookupIdx = (uint16_t)((uint32_t)(uint16_t)rank / 18);
-                    *promRelOutput++ = standingsLookup[lookupIdx];
+                    /* BE-preserving copy — see promotion loop above. */
+                    uint16_t teamId = BE_READ_U16(&standingsLookup[lookupIdx]);
+                    BE_WRITE_U16(promRelOutput, teamId);
+                    promRelOutput++;
                 }
             }
         }

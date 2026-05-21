@@ -1423,7 +1423,14 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         for (int16_t i = cnt; i >= 0; i--) {
             uint16_t qIdx = BE_READ_U16(a2);
             a2 += 2;
-            BE_WRITE_U16(teamData, diyQualifiedTeamIndices[qIdx]);
+            /* diyQualifiedTeamIndices is populated by
+             * _DIY_CopyCompetitionTeamIndexTable from comp+0x1AE
+             * (_bss_2E0AE), which `_DIY_RecordLeagueFixtureResultAndAdvance
+             * Progress`'s promotion-output loop populates byte-for-byte
+             * from leagueTeamIds — BE-packed per 4e5f378. Use BE_READ_U16
+             * to recover the correct id from the array. */
+            uint16_t teamId = BE_READ_U16(&diyQualifiedTeamIndices[qIdx]);
+            BE_WRITE_U16(teamData, teamId);
             teamData += 2;
         }
 
