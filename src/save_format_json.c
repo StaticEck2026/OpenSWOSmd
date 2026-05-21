@@ -203,6 +203,17 @@ static uint32_t string_pool_intern(const char *s)
     return (uint32_t)(uintptr_t)dst;
 }
 
+/* Returns 1 if `val` already points inside our static string pool —
+ * we use this in normalize_ptr_for_save to avoid re-interning a
+ * pool-resident string back into the pool (which would leak
+ * sequential copies of the same content). */
+static int looks_pool(uint32_t val)
+{
+    uint32_t lo = (uint32_t)(uintptr_t)&s_string_pool[0];
+    uint32_t hi = lo + STRING_POOL_SIZE;
+    return val >= lo && val < hi;
+}
+
 /* Heuristic readability check for `.rodata` string pointers we
  * encounter at save time. We use the address of any known LUT entry
  * (`g_amiga_addr_map[0].current_addr`) as a probe and accept pointers
@@ -322,6 +333,54 @@ static int json_out_emit(const char *chunk, int chunk_len, void *ud)
 #define SAVE_SI_TOURLOST         103u
 #define SAVE_SI_TOURNAMENTSTATUS 104u
 #define SAVE_SI_MANAGERSTATUS    105u
+
+/* Forward decls — looks_sentinel and emit_ptr_field are defined
+ * after the normalize helpers below but used by them. */
+static int  looks_sentinel(uint32_t val);
+static int  emit_ptr_field(mjson_print_fn_t fn, void *fnd,
+                           const char *key, uint32_t val);
+
+/* At save time, replace a .rodata-style string pointer with its
+ * string-pool equivalent in place. This makes the address
+ * deterministic across save → load → save round-trips because both
+ * save and load reset the pool to the same starting offset before
+ * interning, so the same string content always resolves to the
+ * same pool address. Without this, the saved pointer (e.g. &"DIV 1"
+ * in .rodata) and the post-load pointer (string pool copy of
+ * "DIV 1") would byte-differ.
+ *
+ * Leaves the pointer alone if:
+ *   - val is 0
+ *   - val resolves through g_amiga_addr_map (handled by `sym` form)
+ *   - val is already inside our string pool
+ *   - val isn't in a plausible in-process address range
+ *   - the bytes at *val don't look like a NUL-terminated string
+ */
+static void normalize_ptr_for_save(uint32_t *p)
+{
+    uint32_t val = *p;
+    if (val == 0u) return;
+    if (sym_from_ptr(val, NULL)) return;
+    if (looks_pool(val)) return;
+    if (looks_sentinel(val) || !looks_readable(val)) return;
+
+    const char *s = (const char *)(uintptr_t)val;
+    size_t n = 0;
+    while (n < 128u && s[n] != '\0') n++;
+    if (n == 0 || n >= 128u) return;
+
+    uint32_t pool_addr = string_pool_intern(s);
+    if (pool_addr) *p = pool_addr;
+}
+
+/* Convenience wrapper: normalize storage in place, then emit. Used
+ * by callers that have an addressable uint32_t pointer field. */
+static int emit_ptr_field_ref(mjson_print_fn_t fn, void *fnd,
+                              const char *key, uint32_t *p)
+{
+    normalize_ptr_for_save(p);
+    return emit_ptr_field(fn, fnd, key, *p);
+}
 
 /* Heuristic for sentinel pointer values used in competition tables:
  * `(CompetitionCup *)-1`, `-2`, `0xFC`, etc. These aren't real
@@ -467,13 +526,17 @@ static void emit_season_informations(mjson_print_fn_t fn, void *fnd)
 
         /* The four comp-name pointers — this is the whole point of
          * the seasonInformations promotion. */
-        emit_ptr_field(fn, fnd, "league_str", *(uint32_t *)(e + SAVE_SI_LEAGUESTRPTR));
+        emit_ptr_field_ref(fn, fnd, "league_str",
+                           (uint32_t *)((uint8_t *)e + SAVE_SI_LEAGUESTRPTR));
         mjson_printf(fn, fnd, "%s", ",");
-        emit_ptr_field(fn, fnd, "str_1", *(uint32_t *)(e + SAVE_SI_STRPTR1));
+        emit_ptr_field_ref(fn, fnd, "str_1",
+                           (uint32_t *)((uint8_t *)e + SAVE_SI_STRPTR1));
         mjson_printf(fn, fnd, "%s", ",");
-        emit_ptr_field(fn, fnd, "str_2", *(uint32_t *)(e + SAVE_SI_STRPTR2));
+        emit_ptr_field_ref(fn, fnd, "str_2",
+                           (uint32_t *)((uint8_t *)e + SAVE_SI_STRPTR2));
         mjson_printf(fn, fnd, "%s", ",");
-        emit_ptr_field(fn, fnd, "str_3", *(uint32_t *)(e + SAVE_SI_STRPTR3));
+        emit_ptr_field_ref(fn, fnd, "str_3",
+                           (uint32_t *)((uint8_t *)e + SAVE_SI_STRPTR3));
 
         mjson_printf(fn, fnd, ",%Q:%u,",
                      "best_scorer_goals",
@@ -651,35 +714,27 @@ static void cfb_set_u32(uint32_t off, uint32_t val)
 
 static void emit_career_pointers(mjson_print_fn_t fn, void *fnd)
 {
-    emit_ptr_field(fn, fnd, "current_competition_ptr",
-                   cfb_u32(CFB_CURRENT_COMP_PTR_OFF));
+#define PTR_AT(off) ((uint32_t *)((&careerFileBuffer) + (off)))
+    emit_ptr_field_ref(fn, fnd, "current_competition_ptr",       PTR_AT(CFB_CURRENT_COMP_PTR_OFF));
     mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field(fn, fnd, "secondary_competition_ptr",
-                   cfb_u32(CFB_SECONDARY_COMP_PTR_OFF));
+    emit_ptr_field_ref(fn, fnd, "secondary_competition_ptr",     PTR_AT(CFB_SECONDARY_COMP_PTR_OFF));
     mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field(fn, fnd, "tertiary_competition_ptr",
-                   cfb_u32(CFB_TERTIARY_COMP_PTR_OFF));
+    emit_ptr_field_ref(fn, fnd, "tertiary_competition_ptr",      PTR_AT(CFB_TERTIARY_COMP_PTR_OFF));
     mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field(fn, fnd, "quaternary_competition_ptr",
-                   cfb_u32(CFB_QUATERNARY_COMP_PTR_OFF));
+    emit_ptr_field_ref(fn, fnd, "quaternary_competition_ptr",    PTR_AT(CFB_QUATERNARY_COMP_PTR_OFF));
     mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field(fn, fnd, "diy_competition_ptr",
-                   cfb_u32(CFB_DIY_COMP_PTR_OFF));
+    emit_ptr_field_ref(fn, fnd, "diy_competition_ptr",           PTR_AT(CFB_DIY_COMP_PTR_OFF));
     mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field(fn, fnd, "diy_competition_table_ptr",
-                   cfb_u32(CFB_DIY_COMP_TABLE_PTR_OFF));
+    emit_ptr_field_ref(fn, fnd, "diy_competition_table_ptr",     PTR_AT(CFB_DIY_COMP_TABLE_PTR_OFF));
     mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field(fn, fnd, "primary_comp_string_offset",
-                   cfb_u32(CFB_PRIMARY_COMP_STR_OFF));
+    emit_ptr_field_ref(fn, fnd, "primary_comp_string_offset",    PTR_AT(CFB_PRIMARY_COMP_STR_OFF));
     mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field(fn, fnd, "secondary_comp_string_offset",
-                   cfb_u32(CFB_SECONDARY_COMP_STR_OFF));
+    emit_ptr_field_ref(fn, fnd, "secondary_comp_string_offset",  PTR_AT(CFB_SECONDARY_COMP_STR_OFF));
     mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field(fn, fnd, "tertiary_comp_string_offset",
-                   cfb_u32(CFB_TERTIARY_COMP_STR_OFF));
+    emit_ptr_field_ref(fn, fnd, "tertiary_comp_string_offset",   PTR_AT(CFB_TERTIARY_COMP_STR_OFF));
     mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field(fn, fnd, "quaternary_comp_string_offset",
-                   cfb_u32(CFB_QUATERNARY_COMP_STR_OFF));
+    emit_ptr_field_ref(fn, fnd, "quaternary_comp_string_offset", PTR_AT(CFB_QUATERNARY_COMP_STR_OFF));
+#undef PTR_AT
 
     /* careerCompetitionSlotPtrTable[5] */
     mjson_printf(fn, fnd, ",%Q:[", "career_competition_slot_ptr_table");
@@ -687,7 +742,9 @@ static void emit_career_pointers(mjson_print_fn_t fn, void *fnd)
         if (i > 0) mjson_printf(fn, fnd, "%s", ",");
         /* emit_ptr_field requires a key — for array elements we
          * inline the same logic minus the key prefix. */
-        uint32_t val = cfb_u32(CFB_CAREER_COMP_SLOT_TBL_OFF + i * 4);
+        uint32_t *pp = (uint32_t *)((&careerFileBuffer) + CFB_CAREER_COMP_SLOT_TBL_OFF + i * 4);
+        normalize_ptr_for_save(pp);
+        uint32_t val = *pp;
         uint32_t off = 0;
         const AmigaAddrLutEntry *e = sym_from_ptr(val, &off);
         if (val == 0u) {
@@ -715,7 +772,9 @@ static void emit_career_pointers(mjson_print_fn_t fn, void *fnd)
     mjson_printf(fn, fnd, ",%Q:[", "career_cup_pick_list");
     for (uint32_t i = 0; i < 5; i++) {
         if (i > 0) mjson_printf(fn, fnd, "%s", ",");
-        uint32_t val = cfb_u32(CFB_CAREER_CUP_PICK_LIST_OFF + i * 4);
+        uint32_t *pp = (uint32_t *)((&careerFileBuffer) + CFB_CAREER_CUP_PICK_LIST_OFF + i * 4);
+        normalize_ptr_for_save(pp);
+        uint32_t val = *pp;
         uint32_t off = 0;
         const AmigaAddrLutEntry *e = sym_from_ptr(val, &off);
         if (val == 0u) {
@@ -1843,8 +1902,8 @@ static void emit_cup_record_name_sources(mjson_print_fn_t fn, void *fnd)
             const char *key = e ? e->name : "unknown";
             if (!first) mjson_printf(fn, fnd, "%s", ",");
             first = 0;
-            uint32_t val = *(uint32_t *)(dest + 5 + nameOffset);
-            emit_ptr_field(fn, fnd, key, val);
+            emit_ptr_field_ref(fn, fnd, key,
+                               (uint32_t *)(dest + 5 + nameOffset));
         }
         tbl += 10;
     }
@@ -1883,6 +1942,13 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
 {
     uint32_t data_size = career_data_size();
     JsonOutBuf out = { NULL, 0, 0, 0 };
+
+    /* Reset string pool — normalize_ptr_for_save will intern
+     * .rodata strings into it during the emit pass. Resetting up
+     * front (mirroring the load side) means string-pool pointer
+     * fields land at the same pool offsets every save → byte-
+     * stable round-trip with the loader. */
+    string_pool_reset();
 
     /* Top-level object. Every byte of careerFileBuffer is now
      * covered by either a typed semantic field or a named blob
@@ -2224,6 +2290,9 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
                         sizeof(numSelectedTeams);  /* +2 for the count word */
     JsonOutBuf out = { NULL, 0, 0, 0 };
 
+    /* Pool reset — see comment in SaveJson_WriteCareer. */
+    string_pool_reset();
+
     mjson_printf(json_out_emit, &out,
         "{\n  %Q:%d,\n  %Q:%Q,\n  %Q:%u,\n  ",
         "schema_version", SAVE_JSON_SCHEMA_VERSION,
@@ -2232,8 +2301,8 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
 
     /* primary_comp_string_offset is the only career pointer that
      * lives inside the preset range. Emit it independently. */
-    emit_ptr_field(json_out_emit, &out, "primary_comp_string_offset",
-                   *(uint32_t *)&primaryCompStringOffset);
+    emit_ptr_field_ref(json_out_emit, &out, "primary_comp_string_offset",
+                       &primaryCompStringOffset);
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
 
     emit_scalar_table_range(json_out_emit, &out,
