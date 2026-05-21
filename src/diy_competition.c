@@ -9528,10 +9528,14 @@ uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, DIYCompetition *comp)
     TeamFileEx *myTeam = _VerifyTeamLoaded(teamNo);
     uint16_t myPrice = _GetAveragePlayerPrice(myTeam);
 
-    /* Count teams with higher average price */
+    /* Count teams with higher average price.
+     * teamIds points at competitionFileBuffer +0x12E/+0x24E/+0x9A — all
+     * BE-packed `{country, ordinal}` per the 4e5f378 convention. Use
+     * BE_READ_U16 so the comparison and _VerifyTeamLoaded lookup see
+     * the same id format as the rest of the call chain. */
     uint16_t count = 0;
     for (uint16_t i = 0; i < numTeams; i++) {
-        uint16_t otherId = teamIds[i];
+        uint16_t otherId = BE_READ_U16(&teamIds[i]);
         if (otherId == teamNo)
             continue;
         TeamFileEx *otherTeam = _VerifyTeamLoaded(otherId);
