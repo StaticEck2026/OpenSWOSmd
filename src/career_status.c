@@ -1153,7 +1153,8 @@ league_match:
 
         /* Find team rank in league table — search sorted team order for selTeamNumber.
          * ASM: a0 = leagueTeamIds, loop reads teamEntryOffsets,
-         * divides by 18 to get team index, looks up in leagueTeamIds. */
+         * divides by 18 to get team index, looks up in leagueTeamIds.
+         * leagueTable is BE-packed (4e5f378); compare via BE_READ_U16. */
         uint16_t *teamEntryOffsets = comp->matchData.league.teamEntryOffsets;
         uint16_t *leagueTable = comp->matchData.league.leagueTeamIds;
         int16_t d1 = 0;
@@ -1161,7 +1162,7 @@ league_match:
             int16_t tableEntry = (int16_t)teamEntryOffsets[d1];
             uint16_t teamIdx = (uint16_t)((uint32_t)(int32_t)tableEntry / 18);
             d1++;
-        } while (leagueTable[(uint16_t)((uint32_t)(int32_t)(int16_t)teamEntryOffsets[d1 - 1] / 18)]
+        } while (BE_READ_U16(&leagueTable[(uint16_t)((uint32_t)(int32_t)(int16_t)teamEntryOffsets[d1 - 1] / 18)])
                  != selTeamNumber);
         d1--;  /* convert to 0-based rank */
 
@@ -2009,7 +2010,12 @@ void _UpdateCareerReputationBonuses(void) {
         uint16_t avgPrice = getTeamValueForGateReceipts(&careerTeam);
         int16_t d7 = (int16_t)avgPrice;
 
-        /* Find team rank in league table */
+        /* Find team rank in league table.
+         * leagueTable is BE-packed (4e5f378 convention) — compare via
+         * BE_READ_U16 against selTeamNumber, which the rest of the code
+         * keeps in (country<<8)|ordinal form. Without this the loop
+         * compares the host-native byte-swap of each entry and never
+         * matches → hang on FINISH SEASON. */
         uint16_t *leagueTable = cfbEx->matchData.league.leagueTeamIds;
         int16_t *teamEntryOffsets = (int16_t *)cfbEx->matchData.league.teamEntryOffsets;
         int16_t d1 = -1;
@@ -2019,7 +2025,8 @@ void _UpdateCareerReputationBonuses(void) {
             int32_t extended = (int32_t)entry;
             uint16_t divided = (uint16_t)((uint32_t)extended / 18);
             (void)divided;
-        } while (leagueTable[(uint16_t)((uint32_t)(int32_t)teamEntryOffsets[d1] / 18)] != selTeamNumber);
+        } while (BE_READ_U16(&leagueTable[(uint16_t)((uint32_t)(int32_t)teamEntryOffsets[d1] / 18)])
+                 != selTeamNumber);
         /* d1 is now the rank (0-based index into teamEntryOffsets) */
 
         int16_t rankDelta = (int16_t)expectedLeagueRankIndex - d1;
