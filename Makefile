@@ -140,6 +140,16 @@ ifdef SWOS_SAVE_FORMAT_JSON
 DEBUG_FLAGS += -DSWOS_SAVE_FORMAT_JSON=1
 endif
 
+# Coverage verification for the JSON save format. Set
+# `make SWOS_SAVE_FORMAT_JSON=1 SWOS_SAVE_FORMAT_JSON_VERIFY=1` to
+# enable a load-time diff that compares the byte image produced by
+# the named-blob + semantic field loaders against the bytes from
+# opaque_data. A zero-mismatch result means every meaningful byte
+# is covered by typed fields/blobs and opaque_data can be removed.
+ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
+DEBUG_FLAGS += -DSWOS_SAVE_FORMAT_JSON_VERIFY=1
+endif
+
 CFLAGS  := $(ARCHFLAGS) -O2 -g -std=gnu11 -fno-strict-aliasing -fno-builtin \
            -D_FILE_OFFSET_BITS=64 $(DEBUG_FLAGS) \
            -Wall -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable \

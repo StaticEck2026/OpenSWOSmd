@@ -1814,6 +1814,32 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
 
 /* ---------- .CAR loader ---------- */
 
+/* Helper that runs the named-blob + semantic field loaders in
+ * dependency order. Used by both the main load path (after
+ * opaque_data has been laid down) and the verify path (against a
+ * zeroed buffer so we can diff). */
+static void apply_semantic_load(const char *src, int src_size)
+{
+    load_named_blobs(src, src_size);
+    load_season_informations(src, src_size);
+    load_career_pointers(src, src_size);
+    load_cup_record_name_sources(src, src_size);
+    load_scalar_table(src, src_size, "career_scalars", s_career_scalars);
+
+    load_team_file_ex(src, src_size, "$.career_team",  &careerTeam);
+    load_team_file_ex(src, src_size, "$.current_team", &currentTeam);
+
+    /* numSelectedTeams comes through career_scalars
+     * (num_selected_teams_inner aliases &numSelectedTeams). Now use
+     * it to size the selected_teams loop. */
+    char selpath[80];
+    for (uint16_t i = 0; i < numSelectedTeams; i++) {
+        snprintf(selpath, sizeof(selpath), "$.selected_teams[%u]", (unsigned)i);
+        load_team_file_ex(src, src_size, selpath,
+                          (&selTeamsPtr) + (uint32_t)i * 684u);
+    }
+}
+
 int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src, uint32_t src_size)
 {
     (void)filename;
@@ -1868,31 +1894,47 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src, uint32_t src_
      * across rebuilds: even though the opaque blob has the original
      * raw pointer values, load_* overwrites them with current-build
      * addresses resolved from stable symbol names. */
-    /* Named blobs FIRST — they cover the same bytes the opaque blob
-     * does but split per region for navigability. Following loaders
-     * (semantic fields, pointer fields, team records) then override
-     * specific byte ranges with their semantically-resolved values. */
-    load_named_blobs((const char *)src, (int)src_size);
+    apply_semantic_load((const char *)src, (int)src_size);
 
-    load_season_informations((const char *)src, (int)src_size);
-    load_career_pointers((const char *)src, (int)src_size);
-    load_cup_record_name_sources((const char *)src, (int)src_size);
-    load_scalar_table((const char *)src, (int)src_size, "career_scalars", s_career_scalars);
+#ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
+    /* Coverage verification: at this point careerFileBuffer holds
+     * the bytes from opaque_data PLUS every semantic override that
+     * sits on top of it. Snapshot it as the "golden" reference,
+     * then re-run the semantic-only path (no opaque_data) into the
+     * same buffer and diff. A zero-mismatch result means the named
+     * blobs + typed fields together cover every meaningful byte and
+     * opaque_data can be dropped. */
+    {
+        uint32_t want = career_data_size();
+        uint8_t *golden = (uint8_t *)malloc(want);
+        if (golden) {
+            memcpy(golden, &careerFileBuffer, want);
+            memset(&careerFileBuffer, 0, want);
+            apply_semantic_load((const char *)src, (int)src_size);
 
-    load_team_file_ex((const char *)src, (int)src_size,
-                      "$.career_team",  &careerTeam);
-    load_team_file_ex((const char *)src, (int)src_size,
-                      "$.current_team", &currentTeam);
-
-    /* numSelectedTeams was just loaded via career_scalars
-     * (num_selected_teams_inner field at &numSelectedTeams). Read it
-     * now to size the selected_teams array load. */
-    char selpath[80];
-    for (uint16_t i = 0; i < numSelectedTeams; i++) {
-        snprintf(selpath, sizeof(selpath), "$.selected_teams[%u]", (unsigned)i);
-        load_team_file_ex((const char *)src, (int)src_size, selpath,
-                          (&selTeamsPtr) + (uint32_t)i * 684u);
+            size_t mismatches = 0, first = (size_t)-1;
+            for (uint32_t i = 0; i < want; i++) {
+                if (((uint8_t *)&careerFileBuffer)[i] != golden[i]) {
+                    if (mismatches < 20) {
+                        if (first == (size_t)-1) first = i;
+                        fprintf(stderr,
+                                "[json-verify] mismatch at +%u: semantic=0x%02X golden=0x%02X\n",
+                                (unsigned)i, (unsigned)((uint8_t *)&careerFileBuffer)[i],
+                                (unsigned)golden[i]);
+                    }
+                    mismatches++;
+                }
+            }
+            fprintf(stderr,
+                    "[json-verify] %zu mismatches across %u bytes (first at +%zu)\n",
+                    mismatches, (unsigned)want, first);
+            /* Restore the golden image so the game runs with the
+             * verified-correct state. */
+            memcpy(&careerFileBuffer, golden, want);
+            free(golden);
+        }
     }
+#endif
 
     return 0;
 }
