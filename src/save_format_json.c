@@ -1312,6 +1312,13 @@ static void emit_scalar_table(mjson_print_fn_t fn, void *fnd,
         case FLD_STR: {
             uint32_t n = 0;
             while (n < f->size && p[n] != '\0') n++;
+            /* Zero post-NUL bytes so the save reflects what the
+             * loader will round-trip back. Without this, garbage
+             * left over from prior buffer use shows up as
+             * verify-time mismatches even though it has no game
+             * semantics. */
+            for (uint32_t i = n; i < f->size; i++)
+                ((uint8_t *)p)[i] = 0;
             mjson_printf(fn, fnd, "%Q:%.*Q", f->name, (int)n, (const char *)p);
             break;
         }
@@ -1447,9 +1454,13 @@ static void emit_str_at(mjson_print_fn_t fn, void *fnd,
                         const char *key, const uint8_t *base,
                         size_t off, size_t maxlen)
 {
-    const uint8_t *p = base + off;
+    uint8_t *p = (uint8_t *)base + off;
     size_t n = 0;
     while (n < maxlen && p[n] != '\0') n++;
+    /* Zero post-NUL bytes — see comment in emit_scalar_table.
+     * Same rationale: lose nothing semantic, gain byte-exact
+     * verify round-trip. */
+    for (size_t i = n; i < maxlen; i++) p[i] = 0;
     mjson_printf(fn, fnd, "%Q:%.*Q", key, (int)n, (const char *)p);
 }
 
@@ -1968,6 +1979,13 @@ int SaveJson_FileIsJson(const uint8_t *filename)
  * zeroed buffer so we can diff). */
 static void apply_semantic_load(const char *src, int src_size)
 {
+    /* Reset the string pool up front so any { str: "..." } pointer
+     * fields decoded during this load start interning at pool[0].
+     * Without this, repeated loads (e.g. the verify pass) intern at
+     * different pool offsets and pointer fields show up as
+     * byte-level mismatches. */
+    string_pool_reset();
+
     load_named_blobs(src, src_size);
     load_season_informations(src, src_size);
     load_career_pointers(src, src_size);
@@ -2100,6 +2118,13 @@ static void emit_scalar_table_range(mjson_print_fn_t fn, void *fnd,
         case FLD_STR: {
             uint32_t n = 0;
             while (n < f->size && p[n] != '\0') n++;
+            /* Zero post-NUL bytes so the save reflects what the
+             * loader will round-trip back. Without this, garbage
+             * left over from prior buffer use shows up as
+             * verify-time mismatches even though it has no game
+             * semantics. */
+            for (uint32_t i = n; i < f->size; i++)
+                ((uint8_t *)p)[i] = 0;
             mjson_printf(fn, fnd, "%Q:%.*Q", f->name, (int)n, (const char *)p);
             break;
         }
@@ -2274,6 +2299,9 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
                         sizeof(numSelectedTeams);
     uint32_t want = (uint32_t)(hi - lo);
     memset((void *)lo, 0, want);
+
+    /* Reset string pool — see comment in apply_semantic_load. */
+    string_pool_reset();
 
     load_named_blobs_range((const char *)src, (int)src_size, lo, hi);
 
