@@ -585,85 +585,81 @@ static void load_season_informations(const char *buf, int buflen)
 {
     string_pool_reset();
 
-    char path[128];
+    /* Slice the array once, then walk each entry as its own
+     * sub-object. Cuts ~400 full-file mjson_get_* scans down to
+     * 20 array lookups + per-entry scans of ~500 bytes. */
+    const char *arr = NULL;
+    int arr_len = 0;
+    if (mjson_find(buf, buflen, "$.season_informations",
+                   &arr, &arr_len) != MJSON_TOK_ARRAY)
+        return;
+
+    char ipath[40];
     double num = 0.0;
     for (uint32_t i = 0; i < SAVE_SI_ENTRY_COUNT; i++) {
+        snprintf(ipath, sizeof(ipath), "$[%u]", (unsigned)i);
+        const char *e_slice = NULL;
+        int e_slen = 0;
+        if (mjson_find(arr, arr_len, ipath,
+                       &e_slice, &e_slen) != MJSON_TOK_OBJECT)
+            break;
+
         uint8_t *e = seasonInformationsArray + i * SAVE_SI_ENTRY_SIZE;
 
-        /* Probe the entry to see if it exists. A missing index just
-         * leaves the opaque_data bytes in place. */
-        snprintf(path, sizeof(path), "$.season_informations[%u].club_no",
-                 (unsigned)i);
-        if (mjson_get_number(buf, buflen, path, &num) <= 0)
+        if (mjson_get_number(e_slice, e_slen, "$.club_no", &num) <= 0)
             continue;
-
         *(uint16_t *)(e + SAVE_SI_CLUBNO) = (uint16_t)num;
 
-        load_string_field(buf, buflen,
-            ({ snprintf(path, sizeof(path), "$.season_informations[%u].club_name",
-                       (unsigned)i); path; }),
-            e + SAVE_SI_CLUBNAME, 18);
+        load_string_field(e_slice, e_slen, "$.club_name",
+                          e + SAVE_SI_CLUBNAME, 18);
 
-        snprintf(path, sizeof(path), "$.season_informations[%u].trophy_flags", (unsigned)i);
-        if (mjson_get_number(buf, buflen, path, &num) > 0)
+        if (mjson_get_number(e_slice, e_slen, "$.trophy_flags", &num) > 0)
             *(uint16_t *)(e + SAVE_SI_TROPHYFLAGS) = (uint16_t)num;
 
-        snprintf(path, sizeof(path), "$.season_informations[%u].league_str", (unsigned)i);
-        load_ptr_field(buf, buflen, path, (uint32_t *)(e + SAVE_SI_LEAGUESTRPTR));
-        snprintf(path, sizeof(path), "$.season_informations[%u].str_1", (unsigned)i);
-        load_ptr_field(buf, buflen, path, (uint32_t *)(e + SAVE_SI_STRPTR1));
-        snprintf(path, sizeof(path), "$.season_informations[%u].str_2", (unsigned)i);
-        load_ptr_field(buf, buflen, path, (uint32_t *)(e + SAVE_SI_STRPTR2));
-        snprintf(path, sizeof(path), "$.season_informations[%u].str_3", (unsigned)i);
-        load_ptr_field(buf, buflen, path, (uint32_t *)(e + SAVE_SI_STRPTR3));
+        load_ptr_field(e_slice, e_slen, "$.league_str",
+                       (uint32_t *)(e + SAVE_SI_LEAGUESTRPTR));
+        load_ptr_field(e_slice, e_slen, "$.str_1",
+                       (uint32_t *)(e + SAVE_SI_STRPTR1));
+        load_ptr_field(e_slice, e_slen, "$.str_2",
+                       (uint32_t *)(e + SAVE_SI_STRPTR2));
+        load_ptr_field(e_slice, e_slen, "$.str_3",
+                       (uint32_t *)(e + SAVE_SI_STRPTR3));
 
-        snprintf(path, sizeof(path), "$.season_informations[%u].best_scorer_goals", (unsigned)i);
-        if (mjson_get_number(buf, buflen, path, &num) > 0)
+        if (mjson_get_number(e_slice, e_slen, "$.best_scorer_goals", &num) > 0)
             *(uint16_t *)(e + SAVE_SI_BESTSCORERNUMGOALS) = (uint16_t)num;
 
-        load_string_field(buf, buflen,
-            ({ snprintf(path, sizeof(path), "$.season_informations[%u].best_scorer_name",
-                       (unsigned)i); path; }),
-            e + SAVE_SI_BESTSCORERNAME, 23);
-        load_string_field(buf, buflen,
-            ({ snprintf(path, sizeof(path), "$.season_informations[%u].second_scorer_name",
-                       (unsigned)i); path; }),
-            e + SAVE_SI_2NDSCORERNAME, 23);
+        load_string_field(e_slice, e_slen, "$.best_scorer_name",
+                          e + SAVE_SI_BESTSCORERNAME, 23);
+        load_string_field(e_slice, e_slen, "$.second_scorer_name",
+                          e + SAVE_SI_2NDSCORERNAME, 23);
 
-#define LOAD_BYTE(field, dst_off)                                                    \
-        do {                                                                         \
-            snprintf(path, sizeof(path),                                             \
-                     "$.season_informations[%u]." field, (unsigned)i);               \
-            if (mjson_get_number(buf, buflen, path, &num) > 0)                       \
-                e[dst_off] = (uint8_t)(int8_t)(int)num;                              \
+#define LOAD_BYTE(key, dst_off) do { \
+            if (mjson_get_number(e_slice, e_slen, "$." key, &num) > 0) \
+                e[dst_off] = (uint8_t)(int8_t)(int)num; \
+        } while (0)
+#define LOAD_U16(key, dst_off) do { \
+            if (mjson_get_number(e_slice, e_slen, "$." key, &num) > 0) \
+                *(uint16_t *)(e + dst_off) = (uint16_t)num; \
         } while (0)
 
-#define LOAD_U16(field, dst_off)                                                     \
-        do {                                                                         \
-            snprintf(path, sizeof(path),                                             \
-                     "$.season_informations[%u]." field, (unsigned)i);               \
-            if (mjson_get_number(buf, buflen, path, &num) > 0)                       \
-                *(uint16_t *)(e + dst_off) = (uint16_t)num;                          \
-        } while (0)
-
-        LOAD_BYTE("comp_1_result",     SAVE_SI_COMP1RESULT);
-        LOAD_BYTE("comp_2_result",     SAVE_SI_COMP2RESULT);
-        LOAD_BYTE("comp_3_result",     SAVE_SI_COMP3RESULT);
-        LOAD_BYTE("comp_4_result",     SAVE_SI_COMP4RESULT);
+        LOAD_BYTE("comp_1_result",      SAVE_SI_COMP1RESULT);
+        LOAD_BYTE("comp_2_result",      SAVE_SI_COMP2RESULT);
+        LOAD_BYTE("comp_3_result",      SAVE_SI_COMP3RESULT);
+        LOAD_BYTE("comp_4_result",      SAVE_SI_COMP4RESULT);
         LOAD_U16 ("total_goals_scored", SAVE_SI_TOTALGOALSSCORED);
         LOAD_U16 ("total_goals_taken",  SAVE_SI_TOTALGOALSTAKEN);
-        LOAD_BYTE("total_games",       SAVE_SI_TOTALGAMES);
-        LOAD_BYTE("total_wins",        SAVE_SI_TOTALWINS);
-        LOAD_BYTE("total_drawn",       SAVE_SI_TOTALDRAWN);
-        LOAD_BYTE("total_lost",        SAVE_SI_TOTALLOST);
-        LOAD_BYTE("friendly_wins",     SAVE_SI_FRIENDLYWINS);
-        LOAD_BYTE("friendly_draws",    SAVE_SI_FRIENDLYDRAWS);
-        LOAD_BYTE("friendly_lost",     SAVE_SI_FRIENDLYLOST);
-        LOAD_BYTE("tour_wins",         SAVE_SI_TOURWINS);
-        LOAD_BYTE("tour_draws",        SAVE_SI_TOURDRAWS);
-        LOAD_BYTE("tour_lost",         SAVE_SI_TOURLOST);
-        LOAD_BYTE("tournament_status", SAVE_SI_TOURNAMENTSTATUS);
-        LOAD_BYTE("manager_status",    SAVE_SI_MANAGERSTATUS);
+        LOAD_BYTE("total_games",        SAVE_SI_TOTALGAMES);
+        LOAD_BYTE("total_wins",         SAVE_SI_TOTALWINS);
+        LOAD_BYTE("total_drawn",        SAVE_SI_TOTALDRAWN);
+        LOAD_BYTE("total_lost",         SAVE_SI_TOTALLOST);
+        LOAD_BYTE("friendly_wins",      SAVE_SI_FRIENDLYWINS);
+        LOAD_BYTE("friendly_draws",     SAVE_SI_FRIENDLYDRAWS);
+        LOAD_BYTE("friendly_lost",      SAVE_SI_FRIENDLYLOST);
+        LOAD_BYTE("tour_wins",          SAVE_SI_TOURWINS);
+        LOAD_BYTE("tour_draws",         SAVE_SI_TOURDRAWS);
+        LOAD_BYTE("tour_lost",          SAVE_SI_TOURLOST);
+        LOAD_BYTE("tournament_status",  SAVE_SI_TOURNAMENTSTATUS);
+        LOAD_BYTE("manager_status",     SAVE_SI_MANAGERSTATUS);
 #undef LOAD_BYTE
 #undef LOAD_U16
     }
@@ -1401,29 +1397,41 @@ static void load_scalar_table(const char *buf, int buflen,
                               const char *section_key,
                               const FieldDesc *table)
 {
-    char path[160];
+    /* Resolve the section's object slice ONCE — subsequent
+     * mjson_get_* calls then scan ~5 KB instead of the entire
+     * .CAR JSON (hundreds of KB). For a 200-entry table this is
+     * roughly a 100× speedup. */
+    char section_path[80];
+    snprintf(section_path, sizeof(section_path), "$.%s", section_key);
+    const char *section = NULL;
+    int section_len = 0;
+    if (mjson_find(buf, buflen, section_path,
+                   &section, &section_len) != MJSON_TOK_OBJECT)
+        return;
+
+    char path[80];
     char tmp[64];
     double num = 0.0;
 
     for (const FieldDesc *f = table; f->type != FLD_END; f++) {
-        snprintf(path, sizeof(path), "$.%s.%s", section_key, f->name);
+        snprintf(path, sizeof(path), "$.%s", f->name);
         uint8_t *p = (uint8_t *)f->addr;
         switch (f->type) {
         case FLD_U8: case FLD_S8:
-            if (mjson_get_number(buf, buflen, path, &num) > 0)
+            if (mjson_get_number(section, section_len, path, &num) > 0)
                 *p = (uint8_t)(int)num;
             break;
         case FLD_U16: case FLD_S16:
-            if (mjson_get_number(buf, buflen, path, &num) > 0)
+            if (mjson_get_number(section, section_len, path, &num) > 0)
                 *(uint16_t *)p = (uint16_t)(int)num;
             break;
         case FLD_U32: case FLD_S32:
-            if (mjson_get_number(buf, buflen, path, &num) > 0)
+            if (mjson_get_number(section, section_len, path, &num) > 0)
                 *(uint32_t *)p = (uint32_t)(int32_t)num;
             break;
         case FLD_STR:
             memset(p, 0, f->size);
-            if (mjson_get_string(buf, buflen, path, tmp, sizeof(tmp)) > 0) {
+            if (mjson_get_string(section, section_len, path, tmp, sizeof(tmp)) > 0) {
                 uint32_t n = (uint32_t)strlen(tmp);
                 /* Fields can fill all `f->size` bytes — see comment
                  * in load_str_at. Don't reserve a NUL slot. */
@@ -1436,7 +1444,8 @@ static void load_scalar_table(const char *buf, int buflen,
 #if MJSON_ENABLE_NEXT
             const char *arr = NULL;
             int arr_len = 0;
-            if (mjson_find(buf, buflen, path, &arr, &arr_len) == MJSON_TOK_ARRAY) {
+            if (mjson_find(section, section_len, path,
+                           &arr, &arr_len) == MJSON_TOK_ARRAY) {
                 int koff, klen, voff, vlen, vt;
                 uint32_t i = 0;
                 int off = 0;
@@ -1694,28 +1703,57 @@ static void emit_team_file_ex(mjson_print_fn_t fn, void *fnd,
     emit_team_file_ex_body(fn, fnd, base);
 }
 
+/* Resolve a path against `buf` and run `body` with `slice`/`slice_len`
+ * set to the matched sub-object. Skips body if not found / not an
+ * object. Used by the optimised loaders to bound mjson_get_* scans
+ * to a small sub-buffer instead of the whole file. */
+#define WITH_OBJECT_SLICE(buf, buflen, path_str, slice_var, slicelen_var, body) \
+    do { \
+        const char *slice_var = NULL; int slicelen_var = 0; \
+        if (mjson_find((buf), (buflen), (path_str), \
+                       &slice_var, &slicelen_var) == MJSON_TOK_OBJECT) { \
+            body \
+        } \
+    } while (0)
+
+/* Old signature kept for callers that prefer to pass a path against
+ * the full file; internally it slices then dispatches to the fast
+ * path. */
+static void load_team_file_ex_slice(const char *buf, int buflen,
+                                    uint8_t *base);
+
 static void load_team_file_ex(const char *buf, int buflen,
                               const char *path_prefix, uint8_t *base)
 {
+    WITH_OBJECT_SLICE(buf, buflen, path_prefix, slice, slice_len, {
+        load_team_file_ex_slice(slice, slice_len, base);
+    });
+}
+
+/* Fast variant: `buf`/`buflen` is already the TeamFileEx sub-object's
+ * JSON slice. mjson_get_* calls below scan ~3 KB instead of the full
+ * .CAR file — typically 100× faster for the selected_teams loop. */
+static void load_team_file_ex_slice(const char *buf, int buflen,
+                                    uint8_t *base)
+{
     uint8_t *team = base + offsetof(TeamFileEx, team);
-    char path[160];
-    double num = 0.0;
+    char path[64];
 
 #define LOAD_U8(field, jsonkey) do { \
-        snprintf(path, sizeof(path), "%s.team.%s", path_prefix, jsonkey); \
-        load_u8_at(buf, buflen, path, team, offsetof(TeamFile, field)); \
+        load_u8_at(buf, buflen, "$.team." jsonkey, \
+                   team, offsetof(TeamFile, field)); \
     } while (0)
 #define LOAD_S16(field, jsonkey) do { \
-        snprintf(path, sizeof(path), "%s.team.%s", path_prefix, jsonkey); \
-        load_s16_at(buf, buflen, path, team, offsetof(TeamFile, field)); \
+        load_s16_at(buf, buflen, "$.team." jsonkey, \
+                    team, offsetof(TeamFile, field)); \
     } while (0)
 #define LOAD_STR(field, jsonkey, maxlen) do { \
-        snprintf(path, sizeof(path), "%s.team.%s", path_prefix, jsonkey); \
-        load_str_at(buf, buflen, path, team, offsetof(TeamFile, field), maxlen); \
+        load_str_at(buf, buflen, "$.team." jsonkey, \
+                    team, offsetof(TeamFile, field), maxlen); \
     } while (0)
 #define LOAD_BYTES(field, jsonkey, len) do { \
-        snprintf(path, sizeof(path), "%s.team.%s", path_prefix, jsonkey); \
-        load_bytes_at(buf, buflen, path, team, offsetof(TeamFile, field), len); \
+        load_bytes_at(buf, buflen, "$.team." jsonkey, \
+                      team, offsetof(TeamFile, field), len); \
     } while (0)
 
     LOAD_U8 (countryNumber,    "country_number");
@@ -1736,22 +1774,22 @@ static void load_team_file_ex(const char *buf, int buflen,
 #undef LOAD_STR
 #undef LOAD_BYTES
 
+    /* Per-player: slice each players[i] object once, then 14 field
+     * lookups against that ~250-byte sub-slice instead of ~3 KB. */
     for (int i = 0; i < 16; i++) {
         uint8_t *p = base + offsetof(TeamFileEx, players)
                           + (size_t)i * sizeof(PlayerFile);
+        snprintf(path, sizeof(path), "$.players[%d]", i);
+        const char *ps = NULL; int psl = 0;
+        if (mjson_find(buf, buflen, path, &ps, &psl) != MJSON_TOK_OBJECT)
+            continue;
 
-#define LOAD_PU8(field, jsonkey) do { \
-        snprintf(path, sizeof(path), "%s.players[%d].%s", path_prefix, i, jsonkey); \
-        load_u8_at(buf, buflen, path, p, offsetof(PlayerFile, field)); \
-    } while (0)
-#define LOAD_PSTR(field, jsonkey, maxlen) do { \
-        snprintf(path, sizeof(path), "%s.players[%d].%s", path_prefix, i, jsonkey); \
-        load_str_at(buf, buflen, path, p, offsetof(PlayerFile, field), maxlen); \
-    } while (0)
-#define LOAD_PBYTES(field, jsonkey, len) do { \
-        snprintf(path, sizeof(path), "%s.players[%d].%s", path_prefix, i, jsonkey); \
-        load_bytes_at(buf, buflen, path, p, offsetof(PlayerFile, field), len); \
-    } while (0)
+#define LOAD_PU8(field, jsonkey) \
+        load_u8_at(ps, psl, "$." jsonkey, p, offsetof(PlayerFile, field))
+#define LOAD_PSTR(field, jsonkey, maxlen) \
+        load_str_at(ps, psl, "$." jsonkey, p, offsetof(PlayerFile, field), maxlen)
+#define LOAD_PBYTES(field, jsonkey, len) \
+        load_bytes_at(ps, psl, "$." jsonkey, p, offsetof(PlayerFile, field), len)
 
         LOAD_PU8(nationality,         "nationality");
         LOAD_PU8(field_1,             "field_1");
@@ -1771,7 +1809,6 @@ static void load_team_file_ex(const char *buf, int buflen,
 #undef LOAD_PSTR
 #undef LOAD_PBYTES
     }
-    (void)num;
 }
 
 /* ---------- named base64 blob regions ----------
@@ -1856,10 +1893,16 @@ static void emit_named_blobs(mjson_print_fn_t fn, void *fnd)
 
 static void load_named_blobs(const char *buf, int buflen)
 {
-    char path[160];
+    /* Slice the blobs object once so each per-blob base64 decode
+     * scans only the blobs section instead of the entire file. */
+    const char *bs = NULL; int bsl = 0;
+    if (mjson_find(buf, buflen, "$.blobs", &bs, &bsl) != MJSON_TOK_OBJECT)
+        return;
+
+    char path[80];
     for (const BlobDesc *b = s_career_blobs; b->name; b++) {
-        snprintf(path, sizeof(path), "$.blobs.%s", b->name);
-        mjson_get_base64(buf, buflen, path,
+        snprintf(path, sizeof(path), "$.%s", b->name);
+        mjson_get_base64(bs, bsl, path,
                          (char *)b->addr, (int)b->size);
     }
 }
@@ -1913,7 +1956,14 @@ static void emit_cup_record_name_sources(mjson_print_fn_t fn, void *fnd)
 
 static void load_cup_record_name_sources(const char *buf, int buflen)
 {
-    char path[160];
+    /* Slice the cup_record_name_sources object once — each
+     * subsequent per-record lookup scans the small slice. */
+    const char *crns = NULL; int crns_len = 0;
+    if (mjson_find(buf, buflen, "$.cup_record_name_sources",
+                   &crns, &crns_len) != MJSON_TOK_OBJECT)
+        return;
+
+    char path[80];
     uint8_t *tbl = careerContests;
     for (;;) {
         uint32_t srcAddr = *(uint32_t *)tbl;
@@ -1926,10 +1976,9 @@ static void load_cup_record_name_sources(const char *buf, int buflen)
             const AmigaAddrLutEntry *e =
                 sym_from_ptr((uint32_t)(uintptr_t)dest, &off);
             if (e) {
-                snprintf(path, sizeof(path),
-                         "$.cup_record_name_sources.%s", e->name);
+                snprintf(path, sizeof(path), "$.%s", e->name);
                 uint32_t val = 0;
-                load_ptr_field(buf, buflen, path, &val);
+                load_ptr_field(crns, crns_len, path, &val);
                 *(uint32_t *)(dest + 5 + nameOffset) = val;
             }
         }
@@ -2069,12 +2118,23 @@ static void apply_semantic_load(const char *src, int src_size)
 
     /* numSelectedTeams comes through career_scalars
      * (num_selected_teams_inner aliases &numSelectedTeams). Now use
-     * it to size the selected_teams loop. */
-    char selpath[80];
-    for (uint16_t i = 0; i < numSelectedTeams; i++) {
-        snprintf(selpath, sizeof(selpath), "$.selected_teams[%u]", (unsigned)i);
-        load_team_file_ex(src, src_size, selpath,
-                          (&selTeamsPtr) + (uint32_t)i * 684u);
+     * it to size the selected_teams loop. Slice the array once so
+     * per-team lookups scan a single team's ~3 KB slice instead of
+     * the full file each time. */
+    const char *teams_arr = NULL;
+    int teams_arr_len = 0;
+    if (mjson_find(src, src_size, "$.selected_teams",
+                   &teams_arr, &teams_arr_len) == MJSON_TOK_ARRAY) {
+        char ipath[24];
+        for (uint16_t i = 0; i < numSelectedTeams; i++) {
+            snprintf(ipath, sizeof(ipath), "$[%u]", (unsigned)i);
+            const char *ts = NULL; int tsl = 0;
+            if (mjson_find(teams_arr, teams_arr_len, ipath,
+                           &ts, &tsl) != MJSON_TOK_OBJECT)
+                break;
+            load_team_file_ex_slice(ts, tsl,
+                                    (&selTeamsPtr) + (uint32_t)i * 684u);
+        }
     }
 }
 
@@ -2235,26 +2295,35 @@ static void load_scalar_table_range(const char *buf, int buflen,
                                     const FieldDesc *table,
                                     const uint8_t *lo, const uint8_t *hi)
 {
-    char path[160];
+    /* Slice the section once — same speedup pattern as
+     * load_scalar_table. */
+    char section_path[80];
+    snprintf(section_path, sizeof(section_path), "$.%s", section_key);
+    const char *section = NULL; int section_len = 0;
+    if (mjson_find(buf, buflen, section_path,
+                   &section, &section_len) != MJSON_TOK_OBJECT)
+        return;
+
+    char path[80];
     char tmp[64];
     double num = 0.0;
     for (const FieldDesc *f = table; f->type != FLD_END; f++) {
         if (!field_in_range(f, lo, hi)) continue;
-        snprintf(path, sizeof(path), "$.%s.%s", section_key, f->name);
+        snprintf(path, sizeof(path), "$.%s", f->name);
         uint8_t *p = (uint8_t *)f->addr;
         switch (f->type) {
         case FLD_U8: case FLD_S8:
-            if (mjson_get_number(buf, buflen, path, &num) > 0) *p = (uint8_t)(int)num;
+            if (mjson_get_number(section, section_len, path, &num) > 0) *p = (uint8_t)(int)num;
             break;
         case FLD_U16: case FLD_S16:
-            if (mjson_get_number(buf, buflen, path, &num) > 0) *(uint16_t *)p = (uint16_t)(int)num;
+            if (mjson_get_number(section, section_len, path, &num) > 0) *(uint16_t *)p = (uint16_t)(int)num;
             break;
         case FLD_U32: case FLD_S32:
-            if (mjson_get_number(buf, buflen, path, &num) > 0) *(uint32_t *)p = (uint32_t)(int32_t)num;
+            if (mjson_get_number(section, section_len, path, &num) > 0) *(uint32_t *)p = (uint32_t)(int32_t)num;
             break;
         case FLD_STR:
             memset(p, 0, f->size);
-            if (mjson_get_string(buf, buflen, path, tmp, sizeof(tmp)) > 0) {
+            if (mjson_get_string(section, section_len, path, tmp, sizeof(tmp)) > 0) {
                 uint32_t n = (uint32_t)strlen(tmp);
                 /* Fields can fill all `f->size` bytes — see comment
                  * in load_str_at. Don't reserve a NUL slot. */
@@ -2263,7 +2332,7 @@ static void load_scalar_table_range(const char *buf, int buflen,
             }
             break;
         case FLD_BYTES:
-            load_bytes_at(buf, buflen, path, p, 0, f->size);
+            load_bytes_at(section, section_len, path, p, 0, f->size);
             break;
         default:
             break;
@@ -2274,11 +2343,16 @@ static void load_scalar_table_range(const char *buf, int buflen,
 static void load_named_blobs_range(const char *buf, int buflen,
                                    const uint8_t *lo, const uint8_t *hi)
 {
-    char path[160];
+    /* Slice the blobs object once. */
+    const char *bs = NULL; int bsl = 0;
+    if (mjson_find(buf, buflen, "$.blobs", &bs, &bsl) != MJSON_TOK_OBJECT)
+        return;
+
+    char path[80];
     for (const BlobDesc *b = s_career_blobs; b->name; b++) {
         if (!blob_in_range(b, lo, hi)) continue;
-        snprintf(path, sizeof(path), "$.blobs.%s", b->name);
-        mjson_get_base64(buf, buflen, path, (char *)b->addr, (int)b->size);
+        snprintf(path, sizeof(path), "$.%s", b->name);
+        mjson_get_base64(bs, bsl, path, (char *)b->addr, (int)b->size);
     }
 }
 
@@ -2391,12 +2465,22 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
     load_scalar_table_range((const char *)src, (int)src_size,
                             "comp_scalars", s_career_scalars, lo, hi);
 
-    /* DIY teams */
-    char tpath[64];
-    for (uint16_t i = 0; i < numDiyTeams; i++) {
-        snprintf(tpath, sizeof(tpath), "$.diy_teams[%u]", (unsigned)i);
-        load_team_file_ex((const char *)src, (int)src_size, tpath,
-                          (&selTeamsPtr) + (uint32_t)i * 684u);
+    /* DIY teams — slice array once, then iterate. Same speedup
+     * pattern as the career selected_teams loop. */
+    const char *teams_arr = NULL;
+    int teams_arr_len = 0;
+    if (mjson_find((const char *)src, (int)src_size, "$.diy_teams",
+                   &teams_arr, &teams_arr_len) == MJSON_TOK_ARRAY) {
+        char ipath[24];
+        for (uint16_t i = 0; i < numDiyTeams; i++) {
+            snprintf(ipath, sizeof(ipath), "$[%u]", (unsigned)i);
+            const char *ts = NULL; int tsl = 0;
+            if (mjson_find(teams_arr, teams_arr_len, ipath,
+                           &ts, &tsl) != MJSON_TOK_OBJECT)
+                break;
+            load_team_file_ex_slice(ts, tsl,
+                                    (&selTeamsPtr) + (uint32_t)i * 684u);
+        }
     }
 
     free(src);
@@ -2568,43 +2652,48 @@ static void emit_team_game(mjson_print_fn_t fn, void *fnd,
     mjson_printf(fn, fnd, "%s", "]}");
 }
 
-static void load_team_game(const char *buf, int buflen,
-                           const char *path_prefix, uint8_t *tg)
+/* Sliced variant — caller has already located the TeamGame's JSON
+ * object slice via mjson_find. Subsequent get_* lookups scan only
+ * the ~10 KB slice instead of the entire .HIL JSON. */
+static void load_team_game_slice(const char *buf, int buflen, uint8_t *tg)
 {
-    char path[200];
     double num = 0.0;
+    char path[40];
 
     /* Zero the buffer up front — fields not present in JSON stay
      * defined as zero. */
     memset(tg, 0, sizeof(TeamGame));
 
+    /* Kit fields live under "$.kit" — slice the sub-object so the
+     * 10 lookups don't scan the whole TeamGame slice. */
+    const char *kit = NULL; int kit_len = 0;
+    if (mjson_find(buf, buflen, "$.kit",
+                   &kit, &kit_len) == MJSON_TOK_OBJECT) {
 #define LOAD_BE16(key, field) do { \
-        snprintf(path, sizeof(path), "%s.kit.%s", path_prefix, key); \
-        if (mjson_get_number(buf, buflen, path, &num) > 0) \
-            BE_WRITE_U16(tg + offsetof(TeamGame, field), (uint16_t)(int)num); \
-    } while (0)
-    LOAD_BE16("pr_shirt_type",  prShirtType);
-    LOAD_BE16("pr_shirt_col",   prShirtCol);
-    LOAD_BE16("pr_stripes_col", prStripesCol);
-    LOAD_BE16("pr_shorts_col",  prShortsCol);
-    LOAD_BE16("pr_socks_col",   prSocksCol);
-    LOAD_BE16("sec_shirt_type", secShirtType);
-    LOAD_BE16("sec_shirt_col",  secShirtCol);
-    LOAD_BE16("sec_stripes",    secStripesCol);
-    LOAD_BE16("sec_shorts",     secShortsCol);
-    LOAD_BE16("sec_socks",      secSocksCol);
+            if (mjson_get_number(kit, kit_len, "$." key, &num) > 0) \
+                BE_WRITE_U16(tg + offsetof(TeamGame, field), (uint16_t)(int)num); \
+        } while (0)
+        LOAD_BE16("pr_shirt_type",  prShirtType);
+        LOAD_BE16("pr_shirt_col",   prShirtCol);
+        LOAD_BE16("pr_stripes_col", prStripesCol);
+        LOAD_BE16("pr_shorts_col",  prShortsCol);
+        LOAD_BE16("pr_socks_col",   prSocksCol);
+        LOAD_BE16("sec_shirt_type", secShirtType);
+        LOAD_BE16("sec_shirt_col",  secShirtCol);
+        LOAD_BE16("sec_stripes",    secStripesCol);
+        LOAD_BE16("sec_shorts",     secShortsCol);
+        LOAD_BE16("sec_socks",      secSocksCol);
 #undef LOAD_BE16
+    }
 
-    snprintf(path, sizeof(path), "%s.marked_player", path_prefix);
-    if (mjson_get_number(buf, buflen, path, &num) > 0)
+    if (mjson_get_number(buf, buflen, "$.marked_player", &num) > 0)
         BE_WRITE_U16(tg + offsetof(TeamGame, markedPlayer), (uint16_t)(int)num);
 
-    snprintf(path, sizeof(path), "%s.team_name", path_prefix);
-    load_str_at(buf, buflen, path, tg, offsetof(TeamGame, teamName), 17);
+    load_str_at(buf, buflen, "$.team_name", tg,
+                offsetof(TeamGame, teamName), 17);
 
 #define LOAD_B(key, field) do { \
-        snprintf(path, sizeof(path), "%s.%s", path_prefix, key); \
-        if (mjson_get_number(buf, buflen, path, &num) > 0) \
+        if (mjson_get_number(buf, buflen, "$." key, &num) > 0) \
             tg[offsetof(TeamGame, field)] = (uint8_t)(int)num; \
     } while (0)
     LOAD_B("unk1",          unk1);
@@ -2612,12 +2701,23 @@ static void load_team_game(const char *buf, int buflen,
     LOAD_B("unk3",          unk3);
 #undef LOAD_B
 
+    /* Slice the players array once, then walk per-player slices. */
+    const char *players = NULL; int players_len = 0;
+    if (mjson_find(buf, buflen, "$.players",
+                   &players, &players_len) != MJSON_TOK_ARRAY)
+        return;
+
     for (int i = 0; i < 16; i++) {
         uint8_t *p = tg + offsetof(TeamGame, players)
                         + (size_t)i * sizeof(struct PlayerInfo);
+        snprintf(path, sizeof(path), "$[%d]", i);
+        const char *ps = NULL; int psl = 0;
+        if (mjson_find(players, players_len, path,
+                       &ps, &psl) != MJSON_TOK_OBJECT)
+            break;
+
 #define LOAD_PB(key, field) do { \
-            snprintf(path, sizeof(path), "%s.players[%d].%s", path_prefix, i, key); \
-            if (mjson_get_number(buf, buflen, path, &num) > 0) \
+            if (mjson_get_number(ps, psl, "$." key, &num) > 0) \
                 p[offsetof(struct PlayerInfo, field)] = (uint8_t)(int)(int8_t)(int)num; \
         } while (0)
         LOAD_PB("skip",            skip);
@@ -2632,8 +2732,8 @@ static void load_team_game(const char *buf, int buflen,
         LOAD_PB("previous_cards",  previousCards);
         LOAD_PB("num_yellow_cards",numYellowCards);
         LOAD_PB("field_b",         field_B);
-        snprintf(path, sizeof(path), "%s.players[%d].short_name", path_prefix, i);
-        load_str_at(buf, buflen, path, p, offsetof(struct PlayerInfo, shortName), 15);
+        load_str_at(ps, psl, "$.short_name", p,
+                    offsetof(struct PlayerInfo, shortName), 15);
         LOAD_PB("passing",         passing);
         LOAD_PB("shooting",        shooting);
         LOAD_PB("heading",         heading);
@@ -2645,10 +2745,22 @@ static void load_team_game(const char *buf, int buflen,
         LOAD_PB("injuries_bits",   injuriesBitfield);
         LOAD_PB("half_played",     halfPlayed);
         LOAD_PB("face_2",          face2);
-        snprintf(path, sizeof(path), "%s.players[%d].full_name", path_prefix, i);
-        load_str_at(buf, buflen, path, p, offsetof(struct PlayerInfo, fullName), 23);
+        load_str_at(ps, psl, "$.full_name", p,
+                    offsetof(struct PlayerInfo, fullName), 23);
 #undef LOAD_PB
     }
+}
+
+/* Path-based wrapper — locates the slice then delegates. */
+static void load_team_game(const char *buf, int buflen,
+                           const char *path_prefix, uint8_t *tg)
+{
+    const char *slice = NULL; int slice_len = 0;
+    if (mjson_find(buf, buflen, path_prefix,
+                   &slice, &slice_len) == MJSON_TOK_OBJECT)
+        load_team_game_slice(slice, slice_len, tg);
+    else
+        memset(tg, 0, sizeof(TeamGame));
 }
 
 /* ---------- scene emit/load ----------
@@ -3022,15 +3134,23 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
     HDR_U16("max_substitutes", max_substitutes);
 #undef HDR_U16
 
-    /* Zero scene area then decode each scene. */
+    /* Zero scene area then decode each scene. Slice the scenes
+     * array once so per-scene mjson_find lookups scan a single
+     * scene's slice instead of the whole file each iteration. */
     memset(hilFileBuffer + HIL_HEADER_SIZE, 0,
            (size_t)num_goals * HIL_SCENE_SIZE);
-    char scene_path[80];
-    for (uint16_t i = 0; i < num_goals; i++) {
-        snprintf(scene_path, sizeof(scene_path), "$.scenes[%u]", (unsigned)i);
-        load_scene((const char *)src, (int)src_size, scene_path,
-                   hilFileBuffer + HIL_HEADER_SIZE
-                                 + (uint32_t)i * HIL_SCENE_SIZE);
+
+    const char *scenes_arr = NULL;
+    int scenes_arr_len = 0;
+    if (mjson_find((const char *)src, (int)src_size, "$.scenes",
+                   &scenes_arr, &scenes_arr_len) == MJSON_TOK_ARRAY) {
+        char ipath[24];
+        for (uint16_t i = 0; i < num_goals; i++) {
+            snprintf(ipath, sizeof(ipath), "$[%u]", (unsigned)i);
+            load_scene(scenes_arr, scenes_arr_len, ipath,
+                       hilFileBuffer + HIL_HEADER_SIZE
+                                     + (uint32_t)i * HIL_SCENE_SIZE);
+        }
     }
 
     free(src);
