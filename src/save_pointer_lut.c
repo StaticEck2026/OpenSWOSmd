@@ -103,42 +103,6 @@ extern uint32_t  careerCupPickList;       /* 5-entry array via spill */
 extern uint32_t *diyCompetitionTablePtr;
 extern uint8_t   careerContests[];
 extern uint16_t  numSelectedTeams;
-extern uint8_t   seasonInformationsArray[];
-extern char      aFriendly[];   /* probe symbol for "valid .rodata range" check */
-
-/* seasonInformationsArray holds up to 20 season-summary records of 106
- * bytes each. Offsets 22/26/30 are 32-bit pointers into static
- * competition-name strings (primaryCompStringOffset family). Those
- * raw addresses change every SDL rebuild, so a save written by an
- * earlier build's binary points at addresses that no longer exist in
- * this one. Validate each pointer against the current build's
- * .rodata range and zero anything that falls outside — the display
- * site (statistics.c:1930) short-circuits on NULL.
- *
- * Heuristic: comp-name strings live in .rodata next to `aFriendly`
- * (Cygwin/MinGW puts them all within ~1MB). Any pointer farther than
- * 1MB from &aFriendly is treated as stale. Same-build current-session
- * writes (career_init.c:1050 / 1071 / 1087) stay valid; cross-build
- * leftovers get nulled. Amiga-range values still get translated by
- * the LUT call first. */
-#define SEASONINFO_ENTRY_SIZE 106u
-#define SEASONINFO_ENTRY_COUNT 20u
-#define SEASONINFO_STRPTR_VALID_WINDOW 0x00100000u
-static void rebuild_one_si_strptr(uint32_t *p)
-{
-    if (!p) return;
-    uint32_t val = *p;
-    if (val == 0u) return;
-    if (looks_like_amiga_address(val)) {
-        translate_one(p);
-        return;
-    }
-    uint32_t probe = (uint32_t)(uintptr_t)&aFriendly[0];
-    uint32_t diff  = (val > probe) ? (val - probe) : (probe - val);
-    if (diff > SEASONINFO_STRPTR_VALID_WINDOW) {
-        *p = 0u;
-    }
-}
 
 /*
  * _TranslateAmigaAddressesAfterLoad
@@ -198,15 +162,6 @@ void _TranslateAmigaAddressesAfterLoad(void)
     /* diyCompetitionTablePtr is `uint32_t **` but holds a single
      * pointer value — translate the value field. */
     translate_one((uint32_t *)&diyCompetitionTablePtr);
-
-    /* seasonInformationsArray STRPTR fields — see comment above
-     * rebuild_one_si_strptr for the heuristic and rationale. */
-    for (uint32_t s = 0; s < SEASONINFO_ENTRY_COUNT; s++) {
-        uint8_t *entry = seasonInformationsArray + (s * SEASONINFO_ENTRY_SIZE);
-        rebuild_one_si_strptr((uint32_t *)(entry + 22));
-        rebuild_one_si_strptr((uint32_t *)(entry + 26));
-        rebuild_one_si_strptr((uint32_t *)(entry + 30));
-    }
 
     /* Cup-record `nameSource` pointers inside each *Copy slot.
      * Each careerContests entry is { src_static, dest_copy, len }
