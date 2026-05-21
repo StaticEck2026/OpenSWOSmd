@@ -133,19 +133,29 @@ Conventions:
 
 ## Implementation phases
 
-1. **Foundation** — skeleton files, dispatcher wired into `file_io.c`,
-   schema doc, build flag. ← *we are here*
-2. **`.CAR` schema** — author write/read for each careerFileBuffer
-   sub-region in `src/save_format_json_career.c`. Round-trip test by
-   loading a legacy save, saving as JSON, loading JSON, comparing
-   in-memory state.
-3. **`.SEA / .PRE`** — re-use career sub-schema for the competition
-   block.
-4. **`.DIY`** — diyFileBufferCopy schema.
-5. **`.HIL`** — replay schema.
-6. **`.TAC`** — trivial.
-7. **Cut over** — flip default flag, delete legacy paths after a
+1. ✅ **Foundation** — skeleton files, dispatcher wired into `file_io.c`,
+   schema doc, build flag.
+2. ✅ **`.CAR` round-trip via opaque base64** — JSON envelope with
+   `schema_version`, `file_kind`, `num_selected_teams`, and the
+   careerFileBuffer payload base64-encoded as `opaque_data`. Builds
+   produce byte-perfect round-trips today. ← *we are here*
+3. **Promote `.CAR` fields to semantic JSON** — replace chunks of
+   `opaque_data` with named fields. Highest-priority chunk is
+   `seasonInformationsArray[20]` (its STRPTR fields are what triggered
+   this rewrite). After that: the `*Copy` competition slots,
+   `selTeamsPtr` team file records, finance state, career meta.
+4. **`.SEA / .PRE`** — re-use career sub-schema for the competition
+   block. Likely just `competitionFileBuffer` opaque + the same
+   competition-slot semantic promotion.
+5. **`.DIY`** — diyFileBufferCopy schema.
+6. **`.HIL`** — replay schema.
+7. **`.TAC`** — trivial — 11-position formation + name.
+8. **Cut over** — flip default flag, delete legacy paths after a
    release cycle.
+
+When the `opaque_data` blob shrinks to zero, the schema is complete.
+Until then every field stays round-trippable via the blob while we
+incrementally promote sub-regions to semantic.
 
 ## What this replaces
 
