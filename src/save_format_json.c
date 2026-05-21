@@ -2889,18 +2889,21 @@ int16_t SaveJson_WriteHighlights(uint8_t *filename)
     emit_team_game(json_out_emit, &out, "bottom_team",
                    (uint8_t *)&hdr->bottom_team);
 
-    {
-        const uint8_t *p = hdr->game_name;
-        size_t n = 0; while (n < sizeof(hdr->game_name) && p[n] != '\0') n++;
-        mjson_printf(json_out_emit, &out, ",\n  %Q:%.*Q",
-                     "game_name", (int)n, (const char *)p);
-    }
-    {
-        const uint8_t *p = hdr->game_round;
-        size_t n = 0; while (n < sizeof(hdr->game_round) && p[n] != '\0') n++;
-        mjson_printf(json_out_emit, &out, ",\n  %Q:%.*Q",
-                     "game_round", (int)n, (const char *)p);
-    }
+    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+    /* emit_str_at zeros post-NUL bytes in place — matches what the
+     * loader will round-trip back. Without this, the 100-byte slot
+     * keeps stale buffer bytes after the NUL terminator and verify
+     * reports them as mismatches (190 such bytes on a typical
+     * .HIL). */
+    emit_str_at(json_out_emit, &out, "game_name",
+                (uint8_t *)hilFileBuffer,
+                offsetof(HilFileHeader, game_name),
+                sizeof(hdr->game_name));
+    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+    emit_str_at(json_out_emit, &out, "game_round",
+                (uint8_t *)hilFileBuffer,
+                offsetof(HilFileHeader, game_round),
+                sizeof(hdr->game_round));
 
     /* Header u16s are host-native here (pre-swap-dance dispatch). */
     mjson_printf(json_out_emit, &out,
