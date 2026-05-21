@@ -103,6 +103,19 @@ phase) covers comp-name string pointers that the LUT doesn't index.
       16 player records of 14 fields each).
 - [x] Promote finance state (overdraftStreak, balances, weekly
       costs, etc.) via the address-based scalar table.
+- [x] Named blob region for remaining unmodeled byte ranges —
+      tmdFileBuffer, careerForeignMarketPlayers, editTeamsBuffer,
+      editTeamsSaveVarsArea, the comp contexts, teamSelectionKeyCache,
+      diy team-id lists, teamTacticsUSER A-F, the *Copy slot region.
+      Each gets a named entry under `blobs` with a base64 payload.
+      Future promotions replace each blob with a typed encoder.
+- [ ] Promote individual `*Copy` slot bodies (CompetitionCup /
+      CompetitionCup2 / CompetitionLeague variants) — currently
+      bundled in `blobs.comp_copy_region`.
+- [ ] Promote tmdFileBuffer (transfer market data) — needs
+      schema design.
+- [ ] Promote competition contexts (the slot state buffers).
+- [ ] Verify byte coverage and remove `opaque_data` safety net.
 - [ ] Promote `tmdFileBuffer` (transfer market data — large block
       at the very start of careerFileBuffer)
 - [ ] Promote misc career flags/state (currentSeasonShowing,
@@ -185,13 +198,12 @@ are:
 4. Wire both into `SaveJson_WriteCareer` / `SaveJson_LoadCareer`.
 5. Update this file's checklist.
 
-Last update: 2026-05-21. careerTeam, currentTeam, and the
-selTeamsPtr TeamFileEx array are now fully semantic via
-`offsetof()`-driven encoding. Remaining large blocks before
-`opaque_data` can be removed: tmdFileBuffer (54720 bytes — biggest
-chunk; needs schema design for transfer market state),
-careerForeignMarketPlayers (18144 bytes), diy/euroCups competition
-contexts, *Copy slot bodies (the nameSource pointers are promoted
-but each record's other bytes still ride in opaque_data),
-teamSelectionKeyCache, teamTacticsUSER A-F, editTeamsBuffer +
-editTeamsSaveVarsArea (the latter two are ~66 KB combined).
+Last update: 2026-05-21. Every byte of careerFileBuffer is now
+inside either a typed field or a named blob; opaque_data is
+technically redundant but still rides as a safety net. Next
+session pick-up: verify byte-coverage via a round-trip diff
+(load legacy → save JSON → load JSON → save legacy → diff bytes)
+and remove opaque_data. Then promote individual blob regions to
+typed encoders — best ROI: comp_copy_region (each *Copy gets a
+proper CompetitionCup/Cup2/League encoder using offsetof()) and
+tmdFileBuffer (transfer-market schema design).

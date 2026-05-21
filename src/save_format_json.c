@@ -1314,6 +1314,38 @@ static void load_scalar_table(const char *buf, int buflen,
 extern uint8_t careerTeam;       /* TeamFileEx at careerFileBuffer + 56190 */
 extern uint8_t currentTeam;      /* TeamFileEx at careerFileBuffer + 61610 */
 
+/* Large opaque region externs — emitted as named base64 sub-blobs
+ * so the JSON has navigable structure for each region instead of
+ * one big opaque_data field. Bodies stay byte-identical to legacy;
+ * future promotions replace each named blob with a typed encoder. */
+extern uint8_t tmdFileBuffer[];                     /* +2,     54720 B */
+extern uint8_t careerUnavailablePlayerLookupTable[];/* +55738, 80 B  */
+extern uint8_t careerUnavailablePlayerNames[];      /* +55818, 340 B */
+extern uint8_t diyLeagueSeasonStateTable[];         /* +59610, 2000 B */
+extern uint8_t competitionContext[];                /* +63340, 2900 B */
+extern uint8_t tertiaryCompetitionContext[];        /* +66240, 1092 B */
+extern uint8_t diyCompetitionContext[];             /* +67332, 1092 B */
+extern uint8_t euroCupsCompetitionContext[];        /* +68424, 2900 B */
+extern uint8_t teamSelectionKeyCache[];             /* +73292, ~1870 B */
+extern uint8_t careerForeignMarketPlayers[];        /* +75162, 18144 B */
+extern uint8_t diyTeamIdListType2[];                /* +93462, 148 B */
+extern uint8_t diyTeamIdListType0[];                /* +93610, 288 B */
+extern uint8_t diyTeamIdListType1[];                /* +93898, 2310 B */
+extern uint8_t teamTacticsUSERA[];                  /* +96220, 370 B */
+extern uint8_t teamTacticsUSERB[];                  /* +96590, 370 B */
+extern uint8_t teamTacticsUSERC[];                  /* +96960, 370 B */
+extern uint8_t teamTacticsUSERD[];                  /* +97330, 370 B */
+extern uint8_t teamTacticsUSERE[];                  /* +97700, 370 B */
+extern uint8_t teamTacticsUSERF[];                  /* +98070, 370 B */
+extern uint8_t editTeamsBuffer[];                   /* +99846, ~43.7 KB */
+extern uint8_t editTeamsSaveVarsArea[];             /* +143624, ~23.2 KB */
+
+/* *Copy slot region — one big contiguous block at +71452, 1832 B.
+ * Individual records resolvable via careerContests; we emit the
+ * whole region as one blob since the nameSource pointers (the only
+ * pointer-typed fields) are already promoted separately. */
+extern uint8_t euroCupCopy[];                       /* +71452 */
+
 /* Helpers for writing/reading fields at struct offsets. */
 static void emit_str_at(mjson_print_fn_t fn, void *fnd,
                         const char *key, const uint8_t *base,
@@ -1570,6 +1602,76 @@ static void load_team_file_ex(const char *buf, int buflen,
     (void)num;
 }
 
+/* ---------- named base64 blob regions ----------
+ *
+ * Mid-step between opaque_data and full semantic JSON. Each big
+ * sub-region of careerFileBuffer that we haven't promoted yet gets
+ * a named entry under "blobs" with a base64 payload of its bytes.
+ * On load, base64-decode each into the region's memory location.
+ * Promoted semantic fields apply AFTER blobs, so e.g.
+ * cup_record_name_sources still overrides the relevant 4-byte
+ * pointer slots inside the *Copy region's bytes.
+ *
+ * When every byte of careerFileBuffer is covered by either a typed
+ * field or a named blob, we can drop opaque_data entirely.
+ */
+
+typedef struct {
+    const char *name;
+    void       *addr;
+    uint32_t    size;
+} BlobDesc;
+
+static const BlobDesc s_career_blobs[] = {
+    { "tmd_file_buffer",                       tmdFileBuffer,                  54720 },
+    { "career_unavailable_player_lookup_table",careerUnavailablePlayerLookupTable, 80 },
+    { "career_unavailable_player_names",       careerUnavailablePlayerNames,    340 },
+    { "diy_league_season_state_table",         diyLeagueSeasonStateTable,      2000 },
+    { "competition_context",                   competitionContext,             2900 },
+    { "tertiary_competition_context",          tertiaryCompetitionContext,     1092 },
+    { "diy_competition_context",               diyCompetitionContext,          1092 },
+    { "euro_cups_competition_context",         euroCupsCompetitionContext,     2900 },
+    { "team_selection_key_cache",              teamSelectionKeyCache,          1870 },
+    { "career_foreign_market_players",         careerForeignMarketPlayers,    18144 },
+    { "diy_team_id_list_type_2",               diyTeamIdListType2,              148 },
+    { "diy_team_id_list_type_0",               diyTeamIdListType0,              288 },
+    { "diy_team_id_list_type_1",               diyTeamIdListType1,             2310 },
+    { "team_tactics_user_a",                   teamTacticsUSERA,                370 },
+    { "team_tactics_user_b",                   teamTacticsUSERB,                370 },
+    { "team_tactics_user_c",                   teamTacticsUSERC,                370 },
+    { "team_tactics_user_d",                   teamTacticsUSERD,                370 },
+    { "team_tactics_user_e",                   teamTacticsUSERE,                370 },
+    { "team_tactics_user_f",                   teamTacticsUSERF,                370 },
+    /* *Copy slot region: from euroCupCopy to oceaniaWorldCupQualificationCopy
+     * +0x24. Total 1832 bytes. */
+    { "comp_copy_region",                      euroCupCopy,                    1832 },
+    { "edit_teams_buffer",                     editTeamsBuffer,               43778 },
+    { "edit_teams_save_vars_area",             editTeamsSaveVarsArea,         23254 },
+    { NULL, NULL, 0 },
+};
+
+static void emit_named_blobs(mjson_print_fn_t fn, void *fnd)
+{
+    mjson_printf(fn, fnd, "%Q:{", "blobs");
+    int first = 1;
+    for (const BlobDesc *b = s_career_blobs; b->name; b++) {
+        if (!first) mjson_printf(fn, fnd, "%s", ",");
+        first = 0;
+        mjson_printf(fn, fnd, "%Q:%V", b->name, (int)b->size, (const char *)b->addr);
+    }
+    mjson_printf(fn, fnd, "%s", "}");
+}
+
+static void load_named_blobs(const char *buf, int buflen)
+{
+    char path[160];
+    for (const BlobDesc *b = s_career_blobs; b->name; b++) {
+        snprintf(path, sizeof(path), "$.blobs.%s", b->name);
+        mjson_get_base64(buf, buflen, path,
+                         (char *)b->addr, (int)b->size);
+    }
+}
+
 /* ---------- *Copy cup-record nameSource pointers ----------
  *
  * Each entry in the static careerContests table maps a template
@@ -1691,6 +1793,9 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     }
     mjson_printf(json_out_emit, &out, "%s", "]");
 
+    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+    emit_named_blobs(json_out_emit, &out);
+
     mjson_printf(json_out_emit, &out, "%s", "\n}\n");
 
     if (out.oom || !out.ptr) {
@@ -1763,6 +1868,12 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src, uint32_t src_
      * across rebuilds: even though the opaque blob has the original
      * raw pointer values, load_* overwrites them with current-build
      * addresses resolved from stable symbol names. */
+    /* Named blobs FIRST — they cover the same bytes the opaque blob
+     * does but split per region for navigability. Following loaders
+     * (semantic fields, pointer fields, team records) then override
+     * specific byte ranges with their semantically-resolved values. */
+    load_named_blobs((const char *)src, (int)src_size);
+
     load_season_informations((const char *)src, (int)src_size);
     load_career_pointers((const char *)src, (int)src_size);
     load_cup_record_name_sources((const char *)src, (int)src_size);
