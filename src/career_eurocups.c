@@ -315,7 +315,8 @@ void _DIY_CachePrimaryQualifiedTeamsGrid(void)
         /* ext.l d0 then divu.w #$12,d0: sign-extend to 32-bit then unsigned div by 18 */
         uint16_t slotIdx = (uint16_t)((uint32_t)(int32_t)posIdx / 18);
         slotIdx <<= 1;
-        uint16_t teamNum = *(uint16_t *)((uint8_t *)teamIdsTable + slotIdx);
+        /* leagueTeamIds is BE-packed per 4e5f378. */
+        uint16_t teamNum = BE_READ_U16((uint8_t *)teamIdsTable + slotIdx);
         *cachedIds++ = teamNum;
         TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
         copyTeamGridWords((uint8_t *)teamData, dst, 0x155);
@@ -338,7 +339,8 @@ void _DIY_CacheSecondaryQualifiedTeamsGrid(void)
         int8_t gridByte = (int8_t)*grid++;
         int16_t idx = gridByte;
         idx <<= 1;
-        uint16_t teamNum = *(uint16_t *)((uint8_t *)teamIdsTable + idx);
+        /* cupTeamIds (compRaw+0x24E) BE-packed — see copyTitleHolderGrid. */
+        uint16_t teamNum = BE_READ_U16((uint8_t *)teamIdsTable + idx);
         *cachedIds++ = teamNum;
         TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
         copyTeamGridWords((uint8_t *)teamData, dst, 0x155);
@@ -355,7 +357,8 @@ void _DIY_CacheTertiaryQualifiedTeamGrid(void)
     int16_t idx = gridByte;
     idx <<= 1;
     uint16_t *teamIdsTable = (uint16_t *)(compRaw + 0x24E);
-    uint16_t teamNum = *(uint16_t *)((uint8_t *)teamIdsTable + idx);
+    /* cupTeamIds (compRaw+0x24E) BE-packed — see copyTitleHolderGrid. */
+    uint16_t teamNum = BE_READ_U16((uint8_t *)teamIdsTable + idx);
     cachedTertiaryQualifiedTeamId = teamNum;
     TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
     copyTeamGridWords((uint8_t *)teamData, tertiaryQualifiedTeamGrid, 0x155);
@@ -374,7 +377,12 @@ static void copyTitleHolderGrid(uint16_t *titleHolderTeamId, uint8_t *titleHolde
     int16_t idx = gridByte;
     idx <<= 1;
     uint16_t *teamIdsTable = (uint16_t *)(compRaw + 0x24E);
-    uint16_t teamNum = *(uint16_t *)((uint8_t *)teamIdsTable + idx);
+    /* compRaw+0x24E is diyCompetitionStart.cupTeamIds — BE-packed
+     * `{country, ordinal}` byte pairs per the 4e5f378 convention.
+     * Read with BE_READ_U16 so titleHolderTeamId holds the packed
+     * value the rest of the code (qualifyTeamForCupWinnersCup /
+     * qualifyTeamsForUefaCup comparisons, _VerifyTeamLoaded) expects. */
+    uint16_t teamNum = BE_READ_U16((uint8_t *)teamIdsTable + idx);
     *titleHolderTeamId = teamNum;
     TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
     copyTeamGridWords((uint8_t *)teamData, titleHolderGrid, 0x155);
