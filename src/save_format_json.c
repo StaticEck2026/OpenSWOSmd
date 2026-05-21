@@ -680,6 +680,338 @@ static void load_career_pointers(const char *buf, int buflen)
     }
 }
 
+/* ---------- table-driven scalar/array fields ----------
+ *
+ * Most of careerFileBuffer is plain typed data — flags, counters,
+ * balances, identifiers. Rather than writing a `mjson_printf` line
+ * per field (hundreds of them), we describe each field with a
+ * struct entry and iterate at save/load time. Saves the JSON
+ * structure self-describing, keeps the code small, and adding a
+ * field is a one-line table extension.
+ *
+ * Field types:
+ *   FLD_U8 / FLD_S8 / FLD_U16 / FLD_S16 / FLD_U32 / FLD_S32  — typed
+ *     scalar at `offset`, emitted as a JSON number.
+ *   FLD_STR — char[`size`] NUL-terminated string at `offset`.
+ *   FLD_BYTES — `size` bytes at `offset`, emitted as a JSON array of
+ *     unsigned ints (small) so it stays human-readable.
+ *
+ * The table covers fields we've semantically modeled; everything
+ * else still rides along in opaque_data until we promote it.
+ */
+typedef enum {
+    FLD_END = 0,
+    FLD_U8, FLD_S8,
+    FLD_U16, FLD_S16,
+    FLD_U32, FLD_S32,
+    FLD_STR,
+    FLD_BYTES,
+} FieldType;
+
+typedef struct {
+    const char *name;
+    uint32_t    offset;     /* relative to &careerFileBuffer */
+    uint32_t    size;       /* for FLD_STR / FLD_BYTES; ignored for scalars */
+    FieldType   type;
+} FieldDesc;
+
+/* Career meta / flags / finance / market state — covers offsets
+ * 54722..56189 except the regions already promoted elsewhere
+ * (careerCupPickList[5] at 55086, comp-string offsets, etc.). */
+static const FieldDesc s_career_scalars[] = {
+    { "current_season_showing",          54722, 0, FLD_U16 },
+    { "staying_in_old_club",             54724, 0, FLD_U16 },
+    { "overdraft_streak",                54726, 0, FLD_U16 },
+    { "overdraft_warning_state",         54728, 0, FLD_U16 },
+    { "performance_warning_state",       54730, 0, FLD_U16 },
+    { "overdraft_warning_cooldown",      54732, 0, FLD_U16 },
+    { "performance_warning_cooldown",    54734, 0, FLD_U16 },
+    { "youre_sacked",                    54736, 0, FLD_U16 },
+    { "retired",                         54738, 0, FLD_U16 },
+    { "competition_slot_updated_flag",   54740, 0, FLD_U16 },
+    { "career_team_lost_match",          54742, 0, FLD_U16 },
+    { "club_business_active",            54744, 0, FLD_U16 },
+    { "new_balance",                     54746, 0, FLD_S32 },
+    { "old_balance",                     54750, 0, FLD_S32 },
+    { "player_purchases",                54754, 0, FLD_S32 },
+    { "player_sales",                    54758, 0, FLD_S32 },
+    { "general_running_costs",           54762, 0, FLD_S32 },
+    { "player_wages_bill",               54766, 0, FLD_S32 },
+    { "gate_receipts",                   54770, 0, FLD_S32 },
+    { "starting_balance",                54774, 0, FLD_S32 },
+    { "starting_balance_copy",           54778, 0, FLD_S32 },
+    { "competition_bonuses",             54782, 0, FLD_S32 },
+    { "sensisoft_plc_sponsorship",       54786, 0, FLD_S32 },
+    { "finance_totals_need_reset_flag",  54790, 0, FLD_U16 },
+    { "weekly_running_costs",            54796, 0, FLD_U32 },
+    { "weekly_player_wages",             54800, 0, FLD_U32 },
+    { "total_team_value",                54804, 0, FLD_S32 },
+    { "weekly_wage_by_player_index",     54808, 128, FLD_BYTES },
+    { "player_form_modifiers",           54936, 32, FLD_BYTES },
+    { "sensisoft_plc_sponsorship_factor",54968, 0, FLD_U16 },
+    { "additional_investments",          54970, 0, FLD_S32 },  /* 6 bytes — actually 2x u16/u32? Use 4B for now, rest opaque */
+    { "team_value_divisor",              54976, 0, FLD_U16 },
+    { "expected_league_rank_index",      54978, 0, FLD_U16 },
+    { "board_confidence_history",        54980, 8, FLD_BYTES }, /* 4 × u16 */
+    { "board_confidence_score",          54988, 0, FLD_U16 },
+    { "previous_board_confidence",       54990, 0, FLD_U16 },
+    { "play_win_cup_animation",          54992, 0, FLD_U16 },
+    { "minor_trophy_bonus_active",       54994, 0, FLD_U16 },
+    { "league_title_bonus_active",       54996, 0, FLD_U16 },
+    { "major_trophy_bonus_active",       54998, 0, FLD_U16 },
+    { "cup_bonus_1_active",              55000, 0, FLD_U16 },
+    { "cup_bonus_2_active",              55002, 0, FLD_U16 },
+    { "won_world_cup",                   55004, 0, FLD_U16 },
+    { "won_continental_cup",             55006, 0, FLD_U16 },
+    { "won_invitation_tournament",       55008, 0, FLD_U16 },
+    { "qualifying_stage_1_pending_flag0",55010, 0, FLD_U16 },
+    { "qualifying_stage_1_pending_flag1",55012, 0, FLD_U16 },
+    { "qualifying_stage_2_pending_flag0",55014, 0, FLD_U16 },
+    { "qualifying_stage_2_pending_flag1",55016, 0, FLD_U16 },
+    { "is_career",                       55018, 0, FLD_U16 },
+    { "career_match_simulated_flag",     55020, 0, FLD_U16 },
+    { "games_played",                    55022, 0, FLD_U16 },
+    { "num_wins",                        55024, 0, FLD_U16 },
+    { "num_drawn",                       55026, 0, FLD_U16 },
+    { "num_lost",                        55028, 0, FLD_U16 },
+    { "goals_scored",                    55030, 0, FLD_U16 },
+    { "goals_taken",                     55032, 0, FLD_U16 },
+    { "board_confidence_mods",           55034, 20, FLD_BYTES }, /* 10 × u16 — boardConfidenceMod0..9 */
+    { "board_confidence_value_0",        55042, 0, FLD_U16 }, /* overlaps board_confidence_mods — kept for symmetry */
+    { "board_confidence_value_1",        55044, 0, FLD_U16 },
+    { "contract_negotiation_active",     55058, 0, FLD_U16 },
+    { "wage_scaling_divisor",            55060, 0, FLD_U16 },
+    { "team_no_offer_accepted",          55062, 0, FLD_U16 },
+    { "team_funds_accepted",             55064, 0, FLD_S32 },
+    { "is_national_selector",            55068, 0, FLD_U16 },
+    { "some_team_flags",                 55070, 0, FLD_U16 },
+    { "last_nationality_call",           55072, 0, FLD_U16 },
+    { "national_team_nationality",       55074, 0, FLD_U8  },
+    { "national_team_file_id",           55075, 0, FLD_U8  },
+    { "same_national_call_flag",         55076, 0, FLD_U16 },
+    { "sacked_reputation_score",         55078, 0, FLD_U16 },
+    { "national_selector_reputation_points",55080,0,FLD_U16 },
+    { "national_team_file_code",         55082, 0, FLD_U16 },
+    { "season_review",                   55084, 0, FLD_U16 },
+    { "world_cup_host_team",             55106, 0, FLD_U16 },
+    { "world_cup_qualifying_team",       55108, 0, FLD_U16 },
+    { "euro_championship_qual_team",     55110, 0, FLD_U16 },
+    { "sel_team_number",                 55112, 0, FLD_U16 },
+    { "coach_or_player",                 55114, 0, FLD_U16 },
+    { "career_team_league",              55116, 0, FLD_U16 },
+    { "current_division_index",          55118, 0, FLD_U16 },
+    { "league_first_round_number",       55120, 0, FLD_U16 },
+    { "play_promoted_animation",         55122, 0, FLD_U16 },
+    { "play_relegated_animation",        55124, 0, FLD_U16 },
+    { "mr_or_ms",                        55126, 0, FLD_U16 },
+    { "manager_sex_buffer",              55128, 4,  FLD_STR },
+    { "manager_name_buffer",             55132, 9,  FLD_STR },
+    { "manager_surname_buffer",          55141, 13, FLD_STR },
+    { "pl_nationality",                  55154, 0, FLD_U16 },
+    { "win_cup_bonus_count",             55156, 0, FLD_U16 },
+    { "minor_trophy_bonus_count",        55158, 0, FLD_U16 },
+    { "major_trophy_bonus_count",        55160, 0, FLD_U16 },
+    { "career_reputation_points",        55162, 0, FLD_S16 },
+    { "removed_offer_players_from_selected_team_count",55164,0,FLD_U16 },
+    { "removed_offer_players_from_other_teams_count",  55166,0,FLD_U16 },
+    { "home_market_update_backlog",      55168, 0, FLD_U16 },
+    { "foreign_market_update_backlog",   55170, 0, FLD_U16 },
+    { "offer_expiry_iterations_remaining",55172,0,FLD_U16 },
+    { "num_foreign_market_players",      55174, 0, FLD_U16 },
+    { "num_home_market_players",         55176, 0, FLD_U16 },
+    { "num_offers",                      55178, 0, FLD_U16 },
+    { "career_seasons_completed",        55410, 0, FLD_U16 },
+    { "num_foreign_market_players_2",    55412, 0, FLD_U16 },
+    { "pending_foreign_player_count",    55414, 0, FLD_U16 },
+    { "season_transfer_quota",           55416, 0, FLD_U16 },
+    { "transfer_pool_slot_limit",        55418, 0, FLD_U16 },
+    { "offer_swap_slot_limit",           55420, 0, FLD_U16 },
+    { "transfer_pool_slots_used",        55422, 0, FLD_U16 },
+    { "offer_swap_slots_used",           55424, 0, FLD_U16 },
+    { "num_new_job_offers",              55426, 0, FLD_U16 },
+    { "num_job_offers",                  55558, 0, FLD_U16 },
+    { "time_to_negotiate",               55690, 0, FLD_U16 },
+    { "num_players_on_transfer_market",  55692, 0, FLD_U16 },
+    { "last_offer_primary_player_ordinal",55704,0,FLD_U16 },
+    { "last_offer_extra_players_wanted", 55706, 0, FLD_U16 },
+    { "last_offer_swap_player_ordinal",  55708, 0, FLD_U16 },
+    { "last_offer_extra_player_ordinal", 55710, 0, FLD_U16 },
+    { "offer_negotiation_attempt_count", 55712, 0, FLD_U16 },
+    { "transfer_market_rand_offset_0",   55714, 0, FLD_U16 },
+    { "transfer_market_rand_offset_1",   55716, 0, FLD_U16 },
+    { "transfer_market_rand_offset_2",   55718, 0, FLD_U16 },
+    { "transfer_market_phase",           55720, 0, FLD_U16 },
+    { "career_num_players",              57482, 0, FLD_U16 },
+    { "sel_team_selected_player_position",57484,0, FLD_U16 },
+    { "last_financial_week_index",       59608, 0, FLD_U16 },
+    { "num_players",                     62934, 0, FLD_U16 },
+    { "current_team_number",             62936, 0, FLD_U16 },
+    { "current_team_selected_player_position",62938,0,FLD_U16 },
+    { "training_match_saved_player_pos", 62940, 0, FLD_U16 },
+    { "last_match_saved_player_pos",     63008, 0, FLD_U16 },
+    { "last_match_saved_coach_or_player",63010, 0, FLD_U16 },
+    { "current_tactics",                 63076, 0, FLD_U8  },
+    { "last_match_saved_team_controls",  63077, 0, FLD_U8  },
+    { "season_finished",                 63240, 0, FLD_U16 },
+    { "career_finished",                 63242, 0, FLD_U16 },
+    { "euro_cup_slot_index",             63264, 0, FLD_U16 },
+    { "season_number_of_squads",         63270, 0, FLD_U16 },
+    { "team_selection_key_cache_index",  73284, 0, FLD_U16 },
+    { "team_selection_key_cache_offset", 73286, 0, FLD_U16 },
+    { "team_selection_key_cache_count",  73288, 0, FLD_U16 },
+    { "career_slot_processing_in_progress",73290,0,FLD_U16 },
+    { "team_selection_key_cache_end",    93306, 0, FLD_U16 },
+    { "competition_over",                93310, 0, FLD_U16 },
+    { "diy_preset_name_of_competition",  93312, 36, FLD_STR },
+    { "major_trophy_bonus_value",        93356, 0, FLD_U16 },
+    { "num_diy_teams",                   93358, 0, FLD_U16 },
+    { "primary_comp_winner_team",        93366, 0, FLD_U16 },
+    { "primary_comp_squad_view_param",   93368, 0, FLD_U16 },
+    { "primary_comp_slot_state_a",       93370, 0, FLD_U16 },
+    { "primary_comp_slot_state_b",       93372, 0, FLD_U16 },
+    { "primary_comp_slot_state_c",       93374, 0, FLD_U16 },
+    { "diy_team_min_division_index",     93392, 0, FLD_U16 },
+    { "diy_team_max_division_offset",    93394, 0, FLD_U16 },
+    { "league_promotion_count",          93396, 0, FLD_U16 },
+    { "league_relegation_count",         93398, 0, FLD_U16 },
+    { "league_warnings_enabled",         93404, 0, FLD_U16 },
+    { "view_random_phase",               96208, 0, FLD_U8  },
+    { "season_playing",                  96209, 0, FLD_U8  },
+    { "in_friendly_menu",                96210, 0, FLD_U16 },
+    { "is_national_team",                96212, 0, FLD_U16 },
+    { "game_type",                       96214, 0, FLD_U16 },
+    { "contest_started",                 96216, 0, FLD_U16 },
+    { "career_loaded_flag",              96218, 0, FLD_U16 },
+    { "game_length",                     98440, 0, FLD_U16 },
+    { "auto_replays",                    98442, 0, FLD_U16 },
+    { "menu_music",                      98444, 0, FLD_U16 },
+    { "auto_save_highlights",            98446, 0, FLD_U16 },
+    { "all_player_teams_equal",          98448, 0, FLD_U16 },
+    { "pitch_type",                      98450, 0, FLD_U16 },
+    { "seed_2",                          98452, 0, FLD_U8  },
+    { "rand_xor_index_2",                98453, 0, FLD_U8  },
+    { "rand_xor_key_2",                  98454, 0, FLD_U8  },
+    { "new_random_seed_copy",            98455, 0, FLD_U8  },
+    { "random_seed",                     98456, 0, FLD_U16 },
+    { "save_file_version",               98458, 0, FLD_U16 },
+    { "save_file_amiga_type",            98472, 0, FLD_U32 },
+    { "num_selected_teams_inner",        98476, 0, FLD_U16 },
+    { NULL, 0, 0, FLD_END },
+};
+
+static void emit_scalar_table(mjson_print_fn_t fn, void *fnd,
+                              const char *section_key,
+                              const FieldDesc *table)
+{
+    mjson_printf(fn, fnd, "%Q:{", section_key);
+    int first = 1;
+    for (const FieldDesc *f = table; f->type != FLD_END; f++) {
+        if (!first) mjson_printf(fn, fnd, "%s", ",");
+        first = 0;
+        const uint8_t *p = (&careerFileBuffer) + f->offset;
+        switch (f->type) {
+        case FLD_U8:
+            mjson_printf(fn, fnd, "%Q:%u", f->name, (unsigned)*p);
+            break;
+        case FLD_S8:
+            mjson_printf(fn, fnd, "%Q:%d", f->name, (int)*(int8_t *)p);
+            break;
+        case FLD_U16:
+            mjson_printf(fn, fnd, "%Q:%u", f->name, (unsigned)*(uint16_t *)p);
+            break;
+        case FLD_S16:
+            mjson_printf(fn, fnd, "%Q:%d", f->name, (int)*(int16_t *)p);
+            break;
+        case FLD_U32:
+            mjson_printf(fn, fnd, "%Q:%lu", f->name, (long)(uint32_t)*(uint32_t *)p);
+            break;
+        case FLD_S32:
+            mjson_printf(fn, fnd, "%Q:%ld", f->name, (long)*(int32_t *)p);
+            break;
+        case FLD_STR: {
+            uint32_t n = 0;
+            while (n < f->size && p[n] != '\0') n++;
+            mjson_printf(fn, fnd, "%Q:%.*Q", f->name, (int)n, (const char *)p);
+            break;
+        }
+        case FLD_BYTES:
+            mjson_printf(fn, fnd, "%Q:[", f->name);
+            for (uint32_t i = 0; i < f->size; i++) {
+                if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+                mjson_printf(fn, fnd, "%u", (unsigned)p[i]);
+            }
+            mjson_printf(fn, fnd, "%s", "]");
+            break;
+        default:
+            break;
+        }
+    }
+    mjson_printf(fn, fnd, "%s", "}");
+}
+
+static void load_scalar_table(const char *buf, int buflen,
+                              const char *section_key,
+                              const FieldDesc *table)
+{
+    char path[160];
+    char tmp[64];
+    double num = 0.0;
+
+    for (const FieldDesc *f = table; f->type != FLD_END; f++) {
+        snprintf(path, sizeof(path), "$.%s.%s", section_key, f->name);
+        uint8_t *p = (&careerFileBuffer) + f->offset;
+        switch (f->type) {
+        case FLD_U8: case FLD_S8:
+            if (mjson_get_number(buf, buflen, path, &num) > 0)
+                *p = (uint8_t)(int)num;
+            break;
+        case FLD_U16: case FLD_S16:
+            if (mjson_get_number(buf, buflen, path, &num) > 0)
+                *(uint16_t *)p = (uint16_t)(int)num;
+            break;
+        case FLD_U32: case FLD_S32:
+            if (mjson_get_number(buf, buflen, path, &num) > 0)
+                *(uint32_t *)p = (uint32_t)(int32_t)num;
+            break;
+        case FLD_STR:
+            memset(p, 0, f->size);
+            if (mjson_get_string(buf, buflen, path, tmp, sizeof(tmp)) > 0) {
+                uint32_t n = (uint32_t)strlen(tmp);
+                if (n >= f->size) n = f->size - 1;
+                memcpy(p, tmp, n);
+            }
+            break;
+        case FLD_BYTES: {
+            /* Iterate the JSON array via mjson_next when available. */
+#if MJSON_ENABLE_NEXT
+            const char *arr = NULL;
+            int arr_len = 0;
+            if (mjson_find(buf, buflen, path, &arr, &arr_len) == MJSON_TOK_ARRAY) {
+                int koff, klen, voff, vlen, vt;
+                uint32_t i = 0;
+                int off = 0;
+                while (i < f->size &&
+                       (off = mjson_next(arr, arr_len, off,
+                                         &koff, &klen, &voff, &vlen, &vt)) != 0) {
+                    if (vt == MJSON_TOK_NUMBER) {
+                        char nbuf[32];
+                        int n = vlen < (int)sizeof(nbuf) - 1 ? vlen : (int)sizeof(nbuf) - 1;
+                        memcpy(nbuf, arr + voff, (size_t)n);
+                        nbuf[n] = '\0';
+                        p[i] = (uint8_t)atoi(nbuf);
+                    }
+                    i++;
+                }
+            }
+#endif
+            break;
+        }
+        default:
+            break;
+        }
+    }
+}
+
 /* ---------- *Copy cup-record nameSource pointers ----------
  *
  * Each entry in the static careerContests table maps a template
@@ -782,6 +1114,8 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     emit_career_pointers(json_out_emit, &out);
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
     emit_cup_record_name_sources(json_out_emit, &out);
+    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+    emit_scalar_table(json_out_emit, &out, "career_scalars", s_career_scalars);
 
     mjson_printf(json_out_emit, &out, "%s", "\n}\n");
 
@@ -858,6 +1192,7 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src, uint32_t src_
     load_season_informations((const char *)src, (int)src_size);
     load_career_pointers((const char *)src, (int)src_size);
     load_cup_record_name_sources((const char *)src, (int)src_size);
+    load_scalar_table((const char *)src, (int)src_size, "career_scalars", s_career_scalars);
 
     return 0;
 }
