@@ -43,6 +43,12 @@ extern volatile uint16_t seasonUpdateInProgress;
  * (normal fire-only, navigation, etc.) is unaffected. */
 #define SEASON_UPDATE_MENU_HOLD_FRAMES 50
 static uint16_t s_seasonUpdateHoldCounter;
+
+/* SDL-only: latched once SPACE / second controller button is pressed
+ * during a season update, so the user can press once and let go — the
+ * skip persists across every remaining menu in the chain. Auto-clears
+ * when seasonUpdateInProgress drops back to 0. */
+static uint16_t s_seasonSkipLatched;
 extern uint16_t menuCursorFrame;
 extern uint16_t menuTextBlinkCounter;
 extern uint16_t controlMask;
@@ -1448,6 +1454,13 @@ void _MenuProc(void)
     extern void Platform_CheckQuitRequest(void);
     Platform_CheckQuitRequest();
 
+    /* Drop the season-end skip latch the moment the chain ends, so the
+     * next chain (e.g. start of the next season-end review) gets the
+     * full per-screen dwell unless the user presses SPACE / button 2
+     * again. */
+    if (seasonUpdateInProgress == 0)
+        s_seasonSkipLatched = 0;
+
     _ReadTimerDelta();
 
     if (magicValue != 0x12345678) {
@@ -1529,10 +1542,14 @@ void _MenuProc(void)
          * flashes by in milliseconds — see Amiga visual reference.
          *
          * SDL-only: pauseSkipRequested (SPACE key / second controller
-         * button) drains the hold counter instantly so users can fast-
-         * forward through a long season-end menu chain without waiting
-         * a full second per result screen. */
-        if (pauseSkipRequested) {
+         * button) latches s_seasonSkipLatched, draining the hold counter
+         * for THIS menu AND every remaining menu in the chain. The latch
+         * clears the next time seasonUpdateInProgress drops to 0 (see
+         * top of MenuProc), so a single press skips the whole sequence
+         * without the user having to hold the button. */
+        if (pauseSkipRequested)
+            s_seasonSkipLatched = 1;
+        if (s_seasonSkipLatched) {
             s_seasonUpdateHoldCounter = SEASON_UPDATE_MENU_HOLD_FRAMES;
         } else if (s_seasonUpdateHoldCounter < SEASON_UPDATE_MENU_HOLD_FRAMES) {
             s_seasonUpdateHoldCounter++;
