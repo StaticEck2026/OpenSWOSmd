@@ -2138,6 +2138,9 @@ static void restore_comp_copy_pointers_from_template(void)
             uint32_t src_val;
             memcpy(&src_val, src + off, sizeof(src_val));
             if (src_val == 0u) continue;
+            if (entry_idx == 0)
+                fprintf(stderr, "[restore-tmpl-dump]   entry0 +%2u = 0x%08X readable=%d\n",
+                        (unsigned)off, (unsigned)src_val, looks_readable(src_val));
             if (looks_readable(src_val)) {
                 memcpy(dest + off, &src_val, sizeof(src_val));
                 copies++;
