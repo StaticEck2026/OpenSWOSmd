@@ -2252,6 +2252,23 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
 
     apply_semantic_load((const char *)src, (int)src_size);
 
+    /* Repopulate diyCompetitionStart (the runtime working struct
+     * outside the careerFileBuffer overlay) from the loaded primary
+     * slot's bytes — mirrors step 2 of the legacy
+     * _RebuildPointersAfterLoad path. Without this, the upcoming-
+     * match list shows fixtures generated against whatever
+     * competition the previous in-memory state held — the tester saw
+     * a national-team World Cup season's fixture list change from
+     * JAMAICA / COLOMBIA / CONGO etc. to ANGOLA / LAOS / NEW ZEALAND
+     * after a save→quit→reload, because the league fixture order/
+     * times live in diyCompetitionStart, not in the saved overlay
+     * slot. The blob load puts the bytes in &competitionFileBuffer;
+     * this step distributes them into the runtime struct the menu
+     * draws from. */
+    extern uint8_t competitionFileBuffer;
+    extern void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
+    _Career_LoadCompetitionSlotStateFromBuffer(&competitionFileBuffer);
+
     free(src);
     return 0;
 }
