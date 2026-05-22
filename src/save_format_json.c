@@ -1911,13 +1911,19 @@ static const BlobDesc s_career_blobs[] = {
      * lands. */
     { "career_team_reserves",                  (uint8_t *)&careerTeam  + 684,  608 },
     { "current_team_reserves",                 (uint8_t *)&currentTeam + 684,  608 },
-    /* Padding/unnamed bytes between primaryCompStringOffset
-     * (+93348..+93351) and diyTeamIdListType2 (+93462). 5 gaps
-     * totalling 86 bytes between named scalars. Easiest cover is
-     * one wrapper blob over the whole region (110 B) — the
-     * scalar table's named fields override their bytes after the
-     * blob runs in apply_semantic_load. */
-    { "primary_comp_block_padding",            (uint8_t *)&careerFileBuffer + 93352, 110 },
+    /* competitionFileBuffer's first 154 bytes (offset 93308..93461 of
+     * careerFileBuffer). This region holds the primary-slot type
+     * indicator at offset 0 (uint16: 0=league, 1=cup, 2+=tournament),
+     * plus the runtime DIY competition header that _CareerGameListCommon
+     * reads to pick the LEAGUE/CUP/DEFAULT draw branch. Without this
+     * coverage the slot-type byte loads as 0 from memset and World Cup
+     * fixtures display as a league (no round designation, see
+     * 6b6921c [round-dbg] dump).
+     *
+     * Bytes 93352..93461 (110 of these) overlap with named scalars
+     * (primaryCompStringOffset etc.) that re-apply after the blob in
+     * apply_semantic_load — that ordering is preserved. */
+    { "primary_comp_block_padding",            (uint8_t *)&careerFileBuffer + 93308, 154 },
     { "career_unavailable_player_lookup_table",careerUnavailablePlayerLookupTable, 80 },
     { "career_unavailable_player_names",       careerUnavailablePlayerNames,    340 },
     { "diy_league_season_state_table",         diyLeagueSeasonStateTable,      2000 },
