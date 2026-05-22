@@ -6497,6 +6497,13 @@ pastTeamLoad:
     uint16_t d5; /* color/stringFlags value */
     uint8_t *namePtr; /* competition name pointer */
 
+    fprintf(stderr, "[round-dbg] d0=%u a6=%p a6[0..9]="
+                    "%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X "
+                    "slotType=%u compInfo=%p\n",
+            (unsigned)d0, (void *)a6,
+            a6[0], a6[1], a6[2], a6[3], a6[4], a6[5], a6[6], a6[7], a6[8], a6[9],
+            (unsigned)slotType, (void *)compInfo);
+
     switch (slotType) {
     case 0: /* league */
         namePtr = (uint8_t *)divStringTable;
@@ -6536,6 +6543,10 @@ pastTeamLoad:
         uint8_t *a3slot = careerCompetitionSlotPtrTable[slotType];
         uint16_t slotVal = *(uint16_t *)a3slot;
 
+        fprintf(stderr, "[round-dbg]   a3slot=%p slotVal=%u branch=%s\n",
+                (void *)a3slot, (unsigned)slotVal,
+                slotVal == 0 ? "LEAGUE" : (slotVal == 1 ? "CUP" : "DEFAULT"));
+
         if (slotVal == 0) {
             /* --- League-style header --- */
             /* Height check */
@@ -6564,6 +6575,11 @@ pastTeamLoad:
             a5->fg = (uint32_t)namePtr;
             a5->isInvisible = 0;
             a5++; /* next entry */
+
+            fprintf(stderr, "[round-dbg]   LEAGUE: namePtr=%p \"%.30s\" "
+                            "(second line invisible → no round suffix)\n",
+                    (void *)namePtr,
+                    namePtr ? (const char *)namePtr : "(null)");
 
             /* Second header line — invisible */
             a5->y = d2 + 8;
@@ -6610,6 +6626,10 @@ pastTeamLoad:
                 /* Replay — use rndStringTable instead */
                 roundStr = (uint8_t *)rndStringTable[roundIdx];
             }
+            fprintf(stderr, "[round-dbg]   CUP path: roundIdx=%d a6[8]=0x%02X "
+                            "roundStr=%p \"%.30s\"\n",
+                    (int)roundIdx, a6[8], (void *)roundStr,
+                    roundStr ? (const char *)roundStr : "(null)");
 
             /* Copy round string into entry's string buffer */
             uint8_t *dst = (uint8_t *)a5->fg;
