@@ -235,20 +235,51 @@ static int looks_pool(uint32_t val)
 }
 
 /* Heuristic readability check for `.rodata` string pointers we
- * encounter at save time. We use the address of any known LUT entry
- * (`g_amiga_addr_map[0].current_addr`) as a probe and accept pointers
- * within ±16 MB of it — that comfortably covers .text + .rodata on
- * MinGW/Cygwin/Linux without risk of touching unmapped memory.
+ * encounter at save / template-copy time. Walks g_amiga_addr_map once
+ * to find the actual min/max symbol addresses, then accepts anything
+ * inside that range with a small (256 KB) padding for .rodata strings
+ * that aren't in the LUT directly but live next to symbols that are.
  *
- * Returns 1 if `val` looks like a valid in-process address, 0 if it
- * looks stale / unmapped (older build's address). */
+ * Earlier this used a fixed ±16 MB window around g_amiga_addr_map[0].
+ * On Linux at base 0x56600000 that worked — small-integer 4-byte
+ * slices (struct score data, grid bytes, etc.) sat 1.4 GB away from
+ * the probe, so diff > 16 MB and they were correctly rejected. On
+ * MinGW Windows at base ~0x01000000 those same slices fell INSIDE the
+ * ±16 MB window and were treated as pointers, so the
+ * restore_comp_copy_pointers_from_template byte-stride scan stomped
+ * cupWinnersCup.unk1 (the team-grid bytes) with template defaults
+ * — corrupting season-advance.
+ *
+ * The actual binary footprint is at most ~3 MB; bounding by the
+ * actual address-map extents keeps Linux behaviour and fixes Windows. */
+static uint32_t s_addr_lo, s_addr_hi;
+static int s_addr_bounds_inited;
+
+static void looks_readable_init(void)
+{
+    if (s_addr_bounds_inited) return;
+    if (g_amiga_addr_map_count == 0) { s_addr_bounds_inited = 1; return; }
+    uint32_t lo = (uint32_t)(uintptr_t)g_amiga_addr_map[0].current_addr;
+    uint32_t hi = lo;
+    for (size_t i = 1; i < g_amiga_addr_map_count; i++) {
+        uint32_t a = (uint32_t)(uintptr_t)g_amiga_addr_map[i].current_addr;
+        if (a < lo) lo = a;
+        if (a > hi) hi = a;
+    }
+    s_addr_lo = lo;
+    s_addr_hi = hi;
+    s_addr_bounds_inited = 1;
+}
+
 static int looks_readable(uint32_t val)
 {
     if (val == 0u || val == 0xFFFFFFFFu) return 0;
-    if (g_amiga_addr_map_count == 0) return 0;
-    uint32_t probe = (uint32_t)(uintptr_t)g_amiga_addr_map[0].current_addr;
-    uint32_t diff  = (val > probe) ? (val - probe) : (probe - val);
-    return diff < 0x01000000u; /* ±16 MB */
+    looks_readable_init();
+    if (s_addr_lo == 0u && s_addr_hi == 0u) return 0;
+    const uint32_t pad = 0x40000u;  /* 256 KB */
+    uint32_t lo = (s_addr_lo > pad) ? (s_addr_lo - pad) : 0u;
+    uint32_t hi = s_addr_hi + pad;
+    return val >= lo && val <= hi;
 }
 
 /* ---------- format constants ---------- */
