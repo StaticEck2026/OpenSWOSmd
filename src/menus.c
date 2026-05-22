@@ -6286,14 +6286,26 @@ void _SelectAndShowSquadToView_Direct(uint16_t rowMode)
  * _StatsViewSquads  (SWOS2.s line 49177)
  *
  * Opens squad view from stats menu using DIY teams buffer.
- * ================================================================ */
+ *
+ * diyTeamsBufferPtr points into diyCompetitionStart where team IDs
+ * are stored as Amiga BE byte pairs ([country, ordinal]) — same
+ * encoding as the other cup/league team lists.
+ * _SelectAndShowSquadToView's downstream _VerifyTeamLoaded expects
+ * a host-native (country<<8)|ord value, so we BE-decode each entry
+ * into a stack buffer first. The other _ChooseTeamForEditTactics
+ * caller (edit_tactics.c:3165) already does this via PACK_BE_U16;
+ * this is the same conversion, just applied to a different source. */
 __attribute__((used, externally_visible))
 void _StatsViewSquads(void)
 {
-    uint16_t *teams = (uint16_t *)diyTeamsBufferPtr;
+    uint8_t *src = (uint8_t *)(uintptr_t)diyTeamsBufferPtr;
     uint16_t numTeams = diyNumberOfTeams;
     uint16_t rowMode = (uint16_t)diyCompetitionStart.base.substitutesCount;
-    _SelectAndShowSquadToView(teams, numTeams, rowMode);
+    uint16_t decoded[64];
+    if (numTeams > 64) numTeams = 64;
+    for (uint16_t i = 0; i < numTeams; i++)
+        decoded[i] = BE_READ_U16(src + (uint32_t)i * 2);
+    _SelectAndShowSquadToView(decoded, numTeams, rowMode);
 }
 
 /* ================================================================
