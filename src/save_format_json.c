@@ -2355,14 +2355,15 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
      * (a single-byte stub aliased onto careerFileBufferBuf), so
      * passing &careerFileBuffer to memset/mjson_get_base64 makes
      * fortify_source on Linux glibc see a 1-byte destination and
-     * __chk_fail on the `want > 1` write. Cast through uintptr_t to
-     * strip the type info — the actual backing buffer is 256 KB. */
-    void *cfb = (void *)(uintptr_t)&careerFileBuffer;
+     * __chk_fail on the `want > 1` write. Use the real 256 KB backing
+     * buffer directly — same memory, but the compiler sees it as
+     * properly sized so the fortify check passes. */
+    extern uint8_t careerFileBufferBuf[];
     int legacy_got = mjson_get_base64((const char *)src, (int)src_size,
                                       "$.opaque_data",
-                                      (char *)cfb, (int)want);
+                                      (char *)careerFileBufferBuf, (int)want);
     if (legacy_got <= 0) {
-        memset(cfb, 0, want);
+        memset(careerFileBufferBuf, 0, want);
     }
 
     apply_semantic_load((const char *)src, (int)src_size);
