@@ -433,6 +433,7 @@ static int emit_ptr_field_ref(mjson_print_fn_t fn, void *fnd,
     return emit_ptr_field(fn, fnd, key, *p);
 }
 
+
 /* Heuristic for sentinel pointer values used in competition tables:
  * `(CompetitionCup *)-1`, `-2`, `0xFC`, etc. These aren't real
  * addresses — they're flags meaning "end of list" / "skip" / etc.,
@@ -1990,165 +1991,27 @@ static void load_named_blobs(const char *buf, int buflen)
 
 extern uint8_t careerContests[];
 
-static void emit_cup_record_name_sources(mjson_print_fn_t fn, void *fnd)
-{
-    mjson_printf(fn, fnd, "%Q:{", "cup_record_name_sources");
-    uint8_t *tbl = careerContests;
-    int first = 1;
-    for (;;) {
-        uint32_t srcAddr = *(uint32_t *)tbl;
-        if (srcAddr == 0xFFFFFFFFu)
-            break;
-        uint8_t *dest = *(uint8_t **)(tbl + 4);
-        int8_t  nameOffset = (int8_t)dest[5];
-        if (nameOffset != 0) {
-            /* Look up the dest's symbol name so the JSON key is
-             * self-describing. */
-            uint32_t off = 0;
-            const AmigaAddrLutEntry *e =
-                sym_from_ptr((uint32_t)(uintptr_t)dest, &off);
-            const char *key = e ? e->name : "unknown";
-            if (!first) mjson_printf(fn, fnd, "%s", ",");
-            first = 0;
-            emit_ptr_field_ref(fn, fnd, key,
-                               (uint32_t *)(dest + 5 + nameOffset));
-        }
-        tbl += 10;
-    }
-    mjson_printf(fn, fnd, "%s", "}");
-}
-
-static void load_cup_record_name_sources(const char *buf, int buflen)
-{
-    /* Slice the cup_record_name_sources object once — each
-     * subsequent per-record lookup scans the small slice. */
-    const char *crns = NULL; int crns_len = 0;
-    if (mjson_find(buf, buflen, "$.cup_record_name_sources",
-                   &crns, &crns_len) != MJSON_TOK_OBJECT)
-        return;
-
-    char path[80];
-    uint8_t *tbl = careerContests;
-    for (;;) {
-        uint32_t srcAddr = *(uint32_t *)tbl;
-        if (srcAddr == 0xFFFFFFFFu)
-            break;
-        uint8_t *dest = *(uint8_t **)(tbl + 4);
-        int8_t  nameOffset = (int8_t)dest[5];
-        if (nameOffset != 0) {
-            uint32_t off = 0;
-            const AmigaAddrLutEntry *e =
-                sym_from_ptr((uint32_t)(uintptr_t)dest, &off);
-            if (e) {
-                snprintf(path, sizeof(path), "$.%s", e->name);
-                uint32_t val = 0;
-                load_ptr_field(crns, crns_len, path, &val);
-                *(uint32_t *)(dest + 5 + nameOffset) = val;
-            }
-        }
-        tbl += 10;
-    }
-}
-
-/* ---------- comp_copy_region pointer fixups ----------
+/* ---------- *Copy struct text[2] pointers ----------
  *
- * The comp_copy_region blob (euroCupCopy..oceaniaWorldCupQualificationCopy,
- * 1832 bytes) is loaded as a raw base64 byte stream so every byte of
- * each *Copy struct round-trips. The catch: each *Copy carries embedded
- * string-table pointers (e.g. euroCupCopy at +38/+42 → aEuropeanChampi_1
- * and aEuropeanCup) which the raw-byte loader leaves at the saving
- * binary's addresses. On a different binary those pointers point to
- * unrelated memory and the game crashes when it dereferences them.
+ * Each *Copy competition struct (euroCupCopy, cupWinnersCupCopy, …
+ * 34 of them in careerContests) has a `text[2]` pointer pair living
+ * at offset 5 + src[5] within the struct. text[0] / text[1] point
+ * into .rodata (`aEuropeanChampi_1`, `aEuropeanCup`, etc.) and are
+ * baked in at link time when the static template (e.g. `euroCup`) is
+ * initialised. The runtime *Copy is created by memcpy-ing the
+ * template; nothing ever modifies text[0]/text[1] after that.
  *
- * cup_record_name_sources already saves the FIRST pointer of each *Copy's
- * string table (the `nameSource` at +5+strTableOff+0). But the second
- * pointer (+5+strTableOff+4 — used by the game's contest-menu draw path)
- * was being left at its stale on-disk value, which is exactly the
- * START.CAR crash: euroCupCopy+42 = 0x00583654 (the tester's binary's
- * `aEuropeanCup` address, invalid on the loader's binary).
+ * So there's nothing to save: the bytes are pure template state.
+ * On load we just copy text[0..1] from each src template into its
+ * dest *Copy, overwriting whatever stale pointer bytes the raw-byte
+ * blob load left behind. The struct's own byte-5 field tells us the
+ * exact offset — no scan, no heuristic, no JSON encoding needed.
  *
- * General fix: scan the entire comp_copy_region at save time for any
- * 4-byte word that resolves to a symbol in g_amiga_addr_map, and emit
- * a fixup `{off, sym}` for it. On load, after the blob is decoded,
- * re-resolve each sym in the loader's binary and write the result back
- * at the recorded offset. Subsumes cup_record_name_sources but we keep
- * that for backwards-compat with saves written before this commit.
- */
-#define COMP_COPY_REGION_SIZE 1832u
-
-static void emit_comp_copy_pointer_fixups(mjson_print_fn_t fn, void *fnd)
-{
-    mjson_printf(fn, fnd, "%Q:[", "comp_copy_pointer_fixups");
-    int first = 1;
-    const uint8_t *base = (const uint8_t *)euroCupCopy;
-    for (uint32_t i = 0; i + 4 <= COMP_COPY_REGION_SIZE; i += 4) {
-        uint32_t val;
-        memcpy(&val, base + i, sizeof(val));
-        if (val == 0u) continue;
-        uint32_t off = 0;
-        const AmigaAddrLutEntry *e = sym_from_ptr(val, &off);
-        if (!e) continue;
-        if (!first) mjson_printf(fn, fnd, "%s", ",");
-        first = 0;
-        if (off == 0)
-            mjson_printf(fn, fnd, "{%Q:%u,%Q:%Q}",
-                         "at", (unsigned)i, "sym", e->name);
-        else
-            mjson_printf(fn, fnd, "{%Q:%u,%Q:%Q,%Q:%u}",
-                         "at", (unsigned)i, "sym", e->name,
-                         "soff", (unsigned)off);
-    }
-    mjson_printf(fn, fnd, "%s", "]");
-}
-
-static void load_comp_copy_pointer_fixups(const char *buf, int buflen)
-{
-    const char *arr = NULL; int arr_len = 0;
-    if (mjson_find(buf, buflen, "$.comp_copy_pointer_fixups",
-                   &arr, &arr_len) != MJSON_TOK_ARRAY)
-        return;
-
-    uint8_t *base = (uint8_t *)euroCupCopy;
-    int koff, klen, voff, vlen, vt, o = 0;
-    while ((o = mjson_next(arr, arr_len, o,
-                           &koff, &klen, &voff, &vlen, &vt)) != 0) {
-        if (vt != MJSON_TOK_OBJECT) continue;
-        const char *entry = arr + voff;
-        double at_val = -1.0, soff_val = 0.0;
-        char sym[64] = {0};
-        mjson_get_number(entry, vlen, "$.at", &at_val);
-        mjson_get_number(entry, vlen, "$.soff", &soff_val);
-        if (mjson_get_string(entry, vlen, "$.sym", sym, sizeof(sym)) <= 0)
-            continue;
-        if (at_val < 0 || at_val + 4 > (double)COMP_COPY_REGION_SIZE)
-            continue;
-        uint32_t resolved = ptr_from_sym(sym, (uint32_t)soff_val);
-        if (resolved == 0u) continue;
-        memcpy(base + (uint32_t)at_val, &resolved, sizeof(resolved));
-    }
-}
-
-/* Backward-compat fallback for saves written before
- * comp_copy_pointer_fixups was added: walk careerContests and, for
- * every 4-byte word in the *src template that looks like a real
- * in-process address, copy that word into the corresponding offset
- * in the *dest *Copy. The template's pointers are always link-time-
- * correct for the loader's binary, so this restores any stale
- * string-table pointer left over from a blob load — including the
- * second-element pointers (e.g. euroCupCopy+42) that
- * cup_record_name_sources doesn't cover.
- *
- * We can't filter on sym_from_ptr alone because the comp-name string
- * symbols (aEuropeanCup, aSerieA, ~114 of them) aren't in
- * g_amiga_addr_map — only the competition struct names are. So we
- * use looks_readable() which catches anything within ±16 MB of a
- * known LUT entry — covers .text + .rodata where the strings live.
- *
- * Safe to run unconditionally even on new saves: it overwrites
- * already-correct pointers with the same values. Non-pointer bytes
- * in the template (scores, indices, sentinels like -108) fall well
- * outside the readable range and are not touched. */
-static void restore_comp_copy_pointers_from_template(void)
+ * Replaces the previous cup_record_name_sources (single-pointer per
+ * *Copy, encoded as JSON) and comp_copy_pointer_fixups (heuristic
+ * byte-scan) — both unnecessary once we recognise the values are
+ * template-static. */
+static void restore_comp_copy_text_ptrs_from_template(void)
 {
     uint8_t *tbl = careerContests;
     for (;;) {
@@ -2157,25 +2020,12 @@ static void restore_comp_copy_pointers_from_template(void)
             break;
         const uint8_t *src  = (const uint8_t *)(uintptr_t)srcAddr;
         uint8_t       *dest = *(uint8_t **)(tbl + 4);
-        uint32_t       size = (uint32_t)(uint16_t)*(uint16_t *)(tbl + 8);
-
-        /* 1-byte stride: the *Copy templates are packed Amiga structs
-         * (m68k 2-byte alignment max), so text pointers can sit at
-         * non-4-byte-aligned offsets — euroCup's text[2] is at
-         * offsets 38/42 because CompetitionCup2_4 is 38 bytes packed.
-         * A 4-byte-aligned scan misses those entirely. Byte-stride
-         * catches every alignment; looks_readable's ±16 MB window
-         * filters out non-pointer bytes, and the rare misaligned
-         * "hit" inside a real pointer just rewrites template bytes
-         * over template bytes (no harm). */
-        for (uint32_t off = 0; off + 4 <= size; off += 1) {
-            uint32_t src_val;
-            memcpy(&src_val, src + off, sizeof(src_val));
-            if (src_val == 0u) continue;
-            if (looks_readable(src_val))
-                memcpy(dest + off, &src_val, sizeof(src_val));
+        int8_t  nameOffset = (int8_t)src[5];
+        if (nameOffset != 0) {
+            /* text[0] + text[1] = 8 bytes from src template to dest
+             * *Copy at the struct's own text-array offset. */
+            memcpy(dest + 5 + nameOffset, src + 5 + nameOffset, 8);
         }
-
         tbl += 10;
     }
 }
@@ -2213,10 +2063,10 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
     emit_career_pointers(json_out_emit, &out);
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
-    emit_cup_record_name_sources(json_out_emit, &out);
-    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
-    emit_comp_copy_pointer_fixups(json_out_emit, &out);
-    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+    /* *Copy struct text[2] pointers are template-static — see
+     * restore_comp_copy_text_ptrs_from_template — so they're NOT
+     * encoded in the save. They get restored from each careerContests
+     * src template on load. */
     emit_scalar_table(json_out_emit, &out, "career_scalars", s_career_scalars);
 
     /* Two top-level TeamFileEx records (careerTeam, currentTeam) and
@@ -2306,17 +2156,11 @@ static void apply_semantic_load(const char *src, int src_size)
     load_named_blobs(src, src_size);
     load_season_informations(src, src_size);
     load_career_pointers(src, src_size);
-    load_cup_record_name_sources(src, src_size);
-    /* Apply generic pointer fixups AFTER blob decode + after
-     * cup_record_name_sources so any pointer NOT yet relocated
-     * (e.g. euroCupCopy+42 second-pointer in the string table)
-     * gets its symbol re-resolved against this binary. */
-    load_comp_copy_pointer_fixups(src, src_size);
-    /* Backward-compat: saves written before comp_copy_pointer_fixups
-     * lack the array entirely, so fall back to template-copy which
-     * restores any pointer field from the static template struct
-     * (whose pointers are always link-time-valid for this binary). */
-    restore_comp_copy_pointers_from_template();
+    /* *Copy struct text[2] pointers are template-static (see comment
+     * above restore_comp_copy_text_ptrs_from_template), so they're
+     * not in the save. Apply them from each careerContests src
+     * template after the blob load has put stale bytes into dest. */
+    restore_comp_copy_text_ptrs_from_template();
     load_scalar_table(src, src_size, "career_scalars", s_career_scalars);
 
     load_team_file_ex(src, src_size, "$.career_team",  &careerTeam);
