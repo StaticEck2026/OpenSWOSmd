@@ -2270,9 +2270,28 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
      * times live in diyCompetitionStart, not in the saved overlay
      * slot. The blob load puts the bytes in &competitionFileBuffer;
      * this step distributes them into the runtime struct the menu
-     * draws from. */
+     * draws from.
+     *
+     * Backward-compat: saves written before a2f2d6a left the slot-
+     * type uint16 at competitionFileBuffer[0..1] as zero (the 44-byte
+     * gap before primary_comp_block_padding was uncovered). With
+     * slot-type 0 the loader treats the slot as a league regardless
+     * of what currentCompetitionPtr actually points to, and
+     * _CareerGameListCommon picks the LEAGUE draw branch (no round
+     * designation). Derive the slot type from currentCompetitionPtr's
+     * Competition.type byte (the same field that
+     * _Career_SetCurrentCompetitionSlot copies at init time:
+     * `*(uint16_t *)slotState = (int16_t)(int8_t)comp[1]`) so old
+     * saves recover correctly. Has no effect on new saves where the
+     * blob already captured the right value. */
     extern uint8_t competitionFileBuffer;
     extern void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
+    extern uint32_t currentCompetitionPtr;
+    if (currentCompetitionPtr != 0u) {
+        const uint8_t *comp = (const uint8_t *)(uintptr_t)currentCompetitionPtr;
+        uint16_t derived = (uint16_t)(int16_t)(int8_t)comp[1];
+        *(uint16_t *)&competitionFileBuffer = derived;
+    }
     _Career_LoadCompetitionSlotStateFromBuffer(&competitionFileBuffer);
 
     free(src);
