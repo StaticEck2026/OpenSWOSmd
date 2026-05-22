@@ -10,6 +10,7 @@
 
 #include "diy_competition.h"
 #include "auto_skip_debug.h"
+#include <stdio.h>
 #include "endian_helpers.h"
 #include "game_types.h"
 #include "string_utils.h"
@@ -1348,6 +1349,14 @@ void _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs(void)
     uint8_t *grid = comp->teamGridPairings;
     uint8_t *flags = comp->matchData.cup.cupRoundResults;
 
+    fprintf(stderr, "[bug23-swap] ENTER count=%u grid[0..7]="
+                    "%02X %02X %02X %02X %02X %02X %02X %02X "
+                    "flags[0..3]=%02X %02X %02X %02X\n",
+            (unsigned)count,
+            grid[0], grid[1], grid[2], grid[3],
+            grid[4], grid[5], grid[6], grid[7],
+            flags[0], flags[1], flags[2], flags[3]);
+
     for (int16_t i = (int16_t)count - 1; i >= 0; i--) {
         if (*flags++ & 1) {
             /* Swapped: team1→high, team2→low */
@@ -1367,6 +1376,13 @@ void _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs(void)
     for (int16_t j = (int16_t)total - 1; j >= 0; j--) {
         *vdst++ = *vsrc++;
     }
+
+    fprintf(stderr, "[bug23-swap] EXIT  grid[0..7]="
+                    "%02X %02X %02X %02X %02X %02X %02X %02X\n",
+            comp->teamGridPairings[0], comp->teamGridPairings[1],
+            comp->teamGridPairings[2], comp->teamGridPairings[3],
+            comp->teamGridPairings[4], comp->teamGridPairings[5],
+            comp->teamGridPairings[6], comp->teamGridPairings[7]);
 }
 
 /* ================================================================
@@ -2542,8 +2558,40 @@ void _DIY_UpdateCompetitionProgress(void)
         goto second_leg_path;
     }
 
+    {
+        /* [bug23-cup] Before advance — log grid + key state. The bug:
+         * after the semi-final, winners get scheduled for BOTH the
+         * final and the 3rd-place play-off. We need to see what's in
+         * the team grid + slot.doubleCount at this point. */
+        uint8_t *grid = comp->teamGridPairings;
+        uint8_t *flags = comp->matchData.cup.cupRoundResults;
+        uint16_t mppr = (uint16_t)a0s->matchPairsPerRound;
+        /* Tournament slot for current round (if any) */
+        uint16_t slotIdx = (uint16_t)((DIYCompetition *)diyFileBufferCopy)->roundComplete;
+        DIYTournamentSlot *cur_s = (DIYTournamentSlot *)
+            ((uint8_t *)diyFileBufferCopy + (uint32_t)slotIdx * 118 + 0x15A);
+        DIYTournamentSlot *nxt_s = cur_s + 1;
+        fprintf(stderr, "[bug23-cup] BEFORE: round=%d mppr=%u grid[0..7]="
+                        "%02X %02X %02X %02X %02X %02X %02X %02X "
+                        "flags[0..3]=%02X %02X %02X %02X "
+                        "slot.doubleCount=cur=%u next=%u\n",
+                (int)a0s->currentRoundIndex, (unsigned)mppr,
+                grid[0], grid[1], grid[2], grid[3],
+                grid[4], grid[5], grid[6], grid[7],
+                flags[0], flags[1], flags[2], flags[3],
+                (unsigned)cur_s->doubleCount, (unsigned)nxt_s->doubleCount);
+    }
+
     /* Reorder team grid by order list */
     _DIY_ReorderTeamGridByOrderList();
+
+    {
+        uint8_t *grid = comp->teamGridPairings;
+        fprintf(stderr, "[bug23-cup] AFTER reorder: grid[0..7]="
+                        "%02X %02X %02X %02X %02X %02X %02X %02X\n",
+                grid[0], grid[1], grid[2], grid[3],
+                grid[4], grid[5], grid[6], grid[7]);
+    }
 
     /* Check if sub-round counter needs extra increment.
      * ASM: cmpi.w #2,DIY_COMPETITION_FIELD_2+$14A(a0) = offset $14C (round format type). */
@@ -2564,6 +2612,8 @@ void _DIY_UpdateCompetitionProgress(void)
         int16_t half = (int16_t)((uint16_t)a0s->matchPairsPerRound >> 1);
         a0s->matchPairsPerRound = half;
         a0s->totalMatchesInRound = half;
+        fprintf(stderr, "[bug23-cup] HALVED: new mppr=%d new round=%d\n",
+                (int)half, (int)a0s->currentRoundIndex);
     }
 
     /* Reset fixture index and set round type */
