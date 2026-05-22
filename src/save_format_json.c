@@ -2351,11 +2351,18 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
      * otherwise pre-zero the save region and let blobs+semantic
      * populate every byte from named JSON fields. */
     uint32_t want = career_data_size();
+    /* careerFileBuffer is declared `extern uint8_t careerFileBuffer;`
+     * (a single-byte stub aliased onto careerFileBufferBuf), so
+     * passing &careerFileBuffer to memset/mjson_get_base64 makes
+     * fortify_source on Linux glibc see a 1-byte destination and
+     * __chk_fail on the `want > 1` write. Cast through uintptr_t to
+     * strip the type info — the actual backing buffer is 256 KB. */
+    void *cfb = (void *)(uintptr_t)&careerFileBuffer;
     int legacy_got = mjson_get_base64((const char *)src, (int)src_size,
                                       "$.opaque_data",
-                                      (char *)&careerFileBuffer, (int)want);
+                                      (char *)cfb, (int)want);
     if (legacy_got <= 0) {
-        memset(&careerFileBuffer, 0, want);
+        memset(cfb, 0, want);
     }
 
     apply_semantic_load((const char *)src, (int)src_size);
