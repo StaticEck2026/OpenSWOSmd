@@ -2099,15 +2099,24 @@ static void load_comp_copy_pointer_fixups(const char *buf, int buflen)
 
 /* Backward-compat fallback for saves written before
  * comp_copy_pointer_fixups was added: walk careerContests and, for
- * every 4-byte word in the *src template that looks like a real symbol
- * pointer, copy that word into the corresponding offset in the *dest
- * *Copy. The template's pointers are always link-time-correct for the
- * loader's binary, so this restores any stale string-table pointer
- * left over from a blob load — including the second-element pointers
- * (e.g. euroCupCopy+42) that cup_record_name_sources doesn't cover.
+ * every 4-byte word in the *src template that looks like a real
+ * in-process address, copy that word into the corresponding offset
+ * in the *dest *Copy. The template's pointers are always link-time-
+ * correct for the loader's binary, so this restores any stale
+ * string-table pointer left over from a blob load — including the
+ * second-element pointers (e.g. euroCupCopy+42) that
+ * cup_record_name_sources doesn't cover.
+ *
+ * We can't filter on sym_from_ptr alone because the comp-name string
+ * symbols (aEuropeanCup, aSerieA, ~114 of them) aren't in
+ * g_amiga_addr_map — only the competition struct names are. So we
+ * use looks_readable() which catches anything within ±16 MB of a
+ * known LUT entry — covers .text + .rodata where the strings live.
  *
  * Safe to run unconditionally even on new saves: it overwrites
- * already-correct pointers with the same values. */
+ * already-correct pointers with the same values. Non-pointer bytes
+ * in the template (scores, indices, sentinels like -108) fall well
+ * outside the readable range and are not touched. */
 static void restore_comp_copy_pointers_from_template(void)
 {
     uint8_t *tbl = careerContests;
@@ -2123,7 +2132,7 @@ static void restore_comp_copy_pointers_from_template(void)
             uint32_t src_val;
             memcpy(&src_val, src + off, sizeof(src_val));
             if (src_val == 0u) continue;
-            if (sym_from_ptr(src_val, NULL))
+            if (looks_readable(src_val))
                 memcpy(dest + off, &src_val, sizeof(src_val));
         }
 
