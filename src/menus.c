@@ -6,7 +6,9 @@
 #include "menus.h"
 #include "endian_helpers.h"
 #include "auto_skip_debug.h"
+#ifdef SWOS_DEBUG_AUTOSKIP
 #include <stdio.h>
+#endif
 #include "game_utils.h"
 #include "game_types.h"
 #include "frontend.h"
@@ -6397,11 +6399,6 @@ void _CareerGameListCommon(MenuEntry *item)
         goto hideAll;
     uint8_t *a4 = (uint8_t *)gameListArray[arrayOff / 4 + 1]; /* round/game ptr */
 
-    fprintf(stderr, "[startcar] CGLC d0=%u a6=%p a6[0..5]=%02X %02X %02X %02X %02X %02X "
-                    "a4=%p\n",
-            (unsigned)d0, (void *)a6,
-            a6[0], a6[1], a6[2], a6[3], a6[4], a6[5], (void *)a4);
-
     /* a5 = entry 33 (menuEntries + 0x738) */
     a5 = &menuEntries[33];
 
@@ -6474,9 +6471,6 @@ pastTeamLoad:
     /* Determine slot type and competition name */
     uint16_t slotType = a6[0] & 0xFF;
     uint8_t *compInfo = ((uint8_t **)&currentCompetitionPtr)[slotType]; /* a1 */
-
-    fprintf(stderr, "[startcar] slotType=%u compInfo=%p currentDivisionIndex=%u\n",
-            (unsigned)slotType, (void *)compInfo, (unsigned)currentDivisionIndex);
     uint16_t d5; /* color/stringFlags value */
     uint8_t *namePtr; /* competition name pointer */
 
@@ -6519,9 +6513,6 @@ pastTeamLoad:
         uint8_t *a3slot = careerCompetitionSlotPtrTable[slotType];
         uint16_t slotVal = *(uint16_t *)a3slot;
 
-        fprintf(stderr, "[startcar] a3slot=%p slotVal=%u (0=league,1=cup,2+=default)\n",
-                (void *)a3slot, (unsigned)slotVal);
-
         if (slotVal == 0) {
             /* --- League-style header --- */
             /* Height check */
@@ -6539,16 +6530,12 @@ pastTeamLoad:
                 /* Use divStringTable[currentDivisionIndex]
                  * namePtr == divStringTable base for league type */
                 namePtr = (uint8_t *)divStringTable[currentDivisionIndex];
-                fprintf(stderr, "[startcar] league: strTableOff=0 -> divStringTable[%u]=%p\n",
-                        (unsigned)currentDivisionIndex, (void *)namePtr);
             } else {
                 /* compInfo + 5 + strTableOff, then index by currentDivisionIndex*8 + 4 */
                 int16_t off = (int8_t)strTableOff;
                 uint8_t *base = compInfo + 5 + off;
                 uint16_t idx = currentDivisionIndex << 3;
                 namePtr = (uint8_t *)(*(uint32_t *)(base + 4 + idx));
-                fprintf(stderr, "[startcar] league: strTableOff=%d base=%p idx=%u namePtr=%p\n",
-                        (int)off, (void *)base, (unsigned)idx, (void *)namePtr);
             }
 
             a5->fg = (uint32_t)namePtr;
@@ -6567,11 +6554,6 @@ pastTeamLoad:
                 int16_t off = (int8_t)strTableOff;
                 uint8_t *base = compInfo + 5 + off;
                 namePtr = (uint8_t *)(*(uint32_t *)(base + 4));
-                fprintf(stderr, "[startcar] cup: strTableOff=%d base=%p namePtr=%p\n",
-                        (int)off, (void *)base, (void *)namePtr);
-            } else {
-                fprintf(stderr, "[startcar] cup: strTableOff=0 (no resolve) namePtr=%p\n",
-                        (void *)namePtr);
             }
 
             a5->fg = (uint32_t)namePtr;
@@ -6649,11 +6631,6 @@ pastTeamLoad:
                 int16_t off = (int8_t)strTableOff;
                 uint8_t *base = compInfo + 5 + off;
                 namePtr = (uint8_t *)(*(uint32_t *)(base + 4));
-                fprintf(stderr, "[startcar] default: slotVal=%u strTableOff=%d base=%p namePtr=%p\n",
-                        (unsigned)slotVal, (int)off, (void *)base, (void *)namePtr);
-            } else {
-                fprintf(stderr, "[startcar] default: slotVal=%u strTableOff=0 namePtr=%p\n",
-                        (unsigned)slotVal, (void *)namePtr);
             }
 
             a5->fg = (uint32_t)namePtr;

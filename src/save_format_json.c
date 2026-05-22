@@ -2019,6 +2019,118 @@ static void load_cup_record_name_sources(const char *buf, int buflen)
     }
 }
 
+/* ---------- comp_copy_region pointer fixups ----------
+ *
+ * The comp_copy_region blob (euroCupCopy..oceaniaWorldCupQualificationCopy,
+ * 1832 bytes) is loaded as a raw base64 byte stream so every byte of
+ * each *Copy struct round-trips. The catch: each *Copy carries embedded
+ * string-table pointers (e.g. euroCupCopy at +38/+42 → aEuropeanChampi_1
+ * and aEuropeanCup) which the raw-byte loader leaves at the saving
+ * binary's addresses. On a different binary those pointers point to
+ * unrelated memory and the game crashes when it dereferences them.
+ *
+ * cup_record_name_sources already saves the FIRST pointer of each *Copy's
+ * string table (the `nameSource` at +5+strTableOff+0). But the second
+ * pointer (+5+strTableOff+4 — used by the game's contest-menu draw path)
+ * was being left at its stale on-disk value, which is exactly the
+ * START.CAR crash: euroCupCopy+42 = 0x00583654 (the tester's binary's
+ * `aEuropeanCup` address, invalid on the loader's binary).
+ *
+ * General fix: scan the entire comp_copy_region at save time for any
+ * 4-byte word that resolves to a symbol in g_amiga_addr_map, and emit
+ * a fixup `{off, sym}` for it. On load, after the blob is decoded,
+ * re-resolve each sym in the loader's binary and write the result back
+ * at the recorded offset. Subsumes cup_record_name_sources but we keep
+ * that for backwards-compat with saves written before this commit.
+ */
+#define COMP_COPY_REGION_SIZE 1832u
+
+static void emit_comp_copy_pointer_fixups(mjson_print_fn_t fn, void *fnd)
+{
+    mjson_printf(fn, fnd, "%Q:[", "comp_copy_pointer_fixups");
+    int first = 1;
+    const uint8_t *base = (const uint8_t *)euroCupCopy;
+    for (uint32_t i = 0; i + 4 <= COMP_COPY_REGION_SIZE; i += 4) {
+        uint32_t val;
+        memcpy(&val, base + i, sizeof(val));
+        if (val == 0u) continue;
+        uint32_t off = 0;
+        const AmigaAddrLutEntry *e = sym_from_ptr(val, &off);
+        if (!e) continue;
+        if (!first) mjson_printf(fn, fnd, "%s", ",");
+        first = 0;
+        if (off == 0)
+            mjson_printf(fn, fnd, "{%Q:%u,%Q:%Q}",
+                         "at", (unsigned)i, "sym", e->name);
+        else
+            mjson_printf(fn, fnd, "{%Q:%u,%Q:%Q,%Q:%u}",
+                         "at", (unsigned)i, "sym", e->name,
+                         "soff", (unsigned)off);
+    }
+    mjson_printf(fn, fnd, "%s", "]");
+}
+
+static void load_comp_copy_pointer_fixups(const char *buf, int buflen)
+{
+    const char *arr = NULL; int arr_len = 0;
+    if (mjson_find(buf, buflen, "$.comp_copy_pointer_fixups",
+                   &arr, &arr_len) != MJSON_TOK_ARRAY)
+        return;
+
+    uint8_t *base = (uint8_t *)euroCupCopy;
+    int koff, klen, voff, vlen, vt, o = 0;
+    while ((o = mjson_next(arr, arr_len, o,
+                           &koff, &klen, &voff, &vlen, &vt)) != 0) {
+        if (vt != MJSON_TOK_OBJECT) continue;
+        const char *entry = arr + voff;
+        double at_val = -1.0, soff_val = 0.0;
+        char sym[64] = {0};
+        mjson_get_number(entry, vlen, "$.at", &at_val);
+        mjson_get_number(entry, vlen, "$.soff", &soff_val);
+        if (mjson_get_string(entry, vlen, "$.sym", sym, sizeof(sym)) <= 0)
+            continue;
+        if (at_val < 0 || at_val + 4 > (double)COMP_COPY_REGION_SIZE)
+            continue;
+        uint32_t resolved = ptr_from_sym(sym, (uint32_t)soff_val);
+        if (resolved == 0u) continue;
+        memcpy(base + (uint32_t)at_val, &resolved, sizeof(resolved));
+    }
+}
+
+/* Backward-compat fallback for saves written before
+ * comp_copy_pointer_fixups was added: walk careerContests and, for
+ * every 4-byte word in the *src template that looks like a real symbol
+ * pointer, copy that word into the corresponding offset in the *dest
+ * *Copy. The template's pointers are always link-time-correct for the
+ * loader's binary, so this restores any stale string-table pointer
+ * left over from a blob load — including the second-element pointers
+ * (e.g. euroCupCopy+42) that cup_record_name_sources doesn't cover.
+ *
+ * Safe to run unconditionally even on new saves: it overwrites
+ * already-correct pointers with the same values. */
+static void restore_comp_copy_pointers_from_template(void)
+{
+    uint8_t *tbl = careerContests;
+    for (;;) {
+        uint32_t srcAddr = *(uint32_t *)tbl;
+        if (srcAddr == 0xFFFFFFFFu)
+            break;
+        const uint8_t *src  = (const uint8_t *)(uintptr_t)srcAddr;
+        uint8_t       *dest = *(uint8_t **)(tbl + 4);
+        uint32_t       size = (uint32_t)(uint16_t)*(uint16_t *)(tbl + 8);
+
+        for (uint32_t off = 0; off + 4 <= size; off += 4) {
+            uint32_t src_val;
+            memcpy(&src_val, src + off, sizeof(src_val));
+            if (src_val == 0u) continue;
+            if (sym_from_ptr(src_val, NULL))
+                memcpy(dest + off, &src_val, sizeof(src_val));
+        }
+
+        tbl += 10;
+    }
+}
+
 /* ---------- .CAR writer ---------- */
 
 int16_t SaveJson_WriteCareer(uint8_t *filename)
@@ -2053,6 +2165,8 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     emit_career_pointers(json_out_emit, &out);
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
     emit_cup_record_name_sources(json_out_emit, &out);
+    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+    emit_comp_copy_pointer_fixups(json_out_emit, &out);
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
     emit_scalar_table(json_out_emit, &out, "career_scalars", s_career_scalars);
 
@@ -2144,6 +2258,16 @@ static void apply_semantic_load(const char *src, int src_size)
     load_season_informations(src, src_size);
     load_career_pointers(src, src_size);
     load_cup_record_name_sources(src, src_size);
+    /* Apply generic pointer fixups AFTER blob decode + after
+     * cup_record_name_sources so any pointer NOT yet relocated
+     * (e.g. euroCupCopy+42 second-pointer in the string table)
+     * gets its symbol re-resolved against this binary. */
+    load_comp_copy_pointer_fixups(src, src_size);
+    /* Backward-compat: saves written before comp_copy_pointer_fixups
+     * lack the array entirely, so fall back to template-copy which
+     * restores any pointer field from the static template struct
+     * (whose pointers are always link-time-valid for this binary). */
+    restore_comp_copy_pointers_from_template();
     load_scalar_table(src, src_size, "career_scalars", s_career_scalars);
 
     load_team_file_ex(src, src_size, "$.career_team",  &careerTeam);
