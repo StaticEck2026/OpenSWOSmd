@@ -6,9 +6,7 @@
 #include "menus.h"
 #include "endian_helpers.h"
 #include "auto_skip_debug.h"
-#ifdef SWOS_DEBUG_AUTOSKIP
 #include <stdio.h>
-#endif
 #include "game_utils.h"
 #include "game_types.h"
 #include "frontend.h"
