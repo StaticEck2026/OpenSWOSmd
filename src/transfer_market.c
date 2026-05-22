@@ -983,33 +983,38 @@ restart:
 __attribute__((used, externally_visible))
 int16_t _FindTeamIdInDiyTeamsList(uint16_t *teamIdPtr)
 {
-    uint16_t *list;
+    uint8_t *list;
     int16_t count;
     uint16_t target;
 
     if (competitionFileBuffer == 1)
-        list = diyTeamIdListType1;
+        list = (uint8_t *)diyTeamIdListType1;
     else if (competitionFileBuffer == 2)
-        list = diyTeamIdListType2;
+        list = (uint8_t *)diyTeamIdListType2;
     else
-        list = diyTeamIdListType0;
+        list = (uint8_t *)diyTeamIdListType0;
 
     count = (int16_t)(numDiyTeams - 1);
-    /* teamIdPtr points at a TeamFile's leading {country, ordinal} byte
-     * pair (the Amiga BE memory layout for the team id). The diy list
-     * was populated via host-native `*(uint16_t *) = (country<<8)|ord`
-     * writes, so on LE x86 its physical bytes are [ord, country] and
-     * reading it as `*list` gives `(country<<8)|ord`. The previous
-     * code read target as `*teamIdPtr` host-native, which on LE
-     * decodes the team file's [country, ord] bytes as `(ord<<8)|country`
-     * — different value, so every team failed the membership test
-     * and TOP GOAL SCORERS came out empty in career mode.
-     * BE_READ_U16 normalises to `(country<<8)|ord` on either host. */
+    /* Both sides read via BE_READ_U16 so they normalise to the same
+     * (country<<8)|ord encoding on every host.
+     *
+     * The diy team-id lists store bytes in Amiga BE byte-pair order
+     * — `[country, ordinal]` per entry — same as eurocup team lists
+     * (see appendTeamToList in career_eurocups.c). teamIdPtr points
+     * at a TeamFile's leading {country, ordinal} byte pair (also BE).
+     *
+     * d95b76a fixed the target side (BE_READ_U16) but kept the list
+     * read as host-native `*list`, which on LE decodes [country, ord]
+     * as (ord<<8)|country — opposite endian, no match. That left
+     * TOP GOAL SCORERS empty in career mode because every non-career
+     * team's _FindTeamIdInDiyTeamsList returned "not found" and
+     * AddTeamScorersToHighestScorersTable skipped it. */
     target = BE_READ_U16((uint8_t *)teamIdPtr);
 
     for (; count >= 0; count--) {
-        if (*list++ == target)
+        if (BE_READ_U16(list) == target)
             return 0;  /* found */
+        list += 2;
     }
     return 1;  /* not found */
 }
