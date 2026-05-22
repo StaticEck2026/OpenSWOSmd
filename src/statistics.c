@@ -10,6 +10,7 @@
 #include "input_text.h"
 #include "endian_helpers.h"
 #include "auto_skip_debug.h"
+#include <stdio.h>
 
 /* ---- External globals ---- */
 extern uint16_t showStats;
@@ -770,30 +771,50 @@ static void PopulateHighestScorersTableFromSelectedTeams(int16_t statIndex)
     uint16_t numTeams = numSelectedTeams;
     uint16_t careerTeamNum;
 
-#ifdef SWOS_DEBUG_AUTOSKIP
-    SWOS_AUTOSKIP_LOG("[bug2-scorers]   PopulateFromSelectedTeams statIdx=%d numSelectedTeams=%u",
-                      (int)statIndex, (unsigned)numTeams);
-#endif
+    fprintf(stderr, "[scorers] Populate statIdx=%d numSel=%u selTeamNo=0x%04X "
+                    "gameType=%u careerLoadedFlag=%u\n",
+            (int)statIndex, (unsigned)numTeams, (unsigned)selTeamNumber,
+            (unsigned)gameType, (unsigned)careerLoadedFlag);
+    /* Show first few team records' header bytes + a known goal slot to
+     * verify selected_teams loaded into the right address with usable
+     * data. Bytes 0/1 = country/ordinal, byte 5 = first char of name,
+     * +0x6D = PlayerFile[0].goalStats[0] (i.e. first player's first
+     * comp goals). */
+    for (uint16_t i = 0; i < 4 && i < numTeams; i++) {
+        const uint8_t *t = (&selTeamsPtr) + (uint32_t)i * 684u;
+        fprintf(stderr, "[scorers]   team[%u] cc=%02X to=%02X name0=%c "
+                        "ply0goal0..3=[%u,%u,%u,%u]\n",
+                (unsigned)i, t[0], t[1], (char)(t[5] ? t[5] : '?'),
+                t[0x6D], t[0x6E], t[0x6F], t[0x70]);
+    }
+
     if (numTeams == 0)
         return;
 
     careerTeamNum = selTeamNumber;
     numTeams--;
 
+    int addsCalled = 0;
     for (; (int16_t)numTeams >= 0; numTeams--)
     {
         if (BE_READ_U16(teamsPtr) != careerTeamNum)
         {
             AddTeamScorersToHighestScorersTable(statIndex, teamsPtr);
+            addsCalled++;
         }
         teamsPtr += 684;
     }
+    fprintf(stderr, "[scorers] loop addsCalled=%d\n", addsCalled);
 
     /* In Career mode with careerLoadedFlag==0, add career team too */
     if (gameType == GAME_TYPE_CAREER)
     {
-        if (careerLoadedFlag != 0)
+        if (careerLoadedFlag != 0) {
+            fprintf(stderr, "[scorers] skip careerTeam (careerLoadedFlag=%u)\n",
+                    (unsigned)careerLoadedFlag);
             return;
+        }
+        fprintf(stderr, "[scorers] add careerTeam\n");
         AddTeamScorersToHighestScorersTable(statIndex, (uint8_t *)&careerTeam);
     }
 }
