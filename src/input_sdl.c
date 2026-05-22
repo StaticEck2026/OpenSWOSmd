@@ -146,6 +146,12 @@ static int sdl_to_amiga(SDL_Keycode k)
 
 /* ---- Tracked keyboard state for joystick/fire synthesis ---- */
 static int s_kbd_up, s_kbd_down, s_kbd_left, s_kbd_right, s_kbd_fire;
+/* SDL-only "skip auto-advance pause" input. Pressing SPACE (kb) or the
+ * second button on a controller sets pauseSkipRequested so dwell loops
+ * (e.g. season-end menu chains, future auto-advance pauses) can bail
+ * early. Independent of fire so it doesn't interfere with menu select. */
+static int s_kbd_skip;
+volatile uint16_t pauseSkipRequested;
 
 /* Up to two game controllers, mapped to players 1 and 2 respectively.
  * Pad 0 is shared with the keyboard for player 1; pad 1 drives player 2
@@ -319,9 +325,9 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         case SDLK_LEFT:  s_kbd_left  = 1; break;
         case SDLK_RIGHT: s_kbd_right = 1; break;
         case SDLK_RCTRL:
-        case SDLK_SPACE:
         case SDLK_LCTRL:
         case SDLK_RETURN: s_kbd_fire = 1; break;
+        case SDLK_SPACE:  s_kbd_fire = 1; s_kbd_skip = 1; break;
         default: break;
         }
     } break;
@@ -336,9 +342,9 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         case SDLK_LEFT:  s_kbd_left  = 0; break;
         case SDLK_RIGHT: s_kbd_right = 0; break;
         case SDLK_RCTRL:
-        case SDLK_SPACE:
         case SDLK_LCTRL:
         case SDLK_RETURN: s_kbd_fire = 0; break;
+        case SDLK_SPACE:  s_kbd_fire = 0; s_kbd_skip = 0; break;
         default: break;
         }
     } break;
@@ -379,9 +385,13 @@ void InputSDL_HandleEvent(const SDL_Event *e)
     }
 }
 
-/* Read directional + fire state from a single pad slot. */
+/* Read directional + fire state from a single pad slot. `skip` (may be
+ * NULL) is set when the conventional "second button" (B on mapped pads,
+ * button index 1 on raw joysticks) is pressed — used for the SDL-only
+ * "skip auto-advance pause" feature, independent of fire. */
 static void read_pad_state(int slot,
-                           int *up, int *down, int *left, int *right, int *fire)
+                           int *up, int *down, int *left, int *right,
+                           int *fire, int *skip)
 {
     SDL_GameController *pad = s_pads[slot];
     SDL_Joystick *raw = s_raw_pads[slot];
@@ -396,6 +406,8 @@ static void read_pad_state(int slot,
         if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_A) ||
             SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_B))
             *fire = 1;
+        if (skip && SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_B))
+            *skip = 1;
         return;
     }
 
@@ -431,6 +443,10 @@ static void read_pad_state(int slot,
                 break;
             }
         }
+        /* Button index 1 (the "second" button on classic gameport-shaped
+         * pads) also raises skip. Button 0 alone never triggers skip. */
+        if (skip && nbtns >= 2 && SDL_JoystickGetButton(raw, 1))
+            *skip = 1;
     }
 }
 
@@ -489,6 +505,8 @@ void InputSDL_ClearKeyState(void)
     memset((void *)keyBuffer, 0, sizeof(keyBuffer));
     keyCount = 0;
     s_kbd_up = s_kbd_down = s_kbd_left = s_kbd_right = s_kbd_fire = 0;
+    s_kbd_skip = 0;
+    pauseSkipRequested = 0;
     /* joy0Dat / joy1Dat / ciaa_pra are recomputed each frame by
      * InputSDL_PostFrame from the cleared s_kbd_* + read_pad_state, so
      * they don't need explicit clearing here. */
@@ -499,13 +517,16 @@ void InputSDL_PostFrame(void)
     /* Player 1: keyboard + pad 0 (combined). */
     int p1_up = s_kbd_up, p1_down = s_kbd_down, p1_left = s_kbd_left, p1_right = s_kbd_right;
     int p1_fire = s_kbd_fire;
-    read_pad_state(0, &p1_up, &p1_down, &p1_left, &p1_right, &p1_fire);
+    int skip = s_kbd_skip;
+    read_pad_state(0, &p1_up, &p1_down, &p1_left, &p1_right, &p1_fire, &skip);
 
     /* Player 2: pad 1 only. No keyboard binding — keeping the keyboard
      * single-player avoids hijacking arrow / fire keys when a P2 pad is
      * plugged in but unused. */
     int p2_up = 0, p2_down = 0, p2_left = 0, p2_right = 0, p2_fire = 0;
-    read_pad_state(1, &p2_up, &p2_down, &p2_left, &p2_right, &p2_fire);
+    read_pad_state(1, &p2_up, &p2_down, &p2_left, &p2_right, &p2_fire, &skip);
+
+    pauseSkipRequested = (uint16_t)(skip ? 1 : 0);
 
     /* SWOS reads P1 from JOY1DAT (Amiga Port 1) and P2 from JOY0DAT
      * (Port 0). The port numbering is reversed from the player number —

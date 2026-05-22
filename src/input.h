@@ -14,4 +14,11 @@ typedef short int16_t;
 void _Player1StatusProc(void);
 void _Player2StatusProc(void);
 
+/* SDL-only — set when SPACE (keyboard) or the second button on a
+ * controller / raw joystick is pressed. Auto-advance pause loops can
+ * test this to bail out of dwell waits early. Not present on the
+ * Amiga build; gate any use behind a stub or `#ifdef` if back-porting
+ * a routine that reads it. */
+extern volatile uint16_t pauseSkipRequested;
+
 #endif

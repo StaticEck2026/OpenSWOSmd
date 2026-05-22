@@ -28,6 +28,7 @@ extern volatile uint16_t seasonUpdateInProgress;
 
 #include <stdint.h>
 #include "auto_skip_debug.h"
+#include "input.h"  /* pauseSkipRequested — SPACE / second controller button */
 
 /* Season-update menu hold: on Amiga, the slow CPU + blitter naturally
  * stretched each cup/league result menu render to ~0.5-1 s. On x86 the
@@ -1525,8 +1526,15 @@ void _MenuProc(void)
         /* Hold the menu visible for ~1 s so the user can read each
          * cup/league result during a season transition. Without this the
          * controlMask=0xFFFF entry fires on iteration 1 and the chain
-         * flashes by in milliseconds — see Amiga visual reference. */
-        if (s_seasonUpdateHoldCounter < SEASON_UPDATE_MENU_HOLD_FRAMES) {
+         * flashes by in milliseconds — see Amiga visual reference.
+         *
+         * SDL-only: pauseSkipRequested (SPACE key / second controller
+         * button) drains the hold counter instantly so users can fast-
+         * forward through a long season-end menu chain without waiting
+         * a full second per result screen. */
+        if (pauseSkipRequested) {
+            s_seasonUpdateHoldCounter = SEASON_UPDATE_MENU_HOLD_FRAMES;
+        } else if (s_seasonUpdateHoldCounter < SEASON_UPDATE_MENU_HOLD_FRAMES) {
             s_seasonUpdateHoldCounter++;
             SWOS_AUTOSKIP_LOG("MenuProc: holding (counter=%u/%u)",
                               (unsigned)s_seasonUpdateHoldCounter,

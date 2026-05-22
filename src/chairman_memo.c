@@ -103,22 +103,12 @@ void _ChairmanMemosOnReturn(void)
                     0, 0, 0, 0, 0, 0, 0,
                     managerNameBuffer, (const uint8_t *)plNameForMessage, (void *)0);
 
-    /* Draw the menu */
-    _DrawMenu();
-
-    /* Wait 100 VBlanks before showing the Continue button. The original
-     * Amiga code spun on `currentGameTick` (cleared by the VBlank IRQ);
-     * on SDL we go through _WaitForVSync so the buffer swap, event pump,
-     * and 50 Hz pacing all happen on the main thread instead of relying
-     * on the SDL_Timer thread to make progress while we busy-spin. */
-    for (int16_t i = 99; i >= 0; i--) {
-        _WaitForVSync();
-    }
-
-    /* Show the "Continue" button (entry 6, clear isInvisible) */
+    /* SDL build skips the original Amiga 100-VBlank (~2s) dwell before
+     * the Continue button appears. With a series of chairman messages
+     * during a season-end review, the cumulative wait was painful and
+     * users have no way to short-circuit it on the original hardware
+     * either — so we just show Continue immediately. */
     menuEntries[6].isInvisible = 0;
-
-    /* Redraw */
     _DrawMenu();
 }
 
