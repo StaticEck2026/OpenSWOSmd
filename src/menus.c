@@ -5132,7 +5132,18 @@ __attribute__((used, externally_visible))
 void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, PlayerFile *playerFile)
 {
     if (_ShouldApplyRandomPlayerStatusAfterSim() == 0) {
-        _SetSquadMenuEntryStatusSprite(entry, playerFile, 0);
+        /* _SetSquadMenuEntryStatusSprite expects a RAW player pointer
+         * (team-relative, from _GetPlayer); it adds sizeof(TeamFile)=76
+         * internally to reach the PlayerFile data. But our `playerFile`
+         * param is already +76-offset (the AfterSim convention used by
+         * the transfer-market caller). Undo the offset before
+         * delegating so the inner function doesn't double-count and
+         * read fields from two PlayerFile slots ahead — that was
+         * causing ADD INTERNATIONAL PLAYER's status-sprite column to
+         * render with the wrong player's positionAndFace/cardsInjuries,
+         * picking card-icon sprites instead of skin/hair faces. */
+        _SetSquadMenuEntryStatusSprite(entry,
+            (PlayerFile *)((uint8_t *)playerFile - sizeof(TeamFile)), 0);
         return;
     }
     /* After sim path — extract face and status for sprite.
