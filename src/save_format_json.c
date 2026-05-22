@@ -2119,25 +2119,45 @@ static void load_comp_copy_pointer_fixups(const char *buf, int buflen)
  * outside the readable range and are not touched. */
 static void restore_comp_copy_pointers_from_template(void)
 {
+    fprintf(stderr, "[restore-tmpl] ENTER careerContests=%p\n",
+            (void *)careerContests);
     uint8_t *tbl = careerContests;
+    int entry_idx = 0;
     for (;;) {
         uint32_t srcAddr = *(uint32_t *)tbl;
-        if (srcAddr == 0xFFFFFFFFu)
+        if (srcAddr == 0xFFFFFFFFu) {
+            fprintf(stderr, "[restore-tmpl] sentinel at entry %d, done\n", entry_idx);
             break;
+        }
         const uint8_t *src  = (const uint8_t *)(uintptr_t)srcAddr;
         uint8_t       *dest = *(uint8_t **)(tbl + 4);
         uint32_t       size = (uint32_t)(uint16_t)*(uint16_t *)(tbl + 8);
 
+        int copies = 0;
         for (uint32_t off = 0; off + 4 <= size; off += 4) {
             uint32_t src_val;
             memcpy(&src_val, src + off, sizeof(src_val));
             if (src_val == 0u) continue;
-            if (looks_readable(src_val))
+            if (looks_readable(src_val)) {
                 memcpy(dest + off, &src_val, sizeof(src_val));
+                copies++;
+            }
         }
+        if (entry_idx < 3 || entry_idx == 5)
+            fprintf(stderr, "[restore-tmpl] entry %d src=%p dest=%p size=%u copies=%d\n",
+                    entry_idx, (void *)src, (void *)dest, (unsigned)size, copies);
 
         tbl += 10;
+        entry_idx++;
     }
+    /* Verify the fix actually landed for euroCupCopy+42. */
+    extern uint8_t euroCupCopy[];
+    uint32_t after;
+    memcpy(&after, euroCupCopy + 42, 4);
+    fprintf(stderr, "[restore-tmpl] euroCupCopy+42 after=0x%08X probe=0x%08X readable=%d\n",
+            (unsigned)after,
+            (unsigned)(uint32_t)(uintptr_t)g_amiga_addr_map[0].current_addr,
+            looks_readable(after));
 }
 
 /* ---------- .CAR writer ---------- */
