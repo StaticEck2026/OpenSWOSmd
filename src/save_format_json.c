@@ -2239,8 +2239,6 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
         "file_kind",      kind,
         "num_diy_teams",  (unsigned)numDiyTeams);
 
-    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
-
     /* primaryCompStringOffset is intentionally NOT saved — it's a
      * stale absolute pointer into the strings table that the legacy
      * format dumped verbatim. The career load path zeroes it in
