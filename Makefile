@@ -6,7 +6,27 @@
 # discoverable via `arm-linux-gnueabihf-pkg-config`. The Amiga struct
 # size_check[] asserts assume 32-bit pointers, which armhf already
 # provides — no -m32 needed.
-ifdef ARM
+#
+# Cross-compile to ARM 64-bit (aarch64) with `make ARM64=1`. Picks
+# `aarch64-linux-gnu-gcc`; needs libsdl2-dev:arm64 (Debian/Ubuntu
+# foreign-arch) or a sysroot. 64-bit pointers mean the static
+# size_check[] asserts that hard-code Amiga (32-bit) struct sizes
+# will fail to compile until Phase 5 / 6 of the 64-bit transition.
+# Useful right now as a "what still hard-codes 32-bit" checklist.
+#
+# macOS: auto-detected via `uname -s == Darwin`. Native clang; expects
+# SDL2 from Homebrew (`brew install sdl2`). Like ARM64, modern macOS
+# is 64-bit, so the same Phase 5 / 6 constraints apply.
+ifdef ARM64
+ARM64_HOST_MACHINE := $(shell uname -m)
+ifneq (,$(filter aarch64 arm64,$(ARM64_HOST_MACHINE)))
+CC := gcc
+PKGCONF := pkg-config
+else
+CC := aarch64-linux-gnu-gcc
+PKGCONF := PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig pkg-config
+endif
+else ifdef ARM
 # Native ARM builds (e.g. on a Raspberry Pi) use the system gcc.
 # Cross-builds from x86_64 → armhf use the standard Debian/Ubuntu
 # arm-linux-gnueabihf- toolchain. Detect by host architecture; user
@@ -27,7 +47,17 @@ CC := arm-linux-gnueabihf-gcc
 PKGCONF := PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig pkg-config
 endif
 else
+# Default: native compiler (gcc on Linux/MinGW/Cygwin, clang on macOS).
+ifeq ($(shell uname -s),Darwin)
+CC := cc
+# Homebrew installs SDL2 under /opt/homebrew (arm64) or /usr/local
+# (intel). brew --prefix returns the right one. If pkg-config exists
+# in PATH it will already pick the right .pc up; fall back to
+# sdl2-config below if not.
+PKGCONF := PKG_CONFIG_PATH=$(shell brew --prefix sdl2 2>/dev/null)/lib/pkgconfig pkg-config
+else
 CC := gcc
+endif
 endif
 SHELL := /bin/bash
 
@@ -43,12 +73,16 @@ else ifeq ($(UNAME_S),MINGW32_NT)
 TARGET_NAME := SWOS.exe
 else ifeq ($(UNAME_S),MINGW64_NT)
 TARGET_NAME := SWOS.exe
+else ifdef ARM64
+TARGET_NAME := SWOS.aarch64
 else ifdef ARM
 # Distinguish the cross-built ARM binary so it doesn't overwrite a
 # native x86 bin/SWOS in the same checkout. Native ARM builds (on a
 # Pi) also get the .armhf suffix — `file bin/SWOS.armhf` confirms the
 # ELF arch either way.
 TARGET_NAME := SWOS.armhf
+else ifeq ($(UNAME_S),Darwin)
+TARGET_NAME := SWOS.macos
 else
 TARGET_NAME := SWOS
 endif
@@ -94,11 +128,20 @@ SDL2_LIBS   := $(shell $(PKGCONF) --libs sdl2 2>/dev/null || sdl2-config --libs 
 # Testers wanting an actual 32-bit Windows binary should use MSYS2
 # MINGW32 (gcc already 32-bit; -m32 is a no-op) or Cygwin's 32-bit
 # toolchain.
-ifdef ARM
+ifdef ARM64
+# aarch64 is 64-bit (LP64) — no -m32 / -m64 needed. The static
+# size_check[] asserts that hard-code Amiga 32-bit struct sizes
+# will fail until Phase 5 / 6 lands.
+ARCHFLAGS :=
+else ifdef ARM
 # armhf is already 32-bit (ILP32) — no -m32 needed; passing it would
 # fail with "unrecognized command-line option '-m32'" on most ARM gcc
 # builds. Force armv7-a to keep things uniform across Pi 2/3/4 etc.
 ARCHFLAGS := -march=armv7-a -mfpu=neon -mfloat-abi=hard
+else ifeq ($(UNAME_S),Darwin)
+# Modern macOS is 64-bit (arm64 or x86_64). No -m32. The static
+# size_check[] asserts will fail until Phase 5 / 6 (same as ARM64).
+ARCHFLAGS :=
 else ifeq ($(GCC_MACHINE),x86_64-w64-mingw32)
 ARCHFLAGS :=
 else
