@@ -10734,6 +10734,41 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
     TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + teamSelOff1);
     TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + teamSelOff2);
 
+    /* [bug23-fix] Log fixture details when both sides resolve to the
+     * same TeamFileEx — that's how the qualifier auto-play loop got
+     * into _VerifyTeamLoaded(0) on NATIONAL.CAR. Capture which row in
+     * the standings table the duplicate came from + the current
+     * fixture index so we can trace back to the broken bracket bytes. */
+    if (team1 == team2) {
+        DIYCompetitionEx *bx = &diyCompetitionStart;
+        DIYCompetition  *bs = &bx->base;
+        uint8_t *cb = (uint8_t *)bx;
+        fprintf(stderr, "[bug23-fix] duplicate team fixture: "
+                        "compPtr1=%p compPtr2=%p teamSelOff1=%d teamSelOff2=%d "
+                        "team1=team2=%p selTeamsPtr=%p "
+                        "leagueCurrentSlot=%u matchesPlayedCount=%u "
+                        "roundComplete=%u currentRoundIndex=%d "
+                        "numTeams=%d compType=%u\n",
+                (void *)compPtr1, (void *)compPtr2,
+                (int)teamSelOff1, (int)teamSelOff2,
+                (void *)team1, (void *)&selTeamsPtr,
+                (unsigned)bx->leagueCurrentSlot,
+                (unsigned)bx->matchesPlayedCount,
+                (unsigned)bs->roundComplete,
+                (int)bs->currentRoundIndex,
+                (int)bs->numTeams, (unsigned)bs->competitionType);
+        /* Dump first fixture row from each likely fixture-list offset.
+         * The fixture-team-pair table on a league lives somewhere we
+         * haven't fully nailed down — show 32 bytes from the row that
+         * compPtr1 points into so we can see what byte-pair generated
+         * the offsets. */
+        const uint8_t *r1 = compPtr1;
+        fprintf(stderr, "[bug23-fix]   compPtr1 row[0..31]:");
+        for (int i = 0; i < 32; i++) fprintf(stderr, " %02X", r1[i]);
+        fprintf(stderr, "\n");
+        fflush(stderr);
+    }
+
     /* Safety guard ONLY for auto-advance paths. If either teamSelPtr
      * offset is genuinely out of range for selTeamsPtr during
      * careerAutoAdvanceInProgress / seasonUpdateInProgress, the
