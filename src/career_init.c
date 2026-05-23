@@ -831,8 +831,8 @@ found:
         /* Set slot 3 for this euro cup (d0=3, d1=euroCupIndex, d2=0) */
         _Career_SetCurrentCompetitionSlot(cupCopy, 3, 0, 0);
 
-        uint8_t *seasonPtr = _GetCurrentSeasonPointer();
-        *(uint32_t *)(seasonPtr + 0x22) = quaternaryCompStringOffset;
+        ((SeasonInformations *)_GetCurrentSeasonPointer())->strPtr3 =
+            quaternaryCompStringOffset;
 
         /* Restore quaternary slot state */
         quaternaryCompSlotStateC = savedC;
@@ -854,7 +854,7 @@ __attribute__((used, externally_visible))
 void _DIY_SelectCompetitionSlot4FromCurrentDivision(void)
 {
     uint8_t *comp = (uint8_t *)currentCompetitionPtr;
-    if (comp[1] != 0)
+    if (((Competition *)comp)->type != 0)
         return;
 
     uint16_t offset = currentDivisionIndex * 6;
@@ -897,10 +897,16 @@ void _InitializeNewSeason(void)
     selTeamSelectedPlayerPosition = 0xFFFF;
 
     /* Clear 4 entries of careerUnavailablePlayerList */
-    *(uint16_t *)(careerUnavailablePlayerList + 0) = 0xFFFF;
-    *(uint16_t *)(careerUnavailablePlayerList + 4) = 0xFFFF;
-    *(uint16_t *)(careerUnavailablePlayerList + 8) = 0xFFFF;
-    *(uint16_t *)(careerUnavailablePlayerList + 12) = 0xFFFF;
+    /* careerUnavailablePlayerList holds 4 × { uint16 teamNumber,
+     * uint16 playerIndex } entries at byte stride 4. Mark the first 4
+     * teamNumber slots as empty (0xFFFF). */
+    {
+        uint16_t *upl = (uint16_t *)careerUnavailablePlayerList;
+        upl[0] = 0xFFFF;
+        upl[2] = 0xFFFF;
+        upl[4] = 0xFFFF;
+        upl[6] = 0xFFFF;
+    }
 
     retired = 0;
     youreSacked = 0;
@@ -926,21 +932,21 @@ void _InitializeNewSeason(void)
     boardConfidenceMod9 = 0;
 
     /* Get current season info pointer and fill it */
-    uint8_t *seasonInfo = _GetCurrentSeasonPointer();
-    *(uint16_t *)(seasonInfo + 0) = selTeamNumber;  /* CLUBNO */
-    *(uint32_t *)(seasonInfo + 22) = 0;  /* LEAGUESTRINGOFFSET */
-    *(uint32_t *)(seasonInfo + 26) = 0;  /* STROFFSET1 */
-    *(uint32_t *)(seasonInfo + 30) = 0;  /* STROFFSET2 */
-    *(uint32_t *)(seasonInfo + 34) = 0;  /* FIELD_22 */
-    *(uint8_t *)(seasonInfo + 86) = 0;   /* FIELD_56 */
-    *(uint8_t *)(seasonInfo + 87) = 0;   /* FINALPOSITION */
-    *(uint8_t *)(seasonInfo + 88) = 0;   /* FIELD_58 */
-    *(uint8_t *)(seasonInfo + 89) = 0;   /* FIELD_59 */
-    *(uint8_t *)(seasonInfo + 40) = 0;   /* BESTSCORERNAME (first byte) */
-    *(uint8_t *)(seasonInfo + 105) = 0;  /* MANAGERSTATUS */
+    SeasonInformations *si = (SeasonInformations *)_GetCurrentSeasonPointer();
+    si->clubNo            = selTeamNumber;
+    si->leagueStrPtr      = 0;
+    si->strPtr1           = 0;
+    si->strPtr2           = 0;
+    si->strPtr3           = 0;
+    si->comp1Result       = 0;
+    si->comp2Result       = 0;
+    si->comp3Result       = 0;
+    si->comp4Result       = 0;
+    si->bestScorerName[0] = 0;
+    si->managerStatus     = 0;
 
-    /* Copy team name to season info CLUBNAME (offset 2) */
-    _StringCopy((uint8_t *)careerTeam.team.teamName, seasonInfo + 2);
+    /* Copy team name to season info CLUBNAME */
+    _StringCopy((uint8_t *)careerTeam.team.teamName, (uint8_t *)si->clubName);
 
     /* Verify team loaded and get current division index */
     TeamFileEx *teamFile = _VerifyTeamLoaded(selTeamNumber);
@@ -1044,8 +1050,8 @@ void _InitializeNewSeason(void)
         compTablePtr++;
         _Career_SetCurrentCompetitionSlot(comp, 0, currentDivisionIndex, 0);
 
-        seasonInfo = _GetCurrentSeasonPointer();
-        *(uint32_t *)(seasonInfo + 22) = primaryCompStringOffset;
+        ((SeasonInformations *)_GetCurrentSeasonPointer())->leagueStrPtr =
+            primaryCompStringOffset;
 
         primaryCompSlotStateC = savedC;
         primaryCompSlotStateB = savedB;
@@ -1065,8 +1071,8 @@ void _InitializeNewSeason(void)
         compTablePtr++;
         _Career_SetCurrentCompetitionSlot(comp, 1, 0, 0);
 
-        seasonInfo = _GetCurrentSeasonPointer();
-        *(uint32_t *)(seasonInfo + 0x1A) = secondaryCompStringOffset;
+        ((SeasonInformations *)_GetCurrentSeasonPointer())->strPtr1 =
+            secondaryCompStringOffset;
 
         secondaryCompSlotStateC = savedC;
         secondaryCompSlotStateB = savedB;
@@ -1081,8 +1087,8 @@ void _InitializeNewSeason(void)
             comp = (uint8_t *)*compTablePtr;
             _Career_SetCurrentCompetitionSlot(comp, 2, 0, 0);
 
-            seasonInfo = _GetCurrentSeasonPointer();
-            *(uint32_t *)(seasonInfo + 0x1E) = tertiaryCompStringOffset;
+            ((SeasonInformations *)_GetCurrentSeasonPointer())->strPtr2 =
+                tertiaryCompStringOffset;
 
             tertiaryCompSlotStateC = savedC2;
             tertiaryCompSlotStateB = savedB2;
@@ -1192,7 +1198,7 @@ __attribute__((used, externally_visible))
 void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
 {
     retired = 0;
-    uint8_t compTableIdx = src[2];
+    uint8_t compTableIdx = (uint8_t)((Competition *)src)->teamNumber;
     currentDivisionIndex = divisionIndex;
 
     /* Initialize competition slot pointer table */
@@ -1339,7 +1345,7 @@ static void _Rebuild_CupRecordNameSourcePointers(void)
             break;
         uint8_t *src  = (uint8_t *)srcAddr;
         uint8_t *dest = *(uint8_t **)(tbl + 4);
-        int8_t nameOffset = (int8_t)src[5];
+        int8_t nameOffset = ((Competition *)src)->unk1;
         if (nameOffset != 0) {
             uint32_t *srcPtrs  = (uint32_t *)(src  + 5 + nameOffset);
             uint32_t *destPtrs = (uint32_t *)(dest + 5 + nameOffset);
@@ -1405,7 +1411,7 @@ static void _Rebuild_CompetitionSlotPointers(void)
     diyCompetitionTablePtr = (uint32_t *)0;
     if (currentCompetitionPtr != 0) {
         uint8_t *primary = (uint8_t *)currentCompetitionPtr;
-        if (primary[1] == 0) {
+        if (((Competition *)primary)->type == 0) {
             uint16_t off = currentDivisionIndex * 6;
             uint8_t *entry = primary + off;
             uint8_t diyOffset = entry[0x12];
@@ -1601,7 +1607,7 @@ void _Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel)
     /* Not in any active slot — auto-advance this external competition */
     _SaveSelectedTeams();
     {
-        uint8_t compType = comp[1];
+        int8_t compType = ((Competition *)comp)->type;
         if (compType == 1) {
             _Career_AutoAdvanceCupCompetitionFromRecord(comp);
         } else if (compType == 2) {

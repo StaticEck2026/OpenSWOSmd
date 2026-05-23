@@ -621,7 +621,7 @@ void _Career_UpdateEuropeanChampionshipCompetitions(void)
         return;
 
     uint8_t *a5 = europeanChampionships2Copy;
-    uint8_t offset = a5[7];
+    uint8_t offset = (uint8_t)((Competition *)a5)->unk3;
     a5 = a5 + 7 + offset;
     /* Asm `move.w euroChampionshipQualTeam,(a5)+` writes BE on m68k.
      * Use BE_WRITE_U16 so the destination byte order matches the rest
@@ -650,14 +650,15 @@ void _Career_UpdateEuropeanChampionshipCompetitions(void)
  * More complex: handles type 0 (league), type 2 (cup), and error cases. */
 static void updateWCSlot(uint8_t *competition, uint16_t count, uint8_t *out)
 {
+    int8_t compType = ((Competition *)competition)->type;
     if ((uint32_t)competition == currentCompetitionPtr) {
         _RestoreSelectedTeams();
-        if (competition[1] == 2) {
+        if (compType == 2) {
             _Career_CopyCompetitionFileBufferToOrFromActive();
             _DIY_EditCompetitionSlot(1, 1, 0);
             _DIY_BuildQualifiedTeamListFromDiyFileBuffer(count, out);
             _SaveSelectedTeams();
-        } else if (competition[1] == 0) {
+        } else if (compType == 0) {
             _Career_CopyCompetitionFileBufferToOrFromActive();
             _ShowDiyLeaguesTournamentMenu(1, 1, 0);
             _DIY_BuildQualifiedTeamListFromSortedTable(count, out);
@@ -667,10 +668,10 @@ static void updateWCSlot(uint8_t *competition, uint16_t count, uint8_t *out)
             _PanicHaltLoop();
         }
     } else {
-        if (competition[1] == 2) {
+        if (compType == 2) {
             _Career_AutoAdvanceLeagueCompetitionFromRecord(competition);
             _DIY_BuildQualifiedTeamListFromDiyFileBuffer(count, out);
-        } else if (competition[1] == 0) {
+        } else if (compType == 0) {
             _Career_AutoAdvanceInternationalCompetitionFixtures(competition, 0);
             _DIY_BuildQualifiedTeamListFromSortedTable(count, out);
         } else {
@@ -691,7 +692,7 @@ void _Career_UpdateWorldCupCompetitions(void)
         return;
 
     uint8_t *a5 = worldCup2Copy;
-    uint8_t offset = a5[7];
+    uint8_t offset = (uint8_t)((Competition *)a5)->unk3;
     a5 = a5 + 7 + offset;
     /* BE write — matches the eurochampionship variant above and the
      * BE-packed convention for *.unk1 team-id lists (4e5f378). */

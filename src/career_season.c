@@ -702,7 +702,7 @@ static void processPrimaryCompetitionForNextSeason(uint8_t *competition);
 __attribute__((used, externally_visible))
 void _Career_ProcessSecondaryCompetitionForNextSeason(uint8_t *competition)
 {
-    if (competition[1] != 1) {
+    if (((Competition *)competition)->type != 1) {
         panicReasonCode = 0x3003;
         _PanicHaltLoop();
         return;
@@ -724,7 +724,7 @@ void _Career_ProcessSecondaryCompetitionForNextSeason(uint8_t *competition)
 __attribute__((used, externally_visible))
 void _Career_ProcessTertiaryCompetitionForNextSeason(uint8_t *competition)
 {
-    if (competition[1] != 1) {
+    if (((Competition *)competition)->type != 1) {
         panicReasonCode = 0x3003;
         _PanicHaltLoop();
         return;
@@ -1200,8 +1200,8 @@ static void setupFriendlyCupTeams(void)
     uint16_t maxPrice = (uint16_t)((uint32_t)avgPrice * 125 / 100);
 
     uint8_t *comp = friendlyCopy;
-    int16_t teamCount = (int8_t)comp[0xD];
-    uint8_t hdrSize = comp[7];
+    int16_t teamCount = (int8_t)((CompetitionCup *)comp)->firstRoundNo;
+    uint8_t hdrSize = (uint8_t)((Competition *)comp)->unk3;
     uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF));
     uint16_t *listBase = teamList;
 
@@ -1228,8 +1228,8 @@ static void setupInvitationTournamentTeams(void)
     uint16_t maxPrice = (uint16_t)((uint32_t)avgPrice * 125 / 100);
 
     uint8_t *comp = invitationTournamentCopy;
-    int16_t teamCount = (int8_t)comp[0xD];
-    uint8_t hdrSize = comp[7];
+    int16_t teamCount = (int8_t)((CompetitionCup *)comp)->firstRoundNo;
+    uint8_t hdrSize = (uint8_t)((Competition *)comp)->unk3;
     uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF));
     uint16_t *listBase = teamList;
 
@@ -1353,9 +1353,10 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         return;
 
     /* Check if this is the last division OR if the offset matches the next
-     * division's offset + 6. If neither, skip processing. */
+     * division's offset + 6. If neither, skip processing. Byte 9 of a
+     * CompetitionLeague is divisionsCount. */
     uint16_t nextDiv = index + 1;
-    if ((uint8_t)nextDiv != competition[9]) {
+    if ((uint8_t)nextDiv != (uint8_t)((CompetitionLeague *)competition)->divisionsCount) {
         uint8_t d1 = a2[0x18] + 6;
         if (d0 == d1)
             return;
@@ -1449,7 +1450,7 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
  * Handles league (type 0) and cup (type 2) competitions differently. */
 static void processPrimaryCompetitionForNextSeason(uint8_t *competition)
 {
-    uint8_t compType = competition[1];
+    int8_t compType = ((Competition *)competition)->type;
 
     if (compType == 2) {
         /* Cup competition */
@@ -1486,7 +1487,7 @@ static void processPrimaryCompetitionForNextSeason(uint8_t *competition)
      * qualification-loop's _Career_AutoAdvanceCupCompetitionFromRecord
      * picked teams from the wrong division, putting promotion weights
      * into wrong scratch slots and tripping the 0x5555 validate panic. */
-    uint8_t numDivisions = competition[9];
+    uint8_t numDivisions = (uint8_t)((CompetitionLeague *)competition)->divisionsCount;
     uint16_t d7;
     uint8_t *qualCursor = (uint8_t *)diyQualifiedTeamIndices;
 

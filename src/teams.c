@@ -3065,12 +3065,15 @@ skip_continental_check:
     }
 
     /* loc_13E21E: competition entry (>= 256) */
-    compType = compEntry[1];
+    {
+        Competition       *compHdr = (Competition *)compEntry;
+        CompetitionLeague *league  = (CompetitionLeague *)compEntry;
+        compType = compHdr->type;
     if (compType == 0) {
         /* League: enumerate divisions */
         divIdx = 0;
 loc_E246:
-        nameOff = compEntry[5];
+        nameOff = compHdr->unk1;
         if (nameOff == 0) {
             /* Use divisionStringTable */
             namePtr = (uint8_t *)divisionStringTable[divIdx];
@@ -3085,13 +3088,13 @@ loc_E246:
         *leagueNumsOut++ = divIdx;
         d1++;
         divIdx++;
-        if ((uint8_t)divIdx != compEntry[9])
+        if ((uint8_t)divIdx != (uint8_t)league->divisionsCount)
             goto loc_E246;
-        numberOfLeagues = (int8_t)compEntry[9];
+        numberOfLeagues = (int8_t)league->divisionsCount;
         goto loc_E086;
     } else if (compType == 1) {
         /* Cup */
-        nameOff = compEntry[5];
+        nameOff = compHdr->unk1;
         if (nameOff == 0) {
             namePtr = (uint8_t *)aCup_0;
         } else {
@@ -3105,7 +3108,7 @@ loc_E246:
         goto loc_E086;
     } else if (compType == 2) {
         /* Tournament */
-        nameOff = compEntry[5];
+        nameOff = compHdr->unk1;
         if (nameOff == 0) {
             namePtr = (uint8_t *)aLeague_1;
         } else {
@@ -3120,6 +3123,7 @@ loc_E246:
     } else {
         panicReasonCode = 0x2209;
         _PanicHaltLoop();
+    }
     }
 
 loc_E2D0:

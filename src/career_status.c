@@ -4268,14 +4268,15 @@ void _Career_SetCurrentCompetitionSlot(uint8_t *comp, uint16_t slot, uint16_t di
     _Career_LoadCompetitionSlotStateFromBuffer(slotState);
 
     /* Validate comp type vs slot — panic if mismatch */
-    uint8_t compType = comp[1];  /* 1(a0) */
+    const Competition *compHdr = (const Competition *)comp;
+    int8_t compType = compHdr->type;
     if (slot == 0) {
-        /* Slot 0: compType must NOT be 1 (if comp[1]==1 → panic, else fall through to validated) */
+        /* Slot 0: compType must NOT be 1 */
         if (compType == 1)
             goto panic_mismatch;
         goto validated;
     } else if (slot == 4) {
-        /* Slot 4: compType must be 1 (bne → panic) */
+        /* Slot 4: compType must be 1 */
         if (compType != 1)
             goto panic_mismatch;
         goto validated;
@@ -4301,7 +4302,9 @@ validated:
     /* Slot 4 special case: fill diyCupTeamIds with career team id */
     if (slot == 4) {
         uint16_t teamId = PACK_BE_U16(careerTeam.team.countryNumber, careerTeam.team.teamOrdinal);
-        int16_t count = (int16_t)(int8_t)comp[0xA];  /* move.b $A(a0),d3 / ext.w d3 */
+        /* Slot 4 is validated as compType==1 (cup) above, so comp is a
+         * CompetitionCup — byte 0xA = CompetitionCup.teams. */
+        int16_t count = (int16_t)((const CompetitionCup *)comp)->teams;
         int16_t i = count - 1;
         while (i >= 0) {
             diyCupTeamIds[i] = teamId;
@@ -4313,11 +4316,10 @@ validated:
     /* Non-slot-4: handle team selection */
     if (hasSelectedTeams) {
         /* Copy team numbers from selection to appropriate team ID list */
-        uint8_t compTypeByte = comp[1];
         uint16_t *teamIdList;
-        if (compTypeByte == 0) {
+        if (compType == 0) {
             teamIdList = diyLeagueTeamIds;
-        } else if (compTypeByte == 1) {
+        } else if (compType == 1) {
             teamIdList = diyCupTeamIds;
         } else {
             teamIdList = diyTournamentTeamIds;
@@ -4341,9 +4343,8 @@ init_competition:
     *(uint16_t *)&((DIYCompetition *)diyFileBufferCopy)->compId = slot;
     *(uint16_t *)&diyCompetitionStart.base.compId = slot;  /* writes compId+slotId as word */
 
-    /* Write comp type to slot state header */
-    uint8_t compTypeByte2 = comp[1];
-    int16_t typeWord = (int16_t)(int8_t)compTypeByte2;  /* ext.w d3 */
+    /* Write comp type to slot state header (sign-extended from int8). */
+    int16_t typeWord = (int16_t)compType;
     *(uint16_t *)slotState = (uint16_t)typeWord;
 
     /* Store competition slot state to buffer */

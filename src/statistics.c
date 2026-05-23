@@ -1434,10 +1434,7 @@ void _Career_StorePromotionRelegationInSeasonInfo(void)
     else
         return;
 
-    {
-        uint8_t *si = _GetCurrentSeasonPointer();
-        si[SI_TOURNAMENTSTATUS] = flag;
-    }
+    ((SeasonInformations *)_GetCurrentSeasonPointer())->tournamentStatus = flag;
 }
 
 /* ================================================================
@@ -1650,7 +1647,7 @@ static int16_t EncodeCompetitionPositionForSeasonInfo_impl(
 __attribute__((used, externally_visible))
 void _Career_FillCurrentSeasonInfo(void)
 {
-    uint8_t *a5;
+    SeasonInformations *a5;
     uint16_t d0;
     int16_t d1;
 
@@ -1658,7 +1655,7 @@ void _Career_FillCurrentSeasonInfo(void)
         return;
 
     _UpdateBoardConfidenceModifiers();
-    a5 = _GetCurrentSeasonPointer();
+    a5 = (SeasonInformations *)_GetCurrentSeasonPointer();
 
     /* --- Build trophy flags word --- */
     d0 = 0;
@@ -1677,27 +1674,27 @@ void _Career_FillCurrentSeasonInfo(void)
     if (leagueTitleBonusActive != 0)   d0 |= (1 << 8);
     if (wonInvitationTournament != 0)  d0 |= (1 << 9);
 
-    *(uint16_t *)(a5 + SI_TROPHYFLAGS) = d0;
+    a5->trophyFlags = d0;
 
     /* --- Manager status for final season / sacked --- */
     if (currentSeasonShowing == 0x13 && seasonFinished != 0)
-        a5[SI_MANAGERSTATUS] = 2;
+        a5->managerStatus = 2;
     if (youreSacked != 0)
-        a5[SI_MANAGERSTATUS] = 0xFF;
+        a5->managerStatus = (int8_t)0xFF;
 
     /* --- Board confidence modifiers and values --- */
-    a5[SI_TOTALGAMES]       = (uint8_t)boardConfidenceMod0;
-    a5[SI_TOTALWINS]        = (uint8_t)boardConfidenceMod1;
-    a5[SI_TOTALDRAWN]       = (uint8_t)boardConfidenceMod2;
-    a5[SI_TOTALLOST]        = (uint8_t)boardConfidenceMod3;
-    *(uint16_t *)(a5 + SI_TOTALGOALSSCORED) = boardConfidenceValue0;
-    *(uint16_t *)(a5 + SI_TOTALGOALSTAKEN)  = boardConfidenceValue1;
-    a5[SI_FRIENDLYWINS]     = (uint8_t)boardConfidenceMod4;
-    a5[SI_FRIENDLYDRAWS]    = (uint8_t)boardConfidenceMod5;
-    a5[SI_FRIENDLYLOST]     = (uint8_t)boardConfidenceMod6;
-    a5[SI_TOURWINS]         = (uint8_t)boardConfidenceMod7;
-    a5[SI_TOURDRAWS]        = (uint8_t)boardConfidenceMod8;
-    a5[SI_TOURLOST]         = (uint8_t)boardConfidenceMod9;
+    a5->totalGames        = (uint8_t)boardConfidenceMod0;
+    a5->totalWins         = (uint8_t)boardConfidenceMod1;
+    a5->totalDrawn        = (uint8_t)boardConfidenceMod2;
+    a5->totalLost         = (uint8_t)boardConfidenceMod3;
+    a5->totalGoalsScored  = boardConfidenceValue0;
+    a5->totalGoalsTaken   = boardConfidenceValue1;
+    a5->friendlyWins      = (uint8_t)boardConfidenceMod4;
+    a5->friendlyDraws     = (uint8_t)boardConfidenceMod5;
+    a5->friendlyLost      = (uint8_t)boardConfidenceMod6;
+    a5->tourWins          = (uint8_t)boardConfidenceMod7;
+    a5->tourDraws         = (uint8_t)boardConfidenceMod8;
+    a5->tourLost          = (uint8_t)boardConfidenceMod9;
 
     /* --- Find best-skilled player(s) --- */
     {
@@ -1725,23 +1722,23 @@ void _Career_FillCurrentSeasonInfo(void)
             i--;
         }
 
-        *(uint16_t *)(a5 + SI_BESTSCORERNUMGOALS) = bestSkill;
+        a5->bestScorerNumGoals = bestSkill;
 
         if (bestCount == 1) {
-            _StringCopy(bestPlayer + 0x4F, a5 + SI_BESTSCORERNAME);
-            a5[SI_2NDSCORERNAME] = 0;
+            _StringCopy(bestPlayer + 0x4F, (uint8_t *)a5->bestScorerName);
+            a5->secondScorerName[0] = 0;
         } else if (bestCount == 2) {
-            _StringCopy(bestPlayer + 0x4F, a5 + SI_BESTSCORERNAME);
-            _StringCopy(best2nd + 0x4F, a5 + SI_2NDSCORERNAME);
+            _StringCopy(bestPlayer + 0x4F, (uint8_t *)a5->bestScorerName);
+            _StringCopy(best2nd    + 0x4F, (uint8_t *)a5->secondScorerName);
         } else {
             /* 3+ players tied: "SEVERAL" */
-            _StringCopy(aSeveral, a5 + SI_BESTSCORERNAME);
-            a5[SI_2NDSCORERNAME] = 0;
+            _StringCopy(aSeveral, (uint8_t *)a5->bestScorerName);
+            a5->secondScorerName[0] = 0;
         }
     }
 
     /* --- Competition position results --- */
-    a5[SI_TOURNAMENTSTATUS] = 0;
+    a5->tournamentStatus = 0;
 
     /* Primary competition */
     {
@@ -1752,7 +1749,7 @@ void _Career_FillCurrentSeasonInfo(void)
         if (d1 >= 0) {
             d1 = EncodeCompetitionPositionForSeasonInfo_impl(
                 d1, (uint8_t *)&competitionFileBuffer, compDef);
-            a5[SI_COMP1RESULT] = (uint8_t)d1;
+            a5->comp1Result = (int8_t)d1;
 
             /* Check qualifying stage status */
             if (((uint32_t)compDef >= (uint32_t)worldCupQualifyingGroup1Copy &&
@@ -1760,15 +1757,15 @@ void _Career_FillCurrentSeasonInfo(void)
                 ((uint32_t)compDef >= (uint32_t)ecQualifyingGroup1Copy &&
                  (uint32_t)compDef <= (uint32_t)ecQualifyingGroup8Copy))
             {
-                a5[SI_TOURNAMENTSTATUS] = 1;
+                a5->tournamentStatus = 1;
                 if (qualifyingStage1PendingFlag0 == 0 &&
                     qualifyingStage1PendingFlag1 == 0)
                 {
-                    a5[SI_TOURNAMENTSTATUS] = 2;
+                    a5->tournamentStatus = 2;
                     if (qualifyingStage2PendingFlag0 == 0 &&
                         qualifyingStage2PendingFlag1 == 0)
                     {
-                        a5[SI_TOURNAMENTSTATUS] = 0;
+                        a5->tournamentStatus = 0;
                     }
                 }
             }
@@ -1776,33 +1773,33 @@ void _Career_FillCurrentSeasonInfo(void)
     }
 
     /* Secondary competition */
-    if (*(uint32_t *)(a5 + SI_STRPTR1) != 0) {
+    if (a5->strPtr1 != 0) {
         d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
                                       (DIYCompetition *)&competitionContext);
         uint8_t *compDef = (uint8_t *)(uint32_t)secondaryCompetitionPtr;
         d1 = EncodeCompetitionPositionForSeasonInfo_impl(
             d1, (uint8_t *)&competitionContext, compDef);
-        a5[SI_COMP2RESULT] = (uint8_t)d1;
+        a5->comp2Result = (int8_t)d1;
     }
 
     /* Tertiary competition */
-    if (*(uint32_t *)(a5 + SI_STRPTR2) != 0) {
+    if (a5->strPtr2 != 0) {
         d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
                                       (DIYCompetition *)&tertiaryCompetitionContext);
         uint8_t *compDef = (uint8_t *)(uint32_t)tertiaryCompetitionPtr;
         d1 = EncodeCompetitionPositionForSeasonInfo_impl(
             d1, (uint8_t *)&tertiaryCompetitionContext, compDef);
-        a5[SI_COMP3RESULT] = (uint8_t)d1;
+        a5->comp3Result = (int8_t)d1;
     }
 
     /* Quaternary competition */
-    if (*(uint32_t *)(a5 + SI_STRPTR3) != 0) {
+    if (a5->strPtr3 != 0) {
         d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
                                       (DIYCompetition *)&euroCupsCompetitionContext);
         uint8_t *compDef = (uint8_t *)(uint32_t)quaternaryCompetitionPtr;
         d1 = EncodeCompetitionPositionForSeasonInfo_impl(
             d1, (uint8_t *)&euroCupsCompetitionContext, compDef);
-        a5[SI_COMP4RESULT] = (uint8_t)d1;
+        a5->comp4Result = (int8_t)d1;
     }
 }
 
@@ -1881,7 +1878,7 @@ static MenuEntry *SetTrophySprite_Internal(uint16_t trophyIndex, MenuEntry *slot
  *
  * Initialize trophy slot entries and populate from season info flags.
  * ================================================================ */
-static void SetTrophySprites_Internal(uint8_t *si)
+static void SetTrophySprites_Internal(SeasonInformations *si)
 {
     MenuEntry *base = &menuEntries[17]; /* entry at $3B8/56 = 17 */
     uint16_t d0;
@@ -1902,8 +1899,8 @@ static void SetTrophySprites_Internal(uint8_t *si)
     base[2].x = d0; d0 += 20;
     base[3].x = d0;
 
-    /* Read trophy flags (word at offset 20) */
-    flags = *(uint16_t *)(si + SI_TROPHYFLAGS);
+    /* Read trophy flags */
+    flags = si->trophyFlags;
     if (flags == 0)
         return;
 
@@ -1926,7 +1923,7 @@ static void SetTrophySprites_Internal(uint8_t *si)
  * management record menu. Modifies the running Y position.
  * ================================================================ */
 static void RenderCompLine_Internal(const uint8_t *compName, int8_t resultCodeByte,
-                                    uint8_t qualFlag, uint8_t *si, uint16_t *pY)
+                                    uint8_t qualFlag, SeasonInformations *si, uint16_t *pY)
 {
     const uint8_t *origCompName = compName;
     MenuEntry *entry7;
@@ -1974,9 +1971,9 @@ static void RenderCompLine_Internal(const uint8_t *compName, int8_t resultCodeBy
     /* --- FRIENDLY path --- */
     if (origCompName == aFriendly)
     {
-        n0 = (uint16_t)(int16_t)(int8_t)si[SI_FRIENDLYWINS];
-        n1 = (uint16_t)(int16_t)(int8_t)si[SI_FRIENDLYDRAWS];
-        n2 = (uint16_t)(int16_t)(int8_t)si[SI_FRIENDLYLOST];
+        n0 = (uint16_t)(int16_t)(int8_t)si->friendlyWins;
+        n1 = (uint16_t)(int16_t)(int8_t)si->friendlyDraws;
+        n2 = (uint16_t)(int16_t)(int8_t)si->friendlyLost;
         fmt = aDash;
         if (n0 != 0 || n1 != 0 || n2 != 0)
             fmt = aWon0Drawn1Lost;
@@ -1986,9 +1983,9 @@ static void RenderCompLine_Internal(const uint8_t *compName, int8_t resultCodeBy
     /* --- TOUR path (European Tour .. Oceania Tour) --- */
     if (origCompName >= aEuropeanTour && origCompName <= aOceaniaTour)
     {
-        n0 = (uint16_t)(int16_t)(int8_t)si[SI_TOURWINS];
-        n1 = (uint16_t)(int16_t)(int8_t)si[SI_TOURDRAWS];
-        n2 = (uint16_t)(int16_t)(int8_t)si[SI_TOURLOST];
+        n0 = (uint16_t)(int16_t)(int8_t)si->tourWins;
+        n1 = (uint16_t)(int16_t)(int8_t)si->tourDraws;
+        n2 = (uint16_t)(int16_t)(int8_t)si->tourLost;
         fmt = aDash;
         if (n0 != 0 || n1 != 0 || n2 != 0)
             fmt = aWon0Drawn1Lost;
@@ -2108,17 +2105,14 @@ do_print:
 __attribute__((used, externally_visible))
 void _FillManagementRecordInfo(void)
 {
-    uint8_t *si;
+    SeasonInformations *si;
     uint16_t d5;
     MenuEntry *entry;
     uint8_t *dest;
     uint16_t yearLo;
 
     /* Compute season info pointer */
-    {
-        uint32_t off = (uint32_t)currentSeasonNumber * 106;
-        si = seasonInformationsArray + off;
-    }
+    si = &((SeasonInformations *)seasonInformationsArray)[currentSeasonNumber];
 
     /* Initialize trophy sprites */
     SetTrophySprites_Internal(si);
@@ -2153,7 +2147,7 @@ void _FillManagementRecordInfo(void)
     /* --- Club name line (entry 4) --- */
     entry = &menuEntries[4]; /* $E0/56 = 4 */
     dest = (uint8_t *)entry->fg;
-    _StringCopy(si + SI_CLUBNAME, dest);
+    _StringCopy((uint8_t *)si->clubName, dest);
     entry->y = d5;
     d5 += 10;
 
@@ -2161,7 +2155,7 @@ void _FillManagementRecordInfo(void)
     entry = &menuEntries[5]; /* $118/56 = 5 */
     dest = (uint8_t *)entry->fg;
     {
-        uint8_t countryCode = si[SI_CLUBNO];
+        uint8_t countryCode = (uint8_t)si->clubNo;
         const uint8_t *countryStr;
 
         if (countryCode >= CN_EUROPE && countryCode <= CN_OCEANIA)
@@ -2182,23 +2176,14 @@ void _FillManagementRecordInfo(void)
     d5 += 17;
 
     /* --- Competition results (4 lines) --- */
-    {
-        const uint8_t *comp1 = *(const uint8_t **)(si + SI_LEAGUESTRPTR);
-        RenderCompLine_Internal(comp1, (int8_t)si[SI_COMP1RESULT],
-                                si[SI_TOURNAMENTSTATUS], si, &d5);
-    }
-    {
-        const uint8_t *comp2 = *(const uint8_t **)(si + SI_STRPTR1);
-        RenderCompLine_Internal(comp2, (int8_t)si[SI_COMP2RESULT], 0, si, &d5);
-    }
-    {
-        const uint8_t *comp3 = *(const uint8_t **)(si + SI_STRPTR2);
-        RenderCompLine_Internal(comp3, (int8_t)si[SI_COMP3RESULT], 0, si, &d5);
-    }
-    {
-        const uint8_t *comp4 = *(const uint8_t **)(si + SI_STRPTR3);
-        RenderCompLine_Internal(comp4, (int8_t)si[SI_COMP4RESULT], 0, si, &d5);
-    }
+    RenderCompLine_Internal((const uint8_t *)(uintptr_t)si->leagueStrPtr,
+                            si->comp1Result, si->tournamentStatus, si, &d5);
+    RenderCompLine_Internal((const uint8_t *)(uintptr_t)si->strPtr1,
+                            si->comp2Result, 0, si, &d5);
+    RenderCompLine_Internal((const uint8_t *)(uintptr_t)si->strPtr2,
+                            si->comp3Result, 0, si, &d5);
+    RenderCompLine_Internal((const uint8_t *)(uintptr_t)si->strPtr3,
+                            si->comp4Result, 0, si, &d5);
 
     d5 += 8;
 
@@ -2211,7 +2196,7 @@ void _FillManagementRecordInfo(void)
     entry = &menuEntries[11]; /* $268/56 = 11 */
     dest = (uint8_t *)entry->fg;
 
-    if (si[SI_BESTSCORERNAME] == 0)
+    if (si->bestScorerName[0] == 0)
     {
         /* No scorer name — show dash */
         _StringCopy(aDash, dest);
@@ -2219,7 +2204,7 @@ void _FillManagementRecordInfo(void)
     else
     {
         uint16_t savedY = d5;
-        uint16_t totalGames = (uint16_t)si[SI_TOTALGAMES];
+        uint16_t totalGames = (uint16_t)si->totalGames;
         const uint8_t *fmt;
 
         if (totalGames == 0)
@@ -2231,11 +2216,11 @@ void _FillManagementRecordInfo(void)
         }
         else
         {
-            uint16_t tw = (uint16_t)si[SI_TOTALWINS];
-            uint16_t td = (uint16_t)si[SI_TOTALDRAWN];
-            uint16_t tl = (uint16_t)si[SI_TOTALLOST];
-            uint16_t gs = *(uint16_t *)(si + SI_TOTALGOALSSCORED);
-            uint16_t gt = *(uint16_t *)(si + SI_TOTALGOALSTAKEN);
+            uint16_t tw = (uint16_t)si->totalWins;
+            uint16_t td = (uint16_t)si->totalDrawn;
+            uint16_t tl = (uint16_t)si->totalLost;
+            uint16_t gs = si->totalGoalsScored;
+            uint16_t gt = si->totalGoalsTaken;
             _PrintFormatted(aPl0W1D2L3F4A5, dest,
                             totalGames, tw, td, tl, gs, gt, 0,
                             (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
@@ -2253,10 +2238,10 @@ void _FillManagementRecordInfo(void)
     /* --- Manager status (entry 9) --- */
     menuEntries[9].isInvisible = 1;
 
-    if ((int8_t)si[SI_MANAGERSTATUS] != 0)
+    if (si->managerStatus != 0)
     {
         uint16_t color;
-        int8_t status = (int8_t)si[SI_MANAGERSTATUS];
+        int8_t status = si->managerStatus;
 
         menuEntries[9].isInvisible = 0;
         entry = &menuEntries[9]; /* $1F8/56 = 9 */
@@ -2293,7 +2278,7 @@ void _FillManagementRecordInfo(void)
     entry = &menuEntries[12]; /* $2A0/56 = 12 */
     entry->fg = (uint32_t)aSeasonSTopScor; /* "SEASON'S TOP SCORER" */
 
-    if (si[SI_BESTSCORERNAME] != 0 && si[SI_2NDSCORERNAME] != 0)
+    if (si->bestScorerName[0] != 0 && si->secondScorerName[0] != 0)
     {
         entry->fg = (uint32_t)aSeasonSTopScor_0; /* "SEASON'S TOP SCORERS" */
     }
@@ -2306,15 +2291,15 @@ void _FillManagementRecordInfo(void)
     dest = (uint8_t *)entry->fg;
 
     {
-        uint16_t numGoals = *(uint16_t *)(si + SI_BESTSCORERNUMGOALS);
+        uint16_t numGoals = si->bestScorerNumGoals;
 
-        if (numGoals == 0 || si[SI_BESTSCORERNAME] == 0)
+        if (numGoals == 0 || si->bestScorerName[0] == 0)
         {
             _StringCopy(aDash, dest);
         }
         else
         {
-            const uint8_t *scorerName = si + SI_BESTSCORERNAME;
+            const uint8_t *scorerName = (const uint8_t *)si->bestScorerName;
             _PrintFormatted(aA0, dest,
                             numGoals, 0, 0, 0, 0, 0, 0,
                             scorerName, (const uint8_t *)0, (const uint8_t *)0);
@@ -2331,7 +2316,7 @@ void _FillManagementRecordInfo(void)
     /* --- Top scorer line 2 / second scorer (entry 14) --- */
     menuEntries[14].isInvisible = 1; /* $310/56 = 14 */
 
-    if (si[SI_BESTSCORERNAME] != 0 && si[SI_2NDSCORERNAME] != 0)
+    if (si->bestScorerName[0] != 0 && si->secondScorerName[0] != 0)
     {
         uint16_t numGoals;
 
@@ -2339,11 +2324,12 @@ void _FillManagementRecordInfo(void)
         entry = &menuEntries[14];
         dest = (uint8_t *)entry->fg;
 
-        numGoals = *(uint16_t *)(si + SI_BESTSCORERNUMGOALS);
+        numGoals = si->bestScorerNumGoals;
 
         _PrintFormatted(aA0, dest,
                         numGoals, 0, 0, 0, 0, 0, 0,
-                        si + SI_2NDSCORERNAME, (const uint8_t *)0, (const uint8_t *)0);
+                        (const uint8_t *)si->secondScorerName,
+                        (const uint8_t *)0, (const uint8_t *)0);
 
         entry->y = d5;
 

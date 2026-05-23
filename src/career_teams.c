@@ -2367,10 +2367,13 @@ void _Career_CopyUnavailablePlayerToCareerTeamSlot(uint8_t *srcPlayer, uint8_t *
     uint8_t *namesDst = careerUnavailablePlayerNames + (uint16_t)(dstSlotIndex * 17);
     _StringCopy(srcName, namesDst);
 
-    /* Store team number and player index in lookup table (4-byte entries) */
-    uint16_t offset = (uint16_t)(dstSlotIndex << 2);
-    *(uint16_t *)(careerUnavailablePlayerLookupTable + offset) = srcTeamNumber;
-    *(uint16_t *)(careerUnavailablePlayerLookupTable + offset + 2) = srcPlayerIndex;
+    /* Store team number and player index in lookup table. Each slot is
+     * 4 bytes: { uint16 teamNumber, uint16 playerIndex }. */
+    {
+        uint16_t *uplBase = (uint16_t *)careerUnavailablePlayerLookupTable;
+        uplBase[dstSlotIndex * 2 + 0] = srcTeamNumber;
+        uplBase[dstSlotIndex * 2 + 1] = srcPlayerIndex;
+    }
 
     /* Save shirtNumber before overwriting with player data copy */
     PlayerFile *dstPf = (PlayerFile *)(dstTeam + 76);  /* PlayerFile at TeamFileEx offset 0x4C */
@@ -2439,10 +2442,11 @@ void _Career_RemoveInternationalPlayersByMask(uint32_t removeMask)
 {
     uint8_t *slot = (uint8_t *)&careerTeam;
 
+    uint16_t *uplBase = (uint16_t *)careerUnavailablePlayerLookupTable;
     for (uint16_t i = 0; i < 20; i++) {
         if (removeMask & (1 << i)) {
-            /* Clear lookup table entry (word at offset i*4) */
-            *(uint16_t *)(careerUnavailablePlayerLookupTable + (uint16_t)(i << 2)) = 0xFFFF;
+            /* Clear lookup table entry's teamNumber slot. */
+            uplBase[i * 2] = 0xFFFF;
 
             /* Find position of this player slot in currentMatchPlayers */
             uint16_t pos = _GetPlayerPositionFromCurrent(i);
@@ -2501,12 +2505,13 @@ void _Career_InitInternationalSquadAndLookupTablesForNewSeason(TeamFileEx *teamP
 {
     (void)teamPtr;  /* dead parameter in original asm */
 
-    uint8_t *squadSlots = careerDefaultInternationalSquadSlotsTable;
-    uint16_t squadSlotIdx = 0;
+    uint8_t  *squadSlots = careerDefaultInternationalSquadSlotsTable;
+    uint16_t *uplBase    = (uint16_t *)careerUnavailablePlayerLookupTable;
+    uint16_t  squadSlotIdx = 0;
 
     for (uint16_t i = 0; i < 20; i++) {
-        /* Clear lookup table entry (word at offset i*4) */
-        *(uint16_t *)(careerUnavailablePlayerLookupTable + i * 4) = 0xFFFF;
+        /* Clear lookup table entry's teamNumber slot. */
+        uplBase[i * 2] = 0xFFFF;
 
         /* Set currentMatchPlayers[i] = i */
         currentMatchPlayers[i] = (uint8_t)i;

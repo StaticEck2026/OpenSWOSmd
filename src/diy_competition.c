@@ -8605,7 +8605,7 @@ static void checkEuropeanCupsAndClear3C(uint8_t *record, uint8_t *comp)
 static uint8_t *prependCountryNameIfClub(uint8_t *record, uint8_t *dst)
 {
     if (_IsNationalTeamCompetitionOrQualification((uint32_t)record) != 0) {
-        uint16_t countryIdx = record[2];
+        uint16_t countryIdx = (uint8_t)((Competition *)record)->teamNumber;
         uint8_t *countryEntry = (uint8_t *)countriesTable[countryIdx];
         if (countryEntry == 0)
             return dst;
@@ -8637,13 +8637,17 @@ static void setPitchTypeFields(uint8_t *comp)
 __attribute__((used, externally_visible))
 void _InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table)
 {
-    uint16_t byteOff = (uint16_t)(idx * 6);
-    if (table[byteOff + 0xD] & 1) {
+    /* `table` points at a CompetitionLeague_* record whose
+     * `divisions[]` starts at byte 13. The Division struct is
+     * 6 bytes per entry. */
+    Division *divisions = (Division *)(table + 13);
+    if (divisions[idx].unk1 & 1) {
         panicReasonCode = 0x1313;
         _PanicHaltLoop();
     }
 
-    uint8_t *a5 = table;
+    Competition       *compHdr = (Competition *)table;
+    CompetitionLeague *league  = (CompetitionLeague *)table;
     uint16_t d7 = idx;
 
     _DIY_InitCompetitionDefaults();
@@ -8651,70 +8655,73 @@ void _InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table)
     uint8_t *a6 = (uint8_t *)&diyCompetitionStart;
     DIYCompetition *a6s = (DIYCompetition *)a6;
     a6s->substitutesCount = 1;  /* 0x3C */
-    checkEuropeanCupsAndClear3C(a5, a6);
+    checkEuropeanCupsAndClear3C(table, a6);
 
-    a6s->field_2E = a5[0];     /* 0x2E */
-    a6s->startMonth = a5[3];   /* 0x38 */
-    a6s->endMonth = a5[4];     /* 0x39 */
+    a6s->field_2E   = (uint8_t)compHdr->compNumber;  /* 0x2E */
+    a6s->startMonth = compHdr->beginMonth;           /* 0x38 */
+    a6s->endMonth   = compHdr->endMonth;             /* 0x39 */
 
-    if ((int16_t)*(uint16_t *)(a5 + 0xA) < 0)
+    /* a5+0xA reads a word starting at CompetitionLeague.rounds; the
+     * `rounds < 0` sign test asks the original asm whether the
+     * MSBit of that combined word is set. */
+    if ((int16_t)*(uint16_t *)&league->rounds < 0)
         ((DIYCompetitionEx *)a6)->matchData.league.hasGroupsDiy = 1;
 
     setPitchTypeFields(a6);
 
-    /* Extract round-specific values from table at idx*6 offset */
-    uint16_t off = (uint16_t)(d7 * 6);
+    /* Per-division fields from divisions[idx]. */
+    Division *div = &divisions[idx];
     uint16_t d1;
 
-    d1 = a5[off + 0xE];
+    d1 = (uint8_t)div->promoted;
     a6s->roundComplete = (int16_t)d1;   /* 0x54 */
 
-    d1 = a5[off + 0xF];
+    d1 = (uint8_t)div->promotedPo;
     if ((int8_t)d1 < 0) {
         d1 = (uint8_t)(-(int8_t)d1);
         d1 >>= 1;
     }
     a6s->competitionFinished = (int16_t)d1;   /* 0x56 */
 
-    d1 = a5[off + 0x10];
+    d1 = (uint8_t)div->relegated;
     a6s->currentRoundIndex = (int16_t)d1;       /* 0x58 */
 
-    d1 = a5[off + 0x11];
+    d1 = (uint8_t)div->relegatedPo;
     if ((int8_t)d1 < 0) {
         d1 = (uint8_t)(-(int8_t)d1);
         d1 >>= 1;
     }
     a6s->numRounds = (int16_t)d1;      /* 0x5A */
 
-    int16_t numTeams = (int8_t)a5[off + 0xD];
+    int16_t numTeams = (int8_t)div->teams;
     a6s->numTeams = numTeams;           /* 0x32 */
 
     a6s->matchPairsPerRound = 1;                /* 0x50 */
 
     /* Build competition name at offset 4 */
     uint8_t *a1 = a6 + 4;
-    a1 = prependCountryNameIfClub(a5, a1);
+    a1 = prependCountryNameIfClub(table, a1);
 
     /* Division/competition name */
     uint8_t *nameSource;
-    int8_t nameOffset = (int8_t)a5[5];
+    int8_t nameOffset = compHdr->unk1;
     if (nameOffset == 0) {
         nameSource = (uint8_t *)divisionStringTable[d7];
     } else {
-        uint8_t *customTable = a5 + 5 + nameOffset;
+        uint8_t *customTable = table + 5 + nameOffset;
         nameSource = *(uint8_t **)(customTable + (d7 << 3));
     }
     a6s->namePtr = (uint32_t)nameSource;  /* 0x28 */
     a1 = _StringCopy(nameSource, a1);
 
-    ((DIYCompetitionEx *)a6)->pointsForAWin = (int16_t)(int8_t)a5[0xB];
+    ((DIYCompetitionEx *)a6)->pointsForAWin = (int16_t)league->pointsForWin;
 
-    int8_t typeVal = (int8_t)a5[0xA];
+    int8_t typeVal = league->rounds;
     if (typeVal < 0)
         typeVal = 1;
     a6s->playEachTeam = (int16_t)typeVal;  /* 0x5E */
 
-    uint16_t c = a5[0xC];
+    uint16_t c = (uint8_t)league->subsReserves;
     ((DIYCompetitionEx *)a6)->matchData.league.leagueMinSubstitutes = (c & 0xF0) >> 4;
     ((DIYCompetitionEx *)a6)->matchData.league.leagueMaxSubstitutes = c & 0x0F;
 
@@ -8725,45 +8732,46 @@ void _InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table)
 __attribute__((used, externally_visible))
 void _InitDIYCupFromRecord(uint8_t *cupRec)
 {
-    if (cupRec[0xA] & 1) {
+    Competition    *compHdr = (Competition *)cupRec;
+    CompetitionCup *cup     = (CompetitionCup *)cupRec;
+
+    if (cup->teams & 1) {
         panicReasonCode = 0x1313;
         _PanicHaltLoop();
     }
-
-    uint8_t *a5 = cupRec;
 
     _InitDIYCup();
 
     uint8_t *a6 = (uint8_t *)&diyCompetitionStart;
     DIYCompetition *a6s = (DIYCompetition *)a6;
     a6s->substitutesCount = 1;  /* 0x3C */
-    checkEuropeanCupsAndClear3C(a5, a6);
+    checkEuropeanCupsAndClear3C(cupRec, a6);
 
-    a6s->field_2E = a5[0];           /* 0x2E */
-    a6s->subRoundCounter = (int8_t)a5[0xD];  /* 0x5C */
-    a6s->startMonth = a5[3];         /* 0x38 */
-    a6s->endMonth = a5[4];           /* 0x39 */
+    a6s->field_2E        = (uint8_t)compHdr->compNumber;  /* 0x2E */
+    a6s->subRoundCounter = (int8_t)cup->firstRoundNo;     /* 0x5C */
+    a6s->startMonth      = compHdr->beginMonth;           /* 0x38 */
+    a6s->endMonth        = compHdr->endMonth;             /* 0x39 */
 
     setPitchTypeFields(a6);
 
-    a6s->numTeams = (int8_t)a5[0xA]; /* 0x32 */
+    a6s->numTeams = (int8_t)cup->teams; /* 0x32 */
 
     /* Build competition name at offset 4 */
     uint8_t *a1 = a6 + 4;
-    a1 = prependCountryNameIfClub(a5, a1);
+    a1 = prependCountryNameIfClub(cupRec, a1);
 
     /* Cup name */
     uint8_t *nameSource = (uint8_t *)aCup_0; /* "CUP" default */
-    int8_t nameOffset = (int8_t)a5[5];
+    int8_t nameOffset = compHdr->unk1;
     if (nameOffset != 0) {
-        nameSource = *(uint8_t **)(a5 + 5 + nameOffset);
+        nameSource = *(uint8_t **)(cupRec + 5 + nameOffset);
     }
     a6s->namePtr = (uint32_t)nameSource;  /* 0x28 */
     a1 = _StringCopy(nameSource, a1);
 
-    a6s->playEachTeam = (int8_t)a5[0xB];  /* 0x5E */
+    a6s->playEachTeam = (int8_t)cup->awayGoalsMode;  /* 0x5E */
 
-    uint16_t c = a5[0xC];
+    uint16_t c = (uint8_t)cup->subsReserves;
     ((DIYCompetitionEx *)a6)->minSubstitutes = (c & 0xF0) >> 4;
     ((DIYCompetitionEx *)a6)->pointsForAWin = c & 0x0F;
 
@@ -8776,8 +8784,12 @@ void _InitDIYCupFromRecord(uint8_t *cupRec)
     }
     d2--;
 
-    /* Unpack round flags from record byte 0xE onwards */
-    uint8_t *recPtr = a5;
+    /* Unpack round flags from variant tail at &cupRec[0xE].
+     * Variants differ past offset 0xE (CompetitionCup_6_2_12 has
+     * rounds[6] starting there, CompetitionCup_6_2_64 same), so
+     * read as raw bytes — the encoding is the same per-round-byte
+     * regardless of variant tail. */
+    uint8_t *recPtr = cupRec;
     DIYCompetitionEx *compEx = (DIYCompetitionEx *)a6;
     for (int16_t i = 0; i <= (int16_t)d2; i++) {
         uint8_t flags = recPtr[0xE];
@@ -8789,14 +8801,16 @@ void _InitDIYCupFromRecord(uint8_t *cupRec)
 
     _DIY_InitCupBracketState();
 
-    /* Third-place match */
-    if (a5[9] != 0) {
-        int16_t val = (int8_t)a5[9];
+    /* Third-place match — byte 9 = CompetitionCup.unk1 holds the
+     * third-place team count. */
+    if (cup->unk1 != 0) {
+        int16_t val = cup->unk1;
         DIYCompetition *diyStartS = &diyCompetitionStart.base;
         diyStartS->numRounds = val;  /* 0x5A (= 0x3A + 0x20) */
     }
 
-    if (a5[8] == 0)
+    /* Competition.unk4 == 0 → shuffle. */
+    if (compHdr->unk4 == 0)
         _DIY_ShuffleTeamGridPairs();
 }
 
@@ -8804,6 +8818,7 @@ __attribute__((used, externally_visible))
 void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
 {
     uint8_t *a5 = leagueRec;
+    Competition *compHdr = (Competition *)leagueRec;
 
     _InitDIYTournament();
 
@@ -8812,13 +8827,13 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
     a6s->substitutesCount = 1;  /* 0x3C */
     checkEuropeanCupsAndClear3C(a5, a6);
 
-    a6s->field_2E = a5[0];     /* 0x2E */
+    a6s->field_2E = (uint8_t)compHdr->compNumber;  /* 0x2E */
     a6s->matchPairsPerRound = 0;        /* 0x50 */
 
-    if (a5[8] != 0) {
+    if (compHdr->unk4 != 0) {
         a6s->matchPairsPerRound = 1;  /* 0x50 */
 
-        int8_t seedOff = (int8_t)a5[7];
+        int8_t seedOff = compHdr->unk3;
         if (seedOff == 0) {
             panicReasonCode = 0x5295;
             _PanicHaltLoop();
@@ -8877,12 +8892,12 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
         }
     }
 
-    a6s->startMonth = a5[3];   /* 0x38 */
-    a6s->endMonth = a5[4];     /* 0x39 */
+    a6s->startMonth = compHdr->beginMonth;   /* 0x38 */
+    a6s->endMonth   = compHdr->endMonth;     /* 0x39 */
 
     setPitchTypeFields(a6);
 
-    a6s->numTeams = (int8_t)a5[0xF];  /* 0x32 */
+    a6s->numTeams = (int8_t)a5[0xF];  /* 0x32 — variant-tail byte */
 
     /* Build competition name at offset 4 */
     uint8_t *a1 = a6 + 4;
@@ -8890,7 +8905,7 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
 
     /* League name */
     uint8_t *nameSource = (uint8_t *)aLeague_1; /* "LEAGUE" default */
-    int8_t nameOffset = (int8_t)a5[5];
+    int8_t nameOffset = compHdr->unk1;
     if (nameOffset != 0) {
         nameSource = *(uint8_t **)(a5 + 5 + nameOffset);
     }
@@ -8982,7 +8997,7 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
 __attribute__((used, externally_visible))
 void _InitCompetitionFromRecord(uint16_t index, uint8_t *record)
 {
-    uint8_t type = record[1];
+    int8_t type = ((Competition *)record)->type;
     if (type == 0)
         _InitDIYCompetitionFromTableEntry(index, record);
     else if (type == 1)

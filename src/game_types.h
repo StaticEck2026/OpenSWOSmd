@@ -767,6 +767,49 @@ typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx {
 typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5C8) ? 1 : -1];
 
 /* ==================================================================
+ * SeasonInformations — 106 bytes per row, pack(2)
+ *
+ * Per-season summary used on the season-end recap screen. The
+ * seasonInformationsArray global holds 20 of these (one per season
+ * the player has played). Pointer fields (leagueStrPtr / strPtr1-3)
+ * are runtime-derived comp-name strings — the JSON save emits them
+ * as bare string values via emit_str_pool_field, re-interned into
+ * the string pool on load.
+ * ================================================================== */
+typedef struct __attribute__((packed, aligned(2))) SeasonInformations {
+    uint16_t clubNo;                  /* 0x00 */
+    int8_t   clubName[18];            /* 0x02 */
+    uint16_t trophyFlags;             /* 0x14 */
+    uint32_t leagueStrPtr;            /* 0x16: ptr to league name */
+    uint32_t strPtr1;                 /* 0x1A: ptr to cup name */
+    uint32_t strPtr2;                 /* 0x1E: ptr to cup name */
+    uint32_t strPtr3;                 /* 0x22: ptr to cup name */
+    uint16_t bestScorerNumGoals;      /* 0x26 */
+    int8_t   bestScorerName[23];      /* 0x28 */
+    int8_t   secondScorerName[23];    /* 0x3F */
+    int8_t   comp1Result;             /* 0x56 */
+    int8_t   comp2Result;             /* 0x57 */
+    int8_t   comp3Result;             /* 0x58 */
+    int8_t   comp4Result;             /* 0x59 */
+    uint16_t totalGoalsScored;        /* 0x5A */
+    uint16_t totalGoalsTaken;         /* 0x5C */
+    uint8_t  totalGames;              /* 0x5E */
+    uint8_t  totalWins;               /* 0x5F */
+    uint8_t  totalDrawn;              /* 0x60 */
+    uint8_t  totalLost;               /* 0x61 */
+    uint8_t  friendlyWins;            /* 0x62 */
+    uint8_t  friendlyDraws;           /* 0x63 */
+    uint8_t  friendlyLost;            /* 0x64 */
+    uint8_t  tourWins;                /* 0x65 */
+    uint8_t  tourDraws;               /* 0x66 */
+    uint8_t  tourLost;                /* 0x67 */
+    uint8_t  tournamentStatus;        /* 0x68 */
+    int8_t   managerStatus;           /* 0x69 */
+} SeasonInformations;
+
+typedef char _seasoninformations_size_check[(sizeof(SeasonInformations) == 106) ? 1 : -1];
+
+/* ==================================================================
  * JobOffer — 26 bytes, pack(2)
  * Queue entry for career mode job offers.
  * ================================================================== */
