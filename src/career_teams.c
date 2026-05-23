@@ -1434,6 +1434,30 @@ uint8_t *_TeamSelectionKeyCache_GetCurrentSelectedElementPtr(void)
 }
 
 /* ================================================================
+ * _TeamSelectionKeyCache_GetCurrentMatchSlot — typed wrapper for the
+ * post-Phase-1F struct-named match-slot access.
+ *
+ * The asm helper above returns `entry + diff*12`, which is 10 bytes
+ * before the actual match slot start (writes happen at +0x0B). This
+ * wrapper returns the properly-aligned slot pointer so callers can
+ * use `slot->matchFlags / packedGoals / aggregate / penaltyScore`
+ * instead of raw `elem[0x0B / 0x10 / 0x12 / 0x14]` byte arithmetic.
+ *
+ * Returns NULL when the current entry has no remaining matches.
+ * ================================================================ */
+TeamSelectionKeyCacheMatchSlot *_TeamSelectionKeyCache_GetCurrentMatchSlot(void)
+{
+    TeamSelectionKeyCacheEntry *entry =
+        (TeamSelectionKeyCacheEntry *)(teamSelectionKeyCache + teamSelectionKeyCacheOffset);
+    if (entry->remainingElements < 0)
+        return (TeamSelectionKeyCacheMatchSlot *)0;
+    uint8_t diff = (uint8_t)entry->totalElements - (uint8_t)entry->remainingElements;
+    return (TeamSelectionKeyCacheMatchSlot *)((uint8_t *)entry +
+                                              sizeof(TeamSelectionKeyCacheEntry) +
+                                              (uint32_t)diff * 12);
+}
+
+/* ================================================================
  * _Career_UpdateCareerFinishedFlag  (SWOS2.s line 36148)
  *
  * Checks if all remaining key cache entries have been processed.
@@ -1448,24 +1472,25 @@ void _Career_UpdateCareerFinishedFlag(void)
         return;
     }
 
-    uint8_t *ptr = _TeamSelectionKeyCache_GetCurrentListPtr();
-    if (ptr[6] != 0) {
+    TeamSelectionKeyCacheEntry *entry =
+        (TeamSelectionKeyCacheEntry *)_TeamSelectionKeyCache_GetCurrentListPtr();
+    if (entry->remainingElements != 0) {
         careerFinished = 0;
         return;
     }
 
     /* Walk from current entry to end of cache */
-    ptr = _TeamSelectionKeyCache_GetCurrentListPtr();
+    entry = (TeamSelectionKeyCacheEntry *)_TeamSelectionKeyCache_GetCurrentListPtr();
     uint16_t idx = teamSelectionKeyCacheIndex;
 
     for (;;) {
-        if (ptr[4] == 0) {
-            if (ptr[6] != 0) {
+        if (entry->phaseFlag == 0) {
+            if (entry->remainingElements != 0) {
                 careerFinished = 0;
                 return;
             }
         }
-        ptr += *(uint16_t *)(ptr + 2);
+        entry = (TeamSelectionKeyCacheEntry *)((uint8_t *)entry + entry->entryStride);
         idx++;
         if (idx == teamSelectionKeyCacheCount)
             break;
@@ -1705,8 +1730,9 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
          * The original asm runs auto-sim only after the menu (in
          * Career_ProcessCurrentCompetitionSlotForMatch, reached only when
          * entry[6] > 0). Gating here matches that condition. */
-        uint8_t *cacheEntry = _TeamSelectionKeyCache_GetCurrentListPtr();
-        if (cacheEntry[6] != 0) {
+        TeamSelectionKeyCacheEntry *cacheEntry =
+            (TeamSelectionKeyCacheEntry *)_TeamSelectionKeyCache_GetCurrentListPtr();
+        if (cacheEntry->remainingElements != 0) {
             _Career_AutoSimulateCupMatchesUntilHumanTeam();
         }
         _ShowDIYCupMenuWithParams(1, 0, d2);

@@ -846,6 +846,58 @@ typedef struct __attribute__((packed)) NationalTeamRecord {
 typedef char _nationalteamrecord_size_check[(sizeof(NationalTeamRecord) == 6) ? 1 : -1];
 
 /* ==================================================================
+ * TeamSelectionKeyCache — variable-length entry stream in
+ * `teamSelectionKeyCache` (BSS overlay over careerFileBufferBuf+73292).
+ *
+ * Each entry is a 10-byte header followed by N × 12-byte match slots,
+ * with `entryStride = 10 + N*12`. Entries are sorted by `sortKey` and
+ * walked by adding `entryStride` to the current entry pointer.
+ *
+ * The original asm `_TeamSelectionKeyCache_GetCurrentSelectedElementPtr`
+ * helper returns `entry + diff*12` where `diff = totalElements -
+ * remainingElements`. Writes go to elem[+0x0B..+0x15], so the asm
+ * pointer is 10 bytes *before* the actual match slot start. The typed
+ * helper `_TeamSelectionKeyCache_GetCurrentMatchSlot()` returns the
+ * properly-aligned `TeamSelectionKeyCacheMatchSlot *`.
+ *
+ * Layout reverse-engineered from SWOS2.s lines 59549-59656 (entry
+ * build), 60046-60054 (match-result write), 60723-60738
+ * (GetCurrentSelectedElementPtr), and slot-build reads at
+ * diy_competition.c:2776+ (compId/roundIdx lookup).
+ * ================================================================== */
+typedef struct __attribute__((packed)) TeamSelectionKeyCacheMatchSlot {
+    uint8_t  pairType;          /* +0  (elem[0x0A]) — 0/1/2 fixture type */
+    uint8_t  matchFlags;        /* +1  (elem[0x0B]) — written post-match */
+    uint16_t teamId1;           /* +2  (elem[0x0C]) — host-native */
+    uint16_t teamId2;           /* +4  (elem[0x0E]) — host-native */
+    uint16_t packedGoals;       /* +6  (elem[0x10]) — high=team1, low=team2 */
+    uint16_t aggregate;         /* +8  (elem[0x12]) */
+    uint16_t penaltyScore;      /* +10 (elem[0x14]) */
+} TeamSelectionKeyCacheMatchSlot;
+
+typedef char _tskc_slot_size_check[(sizeof(TeamSelectionKeyCacheMatchSlot) == 12) ? 1 : -1];
+
+typedef struct __attribute__((packed)) TeamSelectionKeyCacheEntry {
+    uint8_t  compId;            /* +0 — competition id (matched in lookup) */
+    uint8_t  sortKey;           /* +1 — InsertSpaceSorted insertion key */
+    uint16_t entryStride;       /* +2 — host-native; = 10 + numTeams*12 */
+    uint8_t  phaseFlag;         /* +4 — 0 == unprocessed */
+    uint8_t  totalElements;     /* +5 — count of match slots */
+    int8_t   remainingElements; /* +6 — slots left to play (< 0 means none) */
+    uint8_t  roundIdx;          /* +7 — cup round index (cup mode) */
+    uint8_t  legFlag;           /* +8 — 1/2/3 leg/format variant; never
+                                 *      written via cacheEntry[8]= in the
+                                 *      ported C; initialised somewhere in
+                                 *      the cache-build chain that we
+                                 *      haven't fully mapped. Reads at
+                                 *      diy_competition.c:2804+. */
+    uint8_t  cupRoundStringIdx; /* +9 — cup round string index */
+    /* +10..: TeamSelectionKeyCacheMatchSlot slots[totalElements] */
+} TeamSelectionKeyCacheEntry;
+
+typedef char _tskc_entry_size_check[(sizeof(TeamSelectionKeyCacheEntry) == 10) ? 1 : -1];
+
+/* ==================================================================
  * MarketPlayer — 42 bytes, pack(1)
  * Career foreign market player entry.
  * ================================================================== */

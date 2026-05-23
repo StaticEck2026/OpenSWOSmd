@@ -2655,23 +2655,29 @@ void _SelectActiveContestAndRound(void)
     if (careerFinished != 0)
         goto setInvalid;
     {
-        uint8_t *a0 = _TeamSelectionKeyCache_GetCurrentListPtr();
-        uint8_t *base = teamSelectionKeyCache;
+        TeamSelectionKeyCacheEntry *entry =
+            (TeamSelectionKeyCacheEntry *)_TeamSelectionKeyCache_GetCurrentListPtr();
         uint16_t d0 = teamSelectionKeyCacheIndex;
         for (;;) {
-            uint8_t numGames = *(uint8_t *)(a0 + 5);
-            uint8_t remaining = *(uint8_t *)(a0 + 6);
+            uint8_t numGames = (uint8_t)entry->totalElements;
+            uint8_t remaining = (uint8_t)entry->remainingElements;
             if (numGames != 0 && remaining != 0) {
                 savedContestListIndex = (int16_t)d0;
-                savedContestEntryPtr = (uint32_t)a0;
+                savedContestEntryPtr = (uint32_t)(uintptr_t)entry;
                 int16_t gameOff = (int16_t)numGames - (int16_t)remaining;
                 savedContestGameOffset = gameOff;
+                /* asm formula: a0 + gameOff*12 (the byte pointer at +gameOff*12
+                 * from entry start — same shape as GetCurrentSelectedElementPtr).
+                 * Writes will land at +0x0B etc. of that pointer = match slot
+                 * gameOff's matchFlags/packedGoals/aggregate/penaltyScore.
+                 * Kept as uint32_t here since savedContestRoundPtr is still a
+                 * uint32_t global; will become a typed pointer in Phase 2 Wave 2. */
                 uint32_t byteOff = (uint16_t)gameOff * 12u;
-                savedContestRoundPtr = (uint32_t)(a0 + byteOff);
+                savedContestRoundPtr = (uint32_t)(uintptr_t)((uint8_t *)entry + byteOff);
                 return;
             }
             d0++;
-            a0 += *(uint16_t *)(a0 + 2); /* advance by entry size */
+            entry = (TeamSelectionKeyCacheEntry *)((uint8_t *)entry + entry->entryStride);
             if (d0 == teamSelectionKeyCacheCount)
                 break;
         }

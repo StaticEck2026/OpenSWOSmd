@@ -58,6 +58,7 @@ extern void _ShowChairmanMessage(void);
 extern void _AddCareerTeamPlayer(void);
 extern void _CheckPlayersLeavingComing(void);
 extern uint8_t *_TeamSelectionKeyCache_GetCurrentListPtr(void);
+extern TeamSelectionKeyCacheMatchSlot *_TeamSelectionKeyCache_GetCurrentMatchSlot(void);
 
 /* C-callable asm bridges for GetPlayer/GetPlayerAtIndex */
 extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerIndex);
@@ -3810,20 +3811,20 @@ skipStats:
      * The base cache entry (a0) gets its counter decremented,
      * while the selected element (a1) receives match result data. */
     if (team1->team.teamControls != 1 || team2->team.teamControls != 1) {
-        /* Asm calls GetCurrentSelectedElementPtr FIRST (returns a0=base, a1=elem),
-         * THEN decrements byte[6] of base. Order matters: the element pointer
-         * depends on (byte[5] - byte[6]) * 12. */
-        uint8_t *elem = _TeamSelectionKeyCache_GetCurrentSelectedElementPtr();
+        /* Asm calls GetCurrentSelectedElementPtr FIRST, THEN decrements
+         * remainingElements. Order matters: the slot pointer depends on
+         * (totalElements - remainingElements) * 12. */
+        TeamSelectionKeyCacheMatchSlot *slot = _TeamSelectionKeyCache_GetCurrentMatchSlot();
 
-        /* Base cache entry (a0 in asm) — decrement byte[6] AFTER getting element */
-        uint8_t *base_entry = teamSelectionKeyCache + teamSelectionKeyCacheOffset;
-        base_entry[6] -= 1;
+        /* Base cache entry — decrement remainingElements AFTER getting slot */
+        TeamSelectionKeyCacheEntry *base_entry =
+            (TeamSelectionKeyCacheEntry *)(teamSelectionKeyCache + teamSelectionKeyCacheOffset);
+        base_entry->remainingElements -= 1;
 
-        /* Selected element (a1 in asm) — store match results */
-        elem[0x0B] = (uint8_t)flags;
-        *(uint16_t *)(elem + 0x10) = packedGoals;
-        *(uint16_t *)(elem + 0x12) = aggregate;
-        *(uint16_t *)(elem + 0x14) = penalty;
+        slot->matchFlags    = (uint8_t)flags;
+        slot->packedGoals   = packedGoals;
+        slot->aggregate     = aggregate;
+        slot->penaltyScore  = penalty;
     }
 
     /* Set career slot processing variable */
@@ -3870,15 +3871,17 @@ void _Career_AutoAdvanceLeagueFixtures(void)
         currentPhase = 0xFF;
         nextPhase = 0xFF;
     } else {
-        /* Get phase bytes from TeamSelectionKeyCache */
-        uint8_t *cacheEntry = _TeamSelectionKeyCache_GetCurrentListPtr();
-        currentPhase = cacheEntry[1];
+        /* Get phase bytes (sortKey) from TeamSelectionKeyCache */
+        TeamSelectionKeyCacheEntry *cacheEntry =
+            (TeamSelectionKeyCacheEntry *)_TeamSelectionKeyCache_GetCurrentListPtr();
+        currentPhase = cacheEntry->sortKey;
         uint16_t nextIdx = teamSelectionKeyCacheIndex + 1;
         if (nextIdx == teamSelectionKeyCacheCount) {
             nextPhase = 0xFF;
         } else {
-            uint16_t entrySize = *(uint16_t *)(cacheEntry + 2);
-            nextPhase = *(cacheEntry + entrySize + 1);
+            TeamSelectionKeyCacheEntry *next =
+                (TeamSelectionKeyCacheEntry *)((uint8_t *)cacheEntry + cacheEntry->entryStride);
+            nextPhase = next->sortKey;
         }
     }
 
@@ -4019,14 +4022,16 @@ void _Career_AutoAdvanceCupMatches(void)
         currentPhase = 0xFF;
         nextPhase = 0xFF;
     } else {
-        uint8_t *cacheEntry = _TeamSelectionKeyCache_GetCurrentListPtr();
-        currentPhase = cacheEntry[1];
+        TeamSelectionKeyCacheEntry *cacheEntry =
+            (TeamSelectionKeyCacheEntry *)_TeamSelectionKeyCache_GetCurrentListPtr();
+        currentPhase = cacheEntry->sortKey;
         uint16_t nextIdx = teamSelectionKeyCacheIndex + 1;
         if (nextIdx == teamSelectionKeyCacheCount) {
             nextPhase = 0xFF;
         } else {
-            uint16_t entrySize = *(uint16_t *)(cacheEntry + 2);
-            nextPhase = *(cacheEntry + entrySize + 1);
+            TeamSelectionKeyCacheEntry *next =
+                (TeamSelectionKeyCacheEntry *)((uint8_t *)cacheEntry + cacheEntry->entryStride);
+            nextPhase = next->sortKey;
         }
     }
 
