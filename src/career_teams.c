@@ -1664,6 +1664,24 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
      * league menu on LE hosts, which then crashes sorting an
      * uninitialized league table. */
     uint16_t type = *(uint16_t *)slotPtr;
+
+    /* [bug23-dispatch] Diagnostic for the View-Result-on-semi-final
+     * crash: log the slot type the dispatch sees + the cache entry
+     * + currentCompetitionPtr's first byte so we can see why a
+     * World Cup knockout is routing to the LEAGUE branch. */
+    {
+        extern uint32_t currentCompetitionPtr;
+        const uint8_t *cp = (const uint8_t *)(uintptr_t)currentCompetitionPtr;
+        fprintf(stderr, "[bug23-dispatch] slotIdx=%d slotPtr=%p type=%u "
+                        "(branch=%s) entry[0..9]=%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X "
+                        "currentCompetitionPtr=%p comp[0..3]=%02X %02X %02X %02X\n",
+                (int)slotIdx, (void *)slotPtr, (unsigned)type,
+                type == 1 ? "CUP" : (type == 2 ? "HYBRID" : "LEAGUE"),
+                entry[0], entry[1], entry[2], entry[3], entry[4],
+                entry[5], entry[6], entry[7], entry[8], entry[9],
+                (void *)cp,
+                cp ? cp[0] : 0, cp ? cp[1] : 0, cp ? cp[2] : 0, cp ? cp[3] : 0);
+    }
     if (type == 1) {
         /* Cup */
         /* Auto-simulate CPU-only fixtures BEFORE the menu draws so that
