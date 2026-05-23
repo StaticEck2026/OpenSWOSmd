@@ -411,7 +411,7 @@ void _Career_CopyUefaCupTeamGridAndTitleHolder(void)
 extern uint8_t euroCupCopy[];
 extern uint8_t cupWinnersCupCopy[];
 extern uint8_t uefaCupCopy[];
-extern uint32_t quaternaryCompetitionPtr;
+extern uint8_t *quaternaryCompetitionPtr;
 
 extern void _SaveSelectedTeams(void);
 extern void _RestoreSelectedTeams(void);
@@ -425,7 +425,7 @@ __attribute__((used, externally_visible))
 void _Career_UpdateEuroCupCompetitionSlot(void)
 {
     uint8_t *a4 = euroCupCopy;
-    if ((uint32_t)a4 == quaternaryCompetitionPtr) {
+    if (a4 == quaternaryCompetitionPtr) {
         _RestoreSelectedTeams();
         _Career_CopyEuroCupsCompetitionContextToOrFromActive();
         _DIY_EditCompetitionSlot(1, 1, 0);
@@ -443,7 +443,7 @@ __attribute__((used, externally_visible))
 void _Career_UpdateCupWinnersCupCompetitionSlot(void)
 {
     uint8_t *a4 = cupWinnersCupCopy;
-    if ((uint32_t)a4 == quaternaryCompetitionPtr) {
+    if (a4 == quaternaryCompetitionPtr) {
         _RestoreSelectedTeams();
         _Career_CopyEuroCupsCompetitionContextToOrFromActive();
         _ShowDIYCupMenuWithParams(1, 1, 0);
@@ -461,7 +461,7 @@ __attribute__((used, externally_visible))
 void _Career_UpdateUefaCupCompetitionSlot(void)
 {
     uint8_t *a4 = uefaCupCopy;
-    if ((uint32_t)a4 == quaternaryCompetitionPtr) {
+    if (a4 == quaternaryCompetitionPtr) {
         _RestoreSelectedTeams();
         _Career_CopyEuroCupsCompetitionContextToOrFromActive();
         _ShowDIYCupMenuWithParams(1, 1, 0);
@@ -560,7 +560,7 @@ void _Career_DrawEuropeanCupTeamsAndCopyGrids(void)
 
 /* ---- Chunk 184: European Championship + World Cup Competition Updates ---- */
 
-extern uint32_t currentCompetitionPtr;
+extern uint8_t *currentCompetitionPtr;
 extern uint8_t someTeamFlags;
 extern uint16_t euroChampionshipQualTeam;
 extern uint8_t europeanChampionships2Copy[];
@@ -601,7 +601,7 @@ extern void _Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record,
  * If active competition, edit interactively; else auto-advance. */
 static void updateECSlot(uint8_t *competition, uint16_t count, uint8_t *out)
 {
-    if ((uint32_t)competition == currentCompetitionPtr) {
+    if (competition == currentCompetitionPtr) {
         _RestoreSelectedTeams();
         _Career_CopyCompetitionFileBufferToOrFromActive();
         _ShowDiyLeaguesTournamentMenu(1, 1, 0);
@@ -651,7 +651,7 @@ void _Career_UpdateEuropeanChampionshipCompetitions(void)
 static void updateWCSlot(uint8_t *competition, uint16_t count, uint8_t *out)
 {
     int8_t compType = ((Competition *)competition)->type;
-    if ((uint32_t)competition == currentCompetitionPtr) {
+    if (competition == currentCompetitionPtr) {
         _RestoreSelectedTeams();
         if (compType == 2) {
             _Career_CopyCompetitionFileBufferToOrFromActive();

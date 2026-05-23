@@ -1228,10 +1228,10 @@ void _SquadCommon(void *entryPtr)
 extern uint16_t isNationalSquad;
 extern uint16_t squadDisplayCount;
 extern TeamFileEx careerTeam;
-extern uint32_t currentCompetitionPtr;
-extern uint32_t secondaryCompetitionPtr;
-extern uint32_t tertiaryCompetitionPtr;
-extern uint32_t quaternaryCompetitionPtr;
+extern uint8_t *currentCompetitionPtr;
+extern uint8_t *secondaryCompetitionPtr;
+extern uint8_t *tertiaryCompetitionPtr;
+extern uint8_t *quaternaryCompetitionPtr;
 extern uint32_t countriesTable[];
 extern uint32_t playerPositionsStringTable[];
 extern uint8_t aClubs[];
@@ -1336,7 +1336,7 @@ void _SquadUpdateMenuState(void)
         }
 
         /* Check competition pointers for view mode */
-        if ((quaternaryCompetitionPtr | secondaryCompetitionPtr | tertiaryCompetitionPtr) == 0) {
+        if (quaternaryCompetitionPtr == 0 && secondaryCompetitionPtr == 0 && tertiaryCompetitionPtr == 0) {
             menuEntries[18].isInvisible = 1;
             menuEntries[17].isInvisible = 1;
             menuEntries[19].isInvisible = 1;
@@ -1482,7 +1482,7 @@ afterBankBalance:
 
 viewModeCompChecks:
     /* Jumped to from edit mode national squad path — runs view mode competition checks */
-    if ((quaternaryCompetitionPtr | secondaryCompetitionPtr | tertiaryCompetitionPtr) == 0) {
+    if (quaternaryCompetitionPtr == 0 && secondaryCompetitionPtr == 0 && tertiaryCompetitionPtr == 0) {
         menuEntries[18].isInvisible = 1;
         menuEntries[17].isInvisible = 1;
         menuEntries[19].isInvisible = 1;
@@ -1754,7 +1754,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
         /* Entry 59: first competition goals (if any secondary competitions exist) */
         e = &menuEntries[59];
         e->isInvisible = 1;
-        if ((quaternaryCompetitionPtr | secondaryCompetitionPtr | tertiaryCompetitionPtr) != 0) {
+        if (quaternaryCompetitionPtr != 0 || secondaryCompetitionPtr != 0 || tertiaryCompetitionPtr != 0) {
             *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)pf->goalStats[0];
             e->isInvisible = 0;
         }
@@ -1935,7 +1935,7 @@ void _SquadInit(void)
     }
 
     /* If all three competition pointers are zero, shift entries right */
-    if ((quaternaryCompetitionPtr | secondaryCompetitionPtr | tertiaryCompetitionPtr) == 0) {
+    if (quaternaryCompetitionPtr == 0 && secondaryCompetitionPtr == 0 && tertiaryCompetitionPtr == 0) {
         menuEntries[59].x += 20;
         menuEntries[60].x += 20;
         menuEntries[61].x += 20;
@@ -4396,12 +4396,12 @@ void _SelectLeaguesCommon(MenuEntry *entry)
  * ================================================================ */
 
 /* Additional externs for Chunk 136 */
-extern uint32_t currentCompetitionPtr;
+extern uint8_t *currentCompetitionPtr;
 extern uint8_t  tourCopy[];
 extern uint8_t  friendlyCopy[];
-extern uint32_t secondaryCompetitionPtr;
-extern uint32_t tertiaryCompetitionPtr;
-extern uint32_t quaternaryCompetitionPtr;
+extern uint8_t *secondaryCompetitionPtr;
+extern uint8_t *tertiaryCompetitionPtr;
+extern uint8_t *quaternaryCompetitionPtr;
 extern uint8_t  diyPresetNameOfCompetition[];
 extern uint8_t  secondaryCompetitionName[];
 extern uint8_t  tertiaryCompetitionName[];
@@ -4470,8 +4470,8 @@ void _ViewCompetitionsOnReturn(void)
     menuEntries[4].fg = (uint32_t)quaternaryCompetitionName;
 
     /* If primary competition is tour/friendly, hide entry 1 and shift Y coords up */
-    if (currentCompetitionPtr == (uint32_t)tourCopy
-        || currentCompetitionPtr == (uint32_t)friendlyCopy)
+    if (currentCompetitionPtr == (uint8_t *)tourCopy
+        || currentCompetitionPtr == (uint8_t *)friendlyCopy)
     {
         menuEntries[1].isInvisible = 1;
         /* Shift Y coordinates: 5←4, 4←3, 3←2, 2←1 */
@@ -4483,8 +4483,8 @@ void _ViewCompetitionsOnReturn(void)
 
     /* If secondary competition is null/tour/friendly, hide entry 2 and shift */
     if (secondaryCompetitionPtr == 0
-        || secondaryCompetitionPtr == (uint32_t)friendlyCopy
-        || secondaryCompetitionPtr == (uint32_t)tourCopy)
+        || secondaryCompetitionPtr == (uint8_t *)friendlyCopy
+        || secondaryCompetitionPtr == (uint8_t *)tourCopy)
     {
         menuEntries[2].isInvisible = 1;
         /* Shift Y coordinates: 5←4, 4←3, 3←2 */
@@ -4495,8 +4495,8 @@ void _ViewCompetitionsOnReturn(void)
 
     /* If tertiary competition is null/tour/friendly, hide entry 3 and shift */
     if (tertiaryCompetitionPtr == 0
-        || tertiaryCompetitionPtr == (uint32_t)friendlyCopy
-        || tertiaryCompetitionPtr == (uint32_t)tourCopy)
+        || tertiaryCompetitionPtr == (uint8_t *)friendlyCopy
+        || tertiaryCompetitionPtr == (uint8_t *)tourCopy)
     {
         menuEntries[3].isInvisible = 1;
         /* Shift Y coordinates: 5←4, 4←3 */
@@ -4535,8 +4535,8 @@ void _ViewCompetitionsOnReturn(void)
 __attribute__((used, externally_visible))
 void _ViewCompetitionsInit(void)
 {
-    if (currentCompetitionPtr == (uint32_t)tourCopy
-        || currentCompetitionPtr == (uint32_t)friendlyCopy)
+    if (currentCompetitionPtr == (uint8_t *)tourCopy
+        || currentCompetitionPtr == (uint8_t *)friendlyCopy)
     {
         _SetCurrentEntry(5);
 

@@ -468,8 +468,8 @@ extern uint16_t gameType;
 extern uint16_t careerLoadedFlag;
 extern TeamFileEx careerTeam;
 extern uint16_t careerNumPlayers;
-extern uint32_t secondaryCompetitionPtr;
-extern uint32_t tertiaryCompetitionPtr;
+extern uint8_t *secondaryCompetitionPtr;
+extern uint8_t *tertiaryCompetitionPtr;
 extern uint8_t *diyNameOfCompetitionPtr;
 extern uint16_t diyUnknownWord_2C;
 extern MenuEntry menuEntries[];
@@ -1465,10 +1465,10 @@ extern uint16_t boardConfidenceMod6;
 extern uint16_t boardConfidenceMod7;
 extern uint16_t boardConfidenceMod8;
 extern uint16_t boardConfidenceMod9;
-extern uint32_t currentCompetitionPtr;
-extern uint32_t secondaryCompetitionPtr;
-extern uint32_t tertiaryCompetitionPtr;
-extern uint32_t quaternaryCompetitionPtr;
+extern uint8_t *currentCompetitionPtr;
+extern uint8_t *secondaryCompetitionPtr;
+extern uint8_t *tertiaryCompetitionPtr;
+extern uint8_t *quaternaryCompetitionPtr;
 extern uint8_t competitionFileBuffer[];
 extern uint32_t competitionContext;
 extern uint32_t tertiaryCompetitionContext;
@@ -1744,7 +1744,7 @@ void _Career_FillCurrentSeasonInfo(void)
     {
         d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
                                       (DIYCompetition *)&competitionFileBuffer);
-        uint8_t *compDef = (uint8_t *)(uint32_t)currentCompetitionPtr;
+        uint8_t *compDef = currentCompetitionPtr;
 
         if (d1 >= 0) {
             d1 = EncodeCompetitionPositionForSeasonInfo_impl(
@@ -1776,7 +1776,7 @@ void _Career_FillCurrentSeasonInfo(void)
     if (a5->strPtr1 != 0) {
         d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
                                       (DIYCompetition *)&competitionContext);
-        uint8_t *compDef = (uint8_t *)(uint32_t)secondaryCompetitionPtr;
+        uint8_t *compDef = secondaryCompetitionPtr;
         d1 = EncodeCompetitionPositionForSeasonInfo_impl(
             d1, (uint8_t *)&competitionContext, compDef);
         a5->comp2Result = (int8_t)d1;
@@ -1786,7 +1786,7 @@ void _Career_FillCurrentSeasonInfo(void)
     if (a5->strPtr2 != 0) {
         d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
                                       (DIYCompetition *)&tertiaryCompetitionContext);
-        uint8_t *compDef = (uint8_t *)(uint32_t)tertiaryCompetitionPtr;
+        uint8_t *compDef = tertiaryCompetitionPtr;
         d1 = EncodeCompetitionPositionForSeasonInfo_impl(
             d1, (uint8_t *)&tertiaryCompetitionContext, compDef);
         a5->comp3Result = (int8_t)d1;
@@ -1796,7 +1796,7 @@ void _Career_FillCurrentSeasonInfo(void)
     if (a5->strPtr3 != 0) {
         d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
                                       (DIYCompetition *)&euroCupsCompetitionContext);
-        uint8_t *compDef = (uint8_t *)(uint32_t)quaternaryCompetitionPtr;
+        uint8_t *compDef = quaternaryCompetitionPtr;
         d1 = EncodeCompetitionPositionForSeasonInfo_impl(
             d1, (uint8_t *)&euroCupsCompetitionContext, compDef);
         a5->comp4Result = (int8_t)d1;

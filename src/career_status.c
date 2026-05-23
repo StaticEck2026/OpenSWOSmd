@@ -144,10 +144,10 @@ extern uint16_t   minorTrophyBonusActive;
 extern uint16_t   leagueTitleBonusActive;
 
 /* Competition pointers and contexts */
-extern uint32_t   currentCompetitionPtr;
-extern uint32_t   secondaryCompetitionPtr;
-extern uint32_t   tertiaryCompetitionPtr;
-extern uint32_t   quaternaryCompetitionPtr;
+extern uint8_t *currentCompetitionPtr;
+extern uint8_t *secondaryCompetitionPtr;
+extern uint8_t *tertiaryCompetitionPtr;
+extern uint8_t *quaternaryCompetitionPtr;
 extern uint8_t    competitionContext[];
 extern uint8_t    tertiaryCompetitionContext[];
 extern uint8_t    euroCupsCompetitionContext[];
@@ -1858,7 +1858,7 @@ check_ec_qualifying:
 
         uint16_t teamRank = _FindTeamInDIY(selTeamNumber, competitionFileBuffer);
         uint16_t qualSlots;
-        if (currentCompetitionPtr == (uint32_t)ecQualifyingGroup8Copy)
+        if (currentCompetitionPtr == (uint8_t *)ecQualifyingGroup8Copy)
             qualSlots = 1;
         else
             qualSlots = 2;
@@ -1891,30 +1891,30 @@ check_winners:
     /* Check if we won the primary competition */
     if (selTeamNumber != primaryCompWinnerTeam)
         goto check_secondary_winner;
-    if (currentCompetitionPtr == (uint32_t)friendlyCopy)
+    if (currentCompetitionPtr == (uint8_t *)friendlyCopy)
         goto check_secondary_winner;
-    if (currentCompetitionPtr == (uint32_t)tourCopy)
+    if (currentCompetitionPtr == (uint8_t *)tourCopy)
         goto check_secondary_winner;
     /* Skip if EC qualifying */
-    if (currentCompetitionPtr >= (uint32_t)ecQualifyingGroup1Copy &&
-        currentCompetitionPtr <= (uint32_t)ecQualifyingGroup8Copy)
+    if (currentCompetitionPtr >= (uint8_t *)ecQualifyingGroup1Copy &&
+        currentCompetitionPtr <= (uint8_t *)ecQualifyingGroup8Copy)
         goto check_secondary_winner;
     /* Skip if WC qualifying */
-    if (currentCompetitionPtr >= (uint32_t)worldCupQualifyingGroup1Copy &&
-        currentCompetitionPtr <= (uint32_t)oceaniaWorldCupQualificationCopy)
+    if (currentCompetitionPtr >= (uint8_t *)worldCupQualifyingGroup1Copy &&
+        currentCompetitionPtr <= (uint8_t *)oceaniaWorldCupQualificationCopy)
         goto check_secondary_winner;
 
     /* Determine which trophy was won */
-    if (currentCompetitionPtr == (uint32_t)invitationTournamentCopy) {
+    if (currentCompetitionPtr == (uint8_t *)invitationTournamentCopy) {
         wonInvitationTournament = 1;
-    } else if (currentCompetitionPtr == (uint32_t)worldCup2Copy) {
+    } else if (currentCompetitionPtr == (uint8_t *)worldCup2Copy) {
         wonWorldCup = 1;
-    } else if (currentCompetitionPtr == (uint32_t)europeanChampionships2Copy ||
-               currentCompetitionPtr == (uint32_t)copaAmericaCopy ||
-               currentCompetitionPtr == (uint32_t)africanNationsCupCopy ||
-               currentCompetitionPtr == (uint32_t)northAmericanCupCopy ||
-               currentCompetitionPtr == (uint32_t)asianCupCopy ||
-               currentCompetitionPtr == (uint32_t)oceaniaCupCopy) {
+    } else if (currentCompetitionPtr == (uint8_t *)europeanChampionships2Copy ||
+               currentCompetitionPtr == (uint8_t *)copaAmericaCopy ||
+               currentCompetitionPtr == (uint8_t *)africanNationsCupCopy ||
+               currentCompetitionPtr == (uint8_t *)northAmericanCupCopy ||
+               currentCompetitionPtr == (uint8_t *)asianCupCopy ||
+               currentCompetitionPtr == (uint8_t *)oceaniaCupCopy) {
         wonContinentalCup = 1;
     } else {
         playWinCupAnimation = 1;
@@ -1927,19 +1927,19 @@ check_secondary_winner:
         goto check_tertiary_winner;
     if (selTeamNumber != secondaryCompWinnerTeam)
         goto check_tertiary_winner;
-    if (secondaryCompetitionPtr == (uint32_t)friendlyCopy)
+    if (secondaryCompetitionPtr == (uint8_t *)friendlyCopy)
         goto check_tertiary_winner;
-    if (currentCompetitionPtr == (uint32_t)tourCopy)
+    if (currentCompetitionPtr == (uint8_t *)tourCopy)
         goto check_tertiary_winner;
 
-    if (secondaryCompetitionPtr == (uint32_t)invitationTournamentCopy) {
+    if (secondaryCompetitionPtr == (uint8_t *)invitationTournamentCopy) {
         wonInvitationTournament = 1;
-    } else if (secondaryCompetitionPtr == (uint32_t)europeanChampionships2Copy ||
-               secondaryCompetitionPtr == (uint32_t)copaAmericaCopy ||
-               secondaryCompetitionPtr == (uint32_t)africanNationsCupCopy ||
-               secondaryCompetitionPtr == (uint32_t)northAmericanCupCopy ||
-               secondaryCompetitionPtr == (uint32_t)asianCupCopy ||
-               secondaryCompetitionPtr == (uint32_t)oceaniaCupCopy) {
+    } else if (secondaryCompetitionPtr == (uint8_t *)europeanChampionships2Copy ||
+               secondaryCompetitionPtr == (uint8_t *)copaAmericaCopy ||
+               secondaryCompetitionPtr == (uint8_t *)africanNationsCupCopy ||
+               secondaryCompetitionPtr == (uint8_t *)northAmericanCupCopy ||
+               secondaryCompetitionPtr == (uint8_t *)asianCupCopy ||
+               secondaryCompetitionPtr == (uint8_t *)oceaniaCupCopy) {
         wonContinentalCup = 1;
     } else {
         minorTrophyBonusActive = 1;
@@ -1950,7 +1950,7 @@ check_tertiary_winner:
 
     if (tertiaryCompetitionPtr != 0 &&
         selTeamNumber == tertiaryCompWinnerTeam &&
-        tertiaryCompetitionPtr != (uint32_t)friendlyCopy) {
+        tertiaryCompetitionPtr != (uint8_t *)friendlyCopy) {
         leagueTitleBonusActive = 1;
     }
 

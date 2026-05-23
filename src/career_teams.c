@@ -1693,7 +1693,7 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
      * + currentCompetitionPtr's first byte so we can see why a
      * World Cup knockout is routing to the LEAGUE branch. */
     {
-        extern uint32_t currentCompetitionPtr;
+        extern uint8_t *currentCompetitionPtr;
         const uint8_t *cp = (const uint8_t *)(uintptr_t)currentCompetitionPtr;
         fprintf(stderr, "[bug23-dispatch] slotIdx=%d slotPtr=%p type=%u "
                         "(branch=%s) entry[0..9]=%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X "
@@ -2574,7 +2574,7 @@ void _Career_InitInternationalSquadAndLookupTablesForNewSeason(TeamFileEx *teamP
  * ================================================================ */
 
 /* Forward declarations for functions called from Career_SetCurrentCompetitionSlot */
-extern uint32_t currentCompetitionPtr;
+extern uint8_t *currentCompetitionPtr;
 extern uint8_t *careerCompetitionSlotPtrTable[];
 extern uint16_t isNationalSelector;
 extern uint16_t teamSelectionKeyCacheOffset;

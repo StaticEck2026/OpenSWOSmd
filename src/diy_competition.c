@@ -98,10 +98,10 @@ extern void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *te
 /* ---- ASM globals for new functions ---- */
 extern uint16_t gameType;
 extern uint16_t careerLoadedFlag;
-extern uint32_t diyCompetitionPtr;
+extern uint8_t *diyCompetitionPtr;
 extern uint32_t *diyCompetitionTablePtr;
 extern uint8_t diyCompetitionContext[];
-extern uint32_t currentCompetitionPtr[];
+extern uint8_t *currentCompetitionPtr;
 extern uint16_t currentDivisionIndex;
 extern uint16_t internationalAutoAdvanceFlag;
 extern uint16_t competitionSlotUpdatedFlag;
@@ -3251,7 +3251,7 @@ void _DIY_RebuildCompetitionAndTeamSelectionCaches(void)
         uint32_t divIndex = tablePtr[1];
         tablePtr += 2;
 
-        if (compPtr == (uint8_t *)currentCompetitionPtr[0] &&
+        if (compPtr == currentCompetitionPtr &&
             (uint16_t)divIndex == currentDivisionIndex) {
             /* Current competition — copy from competitionFileBuffer */
             /* Career_CopyCompetitionTeamByIndex inline:

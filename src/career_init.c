@@ -533,11 +533,11 @@ extern uint16_t numJobOffers;
 extern uint16_t careerTeamLostMatch;
 extern volatile uint16_t currentMessage;
 extern uint8_t  careerLastMatchIndexByCompetitionSlot[];
-extern uint32_t currentCompetitionPtr;
-extern uint32_t secondaryCompetitionPtr;
-extern uint32_t tertiaryCompetitionPtr;
-extern uint32_t quaternaryCompetitionPtr;
-extern uint32_t diyCompetitionPtr;
+extern uint8_t *currentCompetitionPtr;
+extern uint8_t *secondaryCompetitionPtr;
+extern uint8_t *tertiaryCompetitionPtr;
+extern uint8_t *quaternaryCompetitionPtr;
+extern uint8_t *diyCompetitionPtr;
 extern uint8_t competitionFileBuffer[];
 extern uint32_t competitionContext;
 extern uint32_t tertiaryCompetitionContext;
@@ -1433,11 +1433,11 @@ static void _Rebuild_CompetitionSlotPointers(void)
     if (quaternaryCompetitionPtr == 0) {
         /* Slot was inactive in the saved state — leave it inactive. */
     } else if (euroCupSlotIndex == 0) {
-        quaternaryCompetitionPtr = (uint32_t)euroCupCopy;
+        quaternaryCompetitionPtr = euroCupCopy;
     } else if (euroCupSlotIndex == 1) {
-        quaternaryCompetitionPtr = (uint32_t)cupWinnersCupCopy;
+        quaternaryCompetitionPtr = cupWinnersCupCopy;
     } else if (euroCupSlotIndex == 2) {
-        quaternaryCompetitionPtr = (uint32_t)uefaCupCopy;
+        quaternaryCompetitionPtr = uefaCupCopy;
     } else {
         /* Active slot but out-of-range index (shouldn't happen) —
          * NULL it rather than dereference garbage. */

@@ -403,10 +403,10 @@ extern uint8_t competitionContext[];
 extern uint8_t tertiaryCompetitionContext[];
 extern uint8_t euroCupsCompetitionContext[];
 
-extern uint32_t currentCompetitionPtr;
-extern uint32_t secondaryCompetitionPtr;
-extern uint32_t tertiaryCompetitionPtr;
-extern uint32_t quaternaryCompetitionPtr;
+extern uint8_t *currentCompetitionPtr;
+extern uint8_t *secondaryCompetitionPtr;
+extern uint8_t *tertiaryCompetitionPtr;
+extern uint8_t *quaternaryCompetitionPtr;
 
 extern uint16_t wonWorldCup;
 extern uint16_t wonContinentalCup;
@@ -685,8 +685,8 @@ void _BeginContractNegotiationSequence(DIYCompetitionEx *comp, TeamFileEx *team)
 
 /* ---- Chunk 182: Competition Season Processing ---- */
 
-extern uint32_t secondaryCompetitionPtr;
-extern uint32_t tertiaryCompetitionPtr;
+extern uint8_t *secondaryCompetitionPtr;
+extern uint8_t *tertiaryCompetitionPtr;
 
 extern uint32_t competitionsTable[];
 extern uint16_t cachedTertiaryQualifiedTeamId;
@@ -707,7 +707,7 @@ void _Career_ProcessSecondaryCompetitionForNextSeason(uint8_t *competition)
         _PanicHaltLoop();
         return;
     }
-    if ((uint32_t)competition == secondaryCompetitionPtr) {
+    if (competition == secondaryCompetitionPtr) {
         _RestoreSelectedTeams();
         _Career_CopyCompetitionContextToOrFromActive();
         _ShowDIYCupMenuWithParams(1, 1, 0);
@@ -729,7 +729,7 @@ void _Career_ProcessTertiaryCompetitionForNextSeason(uint8_t *competition)
         _PanicHaltLoop();
         return;
     }
-    if ((uint32_t)competition == tertiaryCompetitionPtr) {
+    if (competition == tertiaryCompetitionPtr) {
         _RestoreSelectedTeams();
         _Career_CopyTertiaryCompetitionContextToOrFromActive();
         _ShowDIYCupMenuWithParams(1, 1, 0);
@@ -1334,7 +1334,7 @@ extern uint8_t careerCompetitionIdRemapTable[];
 extern uint16_t diyQualifiedTeamIndices[];
 extern uint16_t currentDivisionIndex;
 extern uint16_t youreSacked;
-extern uint32_t diyCompetitionPtr;
+extern uint8_t *diyCompetitionPtr;
 extern uint8_t diyCompetitionContext[];
 
 /* ---- Career_ProcessDiyLeagueQualificationEntry ----
@@ -1369,7 +1369,7 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
     /* Skip 4-byte gap */
     a2 += 4;
 
-    if (!youreSacked && (uint32_t)qualComp == diyCompetitionPtr) {
+    if (!youreSacked && qualComp == diyCompetitionPtr) {
         /* Player's competition — interactive processing */
         int8_t teamCount = *(int8_t *)(qualComp + 0xA);
         a2 += (int16_t)teamCount * 2;
@@ -1452,7 +1452,7 @@ static void processPrimaryCompetitionForNextSeason(uint8_t *competition)
 
     if (compType == 2) {
         /* Cup competition */
-        if ((uint32_t)competition == currentCompetitionPtr) {
+        if (competition == currentCompetitionPtr) {
             _RestoreSelectedTeams();
             _Career_CopyCompetitionFileBufferToOrFromActive();
             _DIY_EditCompetitionSlot(1, 1, 0);
@@ -1490,7 +1490,7 @@ static void processPrimaryCompetitionForNextSeason(uint8_t *competition)
     uint8_t *qualCursor = (uint8_t *)diyQualifiedTeamIndices;
 
     for (d7 = 0; d7 < numDivisions; d7++) {
-        if ((uint32_t)competition == currentCompetitionPtr &&
+        if (competition == currentCompetitionPtr &&
             d7 == currentDivisionIndex) {
             /* Player's current division — interactive */
             _RestoreSelectedTeams();

@@ -89,11 +89,15 @@ static void translate_one(uint32_t *p)
 }
 
 /* ---- External symbols we walk after load ---- */
-extern uint32_t  currentCompetitionPtr;
-extern uint32_t  secondaryCompetitionPtr;
-extern uint32_t  tertiaryCompetitionPtr;
-extern uint32_t  quaternaryCompetitionPtr;
-extern uint32_t  diyCompetitionPtr;
+/* Phase 2 Wave 2: these are now uint8_t * but save_pointer_lut treats
+ * every 4-byte slot as an opaque address — translate_one rewrites the
+ * value via the LUT. The (uint32_t *) casts at the call sites below
+ * are valid because both types are 4 bytes on 32-bit hosts. */
+extern uint8_t  *currentCompetitionPtr;
+extern uint8_t  *secondaryCompetitionPtr;
+extern uint8_t  *tertiaryCompetitionPtr;
+extern uint8_t  *quaternaryCompetitionPtr;
+extern uint8_t  *diyCompetitionPtr;
 extern uint8_t  *careerCompetitionSlotPtrTable[];
 extern uint32_t  primaryCompStringOffset;
 extern uint32_t  secondaryCompStringOffset;
@@ -131,11 +135,11 @@ __attribute__((used, externally_visible))
 void _TranslateAmigaAddressesAfterLoad(void)
 {
     /* Top-level slot pointers. */
-    translate_one(&currentCompetitionPtr);
-    translate_one(&secondaryCompetitionPtr);
-    translate_one(&tertiaryCompetitionPtr);
-    translate_one(&quaternaryCompetitionPtr);
-    translate_one(&diyCompetitionPtr);
+    translate_one((uint32_t *)&currentCompetitionPtr);
+    translate_one((uint32_t *)&secondaryCompetitionPtr);
+    translate_one((uint32_t *)&tertiaryCompetitionPtr);
+    translate_one((uint32_t *)&quaternaryCompetitionPtr);
+    translate_one((uint32_t *)&diyCompetitionPtr);
 
     /* careerCompetitionSlotPtrTable is uint8_t*[5]. */
     for (int i = 0; i < 5; i++) {
