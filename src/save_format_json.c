@@ -1,15 +1,20 @@
 /*
  * save_format_json.c — JSON serializer/parser for SWOS save files.
  *
- * Status: hybrid bring-up. The careerFileBuffer is round-tripped via
- * a single base64 "opaque_data" field. Semantic field promotion
- * (turning the comp-name pointers in seasonInformations into stable
- * string IDs, breaking out the TeamFileEx records, etc.) lands in
- * follow-up commits. The format is JSON from day 1; every commit
- * shrinks the opaque blob and grows the semantic schema.
+ * Five save kinds, all fully structured (no base64 blobs):
+ *   - career      (.CAR) — SaveJson_WriteCareer / SaveJson_LoadCareer
+ *   - preset      (.PRE) — write/load_competition_buf via SaveJson_*Preset
+ *   - DIY         (.DIY) — same path with KIND_DIY
+ *   - highlights  (.HIL) — SaveJson_WriteHighlights / SaveJson_LoadHighlights
+ *   - tactics     (.TAC) — SaveJson_WriteTactics / SaveJson_LoadTactics
  *
- * See SAVE_FORMAT_JSON.md for the migration plan and field-by-field
- * TODO list.
+ * Every byte that round-trips is covered by either a typed scalar
+ * (s_career_scalars FLD_* entries) or a structured top-level field
+ * (selected_teams, tmd_teams, career_foreign_market_players,
+ * career_team_reserves, current_team_reserves, scenes, etc.). The
+ * legacy `opaque_data` blob and the `blobs` sub-object are gone.
+ *
+ * See SAVE_FORMAT_JSON.md for the migration history.
  */
 
 #include "save_format_json.h"
@@ -153,56 +158,14 @@ static int read_save_file_heap(const uint8_t *filename,
     return 0;
 }
 
-/* g_amiga_addr_map from generated/amiga_address_map.c — used to
- * convert pointer values to/from stable symbol-name identifiers. */
-typedef struct AmigaAddrLutEntry {
-    const char *name;
-    void       *current_addr;
-    uint32_t    amiga_addr;
-    uint32_t    size;
-} AmigaAddrLutEntry;
-extern const AmigaAddrLutEntry g_amiga_addr_map[];
-extern const size_t g_amiga_addr_map_count;
-
-/* Resolve a current-build pointer to a stable symbol identity.
- * Returns the entry whose [current_addr, current_addr+size) range
- * contains `val`, with *out_offset set to (val - entry->current_addr).
- * Returns NULL if no entry covers `val` (stale cross-build pointer or
- * non-symbol value). */
-static const AmigaAddrLutEntry *sym_from_ptr(uint32_t val, uint32_t *out_offset)
-{
-    for (size_t i = 0; i < g_amiga_addr_map_count; i++) {
-        const AmigaAddrLutEntry *e = &g_amiga_addr_map[i];
-        uint32_t base = (uint32_t)(uintptr_t)e->current_addr;
-        uint32_t end  = base + (e->size ? e->size : 1u);
-        if (val >= base && val < end) {
-            if (out_offset) *out_offset = val - base;
-            return e;
-        }
-    }
-    return NULL;
-}
-
-/* Resolve a stable symbol name back to a current-build pointer. */
-static uint32_t ptr_from_sym(const char *name, uint32_t offset)
-{
-    for (size_t i = 0; i < g_amiga_addr_map_count; i++) {
-        const AmigaAddrLutEntry *e = &g_amiga_addr_map[i];
-        if (strcmp(e->name, name) == 0) {
-            return (uint32_t)(uintptr_t)e->current_addr + offset;
-        }
-    }
-    return 0u;
-}
-
-/* String pool for save-load round-trips of .rodata string pointers
- * that aren't in g_amiga_addr_map (comp-name strings like "DIV 1",
- * "BUNDESLIGA", "EC FINALS" — 114 of these live in competition_data.c).
- * On load, JSON `{ "str": "DIV 1" }` fields get a string copied into
- * this pool and the resulting pool address is what we write into the
- * pointer slot. The display code (_StringCopy etc.) just walks bytes
- * to NUL, so any valid backing memory works. Pool is reset at the
- * start of each load. */
+/* String pool for save-load round-trips of in-memory string pointer
+ * fields (the four comp-name slots in seasonInformations). On save we
+ * emit the string content as a bare JSON value; on load we copy the
+ * content into this pool and write the pool address into the slot.
+ * Display code (_StringCopy etc.) just walks bytes to NUL, so any
+ * valid backing memory works. Pool is reset at the start of each
+ * save AND each load so the same string always interns at the same
+ * pool offset — byte-stable round-trip. */
 #define STRING_POOL_SIZE 8192u
 static char     s_string_pool[STRING_POOL_SIZE];
 static uint32_t s_string_pool_used = 0;
@@ -223,63 +186,43 @@ static uint32_t string_pool_intern(const char *s)
     return (uint32_t)(uintptr_t)dst;
 }
 
-/* Returns 1 if `val` already points inside our static string pool —
- * we use this in normalize_ptr_for_save to avoid re-interning a
- * pool-resident string back into the pool (which would leak
- * sequential copies of the same content). */
-static int looks_pool(uint32_t val)
-{
-    uint32_t lo = (uint32_t)(uintptr_t)&s_string_pool[0];
-    uint32_t hi = lo + STRING_POOL_SIZE;
-    return val >= lo && val < hi;
-}
-
-/* Heuristic readability check for `.rodata` string pointers we
- * encounter at save / template-copy time. Walks g_amiga_addr_map once
- * to find the actual min/max symbol addresses, then accepts anything
- * inside that range with a small (256 KB) padding for .rodata strings
- * that aren't in the LUT directly but live next to symbols that are.
+/* Emit a pointer-to-string field as a bare JSON string. Used for
+ * fields that are typed `uint32_t namePtr` in memory but semantically
+ * hold a comp-name / division-name string. Dereferences the pointer,
+ * walks up to 128 bytes for the NUL terminator, and emits a plain
+ * JSON string — no {sym}/{str}/{raw} discriminator wrapper.
  *
- * Earlier this used a fixed ±16 MB window around g_amiga_addr_map[0].
- * On Linux at base 0x56600000 that worked — small-integer 4-byte
- * slices (struct score data, grid bytes, etc.) sat 1.4 GB away from
- * the probe, so diff > 16 MB and they were correctly rejected. On
- * MinGW Windows at base ~0x01000000 those same slices fell INSIDE the
- * ±16 MB window and were treated as pointers, so the
- * restore_comp_copy_pointers_from_template byte-stride scan stomped
- * cupWinnersCup.unk1 (the team-grid bytes) with template defaults
- * — corrupting season-advance.
- *
- * The actual binary footprint is at most ~3 MB; bounding by the
- * actual address-map extents keeps Linux behaviour and fixes Windows. */
-static uint32_t s_addr_lo, s_addr_hi;
-static int s_addr_bounds_inited;
-
-static void looks_readable_init(void)
+ * Null / unreadable pointers emit as an empty string; the load side
+ * leaves the slot at 0 in that case so consumers (statistics.c:1930)
+ * still short-circuit on NULL. */
+static void emit_str_pool_field(mjson_print_fn_t fn, void *fnd,
+                                const char *key, uint32_t val)
 {
-    if (s_addr_bounds_inited) return;
-    if (g_amiga_addr_map_count == 0) { s_addr_bounds_inited = 1; return; }
-    uint32_t lo = (uint32_t)(uintptr_t)g_amiga_addr_map[0].current_addr;
-    uint32_t hi = lo;
-    for (size_t i = 1; i < g_amiga_addr_map_count; i++) {
-        uint32_t a = (uint32_t)(uintptr_t)g_amiga_addr_map[i].current_addr;
-        if (a < lo) lo = a;
-        if (a > hi) hi = a;
+    if (val == 0u) {
+        mjson_printf(fn, fnd, "%Q:%Q", key, "");
+        return;
     }
-    s_addr_lo = lo;
-    s_addr_hi = hi;
-    s_addr_bounds_inited = 1;
+    const char *s = (const char *)(uintptr_t)val;
+    size_t n = 0;
+    while (n < 128u && s[n] != '\0') n++;
+    if (n == 0 || n >= 128u) {
+        mjson_printf(fn, fnd, "%Q:%Q", key, "");
+        return;
+    }
+    mjson_printf(fn, fnd, "%Q:%.*Q", key, (int)n, s);
 }
 
-static int looks_readable(uint32_t val)
+/* Read a bare JSON string field, intern into the string pool, store
+ * the resulting pool address into *out. Empty / missing string leaves
+ * *out at 0. */
+static void load_str_pool_field(const char *buf, int buflen,
+                                const char *path, uint32_t *out)
 {
-    if (val == 0u || val == 0xFFFFFFFFu) return 0;
-    looks_readable_init();
-    if (s_addr_lo == 0u && s_addr_hi == 0u) return 0;
-    const uint32_t pad = 0x40000u;  /* 256 KB */
-    uint32_t lo = (s_addr_lo > pad) ? (s_addr_lo - pad) : 0u;
-    uint32_t hi = s_addr_hi + pad;
-    return val >= lo && val <= hi;
+    *out = 0;
+    char tmp[128] = {0};
+    int got = mjson_get_string(buf, buflen, path, tmp, sizeof(tmp));
+    if (got <= 0 || tmp[0] == '\0') return;
+    *out = string_pool_intern(tmp);
 }
 
 /* ---------- format constants ---------- */
@@ -345,11 +288,11 @@ static int json_out_emit(const char *chunk, int chunk_len, void *ud)
 /* ---------- seasonInformationsArray semantic encoder/decoder ----------
  *
  * Each 106-byte record is laid out per the SI_* defines in
- * statistics.c. Pointer fields (offsets 22/26/30/34) become stable
- * symbol identities in JSON — `{ "sym": "aECFinals", "off": 0 }` —
- * so saves survive rebuilds. Unrecognized pointers (stale cross-build
- * values from older binaries) emit as JSON null; the legacy code path
- * already short-circuits on NULL pointers (statistics.c:1930).
+ * statistics.c. The 4 pointer-typed string slots (offsets 22/26/30/34)
+ * are emitted as bare JSON strings via emit_str_pool_field and
+ * re-interned into the string pool on load. Empty / missing slots
+ * round-trip to NULL pointers; the consumer (statistics.c:1930)
+ * already short-circuits on those.
  *
  * Field offsets — kept private to this file. Mirrors the legacy
  * SI_* defines but local so we don't drag statistics.c into the
@@ -385,153 +328,14 @@ static int json_out_emit(const char *chunk, int chunk_len, void *ud)
 #define SAVE_SI_TOURNAMENTSTATUS 104u
 #define SAVE_SI_MANAGERSTATUS    105u
 
-/* Forward decls — looks_sentinel and emit_ptr_field are defined
- * after the normalize helpers below but used by them. */
-static int  looks_sentinel(uint32_t val);
-static int  emit_ptr_field(mjson_print_fn_t fn, void *fnd,
-                           const char *key, uint32_t val);
-
-/* At save time, replace a .rodata-style string pointer with its
- * string-pool equivalent in place. This makes the address
- * deterministic across save → load → save round-trips because both
- * save and load reset the pool to the same starting offset before
- * interning, so the same string content always resolves to the
- * same pool address. Without this, the saved pointer (e.g. &"DIV 1"
- * in .rodata) and the post-load pointer (string pool copy of
- * "DIV 1") would byte-differ.
- *
- * Leaves the pointer alone if:
- *   - val is 0
- *   - val resolves through g_amiga_addr_map (handled by `sym` form)
- *   - val is already inside our string pool
- *   - val isn't in a plausible in-process address range
- *   - the bytes at *val don't look like a NUL-terminated string
- */
-static void normalize_ptr_for_save(uint32_t *p)
-{
-    uint32_t val = *p;
-    if (val == 0u) return;
-    if (sym_from_ptr(val, NULL)) return;
-    if (looks_pool(val)) return;
-    if (looks_sentinel(val) || !looks_readable(val)) return;
-
-    const char *s = (const char *)(uintptr_t)val;
-    size_t n = 0;
-    while (n < 128u && s[n] != '\0') n++;
-    if (n == 0 || n >= 128u) return;
-
-    uint32_t pool_addr = string_pool_intern(s);
-    if (pool_addr) *p = pool_addr;
-}
-
-/* Convenience wrapper: normalize storage in place, then emit. Used
- * by callers that have an addressable uint32_t pointer field. */
-static int emit_ptr_field_ref(mjson_print_fn_t fn, void *fnd,
-                              const char *key, uint32_t *p)
-{
-    normalize_ptr_for_save(p);
-    return emit_ptr_field(fn, fnd, key, *p);
-}
-
-
-/* Heuristic for sentinel pointer values used in competition tables:
- * `(CompetitionCup *)-1`, `-2`, `0xFC`, etc. These aren't real
- * addresses — they're flags meaning "end of list" / "skip" / etc.,
- * and they MUST round-trip bit-exact. Any unsigned value at the
- * extreme top of the 32-bit range or below the lowest plausible
- * mapped address is treated as a sentinel. */
-static int looks_sentinel(uint32_t val)
-{
-    return val >= 0xFFFFFF00u || val < 0x00001000u;
-}
-
-/* Emit a single 32-bit pointer field as one of:
- *   - JSON null                          (val == 0)
- *   - `{ "sym": "name" [, "off": N] }`   (resolved via g_amiga_addr_map)
- *   - `{ "str": "<content>" }`           (string pointer not in LUT —
- *                                         covers the ~114 comp-name
- *                                         strings)
- *   - `{ "raw": N }`                     (sentinel value used by
- *                                         comp tables: -1, -2, 0xFC,
- *                                         etc.)
- *   - JSON null                          (stale cross-build pointer)
- */
-static int emit_ptr_field(mjson_print_fn_t fn, void *fnd, const char *key,
-                          uint32_t val)
-{
-    if (val == 0u) {
-        return mjson_printf(fn, fnd, "%Q:null", key);
-    }
-    uint32_t off = 0;
-    const AmigaAddrLutEntry *e = sym_from_ptr(val, &off);
-    if (e) {
-        if (off == 0)
-            return mjson_printf(fn, fnd, "%Q:{%Q:%Q}", key, "sym", e->name);
-        return mjson_printf(fn, fnd, "%Q:{%Q:%Q,%Q:%u}",
-                            key, "sym", e->name, "off", (unsigned)off);
-    }
-    /* Sentinel before string-readability — sentinels could
-     * accidentally look "readable" by the ±16MB heuristic and emit
-     * garbage. */
-    if (looks_sentinel(val)) {
-        return mjson_printf(fn, fnd, "%Q:{%Q:%u}", key, "raw", (unsigned)val);
-    }
-    /* Not in the LUT — could be a comp-name string in .rodata. If
-     * the pointer falls in a plausible in-process range, dereference
-     * it and emit the C string content. */
-    if (looks_readable(val)) {
-        const char *s = (const char *)(uintptr_t)val;
-        /* Scan for NUL up to a sane length to avoid pathological
-         * runaway reads on a non-string region that happens to land
-         * in our heuristic range. */
-        size_t n = 0;
-        while (n < 128u && s[n] != '\0') n++;
-        if (n > 0 && n < 128u) {
-            return mjson_printf(fn, fnd, "%Q:{%Q:%.*Q}",
-                                key, "str", (int)n, s);
-        }
-    }
-    /* Truly unresolved — emit null so the loader leaves the field
-     * empty. statistics.c:1930 short-circuits on NULL. */
-    return mjson_printf(fn, fnd, "%Q:null", key);
-}
-
-/* Parse one of `{ "sym": ..., "off": ... }`, `{ "str": ... }`, or
- * null. Sets *out to 0 on null / unresolved / parse error. */
-static void load_ptr_field(const char *buf, int buflen, const char *path,
-                           uint32_t *out)
-{
-    *out = 0;
-    char child_path[128];
-    char tmp[128] = {0};
-
-    /* Try "sym" form first. */
-    snprintf(child_path, sizeof(child_path), "%s.sym", path);
-    if (mjson_get_string(buf, buflen, child_path, tmp, sizeof(tmp)) > 0) {
-        double off_val = 0.0;
-        snprintf(child_path, sizeof(child_path), "%s.off", path);
-        if (mjson_get_number(buf, buflen, child_path, &off_val) <= 0)
-            off_val = 0.0;
-        *out = ptr_from_sym(tmp, (uint32_t)off_val);
-        return;
-    }
-
-    /* "str" form — copy content into our pool. */
-    snprintf(child_path, sizeof(child_path), "%s.str", path);
-    if (mjson_get_string(buf, buflen, child_path, tmp, sizeof(tmp)) > 0) {
-        *out = string_pool_intern(tmp);
-        return;
-    }
-
-    /* "raw" form — bit-exact sentinel passthrough. */
-    snprintf(child_path, sizeof(child_path), "%s.raw", path);
-    double raw_val = 0.0;
-    if (mjson_get_number(buf, buflen, child_path, &raw_val) > 0) {
-        *out = (uint32_t)raw_val;
-        return;
-    }
-    /* None of the forms present — null / unresolved. *out stays 0. */
-}
+/* The previous {sym}/{str}/{raw} discriminator wrapper used for
+ * pointer-typed fields has been retired — all top-level pointer
+ * fields are gone from the format and the only remaining pointer-
+ * shaped slots (4 × seasonInformations comp-name strings) now use
+ * emit_str_pool_field / load_str_pool_field which emit a bare JSON
+ * string. The LUT-walking sym_from_ptr / ptr_from_sym helpers and
+ * the looks_sentinel / looks_readable / looks_pool heuristics that
+ * supported it are gone with it. */
 
 static void emit_string_field(mjson_print_fn_t fn, void *fnd, const char *key,
                               const uint8_t *src, uint32_t maxlen)
@@ -576,19 +380,20 @@ static void emit_season_informations(mjson_print_fn_t fn, void *fnd)
                      "trophy_flags",
                      (unsigned)*(uint16_t *)(e + SAVE_SI_TROPHYFLAGS));
 
-        /* The four comp-name pointers — this is the whole point of
-         * the seasonInformations promotion. */
-        emit_ptr_field_ref(fn, fnd, "league_str",
-                           (uint32_t *)((uint8_t *)e + SAVE_SI_LEAGUESTRPTR));
+        /* Four per-season comp-name strings. In-memory slots are still
+         * typed `uint32_t *`; on disk they're bare JSON strings whose
+         * content gets re-interned into the string pool at load time. */
+        emit_str_pool_field(fn, fnd, "league_str",
+                            *(uint32_t *)(e + SAVE_SI_LEAGUESTRPTR));
         mjson_printf(fn, fnd, "%s", ",");
-        emit_ptr_field_ref(fn, fnd, "str_1",
-                           (uint32_t *)((uint8_t *)e + SAVE_SI_STRPTR1));
+        emit_str_pool_field(fn, fnd, "str_1",
+                            *(uint32_t *)(e + SAVE_SI_STRPTR1));
         mjson_printf(fn, fnd, "%s", ",");
-        emit_ptr_field_ref(fn, fnd, "str_2",
-                           (uint32_t *)((uint8_t *)e + SAVE_SI_STRPTR2));
+        emit_str_pool_field(fn, fnd, "str_2",
+                            *(uint32_t *)(e + SAVE_SI_STRPTR2));
         mjson_printf(fn, fnd, "%s", ",");
-        emit_ptr_field_ref(fn, fnd, "str_3",
-                           (uint32_t *)((uint8_t *)e + SAVE_SI_STRPTR3));
+        emit_str_pool_field(fn, fnd, "str_3",
+                            *(uint32_t *)(e + SAVE_SI_STRPTR3));
 
         mjson_printf(fn, fnd, ",%Q:%u,",
                      "best_scorer_goals",
@@ -671,14 +476,14 @@ static void load_season_informations(const char *buf, int buflen)
         if (mjson_get_number(e_slice, e_slen, "$.trophy_flags", &num) > 0)
             *(uint16_t *)(e + SAVE_SI_TROPHYFLAGS) = (uint16_t)num;
 
-        load_ptr_field(e_slice, e_slen, "$.league_str",
-                       (uint32_t *)(e + SAVE_SI_LEAGUESTRPTR));
-        load_ptr_field(e_slice, e_slen, "$.str_1",
-                       (uint32_t *)(e + SAVE_SI_STRPTR1));
-        load_ptr_field(e_slice, e_slen, "$.str_2",
-                       (uint32_t *)(e + SAVE_SI_STRPTR2));
-        load_ptr_field(e_slice, e_slen, "$.str_3",
-                       (uint32_t *)(e + SAVE_SI_STRPTR3));
+        load_str_pool_field(e_slice, e_slen, "$.league_str",
+                            (uint32_t *)(e + SAVE_SI_LEAGUESTRPTR));
+        load_str_pool_field(e_slice, e_slen, "$.str_1",
+                            (uint32_t *)(e + SAVE_SI_STRPTR1));
+        load_str_pool_field(e_slice, e_slen, "$.str_2",
+                            (uint32_t *)(e + SAVE_SI_STRPTR2));
+        load_str_pool_field(e_slice, e_slen, "$.str_3",
+                            (uint32_t *)(e + SAVE_SI_STRPTR3));
 
         if (mjson_get_number(e_slice, e_slen, "$.best_scorer_goals", &num) > 0)
             *(uint16_t *)(e + SAVE_SI_BESTSCORERNUMGOALS) = (uint16_t)num;
@@ -720,173 +525,28 @@ static void load_season_informations(const char *buf, int buflen)
     }
 }
 
-/* ---------- careerFileBuffer top-level pointer fields ----------
+/* careerFileBuffer top-level pointer fields are NOT saved.
  *
- * Bytes that need symbol-stable encoding so saves survive rebuilds.
- * Offsets are into careerFileBuffer (= careerFileBufferBuf).
+ * Removed:
+ *   currentCompetitionPtr / secondaryCompetitionPtr / tertiaryCompetitionPtr /
+ *   quaternaryCompetitionPtr / diyCompetitionPtr / diyCompetitionTablePtr
+ *   careerCompetitionSlotPtrTable[5] / careerCupPickList[5]
+ *   primary/secondary/tertiary/quaternaryCompStringOffset
  *
- *   currentCompetitionPtr            +63244  (uint32_t)
- *   secondaryCompetitionPtr          +63248
- *   tertiaryCompetitionPtr           +63252
- *   quaternaryCompetitionPtr         +63256
- *   diyCompetitionPtr                +63260
- *   diyCompetitionTablePtr           +63266
- *   careerCompetitionSlotPtrTable[5] +63320  (5 × uint32_t)
- *   careerCupPickList[5]             +55086  (5 × uint32_t, terminator-
- *                                              based comp table)
- *   primaryCompStringOffset          +93348
- *   secondaryCompStringOffset        +63380
- *   tertiaryCompStringOffset         +66280
- *   quaternaryCompStringOffset       +68464
+ * All re-derivable from non-pointer state on load via
+ * _RebuildPointersAfterLoad() in career_init.c:
+ *   - slot ptr table: refresh from the 5 named per-slot buffer symbols
+ *   - top-level comp pointers: look up by selTeamNumber / isNationalSelector
+ *     in competitionsTable / careerCupPickList
+ *   - cup pick list: re-populated by _Career_SetCupPickList_ForSelectedRegion
+ *     for national selectors; unused otherwise
+ *   - string offsets: zeroed (consumers tolerate NULL as empty string)
+ *
+ * Previously these were emitted as `{sym: "name"}` references which made
+ * the format "pointer-portable" but still pointer-shaped on disk. The
+ * roadmap calls for no pointer fields in the JSON; derive everything
+ * from a stable identity on load instead.
  */
-
-#define CFB_CURRENT_COMP_PTR_OFF        63244u
-#define CFB_SECONDARY_COMP_PTR_OFF      63248u
-#define CFB_TERTIARY_COMP_PTR_OFF       63252u
-#define CFB_QUATERNARY_COMP_PTR_OFF     63256u
-#define CFB_DIY_COMP_PTR_OFF            63260u
-#define CFB_DIY_COMP_TABLE_PTR_OFF      63266u
-#define CFB_CAREER_COMP_SLOT_TBL_OFF    63320u
-#define CFB_CAREER_CUP_PICK_LIST_OFF    55086u
-#define CFB_PRIMARY_COMP_STR_OFF        93348u
-#define CFB_SECONDARY_COMP_STR_OFF      63380u
-#define CFB_TERTIARY_COMP_STR_OFF       66280u
-#define CFB_QUATERNARY_COMP_STR_OFF     68464u
-
-/* Convenience to read a uint32 from careerFileBuffer + off. */
-static uint32_t cfb_u32(uint32_t off)
-{
-    return *(uint32_t *)((&careerFileBuffer) + off);
-}
-
-static void cfb_set_u32(uint32_t off, uint32_t val)
-{
-    *(uint32_t *)((&careerFileBuffer) + off) = val;
-}
-
-static void emit_career_pointers(mjson_print_fn_t fn, void *fnd)
-{
-#define PTR_AT(off) ((uint32_t *)((&careerFileBuffer) + (off)))
-    emit_ptr_field_ref(fn, fnd, "current_competition_ptr",       PTR_AT(CFB_CURRENT_COMP_PTR_OFF));
-    mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field_ref(fn, fnd, "secondary_competition_ptr",     PTR_AT(CFB_SECONDARY_COMP_PTR_OFF));
-    mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field_ref(fn, fnd, "tertiary_competition_ptr",      PTR_AT(CFB_TERTIARY_COMP_PTR_OFF));
-    mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field_ref(fn, fnd, "quaternary_competition_ptr",    PTR_AT(CFB_QUATERNARY_COMP_PTR_OFF));
-    mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field_ref(fn, fnd, "diy_competition_ptr",           PTR_AT(CFB_DIY_COMP_PTR_OFF));
-    mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field_ref(fn, fnd, "diy_competition_table_ptr",     PTR_AT(CFB_DIY_COMP_TABLE_PTR_OFF));
-    mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field_ref(fn, fnd, "primary_comp_string_offset",    PTR_AT(CFB_PRIMARY_COMP_STR_OFF));
-    mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field_ref(fn, fnd, "secondary_comp_string_offset",  PTR_AT(CFB_SECONDARY_COMP_STR_OFF));
-    mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field_ref(fn, fnd, "tertiary_comp_string_offset",   PTR_AT(CFB_TERTIARY_COMP_STR_OFF));
-    mjson_printf(fn, fnd, "%s", ",");
-    emit_ptr_field_ref(fn, fnd, "quaternary_comp_string_offset", PTR_AT(CFB_QUATERNARY_COMP_STR_OFF));
-#undef PTR_AT
-
-    /* careerCompetitionSlotPtrTable[5] */
-    mjson_printf(fn, fnd, ",%Q:[", "career_competition_slot_ptr_table");
-    for (uint32_t i = 0; i < 5; i++) {
-        if (i > 0) mjson_printf(fn, fnd, "%s", ",");
-        /* emit_ptr_field requires a key — for array elements we
-         * inline the same logic minus the key prefix. */
-        uint32_t *pp = (uint32_t *)((&careerFileBuffer) + CFB_CAREER_COMP_SLOT_TBL_OFF + i * 4);
-        normalize_ptr_for_save(pp);
-        uint32_t val = *pp;
-        uint32_t off = 0;
-        const AmigaAddrLutEntry *e = sym_from_ptr(val, &off);
-        if (val == 0u) {
-            mjson_printf(fn, fnd, "%s", "null");
-        } else if (e) {
-            if (off == 0) mjson_printf(fn, fnd, "{%Q:%Q}", "sym", e->name);
-            else mjson_printf(fn, fnd, "{%Q:%Q,%Q:%u}",
-                              "sym", e->name, "off", (unsigned)off);
-        } else if (looks_sentinel(val)) {
-            mjson_printf(fn, fnd, "{%Q:%u}", "raw", (unsigned)val);
-        } else if (looks_readable(val)) {
-            const char *s = (const char *)(uintptr_t)val;
-            size_t n = 0; while (n < 128u && s[n] != '\0') n++;
-            if (n > 0 && n < 128u)
-                mjson_printf(fn, fnd, "{%Q:%.*Q}", "str", (int)n, s);
-            else
-                mjson_printf(fn, fnd, "%s", "null");
-        } else {
-            mjson_printf(fn, fnd, "%s", "null");
-        }
-    }
-    mjson_printf(fn, fnd, "%s", "]");
-
-    /* careerCupPickList[5] — same shape as the slot table. */
-    mjson_printf(fn, fnd, ",%Q:[", "career_cup_pick_list");
-    for (uint32_t i = 0; i < 5; i++) {
-        if (i > 0) mjson_printf(fn, fnd, "%s", ",");
-        uint32_t *pp = (uint32_t *)((&careerFileBuffer) + CFB_CAREER_CUP_PICK_LIST_OFF + i * 4);
-        normalize_ptr_for_save(pp);
-        uint32_t val = *pp;
-        uint32_t off = 0;
-        const AmigaAddrLutEntry *e = sym_from_ptr(val, &off);
-        if (val == 0u) {
-            mjson_printf(fn, fnd, "%s", "null");
-        } else if (e) {
-            if (off == 0) mjson_printf(fn, fnd, "{%Q:%Q}", "sym", e->name);
-            else mjson_printf(fn, fnd, "{%Q:%Q,%Q:%u}",
-                              "sym", e->name, "off", (unsigned)off);
-        } else if (looks_sentinel(val)) {
-            mjson_printf(fn, fnd, "{%Q:%u}", "raw", (unsigned)val);
-        } else if (looks_readable(val)) {
-            const char *s = (const char *)(uintptr_t)val;
-            size_t n = 0; while (n < 128u && s[n] != '\0') n++;
-            if (n > 0 && n < 128u)
-                mjson_printf(fn, fnd, "{%Q:%.*Q}", "str", (int)n, s);
-            else
-                mjson_printf(fn, fnd, "%s", "null");
-        } else {
-            mjson_printf(fn, fnd, "%s", "null");
-        }
-    }
-    mjson_printf(fn, fnd, "%s", "]");
-}
-
-static void load_career_pointers(const char *buf, int buflen)
-{
-    uint32_t val = 0;
-
-    load_ptr_field(buf, buflen, "$.current_competition_ptr", &val);
-    cfb_set_u32(CFB_CURRENT_COMP_PTR_OFF, val);
-    load_ptr_field(buf, buflen, "$.secondary_competition_ptr", &val);
-    cfb_set_u32(CFB_SECONDARY_COMP_PTR_OFF, val);
-    load_ptr_field(buf, buflen, "$.tertiary_competition_ptr", &val);
-    cfb_set_u32(CFB_TERTIARY_COMP_PTR_OFF, val);
-    load_ptr_field(buf, buflen, "$.quaternary_competition_ptr", &val);
-    cfb_set_u32(CFB_QUATERNARY_COMP_PTR_OFF, val);
-    load_ptr_field(buf, buflen, "$.diy_competition_ptr", &val);
-    cfb_set_u32(CFB_DIY_COMP_PTR_OFF, val);
-    load_ptr_field(buf, buflen, "$.diy_competition_table_ptr", &val);
-    cfb_set_u32(CFB_DIY_COMP_TABLE_PTR_OFF, val);
-    load_ptr_field(buf, buflen, "$.primary_comp_string_offset", &val);
-    cfb_set_u32(CFB_PRIMARY_COMP_STR_OFF, val);
-    load_ptr_field(buf, buflen, "$.secondary_comp_string_offset", &val);
-    cfb_set_u32(CFB_SECONDARY_COMP_STR_OFF, val);
-    load_ptr_field(buf, buflen, "$.tertiary_comp_string_offset", &val);
-    cfb_set_u32(CFB_TERTIARY_COMP_STR_OFF, val);
-    load_ptr_field(buf, buflen, "$.quaternary_comp_string_offset", &val);
-    cfb_set_u32(CFB_QUATERNARY_COMP_STR_OFF, val);
-
-    char path[64];
-    for (uint32_t i = 0; i < 5; i++) {
-        snprintf(path, sizeof(path), "$.career_competition_slot_ptr_table[%u]", i);
-        load_ptr_field(buf, buflen, path, &val);
-        cfb_set_u32(CFB_CAREER_COMP_SLOT_TBL_OFF + i * 4, val);
-
-        snprintf(path, sizeof(path), "$.career_cup_pick_list[%u]", i);
-        load_ptr_field(buf, buflen, path, &val);
-        cfb_set_u32(CFB_CAREER_CUP_PICK_LIST_OFF + i * 4, val);
-    }
-}
 
 /* ---------- table-driven scalar/array fields ----------
  *
@@ -1151,6 +811,32 @@ extern uint8_t  transferOfferTable[];
 extern uint8_t  newJobOffers[];
 extern uint8_t  jobOffers[];
 
+/* careerCompetitionSlotPtrTable entry buffers — declared further down
+ * for the named-blob section but needed earlier for the per-slot type
+ * scalars at the top of the s_career_scalars table. */
+extern uint8_t  competitionContext[];
+extern uint8_t  tertiaryCompetitionContext[];
+extern uint8_t  euroCupsCompetitionContext[];
+extern uint8_t  diyCompetitionContext[];
+
+/* Other career-overlay byte regions referenced by the scalar table —
+ * declared further down for the per-region section but needed earlier
+ * for static initialiser address resolution. */
+extern uint8_t  diyLeagueSeasonStateTable[];
+extern uint8_t  diyTeamIdListType0[];
+extern uint8_t  diyTeamIdListType1[];
+extern uint8_t  diyTeamIdListType2[];
+extern uint8_t  careerUnavailablePlayerLookupTable[];
+extern uint8_t  careerUnavailablePlayerNames[];
+extern uint8_t  teamSelectionKeyCache[];
+extern uint8_t  teamTacticsUSERA[];
+extern uint8_t  teamTacticsUSERB[];
+extern uint8_t  teamTacticsUSERC[];
+extern uint8_t  teamTacticsUSERD[];
+extern uint8_t  teamTacticsUSERE[];
+extern uint8_t  teamTacticsUSERF[];
+extern uint8_t  euroCupCopy[];
+
 /* Career meta / flags / finance / market state.
  * Address-based: each entry takes &symbol so the table is
  * resilient to overlay layout shifts (e.g. eventual 64-bit move)
@@ -1160,6 +846,25 @@ extern uint8_t  jobOffers[];
 #define FA(name, sym, len, type) { name, (void *)&sym, len, type }
 
 static const FieldDesc s_career_scalars[] = {
+    /* tmd_team_count — uint16 at &careerFileBuffer + 0, holds the count
+     * of populated TeamFileEx records in the TMD pool that follows at
+     * tmdFileBuffer (= &careerFileBuffer + 2). Consumed by
+     * _SearchTeamInTmdFile and friends in career_teams.c. */
+    FX("tmd_team_count",                  careerFileBuffer,            FLD_U16),
+
+    /* Per-slot type bytes — first int16 of each careerCompetitionSlotPtrTable
+     * entry (= DIYCompetition.competitionType field). Saved explicitly so
+     * _Career_LoadCompetitionSlotStateFromBuffer dispatches to the right
+     * branch on load. Previously this was inferred from currentCompetitionPtr
+     * (b20b070) which broke when the saved in-memory state disagreed with
+     * the pointer; an explicit field is authoritative and survives any
+     * future struct reshuffles. */
+    FX("primary_slot_type",               competitionFileBuffer,       FLD_S16),
+    FX("secondary_slot_type",             competitionContext,          FLD_S16),
+    FX("tertiary_slot_type",              tertiaryCompetitionContext,  FLD_S16),
+    FX("quaternary_slot_type",            euroCupsCompetitionContext,  FLD_S16),
+    FX("diy_slot_type",                   diyCompetitionContext,       FLD_S16),
+
     FX("current_season_showing",          currentSeasonShowing,        FLD_U16),
     FX("staying_in_old_club",             stayingInOldClub,            FLD_U16),
     FX("overdraft_streak",                overdraftStreak,             FLD_U16),
@@ -1385,6 +1090,73 @@ static const FieldDesc s_career_scalars[] = {
     FA("transfer_offer_table",            transferOfferTable, 70,      FLD_BYTES),
     FA("new_job_offers",                  newJobOffers, 130,           FLD_BYTES),
     FA("job_offers",                      jobOffers, 130,              FLD_BYTES),
+
+    /* Per-globalTeamNumber league offset (signed). Indexed by team's
+     * globalTeamNumber, read in teams.c:setLeagueNumbers and
+     * career_init.c when deriving currentDivisionIndex. Editable via the
+     * DIY-edit-leagues menu's scratch buffer. Flat int8[2000]. */
+    FA("diy_league_season_state_table",   diyLeagueSeasonStateTable, 2000, FLD_BYTES),
+
+    /* DIY team-id lists per competition type (league/cup/hybrid). Each
+     * is an array of BE byte-pairs [country, ordinal] — see
+     * _FindTeamIdInDiyTeamsList in transfer_market.c. Saved as flat
+     * bytes for round-trip fidelity. */
+    FA("diy_team_id_list_type_0",         diyTeamIdListType0,  288,    FLD_BYTES),
+    FA("diy_team_id_list_type_1",         diyTeamIdListType1,  2310,   FLD_BYTES),
+    FA("diy_team_id_list_type_2",         diyTeamIdListType2,  148,    FLD_BYTES),
+
+    /* Per-career-slot competition contexts. Each is a snapshot of
+     * diyCompetitionStart / diyFileBufferCopy at the moment
+     * _Career_StoreCompetitionSlotStateToBuffer was last called for
+     * the slot. Sizes are league/hybrid (2900) or cup (1092).
+     *
+     * These regions contain `namePtr` and other absolute-pointer fields
+     * embedded in their DIYCompetition headers. The legacy raw-byte
+     * round-trip preserves those pointer values verbatim, which works
+     * for same-binary load but breaks across rebuilds (pointer-to-disk
+     * problem — see CLAUDE.md). Promoting these to structured DIY
+     * fields with sym-encoded inner pointers is future work; for now
+     * preserve byte fidelity as flat scalars. */
+    /* Inline literal — primary slot lives at careerFileBuffer + 93308
+     * (no standalone symbol), so the FA macro's `&sym` form doesn't
+     * apply. Covers DIYCompetition header bytes 2..153; bytes 0..1 are
+     * the primary_slot_type scalar at the top of this table, and
+     * bytes 154..2899 are covered by diy_team_id_list_type_2/0/1. */
+    { "primary_comp_block", (void *)((uint8_t *)&careerFileBuffer + 93308), 154, FLD_BYTES },
+    FA("competition_context",         competitionContext,         2900, FLD_BYTES),
+    FA("tertiary_competition_context",tertiaryCompetitionContext, 1092, FLD_BYTES),
+    FA("diy_competition_context",     diyCompetitionContext,      1092, FLD_BYTES),
+    FA("euro_cups_competition_context",euroCupsCompetitionContext, 2900, FLD_BYTES),
+
+    /* Team selection key cache — per-slot list of 10-byte cache entries.
+     * Layout per entry is reverse-engineered from access patterns in
+     * career_status.c / career_teams.c; structured promotion is future
+     * work. */
+    FA("team_selection_key_cache",    teamSelectionKeyCache,      1870, FLD_BYTES),
+
+    /* Six user-saved tactic slots (teamTacticsUSERA..F). Same 370-byte
+     * TeamTactics shape as a .TAC file (see write_tactics_buf). Saved
+     * as flat bytes here for table compactness; structured promotion is
+     * a candidate follow-up using the existing emit/load helpers. */
+    FA("team_tactics_user_a",         teamTacticsUSERA,            370, FLD_BYTES),
+    FA("team_tactics_user_b",         teamTacticsUSERB,            370, FLD_BYTES),
+    FA("team_tactics_user_c",         teamTacticsUSERC,            370, FLD_BYTES),
+    FA("team_tactics_user_d",         teamTacticsUSERD,            370, FLD_BYTES),
+    FA("team_tactics_user_e",         teamTacticsUSERE,            370, FLD_BYTES),
+    FA("team_tactics_user_f",         teamTacticsUSERF,            370, FLD_BYTES),
+
+    /* *Copy competition record region. Spans euroCupCopy through
+     * oceaniaWorldCupQualificationCopy (1832 B, 34 records). Each
+     * record's text[2] pointer pair is restored from its template by
+     * restore_comp_copy_text_ptrs_from_template — saved bytes don't
+     * need to carry those pointers. */
+    FA("comp_copy_region",            euroCupCopy,                1832, FLD_BYTES),
+
+    /* Small unstructured tables — internal layout not yet modelled. */
+    FA("career_unavailable_player_lookup_table",
+                                       careerUnavailablePlayerLookupTable, 80,  FLD_BYTES),
+    FA("career_unavailable_player_names",
+                                       careerUnavailablePlayerNames,     340, FLD_BYTES),
 
     { NULL, NULL, 0, FLD_END },
 };
@@ -1680,6 +1452,100 @@ static void load_bytes_at(const char *buf, int buflen, const char *path,
 #endif
 }
 
+/* Emit a single PlayerFile (38 B) as a JSON object body. Used by the
+ * TeamFileEx players[] loop and by typed market-player encoders. */
+static void emit_player_file_body(mjson_print_fn_t fn, void *fnd,
+                                  const uint8_t *p)
+{
+    mjson_printf(fn, fnd, "%s", "{");
+    emit_s8_at  (fn, fnd, "nationality",          p, offsetof(PlayerFile, nationality));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_s8_at  (fn, fnd, "field_1",              p, offsetof(PlayerFile, field_1));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_s8_at  (fn, fnd, "shirt_number",         p, offsetof(PlayerFile, shirtNumber));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_str_at (fn, fnd, "player_name",          p, offsetof(PlayerFile, playerName), 22);
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_s8_at  (fn, fnd, "field_19",             p, offsetof(PlayerFile, field_19));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at  (fn, fnd, "position_and_face",    p, offsetof(PlayerFile, positionAndFace));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at  (fn, fnd, "cards_injuries",       p, offsetof(PlayerFile, cardsInjuries));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_s8_at  (fn, fnd, "passing",              p, offsetof(PlayerFile, passing));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_s8_at  (fn, fnd, "shooting_heading",     p, offsetof(PlayerFile, shootingHeading));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_s8_at  (fn, fnd, "tackling_ball_control",p, offsetof(PlayerFile, tacklingBallControl));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_s8_at  (fn, fnd, "speed_finishing",      p, offsetof(PlayerFile, speedFinishing));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_s8_at  (fn, fnd, "price",                p, offsetof(PlayerFile, price));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_bytes_at(fn, fnd,"goal_stats",           p, offsetof(PlayerFile, goalStats), 4);
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_s8_at  (fn, fnd, "some_flag",            p, offsetof(PlayerFile, someFlag));
+    mjson_printf(fn, fnd, "%s", "}");
+}
+
+/* Load a PlayerFile from a JSON object slice. Mirror of emit_player_file_body. */
+static void load_player_file_body(const char *buf, int buflen, uint8_t *p)
+{
+#define LOAD_PU8(field, jsonkey) \
+        load_u8_at(buf, buflen, "$." jsonkey, p, offsetof(PlayerFile, field))
+#define LOAD_PSTR(field, jsonkey, maxlen) \
+        load_str_at(buf, buflen, "$." jsonkey, p, offsetof(PlayerFile, field), maxlen)
+#define LOAD_PBYTES(field, jsonkey, len) \
+        load_bytes_at(buf, buflen, "$." jsonkey, p, offsetof(PlayerFile, field), len)
+
+    LOAD_PU8(nationality,         "nationality");
+    LOAD_PU8(field_1,             "field_1");
+    LOAD_PU8(shirtNumber,         "shirt_number");
+    LOAD_PSTR(playerName,         "player_name", 22);
+    LOAD_PU8(field_19,            "field_19");
+    LOAD_PU8(positionAndFace,     "position_and_face");
+    LOAD_PU8(cardsInjuries,       "cards_injuries");
+    LOAD_PU8(passing,             "passing");
+    LOAD_PU8(shootingHeading,     "shooting_heading");
+    LOAD_PU8(tacklingBallControl, "tackling_ball_control");
+    LOAD_PU8(speedFinishing,      "speed_finishing");
+    LOAD_PU8(price,               "price");
+    LOAD_PBYTES(goalStats,        "goal_stats", 4);
+    LOAD_PU8(someFlag,            "some_flag");
+#undef LOAD_PU8
+#undef LOAD_PSTR
+#undef LOAD_PBYTES
+}
+
+/* Emit a single MarketPlayer (42 B = 4 B header + PlayerFile) as a
+ * JSON object body. Used by the careerForeignMarketPlayers array. */
+static void emit_market_player_body(mjson_print_fn_t fn, void *fnd,
+                                    const uint8_t *base)
+{
+    mjson_printf(fn, fnd, "%s", "{");
+    emit_s16_at (fn, fnd, "team_id",        base, offsetof(MarketPlayer, teamId));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_s8_at  (fn, fnd, "player_ordinal", base, offsetof(MarketPlayer, playerOrdinal));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_s8_at  (fn, fnd, "padding",        base, offsetof(MarketPlayer, padding));
+    mjson_printf(fn, fnd, ",%Q:", "player");
+    emit_player_file_body(fn, fnd, base + offsetof(MarketPlayer, player));
+    mjson_printf(fn, fnd, "%s", "}");
+}
+
+/* Load a MarketPlayer from a JSON object slice. Mirror of
+ * emit_market_player_body. */
+static void load_market_player_body(const char *buf, int buflen, uint8_t *base)
+{
+    load_s16_at(buf, buflen, "$.team_id",      base, offsetof(MarketPlayer, teamId));
+    load_u8_at (buf, buflen, "$.player_ordinal",base, offsetof(MarketPlayer, playerOrdinal));
+    load_u8_at (buf, buflen, "$.padding",      base, offsetof(MarketPlayer, padding));
+
+    const char *ps = NULL; int psl = 0;
+    if (mjson_find(buf, buflen, "$.player", &ps, &psl) == MJSON_TOK_OBJECT)
+        load_player_file_body(ps, psl, base + offsetof(MarketPlayer, player));
+}
+
 static void emit_team_file_ex_body(mjson_print_fn_t fn, void *fnd,
                                    const uint8_t *base)
 {
@@ -1718,35 +1584,7 @@ static void emit_team_file_ex_body(mjson_print_fn_t fn, void *fnd,
         const uint8_t *p = base + offsetof(TeamFileEx, players)
                                 + (size_t)i * sizeof(PlayerFile);
         if (i > 0) mjson_printf(fn, fnd, "%s", ",");
-        mjson_printf(fn, fnd, "%s", "{");
-        emit_s8_at  (fn, fnd, "nationality",          p, offsetof(PlayerFile, nationality));
-        mjson_printf(fn, fnd, "%s", ",");
-        emit_s8_at  (fn, fnd, "field_1",              p, offsetof(PlayerFile, field_1));
-        mjson_printf(fn, fnd, "%s", ",");
-        emit_s8_at  (fn, fnd, "shirt_number",         p, offsetof(PlayerFile, shirtNumber));
-        mjson_printf(fn, fnd, "%s", ",");
-        emit_str_at (fn, fnd, "player_name",          p, offsetof(PlayerFile, playerName), 22);
-        mjson_printf(fn, fnd, "%s", ",");
-        emit_s8_at  (fn, fnd, "field_19",             p, offsetof(PlayerFile, field_19));
-        mjson_printf(fn, fnd, "%s", ",");
-        emit_u8_at  (fn, fnd, "position_and_face",    p, offsetof(PlayerFile, positionAndFace));
-        mjson_printf(fn, fnd, "%s", ",");
-        emit_u8_at  (fn, fnd, "cards_injuries",       p, offsetof(PlayerFile, cardsInjuries));
-        mjson_printf(fn, fnd, "%s", ",");
-        emit_s8_at  (fn, fnd, "passing",              p, offsetof(PlayerFile, passing));
-        mjson_printf(fn, fnd, "%s", ",");
-        emit_s8_at  (fn, fnd, "shooting_heading",     p, offsetof(PlayerFile, shootingHeading));
-        mjson_printf(fn, fnd, "%s", ",");
-        emit_s8_at  (fn, fnd, "tackling_ball_control",p, offsetof(PlayerFile, tacklingBallControl));
-        mjson_printf(fn, fnd, "%s", ",");
-        emit_s8_at  (fn, fnd, "speed_finishing",      p, offsetof(PlayerFile, speedFinishing));
-        mjson_printf(fn, fnd, "%s", ",");
-        emit_s8_at  (fn, fnd, "price",                p, offsetof(PlayerFile, price));
-        mjson_printf(fn, fnd, "%s", ",");
-        emit_bytes_at(fn, fnd,"goal_stats",           p, offsetof(PlayerFile, goalStats), 4);
-        mjson_printf(fn, fnd, "%s", ",");
-        emit_s8_at  (fn, fnd, "some_flag",            p, offsetof(PlayerFile, someFlag));
-        mjson_printf(fn, fnd, "%s", "}");
+        emit_player_file_body(fn, fnd, p);
     }
     mjson_printf(fn, fnd, "%s", "]}");
 }
@@ -1845,138 +1683,21 @@ static void load_team_file_ex_slice(const char *buf, int buflen,
         if (vt != MJSON_TOK_OBJECT) { i++; continue; }
         uint8_t *p = base + offsetof(TeamFileEx, players)
                           + (size_t)i * sizeof(PlayerFile);
-        const char *ps = players_arr + voff;
-        int psl = vlen;
+        load_player_file_body(players_arr + voff, vlen, p);
         i++;
-
-#define LOAD_PU8(field, jsonkey) \
-        load_u8_at(ps, psl, "$." jsonkey, p, offsetof(PlayerFile, field))
-#define LOAD_PSTR(field, jsonkey, maxlen) \
-        load_str_at(ps, psl, "$." jsonkey, p, offsetof(PlayerFile, field), maxlen)
-#define LOAD_PBYTES(field, jsonkey, len) \
-        load_bytes_at(ps, psl, "$." jsonkey, p, offsetof(PlayerFile, field), len)
-
-        LOAD_PU8(nationality,         "nationality");
-        LOAD_PU8(field_1,             "field_1");
-        LOAD_PU8(shirtNumber,         "shirt_number");
-        LOAD_PSTR(playerName,         "player_name", 22);
-        LOAD_PU8(field_19,            "field_19");
-        LOAD_PU8(positionAndFace,     "position_and_face");
-        LOAD_PU8(cardsInjuries,       "cards_injuries");
-        LOAD_PU8(passing,             "passing");
-        LOAD_PU8(shootingHeading,     "shooting_heading");
-        LOAD_PU8(tacklingBallControl, "tackling_ball_control");
-        LOAD_PU8(speedFinishing,      "speed_finishing");
-        LOAD_PU8(price,               "price");
-        LOAD_PBYTES(goalStats,        "goal_stats", 4);
-        LOAD_PU8(someFlag,            "some_flag");
-#undef LOAD_PU8
-#undef LOAD_PSTR
-#undef LOAD_PBYTES
     }
 }
 
-/* ---------- named base64 blob regions ----------
- *
- * Mid-step between opaque_data and full semantic JSON. Each big
- * sub-region of careerFileBuffer that we haven't promoted yet gets
- * a named entry under "blobs" with a base64 payload of its bytes.
- * On load, base64-decode each into the region's memory location.
- * Promoted semantic fields apply AFTER blobs, so e.g.
- * cup_record_name_sources still overrides the relevant 4-byte
- * pointer slots inside the *Copy region's bytes.
- *
- * When every byte of careerFileBuffer is covered by either a typed
- * field or a named blob, we can drop opaque_data entirely.
- */
-
-typedef struct {
-    const char *name;
-    void       *addr;
-    uint32_t    size;
-} BlobDesc;
-
-static const BlobDesc s_career_blobs[] = {
-    /* tmd_file_buffer extended back by 2 bytes — the symbol
-     * tmdFileBuffer is at &careerFileBuffer + 2, but bytes 0..1 of
-     * the buffer carry a 2-byte length/count prefix that the
-     * Amiga code reads/writes alongside the TMD payload. */
-    { "tmd_file_buffer",                       &careerFileBuffer,              54722 },
-    /* Extra 608 bytes after careerTeam / currentTeam — these are
-     * 16 additional PlayerFile entries (reserves / subs roster).
-     * TeamFileEx is 684 bytes (TeamFile + 16 players); the on-disk
-     * career/current team slots are 1292 bytes (TeamFile + 32
-     * players). emit_team_file_ex covers the first 16, blobs
-     * cover the second 16 here until a proper extended schema
-     * lands. */
-    { "career_team_reserves",                  (uint8_t *)&careerTeam  + 684,  608 },
-    { "current_team_reserves",                 (uint8_t *)&currentTeam + 684,  608 },
-    /* competitionFileBuffer's first 154 bytes (offset 93308..93461 of
-     * careerFileBuffer). This region holds the primary-slot type
-     * indicator at offset 0 (uint16: 0=league, 1=cup, 2+=tournament),
-     * plus the runtime DIY competition header that _CareerGameListCommon
-     * reads to pick the LEAGUE/CUP/DEFAULT draw branch. Without this
-     * coverage the slot-type byte loads as 0 from memset and World Cup
-     * fixtures display as a league (no round designation, see
-     * 6b6921c [round-dbg] dump).
-     *
-     * Bytes 93352..93461 (110 of these) overlap with named scalars
-     * (primaryCompStringOffset etc.) that re-apply after the blob in
-     * apply_semantic_load — that ordering is preserved. */
-    { "primary_comp_block_padding",            (uint8_t *)&careerFileBuffer + 93308, 154 },
-    { "career_unavailable_player_lookup_table",careerUnavailablePlayerLookupTable, 80 },
-    { "career_unavailable_player_names",       careerUnavailablePlayerNames,    340 },
-    { "diy_league_season_state_table",         diyLeagueSeasonStateTable,      2000 },
-    { "competition_context",                   competitionContext,             2900 },
-    { "tertiary_competition_context",          tertiaryCompetitionContext,     1092 },
-    { "diy_competition_context",               diyCompetitionContext,          1092 },
-    { "euro_cups_competition_context",         euroCupsCompetitionContext,     2900 },
-    { "team_selection_key_cache",              teamSelectionKeyCache,          1870 },
-    { "career_foreign_market_players",         careerForeignMarketPlayers,    18144 },
-    { "diy_team_id_list_type_2",               diyTeamIdListType2,              148 },
-    { "diy_team_id_list_type_0",               diyTeamIdListType0,              288 },
-    { "diy_team_id_list_type_1",               diyTeamIdListType1,             2310 },
-    { "team_tactics_user_a",                   teamTacticsUSERA,                370 },
-    { "team_tactics_user_b",                   teamTacticsUSERB,                370 },
-    { "team_tactics_user_c",                   teamTacticsUSERC,                370 },
-    { "team_tactics_user_d",                   teamTacticsUSERD,                370 },
-    { "team_tactics_user_e",                   teamTacticsUSERE,                370 },
-    { "team_tactics_user_f",                   teamTacticsUSERF,                370 },
-    /* *Copy slot region: from euroCupCopy to oceaniaWorldCupQualificationCopy
-     * +0x24. Total 1832 bytes. */
-    { "comp_copy_region",                      euroCupCopy,                    1832 },
-    { "edit_teams_buffer",                     editTeamsBuffer,               43778 },
-    { "edit_teams_save_vars_area",             editTeamsSaveVarsArea,         23254 },
-    { NULL, NULL, 0 },
-};
-
-static void emit_named_blobs(mjson_print_fn_t fn, void *fnd)
-{
-    mjson_printf(fn, fnd, "%Q:{", "blobs");
-    int first = 1;
-    for (const BlobDesc *b = s_career_blobs; b->name; b++) {
-        if (!first) mjson_printf(fn, fnd, "%s", ",");
-        first = 0;
-        mjson_printf(fn, fnd, "%Q:%V", b->name, (int)b->size, (const char *)b->addr);
-    }
-    mjson_printf(fn, fnd, "%s", "}");
-}
-
-static void load_named_blobs(const char *buf, int buflen)
-{
-    /* Slice the blobs object once so each per-blob base64 decode
-     * scans only the blobs section instead of the entire file. */
-    const char *bs = NULL; int bsl = 0;
-    if (mjson_find(buf, buflen, "$.blobs", &bs, &bsl) != MJSON_TOK_OBJECT)
-        return;
-
-    char path[80];
-    for (const BlobDesc *b = s_career_blobs; b->name; b++) {
-        snprintf(path, sizeof(path), "$.%s", b->name);
-        mjson_get_base64(bs, bsl, path,
-                         (char *)b->addr, (int)b->size);
-    }
-}
+/* The named-blob ("blobs":{}) sub-object and the previous base64
+ * payload-per-region scheme have been retired. Every region that used
+ * to live in s_career_blobs is now either a typed scalar in
+ * s_career_scalars (FLD_BYTES or otherwise) or a structured field at
+ * the top level (tmd_teams, selected_teams, career_foreign_market_players,
+ * career_team_reserves, current_team_reserves). The two transient menu-
+ * scratch regions (editTeamsBuffer, editTeamsSaveVarsArea) were dropped
+ * entirely because no code path reads them outside the menu they belong
+ * to. Cross-rebuild loads now rely on _RebuildPointersAfterLoad() for
+ * any pointer field re-derivation (see SaveJson_LoadCareer). */
 
 /* ---------- *Copy cup-record nameSource pointers ----------
  *
@@ -2043,10 +1764,11 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     uint32_t data_size = career_data_size();
     JsonOutBuf out = { NULL, 0, 0, 0 };
 
-    /* Reset string pool — normalize_ptr_for_save will intern
-     * .rodata strings into it during the emit pass. Resetting up
-     * front (mirroring the load side) means string-pool pointer
-     * fields land at the same pool offsets every save → byte-
+    /* Reset string pool — emit_str_pool_field consumers (the four
+     * seasonInformations comp-name slots) read pointer-typed fields
+     * whose post-load value lives in this pool. Resetting up front
+     * mirrors the load side so the same content interns at the same
+     * pool offset, keeping save → load → save byte-
      * stable round-trip with the loader. */
     string_pool_reset();
 
@@ -2067,8 +1789,9 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
 
     emit_season_informations(json_out_emit, &out);
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
-    emit_career_pointers(json_out_emit, &out);
-    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+    /* careerCompetitionSlotPtrTable / *CompetitionPtr / *CompStringOffset /
+     * careerCupPickList are all re-derivable from non-pointer state on
+     * load — _RebuildPointersAfterLoad() handles them. Not saved. */
     /* *Copy struct text[2] pointers are template-static — see
      * restore_comp_copy_text_ptrs_from_template — so they're NOT
      * encoded in the save. They get restored from each careerContests
@@ -2087,12 +1810,54 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     for (uint16_t i = 0; i < numSelectedTeams; i++) {
         if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
         emit_team_file_ex_body(json_out_emit, &out,
-                               (&selTeamsPtr) + (uint32_t)i * 684u);
+                               (uint8_t *)((TeamFileEx *)&selTeamsPtr + i));
     }
     mjson_printf(json_out_emit, &out, "%s", "]");
 
-    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
-    emit_named_blobs(json_out_emit, &out);
+    /* TMD team pool — emit only the populated count (= tmd_team_count
+     * scalar = uint16 at &careerFileBuffer + 0). Empty trailing slots
+     * are reconstructed by careerFileBufferBuf memset on load. */
+    {
+        uint16_t tmd_count = *(uint16_t *)&careerFileBuffer;
+        mjson_printf(json_out_emit, &out, ",\n  %Q:[", "tmd_teams");
+        for (uint16_t i = 0; i < tmd_count; i++) {
+            if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
+            emit_team_file_ex_body(json_out_emit, &out,
+                                   (uint8_t *)((TeamFileEx *)tmdFileBuffer + i));
+        }
+        mjson_printf(json_out_emit, &out, "%s", "]");
+    }
+
+    /* Foreign-market player pool — fixed-size MarketPlayer[432]. Emit
+     * all 432 slots so unpopulated entries (teamId == 0) round-trip
+     * faithfully; the array is dense in practice for active careers. */
+    {
+        mjson_printf(json_out_emit, &out, ",\n  %Q:[", "career_foreign_market_players");
+        for (uint32_t i = 0; i < 432; i++) {
+            if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
+            emit_market_player_body(json_out_emit, &out,
+                                    careerForeignMarketPlayers + i * sizeof(MarketPlayer));
+        }
+        mjson_printf(json_out_emit, &out, "%s", "]");
+    }
+
+    /* Career / current team reserve players — 16 × PlayerFile each,
+     * extending the 16-player roster in career_team / current_team
+     * to the on-disk 32-player slot. */
+    {
+        const char *keys[2] = { "career_team_reserves", "current_team_reserves" };
+        const uint8_t *bases[2] = { (uint8_t *)&careerTeam  + 684,
+                                    (uint8_t *)&currentTeam + 684 };
+        for (int t = 0; t < 2; t++) {
+            mjson_printf(json_out_emit, &out, ",\n  %Q:[", keys[t]);
+            for (int i = 0; i < 16; i++) {
+                if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
+                emit_player_file_body(json_out_emit, &out,
+                                      bases[t] + (size_t)i * sizeof(PlayerFile));
+            }
+            mjson_printf(json_out_emit, &out, "%s", "]");
+        }
+    }
 
     mjson_printf(json_out_emit, &out, "%s", "\n}\n");
 
@@ -2159,9 +1924,9 @@ static void apply_semantic_load(const char *src, int src_size)
      * byte-level mismatches. */
     string_pool_reset();
 
-    load_named_blobs(src, src_size);
     load_season_informations(src, src_size);
-    load_career_pointers(src, src_size);
+    /* Top-level pointer fields were removed from the save format —
+     * _RebuildPointersAfterLoad() re-derives them after this returns. */
     /* *Copy struct text[2] pointers are template-static (see comment
      * above restore_comp_copy_text_ptrs_from_template), so they're
      * not in the save. Apply them from each careerContests src
@@ -2190,8 +1955,71 @@ static void apply_semantic_load(const char *src, int src_size)
                                  &koff, &klen, &voff, &vlen, &vt)) != 0) {
             if (vt != MJSON_TOK_OBJECT) { i++; continue; }
             load_team_file_ex_slice(teams_arr + voff, vlen,
-                                    (&selTeamsPtr) + (uint32_t)i * 684u);
+                                    (uint8_t *)((TeamFileEx *)&selTeamsPtr + i));
             i++;
+        }
+    }
+
+    /* TMD team pool — count from tmd_team_count scalar (already applied
+     * by load_scalar_table above). Empty trailing slots stay zero from
+     * the careerFileBufferBuf memset earlier in SaveJson_LoadCareer. */
+    {
+        const char *tmd_arr = NULL;
+        int tmd_arr_len = 0;
+        if (mjson_find(src, src_size, "$.tmd_teams",
+                       &tmd_arr, &tmd_arr_len) == MJSON_TOK_ARRAY) {
+            uint16_t tmd_count = *(uint16_t *)&careerFileBuffer;
+            int pos = 0, koff, klen, voff, vlen, vt;
+            uint16_t i = 0;
+            while (i < tmd_count &&
+                   (pos = mjson_next(tmd_arr, tmd_arr_len, pos,
+                                     &koff, &klen, &voff, &vlen, &vt)) != 0) {
+                if (vt != MJSON_TOK_OBJECT) { i++; continue; }
+                load_team_file_ex_slice(tmd_arr + voff, vlen,
+                                        (uint8_t *)((TeamFileEx *)tmdFileBuffer + i));
+                i++;
+            }
+        }
+    }
+
+    /* Foreign-market player pool — fixed-size MarketPlayer[432]. */
+    {
+        const char *mp_arr = NULL;
+        int mp_arr_len = 0;
+        if (mjson_find(src, src_size, "$.career_foreign_market_players",
+                       &mp_arr, &mp_arr_len) == MJSON_TOK_ARRAY) {
+            int pos = 0, koff, klen, voff, vlen, vt;
+            uint32_t i = 0;
+            while (i < 432 &&
+                   (pos = mjson_next(mp_arr, mp_arr_len, pos,
+                                     &koff, &klen, &voff, &vlen, &vt)) != 0) {
+                if (vt != MJSON_TOK_OBJECT) { i++; continue; }
+                load_market_player_body(mp_arr + voff, vlen,
+                                        careerForeignMarketPlayers + i * sizeof(MarketPlayer));
+                i++;
+            }
+        }
+    }
+
+    /* Career / current team reserve players — 16 × PlayerFile each. */
+    {
+        const char *paths[2] = { "$.career_team_reserves", "$.current_team_reserves" };
+        uint8_t *bases[2] = { (uint8_t *)&careerTeam  + 684,
+                              (uint8_t *)&currentTeam + 684 };
+        for (int t = 0; t < 2; t++) {
+            const char *arr = NULL; int arr_len = 0;
+            if (mjson_find(src, src_size, paths[t], &arr, &arr_len) != MJSON_TOK_ARRAY)
+                continue;
+            int pos = 0, koff, klen, voff, vlen, vt;
+            int i = 0;
+            while (i < 16 &&
+                   (pos = mjson_next(arr, arr_len, pos,
+                                     &koff, &klen, &voff, &vlen, &vt)) != 0) {
+                if (vt != MJSON_TOK_OBJECT) { i++; continue; }
+                load_player_file_body(arr + voff, vlen,
+                                      bases[t] + (size_t)i * sizeof(PlayerFile));
+                i++;
+            }
         }
     }
 }
@@ -2234,65 +2062,38 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
         return 1;
     }
 
-    /* opaque_data has been retired (verified zero-mismatch with
-     * SWOS_SAVE_FORMAT_JSON_VERIFY before removal). For
-     * backwards-compat with saves written before the cutover, try
-     * decoding it if present so old TEST.CAR files keep loading;
-     * otherwise pre-zero the save region and let blobs+semantic
-     * populate every byte from named JSON fields. */
+    /* Zero the entire careerFileBuffer region — every byte is now
+     * covered by either a typed scalar in s_career_scalars or a
+     * top-level structured field (tmd_teams, selected_teams,
+     * career_foreign_market_players, career_team_reserves,
+     * current_team_reserves). The legacy `$.opaque_data` blob and the
+     * named-blob sub-object have both been retired. Anything the new
+     * scalar/field paths don't populate (transient menu scratch,
+     * unused buffer tail) stays zero, which matches the original
+     * Amiga career_init zeroing semantics.
+     *
+     * careerFileBuffer is declared `extern uint8_t` (single-byte stub)
+     * so we go through careerFileBufferBuf for the memset — the
+     * compiler sees the full 256 KB destination and fortify_source
+     * doesn't trip. */
     uint32_t want = career_data_size();
-    /* careerFileBuffer is declared `extern uint8_t careerFileBuffer;`
-     * (a single-byte stub aliased onto careerFileBufferBuf), so
-     * passing &careerFileBuffer to memset/mjson_get_base64 makes
-     * fortify_source on Linux glibc see a 1-byte destination and
-     * __chk_fail on the `want > 1` write. Use the real 256 KB backing
-     * buffer directly — same memory, but the compiler sees it as
-     * properly sized so the fortify check passes. */
     extern uint8_t careerFileBufferBuf[];
-    int legacy_got = mjson_get_base64((const char *)src, (int)src_size,
-                                      "$.opaque_data",
-                                      (char *)careerFileBufferBuf, (int)want);
-    if (legacy_got <= 0) {
-        memset(careerFileBufferBuf, 0, want);
-    }
+    memset(careerFileBufferBuf, 0, want);
 
     apply_semantic_load((const char *)src, (int)src_size);
 
-    /* Repopulate diyCompetitionStart (the runtime working struct
-     * outside the careerFileBuffer overlay) from the loaded primary
-     * slot's bytes — mirrors step 2 of the legacy
-     * _RebuildPointersAfterLoad path. Without this, the upcoming-
-     * match list shows fixtures generated against whatever
-     * competition the previous in-memory state held — the tester saw
-     * a national-team World Cup season's fixture list change from
-     * JAMAICA / COLOMBIA / CONGO etc. to ANGOLA / LAOS / NEW ZEALAND
-     * after a save→quit→reload, because the league fixture order/
-     * times live in diyCompetitionStart, not in the saved overlay
-     * slot. The blob load puts the bytes in &competitionFileBuffer;
-     * this step distributes them into the runtime struct the menu
-     * draws from.
+    /* Re-derive all pointer fields and distribute the loaded primary
+     * slot's bytes into diyCompetitionStart / diyFileBufferCopy. The
+     * legacy .CAR path runs this same helper after the raw-byte load;
+     * the JSON path now matches.
      *
-     * Backward-compat: saves written before a2f2d6a left the slot-
-     * type uint16 at competitionFileBuffer[0..1] as zero (the 44-byte
-     * gap before primary_comp_block_padding was uncovered). With
-     * slot-type 0 the loader treats the slot as a league regardless
-     * of what currentCompetitionPtr actually points to, and
-     * _CareerGameListCommon picks the LEAGUE draw branch (no round
-     * designation). Derive the slot type from currentCompetitionPtr's
-     * Competition.type byte (the same field that
-     * _Career_SetCurrentCompetitionSlot copies at init time:
-     * `*(uint16_t *)slotState = (int16_t)(int8_t)comp[1]`) so old
-     * saves recover correctly. Has no effect on new saves where the
-     * blob already captured the right value. */
-    extern uint8_t competitionFileBuffer;
-    extern void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
-    extern uint32_t currentCompetitionPtr;
-    if (currentCompetitionPtr != 0u) {
-        const uint8_t *comp = (const uint8_t *)(uintptr_t)currentCompetitionPtr;
-        uint16_t derived = (uint16_t)(int16_t)(int8_t)comp[1];
-        *(uint16_t *)&competitionFileBuffer = derived;
-    }
-    _Career_LoadCompetitionSlotStateFromBuffer(&competitionFileBuffer);
+     * Per-slot type bytes are restored via primary_slot_type /
+     * secondary_slot_type / ... scalars in s_career_scalars (already
+     * applied by apply_semantic_load above), so step 2 of the rebuild
+     * dispatches to the correct (league/cup/hybrid) branch when it
+     * reads slotPtr[0..1]. */
+    extern void _RebuildPointersAfterLoad(void);
+    _RebuildPointersAfterLoad();
 
     free(src);
     return 0;
@@ -2308,7 +2109,6 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
  */
 
 extern uint8_t  competitionFileBuffer;
-extern uint32_t primaryCompStringOffset;
 
 static int field_in_range(const FieldDesc *f,
                           const uint8_t *lo, const uint8_t *hi)
@@ -2317,12 +2117,6 @@ static int field_in_range(const FieldDesc *f,
     return p >= lo && p < hi;
 }
 
-static int blob_in_range(const BlobDesc *b,
-                         const uint8_t *lo, const uint8_t *hi)
-{
-    const uint8_t *p = (const uint8_t *)b->addr;
-    return p >= lo && (p + b->size) <= hi;
-}
 
 static void emit_scalar_table_range(mjson_print_fn_t fn, void *fnd,
                                     const char *section_key,
@@ -2377,21 +2171,6 @@ static void emit_scalar_table_range(mjson_print_fn_t fn, void *fnd,
     mjson_printf(fn, fnd, "%s", "}");
 }
 
-static void emit_named_blobs_range(mjson_print_fn_t fn, void *fnd,
-                                   const uint8_t *lo, const uint8_t *hi)
-{
-    mjson_printf(fn, fnd, "%Q:{", "blobs");
-    int first = 1;
-    for (const BlobDesc *b = s_career_blobs; b->name; b++) {
-        if (!blob_in_range(b, lo, hi)) continue;
-        if (!first) mjson_printf(fn, fnd, "%s", ",");
-        first = 0;
-        mjson_printf(fn, fnd, "%Q:%V", b->name,
-                     (int)b->size, (const char *)b->addr);
-    }
-    mjson_printf(fn, fnd, "%s", "}");
-}
-
 static void load_scalar_table_range(const char *buf, int buflen,
                                     const char *section_key,
                                     const FieldDesc *table,
@@ -2442,22 +2221,6 @@ static void load_scalar_table_range(const char *buf, int buflen,
     }
 }
 
-static void load_named_blobs_range(const char *buf, int buflen,
-                                   const uint8_t *lo, const uint8_t *hi)
-{
-    /* Slice the blobs object once. */
-    const char *bs = NULL; int bsl = 0;
-    if (mjson_find(buf, buflen, "$.blobs", &bs, &bsl) != MJSON_TOK_OBJECT)
-        return;
-
-    char path[80];
-    for (const BlobDesc *b = s_career_blobs; b->name; b++) {
-        if (!blob_in_range(b, lo, hi)) continue;
-        snprintf(path, sizeof(path), "$.%s", b->name);
-        mjson_get_base64(bs, bsl, path, (char *)b->addr, (int)b->size);
-    }
-}
-
 /* Shared write body for preset / DIY — they share competitionFileBuffer
  * layout, only the file_kind string differs. */
 static int16_t write_competition_buf(uint8_t *filename, const char *kind)
@@ -2476,16 +2239,18 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
         "file_kind",      kind,
         "num_diy_teams",  (unsigned)numDiyTeams);
 
-    /* primary_comp_string_offset is the only career pointer that
-     * lives inside the preset range. Emit it independently. */
-    emit_ptr_field_ref(json_out_emit, &out, "primary_comp_string_offset",
-                       &primaryCompStringOffset);
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
 
+    /* primaryCompStringOffset is intentionally NOT saved — it's a
+     * stale absolute pointer into the strings table that the legacy
+     * format dumped verbatim. The career load path zeroes it in
+     * _Rebuild_CompStringOffsets and _InitializeNewSeason tolerates
+     * the resulting empty string in the season-end summary. Preset/
+     * DIY loads land in the same place after the memset that opens
+     * load_competition_buf (the field lives inside the cleared
+     * range), so nothing here needs to write it. */
     emit_scalar_table_range(json_out_emit, &out,
                             "comp_scalars", s_career_scalars, lo, hi);
-    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
-    emit_named_blobs_range(json_out_emit, &out, lo, hi);
 
     /* DIY teams array — numDiyTeams TeamFileEx records at
      * &selTeamsPtr. Same record layout as the career selected_teams. */
@@ -2493,7 +2258,7 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
     for (uint16_t i = 0; i < numDiyTeams; i++) {
         if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
         emit_team_file_ex_body(json_out_emit, &out,
-                               (&selTeamsPtr) + (uint32_t)i * 684u);
+                               (uint8_t *)((TeamFileEx *)&selTeamsPtr + i));
     }
     mjson_printf(json_out_emit, &out, "%s", "]\n}\n");
 
@@ -2556,13 +2321,12 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
     /* Reset string pool — see comment in apply_semantic_load. */
     string_pool_reset();
 
-    load_named_blobs_range((const char *)src, (int)src_size, lo, hi);
-
-    /* primary_comp_string_offset */
-    uint32_t pval = 0;
-    load_ptr_field((const char *)src, (int)src_size,
-                   "$.primary_comp_string_offset", &pval);
-    primaryCompStringOffset = pval;
+    /* primaryCompStringOffset is left at 0 from the memset above —
+     * _InitializeNewSeason tolerates a NULL value here by writing a
+     * NULL into the season-end summary's slot, which prints as an
+     * empty competition name. The legacy emit was a stale absolute
+     * pointer that would have crashed if dereferenced after a
+     * cross-build load anyway. */
 
     load_scalar_table_range((const char *)src, (int)src_size,
                             "comp_scalars", s_career_scalars, lo, hi);
@@ -2580,7 +2344,7 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
                                  &koff, &klen, &voff, &vlen, &vt)) != 0) {
             if (vt != MJSON_TOK_OBJECT) { i++; continue; }
             load_team_file_ex_slice(teams_arr + voff, vlen,
-                                    (&selTeamsPtr) + (uint32_t)i * 684u);
+                                    (uint8_t *)((TeamFileEx *)&selTeamsPtr + i));
             i++;
         }
     }

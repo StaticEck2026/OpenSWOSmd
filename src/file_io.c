@@ -475,33 +475,15 @@ int16_t _LoadCareerFile(uint8_t *filename)
 __attribute__((used, externally_visible))
 int16_t _SaveCareerFile(uint8_t *filename)
 {
-    uint32_t fileSize;
-    int16_t result;
-
-#ifdef SWOS_SAVE_FORMAT_JSON
-    /* JSON write is gated on the build flag so testers can opt in
-     * before the legacy path is removed. See SAVE_FORMAT_JSON.md. */
-    {
-        int16_t jr = SaveJson_WriteCareer(filename);
-        if (jr == 0)
-            return 0;
-        /* jr != 0 = JSON path not implemented yet for this region.
-         * Fall through to the legacy writer so saves still work
-         * during the dual-format transition. */
-    }
-#endif
-
-    _SaveCompetitionFile();
-
-    fileSize = (uint32_t)((uint8_t *)&numSelectedTeams - (uint8_t *)&careerFileBuffer)
-             + (uint32_t)numSelectedTeams * 684 + 2;
-
-    result = _WriteFile(filename, (uint8_t *)&careerFileBuffer, fileSize);
-    if (result != 0) {
-        _ShowFsErrorByCode((uint16_t)result);
-        return 1;
-    }
-    return 0;
+    /* JSON is the only career write format. The legacy raw-memory-dump
+     * writer was retired because it embedded build-specific pointer
+     * values and required a careerFileBuffer-shaped on-disk layout.
+     * The read path still accepts legacy .CAR (see _LoadCareerFile).
+     *
+     * SaveJson_WriteCareer surfaces _WriteFile errors via
+     * _ShowFsErrorByCode internally, so we just propagate its 0/1
+     * result here. */
+    return SaveJson_WriteCareer(filename);
 }
 
 /* ================================================================
