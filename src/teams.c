@@ -270,10 +270,11 @@ void byteswap_loaded_team_file(void)
     uint8_t *buf = teamFileBuffer;
     uint16_t count = BE_READ_U16(buf);
     *(uint16_t *)buf = count;                      /* store in host order */
-    uint8_t *rec = buf + 2;
+    TeamFileEx *rec = (TeamFileEx *)(buf + 2);
     for (uint16_t i = 0; i < count; i++) {
-        *(uint16_t *)(rec + 2) = BE_READ_U16(rec + 2);
-        rec += 684;
+        rec->team.globalTeamNumber =
+            (int16_t)BE_READ_U16(&rec->team.globalTeamNumber);
+        rec++;
     }
 }
 
@@ -289,11 +290,11 @@ void byteswap_team_file_to_disk(void)
 {
     uint8_t *buf = teamFileBuffer;
     uint16_t count = *(uint16_t *)buf;             /* host-native read */
-    uint8_t *rec = buf + 2;
+    TeamFileEx *rec = (TeamFileEx *)(buf + 2);
     for (uint16_t i = 0; i < count; i++) {
-        uint16_t gtn = *(uint16_t *)(rec + 2);     /* host-native */
-        BE_WRITE_U16(rec + 2, gtn);
-        rec += 684;
+        uint16_t gtn = (uint16_t)rec->team.globalTeamNumber;
+        BE_WRITE_U16(&rec->team.globalTeamNumber, gtn);
+        rec++;
     }
     BE_WRITE_U16(buf, count);                       /* swap count last */
 }
@@ -770,7 +771,7 @@ void _RotatePlayersLeft(TeamFileEx *team, uint16_t maxSubs)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 TeamFileEx *_AddTeamToBuffer(TeamFileEx *team)
 {
-    TeamFileEx *dest = (TeamFileEx *)(&selTeamsPtr + (uint32_t)numSelectedTeams * 684);
+    TeamFileEx *dest = (TeamFileEx *)&selTeamsPtr + numSelectedTeams;
     uint16_t *src16 = (uint16_t *)team;
     uint16_t *dst16 = (uint16_t *)dest;
     uint16_t i;
@@ -1901,8 +1902,6 @@ void _ViewSelTeamsSetColumns(void)
        ChooseTeamsFriendly_DrawChangeTeamsPrompt, ChooseTeamsFriendlyCommon ---- */
 
 #define TEAM_NOT_SELECTED 0
-#define TEAMFILE_TEAMCONTROLS 4
-#define TEAMFILE_TEAMNAME 5
 
 __attribute__((used, externally_visible))
 void _SetTeamEntriesStringsAndColors(void)
@@ -1933,11 +1932,11 @@ void _SetTeamEntriesStringsAndColors(void)
                     /* visible entry — set string and color */
                     e->isInvisible = 0;
                     int16_t idx = (int8_t)*indices++;
-                    uint8_t *team = (uint8_t *)teamPointers[idx];
-                    e->fg = (uint32_t)(team + TEAMFILE_TEAMNAME);
+                    TeamFileEx *team = (TeamFileEx *)teamPointers[idx];
+                    e->fg = (uint32_t)(uintptr_t)team->team.teamName;
 
                     uint16_t color = PINK_TO_BROWN_9;
-                    uint8_t ctrl = *(team + TEAMFILE_TEAMCONTROLS);
+                    uint8_t ctrl = team->team.teamControls;
                     if (ctrl != TEAM_NOT_SELECTED) {
                         color = RED_10;
                         if (ctrl != TEAM_COMPUTER) {
@@ -2036,22 +2035,22 @@ void _ChooseTeamsFriendlyCommon(MenuEntry *entry)
 
     int8_t idx = (int8_t)teamNumbersIndices[d0];
     int16_t idx16 = (int16_t)idx;
-    uint8_t *team = (uint8_t *)teamPointers[(uint16_t)idx16];
-    uint8_t ctrl = *(team + TEAMFILE_TEAMCONTROLS);
+    TeamFileEx *team = (TeamFileEx *)teamPointers[(uint16_t)idx16];
+    uint8_t ctrl = team->team.teamControls;
 
     if (ctrl == TEAM_NOT_SELECTED) {
         setEntryBgColor(entry, RED_10);
-        *(team + TEAMFILE_TEAMCONTROLS) = TEAM_COMPUTER;
+        team->team.teamControls = TEAM_COMPUTER;
         numSelectedTeamsCopy++;
     } else if (ctrl == TEAM_COMPUTER) {
-        *(team + TEAMFILE_TEAMCONTROLS) = TEAM_PLAYER_COACH;
+        team->team.teamControls = TEAM_PLAYER_COACH;
         setEntryBgColor(entry, BLUE_TO_PURPLE_11);
     } else if (ctrl == TEAM_PLAYER_COACH) {
-        *(team + TEAMFILE_TEAMCONTROLS) = TEAM_COACH;
+        team->team.teamControls = TEAM_COACH;
         setEntryBgColor(entry, BRIGHT_BLUE_TO_BLUE_13);
     } else {
         setEntryBgColor(entry, PINK_TO_BROWN_9);
-        *(team + TEAMFILE_TEAMCONTROLS) = TEAM_NOT_SELECTED;
+        team->team.teamControls = TEAM_NOT_SELECTED;
         numSelectedTeamsCopy--;
     }
 
@@ -2174,15 +2173,15 @@ void _ChooseTeamsFriendlyInit(void)
     selTeamsUpperBound = numSelectedTeams;
 
     /* Build teamPointers[] and teamNumbersIndices[] from selTeamsPtr */
-    uint8_t *src = &selTeamsPtr;
+    TeamFileEx *src = (TeamFileEx *)&selTeamsPtr;
     uint16_t i;
     for (i = 0; i < selTeamsUpperBound; i++) {
         teamPointers[i] = (uint32_t)src;
         teamNumbersIndices[i] = (uint8_t)i;
-        src += 684;
+        src++;
     }
 
-    /* Bubble sort teams alphabetically by name (offset 5 = TEAMFILE_TEAMNAME) */
+    /* Bubble sort teams alphabetically by name */
     if (selTeamsUpperBound >= 2) {
         uint16_t n = selTeamsUpperBound - 2;
         uint16_t swapped;
@@ -2192,9 +2191,9 @@ void _ChooseTeamsFriendlyInit(void)
             uint16_t j;
             for (j = 0; j <= n; j++) {
                 int8_t i1 = (int8_t)idx[0];
-                uint8_t *name1 = (uint8_t *)teamPointers[(uint16_t)(int16_t)i1] + TEAMFILE_TEAMNAME;
+                uint8_t *name1 = (uint8_t *)((TeamFileEx *)teamPointers[(uint16_t)(int16_t)i1])->team.teamName;
                 int8_t i2 = (int8_t)idx[1];
-                uint8_t *name2 = (uint8_t *)teamPointers[(uint16_t)(int16_t)i2] + TEAMFILE_TEAMNAME;
+                uint8_t *name2 = (uint8_t *)((TeamFileEx *)teamPointers[(uint16_t)(int16_t)i2])->team.teamName;
 
                 uint8_t *p1 = name1;
                 uint8_t *p2 = name2;
@@ -2381,8 +2380,6 @@ extern uint16_t chooseTeamsFriendly_numTeamsInLeagueList;
 extern uint8_t lastLoadedExtNumber;
 extern uint8_t teamFileBuffer[];
 
-#define TEAMFILE_LEAGUE 25
-
 __attribute__((used, externally_visible))
 void _ChooseTeamsFriendlyInitFinish(void)
 {
@@ -2409,28 +2406,28 @@ void _ChooseTeamsFriendlyInitFinish(void)
     uint8_t *idx = teamsIndex;
     uint32_t *ptrs = teamsPtrTable;
     uint16_t numTeamsInFile = *(uint16_t *)teamFileBuffer;
-    uint8_t *teamRecord = teamFileBuffer + 2;
+    TeamFileEx *teamRecord = (TeamFileEx *)(teamFileBuffer + 2);
     uint8_t league = (uint8_t)leagueNumber;
     uint16_t count = 0;
     uint16_t selNum = selTeamNumber;
     uint16_t i;
 
     for (i = 0; i < numTeamsInFile; i++) {
-        if (*(teamRecord + TEAMFILE_LEAGUE) == league) {
-            /* teamRecord[0..1] = {countryNumber, teamOrdinal} byte pair.
-             * selNum is BE-packed (country<<8 | ordinal); compare via
+        if (teamRecord->team.league == league) {
+            /* selNum is BE-packed (country<<8 | ordinal); compare via
              * PACK_BE_U16 so the user's own team is correctly skipped
-             * out of the friendly-menu list on LE hosts (raw
-             * *(uint16_t *)teamRecord gives ordinal<<8|country and
-             * the skip never fires). */
+             * out of the friendly-menu list on LE hosts (a raw
+             * *(uint16_t *)teamRecord would give ordinal<<8|country
+             * and the skip would never fire). */
             if (inFriendlyMenu != 0 ||
-                PACK_BE_U16(teamRecord[0], teamRecord[1]) != selNum) {
+                PACK_BE_U16(teamRecord->team.countryNumber,
+                            teamRecord->team.teamOrdinal) != selNum) {
                 *idx++ = (uint8_t)count;
                 *ptrs++ = (uint32_t)teamRecord;
                 count++;
             }
         }
-        teamRecord += 684;
+        teamRecord++;
     }
     chooseTeamsFriendly_numTeamsInLeagueList = count;
 
@@ -2444,9 +2441,9 @@ void _ChooseTeamsFriendlyInitFinish(void)
             uint16_t j;
             for (j = 0; j <= n; j++) {
                 int8_t i1 = (int8_t)si[0];
-                uint8_t *name1 = (uint8_t *)teamsPtrTable[(uint16_t)(int16_t)i1] + TEAMFILE_TEAMNAME;
+                uint8_t *name1 = (uint8_t *)((TeamFileEx *)teamsPtrTable[(uint16_t)(int16_t)i1])->team.teamName;
                 int8_t i2 = (int8_t)si[1];
-                uint8_t *name2 = (uint8_t *)teamsPtrTable[(uint16_t)(int16_t)i2] + TEAMFILE_TEAMNAME;
+                uint8_t *name2 = (uint8_t *)((TeamFileEx *)teamsPtrTable[(uint16_t)(int16_t)i2])->team.teamName;
 
                 uint8_t *p1 = name1;
                 uint8_t *p2 = name2;
@@ -2557,9 +2554,9 @@ outer:
     e->isInvisible = 0;
 
     int8_t tidx = (int8_t)teamsIndex[d5];
-    uint8_t *team = (uint8_t *)teamsPtrTable[(uint16_t)(int16_t)tidx];
-    uint8_t teamOrd = *(team + 1);
-    e->fg = (uint32_t)(team + TEAMFILE_TEAMNAME);
+    TeamFileEx *team = (TeamFileEx *)teamsPtrTable[(uint16_t)(int16_t)tidx];
+    uint8_t teamOrd = team->team.teamOrdinal;
+    e->fg = (uint32_t)(uintptr_t)team->team.teamName;
 
     uint16_t color = defaultColor;
     uint8_t ctrl = teamsTable[teamOrd];

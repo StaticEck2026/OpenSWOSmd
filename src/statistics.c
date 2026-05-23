@@ -766,7 +766,7 @@ next_player:
  * ================================================================ */
 static void PopulateHighestScorersTableFromSelectedTeams(int16_t statIndex)
 {
-    uint8_t *teamsPtr = &selTeamsPtr;
+    TeamFileEx *teamsPtr = (TeamFileEx *)&selTeamsPtr;
     uint16_t numTeams = numSelectedTeams;
     uint16_t careerTeamNum;
 
@@ -782,11 +782,13 @@ static void PopulateHighestScorersTableFromSelectedTeams(int16_t statIndex)
 
     for (; (int16_t)numTeams >= 0; numTeams--)
     {
-        if (BE_READ_U16(teamsPtr) != careerTeamNum)
+        uint16_t pid = PACK_BE_U16(teamsPtr->team.countryNumber,
+                                   teamsPtr->team.teamOrdinal);
+        if (pid != careerTeamNum)
         {
-            AddTeamScorersToHighestScorersTable(statIndex, teamsPtr);
+            AddTeamScorersToHighestScorersTable(statIndex, (uint8_t *)teamsPtr);
         }
-        teamsPtr += 684;
+        teamsPtr++;
     }
 
     /* In Career mode with careerLoadedFlag==0, add career team too */
@@ -1516,11 +1518,13 @@ static int16_t EncodeCompetitionPositionForSeasonInfo_impl(
      * into WINNERS/RUNNER-UP/REACHED SEMI-FINAL labels. Same family as
      * the AutoAdvance dispatch fix in `_Career_AutoAdvanceCompetition
      * AndPersistSlotState` — see project memory `low-byte-of-uint16-field`. */
-    uint8_t type = (uint8_t)*(uint16_t *)compBuf;
+    DIYCompetitionEx *compEx = (DIYCompetitionEx *)compBuf;
+    DIYCompetition   *comp   = &compEx->base;
+    uint8_t type = (uint8_t)(uint16_t)comp->competitionType;
 
     if (type == 0) {
         /* --- League path --- */
-        if (*(int16_t *)(compBuf + 0x44) == 0)
+        if (comp->matchStarted == 0)
             return -106;   /* league not started/invalid */
 
         /* Check if compDef is a World Cup qualifying group */
@@ -1533,8 +1537,8 @@ static int16_t EncodeCompetitionPositionForSeasonInfo_impl(
             (uint32_t)compDef <= (uint32_t)ecQualifyingGroup8Copy)
             goto negate;
 
-        /* Check finished flag at offset 0x60 */
-        if (*(int16_t *)(compBuf + 0x60) == 0)
+        /* Check finished flag at extended +0x60 (minSubstitutes) */
+        if (compEx->minSubstitutes == 0)
             return d1;     /* not finished, return position as-is */
 
     negate:
@@ -1543,9 +1547,9 @@ static int16_t EncodeCompetitionPositionForSeasonInfo_impl(
 
     if (type == 1) {
         /* --- Cup path --- */
-        if (*(int16_t *)(compBuf + 0x56) == 0) {
+        if (comp->competitionFinished == 0) {
             /* Cup not finished — check if team is still in it */
-            _FindTeamInDIY(selTeamNumber, (DIYCompetition *)compBuf);
+            _FindTeamInDIY(selTeamNumber, comp);
             if (diyFoundTeamIndex == 0)
                 return -104;   /* team not found in cup */
         }
@@ -1559,61 +1563,67 @@ static int16_t EncodeCompetitionPositionForSeasonInfo_impl(
          * Asm: d2=-1, d0=numTeams; do { d2++; d0>>=1; } while d1<d0 */
         {
             int16_t d2 = -1;
-            uint16_t d0 = *(uint16_t *)(compBuf + 0x32);
+            uint16_t d0 = (uint16_t)comp->numTeams;
             do {
                 d2++;
                 d0 >>= 1;
             } while ((uint16_t)d1 < d0);
 
-            d1 = *(int16_t *)(compBuf + 0x5C); /* starting round */
+            d1 = comp->subRoundCounter; /* starting round */
             d1 += d2;
             return -(d1 + 110);
         }
     }
 
     /* --- Tournament/Groups path (type >= 2) --- */
-    if (*(int16_t *)(compBuf + 0x58) == 0) {
+    if (comp->currentRoundIndex == 0) {
         /* Tournament not finished — check if team is still in it */
-        _FindTeamInDIY(selTeamNumber, (DIYCompetition *)compBuf);
+        _FindTeamInDIY(selTeamNumber, comp);
         if (diyFoundTeamIndex == 0)
             return -104;   /* team not found */
     }
 
     if (d1 == 1) return d1;   /* winner */
 
-    /* Check playoff groups special cases */
-    if (d1 == 3 && *(int16_t *)(compBuf + 0x15A) != 0)
-        return -103;   /* third place in playoff */
-    if (d1 == 4 && *(int16_t *)(compBuf + 0x15A) != 0)
-        return -105;   /* fourth place in playoff */
+    /* Check playoff groups special cases — read the first DIYTournamentSlot
+     * record at parent +0x15A; its _pad_00[2] bytes are interpreted as a
+     * uint16 group-presence flag. */
+    {
+        DIYTournamentSlot *slot0 = (DIYTournamentSlot *)(compBuf + 0x15A);
+        uint16_t slot0HeadFlag = *(uint16_t *)slot0->_pad_00;
+        if (d1 == 3 && slot0HeadFlag != 0)
+            return -103;   /* third place in playoff */
+        if (d1 == 4 && slot0HeadFlag != 0)
+            return -105;   /* fourth place in playoff */
+    }
 
     /* Iterate through groups to find which group the position falls into.
-     * Groups are 0x76 (118) bytes each, starting at compBuf.
-     * Loop: advance through groups while d1 <= group[d2].teamCount at +0x162 */
+     * Groups are 0x76 (118) bytes each, starting at compBuf + 0x15A.
+     * Loop: advance through slot records while d1 <= group.numTeams. */
     {
         int16_t d2 = 0;
-        uint8_t *a0 = compBuf - 0x76; /* before first group */
-        int16_t numGroups = *(int16_t *)(compBuf + 0x52);
+        DIYTournamentSlot *slot = (DIYTournamentSlot *)(compBuf + 0x15A) - 1; /* before first group */
+        int16_t numGroups = comp->totalMatchesInRound;
 
         for (;;) {
-            a0 += 0x76;           /* advance to next group */
+            slot++;           /* advance to next group */
             d2++;
             if ((uint16_t)d2 > (uint16_t)numGroups)
                 break;            /* past all groups */
-            if ((uint16_t)d1 > *(uint16_t *)(a0 + 0x162))
+            if ((uint16_t)d1 > (uint16_t)slot->numTeams)
                 break;            /* pos exceeds this group's team count */
         }
 
-        a0 -= 0x76;              /* back up to previous group */
+        slot--;               /* back up to previous group */
 
-        if (*(int16_t *)(a0 + 0x15E) != 0) {
+        if (slot->isLeagueFormat != 0) {
             /* League-type group */
             if ((uint16_t)d2 > (uint16_t)numGroups)
                 return d1;        /* past all groups, return position as-is */
             /* Fall through to position encoding */
         } else {
             /* Cup-type group: check team counts for special returns */
-            int16_t groupTeams = *(int16_t *)(a0 + 0x162);
+            int16_t groupTeams = (int16_t)slot->numTeams;
             if (groupTeams == 2) return -100;
             if (groupTeams == 4) return -101;
             if (groupTeams == 8) return -102;

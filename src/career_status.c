@@ -3517,20 +3517,21 @@ void _UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team
         int16_t slot = (int8_t)currentMatchPlayers[d3];
         uint8_t *goalCounterForPlayer = goalCounter + slot;
 
-        /* Player base in careerTeam: careerTeam + slot * 38 */
-        uint8_t *a0 = (uint8_t *)&careerTeam + (uint16_t)((uint16_t)slot * 38);
-
-        /* PlayerFile data at playerBase + 76 (TEAMFILE_PLAYERS) */
-        uint8_t *plSomeFlag = a0 + 76 + 37;  /* PLAYERFILE_SOMEFLAG */
+        PlayerFile *pl = &careerTeam.players[slot];
+        uint8_t plSomeFlag = (uint8_t)pl->someFlag;
 
         /* Skip trialist/reserve leaving special states */
-        if (*plSomeFlag == 0x9B || *plSomeFlag == 0x9A)
+        if (plSomeFlag == 0x9B || plSomeFlag == 0x9A)
             goto nextPlayer;
 
         int8_t d4;  /* form delta to apply */
 
         /* Check if player is injured */
-        if (_IsPlayerInjured((PlayerFile *)a0, (int16_t)d6)) {
+        if (_IsPlayerInjured(pl - 2, (int16_t)d6)) {
+            /* _IsPlayerInjured takes the TeamFile-relative player base; the
+             * Amiga asm passes the slot-base (careerTeam + slot*38, two
+             * PlayerFile records before the players[] start). Preserve
+             * that calling convention. */
             /* Injured: 33% chance of -1 form */
             if (_Rand2() > 0x33)
                 goto clampForm;
@@ -3554,16 +3555,16 @@ void _UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team
             /* Starting outfield player (index 1-10): form-based adjustment */
 
             /* Expected form: someFlag/10 + price */
-            int8_t sf = (int8_t)*plSomeFlag;
+            int8_t sf = (int8_t)plSomeFlag;
             int16_t sfExt = (int16_t)sf;
             int32_t sfLong = (int32_t)sfExt;
             int16_t div10 = (int16_t)(sfLong / 10);  /* divs.w #$A */
 
-            uint8_t price = a0[76 + 32];  /* PLAYERFILE_PRICE */
+            uint8_t price = (uint8_t)pl->price;
             uint8_t expected = (uint8_t)div10 + price;  /* add.b */
 
             /* formDelta = field_1 - expected */
-            uint8_t field1 = a0[76 + 1];  /* PLAYERFILE_FIELD_1 */
+            uint8_t field1 = (uint8_t)pl->field_1;
             int8_t formDelta = (int8_t)(field1 - expected);  /* sub.b */
 
             int16_t d4s = (int16_t)formDelta;
@@ -3590,7 +3591,7 @@ void _UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team
             if (_Rand2() > 0x33)
                 goto clampForm;
 
-            uint8_t posType = (a0[76 + 26] & 0xE0) >> 5;
+            uint8_t posType = (((uint8_t)pl->positionAndFace) & 0xE0) >> 5;
             if (posType == 0) {
                 /* GK sub: random ±1 */
                 uint16_t r = _Rand2();
@@ -3641,14 +3642,14 @@ applyGoalBonus:
         /* Apply delta to someFlag.
          * ASM has dead code checking d0 against 0x9B/0x9A (impossible values).
          * Replicated as no-op. */
-        *plSomeFlag = (uint8_t)((int8_t)*plSomeFlag + d4);
+        pl->someFlag = (int8_t)((int8_t)pl->someFlag + d4);
 
 clampForm:
         /* Clamp someFlag to [-100..100] signed (0x9C..0x64 unsigned) */
-        if ((int8_t)*plSomeFlag < (int8_t)0x9C)
-            *plSomeFlag = 0x9C;
-        if ((int8_t)*plSomeFlag > (int8_t)0x64)
-            *plSomeFlag = 0x64;
+        if ((int8_t)pl->someFlag < (int8_t)0x9C)
+            pl->someFlag = (int8_t)0x9C;
+        if ((int8_t)pl->someFlag > (int8_t)0x64)
+            pl->someFlag = (int8_t)0x64;
 
 nextPlayer:
         ;

@@ -3160,7 +3160,7 @@ void _EditTactics(void)
         TeamFileEx *lastNonComputer = (TeamFileEx *)0;
 
         for (uint16_t i = 0; i < numSelectedTeams; i++) {
-            TeamFileEx *t = (TeamFileEx *)((uint8_t *)selPtr + (uint32_t)i * 684);
+            TeamFileEx *t = (TeamFileEx *)selPtr + i;
             if (t->team.teamControls != TEAM_COMPUTER) {
                 *countryBuf++ = PACK_BE_U16(t->team.countryNumber, t->team.teamOrdinal);
                 lastNonComputer = t;

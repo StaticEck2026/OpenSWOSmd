@@ -363,22 +363,15 @@ int16_t _SearchTeamInTmdFile(uint16_t teamNo)
     if (count == 0)
         return 1;
 
-    uint8_t *ptr = &tmdFileBuffer;
-    /* teamNo is BE-packed `(country<<8)|ordinal` (the form PACK_BE_U16
-     * produces, used everywhere — _CopySelectedTeamNumbers, the
-     * cached*QualifiedTeamIds globals, the Title-Holder TeamId
-     * globals). Each TMD entry stores countryNumber and teamOrdinal
-     * as adjacent bytes 0/1 of TeamFileEx. On Amiga BE `move.w (ptr)`
-     * gave the same BE-packed value; on x86 LE a raw uint16 cast
-     * byte-swaps it, so e.g. teamNo=0x0801 (England team 1) FALSELY
-     * matched TMD[1] = Austria team 8 (bytes [0x01, 0x08] read LE =
-     * 0x0801). Result: every "is this team in pool?" check returned
-     * the wrong answer for asymmetric (a,b) teamId pairs. Use
-     * BE_READ_U16 to recover the BE-packed identity. */
+    TeamFileEx *ptr = (TeamFileEx *)&tmdFileBuffer;
+    /* teamNo is the Amiga BE-packed `(country<<8)|ordinal`. Compose
+     * the same value from the per-record byte pair via PACK_BE_U16
+     * so the comparison matches on either host. */
     for (uint16_t i = 0; i < count; i++) {
-        if (BE_READ_U16(ptr) == teamNo)
+        if (PACK_BE_U16(ptr->team.countryNumber,
+                        ptr->team.teamOrdinal) == teamNo)
             return 0;  /* found */
-        ptr += sizeof(TeamFileEx);
+        ptr++;
     }
     return 1;  /* not found */
 }
@@ -396,15 +389,16 @@ void _Career_RemoveTeamFromTmdTeamPool(uint16_t teamNo)
     if (count == 0)
         return;
 
-    uint8_t *ptr = &tmdFileBuffer;
+    TeamFileEx *ptr = (TeamFileEx *)&tmdFileBuffer;
     /* See note in _SearchTeamInTmdFile — same BE-packed teamNo vs
-     * adjacent {country, ordinal} bytes. Use BE_READ_U16. */
+     * adjacent {country, ordinal} bytes. */
     for (uint16_t i = 0; i < count; i++) {
-        if (BE_READ_U16(ptr) == teamNo) {
+        if (PACK_BE_U16(ptr->team.countryNumber,
+                        ptr->team.teamOrdinal) == teamNo) {
             /* Found — shift remaining entries left */
             uint16_t remaining = count - 1 - i;
             if (remaining > 0) {
-                volatile uint16_t *src = (volatile uint16_t *)(ptr + sizeof(TeamFileEx));
+                volatile uint16_t *src = (volatile uint16_t *)&ptr[1];
                 volatile uint16_t *dst = (volatile uint16_t *)ptr;
                 uint32_t words = (uint32_t)remaining * (sizeof(TeamFileEx) / 2);
                 for (uint32_t w = 0; w < words; w++) {
@@ -414,7 +408,7 @@ void _Career_RemoveTeamFromTmdTeamPool(uint16_t teamNo)
             careerFileBuffer--;
             return;
         }
-        ptr += sizeof(TeamFileEx);
+        ptr++;
     }
 }
 
@@ -438,7 +432,7 @@ void _Career_AppendTeamToTmdTeamPool(TeamFileEx *team)
 
     /* Append at end of pool */
     uint16_t count = careerFileBuffer;
-    uint8_t *dest = &tmdFileBuffer + (uint32_t)count * sizeof(TeamFileEx);
+    TeamFileEx *dest = (TeamFileEx *)&tmdFileBuffer + count;
     volatile uint16_t *src = (volatile uint16_t *)team;
     volatile uint16_t *dst = (volatile uint16_t *)dest;
     for (int16_t i = 0x155; i >= 0; i--) {
@@ -501,12 +495,13 @@ static TeamFileEx *findTeamInTmdBuffer(uint16_t teamId)
  * value (country<<8 | ordinal). */
 static uint8_t *findTeamInTeamFileBuffer(uint16_t teamId)
 {
-    uint8_t *ptr = &teamFileBuffer + 2;
+    TeamFileEx *ptr = (TeamFileEx *)(&teamFileBuffer + 2);
     uint16_t count = *(uint16_t *)&teamFileBuffer;
     for (uint16_t i = 0; i < count; i++) {
-        if (BE_READ_U16(ptr) == teamId)
-            return ptr;
-        ptr += sizeof(TeamFileEx);
+        if (PACK_BE_U16(ptr->team.countryNumber,
+                        ptr->team.teamOrdinal) == teamId)
+            return (uint8_t *)ptr;
+        ptr++;
     }
     return (uint8_t *)0;
 }
@@ -538,14 +533,14 @@ void _Career_SortTeamFilePtrsByAvgPlayerPrice(uint16_t extNumber)
     _LoadTeamFile(extNumber);
 
     uint16_t count = *(uint16_t *)&teamFileBuffer;
-    uint8_t *team = &teamFileBuffer + 2;
+    TeamFileEx *team = (TeamFileEx *)(&teamFileBuffer + 2);
     uint32_t *sortBuf = (uint32_t *)teamSortBuffer;
 
     /* Build pointer array */
     uint16_t i;
     for (i = 0; i < count; i++) {
         sortBuf[i] = (uint32_t)team;
-        team += sizeof(TeamFileEx);
+        team++;
     }
 
     /* Bubble sort by average player price (descending: highest first) */
@@ -621,15 +616,15 @@ void _LoadSomeEuroCup(uint8_t *whichCup)
 
     /* Calculate destination offset past existing teams */
     uint16_t existingCount = careerFileBuffer;
-    uint8_t *dest = &tmdFileBuffer + (uint32_t)existingCount * sizeof(TeamFileEx);
+    TeamFileEx *dest = (TeamFileEx *)&tmdFileBuffer + existingCount;
 
     uint32_t fileSize = 0;
-    _LoadFileEx(filename, dest, &fileSize);
+    _LoadFileEx(filename, (uint8_t *)dest, &fileSize);
 
     uint16_t loadedCount = (uint16_t)(fileSize / sizeof(TeamFileEx));
     careerFileBuffer += loadedCount;
 
-    _SetTeamGlobalNumbers(loadedCount, dest);
+    _SetTeamGlobalNumbers(loadedCount, (uint8_t *)dest);
 }
 
 /* ================================================================
@@ -687,7 +682,7 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
     }
 
     /* Phase 2: Process remaining teams */
-    uint8_t *selDst = &selTeamsPtr + (uint32_t)numSelectedTeams * sizeof(TeamFileEx);
+    TeamFileEx *selDst = (TeamFileEx *)&selTeamsPtr + numSelectedTeams;
 
     for (;;) {
         int16_t foundIdx = -1;
@@ -701,11 +696,11 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
 
         TeamFileEx *tmdTeam = findTeamInTmdBuffer(teamId);
         if (tmdTeam) {
-            copyTeamRecord(selDst, (uint8_t *)tmdTeam);
-            ((TeamFileEx *)selDst)->team.teamControls = 1;
+            copyTeamRecord((uint8_t *)selDst, (uint8_t *)tmdTeam);
+            selDst->team.teamControls = 1;
             flags[foundIdx] = 1;
             numSelectedTeams++;
-            selDst += sizeof(TeamFileEx);
+            selDst++;
             continue;
         }
 
@@ -738,26 +733,25 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
                  * (out-of-range ordinal written by qualifier) or whether
                  * the file lookup is bogus. */
                 uint16_t tfCount = *(uint16_t *)&teamFileBuffer;
-                uint8_t *tfBase = &teamFileBuffer;
-                uint8_t *first = tfBase + 2;
-                uint8_t *last = (tfCount > 0)
-                    ? tfBase + 2 + ((uint32_t)tfCount - 1) * sizeof(TeamFileEx)
-                    : first;
+                TeamFileEx *tfFirst = (TeamFileEx *)(&teamFileBuffer + 2);
+                TeamFileEx *tfLast = (tfCount > 0) ? &tfFirst[tfCount - 1] : tfFirst;
                 fprintf(stderr,
                         "[append]   NO MATCH for 0x%04X in TEAM.%03u "
                         "(file has %u teams; first=0x%02X%02X last=0x%02X%02X)\n",
                         (unsigned)teamIdsLE[i], (unsigned)loadedExt,
                         (unsigned)tfCount,
-                        (unsigned)first[0], (unsigned)first[1],
-                        (unsigned)last[0], (unsigned)last[1]);
+                        (unsigned)tfFirst->team.countryNumber,
+                        (unsigned)tfFirst->team.teamOrdinal,
+                        (unsigned)tfLast->team.countryNumber,
+                        (unsigned)tfLast->team.teamOrdinal);
                 fflush(stderr);
             }
             if (tfTeam) {
-                copyTeamRecord(selDst, tfTeam);
-                ((TeamFileEx *)selDst)->team.teamControls = 1;
+                copyTeamRecord((uint8_t *)selDst, tfTeam);
+                selDst->team.teamControls = 1;
                 flags[i] = 1;
                 numSelectedTeams++;
-                selDst += sizeof(TeamFileEx);
+                selDst++;
             } else {
                 /* CRITICAL: leaving flags[i]=0 when the lookup failed
                  * makes the outer for(;;) re-pick this same team next
@@ -800,48 +794,42 @@ static void fillLeagueTeamSelectionFromFile(uint16_t extNumber, uint16_t leagueF
 {
     _LoadTeamFile(extNumber);
 
-    uint8_t *tfBase = &teamFileBuffer + 2;
+    TeamFileEx *tfBase = (TeamFileEx *)(&teamFileBuffer + 2);
     uint16_t tfCount = *(uint16_t *)&teamFileBuffer;
 
     /* Verify expected count matches actual */
     uint16_t actualCount = 0;
-    uint8_t *p = tfBase;
     uint16_t j;
     for (j = 0; j < tfCount; j++) {
-        if (((TeamFileEx *)p)->team.league == (uint8_t)leagueFilter)
+        if (tfBase[j].team.league == (uint8_t)leagueFilter)
             actualCount++;
-        p += sizeof(TeamFileEx);
     }
     if ((int16_t)actualCount != expectedCount) {
         panicReasonCode = 0x8885;
         _PanicHaltLoop();
     }
 
-    /* Fill selection with matching teams. The leading two bytes of
-     * each team record are { countryByte, ordinalByte } as separate
-     * fields; the original asm reads them as a single big-endian
-     * uint16. Use BE_READ_U16 so the LE host produces the same
-     * `(country << 8) | ordinal` value that findTeamInCache and
-     * isTeamInCache compare against.
-     *
-     * The output array (diyLeagueTeamIds) uses the BE-packed byte-pair
-     * convention from 4e5f378 — consumers read via BE_READ_U16. Mirror
-     * the asm `move.w (a0),(a1)+` pattern with BE_WRITE_U16 so the
-     * stored bytes match. */
-    uint8_t *selDst = &selTeamsPtr + (uint32_t)numSelectedTeams * sizeof(TeamFileEx);
+    /* Fill selection with matching teams. The output array
+     * (diyLeagueTeamIds) uses the BE-packed byte-pair convention from
+     * 4e5f378 — consumers read via BE_READ_U16. Use PACK_BE_U16 to
+     * produce the same `(country << 8) | ordinal` value that
+     * findTeamInCache / isTeamInCache compare against, and
+     * BE_WRITE_U16 to store. */
+    TeamFileEx *selDst = (TeamFileEx *)&selTeamsPtr + numSelectedTeams;
     uint16_t *idOut = diyLeagueTeamIds;
-    p = tfBase;
     for (j = 0; j < tfCount; j++) {
-        if (((TeamFileEx *)p)->team.league == (uint8_t)leagueFilter) {
-            uint16_t teamId = BE_READ_U16(p);
+        TeamFileEx *src = &tfBase[j];
+        if (src->team.league == (uint8_t)leagueFilter) {
+            uint16_t teamId = PACK_BE_U16(src->team.countryNumber,
+                                          src->team.teamOrdinal);
             BE_WRITE_U16(idOut, teamId);
             idOut++;
             if (isTeamInCache(teamId) != 0) {
                 /* Not in cache — add to selection */
-                selDst = appendTeamToSelection(selDst, p);
+                selDst = (TeamFileEx *)appendTeamToSelection(
+                    (uint8_t *)selDst, (const uint8_t *)src);
             }
         }
-        p += sizeof(TeamFileEx);
     }
 }
 
@@ -861,7 +849,7 @@ static void fillLeagueTeamSelectionFromFile(uint16_t extNumber, uint16_t leagueF
 static void tryAddRandomTeamByRegion_Cup(uint16_t **pIdOut, uint8_t **pSelOut,
                                           uint16_t *pRemaining, uint16_t filter)
 {
-    uint8_t *tfBase = &teamFileBuffer + 2;
+    TeamFileEx *tfBase = (TeamFileEx *)(&teamFileBuffer + 2);
     uint16_t tfCount = *(uint16_t *)&teamFileBuffer;
 
     if (*pRemaining == 0)
@@ -869,12 +857,13 @@ static void tryAddRandomTeamByRegion_Cup(uint16_t **pIdOut, uint8_t **pSelOut,
 
     uint16_t rnd = _Rand2();
     uint16_t idx = (uint16_t)(((uint32_t)rnd * tfCount) >> 8);
-    uint8_t *team = tfBase + (uint32_t)idx * sizeof(TeamFileEx);
+    TeamFileEx *team = &tfBase[idx];
 
-    if (((TeamFileEx *)team)->team.league != (uint8_t)filter)
+    if (team->team.league != (uint8_t)filter)
         return;
 
-    uint16_t teamId = BE_READ_U16(team);
+    uint16_t teamId = PACK_BE_U16(team->team.countryNumber,
+                                  team->team.teamOrdinal);
     uint32_t result = _Career_IsTeamIdNotInListOrReturnSentinel(teamId, *pIdOut);
     if ((result & 0x10000) == 0)
         return;  /* already in list */
@@ -888,7 +877,7 @@ static void tryAddRandomTeamByRegion_Cup(uint16_t **pIdOut, uint8_t **pSelOut,
         return;  /* not in selection cache → just added ID */
 
     /* Copy team record to selection buffer */
-    *pSelOut = appendTeamToSelection(*pSelOut, team);
+    *pSelOut = appendTeamToSelection(*pSelOut, (const uint8_t *)team);
 }
 
 /* ================================================================
@@ -909,7 +898,9 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
 
     _LoadTeamFile(extNumber);
 
-    uint8_t *selDst = &selTeamsPtr + (uint32_t)numSelectedTeams * sizeof(TeamFileEx);
+    /* selDst stays uint8_t * here because tryAddRandomTeamByRegion_Cup
+     * takes a uint8_t ** in/out parameter and reassigns it across calls. */
+    uint8_t *selDst = (uint8_t *)((TeamFileEx *)&selTeamsPtr + numSelectedTeams);
 
     /* BE-write convention for diyCupTeamIds (4e5f378). */
     /* If not career loaded and gameType==4, add selected team first */
@@ -924,14 +915,16 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
     if (gameType == 3) {
         uint16_t numSel = numSelectedTeams;
         if (numSel != 0) {
+            TeamFileEx *selBase = (TeamFileEx *)&selTeamsPtr;
             int16_t tries;
             for (tries = 0x3E8; tries >= 0; tries--) {
                 uint16_t rnd = _Rand2();
                 uint16_t idx = (uint16_t)(((uint32_t)rnd * numSel) >> 8);
-                uint8_t *selTeam = &selTeamsPtr + (uint32_t)idx * sizeof(TeamFileEx);
-                if (((TeamFileEx *)selTeam)->team.teamControls == 1)
+                TeamFileEx *selTeam = &selBase[idx];
+                if (selTeam->team.teamControls == 1)
                     continue;  /* skip user-controlled teams */
-                uint16_t teamId = BE_READ_U16(selTeam);
+                uint16_t teamId = PACK_BE_U16(selTeam->team.countryNumber,
+                                              selTeam->team.teamOrdinal);
                 uint32_t sentinel = _Career_IsTeamIdNotInListOrReturnSentinel(teamId, idOut);
                 if ((sentinel & 0x10000) == 0)
                     continue;  /* already in list */
@@ -947,10 +940,11 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
     if (initialCount > 0x20) {
         uint16_t numSel = numSelectedTeams;
         if (numSel != 0) {
-            uint8_t *selTeam = &selTeamsPtr;
+            TeamFileEx *selTeam = (TeamFileEx *)&selTeamsPtr;
             uint16_t k;
             for (k = 0; k < numSel; k++) {
-                uint16_t teamId = BE_READ_U16(selTeam);
+                uint16_t teamId = PACK_BE_U16(selTeam->team.countryNumber,
+                                              selTeam->team.teamOrdinal);
                 uint32_t sentinel = _Career_IsTeamIdNotInListOrReturnSentinel(teamId, idOut);
                 if ((sentinel & 0x10000) != 0) {
                     BE_WRITE_U16(idOut, teamId); idOut++;
@@ -958,7 +952,7 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
                     if (remaining == 0)
                         return;
                 }
-                selTeam += sizeof(TeamFileEx);
+                selTeam++;
             }
         }
     }
@@ -1014,7 +1008,7 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
 
     _LoadTeamFile(extNumber);
 
-    uint8_t *selDst = &selTeamsPtr + (uint32_t)numSelectedTeams * sizeof(TeamFileEx);
+    TeamFileEx *selDst = (TeamFileEx *)&selTeamsPtr + numSelectedTeams;
 
     /* BE-write convention for diyTournamentTeamIds (4e5f378). */
     /* If not career loaded and gameType==4, add selected team first */
@@ -1029,14 +1023,16 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
     if (gameType == 3) {
         uint16_t numSel = numSelectedTeams;
         if (numSel != 0) {
+            TeamFileEx *selBase = (TeamFileEx *)&selTeamsPtr;
             int16_t tries;
             for (tries = 0x3E8; tries >= 0; tries--) {
                 uint16_t rnd = _Rand2();
                 uint16_t idx = (uint16_t)(((uint32_t)rnd * numSel) >> 8);
-                uint8_t *selTeam = &selTeamsPtr + (uint32_t)idx * sizeof(TeamFileEx);
-                if (((TeamFileEx *)selTeam)->team.teamControls == 1)
+                TeamFileEx *selTeam = &selBase[idx];
+                if (selTeam->team.teamControls == 1)
                     continue;
-                uint16_t teamId = BE_READ_U16(selTeam);
+                uint16_t teamId = PACK_BE_U16(selTeam->team.countryNumber,
+                                              selTeam->team.teamOrdinal);
                 uint32_t sentinel = _Career_IsTeamIdNotInListOrReturnSentinel2(teamId, idOut);
                 if ((sentinel & 0x10000) == 0)
                     continue;
@@ -1051,7 +1047,7 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
     /* Weighted random region picking using inline version */
     {
         uint8_t *weights = careerRegionPickWeightsTable2;
-        uint8_t *tfBase = &teamFileBuffer + 2;
+        TeamFileEx *tfBase = (TeamFileEx *)(&teamFileBuffer + 2);
         uint16_t tfCount = *(uint16_t *)&teamFileBuffer;
 
         while (remaining > 0) {
@@ -1060,12 +1056,13 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
 
             uint16_t rnd2 = _Rand2();
             uint16_t idx = (uint16_t)(((uint32_t)rnd2 * tfCount) >> 8);
-            uint8_t *team = tfBase + (uint32_t)idx * sizeof(TeamFileEx);
+            TeamFileEx *team = &tfBase[idx];
 
-            if (((TeamFileEx *)team)->team.league != region)
+            if (team->team.league != region)
                 continue;
 
-            uint16_t teamId = BE_READ_U16(team);
+            uint16_t teamId = PACK_BE_U16(team->team.countryNumber,
+                                          team->team.teamOrdinal);
             uint32_t sentinel = _Career_IsTeamIdNotInListOrReturnSentinel2(teamId, idOut);
             if ((sentinel & 0x10000) == 0)
                 continue;
@@ -1076,7 +1073,8 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
             if (isTeamInCache(teamId) == 0)
                 continue;  /* not in cache */
 
-            selDst = appendTeamToSelection(selDst, team);
+            selDst = (TeamFileEx *)appendTeamToSelection(
+                (uint8_t *)selDst, (const uint8_t *)team);
         }
     }
 }
@@ -2324,9 +2322,6 @@ void _Career_UpdateRemovePlayersMenuEntry(void)
  * Loads the team file, scans for matching team number in the
  * teamFileBuffer, returns the league byte from that team record.
  * ================================================================ */
-#define TEAMFILE_LEAGUE 25
-#define TEAMFILE_RECORD_SIZE 684
-
 __attribute__((used, externally_visible))
 int16_t _GetTeamLeague(uint16_t teamNumber)
 {
@@ -2337,15 +2332,14 @@ int16_t _GetTeamLeague(uint16_t teamNumber)
     skipLeagueNumbers = 0;
     teamsLoaded = 0;
 
-    /* Scan teamFileBuffer+2 for matching team number. The two bytes
-     * at the start of each record are { countryByte, teamByte } as
-     * separate fields; the original asm read them as one big-endian
-     * uint16. BE_READ_U16 so the LE host sees the Amiga packed value. */
-    uint8_t *p = &teamFileBuffer + 2;
-    while (BE_READ_U16(p) != teamNumber)
-        p += TEAMFILE_RECORD_SIZE;
+    /* Scan teamFileBuffer+2 for matching team number. teamNumber is
+     * the Amiga BE-packed `(country << 8) | ordinal` form, so build
+     * the same value from the per-record byte pair. */
+    TeamFileEx *p = (TeamFileEx *)(&teamFileBuffer + 2);
+    while (PACK_BE_U16(p->team.countryNumber, p->team.teamOrdinal) != teamNumber)
+        p++;
 
-    return (int8_t)p[TEAMFILE_LEAGUE];
+    return (int8_t)p->team.league;
 }
 
 /* ================================================================

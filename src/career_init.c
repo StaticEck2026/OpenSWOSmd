@@ -396,14 +396,13 @@ void _Career_InitializeSelectedTeamAndStartingBalance(uint16_t teamNumber, int32
     /* Set teamNameControl byte (offset 4) based on coach-or-player setting:
      * 2 = coach only, 3 = player-coach */
     uint8_t controlByte = (coachOrPlayer != 0) ? 2 : 3;
-    ((uint8_t *)&careerTeam)[4] = controlByte;
-    ((uint8_t *)&selTeamsPtr)[4] = controlByte;
+    careerTeam.team.teamControls = controlByte;
+    ((TeamFileEx *)&selTeamsPtr)->team.teamControls = controlByte;
 
-    /* Copy 16 bytes of playerOrder (offset 60 in TeamFile) to currentMatchPlayers */
+    /* Copy 16 bytes of playerNumbers (TeamFile.playerNumbers) to currentMatchPlayers */
     teamPtr = _GetTeamPointer(selTeamNumber);
-    uint8_t *playerOrderSrc = (uint8_t *)teamPtr + 60;
     for (int16_t i = 15; i >= 0; i--) {
-        currentMatchPlayers[i] = playerOrderSrc[i];
+        currentMatchPlayers[i] = teamPtr->team.playerNumbers[i];
     }
 
     careerNumPlayers = 16;
@@ -941,8 +940,7 @@ void _InitializeNewSeason(void)
     *(uint8_t *)(seasonInfo + 105) = 0;  /* MANAGERSTATUS */
 
     /* Copy team name to season info CLUBNAME (offset 2) */
-    uint8_t *teamNameSrc = (uint8_t *)&careerTeam + 0 + 5;  /* TEAMFILEEX_TEAM(0) + TEAMFILE_TEAMNAME(5) */
-    _StringCopy(teamNameSrc, seasonInfo + 2);
+    _StringCopy((uint8_t *)careerTeam.team.teamName, seasonInfo + 2);
 
     /* Verify team loaded and get current division index */
     TeamFileEx *teamFile = _VerifyTeamLoaded(selTeamNumber);
@@ -1139,10 +1137,10 @@ void _InitializeNewSeason(void)
 
     _InitTeams();
 
-    /* Copy manager name to team data (offset 0x24 in team file) */
+    /* Copy manager name into the team's coach-name slot */
     teamFile = _VerifyTeamLoaded(selTeamNumber);
     {
-        uint8_t *namePos = (uint8_t *)teamFile + 0x24;
+        uint8_t *namePos = (uint8_t *)teamFile->team.coachName;
         _StringCopy(managerNameBuffer, namePos);
         /* Find end of copied name and add space + surname */
         while (*namePos != 0)
@@ -1247,14 +1245,15 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
     /* Count non-computer-controlled squads */
     seasonNumberOfSquads = 0;
     uint16_t *squadTeams = seasonSquadTeamNumbers;
-    uint8_t *teamPtr = (uint8_t *)&selTeamsPtr;
+    TeamFileEx *teamPtr = (TeamFileEx *)&selTeamsPtr;
     int16_t numTeams = numSelectedTeams - 1;
     for (int16_t i = numTeams; i >= 0; i--) {
-        if (teamPtr[4] != 1) {  /* selTeamIsComputerFlag offset = 4 */
+        if (teamPtr->team.teamControls != 1) {
             seasonNumberOfSquads++;
-            *squadTeams++ = BE_READ_U16(teamPtr);
+            *squadTeams++ = PACK_BE_U16(teamPtr->team.countryNumber,
+                                        teamPtr->team.teamOrdinal);
         }
-        teamPtr += 684;  /* sizeof(TeamFileEx) */
+        teamPtr++;
     }
 
     if (seasonNumberOfSquads == 0)

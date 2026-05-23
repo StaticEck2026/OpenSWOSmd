@@ -1464,8 +1464,9 @@ afterEDE:
     if (isSquadViewMode == 0 &&
         gameType == 4 &&
         isNationalSelector == 0) {
-        uint8_t *teamPtr = (uint8_t *)squadTeamFilePtr;
-        if (BE_READ_U16(teamPtr) == selTeamNumber) {
+        TeamFileEx *teamPtr = (TeamFileEx *)squadTeamFilePtr;
+        if (PACK_BE_U16(teamPtr->team.countryNumber,
+                        teamPtr->team.teamOrdinal) == selTeamNumber) {
             menuEntries[12].isInvisible = 0;
             _GetBankBalance((uint8_t *)menuEntries[12].fg);
             goto afterBankBalance;
@@ -5378,9 +5379,10 @@ void _RandomlySwapTeams(void)
 {
     uint16_t r = _Rand2();
     if (!(r & 1)) return;
-    /* Swap 684 bytes (TEAMFILE_SIZE) between team 0 and team 1 */
-    uint16_t *a = (uint16_t *)&selTeamsPtr;
-    uint16_t *b = (uint16_t *)(&selTeamsPtr + 684);
+    /* Swap two TeamFileEx records word-by-word (684 / 2 = 342 words). */
+    TeamFileEx *base = (TeamFileEx *)&selTeamsPtr;
+    uint16_t *a = (uint16_t *)&base[0];
+    uint16_t *b = (uint16_t *)&base[1];
     int16_t i;
     for (i = 0; i < 342; i++) {
         uint16_t tmp = a[i];
@@ -5831,7 +5833,7 @@ void _Career_AddInternationalPlayerCommon(uint8_t *selectedTeam, uint8_t *title)
      * PlayerFile fields at block_ptr + sizeof(TeamFile) */
     uint8_t *srcBlock = (uint8_t *)teamEx + (uint16_t)((uint16_t)selected * sizeof(PlayerFile));
     careerAddIntlPlayerSelectedSrcPlayerPtr = (uint32_t)srcBlock;
-    careerAddIntlPlayerSelectedSrcPlayerNamePtr = (uint32_t)((uint8_t *)teamEx + 5);
+    careerAddIntlPlayerSelectedSrcPlayerNamePtr = (uint32_t)(uintptr_t)teamEx->team.teamName;
 
     /* Get position type of selected source player */
     uint16_t srcPos = (teamEx->players[selected].positionAndFace & 0xE0) >> 5;
@@ -6258,7 +6260,7 @@ static void _ShowSquadMenuForTeam(uint8_t *teamPtr, uint16_t rowMode)
      * set skill diff to -1 (disabled) */
     uint16_t gt = gameType;
     if (gt != 1 && gt != 2) {
-        if (*(uint8_t *)(teamPtr + 4) != 1) {
+        if (((TeamFileEx *)teamPtr)->team.teamControls != 1) {
             teamSkillDiffAfterChange = 0xFFFF;
         }
     }

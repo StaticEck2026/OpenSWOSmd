@@ -1484,20 +1484,21 @@ static void applyForeignMarketPlayersToTeams(uint16_t count)
     for (i = 0; i < count; i++) {
         uint8_t entryHi = *(uint8_t *)&entry->teamId;
         uint8_t entryLo = *((uint8_t *)&entry->teamId + 1);
-        uint8_t *team = &selTeamsPtr;
+        TeamFileEx *team = (TeamFileEx *)&selTeamsPtr;
         uint16_t t;
 
         for (t = 0; t < numSelectedTeams; t++) {
-            if (team[0] == entryHi && team[1] == entryLo) {
+            if (team->team.countryNumber == entryHi &&
+                team->team.teamOrdinal  == entryLo) {
                 uint8_t playerOrd = (uint8_t)entry->playerOrdinal;
-                volatile uint16_t *dst = (volatile uint16_t *)&((TeamFileEx *)team)->players[playerOrd];
+                volatile uint16_t *dst = (volatile uint16_t *)&team->players[playerOrd];
                 uint16_t *src = (uint16_t *)&entry->player;
                 uint16_t j;
                 for (j = 0; j < 19; j++)
                     dst[j] = src[j];
                 break;
             }
-            team += sizeof(TeamFileEx);
+            team++;
         }
         entry++;
     }
@@ -1558,22 +1559,23 @@ void _DIY_AdvanceFixtureIndex(uint16_t lo, uint16_t hi)
         if (phase >= (uint8_t)lo && phase <= (uint8_t)hi) {
             uint8_t entryHi = *(uint8_t *)&entry->teamId;       /* team number high byte */
             uint8_t entryLo = *((uint8_t *)&entry->teamId + 1); /* team number low byte */
-            uint8_t *team = &selTeamsPtr;
+            TeamFileEx *team = (TeamFileEx *)&selTeamsPtr;
             uint16_t t;
 
             for (t = 0; t < numSelectedTeams; t++) {
-                if (team[0] == entryHi && team[1] == entryLo) {
+                if (team->team.countryNumber == entryHi &&
+                    team->team.teamOrdinal  == entryLo) {
                     /* Found matching team — copy player data */
                     int8_t playerOrd = entry->playerOrdinal;
                     int16_t ord = (int16_t)playerOrd;
-                    volatile uint16_t *dst = (volatile uint16_t *)&((TeamFileEx *)team)->players[(uint16_t)ord];
+                    volatile uint16_t *dst = (volatile uint16_t *)&team->players[(uint16_t)ord];
                     uint16_t *src = (uint16_t *)&entry->player;
                     uint16_t j;
                     for (j = 0; j < 19; j++)
                         dst[j] = src[j];
                     break;
                 }
-                team += sizeof(TeamFileEx);
+                team++;
             }
         }
         entry++;
@@ -3340,8 +3342,6 @@ extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
 extern void _Int2Pounds(uint32_t pounds, uint8_t *dst);
 extern uint16_t _GetStringLength(const uint8_t *str);
 
-#define TEAMFILE_TEAMNAME_OFFSET 5
-
 /* TransferPlayerInit (Chunk 166) — init for playerTransferMenu */
 __attribute__((used, externally_visible))
 void _TransferPlayerInit(void *entryPtr)
@@ -4237,49 +4237,46 @@ void _Career_RemovePlayerAndAddAsTrialist(uint16_t sourceTeam, uint16_t playerOr
  * ================================================================ */
 static uint8_t *pickRandomTeamRecordAvoidingTeam(uint16_t avoidTeamWord, uint8_t avoidTeamByte)
 {
-    uint8_t *result;
+    TeamFileEx *result;
     uint16_t retries = 100;
 
     while (1) {
         /* Try TMD file first if non-empty.
          *
-         * Reading the candidate team's id as a host-native uint16
-         * (*(uint16_t *)result) gives (ordinal<<8)|country on LE,
-         * which never matches the BE-packed avoidTeamWord — the
-         * word-level avoid then never fires and the only thing
-         * filtering candidates is the byte-level country check
-         * below. PACK_BE_U16 of the (countryNumber, teamOrdinal)
-         * byte pair produces the correct id on both hosts. */
+         * PACK_BE_U16 of the (countryNumber, teamOrdinal) byte pair
+         * produces the Amiga BE-packed id on either host so the
+         * word-level avoid check matches. Reading host-native would
+         * give (ordinal<<8)|country on LE and never match. */
         if (careerFileBuffer != 0) {
             uint16_t r = _Rand2();
             uint32_t idx = (uint32_t)r * (uint32_t)careerFileBuffer;
             idx >>= 8;
-            idx *= 0x2AC;
-            result = &tmdFileBuffer + idx;
+            result = (TeamFileEx *)&tmdFileBuffer + idx;
 
-            uint16_t candTeamId = PACK_BE_U16(result[0], result[1]);
+            uint16_t candTeamId = PACK_BE_U16(result->team.countryNumber,
+                                              result->team.teamOrdinal);
             if (candTeamId != avoidTeamWord) {
-                if (*result != avoidTeamByte)
-                    return result;
+                if (result->team.countryNumber != avoidTeamByte)
+                    return (uint8_t *)result;
             }
             if (retries == 0)
-                return result;
+                return (uint8_t *)result;
         }
 
         /* Try selected teams — same byte-pair fix as above. */
         uint16_t r = _Rand2();
         uint32_t idx = (uint32_t)r * (uint32_t)numSelectedTeams;
         idx >>= 8;
-        idx *= 0x2AC;
-        result = &selTeamsPtr + idx;
+        result = (TeamFileEx *)&selTeamsPtr + idx;
 
-        uint16_t candTeamId2 = PACK_BE_U16(result[0], result[1]);
+        uint16_t candTeamId2 = PACK_BE_U16(result->team.countryNumber,
+                                           result->team.teamOrdinal);
         if (candTeamId2 != avoidTeamWord) {
-            if (*result != avoidTeamByte)
-                return result;
+            if (result->team.countryNumber != avoidTeamByte)
+                return (uint8_t *)result;
         }
         if (retries == 0)
-            return result;
+            return (uint8_t *)result;
 
         retries--;
     }

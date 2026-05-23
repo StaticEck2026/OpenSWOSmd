@@ -1,0 +1,279 @@
+# Overlapped data regions
+
+## What this is
+
+Several runtime structures in SWOS deliberately re-use the same memory
+bytes for different semantic views at different points in the game's
+lifecycle. This was a memory-saving pattern on the Amiga — the
+competition struct, for example, never needed both "team stats during
+matches" and "team-pointer cache during selection" data live at the
+same time, so the IDA-reversed type makes them a `union`:
+
+```c
+union DIYCompetitionEx_Overlap {
+    struct DIYTeamStats              teamStats[24];   // 432 B
+    struct DIYCompetitionEx_Overlap_1 cacheView;       // 240 B (rest = pad)
+    byte                              overlapRaw[432];
+};
+```
+
+Same bytes; the consumer code decides which view applies based on
+game phase.
+
+## Why it matters for this port
+
+Two reasons:
+
+1. **Bug-hunting.** When a value at a given offset has unexpected
+   contents, it might be because *another* subsystem just wrote a
+   different view of the same bytes. The asm/IDA reference shows the
+   union clearly; our C port often has only the dominant view typed
+   as a struct field, with the alternate view hidden behind raw
+   byte arithmetic in the few functions that need it. Grepping for
+   the field name doesn't surface those alternate writers.
+
+2. **Future separation.** Long-term we want to split each overlap
+   into separate, lifetime-distinct buffers. Modern memory is cheap;
+   the storage pressure that justified the overlap is gone. After
+   separation, each subsystem owns named storage and the "this byte
+   means X or Y depending on phase" trap goes away.
+
+   We are **not** doing the separation as part of the 64-bit
+   transition. Structural changes to these regions risk regressions
+   in code paths we may not have full coverage for. The 64-bit work
+   keeps the existing overlaps, just gives every byte-level access a
+   named struct field (Phase 1 of the 64-bit plan).
+
+## Known overlap regions
+
+This list is incomplete — add to it as we discover more.
+
+### 1. `DIYCompetitionEx_Overlap` (DIYTeamStats vs cacheView)
+
+**Where:** `DIYCompetitionEx` extended region. In the IDA reference
+this is `union overlap` at parent offset ~0x308 (after
+`cupTeamIds[64]`), 432 bytes.
+
+**View A — `teamStats[24]`:** array of `DIYTeamStats` records (18
+bytes each: `teamSelPtr` u32 + `gamesPlayed`/wins/draws/losses/
+goalsFor/goalsAgainst/points u16 each). Used during league play to
+accumulate per-team results.
+
+**View B — `cacheView` (DIYCompetitionEx_Overlap_1):**
+- `byte _teamStats0_7[144]` — first 8 teamStats records' bytes
+  remain readable here
+- `uint teamPtrCache[24]` — 24 cached `selTeamsPtr` offsets used
+  during team selection / draw-order generation
+
+**Why it works:** league play populates teamStats while the
+selection cache is unused, and the selection / draw flow only runs
+before/between competitions when teamStats is dormant.
+
+**Our port:** we don't yet have this union in `game_types.h`.
+Consumers reach the alternate view through raw byte arithmetic. Worth
+auditing when we get to Phase 1B follow-up (the `_FindTeamInDIY`
+function in particular reads through `raw + 0x2B4` to walk
+`DIYTeamStats` records).
+
+### 2. `matchData` union (cup vs league view)
+
+**Where:** `DIYCompetitionEx.matchData`, parent +0x64..+0x14D
+(0xEA bytes).
+
+**View A — `cup` (`DIYCompetitionEx_CupView`):** `currentMatchIndex`,
+`roundLegs[6]`, `roundExtraTime[6]`, `roundPenalties[6]`,
+`cupRoundResults[100]`, `_shuffleIndicesAlias[2]`, …
+
+**View B — `league` (`DIYCompetitionEx_LeagueView`):**
+`leagueMinSubstitutes`, `leagueMaxSubstitutes`, `hasGroupsDiy`,
+`totalMatchesPerSection`, `teamEntryOffsets[14]`, `cupRoundResults[100]`
+(same 100 bytes as cup view — re-used as scratch storage in league
+mode), `shuffleAndPad[64]`, `leagueTeamIds[14]`, `competitionFormat`,
+`roundFormat`.
+
+**Status:** modelled in our `game_types.h:619-669`. Consumers
+correctly switch between `.cup.foo` and `.league.bar` based on
+competition type.
+
+### 3. `bracketScratch` overlay on `teamShuffleOrder`
+
+**Where:** `DIYCompetitionEx`, parent +0x30E..+0x5C7 (698 bytes,
+SWOS2.s named `diyTeamShuffleOrder`).
+
+**View A — `teamShuffleOrder[698]`:** raw bytes used at the start
+of cup setup for shuffled team indices.
+
+**View B — `bracketScratch` (anonymous struct):**
+- `shuffleHead[0x20]` — keeps the raw shuffle bytes alias for the
+  first 32 bytes
+- bracket-progression counters (`secondLegCounter`, `groupSectionFlag`,
+  `matchCount`, `totalMatches`, `curMonthIdx`)
+- `progTable[0xC]` — month progression bytes
+- `teamPtrTable[64]` — per-team `selTeamsPtr` offset cache
+- `scratchTail[0x184]`
+
+**Status:** modelled as an anonymous union in our
+`game_types.h:751-764` so callers can keep using
+`teamShuffleOrder[i]` for the head bytes and
+`bracketScratch.<field>` for the named bracket state.
+
+### 4. `diyFileBufferCopy` vs `diyCompetitionStart`
+
+**Where:** Two separate buffers; they're contiguous in BSS on
+both Amiga and SDL (diyCompetitionStart is aliased at
+diyFileBufferCopyBuf + 0x420 — see `swos_globals.c:890`).
+
+- diyFileBufferCopy: DIYCompetition base (0x60), then
+  `BSS_00_2DB6A` (0x3A), then `diyTournamentTeamIds` (0x386)
+- diyCompetitionStart: full `DIYCompetitionEx` (0x5C8)
+
+The two buffers share the same `DIYCompetition` base layout for the
+first 0x60 bytes — both can be cast to `DIYCompetition *` for the
+header fields. Past 0x60 they diverge: diyFileBufferCopy uses the
+adjacent region for tournament slot records and team-id tables;
+diyCompetitionStart uses it for the cup/league match data union and
+team stats.
+
+**`_FindTeamInDIY` consequence:** the function takes a generic
+`DIYCompetition *` parameter and accesses extended bytes via raw
+pointer arithmetic because the meaning of bytes past 0x60 depends
+on which buffer the caller passed in. Can't be cleanly typed
+without introducing a separate `DIYFileBufferCopy` struct that maps
+the second region's layout.
+
+**Status:** partly documented in `game_types.h:704-711`. Phase 4 of
+the 64-bit transition will need to define the alternate struct
+properly when retiring the careerFileBufferBuf overlay aliases.
+
+### 5. `clearLeagueTableStats` writes past struct end
+
+**Where:** `diyCompetitionStart + 0x2B4` to `+0x734` (1152 bytes,
+64 rows × 18 bytes of DIYTeamStats / DIYLeagueTableRow).
+
+The byte range starts inside `DIYCompetitionEx` (at parent 0x2B4 =
+the league standings area inside the `cupTeamIds[64]` array
+according to one view, or `teamGridPairings`/`teamShuffleOrder`
+according to another) and runs PAST `sizeof(DIYCompetitionEx)`
+(0x5C8) into the address space of the adjacent `audioInstrumentBank`
+global.
+
+**Why it works:** audio bank isn't loaded during DIY menu
+operation, so its memory is free to be repurposed as a 64-row
+league standings table.
+
+**Status:** documented in `game_types.h:698-703` and
+`memory/project_diycomp_league_table_overlay.md`. The "extension
+past struct end" is intentional shared-memory overlay; it is **not**
+represented as a struct field; reached only via raw byte arithmetic
+in the table-clear routine.
+
+### 6. `imageCmdWorkBuf` sprite-pool overflow
+
+**Where:** `imageCmdWorkBuf` global, originally 0xFFDC bytes on
+Amiga.
+
+The Amiga's sprite-graphics allocator deliberately overflows past
+the end of `imageCmdWorkBuf` into the next ~12 adjacent BSS labels
+(menuInsBank, unnamed scratch, tempTeamBuffer, teamFileBuffer, and
+more — ~230 KB of effectively-contiguous storage).
+
+**SDL port:** we don't have adjacent BSS — each global is its own
+linker symbol. `imageCmdWorkBuf` is sized at 2 MB in our port so
+sprite writes never overflow into adjacent globals. See
+`memory/project_sprite_pool_overflow.md` and the comment block in
+`src/swos_amiga_data_stubs.c:903-917`.
+
+This is a different shape of overlap (cross-symbol overflow rather
+than within-struct union), but the same root pattern: the Amiga
+freely reused adjacent BSS as logical extensions of one buffer.
+
+### 7. `team1Scorers` / `team2Scorers` aliased onto loader-intro code
+
+**Status:** already separated in our port — this entry is here as a
+notable historical example, not active concern.
+
+**Where (Amiga original):** `ShowLoaderIntroSequence` is a 68k
+function at `$10FE2x` and friends. The asm took its address and
+treated the function's machine-code bytes as `ScorerInfo
+team1Scorers[8]` (528 bytes of in-match scorer data). The same bytes
+were `team2Scorers[8]` starting at `loc_10FE24+2`. From SWOS2.s:
+
+```
+                lea     (ShowLoaderIntroSequence).l,a3 ; ScorerInfo team1Scorers[8]
+                lea     ((loc_10FE24+2)).l,a4         ; ScorerInfo team2Scorers[8]
+```
+
+**Why it worked:** the intro sequence runs once at boot and never
+again — by the time a match starts the function bytes are dead
+weight. Reusing them as in-match scorer state saved 528 bytes of
+RAM. On a 512 KB Amiga that was meaningful.
+
+**Why it's not portable:** in a C/SDL build, function-machine-code
+bytes are in read-only `.text`; you can't write to them. Even if you
+could, the code is x86 / ARM / m68k — completely different bytes
+than what the asm expected, so no offset within the function gives
+useful "scorer data" content. And the runtime might fault on writes
+to `.text` (most do).
+
+**Our port:** `team1Scorers[8]` and `team2Scorers[8]` are normal
+typed BSS globals in `src/swos_data_typed_stubs.c:835-836`. The
+intro-sequence code is `_ShowLoaderIntroSequence` in
+`src/loader_intro.c:317`, completely unrelated memory. Consumers in
+`game_state.c`, `goal_scored.c`, etc. use the named globals.
+
+This is the most aggressive overlap in the Amiga binary — *code*
+and *data* sharing the same bytes via lifetime separation. Worth
+remembering as the upper bound of what the original was doing for
+memory pressure.
+
+### 8. Adjacent-globals reads
+
+See `memory/project_adjacent_globals_bss.md` for the per-site list
+(`stadiumMenuLittlePlayer` / `littlePlayerSpriteGeneric` /
+`littlePlayersColorTable` triple is the classic). These aren't
+struct-level unions — they're separate-symbol reads where the
+consumer treats the symbols as one contiguous record. Phase 3 of
+the 64-bit transition retires this pattern.
+
+## Reference structs (IDA-reversed)
+
+When the port's struct definition doesn't match the IDA reference,
+the IDA version is generally more complete. Quick reference for the
+DIYCompetitionEx region:
+
+`C:\Projects\AI\SWOS\SWOS_C\data\SWOS2.h:2578-2613` —
+full `DIYCompetitionEx` layout including the `overlap` union and
+the trailing fields (`teamGrid[64]`, `teamOrder[32]`,
+`unselectedTeamCount`, `replayFlag`, `matchesPlayedInRound`,
+`totalMonthEntries`, `currentMonthIndex`, `cupMonthTable[12]`,
+`gap_586[94]`).
+
+`C:\Projects\AI\SWOS\SWOS_C\data\SWOS2.h:592-601` —
+`DIYTeamStats` (18 bytes), the per-team record that `teamStats[24]`
+in the overlap union contains.
+
+Use these as authoritative when adding missing fields to our port's
+`game_types.h`. Don't blindly copy the layout — our port has
+diverged in places (the `bracketScratch` union, the
+`leagueSectionState` broken-out struct) and those divergences are
+intentional. But where IDA gives a name for a region that our port
+treats as raw bytes, prefer the IDA name.
+
+## Rule of thumb during 64-bit transition
+
+- **Add struct fields.** If a region currently accessed via raw
+  byte offsets is also a known overlap, define both views as a
+  union and use named fields per view. Match the IDA reference
+  layout where possible.
+- **Don't separate yet.** Don't try to split an overlap into two
+  buffers during the 64-bit work. That's a behavioural change
+  with regression risk we shouldn't take on while also touching
+  pointer widths.
+- **Document new overlaps as found.** Add to this file's list when
+  a Phase 1 conversion uncovers a previously-undocumented overlap.
+  Tag the consumer functions so the next reader can find both
+  writers.
+
+The separation work happens after 64-bit is stable. At that point
+we know the structural change is the only variable, so any
+regression has a single cause to investigate.
