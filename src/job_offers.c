@@ -1252,14 +1252,12 @@ searchNational:
                 uint16_t rnd = _Rand();
                 uint32_t idx32 = (uint32_t)rnd * (uint32_t)nat_teams_rand_limit1;
                 uint16_t idx = (uint16_t)(idx32 >> 8);
-                uint8_t *entry = nationalTeams + (uint32_t)idx * 6;
+                NationalTeamRecord *rec = (NationalTeamRecord *)nationalTeams + (uint32_t)idx;
 
-                /* entry[0..1] = {countryNumber, teamOrdinal} byte pair.
-                 * teamId is compared against selTeamNumber (BE-packed)
-                 * below, so use PACK_BE_U16 to read the matching form
-                 * on both hosts. */
-                uint16_t teamId = PACK_BE_U16(entry[0], entry[1]);
-                uint16_t skill = *(uint16_t *)(entry + 4);
+                /* teamId is compared against selTeamNumber (BE-packed)
+                 * below — compose the same form via PACK_BE_U16. */
+                uint16_t teamId = PACK_BE_U16(rec->countryNumber, rec->teamOrdinal);
+                uint16_t skill = rec->skillOrPrice;
 
                 if (skill < repLow || skill > repHigh)
                     continue;
@@ -1268,7 +1266,7 @@ searchNational:
                 if (teamId == lastNationalityCall)
                     continue;
 
-                if (_IsTeamCodeOkForNationalSelector(entry[0]) == 0)
+                if (_IsTeamCodeOkForNationalSelector(rec->countryNumber) == 0)
                     continue;
                 if (_IsNewJobOffer(teamId) == 0)
                     continue;

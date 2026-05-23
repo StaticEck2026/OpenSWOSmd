@@ -160,27 +160,14 @@ void _Career_RandomizeInvitationTournamentCup(void)
 
 /* SetPlayerCoachFieldColor: update background color palette index
  * for menu entry 9 based on coachOrPlayer toggle.
- * The low nibble of the bg high word holds the color palette index. */
+ * The low nibble of the bg color word holds the color palette index. */
 __attribute__((used, externally_visible))
 void _SetPlayerCoachFieldColor(void)
 {
-    /* menuEntries + 0x1F8 = &menuEntries[9] (0x1F8 / 56 = 9)
-     * bg field at offset 30 — access high word via byte pointer to avoid
-     * packed struct alignment warning */
-    uint8_t *base = (uint8_t *)&menuEntries[9];
-    uint16_t val;
-
-    /* Read high word of bg (offset 30, big-endian) */
-    val = *(uint16_t *)(base + 30);
-    val = (val & 0xFFF0) + 13; /* BRIGHT_BLUE_TO_BLUE_13 */
-    *(uint16_t *)(base + 30) = val;
-
-    if (coachOrPlayer != 0) {
-        /* Override: blue to purple (11) */
-        val = *(uint16_t *)(base + 30);
-        val = (val & 0xFFF0) + 11; /* BLUE_TO_PURPLE_11 */
-        *(uint16_t *)(base + 30) = val;
-    }
+    MenuEntry *e = &menuEntries[9];
+    setBgColorIdx(e, 13); /* BRIGHT_BLUE_TO_BLUE_13 */
+    if (coachOrPlayer != 0)
+        setBgColorIdx(e, 11); /* BLUE_TO_PURPLE_11 */
 }
 
 /* CheckSex: copy "MR" or "MS" to managerSexBuffer based on mrOrMs toggle */

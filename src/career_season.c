@@ -863,22 +863,20 @@ static uint16_t pickRandomNationalTeamId(uint16_t minPrice, uint16_t maxPrice,
         uint16_t r = _Rand();
         uint32_t idx = (uint32_t)r * natTeamsRandLimit2;
         idx >>= 8;
-        uint8_t *entry = nationalTeams + (uint16_t)(idx * 6);
-        /* entry[0..1] = {countryNumber, teamOrdinal} byte pair. teamId
-         * is compared against selTeamNumber (BE-packed) and the high
-         * byte is region-filtered, so use PACK_BE_U16 to get the
-         * correct packed form on both hosts. */
-        uint16_t teamId = PACK_BE_U16(entry[0], entry[1]);
+        NationalTeamRecord *rec = (NationalTeamRecord *)nationalTeams + (uint16_t)idx;
+        /* teamId is compared against selTeamNumber (BE-packed), so
+         * compose the same form via PACK_BE_U16 on either host. */
+        uint16_t teamId = PACK_BE_U16(rec->countryNumber, rec->teamOrdinal);
 
         if (regionFilter != 0) {
-            if ((uint8_t)(teamId >> 8) != regionFilter)
+            if (rec->countryNumber != regionFilter)
                 continue;
         }
         if (teamId == selTeamNumber)
             continue;
 
         if (retries >= 0) {
-            uint16_t price = *(uint16_t *)(entry + 4);
+            uint16_t price = rec->skillOrPrice;
             if (price < minPrice || price > maxPrice) {
                 retries--;
                 continue;

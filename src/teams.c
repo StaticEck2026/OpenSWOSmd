@@ -972,26 +972,19 @@ uint16_t _GetPlayerSlotIndexByPlayerNumber(uint16_t teamNumber, uint16_t playerN
 /* ================================================================
  * _GetNationalityRecordPtr — find nationality record by team file+ordinal.
  * Asm: GetNationalityRecordPtr (d0=teamFileAndOrdinal → a0=recordPtr or NULL)
- *
- * Each nationalTeams record is 6 bytes:
- *   [0..1] teamFileAndOrdinal (word)
- *   [2]    nationality code
- *   [3]    team file ID
- *   [4..5] other data
  * ================================================================ */
 __attribute__((used, externally_visible))
 uint8_t *_GetNationalityRecordPtr(uint16_t teamFileAndOrdinal)
 {
-    uint8_t *ptr = nationalTeams;
+    NationalTeamRecord *rec = (NationalTeamRecord *)nationalTeams;
     uint16_t count = numNationalTeams;
     for (uint16_t i = 0; i < count; i++) {
-        /* nationalTeams entries start with {countryNumber, teamOrdinal}
-         * byte pair (caller passes the BE-packed pair). PACK_BE_U16
-         * produces the matching id on either host endianness — see
-         * the same fix in _GetTeamPointer. */
-        if (PACK_BE_U16(ptr[0], ptr[1]) == teamFileAndOrdinal)
-            return ptr;
-        ptr += 6;
+        /* countryNumber/teamOrdinal are a BE byte pair (caller passes
+         * the BE-packed pair). PACK_BE_U16 produces the matching id on
+         * either host endianness. */
+        if (PACK_BE_U16(rec->countryNumber, rec->teamOrdinal) == teamFileAndOrdinal)
+            return (uint8_t *)rec;
+        rec++;
     }
     return (uint8_t *)0;
 }
@@ -1006,19 +999,16 @@ uint8_t *_GetNationalityRecordPtr(uint16_t teamFileAndOrdinal)
 __attribute__((used, externally_visible))
 int16_t _GetNationalTeamNumber(uint16_t nationality)
 {
-    uint8_t *ptr = nationalTeams;
+    NationalTeamRecord *rec = (NationalTeamRecord *)nationalTeams;
     uint16_t count = numNationalTeams;
     for (uint16_t i = 0; i < count; i++) {
-        if (ptr[2] == (uint8_t)nationality)
-            /* Same BE-vs-LE byte-order bug as
-             * _GetNationalTeamNumberFromTeamFileId: the packed
-             * national-team ID lives as [country, ordinal] bytes in
-             * nationalTeams; reading host-native uint16 on LE flips them.
-             * This is the in-season offer-generation path Playaveli
-             * was hitting AFTER his .CAR was patched — the previous fix
-             * only covered the team-file-id lookup. */
-            return (int16_t)BE_READ_U16(ptr);
-        ptr += 6;
+        if (rec->nationalityCode == (uint8_t)nationality)
+            /* The packed national-team ID is the BE byte pair
+             * {countryNumber, teamOrdinal} — recompose via PACK_BE_U16
+             * (was: BE_READ_U16(ptr) — same result, this is the
+             * struct-field form). */
+            return (int16_t)PACK_BE_U16(rec->countryNumber, rec->teamOrdinal);
+        rec++;
     }
     return -1;
 }
@@ -1033,21 +1023,18 @@ int16_t _GetNationalTeamNumber(uint16_t nationality)
 __attribute__((used, externally_visible))
 int16_t _GetNationalTeamNumberFromTeamFileId(uint16_t teamFileId)
 {
-    uint8_t *ptr = nationalTeams;
+    NationalTeamRecord *rec = (NationalTeamRecord *)nationalTeams;
     uint16_t count = numNationalTeams;
     for (uint16_t i = 0; i < count; i++) {
-        if (ptr[3] == (uint8_t)teamFileId)
+        if (rec->teamFileId == (uint8_t)teamFileId)
             /* Asm: `move.w (a0),d0` — on m68k BE this reads the
              * `(country<<8)|ordinal` packed national-team ID stored as
-             * two adjacent bytes [country, ordinal]. Host-native
-             * `*(uint16_t *)` flips that on LE, returning ordinal-in-
-             * high-byte (e.g. byte pair {0x50, 0x11} comes back as
-             * 0x1150 instead of 0x5011). Downstream `_GetTeamPointer`
-             * then loads TEAM.017 and walks off the end looking for
-             * country-17 ordinal-80 — Playaveli's NATIONAL TEAM job
-             * offer SIGSEGV (crash backtrace _GetTeamPointer:195). */
-            return (int16_t)BE_READ_U16(ptr);
-        ptr += 6;
+             * two adjacent bytes [country, ordinal]. Use PACK_BE_U16
+             * so the same id materialises on either host endianness
+             * (Playaveli's NATIONAL TEAM job-offer SIGSEGV was the
+             * naive host-native read of these two bytes). */
+            return (int16_t)PACK_BE_U16(rec->countryNumber, rec->teamOrdinal);
+        rec++;
     }
     return -1;
 }
@@ -1063,14 +1050,12 @@ int16_t _GetNationalTeamNumberFromTeamFileId(uint16_t teamFileId)
 __attribute__((used, externally_visible))
 uint32_t _GetNationalityAndTeamFile(uint16_t teamFileAndOrdinal)
 {
-    uint8_t *record = _GetNationalityRecordPtr(teamFileAndOrdinal);
-    if (!record) {
+    NationalTeamRecord *rec = (NationalTeamRecord *)_GetNationalityRecordPtr(teamFileAndOrdinal);
+    if (!rec) {
         panicReasonCode = 0x4543;
         _PanicHaltLoop();
     }
-    uint8_t nationality = record[2];
-    uint8_t teamFileId = record[3];
-    return ((uint32_t)nationality << 16) | (uint32_t)teamFileId;
+    return ((uint32_t)rec->nationalityCode << 16) | (uint32_t)rec->teamFileId;
 }
 
 /* ================================================================

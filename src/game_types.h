@@ -823,6 +823,29 @@ typedef struct __attribute__((packed, aligned(2))) JobOffer {
 typedef char _joboffer_size_check[(sizeof(JobOffer) == 26) ? 1 : -1];
 
 /* ==================================================================
+ * NationalTeamRecord — 6 bytes, pack(1)
+ * Entry in nationalTeams[]. Indexed by ordinal × 6.
+ *
+ * countryNumber/teamOrdinal are an Amiga BE byte pair: callers compare
+ * the packed id against selTeamNumber via PACK_BE_U16, *not* a host
+ * uint16 read.
+ *
+ * skillOrPrice is read host-native (`*(uint16_t *)(entry+4)`) by the
+ * random-pick filters — see _PickRandomNationalTeamId / job_offers
+ * searchNational. Keep that behaviour unchanged here; if it turns out
+ * to be a latent endian bug, fix it separately and document.
+ * ================================================================== */
+typedef struct __attribute__((packed)) NationalTeamRecord {
+    uint8_t  countryNumber;      /* 0 */
+    uint8_t  teamOrdinal;        /* 1 */
+    uint8_t  nationalityCode;    /* 2 */
+    uint8_t  teamFileId;          /* 3 */
+    uint16_t skillOrPrice;        /* 4..5 — host-native, see note above */
+} NationalTeamRecord;
+
+typedef char _nationalteamrecord_size_check[(sizeof(NationalTeamRecord) == 6) ? 1 : -1];
+
+/* ==================================================================
  * MarketPlayer — 42 bytes, pack(1)
  * Career foreign market player entry.
  * ================================================================== */
