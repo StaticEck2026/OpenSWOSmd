@@ -8639,9 +8639,11 @@ void _InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table)
 {
     /* `table` points at a CompetitionLeague_* record whose
      * `divisions[]` starts at byte 13. The Division struct is
-     * 6 bytes per entry. */
+     * 6 bytes per entry. The original asm tested byte
+     * (idx*6 + 13) = divisions[idx].teams (field at Division
+     * offset 0). */
     Division *divisions = (Division *)(table + 13);
-    if (divisions[idx].unk1 & 1) {
+    if (divisions[idx].teams & 1) {
         panicReasonCode = 0x1313;
         _PanicHaltLoop();
     }
@@ -9523,6 +9525,29 @@ tournament_entry:
 not_found:
     if (isNationalSelector != 0)
         return 0xFFFF;
+    /* [bug-phase1d] Dump the team list head so we can see what's in
+     * competitionFileBuffer at the moment of the lookup failure.
+     * The 0x6006 panic means the saved primary slot doesn't contain
+     * the team we're looking for — either the slot type or the team
+     * list got corrupted by a Phase 1 conversion. */
+    fprintf(stderr,
+            "[FindTeamInDIY] not_found: teamNo=0x%04X compType=%u "
+            "numTeams=%u raw[0..1]=%02X %02X raw[+96/0x60]=%02X %02X "
+            "raw[+0x12E..+0x141]=%02X %02X %02X %02X %02X %02X %02X %02X "
+            "%02X %02X %02X %02X %02X %02X %02X %02X "
+            "raw[+0x24E..+0x261]=%02X %02X %02X %02X %02X %02X %02X %02X "
+            "%02X %02X %02X %02X %02X %02X %02X %02X\n",
+            (unsigned)teamNo, (unsigned)compType, (unsigned)numTeams,
+            raw[0], raw[1], raw[96], raw[97],
+            raw[0x12E], raw[0x12F], raw[0x130], raw[0x131],
+            raw[0x132], raw[0x133], raw[0x134], raw[0x135],
+            raw[0x136], raw[0x137], raw[0x138], raw[0x139],
+            raw[0x13A], raw[0x13B], raw[0x13C], raw[0x13D],
+            raw[0x24E], raw[0x24F], raw[0x250], raw[0x251],
+            raw[0x252], raw[0x253], raw[0x254], raw[0x255],
+            raw[0x256], raw[0x257], raw[0x258], raw[0x259],
+            raw[0x25A], raw[0x25B], raw[0x25C], raw[0x25D]);
+    fflush(stderr);
     panicReasonCode = 0x6006;
     _PanicHaltLoop();
     /* not reached */
