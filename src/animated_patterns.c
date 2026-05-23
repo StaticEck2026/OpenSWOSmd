@@ -37,7 +37,7 @@ extern uint16_t fansSidesSwapped;
 extern uint16_t panicReasonCode;
 extern int16_t  animatedPatterns[];
 extern TeamGeneralInfo *lastTeamPlayedBeforeBreak;
-extern uint32_t teamScoredGamePtr;
+extern TeamGame *teamScoredGamePtr;
 extern TeamGame topTeamInGame;
 extern TeamGame bottomTeamInGame;
 extern uint8_t  *spriteGraphicsPtr;
@@ -263,7 +263,7 @@ _DrawAnimatedPatterns(void)
             goto ball_out_of_play;
 
         {
-            uint32_t scoredTeamPtr = teamScoredGamePtr;
+            TeamGame *scoredTeamPtr = teamScoredGamePtr;
             if ((int16_t)cameraY.s.i > 440) {
                 /* bottom of pitch */
                 if (fansSidesSwapped != 0)
@@ -274,11 +274,11 @@ _DrawAnimatedPatterns(void)
                 if (fansSidesSwapped != 0)
                     goto check_bottom_team;
             check_top_team:
-                if (scoredTeamPtr == (uint32_t)&topTeamInGame)
+                if (scoredTeamPtr == &topTeamInGame)
                     goto check_cheers_phase;
                 goto other_team_scored_be_still;
             check_bottom_team:
-                if (scoredTeamPtr == (uint32_t)&bottomTeamInGame)
+                if (scoredTeamPtr == &bottomTeamInGame)
                     goto check_cheers_phase;
                 goto other_team_scored_be_still;
             }

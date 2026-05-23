@@ -57,7 +57,7 @@ extern uint16_t numSelectedTeams;
 extern uint16_t teamsLoaded;
 extern uint16_t poolplyrLoaded;
 extern uint8_t importTacticsFilename;
-extern uint32_t chooseTacticsTeamPtr;
+extern TeamFileEx *chooseTacticsTeamPtr;
 extern uint8_t swosMainMenu[];
 
 /* ZeroOutStars globals */
@@ -465,7 +465,7 @@ void _InitMainMenuStuff(void)
     teamsLoaded = 0;
     poolplyrLoaded = 0;
     importTacticsFilename = 0;
-    chooseTacticsTeamPtr = 0;
+    chooseTacticsTeamPtr = (TeamFileEx *)0;
 
     _InitUserTactics();
 
@@ -2564,7 +2564,7 @@ extern void _SeasonFinished_ComputeSeasonReview(void); /* still in asm */
 extern TeamFileEx *_ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers, uint16_t numTeams);
 extern uint8_t aSelectSquadToV[];   /* "SELECT SQUAD TO VIEW" */
 extern uint16_t diyNumberOfTeams;
-extern uint32_t diyTeamsBufferPtr;
+extern uint8_t *diyTeamsBufferPtr;
 extern uint16_t numDiyTeams;
 extern void _ChooseCompetitionMenu(void);         /* asm stub → _ChooseCompetitionMenu */
 
@@ -5617,7 +5617,7 @@ void _CheckNumberOfTeams(void)
  * ========================================================================== */
 
 extern uint16_t selectedTeamCountryNumber;
-extern uint32_t selectedTeamPtr;
+extern TeamFileEx *selectedTeamPtr;
 extern uint8_t  aStatistics[];
 
 /* ChooseTeamsDialog — set up team selection globals and show choose-teams menu.
@@ -5642,7 +5642,7 @@ void _ChooseTeamsDialog(uint16_t showClub, uint16_t showNational, uint16_t showO
     numNeededTeams = 1;
     selectTeamsNoLimit = 1;
     selectedTeamCountryNumber = 0xFFFF;
-    selectedTeamPtr = 0;
+    selectedTeamPtr = (TeamFileEx *)0;
     _ShowMenu(chooseTeamsMenu);
     if ((int16_t)teamsType >= 0) {
         loadTeam = 1;
@@ -5676,7 +5676,7 @@ void _ChooseTeamsDialogWithNationality(uint16_t nationality, uint16_t showClub,
     numNeededTeams = 1;
     selectTeamsNoLimit = 1;
     selectedTeamCountryNumber = 0xFFFF;
-    selectedTeamPtr = 0;
+    selectedTeamPtr = (TeamFileEx *)0;
     _ShowMenu(chooseTeamsMenu);
     if ((int16_t)teamsType >= 0) {
         loadTeam = 1;

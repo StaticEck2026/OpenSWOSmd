@@ -470,7 +470,7 @@ extern TeamFileEx careerTeam;
 extern uint16_t careerNumPlayers;
 extern uint32_t secondaryCompetitionPtr;
 extern uint32_t tertiaryCompetitionPtr;
-extern uint32_t diyNameOfCompetitionPtr;
+extern uint8_t *diyNameOfCompetitionPtr;
 extern uint16_t diyUnknownWord_2C;
 extern MenuEntry menuEntries[];
 extern uint8_t  aLparen[];              /* "(" */
@@ -980,7 +980,7 @@ void _TopGoalScorersMenu_0(void)
 __attribute__((used, externally_visible))
 void _StatsHighestScorerList(void)
 {
-    uint8_t *namePtr = (uint8_t *)diyNameOfCompetitionPtr;
+    uint8_t *namePtr = diyNameOfCompetitionPtr;
     int16_t statIdx = (int16_t)diyUnknownWord_2C;
     ShowCompetitionTopScorers(statIdx, namePtr);
 }

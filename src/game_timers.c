@@ -79,8 +79,8 @@ extern uint16_t statsTeam2Goals;
 extern uint16_t statsTeam1GoalsCopy2;
 extern uint16_t statsTeam2GoalsCopy2;
 extern uint16_t teamNumThatScored;
-extern uint32_t teamScoredDataPtr;
-extern uint32_t teamScoredGamePtr;
+extern TeamGeneralInfo *teamScoredDataPtr;
+extern TeamGame *teamScoredGamePtr;
 extern uint16_t goalCounter;
 extern uint16_t patternsGoalCounter;
 extern uint16_t goalOut;
@@ -525,8 +525,8 @@ static void __attribute__((noinline)) handleGoalScored(TeamGeneralInfo *teamData
     teamNumThatScored = teamNum;
 
     /* finalize_goal_replay_side */
-    teamScoredDataPtr = (uint32_t)teamData;
-    teamScoredGamePtr = (uint32_t)teamData->inGameTeamPtr;
+    teamScoredDataPtr = teamData;
+    teamScoredGamePtr = teamData->inGameTeamPtr;
 
     {
         TeamGeneralInfo *opTeam = teamData->opponentsTeam;

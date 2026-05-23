@@ -1108,7 +1108,7 @@ void _WriteCopperPalette(const uint16_t *palette)
  * ================================================================ */
 extern uint16_t gamePalette[];
 extern uint16_t pitchNumberAndType;
-extern uint32_t pitchPalettePtrs[];
+extern const uint16_t *pitchPalettePtrs[];
 extern uint8_t paletteIndices[];
 
 __attribute__((used, externally_visible))
@@ -1121,7 +1121,7 @@ void _WriteCopperPitchPalette(void)
     if (pitchIdx > 6)
         pitchIdx = 4; /* default to "normal" if out of range */
 
-    pitchPal = (const uint16_t *)pitchPalettePtrs[pitchIdx];
+    pitchPal = pitchPalettePtrs[pitchIdx];
 
     /* Apply 9 entries into gamePalette */
     for (i = 0; i < 9; i++)

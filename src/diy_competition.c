@@ -122,7 +122,7 @@ extern uint8_t diyPointsForAWin[];
 extern uint8_t europeanChampionships[];
 extern uint8_t europeanChampionships2[];
 extern uint8_t euroChampFixtureData[];
-extern uint32_t fixtureSchedulePtrTable[];
+extern const uint8_t *fixtureSchedulePtrTable[];
 extern uint16_t diyLeagueTeamIds[];
 
 /* ---- Local data table for InitDIYTournament ---- */
@@ -1709,7 +1709,7 @@ static void getCurrentFixtureTeamPtrs(uint8_t **team1Out, uint8_t **team2Out)
         schedule = euroChampFixtureData;
     } else {
         uint16_t groups = (uint16_t)a0s->totalMatchesInRound;
-        schedule = (uint8_t *)fixtureSchedulePtrTable[groups - 2];
+        schedule = (uint8_t *)fixtureSchedulePtrTable[groups - 2];  /* drop const for schedule += writes below */
     }
 
     /* Advance to current round fixture pair */
@@ -5334,7 +5334,7 @@ void _DesignDIYTournamentOnSelect28(MenuEntry *entry)
 
 /* Externs for Chunk 129 */
 extern uint16_t diyTournamentSelectedStageIndex1Based;
-extern uint32_t diyTournamentSelectedStagePtr; /* void * stored as uint32_t */
+extern uint8_t *diyTournamentSelectedStagePtr;
 extern uint16_t diyTournamentPrevValueBackup;
 extern uint16_t controlMask;
 
@@ -5557,8 +5557,7 @@ void _DesignDIYTournament_CacheStageSelection(MenuEntry *entry)
     int32_t d0l = d0; /* ext.l */
     uint16_t stageIdx = (uint16_t)((uint32_t)d0l / 0xC);
     diyTournamentSelectedStageIndex1Based = stageIdx + 1;
-    uint32_t ptr = (uint32_t)(uint32_t)diyFileBufferCopy + (uint32_t)stageIdx * 0x76;
-    diyTournamentSelectedStagePtr = ptr;
+    diyTournamentSelectedStagePtr = diyFileBufferCopy + (uint32_t)stageIdx * 0x76;
 }
 
 /* --- _DesignDIYTournament_RedrawStageItemsFromBlock (SWOS2.s line 50114) ---
@@ -5945,7 +5944,7 @@ __attribute__((used, externally_visible))
 void _DesignDIYTournamentOnSelect20(MenuEntry *entry)
 {
     _DesignDIYTournament_CacheStageSelection(entry);
-    uint8_t *a3 = (uint8_t *)(uint32_t)diyTournamentSelectedStagePtr;
+    uint8_t *a3 = diyTournamentSelectedStagePtr;
     DIYTournamentSlot *slot = (DIYTournamentSlot *)(a3 + 0x15A);
 
     uint16_t d1 = slot->groups;
@@ -5972,7 +5971,7 @@ void _DesignDIYTournament_AdjustStageQualifiers(MenuEntry *entry)
 {
     _DesignDIYTournament_CacheStageSelection(entry);
     uint16_t d7 = diyTournamentSelectedStageIndex1Based;
-    uint8_t *a3 = (uint8_t *)(uint32_t)diyTournamentSelectedStagePtr;
+    uint8_t *a3 = diyTournamentSelectedStagePtr;
     uint8_t *a2 = a3 - 0x76; /* previous stage */
     DIYTournamentSlot *slotA3 = (DIYTournamentSlot *)(a3 + 0x15A);
     DIYTournamentSlot *slotA2 = (DIYTournamentSlot *)(a2 + 0x15A);
@@ -6114,11 +6113,11 @@ extern uint16_t diyCupMenuArg0Copy;
 extern uint16_t diyCupMenuArg1;
 extern uint16_t diyCupMenuArg0;
 extern uint16_t diyCupMenuArg2;
-extern uint32_t diyCupMatchTeamNamePtr1;
-extern uint32_t diyCupMatchTeamNamePtr2;
+extern uint8_t *diyCupMatchTeamNamePtr1;
+extern uint8_t *diyCupMatchTeamNamePtr2;
 extern uint16_t diyCupMatchListDrawModeFlag;
-extern uint32_t diyCupLastMatchTeam1Ptr;
-extern uint32_t diyCupLastMatchTeam2Ptr;
+extern TeamFileEx *diyCupLastMatchTeam1Ptr;
+extern TeamFileEx *diyCupLastMatchTeam2Ptr;
 extern uint16_t diyCupLastMatchScoreTeam1;
 extern uint16_t diyCupLastMatchScoreTeam2;
 extern uint16_t chooseTeamsResult;
@@ -6286,7 +6285,7 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
             /* Team 1 name */
             int8_t teamIdx1 = (int8_t)a6[0];
             uint8_t *name1 = getTeamNameFromIndex(teamIdx1, a4);
-            diyCupMatchTeamNamePtr1 = (uint32_t)name1;
+            diyCupMatchTeamNamePtr1 = name1;
             uint8_t *dst = (uint8_t *)a3->fg;
             _StringCopy(name1, dst);
             a3->isInvisible = 0;
@@ -6299,7 +6298,7 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
             /* Team 2 name */
             int8_t teamIdx2 = (int8_t)a6[1];
             uint8_t *name2 = getTeamNameFromIndex(teamIdx2, a4);
-            diyCupMatchTeamNamePtr2 = (uint32_t)name2;
+            diyCupMatchTeamNamePtr2 = name2;
             dst = (uint8_t *)a3->fg;
             _StringCopy(name2, dst);
             a3->isInvisible = 0;
@@ -6350,8 +6349,8 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
 
                 uint8_t *resultStr = _BuildMatchResultString(
                     0, goals, agg, pen,
-                    (uint8_t *)diyCupMatchTeamNamePtr1,
-                    (uint8_t *)diyCupMatchTeamNamePtr2,
+                    diyCupMatchTeamNamePtr1,
+                    diyCupMatchTeamNamePtr2,
                     (uint16_t)flags);
 
                 a3->isInvisible = 0;
@@ -6712,8 +6711,8 @@ void _DesignDIYCup_UpdateMatchListAndRedrawIfNeeded(void)
 __attribute__((used, externally_visible))
 void _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries(void)
 {
-    uint8_t *team1 = (uint8_t *)(uint32_t)diyCupLastMatchTeam1Ptr;
-    uint8_t *team2 = (uint8_t *)(uint32_t)diyCupLastMatchTeam2Ptr;
+    TeamFileEx *team1 = diyCupLastMatchTeam1Ptr;
+    TeamFileEx *team2 = diyCupLastMatchTeam2Ptr;
     uint16_t score1 = diyCupLastMatchScoreTeam1;
     uint16_t score2 = diyCupLastMatchScoreTeam2;
 
@@ -6724,13 +6723,13 @@ void _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries(void)
     e->fg = (uint32_t)aMinus;
     e++;
 
-    /* Entry 12: team 1 name (offset 5 into team record) */
-    e->fg = (uint32_t)(team1 + 5);
+    /* Entry 12: team 1 name */
+    e->fg = (uint32_t)(uintptr_t)team1->team.teamName;
     e->isInvisible = 0;
     e++;
 
     /* Entry 13: team 2 name */
-    e->fg = (uint32_t)(team2 + 5);
+    e->fg = (uint32_t)(uintptr_t)team2->team.teamName;
     e->isInvisible = 0;
     e++;
 
@@ -7973,8 +7972,8 @@ void _DesignDIYTournamentOnSelect89(void)
 /* ---- Chunk 141: SetupDIYCompetitionStatsMenu ---- */
 extern uint16_t diyUnknownWord_2C;
 extern uint16_t diyNumberOfTeams;
-extern uint32_t diyNameOfCompetitionPtr;
-extern uint32_t diyTeamsBufferPtr;
+extern uint8_t *diyNameOfCompetitionPtr;
+extern uint8_t *diyTeamsBufferPtr;
 extern uint16_t diyCompetitionType;
 extern uint8_t competitionStatsMenu[];
 
@@ -7991,13 +7990,13 @@ void _SetupDIYCompetitionStatsMenu(void) {
     if ((uint16_t)a0s->hasGroups)
         diyNumberOfTeams = (uint16_t)a0s->numTeamsInStage;
 
-    diyNameOfCompetitionPtr = (uint32_t)(uintptr_t)a0s->competitionName;
+    diyNameOfCompetitionPtr = (uint8_t *)a0s->competitionName;
     /* a0+302 = league teamIds region; a0+590 = cup teamIds region.
      * Match the existing struct layout: leagueTeamIds is at parent 0x12E
      * (= a0+0x12E = a0+302), cupTeamIds at parent 0x24E (= a0+0x24E = a0+590). */
-    diyTeamsBufferPtr = (uint32_t)(uintptr_t)(isCup
+    diyTeamsBufferPtr = isCup
         ? (uint8_t *)a0->cupTeamIds
-        : (uint8_t *)a0->matchData.league.leagueTeamIds);
+        : (uint8_t *)a0->matchData.league.leagueTeamIds;
     diyCompetitionType = isCup ? 1 : 0;
 
     if ((uint16_t)a0s->hasGroups)
@@ -8146,8 +8145,8 @@ extern uint16_t diyTournamentViewOnly;
 extern uint16_t diyLeagueTournament_viewOptionsAvailable;
 extern uint16_t diyMinSubstitutes;
 extern volatile uint16_t seasonUpdateInProgress;
-extern uint32_t diyLeftTeamPtr;
-extern uint32_t diyRightTeamPtr;
+extern TeamFileEx *diyLeftTeamPtr;
+extern TeamFileEx *diyRightTeamPtr;
 extern uint16_t diyLeftTeamResult;
 extern uint16_t diyRightTeamResult;
 extern uint16_t numDiyResults;
@@ -8281,8 +8280,8 @@ void _DIYLeagueTournament_UpdateViewOptionsAvailability(void)
 __attribute__((used, externally_visible))
 void _DIYSetTeamNamesAndResults(void)
 {
-    TeamFileEx *a1 = (TeamFileEx *)diyLeftTeamPtr;
-    TeamFileEx *a2 = (TeamFileEx *)diyRightTeamPtr;
+    TeamFileEx *a1 = diyLeftTeamPtr;
+    TeamFileEx *a2 = diyRightTeamPtr;
     uint16_t d1 = diyLeftTeamResult;
     uint16_t d2 = diyRightTeamResult;
 
@@ -10453,8 +10452,8 @@ done:
 
 /* Externs for Chunk 193 */
 extern uint16_t careerMatchSimulatedFlag;
-extern uint32_t diyCupLastMatchTeam1Ptr;
-extern uint32_t diyCupLastMatchTeam2Ptr;
+extern TeamFileEx *diyCupLastMatchTeam1Ptr;
+extern TeamFileEx *diyCupLastMatchTeam2Ptr;
 extern uint16_t diyCupLastMatchScoreTeam1;
 extern uint16_t diyCupLastMatchScoreTeam2;
 
@@ -10582,8 +10581,8 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
     /* Asm returns team ptrs in a1/a2 and scores in d1/d2 for caller
      * (DIYCupOnSelectCommon stores them into diyCupLastMatch* globals).
      * Since C doesn't preserve register side effects, store them here. */
-    diyCupLastMatchTeam1Ptr = (uint32_t)team1;
-    diyCupLastMatchTeam2Ptr = (uint32_t)team2;
+    diyCupLastMatchTeam1Ptr = team1;
+    diyCupLastMatchTeam2Ptr = team2;
     diyCupLastMatchScoreTeam1 = packedGoals >> 8;
     diyCupLastMatchScoreTeam2 = packedGoals & 0xFF;
 
@@ -11032,8 +11031,8 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
      * In asm, a1/a2/d1/d2 survive as register outputs and are stored
      * by the caller (DIYLeagueTournamentMatchCommon). In C we must
      * store them here since register values don't persist. */
-    diyLeftTeamPtr = (uint32_t)team1;
-    diyRightTeamPtr = (uint32_t)team2;
+    diyLeftTeamPtr = team1;
+    diyRightTeamPtr = team2;
     diyLeftTeamResult = goals1;
     diyRightTeamResult = goals2;
 

@@ -77,13 +77,13 @@ extern uint8_t savedCurrentTactics;        /* 370-byte saved tactics buffer */
 /* ---- Globals (defined in asm) ---- */
 extern uint16_t chosenTactics;
 extern uint16_t flipOnOff;
-extern uint32_t chooseTacticsTeamPtr;   /* stored as uint32_t, used as pointer */
+extern TeamFileEx *chooseTacticsTeamPtr;
 extern uint16_t selTeamNumber;
 extern uint16_t inEditTactics;
 extern uint16_t careerNumPlayers;
 extern uint16_t editTacticsNumPlayers;
 extern uint16_t editTacticsSelectedPairSlotIndex;
-extern uint32_t editTacticsSelectedPlayerMenuEntryPtr;
+extern MenuEntry *editTacticsSelectedPlayerMenuEntryPtr;
 extern uint16_t editTacticsSelectedPlayerNameIndex;
 extern uint16_t oldPlayerSkill;
 extern uint16_t newPlayerSkill;
@@ -156,7 +156,7 @@ extern uint16_t editTacticsNearestSelectPitchWidth;
 /* ---- Globals for Chunk 88 ---- */
 extern uint32_t positionsTable[];       /* pointer table indexed by formation */
 extern uint16_t editTacticsSelectedPlayerSlotIndex;
-extern uint32_t editTacticsSelectedPairMenuEntryPtr;
+extern MenuEntry *editTacticsSelectedPairMenuEntryPtr;
 extern uint16_t gameType;
 extern uint8_t playerPositions[];       /* player positions translation table (current team) */
 extern uint16_t _cGetPlayerAtIndexFileIdx;
@@ -210,7 +210,7 @@ void _ChooseTacticsInit(void)
 __attribute__((used, externally_visible))
 void _ShowStandardChooseTacticsMenu(TeamFileEx *teamPtr)
 {
-    chooseTacticsTeamPtr = (uint32_t)teamPtr;
+    chooseTacticsTeamPtr = teamPtr;
     _ShowMenu(chooseTacticsMenu);
 
     if (chosenTactics != 0xFFFF) {
@@ -218,7 +218,7 @@ void _ShowStandardChooseTacticsMenu(TeamFileEx *teamPtr)
         _ShowMenu(editTacticsMenu);
     }
 
-    chooseTacticsTeamPtr = 0;
+    chooseTacticsTeamPtr = (TeamFileEx *)0;
 }
 
 /* ================================================================
@@ -232,7 +232,7 @@ void _ShowStandardChooseTacticsMenu(TeamFileEx *teamPtr)
 __attribute__((used, externally_visible))
 void _EditTacticsInit(void)
 {
-    TeamFileEx *teamEx = (TeamFileEx *)chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = chooseTacticsTeamPtr;
     _SetBenchPlayersNumbers(teamEx);
 
     uint16_t numPlayers;
@@ -244,7 +244,7 @@ void _EditTacticsInit(void)
     editTacticsNumPlayers = numPlayers;
 
     editTacticsSelectedPairSlotIndex = 0xFFFF;
-    editTacticsSelectedPlayerMenuEntryPtr = 0;
+    editTacticsSelectedPlayerMenuEntryPtr = (MenuEntry *)0;
     editTacticsSelectedPlayerNameIndex = 0xFFFF;
 
     _EditTactics_CommitPlayerPositionsAndRecalcSkill();
@@ -745,7 +745,7 @@ void _ImportTactics(void)
     }
 
     /* Mark team as changed */
-    TeamFileEx *teamEx = (TeamFileEx *)chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = chooseTacticsTeamPtr;
     teamEx->team.someFlag = 1;
     _MarkSelectedTeamsTacticsChanged();
     _CopyCurrentTacticName();
@@ -1359,7 +1359,7 @@ void _InitLittlePlayerSprites(void)
     _SaveCurrentTactics();
 
     /* Set up player numbers pointer */
-    TeamFileEx *teamEx = (TeamFileEx *)chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = chooseTacticsTeamPtr;
     uint8_t *playerNums = teamEx->team.playerNumbers;
     if (teamEx == &careerTeam) {
         playerNums = currentMatchPlayers;
@@ -1428,7 +1428,7 @@ void _DrawLittlePlayersAndBall(void)
 
     _SortEditTacticsDrawOrderByY();
 
-    TeamFileEx *teamEx = (TeamFileEx *)chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = chooseTacticsTeamPtr;
     int16_t *posArr = editTacticsPlayerPositions;
     uint8_t *playerNums = (uint8_t *)editTacticsPlayerNumbers;
 
@@ -1533,7 +1533,7 @@ void _DrawEditTacticsHighlightedPlayerRoute(void)
 
     int16_t *areas = playerAreas;
     uint8_t *playerNums = (uint8_t *)editTacticsPlayerNumbers;
-    TeamFileEx *teamEx = (TeamFileEx *)chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = chooseTacticsTeamPtr;
 
     /* Get marked player's info */
     uint16_t markedIdx = markedPlayerNumber;
@@ -2210,7 +2210,7 @@ void _EditTacticsCommon(MenuEntry *cur)
         /* No previous selection - start new selection */
         editTacticsSelectedPairSlotIndex = slot;
         MenuEntry *entry = _CalcMenuEntryAddress(11 + savedRelIdx);
-        editTacticsSelectedPairMenuEntryPtr = (uint32_t)(uint32_t)entry;
+        editTacticsSelectedPairMenuEntryPtr = entry;
         _CallDrawMenuItem(entry);
         return;
     }
@@ -2218,7 +2218,7 @@ void _EditTacticsCommon(MenuEntry *cur)
     if (editTacticsSelectedPairSlotIndex == slot) {
         /* Same slot clicked again - cancel selection */
         editTacticsSelectedPairSlotIndex = 0xFFFF;
-        _CallDrawMenuItem((MenuEntry *)(uint32_t)editTacticsSelectedPairMenuEntryPtr);
+        _CallDrawMenuItem(editTacticsSelectedPairMenuEntryPtr);
         return;
     }
 
@@ -2242,7 +2242,7 @@ void _EditTacticsCommon(MenuEntry *cur)
     editTacticsSelectedPairSlotIndex = 0xFFFF;
 
     /* Redraw the selected pair entry and all pair entries */
-    _CallDrawMenuItem((MenuEntry *)(uint32_t)editTacticsSelectedPairMenuEntryPtr);
+    _CallDrawMenuItem(editTacticsSelectedPairMenuEntryPtr);
     _CallDrawMultipleItems(10, &menuEntries[29]);
 }
 
@@ -2296,8 +2296,8 @@ void _EditTacticsPlayerNamesCommon(MenuEntry *cur)
     editTacticsSelectedPlayerNameIndex = playerIndex;
     editTacticsSelectedPlayerSlotIndex = slot;
 
-    MenuEntry *prevEntry = (MenuEntry *)(uint32_t)editTacticsSelectedPlayerMenuEntryPtr;
-    editTacticsSelectedPlayerMenuEntryPtr = (uint32_t)(uint32_t)cur;
+    MenuEntry *prevEntry = editTacticsSelectedPlayerMenuEntryPtr;
+    editTacticsSelectedPlayerMenuEntryPtr = cur;
 
     if (prevEntry != (MenuEntry *)0) {
         _CallDrawMenuItem(prevEntry);
@@ -2983,7 +2983,7 @@ void _ImportTeamsMenu(void)
     _ChooseTeamsDialog(1, 1, 0, aSelectTeamToIm, (void *)0);
 
     extern uint16_t selectedTeamCountryNumber;
-    extern uint32_t selectedTeamPtr;
+    extern TeamFileEx *selectedTeamPtr;
 
     if ((int16_t)selectedTeamCountryNumber != -1) {
         /* Save selTeamsPtr team number and selTeamImportField, copy selected team data */
@@ -2991,7 +2991,7 @@ void _ImportTeamsMenu(void)
         uint8_t savedImportField = selTeamImportField;
 
         /* Copy 342 words (684 bytes) from selectedTeamPtr to selTeamsPtr */
-        volatile uint16_t *src = (volatile uint16_t *)(uint32_t)selectedTeamPtr;
+        volatile uint16_t *src = (volatile uint16_t *)selectedTeamPtr;
         volatile uint16_t *dst = (volatile uint16_t *)&selTeamsPtr;
         for (int16_t i = 341; i >= 0; i--)
             *dst++ = *src++;

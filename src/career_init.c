@@ -232,7 +232,7 @@ void _DIY_SelectCompetitionSlot4FromCurrentDivision(void);
 uint16_t _Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t euroCupIndex);
 
 extern uint16_t selectedTeamCountryNumber;
-extern uint32_t selectedTeamPtr;
+extern TeamFileEx *selectedTeamPtr;
 void _SelectTeamToManage(void);
 
 /* ChooseTeamAndStartCareer: let user pick a team, then start career.

@@ -2047,7 +2047,7 @@ void _ChooseTeamsFriendlyCommon(MenuEntry *entry)
 
 extern uint8_t teamsIndex[];
 extern uint32_t teamsPtrTable[];
-extern uint32_t selectedTeamPtr;
+extern TeamFileEx *selectedTeamPtr;
 extern uint16_t selectedTeamCountryNumber;
 extern uint32_t chooseTeamsFunc;
 extern uint16_t careerSquadScreenDidSelectPlayerFlag;
@@ -2077,7 +2077,7 @@ void _ChooseTeamsFriendlyCommon2(MenuEntry *entry)
     int8_t idx = (int8_t)teamsIndex[d0];
     int16_t idx16 = (int16_t)idx;
     TeamFileEx *team = (TeamFileEx *)teamsPtrTable[(uint16_t)idx16];
-    selectedTeamPtr = (uint32_t)team;
+    selectedTeamPtr = team;
     selectedTeamCountryNumber = BE_READ_U16(team);
 
     if (chooseTeamsFunc != 0) {
