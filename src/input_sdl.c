@@ -33,6 +33,12 @@ extern uint8_t  keyState[128];
 extern uint16_t joy0Dat;
 extern uint16_t joy1Dat;
 extern uint8_t  ciaa_pra;
+/* gameState transitions into the ST_STARTING_GAME (21) … ST_PENALTIES (31)
+ * range while a match is on screen; everything else (frontend, season-end
+ * menus, edit screens, text entry) is outside that window. Used to gate
+ * the SPACE multi-role binding so SPACE during a live match falls through
+ * to the Amiga highlight-capture path only, not the menu fire/skip path. */
+extern uint16_t gameState;
 
 /* ---- Keyboard FIFO consumed by _GetKey() ----
  * The Amiga build's level-2 ISR pushes raw scan codes into keyBuffer
@@ -327,7 +333,26 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         case SDLK_RCTRL:
         case SDLK_LCTRL:
         case SDLK_RETURN: s_kbd_fire = 1; break;
-        case SDLK_SPACE:  s_kbd_fire = 1; s_kbd_skip = 1; break;
+        case SDLK_SPACE:
+            /* In a live match SPACE is SWOS's highlight-capture key
+             * (game_loop.c _MainKeysCheck case 0x20 — sets
+             * fadeAndSaveHighlightScene, which fades the screen).
+             * Don't also route it to fire/skip on the game pad — that
+             * would mash the player's fire button at the same time as
+             * the highlight capture and cause the brief pause + black
+             * frame the tester reported. Outside a match (frontend,
+             * season-end menu chain, edit screens) the keyBuffer push
+             * is harmless because _MainKeysCheck isn't reached, so
+             * SPACE here is purely our menu fire + season-skip latch.
+             *
+             * gameState in the [ST_STARTING_GAME .. ST_PENALTIES]
+             * window means a match is on screen — see game_types.h. */
+            if (!(gameState >= 21 /*ST_STARTING_GAME*/ &&
+                  gameState <= 31 /*ST_PENALTIES*/)) {
+                s_kbd_fire = 1;
+                s_kbd_skip = 1;
+            }
+            break;
         default: break;
         }
     } break;
