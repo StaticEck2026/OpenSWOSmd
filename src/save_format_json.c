@@ -1122,9 +1122,7 @@ static const FieldDesc s_career_scalars[] = {
      * apply. Covers DIYCompetition header bytes 2..153; bytes 0..1 are
      * the primary_slot_type scalar at the top of this table, and
      * bytes 154..2899 are covered by diy_team_id_list_type_2/0/1. */
-    /* Keep the legacy "primary_comp_block_padding" name so old saves'
-     * blob-form data matches via the load_legacy_blobs_fallback shim. */
-    { "primary_comp_block_padding", (void *)((uint8_t *)&careerFileBuffer + 93308), 154, FLD_BYTES },
+    { "primary_comp_block", (void *)((uint8_t *)&careerFileBuffer + 93308), 154, FLD_BYTES },
     FA("competition_context",         competitionContext,         2900, FLD_BYTES),
     FA("tertiary_competition_context",tertiaryCompetitionContext, 1092, FLD_BYTES),
     FA("diy_competition_context",     diyCompetitionContext,      1092, FLD_BYTES),
@@ -1917,38 +1915,6 @@ int SaveJson_FileIsJson(const uint8_t *filename)
  * dependency order. Used by both the main load path (after
  * opaque_data has been laid down) and the verify path (against a
  * zeroed buffer so we can diff). */
-/* Backward-compat: pre-finalization saves stored large byte arrays
- * under a top-level "blobs" sub-object as base64 strings. After the
- * format cleanup those entries moved into s_career_scalars as
- * FLD_BYTES scalars under "career_scalars". For each FLD_BYTES field,
- * if "$.career_scalars.<name>" wasn't present in the save but
- * "$.blobs.<name>" IS, decode the base64 blob into the field's
- * address. Old saves keep loading; new saves are unaffected. */
-static void load_legacy_blobs_fallback(const char *src, int src_size,
-                                       const char *scalar_section,
-                                       const FieldDesc *table)
-{
-    const char *bs = NULL; int bsl = 0;
-    if (mjson_find(src, src_size, "$.blobs", &bs, &bsl) != MJSON_TOK_OBJECT)
-        return;
-
-    char path[80];
-    for (const FieldDesc *f = table; f->type != FLD_END; f++) {
-        if (f->type != FLD_BYTES) continue;
-        /* If the scalar form is present, we already loaded the value
-         * via load_scalar_table; skip the blob fallback. */
-        snprintf(path, sizeof(path), "$.%s.%s", scalar_section, f->name);
-        const char *scalar_slice = NULL; int scalar_slice_len = 0;
-        if (mjson_find(src, src_size, path,
-                       &scalar_slice, &scalar_slice_len) == MJSON_TOK_ARRAY)
-            continue;
-        /* Old-format save — decode blob into field address. */
-        snprintf(path, sizeof(path), "$.%s", f->name);
-        mjson_get_base64(bs, bsl, path,
-                         (char *)f->addr, (int)f->size);
-    }
-}
-
 static void apply_semantic_load(const char *src, int src_size)
 {
     /* Reset the string pool up front so any { str: "..." } pointer
@@ -1967,10 +1933,6 @@ static void apply_semantic_load(const char *src, int src_size)
      * template after the blob load has put stale bytes into dest. */
     restore_comp_copy_text_ptrs_from_template();
     load_scalar_table(src, src_size, "career_scalars", s_career_scalars);
-    /* Backward-compat: fall back to "$.blobs.<name>" base64 for any
-     * FLD_BYTES scalar that wasn't present in career_scalars. Lets
-     * pre-finalization saves keep loading. */
-    load_legacy_blobs_fallback(src, src_size, "career_scalars", s_career_scalars);
 
     load_team_file_ex(src, src_size, "$.career_team",  &careerTeam);
     load_team_file_ex(src, src_size, "$.current_team", &currentTeam);
@@ -2368,12 +2330,6 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
 
     load_scalar_table_range((const char *)src, (int)src_size,
                             "comp_scalars", s_career_scalars, lo, hi);
-
-    /* Backward-compat: fall back to "$.blobs.<name>" base64 for old
-     * preset/DIY saves whose FLD_BYTES scalars used to live in the
-     * named-blobs sub-object. Same shim as the career load. */
-    load_legacy_blobs_fallback((const char *)src, (int)src_size,
-                               "comp_scalars", s_career_scalars);
 
     /* DIY teams — walk array via mjson_next so each iteration is
      * O(1) in array position. */
