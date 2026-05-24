@@ -6502,6 +6502,11 @@ pastTeamLoad:
     /* Determine slot type and competition name */
     uint16_t slotType = a6[0] & 0xFF;
     uint8_t *compInfo = ((uint8_t **)&currentCompetitionPtr)[slotType]; /* a1 */
+    /* compInfo NULL when the loaded save left the slot pointers unset
+     * — e.g. a SEA captured with selTeamNumber==0xFFFF. Hide the entry
+     * instead of dereferencing NULL. */
+    if (compInfo == 0)
+        goto hideAll;
     uint16_t d5; /* color/stringFlags value */
     uint8_t *namePtr; /* competition name pointer */
 

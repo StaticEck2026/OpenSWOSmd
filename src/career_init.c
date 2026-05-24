@@ -1364,7 +1364,25 @@ static void _Rebuild_CompetitionSlotPointers(void)
         _Career_SetCupPickList_ForSelectedRegion(0);
         compTablePtr = &careerCupPickList;
     } else {
+        /* selTeamNumber is a packed (country << 8) | ordinal id; 0xFFFF
+         * is the "no team" / mid-transition sentinel (see e.g.
+         * career_status.c:3139 where _Career_PostMatchUpdate temporarily
+         * overrides it). If a SAVE was taken during that window, the
+         * loaded value lands here as 0xFFFF and tableIdx=0xFF points at
+         * an empty slot in competitionsTable[256]. Leave the comp
+         * pointers all NULL — downstream consumers
+         * (_CareerGameListCommon etc.) skip drawing when they see a
+         * NULL slot rather than dereferencing garbage. */
         uint16_t tableIdx = selTeamNumber >> 8;
+        if (tableIdx >= 256 || competitionsTable[tableIdx] == 0) {
+            currentCompetitionPtr    = 0;
+            secondaryCompetitionPtr  = 0;
+            tertiaryCompetitionPtr   = 0;
+            quaternaryCompetitionPtr = 0;
+            diyCompetitionPtr        = 0;
+            diyCompetitionTablePtr   = (uint32_t *)0;
+            return;
+        }
         compTablePtr = (uint32_t *)competitionsTable[tableIdx];
     }
     if (!compTablePtr)

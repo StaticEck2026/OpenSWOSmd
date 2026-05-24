@@ -228,7 +228,12 @@ uint16_t _InputText(uint16_t maxLenPlus1, uint8_t *entryRaw)
     for (;;) {
         _MenuCheckControls();
 
-        if (shortFire != 0)
+        /* shortFire commits the text — except when it was triggered by
+         * SPACE. SDL binds SPACE → fire1 for menu navigation, but
+         * during text input SPACE should be a literal space character
+         * (see inputAllowedControlKeys which includes 0x20). The filter
+         * loop below inserts it as a printable char. */
+        if (shortFire != 0 && currentKey != 0x20)
             goto commit;
 
         uint16_t key = _InputTextFilterKey();
