@@ -123,8 +123,18 @@ static inline void setFgWord(MenuEntry *e, uint16_t v) {
 }
 
 /* Compile-time size checks */
+/* Menu has 4 pointer fields (onInit, afterDraw, onDraw, selectedEntry);
+ * +16 on 64-bit. endOfMenuPtr is still uint32_t (raw offset in
+ * template), so it doesn't contribute.
+ * MenuEntry has 5 pointer-width fields (bg, fg uintptr_t + onSelect,
+ * beforeDraw, afterDrawCb fn-ptrs); +20 on 64-bit. */
+#if UINTPTR_MAX == 0xFFFFFFFFu
 typedef char _menu_size_check[(sizeof(Menu) == 22) ? 1 : -1];
 typedef char _menuentry_size_check[(sizeof(MenuEntry) == 56) ? 1 : -1];
+#else
+typedef char _menu_size_check[(sizeof(Menu) == 38) ? 1 : -1];
+typedef char _menuentry_size_check[(sizeof(MenuEntry) == 76) ? 1 : -1];
+#endif
 
 /* ---- Constants ---- */
 #define MENU_HEADER_SIZE   22

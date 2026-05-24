@@ -19,6 +19,11 @@ typedef unsigned int uint32_t;
 typedef signed char    int8_t;
 typedef short          int16_t;
 typedef int int32_t;
+/* stdint.h pulled in for UINTPTR_MAX (used by 32/64-bit size_check
+ * branches below). The typedefs above predate this and stay for
+ * project-style consistency; stdint.h's matching typedefs are
+ * idempotent. */
+#include <stdint.h>
 
 /* ---- Forward declarations ---- */
 typedef struct Sprite Sprite;
@@ -101,7 +106,13 @@ struct __attribute__((packed, aligned(2))) Sprite {
     int16_t    sentAway;            /* 108 */
 };
 
+/* Sprite has 2 pointer fields (animationTable, frameIndicesTable);
+ * each grows from 4→8 bytes on 64-bit. */
+#if UINTPTR_MAX == 0xFFFFFFFFu
 typedef char _sprite_size_check[(sizeof(Sprite) == 110) ? 1 : -1];
+#else
+typedef char _sprite_size_check[(sizeof(Sprite) == 118) ? 1 : -1];
+#endif
 
 #define SPRITE_SIZE 110
 
@@ -130,10 +141,23 @@ typedef struct __attribute__((packed, aligned(2))) {
 } AnimTable_8;
 
 /* Compile-time size checks for AnimTable variants */
+/* AnimTable* have `int16_t *animFrames[N]` where N varies per variant;
+ * each pointer grows from 4→8 bytes on 64-bit. 32-bit/64-bit sizes:
+ *   AnimTable    : N=32 → 2 + 32*4 = 130 / 2 + 32*8 = 258
+ *   AnimTable_20 : N=20 → 2 + 20*4 = 82  / 2 + 20*8 = 162
+ *   AnimTable_12 : N=12 → 2 + 12*4 = 50  / 2 + 12*8 = 98
+ *   AnimTable_8  : N=8  → 2 +  8*4 = 34  / 2 +  8*8 = 66 */
+#if UINTPTR_MAX == 0xFFFFFFFFu
 typedef char _animtable_size_check[(sizeof(AnimTable) == 130) ? 1 : -1];
 typedef char _animtable20_size_check[(sizeof(AnimTable_20) == 82) ? 1 : -1];
 typedef char _animtable12_size_check[(sizeof(AnimTable_12) == 50) ? 1 : -1];
 typedef char _animtable8_size_check[(sizeof(AnimTable_8) == 34) ? 1 : -1];
+#else
+typedef char _animtable_size_check[(sizeof(AnimTable) == 258) ? 1 : -1];
+typedef char _animtable20_size_check[(sizeof(AnimTable_20) == 162) ? 1 : -1];
+typedef char _animtable12_size_check[(sizeof(AnimTable_12) == 98) ? 1 : -1];
+typedef char _animtable8_size_check[(sizeof(AnimTable_8) == 66) ? 1 : -1];
+#endif
 
 /* ==================================================================
  * TeamGeneralInfo — 144 bytes, pack(1)
@@ -211,7 +235,15 @@ struct __attribute__((packed, aligned(2))) TeamGeneralInfo {
     int16_t            resetControls;               /* 142 */
 };
 
+/* TeamGeneralInfo has 9 pointer fields (opponentsTeam, inGameTeamPtr,
+ * teamStatsPtr, spritesTable, shotChanceTable, controlledPlayer,
+ * passToPlayerPtr, lastHeadingTacklingPlayer, passingKickingPlayer);
+ * +36 bytes on 64-bit. */
+#if UINTPTR_MAX == 0xFFFFFFFFu
 typedef char _tgi_size_check[(sizeof(TeamGeneralInfo) == 144) ? 1 : -1];
+#else
+typedef char _tgi_size_check[(sizeof(TeamGeneralInfo) == 180) ? 1 : -1];
+#endif
 
 /* ==================================================================
  * PlayerInfo — 61 bytes (embedded in TeamGame)
@@ -329,7 +361,12 @@ struct SpriteGraphics {
     int16_t  ordinal;           /* 22 */
 };
 
+/* SpriteGraphics has 2 pointer fields (sprData, maskPtr); +8 on 64-bit. */
+#if UINTPTR_MAX == 0xFFFFFFFFu
 typedef char _spritegfx_size_check[(sizeof(SpriteGraphics) == 24) ? 1 : -1];
+#else
+typedef char _spritegfx_size_check[(sizeof(SpriteGraphics) == 32) ? 1 : -1];
+#endif
 
 #define SPRITEGRAPHICS_SIZE 24
 
@@ -554,7 +591,12 @@ typedef struct DIYCompetition {
     int16_t  playEachTeam;             /* 0x5E */
 } DIYCompetition;
 
+/* DIYCompetition has 1 pointer field (namePtr); +4 on 64-bit. */
+#if UINTPTR_MAX == 0xFFFFFFFFu
 typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x60) ? 1 : -1];
+#else
+typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x64) ? 1 : -1];
+#endif
 
 /* ==================================================================
  * DIYTeamStats / DIYLeagueTableRow — 18 bytes
@@ -764,7 +806,14 @@ typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx {
     };
 } DIYCompetitionEx;
 
+/* DIYCompetitionEx embeds DIYCompetition (which has 1 pointer);
+ * +4 on 64-bit via that. The DIYCompetitionEx_* view variants are
+ * pointer-free. */
+#if UINTPTR_MAX == 0xFFFFFFFFu
 typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5C8) ? 1 : -1];
+#else
+typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5CC) ? 1 : -1];
+#endif
 
 /* ==================================================================
  * SeasonInformations — 106 bytes per row, pack(2)
@@ -807,7 +856,13 @@ typedef struct __attribute__((packed, aligned(2))) SeasonInformations {
     int8_t   managerStatus;           /* 0x69 */
 } SeasonInformations;
 
+/* SeasonInformations has 4 pointer fields (leagueStrPtr, strPtr1/2/3);
+ * +16 on 64-bit. */
+#if UINTPTR_MAX == 0xFFFFFFFFu
 typedef char _seasoninformations_size_check[(sizeof(SeasonInformations) == 106) ? 1 : -1];
+#else
+typedef char _seasoninformations_size_check[(sizeof(SeasonInformations) == 122) ? 1 : -1];
+#endif
 
 /* ==================================================================
  * JobOffer — 26 bytes, pack(2)
