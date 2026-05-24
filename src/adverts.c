@@ -5,6 +5,7 @@
  */
 #include "adverts.h"
 #include "game_types.h"
+#include <stdint.h>
 
 /* Sprite image indices */
 #define SPR_ADVERT_1_PART_1     113
@@ -257,9 +258,13 @@ void _ManageAdvertisements(void)
 #else
                 uint32_t lineBytes = (uint32_t)wquads * 8;
 #endif
-                uint32_t offset = (uint32_t)currentAnimatedAdLine * lineBytes;
-                offset += a6[d2];
-                gfx->sprData = offset;
+                /* a6[d2] is the absolute base address of this sprite's
+                 * pixel data (stored as uint32_t in advert*Pointers[]).
+                 * On 64-bit hosts the cast through uintptr_t preserves
+                 * the full pointer when assigning to sprData (now a
+                 * uint8_t *), instead of truncating via uint32_t. */
+                uint32_t scrollOffset = (uint32_t)currentAnimatedAdLine * lineBytes;
+                gfx->sprData = (uint8_t *)(uintptr_t)a6[d2] + scrollOffset;
             }
             d1 += 0x10;
             imgIdx += 1;

@@ -133,7 +133,7 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
     }
 
     /* sprData pointer = start of payload (just past the header) */
-    headerBase->sprData = (uint32_t)(headerBase + 1);
+    headerBase->sprData = (uint8_t *)(headerBase + 1);
     pixelPtr = (uint8_t *)(headerBase + 1);
 
 #ifdef SWOS_SDL_BUILD
@@ -242,7 +242,7 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
     }
 
     /* Negative maskSel (bit 15 set): inline mask composition */
-    headerBase->maskPtr = (uint32_t)pixelPtr;
+    headerBase->maskPtr = pixelPtr;
 
     if (src == (uint8_t *)0 || maskSel == (uint16_t)0xFFFE) {
         /* Generate right-edge mask */
@@ -262,7 +262,7 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
         pixelPtr = (uint8_t *)wp;
     } else {
         /* Compose mask by OR'ing bitplanes together */
-        uint8_t *pixelData = (uint8_t *)headerBase->sprData;
+        uint8_t *pixelData = headerBase->sprData;
         uint16_t nlines = (uint16_t)headerBase->nlines;
         uint16_t planeWordStride = wquads * 2;  /* bytes per plane row */
         uint16_t rowIdx;

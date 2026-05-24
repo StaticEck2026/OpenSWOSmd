@@ -510,14 +510,14 @@ _UpdateBall(void)
     /* ---- Select frame table (static vs moving) ---- */
     if (ball->deltaX.raw != 0 || ball->deltaY.raw != 0) {
         /* ball is moving */
-        if (ball->frameIndicesTable != (uint32_t)&ballMovingFrameIndices) {
-            ball->frameIndicesTable = (uint32_t)&ballMovingFrameIndices;
+        if (ball->frameIndicesTable != (int16_t *)ballMovingFrameIndices) {
+            ball->frameIndicesTable = (int16_t *)ballMovingFrameIndices;
             ball->frameIndex = (int16_t)0;
         }
     } else {
         /* ball is stationary */
-        if (ball->frameIndicesTable != (uint32_t)&ballStaticFrameIndices) {
-            ball->frameIndicesTable = (uint32_t)&ballStaticFrameIndices;
+        if (ball->frameIndicesTable != (int16_t *)ballStaticFrameIndices) {
+            ball->frameIndicesTable = (int16_t *)ballStaticFrameIndices;
             ball->frameIndex = (int16_t)0;
         }
     }
@@ -542,7 +542,7 @@ _UpdateBall(void)
 
 extract_frame:
     {
-        int16_t *table = (int16_t *)ball->frameIndicesTable;
+        int16_t *table = ball->frameIndicesTable;
         int16_t fi = ball->frameIndex;
         int16_t frame = table[fi];
         if (frame >= 0) {

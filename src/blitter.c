@@ -470,8 +470,8 @@ void _BlitSpritePlanar_Word(uint16_t spriteIndex)
 
     hdr = *(SpriteGraphics **)(base + (uint32_t)(spriteIndex << 2));
     type = hdr->type;
-    srcData = (uint8_t *)hdr->sprData;
-    dstMask = (uint8_t *)hdr->maskPtr;
+    srcData = hdr->sprData;
+    dstMask = hdr->maskPtr;
     nlines = (uint16_t)hdr->nlines;
     wquads = (uint16_t)hdr->wquads;
 
@@ -578,8 +578,8 @@ void _BlitSpritePlanar_Word_StridedDest(uint16_t spriteIndex)
 
     hdr = *(SpriteGraphics **)(base + (uint32_t)(spriteIndex << 2));
     type = hdr->type;
-    srcData = (uint8_t *)hdr->sprData;
-    dstMask = (uint8_t *)hdr->maskPtr;
+    srcData = hdr->sprData;
+    dstMask = hdr->maskPtr;
     nlines = (uint16_t)hdr->nlines;
 
     stride2 = (uint16_t)hdr->wquads * 2;
@@ -639,8 +639,8 @@ void _BlitSpritePlanar_Long_StridedDest(uint16_t spriteIndex)
 
     hdr = *(SpriteGraphics **)(base + (uint32_t)(spriteIndex << 2));
     type = hdr->type;
-    srcData = (uint8_t *)hdr->sprData;
-    dstMask = (uint8_t *)hdr->maskPtr;
+    srcData = hdr->sprData;
+    dstMask = hdr->maskPtr;
     nlines = (uint16_t)hdr->nlines;
 
     stride2 = (uint16_t)hdr->wquads * 2;
@@ -721,7 +721,7 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     }
     if (!srcHdr || !dstHdr) return;
 
-    const uint8_t *src = (const uint8_t *)(uintptr_t)srcHdr->sprData;
+    const uint8_t *src = srcHdr->sprData;
     uint8_t       *dst = (uint8_t       *)(uintptr_t)dstHdr->sprData;
     if (!src || !dst) return;
 
@@ -811,7 +811,7 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     dstRowAdv = (int32_t)dstRowBytes;
 
     /* Destination data pointer */
-    dstBase = (uint8_t *)dstHdr->sprData;
+    dstBase = dstHdr->sprData;
 
     /* Glyph height */
     glyphHeight = (uint16_t)srcHdr->nlines;
@@ -846,7 +846,7 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     custom->bltcon1 = bltconShift;
 
     /* Validate mask pointer exists */
-    maskPtr = (uint8_t *)srcHdr->maskPtr;
+    maskPtr = srcHdr->maskPtr;
     if (maskPtr == 0) {
         panicReasonCode = 0x1567;
         _PanicHaltLoop();
@@ -884,7 +884,7 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     custom->bltdmod = dstMod;
 
     /* Glyph data: advance to plane 1, and compute last plane pointer */
-    glyphData = (uint8_t *)srcHdr->sprData;      /* sprData (plane 0 start) */
+    glyphData = srcHdr->sprData;      /* sprData (plane 0 start) */
     glyphData += (int32_t)srcStride2;            /* advance to plane 1 */
     glyphPlane3 = glyphData + (int32_t)srcStride2 * (NUM_PLANES - 2);  /* last plane */
 

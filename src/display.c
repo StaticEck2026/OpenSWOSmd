@@ -995,7 +995,7 @@ void _HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
     SpriteGraphics **table = (SpriteGraphics **)(uintptr_t)spriteGraphicsPtr;
     SpriteGraphics *spr = table[spriteIndex];
     if (!spr) return;
-    uint8_t *data = (uint8_t *)(uintptr_t)spr->sprData;
+    uint8_t *data = spr->sprData;
     if (!data) return;
     size_t bytes = (size_t)spr->wquads * 16 * (size_t)spr->nlines;
     memset(data, 0, bytes);

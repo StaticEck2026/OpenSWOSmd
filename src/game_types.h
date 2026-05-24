@@ -63,7 +63,7 @@ struct __attribute__((packed, aligned(2))) Sprite {
     int8_t     playerDownTimer;     /* 13 */
     int16_t    field_E;             /* 14 */
     int16_t    field_10;            /* 16 */
-    uint32_t   frameIndicesTable;   /* 18: raw 68k ptr to int16_t[] */
+    int16_t   *frameIndicesTable;   /* 18: ptr to int16_t[] */
     int16_t    frameIndex;          /* 22 */
     int16_t    frameDelay;          /* 24 */
     int16_t    cycleFramesTimer;    /* 26 */
@@ -317,8 +317,8 @@ typedef char _goalieskill_size_check[(sizeof(GoalieSkill) == 60) ? 1 : -1];
  * SpriteGraphics — 24 bytes
  * ================================================================== */
 struct SpriteGraphics {
-    uint32_t sprData;           /* 0: raw 68k ptr to pixel data */
-    uint32_t maskPtr;           /* 4: raw 68k ptr to mask data (0 = no mask) */
+    uint8_t *sprData;           /* 0: ptr to pixel data */
+    uint8_t *maskPtr;           /* 4: ptr to mask data (NULL = no mask) */
     uint16_t type;              /* 8: 0=separate planes, nonzero=linked/interleaved */
     int16_t  pixWidth;          /* 10 */
     int16_t  nlines;            /* 12 */

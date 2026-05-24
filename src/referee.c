@@ -87,7 +87,7 @@ void _InitRefereeAnimationTable(uint8_t *animTable)
     uint16_t dir = (uint16_t)a0->direction;
     uint16_t frameDelay = *(uint16_t *)animTable;
     /* Frame table pointer at offset 2 + dir*4 */
-    uint32_t frameTablePtr = *(uint32_t *)(animTable + 2 + dir * 4);
+    int16_t *frameTablePtr = *(int16_t **)(animTable + 2 + dir * 4);
 
     a0->frameDelay        = (int16_t)frameDelay;
     a0->frameIndicesTable = frameTablePtr;
@@ -204,7 +204,7 @@ void _UpdateReferee(void)
         a0->frameIndex += 1;
         a0->cycleFramesTimer = a0->frameDelay;
 
-        int16_t *frameTable = (int16_t *)a0->frameIndicesTable;
+        int16_t *frameTable = a0->frameIndicesTable;
 
     decode_frame:;
         int16_t frameIdx = a0->frameIndex;
