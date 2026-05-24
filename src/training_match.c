@@ -483,7 +483,7 @@ extern uint8_t playerPositions[];
 extern uint16_t numPlayers;
 extern uint8_t teamAName[];
 extern uint8_t teamBName[];
-extern uint32_t teamTacticsTable[];
+extern void *teamTacticsTable[];
 extern void *tacticPosMapPtrs[];
 extern void *trainingPosOrderTables[];
 extern uint16_t pitchTypeOrSeason;

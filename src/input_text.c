@@ -216,7 +216,7 @@ uint16_t _InputText(uint16_t maxLenPlus1, uint8_t *entryRaw)
     /* Save original string pointer, copy to edit buffer */
     uint8_t *origStr = (uint8_t *)entry->fg;
     _StringCopy(origStr, inMenuKeyboardBuffer);
-    entry->fg = (uint32_t)inMenuKeyboardBuffer;
+    entry->fg = (uintptr_t)inMenuKeyboardBuffer;
 
     /* Cursor starts at end of string (at the NUL terminator).
      * Asm: GetStringLength stub sets a0 = buffer + len (at NUL). */
@@ -256,7 +256,7 @@ uint16_t _InputText(uint16_t maxLenPlus1, uint8_t *entryRaw)
         }
 
         if (key == 27) { /* Escape — cancel */
-            entry->fg = (uint32_t)origStr;
+            entry->fg = (uintptr_t)origStr;
             _CallDrawMenuItem(entry);
             deadVar02 = 0;
             return 1;
@@ -293,7 +293,7 @@ uint16_t _InputText(uint16_t maxLenPlus1, uint8_t *entryRaw)
 
 commit:
     _StringCopy(inMenuKeyboardBuffer, origStr);
-    entry->fg = (uint32_t)origStr;
+    entry->fg = (uintptr_t)origStr;
     _CallDrawMenuItem(entry);
     deadVar02 = 0;
     return 0;

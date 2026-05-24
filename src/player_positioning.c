@@ -23,7 +23,7 @@ extern int16_t  playerXQuadrantOffset;
 extern int16_t  playerYQuadrantOffset;
 
 /* Tactics lookup table: array of raw 68k pointers to TeamTactics structures */
-extern uint32_t teamTacticsTable[];
+extern void *teamTacticsTable[];
 
 /* Position lookup tables (in SWOS2.s code section) */
 extern int16_t  playerXQuadrantsCoordinates[];

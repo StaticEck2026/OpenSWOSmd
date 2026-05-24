@@ -1796,20 +1796,20 @@ void _UpdatePlayerOfferMenuIndicators(void)
 
     /* Entry 8 (0x1C0/56): toggle +/- based on numExtraPlayersWanted sign */
     MenuEntry *entry8 = &menuEntries[8];
-    entry8->fg = (uint32_t)aPlus;
+    entry8->fg = (uintptr_t)aPlus;
     if (numExtraPlayersWanted >= 0) {
-        entry8->fg = (uint32_t)aMinus;
+        entry8->fg = (uintptr_t)aMinus;
     }
 
     /* Entries 10,11 (0x230/56, 0x268/56): toggle +/- based on swap/extra player state */
     MenuEntry *entry10 = &menuEntries[10];
     MenuEntry *entry11 = &menuEntries[11];
-    entry10->fg = (uint32_t)aPlus;
-    entry11->fg = (uint32_t)aPlus;
+    entry10->fg = (uintptr_t)aPlus;
+    entry11->fg = (uintptr_t)aPlus;
     if (offerSwapPlayerOrdinal >= 0) {
-        entry10->fg = (uint32_t)aMinus;
+        entry10->fg = (uintptr_t)aMinus;
         if (offerExtraPlayerOrdinal >= 0) {
-            entry11->fg = (uint32_t)aMinus;
+            entry11->fg = (uintptr_t)aMinus;
         }
     }
 
@@ -2001,9 +2001,9 @@ extern uint8_t *buyOtherPlayersTitlePtr;
 __attribute__((used, externally_visible))
 void _BuyOtherPlayersFinish(void)
 {
-    menuEntries[0].fg = (uint32_t)buyOtherPlayersTitlePtr;
+    menuEntries[0].fg = (uintptr_t)buyOtherPlayersTitlePtr;
     uint8_t *teamName = buyOtherPlayersTeamPtr->team.teamName;
-    menuEntries[1].fg = (uint32_t)teamName;
+    menuEntries[1].fg = (uintptr_t)teamName;
 }
 
 /* BuyOtherPlayersInit: get team pointer from teamOffering, store it, then finish */
@@ -2164,7 +2164,7 @@ void _EnableDisableOffers(void)
     }
 
     if (numOffers == 0) {
-        entry->fg = (uint32_t)aNoOffers;
+        entry->fg = (uintptr_t)aNoOffers;
         entry->isDisabled = 1;
         uint16_t color = *(uint16_t *)&entry->bg;
         color = (color & 0xFFF0) + PINK_TO_BROWN_9;
@@ -2395,7 +2395,7 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
         }
         uint16_t extractParam = 0x0D + maxNameLen;
         uint8_t *nameResult = _ExtractSurname((uint8_t *)pf->playerName, extractParam);
-        a0->fg = (uint32_t)nameResult;
+        a0->fg = (uintptr_t)nameResult;
         a0->y = y;
         a0->isInvisible = 0;
         a0++;
@@ -2468,7 +2468,7 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
         _InitPlayerValueDisplayStruct(player, (uint8_t *)a0);
     } else {
         _FormatPlayerValueOrStatusText(player, fundsBuffer);
-        a0->fg = (uint32_t)fundsBuffer;
+        a0->fg = (uintptr_t)fundsBuffer;
     }
     a0->y = y;
     a0->isInvisible = 0;
@@ -2641,7 +2641,7 @@ void _ShowPlayerMarket(void)
     else
         title = aPlayersOnForei;
 
-    menuEntries[0].fg = (uint32_t)title;
+    menuEntries[0].fg = (uintptr_t)title;
     uint8_t *balanceBuf = (uint8_t *)menuEntries[1].fg;
     _GetBankBalance(balanceBuf);
     _PlayerMarketUpdateFilterMenuEntryState();
@@ -2802,9 +2802,9 @@ void _PlayerMarketUpdateMoreListLabel(void)
     MenuEntry *entry = &menuEntries[7]; /* 0x188/56 = 7 */
     uint16_t offset = playerMarketListScrollOffset + 10;
     if (offset < total)
-        entry->fg = (uint32_t)aMore;
+        entry->fg = (uintptr_t)aMore;
     else
-        entry->fg = (uint32_t)aList;
+        entry->fg = (uintptr_t)aList;
 }
 
 /* PlayerMarketResetListState (Chunk 163) */

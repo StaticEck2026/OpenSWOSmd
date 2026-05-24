@@ -30,7 +30,7 @@
 #define PLAYERPOSITIONS_SIZE         35
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uint32_t menuImageStreamBaseEnd;
+extern uint8_t *menuImageStreamBaseEnd;
 extern uint16_t menuBGImageCmdStream[];
 extern uint8_t aGrafsMenubgRaw[];
 extern uint16_t twoPlayers;
@@ -114,8 +114,8 @@ extern uint8_t aUSER_E[];
 extern uint8_t aUSER_F[];
 
 /* InitializeTacticsPositions globals */
-extern uint32_t playersPositionsByTactics[18];
-extern uint32_t teamTacticsTable[19];
+extern void *playersPositionsByTactics[18];
+extern void *teamTacticsTable[19];
 extern uint16_t tacticsPositionDefensiveness[11];
 
 /* SaveOptions / RestoreOptions globals */
@@ -123,14 +123,14 @@ extern uint8_t saveGameLength[];
 
 /* ShowErrorMenu globals */
 extern uint16_t errorPromptsEnabled;
-extern uint32_t errorText;
+extern uintptr_t errorText;
 extern uint8_t continueMenu[];
 
 /* DoContinueAbortMenu globals */
-extern uint32_t promptHeader;
-extern uint32_t whatIsChanging;
-extern uint32_t continueText;
-extern uint32_t abortText;
+extern uintptr_t promptHeader;
+extern uintptr_t whatIsChanging;
+extern uintptr_t continueText;
+extern uintptr_t abortText;
 extern uint16_t contAbortDefault;
 extern uint16_t contAbortResult;
 extern uint8_t continueAbortMenu[];
@@ -219,22 +219,16 @@ void _SetDefaultNameAndSurname(void)
 
     mrOrMs = 0;
 
-    /* Original: tick & 0xFF, * 6, >> 8, << 2 = index into pointer table */
+    /* Original asm computed (tick & 0xFF) * 6 / 256 — yielding 0..5 — then
+     * scaled by 4 to index a 32-bit pointer table by byte offset. On 64-bit
+     * the pointer slots are 8 bytes, so the byte-offset arithmetic was
+     * pulling values from mid-pointer. Drop the byte math and index the
+     * `void *[6]` arrays directly. */
     idx = currentGameTick & 0xFF;
     idx = (uint16_t)((idx * 6) >> 8);
-    idx = idx << 2;  /* multiply by 4 for longword pointer table offset */
 
-    /* idx is now a byte offset into the pointer tables (0, 4, 8, 12, 16, 20) */
-    {
-        uint32_t *nameTable = (uint32_t *)((uint8_t *)defaultNamesTable + idx);
-        uint8_t *name = (uint8_t *)(*nameTable);
-        _StringCopy(name, managerNameBuffer);
-    }
-    {
-        uint32_t *surnameTable = (uint32_t *)((uint8_t *)defaultSurnamesTable + idx);
-        uint8_t *surname = (uint8_t *)(*surnameTable);
-        _StringCopy(surname, managerSurnameBuffer);
-    }
+    _StringCopy((uint8_t *)defaultNamesTable[idx], managerNameBuffer);
+    _StringCopy((uint8_t *)defaultSurnamesTable[idx], managerSurnameBuffer);
 }
 
 /* ================================================================
@@ -410,7 +404,7 @@ void _InitCareerVariables(uint16_t gameTypeParam)
 __attribute__((used, externally_visible))
 void _PrepareMenuBackground(void)
 {
-    _ProcessImageCommandStream(menuBGImageCmdStream, (uint8_t *)menuImageStreamBaseEnd);
+    _ProcessImageCommandStream(menuBGImageCmdStream, menuImageStreamBaseEnd);
     _LoadOverlayToFrontbuffer(aGrafsMenubgRaw);
 }
 
@@ -516,7 +510,7 @@ __attribute__((used, externally_visible))
 void _ShowErrorMenu(uint8_t *errorTextStr)
 {
     errorPromptsEnabled = 1;
-    errorText = (uint32_t)errorTextStr;
+    errorText = (uintptr_t)errorTextStr;
     _ShowMenu(continueMenu);
 }
 
@@ -535,10 +529,10 @@ int16_t _DoContinueAbortMenu(uint8_t *header, uint8_t *changing,
                               uint8_t *contText, uint8_t *abortTextStr,
                               uint16_t defaultEntry)
 {
-    promptHeader = (uint32_t)header;
-    whatIsChanging = (uint32_t)changing;
-    continueText = (uint32_t)contText;
-    abortText = (uint32_t)abortTextStr;
+    promptHeader = (uintptr_t)header;
+    whatIsChanging = (uintptr_t)changing;
+    continueText = (uintptr_t)contText;
+    abortText = (uintptr_t)abortTextStr;
     contAbortDefault = defaultEntry;
 
     _ShowMenu(continueAbortMenu);
@@ -619,7 +613,7 @@ void _ContinueAbortInit(void)
     }
 
     /* If abort text is the standard "ABORT" string, color it red */
-    if (abortText == (uint32_t)aAbort) {
+    if (abortText == (uintptr_t)aAbort) {
         /* move.w reads/writes upper 16 bits of bg (big-endian) */
         uint16_t bgColor = (uint16_t)(menuEntries[3].bg >> 16);
         bgColor = (bgColor & 0xFFF0) + 10; /* RED_10 */
@@ -694,7 +688,7 @@ void _ShowStadiumInit(void)
     _LoadOverlayToFrontbuffer(aGrafsMenubg2Ra);
 
     /* Entry 0: game name */
-    menuEntries[0].fg = (uint32_t)gameName;
+    menuEntries[0].fg = (uintptr_t)gameName;
 
     if (gameRound[0] == 0) {
         /* No round info: hide entry 1, nudge entry 0 down */
@@ -702,7 +696,7 @@ void _ShowStadiumInit(void)
         menuEntries[0].y += 5;
     } else {
         /* Show round info in entry 1 */
-        menuEntries[1].fg = (uint32_t)gameRound;
+        menuEntries[1].fg = (uintptr_t)gameRound;
     }
 
     /* Entry 2: top team name + trailing space */
@@ -754,7 +748,7 @@ void _ShowStadiumInit(void)
     {
         int16_t i;
         for (i = 0; i < 16; i++) {
-            menuEntries[16 + i].fg = (uint32_t)topTeamInGame.players[i].fullName;
+            menuEntries[16 + i].fg = (uintptr_t)topTeamInGame.players[i].fullName;
         }
     }
 
@@ -762,7 +756,7 @@ void _ShowStadiumInit(void)
     {
         int16_t i;
         for (i = 0; i < 16; i++) {
-            menuEntries[43 + i].fg = (uint32_t)bottomTeamInGame.players[i].fullName;
+            menuEntries[43 + i].fg = (uintptr_t)bottomTeamInGame.players[i].fullName;
         }
     }
 
@@ -867,7 +861,7 @@ extern void _PlayTrainingGame(void);
 extern uint8_t squadMenu[];
 extern uint16_t squadPrevSelectedPlayerIndex;
 extern uint16_t isSquadViewMode;
-extern uint32_t squadTeamFilePtr;
+extern uintptr_t squadTeamFilePtr;
 
 /* ================================================================
  * SelectTraining  (SWOS2.s line 56661)
@@ -1304,7 +1298,7 @@ void _SquadUpdateMenuState(void)
             selTeamNumber == PACK_BE_U16(tf->countryNumber, tf->teamOrdinal)) {
             menuEntries[26].isInvisible = 0;
             menuEntries[27].isInvisible = 0;
-            menuEntries[27].fg = (uint32_t)removedPlayerStatAccum;
+            menuEntries[27].fg = (uintptr_t)removedPlayerStatAccum;
         } else {
             menuEntries[26].isInvisible = 1;
             menuEntries[27].isInvisible = 1;
@@ -1476,8 +1470,8 @@ afterEDE:
 
 afterBankBalance:
     /* Entry 2: fg = team name, Entry 5: fg = coach name */
-    menuEntries[2].fg = (uint32_t)tf->teamName;
-    menuEntries[5].fg = (uint32_t)tf->coachName;
+    menuEntries[2].fg = (uintptr_t)tf->teamName;
+    menuEntries[5].fg = (uintptr_t)tf->coachName;
     return;
 
 viewModeCompChecks:
@@ -1522,7 +1516,7 @@ extern uint8_t playerPositionsArray[];
 extern uint8_t oldPlayerPositionsArray[];
 extern uint16_t squadRowMode;
 extern uint16_t squadSelectedPlayerIndex;
-extern uint32_t squadSelectedPlayerPtr;
+extern uintptr_t squadSelectedPlayerPtr;
 extern uint8_t fundsBuffer[];
 extern uint8_t careerUnavailablePlayerNames[];
 
@@ -1588,7 +1582,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
     }
 
     squadSelectedPlayerIndex = d4_fileIdx;
-    squadSelectedPlayerPtr = (uint32_t)player;
+    squadSelectedPlayerPtr = (uintptr_t)player;
 
     uint16_t yPos = a5->y;
 
@@ -1622,7 +1616,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
 
     /* Entry 48: player name */
     e = &menuEntries[48];
-    e->fg = (uint32_t)(uint8_t *)pf->playerName;
+    e->fg = (uintptr_t)(uint8_t *)pf->playerName;
     e->y = yPos;
 
     /* Entry 49: position string */
@@ -1704,7 +1698,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
             _InitPlayerValueDisplayStruct(player, (uint8_t *)&menuEntries[57]);
         } else {
             _FormatPlayerValueOrStatusText(player, fundsBuffer);
-            menuEntries[57].fg = (uint32_t)fundsBuffer;
+            menuEntries[57].fg = (uintptr_t)fundsBuffer;
         }
         menuEntries[57].isInvisible = 0;
 
@@ -1874,19 +1868,19 @@ void _SquadFinish(void)
         MenuEntry *target = &menuEntries[22]; /* default target if no secondary */
 
         if (secondaryCompetitionPtr != 0) {
-            menuEntries[18].fg = (uint32_t)abbrev;
+            menuEntries[18].fg = (uintptr_t)abbrev;
             abbrev = _GetCompetitionAbbrevStr((uint8_t *)secondaryCompetitionPtr);
             target = &menuEntries[19];
 
             if (tertiaryCompetitionPtr != 0) {
-                menuEntries[19].fg = (uint32_t)abbrev;
+                menuEntries[19].fg = (uintptr_t)abbrev;
                 abbrev = _GetCompetitionAbbrevStr((uint8_t *)tertiaryCompetitionPtr);
-                menuEntries[20].fg = (uint32_t)abbrev;
+                menuEntries[20].fg = (uintptr_t)abbrev;
                 menuEntries[20].isInvisible = 0;
                 goto skipFgStore;
             }
         }
-        target->fg = (uint32_t)abbrev;
+        target->fg = (uintptr_t)abbrev;
     skipFgStore:;
     }
 
@@ -1899,9 +1893,9 @@ void _SquadFinish(void)
         menuEntries[8].isInvisible = 0;
     }
 
-    menuEntries[8].fg = (uint32_t)aGoals;
+    menuEntries[8].fg = (uintptr_t)aGoals;
     if (isNationalSquad != 0) {
-        menuEntries[8].fg = (uint32_t)aClubs;
+        menuEntries[8].fg = (uintptr_t)aClubs;
     }
 
     /* If team type byte (offset 4) == 1 */
@@ -2496,8 +2490,8 @@ extern uint16_t teamSelectionKeyCacheIndex;
 extern uint16_t teamSelectionKeyCacheEnd;
 extern int16_t  savedContestListIndex;
 extern int16_t  savedContestGameOffset;
-extern uint32_t savedContestEntryPtr;
-extern uint32_t savedContestRoundPtr;
+extern uintptr_t savedContestEntryPtr;
+extern uintptr_t savedContestRoundPtr;
 extern uint16_t gameListY;
 extern uint16_t contestEntryHeight;
 extern uint32_t gameListArray[];       /* 14 × 2 uint32_t entries = 112 bytes */
@@ -2645,9 +2639,9 @@ void _SelectActiveContestAndRound(void)
                 goto setInvalid;
             uint8_t *a0 = _TeamSelectionKeyCache_GetCurrentListPtr();
             savedContestListIndex = (int16_t)teamSelectionKeyCacheIndex;
-            savedContestEntryPtr = (uint32_t)a0;
+            savedContestEntryPtr = (uintptr_t)a0;
             savedContestGameOffset = 0;
-            savedContestRoundPtr = (uint32_t)a0;
+            savedContestRoundPtr = (uintptr_t)a0;
             return;
         }
     }
@@ -2663,17 +2657,15 @@ void _SelectActiveContestAndRound(void)
             uint8_t remaining = (uint8_t)entry->remainingElements;
             if (numGames != 0 && remaining != 0) {
                 savedContestListIndex = (int16_t)d0;
-                savedContestEntryPtr = (uint32_t)(uintptr_t)entry;
+                savedContestEntryPtr = (uintptr_t)entry;
                 int16_t gameOff = (int16_t)numGames - (int16_t)remaining;
                 savedContestGameOffset = gameOff;
                 /* asm formula: a0 + gameOff*12 (the byte pointer at +gameOff*12
                  * from entry start — same shape as GetCurrentSelectedElementPtr).
                  * Writes will land at +0x0B etc. of that pointer = match slot
-                 * gameOff's matchFlags/packedGoals/aggregate/penaltyScore.
-                 * Kept as uint32_t here since savedContestRoundPtr is still a
-                 * uint32_t global; will become a typed pointer in Phase 2 Wave 2. */
+                 * gameOff's matchFlags/packedGoals/aggregate/penaltyScore. */
                 uint32_t byteOff = (uint16_t)gameOff * 12u;
-                savedContestRoundPtr = (uint32_t)(uintptr_t)((uint8_t *)entry + byteOff);
+                savedContestRoundPtr = (uintptr_t)((uint8_t *)entry + byteOff);
                 return;
             }
             d0++;
@@ -2719,7 +2711,7 @@ void _CheckJobOffers(void)
 
     if (teamNoOfferAccepted != 0xFFFF) {
         /* Got an accepted offer — show "NEW JOB" */
-        entry->fg = (uint32_t)aNewJob;
+        entry->fg = (uintptr_t)aNewJob;
         entry->stringFlags = flags;
         return;
     }
@@ -2735,7 +2727,7 @@ void _CheckJobOffers(void)
         return;
     }
     /* No offers at all */
-    entry->fg = (uint32_t)aNoJobOffers;
+    entry->fg = (uintptr_t)aNoJobOffers;
     entry->isDisabled = 1;
     setBgColorIdx(entry, COLOR_PINK_TO_BROWN_7);
     entry->stringFlags = flags;
@@ -2940,12 +2932,12 @@ void _SetNationalSelectorButtons(void)
 
     /* Set transfers/squad entry text */
     MenuEntry *transfersEntry = &menuEntries[4]; /* TRANSFERS */
-    transfersEntry->fg = (uint32_t)aSquadSelected;
+    transfersEntry->fg = (uintptr_t)aSquadSelected;
 
     if (_IsTournamentAllowingSquadChangesIfNotCareer() == 0) {
-        transfersEntry->fg = (uint32_t)aChangeSquad;
+        transfersEntry->fg = (uintptr_t)aChangeSquad;
         if (careerNumPlayers != 20)
-            transfersEntry->fg = (uint32_t)aSelectSquad;
+            transfersEntry->fg = (uintptr_t)aSelectSquad;
     }
 
     /* Entry 12 (national selector actions) */
@@ -2990,7 +2982,7 @@ __attribute__((used, externally_visible))
 void _ContestSetButtons(void)
 {
     MenuEntry *entry7 = &menuEntries[7]; /* PLAY MATCH */
-    entry7->fg = (uint32_t)aPlayMatch;
+    entry7->fg = (uintptr_t)aPlayMatch;
     entry7->stringFlags &= ~(1 << 13); /* clear blinking */
 
     if (gameType == GAME_TYPE_SEASON) {
@@ -2999,7 +2991,7 @@ void _ContestSetButtons(void)
         setBgColorIdx(entry13, COLOR_ORANGE_TO_BROWN_4);
         entry13->isDisabled = 0;
         if (seasonNumberOfSquads == 0) {
-            entry7->fg = (uint32_t)aNextMatch;
+            entry7->fg = (uintptr_t)aNextMatch;
             _SeasonLowerButtons();
             if (seasonFinished != 0)
                 goto setFinishSeason;
@@ -3023,7 +3015,7 @@ void _ContestSetButtons(void)
         setBgColorIdx(entry10, COLOR_ORANGE_TO_BROWN_4);
     }
     if (careerFinished != 0) {
-        entry7->fg = (uint32_t)aFinishSeason;
+        entry7->fg = (uintptr_t)aFinishSeason;
         return;
     }
     /* Check if match available — set blinking if so */
@@ -3035,7 +3027,7 @@ void _ContestSetButtons(void)
     return;
 
 careerFinished_label:
-    entry7->fg = (uint32_t)aFinishSeason;
+    entry7->fg = (uintptr_t)aFinishSeason;
     {
         MenuEntry *entry10 = &menuEntries[10];
         setBgColorIdx(entry10, COLOR_PINK_TO_BROWN_9);
@@ -3046,7 +3038,7 @@ careerFinished_label:
 lowerAndFinish:
     _SeasonLowerButtons();
 setFinishSeason:
-    entry7->fg = (uint32_t)aFinishSeason;
+    entry7->fg = (uintptr_t)aFinishSeason;
 }
 
 /* ContestMenuInit — init callback for contest menu (SWOS2.s line 59786) */
@@ -3094,7 +3086,7 @@ void _ContestMenuOnReturn(void)
 
         /* If only 1 squad, change "SQUAD" text to "SQUADS" */
         if (seasonNumberOfSquads == 1) {
-            menuEntries[8].fg = (uint32_t)aSquads;
+            menuEntries[8].fg = (uintptr_t)aSquads;
         }
 
         /* Hide career-specific entries */
@@ -3842,9 +3834,9 @@ fail: /* loc_14149A */
 extern void _SelectTeamsFinalMenu(uint16_t mode); /* bridge: loads d0 from param, calls SelectTeamsFinalMenu */
 
 extern uint16_t teamsType;
-extern uint32_t gameTypeStr;
-extern uint32_t chooseTeamsHeader1stPart;
-extern uint32_t chooseTeamsFunc;
+extern uintptr_t gameTypeStr;
+extern uintptr_t chooseTeamsHeader1stPart;
+extern uintptr_t chooseTeamsFunc;
 extern uint16_t careerSquadScreenDidSelectPlayerFlag;
 extern uint16_t selectTeamsNoLimit;
 extern uint16_t loadTeam;
@@ -3855,7 +3847,7 @@ extern uint16_t choosingPreset;
 extern uint16_t showClubTeams;
 extern uint16_t showNationalTeams;
 extern uint16_t showOrigCustomTeams;
-extern uint32_t playWhatStr;
+extern uintptr_t playWhatStr;
 extern uint16_t numNeededTeams;
 extern uint8_t  aChooseCompetit[];
 extern uint8_t  aChoosePresetCo[];
@@ -3867,7 +3859,7 @@ __attribute__((used, externally_visible))
 void _ChooseCompetitionMenu(void)
 {
     gameTypeStr = 0;
-    chooseTeamsHeader1stPart = (uint32_t)aChooseCompetit;
+    chooseTeamsHeader1stPart = (uintptr_t)aChooseCompetit;
     chooseTeamsFunc = 0;
     careerSquadScreenDidSelectPlayerFlag = 0;
     selectTeamsNoLimit = 1;
@@ -3884,7 +3876,7 @@ __attribute__((used, externally_visible))
 void _SelectTeamsForPresetCompetition(void)
 {
     gameTypeStr = 0;
-    chooseTeamsHeader1stPart = (uint32_t)aChoosePresetCo;
+    chooseTeamsHeader1stPart = (uintptr_t)aChoosePresetCo;
     chooseTeamsFunc = 0;
     careerSquadScreenDidSelectPlayerFlag = 0;
     selectTeamsNoLimit = 1;
@@ -3903,7 +3895,7 @@ __attribute__((used, externally_visible))
 void _ChooseSeasonMenu(void)
 {
     gameTypeStr = 0;
-    chooseTeamsHeader1stPart = (uint32_t)aChooseSeason;
+    chooseTeamsHeader1stPart = (uintptr_t)aChooseSeason;
     chooseTeamsFunc = 0;
     careerSquadScreenDidSelectPlayerFlag = 0;
     selectTeamsNoLimit = 1;
@@ -3926,8 +3918,8 @@ void _GoGetTeamsForPlay(uint8_t *gameTypeStrParam, uint8_t *playWhatStrParam,
     showClubTeams = showClub;
     showNationalTeams = showNational;
     showOrigCustomTeams = showOrigCustom;
-    gameTypeStr = (uint32_t)gameTypeStrParam;
-    playWhatStr = (uint32_t)playWhatStrParam;
+    gameTypeStr = (uintptr_t)gameTypeStrParam;
+    playWhatStr = (uintptr_t)playWhatStrParam;
     chooseTeamsHeader1stPart = 0;
     numSelectedTeams = 0;
     numNeededTeams = numTeams;
@@ -3960,7 +3952,7 @@ extern uint8_t  aNewJob[];              /* "NEW JOB" */
 extern uint8_t  aNoJobOffers[];         /* "NO JOB OFFERS" */
 extern uint16_t selectedTeamIndex;
 extern uint16_t selectedLeagueIndex;
-extern uint32_t selectedTeamText;
+extern uintptr_t selectedTeamText;
 extern uint16_t lastSelectedTeam;
 extern uint16_t startingTeamIndex;
 extern uint16_t numTeamsColumn1;
@@ -4023,7 +4015,7 @@ static void CareerOverUpdateJobOffersEntry(void)
                 return;
             }
             /* No offers at all */
-            e->fg = (uint32_t)aNoJobOffers;
+            e->fg = (uintptr_t)aNoJobOffers;
             e->isDisabled = 1;
             {
                 uint16_t bg = *(uint16_t *)((uint8_t *)e + 30);
@@ -4036,7 +4028,7 @@ static void CareerOverUpdateJobOffersEntry(void)
         else
         {
             /* Offer accepted — show "NEW JOB" */
-            e->fg = (uint32_t)aNewJob;
+            e->fg = (uintptr_t)aNewJob;
             e->stringFlags = flags;
             return;
         }
@@ -4116,7 +4108,7 @@ void _CareerOverFinish(void)
         menuEntries[0x188 / 56].isInvisible = 1;
         {
             MenuEntry *e150 = &menuEntries[0x150 / 56];
-            e150->fg = (uint32_t)aRetire;
+            e150->fg = (uintptr_t)aRetire;
         }
         menuEntries[0xA8 / 56].isInvisible = 0;
         return;
@@ -4464,10 +4456,10 @@ __attribute__((used, externally_visible))
 void _ViewCompetitionsOnReturn(void)
 {
     /* Set text pointers for competition name entries */
-    menuEntries[1].fg = (uint32_t)diyPresetNameOfCompetition;
-    menuEntries[2].fg = (uint32_t)secondaryCompetitionName;
-    menuEntries[3].fg = (uint32_t)tertiaryCompetitionName;
-    menuEntries[4].fg = (uint32_t)quaternaryCompetitionName;
+    menuEntries[1].fg = (uintptr_t)diyPresetNameOfCompetition;
+    menuEntries[2].fg = (uintptr_t)secondaryCompetitionName;
+    menuEntries[3].fg = (uintptr_t)tertiaryCompetitionName;
+    menuEntries[4].fg = (uintptr_t)quaternaryCompetitionName;
 
     /* If primary competition is tour/friendly, hide entry 1 and shift Y coords up */
     if (currentCompetitionPtr == (uint8_t *)tourCopy
@@ -4760,9 +4752,9 @@ extern uint16_t changeTeams;
 extern uint16_t abortSelectTeams;
 extern uint16_t exitSelectTeams;
 extern uint16_t numLeaguesInCountry;
-extern uint32_t teamNames[];          /* array of string pointers */
+extern void *teamNames[];          /* array of string pointers */
 extern uint16_t chooseTeamsNumTeams;
-extern uint32_t countryNames[];       /* array of string pointers */
+extern void *countryNames[];       /* array of string pointers */
 extern uint16_t teamsLowerBound;
 
 extern void _SetExitMenuFlag(void);
@@ -4863,7 +4855,7 @@ __attribute__((used, externally_visible))
 void _SetLeagueNames(void)
 {
     MenuEntry *e;
-    uint32_t *names;
+    void **names;
     int16_t count;
 
     if (numLeaguesInCountry == 0)
@@ -4903,7 +4895,7 @@ void _SetLeagueNames(void)
 __attribute__((used, externally_visible))
 void _SetCountryNames(void)
 {
-    uint32_t *names = countryNames;
+    void **names = countryNames;
     MenuEntry *e = &menuEntries[21]; /* $498/56 = 21 */
     uint16_t d6 = startingTeamIndex;
 
@@ -5184,7 +5176,7 @@ void _SetFriendlyPitchOrSeason(void)
     uint8_t *table = friendlyPitchTypeTable;
     if (pitchTypeOrSeason != 0)
         table = friendly_season_table;
-    menuEntries[4].fg = (uint32_t)table;  /* 0xE0 / 56 = 4 */
+    menuEntries[4].fg = (uintptr_t)table;  /* 0xE0 / 56 = 4 */
 }
 
 /* ---- Chunk 147: PitchTypeOrSeasonProc ---- */
@@ -5436,7 +5428,7 @@ void _ViewSquadInit(void)
 skipEntryShow:
 
     menuEntries[0].fg = viewSquadTitle;
-    menuEntries[1].fg = (uint32_t)squadTeamPtr->teamName;
+    menuEntries[1].fg = (uintptr_t)squadTeamPtr->teamName;
 
     if (viewSquadArg2) {
         menuEntries[2].isInvisible = 1;  /* 0x70/56 = 2 */
@@ -5638,13 +5630,13 @@ void _ChooseTeamsDialog(uint16_t showClub, uint16_t showNational, uint16_t showO
     showNationalTeams = showNational;
     showOrigCustomTeams = showOrigCustom;
     gameTypeStr = 0;
-    chooseTeamsHeader1stPart = (uint32_t)title;
-    chooseTeamsFunc = (uint32_t)onSelect;
+    chooseTeamsHeader1stPart = (uintptr_t)title;
+    chooseTeamsFunc = (uintptr_t)onSelect;
     careerSquadScreenDidSelectPlayerFlag = 0;
     /* seq instruction: sets high byte of word to 0xFF when a1==0 (big-endian) */
     if (onSelect == (void *)0)
         careerSquadScreenDidSelectPlayerFlag = 0xFF00;
-    playWhatStr = (uint32_t)aStatistics;
+    playWhatStr = (uintptr_t)aStatistics;
     numNeededTeams = 1;
     selectTeamsNoLimit = 1;
     selectedTeamCountryNumber = 0xFFFF;
@@ -5672,13 +5664,13 @@ void _ChooseTeamsDialogWithNationality(uint16_t nationality, uint16_t showClub,
     showNationalTeams = showNational;
     showOrigCustomTeams = showOrigCustom;
     gameTypeStr = 0;
-    chooseTeamsHeader1stPart = (uint32_t)title;
-    chooseTeamsFunc = (uint32_t)onSelect;
+    chooseTeamsHeader1stPart = (uintptr_t)title;
+    chooseTeamsFunc = (uintptr_t)onSelect;
     careerSquadScreenDidSelectPlayerFlag = 0;
     /* seq instruction: sets high byte of word to 0xFF when a1==0 (big-endian) */
     if (onSelect == (void *)0)
         careerSquadScreenDidSelectPlayerFlag = 0xFF00;
-    playWhatStr = (uint32_t)aStatistics;
+    playWhatStr = (uintptr_t)aStatistics;
     numNeededTeams = 1;
     selectTeamsNoLimit = 1;
     selectedTeamCountryNumber = 0xFFFF;
@@ -5716,8 +5708,8 @@ void _SelectTeamToManage(void)
  * ========================================================================== */
 
 extern uint16_t careerAddIntlPlayerResult;
-extern uint32_t careerAddIntlPlayerSelectedSrcPlayerPtr;
-extern uint32_t careerAddIntlPlayerSelectedSrcPlayerNamePtr;
+extern uintptr_t careerAddIntlPlayerSelectedSrcPlayerPtr;
+extern uintptr_t careerAddIntlPlayerSelectedSrcPlayerNamePtr;
 extern uint8_t  nationalTeamFileId;
 extern uint8_t  aAddInternation[];
 extern uint8_t  aAddInternation_0[];
@@ -5838,8 +5830,8 @@ void _Career_AddInternationalPlayerCommon(uint8_t *selectedTeam, uint8_t *title)
      * block_ptr = teamBase + ordinal * sizeof(PlayerFile)
      * PlayerFile fields at block_ptr + sizeof(TeamFile) */
     uint8_t *srcBlock = (uint8_t *)teamEx + (uint16_t)((uint16_t)selected * sizeof(PlayerFile));
-    careerAddIntlPlayerSelectedSrcPlayerPtr = (uint32_t)srcBlock;
-    careerAddIntlPlayerSelectedSrcPlayerNamePtr = (uint32_t)(uintptr_t)teamEx->team.teamName;
+    careerAddIntlPlayerSelectedSrcPlayerPtr = (uintptr_t)srcBlock;
+    careerAddIntlPlayerSelectedSrcPlayerNamePtr = (uintptr_t)teamEx->team.teamName;
 
     /* Get position type of selected source player */
     uint16_t srcPos = (teamEx->players[selected].positionAndFace & 0xE0) >> 5;
@@ -6058,11 +6050,11 @@ void _NationalTeamAddPlayer(void)
 
         if (careerAddIntlPlayerResult == 1) {
             /* No room right now — store as pending add */
-            _StringCopy((uint8_t *)(uint32_t)careerAddIntlPlayerSelectedSrcPlayerNamePtr,
+            _StringCopy((uint8_t *)careerAddIntlPlayerSelectedSrcPlayerNamePtr,
                          careerIntlPlayerSelectedTeamName);
 
             /* Copy 38 bytes of PlayerFile data from source player */
-            uint8_t *src = (uint8_t *)(uint32_t)careerAddIntlPlayerSelectedSrcPlayerPtr + sizeof(TeamFile);
+            uint8_t *src = (uint8_t *)careerAddIntlPlayerSelectedSrcPlayerPtr + sizeof(TeamFile);
             volatile uint8_t *dst = (volatile uint8_t *)careerIntlPlayerSelectedPlayerDataCopy;
             for (int16_t i = 37; i >= 0; i--) {
                 *dst++ = *src++;
@@ -6252,7 +6244,7 @@ extern DIYCompetitionEx diyCompetitionStart;
  * ================================================================ */
 static void _ShowSquadMenuForTeam(uint8_t *teamPtr, uint16_t rowMode)
 {
-    squadTeamFilePtr = (uint32_t)teamPtr;
+    squadTeamFilePtr = (uintptr_t)teamPtr;
     squadRowMode = rowMode;
     inEditTactics = rowMode;
 
@@ -6528,10 +6520,10 @@ pastTeamLoad:
         break;
     default:
         /* Unknown slot type — show dashes */
-        a5->fg = (uint32_t)aMinus;
+        a5->fg = (uintptr_t)aMinus;
         a5->isInvisible = 0;
         a5++; /* next entry */
-        a5->fg = (uint32_t)aMinus;
+        a5->fg = (uintptr_t)aMinus;
         a5->isInvisible = 0;
         a5++; /* next entry */
         d5 = 1;
@@ -6569,7 +6561,7 @@ pastTeamLoad:
                 namePtr = (uint8_t *)(*(uint32_t *)(base + 4 + idx));
             }
 
-            a5->fg = (uint32_t)namePtr;
+            a5->fg = (uintptr_t)namePtr;
             a5->isInvisible = 0;
             a5++; /* next entry */
 
@@ -6587,7 +6579,7 @@ pastTeamLoad:
                 namePtr = (uint8_t *)(*(uint32_t *)(base + 4));
             }
 
-            a5->fg = (uint32_t)namePtr;
+            a5->fg = (uintptr_t)namePtr;
 
             /* Height check depends on whether a4 == a6 */
             if (a4 == a6) {
@@ -6664,7 +6656,7 @@ pastTeamLoad:
                 namePtr = (uint8_t *)(*(uint32_t *)(base + 4));
             }
 
-            a5->fg = (uint32_t)namePtr;
+            a5->fg = (uintptr_t)namePtr;
 
             /* Height check */
             if (a4 == a6) {
@@ -6762,9 +6754,9 @@ afterHeader:
         uint8_t homeAway = a4[0x0A];
         if (homeAway != 0) {
             if (homeAway == 1) {
-                a5->fg = (uint32_t)aH; /* "(H)" */
+                a5->fg = (uintptr_t)aH; /* "(H)" */
             } else if (homeAway == 2) {
-                a5->fg = (uint32_t)aA_2; /* "(A)" */
+                a5->fg = (uintptr_t)aA_2; /* "(A)" */
             }
             /* asm: clr.w 4(a5) regardless of homeAway value (1, 2, or other) */
             a5->isInvisible = 0;
@@ -6779,8 +6771,8 @@ afterHeader:
     a5->dwHeight = 7;
 
     /* Check if this is the saved/active contest entry */
-    if ((uint32_t)a6 == savedContestEntryPtr &&
-        (uint32_t)a4 == savedContestRoundPtr) {
+    if ((uintptr_t)a6 == savedContestEntryPtr &&
+        (uintptr_t)a4 == savedContestRoundPtr) {
         a5->isInvisible = 0;
     } else {
         a5->isInvisible = 1;
@@ -6791,9 +6783,9 @@ afterHeader:
     /* Top team name (player-controlled team) */
     a5->y = d2;
     if (careerGameListTeamControl == 0)
-        a5->fg = (uint32_t)careerGameTopTeamName;
+        a5->fg = (uintptr_t)careerGameTopTeamName;
     else
-        a5->fg = (uint32_t)careerGameBottomTeamName;
+        a5->fg = (uintptr_t)careerGameBottomTeamName;
     a5->isInvisible = 0;
     a5++; /* next entry */
 
@@ -6827,7 +6819,7 @@ afterHeader:
 
         /* Dash separator */
         a5->y = d2;
-        a5->fg = (uint32_t)aMinus;
+        a5->fg = (uintptr_t)aMinus;
         a5->isInvisible = 0;
         a5++; /* next entry */
 
@@ -6846,7 +6838,7 @@ afterHeader:
         a5++; /* top score hidden */
 
         a5->y = d2;
-        a5->fg = (uint32_t)aV;
+        a5->fg = (uintptr_t)aV;
         a5->isInvisible = 0;
         a5++; /* "V" separator */
 
@@ -6858,9 +6850,9 @@ afterHeader:
     /* Bottom team name (opponent) */
     a5->y = d2;
     if (careerGameListTeamControl == 0)
-        a5->fg = (uint32_t)careerGameBottomTeamName;
+        a5->fg = (uintptr_t)careerGameBottomTeamName;
     else
-        a5->fg = (uint32_t)careerGameTopTeamName;
+        a5->fg = (uintptr_t)careerGameTopTeamName;
     a5->isInvisible = 0;
     a5++; /* next entry */
 

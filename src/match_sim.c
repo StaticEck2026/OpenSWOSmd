@@ -58,7 +58,7 @@ extern uint8_t    newRandomSeedCopy;
 extern uint8_t    viewRandomPhase;
 extern uint8_t    seasonPlaying;
 extern uint8_t    kRandomTable[];
-extern uint32_t   teamTacticsTable[];
+extern void *teamTacticsTable[];
 extern void *positionsTable[];
 extern uint16_t   oldPlayerSkill;
 extern uint8_t    playerPositionsArray[];
@@ -78,7 +78,7 @@ extern uint8_t    kTeamViewOffsetBaseLUT[];
 extern uint8_t    availablePickCountByGoalsInTable[];
 extern uint8_t    preferredTacticsSlotsByRole[];
 extern uint8_t    candidatePlayersByGoalsInTable[];
-extern uint32_t   playersPositionsByTactics[];
+extern void *playersPositionsByTactics[];
 extern uint8_t    playerStatusBucketThresholds[];
 
 /* Extern globals/functions for Chunk 106 */
@@ -266,7 +266,7 @@ static void AssignSimulatedGoalsToScorers(TeamFileEx *team, uint8_t *remapTable,
 
     /* Get tactic index -> ball-out-of-play tactics -> position list */
     int16_t tacticIdx = (int8_t)team->team.tactics;
-    TeamTactics *tactics = (TeamTactics *)(uint32_t)teamTacticsTable[tacticIdx];
+    TeamTactics *tactics = (TeamTactics *)teamTacticsTable[tacticIdx];
     int16_t ballOutTacticIdx = (int8_t)tactics->ballOutOfPlayTactics;
     uint8_t *positions = (uint8_t *)(uint32_t)positionsTable[ballOutTacticIdx];
 
@@ -702,7 +702,7 @@ static void BuildAvailablePlayersRemapAndMask(TeamFileEx *team, uint8_t *remapTa
 
         /* Map through tactics to get position index */
         uint8_t tacticIdx = team->team.tactics;
-        uint8_t *tacticPositions = (uint8_t *)(uint32_t)playersPositionsByTactics[(int8_t)tacticIdx];
+        uint8_t *tacticPositions = (uint8_t *)playersPositionsByTactics[(int8_t)tacticIdx];
         uint8_t posIdx = tacticPositions[slotIdx];
         uint8_t targetPlayer = playerNums[posIdx];
 
@@ -714,7 +714,7 @@ static void BuildAvailablePlayersRemapAndMask(TeamFileEx *team, uint8_t *remapTa
 
             /* Re-read tactics mapping */
             tacticIdx = team->team.tactics;
-            tacticPositions = (uint8_t *)(uint32_t)playersPositionsByTactics[(int8_t)tacticIdx];
+            tacticPositions = (uint8_t *)playersPositionsByTactics[(int8_t)tacticIdx];
             posIdx = tacticPositions[slotIdx];
             targetPlayer = playerNums[posIdx];
 
@@ -1805,7 +1805,7 @@ extern uint8_t quadrantCoordinatesToBallQuadrant[]; /* 240 bytes: coordinate->qu
 extern uint8_t quadrantDistanceFactor[];     /* 35×35 distance factor matrix */
 extern uint8_t skillValuePonders[];          /* 8 bytes: skill value multipliers */
 extern uint8_t plPricesIncreaseTable[];      /* 50 bytes: price increase lookup */
-extern uint32_t teamTacticsTable[];          /* 19 pointers to tactics data */
+extern void *teamTacticsTable[];          /* 19 pointers to tactics data */
 extern uint32_t plPositions;                 /* pointer storage for current tactics base */
 extern uint16_t totalSkillsFactorSum;        /* accumulator for skill factor sum */
 extern uint16_t numPlayersAtQuadrant;        /* count of players sharing a quadrant */

@@ -19,9 +19,9 @@ static void _unbuf_stderr(void) { setbuf(stderr, NULL); }
  * imageStreamCursor, frontbufferBasePtr, spriteGraphicsPtr are pointers stored
  * as uint32_t in asm. We declare them matching other C files and cast in use.
  */
-extern uint32_t imageStreamCursor;           /* actually uint8_t*, match frontend.c */
+extern uint8_t *imageStreamCursor;           /* matches typed storage in swos_data_typed_stubs.c */
 extern uint8_t frontbufferMaskBuffer[];
-extern volatile uint32_t frontbufferBasePtr;         /* actually uint8_t*, match display.c */
+extern volatile uintptr_t frontbufferBasePtr;         /* actually uint8_t*, match display.c */
 extern uint16_t panicReasonCode;
 extern uint8_t *spriteGraphicsPtr;          /* actually uint32_t*[], match game_utils.c */
 extern int16_t currentSpriteIndex;
@@ -303,7 +303,7 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
 
 update_cursor:
     /* ---- Update stream cursor and check bounds ---- */
-    imageStreamCursor = (uint32_t)pixelPtr;
+    imageStreamCursor = pixelPtr;
 
 #ifdef SWOS_SDL_BUILD
     /* The Amiga check depended on `menuInsBank` living immediately
@@ -366,7 +366,7 @@ void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
     uint8_t *const imageSrcBuf = frontbufferMaskBuffer;
 #endif
 
-    imageStreamCursor = (uint32_t)workBuffer;
+    imageStreamCursor = workBuffer;
 
     for (;;) {
         opcode = *(const uint16_t *)a0;
@@ -380,7 +380,17 @@ void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
         /* ---- Opcode 0x7000: Indirect file load ---- */
         if (opcodeType == 0x7000) {
             const uint8_t *savedA0 = a0 + 4;  /* skip the pointer long */
+            /* On 32-bit the slot holds a raw pointer; on 64-bit it
+             * holds an index into imageScriptPtrTable (see
+             * swos_globals.c::_SwosSDL_InitImageScripts for why). */
+#if UINTPTR_MAX == 0xFFFFFFFFu
             const uint8_t *filename = *(const uint8_t *const *)a0;
+#else
+            extern const void *imageScriptPtrTable[];
+            uint32_t idx = (uint32_t)a0[0] | ((uint32_t)a0[1] << 8) |
+                           ((uint32_t)a0[2] << 16) | ((uint32_t)a0[3] << 24);
+            const uint8_t *filename = (const uint8_t *)imageScriptPtrTable[idx];
+#endif
 #ifdef SWOS_SDL_BUILD
             if (g_debug_sprite_load)
                 fprintf(stderr, "[sprite] LOAD filename=%s\n",
@@ -406,8 +416,21 @@ void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
         /* ---- Opcode 0x8000: Double-indirect file load ---- */
         if (opcodeType == 0x8000) {
             const uint8_t *savedA0 = a0 + 4;
+            /* Same 32/64-bit handling as 0x7000 — the first deref
+             * reads from the side table; the second deref is a normal
+             * runtime pointer read (the pointed-to data is a real
+             * native pointer, e.g. team1Filename which holds a
+             * dynamically-set filename address). */
+#if UINTPTR_MAX == 0xFFFFFFFFu
             const uint8_t *ptr = *(const uint8_t *const *)a0;
             const uint8_t *filename = *(const uint8_t *const *)ptr;
+#else
+            extern const void *imageScriptPtrTable[];
+            uint32_t idx = (uint32_t)a0[0] | ((uint32_t)a0[1] << 8) |
+                           ((uint32_t)a0[2] << 16) | ((uint32_t)a0[3] << 24);
+            const uint8_t *ptr = (const uint8_t *)imageScriptPtrTable[idx];
+            const uint8_t *filename = *(const uint8_t *const *)ptr;
+#endif
 
 #ifdef SWOS_SDL_BUILD
             while (_LoadFileEx((uint8_t *)filename, rawAssetLoadBuffer, (uint32_t *)0) != 0)

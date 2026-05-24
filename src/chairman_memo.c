@@ -59,9 +59,9 @@ void _ChairmanMemosInit(void)
 
     if (isNationalSelector) {
         /* Change menu title to "MEMO FROM THE PRESIDENT" */
-        menuEntries[0].fg = (uint32_t)aMemoFromThePre;
+        menuEntries[0].fg = (uintptr_t)aMemoFromThePre;
         /* Change sign-off to "THE PRESIDENT" (entry 5 = offset $118/56) */
-        menuEntries[5].fg = (uint32_t)aThePresident;
+        menuEntries[5].fg = (uintptr_t)aThePresident;
     }
 
     /* Fall through to OnReturn */

@@ -33,6 +33,16 @@ extern void _PanicHaltLoop(void) __attribute__((noreturn));
 #define FAN_PTR_TABLE_SIZE      21      /* 21 pointers per fan group */
 #define FAN_PTR_TABLE_OFFSET    0x54    /* second group starts here */
 
+/* Per-slot full-width pointer to the slot's chunky tile buffer. The
+ * 32-bit pitchDatBuffer slot can only hold the low 32 of a 64-bit
+ * heap/BSS address; that's still usable for the ANIM offset math
+ * (`*a0 - baseAddr` cancels the truncated-vs-truncated subtraction),
+ * but any *dereference* of the slot value on 64-bit hands the blitter
+ * an unmapped low-32 address. We populate this side table at the same
+ * time we fill the slot, and read through it whenever we actually need
+ * to fetch tile bytes. */
+static uint8_t *s_pitchFullPtrs[PITCH_POINTER_COUNT];
+
 /* pitchFansConvertTable: color remap table for fan sprites.
  * Indices 10,11 get replaced with team kit colors. */
 static uint16_t pitchFansConvertTable[16] = {
@@ -147,8 +157,6 @@ void _FixupAndColorPitchFile(void)
 #else
     uint32_t baseAddr = (uint32_t)currentMenu;
 #endif
-    uint32_t *fanPtrsA;  /* first group of fan sprite pointers */
-    uint32_t *fanPtrsB;  /* second group */
     TeamGame *teamData;
     uint16_t kitPrimary, kitSecondary, kitTertiary;
 
@@ -204,6 +212,7 @@ void _FixupAndColorPitchFile(void)
                 uint8_t *chunky = pitchChunkyBuffer + safeIdx * 256;
                 for (int k = 0; k < 256; k++) chunky[k] = 0;
                 pitchPtrs[i] = (uint32_t)(uintptr_t)chunky;
+                s_pitchFullPtrs[i] = chunky;
                 continue;
             }
 
@@ -213,6 +222,7 @@ void _FixupAndColorPitchFile(void)
                 uint8_t *chunky = pitchChunkyBuffer + (size_t)i * 256;
                 for (int k = 0; k < 256; k++) chunky[k] = 0;
                 pitchPtrs[i] = (uint32_t)(uintptr_t)chunky;
+                s_pitchFullPtrs[i] = chunky;
                 continue;
             }
 
@@ -239,6 +249,7 @@ void _FixupAndColorPitchFile(void)
                 tileDecoded[tileIdx] = 1;
             }
             pitchPtrs[i] = (uint32_t)(uintptr_t)chunky;
+            s_pitchFullPtrs[i] = chunky;
         }
     }
 #endif
@@ -249,17 +260,23 @@ void _FixupAndColorPitchFile(void)
     cameraXMod320 = 0;
     cameraYMod320 = 0;
 
-    /* Step 3: Set up fan pointer groups */
-    fanPtrsA = (uint32_t *)pitchDatBuffer;                          /* offset 0 */
-    fanPtrsB = (uint32_t *)(pitchDatBuffer + FAN_PTR_TABLE_OFFSET); /* offset 0x54 */
+    /* Step 3: Set up fan pointer groups.
+     *
+     * The Amiga code aliased the in-buffer 32-bit slot table as two
+     * fan-group pointers (group A at slot 0, group B at slot
+     * FAN_PTR_TABLE_OFFSET/4 = 21). On 64-bit the slot's truncated
+     * pointer can't be dereferenced, so resolve to the full-width
+     * pointers via the side table populated in Step 1b. */
+    uint8_t **fanGroupA = &s_pitchFullPtrs[0];
+    uint8_t **fanGroupB = &s_pitchFullPtrs[FAN_PTR_TABLE_OFFSET / 4];
 
     fansSidesSwapped = 0;
     /* If topTeamInGame's team name first byte is odd, swap groups */
     if (topTeamInGame.teamName[0] & 1)
     {
-        uint32_t *tmp = fanPtrsA;
-        fanPtrsA = fanPtrsB;
-        fanPtrsB = tmp;
+        uint8_t **tmp = fanGroupA;
+        fanGroupA = fanGroupB;
+        fanGroupB = tmp;
         fansSidesSwapped = 1;
     }
 
@@ -277,7 +294,7 @@ void _FixupAndColorPitchFile(void)
 
     for (i = FAN_PTR_TABLE_SIZE - 1; i >= 0; i--)
     {
-        _AdjustFanColor((uint8_t *)fanPtrsB[i], pitchFansConvertTable);
+        _AdjustFanColor(fanGroupB[i], pitchFansConvertTable);
     }
 
     /* Step 5: Recolor bottom team fans (21 sprites) */
@@ -294,7 +311,7 @@ void _FixupAndColorPitchFile(void)
 
     for (i = 20; i >= 0; i--)
     {
-        _AdjustFanColor((uint8_t *)fanPtrsA[i], pitchFansConvertTable);
+        _AdjustFanColor(fanGroupA[i], pitchFansConvertTable);
     }
 }
 
@@ -326,12 +343,11 @@ void _FixupAndColorPitchFile(void)
 #define PITCH_TILE_SIZE     16
 
 extern uint8_t pitchDatBuffer[];
-extern volatile uint32_t frontbufferBasePtr;
+extern volatile uintptr_t frontbufferBasePtr;
 
 __attribute__((used, externally_visible))
 void _DrawChunkyPitch(void)
 {
-    uint32_t *pitchPtrs = (uint32_t *)pitchDatBuffer;
     uint8_t  *fb        = (uint8_t *)(uintptr_t)frontbufferBasePtr;
     if (!fb) return;
 
@@ -360,7 +376,8 @@ void _DrawChunkyPitch(void)
             if (gridX >= 0 && gridX < PITCH_GRID_COLS &&
                 gridY >= 0 && gridY < PITCH_GRID_ROWS) {
                 int ptrIdx = PITCH_PTR_START + gridY * PITCH_GRID_COLS + gridX;
-                tile = (uint8_t *)(uintptr_t)pitchPtrs[ptrIdx];
+                tile = (ptrIdx >= 0 && ptrIdx < PITCH_POINTER_COUNT)
+                         ? s_pitchFullPtrs[ptrIdx] : (uint8_t *)0;
             }
 
             for (int row = 0; row < PITCH_TILE_SIZE; row++) {

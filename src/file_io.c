@@ -3,6 +3,7 @@
  * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
+#include <stdint.h>
 #include "file_io.h"
 #include "display.h"
 #include "menus.h"
@@ -20,11 +21,11 @@
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint16_t assetCurrentIndex;
-extern uint32_t assetLoaderCacheFlag;
+extern uintptr_t assetLoaderCacheFlag;
 extern uint16_t assetLoaderAltPathReady;
-extern volatile uint32_t frontbufferBasePtr;
+extern volatile uintptr_t frontbufferBasePtr;
 #ifdef SWOS_SDL_BUILD
-extern volatile uint32_t frontbufferBaseAltPtr;
+extern volatile uintptr_t frontbufferBaseAltPtr;
 extern uint8_t frontbufferBaseAlt[];
 #endif
 extern volatile uint16_t currentGameTick;
@@ -82,7 +83,7 @@ extern uint16_t menuMusic;
 
 /* File selection dialog globals */
 extern uint32_t extension;
-extern uint32_t menuTitle;           /* stored as pointer (uint32_t on 68k) */
+extern uintptr_t menuTitle;
 extern uint8_t inputSaveFilename[];
 extern uint16_t numberOfFiles;
 extern uint16_t totalNumberOfFiles;
@@ -199,8 +200,8 @@ int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
              * mirror that by stamping the displayed buffer if `dest`
              * is the alt buffer. */
             if (result == 0 && (uint8_t *)frontbufferBasePtr != dest &&
-                ((uint32_t)dest == (uint32_t)frontbufferBaseAlt ||
-                 (uint32_t)dest == frontbufferBaseAltPtr)) {
+                ((uintptr_t)dest == (uintptr_t)frontbufferBaseAlt ||
+                 (uintptr_t)dest == frontbufferBaseAltPtr)) {
                 uint32_t cap = FRONTBUFFER_SIZE_TOTAL_BYTES;
                 memcpy((void *)frontbufferBasePtr, dest,
                        fileSize < cap ? fileSize : cap);
@@ -1029,7 +1030,7 @@ int16_t _SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename,
     uint16_t i;
 
     extension = filterExt;
-    menuTitle = (uint32_t)menuTitleStr;
+    menuTitle = (uintptr_t)menuTitleStr;
     _StringCopy(defaultFilename, inputSaveFilename);
 
     result = _FindFilesExtensionPresent((uint8_t *)0);
@@ -1118,7 +1119,7 @@ int16_t _GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename
     uint16_t i;
 
     extension = preferredExt;
-    menuTitle = (uint32_t)menuTitleStr;
+    menuTitle = (uintptr_t)menuTitleStr;
     _StringCopy(defaultFilename, inputSaveFilename);
 
     result = _FindFilesExtensionPresent((uint8_t *)0);
@@ -1317,7 +1318,7 @@ void _SelFilesDrawItemDescription(MenuEntry *entry) {
     else
         descStr = (const uint8_t *)"HIGH";
 
-    descEntry->fg = (uint32_t)descStr;
+    descEntry->fg = (uintptr_t)descStr;
     descEntry->x = entry->x + 0x39;
     descEntry->y = entry->y;
     descEntry->isInvisible = 0;

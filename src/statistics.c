@@ -460,7 +460,7 @@ check_show_stats_flag:
 
 /* ---- Additional external globals for top goal scorers ---- */
 extern uint8_t  highestScorersTable[];   /* 92 bytes BSS */
-extern uint32_t diyStatsName;            /* pointer stored as uint32_t */
+extern uintptr_t diyStatsName;            /* pointer stored as uint32_t */
 extern uint16_t numSelectedTeams;
 extern uint16_t selTeamNumber;
 extern uint8_t  selTeamsPtr;             /* start of selected teams, stride=684 */
@@ -920,7 +920,7 @@ static void ShowCompetitionTopScorers(int16_t statIndex, uint8_t *namePtr)
 
     InitHighestScorersTable();
     PopulateHighestScorersTableFromSelectedTeams(statIndex);
-    diyStatsName = (uint32_t)namePtr;
+    diyStatsName = (uintptr_t)namePtr;
     SortHighestScorerTable();
     _ShowMenu(competitionTopGoalScorersMenu);
 }
@@ -1107,7 +1107,7 @@ void _TopGoalScorersInit(void)
 
         /* Set CUP label on entry 2 */
         MenuEntry *cupEntry = &menuEntries[0x70 / 56];
-        cupEntry->fg = (uint32_t)aCup_10;
+        cupEntry->fg = (uintptr_t)aCup_10;
     }
 
     /* If no secondary competition, shift further */
@@ -1200,7 +1200,7 @@ void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         surnameBuf = _ExtractSurname(playerPtr + 0x4F, 0x15);
 
         /* Entry 0: player surname */
-        a4->fg = (uint32_t)surnameBuf;
+        a4->fg = (uintptr_t)surnameBuf;
         a4->y = yCoord;
         a4->isInvisible = 0;
         a4 += 1;
@@ -2252,11 +2252,11 @@ void _FillManagementRecordInfo(void)
         {
             /* Not sacked — check resigned/retired */
             color = 6;
-            entry->fg = (uint32_t)aResigned;
+            entry->fg = (uintptr_t)aResigned;
             if (status != 1)
             {
                 color = 15;
-                entry->fg = (uint32_t)aRetired;
+                entry->fg = (uintptr_t)aRetired;
             }
         }
 
@@ -2276,11 +2276,11 @@ void _FillManagementRecordInfo(void)
 
     /* --- Top scorer header (entry 12) --- */
     entry = &menuEntries[12]; /* $2A0/56 = 12 */
-    entry->fg = (uint32_t)aSeasonSTopScor; /* "SEASON'S TOP SCORER" */
+    entry->fg = (uintptr_t)aSeasonSTopScor; /* "SEASON'S TOP SCORER" */
 
     if (si->bestScorerName[0] != 0 && si->secondScorerName[0] != 0)
     {
-        entry->fg = (uint32_t)aSeasonSTopScor_0; /* "SEASON'S TOP SCORERS" */
+        entry->fg = (uintptr_t)aSeasonSTopScor_0; /* "SEASON'S TOP SCORERS" */
     }
 
     entry->y = d5;

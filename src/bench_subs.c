@@ -184,7 +184,7 @@ extern uint8_t  playerNumberString[];
 extern uint16_t playerFacesTable[];
 extern void *playerPositionsStringTable[];
 extern void *tacticsStringTable[];
-extern uint32_t teamTacticsTable[];
+extern void *teamTacticsTable[];
 extern uint8_t  aFormation[];
 
 /* ---- external functions ---- */

@@ -5685,9 +5685,9 @@ void _DesignDIYTournamentOnDraw(void)
         a4++;
         a4->isInvisible = 0;
         if (slot->seedingType != 0) {
-            a4->fg = (uint32_t)(uint32_t)aStar;  /* "*" */
+            a4->fg = (uintptr_t)(uint32_t)aStar;  /* "*" */
         } else {
-            a4->fg = (uint32_t)(uint32_t)asc_135D9A; /* "-" */
+            a4->fg = (uintptr_t)(uint32_t)asc_135D9A; /* "-" */
         }
 
         /* Next entry: qualification description */
@@ -6190,7 +6190,7 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
                     a3 = hideAndAdvance(a3);
             } else {
                 /* "V" label */
-                a3->fg = (uint32_t)aV;
+                a3->fg = (uintptr_t)aV;
                 a3->isInvisible = 0;
                 a3++;
 
@@ -6276,9 +6276,9 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
             uint16_t d4 = d6 * 2;
 
             /* "V" or "-" label */
-            a3->fg = (uint32_t)aV;
+            a3->fg = (uintptr_t)aV;
             if (*a5 & 0x80)
-                a3->fg = (uint32_t)aMinus;
+                a3->fg = (uintptr_t)aMinus;
             a3->isInvisible = 0;
             a3++;
 
@@ -6400,7 +6400,7 @@ void _DesignDIYCupOnDraw(void)
             uint16_t d1 = *(uint16_t *)&diyCompetitionStart.base.numRounds; /* DIY_COMPETITION_FIELD_3A+$20 */
             uint16_t d2 = *(uint16_t *)&diyCompetitionStart.base.subRoundCounter; /* DIY_COMPETITION_FIELD_3A+$22 */
             const char *roundStr = _GetNextCupRoundString(roundIdx, d1, d2);
-            a4->fg = (uint32_t)roundStr;
+            a4->fg = (uintptr_t)roundStr;
             a4++;
 
             /* Number of teams in this round */
@@ -6496,7 +6496,7 @@ void _DesignDIYCup_BuildMenuTitleString(void)
 {
     DIYCompetition *a2s = &diyCompetitionStart.base;
     uint8_t *a2 = (uint8_t *)&diyCompetitionStart;
-    uint8_t *dst = (uint8_t *)(uint32_t)menuEntries[0].fg;
+    uint8_t *dst = (uint8_t *)menuEntries[0].fg;
 
     /* Copy competition name (at offset 4) */
     dst = _StringCopy(a2 + 4, dst);
@@ -6595,19 +6595,19 @@ void _DesignDIYCup_UpdateCurrentMatchTeamEntryStrings(void)
 
     /* Entry 11: "V" separator, visible */
     e->isInvisible = 0;
-    e->fg = (uint32_t)aV;
+    e->fg = (uintptr_t)aV;
     e++;
 
     /* Entry 12: team 1 name, visible */
     e->isInvisible = 0;
     uint8_t *teamName1 = (uint8_t *)(uintptr_t)baseEx->bracketScratch.teamOffsetTable[(int16_t)slot1] + (uint32_t)&selTeamNameBase;
-    e->fg = (uint32_t)teamName1;
+    e->fg = (uintptr_t)teamName1;
     e++;
 
     /* Entry 13: team 2 name, visible */
     e->isInvisible = 0;
     uint8_t *teamName2 = (uint8_t *)(uintptr_t)baseEx->bracketScratch.teamOffsetTable[(int16_t)slot2] + (uint32_t)&selTeamNameBase;
-    e->fg = (uint32_t)teamName2;
+    e->fg = (uintptr_t)teamName2;
     e++;
 
     /* Entry 14: hidden */
@@ -6720,16 +6720,16 @@ void _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries(void)
 
     /* Entry 11: "-" separator */
     e->isInvisible = 0;
-    e->fg = (uint32_t)aMinus;
+    e->fg = (uintptr_t)aMinus;
     e++;
 
     /* Entry 12: team 1 name */
-    e->fg = (uint32_t)(uintptr_t)team1->team.teamName;
+    e->fg = (uintptr_t)team1->team.teamName;
     e->isInvisible = 0;
     e++;
 
     /* Entry 13: team 2 name */
-    e->fg = (uint32_t)(uintptr_t)team2->team.teamName;
+    e->fg = (uintptr_t)team2->team.teamName;
     e->isInvisible = 0;
     e++;
 
@@ -6805,7 +6805,7 @@ void _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection(void)
 
     if (field4A == 0) {
         if ((int16_t)diyCupMenuArg0Copy <= 0) {
-            menuEntries[1].fg = (uint32_t)aNextMatch;
+            menuEntries[1].fg = (uintptr_t)aNextMatch;
             goto show_entry1_hide_rest;
         }
         goto show_match_entries;
@@ -6813,31 +6813,31 @@ void _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection(void)
 
     if (field4A == 1) {
         fireResetFlag = 1;
-        menuEntries[1].fg = (uint32_t)a2ndLegRound;
+        menuEntries[1].fg = (uintptr_t)a2ndLegRound;
         goto show_entry1_hide_rest;
     }
 
     if (field4A == 2) {
         fireResetFlag = 1;
-        menuEntries[1].fg = (uint32_t)aNextRoundDraw;
+        menuEntries[1].fg = (uintptr_t)aNextRoundDraw;
         goto show_entry1_hide_rest;
     }
 
     if (field4A == 3) {
         fireResetFlag = 1;
-        menuEntries[1].fg = (uint32_t)aPlayReplays;
+        menuEntries[1].fg = (uintptr_t)aPlayReplays;
         goto show_entry1_hide_rest;
     }
 
     if (field4A == 4) {
         fireResetFlag = 1;
-        menuEntries[1].fg = (uint32_t)aNextRound;
+        menuEntries[1].fg = (uintptr_t)aNextRound;
         goto show_entry1_hide_rest;
     }
 
     /* Default: field4A >= 5 (but != 6) */
     fireResetFlag = 1;
-    menuEntries[1].fg = (uint32_t)aNextRound;
+    menuEntries[1].fg = (uintptr_t)aNextRound;
 
 show_entry1_hide_rest:
     menuEntries[1].isInvisible = 0;
@@ -7215,7 +7215,7 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
             setBgColorWord(a5, 14); /* COLOR_ORANGE */
 
         /* Set team name string */
-        a5->fg = (uint32_t)(uintptr_t)teamPtr->team.teamName;
+        a5->fg = (uintptr_t)teamPtr->team.teamName;
 
         /* Determine row color (d3) based on view options and promotion/relegation zones */
         uint16_t d3;
@@ -8009,12 +8009,12 @@ void _SetupDIYCompetitionStatsMenu(void) {
  * Chunk 148: ChooseTeamsSetHeader, CheckNumTeamsAllowed, Bureaucracy
  * ================================================================ */
 
-extern uint32_t chooseTeamsHeader1stPart;  /* pointer to header prefix string (or 0) */
-extern uint32_t gameTypeStr;               /* pointer to game type string (or 0) */
+extern uintptr_t chooseTeamsHeader1stPart;  /* pointer to header prefix string (or 0) */
+extern uintptr_t gameTypeStr;               /* pointer to game type string (or 0) */
 extern uint8_t *curCountryStr;
 extern uint16_t selectTeamsNoLimit;
 extern uint16_t numNeededTeams;
-extern uint32_t playWhatStr;               /* pointer to "play what" string */
+extern uintptr_t playWhatStr;               /* pointer to "play what" string */
 extern uint8_t aChooseTeamsFor[];          /* "CHOOSE TEAMS FOR " */
 extern uint8_t aChangeTeamsFor[];          /* "CHANGE TEAMS FOR " */
 extern uint8_t aSelect1MoreTea[];          /* "SELECT 1 MORE TEAM" */
@@ -8287,15 +8287,15 @@ void _DIYSetTeamNamesAndResults(void)
 
     MenuEntry *e = &menuEntries[11];  /* 0x268/56=11 */
     e->isInvisible = 0;
-    e->fg = (uint32_t)aMinus;         /* "-" */
+    e->fg = (uintptr_t)aMinus;         /* "-" */
 
     e++;  /* entry 12 */
     e->isInvisible = 0;
-    e->fg = (uint32_t)(uintptr_t)a1->team.teamName;
+    e->fg = (uintptr_t)a1->team.teamName;
 
     e++;  /* entry 13 */
     e->isInvisible = 0;
-    e->fg = (uint32_t)(uintptr_t)a2->team.teamName;
+    e->fg = (uintptr_t)a2->team.teamName;
 
     e++;  /* entry 14 */
     e->isInvisible = 0;
@@ -8407,21 +8407,21 @@ void _DIYLeagueTournament_SetupCurrentFixtureTeamNames(void)
 
     MenuEntry *e = &menuEntries[11];  /* 0x268/56=11 */
     e->isInvisible = 0;
-    e->fg = (uint32_t)aV;             /* "V" */
+    e->fg = (uintptr_t)aV;             /* "V" */
 
     e++;  /* entry 12 */
     e->isInvisible = 0;
     /* DIYTeamStats teamSelOffset (+0x2B4) → name offset, add selTeamNameBase */
     {
         uint32_t nameOff = ((DIYTeamStats *)(team1 + 0x2B4))->teamSelOffset;
-        e->fg = (uint32_t)(&selTeamNameBase + nameOff);
+        e->fg = (uintptr_t)(&selTeamNameBase + nameOff);
     }
 
     e++;  /* entry 13 */
     e->isInvisible = 0;
     {
         uint32_t nameOff = ((DIYTeamStats *)(team2 + 0x2B4))->teamSelOffset;
-        e->fg = (uint32_t)(&selTeamNameBase + nameOff);
+        e->fg = (uintptr_t)(&selTeamNameBase + nameOff);
     }
 
     e++;  /* entry 14 — invisible */
@@ -8440,7 +8440,7 @@ void _DIYLeagueTournament_DrawPlayMatchAndFixtureHeader(void)
     _DIYLeagueTournament_SetupCurrentFixtureTeamNames();
 
     MenuEntry *e1 = &menuEntries[1];  /* 0x38/56=1 */
-    e1->fg = (uint32_t)aPlayMatch;    /* "PLAY MATCH" */
+    e1->fg = (uintptr_t)aPlayMatch;    /* "PLAY MATCH" */
     _CallDrawMenuItem(e1);
 
     _CallDrawMultipleItems(5, &menuEntries[11]);  /* 0x268/56=11, draw 5 entries */
@@ -9213,11 +9213,11 @@ void _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus(void)
 
     /* field $60 == 0 — show "NEXT ROUND" */
     fireResetFlag = 1;
-    menuEntries[1].fg = (uint32_t)aNextRound;
+    menuEntries[1].fg = (uintptr_t)aNextRound;
     goto show_next_button;
 
 show_next_match:
-    menuEntries[1].fg = (uint32_t)aNextMatch;
+    menuEntries[1].fg = (uintptr_t)aNextMatch;
 
 show_next_button:
     /* Show entry 1, hide entries 3-8 */

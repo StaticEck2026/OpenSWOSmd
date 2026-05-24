@@ -57,10 +57,10 @@ extern uint8_t *currentHilPtr;
 extern uint8_t *currentGoalPtr;
 extern volatile uint16_t goIntoHighlightsLoop;
 extern uint16_t hilSceneNumber;
-extern uint32_t savedCurrentHilPtr;
-extern uint32_t savedCurrentGoalPtr;
-extern uint32_t savedGoalBasePtr;
-extern uint32_t savedNextGoalPtr;
+extern uintptr_t savedCurrentHilPtr;
+extern uintptr_t savedCurrentGoalPtr;
+extern uintptr_t savedGoalBasePtr;
+extern uintptr_t savedNextGoalPtr;
 extern uint8_t  hilStartOfGoalsBuffer[];
 extern uint8_t  inGameHilBuffer[];
 extern uint16_t throwInDeadVar;
@@ -307,10 +307,10 @@ void _SaveHighlightsPointers(void)
         return;
 
     normalReplayRunning = 1;
-    savedGoalBasePtr = (uint32_t)goalBasePtr;
-    savedNextGoalPtr = (uint32_t)nextGoalPtr;
-    savedCurrentHilPtr = (uint32_t)currentHilPtr;
-    savedCurrentGoalPtr = (uint32_t)currentGoalPtr;
+    savedGoalBasePtr = (uintptr_t)goalBasePtr;
+    savedNextGoalPtr = (uintptr_t)nextGoalPtr;
+    savedCurrentHilPtr = (uintptr_t)currentHilPtr;
+    savedCurrentGoalPtr = (uintptr_t)currentGoalPtr;
     goIntoHighlightsLoop = 1;
     hilSceneNumber = 0xFFFF;
 }

@@ -846,7 +846,7 @@ ScorerInfo team2Scorers[8];
 uint8_t careerDefaultInternationalSquadSlotsTable[12] = {
     0x01, 0x02, 0x05, 0x06, 0x03, 0x09, 0x04, 0x07, 0x0B, 0x0A, 0x08, 0x00
 };
-void * spriteBlitQueue;
+volatile uintptr_t spriteBlitQueue;
 
 /* audioState: properly-sized AudioState struct (0x2E = 46 bytes). The
  * auto-extractor truncated the BSS dump to 12 bytes, so writes/reads at

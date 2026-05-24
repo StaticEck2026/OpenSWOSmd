@@ -16,12 +16,12 @@
 extern uint8_t *spriteGraphicsPtr;
 extern volatile uint16_t panicReasonCode;
 
-extern uint32_t allSpritesArray[];     /* Null-terminated (0xFFFFFFFF) pointer array */
-extern uint32_t sortedSprites[];       /* 78 entries max */
+extern Sprite *allSpritesArray[];      /* Null-terminated ((Sprite *)-1) pointer array */
+extern Sprite *sortedSprites[];        /* 78 entries max */
 extern uint16_t numSpritesToRender;
 
-extern volatile uint32_t spriteBlitQueue;         /* 4-byte var holding pointer to blit queue */
-extern volatile uint32_t frontbufferBasePtr;      /* 4-byte var holding pointer to frontbuffer */
+extern volatile uintptr_t spriteBlitQueue;         /* 4-byte var holding pointer to blit queue */
+extern volatile uintptr_t frontbufferBasePtr;      /* 4-byte var holding pointer to frontbuffer */
 extern uint8_t frontbufferMaskBuffer[];  /* BSS label: mask buffer base address */
 extern FixedPoint cameraX;
 extern FixedPoint cameraY;
@@ -30,11 +30,11 @@ extern uint16_t cameraYMod320;
 extern uint16_t overlayActiveFlag;
 
 /* Render stacks: xxxPtr are 4-byte pointer vars, xxxBase are BSS labels */
-extern uint32_t renderStackPtr;
+extern uint8_t *renderStackPtr;
 extern uint8_t renderStackBase[];
-extern uint32_t plane01RenderStackPtr;
+extern uint8_t *plane01RenderStackPtr;
 extern uint8_t plane01RenderStackBase[];
-extern uint32_t plane23RenderStackPtr;
+extern uint8_t *plane23RenderStackPtr;
 extern uint8_t plane23RenderStackBase[];
 
 /* Copper list plane pointers (4-byte vars) */
@@ -366,23 +366,22 @@ void _SortSprites(void)
     if (n < 0)
         return;
 
-    uint32_t *base = sortedSprites;
+    Sprite **base = sortedSprites;
 
     /* Assembly does NOT shrink the inner loop — always a full pass of n+1
      * comparisons, repeating until no swaps occur (pure unoptimized bubble sort). */
     for (;;) {
         int16_t swapped = 0;
-        uint32_t *p = base;
+        Sprite **p = base;
         int16_t i;
         for (i = n; i >= 0; i--) {
-            Sprite *s1 = (Sprite *)p[0];
-            Sprite *s2 = (Sprite *)p[1];
+            Sprite *s1 = p[0];
+            Sprite *s2 = p[1];
             int16_t y1 = s1->y.s.i;
             int16_t y2 = s2->y.s.i;
             if (y1 > y2) {
-                /* swap */
-                p[0] = (uint32_t)s2;
-                p[1] = (uint32_t)s1;
+                p[0] = s2;
+                p[1] = s1;
                 swapped = 1;
             }
             p++;
@@ -403,17 +402,20 @@ __attribute__((used, externally_visible))
 void _InitDisplaySprites(void)
 {
     uint16_t count = 0;
-    uint32_t *dst = sortedSprites;
-    uint32_t *src = allSpritesArray;
+    Sprite **dst = sortedSprites;
+    Sprite **src = allSpritesArray;
 
     for (;;) {
-        uint32_t ptr = *src++;
-        if (ptr == 0xFFFFFFFF)
+        Sprite *spr = *src++;
+        /* Sentinel is (Sprite *)-1, set in sprite_data.c at slot 79 of
+         * allSpritesArray. (uintptr_t)-1 is all-bits-set so masking to
+         * 32 bits still matches the original 0xFFFFFFFF sentinel on
+         * either bitness.) */
+        if ((uintptr_t)spr == (uintptr_t)-1)
             break;
-        Sprite *spr = (Sprite *)ptr;
         if (spr->visible == 0)
             continue;
-        *dst++ = ptr;
+        *dst++ = spr;
         count++;
     }
     numSpritesToRender = count;
@@ -580,7 +582,7 @@ void _QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         /* Advance queue pointer, write sentinel */
         a3 = (uint32_t *)((uint8_t *)a3 + 12);
         *(uint32_t *)a3 = BLT_BLITQ_END;
-        spriteBlitQueue = (uint32_t)a3;
+        spriteBlitQueue = (uintptr_t)a3;
     }
     return;
 
@@ -800,7 +802,7 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 
         /* Seal queue */
         *(uint32_t *)a3 = BLT_BLITQ_END;
-        spriteBlitQueue = (uint32_t)a3;
+        spriteBlitQueue = (uintptr_t)a3;
         return;
     }
 
@@ -1024,7 +1026,7 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 
         /* Seal queue */
         *(uint32_t *)a3 = BLT_BLITQ_END;
-        spriteBlitQueue = (uint32_t)a3;
+        spriteBlitQueue = (uintptr_t)a3;
     }
 #endif /* !SWOS_SDL_BUILD */
 }
@@ -1039,7 +1041,7 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 __attribute__((used, externally_visible))
 void _DrawSprite_entry2(SpriteGraphics *a0, int16_t d1, int16_t d2)
 {
-    uint32_t savedQueue = spriteBlitQueue;
+    uintptr_t savedQueue = spriteBlitQueue;
     _DrawSpriteClipped(a0, d1, d2);
     spriteBlitQueue = savedQueue;
     *(uint32_t *)savedQueue = BLT_BLITQ_END;
@@ -1407,16 +1409,16 @@ void _BuildSpriteBandAndGeneralRenderStacks(void)
     int16_t *a3 = occlMinYBucketsActive_local;
 
     /* Walk sorted sprites from back to front (highest index first) */
-    uint32_t *a2 = sortedSprites + d7;
+    Sprite **a2 = sortedSprites + d7;
     d7--;
 
 #if defined(DETERMINISTIC_MODE) && DETERMINISTIC_SPRITE_LIMIT > 0
     int16_t spritesEnqueued = 0;
 #endif
 
-    while ((uint32_t)a2 != (uint32_t)sortedSprites) {
+    while (a2 != sortedSprites) {
         a2--;
-        Sprite *a1 = (Sprite *)(*a2);
+        Sprite *a1 = *a2;
 
         int16_t sprIdx = a1->imageIndex;
         if (sprIdx < 0) {
@@ -1570,9 +1572,9 @@ post_enqueue:
     }
 
     /* Commit stack pointers */
-    plane01RenderStackPtr = (uint32_t)a4;
-    plane23RenderStackPtr = (uint32_t)a5;
-    renderStackPtr = (uint32_t)a6loc;
+    plane01RenderStackPtr = a4;
+    plane23RenderStackPtr = a5;
+    renderStackPtr = a6loc;
 }
 
 /* ================================================================

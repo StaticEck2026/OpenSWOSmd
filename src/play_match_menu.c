@@ -53,7 +53,7 @@ extern uint8_t playerPositions[];
 extern uint8_t currentMatchPlayers[];
 extern uint8_t playerPositionsArray[];
 extern uint8_t oldPlayerPositionsArray[];
-extern uint32_t teamTacticsTable[];
+extern void *teamTacticsTable[];
 extern void *positionsTable[];
 extern void *countriesTable[];
 
@@ -76,7 +76,7 @@ extern int16_t  playMatchExcludeFlags;
 extern uint16_t playMatchButtonVisibilityState;
 extern uint16_t careerTeamCoachOnly;
 extern uint16_t isFirstPlayerChoosingTeam;
-extern uint32_t currentSelectedPlayerIndexPtr;
+extern uintptr_t currentSelectedPlayerIndexPtr;
 extern uint16_t currentTeamSelectedPlayerPosition;
 extern uint16_t selTeamSelectedPlayerPosition;
 extern uint16_t team1SelectedPlayerIndex;
@@ -180,7 +180,7 @@ void _SetCurrentSelectedPlayerIndexPointer(void) {
     uint16_t *a1 = &team2SelectedPlayerIndex;
     if (!isFirstPlayerChoosingTeam) { uint16_t *t = a0; a0 = a1; a1 = t; }
     if (viewingOpponentTeam)        { uint16_t *t = a0; a0 = a1; a1 = t; }
-    currentSelectedPlayerIndexPtr = (uint32_t)a0;
+    currentSelectedPlayerIndexPtr = (uintptr_t)a0;
 }
 
 /* ================================================================ */
@@ -220,18 +220,18 @@ __attribute__((used, externally_visible))
 void _SetGameStartButtonText(void) {
     MenuEntry *e = &menuEntries[9];
     setBgColor(e, (bgColor(e) & 0xFFF0) | YELLOW_GREEN_BLACK_14);
-    e->fg = (uint32_t)aViewResult;
+    e->fg = (uintptr_t)aViewResult;
     if (!squadChangesAllowed) return;
 
     TeamFileEx *t1 = playMatchTeam1Ptr;
     TeamFileEx *t2 = playMatchTeam2Ptr;
     if (t1->team.teamControls == TEAM_COMPUTER &&
         t2->team.teamControls == TEAM_COMPUTER) {
-        e->fg = (uint32_t)aViewMatch;
+        e->fg = (uintptr_t)aViewMatch;
     } else {
-        e->fg = (uint32_t)aPlayCoachMatch;
+        e->fg = (uintptr_t)aPlayCoachMatch;
         if (t1->team.teamControls != TEAM_PLAYER_COACH)
-            e->fg = (uint32_t)aCoachMatch;
+            e->fg = (uintptr_t)aCoachMatch;
     }
     setBgColor(e, (bgColor(e) & 0xFFF0) | RED_10);
 }
@@ -287,9 +287,9 @@ void _ShowOrHidePlayMatchButton(void) {
         MenuEntry *vb = &menuEntries[7];
         vb->stringFlags &= ~(1u << 13);
         if (trainingGame) {
-            vb->fg = (uint32_t)aViewATeam;
+            vb->fg = (uintptr_t)aViewATeam;
             if (!is_A_team)
-                vb->fg = (uint32_t)aViewBTeam;
+                vb->fg = (uintptr_t)aViewBTeam;
         }
     }
 
@@ -499,16 +499,16 @@ void _SetVariableButtons(void) {
     _ShowUseMatchTeamIfTraining();
 
     MenuEntry *vb = &menuEntries[7];
-    vb->fg = (uint32_t)aViewOppo;
-    if (viewingOpponentTeam) vb->fg = (uint32_t)aViewTeam;
-    if (showingCpuTeams) { vb->fg = (uint32_t)aViewOtherTeam; vb->dwWidth = 93; }
+    vb->fg = (uintptr_t)aViewOppo;
+    if (viewingOpponentTeam) vb->fg = (uintptr_t)aViewTeam;
+    if (showingCpuTeams) { vb->fg = (uintptr_t)aViewOtherTeam; vb->dwWidth = 93; }
 
     vb->stringFlags &= ~(1u << 13);
 
     if (trainingGame) {
-        vb->fg = (uint32_t)aViewATeam;
+        vb->fg = (uintptr_t)aViewATeam;
         if (!is_A_team) {
-            vb->fg = (uint32_t)aViewBTeam;
+            vb->fg = (uintptr_t)aViewBTeam;
             uint16_t ns = _GetNumberOfSubstitutes((uint8_t *)&currentTeam, 1);
             if (ns != 1)
                 vb->stringFlags |= (1u << 13);
@@ -570,9 +570,9 @@ void _SetVariableButtons(void) {
             menuEntries[3].isInvisible = 0;
         }
 
-        cb->fg = (uint32_t)aCoach_1;
+        cb->fg = (uintptr_t)aCoach_1;
         if (t1->team.teamControls == TEAM_PLAYER_COACH)
-            cb->fg = (uint32_t)aPlayer_1;
+            cb->fg = (uintptr_t)aPlayer_1;
 
         setBgColor(cb, (bgColor(cb) & 0xFFF0) | BRIGHT_BLUE_TO_BLUE_13);
         if (t1->team.teamControls == TEAM_PLAYER_COACH)
@@ -632,17 +632,17 @@ void _SetVariableButtons(void) {
         if (trainingGame && !is_A_team) {
             /* B team: show team B name */
             if (playMatchTeam1Ptr == &careerTeam)
-                nm->fg = (uint32_t)teamBName;
+                nm->fg = (uintptr_t)teamBName;
             else
-                nm->fg = (uint32_t)teamAName;
+                nm->fg = (uintptr_t)teamAName;
         } else {
             TeamFileEx *tm = playMatchTeam1Ptr;
             if (viewingOpponentTeam) tm = playMatchTeam2Ptr;
-            nm->fg = (uint32_t)tm->team.teamName;
+            nm->fg = (uintptr_t)tm->team.teamName;
             if (trainingGame) {
-                nm->fg = (uint32_t)teamAName;
+                nm->fg = (uintptr_t)teamAName;
                 if (playMatchTeam1Ptr != &careerTeam)
-                    nm->fg = (uint32_t)teamBName;
+                    nm->fg = (uintptr_t)teamBName;
             }
         }
     }
@@ -650,7 +650,7 @@ void _SetVariableButtons(void) {
     {
         TeamFileEx *tm = playMatchTeam1Ptr;
         if (viewingOpponentTeam) tm = playMatchTeam2Ptr;
-        menuEntries[4].fg = (uint32_t)tm->team.coachName;
+        menuEntries[4].fg = (uintptr_t)tm->team.coachName;
     }
 }
 
@@ -1202,7 +1202,7 @@ void _DrawPlayerEntries(MenuEntry *a5) {
     /* Surname entry (entry 33 = numE) */
     {
         uint8_t *surname = _ExtractSurname((uint8_t *)playerPf->playerName, 0x800D);
-        numE->fg = (uint32_t)surname;
+        numE->fg = (uintptr_t)surname;
         numE->y = a5->y;
     }
 
@@ -1229,7 +1229,7 @@ void _DrawPlayerEntries(MenuEntry *a5) {
             _InitPlayerValueDisplayStruct(player, (uint8_t *)valE);
         } else {
             _FormatPlayerValueOrStatusText(player, fundsBuffer);
-            valE->fg = (uint32_t)fundsBuffer;
+            valE->fg = (uintptr_t)fundsBuffer;
         }
     }
 

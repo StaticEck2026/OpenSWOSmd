@@ -3,6 +3,7 @@
  * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
+#include <stdint.h>
 #include "loader_intro.h"
 #include "fade.h"
 #include "display.h"
@@ -28,8 +29,8 @@ extern uint16_t g_quitToDos;
 extern volatile uint16_t currentGameTick;
 extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 extern uint8_t pl1Fire;
-extern volatile uint32_t frontbufferBaseAltPtr;
-extern volatile uint32_t frontbufferBasePtr;
+extern volatile uintptr_t frontbufferBaseAltPtr;
+extern volatile uintptr_t frontbufferBasePtr;
 extern uint32_t memBoundaryMarker;
 extern uint16_t audioBankLoaded;
 extern volatile uint16_t audioActive;

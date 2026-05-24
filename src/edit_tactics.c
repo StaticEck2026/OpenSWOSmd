@@ -70,7 +70,7 @@ extern TeamTactics teamTacticsUSERD;
 extern TeamTactics teamTacticsUSERE;
 extern TeamTactics teamTacticsUSERF;
 
-extern uint32_t teamTacticsTable[];  /* pointer table indexed by chosenTactics */
+extern void *teamTacticsTable[];  /* pointer table indexed by chosenTactics */
 extern TeamTactics editTacticsCurrentTactics;  /* 370-byte tactics buffer */
 extern uint8_t savedCurrentTactics;        /* 370-byte saved tactics buffer */
 
@@ -191,12 +191,12 @@ __attribute__((used, externally_visible))
 void _ChooseTacticsInit(void)
 {
     _CheckIsTeamNational();
-    menuEntries[1].fg = (uint32_t)&teamTacticsUSERA;
-    menuEntries[2].fg = (uint32_t)&teamTacticsUSERB;
-    menuEntries[3].fg = (uint32_t)&teamTacticsUSERC;
-    menuEntries[4].fg = (uint32_t)&teamTacticsUSERD;
-    menuEntries[5].fg = (uint32_t)&teamTacticsUSERE;
-    menuEntries[6].fg = (uint32_t)&teamTacticsUSERF;
+    menuEntries[1].fg = (uintptr_t)&teamTacticsUSERA;
+    menuEntries[2].fg = (uintptr_t)&teamTacticsUSERB;
+    menuEntries[3].fg = (uintptr_t)&teamTacticsUSERC;
+    menuEntries[4].fg = (uintptr_t)&teamTacticsUSERD;
+    menuEntries[5].fg = (uintptr_t)&teamTacticsUSERE;
+    menuEntries[6].fg = (uintptr_t)&teamTacticsUSERF;
 }
 
 /* ================================================================
@@ -402,7 +402,7 @@ void _CopyCurrentTactics(void)
 {
     /* volatile: LTO with -Ofast may eliminate this copy because
      * teamTacticsTable[18] aliases editTacticsCurrentTactics. */
-    volatile uint8_t *src = (volatile uint8_t *)(uint32_t)teamTacticsTable[chosenTactics];
+    volatile uint8_t *src = (volatile uint8_t *)teamTacticsTable[chosenTactics];
     volatile uint8_t *dst = (volatile uint8_t *)&editTacticsCurrentTactics;
 
     for (int16_t i = 369; i >= 0; i--) {
@@ -420,7 +420,7 @@ void _CopyCurrentTactics(void)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void _ApplyCurrentEditedTactics(void)
 {
-    volatile uint8_t *dst = (volatile uint8_t *)(uint32_t)teamTacticsTable[chosenTactics];
+    volatile uint8_t *dst = (volatile uint8_t *)teamTacticsTable[chosenTactics];
     volatile uint8_t *src = (volatile uint8_t *)&editTacticsCurrentTactics;
 
     for (int16_t i = 369; i >= 0; i--) {
@@ -2767,10 +2767,10 @@ void _InitEditTeamsMenu(void)
     TeamFileEx *teamEx = (TeamFileEx *)&selTeamsPtr;
 
     /* Team name → entry 0 */
-    menuEntries[0].fg = (uint32_t)(uint8_t *)teamEx->team.teamName;
+    menuEntries[0].fg = (uintptr_t)(uint8_t *)teamEx->team.teamName;
 
     /* Coach name → entry at offset 0xA8 */
-    menuEntries[0xA8 / 56].fg = (uint32_t)(uint8_t *)teamEx->team.coachName;
+    menuEntries[0xA8 / 56].fg = (uintptr_t)(uint8_t *)teamEx->team.coachName;
 
     PrimaryKitColorConversionC();
     SecondaryKitColorConversionC();
@@ -2788,7 +2788,7 @@ void _InitEditTeamsMenu(void)
         *(uint16_t *)&faceEntry->fg = (uint16_t)(faceIdx + 186);  /* SPR_PL_FACE_WHITE_GUY */
         faceEntry = (MenuEntry *)((uint8_t *)faceEntry + 56);
 
-        nameEntry->fg = (uint32_t)(uint8_t *)pf->playerName;
+        nameEntry->fg = (uintptr_t)(uint8_t *)pf->playerName;
         nameEntry = (MenuEntry *)((uint8_t *)nameEntry + 56);
     }
 }
@@ -3048,7 +3048,7 @@ static void setBgColor(MenuEntry *e, uint16_t colorIdx) {
  *      d0 = number of teams
  * out: a0 = team pointer (or NULL)
  * ================================================================ */
-extern uint32_t chooseTeamMenuName;
+extern uintptr_t chooseTeamMenuName;
 extern uint16_t numTeamsCountryBuffer;
 extern uint32_t dwArrayCountries[];
 extern uint8_t indexCountries[];
@@ -3059,7 +3059,7 @@ __attribute__((used, externally_visible))
 TeamFileEx *_ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers,
                                       uint16_t numTeams)
 {
-    chooseTeamMenuName = (uint32_t)menuTitle;
+    chooseTeamMenuName = (uintptr_t)menuTitle;
     numTeamsCountryBuffer = numTeams;
 
     uint32_t *nameArray = dwArrayCountries;
@@ -3387,7 +3387,7 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
 
     /* Entry 41: player name (surname) */
     uint8_t *surname = _ExtractSurname((uint8_t *)pf->playerName, 0x800D);
-    e->fg = (uint32_t)surname;
+    e->fg = (uintptr_t)surname;
     e->y = entryY;
     e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 42 */
 
@@ -3411,7 +3411,7 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
         _InitPlayerValueDisplayStruct(playerPtr, (uint8_t *)e);
     } else {
         _FormatPlayerValueOrStatusText(playerPtr, fundsBuffer);
-        e->fg = (uint32_t)fundsBuffer;
+        e->fg = (uintptr_t)fundsBuffer;
     }
     e->isInvisible = 0;
 

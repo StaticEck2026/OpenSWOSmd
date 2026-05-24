@@ -7,7 +7,7 @@
 #include "game_types.h"
 #include "deterministic.h"
 
-extern uint32_t assetLoaderCacheFlag;
+extern uintptr_t assetLoaderCacheFlag;
 extern uint32_t assetLoaderWorkPtr;
 extern volatile int16_t waitingInterrupt;
 extern uint16_t useIndividualPlayerSkinColor;

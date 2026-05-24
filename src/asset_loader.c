@@ -15,10 +15,14 @@
 #include <stdio.h>
 #endif
 
+#include <stdint.h>
+
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint32_t assetLoaderWorkPtr;
 extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
-extern uint32_t assetLoaderCacheFlag;
+/* Head of the cache linked-list. Storage retyped to uintptr_t so that on
+ * 64-bit hosts (LP64 / LLP64) a real pointer round-trips. */
+extern uintptr_t assetLoaderCacheFlag;
 extern volatile uint16_t panicReasonCode;
 extern uint16_t assetLoaderAltPathReady;
 extern uint32_t loaderMemTop;
@@ -45,14 +49,50 @@ extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSi
 #include "rnc_magic.h"
 
 /* ---- Cache node layout constants ----
- * offset 0:  next pointer (uint32_t)
- * offset 4:  isFree flag (uint16_t) — 0 = in-use, 1 = free
- * offset 6:  blockSize (uint32_t) — allocated block size (even-aligned)
- * offset 10: dataSize (uint32_t) — actual data size stored
- * offset 14: name (char[34]) — null-terminated asset name
- * offset 48: payload data begins
- */
+ *
+ * 32-bit (matches Amiga m68k layout exactly):
+ *   offset 0:  next pointer (4 bytes)
+ *   offset 4:  isFree flag (uint16_t) — 0 = in-use, 1 = free
+ *   offset 6:  blockSize (uint32_t) — allocated block size (even-aligned)
+ *   offset 10: dataSize (uint32_t) — actual data size stored
+ *   offset 14: name (null-terminated asset name)
+ *   offset 48: payload data begins
+ *
+ * 64-bit (next widened to 8 bytes, every other field shifted +4):
+ *   offset 0:  next pointer (8 bytes)
+ *   offset 8:  isFree
+ *   offset 10: blockSize
+ *   offset 14: dataSize
+ *   offset 18: name
+ *   offset 48: payload data begins
+ *
+ * The 48-byte header has plenty of slack in the name field, so on 64-bit
+ * the layout stays inside the same header window — splits at
+ * node + CACHE_NODE_HEADER_SIZE + alignedSize remain valid. */
 #define CACHE_NODE_HEADER_SIZE  48
+#if UINTPTR_MAX == 0xFFFFFFFFu
+  #define CACHE_OFF_ISFREE    4
+  #define CACHE_OFF_BLOCKSIZE 6
+  #define CACHE_OFF_DATASIZE  10
+  #define CACHE_OFF_NAME      14
+#else
+  #define CACHE_OFF_ISFREE    8
+  #define CACHE_OFF_BLOCKSIZE 10
+  #define CACHE_OFF_DATASIZE  14
+  #define CACHE_OFF_NAME      18
+#endif
+
+/* Read/write the "next" field as a real native pointer. On both 32-bit
+ * (4-byte slot) and 64-bit (8-byte slot) the slot is wide enough to
+ * round-trip a pointer, so a direct (uint8_t **) cast is correct. */
+static inline uint8_t *cache_node_next(const uint8_t *node)
+{
+    return *(uint8_t *const *)node;
+}
+static inline void cache_node_set_next(uint8_t *node, uint8_t *next)
+{
+    *(uint8_t **)node = next;
+}
 
 /* ---- Forward declarations ---- */
 extern void _InstallAndInitLoaderBootstrap(void);
@@ -85,26 +125,26 @@ static uint8_t *assetCacheAllocInternal(uint32_t size)
     for (;;)
     {
         /* Only consider free nodes */
-        if (*(uint16_t *)(node + 4) != 0)
+        if (*(uint16_t *)(node + CACHE_OFF_ISFREE) != 0)
         {
             /* Check if block is large enough */
-            if (*(uint32_t *)(node + 6) >= alignedSize)
+            if (*(uint32_t *)(node + CACHE_OFF_BLOCKSIZE) >= alignedSize)
             {
                 /* Found a suitable block — claim it */
-                remaining = (int32_t)(*(uint32_t *)(node + 6) - alignedSize - CACHE_NODE_HEADER_SIZE);
+                remaining = (int32_t)(*(uint32_t *)(node + CACHE_OFF_BLOCKSIZE) - alignedSize - CACHE_NODE_HEADER_SIZE);
 
-                *(uint32_t *)(node + 6) = alignedSize;  /* blockSize = aligned size */
-                *(uint32_t *)(node + 10) = size;         /* dataSize = original size */
-                *(uint16_t *)(node + 4) = 0;             /* mark in-use */
+                *(uint32_t *)(node + CACHE_OFF_BLOCKSIZE) = alignedSize;
+                *(uint32_t *)(node + CACHE_OFF_DATASIZE)  = size;
+                *(uint16_t *)(node + CACHE_OFF_ISFREE)    = 0;
 
                 /* Split: create a new free node from the remainder */
                 if (remaining >= 0)
                 {
                     splitNode = node + CACHE_NODE_HEADER_SIZE + alignedSize;
-                    *(uint32_t *)splitNode = *(uint32_t *)node;   /* new->next = old->next */
-                    *(uint32_t *)node = (uint32_t)splitNode;      /* old->next = new */
-                    *(uint32_t *)(splitNode + 6) = (uint32_t)remaining;  /* new->blockSize */
-                    *(uint16_t *)(splitNode + 4) = 1;             /* new->isFree = 1 */
+                    cache_node_set_next(splitNode, cache_node_next(node));  /* new->next = old->next */
+                    cache_node_set_next(node, splitNode);                    /* old->next = new */
+                    *(uint32_t *)(splitNode + CACHE_OFF_BLOCKSIZE) = (uint32_t)remaining;
+                    *(uint16_t *)(splitNode + CACHE_OFF_ISFREE)    = 1;
                 }
 
                 assetLoaderWorkPtr -= alignedSize;
@@ -113,10 +153,10 @@ static uint8_t *assetCacheAllocInternal(uint32_t size)
         }
 
         /* Advance to next node */
-        if (*(uint32_t *)node == 0)
+        if (cache_node_next(node) == (uint8_t *)0)
             return (uint8_t *)0;
 
-        node = *(uint8_t **)node;
+        node = cache_node_next(node);
     }
 }
 
@@ -140,11 +180,11 @@ static uint8_t *cacheNodeFindByName(const uint8_t *name, uint32_t *outDataSize)
     for (;;)
     {
         /* Only check in-use nodes (isFree == 0) */
-        if (*(uint16_t *)(node + 4) == 0)
+        if (*(uint16_t *)(node + CACHE_OFF_ISFREE) == 0)
         {
-            /* Compare name at offset 14 */
+            /* Compare name */
             s1 = name;
-            s2 = node + 14;
+            s2 = node + CACHE_OFF_NAME;
 
             for (;;)
             {
@@ -153,7 +193,7 @@ static uint8_t *cacheNodeFindByName(const uint8_t *name, uint32_t *outDataSize)
                 if (*s1 == 0)
                 {
                     /* Match found */
-                    *outDataSize = *(uint32_t *)(node + 10);
+                    *outDataSize = *(uint32_t *)(node + CACHE_OFF_DATASIZE);
                     return node;
                 }
                 s1++;
@@ -162,10 +202,10 @@ static uint8_t *cacheNodeFindByName(const uint8_t *name, uint32_t *outDataSize)
         }
 
         /* Advance to next node */
-        if (*(uint32_t *)node == 0)
+        if (cache_node_next(node) == (uint8_t *)0)
             return (uint8_t *)0;
 
-        node = *(uint8_t **)node;
+        node = cache_node_next(node);
     }
 }
 
@@ -272,8 +312,8 @@ int16_t _AssetCacheLoadFromAssetSys(const uint8_t *name)
         return (int16_t)0xFF;
     }
 
-    /* Copy name into node (offset 14) */
-    nameField = node + 14;
+    /* Copy name into node */
+    nameField = node + CACHE_OFF_NAME;
     srcName = name;
     do
     {
@@ -314,8 +354,8 @@ void _AssetCacheStoreFromMemory(uint8_t *name, uint8_t *src, uint32_t size)
         count--;
     }
 
-    /* Copy name into node (offset 14) */
-    nameField = node + 14;
+    /* Copy name into node */
+    nameField = node + CACHE_OFF_NAME;
     do
     {
         *nameField++ = *name;
@@ -362,23 +402,23 @@ void _AssetLoaderRegisterRegion(uint32_t size, uint8_t *region)
     if (node == (uint8_t *)0)
     {
         /* First node — set cache head */
-        assetLoaderCacheFlag = (uint32_t)region;
+        assetLoaderCacheFlag = (uintptr_t)region;
     }
     else
     {
         /* Walk to end of list */
-        while (*(uint32_t *)node != 0)
+        while (cache_node_next(node) != (uint8_t *)0)
         {
-            node = *(uint8_t **)node;
+            node = cache_node_next(node);
         }
         /* Append new node */
-        *(uint32_t *)node = (uint32_t)region;
+        cache_node_set_next(node, region);
     }
 
     /* Initialize node header */
-    *(uint32_t *)region = 0;                  /* next pointer = NULL */
-    *(uint32_t *)(region + 6) = size;         /* usable size */
-    *(uint16_t *)(region + 4) = 1;            /* flags = available */
+    cache_node_set_next(region, (uint8_t *)0);
+    *(uint32_t *)(region + CACHE_OFF_BLOCKSIZE) = size;
+    *(uint16_t *)(region + CACHE_OFF_ISFREE)    = 1;  /* free */
 }
 
 /* ================================================================

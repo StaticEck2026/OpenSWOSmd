@@ -20,7 +20,7 @@ typedef void (*VoidFunc)(void);
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t currentMenu[];
 extern MenuEntry menuEntries[];
-extern uint32_t currentMenuPtr;
+extern uintptr_t currentMenuPtr;
 extern volatile uint16_t menuStatus;
 extern uint16_t menuFade;
 extern volatile uint16_t exitMenu;
@@ -65,7 +65,7 @@ extern uint16_t nextEntryDirectionOffsets[];
 extern uint32_t magicValue;
 extern uint16_t panicReasonCode;
 extern uint32_t irqCookieObfuscated;
-extern uint32_t errorMessagePtr;
+extern char *errorMessagePtr;
 extern uint16_t forceDrawTransparentMenuItems;
 
 /* _MenuCheckControls globals */
@@ -161,7 +161,7 @@ extern volatile uint8_t keyBuffer[];
 extern uint8_t keycodeLut[];
 
 /* BlitterCopyOverlayToScreen globals */
-extern volatile uint32_t frontbufferBasePtr;
+extern volatile uintptr_t frontbufferBasePtr;
 extern uint8_t frontbufferBase[];
 extern uint8_t frontbufferBaseAlt[];
 extern uint8_t frontbufferMaskBuffer[];
@@ -336,7 +336,7 @@ void _BlitterCopyOverlayToScreen(void)
      * works there because the bitplane pointers still point at the
      * just-drawn buffer post-swap -- on our SDL renderer that
      * isn't true, so we need the full sync. */
-    uint8_t *src = (frontbufferBasePtr != (uint32_t)frontbufferBaseAlt)
+    uint8_t *src = (frontbufferBasePtr != (uintptr_t)frontbufferBaseAlt)
                        ? frontbufferBaseAlt
                        : frontbufferBase;
     uint8_t *dst = (uint8_t *)frontbufferBasePtr;
@@ -367,9 +367,9 @@ void _BlitterCopyOverlayToScreen(void)
     custom->bltcon0 = BLTCON0_USEA_USED_LF_F0;
 
     /* Select source: if frontbuffer is Alt, use Base; else use Alt */
-    srcAddr = (uint32_t)frontbufferBase;
-    if (frontbufferBasePtr != (uint32_t)frontbufferBaseAlt)
-        srcAddr = (uint32_t)frontbufferBaseAlt;
+    srcAddr = (uintptr_t)frontbufferBase;
+    if (frontbufferBasePtr != (uintptr_t)frontbufferBaseAlt)
+        srcAddr = (uintptr_t)frontbufferBaseAlt;
 
 #ifdef AGA
     /* AGA: per-plane blit with interleaved stride */
@@ -874,6 +874,20 @@ static void initMenuEntry(MenuEntry *tmpl)
     tmpl->afterDrawCb = 0;
 }
 
+/* Read a native pointer-width value from the packed stream and advance
+ * the cursor. On 32-bit reads 4 bytes (matching the Amiga layout); on
+ * 64-bit reads 8 (matching the C `void *` slot in MenuCmd_OnSelect,
+ * MenuCmd_TextPtr, etc.). Returning uintptr_t lets the caller assign
+ * directly to MenuEntry.bg/fg (uintptr_t) or cast to a function-pointer
+ * field. */
+static inline uintptr_t unpackReadPtr(uint8_t **pp)
+{
+    uintptr_t v;
+    __builtin_memcpy(&v, *pp, sizeof(v));
+    *pp += sizeof(v);
+    return v;
+}
+
 /* ================================================================
  * UnpackMenu — unpack packed menu data into MenuEntry array
  *
@@ -897,11 +911,32 @@ void _UnpackMenu(uint8_t *packed, uint8_t *dest)
     menuY = 0;
     initMenuEntry(tmpl);
 
-    /* Copy menu header (16 bytes: onInit, afterDraw, onDraw, selectedEntry) */
-    *(uint32_t *)a1 = *(uint32_t *)a0; a0 += 4;
-    *(uint32_t *)(a1 + 4) = *(uint32_t *)a0; a0 += 4;
-    *(uint32_t *)(a1 + 8) = *(uint32_t *)a0; a0 += 4;
-    *(uint32_t *)(a1 + 12) = *(uint32_t *)a0; a0 += 4;
+    /* Copy menu header.
+     *
+     * Source layout (MenuHeader): 3 void* + 1 uint32_t defaultEntry.
+     * Dest layout   (Menu)      : 3 fn-ptr + 1 MenuEntry* selectedEntry
+     *                              + uint16_t numEntries + uint32_t endOfMenuPtr.
+     *
+     * On 32-bit the pointer slots are 4 bytes; on 64-bit they grow to 8.
+     * The 4th source field is a uint32_t ordinal that ActivateMenu later
+     * resolves to a real MenuEntry* via _CalcMenuEntryAddress, so we copy
+     * just the 4 ordinal bytes into the low half of selectedEntry. Use
+     * field-typed access so the pointer width round-trips for both
+     * targets without a per-bitness branch. */
+    {
+        struct __attribute__((packed)) PackedHdr {
+            void    *onInitPtr;
+            void    *onReturnPtr;
+            void    *onDrawPtr;
+            uint32_t defaultEntry;
+        } *srcHdr = (struct PackedHdr *)a0;
+        Menu *dstMenu = (Menu *)a1;
+        dstMenu->onInit        = (MenuVoidFn)srcHdr->onInitPtr;
+        dstMenu->afterDraw     = (MenuVoidFn)srcHdr->onReturnPtr;
+        dstMenu->onDraw        = (MenuVoidFn)srcHdr->onDrawPtr;
+        dstMenu->selectedEntry = (MenuEntry *)(uintptr_t)srcHdr->defaultEntry;
+        a0 += sizeof(*srcHdr);
+    }
 
     a1 += MENU_HEADER_SIZE;
 
@@ -1019,37 +1054,34 @@ convert_menu_switch:
 
     case 3: /* func1 (background function) */
         curEntry->background = ENTRY_FUNC1;
-        curEntry->bg = *(uint32_t *)a0; a0 += 4;
+        curEntry->bg = unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 4: /* entry_frame (background color + frame) */
         curEntry->background = ENTRY_FRAME_AND_BACK_COLOR;
-        *(uint16_t *)((uint8_t *)curEntry + 30) = *(uint16_t *)a0; a0 += 2;
-        *(uint16_t *)((uint8_t *)curEntry + 32) = 0;
+        curEntry->bg = (uintptr_t)*(uint16_t *)a0; a0 += 2;
         goto convert_menu_switch;
 
     case 5: /* sprite1 (background sprite) */
         curEntry->background = ENTRY_SPRITE1;
-        *(uint16_t *)((uint8_t *)curEntry + 30) = *(uint16_t *)a0; a0 += 2;
-        *(uint16_t *)((uint8_t *)curEntry + 32) = 0;
+        curEntry->bg = (uintptr_t)*(uint16_t *)a0; a0 += 2;
         goto convert_menu_switch;
 
     case 6: /* invalid_type */
         curEntry->background = 4;
-        *(uint16_t *)((uint8_t *)curEntry + 30) = *(uint16_t *)a0; a0 += 2;
-        *(uint16_t *)((uint8_t *)curEntry + 32) = 0;
+        curEntry->bg = (uintptr_t)*(uint16_t *)a0; a0 += 2;
         goto convert_menu_switch;
 
     case 7: /* func2 (foreground function) */
         curEntry->content = ENTRY_FUNC2;
         curEntry->stringFlags = 0;
-        curEntry->fg = *(uint32_t *)a0; a0 += 4;
+        curEntry->fg = unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 8: /* string_entry */
         curEntry->content = ENTRY_STRING;
         curEntry->stringFlags = *(uint16_t *)a0; a0 += 2;
-        curEntry->fg = *(uint32_t *)a0; a0 += 4;
+        curEntry->fg = unpackReadPtr(&a0);
         /* Check if fg is a valid pointer (>= 256) or NULL */
         if (curEntry->fg != 0 && curEntry->fg < 256) {
             curEntry->fg = 0xFFFFFFFF;
@@ -1059,45 +1091,43 @@ convert_menu_switch:
     case 9: /* sprite2 (foreground sprite) */
         curEntry->content = ENTRY_SPRITE2;
         curEntry->stringFlags = 0;
-        *(uint16_t *)((uint8_t *)curEntry + 38) = *(uint16_t *)a0; a0 += 2;
-        *(uint16_t *)((uint8_t *)curEntry + 40) = 0;
+        curEntry->fg = (uintptr_t)*(uint16_t *)a0; a0 += 2;
         goto convert_menu_switch;
 
     case 10: /* string_table */
         curEntry->content = ENTRY_STRING_TABLE;
         curEntry->stringFlags = *(uint16_t *)a0; a0 += 2;
-        curEntry->fg = *(uint32_t *)a0; a0 += 4;
+        curEntry->fg = unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 11: /* multiLine_text */
         curEntry->content = ENTRY_MULTI_LINE_TEXT;
         curEntry->stringFlags = *(uint16_t *)a0; a0 += 2;
-        curEntry->fg = *(uint32_t *)a0; a0 += 4;
+        curEntry->fg = unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 12: /* number */
         curEntry->content = ENTRY_NUMBER;
         curEntry->stringFlags = *(uint16_t *)a0; a0 += 2;
-        *(uint16_t *)((uint8_t *)curEntry + 38) = *(uint16_t *)a0; a0 += 2;
-        *(uint16_t *)((uint8_t *)curEntry + 40) = 0;
+        curEntry->fg = (uintptr_t)*(uint16_t *)a0; a0 += 2;
         goto convert_menu_switch;
 
     case 13: /* on_select_fire_only */
         curEntry->controlMask = 0x20;
-        curEntry->onSelect = *(uint32_t *)a0; a0 += 4;
+        curEntry->onSelect = (MenuEntryFn)unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 14: /* on_select */
         curEntry->controlMask = *(uint16_t *)a0; a0 += 2;
-        curEntry->onSelect = *(uint32_t *)a0; a0 += 4;
+        curEntry->onSelect = (MenuEntryFn)unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 15: /* before_draw_func */
-        curEntry->beforeDraw = *(uint32_t *)a0; a0 += 4;
+        curEntry->beforeDraw = (MenuEntryFn)unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 16: /* after_draw_func */
-        curEntry->afterDrawCb = *(uint32_t *)a0; a0 += 4;
+        curEntry->afterDrawCb = (MenuEntryFn)unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 17: /* left_skip */
@@ -1123,7 +1153,7 @@ convert_menu_switch:
     case 21: /* sprite_copy */
         curEntry->content = ENTRY_SPRITE_COPY;
         curEntry->stringFlags = 0;
-        curEntry->fg = *(uint32_t *)a0; a0 += 4;
+        curEntry->fg = unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 22: /* string_entry2 (deferred text — marker for dynamic string) */
@@ -1155,7 +1185,7 @@ finish_menu:
         for (i = (int16_t)entryCount - 1; i >= 0; i--) {
             if (entryIter->content == ENTRY_STRING && entryIter->fg == 0xFFFFFFFF) {
                 /* Allocate buffer space for dynamic menu text */
-                entryIter->fg = (uint32_t)a1;
+                entryIter->fg = (uintptr_t)a1;
                 /* Write "STDMENUTEXT\0" marker. Original asm used four
                  * `move.l #'STDM',(a0)+` etc. — m68k char literals pack
                  * BE so the bytes landed [S,T,D,M,E,N,U,T,E,X,T,0] in
@@ -1453,7 +1483,7 @@ void _MenuProc(void)
 {
     Menu *menu;
     MenuEntry *selectedEntry;
-    uint32_t onSelectPtr;
+    MenuEntryFn onSelectPtr;
     uint16_t d7;
     int16_t dir;
 
@@ -1475,7 +1505,7 @@ void _MenuProc(void)
 
     if (magicValue != 0x12345678) {
         panicReasonCode = 0x9999;
-        errorMessagePtr = (uint32_t)aStackOverflow;
+        errorMessagePtr = (char *)aStackOverflow;
         _PanicHaltLoop();
         return;
     }
@@ -1600,7 +1630,7 @@ no_event_or_done:
             MenuEntry *cand = _CalcMenuEntryAddress((uint16_t)(uint8_t)navOrd);
 
             if (cand->isDisabled == 0 && cand->isInvisible == 0) {
-                menu->selectedEntry = (uint32_t)cand;
+                menu->selectedEntry = cand;
                 if (selectedEntry->background == NO_BACKGROUND)
                     _DrawMenu();
                 else
@@ -1633,7 +1663,7 @@ void _ActivateMenu(uint8_t *packedMenu)
     uintptr_t selEntryVal;
     MenuVoidFn onInitPtr;
 
-    currentMenuPtr = (uint32_t)packedMenu;
+    currentMenuPtr = (uintptr_t)packedMenu;
     s_seasonUpdateHoldCounter = 0;
 
     _UnpackMenu(packedMenu, currentMenu);
@@ -1685,7 +1715,7 @@ void _ShowMenu(uint8_t *packedMenu)
        callbacks, but keep volatile in case any callback path is missed. */
     /* Save+restore as MenuEntry * (the new struct field type). */
     MenuEntry * volatile oldSelectedEntry = menu->selectedEntry;
-    volatile uint32_t oldPackedMenu = currentMenuPtr;
+    volatile uintptr_t oldPackedMenu = currentMenuPtr;
 
     menuStatus = 0;
     exitMenu = 0;
@@ -1733,7 +1763,7 @@ void _RestorePreviousMenu(MenuEntry *oldSelectedEntry, uint8_t *oldPackedMenu)
     Menu *menu;
     MenuVoidFn afterDrawPtr;
 
-    currentMenuPtr = (uint32_t)oldPackedMenu;
+    currentMenuPtr = (uintptr_t)oldPackedMenu;
     _UnpackMenu(oldPackedMenu, currentMenu);
 
     menu = (Menu *)currentMenu;
@@ -1759,7 +1789,7 @@ void _RestorePreviousMenu(MenuEntry *oldSelectedEntry, uint8_t *oldPackedMenu)
 __attribute__((used, externally_visible))
 void _BlitMaskedRectAltToFront(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
-    extern volatile uint32_t frontbufferBaseAltPtr;
+    extern volatile uintptr_t frontbufferBaseAltPtr;
     _RectRowMaskedApplyScreenOffset(x, y, w, h, (uint8_t *)frontbufferBaseAltPtr, (uint8_t *)frontbufferBasePtr);
 }
 

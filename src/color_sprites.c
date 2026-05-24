@@ -27,11 +27,11 @@ extern void _ConvertColorTableToSkinColor(uint16_t color, uint16_t *destTable);
 extern void _DetermineGoalieFaces(TeamGame *team, uint8_t *gkFaceToIndex, uint8_t *gkFaceIndices);
 
 /* ---- External globals ---- */
-extern uint32_t teamFilenamesTable;
-extern uint32_t team1Filename;
-extern uint32_t team2Filename;
+extern void *teamFilenamesTable[];
+extern uintptr_t team1Filename;
+extern uintptr_t team2Filename;
 extern uint16_t menuColorAndTextScript[];
-extern uint32_t menuImageStreamBaseEnd;
+extern uint8_t *menuImageStreamBaseEnd;
 extern uint8_t bigCharsTable[];
 extern uint16_t team1NameLength;
 extern uint16_t team2NameLength;
@@ -105,18 +105,17 @@ __attribute__((used, externally_visible))
 void _ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
 {
     uint16_t d0;
-    uint32_t *fnTable = &teamFilenamesTable;
     uint16_t totalWidth;
 
     /* Set team filenames from shirt type index */
     d0 = (uint16_t)team1->prShirtType;
-    team1Filename = fnTable[d0];
+    team1Filename = (uintptr_t)teamFilenamesTable[d0];
     d0 = (uint16_t)team2->prShirtType;
-    team2Filename = fnTable[d0];
+    team2Filename = (uintptr_t)teamFilenamesTable[d0];
 
     /* Process image command stream (colors menu graphics) */
     /* Force read from memory — LTO must not use a stale cached value */
-    _ProcessImageCommandStream(menuColorAndTextScript, (uint8_t *)*(volatile uint32_t *)&menuImageStreamBaseEnd);
+    _ProcessImageCommandStream(menuColorAndTextScript, *(uint8_t * volatile *)&menuImageStreamBaseEnd);
 
     /* Copy advertisement sprite data pointers */
     _CopyAdvertisementsData();

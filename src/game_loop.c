@@ -84,7 +84,7 @@ extern uint16_t team1TotalGoals;
 extern uint16_t team2TotalGoals;
 extern uint16_t pl1Tactics;
 extern uint16_t pl2Tactics;
-extern uint32_t playersPositionsByTactics[18];
+extern void *playersPositionsByTactics[18];
 
 extern uint16_t hilSceneNumber;
 extern volatile uint16_t numScenesInHilFile;

@@ -168,8 +168,8 @@ extern uint16_t bootTemp6;
 
 extern uint16_t introMenuImageScript[];
 extern uint8_t imageCmdWorkBuf[];
-extern uint32_t imageStreamCursor;
-extern uint32_t menuImageStreamBaseEnd;
+extern uint8_t *imageStreamCursor;
+extern uint8_t *menuImageStreamBaseEnd;
 
 extern uint16_t g_quitToDos;
 
@@ -286,7 +286,8 @@ void _mainC(void)
     _ProcessImageCommandStream(introMenuImageScript, imageCmdWorkBuf);
     /* Force this write through to memory — LTO must not eliminate it.
      * menuImageStreamBaseEnd is read later by _ConvertColorsAndTextSprites. */
-    *(volatile uint32_t *)&menuImageStreamBaseEnd = *(volatile uint32_t *)&imageStreamCursor;
+    *(uint8_t * volatile *)&menuImageStreamBaseEnd =
+        *(uint8_t * volatile *)&imageStreamCursor;
     _AssetPrecacheMenuPack();
     assetLoaderAltPathReady = 1;
     hilNumGoals = 0;

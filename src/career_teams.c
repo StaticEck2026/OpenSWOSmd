@@ -2333,9 +2333,9 @@ void _Career_UpdateRemovePlayersMenuEntry(void)
             count++;
     }
 
-    menuEntries[6].fg = (uint32_t)aRemovePlayer;   /* singular */
+    menuEntries[6].fg = (uintptr_t)aRemovePlayer;   /* singular */
     if (count != 1) {
-        menuEntries[6].fg = (uint32_t)aRemovePlayers;  /* plural */
+        menuEntries[6].fg = (uintptr_t)aRemovePlayers;  /* plural */
     }
 }
 

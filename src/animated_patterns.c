@@ -16,6 +16,7 @@
  * ResetAnimatedPatterns forces all animated tiles back to static.
  */
 
+#include <stdint.h>
 #include "animated_patterns.h"
 #include "game_types.h"
 #include "display.h"
@@ -42,7 +43,7 @@ extern TeamGame topTeamInGame;
 extern TeamGame bottomTeamInGame;
 extern uint8_t  *spriteGraphicsPtr;
 extern uint8_t  pitchDatBuffer[];
-extern volatile uint32_t frontbufferBasePtr;
+extern volatile uintptr_t frontbufferBasePtr;
 extern uint8_t  frontbufferMaskBuffer[];
 extern uint8_t  currentMenu[];
 #ifdef SWOS_SDL_BUILD

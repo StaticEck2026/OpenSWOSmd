@@ -18,8 +18,8 @@ volatile struct Custom *custom = (volatile struct Custom *)0xDFF000;
 extern uint8_t frontbufferBase[];
 extern uint8_t frontbufferBaseAlt[];
 extern uint8_t frontbufferMaskBuffer[];
-extern volatile uint32_t frontbufferBasePtr;
-extern volatile uint32_t frontbufferBaseAltPtr;
+extern volatile uintptr_t frontbufferBasePtr;
+extern volatile uintptr_t frontbufferBaseAltPtr;
 
 /* Bitplane bases (BSSInChip, 0x384 bytes each) */
 extern uint8_t bitPlane0Base[];
@@ -62,7 +62,7 @@ extern uint32_t copperZeroLong;
 /* Sprite blit queue sentinels (4 bytes each: 2-byte sentinel + padding/queue) */
 extern uint32_t kSpriteBlitQueueSentinel_A;
 extern uint32_t kSpriteBlitQueueSentinel_B;
-extern volatile uint32_t spriteBlitQueue;
+extern volatile uintptr_t spriteBlitQueue;
 
 /* Camera state */
 extern FixedPoint cameraX;          /* dc.l but word-accessed (big-endian high word) */
@@ -286,8 +286,8 @@ void _InitDisplayAndCopper(void)
     int16_t i;
 
     /* Set frontbuffer base pointers */
-    frontbufferBasePtr = (uint32_t)frontbufferBase;
-    frontbufferBaseAltPtr = (uint32_t)frontbufferBaseAlt;
+    frontbufferBasePtr = (uintptr_t)frontbufferBase;
+    frontbufferBaseAltPtr = (uintptr_t)frontbufferBaseAlt;
 
     /* Initialize sprite blit queue sentinels */
     kSpriteBlitQueueSentinel_A = 0xFFFFFFFFu;
@@ -553,7 +553,7 @@ void _UpdatePlanePtrsAndBlitParams(void)
 __attribute__((used, externally_visible))
 void _SwapBuffersAndCameraViewState(void)
 {
-    if (frontbufferBasePtr == (uint32_t)frontbufferBase)
+    if (frontbufferBasePtr == (uintptr_t)frontbufferBase)
     {
         /* Currently using primary → swap to alt */
         bitPlane0BasePtr = (uint32_t)bitPlane0BaseAlt;
@@ -578,9 +578,9 @@ void _SwapBuffersAndCameraViewState(void)
         *(volatile uint32_t *)bitPlane7BaseAlt = copperZeroLong;
 #endif
 
-        frontbufferBasePtr = (uint32_t)frontbufferBaseAlt;
-        frontbufferBaseAltPtr = (uint32_t)frontbufferBase;
-        spriteBlitQueue = (uint32_t)&kSpriteBlitQueueSentinel_B;
+        frontbufferBasePtr = (uintptr_t)frontbufferBaseAlt;
+        frontbufferBaseAltPtr = (uintptr_t)frontbufferBase;
+        spriteBlitQueue = (uintptr_t)&kSpriteBlitQueueSentinel_B;
 
         /* Save current camera state to slot 0 */
         dstXByteOffsetSaved0 = cameraXMod320;
@@ -623,9 +623,9 @@ void _SwapBuffersAndCameraViewState(void)
         *(volatile uint32_t *)bitPlane7Base = copperZeroLong;
 #endif
 
-        frontbufferBasePtr = (uint32_t)frontbufferBase;
-        frontbufferBaseAltPtr = (uint32_t)frontbufferBaseAlt;
-        spriteBlitQueue = (uint32_t)&kSpriteBlitQueueSentinel_A;
+        frontbufferBasePtr = (uintptr_t)frontbufferBase;
+        frontbufferBaseAltPtr = (uintptr_t)frontbufferBaseAlt;
+        spriteBlitQueue = (uintptr_t)&kSpriteBlitQueueSentinel_A;
 
         /* Save current camera state to slot 1 */
         dstXByteOffsetSaved1 = cameraXMod320;

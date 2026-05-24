@@ -12,7 +12,7 @@
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t *spriteGraphicsPtr;
-extern volatile uint32_t frontbufferBasePtr;
+extern volatile uintptr_t frontbufferBasePtr;
 extern uint16_t cameraXMod320;
 extern uint16_t cameraYMod320;
 extern volatile uint16_t panicReasonCode;
@@ -60,7 +60,7 @@ static inline __attribute__((always_inline)) void waitBlit(void)
 static void blitGlyphBitplanes(uint16_t sprIdx, int16_t dstX, int16_t dstY,
                                uint16_t color)
 {
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)(uint32_t)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[sprIdx];
     if (!spr) return;
 
@@ -123,7 +123,7 @@ static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint1
 #else
 static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint16_t planeMask)
 {
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)(uint32_t)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
 
     /* Look up glyph sprite header */
     SpriteGraphics *spr = sprGfxTable[sprIdx];
@@ -134,7 +134,7 @@ static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint1
         _PanicHaltLoop();
     }
 
-    uint8_t *dstBase = (uint8_t *)(uint32_t)frontbufferBasePtr;
+    uint8_t *dstBase = (uint8_t *)frontbufferBasePtr;
     uint16_t glyphHeight = (uint16_t)spr->nlines;
 
     /* Apply camera offset */
@@ -302,7 +302,7 @@ uint16_t _GetTextWidth(uint8_t *text, uint8_t *charsTable)
     uint16_t charSpacing = (uint16_t)ct->charSpacing;
     uint8_t *convTable = (uint8_t *)(ct + 1);
     uint16_t spaceWidth = (uint16_t)ct->spaceWidth;
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)(uint32_t)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
 
     uint16_t width = 0;
     uint8_t ch;
@@ -343,7 +343,7 @@ uint16_t _DrawMenuText(uint16_t x, uint16_t y, uint16_t color,
     uint16_t charSpacing = (uint16_t)ct->charSpacing;
     uint8_t *convTable = (uint8_t *)(ct + 1);
     uint16_t spaceWidth = (uint16_t)ct->spaceWidth;
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)(uint32_t)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
 
     int16_t curX = (int16_t)x;
     int16_t nextX = curX;

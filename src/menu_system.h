@@ -136,9 +136,18 @@ typedef char _menu_size_check[(sizeof(Menu) == 38) ? 1 : -1];
 typedef char _menuentry_size_check[(sizeof(MenuEntry) == 76) ? 1 : -1];
 #endif
 
-/* ---- Constants ---- */
+/* ---- Constants ----
+ * Bitness-conditional because Menu has 4 pointer fields and MenuEntry has
+ * 5 pointer-width fields (uintptr_t bg/fg + 3 fn-ptrs); both struct sizes
+ * grow on 64-bit (+16 / +20). The `menuEntries` link-time alias in
+ * swos_globals.c uses the same offset and must stay in sync. */
+#if UINTPTR_MAX == 0xFFFFFFFFu
 #define MENU_HEADER_SIZE   22
 #define MENUENTRY_STRIDE   56
+#else
+#define MENU_HEADER_SIZE   38
+#define MENUENTRY_STRIDE   76
+#endif
 #define NO_BACKGROUND      0
 #define NO_FOREGROUND      0
 

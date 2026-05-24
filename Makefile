@@ -99,13 +99,19 @@ OBJECTS := $(SOURCES:.c=.o)
 DEPS    := $(SOURCES:.c=.d)
 
 # ---- Windows resource (icon) ----
-# On MinGW we compile SWOS.rc → SWOS.res.o via windres and link it in,
-# which gives the .exe the SWOS.ico for both the file icon (Explorer)
-# and the SDL window/taskbar icon (SDL2 picks up resource ID 1 when
-# no SDL_SetWindowIcon is called).
+# On MinGW and Cygwin we compile SWOS.rc → SWOS.res.o via windres and
+# link it in, which gives the .exe the SWOS.ico for both the file icon
+# (Explorer) and the SDL window/taskbar icon (SDL2 picks up resource ID
+# 1 when no SDL_SetWindowIcon is called).
+#
+# `gcc -dumpmachine` returns e.g. `x86_64-w64-mingw32` on MinGW and
+# `x86_64-pc-cygwin` on Cygwin64 — match either via findstring.
 GCC_MACHINE := $(shell $(CC) -dumpmachine 2>/dev/null)
 WINDRES ?= windres
 ifneq (,$(findstring mingw,$(GCC_MACHINE)))
+WIN_RES_OBJ := SWOS.res.o
+OBJECTS     += $(WIN_RES_OBJ)
+else ifneq (,$(findstring cygwin,$(GCC_MACHINE)))
 WIN_RES_OBJ := SWOS.res.o
 OBJECTS     += $(WIN_RES_OBJ)
 endif

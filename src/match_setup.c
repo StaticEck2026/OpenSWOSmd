@@ -796,7 +796,7 @@ apply_palette_and_pitch:
         uint16_t pitchIdx = pitchNumberAndType & 0xFF;
 
         /* paletteTable[2] = &gamePalette (offset 8 in paletteTable is index 2) */
-        paletteTable[2] = (uint32_t)gamePalette;
+        paletteTable[2] = gamePalette;
 
 #ifdef AGA
         {

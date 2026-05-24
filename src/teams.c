@@ -88,10 +88,10 @@ extern int16_t  topOfStackMark;
 /* Globals for SelectTeamsFinalMenu */
 extern uint8_t customsLeague[];
 extern void *competitionsTable[];
-extern uint32_t teamNames[];
-extern uint32_t leaguesPtrTable[];
+extern void *teamNames[];
+extern void *leaguesPtrTable[];
 extern uint16_t leagueNumbersTable[];
-extern uint32_t countryNames[];
+extern void *countryNames[];
 extern uint16_t numLeaguesInCountry;
 extern uint16_t chooseTeamsNumTeams;
 extern int16_t  selectedTeamIndex;
@@ -107,10 +107,10 @@ extern uint16_t gotCountryName;
 extern uint16_t numberOfLeagues;
 extern uint32_t selectedContest;
 extern uint16_t selectTeamsNoLimit;
-extern uint32_t chooseTeamsHeader1stPart;
-extern uint32_t selectedTeamText;
-extern uint32_t gameTypeStr;
-extern uint32_t playWhatStr;
+extern uintptr_t chooseTeamsHeader1stPart;
+extern uintptr_t selectedTeamText;
+extern uintptr_t gameTypeStr;
+extern uintptr_t playWhatStr;
 extern uint32_t entryText2;
 extern uint8_t  someTeamFlags;
 extern uint16_t isNationalSelector;
@@ -639,10 +639,15 @@ void _InitPlayerValueDisplayStruct(uint8_t *playerEntry, uint8_t *dst)
     val >>= 3;                                              /* lsr.w #3,d0 */
     val += 0x71;                                            /* addi.w #$71,d0 */
 
-    *(uint16_t *)(dst + 0x22) = 3;                          /* move.w #3,$22(a1) */
-    *(uint16_t *)(dst + 0x24) = 0;                          /* move.w #0,$24(a1) */
-    *(uint16_t *)(dst + 0x26) = val;                        /* move.w d0,$26(a1) */
-    *(uint16_t *)(dst + 0x28) = 0;                          /* clr.w $28(a1) */
+    /* Original asm wrote 4 uint16s at fixed offsets 0x22-0x28 into the
+     * MenuEntry: content (= ENTRY_SPRITE2), stringFlags, fg low/high.
+     * On 64-bit MenuEntry the bg slot is 4 bytes wider so content sits
+     * at offset 0x26 (not 0x22) and fg at 0x2A (not 0x26) — use the
+     * typed fields so the writes land correctly regardless of bitness. */
+    MenuEntry *e = (MenuEntry *)dst;
+    e->content     = 3;     /* ENTRY_SPRITE2 — show a sprite by idx in fg low 16 */
+    e->stringFlags = 0;
+    setFgWord(e, val);
 }
 
 /* ================================================================
@@ -1762,7 +1767,7 @@ extern uint8_t teamNumbersIndices[];
 extern uint32_t teamPointers[];
 extern uint16_t numSelectedTeamsCopy;
 extern uint16_t numNeededTeams;
-extern uint32_t playWhatStr;
+extern uintptr_t playWhatStr;
 extern uint8_t aChooseTeams[];
 extern uint8_t aChangeTeams[];
 extern uint8_t aSelect1MoreTea[];
@@ -1918,7 +1923,7 @@ void _SetTeamEntriesStringsAndColors(void)
                     e->isInvisible = 0;
                     int16_t idx = (int8_t)*indices++;
                     TeamFileEx *team = (TeamFileEx *)teamPointers[idx];
-                    e->fg = (uint32_t)(uintptr_t)team->team.teamName;
+                    e->fg = (uintptr_t)team->team.teamName;
 
                     uint16_t color = PINK_TO_BROWN_9;
                     uint8_t ctrl = team->team.teamControls;
@@ -1958,7 +1963,7 @@ void _SetChooseChangeTeamsEntries(void)
     uint8_t *label = aChooseTeams;
     if (numSelectedTeamsCopy == numNeededTeams)
         label = aChangeTeams;
-    labelEntry->fg = (uint32_t)label;
+    labelEntry->fg = (uintptr_t)label;
 
     /* Entry 76 (0x10A0/0x38) = play prompt, Entry 77 (0x10D8/0x38) = select more/less */
     MenuEntry *playEntry = &menuEntries[76];
@@ -2046,10 +2051,10 @@ void _ChooseTeamsFriendlyCommon(MenuEntry *entry)
 /* ---- Chunk 221: ChooseTeamsFriendlyCommon2 ---- */
 
 extern uint8_t teamsIndex[];
-extern uint32_t teamsPtrTable[];
+extern void *teamsPtrTable[];
 extern TeamFileEx *selectedTeamPtr;
 extern uint16_t selectedTeamCountryNumber;
-extern uint32_t chooseTeamsFunc;
+extern uintptr_t chooseTeamsFunc;
 extern uint16_t careerSquadScreenDidSelectPlayerFlag;
 extern uint16_t abortSelectTeams;
 extern uint16_t chooseTeamsResult;
@@ -2140,8 +2145,8 @@ void _ChooseTeamsFriendlyCommon2(MenuEntry *entry)
 extern uint8_t selTeamsPtr;
 extern uint16_t numSelectedTeams;
 extern uint16_t viewSelectedTeams;
-extern uint32_t chooseTeamsHeader1stPart;
-extern uint32_t gameTypeStr;
+extern uintptr_t chooseTeamsHeader1stPart;
+extern uintptr_t gameTypeStr;
 extern uint8_t *curCountryStr;
 extern uint16_t choosingPreset;
 extern uint32_t selectedContest;
@@ -2265,7 +2270,7 @@ void _ChooseTeamsFriendlyInit(void)
 
 /* ---- Chunk 225: SelTeamForTacticsInit ---- */
 
-extern uint32_t chooseTeamMenuName;
+extern uintptr_t chooseTeamMenuName;
 extern uint16_t numTeamsCountryBuffer;
 extern uint16_t selTeamsColumn1;
 extern uint16_t selTeamsColumn2;
@@ -2371,7 +2376,7 @@ void _ChooseTeamsFriendlyInitFinish(void)
     /* If topOfStackMark < 0, set abort button */
     if ((int16_t)topOfStackMark < 0) {
         MenuEntry *abortEntry = &menuEntries[56]; /* 0xC40/56=56 */
-        abortEntry->fg = (uint32_t)aAbort;
+        abortEntry->fg = (uintptr_t)aAbort;
         uint16_t bgc = *(uint16_t *)&abortEntry->bg;
         bgc = (bgc & 0xFFF0) + RED_10;
         *(uint16_t *)&abortEntry->bg = bgc;
@@ -2389,7 +2394,7 @@ void _ChooseTeamsFriendlyInitFinish(void)
 
     /* Build teamsIndex[] and teamsPtrTable[] from teamFileBuffer */
     uint8_t *idx = teamsIndex;
-    uint32_t *ptrs = teamsPtrTable;
+    void   **ptrs = teamsPtrTable;
     uint16_t numTeamsInFile = *(uint16_t *)teamFileBuffer;
     TeamFileEx *teamRecord = (TeamFileEx *)(teamFileBuffer + 2);
     uint8_t league = (uint8_t)leagueNumber;
@@ -2408,7 +2413,7 @@ void _ChooseTeamsFriendlyInitFinish(void)
                 PACK_BE_U16(teamRecord->team.countryNumber,
                             teamRecord->team.teamOrdinal) != selNum) {
                 *idx++ = (uint8_t)count;
-                *ptrs++ = (uint32_t)teamRecord;
+                *ptrs++ = teamRecord;
                 count++;
             }
         }
@@ -2541,7 +2546,7 @@ outer:
     int8_t tidx = (int8_t)teamsIndex[d5];
     TeamFileEx *team = (TeamFileEx *)teamsPtrTable[(uint16_t)(int16_t)tidx];
     uint8_t teamOrd = team->team.teamOrdinal;
-    e->fg = (uint32_t)(uintptr_t)team->team.teamName;
+    e->fg = (uintptr_t)team->team.teamName;
 
     uint16_t color = defaultColor;
     uint8_t ctrl = teamsTable[teamOrd];
@@ -2663,7 +2668,7 @@ void _SelectTeamsReinit(void)
     /* If at top of stack, show "ABORT" button */
     if (teamDepthLevel == (uint16_t)topOfStackMark) {
         MenuEntry *abortEntry = &menuEntries[88]; /* 0x1340/56=88 */
-        abortEntry->fg = (uint32_t)aAbort;
+        abortEntry->fg = (uintptr_t)aAbort;
         uint16_t bgc = *(uint16_t *)&abortEntry->bg;
         bgc = (bgc & 0xFFF0) + RED_10;
         *(uint16_t *)&abortEntry->bg = bgc;
@@ -2841,14 +2846,20 @@ void _SelectTeamsFinalMenu(uint16_t mode)
     uint16_t d6;            /* country/team-file number, preserved across calls */
     uint16_t d7;            /* current country index byte */
     uint16_t d1;            /* counter for enumeration */
-    uint32_t *a5;           /* pointer into competition entry list, advances via (a5)+ */
+    /* The competition list is a `Competition *[N]` terminated by
+     * (Competition *)-1 / -2 sentinels — entries are native pointers
+     * (4B on 32-bit Amiga, 8B on 64-bit). Use void** so iteration
+     * advances by sizeof(void*) per entry on both targets, and the
+     * sentinel comparisons stay correct (low-32-bit truncation of -1
+     * is still 0xFFFFFFFF). */
+    void   **a5;
     uint8_t *compEntry;     /* a1 - current competition entry pointer */
-    uint32_t compListAddr;
-    uint32_t *compList;
-    uint32_t *teamNamesPtr;
-    uint32_t *leaguesPtrOut;
+    void    *compListAddr;
+    void   **compList;
+    void   **teamNamesPtr;
+    void   **leaguesPtrOut;
     uint16_t *leagueNumsOut;
-    uint32_t *countryNamesPtr;
+    void   **countryNamesPtr;
     uint16_t cnCount;
     uint8_t *contest;
     uint16_t lnum;
@@ -2860,7 +2871,6 @@ void _SelectTeamsFinalMenu(uint16_t mode)
     uint8_t nameOff;
     uint8_t *namePtr;
     int16_t off16;
-    uint8_t *nameTable;
     uint8_t *cPtr;
     uint8_t cByte;
     uint16_t cidx;
@@ -2935,7 +2945,7 @@ loc_E012:
         panicReasonCode = 0x8632;
         _PanicHaltLoop();
     }
-    compList = (uint32_t *)compListAddr;
+    compList = (void **)compListAddr;
     teamNamesPtr = teamNames;
     leaguesPtrOut = leaguesPtrTable;
     leagueNumsOut = leagueNumbersTable;
@@ -2944,7 +2954,7 @@ loc_E012:
 
     /* loc_13E086: iterate through competition entries */
 loc_E086:
-    compEntry = (uint8_t *)*a5;
+    compEntry = (uint8_t *)(*a5);
     a5++;
 
     if ((uint32_t)compEntry == 0xFFFFFFFF)
@@ -3042,8 +3052,8 @@ skip_continental_check:
         /* Country entry: get country name from countriesTable */
         countryIdx = (uint16_t)(uint32_t)compEntry;
         ctEntry = (uint8_t *)countriesTable[countryIdx];
-        *teamNamesPtr++ = (uint32_t)(ctEntry + 1);
-        *leaguesPtrOut++ = (uint32_t)compEntry;
+        *teamNamesPtr++ = (void *)(ctEntry + 1);
+        *leaguesPtrOut++ = compEntry;
         *leagueNumsOut++ = 0xFFFF;
         d1++;
         goto loc_E086;
@@ -3055,7 +3065,15 @@ skip_continental_check:
         CompetitionLeague *league  = (CompetitionLeague *)compEntry;
         compType = compHdr->type;
     if (compType == 0) {
-        /* League: enumerate divisions */
+        /* League: enumerate divisions.
+         *
+         * The Competition's embedded name table is 2 char* entries per
+         * division (full name + abbreviation, e.g. "PREMIER LEAGUE" +
+         * "PREMIER"). Amiga stride was 2*4 = 8 bytes per division and
+         * we read a single 32-bit pointer at the start. On 64-bit each
+         * char* is 8 bytes so the stride is 16 and we must read 8
+         * bytes — use typed `char **` indexing so the layout is
+         * pointer-width-correct on both targets. */
         divIdx = 0;
 loc_E246:
         nameOff = compHdr->unk1;
@@ -3063,13 +3081,12 @@ loc_E246:
             /* Use divisionStringTable */
             namePtr = (uint8_t *)divisionStringTable[divIdx];
         } else {
-            /* Name table relative to offset 5 */
             off16 = (int8_t)nameOff;
-            nameTable = compEntry + 5 + off16;
-            namePtr = (uint8_t *)*(uint32_t *)(nameTable + (divIdx << 3));
+            char **nameTbl = (char **)(compEntry + 5 + off16);
+            namePtr = (uint8_t *)nameTbl[divIdx * 2];
         }
-        *teamNamesPtr++ = (uint32_t)namePtr;
-        *leaguesPtrOut++ = (uint32_t)compEntry;
+        *teamNamesPtr++ = (void *)namePtr;
+        *leaguesPtrOut++ = compEntry;
         *leagueNumsOut++ = divIdx;
         d1++;
         divIdx++;
@@ -3078,30 +3095,30 @@ loc_E246:
         numberOfLeagues = (int8_t)league->divisionsCount;
         goto loc_E086;
     } else if (compType == 1) {
-        /* Cup */
+        /* Cup — single name pointer at +5+off16 (1 entry, char *). */
         nameOff = compHdr->unk1;
         if (nameOff == 0) {
             namePtr = (uint8_t *)aCup_0;
         } else {
             off16 = (int8_t)nameOff;
-            namePtr = (uint8_t *)*(uint32_t *)(compEntry + 5 + off16);
+            namePtr = (uint8_t *)(*(char **)(compEntry + 5 + off16));
         }
-        *teamNamesPtr++ = (uint32_t)namePtr;
-        *leaguesPtrOut++ = (uint32_t)compEntry;
+        *teamNamesPtr++ = (void *)namePtr;
+        *leaguesPtrOut++ = compEntry;
         *leagueNumsOut++ = 0xFFFF;
         d1++;
         goto loc_E086;
     } else if (compType == 2) {
-        /* Tournament */
+        /* Tournament — same as Cup */
         nameOff = compHdr->unk1;
         if (nameOff == 0) {
             namePtr = (uint8_t *)aLeague_1;
         } else {
             off16 = (int8_t)nameOff;
-            namePtr = (uint8_t *)*(uint32_t *)(compEntry + 5 + off16);
+            namePtr = (uint8_t *)(*(char **)(compEntry + 5 + off16));
         }
-        *teamNamesPtr++ = (uint32_t)namePtr;
-        *leaguesPtrOut++ = (uint32_t)compEntry;
+        *teamNamesPtr++ = (void *)namePtr;
+        *leaguesPtrOut++ = compEntry;
         *leagueNumsOut++ = 0xFFFF;
         d1++;
         goto loc_E086;
@@ -3127,7 +3144,7 @@ loc_E2D0:
                 break;
             cidx = (uint16_t)cByte;
             ctEntry = (uint8_t *)countriesTable[cidx];
-            *countryNamesPtr++ = (uint32_t)(ctEntry + 1);
+            *countryNamesPtr++ = (void *)(ctEntry + 1);
             cnCount++;
         }
     }
@@ -3225,7 +3242,7 @@ loc_E428:
     }
 
     /* loc_13E49E: */
-    playWhatStr = (uint32_t)aPlaySeason;
+    playWhatStr = (uintptr_t)aPlaySeason;
     _MarkSelectedTeamsStackLocation();
     selectTeamsNoLimit = 0;
     playSeason = 0;
@@ -3283,7 +3300,7 @@ loc_E57A:
         goto exit_return;
     }
     _InitCompetitionTeamSelectionFromAltTableHeader((uint8_t *)selectedContest);
-    playWhatStr = (uint32_t)aPlayTournament;
+    playWhatStr = (uintptr_t)aPlayTournament;
     _SetTeamsTypeForSelectedContest();
     _IsContestContinentalCup();
     _MarkSelectedTeamsStackLocation();
@@ -3303,7 +3320,7 @@ loc_E5EA:
         goto exit_return;
     }
     _InitCompetitionTeamSelectionFromTableHeader((uint8_t *)selectedContest);
-    playWhatStr = (uint32_t)aPlayCup;
+    playWhatStr = (uintptr_t)aPlayCup;
     _SetTeamsTypeForSelectedContest();
     _IsContestContinentalCup();
     _MarkSelectedTeamsStackLocation();
@@ -3327,7 +3344,7 @@ loc_E65A:
         goto exit_return;
     }
     _InitCompetitionTeamSelectionFromTableEntry(lnum, (uint8_t *)selectedContest);
-    playWhatStr = (uint32_t)aPlayLeague;
+    playWhatStr = (uintptr_t)aPlayLeague;
     _SetTeamsTypeForSelectedContest();
     _IsContestContinentalCup();
     _MarkSelectedTeamsStackLocation();

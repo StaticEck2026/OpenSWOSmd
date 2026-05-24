@@ -10,6 +10,7 @@
  * per pixel into the streaming SDL texture.
  */
 
+#include <stdint.h>
 #include "platform_sdl.h"
 #include "display.h"
 
@@ -35,8 +36,8 @@ void InputSDL_ClearKeyState(void);
  * swap) as 8bpp chunky pixels — 1 byte per pixel = palette index, row
  * stride = SCREEN_WIDTH. `frontbufferBasePtr` is the live pointer to
  * the buffer the game last drew into. */
-extern volatile uint32_t frontbufferBasePtr;
-extern volatile uint32_t frontbufferBaseAltPtr;
+extern volatile uintptr_t frontbufferBasePtr;
+extern volatile uintptr_t frontbufferBaseAltPtr;
 extern uint8_t  frontbufferBase[];
 extern uint8_t  frontbufferBaseAlt[];
 extern uint8_t  frontbufferMaskBuffer[];
@@ -657,9 +658,9 @@ static void pump_events_any_thread(void)
              * else it stays passed through to the menu/game-loop layer
              * (in-game pause/end-match menu, sub-menus' EXIT, etc.). */
             if (ev.key.repeat == 0 && ev.key.keysym.sym == SDLK_ESCAPE) {
-                extern volatile uint32_t currentMenuPtr;
+                extern volatile uintptr_t currentMenuPtr;
                 extern uint8_t swosMainMenu[];
-                if (currentMenuPtr == (uint32_t)(uintptr_t)swosMainMenu) {
+                if (currentMenuPtr == (uintptr_t)swosMainMenu) {
                     Platform_RequestQuit();
                     if (s_window) SDL_HideWindow(s_window);
                     AudioSDL_PauseAndClear();

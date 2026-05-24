@@ -199,7 +199,7 @@ extern uint16_t menuMusic;
 extern uint16_t deadVarAlways0;
 extern volatile uint16_t menuStatus;
 extern volatile uint16_t exitMenu;
-extern uint32_t currentMenuPtr;
+extern uintptr_t currentMenuPtr;
 extern uint8_t  currentMenu[];
 
 extern void _CopyTeamsAndHeader(void);
@@ -224,7 +224,7 @@ static void viewAndRestoreMenu(void (*viewFunc)(void))
 {
     Menu *menu = (Menu *)currentMenu;
     MenuEntry *savedSelectedEntry = menu->selectedEntry;
-    uint32_t savedMenuPtr = currentMenuPtr;
+    uintptr_t savedMenuPtr = currentMenuPtr;
 
     viewFunc();
 

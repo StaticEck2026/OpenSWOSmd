@@ -13,6 +13,7 @@
  * Ported from SWOS2.s lines 5504-5884.
  */
 
+#include <stdint.h>
 #include "scroll_blit.h"
 #include "game_types.h"
 #include "display.h"
@@ -25,7 +26,7 @@ extern int16_t  oldCameraY;
 extern uint16_t cameraXMod320;
 extern uint16_t cameraYMod320;
 extern uint16_t cameraCoordinatesValid;
-extern volatile uint32_t frontbufferBasePtr;
+extern volatile uintptr_t frontbufferBasePtr;
 extern uint8_t  frontbufferMaskBuffer[];
 extern uint8_t  pitchDatBuffer[];
 

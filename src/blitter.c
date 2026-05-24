@@ -13,7 +13,7 @@
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t *spriteGraphicsPtr;
-extern volatile uint32_t frontbufferBasePtr;
+extern volatile uintptr_t frontbufferBasePtr;
 extern uint16_t cameraXMod320;
 extern uint16_t cameraYMod320;
 extern volatile uint16_t panicReasonCode;
@@ -468,7 +468,7 @@ void _BlitSpritePlanar_Word(uint16_t spriteIndex)
     int32_t advance;
     int16_t row, col;
 
-    hdr = *(SpriteGraphics **)(base + (uint32_t)(spriteIndex << 2));
+    hdr = ((SpriteGraphics **)spriteGraphicsPtr)[spriteIndex];
     type = hdr->type;
     srcData = hdr->sprData;
     dstMask = hdr->maskPtr;
@@ -576,7 +576,7 @@ void _BlitSpritePlanar_Word_StridedDest(uint16_t spriteIndex)
     int32_t srcAdvance, dstAdvance;
     int16_t row;
 
-    hdr = *(SpriteGraphics **)(base + (uint32_t)(spriteIndex << 2));
+    hdr = ((SpriteGraphics **)spriteGraphicsPtr)[spriteIndex];
     type = hdr->type;
     srcData = hdr->sprData;
     dstMask = hdr->maskPtr;
@@ -637,7 +637,7 @@ void _BlitSpritePlanar_Long_StridedDest(uint16_t spriteIndex)
     int32_t srcAdvance, dstAdvance;
     int16_t row;
 
-    hdr = *(SpriteGraphics **)(base + (uint32_t)(spriteIndex << 2));
+    hdr = ((SpriteGraphics **)spriteGraphicsPtr)[spriteIndex];
     type = hdr->type;
     srcData = hdr->sprData;
     dstMask = hdr->maskPtr;
@@ -795,7 +795,7 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     int16_t i;
 
     /* Look up source glyph header */
-    srcHdr = *(SpriteGraphics **)(base + (uint32_t)(glyphIndex << 2));
+    srcHdr = ((SpriteGraphics **)spriteGraphicsPtr)[glyphIndex];
 
     /* Validate: type must be 0 (separate planes) */
     if (srcHdr->type != 0) {
@@ -804,7 +804,7 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     }
 
     /* Look up destination sprite header */
-    dstHdr = *(SpriteGraphics **)(base + (uint32_t)(dstSpriteIndex << 2));
+    dstHdr = ((SpriteGraphics **)spriteGraphicsPtr)[dstSpriteIndex];
 
     /* Destination row stride in bytes (per plane) */
     dstRowBytes = (uint16_t)dstHdr->wquads * 2;
@@ -973,7 +973,7 @@ uint16_t _Text2Sprite(uint16_t xOff, uint16_t yOff, uint16_t dstSpriteIndex,
                       uint8_t *text, uint8_t *charsTable, uint16_t planeMask,
                       uint16_t *outTotalWidth)
 {
-    uint8_t *base = spriteGraphicsPtr;
+    SpriteGraphics **table = (SpriteGraphics **)spriteGraphicsPtr;
     SpriteGraphics *dstHdr;
     uint16_t textWidth;
     uint16_t spriteIndexOffset;
@@ -986,8 +986,11 @@ uint16_t _Text2Sprite(uint16_t xOff, uint16_t yOff, uint16_t dstSpriteIndex,
     textWidth = _GetTextWidth(text, charsTable);
     textWidth += xOff;
 
-    /* Check if text fits in destination sprite */
-    dstHdr = *(SpriteGraphics **)(base + (uint32_t)(dstSpriteIndex << 2));
+    /* Check if text fits in destination sprite.
+     * Amiga: `*(SpriteGraphics**)(base + idx*4)`. On 64-bit each slot
+     * in spriteGraphicsPtr is 8 bytes; index as a typed pointer table
+     * so the stride is correct on both targets. */
+    dstHdr = table[dstSpriteIndex];
     {
         extern int g_debug_sprite_load;
         if (g_debug_sprite_load) {
@@ -1020,7 +1023,7 @@ uint16_t _Text2Sprite(uint16_t xOff, uint16_t yOff, uint16_t dstSpriteIndex,
             glyphIdx = (uint16_t)convTable[ch - ' '] + spriteIndexOffset;
 
             /* Get glyph pixel width */
-            glyphHdr = *(SpriteGraphics **)(base + (uint32_t)(glyphIdx << 2));
+            glyphHdr = ((SpriteGraphics **)spriteGraphicsPtr)[glyphIdx];
             glyphWidth = (uint16_t)glyphHdr->pixWidth;
             nextX = xOff + glyphWidth + charSpacing;
 

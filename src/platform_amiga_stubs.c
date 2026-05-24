@@ -91,13 +91,13 @@ void Platform_PreArmIsrGlobals(void)
     extern uint8_t  panicPalette[];
     extern uint8_t  titleTextPalette[];
     extern uint8_t  titleLogoPalette[];
-    paletteTable[0] = (uint32_t)(uintptr_t)menuPalette;
-    paletteTable[1] = (uint32_t)(uintptr_t)blackPalette;
-    paletteTable[2] = (uint32_t)(uintptr_t)gamePalette;
-    paletteTable[3] = (uint32_t)(uintptr_t)titleScreenPalette;
-    paletteTable[4] = (uint32_t)(uintptr_t)panicPalette;
-    paletteTable[5] = (uint32_t)(uintptr_t)titleTextPalette;
-    paletteTable[6] = (uint32_t)(uintptr_t)titleLogoPalette;
+    paletteTable[0] = menuPalette;
+    paletteTable[1] = blackPalette;
+    paletteTable[2] = gamePalette;
+    paletteTable[3] = titleScreenPalette;
+    paletteTable[4] = panicPalette;
+    paletteTable[5] = titleTextPalette;
+    paletteTable[6] = titleLogoPalette;
 }
 
 /* ---- Forward declarations from the ported Amiga C ------------------- */

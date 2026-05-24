@@ -79,7 +79,7 @@ extern int16_t  jobOfferOrdinal;
 extern int16_t  oldJobOfferOrdinal;
 extern uint16_t selectedOldJobOfferOrdinal;
 extern uint16_t teamNoOfferingJob;
-extern uint32_t teamOfferingJobPtr;
+extern uintptr_t teamOfferingJobPtr;
 extern int32_t  jobOfferFunds;
 extern uint16_t viewFutureTeamModeFlag;
 
@@ -450,7 +450,7 @@ void _GotJobOfferFinish(void) {
     if (youreSacked) {
         if ((uint16_t)(numNewJobOffers + numJobOffers) == 1) {
             MenuEntry *exitEntry = &menuEntries[8];
-            exitEntry->fg = (uint32_t)aRetire;
+            exitEntry->fg = (uintptr_t)aRetire;
             setBgColor(exitEntry, (bgColor(exitEntry) & 0xFFF0) | 10); /* RED_10 */
         }
     }
@@ -458,7 +458,7 @@ void _GotJobOfferFinish(void) {
     /* International job offer adjustments */
     if (jobOfferFunds == -1) {
         MenuEntry *e0 = &menuEntries[0];
-        e0->fg = (uint32_t)aInternationalJ;
+        e0->fg = (uintptr_t)aInternationalJ;
         e0->x -= 30;
         e0->dwWidth += 60;
         menuEntries[8].x += 65;
@@ -487,7 +487,7 @@ void _GotJobOfferFinish(void) {
     }
 
     /* Set up team pointer and format strings */
-    teamOfferingJobPtr = (uint32_t)_GetTeamPointer(teamNoOfferingJob);
+    teamOfferingJobPtr = (uintptr_t)_GetTeamPointer(teamNoOfferingJob);
 
     /* Format "DEAR %a %b" with manager sex and surname */
     {
@@ -545,7 +545,7 @@ void _GotJobOfferFinish(void) {
 
 acceptedJobPath:
     /* loc_14A5D0: team already accepted */
-    menuEntries[0].fg = (uint32_t)aNewJob;
+    menuEntries[0].fg = (uintptr_t)aNewJob;
     {
         int16_t newY = menuEntries[3].y + 10;
         menuEntries[4].y = newY;
@@ -554,7 +554,7 @@ acceptedJobPath:
     menuEntries[13].isInvisible = 1;
     menuEntries[8].isInvisible = 1;
 
-    teamOfferingJobPtr = (uint32_t)_GetTeamPointer(teamNoOfferAccepted);
+    teamOfferingJobPtr = (uintptr_t)_GetTeamPointer(teamNoOfferAccepted);
 
     {
         uint8_t *out = (uint8_t *)menuEntries[1].fg;

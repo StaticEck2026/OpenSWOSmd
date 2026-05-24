@@ -2775,7 +2775,7 @@ void _ClubBusinessInit(void)
         /* Compute total profit/loss */
         int32_t total = computeTotalProfitLoss();
         if (total < 0) {
-            menuEntries[10].fg = (uint32_t)aTotalLoss;
+            menuEntries[10].fg = (uintptr_t)aTotalLoss;
         }
 
         /* Write total */
@@ -2790,7 +2790,7 @@ void _ClubBusinessInit(void)
         /* ---- Path 2: Abbreviated summary (no gate receipts etc.) ---- */
         MenuEntry *e70 = &menuEntries[2];
         e70->y += 30;
-        e70->fg = (uint32_t)aBalanceAtStart;
+        e70->fg = (uintptr_t)aBalanceAtStart;
 
         MenuEntry *e2A0 = &menuEntries[12];
         e2A0->y += 30;
@@ -2816,7 +2816,7 @@ void _ClubBusinessInit(void)
         /* Compute total */
         int32_t total = computeTotalProfitLoss();
         if (total < 0) {
-            menuEntries[10].fg = (uint32_t)aTotalLoss;
+            menuEntries[10].fg = (uintptr_t)aTotalLoss;
         }
 
         /* Write total */
@@ -2849,7 +2849,7 @@ void _ClubBusinessInit(void)
 
     /* Set "BALANCE AT END OF LAST SEASON:" */
     MenuEntry *e70 = &menuEntries[2];
-    e70->fg = (uint32_t)aBalanceAtEndOf;
+    e70->fg = (uintptr_t)aBalanceAtEndOf;
     e70->y += 5;
 
     MenuEntry *e2A0 = &menuEntries[12];
@@ -2881,10 +2881,10 @@ void _ClubBusinessInit(void)
 
     /* Set sponsorship text */
     MenuEntry *eE0 = &menuEntries[4];
-    eE0->fg = (uint32_t)aSponsorshipFor;
+    eE0->fg = (uintptr_t)aSponsorshipFor;
     eE0->y += 5;
 
-    menuEntries[5].fg = (uint32_t)aSeasonFromSens;
+    menuEntries[5].fg = (uintptr_t)aSeasonFromSens;
 
     /* Starting balance copy */
     menuEntries[14].y += 10;
@@ -2898,7 +2898,7 @@ void _ClubBusinessInit(void)
         _WriteAccountBalance(sensisoftPlcSponsorship, (uint8_t *)menuEntries[16].fg);
 
         if (additionalInvestments) {
-            menuEntries[6].fg = (uint32_t)aAdditionalInve;
+            menuEntries[6].fg = (uintptr_t)aAdditionalInve;
         }
 
         /* Shift entries 188..188+4*56 down by 15 */
@@ -2931,7 +2931,7 @@ void _ClubBusinessInit(void)
 
     int32_t total = computeTotalProfitLoss();
     if (total < 0) {
-        menuEntries[10].fg = (uint32_t)aTotalLoss;
+        menuEntries[10].fg = (uintptr_t)aTotalLoss;
     }
 
     menuEntries[20].y -= 15;

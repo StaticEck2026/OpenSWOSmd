@@ -244,7 +244,12 @@ uint8_t teamNumbersIndices[64] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 uint8_t teamPointers[256];
 uint8_t teamSortBuffer[256];
 uint8_t teamsIndex[100];
-uint8_t teamsPtrTable[400];
+/* 100-entry pointer table — each slot points to a TeamFileEx. The
+ * Amiga build allocated 4 bytes/slot (uint32_t pointer); on 64-bit
+ * each slot is 8 bytes, so we declare it as void *[100] to track the
+ * native width regardless of bitness. The matching extern in teams.c
+ * was retyped from `uint32_t[]` to `void *[]`. */
+void *teamsPtrTable[100];
 uint8_t teamsTable[100];
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): tertiaryCompetitionName */
 // int8_t tertiaryCompetitionName[36];

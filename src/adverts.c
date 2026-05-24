@@ -37,9 +37,9 @@ extern uint16_t lastFrameTicks;
 extern uint16_t advertIndex;
 extern uint16_t advertSlideTimer;
 extern uint16_t currentAnimatedAdLine;
-extern uint32_t advert1Pointers[8];
-extern uint32_t advert2Pointers[8];
-extern uint32_t advert3Pointers[8];
+extern uint8_t *advert1Pointers[8];
+extern uint8_t *advert2Pointers[8];
+extern uint8_t *advert3Pointers[8];
 extern uint16_t blockAdvertisements;
 extern uint16_t gameStatePl;
 extern volatile uint16_t goalCameraMode;
@@ -60,38 +60,28 @@ extern uint16_t _Rand(void);
 /* ================================================================
  * CopyAdvertisementsData  (SWOS2.s line 11822)
  *
- * Copies sprite graphics data pointers for the 3 advertisement
- * strips from the sprite graphics bank.
- * Offsets 0x1C4, 0x1E4, 0x204 into spriteGraphicsPtr are pointer
- * tables; each entry points to a long that we dereference.
- * ================================================================ */
+ * Copies sprite-data pointers for the 3 advertisement strips out of
+ * the sprite-graphics table. Amiga slot indices: 113 (0x71), 121
+ * (0x79), 129 (0x81); 8 sprites per advert.
+ *
+ * Originally written with byte offsets (0x1C4 / 0x1E4 / 0x204 =
+ * idx * 4) into a uint32_t* slot table. On 64-bit the slots are 8
+ * bytes wide and the byte offsets land mid-pointer, so use typed
+ * SpriteGraphics** indexing instead. Each advertN slot holds the
+ * sprite's `sprData` pointer, used later by _UpdateAdvertisements
+ * to scroll the ad strip. */
 __attribute__((used, externally_visible))
 void _CopyAdvertisementsData(void)
 {
-    uint32_t *base = (uint32_t *)spriteGraphicsPtr;
-    uint32_t *src;
+    SpriteGraphics **table = (SpriteGraphics **)spriteGraphicsPtr;
     int i;
 
-    /* advert1: offset 0x1C4 = 452 bytes = 113 longs */
-    src = (uint32_t *)((uint8_t *)base + 0x1C4);
-    for (i = 0; i < 8; i++) {
-        uint32_t *ptr = (uint32_t *)src[i];
-        advert1Pointers[i] = *ptr;
-    }
-
-    /* advert2: offset 0x1E4 = 484 bytes = 121 longs */
-    src = (uint32_t *)((uint8_t *)base + 0x1E4);
-    for (i = 0; i < 8; i++) {
-        uint32_t *ptr = (uint32_t *)src[i];
-        advert2Pointers[i] = *ptr;
-    }
-
-    /* advert3: offset 0x204 = 516 bytes = 129 longs */
-    src = (uint32_t *)((uint8_t *)base + 0x204);
-    for (i = 0; i < 8; i++) {
-        uint32_t *ptr = (uint32_t *)src[i];
-        advert3Pointers[i] = *ptr;
-    }
+    for (i = 0; i < 8; i++)
+        advert1Pointers[i] = table[113 + i]->sprData;
+    for (i = 0; i < 8; i++)
+        advert2Pointers[i] = table[121 + i]->sprData;
+    for (i = 0; i < 8; i++)
+        advert3Pointers[i] = table[129 + i]->sprData;
 }
 
 /* ================================================================
@@ -152,9 +142,8 @@ void _ManageAdvertisements(void)
 {
     uint16_t d0, d1, d2;
     int16_t d7;
-    uint32_t *a6;   /* advert pointers */
+    uint8_t **a6;   /* advert sprite-data pointers */
     Sprite *spr;
-    uint32_t *base;
 
     /* Bail out conditions */
     if (trainingGame != 0)
@@ -229,13 +218,19 @@ void _ManageAdvertisements(void)
         }
     }
 
-    /* Build ad strip: update 8 sprite tiles */
-    base = (uint32_t *)spriteGraphicsPtr;
+    /* Build ad strip: update 8 sprite tiles.
+     *
+     * The Amiga code reached the per-sprite header via
+     * `((uint32_t *)spriteGraphicsPtr) + (d7 << 2)` byte-offsetting
+     * into a uint32_t* slot table. On 64-bit each slot is 8 bytes, so
+     * the byte arithmetic lands mid-pointer; index the table as
+     * SpriteGraphics** at slot d7 instead, which is pointer-width
+     * correct on both targets. */
     {
-        uint32_t *sprGfxTable = (uint32_t *)((uint8_t *)base + (uint16_t)(d7 << 2));
+        SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr + (uint16_t)d7;
         int16_t imgIdx = d7;
         for (d2 = 0; d2 < 8; d2++) {
-            SpriteGraphics *gfx = (SpriteGraphics *)sprGfxTable[d2];
+            SpriteGraphics *gfx = sprGfxTable[d2];
             spr = &advertInGameSprites[d2];
             spr->imageIndex = (int16_t)imgIdx;
             spr->x.s.i = (int16_t)d1;
@@ -258,13 +253,12 @@ void _ManageAdvertisements(void)
 #else
                 uint32_t lineBytes = (uint32_t)wquads * 8;
 #endif
-                /* a6[d2] is the absolute base address of this sprite's
-                 * pixel data (stored as uint32_t in advert*Pointers[]).
-                 * On 64-bit hosts the cast through uintptr_t preserves
-                 * the full pointer when assigning to sprData (now a
-                 * uint8_t *), instead of truncating via uint32_t. */
+                /* a6[d2] is the per-sprite pixel-data base captured at
+                 * load time by _CopyAdvertisementsData. Now stored as a
+                 * real uint8_t* (advertNPointers retyped to uint8_t*[8]),
+                 * so the scroll offset just adds onto it directly. */
                 uint32_t scrollOffset = (uint32_t)currentAnimatedAdLine * lineBytes;
-                gfx->sprData = (uint8_t *)(uintptr_t)a6[d2] + scrollOffset;
+                gfx->sprData = a6[d2] + scrollOffset;
             }
             d1 += 0x10;
             imgIdx += 1;

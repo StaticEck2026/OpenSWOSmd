@@ -1068,9 +1068,23 @@ Sprite* teamSpritesTable[101] = {
     &advertInGameSprites[0x5], &advertInGameSprites[0x6],
     &advertInGameSprites[0x7], (Sprite*)-1,
 };
+/* Byte offsets for the aliases: 11 slots and 22 slots in. Stringify
+ * sizeof(void*) into the .equ literals so the alias points at the
+ * right slot on both 32-bit (4 B → 44/88) and 64-bit (8 B → 88/176). */
+#define _SPR_TBL_STR_HELPER(x) #x
+#define _SPR_TBL_STR(x) _SPR_TBL_STR_HELPER(x)
+#if UINTPTR_MAX == 0xFFFFFFFFu
+  #define SPR_TEAM2_OFF_STR  "44"
+  #define SPR_ALLSPR_OFF_STR "88"
+#else
+  #define SPR_TEAM2_OFF_STR  "88"
+  #define SPR_ALLSPR_OFF_STR "176"
+#endif
 __asm__(".globl " _ASM_PFX "team1SpritesTable\n"
         ".equ   " _ASM_PFX "team1SpritesTable, " _ASM_PFX "teamSpritesTable\n"
         ".globl " _ASM_PFX "team2SpritesTable\n"
-        ".equ   " _ASM_PFX "team2SpritesTable, " _ASM_PFX "teamSpritesTable + 44\n"
+        ".equ   " _ASM_PFX "team2SpritesTable, " _ASM_PFX "teamSpritesTable + "
+        SPR_TEAM2_OFF_STR "\n"
         ".globl " _ASM_PFX "allSpritesArray\n"
-        ".equ   " _ASM_PFX "allSpritesArray,   " _ASM_PFX "teamSpritesTable + 88\n");
+        ".equ   " _ASM_PFX "allSpritesArray,   " _ASM_PFX "teamSpritesTable + "
+        SPR_ALLSPR_OFF_STR "\n");

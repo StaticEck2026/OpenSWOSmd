@@ -16,6 +16,7 @@
 #include "swos_platform.h"
 #include "display.h"
 #include "game_types.h"
+#include "menu_system.h"     /* MENU_HEADER_SIZE — used by menuEntries alias */
 
 #include <stdint.h>
 
@@ -88,8 +89,13 @@ volatile uint32_t bitPlane7BasePtr;
 uint8_t frontbufferBase[FRONTBUFFER_SIZE_TOTAL_BYTES];
 uint8_t frontbufferBaseAlt[FRONTBUFFER_SIZE_TOTAL_BYTES];
 uint8_t frontbufferMaskBuffer[FRONTBUFFER_SIZE_TOTAL_BYTES];
-volatile uint32_t frontbufferBasePtr;
-volatile uint32_t frontbufferBaseAltPtr;
+/* These store live pointers to frontbuffer memory. On 32-bit they
+ * are word-sized for layout compatibility with the Amiga port (where
+ * the asm reads them as long words). On 64-bit they must be wide
+ * enough to hold a real heap/BSS pointer — uintptr_t keeps both
+ * targets working without retyping every consumer. */
+volatile uintptr_t frontbufferBasePtr;
+volatile uintptr_t frontbufferBaseAltPtr;
 
 #ifdef SWOS_SDL_BUILD
 /* SDL-only scratch buffer used by `_ProcessImageCommandStream` and
@@ -177,42 +183,76 @@ extern const char aGrafsCjcteamgR[];
 extern const char aGrafsCjcbitsRa[];
 extern const char aGrafsSoccerSRa[];
 extern const char aGrafsCjcbenchR[];
-extern uint32_t team1Filename;
-extern uint32_t team2Filename;
+extern uintptr_t team1Filename;
+extern uintptr_t team2Filename;
 
 #include <stddef.h>
+#include <stdint.h>
+
+/* image_cmd.c interprets 0x7000/0x8000 file-load opcodes by reading a
+ * pointer from the script stream at the current cursor — but the
+ * stream stores pointers as two uint16 halves (32 bits total). On
+ * 32-bit hosts that works directly; on 64-bit it truncates the high
+ * 32 bits of the address and the load handler hands garbage to RNC,
+ * which overruns and trips a cygwin/libc assert in memcpy.
+ *
+ * Fix: keep the on-stream layout (two uint16 halves) the same on
+ * both targets, but on 64-bit treat the stored value as an INDEX
+ * into the side table below rather than as a raw pointer. Init code
+ * here populates the side table and writes the index back into the
+ * stream slot; image_cmd.c reads the slot, looks up the table on
+ * 64-bit, dereferences directly on 32-bit. Bitness-conditional via
+ * UINTPTR_MAX so the 32-bit code path is unchanged. */
+const void *imageScriptPtrTable[32];
+
+static uint16_t s_imageScriptPtrCount = 0;
+static uint32_t image_script_register_ptr(const void *p)
+{
+    /* 32-bit: encode pointer directly (low/high halves). */
+    /* 64-bit: register in side table, return the slot index. */
+#if UINTPTR_MAX == 0xFFFFFFFFu
+    return (uint32_t)(uintptr_t)p;
+#else
+    if (s_imageScriptPtrCount >= sizeof(imageScriptPtrTable) /
+                                 sizeof(imageScriptPtrTable[0])) {
+        /* Out of slots — bump the table size in the header. */
+        return 0xFFFFFFFFu;
+    }
+    imageScriptPtrTable[s_imageScriptPtrCount] = p;
+    return (uint32_t)s_imageScriptPtrCount++;
+#endif
+}
+
+static void image_script_emit_ptr(uint16_t *stream, uint32_t off, const void *p)
+{
+    uint32_t enc = image_script_register_ptr(p);
+    stream[off    ] = (uint16_t)enc;
+    stream[off + 1] = (uint16_t)(enc >> 16);
+}
 
 void _SwosSDL_InitImageScripts(void)
 {
-    uintptr_t p = (uintptr_t)aGrafsCharsetRa;
-    introMenuImageScript[1] = (uint16_t)(p);
-    introMenuImageScript[2] = (uint16_t)(p >> 16);
+    /* Reset the side-table cursor on each init call (only matters on
+     * 64-bit; the 32-bit path doesn't touch the table). */
+    s_imageScriptPtrCount = 0;
 
-    uintptr_t m1 = (uintptr_t)aGrafsMenusRaw;
-    menuBGImageCmdStream[1] = (uint16_t)(m1);
-    menuBGImageCmdStream[2] = (uint16_t)(m1 >> 16);
-
-    uintptr_t m2 = (uintptr_t)aGrafsMenus2Raw;
-    menuBGImageCmdStream[393] = (uint16_t)(m2);
-    menuBGImageCmdStream[394] = (uint16_t)(m2 >> 16);
+    image_script_emit_ptr(introMenuImageScript,    1, aGrafsCharsetRa);
+    image_script_emit_ptr(menuBGImageCmdStream,    1, aGrafsMenusRaw);
+    image_script_emit_ptr(menuBGImageCmdStream,  393, aGrafsMenus2Raw);
 
     /* menuColorAndTextScript pointer slots. The .inc file lists the
-     * word offsets as comments. The script opcode interpreter reads
-     * a dc.l as two uint16 halves (low word first, then high word) —
-     * matching the $7000 / 0x7000 load-file opcode convention used
-     * throughout the image-command pipeline. */
-    struct { uint32_t off; uintptr_t val; } mcts[] = {
-        {    1, (uintptr_t)aGrafsCjcgrafsR },
-        {  406, (uintptr_t)&team1Filename   },
-        { 1877, (uintptr_t)&team2Filename   },
-        { 3419, (uintptr_t)aGrafsCjcteamgR },
-        { 4548, (uintptr_t)aGrafsCjcbitsRa },
-        { 4695, (uintptr_t)aGrafsSoccerSRa },
-        { 4890, (uintptr_t)aGrafsCjcbenchR },
+     * word offsets as comments. */
+    struct { uint32_t off; const void *val; } mcts[] = {
+        {    1, aGrafsCjcgrafsR },
+        {  406, &team1Filename  },
+        { 1877, &team2Filename  },
+        { 3419, aGrafsCjcteamgR },
+        { 4548, aGrafsCjcbitsRa },
+        { 4695, aGrafsSoccerSRa },
+        { 4890, aGrafsCjcbenchR },
     };
     for (size_t i = 0; i < sizeof(mcts) / sizeof(mcts[0]); i++) {
-        menuColorAndTextScript[mcts[i].off    ] = (uint16_t)(mcts[i].val);
-        menuColorAndTextScript[mcts[i].off + 1] = (uint16_t)(mcts[i].val >> 16);
+        image_script_emit_ptr(menuColorAndTextScript, mcts[i].off, mcts[i].val);
     }
 }
 
@@ -229,8 +269,8 @@ extern const char aGrafsCjcteamgR[];
 extern const char aGrafsCjcbitsRa[];
 extern const char aGrafsSoccerSRa[];
 extern const char aGrafsCjcbenchR[];
-extern uint32_t team1Filename;
-extern uint32_t team2Filename;
+extern uintptr_t team1Filename;
+extern uintptr_t team2Filename;
 uint16_t menuColorAndTextScript[5166] = {
 #include "menu_color_text_script_cmds.inc"
 };
@@ -256,8 +296,14 @@ uint16_t menuColorAndTextScript[5166] = {
  * `menuEntries` symbol at offset +22 within the same storage. */
 __attribute__((used, aligned(4)))
 uint8_t currentMenu[8 * 1024 + 80 * 1024];
+/* The alias offset must match MENU_HEADER_SIZE — 22 on 32-bit, 38 on
+ * 64-bit (Menu has 4 pointer fields). Stringify the literal so the
+ * .equ inline asm picks up the correct value for the build. */
+#define _MENU_HDR_STR_HELPER(x) #x
+#define _MENU_HDR_STR(x) _MENU_HDR_STR_HELPER(x)
 __asm__(".globl " _ASM_PFX "menuEntries\n"
-        ".equ   " _ASM_PFX "menuEntries, " _ASM_PFX "currentMenu + 22\n");
+        ".equ   " _ASM_PFX "menuEntries, " _ASM_PFX "currentMenu + "
+        _MENU_HDR_STR(MENU_HEADER_SIZE) "\n");
 
 /* ---- Stadium-menu little-player sprite-copy block --------------------
  * The stadium menu (pre-match lineup screen) draws one mini-player
