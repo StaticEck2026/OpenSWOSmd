@@ -591,11 +591,14 @@ typedef struct DIYCompetition {
     int16_t  playEachTeam;             /* 0x5E */
 } DIYCompetition;
 
-/* DIYCompetition has 1 pointer field (namePtr); +4 on 64-bit. */
+/* DIYCompetition has 1 pointer field (namePtr); +4 from pointer growth
+ * + 4 from 8-byte tail alignment (struct is NOT packed, so its
+ * alignment matches the largest member = pointer = 8 bytes on 64-bit)
+ * → +8 total. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
 typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x60) ? 1 : -1];
 #else
-typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x64) ? 1 : -1];
+typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x68) ? 1 : -1];
 #endif
 
 /* ==================================================================
@@ -812,7 +815,7 @@ typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx {
 #if UINTPTR_MAX == 0xFFFFFFFFu
 typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5C8) ? 1 : -1];
 #else
-typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5CC) ? 1 : -1];
+typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5D0) ? 1 : -1];
 #endif
 
 /* ==================================================================

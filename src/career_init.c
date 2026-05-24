@@ -566,7 +566,7 @@ extern uint8_t *quaternaryCompStringOffset;
 extern uint8_t  euroCupCopy[];
 extern uint8_t  cupWinnersCupCopy[];
 extern uint8_t  uefaCupCopy[];
-extern uint32_t competitionsTable[];
+extern void *competitionsTable[];
 /* careerCupPickList: declared at top of file (line 39) */
 extern uint16_t euroCupSlotIndex;
 extern uint32_t *diyCompetitionTablePtr;

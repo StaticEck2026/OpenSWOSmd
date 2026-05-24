@@ -87,7 +87,7 @@ extern int16_t  topOfStackMark;
 
 /* Globals for SelectTeamsFinalMenu */
 extern uint8_t customsLeague[];
-extern uint32_t competitionsTable[];
+extern void *competitionsTable[];
 extern uint32_t teamNames[];
 extern uint32_t leaguesPtrTable[];
 extern uint16_t leagueNumbersTable[];

@@ -115,7 +115,7 @@ extern uint8_t managerSexBuffer[];
 extern uint8_t managerSurnameBuffer[];
 extern uint8_t aViewTeam[];
 
-extern uint32_t competitionsTable[];
+extern void *competitionsTable[];
 extern uint8_t seasonInformationsArray[];
 extern uint16_t currentSeasonShowing;
 

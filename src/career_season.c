@@ -689,7 +689,7 @@ void _BeginContractNegotiationSequence(DIYCompetitionEx *comp, TeamFileEx *team)
 extern uint8_t *secondaryCompetitionPtr;
 extern uint8_t *tertiaryCompetitionPtr;
 
-extern uint32_t competitionsTable[];
+extern void *competitionsTable[];
 extern uint16_t cachedTertiaryQualifiedTeamId;
 extern uint16_t panicReasonCode;
 extern uint8_t currentCompetitionId;
