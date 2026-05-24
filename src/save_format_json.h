@@ -51,6 +51,13 @@ int16_t SaveJson_LoadHighlights (uint8_t *filename, const uint8_t *src, uint32_t
 int16_t SaveJson_WriteTactics(uint8_t *filename, const uint8_t *src, uint32_t src_size);
 int16_t SaveJson_LoadTactics (uint8_t *filename, uint8_t *dst, uint32_t dst_capacity);
 
+/* Country/league byte from the last loaded career save's primary
+ * competition. Read by _Rebuild_CompetitionSlotPointers to recover
+ * the competitionsTable[] index when selTeamNumber is 0xFFFF (season
+ * mode with all-CPU teams). Returns 0xFF when no save has been
+ * loaded or the save was from before this field existed. */
+uint8_t SaveJson_GetLoadedPrimaryCountryCode(void);
+
 #ifdef __cplusplus
 }
 #endif

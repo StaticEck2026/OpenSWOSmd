@@ -13,6 +13,7 @@
 #include "endian_helpers.h"
 #include "menu_system.h"
 #include "input_text.h"
+#include "save_format_json.h"
 #include "random.h"
 #include "string_utils.h"
 #include "panic.h"
@@ -1365,17 +1366,20 @@ static void _Rebuild_CompetitionSlotPointers(void)
         _Career_SetCupPickList_ForSelectedRegion(0);
         compTablePtr = &careerCupPickList;
     } else {
-        uint16_t tableIdx = selTeamNumber >> 8;
+        /* selTeamNumber's high byte is the country/league index used to
+         * look up competitionsTable[]. In career mode (a human team is
+         * picked) selTeamNumber == (country<<8)|ordinal so the index
+         * comes for free. In season mode with all-CPU teams, there is
+         * no human team and selTeamNumber legitimately stays at the
+         * 0xFFFF "no team" sentinel for the whole session — so we
+         * recover the country byte from a dedicated saved scalar
+         * (primary_country_code in the JSON, captured at save time from
+         * ((Competition *)currentCompetitionPtr)->teamNumber). */
+        uint16_t tableIdx = (selTeamNumber == 0xFFFF)
+            ? SaveJson_GetLoadedPrimaryCountryCode()
+            : (selTeamNumber >> 8);
         compTablePtr = (uint32_t *)competitionsTable[tableIdx];
     }
-    fprintf(stderr,
-            "[bug-sea] _Rebuild_CompetitionSlotPointers: "
-            "selTeamNumber=0x%04X isNationalSelector=%u "
-            "tableIdx=0x%02X competitionsTable[tableIdx]=%p compTablePtr=%p\n",
-            (unsigned)selTeamNumber, (unsigned)isNationalSelector,
-            (unsigned)(selTeamNumber >> 8),
-            (void *)(uintptr_t)competitionsTable[selTeamNumber >> 8],
-            (void *)compTablePtr);
     if (!compTablePtr)
         return;
 

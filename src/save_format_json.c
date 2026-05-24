@@ -22,6 +22,22 @@
 #include "game_types.h"
 #include "endian_helpers.h"
 
+extern uint8_t *currentCompetitionPtr;
+
+/* Country-code byte of the primary competition's static struct at save
+ * time. _Rebuild_CompetitionSlotPointers uses this when selTeamNumber
+ * is the 0xFFFF "no team" sentinel — i.e. season mode with all-CPU
+ * teams, where there's no human team identifying the league. Without
+ * this scalar the rebuild can't re-derive currentCompetitionPtr from
+ * competitionsTable[] and the contest menu segfaults on first draw.
+ * Default 0xFF = "no comp" (career was at front-end / nothing
+ * selected yet). */
+static uint8_t s_loaded_primary_country_code = 0xFF;
+uint8_t SaveJson_GetLoadedPrimaryCountryCode(void)
+{
+    return s_loaded_primary_country_code;
+}
+
 #include <stddef.h>  /* offsetof */
 #include <stdio.h>
 #include <stdlib.h>
@@ -1791,7 +1807,23 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
     /* careerCompetitionSlotPtrTable / *CompetitionPtr / *CompStringOffset /
      * careerCupPickList are all re-derivable from non-pointer state on
-     * load — _RebuildPointersAfterLoad() handles them. Not saved. */
+     * load — _RebuildPointersAfterLoad() handles them. Not saved.
+     *
+     * EXCEPT: when selTeamNumber is the 0xFFFF "no team" sentinel
+     * (season mode, all-CPU teams), the rebuild can't recover the
+     * country/league index from selTeamNumber alone. Capture it from
+     * the live currentCompetitionPtr->teamNumber (Competition struct
+     * offset 18) so the rebuild can look up competitionsTable[] on
+     * load. 0xFF when no comp is active (career not yet started). */
+    {
+        uint8_t pcc = 0xFF;
+        if (currentCompetitionPtr) {
+            pcc = (uint8_t)((Competition *)currentCompetitionPtr)->teamNumber;
+        }
+        mjson_printf(json_out_emit, &out,
+                     "%Q:%d,\n  ",
+                     "primary_country_code", (int)pcc);
+    }
     /* *Copy struct text[2] pointers are template-static — see
      * restore_comp_copy_text_ptrs_from_template — so they're NOT
      * encoded in the save. They get restored from each careerContests
@@ -1926,7 +1958,19 @@ static void apply_semantic_load(const char *src, int src_size)
 
     load_season_informations(src, src_size);
     /* Top-level pointer fields were removed from the save format —
-     * _RebuildPointersAfterLoad() re-derives them after this returns. */
+     * _RebuildPointersAfterLoad() re-derives them after this returns.
+     * For the rebuild's selTeamNumber==0xFFFF (season-mode) path, parse
+     * the saved primary-comp country byte; default to 0xFF if missing
+     * (legacy save). Stored to a module-local; career_init.c reads it
+     * via SaveJson_GetLoadedPrimaryCountryCode(). */
+    {
+        double v = 0xFF;
+        if (mjson_get_number(src, src_size, "$.primary_country_code", &v) > 0) {
+            s_loaded_primary_country_code = (uint8_t)v;
+        } else {
+            s_loaded_primary_country_code = 0xFF;
+        }
+    }
     /* *Copy struct text[2] pointers are template-static (see comment
      * above restore_comp_copy_text_ptrs_from_template), so they're
      * not in the save. Apply them from each careerContests src
