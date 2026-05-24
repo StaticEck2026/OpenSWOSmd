@@ -389,6 +389,8 @@ void _InitCareerVariables(uint16_t gameTypeParam)
     teamsLoaded = 0;
     careerAutoAdvanceInProgress = 0;
     careerLoadedFlag = 0;
+    fprintf(stderr, "[bug-sea] _InitCareerVariables: selTeamNumber 0x%04X -> 0xFFFF (gameType=%u)\n",
+            (unsigned)selTeamNumber, (unsigned)gameTypeParam);
     selTeamNumber = 0xFFFF;
     currentTeamNumber = 0xFFFF;
     currentSeasonShowing = 0;
@@ -5257,10 +5259,14 @@ void _Friendly(void)
     _SaveSelectedTeams();
     uint16_t savedGameType = gameType;
     uint16_t savedSelTeam = selTeamNumber;
+    fprintf(stderr, "[bug-sea] Friendly OVERRIDE: selTeamNumber 0x%04X -> 0xFFFF\n",
+            (unsigned)savedSelTeam);
     selTeamNumber = 0xFFFF;
     gameType = GAME_TYPE_NO_GAME;
     _ShowFriendlyMenu();
     selTeamNumber = savedSelTeam;
+    fprintf(stderr, "[bug-sea] Friendly RESTORE: selTeamNumber -> 0x%04X\n",
+            (unsigned)savedSelTeam);
     gameType = savedGameType;
     _RestoreSelectedTeams();
 }

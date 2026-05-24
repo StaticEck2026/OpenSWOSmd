@@ -405,6 +405,12 @@ int16_t _LoadCareerFile(uint8_t *filename)
 {
     int16_t result;
     uint32_t fileSize = 0;
+    extern uint16_t selTeamNumber;
+
+    fprintf(stderr,
+            "[bug-sea] _LoadCareerFile ENTRY: filename=%s "
+            "pre-load selTeamNumber=0x%04X\n",
+            (const char *)filename, (unsigned)selTeamNumber);
 
     _SaveOptions();
 
@@ -415,6 +421,9 @@ int16_t _LoadCareerFile(uint8_t *filename)
      * re-opens the file via stdio into a heap buffer it manages. */
     if (SaveJson_FileIsJson(filename) == 1) {
         int16_t jr = SaveJson_LoadCareer(filename, NULL, 0);
+        fprintf(stderr,
+                "[bug-sea] _LoadCareerFile POST-JSON: selTeamNumber=0x%04X (jr=%d)\n",
+                (unsigned)selTeamNumber, (int)jr);
         if (jr != 0) {
             _ShowErrorMenu(aFileSavedByDif);
             _RestoreOptions();
