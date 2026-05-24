@@ -223,7 +223,7 @@ void _SetCurrentEntry(uint16_t index)
 {
     MenuEntry *entry = _CalcMenuEntryAddress(index);
     Menu *menu = (Menu *)currentMenu;
-    menu->selectedEntry = (uint32_t)entry;
+    menu->selectedEntry = entry;
     SWOS_AUTOSKIP_LOG("SetCurrentEntry(%u) caller=%p ctrlMask=0x%04x onSelect=%p",
                       (unsigned)index, __builtin_return_address(0),
                       (unsigned)entry->controlMask,
@@ -585,7 +585,7 @@ void _DrawMenuItem(MenuEntry *entry)
 
     /* Call beforeDraw callback — a5 = entry in original asm */
     if (entry->beforeDraw != 0) {
-        _CallMenuOnSelect((void *)entry->beforeDraw, (void *)entry);
+        _CallMenuOnSelect((void *)entry->beforeDraw, entry);
         if (entry->isInvisible)
             return;
     }
@@ -831,7 +831,7 @@ fg_text_common:
 
 post_draw_callback:
     if (entry->afterDrawCb != 0) {
-        _CallMenuOnSelect((void *)entry->afterDrawCb, (void *)entry);
+        _CallMenuOnSelect((void *)entry->afterDrawCb, entry);
     }
 }
 
@@ -1193,7 +1193,7 @@ __attribute__((used, externally_visible, noinline))
 void _DrawSelectedMenuItemFrame(void)
 {
     Menu *menu = (Menu *)currentMenu;
-    MenuEntry *sel = (MenuEntry *)menu->selectedEntry;
+    MenuEntry *sel = menu->selectedEntry;
     uint16_t w, h, color;
 
     if (sel == (MenuEntry *)0)
@@ -1217,7 +1217,7 @@ void _DrawMenu(void)
     Menu *menu = (Menu *)currentMenu;
     MenuEntry *entry;
     int16_t i, count;
-    uint32_t onDrawPtr;
+    MenuVoidFn onDrawPtr;
 
     menuStatus = 0;
     menuTextBlinkCounter = 0;
@@ -1492,7 +1492,7 @@ void _MenuProc(void)
     _MenuCheckControls();
 
     menu = (Menu *)currentMenu;
-    selectedEntry = (MenuEntry *)menu->selectedEntry;
+    selectedEntry = menu->selectedEntry;
     controlMask = 0;
 
     onSelectPtr = selectedEntry->onSelect;
@@ -1620,8 +1620,8 @@ __attribute__((used, externally_visible, noinline))
 void _ActivateMenu(uint8_t *packedMenu)
 {
     Menu *menu;
-    uint32_t selEntry;
-    uint32_t onInitPtr;
+    uintptr_t selEntryVal;
+    MenuVoidFn onInitPtr;
 
     currentMenuPtr = (uint32_t)packedMenu;
     s_seasonUpdateHoldCounter = 0;
@@ -1629,11 +1629,13 @@ void _ActivateMenu(uint8_t *packedMenu)
     _UnpackMenu(packedMenu, currentMenu);
 
     menu = (Menu *)currentMenu;
-    selEntry = menu->selectedEntry;
+    /* The unpacker may write either an ordinal (0..65535) or a real
+     * pointer into this slot; resolve ordinals via _CalcMenuEntryAddress
+     * before any consumer reads it as a MenuEntry *. */
+    selEntryVal = (uintptr_t)menu->selectedEntry;
 
-    if (selEntry <= 0xFFFF) {
-        MenuEntry *resolved = _CalcMenuEntryAddress((uint16_t)selEntry);
-        menu->selectedEntry = (uint32_t)resolved;
+    if (selEntryVal <= 0xFFFF) {
+        menu->selectedEntry = _CalcMenuEntryAddress((uint16_t)selEntryVal);
     }
 
     onInitPtr = menu->onInit;
@@ -1671,7 +1673,8 @@ void _ShowMenu(uint8_t *packedMenu)
     Menu *menu = (Menu *)currentMenu;
     /* volatile as safety: _CallMenuCallback saves/restores all regs around asm
        callbacks, but keep volatile in case any callback path is missed. */
-    volatile uint32_t oldSelectedEntry = menu->selectedEntry;
+    /* Save+restore as MenuEntry * (the new struct field type). */
+    MenuEntry * volatile oldSelectedEntry = menu->selectedEntry;
     volatile uint32_t oldPackedMenu = currentMenuPtr;
 
     menuStatus = 0;
@@ -1715,10 +1718,10 @@ void _ShowMenu(uint8_t *packedMenu)
  * RestorePreviousMenu
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _RestorePreviousMenu(uint32_t oldSelectedEntry, uint8_t *oldPackedMenu)
+void _RestorePreviousMenu(MenuEntry *oldSelectedEntry, uint8_t *oldPackedMenu)
 {
     Menu *menu;
-    uint32_t afterDrawPtr;
+    MenuVoidFn afterDrawPtr;
 
     currentMenuPtr = (uint32_t)oldPackedMenu;
     _UnpackMenu(oldPackedMenu, currentMenu);

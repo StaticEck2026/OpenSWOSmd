@@ -223,7 +223,7 @@ extern uint8_t stadiumMenu[];
 static void viewAndRestoreMenu(void (*viewFunc)(void))
 {
     Menu *menu = (Menu *)currentMenu;
-    uint32_t savedSelectedEntry = menu->selectedEntry;
+    MenuEntry *savedSelectedEntry = menu->selectedEntry;
     uint32_t savedMenuPtr = currentMenuPtr;
 
     viewFunc();

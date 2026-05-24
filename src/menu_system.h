@@ -13,19 +13,29 @@ typedef signed char int8_t;
 typedef short int16_t;
 typedef int int32_t;
 
+/* Forward decl so callback typedefs below can take MenuEntry *. */
+typedef struct MenuEntry MenuEntry;
+
+/* Function-pointer typedefs for menu callbacks. */
+typedef void (*MenuVoidFn)(void);              /* Menu.onInit / afterDraw / onDraw */
+typedef void (*MenuEntryFn)(MenuEntry *entry); /* MenuEntry.onSelect / beforeDraw / afterDrawCb */
+
 /* ---- Menu struct (22 bytes) ---- */
-/* Packed to match 68k memory layout exactly */
+/* Packed to match 68k memory layout exactly. On 32-bit the function
+ * pointer + struct pointer slots are 4 bytes each, preserving the
+ * size_check. On 64-bit they grow to 8 bytes — Phase 5 / 6 retypes
+ * the size_check accordingly. */
 typedef struct __attribute__((packed)) {
-    uint32_t onInit;        /* 0: function pointer (or 0) */
-    uint32_t afterDraw;     /* 4: function pointer (or 0) */
-    uint32_t onDraw;        /* 8: function pointer (or 0) */
-    uint32_t selectedEntry; /* 12: pointer to selected MenuEntry */
-    uint16_t numEntries;    /* 16 */
-    uint32_t endOfMenuPtr;  /* 18 */
+    MenuVoidFn   onInit;       /* 0: function pointer (or NULL) */
+    MenuVoidFn   afterDraw;    /* 4: function pointer (or NULL) */
+    MenuVoidFn   onDraw;       /* 8: function pointer (or NULL) */
+    MenuEntry   *selectedEntry;/* 12: pointer to selected MenuEntry */
+    uint16_t     numEntries;   /* 16 */
+    uint32_t     endOfMenuPtr; /* 18 — still uint32_t (raw addr in template) */
 } Menu;
 
 /* ---- MenuEntry struct (56 bytes) ---- */
-typedef struct __attribute__((packed)) {
+struct __attribute__((packed)) MenuEntry {
     uint16_t alreadyDrawn;   /* 0 */
     uint16_t ordinal;        /* 2 */
     uint16_t isInvisible;    /* 4 */
@@ -47,15 +57,19 @@ typedef struct __attribute__((packed)) {
     uint16_t dwWidth;        /* 24 */
     uint16_t dwHeight;       /* 26 */
     uint16_t background;     /* 28 */
+    /* bg/fg are dual-use slots: sometimes function pointers (ENTRY_FUNC1/2),
+     * sometimes color+content bitfields, sometimes string/sprite content
+     * tokens. Keep as uint32_t until a tagged-union design lands;
+     * Phase 6 (64-bit) will need to widen to uintptr_t. */
     uint32_t bg;             /* 30 */
     uint16_t content;        /* 34 */
     uint16_t stringFlags;    /* 36 */
     uint32_t fg;             /* 38 */
-    uint32_t onSelect;       /* 42 */
+    MenuEntryFn onSelect;    /* 42: function pointer (or NULL) */
     uint16_t controlMask;    /* 46 */
-    uint32_t beforeDraw;     /* 48 */
-    uint32_t afterDrawCb;    /* 52 */
-} MenuEntry;
+    MenuEntryFn beforeDraw;  /* 48: function pointer (or NULL) */
+    MenuEntryFn afterDrawCb; /* 52: function pointer (or NULL) */
+};
 
 /* Helpers to access the low memory word of MenuEntry.bg / MenuEntry.fg.
  * The unpacker writes and _DrawMenuItem reads the first 2 bytes of these
@@ -145,7 +159,7 @@ extern void _CallMenuFuncWithXY(void *funcPtr, uint16_t x, uint16_t y);
 void _MenuProc(void);
 void _ActivateMenu(uint8_t *packedMenu);
 void _ShowMenu(uint8_t *packedMenu);
-void _RestorePreviousMenu(uint32_t oldSelectedEntry, uint8_t *oldPackedMenu);
+void _RestorePreviousMenu(MenuEntry *oldSelectedEntry, uint8_t *oldPackedMenu);
 void _DrawMenu(void);
 void _MenuCheckControls(void);
 void _DrawSelectedMenuItemFrame(void);
