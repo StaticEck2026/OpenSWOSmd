@@ -67,11 +67,13 @@ UNAME_S := $(shell uname -s)
 # ---- Output ----
 ifeq ($(OS),Windows_NT)
 TARGET_NAME := SWOS.exe
-else ifeq ($(UNAME_S),CYGWIN_NT)
+else ifneq (,$(findstring CYGWIN,$(UNAME_S)))
+# uname -s on Cygwin outputs `CYGWIN_NT-10.0-22631` (or similar with
+# the Windows build number suffix), not bare `CYGWIN_NT`. Use
+# `findstring` so the version suffix doesn't break detection.
 TARGET_NAME := SWOS.exe
-else ifeq ($(UNAME_S),MINGW32_NT)
-TARGET_NAME := SWOS.exe
-else ifeq ($(UNAME_S),MINGW64_NT)
+else ifneq (,$(findstring MINGW,$(UNAME_S)))
+# Same suffix issue for MSYS2 MINGW32_NT-X.Y / MINGW64_NT-X.Y.
 TARGET_NAME := SWOS.exe
 else ifdef ARM64
 TARGET_NAME := SWOS.aarch64
@@ -143,6 +145,13 @@ else ifeq ($(UNAME_S),Darwin)
 # size_check[] asserts will fail until Phase 5 / 6 (same as ARM64).
 ARCHFLAGS :=
 else ifeq ($(GCC_MACHINE),x86_64-w64-mingw32)
+ARCHFLAGS :=
+else ifneq (,$(findstring CYGWIN,$(UNAME_S)))
+# Cygwin64's gcc is 64-bit-only; -m32 fails with "unimplemented for
+# this target" in <signal.h>. Drop -m32 and let it produce a native
+# 64-bit Windows binary (struct sizes go through the Phase 5
+# bitness-conditional asserts the same way aarch64 does). Testers
+# wanting a 32-bit Windows binary should use MSYS2 MINGW32 instead.
 ARCHFLAGS :=
 else
 ARCHFLAGS := -m32
