@@ -114,7 +114,7 @@ extern uint16_t diyCompSlotStateC;
 extern uint8_t teamSelectionKeyCache[];
 extern uint16_t teamSelectionKeyCacheCount;
 extern uint16_t diyHasGroups;
-extern uint32_t aFriendly;  /* string pointer "FRIENDLY" */
+extern uint8_t aFriendly[];  /* string "FRIENDLY" */
 extern uint8_t worldCup[];
 extern uint8_t diyPointsForAWin[];
 
@@ -8712,7 +8712,7 @@ void _InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table)
         uint8_t *customTable = table + 5 + nameOffset;
         nameSource = *(uint8_t **)(customTable + (d7 << 3));
     }
-    a6s->namePtr = (uint32_t)nameSource;  /* 0x28 */
+    a6s->namePtr = nameSource;  /* 0x28 */
     a1 = _StringCopy(nameSource, a1);
 
     ((DIYCompetitionEx *)a6)->pointsForAWin = (int16_t)league->pointsForWin;
@@ -8767,7 +8767,7 @@ void _InitDIYCupFromRecord(uint8_t *cupRec)
     if (nameOffset != 0) {
         nameSource = *(uint8_t **)(cupRec + 5 + nameOffset);
     }
-    a6s->namePtr = (uint32_t)nameSource;  /* 0x28 */
+    a6s->namePtr = nameSource;  /* 0x28 */
     a1 = _StringCopy(nameSource, a1);
 
     a6s->playEachTeam = (int8_t)cup->awayGoalsMode;  /* 0x5E */
@@ -8910,7 +8910,7 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
     if (nameOffset != 0) {
         nameSource = *(uint8_t **)(a5 + 5 + nameOffset);
     }
-    a6s->namePtr = (uint32_t)nameSource;  /* 0x28 */
+    a6s->namePtr = nameSource;  /* 0x28 */
     a1 = _StringCopy(nameSource, a1);
 
     a6s->menuState = (int8_t)a5[0xA];              /* 0x4A */

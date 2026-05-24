@@ -518,7 +518,7 @@ typedef struct DIYCompetition {
     /* --- field_2 sub-fields (48 bytes, 0x02-0x31) --- */
     uint16_t isActive;                 /* 0x02: 0=inactive, 1=in use */
     int8_t   competitionName[36];      /* 0x04: competition name string buffer */
-    uint32_t namePtr;                  /* 0x28: raw 68k ptr to competition name string */
+    uint8_t *namePtr;                  /* 0x28: ptr to competition name string */
     uint8_t  compId;                   /* 0x2C: competition ID byte */
     uint8_t  slotId;                   /* 0x2D: competition slot index for cache matching */
     uint8_t  field_2E;                 /* 0x2E: team configuration byte */
@@ -780,10 +780,10 @@ typedef struct __attribute__((packed, aligned(2))) SeasonInformations {
     uint16_t clubNo;                  /* 0x00 */
     int8_t   clubName[18];            /* 0x02 */
     uint16_t trophyFlags;             /* 0x14 */
-    uint32_t leagueStrPtr;            /* 0x16: ptr to league name */
-    uint32_t strPtr1;                 /* 0x1A: ptr to cup name */
-    uint32_t strPtr2;                 /* 0x1E: ptr to cup name */
-    uint32_t strPtr3;                 /* 0x22: ptr to cup name */
+    uint8_t *leagueStrPtr;            /* 0x16: ptr to league name */
+    uint8_t *strPtr1;                 /* 0x1A: ptr to cup name */
+    uint8_t *strPtr2;                 /* 0x1E: ptr to cup name */
+    uint8_t *strPtr3;                 /* 0x22: ptr to cup name */
     uint16_t bestScorerNumGoals;      /* 0x26 */
     int8_t   bestScorerName[23];      /* 0x28 */
     int8_t   secondScorerName[23];    /* 0x3F */

@@ -99,10 +99,10 @@ extern uint8_t  *tertiaryCompetitionPtr;
 extern uint8_t  *quaternaryCompetitionPtr;
 extern uint8_t  *diyCompetitionPtr;
 extern uint8_t  *careerCompetitionSlotPtrTable[];
-extern uint32_t  primaryCompStringOffset;
-extern uint32_t  secondaryCompStringOffset;
-extern uint32_t  tertiaryCompStringOffset;
-extern uint32_t  quaternaryCompStringOffset;
+extern uint8_t  *primaryCompStringOffset;
+extern uint8_t  *secondaryCompStringOffset;
+extern uint8_t  *tertiaryCompStringOffset;
+extern uint8_t  *quaternaryCompStringOffset;
 extern uint32_t  careerCupPickList;       /* 5-entry array via spill */
 extern uint32_t *diyCompetitionTablePtr;
 extern uint8_t   careerContests[];
@@ -158,10 +158,10 @@ void _TranslateAmigaAddressesAfterLoad(void)
     }
 
     /* String-table offsets — saved as raw pointers on Amiga. */
-    translate_one(&primaryCompStringOffset);
-    translate_one(&secondaryCompStringOffset);
-    translate_one(&tertiaryCompStringOffset);
-    translate_one(&quaternaryCompStringOffset);
+    translate_one((uint32_t *)&primaryCompStringOffset);
+    translate_one((uint32_t *)&secondaryCompStringOffset);
+    translate_one((uint32_t *)&tertiaryCompStringOffset);
+    translate_one((uint32_t *)&quaternaryCompStringOffset);
 
     /* diyCompetitionTablePtr is `uint32_t **` but holds a single
      * pointer value — translate the value field. */

@@ -3772,8 +3772,8 @@ void _Career_UpdateStatsAfterMatch(TeamFileEx *team1, TeamFileEx *team2, uint16_
         boardConfidenceMod1++;
         numWins++;
         if (compType == 0) {
-            uint32_t tourPtr = diyCompetitionStart.base.namePtr;
-            if (tourPtr >= (uint32_t)&aEuropeanTour && tourPtr <= (uint32_t)&aOceaniaTour) {
+            uint8_t *tourPtr = diyCompetitionStart.base.namePtr;
+            if (tourPtr >= (uint8_t *)&aEuropeanTour && tourPtr <= (uint8_t *)&aOceaniaTour) {
                 boardConfidenceMod7++;
             } else if (diyHasGroups) {
                 boardConfidenceMod4++;
@@ -3784,8 +3784,8 @@ void _Career_UpdateStatsAfterMatch(TeamFileEx *team1, TeamFileEx *team2, uint16_
         boardConfidenceMod3++;
         numLost++;
         if (compType == 0) {
-            uint32_t tourPtr = diyCompetitionStart.base.namePtr;
-            if (tourPtr >= (uint32_t)&aEuropeanTour && tourPtr <= (uint32_t)&aOceaniaTour) {
+            uint8_t *tourPtr = diyCompetitionStart.base.namePtr;
+            if (tourPtr >= (uint8_t *)&aEuropeanTour && tourPtr <= (uint8_t *)&aOceaniaTour) {
                 boardConfidenceMod9++;
             } else if (diyHasGroups) {
                 boardConfidenceMod6++;
@@ -3796,8 +3796,8 @@ void _Career_UpdateStatsAfterMatch(TeamFileEx *team1, TeamFileEx *team2, uint16_
         boardConfidenceMod2++;
         numDrawn++;
         if (compType == 0) {
-            uint32_t tourPtr = diyCompetitionStart.base.namePtr;
-            if (tourPtr >= (uint32_t)&aEuropeanTour && tourPtr <= (uint32_t)&aOceaniaTour) {
+            uint8_t *tourPtr = diyCompetitionStart.base.namePtr;
+            if (tourPtr >= (uint8_t *)&aEuropeanTour && tourPtr <= (uint8_t *)&aOceaniaTour) {
                 boardConfidenceMod8++;
             } else if (diyHasGroups) {
                 boardConfidenceMod5++;

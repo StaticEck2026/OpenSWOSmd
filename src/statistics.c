@@ -2176,13 +2176,13 @@ void _FillManagementRecordInfo(void)
     d5 += 17;
 
     /* --- Competition results (4 lines) --- */
-    RenderCompLine_Internal((const uint8_t *)(uintptr_t)si->leagueStrPtr,
+    RenderCompLine_Internal(si->leagueStrPtr,
                             si->comp1Result, si->tournamentStatus, si, &d5);
-    RenderCompLine_Internal((const uint8_t *)(uintptr_t)si->strPtr1,
+    RenderCompLine_Internal(si->strPtr1,
                             si->comp2Result, 0, si, &d5);
-    RenderCompLine_Internal((const uint8_t *)(uintptr_t)si->strPtr2,
+    RenderCompLine_Internal(si->strPtr2,
                             si->comp3Result, 0, si, &d5);
-    RenderCompLine_Internal((const uint8_t *)(uintptr_t)si->strPtr3,
+    RenderCompLine_Internal(si->strPtr3,
                             si->comp4Result, 0, si, &d5);
 
     d5 += 8;
