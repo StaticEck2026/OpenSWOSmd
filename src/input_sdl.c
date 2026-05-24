@@ -337,19 +337,21 @@ void InputSDL_HandleEvent(const SDL_Event *e)
             /* In a live match SPACE is SWOS's highlight-capture key
              * (game_loop.c _MainKeysCheck case 0x20 — sets
              * fadeAndSaveHighlightScene, which fades the screen).
-             * Don't also route it to fire/skip on the game pad — that
-             * would mash the player's fire button at the same time as
-             * the highlight capture and cause the brief pause + black
-             * frame the tester reported. Outside a match (frontend,
-             * season-end menu chain, edit screens) the keyBuffer push
-             * is harmless because _MainKeysCheck isn't reached, so
-             * SPACE here is purely our menu fire + season-skip latch.
+             * Don't route it to fire/skip on the game pad in-match —
+             * that would mash the player's fire button at the same
+             * time as the highlight capture.
              *
-             * gameState in the [ST_STARTING_GAME .. ST_PENALTIES]
-             * window means a match is on screen — see game_types.h. */
+             * Outside a match SPACE drives the season-end auto-skip
+             * latch (pauseSkipRequested) ONLY. Fire (Right Ctrl /
+             * Left Ctrl / Enter) is intentionally separate so SPACE
+             * stays usable as a literal space character in filename /
+             * tactics-name text input fields, which read shortFire
+             * via the same MenuCheckControls path the menus do.
+             *
+             * gameState in [ST_STARTING_GAME .. ST_PENALTIES] means
+             * a match is on screen — see game_types.h. */
             if (!(gameState >= 21 /*ST_STARTING_GAME*/ &&
                   gameState <= 31 /*ST_PENALTIES*/)) {
-                s_kbd_fire = 1;
                 s_kbd_skip = 1;
             }
             break;
@@ -369,7 +371,7 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         case SDLK_RCTRL:
         case SDLK_LCTRL:
         case SDLK_RETURN: s_kbd_fire = 0; break;
-        case SDLK_SPACE:  s_kbd_fire = 0; s_kbd_skip = 0; break;
+        case SDLK_SPACE:  s_kbd_skip = 0; break;
         default: break;
         }
     } break;
