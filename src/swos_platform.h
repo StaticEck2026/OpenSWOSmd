@@ -35,7 +35,19 @@
 
 /* The Amiga code uses its own typedefs (unsigned char uint8_t, etc.).
  * Make sure stdint.h is NOT pulled in indirectly to prevent typedef
- * conflicts. The Amiga code's typedefs match the SysV ABI on x86/x64. */
+ * conflicts. The Amiga code's typedefs match the SysV ABI on x86/x64.
+ *
+ * The Amiga port doesn't see this file, so this typedef is SDL-only.
+ * uintptr_t is needed for the bitness-aware pointer slots
+ * (MenuEntry.bg/fg, frontbufferBasePtr, *.fg = (uintptr_t)X writes,
+ * etc.) introduced during Phase 6. GCC defines __UINTPTR_TYPE__ to
+ * the platform's correct typedef — `unsigned int` on 32-bit ILP32,
+ * `unsigned long` on 64-bit LP64, `unsigned long long` on Win64
+ * LLP64 — which is exactly what we want. */
+#ifndef _UINTPTR_T_DEFINED
+typedef __UINTPTR_TYPE__ uintptr_t;
+#define _UINTPTR_T_DEFINED 1
+#endif
 
 /* Override Amiga section macros — section attributes don't make sense on PC. */
 #ifdef SWOS_CHIP_BSS

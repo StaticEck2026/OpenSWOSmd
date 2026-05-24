@@ -1182,14 +1182,18 @@ void _DrawQueuedSprites(void)
 {
     uint8_t *a2 = (uint8_t *)renderStackPtr;
 
-    while ((uint32_t)a2 != (uint32_t)renderStackBase) {
+    /* Stack entry on disk: [Sprite *a1][SpriteGraphics *a0][int16 d1][int16 d2]
+     * On 32-bit each pointer is 4 B (total 12 B/entry); on 64-bit each is 8 B
+     * (total 20 B/entry). Reads back must use sizeof(void *) — earlier
+     * a2 -= 4 unconditionally was reading half a pointer on 64-bit. */
+    while (a2 != renderStackBase) {
         a2 -= 2;
         int16_t d2 = *(int16_t *)a2;
         a2 -= 2;
         int16_t d1 = *(int16_t *)a2;
-        a2 -= 4;
+        a2 -= sizeof(SpriteGraphics *);
         SpriteGraphics *a0 = *(SpriteGraphics **)a2;
-        a2 -= 4;
+        a2 -= sizeof(Sprite *);
         Sprite *a4 = *(Sprite **)a2;
 
         /* Check if highlight recording needed */
@@ -1293,6 +1297,16 @@ static void renderSpriteBandPlanePair(SpriteGraphics *sprGfx, int16_t x, int16_t
 __attribute__((used, externally_visible))
 void _RenderSpriteBandsToCopperLists(void)
 {
+#ifdef SWOS_SDL_BUILD
+    /* SDL has no Amiga copper-list / bitplane infrastructure — every
+     * write below targets bitPlane{0..3}BasePtr (Amiga chip memory)
+     * via Amiga blitter regs that don't exist here. On 64-bit the
+     * pointer-as-uint32 globals also give us truncated addresses that
+     * SIGSEGV when written. Sprites on SDL are drawn through the
+     * chunky 8bpp path in _DrawQueuedSprites (already called by
+     * _DrawSprites above us), so this function is a no-op. */
+    return;
+#else
 
 
     /* Set up blitter for straight copy (A->D) */
@@ -1309,14 +1323,14 @@ void _RenderSpriteBandsToCopperLists(void)
     uint16_t *a5 = (uint16_t *)bitPlane1BasePtr;
     uint8_t *a3 = (uint8_t *)plane01RenderStackPtr;
 
-    while ((uint32_t)a3 != (uint32_t)plane01RenderStackBase) {
+    while (a3 != plane01RenderStackBase) {
         a3 -= 2;
         int16_t d2 = *(int16_t *)a3;
         a3 -= 2;
         int16_t d1 = *(int16_t *)a3;
-        a3 -= 4;
+        a3 -= sizeof(SpriteGraphics *);
         SpriteGraphics *a0 = *(SpriteGraphics **)a3;
-        a3 -= 4;
+        a3 -= sizeof(uint8_t *);
         uint8_t *a1 = *(uint8_t **)a3;
 
         if (*(uint16_t *)a1 != 0) {
@@ -1336,14 +1350,14 @@ void _RenderSpriteBandsToCopperLists(void)
     a5 = (uint16_t *)bitPlane3BasePtr;
     a3 = (uint8_t *)plane23RenderStackPtr;
 
-    while ((uint32_t)a3 != (uint32_t)plane23RenderStackBase) {
+    while (a3 != plane23RenderStackBase) {
         a3 -= 2;
         int16_t d2 = *(int16_t *)a3;
         a3 -= 2;
         int16_t d1 = *(int16_t *)a3;
-        a3 -= 4;
+        a3 -= sizeof(SpriteGraphics *);
         SpriteGraphics *a0 = *(SpriteGraphics **)a3;
-        a3 -= 4;
+        a3 -= sizeof(uint8_t *);
         uint8_t *a1 = *(uint8_t **)a3;
 
         if (*(uint16_t *)a1 != 0) {
@@ -1357,6 +1371,7 @@ void _RenderSpriteBandsToCopperLists(void)
     /* Terminate plane 2/3 copper lists */
     *(uint32_t *)a4 = copperZeroLong;
     *(uint32_t *)a5 = copperZeroLong;
+#endif /* !SWOS_SDL_BUILD */
 }
 
 /* ================================================================
@@ -1502,11 +1517,12 @@ void _BuildSpriteBandAndGeneralRenderStacks(void)
 
             a1->field_56 = 0;
 
-            /* Push to general render stack */
-            *(uint32_t *)a6loc = (uint32_t)a1; a6loc += 4;
-            *(uint32_t *)a6loc = (uint32_t)a0; a6loc += 4;
-            *(int16_t *)a6loc = d1; a6loc += 2;
-            *(int16_t *)a6loc = d2; a6loc += 2;
+            /* Push to general render stack — pointer slots are
+             * sizeof(void *) wide (4 B on 32-bit, 8 B on 64-bit). */
+            *(Sprite **)a6loc = a1;          a6loc += sizeof(Sprite *);
+            *(SpriteGraphics **)a6loc = a0;  a6loc += sizeof(SpriteGraphics *);
+            *(int16_t *)a6loc = d1;          a6loc += 2;
+            *(int16_t *)a6loc = d2;          a6loc += 2;
         } else {
             /* Narrow sprite (<=16px): try to assign to a hardware band */
             int16_t leftBucket = (d1 >> 4) << 1;
@@ -1527,10 +1543,10 @@ void _BuildSpriteBandAndGeneralRenderStacks(void)
             if (d3 < plane23BandTopY_local) {
                 a1->field_56 = 2;
                 plane23BandTopY_local = d2;
-                *(uint32_t *)a5 = (uint32_t)a1; a5 += 4;
-                *(uint32_t *)a5 = (uint32_t)a0; a5 += 4;
-                *(int16_t *)a5 = d1; a5 += 2;
-                *(int16_t *)a5 = d2; a5 += 2;
+                *(Sprite **)a5 = a1;             a5 += sizeof(Sprite *);
+                *(SpriteGraphics **)a5 = a0;     a5 += sizeof(SpriteGraphics *);
+                *(int16_t *)a5 = d1;             a5 += 2;
+                *(int16_t *)a5 = d2;             a5 += 2;
                 goto post_enqueue;
             }
 
@@ -1538,20 +1554,20 @@ void _BuildSpriteBandAndGeneralRenderStacks(void)
             if (d3 < plane01BandTopY_local) {
                 a1->field_56 = 1;
                 plane01BandTopY_local = d2;
-                *(uint32_t *)a4 = (uint32_t)a1; a4 += 4;
-                *(uint32_t *)a4 = (uint32_t)a0; a4 += 4;
-                *(int16_t *)a4 = d1; a4 += 2;
-                *(int16_t *)a4 = d2; a4 += 2;
+                *(Sprite **)a4 = a1;             a4 += sizeof(Sprite *);
+                *(SpriteGraphics **)a4 = a0;     a4 += sizeof(SpriteGraphics *);
+                *(int16_t *)a4 = d1;             a4 += 2;
+                *(int16_t *)a4 = d2;             a4 += 2;
                 goto post_enqueue;
             }
 
             /* Falls through to general stack */
 enqueue_general:
             a1->field_56 = 0;
-            *(uint32_t *)a6loc = (uint32_t)a1; a6loc += 4;
-            *(uint32_t *)a6loc = (uint32_t)a0; a6loc += 4;
-            *(int16_t *)a6loc = d1; a6loc += 2;
-            *(int16_t *)a6loc = d2; a6loc += 2;
+            *(Sprite **)a6loc = a1;          a6loc += sizeof(Sprite *);
+            *(SpriteGraphics **)a6loc = a0;  a6loc += sizeof(SpriteGraphics *);
+            *(int16_t *)a6loc = d1;          a6loc += 2;
+            *(int16_t *)a6loc = d2;          a6loc += 2;
 
 post_enqueue:
             /* Update occlusion bucket minimums */

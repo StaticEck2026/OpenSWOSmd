@@ -41,7 +41,10 @@ extern void _PanicHaltLoop(void) __attribute__((noreturn));
  * an unmapped low-32 address. We populate this side table at the same
  * time we fill the slot, and read through it whenever we actually need
  * to fetch tile bytes. */
-static uint8_t *s_pitchFullPtrs[PITCH_POINTER_COUNT];
+/* Non-static so animated_patterns.c can read it directly (declared
+ * extern there). Same shape: index = slot, value = full chunky-tile
+ * pointer (NULL if not yet decoded). */
+uint8_t *s_pitchFullPtrs[PITCH_POINTER_COUNT];
 
 /* pitchFansConvertTable: color remap table for fan sprites.
  * Indices 10,11 get replaced with team kit colors. */
@@ -201,8 +204,23 @@ void _FixupAndColorPitchFile(void)
         for (i = 0; i < PITCH_POINTER_COUNT; i++)
             tileDecoded[i] = 0;
 
+        /* Reconstruct each slot's real (64-bit) tile pointer.
+         *
+         * Step 1 wrote `pitchPtrs[i] = offsetBE + baseAddr` where
+         * baseAddr is `(uint32_t)(uintptr_t)tileDataBase` — truncated
+         * to 32 bits. On 32-bit hosts that's lossless; on 64-bit the
+         * slot now holds (low-32 of tileDataBase) + offsetBE, which
+         * looks like a valid pointer in the low 4 GB but isn't mapped.
+         *
+         * The original file offset is recovered by subtracting the
+         * truncated base from the truncated slot — both halves cancel
+         * to give the same offset Step 1 read out of the file. Add it
+         * back to the *real* tileDataBase to get the real pointer. */
+        uint32_t baseLow = (uint32_t)(uintptr_t)tileDataBase;
         for (i = 0; i < PITCH_POINTER_COUNT; i++) {
-            uint8_t *bitplane = (uint8_t *)(uintptr_t)pitchPtrs[i];
+            uint32_t slotLow    = pitchPtrs[i];
+            uint32_t fileOffset = slotLow - baseLow;
+            uint8_t *bitplane   = tileDataBase + fileOffset;
             /* Guard against bogus pointers (shouldn't happen, but the
              * file could be malformed or the stub still indexed). */
             if (bitplane < tileDataBase || bitplane + 128 > bufEnd) {

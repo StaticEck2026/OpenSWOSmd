@@ -180,8 +180,12 @@ uint8_t plNamesLengthTable[32];
 uint8_t plNamesLengthTableCopy[32];
 uint8_t plOrdinalsTable[32];
 uint8_t plPricesIncreaseTable[50] = { 0, 1, 2, 3, 4, 4, 5, 5, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 };
-uint8_t plane01RenderStackBase[360];
-uint8_t plane23RenderStackBase[360];
+/* Render-stack stride: 2 pointers + 2 int16_t per entry. 30 entries
+ * each = 360 bytes on 32-bit (Amiga 4-byte ptrs) / 600 bytes on 64-bit
+ * (8-byte ptrs). Allocate the larger size unconditionally; on 32-bit
+ * the extra ~240 B per stack is harmless. */
+uint8_t plane01RenderStackBase[600];
+uint8_t plane23RenderStackBase[600];
 uint8_t playerFormDeltaRandomTable[144] = { 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 2, 1, 1, 1, 1, 0, 0, 0, 2, 1, 1, 1, 1, 1, 0, 0, 2, 1, 1, 1, 1, 1, 0, 0, 2, 2, 1, 1, 1, 1, 0, 0, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 1, 1, 1, 2, 2, 2, 0, 1, 1, 1, 1, 2, 2, 2, 0, 1, 1, 1, 1, 2, 2, 2, 0, 1, 1, 1, 1, 2, 2, 3, 0, 1, 1, 1, 1, 2, 2, 3, 0, 1, 1, 1, 2, 2, 2, 3 };
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): playerFormModifiers */
 // uint8_t playerFormModifiers[32];
@@ -195,7 +199,9 @@ uint8_t preferredTacticsSlotsByRole[64] = { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): quaternaryCompetitionName */
 // uint8_t quaternaryCompetitionName[36];
 int8_t redCardTable[30] = { 0, 9, 0, 9, 0, 9, 0, 9, 0, 9, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1 };
-uint8_t renderStackBase[840];
+/* Main render stack: 70 entries × 12 B = 840 B on 32-bit, × 20 B =
+ * 1400 B on 64-bit (see plane01/23RenderStackBase comment). */
+uint8_t renderStackBase[1400];
 uint8_t resultString[70];
 uint8_t saveFileTitle[70] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): seasonInformationsArray */

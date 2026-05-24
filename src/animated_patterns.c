@@ -116,20 +116,44 @@ static void drawPatternFromIndex(uint16_t patternIndex)
 {
     int16_t pixelX, pixelY;
     int16_t screenX, screenY;
-    uint32_t *sprGfx;
-    uint32_t *tileEntries;
-    uint32_t spriteAddr;
 
     /* decompose patternIndex into row,col in a 42-column grid */
     pixelY = (int16_t)(patternIndex / 42) * 16;     /* row * 16 */
     pixelX = (int16_t)(patternIndex % 42) * 16;     /* col * 16 */
 
-    /* load sprite 137 graphics pointer and set its tile data */
-    sprGfx = (uint32_t *)(void *)spriteGraphicsPtr;
-    spriteAddr = sprGfx[137];
-
-    tileEntries = (uint32_t *)(void *)pitchDatBuffer;
-    *(uint32_t *)spriteAddr = tileEntries[patternIndex];
+    /* Sprite 137 is the animated-fan placeholder: overwrite its
+     * sprData each call with the current pitch-tile pointer, then draw
+     * it at the cell's screen-space coordinates.
+     *
+     * Original code went through `(uint32_t *)spriteGraphicsPtr` and
+     * `(uint32_t *)pitchDatBuffer` — both 4-byte-slot views. On 64-bit
+     * the table slots are 8 bytes, so sprGfx[137] returned half a
+     * SpriteGraphics pointer (zero-extended to an unmapped low-32
+     * address) and the write through it segfaulted. Use the typed
+     * pointer table for the sprite header, and the matching side table
+     * for the chunky tile pointer (populated by _FixupAndColorPitchFile
+     * Step 1b, see pitch.c). */
+#ifdef SWOS_SDL_BUILD
+    {
+        /* s_pitchFullPtrs is the pitch.c side table that holds the
+         * full-width chunky-tile pointer per slot — populated in
+         * _FixupAndColorPitchFile Step 1b. The 4-byte slots in
+         * pitchDatBuffer can't round-trip a 64-bit address. */
+        extern uint8_t *s_pitchFullPtrs[];
+        SpriteGraphics *spr = ((SpriteGraphics **)spriteGraphicsPtr)[137];
+        if (spr && patternIndex < 2310) {
+            uint8_t *tile = s_pitchFullPtrs[patternIndex];
+            if (tile) spr->sprData = tile;
+        }
+    }
+#else
+    {
+        uint32_t *sprGfx     = (uint32_t *)(void *)spriteGraphicsPtr;
+        uint32_t *tileEntries = (uint32_t *)(void *)pitchDatBuffer;
+        uint32_t spriteAddr   = sprGfx[137];
+        *(uint32_t *)spriteAddr = tileEntries[patternIndex];
+    }
+#endif
 
     /* compute screen-relative coordinates */
     screenX = pixelX - (int16_t)cameraX.s.i;
@@ -144,10 +168,12 @@ static void drawPatternFromIndex(uint16_t patternIndex)
     /* draw to frontbuffer */
     _DrawSprite16Pixels(137, screenX, screenY);
 
-    /* draw to mask buffer (swap frontbuffer ptr temporarily) */
+    /* draw to mask buffer (swap frontbuffer ptr temporarily). The
+     * pointer slot is uintptr_t on both targets — save/restore at
+     * native width so we don't truncate the swap. */
     {
-        uint32_t savedFbPtr = frontbufferBasePtr;
-        frontbufferBasePtr = (uint32_t)frontbufferMaskBuffer;
+        uintptr_t savedFbPtr = frontbufferBasePtr;
+        frontbufferBasePtr = (uintptr_t)frontbufferMaskBuffer;
         _DrawSprite16Pixels(137, screenX, screenY);
         frontbufferBasePtr = savedFbPtr;
     }
