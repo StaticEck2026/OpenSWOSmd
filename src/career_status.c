@@ -29,6 +29,7 @@
  */
 
 #include "career_status.h"
+#include <stdio.h>
 #include "endian_helpers.h"
 #include "career_teams.h"
 #include "game_types.h"
@@ -3136,6 +3137,8 @@ void _Career_PostMatchUpdate(void)
     uint16_t savedSelTeam = selTeamNumber;
     uint8_t savedControls = careerTeam.team.teamControls;
 
+    fprintf(stderr, "[bug-sea] PostMatchUpdate OVERRIDE: selTeamNumber 0x%04X -> 0xFFFF\n",
+            (unsigned)savedSelTeam);
     selTeamNumber = 0xFFFF;
     careerTeam.team.teamControls = 1;
 
@@ -3173,6 +3176,8 @@ void _Career_PostMatchUpdate(void)
     /* Restore saved values */
     careerTeam.team.teamControls = savedControls;
     selTeamNumber = savedSelTeam;
+    fprintf(stderr, "[bug-sea] PostMatchUpdate RESTORE: selTeamNumber -> 0x%04X\n",
+            (unsigned)savedSelTeam);
 
 #ifdef SWOS_DEBUG_AUTOSKIP
     SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate EXIT (after all 4 AutoAdvance calls)");

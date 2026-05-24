@@ -6,8 +6,8 @@
 #include "menus.h"
 #include "endian_helpers.h"
 #include "auto_skip_debug.h"
+#include <stdio.h>  /* unconditional — diagnostic logging not always gated */
 #ifdef SWOS_DEBUG_AUTOSKIP
-#include <stdio.h>
 #endif
 #include "game_utils.h"
 #include "game_types.h"
@@ -6502,11 +6502,12 @@ pastTeamLoad:
     /* Determine slot type and competition name */
     uint16_t slotType = a6[0] & 0xFF;
     uint8_t *compInfo = ((uint8_t **)&currentCompetitionPtr)[slotType]; /* a1 */
-    /* compInfo NULL when the loaded save left the slot pointers unset
-     * — e.g. a SEA captured with selTeamNumber==0xFFFF. Hide the entry
-     * instead of dereferencing NULL. */
-    if (compInfo == 0)
-        goto hideAll;
+    fprintf(stderr,
+            "[bug-sea] _CareerGameListCommon: slotType=%u compInfo=%p "
+            "current=%p secondary=%p tertiary=%p quaternary=%p\n",
+            (unsigned)slotType, (void *)compInfo,
+            (void *)currentCompetitionPtr, (void *)secondaryCompetitionPtr,
+            (void *)tertiaryCompetitionPtr, (void *)quaternaryCompetitionPtr);
     uint16_t d5; /* color/stringFlags value */
     uint8_t *namePtr; /* competition name pointer */
 

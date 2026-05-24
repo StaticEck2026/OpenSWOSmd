@@ -9,6 +9,7 @@
  */
 
 #include "career_season.h"
+#include <stdio.h>
 #include "career_eurocups.h"
 #include "career_init.h"
 #include "career_status.h"
@@ -1384,6 +1385,8 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         uint16_t savedSelTeam = selTeamNumber;
         uint8_t savedCtrl = careerTeam.team.teamControls;
 
+        fprintf(stderr, "[bug-sea] career_season OVERRIDE: selTeamNumber 0x%04X -> 0xFFFF\n",
+                (unsigned)savedSelTeam);
         selTeamNumber = 0xFFFF;
         careerTeam.team.teamControls = 1;
 
@@ -1439,6 +1442,8 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
 
         careerTeam.team.teamControls = savedCtrl;
         selTeamNumber = savedSelTeam;
+        fprintf(stderr, "[bug-sea] career_season RESTORE: selTeamNumber -> 0x%04X\n",
+                (unsigned)savedSelTeam);
     }
 }
 

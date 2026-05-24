@@ -475,6 +475,14 @@ int16_t _LoadCareerFile(uint8_t *filename)
 __attribute__((used, externally_visible))
 int16_t _SaveCareerFile(uint8_t *filename)
 {
+    extern uint16_t selTeamNumber;
+    extern uint16_t isNationalSelector;
+    extern uint16_t currentDivisionIndex;
+    fprintf(stderr,
+            "[bug-sea] _SaveCareerFile ENTRY: filename=%s "
+            "selTeamNumber=0x%04X isNationalSelector=%u currentDivisionIndex=%u\n",
+            (const char *)filename, (unsigned)selTeamNumber,
+            (unsigned)isNationalSelector, (unsigned)currentDivisionIndex);
     /* JSON is the only career write format. The legacy raw-memory-dump
      * writer was retired because it embedded build-specific pointer
      * values and required a careerFileBuffer-shaped on-disk layout.
