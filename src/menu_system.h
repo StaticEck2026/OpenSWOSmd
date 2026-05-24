@@ -6,6 +6,7 @@
 #ifndef MENU_SYSTEM_H
 #define MENU_SYSTEM_H
 
+#include <stdint.h>  /* uintptr_t for MenuEntry.bg / .fg dual-use slots */
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
@@ -57,14 +58,24 @@ struct __attribute__((packed)) MenuEntry {
     uint16_t dwWidth;        /* 24 */
     uint16_t dwHeight;       /* 26 */
     uint16_t background;     /* 28 */
-    /* bg/fg are dual-use slots: sometimes function pointers (ENTRY_FUNC1/2),
-     * sometimes color+content bitfields, sometimes string/sprite content
-     * tokens. Keep as uint32_t until a tagged-union design lands;
-     * Phase 6 (64-bit) will need to widen to uintptr_t. */
-    uint32_t bg;             /* 30 */
+    /* bg/fg are dual-use slots driven by `background` / `content` tags:
+     *   - ENTRY_FUNC1 / ENTRY_FUNC2          → function pointer
+     *   - ENTRY_STRING / ENTRY_STRING_TABLE
+     *     / ENTRY_MULTI_LINE_TEXT            → string pointer
+     *   - ENTRY_SPRITE1 / ENTRY_SPRITE2
+     *     / ENTRY_SPRITE_COPY                → sprite index or sprite ptr
+     *   - ENTRY_FRAME_AND_BACK_COLOR
+     *     / ENTRY_NUMBER                     → integer (color word / number)
+     * Typed as uintptr_t so the slot is wide enough on 64-bit to hold a
+     * native pointer; on 32-bit it's still 4 bytes (uintptr_t == uint32_t),
+     * preserving the existing struct layout. Existing helpers
+     * (getBgColorWord / setBgColorIdx / getFgWord / setFgWord) byte-
+     * launder to the low 16 bits so they still read the color word
+     * regardless of slot width. */
+    uintptr_t bg;            /* 30 (4 bytes on 32-bit, 8 on 64-bit) */
     uint16_t content;        /* 34 */
     uint16_t stringFlags;    /* 36 */
-    uint32_t fg;             /* 38 */
+    uintptr_t fg;            /* 38 */
     MenuEntryFn onSelect;    /* 42: function pointer (or NULL) */
     uint16_t controlMask;    /* 46 */
     MenuEntryFn beforeDraw;  /* 48: function pointer (or NULL) */
