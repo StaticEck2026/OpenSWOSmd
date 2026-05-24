@@ -654,9 +654,9 @@ CharTable bigCharsTable = {
  *   charTables[0] = &smallCharsTable
  *   charTables[1] = &bigCharsTable
  * Index is derived from the menu entry's stringFlags (see menu_system.c). */
-uint32_t charTables[2] = {
-    (uint32_t)(uintptr_t)&smallCharsTable,
-    (uint32_t)(uintptr_t)&bigCharsTable
+void *charTables[2] = {
+    &smallCharsTable,
+    &bigCharsTable
 };
 
 /* ---- outerFrameColorsTable: 16 background-colour pairs (top-left,
@@ -796,15 +796,15 @@ int16_t kGoalieSkill0Table[30] = { 0x0007, 0x01A8, -50,    0x0340, 0x00A0, 0x000
 uint8_t pitchDatBuffer[64 * 1024];
 uint8_t pitchChunkyBuffer[PITCH_POINTER_COUNT * PITCH_CHUNKY_TILE_BYTES];
 
-uint32_t kGoalieSkillTables[8] = {
-    (uint32_t)(uintptr_t)kGoalieSkill0Table,
-    (uint32_t)(uintptr_t)kGoalieSkill1Table,
-    (uint32_t)(uintptr_t)kGoalieSkill2Table,
-    (uint32_t)(uintptr_t)kGoalieSkill3Table,
-    (uint32_t)(uintptr_t)kGoalieSkill4Table,
-    (uint32_t)(uintptr_t)kGoalieSkill5Table,
-    (uint32_t)(uintptr_t)kGoalieSkill6Table,
-    (uint32_t)(uintptr_t)kGoalieSkill7Table,
+void *kGoalieSkillTables[8] = {
+    kGoalieSkill0Table,
+    kGoalieSkill1Table,
+    kGoalieSkill2Table,
+    kGoalieSkill3Table,
+    kGoalieSkill4Table,
+    kGoalieSkill5Table,
+    kGoalieSkill6Table,
+    kGoalieSkill7Table,
 };
 
 /* ---- diyFileBufferCopy / diyCompetitionStart / competitionFileBuffer ----

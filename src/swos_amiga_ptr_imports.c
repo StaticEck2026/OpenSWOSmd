@@ -628,7 +628,7 @@ extern const char aNormal[], aDry[], aHard[];
 
 extern char diyPitchTypeOrSeason_1[];
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[2];
+    void    *indexPtr; uint16_t base; void    *entries[2];
 } diyPitchTypeOrSeasonStrTable = {
     diyPitchTypeOrSeason_1, 0,
     { aPitchType, aSeason_1 }
@@ -637,7 +637,7 @@ struct __attribute__((packed)) {
 /* diyLeaguePitchTypeStrTable: index var is `diyCompetitionStart + 0x36`,
  * base = -1 (so index 0 → entries[1] = "FROZEN" while index -1 → "RANDOM"). */
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[8];
+    void    *indexPtr; uint16_t base; void    *entries[8];
 } diyLeaguePitchTypeStrTable = {
     (diyCompetitionStart + 0x36), (uint16_t)-1,
     {
@@ -649,14 +649,14 @@ struct __attribute__((packed)) {
 };
 
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[12];
+    void    *indexPtr; uint16_t base; void    *entries[12];
 } diyLeagueMonthsStrTable = {
     diyLeagueStartingMonth, 0,
     { MONTHS }
 };
 
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[12];
+    void    *indexPtr; uint16_t base; void    *entries[12];
 } diyLeagueEndingMonthStrTable = {
     diyLeagueEndingMonth, 0,
     { MONTHS }
@@ -680,7 +680,7 @@ extern const char aSoft[], aNormal[], aDry[], aHard[];
 /* diyCupPitchTypeStringTable: indexPtr = `diyCompetitionStart + 0x36`
  * = `&diyCompetitionStart.base.pitchType`; base = -1; 8 entries. */
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[8];
+    void    *indexPtr; uint16_t base; void    *entries[8];
 } diyCupPitchTypeStringTable = {
     (diyCompetitionStart + 0x36), (uint16_t)-1,
     { PITCH_8 }
@@ -690,7 +690,7 @@ struct __attribute__((packed)) {
  * (which our struct names `playEachTeam` — Amiga reuses that field
  * for AWAY-GOALS-MODE in cup configurations); base = 0; 3 entries. */
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[3];
+    void    *indexPtr; uint16_t base; void    *entries[3];
 } diyCupAwayGoalsStringTable = {
     (diyCompetitionStart + 0x5E), 0,
     {
@@ -702,7 +702,7 @@ struct __attribute__((packed)) {
 
 /* diyPitchTypeStringTable: indexPtr = `diyFileBufferCopy + 0x36`. */
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[8];
+    void    *indexPtr; uint16_t base; void    *entries[8];
 } diyPitchTypeStringTable = {
     (diyFileBufferCopy + 0x36), (uint16_t)-1,
     { PITCH_8 }
@@ -756,26 +756,26 @@ extern const char aPitchType[], aSeason_1[];
     aPensIfReplay
 
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[2];
+    void    *indexPtr; uint16_t base; void    *entries[2];
 } diyCupPitchTypeOrSeasonStringTable = {
     diyCupPitchTypeOrSeasonSelection, 0,
     { aPitchType, aSeason_1 }
 };
 
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[12];
+    void    *indexPtr; uint16_t base; void    *entries[12];
 } diyCupStartMonthStringTable = {
     diyCupStartMonthIndex, 0, { MONTHS }
 };
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[12];
+    void    *indexPtr; uint16_t base; void    *entries[12];
 } diyCupEndMonthStringTable = {
     diyCupEndMonthIndex, 0, { MONTHS }
 };
 
 #define DEFINE_LEGS(N) \
 struct __attribute__((packed)) { \
-    uint32_t indexPtr; uint16_t base; uint32_t entries[3]; \
+    void    *indexPtr; uint16_t base; void    *entries[3]; \
 } diyCupLegsStringTable##N = { diyCupLegsChoice##N, 0, { LEGS_3 } }
 DEFINE_LEGS(0); DEFINE_LEGS(1); DEFINE_LEGS(2);
 DEFINE_LEGS(3); DEFINE_LEGS(4); DEFINE_LEGS(5);
@@ -783,7 +783,7 @@ DEFINE_LEGS(3); DEFINE_LEGS(4); DEFINE_LEGS(5);
 
 #define DEFINE_ET(N) \
 struct __attribute__((packed)) { \
-    uint32_t indexPtr; uint16_t base; uint32_t entries[3]; \
+    void    *indexPtr; uint16_t base; void    *entries[3]; \
 } diyCupExtraTimeStringTable##N = { diyCupExtraTimeChoice##N, 0, { EXTRATIME_3 } }
 DEFINE_ET(0); DEFINE_ET(1); DEFINE_ET(2);
 DEFINE_ET(3); DEFINE_ET(4); DEFINE_ET(5);
@@ -791,7 +791,7 @@ DEFINE_ET(3); DEFINE_ET(4); DEFINE_ET(5);
 
 #define DEFINE_PEN(N) \
 struct __attribute__((packed)) { \
-    uint32_t indexPtr; uint16_t base; uint32_t entries[3]; \
+    void    *indexPtr; uint16_t base; void    *entries[3]; \
 } diyCupPenaltiesStringTable##N = { diyCupPenaltiesChoice##N, 0, { PENALTIES_3 } }
 DEFINE_PEN(0); DEFINE_PEN(1); DEFINE_PEN(2);
 DEFINE_PEN(3); DEFINE_PEN(4); DEFINE_PEN(5);
@@ -813,7 +813,7 @@ extern const char aOff[], aOn[];
 
 #define ON_OFF_TABLE(NAME, VAR) \
 struct __attribute__((packed)) { \
-    uint32_t indexPtr; uint16_t base; uint32_t entries[2]; \
+    void    *indexPtr; uint16_t base; void    *entries[2]; \
 } NAME = { \
     (VAR), 0, \
     { aOff, aOn } \
@@ -822,7 +822,7 @@ struct __attribute__((packed)) { \
 /* pitchType menu: base = -2 so index -2 → "SEASONAL", -1 → "RANDOM",
  * 0..6 → FROZEN..HARD (matches SWOS2.s line 73164). */
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[9];
+    void    *indexPtr; uint16_t base; void    *entries[9];
 } pitchTypeStrTable = {
     pitchType, (uint16_t)-2,
     {
@@ -835,7 +835,7 @@ struct __attribute__((packed)) {
 };
 
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[4];
+    void    *indexPtr; uint16_t base; void    *entries[4];
 } gameLengthStrTable = {
     gameLength, 0,
     {
@@ -884,24 +884,24 @@ extern const char aPlayEachTeamX1[], aPlayEachTeamX2[], aPlayEachTeamX3[], aPlay
     aPlayEachTeamX3, aPlayEachTeamX4
 
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[2];
+    void    *indexPtr; uint16_t base; void    *entries[2];
 } diyPitchSeasonStrTab = {
     diyTournamentUseSeasonalPitchEffective, 0,
     { aPitchType, aSeason_1 }
 };
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[12];
+    void    *indexPtr; uint16_t base; void    *entries[12];
 } diyStartMonthStrTab = {
     diyTournamentStartMonthPage, 0, { MONTHS }
 };
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[12];
+    void    *indexPtr; uint16_t base; void    *entries[12];
 } diyEndMonthStrTab = {
     diyTournamentEndMonthPage, 0, { MONTHS }
 };
 /* diyAwayGoalsStrTab: indexPtr = diyFileBufferCopy + 0x4A. */
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[3];
+    void    *indexPtr; uint16_t base; void    *entries[3];
 } diyAwayGoalsStrTab = {
     (diyFileBufferCopy + 0x4A), 0,
     {
@@ -918,21 +918,21 @@ struct __attribute__((packed)) {
 #define STAGE_PTR(N, OFF)  ((uint8_t *)diyTournamentStages + (N) * 0xA + (OFF))
 
 #define DEFINE_LEGS(N) \
-struct __attribute__((packed)) { uint32_t indexPtr; uint16_t base; uint32_t entries[3]; } \
+struct __attribute__((packed)) { void    *indexPtr; uint16_t base; void    *entries[3]; } \
 diyStage##N##LegsStrTab = { STAGE_PTR((N) - 1, 0), 0, { LEGS_3 } }
 DEFINE_LEGS(1); DEFINE_LEGS(2); DEFINE_LEGS(3);
 DEFINE_LEGS(4); DEFINE_LEGS(5); DEFINE_LEGS(6);
 #undef DEFINE_LEGS
 
 #define DEFINE_ET(N) \
-struct __attribute__((packed)) { uint32_t indexPtr; uint16_t base; uint32_t entries[3]; } \
+struct __attribute__((packed)) { void    *indexPtr; uint16_t base; void    *entries[3]; } \
 diyStage##N##ExtraTimeStrTab = { STAGE_PTR((N) - 1, 2), 0, { EXTRATIME_3 } }
 DEFINE_ET(1); DEFINE_ET(2); DEFINE_ET(3);
 DEFINE_ET(4); DEFINE_ET(5); DEFINE_ET(6);
 #undef DEFINE_ET
 
 #define DEFINE_PEN(N) \
-struct __attribute__((packed)) { uint32_t indexPtr; uint16_t base; uint32_t entries[3]; } \
+struct __attribute__((packed)) { void    *indexPtr; uint16_t base; void    *entries[3]; } \
 diyStage##N##PenaltiesStrTab = { STAGE_PTR((N) - 1, 4), 0, { PENALTIES_3 } }
 DEFINE_PEN(1); DEFINE_PEN(2); DEFINE_PEN(3);
 DEFINE_PEN(4); DEFINE_PEN(5); DEFINE_PEN(6);
@@ -940,7 +940,7 @@ DEFINE_PEN(4); DEFINE_PEN(5); DEFINE_PEN(6);
 
 /* PtsForWin: indexPtr at stage offset +6, base = 2 (index 2 → "2 PTS"). */
 #define DEFINE_PTS(N) \
-struct __attribute__((packed)) { uint32_t indexPtr; uint16_t base; uint32_t entries[2]; } \
+struct __attribute__((packed)) { void    *indexPtr; uint16_t base; void    *entries[2]; } \
 diyStage##N##PtsForWinStrTab = { STAGE_PTR((N) - 1, 6), 2, { PTS_2 } }
 DEFINE_PTS(1); DEFINE_PTS(2); DEFINE_PTS(3);
 DEFINE_PTS(4); DEFINE_PTS(5); DEFINE_PTS(6);
@@ -948,7 +948,7 @@ DEFINE_PTS(4); DEFINE_PTS(5); DEFINE_PTS(6);
 
 /* PlayCount: indexPtr at stage offset +8, base = 1, 4 entries. */
 #define DEFINE_PLAY(N) \
-struct __attribute__((packed)) { uint32_t indexPtr; uint16_t base; uint32_t entries[4]; } \
+struct __attribute__((packed)) { void    *indexPtr; uint16_t base; void    *entries[4]; } \
 diyStage##N##PlayCountStrTab = { STAGE_PTR((N) - 1, 8), 1, { PLAYCOUNT_4 } }
 DEFINE_PLAY(1); DEFINE_PLAY(2); DEFINE_PLAY(3);
 DEFINE_PLAY(4); DEFINE_PLAY(5); DEFINE_PLAY(6);
@@ -1006,7 +1006,7 @@ void *tacticPosMapPtrs[18] = {
  * globals when picking a string. */
 extern const char aCoach_0[], aPlayerCoach_0[];
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[2];
+    void    *indexPtr; uint16_t base; void    *entries[2];
 } offsetCoachOrPlayer = {
     coachOrPlayer, 0,
     {
@@ -1051,7 +1051,7 @@ extern const char aEuropean[], aNorthAmerican[], aSouthAmerican[];
 extern const char aAfrican[], aAsian[], aOceanian[];
 
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[5];
+    void    *indexPtr; uint16_t base; void    *entries[5];
 } positionFilterStringTable = {
     playerMarketFilterPosition, (uint16_t)-1,
     {
@@ -1064,7 +1064,7 @@ struct __attribute__((packed)) {
 };
 
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[8];
+    void    *indexPtr; uint16_t base; void    *entries[8];
 } skillFilterStringTable = {
     playerMarketFilterAgeGroup, (uint16_t)-1,
     {
@@ -1080,7 +1080,7 @@ struct __attribute__((packed)) {
 };
 
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[7];
+    void    *indexPtr; uint16_t base; void    *entries[7];
 } countryFilterStringTable = {
     playerMarketFilterCountry, 0,
     {
@@ -1202,7 +1202,7 @@ void *clubMessagesTable[76] = {
 extern const char aFlipOff[], aFlipOn[];
 extern char aUSER_A[], aUSER_B[], aUSER_C[];
 struct __attribute__((packed)) {
-    uint32_t indexPtr; uint16_t base; uint32_t entries[5];
+    void    *indexPtr; uint16_t base; void    *entries[5];
 } flipStrTable = {
     flipOnOff, 0,
     {
@@ -1317,7 +1317,7 @@ void *nationalTeamCompetitionsAndQualifications1[39] = {
  * with terminator. Host-order writes work directly because the function
  * uses host uint16_t / uint32_t reads. */
 typedef struct __attribute__((packed)) SeedListGroupEntry {
-    uint32_t ptr;
+    void    *ptr;
     uint16_t size;
     uint16_t count;
 } SeedListGroupEntry;
@@ -1327,7 +1327,7 @@ SeedListGroupEntry euroCupQualGroupSeedLists_4_6_11[5] = {
     { euroCupQualSeedList6,  6,  5 },
     { euroCupQualSeedList11, 11, 5 },
     { euroCupQualSeedList22, 22, 2 },
-    { 0xFFFFFFFFu, 0, 0 },
+    { (void *)(uintptr_t)-1, 0, 0 },
 };
 
 SeedListGroupEntry euroCupQualGroupSeedListsReduced_4_6_11[5] = {
@@ -1335,7 +1335,7 @@ SeedListGroupEntry euroCupQualGroupSeedListsReduced_4_6_11[5] = {
     { euroCupQualSeedListReduced6,  6,  6  },
     { euroCupQualSeedListReduced11, 11, 11 },
     { euroCupQualSeedListReduced22, 22, 11 },
-    { 0xFFFFFFFFu, 0, 0 },
+    { (void *)(uintptr_t)-1, 0, 0 },
 };
 
 SeedListGroupEntry euroCupQualGroupSeedBuckets_15_18_22[5] = {
@@ -1343,7 +1343,7 @@ SeedListGroupEntry euroCupQualGroupSeedBuckets_15_18_22[5] = {
     { euroCupQualSeedBucket18,     18, 10 },
     { euroCupQualSeedBucket22,     22, 8  },
     { euroCupQualSeedBucket22Full, 22, 4  },
-    { 0xFFFFFFFFu, 0, 0 },
+    { (void *)(uintptr_t)-1, 0, 0 },
 };
 void *positionsTable[18] = {
     positionsDefault,

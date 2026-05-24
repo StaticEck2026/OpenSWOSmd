@@ -170,7 +170,7 @@ extern uint8_t frontbufferMaskBuffer[];
 extern uint8_t outerFrameColorsTable[];
 
 /* DrawMenuItem data */
-extern uint32_t charTables[];
+extern void *charTables[];
 extern uint8_t numbersBuffer[];
 extern uint32_t smallCharsTable[];
 
@@ -666,15 +666,25 @@ void _DrawMenuItem(MenuEntry *entry)
     }
 
     if (content == ENTRY_STRING_TABLE) {
-        uint8_t *tablePtr = (uint8_t *)entry->fg;
-        uint32_t indexPtr = *(uint32_t *)tablePtr;
-        uint16_t idx = *(uint16_t *)indexPtr;
-        uint16_t base = *(uint16_t *)(tablePtr + 4);
-        uint32_t strAddr;
+        /* Layout: { void *indexPtr; uint16_t base; void *entries[N]; }
+         * (packed). On 32-bit indexPtr at 0, base at 4, entries at 6.
+         * On 64-bit indexPtr at 0 (8 bytes), base at 8, entries at 10.
+         * Use sizeof() of the header so the offsets stay correct on
+         * both targets. The auto-generated tables in
+         * swos_amiga_ptr_imports.c declare matching packed struct
+         * types — see e.g. diyPitchTypeOrSeasonStrTable. */
+        struct __attribute__((packed)) MenuStringTableHeader {
+            void    *indexPtr;
+            uint16_t base;
+        };
+        struct MenuStringTableHeader *hdr =
+            (struct MenuStringTableHeader *)entry->fg;
+        uint16_t idx = *(uint16_t *)hdr->indexPtr;
+        uint16_t base = hdr->base;
+        void **entries = (void **)((uint8_t *)hdr + sizeof(*hdr));
 
         idx -= base;
-        strAddr = *(uint32_t *)(tablePtr + 6 + (uint32_t)idx * 4);
-        textPtr = (uint8_t *)strAddr;
+        textPtr = (uint8_t *)entries[idx];
         goto fg_text_common;
     }
 
