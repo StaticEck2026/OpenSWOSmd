@@ -3257,7 +3257,7 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
              * `diyCompetitionStart+0x2B4` overlays diyCupTeamIds /
              * diyTeamGridPairings / diyTeamShuffleOrder / audioInstrumentBank
              * — see project memory `diycomp_league_table_overlay`. Reading
-             * the first 4 bytes of that region as an int32 "teamSelPtr"
+             * the first 4 bytes of that region as an int32 "teamSelOffset"
              * for a cup yields garbage like 0x0D0C0B0A (sequential team
              * grid indices), which would fail any sane offset range and
              * mis-flag the cup as corrupt. The Coppa Italia and European
@@ -3270,7 +3270,7 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
              * dispatched correctly, this guard naturally limits itself
              * to leagues where the standings rows actually exist.
              *
-             * Each row is 18 bytes; teamSelPtr at offset 0 is a SIGNED
+             * Each row is 18 bytes; teamSelOffset at offset 0 is a SIGNED
              * byte-offset into selTeamsPtr. Positive offsets index
              * forward through the selected-teams array (numSelectedTeams
              * * 684, typically < 50 KB); negative offsets are legitimate
@@ -3287,7 +3287,7 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
                 int32_t teamSelOff = *(int32_t *)(rowsBase + i * 18);
                 if (teamSelOff > maxPositive || teamSelOff < maxNegative) {
                     bail = 1;
-                    bailReason = "standings row teamSelPtr out of range";
+                    bailReason = "standings row teamSelOffset out of range";
                     bailTeamSelPtr = (uint32_t)teamSelOff;
                     break;
                 }

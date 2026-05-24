@@ -1911,12 +1911,12 @@ void _Career_AutoSimulateLeagueFixturesUntilHumanTeam(void)
         uint8_t *comp1 = fixtureTeam1CompPtr;
         uint8_t *comp2 = fixtureTeam2CompPtr;
 
-        /* Check team1: DIYTeamStats teamSelPtr (+0x2B4) is selTeamsPtr-relative */
-        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + ((DIYTeamStats *)(comp1 + 0x2B4))->teamSelPtr);
+        /* Check team1: DIYTeamStats teamSelOffset (+0x2B4) is selTeamsPtr-relative */
+        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + ((DIYTeamStats *)(comp1 + 0x2B4))->teamSelOffset);
         if (team1->teamControls != 1) return;  /* human team found */
 
         /* Check team2 */
-        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + ((DIYTeamStats *)(comp2 + 0x2B4))->teamSelPtr);
+        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + ((DIYTeamStats *)(comp2 + 0x2B4))->teamSelOffset);
         if (team2->teamControls != 1) return;  /* human team found */
 
         /* Both AI: simulate */
@@ -1946,7 +1946,7 @@ static void getCurrentMatchTeamSlots(uint8_t **slot1Out, uint8_t **slot2Out)
 }
 
 /* Like getCurrentMatchTeamSlots, but returns clean slot indices for use
- * with bracketScratch.teamPtrTable[] instead of the asm-style "fake"
+ * with bracketScratch.teamOffsetTable[] instead of the asm-style "fake"
  * pointers `base + slotIdx*4`. */
 static void getCurrentMatchTeamSlotIndices(int16_t *slot1Idx, int16_t *slot2Idx)
 {
@@ -1983,9 +1983,9 @@ void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
         int16_t slot1Idx, slot2Idx;
         getCurrentMatchTeamSlotIndices(&slot1Idx, &slot2Idx);
 
-        /* Read team pointer from bracketScratch.teamPtrTable[slotIdx] */
+        /* Read team pointer from bracketScratch.teamOffsetTable[slotIdx] */
         DIYCompetitionEx *baseEx = &diyCompetitionStart;
-        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + baseEx->bracketScratch.teamPtrTable[slot1Idx]);
+        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + baseEx->bracketScratch.teamOffsetTable[slot1Idx]);
         if (team1->teamControls != 1) {
 #ifdef SWOS_DEBUG_AUTOSKIP
             SWOS_AUTOSKIP_LOG("[bug4-cup] AutoSimUntilHuman EXIT (team1 human/coach) "
@@ -1995,7 +1995,7 @@ void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
             return;
         }
 
-        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + baseEx->bracketScratch.teamPtrTable[slot2Idx]);
+        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + baseEx->bracketScratch.teamOffsetTable[slot2Idx]);
         if (team2->teamControls != 1) {
 #ifdef SWOS_DEBUG_AUTOSKIP
             SWOS_AUTOSKIP_LOG("[bug4-cup] AutoSimUntilHuman EXIT (team2 human/coach) "

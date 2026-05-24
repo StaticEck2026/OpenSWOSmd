@@ -559,14 +559,14 @@ typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x60) ? 1 : -
 /* ==================================================================
  * DIYTeamStats / DIYLeagueTableRow — 18 bytes
  * Per-team league standings entry written by clearLeagueTableStats
- * starting at diyCompetitionStart + 0x2B4. Each row is one teamSelPtr
+ * starting at diyCompetitionStart + 0x2B4. Each row is one teamSelOffset
  * (NOT cleared by the loop) plus 7 stats fields cleared per row.
  * 64 rows total; the table extends to offset 0x734 — past the end of
  * the 0x5C8-byte struct, into audioInstrumentBank's address range.
  * Intentional shared-memory overlay; see DIYCOMPETITIONEX_AUDIT.md.
  * ================================================================== */
 typedef struct __attribute__((packed, aligned(2))) DIYTeamStats {
-    uint32_t teamSelPtr;            /* 0x00: offset from selTeamsPtr to team record */
+    uint32_t teamSelOffset;         /* 0x00: byte offset from selTeamsPtr to team record (NOT a pointer despite the historical "Ptr" name) */
     uint16_t gamesPlayed;           /* 0x04 */
     uint16_t wins;                  /* 0x06 */
     uint16_t draws;                 /* 0x08 */
@@ -758,7 +758,7 @@ typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx {
             uint16_t totalMatches;                        /* 0x334 */
             uint16_t curMonthIdx;                         /* 0x336 */
             uint8_t  progTable[0xC];                      /* 0x338..0x343: month-progression bytes */
-            uint32_t teamPtrTable[64];                    /* 0x344..0x443: per-team selTeamsPtr offsets */
+            uint32_t teamOffsetTable[64];                 /* 0x344..0x443: per-team byte offsets from selTeamsPtr (NOT pointers despite the historical "PtrTable" name) */
             uint8_t  scratchTail[0x184];                  /* 0x444..0x5C7: bracket scratch tail */
         } bracketScratch;
     };

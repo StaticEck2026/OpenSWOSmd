@@ -352,7 +352,7 @@ uint16_t _DIY_CountUnselectedTeams(void)
 }
 
 /* Helper: clear league table stats for 64 entries.
- * Iterates DIYTeamStats rows starting at base+0x2B4; teamSelPtr (the
+ * Iterates DIYTeamStats rows starting at base+0x2B4; teamSelOffset (the
  * 4-byte head of each row) is intentionally NOT cleared — only the 7
  * stats words. The 64-row × 18-byte span runs from 0x2B4 to 0x734
  * (the end of audioInstrumentBank's address range — intentional
@@ -508,7 +508,7 @@ void _DIY_CacheSelectedTeamPointers(void)
         uint8_t *entry = a2raw + entryIdx * 0x12;
         int32_t off = (int32_t)((uint8_t *)teamPtr - &selTeamsPtr);
 #ifdef SWOS_DEBUG_AUTOSKIP
-        /* [bug8w] Trace every standings teamSelPtr write so we can
+        /* [bug8w] Trace every standings teamSelOffset write so we can
          * correlate the bail log's bogus value to the actual write
          * that produced it. Covers all `i` so we see the full table
          * each time _DIY_CacheSelectedTeamPointers runs. */
@@ -566,8 +566,8 @@ void _DIY_SortLeagueTableByStandings(void)
 
                 /* Goals scored equal — alphabetical comparison */
                 {
-                    uint8_t *nameA = &selTeamNameBase + rowA->teamSelPtr;
-                    uint8_t *nameB = &selTeamNameBase + rowB->teamSelPtr;
+                    uint8_t *nameA = &selTeamNameBase + rowA->teamSelOffset;
+                    uint8_t *nameB = &selTeamNameBase + rowB->teamSelOffset;
                     for (;;) {
                         uint8_t cA = *nameA++;
                         if (cA == 0) goto no_swap;
@@ -1522,7 +1522,7 @@ void _DIY_BuildTeamSelectionPointerCache(void)
     uint16_t *teamIds = comp->cupTeamIds;
     uint16_t count = (uint16_t)a2s->numTeams;
 
-    /* Part 1: build relative pointer cache (teamPtrTable inside
+    /* Part 1: build relative pointer cache (teamOffsetTable inside
      * bracketScratch). cupTeamIds holds BE-packed `{country, ordinal}`
      * byte pairs (4e5f378 convention) — read via BE_READ_U16. */
     for (int16_t i = (int16_t)count - 1; i >= 0; i--) {
@@ -1530,7 +1530,7 @@ void _DIY_BuildTeamSelectionPointerCache(void)
         uint16_t teamNum = BE_READ_U16(&teamIds[gridIdx]);
         TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
         uint32_t relPtr = (uint32_t)((uint8_t *)teamPtr - &selTeamsPtr);
-        comp->bracketScratch.teamPtrTable[(uint16_t)gridIdx] = relPtr;
+        comp->bracketScratch.teamOffsetTable[(uint16_t)gridIdx] = relPtr;
     }
 
     /* Part 2: count non-national teams */
@@ -1742,8 +1742,8 @@ static void getCurrentFixtureTeamPtrs(uint8_t **team1Out, uint8_t **team2Out)
     {
         DIYTeamStats *r1 = (DIYTeamStats *)(*team1Out + 0x2B4);
         DIYTeamStats *r2 = (DIYTeamStats *)(*team2Out + 0x2B4);
-        int32_t selOff1 = (int32_t)r1->teamSelPtr;
-        int32_t selOff2 = (int32_t)r2->teamSelPtr;
+        int32_t selOff1 = (int32_t)r1->teamSelOffset;
+        int32_t selOff2 = (int32_t)r2->teamSelOffset;
         uint16_t t1Id = 0, t2Id = 0;
         uint8_t t1Ctrl = 0xFF, t2Ctrl = 0xFF;
         uint8_t *sel1Ptr = (uint8_t *)&selTeamsPtr + selOff1;
@@ -1879,9 +1879,9 @@ uint16_t _DIY_GetCurrentFixtureTeamClass(void)
     uint8_t *team1, *team2;
     getCurrentFixtureTeamPtrs(&team1, &team2);
 
-    /* Follow pointer at DIYTeamStats teamSelPtr (+0x2B4) + selTeamsPtr base */
-    uint8_t *sel1 = &selTeamsPtr + ((DIYTeamStats *)(team1 + 0x2B4))->teamSelPtr;
-    uint8_t *sel2 = &selTeamsPtr + ((DIYTeamStats *)(team2 + 0x2B4))->teamSelPtr;
+    /* Follow pointer at DIYTeamStats teamSelOffset (+0x2B4) + selTeamsPtr base */
+    uint8_t *sel1 = &selTeamsPtr + ((DIYTeamStats *)(team1 + 0x2B4))->teamSelOffset;
+    uint8_t *sel2 = &selTeamsPtr + ((DIYTeamStats *)(team2 + 0x2B4))->teamSelOffset;
 
     int16_t class1 = (int8_t)sel1[4];
     int16_t class2 = (int8_t)sel2[4];
@@ -2114,8 +2114,8 @@ void _DIY_UpdatePromotionRelegationScratchCounts(void)
         for (int16_t i = (int16_t)(promotedCount - 1); i >= 0; i--) {
             uint16_t entryOff = *indices++;
             uint8_t *entry = comp + entryOff;
-            /* Follow DIYTeamStats teamSelPtr (+0x2B4) and add selTeamsPtr base */
-            uint32_t selOff = ((DIYTeamStats *)(entry + 0x2B4))->teamSelPtr;
+            /* Follow DIYTeamStats teamSelOffset (+0x2B4) and add selTeamsPtr base */
+            uint32_t selOff = ((DIYTeamStats *)(entry + 0x2B4))->teamSelOffset;
             TeamFileEx *team = (TeamFileEx *)(&selTeamsPtr + selOff);
             /* "countryNum" name predates the audit — the slot at byte 2
              * is TeamFile.globalTeamNumber, used as a scratch index. */
@@ -2138,7 +2138,7 @@ void _DIY_UpdatePromotionRelegationScratchCounts(void)
     for (int16_t i = (int16_t)(relegatedCount - 1); i >= 0; i--) {
         uint16_t entryOff = *(--bottomIndices);
         uint8_t *entry = comp + entryOff;
-        uint32_t selOff = ((DIYTeamStats *)(entry + 0x2B4))->teamSelPtr;
+        uint32_t selOff = ((DIYTeamStats *)(entry + 0x2B4))->teamSelOffset;
         TeamFileEx *team = (TeamFileEx *)(&selTeamsPtr + selOff);
         uint16_t globalNo = (uint16_t)team->team.globalTeamNumber;
         scratch[globalNo]++;
@@ -2825,11 +2825,11 @@ process_fixtures:
     for (int16_t i = 0; i < numTeams; i++) {
         /* Read two team indices from grid */
         int8_t idx1 = (int8_t)*teamGrid++;
-        uint8_t *team1 = &selTeamsPtr + comp->bracketScratch.teamPtrTable[(int16_t)idx1];
+        uint8_t *team1 = &selTeamsPtr + comp->bracketScratch.teamOffsetTable[(int16_t)idx1];
         uint16_t teamId1 = *(uint16_t *)team1;
 
         int8_t idx2 = (int8_t)*teamGrid++;
-        uint8_t *team2 = &selTeamsPtr + comp->bracketScratch.teamPtrTable[(int16_t)idx2];
+        uint8_t *team2 = &selTeamsPtr + comp->bracketScratch.teamOffsetTable[(int16_t)idx2];
         uint16_t teamId2 = *(uint16_t *)team2;
 
         /* If d7 > 0 (second pass), swap teams */
@@ -3070,9 +3070,9 @@ process_next:
     /* Advance league progress */
     _DIY_AdvanceLeagueProgressAfterMatch(team1Comp, team2Comp);
 
-    /* Get selected team pointers from DIYTeamStats teamSelPtr (+0x2B4) */
-    uint8_t *sel1 = &selTeamsPtr + ((DIYTeamStats *)(team1Comp + 0x2B4))->teamSelPtr;
-    uint8_t *sel2 = &selTeamsPtr + ((DIYTeamStats *)(team2Comp + 0x2B4))->teamSelPtr;
+    /* Get selected team pointers from DIYTeamStats teamSelOffset (+0x2B4) */
+    uint8_t *sel1 = &selTeamsPtr + ((DIYTeamStats *)(team1Comp + 0x2B4))->teamSelOffset;
+    uint8_t *sel2 = &selTeamsPtr + ((DIYTeamStats *)(team2Comp + 0x2B4))->teamSelOffset;
 
 #ifdef SWOS_DEBUG_AUTOSKIP
     SWOS_AUTOSKIP_LOG("[bug20-fixture] RecLoop iter compId=0x%04X "
@@ -6154,7 +6154,7 @@ extern void _GoGetTeamsForPlay(uint8_t *gameTypeStr, uint8_t *playWhatStr,
 static uint8_t *getTeamNameFromIndex(int8_t idx, uint8_t *comp)
 {
     DIYCompetitionEx *compEx = (DIYCompetitionEx *)comp;
-    uint8_t *teamEntry = (uint8_t *)(uintptr_t)compEx->bracketScratch.teamPtrTable[(uint16_t)(int16_t)idx];
+    uint8_t *teamEntry = (uint8_t *)(uintptr_t)compEx->bracketScratch.teamOffsetTable[(uint16_t)(int16_t)idx];
     return teamEntry + (uint32_t)&selTeamNameBase;
 }
 
@@ -6600,13 +6600,13 @@ void _DesignDIYCup_UpdateCurrentMatchTeamEntryStrings(void)
 
     /* Entry 12: team 1 name, visible */
     e->isInvisible = 0;
-    uint8_t *teamName1 = (uint8_t *)(uintptr_t)baseEx->bracketScratch.teamPtrTable[(int16_t)slot1] + (uint32_t)&selTeamNameBase;
+    uint8_t *teamName1 = (uint8_t *)(uintptr_t)baseEx->bracketScratch.teamOffsetTable[(int16_t)slot1] + (uint32_t)&selTeamNameBase;
     e->fg = (uint32_t)teamName1;
     e++;
 
     /* Entry 13: team 2 name, visible */
     e->isInvisible = 0;
-    uint8_t *teamName2 = (uint8_t *)(uintptr_t)baseEx->bracketScratch.teamPtrTable[(int16_t)slot2] + (uint32_t)&selTeamNameBase;
+    uint8_t *teamName2 = (uint8_t *)(uintptr_t)baseEx->bracketScratch.teamOffsetTable[(int16_t)slot2] + (uint32_t)&selTeamNameBase;
     e->fg = (uint32_t)teamName2;
     e++;
 
@@ -7180,8 +7180,8 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
         a5->y = d2;
         a5->dwHeight = d4;
 
-        /* Get team pointer: row->teamSelPtr + selTeamsPtr base */
-        TeamFileEx *teamPtr = (TeamFileEx *)((uint32_t)a4row->teamSelPtr + (uint32_t)&selTeamsPtr);
+        /* Get team pointer: row->teamSelOffset + selTeamsPtr base */
+        TeamFileEx *teamPtr = (TeamFileEx *)((uint32_t)a4row->teamSelOffset + (uint32_t)&selTeamsPtr);
 
         /* DEBUG: validate team name bytes are printable ASCII. If
          * corruption detected, flash color and halt so the debugger
@@ -8411,16 +8411,16 @@ void _DIYLeagueTournament_SetupCurrentFixtureTeamNames(void)
 
     e++;  /* entry 12 */
     e->isInvisible = 0;
-    /* DIYTeamStats teamSelPtr (+0x2B4) → name offset, add selTeamNameBase */
+    /* DIYTeamStats teamSelOffset (+0x2B4) → name offset, add selTeamNameBase */
     {
-        uint32_t nameOff = ((DIYTeamStats *)(team1 + 0x2B4))->teamSelPtr;
+        uint32_t nameOff = ((DIYTeamStats *)(team1 + 0x2B4))->teamSelOffset;
         e->fg = (uint32_t)(&selTeamNameBase + nameOff);
     }
 
     e++;  /* entry 13 */
     e->isInvisible = 0;
     {
-        uint32_t nameOff = ((DIYTeamStats *)(team2 + 0x2B4))->teamSelPtr;
+        uint32_t nameOff = ((DIYTeamStats *)(team2 + 0x2B4))->teamSelOffset;
         e->fg = (uint32_t)(&selTeamNameBase + nameOff);
     }
 
@@ -10034,7 +10034,7 @@ careerUpdate:
  * the current match. Used by the C-side callers — converts the
  * "fake pointer" `base + slotIdx*4` returned by the externally-visible
  * `_DIY_GetCurrentMatchTeamSlots` into a clean (slotIdx1, slotIdx2)
- * pair so that callers can use `bracketScratch.teamPtrTable[slotIdx]`
+ * pair so that callers can use `bracketScratch.teamOffsetTable[slotIdx]`
  * directly. */
 static void getCurrentMatchTeamSlotIndices(int16_t *outSlot1, int16_t *outSlot2)
 {
@@ -10074,10 +10074,10 @@ uint16_t _DIY_CompareCurrentMatchTeamCategories(void) {
     int16_t slot1Idx, slot2Idx;
     getCurrentMatchTeamSlotIndices(&slot1Idx, &slot2Idx);
 
-    /* Load team pointer from bracketScratch.teamPtrTable[slotIdx] (selTeamsPtr-relative) */
+    /* Load team pointer from bracketScratch.teamOffsetTable[slotIdx] (selTeamsPtr-relative) */
     DIYCompetitionEx *baseEx = &diyCompetitionStart;
-    TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + baseEx->bracketScratch.teamPtrTable[slot1Idx]);
-    TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + baseEx->bracketScratch.teamPtrTable[slot2Idx]);
+    TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + baseEx->bracketScratch.teamOffsetTable[slot1Idx]);
+    TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + baseEx->bracketScratch.teamOffsetTable[slot2Idx]);
 
     int16_t ctrl1 = (int16_t)(int8_t)team1->team.teamControls;
     int16_t ctrl2 = (int16_t)(int8_t)team2->team.teamControls;
@@ -10499,13 +10499,13 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
     _DIY_SyncProgressToDiyFileBufferCopy();
 
     /* Get current match team slot indices → team pointers via
-     * bracketScratch.teamPtrTable[slotIdx]. */
+     * bracketScratch.teamOffsetTable[slotIdx]. */
     int16_t slot1Idx, slot2Idx;
     getCurrentMatchTeamSlotIndices(&slot1Idx, &slot2Idx);
 
     DIYCompetitionEx *baseExForSlot = &diyCompetitionStart;
-    TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + baseExForSlot->bracketScratch.teamPtrTable[slot1Idx]);
-    TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + baseExForSlot->bracketScratch.teamPtrTable[slot2Idx]);
+    TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + baseExForSlot->bracketScratch.teamOffsetTable[slot1Idx]);
+    TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + baseExForSlot->bracketScratch.teamOffsetTable[slot2Idx]);
 
     /* Route match based on mode */
     if (mode == 0) {
@@ -10754,12 +10754,12 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
     uint8_t *compPtr1 = fixtureTeam1CompPtr;
     uint8_t *compPtr2 = fixtureTeam2CompPtr;
 
-    /* Build team file pointers from DIYTeamStats teamSelPtr (+0x2B4).
-     * teamSelPtr is a SIGNED byte-offset into selTeamsPtr — positive
+    /* Build team file pointers from DIYTeamStats teamSelOffset (+0x2B4).
+     * teamSelOffset is a SIGNED byte-offset into selTeamsPtr — positive
      * values index forward (other teams), negative values index back
      * (careerTeam lives below selTeamsPtr in memory). */
-    int32_t teamSelOff1 = (int32_t)((DIYTeamStats *)(compPtr1 + 0x2B4))->teamSelPtr;
-    int32_t teamSelOff2 = (int32_t)((DIYTeamStats *)(compPtr2 + 0x2B4))->teamSelPtr;
+    int32_t teamSelOff1 = (int32_t)((DIYTeamStats *)(compPtr1 + 0x2B4))->teamSelOffset;
+    int32_t teamSelOff2 = (int32_t)((DIYTeamStats *)(compPtr2 + 0x2B4))->teamSelOffset;
     TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + teamSelOff1);
     TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + teamSelOff2);
 
@@ -10798,7 +10798,7 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
         fflush(stderr);
     }
 
-    /* Safety guard ONLY for auto-advance paths. If either teamSelPtr
+    /* Safety guard ONLY for auto-advance paths. If either teamSelOffset
      * offset is genuinely out of range for selTeamsPtr during
      * careerAutoAdvanceInProgress / seasonUpdateInProgress, the
      * standings table at diyCompetitionStart+0x2B4 is garbage (uninit
@@ -10836,7 +10836,7 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
             if (!s_bug1_bail_logged) {
                 s_bug1_bail_logged = 1;
                 SWOS_AUTOSKIP_LOG("[bug1] PlayOrSimLeague: bail (first occurrence) — "
-                                  "bogus teamSelPtr (team1off=%d team2off=%d maxPositive=%d "
+                                  "bogus teamSelOffset (team1off=%d team2off=%d maxPositive=%d "
                                   "numSelTeams=%u careerAutoAdv=%u seasonUpd=%u selector=%d)",
                                   (int)teamSelOff1, (int)teamSelOff2,
                                   (int)maxPositive, (unsigned)numSelectedTeams,
