@@ -47,7 +47,7 @@ extern uint8_t *euroCupTeamListWritePtr;
 extern uint8_t *cupWinnersCupTeamListWritePtr;
 extern uint8_t *uefaCupTeamListWritePtr;
 
-extern uint32_t countriesTable[];
+extern void *countriesTable[];
 extern uint16_t selTeamNumber;
 
 /* C-to-asm bridges */

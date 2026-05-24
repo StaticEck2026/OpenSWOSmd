@@ -154,7 +154,7 @@ extern uint16_t editTacticsInputRepeatCounter;
 extern uint16_t editTacticsNearestSelectPitchWidth;
 
 /* ---- Globals for Chunk 88 ---- */
-extern uint32_t positionsTable[];       /* pointer table indexed by formation */
+extern void *positionsTable[];       /* pointer table indexed by formation */
 extern uint16_t editTacticsSelectedPlayerSlotIndex;
 extern MenuEntry *editTacticsSelectedPairMenuEntryPtr;
 extern uint16_t gameType;
@@ -614,7 +614,7 @@ void _MarkSelectedTeamsTacticsChanged(void)
  * conversion table. Reads entries from the table until a negative
  * terminator is encountered.
  * ================================================================ */
-extern uint32_t skinAndHairColorConversionTable[];  /* array of pointers to conversion subtables */
+extern void *skinAndHairColorConversionTable[];  /* array of pointers to conversion subtables */
 
 __attribute__((used, externally_visible))
 void _FillSkinColorConversionTable(uint16_t skinColor, uint16_t *convertTable)
@@ -2369,7 +2369,7 @@ extern uint16_t editTeamsSecondaryShortsColTable[]; /* 16 word color table + at 
 extern uint16_t editTeamsSecondarySocksColTable[];  /* 16 word color table + at +0x16 */
 extern uint16_t shirtTypesTable[];       /* 4 entries of 8 words each (4 shirt types) */
 extern uint16_t shirtsIndexTable[];      /* 8 word entries (byte offsets into color table) */
-extern uint32_t playerPositionsStringTable[];       /* 8 string pointers */
+extern void *playerPositionsStringTable[];       /* 8 string pointers */
 
 /* EditTeamsGetPlayerPointer — return PlayerFile pointer for player N in selTeamsPtr */
 static PlayerFile *EditTeamsGetPlayerFileC(MenuEntry *entry)

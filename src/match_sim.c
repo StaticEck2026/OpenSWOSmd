@@ -59,20 +59,20 @@ extern uint8_t    viewRandomPhase;
 extern uint8_t    seasonPlaying;
 extern uint8_t    kRandomTable[];
 extern uint32_t   teamTacticsTable[];
-extern uint32_t   positionsTable[];
+extern void *positionsTable[];
 extern uint16_t   oldPlayerSkill;
 extern uint8_t    playerPositionsArray[];
 
 /* Data tables in asm for this module */
 extern uint8_t    simGoalsByStrengthDiffTable[];
 extern uint8_t    simHighGoalFallbackValues[];
-extern uint32_t   simGoalProbByTacticPtrs[];
-extern uint32_t   simExtraGoalProbByTacticPtrs[];
+extern void *simGoalProbByTacticPtrs[];
+extern void *simExtraGoalProbByTacticPtrs[];
 extern uint8_t    simGoalsByIndexDiffTable[];
 extern uint8_t    simExtraGoalThresholdsA[];
 extern uint8_t    simExtraGoalThresholdsB[];
 extern uint8_t    simGoalScorerPairTable[];
-extern uint32_t   goalScorerDistributionByBallOutTactic[];
+extern void *goalScorerDistributionByBallOutTactic[];
 extern uint8_t    kUserTeamOffsetBiasLUT[];
 extern uint8_t    kTeamViewOffsetBaseLUT[];
 extern uint8_t    availablePickCountByGoalsInTable[];

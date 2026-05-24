@@ -144,7 +144,7 @@ extern const char aLeague_1[];       /* "LEAGUE" */
 extern uint8_t  countriesStack[];
 
 /* Globals for team navigation stack (Chunk 109) */
-extern uint32_t countriesTable[];
+extern void *countriesTable[];
 extern uint8_t *curCountryStr;
 extern uint8_t *countryStackPtr;
 extern uint16_t teamDepthLevel;

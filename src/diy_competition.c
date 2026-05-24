@@ -65,7 +65,7 @@ extern void _PanicHaltLoop(void) __attribute__((noreturn));
 extern void _FlashColor0Delay(uint32_t loopCount, uint16_t color);
 
 /* ASM data tables */
-extern uint32_t cupRoundStringTable[];
+extern void *cupRoundStringTable[];
 extern uint8_t diyLeagueSeasonStateTable[];
 extern volatile uint8_t diyLeagueScratchBuffer[];
 extern uint8_t competitionFileBuffer[];
@@ -6135,7 +6135,7 @@ extern uint8_t a1stLeg[];  /* "1ST LEG" */
 extern uint8_t a2ndLeg[];  /* "2ND LEG" */
 extern uint8_t aPlayCup[]; /* "PLAY CUP" */
 extern const char *rndStringTable[];     /* const char *[15] */
-extern uint32_t replayStringTable[];  /* const char *[3] */
+extern void *replayStringTable[];  /* const char *[3] */
 
 extern void _MenuCheckControls(void);
 
@@ -6925,7 +6925,7 @@ check_arg2:
 
 extern uint16_t diyLeagueTournament_fixtureRowHeight;
 extern uint16_t diyLeagueTournament_fixtureRowYStep;
-extern uint32_t groupStringTable[];
+extern void *groupStringTable[];
 extern uint16_t diyFixtureViewMode;
 extern uint16_t numDiyResults;
 extern uint16_t currentDiyLine;
@@ -8547,7 +8547,7 @@ void _DIYLeagueTournamentInit(void)
  *
  * In asm, returns via Z flag: Z=set if found, Z=clear if not found.
  * ================================================================ */
-extern uint32_t nationalTeamCompetitionsAndQualifications1[];
+extern void *nationalTeamCompetitionsAndQualifications1[];
 
 __attribute__((used, externally_visible))
 uint16_t _IsNationalTeamCompetitionOrQualification(uint32_t key)
@@ -8570,8 +8570,8 @@ uint16_t _IsNationalTeamCompetitionOrQualification(uint32_t key)
  *   type 1 → InitDIYCupFromRecord
  *   else   → InitDIYLeagueFromRecord
  * ================================================================ */
-extern uint32_t europeanCupsandNationalTeamCompetitionsAndQualifications[];
-extern uint32_t countriesTable[];
+extern void *europeanCupsandNationalTeamCompetitionsAndQualifications[];
+extern void *countriesTable[];
 extern const char *divisionStringTable[];
 extern const char aCup_0[];
 extern const char aLeague_1[];

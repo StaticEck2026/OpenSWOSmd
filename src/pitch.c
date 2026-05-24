@@ -12,7 +12,7 @@
 #include <stdio.h>
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uint32_t swcPitchMapFiles[];     /* char *[6] -- pitch map filenames */
+extern void *swcPitchMapFiles[];     /* char *[6] -- pitch map filenames */
 extern uint8_t pitchDatBuffer[];        /* 9240 bytes (2310 longs) */
 extern uint8_t currentMenu[];           /* BSS base for pointer relocation */
 extern uint16_t panicReasonCode;

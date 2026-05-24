@@ -39,7 +39,7 @@ extern uint16_t g_quitToDos;
 extern uint16_t loaderModeFlag;
 extern uint16_t paletteIndex;
 extern uint8_t copperListBuffer[];
-extern uint32_t paletteTable[];   /* array of 7 pointers to uint16_t[16] palettes */
+extern void *paletteTable[];   /* array of 7 pointers to uint16_t[16] palettes */
 
 /* FadeOutToBlack (SWOS2.s line 6781)
  *

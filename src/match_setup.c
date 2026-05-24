@@ -62,7 +62,7 @@ extern uint16_t gameRandValue;
 extern uint16_t paletteIndex;
 extern volatile uint16_t playHighlightFlag;
 extern uint8_t  gamePalette[];
-extern uint32_t paletteTable[];
+extern void *paletteTable[];
 extern uint16_t pitchBallSpeedFactor;
 extern uint16_t ballSpeedBounceFactor;
 extern uint16_t ballBounceFactor;
@@ -112,7 +112,7 @@ extern uint16_t animPatternsIndex;
 extern uint16_t patternsGoalCounter;
 
 /* Data tables (in SWOS2.s code section, PC-relative) */
-extern uint32_t playerCardChancesPerGameLength[];
+extern void *playerCardChancesPerGameLength[];
 extern int16_t  gameLenSecondsTable[];
 extern const uint16_t *pitchPalettePtrs[];
 extern int16_t  kPitchBallSpeedInfluence[];

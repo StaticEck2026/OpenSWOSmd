@@ -1837,7 +1837,7 @@ extern uint8_t aSeasonSTopScor[];    /* "SEASON'S TOP SCORER" */
 extern uint8_t aSeasonSTopScor_0[];  /* "SEASON'S TOP SCORERS" */
 extern uint8_t aResigned[];          /* "- RESIGNED -" */
 extern uint8_t aRetired[];           /* "- RETIRED -" */
-extern uint32_t countriesTable[];
+extern void *countriesTable[];
 extern uint16_t trophySprites[];
 
 #define CN_EUROPE   80

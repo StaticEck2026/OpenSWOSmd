@@ -16,7 +16,7 @@
 /* ---- External globals (in SWOS2.s / data section) ---- */
 extern uint8_t surnameBuf[];
 extern uint8_t facesFrequency[];
-extern uint32_t skinAndHairColorConversionTable[];
+extern void *skinAndHairColorConversionTable[];
 extern uint8_t team1GoalieFaceToPosition[];
 extern uint8_t team2GoalieFaceToPosition[];
 extern uint16_t useIndividualPlayerSkinColor;

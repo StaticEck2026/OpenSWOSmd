@@ -2300,7 +2300,7 @@ void _TransferMarketCommon(void *entryPtr)
  * ================================================================ */
 
 extern uint8_t  fundsBuffer[];
-extern uint32_t playerPositionsStringTable[];
+extern void *playerPositionsStringTable[];
 extern uint8_t  shortCountryNames[];
 extern uint16_t isNationalSelector;
 extern uint16_t viewFutureTeamModeFlag;
@@ -3316,7 +3316,7 @@ done:
 extern int16_t  teamWillingToSellOrExchange;
 extern uint8_t  managerSexBuffer[];
 extern uint8_t  managerSurnameBuffer[];
-extern uint32_t sellExchangeStrings[];
+extern void *sellExchangeStrings[];
 extern uint32_t sellExchangeResponseStrings[];
 extern uint8_t  aDearAB[];
 extern uint8_t  aInADealWithAFo[];

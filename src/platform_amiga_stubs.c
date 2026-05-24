@@ -83,7 +83,7 @@ void Platform_PreArmIsrGlobals(void)
      * Originally initialised in SWOS2.s; on SDL we need to set them
      * up at runtime so fade ticks have somewhere to write. Order
      * matches the Amiga layout exactly. */
-    extern uint32_t paletteTable[];
+    extern void *paletteTable[];
     extern uint8_t  menuPalette[];
     extern uint8_t  blackPalette[];
     extern uint8_t  gamePalette[];

@@ -75,8 +75,8 @@ extern uint16_t allPlayerTeamsEqual;
 /* SetDefaultNameAndSurname globals */
 extern uint16_t mrOrMs;
 extern volatile uint16_t currentGameTick;
-extern uint32_t defaultNamesTable[6];
-extern uint32_t defaultSurnamesTable[6];
+extern void *defaultNamesTable[6];
+extern void *defaultSurnamesTable[6];
 extern uint8_t managerNameBuffer[9];
 extern uint8_t managerSurnameBuffer[13];
 
@@ -1232,8 +1232,8 @@ extern uint8_t *currentCompetitionPtr;
 extern uint8_t *secondaryCompetitionPtr;
 extern uint8_t *tertiaryCompetitionPtr;
 extern uint8_t *quaternaryCompetitionPtr;
-extern uint32_t countriesTable[];
-extern uint32_t playerPositionsStringTable[];
+extern void *countriesTable[];
+extern void *playerPositionsStringTable[];
 extern uint8_t aClubs[];
 extern uint16_t isNationalSelector;
 extern void _SetCurrentEntry(uint16_t entry);

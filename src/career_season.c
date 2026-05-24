@@ -49,7 +49,7 @@ extern uint8_t euroCupQualGroupSeedLists_4_6_11[];
 extern uint8_t euroCupQualGroupSeedListsReduced_4_6_11[];
 extern uint8_t euroCupQualGroupSeedBuckets_15_18_22[];
 
-extern uint32_t countriesTable[];
+extern void *countriesTable[];
 
 extern uint8_t euroCupEligibleCompetitionIds[];
 extern uint8_t cupWinnersCupEligibleCompetitionIds[];

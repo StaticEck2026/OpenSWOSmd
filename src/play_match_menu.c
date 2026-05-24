@@ -54,8 +54,8 @@ extern uint8_t currentMatchPlayers[];
 extern uint8_t playerPositionsArray[];
 extern uint8_t oldPlayerPositionsArray[];
 extern uint32_t teamTacticsTable[];
-extern uint32_t positionsTable[];
-extern uint32_t countriesTable[];
+extern void *positionsTable[];
+extern void *countriesTable[];
 
 /* Globals defined in play match menu data section of SWOS2.s */
 extern uint16_t showingCpuTeams;
@@ -96,10 +96,10 @@ extern uint8_t aViewBTeam[];
 extern uint8_t aCoach_1[];
 extern uint8_t aPlayer_1[];
 extern uint8_t fundsBuffer[];
-extern uint32_t playerPositionsStringTable[];
+extern void *playerPositionsStringTable[];
 extern uint8_t teamAName[];
 extern uint8_t teamBName[];
-extern uint32_t sidePitchSurnamePositionsTable[];
+extern void *sidePitchSurnamePositionsTable[];
 extern int16_t playMatchRedrawList[];
 extern int16_t togglePlayerCoachRedrawItemList[];
 
@@ -1266,10 +1266,10 @@ void _DrawPlayerEntries(MenuEntry *a5) {
  *   rotating by amounts from the bit-rotation table
  * - Pick the top 3 skill values and output their corresponding letters
  * ================================================================ */
-extern uint32_t topSkillLettersEven[];  /* 7 pointers to letter strings */
-extern uint32_t topSkillLettersOdd[];
-extern uint32_t topSkillBitRotEven[];   /* 7 pointers to byte arrays */
-extern uint32_t topSkillBitRotOdd[];
+extern void *topSkillLettersEven[];  /* 7 pointers to letter strings */
+extern void *topSkillLettersOdd[];
+extern void *topSkillBitRotEven[];   /* 7 pointers to byte arrays */
+extern void *topSkillBitRotOdd[];
 
 __attribute__((used, externally_visible))
 void _FormTopSkillsString(uint8_t *dst, PlayerFile *playerFile)

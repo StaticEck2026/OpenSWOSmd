@@ -25,30 +25,30 @@ extern uint16_t bigNumbersColorConversionTable[];
  * bigNumbersColorConversionTable int16 array — i.e. int16 indices
  * 48/61/74. Without this _FillSkinColorConversionTable reads NULL
  * and segfaults. */
-uint32_t skinAndHairColorConversionTable[3] = {
-    (uint32_t)(uintptr_t)(bigNumbersColorConversionTable + 48),
-    (uint32_t)(uintptr_t)(bigNumbersColorConversionTable + 61),
-    (uint32_t)(uintptr_t)(bigNumbersColorConversionTable + 74),
+void *skinAndHairColorConversionTable[3] = {
+    (bigNumbersColorConversionTable + 48),
+    (bigNumbersColorConversionTable + 61),
+    (bigNumbersColorConversionTable + 74),
 };
 
 extern const char aTspvhcfstpvhcf[];
-uint32_t topSkillLettersEven[7] = {
-    (uint32_t)(uintptr_t)(aTspvhcfstpvhcf + 0x00),
-    (uint32_t)(uintptr_t)(aTspvhcfstpvhcf + 0x0E),
-    (uint32_t)(uintptr_t)(aTspvhcfstpvhcf + 0x1C),
-    (uint32_t)(uintptr_t)(aTspvhcfstpvhcf + 0x2A),
-    (uint32_t)(uintptr_t)(aTspvhcfstpvhcf + 0x38),
-    (uint32_t)(uintptr_t)(aTspvhcfstpvhcf + 0x46),
-    (uint32_t)(uintptr_t)(aTspvhcfstpvhcf + 0x54),
+void *topSkillLettersEven[7] = {
+    (aTspvhcfstpvhcf + 0x00),
+    (aTspvhcfstpvhcf + 0x0E),
+    (aTspvhcfstpvhcf + 0x1C),
+    (aTspvhcfstpvhcf + 0x2A),
+    (aTspvhcfstpvhcf + 0x38),
+    (aTspvhcfstpvhcf + 0x46),
+    (aTspvhcfstpvhcf + 0x54),
 };
-uint32_t topSkillLettersOdd[7] = {
-    (uint32_t)(uintptr_t)(aTspvhcfstpvhcf + 0x07),
-    (uint32_t)(uintptr_t)(aTspvhcfstpvhcf + 0x15),
-    (uint32_t)(uintptr_t)(aTspvhcfstpvhcf + 0x23),
-    (uint32_t)(uintptr_t)(aTspvhcfstpvhcf + 0x31),
-    (uint32_t)(uintptr_t)(aTspvhcfstpvhcf + 0x3F),
-    (uint32_t)(uintptr_t)(aTspvhcfstpvhcf + 0x4D),
-    (uint32_t)(uintptr_t)(aTspvhcfstpvhcf + 0x5B),
+void *topSkillLettersOdd[7] = {
+    (aTspvhcfstpvhcf + 0x07),
+    (aTspvhcfstpvhcf + 0x15),
+    (aTspvhcfstpvhcf + 0x23),
+    (aTspvhcfstpvhcf + 0x31),
+    (aTspvhcfstpvhcf + 0x3F),
+    (aTspvhcfstpvhcf + 0x4D),
+    (aTspvhcfstpvhcf + 0x5B),
 };
 
 extern char a2ndReplay[];
@@ -480,120 +480,120 @@ const uint16_t *pitchPalettePtrs[7] = {
     dryPalette,
     hardPalette,
 };
-uint32_t swcPitchMapFiles[6] = {
-    (uint32_t)(uintptr_t)aGrafsSwcpich1M,
-    (uint32_t)(uintptr_t)aGrafsSwcpich2M,
-    (uint32_t)(uintptr_t)aGrafsSwcpich3M,
-    (uint32_t)(uintptr_t)aGrafsSwcpich4M,
-    (uint32_t)(uintptr_t)aGrafsSwcpich5M,
-    (uint32_t)(uintptr_t)aGrafsSwcpich6M,
+void *swcPitchMapFiles[6] = {
+    aGrafsSwcpich1M,
+    aGrafsSwcpich2M,
+    aGrafsSwcpich3M,
+    aGrafsSwcpich4M,
+    aGrafsSwcpich5M,
+    aGrafsSwcpich6M,
 };
-uint32_t paletteTable[7] = {
-    (uint32_t)(uintptr_t)menuPalette,
-    (uint32_t)(uintptr_t)blackPalette,
-    (uint32_t)(uintptr_t)gamePalette,
-    (uint32_t)(uintptr_t)titleScreenPalette,
-    (uint32_t)(uintptr_t)panicPalette,
-    (uint32_t)(uintptr_t)titleTextPalette,
-    (uint32_t)(uintptr_t)titleLogoPalette,
+void *paletteTable[7] = {
+    menuPalette,
+    blackPalette,
+    gamePalette,
+    titleScreenPalette,
+    panicPalette,
+    titleTextPalette,
+    titleLogoPalette,
 };
-uint32_t playerCardChancesPerGameLength[4] = {
-    (uint32_t)(uintptr_t)playerCardChances3min,
-    (uint32_t)(uintptr_t)playerCardChances5min,
-    (uint32_t)(uintptr_t)playerCardChances7min,
-    (uint32_t)(uintptr_t)playerCardChances10min,
+void *playerCardChancesPerGameLength[4] = {
+    playerCardChances3min,
+    playerCardChances5min,
+    playerCardChances7min,
+    playerCardChances10min,
 };
-uint32_t defaultNamesTable[6] = {
-    (uint32_t)(uintptr_t)aChris,
-    (uint32_t)(uintptr_t)aJon,
-    (uint32_t)(uintptr_t)aGraeme,
-    (uint32_t)(uintptr_t)aMark,
-    (uint32_t)(uintptr_t)aDavid,
-    (uint32_t)(uintptr_t)aDavid_0,
+void *defaultNamesTable[6] = {
+    aChris,
+    aJon,
+    aGraeme,
+    aMark,
+    aDavid,
+    aDavid_0,
 };
-uint32_t defaultSurnamesTable[6] = {
-    (uint32_t)(uintptr_t)aChapman,
-    (uint32_t)(uintptr_t)aHare,
-    (uint32_t)(uintptr_t)aBoxall,
-    (uint32_t)(uintptr_t)aDearsley,
-    (uint32_t)(uintptr_t)aWilkin,
-    (uint32_t)(uintptr_t)aNottingham,
+void *defaultSurnamesTable[6] = {
+    aChapman,
+    aHare,
+    aBoxall,
+    aDearsley,
+    aWilkin,
+    aNottingham,
 };
-uint32_t simGoalProbByTacticPtrs[18] = {
-    (uint32_t)(uintptr_t)simGoalProbThreshA,
-    (uint32_t)(uintptr_t)simGoalProbThreshA,
-    (uint32_t)(uintptr_t)simGoalProbThreshB,
-    (uint32_t)(uintptr_t)simGoalProbThreshB,
-    (uint32_t)(uintptr_t)simGoalProbThreshC,
-    (uint32_t)(uintptr_t)simGoalProbThreshC,
-    (uint32_t)(uintptr_t)simGoalProbThreshC,
-    (uint32_t)(uintptr_t)simGoalProbThreshD,
-    (uint32_t)(uintptr_t)simGoalProbThreshD,
-    (uint32_t)(uintptr_t)simGoalProbThreshD,
-    (uint32_t)(uintptr_t)simGoalProbThreshE,
-    (uint32_t)(uintptr_t)simGoalProbThreshE,
-    (uint32_t)(uintptr_t)simGoalProbThreshE,
-    (uint32_t)(uintptr_t)simGoalProbThreshE,
-    (uint32_t)(uintptr_t)simGoalProbThreshE,
-    (uint32_t)(uintptr_t)simGoalProbThreshE,
-    (uint32_t)(uintptr_t)simGoalProbThreshE,
-    (uint32_t)(uintptr_t)simGoalProbThreshE,
+void *simGoalProbByTacticPtrs[18] = {
+    simGoalProbThreshA,
+    simGoalProbThreshA,
+    simGoalProbThreshB,
+    simGoalProbThreshB,
+    simGoalProbThreshC,
+    simGoalProbThreshC,
+    simGoalProbThreshC,
+    simGoalProbThreshD,
+    simGoalProbThreshD,
+    simGoalProbThreshD,
+    simGoalProbThreshE,
+    simGoalProbThreshE,
+    simGoalProbThreshE,
+    simGoalProbThreshE,
+    simGoalProbThreshE,
+    simGoalProbThreshE,
+    simGoalProbThreshE,
+    simGoalProbThreshE,
 };
-uint32_t simExtraGoalProbByTacticPtrs[16] = {
-    (uint32_t)(uintptr_t)simExtraGoalProbThreshA,
-    (uint32_t)(uintptr_t)simExtraGoalProbThreshA,
-    (uint32_t)(uintptr_t)simExtraGoalProbThreshB,
-    (uint32_t)(uintptr_t)simExtraGoalProbThreshB,
-    (uint32_t)(uintptr_t)simExtraGoalProbThreshC,
-    (uint32_t)(uintptr_t)simExtraGoalProbThreshC,
-    (uint32_t)(uintptr_t)simExtraGoalProbThreshC,
-    (uint32_t)(uintptr_t)simExtraGoalProbThreshD,
-    (uint32_t)(uintptr_t)simExtraGoalProbThreshD,
-    (uint32_t)(uintptr_t)simExtraGoalProbThreshD,
-    (uint32_t)(uintptr_t)simExtraGoalProbThreshE,
-    (uint32_t)(uintptr_t)simExtraGoalProbThreshE,
-    (uint32_t)(uintptr_t)simExtraGoalProbThreshE,
-    (uint32_t)(uintptr_t)simExtraGoalProbThreshE,
-    (uint32_t)(uintptr_t)simExtraGoalProbThreshE,
-    (uint32_t)(uintptr_t)simExtraGoalProbThreshE,
+void *simExtraGoalProbByTacticPtrs[16] = {
+    simExtraGoalProbThreshA,
+    simExtraGoalProbThreshA,
+    simExtraGoalProbThreshB,
+    simExtraGoalProbThreshB,
+    simExtraGoalProbThreshC,
+    simExtraGoalProbThreshC,
+    simExtraGoalProbThreshC,
+    simExtraGoalProbThreshD,
+    simExtraGoalProbThreshD,
+    simExtraGoalProbThreshD,
+    simExtraGoalProbThreshE,
+    simExtraGoalProbThreshE,
+    simExtraGoalProbThreshE,
+    simExtraGoalProbThreshE,
+    simExtraGoalProbThreshE,
+    simExtraGoalProbThreshE,
 };
-uint32_t goalScorerDistributionByBallOutTactic[18] = {
-    (uint32_t)(uintptr_t)goalScorerDist442,
-    (uint32_t)(uintptr_t)goalScorerDist541,
-    (uint32_t)(uintptr_t)goalScorerDist451,
-    (uint32_t)(uintptr_t)goalScorerDist532,
-    (uint32_t)(uintptr_t)goalScorerDist352,
-    (uint32_t)(uintptr_t)goalScorerDist433,
-    (uint32_t)(uintptr_t)goalScorerDist424,
-    (uint32_t)(uintptr_t)goalScorerDist343,
-    (uint32_t)(uintptr_t)goalScorerDistSweep,
-    (uint32_t)(uintptr_t)goalScorerDist523,
-    (uint32_t)(uintptr_t)goalScorerDistAttack,
-    (uint32_t)(uintptr_t)goalScorerDistDefend,
-    (uint32_t)(uintptr_t)goalScorerDist442,
-    (uint32_t)(uintptr_t)goalScorerDist442,
-    (uint32_t)(uintptr_t)goalScorerDist442,
-    (uint32_t)(uintptr_t)goalScorerDist442,
-    (uint32_t)(uintptr_t)goalScorerDist442,
-    (uint32_t)(uintptr_t)goalScorerDist442,
+void *goalScorerDistributionByBallOutTactic[18] = {
+    goalScorerDist442,
+    goalScorerDist541,
+    goalScorerDist451,
+    goalScorerDist532,
+    goalScorerDist352,
+    goalScorerDist433,
+    goalScorerDist424,
+    goalScorerDist343,
+    goalScorerDistSweep,
+    goalScorerDist523,
+    goalScorerDistAttack,
+    goalScorerDistDefend,
+    goalScorerDist442,
+    goalScorerDist442,
+    goalScorerDist442,
+    goalScorerDist442,
+    goalScorerDist442,
+    goalScorerDist442,
 };
-uint32_t careerTeamFlagsByRegionTable[6] = {
-    (uint32_t)(uintptr_t)careerTeamFlagsBySeason0,
-    (uint32_t)(uintptr_t)careerTeamFlagsBySeason1,
-    (uint32_t)(uintptr_t)careerTeamFlagsBySeason1,
-    (uint32_t)(uintptr_t)careerTeamFlagsBySeason1,
-    (uint32_t)(uintptr_t)careerTeamFlagsBySeason1,
-    (uint32_t)(uintptr_t)careerTeamFlagsBySeason1,
+void *careerTeamFlagsByRegionTable[6] = {
+    careerTeamFlagsBySeason0,
+    careerTeamFlagsBySeason1,
+    careerTeamFlagsBySeason1,
+    careerTeamFlagsBySeason1,
+    careerTeamFlagsBySeason1,
+    careerTeamFlagsBySeason1,
 };
-uint32_t trainingPosOrderTables[8] = {
-    (uint32_t)(uintptr_t)trainingPosOrder0,
-    (uint32_t)(uintptr_t)trainingPosOrder1,
-    (uint32_t)(uintptr_t)trainingPosOrder2,
-    (uint32_t)(uintptr_t)trainingPosOrder3,
-    (uint32_t)(uintptr_t)trainingPosOrder4,
-    (uint32_t)(uintptr_t)trainingPosOrder5,
-    (uint32_t)(uintptr_t)trainingPosOrder6,
-    (uint32_t)(uintptr_t)trainingPosOrder7,
+void *trainingPosOrderTables[8] = {
+    trainingPosOrder0,
+    trainingPosOrder1,
+    trainingPosOrder2,
+    trainingPosOrder3,
+    trainingPosOrder4,
+    trainingPosOrder5,
+    trainingPosOrder6,
+    trainingPosOrder7,
 };
 /* ---- String tables for MENU_CMD_STRING_TABLE entries ----------------
  * Layout (per SWOS2.s and the C unpacker in _DrawMenuItem):
@@ -619,19 +619,19 @@ extern const char aRandom[], aFrozen[], aMuddy[], aWet[], aSoft[];
 extern const char aNormal[], aDry[], aHard[];
 
 #define MONTHS \
-    (uint32_t)(uintptr_t)aJan, (uint32_t)(uintptr_t)aFeb, \
-    (uint32_t)(uintptr_t)aMar, (uint32_t)(uintptr_t)aApr, \
-    (uint32_t)(uintptr_t)aMay, (uint32_t)(uintptr_t)aJun, \
-    (uint32_t)(uintptr_t)aJul, (uint32_t)(uintptr_t)aAug, \
-    (uint32_t)(uintptr_t)aSep, (uint32_t)(uintptr_t)aOct, \
-    (uint32_t)(uintptr_t)aNov, (uint32_t)(uintptr_t)aDec
+    aJan, aFeb, \
+    aMar, aApr, \
+    aMay, aJun, \
+    aJul, aAug, \
+    aSep, aOct, \
+    aNov, aDec
 
 extern char diyPitchTypeOrSeason_1[];
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[2];
 } diyPitchTypeOrSeasonStrTable = {
-    (uint32_t)(uintptr_t)diyPitchTypeOrSeason_1, 0,
-    { (uint32_t)(uintptr_t)aPitchType, (uint32_t)(uintptr_t)aSeason_1 }
+    diyPitchTypeOrSeason_1, 0,
+    { aPitchType, aSeason_1 }
 };
 
 /* diyLeaguePitchTypeStrTable: index var is `diyCompetitionStart + 0x36`,
@@ -639,26 +639,26 @@ struct __attribute__((packed)) {
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[8];
 } diyLeaguePitchTypeStrTable = {
-    (uint32_t)(uintptr_t)(diyCompetitionStart + 0x36), (uint16_t)-1,
+    (diyCompetitionStart + 0x36), (uint16_t)-1,
     {
-        (uint32_t)(uintptr_t)aRandom, (uint32_t)(uintptr_t)aFrozen,
-        (uint32_t)(uintptr_t)aMuddy,  (uint32_t)(uintptr_t)aWet,
-        (uint32_t)(uintptr_t)aSoft,   (uint32_t)(uintptr_t)aNormal,
-        (uint32_t)(uintptr_t)aDry,    (uint32_t)(uintptr_t)aHard,
+        aRandom, aFrozen,
+        aMuddy,  aWet,
+        aSoft,   aNormal,
+        aDry,    aHard,
     }
 };
 
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[12];
 } diyLeagueMonthsStrTable = {
-    (uint32_t)(uintptr_t)diyLeagueStartingMonth, 0,
+    diyLeagueStartingMonth, 0,
     { MONTHS }
 };
 
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[12];
 } diyLeagueEndingMonthStrTable = {
-    (uint32_t)(uintptr_t)diyLeagueEndingMonth, 0,
+    diyLeagueEndingMonth, 0,
     { MONTHS }
 };
 
@@ -672,17 +672,17 @@ extern const char aRandom[], aFrozen[], aMuddy[], aWet[];
 extern const char aSoft[], aNormal[], aDry[], aHard[];
 
 #define PITCH_8 \
-    (uint32_t)(uintptr_t)aRandom, (uint32_t)(uintptr_t)aFrozen, \
-    (uint32_t)(uintptr_t)aMuddy,  (uint32_t)(uintptr_t)aWet, \
-    (uint32_t)(uintptr_t)aSoft,   (uint32_t)(uintptr_t)aNormal, \
-    (uint32_t)(uintptr_t)aDry,    (uint32_t)(uintptr_t)aHard
+    aRandom, aFrozen, \
+    aMuddy,  aWet, \
+    aSoft,   aNormal, \
+    aDry,    aHard
 
 /* diyCupPitchTypeStringTable: indexPtr = `diyCompetitionStart + 0x36`
  * = `&diyCompetitionStart.base.pitchType`; base = -1; 8 entries. */
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[8];
 } diyCupPitchTypeStringTable = {
-    (uint32_t)(uintptr_t)(diyCompetitionStart + 0x36), (uint16_t)-1,
+    (diyCompetitionStart + 0x36), (uint16_t)-1,
     { PITCH_8 }
 };
 
@@ -692,11 +692,11 @@ struct __attribute__((packed)) {
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[3];
 } diyCupAwayGoalsStringTable = {
-    (uint32_t)(uintptr_t)(diyCompetitionStart + 0x5E), 0,
+    (diyCompetitionStart + 0x5E), 0,
     {
-        (uint32_t)(uintptr_t)aOff,
-        (uint32_t)(uintptr_t)aAfter90Mins,
-        (uint32_t)(uintptr_t)aAfterExtraTime,
+        aOff,
+        aAfter90Mins,
+        aAfterExtraTime,
     }
 };
 
@@ -704,21 +704,21 @@ struct __attribute__((packed)) {
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[8];
 } diyPitchTypeStringTable = {
-    (uint32_t)(uintptr_t)(diyFileBufferCopy + 0x36), (uint16_t)-1,
+    (diyFileBufferCopy + 0x36), (uint16_t)-1,
     { PITCH_8 }
 };
 
 #undef PITCH_8
 
-uint32_t groupStringTable[8] = {
-    (uint32_t)(uintptr_t)aGroupA,
-    (uint32_t)(uintptr_t)aGroupB,
-    (uint32_t)(uintptr_t)aGroupC,
-    (uint32_t)(uintptr_t)aGroupD,
-    (uint32_t)(uintptr_t)aGroupE,
-    (uint32_t)(uintptr_t)aGroupF,
-    (uint32_t)(uintptr_t)aGroupG,
-    (uint32_t)(uintptr_t)aGroupH,
+void *groupStringTable[8] = {
+    aGroupA,
+    aGroupB,
+    aGroupC,
+    aGroupD,
+    aGroupE,
+    aGroupF,
+    aGroupG,
+    aGroupH,
 };
 /* ---- DIY Cup string tables (SWOS2.s lines 70274..70433) ----
  * All 21 of these were previously emitted as 4-byte stubs holding
@@ -740,43 +740,43 @@ extern const char aNoPenalties[], aPenalties[], aPensIfReplay[];
 extern const char aPitchType[], aSeason_1[];
 
 #define MONTHS \
-    (uint32_t)(uintptr_t)aJan, (uint32_t)(uintptr_t)aFeb, \
-    (uint32_t)(uintptr_t)aMar, (uint32_t)(uintptr_t)aApr, \
-    (uint32_t)(uintptr_t)aMay, (uint32_t)(uintptr_t)aJun, \
-    (uint32_t)(uintptr_t)aJul, (uint32_t)(uintptr_t)aAug, \
-    (uint32_t)(uintptr_t)aSep, (uint32_t)(uintptr_t)aOct, \
-    (uint32_t)(uintptr_t)aNov, (uint32_t)(uintptr_t)aDec
+    aJan, aFeb, \
+    aMar, aApr, \
+    aMay, aJun, \
+    aJul, aAug, \
+    aSep, aOct, \
+    aNov, aDec
 #define LEGS_3 \
-    (uint32_t)(uintptr_t)a1Leg, (uint32_t)(uintptr_t)a1Leg, (uint32_t)(uintptr_t)a2Legs
+    a1Leg, a1Leg, a2Legs
 #define EXTRATIME_3 \
-    (uint32_t)(uintptr_t)aNoExtraTime, (uint32_t)(uintptr_t)aExtraTime, \
-    (uint32_t)(uintptr_t)aETIfReplay
+    aNoExtraTime, aExtraTime, \
+    aETIfReplay
 #define PENALTIES_3 \
-    (uint32_t)(uintptr_t)aNoPenalties, (uint32_t)(uintptr_t)aPenalties, \
-    (uint32_t)(uintptr_t)aPensIfReplay
+    aNoPenalties, aPenalties, \
+    aPensIfReplay
 
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[2];
 } diyCupPitchTypeOrSeasonStringTable = {
-    (uint32_t)(uintptr_t)diyCupPitchTypeOrSeasonSelection, 0,
-    { (uint32_t)(uintptr_t)aPitchType, (uint32_t)(uintptr_t)aSeason_1 }
+    diyCupPitchTypeOrSeasonSelection, 0,
+    { aPitchType, aSeason_1 }
 };
 
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[12];
 } diyCupStartMonthStringTable = {
-    (uint32_t)(uintptr_t)diyCupStartMonthIndex, 0, { MONTHS }
+    diyCupStartMonthIndex, 0, { MONTHS }
 };
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[12];
 } diyCupEndMonthStringTable = {
-    (uint32_t)(uintptr_t)diyCupEndMonthIndex, 0, { MONTHS }
+    diyCupEndMonthIndex, 0, { MONTHS }
 };
 
 #define DEFINE_LEGS(N) \
 struct __attribute__((packed)) { \
     uint32_t indexPtr; uint16_t base; uint32_t entries[3]; \
-} diyCupLegsStringTable##N = { (uint32_t)(uintptr_t)diyCupLegsChoice##N, 0, { LEGS_3 } }
+} diyCupLegsStringTable##N = { diyCupLegsChoice##N, 0, { LEGS_3 } }
 DEFINE_LEGS(0); DEFINE_LEGS(1); DEFINE_LEGS(2);
 DEFINE_LEGS(3); DEFINE_LEGS(4); DEFINE_LEGS(5);
 #undef DEFINE_LEGS
@@ -784,7 +784,7 @@ DEFINE_LEGS(3); DEFINE_LEGS(4); DEFINE_LEGS(5);
 #define DEFINE_ET(N) \
 struct __attribute__((packed)) { \
     uint32_t indexPtr; uint16_t base; uint32_t entries[3]; \
-} diyCupExtraTimeStringTable##N = { (uint32_t)(uintptr_t)diyCupExtraTimeChoice##N, 0, { EXTRATIME_3 } }
+} diyCupExtraTimeStringTable##N = { diyCupExtraTimeChoice##N, 0, { EXTRATIME_3 } }
 DEFINE_ET(0); DEFINE_ET(1); DEFINE_ET(2);
 DEFINE_ET(3); DEFINE_ET(4); DEFINE_ET(5);
 #undef DEFINE_ET
@@ -792,7 +792,7 @@ DEFINE_ET(3); DEFINE_ET(4); DEFINE_ET(5);
 #define DEFINE_PEN(N) \
 struct __attribute__((packed)) { \
     uint32_t indexPtr; uint16_t base; uint32_t entries[3]; \
-} diyCupPenaltiesStringTable##N = { (uint32_t)(uintptr_t)diyCupPenaltiesChoice##N, 0, { PENALTIES_3 } }
+} diyCupPenaltiesStringTable##N = { diyCupPenaltiesChoice##N, 0, { PENALTIES_3 } }
 DEFINE_PEN(0); DEFINE_PEN(1); DEFINE_PEN(2);
 DEFINE_PEN(3); DEFINE_PEN(4); DEFINE_PEN(5);
 #undef DEFINE_PEN
@@ -815,8 +815,8 @@ extern const char aOff[], aOn[];
 struct __attribute__((packed)) { \
     uint32_t indexPtr; uint16_t base; uint32_t entries[2]; \
 } NAME = { \
-    (uint32_t)(uintptr_t)(VAR), 0, \
-    { (uint32_t)(uintptr_t)aOff, (uint32_t)(uintptr_t)aOn } \
+    (VAR), 0, \
+    { aOff, aOn } \
 }
 
 /* pitchType menu: base = -2 so index -2 → "SEASONAL", -1 → "RANDOM",
@@ -824,23 +824,23 @@ struct __attribute__((packed)) { \
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[9];
 } pitchTypeStrTable = {
-    (uint32_t)(uintptr_t)pitchType, (uint16_t)-2,
+    pitchType, (uint16_t)-2,
     {
-        (uint32_t)(uintptr_t)aSeasonal, (uint32_t)(uintptr_t)aRandom,
-        (uint32_t)(uintptr_t)aFrozen,   (uint32_t)(uintptr_t)aMuddy,
-        (uint32_t)(uintptr_t)aWet,      (uint32_t)(uintptr_t)aSoft,
-        (uint32_t)(uintptr_t)aNormal,   (uint32_t)(uintptr_t)aDry,
-        (uint32_t)(uintptr_t)aHard,
+        aSeasonal, aRandom,
+        aFrozen,   aMuddy,
+        aWet,      aSoft,
+        aNormal,   aDry,
+        aHard,
     }
 };
 
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[4];
 } gameLengthStrTable = {
-    (uint32_t)(uintptr_t)gameLength, 0,
+    gameLength, 0,
     {
-        (uint32_t)(uintptr_t)a3Mins,  (uint32_t)(uintptr_t)a5Mins,
-        (uint32_t)(uintptr_t)a7Mins,  (uint32_t)(uintptr_t)a10Mins,
+        a3Mins,  a5Mins,
+        a7Mins,  a10Mins,
     }
 };
 
@@ -865,49 +865,49 @@ extern const char a2PtsForAWin[], a3PtsForAWin[];
 extern const char aPlayEachTeamX1[], aPlayEachTeamX2[], aPlayEachTeamX3[], aPlayEachTeamX4[];
 
 #define MONTHS \
-    (uint32_t)(uintptr_t)aJan, (uint32_t)(uintptr_t)aFeb, \
-    (uint32_t)(uintptr_t)aMar, (uint32_t)(uintptr_t)aApr, \
-    (uint32_t)(uintptr_t)aMay, (uint32_t)(uintptr_t)aJun, \
-    (uint32_t)(uintptr_t)aJul, (uint32_t)(uintptr_t)aAug, \
-    (uint32_t)(uintptr_t)aSep, (uint32_t)(uintptr_t)aOct, \
-    (uint32_t)(uintptr_t)aNov, (uint32_t)(uintptr_t)aDec
+    aJan, aFeb, \
+    aMar, aApr, \
+    aMay, aJun, \
+    aJul, aAug, \
+    aSep, aOct, \
+    aNov, aDec
 #define LEGS_3 \
-    (uint32_t)(uintptr_t)a1Leg, (uint32_t)(uintptr_t)a1Leg, (uint32_t)(uintptr_t)a2Legs
+    a1Leg, a1Leg, a2Legs
 #define EXTRATIME_3 \
-    (uint32_t)(uintptr_t)aNoExtraTime, (uint32_t)(uintptr_t)aExtraTime, (uint32_t)(uintptr_t)aETIfReplay
+    aNoExtraTime, aExtraTime, aETIfReplay
 #define PENALTIES_3 \
-    (uint32_t)(uintptr_t)aNoPenalties, (uint32_t)(uintptr_t)aPenalties, (uint32_t)(uintptr_t)aPensIfReplay
+    aNoPenalties, aPenalties, aPensIfReplay
 #define PTS_2 \
-    (uint32_t)(uintptr_t)a2PtsForAWin, (uint32_t)(uintptr_t)a3PtsForAWin
+    a2PtsForAWin, a3PtsForAWin
 #define PLAYCOUNT_4 \
-    (uint32_t)(uintptr_t)aPlayEachTeamX1, (uint32_t)(uintptr_t)aPlayEachTeamX2, \
-    (uint32_t)(uintptr_t)aPlayEachTeamX3, (uint32_t)(uintptr_t)aPlayEachTeamX4
+    aPlayEachTeamX1, aPlayEachTeamX2, \
+    aPlayEachTeamX3, aPlayEachTeamX4
 
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[2];
 } diyPitchSeasonStrTab = {
-    (uint32_t)(uintptr_t)diyTournamentUseSeasonalPitchEffective, 0,
-    { (uint32_t)(uintptr_t)aPitchType, (uint32_t)(uintptr_t)aSeason_1 }
+    diyTournamentUseSeasonalPitchEffective, 0,
+    { aPitchType, aSeason_1 }
 };
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[12];
 } diyStartMonthStrTab = {
-    (uint32_t)(uintptr_t)diyTournamentStartMonthPage, 0, { MONTHS }
+    diyTournamentStartMonthPage, 0, { MONTHS }
 };
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[12];
 } diyEndMonthStrTab = {
-    (uint32_t)(uintptr_t)diyTournamentEndMonthPage, 0, { MONTHS }
+    diyTournamentEndMonthPage, 0, { MONTHS }
 };
 /* diyAwayGoalsStrTab: indexPtr = diyFileBufferCopy + 0x4A. */
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[3];
 } diyAwayGoalsStrTab = {
-    (uint32_t)(uintptr_t)(diyFileBufferCopy + 0x4A), 0,
+    (diyFileBufferCopy + 0x4A), 0,
     {
-        (uint32_t)(uintptr_t)aOff,
-        (uint32_t)(uintptr_t)aAfter90Mins,
-        (uint32_t)(uintptr_t)aAfterExtraTime,
+        aOff,
+        aAfter90Mins,
+        aAfterExtraTime,
     }
 };
 
@@ -919,21 +919,21 @@ struct __attribute__((packed)) {
 
 #define DEFINE_LEGS(N) \
 struct __attribute__((packed)) { uint32_t indexPtr; uint16_t base; uint32_t entries[3]; } \
-diyStage##N##LegsStrTab = { (uint32_t)(uintptr_t)STAGE_PTR((N) - 1, 0), 0, { LEGS_3 } }
+diyStage##N##LegsStrTab = { STAGE_PTR((N) - 1, 0), 0, { LEGS_3 } }
 DEFINE_LEGS(1); DEFINE_LEGS(2); DEFINE_LEGS(3);
 DEFINE_LEGS(4); DEFINE_LEGS(5); DEFINE_LEGS(6);
 #undef DEFINE_LEGS
 
 #define DEFINE_ET(N) \
 struct __attribute__((packed)) { uint32_t indexPtr; uint16_t base; uint32_t entries[3]; } \
-diyStage##N##ExtraTimeStrTab = { (uint32_t)(uintptr_t)STAGE_PTR((N) - 1, 2), 0, { EXTRATIME_3 } }
+diyStage##N##ExtraTimeStrTab = { STAGE_PTR((N) - 1, 2), 0, { EXTRATIME_3 } }
 DEFINE_ET(1); DEFINE_ET(2); DEFINE_ET(3);
 DEFINE_ET(4); DEFINE_ET(5); DEFINE_ET(6);
 #undef DEFINE_ET
 
 #define DEFINE_PEN(N) \
 struct __attribute__((packed)) { uint32_t indexPtr; uint16_t base; uint32_t entries[3]; } \
-diyStage##N##PenaltiesStrTab = { (uint32_t)(uintptr_t)STAGE_PTR((N) - 1, 4), 0, { PENALTIES_3 } }
+diyStage##N##PenaltiesStrTab = { STAGE_PTR((N) - 1, 4), 0, { PENALTIES_3 } }
 DEFINE_PEN(1); DEFINE_PEN(2); DEFINE_PEN(3);
 DEFINE_PEN(4); DEFINE_PEN(5); DEFINE_PEN(6);
 #undef DEFINE_PEN
@@ -941,7 +941,7 @@ DEFINE_PEN(4); DEFINE_PEN(5); DEFINE_PEN(6);
 /* PtsForWin: indexPtr at stage offset +6, base = 2 (index 2 → "2 PTS"). */
 #define DEFINE_PTS(N) \
 struct __attribute__((packed)) { uint32_t indexPtr; uint16_t base; uint32_t entries[2]; } \
-diyStage##N##PtsForWinStrTab = { (uint32_t)(uintptr_t)STAGE_PTR((N) - 1, 6), 2, { PTS_2 } }
+diyStage##N##PtsForWinStrTab = { STAGE_PTR((N) - 1, 6), 2, { PTS_2 } }
 DEFINE_PTS(1); DEFINE_PTS(2); DEFINE_PTS(3);
 DEFINE_PTS(4); DEFINE_PTS(5); DEFINE_PTS(6);
 #undef DEFINE_PTS
@@ -949,7 +949,7 @@ DEFINE_PTS(4); DEFINE_PTS(5); DEFINE_PTS(6);
 /* PlayCount: indexPtr at stage offset +8, base = 1, 4 entries. */
 #define DEFINE_PLAY(N) \
 struct __attribute__((packed)) { uint32_t indexPtr; uint16_t base; uint32_t entries[4]; } \
-diyStage##N##PlayCountStrTab = { (uint32_t)(uintptr_t)STAGE_PTR((N) - 1, 8), 1, { PLAYCOUNT_4 } }
+diyStage##N##PlayCountStrTab = { STAGE_PTR((N) - 1, 8), 1, { PLAYCOUNT_4 } }
 DEFINE_PLAY(1); DEFINE_PLAY(2); DEFINE_PLAY(3);
 DEFINE_PLAY(4); DEFINE_PLAY(5); DEFINE_PLAY(6);
 #undef DEFINE_PLAY
@@ -961,43 +961,43 @@ DEFINE_PLAY(4); DEFINE_PLAY(5); DEFINE_PLAY(6);
 #undef PENALTIES_3
 #undef PTS_2
 #undef PLAYCOUNT_4
-uint32_t topSkillBitRotEven[7] = {
-    (uint32_t)(uintptr_t)skillBitRotEven1,
-    (uint32_t)(uintptr_t)skillBitRotEven2,
-    (uint32_t)(uintptr_t)skillBitRotEven3,
-    (uint32_t)(uintptr_t)skillBitRotEven4,
-    (uint32_t)(uintptr_t)skillBitRotEven5,
-    (uint32_t)(uintptr_t)skillBitRotEven6,
-    (uint32_t)(uintptr_t)skillBitRotEven7,
+void *topSkillBitRotEven[7] = {
+    skillBitRotEven1,
+    skillBitRotEven2,
+    skillBitRotEven3,
+    skillBitRotEven4,
+    skillBitRotEven5,
+    skillBitRotEven6,
+    skillBitRotEven7,
 };
-uint32_t topSkillBitRotOdd[7] = {
-    (uint32_t)(uintptr_t)skillBitRotOdd1,
-    (uint32_t)(uintptr_t)skillBitRotOdd2,
-    (uint32_t)(uintptr_t)skillBitRotOdd3,
-    (uint32_t)(uintptr_t)skillBitRotOdd4,
-    (uint32_t)(uintptr_t)skillBitRotOdd5,
-    (uint32_t)(uintptr_t)skillBitRotOdd6,
-    (uint32_t)(uintptr_t)skillBitRotOdd7,
+void *topSkillBitRotOdd[7] = {
+    skillBitRotOdd1,
+    skillBitRotOdd2,
+    skillBitRotOdd3,
+    skillBitRotOdd4,
+    skillBitRotOdd5,
+    skillBitRotOdd6,
+    skillBitRotOdd7,
 };
-uint32_t tacticPosMapPtrs[18] = {
-    (uint32_t)(uintptr_t)tacticPosMap0,
-    (uint32_t)(uintptr_t)tacticPosMap1,
-    (uint32_t)(uintptr_t)tacticPosMap2,
-    (uint32_t)(uintptr_t)tacticPosMap3,
-    (uint32_t)(uintptr_t)tacticPosMap4,
-    (uint32_t)(uintptr_t)tacticPosMap5,
-    (uint32_t)(uintptr_t)tacticPosMap6,
-    (uint32_t)(uintptr_t)tacticPosMap7,
-    (uint32_t)(uintptr_t)tacticPosMap8,
-    (uint32_t)(uintptr_t)tacticPosMap9,
-    (uint32_t)(uintptr_t)tacticPosMap10,
-    (uint32_t)(uintptr_t)tacticPosMap11,
-    (uint32_t)(uintptr_t)tacticPosMap0,
-    (uint32_t)(uintptr_t)tacticPosMap0,
-    (uint32_t)(uintptr_t)tacticPosMap0,
-    (uint32_t)(uintptr_t)tacticPosMap0,
-    (uint32_t)(uintptr_t)tacticPosMap0,
-    (uint32_t)(uintptr_t)tacticPosMap0,
+void *tacticPosMapPtrs[18] = {
+    tacticPosMap0,
+    tacticPosMap1,
+    tacticPosMap2,
+    tacticPosMap3,
+    tacticPosMap4,
+    tacticPosMap5,
+    tacticPosMap6,
+    tacticPosMap7,
+    tacticPosMap8,
+    tacticPosMap9,
+    tacticPosMap10,
+    tacticPosMap11,
+    tacticPosMap0,
+    tacticPosMap0,
+    tacticPosMap0,
+    tacticPosMap0,
+    tacticPosMap0,
+    tacticPosMap0,
 };
 /* offsetCoachOrPlayer: career-menu COACH / PLAYER-COACH selector
  * (SWOS2.s:85269). Auto-extractor emitted only the indexPtr; the
@@ -1008,20 +1008,20 @@ extern const char aCoach_0[], aPlayerCoach_0[];
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[2];
 } offsetCoachOrPlayer = {
-    (uint32_t)(uintptr_t)coachOrPlayer, 0,
+    coachOrPlayer, 0,
     {
-        (uint32_t)(uintptr_t)aCoach_0,
-        (uint32_t)(uintptr_t)aPlayerCoach_0,
+        aCoach_0,
+        aPlayerCoach_0,
     }
 };
-uint32_t countryStackPtr[1] = {
-    (uint32_t)(uintptr_t)countriesStack,
+void *countryStackPtr[1] = {
+    countriesStack,
 };
-uint32_t sellExchangeStrings[4] = {
-    (uint32_t)(uintptr_t)aWeHereAtAAreHa,
-    (uint32_t)(uintptr_t)aWeHereAtAAreHa_0,
-    (uint32_t)(uintptr_t)aSorryAAreUnwil,
-    (uint32_t)(uintptr_t)aSorryAAreUnwil_0,
+void *sellExchangeStrings[4] = {
+    aWeHereAtAAreHa,
+    aWeHereAtAAreHa_0,
+    aSorryAAreUnwil,
+    aSorryAAreUnwil_0,
 };
 /* positionFilterStringTable / skillFilterStringTable / countryFilterStringTable
  * — same auto-extractor truncation as the diyCup* tables: only the
@@ -1053,149 +1053,149 @@ extern const char aAfrican[], aAsian[], aOceanian[];
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[5];
 } positionFilterStringTable = {
-    (uint32_t)(uintptr_t)playerMarketFilterPosition, (uint16_t)-1,
+    playerMarketFilterPosition, (uint16_t)-1,
     {
-        (uint32_t)(uintptr_t)aAny,
-        (uint32_t)(uintptr_t)aGoalkeeper,
-        (uint32_t)(uintptr_t)aDefender,
-        (uint32_t)(uintptr_t)aMidfielder,
-        (uint32_t)(uintptr_t)aAttacker,
+        aAny,
+        aGoalkeeper,
+        aDefender,
+        aMidfielder,
+        aAttacker,
     }
 };
 
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[8];
 } skillFilterStringTable = {
-    (uint32_t)(uintptr_t)playerMarketFilterAgeGroup, (uint16_t)-1,
+    playerMarketFilterAgeGroup, (uint16_t)-1,
     {
-        (uint32_t)(uintptr_t)aAny,
-        (uint32_t)(uintptr_t)aPassing,
-        (uint32_t)(uintptr_t)aShooting,
-        (uint32_t)(uintptr_t)aHeading,
-        (uint32_t)(uintptr_t)aTackling,
-        (uint32_t)(uintptr_t)aBallControl,
-        (uint32_t)(uintptr_t)aSpeed,
-        (uint32_t)(uintptr_t)aFinishing,
+        aAny,
+        aPassing,
+        aShooting,
+        aHeading,
+        aTackling,
+        aBallControl,
+        aSpeed,
+        aFinishing,
     }
 };
 
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[7];
 } countryFilterStringTable = {
-    (uint32_t)(uintptr_t)playerMarketFilterCountry, 0,
+    playerMarketFilterCountry, 0,
     {
-        (uint32_t)(uintptr_t)aEuropean,
-        (uint32_t)(uintptr_t)aNorthAmerican,
-        (uint32_t)(uintptr_t)aSouthAmerican,
-        (uint32_t)(uintptr_t)aAfrican,
-        (uint32_t)(uintptr_t)aAsian,
-        (uint32_t)(uintptr_t)aOceanian,
-        (uint32_t)(uintptr_t)aAny,
+        aEuropean,
+        aNorthAmerican,
+        aSouthAmerican,
+        aAfrican,
+        aAsian,
+        aOceanian,
+        aAny,
     }
 };
-uint32_t positionGroupTable[4] = {
-    (uint32_t)(uintptr_t)positionGroupGoalkeeper,
-    (uint32_t)(uintptr_t)positionGroupDefender,
-    (uint32_t)(uintptr_t)positionGroupMidfielder,
-    (uint32_t)(uintptr_t)positionGroupAttacker,
+void *positionGroupTable[4] = {
+    positionGroupGoalkeeper,
+    positionGroupDefender,
+    positionGroupMidfielder,
+    positionGroupAttacker,
 };
-uint32_t sidePitchSurnamePositionsTable[18] = {
-    (uint32_t)(uintptr_t)sidePitchPositionsDefault,
-    (uint32_t)(uintptr_t)sidePitchPositions_5_4_1,
-    (uint32_t)(uintptr_t)sidePitchPositions_4_5_1,
-    (uint32_t)(uintptr_t)sidePitchPositions_5_3_2,
-    (uint32_t)(uintptr_t)sidePitchPositions_3_5_2,
-    (uint32_t)(uintptr_t)sidePitchPositions_4_3_3,
-    (uint32_t)(uintptr_t)sidePitchPositions_4_2_4,
-    (uint32_t)(uintptr_t)sidePitchPositions_3_4_3,
-    (uint32_t)(uintptr_t)sidePitchPositionsSweep,
-    (uint32_t)(uintptr_t)sidePitchPositions_5_2_3,
-    (uint32_t)(uintptr_t)sidePitchPositionsAttack,
-    (uint32_t)(uintptr_t)sidePitchPositionsDefend,
-    (uint32_t)(uintptr_t)sidePitchPositionsDefault,
-    (uint32_t)(uintptr_t)sidePitchPositionsDefault,
-    (uint32_t)(uintptr_t)sidePitchPositionsDefault,
-    (uint32_t)(uintptr_t)sidePitchPositionsDefault,
-    (uint32_t)(uintptr_t)sidePitchPositionsDefault,
-    (uint32_t)(uintptr_t)sidePitchPositionsDefault,
+void *sidePitchSurnamePositionsTable[18] = {
+    sidePitchPositionsDefault,
+    sidePitchPositions_5_4_1,
+    sidePitchPositions_4_5_1,
+    sidePitchPositions_5_3_2,
+    sidePitchPositions_3_5_2,
+    sidePitchPositions_4_3_3,
+    sidePitchPositions_4_2_4,
+    sidePitchPositions_3_4_3,
+    sidePitchPositionsSweep,
+    sidePitchPositions_5_2_3,
+    sidePitchPositionsAttack,
+    sidePitchPositionsDefend,
+    sidePitchPositionsDefault,
+    sidePitchPositionsDefault,
+    sidePitchPositionsDefault,
+    sidePitchPositionsDefault,
+    sidePitchPositionsDefault,
+    sidePitchPositionsDefault,
 };
-uint32_t clubMessagesTable[76] = {
-    (uint32_t)(uintptr_t)aSorryAButTheCl,
-    (uint32_t)(uintptr_t)aAnyFurtherPlay,
-    (uint32_t)(uintptr_t)aComeOnAWeCanno,
-    (uint32_t)(uintptr_t)aOrTheWageBillW,
-    (uint32_t)(uintptr_t)aSorryAButTheDi,
-    (uint32_t)(uintptr_t)aMoreTimeToNego,
-    (uint32_t)(uintptr_t)aPleaseNoteATha_2,
-    (uint32_t)(uintptr_t)aAnyFurtherPlay_0,
-    (uint32_t)(uintptr_t)aPleaseTakeNote,
-    (uint32_t)(uintptr_t)aEnsureThatWeCl,
-    (uint32_t)(uintptr_t)aJustAReminderT,
-    (uint32_t)(uintptr_t)aOrWeWillHaveTo,
-    (uint32_t)(uintptr_t)aFollowingACris,
-    (uint32_t)(uintptr_t)aClearTheOverdr,
-    (uint32_t)(uintptr_t)aItIsWithGreatR_0,
-    (uint32_t)(uintptr_t)aDecidedToRelie,
-    (uint32_t)(uintptr_t)aPleaseTakeNote_0,
-    (uint32_t)(uintptr_t)aEnsureThatItIs,
-    (uint32_t)(uintptr_t)aRememberUnless,
-    (uint32_t)(uintptr_t)aWeWillHaveToRe,
-    (uint32_t)(uintptr_t)aFollowingAVote,
-    (uint32_t)(uintptr_t)a3MatchesToTurn,
-    (uint32_t)(uintptr_t)aItIsWithGreatR_1,
-    (uint32_t)(uintptr_t)aDecidedToRelie_0,
-    (uint32_t)(uintptr_t)aWellDoneAYouDi_0,
-    (uint32_t)(uintptr_t)aThisSeasonAndW_0,
-    (uint32_t)(uintptr_t)aAGoodSeasonAWe_0,
-    (uint32_t)(uintptr_t)aPleasedWithYou_0,
-    (uint32_t)(uintptr_t)aAnUpAndDownSea_0,
-    (uint32_t)(uintptr_t)aCanImproveOnTh_0,
-    (uint32_t)(uintptr_t)aNotAVeryGoodSe_0,
-    (uint32_t)(uintptr_t)aImproveTheTeam,
-    (uint32_t)(uintptr_t)aAVeryDisappoin_0,
-    (uint32_t)(uintptr_t)aDemandsMuchBet,
-    (uint32_t)(uintptr_t)aThanksForAllYo_0,
-    (uint32_t)(uintptr_t)aYouWellInYourN_0,
-    (uint32_t)(uintptr_t)aWelcomeToOurCl,
-    (uint32_t)(uintptr_t)aMuchSuccessFro,
-    (uint32_t)(uintptr_t)aWelcomeToOurCl_0,
-    (uint32_t)(uintptr_t)aSeasonInManage_0,
-    (uint32_t)(uintptr_t)aJustANoteToWis_0,
-    (uint32_t)(uintptr_t)aNewSeason_0,
-    (uint32_t)(uintptr_t)aWeAllHopeYouEn_0,
-    (uint32_t)(uintptr_t)aBeforeHandingT_0,
-    (uint32_t)(uintptr_t)aWeAllWishYouTh_0,
-    (uint32_t)(uintptr_t)aDistinguishedC_0,
-    (uint32_t)(uintptr_t)aPleaseNoteATha,
-    (uint32_t)(uintptr_t)aBHasLeftTheClu,
-    (uint32_t)(uintptr_t)aPleaseNoteATha_0,
-    (uint32_t)(uintptr_t)aBHasLeftTheClu_0,
-    (uint32_t)(uintptr_t)aPleaseNoteATha_1,
-    (uint32_t)(uintptr_t)aHasJoinedTheCl,
-    (uint32_t)(uintptr_t)aWellDoneAYouDi,
-    (uint32_t)(uintptr_t)aThisSeasonAndW,
-    (uint32_t)(uintptr_t)aAGoodSeasonAWe,
-    (uint32_t)(uintptr_t)aPleasedWithYou,
-    (uint32_t)(uintptr_t)aAnUpAndDownSea,
-    (uint32_t)(uintptr_t)aCanImproveOnTh,
-    (uint32_t)(uintptr_t)aNotAVeryGoodSe,
-    (uint32_t)(uintptr_t)aImproveOnOurPe,
-    (uint32_t)(uintptr_t)aAVeryDisappoin,
-    (uint32_t)(uintptr_t)aMuchBetterFrom,
-    (uint32_t)(uintptr_t)aThanksForAllYo,
-    (uint32_t)(uintptr_t)aYouWellInYourN,
-    (uint32_t)(uintptr_t)aWelcomeAWeLook,
-    (uint32_t)(uintptr_t)aSuccessFromOur,
-    (uint32_t)(uintptr_t)aWelcomeAWeHope,
-    (uint32_t)(uintptr_t)aSeasonInManage,
-    (uint32_t)(uintptr_t)aJustANoteToWis,
-    (uint32_t)(uintptr_t)aNewSeason,
-    (uint32_t)(uintptr_t)aWeAllHopeYouEn,
-    (uint32_t)(uintptr_t)aBeforeHandingT,
-    (uint32_t)(uintptr_t)aWeAllWishYouTh,
-    (uint32_t)(uintptr_t)aDistinguishedC,
-    (uint32_t)(uintptr_t)aItIsWithGreatR,
-    (uint32_t)(uintptr_t)aRenewYourContr,
+void *clubMessagesTable[76] = {
+    aSorryAButTheCl,
+    aAnyFurtherPlay,
+    aComeOnAWeCanno,
+    aOrTheWageBillW,
+    aSorryAButTheDi,
+    aMoreTimeToNego,
+    aPleaseNoteATha_2,
+    aAnyFurtherPlay_0,
+    aPleaseTakeNote,
+    aEnsureThatWeCl,
+    aJustAReminderT,
+    aOrWeWillHaveTo,
+    aFollowingACris,
+    aClearTheOverdr,
+    aItIsWithGreatR_0,
+    aDecidedToRelie,
+    aPleaseTakeNote_0,
+    aEnsureThatItIs,
+    aRememberUnless,
+    aWeWillHaveToRe,
+    aFollowingAVote,
+    a3MatchesToTurn,
+    aItIsWithGreatR_1,
+    aDecidedToRelie_0,
+    aWellDoneAYouDi_0,
+    aThisSeasonAndW_0,
+    aAGoodSeasonAWe_0,
+    aPleasedWithYou_0,
+    aAnUpAndDownSea_0,
+    aCanImproveOnTh_0,
+    aNotAVeryGoodSe_0,
+    aImproveTheTeam,
+    aAVeryDisappoin_0,
+    aDemandsMuchBet,
+    aThanksForAllYo_0,
+    aYouWellInYourN_0,
+    aWelcomeToOurCl,
+    aMuchSuccessFro,
+    aWelcomeToOurCl_0,
+    aSeasonInManage_0,
+    aJustANoteToWis_0,
+    aNewSeason_0,
+    aWeAllHopeYouEn_0,
+    aBeforeHandingT_0,
+    aWeAllWishYouTh_0,
+    aDistinguishedC_0,
+    aPleaseNoteATha,
+    aBHasLeftTheClu,
+    aPleaseNoteATha_0,
+    aBHasLeftTheClu_0,
+    aPleaseNoteATha_1,
+    aHasJoinedTheCl,
+    aWellDoneAYouDi,
+    aThisSeasonAndW,
+    aAGoodSeasonAWe,
+    aPleasedWithYou,
+    aAnUpAndDownSea,
+    aCanImproveOnTh,
+    aNotAVeryGoodSe,
+    aImproveOnOurPe,
+    aAVeryDisappoin,
+    aMuchBetterFrom,
+    aThanksForAllYo,
+    aYouWellInYourN,
+    aWelcomeAWeLook,
+    aSuccessFromOur,
+    aWelcomeAWeHope,
+    aSeasonInManage,
+    aJustANoteToWis,
+    aNewSeason,
+    aWeAllHopeYouEn,
+    aBeforeHandingT,
+    aWeAllWishYouTh,
+    aDistinguishedC,
+    aItIsWithGreatR,
+    aRenewYourContr,
 };
 /* flipStrTable: edit-tactics tactic-side flip selector. SWOS2.s:112717
  * (flipOnOff already extern'd above as char[]; just take its address.) */
@@ -1204,100 +1204,100 @@ extern char aUSER_A[], aUSER_B[], aUSER_C[];
 struct __attribute__((packed)) {
     uint32_t indexPtr; uint16_t base; uint32_t entries[5];
 } flipStrTable = {
-    (uint32_t)(uintptr_t)flipOnOff, 0,
+    flipOnOff, 0,
     {
-        (uint32_t)(uintptr_t)aFlipOff, (uint32_t)(uintptr_t)aFlipOn,
-        (uint32_t)(uintptr_t)aUSER_A,  (uint32_t)(uintptr_t)aUSER_B,
-        (uint32_t)(uintptr_t)aUSER_C,
+        aFlipOff, aFlipOn,
+        aUSER_A,  aUSER_B,
+        aUSER_C,
     }
 };
-uint32_t europeanCupsandNationalTeamCompetitionsAndQualifications[46] = {
-    (uint32_t)(uintptr_t)worldCup,
-    (uint32_t)(uintptr_t)europeanChampionships,
-    (uint32_t)(uintptr_t)copaAmerica,
-    (uint32_t)(uintptr_t)euroCup,
-    (uint32_t)(uintptr_t)euroCupCopy,
-    (uint32_t)(uintptr_t)cupWinnersCup,
-    (uint32_t)(uintptr_t)cupWinnersCupCopy,
-    (uint32_t)(uintptr_t)uefaCup,
-    (uint32_t)(uintptr_t)uefaCupCopy,
-    (uint32_t)(uintptr_t)copaAmericaCopy,
-    (uint32_t)(uintptr_t)africanNationsCup,
-    (uint32_t)(uintptr_t)africanNationsCupCopy,
-    (uint32_t)(uintptr_t)northAmericanCup,
-    (uint32_t)(uintptr_t)northAmericanCupCopy,
-    (uint32_t)(uintptr_t)asianCup,
-    (uint32_t)(uintptr_t)asianCupCopy,
-    (uint32_t)(uintptr_t)oceaniaCup,
-    (uint32_t)(uintptr_t)oceaniaCupCopy,
-    (uint32_t)(uintptr_t)europeanChampionships2Copy,
-    (uint32_t)(uintptr_t)ecQualifyingGroup1Copy,
-    (uint32_t)(uintptr_t)ecQualifyingGroup2Copy,
-    (uint32_t)(uintptr_t)ecQualifyingGroup3Copy,
-    (uint32_t)(uintptr_t)ecQualifyingGroup4Copy,
-    (uint32_t)(uintptr_t)ecQualifyingGroup5Copy,
-    (uint32_t)(uintptr_t)ecQualifyingGroup6Copy,
-    (uint32_t)(uintptr_t)ecQualifyingGroup7Copy,
-    (uint32_t)(uintptr_t)ecQualifyingGroup8Copy,
-    (uint32_t)(uintptr_t)worldCup2Copy,
-    (uint32_t)(uintptr_t)worldCupQualifyingGroup1Copy,
-    (uint32_t)(uintptr_t)worldCupQualifyingGroup2Copy,
-    (uint32_t)(uintptr_t)worldCupQualifyingGroup3Copy,
-    (uint32_t)(uintptr_t)worldCupQualifyingGroup4Copy,
-    (uint32_t)(uintptr_t)worldCupQualifyingGroup5Copy,
-    (uint32_t)(uintptr_t)worldCupQualifyingGroup6Copy,
-    (uint32_t)(uintptr_t)worldCupQualifyingGroup7Copy,
-    (uint32_t)(uintptr_t)worldCupQualifyingGroup8Copy,
-    (uint32_t)(uintptr_t)northAmericaWorldCupQualificationCopy,
-    (uint32_t)(uintptr_t)southAmericaWorldCupQualificationCopy,
-    (uint32_t)(uintptr_t)africaWorldCupQualificationCopy,
-    (uint32_t)(uintptr_t)asiaWorldCupQualificationCopy,
-    (uint32_t)(uintptr_t)oceaniaWorldCupQualificationCopy,
-    (uint32_t)(uintptr_t)invitationTournamentCopy,
-    (uint32_t)(uintptr_t)tourCopy,
-    (uint32_t)(uintptr_t)friendly,
-    (uint32_t)(uintptr_t)friendlyCopy,
+void *europeanCupsandNationalTeamCompetitionsAndQualifications[46] = {
+    worldCup,
+    europeanChampionships,
+    copaAmerica,
+    euroCup,
+    euroCupCopy,
+    cupWinnersCup,
+    cupWinnersCupCopy,
+    uefaCup,
+    uefaCupCopy,
+    copaAmericaCopy,
+    africanNationsCup,
+    africanNationsCupCopy,
+    northAmericanCup,
+    northAmericanCupCopy,
+    asianCup,
+    asianCupCopy,
+    oceaniaCup,
+    oceaniaCupCopy,
+    europeanChampionships2Copy,
+    ecQualifyingGroup1Copy,
+    ecQualifyingGroup2Copy,
+    ecQualifyingGroup3Copy,
+    ecQualifyingGroup4Copy,
+    ecQualifyingGroup5Copy,
+    ecQualifyingGroup6Copy,
+    ecQualifyingGroup7Copy,
+    ecQualifyingGroup8Copy,
+    worldCup2Copy,
+    worldCupQualifyingGroup1Copy,
+    worldCupQualifyingGroup2Copy,
+    worldCupQualifyingGroup3Copy,
+    worldCupQualifyingGroup4Copy,
+    worldCupQualifyingGroup5Copy,
+    worldCupQualifyingGroup6Copy,
+    worldCupQualifyingGroup7Copy,
+    worldCupQualifyingGroup8Copy,
+    northAmericaWorldCupQualificationCopy,
+    southAmericaWorldCupQualificationCopy,
+    africaWorldCupQualificationCopy,
+    asiaWorldCupQualificationCopy,
+    oceaniaWorldCupQualificationCopy,
+    invitationTournamentCopy,
+    tourCopy,
+    friendly,
+    friendlyCopy,
     0xFFFFFFFFu,
 };
-uint32_t nationalTeamCompetitionsAndQualifications1[39] = {
-    (uint32_t)(uintptr_t)worldCup,
-    (uint32_t)(uintptr_t)worldCup2Copy,
-    (uint32_t)(uintptr_t)europeanChampionships,
-    (uint32_t)(uintptr_t)europeanChampionships2Copy,
-    (uint32_t)(uintptr_t)copaAmerica,
-    (uint32_t)(uintptr_t)copaAmericaCopy,
-    (uint32_t)(uintptr_t)africanNationsCup,
-    (uint32_t)(uintptr_t)africanNationsCupCopy,
-    (uint32_t)(uintptr_t)northAmericanCup,
-    (uint32_t)(uintptr_t)northAmericanCupCopy,
-    (uint32_t)(uintptr_t)asianCup,
-    (uint32_t)(uintptr_t)asianCupCopy,
-    (uint32_t)(uintptr_t)oceaniaCup,
-    (uint32_t)(uintptr_t)oceaniaCupCopy,
-    (uint32_t)(uintptr_t)friendlyCopy,
-    (uint32_t)(uintptr_t)ecQualifyingGroup1Copy,
-    (uint32_t)(uintptr_t)ecQualifyingGroup2Copy,
-    (uint32_t)(uintptr_t)ecQualifyingGroup3Copy,
-    (uint32_t)(uintptr_t)ecQualifyingGroup4Copy,
-    (uint32_t)(uintptr_t)ecQualifyingGroup5Copy,
-    (uint32_t)(uintptr_t)ecQualifyingGroup6Copy,
-    (uint32_t)(uintptr_t)ecQualifyingGroup7Copy,
-    (uint32_t)(uintptr_t)ecQualifyingGroup8Copy,
-    (uint32_t)(uintptr_t)worldCupQualifyingGroup1Copy,
-    (uint32_t)(uintptr_t)worldCupQualifyingGroup2Copy,
-    (uint32_t)(uintptr_t)worldCupQualifyingGroup3Copy,
-    (uint32_t)(uintptr_t)worldCupQualifyingGroup4Copy,
-    (uint32_t)(uintptr_t)worldCupQualifyingGroup5Copy,
-    (uint32_t)(uintptr_t)worldCupQualifyingGroup6Copy,
-    (uint32_t)(uintptr_t)worldCupQualifyingGroup7Copy,
-    (uint32_t)(uintptr_t)worldCupQualifyingGroup8Copy,
-    (uint32_t)(uintptr_t)northAmericaWorldCupQualificationCopy,
-    (uint32_t)(uintptr_t)southAmericaWorldCupQualificationCopy,
-    (uint32_t)(uintptr_t)africaWorldCupQualificationCopy,
-    (uint32_t)(uintptr_t)asiaWorldCupQualificationCopy,
-    (uint32_t)(uintptr_t)oceaniaWorldCupQualificationCopy,
-    (uint32_t)(uintptr_t)invitationTournamentCopy,
-    (uint32_t)(uintptr_t)tourCopy,
+void *nationalTeamCompetitionsAndQualifications1[39] = {
+    worldCup,
+    worldCup2Copy,
+    europeanChampionships,
+    europeanChampionships2Copy,
+    copaAmerica,
+    copaAmericaCopy,
+    africanNationsCup,
+    africanNationsCupCopy,
+    northAmericanCup,
+    northAmericanCupCopy,
+    asianCup,
+    asianCupCopy,
+    oceaniaCup,
+    oceaniaCupCopy,
+    friendlyCopy,
+    ecQualifyingGroup1Copy,
+    ecQualifyingGroup2Copy,
+    ecQualifyingGroup3Copy,
+    ecQualifyingGroup4Copy,
+    ecQualifyingGroup5Copy,
+    ecQualifyingGroup6Copy,
+    ecQualifyingGroup7Copy,
+    ecQualifyingGroup8Copy,
+    worldCupQualifyingGroup1Copy,
+    worldCupQualifyingGroup2Copy,
+    worldCupQualifyingGroup3Copy,
+    worldCupQualifyingGroup4Copy,
+    worldCupQualifyingGroup5Copy,
+    worldCupQualifyingGroup6Copy,
+    worldCupQualifyingGroup7Copy,
+    worldCupQualifyingGroup8Copy,
+    northAmericaWorldCupQualificationCopy,
+    southAmericaWorldCupQualificationCopy,
+    africaWorldCupQualificationCopy,
+    asiaWorldCupQualificationCopy,
+    oceaniaWorldCupQualificationCopy,
+    invitationTournamentCopy,
+    tourCopy,
     0xFFFFFFFFu,
 };
 /* Each Amiga euroCupQual* "group seed list" table is a sequence of
@@ -1323,151 +1323,151 @@ typedef struct __attribute__((packed)) SeedListGroupEntry {
 } SeedListGroupEntry;
 
 SeedListGroupEntry euroCupQualGroupSeedLists_4_6_11[5] = {
-    { (uint32_t)(uintptr_t)euroCupQualSeedList4,  4,  4 },
-    { (uint32_t)(uintptr_t)euroCupQualSeedList6,  6,  5 },
-    { (uint32_t)(uintptr_t)euroCupQualSeedList11, 11, 5 },
-    { (uint32_t)(uintptr_t)euroCupQualSeedList22, 22, 2 },
+    { euroCupQualSeedList4,  4,  4 },
+    { euroCupQualSeedList6,  6,  5 },
+    { euroCupQualSeedList11, 11, 5 },
+    { euroCupQualSeedList22, 22, 2 },
     { 0xFFFFFFFFu, 0, 0 },
 };
 
 SeedListGroupEntry euroCupQualGroupSeedListsReduced_4_6_11[5] = {
-    { (uint32_t)(uintptr_t)euroCupQualSeedListReduced4,  4,  4  },
-    { (uint32_t)(uintptr_t)euroCupQualSeedListReduced6,  6,  6  },
-    { (uint32_t)(uintptr_t)euroCupQualSeedListReduced11, 11, 11 },
-    { (uint32_t)(uintptr_t)euroCupQualSeedListReduced22, 22, 11 },
+    { euroCupQualSeedListReduced4,  4,  4  },
+    { euroCupQualSeedListReduced6,  6,  6  },
+    { euroCupQualSeedListReduced11, 11, 11 },
+    { euroCupQualSeedListReduced22, 22, 11 },
     { 0xFFFFFFFFu, 0, 0 },
 };
 
 SeedListGroupEntry euroCupQualGroupSeedBuckets_15_18_22[5] = {
-    { (uint32_t)(uintptr_t)euroCupQualSeedBucket15,     15, 10 },
-    { (uint32_t)(uintptr_t)euroCupQualSeedBucket18,     18, 10 },
-    { (uint32_t)(uintptr_t)euroCupQualSeedBucket22,     22, 8  },
-    { (uint32_t)(uintptr_t)euroCupQualSeedBucket22Full, 22, 4  },
+    { euroCupQualSeedBucket15,     15, 10 },
+    { euroCupQualSeedBucket18,     18, 10 },
+    { euroCupQualSeedBucket22,     22, 8  },
+    { euroCupQualSeedBucket22Full, 22, 4  },
     { 0xFFFFFFFFu, 0, 0 },
 };
-uint32_t positionsTable[18] = {
-    (uint32_t)(uintptr_t)positionsDefault,
-    (uint32_t)(uintptr_t)positions541,
-    (uint32_t)(uintptr_t)positions451,
-    (uint32_t)(uintptr_t)positions532,
-    (uint32_t)(uintptr_t)positions352,
-    (uint32_t)(uintptr_t)positions433,
-    (uint32_t)(uintptr_t)positions424,
-    (uint32_t)(uintptr_t)positions343,
-    (uint32_t)(uintptr_t)positionsSweep,
-    (uint32_t)(uintptr_t)positions523,
-    (uint32_t)(uintptr_t)positionsAttack,
-    (uint32_t)(uintptr_t)positionsDefend,
-    (uint32_t)(uintptr_t)positionsDefault,
-    (uint32_t)(uintptr_t)positionsDefault,
-    (uint32_t)(uintptr_t)positionsDefault,
-    (uint32_t)(uintptr_t)positionsDefault,
-    (uint32_t)(uintptr_t)positionsDefault,
-    (uint32_t)(uintptr_t)positionsDefault,
+void *positionsTable[18] = {
+    positionsDefault,
+    positions541,
+    positions451,
+    positions532,
+    positions352,
+    positions433,
+    positions424,
+    positions343,
+    positionsSweep,
+    positions523,
+    positionsAttack,
+    positionsDefend,
+    positionsDefault,
+    positionsDefault,
+    positionsDefault,
+    positionsDefault,
+    positionsDefault,
+    positionsDefault,
 };
-uint32_t divisionStringTable[4] = {
-    (uint32_t)(uintptr_t)aPremierDivisio,
-    (uint32_t)(uintptr_t)aDivision1_0,
-    (uint32_t)(uintptr_t)aDivision2_0,
-    (uint32_t)(uintptr_t)aDivision3_0,
+void *divisionStringTable[4] = {
+    aPremierDivisio,
+    aDivision1_0,
+    aDivision2_0,
+    aDivision3_0,
 };
-uint32_t divStringTable[4] = {
-    (uint32_t)(uintptr_t)aPremDiv,
-    (uint32_t)(uintptr_t)aDiv1,
-    (uint32_t)(uintptr_t)aDiv2,
-    (uint32_t)(uintptr_t)aDiv3,
+void *divStringTable[4] = {
+    aPremDiv,
+    aDiv1,
+    aDiv2,
+    aDiv3,
 };
-uint32_t cupRoundStringTable[12] = {
-    (uint32_t)(uintptr_t)aFirstRound,
-    (uint32_t)(uintptr_t)aSecondRound,
-    (uint32_t)(uintptr_t)aThirdRound,
-    (uint32_t)(uintptr_t)aFourthRound,
-    (uint32_t)(uintptr_t)aFifthRound,
-    (uint32_t)(uintptr_t)aSixthRound,
-    (uint32_t)(uintptr_t)aQuarterFinal,
-    (uint32_t)(uintptr_t)aSemiFinal,
-    (uint32_t)(uintptr_t)aFinal_2,
-    (uint32_t)(uintptr_t)aFinalGroup,
-    (uint32_t)(uintptr_t)aThirdPlacePlay,
-    (uint32_t)(uintptr_t)aFinalGroups,
+void *cupRoundStringTable[12] = {
+    aFirstRound,
+    aSecondRound,
+    aThirdRound,
+    aFourthRound,
+    aFifthRound,
+    aSixthRound,
+    aQuarterFinal,
+    aSemiFinal,
+    aFinal_2,
+    aFinalGroup,
+    aThirdPlacePlay,
+    aFinalGroups,
 };
-uint32_t roundStringTable[12] = {
-    (uint32_t)(uintptr_t)aRound1,
-    (uint32_t)(uintptr_t)aRound2,
-    (uint32_t)(uintptr_t)aRound3,
-    (uint32_t)(uintptr_t)aRound4,
-    (uint32_t)(uintptr_t)aRound5,
-    (uint32_t)(uintptr_t)aRound6,
-    (uint32_t)(uintptr_t)aQFinal,
-    (uint32_t)(uintptr_t)aSFinal,
-    (uint32_t)(uintptr_t)aFinal_3,
-    (uint32_t)(uintptr_t)aFinalGroup_0,
-    (uint32_t)(uintptr_t)a3rdPlayOff,
-    (uint32_t)(uintptr_t)aFinalGroups_0,
+void *roundStringTable[12] = {
+    aRound1,
+    aRound2,
+    aRound3,
+    aRound4,
+    aRound5,
+    aRound6,
+    aQFinal,
+    aSFinal,
+    aFinal_3,
+    aFinalGroup_0,
+    a3rdPlayOff,
+    aFinalGroups_0,
 };
-uint32_t rndStringTable[15] = {
-    (uint32_t)(uintptr_t)aRnd1,
-    (uint32_t)(uintptr_t)aRnd2,
-    (uint32_t)(uintptr_t)aRnd3,
-    (uint32_t)(uintptr_t)aRnd4,
-    (uint32_t)(uintptr_t)aRnd5,
-    (uint32_t)(uintptr_t)aRnd6,
-    (uint32_t)(uintptr_t)aQF,
-    (uint32_t)(uintptr_t)aSF,
-    (uint32_t)(uintptr_t)aFinal,
-    (uint32_t)(uintptr_t)aFinal_0,
-    (uint32_t)(uintptr_t)a3rd,
-    (uint32_t)(uintptr_t)aFinal_1,
-    (uint32_t)(uintptr_t)aReplay,
-    (uint32_t)(uintptr_t)a2ndReplay,
-    (uint32_t)(uintptr_t)a3rdReplay,
+void *rndStringTable[15] = {
+    aRnd1,
+    aRnd2,
+    aRnd3,
+    aRnd4,
+    aRnd5,
+    aRnd6,
+    aQF,
+    aSF,
+    aFinal,
+    aFinal_0,
+    a3rd,
+    aFinal_1,
+    aReplay,
+    a2ndReplay,
+    a3rdReplay,
 };
-uint32_t replayStringTable[3] = {
-    (uint32_t)(uintptr_t)aReplays,
-    (uint32_t)(uintptr_t)a2ndReplays,
-    (uint32_t)(uintptr_t)a3rdReplays,
+void *replayStringTable[3] = {
+    aReplays,
+    a2ndReplays,
+    a3rdReplays,
 };
-uint32_t playerPositionsStringTable[20] = {
-    (uint32_t)(uintptr_t)aG,
-    (uint32_t)(uintptr_t)aRb,
-    (uint32_t)(uintptr_t)aLb,
-    (uint32_t)(uintptr_t)aD_0,
-    (uint32_t)(uintptr_t)aRw,
-    (uint32_t)(uintptr_t)aLw,
-    (uint32_t)(uintptr_t)aM,
-    (uint32_t)(uintptr_t)aA_1,
-    (uint32_t)(uintptr_t)aEur,
-    (uint32_t)(uintptr_t)aNam,
-    (uint32_t)(uintptr_t)aSam,
-    (uint32_t)(uintptr_t)aAsi,
-    (uint32_t)(uintptr_t)aOce,
-    (uint32_t)(uintptr_t)aAfr,
-    (uint32_t)(uintptr_t)aEuro,
-    (uint32_t)(uintptr_t)aNam_0,
-    (uint32_t)(uintptr_t)aSam_0,
-    (uint32_t)(uintptr_t)aAsi_0,
-    (uint32_t)(uintptr_t)aOce_0,
-    (uint32_t)(uintptr_t)aAfr_0,
+void *playerPositionsStringTable[20] = {
+    aG,
+    aRb,
+    aLb,
+    aD_0,
+    aRw,
+    aLw,
+    aM,
+    aA_1,
+    aEur,
+    aNam,
+    aSam,
+    aAsi,
+    aOce,
+    aAfr,
+    aEuro,
+    aNam_0,
+    aSam_0,
+    aAsi_0,
+    aOce_0,
+    aAfr_0,
 };
-uint32_t tacticsStringTable[18] = {
-    (uint32_t)(uintptr_t)a442,
-    (uint32_t)(uintptr_t)a541,
-    (uint32_t)(uintptr_t)a451,
-    (uint32_t)(uintptr_t)a532,
-    (uint32_t)(uintptr_t)a352,
-    (uint32_t)(uintptr_t)a433,
-    (uint32_t)(uintptr_t)a424,
-    (uint32_t)(uintptr_t)a343,
-    (uint32_t)(uintptr_t)aSweep,
-    (uint32_t)(uintptr_t)a523,
-    (uint32_t)(uintptr_t)aAttack,
-    (uint32_t)(uintptr_t)aDefend,
-    (uint32_t)(uintptr_t)aUSER_A,
-    (uint32_t)(uintptr_t)aUSER_B,
-    (uint32_t)(uintptr_t)aUSER_C,
-    (uint32_t)(uintptr_t)aUSER_D,
-    (uint32_t)(uintptr_t)aUSER_E,
-    (uint32_t)(uintptr_t)aUSER_F,
+void *tacticsStringTable[18] = {
+    a442,
+    a541,
+    a451,
+    a532,
+    a352,
+    a433,
+    a424,
+    a343,
+    aSweep,
+    a523,
+    aAttack,
+    aDefend,
+    aUSER_A,
+    aUSER_B,
+    aUSER_C,
+    aUSER_D,
+    aUSER_E,
+    aUSER_F,
 };
 const uint8_t *fixtureSchedulePtrTable[23] = {
     fixtureSchedule2Teams,
@@ -1494,9 +1494,9 @@ const uint8_t *fixtureSchedulePtrTable[23] = {
     fixtureSchedule23Teams,
     fixtureSchedule24Teams,
 };
-uint32_t teamFilenamesTable[4] = {
-    (uint32_t)(uintptr_t)aGrafsCjcteam1R,
-    (uint32_t)(uintptr_t)aGrafsCjcteam2R,
-    (uint32_t)(uintptr_t)aGrafsCjcteam1R,
-    (uint32_t)(uintptr_t)aGrafsCjcteam3R,
+void *teamFilenamesTable[4] = {
+    aGrafsCjcteam1R,
+    aGrafsCjcteam2R,
+    aGrafsCjcteam1R,
+    aGrafsCjcteam3R,
 };

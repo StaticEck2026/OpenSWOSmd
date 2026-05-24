@@ -132,7 +132,7 @@ extern TeamGame bottomTeamInGame;
 extern uint8_t  plOrdinalsTable[];
 extern uint8_t  plNamesLengthTableCopy[];
 extern uint16_t ingameTeamPlayerOffsets[];
-extern uint32_t positionsTable[];
+extern void *positionsTable[];
 extern AnimTable playerNormalStandingAnimTable;
 
 /* ---- Game state constants (ST_GAME_IN_PROGRESS, ST_KEEPER_HOLDS_BALL,
@@ -182,8 +182,8 @@ extern uint16_t subsMenuHighlightColor;
 extern uint16_t subsMenuEntryFrameColor;
 extern uint8_t  playerNumberString[];
 extern uint16_t playerFacesTable[];
-extern uint32_t playerPositionsStringTable[];
-extern uint32_t tacticsStringTable[];
+extern void *playerPositionsStringTable[];
+extern void *tacticsStringTable[];
 extern uint32_t teamTacticsTable[];
 extern uint8_t  aFormation[];
 

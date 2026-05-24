@@ -43,7 +43,7 @@ extern uint16_t useIndividualPlayerSkinColor;
 extern uint16_t team1MostFrequentFace;
 extern uint16_t team2MostFrequentFace;
 extern uint8_t facesFrequency[];
-extern uint32_t skinAndHairColorConversionTable[];
+extern void *skinAndHairColorConversionTable[];
 extern uint8_t team1GoalieFaceToPosition[];
 extern uint8_t team2GoalieFaceToPosition[];
 extern uint8_t team1GoalieFaces[];      /* [0]=team1 main GK face, [1]=team1 reserve GK face (=team2GoalieFaces label) */
