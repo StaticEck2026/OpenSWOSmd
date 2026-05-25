@@ -33,22 +33,22 @@ void *skinAndHairColorConversionTable[3] = {
 
 extern const char aTspvhcfstpvhcf[];
 void *topSkillLettersEven[7] = {
-    (aTspvhcfstpvhcf + 0x00),
-    (aTspvhcfstpvhcf + 0x0E),
-    (aTspvhcfstpvhcf + 0x1C),
-    (aTspvhcfstpvhcf + 0x2A),
-    (aTspvhcfstpvhcf + 0x38),
-    (aTspvhcfstpvhcf + 0x46),
-    (aTspvhcfstpvhcf + 0x54),
+    ((void *)aTspvhcfstpvhcf + 0x00),
+    ((void *)aTspvhcfstpvhcf + 0x0E),
+    ((void *)aTspvhcfstpvhcf + 0x1C),
+    ((void *)aTspvhcfstpvhcf + 0x2A),
+    ((void *)aTspvhcfstpvhcf + 0x38),
+    ((void *)aTspvhcfstpvhcf + 0x46),
+    ((void *)aTspvhcfstpvhcf + 0x54),
 };
 void *topSkillLettersOdd[7] = {
-    (aTspvhcfstpvhcf + 0x07),
-    (aTspvhcfstpvhcf + 0x15),
-    (aTspvhcfstpvhcf + 0x23),
-    (aTspvhcfstpvhcf + 0x31),
-    (aTspvhcfstpvhcf + 0x3F),
-    (aTspvhcfstpvhcf + 0x4D),
-    (aTspvhcfstpvhcf + 0x5B),
+    ((void *)aTspvhcfstpvhcf + 0x07),
+    ((void *)aTspvhcfstpvhcf + 0x15),
+    ((void *)aTspvhcfstpvhcf + 0x23),
+    ((void *)aTspvhcfstpvhcf + 0x31),
+    ((void *)aTspvhcfstpvhcf + 0x3F),
+    ((void *)aTspvhcfstpvhcf + 0x4D),
+    ((void *)aTspvhcfstpvhcf + 0x5B),
 };
 
 extern char a2ndReplay[];
@@ -619,19 +619,19 @@ extern const char aRandom[], aFrozen[], aMuddy[], aWet[], aSoft[];
 extern const char aNormal[], aDry[], aHard[];
 
 #define MONTHS \
-    aJan, aFeb, \
-    aMar, aApr, \
-    aMay, aJun, \
-    aJul, aAug, \
-    aSep, aOct, \
-    aNov, aDec
+    (void *)aJan, (void *)aFeb, \
+    (void *)aMar, (void *)aApr, \
+    (void *)aMay, (void *)aJun, \
+    (void *)aJul, (void *)aAug, \
+    (void *)aSep, (void *)aOct, \
+    (void *)aNov, (void *)aDec
 
 extern char diyPitchTypeOrSeason_1[];
 struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[2];
 } diyPitchTypeOrSeasonStrTable = {
     diyPitchTypeOrSeason_1, 0,
-    { aPitchType, aSeason_1 }
+    { (void *)aPitchType, (void *)aSeason_1 }
 };
 
 /* diyLeaguePitchTypeStrTable: index var is `diyCompetitionStart + 0x36`,
@@ -641,10 +641,10 @@ struct __attribute__((packed)) {
 } diyLeaguePitchTypeStrTable = {
     (diyCompetitionStart + 0x36), (uint16_t)-1,
     {
-        aRandom, aFrozen,
-        aMuddy,  aWet,
-        aSoft,   aNormal,
-        aDry,    aHard,
+        (void *)aRandom, (void *)aFrozen,
+        (void *)aMuddy,  (void *)aWet,
+        (void *)aSoft,   (void *)aNormal,
+        (void *)aDry,    (void *)aHard,
     }
 };
 
@@ -672,10 +672,10 @@ extern const char aRandom[], aFrozen[], aMuddy[], aWet[];
 extern const char aSoft[], aNormal[], aDry[], aHard[];
 
 #define PITCH_8 \
-    aRandom, aFrozen, \
-    aMuddy,  aWet, \
-    aSoft,   aNormal, \
-    aDry,    aHard
+    (void *)aRandom, (void *)aFrozen, \
+    (void *)aMuddy,  (void *)aWet, \
+    (void *)aSoft,   (void *)aNormal, \
+    (void *)aDry,    (void *)aHard
 
 /* diyCupPitchTypeStringTable: indexPtr = `diyCompetitionStart + 0x36`
  * = `&diyCompetitionStart.base.pitchType`; base = -1; 8 entries. */
@@ -694,9 +694,9 @@ struct __attribute__((packed)) {
 } diyCupAwayGoalsStringTable = {
     (diyCompetitionStart + 0x5E), 0,
     {
-        aOff,
-        aAfter90Mins,
-        aAfterExtraTime,
+        (void *)aOff,
+        (void *)aAfter90Mins,
+        (void *)aAfterExtraTime,
     }
 };
 
@@ -740,26 +740,26 @@ extern const char aNoPenalties[], aPenalties[], aPensIfReplay[];
 extern const char aPitchType[], aSeason_1[];
 
 #define MONTHS \
-    aJan, aFeb, \
-    aMar, aApr, \
-    aMay, aJun, \
-    aJul, aAug, \
-    aSep, aOct, \
-    aNov, aDec
+    (void *)aJan, (void *)aFeb, \
+    (void *)aMar, (void *)aApr, \
+    (void *)aMay, (void *)aJun, \
+    (void *)aJul, (void *)aAug, \
+    (void *)aSep, (void *)aOct, \
+    (void *)aNov, (void *)aDec
 #define LEGS_3 \
-    a1Leg, a1Leg, a2Legs
+    (void *)a1Leg, (void *)a1Leg, (void *)a2Legs
 #define EXTRATIME_3 \
-    aNoExtraTime, aExtraTime, \
-    aETIfReplay
+    (void *)aNoExtraTime, (void *)aExtraTime, \
+    (void *)aETIfReplay
 #define PENALTIES_3 \
-    aNoPenalties, aPenalties, \
-    aPensIfReplay
+    (void *)aNoPenalties, (void *)aPenalties, \
+    (void *)aPensIfReplay
 
 struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[2];
 } diyCupPitchTypeOrSeasonStringTable = {
     diyCupPitchTypeOrSeasonSelection, 0,
-    { aPitchType, aSeason_1 }
+    { (void *)aPitchType, (void *)aSeason_1 }
 };
 
 struct __attribute__((packed)) {
@@ -816,7 +816,7 @@ struct __attribute__((packed)) { \
     void    *indexPtr; uint16_t base; void    *entries[2]; \
 } NAME = { \
     (VAR), 0, \
-    { aOff, aOn } \
+    { (void *)aOff, (void *)aOn } \
 }
 
 /* pitchType menu: base = -2 so index -2 → "SEASONAL", -1 → "RANDOM",
@@ -826,11 +826,11 @@ struct __attribute__((packed)) {
 } pitchTypeStrTable = {
     pitchType, (uint16_t)-2,
     {
-        aSeasonal, aRandom,
-        aFrozen,   aMuddy,
-        aWet,      aSoft,
-        aNormal,   aDry,
-        aHard,
+        (void *)aSeasonal, (void *)aRandom,
+        (void *)aFrozen,   (void *)aMuddy,
+        (void *)aWet,      (void *)aSoft,
+        (void *)aNormal,   (void *)aDry,
+        (void *)aHard,
     }
 };
 
@@ -839,8 +839,8 @@ struct __attribute__((packed)) {
 } gameLengthStrTable = {
     gameLength, 0,
     {
-        a3Mins,  a5Mins,
-        a7Mins,  a10Mins,
+        (void *)a3Mins,  (void *)a5Mins,
+        (void *)a7Mins,  (void *)a10Mins,
     }
 };
 
@@ -865,29 +865,29 @@ extern const char a2PtsForAWin[], a3PtsForAWin[];
 extern const char aPlayEachTeamX1[], aPlayEachTeamX2[], aPlayEachTeamX3[], aPlayEachTeamX4[];
 
 #define MONTHS \
-    aJan, aFeb, \
-    aMar, aApr, \
-    aMay, aJun, \
-    aJul, aAug, \
-    aSep, aOct, \
-    aNov, aDec
+    (void *)aJan, (void *)aFeb, \
+    (void *)aMar, (void *)aApr, \
+    (void *)aMay, (void *)aJun, \
+    (void *)aJul, (void *)aAug, \
+    (void *)aSep, (void *)aOct, \
+    (void *)aNov, (void *)aDec
 #define LEGS_3 \
-    a1Leg, a1Leg, a2Legs
+    (void *)a1Leg, (void *)a1Leg, (void *)a2Legs
 #define EXTRATIME_3 \
-    aNoExtraTime, aExtraTime, aETIfReplay
+    (void *)aNoExtraTime, (void *)aExtraTime, (void *)aETIfReplay
 #define PENALTIES_3 \
-    aNoPenalties, aPenalties, aPensIfReplay
+    (void *)aNoPenalties, (void *)aPenalties, (void *)aPensIfReplay
 #define PTS_2 \
-    a2PtsForAWin, a3PtsForAWin
+    (void *)a2PtsForAWin, (void *)a3PtsForAWin
 #define PLAYCOUNT_4 \
-    aPlayEachTeamX1, aPlayEachTeamX2, \
-    aPlayEachTeamX3, aPlayEachTeamX4
+    (void *)aPlayEachTeamX1, (void *)aPlayEachTeamX2, \
+    (void *)aPlayEachTeamX3, (void *)aPlayEachTeamX4
 
 struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[2];
 } diyPitchSeasonStrTab = {
     diyTournamentUseSeasonalPitchEffective, 0,
-    { aPitchType, aSeason_1 }
+    { (void *)aPitchType, (void *)aSeason_1 }
 };
 struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[12];
@@ -905,9 +905,9 @@ struct __attribute__((packed)) {
 } diyAwayGoalsStrTab = {
     (diyFileBufferCopy + 0x4A), 0,
     {
-        aOff,
-        aAfter90Mins,
-        aAfterExtraTime,
+        (void *)aOff,
+        (void *)aAfter90Mins,
+        (void *)aAfterExtraTime,
     }
 };
 
@@ -1010,8 +1010,8 @@ struct __attribute__((packed)) {
 } offsetCoachOrPlayer = {
     coachOrPlayer, 0,
     {
-        aCoach_0,
-        aPlayerCoach_0,
+        (void *)aCoach_0,
+        (void *)aPlayerCoach_0,
     }
 };
 void *countryStackPtr[1] = {
@@ -1055,11 +1055,11 @@ struct __attribute__((packed)) {
 } positionFilterStringTable = {
     playerMarketFilterPosition, (uint16_t)-1,
     {
-        aAny,
-        aGoalkeeper,
-        aDefender,
-        aMidfielder,
-        aAttacker,
+        (void *)aAny,
+        (void *)aGoalkeeper,
+        (void *)aDefender,
+        (void *)aMidfielder,
+        (void *)aAttacker,
     }
 };
 
@@ -1068,14 +1068,14 @@ struct __attribute__((packed)) {
 } skillFilterStringTable = {
     playerMarketFilterAgeGroup, (uint16_t)-1,
     {
-        aAny,
-        aPassing,
-        aShooting,
-        aHeading,
-        aTackling,
-        aBallControl,
-        aSpeed,
-        aFinishing,
+        (void *)aAny,
+        (void *)aPassing,
+        (void *)aShooting,
+        (void *)aHeading,
+        (void *)aTackling,
+        (void *)aBallControl,
+        (void *)aSpeed,
+        (void *)aFinishing,
     }
 };
 
@@ -1084,13 +1084,13 @@ struct __attribute__((packed)) {
 } countryFilterStringTable = {
     playerMarketFilterCountry, 0,
     {
-        aEuropean,
-        aNorthAmerican,
-        aSouthAmerican,
-        aAfrican,
-        aAsian,
-        aOceanian,
-        aAny,
+        (void *)aEuropean,
+        (void *)aNorthAmerican,
+        (void *)aSouthAmerican,
+        (void *)aAfrican,
+        (void *)aAsian,
+        (void *)aOceanian,
+        (void *)aAny,
     }
 };
 void *positionGroupTable[4] = {
@@ -1206,7 +1206,7 @@ struct __attribute__((packed)) {
 } flipStrTable = {
     flipOnOff, 0,
     {
-        aFlipOff, aFlipOn,
+        (void *)aFlipOff, (void *)aFlipOn,
         aUSER_A,  aUSER_B,
         aUSER_C,
     }

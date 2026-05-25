@@ -10,6 +10,7 @@
 
 #include "game_types.h"
 #include <stdio.h>
+#include <string.h>   /* memcpy in _Rebuild_CupRecordNameSourcePointers */
 #include "endian_helpers.h"
 #include "menu_system.h"
 #include "input_text.h"

@@ -3574,7 +3574,7 @@ extern uintptr_t offerFmtLine2b;
 extern uintptr_t exchangeFmtLine1a;
 extern uintptr_t exchangeFmtLine2a;
 extern uintptr_t exchangeFmtLine1b;
-extern uint32_t exchangeFmtLine2b;
+extern uintptr_t exchangeFmtLine2b;
 
 /* Format string labels */
 extern uint8_t aAOfferForB[];

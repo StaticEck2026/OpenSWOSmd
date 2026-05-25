@@ -847,7 +847,13 @@ extern uint32_t cupPickEuropeNoCupFriendlyAlt[];
 extern uint32_t cupPickListEuropeInviteTournamentFriendlyAlt[];
 
 extern uint32_t ecQualifyingGroupsTable[];
-extern uint32_t worldCupQualifyingGroupsTable[];
+/* Real storage is `CompetitionCup *[8]` in competition_data.c:1191
+ * — native pointer-width table. The legacy extern said `uint32_t[]`
+ * (Amiga 32-bit pointer slot) which read half a pointer on 64-bit
+ * at every `(uint8_t *)tbl[i]` consumer site. Declared as
+ * `void *[]` here to avoid pulling in competition_data.h's other
+ * typedefs (some clash with locals in this file). */
+extern void    *worldCupQualifyingGroupsTable[];
 extern uint32_t tourStringTable[];
 
 /* Forward declarations */
