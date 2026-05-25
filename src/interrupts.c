@@ -101,7 +101,9 @@ void _InitHardwareAtFrameStart(void)
 __attribute__((used, externally_visible))
 void _SetupInterrupts(void)
 {
-    volatile uint32_t *vectors = (volatile uint32_t *)S_VBR;
+    /* S_VBR is the m68k Vector Base Register — dead address on SDL.
+     * Widen through uintptr_t to silence Wint-to-pointer-cast on 64-bit. */
+    volatile uint32_t *vectors = (volatile uint32_t *)(uintptr_t)S_VBR;
 
     /* Save old Level 3 handler to Level 1 slot */
     vectors[LEVEL_1_VEC / 4] = vectors[LEVEL_3_VEC / 4];

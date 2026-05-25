@@ -3317,7 +3317,7 @@ extern int16_t  teamWillingToSellOrExchange;
 extern uint8_t  managerSexBuffer[];
 extern uint8_t  managerSurnameBuffer[];
 extern void *sellExchangeStrings[];
-extern uint32_t sellExchangeResponseStrings[];
+extern char    *sellExchangeResponseStrings[];  /* native-width pointer table; storage is char *[12] in swos_data_typed_stubs.c */
 extern uint8_t  aDearAB[];
 extern uint8_t  aInADealWithAFo[];
 extern uint8_t  aUnlessTheOffer[];
@@ -3366,17 +3366,20 @@ void _TransferPlayerInit(void *entryPtr)
                     0, 0, 0, 0, 0, 0, 0,
                     managerSexBuffer, managerSurnameBuffer, 0);
 
-    /* Select appropriate sell/exchange string from table */
-    uint32_t *strPair = sellExchangeStrings;
+    /* Select appropriate sell/exchange string from table. The table is
+     * `void *[4]` (native pointer width), so walk as `void **` — was
+     * `uint32_t *` which read half-pointers on 64-bit and warned at the
+     * (uint8_t *)<u32> cast below. */
+    void **strPair = sellExchangeStrings;
     if (teamWillingToSellOrExchange != 0)
-        strPair += 2;  /* advance by 8 bytes = 2 longs */
+        strPair += 2;
     if (offerSwapPlayerOrdinal >= 0)
-        strPair += 1;  /* advance by 4 bytes = 1 long */
+        strPair += 1;
 
     /* Get offering team name and format into entry 2 */
     TeamFileEx *teamPtr = _GetTeamPointer(teamOffering);
     uint8_t *teamName = (uint8_t *)teamPtr->team.teamName;
-    _PrintFormatted((const uint8_t *)(uint32_t)*strPair,
+    _PrintFormatted((const uint8_t *)*strPair,
                     (uint8_t *)menuEntries[2].fg,
                     0, 0, 0, 0, 0, 0, 0,
                     teamName, 0, 0);
@@ -3406,16 +3409,18 @@ void _TransferPlayerInit(void *entryPtr)
                         0, 0, 0, 0, 0, 0, 0,
                         fundsBuffer, 0, 0);
     } else {
-        /* Non-negative: use response string lookup table */
-        uint32_t *respPair = sellExchangeResponseStrings + (twse * 2);
-        if (*respPair != 0) {
+        /* Non-negative: use response string lookup table.
+         * Walk as `char **` (native width); was `uint32_t *` which
+         * read half-pointers on 64-bit. */
+        char **respPair = sellExchangeResponseStrings + (twse * 2);
+        if (respPair[0] != 0) {
             menuEntries[4].isInvisible = 0;
-            _StringCopy((const uint8_t *)(uint32_t)*respPair,
+            _StringCopy((const uint8_t *)respPair[0],
                         (uint8_t *)menuEntries[4].fg);
         }
-        if (*(respPair + 1) != 0) {
+        if (respPair[1] != 0) {
             menuEntries[5].isInvisible = 0;
-            _StringCopy((const uint8_t *)(uint32_t)*(respPair + 1),
+            _StringCopy((const uint8_t *)respPair[1],
                         (uint8_t *)menuEntries[5].fg);
         }
     }

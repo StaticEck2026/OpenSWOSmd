@@ -555,7 +555,7 @@ extern uint16_t teamSelectionKeyCacheIndex;
 extern uint16_t teamSelectionKeyCacheOffset;
 extern uint16_t careerSlotProcessingInProgress;
 extern uint16_t lastNationalityCall;
-extern uint8_t  careerTeamFlagsByRegionTable[];  /* 6-entry pointer table */
+extern void    *careerTeamFlagsByRegionTable[];  /* 6-entry pointer table; native width on 32 and 64-bit. Storage is `void *[6]` in swos_amiga_ptr_imports.c. */
 extern uint8_t  someTeamFlags;
 extern uint8_t  nationalTeamNationality;
 extern uint8_t  nationalTeamFileId;
@@ -1006,8 +1006,11 @@ void _InitializeNewSeason(void)
             sameNationalCallFlag = 1;
         }
 
-        /* Look up team flags from region table */
-        uint32_t *regionTable = (uint32_t *)careerTeamFlagsByRegionTable;
+        /* Look up team flags from region table. Walk as `void **` so
+         * each slot is native pointer width (was `uint32_t *` which
+         * read half a pointer on 64-bit and warned at the
+         * (uint8_t *)<u32> cast). */
+        void **regionTable = careerTeamFlagsByRegionTable;
         uint16_t regionIdx = (uint8_t)(selTeamNumber >> 8);  /* move.b — high byte = country */
         int16_t regionOffset = (int16_t)(int8_t)regionIdx - 80;
         uint8_t *flagsArray = (uint8_t *)regionTable[regionOffset];

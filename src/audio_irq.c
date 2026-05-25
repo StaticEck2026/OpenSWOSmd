@@ -27,7 +27,7 @@ static const uint16_t kAmigaNotePeriodTable[36] = {
 /* Get AUDx register base from channel struct */
 static inline volatile uint8_t *audxBase(AudioChannel *chan)
 {
-    return (volatile uint8_t *)chan->hwRegBase;
+    return (volatile uint8_t *)(uintptr_t)chan->hwRegBase;
 }
 
 static inline void writeAudxPtr(volatile uint8_t *audx, uint32_t ptr)
@@ -68,7 +68,7 @@ static void beepVolumeEnvStop(AudioChannel *chan)
 /* BeepVolumeEnvLoadSegment — loads next envelope segment from data */
 static void beepVolumeEnvLoadSegment(AudioChannel *chan)
 {
-    uint8_t *envData = (uint8_t *)chan->pvEnvDataPtr;
+    uint8_t *envData = (uint8_t *)(uintptr_t)chan->pvEnvDataPtr;
     uint8_t targetVal = envData[3];
 
     chan->pvEnvTarget = targetVal;
@@ -161,7 +161,7 @@ static void beepVolumeLfoStep(AudioChannel *chan)
     if (lfoPtr == 0)
         return;
 
-    lfoData = (uint8_t *)lfoPtr;
+    lfoData = (uint8_t *)(uintptr_t)lfoPtr;
     idx = chan->pvVolLfoIdx;
     sample = (int8_t)lfoData[idx];
     /* muls.w pvCurVol,d1 -> asr.w #7,d1: asr.w operates only on the low
@@ -222,7 +222,7 @@ static void beepLFOAndPitchSlide(AudioChannel *chan)
     lfoPtr = chan->pvPitchLfoPtr;
     if (lfoPtr != 0)
     {
-        uint8_t *lfoData = (uint8_t *)lfoPtr;
+        uint8_t *lfoData = (uint8_t *)(uintptr_t)lfoPtr;
         uint32_t idx = chan->pvPitchLfoIdx;
         int8_t sample = (int8_t)lfoData[idx];
         int16_t mod;
@@ -274,7 +274,7 @@ static void beepLFOAndPitchSlide(AudioChannel *chan)
 /* InitVolumeEnvForNote — initializes beep envelope on note start */
 static void initVolumeEnvForNote(AudioChannel *chan)
 {
-    uint8_t *envData = (uint8_t *)chan->pvEnvDataPtr;
+    uint8_t *envData = (uint8_t *)(uintptr_t)chan->pvEnvDataPtr;
     int8_t delta;
 
     chan->pvEnvTarget = 0;
@@ -289,7 +289,7 @@ static void initVolumeEnvForNote(AudioChannel *chan)
  * Asm: AudioIRQNoteOnInitChannel (line 9480) */
 static void noteOnInitChannel(AudioChannel *chan, uint16_t amigaPeriod)
 {
-    VariantDescriptor *variantDesc = (VariantDescriptor *)chan->pvVariantDesc;
+    VariantDescriptor *variantDesc = (VariantDescriptor *)(uintptr_t)chan->pvVariantDesc;
     uint8_t *envData;
     uint8_t *sampleBase;
     volatile uint8_t *audx;
@@ -314,7 +314,7 @@ static void noteOnInitChannel(AudioChannel *chan, uint16_t amigaPeriod)
 
     /* Set up first-time sample: a4 = sampleBase + firstSampleOffset */
     audx = audxBase(chan);
-    sampleBase = (uint8_t *)chan->pvSampleBase;
+    sampleBase = (uint8_t *)(uintptr_t)chan->pvSampleBase;
     sampleBase += variantDesc->firstSampleOffset;
 
     /* clr.w (a4) — clear first word of sample */
@@ -376,7 +376,7 @@ static uint8_t loadAUDxPtrLenIfReloadNeeded(AudioChannel *chan)
 
         chan->pvReloadFlag &= ~1;
 
-        sampleBase = (uint8_t *)chan->pvSampleBase;
+        sampleBase = (uint8_t *)(uintptr_t)chan->pvSampleBase;
         offset = (uint32_t)chan->pvSampleOffset;
         offset += offset; /* words to bytes */
         sampleBase += offset;
@@ -424,7 +424,7 @@ static void runChannelScriptStep(AudioChannel *chan, uint8_t loopCount)
             if (chan->pvPeriodCounter != 0)
                 goto reload_timer;
 
-            script = (uint8_t *)scriptPtr;
+            script = (uint8_t *)(uintptr_t)scriptPtr;
             goto fetch_cmd;
         }
         else
@@ -443,7 +443,7 @@ fetch_cmd:
             {
             case 0: /* cmd 0x80: play note from track */
             {
-                uint8_t *trackPtr = (uint8_t *)chan->pvNoteScript;
+                uint8_t *trackPtr = (uint8_t *)(uintptr_t)chan->pvNoteScript;
                 uint8_t noteRef;
 
                 chan->pvRepeatPeriod = 1;
@@ -579,7 +579,7 @@ static void volumeEnvStop(AudioChannel *chan)
 /* VolumeEnvLoadSegment — loads next secondary envelope segment */
 static void volumeEnvLoadSegment(AudioChannel *chan)
 {
-    uint8_t *envData = (uint8_t *)chan->svEnvDataPtr;
+    uint8_t *envData = (uint8_t *)(uintptr_t)chan->svEnvDataPtr;
     uint8_t targetVal = envData[3];
 
     chan->svEnvTarget = targetVal;
@@ -669,7 +669,7 @@ static void volumeLfoStep(AudioChannel *chan)
     if (lfoPtr == 0)
         return;
 
-    lfoData = (uint8_t *)lfoPtr;
+    lfoData = (uint8_t *)(uintptr_t)lfoPtr;
     idx = chan->svVolLfoIdx;
     sample = (int8_t)lfoData[idx];
     /* asr.w #7: truncate product to int16_t before shift (word-only) */
@@ -734,7 +734,7 @@ static void lfoAndPitchSlide(AudioChannel *chan)
     lfoPtr = chan->svPitchLfoPtr;
     if (lfoPtr != 0)
     {
-        uint8_t *lfoData = (uint8_t *)lfoPtr;
+        uint8_t *lfoData = (uint8_t *)(uintptr_t)lfoPtr;
         uint32_t idx = chan->svPitchLfoIdx;
         int8_t sample = (int8_t)lfoData[idx];
         int16_t mod;
@@ -777,7 +777,7 @@ static void lfoAndPitchSlide(AudioChannel *chan)
 /* InitPitchEnv — secondary voice note init (analogous to NoteOnInitChannel) */
 static void initPitchEnv(AudioChannel *chan, uint16_t amigaPeriod)
 {
-    VariantDescriptor *variantDesc = (VariantDescriptor *)chan->svVariantDesc;
+    VariantDescriptor *variantDesc = (VariantDescriptor *)(uintptr_t)chan->svVariantDesc;
     uint8_t *envData;
     uint8_t *sampleBase;
     volatile uint8_t *audx;
@@ -805,7 +805,7 @@ static void initPitchEnv(AudioChannel *chan, uint16_t amigaPeriod)
 
     /* Set up first-time sample */
     audx = audxBase(chan);
-    sampleBase = (uint8_t *)chan->svSampleBase;
+    sampleBase = (uint8_t *)(uintptr_t)chan->svSampleBase;
     sampleBase += variantDesc->firstSampleOffset;
 
     *(uint16_t *)sampleBase = 0;
@@ -817,7 +817,7 @@ static void initPitchEnv(AudioChannel *chan, uint16_t amigaPeriod)
 /* InitVolumeEnv — secondary voice envelope init */
 static void initVolumeEnv(AudioChannel *chan)
 {
-    uint8_t *envData = (uint8_t *)chan->svEnvDataPtr;
+    uint8_t *envData = (uint8_t *)(uintptr_t)chan->svEnvDataPtr;
     int8_t delta;
 
     chan->svEnvTarget = 0;
@@ -876,7 +876,7 @@ static uint8_t loadAUDxPtrLenIfReloadNeeded2(AudioChannel *chan)
 
         chan->svReloadFlag &= ~1;
 
-        sampleBase = (uint8_t *)chan->svSampleBase;
+        sampleBase = (uint8_t *)(uintptr_t)chan->svSampleBase;
         offset = (uint32_t)chan->svSampleOffset;
         offset += offset;
         sampleBase += offset;
@@ -927,7 +927,7 @@ static void runModCommandStream(AudioChannel *chan)
     if (chan->svPeriodCounter != 0)
         goto reload_timer;
 
-    stream = (uint8_t *)streamPtr;
+    stream = (uint8_t *)(uintptr_t)streamPtr;
     goto fetch_cmd;
 
 fetch_cmd:

@@ -3333,7 +3333,13 @@ void _DIY_RebuildCompetitionAndTeamSelectionCaches(void)
     int16_t count = ctxS->numTeams - 1;
 
     for (int16_t i = count; i >= 0; i--) {
-        uint8_t *compPtr = (uint8_t *)tablePtr[0];
+        /* `tablePtr` walks {ptr, int} pairs at 4-byte stride. On 64-bit
+         * tablePtr[0] is a 32-bit value we need to interpret as a
+         * pointer — double-cast through uintptr_t to silence the
+         * Wint-to-pointer-cast warning while preserving the zero-
+         * extended low-32 address (matches the equality-compare against
+         * currentCompetitionPtr, which has the same source/encoding). */
+        uint8_t *compPtr = (uint8_t *)(uintptr_t)tablePtr[0];
         uint32_t divIndex = tablePtr[1];
         tablePtr += 2;
 

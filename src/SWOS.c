@@ -66,7 +66,10 @@ extern uint8_t *_AllocMemAny(uint32_t size);
 SWOS_CHIP_BSS volatile uint32_t g_swos_chip_bss_anchor;
 SWOS_FAST_BSS volatile uint32_t g_swos_fast_bss_anchor;
 
-static void set_vector(uint32_t vbr, uint32_t offset, void (*handler)(void))
+/* m68k exception-vector table installer. Dead code on SDL (no real
+ * VBR), but kept for the Amiga port. uintptr_t so the cast to
+ * `volatile uint32_t *` doesn't widen a 32-bit literal on 64-bit. */
+static void set_vector(uintptr_t vbr, uintptr_t offset, void (*handler)(void))
 {
     volatile uint32_t *vector = (volatile uint32_t *)(vbr + offset);
     *vector = (uintptr_t)handler;

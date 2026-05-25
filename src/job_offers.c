@@ -675,9 +675,12 @@ void _ViewFutureTeamLeague(void) {
     TeamFile *teamPtr = (TeamFile *)teamOfferingJobPtr;
     int16_t d7 = (int8_t)teamPtr->league;
     uint8_t countryIdx = teamPtr->countryNumber;
-    uint32_t *compTable = (uint32_t *)competitionsTable;
+    /* competitionsTable is `void *[]` (native-width pointers).
+     * Walk as `void **` so each slot is sizeof(void*), not 4. The
+     * legacy `uint32_t *` cast read half a pointer on 64-bit. */
+    void **compTable = competitionsTable;
     uint8_t *compEntry = (uint8_t *)compTable[countryIdx];
-    uint8_t *comp = (uint8_t *)(*(uint32_t *)compEntry);
+    uint8_t *comp = *(uint8_t **)compEntry;
 
     highlightedLeagueTeamId = BE_READ_U16(teamPtr);
     _Career_ViewOrEditCompetitionSlot(comp, (uint16_t)d7);

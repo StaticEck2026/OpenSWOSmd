@@ -751,7 +751,9 @@ void _Career_ProcessCompetitionForNextSeason(uint16_t compId)
     currentCompetitionId = (uint8_t)compId;
     cachedTertiaryQualifiedTeamId = 0xFFFF;
 
-    uint32_t *tableEntry = (uint32_t *)competitionsTable[compId & 0xFF];
+    /* Walk competitionsTable[idx]'s sub-table as void** so each slot is
+     * native pointer-width. Was uint32_t* — read half-pointers on 64-bit. */
+    void **tableEntry = (void **)competitionsTable[compId & 0xFF];
 
     /* Entry layout: [0]=primary ptr, [1]=skip, [2]=secondary ptr, [3]=tertiary ptr */
     uint8_t *primary = (uint8_t *)tableEntry[0];

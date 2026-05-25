@@ -73,7 +73,7 @@ extern uint8_t  pl2Fire;
 /* CheckIfBallOutOfPlay globals */
 extern uint16_t playRefereeWhistle;
 extern Sprite  *lastPlayerPlayed;
-extern uint32_t lastKeeperPlayed;
+extern Sprite *lastKeeperPlayed;
 extern uint16_t statsTeam1Goals;
 extern uint16_t statsTeam2Goals;
 extern uint16_t statsTeam1GoalsCopy2;
@@ -516,7 +516,7 @@ static void __attribute__((noinline)) handleGoalScored(TeamGeneralInfo *teamData
     a0 = lastPlayerPlayed;
     if (lastKeeperPlayed != 0) {
         if (a0 == &goalie1Sprite || a0 == &goalie2Sprite)
-            a0 = (Sprite *)(uint32_t)lastKeeperPlayed;
+            a0 = lastKeeperPlayed;
     }
     statsTeam1GoalsCopy2 = statsTeam1Goals;
     statsTeam2GoalsCopy2 = statsTeam2Goals;

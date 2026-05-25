@@ -271,7 +271,11 @@ static int32_t assetSys_Op5ThenMaybe6(const uint8_t *sourceDesc)
     if (result != 0)
     {
         /* Op 5 returned non-zero — do op 6 with it */
-        _RobNorthenLoader_C(6, 0, (uint8_t *)(uint32_t)result, (uint8_t *)0);
+        /* Asm path: op-5 returned a 32-bit address; op-6 takes it as a
+         * pointer. Double-cast preserves the zero-extended 32-bit value
+         * on 64-bit (matching the Amiga behaviour where pointer == 32-bit
+         * uint). Only used by asset-loader paths that are dead on SDL. */
+        _RobNorthenLoader_C(6, 0, (uint8_t *)(uintptr_t)(uint32_t)result, (uint8_t *)0);
         return 0;
     }
     return 1;
