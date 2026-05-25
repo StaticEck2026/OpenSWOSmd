@@ -2652,7 +2652,7 @@ void _ShowPlayerMarket(void)
 /* =============================================================== */
 
 extern int16_t filterMenuRedrawList[];
-extern uint32_t playerMarketVisibleItems[];
+extern uintptr_t playerMarketVisibleItems[];
 static void showSquadWithTransferMarketMask(void);
 
 /* Helper: update filter entry states and redraw filter entries (was loc_14506E) */
@@ -4938,7 +4938,7 @@ void _BuyOtherForeignPlayer(void)
 
 extern uint8_t *positionGroupTable[];   /* 4 pointers to position group byte arrays (0xFF terminated) */
 extern uint8_t  playerRatingFilterThresholds[];  /* 17-byte lookup: filter index → min rating */
-extern uint32_t playerMarketVisibleItems[];      /* up to 10 pointers to market entries */
+extern uintptr_t playerMarketVisibleItems[];      /* up to 10 pointers to market entries */
 
 /* PlayerMarketPlayerMatchesFilters — filter predicate for player market.
  * blockPtr uses the "block pointer" convention: blockPtr + 0x4C = PlayerFile start.
@@ -5036,7 +5036,7 @@ void _PlayerMarketBuildVisiblePlayerList(void)
     playerMarketTotalMatchCount = 0;
     playerMarketVisibleItemCount = 0;
 
-    uint32_t *visPtr = playerMarketVisibleItems;
+    uintptr_t *visPtr = playerMarketVisibleItems;
 
     if (showDomesticPlayerMarket != 0) {
         /* ---- Domestic market path ---- */
@@ -5064,7 +5064,7 @@ void _PlayerMarketBuildVisiblePlayerList(void)
                 uint16_t scrollOff = playerMarketListScrollOffset;
                 if (scrollOff < playerMarketTotalMatchCount &&
                     scrollOff + 10 >= playerMarketTotalMatchCount) {
-                    *visPtr++ = (uint32_t)a1;
+                    *visPtr++ = (uintptr_t)a1;
                     playerMarketVisibleItemCount++;
                 }
             }
@@ -5100,7 +5100,7 @@ void _PlayerMarketBuildVisiblePlayerList(void)
                 uint16_t scrollOff = playerMarketListScrollOffset;
                 if (scrollOff < playerMarketTotalMatchCount &&
                     scrollOff + 10 >= playerMarketTotalMatchCount) {
-                    *visPtr++ = (uint32_t)a1;
+                    *visPtr++ = (uintptr_t)a1;
                     playerMarketVisibleItemCount++;
                 }
             }

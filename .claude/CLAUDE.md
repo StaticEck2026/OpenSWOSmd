@@ -73,15 +73,17 @@ fixups at all (`LoadCompetitionFile` is just a magic-bytes verifier). This
 is one of the bugs we *don't* inherit: our Amiga C port no longer places
 data at fixed addresses either, so the same fixup is needed on both ports.
 
-**Until the JSON-format rewrite lands**, the right fix is post-load
-re-derivation: a `_RebuildPointersAfterLoad()` hook that recomputes every
-pointer field from a stable identity (competition ID → static cup struct
-lookup, careerFileBuffer offsets → `&competitionFileBuffer` etc., runtime
-fields zeroed) and repopulates the runtime DIY struct
-(`diyCompetitionStart`) from the loaded competition slot bytes. Wire it
-into `_LoadCareerFile` after the magic check passes. This keeps the .CAR
-format unchanged, fixes save round-trips, and gets back-ported verbatim to
-the Amiga C port.
+**The JSON save format is live** (`src/save_format_json.c`, ~3270 lines).
+Build with `make SWOS_SAVE_FORMAT_JSON=1` to write new saves in JSON via
+mjson — pointer fields are emitted as semantic identities (competition id,
+string-pool key, etc.) rather than raw address bytes, so saves round-trip
+across rebuilds and across 32/64-bit. Load auto-detects format from the
+file header so legacy `.CAR` dumps still open. `SWOS_SAVE_FORMAT_JSON_VERIFY=1`
+adds a load-time diff that compares the JSON-derived byte image against the
+opaque-data fallback — a zero-mismatch result means every meaningful byte
+is covered by typed fields/blobs and opaque_data can be removed. Step 4
+of the long-term roadmap is now mostly "delete the legacy dump path once
+all save types are proven."
 
 ## Data
 

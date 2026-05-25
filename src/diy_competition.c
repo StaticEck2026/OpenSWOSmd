@@ -1700,11 +1700,19 @@ void _DIY_RecomputeCompetitionDerivedFields(void)
  * ================================================================ */
 static void getCurrentFixtureTeamPtrs(uint8_t **team1Out, uint8_t **team2Out)
 {
-    DIYCompetition *a0s = &diyCompetitionStart.base;
+    DIYCompetitionEx *compEx = &diyCompetitionStart;
+    DIYCompetition *a0s = &compEx->base;
     uint8_t *a0 = (uint8_t *)a0s;
     uint16_t d5 = (uint16_t)a0s->subRoundCounter;
     d5 = (uint16_t)(d5 * (uint16_t)a0s->totalMatchesInRound);
-    uint8_t *fixturePositions = a0 + 0xEE + d5;  /* extended */
+    /* fixturePositions = shuffleAndPad[d5..]. Original asm uses the raw
+     * byte offset 0xEE (parent-relative) but on 64-bit DIYCompetition
+     * grew by +8 from the namePtr pointer-width change (see size_check
+     * at game_types.h:599), so the raw offset reads 8 bytes too early —
+     * inside cupRoundResults[100], producing garbage like 56/74/92/110
+     * for the team grid lookup. Use the typed field so the address is
+     * bitness-correct on both 32 and 64-bit. */
+    uint8_t *fixturePositions = compEx->matchData.league.shuffleAndPad + d5;
 
     /* Select fixture schedule: EC fixture data or general table */
     uint8_t *schedule;
@@ -1732,14 +1740,47 @@ static void getCurrentFixtureTeamPtrs(uint8_t **team1Out, uint8_t **team2Out)
     uint32_t offsetB = (uint16_t)gridIdxB * 18u;
     uint8_t *team2 = a0 + offsetB;
 
-    /* Home/away swap if flag bit 0 is set */
-    uint8_t swapFlag = (uint8_t)(a0[0x61] & 1);
+    /* Home/away swap if flag bit 0 is set. Asm: btst #0,$61(a0) with
+     * a0=diyCompetitionStart. On Amiga BE, byte +0x61 is the LSB of
+     * `minSubstitutes` (uint16 at parent +0x60). Bit 0 of the LSB == bit
+     * 0 of the uint16. Read the typed field directly so the test is
+     * bitness- and endian-agnostic — `0x61` is a 32-bit raw offset and
+     * lands inside DIYCompetition padding on 64-bit (same trap that broke
+     * the fixturePositions read above). */
+    uint8_t swapFlag = (uint8_t)(compEx->minSubstitutes & 1);
     if (swapFlag) {  /* extended */
         *team1Out = team2;
         *team2Out = team1;
     } else {
         *team1Out = team1;
         *team2Out = team2;
+    }
+
+    /* [bug20-getfx] Always-on first-N trace of grid/schedule lookup. */
+    {
+        static int s_gfCalls = 0;
+        if (s_gfCalls < 30) {
+            s_gfCalls++;
+            fprintf(stderr, "[bug20-getfx] #%d subRound=%d "
+                            "matchesInRound=%d sectionProg=%u "
+                            "d5(grid stride)=%u "
+                            "fxPositionsOff=0x%lx "
+                            "schedule[0..3]=%02X %02X %02X %02X "
+                            "posA=%u posB=%u gridA=%d gridB=%d "
+                            "swap=%u\n",
+                            s_gfCalls,
+                            (int)a0s->subRoundCounter,
+                            (int)a0s->totalMatchesInRound,
+                            (unsigned)roundIdx,
+                            (unsigned)d5,
+                            (unsigned long)(fixturePositions - a0),
+                            (unsigned)schedule[0], (unsigned)schedule[1],
+                            (unsigned)schedule[2], (unsigned)schedule[3],
+                            (unsigned)posA, (unsigned)posB,
+                            (int)gridIdxA, (int)gridIdxB,
+                            (unsigned)swapFlag);
+            fflush(stderr);
+        }
     }
 
 #ifdef SWOS_DEBUG_AUTOSKIP
@@ -2014,7 +2055,12 @@ uint8_t *_DIY_CopyCompetitionTeamIndexTable(uint8_t *dst)
     if (count == 0)
         return dst;
 
-    uint16_t *src = (uint16_t *)(comp + 0x1AE);  /* extended */
+    /* +0x1AE is parent offset = offset 0x60 within _bss_2E0AE (which
+     * starts at parent +0x14E). Use typed field so 64-bit pointer
+     * growth in DIYCompetition base doesn't shift the read. See
+     * project_raw_offset_64bit_shift_trap.md. */
+    DIYCompetitionEx *_compEx_idx_table = &diyCompetitionStart;
+    uint16_t *src = (uint16_t *)(_compEx_idx_table->_bss_2E0AE + 0x60);  /* extended */
     uint16_t *d = (uint16_t *)dst;
     for (int16_t i = (int16_t)(count - 1); i >= 0; i--) {
         *d++ = *src++;
@@ -2050,7 +2096,8 @@ void _DIY_ApplyPromotionRelegationWeightsToScratch(const uint8_t *weights)
     DIYCompetition *comps = &diyCompetitionStart.base;
     uint8_t *comp = (uint8_t *)comps;
     uint16_t numTeams = (uint16_t)comps->numTeams;
-    uint8_t *teamData = comp + 0x2CE;  /* extended */
+    /* +0x2CE = teamGridPairings[64]; use typed field for bitness safety. */
+    uint8_t *teamData = ((DIYCompetitionEx *)comp)->teamGridPairings;
     const uint8_t *w = weights;
 
     for (int16_t i = (int16_t)(numTeams - 1); i >= 0; i--) {
@@ -2119,7 +2166,10 @@ void _DIY_UpdatePromotionRelegationScratchCounts(void)
             uint16_t entryOff = *indices++;
             uint8_t *entry = comp + entryOff;
             /* Follow DIYTeamStats teamSelOffset (+0x2B4) and add selTeamsPtr base */
-            uint32_t selOff = ((DIYTeamStats *)(entry + DIY_STANDINGS_OFFSET))->teamSelOffset;
+            /* teamSelOffset is int32_t — careerTeam's offset is negative; keep
+         * signed so 64-bit pointer arithmetic sign-extends correctly
+         * (see SetupCurrentFixtureTeamNames for the bug story). */
+        int32_t selOff = ((DIYTeamStats *)(entry + DIY_STANDINGS_OFFSET))->teamSelOffset;
             TeamFileEx *team = (TeamFileEx *)(&selTeamsPtr + selOff);
             /* "countryNum" name predates the audit — the slot at byte 2
              * is TeamFile.globalTeamNumber, used as a scratch index. */
@@ -2142,7 +2192,10 @@ void _DIY_UpdatePromotionRelegationScratchCounts(void)
     for (int16_t i = (int16_t)(relegatedCount - 1); i >= 0; i--) {
         uint16_t entryOff = *(--bottomIndices);
         uint8_t *entry = comp + entryOff;
-        uint32_t selOff = ((DIYTeamStats *)(entry + DIY_STANDINGS_OFFSET))->teamSelOffset;
+        /* teamSelOffset is int32_t — careerTeam's offset is negative; keep
+         * signed so 64-bit pointer arithmetic sign-extends correctly
+         * (see SetupCurrentFixtureTeamNames for the bug story). */
+        int32_t selOff = ((DIYTeamStats *)(entry + DIY_STANDINGS_OFFSET))->teamSelOffset;
         TeamFileEx *team = (TeamFileEx *)(&selTeamsPtr + selOff);
         uint16_t globalNo = (uint16_t)team->team.globalTeamNumber;
         scratch[globalNo]++;
@@ -2659,7 +2712,8 @@ two_leg_path:
         /* a1: scoreTab1 (parent +0xCA = cupRoundResults+0x40 score region)
          * a2: BSS_00_2E0AE — second-leg score buffer, kept raw pending naming */
         uint8_t *scores  = (uint8_t *)&comp->matchData.cup.cupRoundResults[0x40];
-        uint8_t *scores2 = (uint8_t *)comp + 0x14E;
+        /* parent +0x14E = _bss_2E0AE start; use typed field. */
+        uint8_t *scores2 = comp->_bss_2E0AE;
         uint8_t *grid    = comp->teamGridPairings;
         uint8_t *flags   = comp->matchData.cup.cupRoundResults;
         int16_t count    = a0s->totalMatchesInRound - 1;
@@ -3008,22 +3062,40 @@ void _DIY_RecordLeagueFixtureResultAndAdvanceProgress(void)
     DIYCompetition *a6s = &a6Ex->base;
     uint8_t *a6 = (uint8_t *)a6s;
 
-#ifdef SWOS_DEBUG_AUTOSKIP
-    SWOS_AUTOSKIP_LOG("[bug20-record] RecordLeagueFixtureResult ENTER compId=0x%04X "
-                      "minSubstitutes=%u (bail iff 0) playEachTeam=%u "
-                      "leagueMatchProgress=%u leagueCurrentSlot=%u "
-                      "totalMatchesPerSectionLive=%d totalMatchesInRound=%d "
-                      "subRoundCounter=%d numTeams=%d",
-                      (unsigned)*(uint16_t *)&a6s->compId,
-                      (unsigned)a6Ex->minSubstitutes,
-                      (unsigned)a6s->playEachTeam,
-                      (unsigned)a6Ex->leagueMatchProgress,
-                      (unsigned)a6Ex->leagueCurrentSlot,
-                      (int)a6Ex->matchData.league.totalMatchesPerSectionLive,
-                      (int)a6s->totalMatchesInRound,
-                      (int)a6s->subRoundCounter,
-                      (int)a6s->numTeams);
-#endif
+    /* [bug20-record] Always-on writer entry trace during bring-up.
+     * First-N limited so it doesn't flood. Pair with [bug20-fixture]
+     * (getCurrentFixtureTeamPtrs) to see fixture lookup chain. */
+    {
+        static int s_recCalls = 0;
+        if (s_recCalls < 20) {
+            s_recCalls++;
+            fprintf(stderr, "[bug20-record] #%d ENTER compId=0x%04X "
+                            "minSubs=%u playEachTeam=%u "
+                            "matchPairsPerRound=%d totalMatchesInRound=%d "
+                            "sectionMatchesProgress=%u halfGroupsCounter=%u "
+                            "matchesPerHalf=%u leagueCurrentSlot=%u "
+                            "leagueMatchProgress=%u "
+                            "totalMatchesPerSectionLive=%d "
+                            "subRoundCounter=%d numTeams=%d "
+                            "leagueTotalMatches=%u\n",
+                            s_recCalls,
+                            (unsigned)*(uint16_t *)&a6s->compId,
+                            (unsigned)a6Ex->minSubstitutes,
+                            (unsigned)a6s->playEachTeam,
+                            (int)a6s->matchPairsPerRound,
+                            (int)a6s->totalMatchesInRound,
+                            (unsigned)a6Ex->leagueSectionState.sectionMatchesProgress,
+                            (unsigned)a6Ex->leagueSectionState.halfGroupsCounter,
+                            (unsigned)a6Ex->leagueSectionState.matchesPerHalf,
+                            (unsigned)a6Ex->leagueCurrentSlot,
+                            (unsigned)a6Ex->leagueMatchProgress,
+                            (int)a6Ex->matchData.league.totalMatchesPerSectionLive,
+                            (int)a6s->subRoundCounter,
+                            (int)a6s->numTeams,
+                            (unsigned)a6Ex->leagueTotalMatches);
+            fflush(stderr);
+        }
+    }
 
     /* Check if there are results to process (minSubstitutes repurposed as section counter) */
     if (a6Ex->minSubstitutes == 0)
@@ -3078,22 +3150,32 @@ process_next:
     uint8_t *sel1 = &selTeamsPtr + ((DIYTeamStats *)(team1Comp + DIY_STANDINGS_OFFSET))->teamSelOffset;
     uint8_t *sel2 = &selTeamsPtr + ((DIYTeamStats *)(team2Comp + DIY_STANDINGS_OFFSET))->teamSelOffset;
 
-#ifdef SWOS_DEBUG_AUTOSKIP
-    SWOS_AUTOSKIP_LOG("[bug20-fixture] RecLoop iter compId=0x%04X "
-                      "minSubs=%u curSlot=%u secMatchProg=%u matchesPerSecLive=%d "
-                      "sel1=%p t1=0x%04X ctrl1=%u sel2=%p t2=0x%04X ctrl2=%u "
-                      "namePtr=%p isFriendly=%d playEach=%u resultPtrOff=0x%lx",
-                      (unsigned)*(uint16_t *)&a6s->compId,
-                      (unsigned)a6Ex->minSubstitutes,
-                      (unsigned)a6Ex->leagueCurrentSlot,
-                      (unsigned)a6Ex->leagueSectionState.sectionMatchesProgress,
-                      (int)a6Ex->matchData.league.totalMatchesPerSectionLive,
-                      (void *)sel1, (unsigned)BE_READ_U16(sel1), (unsigned)sel1[4],
-                      (void *)sel2, (unsigned)BE_READ_U16(sel2), (unsigned)sel2[4],
-                      (void *)a6s->namePtr, (int)(a6s->namePtr == aFriendly),
-                      (unsigned)a6s->playEachTeam,
-                      (unsigned long)(resultPtr - cache));
-#endif
+    /* [bug20-fixture] Always-on per-iteration trace. First-N limited. */
+    {
+        static int s_fxCalls = 0;
+        if (s_fxCalls < 30) {
+            s_fxCalls++;
+            uint8_t *a0 = (uint8_t *)a6s;
+            fprintf(stderr, "[bug20-fixture] #%d compId=0x%04X "
+                            "subRound=%d sectionProgress=%u "
+                            "totalMatchesInRound=%d matchPairsPerRound=%d "
+                            "team1Off=0x%lx team2Off=0x%lx "
+                            "t1=0x%04X ctrl1=%u t2=0x%04X ctrl2=%u "
+                            "resultPtrOff=0x%lx\n",
+                            s_fxCalls,
+                            (unsigned)*(uint16_t *)&a6s->compId,
+                            (int)a6s->subRoundCounter,
+                            (unsigned)a6Ex->leagueSectionState.sectionMatchesProgress,
+                            (int)a6s->totalMatchesInRound,
+                            (int)a6s->matchPairsPerRound,
+                            (unsigned long)(team1Comp - a0),
+                            (unsigned long)(team2Comp - a0),
+                            (unsigned)BE_READ_U16(sel1), (unsigned)sel1[4],
+                            (unsigned)BE_READ_U16(sel2), (unsigned)sel2[4],
+                            (unsigned long)(resultPtr - cache));
+            fflush(stderr);
+        }
+    }
 
     /* Check if team1 is human-controlled (category == 1) and write
      * the home/away marker to fixture[+0x0A].
@@ -3642,9 +3724,13 @@ void _DIY_BuildSeededBracketAndUpdateScores(uint8_t *diy, uint8_t *slot,
 
 copy_back:
     {
-        /* Copy sorted offsets to team order, then to team list */
+        /* Copy sorted offsets to team order, then to team list.
+         * Raw `comp + 0xEE` is the 32-bit byte offset to the shuffle
+         * grid; on 64-bit DIYCompetition grew by +8 so the raw offset
+         * lands 8 bytes too early (inside cupRoundResults). Use the
+         * typed field. See project_raw_offset_64bit_shift_trap.md. */
         uint16_t *sortedOffsets = compEx->matchData.league.teamEntryOffsets;
-        uint8_t *teamOrder = comp + 0xEE;  /* diyTeamShuffleIndices alias */
+        uint8_t *teamOrder = compEx->matchData.league.shuffleAndPad;
         uint16_t numTeams = (uint16_t)compS->numTeams;
 
         for (int16_t i = (int16_t)numTeams - 1; i >= 0; i--) {
@@ -3655,8 +3741,8 @@ copy_back:
         }
 
         /* Copy team order to diy team list */
-        uint8_t *orderSrc = comp + 0xEE;  /* extended buffer, beyond DIYCompetition struct */
-        uint8_t *diyDst = diy + 0x5A;  /* byte array starting at numRounds, used as raw team index buffer */
+        uint8_t *orderSrc = compEx->matchData.league.shuffleAndPad;
+        uint8_t *diyDst = diy + 0x5A;  /* `diy` is a raw disk buffer (competition file), not DIYCompetitionEx — disk offsets are stable across bitness */
         for (int16_t i = (int16_t)numTeams - 1; i >= 0; i--)
             *diyDst++ = *orderSrc++;
 
@@ -3729,10 +3815,12 @@ check_worldcup:
         }
     }
 
-    /* Copy team grid from comp to diy */
+    /* Copy team grid from comp to diy. Raw `comp + 0x2CE` is the 32-bit
+     * byte offset to teamGridPairings[64]; on 64-bit DIYCompetition grew
+     * by +8 so this would land in cupTeamIds. Use the typed field. */
     {
-        uint8_t *gridSrc = comp + 0x2CE;  /* extended buffer, beyond DIYCompetition struct */
-        uint8_t *gridDst = diy + 0x5A;  /* byte array starting at numRounds, used as raw team index buffer */
+        uint8_t *gridSrc = ((DIYCompetitionEx *)comp)->teamGridPairings;
+        uint8_t *gridDst = diy + 0x5A;  /* `diy` is raw disk buffer (compFile), not DIYCompetitionEx — disk offsets are stable */
         uint16_t count = (uint16_t)compS->numTeams;
         if (s->doubleCount != 0)
             count <<= 1;
@@ -3842,10 +3930,12 @@ void _DIY_BuildTeamGridAndIndexMaps(uint8_t *diy, uint8_t *slot,
 
 build_index_maps:
     {
-        /* Build team order and offset maps */
+        /* Build team order and offset maps. Same 64-bit raw-offset trap
+         * as elsewhere — use the typed shuffleAndPad field instead of
+         * `comp + 0xEE`. */
         DIYCompetitionEx *compEx = (DIYCompetitionEx *)comp;
         uint8_t *teamList = diy + 0x5A;
-        uint8_t *teamOrder = comp + 0xEE;
+        uint8_t *teamOrder = compEx->matchData.league.shuffleAndPad;
         uint16_t *teamOffsets = compEx->matchData.league.teamEntryOffsets;
         uint16_t numTeams = s->numTeams;
 
@@ -3967,9 +4057,11 @@ void _DIY_ShuffleTeamsAndBuildCompTeamList(uint8_t *diy, uint8_t *slot,
 
 build_comp_list:
     {
-        /* Copy team list to competition order list */
+        /* Copy team list to competition order list. Raw `comp + 0x2CE`
+         * needs the +8 64-bit shift compensation — use the typed field
+         * (teamGridPairings[64] is at parent +0x2CE). */
         uint8_t *teamList = diy + 0x5A;
-        uint8_t *compOrder = comp + 0x2CE;
+        uint8_t *compOrder = ((DIYCompetitionEx *)comp)->teamGridPairings;
         uint16_t numTeams = s->numTeams;
         uint16_t copyCount = numTeams;
 
@@ -5776,19 +5868,19 @@ after_qual_text: ;
             a4->isInvisible = 0;
             {
                 /* Set number value via double-indirection: fg → ptr → write */
-                uint16_t **pp = (uint16_t **)(uint32_t)a4->fg;
+                uint16_t **pp = (uint16_t **)(uintptr_t)a4->fg;
                 **pp = slot->formatFlag16E;
             }
             a4++;
             a4->isInvisible = 0;
             {
-                uint16_t **pp = (uint16_t **)(uint32_t)a4->fg;
+                uint16_t **pp = (uint16_t **)(uintptr_t)a4->fg;
                 **pp = slot->initConst170;
             }
             a4++;
             a4->isInvisible = 0;
             {
-                uint16_t **pp = (uint16_t **)(uint32_t)a4->fg;
+                uint16_t **pp = (uint16_t **)(uintptr_t)a4->fg;
                 **pp = slot->formatFlag172;
             }
             a4++;
@@ -5815,7 +5907,7 @@ after_qual_text: ;
             /* Show group toggle entry */
             a4->isInvisible = 0;
             {
-                uint16_t **pp = (uint16_t **)(uint32_t)a4->fg;
+                uint16_t **pp = (uint16_t **)(uintptr_t)a4->fg;
                 **pp = slot->initConst168;
             }
             a4++;
@@ -5829,7 +5921,7 @@ after_qual_text: ;
             /* Show group count entry */
             a4->isInvisible = 0;
             {
-                uint16_t **pp = (uint16_t **)(uint32_t)a4->fg;
+                uint16_t **pp = (uint16_t **)(uintptr_t)a4->fg;
                 **pp = slot->playEachTeam;
             }
             a4++;
@@ -6386,7 +6478,7 @@ void _DesignDIYCupOnDraw(void)
 
     /* Entry 9: show and write play-each-team value via double indirection */
     entry9->isInvisible = 0;
-    uint16_t *numericPtr = *(uint16_t **)(uint32_t)entry9->fg;
+    uint16_t *numericPtr = *(uint16_t **)(uintptr_t)entry9->fg;
     *numericPtr = (uint16_t)a2s->playEachTeam;
 
     /* Entry 11: show and write numRounds */
@@ -6419,7 +6511,7 @@ void _DesignDIYCupOnDraw(void)
 
             /* Knockout type: double indirection write */
             a4->isInvisible = 0;
-            numericPtr = *(uint16_t **)(uint32_t)a4->fg;
+            numericPtr = *(uint16_t **)(uintptr_t)a4->fg;
             *numericPtr = comp->matchData.cup.roundLegs[roundIdx];
             a4++;
 
@@ -6429,13 +6521,13 @@ void _DesignDIYCupOnDraw(void)
 
             /* Qualifiers: double indirection write */
             a4->isInvisible = 0;
-            numericPtr = *(uint16_t **)(uint32_t)a4->fg;
+            numericPtr = *(uint16_t **)(uintptr_t)a4->fg;
             *numericPtr = comp->matchData.cup.roundExtraTime[roundIdx];
             a4++;
 
             /* Byes: double indirection write */
             a4->isInvisible = 0;
-            numericPtr = *(uint16_t **)(uint32_t)a4->fg;
+            numericPtr = *(uint16_t **)(uintptr_t)a4->fg;
             *numericPtr = comp->matchData.cup.roundPenalties[roundIdx];
             a4++;
         } else {
@@ -8213,9 +8305,13 @@ void _DIYLeagueTournamentStats(void)
 __attribute__((used, externally_visible))
 void _DIYLeagueTournamentExit(void)
 {
-    uint8_t *a0 = (uint8_t *)&diyCompetitionStart;
-    int16_t field48 = *(int16_t *)&a0[0x48];   /* hasGroups */
-    int16_t field60 = *(int16_t *)&a0[0x60];
+    DIYCompetitionEx *compEx = &diyCompetitionStart;
+    uint8_t *a0 = (uint8_t *)compEx;
+    int16_t field48 = (int16_t)compEx->base.hasGroups;
+    /* +0x60 is minSubstitutes on 32-bit; on 64-bit the raw offset reads
+     * 8 bytes too early due to DIYCompetition pointer-width growth.
+     * Use the typed field. See project_raw_offset_64bit_shift_trap.md. */
+    int16_t field60 = (int16_t)compEx->minSubstitutes;
 
     extern uint16_t youreSacked;
     extern uint16_t gameType;
@@ -8429,16 +8525,25 @@ void _DIYLeagueTournament_SetupCurrentFixtureTeamNames(void)
 
     e++;  /* entry 12 */
     e->isInvisible = 0;
-    /* DIYTeamStats teamSelOffset (+0x2B4) → name offset, add selTeamNameBase */
+    /* DIYTeamStats teamSelOffset (+0x2B4) → name offset, add selTeamNameBase.
+     * teamSelOffset is int32_t (signed) — careerTeam lives BELOW
+     * selTeamsPtr in BSS so its offset is negative. Reading into
+     * uint32_t and then adding to a pointer on 64-bit zero-extends the
+     * value to a huge positive number (~4 GB), and the pointer add
+     * carries past the 32-bit boundary, leaving fg with upper-32-bits=2
+     * and a low-half that looks almost-valid — exactly the corruption
+     * pattern that left the bottom fixture row's left-team-name blank.
+     * Keep signed so the 64-bit sign-extension handles negative offsets
+     * correctly. */
     {
-        uint32_t nameOff = ((DIYTeamStats *)(team1 + DIY_STANDINGS_OFFSET))->teamSelOffset;
+        int32_t nameOff = ((DIYTeamStats *)(team1 + DIY_STANDINGS_OFFSET))->teamSelOffset;
         e->fg = (uintptr_t)(&selTeamNameBase + nameOff);
     }
 
     e++;  /* entry 13 */
     e->isInvisible = 0;
     {
-        uint32_t nameOff = ((DIYTeamStats *)(team2 + DIY_STANDINGS_OFFSET))->teamSelOffset;
+        int32_t nameOff = ((DIYTeamStats *)(team2 + DIY_STANDINGS_OFFSET))->teamSelOffset;
         e->fg = (uintptr_t)(&selTeamNameBase + nameOff);
     }
 
@@ -8470,8 +8575,11 @@ void _DIYLeagueTournament_DrawPlayMatchAndFixtureHeader(void)
 __attribute__((used, externally_visible))
 void _DIYLeagueTournamentNextMatch(void)
 {
-    uint8_t *a0 = (uint8_t *)&diyCompetitionStart;
-    int16_t field60 = *(int16_t *)&a0[0x60];
+    DIYCompetitionEx *compEx = &diyCompetitionStart;
+    uint8_t *a0 = (uint8_t *)compEx;
+    /* +0x60 = minSubstitutes; raw offset wrong on 64-bit, use typed
+     * field. See project_raw_offset_64bit_shift_trap.md. */
+    int16_t field60 = (int16_t)compEx->minSubstitutes;
 
     if (field60 == 0) {
         *(int16_t *)&a0[2] = 2;
@@ -9200,7 +9308,7 @@ void _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus(void)
         return;
     }
 
-    uint8_t *a1 = (uint8_t *)&diyCompetitionStart;
+    DIYCompetitionEx *compEx = &diyCompetitionStart;
 
     if (diyAllMatchesPlayed != 0) {
         /* All matches played */
@@ -9220,9 +9328,16 @@ void _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus(void)
         return;
     }
 
-    /* Not all played — check field $60 */
-    if (*(int16_t *)&a1[0x60] != 0) {
-        /* field $60 != 0 — check fixture view mode */
+    /* Not all played — check minSubstitutes (parent +0x60). Asm reads
+     * `*(int16_t *)&a1[0x60]` — that's the 32-bit raw offset to
+     * `minSubstitutes`. On 64-bit `DIYCompetition` grew from 0x60 to
+     * 0x68 (namePtr pointer-width change), so the raw offset lands
+     * inside the base struct's padding (reads as 0) and the menu always
+     * takes the "NEXT ROUND" branch instead of showing MATCH/RESULT
+     * for the player's pending fixture. Use the typed field.
+     * See memory project_raw_offset_64bit_shift_trap.md. */
+    if ((int16_t)compEx->minSubstitutes != 0) {
+        /* minSubstitutes != 0 — check fixture view mode */
         if ((int16_t)diyFixtureViewMode <= 0)
             goto show_next_match;
         /* diyFixtureViewMode > 0 — show match view options */

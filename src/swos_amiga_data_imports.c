@@ -33,7 +33,10 @@ uint16_t controlMask[1] = { 0x0000               };
 uint16_t diyCupPitchTypeOrSeasonSelection[1] = { 0x0000 };
 uint16_t kJumpHeaderSpeed[12] = { 0x0800,0x0600,0x0600,0x0700,0x0800,0x0700,0x0000,0x2000 , 0x0030,0x0001,0x0000,0x0800 };
 uint16_t pl2FireCounter[1] = { 0x0000 };
-uint32_t benchTeamGame[1] = { 0x00000000           };
+/* Pointer-storage globals — retyped from uint32_t to uintptr_t so the
+ * upper 32 bits of 64-bit pointers aren't truncated at the writer's
+ * (uint32_t)<ptr> cast. See [[project_uint32_pointer_storage_trap]]. */
+uintptr_t benchTeamGame[1] = { 0 };
 uint16_t playerMarketFilterAgeGroup[1] = { 0x0000 };
 uint16_t selectedPlayerTacticsPosition[1] = { 0x0000 };
 uint16_t kGoalkeeperMediumDeflectBallSpeed[1] = { 0x0400 };
@@ -124,7 +127,7 @@ uint16_t gameSeconds[1] = { 0x0000               };
 uint32_t allowShorterMenuItemsWithFrames[1] = { 0x00000000           };
 uint16_t playerCardChance[1] = { 0x0000               };
 uint16_t kLeftThrowInBallDestDelta[16] = { 250,-1000,1000,-1000,1000,0,1000,1000, 250,1000,-1000,1000,-1000,0,-1000,-1000 };
-uint32_t plPositions[1] = { 0x00000000 };
+uintptr_t plPositions[1] = { 0 };
 uint16_t ballInLowerPenaltyArea[1] = { 0x0000 };
 uint16_t kShotAtGoalMinumumSpeed[1] = { 0x0200 };
 uint16_t kGoalkeeperCatchSpeed[1] = { 0x0300               };
@@ -351,7 +354,7 @@ uint16_t copyTimeSprite[1] = { 0x0000               };
 uint16_t cachedPenaltyShootoutTeam2Score[1] = { 0x0000 };
 uint16_t turnDirCopiedFromCameraCount[1] = { 0x0000 };
 uint16_t currentCrowdSample[1] = { 0x0000 };
-uint32_t editTacticsPlayerNumbers[1] = { 0x00000000           };
+uintptr_t editTacticsPlayerNumbers[1] = { 0 };
 uint16_t oldCameraX[1] = { 0x0000               };
 uint16_t teamPlOfs24Table[30] = { 0x0008              , 0x0400              , 0x0070              , 0x0320              , 0x0090              , 0x0007              , 0x0007              , 0x0007              , 0x0003              , 0x0004              , 0x0005              , 0x0006              , 0x0007              , 0x0007              , 0x0007              , 0x0007              , 0x0007              , 0x0007              , 0x0007              , 0x0007              , 0x0007              , 0x0001              , 0x0006              , 0x0009              , 0x0004              , 0x000C              , 0x0001              , 0x0006              , 0x0009              , 0x0004               };
 uint16_t secondLeg[1] = { 0x0000 };
@@ -467,7 +470,12 @@ uint16_t secondsSwitchAccumulator[1] = { 0x0000               };
  * BSS and reads past entry 0 return garbage. Sized as
  * uint32_t[10] = 40 bytes, matching the original 2 + 38 footprint
  * exactly. */
-uint32_t playerMarketVisibleItems[10] = { 0 };
+/* Stores up to 10 pointers into homeMarketPlayers/foreignMarketPlayers
+ * entries. Amiga stored these as 32-bit values; on 64-bit the slot must
+ * be uintptr_t or the writer's `(uint32_t)a1` cast truncates the upper
+ * 32 bits and the reader SIGSEGVs in _PlayerMarketItemBeforeDraw.
+ * Same trap shape as [[project_uint32_pointer_storage_trap]]. */
+uintptr_t playerMarketVisibleItems[10] = { 0 };
 uint16_t diyLeagueTournament_viewOptionsAvailable[1] = { 0x0000 };
 uint16_t hilLeftTeamGoals[1] = { 0x0000 };
 uint16_t team1TotalGoals[1] = { 0x0000 };
@@ -530,7 +538,7 @@ uint16_t keyDelay[1] = { 0x0000 };
 uint16_t selectedLeagueIndex[1] = { 0x0000               };
 uint16_t subsTrainingTopTeam[1] = { 0x0000               };
 uint32_t seasonGateReceiptsAccum2[1] = { 0x00000000           };
-uint32_t pmSelectedPlayerEntry[1] = { 0x00000000           };
+uintptr_t pmSelectedPlayerEntry[1] = { 0 };
 TeamGeneralInfo *teamScoredDataPtr = (TeamGeneralInfo *)0;
 uint16_t patternsGoalCounter[1] = { 0x0000 };
 uintptr_t topTeamPtr[1] = { 0 };
@@ -560,7 +568,7 @@ uint16_t halfNumber[1] = { 0x0000               };
 uint16_t cachedPrimaryQualifiedTeamIds[9] = { 0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000, 0x0000 };
 uint16_t goalkeeperSkipFlag[1] = { 0x0000               };
 uint16_t pl2SkipFireCounter[1] = { 0x0000               };
-uint32_t benchTeam[1] = { 0x00000000           };
+uintptr_t benchTeam[1] = { 0 };
 uint32_t kBallJumpHeaderDeltaZ[1] = { 0x0000A000           };
 uint16_t throwInPassOrKick[1] = { 0x0000               };
 uint16_t kLowerLeftCornerBallDestDelta[16] = { 250,-1000,1000,-350,1000,-150,1000,1000, 0,1000,-1000,1000,-1000,0,-1000,-1000 };
@@ -580,7 +588,7 @@ uint16_t numTeamsColumn2[1] = { 0x0000 };
 uint16_t numTeamsColumn3[1] = { 0x0000 };
 uint16_t numTeamsCountryBuffer[1] = { 0x0000 };
 uint16_t refTimer[1] = { 0x0000               };
-uint32_t teamThatSubstitutes[1] = { 0x00000000 };
+uintptr_t teamThatSubstitutes[1] = { 0 };
 uintptr_t savedGoalBasePtr[1] = { 0 };
 uint16_t teamNumThatScored[1] = { 0x0000               };
 uint32_t viewSquadTitle[1] = { 0x00000000           };
@@ -697,7 +705,12 @@ uint16_t waitForPlayerToGoInTimer[1] = { 0x0000               };
 uint16_t cardsDisallowed[1] = { 0x0000               };
 uint16_t careerAddIntlPlayerSelectedPlayerOrdinal[1] = { 0x0000 };
 uint16_t selTeamsColumn3[1] = { 0x0000 };
-uint32_t selectedContest[1] = { 0x00000000 };
+/* selectedContest stores a Competition* pointer (Amiga binary uses a
+ * 32-bit pointer slot; on 64-bit it must be uintptr_t or the high half
+ * is truncated by the `(uint32_t)contest` cast at the writer site).
+ * Wrong-size storage caused VIEW WORLD panics because the truncated
+ * pointer dereferenced to zero-page memory and read all zeros. */
+uintptr_t selectedContest[1] = { 0 };
 uintptr_t abortText[1] = { 0 };
 uint16_t friendlyOk[1] = { 0x0000               };
 uint16_t whichCard[1] = { 0x0000               };

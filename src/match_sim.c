@@ -159,7 +159,7 @@ static uint32_t  team1AvailableMask;
 static uint32_t  team2AvailableMask;
 static uint16_t  team1AvailableCount;
 static uint16_t  team2AvailableCount;
-static uint32_t  currentGoalScorerDistPtr;
+static uintptr_t currentGoalScorerDistPtr;  /* holds a pointer into goalScorerDistributionByBallOutTactic[]; retyped uintptr_t for 64-bit. */
 static uint16_t  oldPlayerSkillDivisor;
 
 /* Externally-visible state (defined in asm, referenced by other asm modules) */
@@ -269,13 +269,13 @@ static void AssignSimulatedGoalsToScorers(TeamFileEx *team, uint8_t *remapTable,
     int16_t tacticIdx = (int8_t)team->team.tactics;
     TeamTactics *tactics = (TeamTactics *)teamTacticsTable[tacticIdx];
     int16_t ballOutTacticIdx = (int8_t)tactics->ballOutOfPlayTactics;
-    uint8_t *positions = (uint8_t *)(uint32_t)positionsTable[ballOutTacticIdx];
+    uint8_t *positions = (uint8_t *)positionsTable[ballOutTacticIdx];
 
     /* Get goal scorer distribution pointer */
-    currentGoalScorerDistPtr = goalScorerDistributionByBallOutTactic[ballOutTacticIdx];
+    currentGoalScorerDistPtr = (uintptr_t)goalScorerDistributionByBallOutTactic[ballOutTacticIdx];
 
     for (; d5 >= 0; d5--) {
-        uint8_t *distTable = (uint8_t *)(uint32_t)currentGoalScorerDistPtr;
+        uint8_t *distTable = (uint8_t *)currentGoalScorerDistPtr;
         uint16_t d0 = _Rand2();
 
         /* Special case: if d0 >= 0xF8, it's an own goal */
@@ -947,7 +947,7 @@ void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
     /* d1 is now extended to int16_t */
 
     /* Look up additional goals from tactic-based probability */
-    uint8_t *tacticGoalProbs = (uint8_t *)(uint32_t)simGoalProbByTacticPtrs[d1];
+    uint8_t *tacticGoalProbs = (uint8_t *)simGoalProbByTacticPtrs[d1];
     r = _Rand2();
     int16_t d2 = 0;
 
@@ -963,7 +963,7 @@ void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
                     r -= tp[3]; d2++;
 
                     /* Exceeded 4 thresholds: use extra table */
-                    uint8_t *extraProbs = (uint8_t *)(uint32_t)simExtraGoalProbByTacticPtrs[d1];
+                    uint8_t *extraProbs = (uint8_t *)simExtraGoalProbByTacticPtrs[d1];
                     r = _Rand2();
                     d2 = 3;
                     if (r >= extraProbs[0]) {
@@ -1807,7 +1807,7 @@ extern uint8_t quadrantDistanceFactor[];     /* 35×35 distance factor matrix */
 extern uint8_t skillValuePonders[];          /* 8 bytes: skill value multipliers */
 extern uint8_t plPricesIncreaseTable[];      /* 50 bytes: price increase lookup */
 extern void *teamTacticsTable[];          /* 19 pointers to tactics data */
-extern uint32_t plPositions;                 /* pointer storage for current tactics base */
+extern uintptr_t plPositions;                 /* tactics-data base pointer; retyped uintptr_t for 64-bit. See project_uint32_pointer_storage_trap.md. */
 extern uint16_t totalSkillsFactorSum;        /* accumulator for skill factor sum */
 extern uint16_t numPlayersAtQuadrant;        /* count of players sharing a quadrant */
 extern uint8_t currentMatchPlayers[];
@@ -1858,7 +1858,7 @@ int16_t _GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t pla
     /* Get tactics table for this team */
     int16_t tacticsIdx = (int8_t)tf->tactics;
     uint8_t *tacticsData = (uint8_t *)teamTacticsTable[tacticsIdx] + 9;
-    plPositions = (uint32_t)tacticsData;
+    plPositions = (uintptr_t)tacticsData;
 
     /* Player's position data in tactics table (0-based from playerNumber) */
     uint16_t plNum0 = playerNumber - 1;

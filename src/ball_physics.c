@@ -39,7 +39,7 @@ extern uint16_t hideBall;
 extern uint16_t gameState;
 extern uint16_t gameStatePl;
 extern uint16_t substituteInProgress;
-extern uint32_t teamThatSubstitutes;     /* pointer stored as uint32_t */
+extern uintptr_t teamThatSubstitutes;     /* TeamGeneralInfo*-shaped pointer; retyped uintptr_t for 64-bit. */
 extern TeamGeneralInfo *lastTeamPlayedBeforeBreak; /* pointer to team */
 
 extern int16_t  foulXCoordinate;

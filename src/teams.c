@@ -105,7 +105,7 @@ extern uint16_t isContestContinentalCup;
 extern uint16_t isCountryNumber;
 extern uint16_t gotCountryName;
 extern uint16_t numberOfLeagues;
-extern uint32_t selectedContest;
+extern uintptr_t selectedContest;
 extern uint16_t selectTeamsNoLimit;
 extern uintptr_t chooseTeamsHeader1stPart;
 extern uintptr_t selectedTeamText;
@@ -156,7 +156,7 @@ extern uint16_t gotCountryName;
 extern uint16_t numberOfLeagues;
 extern uint16_t isContestContinentalCup;
 extern uint32_t continentalCups[];
-extern uint32_t selectedContest;
+extern uintptr_t selectedContest;
 extern uint16_t teamsType;
 extern uint32_t nationalTeamCompetitionsAndQualifications[];
 
@@ -1639,14 +1639,19 @@ void _MarkSelectedTeamsStackLocation(void)
     }
 }
 
-/* IsContestContinentalCup: check if selectedContest is in continentalCups list */
+/* IsContestContinentalCup: check if selectedContest is in continentalCups list.
+ * continentalCups is a `CompetitionCup *[7]` table (8-byte pointers on
+ * 64-bit). Walk it as `uintptr_t *` so each stride matches the actual
+ * pointer width and we don't read half-pointers like the original
+ * `uint32_t *` cast did. Sentinel value (`-1` cast) matches whatever
+ * the Amiga binary terminated with. */
 __attribute__((used, externally_visible))
 void _IsContestContinentalCup(void)
 {
-    uint32_t *ptr = continentalCups;
+    uintptr_t *ptr = (uintptr_t *)continentalCups;
     for (;;) {
-        uint32_t entry = *ptr++;
-        if (entry == 0xFFFFFFFF)
+        uintptr_t entry = *ptr++;
+        if (entry == (uintptr_t)-1 || entry == 0)
             return;
         if (entry == selectedContest) {
             isContestContinentalCup = 1;
@@ -1656,13 +1661,15 @@ void _IsContestContinentalCup(void)
 }
 
 /* IsClubTeamsContest: check if contest is in nationalTeamCompetitionsAndQualifications.
- * Returns 0 if found (national team contest), 1 if not found (club teams contest). */
+ * Returns 0 if found (national team contest), 1 if not found (club teams contest).
+ * contest is a Competition* pointer; pass as uintptr_t so 64-bit
+ * pointers aren't truncated. The lookup table is similarly walked as
+ * uintptr_t* — see _IsContestContinentalCup for the rationale. */
 __attribute__((used, externally_visible))
-uint16_t _IsClubTeamsContest(uint32_t contest)
+uint16_t _IsClubTeamsContest(uintptr_t contest)
 {
-    uint32_t *ptr = nationalTeamCompetitionsAndQualifications;
-    /* Asm: cmpi.w #$FFFF,(a0) checks high word; terminator is 0xFFFFFFFF */
-    while (*ptr != 0xFFFFFFFF) {
+    uintptr_t *ptr = (uintptr_t *)nationalTeamCompetitionsAndQualifications;
+    while (*ptr != (uintptr_t)-1 && *ptr != 0) {
         if (*ptr == contest)
             return 0;
         ptr++;
@@ -1764,7 +1771,7 @@ extern uint16_t viewTeamsStartY;
 extern uint16_t viewTeamsAbortY;
 extern uint16_t selTeamsUpperBound;
 extern uint8_t teamNumbersIndices[];
-extern uint32_t teamPointers[];
+extern uintptr_t teamPointers[];
 extern uint16_t numSelectedTeamsCopy;
 extern uint16_t numNeededTeams;
 extern uintptr_t playWhatStr;
@@ -2148,7 +2155,7 @@ extern uintptr_t chooseTeamsHeader1stPart;
 extern uintptr_t gameTypeStr;
 extern uint8_t *curCountryStr;
 extern uint16_t choosingPreset;
-extern uint32_t selectedContest;
+extern uintptr_t selectedContest;
 extern uint8_t copaAmerica[];
 extern uint8_t aAllSelectedTea[];
 
@@ -2165,7 +2172,7 @@ void _ChooseTeamsFriendlyInit(void)
     TeamFileEx *src = (TeamFileEx *)&selTeamsPtr;
     uint16_t i;
     for (i = 0; i < selTeamsUpperBound; i++) {
-        teamPointers[i] = (uint32_t)src;
+        teamPointers[i] = (uintptr_t)src;
         teamNumbersIndices[i] = (uint8_t)i;
         src++;
     }
@@ -2252,7 +2259,7 @@ void _ChooseTeamsFriendlyInit(void)
 
     /* Handle choosingPreset / copaAmerica */
     if (choosingPreset != 0) {
-        if (selectedContest == (uint32_t)copaAmerica) {
+        if (selectedContest == (uintptr_t)copaAmerica) {
             menuEntries[74].isInvisible = 1;
         }
     }
@@ -3222,7 +3229,7 @@ loc_E3DC:
 loc_E428:
     /* Play season: dispatch by competition type */
     contest = (uint8_t *)leaguesPtrTable[d7];
-    selectedContest = (uint32_t)contest;
+    selectedContest = (uintptr_t)contest;
 
     if (contest[1] == 0) {
         /* League: loc_13E476 */
@@ -3283,7 +3290,7 @@ loc_E50A:
     if ((uint32_t)contest < 256)
         goto loc_E4EA;
 
-    selectedContest = (uint32_t)contest;
+    selectedContest = (uintptr_t)contest;
 
     if (contest[1] == 0)
         goto loc_E65A;

@@ -69,7 +69,7 @@ extern uint16_t viewingOpponentTeam;
 extern uint16_t is_A_team;
 extern int16_t  selectedPlayerPosition;
 extern int16_t  selectedPlayerTacticsPosition;
-extern uint32_t pmSelectedPlayerEntry;
+extern uintptr_t pmSelectedPlayerEntry;
 extern uint16_t playMatchControlFlags;
 extern uint16_t playerNumThatStarted;
 extern int16_t  playMatchExcludeFlags;
@@ -778,7 +778,7 @@ void _OnSwapPlayer(MenuEntry *a5) {
         selectedPlayerTacticsPosition = d6;
         {
             MenuEntry *old = (MenuEntry *)pmSelectedPlayerEntry;
-            pmSelectedPlayerEntry = (uint32_t)a5;
+            pmSelectedPlayerEntry = (uintptr_t)a5;
             if (old) { _CallDrawMenuItem(old); }
         }
         _CallDrawMenuItem(a5);

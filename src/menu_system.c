@@ -656,6 +656,32 @@ void _DrawMenuItem(MenuEntry *entry)
          * dereference it. */
         if (entry->fg == 0 || entry->fg == 0xFFFFFFFF)
             goto post_draw_callback;
+        /* [drawmenu-fg] Diagnostic for 64-bit fg corruption — the
+         * Cygwin64 image lives at ~0x100000000; any fg with upper 32
+         * bits != 1 is corrupt and would SIGSEGV in _DrawMenuText. */
+#if UINTPTR_MAX > 0xFFFFFFFFu
+        {
+            uintptr_t fgRaw = entry->fg;
+            uint32_t fgHigh = (uint32_t)((uint64_t)fgRaw >> 32);
+            if (fgHigh != 1 && fgHigh != 0) {
+                Menu *m = (Menu *)currentMenu;
+                MenuEntry *base = (MenuEntry *)((uint8_t *)m + MENU_HEADER_SIZE);
+                long entryIdx = (long)((uint8_t *)entry - (uint8_t *)base) / (long)sizeof(MenuEntry);
+                fprintf(stderr, "[drawmenu-fg] CORRUPT entry=%p idx=%ld ordinal=%u "
+                                "content=%u fg=0x%016llx high=0x%x low=0x%x "
+                                "stringFlags=0x%04x x=%u y=%u\n",
+                        (void *)entry, entryIdx, (unsigned)entry->ordinal,
+                        (unsigned)entry->content, (unsigned long long)fgRaw,
+                        (unsigned)fgHigh, (unsigned)(uint32_t)fgRaw,
+                        (unsigned)entry->stringFlags,
+                        (unsigned)entry->x, (unsigned)entry->y);
+                fflush(stderr);
+                /* Skip the draw rather than crash so we can see what
+                 * happens NEXT in the menu. */
+                goto post_draw_callback;
+            }
+        }
+#endif
         textPtr = (uint8_t *)entry->fg;
         goto fg_text_common;
     }

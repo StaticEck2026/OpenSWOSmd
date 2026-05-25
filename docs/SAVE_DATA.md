@@ -500,7 +500,11 @@ v2 binary via a one-time `Amiga LUT → JSON` migrator.
   `b8c85c56 / 44c95c56 / …` trailers flagged in the .CAR section need
   per-record verification before they're declared real pointers.
 
-Until the JSON-format rewrite lands, `_RebuildPointersAfterLoad()` +
-the LUT is the bridge: every pointer field gets translated from its
-canonical Amiga address back to the current build's runtime address
-right after the raw load completes.
+The JSON save format (`src/save_format_json.c`, `make SWOS_SAVE_FORMAT_JSON=1`)
+is now the primary path — pointer fields are emitted as semantic identities
+rather than raw address bytes, so saves round-trip across rebuilds and
+32/64-bit. Load auto-detects format from the file header so legacy `.CAR`
+dumps still open via the raw-load + `_RebuildPointersAfterLoad()` + LUT
+bridge. The LUT/rebuild path is now a backwards-compatibility fallback,
+not the long-term solution; cleanup is to delete it once every save type
+is proven on JSON.

@@ -39,7 +39,7 @@ extern uint16_t panicReasonCode;
 extern uint16_t careerFileBuffer;     /* count of teams in TMD pool */
 extern uint8_t tmdFileBuffer;         /* start of TMD team pool data (array of TeamFileEx records) */
 extern uint8_t teamFileBuffer;        /* team file buffer: first word is count, then records */
-extern uint8_t teamSortBuffer[];      /* 256-byte temp buffer for sorting */
+extern uintptr_t teamSortBuffer[];      /* 64-entry pointer/ID temp buffer for sorting; sized for 64-bit pointers. */
 extern uint8_t lastLoadedExtNumber;
 extern uint8_t teamIdSelectionProcessedFlags[]; /* 64-byte flags buffer */
 extern uint16_t diyLeagueTeamIds[];
@@ -534,26 +534,26 @@ void _Career_SortTeamFilePtrsByAvgPlayerPrice(uint16_t extNumber)
 
     uint16_t count = *(uint16_t *)&teamFileBuffer;
     TeamFileEx *team = (TeamFileEx *)(&teamFileBuffer + 2);
-    uint32_t *sortBuf = (uint32_t *)teamSortBuffer;
+    uintptr_t *sortBuf = teamSortBuffer;
 
     /* Build pointer array */
     uint16_t i;
     for (i = 0; i < count; i++) {
-        sortBuf[i] = (uint32_t)team;
+        sortBuf[i] = (uintptr_t)team;
         team++;
     }
 
     /* Bubble sort by average player price (descending: highest first) */
     int16_t pass;
     for (pass = (int16_t)(count - 2); pass >= 0; pass--) {
-        uint32_t *p = sortBuf;
+        uintptr_t *p = sortBuf;
         int16_t j;
         for (j = pass; j >= 0; j--) {
             uint16_t price1 = _GetAveragePlayerPrice((TeamFileEx *)p[0]);
             uint16_t price2 = _GetAveragePlayerPrice((TeamFileEx *)p[1]);
             if (price1 < price2) {
                 /* bcc.s: branch if carry clear = price1 >= price2 (unsigned) */
-                uint32_t tmp = p[0];
+                uintptr_t tmp = p[0];
                 p[0] = p[1];
                 p[1] = tmp;
             }
@@ -562,10 +562,10 @@ void _Career_SortTeamFilePtrsByAvgPlayerPrice(uint16_t extNumber)
     }
 
     /* Random shuffle: ~25% chance to swap adjacent pairs */
-    uint32_t *p2 = sortBuf;
+    uintptr_t *p2 = sortBuf;
     for (pass = (int16_t)(count - 2); pass >= 0; pass--) {
         if ((_Rand2() & 3) == 0) {
-            uint32_t tmp = p2[0];
+            uintptr_t tmp = p2[0];
             p2[0] = p2[1];
             p2[1] = tmp;
         }
@@ -805,6 +805,13 @@ static void fillLeagueTeamSelectionFromFile(uint16_t extNumber, uint16_t leagueF
             actualCount++;
     }
     if ((int16_t)actualCount != expectedCount) {
+        /* [verify-fill] -O2 makes gdb's `expectedCount=...` value
+         * unreliable; print the real values plus what fed them. */
+        fprintf(stderr, "[verify-fill] panic 0x8885: extNumber=%u leagueFilter=%u "
+                        "expectedCount=%d actualCount=%u tfCount=%u\n",
+                (unsigned)extNumber, (unsigned)leagueFilter,
+                (int)expectedCount, (unsigned)actualCount, (unsigned)tfCount);
+        fflush(stderr);
         panicReasonCode = 0x8885;
         _PanicHaltLoop();
     }
@@ -1135,6 +1142,16 @@ void _Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *spec, uint1
         uint16_t entryOff = idx * 6;
         int16_t expectedCount = (int16_t)(int8_t)spec[13 + entryOff];
         uint16_t extNumber = spec[2];
+        /* [verify-fill] Trace the values that feed fillLeagueTeamSelectionFromFile. */
+        fprintf(stderr, "[verify-fill] InitFromTableEntrySpec(spec=%p, idx=%u): "
+                        "spec[1]=%u spec[2]=%u spec[7]=%u spec[13]=%u "
+                        "entryOff=%u spec[13+entryOff]=%u expectedCount=%d\n",
+                (void *)spec, (unsigned)idx,
+                (unsigned)spec[1], (unsigned)spec[2], (unsigned)spec[7],
+                (unsigned)spec[13],
+                (unsigned)entryOff, (unsigned)spec[13 + entryOff],
+                (int)expectedCount);
+        fflush(stderr);
         fillLeagueTeamSelectionFromFile(extNumber, idx /* = league filter */, expectedCount);
     }
 }
@@ -1371,8 +1388,24 @@ uint8_t *_TeamSelectionKeyCache_GetListPtr(uint16_t listIndex)
     uint16_t idx = listIndex & 0xFF;
     if (idx == 0)
         return ptr;
-    for (int16_t i = (int16_t)(idx - 1); i >= 0; i--)
-        ptr += *(uint16_t *)(ptr + 2);
+    for (int16_t i = (int16_t)(idx - 1); i >= 0; i--) {
+        /* Stride bounds check — same defence as
+         * _BuildGameListArrayFromTeamSelectionKeyCache. The career-mode
+         * writer overflows the 22-byte slot and stomps slot[N+1]'s stride
+         * field with team-ID bytes (`0E 0A` on the player's team), which
+         * reads as 0x0A0E=2574 on LE. Walking via that stride lands deep
+         * in the overlaid careerForeignMarketPlayers region and the next
+         * read picks up real foreign-player records as a fake cache
+         * header. On Amiga BE the corrupted bytes read as 0x0E0A=3594
+         * which happens to land on zero bytes. Clamp to legitimate slot
+         * sizes (10..256) and freeze the walker at the last sane entry —
+         * same approach as the builder walker fix. See
+         * docs/OVERLAPPED_DATA.md entry #8. */
+        uint16_t stride = *(uint16_t *)(ptr + 2);
+        if (stride < 10 || stride > 256)
+            return ptr;
+        ptr += stride;
+    }
     return ptr;
 }
 
@@ -1537,7 +1570,19 @@ void _Career_AdvanceToNextTeamSelectionKeyCacheEntry(void)
             _Career_FillCurrentSeasonInfo();
             return;
         }
-        ptr += *(uint16_t *)(ptr + 2);
+        /* Stride bounds check — see _TeamSelectionKeyCache_GetListPtr for
+         * the full story (career-mode 22-byte slot overflow corrupts the
+         * stride field). If we'd step outside the legitimate slot-size
+         * range, treat the season as finished early rather than walking
+         * into the careerForeignMarketPlayers overlay. */
+        uint16_t stride = *(uint16_t *)(ptr + 2);
+        if (stride < 10 || stride > 256) {
+            seasonFinished = 1;
+            careerFinished = 1;
+            _Career_FillCurrentSeasonInfo();
+            return;
+        }
+        ptr += stride;
         if (ptr[4] == 0) {
             teamSelectionKeyCacheIndex = d0;
             teamSelectionKeyCacheOffset = (uint16_t)((uint32_t)ptr - (uint32_t)teamSelectionKeyCache);

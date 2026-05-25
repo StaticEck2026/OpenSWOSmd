@@ -260,8 +260,19 @@ uint8_t teamBName[17] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 uint8_t teamFilenameBuffer[50];
 uint8_t teamIdSelectionProcessedFlags[64] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 uint8_t teamNumbersIndices[64] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-uint8_t teamPointers[256];
-uint8_t teamSortBuffer[256];
+/* 64-entry TeamFileEx* table. Amiga build used 64 × 4 = 256 bytes; on
+ * 64-bit a pointer is 8 bytes so it must be `uintptr_t[64]` (= 512 B)
+ * to hold the same logical 64 entries. With `uint8_t[256]` on 64-bit,
+ * the writer's `(uint32_t)src` truncated each entry's upper 32 bits
+ * and only the first 32 entries had room — see
+ * project_uint32_pointer_storage_trap.md. */
+uintptr_t teamPointers[64];
+/* 64-entry TeamFileEx* table used during _Career_SortTeamFilePtrsByAvgPlayerPrice.
+ * Same fix as teamPointers above — needs uintptr_t[64] (512 B on 64-bit)
+ * instead of uint8_t[256] (only fits 32 pointers). After sort the buffer
+ * is reused as a uint16_t[] ID list (consumers in career_season.c cast
+ * to `(uint16_t *)teamSortBuffer`); 64 IDs = 128 B, fits within 256/512. */
+uintptr_t teamSortBuffer[64];
 uint8_t teamsIndex[100];
 /* 100-entry pointer table — each slot points to a TeamFileEx. The
  * Amiga build allocated 4 bytes/slot (uint32_t pointer); on 64-bit

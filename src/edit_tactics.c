@@ -122,7 +122,7 @@ extern uint16_t editTacticsDisableLittlePlayersAndBallDraw;
 extern uint16_t editTacticsTransitionActive;
 extern uint16_t editTacticsLastTick;
 extern int16_t editTacticsPlayerPositions[];    /* 12 entries: -1,0,1,...,10 */
-extern uint32_t editTacticsPlayerNumbers;       /* pointer stored as uint32_t */
+extern uintptr_t editTacticsPlayerNumbers;       /* uint8_t*-shaped pointer; retyped uintptr_t for 64-bit. See project_uint32_pointer_storage_trap.md. */
 extern int16_t playerAreas[];                   /* 35 entries: 0..34 */
 extern uint16_t menuControlsDirection;
 extern uint16_t menuControlsDirection2;
@@ -1364,7 +1364,7 @@ void _InitLittlePlayerSprites(void)
     if (teamEx == &careerTeam) {
         playerNums = currentMatchPlayers;
     }
-    editTacticsPlayerNumbers = (uint32_t)playerNums;
+    editTacticsPlayerNumbers = (uintptr_t)playerNums;
 
     /* Convert dress colors into the little players color table */
     uint16_t stripesColor = _ConvertPlayerDressColor(
@@ -2128,7 +2128,7 @@ void _EditTactics_ClearPairId(uint16_t value)
 __attribute__((used, externally_visible))
 void _EditTactics_SwapPlayersInSlots(uint16_t slot1, uint16_t slot2)
 {
-    TeamFileEx *teamEx = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = chooseTacticsTeamPtr;
 
     /* Check if we need to do the GetPlayerAtIndex-based swap.
      * Skip when both slots are in the same category:
@@ -2195,14 +2195,14 @@ void _EditTacticsCommon(MenuEntry *cur)
     uint16_t relIdx = cur->ordinal - menuEntries[29].ordinal + 1;
     uint16_t savedRelIdx = relIdx;
 
-    TeamFileEx *teamEx = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = chooseTacticsTeamPtr;
     uint8_t savedTactics = teamEx->team.tactics;
     teamEx->team.tactics = editTacticsCurrentTactics.ballOutOfPlayTactics;
 
     uint16_t slot, playerIndex;
     _GetPlayerInfoBreakPosition(teamEx, relIdx, &slot, &playerIndex);
 
-    teamEx = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    teamEx = chooseTacticsTeamPtr;
     teamEx->team.tactics = savedTactics;
     slot -= 1;
 
@@ -2263,14 +2263,14 @@ void _EditTacticsPlayerNamesCommon(MenuEntry *cur)
     /* Compute relative index: current entry vs menuEntries[11] */
     uint16_t relIdx = cur->ordinal - menuEntries[11].ordinal;
 
-    TeamFileEx *teamEx = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = chooseTacticsTeamPtr;
     uint8_t savedTactics = teamEx->team.tactics;
     teamEx->team.tactics = editTacticsCurrentTactics.ballOutOfPlayTactics;
 
     uint16_t slot, playerIndex;
     _GetPlayerInfoBreakPosition(teamEx, relIdx, &slot, &playerIndex);
 
-    teamEx = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    teamEx = chooseTacticsTeamPtr;
     teamEx->team.tactics = savedTactics;
 
     if ((int16_t)editTacticsSelectedPlayerNameIndex >= 0) {
@@ -2282,8 +2282,8 @@ void _EditTacticsPlayerNamesCommon(MenuEntry *cur)
             /* Different player - swap them */
             _EditTactics_SwapPlayersInSlots(
                 editTacticsSelectedPlayerSlotIndex, slot);
-            _SetBenchPlayersNumbers((TeamFileEx *)(uint32_t)chooseTacticsTeamPtr);
-            teamEx = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+            _SetBenchPlayersNumbers(chooseTacticsTeamPtr);
+            teamEx = chooseTacticsTeamPtr;
             teamEx->team.someFlag = 1;
             _EditTactics_CommitPlayerPositionsAndRecalcSkill();
             editTacticsSelectedPlayerNameIndex = 0xFFFF;
@@ -2444,7 +2444,7 @@ static void MarkFirstKitShirtC(void)
         e->bgColor = 9;  /* PINK_TO_BROWN_9 */
         if ((uint8_t)i == shirtType)
             e->bgColor = 10;  /* RED_10 */
-        e = (MenuEntry *)((uint8_t *)e - 56);
+        e = (MenuEntry *)((uint8_t *)e - MENUENTRY_STRIDE);
     }
 }
 
@@ -2459,7 +2459,7 @@ static void MarkSecondKitShirtC(void)
         e->bgColor = 9;  /* PINK_TO_BROWN_9 */
         if ((uint8_t)i == shirtType)
             e->bgColor = 10;  /* RED_10 */
-        e = (MenuEntry *)((uint8_t *)e - 56);
+        e = (MenuEntry *)((uint8_t *)e - MENUENTRY_STRIDE);
     }
 }
 
@@ -2786,10 +2786,10 @@ void _InitEditTeamsMenu(void)
         uint8_t posAndFace = pf->positionAndFace;
         uint16_t faceIdx = (posAndFace & 0x18) >> 3;
         faceEntry->fgWord = (uint16_t)(faceIdx + 186);  /* SPR_PL_FACE_WHITE_GUY */
-        faceEntry = (MenuEntry *)((uint8_t *)faceEntry + 56);
+        faceEntry = (MenuEntry *)((uint8_t *)faceEntry + MENUENTRY_STRIDE);
 
         nameEntry->fg = (uintptr_t)(uint8_t *)pf->playerName;
-        nameEntry = (MenuEntry *)((uint8_t *)nameEntry + 56);
+        nameEntry = (MenuEntry *)((uint8_t *)nameEntry + MENUENTRY_STRIDE);
     }
 }
 
@@ -2810,31 +2810,31 @@ void _EditTeamsPlayersBeforeDraw(MenuEntry *entry)
     uint8_t shirtNum = (uint8_t)pf->shirtNumber;
     e->fgWord = (uint16_t)shirtNum;
     e->y = y;
-    e = (MenuEntry *)((uint8_t *)e + 56);
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);
 
     /* Second entry — just set y */
     e->y = y;
-    e = (MenuEntry *)((uint8_t *)e + 56);
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);
 
     /* Position string */
     uint16_t posIdx = (posAndFace & 0xE0) >> 3;  /* extract top 3 bits, shift to word index */
     e->fg = playerPositionsStringTable[posIdx / 4];
     e->y = y;
-    e = (MenuEntry *)((uint8_t *)e + 56);
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);
 
     /* Hidden entries */
     e->isInvisible = 1;
     e->y = y;
-    e = (MenuEntry *)((uint8_t *)e + 56);
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);
 
     e->isInvisible = 1;
     e->y = y;
-    e = (MenuEntry *)((uint8_t *)e + 56);
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);
 
     e->isInvisible = 1;
     e->isInvisible = 1;  /* written twice in asm */
     e->y = y;
-    e = (MenuEntry *)((uint8_t *)e + 56);
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);
 
     /* Draw all 6 entries */
     _DrawMultipleItems(6, &menuEntries[0xC08 / 56]);
@@ -3243,7 +3243,7 @@ void _EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *c
     }
 
     /* Save/restore tactics byte, get player info */
-    TeamFileEx *teamBase = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    TeamFileEx *teamBase = chooseTacticsTeamPtr;
     uint8_t savedTactics = teamBase->team.tactics;
     teamBase->team.tactics = editTacticsCurrentTactics.ballOutOfPlayTactics;
 
@@ -3251,7 +3251,7 @@ void _EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *c
     uint8_t *playerPtr = _GetPlayerInfoBreakPosition(teamBase, (uint16_t)playerOrdinal, &slot, &playerIndex);
     PlayerFile *pf = (PlayerFile *)(playerPtr + 76);
 
-    teamBase = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    teamBase = chooseTacticsTeamPtr;
     teamBase->team.tactics = savedTactics;
 
     /* Check cardsInjuries for injury */
@@ -3344,7 +3344,7 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     }
 
     /* Get player info */
-    TeamFileEx *teamBase = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    TeamFileEx *teamBase = chooseTacticsTeamPtr;
     uint8_t savedTactics = teamBase->team.tactics;
     teamBase->team.tactics = editTacticsCurrentTactics.ballOutOfPlayTactics;
 
@@ -3352,7 +3352,7 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     uint8_t *playerPtr = _GetPlayerInfoBreakPosition(teamBase, d7, &d7_slot, &d1_fileIdx);
     PlayerFile *pf = (PlayerFile *)(playerPtr + 76);
 
-    teamBase = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    teamBase = chooseTacticsTeamPtr;
     teamBase->team.tactics = savedTactics;
 
     /* Check if player is injured */
@@ -3384,31 +3384,31 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
         e->isInvisible = 0;
     }
     e->y = entryY;
-    e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 41 */
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);  /* entry 41 */
 
     /* Entry 41: player name (surname) */
     uint8_t *surname = _ExtractSurname((uint8_t *)pf->playerName, 0x800D);
     e->fg = (uintptr_t)surname;
     e->y = entryY;
-    e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 42 */
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);  /* entry 42 */
 
     /* Entry 42: position string */
     uint8_t posAndFace = pf->positionAndFace;
     uint16_t posIdx = ((uint16_t)posAndFace & 0xE0) >> 3;
     e->fg = playerPositionsStringTable[posIdx / 4];
     e->y = entryY;
-    e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 43 */
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);  /* entry 43 */
 
     /* Entry 43: top skills */
     _FormTopSkillsString((uint8_t *)e->fg, (PlayerFile *)playerPtr);
     e->y = entryY;
-    e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 44 */
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);  /* entry 44 */
 
     /* Entry 44: value/status */
     e->isInvisible = 1;
     e->y = entryY;
 
-    if (_IsTeamNational((TeamFileEx *)(uint32_t)chooseTacticsTeamPtr)) {
+    if (_IsTeamNational(chooseTacticsTeamPtr)) {
         _InitPlayerValueDisplayStruct(playerPtr, (uint8_t *)e);
     } else {
         _FormatPlayerValueOrStatusText(playerPtr, fundsBuffer);

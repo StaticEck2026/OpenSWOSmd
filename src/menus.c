@@ -2517,7 +2517,7 @@ extern uint16_t numOffers;
 extern volatile uint16_t currentMessage;
 extern uint16_t primaryCompSquadViewParam;
 extern uint16_t seasonSquadTeamNumbers[];
-extern uint32_t selectedContest;
+extern uintptr_t selectedContest;
 extern uint16_t contestLeagueNumber;
 
 /* String constants */
@@ -2849,10 +2849,37 @@ void _BuildGameListArrayFromTeamSelectionKeyCache(void)
             if (remaining == 0)
                 return;
         }
-        /* Move to next list entry */
+        /* Move to next list entry.
+         *
+         * The asm reads the slot's stride at +2..+3 and advances by it. On
+         * SDL this can be corrupted: the in-match league-fixture writer
+         * (_DIY_RecordLeagueFixtureResultAndAdvanceProgress) writes multiple
+         * 12-byte fixtures into a single 22-byte career-mode slot, and
+         * fixture 2's team-ID bytes land on slot[N+1]'s stride field at
+         * +2..+3. On Amiga the corrupted stride happens to jump to a zeroed
+         * area of the overlaid careerForeignMarketPlayers region; on SDL
+         * the same jump lands on populated foreign-player records, the
+         * walker reads them as fake cache entries, and the reader panics
+         * loading "team 0x0200" (= the first 2 bytes of a real
+         * foreign-player record interpreted as a team id).
+         *
+         * Clamp the stride to a sane range. Slots are 22 bytes (career) up
+         * to 118 bytes (DIY 18-team) — anything outside [10, 256] is the
+         * sign of a stomped stride field. Treat it as the end of the cache
+         * so the walker behaves the same as Amiga's "fell off into zeros"
+         * accidental-safety-net behaviour. */
+        uint16_t stride = *(uint16_t *)(listEntry + 2);
+        if (stride < 10 || stride > 256) {
+            while (remaining > 0) {
+                *out++ = 0;
+                *out++ = 0;
+                remaining--;
+            }
+            return;
+        }
         listIdx++;
         gameIdx = 0;
-        listEntry += *(uint16_t *)(listEntry + 2);
+        listEntry += stride;
         gameEntry = listEntry;
         remaining--;
         if (remaining == 0)
@@ -6349,20 +6376,49 @@ void _SquadMenu(void)
         return;
     }
 
-    /* No squads — use competition file buffer teams */
-    uint16_t compType = *(uint16_t *)competitionFileBuffer;
-    uint16_t numT = numDiyTeams;
+    /* No squads — use competition file buffer teams. Read via the typed
+     * struct view: `competitionFileBuffer` mirrors diyCompetitionStart's
+     * bytes (written by _Career_StoreCompetitionSlotStateToBuffer's
+     * word-by-word copy), so it has the same 64-bit struct layout where
+     * post-namePtr fields shift by +4 vs Amiga. The asm-style raw
+     * offsets (+50 numTeams, +302/+590/+154 team lists) were reading
+     * stale field bytes on 64-bit. Use typed fields instead.
+     * See project_raw_offset_64bit_shift_trap.md. */
+    DIYCompetitionEx *cfbEx = (DIYCompetitionEx *)competitionFileBuffer;
+    DIYCompetition   *cfb   = &cfbEx->base;
+    uint16_t compType = (uint16_t)cfb->competitionType;
+    uint16_t numT = (uint16_t)cfb->numTeams;
     uint16_t *teamList;
 
     if (compType == 0) {
-        teamList = (uint16_t *)(competitionFileBuffer + 302);
+        teamList = cfbEx->matchData.league.leagueTeamIds;  /* parent +0x12E */
     } else if (compType == 1) {
-        teamList = (uint16_t *)(competitionFileBuffer + 590);
+        teamList = cfbEx->cupTeamIds;                       /* parent +0x24E */
     } else {
-        teamList = (uint16_t *)(competitionFileBuffer + 154);
+        /* Tournament: team-id list is at parent +0x9A.
+         * diyFileBufferCopy stores team IDs at that offset
+         * (diyTournamentTeamIds alias). For DIYCompetitionEx in the
+         * SDL build the matching typed access lands at parent +0x9A
+         * inside the matchData region — interpret via raw bytes with
+         * the 64-bit shift compensation. */
+        teamList = (uint16_t *)((uint8_t *)cfb + 0x9A);
     }
 
-    _SelectAndShowSquadToView(teamList, numT, rowMode);
+    if (numT > 64) numT = 0;  /* safety clamp — should never trigger now */
+
+    /* Team IDs in `competitionFileBuffer`'s leagueTeamIds/cupTeamIds/
+     * tournamentTeamIds region are BE-packed `{country, ordinal}` byte
+     * pairs (same convention as elsewhere in the SDL build). The
+     * downstream `_VerifyTeamLoaded` expects a host-native
+     * (country<<8)|ordinal value, so a raw `*(uint16_t *)` read on LE
+     * would byte-swap and panic on bogus IDs like 0x000E.
+     * Mirror the BE-decode helper from _StatsViewSquads (see below). */
+    {
+        uint16_t decoded[64];
+        for (uint16_t i = 0; i < numT; i++)
+            decoded[i] = BE_READ_U16((uint8_t *)&teamList[i]);
+        _SelectAndShowSquadToView(decoded, numT, rowMode);
+    }
 }
 
 /* ===== CareerGameListCommon (SWOS2.s line 49351) =====
@@ -6437,6 +6493,59 @@ void _CareerGameListCommon(MenuEntry *item)
 
     uint8_t *a2 = 0; /* result string pointer, NULL if no result */
 
+    /* [cglm-dump] One-shot dump of cache + gameListArray state on first
+     * draw of the career main screen. Diagnostic for the 64-bit
+     * bring-up: stale fixtures + 22-byte cache slot overflow have been
+     * causing _VerifyTeamLoaded panics. Dumps the whole cache and the
+     * gameListArray pairs so we can see which entries are well-formed
+     * vs. corrupted. Always-on for now (one-shot, small output) — gate
+     * with SWOS_DEBUG_AUTOSKIP and remove once the 22-byte slot
+     * overflow is properly fixed and the new-career menu is stable. */
+    {
+        extern uint8_t teamSelectionKeyCache[];
+        extern uint16_t teamSelectionKeyCacheCount;
+        static int s_cglmDumpDone = 0;
+        if (!s_cglmDumpDone) {
+            s_cglmDumpDone = 1;
+            int cacheCountS = (int)(int16_t)teamSelectionKeyCacheCount;
+            fprintf(stderr, "[cglm-dump] d0=%u cacheCount=%d cacheBase=%p\n",
+                    (unsigned)d0, cacheCountS,
+                    (void *)teamSelectionKeyCache);
+            uint8_t *p = teamSelectionKeyCache;
+            for (int s = 0; s < cacheCountS && s < 40; s++) {
+                uint16_t stride = *(uint16_t *)(p + 2);
+                fprintf(stderr, "[cglm-dump]   slot[%d] @%+lld stride=%u "
+                                "hdr=%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X"
+                                "  fx0=%02X %02X %02X %02X %02X %02X\n",
+                        (int)s, (long long)(p - teamSelectionKeyCache),
+                        (unsigned)stride,
+                        p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9],
+                        p[10], p[11], p[12], p[13], p[14], p[15]);
+                if (stride < 12 || stride > 256) {
+                    fprintf(stderr, "[cglm-dump]   stride out of range, halting dump\n");
+                    break;
+                }
+                p += stride;
+            }
+            for (uint16_t i = 0; i < 14; i++) {
+                void *ce = gameListArray[i * 2];
+                void *ge = gameListArray[i * 2 + 1];
+                if (ce == 0 && ge == 0) continue;
+                long long ceOff = ce ? (long long)((uint8_t *)ce - teamSelectionKeyCache) : -1;
+                long long geOff = ge ? (long long)((uint8_t *)ge - teamSelectionKeyCache) : -1;
+                fprintf(stderr, "[cglm-dump]   gameListArray[%u] contest=+%lld game=+%lld",
+                        (unsigned)i, ceOff, geOff);
+                if (ge) {
+                    uint8_t *g = (uint8_t *)ge;
+                    fprintf(stderr, "  bytes=%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
+                            g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11]);
+                }
+                fputc('\n', stderr);
+            }
+            fflush(stderr);
+        }
+    }
+
     if (a6[5] != 0) {
         /* Has teams — load them. Team IDs in the fixture record are
          * { countryByte, ordinalByte } pairs that the original asm
@@ -6444,6 +6553,23 @@ void _CareerGameListCommon(MenuEntry *item)
          * so the LE host produces the `(country<<8)|ordinal` value
          * findTeamInCache / _VerifyTeamLoaded compare against. */
         uint16_t topTeamIdx = BE_READ_U16(a4 + 0x0C);
+        /* [career-row] Per-call trace. Always-on diagnostic during
+         * bring-up — log every team verify with d0, listIndex,
+         * game offset, and resolved team ids. Lets us see which row
+         * triggers a verify panic without having to guess. */
+        {
+            extern uint8_t teamSelectionKeyCache[];
+            extern uint16_t teamSelectionKeyCache_ListIndex;
+            uint16_t botTeamIdxPreview = BE_READ_U16(a4 + 0x0E);
+            long long gameOff = (long long)((uint8_t *)a4 - teamSelectionKeyCache);
+            long long contestOff = (long long)((uint8_t *)a6 - teamSelectionKeyCache);
+            fprintf(stderr, "[career-row] d0=%u listIdx=%u contest=+%lld game=+%lld "
+                            "numGames=%u top=0x%04X bot=0x%04X\n",
+                    (unsigned)d0, (unsigned)teamSelectionKeyCache_ListIndex,
+                    contestOff, gameOff, (unsigned)a6[5],
+                    (unsigned)topTeamIdx, (unsigned)botTeamIdxPreview);
+            fflush(stderr);
+        }
         TeamFileEx *topTeamData = _VerifyTeamLoaded(topTeamIdx);
         careerGameTopTeamName = (char *)topTeamData->team.teamName;
 

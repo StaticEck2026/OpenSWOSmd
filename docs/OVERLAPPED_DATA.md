@@ -226,7 +226,74 @@ and *data* sharing the same bytes via lifetime separation. Worth
 remembering as the upper bound of what the original was doing for
 memory pressure.
 
-### 8. Adjacent-globals reads
+### 8. `teamSelectionKeyCache` vs `careerForeignMarketPlayers` / `careerJobOfferPhaseBias`
+
+**Where:** all three are aliased into `careerFileBufferBuf` at:
+
+| label | base offset | distance from cache start |
+|---|---|---|
+| `teamSelectionKeyCache`     | +73292 |   0  B |
+| `careerJobOfferPhaseBias`   | +73293 |   1  B |
+| `careerForeignMarketPlayers`| +75162 | 1870  B |
+| `teamSelectionKeyCacheEnd`  | +93306 | 20014 B |
+
+Defined as `.equ` aliases in `src/swos_globals_career_overlay.c:520-535`.
+
+**View A — `teamSelectionKeyCache[]`:** 10-byte slot headers + 12-byte
+fixture records, written by
+`_TeamSelectionKeyCache_BuildFromCompetitionBlock` and
+`_DIY_RecordLeagueFixtureResultAndAdvanceProgress`. In career mode
+the slot stride is 22 bytes (one fixture per slot per the original
+asm).
+
+**View B — `careerForeignMarketPlayers[]`:** populated when the user
+picks a career team; contains foreign-player records (compact 6-byte
+records of country/team/player-slot triples). Lives at offset +1870
+within the cache region.
+
+**View C — `careerJobOfferPhaseBias`:** single byte at +1 inside
+`teamSelectionKeyCache`. Used by the job-offer scheduler. Effectively
+overlaid with the first byte of slot[0]'s header byte 1 (the
+month-phase key). Odd but apparently intentional.
+
+**Why it usually works:** the cache is small relative to the region —
+even an 18-team Liga only needs 34 slots × 22 = 748 bytes, well
+within the 1870-byte gap before foreign-market data starts. Foreign
+market players don't overlap the live cache *bytes*, just the
+*region*.
+
+**Why it breaks on SDL:** the writer overflows the 22-byte career
+slot (writes ≥2 fixtures per slot during phase-boundary loops),
+stomping slot[N+1]'s stride field with team-ID bytes. The walker
+then reads a corrupted stride and jumps somewhere past the
+legitimate cache.
+
+- **Amiga BE:** stride bytes `0E 0A` read as `0x0E0A=3594` → jump
+  lands deeper in foreign-market data where bytes happen to be
+  zero → walker reads numGames=0 → terminates cleanly. Accidental
+  safety net.
+- **SDL LE:** same bytes read as `0x0A0E=2574` → jump lands at the
+  start of populated foreign-market records → walker treats them
+  as fake cache entries → reader reads `02 00` as team id 0x0200 →
+  `_VerifyTeamLoaded` panic.
+
+**Why we can't enlarge the slot:** growing the slot past
+1870/numSlots bytes would clobber `careerForeignMarketPlayers`. The
+22-byte slot is load-bearing for the overlay packing.
+
+**Current mitigation:** `_BuildGameListArrayFromTeamSelectionKeyCache`
+(src/menus.c) validates the stride field at `listEntry+2` before
+jumping. If outside [10, 256], treat as end-of-cache. Replicates the
+Amiga's accidental safety-net behaviour deterministically.
+
+**Status:** mitigated for the new-career menu draw path; the writer
+overflow itself is unfixed (matches asm). Proper fix is to redesign
+the writer to advance to the next cache slot after each fixture
+write — deferred until the overlay untangle phase (CLAUDE.md step 3)
+because changing the writer needs the matching layout change on
+both the SDL and Amiga ports and the new save-format work.
+
+### 9. Adjacent-globals reads
 
 See `memory/project_adjacent_globals_bss.md` for the per-site list
 (`stadiumMenuLittlePlayer` / `littlePlayerSpriteGeneric` /

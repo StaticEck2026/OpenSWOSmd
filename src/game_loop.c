@@ -1044,10 +1044,15 @@ advance_to_next_highlight:
 
     {
         uint32_t offset = (uint32_t)hilSceneNumber * 19000u;
-        uint32_t baseAddr = hilStartOfGoalsBuffer + offset;
-        goalBasePtr = (uint8_t *)baseAddr;
-        currentHilPtr = (uint8_t *)(baseAddr - 4);
-        nextGoalPtr = (uint8_t *)(baseAddr + 19000u);
+        /* `hilStartOfGoalsBuffer + offset` is a pointer (8 bytes on 64-bit).
+         * Storing into uint32_t truncated the upper 32 bits, then the
+         * `(uint8_t *)baseAddr` re-cast produced a half-pointer that
+         * SIGSEGVed in _HandleInstantReplayStateSwitch's `*p & 0x80`.
+         * Carry the value as a real pointer instead. */
+        uint8_t *baseAddr = hilStartOfGoalsBuffer + offset;
+        goalBasePtr = baseAddr;
+        currentHilPtr = baseAddr - 4;
+        nextGoalPtr = baseAddr + 19000u;
     }
     _HandleInstantReplayStateSwitch();
 

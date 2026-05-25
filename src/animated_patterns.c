@@ -17,6 +17,7 @@
  */
 
 #include <stdint.h>
+#include <stddef.h>
 #include "animated_patterns.h"
 #include "game_types.h"
 #include "display.h"
@@ -192,12 +193,29 @@ static void resetAnimatedPatterns(uint32_t *a0, int16_t count)
 {
     int16_t i;
     uint32_t baseAddr = ANIM_TILE_BASE;
+#ifdef SWOS_SDL_BUILD
+    extern uint8_t *s_pitchFullPtrs[];
+    extern uint8_t pitchChunkyBuffer[];
+    uint32_t *pitchBase = (uint32_t *)(void *)pitchDatBuffer;
+#endif
 
     for (i = count; i >= 0; i--) {
         uint32_t d0 = *a0 - baseAddr;
         if (d0 != 0 && d0 <= ANIM_MAX_TILE_OFFSET && !(d0 & ANIM_TILE_SIZE)) {
             /* animated variant (even tile index) → subtract one tile → static */
             *a0 -= ANIM_TILE_SIZE;
+#ifdef SWOS_SDL_BUILD
+            /* Mirror the toggle into s_pitchFullPtrs — see comment in
+             * _DrawAnimatedPatterns. The slot index is the byte offset
+             * of `a0` from the pitchDatBuffer base divided by 4. */
+            {
+                ptrdiff_t slotIdx = a0 - pitchBase;
+                uint32_t newTileIdx = (d0 - ANIM_TILE_SIZE) >> ANIM_TILE_SIZE_SHIFT;
+                if (slotIdx >= 0 && slotIdx < 2310 && newTileIdx < 2310) {
+                    s_pitchFullPtrs[slotIdx] = pitchChunkyBuffer + (size_t)newTileIdx * 256;
+                }
+            }
+#endif
         }
         a0++;
     }
@@ -495,6 +513,24 @@ pattern_loop:
 
                 animatedPatterns[7 - d7] = d3;
                 *tileEntryPtr = ANIM_TILE_BASE + ((uint32_t)newIndex << ANIM_TILE_SIZE_SHIFT);
+#ifdef SWOS_SDL_BUILD
+                /* On SDL `drawPatternFromIndex` renders from
+                 * `s_pitchFullPtrs[d3]` (the 64-bit pitch.c side table)
+                 * because the 4-byte pitchDatBuffer slots can't hold a
+                 * full 64-bit pointer. The toggle above only updates
+                 * pitchDatBuffer's truncated slot, so without the
+                 * matching side-table update the next draw keeps
+                 * rendering the *previous* tile variant — fan animation
+                 * appears frozen. Mirror the toggle into the side
+                 * table so reader and writer stay in sync. */
+                {
+                    extern uint8_t *s_pitchFullPtrs[];
+                    extern uint8_t pitchChunkyBuffer[];
+                    if (d3 >= 0 && d3 < 2310) {
+                        s_pitchFullPtrs[d3] = pitchChunkyBuffer + (size_t)newIndex * 256;
+                    }
+                }
+#endif
             }
         }
 

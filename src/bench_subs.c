@@ -35,8 +35,8 @@
 
 /* ---- external asm globals ---- */
 extern uint16_t inSubstitutesMenu;
-extern uint32_t benchTeam;          /* pointer stored as uint32_t */
-extern uint32_t benchTeamGame;      /* pointer stored as uint32_t */
+extern uintptr_t benchTeam;          /* Competition*-shaped pointer; retyped uintptr_t for 64-bit. See project_uint32_pointer_storage_trap.md. */
+extern uintptr_t benchTeamGame;      /* TeamGame*-shaped pointer; retyped uintptr_t for 64-bit. */
 extern uint16_t subsTeamsSwapped;
 extern uint16_t subsDirection;
 extern uint8_t  subsFire;
@@ -108,8 +108,8 @@ extern uint16_t team1MostFrequentFace;
 extern uint16_t team2MostFrequentFace;
 extern uint16_t maxSubsPerTeam;
 extern uint16_t gameMaxSubstitutes;
-extern uint32_t substitutedPlSprite;  /* pointer stored as uint32_t */
-extern uint32_t teamThatSubstitutes;  /* pointer stored as uint32_t */
+extern Sprite *substitutedPlSprite;  /* Storage is `Sprite *` (swos_amiga_data_imports.c:283); stale uint32_t extern truncated pointer writes/reads on 64-bit. */
+extern uintptr_t teamThatSubstitutes;  /* TeamGeneralInfo*-shaped pointer; retyped uintptr_t for 64-bit. */
 extern uint16_t substitutedPlX;
 extern uint16_t substitutedPlY;
 extern uint16_t substitutedPlDestX;
@@ -451,12 +451,12 @@ activate_bench:
 
         bench1Called = 0;
         bench2Called = 0;
-        benchTeam = (uint32_t)a6;
+        benchTeam = (uintptr_t)a6;
         a0 = topTeamPtr;
         if ((uint16_t)a6->teamNumber == 2)
             a0 = bottomTeamPtr;
 
-        benchTeamGame = (uint32_t)a0;
+        benchTeamGame = (uintptr_t)a0;
         plToBeSubstitutedPos = 0xFFFF;
         subsState = 0;
         benchPlayerIndex = 0;
@@ -734,12 +734,12 @@ static void trainingSwapBenchTeams(void)
 
     a6 = (TeamGeneralInfo *)benchTeam;
     a6 = a6->opponentsTeam;
-    benchTeam = (uint32_t)a6;
+    benchTeam = (uintptr_t)a6;
 
     a0 = topTeamPtr;
     if ((uint16_t)a6->teamNumber == 2)
         a0 = bottomTeamPtr;
-    benchTeamGame = (uint32_t)a0;
+    benchTeamGame = (uintptr_t)a0;
 }
 
 /* ================================================================
@@ -891,10 +891,10 @@ static void selectPlayerToSubstituteMenuHandler(void)
         Sprite **sprTable;
         Sprite *sprPtr;
 
-        teamThatSubstitutes = (uint32_t)a0;
+        teamThatSubstitutes = (uintptr_t)a0;
         sprTable = a0->spritesTable;
         sprPtr = sprTable[plToBeSubstitutedPos];
-        substitutedPlSprite = (uint32_t)sprPtr;
+        substitutedPlSprite = sprPtr;
 
         sprPtr->cards = 0;
         substitutedPlX = (uint16_t)sprPtr->x.s.i;
@@ -931,7 +931,7 @@ static void checkForThrowInAndGoalkeepersBall(void)
 static void __attribute__((optimize("no-tree-loop-distribute-patterns")))
 substitutePlayer(void)
 {
-    Sprite *sprPtr = (Sprite *)substitutedPlSprite;
+    Sprite *sprPtr = substitutedPlSprite;
     int16_t d7, d6;
     TeamGame *a0;
     uint16_t off7, off6;
@@ -2688,7 +2688,7 @@ void _SelectPlayerToSubstituteMenuHandler(void)
     teamThatSubstitutes = benchTeam;
     Sprite **table = team->spritesTable;
     Sprite *sprite = table[pos];
-    substitutedPlSprite = (uint32_t)sprite;
+    substitutedPlSprite = sprite;
     sprite->cards = 0;
     substitutedPlX = sprite->x.s.i;
     substitutedPlY = sprite->y.s.i;
@@ -2711,7 +2711,7 @@ void _SelectPlayerToSubstituteMenuHandler(void)
 __attribute__((used, externally_visible))
 void _SubstitutePlayer(void)
 {
-    Sprite *sprite = (Sprite *)substitutedPlSprite;
+    Sprite *sprite = substitutedPlSprite;
     sprite->injuryLevel = 0;
     sprite->sentAway = 0;
 
