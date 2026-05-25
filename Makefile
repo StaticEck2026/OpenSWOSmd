@@ -187,30 +187,32 @@ ifdef SWOS_TEST_NO_INJURIES_CARDS
 DEBUG_FLAGS += -DSWOS_TEST_NO_INJURIES_CARDS=1
 endif
 
-# Save-file format toggle. Default OFF — saves are written in the
-# legacy raw-memory-dump format the original Amiga SWOS used. Build
-# with `make SWOS_SAVE_FORMAT_JSON=1` to write new saves as JSON via
-# mjson (see src/save_format_json.c). Load auto-detects format from
-# the file header so existing saves keep working in either mode.
-# Cleanup: once JSON is proven for all save types we delete the
-# legacy paths and the toggle.
-ifdef SWOS_SAVE_FORMAT_JSON
+# Save-file format toggle. Default ON — new saves are written as JSON
+# via mjson (see src/save_format_json.c) and load auto-detects format
+# from the file header so existing raw-dump saves keep working too.
+# Opt out with `make SWOS_SAVE_FORMAT_JSON=0` to force the legacy
+# raw-memory-dump format the original Amiga SWOS used (only useful for
+# A/B testing the legacy path before we delete it). Cleanup: once JSON
+# is proven for all save types we delete the legacy paths and the toggle.
+ifneq ($(SWOS_SAVE_FORMAT_JSON),0)
 DEBUG_FLAGS += -DSWOS_SAVE_FORMAT_JSON=1
 endif
 
-# Coverage verification for the JSON save format. Set
-# `make SWOS_SAVE_FORMAT_JSON=1 SWOS_SAVE_FORMAT_JSON_VERIFY=1` to
-# enable a load-time diff that compares the byte image produced by
-# the named-blob + semantic field loaders against the bytes from
-# opaque_data. A zero-mismatch result means every meaningful byte
-# is covered by typed fields/blobs and opaque_data can be removed.
-ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
+# Coverage verification for the JSON save format. Default ON during
+# bring-up — load-time diff compares the byte image produced by the
+# named-blob + semantic field loaders against the bytes from opaque_data.
+# A zero-mismatch result means every meaningful byte is covered by typed
+# fields/blobs and opaque_data can be removed. Opt out with
+# `make SWOS_SAVE_FORMAT_JSON_VERIFY=0` to skip the diff (small load-time
+# perf win once we trust the format).
+ifneq ($(SWOS_SAVE_FORMAT_JSON_VERIFY),0)
 DEBUG_FLAGS += -DSWOS_SAVE_FORMAT_JSON_VERIFY=1
 endif
 
 # Profile flag: prints per-phase wall-clock timings (`[json-prof-*]`
-# lines) so you can see where load/save time is going. Useful when
-# the format feels slow.
+# lines) so you can see where load/save time is going. Default OFF —
+# profiling is largely done; opt in with `make SWOS_SAVE_FORMAT_JSON_PROFILE=1`
+# when investigating save/load perf regressions.
 ifdef SWOS_SAVE_FORMAT_JSON_PROFILE
 DEBUG_FLAGS += -DSWOS_SAVE_FORMAT_JSON_PROFILE=1
 endif
