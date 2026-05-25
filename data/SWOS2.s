@@ -48460,7 +48460,7 @@ playerAgeToFormDivisorTable:
                 dc.b $0F,$0F
 
 ; ===== UpdateCareerPlayersFormAfterMatch =====
-; prototype: void __usercall UpdateCareerPlayersFormAfterMatch(void *team@<a0>, TeamFileEx *teamRef@<a1>, __int16 p1@<d1>, __int16 p2@<d2>)
+; prototype: void __usercall UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp@<a0>, TeamFileEx *team1@<a1>, TeamFileEx *team2@<a2>, unsigned __int16 goals1@<d1>, unsigned __int16 goals2@<d2>)
 ; dos: cseg_908B4
 UpdateCareerPlayersFormAfterMatch:
                 tst.w   (isNationalSelector).l
@@ -48471,13 +48471,13 @@ UpdateCareerPlayersFormAfterMatch:
                 exg     d1,d2
                 lea     team2GoalCounterByPlayer(pc),a6
 loc_124930:
-                move.w  $3C(a0),d6
+                move.w  DIYCOMPETITIONEX_BASE+DIYCOMPETITION_SUBSTITUTESCOUNT(a0),d6
                 cmpa.l  #diyCompetitionStart,a0
                 beq.s   loc_124942
-                move.w  DIYCOMPETITION_COMPETITIONNAME+$62(a0),d7
+                move.w  DIYCOMPETITIONEX_MATCHDATA+DIYCOMPETITIONEX_MATCHDATA_CUP+DIYCOMPETITIONEX_CUPVIEW_ROUNDLEGS(a0),d7
                 bra.s   loc_124946
 loc_124942:
-                move.w  DIYCOMPETITION_ISACTIVE+$60(a0),d7
+                move.w  DIYCOMPETITIONEX_POINTSFORAWIN(a0),d7
 loc_124946:
                 addi.w  #$B,d7
                 move.l  a0,-(sp)
@@ -49152,28 +49152,28 @@ loc_1250C2:
                 rts
 
 ; ===== UpdateCareerFinancesAfterMatch =====
-; prototype: void __usercall UpdateCareerFinancesAfterMatch(void *ctx@<a0>, TeamFile *team@<a1>)
+; prototype: void __usercall UpdateCareerFinancesAfterMatch(DIYCompetitionEx *comp@<a0>, TeamFile *team@<a1>)
 UpdateCareerFinancesAfterMatch:
                 tst.w   (isNationalSelector).l
                 bne.w   locret_125334
                 movea.l a0,a3
-                cmpi.w  #0,$2C(a3)
+                cmpi.w  #0,DIYCOMPETITIONEX_BASE+DIYCOMPETITION_COMPID(a3)
                 beq.s   loc_125114
-                cmpi.w  #4,$2C(a3)
+                cmpi.w  #4,DIYCOMPETITIONEX_BASE+DIYCOMPETITION_COMPID(a3)
                 beq.w   loc_12525A
-                cmpi.w  #1,$2C(a3)
+                cmpi.w  #1,DIYCOMPETITIONEX_BASE+DIYCOMPETITION_COMPID(a3)
                 beq.w   loc_125214
-                cmpi.w  #2,$2C(a3)
+                cmpi.w  #2,DIYCOMPETITIONEX_BASE+DIYCOMPETITION_COMPID(a3)
                 beq.w   loc_125214
-                cmpi.w  #3,$2C(a3)
+                cmpi.w  #3,DIYCOMPETITIONEX_BASE+DIYCOMPETITION_COMPID(a3)
                 beq.w   loc_12525C
                 move.w  #$9231,(panicReasonCode).l
                 jsr     PanicHaltLoop
 loc_125114:
                 bsr.w   CalcLeagueMatchGateReceiptsFactor
-                tst.w   $48(a3)
+                tst.w   DIYCOMPETITIONEX_BASE+DIYCOMPETITION_HASGROUPS(a3)
                 bne.w   loc_1251F0
-                cmpi.w  #0,(a3)
+                cmpi.w  #DIYCOMPETITIONEX_BASE+DIYCOMPETITION_COMPETITIONTYPE,(a3)
                 beq.s   loc_125134
                 move.w  #$9235,(panicReasonCode).l
                 jsr     PanicHaltLoop
@@ -50492,7 +50492,7 @@ locret_1263EE:
                 rts
 
 ; ===== BeginContractNegotiationSequence =====
-; prototype: void __usercall BeginContractNegotiationSequence()
+; prototype: void __usercall BeginContractNegotiationSequence(DIYCompetitionEx *comp@<a0>, TeamFileEx *team@<a1>)
 BeginContractNegotiationSequence:
                 movem.l d0-d7/a0-a6,-(sp)
                 move.w  #1,(contractNegotiationActive).l
@@ -59733,11 +59733,11 @@ TeamSelectionKeyCache_AddCupEntry:
                 rts
 
 ; ===== DIY_UpdateCompetitionProgressOrAdvanceSlot =====
-; prototype: void __usercall DIY_UpdateCompetitionProgressOrAdvanceSlot(void *blk@<a0>)
+; prototype: void __usercall DIY_UpdateCompetitionProgressOrAdvanceSlot(DIYCompetitionEx *comp@<a0>)
 DIY_UpdateCompetitionProgressOrAdvanceSlot:
-                cmpi.w  #0,(a0)
+                cmpi.w  #DIYCOMPETITIONEX_BASE+DIYCOMPETITION_COMPETITIONTYPE,(a0)
                 beq.w   DIY_RecordLeagueFixtureResultAndAdvanceProgress
-                cmpi.w  #1,(a0)
+                cmpi.w  #DIYCOMPETITIONEX_BASE+DIYCOMPETITION_COMPETITIONTYPE+1,(a0)
                 beq.w   loc_12D36A
                 bra.w   loc_12D4B0
 
@@ -59745,17 +59745,17 @@ DIY_UpdateCompetitionProgressOrAdvanceSlot:
 ; prototype: void __usercall DIY_RecordLeagueFixtureResultAndAdvanceProgress()
 DIY_RecordLeagueFixtureResultAndAdvanceProgress:
                 lea     (diyCompetitionStart).l,a6
-                tst.w   $60(a6)
+                tst.w   DIYCOMPETITIONEX_MINSUBSTITUTES(a6)
                 beq.w   locret_12D368
                 lea     (teamSelectionKeyCache).l,a4
                 move.w  (teamSelectionKeyCacheCount).l,d7
                 subq.w  #1,d7
                 move.w  (diyFileBufferCopy+DIYCOMPETITION_ROUNDCOMPLETE).l,d1
-                move.w  $2C(a6),d0
+                move.w  DIYCOMPETITIONEX_BASE+DIYCOMPETITION_COMPID(a6),d0
 loc_12D29A:
                 cmp.b   (a4),d0
                 bne.s   loc_12D2AA
-                tst.w   $48(a6)
+                tst.w   DIYCOMPETITIONEX_BASE+DIYCOMPETITION_HASGROUPS(a6)
                 beq.s   loc_12D2C0
                 cmp.b   7(a4),d1
                 beq.s   loc_12D2C0
@@ -59777,9 +59777,9 @@ loc_12D2C2:
                 adda.l  #selTeamsPtr,a1
                 movea.l $2B4(a2),a2
                 adda.l  #selTeamsPtr,a2
-                cmpi.b  #1,4(a1)
+                cmpi.b  #1,TEAMFILE_TEAMCONTROLS(a1)
                 bne.s   loc_12D31C
-                cmpi.b  #1,4(a2)
+                cmpi.b  #1,TEAMFILE_TEAMCONTROLS(a2)
                 beq.s   loc_12D358
                 cmpi.l  #aFriendly,(diyCompetitionStart+DIYCOMPETITION_NAMEPTR).l ; "FRIENDLY" ...
                 beq.s   loc_12D314

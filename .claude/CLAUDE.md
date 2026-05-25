@@ -161,7 +161,7 @@ The `data/` folder contains helpful artifacts:
 - `data/SWOS2.c` — Ghidra decompiled C (reference only; not authoritative)
 - `data/SWOS2.h` — Ghidra header (structs/types reference)
 - `data/SWOS2_IDA.h` — IDA header (structs/types reference)
-- `data/SWOS.s` — the original assembly file for reference
+- `data/SWOS2.s` — the original assembly file for reference
 
 Use these to:
 - identify structs and field layouts

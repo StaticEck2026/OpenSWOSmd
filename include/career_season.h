@@ -28,7 +28,7 @@ void _SeasonFinished_ComputeSeasonReview(void);
 void _ShowChairmanOpinionAboutTheSeason(void);
 
 /* --- Chunk 181: Contract Negotiation --- */
-void _BeginContractNegotiationSequence(DIYCompetition *ctx, TeamFileEx *team);
+void _BeginContractNegotiationSequence(DIYCompetitionEx *comp, TeamFileEx *team);
 
 /* --- Chunk 182: Competition Season Processing --- */
 void _Career_ProcessSecondaryCompetitionForNextSeason(uint8_t *competition);

@@ -31,7 +31,7 @@ int16_t _GetAgeAdjustedPlayerFormFactor(uint8_t *playerBase);
 /* --- Financial management --- */
 void _ClampNewBalanceAndUpdateClubStatus(void);
 void _ClearOverdraftStateIfRecovered(void);
-void _UpdateCareerFinancesAfterMatch(uint8_t *ctx, TeamFileEx *team);
+void _UpdateCareerFinancesAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team);
 void _ApplyWeeklyFinancialDeductions(void);
 void _InitializeCareerSeasonFinancials(void);
 
@@ -106,7 +106,7 @@ void _Career_AutoAdvanceCompetitionSlots(void);
 void _Career_SetCurrentCompetitionSlot(uint8_t *comp, uint16_t slot, uint16_t divisionIndex, uint16_t hasSelectedTeams);
 
 /* --- Career player form update (Chunk 188) --- */
-void _UpdateCareerPlayersFormAfterMatch(uint8_t *compCtx, TeamFileEx *team1, TeamFileEx *team2,
+void _UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team1, TeamFileEx *team2,
                                          uint16_t team1Goals, uint16_t team2Goals);
 
 /* --- Career stats update after match (Chunk 189) --- */

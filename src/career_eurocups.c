@@ -16,7 +16,7 @@
 #include "panic.h"
 
 /* ---- ASM externs (globals defined in assembly) ---- */
-extern uint8_t diyCompetitionStart[];
+extern DIYCompetitionEx diyCompetitionStart;
 extern uint8_t primaryQualifiedTeamGrids[];
 extern uint8_t tertiaryQualifiedTeamGrid[];
 extern uint8_t euroCupTitleHolderGrid[];
@@ -270,12 +270,11 @@ void _DIY_CachePrimaryQualifiedTeamsGrid(void)
 {
     uint8_t *dst = primaryQualifiedTeamGrids;
     uint16_t *cachedIds = cachedPrimaryQualifiedTeamIds;
-    uint8_t *comp = diyCompetitionStart;
-    DIYCompetition *diyComp = (DIYCompetition *)comp;
-    uint16_t *leaguePositions = (uint16_t *)(comp + 0x6E);
-    uint16_t *teamIdsTable = (uint16_t *)(comp + 0x12E);
+    DIYCompetitionEx *comp = &diyCompetitionStart;
+    uint16_t *leaguePositions = comp->matchData.league.teamEntryOffsets;
+    uint16_t *teamIdsTable = comp->matchData.league.leagueTeamIds;
     uint16_t count = 9;
-    uint16_t numTeams = diyComp->numTeams;
+    uint16_t numTeams = comp->base.numTeams;
     if (count > numTeams)
         count = numTeams;
     /* asm: subq.w #1,d2 then dbf → loops count times */
@@ -299,9 +298,9 @@ void _DIY_CacheSecondaryQualifiedTeamsGrid(void)
     /* asm: lea (primaryQualifiedTeamGrids+0x180C),a1 — slot 9 (0x2AC * 9 = 0x180C) */
     uint8_t *dst = primaryQualifiedTeamGrids + 0x180C;
     uint16_t *cachedIds = cachedSecondaryQualifiedTeamIds;
-    uint8_t *comp = diyCompetitionStart;
-    uint8_t *grid = comp + 0x2CE;
-    uint16_t *teamIdsTable = (uint16_t *)(comp + 0x24E);
+    uint8_t *compRaw = (uint8_t *)&diyCompetitionStart;
+    uint8_t *grid = compRaw + 0x2CE;
+    uint16_t *teamIdsTable = (uint16_t *)(compRaw + 0x24E);
 
     for (int16_t i = 2; i >= 0; i--) {
         int8_t gridByte = (int8_t)*grid++;
@@ -319,11 +318,11 @@ __attribute__((used, externally_visible))
 void _DIY_CacheTertiaryQualifiedTeamGrid(void)
 {
     _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
-    uint8_t *comp = diyCompetitionStart;
-    int8_t gridByte = (int8_t)*(comp + 0x2CE);
+    uint8_t *compRaw = (uint8_t *)&diyCompetitionStart;
+    int8_t gridByte = (int8_t)*(compRaw + 0x2CE);
     int16_t idx = gridByte;
     idx <<= 1;
-    uint16_t *teamIdsTable = (uint16_t *)(comp + 0x24E);
+    uint16_t *teamIdsTable = (uint16_t *)(compRaw + 0x24E);
     uint16_t teamNum = *(uint16_t *)((uint8_t *)teamIdsTable + idx);
     cachedTertiaryQualifiedTeamId = teamNum;
     TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
@@ -338,11 +337,11 @@ void _DIY_CacheTertiaryQualifiedTeamGrid(void)
 static void copyTitleHolderGrid(uint16_t *titleHolderTeamId, uint8_t *titleHolderGrid)
 {
     _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
-    uint8_t *comp = diyCompetitionStart;
-    int8_t gridByte = (int8_t)*(comp + 0x2CE);
+    uint8_t *compRaw = (uint8_t *)&diyCompetitionStart;
+    int8_t gridByte = (int8_t)*(compRaw + 0x2CE);
     int16_t idx = gridByte;
     idx <<= 1;
-    uint16_t *teamIdsTable = (uint16_t *)(comp + 0x24E);
+    uint16_t *teamIdsTable = (uint16_t *)(compRaw + 0x24E);
     uint16_t teamNum = *(uint16_t *)((uint8_t *)teamIdsTable + idx);
     *titleHolderTeamId = teamNum;
     TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);

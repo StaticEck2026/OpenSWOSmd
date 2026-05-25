@@ -1068,7 +1068,7 @@ extern uint8_t competitionFileBuffer[];
 extern uint8_t competitionContext[];
 extern uint8_t tertiaryCompetitionContext[];
 extern uint8_t euroCupsCompetitionContext[];
-extern uint8_t diyCompetitionStart[];
+extern DIYCompetitionEx diyCompetitionStart;
 extern uint8_t diyFileBufferCopy[];
 extern uint16_t teamSelectionKeyCacheOffset;
 extern uint16_t teamSelectionKeyCacheIndex;
@@ -1099,11 +1099,11 @@ void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src)
     volatile uint16_t *s = (volatile uint16_t *)src;
 
     if (type == 0) {
-        volatile uint16_t *d = (volatile uint16_t *)diyCompetitionStart;
+        volatile uint16_t *d = (volatile uint16_t *)&diyCompetitionStart;
         for (int16_t i = 0x399; i >= 0; i--)
             *d++ = *s++;
     } else if (type == 1) {
-        volatile uint16_t *d = (volatile uint16_t *)diyCompetitionStart;
+        volatile uint16_t *d = (volatile uint16_t *)&diyCompetitionStart;
         for (int16_t i = 0x221; i >= 0; i--)
             *d++ = *s++;
     } else {
@@ -1131,11 +1131,11 @@ void _Career_StoreCompetitionSlotStateToBuffer(uint8_t *dst)
     volatile uint16_t *d = (volatile uint16_t *)dst;
 
     if (type == 0) {
-        volatile uint16_t *s = (volatile uint16_t *)diyCompetitionStart;
+        volatile uint16_t *s = (volatile uint16_t *)&diyCompetitionStart;
         for (int16_t i = 0x399; i >= 0; i--)
             *d++ = *s++;
     } else if (type == 1) {
-        volatile uint16_t *s = (volatile uint16_t *)diyCompetitionStart;
+        volatile uint16_t *s = (volatile uint16_t *)&diyCompetitionStart;
         for (int16_t i = 0x221; i >= 0; i--)
             *d++ = *s++;
     } else {
@@ -1481,7 +1481,7 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
     if (type == 1) {
         /* Cup */
         _ShowDIYCupMenuWithParams(1, 0, d2);
-        if (((DIYCompetition *)diyCompetitionStart)->roundComplete != 0)
+        if (diyCompetitionStart.base.roundComplete != 0)
             _DIY_UpdateCompetitionProgress();
     } else if (type == 2) {
         /* Hybrid */
@@ -1677,15 +1677,15 @@ void _Career_AutoSimulateLeagueFixturesUntilHumanTeam(void)
  * ================================================================ */
 static void getCurrentMatchTeamSlots(uint8_t **slot1Out, uint8_t **slot2Out)
 {
-    uint8_t *base = diyCompetitionStart;
-    uint16_t matchIdx = *(uint16_t *)(base + 0x64);
+    uint8_t *base = (uint8_t *)&diyCompetitionStart;
+    uint16_t matchIdx = diyCompetitionStart.matchData.cup.currentMatchIndex;
     uint16_t off = matchIdx * 2;
-    uint8_t *teamGrid = base + 0x2CE;
+    uint8_t *cupTeamGrid = base + 0x2CE;  /* cup bracket grid, distinct from teamGrid at 0x510 */
 
-    int8_t t1 = (int8_t)teamGrid[off];
+    int8_t t1 = (int8_t)cupTeamGrid[off];
     *slot1Out = base + (int16_t)t1 * 4;
 
-    int8_t t2 = (int8_t)teamGrid[off + 1];
+    int8_t t2 = (int8_t)cupTeamGrid[off + 1];
     *slot2Out = base + (int16_t)t2 * 4;
 }
 
@@ -1748,7 +1748,7 @@ __attribute__((used, externally_visible))
 void _Career_AutoPlayOrSimulateLeagueFixtureLoop(void)
 {
     for (;;) {
-        uint16_t field1C0 = *(uint16_t *)(diyCompetitionStart + 0x1C0);  /* extended buffer field */
+        uint16_t field1C0 = *(uint16_t *)((uint8_t *)&diyCompetitionStart + 0x1C0);  /* extended buffer field */
         if (field1C0 != 0 && careerSlotProcessingInProgress != 0)
             return;
         _DIY_PlayOrSimulateLeagueFixture(0, 0);
@@ -1766,7 +1766,7 @@ __attribute__((used, externally_visible))
 void _Career_AutoPlayCupMatchAndAdvanceLoop(void)
 {
     for (;;) {
-        uint16_t field54 = ((DIYCompetition *)diyCompetitionStart)->roundComplete;
+        uint16_t field54 = (uint16_t)diyCompetitionStart.base.roundComplete;
         if (field54 != 0 && careerSlotProcessingInProgress != 0) {
             _DIY_UpdateCompetitionProgress();
             return;
@@ -1792,7 +1792,7 @@ void _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot(void)
     uint16_t slotIdx = bufComp->roundComplete;
     uint8_t *slot = buf + (uint32_t)slotIdx * 0x76;
 
-    DIYCompetition *comp = (DIYCompetition *)diyCompetitionStart;
+    DIYCompetition *comp = &diyCompetitionStart.base;
 
     if (*(uint16_t *)(slot + 0x15E) != 0) {
         /* League type slot */
@@ -1853,7 +1853,7 @@ void _DIY_AdvanceToNextCompetitionSlot(void)
 
     /* Determine slot type */
     uint8_t *slot = buf + (uint32_t)currentSlot * 0x76;
-    uint8_t *comp = diyCompetitionStart;
+    uint8_t *comp = (uint8_t *)&diyCompetitionStart;
 
     if (*(uint16_t *)(slot + 0x15E) != 0) {
         /* League type: build seeded bracket */
@@ -2245,7 +2245,7 @@ extern uint16_t isNationalSelector;
 extern uint16_t teamSelectionKeyCacheOffset;
 extern uint16_t teamSelectionKeyCacheIndex;
 extern uint8_t diyFileBufferCopy[];
-extern uint8_t diyCompetitionStart[];
+extern DIYCompetitionEx diyCompetitionStart;
 extern void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
 extern void _Career_StoreCompetitionSlotStateToBuffer(uint8_t *dst);
 extern void _Career_InitCompetitionTeamSelection_Dispatch(uint8_t *spec, uint16_t idx);

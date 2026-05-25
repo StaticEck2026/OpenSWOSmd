@@ -125,7 +125,7 @@ extern uint16_t isGameFriendly;
 extern uint16_t gameRandValue;
 extern TeamGame topTeamInGame;
 extern TeamGame bottomTeamInGame;
-extern uint8_t  diyCompetitionStart[];
+extern DIYCompetitionEx diyCompetitionStart;
 extern void _SaveRand2State(void);
 extern void _RestoreRand2State(void);
 extern void _Randomize2(uint16_t seed);
@@ -1284,7 +1284,7 @@ int16_t _GetPlayerPricePercentageChange(int16_t factor, TeamFile *teamFile,
             d4 += (int16_t)callerD0;
 
             /* Add price rank offset */
-            int16_t pctOff = _CalcTeamPriceRankPercentOffset((DIYCompetition *)diyCompetitionStart, teamFile);
+            int16_t pctOff = _CalcTeamPriceRankPercentOffset(&diyCompetitionStart.base, teamFile);
             d4 += pctOff;
         }
     }

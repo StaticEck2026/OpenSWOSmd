@@ -6110,7 +6110,7 @@ void _SelectNationalTeamAfterDrawCommon(void *entryPtr)
 
 /* ---- Chunk 217: SelectAndShowSquadToView + StatsViewSquads + SquadMenu ---- */
 extern uint16_t inEditTactics;
-extern uint8_t  diyCompetitionStart[];
+extern DIYCompetitionEx diyCompetitionStart;
 
 /* ================================================================
  * _ShowSquadMenuForTeam  (SWOS2.s loc_1391C4)
@@ -6125,7 +6125,7 @@ static void _ShowSquadMenuForTeam(uint8_t *teamPtr, uint16_t rowMode)
     inEditTactics = rowMode;
 
     /* Read skill diff param from diyCompetitionStart offset 0x2C (word) */
-    uint16_t d0 = *(uint16_t *)(diyCompetitionStart + 0x2C);
+    uint16_t d0 = *(uint16_t *)&diyCompetitionStart.base.compId;
     if (d0 == 4)
         d0 = 0;
     teamSkillDiffAfterChange = d0;
@@ -6179,7 +6179,7 @@ void _StatsViewSquads(void)
 {
     uint16_t *teams = (uint16_t *)diyTeamsBufferPtr;
     uint16_t numTeams = diyNumberOfTeams;
-    uint16_t rowMode = ((DIYCompetition *)diyCompetitionStart)->substitutesCount;
+    uint16_t rowMode = (uint16_t)diyCompetitionStart.base.substitutesCount;
     _SelectAndShowSquadToView(teams, numTeams, rowMode);
 }
 
