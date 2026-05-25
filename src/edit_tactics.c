@@ -380,10 +380,10 @@ void _SetBigCheckSprite(void)
     /* Determine which sprite to show */
     if (oldPlayerSkill > newPlayerSkill) {
         /* Skill decreased - show red X */
-        *(uint16_t *)&entry->fg = SPR_CHECK_BIG;
+        entry->fgWord = SPR_CHECK_BIG;
     } else {
         /* Skill increased - show green check */
-        *(uint16_t *)&entry->fg = SPR_NOT_CHECK_BIG;
+        entry->fgWord = SPR_NOT_CHECK_BIG;
     }
 
     /* Set bit 13 of stringFlags and make visible */
@@ -2027,7 +2027,7 @@ void _CopyTactics(void)
 {
     if (editTacticsTransitionActive == 0) {
         /* Set entry 4's bg color to pink */
-        setBgColorIdx(&menuEntries[4], COLOR_PINK_TO_BROWN);
+        menuEntries[4].bgColor = (menuEntries[4].bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN;
         _CallDrawMenuItem(&menuEntries[4]);
         _EditTacticsMenuSavePlayerPositions();
         _DrawPlayerNamesAndFaces();
@@ -2038,7 +2038,7 @@ void _CopyTactics(void)
         return;
     _CallDrawMenuItem(&menuEntries[2]);
     /* Restore entry 4's bg color to yellow-green */
-    setBgColorIdx(&menuEntries[4], COLOR_YELLOW_GREEN_BLK);
+    menuEntries[4].bgColor = (menuEntries[4].bgColor & 0xFFF0) | COLOR_YELLOW_GREEN_BLK;
     _SetCurrentEntry(COLOR_ORANGE_TO_BROWN);
     _CallDrawMenuItem(&menuEntries[4]);
     _EditTactics_CommitPlayerPositionsAndRecalcSkill();
@@ -2441,9 +2441,9 @@ static void MarkFirstKitShirtC(void)
     uint8_t shirtType = tf->prShirtType;
 
     for (int16_t i = 3; i >= 0; i--) {
-        *(uint16_t *)&e->bg = 9;  /* PINK_TO_BROWN_9 */
+        e->bgColor = 9;  /* PINK_TO_BROWN_9 */
         if ((uint8_t)i == shirtType)
-            *(uint16_t *)&e->bg = 10;  /* RED_10 */
+            e->bgColor = 10;  /* RED_10 */
         e = (MenuEntry *)((uint8_t *)e - 56);
     }
 }
@@ -2456,9 +2456,9 @@ static void MarkSecondKitShirtC(void)
     uint8_t shirtType = tf->secShirtType;
 
     for (int16_t i = 3; i >= 0; i--) {
-        *(uint16_t *)&e->bg = 9;  /* PINK_TO_BROWN_9 */
+        e->bgColor = 9;  /* PINK_TO_BROWN_9 */
         if ((uint8_t)i == shirtType)
-            *(uint16_t *)&e->bg = 10;  /* RED_10 */
+            e->bgColor = 10;  /* RED_10 */
         e = (MenuEntry *)((uint8_t *)e - 56);
     }
 }
@@ -2751,7 +2751,7 @@ void _EditTeamsChangePlayerFace(MenuEntry *entry)
     pf->positionAndFace = (posAndFace & 0xE7) | (uint8_t)(faceIdx << 3);
 
     /* Update menu entry sprite to show new face */
-    *(uint16_t *)&entry->fg = (uint16_t)(faceIdx + 186);  /* SPR_PL_FACE_WHITE_GUY */
+    entry->fgWord = (uint16_t)(faceIdx + 186);  /* SPR_PL_FACE_WHITE_GUY */
     _CallDrawMenuItem(entry);
 }
 
@@ -2785,7 +2785,7 @@ void _InitEditTeamsMenu(void)
         PlayerFile *pf = &teamEx->players[15 - i];
         uint8_t posAndFace = pf->positionAndFace;
         uint16_t faceIdx = (posAndFace & 0x18) >> 3;
-        *(uint16_t *)&faceEntry->fg = (uint16_t)(faceIdx + 186);  /* SPR_PL_FACE_WHITE_GUY */
+        faceEntry->fgWord = (uint16_t)(faceIdx + 186);  /* SPR_PL_FACE_WHITE_GUY */
         faceEntry = (MenuEntry *)((uint8_t *)faceEntry + 56);
 
         nameEntry->fg = (uintptr_t)(uint8_t *)pf->playerName;
@@ -2808,7 +2808,7 @@ void _EditTeamsPlayersBeforeDraw(MenuEntry *entry)
 
     /* Player number (shirt number) */
     uint8_t shirtNum = (uint8_t)pf->shirtNumber;
-    *(uint16_t *)&e->fg = (uint16_t)shirtNum;
+    e->fgWord = (uint16_t)shirtNum;
     e->y = y;
     e = (MenuEntry *)((uint8_t *)e + 56);
 
@@ -3031,9 +3031,10 @@ void _ImportTeamsMenu(void)
     _InitEditTeamsMenu();
 }
 
-/* Helper: set bg color index — delegates to shared setBgColorIdx */
+/* Helper: set bg color index — set only the low nibble (color index) of
+ * the entry's bgColor word, preserving the upper 12 bits. */
 static void setBgColor(MenuEntry *e, uint16_t colorIdx) {
-    setBgColorIdx(e, colorIdx);
+    e->bgColor = (e->bgColor & 0xFFF0) | colorIdx;
 }
 
 /* ================================================================
@@ -3050,7 +3051,7 @@ static void setBgColor(MenuEntry *e, uint16_t colorIdx) {
  * ================================================================ */
 extern uintptr_t chooseTeamMenuName;
 extern uint16_t numTeamsCountryBuffer;
-extern uint32_t dwArrayCountries[];
+extern void *dwArrayCountries[];
 extern uint8_t indexCountries[];
 extern uint8_t selectTeamsForTacticsMenu[];
 extern uint16_t teamSelected;
@@ -3062,7 +3063,7 @@ TeamFileEx *_ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers,
     chooseTeamMenuName = (uintptr_t)menuTitle;
     numTeamsCountryBuffer = numTeams;
 
-    uint32_t *nameArray = dwArrayCountries;
+    void **nameArray = dwArrayCountries;
     uint8_t *idxArray = indexCountries;
     uint16_t count = 0;
 
@@ -3072,7 +3073,7 @@ TeamFileEx *_ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers,
         uint16_t teamNum = teamNums[i];
         TeamFileEx *teamEx = _VerifyTeamLoaded(teamNum);
         idxArray[i] = (uint8_t)count;
-        nameArray[count] = (uint32_t)teamEx->team.teamName;
+        nameArray[count] = teamEx->team.teamName;
         count++;
     }
 
@@ -3299,9 +3300,9 @@ void _EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *c
         uint8_t curPos = posArray[playerIndex];
         uint8_t oldPos = oldPosArray[playerIndex];
         if (curPos > oldPos) {
-            *(uint16_t *)&entry39->fg = SPR_CHECK_SMALL;  /* ENTRY_NUMBER: write high word */
+            entry39->fgWord = SPR_CHECK_SMALL;  /* ENTRY_NUMBER: write high word */
         } else if (curPos < oldPos) {
-            *(uint16_t *)&entry39->fg = SPR_NOT_CHECK_SMALL;  /* ENTRY_NUMBER: write high word */
+            entry39->fgWord = SPR_NOT_CHECK_SMALL;  /* ENTRY_NUMBER: write high word */
         }
     }
 }
@@ -3379,7 +3380,7 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     /* Entry 40: shirt number */
     e->isInvisible = 1;
     if (!d5) {
-        *(uint16_t *)&e->fg = (uint16_t)(uint8_t)pf->shirtNumber;  /* ENTRY_NUMBER: write high word */
+        e->fgWord = (uint16_t)(uint8_t)pf->shirtNumber;  /* ENTRY_NUMBER: write high word */
         e->isInvisible = 0;
     }
     e->y = entryY;

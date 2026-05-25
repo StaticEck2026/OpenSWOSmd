@@ -647,7 +647,7 @@ void _InitPlayerValueDisplayStruct(uint8_t *playerEntry, uint8_t *dst)
     MenuEntry *e = (MenuEntry *)dst;
     e->content     = 3;     /* ENTRY_SPRITE2 — show a sprite by idx in fg low 16 */
     e->stringFlags = 0;
-    setFgWord(e, val);
+    e->fgWord = val;
 }
 
 /* ================================================================
@@ -1777,7 +1777,6 @@ extern uint8_t aSelect0LessTea[];
 extern uint8_t aError[];
 extern int16_t chooseTeamsFriendly_changeTeamsPromptDrawList[];
 
-static inline void setEntryBgColor(MenuEntry *e, uint16_t v) { setBgColorWord(e, v); }
 
 __attribute__((used, externally_visible))
 void _ChooseTeamsFriendly_UpdateMenuEntryYLayout(void)
@@ -1935,7 +1934,7 @@ void _SetTeamEntriesStringsAndColors(void)
                                 color = BRIGHT_BLUE_TO_BLUE_13;
                         }
                     }
-                    setEntryBgColor(e, color);
+                    e->bgColor = color;
                     break;
                 }
 
@@ -2029,17 +2028,17 @@ void _ChooseTeamsFriendlyCommon(MenuEntry *entry)
     uint8_t ctrl = team->team.teamControls;
 
     if (ctrl == TEAM_NOT_SELECTED) {
-        setEntryBgColor(entry, RED_10);
+        entry->bgColor = RED_10;
         team->team.teamControls = TEAM_COMPUTER;
         numSelectedTeamsCopy++;
     } else if (ctrl == TEAM_COMPUTER) {
         team->team.teamControls = TEAM_PLAYER_COACH;
-        setEntryBgColor(entry, BLUE_TO_PURPLE_11);
+        entry->bgColor = BLUE_TO_PURPLE_11;
     } else if (ctrl == TEAM_PLAYER_COACH) {
         team->team.teamControls = TEAM_COACH;
-        setEntryBgColor(entry, BRIGHT_BLUE_TO_BLUE_13);
+        entry->bgColor = BRIGHT_BLUE_TO_BLUE_13;
     } else {
-        setEntryBgColor(entry, PINK_TO_BROWN_9);
+        entry->bgColor = PINK_TO_BROWN_9;
         team->team.teamControls = TEAM_NOT_SELECTED;
         numSelectedTeamsCopy--;
     }
@@ -2114,7 +2113,7 @@ void _ChooseTeamsFriendlyCommon2(MenuEntry *entry)
         if (numSelectedTeams >= 64)
             return;
         *tableEntry = 1;
-        setEntryBgColor(entry, RED_10);
+        entry->bgColor = RED_10;
         TeamFileEx *copied = _AddTeamToBuffer(team);
         copied->team.teamControls = 1;
     } else if (ctrl == 1) {
@@ -2122,17 +2121,17 @@ void _ChooseTeamsFriendlyCommon2(MenuEntry *entry)
         *tableEntry = 2;
         TeamFileEx *found = _FindTeam(team, (uint16_t *)0);
         found->team.teamControls = 2;
-        setEntryBgColor(entry, BLUE_TO_PURPLE_11);
+        entry->bgColor = BLUE_TO_PURPLE_11;
     } else if (ctrl == 2) {
         /* player coach → coach */
         *tableEntry = 3;
         TeamFileEx *found2 = _FindTeam(team, (uint16_t *)0);
         found2->team.teamControls = 3;
-        setEntryBgColor(entry, BRIGHT_BLUE_TO_BLUE_13);
+        entry->bgColor = BRIGHT_BLUE_TO_BLUE_13;
     } else {
         /* coach → unselect */
         *tableEntry = 0;
-        setEntryBgColor(entry, PINK_TO_BROWN_9);
+        entry->bgColor = PINK_TO_BROWN_9;
         _DeselectTeam(team);
     }
 
@@ -2276,7 +2275,7 @@ extern uint16_t selTeamsColumn1;
 extern uint16_t selTeamsColumn2;
 extern uint16_t selTeamsColumn3;
 extern uint8_t indexCountries[];
-extern uint32_t dwArrayCountries[];
+extern void *dwArrayCountries[];
 
 extern void _SelTeamForTactics_ReflowTeamListLayout(void);
 
@@ -2341,7 +2340,7 @@ void _SelTeamForTacticsInit(void)
                     /* Visible — set team name pointer */
                     e->isInvisible = 0;
                     int8_t idx = (int8_t)*indices++;
-                    e->fg = dwArrayCountries[(uint16_t)(int16_t)idx];
+                    e->fg = (uintptr_t)dwArrayCountries[(uint16_t)(int16_t)idx];
                     break;
                 }
 
@@ -2377,9 +2376,9 @@ void _ChooseTeamsFriendlyInitFinish(void)
     if ((int16_t)topOfStackMark < 0) {
         MenuEntry *abortEntry = &menuEntries[56]; /* 0xC40/56=56 */
         abortEntry->fg = (uintptr_t)aAbort;
-        uint16_t bgc = *(uint16_t *)&abortEntry->bg;
+        uint16_t bgc = abortEntry->bgColor;
         bgc = (bgc & 0xFFF0) + RED_10;
-        *(uint16_t *)&abortEntry->bg = bgc;
+        abortEntry->bgColor = bgc;
     }
 
     /* If selectTeamsNoLimit, hide entries 1-6 */
@@ -2558,7 +2557,7 @@ outer:
                 color = 13;
         }
     }
-    setEntryBgColor(e, color);
+    e->bgColor = color;
 
     /* Advance: mark remaining entries invisible, increment d5 if more teams */
     for (;;) {
@@ -2669,9 +2668,9 @@ void _SelectTeamsReinit(void)
     if (teamDepthLevel == (uint16_t)topOfStackMark) {
         MenuEntry *abortEntry = &menuEntries[88]; /* 0x1340/56=88 */
         abortEntry->fg = (uintptr_t)aAbort;
-        uint16_t bgc = *(uint16_t *)&abortEntry->bg;
+        uint16_t bgc = abortEntry->bgColor;
         bgc = (bgc & 0xFFF0) + RED_10;
-        *(uint16_t *)&abortEntry->bg = bgc;
+        abortEntry->bgColor = bgc;
     }
 
     /* Build header string */

@@ -611,7 +611,7 @@ typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x68) ? 1 : -
  * Intentional shared-memory overlay; see DIYCOMPETITIONEX_AUDIT.md.
  * ================================================================== */
 typedef struct __attribute__((packed, aligned(2))) DIYTeamStats {
-    uint32_t teamSelOffset;         /* 0x00: byte offset from selTeamsPtr to team record (NOT a pointer despite the historical "Ptr" name) */
+    int32_t  teamSelOffset;         /* 0x00: byte offset from selTeamsPtr to team record (NOT a pointer despite the historical "Ptr" name). Signed: careerTeam lives BELOW selTeamsPtr in BSS, so its offset is negative and must sign-extend on 64-bit when added back to &selTeamsPtr. */
     uint16_t gamesPlayed;           /* 0x04 */
     uint16_t wins;                  /* 0x06 */
     uint16_t draws;                 /* 0x08 */
@@ -803,7 +803,7 @@ typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx {
             uint16_t totalMatches;                        /* 0x334 */
             uint16_t curMonthIdx;                         /* 0x336 */
             uint8_t  progTable[0xC];                      /* 0x338..0x343: month-progression bytes */
-            uint32_t teamOffsetTable[64];                 /* 0x344..0x443: per-team byte offsets from selTeamsPtr (NOT pointers despite the historical "PtrTable" name) */
+            int32_t  teamOffsetTable[64];                 /* 0x344..0x443: per-team byte offsets from selTeamsPtr (NOT pointers despite the historical "PtrTable" name). Signed so `&selTeamsPtr + offset` sign-extends on 64-bit when teamPtr is in BSS *below* selTeamsPtr (e.g. careerTeam). */
             uint8_t  scratchTail[0x184];                  /* 0x444..0x5C7: bracket scratch tail */
         } bracketScratch;
     };

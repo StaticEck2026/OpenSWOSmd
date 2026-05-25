@@ -89,7 +89,12 @@ uint8_t diyTournamentShuffleOrder8[8] = { 6, 1, 5, 4, 2, 3, 7, 0 };
  * diyFileBufferCopy+0x9A → leagueTeamIds[idx] = 0 →
  * _VerifyTeamLoaded(0) panic. Alias to the same bytes. */
 /* uint16_t diyTournamentTeamIds[451];  -- see swos_globals.c .equ alias */
-uint8_t dwArrayCountries[256];
+/* dwArrayCountries: per-team teamName pointer cache used by
+ * _ChooseTeamForEditTactics for the alphabetical name sort. Amiga sized
+ * this as 256 bytes = 64 entries × 4-byte pointers. On 64-bit each
+ * entry is 8 bytes, so widen to a typed `void *[64]` so writes/reads
+ * carry the full pointer and consumers can index without truncation. */
+void *dwArrayCountries[64];
 uint8_t editTacticsCountryBuffer[128] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 uint8_t editTacticsDirectionDeltaTable[16] = { 0x0, 0xFF, 0x1, 0xFF, 0x1, 0x0, 0x1, 0x1, 0x0, 0x1, 0xFF, 0x1, 0xFF, 0x0, 0xFF, 0xFF };
 /* The six editTeamsXxx[2] sprite-copy headers and their matching
@@ -109,9 +114,17 @@ uint8_t facesFrequency[4] = { 0x0, 0x0, 0x0, 0x0 };
  * aliased to `numberOfFilesBuf + 4` so it overlaps the file-list
  * entries written by AssetSys_ResolveAssetList (which receives
  * &numberOfFiles as its listBuf). */
-uint8_t foundFilesPtrTable[180] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+/* 45 filename pointers — one per file slot in the file-select menu.
+ * Amiga 4-byte slots → 180 B; on 64-bit the slot grows to 8 B and we
+ * need 360 B. Use a typed void *[45] so both targets size correctly.
+ * extensionsBuffer (above) genuinely holds 32-bit extension codes
+ * (.CAR/.SEA/...) so it stays uint8_t[180]. */
+void *foundFilesPtrTable[45] = { 0 };
 uint8_t fundsBuffer[100];
-uint8_t gameListArray[112] = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
+/* 14 pairs of 2 pointers each — Amiga 4-byte slots → 112 B; on
+ * 64-bit each slot is 8 B (total 224 B). Typed void *[28] so
+ * the stride and storage size are both correct on each target. */
+void *gameListArray[28] = { 0 };
 uint8_t gameName[100];
 uint8_t gameTime[4] = { 0 };
 int8_t goalScoredChances[16] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0 };

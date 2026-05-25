@@ -2166,9 +2166,9 @@ void _EnableDisableOffers(void)
     if (numOffers == 0) {
         entry->fg = (uintptr_t)aNoOffers;
         entry->isDisabled = 1;
-        uint16_t color = *(uint16_t *)&entry->bg;
+        uint16_t color = entry->bgColor;
         color = (color & 0xFFF0) + PINK_TO_BROWN_9;
-        *(uint16_t *)&entry->bg = color;
+        entry->bgColor = color;
     }
 }
 
@@ -2350,9 +2350,9 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
 
     /* Entry 0: Style/color row header */
     {
-        uint16_t color = *(uint16_t *)&a0->bg;
+        uint16_t color = a0->bgColor;
         color = (color & 0xFFF0) | style;
-        *(uint16_t *)&a0->bg = color;
+        a0->bgColor = color;
     }
     a0->y = y;
     a0->isInvisible = 0;
@@ -2361,7 +2361,7 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
     /* Entry 1: Player number */
     a0->y = y;
     a0->isInvisible = 1;
-    *(uint16_t *)&a0->fg = (uint16_t)idx;  /* ENTRY_NUMBER: write high word */
+    a0->fgWord = (uint16_t)idx;  /* ENTRY_NUMBER: write high word */
     if (idx >= 0)
         a0->isInvisible = 0;
     a0++;
@@ -2622,11 +2622,11 @@ void _PlayerMarketUpdateFilterMenuEntryState(void)
     MenuEntry *entry = &menuEntries[6]; /* 0x150/56 = 6 */
     if (playerMarketFilterPosition != 0) {
         /* Active: bright blue, enabled */
-        setBgColorIdx(entry, 13); /* BRIGHT_BLUE_TO_BLUE_13 */
+        entry->bgColor = (entry->bgColor & 0xFFF0) | 13; /* BRIGHT_BLUE_TO_BLUE_13 */
         entry->isDisabled = 0;
     } else {
         /* Inactive: pink/brown, disabled */
-        setBgColorIdx(entry, 9); /* PINK_TO_BROWN_9 */
+        entry->bgColor = (entry->bgColor & 0xFFF0) | 9; /* PINK_TO_BROWN_9 */
         entry->isDisabled = 1;
     }
 }
@@ -3643,8 +3643,8 @@ void _OffersAfterDrawCommon(void *entryPtr)
     menuEntries[10].y = a5->y + 7;
     menuEntries[10].isInvisible = 1;
 
-    /* Store offer index+1 in entry 10's fg field (ENTRY_NUMBER: write high word) */
-    *(uint16_t *)((uint8_t *)&menuEntries[10] + 38) = (uint16_t)(d7 + 1);
+    /* ENTRY_NUMBER: store offer index+1 in entry 10's fg-word. */
+    menuEntries[10].fgWord = (uint16_t)(d7 + 1);
 
     /* Mark current entry as disabled */
     a5->isDisabled = 1;

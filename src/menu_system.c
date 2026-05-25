@@ -603,7 +603,7 @@ void _DrawMenuItem(MenuEntry *entry)
             uint16_t y = entry->y;
             uint16_t w = entry->dwWidth;
             uint16_t h = entry->dwHeight;
-            uint16_t bgColor = getBgColorWord(entry) & 0xF;
+            uint16_t bgColor = entry->bgColor & 0xF;
 
             if (bgColor == 0) {
                 if (forceDrawTransparentMenuItems) {
@@ -621,14 +621,14 @@ void _DrawMenuItem(MenuEntry *entry)
 
                 /* Inner frame if high nibble is non-zero */
                 {
-                    uint16_t frameColor = (getBgColorWord(entry) & 0xF0) >> 4;
+                    uint16_t frameColor = (entry->bgColor & 0xF0) >> 4;
                     if (frameColor != 0) {
                         _DrawMenuItemInnerFrame(frameColor, x + 1, y + 1, w - 2, h - 2);
                     }
                 }
             }
         } else if (bg == ENTRY_SPRITE1) {
-            uint16_t sprIdx = getBgColorWord(entry);
+            uint16_t sprIdx = entry->bgColor;
             _DrawSprite16Pixels(sprIdx, entry->x, entry->y);
         } else if (bg == ENTRY_FUNC1) {
             /* Original asm passes x in d1, y in d2 as register params.
@@ -661,7 +661,7 @@ void _DrawMenuItem(MenuEntry *entry)
     }
 
     if (content == ENTRY_SPRITE2) {
-        sprIdx = getFgWord(entry);
+        sprIdx = entry->fgWord;
         goto fg_sprite_draw;
     }
 
@@ -736,7 +736,7 @@ void _DrawMenuItem(MenuEntry *entry)
     }
 
     if (content == ENTRY_NUMBER) {
-        _Int2Ascii(getFgWord(entry), numbersBuffer);
+        _Int2Ascii(entry->fgWord, numbersBuffer);
         textPtr = numbersBuffer;
         goto fg_text_common;
     }

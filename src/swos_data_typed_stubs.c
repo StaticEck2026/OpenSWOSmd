@@ -806,18 +806,33 @@ char *sellExchangeResponseStrings[12] = {
     (char *)aButWeWouldBeHa,
     (char *)aFavourableOffe,
 };
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): currentCompetitionPtr */
-// CompetitionCup * currentCompetitionPtr;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): secondaryCompetitionPtr */
-// CompetitionCup * secondaryCompetitionPtr;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): tertiaryCompetitionPtr */
-// CompetitionCup * tertiaryCompetitionPtr;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): quaternaryCompetitionPtr */
-// CompetitionCup * quaternaryCompetitionPtr;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): diyCompetitionPtr */
-// void * diyCompetitionPtr;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): diyCompetitionTablePtr */
-// void * diyCompetitionTablePtr;
+/* ---- Career competition pointer state -----------------------------
+ *
+ * These 11 pointers were previously aliased onto careerFileBufferBuf
+ * at fixed Amiga 4-byte offsets (see git history of
+ * swos_globals_career_overlay.c). The overlay layout forced every
+ * pointer slot to 4 bytes, which on 64-bit either truncated the
+ * value or — through the `((uint8_t **)&currentCompetitionPtr)[i]`
+ * array trick — read across multiple aliased slots at the wrong
+ * stride.
+ *
+ * The .CAR save format is now JSON (SaveJson_WriteCareer / LoadCareer)
+ * which does NOT persist these pointers — they're re-derived after
+ * load by _RebuildPointersAfterLoad from stable identities
+ * (competition IDs, slot offsets, etc.). So the overlay layout no
+ * longer matters for serialization, and we can give each one a
+ * proper standalone definition with native pointer width. */
+uint8_t  *currentCompetitionPtr;
+uint8_t  *secondaryCompetitionPtr;
+uint8_t  *tertiaryCompetitionPtr;
+uint8_t  *quaternaryCompetitionPtr;
+uint8_t  *diyCompetitionPtr;
+uint32_t *diyCompetitionTablePtr;
+uint8_t  *careerCompetitionSlotPtrTable[5];
+uint8_t  *primaryCompStringOffset;
+uint8_t  *secondaryCompStringOffset;
+uint8_t  *tertiaryCompStringOffset;
+uint8_t  *quaternaryCompStringOffset;
 void * nearestTeammatePtr;
 /* saveFileAmigaType: aliased to careerFileBuffer + 98472 in swos_globals.c. */
 uint32_t * currentGoalPtr;

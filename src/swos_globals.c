@@ -989,32 +989,42 @@ __asm__(".globl " _ASM_PFX "diyTournamentCompetition\n"
  * into a buffer that overflows past everything else. The overlay puts
  * it back inside the 256 KB careerFileBufferBuf at the right offset. */
 
-/* diyLeagueTeamIds: on Amiga, the label sits at
- * `diyCompetitionStart + 0x12E` — the same memory the
- * `(uint16_t *)(diyCompetitionStart + 0x12E)` reads in
- * _DIY_CacheSelectedTeamPointers / DIY_RecomputeCompetitionDerivedFields
- * resolve to. SDL must mirror this overlap so writes via the global
- * and reads via the offset hit the same bytes. */
+/* Named diy* sub-aliases overlay typed struct fields inside
+ * diyCompetitionStart (typed as DIYCompetitionEx). The original Amiga
+ * offsets (0x6E / 0xEE / 0x12E / 0x24E / ...) assumed
+ * sizeof(DIYCompetition::base) == 0x60. On 64-bit hosts the base grows
+ * to 0x68 (namePtr widens from 4 → 8 + tail alignment), so every alias
+ * past the base end must shift by +8 to land on the same bytes the
+ * typed-struct readers see. Until Phase 3 retires these aliases by
+ * replacing call sites with direct struct field access, encode the
+ * shift here so 32-bit Amiga and 64-bit SDL builds stay in sync. */
+#define DIY_STR_(x) #x
+#define DIY_STR(x)  DIY_STR_(x)
+#if __SIZEOF_POINTER__ == 8
+#  define DIY_POST_BASE_SHIFT 8
+#else
+#  define DIY_POST_BASE_SHIFT 0
+#endif
+
+/* diyLeagueTeamIds: aliases DIYCompetitionEx::matchData.league.leagueTeamIds. */
 __asm__(".globl " _ASM_PFX "diyLeagueTeamIds\n"
-        ".equ   " _ASM_PFX "diyLeagueTeamIds, " _ASM_PFX "diyCompetitionStartBuf + 0x12E\n");
+        ".equ   " _ASM_PFX "diyLeagueTeamIds, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x12E + DIY_POST_BASE_SHIFT) "\n");
 
-/* diyCupTeamIds: same Amiga BSS overlap pattern. The cup-init paths
- * write team IDs via the named global (e.g. _AppendTeamsToSelection
- * with diyCupTeamIds as the destination), while
- * _DIY_BuildTeamSelectionPointerCache reads them as
- * `(uint16_t *)(diyCompetitionStart + 0x24E)`. Alias to the same
- * bytes so populate-then-cache works. */
+/* diyCupTeamIds: aliases DIYCompetitionEx::matchData.cup.cupTeamIds (same
+ * union memory, cup interpretation). */
 __asm__(".globl " _ASM_PFX "diyCupTeamIds\n"
-        ".equ   " _ASM_PFX "diyCupTeamIds, " _ASM_PFX "diyCompetitionStartBuf + 0x24E\n");
+        ".equ   " _ASM_PFX "diyCupTeamIds, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x24E + DIY_POST_BASE_SHIFT) "\n");
 
-/* diyTeamEntryOffsetsByIndex (offset 0x6E) and diyTeamShuffleIndices
- * (offset 0xEE) overlap diyCompetitionStart per the Amiga BSS layout.
- * Without this alias, _FindTeamInDIY reads zeros at `comp + 0x6E` and
- * fails to locate the player's team. */
+/* diyTeamEntryOffsetsByIndex (matchData.league.teamEntryOffsets) and
+ * diyTeamShuffleIndices (matchData.league.shuffleAndPad). */
 __asm__(".globl " _ASM_PFX "diyTeamEntryOffsetsByIndex\n"
-        ".equ   " _ASM_PFX "diyTeamEntryOffsetsByIndex, " _ASM_PFX "diyCompetitionStartBuf + 0x6E\n"
+        ".equ   " _ASM_PFX "diyTeamEntryOffsetsByIndex, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x6E + DIY_POST_BASE_SHIFT) "\n"
         ".globl " _ASM_PFX "diyTeamShuffleIndices\n"
-        ".equ   " _ASM_PFX "diyTeamShuffleIndices, " _ASM_PFX "diyCompetitionStartBuf + 0xEE\n");
+        ".equ   " _ASM_PFX "diyTeamShuffleIndices, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0xEE + DIY_POST_BASE_SHIFT) "\n");
 
 /* The named diy* uint16 globals at offsets 0x60..0x68 and 0x1BE..0x1C4
  * also overlap diyCompetitionStart per the SWOS2.s BSS layout. Without
@@ -1024,27 +1034,38 @@ __asm__(".globl " _ASM_PFX "diyTeamEntryOffsetsByIndex\n"
  * different memory — the auto-play loop never observes the phase
  * boundary and runs forever. */
 __asm__(".globl " _ASM_PFX "diyMinSubstitutes\n"
-        ".equ   " _ASM_PFX "diyMinSubstitutes, " _ASM_PFX "diyCompetitionStartBuf + 0x60\n"
+        ".equ   " _ASM_PFX "diyMinSubstitutes, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x60 + DIY_POST_BASE_SHIFT) "\n"
         ".globl " _ASM_PFX "diyPointsForAWin\n"
-        ".equ   " _ASM_PFX "diyPointsForAWin, " _ASM_PFX "diyCompetitionStartBuf + 0x62\n"
+        ".equ   " _ASM_PFX "diyPointsForAWin, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x62 + DIY_POST_BASE_SHIFT) "\n"
         ".globl " _ASM_PFX "diyLeagueMinSubstitutes\n"
-        ".equ   " _ASM_PFX "diyLeagueMinSubstitutes, " _ASM_PFX "diyCompetitionStartBuf + 0x64\n"
+        ".equ   " _ASM_PFX "diyLeagueMinSubstitutes, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x64 + DIY_POST_BASE_SHIFT) "\n"
         ".globl " _ASM_PFX "diyLeagueMaxSubstitutes\n"
-        ".equ   " _ASM_PFX "diyLeagueMaxSubstitutes, " _ASM_PFX "diyCompetitionStartBuf + 0x66\n"
+        ".equ   " _ASM_PFX "diyLeagueMaxSubstitutes, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x66 + DIY_POST_BASE_SHIFT) "\n"
         ".globl " _ASM_PFX "diyHasGroups\n"
-        ".equ   " _ASM_PFX "diyHasGroups, " _ASM_PFX "diyCompetitionStartBuf + 0x68\n"
+        ".equ   " _ASM_PFX "diyHasGroups, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x68 + DIY_POST_BASE_SHIFT) "\n"
         ".globl " _ASM_PFX "diyMatchesPlayedCount\n"
-        ".equ   " _ASM_PFX "diyMatchesPlayedCount, " _ASM_PFX "diyCompetitionStartBuf + 0x1BE\n"
+        ".equ   " _ASM_PFX "diyMatchesPlayedCount, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x1BE + DIY_POST_BASE_SHIFT) "\n"
         ".globl " _ASM_PFX "diyLeagueCurrentSlot\n"
-        ".equ   " _ASM_PFX "diyLeagueCurrentSlot, " _ASM_PFX "diyCompetitionStartBuf + 0x1C0\n"
+        ".equ   " _ASM_PFX "diyLeagueCurrentSlot, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x1C0 + DIY_POST_BASE_SHIFT) "\n"
         ".globl " _ASM_PFX "diyLeagueMatchProgress\n"
-        ".equ   " _ASM_PFX "diyLeagueMatchProgress, " _ASM_PFX "diyCompetitionStartBuf + 0x1C2\n"
+        ".equ   " _ASM_PFX "diyLeagueMatchProgress, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x1C2 + DIY_POST_BASE_SHIFT) "\n"
         ".globl " _ASM_PFX "diyLeagueTotalMatches\n"
-        ".equ   " _ASM_PFX "diyLeagueTotalMatches, " _ASM_PFX "diyCompetitionStartBuf + 0x1C4\n"
+        ".equ   " _ASM_PFX "diyLeagueTotalMatches, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x1C4 + DIY_POST_BASE_SHIFT) "\n"
         ".globl " _ASM_PFX "diyCompetitionFormat\n"
-        ".equ   " _ASM_PFX "diyCompetitionFormat, " _ASM_PFX "diyCompetitionStartBuf + 0x14A\n"
+        ".equ   " _ASM_PFX "diyCompetitionFormat, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x14A + DIY_POST_BASE_SHIFT) "\n"
         ".globl " _ASM_PFX "diyRoundFormat\n"
-        ".equ   " _ASM_PFX "diyRoundFormat, " _ASM_PFX "diyCompetitionStartBuf + 0x14C\n");
+        ".equ   " _ASM_PFX "diyRoundFormat, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x14C + DIY_POST_BASE_SHIFT) "\n");
 
 /* diyPresetNameOfCompetition: aliased in swos_globals_career_overlay.c
  * at careerFileBufferBuf + 93312 (== competitionFileBuffer + 4 in the

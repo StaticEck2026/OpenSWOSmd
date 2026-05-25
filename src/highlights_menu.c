@@ -58,27 +58,27 @@ void _HighlightsMenuCommon(void)
     if (hilNumGoals == 0) {
         /* No goals — disable entries 1 and 3 */
         menuEntries[1].isDisabled = 1;
-        uint16_t color1 = *(uint16_t *)&menuEntries[1].bg;
+        uint16_t color1 = menuEntries[1].bgColor;
         color1 = (color1 & 0xFFF0) + PINK_TO_BROWN_9;
-        *(uint16_t *)&menuEntries[1].bg = color1;
+        menuEntries[1].bgColor = color1;
 
         menuEntries[3].isDisabled = 1;
-        uint16_t color3 = *(uint16_t *)&menuEntries[3].bg;
+        uint16_t color3 = menuEntries[3].bgColor;
         color3 = (color3 & 0xFFF0) + PINK_TO_BROWN_9;
-        *(uint16_t *)&menuEntries[3].bg = color3;
+        menuEntries[3].bgColor = color3;
 
         _SetCurrentEntry(2);
     } else {
         /* Goals exist — enable entries 1 and 3 */
         menuEntries[1].isDisabled = 0;
-        uint16_t color1 = *(uint16_t *)&menuEntries[1].bg;
+        uint16_t color1 = menuEntries[1].bgColor;
         color1 = (color1 & 0xFFF0) + YELLOW_GREEN_BLACK_14;
-        *(uint16_t *)&menuEntries[1].bg = color1;
+        menuEntries[1].bgColor = color1;
 
         menuEntries[3].isDisabled = 0;
-        uint16_t color3 = *(uint16_t *)&menuEntries[3].bg;
+        uint16_t color3 = menuEntries[3].bgColor;
         color3 = (color3 & 0xFFF0) + YELLOW_GREEN_BLACK_14;
-        *(uint16_t *)&menuEntries[3].bg = color3;
+        menuEntries[3].bgColor = color3;
     }
 }
 

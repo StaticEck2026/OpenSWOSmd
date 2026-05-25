@@ -105,7 +105,7 @@ extern uint8_t  *tertiaryCompStringOffset;
 extern uint8_t  *quaternaryCompStringOffset;
 extern uint32_t  careerCupPickList;       /* 5-entry array via spill */
 extern uint32_t *diyCompetitionTablePtr;
-extern uint8_t   careerContests[];
+extern CompetitionCareer careerContests[];
 extern uint16_t  numSelectedTeams;
 
 /*
@@ -175,17 +175,16 @@ void _TranslateAmigaAddressesAfterLoad(void)
      * nameOffset). Translate in-place; this also makes the legacy
      * `_Rebuild_CupRecordNameSourcePointers` step idempotent. */
     {
-        uint8_t *tbl = careerContests;
-        for (;;) {
-            uint32_t srcAddr = *(uint32_t *)tbl;
-            if (srcAddr == 0xFFFFFFFFu)
-                break;
-            uint8_t *dest = *(uint8_t **)(tbl + 4);
-            int8_t  nameOffset = (int8_t)dest[5];
+        /* Iterate CompetitionCareer[] as the typed array; stride
+         * differs by bitness (10 B / 18 B). */
+        extern CompetitionCareer careerContests[];
+        for (CompetitionCareer *e = careerContests;
+             (uintptr_t)e->competition != 0xFFFFFFFFu; e++) {
+            uint8_t *dest = (uint8_t *)e->competitionCopy;
+            int8_t nameOffset = (int8_t)dest[5];
             if (nameOffset != 0) {
                 translate_one((uint32_t *)(dest + 5 + nameOffset));
             }
-            tbl += 10;
         }
     }
 }

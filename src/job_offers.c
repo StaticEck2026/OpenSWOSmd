@@ -140,8 +140,6 @@ extern void _Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel);
 /* Helper: menu entry from byte offset */
 
 /* Helper: access bg as the high 16 bits (big-endian BACKANDFRAMECOLOR) */
-static inline uint16_t bgColor(MenuEntry *e) { return getBgColorWord(e); }
-static inline void setBgColor(MenuEntry *e, uint16_t v) { setBgColorWord(e, v); }
 
 /* Helper: GetCurrentSeasonPointer */
 static inline uint8_t *getCurrentSeasonPointer(void) {
@@ -451,7 +449,7 @@ void _GotJobOfferFinish(void) {
         if ((uint16_t)(numNewJobOffers + numJobOffers) == 1) {
             MenuEntry *exitEntry = &menuEntries[8];
             exitEntry->fg = (uintptr_t)aRetire;
-            setBgColor(exitEntry, (bgColor(exitEntry) & 0xFFF0) | 10); /* RED_10 */
+            exitEntry->bgColor = (exitEntry->bgColor & 0xFFF0) | 10; /* RED_10 */
         }
     }
 
@@ -483,7 +481,7 @@ void _GotJobOfferFinish(void) {
     if (!jobOffersFromRetired) {
         MenuEntry *acceptBtn = &menuEntries[13];
         acceptBtn->isDisabled = 1;
-        setBgColor(acceptBtn, (bgColor(acceptBtn) & 0xFFF0) | 9); /* PINK_TO_BROWN_9 */
+        acceptBtn->bgColor = (acceptBtn->bgColor & 0xFFF0) | 9; /* PINK_TO_BROWN_9 */
     }
 
     /* Set up team pointer and format strings */
@@ -886,7 +884,7 @@ void _JobOffers_DrawOldOfferLine(void *entryPtr)
     MenuEntry *a3 = &menuEntries[15];
     uint16_t d3 = a3->stringFlags & 0xFFF0;
     a3->y = a5->y;
-    *(uint16_t *)&a3->fg = (uint16_t)(d7 + 1);  /* ENTRY_NUMBER: write high word */
+    a3->fgWord = (uint16_t)(d7 + 1);  /* ENTRY_NUMBER: write high word */
 
     /* Entry 16 (a4): set stringFlags base, y, get dest buffer */
     MenuEntry *a4 = &menuEntries[16];
@@ -954,7 +952,7 @@ void _JobOffersAfterDrawCommon(void *entryPtr)
     uint16_t d3 = a3->stringFlags & 0xFFF0;
     a3->y = a5->y;
     uint16_t numVal = (uint16_t)d7 + 1;
-    *(uint16_t *)&a3->fg = numVal;  /* ENTRY_NUMBER: write high word */
+    a3->fgWord = numVal;  /* ENTRY_NUMBER: write high word */
 
     /* Entry 14 (a4): set stringFlags base, y, get dest buffer */
     MenuEntry *a4 = &menuEntries[14];

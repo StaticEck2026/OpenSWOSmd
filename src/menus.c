@@ -719,7 +719,7 @@ void _ShowStadiumInit(void)
         } else {
             color = RED_10;
         }
-        *(uint16_t *)&menuEntries[2].bg = color;
+        menuEntries[2].bgColor = color;
     }
 
     /* Entry 4: leading space + bottom team name */
@@ -741,7 +741,7 @@ void _ShowStadiumInit(void)
         } else {
             color = RED_10;
         }
-        *(uint16_t *)&menuEntries[4].bg = color;
+        menuEntries[4].bgColor = color;
     }
 
     /* Entries 16-31: top team player names */
@@ -959,7 +959,6 @@ __attribute__((used, externally_visible))
 void _UpdateBigCheckMark(void)
 {
     MenuEntry *entry = &menuEntries[1]; /* menuEntries + 0x38 */
-    uint8_t *base = (uint8_t *)entry;
 
     entry->isInvisible = 1;
 
@@ -972,10 +971,10 @@ void _UpdateBigCheckMark(void)
 
     if (oldPlayerSkill > newPlayerSkill) {
         /* Skill decreased: show check mark */
-        *(uint16_t *)(base + 38) = SPR_CHECK_BIG;
+        entry->fgWord = SPR_CHECK_BIG;
     } else if (oldPlayerSkill < newPlayerSkill) {
         /* Skill increased: show not-check mark */
-        *(uint16_t *)(base + 38) = SPR_NOT_CHECK_BIG;
+        entry->fgWord = SPR_NOT_CHECK_BIG;
     } else {
         /* Equal: no mark shown */
         return;
@@ -1237,7 +1236,7 @@ extern uint8_t shortCountryNames[];
 
 /* Helper: set the low nibble of the bg field's high word (68k big-endian color index) */
 static void setBgColorIndex(MenuEntry *e, uint16_t colorIdx) {
-    setBgColorIdx(e, colorIdx);
+    e->bgColor = (e->bgColor & 0xFFF0) | colorIdx;
 }
 
 /* _SquadUpdateMenuState (SWOS2.s line 48491)
@@ -1270,7 +1269,7 @@ void _SquadUpdateMenuState(void)
     }
 
     /* Entry 25: fg = team writesZeroHere field (ENTRY_NUMBER: write high word) */
-    *(uint16_t *)((uint8_t *)&menuEntries[25] + 38) = (uint16_t)(uint8_t)tf->writesZeroHere;
+    menuEntries[25].fgNumber = (uint16_t)(uint8_t)tf->writesZeroHere;
 
     /* Entries 15, 13 initially invisible */
     menuEntries[15].isInvisible = 1;
@@ -1596,9 +1595,9 @@ void _SquadAfterDrawCommon(void *entryPtr)
         uint8_t curPos = playerPositionsArray[d4_fileIdx];
         uint8_t oldPos = oldPlayerPositionsArray[d4_fileIdx];
         if (curPos < oldPos) {
-            *(uint16_t *)&e->fg = 0xD1; /* down arrow — ENTRY_SPRITE2: write high word */
+            e->fgWord = 0xD1; /* down arrow — ENTRY_SPRITE2: write high word */
         } else if (curPos > oldPos) {
-            *(uint16_t *)&e->fg = 0xD0; /* up arrow — ENTRY_SPRITE2: write high word */
+            e->fgWord = 0xD0; /* up arrow — ENTRY_SPRITE2: write high word */
         }
     }
 
@@ -1606,10 +1605,11 @@ void _SquadAfterDrawCommon(void *entryPtr)
     e = &menuEntries[47];
     e->isInvisible = 1;
     if (d5 == 0) {
-        /* ENTRY_NUMBER renderer reads *(uint16_t *)((uint8_t *)entry + 38),
-         * which is the high word of fg on big-endian. Write only the high word
-         * to match asm: clr.w d0; move.b $4E(a6),d0; move.w d0,$26(a0) */
-        *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)(uint8_t)pf->shirtNumber;
+        /* ENTRY_NUMBER renderer reads e->fgNumber (the first 2 bytes of
+         * the fg union slot). Direct named-field write replaces the
+         * Amiga-shorthand `entry + 38` byte arithmetic, which on 64-bit
+         * landed on `content` instead of `fg`. */
+        e->fgNumber = (uint16_t)(uint8_t)pf->shirtNumber;
         e->isInvisible = 0;
     }
     e->y = yPos;
@@ -1671,11 +1671,11 @@ void _SquadAfterDrawCommon(void *entryPtr)
                              + (uint16_t)pf->goalStats[2]
                              + (uint16_t)pf->goalStats[3];
                 /* ENTRY_NUMBER: renderer reads high word of fg */
-                *(uint16_t *)((uint8_t *)e + 38) = sum;
+                e->fgNumber = sum;
                 e->isInvisible = 0;
             }
         } else {
-            *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)pf->goalStats[skillDiff];
+            e->fgNumber = (uint16_t)pf->goalStats[skillDiff];
             e->isInvisible = 0;
         }
     }
@@ -1749,7 +1749,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
         e = &menuEntries[59];
         e->isInvisible = 1;
         if (quaternaryCompetitionPtr != 0 || secondaryCompetitionPtr != 0 || tertiaryCompetitionPtr != 0) {
-            *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)pf->goalStats[0];
+            e->fgNumber = (uint16_t)pf->goalStats[0];
             e->isInvisible = 0;
         }
         e->y = yPos;
@@ -1758,7 +1758,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
         e = &menuEntries[60];
         e->isInvisible = 1;
         if (secondaryCompetitionPtr != 0) {
-            *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)pf->goalStats[1];
+            e->fgNumber = (uint16_t)pf->goalStats[1];
             e->isInvisible = 0;
         }
         e->y = yPos;
@@ -1767,7 +1767,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
         e = &menuEntries[61];
         e->isInvisible = 1;
         if (tertiaryCompetitionPtr != 0) {
-            *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)pf->goalStats[2];
+            e->fgNumber = (uint16_t)pf->goalStats[2];
             e->isInvisible = 0;
         }
         e->y = yPos;
@@ -1776,7 +1776,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
         e = &menuEntries[62];
         e->isInvisible = 1;
         if (quaternaryCompetitionPtr != 0) {
-            *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)pf->goalStats[3];
+            e->fgWord = (uint16_t)pf->goalStats[3];
             e->isInvisible = 0;
         }
         e->y = yPos;
@@ -1788,7 +1788,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
                            + (uint16_t)pf->goalStats[1]
                            + (uint16_t)pf->goalStats[2]
                            + (uint16_t)pf->goalStats[3];
-            *(uint16_t *)((uint8_t *)e + 38) = total;
+            e->fgWord = total;
             e->isInvisible = 0;
         }
         e->y = yPos;
@@ -2494,7 +2494,7 @@ extern uintptr_t savedContestEntryPtr;
 extern uintptr_t savedContestRoundPtr;
 extern uint16_t gameListY;
 extern uint16_t contestEntryHeight;
-extern uint32_t gameListArray[];       /* 14 × 2 uint32_t entries = 112 bytes */
+extern void *gameListArray[];          /* 14 pairs of 2 pointers (28 entries) */
 extern uint16_t columnMarker;
 extern uint16_t cglmVar3;
 extern uint16_t seasonFinished;
@@ -2704,7 +2704,7 @@ void _CheckJobOffers(void)
         return;
     MenuEntry *entry = &menuEntries[5]; /* JOB OFFERS entry */
     /* Reset background color */
-    setBgColorIdx(entry, COLOR_BLUE_TO_PURPLE_11);
+    entry->bgColor = (entry->bgColor & 0xFFF0) | COLOR_BLUE_TO_PURPLE_11;
     entry->isDisabled = 0;
     uint16_t flags = entry->stringFlags;
     flags &= ~(1 << 13);
@@ -2729,7 +2729,7 @@ void _CheckJobOffers(void)
     /* No offers at all */
     entry->fg = (uintptr_t)aNoJobOffers;
     entry->isDisabled = 1;
-    setBgColorIdx(entry, COLOR_PINK_TO_BROWN_7);
+    entry->bgColor = (entry->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_7;
     entry->stringFlags = flags;
 }
 
@@ -2776,7 +2776,7 @@ void _CheckTransfers(void)
     /* Enable transfers entry */
     {
         MenuEntry *entry = &menuEntries[4];
-        setBgColorIdx(entry, COLOR_BLUE_TO_BLACK_8);
+        entry->bgColor = (entry->bgColor & 0xFFF0) | COLOR_BLUE_TO_BLACK_8;
         entry->isDisabled = 0;
         if (timeToNegotiate != 0) {
             if (_CheckForTransferOffers() == 0) {
@@ -2796,7 +2796,7 @@ void _CheckTransfers(void)
 disableEntry:
     {
         MenuEntry *entry = &menuEntries[4];
-        setBgColorIdx(entry, COLOR_PINK_TO_BROWN_9);
+        entry->bgColor = (entry->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_9;
         entry->isDisabled = 1;
     }
     /* Disabled path: clear blink so a stale bit from a prior enable
@@ -2822,7 +2822,7 @@ void _BuildGameListArrayFromTeamSelectionKeyCache(void)
     uint8_t *listEntry = _TeamSelectionKeyCache_GetListPtr(listIdx);
     uint8_t *gameEntry = listEntry + gameIdx * 12;
 
-    uint32_t *out = gameListArray;
+    void **out = gameListArray;
     uint16_t remaining = 14; /* 0xD + 1 = 14 entries (dbf counts from 13) */
 
     for (;;) {
@@ -2836,8 +2836,8 @@ void _BuildGameListArrayFromTeamSelectionKeyCache(void)
             return;
         }
         for (;;) {
-            *out++ = (uint32_t)listEntry;
-            *out++ = (uint32_t)gameEntry;
+            *out++ = listEntry;
+            *out++ = gameEntry;
             uint8_t numGames = *(uint8_t *)(listEntry + 5);
             if (numGames == 0)
                 break;
@@ -2942,11 +2942,11 @@ void _SetNationalSelectorButtons(void)
 
     /* Entry 12 (national selector actions) */
     MenuEntry *entry12 = &menuEntries[12];
-    setBgColorIdx(entry12, COLOR_ORANGE_TO_BROWN_4);
+    entry12->bgColor = (entry12->bgColor & 0xFFF0) | COLOR_ORANGE_TO_BROWN_4;
     entry12->isDisabled = 0;
 
     if (_IsTournamentAllowingSquadChangesIfNotCareer() != 0) {
-        setBgColorIdx(entry12, COLOR_PINK_TO_BROWN_9);
+        entry12->bgColor = (entry12->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_9;
         entry12->isDisabled = 1;
     }
 
@@ -2958,22 +2958,22 @@ void _SetNationalSelectorButtons(void)
 
     /* Not enough players — disable most entries */
     MenuEntry *entry8 = &menuEntries[8];  /* SQUAD */
-    setBgColorIdx(entry8, COLOR_PINK_TO_BROWN_9);
+    entry8->bgColor = (entry8->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_9;
     entry8->isDisabled = 1;
 
     MenuEntry *entry7 = &menuEntries[7];  /* PLAY MATCH */
-    setBgColorIdx(entry7, COLOR_PINK_TO_BROWN_9);
+    entry7->bgColor = (entry7->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_9;
     entry7->isDisabled = 1;
 
     MenuEntry *entry10 = &menuEntries[10]; /* NEXT MATCH */
-    setBgColorIdx(entry10, COLOR_PINK_TO_BROWN_9);
+    entry10->bgColor = (entry10->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_9;
     entry10->isDisabled = 1;
 
     MenuEntry *entry11 = &menuEntries[11]; /* VIEW COMPETITIONS */
-    setBgColorIdx(entry11, COLOR_PINK_TO_BROWN_9);
+    entry11->bgColor = (entry11->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_9;
     entry11->isDisabled = 1;
 
-    setBgColorIdx(entry12, COLOR_PINK_TO_BROWN_9);
+    entry12->bgColor = (entry12->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_9;
     entry12->isDisabled = 1;
 }
 
@@ -2988,7 +2988,7 @@ void _ContestSetButtons(void)
     if (gameType == GAME_TYPE_SEASON) {
         /* Season mode */
         MenuEntry *entry13 = &menuEntries[13];
-        setBgColorIdx(entry13, COLOR_ORANGE_TO_BROWN_4);
+        entry13->bgColor = (entry13->bgColor & 0xFFF0) | COLOR_ORANGE_TO_BROWN_4;
         entry13->isDisabled = 0;
         if (seasonNumberOfSquads == 0) {
             entry7->fg = (uintptr_t)aNextMatch;
@@ -3012,7 +3012,7 @@ void _ContestSetButtons(void)
     menuEntries[10].isInvisible = 0;
     {
         MenuEntry *entry10 = &menuEntries[10];
-        setBgColorIdx(entry10, COLOR_ORANGE_TO_BROWN_4);
+        entry10->bgColor = (entry10->bgColor & 0xFFF0) | COLOR_ORANGE_TO_BROWN_4;
     }
     if (careerFinished != 0) {
         entry7->fg = (uintptr_t)aFinishSeason;
@@ -3030,7 +3030,7 @@ careerFinished_label:
     entry7->fg = (uintptr_t)aFinishSeason;
     {
         MenuEntry *entry10 = &menuEntries[10];
-        setBgColorIdx(entry10, COLOR_PINK_TO_BROWN_9);
+        entry10->bgColor = (entry10->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_9;
         entry10->isDisabled = 1;
     }
     return;
@@ -3994,9 +3994,9 @@ static void CareerOverUpdateJobOffersEntry(void)
     /* Set entry to yellow-green-black color scheme */
     e = &menuEntries[0x118 / 56];
     {
-        uint16_t bg = *(uint16_t *)((uint8_t *)e + 30);  /* BG+BACKANDFRAMECOLOR at offset 30 */
+        uint16_t bg = e->bgColor;  /* BG+BACKANDFRAMECOLOR at offset 30 */
         bg = (bg & 0xFFF0) + 14;  /* YELLOW_GREEN_BLACK_14 */
-        *(uint16_t *)((uint8_t *)e + 30) = bg;
+        e->bgColor = bg;
     }
     e->isDisabled = 0;
 
@@ -4018,9 +4018,9 @@ static void CareerOverUpdateJobOffersEntry(void)
             e->fg = (uintptr_t)aNoJobOffers;
             e->isDisabled = 1;
             {
-                uint16_t bg = *(uint16_t *)((uint8_t *)e + 30);
+                uint16_t bg = e->bgColor;
                 bg = (bg & 0xFFF0) + 9;  /* PINK_TO_BROWN_9 */
-                *(uint16_t *)((uint8_t *)e + 30) = bg;
+                e->bgColor = bg;
             }
             e->stringFlags = flags;
             return;
@@ -4122,17 +4122,17 @@ void _CareerOverFinish(void)
         {
             MenuEntry *eE0 = &menuEntries[0xE0 / 56];
             eE0->isDisabled = 1;
-            uint16_t bg = *(uint16_t *)((uint8_t *)eE0 + 30);
+            uint16_t bg = eE0->bgColor;
             bg = (bg & 0xFFF0) + 9;  /* PINK_TO_BROWN_9 */
-            *(uint16_t *)((uint8_t *)eE0 + 30) = bg;
+            eE0->bgColor = bg;
         }
         /* Disable "SAVE CAREER" entry (at offset $150) */
         {
             MenuEntry *e150 = &menuEntries[0x150 / 56];
             e150->isDisabled = 1;
-            uint16_t bg = *(uint16_t *)((uint8_t *)e150 + 30);
+            uint16_t bg = e150->bgColor;
             bg = (bg & 0xFFF0) + 9;  /* PINK_TO_BROWN_9 */
-            *(uint16_t *)((uint8_t *)e150 + 30) = bg;
+            e150->bgColor = bg;
         }
         menuEntries[0x188 / 56].isInvisible = 1;
         menuEntries[0xA8 / 56].isInvisible = 0;
@@ -4143,9 +4143,9 @@ void _CareerOverFinish(void)
     {
         MenuEntry *e150 = &menuEntries[0x150 / 56];
         e150->isDisabled = 1;
-        uint16_t bg = *(uint16_t *)((uint8_t *)e150 + 30);
+        uint16_t bg = e150->bgColor;
         bg = (bg & 0xFFF0) + 9;  /* PINK_TO_BROWN_9 */
-        *(uint16_t *)((uint8_t *)e150 + 30) = bg;
+        e150->bgColor = bg;
     }
 }
 
@@ -4877,7 +4877,7 @@ void _SetLeagueNames(void)
             if (*str == '.')
             {
                 /* Write PINK_TO_BROWN_7 to high word of bg (68k move.w to bg offset) */
-                *(uint16_t *)&e->bg = PINK_TO_BROWN_7;
+                e->bgColor = PINK_TO_BROWN_7;
             }
         }
 
@@ -4945,7 +4945,7 @@ void _SetCountryNames(void)
                         const uint8_t *str = (const uint8_t *)e->fg;
                         if (*str == '.')
                         {
-                            *(uint16_t *)&e->bg = PINK_TO_BROWN_7;
+                            e->bgColor = PINK_TO_BROWN_7;
                         }
                     }
                     break; /* goto next_entry */
@@ -4977,7 +4977,7 @@ void _SetMenuEntryPlayerFace(MenuEntry *entry, PlayerFile *playerFile) {
     d0 &= 0x18;
     d0 >>= 3;
     d0 += SPR_PL_FACE_WHITE_GUY;
-    *(uint16_t *)&entry->fg = d0;
+    entry->fgWord = d0;
 }
 
 /* ---- Chunk 142: SaveCareer ---- */
@@ -5045,11 +5045,11 @@ void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, PlayerFile *playerFile, ui
 
         if (d2 == 0) {
             if (d3 == 0) {
-                *(uint16_t *)&entry->fg = d1 + 0xBA;
+                entry->fgWord = d1 + 0xBA;
                 return;
             }
             if (d3 == 0x20) {
-                *(uint16_t *)&entry->fg = d1 + 0x99;
+                entry->fgWord = d1 + 0x99;
                 return;
             }
             goto injury_0;
@@ -5079,8 +5079,8 @@ void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, PlayerFile *playerFile, ui
         }
         sprite = (d3 - 0x40) / 32 + 0x9C;
     write_fg_bg_0:
-        *(uint16_t *)&entry->fg = sprite;
-        *(uint16_t *)&entry->bg &= 0xFFF0;
+        entry->fgWord = sprite;
+        entry->bgColor &= 0xFFF0;
         return;
     }
 
@@ -5090,11 +5090,11 @@ void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, PlayerFile *playerFile, ui
 
     if (d2 == 0) {
         if (d3 == 0) {
-            *(uint16_t *)&entry->fg = d1 + 0xBA;
+            entry->fgWord = d1 + 0xBA;
             return;
         }
         if (d3 == 0x20) {
-            *(uint16_t *)&entry->fg = d1 + 0x99;
+            entry->fgWord = d1 + 0x99;
             return;
         }
         goto injury_1;
@@ -5121,8 +5121,8 @@ injury_1:
     }
     sprite = (d3 - 0x40) / 32 + 0x9C;
 write_fg_bg_1:
-    *(uint16_t *)&entry->fg = sprite;
-    *(uint16_t *)&entry->bg &= 0xFFF0;
+    entry->fgWord = sprite;
+    entry->bgColor &= 0xFFF0;
 }
 
 /* ---- Chunk 143: SetSquadMenuEntryStatusSprite_AfterSim ---- */
@@ -5154,15 +5154,15 @@ void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, PlayerFile *playe
     uint16_t d3 = playerFile->cardsInjuries & 0xE0;
 
     if (d3 == 0) {
-        *(uint16_t *)&entry->fg = d1 + 0xBA;
+        entry->fgWord = d1 + 0xBA;
         return;
     }
     if (d3 == 0x20) {
-        *(uint16_t *)&entry->fg = d1 + 0x99;
+        entry->fgWord = d1 + 0x99;
         return;
     }
     /* Injured */
-    *(uint16_t *)&entry->fg = (d3 - 0x40) / 32 + 0x9C;
+    entry->fgWord = (d3 - 0x40) / 32 + 0x9C;
 }
 
 /* ---- Chunk 147: SetFriendlyPitchOrSeason ---- */
@@ -5274,10 +5274,10 @@ void _DisableEntries(void)
     for (i = 0; i < 6; i++) {
         MenuEntry *e = &menuEntries[1 + i];  /* 0x38/56=1, loop 6 */
         if (e->background == ENTRY_FRAME_AND_BACK_COLOR) {
-            uint16_t bgVal = *(uint16_t *)&e->bg;
+            uint16_t bgVal = e->bgColor;
             if ((bgVal & 0x0F) != 0) {
                 bgVal = (bgVal & 0xFFF0) + PINK_TO_BROWN_9;
-                *(uint16_t *)&e->bg = bgVal;
+                e->bgColor = bgVal;
                 e->isDisabled = 1;
             }
         }
@@ -5302,15 +5302,15 @@ void _FriendlyMenuReinit(void)
         friendlyPitchType = pitchType;
         /* Disable entry 3 (pitch/season toggle) */
         MenuEntry *e3 = &menuEntries[3];  /* 0xA8/56=3 */
-        uint16_t bg3 = *(uint16_t *)&e3->bg;
+        uint16_t bg3 = e3->bgColor;
         bg3 = (bg3 & 0xFFF0) + PINK_TO_BROWN_9;
-        *(uint16_t *)&e3->bg = bg3;
+        e3->bgColor = bg3;
         e3->isDisabled = 1;
         /* Disable entry 4 */
         MenuEntry *e4 = &menuEntries[4];  /* 0xE0/56=4 */
-        uint16_t bg4 = *(uint16_t *)&e4->bg;
+        uint16_t bg4 = e4->bgColor;
         bg4 = (bg4 & 0xFFF0) + PINK_TO_BROWN_9;
-        *(uint16_t *)&e4->bg = bg4;
+        e4->bgColor = bg4;
         e4->isDisabled = 1;
     }
 
@@ -6415,12 +6415,14 @@ void _CareerGameListCommon(MenuEntry *item)
     uint16_t d4 = 0;
     uint16_t d3 = 0;
 
-    /* d0 <<= 3 to get byte offset into gameListArray (8 bytes per pair) */
-    uint16_t arrayOff = d0 << 3;
-    uint8_t *a6 = (uint8_t *)gameListArray[arrayOff / 4]; /* contest entry ptr */
+    /* gameListArray is now a typed void *[28] = 14 pairs of
+     * (contestEntry, roundOrGame). Index by pair via d0 * 2 instead
+     * of byte arithmetic — the old `d0 << 3 / 4` form assumed 4-byte
+     * slots and would land mid-pointer on 64-bit. */
+    uint8_t *a6 = (uint8_t *)gameListArray[d0 * 2];     /* contest entry ptr */
     if (a6 == 0)
         goto hideAll;
-    uint8_t *a4 = (uint8_t *)gameListArray[arrayOff / 4 + 1]; /* round/game ptr */
+    uint8_t *a4 = (uint8_t *)gameListArray[d0 * 2 + 1]; /* round/game ptr */
 
     /* a5 = entry 33 (menuEntries + 0x738) */
     a5 = &menuEntries[33];
@@ -6442,18 +6444,6 @@ void _CareerGameListCommon(MenuEntry *item)
          * so the LE host produces the `(country<<8)|ordinal` value
          * findTeamInCache / _VerifyTeamLoaded compare against. */
         uint16_t topTeamIdx = BE_READ_U16(a4 + 0x0C);
-#ifdef SWOS_DEBUG_AUTOSKIP
-        /* Trace which fixture entry we're verifying so we can match a
-         * panic back to a competition slot and a specific game. */
-        fprintf(stderr,
-                "[gamelist] entry d0=%u contest=%p game=%p slotType=%u "
-                "topRaw=(0x%02X 0x%02X) topId=0x%04X botRaw=(0x%02X 0x%02X) botId=0x%04X\n",
-                (unsigned)d0,
-                (void *)a6, (void *)a4, (unsigned)(a6[0] & 0xFF),
-                (unsigned)a4[0x0C], (unsigned)a4[0x0D], (unsigned)topTeamIdx,
-                (unsigned)a4[0x0E], (unsigned)a4[0x0F],
-                (unsigned)BE_READ_U16(a4 + 0x0E));
-#endif
         TeamFileEx *topTeamData = _VerifyTeamLoaded(topTeamIdx);
         careerGameTopTeamName = (char *)topTeamData->team.teamName;
 
@@ -6491,9 +6481,24 @@ void _CareerGameListCommon(MenuEntry *item)
 
 pastTeamLoad:
     ;
-    /* Determine slot type and competition name */
+    /* Determine slot type and competition name.
+     *
+     * The Amiga code did `((uint8_t **)&currentCompetitionPtr)[slotType]`
+     * — relying on the four globals being adjacent 4-byte pointers in
+     * BSS / careerFileBufferBuf overlay. On 64-bit the array-index
+     * stride is 8 and reads land in the wrong slot (and the overlay
+     * offsets are still 4 B apart pending a wider careerFileBuffer
+     * format). Switch on slotType to fetch the right named pointer
+     * directly — pointer-width-correct on both targets. */
     uint16_t slotType = a6[0] & 0xFF;
-    uint8_t *compInfo = ((uint8_t **)&currentCompetitionPtr)[slotType]; /* a1 */
+    uint8_t *compInfo;
+    switch (slotType) {
+        case 0: compInfo = currentCompetitionPtr;     break;
+        case 1: compInfo = secondaryCompetitionPtr;   break;
+        case 2: compInfo = tertiaryCompetitionPtr;    break;
+        case 3: compInfo = quaternaryCompetitionPtr;  break;
+        default: compInfo = (uint8_t *)0;             break;
+    }
     uint16_t d5; /* color/stringFlags value */
     uint8_t *namePtr; /* competition name pointer */
 
@@ -6550,15 +6555,18 @@ pastTeamLoad:
             /* Get division/competition name string */
             uint8_t strTableOff = compInfo[5];
             if (strTableOff == 0) {
-                /* Use divStringTable[currentDivisionIndex]
-                 * namePtr == divStringTable base for league type */
                 namePtr = (uint8_t *)divStringTable[currentDivisionIndex];
             } else {
-                /* compInfo + 5 + strTableOff, then index by currentDivisionIndex*8 + 4 */
+                /* Embedded char *[] name table — 2 entries per
+                 * division (full name + abbreviation). Amiga stride
+                 * was divIdx * 8 (= 2 × 4-byte slots), reading the
+                 * second slot via base+4. On 64-bit each entry is 8
+                 * bytes, so use typed `char **` indexing with
+                 * `divIdx * 2 + 1` to get the abbreviation. Same fix
+                 * as in _SelectTeamsFinalMenu (teams.c). */
                 int16_t off = (int8_t)strTableOff;
-                uint8_t *base = compInfo + 5 + off;
-                uint16_t idx = currentDivisionIndex << 3;
-                namePtr = (uint8_t *)(*(uint32_t *)(base + 4 + idx));
+                char **nameTbl = (char **)(compInfo + 5 + off);
+                namePtr = (uint8_t *)nameTbl[currentDivisionIndex * 2 + 1];
             }
 
             a5->fg = (uintptr_t)namePtr;
@@ -6571,12 +6579,13 @@ pastTeamLoad:
             a5++; /* next entry */
         } else if (slotVal == 1) {
             /* --- Cup-style header (single line comp name + round info) --- */
-            /* Resolve competition name if strTableOff != 0 */
             uint8_t strTableOff = compInfo[5];
             if (strTableOff != 0) {
+                /* Typed `char **` access — slot 1 is the abbreviation
+                 * (full name + abbreviation pair per div). */
                 int16_t off = (int8_t)strTableOff;
-                uint8_t *base = compInfo + 5 + off;
-                namePtr = (uint8_t *)(*(uint32_t *)(base + 4));
+                char **nameTbl = (char **)(compInfo + 5 + off);
+                namePtr = (uint8_t *)nameTbl[1];
             }
 
             a5->fg = (uintptr_t)namePtr;
@@ -6648,12 +6657,11 @@ pastTeamLoad:
             }
         } else {
             /* --- Default (slotVal >= 2) header: same as cup but different path --- */
-            /* Resolve competition name if strTableOff != 0 */
             uint8_t strTableOff = compInfo[5];
             if (strTableOff != 0) {
                 int16_t off = (int8_t)strTableOff;
-                uint8_t *base = compInfo + 5 + off;
-                namePtr = (uint8_t *)(*(uint32_t *)(base + 4));
+                char **nameTbl = (char **)(compInfo + 5 + off);
+                namePtr = (uint8_t *)nameTbl[1];
             }
 
             a5->fg = (uintptr_t)namePtr;
@@ -6812,7 +6820,7 @@ afterHeader:
              * (player-controlled). The display puts the user team first, so
              * topScore should be the user's score. */
             int8_t topScore = (careerGameListTeamControl == 0) ? team1Score : team2Score;
-            *(uint16_t *)&a5->fg = (uint16_t)(int16_t)topScore;
+            a5->fgWord = (uint16_t)(int16_t)topScore;
         }
         a5->isInvisible = 0;
         a5++; /* next entry */
@@ -6827,7 +6835,7 @@ afterHeader:
         a5->y = d2;
         {
             int8_t botScore = (careerGameListTeamControl == 0) ? team2Score : team1Score;
-            *(uint16_t *)&a5->fg = (uint16_t)(int16_t)botScore;
+            a5->fgWord = (uint16_t)(int16_t)botScore;
         }
         a5->isInvisible = 0;
         a5++; /* next entry */

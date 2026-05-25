@@ -1067,7 +1067,7 @@ void _CompetitionTopGoalScorersInit(void)
             a5 += 1;
             {
                 uint8_t score = *(entry + 35);
-                *(uint16_t *)&a5->fg = (uint16_t)score;  /* ENTRY_NUMBER: write high word */
+                a5->fgWord = (uint16_t)score;  /* ENTRY_NUMBER: write high word */
             }
 
             a5 += 1;
@@ -1224,7 +1224,7 @@ void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         if (secondaryCompetitionPtr != 0)
         {
             d0val = *(playerPtr + 0x6D);     /* goalStats[0] */
-            *(uint16_t *)&a4->fg = d0val;  /* ENTRY_NUMBER: write high word */
+            a4->fgWord = d0val;  /* ENTRY_NUMBER: write high word */
             a4->y = yCoord;
             a4->isInvisible = 0;
         }
@@ -1235,7 +1235,7 @@ void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         if (secondaryCompetitionPtr != 0)
         {
             d0val = *(playerPtr + 0x6E);     /* goalStats[1] */
-            *(uint16_t *)&a4->fg = d0val;  /* ENTRY_NUMBER: write high word */
+            a4->fgWord = d0val;  /* ENTRY_NUMBER: write high word */
             a4->y = yCoord;
             a4->isInvisible = 0;
         }
@@ -1246,7 +1246,7 @@ void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         if (tertiaryCompetitionPtr != 0)
         {
             d0val = *(playerPtr + 0x6F);     /* goalStats[2] */
-            *(uint16_t *)&a4->fg = d0val;  /* ENTRY_NUMBER: write high word */
+            a4->fgWord = d0val;  /* ENTRY_NUMBER: write high word */
             a4->y = yCoord;
             a4->isInvisible = 0;
         }
@@ -1256,7 +1256,7 @@ void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         {
             uint8_t totalScore = *(scorerEntry + 35);
             d0val = totalScore;
-            *(uint16_t *)&a4->fg = d0val;  /* ENTRY_NUMBER: write high word */
+            a4->fgWord = d0val;  /* ENTRY_NUMBER: write high word */
             a4->y = yCoord;
             a4->isInvisible = 0;
         }
@@ -1855,7 +1855,7 @@ static MenuEntry *SetTrophySprite_Internal(uint16_t trophyIndex, MenuEntry *slot
     MenuEntry *base = &menuEntries[17]; /* entry at $3B8/56 = 17 */
 
     /* Set sprite ID in high word of fg (68k big-endian: move.w to offset 38) */
-    *(uint16_t *)&slot->fg = trophySprites[trophyIndex];
+    slot->fgWord = trophySprites[trophyIndex];
 
     /* Make this slot visible */
     slot->isInvisible = 0;

@@ -1912,11 +1912,11 @@ void _Career_AutoSimulateLeagueFixturesUntilHumanTeam(void)
         uint8_t *comp2 = fixtureTeam2CompPtr;
 
         /* Check team1: DIYTeamStats teamSelOffset (+0x2B4) is selTeamsPtr-relative */
-        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + ((DIYTeamStats *)(comp1 + 0x2B4))->teamSelOffset);
+        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + ((DIYTeamStats *)(comp1 + DIY_STANDINGS_OFFSET))->teamSelOffset);
         if (team1->teamControls != 1) return;  /* human team found */
 
         /* Check team2 */
-        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + ((DIYTeamStats *)(comp2 + 0x2B4))->teamSelOffset);
+        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + ((DIYTeamStats *)(comp2 + DIY_STANDINGS_OFFSET))->teamSelOffset);
         if (team2->teamControls != 1) return;  /* human team found */
 
         /* Both AI: simulate */

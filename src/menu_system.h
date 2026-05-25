@@ -59,68 +59,44 @@ struct __attribute__((packed)) MenuEntry {
     uint16_t dwHeight;       /* 26 */
     uint16_t background;     /* 28 */
     /* bg/fg are dual-use slots driven by `background` / `content` tags:
-     *   - ENTRY_FUNC1 / ENTRY_FUNC2          → function pointer
+     *   - ENTRY_FUNC1 / ENTRY_FUNC2          → function pointer (`bg`/`fg`)
      *   - ENTRY_STRING / ENTRY_STRING_TABLE
-     *     / ENTRY_MULTI_LINE_TEXT            → string pointer
+     *     / ENTRY_MULTI_LINE_TEXT            → string pointer (`bg`/`fg`)
      *   - ENTRY_SPRITE1 / ENTRY_SPRITE2
-     *     / ENTRY_SPRITE_COPY                → sprite index or sprite ptr
-     *   - ENTRY_FRAME_AND_BACK_COLOR
-     *     / ENTRY_NUMBER                     → integer (color word / number)
-     * Typed as uintptr_t so the slot is wide enough on 64-bit to hold a
-     * native pointer; on 32-bit it's still 4 bytes (uintptr_t == uint32_t),
-     * preserving the existing struct layout. Existing helpers
-     * (getBgColorWord / setBgColorIdx / getFgWord / setFgWord) byte-
-     * launder to the low 16 bits so they still read the color word
-     * regardless of slot width. */
-    uintptr_t bg;            /* 30 (4 bytes on 32-bit, 8 on 64-bit) */
-    uint16_t content;        /* 34 */
-    uint16_t stringFlags;    /* 36 */
-    uintptr_t fg;            /* 38 */
-    MenuEntryFn onSelect;    /* 42: function pointer (or NULL) */
-    uint16_t controlMask;    /* 46 */
-    MenuEntryFn beforeDraw;  /* 48: function pointer (or NULL) */
-    MenuEntryFn afterDrawCb; /* 52: function pointer (or NULL) */
+     *     / ENTRY_SPRITE_COPY                → sprite ptr (`bg`/`fg`) OR
+     *                                          sprite index (`bgWord`/`fgWord`)
+     *   - ENTRY_FRAME_AND_BACK_COLOR         → color word (`bgColor`)
+     *   - ENTRY_NUMBER                       → integer (`fgWord` / `fgNumber`)
+     *
+     * Anonymous union — the pointer alias (`bg`/`fg`, uintptr_t) and the
+     * first-word alias (`bgColor`/`bgWord` and `fgWord`/`fgNumber`,
+     * uint16_t) refer to the SAME bytes. On 32-bit Amiga BE those bytes
+     * are the high 16 bits of the uintptr_t; on x86 LE 64-bit they're
+     * the low 16 bits. Either way the renderer and the writer agree
+     * because both touch the slot's first 2 bytes in memory order. This
+     * replaces the historical `(uint8_t *)e + 38` byte arithmetic. */
+    union {
+        uintptr_t bg;        /* 30: pointer / function-ptr / string ptr */
+        uint16_t  bgColor;   /* first 2 bytes: color word for ENTRY_FRAME_AND_BACK_COLOR */
+        uint16_t  bgWord;    /* alias of bgColor for sprite-index / number reads */
+    };
+    uint16_t content;        /* 34 (32-bit) / 38 (64-bit, bg grows to 8B) */
+    uint16_t stringFlags;    /* 36 / 40 */
+    union {
+        uintptr_t fg;        /* 38 / 42: pointer / function-ptr / string ptr */
+        uint16_t  fgWord;    /* first 2 bytes: integer payload */
+        uint16_t  fgNumber;  /* alias of fgWord — clearer name at ENTRY_NUMBER sites */
+        uint16_t  fgSpriteIdx; /* alias of fgWord — clearer at ENTRY_SPRITE2 sites */
+    };
+    MenuEntryFn onSelect;    /* 42 / 46: function pointer (or NULL) */
+    uint16_t controlMask;    /* 46 / 54 */
+    MenuEntryFn beforeDraw;  /* 48 / 56: function pointer (or NULL) */
+    MenuEntryFn afterDrawCb; /* 52 / 64: function pointer (or NULL) */
 };
 
-/* Helpers to access the low memory word of MenuEntry.bg / MenuEntry.fg.
- * The unpacker writes and _DrawMenuItem reads the first 2 bytes of these
- * uint32 slots in memory order — on Amiga (BE) that's the upper 16 bits
- * of the field value, on x86 (LE) it's the lower 16 bits. We don't care
- * which "half" of the value it is, only that the bytes match across
- * writer and reader.
- *
- * Earlier helpers used `e->bg >> 16` which is correct on BE but wrong
- * on LE: runtime color overrides written via the helper went to the
- * upper half while the draw read the lower half, so the entry kept its
- * unpack-time template color. Use `*(uint16_t *)&e->bg` so the compiler
- * computes the field's offset (portable to 64-bit) and we still hit the
- * low memory bytes the renderer reads. */
-/* The (uint8_t *) launder before the uint16_t * cast silences GCC's
- * -Waddress-of-packed-member: bg/fg sit at packed offsets 30/38, so a
- * direct (uint16_t *)&e->bg would warn about a potentially misaligned
- * pointer. The byte-launder hides the packed origin; on x86 this is
- * a no-op, on stricter archs the compiler will pick a safe access path. */
-static inline uint16_t getBgColorWord(MenuEntry *e) {
-    return *(uint16_t *)((uint8_t *)&e->bg);
-}
-static inline void setBgColorWord(MenuEntry *e, uint16_t v) {
-    *(uint16_t *)((uint8_t *)&e->bg) = v;
-}
-/* Set only the low nibble (color index) of the bg color word */
-static inline void setBgColorIdx(MenuEntry *e, uint16_t colorIdx) {
-    uint16_t *w = (uint16_t *)((uint8_t *)&e->bg);
-    *w = (*w & 0xFFF0) | colorIdx;
-}
-
-/* Same shape for the fg slot — the unpacker stores a 16-bit content
- * payload (sprite index, number, etc.) and the renderer reads it back
- * the same way. */
-static inline uint16_t getFgWord(MenuEntry *e) {
-    return *(uint16_t *)((uint8_t *)&e->fg);
-}
-static inline void setFgWord(MenuEntry *e, uint16_t v) {
-    *(uint16_t *)((uint8_t *)&e->fg) = v;
-}
+/* Direct field access via the union aliases above — no helper layer.
+ * Read/write the bg/fg first-word as `e->bgColor` / `e->fgWord`, and
+ * read/write the full pointer payload as `e->bg` / `e->fg`. */
 
 /* Compile-time size checks */
 /* Menu has 4 pointer fields (onInit, afterDraw, onDraw, selectedEntry);

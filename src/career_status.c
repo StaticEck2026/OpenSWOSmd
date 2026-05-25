@@ -29,6 +29,7 @@
  */
 
 #include "career_status.h"
+#include "diy_competition.h"
 #include <stdio.h>
 #include "endian_helpers.h"
 #include "career_teams.h"
@@ -53,8 +54,7 @@ static uint16_t getTeamValueForGateReceipts(TeamFileEx *team) {
     uint16_t avgPrice = _GetAveragePlayerPrice(team);
     return _CalcGateReceiptsBaseFromTeamValue(avgPrice);
 }
-extern uint16_t _FindTeamInDIY(uint16_t teamNum, uint8_t *compBuf);
-extern uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNum, uint8_t *compBuf);
+/* _FindTeamInDIY and _GetMoreExpensiveTeamsCount declared in diy_competition.h. */
 extern void _ShowChairmanMessage(void);
 extern void _AddCareerTeamPlayer(void);
 extern void _CheckPlayersLeavingComing(void);
@@ -1342,7 +1342,7 @@ void _UpdateCareerChairmanWarningsAfterMatch(void) {
         performanceWarningCooldown--;
 
     /* Get team rank in DIY league */
-    uint16_t d7 = _FindTeamInDIY(selTeamNumber, competitionFileBuffer);
+    uint16_t d7 = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)competitionFileBuffer);
 
     /* Compute performance pressure factor */
     int16_t viewPhase = (int16_t)(int8_t)viewRandomPhase;
@@ -1649,22 +1649,22 @@ static uint16_t getExpectedLeagueRankIndex(uint8_t *ctx, uint16_t moreExpensiveC
 __attribute__((used, externally_visible))
 void _InitializeCareerSeasonFinancials(void) {
     /* Get more expensive teams count and set expected rank */
-    uint16_t moreExpensiveCount = _GetMoreExpensiveTeamsCount(selTeamNumber, competitionFileBuffer);
+    uint16_t moreExpensiveCount = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)competitionFileBuffer);
     expectedLeagueRankIndex = moreExpensiveCount;
 
     /* Calculate team value divisor from all active competitions */
     uint16_t d5 = getExpectedLeagueRankIndex(competitionFileBuffer, moreExpensiveCount);
 
     if (secondaryCompetitionPtr != 0) {
-        uint16_t mec2 = _GetMoreExpensiveTeamsCount(selTeamNumber, competitionContext);
+        uint16_t mec2 = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)competitionContext);
         d5 += getExpectedLeagueRankIndex(competitionContext, mec2);
     }
     if (tertiaryCompetitionPtr != 0) {
-        uint16_t mec3 = _GetMoreExpensiveTeamsCount(selTeamNumber, tertiaryCompetitionContext);
+        uint16_t mec3 = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)tertiaryCompetitionContext);
         d5 += getExpectedLeagueRankIndex(tertiaryCompetitionContext, mec3);
     }
     if (quaternaryCompetitionPtr != 0) {
-        uint16_t mec4 = _GetMoreExpensiveTeamsCount(selTeamNumber, euroCupsCompetitionContext);
+        uint16_t mec4 = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)euroCupsCompetitionContext);
         d5 += getExpectedLeagueRankIndex(euroCupsCompetitionContext, mec4);
     }
 
@@ -1726,7 +1726,7 @@ static int16_t calcBoardConfidenceDeltaPercent(void) {
     }
 
     /* Club manager: compute from league rank delta */
-    uint16_t teamRank = _FindTeamInDIY(selTeamNumber, competitionFileBuffer);
+    uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)competitionFileBuffer);
     int16_t d0 = (int16_t)expectedLeagueRankIndex - (int16_t)teamRank;
     int16_t numTeams = ((DIYCompetitionEx *)competitionFileBuffer)->base.numTeams;
     d0 = (int16_t)(((int32_t)d0 * 100) / (int32_t)numTeams);
@@ -1808,7 +1808,7 @@ void _UpdateBoardConfidenceModifiers(void) {
             goto check_ec_qualifying;
 
         /* In WC qualifying: find team rank and determine qualifying slots */
-        uint16_t teamRank = _FindTeamInDIY(selTeamNumber, competitionFileBuffer);
+        uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)competitionFileBuffer);
         uint32_t comp = currentCompetitionPtr;
         uint16_t qualSlots;
 
@@ -1857,7 +1857,7 @@ check_ec_qualifying:
             curComp > (uint32_t)ecQualifyingGroup8Copy)
             goto check_winners;
 
-        uint16_t teamRank = _FindTeamInDIY(selTeamNumber, competitionFileBuffer);
+        uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)competitionFileBuffer);
         uint16_t qualSlots;
         if (currentCompetitionPtr == (uint8_t *)ecQualifyingGroup8Copy)
             qualSlots = 1;
@@ -2087,7 +2087,7 @@ void _InitializeStartingBalanceForNewSeason(void) {
     uint16_t d2 = teamBase;
 
     /* Compute adjusted starting balance from expected rank */
-    uint16_t teamRank = _FindTeamInDIY(selTeamNumber, competitionFileBuffer);
+    uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)competitionFileBuffer);
     int16_t rankDelta = (int16_t)expectedLeagueRankIndex - (int16_t)teamRank;
     int16_t pct = (int16_t)(((int32_t)rankDelta * 100) / (int32_t)(int16_t)numDiyTeams);
     pct >>= 1;   /* asr.w #1 */
@@ -2718,8 +2718,6 @@ extern uint16_t _GetTeamValueBase(uint16_t avgPrice);
 /* Helper: menu entry from byte offset */
 
 /* Helper: access bg as the high 16 bits (big-endian BACKANDFRAMECOLOR) */
-static inline uint16_t bgColor_cs(MenuEntry *e) { return getBgColorWord(e); }
-static inline void setBgColor_cs(MenuEntry *e, uint16_t v) { setBgColorWord(e, v); }
 
 /* Compute total profit/loss from all financial components */
 static inline int32_t computeTotalProfitLoss(void) {
@@ -2739,9 +2737,9 @@ static void formatNewBalanceEntry(MenuEntry *e, int32_t balance) {
         /* Set blinking flag (bit 13 of stringFlags) */
         e->stringFlags |= (1 << 13);
         /* Change color to RED_12 */
-        uint16_t bg = bgColor_cs(e);
+        uint16_t bg = e->bgColor;
         bg = (bg & 0xFFF0) | 12;
-        setBgColor_cs(e, bg);
+        e->bgColor = bg;
     }
     _Int2PoundsSigned(balance, (uint8_t *)e->fg);
 }
@@ -3282,7 +3280,7 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
              * to ~1 MB backward. */
             const int32_t maxPositive = 64 * 684;
             const int32_t maxNegative = -1 * 1024 * 1024;
-            uint8_t *rowsBase = (uint8_t *)&diyCompetitionStart + 0x2B4;
+            uint8_t *rowsBase = (uint8_t *)&diyCompetitionStart + DIY_STANDINGS_OFFSET;
             for (int16_t i = 0; i < numTeams; i++) {
                 int32_t teamSelOff = *(int32_t *)(rowsBase + i * 18);
                 if (teamSelOff > maxPositive || teamSelOff < maxNegative) {
@@ -4260,9 +4258,27 @@ extern void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk);
 __attribute__((used, externally_visible))
 void _Career_SetCurrentCompetitionSlot(uint8_t *comp, uint16_t slot, uint16_t divisionIndex, uint16_t hasSelectedTeams)
 {
-    /* Store comp pointer in the currentCompetitionPtr array */
-    uint32_t *compPtrArray = &currentCompetitionPtr;
-    compPtrArray[slot] = (uint32_t)comp;
+    /* Store comp pointer in the named per-slot global. On Amiga
+     * `currentCompetitionPtr` and its 4 siblings were 5 adjacent
+     * uint32 BSS labels, so the original code walked them as
+     * `((uint32_t *)&currentCompetitionPtr)[slot]`. We extracted them
+     * into typed standalone pointers (Phase 6) — they are no longer
+     * guaranteed to be adjacent, and the linker is free to put them
+     * anywhere. Address each by name instead. */
+    extern uint8_t *secondaryCompetitionPtr;
+    extern uint8_t *tertiaryCompetitionPtr;
+    extern uint8_t *quaternaryCompetitionPtr;
+    extern uint8_t *diyCompetitionPtr;
+    switch (slot) {
+        case 0: currentCompetitionPtr    = comp; break;
+        case 1: secondaryCompetitionPtr  = comp; break;
+        case 2: tertiaryCompetitionPtr   = comp; break;
+        case 3: quaternaryCompetitionPtr = comp; break;
+        case 4: diyCompetitionPtr        = comp; break;
+        default:
+            panicReasonCode = 0x4459;  /* unknown slot index */
+            _PanicHaltLoop();
+    }
 
     /* Get the slot state pointer from careerCompetitionSlotPtrTable.
      * +0x2C = compId/slotId word in DIYCompetition base. */

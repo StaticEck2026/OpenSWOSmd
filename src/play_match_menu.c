@@ -144,8 +144,6 @@ extern void _TrainingMatch_ApplyUseMatchTeamAndSwapSubs(void);
 /* ---- Helper: menu entry from byte offset ---- */
 
 /* Helper: access bg as the high 16 bits (big-endian BACKANDFRAMECOLOR) */
-static inline uint16_t bgColor(MenuEntry *e) { return getBgColorWord(e); }
-static inline void setBgColor(MenuEntry *e, uint16_t v) { setBgColorWord(e, v); }
 
 /* ================================================================
  * GetPlayerPosition  (SWOS2.s line 79648)
@@ -191,7 +189,7 @@ void _UpdateCheckMarkSprite(void) {
     if (viewingOpponentTeam) return;
     e->stringFlags &= ~(1u << 13);
     if (oldPlayerSkill == newPlayerSkill) return;
-    *(uint16_t *)&e->fg = (oldPlayerSkill > newPlayerSkill) ? SPR_CHECK_BIG : SPR_NOT_CHECK_BIG;
+    e->fgWord = (oldPlayerSkill > newPlayerSkill) ? SPR_CHECK_BIG : SPR_NOT_CHECK_BIG;
     e->stringFlags |= (1u << 13);
     e->isInvisible = 0;
 }
@@ -219,7 +217,7 @@ void _SavePositionsAndUpdateLittleCheckmark(void) {
 __attribute__((used, externally_visible))
 void _SetGameStartButtonText(void) {
     MenuEntry *e = &menuEntries[9];
-    setBgColor(e, (bgColor(e) & 0xFFF0) | YELLOW_GREEN_BLACK_14);
+    e->bgColor = (e->bgColor & 0xFFF0) | YELLOW_GREEN_BLACK_14;
     e->fg = (uintptr_t)aViewResult;
     if (!squadChangesAllowed) return;
 
@@ -233,7 +231,7 @@ void _SetGameStartButtonText(void) {
         if (t1->team.teamControls != TEAM_PLAYER_COACH)
             e->fg = (uintptr_t)aCoachMatch;
     }
-    setBgColor(e, (bgColor(e) & 0xFFF0) | RED_10);
+    e->bgColor = (e->bgColor & 0xFFF0) | RED_10;
 }
 
 /* ================================================================ */
@@ -452,13 +450,13 @@ void _SetUpTacticsButtons(void) {
     MenuEntry *e = &menuEntries[38];
     int16_t i;
     for (i = 0; i < 18; i++, e++) {
-        uint16_t c = bgColor(e) & 0xFFF0;
+        uint16_t c = e->bgColor & 0xFFF0;
         if (viewingOpponentTeam || showingCpuTeams) {
             c |= (i == curTact) ? PINK_TO_BROWN_1 : PINK_TO_BROWN_9;
         } else {
             c |= (i == curTact) ? ORANGE_TO_BROWN_5 : ORANGE_TO_BROWN_4;
         }
-        setBgColor(e, c);
+        e->bgColor = c;
         e->isDisabled = (showingCpuTeams || viewingOpponentTeam) ? 1 : 0;
     }
 }
@@ -542,7 +540,7 @@ void _SetVariableButtons(void) {
         menuEntries[3].y = 204;
         menuEntries[4].y = 204;
         menuEntries[6].isInvisible = 1;
-        setBgColor(&menuEntries[1], (bgColor(&menuEntries[1]) & 0xFFF0) | ORANGE_TO_BROWN_12);
+        menuEntries[1].bgColor = (menuEntries[1].bgColor & 0xFFF0) | ORANGE_TO_BROWN_12;
 
         curTeam = playMatchTeam2Ptr;
         menuEntries[10].isInvisible = 1;
@@ -574,9 +572,9 @@ void _SetVariableButtons(void) {
         if (t1->team.teamControls == TEAM_PLAYER_COACH)
             cb->fg = (uintptr_t)aPlayer_1;
 
-        setBgColor(cb, (bgColor(cb) & 0xFFF0) | BRIGHT_BLUE_TO_BLUE_13);
+        cb->bgColor = (cb->bgColor & 0xFFF0) | BRIGHT_BLUE_TO_BLUE_13;
         if (t1->team.teamControls == TEAM_PLAYER_COACH)
-            setBgColor(cb, (bgColor(cb) & 0xFFF0) | BLUE_TO_PURPLE_11);
+            cb->bgColor = (cb->bgColor & 0xFFF0) | BLUE_TO_PURPLE_11;
 
         if (!squadChangesAllowed) {
             menuEntries[3].isInvisible = 0;
@@ -598,14 +596,14 @@ void _SetVariableButtons(void) {
 
         /* Edit tactics button */
         MenuEntry *eb = &menuEntries[1];
-        setBgColor(eb, (bgColor(eb) & 0xFFF0) | BLUE_TO_PURPLE_11);
+        eb->bgColor = (eb->bgColor & 0xFFF0) | BLUE_TO_PURPLE_11;
         if (t1->team.teamControls != TEAM_PLAYER_COACH) {
-            setBgColor(eb, (bgColor(eb) & 0xFFF0) | BRIGHT_BLUE_TO_BLUE_13);
+            eb->bgColor = (eb->bgColor & 0xFFF0) | BRIGHT_BLUE_TO_BLUE_13;
             if (t1->team.teamControls != TEAM_COACH)
-                setBgColor(eb, (bgColor(eb) & 0xFFF0) | ORANGE_TO_BROWN_12);
+                eb->bgColor = (eb->bgColor & 0xFFF0) | ORANGE_TO_BROWN_12;
         }
         if (trainingGame && t1->team.teamControls == TEAM_COMPUTER)
-            setBgColor(eb, (bgColor(eb) & 0xFFF0) | BRIGHT_BLUE_TO_BLUE_13);
+            eb->bgColor = (eb->bgColor & 0xFFF0) | BRIGHT_BLUE_TO_BLUE_13;
 
         menuEntries[10].isInvisible = 0;
         if (showingCpuTeams) menuEntries[10].isInvisible = 1;
@@ -1107,30 +1105,30 @@ void _DrawPlayerEntries(MenuEntry *a5) {
     if (d7 == 16) {
         d5 = 1;
         d7 = d7 - 5 + maxSubstitutesEntries;
-        setBgColor(bgE, (bgColor(bgE) & 0xFFF0) | BLUE_TO_BLACK_8);
-        setBgColor(numE, (bgColor(numE) & 0xFFF0) | BLUE_TO_BLACK_8);
+        bgE->bgColor = (bgE->bgColor & 0xFFF0) | BLUE_TO_BLACK_8;
+        numE->bgColor = (numE->bgColor & 0xFFF0) | BLUE_TO_BLACK_8;
     } else if (d7 < 11) {
         if (!showingCpuTeams && !viewingOpponentTeam) {
             uint16_t c = (d7 == 0) ? YELLOW_GREEN_BLACK_14 : BRIGHT_BLUE_TO_BLUE_13;
-            setBgColor(bgE, (bgColor(bgE) & 0xFFF0) | c);
-            setBgColor(numE, (bgColor(numE) & 0xFFF0) | c);
+            bgE->bgColor = (bgE->bgColor & 0xFFF0) | c;
+            numE->bgColor = (numE->bgColor & 0xFFF0) | c;
         } else {
-            setBgColor(bgE, (bgColor(bgE) & 0xFFF0) | RED_10);
-            setBgColor(numE, (bgColor(numE) & 0xFFF0) | RED_10);
+            bgE->bgColor = (bgE->bgColor & 0xFFF0) | RED_10;
+            numE->bgColor = (numE->bgColor & 0xFFF0) | RED_10;
         }
     } else {
         /* >= 11: substitute */
         if (!viewingOpponentTeam && !showingCpuTeams) {
             if (d7 == 11 && maxSubstitutesEntries > 5) {
-                setBgColor(bgE, (bgColor(bgE) & 0xFFF0) | YELLOW_GREEN_BLACK_14);
-                setBgColor(numE, (bgColor(numE) & 0xFFF0) | YELLOW_GREEN_BLACK_14);
+                bgE->bgColor = (bgE->bgColor & 0xFFF0) | YELLOW_GREEN_BLACK_14;
+                numE->bgColor = (numE->bgColor & 0xFFF0) | YELLOW_GREEN_BLACK_14;
             } else {
-                setBgColor(bgE, (bgColor(bgE) & 0xFFF0) | BLUE_TO_PURPLE_11);
-                setBgColor(numE, (bgColor(numE) & 0xFFF0) | BLUE_TO_PURPLE_11);
+                bgE->bgColor = (bgE->bgColor & 0xFFF0) | BLUE_TO_PURPLE_11;
+                numE->bgColor = (numE->bgColor & 0xFFF0) | BLUE_TO_PURPLE_11;
             }
         } else {
-            setBgColor(bgE, (bgColor(bgE) & 0xFFF0) | ORANGE_TO_BROWN_12);
-            setBgColor(numE, (bgColor(numE) & 0xFFF0) | ORANGE_TO_BROWN_12);
+            bgE->bgColor = (bgE->bgColor & 0xFFF0) | ORANGE_TO_BROWN_12;
+            numE->bgColor = (numE->bgColor & 0xFFF0) | ORANGE_TO_BROWN_12;
         }
     }
 
@@ -1145,15 +1143,15 @@ void _DrawPlayerEntries(MenuEntry *a5) {
     /* Injured check */
     if (!viewingOpponentTeam) {
         if (_IsPlayerInjured((PlayerFile *)player, playMatchExcludeFlags)) {
-            setBgColor(bgE, (bgColor(bgE) & 0xFFF0) | RED_10);
-            setBgColor(numE, (bgColor(numE) & 0xFFF0) | RED_10);
+            bgE->bgColor = (bgE->bgColor & 0xFFF0) | RED_10;
+            numE->bgColor = (numE->bgColor & 0xFFF0) | RED_10;
         }
     }
 
     /* Selected player highlight */
     if (!viewingOpponentTeam && d1 == selectedPlayerPosition) {
-        setBgColor(bgE, (bgColor(bgE) & 0xFFF0) | ORANGE_TO_BROWN_6);
-        setBgColor(numE, (bgColor(numE) & 0xFFF0) | ORANGE_TO_BROWN_6);
+        bgE->bgColor = (bgE->bgColor & 0xFFF0) | ORANGE_TO_BROWN_6;
+        numE->bgColor = (numE->bgColor & 0xFFF0) | ORANGE_TO_BROWN_6;
     }
 
     bgE->y = a5->y;
@@ -1165,8 +1163,8 @@ void _DrawPlayerEntries(MenuEntry *a5) {
     if (!viewingOpponentTeam && d4 < 11) {
         uint8_t cur = playerPositionsArray[d1];
         uint8_t old = oldPlayerPositionsArray[d1];
-        if (cur < old) *(uint16_t *)&bgE->fg = SPR_NOT_CHECK_SMALL;
-        else if (cur > old) *(uint16_t *)&bgE->fg = SPR_CHECK_SMALL;
+        if (cur < old) bgE->fgWord = SPR_NOT_CHECK_SMALL;
+        else if (cur > old) bgE->fgWord = SPR_CHECK_SMALL;
     }
 
     /* Checkmark entry sync */
@@ -1184,8 +1182,8 @@ void _DrawPlayerEntries(MenuEntry *a5) {
         if (selIdx == d1) {
             MenuEntry *ck = &menuEntries[37];
             ck->y = bgE->y;
-            setBgColor(ck, bgColor(bgE));
-            *(uint16_t *)&ck->fg = *(uint16_t *)&bgE->fg;
+            ck->bgColor = bgE->bgColor;
+            ck->fgWord = bgE->fgWord;
         }
     }
 
@@ -1194,7 +1192,7 @@ void _DrawPlayerEntries(MenuEntry *a5) {
     PlayerFile *playerPf = (PlayerFile *)(player + 76);
     shE->isInvisible = 1;
     if (!d5) {
-        *(uint16_t *)&shE->fg = (uint16_t)(uint8_t)playerPf->shirtNumber;
+        shE->fgWord = (uint16_t)(uint8_t)playerPf->shirtNumber;
         shE->isInvisible = 0;
     }
     shE->y = a5->y;

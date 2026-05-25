@@ -29,17 +29,20 @@ extern void _InstallAndInitLoaderBootstrap(void);
  * These were PC-relative data in SWOS2.s. Now C globals.
  * Some are exported because other C code reads them.
  */
-static uint32_t assetBasePtr;
-static uint32_t assetAltBasePtr;
-static uint32_t assetSource0;
-static uint32_t assetSource1;
-static uint32_t assetSource2;
-static uint32_t assetSource3;
+/* All slots that hold a real pointer (loaderBase, source path strings,
+ * source vectors). Amiga 32-bit fits in uint32_t; on 64-bit the
+ * pointer needs uintptr_t so the value round-trips correctly. */
+static uintptr_t assetBasePtr;
+static uintptr_t assetAltBasePtr;
+static uintptr_t assetSource0;
+static uintptr_t assetSource1;
+static uintptr_t assetSource2;
+static uintptr_t assetSource3;
 
 /* Exported globals — referenced by asset_loader.c, file_io.c, loader_bootstrap.c */
 uint16_t assetCurrentIndex;
 uint16_t assetCurrentSourceSlot;
-uint32_t assetSourceVec[4];
+uintptr_t assetSourceVec[4];
 uint16_t assetIndexStartBytes;  /* treated as 4-byte block in asm: 2 x uint16_t */
 uint16_t assetParamBlock;
 
@@ -58,7 +61,7 @@ static const uint8_t kGrafsDisk2Raw[] = GRAFS "disk2.raw";
 static void assetSysPrepCopyParams(const uint8_t *filename)
 {
     uint8_t *dst;
-    uint32_t srcAddr;
+    uintptr_t srcAddr;
 
     srcAddr = assetSourceVec[assetCurrentSourceSlot];
     dst = assetFilename;
@@ -83,13 +86,13 @@ static int16_t assetSys_InitContext(uint8_t *loaderBase, const uint8_t *disk0,
 {
     uint16_t i;
 
-    assetBasePtr = (uint32_t)loaderBase;
-    assetAltBasePtr = (uint32_t)(loaderBase + 0x4D00);
+    assetBasePtr = (uintptr_t)loaderBase;
+    assetAltBasePtr = (uintptr_t)(loaderBase + 0x4D00);
 
-    assetSource0 = (uint32_t)disk0;
-    assetSource1 = (uint32_t)disk1;
-    assetSource2 = (uint32_t)disk2;
-    assetSource3 = (uint32_t)disk3;
+    assetSource0 = (uintptr_t)disk0;
+    assetSource1 = (uintptr_t)disk1;
+    assetSource2 = (uintptr_t)disk2;
+    assetSource3 = (uintptr_t)disk3;
 
     /* In HDD mode, no floppy drives — sourceVec stays NULL */
     for (i = 0; i < 4; i++)

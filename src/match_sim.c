@@ -19,6 +19,7 @@
 
 #include "match_sim.h"
 #include "game_types.h"
+#include "diy_competition.h"
 #include "deterministic.h"
 #include "auto_skip_debug.h"
 
@@ -1753,7 +1754,7 @@ int16_t _CalcTeamPriceRankPercentOffset(DIYCompetition *comp, TeamFile *team)
 
     /* Check minimum number of entries: row[0].gamesPlayed
      * (DIYTeamStats[0] starts at parent +0x2B4, gamesPlayed at +0x2B8). */
-    DIYTeamStats *row0 = (DIYTeamStats *)((uint8_t *)comp + 0x2B4);
+    DIYTeamStats *row0 = (DIYTeamStats *)((uint8_t *)comp + DIY_STANDINGS_OFFSET);
     uint16_t numEntries = row0->gamesPlayed;
     if (team->teamControls == TEAM_COMPUTER) {
         /* Cup: need at least 3 entries */

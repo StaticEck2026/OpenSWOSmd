@@ -89,7 +89,7 @@ extern uint16_t numberOfFiles;
 extern uint16_t totalNumberOfFiles;
 extern uint16_t numMatchedFiles;
 extern uint8_t foundFilenamesBuffer[];
-extern uint32_t foundFilesPtrTable[];
+extern void *foundFilesPtrTable[];
 extern uint32_t extensionsBuffer[];
 extern uint16_t savingFile;
 extern uint8_t selectFilesMenu[];
@@ -1023,7 +1023,7 @@ int16_t _SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename,
     int16_t result;
     uint16_t count;
     uint8_t *fileEntry;
-    uint32_t *ptrTableCursor;
+    void **ptrTableCursor;
     uint32_t *extTableCursor;
     uint8_t *scan;
     uint32_t ext;
@@ -1072,7 +1072,7 @@ int16_t _SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename,
                 totalNumberOfFiles++;
                 if (ext == extension) {
                     numMatchedFiles++;
-                    *ptrTableCursor++ = (uint32_t)fileEntry;
+                    *ptrTableCursor++ = fileEntry;
                     *extTableCursor++ = ext;
                 }
             }
@@ -1112,7 +1112,7 @@ int16_t _GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename
     int16_t result;
     uint16_t count;
     uint8_t *fileEntry;
-    uint32_t *ptrTableCursor;
+    void **ptrTableCursor;
     uint32_t *extTableCursor;
     uint8_t *scan;
     uint32_t ext;
@@ -1160,7 +1160,7 @@ int16_t _GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename
             {
                 totalNumberOfFiles++;
                 numMatchedFiles++;
-                *ptrTableCursor++ = (uint32_t)fileEntry;
+                *ptrTableCursor++ = fileEntry;
                 *extTableCursor++ = ext;
             }
 
@@ -1414,7 +1414,7 @@ void _SelectFilesOnReturn(void)
 
     _RepositionSelectFileEntries();
     /* Assign filenames to menu entries */
-    uint32_t *filePtr = foundFilesPtrTable;
+    void **filePtr = foundFilesPtrTable;
     MenuEntry *entry = &menuEntries[1]; /* entry at offset 0x38 = index 1 */
     uint16_t d6 = 0;
 
@@ -1501,7 +1501,7 @@ void _SelectFilesInit(void)
         uint16_t swapped;
         do {
             swapped = 0;
-            uint32_t *ptrCur = foundFilesPtrTable;
+            void **ptrCur = foundFilesPtrTable;
             uint32_t *extCur = extensionsBuffer;
 
             for (int16_t i = count; i >= 0; i--) {
@@ -1530,7 +1530,7 @@ void _SelectFilesInit(void)
             doSwap:
                 /* Swap pointer table entries */
                 ptrCur[0] = ptrCur[1];
-                ptrCur[1] = (uint32_t)name1;
+                ptrCur[1] = name1;
                 /* Swap extension entries */
                 extCur[0] = ext2;
                 extCur[1] = ext1;

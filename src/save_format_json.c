@@ -1732,7 +1732,7 @@ static void load_team_file_ex_slice(const char *buf, int buflen,
  * The 0xFFFFFFFF src value terminates the table.
  */
 
-extern uint8_t careerContests[];
+extern CompetitionCareer careerContests[];
 
 /* ---------- *Copy struct text[2] pointers ----------
  *
@@ -1756,20 +1756,25 @@ extern uint8_t careerContests[];
  * template-static. */
 static void restore_comp_copy_text_ptrs_from_template(void)
 {
-    uint8_t *tbl = careerContests;
-    for (;;) {
-        uint32_t srcAddr = *(uint32_t *)tbl;
-        if (srcAddr == 0xFFFFFFFFu)
-            break;
-        const uint8_t *src  = (const uint8_t *)(uintptr_t)srcAddr;
-        uint8_t       *dest = *(uint8_t **)(tbl + 4);
-        int8_t  nameOffset = (int8_t)src[5];
+    /* careerContests is a CompetitionCareer[] (two pointers + uint16
+     * length). The Amiga path used `uint8_t *tbl; tbl += 10` which is
+     * the 32-bit packed stride; on 64-bit each entry is 18 bytes
+     * (two 8-byte pointers + 2). Iterate as the typed array so stride
+     * is correct on both targets, and compare the sentinel value as
+     * a low-32 pattern (the static table stores
+     * `(CompetitionCup *)0xFFFFFFFFu` which zero-extends to
+     * 0x00000000FFFFFFFFu on 64-bit). */
+    extern CompetitionCareer careerContests[];
+    for (CompetitionCareer *e = careerContests;
+         (uintptr_t)e->competition != 0xFFFFFFFFu; e++) {
+        const uint8_t *src  = (const uint8_t *)e->competition;
+        uint8_t       *dest = (uint8_t *)e->competitionCopy;
+        int8_t nameOffset = (int8_t)src[5];
         if (nameOffset != 0) {
             /* text[0] + text[1] = 8 bytes from src template to dest
              * *Copy at the struct's own text-array offset. */
             memcpy(dest + 5 + nameOffset, src + 5 + nameOffset, 8);
         }
-        tbl += 10;
     }
 }
 

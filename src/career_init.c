@@ -167,9 +167,9 @@ __attribute__((used, externally_visible))
 void _SetPlayerCoachFieldColor(void)
 {
     MenuEntry *e = &menuEntries[9];
-    setBgColorIdx(e, 13); /* BRIGHT_BLUE_TO_BLUE_13 */
+    e->bgColor = (e->bgColor & 0xFFF0) | 13; /* BRIGHT_BLUE_TO_BLUE_13 */
     if (coachOrPlayer != 0)
-        setBgColorIdx(e, 11); /* BLUE_TO_PURPLE_11 */
+        e->bgColor = (e->bgColor & 0xFFF0) | 11; /* BLUE_TO_PURPLE_11 */
 }
 
 /* CheckSex: copy "MR" or "MS" to managerSexBuffer based on mrOrMs toggle */
@@ -484,8 +484,12 @@ extern uint8_t  euroCup[];
 extern uint8_t  cupWinnersCup[];
 extern uint8_t  uefaCup[];
 
-/* careerContests table: array of {src_ptr, dest_ptr, byte_count}, terminated by 0xFFFFFFFF */
-extern uint8_t  careerContests[];
+/* careerContests table — typed CompetitionCareer[] entries
+ * {src_ptr, dest_ptr, byte_count} terminated by `competition ==
+ * (CompetitionCup *)0xFFFFFFFFu`. Was `extern uint8_t careerContests[]`
+ * with byte-stride walks (10 B per entry); on 64-bit each entry is
+ * 18 B so consumers iterate the typed array instead. */
+extern CompetitionCareer careerContests[];
 
 extern uint16_t primaryCompSlotStateA;
 extern uint16_t primaryCompSlotStateB;
@@ -680,20 +684,19 @@ void _InitCareer(uint16_t teamNo)
     _LoadSomeEuroCup(cupWinnersCup);
     _LoadSomeEuroCup(uefaCup);
 
-    /* Copy careerContests table entries: {src, dest, count} until src==0xFFFFFFFF.
-     * Uses volatile to prevent LTO from eliminating the ROM→BSS copies
-     * (same pattern as the tactic copy bug). */
-    uint8_t *tbl = careerContests;
-    for (;;) {
-        uint32_t srcAddr = *(uint32_t *)tbl;
-        tbl += 4;
-        if (srcAddr == 0xFFFFFFFF)
-            break;
-        volatile uint8_t *dst = *(volatile uint8_t **)tbl;
-        tbl += 4;
-        uint16_t count = *(uint16_t *)tbl;
-        tbl += 2;
-        volatile uint8_t *src = (volatile uint8_t *)srcAddr;
+    /* Copy careerContests table entries: {src, dest, count} until
+     * src == 0xFFFFFFFF. Iterate as the typed CompetitionCareer[]
+     * — on 64-bit each entry is 18 bytes (two 8-byte pointers + uint16);
+     * the old byte-stride walk assumed 10-byte entries and would slip
+     * 8 bytes between each iteration. Volatile cursors prevent LTO
+     * from eliminating the ROM→BSS copies (same pattern as the tactic
+     * copy bug). */
+    extern CompetitionCareer careerContests[];
+    for (CompetitionCareer *e = careerContests;
+         (uintptr_t)e->competition != 0xFFFFFFFFu; e++) {
+        volatile uint8_t *src = (volatile uint8_t *)e->competition;
+        volatile uint8_t *dst = (volatile uint8_t *)e->competitionCopy;
+        uint16_t count = e->length;
         for (int16_t i = count - 1; i >= 0; i--)
             *dst++ = *src++;
     }
@@ -987,7 +990,12 @@ void _InitializeNewSeason(void)
 
     /* Determine if this is a national team (country code 80..85 = CN_EUROPE..CN_OCEANIA) */
     uint16_t countryCode = selTeamNumber >> 8;
-    uint32_t *compTablePtr;
+    /* Walker over a country's competition pointer-array. Entries are
+     * full-width pointers — `Competition *` — interleaved with -2/-1
+     * sentinels. Iterating as `void **` makes the stride scale with
+     * pointer width (4 B on Amiga/32-bit, 8 B on 64-bit) and lets the
+     * sentinel comparison use the full pointer width via `(uintptr_t)-1`. */
+    void **compTablePtr;
 
     if (countryCode >= 80 && countryCode <= 85) {
         /* National team selector */
@@ -1018,13 +1026,13 @@ void _InitializeNewSeason(void)
         /* Set cup pick list for selected region (param unused, function writes to global) */
         _Career_SetCupPickList_ForSelectedRegion(0);
 
-        compTablePtr = &careerCupPickList;
+        compTablePtr = (void **)&careerCupPickList;
     } else {
         /* Club team */
         nationalTeamFileCode = (uint8_t)(selTeamNumber >> 8);  /* move.b — high byte */
 
         uint16_t tableIdx = selTeamNumber >> 8;
-        compTablePtr = (uint32_t *)competitionsTable[tableIdx];
+        compTablePtr = (void **)competitionsTable[tableIdx];
     }
 
     _Career_UpdateLastNationalityCall();
@@ -1047,11 +1055,12 @@ void _InitializeNewSeason(void)
         primaryCompSlotStateA = savedA;
     }
 
-    /* Skip 1 long (4 bytes) past the primary comp entry */
-    compTablePtr = (uint32_t *)((uint8_t *)compTablePtr + 4);
+    /* Skip the per-primary divisionIndex slot (one pointer-sized entry,
+     * usually -2 = "no extra division pointer"). */
+    compTablePtr++;
 
     /* Set up secondary competition (slot 1) if present */
-    if (*(int32_t *)compTablePtr != (int32_t)0xFFFFFFFF) {
+    if ((uintptr_t)*compTablePtr != (uintptr_t)-1) {
         uint16_t savedA = secondaryCompSlotStateA;
         uint16_t savedB = secondaryCompSlotStateB;
         uint16_t savedC = secondaryCompSlotStateC;
@@ -1068,7 +1077,7 @@ void _InitializeNewSeason(void)
         secondaryCompSlotStateA = savedA;
 
         /* Set up tertiary competition (slot 2) if present */
-        if (*(int32_t *)compTablePtr != (int32_t)0xFFFFFFFF) {
+        if ((uintptr_t)*compTablePtr != (uintptr_t)-1) {
             uint16_t savedA2 = tertiaryCompSlotStateA;
             uint16_t savedB2 = tertiaryCompSlotStateB;
             uint16_t savedC2 = tertiaryCompSlotStateC;
@@ -1208,27 +1217,28 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
     teamSelectionKeyCacheOffset = 0;
     careerSlotProcessingInProgress = 0;
 
-    /* Look up competitions table by index */
-    uint32_t tableIdx = (uint16_t)(compTableIdx & 0xFF) << 2;
-    uint32_t *compTable = (uint32_t *)((uint8_t *)competitionsTable + tableIdx);
-    compTable = (uint32_t *)*compTable;
+    /* Look up competitions table by index — entries are full-width
+     * pointers (8 B on 64-bit, 4 B on Amiga). Iterate as `void **` so
+     * stride/sentinel scale with pointer width — see equivalent walker
+     * in `_InitializeNewSeason`. */
+    void **compTable = (void **)competitionsTable[compTableIdx & 0xFF];
 
     /* Slot 0: primary competition */
     uint8_t *comp = (uint8_t *)*compTable;
     compTable++;
     _Career_SetCurrentCompetitionSlot(comp, 0, currentDivisionIndex, 1);
 
-    /* Skip 4 bytes past primary entry */
-    compTable = (uint32_t *)((uint8_t *)compTable + 4);
+    /* Skip the per-primary divisionIndex slot (one pointer entry, -2 = "none"). */
+    compTable++;
 
     /* Slot 1: secondary competition (if present) */
-    if (*(int32_t *)compTable != (int32_t)0xFFFFFFFF) {
+    if ((uintptr_t)*compTable != (uintptr_t)-1) {
         comp = (uint8_t *)*compTable;
         compTable++;
         _Career_SetCurrentCompetitionSlot(comp, 1, 0, 0);
 
         /* Slot 2: tertiary competition (if present) */
-        if (*(int32_t *)compTable != (int32_t)0xFFFFFFFF) {
+        if ((uintptr_t)*compTable != (uintptr_t)-1) {
             comp = (uint8_t *)*compTable;
             _Career_SetCurrentCompetitionSlot(comp, 2, 0, 0);
         }
@@ -1327,21 +1337,21 @@ extern void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
  * saving build. Copy both pointers from src→dest. */
 static void _Rebuild_CupRecordNameSourcePointers(void)
 {
-    uint8_t *tbl = careerContests;
-    for (;;) {
-        uint32_t srcAddr = *(uint32_t *)tbl;
-        if (srcAddr == 0xFFFFFFFFu)
-            break;
-        uint8_t *src  = (uint8_t *)srcAddr;
-        uint8_t *dest = *(uint8_t **)(tbl + 4);
+    /* Iterate as typed CompetitionCareer[] — entry stride is 10 on
+     * 32-bit, 18 on 64-bit. The text[] copy reads/writes two pointer-
+     * width entries (4 B each → 8 B on 32-bit, 8 B each → 16 B on
+     * 64-bit), so use sizeof(void *) and memcpy 2*sizeof(void *). */
+    extern CompetitionCareer careerContests[];
+    for (CompetitionCareer *e = careerContests;
+         (uintptr_t)e->competition != 0xFFFFFFFFu; e++) {
+        uint8_t *src  = (uint8_t *)e->competition;
+        uint8_t *dest = (uint8_t *)e->competitionCopy;
         int8_t nameOffset = ((Competition *)src)->unk1;
         if (nameOffset != 0) {
-            uint32_t *srcPtrs  = (uint32_t *)(src  + 5 + nameOffset);
-            uint32_t *destPtrs = (uint32_t *)(dest + 5 + nameOffset);
-            destPtrs[0] = srcPtrs[0];   /* text[0] */
-            destPtrs[1] = srcPtrs[1];   /* text[1] */
+            memcpy(dest + 5 + nameOffset,
+                   src  + 5 + nameOffset,
+                   2 * sizeof(void *));
         }
-        tbl += 10;
     }
 }
 
@@ -1360,43 +1370,38 @@ static void _Rebuild_CupRecordNameSourcePointers(void)
  * via `_Career_SetCupPickList_ForSelectedRegion(0)` first. */
 static void _Rebuild_CompetitionSlotPointers(void)
 {
-    uint32_t *compTablePtr;
+    /* Country / pickList tables are `Competition *[]` — 8 bytes per
+     * entry on 64-bit. The Amiga path walked them as `uint32_t *`
+     * which only read half a pointer per slot. Use `void **` so the
+     * stride is correct on both targets. Sentinels stored as
+     * `(Competition *)-1` / `-2` compare via (uintptr_t)X == -1u /
+     * -2u — both halves of the pointer are all-ones on Amiga and
+     * zero-extend identically on 64-bit. */
+    void **compTablePtr;
 
     if (isNationalSelector != 0) {
         _Career_SetCupPickList_ForSelectedRegion(0);
-        compTablePtr = &careerCupPickList;
+        compTablePtr = (void **)&careerCupPickList;
     } else {
-        /* selTeamNumber's high byte is the country/league index used to
-         * look up competitionsTable[]. In career mode (a human team is
-         * picked) selTeamNumber == (country<<8)|ordinal so the index
-         * comes for free. In season mode with all-CPU teams, there is
-         * no human team and selTeamNumber legitimately stays at the
-         * 0xFFFF "no team" sentinel for the whole session — so we
-         * recover the country byte from a dedicated saved scalar
-         * (primary_country_code in the JSON, captured at save time from
-         * ((Competition *)currentCompetitionPtr)->teamNumber). */
         uint16_t tableIdx = (selTeamNumber == 0xFFFF)
             ? SaveJson_GetLoadedPrimaryCountryCode()
             : (selTeamNumber >> 8);
-        compTablePtr = (uint32_t *)competitionsTable[tableIdx];
+        compTablePtr = (void **)competitionsTable[tableIdx];
     }
     if (!compTablePtr)
         return;
 
     /* Slot 0 (primary): always present. */
-    currentCompetitionPtr = *compTablePtr;
+    currentCompetitionPtr = (uint8_t *)*compTablePtr++;
+    /* One filler slot after the primary entry (the `(Competition *)-2`
+     * sentinel in country tables like albaniaTable). */
     compTablePtr++;
-    /* 4-byte filler after the primary entry, mirroring the
-     * `compTablePtr += 4` skip at line 1022 of _InitializeNewSeason. */
-    compTablePtr = (uint32_t *)((uint8_t *)compTablePtr + 4);
 
     /* Slot 1 (secondary): may be -1 sentinel. */
-    if (*(int32_t *)compTablePtr != (int32_t)0xFFFFFFFF) {
-        secondaryCompetitionPtr = *compTablePtr;
-        compTablePtr++;
-
-        if (*(int32_t *)compTablePtr != (int32_t)0xFFFFFFFF) {
-            tertiaryCompetitionPtr = *compTablePtr;
+    if ((uintptr_t)*compTablePtr != (uintptr_t)-1) {
+        secondaryCompetitionPtr = (uint8_t *)*compTablePtr++;
+        if ((uintptr_t)*compTablePtr != (uintptr_t)-1) {
+            tertiaryCompetitionPtr = (uint8_t *)*compTablePtr;
         } else {
             tertiaryCompetitionPtr = 0;
         }
@@ -1406,7 +1411,10 @@ static void _Rebuild_CompetitionSlotPointers(void)
     }
 
     /* Slot 4 (DIY) — derive from primary comp's DIY link. Mirrors
-     * `_DIY_SelectCompetitionSlot4FromCurrentDivision`. */
+     * `_DIY_SelectCompetitionSlot4FromCurrentDivision`. The diyEntry
+     * payload is two pointers (diy comp ptr + diy table ptr) — 8 B
+     * stride on 64-bit. Use `void **` read instead of the old
+     * `*(uint32_t *)` which truncated. */
     diyCompetitionPtr = 0;
     diyCompetitionTablePtr = (uint32_t *)0;
     if (currentCompetitionPtr != 0) {
@@ -1416,9 +1424,9 @@ static void _Rebuild_CompetitionSlotPointers(void)
             uint8_t *entry = primary + off;
             uint8_t diyOffset = entry[0x12];
             if (diyOffset != 0) {
-                uint8_t *diyEntry = entry + 0x12 + diyOffset;
-                diyCompetitionPtr = *(uint32_t *)diyEntry;
-                diyCompetitionTablePtr = *(uint32_t **)(diyEntry + 4);
+                void **diyEntry = (void **)(entry + 0x12 + diyOffset);
+                diyCompetitionPtr = (uint8_t *)diyEntry[0];
+                diyCompetitionTablePtr = (uint32_t *)diyEntry[1];
             }
         }
     }
@@ -1563,19 +1571,17 @@ extern void _Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record);
 __attribute__((used, externally_visible))
 void _Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel)
 {
-    /* Step 1: Map competition pointer to its career copy via careerContests table.
-     * Each careerContests entry is {uint32_t src, uint32_t dest, uint16_t len} = 10 bytes.
-     * We search for comp in the src field and replace with dest. */
-    uint8_t *tbl = careerContests;
-    for (;;) {
-        uint32_t src = *(uint32_t *)tbl;
-        if (src == 0xFFFFFFFF)
-            break;
-        if (src == (uint32_t)comp) {
-            comp = *(uint8_t **)(tbl + 4);
+    /* Step 1: Map competition pointer to its career copy via the
+     * typed CompetitionCareer[] — entry stride differs by bitness
+     * (10 B on 32-bit, 18 B on 64-bit), so iterate as the typed
+     * array instead of advancing tbl by a literal byte count. */
+    extern CompetitionCareer careerContests[];
+    for (CompetitionCareer *e = careerContests;
+         (uintptr_t)e->competition != 0xFFFFFFFFu; e++) {
+        if ((uint8_t *)e->competition == comp) {
+            comp = (uint8_t *)e->competitionCopy;
             break;
         }
-        tbl += 10;
     }
 
     /* Step 2: Special replacements for europeanChampionships and worldCup */
