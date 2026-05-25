@@ -846,7 +846,10 @@ extern uint32_t cupPickEuropeNoCupFriendly[];
 extern uint32_t cupPickEuropeNoCupFriendlyAlt[];
 extern uint32_t cupPickListEuropeInviteTournamentFriendlyAlt[];
 
-extern uint32_t ecQualifyingGroupsTable[];
+/* Real storage is `CompetitionCup *[8]` in competition_data.c:1175.
+ * Same trap shape as worldCupQualifyingGroupsTable below — see
+ * comment there. Use `void *[]` so the stride is native pointer-width. */
+extern void    *ecQualifyingGroupsTable[];
 /* Real storage is `CompetitionCup *[8]` in competition_data.c:1191
  * — native pointer-width table. The legacy extern said `uint32_t[]`
  * (Amiga 32-bit pointer slot) which read half a pointer on 64-bit
