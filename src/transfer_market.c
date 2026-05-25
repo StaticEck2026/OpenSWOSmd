@@ -3558,17 +3558,17 @@ void _ThirdPartyOfferMenuInit(void *entryPtr)
  * ================================================================ */
 
 /* Format string pointer globals (BSS in asm — 12 pointers) */
-extern uint32_t offerFmtSinglePlayer;
-extern uint32_t offerFmtTwoPlayers;
-extern uint32_t exchangeFmtSinglePlayer;
-extern uint32_t exchangeFmtTwoPlayers;
-extern uint32_t offerFmtLine1a;
-extern uint32_t offerFmtLine2a;
-extern uint32_t offerFmtLine1b;
-extern uint32_t offerFmtLine2b;
-extern uint32_t exchangeFmtLine1a;
-extern uint32_t exchangeFmtLine2a;
-extern uint32_t exchangeFmtLine1b;
+extern uintptr_t offerFmtSinglePlayer;
+extern uintptr_t offerFmtTwoPlayers;
+extern uintptr_t exchangeFmtSinglePlayer;
+extern uintptr_t exchangeFmtTwoPlayers;
+extern uintptr_t offerFmtLine1a;
+extern uintptr_t offerFmtLine2a;
+extern uintptr_t offerFmtLine1b;
+extern uintptr_t offerFmtLine2b;
+extern uintptr_t exchangeFmtLine1a;
+extern uintptr_t exchangeFmtLine2a;
+extern uintptr_t exchangeFmtLine1b;
 extern uint32_t exchangeFmtLine2b;
 
 /* Format string labels */
@@ -3679,48 +3679,48 @@ void _OffersAfterDrawCommon(void *entryPtr)
     menuEntries[7].y = a5->y;
 
     /* Set up format string pointers: default (normal offer) */
-    offerFmtSinglePlayer   = (uint32_t)aAOfferForB;
-    offerFmtTwoPlayers     = (uint32_t)aAOfferForBAndC;
-    exchangeFmtSinglePlayer = (uint32_t)aAExchangeOffer;
-    exchangeFmtTwoPlayers   = (uint32_t)aAExchangeOffer_0;
-    offerFmtLine1a          = (uint32_t)aAOfferFor;
-    offerFmtLine2a          = (uint32_t)aB;
-    offerFmtLine1b          = (uint32_t)aAOfferFor_0;
-    offerFmtLine2b          = (uint32_t)aBAndC;
-    exchangeFmtLine1a       = (uint32_t)aAExchangeOffer_1;
-    exchangeFmtLine2a       = (uint32_t)aB_0;
-    exchangeFmtLine1b       = (uint32_t)aAExchangeOffer_2;
-    exchangeFmtLine2b       = (uint32_t)aBAndC_0;
+    offerFmtSinglePlayer   = (uintptr_t)aAOfferForB;
+    offerFmtTwoPlayers     = (uintptr_t)aAOfferForBAndC;
+    exchangeFmtSinglePlayer = (uintptr_t)aAExchangeOffer;
+    exchangeFmtTwoPlayers   = (uintptr_t)aAExchangeOffer_0;
+    offerFmtLine1a          = (uintptr_t)aAOfferFor;
+    offerFmtLine2a          = (uintptr_t)aB;
+    offerFmtLine1b          = (uintptr_t)aAOfferFor_0;
+    offerFmtLine2b          = (uintptr_t)aBAndC;
+    exchangeFmtLine1a       = (uintptr_t)aAExchangeOffer_1;
+    exchangeFmtLine2a       = (uintptr_t)aB_0;
+    exchangeFmtLine1b       = (uintptr_t)aAExchangeOffer_2;
+    exchangeFmtLine2b       = (uintptr_t)aBAndC_0;
 
     /* Check for "further improved" (offer word at offset 10 == 0xFFFF) */
     if (*(uint16_t *)(offer + 10) == 0xFFFF) {
-        offerFmtSinglePlayer   = (uint32_t)aAFurtherImprov;
-        offerFmtTwoPlayers     = (uint32_t)aAFurtherImprov_0;
-        exchangeFmtSinglePlayer = (uint32_t)aAFurtherImprov_1;
-        exchangeFmtTwoPlayers   = (uint32_t)aAFurtherImprov_2;
-        offerFmtLine1a          = (uint32_t)aAFurtherImprov_3;
-        offerFmtLine2a          = (uint32_t)aB_3;
-        offerFmtLine1b          = (uint32_t)aAFurtherImprov_4;
-        offerFmtLine2b          = (uint32_t)aBAndC_3;
-        exchangeFmtLine1a       = (uint32_t)aAFurtherImprov_5;
-        exchangeFmtLine2a       = (uint32_t)aOfferForB;
-        exchangeFmtLine1b       = (uint32_t)aAFurtherImprov_6;
-        exchangeFmtLine2b       = (uint32_t)aBAndC_4;
+        offerFmtSinglePlayer   = (uintptr_t)aAFurtherImprov;
+        offerFmtTwoPlayers     = (uintptr_t)aAFurtherImprov_0;
+        exchangeFmtSinglePlayer = (uintptr_t)aAFurtherImprov_1;
+        exchangeFmtTwoPlayers   = (uintptr_t)aAFurtherImprov_2;
+        offerFmtLine1a          = (uintptr_t)aAFurtherImprov_3;
+        offerFmtLine2a          = (uintptr_t)aB_3;
+        offerFmtLine1b          = (uintptr_t)aAFurtherImprov_4;
+        offerFmtLine2b          = (uintptr_t)aBAndC_3;
+        exchangeFmtLine1a       = (uintptr_t)aAFurtherImprov_5;
+        exchangeFmtLine2a       = (uintptr_t)aOfferForB;
+        exchangeFmtLine1b       = (uintptr_t)aAFurtherImprov_6;
+        exchangeFmtLine2b       = (uintptr_t)aBAndC_4;
     }
     /* Check for "improved" (offer[8] == 0xFFFF) */
     else if (*(uint16_t *)(offer + 8) == 0xFFFF) {
-        offerFmtSinglePlayer   = (uint32_t)aAImprovedOffer;
-        offerFmtTwoPlayers     = (uint32_t)aAImprovedOffer_0;
-        exchangeFmtSinglePlayer = (uint32_t)aAImprovedExcha;
-        exchangeFmtTwoPlayers   = (uint32_t)aAImprovedExcha_0;
-        offerFmtLine1a          = (uint32_t)aAImprovedOffer_1;
-        offerFmtLine2a          = (uint32_t)aB_1;
-        offerFmtLine1b          = (uint32_t)aAImprovedOffer_2;
-        offerFmtLine2b          = (uint32_t)aBAndC_1;
-        exchangeFmtLine1a       = (uint32_t)aAImprovedExcha_1;
-        exchangeFmtLine2a       = (uint32_t)aB_2;
-        exchangeFmtLine1b       = (uint32_t)aAImprovedExcha_2;
-        exchangeFmtLine2b       = (uint32_t)aBAndC_2;
+        offerFmtSinglePlayer   = (uintptr_t)aAImprovedOffer;
+        offerFmtTwoPlayers     = (uintptr_t)aAImprovedOffer_0;
+        exchangeFmtSinglePlayer = (uintptr_t)aAImprovedExcha;
+        exchangeFmtTwoPlayers   = (uintptr_t)aAImprovedExcha_0;
+        offerFmtLine1a          = (uintptr_t)aAImprovedOffer_1;
+        offerFmtLine2a          = (uintptr_t)aB_1;
+        offerFmtLine1b          = (uintptr_t)aAImprovedOffer_2;
+        offerFmtLine2b          = (uintptr_t)aBAndC_1;
+        exchangeFmtLine1a       = (uintptr_t)aAImprovedExcha_1;
+        exchangeFmtLine2a       = (uintptr_t)aB_2;
+        exchangeFmtLine1b       = (uintptr_t)aAImprovedExcha_2;
+        exchangeFmtLine2b       = (uintptr_t)aBAndC_2;
     }
 
     /* Get team name pointer (offset 5 from team data = teamName field) */

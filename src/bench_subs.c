@@ -1389,7 +1389,7 @@ static void swapPlayerNameData(int16_t enterIndex, int16_t leaveIndex)
     uint8_t *lenTable = plNamesLengthTableCopy;
     uint8_t tmp;
 
-    if ((uint32_t)benchTeamGame != (uint32_t)&topTeamInGame) {
+    if ((uintptr_t)benchTeamGame != (uintptr_t)&topTeamInGame) {
         ordTable += 16;
         lenTable += 16;
     }
@@ -1539,7 +1539,7 @@ static void drawOpponentsBench(void)
     d2 = opponentBenchY;
 
     a0 = &topTeamInGame;
-    if (benchTeamGame != (uint32_t)&bottomTeamInGame)
+    if (benchTeamGame != (uintptr_t)&bottomTeamInGame)
         a0 = &bottomTeamInGame;
 
     a1 = (TeamGeneralInfo *)benchTeam;
@@ -2331,7 +2331,7 @@ void _SwapPlayerNameData(uint16_t enterIndex, uint16_t leaveIndex)
     uint8_t *ordinals = (uint8_t *)&plOrdinalsTable;
     uint8_t *nameLens = (uint8_t *)&plNamesLengthTableCopy;
 
-    if (benchTeamGame != (uint32_t)&topTeamInGame) {
+    if (benchTeamGame != (uintptr_t)&topTeamInGame) {
         ordinals += 16;
         nameLens += 16;
     }
@@ -2371,13 +2371,13 @@ void _TrainingSwapBenchTeams(void)
     /* Switch to opponent team */
     TeamGeneralInfo *team = (TeamGeneralInfo *)benchTeam;
     team = team->opponentsTeam;
-    benchTeam = (uint32_t)team;
+    benchTeam = (uintptr_t)team;
 
     /* Set benchTeamGame based on team number */
     TeamGame *gamePtr = topTeamPtr;
     if (team->teamNumber == 2)
         gamePtr = bottomTeamPtr;
-    benchTeamGame = (uint32_t)gamePtr;
+    benchTeamGame = (uintptr_t)gamePtr;
 }
 
 /* ---- LeaveSubsMenu  (SWOS2.s line 9787) ----
@@ -2886,7 +2886,7 @@ void _BenchMenuHandleControls(void)
     }
 
     /* subsState == 0: bench idle — check if bench was dismissed */
-    if (benchTeam == (uint32_t)&topTeamData) {
+    if (benchTeam == (uintptr_t)&topTeamData) {
         if (bench1Called != 0) { _LeaveSubsMenu(); return; }
     } else {
         if (bench2Called != 0) { _LeaveSubsMenu(); return; }

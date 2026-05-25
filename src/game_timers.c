@@ -38,7 +38,7 @@ extern uint16_t autoReplays;
 extern volatile uint16_t saveHighlightScene;
 extern uint16_t userRequestedReplay;
 extern uint16_t instantReplayFlag;
-extern uint32_t currentScorer;
+extern uintptr_t currentScorer;
 extern uint16_t foulXCoordinate;
 extern uint16_t foulYCoordinate;
 extern uint16_t cameraDirection;

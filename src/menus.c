@@ -1371,7 +1371,7 @@ void _SquadUpdateMenuState(void)
         menuEntries[6].isInvisible = 1;
 
         if (gameType == 4 &&
-            squadTeamFilePtr == (uint32_t)&careerTeam &&
+            squadTeamFilePtr == (uintptr_t)&careerTeam &&
             isNationalSelector == 0) {
             menuEntries[6].isInvisible = 0;
         } else {
@@ -1924,7 +1924,7 @@ void _SquadInit(void)
 {
     /* Set national squad flag */
     isNationalSquad = 0;
-    if (squadTeamFilePtr == (uint32_t)&careerTeam && isNationalSelector != 0) {
+    if (squadTeamFilePtr == (uintptr_t)&careerTeam && isNationalSelector != 0) {
         isNationalSquad = 1;
     }
 
@@ -3412,7 +3412,7 @@ extern uint8_t  aLoadOldCompeti[];
 extern uint8_t  aNotACompetitio[];
 extern uint8_t  competitionFilename[];
 extern uint8_t  selectedFilename[];
-extern uint32_t extension;
+extern uintptr_t extension;
 extern uint16_t diyLeagueTeamIds[];
 extern uint16_t diyCupTeamIds[];
 extern uint16_t diyTournamentTeamIds[];
@@ -5420,7 +5420,7 @@ void _RandomlySwapTeams(void)
  * Chunk 163: ViewSquad Init/Common/AfterDraw
  * ================================================================ */
 
-extern uint32_t viewSquadTitle;
+extern uintptr_t viewSquadTitle;
 extern uint32_t viewSquadFlags;
 extern uint32_t viewSquadMaskLo;
 extern uint32_t viewSquadMaskHi;
@@ -5561,7 +5561,7 @@ int16_t _ShowSquad(TeamFile *teamPtr, uint8_t *title, uint32_t maskLo,
                     uint32_t maskHi, uint16_t arg2, uint16_t arg3)
 {
     squadTeamPtr = teamPtr;
-    viewSquadTitle = (uint32_t)title;
+    viewSquadTitle = (uintptr_t)title;
     viewSquadMaskLo = maskLo;
     viewSquadMaskHi = maskHi;
     viewSquadArg2 = arg2;
@@ -7009,7 +7009,7 @@ calcColumnMarker:
     {
         uint8_t numRounds = a6[5];
         if (numRounds != 0) {
-            int16_t diff16 = (int16_t)((uint32_t)a4 - (uint32_t)a6);
+            int16_t diff16 = (int16_t)((uintptr_t)a4 - (uintptr_t)a6);
             uint32_t dividend = (uint32_t)(int32_t)diff16;
             uint16_t gameIndex = (uint16_t)(dividend / 12) + 1;
             if ((uint8_t)gameIndex != numRounds)

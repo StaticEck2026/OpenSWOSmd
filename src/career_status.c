@@ -810,7 +810,7 @@ int16_t _GetAgeAdjustedPlayerFormFactor(uint8_t *playerBase) {
 
     if (flagByte == 0x9B || flagByte == 0x9A) {
         /* Special career form: compute player index within careerTeam */
-        uint32_t offset = (uint32_t)((uint32_t)playerBase - (uint32_t)&careerTeam);
+        uint32_t offset = (uintptr_t)((uintptr_t)playerBase - (uintptr_t)&careerTeam);
         uint16_t playerIdx = offset / 38;
         formValue = (int16_t)(int8_t)playerFormModifiers[playerIdx];
         formValue <<= 1;  /* * 2 */
@@ -915,29 +915,29 @@ uint16_t _IsMajorInternationalTournament(uint8_t **outCtx) {
     uint32_t curComp = currentCompetitionPtr;
 
     /* Check primary competition against 9 tournament types */
-    if (curComp == (uint32_t)worldCup2Copy ||
-        curComp == (uint32_t)europeanChampionships2Copy ||
-        curComp == (uint32_t)copaAmericaCopy ||
-        curComp == (uint32_t)africanNationsCupCopy ||
-        curComp == (uint32_t)northAmericanCupCopy ||
-        curComp == (uint32_t)asianCupCopy ||
-        curComp == (uint32_t)oceaniaCupCopy ||
-        curComp == (uint32_t)invitationTournamentCopy ||
-        curComp == (uint32_t)tourCopy) {
+    if (curComp == (uintptr_t)worldCup2Copy ||
+        curComp == (uintptr_t)europeanChampionships2Copy ||
+        curComp == (uintptr_t)copaAmericaCopy ||
+        curComp == (uintptr_t)africanNationsCupCopy ||
+        curComp == (uintptr_t)northAmericanCupCopy ||
+        curComp == (uintptr_t)asianCupCopy ||
+        curComp == (uintptr_t)oceaniaCupCopy ||
+        curComp == (uintptr_t)invitationTournamentCopy ||
+        curComp == (uintptr_t)tourCopy) {
         *outCtx = competitionFileBuffer;
         return 1;
     }
 
     /* Check secondary competition against 8 tournament types (no worldCup) */
     uint32_t secComp = secondaryCompetitionPtr;
-    if (secComp == (uint32_t)europeanChampionships2Copy ||
-        secComp == (uint32_t)copaAmericaCopy ||
-        secComp == (uint32_t)africanNationsCupCopy ||
-        secComp == (uint32_t)northAmericanCupCopy ||
-        secComp == (uint32_t)asianCupCopy ||
-        secComp == (uint32_t)oceaniaCupCopy ||
-        secComp == (uint32_t)invitationTournamentCopy ||
-        secComp == (uint32_t)tourCopy) {
+    if (secComp == (uintptr_t)europeanChampionships2Copy ||
+        secComp == (uintptr_t)copaAmericaCopy ||
+        secComp == (uintptr_t)africanNationsCupCopy ||
+        secComp == (uintptr_t)northAmericanCupCopy ||
+        secComp == (uintptr_t)asianCupCopy ||
+        secComp == (uintptr_t)oceaniaCupCopy ||
+        secComp == (uintptr_t)invitationTournamentCopy ||
+        secComp == (uintptr_t)tourCopy) {
         *outCtx = competitionContext;
         return 1;
     }
@@ -1803,8 +1803,8 @@ void _UpdateBoardConfidenceModifiers(void) {
             goto set_qual1_flag0;
 
         uint32_t curComp = currentCompetitionPtr;
-        if (curComp < (uint32_t)worldCupQualifyingGroup1Copy ||
-            curComp > (uint32_t)oceaniaWorldCupQualificationCopy)
+        if (curComp < (uintptr_t)worldCupQualifyingGroup1Copy ||
+            curComp > (uintptr_t)oceaniaWorldCupQualificationCopy)
             goto check_ec_qualifying;
 
         /* In WC qualifying: find team rank and determine qualifying slots */
@@ -1812,17 +1812,17 @@ void _UpdateBoardConfidenceModifiers(void) {
         uint32_t comp = currentCompetitionPtr;
         uint16_t qualSlots;
 
-        if (comp == (uint32_t)northAmericaWorldCupQualificationCopy)
+        if (comp == (uintptr_t)northAmericaWorldCupQualificationCopy)
             qualSlots = 3;
-        else if (comp == (uint32_t)southAmericaWorldCupQualificationCopy)
+        else if (comp == (uintptr_t)southAmericaWorldCupQualificationCopy)
             qualSlots = 4;
-        else if (comp == (uint32_t)africaWorldCupQualificationCopy)
+        else if (comp == (uintptr_t)africaWorldCupQualificationCopy)
             qualSlots = 5;
-        else if (comp == (uint32_t)asiaWorldCupQualificationCopy)
+        else if (comp == (uintptr_t)asiaWorldCupQualificationCopy)
             qualSlots = 2;
-        else if (comp == (uint32_t)oceaniaWorldCupQualificationCopy)
+        else if (comp == (uintptr_t)oceaniaWorldCupQualificationCopy)
             qualSlots = 1;
-        else if (comp == (uint32_t)worldCupQualifyingGroup8Copy)
+        else if (comp == (uintptr_t)worldCupQualifyingGroup8Copy)
             qualSlots = 1;
         else
             qualSlots = 2;
@@ -1853,8 +1853,8 @@ check_ec_qualifying:
             goto set_qual1_flag1;
 
         uint32_t curComp = currentCompetitionPtr;
-        if (curComp < (uint32_t)ecQualifyingGroup1Copy ||
-            curComp > (uint32_t)ecQualifyingGroup8Copy)
+        if (curComp < (uintptr_t)ecQualifyingGroup1Copy ||
+            curComp > (uintptr_t)ecQualifyingGroup8Copy)
             goto check_winners;
 
         uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)competitionFileBuffer);
@@ -2046,12 +2046,12 @@ void _UpdateCareerReputationBonuses(void) {
         /* Check if it's a major continental or minor */
         uint32_t comp = currentCompetitionPtr;
         int8_t bonusVal;
-        if (comp == (uint32_t)europeanChampionships2Copy ||
-            comp == (uint32_t)copaAmericaCopy ||
-            comp == (uint32_t)africanNationsCupCopy ||
-            comp == (uint32_t)northAmericanCupCopy ||
-            comp == (uint32_t)asianCupCopy ||
-            comp == (uint32_t)oceaniaCupCopy) {
+        if (comp == (uintptr_t)europeanChampionships2Copy ||
+            comp == (uintptr_t)copaAmericaCopy ||
+            comp == (uintptr_t)africanNationsCupCopy ||
+            comp == (uintptr_t)northAmericanCupCopy ||
+            comp == (uintptr_t)asianCupCopy ||
+            comp == (uintptr_t)oceaniaCupCopy) {
             bonusVal = (int8_t)majorTrophyBonusValue;
         } else {
             bonusVal = (int8_t)minorTrophyBonusValue;

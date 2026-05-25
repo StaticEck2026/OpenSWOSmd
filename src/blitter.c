@@ -103,8 +103,8 @@ static void blitterSpanCore(uint8_t *plane, uint16_t xBit, uint16_t width,
         custom->bltalwm = d7;
         d7 = ~d7;
         custom->bltbdat = d7;
-        custom->bltapt = (uint32_t)plane;
-        custom->bltdpt = (uint32_t)plane;
+        custom->bltapt = (uintptr_t)plane;
+        custom->bltdpt = (uintptr_t)plane;
         custom->bltamod = FB_BLT_MOD_AFTER_1_WORD;
         custom->bltdmod = FB_BLT_MOD_AFTER_1_WORD;
         custom->bltcon0 = d5;
@@ -126,7 +126,7 @@ static void blitterSpanCore(uint8_t *plane, uint16_t xBit, uint16_t width,
         uint16_t mod = ROW_STRIDE_BYTES - d0 * 2;
 
         waitBlit();
-        custom->bltdpt = (uint32_t)plane;
+        custom->bltdpt = (uintptr_t)plane;
         custom->bltdmod = mod;
         custom->bltcon0 = d6;
         custom->bltcon1 = 0;
@@ -149,8 +149,8 @@ static void blitterSpanCore(uint8_t *plane, uint16_t xBit, uint16_t width,
             custom->bltalwm = d7;
             d7 = ~d7;
             custom->bltbdat = d7;
-            custom->bltapt = (uint32_t)plane;
-            custom->bltdpt = (uint32_t)plane;
+            custom->bltapt = (uintptr_t)plane;
+            custom->bltdpt = (uintptr_t)plane;
             custom->bltamod = FB_BLT_MOD_AFTER_1_WORD;
             custom->bltdmod = FB_BLT_MOD_AFTER_1_WORD;
             custom->bltcon0 = d5;

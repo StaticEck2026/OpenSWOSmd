@@ -75,7 +75,7 @@ static void ensureChannelPtrs(void)
  * ================================================================ */
 static uint8_t *accessRelocate(uint8_t *ptr)
 {
-    return (uint8_t *)(((uint32_t)ptr + (uint32_t)audioState.bankSectionPtrs[5]) & 0x00FFFFFFu);
+    return (uint8_t *)(((uintptr_t)ptr + (uintptr_t)audioState.bankSectionPtrs[5]) & 0x00FFFFFFu);
 }
 
 /* ================================================================
@@ -427,15 +427,15 @@ void _AudioChannelNoteOnOff(uint16_t channel, uint16_t noteId)
 
     /* First byte of note data is the wave index */
     waveIdx = *noteData++;
-    chan->pvNoteScript = (uint32_t)noteData;
+    chan->pvNoteScript = (uintptr_t)noteData;
 
     /* Look up wave data from bank section 4, relocate with section 6 */
     waveTable = audioState.bankSectionPtrs[4];  /* offset 0x14 from state */
     waveOffset = (uint32_t)waveIdx * 4;
     waveData = *(uint8_t **)(waveTable + waveOffset);
-    waveData = (uint8_t *)((uint32_t)waveData + (uint32_t)audioState.bankSectionPtrs[6]);
+    waveData = (uint8_t *)((uintptr_t)waveData + (uintptr_t)audioState.bankSectionPtrs[6]);
 
-    chan->pvWaveData = (uint32_t)waveData;
+    chan->pvWaveData = (uintptr_t)waveData;
     chan->pvStepPeriod = 6;
     chan->pvScriptTimer = 1;
     chan->pvPeriodCounter = 1;

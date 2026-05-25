@@ -54,7 +54,7 @@ extern uint8_t  pitchChunkyBuffer[];
  * Pitch.c arranges chunky tiles to be indexed by the *original* Amiga
  * tile index (offset / 128), so the same `(entry - base) / stride` math
  * still recovers the tile-pair index used by the static/animated swap. */
-#define ANIM_TILE_BASE        ((uint32_t)pitchChunkyBuffer)
+#define ANIM_TILE_BASE        ((uintptr_t)pitchChunkyBuffer)
 #define ANIM_TILE_SIZE        256u
 #define ANIM_TILE_SIZE_SHIFT  8
 #define ANIM_MAX_TILE_OFFSET  (MAX_FAN_TILE_INDEX * ANIM_TILE_SIZE)
@@ -482,8 +482,8 @@ pattern_loop:
 
             /* bounds check: &pitchDatBuffer[pitchIdx*4] must be in [pitchDatBuffer, currentMenu) */
             tileEntryPtr = ((uint32_t *)(void *)pitchDatBuffer) + pitchIdx;
-            if ((uint32_t)tileEntryPtr < (uint32_t)pitchDatBuffer ||
-                (uint32_t)tileEntryPtr >= (uint32_t)currentMenu) {
+            if ((uintptr_t)tileEntryPtr < (uintptr_t)pitchDatBuffer ||
+                (uintptr_t)tileEntryPtr >= (uintptr_t)currentMenu) {
                 panicReasonCode = 0x2772;
                 _PanicHaltLoop();
             }

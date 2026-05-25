@@ -8,7 +8,7 @@
 #include "deterministic.h"
 
 extern uintptr_t assetLoaderCacheFlag;
-extern uint32_t assetLoaderWorkPtr;
+extern uintptr_t assetLoaderWorkPtr;
 extern volatile int16_t waitingInterrupt;
 extern uint16_t useIndividualPlayerSkinColor;
 extern uint8_t goalBase[];

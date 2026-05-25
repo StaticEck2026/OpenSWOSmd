@@ -107,10 +107,10 @@ void _SetupInterrupts(void)
     vectors[LEVEL_1_VEC / 4] = vectors[LEVEL_3_VEC / 4];
 
     /* Install Int3Handler at Level 3 */
-    vectors[LEVEL_3_VEC / 4] = (uint32_t)Int3Handler;
+    vectors[LEVEL_3_VEC / 4] = (uintptr_t)Int3Handler;
 
     /* Install Int5Handler at Level 5 */
-    vectors[LEVEL_5_VEC / 4] = (uint32_t)Int5Handler;
+    vectors[LEVEL_5_VEC / 4] = (uintptr_t)Int5Handler;
 
     /* Enable: SET(15) + Master(14) + RBF(11) + VERTB(5) + SOFTINT(2)
      * Binary: 1100 1000 0010 0100 = 0xC824 */

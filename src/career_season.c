@@ -89,7 +89,7 @@ void _Career_FillRandomTeamListExcludingSelected(uint16_t excludeCount,
         /* Read group pointer (4 bytes) */
         uint8_t *groupPtr = *(uint8_t **)table;
         table += 4;
-        if ((uint32_t)groupPtr == 0xFFFFFFFF)
+        if (groupPtr == (uint8_t *)(uintptr_t)-1)
             break;
 
         /* Read group size and copy count (2 words each) */
@@ -441,8 +441,8 @@ static void adjustWeightsForCompetition(uint8_t *compPtr, uint16_t *weightAccum,
         return;
     }
     /* World Cup qualifiers (range check): weight 4 */
-    if ((uint32_t)compPtr >= (uint32_t)worldCupQualifyingGroup1Copy &&
-        (uint32_t)compPtr <= (uint32_t)oceaniaWorldCupQualificationCopy) {
+    if ((uintptr_t)compPtr >= (uintptr_t)worldCupQualifyingGroup1Copy &&
+        (uintptr_t)compPtr <= (uintptr_t)oceaniaWorldCupQualificationCopy) {
         *weightedCategory *= 4;
         *weightAccum += 4;
         return;
@@ -758,11 +758,11 @@ void _Career_ProcessCompetitionForNextSeason(uint16_t compId)
     processPrimaryCompetitionForNextSeason(primary);
 
     uint8_t *secondary = (uint8_t *)tableEntry[2];
-    if ((uint32_t)secondary != 0xFFFFFFFF) {
+    if (secondary != (uint8_t *)(uintptr_t)-1) {
         _Career_ProcessSecondaryCompetitionForNextSeason(secondary);
 
         uint8_t *tertiary = (uint8_t *)tableEntry[3];
-        if ((uint32_t)tertiary != 0xFFFFFFFF) {
+        if (tertiary != (uint8_t *)(uintptr_t)-1) {
             _Career_ProcessTertiaryCompetitionForNextSeason(tertiary);
         }
     }
@@ -939,7 +939,7 @@ static void fillWorldCupQualifyingGroupTeams(uint8_t regionCode, uint8_t *group,
     if (selTeamNumber != worldCupHostTeam &&
         selTeamNumber != worldCupQualifyingTeam &&
         (uint8_t)(selTeamNumber >> 8) == regionCode) {
-        careerCupPickList[0] = (uint32_t)origGroup;
+        careerCupPickList[0] = (uintptr_t)origGroup;
         firstTeam = selTeamNumber;
     } else {
         do {
@@ -1013,7 +1013,7 @@ static void setupWorldCupQualifyingGroups(uint16_t **teamListPtr)
                 selTeamNumber != worldCupHostTeam &&
                 selTeamNumber != worldCupQualifyingTeam &&
                 (uint8_t)(selTeamNumber >> 8) == 0x50) {
-                careerCupPickList[0] = (uint32_t)group;
+                careerCupPickList[0] = (uintptr_t)group;
                 teamId = selTeamNumber;
             } else {
                 if (group == worldCupQualifyingGroup8Copy && colOffset >= d5)
@@ -1161,7 +1161,7 @@ static void setCupPickList_Europe(uint16_t **teamListPtr)
             int readFromList = 1;
             if (colOffset == 0 && group == selectedGroup) {
                 if (selTeamNumber != euroChampionshipQualTeam) {
-                    careerCupPickList[0] = (uint32_t)group;
+                    careerCupPickList[0] = (uintptr_t)group;
                     teamId = selTeamNumber;
                     readFromList = 0;
                 }

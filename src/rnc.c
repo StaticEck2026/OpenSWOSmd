@@ -266,8 +266,8 @@ static uint32_t v1DecodeBlock(uint8_t *src, uint8_t *dst)
             uint8_t *relDst = endWithLeeway;
 
             /* Align to even */
-            if ((uint32_t)srcEnd & 1) { srcEnd++; relDst++; }
-            if ((uint32_t)relDst & 1) { relDst++; }
+            if ((uintptr_t)srcEnd & 1) { srcEnd++; relDst++; }
+            if ((uintptr_t)relDst & 1) { relDst++; }
 
             /* Save bytes that will be overwritten (between a6 and relDst) */
             {

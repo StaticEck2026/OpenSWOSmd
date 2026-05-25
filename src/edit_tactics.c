@@ -92,7 +92,7 @@ extern uint16_t newPlayerSkill;
 extern uint16_t tacticsChangedFlag;
 extern uint8_t importTacticsMenu[];
 extern uint8_t selectedFilename[];
-extern uint32_t extension;              /* file extension from GetFilenameAndExtension */
+extern uintptr_t extension;              /* file extension from GetFilenameAndExtension */
 extern uint8_t importTacticsFilename;   /* filename buffer */
 
 /* ---- String literals (defined in asm) ---- */

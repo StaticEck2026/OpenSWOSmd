@@ -147,9 +147,9 @@ void _Career_RandomizeInvitationTournamentCup(void)
     int16_t i;
 
     for (i = 4; i >= 0; i--) {
-        if (pickList[i] == (uint32_t)invitationTournamentCopy) {
+        if (pickList[i] == (uintptr_t)invitationTournamentCopy) {
             if (_Rand() & 1)
-                pickList[i] = (uint32_t)tourCopy;
+                pickList[i] = (uintptr_t)tourCopy;
         }
     }
 }

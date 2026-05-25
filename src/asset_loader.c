@@ -18,7 +18,7 @@
 #include <stdint.h>
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uint32_t assetLoaderWorkPtr;
+extern uintptr_t assetLoaderWorkPtr;
 extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 /* Head of the cache linked-list. Storage retyped to uintptr_t so that on
  * 64-bit hosts (LP64 / LLP64) a real pointer round-trips. */

@@ -69,7 +69,7 @@ SWOS_FAST_BSS volatile uint32_t g_swos_fast_bss_anchor;
 static void set_vector(uint32_t vbr, uint32_t offset, void (*handler)(void))
 {
     volatile uint32_t *vector = (volatile uint32_t *)(vbr + offset);
-    *vector = (uint32_t)handler;
+    *vector = (uintptr_t)handler;
 }
 
 /* Renamed from `_start` to avoid colliding with the hosted libc CRT
@@ -82,16 +82,19 @@ __attribute__((used, externally_visible)) void _swos_c_start(void)
     _DetachOSDisplay();
     _InitHardwareAtFrameStart();
 
-    uint32_t bank_bitmap_ptr = (uint32_t)&loaderBankBitmap;
-    uint32_t bank_bitmap_end = (uint32_t)&chipRamBitmapEnd;
+    /* uintptr_t locals so the global addresses don't truncate on 64-bit
+     * before being cast back to volatile uint16_t* for the byte-by-byte
+     * zero-fill. */
+    uintptr_t bank_bitmap_ptr = (uintptr_t)&loaderBankBitmap;
+    uintptr_t bank_bitmap_end = (uintptr_t)&chipRamBitmapEnd;
     do
     {
         *(volatile uint16_t *)bank_bitmap_ptr = 0x0000u;
         bank_bitmap_ptr += 2u;
     } while (bank_bitmap_ptr != bank_bitmap_end);
 
-    uint32_t pitch_ptr = (uint32_t)&pitchDatBuffer;
-    uint32_t menu_ptr = (uint32_t)&currentMenu;
+    uintptr_t pitch_ptr = (uintptr_t)&pitchDatBuffer;
+    uintptr_t menu_ptr = (uintptr_t)&currentMenu;
     do
     {
         *(volatile uint16_t *)pitch_ptr = 0x0000u;

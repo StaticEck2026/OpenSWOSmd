@@ -84,7 +84,7 @@ static void translate_one(uint32_t *p)
         return;
     void *current = current_for_amiga(val);
     if (current) {
-        *p = (uint32_t)current;
+        *p = (uintptr_t)current;
     }
 }
 

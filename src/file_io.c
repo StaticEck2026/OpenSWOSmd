@@ -82,7 +82,7 @@ extern uint16_t saveFileBuffer;
 extern uint16_t menuMusic;
 
 /* File selection dialog globals */
-extern uint32_t extension;
+extern uintptr_t extension;
 extern uintptr_t menuTitle;
 extern uint8_t inputSaveFilename[];
 extern uint16_t numberOfFiles;

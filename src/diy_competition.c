@@ -5781,9 +5781,9 @@ void _DesignDIYTournamentOnDraw(void)
         a4++;
         a4->isInvisible = 0;
         if (slot->seedingType != 0) {
-            a4->fg = (uintptr_t)(uint32_t)aStar;  /* "*" */
+            a4->fg = (uintptr_t)(uintptr_t)aStar;  /* "*" */
         } else {
-            a4->fg = (uintptr_t)(uint32_t)asc_135D9A; /* "-" */
+            a4->fg = (uintptr_t)(uintptr_t)asc_135D9A; /* "-" */
         }
 
         /* Next entry: qualification description */
@@ -8708,7 +8708,7 @@ static void checkEuropeanCupsAndClear3C(uint8_t *record, uint8_t *comp)
 {
     uint32_t *p = europeanCupsandNationalTeamCompetitionsAndQualifications;
     while (*p != 0xFFFFFFFF) {
-        if (*p == (uint32_t)record) {
+        if (*p == (uintptr_t)record) {
             ((DIYCompetition *)comp)->substitutesCount = 0;  /* 0x3C */
             return;
         }
@@ -8729,7 +8729,7 @@ static void checkEuropeanCupsAndClear3C(uint8_t *record, uint8_t *comp)
  * explicitly when there's no valid country slot. */
 static uint8_t *prependCountryNameIfClub(uint8_t *record, uint8_t *dst)
 {
-    if (_IsNationalTeamCompetitionOrQualification((uint32_t)record) != 0) {
+    if (_IsNationalTeamCompetitionOrQualification((uintptr_t)record) != 0) {
         uint16_t countryIdx = (uint8_t)((Competition *)record)->teamNumber;
         uint8_t *countryEntry = (uint8_t *)countriesTable[countryIdx];
         if (countryEntry == 0)

@@ -10,7 +10,7 @@
 #include "string_utils.h"
 
 /* ---- External globals (in SWOS2.s code/BSS sections) ---- */
-extern uint32_t currentScorer;
+extern uintptr_t currentScorer;
 extern Sprite  *lastPlayerBeforeGoalkeeper;
 extern uint16_t goalScored;
 extern uint16_t runSlower;

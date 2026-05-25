@@ -308,7 +308,7 @@ uint8_t *_TeamSelectionKeyCache_InsertSpaceSorted(uint16_t key, uint16_t inserti
     }
 
     /* Walked all entries without finding insert point — check bounds */
-    if ((uint32_t)ptr > (uint32_t)teamSelectionKeyCacheEnd)
+    if ((uintptr_t)ptr > (uintptr_t)teamSelectionKeyCacheEnd)
         goto panic;
     return ptr;
 
@@ -324,11 +324,11 @@ found_insert_point:
 
         /* Check if shifted data would overflow */
         uint8_t *newEnd = endPtr + insertionBytes;
-        if ((uint32_t)newEnd > (uint32_t)teamSelectionKeyCacheEnd)
+        if ((uintptr_t)newEnd > (uintptr_t)teamSelectionKeyCacheEnd)
             goto panic;
 
         /* Shift data upward by insertionBytes (from end to start, word-at-a-time) */
-        uint32_t shiftBytes = (uint32_t)endPtr - (uint32_t)ptr;
+        uint32_t shiftBytes = (uintptr_t)endPtr - (uintptr_t)ptr;
         uint16_t numWords = (uint16_t)(shiftBytes >> 1) - 1;
         {
             volatile uint16_t *src = (volatile uint16_t *)endPtr;
@@ -1585,7 +1585,7 @@ void _Career_AdvanceToNextTeamSelectionKeyCacheEntry(void)
         ptr += stride;
         if (ptr[4] == 0) {
             teamSelectionKeyCacheIndex = d0;
-            teamSelectionKeyCacheOffset = (uint16_t)((uint32_t)ptr - (uint32_t)teamSelectionKeyCache);
+            teamSelectionKeyCacheOffset = (uint16_t)((uintptr_t)ptr - (uintptr_t)teamSelectionKeyCache);
             return;
         }
     }

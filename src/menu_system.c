@@ -1227,9 +1227,9 @@ finish_menu:
             entryIter = (MenuEntry *)((uint8_t *)entryIter + MENUENTRY_STRIDE);
         }
 
-        menu->endOfMenuPtr = (uint32_t)a1;
-        menuFreeSpace = (uint32_t)diyLeagueScratchBuffer - (uint32_t)a1;
-        menuDataOffset = (uint32_t)a1 - (uint32_t)currentMenu;
+        menu->endOfMenuPtr = (uintptr_t)a1;
+        menuFreeSpace = (uintptr_t)diyLeagueScratchBuffer - (uintptr_t)a1;
+        menuDataOffset = (uintptr_t)a1 - (uintptr_t)currentMenu;
 
         /* Anti-tamper check */
         {

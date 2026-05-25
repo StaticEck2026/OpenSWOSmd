@@ -167,7 +167,7 @@ void _CopySprite(uint16_t srcSprite, uint16_t dstSprite,
     /* Compute y offset in interleaved plane data */
     uint16_t dstInterleavedStride = dstStrideBytes << NUM_PLANES_SHIFT;
     uint32_t yByteOff = (uint32_t)yOffset * dstInterleavedStride;
-    uint32_t dstAddr = (uint32_t)dstData + yByteOff + wordByteOff;
+    uint32_t dstAddr = (uintptr_t)dstData + yByteOff + wordByteOff;
 
     custom->bltcpt = dstAddr;
     custom->bltdpt = dstAddr;
@@ -1268,14 +1268,14 @@ static void renderSpriteBandPlanePair(SpriteGraphics *sprGfx, int16_t x, int16_t
     /* First plane pair */
     waitBlit();
     custom->bltapt = sprGfx->sprData;
-    custom->bltdpt = (uint32_t)a4;
+    custom->bltdpt = (uintptr_t)a4;
     custom->bltsize = sprGfx->bltsize;
 
     /* Second plane pair: source at data+4 */
     uint32_t srcPlane2 = sprGfx->sprData + 4;
     waitBlit();
     custom->bltapt = srcPlane2;
-    custom->bltdpt = (uint32_t)a5;
+    custom->bltdpt = (uintptr_t)a5;
     custom->bltsize = sprGfx->bltsize;
 
     /* Advance past sprite data: nlines * 4 bytes (2 words per line) */

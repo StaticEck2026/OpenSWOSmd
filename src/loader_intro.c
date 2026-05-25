@@ -318,7 +318,7 @@ __attribute__((used, externally_visible))
 void _ShowLoaderIntroSequence(void)
 {
     /* Sanity check: memBoundaryMarker address must be <= 1MB */
-    if ((uint32_t)&memBoundaryMarker > 0x100000u)
+    if ((uintptr_t)&memBoundaryMarker > 0x100000u)
     {
         /* Original asm had a commented-out infinite color-cycle loop here.
          * In practice this path is dead code in a working build. */

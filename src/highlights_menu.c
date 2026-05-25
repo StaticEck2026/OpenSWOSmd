@@ -27,7 +27,7 @@ extern uint16_t hilTeam1Goals;
 extern uint16_t hilTeam2Goals;
 extern uint16_t hilPitchNumber;
 extern uint16_t hilMaxSubstitutes;
-extern uint32_t extension;
+extern uintptr_t extension;
 extern uint8_t selectedFilename[];
 extern uint8_t hilFileBuffer[];
 extern uint32_t kHilFileSig;

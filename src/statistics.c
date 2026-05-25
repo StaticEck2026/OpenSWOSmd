@@ -1525,13 +1525,13 @@ static int16_t EncodeCompetitionPositionForSeasonInfo_impl(
             return -106;   /* league not started/invalid */
 
         /* Check if compDef is a World Cup qualifying group */
-        if ((uint32_t)compDef >= (uint32_t)worldCupQualifyingGroup1Copy &&
-            (uint32_t)compDef <= (uint32_t)oceaniaWorldCupQualificationCopy)
+        if ((uintptr_t)compDef >= (uintptr_t)worldCupQualifyingGroup1Copy &&
+            (uintptr_t)compDef <= (uintptr_t)oceaniaWorldCupQualificationCopy)
             goto negate;
 
         /* Check if compDef is a European Championship qualifying group */
-        if ((uint32_t)compDef >= (uint32_t)ecQualifyingGroup1Copy &&
-            (uint32_t)compDef <= (uint32_t)ecQualifyingGroup8Copy)
+        if ((uintptr_t)compDef >= (uintptr_t)ecQualifyingGroup1Copy &&
+            (uintptr_t)compDef <= (uintptr_t)ecQualifyingGroup8Copy)
             goto negate;
 
         /* Check finished flag at extended +0x60 (minSubstitutes) */
@@ -1752,10 +1752,10 @@ void _Career_FillCurrentSeasonInfo(void)
             a5->comp1Result = (int8_t)d1;
 
             /* Check qualifying stage status */
-            if (((uint32_t)compDef >= (uint32_t)worldCupQualifyingGroup1Copy &&
-                 (uint32_t)compDef <= (uint32_t)oceaniaWorldCupQualificationCopy) ||
-                ((uint32_t)compDef >= (uint32_t)ecQualifyingGroup1Copy &&
-                 (uint32_t)compDef <= (uint32_t)ecQualifyingGroup8Copy))
+            if (((uintptr_t)compDef >= (uintptr_t)worldCupQualifyingGroup1Copy &&
+                 (uintptr_t)compDef <= (uintptr_t)oceaniaWorldCupQualificationCopy) ||
+                ((uintptr_t)compDef >= (uintptr_t)ecQualifyingGroup1Copy &&
+                 (uintptr_t)compDef <= (uintptr_t)ecQualifyingGroup8Copy))
             {
                 a5->tournamentStatus = 1;
                 if (qualifyingStage1PendingFlag0 == 0 &&

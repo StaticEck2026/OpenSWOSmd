@@ -23,7 +23,7 @@ extern uint16_t currentGameTick;
 extern uint16_t trainingGame;
 extern uint16_t currentPlayerIndicatorPosition;
 extern uint16_t resultTimer;
-extern uint32_t currentScorer;
+extern uintptr_t currentScorer;
 extern TeamGeneralInfo *lastTeamScored;
 extern Sprite  *lastPlayerBeforeGoalkeeper;
 extern Sprite  *lastPlayerPlayed;

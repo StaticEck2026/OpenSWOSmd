@@ -325,7 +325,7 @@ void _InitDisplayAndCopper(void)
     /* Write copperZeroLong pointer into first 8 sprite pointer entries */
     {
         uint8_t *entry = copperListBuffer + COP_SPR_B0_OFF;
-        uint32_t ptr = (uint32_t)&copperZeroLong;
+        uint32_t ptr = (uintptr_t)&copperZeroLong;
         for (i = 7; i >= 0; i--)
         {
             copper_write_ptr(entry, ptr);
@@ -372,10 +372,10 @@ void _InitDisplayAndCopper(void)
     }
 
     /* Set bitplane base pointers */
-    bitPlane0BasePtr = (uint32_t)bitPlane0Base;
-    bitPlane1BasePtr = (uint32_t)bitPlane1Base;
-    bitPlane2BasePtr = (uint32_t)bitPlane2Base;
-    bitPlane3BasePtr = (uint32_t)bitPlane3Base;
+    bitPlane0BasePtr = (uintptr_t)bitPlane0Base;
+    bitPlane1BasePtr = (uintptr_t)bitPlane1Base;
+    bitPlane2BasePtr = (uintptr_t)bitPlane2Base;
+    bitPlane3BasePtr = (uintptr_t)bitPlane3Base;
 #ifdef AGA
     bitPlane4BasePtr = (uint32_t)bitPlane4Base;
     bitPlane5BasePtr = (uint32_t)bitPlane5Base;
@@ -399,7 +399,7 @@ void _InitDisplayAndCopper(void)
     _UpdatePlanePtrsAndBlitParams();
 
     /* Install copper list */
-    custom->cop1lc = (uint32_t)copperListBuffer;
+    custom->cop1lc = (uintptr_t)copperListBuffer;
 
     /* Strobe copper to start — original asm does: move.w (COPJMP1).l,d0
      * This is a pure read strobe; any access triggers copper PC reload. */
@@ -489,7 +489,7 @@ void _UpdatePlanePtrsAndBlitParams(void)
         /* Select base address */
         if (usePlaneOffsetFlag != 0)
         {
-            baseOffset += (uint32_t)frontbufferMaskBuffer;
+            baseOffset += (uintptr_t)frontbufferMaskBuffer;
         }
         else if (useAltBaseFlag != 0)
         {
@@ -509,7 +509,7 @@ void _UpdatePlanePtrsAndBlitParams(void)
         /* Compute alt offset for second table */
         if (usePlaneOffsetFlag != 0)
         {
-            altOffset = (uint32_t)d1 + (uint32_t)frontbufferMaskBuffer;
+            altOffset = (uintptr_t)d1 + (uintptr_t)frontbufferMaskBuffer;
         }
         else
         {
@@ -556,10 +556,10 @@ void _SwapBuffersAndCameraViewState(void)
     if (frontbufferBasePtr == (uintptr_t)frontbufferBase)
     {
         /* Currently using primary → swap to alt */
-        bitPlane0BasePtr = (uint32_t)bitPlane0BaseAlt;
-        bitPlane1BasePtr = (uint32_t)bitPlane1BaseAlt;
-        bitPlane2BasePtr = (uint32_t)bitPlane2BaseAlt;
-        bitPlane3BasePtr = (uint32_t)bitPlane3BaseAlt;
+        bitPlane0BasePtr = (uintptr_t)bitPlane0BaseAlt;
+        bitPlane1BasePtr = (uintptr_t)bitPlane1BaseAlt;
+        bitPlane2BasePtr = (uintptr_t)bitPlane2BaseAlt;
+        bitPlane3BasePtr = (uintptr_t)bitPlane3BaseAlt;
 #ifdef AGA
         bitPlane4BasePtr = (uint32_t)bitPlane4BaseAlt;
         bitPlane5BasePtr = (uint32_t)bitPlane5BaseAlt;
@@ -601,10 +601,10 @@ void _SwapBuffersAndCameraViewState(void)
     else
     {
         /* Currently using alt → swap to primary */
-        bitPlane0BasePtr = (uint32_t)bitPlane0Base;
-        bitPlane1BasePtr = (uint32_t)bitPlane1Base;
-        bitPlane2BasePtr = (uint32_t)bitPlane2Base;
-        bitPlane3BasePtr = (uint32_t)bitPlane3Base;
+        bitPlane0BasePtr = (uintptr_t)bitPlane0Base;
+        bitPlane1BasePtr = (uintptr_t)bitPlane1Base;
+        bitPlane2BasePtr = (uintptr_t)bitPlane2Base;
+        bitPlane3BasePtr = (uintptr_t)bitPlane3Base;
 #ifdef AGA
         bitPlane4BasePtr = (uint32_t)bitPlane4Base;
         bitPlane5BasePtr = (uint32_t)bitPlane5Base;
@@ -1114,7 +1114,16 @@ extern uint8_t paletteIndices[];
 __attribute__((used, externally_visible))
 void _WriteCopperPitchPalette(void)
 {
-    uint16_t pitchIdx = pitchNumberAndType;
+    /* pitchNumberAndType packs pitch *number* in the high byte and pitch
+     * *type* in the low byte. The palette lookup uses only the type, so
+     * mask to 0xFF — matches asm `andi.w #$FF,d1` at SWOS2.s line 15938.
+     * Without the mask, any non-zero pitch number makes the uint16 > 6
+     * and the clamp below silently substitutes the default "normal"
+     * (type 4) palette — symptom: HIL replays after a CAREER session
+     * show normal grass even when the saved HIL specified a different
+     * pitch type. Fresh boot worked only because pitch number happened
+     * to be 0 then. */
+    uint16_t pitchIdx = pitchNumberAndType & 0xFF;
     const uint16_t *pitchPal;
     int16_t i;
 

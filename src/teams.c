@@ -111,7 +111,7 @@ extern uintptr_t chooseTeamsHeader1stPart;
 extern uintptr_t selectedTeamText;
 extern uintptr_t gameTypeStr;
 extern uintptr_t playWhatStr;
-extern uint32_t entryText2;
+extern uintptr_t entryText2;
 extern uint8_t  someTeamFlags;
 extern uint16_t isNationalSelector;
 extern uint16_t chooseCompetitionOnly;
@@ -2963,10 +2963,10 @@ loc_E086:
     compEntry = (uint8_t *)(*a5);
     a5++;
 
-    if ((uint32_t)compEntry == 0xFFFFFFFF)
+    if (compEntry == (uint8_t *)(uintptr_t)-1)
         goto loc_E2D0;
 
-    if ((uint32_t)compEntry == 0xFFFFFFFE) {
+    if (compEntry == (uint8_t *)(uintptr_t)-2) {
         if (showCupsAndOther == 0)
             goto loc_E2D0;
         goto loc_E086;
@@ -3020,7 +3020,7 @@ loc_E114:
 skip_continental_check:
 
     /* loc_13E154: World Cup qualification checks */
-    if ((uint32_t)compEntry == 252 ||
+    if ((uintptr_t)compEntry == 252 ||
         compEntry == northAmericaWorldCupQualification ||
         compEntry == southAmericaWorldCupQualification ||
         compEntry == africaWorldCupQualification ||
@@ -3054,9 +3054,9 @@ skip_continental_check:
     }
 
     /* loc_13E1F6: entry type dispatch */
-    if ((uint32_t)compEntry < 256) {
+    if ((uintptr_t)compEntry < 256) {
         /* Country entry: get country name from countriesTable */
-        countryIdx = (uint16_t)(uint32_t)compEntry;
+        countryIdx = (uint16_t)(uintptr_t)compEntry;
         ctEntry = (uint8_t *)countriesTable[countryIdx];
         *teamNamesPtr++ = (void *)(ctEntry + 1);
         *leaguesPtrOut++ = compEntry;
@@ -3262,7 +3262,7 @@ loc_E428:
 
 loc_E4EA:
     /* Country number navigation */
-    d7 = (uint16_t)(uint32_t)contest;
+    d7 = (uint16_t)(uintptr_t)contest;
     _PushLastSelectedTeam();
     _PushContinent(d6);
     _SetSelectedTeamsStackTop();
@@ -3287,7 +3287,7 @@ loc_E50A:
     }
 
     /* loc_13E554: check if country entry (< 256) */
-    if ((uint32_t)contest < 256)
+    if ((uintptr_t)contest < 256)
         goto loc_E4EA;
 
     selectedContest = (uintptr_t)contest;
