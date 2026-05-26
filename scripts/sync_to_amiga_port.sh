@@ -48,6 +48,7 @@ SRC_FILES=(
     simulation_data.c player_data.c render_data.c palette_data.c
     general_data.c menu_data.c team_colors.c
     mjson.c save_format_json.c save_pointer_lut.c swos_io.c
+    resload.c
     swos_globals.c swos_globals_career_overlay.c
     swos_amiga_data_imports.c swos_amiga_ptr_imports.c
     swos_data_bulk_imports.c swos_data_typed_stubs.c
@@ -64,7 +65,7 @@ HDR_FILES=(
     diy_competition.h menu_system.h teams.h game_types.h
     mjson.h save_format_json.h
     rnc_magic.h endian_helpers.h auto_skip_debug.h
-    swos_io.h audio.h input.h swos_platform.h
+    swos_io.h audio.h input.h swos_platform.h swos_sections.h
 )
 
 # ---- Arg parsing ----
