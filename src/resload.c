@@ -1041,7 +1041,6 @@ static uint32_t resload_loadfile(uint8_t *name, uint8_t *dest, uint32_t *outErro
 {
     name = make_data_path(name);
     void *dosBase = (void *)S_DosBase;
-
     uint32_t handle = os_DosOpen(dosBase, name, MODE_OLDFILE);
     if (handle == 0) {
         custom->color[0] = 0x0F00u; /* red flash */
@@ -1451,6 +1450,21 @@ uint32_t _RobNorthenLoader_C(uint32_t cmd, uint32_t arg1, uint8_t *name, uint8_t
     case 3: return rob_list_directory(name, buf);
     case 4: return rob_format_disk();
     case 5: return rob_get_file_size(name);
+    case 6:
+        /* Op 6 is the "use the address from Op 5" callback. It MUST NOT
+         * clear `_rnl_d1_return` because the dispatcher
+         * `_CAssetSys_DispatchGetSize` reads that value back into
+         * `*outFileSize` AFTER the Op-5/Op-6 pair returns. Clearing it
+         * in Op 6 (as the default case did) makes every cache precache
+         * call allocate a 0-byte node, which cascades into a corrupted
+         * cache linked list whose `next` pointer walks through low
+         * memory, returning tiny "addresses" like 0x0F. The cache-store
+         * then writes payload bytes starting at 0x0F+48=0x3F, trampling
+         * the m68k exception vector table — the next interrupt loads a
+         * corrupted vector and jumps to whatever byte pattern appears
+         * in the file data. (For olddisk1.raw that byte pattern is
+         * `00 F7 7B 00` at file offset 0x20 → wild PC = 0x00F77B00.) */
+        return 0;
     default:
         _rnl_d1_return = 0;
         return 0;

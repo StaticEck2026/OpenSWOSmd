@@ -32,6 +32,31 @@ extern volatile uint16_t seasonUpdateInProgress;
                       * include early so the prototype is in scope before
                       * the first call site. */
 
+/* ---- Blitter register write macros ----
+ * GCC m68k 15.1.0 decomposes `volatile uint16_t = N` struct-member
+ * stores into byte-pair `move.b` instructions in some contexts. For
+ * hardware-trigger registers (writing `bltsize` starts the blitter),
+ * the decomposed write triggers the blit mid-update with a half-formed
+ * size — fill/copy operations either do nothing or write garbage.
+ * Same macros as in blitter.c / sprites.c / scroll_blit.c.  */
+#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+#define BLT_W(reg, val)                                                     \
+    do {                                                                    \
+        uint16_t _v = (uint16_t)(val);                                      \
+        volatile uint16_t *_p = &(reg);                                     \
+        __asm__ volatile ("move.w %0,(%1)" : : "d"(_v), "a"(_p) : "memory");\
+    } while (0)
+#define BLT_L(reg, val)                                                     \
+    do {                                                                    \
+        uint32_t _v = (uint32_t)(val);                                      \
+        volatile uint32_t *_p = &(reg);                                     \
+        __asm__ volatile ("move.l %0,(%1)" : : "d"(_v), "a"(_p) : "memory");\
+    } while (0)
+#else
+#define BLT_W(reg, val) ((void)((reg) = (uint16_t)(val)))
+#define BLT_L(reg, val) ((void)((reg) = (uint32_t)(val)))
+#endif
+
 /* Season-update menu hold: on Amiga, the slow CPU + blitter naturally
  * stretched each cup/league result menu render to ~0.5-1 s. On x86 the
  * controlMask=0xFFFF auto-fire dispatches in the first MenuProc iteration,
@@ -363,11 +388,10 @@ void _BlitterCopyOverlayToScreen(void)
     custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Setup blitter registers */
-    custom->bltalwm = BLT_FWM_ALL;
-    custom->bltafwm = BLT_FWM_ALL;
-    custom->bltcon1 = 0;
-    custom->bltcon0 = BLTCON0_USEA_USED_LF_F0;
-
+    BLT_W(custom->bltalwm, BLT_FWM_ALL);
+    BLT_W(custom->bltafwm, BLT_FWM_ALL);
+    BLT_W(custom->bltcon1, 0);
+    BLT_W(custom->bltcon0, BLTCON0_USEA_USED_LF_F0);
     /* Select source: if frontbuffer is Alt, use Base; else use Alt */
     srcAddr = (uintptr_t)frontbufferBase;
     if (frontbufferBasePtr != (uintptr_t)frontbufferBaseAlt)
@@ -375,8 +399,8 @@ void _BlitterCopyOverlayToScreen(void)
 
 #ifdef AGA
     /* AGA: per-plane blit with interleaved stride */
-    custom->bltamod = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
-    custom->bltdmod = (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE);
+    BLT_W(custom->bltamod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
+    BLT_W(custom->bltdmod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
     {
         uint8_t *srcPlane = (uint8_t *)srcAddr;
         uint8_t *dstPlane = (uint8_t *)frontbufferBasePtr;
@@ -387,10 +411,9 @@ void _BlitterCopyOverlayToScreen(void)
             while (custom->dmaconr & (1u << 14)) {}
             custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
-            custom->bltapt = (uint32_t)srcPlane;
-            custom->bltdpt = (uint32_t)dstPlane;
-            custom->bltsize = (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN;
-
+            BLT_L(custom->bltapt, (uint32_t)srcPlane);
+            BLT_L(custom->bltdpt, (uint32_t)dstPlane);
+            BLT_W(custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN);
             srcPlane += PLANE_STRIDE;
             dstPlane += PLANE_STRIDE;
         }
@@ -400,16 +423,13 @@ void _BlitterCopyOverlayToScreen(void)
     while (custom->dmaconr & (1u << 14)) {}
     custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 #else
-    custom->bltamod = 0;
-    custom->bltdmod = 0;
-
+    BLT_W(custom->bltamod, 0);
+    BLT_W(custom->bltdmod, 0);
     /* Set destination to current frontbuffer */
-    custom->bltdpt = frontbufferBasePtr;
-    custom->bltapt = srcAddr;
-
+    BLT_L(custom->bltdpt, frontbufferBasePtr);
+    BLT_L(custom->bltapt, srcAddr);
     /* Start blit */
-    custom->bltsize = BLTSIZE_OVERLAY_PANEL;
-
+    BLT_W(custom->bltsize, BLTSIZE_OVERLAY_PANEL);
     /* Enable blitter DMA */
     custom->dmacon = (uint16_t)DMACON_BLT_ON;
 
@@ -422,7 +442,7 @@ void _BlitterCopyOverlayToScreen(void)
     custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Reset blit size */
-    custom->bltsize = 0x16;
+    BLT_W(custom->bltsize, 0x16);
 #endif
 }
 #endif /* SWOS_SDL_BUILD */
@@ -1087,17 +1107,24 @@ convert_menu_switch:
 
     case 4: /* entry_frame (background color + frame) */
         curEntry->background = ENTRY_FRAME_AND_BACK_COLOR;
-        curEntry->bg = (uintptr_t)*(uint16_t *)a0; a0 += 2;
+        /* BE-correctness: bg is a uintptr_t union'd with bgColor (uint16
+         * alias of the FIRST 2 BYTES in memory order). Writing the full
+         * `bg = (uintptr_t)16bit_value` zero-extends to 32 bits, which
+         * on BE puts the meaningful 16 bits in the LAST 2 bytes — and
+         * bgColor (first 2 bytes) then reads 0. Write to bgColor
+         * directly so only the high-byte slot in memory gets the value.
+         * Reader (menu_system.c:608) uses `entry->bgColor`. */
+        curEntry->bgColor = *(uint16_t *)a0; a0 += 2;
         goto convert_menu_switch;
 
-    case 5: /* sprite1 (background sprite) */
+    case 5: /* sprite1 (background sprite) — reader uses entry->bgColor */
         curEntry->background = ENTRY_SPRITE1;
-        curEntry->bg = (uintptr_t)*(uint16_t *)a0; a0 += 2;
+        curEntry->bgColor = *(uint16_t *)a0; a0 += 2;
         goto convert_menu_switch;
 
     case 6: /* invalid_type */
         curEntry->background = 4;
-        curEntry->bg = (uintptr_t)*(uint16_t *)a0; a0 += 2;
+        curEntry->bgColor = *(uint16_t *)a0; a0 += 2;
         goto convert_menu_switch;
 
     case 7: /* func2 (foreground function) */
@@ -1116,10 +1143,11 @@ convert_menu_switch:
         }
         goto convert_menu_switch;
 
-    case 9: /* sprite2 (foreground sprite) */
+    case 9: /* sprite2 (foreground sprite) — reader uses entry->fgWord */
         curEntry->content = ENTRY_SPRITE2;
         curEntry->stringFlags = 0;
-        curEntry->fg = (uintptr_t)*(uint16_t *)a0; a0 += 2;
+        /* Same union/BE issue as case 4-6 — write to the uint16 alias. */
+        curEntry->fgSpriteIdx = *(uint16_t *)a0; a0 += 2;
         goto convert_menu_switch;
 
     case 10: /* string_table */
@@ -1134,10 +1162,10 @@ convert_menu_switch:
         curEntry->fg = unpackReadPtr(&a0);
         goto convert_menu_switch;
 
-    case 12: /* number */
+    case 12: /* number — reader uses entry->fgNumber */
         curEntry->content = ENTRY_NUMBER;
         curEntry->stringFlags = *(uint16_t *)a0; a0 += 2;
-        curEntry->fg = (uintptr_t)*(uint16_t *)a0; a0 += 2;
+        curEntry->fgNumber = *(uint16_t *)a0; a0 += 2;
         goto convert_menu_switch;
 
     case 13: /* on_select_fire_only */

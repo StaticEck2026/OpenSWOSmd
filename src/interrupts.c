@@ -194,7 +194,13 @@ ack:
 __attribute__((used, externally_visible))
 void _Int3TimerHandler(void)
 {
-    custom->intreq = 0x0070;
+    /* NOTE: Don't ack COPER/VERTB/BLIT (bits 4/5/6) here — the original
+     * asm doesn't, neither does SWOS_C_OLD. Int3 is the SOFT (bit 2)
+     * deferred-work handler; the VBL ISR (which sets waitingInterrupt
+     * and triggers SOFT) handles VERTB ack itself. Acking VERTB early
+     * here was suppressing the next-frame swap signal, which left one
+     * buffer stale at the top of the screen and showed as flicker on
+     * the menu logo. */
     if (waitingInterrupt != 0)
     {
         uint16_t delta = (uint16_t)(currentGameTick - lastVBlankServiceTick);

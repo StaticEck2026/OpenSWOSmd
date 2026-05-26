@@ -14,6 +14,7 @@
  */
 
 #include <stddef.h>
+#include "swos_sections.h"
 
 /* AI_maxStoppageTime: real data in swos_amiga_data_imports.c */
 /* LoaderBootstrapBlobPI: real data in swos_data_bulk_imports.c */
@@ -289,8 +290,13 @@
  * loads decompressed .ins audio banks (HERO.INS ~250 KB) into this
  * buffer using a "boundary spill" pattern. 256 KB was too tight
  * (decompression overflowed adjacent BSS and tripped a line-F);
- * 512 KB matches SDL. */
-char audioInstrumentBank[512 * 1024];
+ * 512 KB matches SDL.
+ *
+ * SWOS_CHIP_BSS: Paula audio DMA can only reach CHIP RAM (24-bit
+ * address space); putting the instrument bank in fast RAM means
+ * AUDxLC pointers index unreachable memory and Paula plays silence
+ * or garbage. Mirrors the bitplane/frontbuffer CHIP placement. */
+SWOS_CHIP_BSS char audioInstrumentBank[512 * 1024];
 /* audioState: real data in swos_data_bulk_imports.c */
 /* autoReplays: typed definition in swos_data_typed_stubs.c */
 /* autoReplaysStrTable: real data in swos_amiga_ptr_imports.c */
@@ -918,16 +924,15 @@ char goalBase[0x4A38];
  * enough to contain the entire sprite pool by itself: 2 MB leaves
  * plenty of headroom without relying on adjacent-BSS behaviour. */
 /* SDL: 2 MB to cover the documented ~740 KB sprite-pool overflow
- * plus headroom. Amiga: 1 MB — still well under the 10 MB Amiga limit
- * but covers the overflow we measured. The earlier 256 KB cut here
- * was too aggressive: sprite writes spilled into adjacent BSS and
- * corrupted whatever followed (function pointers in particular),
- * producing wild jumps that manifested as line-F / address-error
- * traps with the same low 24 bits of PC across runs. */
+ * plus headroom. Amiga: matches original SWOS2.s AGA size 0x3FFB0
+ * (~256 KB) — the blitter requires CHIP RAM and our build has 2 MB
+ * chip total. 1 MB CHIP allocation here breaks AmigaDOS boot ("not
+ * enough memory"). If overflow recurs on Amiga, address it via
+ * pool-write bounds checking, not a bigger buffer. */
 #if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-char imageCmdWorkBuf[1024 * 1024];
+SWOS_CHIP_BSS char imageCmdWorkBuf[0x3FFB0];
 #else
-char imageCmdWorkBuf[0x200000];
+SWOS_CHIP_BSS char imageCmdWorkBuf[0x200000];
 #endif
 /* imageStreamBytesLeft: typed definition in swos_data_typed_stubs.c */
 /* imageStreamCursor: typed definition in swos_data_typed_stubs.c */
@@ -1606,7 +1611,7 @@ char poolplyrDatBuffer[0x14000];
 /* spaceReplayTimer: real data in swos_amiga_data_imports.c */
 /* spinBigS: real data in swos_amiga_data_imports.c */
 /* spriteBlitQueue: typed definition in swos_data_typed_stubs.c */
-char spriteGraphics[0x1310];
+SWOS_CHIP_BSS char spriteGraphics[0x1310];
 /* spriteGraphicsPtr: real data in swos_amiga_data_imports.c */
 /* squadChangesAllowed: real data in swos_amiga_data_imports.c */
 /* squadDisplayCount: real data in swos_amiga_data_imports.c */

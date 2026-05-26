@@ -11,6 +11,33 @@
 #include "swos_types.h"
 #endif
 
+/* ---- Blitter register write macros ----
+ * GCC m68k 15.1.0 decomposes `volatile uint16_t = N` struct-member
+ * stores into byte-pair `move.b` instructions in some contexts. For
+ * hardware-trigger registers (writing `bltsize` starts the blitter),
+ * the decomposed write triggers the blit mid-update with a half-formed
+ * size — fill/copy operations either do nothing or write garbage. The
+ * macros wrap each write in inline `move.w` / `move.l` asm so the
+ * single-instruction store is guaranteed on m68k. Defined in blitter.c
+ * too — kept local here to avoid an extra header just for these.  */
+#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+#define BLT_W(reg, val)                                                     \
+    do {                                                                    \
+        uint16_t _v = (uint16_t)(val);                                      \
+        volatile uint16_t *_p = &(reg);                                     \
+        __asm__ volatile ("move.w %0,(%1)" : : "d"(_v), "a"(_p) : "memory");\
+    } while (0)
+#define BLT_L(reg, val)                                                     \
+    do {                                                                    \
+        uint32_t _v = (uint32_t)(val);                                      \
+        volatile uint32_t *_p = &(reg);                                     \
+        __asm__ volatile ("move.l %0,(%1)" : : "d"(_v), "a"(_p) : "memory");\
+    } while (0)
+#else
+#define BLT_W(reg, val) ((void)((reg) = (uint16_t)(val)))
+#define BLT_L(reg, val) ((void)((reg) = (uint32_t)(val)))
+#endif
+
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t *spriteGraphicsPtr;
 extern volatile uint16_t panicReasonCode;
@@ -140,13 +167,11 @@ void _CopySprite(uint16_t srcSprite, uint16_t dstSprite,
         blitWords--;
     }
 
-    custom->bltalwm = lastWordMask;
-    custom->bltafwm = 0xFFFF;
-
+    BLT_W(custom->bltalwm, lastWordMask);
+    BLT_W(custom->bltafwm, 0xFFFF);
     /* BLTCON1: shift amount in bits 12-15 */
     uint16_t shiftVal = bitShift << 12;
-    custom->bltcon1 = shiftVal;
-
+    BLT_W(custom->bltcon1, shiftVal);
     /* Check if source has mask data (offset 4) */
     uintptr_t srcMaskPtr = (uintptr_t)srcHdr->maskPtr;
     uint16_t bltcon0;
@@ -156,10 +181,9 @@ void _CopySprite(uint16_t srcSprite, uint16_t dstSprite,
     } else {
         /* Single mode: straight copy, no mask (A = all 1s via BLTADAT) */
         bltcon0 = shiftVal | BLTCON0_BASE_SINGLE;
-        custom->bltadat = 0xFFFF;
+        BLT_W(custom->bltadat, 0xFFFF);
     }
-    custom->bltcon0 = bltcon0;
-
+    BLT_W(custom->bltcon0, bltcon0);
     /* Compute destination byte offset for xOffset */
     uint32_t wordByteOff = (uint32_t)((xOffset >> 3) & 0xFFFE);
 
@@ -168,9 +192,8 @@ void _CopySprite(uint16_t srcSprite, uint16_t dstSprite,
     uint32_t yByteOff = (uint32_t)yOffset * dstInterleavedStride;
     uint32_t dstAddr = (uintptr_t)dstData + yByteOff + wordByteOff;
 
-    custom->bltcpt = dstAddr;
-    custom->bltdpt = dstAddr;
-
+    BLT_L(custom->bltcpt, dstAddr);
+    BLT_L(custom->bltdpt, dstAddr);
     /* Source sprite type: offset 8 */
     uint16_t srcType = srcHdr->type;
     uint16_t blitWidthBytes = blitWords << 1;
@@ -182,19 +205,16 @@ void _CopySprite(uint16_t srcSprite, uint16_t dstSprite,
 
         /* Source A/B modulo */
         uint16_t srcStride = (uint16_t)srcHdr->wquads << 1;
-        custom->bltamod = srcStride - blitWidthBytes;
-        custom->bltbmod = srcStride - blitWidthBytes;
-
+        BLT_W(custom->bltamod, srcStride - blitWidthBytes);
+        BLT_W(custom->bltbmod, srcStride - blitWidthBytes);
         /* Destination C/D modulo */
-        custom->bltcmod = dstStrideBytes - blitWidthBytes;
-        custom->bltdmod = dstStrideBytes - blitWidthBytes;
-
+        BLT_W(custom->bltcmod, dstStrideBytes - blitWidthBytes);
+        BLT_W(custom->bltdmod, dstStrideBytes - blitWidthBytes);
         /* Source pointers */
-        custom->bltbpt = (uint32_t)(uintptr_t)srcHdr->sprData;
-        custom->bltapt = (uint32_t)srcMaskPtr;
-
+        BLT_L(custom->bltbpt, (uint32_t)(uintptr_t)srcHdr->sprData);
+        BLT_L(custom->bltapt, (uint32_t)srcMaskPtr);
         /* Kick blit */
-        custom->bltsize = bltsize;
+        BLT_W(custom->bltsize, bltsize);
     } else {
         /* ---- Four separate planes path ---- */
         uint16_t nlines = (uint16_t)srcHdr->nlines;
@@ -203,17 +223,14 @@ void _CopySprite(uint16_t srcSprite, uint16_t dstSprite,
         /* B modulo: src interleaved stride (4 planes) - blit width */
         uint16_t srcWquads = (uint16_t)srcHdr->wquads;
         uint16_t srcBmod = (srcWquads << NUM_PLANES_SHIFT_PLUS1) - blitWidthBytes;
-        custom->bltbmod = srcBmod;
-
+        BLT_W(custom->bltbmod, srcBmod);
         /* A modulo: per-plane stride - blit width */
         uint16_t srcAmod = (srcWquads << 1) - blitWidthBytes;
-        custom->bltamod = srcAmod;
-
+        BLT_W(custom->bltamod, srcAmod);
         /* C/D modulo: dst interleaved stride - blit width */
         uint16_t dstCDmod = (dstStrideBytes << NUM_PLANES_SHIFT) - blitWidthBytes;
-        custom->bltcmod = dstCDmod;
-        custom->bltdmod = dstCDmod;
-
+        BLT_W(custom->bltcmod, dstCDmod);
+        BLT_W(custom->bltdmod, dstCDmod);
         /* Source data and mask pointers */
         uintptr_t srcDataPtr = (uintptr_t)srcHdr->sprData;
         uintptr_t srcMask = (uintptr_t)srcHdr->maskPtr;  /* may be 0 for single-plane */
@@ -223,45 +240,42 @@ void _CopySprite(uint16_t srcSprite, uint16_t dstSprite,
         uint32_t srcPlaneStep = (uint32_t)(srcWquads << 1);
 
         /* Pass 1 */
-        custom->bltbpt = (uint32_t)srcDataPtr;
-        custom->bltapt = (uint32_t)srcMask;
-        custom->bltsize = bltsize;
-
+        BLT_L(custom->bltbpt, (uint32_t)srcDataPtr);
+        BLT_L(custom->bltapt, (uint32_t)srcMask);
+        BLT_W(custom->bltsize, bltsize);
         /* Advance to plane 1 */
         dstAddr += dstPlaneStep;
         srcDataPtr += srcPlaneStep;
 
         /* Pass 2 */
         waitBlit();
-        custom->bltcpt = dstAddr;
-        custom->bltdpt = dstAddr;
-        custom->bltbpt = (uint32_t)srcDataPtr;
-        custom->bltapt = (uint32_t)srcMask;
-        custom->bltsize = bltsize;
-
+        BLT_L(custom->bltcpt, dstAddr);
+        BLT_L(custom->bltdpt, dstAddr);
+        BLT_L(custom->bltbpt, (uint32_t)srcDataPtr);
+        BLT_L(custom->bltapt, (uint32_t)srcMask);
+        BLT_W(custom->bltsize, bltsize);
         /* Advance to plane 2 */
         dstAddr += dstPlaneStep;
         srcDataPtr += srcPlaneStep;
 
         /* Pass 3 */
         waitBlit();
-        custom->bltcpt = dstAddr;
-        custom->bltdpt = dstAddr;
-        custom->bltbpt = (uint32_t)srcDataPtr;
-        custom->bltapt = (uint32_t)srcMask;
-        custom->bltsize = bltsize;
-
+        BLT_L(custom->bltcpt, dstAddr);
+        BLT_L(custom->bltdpt, dstAddr);
+        BLT_L(custom->bltbpt, (uint32_t)srcDataPtr);
+        BLT_L(custom->bltapt, (uint32_t)srcMask);
+        BLT_W(custom->bltsize, bltsize);
         /* Advance to plane 3 */
         dstAddr += dstPlaneStep;
         srcDataPtr += srcPlaneStep;
 
         /* Pass 4 */
         waitBlit();
-        custom->bltcpt = dstAddr;
-        custom->bltdpt = dstAddr;
-        custom->bltbpt = (uint32_t)srcDataPtr;
-        custom->bltapt = (uint32_t)srcMask;
-        custom->bltsize = bltsize;
+        BLT_L(custom->bltcpt, dstAddr);
+        BLT_L(custom->bltdpt, dstAddr);
+        BLT_L(custom->bltbpt, (uint32_t)srcDataPtr);
+        BLT_L(custom->bltapt, (uint32_t)srcMask);
+        BLT_W(custom->bltsize, bltsize);
     }
 }
 
@@ -537,44 +551,40 @@ void _QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         waitBlit();
 
         /* BLTCON1 = shift, BLTCON0 = shift + cookie-cut minterm */
-        custom->bltcon1 = shiftVal;
-        custom->bltcon0 = shiftVal + BLTCON0_BASE_LINKED;
-
+        BLT_W(custom->bltcon1, shiftVal);
+        BLT_W(custom->bltcon0, shiftVal + BLTCON0_BASE_LINKED);
         /* Destination */
-        custom->bltcpt = destAddr;
-        custom->bltdpt = destAddr;
-
+        BLT_L(custom->bltcpt, destAddr);
+        BLT_L(custom->bltdpt, destAddr);
         /* Queue entry: [maskAddr(4), destAddr(4), mod(2), bltsize(2)] */
         *(uint32_t *)((uint8_t *)a3 + 4) = destAddr;
         uint32_t maskBufAddr = destAddr - (uint32_t)a1 + (uint32_t)frontbufferMaskBuffer;
         *(uint32_t *)((uint8_t *)a3 + 0) = maskBufAddr;
 
         /* Source pointers: data=BLTBPT, mask=BLTAPT */
-        custom->bltbpt = (uint32_t)a0->sprData;
-        custom->bltapt = (uint32_t)a0->maskPtr;
-
+        BLT_L(custom->bltbpt, (uint32_t)a0->sprData);
+        BLT_L(custom->bltapt, (uint32_t)a0->maskPtr);
         /* First word mask always all-ones */
-        custom->bltafwm = 0xFFFF;
-
+        BLT_W(custom->bltafwm, 0xFFFF);
         if (overlap <= 16) {
             /* ---- Single-word path ---- */
-            custom->bltamod = 0;
-            custom->bltbmod = 0;
-            custom->bltcmod = PLANE_STRIDE_MINUS2;
-            custom->bltdmod = PLANE_STRIDE_MINUS2;
+            BLT_W(custom->bltamod, 0);
+            BLT_W(custom->bltbmod, 0);
+            BLT_W(custom->bltcmod, PLANE_STRIDE_MINUS2);
+            BLT_W(custom->bltdmod, PLANE_STRIDE_MINUS2);
             *(uint16_t *)((uint8_t *)a3 + 8) = PLANE_STRIDE_MINUS2;
-            custom->bltalwm = 0xFFFF;
-            custom->bltsize = SPRITE_BLTSIZE_W1;
+            BLT_W(custom->bltalwm, 0xFFFF);
+            BLT_W(custom->bltsize, SPRITE_BLTSIZE_W1);
             *(uint16_t *)((uint8_t *)a3 + 10) = SPRITE_BLTSIZE_W1;
         } else {
             /* ---- Two-word path ---- */
-            custom->bltamod = 0xFFFE; /* -2 */
-            custom->bltbmod = 0xFFFE;
-            custom->bltcmod = PLANE_STRIDE_MINUS4;
-            custom->bltdmod = PLANE_STRIDE_MINUS4;
+            BLT_W(custom->bltamod, 0xFFFE); /* -2 */
+            BLT_W(custom->bltbmod, 0xFFFE);
+            BLT_W(custom->bltcmod, PLANE_STRIDE_MINUS4);
+            BLT_W(custom->bltdmod, PLANE_STRIDE_MINUS4);
             *(uint16_t *)((uint8_t *)a3 + 8) = PLANE_STRIDE_MINUS4;
-            custom->bltalwm = 0;
-            custom->bltsize = SPRITE_BLTSIZE_W2;
+            BLT_W(custom->bltalwm, 0);
+            BLT_W(custom->bltsize, SPRITE_BLTSIZE_W2);
             *(uint16_t *)((uint8_t *)a3 + 10) = SPRITE_BLTSIZE_W2;
         }
 
@@ -702,13 +712,11 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 
         /* Wait for blitter idle and program registers */
         waitBlit();
-        custom->bltalwm = d6;
-        custom->bltafwm = 0xFFFF;
-
+        BLT_W(custom->bltalwm, d6);
+        BLT_W(custom->bltafwm, 0xFFFF);
         /* Shift amount */
         uint16_t shiftVal = ((uint16_t)d1 & TILE_MASK) << 12;
-        custom->bltcon1 = shiftVal;
-
+        BLT_W(custom->bltcon1, shiftVal);
         /* BLTCON0 mode */
         uint32_t maskPtr = (uint32_t)a0->maskPtr;
         uint16_t bltcon0;
@@ -716,10 +724,9 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
             bltcon0 = shiftVal | BLTCON0_BASE_LINKED;
         } else {
             bltcon0 = shiftVal | BLTCON0_BASE_SINGLE;
-            custom->bltadat = 0xFFFF;
+            BLT_W(custom->bltadat, 0xFFFF);
         }
-        custom->bltcon0 = bltcon0;
-
+        BLT_W(custom->bltcon0, bltcon0);
         /* Check for Y-wrap split */
         uint16_t d4 = 0;
         {
@@ -737,9 +744,8 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         uint32_t yOff = (uint16_t)d2 * (uint32_t)ROW_STRIDE_BYTES;
         uint32_t destAddr = (uint32_t)a1 + yOff + xWordOffL;
 
-        custom->bltcpt = destAddr;
-        custom->bltdpt = destAddr;
-
+        BLT_L(custom->bltcpt, destAddr);
+        BLT_L(custom->bltdpt, destAddr);
         /* Queue entry: mask+fb addresses */
         *(uint32_t *)((uint8_t *)a3 + 4) = destAddr;
         uint32_t maskBufAddr = destAddr - (uint32_t)a1 + (uint32_t)frontbufferMaskBuffer;
@@ -752,11 +758,11 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         /* Modulos */
         uint16_t tileStride = (uint16_t)a0->wquads;
         uint16_t srcMod = (tileStride << 1) - blitWidthBytes;
-        custom->bltamod = srcMod;
-        custom->bltbmod = srcMod;
+        BLT_W(custom->bltamod, srcMod);
+        BLT_W(custom->bltbmod, srcMod);
         uint16_t destMod = PLANE_STRIDE - blitWidthBytes;
-        custom->bltcmod = destMod;
-        custom->bltdmod = destMod;
+        BLT_W(custom->bltcmod, destMod);
+        BLT_W(custom->bltdmod, destMod);
         /* Queue modulo */
         *(uint16_t *)((uint8_t *)a3 + 8) = destMod;
 
@@ -766,12 +772,11 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
             srcSkip = (uint32_t)((uint16_t)d5 << NUM_PLANES_SHIFT) * (uint32_t)(tileStride << 1);
         }
         uint32_t srcData = (uint32_t)a0->sprData + srcSkip;
-        custom->bltbpt = srcData;
+        BLT_L(custom->bltbpt, srcData);
         uint32_t srcMask2 = (uint32_t)a0->maskPtr + srcSkip;
-        custom->bltapt = (uint32_t)srcMask2;
-
+        BLT_L(custom->bltapt, (uint32_t)srcMask2);
         /* Kick blit */
-        custom->bltsize = bltsize;
+        BLT_W(custom->bltsize, bltsize);
         *(uint16_t *)((uint8_t *)a3 + 10) = bltsize;
         a3 = (uint32_t *)((uint8_t *)a3 + 12);
 
@@ -787,10 +792,9 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 
             *(uint32_t *)((uint8_t *)a3 + 4) = destAddr2;
             waitBlit();
-            custom->bltcpt = destAddr2;
-            custom->bltdpt = destAddr2;
-            custom->bltsize = tailBltsize;
-
+            BLT_L(custom->bltcpt, destAddr2);
+            BLT_L(custom->bltdpt, destAddr2);
+            BLT_W(custom->bltsize, tailBltsize);
             uint32_t tailMask = destAddr2 - (uint32_t)a1 + (uint32_t)frontbufferMaskBuffer;
             *(uint32_t *)((uint8_t *)a3 + 0) = tailMask;
             /* Copy modulo from previous entry */
@@ -848,13 +852,11 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 
         /* Wait for blitter idle */
         waitBlit();
-        custom->bltalwm = d6;
-        custom->bltafwm = 0xFFFF;
-
+        BLT_W(custom->bltalwm, d6);
+        BLT_W(custom->bltafwm, 0xFFFF);
         /* Shift amount */
         uint16_t shiftVal = ((uint16_t)d1 & TILE_MASK) << 12;
-        custom->bltcon1 = shiftVal;
-
+        BLT_W(custom->bltcon1, shiftVal);
         /* BLTCON0 mode */
         uint32_t maskPtr = (uint32_t)a0->maskPtr;
         uint16_t bltcon0;
@@ -862,10 +864,9 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
             bltcon0 = shiftVal | BLTCON0_BASE_LINKED;
         } else {
             bltcon0 = shiftVal | BLTCON0_BASE_SINGLE;
-            custom->bltadat = 0xFFFF;
+            BLT_W(custom->bltadat, 0xFFFF);
         }
-        custom->bltcon0 = bltcon0;
-
+        BLT_W(custom->bltcon0, bltcon0);
         /* Check for Y-wrap split */
         uint16_t d4 = 0;
         {
@@ -886,8 +887,8 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         uint32_t yOff = (uint16_t)d2 * (uint32_t)ROW_STRIDE_BYTES;
         uint32_t destAddr = (uint32_t)a1 + yOff + xByteOffL;
 
-        custom->bltcpt = destAddr;
-        custom->bltdpt = destAddr;
+        BLT_L(custom->bltcpt, destAddr);
+        BLT_L(custom->bltdpt, destAddr);
         uint8_t *a2 = (uint8_t *)destAddr;  /* tracks dest for multi-plane passes */
 
         /* Queue entry */
@@ -908,20 +909,17 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         uint16_t srcModA = tileStride << 1;
         uint16_t d1mod = srcModA;  /* save for source B modulo */
         uint16_t srcModAB = srcModA - blitWidthBytes;
-        custom->bltamod = srcModAB;
-
+        BLT_W(custom->bltamod, srcModAB);
         /* Source B modulo: stride * 4 planes - blit width */
         uint16_t srcModB = (d1mod << NUM_PLANES_SHIFT) - blitWidthBytes;
-        custom->bltbmod = srcModB;
-
+        BLT_W(custom->bltbmod, srcModB);
         /* Dest C/D modulo: PLANE_STRIDE - blit width (per row, per plane) */
         uint16_t destMod = PLANE_STRIDE - blitWidthBytes;
         *(uint16_t *)((uint8_t *)a3 + 8) = destMod;
         /* Actual C/D mod includes inter-plane gap: ROW_STRIDE - PLANE_STRIDE + destMod */
         uint16_t destCDMod = destMod + (ROW_STRIDE_BYTES - PLANE_STRIDE);
-        custom->bltcmod = destCDMod;
-        custom->bltdmod = destCDMod;
-
+        BLT_W(custom->bltcmod, destCDMod);
+        BLT_W(custom->bltdmod, destCDMod);
         /* Source top skip */
         uint32_t srcSkip5 = 0;
         if (d5 != 0) {
@@ -930,19 +928,18 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 
         /* Source plane data */
         uint32_t srcDataAddr = (uint32_t)a0->sprData + srcSkip5;
-        custom->bltbpt = srcDataAddr;
+        BLT_L(custom->bltbpt, srcDataAddr);
         uint8_t *a5ptr = (uint8_t *)srcDataAddr;
 
         /* Source mask */
         uint32_t srcMaskAddr = (uint32_t)a0->maskPtr + (srcSkip5 >> NUM_PLANES_SHIFT);
-        custom->bltapt = (uint32_t)srcMaskAddr;
+        BLT_L(custom->bltapt, (uint32_t)srcMaskAddr);
         uint8_t *a4ptr = (uint8_t *)srcMaskAddr;
 
         a3 = (uint32_t *)((uint8_t *)a3 + 12);
 
         /* Kick first plane blit */
-        custom->bltsize = bltsize1;
-
+        BLT_W(custom->bltsize, bltsize1);
         /* Save source pointers for tail portion */
         savedSrcPlaneB = (uint32_t)a4ptr;
         savedSrcPlaneA = (uint32_t)a5ptr;
@@ -957,12 +954,11 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
             for (planeIdx = NUM_PLANES_MINUS1; planeIdx > 0; planeIdx--)
             {
                 waitBlit();
-                custom->bltcpt = (uint32_t)a2;
-                custom->bltdpt = (uint32_t)a2;
-                custom->bltapt = (uint32_t)a4ptr;
-                custom->bltbpt = (uint32_t)a5ptr;
-                custom->bltsize = bltsize1;
-
+                BLT_L(custom->bltcpt, (uint32_t)a2);
+                BLT_L(custom->bltdpt, (uint32_t)a2);
+                BLT_L(custom->bltapt, (uint32_t)a4ptr);
+                BLT_L(custom->bltbpt, (uint32_t)a5ptr);
+                BLT_W(custom->bltsize, bltsize1);
                 a2 += PLANE_STRIDE;
                 a5ptr += srcPlaneStep;
             }
@@ -980,11 +976,10 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 
             /* Dest wraps to top of buffer at column offset */
             uint32_t tailDest = (uint32_t)a1 + d6save;
-            custom->bltcpt = tailDest;
-            custom->bltdpt = tailDest;
-            custom->bltapt = tailSrcB;
-            custom->bltbpt = tailSrcA;
-
+            BLT_L(custom->bltcpt, tailDest);
+            BLT_L(custom->bltdpt, tailDest);
+            BLT_L(custom->bltapt, tailSrcB);
+            BLT_L(custom->bltbpt, tailSrcA);
             /* Queue entry for tail */
             *(uint32_t *)((uint8_t *)a3 + 4) = tailDest;
             uint32_t tailMask = tailDest - (uint32_t)a1 + (uint32_t)frontbufferMaskBuffer;
@@ -992,8 +987,7 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 
             /* Per-plane blit size */
             uint16_t tailBltsize1 = ((uint16_t)d4 << 6) | (blitWidthBytes >> 1);
-            custom->bltsize = tailBltsize1;
-
+            BLT_W(custom->bltsize, tailBltsize1);
             /* N-plane blit size for queue */
             uint16_t tailBltsizeN = ((uint16_t)d4 << NUM_PLANES_SHIFT << 6) | (blitWidthBytes >> 1);
             *(uint16_t *)((uint8_t *)a3 + 10) = tailBltsizeN;
@@ -1007,12 +1001,11 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
                 for (planeIdx = NUM_PLANES_MINUS1; planeIdx > 0; planeIdx--)
                 {
                     waitBlit();
-                    custom->bltcpt = tailDest;
-                    custom->bltdpt = tailDest;
-                    custom->bltapt = tailSrcB;
-                    custom->bltbpt = tailSrcA;
-                    custom->bltsize = tailBltsize1;
-
+                    BLT_L(custom->bltcpt, tailDest);
+                    BLT_L(custom->bltdpt, tailDest);
+                    BLT_L(custom->bltapt, tailSrcB);
+                    BLT_L(custom->bltbpt, tailSrcA);
+                    BLT_W(custom->bltsize, tailBltsize1);
                     tailDest += PLANE_STRIDE;
                     tailSrcA += srcPlaneStep;
                 }
@@ -1266,17 +1259,15 @@ static void renderSpriteBandPlanePair(SpriteGraphics *sprGfx, int16_t x, int16_t
     /* Blit sprite data into copper list buffers */
     /* First plane pair */
     waitBlit();
-    custom->bltapt = (uint32_t)(uintptr_t)sprGfx->sprData;
-    custom->bltdpt = (uint32_t)(uintptr_t)a4;
-    custom->bltsize = sprGfx->bltsize;
-
+    BLT_L(custom->bltapt, (uint32_t)(uintptr_t)sprGfx->sprData);
+    BLT_L(custom->bltdpt, (uint32_t)(uintptr_t)a4);
+    BLT_W(custom->bltsize, sprGfx->bltsize);
     /* Second plane pair: source at data+4 */
     uintptr_t srcPlane2 = (uintptr_t)sprGfx->sprData + 4;
     waitBlit();
-    custom->bltapt = (uint32_t)srcPlane2;
-    custom->bltdpt = (uint32_t)(uintptr_t)a5;
-    custom->bltsize = sprGfx->bltsize;
-
+    BLT_L(custom->bltapt, (uint32_t)srcPlane2);
+    BLT_L(custom->bltdpt, (uint32_t)(uintptr_t)a5);
+    BLT_W(custom->bltsize, sprGfx->bltsize);
     /* Advance past sprite data: nlines * 4 bytes (2 words per line) */
     uint16_t nlines = (uint16_t)sprGfx->nlines;
     uint16_t dataBytes = nlines << 2;
@@ -1310,13 +1301,12 @@ void _RenderSpriteBandsToCopperLists(void)
 
     /* Set up blitter for straight copy (A->D) */
     waitBlit();
-    custom->bltalwm = 0xFFFF;
-    custom->bltafwm = 0xFFFF;
-    custom->bltcon1 = 0;
-    custom->bltcon0 = BLTCON0_USEA_USED_LF_F0;
-    custom->bltamod = (NUM_PLANES - 2) * 2;
-    custom->bltdmod = 0;
-
+    BLT_W(custom->bltalwm, 0xFFFF);
+    BLT_W(custom->bltafwm, 0xFFFF);
+    BLT_W(custom->bltcon1, 0);
+    BLT_W(custom->bltcon0, BLTCON0_USEA_USED_LF_F0);
+    BLT_W(custom->bltamod, (NUM_PLANES - 2) * 2);
+    BLT_W(custom->bltdmod, 0);
     /* ---- Process plane 0/1 render stack ---- */
     uint16_t *a4 = (uint16_t *)bitPlane0BasePtr;
     uint16_t *a5 = (uint16_t *)bitPlane1BasePtr;

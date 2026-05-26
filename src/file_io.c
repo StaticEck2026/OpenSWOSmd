@@ -250,8 +250,15 @@ int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
             /* never returns */
         }
 
-        /* Read frontbuffer pointer again */
-        frontbuf = (uint8_t *)frontbufferBasePtr;
+        /* DO NOT re-read frontbufferBasePtr here. The VBlank ISR swaps
+         * front/back buffers and `frontbufferBasePtr` can flip between
+         * the disk-load (line ~229) and this point. Re-reading would
+         * point us at the OTHER (stale) buffer and the decompressor
+         * would parse old display data as RNC, picking up a garbage
+         * `unpackSize` and walking the output pointer off the end of
+         * fast RAM (bus error at PC inside the fill loop). Keep the
+         * frontbuf we already saved before the dispatch — that's the
+         * buffer the disk read wrote into. */
         magic = *(uint32_t *)frontbuf;
 
         if (magic == RNC_MAGIC_V1 || magic == RNC_MAGIC_V2) {

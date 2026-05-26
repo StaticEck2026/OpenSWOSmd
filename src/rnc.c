@@ -401,8 +401,16 @@ typedef struct {
     uint8_t  d2;
 } V2Bits;
 
-__attribute__((noinline, optimize("O1")))
-static int v2Bit(V2Bits *bs)
+/* Force inline. The previous combination of `noinline + optimize("O1")`
+ * with the caller's file-level -O2 caused GCC m68k 15.1.0 to emit a
+ * stack-cleanup mismatch — one caller site popped 8 bytes after a JSR
+ * that only needed 4 (off-by-one ABI assumption between the two
+ * compilation units' optimization settings). Over hundreds of v2Bit
+ * calls per file, SP walks far up into unmapped memory and the next
+ * stack write bus-errors. The original Amiga asm INLINED the
+ * `add.b d2,d2; bne done; refill` bit-extract at every call site —
+ * mirroring that with static inline eliminates the JSR entirely. */
+static inline int v2Bit(V2Bits *bs)
 {
     int carry = (bs->d2 >> 7) & 1;
     bs->d2 <<= 1;
@@ -417,7 +425,7 @@ static int v2Bit(V2Bits *bs)
 
 /* RncDecodeV2Body — V2 decompression engine.
  * Uses goto-based control flow matching the asm branch structure. */
-__attribute__((used, externally_visible, noinline, optimize("O1")))
+__attribute__((used, externally_visible, noinline))
 void _RncDecompressV2(uint8_t *src, uint8_t *dst)
 {
     uint8_t *a1 = dst;
@@ -537,7 +545,17 @@ dist_combine:                        /* loc_106C4A */
 copy:                                /* loc_106C4C */
     d1 = (uint16_t)((d1 & 0xFF00) | *bs.src++);  /* move.b (a0)+,d1 */
     {
-        uint8_t *a2 = a1 - d1 - 1;
+        /* Original asm: `suba.w d1,a2` SIGN-EXTENDS d1's word value to
+         * 32-bit before subtracting. After `rol.w #8,d1` swaps an
+         * accumulated 8-bit dist value with bit 7 set into d1's high
+         * byte, d1.w is >= 0x8000 (negative when sign-extended) and the
+         * asm effectively *adds* 0x10000-d1 to a2 instead of
+         * subtracting. The C `a1 - d1 - 1` (zero-extends d1) computes a
+         * different a2, sending the back-ref pointer into high memory
+         * where reads return ROM/junk and the decompressed output is
+         * corrupt — which then walks the downstream pipeline off the
+         * end. Cast to int16_t to match the asm's sign-extension. */
+        uint8_t *a2 = a1 - (int16_t)d1 - 1;
         int16_t cnt;
         uint8_t odd = (uint8_t)(d0 & 1);
 
