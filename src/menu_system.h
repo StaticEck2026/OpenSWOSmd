@@ -64,11 +64,18 @@ struct __attribute__((packed)) MenuEntry {
      *
      * Anonymous union — the pointer alias (`bg`/`fg`, uintptr_t) and the
      * first-word alias (`bgColor`/`bgWord` and `fgWord`/`fgNumber`,
-     * uint16_t) refer to the SAME bytes. On 32-bit Amiga BE those bytes
-     * are the high 16 bits of the uintptr_t; on x86 LE 64-bit they're
-     * the low 16 bits. Either way the renderer and the writer agree
-     * because both touch the slot's first 2 bytes in memory order. This
-     * replaces the historical `(uint8_t *)e + 38` byte arithmetic. */
+     * uint16_t) refer to the SAME bytes. The uint16 alias maps to the
+     * FIRST 2 BYTES of the slot in memory order (= high 16 bits on BE
+     * 32-bit Amiga, low 16 bits on LE).
+     *
+     * IMPORTANT: when storing a 16-bit value (color word / sprite
+     * index / number) into the slot, ALWAYS write through the uint16
+     * alias (`bgColor`, `bgWord`, `fgWord`, `fgNumber`, `fgSpriteIdx`).
+     * Writing `bg = (uintptr_t)16bit_value` zero-extends to 32 bits and
+     * on BE puts the value in the LAST 2 bytes — the reader then reads
+     * 0 from `bgColor` (= first 2 bytes). Only use the uintptr_t alias
+     * for actual 32-bit pointers (function pointers, string pointers).
+     * Replaces the historical `(uint8_t *)e + 38` byte arithmetic. */
     union {
         uintptr_t bg;        /* 30: pointer / function-ptr / string ptr */
         uint16_t  bgColor;   /* first 2 bytes: color word for ENTRY_FRAME_AND_BACK_COLOR */

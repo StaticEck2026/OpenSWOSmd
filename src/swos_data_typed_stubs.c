@@ -16,6 +16,7 @@
  */
 
 #include "swos_types.h"
+#include "swos_sections.h"
 #include "game_types.h"
 #include "menu_system.h"
 #include "audio.h"
@@ -763,7 +764,7 @@ uint16_t team2SelectedPlayerIndex;
 // uint32_t irqCookieObfuscated;
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): chipRamBitmapEnd */
 // uint8_t chipRamBitmapEnd;
-Sprite * sortedSprites[78];
+SWOS_CHIP_BSS Sprite * sortedSprites[78];
 /* ---- Chairman sell/exchange response string tables ----
  *
  * Both arrays index chairman-negotiation lines by an offer-outcome

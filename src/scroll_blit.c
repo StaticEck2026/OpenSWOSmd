@@ -18,6 +18,33 @@
 #include "game_types.h"
 #include "display.h"
 
+/* ---- Blitter register write macros ----
+ * GCC m68k 15.1.0 decomposes `volatile uint16_t = N` struct-member
+ * stores into byte-pair `move.b` instructions in some contexts. For
+ * hardware-trigger registers (writing `bltsize` starts the blitter),
+ * the decomposed write triggers the blit mid-update with a half-formed
+ * size — fill/copy operations either do nothing or write garbage. The
+ * macros wrap each write in inline `move.w` / `move.l` asm so the
+ * single-instruction store is guaranteed on m68k. Defined in blitter.c
+ * too — kept local here to avoid an extra header just for these.  */
+#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+#define BLT_W(reg, val)                                                     \
+    do {                                                                    \
+        uint16_t _v = (uint16_t)(val);                                      \
+        volatile uint16_t *_p = &(reg);                                     \
+        __asm__ volatile ("move.w %0,(%1)" : : "d"(_v), "a"(_p) : "memory");\
+    } while (0)
+#define BLT_L(reg, val)                                                     \
+    do {                                                                    \
+        uint32_t _v = (uint32_t)(val);                                      \
+        volatile uint32_t *_p = &(reg);                                     \
+        __asm__ volatile ("move.l %0,(%1)" : : "d"(_v), "a"(_p) : "memory");\
+    } while (0)
+#else
+#define BLT_W(reg, val) ((void)((reg) = (uint16_t)(val)))
+#define BLT_L(reg, val) ((void)((reg) = (uint32_t)(val)))
+#endif
+
 /* ---- External globals ---- */
 extern FixedPoint cameraX;
 extern FixedPoint cameraY;
@@ -126,14 +153,13 @@ void _ScrollXUpdateColumnsAndBlit(void)
 
     /* Set up blitter for column copy (A → D, no shift) */
     waitBlit();
-    custom->bltdpt = (uint32_t)a0;
-    custom->bltamod = 0;
-    custom->bltdmod = BLTDMOD_PLANE_STEP;
-    custom->bltafwm = BLT_FWM_ALL;
-    custom->bltalwm = BLT_FWM_ALL;
-    custom->bltcon1 = 0;
-    custom->bltcon0 = BLTCON0_USEA_USED_LF_F0;
-
+    BLT_L(custom->bltdpt, (uint32_t)a0);
+    BLT_W(custom->bltamod, 0);
+    BLT_W(custom->bltdmod, BLTDMOD_PLANE_STEP);
+    BLT_W(custom->bltafwm, BLT_FWM_ALL);
+    BLT_W(custom->bltalwm, BLT_FWM_ALL);
+    BLT_W(custom->bltcon1, 0);
+    BLT_W(custom->bltcon0, BLTCON0_USEA_USED_LF_F0);
     /* ---- Phase 1: top of frontbuffer (from cameraYMod320 to SCREEN_HEIGHT) ---- */
     d2 = cameraYMod320;
     d1 = d2 & TILE_MASK;
@@ -154,8 +180,8 @@ void _ScrollXUpdateColumnsAndBlit(void)
         a1 += PITCH_PTR_ROW_BYTES;
 
         waitBlit();
-        custom->bltapt = (uint32_t)a0;
-        custom->bltsize = bltsize;
+        BLT_L(custom->bltapt, (uint32_t)a0);
+        BLT_W(custom->bltsize, bltsize);
     }
 
     /* Blit full tiles until we reach SCREEN_HEIGHT */
@@ -164,8 +190,8 @@ void _ScrollXUpdateColumnsAndBlit(void)
         a1 += PITCH_PTR_ROW_BYTES;
 
         waitBlit();
-        custom->bltapt = (uint32_t)a0;
-        custom->bltsize = BLTSIZE_TILE_COL;
+        BLT_L(custom->bltapt, (uint32_t)a0);
+        BLT_W(custom->bltsize, BLTSIZE_TILE_COL);
         d2 += TILE_HEIGHT;
     }
 
@@ -178,8 +204,7 @@ void _ScrollXUpdateColumnsAndBlit(void)
     }
 
     waitBlit();
-    custom->bltdpt = (uint32_t)a0;
-
+    BLT_L(custom->bltdpt, (uint32_t)a0);
     /* Blit full tiles from wrap point down to cameraYMod320 */
     d2 = cameraYMod320;
     if (d2 >= TILE_HEIGHT) {
@@ -188,8 +213,8 @@ void _ScrollXUpdateColumnsAndBlit(void)
             a1 += PITCH_PTR_ROW_BYTES;
 
             waitBlit();
-            custom->bltapt = (uint32_t)a0;
-            custom->bltsize = BLTSIZE_TILE_COL;
+            BLT_L(custom->bltapt, (uint32_t)a0);
+            BLT_W(custom->bltsize, BLTSIZE_TILE_COL);
             d2 -= TILE_HEIGHT;
         } while (d2 >= TILE_HEIGHT);
     }
@@ -200,8 +225,8 @@ void _ScrollXUpdateColumnsAndBlit(void)
         uint16_t bltsize = ((d2 << NUM_PLANES_SHIFT) << 6) | 1;
 
         waitBlit();
-        custom->bltapt = (uint32_t)a0;
-        custom->bltsize = bltsize;
+        BLT_L(custom->bltapt, (uint32_t)a0);
+        BLT_W(custom->bltsize, bltsize);
     }
 
     /* ---- Phase 3: copy column from frontbuffer to mask buffer ---- */
@@ -212,15 +237,15 @@ void _ScrollXUpdateColumnsAndBlit(void)
         uint32_t dstAddr = srcAddr - frontbufferBasePtr + (uint32_t)frontbufferMaskBuffer;
 
         waitBlit();
-        custom->bltapt = srcAddr;
-        custom->bltdpt = dstAddr;
-        custom->bltamod = BLTDMOD_PLANE_STEP;
-        custom->bltsize = BLTSIZE_TILE_COL;
+        BLT_L(custom->bltapt, srcAddr);
+        BLT_L(custom->bltdpt, dstAddr);
+        BLT_W(custom->bltamod, BLTDMOD_PLANE_STEP);
+        BLT_W(custom->bltsize, BLTSIZE_TILE_COL);
     }
 
     /* ---- Final: 1-word dummy blit ---- */
     waitBlit();
-    custom->bltsize = 1;
+    BLT_W(custom->bltsize, 1);
 #endif /* !SWOS_SDL_BUILD */
 }
 
@@ -402,15 +427,14 @@ void _ScrollYUpdateRowsAndBlit(void)
 
     /* ---- Blitter mask copy: frontbuffer → mask buffer ---- */
     waitBlit();
-    custom->bltafwm = BLT_FWM_ALL;
-    custom->bltalwm = BLT_FWM_ALL;
-    custom->bltcon1 = 0;
-    custom->bltcon0 = BLTCON0_USEA_USED_LF_F0;
-
+    BLT_W(custom->bltafwm, BLT_FWM_ALL);
+    BLT_W(custom->bltalwm, BLT_FWM_ALL);
+    BLT_W(custom->bltcon1, 0);
+    BLT_W(custom->bltcon0, BLTCON0_USEA_USED_LF_F0);
     {
         uint16_t modVal = (PLANE_STRIDE_DIV2 - blitWordCount) * 2;
-        custom->bltamod = modVal;
-        custom->bltdmod = modVal;
+        BLT_W(custom->bltamod, modVal);
+        BLT_W(custom->bltdmod, modVal);
     }
 
     /* If there's a second stream, subtract its bytes from stream A */
@@ -424,8 +448,8 @@ void _ScrollYUpdateRowsAndBlit(void)
         uint32_t dstAddr = srcAddr - frontbufferBasePtr + (uint32_t)frontbufferMaskBuffer;
 
         waitBlit();
-        custom->bltapt = srcAddr;
-        custom->bltdpt = dstAddr;
+        BLT_L(custom->bltapt, srcAddr);
+        BLT_L(custom->bltdpt, dstAddr);
     }
 
     /* ---- Stream A: blit in batches of max 0x400 rows ---- */
@@ -440,7 +464,7 @@ void _ScrollYUpdateRowsAndBlit(void)
         uint16_t bltsize = (batch << 6) | blitWordCount;
 
         waitBlit();
-        custom->bltsize = bltsize;
+        BLT_W(custom->bltsize, bltsize);
     }
 
     /* ---- Stream B (if Y-wrap occurred) ---- */
@@ -454,8 +478,8 @@ void _ScrollYUpdateRowsAndBlit(void)
         uint32_t dstAddr = srcAddr - frontbufferBasePtr + (uint32_t)frontbufferMaskBuffer;
 
         waitBlit();
-        custom->bltapt = srcAddr;
-        custom->bltdpt = dstAddr;
+        BLT_L(custom->bltapt, srcAddr);
+        BLT_L(custom->bltdpt, dstAddr);
     }
 
     /* ---- Stream B batches ---- */
@@ -470,7 +494,7 @@ void _ScrollYUpdateRowsAndBlit(void)
         uint16_t bltsize = (batch << 6) | blitWordCount;
 
         waitBlit();
-        custom->bltsize = bltsize;
+        BLT_W(custom->bltsize, bltsize);
     }
 #endif /* !SWOS_SDL_BUILD */
 }

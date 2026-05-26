@@ -294,14 +294,19 @@ void _mainC(void)
     }
 
     /* ---- Phase 8: Build intro menu assets ---- */
-    
-#ifdef SWOS_SDL_BUILD
-    /* Fill in the runtime filename-pointer slots in any image scripts
-     * we pulled from Data.c (the IDA exporter emitted those slots as
-     * magic integers rather than symbolic pointer references). */
+
+    /* Fill in the runtime filename-pointer slots in our image scripts.
+     * The script bodies are transcribed from the IDA-exported Data.c
+     * with their pointer halves zeroed (we don't have symbolic refs
+     * from the disassembler). This applies to BOTH the SDL host build
+     * AND the Amiga build — the function's name is historical
+     * (originally only the SDL path patched these). Without this call
+     * on Amiga, the first 0x7000 opcode in introMenuImageScript reads
+     * NULL as the filename pointer; _StringCopy(NULL, assetFilename)
+     * truncates the buffer to byte 0 and the subsequent os_DosOpen on
+     * an empty filename fails. */
     extern void _SwosSDL_InitImageScripts(void);
     _SwosSDL_InitImageScripts();
-#endif
     _ProcessImageCommandStream(introMenuImageScript, imageCmdWorkBuf);
     /* Force this write through to memory — LTO must not eliminate it.
      * menuImageStreamBaseEnd is read later by _ConvertColorsAndTextSprites. */

@@ -15,6 +15,30 @@ __attribute__((constructor))
 static void _unbuf_stderr(void) { setbuf(stderr, NULL); }
 #endif
 
+/* ---- Byte-packed field reads ----
+ * The .inc command-stream files store byte-packed pairs (xOff/yOff,
+ * w/h, dstX/dstY) as native uint16_t constants where the Amiga
+ * "first param" (originally read by `move.b (a0)+,d1`) is the HIGH
+ * byte of the value and the "second param" is the LOW byte.
+ *
+ * Reading these via byte indices (`a0[0]`, `a0[1]`) gives different
+ * results on LE vs BE because the same uint16 constant occupies the
+ * two memory bytes in opposite order. Shifting the native uint16
+ * value works the SAME on both hosts because the operation is on the
+ * integer value, not on the byte positions.
+ *
+ * The original code had ad-hoc `a0[1]/a0[0]` reads with comments
+ * explaining "LE host = byte 1 is high byte", which produced correct
+ * results on x86 SDL but swapped pairs on BE Amiga — visible as
+ * sprite extraction with mismatched w/h, dstX/dstY, etc., and
+ * particularly as garbled menu glyphs (a glyph "blit at (x,y) of
+ * size (w,h)" with w and h transposed extracts the wrong character
+ * from the sheet). */
+#define PACKED_HI(p)     ((uint16_t)((*(const uint16_t *)(p) >> 8) & 0xFFu))
+#define PACKED_LO(p)     ((uint16_t)(*(const uint16_t *)(p) & 0xFFu))
+#define PACKED_HI_S8(p)  ((int16_t)(int8_t)PACKED_HI(p))
+#define PACKED_LO_S8(p)  ((int16_t)(int8_t)PACKED_LO(p))
+
 /* ---- External globals (all live in SWOS2.s) ----
  * imageStreamCursor, frontbufferBasePtr, spriteGraphicsPtr are pointers stored
  * as uint32_t in asm. We declare them matching other C files and cast in use.
@@ -451,8 +475,8 @@ void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
          * byte[0] holds the Amiga-low-byte (yOff). */
         if (opcodeType == 0xC000) {
             spriteIndex = opcode & 0x0FFF;
-            xOff = (uint16_t)(a0[1] & 0xFF);
-            yOff = (uint16_t)(a0[0] & 0xFF);
+            xOff = PACKED_HI(a0);
+            yOff = PACKED_LO(a0);
             a0 += 2;
             goto dispatch_pack_A;
         }
@@ -475,8 +499,8 @@ void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
             spriteIndex = opcode & 0x0FFF;
             xOff = *(const uint16_t *)a0; a0 += 2;
             yOff = *(const uint16_t *)a0; a0 += 2;
-            w = (uint16_t)(a0[1] & 0xFF);
-            h = (uint16_t)(a0[0] & 0xFF);
+            w = PACKED_HI(a0);
+            h = PACKED_LO(a0);
             a0 += 2;
             maskSel = 0xFFFE;
             planesFlag = 0;
@@ -490,8 +514,8 @@ void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
         /* ---- Opcode 0xD000: Byte x/y, then shared dispatch B ---- */
         if (opcodeType == 0xD000) {
             spriteIndex = opcode & 0x0FFF;
-            xOff = (uint16_t)(a0[1] & 0xFF);
-            yOff = (uint16_t)(a0[0] & 0xFF);
+            xOff = PACKED_HI(a0);
+            yOff = PACKED_LO(a0);
             a0 += 2;
             goto dispatch_pack_B;
         }
@@ -507,8 +531,8 @@ void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
         /* ---- Opcode 0xE000: Byte x/y, then shared dispatch C ---- */
         if (opcodeType == 0xE000) {
             spriteIndex = opcode & 0x0FFF;
-            xOff = (uint16_t)(a0[1] & 0xFF);
-            yOff = (uint16_t)(a0[0] & 0xFF);
+            xOff = PACKED_HI(a0);
+            yOff = PACKED_LO(a0);
             a0 += 2;
             goto dispatch_pack_C;
         }
@@ -534,11 +558,11 @@ void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
             spriteIndex = opcode & 0x0FFF;
             xOff = *(const uint16_t *)a0; a0 += 2;
             yOff = *(const uint16_t *)a0; a0 += 2;
-            w = (uint16_t)(a0[1] & 0xFF);
-            h = (uint16_t)(a0[0] & 0xFF);
+            w = PACKED_HI(a0);
+            h = PACKED_LO(a0);
             a0 += 2;
-            dstX = (int16_t)(int8_t)a0[1];
-            dstY = (int16_t)(int8_t)a0[0];
+            dstX = PACKED_HI_S8(a0);
+            dstY = PACKED_LO_S8(a0);
             a0 += 2;
             maskSel = 0xFFFF;
             planesFlag = 1;
@@ -560,8 +584,8 @@ void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
          * "half right" depending on which row/col the swap landed on. */
         if (opcodeType == 0xF000) {
             spriteIndex = opcode & 0x0FFF;
-            xOff = (uint16_t)(a0[1] & 0xFF);
-            yOff = (uint16_t)(a0[0] & 0xFF);
+            xOff = PACKED_HI(a0);
+            yOff = PACKED_LO(a0);
             a0 += 2;
             goto dispatch_pack_D;
         }
@@ -600,8 +624,8 @@ void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
      * word. Read accordingly. */
     dispatch_pack_A:
         /* Byte w/h, maskSel=0xFFFF, planesFlag=0, dstX=dstY=0 */
-        w = (uint16_t)(a0[1] & 0xFF);
-        h = (uint16_t)(a0[0] & 0xFF);
+        w = PACKED_HI(a0);
+        h = PACKED_LO(a0);
         a0 += 2;
         maskSel = 0xFFFF;
         planesFlag = 0;
@@ -613,11 +637,11 @@ void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
 
     dispatch_pack_B:
         /* Byte w/h + byte dstX/dstY (sign-extended), maskSel=0xFFFF, planesFlag=0 */
-        w = (uint16_t)(a0[1] & 0xFF);
-        h = (uint16_t)(a0[0] & 0xFF);
+        w = PACKED_HI(a0);
+        h = PACKED_LO(a0);
         a0 += 2;
-        dstX = (int16_t)(int8_t)a0[1];
-        dstY = (int16_t)(int8_t)a0[0];
+        dstX = PACKED_HI_S8(a0);
+        dstY = PACKED_LO_S8(a0);
         a0 += 2;
         maskSel = 0xFFFF;
         planesFlag = 0;
@@ -627,11 +651,11 @@ void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
 
     dispatch_pack_C:
         /* Byte w/h + byte dstX/dstY (sign-extended) + word maskSel, planesFlag=0 */
-        w = (uint16_t)(a0[1] & 0xFF);
-        h = (uint16_t)(a0[0] & 0xFF);
+        w = PACKED_HI(a0);
+        h = PACKED_LO(a0);
         a0 += 2;
-        dstX = (int16_t)(int8_t)a0[1];
-        dstY = (int16_t)(int8_t)a0[0];
+        dstX = PACKED_HI_S8(a0);
+        dstY = PACKED_LO_S8(a0);
         a0 += 2;
         maskSel = *(const uint16_t *)a0; a0 += 2;
         planesFlag = 0;
@@ -641,11 +665,11 @@ void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
 
     dispatch_pack_D:
         /* Byte w/h + byte dstX/dstY (sign-extended) + word maskSel, planesFlag=1 */
-        w = (uint16_t)(a0[1] & 0xFF);
-        h = (uint16_t)(a0[0] & 0xFF);
+        w = PACKED_HI(a0);
+        h = PACKED_LO(a0);
         a0 += 2;
-        dstX = (int16_t)(int8_t)a0[1];
-        dstY = (int16_t)(int8_t)a0[0];
+        dstX = PACKED_HI_S8(a0);
+        dstY = PACKED_LO_S8(a0);
         a0 += 2;
         maskSel = *(const uint16_t *)a0; a0 += 2;
         planesFlag = 1;

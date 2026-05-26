@@ -9,6 +9,39 @@
 #include "swos_types.h"
 #include <string.h>
 
+/* ---- Blitter register write macros ----
+ * GCC m68k 15.1.0 decomposes `volatile uint16_t = N` and similar struct-
+ * member stores into byte-pair `move.b` instructions in some contexts.
+ * For hardware-trigger registers like `bltsize` (writing it starts the
+ * blitter), a decomposed write triggers the blitter mid-update with a
+ * half-formed size value — the blit either does nothing or writes
+ * garbage. The original Amiga asm used real `move.w` instructions and
+ * works correctly.
+ *
+ * These macros wrap the writes in inline `move.w` / `move.l` asm so the
+ * single-instruction store is guaranteed on m68k. On SDL the writes go
+ * through plain assignment (the Custom struct lives in a stub buffer,
+ * not real hardware, and the writes are no-ops anyway). We already use
+ * this pattern in display.c for copper writes (`copper_write_word` /
+ * `copper_write_ptr`) — see those for context. */
+#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+#define BLT_W(reg, val)                                                     \
+    do {                                                                    \
+        uint16_t _v = (uint16_t)(val);                                      \
+        volatile uint16_t *_p = &(reg);                                     \
+        __asm__ volatile ("move.w %0,(%1)" : : "d"(_v), "a"(_p) : "memory");\
+    } while (0)
+#define BLT_L(reg, val)                                                     \
+    do {                                                                    \
+        uint32_t _v = (uint32_t)(val);                                      \
+        volatile uint32_t *_p = &(reg);                                     \
+        __asm__ volatile ("move.l %0,(%1)" : : "d"(_v), "a"(_p) : "memory");\
+    } while (0)
+#else
+#define BLT_W(reg, val) ((void)((reg) = (uint16_t)(val)))
+#define BLT_L(reg, val) ((void)((reg) = (uint32_t)(val)))
+#endif
+
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t *spriteGraphicsPtr;
 extern volatile uintptr_t frontbufferBasePtr;
@@ -97,19 +130,19 @@ static void blitterSpanCore(uint8_t *plane, uint16_t xBit, uint16_t width,
            BLTBDAT holds ~mask (span pixels) even though USEB=0;
            the blitter uses BLTBDAT as constant B input in the minterm. */
         waitBlit();
-        custom->bltafwm = d7;
-        custom->bltalwm = d7;
+        BLT_W(custom->bltafwm, d7);
+        BLT_W(custom->bltalwm, d7);
         d7 = ~d7;
-        custom->bltbdat = d7;
-        custom->bltapt = (uintptr_t)plane;
-        custom->bltdpt = (uintptr_t)plane;
-        custom->bltamod = FB_BLT_MOD_AFTER_1_WORD;
-        custom->bltdmod = FB_BLT_MOD_AFTER_1_WORD;
-        custom->bltcon0 = d5;
-        custom->bltcon1 = 0;
+        BLT_W(custom->bltbdat, d7);
+        BLT_L(custom->bltapt, (uintptr_t)plane);
+        BLT_L(custom->bltdpt, (uintptr_t)plane);
+        BLT_W(custom->bltamod, FB_BLT_MOD_AFTER_1_WORD);
+        BLT_W(custom->bltdmod, FB_BLT_MOD_AFTER_1_WORD);
+        BLT_W(custom->bltcon0, d5);
+        BLT_W(custom->bltcon1, 0);
         {
             uint16_t blitsize = (height << 6) | 1;
-            custom->bltsize = blitsize;
+            BLT_W(custom->bltsize, blitsize);
         }
 
         plane += 2;
@@ -124,13 +157,13 @@ static void blitterSpanCore(uint8_t *plane, uint16_t xBit, uint16_t width,
         uint16_t mod = ROW_STRIDE_BYTES - d0 * 2;
 
         waitBlit();
-        custom->bltdpt = (uintptr_t)plane;
-        custom->bltdmod = mod;
-        custom->bltcon0 = d6;
-        custom->bltcon1 = 0;
+        BLT_L(custom->bltdpt, (uintptr_t)plane);
+        BLT_W(custom->bltdmod, mod);
+        BLT_W(custom->bltcon0, d6);
+        BLT_W(custom->bltcon1, 0);
         {
             uint16_t blitsize = (height << 6) | d0;
-            custom->bltsize = blitsize;
+            BLT_W(custom->bltsize, blitsize);
         }
 
         plane += d0 * 2;
@@ -143,19 +176,19 @@ static void blitterSpanCore(uint8_t *plane, uint16_t xBit, uint16_t width,
             d7 = ~tailMaskTable[tail];
 
             waitBlit();
-            custom->bltafwm = d7;
-            custom->bltalwm = d7;
+            BLT_W(custom->bltafwm, d7);
+            BLT_W(custom->bltalwm, d7);
             d7 = ~d7;
-            custom->bltbdat = d7;
-            custom->bltapt = (uintptr_t)plane;
-            custom->bltdpt = (uintptr_t)plane;
-            custom->bltamod = FB_BLT_MOD_AFTER_1_WORD;
-            custom->bltdmod = FB_BLT_MOD_AFTER_1_WORD;
-            custom->bltcon0 = d5;
-            custom->bltcon1 = 0;
+            BLT_W(custom->bltbdat, d7);
+            BLT_L(custom->bltapt, (uintptr_t)plane);
+            BLT_L(custom->bltdpt, (uintptr_t)plane);
+            BLT_W(custom->bltamod, FB_BLT_MOD_AFTER_1_WORD);
+            BLT_W(custom->bltdmod, FB_BLT_MOD_AFTER_1_WORD);
+            BLT_W(custom->bltcon0, d5);
+            BLT_W(custom->bltcon1, 0);
             {
                 uint16_t blitsize = (height << 6) | 1;
-                custom->bltsize = blitsize;
+                BLT_W(custom->bltsize, blitsize);
             }
         }
     }
@@ -391,22 +424,20 @@ static void blitterRectRowMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
 
     wordSpan += 1;
 
-    custom->bltcon0 = BLTCON0_USEA_USEB_USED_LF_FC;
-    custom->bltcon1 = 0;
-    custom->bltafwm = fwm;
-    custom->bltalwm = lwm;
-    custom->bltapt = (uint32_t)mask;
-    custom->bltbpt = (uint32_t)buf;
-    custom->bltdpt = (uint32_t)buf;
-
+    BLT_W(custom->bltcon0, BLTCON0_USEA_USEB_USED_LF_FC);
+    BLT_W(custom->bltcon1, 0);
+    BLT_W(custom->bltafwm, fwm);
+    BLT_W(custom->bltalwm, lwm);
+    BLT_L(custom->bltapt, (uint32_t)mask);
+    BLT_L(custom->bltbpt, (uint32_t)buf);
+    BLT_L(custom->bltdpt, (uint32_t)buf);
     mod = PLANE_STRIDE - wordSpan * 2;
-    custom->bltamod = mod;
-    custom->bltbmod = mod;
-    custom->bltdmod = mod;
-
+    BLT_W(custom->bltamod, mod);
+    BLT_W(custom->bltbmod, mod);
+    BLT_W(custom->bltdmod, mod);
     {
         uint16_t blitsize = (h << 6) | wordSpan;
-        custom->bltsize = blitsize;
+        BLT_W(custom->bltsize, blitsize);
     }
 #endif
 }
@@ -836,13 +867,11 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
         blitWords -= 1;
     }
 
-    custom->bltalwm = lastWordMask;
-    custom->bltafwm = 0xFFFF;
-
+    BLT_W(custom->bltalwm, lastWordMask);
+    BLT_W(custom->bltafwm, 0xFFFF);
     /* Shift amount → bltcon1 (descending=0, shift in bits 12-15 of con0) */
     bltconShift = xBit << 12;
-    custom->bltcon1 = bltconShift;
-
+    BLT_W(custom->bltcon1, bltconShift);
     /* Validate mask pointer exists */
     maskPtr = srcHdr->maskPtr;
     if (maskPtr == 0) {
@@ -873,14 +902,12 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     /* Source B (glyph) modulo: stride2 * NUM_PLANES - blitWords */
     srcBMod = srcStride2 * NUM_PLANES - blitWords;
 
-    custom->bltamod = srcAMod;
-    custom->bltbmod = srcBMod;
-
+    BLT_W(custom->bltamod, srcAMod);
+    BLT_W(custom->bltbmod, srcBMod);
     /* Dest modulo: dstRowBytes * NUM_PLANES - blitWords */
     dstMod = dstRowBytes * NUM_PLANES - blitWords;
-    custom->bltcmod = dstMod;
-    custom->bltdmod = dstMod;
-
+    BLT_W(custom->bltcmod, dstMod);
+    BLT_W(custom->bltdmod, dstMod);
     /* Glyph data: advance to plane 1, and compute last plane pointer */
     glyphData = srcHdr->sprData;      /* sprData (plane 0 start) */
     glyphData += (int32_t)srcStride2;            /* advance to plane 1 */
@@ -896,23 +923,22 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
         if (bit) {
             /* Cookie-cut: D = (A & B) | (~A & C), BLTCON0 = $FCA + shift */
             uint16_t con0 = bltconShift + BLTCON0_BASE_LINKED;
-            custom->bltcon0 = con0;
-            custom->bltapt = (uint32_t)maskPtr;
-            custom->bltbpt = (uint32_t)glyphData;
-            custom->bltcpt = (uint32_t)dstPtr;
-            custom->bltdpt = (uint32_t)dstPtr;
+            BLT_W(custom->bltcon0, con0);
+            BLT_L(custom->bltapt, (uint32_t)maskPtr);
+            BLT_L(custom->bltbpt, (uint32_t)glyphData);
+            BLT_L(custom->bltcpt, (uint32_t)dstPtr);
+            BLT_L(custom->bltdpt, (uint32_t)dstPtr);
         } else {
             /* Clear-through-mask: D = ~A & C, BLTCON0 = $B0A + shift */
             uint16_t con0 = bltconShift + BLTCON0_CLEAR_MASK;
-            custom->bltcon0 = con0;
-            custom->bltapt = (uint32_t)maskPtr;
-            custom->bltcpt = (uint32_t)dstPtr;
-            custom->bltdpt = (uint32_t)dstPtr;
+            BLT_W(custom->bltcon0, con0);
+            BLT_L(custom->bltapt, (uint32_t)maskPtr);
+            BLT_L(custom->bltcpt, (uint32_t)dstPtr);
+            BLT_L(custom->bltdpt, (uint32_t)dstPtr);
         }
 
         /* Kick blit */
-        custom->bltsize = blitsize;
-
+        BLT_W(custom->bltsize, blitsize);
         /* Wait for blit to complete */
         waitBlit();
 
@@ -928,22 +954,22 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     if (bit3) {
         /* OR-mask: D = (A & B) | C, BLTCON0 = $BFA + shift */
         uint16_t con0 = bltconShift + BLTCON0_OR_MASK;
-        custom->bltcon0 = con0;
-        custom->bltapt = (uint32_t)maskPtr;
-        custom->bltcpt = (uint32_t)dstPtr;
-        custom->bltdpt = (uint32_t)dstPtr;
+        BLT_W(custom->bltcon0, con0);
+        BLT_L(custom->bltapt, (uint32_t)maskPtr);
+        BLT_L(custom->bltcpt, (uint32_t)dstPtr);
+        BLT_L(custom->bltdpt, (uint32_t)dstPtr);
     } else {
         /* Cookie-cut with last plane data: D = (A & B) | (~A & C), use glyphPlane3 */
         uint16_t con0 = bltconShift + BLTCON0_BASE_LINKED;
-        custom->bltcon0 = con0;
-        custom->bltapt = (uint32_t)maskPtr;
-        custom->bltbpt = (uint32_t)glyphPlane3;
-        custom->bltcpt = (uint32_t)dstPtr;
-        custom->bltdpt = (uint32_t)dstPtr;
+        BLT_W(custom->bltcon0, con0);
+        BLT_L(custom->bltapt, (uint32_t)maskPtr);
+        BLT_L(custom->bltbpt, (uint32_t)glyphPlane3);
+        BLT_L(custom->bltcpt, (uint32_t)dstPtr);
+        BLT_L(custom->bltdpt, (uint32_t)dstPtr);
     }
 
     /* Kick final blit (no wait — caller or next operation will sync) */
-    custom->bltsize = blitsize;
+    BLT_W(custom->bltsize, blitsize);
     }
 }
 #endif /* !SWOS_SDL_BUILD for _BlitGlyphToSpriteBitmap */

@@ -13,6 +13,7 @@
 
 #include "swos_platform.h"
 #include "swos_types.h"
+#include "swos_sections.h"
 #ifdef SWOS_SDL_BUILD
 #include "swos_asm.h"
 #include "platform_sdl.h"
@@ -199,8 +200,15 @@ extern uint32_t S_SavedSP;   /* Resload.s — saves caller's SP for return */
 
 #define SWOS_STACK_BYTES 16384u
 /* File-scope (not static) so the symbol name lands in the .o symbol
- * table for the naked-function inline asm below to reference. */
-uint8_t s_swos_stack[SWOS_STACK_BYTES] __attribute__((aligned(4)));
+ * table for the naked-function inline asm below to reference.
+ *
+ * SWOS_CHIP_BSS: original SWOS2.s `stackSpace: ds.b 8192` lived in the
+ * CHIP section. Some original code (and likely some helper routines)
+ * relied on the stack being in CHIP RAM — e.g. blitter setup from
+ * stack-resident structs, or DMA-readable scratch on the stack. Match
+ * the original placement so we don't have a hidden CHIP-vs-FAST
+ * mismatch when a helper hands the blitter a stack address. */
+SWOS_CHIP_BSS uint8_t s_swos_stack[SWOS_STACK_BYTES] __attribute__((aligned(4)));
 
 __attribute__((naked, used))
 void _startShim(void)
@@ -241,16 +249,25 @@ uint32_t S_VBR = 0;
  * The core+menu precache lists total ~281 KB of raw file data across
  * ~21 entries (each +48 B of node header); in-game loads pile on more.
  * 1 MiB gives comfortable headroom. */
-/* Asset cache pre-allocation. SDL has unlimited RAM; Amiga has at
- * most ~8 MB fast and we're already burning a chunk on BSS. 256 KB
- * is enough for the core+menu precache (~281 KB raw with ~21 node
- * headers — close fit but the asset_loader.c manages incremental
- * eviction). */
-#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-#define EARLY_CACHE_BYTES (256u * 1024u)
-#else
+/* Asset cache pre-allocation. SDL has unlimited RAM; Amiga has 8 MB
+ * fast available on the user's machine. Core+menu precache needs
+ * ~281 KB raw + ~21 node headers — 256 KB was a too-close fit that
+ * caused infinite retry loops in `_AssetPrecacheOneMenu` once the
+ * cache filled (each failed alloc returned status=1 → do-while
+ * retried forever). 1 MB matches SDL and gives generous headroom for
+ * additional assets loaded by image scripts at runtime. */
 #define EARLY_CACHE_BYTES (1024u * 1024u)
-#endif
-static uint8_t s_early_cache[EARLY_CACHE_BYTES];
+/* aligned(4): the cache walker reads node->next / blockSize / dataSize as
+ * uint32_t through `*(uint32_t *)(node + offset)`, which is slow on m68020
+ * for misaligned addresses and risks struct-field tearing if the node
+ * starts at an odd byte. Without this attribute the linker can place the
+ * array at any byte boundary (uint8_t element alignment = 1) and node
+ * fields land on odd offsets, breaking the cache layout. */
+/* CPU-only file cache — doesn't need CHIP RAM (no DMA reads).
+ * Originally tried CHIP placement during the chip-RAM audit but 256 KB
+ * plus the other CHIP buffers pushed us past the A1200's 2 MB chip
+ * budget. The cache is read by C code only; decompression targets
+ * (frontbufferMaskBuffer etc.) keep their CHIP placement. */
+static uint8_t s_early_cache[EARLY_CACHE_BYTES] __attribute__((aligned(4)));
 uint8_t *g_earlyAllocCacheMem = s_early_cache;
 uint32_t g_earlyAllocCacheSize = EARLY_CACHE_BYTES;

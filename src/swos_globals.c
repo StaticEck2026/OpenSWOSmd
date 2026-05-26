@@ -13,6 +13,8 @@
  * error.
  */
 
+#include <string.h>  /* memcpy for image_script_emit_ptr */
+
 #include "swos_platform.h"
 #include "swos_sections.h"   /* SWOS_CHIP_BSS — chip-RAM placement for DMA */
 #include "display.h"
@@ -233,8 +235,16 @@ static uint32_t image_script_register_ptr(const void *p)
 static void image_script_emit_ptr(uint16_t *stream, uint32_t off, const void *p)
 {
     uint32_t enc = image_script_register_ptr(p);
-    stream[off    ] = (uint16_t)enc;
-    stream[off + 1] = (uint16_t)(enc >> 16);
+    /* The stream is read back as a native 32-bit pointer at byte offset
+     * &stream[off] via `*(uint8_t * const *)a0`. The bytes must therefore
+     * end up in host byte order. Splitting `enc` into "low half" then
+     * "high half" stored as uint16_t works on LE (the lower uint16
+     * naturally lands at the lower address = low byte of the 32-bit
+     * load) but produces SWAPPED HALVES on BE (m68k Amiga): the BE
+     * 32-bit load reads the low-half uint16 as the *high* word of the
+     * pointer. Use memcpy with a host-native uint32 source so the bytes
+     * land in correct host order regardless of endianness. */
+    memcpy(&stream[off], &enc, sizeof(enc));
 }
 
 void _SwosSDL_InitImageScripts(void)
@@ -638,9 +648,9 @@ __asm__(".globl " _ASM_PFX "hilFileBuffer\n"
  * Note: sound/sfx.in1 (71500 bytes) loads into poolplyrDatBuffer
  * (52200 bytes) — which overruns by ~19 KB. Fix when sfx path lights up. */
 uint8_t menuSongData[8  * 1024];
-uint8_t menuInsBank [64 * 1024];
+SWOS_CHIP_BSS uint8_t menuInsBank [64 * 1024];
 uint8_t sfxSongData [8  * 1024];
-uint8_t sfxInsBank2 [128 * 1024];
+SWOS_CHIP_BSS uint8_t sfxInsBank2 [128 * 1024];
 
 /* ---- Menu font tables (small + big) --------------------------------
  * Each CharTable is a 238-byte struct: header (unk1, charHeight, unk2,
@@ -846,7 +856,7 @@ int16_t kGoalieSkill0Table[30] = { 0x0007, 0x01A8, -50,    0x0340, 0x00A0, 0x000
  * table the Amiga code already uses. */
 #define PITCH_POINTER_COUNT 2310
 #define PITCH_CHUNKY_TILE_BYTES 256   /* 16 px * 16 rows * 1 byte/px */
-uint8_t pitchDatBuffer[64 * 1024];
+SWOS_CHIP_BSS uint8_t pitchDatBuffer[64 * 1024];
 uint8_t pitchChunkyBuffer[PITCH_POINTER_COUNT * PITCH_CHUNKY_TILE_BYTES];
 
 void *kGoalieSkillTables[8] = {
