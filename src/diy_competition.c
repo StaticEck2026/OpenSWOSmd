@@ -10,7 +10,6 @@
 
 #include "diy_competition.h"
 #include "auto_skip_debug.h"
-#include <stdio.h>
 #include "endian_helpers.h"
 #include "game_types.h"
 #include "string_utils.h"
@@ -1349,7 +1348,7 @@ void _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs(void)
     uint8_t *grid = comp->teamGridPairings;
     uint8_t *flags = comp->matchData.cup.cupRoundResults;
 
-    fprintf(stderr, "[bug23-swap] ENTER count=%u grid[0..7]="
+    SWOS_DBG("[bug23-swap] ENTER count=%u grid[0..7]="
                     "%02X %02X %02X %02X %02X %02X %02X %02X "
                     "flags[0..3]=%02X %02X %02X %02X\n",
             (unsigned)count,
@@ -1377,7 +1376,7 @@ void _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs(void)
         *vdst++ = *vsrc++;
     }
 
-    fprintf(stderr, "[bug23-swap] EXIT  grid[0..7]="
+    SWOS_DBG("[bug23-swap] EXIT  grid[0..7]="
                     "%02X %02X %02X %02X %02X %02X %02X %02X\n",
             comp->teamGridPairings[0], comp->teamGridPairings[1],
             comp->teamGridPairings[2], comp->teamGridPairings[3],
@@ -1761,7 +1760,7 @@ static void getCurrentFixtureTeamPtrs(uint8_t **team1Out, uint8_t **team2Out)
         static int s_gfCalls = 0;
         if (s_gfCalls < 30) {
             s_gfCalls++;
-            fprintf(stderr, "[bug20-getfx] #%d subRound=%d "
+            SWOS_DBG("[bug20-getfx] #%d subRound=%d "
                             "matchesInRound=%d sectionProg=%u "
                             "d5(grid stride)=%u "
                             "fxPositionsOff=0x%lx "
@@ -1779,7 +1778,7 @@ static void getCurrentFixtureTeamPtrs(uint8_t **team1Out, uint8_t **team2Out)
                             (unsigned)posA, (unsigned)posB,
                             (int)gridIdxA, (int)gridIdxB,
                             (unsigned)swapFlag);
-            fflush(stderr);
+            SWOS_DBG_FLUSH();
         }
     }
 
@@ -2629,7 +2628,7 @@ void _DIY_UpdateCompetitionProgress(void)
         DIYTournamentSlot *cur_s = (DIYTournamentSlot *)
             ((uint8_t *)diyFileBufferCopy + (uint32_t)slotIdx * 118 + 0x15A);
         DIYTournamentSlot *nxt_s = cur_s + 1;
-        fprintf(stderr, "[bug23-cup] BEFORE: round=%d mppr=%u grid[0..7]="
+        SWOS_DBG("[bug23-cup] BEFORE: round=%d mppr=%u grid[0..7]="
                         "%02X %02X %02X %02X %02X %02X %02X %02X "
                         "flags[0..3]=%02X %02X %02X %02X "
                         "slot.doubleCount=cur=%u next=%u\n",
@@ -2645,7 +2644,7 @@ void _DIY_UpdateCompetitionProgress(void)
 
     {
         uint8_t *grid = comp->teamGridPairings;
-        fprintf(stderr, "[bug23-cup] AFTER reorder: grid[0..7]="
+        SWOS_DBG("[bug23-cup] AFTER reorder: grid[0..7]="
                         "%02X %02X %02X %02X %02X %02X %02X %02X\n",
                 grid[0], grid[1], grid[2], grid[3],
                 grid[4], grid[5], grid[6], grid[7]);
@@ -2670,7 +2669,7 @@ void _DIY_UpdateCompetitionProgress(void)
         int16_t half = (int16_t)((uint16_t)a0s->matchPairsPerRound >> 1);
         a0s->matchPairsPerRound = half;
         a0s->totalMatchesInRound = half;
-        fprintf(stderr, "[bug23-cup] HALVED: new mppr=%d new round=%d\n",
+        SWOS_DBG("[bug23-cup] HALVED: new mppr=%d new round=%d\n",
                 (int)half, (int)a0s->currentRoundIndex);
     }
 
@@ -3069,7 +3068,7 @@ void _DIY_RecordLeagueFixtureResultAndAdvanceProgress(void)
         static int s_recCalls = 0;
         if (s_recCalls < 20) {
             s_recCalls++;
-            fprintf(stderr, "[bug20-record] #%d ENTER compId=0x%04X "
+            SWOS_DBG("[bug20-record] #%d ENTER compId=0x%04X "
                             "minSubs=%u playEachTeam=%u "
                             "matchPairsPerRound=%d totalMatchesInRound=%d "
                             "sectionMatchesProgress=%u halfGroupsCounter=%u "
@@ -3093,7 +3092,7 @@ void _DIY_RecordLeagueFixtureResultAndAdvanceProgress(void)
                             (int)a6s->subRoundCounter,
                             (int)a6s->numTeams,
                             (unsigned)a6Ex->leagueTotalMatches);
-            fflush(stderr);
+            SWOS_DBG_FLUSH();
         }
     }
 
@@ -3156,7 +3155,7 @@ process_next:
         if (s_fxCalls < 30) {
             s_fxCalls++;
             uint8_t *a0 = (uint8_t *)a6s;
-            fprintf(stderr, "[bug20-fixture] #%d compId=0x%04X "
+            SWOS_DBG("[bug20-fixture] #%d compId=0x%04X "
                             "subRound=%d sectionProgress=%u "
                             "totalMatchesInRound=%d matchPairsPerRound=%d "
                             "team1Off=0x%lx team2Off=0x%lx "
@@ -3173,7 +3172,7 @@ process_next:
                             (unsigned)BE_READ_U16(sel1), (unsigned)sel1[4],
                             (unsigned)BE_READ_U16(sel2), (unsigned)sel2[4],
                             (unsigned long)(resultPtr - cache));
-            fflush(stderr);
+            SWOS_DBG_FLUSH();
         }
     }
 
@@ -7242,7 +7241,7 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
 
     /* Set group string if halfTeams != 1 */
     if (compS->matchPairsPerRound != 1) {
-        entry->fg = groupStringTable[d7];
+        entry->fg = (uintptr_t)groupStringTable[d7];
     }
 
     int16_t d2 = entry->y;
@@ -7665,6 +7664,7 @@ void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2)
 #endif
         do {
             _MenuCheckControls();
+#ifdef SWOS_SDL_BUILD
             /* Pace at 50 Hz AND pump SDL events. _MenuCheckControls
              * reads pl1Fire from `ciaa_pra` which is only updated by
              * `InputSDL_PostFrame` on the SDL event-pump path; without
@@ -7675,6 +7675,7 @@ void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2)
              * that backstop doesn't fire and the loop hangs. */
             extern int Platform_VBlank(void);
             Platform_VBlank();
+#endif
 #ifdef SWOS_DEBUG_AUTOSKIP
             debounce_iters++;
             if (debounce_iters <= 3 || debounce_iters == 100 || debounce_iters % 100 == 0) {
@@ -8684,7 +8685,7 @@ extern void *nationalTeamCompetitionsAndQualifications1[];
 __attribute__((used, externally_visible))
 uint16_t _IsNationalTeamCompetitionOrQualification(uint32_t key)
 {
-    uint32_t *p = nationalTeamCompetitionsAndQualifications1;
+    uint32_t *p = (uint32_t *)nationalTeamCompetitionsAndQualifications1;
     while (*p != 0xFFFFFFFF) {
         if (*p == key)
             return 0;  /* found — is national */
@@ -8712,7 +8713,7 @@ extern const char aLeague_1[];
  * If found, clear the field at offset 0x3C in the competition buffer. */
 static void checkEuropeanCupsAndClear3C(uint8_t *record, uint8_t *comp)
 {
-    uint32_t *p = europeanCupsandNationalTeamCompetitionsAndQualifications;
+    uint32_t *p = (uint32_t *)europeanCupsandNationalTeamCompetitionsAndQualifications;
     while (*p != 0xFFFFFFFF) {
         if (*p == (uintptr_t)record) {
             ((DIYCompetition *)comp)->substitutesCount = 0;  /* 0x3C */
@@ -9451,11 +9452,13 @@ void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t fo
 #endif
         do {
             _MenuCheckControls();
+#ifdef SWOS_SDL_BUILD
             /* See _ShowDIYCupMenuWithParams: Platform_VBlank both
              * paces at 50 Hz and pumps SDL events so KEYUP for the
              * just-pressed CONTINUE actually reaches ciaa_pra. */
             extern int Platform_VBlank(void);
             Platform_VBlank();
+#endif
 #ifdef SWOS_DEBUG_AUTOSKIP
             debounce_iters++;
             if (debounce_iters <= 3 || debounce_iters == 100 || debounce_iters % 100 == 0) {
@@ -10920,7 +10923,7 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
         DIYCompetitionEx *bx = &diyCompetitionStart;
         DIYCompetition  *bs = &bx->base;
         uint8_t *cb = (uint8_t *)bx;
-        fprintf(stderr, "[bug23-fix] duplicate team fixture: "
+        SWOS_DBG("[bug23-fix] duplicate team fixture: "
                         "compPtr1=%p compPtr2=%p teamSelOff1=%d teamSelOff2=%d "
                         "team1=team2=%p selTeamsPtr=%p "
                         "leagueCurrentSlot=%u matchesPlayedCount=%u "
@@ -10940,10 +10943,10 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
          * compPtr1 points into so we can see what byte-pair generated
          * the offsets. */
         const uint8_t *r1 = compPtr1;
-        fprintf(stderr, "[bug23-fix]   compPtr1 row[0..31]:");
-        for (int i = 0; i < 32; i++) fprintf(stderr, " %02X", r1[i]);
-        fprintf(stderr, "\n");
-        fflush(stderr);
+        SWOS_DBG("[bug23-fix]   compPtr1 row[0..31]:");
+        for (int i = 0; i < 32; i++) SWOS_DBG(" %02X", r1[i]);
+        SWOS_DBG("\n");
+        SWOS_DBG_FLUSH();
     }
 
     /* Safety guard ONLY for auto-advance paths. If either teamSelOffset

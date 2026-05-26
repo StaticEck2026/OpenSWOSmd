@@ -6,10 +6,8 @@
 #include "blitter.h"
 #include "text_render.h"
 #include "display.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "swos_types.h"
 #include <string.h>
-#include <stdio.h>
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t *spriteGraphicsPtr;
@@ -714,7 +712,7 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     {
         extern int g_debug_sprite_load;
         if (g_debug_sprite_load) {
-            fprintf(stderr, "[blit] glyph=0x%03X -> dst=0x%03X @(%u,%u) pm=%u srcHdr=%p dstHdr=%p\n",
+            SWOS_DBG("[blit] glyph=0x%03X -> dst=0x%03X @(%u,%u) pm=%u srcHdr=%p dstHdr=%p\n",
                     glyphIndex, dstSpriteIndex, xOff, yOff, planeMask,
                     (void*)srcHdr, (void*)dstHdr);
         }
@@ -994,7 +992,7 @@ uint16_t _Text2Sprite(uint16_t xOff, uint16_t yOff, uint16_t dstSpriteIndex,
     {
         extern int g_debug_sprite_load;
         if (g_debug_sprite_load) {
-            fprintf(stderr, "[text] dstIdx=0x%03X text='%.16s' width=%u dstPixW=%d dstHdr=%p\n",
+            SWOS_DBG("[text] dstIdx=0x%03X text='%.16s' width=%u dstPixW=%d dstHdr=%p\n",
                     dstSpriteIndex, (const char *)text, textWidth,
                     dstHdr ? dstHdr->pixWidth : -1, (void*)dstHdr);
         }

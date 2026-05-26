@@ -16,8 +16,7 @@
  * ResetAnimatedPatterns forces all animated tiles back to static.
  */
 
-#include <stdint.h>
-#include <stddef.h>
+#include "swos_types.h"
 #include "animated_patterns.h"
 #include "game_types.h"
 #include "display.h"

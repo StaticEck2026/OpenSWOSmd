@@ -658,7 +658,7 @@ const char aPen_0[] = "****(PEN),";
  * (_GetStringLength etc.) segfaults dereferencing 0x1.
  *
  * Layout transcribed verbatim from SWOS2.s lines 117594–117857. */
-#include <stdint.h>
+#include "swos_types.h"
 void *countriesTable[262] = {
     [0]   = (void *)aAlbania,
     [1]   = (void *)aAustria,

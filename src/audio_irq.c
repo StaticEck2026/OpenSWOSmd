@@ -5,6 +5,8 @@
  */
 #include "audio_irq.h"
 #include "display.h"
+#include "swos_types.h"  /* uintptr_t — pointer-as-integer casts for the
+                          * Amiga audio engine's plain-integer ptr fields */
 
 /* ---- External data (SWOS2.s code section) ---- */
 extern AudioState audioState;

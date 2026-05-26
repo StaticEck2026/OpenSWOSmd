@@ -77,7 +77,13 @@ static void set_vector(uintptr_t vbr, uintptr_t offset, void (*handler)(void))
 
 /* Renamed from `_start` to avoid colliding with the hosted libc CRT
  * entry point (`_start` is the runtime entry on Linux/glibc). The SDL
- * shim never calls this directly -- it goes straight to _mainC. */
+ * shim never calls this directly -- it goes straight to _mainC. The
+ * Amiga assembly (swos2_unit.s) still does `jsr _start`, so expose
+ * the same body under both names on that build. */
+#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+__attribute__((alias("_swos_c_start"), used, externally_visible))
+void _start(void);
+#endif
 __attribute__((used, externally_visible)) void _swos_c_start(void)
 {
     _SafeStart();
@@ -85,24 +91,26 @@ __attribute__((used, externally_visible)) void _swos_c_start(void)
     _DetachOSDisplay();
     _InitHardwareAtFrameStart();
 
-    /* uintptr_t locals so the global addresses don't truncate on 64-bit
-     * before being cast back to volatile uint16_t* for the byte-by-byte
-     * zero-fill. */
-    uintptr_t bank_bitmap_ptr = (uintptr_t)&loaderBankBitmap;
-    uintptr_t bank_bitmap_end = (uintptr_t)&chipRamBitmapEnd;
-    do
-    {
-        *(volatile uint16_t *)bank_bitmap_ptr = 0x0000u;
-        bank_bitmap_ptr += 2u;
-    } while (bank_bitmap_ptr != bank_bitmap_end);
-
-    uintptr_t pitch_ptr = (uintptr_t)&pitchDatBuffer;
-    uintptr_t menu_ptr = (uintptr_t)&currentMenu;
-    do
-    {
-        *(volatile uint16_t *)pitch_ptr = 0x0000u;
-        pitch_ptr += 2u;
-    } while (pitch_ptr != menu_ptr);
+    /* These two zero-fill loops walk between pairs of SWOS2.s BSS
+     * labels that were originally guaranteed adjacent — the first
+     * scrubs the chip-RAM bank-bitmap metadata from `loaderBankBitmap`
+     * to `chipRamBitmapEnd`; the second clears the pitch tile-pattern
+     * region from `pitchDatBuffer` to `currentMenu`. With the data
+     * migrated to discrete C globals neither pair is contiguous, so
+     * the loops walk the full 32-bit address space and hang. Both are
+     * redundant under the m68k-amiga-elf CRT (it zero-fills BSS at
+     * startup); SDL also doesn't enter `_swos_c_start` so it never
+     * ran them either. Skip until we restore the original adjacency
+     * via a shared backing buffer + .equ aliases (the same pattern
+     * used by `careerFileBufferBuf`).
+     *
+     * uintptr_t locals so the global addresses don't truncate on
+     * 64-bit before being cast back to volatile uint16_t* for the
+     * byte-by-byte zero-fill (kept for when this comes back). */
+    (void)&loaderBankBitmap;
+    (void)&chipRamBitmapEnd;
+    (void)&pitchDatBuffer;
+    (void)&currentMenu;
 
     magicValue = SWOS_MAGIC_VALUE;
     /* Bank scan disabled: assetLoaderBank0Base is in BSS (relocated),
@@ -216,6 +224,7 @@ void _mainC(void)
     _InitSkinAndDefaultPointers();
 
     /* ---- Phase 2: Build palettes ---- */
+    
 #ifdef AGA
     {
         extern uint16_t menuPalette[];
@@ -228,6 +237,7 @@ void _mainC(void)
 #endif
 
     /* ---- Phase 3: Boot temps ---- */
+
     bootTemp0 = 1;
     bootTemp1 = 0;
     bootTemp2 = 0;
@@ -257,6 +267,7 @@ void _mainC(void)
     _FadeIn();
 
     /* ---- Phase 6: Poll loader op3 with 50Hz delays ---- */
+    
     do
     {
         delay_ticks(FPS_50HZ);
@@ -266,6 +277,7 @@ void _mainC(void)
     _FadeOutToBlack();
 
     /* ---- Phase 7: Poll loader op2 ---- */
+    
     if (_AssetSvcLoaderOp2() != 0)
     {
         _BlitterCopyPanelToScreen2();
@@ -282,6 +294,7 @@ void _mainC(void)
     }
 
     /* ---- Phase 8: Build intro menu assets ---- */
+    
 #ifdef SWOS_SDL_BUILD
     /* Fill in the runtime filename-pointer slots in any image scripts
      * we pulled from Data.c (the IDA exporter emitted those slots as

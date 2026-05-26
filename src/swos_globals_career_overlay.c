@@ -26,7 +26,8 @@
  * `careerFileBuffer:`. See memory file project_career_buffer_overlay.md.
  * ================================================================ */
 
-#include <stdint.h>
+#include "swos_types.h"
+#include "swos_platform.h"  /* _ASM_PFX */
 
 /* Backing storage for the entire careerFileBuffer overlay. Sized for
  * a full career save: 98476-byte header + up to 64 × 684 team-file

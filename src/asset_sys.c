@@ -16,6 +16,7 @@
 #include "asset_loader.h"
 #include "string_utils.h"
 #include "display.h"
+#include "swos_types.h"  /* uintptr_t */
 
 /* ---- External globals (from SWOS2.s data) ---- */
 extern uint8_t diskImageContext;
@@ -113,7 +114,8 @@ static int16_t assetSys_InitContext(uint8_t *loaderBase, const uint8_t *disk0,
 static int32_t assetSys_InitSource0(const uint8_t *filename, uint8_t *dest)
 {
     assetSysPrepCopyParams(filename);
-    return (int32_t)_RobNorthenLoader_C(0, 0, assetFilename, dest);
+    int32_t r = (int32_t)_RobNorthenLoader_C(0, 0, assetFilename, dest);
+    return r;
 }
 
 /* ================================================================
@@ -383,6 +385,5 @@ void _AssetSys_InitDiskImageSources(void)
     assetSys_InitContext(&diskImageContext,
                          kSwos4Dk1, kSwos4Dk2,
                          kGrafsDisk2Raw, kSwos4Dku);
-
     _InstallAndInitLoaderBootstrap();
 }

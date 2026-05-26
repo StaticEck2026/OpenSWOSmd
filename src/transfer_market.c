@@ -2419,7 +2419,7 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
     /* Entry 5: Position */
     {
         uint16_t posIdx = (pf->positionAndFace & 0xE0) >> 3;
-        a0->fg = playerPositionsStringTable[posIdx / 4];
+        a0->fg = (uintptr_t)playerPositionsStringTable[posIdx / 4];
     }
     a0->y = y;
     a0->isInvisible = 0;

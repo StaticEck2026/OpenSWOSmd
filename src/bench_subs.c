@@ -30,7 +30,6 @@
 #include "player_sprites.h"
 
 #ifdef SWOS_DEBUG_AUTOSKIP
-#include <stdio.h>
 #endif
 
 /* ---- external asm globals ---- */
@@ -433,7 +432,7 @@ activate_bench:
         extern uint16_t subsPrevPl2Direction, subsPl2TapCount;
         extern uint16_t pl1BenchTimeoutCounter, pl2BenchTimeoutCounter;
         extern uint16_t gameState, gameStatePl;
-        fprintf(stderr,
+        SWOS_DBG(
                 "[bench] ACTIVATE team=%s gameState=%u gameStatePl=%u "
                 "bench1Called=%u bench2Called=%u "
                 "pl1{prev=0x%04X tapCount=%u timeout=%u} "

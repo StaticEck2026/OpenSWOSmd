@@ -7,9 +7,7 @@
 #include "game_types.h"
 #include "display.h"
 #include "endian_helpers.h"
-#include <stdint.h>
-#include <stddef.h>
-#include <stdio.h>
+#include "swos_types.h"
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern void *swcPitchMapFiles[];     /* char *[6] -- pitch map filenames */

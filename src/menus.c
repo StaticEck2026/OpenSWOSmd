@@ -6,7 +6,6 @@
 #include "menus.h"
 #include "endian_helpers.h"
 #include "auto_skip_debug.h"
-#include <stdio.h>  /* unconditional — diagnostic logging not always gated */
 #ifdef SWOS_DEBUG_AUTOSKIP
 #endif
 #include "game_utils.h"
@@ -1624,7 +1623,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
     {
         uint8_t posAndFace = pf->positionAndFace;
         uint16_t posIdx = (posAndFace & 0xE0) >> 3;
-        e->fg = playerPositionsStringTable[posIdx / 4];
+        e->fg = (uintptr_t)playerPositionsStringTable[posIdx / 4];
     }
     e->y = yPos;
 
@@ -1859,7 +1858,7 @@ void _SquadFinish(void)
         int8_t langCode = (int8_t)countryEntry[0];
         int16_t langIdx = (int16_t)langCode;
         /* playerPositionsStringTable + $20 = index 8, then + langIdx */
-        menuEntries[21].fg = playerPositionsStringTable[8 + langIdx];
+        menuEntries[21].fg = (uintptr_t)playerPositionsStringTable[8 + langIdx];
     }
 
     if (isNationalSquad != 0) {
@@ -4896,7 +4895,7 @@ void _SetLeagueNames(void)
 
     do {
         e->isInvisible = 0;
-        e->fg = *names++;
+        e->fg = (uintptr_t)*names++;
 
         /* If name starts with '.', set special background color */
         {
@@ -4965,7 +4964,7 @@ void _SetCountryNames(void)
                 {
                     /* Show this entry */
                     e->isInvisible = 0;
-                    e->fg = *names++;
+                    e->fg = (uintptr_t)*names++;
 
                     /* If name starts with '.', set special background color */
                     {
@@ -6508,13 +6507,13 @@ void _CareerGameListCommon(MenuEntry *item)
         if (!s_cglmDumpDone) {
             s_cglmDumpDone = 1;
             int cacheCountS = (int)(int16_t)teamSelectionKeyCacheCount;
-            fprintf(stderr, "[cglm-dump] d0=%u cacheCount=%d cacheBase=%p\n",
+            SWOS_DBG("[cglm-dump] d0=%u cacheCount=%d cacheBase=%p\n",
                     (unsigned)d0, cacheCountS,
                     (void *)teamSelectionKeyCache);
             uint8_t *p = teamSelectionKeyCache;
             for (int s = 0; s < cacheCountS && s < 40; s++) {
                 uint16_t stride = *(uint16_t *)(p + 2);
-                fprintf(stderr, "[cglm-dump]   slot[%d] @%+lld stride=%u "
+                SWOS_DBG("[cglm-dump]   slot[%d] @%+lld stride=%u "
                                 "hdr=%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X"
                                 "  fx0=%02X %02X %02X %02X %02X %02X\n",
                         (int)s, (long long)(p - teamSelectionKeyCache),
@@ -6522,7 +6521,7 @@ void _CareerGameListCommon(MenuEntry *item)
                         p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9],
                         p[10], p[11], p[12], p[13], p[14], p[15]);
                 if (stride < 12 || stride > 256) {
-                    fprintf(stderr, "[cglm-dump]   stride out of range, halting dump\n");
+                    SWOS_DBG("[cglm-dump]   stride out of range, halting dump\n");
                     break;
                 }
                 p += stride;
@@ -6533,16 +6532,16 @@ void _CareerGameListCommon(MenuEntry *item)
                 if (ce == 0 && ge == 0) continue;
                 long long ceOff = ce ? (long long)((uint8_t *)ce - teamSelectionKeyCache) : -1;
                 long long geOff = ge ? (long long)((uint8_t *)ge - teamSelectionKeyCache) : -1;
-                fprintf(stderr, "[cglm-dump]   gameListArray[%u] contest=+%lld game=+%lld",
+                SWOS_DBG("[cglm-dump]   gameListArray[%u] contest=+%lld game=+%lld",
                         (unsigned)i, ceOff, geOff);
                 if (ge) {
                     uint8_t *g = (uint8_t *)ge;
-                    fprintf(stderr, "  bytes=%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
+                    SWOS_DBG("  bytes=%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
                             g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11]);
                 }
-                fputc('\n', stderr);
+                SWOS_DBG("\n");
             }
-            fflush(stderr);
+            SWOS_DBG_FLUSH();
         }
     }
 
@@ -6563,12 +6562,12 @@ void _CareerGameListCommon(MenuEntry *item)
             uint16_t botTeamIdxPreview = BE_READ_U16(a4 + 0x0E);
             long long gameOff = (long long)((uint8_t *)a4 - teamSelectionKeyCache);
             long long contestOff = (long long)((uint8_t *)a6 - teamSelectionKeyCache);
-            fprintf(stderr, "[career-row] d0=%u listIdx=%u contest=+%lld game=+%lld "
+            SWOS_DBG("[career-row] d0=%u listIdx=%u contest=+%lld game=+%lld "
                             "numGames=%u top=0x%04X bot=0x%04X\n",
                     (unsigned)d0, (unsigned)teamSelectionKeyCache_ListIndex,
                     contestOff, gameOff, (unsigned)a6[5],
                     (unsigned)topTeamIdx, (unsigned)botTeamIdxPreview);
-            fflush(stderr);
+            SWOS_DBG_FLUSH();
         }
         TeamFileEx *topTeamData = _VerifyTeamLoaded(topTeamIdx);
         careerGameTopTeamName = (char *)topTeamData->team.teamName;

@@ -6,13 +6,7 @@
 #ifndef MENU_SYSTEM_H
 #define MENU_SYSTEM_H
 
-#include <stdint.h>  /* uintptr_t for MenuEntry.bg / .fg dual-use slots */
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
-typedef signed char int8_t;
-typedef short int16_t;
-typedef int int32_t;
+#include "swos_types.h"  /* uintptr_t for MenuEntry.bg / .fg dual-use slots */
 
 /* Forward decl so callback typedefs below can take MenuEntry *. */
 typedef struct MenuEntry MenuEntry;

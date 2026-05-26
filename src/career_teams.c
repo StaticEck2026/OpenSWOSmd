@@ -17,7 +17,6 @@
 #include "panic.h"
 #include "teams.h"
 
-#include <stdio.h>
 #include "diy_competition.h"
 #include "file_io.h"
 
@@ -134,7 +133,7 @@ TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum)
         extern uint16_t numSelectedTeams;
         extern uint16_t selTeamNumber;
         extern uint16_t diyTournamentTeamIds[];
-        fprintf(stderr,
+        SWOS_DBG(
                 "[verify] _VerifyTeamLoaded(0x%04X) FAIL: country=0x%02X team=0x%02X "
                 "selTeamNumber=0x%04X numSelectedTeams=%u\n",
                 (unsigned)teamNum,
@@ -144,17 +143,17 @@ TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum)
         unsigned dumpN = numSelectedTeams;
         if (dumpN > 16) dumpN = 16;
         for (unsigned i = 0; i < dumpN; i++) {
-            fprintf(stderr,
+            SWOS_DBG(
                     "[verify]   selTeamsPtr[%u] country=0x%02X ordinal=0x%02X\n",
                     i,
                     (unsigned)firstFew[i].team.countryNumber,
                     (unsigned)firstFew[i].team.teamOrdinal);
         }
-        fprintf(stderr, "[verify] diyTournamentTeamIds[0..15] =");
+        SWOS_DBG("[verify] diyTournamentTeamIds[0..15] =");
         for (unsigned i = 0; i < 16; i++)
-            fprintf(stderr, " %04X", (unsigned)diyTournamentTeamIds[i]);
-        fprintf(stderr, "\n");
-        fflush(stderr);
+            SWOS_DBG(" %04X", (unsigned)diyTournamentTeamIds[i]);
+        SWOS_DBG("\n");
+        SWOS_DBG_FLUSH();
         _PanicHaltLoop();
     }
     return team;
@@ -662,9 +661,9 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
         teamIdsLE[k] = BE_READ_U16(&teamIds[k]);
 
 #ifdef SWOS_DEBUG_AUTOSKIP
-    fprintf(stderr, "[append] count=%u, requested teamIds:\n", (unsigned)count);
+    SWOS_DBG("[append] count=%u, requested teamIds:\n", (unsigned)count);
     for (uint16_t k = 0; k < count; k++) {
-        fprintf(stderr, "[append]   in[%2u] = 0x%04X (country=%u ordinal=%u)\n",
+        SWOS_DBG("[append]   in[%2u] = 0x%04X (country=%u ordinal=%u)\n",
                 (unsigned)k, (unsigned)teamIdsLE[k],
                 (unsigned)((teamIdsLE[k] >> 8) & 0xFF),
                 (unsigned)(teamIdsLE[k] & 0xFF));
@@ -709,7 +708,7 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
         uint8_t loadedExt = lastLoadedExtNumber;
 
 #ifdef SWOS_DEBUG_AUTOSKIP
-        fprintf(stderr, "[append] loaded TEAM.%03u (ext=%u) for teamId=0x%04X\n",
+        SWOS_DBG("[append] loaded TEAM.%03u (ext=%u) for teamId=0x%04X\n",
                 (unsigned)loadedExt, (unsigned)loadedExt, (unsigned)teamId);
 #endif
 
@@ -720,7 +719,7 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
             uint8_t *tfTeam = findTeamInTeamFileBuffer(teamIdsLE[i]);
 #ifdef SWOS_DEBUG_AUTOSKIP
             if (tfTeam) {
-                fprintf(stderr, "[append]   resolved 0x%04X -> '%.16s'\n",
+                SWOS_DBG("[append]   resolved 0x%04X -> '%.16s'\n",
                         (unsigned)teamIdsLE[i],
                         (const char *)((TeamFileEx *)tfTeam)->team.teamName);
             }
@@ -735,7 +734,7 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
                 uint16_t tfCount = *(uint16_t *)&teamFileBuffer;
                 TeamFileEx *tfFirst = (TeamFileEx *)(&teamFileBuffer + 2);
                 TeamFileEx *tfLast = (tfCount > 0) ? &tfFirst[tfCount - 1] : tfFirst;
-                fprintf(stderr,
+                SWOS_DBG(
                         "[append]   NO MATCH for 0x%04X in TEAM.%03u "
                         "(file has %u teams; first=0x%02X%02X last=0x%02X%02X)\n",
                         (unsigned)teamIdsLE[i], (unsigned)loadedExt,
@@ -744,7 +743,7 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
                         (unsigned)tfFirst->team.teamOrdinal,
                         (unsigned)tfLast->team.countryNumber,
                         (unsigned)tfLast->team.teamOrdinal);
-                fflush(stderr);
+                SWOS_DBG_FLUSH();
             }
             if (tfTeam) {
                 copyTeamRecord((uint8_t *)selDst, tfTeam);
@@ -807,11 +806,11 @@ static void fillLeagueTeamSelectionFromFile(uint16_t extNumber, uint16_t leagueF
     if ((int16_t)actualCount != expectedCount) {
         /* [verify-fill] -O2 makes gdb's `expectedCount=...` value
          * unreliable; print the real values plus what fed them. */
-        fprintf(stderr, "[verify-fill] panic 0x8885: extNumber=%u leagueFilter=%u "
+        SWOS_DBG("[verify-fill] panic 0x8885: extNumber=%u leagueFilter=%u "
                         "expectedCount=%d actualCount=%u tfCount=%u\n",
                 (unsigned)extNumber, (unsigned)leagueFilter,
                 (int)expectedCount, (unsigned)actualCount, (unsigned)tfCount);
-        fflush(stderr);
+        SWOS_DBG_FLUSH();
         panicReasonCode = 0x8885;
         _PanicHaltLoop();
     }
@@ -1143,7 +1142,7 @@ void _Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *spec, uint1
         int16_t expectedCount = (int16_t)(int8_t)spec[13 + entryOff];
         uint16_t extNumber = spec[2];
         /* [verify-fill] Trace the values that feed fillLeagueTeamSelectionFromFile. */
-        fprintf(stderr, "[verify-fill] InitFromTableEntrySpec(spec=%p, idx=%u): "
+        SWOS_DBG("[verify-fill] InitFromTableEntrySpec(spec=%p, idx=%u): "
                         "spec[1]=%u spec[2]=%u spec[7]=%u spec[13]=%u "
                         "entryOff=%u spec[13+entryOff]=%u expectedCount=%d\n",
                 (void *)spec, (unsigned)idx,
@@ -1151,7 +1150,7 @@ void _Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *spec, uint1
                 (unsigned)spec[13],
                 (unsigned)entryOff, (unsigned)spec[13 + entryOff],
                 (int)expectedCount);
-        fflush(stderr);
+        SWOS_DBG_FLUSH();
         fillLeagueTeamSelectionFromFile(extNumber, idx /* = league filter */, expectedCount);
     }
 }
@@ -1740,7 +1739,7 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
     {
         extern uint8_t *currentCompetitionPtr;
         const uint8_t *cp = (const uint8_t *)(uintptr_t)currentCompetitionPtr;
-        fprintf(stderr, "[bug23-dispatch] slotIdx=%d slotPtr=%p type=%u "
+        SWOS_DBG("[bug23-dispatch] slotIdx=%d slotPtr=%p type=%u "
                         "(branch=%s) entry[0..9]=%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X "
                         "currentCompetitionPtr=%p comp[0..3]=%02X %02X %02X %02X\n",
                 (int)slotIdx, (void *)slotPtr, (unsigned)type,

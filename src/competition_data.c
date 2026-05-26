@@ -10,7 +10,8 @@
  * declarations or a shared header when this file joins the build.
  */
 #include "game_types.h"
-#include <stdint.h>
+#include "swos_types.h"
+#include "swos_platform.h"  /* _ASM_PFX */
 
 /* ======================================================================
  * Forward declarations — strings defined in assembly/Data.c

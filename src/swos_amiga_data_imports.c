@@ -7,7 +7,7 @@
  * still live as stubs in swos_amiga_data_stubs.c (or as hand-written
  * definitions in swos_globals.c).
  */
-#include <stdint.h>
+#include "swos_types.h"
 #include "game_types.h"
 #include "menu_system.h"
 uint16_t selFilesColumnStartY[1] = { 0x0000 };

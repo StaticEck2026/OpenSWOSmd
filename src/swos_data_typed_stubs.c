@@ -15,7 +15,7 @@
  * locally below.
  */
 
-#include <stdint.h>
+#include "swos_types.h"
 #include "game_types.h"
 #include "menu_system.h"
 #include "audio.h"

@@ -16,8 +16,7 @@
 #ifndef SAVE_FORMAT_JSON_H
 #define SAVE_FORMAT_JSON_H
 
-#include <stdint.h>
-#include <stddef.h>
+#include "swos_types.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -8,8 +8,7 @@
 #include "display.h"
 #include "deterministic.h"
 #ifdef SWOS_SDL_BUILD
-#include <stddef.h>
-#include <stdint.h>
+#include "swos_types.h"
 #endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
@@ -149,7 +148,7 @@ void _CopySprite(uint16_t srcSprite, uint16_t dstSprite,
     custom->bltcon1 = shiftVal;
 
     /* Check if source has mask data (offset 4) */
-    uint32_t srcMaskPtr = srcHdr->maskPtr;
+    uint32_t srcMaskPtr = (uint32_t)srcHdr->maskPtr;
     uint16_t bltcon0;
     if (srcMaskPtr != 0) {
         /* Linked mode: cookie cut with mask */
@@ -191,7 +190,7 @@ void _CopySprite(uint16_t srcSprite, uint16_t dstSprite,
         custom->bltdmod = dstStrideBytes - blitWidthBytes;
 
         /* Source pointers */
-        custom->bltbpt = srcHdr->sprData;
+        custom->bltbpt = (uint32_t)srcHdr->sprData;
         custom->bltapt = srcMaskPtr;
 
         /* Kick blit */
@@ -216,8 +215,8 @@ void _CopySprite(uint16_t srcSprite, uint16_t dstSprite,
         custom->bltdmod = dstCDmod;
 
         /* Source data and mask pointers */
-        uint32_t srcDataPtr = srcHdr->sprData;
-        uint32_t srcMask = srcHdr->maskPtr;  /* may be 0 for single-plane */
+        uint32_t srcDataPtr = (uint32_t)srcHdr->sprData;
+        uint32_t srcMask = (uint32_t)srcHdr->maskPtr;  /* may be 0 for single-plane */
 
         /* Per-plane stride for advancing between passes */
         uint32_t dstPlaneStep = (uint32_t)dstStrideBytes;
@@ -551,8 +550,8 @@ void _QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         *(uint32_t *)((uint8_t *)a3 + 0) = maskBufAddr;
 
         /* Source pointers: data=BLTBPT, mask=BLTAPT */
-        custom->bltbpt = a0->sprData;
-        custom->bltapt = a0->maskPtr;
+        custom->bltbpt = (uint32_t)a0->sprData;
+        custom->bltapt = (uint32_t)a0->maskPtr;
 
         /* First word mask always all-ones */
         custom->bltafwm = 0xFFFF;
@@ -711,7 +710,7 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         custom->bltcon1 = shiftVal;
 
         /* BLTCON0 mode */
-        uint32_t maskPtr = a0->maskPtr;
+        uint32_t maskPtr = (uint32_t)a0->maskPtr;
         uint16_t bltcon0;
         if (maskPtr != 0) {
             bltcon0 = shiftVal | BLTCON0_BASE_LINKED;
@@ -766,9 +765,9 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         if (d5 != 0) {
             srcSkip = (uint32_t)((uint16_t)d5 << NUM_PLANES_SHIFT) * (uint32_t)(tileStride << 1);
         }
-        uint32_t srcData = a0->sprData + srcSkip;
+        uint32_t srcData = (uint32_t)a0->sprData + srcSkip;
         custom->bltbpt = srcData;
-        uint32_t srcMask2 = a0->maskPtr + srcSkip;
+        uint32_t srcMask2 = (uint32_t)a0->maskPtr + srcSkip;
         custom->bltapt = srcMask2;
 
         /* Kick blit */
@@ -857,7 +856,7 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         custom->bltcon1 = shiftVal;
 
         /* BLTCON0 mode */
-        uint32_t maskPtr = a0->maskPtr;
+        uint32_t maskPtr = (uint32_t)a0->maskPtr;
         uint16_t bltcon0;
         if (maskPtr != 0) {
             bltcon0 = shiftVal | BLTCON0_BASE_LINKED;
@@ -930,12 +929,12 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         }
 
         /* Source plane data */
-        uint32_t srcDataAddr = a0->sprData + srcSkip5;
+        uint32_t srcDataAddr = (uint32_t)a0->sprData + srcSkip5;
         custom->bltbpt = srcDataAddr;
         uint8_t *a5ptr = (uint8_t *)srcDataAddr;
 
         /* Source mask */
-        uint32_t srcMaskAddr = a0->maskPtr + (srcSkip5 >> NUM_PLANES_SHIFT);
+        uint32_t srcMaskAddr = (uint32_t)a0->maskPtr + (srcSkip5 >> NUM_PLANES_SHIFT);
         custom->bltapt = srcMaskAddr;
         uint8_t *a4ptr = (uint8_t *)srcMaskAddr;
 
@@ -1267,12 +1266,12 @@ static void renderSpriteBandPlanePair(SpriteGraphics *sprGfx, int16_t x, int16_t
     /* Blit sprite data into copper list buffers */
     /* First plane pair */
     waitBlit();
-    custom->bltapt = sprGfx->sprData;
+    custom->bltapt = (uint32_t)sprGfx->sprData;
     custom->bltdpt = (uintptr_t)a4;
     custom->bltsize = sprGfx->bltsize;
 
     /* Second plane pair: source at data+4 */
-    uint32_t srcPlane2 = sprGfx->sprData + 4;
+    uint32_t srcPlane2 = (uint32_t)sprGfx->sprData + 4;
     waitBlit();
     custom->bltapt = srcPlane2;
     custom->bltdpt = (uintptr_t)a5;

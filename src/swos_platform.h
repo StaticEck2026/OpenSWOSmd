@@ -9,6 +9,20 @@
 #ifndef SWOS_PLATFORM_H
 #define SWOS_PLATFORM_H
 
+/* When the Amiga m68k toolchain compiles a file that pulls this
+ * header in transitively (one of the synced data files does), give
+ * it an empty translation unit — the SDL_BUILD-only defines below
+ * must NOT be visible on Amiga. The SDL build still injects this
+ * header via -include in CFLAGS as before. */
+#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+/* Amiga build: no platform shim needed. The Amiga m68k-elf toolchain
+ * doesn't prefix symbols (ELF on m68k uses bare names), so _ASM_PFX
+ * expands to an empty string. The synced data files (swos_globals.c
+ * etc.) use this macro inside .globl/.equ inline-asm declarations and
+ * need it defined on both ports. */
+#define _ASM_PFX ""
+#else
+
 /* The SDL build is hosted on x86/x64 with little-endian ordering. */
 #define SWOS_SDL_BUILD 1
 
@@ -84,5 +98,7 @@ typedef __UINTPTR_TYPE__ uintptr_t;
 struct Custom;
 extern volatile struct Custom *custom;
 #define CUSTOM_BASE ((unsigned long)(custom))
+
+#endif /* !__m68k__ */
 
 #endif /* SWOS_PLATFORM_H */

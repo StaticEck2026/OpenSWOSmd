@@ -2818,7 +2818,7 @@ void _EditTeamsPlayersBeforeDraw(MenuEntry *entry)
 
     /* Position string */
     uint16_t posIdx = (posAndFace & 0xE0) >> 3;  /* extract top 3 bits, shift to word index */
-    e->fg = playerPositionsStringTable[posIdx / 4];
+    e->fg = (uintptr_t)playerPositionsStringTable[posIdx / 4];
     e->y = y;
     e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);
 
@@ -3395,7 +3395,7 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     /* Entry 42: position string */
     uint8_t posAndFace = pf->positionAndFace;
     uint16_t posIdx = ((uint16_t)posAndFace & 0xE0) >> 3;
-    e->fg = playerPositionsStringTable[posIdx / 4];
+    e->fg = (uintptr_t)playerPositionsStringTable[posIdx / 4];
     e->y = entryY;
     e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);  /* entry 43 */
 

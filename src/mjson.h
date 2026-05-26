@@ -23,27 +23,32 @@
 #define MJSON_H
 
 #include <stdarg.h>
-#include <stdlib.h>
 #include <string.h>
+
+/* SWOS only uses mjson_next (array walk) + mjson_print_* (serialize)
+ * + mjson_find / mjson_get_number / mjson_get_string (parse). Disable
+ * the rest by default — they pull in alloca / realloc / printf which
+ * the Amiga m68k toolchain doesn't ship. SDL can opt them back in by
+ * defining the macros before this header is included. */
 
 #ifndef MJSON_ENABLE_PRINT
 #define MJSON_ENABLE_PRINT 1
 #endif
 
 #ifndef MJSON_ENABLE_RPC
-#define MJSON_ENABLE_RPC 1
+#define MJSON_ENABLE_RPC 0
 #endif
 
 #ifndef MJSON_ENABLE_BASE64
-#define MJSON_ENABLE_BASE64 1
+#define MJSON_ENABLE_BASE64 0
 #endif
 
 #ifndef MJSON_ENABLE_MERGE
-#define MJSON_ENABLE_MERGE 1
+#define MJSON_ENABLE_MERGE 0
 #endif
 
 #ifndef MJSON_ENABLE_PRETTY
-#define MJSON_ENABLE_PRETTY 1
+#define MJSON_ENABLE_PRETTY 0
 #endif
 
 #ifndef MJSON_ENABLE_NEXT
@@ -58,8 +63,12 @@
 #define MJSON_DYNBUF_CHUNK 256  // Allocation granularity for print_dynamic_buf
 #endif
 
+/* mjson_print_dynamic_buf uses MJSON_REALLOC to grow its buffer. Route
+ * through swos_io_realloc so we share one heap implementation across
+ * SDL (malloc-backed) and Amiga (AllocMem-backed). */
 #ifndef MJSON_REALLOC
-#define MJSON_REALLOC realloc
+#include "swos_io.h"
+#define MJSON_REALLOC(p, n) swos_io_realloc((p), (uint32_t)(n))
 #endif
 
 #ifdef __cplusplus
@@ -89,7 +98,15 @@ typedef int (*mjson_cb_t)(int event, const char *buf, int offset, int len,
 int mjson(const char *buf, int len, mjson_cb_t cb, void *ud);
 int mjson_find(const char *buf, int len, const char *jp, const char **tp,
                int *tl);
+/* Integer-only number lookup; works on every target. SWOS save data
+ * is all integers anyway, so this is the recommended API. */
+int mjson_get_long(const char *buf, int len, const char *path, long *v);
+/* Double variant — only available where soft-float / FPU is wired up
+ * (i.e. the SDL host). On Amiga m68k we can't pull in `__floatsidf`
+ * and friends, so the double API is omitted entirely. */
+#if !defined(__m68k__) && !defined(__amigaos__) && !defined(__amigaos4__)
 int mjson_get_number(const char *buf, int len, const char *path, double *v);
+#endif
 int mjson_get_bool(const char *buf, int len, const char *path, int *v);
 int mjson_get_string(const char *buf, int len, const char *path, char *to,
                      int n);

@@ -5,7 +5,7 @@
  */
 #include "adverts.h"
 #include "game_types.h"
-#include <stdint.h>
+#include "swos_types.h"
 
 /* Sprite image indices */
 #define SPR_ADVERT_1_PART_1     113

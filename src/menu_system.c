@@ -5,7 +5,6 @@
  */
 #include "menu_system.h"
 #include "display.h"
-#include <stdio.h>
 #include "game_utils.h"
 #include "fade.h"
 #include "text_render.h"
@@ -26,9 +25,12 @@ extern uint16_t menuFade;
 extern volatile uint16_t exitMenu;
 extern volatile uint16_t seasonUpdateInProgress;
 
-#include <stdint.h>
+#include "swos_types.h"
 #include "auto_skip_debug.h"
-#include "input.h"  /* pauseSkipRequested — SPACE / second controller button */
+#include "input.h"  /* pauseSkipRequested -- SPACE / second controller button */
+#include <string.h>  /* memcpy in _UnpackMenu — Amiga string.h is partial,
+                      * include early so the prototype is in scope before
+                      * the first call site. */
 
 /* Season-update menu hold: on Amiga, the slow CPU + blitter naturally
  * stretched each cup/league result menu render to ~0.5-1 s. On x86 the
@@ -667,7 +669,7 @@ void _DrawMenuItem(MenuEntry *entry)
                 Menu *m = (Menu *)currentMenu;
                 MenuEntry *base = (MenuEntry *)((uint8_t *)m + MENU_HEADER_SIZE);
                 long entryIdx = (long)((uint8_t *)entry - (uint8_t *)base) / (long)sizeof(MenuEntry);
-                fprintf(stderr, "[drawmenu-fg] CORRUPT entry=%p idx=%ld ordinal=%u "
+                SWOS_DBG("[drawmenu-fg] CORRUPT entry=%p idx=%ld ordinal=%u "
                                 "content=%u fg=0x%016llx high=0x%x low=0x%x "
                                 "stringFlags=0x%04x x=%u y=%u\n",
                         (void *)entry, entryIdx, (unsigned)entry->ordinal,
@@ -675,7 +677,7 @@ void _DrawMenuItem(MenuEntry *entry)
                         (unsigned)fgHigh, (unsigned)(uint32_t)fgRaw,
                         (unsigned)entry->stringFlags,
                         (unsigned)entry->x, (unsigned)entry->y);
-                fflush(stderr);
+                SWOS_DBG_FLUSH();
                 /* Skip the draw rather than crash so we can see what
                  * happens NEXT in the menu. */
                 goto post_draw_callback;
@@ -1513,12 +1515,14 @@ void _MenuProc(void)
     uint16_t d7;
     int16_t dir;
 
+#ifdef SWOS_SDL_BUILD
     /* If Platform_RequestQuit flagged a quit from the SDL event pump,
      * longjmp back to _FrontEndMainLoop now — short-circuits the entire
      * nested menu state machine so we don't flicker between submenus
      * as they each return and re-activate on the way out. */
     extern void Platform_CheckQuitRequest(void);
     Platform_CheckQuitRequest();
+#endif
 
     /* Drop the season-end skip latch the moment the chain ends, so the
      * next chain (e.g. start of the next season-end review) gets the
@@ -1613,8 +1617,10 @@ void _MenuProc(void)
          * clears the next time seasonUpdateInProgress drops to 0 (see
          * top of MenuProc), so a single press skips the whole sequence
          * without the user having to hold the button. */
+#ifdef SWOS_SDL_BUILD
         if (pauseSkipRequested)
             s_seasonSkipLatched = 1;
+#endif
         if (s_seasonSkipLatched) {
             s_seasonUpdateHoldCounter = SEASON_UPDATE_MENU_HOLD_FRAMES;
         } else if (s_seasonUpdateHoldCounter < SEASON_UPDATE_MENU_HOLD_FRAMES) {

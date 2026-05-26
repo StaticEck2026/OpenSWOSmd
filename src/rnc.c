@@ -20,6 +20,8 @@
  */
 
 #include "rnc.h"
+#include "swos_types.h"  /* uintptr_t — used to test odd-alignment of
+                          * intermediate decode pointers below */
 
 /* ---- Externs ---- */
 extern volatile uint16_t panicReasonCode;

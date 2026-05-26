@@ -287,7 +287,9 @@
 /* audioDbgFlagA: typed definition in swos_data_typed_stubs.c */
 /* HAND-TUNED: SWOS2.s declares only 0x16C bytes here, but the game
  * loads decompressed .ins audio banks (HERO.INS ~250 KB) into this
- * buffer using a "boundary spill" pattern. 512 KiB contains the biggest. */
+ * buffer using a "boundary spill" pattern. 256 KB was too tight
+ * (decompression overflowed adjacent BSS and tripped a line-F);
+ * 512 KB matches SDL. */
 char audioInstrumentBank[512 * 1024];
 /* audioState: real data in swos_data_bulk_imports.c */
 /* autoReplays: typed definition in swos_data_typed_stubs.c */
@@ -915,7 +917,18 @@ char goalBase[0x4A38];
  * landed ~740 KB past imageCmdWorkBuf start, so size this buffer big
  * enough to contain the entire sprite pool by itself: 2 MB leaves
  * plenty of headroom without relying on adjacent-BSS behaviour. */
+/* SDL: 2 MB to cover the documented ~740 KB sprite-pool overflow
+ * plus headroom. Amiga: 1 MB — still well under the 10 MB Amiga limit
+ * but covers the overflow we measured. The earlier 256 KB cut here
+ * was too aggressive: sprite writes spilled into adjacent BSS and
+ * corrupted whatever followed (function pointers in particular),
+ * producing wild jumps that manifested as line-F / address-error
+ * traps with the same low 24 bits of PC across runs. */
+#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+char imageCmdWorkBuf[1024 * 1024];
+#else
 char imageCmdWorkBuf[0x200000];
+#endif
 /* imageStreamBytesLeft: typed definition in swos_data_typed_stubs.c */
 /* imageStreamCursor: typed definition in swos_data_typed_stubs.c */
 /* importMenuSelectedTactics: real data in swos_amiga_data_imports.c */

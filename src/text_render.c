@@ -206,8 +206,8 @@ static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint1
     custom->bltdmod = dstMod;
 
     /* Source data pointers */
-    uint32_t maskPtr   = spr->maskPtr;
-    uint32_t dataBase  = spr->sprData;
+    uint32_t maskPtr   = (uint32_t)spr->maskPtr;
+    uint32_t dataBase  = (uint32_t)spr->sprData;
     uint32_t plane1Ptr = dataBase + srcStrideBytes;          /* skip plane 0 */
     uint32_t planeLastPtr = plane1Ptr + (uint32_t)srcStrideBytes * (NUM_PLANES - 2);  /* last plane */
 

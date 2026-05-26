@@ -3,7 +3,7 @@
  * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
-#include <stdint.h>
+#include "swos_types.h"
 #include "file_io.h"
 #include "display.h"
 #include "menus.h"
@@ -12,11 +12,10 @@
 #include "string_utils.h"
 #include "asset_loader.h"
 #include "input_text.h"
+#include "endian_helpers.h"
 
 #ifdef SWOS_SDL_BUILD
 #include <string.h>
-#include <stdio.h>
-#include "endian_helpers.h"
 #endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */

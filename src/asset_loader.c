@@ -5,17 +5,7 @@
  */
 #include "asset_loader.h"
 #include "display.h"
-
-#ifdef SWOS_SDL_BUILD
-/* fprintf(stderr, ...) for cacheload debug logging. Manual externs
- * worked on glibc (stderr is a real exported FILE*), but on MinGW
- * stderr is a macro `(__acrt_iob_func(2))` so the manual extern
- * referenced an unresolvable symbol. Including <stdio.h> picks up
- * the platform's correct definition. */
-#include <stdio.h>
-#endif
-
-#include <stdint.h>
+#include "swos_types.h"
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uintptr_t assetLoaderWorkPtr;
@@ -23,7 +13,6 @@ extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on S
 /* Head of the cache linked-list. Storage retyped to uintptr_t so that on
  * 64-bit hosts (LP64 / LLP64) a real pointer round-trips. */
 extern uintptr_t assetLoaderCacheFlag;
-extern volatile uint16_t panicReasonCode;
 extern uint16_t assetLoaderAltPathReady;
 extern uint32_t loaderMemTop;
 extern uint32_t loaderBankBitmap;
@@ -35,6 +24,7 @@ extern volatile uint16_t currentGameTick;
 
 /* ---- External asm functions (C-callable bridges in swos2_unit.s) ---- */
 extern void _PanicHaltLoop(void);
+extern volatile uint16_t panicReasonCode;
 extern int16_t _CAssetSys_Dispatch(uint16_t opcode, uint16_t param, void *name, void *dest);
 extern int16_t _CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param, void *name, void *dest, uint32_t *outFileSize);
 extern void _RncDecompressV1(uint8_t *src, uint8_t *dest);
@@ -288,7 +278,7 @@ int16_t _AssetCacheLoadFromAssetSys(const uint8_t *name)
     result = _CAssetSys_DispatchGetSize(ASSET_OP_5_THEN_MAYBE_6, 0, (void *)name, (void *)0, &fileSize);
     if (result != 0) {
 #ifdef SWOS_SDL_BUILD
-        fprintf(stderr, "[cacheload] %s: size-query failed r=%d\n", (const char *)name, result);
+        SWOS_DBG("[cacheload] %s: size-query failed r=%d\n", (const char *)name, result);
 #endif
         return (int16_t)0xFF;
     }
@@ -297,7 +287,7 @@ int16_t _AssetCacheLoadFromAssetSys(const uint8_t *name)
     node = assetCacheAllocInternal(fileSize);
     if (node == (uint8_t *)0) {
 #ifdef SWOS_SDL_BUILD
-        fprintf(stderr, "[cacheload] %s: alloc failed for %u bytes\n", (const char *)name, fileSize);
+        SWOS_DBG("[cacheload] %s: alloc failed for %u bytes\n", (const char *)name, fileSize);
 #endif
         return 1;
     }
@@ -307,7 +297,7 @@ int16_t _AssetCacheLoadFromAssetSys(const uint8_t *name)
     result = _CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE0, 0, (void *)name, payload);
     if (result != 0) {
 #ifdef SWOS_SDL_BUILD
-        fprintf(stderr, "[cacheload] %s: load failed r=%d\n", (const char *)name, result);
+        SWOS_DBG("[cacheload] %s: load failed r=%d\n", (const char *)name, result);
 #endif
         return (int16_t)0xFF;
     }
@@ -676,9 +666,7 @@ int16_t _AssetEnsureReadyWithRetry(uint8_t *name, uint8_t *dest)
     for (;;)
     {
         if (assetCurrentIndex == 4)
-        {
             return _CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE0, 0, name, dest);
-        }
 
         if (assetLoaderCacheFlag != 0)
         {
@@ -694,6 +682,7 @@ int16_t _AssetEnsureReadyWithRetry(uint8_t *name, uint8_t *dest)
         if (assetCurrentIndex == 4)
             return result;
 
+        
         /* Wait 50 ticks before retry */
         for (i = FPS_50HZ; i >= 0; i--) {
             _WaitForVSync();

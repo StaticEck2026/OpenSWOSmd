@@ -3,7 +3,7 @@
  * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
-#include <stdint.h>
+#include "swos_types.h"
 #include "loader_intro.h"
 #include "fade.h"
 #include "display.h"
@@ -317,21 +317,14 @@ static int16_t loaderIntroShowFrameWithMusic(const uint8_t *filename, int16_t ti
 __attribute__((used, externally_visible))
 void _ShowLoaderIntroSequence(void)
 {
-    /* Sanity check: memBoundaryMarker address must be <= 1MB */
-    if ((uintptr_t)&memBoundaryMarker > 0x100000u)
-    {
-        /* Original asm had a commented-out infinite color-cycle loop here.
-         * In practice this path is dead code in a working build. */
-    }
+    if ((uintptr_t)&memBoundaryMarker > 0x100000u) { }
 
-    /* Initialize camera at (0,0) and set up display */
     _SetCameraCoordinates(0, 0);
     _SwapBuffersAndCameraViewState();
     _UpdatePlanePtrsAndBlitParams();
     _SwapBuffersAndCameraViewState();
     _UpdatePlanePtrsAndBlitParams();
 
-    /* Check if fire is already pressed → skip intro */
     _Player1StatusProc();
     if (pl1Fire != 0)
     {
@@ -344,15 +337,12 @@ void _ShowLoaderIntroSequence(void)
         return;
     }
 
-    /* Load hero audio bank (retries until success) */
     loaderIntroLoadHeroAudioBank();
 
-    /* Show frame sequence */
 #ifndef AGA
     paletteIndex = 6;
 #endif
 
-    /* Frame 0: loader00.raw */
     if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader00.raw", 0xFA) != 0)
         goto load_fail_early;
 

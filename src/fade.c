@@ -11,6 +11,19 @@
 #include <SDL.h>
 #endif
 
+/* COPPER_WRITE_W: write a 16-bit value into the copper list buffer.
+ * On Amiga m68k, GCC decomposes plain `*(volatile uint16_t *)addr = val`
+ * into byte-level move.b pairs which corrupts copper-list word slots
+ * (the copper expects atomic word reads). Force a real move.w instruction
+ * via inline asm. On the SDL host the copper list is a regular RAM buffer
+ * so a plain store is fine. */
+#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+#define COPPER_WRITE_W(addr, val) \
+    __asm__ volatile ("move.w %0,(%1)" : : "d"((uint16_t)(val)), "a"((volatile uint16_t *)(addr)) : "memory")
+#else
+#define COPPER_WRITE_W(addr, val) (*(volatile uint16_t *)(addr) = (uint16_t)(val))
+#endif
+
 typedef unsigned char uint8_t;
 typedef unsigned int uint32_t;
 typedef short int16_t;
@@ -198,7 +211,7 @@ void _ApplyFadeStep(uint16_t fadeLevel)
                     if (blue < 2)
                         color = (color & 0x0FF0) | 2;
                 }
-                *dst = color;
+                COPPER_WRITE_W(dst, color);
                 dst += 2; /* stride 4 bytes */
             }
         }
@@ -214,8 +227,8 @@ void _ApplyFadeStep(uint16_t fadeLevel)
         {
             uint16_t color = *palette++;
             color = (color >> shift) & mask;
-            *palA = color;
-            *palB = color;
+            COPPER_WRITE_W(palA, color);
+            COPPER_WRITE_W(palB, color);
             palA += 2;  /* stride 4 bytes */
             palB += 2;
         }
@@ -233,8 +246,8 @@ void _ApplyFadeStep(uint16_t fadeLevel)
             {
                 color = (color & 0x0FF0) | 2;
             }
-            *palA = color;
-            *palB = color;
+            COPPER_WRITE_W(palA, color);
+            COPPER_WRITE_W(palB, color);
             palA += 2;
             palB += 2;
         }

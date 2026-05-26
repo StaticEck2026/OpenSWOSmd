@@ -194,6 +194,7 @@ ack:
 __attribute__((used, externally_visible))
 void _Int3TimerHandler(void)
 {
+    custom->intreq = 0x0070;
     if (waitingInterrupt != 0)
     {
         uint16_t delta = (uint16_t)(currentGameTick - lastVBlankServiceTick);
@@ -202,7 +203,6 @@ void _Int3TimerHandler(void)
             lastVBlankServiceTick = currentGameTick;
             _UpdatePlanePtrsAndBlitParams();
 
-            /* Read camera position (high word of 32-bit fixed-point on big-endian) */
             int16_t camX = cameraX.s.i;
             int16_t camY = cameraY.s.i;
 
@@ -211,12 +211,9 @@ void _Int3TimerHandler(void)
 
             waitingInterrupt = 0;
             didSwapThisFrame = 1;
-            /* ASM: bra.w *+4 falls through to isr_common_housekeeping
-             * (does NOT skip housekeeping on swap frames) */
         }
     }
 
-    /* isr_common_housekeeping — runs EVERY VBlank, including swap frames */
     _FadeOutTick();
     _FadeInTick();
 

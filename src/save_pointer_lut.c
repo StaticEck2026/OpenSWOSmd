@@ -19,10 +19,16 @@
  *
  * See SAVE_DATA.md "Cross-build pointer LUT" for the design.
  */
-#include <stdint.h>
-#include <stddef.h>
+#include "swos_types.h"
 
 #include "game_types.h"
+
+#ifndef SWOS_SDL_BUILD
+/* On Amiga the BSS *is* the Amiga BSS — saved pointers already
+ * resolve to live symbols, no translation needed. Provide an empty
+ * stub for the one public entrypoint so file_io.c links. */
+void _TranslateAmigaAddressesAfterLoad(void) { }
+#else
 
 typedef struct AmigaAddrLutEntry {
     const char *name;
@@ -188,3 +194,5 @@ void _TranslateAmigaAddressesAfterLoad(void)
         }
     }
 }
+
+#endif /* SWOS_SDL_BUILD */

@@ -14,11 +14,12 @@
  */
 
 #include "swos_platform.h"
+#include "swos_sections.h"   /* SWOS_CHIP_BSS — chip-RAM placement for DMA */
 #include "display.h"
 #include "game_types.h"
 #include "menu_system.h"     /* MENU_HEADER_SIZE — used by menuEntries alias */
 
-#include <stdint.h>
+#include "swos_types.h"
 
 /* ---- Input state shared with input_sdl.c --------------------------- */
 uint8_t  keyState[128];
@@ -48,26 +49,30 @@ uint16_t nextEntryDirectionOffsets[4] = { 2, 1, 3, 0 };
  * PLANE_STRIDE * FRONTBUFFER_TOTAL_LINES = 12012 bytes per plane. */
 #define BITPLANE_BYTES (PLANE_STRIDE * FRONTBUFFER_TOTAL_LINES)
 
-/* "Front" set (visible this frame) + "alt" set (drawn into). */
-uint8_t bitPlane0Base[BITPLANE_BYTES];
-uint8_t bitPlane1Base[BITPLANE_BYTES];
-uint8_t bitPlane2Base[BITPLANE_BYTES];
-uint8_t bitPlane3Base[BITPLANE_BYTES];
+/* "Front" set (visible this frame) + "alt" set (drawn into).
+ * On Amiga: must live in CHIP RAM because the copper/bitplane DMA can
+ * only fetch from chip memory. SWOS_CHIP_BSS routes these into the
+ * .BSSInChip.MEMF_CHIP section the linker maps to chip RAM. On SDL the
+ * attribute is a no-op (regular BSS). */
+SWOS_CHIP_BSS uint8_t bitPlane0Base[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane1Base[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane2Base[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane3Base[BITPLANE_BYTES];
 #ifdef AGA
-uint8_t bitPlane4Base[BITPLANE_BYTES];
-uint8_t bitPlane5Base[BITPLANE_BYTES];
-uint8_t bitPlane6Base[BITPLANE_BYTES];
-uint8_t bitPlane7Base[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane4Base[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane5Base[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane6Base[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane7Base[BITPLANE_BYTES];
 #endif
-uint8_t bitPlane0BaseAlt[BITPLANE_BYTES];
-uint8_t bitPlane1BaseAlt[BITPLANE_BYTES];
-uint8_t bitPlane2BaseAlt[BITPLANE_BYTES];
-uint8_t bitPlane3BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane0BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane1BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane2BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane3BaseAlt[BITPLANE_BYTES];
 #ifdef AGA
-uint8_t bitPlane4BaseAlt[BITPLANE_BYTES];
-uint8_t bitPlane5BaseAlt[BITPLANE_BYTES];
-uint8_t bitPlane6BaseAlt[BITPLANE_BYTES];
-uint8_t bitPlane7BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane4BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane5BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane6BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane7BaseAlt[BITPLANE_BYTES];
 #endif
 
 /* Bitplane base "pointers" — the Amiga sets these to the address of
@@ -86,9 +91,11 @@ volatile uint32_t bitPlane7BasePtr;
 /* "Frontbuffer" arrays. Layout depends on build:
  *   Amiga: bitplane-interleaved (NUM_PLANES planes per scanline).
  *   SDL  : 8bpp chunky, 1 byte per pixel = palette index. */
-uint8_t frontbufferBase[FRONTBUFFER_SIZE_TOTAL_BYTES];
-uint8_t frontbufferBaseAlt[FRONTBUFFER_SIZE_TOTAL_BYTES];
-uint8_t frontbufferMaskBuffer[FRONTBUFFER_SIZE_TOTAL_BYTES];
+/* Frontbuffers also need chip RAM on Amiga — copper-list BPLPT entries
+ * point at these for the main display area. */
+SWOS_CHIP_BSS uint8_t frontbufferBase[FRONTBUFFER_SIZE_TOTAL_BYTES];
+SWOS_CHIP_BSS uint8_t frontbufferBaseAlt[FRONTBUFFER_SIZE_TOTAL_BYTES];
+SWOS_CHIP_BSS uint8_t frontbufferMaskBuffer[FRONTBUFFER_SIZE_TOTAL_BYTES];
 /* These store live pointers to frontbuffer memory. On 32-bit they
  * are word-sized for layout compatibility with the Amiga port (where
  * the asm reads them as long words). On 64-bit they must be wide
@@ -109,9 +116,10 @@ volatile uintptr_t frontbufferBaseAltPtr;
 uint8_t rawAssetLoadBuffer[128 * 1024];
 #endif
 
-/* Copper list (OCS 320 bytes / AGA 1316 bytes). */
-uint8_t  copperListBuffer[COPPERLIST_SIZE_BYTES];
-uint32_t copperZeroLong;
+/* Copper list (OCS 320 bytes / AGA 1316 bytes). Must be in chip RAM
+ * because the copper hardware fetches from it via DMA. */
+SWOS_CHIP_BSS uint8_t  copperListBuffer[COPPERLIST_SIZE_BYTES];
+SWOS_CHIP_BSS uint32_t copperZeroLong;
 
 /* ---- menuPalette: 16-entry OCS palette referenced by SWOS.c (AGA path)
  * and Platform_PreArmIsrGlobals. The Amiga build had this in SWOS2.s
@@ -186,8 +194,7 @@ extern const char aGrafsCjcbenchR[];
 extern uintptr_t team1Filename;
 extern uintptr_t team2Filename;
 
-#include <stddef.h>
-#include <stdint.h>
+#include "swos_types.h"
 
 /* image_cmd.c interprets 0x7000/0x8000 file-load opcodes by reading a
  * pointer from the script stream at the current cursor — but the

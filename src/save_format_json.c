@@ -38,12 +38,29 @@ uint8_t SaveJson_GetLoadedPrimaryCountryCode(void)
     return s_loaded_primary_country_code;
 }
 
-#include <stddef.h>  /* offsetof */
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
+#ifdef SWOS_SDL_BUILD
+#include <stdlib.h>  /* atoi */
+#endif
+#ifdef SWOS_SAVE_FORMAT_JSON_PROFILE
+/* clock() — only the PROFILE macros need this. The Amiga toolchain
+ * has no <time.h>, so this also keeps that include off-path unless
+ * profiling is explicitly enabled. */
 #include <time.h>
+#endif
+#include "swos_types.h"
+#include "swos_io.h"
+
+/* Amiga m68k <string.h> is partial — declares memcpy but not
+ * strlen / strcmp. And there is no <stdlib.h> at all, so atoi is
+ * undeclared too. Provide explicit prototypes for the strict
+ * builtin-mismatch check; the symbols themselves resolve at link
+ * time via libc. */
+#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+extern size_t strlen(const char *s);
+extern int    strcmp(const char *a, const char *b);
+extern int    atoi(const char *s);
+#endif
 
 /* Profile helpers — only emit when SWOS_SAVE_FORMAT_JSON_PROFILE is
  * defined. Times each labeled phase in microseconds via clock(),
@@ -54,9 +71,9 @@ uint8_t SaveJson_GetLoadedPrimaryCountryCode(void)
 #define PROF_END(name, label) do { \
     clock_t _e = clock(); \
     double _ms = (double)(_e - prof_##name) * 1000.0 / (double)CLOCKS_PER_SEC; \
-    fprintf(stderr, "[json-prof-%s] %s: %.2f ms\n", \
+    SWOS_DBG("[json-prof-%s] %s: %.2f ms\n", \
             (label), #name, _ms); \
-    fflush(stderr); \
+    SWOS_DBG_FLUSH(); \
 } while (0)
 #else
 #define PROF_START(name) ((void)0)
@@ -90,7 +107,7 @@ static void verify_roundtrip_region(const char *label,
                                     VerifyReloadFn reload,
                                     uint8_t *filename)
 {
-    uint8_t *snap = (uint8_t *)malloc(size);
+    uint8_t *snap = (uint8_t *)swos_io_alloc(size);
     if (!snap) return;
     memcpy(snap, region, size);
     memset(region, 0, size);
@@ -103,7 +120,7 @@ static void verify_roundtrip_region(const char *label,
         if (region[i] != snap[i]) {
             if (mismatches < 20) {
                 if (first == (size_t)-1) first = i;
-                fprintf(stderr,
+                SWOS_DBG(
                         "[json-verify-%s] mismatch at +%u: loaded=0x%02X saved=0x%02X\n",
                         label, (unsigned)i,
                         (unsigned)region[i], (unsigned)snap[i]);
@@ -111,12 +128,12 @@ static void verify_roundtrip_region(const char *label,
             mismatches++;
         }
     }
-    fprintf(stderr,
+    SWOS_DBG(
             "[json-verify-%s] %zu mismatches across %u bytes (first at +%zu)\n",
             label, mismatches, (unsigned)size, first);
 
     memcpy(region, snap, size);
-    free(snap);
+    swos_io_free(snap);
 }
 
 /* Reload wrappers with the simpler `(filename)` signature so the
@@ -139,39 +156,17 @@ static int16_t verify_reload_highlights(uint8_t *f)
 }
 #endif
 
-/* Direct stdio load helper. JSON saves can grow to several hundred
- * KB (>3x the legacy binary size from base64 expansion + key text),
- * which overflows the careerFileBuffer destination if we route
- * through _LoadFileEx. The save directory is `save/<filename>` per
- * resload.c's resolve_path; replicate that path construction here
- * so we can bypass the asset-loader staging and read straight into
- * a heap buffer sized to the file. */
+/* JSON saves can grow to several hundred KB (>3x the legacy binary
+ * size from base64 expansion + key text), which overflows the
+ * careerFileBuffer destination if we route through _LoadFileEx.
+ * Delegate to swos_io.c, which bypasses the asset-loader staging and
+ * returns a freshly-allocated buffer:
+ *   SDL:   malloc + stdio read.
+ *   Amiga: _AllocMemAny + _RobNorthenLoader_C dispatch. */
 static int read_save_file_heap(const uint8_t *filename,
                                uint8_t **out_buf, uint32_t *out_size)
 {
-    char path[512];
-    const char *src = (const char *)filename;
-    const char *colon = strchr(src, ':');
-    if (colon) src = colon + 1;
-    snprintf(path, sizeof(path), "save/%s", src);
-
-    FILE *f = fopen(path, "rb");
-    if (!f) return 1;
-    fseek(f, 0, SEEK_END);
-    long n = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    if (n <= 0) { fclose(f); return 1; }
-
-    uint8_t *buf = (uint8_t *)malloc((size_t)n + 1);
-    if (!buf) { fclose(f); return 1; }
-    size_t got = fread(buf, 1, (size_t)n, f);
-    fclose(f);
-    if (got != (size_t)n) { free(buf); return 1; }
-    buf[n] = '\0';
-
-    *out_buf  = buf;
-    *out_size = (uint32_t)n;
-    return 0;
+    return swos_io_load_alloc(filename, out_buf, out_size);
 }
 
 /* String pool for save-load round-trips of in-memory string pointer
@@ -290,7 +285,7 @@ static int json_out_emit(const char *chunk, int chunk_len, void *ud)
     if (o->len + (size_t)chunk_len + 1 > o->cap) {
         size_t want = (o->cap ? o->cap : 4096);
         while (want < o->len + (size_t)chunk_len + 1) want *= 2;
-        char *grew = (char *)realloc(o->ptr, want);
+        char *grew = (char *)swos_io_realloc(o->ptr, want);
         if (!grew) { o->oom = 1; return 0; }
         o->ptr = grew;
         o->cap = want;
@@ -469,7 +464,7 @@ static void load_season_informations(const char *buf, int buflen)
     /* Walk the array via mjson_next so each iteration is O(1) in
      * array position. Indexed "$[i]" finds re-walk from the start
      * each time → O(n²) over the whole array. */
-    double num = 0.0;
+    long num = 0.0;
     int pos = 0, koff, klen, voff, vlen, vt;
     uint32_t i = 0;
     while (i < SAVE_SI_ENTRY_COUNT &&
@@ -482,14 +477,14 @@ static void load_season_informations(const char *buf, int buflen)
         uint8_t *e = seasonInformationsArray + i * SAVE_SI_ENTRY_SIZE;
         i++;
 
-        if (mjson_get_number(e_slice, e_slen, "$.club_no", &num) <= 0)
+        if (mjson_get_long(e_slice, e_slen, "$.club_no", &num) <= 0)
             continue;
         *(uint16_t *)(e + SAVE_SI_CLUBNO) = (uint16_t)num;
 
         load_string_field(e_slice, e_slen, "$.club_name",
                           e + SAVE_SI_CLUBNAME, 18);
 
-        if (mjson_get_number(e_slice, e_slen, "$.trophy_flags", &num) > 0)
+        if (mjson_get_long(e_slice, e_slen, "$.trophy_flags", &num) > 0)
             *(uint16_t *)(e + SAVE_SI_TROPHYFLAGS) = (uint16_t)num;
 
         load_str_pool_field(e_slice, e_slen, "$.league_str",
@@ -501,7 +496,7 @@ static void load_season_informations(const char *buf, int buflen)
         load_str_pool_field(e_slice, e_slen, "$.str_3",
                             (uint32_t *)(e + SAVE_SI_STRPTR3));
 
-        if (mjson_get_number(e_slice, e_slen, "$.best_scorer_goals", &num) > 0)
+        if (mjson_get_long(e_slice, e_slen, "$.best_scorer_goals", &num) > 0)
             *(uint16_t *)(e + SAVE_SI_BESTSCORERNUMGOALS) = (uint16_t)num;
 
         load_string_field(e_slice, e_slen, "$.best_scorer_name",
@@ -510,11 +505,11 @@ static void load_season_informations(const char *buf, int buflen)
                           e + SAVE_SI_2NDSCORERNAME, 23);
 
 #define LOAD_BYTE(key, dst_off) do { \
-            if (mjson_get_number(e_slice, e_slen, "$." key, &num) > 0) \
+            if (mjson_get_long(e_slice, e_slen, "$." key, &num) > 0) \
                 e[dst_off] = (uint8_t)(int8_t)(int)num; \
         } while (0)
 #define LOAD_U16(key, dst_off) do { \
-            if (mjson_get_number(e_slice, e_slen, "$." key, &num) > 0) \
+            if (mjson_get_long(e_slice, e_slen, "$." key, &num) > 0) \
                 *(uint16_t *)(e + dst_off) = (uint16_t)num; \
         } while (0)
 
@@ -1245,7 +1240,7 @@ static void load_scalar_table(const char *buf, int buflen,
      * .CAR JSON (hundreds of KB). For a 200-entry table this is
      * roughly a 100× speedup. */
     char section_path[80];
-    snprintf(section_path, sizeof(section_path), "$.%s", section_key);
+    swos_io_snprintf(section_path, sizeof(section_path), "$.%s", section_key);
     const char *section = NULL;
     int section_len = 0;
     if (mjson_find(buf, buflen, section_path,
@@ -1254,22 +1249,22 @@ static void load_scalar_table(const char *buf, int buflen,
 
     char path[80];
     char tmp[64];
-    double num = 0.0;
+    long num = 0.0;
 
     for (const FieldDesc *f = table; f->type != FLD_END; f++) {
-        snprintf(path, sizeof(path), "$.%s", f->name);
+        swos_io_snprintf(path, sizeof(path), "$.%s", f->name);
         uint8_t *p = (uint8_t *)f->addr;
         switch (f->type) {
         case FLD_U8: case FLD_S8:
-            if (mjson_get_number(section, section_len, path, &num) > 0)
+            if (mjson_get_long(section, section_len, path, &num) > 0)
                 *p = (uint8_t)(int)num;
             break;
         case FLD_U16: case FLD_S16:
-            if (mjson_get_number(section, section_len, path, &num) > 0)
+            if (mjson_get_long(section, section_len, path, &num) > 0)
                 *(uint16_t *)p = (uint16_t)(int)num;
             break;
         case FLD_U32: case FLD_S32:
-            if (mjson_get_number(section, section_len, path, &num) > 0)
+            if (mjson_get_long(section, section_len, path, &num) > 0)
                 *(uint32_t *)p = (uint32_t)(int32_t)num;
             break;
         case FLD_STR:
@@ -1427,16 +1422,16 @@ static void load_str_at(const char *buf, int buflen, const char *path,
 static void load_u8_at(const char *buf, int buflen, const char *path,
                        uint8_t *base, size_t off)
 {
-    double num = 0.0;
-    if (mjson_get_number(buf, buflen, path, &num) > 0)
+    long num = 0.0;
+    if (mjson_get_long(buf, buflen, path, &num) > 0)
         base[off] = (uint8_t)(int)num;
 }
 
 static void load_s16_at(const char *buf, int buflen, const char *path,
                         uint8_t *base, size_t off)
 {
-    double num = 0.0;
-    if (mjson_get_number(buf, buflen, path, &num) > 0)
+    long num = 0.0;
+    if (mjson_get_long(buf, buflen, path, &num) > 0)
         *(int16_t *)(base + off) = (int16_t)num;
 }
 
@@ -1899,12 +1894,12 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     mjson_printf(json_out_emit, &out, "%s", "\n}\n");
 
     if (out.oom || !out.ptr) {
-        if (out.ptr) free(out.ptr);
+        if (out.ptr) swos_io_free(out.ptr);
         return 1;
     }
 
     int16_t result = _WriteFile(filename, (uint8_t *)out.ptr, (uint32_t)out.len);
-    free(out.ptr);
+    swos_io_free(out.ptr);
     if (result != 0) {
         _ShowFsErrorByCode((uint16_t)result);
         return 1;
@@ -1919,31 +1914,31 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     return 0;
 }
 
-/* Probe the first bytes of the named save file via stdio. Used by
- * the file_io.c dispatcher to decide which loader to invoke without
+/* Probe the first bytes of the named save file. Used by the
+ * file_io.c dispatcher to decide which loader to invoke without
  * having to stage the whole file through _LoadFileEx (which the
  * JSON-format size would overflow). Returns 1 if the file begins
- * with `{` (after whitespace), 0 otherwise, or -1 on open error. */
+ * with `{` (after whitespace), 0 otherwise, or -1 on open error.
+ *
+ * Implemented via swos_io_load_alloc — wasteful in that we load the
+ * whole file just to peek at the head, but save files are small and
+ * the resulting buffer is then dropped. Keeps the I/O path uniform
+ * across SDL and Amiga. */
 int SaveJson_FileIsJson(const uint8_t *filename)
 {
-    char path[512];
-    const char *src = (const char *)filename;
-    const char *colon = strchr(src, ':');
-    if (colon) src = colon + 1;
-    snprintf(path, sizeof(path), "save/%s", src);
-
-    FILE *f = fopen(path, "rb");
-    if (!f) return -1;
-    uint8_t probe[16];
-    size_t got = fread(probe, 1, sizeof(probe), f);
-    fclose(f);
-    if (got == 0) return 0;
-    for (size_t i = 0; i < got; i++) {
-        uint8_t c = probe[i];
+    uint8_t *buf = (uint8_t *)0;
+    uint32_t size = 0;
+    if (swos_io_load_alloc(filename, &buf, &size) != 0) return -1;
+    int verdict = 0;
+    uint32_t probe = (size < 16u) ? size : 16u;
+    for (uint32_t i = 0; i < probe; i++) {
+        uint8_t c = buf[i];
         if (c == ' ' || c == '\t' || c == '\r' || c == '\n') continue;
-        return (c == '{') ? 1 : 0;
+        verdict = (c == '{') ? 1 : 0;
+        break;
     }
-    return 0;
+    swos_io_free(buf);
+    return verdict;
 }
 
 /* ---------- .CAR loader ---------- */
@@ -1969,8 +1964,8 @@ static void apply_semantic_load(const char *src, int src_size)
      * (legacy save). Stored to a module-local; career_init.c reads it
      * via SaveJson_GetLoadedPrimaryCountryCode(). */
     {
-        double v = 0xFF;
-        if (mjson_get_number(src, src_size, "$.primary_country_code", &v) > 0) {
+        long v = 0xFF;
+        if (mjson_get_long(src, src_size, "$.primary_country_code", &v) > 0) {
             s_loaded_primary_country_code = (uint8_t)v;
         } else {
             s_loaded_primary_country_code = 0xFF;
@@ -2088,14 +2083,14 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
         return 1;
 
     /* Verify schema_version. */
-    double version = 0.0;
-    if (mjson_get_number((const char *)src, (int)src_size,
+    long version = 0;
+    if (mjson_get_long((const char *)src, (int)src_size,
                          "$.schema_version", &version) <= 0) {
-        free(src);
+        swos_io_free(src);
         return 1;
     }
     if ((int)version != SAVE_JSON_SCHEMA_VERSION) {
-        free(src);
+        swos_io_free(src);
         return 1;
     }
 
@@ -2103,11 +2098,11 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
     char kind[32] = {0};
     if (mjson_get_string((const char *)src, (int)src_size,
                          "$.file_kind", kind, sizeof(kind)) <= 0) {
-        free(src);
+        swos_io_free(src);
         return 1;
     }
     if (strcmp(kind, KIND_CAREER) != 0) {
-        free(src);
+        swos_io_free(src);
         return 1;
     }
 
@@ -2126,8 +2121,21 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
      * compiler sees the full 256 KB destination and fortify_source
      * doesn't trip. */
     uint32_t want = career_data_size();
+#ifdef SWOS_SDL_BUILD
+    /* SDL: careerFileBuffer is a 1-byte stub for symbol-only purposes
+     * and the real backing storage lives in careerFileBufferBuf (see
+     * swos_globals_career_overlay.c). Going through the *Buf alias
+     * keeps fortify_source happy with the full destination size. */
     extern uint8_t careerFileBufferBuf[];
     memset(careerFileBufferBuf, 0, want);
+#else
+    /* Amiga: careerFileBuffer IS the real backing storage (defined in
+     * SWOS2.s with a real ds.b reservation). The earlier `extern uint8_t
+     * careerFileBuffer;` (single-byte stub) declaration in this file
+     * makes the symbol available — take its address as a uint8_t* for
+     * the memset destination. */
+    memset(&careerFileBuffer, 0, want);
+#endif
 
     apply_semantic_load((const char *)src, (int)src_size);
 
@@ -2144,7 +2152,7 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
     extern void _RebuildPointersAfterLoad(void);
     _RebuildPointersAfterLoad();
 
-    free(src);
+    swos_io_free(src);
     return 0;
 }
 
@@ -2228,7 +2236,7 @@ static void load_scalar_table_range(const char *buf, int buflen,
     /* Slice the section once — same speedup pattern as
      * load_scalar_table. */
     char section_path[80];
-    snprintf(section_path, sizeof(section_path), "$.%s", section_key);
+    swos_io_snprintf(section_path, sizeof(section_path), "$.%s", section_key);
     const char *section = NULL; int section_len = 0;
     if (mjson_find(buf, buflen, section_path,
                    &section, &section_len) != MJSON_TOK_OBJECT)
@@ -2236,20 +2244,20 @@ static void load_scalar_table_range(const char *buf, int buflen,
 
     char path[80];
     char tmp[64];
-    double num = 0.0;
+    long num = 0.0;
     for (const FieldDesc *f = table; f->type != FLD_END; f++) {
         if (!field_in_range(f, lo, hi)) continue;
-        snprintf(path, sizeof(path), "$.%s", f->name);
+        swos_io_snprintf(path, sizeof(path), "$.%s", f->name);
         uint8_t *p = (uint8_t *)f->addr;
         switch (f->type) {
         case FLD_U8: case FLD_S8:
-            if (mjson_get_number(section, section_len, path, &num) > 0) *p = (uint8_t)(int)num;
+            if (mjson_get_long(section, section_len, path, &num) > 0) *p = (uint8_t)(int)num;
             break;
         case FLD_U16: case FLD_S16:
-            if (mjson_get_number(section, section_len, path, &num) > 0) *(uint16_t *)p = (uint16_t)(int)num;
+            if (mjson_get_long(section, section_len, path, &num) > 0) *(uint16_t *)p = (uint16_t)(int)num;
             break;
         case FLD_U32: case FLD_S32:
-            if (mjson_get_number(section, section_len, path, &num) > 0) *(uint32_t *)p = (uint32_t)(int32_t)num;
+            if (mjson_get_long(section, section_len, path, &num) > 0) *(uint32_t *)p = (uint32_t)(int32_t)num;
             break;
         case FLD_STR:
             memset(p, 0, f->size);
@@ -2310,11 +2318,11 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
     mjson_printf(json_out_emit, &out, "%s", "]\n}\n");
 
     if (out.oom || !out.ptr) {
-        if (out.ptr) free(out.ptr);
+        if (out.ptr) swos_io_free(out.ptr);
         return 1;
     }
     int16_t r = _WriteFile(filename, (uint8_t *)out.ptr, (uint32_t)out.len);
-    free(out.ptr);
+    swos_io_free(out.ptr);
     if (r != 0) {
         _ShowFsErrorByCode((uint16_t)r);
         return 1;
@@ -2344,18 +2352,18 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
     if (read_save_file_heap(filename, &src, &src_size) != 0)
         return 1;
 
-    double version = 0.0;
-    if (mjson_get_number((const char *)src, (int)src_size,
+    long version = 0;
+    if (mjson_get_long((const char *)src, (int)src_size,
                          "$.schema_version", &version) <= 0 ||
         (int)version != SAVE_JSON_SCHEMA_VERSION) {
-        free(src);
+        swos_io_free(src);
         return 1;
     }
     char file_kind[16] = {0};
     if (mjson_get_string((const char *)src, (int)src_size,
                          "$.file_kind", file_kind, sizeof(file_kind)) <= 0 ||
         strcmp(file_kind, kind) != 0) {
-        free(src);
+        swos_io_free(src);
         return 1;
     }
 
@@ -2396,7 +2404,7 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
         }
     }
 
-    free(src);
+    swos_io_free(src);
     return 0;
 }
 
@@ -2570,7 +2578,7 @@ static void emit_team_game(mjson_print_fn_t fn, void *fnd,
  * the ~10 KB slice instead of the entire .HIL JSON. */
 static void load_team_game_slice(const char *buf, int buflen, uint8_t *tg)
 {
-    double num = 0.0;
+    long num = 0.0;
     char path[40];
 
     /* Zero the buffer up front — fields not present in JSON stay
@@ -2583,7 +2591,7 @@ static void load_team_game_slice(const char *buf, int buflen, uint8_t *tg)
     if (mjson_find(buf, buflen, "$.kit",
                    &kit, &kit_len) == MJSON_TOK_OBJECT) {
 #define LOAD_BE16(key, field) do { \
-            if (mjson_get_number(kit, kit_len, "$." key, &num) > 0) \
+            if (mjson_get_long(kit, kit_len, "$." key, &num) > 0) \
                 BE_WRITE_U16(tg + offsetof(TeamGame, field), (uint16_t)(int)num); \
         } while (0)
         LOAD_BE16("pr_shirt_type",  prShirtType);
@@ -2599,14 +2607,14 @@ static void load_team_game_slice(const char *buf, int buflen, uint8_t *tg)
 #undef LOAD_BE16
     }
 
-    if (mjson_get_number(buf, buflen, "$.marked_player", &num) > 0)
+    if (mjson_get_long(buf, buflen, "$.marked_player", &num) > 0)
         BE_WRITE_U16(tg + offsetof(TeamGame, markedPlayer), (uint16_t)(int)num);
 
     load_str_at(buf, buflen, "$.team_name", tg,
                 offsetof(TeamGame, teamName), 17);
 
 #define LOAD_B(key, field) do { \
-        if (mjson_get_number(buf, buflen, "$." key, &num) > 0) \
+        if (mjson_get_long(buf, buflen, "$." key, &num) > 0) \
             tg[offsetof(TeamGame, field)] = (uint8_t)(int)num; \
     } while (0)
     LOAD_B("unk1",          unk1);
@@ -2634,7 +2642,7 @@ static void load_team_game_slice(const char *buf, int buflen, uint8_t *tg)
         i++;
 
 #define LOAD_PB(key, field) do { \
-            if (mjson_get_number(ps, psl, "$." key, &num) > 0) \
+            if (mjson_get_long(ps, psl, "$." key, &num) > 0) \
                 p[offsetof(struct PlayerInfo, field)] = (uint8_t)(int)(int8_t)(int)num; \
         } while (0)
         LOAD_PB("skip",            skip);
@@ -2798,7 +2806,7 @@ static void load_scene_slice(const char *scene_buf, int scene_buflen,
     memset(scene, 0, HIL_SCENE_SIZE);
 
     uint32_t off = 0;
-    double num = 0.0;
+    long num = 0.0;
 
 #if MJSON_ENABLE_NEXT
     const char *frames_arr = NULL;
@@ -2820,11 +2828,11 @@ static void load_scene_slice(const char *scene_buf, int scene_buflen,
             uint16_t cam_x = 0, cam_y = 0, t1 = 0, t2 = 0, anim = 0;
             int is_synthetic = 0;
 
-            if (mjson_get_number(fb, fl, "$.cam_x",          &num) > 0) cam_x = (uint16_t)num;
-            if (mjson_get_number(fb, fl, "$.cam_y",          &num) > 0) cam_y = (uint16_t)num;
-            if (mjson_get_number(fb, fl, "$.team_1_goals",   &num) > 0) t1   = (uint16_t)num;
-            if (mjson_get_number(fb, fl, "$.team_2_goals",   &num) > 0) t2   = (uint16_t)num;
-            if (mjson_get_number(fb, fl, "$.anim_patterns_state", &num) > 0) anim = (uint16_t)num;
+            if (mjson_get_long(fb, fl, "$.cam_x",          &num) > 0) cam_x = (uint16_t)num;
+            if (mjson_get_long(fb, fl, "$.cam_y",          &num) > 0) cam_y = (uint16_t)num;
+            if (mjson_get_long(fb, fl, "$.team_1_goals",   &num) > 0) t1   = (uint16_t)num;
+            if (mjson_get_long(fb, fl, "$.team_2_goals",   &num) > 0) t2   = (uint16_t)num;
+            if (mjson_get_long(fb, fl, "$.anim_patterns_state", &num) > 0) anim = (uint16_t)num;
             {
                 int bval = 0;
                 if (mjson_get_bool(fb, fl, "$._synthetic_no_frame_marker",
@@ -2861,11 +2869,11 @@ static void load_scene_slice(const char *scene_buf, int scene_buflen,
                     int sl = s_vlen;
 
                     uint32_t s_idx = 0, s_x = 0, s_y = 0;
-                    if (mjson_get_number(sb, sl, "$.index", &num) > 0)
+                    if (mjson_get_long(sb, sl, "$.index", &num) > 0)
                         s_idx = (uint32_t)num & 0xFFFu;
-                    if (mjson_get_number(sb, sl, "$.x", &num) > 0)
+                    if (mjson_get_long(sb, sl, "$.x", &num) > 0)
                         s_x = (uint32_t)num & 0x3FFu;
-                    if (mjson_get_number(sb, sl, "$.y", &num) > 0)
+                    if (mjson_get_long(sb, sl, "$.y", &num) > 0)
                         s_y = (uint32_t)num & 0x3FFu;
                     if (off + 4 > HIL_SCENE_SIZE) goto sprites_done;
                     uint32_t packed = (s_idx << 20) | (s_x << 10) | s_y;
@@ -2882,7 +2890,7 @@ static void load_scene_slice(const char *scene_buf, int scene_buflen,
 
     /* EOS sentinel */
     uint32_t eos_off = off;
-    if (mjson_get_number(scene_buf, scene_buflen, "$.eos_offset", &num) > 0) {
+    if (mjson_get_long(scene_buf, scene_buflen, "$.eos_offset", &num) > 0) {
         uint32_t hinted = (uint32_t)num;
         if (hinted >= 4 && hinted <= HIL_SCENE_SIZE)
             eos_off = hinted;
@@ -2959,7 +2967,7 @@ int16_t SaveJson_WriteHighlights(uint8_t *filename)
     PROF_END(scenes, "highlights-write");
 
     if (out.oom || !out.ptr) {
-        if (out.ptr) free(out.ptr);
+        if (out.ptr) swos_io_free(out.ptr);
         return 1;
     }
 
@@ -2968,10 +2976,10 @@ int16_t SaveJson_WriteHighlights(uint8_t *filename)
     PROF_END(write_file, "highlights-write");
 
 #ifdef SWOS_SAVE_FORMAT_JSON_PROFILE
-    fprintf(stderr, "[json-prof-highlights-write] file_size: %u bytes\n",
+    SWOS_DBG("[json-prof-highlights-write] file_size: %u bytes\n",
             (unsigned)out.len);
 #endif
-    free(out.ptr);
+    swos_io_free(out.ptr);
     if (r != 0) {
         _ShowFsErrorByCode((uint16_t)r);
         return 1;
@@ -3003,35 +3011,35 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
     PROF_END(read_file, "highlights-load");
 
 #ifdef SWOS_SAVE_FORMAT_JSON_PROFILE
-    fprintf(stderr, "[json-prof-highlights-load] file_size: %u bytes\n",
+    SWOS_DBG("[json-prof-highlights-load] file_size: %u bytes\n",
             (unsigned)src_size);
 #endif
 
     PROF_START(validate);
-    double version = 0.0;
-    if (mjson_get_number((const char *)src, (int)src_size,
+    long version = 0;
+    if (mjson_get_long((const char *)src, (int)src_size,
                          "$.schema_version", &version) <= 0 ||
         (int)version != SAVE_JSON_SCHEMA_VERSION) {
-        free(src); return 1;
+        swos_io_free(src); return 1;
     }
     char kind[16] = {0};
     if (mjson_get_string((const char *)src, (int)src_size,
                          "$.file_kind", kind, sizeof(kind)) <= 0 ||
         strcmp(kind, KIND_HIGHLIGHTS) != 0) {
-        free(src); return 1;
+        swos_io_free(src); return 1;
     }
     PROF_END(validate, "highlights-load");
 
     string_pool_reset();
-    double num = 0.0;
+    long num = 0.0;
 
     HilFileHeader *hdr = (HilFileHeader *)hilFileBuffer;
 
     PROF_START(header);
-    if (mjson_get_number((const char *)src, (int)src_size,
+    if (mjson_get_long((const char *)src, (int)src_size,
                          "$.signature", &num) > 0)
         BE_WRITE_U32((uint8_t *)&hdr->signature, (uint32_t)num);
-    if (mjson_get_number((const char *)src, (int)src_size,
+    if (mjson_get_long((const char *)src, (int)src_size,
                          "$.max_size", &num) > 0)
         BE_WRITE_U32((uint8_t *)&hdr->max_size,  (uint32_t)num);
 
@@ -3063,13 +3071,13 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
      * highlights_menu.c so both paths converge on host-native
      * fields ready for the game to read). */
     uint16_t num_goals = 0;
-    if (mjson_get_number((const char *)src, (int)src_size,
+    if (mjson_get_long((const char *)src, (int)src_size,
                          "$.num_goals", &num) > 0) num_goals = (uint16_t)num;
     hdr->num_goals = num_goals;
     hilNumGoals    = num_goals;
 
 #define HDR_U16(key, field) do { \
-        if (mjson_get_number((const char *)src, (int)src_size, \
+        if (mjson_get_long((const char *)src, (int)src_size, \
                              "$." key, &num) > 0) \
             hdr->field = (uint16_t)num; \
     } while (0)
@@ -3106,7 +3114,7 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
     }
     PROF_END(scenes, "highlights-load");
 
-    free(src);
+    swos_io_free(src);
 
     PROF_END(total, "highlights-load");
     return 0;
@@ -3168,11 +3176,11 @@ static int16_t write_tactics_buf(uint8_t *filename, const uint8_t *src)
                  (unsigned)src[offsetof(TeamTactics, ballOutOfPlayTactics)]);
 
     if (out.oom || !out.ptr) {
-        if (out.ptr) free(out.ptr);
+        if (out.ptr) swos_io_free(out.ptr);
         return 1;
     }
     int16_t r = _WriteFile(filename, (uint8_t *)out.ptr, (uint32_t)out.len);
-    free(out.ptr);
+    swos_io_free(out.ptr);
     if (r != 0) {
         _ShowFsErrorByCode((uint16_t)r);
         return 1;
@@ -3191,14 +3199,14 @@ static int16_t write_tactics_buf(uint8_t *filename, const uint8_t *src)
                 if (scratch[i] != src[i]) {
                     if (mismatches < 20) {
                         if (first == (size_t)-1) first = i;
-                        fprintf(stderr,
+                        SWOS_DBG(
                                 "[json-verify-tactics] mismatch at +%u: loaded=0x%02X saved=0x%02X\n",
                                 (unsigned)i, scratch[i], src[i]);
                     }
                     mismatches++;
                 }
             }
-            fprintf(stderr,
+            SWOS_DBG(
                     "[json-verify-tactics] %zu mismatches across %u bytes (first at +%zu)\n",
                     mismatches, (unsigned)SAVE_TAC_DATA_SIZE, first);
         }
@@ -3210,8 +3218,8 @@ static int16_t write_tactics_buf(uint8_t *filename, const uint8_t *src)
 
 static int16_t load_tactics_buf(const char *src, int src_size, uint8_t *dst)
 {
-    double version = 0.0;
-    if (mjson_get_number(src, src_size, "$.schema_version", &version) <= 0 ||
+    long version = 0;
+    if (mjson_get_long(src, src_size, "$.schema_version", &version) <= 0 ||
         (int)version != SAVE_JSON_SCHEMA_VERSION)
         return 1;
 
@@ -3233,7 +3241,7 @@ static int16_t load_tactics_buf(const char *src, int src_size, uint8_t *dst)
     /* 10 × 35-byte position arrays */
     for (int i = 0; i < 10; i++) {
         char path[64];
-        snprintf(path, sizeof(path), "$.player_positions[%d]", i);
+        swos_io_snprintf(path, sizeof(path), "$.player_positions[%d]", i);
         load_bytes_at(src, src_size, path,
                       dst, offsetof(TeamTactics, positions)
                             + (size_t)i * sizeof(PlayerPositions),
@@ -3243,8 +3251,8 @@ static int16_t load_tactics_buf(const char *src, int src_size, uint8_t *dst)
     load_bytes_at(src, src_size, "$.unk_table",
                   dst, offsetof(TeamTactics, unkTable), 10);
 
-    double num = 0.0;
-    if (mjson_get_number(src, src_size, "$.ball_out_of_play_tactics", &num) > 0)
+    long num = 0.0;
+    if (mjson_get_long(src, src_size, "$.ball_out_of_play_tactics", &num) > 0)
         dst[offsetof(TeamTactics, ballOutOfPlayTactics)] = (uint8_t)(int)num;
 
     return 0;
@@ -3266,6 +3274,6 @@ int16_t SaveJson_LoadTactics(uint8_t *filename, uint8_t *dst, uint32_t dst_capac
         return 1;
 
     int16_t r = load_tactics_buf((const char *)src, (int)src_size, dst);
-    free(src);
+    swos_io_free(src);
     return r;
 }

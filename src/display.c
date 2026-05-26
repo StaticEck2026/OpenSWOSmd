@@ -5,8 +5,7 @@
  */
 #include "display.h"
 #include "game_types.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "swos_types.h"
 #include <string.h>
 
 /* Custom chip base pointer — set once, used by all HW register access */
@@ -110,18 +109,28 @@ static void copper_write_ptr(uint8_t *entry, uint32_t ptr)
 {
     uint16_t hi = (uint16_t)(ptr >> 16);
     uint16_t lo = (uint16_t)(ptr);
-    /* On Amiga: m68k inline asm forced word-sized writes for live copper.
-     * On the SDL host the copper list is just a buffer in main RAM, no DMA
-     * is racing it, so plain volatile stores are fine. */
+#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+    /* Amiga: force real move.w instructions — GCC's volatile uint16_t store
+     * can decompose into byte-level move.b pairs which corrupt the live
+     * copper list. */
+    __asm__ volatile ("move.w %0,2(%1)" : : "d"(hi), "a"(entry) : "memory");
+    __asm__ volatile ("move.w %0,6(%1)" : : "d"(lo), "a"(entry) : "memory");
+#else
+    /* SDL host: copper list is just a buffer in main RAM, plain stores fine. */
     *(volatile uint16_t *)(entry + 2) = hi;
     *(volatile uint16_t *)(entry + 6) = lo;
+#endif
 }
 
 /* Helper: write a 16-bit word to a copper list buffer address.
  * Forces a move.w instruction on Amiga; plain store on SDL host. */
 static void copper_write_word(uint8_t *addr, uint16_t val)
 {
+#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+    __asm__ volatile ("move.w %0,(%1)" : : "d"(val), "a"(addr) : "memory");
+#else
     *(volatile uint16_t *)addr = val;
+#endif
 }
 
 /* ================================================================

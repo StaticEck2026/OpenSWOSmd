@@ -65,7 +65,16 @@ extern TeamGeneralInfo bottomTeamData;
 extern Sprite          ballSprite;
 extern Sprite          goalie1Sprite;
 extern Sprite          goalie2Sprite;
+#ifdef SWOS_SDL_BUILD
 extern Sprite         *teamSpritesTable[];
+#else
+/* On Amiga the unified `teamSpritesTable` doesn't exist — the BSS
+ * carries team1 and team2 as separate adjacent arrays. SDL aliases
+ * both into one 22-entry slice via sprite_data.c, but on Amiga we
+ * just dispatch by index. */
+extern Sprite         *team1SpritesTable[11];
+extern Sprite         *team2SpritesTable[11];
+#endif
 
 extern uint8_t  pl1Fire;
 extern uint8_t  pl2Fire;
@@ -340,7 +349,12 @@ static void __attribute__((noinline)) handleBreakCameraMode(TeamGeneralInfo *a6)
         if (injuriesForever != 0)
             break;
         for (i = 0; i < 22; i++) {
+#ifdef SWOS_SDL_BUILD
             a1 = teamSpritesTable[i];
+#else
+            a1 = (i < 11) ? team1SpritesTable[i]
+                          : team2SpritesTable[i - 11];
+#endif
             if (gameState != ST_PLAYERS_TO_INITIAL_POSITIONS &&
                 gameState != ST_PENALTY &&
                 gameState != ST_PENALTIES) {

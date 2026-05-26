@@ -37,7 +37,7 @@ static inline DIYTeamStats *diy_standings_row_from_raw(uint8_t *compRaw, int idx
  * layout (cupTeamIds at its offset, +51*2 bytes into cupTeamIds) so
  * it adjusts automatically for 64-bit struct growth — replaces the
  * hardcoded `+ 0x2B4` byte literal that's wrong by 8 on 64-bit. */
-#include <stddef.h>
+#include "swos_types.h"
 #define DIY_STANDINGS_OFFSET \
     (offsetof(DIYCompetitionEx, cupTeamIds) + 51 * sizeof(uint16_t))
 

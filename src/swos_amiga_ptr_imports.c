@@ -11,7 +11,7 @@
  * diyStage1LegsStrTab, savedRandStatePtr) reference symbols not yet
  * ported and stay as zero stubs in swos_amiga_data_stubs.c.
  */
-#include <stdint.h>
+#include "swos_types.h"
 
 /* topSkillLettersEven/Odd — pointer tables that use base+offset syntax
  * in SWOS2.s (e.g. `dc.l aTspvhcfstpvhcf+$7`). The master string
@@ -293,7 +293,7 @@ extern char diyPitchTypeOrSeason_1[];
 extern char diyTournamentEndMonthPage[];
 extern char diyTournamentStartMonthPage[];
 extern char diyTournamentUseSeasonalPitchEffective[];
-extern char dryPalette[];
+extern uint16_t dryPalette[3];
 extern char ecQualifyingGroup1Copy[];
 extern char ecQualifyingGroup2Copy[];
 extern char ecQualifyingGroup3Copy[];
@@ -344,7 +344,7 @@ extern char fixtureSchedule9Teams[];
 extern char flipOnOff[];
 extern char friendlyCopy[];
 extern char friendly[];
-extern char frozenPalette[];
+extern uint16_t frozenPalette[3];
 extern char gameLength[];
 extern char gamePalette[];
 extern char goalScorerDist343[];
@@ -359,12 +359,12 @@ extern char goalScorerDist541[];
 extern char goalScorerDistAttack[];
 extern char goalScorerDistDefend[];
 extern char goalScorerDistSweep[];
-extern char hardPalette[];
+extern uint16_t hardPalette[3];
 extern char invitationTournamentCopy[];
 extern char menuMusic[];
 extern char menuPalette[];
-extern char muddyPalette[];
-extern char normalPalette[];
+extern uint16_t muddyPalette[3];
+extern uint16_t normalPalette[3];
 extern char northAmericaWorldCupQualificationCopy[];
 extern char northAmericanCupCopy[];
 extern char northAmericanCup[];
@@ -431,7 +431,7 @@ extern char skillBitRotOdd4[];
 extern char skillBitRotOdd5[];
 extern char skillBitRotOdd6[];
 extern char skillBitRotOdd7[];
-extern char softPalette[];
+extern uint16_t softPalette[3];
 extern char southAmericaWorldCupQualificationCopy[];
 extern char tacticPosMap0[];
 extern char tacticPosMap10[];
@@ -459,7 +459,7 @@ extern char trainingPosOrder6[];
 extern char trainingPosOrder7[];
 extern char uefaCupCopy[];
 extern char uefaCup[];
-extern char wetPalette[];
+extern uint16_t wetPalette[3];
 extern char worldCup2Copy[];
 extern char worldCupQualifyingGroup1Copy[];
 extern char worldCupQualifyingGroup2Copy[];
@@ -1257,7 +1257,7 @@ void *europeanCupsandNationalTeamCompetitionsAndQualifications[46] = {
     tourCopy,
     friendly,
     friendlyCopy,
-    0xFFFFFFFFu,
+    (void *)(uintptr_t)0xFFFFFFFFu,
 };
 void *nationalTeamCompetitionsAndQualifications1[39] = {
     worldCup,
@@ -1298,7 +1298,7 @@ void *nationalTeamCompetitionsAndQualifications1[39] = {
     oceaniaWorldCupQualificationCopy,
     invitationTournamentCopy,
     tourCopy,
-    0xFFFFFFFFu,
+    (void *)(uintptr_t)0xFFFFFFFFu,
 };
 /* Each Amiga euroCupQual* "group seed list" table is a sequence of
  * 8-byte entries plus a 4-byte 0xFFFFFFFF terminator. Per SWOS2.s

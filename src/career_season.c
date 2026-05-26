@@ -9,7 +9,6 @@
  */
 
 #include "career_season.h"
-#include <stdio.h>
 #include "career_eurocups.h"
 #include "career_init.h"
 #include "career_status.h"

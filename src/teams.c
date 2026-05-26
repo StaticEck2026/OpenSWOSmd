@@ -5,6 +5,7 @@
  */
 #include "teams.h"
 #include "career_teams.h"
+#include "endian_helpers.h"  /* BE_READ_U16 / PACK_BE_U16 */
 #include "file_io.h"
 #include "deterministic.h"
 #include "menus.h"

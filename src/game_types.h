@@ -12,18 +12,10 @@
 #ifndef GAME_TYPES_H
 #define GAME_TYPES_H
 
-/* ---- Integer types (no <stdint.h> per project convention) ---- */
-typedef unsigned char  uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
-typedef signed char    int8_t;
-typedef short          int16_t;
-typedef int int32_t;
-/* stdint.h pulled in for UINTPTR_MAX (used by 32/64-bit size_check
- * branches below). The typedefs above predate this and stay for
- * project-style consistency; stdint.h's matching typedefs are
- * idempotent. */
-#include <stdint.h>
+/* All fixed-width integer types (uint8_t..uint64_t, intN_t, uintptr_t,
+ * size_t) come from swos_types.h. On hosted builds it pulls in
+ * <stdint.h>/<stddef.h>; on Amiga it provides manual typedefs. */
+#include "swos_types.h"
 
 /* ---- Forward declarations ---- */
 typedef struct Sprite Sprite;

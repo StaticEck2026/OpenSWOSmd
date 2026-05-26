@@ -19,10 +19,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+/* Amiga m68k toolchain has no float.h or math.h, so the JSON-double
+ * emitter (mjson_print_dbl) and its isinf/isnan helpers are stubbed
+ * out below. Save files only contain integers, so this never bites
+ * the production code path. */
+#if !defined(__m68k__) && !defined(__amigaos__) && !defined(__amigaos4__)
 #include <float.h>
 #include <math.h>
+#define SWOS_MJSON_HAVE_DOUBLES 1
+#endif
 
 #include "mjson.h"
+#include <string.h>
+
+/* The Amiga m68k toolchain ships an incomplete <string.h> that
+ * declares memcpy/memset but not memcmp/strlen/strncmp. GCC then
+ * falls back to its `int(...)` built-in signature, which doesn't
+ * match the real size_t parameter and triggers builtin-mismatch
+ * warnings (or errors with -Werror). Declare them explicitly here
+ * so both ports see the same prototypes. */
+#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+extern size_t strlen(const char *s);
+extern int    memcmp(const void *a, const void *b, size_t n);
+extern int    strncmp(const char *a, const char *b, size_t n);
+#endif
 
 #if defined(_MSC_VER)
 #define alloca(x) _alloca(x)
@@ -34,7 +54,11 @@
 #define isnan(x) _isnan(x)
 #endif
 
+#ifdef SWOS_MJSON_HAVE_DOUBLES
 static double mystrtod(const char *str, const char **end);
+#endif
+static long   mystrtol(const char *str, const char **end);
+static int    is_digit(int c);
 
 static int mjson_esc(int c, int esc) {
   const char *p, *esc1 = "\b\f\n\r\t\\\"", *esc2 = "bfnrt\\\"";
@@ -111,7 +135,7 @@ int mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
           tok = MJSON_TOK_FALSE;
         } else if (c == '-' || ((c >= '0' && c <= '9'))) {
           const char *end = NULL;
-          mystrtod(&s[i], &end);
+          mystrtol(&s[i], &end);
           if (end != NULL) i += (int) (end - &s[i] - 1);
           tok = MJSON_TOK_NUMBER;
         } else if (c == '"') {
@@ -181,7 +205,11 @@ struct msjon_get_data {
   int tok;              // Returned token
 };
 
+/* Only mjson's #if 0 debug printf blocks use stdio. Amiga m68k toolchain
+ * doesn't ship <stdio.h>, so guard the include. */
+#if !defined(__m68k__) && !defined(__amigaos__) && !defined(__amigaos4__)
 #include <stdio.h>
+#endif
 
 static int plen1(const char *s) {
   int i = 0, n = 0;
@@ -222,7 +250,7 @@ static int mjson_get_cb(int tok, const char *s, int off, int len, void *ud) {
     if (d->d1 == d->d2) d->obj = off;
     if (d->d1 == d->d2 && tok == '[' && d->path[d->pos] == '[') {
       d->i1 = 0;
-      d->i2 = (int) mystrtod(&d->path[d->pos + 1], NULL);
+      d->i2 = (int) mystrtol(&d->path[d->pos + 1], NULL);
       if (d->i1 == d->i2) {
         while (d->path[d->pos] && d->path[d->pos] != ']') d->pos++;
         if (d->path[d->pos] == ']') d->pos++;
@@ -281,6 +309,37 @@ int mjson_find(const char *s, int n, const char *jp, const char **tp, int *tl) {
   return data.tok;
 }
 
+/* Integer-only number parser. Replaces mystrtod for any consumer that
+ * doesn't need a fractional part — which is all SWOS save data. The
+ * Amiga m68k toolchain has no `<math.h>` and the bare build is linked
+ * with `-nostdlib`, so soft-float runtime calls like `__floatsidf` /
+ * `__muldf3` / `__fixdfsi` are unresolved. Keeping the JSON pipeline
+ * on `long` arithmetic avoids pulling those in. */
+static long mystrtol(const char *str, const char **end) {
+  long n = 0;
+  int sign = 1;
+  const char *p = str;
+  while (*p == ' ' || *p == '\t') p++;
+  if (*p == '-') { sign = -1; p++; }
+  else if (*p == '+') p++;
+  while (is_digit(*p)) {
+    n = n * 10 + (*p - '0');
+    p++;
+  }
+  if (end) *end = p;
+  return sign < 0 ? -n : n;
+}
+
+int mjson_get_long(const char *s, int len, const char *path, long *v) {
+  const char *p;
+  int tok, n;
+  if ((tok = mjson_find(s, len, path, &p, &n)) == MJSON_TOK_NUMBER) {
+    if (v != NULL) *v = mystrtol(p, NULL);
+  }
+  return tok == MJSON_TOK_NUMBER ? 1 : 0;
+}
+
+#ifdef SWOS_MJSON_HAVE_DOUBLES
 int mjson_get_number(const char *s, int len, const char *path, double *v) {
   const char *p;
   int tok, n;
@@ -289,6 +348,7 @@ int mjson_get_number(const char *s, int len, const char *path, double *v) {
   }
   return tok == MJSON_TOK_NUMBER ? 1 : 0;
 }
+#endif
 
 int mjson_get_bool(const char *s, int len, const char *path, int *v) {
   int tok = mjson_find(s, len, path, NULL, NULL);
@@ -546,6 +606,7 @@ int mjson_print_int(mjson_print_fn_t fn, void *fnd, int v, int s) {
   return mjson_print_long(fn, fnd, s ? (long) v : (long) (unsigned) v, s);
 }
 
+#ifdef SWOS_MJSON_HAVE_DOUBLES
 static int addexp(char *buf, int e, int sign) {
   int n = 0;
   buf[n++] = 'e';
@@ -616,6 +677,13 @@ int mjson_print_dbl(mjson_print_fn_t fn, void *fnd, double d, int width) {
   buf[s + n] = '\0';
   return fn(buf, s + n, fnd);
 }
+#else  /* !SWOS_MJSON_HAVE_DOUBLES — Amiga: no math.h, JSON save files
+        * only contain integers so the emitter is dead code. */
+int mjson_print_dbl(mjson_print_fn_t fn, void *fnd, double d, int width) {
+  (void)fnd; (void)d; (void)width;
+  return fn("0", 1, fnd);
+}
+#endif
 
 int mjson_print_str(mjson_print_fn_t fn, void *fnd, const char *s, int len) {
   int i, n = fn("\"", 1, fnd);
@@ -737,6 +805,7 @@ static int is_digit(int c) {
   return c >= '0' && c <= '9';
 }
 
+#ifdef SWOS_MJSON_HAVE_DOUBLES
 /* NOTE: strtod() implementation by Yasuhiro Matsumoto. */
 static double mystrtod(const char *str, const char **end) {
   double d = 0.0;
@@ -813,6 +882,7 @@ done:
   if (end) *end = a;
   return d;
 }
+#endif /* SWOS_MJSON_HAVE_DOUBLES */
 
 #if MJSON_ENABLE_MERGE
 int mjson_merge(const char *s, int n, const char *s2, int n2,

@@ -12,22 +12,26 @@
  */
 
 #include "swos_platform.h"
+#include "swos_types.h"
+#ifdef SWOS_SDL_BUILD
 #include "swos_asm.h"
 #include "platform_sdl.h"
 #include "display.h"
-
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#endif
 
 /* ---- Global panic code referenced from the C source ---------------- */
 volatile uint16_t panicReasonCode = 0;
 
-/* The C source declares `_panicReasonCode = &panicReasonCode` in main.c
- * (the SWOS_C version). We do not need it in the SDL build but keep
- * the symbol around for any reference. */
+/* The C source declares `_panicReasonCode = &panicReasonCode` in
+ * main.c on the Amiga port. SDL has its own main.c which doesn't, so
+ * we keep a definition here for SDL — gated to prevent a multi-def
+ * link error on Amiga where main.c is authoritative. */
+#ifdef SWOS_SDL_BUILD
 volatile uint16_t *_panicReasonCode = &panicReasonCode;
+#endif
 
 /* ---- The fake "Custom chip" surface --------------------------------- */
 /* display.c does:  volatile struct Custom *custom = (...)0xDFF000;
@@ -40,6 +44,7 @@ volatile uint16_t *_panicReasonCode = &panicReasonCode;
  *
  * Actually -- the simplest thing is to overwrite the pointer in
  * Platform_Init via a getter. We expose the storage here. */
+#ifdef SWOS_SDL_BUILD
 static struct Custom s_custom_storage;
 struct Custom *Platform_GetCustomStorage(void) { return &s_custom_storage; }
 
@@ -50,7 +55,9 @@ void Platform_RewireCustom(void)
     extern volatile struct Custom *custom;
     custom = (volatile struct Custom *)&s_custom_storage;
 }
+#endif
 
+#ifdef SWOS_SDL_BUILD
 /* The Amiga ISR (`_Int3TimerHandler`) calls into `_FadeOutTick` /
  * `_FadeInTick` which use the sentinel value FADE_SENTINEL (0x3E7) to
  * mean "no fade in progress". On Amiga the data section initialised
@@ -99,6 +106,7 @@ void Platform_PreArmIsrGlobals(void)
     paletteTable[5] = titleTextPalette;
     paletteTable[6] = titleLogoPalette;
 }
+#endif  /* SWOS_SDL_BUILD */
 
 /* ---- Forward declarations from the ported Amiga C ------------------- */
 /* SWOS.c defines `_start` (the original m68k entry). The hosted libc
@@ -110,12 +118,17 @@ extern void _swos_c_start(void);
 extern void _mainC(void);
 
 /* ---- Quit flag ------------------------------------------------------ */
-/* Defined in this file (was defined in SWOS2.s) — referenced by frontend.c. */
+/* SDL: defined here (was in SWOS2.s; SDL doesn't link SWOS2.s).
+ * Amiga: defined by Resload.s, included via resload_unit.s. */
+#ifdef SWOS_SDL_BUILD
 uint16_t g_quitToDos = 0;
+#else
+extern uint16_t g_quitToDos;
+#endif
 
 void Platform_RequestQuit(void)
 {
-#ifdef SWOS_DEBUG_AUTOSKIP
+#if defined(SWOS_DEBUG_AUTOSKIP) && defined(SWOS_SDL_BUILD)
     if (!g_quitToDos)
         fprintf(stderr, "[autoskip] Platform_RequestQuit: g_quitToDos was 0, now setting 1\n");
 #endif
@@ -143,7 +156,7 @@ extern uint16_t chooseTeamsResult;
 void Platform_CheckQuitRequest(void)
 {
     if (!g_quitToDos) return;
-#ifdef SWOS_DEBUG_AUTOSKIP
+#if defined(SWOS_DEBUG_AUTOSKIP) && defined(SWOS_SDL_BUILD)
     static int once;
     if (!once) {
         once = 1;
@@ -156,12 +169,12 @@ void Platform_CheckQuitRequest(void)
 }
 
 /* ---- _startShim ----------------------------------------------------- */
-/* Called from main.c. The Amiga version did stack-pointer dancing; we
- * just call straight through. We deliberately SKIP _start() (the Amiga
- * hardware-takeover routine) on SDL -- it pokes raw chip-register
- * addresses that segfault on a hosted target. The work it did
- * (clearing scratch buffers, picking initial palettes) is harmless to
- * skip because all those buffers live in BSS-zero memory. */
+/* Called from main.c. On Amiga the original asm version was in
+ * swos2_unit.s; here we provide it as C now that SWOS2.s is retired.
+ * The full Amiga sequence is _swos_c_start() -> _mainC(); SDL skips
+ * _swos_c_start() because it pokes raw chip-register addresses that
+ * segfault on a hosted target. */
+#ifdef SWOS_SDL_BUILD
 void _startShim(void)
 {
     /* Re-point `custom` (defined in display.c with a 0xDFF000 initializer)
@@ -172,6 +185,39 @@ void _startShim(void)
 
     _mainC();
 }
+#else
+/* Amiga: switch to our own stack before running _swos_c_start /
+ * _mainC. Mirrors the original SWOS2.s _startShim which reserved
+ * `stackSpace: ds.b 8192` then `movea.l #stackTop, sp`. Without this,
+ * we run on DOS's default task stack (typically 4 KB) and the moment
+ * a Level-3 VBlank interrupt nests into the deep `_Int3TimerHandler`
+ * C call we blow the stack — that's the `Software Failure 8000 000B`
+ * (AN_StackProbe with the leading `01` masked off when ORed against
+ * AT_DeadEnd). 16 KB is comfortable headroom for the worst-case
+ * nested-ISR + drawing call depth. */
+extern uint32_t S_SavedSP;   /* Resload.s — saves caller's SP for return */
+
+#define SWOS_STACK_BYTES 16384u
+/* File-scope (not static) so the symbol name lands in the .o symbol
+ * table for the naked-function inline asm below to reference. */
+uint8_t s_swos_stack[SWOS_STACK_BYTES] __attribute__((aligned(4)));
+
+__attribute__((naked, used))
+void _startShim(void)
+{
+    __asm__ volatile (
+        "move.l  %%sp,S_SavedSP            \n"
+        "lea     s_swos_stack+%c0,%%sp     \n"
+        "jsr     _swos_c_start             \n"
+        "jsr     _mainC                    \n"
+        "jsr     _ExitToDos                \n"
+        "movea.l S_SavedSP,%%sp            \n"
+        "moveq   #0,%%d0                   \n"
+        "rts                               \n"
+        : : "i"(SWOS_STACK_BYTES)
+    );
+}
+#endif
 
 /* ===================================================================
  * Stubs for the small remaining set of Amiga symbols that have no
@@ -183,14 +229,28 @@ void _startShim(void)
  * we must NOT redefine them here.
  * =================================================================== */
 
-/* ---- VBR (vector base register) shadow ------------------------------ */
+/* ---- VBR (vector base register) shadow ------------------------------
+ * On Amiga S_VBR is defined by Resload.s (included via resload_unit.s),
+ * so the SDL-side stub must NOT collide with it. */
+#ifdef SWOS_SDL_BUILD
 uint32_t S_VBR = 0;
+#endif
+
 
 /* ---- Pre-allocated cache (was set up by the loader pre-takeover) ----
  * The core+menu precache lists total ~281 KB of raw file data across
  * ~21 entries (each +48 B of node header); in-game loads pile on more.
  * 1 MiB gives comfortable headroom. */
+/* Asset cache pre-allocation. SDL has unlimited RAM; Amiga has at
+ * most ~8 MB fast and we're already burning a chunk on BSS. 256 KB
+ * is enough for the core+menu precache (~281 KB raw with ~21 node
+ * headers — close fit but the asset_loader.c manages incremental
+ * eviction). */
+#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+#define EARLY_CACHE_BYTES (256u * 1024u)
+#else
 #define EARLY_CACHE_BYTES (1024u * 1024u)
+#endif
 static uint8_t s_early_cache[EARLY_CACHE_BYTES];
 uint8_t *g_earlyAllocCacheMem = s_early_cache;
 uint32_t g_earlyAllocCacheSize = EARLY_CACHE_BYTES;

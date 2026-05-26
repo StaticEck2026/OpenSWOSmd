@@ -28,7 +28,7 @@
 #ifndef SWOS_ENDIAN_HELPERS_H
 #define SWOS_ENDIAN_HELPERS_H
 
-#include <stdint.h>
+#include "swos_types.h"
 
 #if defined(__BIG_ENDIAN__) || \
     (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__) || \

@@ -1208,7 +1208,7 @@ void _DrawPlayerEntries(MenuEntry *a5) {
     MenuEntry *posE = numE + 1;
     {
         uint16_t posField = (playerPf->positionAndFace & 0xE0) >> 3;
-        posE->fg = playerPositionsStringTable[posField >> 2];
+        posE->fg = (uintptr_t)playerPositionsStringTable[posField >> 2];
         posE->y = a5->y;
     }
 
