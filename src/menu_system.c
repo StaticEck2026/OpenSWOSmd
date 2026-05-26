@@ -423,22 +423,41 @@ void _BlitterCopyOverlayToScreen(void)
     while (custom->dmaconr & (1u << 14)) {}
     custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 #else
-    BLT_W(custom->bltamod, 0);
-    BLT_W(custom->bltdmod, 0);
-    /* Set destination to current frontbuffer */
-    BLT_L(custom->bltdpt, frontbufferBasePtr);
-    BLT_L(custom->bltapt, srcAddr);
-    /* Start blit */
-    BLT_W(custom->bltsize, BLTSIZE_OVERLAY_PANEL);
-    /* Enable blitter DMA */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    /* OCS: original asm did a single top-panel-only blit
+     * (BLTSIZE_OVERLAY_PANEL = 30 visible rows). That was enough on the
+     * original m68k binary because the rest of the screen was
+     * background-only and the foreground sprites/items were drawn into
+     * the alt buffer the next frame anyway. On our port the menu
+     * foreground sprite (e.g. SWOS title logo, rows 12..87) lives well
+     * past row 30 and is only drawn ONCE per _DrawMenu, so the alt
+     * buffer never gets it — and the user sees the bottom half of the
+     * logo flicker on/off each VBlank swap. Sync the whole screen
+     * per-plane, matching the AGA path. 4 blits of 272 lines x 22 words
+     * each = full interleaved frame copy. */
+    BLT_W(custom->bltamod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
+    BLT_W(custom->bltdmod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
+    {
+        uint8_t *srcPlane = (uint8_t *)srcAddr;
+        uint8_t *dstPlane = (uint8_t *)frontbufferBasePtr;
+        int16_t plane;
+        for (plane = NUM_PLANES_MINUS1; plane >= 0; plane--)
+        {
+            custom->dmacon = (uint16_t)DMACON_BLT_ON;
+            while (custom->dmaconr & (1u << 14)) {}
+            custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
-    /* Wait for blit to finish (dummy read + busy-wait) */
+            BLT_L(custom->bltapt, (uint32_t)srcPlane);
+            BLT_L(custom->bltdpt, (uint32_t)dstPlane);
+            BLT_W(custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN);
+            srcPlane += PLANE_STRIDE;
+            dstPlane += PLANE_STRIDE;
+        }
+    }
+    /* Wait for last blit, then disable blitter DMA */
+    custom->dmacon = (uint16_t)DMACON_BLT_ON;
     (void)(custom->dmaconr & (1u << 14));
     while (custom->dmaconr & (1u << 14))
         ;
-
-    /* Disable blitter DMA */
     custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Reset blit size */

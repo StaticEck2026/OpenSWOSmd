@@ -25,86 +25,57 @@ void _DetachOSDisplay(void)  {}
 
 /* The Int*Handler entries are direct m68k vector-table entries: the
  * CPU jumps here on a hardware interrupt and the function must return
- * via `rte`, not `rts`. The original SWOS2.s wrappers were pure asm
- * (`movem.l d0-d7/a0-a6,-(sp)` ... `movem.l (sp)+,...` / `rte`); GCC's
- * `__attribute__((interrupt))` is supposed to emit the same thing but
- * the alert we saw on first enable says it doesn't quite. Use naked
- * inline asm so the prologue/epilogue are exactly the m68k ABI. */
+ * via `rte`, not `rts`. Use GCC's `__attribute__((interrupt))` —
+ * matches the demoscene/Cracktro convention (cleaner than naked-asm
+ * wrappers, lets the compiler manage register save/restore).
+ *
+ * On m68k-amiga-elf 15.1.0 the `interrupt` attribute auto-saves the
+ * d0-d1/a0-a1 caller-clobbered scratch regs the body actually uses and
+ * emits `rte`. The body has full C semantics — it can call into other
+ * C functions (which save d2-d7/a2-a6 themselves per the ABI), read
+ * volatile globals, and write to memory-mapped registers. */
 #if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
 extern void _Int2KeyboardHandler(void);  /* worker in interrupts.c */
 extern void _Int3TimerHandler(void);     /* worker in interrupts.c */
 
-/* Restore real ISR bodies. The earlier `move.w #imm,0xDFF09C` form was
- * being assembled to an opcode the CPU interpreted as line-F — load
- * the custom base into A0 first and use displacement addressing (which
- * is what the original SWOS2.s asm did via A6=CUSTOM). */
+/* INTREQ acks. The double write is the demoscene/Cracktro workaround
+ * for the A4000-CPU prefetch-vs-Paula race that can otherwise leave the
+ * interrupt bit set and cause the same ISR to re-fire immediately. */
 
-__attribute__((naked, used))
+__attribute__((interrupt, used))
 void Int2KeyboardHandler(void)
 {
-    __asm__ volatile (
-        "movem.l %%d0-%%d7/%%a0-%%a6,-(%%sp)\n\t"
-        "jsr     _Int2KeyboardHandler\n\t"
-        "movem.l (%%sp)+,%%d0-%%d7/%%a0-%%a6\n\t"
-        "rte\n\t"
-        ::: "memory"
-    );
+    _Int2KeyboardHandler();
+    /* The body already acks via `custom->intreq = 8;` for the I/O Ports
+     * bit (CIA-A) — no extra ack needed here. */
 }
 
-__attribute__((naked, used))
+__attribute__((interrupt, used))
 void Int3TimerHandler(void)
 {
-    __asm__ volatile (
-        "movem.l %%d0-%%d7/%%a0-%%a6,-(%%sp)\n\t"
-        "jsr     _Int3TimerHandler\n\t"
-        "movem.l (%%sp)+,%%d0-%%d7/%%a0-%%a6\n\t"
-        "rte\n\t"
-        ::: "memory"
-    );
+    _Int3TimerHandler();
 }
 
-__attribute__((naked, used))
+__attribute__((interrupt, used))
 void Int3Handler(void)
 {
-    __asm__ volatile (
-        "movem.l %%d0-%%d7/%%a0-%%a6,-(%%sp)\n\t"
-        "jsr     _Int3TimerHandler\n\t"
-        "lea     0xDFF000,%%a0\n\t"
-        "move.w  #0x0070,0x9C(%%a0)\n\t"
-        "movem.l (%%sp)+,%%d0-%%d7/%%a0-%%a6\n\t"
-        "rte\n\t"
-        ::: "memory"
-    );
+    _Int3TimerHandler();
+    custom->intreq = 0x0070;   /* ack COPER + VERTB + BLIT */
+    custom->intreq = 0x0070;
 }
 
-/* Int4Handler and Int5Handler save A0 since they use it for the INTREQ
- * write. Without these pushes the interrupted code's A0 gets clobbered
- * to 0xDFF000 across the RTE — corrupted dos.library mid-call on Amiga
- * boot during the May 2026 bring-up. */
-__attribute__((naked, used))
+__attribute__((interrupt, used))
 void Int4Handler(void)
 {
-    __asm__ volatile (
-        "move.l  %%a0,-(%%sp)\n\t"
-        "lea     0xDFF000,%%a0\n\t"
-        "move.w  #0x0780,0x9C(%%a0)\n\t"   /* ack AUD0..AUD3 */
-        "movea.l (%%sp)+,%%a0\n\t"
-        "rte\n\t"
-        ::: "memory"
-    );
+    custom->intreq = 0x0780;   /* ack AUD0..AUD3 */
+    custom->intreq = 0x0780;
 }
 
-__attribute__((naked, used))
+__attribute__((interrupt, used))
 void Int5Handler(void)
 {
-    __asm__ volatile (
-        "move.l  %%a0,-(%%sp)\n\t"
-        "lea     0xDFF000,%%a0\n\t"
-        "move.w  #0x1800,0x9C(%%a0)\n\t"   /* ack RBF + DSKSYN */
-        "movea.l (%%sp)+,%%a0\n\t"
-        "rte\n\t"
-        ::: "memory"
-    );
+    custom->intreq = 0x1800;   /* ack RBF + DSKSYN */
+    custom->intreq = 0x1800;
 }
 
 #else  /* SDL — never installed as a vector */
