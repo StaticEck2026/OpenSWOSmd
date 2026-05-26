@@ -911,7 +911,7 @@ static void setPerformanceWarningCooldown(void) {
  */
 __attribute__((used, externally_visible))
 uint16_t _IsMajorInternationalTournament(uint8_t **outCtx) {
-    uint32_t curComp = (uint32_t)currentCompetitionPtr;
+    uintptr_t curComp = (uintptr_t)currentCompetitionPtr;
 
     /* Check primary competition against 9 tournament types */
     if (curComp == (uintptr_t)worldCup2Copy ||
@@ -928,7 +928,7 @@ uint16_t _IsMajorInternationalTournament(uint8_t **outCtx) {
     }
 
     /* Check secondary competition against 8 tournament types (no worldCup) */
-    uint32_t secComp = (uint32_t)secondaryCompetitionPtr;
+    uintptr_t secComp = (uintptr_t)secondaryCompetitionPtr;
     if (secComp == (uintptr_t)europeanChampionships2Copy ||
         secComp == (uintptr_t)copaAmericaCopy ||
         secComp == (uintptr_t)africanNationsCupCopy ||
@@ -1801,14 +1801,14 @@ void _UpdateBoardConfidenceModifiers(void) {
         if (team == worldCupQualifyingTeam || team == worldCupHostTeam)
             goto set_qual1_flag0;
 
-        uint32_t curComp = (uint32_t)currentCompetitionPtr;
+        uintptr_t curComp = (uintptr_t)currentCompetitionPtr;
         if (curComp < (uintptr_t)worldCupQualifyingGroup1Copy ||
             curComp > (uintptr_t)oceaniaWorldCupQualificationCopy)
             goto check_ec_qualifying;
 
         /* In WC qualifying: find team rank and determine qualifying slots */
         uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)competitionFileBuffer);
-        uint32_t comp = (uint32_t)currentCompetitionPtr;
+        uintptr_t comp = (uintptr_t)currentCompetitionPtr;
         uint16_t qualSlots;
 
         if (comp == (uintptr_t)northAmericaWorldCupQualificationCopy)
@@ -1851,7 +1851,7 @@ check_ec_qualifying:
         if (team == euroChampionshipQualTeam)
             goto set_qual1_flag1;
 
-        uint32_t curComp = (uint32_t)currentCompetitionPtr;
+        uintptr_t curComp = (uintptr_t)currentCompetitionPtr;
         if (curComp < (uintptr_t)ecQualifyingGroup1Copy ||
             curComp > (uintptr_t)ecQualifyingGroup8Copy)
             goto check_winners;
@@ -2043,7 +2043,7 @@ void _UpdateCareerReputationBonuses(void) {
 
     if (wonContinentalCup != 0) {
         /* Check if it's a major continental or minor */
-        uint32_t comp = (uint32_t)currentCompetitionPtr;
+        uintptr_t comp = (uintptr_t)currentCompetitionPtr;
         int8_t bonusVal;
         if (comp == (uintptr_t)europeanChampionships2Copy ||
             comp == (uintptr_t)copaAmericaCopy ||
