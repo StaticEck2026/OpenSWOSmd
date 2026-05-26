@@ -42,6 +42,7 @@
  */
 
 #include "edit_tactics.h"
+#include "endian_helpers.h"
 #include "menu_system.h"
 #include "string_utils.h"
 #include "file_io.h"
@@ -69,20 +70,20 @@ extern TeamTactics teamTacticsUSERD;
 extern TeamTactics teamTacticsUSERE;
 extern TeamTactics teamTacticsUSERF;
 
-extern uint32_t teamTacticsTable[];  /* pointer table indexed by chosenTactics */
+extern void *teamTacticsTable[];  /* pointer table indexed by chosenTactics */
 extern TeamTactics editTacticsCurrentTactics;  /* 370-byte tactics buffer */
 extern uint8_t savedCurrentTactics;        /* 370-byte saved tactics buffer */
 
 /* ---- Globals (defined in asm) ---- */
 extern uint16_t chosenTactics;
 extern uint16_t flipOnOff;
-extern uint32_t chooseTacticsTeamPtr;   /* stored as uint32_t, used as pointer */
+extern TeamFileEx *chooseTacticsTeamPtr;
 extern uint16_t selTeamNumber;
 extern uint16_t inEditTactics;
 extern uint16_t careerNumPlayers;
 extern uint16_t editTacticsNumPlayers;
 extern uint16_t editTacticsSelectedPairSlotIndex;
-extern uint32_t editTacticsSelectedPlayerMenuEntryPtr;
+extern MenuEntry *editTacticsSelectedPlayerMenuEntryPtr;
 extern uint16_t editTacticsSelectedPlayerNameIndex;
 extern uint16_t oldPlayerSkill;
 extern uint16_t newPlayerSkill;
@@ -91,7 +92,7 @@ extern uint16_t newPlayerSkill;
 extern uint16_t tacticsChangedFlag;
 extern uint8_t importTacticsMenu[];
 extern uint8_t selectedFilename[];
-extern uint32_t extension;              /* file extension from GetFilenameAndExtension */
+extern uintptr_t extension;              /* file extension from GetFilenameAndExtension */
 extern uint8_t importTacticsFilename;   /* filename buffer */
 
 /* ---- String literals (defined in asm) ---- */
@@ -121,7 +122,7 @@ extern uint16_t editTacticsDisableLittlePlayersAndBallDraw;
 extern uint16_t editTacticsTransitionActive;
 extern uint16_t editTacticsLastTick;
 extern int16_t editTacticsPlayerPositions[];    /* 12 entries: -1,0,1,...,10 */
-extern uint32_t editTacticsPlayerNumbers;       /* pointer stored as uint32_t */
+extern uintptr_t editTacticsPlayerNumbers;       /* uint8_t*-shaped pointer; retyped uintptr_t for 64-bit. See project_uint32_pointer_storage_trap.md. */
 extern int16_t playerAreas[];                   /* 35 entries: 0..34 */
 extern uint16_t menuControlsDirection;
 extern uint16_t menuControlsDirection2;
@@ -153,9 +154,9 @@ extern uint16_t editTacticsInputRepeatCounter;
 extern uint16_t editTacticsNearestSelectPitchWidth;
 
 /* ---- Globals for Chunk 88 ---- */
-extern uint32_t positionsTable[];       /* pointer table indexed by formation */
+extern void *positionsTable[];       /* pointer table indexed by formation */
 extern uint16_t editTacticsSelectedPlayerSlotIndex;
-extern uint32_t editTacticsSelectedPairMenuEntryPtr;
+extern MenuEntry *editTacticsSelectedPairMenuEntryPtr;
 extern uint16_t gameType;
 extern uint8_t playerPositions[];       /* player positions translation table (current team) */
 extern uint16_t _cGetPlayerAtIndexFileIdx;
@@ -190,12 +191,12 @@ __attribute__((used, externally_visible))
 void _ChooseTacticsInit(void)
 {
     _CheckIsTeamNational();
-    menuEntries[1].fg = (uint32_t)&teamTacticsUSERA;
-    menuEntries[2].fg = (uint32_t)&teamTacticsUSERB;
-    menuEntries[3].fg = (uint32_t)&teamTacticsUSERC;
-    menuEntries[4].fg = (uint32_t)&teamTacticsUSERD;
-    menuEntries[5].fg = (uint32_t)&teamTacticsUSERE;
-    menuEntries[6].fg = (uint32_t)&teamTacticsUSERF;
+    menuEntries[1].fg = (uintptr_t)&teamTacticsUSERA;
+    menuEntries[2].fg = (uintptr_t)&teamTacticsUSERB;
+    menuEntries[3].fg = (uintptr_t)&teamTacticsUSERC;
+    menuEntries[4].fg = (uintptr_t)&teamTacticsUSERD;
+    menuEntries[5].fg = (uintptr_t)&teamTacticsUSERE;
+    menuEntries[6].fg = (uintptr_t)&teamTacticsUSERF;
 }
 
 /* ================================================================
@@ -209,7 +210,7 @@ void _ChooseTacticsInit(void)
 __attribute__((used, externally_visible))
 void _ShowStandardChooseTacticsMenu(TeamFileEx *teamPtr)
 {
-    chooseTacticsTeamPtr = (uint32_t)teamPtr;
+    chooseTacticsTeamPtr = teamPtr;
     _ShowMenu(chooseTacticsMenu);
 
     if (chosenTactics != 0xFFFF) {
@@ -217,7 +218,7 @@ void _ShowStandardChooseTacticsMenu(TeamFileEx *teamPtr)
         _ShowMenu(editTacticsMenu);
     }
 
-    chooseTacticsTeamPtr = 0;
+    chooseTacticsTeamPtr = (TeamFileEx *)0;
 }
 
 /* ================================================================
@@ -231,11 +232,11 @@ void _ShowStandardChooseTacticsMenu(TeamFileEx *teamPtr)
 __attribute__((used, externally_visible))
 void _EditTacticsInit(void)
 {
-    TeamFileEx *teamEx = (TeamFileEx *)chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = chooseTacticsTeamPtr;
     _SetBenchPlayersNumbers(teamEx);
 
     uint16_t numPlayers;
-    if (selTeamNumber == 0xFFFF || *(uint16_t *)&teamEx->team.countryNumber != selTeamNumber) {
+    if (selTeamNumber == 0xFFFF || PACK_BE_U16(teamEx->team.countryNumber, teamEx->team.teamOrdinal) != selTeamNumber) {
         numPlayers = 16;
     } else {
         numPlayers = careerNumPlayers;
@@ -243,7 +244,7 @@ void _EditTacticsInit(void)
     editTacticsNumPlayers = numPlayers;
 
     editTacticsSelectedPairSlotIndex = 0xFFFF;
-    editTacticsSelectedPlayerMenuEntryPtr = 0;
+    editTacticsSelectedPlayerMenuEntryPtr = (MenuEntry *)0;
     editTacticsSelectedPlayerNameIndex = 0xFFFF;
 
     _EditTactics_CommitPlayerPositionsAndRecalcSkill();
@@ -379,10 +380,10 @@ void _SetBigCheckSprite(void)
     /* Determine which sprite to show */
     if (oldPlayerSkill > newPlayerSkill) {
         /* Skill decreased - show red X */
-        *(uint16_t *)&entry->fg = SPR_CHECK_BIG;
+        entry->fgWord = SPR_CHECK_BIG;
     } else {
         /* Skill increased - show green check */
-        *(uint16_t *)&entry->fg = SPR_NOT_CHECK_BIG;
+        entry->fgWord = SPR_NOT_CHECK_BIG;
     }
 
     /* Set bit 13 of stringFlags and make visible */
@@ -401,7 +402,7 @@ void _CopyCurrentTactics(void)
 {
     /* volatile: LTO with -Ofast may eliminate this copy because
      * teamTacticsTable[18] aliases editTacticsCurrentTactics. */
-    volatile uint8_t *src = (volatile uint8_t *)(uint32_t)teamTacticsTable[chosenTactics];
+    volatile uint8_t *src = (volatile uint8_t *)teamTacticsTable[chosenTactics];
     volatile uint8_t *dst = (volatile uint8_t *)&editTacticsCurrentTactics;
 
     for (int16_t i = 369; i >= 0; i--) {
@@ -419,7 +420,7 @@ void _CopyCurrentTactics(void)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void _ApplyCurrentEditedTactics(void)
 {
-    volatile uint8_t *dst = (volatile uint8_t *)(uint32_t)teamTacticsTable[chosenTactics];
+    volatile uint8_t *dst = (volatile uint8_t *)teamTacticsTable[chosenTactics];
     volatile uint8_t *src = (volatile uint8_t *)&editTacticsCurrentTactics;
 
     for (int16_t i = 369; i >= 0; i--) {
@@ -613,12 +614,23 @@ void _MarkSelectedTeamsTacticsChanged(void)
  * conversion table. Reads entries from the table until a negative
  * terminator is encountered.
  * ================================================================ */
-extern uint32_t skinAndHairColorConversionTable[];  /* array of pointers to conversion subtables */
+extern void *skinAndHairColorConversionTable[];  /* array of pointers to conversion subtables */
 
 __attribute__((used, externally_visible))
 void _FillSkinColorConversionTable(uint16_t skinColor, uint16_t *convertTable)
 {
     int16_t idx = (int16_t)(int8_t)(uint8_t)skinColor;  /* ext.w d0 */
+    /* Same 0xFF-sentinel guard as _ConvertColorTableToSkinColor: the
+     * skinAndHairColorConversionTable has only 3 entries (skin tones 0/1/2),
+     * so a face value of 0xFF (sign-extended to -1) reads
+     * skinAndHairColorConversionTable[-1] OOB, returns a garbage pointer,
+     * and the (idx,value) walk corrupts random memory — including the
+     * caller's convertTable, mapping shirt/shorts/socks/skin all to
+     * whatever happens to be there (we observed every player body part
+     * rendering as palette 0 except the eyes, which survived because
+     * the garbage walk didn't touch their palette index). */
+    if (idx < 0)
+        return;
     int16_t *subtable = (int16_t *)skinAndHairColorConversionTable[idx];
 
     for (;;) {
@@ -733,7 +745,7 @@ void _ImportTactics(void)
     }
 
     /* Mark team as changed */
-    TeamFileEx *teamEx = (TeamFileEx *)chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = chooseTacticsTeamPtr;
     teamEx->team.someFlag = 1;
     _MarkSelectedTeamsTacticsChanged();
     _CopyCurrentTacticName();
@@ -1347,12 +1359,12 @@ void _InitLittlePlayerSprites(void)
     _SaveCurrentTactics();
 
     /* Set up player numbers pointer */
-    TeamFileEx *teamEx = (TeamFileEx *)chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = chooseTacticsTeamPtr;
     uint8_t *playerNums = teamEx->team.playerNumbers;
     if (teamEx == &careerTeam) {
         playerNums = currentMatchPlayers;
     }
-    editTacticsPlayerNumbers = (uint32_t)playerNums;
+    editTacticsPlayerNumbers = (uintptr_t)playerNums;
 
     /* Convert dress colors into the little players color table */
     uint16_t stripesColor = _ConvertPlayerDressColor(
@@ -1416,7 +1428,7 @@ void _DrawLittlePlayersAndBall(void)
 
     _SortEditTacticsDrawOrderByY();
 
-    TeamFileEx *teamEx = (TeamFileEx *)chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = chooseTacticsTeamPtr;
     int16_t *posArr = editTacticsPlayerPositions;
     uint8_t *playerNums = (uint8_t *)editTacticsPlayerNumbers;
 
@@ -1521,7 +1533,7 @@ void _DrawEditTacticsHighlightedPlayerRoute(void)
 
     int16_t *areas = playerAreas;
     uint8_t *playerNums = (uint8_t *)editTacticsPlayerNumbers;
-    TeamFileEx *teamEx = (TeamFileEx *)chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = chooseTacticsTeamPtr;
 
     /* Get marked player's info */
     uint16_t markedIdx = markedPlayerNumber;
@@ -2015,7 +2027,7 @@ void _CopyTactics(void)
 {
     if (editTacticsTransitionActive == 0) {
         /* Set entry 4's bg color to pink */
-        setBgColorIdx(&menuEntries[4], COLOR_PINK_TO_BROWN);
+        menuEntries[4].bgColor = (menuEntries[4].bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN;
         _CallDrawMenuItem(&menuEntries[4]);
         _EditTacticsMenuSavePlayerPositions();
         _DrawPlayerNamesAndFaces();
@@ -2026,7 +2038,7 @@ void _CopyTactics(void)
         return;
     _CallDrawMenuItem(&menuEntries[2]);
     /* Restore entry 4's bg color to yellow-green */
-    setBgColorIdx(&menuEntries[4], COLOR_YELLOW_GREEN_BLK);
+    menuEntries[4].bgColor = (menuEntries[4].bgColor & 0xFFF0) | COLOR_YELLOW_GREEN_BLK;
     _SetCurrentEntry(COLOR_ORANGE_TO_BROWN);
     _CallDrawMenuItem(&menuEntries[4]);
     _EditTactics_CommitPlayerPositionsAndRecalcSkill();
@@ -2056,7 +2068,7 @@ uint8_t *_GetPlayerInfoBreakPosition(TeamFileEx *teamPtr, uint16_t requestedSlot
         uint8_t *positions = (uint8_t *)positionsTable[formIdx];
         slot = (uint8_t)(positions[requestedSlot] - 1);
     }
-    uint16_t teamNumber = *(uint16_t *)&teamPtr->team.countryNumber;
+    uint16_t teamNumber = PACK_BE_U16(teamPtr->team.countryNumber, teamPtr->team.teamOrdinal);
     uint8_t *player = _GetPlayerAtIndex(teamNumber, slot);
     *outSlot = slot;
     *outPlayerIndex = _cGetPlayerAtIndexFileIdx;
@@ -2116,7 +2128,7 @@ void _EditTactics_ClearPairId(uint16_t value)
 __attribute__((used, externally_visible))
 void _EditTactics_SwapPlayersInSlots(uint16_t slot1, uint16_t slot2)
 {
-    TeamFileEx *teamEx = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = chooseTacticsTeamPtr;
 
     /* Check if we need to do the GetPlayerAtIndex-based swap.
      * Skip when both slots are in the same category:
@@ -2133,7 +2145,7 @@ void _EditTactics_SwapPlayersInSlots(uint16_t slot1, uint16_t slot2)
     }
 
     if (doPlayerSwap) {
-        uint16_t teamNumber = *(uint16_t *)&teamEx->team.countryNumber;
+        uint16_t teamNumber = PACK_BE_U16(teamEx->team.countryNumber, teamEx->team.teamOrdinal);
         uint8_t *player1 = _GetPlayerAtIndex(teamNumber, slot1);
         PlayerFile *pf1 = (PlayerFile *)(player1 + 76);
         uint16_t fileIdx1 = _cGetPlayerAtIndexFileIdx;
@@ -2183,14 +2195,14 @@ void _EditTacticsCommon(MenuEntry *cur)
     uint16_t relIdx = cur->ordinal - menuEntries[29].ordinal + 1;
     uint16_t savedRelIdx = relIdx;
 
-    TeamFileEx *teamEx = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = chooseTacticsTeamPtr;
     uint8_t savedTactics = teamEx->team.tactics;
     teamEx->team.tactics = editTacticsCurrentTactics.ballOutOfPlayTactics;
 
     uint16_t slot, playerIndex;
     _GetPlayerInfoBreakPosition(teamEx, relIdx, &slot, &playerIndex);
 
-    teamEx = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    teamEx = chooseTacticsTeamPtr;
     teamEx->team.tactics = savedTactics;
     slot -= 1;
 
@@ -2198,7 +2210,7 @@ void _EditTacticsCommon(MenuEntry *cur)
         /* No previous selection - start new selection */
         editTacticsSelectedPairSlotIndex = slot;
         MenuEntry *entry = _CalcMenuEntryAddress(11 + savedRelIdx);
-        editTacticsSelectedPairMenuEntryPtr = (uint32_t)(uint32_t)entry;
+        editTacticsSelectedPairMenuEntryPtr = entry;
         _CallDrawMenuItem(entry);
         return;
     }
@@ -2206,7 +2218,7 @@ void _EditTacticsCommon(MenuEntry *cur)
     if (editTacticsSelectedPairSlotIndex == slot) {
         /* Same slot clicked again - cancel selection */
         editTacticsSelectedPairSlotIndex = 0xFFFF;
-        _CallDrawMenuItem((MenuEntry *)(uint32_t)editTacticsSelectedPairMenuEntryPtr);
+        _CallDrawMenuItem(editTacticsSelectedPairMenuEntryPtr);
         return;
     }
 
@@ -2230,7 +2242,7 @@ void _EditTacticsCommon(MenuEntry *cur)
     editTacticsSelectedPairSlotIndex = 0xFFFF;
 
     /* Redraw the selected pair entry and all pair entries */
-    _CallDrawMenuItem((MenuEntry *)(uint32_t)editTacticsSelectedPairMenuEntryPtr);
+    _CallDrawMenuItem(editTacticsSelectedPairMenuEntryPtr);
     _CallDrawMultipleItems(10, &menuEntries[29]);
 }
 
@@ -2251,14 +2263,14 @@ void _EditTacticsPlayerNamesCommon(MenuEntry *cur)
     /* Compute relative index: current entry vs menuEntries[11] */
     uint16_t relIdx = cur->ordinal - menuEntries[11].ordinal;
 
-    TeamFileEx *teamEx = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = chooseTacticsTeamPtr;
     uint8_t savedTactics = teamEx->team.tactics;
     teamEx->team.tactics = editTacticsCurrentTactics.ballOutOfPlayTactics;
 
     uint16_t slot, playerIndex;
     _GetPlayerInfoBreakPosition(teamEx, relIdx, &slot, &playerIndex);
 
-    teamEx = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    teamEx = chooseTacticsTeamPtr;
     teamEx->team.tactics = savedTactics;
 
     if ((int16_t)editTacticsSelectedPlayerNameIndex >= 0) {
@@ -2270,8 +2282,8 @@ void _EditTacticsPlayerNamesCommon(MenuEntry *cur)
             /* Different player - swap them */
             _EditTactics_SwapPlayersInSlots(
                 editTacticsSelectedPlayerSlotIndex, slot);
-            _SetBenchPlayersNumbers((TeamFileEx *)(uint32_t)chooseTacticsTeamPtr);
-            teamEx = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+            _SetBenchPlayersNumbers(chooseTacticsTeamPtr);
+            teamEx = chooseTacticsTeamPtr;
             teamEx->team.someFlag = 1;
             _EditTactics_CommitPlayerPositionsAndRecalcSkill();
             editTacticsSelectedPlayerNameIndex = 0xFFFF;
@@ -2284,8 +2296,8 @@ void _EditTacticsPlayerNamesCommon(MenuEntry *cur)
     editTacticsSelectedPlayerNameIndex = playerIndex;
     editTacticsSelectedPlayerSlotIndex = slot;
 
-    MenuEntry *prevEntry = (MenuEntry *)(uint32_t)editTacticsSelectedPlayerMenuEntryPtr;
-    editTacticsSelectedPlayerMenuEntryPtr = (uint32_t)(uint32_t)cur;
+    MenuEntry *prevEntry = editTacticsSelectedPlayerMenuEntryPtr;
+    editTacticsSelectedPlayerMenuEntryPtr = cur;
 
     if (prevEntry != (MenuEntry *)0) {
         _CallDrawMenuItem(prevEntry);
@@ -2357,7 +2369,7 @@ extern uint16_t editTeamsSecondaryShortsColTable[]; /* 16 word color table + at 
 extern uint16_t editTeamsSecondarySocksColTable[];  /* 16 word color table + at +0x16 */
 extern uint16_t shirtTypesTable[];       /* 4 entries of 8 words each (4 shirt types) */
 extern uint16_t shirtsIndexTable[];      /* 8 word entries (byte offsets into color table) */
-extern uint32_t playerPositionsStringTable[];       /* 8 string pointers */
+extern void *playerPositionsStringTable[];       /* 8 string pointers */
 
 /* EditTeamsGetPlayerPointer — return PlayerFile pointer for player N in selTeamsPtr */
 static PlayerFile *EditTeamsGetPlayerFileC(MenuEntry *entry)
@@ -2429,10 +2441,10 @@ static void MarkFirstKitShirtC(void)
     uint8_t shirtType = tf->prShirtType;
 
     for (int16_t i = 3; i >= 0; i--) {
-        *(uint16_t *)&e->bg = 9;  /* PINK_TO_BROWN_9 */
+        e->bgColor = 9;  /* PINK_TO_BROWN_9 */
         if ((uint8_t)i == shirtType)
-            *(uint16_t *)&e->bg = 10;  /* RED_10 */
-        e = (MenuEntry *)((uint8_t *)e - 56);
+            e->bgColor = 10;  /* RED_10 */
+        e = (MenuEntry *)((uint8_t *)e - MENUENTRY_STRIDE);
     }
 }
 
@@ -2444,10 +2456,10 @@ static void MarkSecondKitShirtC(void)
     uint8_t shirtType = tf->secShirtType;
 
     for (int16_t i = 3; i >= 0; i--) {
-        *(uint16_t *)&e->bg = 9;  /* PINK_TO_BROWN_9 */
+        e->bgColor = 9;  /* PINK_TO_BROWN_9 */
         if ((uint8_t)i == shirtType)
-            *(uint16_t *)&e->bg = 10;  /* RED_10 */
-        e = (MenuEntry *)((uint8_t *)e - 56);
+            e->bgColor = 10;  /* RED_10 */
+        e = (MenuEntry *)((uint8_t *)e - MENUENTRY_STRIDE);
     }
 }
 
@@ -2739,7 +2751,7 @@ void _EditTeamsChangePlayerFace(MenuEntry *entry)
     pf->positionAndFace = (posAndFace & 0xE7) | (uint8_t)(faceIdx << 3);
 
     /* Update menu entry sprite to show new face */
-    *(uint16_t *)&entry->fg = (uint16_t)(faceIdx + 186);  /* SPR_PL_FACE_WHITE_GUY */
+    entry->fgWord = (uint16_t)(faceIdx + 186);  /* SPR_PL_FACE_WHITE_GUY */
     _CallDrawMenuItem(entry);
 }
 
@@ -2755,10 +2767,10 @@ void _InitEditTeamsMenu(void)
     TeamFileEx *teamEx = (TeamFileEx *)&selTeamsPtr;
 
     /* Team name → entry 0 */
-    menuEntries[0].fg = (uint32_t)(uint8_t *)teamEx->team.teamName;
+    menuEntries[0].fg = (uintptr_t)(uint8_t *)teamEx->team.teamName;
 
     /* Coach name → entry at offset 0xA8 */
-    menuEntries[0xA8 / 56].fg = (uint32_t)(uint8_t *)teamEx->team.coachName;
+    menuEntries[0xA8 / 56].fg = (uintptr_t)(uint8_t *)teamEx->team.coachName;
 
     PrimaryKitColorConversionC();
     SecondaryKitColorConversionC();
@@ -2773,11 +2785,11 @@ void _InitEditTeamsMenu(void)
         PlayerFile *pf = &teamEx->players[15 - i];
         uint8_t posAndFace = pf->positionAndFace;
         uint16_t faceIdx = (posAndFace & 0x18) >> 3;
-        *(uint16_t *)&faceEntry->fg = (uint16_t)(faceIdx + 186);  /* SPR_PL_FACE_WHITE_GUY */
-        faceEntry = (MenuEntry *)((uint8_t *)faceEntry + 56);
+        faceEntry->fgWord = (uint16_t)(faceIdx + 186);  /* SPR_PL_FACE_WHITE_GUY */
+        faceEntry = (MenuEntry *)((uint8_t *)faceEntry + MENUENTRY_STRIDE);
 
-        nameEntry->fg = (uint32_t)(uint8_t *)pf->playerName;
-        nameEntry = (MenuEntry *)((uint8_t *)nameEntry + 56);
+        nameEntry->fg = (uintptr_t)(uint8_t *)pf->playerName;
+        nameEntry = (MenuEntry *)((uint8_t *)nameEntry + MENUENTRY_STRIDE);
     }
 }
 
@@ -2796,33 +2808,33 @@ void _EditTeamsPlayersBeforeDraw(MenuEntry *entry)
 
     /* Player number (shirt number) */
     uint8_t shirtNum = (uint8_t)pf->shirtNumber;
-    *(uint16_t *)&e->fg = (uint16_t)shirtNum;
+    e->fgWord = (uint16_t)shirtNum;
     e->y = y;
-    e = (MenuEntry *)((uint8_t *)e + 56);
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);
 
     /* Second entry — just set y */
     e->y = y;
-    e = (MenuEntry *)((uint8_t *)e + 56);
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);
 
     /* Position string */
     uint16_t posIdx = (posAndFace & 0xE0) >> 3;  /* extract top 3 bits, shift to word index */
-    e->fg = playerPositionsStringTable[posIdx / 4];
+    e->fg = (uintptr_t)playerPositionsStringTable[posIdx / 4];
     e->y = y;
-    e = (MenuEntry *)((uint8_t *)e + 56);
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);
 
     /* Hidden entries */
     e->isInvisible = 1;
     e->y = y;
-    e = (MenuEntry *)((uint8_t *)e + 56);
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);
 
     e->isInvisible = 1;
     e->y = y;
-    e = (MenuEntry *)((uint8_t *)e + 56);
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);
 
     e->isInvisible = 1;
     e->isInvisible = 1;  /* written twice in asm */
     e->y = y;
-    e = (MenuEntry *)((uint8_t *)e + 56);
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);
 
     /* Draw all 6 entries */
     _DrawMultipleItems(6, &menuEntries[0xC08 / 56]);
@@ -2898,11 +2910,36 @@ retry:
     if (_Asset_PromptInsertSaveDiskDf0(aEditCustomTeam) != 0)
         goto retry;
 
-    /* Write team file: size = teamCount * 684 + 2 (for the count word) */
+    /* Write team file: size = teamCount * 684 + 2 (for the count word).
+     *
+     * teamFileBuffer was byte-swapped to host-native after load (see
+     * byteswap_loaded_team_file in teams.c), so on LE x86 the count
+     * word and each TeamFile.globalTeamNumber sit in LE byte order.
+     * The on-disk .EDT format is BE (Amiga m68k native) and the load
+     * path swaps BE→host-native unconditionally, so writing the
+     * host-native bytes verbatim produces a file whose count and
+     * globalTeamNumbers re-swap to garbage on the next load. Pre-swap
+     * back to BE before _WriteFile and restore host-native after, so
+     * any subsequent in-game uses of teamFileBuffer keep working. */
     {
         uint16_t teamCount = *(uint16_t *)teamFileBuffer;
         uint32_t fileSize = (uint32_t)teamCount * 684 + 2;
+#ifdef SWOS_SDL_BUILD
+        /* Convert host-native → BE in-place before write. Pre-fix bug
+         * (commit f9b750d) used byteswap_loaded_team_file in both
+         * directions, but that function reads the loop count via
+         * BE_READ_U16, which on host-native input mis-decodes to
+         * ~12288 and the loop stomps ~8 MB past the buffer. */
+        extern void byteswap_team_file_to_disk(void);
+        extern void byteswap_loaded_team_file(void);
+        byteswap_team_file_to_disk();
+#endif
         int16_t result = _WriteFile(aCustomsEdt, teamFileBuffer, fileSize);
+#ifdef SWOS_SDL_BUILD
+        /* Restore host-native after write — buffer is BE-on-disk now
+         * (just-written bytes), so re-swap with the load-time helper. */
+        byteswap_loaded_team_file();
+#endif
         if (result != 0) {
             _ShowFsErrorByCode((uint16_t)result);
             goto retry;
@@ -2946,7 +2983,7 @@ void _ImportTeamsMenu(void)
     _ChooseTeamsDialog(1, 1, 0, aSelectTeamToIm, (void *)0);
 
     extern uint16_t selectedTeamCountryNumber;
-    extern uint32_t selectedTeamPtr;
+    extern TeamFileEx *selectedTeamPtr;
 
     if ((int16_t)selectedTeamCountryNumber != -1) {
         /* Save selTeamsPtr team number and selTeamImportField, copy selected team data */
@@ -2954,7 +2991,7 @@ void _ImportTeamsMenu(void)
         uint8_t savedImportField = selTeamImportField;
 
         /* Copy 342 words (684 bytes) from selectedTeamPtr to selTeamsPtr */
-        volatile uint16_t *src = (volatile uint16_t *)(uint32_t)selectedTeamPtr;
+        volatile uint16_t *src = (volatile uint16_t *)selectedTeamPtr;
         volatile uint16_t *dst = (volatile uint16_t *)&selTeamsPtr;
         for (int16_t i = 341; i >= 0; i--)
             *dst++ = *src++;
@@ -2994,9 +3031,10 @@ void _ImportTeamsMenu(void)
     _InitEditTeamsMenu();
 }
 
-/* Helper: set bg color index — delegates to shared setBgColorIdx */
+/* Helper: set bg color index — set only the low nibble (color index) of
+ * the entry's bgColor word, preserving the upper 12 bits. */
 static void setBgColor(MenuEntry *e, uint16_t colorIdx) {
-    setBgColorIdx(e, colorIdx);
+    e->bgColor = (e->bgColor & 0xFFF0) | colorIdx;
 }
 
 /* ================================================================
@@ -3011,9 +3049,9 @@ static void setBgColor(MenuEntry *e, uint16_t colorIdx) {
  *      d0 = number of teams
  * out: a0 = team pointer (or NULL)
  * ================================================================ */
-extern uint32_t chooseTeamMenuName;
+extern uintptr_t chooseTeamMenuName;
 extern uint16_t numTeamsCountryBuffer;
-extern uint32_t dwArrayCountries[];
+extern void *dwArrayCountries[];
 extern uint8_t indexCountries[];
 extern uint8_t selectTeamsForTacticsMenu[];
 extern uint16_t teamSelected;
@@ -3022,10 +3060,10 @@ __attribute__((used, externally_visible))
 TeamFileEx *_ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers,
                                       uint16_t numTeams)
 {
-    chooseTeamMenuName = (uint32_t)menuTitle;
+    chooseTeamMenuName = (uintptr_t)menuTitle;
     numTeamsCountryBuffer = numTeams;
 
-    uint32_t *nameArray = dwArrayCountries;
+    void **nameArray = dwArrayCountries;
     uint8_t *idxArray = indexCountries;
     uint16_t count = 0;
 
@@ -3035,7 +3073,7 @@ TeamFileEx *_ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers,
         uint16_t teamNum = teamNums[i];
         TeamFileEx *teamEx = _VerifyTeamLoaded(teamNum);
         idxArray[i] = (uint8_t)count;
-        nameArray[count] = (uint32_t)teamEx->team.teamName;
+        nameArray[count] = teamEx->team.teamName;
         count++;
     }
 
@@ -3123,9 +3161,9 @@ void _EditTactics(void)
         TeamFileEx *lastNonComputer = (TeamFileEx *)0;
 
         for (uint16_t i = 0; i < numSelectedTeams; i++) {
-            TeamFileEx *t = (TeamFileEx *)((uint8_t *)selPtr + (uint32_t)i * 684);
+            TeamFileEx *t = (TeamFileEx *)selPtr + i;
             if (t->team.teamControls != TEAM_COMPUTER) {
-                *countryBuf++ = *(uint16_t *)&t->team.countryNumber;
+                *countryBuf++ = PACK_BE_U16(t->team.countryNumber, t->team.teamOrdinal);
                 lastNonComputer = t;
                 found++;
             }
@@ -3205,7 +3243,7 @@ void _EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *c
     }
 
     /* Save/restore tactics byte, get player info */
-    TeamFileEx *teamBase = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    TeamFileEx *teamBase = chooseTacticsTeamPtr;
     uint8_t savedTactics = teamBase->team.tactics;
     teamBase->team.tactics = editTacticsCurrentTactics.ballOutOfPlayTactics;
 
@@ -3213,7 +3251,7 @@ void _EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *c
     uint8_t *playerPtr = _GetPlayerInfoBreakPosition(teamBase, (uint16_t)playerOrdinal, &slot, &playerIndex);
     PlayerFile *pf = (PlayerFile *)(playerPtr + 76);
 
-    teamBase = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    teamBase = chooseTacticsTeamPtr;
     teamBase->team.tactics = savedTactics;
 
     /* Check cardsInjuries for injury */
@@ -3262,9 +3300,9 @@ void _EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *c
         uint8_t curPos = posArray[playerIndex];
         uint8_t oldPos = oldPosArray[playerIndex];
         if (curPos > oldPos) {
-            *(uint16_t *)&entry39->fg = SPR_CHECK_SMALL;  /* ENTRY_NUMBER: write high word */
+            entry39->fgWord = SPR_CHECK_SMALL;  /* ENTRY_NUMBER: write high word */
         } else if (curPos < oldPos) {
-            *(uint16_t *)&entry39->fg = SPR_NOT_CHECK_SMALL;  /* ENTRY_NUMBER: write high word */
+            entry39->fgWord = SPR_NOT_CHECK_SMALL;  /* ENTRY_NUMBER: write high word */
         }
     }
 }
@@ -3306,7 +3344,7 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     }
 
     /* Get player info */
-    TeamFileEx *teamBase = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    TeamFileEx *teamBase = chooseTacticsTeamPtr;
     uint8_t savedTactics = teamBase->team.tactics;
     teamBase->team.tactics = editTacticsCurrentTactics.ballOutOfPlayTactics;
 
@@ -3314,7 +3352,7 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     uint8_t *playerPtr = _GetPlayerInfoBreakPosition(teamBase, d7, &d7_slot, &d1_fileIdx);
     PlayerFile *pf = (PlayerFile *)(playerPtr + 76);
 
-    teamBase = (TeamFileEx *)(uint32_t)chooseTacticsTeamPtr;
+    teamBase = chooseTacticsTeamPtr;
     teamBase->team.tactics = savedTactics;
 
     /* Check if player is injured */
@@ -3342,39 +3380,39 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     /* Entry 40: shirt number */
     e->isInvisible = 1;
     if (!d5) {
-        *(uint16_t *)&e->fg = (uint16_t)(uint8_t)pf->shirtNumber;  /* ENTRY_NUMBER: write high word */
+        e->fgWord = (uint16_t)(uint8_t)pf->shirtNumber;  /* ENTRY_NUMBER: write high word */
         e->isInvisible = 0;
     }
     e->y = entryY;
-    e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 41 */
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);  /* entry 41 */
 
     /* Entry 41: player name (surname) */
     uint8_t *surname = _ExtractSurname((uint8_t *)pf->playerName, 0x800D);
-    e->fg = (uint32_t)surname;
+    e->fg = (uintptr_t)surname;
     e->y = entryY;
-    e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 42 */
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);  /* entry 42 */
 
     /* Entry 42: position string */
     uint8_t posAndFace = pf->positionAndFace;
     uint16_t posIdx = ((uint16_t)posAndFace & 0xE0) >> 3;
-    e->fg = playerPositionsStringTable[posIdx / 4];
+    e->fg = (uintptr_t)playerPositionsStringTable[posIdx / 4];
     e->y = entryY;
-    e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 43 */
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);  /* entry 43 */
 
     /* Entry 43: top skills */
     _FormTopSkillsString((uint8_t *)e->fg, (PlayerFile *)playerPtr);
     e->y = entryY;
-    e = (MenuEntry *)((uint8_t *)e + 56);  /* entry 44 */
+    e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);  /* entry 44 */
 
     /* Entry 44: value/status */
     e->isInvisible = 1;
     e->y = entryY;
 
-    if (_IsTeamNational((TeamFileEx *)(uint32_t)chooseTacticsTeamPtr)) {
+    if (_IsTeamNational(chooseTacticsTeamPtr)) {
         _InitPlayerValueDisplayStruct(playerPtr, (uint8_t *)e);
     } else {
         _FormatPlayerValueOrStatusText(playerPtr, fundsBuffer);
-        e->fg = (uint32_t)fundsBuffer;
+        e->fg = (uintptr_t)fundsBuffer;
     }
     e->isInvisible = 0;
 

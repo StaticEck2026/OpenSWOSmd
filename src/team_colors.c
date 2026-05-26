@@ -7,15 +7,54 @@
 #include "game_types.h"
 
 /* ---- External globals (in SWOS2.s code section) ---- */
-extern uint8_t shirtColorTable[];          /* 10-byte color index LUT */
+/* shirtColorTable: 10-entry kit-color index → palette-index LUT.
+ * Transcribed from the Amiga C port data module (Data.c:1846). Every
+ * call to _ConvertTeamColor (stripes/basic/shorts/socks) routes through
+ * this, and the result lands in team->prShirtCol et al., which in turn
+ * feeds team{1,2}PlayersColorTable[10..15] used by _ConvertSpriteColors.
+ * Kept as a definition here (not an auto-generated 4K zero stub) so kit
+ * colors actually survive the first conversion. */
+uint8_t shirtColorTable[10] = { 1, 2, 3, 6, 10, 11, 12, 13, 14, 15 };
+
+/* kTeamColorsTable: maps a team-color index (0..9 or 10..19 for shirt
+ * type variants) to a palette index. The Amiga layout is a 20-byte array
+ * `{0,1, 0,2, …}` accessed via word reads; on a BE host those reads
+ * combine to {0x0001, 0x0002, …}. Expose it as native uint16[10] here
+ * so LE callers get the same 10 effective entries. Data.c:1892. */
+uint16_t kTeamColorsTable[10] = { 1, 2, 3, 6, 10, 11, 12, 13, 14, 15 };
+
+/* littlePlayersColorTable must be adjacent to stadiumMenuLittlePlayer
+ * and littlePlayerSpriteGeneric (MENU_CMD_SPRITE_COPY reads them as a
+ * single contiguous 36-byte struct at &stadiumMenuLittlePlayer). The
+ * real storage lives in swos_globals.c with asm symbol aliases so the
+ * Amiga memory layout is preserved. */
+
+/* kitsSimilarityLookupTable: 3-byte entries {shirt1-type, shirt2-type,
+ * similarity-factor} terminated with 0xFF. Data.c:2078. */
+uint8_t kitsSimilarityLookupTable[46] = {
+    1, 5, 7,   1, 2, 0,   4, 5, 6,   4, 9, 3,
+    1, 9, 9,   1, 7, 7,   1, 0, 0,   4, 3, 3,
+    4, 6, 6,   4, 2, 6,   0, 5, 7,   6, 3, 4,
+    2, 7, 5,   9, 5, 8,   9, 7, 8,   0xFF
+};
+
+/* teamKitsSimilarity: 4-byte scratch output buffer used by
+ * _CompareTeamKitsSimilarity when ranking the 4 kit combinations
+ * (team1-primary/team2-primary, p/s, s/p, s/s). Data.c:2087. */
+uint8_t teamKitsSimilarity[4] = { 0, 0, 0, 0 };
+
+/* teamKitTieBreakColors: 11-color preferred-order fallback list used
+ * when both teams' kits collide; terminated with 0xFF, trailing 0 pads
+ * the word. Data.c:2092. */
+uint8_t teamKitTieBreakColors[12] = {
+    0x4, 0x5, 0x1, 0x7, 0x9, 0x0, 0x3, 0x6, 0x8, 0x2, 0xFF, 0x0
+};
+
 extern uint16_t conflictingBasicTeamColorsTable[];   /* 10 words, bit=conflict */
 extern uint16_t conflictingShortsTeamColorsTable[];  /* 10 words, bit=conflict */
-extern uint8_t kitsSimilarityLookupTable[];          /* terminated by 0xFF, 3-byte entries */
 extern uint8_t shirtType1;                 /* scratch: shirt type of team 1 */
 extern uint8_t shirtType2;                 /* scratch: shirt type of team 2 */
 extern uint16_t similarityFactor;          /* scratch: similarity score */
-extern uint8_t teamKitsSimilarity[];       /* 4-byte result: similarity factors for 4 kit combos */
-extern uint8_t teamKitTieBreakColors[];    /* 10 colors + 0xFF terminator */
 
 extern TeamGame topTeamInGame;
 extern TeamGame bottomTeamInGame;

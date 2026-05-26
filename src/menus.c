@@ -4,6 +4,10 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "menus.h"
+#include "endian_helpers.h"
+#include "auto_skip_debug.h"
+#ifdef SWOS_DEBUG_AUTOSKIP
+#endif
 #include "game_utils.h"
 #include "game_types.h"
 #include "frontend.h"
@@ -25,7 +29,7 @@
 #define PLAYERPOSITIONS_SIZE         35
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uint32_t menuImageStreamBaseEnd;
+extern uint8_t *menuImageStreamBaseEnd;
 extern uint16_t menuBGImageCmdStream[];
 extern uint8_t aGrafsMenubgRaw[];
 extern uint16_t twoPlayers;
@@ -52,7 +56,7 @@ extern uint16_t numSelectedTeams;
 extern uint16_t teamsLoaded;
 extern uint16_t poolplyrLoaded;
 extern uint8_t importTacticsFilename;
-extern uint32_t chooseTacticsTeamPtr;
+extern TeamFileEx *chooseTacticsTeamPtr;
 extern uint8_t swosMainMenu[];
 
 /* ZeroOutStars globals */
@@ -70,8 +74,8 @@ extern uint16_t allPlayerTeamsEqual;
 /* SetDefaultNameAndSurname globals */
 extern uint16_t mrOrMs;
 extern volatile uint16_t currentGameTick;
-extern uint32_t defaultNamesTable[6];
-extern uint32_t defaultSurnamesTable[6];
+extern void *defaultNamesTable[6];
+extern void *defaultSurnamesTable[6];
 extern uint8_t managerNameBuffer[9];
 extern uint8_t managerSurnameBuffer[13];
 
@@ -109,8 +113,8 @@ extern uint8_t aUSER_E[];
 extern uint8_t aUSER_F[];
 
 /* InitializeTacticsPositions globals */
-extern uint32_t playersPositionsByTactics[18];
-extern uint32_t teamTacticsTable[19];
+extern void *playersPositionsByTactics[18];
+extern void *teamTacticsTable[19];
 extern uint16_t tacticsPositionDefensiveness[11];
 
 /* SaveOptions / RestoreOptions globals */
@@ -118,14 +122,14 @@ extern uint8_t saveGameLength[];
 
 /* ShowErrorMenu globals */
 extern uint16_t errorPromptsEnabled;
-extern uint32_t errorText;
+extern uintptr_t errorText;
 extern uint8_t continueMenu[];
 
 /* DoContinueAbortMenu globals */
-extern uint32_t promptHeader;
-extern uint32_t whatIsChanging;
-extern uint32_t continueText;
-extern uint32_t abortText;
+extern uintptr_t promptHeader;
+extern uintptr_t whatIsChanging;
+extern uintptr_t continueText;
+extern uintptr_t abortText;
 extern uint16_t contAbortDefault;
 extern uint16_t contAbortResult;
 extern uint8_t continueAbortMenu[];
@@ -141,12 +145,27 @@ extern void _LoadOverlayToFrontbuffer(const uint8_t *path);
 /* ================================================================
  * ZeroOutStars  (SWOS2.s)
  *
- * Scans through strings from aResigned up to _InitSkinAndDefaultPointers,
- * replacing the first '*' character in each string with a null terminator.
+ * Scans through strings from aResigned up to stringDataEnd,
+ * replacing '*' characters with a null terminator.
+ *
+ * On Amiga the strings between those two labels were one contiguous
+ * block of `dc.b` data, and the original block contained no '*'
+ * characters — so the routine is effectively a no-op on Amiga. On
+ * the SDL build `aResigned` and `stringDataEnd` are unrelated C
+ * symbols with arbitrary memory (globals, including `bigCharsTable`)
+ * between them; the walk would treat that memory as strings and
+ * corrupt any byte whose value is 0x2A. `bigCharsTable[14+57]` is 42
+ * (the 'Y' glyph sprite index) which is exactly 0x2A, so the walk
+ * would zero it and 'Y' would fall through to the invalid-glyph
+ * placeholder.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _ZeroOutStars(void)
 {
+#ifdef SWOS_SDL_BUILD
+    /* No-op on SDL — see comment above. */
+    return;
+#else
     uint8_t *p = aResigned;
     uint8_t *end = stringDataEnd;
 
@@ -167,6 +186,7 @@ void _ZeroOutStars(void)
         if (p == end)
             return;
     }
+#endif
 }
 
 /* ================================================================
@@ -198,22 +218,16 @@ void _SetDefaultNameAndSurname(void)
 
     mrOrMs = 0;
 
-    /* Original: tick & 0xFF, * 6, >> 8, << 2 = index into pointer table */
+    /* Original asm computed (tick & 0xFF) * 6 / 256 — yielding 0..5 — then
+     * scaled by 4 to index a 32-bit pointer table by byte offset. On 64-bit
+     * the pointer slots are 8 bytes, so the byte-offset arithmetic was
+     * pulling values from mid-pointer. Drop the byte math and index the
+     * `void *[6]` arrays directly. */
     idx = currentGameTick & 0xFF;
     idx = (uint16_t)((idx * 6) >> 8);
-    idx = idx << 2;  /* multiply by 4 for longword pointer table offset */
 
-    /* idx is now a byte offset into the pointer tables (0, 4, 8, 12, 16, 20) */
-    {
-        uint32_t *nameTable = (uint32_t *)((uint8_t *)defaultNamesTable + idx);
-        uint8_t *name = (uint8_t *)(*nameTable);
-        _StringCopy(name, managerNameBuffer);
-    }
-    {
-        uint32_t *surnameTable = (uint32_t *)((uint8_t *)defaultSurnamesTable + idx);
-        uint8_t *surname = (uint8_t *)(*surnameTable);
-        _StringCopy(surname, managerSurnameBuffer);
-    }
+    _StringCopy((uint8_t *)defaultNamesTable[idx], managerNameBuffer);
+    _StringCopy((uint8_t *)defaultSurnamesTable[idx], managerSurnameBuffer);
 }
 
 /* ================================================================
@@ -389,7 +403,7 @@ void _InitCareerVariables(uint16_t gameTypeParam)
 __attribute__((used, externally_visible))
 void _PrepareMenuBackground(void)
 {
-    _ProcessImageCommandStream(menuBGImageCmdStream, (uint8_t *)menuImageStreamBaseEnd);
+    _ProcessImageCommandStream(menuBGImageCmdStream, menuImageStreamBaseEnd);
     _LoadOverlayToFrontbuffer(aGrafsMenubgRaw);
 }
 
@@ -444,7 +458,7 @@ void _InitMainMenuStuff(void)
     teamsLoaded = 0;
     poolplyrLoaded = 0;
     importTacticsFilename = 0;
-    chooseTacticsTeamPtr = 0;
+    chooseTacticsTeamPtr = (TeamFileEx *)0;
 
     _InitUserTactics();
 
@@ -495,7 +509,7 @@ __attribute__((used, externally_visible))
 void _ShowErrorMenu(uint8_t *errorTextStr)
 {
     errorPromptsEnabled = 1;
-    errorText = (uint32_t)errorTextStr;
+    errorText = (uintptr_t)errorTextStr;
     _ShowMenu(continueMenu);
 }
 
@@ -514,10 +528,10 @@ int16_t _DoContinueAbortMenu(uint8_t *header, uint8_t *changing,
                               uint8_t *contText, uint8_t *abortTextStr,
                               uint16_t defaultEntry)
 {
-    promptHeader = (uint32_t)header;
-    whatIsChanging = (uint32_t)changing;
-    continueText = (uint32_t)contText;
-    abortText = (uint32_t)abortTextStr;
+    promptHeader = (uintptr_t)header;
+    whatIsChanging = (uintptr_t)changing;
+    continueText = (uintptr_t)contText;
+    abortText = (uintptr_t)abortTextStr;
     contAbortDefault = defaultEntry;
 
     _ShowMenu(continueAbortMenu);
@@ -598,7 +612,7 @@ void _ContinueAbortInit(void)
     }
 
     /* If abort text is the standard "ABORT" string, color it red */
-    if (abortText == (uint32_t)aAbort) {
+    if (abortText == (uintptr_t)aAbort) {
         /* move.w reads/writes upper 16 bits of bg (big-endian) */
         uint16_t bgColor = (uint16_t)(menuEntries[3].bg >> 16);
         bgColor = (bgColor & 0xFFF0) + 10; /* RED_10 */
@@ -673,7 +687,7 @@ void _ShowStadiumInit(void)
     _LoadOverlayToFrontbuffer(aGrafsMenubg2Ra);
 
     /* Entry 0: game name */
-    menuEntries[0].fg = (uint32_t)gameName;
+    menuEntries[0].fg = (uintptr_t)gameName;
 
     if (gameRound[0] == 0) {
         /* No round info: hide entry 1, nudge entry 0 down */
@@ -681,7 +695,7 @@ void _ShowStadiumInit(void)
         menuEntries[0].y += 5;
     } else {
         /* Show round info in entry 1 */
-        menuEntries[1].fg = (uint32_t)gameRound;
+        menuEntries[1].fg = (uintptr_t)gameRound;
     }
 
     /* Entry 2: top team name + trailing space */
@@ -704,7 +718,7 @@ void _ShowStadiumInit(void)
         } else {
             color = RED_10;
         }
-        *(uint16_t *)&menuEntries[2].bg = color;
+        menuEntries[2].bgColor = color;
     }
 
     /* Entry 4: leading space + bottom team name */
@@ -726,14 +740,14 @@ void _ShowStadiumInit(void)
         } else {
             color = RED_10;
         }
-        *(uint16_t *)&menuEntries[4].bg = color;
+        menuEntries[4].bgColor = color;
     }
 
     /* Entries 16-31: top team player names */
     {
         int16_t i;
         for (i = 0; i < 16; i++) {
-            menuEntries[16 + i].fg = (uint32_t)topTeamInGame.players[i].fullName;
+            menuEntries[16 + i].fg = (uintptr_t)topTeamInGame.players[i].fullName;
         }
     }
 
@@ -741,7 +755,7 @@ void _ShowStadiumInit(void)
     {
         int16_t i;
         for (i = 0; i < 16; i++) {
-            menuEntries[43 + i].fg = (uint32_t)bottomTeamInGame.players[i].fullName;
+            menuEntries[43 + i].fg = (uintptr_t)bottomTeamInGame.players[i].fullName;
         }
     }
 
@@ -846,7 +860,7 @@ extern void _PlayTrainingGame(void);
 extern uint8_t squadMenu[];
 extern uint16_t squadPrevSelectedPlayerIndex;
 extern uint16_t isSquadViewMode;
-extern uint32_t squadTeamFilePtr;
+extern uintptr_t squadTeamFilePtr;
 
 /* ================================================================
  * SelectTraining  (SWOS2.s line 56661)
@@ -944,7 +958,6 @@ __attribute__((used, externally_visible))
 void _UpdateBigCheckMark(void)
 {
     MenuEntry *entry = &menuEntries[1]; /* menuEntries + 0x38 */
-    uint8_t *base = (uint8_t *)entry;
 
     entry->isInvisible = 1;
 
@@ -957,10 +970,10 @@ void _UpdateBigCheckMark(void)
 
     if (oldPlayerSkill > newPlayerSkill) {
         /* Skill decreased: show check mark */
-        *(uint16_t *)(base + 38) = SPR_CHECK_BIG;
+        entry->fgWord = SPR_CHECK_BIG;
     } else if (oldPlayerSkill < newPlayerSkill) {
         /* Skill increased: show not-check mark */
-        *(uint16_t *)(base + 38) = SPR_NOT_CHECK_BIG;
+        entry->fgWord = SPR_NOT_CHECK_BIG;
     } else {
         /* Equal: no mark shown */
         return;
@@ -1109,8 +1122,19 @@ static void squadSwapPlayersAtIndices(uint16_t prevFileIdx, uint16_t currFileIdx
     }
 
     if (needFullSwap) {
-        /* Full swap: get player pointers via GetPlayerAtIndex */
-        uint16_t teamNum = *(uint16_t *)(uint32_t)squadTeamFilePtr;
+        /* Full swap: get player pointers via GetPlayerAtIndex.
+         * teamNum must be the BE-packed (country<<8)|ordinal that
+         * _GetPlayerAtIndex compares against selTeamNumber. The first
+         * two bytes of TeamFile are the {countryNumber, teamOrdinal}
+         * byte pair — reading them as a host-native uint16 returns
+         * (ordinal<<8)|country on LE, which never matches selTeamNumber.
+         * The lookup then falls through to the non-user-team branch
+         * and panics 0x1146 whenever prevBreakPos or currBreakPos
+         * is >= 16 — i.e. any swap involving the bench/trialist
+         * slots, including subbing an injured player back in. */
+        TeamFileEx *squadTf = (TeamFileEx *)squadTeamFilePtr;
+        uint16_t teamNum = PACK_BE_U16(squadTf->team.countryNumber,
+                                       squadTf->team.teamOrdinal);
         uint8_t *prevBlockPtr = _GetPlayerAtIndex(teamNum, prevBreakPos);
         uint16_t prevFIdx = _cGetPlayerAtIndexFileIdx;
 
@@ -1196,12 +1220,12 @@ void _SquadCommon(void *entryPtr)
 extern uint16_t isNationalSquad;
 extern uint16_t squadDisplayCount;
 extern TeamFileEx careerTeam;
-extern uint32_t currentCompetitionPtr;
-extern uint32_t secondaryCompetitionPtr;
-extern uint32_t tertiaryCompetitionPtr;
-extern uint32_t quaternaryCompetitionPtr;
-extern uint32_t countriesTable[];
-extern uint32_t playerPositionsStringTable[];
+extern uint8_t *currentCompetitionPtr;
+extern uint8_t *secondaryCompetitionPtr;
+extern uint8_t *tertiaryCompetitionPtr;
+extern uint8_t *quaternaryCompetitionPtr;
+extern void *countriesTable[];
+extern void *playerPositionsStringTable[];
 extern uint8_t aClubs[];
 extern uint16_t isNationalSelector;
 extern void _SetCurrentEntry(uint16_t entry);
@@ -1211,7 +1235,7 @@ extern uint8_t shortCountryNames[];
 
 /* Helper: set the low nibble of the bg field's high word (68k big-endian color index) */
 static void setBgColorIndex(MenuEntry *e, uint16_t colorIdx) {
-    setBgColorIdx(e, colorIdx);
+    e->bgColor = (e->bgColor & 0xFFF0) | colorIdx;
 }
 
 /* _SquadUpdateMenuState (SWOS2.s line 48491)
@@ -1244,7 +1268,7 @@ void _SquadUpdateMenuState(void)
     }
 
     /* Entry 25: fg = team writesZeroHere field (ENTRY_NUMBER: write high word) */
-    *(uint16_t *)((uint8_t *)&menuEntries[25] + 38) = (uint16_t)(uint8_t)tf->writesZeroHere;
+    menuEntries[25].fgNumber = (uint16_t)(uint8_t)tf->writesZeroHere;
 
     /* Entries 15, 13 initially invisible */
     menuEntries[15].isInvisible = 1;
@@ -1269,10 +1293,10 @@ void _SquadUpdateMenuState(void)
 
         /* Asm: cmp.w (a6),d0 — compares selTeamNumber with packed team number at offset 0 */
         if ((int16_t)selTeamNumber != -1 &&
-            selTeamNumber == *(uint16_t *)&tf->countryNumber) {
+            selTeamNumber == PACK_BE_U16(tf->countryNumber, tf->teamOrdinal)) {
             menuEntries[26].isInvisible = 0;
             menuEntries[27].isInvisible = 0;
-            menuEntries[27].fg = (uint32_t)removedPlayerStatAccum;
+            menuEntries[27].fg = (uintptr_t)removedPlayerStatAccum;
         } else {
             menuEntries[26].isInvisible = 1;
             menuEntries[27].isInvisible = 1;
@@ -1304,7 +1328,7 @@ void _SquadUpdateMenuState(void)
         }
 
         /* Check competition pointers for view mode */
-        if ((quaternaryCompetitionPtr | secondaryCompetitionPtr | tertiaryCompetitionPtr) == 0) {
+        if (quaternaryCompetitionPtr == 0 && secondaryCompetitionPtr == 0 && tertiaryCompetitionPtr == 0) {
             menuEntries[18].isInvisible = 1;
             menuEntries[17].isInvisible = 1;
             menuEntries[19].isInvisible = 1;
@@ -1346,7 +1370,7 @@ void _SquadUpdateMenuState(void)
         menuEntries[6].isInvisible = 1;
 
         if (gameType == 4 &&
-            squadTeamFilePtr == (uint32_t)&careerTeam &&
+            squadTeamFilePtr == (uintptr_t)&careerTeam &&
             isNationalSelector == 0) {
             menuEntries[6].isInvisible = 0;
         } else {
@@ -1432,8 +1456,9 @@ afterEDE:
     if (isSquadViewMode == 0 &&
         gameType == 4 &&
         isNationalSelector == 0) {
-        uint8_t *teamPtr = (uint8_t *)squadTeamFilePtr;
-        if (*(uint16_t *)teamPtr == selTeamNumber) {
+        TeamFileEx *teamPtr = (TeamFileEx *)squadTeamFilePtr;
+        if (PACK_BE_U16(teamPtr->team.countryNumber,
+                        teamPtr->team.teamOrdinal) == selTeamNumber) {
             menuEntries[12].isInvisible = 0;
             _GetBankBalance((uint8_t *)menuEntries[12].fg);
             goto afterBankBalance;
@@ -1443,13 +1468,13 @@ afterEDE:
 
 afterBankBalance:
     /* Entry 2: fg = team name, Entry 5: fg = coach name */
-    menuEntries[2].fg = (uint32_t)tf->teamName;
-    menuEntries[5].fg = (uint32_t)tf->coachName;
+    menuEntries[2].fg = (uintptr_t)tf->teamName;
+    menuEntries[5].fg = (uintptr_t)tf->coachName;
     return;
 
 viewModeCompChecks:
     /* Jumped to from edit mode national squad path — runs view mode competition checks */
-    if ((quaternaryCompetitionPtr | secondaryCompetitionPtr | tertiaryCompetitionPtr) == 0) {
+    if (quaternaryCompetitionPtr == 0 && secondaryCompetitionPtr == 0 && tertiaryCompetitionPtr == 0) {
         menuEntries[18].isInvisible = 1;
         menuEntries[17].isInvisible = 1;
         menuEntries[19].isInvisible = 1;
@@ -1489,7 +1514,7 @@ extern uint8_t playerPositionsArray[];
 extern uint8_t oldPlayerPositionsArray[];
 extern uint16_t squadRowMode;
 extern uint16_t squadSelectedPlayerIndex;
-extern uint32_t squadSelectedPlayerPtr;
+extern uintptr_t squadSelectedPlayerPtr;
 extern uint8_t fundsBuffer[];
 extern uint8_t careerUnavailablePlayerNames[];
 
@@ -1555,7 +1580,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
     }
 
     squadSelectedPlayerIndex = d4_fileIdx;
-    squadSelectedPlayerPtr = (uint32_t)player;
+    squadSelectedPlayerPtr = (uintptr_t)player;
 
     uint16_t yPos = a5->y;
 
@@ -1569,9 +1594,9 @@ void _SquadAfterDrawCommon(void *entryPtr)
         uint8_t curPos = playerPositionsArray[d4_fileIdx];
         uint8_t oldPos = oldPlayerPositionsArray[d4_fileIdx];
         if (curPos < oldPos) {
-            *(uint16_t *)&e->fg = 0xD1; /* down arrow — ENTRY_SPRITE2: write high word */
+            e->fgWord = 0xD1; /* down arrow — ENTRY_SPRITE2: write high word */
         } else if (curPos > oldPos) {
-            *(uint16_t *)&e->fg = 0xD0; /* up arrow — ENTRY_SPRITE2: write high word */
+            e->fgWord = 0xD0; /* up arrow — ENTRY_SPRITE2: write high word */
         }
     }
 
@@ -1579,17 +1604,18 @@ void _SquadAfterDrawCommon(void *entryPtr)
     e = &menuEntries[47];
     e->isInvisible = 1;
     if (d5 == 0) {
-        /* ENTRY_NUMBER renderer reads *(uint16_t *)((uint8_t *)entry + 38),
-         * which is the high word of fg on big-endian. Write only the high word
-         * to match asm: clr.w d0; move.b $4E(a6),d0; move.w d0,$26(a0) */
-        *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)(uint8_t)pf->shirtNumber;
+        /* ENTRY_NUMBER renderer reads e->fgNumber (the first 2 bytes of
+         * the fg union slot). Direct named-field write replaces the
+         * Amiga-shorthand `entry + 38` byte arithmetic, which on 64-bit
+         * landed on `content` instead of `fg`. */
+        e->fgNumber = (uint16_t)(uint8_t)pf->shirtNumber;
         e->isInvisible = 0;
     }
     e->y = yPos;
 
     /* Entry 48: player name */
     e = &menuEntries[48];
-    e->fg = (uint32_t)(uint8_t *)pf->playerName;
+    e->fg = (uintptr_t)(uint8_t *)pf->playerName;
     e->y = yPos;
 
     /* Entry 49: position string */
@@ -1597,7 +1623,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
     {
         uint8_t posAndFace = pf->positionAndFace;
         uint16_t posIdx = (posAndFace & 0xE0) >> 3;
-        e->fg = playerPositionsStringTable[posIdx / 4];
+        e->fg = (uintptr_t)playerPositionsStringTable[posIdx / 4];
     }
     e->y = yPos;
 
@@ -1644,11 +1670,11 @@ void _SquadAfterDrawCommon(void *entryPtr)
                              + (uint16_t)pf->goalStats[2]
                              + (uint16_t)pf->goalStats[3];
                 /* ENTRY_NUMBER: renderer reads high word of fg */
-                *(uint16_t *)((uint8_t *)e + 38) = sum;
+                e->fgNumber = sum;
                 e->isInvisible = 0;
             }
         } else {
-            *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)pf->goalStats[skillDiff];
+            e->fgNumber = (uint16_t)pf->goalStats[skillDiff];
             e->isInvisible = 0;
         }
     }
@@ -1671,7 +1697,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
             _InitPlayerValueDisplayStruct(player, (uint8_t *)&menuEntries[57]);
         } else {
             _FormatPlayerValueOrStatusText(player, fundsBuffer);
-            menuEntries[57].fg = (uint32_t)fundsBuffer;
+            menuEntries[57].fg = (uintptr_t)fundsBuffer;
         }
         menuEntries[57].isInvisible = 0;
 
@@ -1721,8 +1747,8 @@ void _SquadAfterDrawCommon(void *entryPtr)
         /* Entry 59: first competition goals (if any secondary competitions exist) */
         e = &menuEntries[59];
         e->isInvisible = 1;
-        if ((quaternaryCompetitionPtr | secondaryCompetitionPtr | tertiaryCompetitionPtr) != 0) {
-            *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)pf->goalStats[0];
+        if (quaternaryCompetitionPtr != 0 || secondaryCompetitionPtr != 0 || tertiaryCompetitionPtr != 0) {
+            e->fgNumber = (uint16_t)pf->goalStats[0];
             e->isInvisible = 0;
         }
         e->y = yPos;
@@ -1731,7 +1757,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
         e = &menuEntries[60];
         e->isInvisible = 1;
         if (secondaryCompetitionPtr != 0) {
-            *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)pf->goalStats[1];
+            e->fgNumber = (uint16_t)pf->goalStats[1];
             e->isInvisible = 0;
         }
         e->y = yPos;
@@ -1740,7 +1766,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
         e = &menuEntries[61];
         e->isInvisible = 1;
         if (tertiaryCompetitionPtr != 0) {
-            *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)pf->goalStats[2];
+            e->fgNumber = (uint16_t)pf->goalStats[2];
             e->isInvisible = 0;
         }
         e->y = yPos;
@@ -1749,7 +1775,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
         e = &menuEntries[62];
         e->isInvisible = 1;
         if (quaternaryCompetitionPtr != 0) {
-            *(uint16_t *)((uint8_t *)e + 38) = (uint16_t)pf->goalStats[3];
+            e->fgWord = (uint16_t)pf->goalStats[3];
             e->isInvisible = 0;
         }
         e->y = yPos;
@@ -1761,7 +1787,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
                            + (uint16_t)pf->goalStats[1]
                            + (uint16_t)pf->goalStats[2]
                            + (uint16_t)pf->goalStats[3];
-            *(uint16_t *)((uint8_t *)e + 38) = total;
+            e->fgWord = total;
             e->isInvisible = 0;
         }
         e->y = yPos;
@@ -1797,7 +1823,7 @@ void _SquadFinish(void)
     /* Determine squad display count */
     uint16_t displayCount;
     if ((int16_t)selTeamNumber == -1 ||
-        selTeamNumber != *(uint16_t *)teamPtr) {
+        selTeamNumber != BE_READ_U16(teamPtr)) {
         displayCount = 16;
     } else {
         displayCount = careerNumPlayers;
@@ -1821,14 +1847,18 @@ void _SquadFinish(void)
         }
     }
 
-    /* Entry 21: set fg to country-specific position string */
+    /* Entry 21: set fg to country-specific position string.
+     * Original asm reads selTeamNumber's high byte as countryIdx, but that
+     * global is stale when reaching this menu via _StatsViewSquads (the
+     * team-pick menu doesn't update it). Use teamPtr->countryNumber, which
+     * is the correct authoritative source for the team being displayed. */
     {
-        uint8_t countryIdx = (uint8_t)(selTeamNumber >> 8);  /* move.b — high byte = country */
+        uint8_t countryIdx = teamPtr->countryNumber;
         uint8_t *countryEntry = (uint8_t *)countriesTable[countryIdx];
         int8_t langCode = (int8_t)countryEntry[0];
         int16_t langIdx = (int16_t)langCode;
         /* playerPositionsStringTable + $20 = index 8, then + langIdx */
-        menuEntries[21].fg = playerPositionsStringTable[8 + langIdx];
+        menuEntries[21].fg = (uintptr_t)playerPositionsStringTable[8 + langIdx];
     }
 
     if (isNationalSquad != 0) {
@@ -1837,19 +1867,19 @@ void _SquadFinish(void)
         MenuEntry *target = &menuEntries[22]; /* default target if no secondary */
 
         if (secondaryCompetitionPtr != 0) {
-            menuEntries[18].fg = (uint32_t)abbrev;
+            menuEntries[18].fg = (uintptr_t)abbrev;
             abbrev = _GetCompetitionAbbrevStr((uint8_t *)secondaryCompetitionPtr);
             target = &menuEntries[19];
 
             if (tertiaryCompetitionPtr != 0) {
-                menuEntries[19].fg = (uint32_t)abbrev;
+                menuEntries[19].fg = (uintptr_t)abbrev;
                 abbrev = _GetCompetitionAbbrevStr((uint8_t *)tertiaryCompetitionPtr);
-                menuEntries[20].fg = (uint32_t)abbrev;
+                menuEntries[20].fg = (uintptr_t)abbrev;
                 menuEntries[20].isInvisible = 0;
                 goto skipFgStore;
             }
         }
-        target->fg = (uint32_t)abbrev;
+        target->fg = (uintptr_t)abbrev;
     skipFgStore:;
     }
 
@@ -1862,9 +1892,9 @@ void _SquadFinish(void)
         menuEntries[8].isInvisible = 0;
     }
 
-    menuEntries[8].fg = (uint32_t)aGoals;
+    menuEntries[8].fg = (uintptr_t)aGoals;
     if (isNationalSquad != 0) {
-        menuEntries[8].fg = (uint32_t)aClubs;
+        menuEntries[8].fg = (uintptr_t)aClubs;
     }
 
     /* If team type byte (offset 4) == 1 */
@@ -1893,12 +1923,12 @@ void _SquadInit(void)
 {
     /* Set national squad flag */
     isNationalSquad = 0;
-    if (squadTeamFilePtr == (uint32_t)&careerTeam && isNationalSelector != 0) {
+    if (squadTeamFilePtr == (uintptr_t)&careerTeam && isNationalSelector != 0) {
         isNationalSquad = 1;
     }
 
     /* If all three competition pointers are zero, shift entries right */
-    if ((quaternaryCompetitionPtr | secondaryCompetitionPtr | tertiaryCompetitionPtr) == 0) {
+    if (quaternaryCompetitionPtr == 0 && secondaryCompetitionPtr == 0 && tertiaryCompetitionPtr == 0) {
         menuEntries[59].x += 20;
         menuEntries[60].x += 20;
         menuEntries[61].x += 20;
@@ -2124,21 +2154,29 @@ extern uint16_t youreSacked;
 extern TeamFile *squadTeamPtr;
 extern TeamFileEx careerTeam;
 
-/* CareerOverInit (line 58154): set default menu entry based on career state */
+/* CareerOverInit (line 58154): set default menu entry based on career state.
+ *
+ * The Amiga ends every branch (including the empty fall-through case) with
+ * `bra.w *+4` which lands on the immediately-following CareerOverFinish
+ * label — the function deliberately falls through into its onReturn
+ * counterpart so both run on init. Without this, entries 0/1/2 (manager
+ * name / team name / season-year slots at the top of the careerOver menu)
+ * never get populated and stay as the STDMENUTEXT placeholder allocated
+ * by _UnpackMenu. */
+extern void _CareerOverFinish(void);
+
 __attribute__((used, externally_visible))
 void _CareerOverInit(void)
 {
     if (currentSeasonShowing == 0x13) {
         _SetCurrentEntry(6);
-        return;
-    }
-    if (numNewJobOffers != 0 || numJobOffers != 0) {
+    } else if (numNewJobOffers != 0 || numJobOffers != 0) {
         _SetCurrentEntry(5);
-        return;
-    }
-    if (youreSacked != 0) {
+    } else if (youreSacked != 0) {
         _SetCurrentEntry(8);
     }
+    /* fall through to CareerOverFinish (Amiga: bra.w *+4) */
+    _CareerOverFinish();
 }
 
 /* ViewSquadOnSelect21 (line 73995): rotate players and redraw entry 20 */
@@ -2239,10 +2277,11 @@ void _CommonMenuExit(void)
         nameStr = aCareer_1;
         fmtStr = aContinueA;
     } else {
-        /* No active competition — hide CONTINUE and SAVE entries */
-        menuEntries[12].isInvisible = 1;
+        /* No active competition: hide the START and SAVE slots and
+         * shift LOAD OLD up to where START would have been. Matches
+         * the Amiga behaviour (SWOS2.s _CommonMenuExit gameType==0). */
         menuEntries[11].isInvisible = 1;
-        /* Copy y from entry 11 to entry 13 */
+        menuEntries[12].isInvisible = 1;
         menuEntries[13].y = menuEntries[11].y;
         return;
     }
@@ -2450,11 +2489,11 @@ extern uint16_t teamSelectionKeyCacheIndex;
 extern uint16_t teamSelectionKeyCacheEnd;
 extern int16_t  savedContestListIndex;
 extern int16_t  savedContestGameOffset;
-extern uint32_t savedContestEntryPtr;
-extern uint32_t savedContestRoundPtr;
+extern uintptr_t savedContestEntryPtr;
+extern uintptr_t savedContestRoundPtr;
 extern uint16_t gameListY;
 extern uint16_t contestEntryHeight;
-extern uint32_t gameListArray[];       /* 14 × 2 uint32_t entries = 112 bytes */
+extern void *gameListArray[];          /* 14 pairs of 2 pointers (28 entries) */
 extern uint16_t columnMarker;
 extern uint16_t cglmVar3;
 extern uint16_t seasonFinished;
@@ -2477,7 +2516,7 @@ extern uint16_t numOffers;
 extern volatile uint16_t currentMessage;
 extern uint16_t primaryCompSquadViewParam;
 extern uint16_t seasonSquadTeamNumbers[];
-extern uint32_t selectedContest;
+extern uintptr_t selectedContest;
 extern uint16_t contestLeagueNumber;
 
 /* String constants */
@@ -2518,7 +2557,7 @@ extern void _SeasonFinished_ComputeSeasonReview(void); /* still in asm */
 extern TeamFileEx *_ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers, uint16_t numTeams);
 extern uint8_t aSelectSquadToV[];   /* "SELECT SQUAD TO VIEW" */
 extern uint16_t diyNumberOfTeams;
-extern uint32_t diyTeamsBufferPtr;
+extern uint8_t *diyTeamsBufferPtr;
 extern uint16_t numDiyTeams;
 extern void _ChooseCompetitionMenu(void);         /* asm stub → _ChooseCompetitionMenu */
 
@@ -2599,9 +2638,9 @@ void _SelectActiveContestAndRound(void)
                 goto setInvalid;
             uint8_t *a0 = _TeamSelectionKeyCache_GetCurrentListPtr();
             savedContestListIndex = (int16_t)teamSelectionKeyCacheIndex;
-            savedContestEntryPtr = (uint32_t)a0;
+            savedContestEntryPtr = (uintptr_t)a0;
             savedContestGameOffset = 0;
-            savedContestRoundPtr = (uint32_t)a0;
+            savedContestRoundPtr = (uintptr_t)a0;
             return;
         }
     }
@@ -2609,23 +2648,27 @@ void _SelectActiveContestAndRound(void)
     if (careerFinished != 0)
         goto setInvalid;
     {
-        uint8_t *a0 = _TeamSelectionKeyCache_GetCurrentListPtr();
-        uint8_t *base = teamSelectionKeyCache;
+        TeamSelectionKeyCacheEntry *entry =
+            (TeamSelectionKeyCacheEntry *)_TeamSelectionKeyCache_GetCurrentListPtr();
         uint16_t d0 = teamSelectionKeyCacheIndex;
         for (;;) {
-            uint8_t numGames = *(uint8_t *)(a0 + 5);
-            uint8_t remaining = *(uint8_t *)(a0 + 6);
+            uint8_t numGames = (uint8_t)entry->totalElements;
+            uint8_t remaining = (uint8_t)entry->remainingElements;
             if (numGames != 0 && remaining != 0) {
                 savedContestListIndex = (int16_t)d0;
-                savedContestEntryPtr = (uint32_t)a0;
+                savedContestEntryPtr = (uintptr_t)entry;
                 int16_t gameOff = (int16_t)numGames - (int16_t)remaining;
                 savedContestGameOffset = gameOff;
+                /* asm formula: a0 + gameOff*12 (the byte pointer at +gameOff*12
+                 * from entry start — same shape as GetCurrentSelectedElementPtr).
+                 * Writes will land at +0x0B etc. of that pointer = match slot
+                 * gameOff's matchFlags/packedGoals/aggregate/penaltyScore. */
                 uint32_t byteOff = (uint16_t)gameOff * 12u;
-                savedContestRoundPtr = (uint32_t)(a0 + byteOff);
+                savedContestRoundPtr = (uintptr_t)((uint8_t *)entry + byteOff);
                 return;
             }
             d0++;
-            a0 += *(uint16_t *)(a0 + 2); /* advance by entry size */
+            entry = (TeamSelectionKeyCacheEntry *)((uint8_t *)entry + entry->entryStride);
             if (d0 == teamSelectionKeyCacheCount)
                 break;
         }
@@ -2660,14 +2703,14 @@ void _CheckJobOffers(void)
         return;
     MenuEntry *entry = &menuEntries[5]; /* JOB OFFERS entry */
     /* Reset background color */
-    setBgColorIdx(entry, COLOR_BLUE_TO_PURPLE_11);
+    entry->bgColor = (entry->bgColor & 0xFFF0) | COLOR_BLUE_TO_PURPLE_11;
     entry->isDisabled = 0;
     uint16_t flags = entry->stringFlags;
     flags &= ~(1 << 13);
 
     if (teamNoOfferAccepted != 0xFFFF) {
         /* Got an accepted offer — show "NEW JOB" */
-        entry->fg = (uint32_t)aNewJob;
+        entry->fg = (uintptr_t)aNewJob;
         entry->stringFlags = flags;
         return;
     }
@@ -2683,9 +2726,9 @@ void _CheckJobOffers(void)
         return;
     }
     /* No offers at all */
-    entry->fg = (uint32_t)aNoJobOffers;
+    entry->fg = (uintptr_t)aNoJobOffers;
     entry->isDisabled = 1;
-    setBgColorIdx(entry, COLOR_PINK_TO_BROWN_7);
+    entry->bgColor = (entry->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_7;
     entry->stringFlags = flags;
 }
 
@@ -2732,7 +2775,7 @@ void _CheckTransfers(void)
     /* Enable transfers entry */
     {
         MenuEntry *entry = &menuEntries[4];
-        setBgColorIdx(entry, COLOR_BLUE_TO_BLACK_8);
+        entry->bgColor = (entry->bgColor & 0xFFF0) | COLOR_BLUE_TO_BLACK_8;
         entry->isDisabled = 0;
         if (timeToNegotiate != 0) {
             if (_CheckForTransferOffers() == 0) {
@@ -2743,15 +2786,20 @@ void _CheckTransfers(void)
             }
         }
     }
-    goto clearBlink;
+    /* Done — RETURN here. The Amiga (SWOS2.s:87142 locret_13C1C8 rts)
+     * falls out of the function after enabling/setting blink. A pre-fix
+     * `goto clearBlink` immediately cleared the bit we just set, so
+     * the TRANSFERS button never blinked when offers arrived. */
+    return;
 
 disableEntry:
     {
         MenuEntry *entry = &menuEntries[4];
-        setBgColorIdx(entry, COLOR_PINK_TO_BROWN_9);
+        entry->bgColor = (entry->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_9;
         entry->isDisabled = 1;
     }
-clearBlink:
+    /* Disabled path: clear blink so a stale bit from a prior enable
+     * doesn't keep the button flashing. */
     {
         MenuEntry *entry = &menuEntries[4];
         uint16_t flags = entry->stringFlags;
@@ -2773,7 +2821,7 @@ void _BuildGameListArrayFromTeamSelectionKeyCache(void)
     uint8_t *listEntry = _TeamSelectionKeyCache_GetListPtr(listIdx);
     uint8_t *gameEntry = listEntry + gameIdx * 12;
 
-    uint32_t *out = gameListArray;
+    void **out = gameListArray;
     uint16_t remaining = 14; /* 0xD + 1 = 14 entries (dbf counts from 13) */
 
     for (;;) {
@@ -2787,8 +2835,8 @@ void _BuildGameListArrayFromTeamSelectionKeyCache(void)
             return;
         }
         for (;;) {
-            *out++ = (uint32_t)listEntry;
-            *out++ = (uint32_t)gameEntry;
+            *out++ = listEntry;
+            *out++ = gameEntry;
             uint8_t numGames = *(uint8_t *)(listEntry + 5);
             if (numGames == 0)
                 break;
@@ -2800,10 +2848,37 @@ void _BuildGameListArrayFromTeamSelectionKeyCache(void)
             if (remaining == 0)
                 return;
         }
-        /* Move to next list entry */
+        /* Move to next list entry.
+         *
+         * The asm reads the slot's stride at +2..+3 and advances by it. On
+         * SDL this can be corrupted: the in-match league-fixture writer
+         * (_DIY_RecordLeagueFixtureResultAndAdvanceProgress) writes multiple
+         * 12-byte fixtures into a single 22-byte career-mode slot, and
+         * fixture 2's team-ID bytes land on slot[N+1]'s stride field at
+         * +2..+3. On Amiga the corrupted stride happens to jump to a zeroed
+         * area of the overlaid careerForeignMarketPlayers region; on SDL
+         * the same jump lands on populated foreign-player records, the
+         * walker reads them as fake cache entries, and the reader panics
+         * loading "team 0x0200" (= the first 2 bytes of a real
+         * foreign-player record interpreted as a team id).
+         *
+         * Clamp the stride to a sane range. Slots are 22 bytes (career) up
+         * to 118 bytes (DIY 18-team) — anything outside [10, 256] is the
+         * sign of a stomped stride field. Treat it as the end of the cache
+         * so the walker behaves the same as Amiga's "fell off into zeros"
+         * accidental-safety-net behaviour. */
+        uint16_t stride = *(uint16_t *)(listEntry + 2);
+        if (stride < 10 || stride > 256) {
+            while (remaining > 0) {
+                *out++ = 0;
+                *out++ = 0;
+                remaining--;
+            }
+            return;
+        }
         listIdx++;
         gameIdx = 0;
-        listEntry += *(uint16_t *)(listEntry + 2);
+        listEntry += stride;
         gameEntry = listEntry;
         remaining--;
         if (remaining == 0)
@@ -2883,21 +2958,21 @@ void _SetNationalSelectorButtons(void)
 
     /* Set transfers/squad entry text */
     MenuEntry *transfersEntry = &menuEntries[4]; /* TRANSFERS */
-    transfersEntry->fg = (uint32_t)aSquadSelected;
+    transfersEntry->fg = (uintptr_t)aSquadSelected;
 
     if (_IsTournamentAllowingSquadChangesIfNotCareer() == 0) {
-        transfersEntry->fg = (uint32_t)aChangeSquad;
+        transfersEntry->fg = (uintptr_t)aChangeSquad;
         if (careerNumPlayers != 20)
-            transfersEntry->fg = (uint32_t)aSelectSquad;
+            transfersEntry->fg = (uintptr_t)aSelectSquad;
     }
 
     /* Entry 12 (national selector actions) */
     MenuEntry *entry12 = &menuEntries[12];
-    setBgColorIdx(entry12, COLOR_ORANGE_TO_BROWN_4);
+    entry12->bgColor = (entry12->bgColor & 0xFFF0) | COLOR_ORANGE_TO_BROWN_4;
     entry12->isDisabled = 0;
 
     if (_IsTournamentAllowingSquadChangesIfNotCareer() != 0) {
-        setBgColorIdx(entry12, COLOR_PINK_TO_BROWN_9);
+        entry12->bgColor = (entry12->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_9;
         entry12->isDisabled = 1;
     }
 
@@ -2909,22 +2984,22 @@ void _SetNationalSelectorButtons(void)
 
     /* Not enough players — disable most entries */
     MenuEntry *entry8 = &menuEntries[8];  /* SQUAD */
-    setBgColorIdx(entry8, COLOR_PINK_TO_BROWN_9);
+    entry8->bgColor = (entry8->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_9;
     entry8->isDisabled = 1;
 
     MenuEntry *entry7 = &menuEntries[7];  /* PLAY MATCH */
-    setBgColorIdx(entry7, COLOR_PINK_TO_BROWN_9);
+    entry7->bgColor = (entry7->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_9;
     entry7->isDisabled = 1;
 
     MenuEntry *entry10 = &menuEntries[10]; /* NEXT MATCH */
-    setBgColorIdx(entry10, COLOR_PINK_TO_BROWN_9);
+    entry10->bgColor = (entry10->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_9;
     entry10->isDisabled = 1;
 
     MenuEntry *entry11 = &menuEntries[11]; /* VIEW COMPETITIONS */
-    setBgColorIdx(entry11, COLOR_PINK_TO_BROWN_9);
+    entry11->bgColor = (entry11->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_9;
     entry11->isDisabled = 1;
 
-    setBgColorIdx(entry12, COLOR_PINK_TO_BROWN_9);
+    entry12->bgColor = (entry12->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_9;
     entry12->isDisabled = 1;
 }
 
@@ -2933,16 +3008,16 @@ __attribute__((used, externally_visible))
 void _ContestSetButtons(void)
 {
     MenuEntry *entry7 = &menuEntries[7]; /* PLAY MATCH */
-    entry7->fg = (uint32_t)aPlayMatch;
+    entry7->fg = (uintptr_t)aPlayMatch;
     entry7->stringFlags &= ~(1 << 13); /* clear blinking */
 
     if (gameType == GAME_TYPE_SEASON) {
         /* Season mode */
         MenuEntry *entry13 = &menuEntries[13];
-        setBgColorIdx(entry13, COLOR_ORANGE_TO_BROWN_4);
+        entry13->bgColor = (entry13->bgColor & 0xFFF0) | COLOR_ORANGE_TO_BROWN_4;
         entry13->isDisabled = 0;
         if (seasonNumberOfSquads == 0) {
-            entry7->fg = (uint32_t)aNextMatch;
+            entry7->fg = (uintptr_t)aNextMatch;
             _SeasonLowerButtons();
             if (seasonFinished != 0)
                 goto setFinishSeason;
@@ -2963,10 +3038,10 @@ void _ContestSetButtons(void)
     menuEntries[10].isInvisible = 0;
     {
         MenuEntry *entry10 = &menuEntries[10];
-        setBgColorIdx(entry10, COLOR_ORANGE_TO_BROWN_4);
+        entry10->bgColor = (entry10->bgColor & 0xFFF0) | COLOR_ORANGE_TO_BROWN_4;
     }
     if (careerFinished != 0) {
-        entry7->fg = (uint32_t)aFinishSeason;
+        entry7->fg = (uintptr_t)aFinishSeason;
         return;
     }
     /* Check if match available — set blinking if so */
@@ -2978,10 +3053,10 @@ void _ContestSetButtons(void)
     return;
 
 careerFinished_label:
-    entry7->fg = (uint32_t)aFinishSeason;
+    entry7->fg = (uintptr_t)aFinishSeason;
     {
         MenuEntry *entry10 = &menuEntries[10];
-        setBgColorIdx(entry10, COLOR_PINK_TO_BROWN_9);
+        entry10->bgColor = (entry10->bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN_9;
         entry10->isDisabled = 1;
     }
     return;
@@ -2989,7 +3064,7 @@ careerFinished_label:
 lowerAndFinish:
     _SeasonLowerButtons();
 setFinishSeason:
-    entry7->fg = (uint32_t)aFinishSeason;
+    entry7->fg = (uintptr_t)aFinishSeason;
 }
 
 /* ContestMenuInit — init callback for contest menu (SWOS2.s line 59786) */
@@ -3037,7 +3112,7 @@ void _ContestMenuOnReturn(void)
 
         /* If only 1 squad, change "SQUAD" text to "SQUADS" */
         if (seasonNumberOfSquads == 1) {
-            menuEntries[8].fg = (uint32_t)aSquads;
+            menuEntries[8].fg = (uintptr_t)aSquads;
         }
 
         /* Hide career-specific entries */
@@ -3320,6 +3395,7 @@ extern void _DIY_SaveCompetitionFileBufferToDIYCompetition(void);
 extern void _DIY_CopyCompetitionFileBufferToDiyFileBufferCopy(void);
 extern void _DIY_CopyCompetitionFileBufferToCompetitionStart_Alt(void);
 extern void _DIY_ResetAndLoadCurrentCompetitionSlot(void);
+extern void _DIY_LoadCurrentCompetitionSlot(void);
 extern void _DIY_InitCupFromTeamGridAndValidateTeams(void);
 extern void _DIY_ResetCompetitionProgressAndShuffle(void);
 
@@ -3335,7 +3411,7 @@ extern uint8_t  aLoadOldCompeti[];
 extern uint8_t  aNotACompetitio[];
 extern uint8_t  competitionFilename[];
 extern uint8_t  selectedFilename[];
-extern uint32_t extension;
+extern uintptr_t extension;
 extern uint16_t diyLeagueTeamIds[];
 extern uint16_t diyCupTeamIds[];
 extern uint16_t diyTournamentTeamIds[];
@@ -3479,6 +3555,12 @@ void _StartContest(void)
 {
     contestStarted = 0;
     uint16_t gt = gameType;
+#ifdef SWOS_DEBUG_AUTOSKIP
+    extern uint8_t competitionFileBuffer[];
+    SWOS_AUTOSKIP_LOG("StartContest: ENTER gameType=%u competitionOver=%u cfb[0]=%u (compType)",
+                      (unsigned)gt, (unsigned)competitionOver,
+                      (unsigned)competitionFileBuffer[0]);
+#endif
 
     if (gt == GAME_TYPE_DIY_COMPETITION) {
         if (competitionOver == 1)
@@ -3518,7 +3600,15 @@ diy_over: /* loc_140FDC — DIY competition over */
             _CommonMenuExit();
             goto final_check;
         } else {
-            /* Tournament */
+            /* Tournament — match the asm at loc_140FDC: no LoadCurrentCompetitionSlot.
+             * The cfb→diyFileBufferCopy copy in _SaveDIYTournament also
+             * populates diyCompetitionStart's struct region because
+             * diyCompetitionStartBuf is aliased onto diyFileBufferCopyBuf+0x420
+             * (Amiga BSS adjacency mirrored in src/swos_globals.c) — so the
+             * 1450-word copy restores both. Calling LoadCurrentCompetitionSlot
+             * here would re-run _InitDIYCup / _DIY_InitCupBracketState and
+             * wipe the just-restored cup match results, which is the
+             * "first match score erased to 0" bug on .DIY save round-trips. */
             _SaveDIYTournament();
             _DIY_EditCompetitionSlot(0, 0, 0);
             _RestoreDIYTournament();
@@ -3545,7 +3635,13 @@ preset_over: /* loc_141050 — preset competition over */
             _CommonMenuExit();
             goto final_check;
         } else {
-            /* Tournament */
+            /* Tournament — match the asm at loc_141050: no LoadCurrentCompetitionSlot.
+             * Same reasoning as the diy_over tournament path above —
+             * diyCompetitionStartBuf is aliased onto diyFileBufferCopyBuf+0x420,
+             * so the 1450-word cfb→diyFileBufferCopy copy also populates
+             * diyCompetitionStart's struct region. Calling LoadCurrentCompetitionSlot
+             * here re-runs _InitDIYCup and wipes cup match results, which is
+             * the "first match score erased to 0" bug on .PRE save round-trips. */
             _DIY_CopyCompetitionFileBufferToDiyFileBufferCopy();
             _DIY_EditCompetitionSlot(0, 0, 0);
             _DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer();
@@ -3652,6 +3748,35 @@ void _SaveContest(void)
         if (_SelectFileToSaveDialog(ext, competitionFilename, saveFileTitle) != 0)
             goto done;
 
+        /* Sync the live working state into competitionFileBuffer
+         * before writing it to disk. SAVE is invoked from inside the
+         * tournament/league/cup menu — at this point the menu hasn't
+         * exited yet, so the end-of-menu Copy that normally mirrors
+         * the working buffer back hasn't run. Without this sync the
+         * .PRE / .DIY contains the bytes that were in
+         * competitionFileBuffer at menu *entry*, missing every match
+         * result the user just played in the same session.
+         *
+         * Pick the right copy based on the competition format word
+         * at competitionFileBuffer[0]:
+         *   0 = league  → diyCompetitionStart → competitionFileBuffer
+         *   1 = cup     → ditto via the cup-style copy
+         *   2 = tournament → diyFileBufferCopy → competitionFileBuffer
+         *
+         * The tournament case is what surfaced the bug (mid-session
+         * .PRE round-trip wiping a played match). The league + cup
+         * cases get the same fix for free since they're the same
+         * "live state lives elsewhere" pattern. */
+        if (gt == GAME_TYPE_DIY_COMPETITION || gt == GAME_TYPE_PRESET_COMPETITION) {
+            uint16_t ct = *(uint16_t *)competitionFileBuffer;
+            if (ct == 0)
+                _DIY_RestoreCompetitionFileBufferFromDIYCompetition();
+            else if (ct == 1)
+                _DIY_CopyCompetitionStartToCompetitionFileBuffer();
+            else
+                _DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer();
+        }
+
         if (gt == GAME_TYPE_DIY_COMPETITION) {
             result = _SaveDIYFile(selectedFilename);
         } else if (gt == GAME_TYPE_PRESET_COMPETITION) {
@@ -3735,9 +3860,9 @@ fail: /* loc_14149A */
 extern void _SelectTeamsFinalMenu(uint16_t mode); /* bridge: loads d0 from param, calls SelectTeamsFinalMenu */
 
 extern uint16_t teamsType;
-extern uint32_t gameTypeStr;
-extern uint32_t chooseTeamsHeader1stPart;
-extern uint32_t chooseTeamsFunc;
+extern uintptr_t gameTypeStr;
+extern uintptr_t chooseTeamsHeader1stPart;
+extern uintptr_t chooseTeamsFunc;
 extern uint16_t careerSquadScreenDidSelectPlayerFlag;
 extern uint16_t selectTeamsNoLimit;
 extern uint16_t loadTeam;
@@ -3748,7 +3873,7 @@ extern uint16_t choosingPreset;
 extern uint16_t showClubTeams;
 extern uint16_t showNationalTeams;
 extern uint16_t showOrigCustomTeams;
-extern uint32_t playWhatStr;
+extern uintptr_t playWhatStr;
 extern uint16_t numNeededTeams;
 extern uint8_t  aChooseCompetit[];
 extern uint8_t  aChoosePresetCo[];
@@ -3760,7 +3885,7 @@ __attribute__((used, externally_visible))
 void _ChooseCompetitionMenu(void)
 {
     gameTypeStr = 0;
-    chooseTeamsHeader1stPart = (uint32_t)aChooseCompetit;
+    chooseTeamsHeader1stPart = (uintptr_t)aChooseCompetit;
     chooseTeamsFunc = 0;
     careerSquadScreenDidSelectPlayerFlag = 0;
     selectTeamsNoLimit = 1;
@@ -3777,7 +3902,7 @@ __attribute__((used, externally_visible))
 void _SelectTeamsForPresetCompetition(void)
 {
     gameTypeStr = 0;
-    chooseTeamsHeader1stPart = (uint32_t)aChoosePresetCo;
+    chooseTeamsHeader1stPart = (uintptr_t)aChoosePresetCo;
     chooseTeamsFunc = 0;
     careerSquadScreenDidSelectPlayerFlag = 0;
     selectTeamsNoLimit = 1;
@@ -3796,7 +3921,7 @@ __attribute__((used, externally_visible))
 void _ChooseSeasonMenu(void)
 {
     gameTypeStr = 0;
-    chooseTeamsHeader1stPart = (uint32_t)aChooseSeason;
+    chooseTeamsHeader1stPart = (uintptr_t)aChooseSeason;
     chooseTeamsFunc = 0;
     careerSquadScreenDidSelectPlayerFlag = 0;
     selectTeamsNoLimit = 1;
@@ -3819,8 +3944,8 @@ void _GoGetTeamsForPlay(uint8_t *gameTypeStrParam, uint8_t *playWhatStrParam,
     showClubTeams = showClub;
     showNationalTeams = showNational;
     showOrigCustomTeams = showOrigCustom;
-    gameTypeStr = (uint32_t)gameTypeStrParam;
-    playWhatStr = (uint32_t)playWhatStrParam;
+    gameTypeStr = (uintptr_t)gameTypeStrParam;
+    playWhatStr = (uintptr_t)playWhatStrParam;
     chooseTeamsHeader1stPart = 0;
     numSelectedTeams = 0;
     numNeededTeams = numTeams;
@@ -3853,7 +3978,7 @@ extern uint8_t  aNewJob[];              /* "NEW JOB" */
 extern uint8_t  aNoJobOffers[];         /* "NO JOB OFFERS" */
 extern uint16_t selectedTeamIndex;
 extern uint16_t selectedLeagueIndex;
-extern uint32_t selectedTeamText;
+extern uintptr_t selectedTeamText;
 extern uint16_t lastSelectedTeam;
 extern uint16_t startingTeamIndex;
 extern uint16_t numTeamsColumn1;
@@ -3895,9 +4020,9 @@ static void CareerOverUpdateJobOffersEntry(void)
     /* Set entry to yellow-green-black color scheme */
     e = &menuEntries[0x118 / 56];
     {
-        uint16_t bg = *(uint16_t *)((uint8_t *)e + 30);  /* BG+BACKANDFRAMECOLOR at offset 30 */
+        uint16_t bg = e->bgColor;  /* BG+BACKANDFRAMECOLOR at offset 30 */
         bg = (bg & 0xFFF0) + 14;  /* YELLOW_GREEN_BLACK_14 */
-        *(uint16_t *)((uint8_t *)e + 30) = bg;
+        e->bgColor = bg;
     }
     e->isDisabled = 0;
 
@@ -3916,12 +4041,12 @@ static void CareerOverUpdateJobOffersEntry(void)
                 return;
             }
             /* No offers at all */
-            e->fg = (uint32_t)aNoJobOffers;
+            e->fg = (uintptr_t)aNoJobOffers;
             e->isDisabled = 1;
             {
-                uint16_t bg = *(uint16_t *)((uint8_t *)e + 30);
+                uint16_t bg = e->bgColor;
                 bg = (bg & 0xFFF0) + 9;  /* PINK_TO_BROWN_9 */
-                *(uint16_t *)((uint8_t *)e + 30) = bg;
+                e->bgColor = bg;
             }
             e->stringFlags = flags;
             return;
@@ -3929,7 +4054,7 @@ static void CareerOverUpdateJobOffersEntry(void)
         else
         {
             /* Offer accepted — show "NEW JOB" */
-            e->fg = (uint32_t)aNewJob;
+            e->fg = (uintptr_t)aNewJob;
             e->stringFlags = flags;
             return;
         }
@@ -4009,7 +4134,7 @@ void _CareerOverFinish(void)
         menuEntries[0x188 / 56].isInvisible = 1;
         {
             MenuEntry *e150 = &menuEntries[0x150 / 56];
-            e150->fg = (uint32_t)aRetire;
+            e150->fg = (uintptr_t)aRetire;
         }
         menuEntries[0xA8 / 56].isInvisible = 0;
         return;
@@ -4023,17 +4148,17 @@ void _CareerOverFinish(void)
         {
             MenuEntry *eE0 = &menuEntries[0xE0 / 56];
             eE0->isDisabled = 1;
-            uint16_t bg = *(uint16_t *)((uint8_t *)eE0 + 30);
+            uint16_t bg = eE0->bgColor;
             bg = (bg & 0xFFF0) + 9;  /* PINK_TO_BROWN_9 */
-            *(uint16_t *)((uint8_t *)eE0 + 30) = bg;
+            eE0->bgColor = bg;
         }
         /* Disable "SAVE CAREER" entry (at offset $150) */
         {
             MenuEntry *e150 = &menuEntries[0x150 / 56];
             e150->isDisabled = 1;
-            uint16_t bg = *(uint16_t *)((uint8_t *)e150 + 30);
+            uint16_t bg = e150->bgColor;
             bg = (bg & 0xFFF0) + 9;  /* PINK_TO_BROWN_9 */
-            *(uint16_t *)((uint8_t *)e150 + 30) = bg;
+            e150->bgColor = bg;
         }
         menuEntries[0x188 / 56].isInvisible = 1;
         menuEntries[0xA8 / 56].isInvisible = 0;
@@ -4044,9 +4169,9 @@ void _CareerOverFinish(void)
     {
         MenuEntry *e150 = &menuEntries[0x150 / 56];
         e150->isDisabled = 1;
-        uint16_t bg = *(uint16_t *)((uint8_t *)e150 + 30);
+        uint16_t bg = e150->bgColor;
         bg = (bg & 0xFFF0) + 9;  /* PINK_TO_BROWN_9 */
-        *(uint16_t *)((uint8_t *)e150 + 30) = bg;
+        e150->bgColor = bg;
     }
 }
 
@@ -4289,12 +4414,12 @@ void _SelectLeaguesCommon(MenuEntry *entry)
  * ================================================================ */
 
 /* Additional externs for Chunk 136 */
-extern uint32_t currentCompetitionPtr;
+extern uint8_t *currentCompetitionPtr;
 extern uint8_t  tourCopy[];
 extern uint8_t  friendlyCopy[];
-extern uint32_t secondaryCompetitionPtr;
-extern uint32_t tertiaryCompetitionPtr;
-extern uint32_t quaternaryCompetitionPtr;
+extern uint8_t *secondaryCompetitionPtr;
+extern uint8_t *tertiaryCompetitionPtr;
+extern uint8_t *quaternaryCompetitionPtr;
 extern uint8_t  diyPresetNameOfCompetition[];
 extern uint8_t  secondaryCompetitionName[];
 extern uint8_t  tertiaryCompetitionName[];
@@ -4357,14 +4482,14 @@ __attribute__((used, externally_visible))
 void _ViewCompetitionsOnReturn(void)
 {
     /* Set text pointers for competition name entries */
-    menuEntries[1].fg = (uint32_t)diyPresetNameOfCompetition;
-    menuEntries[2].fg = (uint32_t)secondaryCompetitionName;
-    menuEntries[3].fg = (uint32_t)tertiaryCompetitionName;
-    menuEntries[4].fg = (uint32_t)quaternaryCompetitionName;
+    menuEntries[1].fg = (uintptr_t)diyPresetNameOfCompetition;
+    menuEntries[2].fg = (uintptr_t)secondaryCompetitionName;
+    menuEntries[3].fg = (uintptr_t)tertiaryCompetitionName;
+    menuEntries[4].fg = (uintptr_t)quaternaryCompetitionName;
 
     /* If primary competition is tour/friendly, hide entry 1 and shift Y coords up */
-    if (currentCompetitionPtr == (uint32_t)tourCopy
-        || currentCompetitionPtr == (uint32_t)friendlyCopy)
+    if (currentCompetitionPtr == (uint8_t *)tourCopy
+        || currentCompetitionPtr == (uint8_t *)friendlyCopy)
     {
         menuEntries[1].isInvisible = 1;
         /* Shift Y coordinates: 5←4, 4←3, 3←2, 2←1 */
@@ -4376,8 +4501,8 @@ void _ViewCompetitionsOnReturn(void)
 
     /* If secondary competition is null/tour/friendly, hide entry 2 and shift */
     if (secondaryCompetitionPtr == 0
-        || secondaryCompetitionPtr == (uint32_t)friendlyCopy
-        || secondaryCompetitionPtr == (uint32_t)tourCopy)
+        || secondaryCompetitionPtr == (uint8_t *)friendlyCopy
+        || secondaryCompetitionPtr == (uint8_t *)tourCopy)
     {
         menuEntries[2].isInvisible = 1;
         /* Shift Y coordinates: 5←4, 4←3, 3←2 */
@@ -4388,8 +4513,8 @@ void _ViewCompetitionsOnReturn(void)
 
     /* If tertiary competition is null/tour/friendly, hide entry 3 and shift */
     if (tertiaryCompetitionPtr == 0
-        || tertiaryCompetitionPtr == (uint32_t)friendlyCopy
-        || tertiaryCompetitionPtr == (uint32_t)tourCopy)
+        || tertiaryCompetitionPtr == (uint8_t *)friendlyCopy
+        || tertiaryCompetitionPtr == (uint8_t *)tourCopy)
     {
         menuEntries[3].isInvisible = 1;
         /* Shift Y coordinates: 5←4, 4←3 */
@@ -4428,8 +4553,8 @@ void _ViewCompetitionsOnReturn(void)
 __attribute__((used, externally_visible))
 void _ViewCompetitionsInit(void)
 {
-    if (currentCompetitionPtr == (uint32_t)tourCopy
-        || currentCompetitionPtr == (uint32_t)friendlyCopy)
+    if (currentCompetitionPtr == (uint8_t *)tourCopy
+        || currentCompetitionPtr == (uint8_t *)friendlyCopy)
     {
         _SetCurrentEntry(5);
 
@@ -4653,9 +4778,9 @@ extern uint16_t changeTeams;
 extern uint16_t abortSelectTeams;
 extern uint16_t exitSelectTeams;
 extern uint16_t numLeaguesInCountry;
-extern uint32_t teamNames[];          /* array of string pointers */
+extern void *teamNames[];          /* array of string pointers */
 extern uint16_t chooseTeamsNumTeams;
-extern uint32_t countryNames[];       /* array of string pointers */
+extern void *countryNames[];       /* array of string pointers */
 extern uint16_t teamsLowerBound;
 
 extern void _SetExitMenuFlag(void);
@@ -4756,7 +4881,7 @@ __attribute__((used, externally_visible))
 void _SetLeagueNames(void)
 {
     MenuEntry *e;
-    uint32_t *names;
+    void **names;
     int16_t count;
 
     if (numLeaguesInCountry == 0)
@@ -4770,7 +4895,7 @@ void _SetLeagueNames(void)
 
     do {
         e->isInvisible = 0;
-        e->fg = *names++;
+        e->fg = (uintptr_t)*names++;
 
         /* If name starts with '.', set special background color */
         {
@@ -4778,7 +4903,7 @@ void _SetLeagueNames(void)
             if (*str == '.')
             {
                 /* Write PINK_TO_BROWN_7 to high word of bg (68k move.w to bg offset) */
-                *(uint16_t *)&e->bg = PINK_TO_BROWN_7;
+                e->bgColor = PINK_TO_BROWN_7;
             }
         }
 
@@ -4796,7 +4921,7 @@ void _SetLeagueNames(void)
 __attribute__((used, externally_visible))
 void _SetCountryNames(void)
 {
-    uint32_t *names = countryNames;
+    void **names = countryNames;
     MenuEntry *e = &menuEntries[21]; /* $498/56 = 21 */
     uint16_t d6 = startingTeamIndex;
 
@@ -4839,14 +4964,14 @@ void _SetCountryNames(void)
                 {
                     /* Show this entry */
                     e->isInvisible = 0;
-                    e->fg = *names++;
+                    e->fg = (uintptr_t)*names++;
 
                     /* If name starts with '.', set special background color */
                     {
                         const uint8_t *str = (const uint8_t *)e->fg;
                         if (*str == '.')
                         {
-                            *(uint16_t *)&e->bg = PINK_TO_BROWN_7;
+                            e->bgColor = PINK_TO_BROWN_7;
                         }
                     }
                     break; /* goto next_entry */
@@ -4878,7 +5003,7 @@ void _SetMenuEntryPlayerFace(MenuEntry *entry, PlayerFile *playerFile) {
     d0 &= 0x18;
     d0 >>= 3;
     d0 += SPR_PL_FACE_WHITE_GUY;
-    *(uint16_t *)&entry->fg = d0;
+    entry->fgWord = d0;
 }
 
 /* ---- Chunk 142: SaveCareer ---- */
@@ -4946,11 +5071,11 @@ void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, PlayerFile *playerFile, ui
 
         if (d2 == 0) {
             if (d3 == 0) {
-                *(uint16_t *)&entry->fg = d1 + 0xBA;
+                entry->fgWord = d1 + 0xBA;
                 return;
             }
             if (d3 == 0x20) {
-                *(uint16_t *)&entry->fg = d1 + 0x99;
+                entry->fgWord = d1 + 0x99;
                 return;
             }
             goto injury_0;
@@ -4980,8 +5105,8 @@ void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, PlayerFile *playerFile, ui
         }
         sprite = (d3 - 0x40) / 32 + 0x9C;
     write_fg_bg_0:
-        *(uint16_t *)&entry->fg = sprite;
-        *(uint16_t *)&entry->bg &= 0xFFF0;
+        entry->fgWord = sprite;
+        entry->bgColor &= 0xFFF0;
         return;
     }
 
@@ -4991,11 +5116,11 @@ void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, PlayerFile *playerFile, ui
 
     if (d2 == 0) {
         if (d3 == 0) {
-            *(uint16_t *)&entry->fg = d1 + 0xBA;
+            entry->fgWord = d1 + 0xBA;
             return;
         }
         if (d3 == 0x20) {
-            *(uint16_t *)&entry->fg = d1 + 0x99;
+            entry->fgWord = d1 + 0x99;
             return;
         }
         goto injury_1;
@@ -5022,8 +5147,8 @@ injury_1:
     }
     sprite = (d3 - 0x40) / 32 + 0x9C;
 write_fg_bg_1:
-    *(uint16_t *)&entry->fg = sprite;
-    *(uint16_t *)&entry->bg &= 0xFFF0;
+    entry->fgWord = sprite;
+    entry->bgColor &= 0xFFF0;
 }
 
 /* ---- Chunk 143: SetSquadMenuEntryStatusSprite_AfterSim ---- */
@@ -5032,7 +5157,18 @@ __attribute__((used, externally_visible))
 void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, PlayerFile *playerFile)
 {
     if (_ShouldApplyRandomPlayerStatusAfterSim() == 0) {
-        _SetSquadMenuEntryStatusSprite(entry, playerFile, 0);
+        /* _SetSquadMenuEntryStatusSprite expects a RAW player pointer
+         * (team-relative, from _GetPlayer); it adds sizeof(TeamFile)=76
+         * internally to reach the PlayerFile data. But our `playerFile`
+         * param is already +76-offset (the AfterSim convention used by
+         * the transfer-market caller). Undo the offset before
+         * delegating so the inner function doesn't double-count and
+         * read fields from two PlayerFile slots ahead — that was
+         * causing ADD INTERNATIONAL PLAYER's status-sprite column to
+         * render with the wrong player's positionAndFace/cardsInjuries,
+         * picking card-icon sprites instead of skin/hair faces. */
+        _SetSquadMenuEntryStatusSprite(entry,
+            (PlayerFile *)((uint8_t *)playerFile - sizeof(TeamFile)), 0);
         return;
     }
     /* After sim path — extract face and status for sprite.
@@ -5044,15 +5180,15 @@ void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, PlayerFile *playe
     uint16_t d3 = playerFile->cardsInjuries & 0xE0;
 
     if (d3 == 0) {
-        *(uint16_t *)&entry->fg = d1 + 0xBA;
+        entry->fgWord = d1 + 0xBA;
         return;
     }
     if (d3 == 0x20) {
-        *(uint16_t *)&entry->fg = d1 + 0x99;
+        entry->fgWord = d1 + 0x99;
         return;
     }
     /* Injured */
-    *(uint16_t *)&entry->fg = (d3 - 0x40) / 32 + 0x9C;
+    entry->fgWord = (d3 - 0x40) / 32 + 0x9C;
 }
 
 /* ---- Chunk 147: SetFriendlyPitchOrSeason ---- */
@@ -5066,7 +5202,7 @@ void _SetFriendlyPitchOrSeason(void)
     uint8_t *table = friendlyPitchTypeTable;
     if (pitchTypeOrSeason != 0)
         table = friendly_season_table;
-    menuEntries[4].fg = (uint32_t)table;  /* 0xE0 / 56 = 4 */
+    menuEntries[4].fg = (uintptr_t)table;  /* 0xE0 / 56 = 4 */
 }
 
 /* ---- Chunk 147: PitchTypeOrSeasonProc ---- */
@@ -5164,10 +5300,10 @@ void _DisableEntries(void)
     for (i = 0; i < 6; i++) {
         MenuEntry *e = &menuEntries[1 + i];  /* 0x38/56=1, loop 6 */
         if (e->background == ENTRY_FRAME_AND_BACK_COLOR) {
-            uint16_t bgVal = *(uint16_t *)&e->bg;
+            uint16_t bgVal = e->bgColor;
             if ((bgVal & 0x0F) != 0) {
                 bgVal = (bgVal & 0xFFF0) + PINK_TO_BROWN_9;
-                *(uint16_t *)&e->bg = bgVal;
+                e->bgColor = bgVal;
                 e->isDisabled = 1;
             }
         }
@@ -5192,15 +5328,15 @@ void _FriendlyMenuReinit(void)
         friendlyPitchType = pitchType;
         /* Disable entry 3 (pitch/season toggle) */
         MenuEntry *e3 = &menuEntries[3];  /* 0xA8/56=3 */
-        uint16_t bg3 = *(uint16_t *)&e3->bg;
+        uint16_t bg3 = e3->bgColor;
         bg3 = (bg3 & 0xFFF0) + PINK_TO_BROWN_9;
-        *(uint16_t *)&e3->bg = bg3;
+        e3->bgColor = bg3;
         e3->isDisabled = 1;
         /* Disable entry 4 */
         MenuEntry *e4 = &menuEntries[4];  /* 0xE0/56=4 */
-        uint16_t bg4 = *(uint16_t *)&e4->bg;
+        uint16_t bg4 = e4->bgColor;
         bg4 = (bg4 & 0xFFF0) + PINK_TO_BROWN_9;
-        *(uint16_t *)&e4->bg = bg4;
+        e4->bgColor = bg4;
         e4->isDisabled = 1;
     }
 
@@ -5267,9 +5403,10 @@ void _RandomlySwapTeams(void)
 {
     uint16_t r = _Rand2();
     if (!(r & 1)) return;
-    /* Swap 684 bytes (TEAMFILE_SIZE) between team 0 and team 1 */
-    uint16_t *a = (uint16_t *)&selTeamsPtr;
-    uint16_t *b = (uint16_t *)(&selTeamsPtr + 684);
+    /* Swap two TeamFileEx records word-by-word (684 / 2 = 342 words). */
+    TeamFileEx *base = (TeamFileEx *)&selTeamsPtr;
+    uint16_t *a = (uint16_t *)&base[0];
+    uint16_t *b = (uint16_t *)&base[1];
     int16_t i;
     for (i = 0; i < 342; i++) {
         uint16_t tmp = a[i];
@@ -5282,7 +5419,7 @@ void _RandomlySwapTeams(void)
  * Chunk 163: ViewSquad Init/Common/AfterDraw
  * ================================================================ */
 
-extern uint32_t viewSquadTitle;
+extern uintptr_t viewSquadTitle;
 extern uint32_t viewSquadFlags;
 extern uint32_t viewSquadMaskLo;
 extern uint32_t viewSquadMaskHi;
@@ -5304,7 +5441,7 @@ void _ViewSquadInit(void)
 {
     uint16_t teamNum = selTeamNumber;
     if (teamNum != 0xFFFF) {
-        if (teamNum == *(uint16_t *)&squadTeamPtr->countryNumber) {
+        if (teamNum == PACK_BE_U16(squadTeamPtr->countryNumber, squadTeamPtr->teamOrdinal)) {
             if (careerNumPlayers == 16) {
                 goto skipEntryShow;
             }
@@ -5317,7 +5454,7 @@ void _ViewSquadInit(void)
 skipEntryShow:
 
     menuEntries[0].fg = viewSquadTitle;
-    menuEntries[1].fg = (uint32_t)squadTeamPtr->teamName;
+    menuEntries[1].fg = (uintptr_t)squadTeamPtr->teamName;
 
     if (viewSquadArg2) {
         menuEntries[2].isInvisible = 1;  /* 0x70/56 = 2 */
@@ -5423,7 +5560,7 @@ int16_t _ShowSquad(TeamFile *teamPtr, uint8_t *title, uint32_t maskLo,
                     uint32_t maskHi, uint16_t arg2, uint16_t arg3)
 {
     squadTeamPtr = teamPtr;
-    viewSquadTitle = (uint32_t)title;
+    viewSquadTitle = (uintptr_t)title;
     viewSquadMaskLo = maskLo;
     viewSquadMaskHi = maskHi;
     viewSquadArg2 = arg2;
@@ -5504,7 +5641,7 @@ void _CheckNumberOfTeams(void)
  * ========================================================================== */
 
 extern uint16_t selectedTeamCountryNumber;
-extern uint32_t selectedTeamPtr;
+extern TeamFileEx *selectedTeamPtr;
 extern uint8_t  aStatistics[];
 
 /* ChooseTeamsDialog — set up team selection globals and show choose-teams menu.
@@ -5519,17 +5656,17 @@ void _ChooseTeamsDialog(uint16_t showClub, uint16_t showNational, uint16_t showO
     showNationalTeams = showNational;
     showOrigCustomTeams = showOrigCustom;
     gameTypeStr = 0;
-    chooseTeamsHeader1stPart = (uint32_t)title;
-    chooseTeamsFunc = (uint32_t)onSelect;
+    chooseTeamsHeader1stPart = (uintptr_t)title;
+    chooseTeamsFunc = (uintptr_t)onSelect;
     careerSquadScreenDidSelectPlayerFlag = 0;
     /* seq instruction: sets high byte of word to 0xFF when a1==0 (big-endian) */
     if (onSelect == (void *)0)
         careerSquadScreenDidSelectPlayerFlag = 0xFF00;
-    playWhatStr = (uint32_t)aStatistics;
+    playWhatStr = (uintptr_t)aStatistics;
     numNeededTeams = 1;
     selectTeamsNoLimit = 1;
     selectedTeamCountryNumber = 0xFFFF;
-    selectedTeamPtr = 0;
+    selectedTeamPtr = (TeamFileEx *)0;
     _ShowMenu(chooseTeamsMenu);
     if ((int16_t)teamsType >= 0) {
         loadTeam = 1;
@@ -5553,17 +5690,17 @@ void _ChooseTeamsDialogWithNationality(uint16_t nationality, uint16_t showClub,
     showNationalTeams = showNational;
     showOrigCustomTeams = showOrigCustom;
     gameTypeStr = 0;
-    chooseTeamsHeader1stPart = (uint32_t)title;
-    chooseTeamsFunc = (uint32_t)onSelect;
+    chooseTeamsHeader1stPart = (uintptr_t)title;
+    chooseTeamsFunc = (uintptr_t)onSelect;
     careerSquadScreenDidSelectPlayerFlag = 0;
     /* seq instruction: sets high byte of word to 0xFF when a1==0 (big-endian) */
     if (onSelect == (void *)0)
         careerSquadScreenDidSelectPlayerFlag = 0xFF00;
-    playWhatStr = (uint32_t)aStatistics;
+    playWhatStr = (uintptr_t)aStatistics;
     numNeededTeams = 1;
     selectTeamsNoLimit = 1;
     selectedTeamCountryNumber = 0xFFFF;
-    selectedTeamPtr = 0;
+    selectedTeamPtr = (TeamFileEx *)0;
     _ShowMenu(chooseTeamsMenu);
     if ((int16_t)teamsType >= 0) {
         loadTeam = 1;
@@ -5597,8 +5734,8 @@ void _SelectTeamToManage(void)
  * ========================================================================== */
 
 extern uint16_t careerAddIntlPlayerResult;
-extern uint32_t careerAddIntlPlayerSelectedSrcPlayerPtr;
-extern uint32_t careerAddIntlPlayerSelectedSrcPlayerNamePtr;
+extern uintptr_t careerAddIntlPlayerSelectedSrcPlayerPtr;
+extern uintptr_t careerAddIntlPlayerSelectedSrcPlayerNamePtr;
 extern uint8_t  nationalTeamFileId;
 extern uint8_t  aAddInternation[];
 extern uint8_t  aAddInternation_0[];
@@ -5654,7 +5791,7 @@ void _Career_ShowAddInternationalPlayerDialog(uint16_t homeOrAbroadFlag)
 __attribute__((used, externally_visible))
 void _Career_AddInternationalPlayerCommon(uint8_t *selectedTeam, uint8_t *title)
 {
-    uint16_t teamNumber = *(uint16_t *)selectedTeam;
+    uint16_t teamNumber = BE_READ_U16(selectedTeam);
     careerAddIntlPlayerSelectedTeamNumber = teamNumber;
 
     TeamFileEx *teamEx = _GetTeamPointer(teamNumber);
@@ -5719,8 +5856,8 @@ void _Career_AddInternationalPlayerCommon(uint8_t *selectedTeam, uint8_t *title)
      * block_ptr = teamBase + ordinal * sizeof(PlayerFile)
      * PlayerFile fields at block_ptr + sizeof(TeamFile) */
     uint8_t *srcBlock = (uint8_t *)teamEx + (uint16_t)((uint16_t)selected * sizeof(PlayerFile));
-    careerAddIntlPlayerSelectedSrcPlayerPtr = (uint32_t)srcBlock;
-    careerAddIntlPlayerSelectedSrcPlayerNamePtr = (uint32_t)((uint8_t *)teamEx + 5);
+    careerAddIntlPlayerSelectedSrcPlayerPtr = (uintptr_t)srcBlock;
+    careerAddIntlPlayerSelectedSrcPlayerNamePtr = (uintptr_t)teamEx->team.teamName;
 
     /* Get position type of selected source player */
     uint16_t srcPos = (teamEx->players[selected].positionAndFace & 0xE0) >> 5;
@@ -5832,7 +5969,19 @@ extern void _Career_RemoveInternationalPlayersByMask(uint32_t removeMask);
 
 /* SelectNationalTeamInit — onInit for the national team selection menu.
  * Clears remove mask and pending add flag. If squad not full, enables
- * "add player" button (entry 3). */
+ * "add player" button (entry 3).
+ *
+ * Asm SelectNationalTeamInit ends with `bra.w *+4` — a literal
+ * branch-to-PC+4 that on Amiga's sequential code layout falls through
+ * into the SelectNationalTeamFinish function laid out immediately
+ * after. So Init implicitly chains into Finish, which is what
+ * populates the menu title ("GERMANY SQUAD") and the
+ * "SELECT N MORE INTERNATIONAL SQUAD PLAYERS" subtitle via
+ * Career_UpdateNationalTeamMenuEntries. Our C translation initially
+ * treated Init and Finish as two separate callbacks, so on first show
+ * the title stayed at the "STDMENUTEXT" placeholder and the red
+ * subtitle bar said "TO REPLACE" (Playaveli's GERMANY.CAR SELECT
+ * SQUAD repro). Mirror the fall-through explicitly. */
 __attribute__((used, externally_visible))
 void _SelectNationalTeamInit(void)
 {
@@ -5841,6 +5990,7 @@ void _SelectNationalTeamInit(void)
     if (careerNumPlayers != 20) {
         _SetCurrentEntry(3);
     }
+    _SelectNationalTeamFinish();
 }
 
 /* SelectNationalTeamFinish — onReturn for the national team selection menu.
@@ -5926,11 +6076,11 @@ void _NationalTeamAddPlayer(void)
 
         if (careerAddIntlPlayerResult == 1) {
             /* No room right now — store as pending add */
-            _StringCopy((uint8_t *)(uint32_t)careerAddIntlPlayerSelectedSrcPlayerNamePtr,
+            _StringCopy((uint8_t *)careerAddIntlPlayerSelectedSrcPlayerNamePtr,
                          careerIntlPlayerSelectedTeamName);
 
             /* Copy 38 bytes of PlayerFile data from source player */
-            uint8_t *src = (uint8_t *)(uint32_t)careerAddIntlPlayerSelectedSrcPlayerPtr + sizeof(TeamFile);
+            uint8_t *src = (uint8_t *)careerAddIntlPlayerSelectedSrcPlayerPtr + sizeof(TeamFile);
             volatile uint8_t *dst = (volatile uint8_t *)careerIntlPlayerSelectedPlayerDataCopy;
             for (int16_t i = 37; i >= 0; i--) {
                 *dst++ = *src++;
@@ -6120,7 +6270,7 @@ extern DIYCompetitionEx diyCompetitionStart;
  * ================================================================ */
 static void _ShowSquadMenuForTeam(uint8_t *teamPtr, uint16_t rowMode)
 {
-    squadTeamFilePtr = (uint32_t)teamPtr;
+    squadTeamFilePtr = (uintptr_t)teamPtr;
     squadRowMode = rowMode;
     inEditTactics = rowMode;
 
@@ -6134,7 +6284,7 @@ static void _ShowSquadMenuForTeam(uint8_t *teamPtr, uint16_t rowMode)
      * set skill diff to -1 (disabled) */
     uint16_t gt = gameType;
     if (gt != 1 && gt != 2) {
-        if (*(uint8_t *)(teamPtr + 4) != 1) {
+        if (((TeamFileEx *)teamPtr)->team.teamControls != 1) {
             teamSkillDiffAfterChange = 0xFFFF;
         }
     }
@@ -6173,14 +6323,26 @@ void _SelectAndShowSquadToView_Direct(uint16_t rowMode)
  * _StatsViewSquads  (SWOS2.s line 49177)
  *
  * Opens squad view from stats menu using DIY teams buffer.
- * ================================================================ */
+ *
+ * diyTeamsBufferPtr points into diyCompetitionStart where team IDs
+ * are stored as Amiga BE byte pairs ([country, ordinal]) — same
+ * encoding as the other cup/league team lists.
+ * _SelectAndShowSquadToView's downstream _VerifyTeamLoaded expects
+ * a host-native (country<<8)|ord value, so we BE-decode each entry
+ * into a stack buffer first. The other _ChooseTeamForEditTactics
+ * caller (edit_tactics.c:3165) already does this via PACK_BE_U16;
+ * this is the same conversion, just applied to a different source. */
 __attribute__((used, externally_visible))
 void _StatsViewSquads(void)
 {
-    uint16_t *teams = (uint16_t *)diyTeamsBufferPtr;
+    uint8_t *src = (uint8_t *)(uintptr_t)diyTeamsBufferPtr;
     uint16_t numTeams = diyNumberOfTeams;
     uint16_t rowMode = (uint16_t)diyCompetitionStart.base.substitutesCount;
-    _SelectAndShowSquadToView(teams, numTeams, rowMode);
+    uint16_t decoded[64];
+    if (numTeams > 64) numTeams = 64;
+    for (uint16_t i = 0; i < numTeams; i++)
+        decoded[i] = BE_READ_U16(src + (uint32_t)i * 2);
+    _SelectAndShowSquadToView(decoded, numTeams, rowMode);
 }
 
 /* ================================================================
@@ -6213,20 +6375,49 @@ void _SquadMenu(void)
         return;
     }
 
-    /* No squads — use competition file buffer teams */
-    uint16_t compType = *(uint16_t *)competitionFileBuffer;
-    uint16_t numT = numDiyTeams;
+    /* No squads — use competition file buffer teams. Read via the typed
+     * struct view: `competitionFileBuffer` mirrors diyCompetitionStart's
+     * bytes (written by _Career_StoreCompetitionSlotStateToBuffer's
+     * word-by-word copy), so it has the same 64-bit struct layout where
+     * post-namePtr fields shift by +4 vs Amiga. The asm-style raw
+     * offsets (+50 numTeams, +302/+590/+154 team lists) were reading
+     * stale field bytes on 64-bit. Use typed fields instead.
+     * See project_raw_offset_64bit_shift_trap.md. */
+    DIYCompetitionEx *cfbEx = (DIYCompetitionEx *)competitionFileBuffer;
+    DIYCompetition   *cfb   = &cfbEx->base;
+    uint16_t compType = (uint16_t)cfb->competitionType;
+    uint16_t numT = (uint16_t)cfb->numTeams;
     uint16_t *teamList;
 
     if (compType == 0) {
-        teamList = (uint16_t *)(competitionFileBuffer + 302);
+        teamList = cfbEx->matchData.league.leagueTeamIds;  /* parent +0x12E */
     } else if (compType == 1) {
-        teamList = (uint16_t *)(competitionFileBuffer + 590);
+        teamList = cfbEx->cupTeamIds;                       /* parent +0x24E */
     } else {
-        teamList = (uint16_t *)(competitionFileBuffer + 154);
+        /* Tournament: team-id list is at parent +0x9A.
+         * diyFileBufferCopy stores team IDs at that offset
+         * (diyTournamentTeamIds alias). For DIYCompetitionEx in the
+         * SDL build the matching typed access lands at parent +0x9A
+         * inside the matchData region — interpret via raw bytes with
+         * the 64-bit shift compensation. */
+        teamList = (uint16_t *)((uint8_t *)cfb + 0x9A);
     }
 
-    _SelectAndShowSquadToView(teamList, numT, rowMode);
+    if (numT > 64) numT = 0;  /* safety clamp — should never trigger now */
+
+    /* Team IDs in `competitionFileBuffer`'s leagueTeamIds/cupTeamIds/
+     * tournamentTeamIds region are BE-packed `{country, ordinal}` byte
+     * pairs (same convention as elsewhere in the SDL build). The
+     * downstream `_VerifyTeamLoaded` expects a host-native
+     * (country<<8)|ordinal value, so a raw `*(uint16_t *)` read on LE
+     * would byte-swap and panic on bogus IDs like 0x000E.
+     * Mirror the BE-decode helper from _StatsViewSquads (see below). */
+    {
+        uint16_t decoded[64];
+        for (uint16_t i = 0; i < numT; i++)
+            decoded[i] = BE_READ_U16((uint8_t *)&teamList[i]);
+        _SelectAndShowSquadToView(decoded, numT, rowMode);
+    }
 }
 
 /* ===== CareerGameListCommon (SWOS2.s line 49351) =====
@@ -6279,12 +6470,14 @@ void _CareerGameListCommon(MenuEntry *item)
     uint16_t d4 = 0;
     uint16_t d3 = 0;
 
-    /* d0 <<= 3 to get byte offset into gameListArray (8 bytes per pair) */
-    uint16_t arrayOff = d0 << 3;
-    uint8_t *a6 = (uint8_t *)gameListArray[arrayOff / 4]; /* contest entry ptr */
+    /* gameListArray is now a typed void *[28] = 14 pairs of
+     * (contestEntry, roundOrGame). Index by pair via d0 * 2 instead
+     * of byte arithmetic — the old `d0 << 3 / 4` form assumed 4-byte
+     * slots and would land mid-pointer on 64-bit. */
+    uint8_t *a6 = (uint8_t *)gameListArray[d0 * 2];     /* contest entry ptr */
     if (a6 == 0)
         goto hideAll;
-    uint8_t *a4 = (uint8_t *)gameListArray[arrayOff / 4 + 1]; /* round/game ptr */
+    uint8_t *a4 = (uint8_t *)gameListArray[d0 * 2 + 1]; /* round/game ptr */
 
     /* a5 = entry 33 (menuEntries + 0x738) */
     a5 = &menuEntries[33];
@@ -6299,13 +6492,87 @@ void _CareerGameListCommon(MenuEntry *item)
 
     uint8_t *a2 = 0; /* result string pointer, NULL if no result */
 
+    /* [cglm-dump] One-shot dump of cache + gameListArray state on first
+     * draw of the career main screen. Diagnostic for the 64-bit
+     * bring-up: stale fixtures + 22-byte cache slot overflow have been
+     * causing _VerifyTeamLoaded panics. Dumps the whole cache and the
+     * gameListArray pairs so we can see which entries are well-formed
+     * vs. corrupted. Always-on for now (one-shot, small output) — gate
+     * with SWOS_DEBUG_AUTOSKIP and remove once the 22-byte slot
+     * overflow is properly fixed and the new-career menu is stable. */
+    {
+        extern uint8_t teamSelectionKeyCache[];
+        extern uint16_t teamSelectionKeyCacheCount;
+        static int s_cglmDumpDone = 0;
+        if (!s_cglmDumpDone) {
+            s_cglmDumpDone = 1;
+            int cacheCountS = (int)(int16_t)teamSelectionKeyCacheCount;
+            SWOS_DBG("[cglm-dump] d0=%u cacheCount=%d cacheBase=%p\n",
+                    (unsigned)d0, cacheCountS,
+                    (void *)teamSelectionKeyCache);
+            uint8_t *p = teamSelectionKeyCache;
+            for (int s = 0; s < cacheCountS && s < 40; s++) {
+                uint16_t stride = *(uint16_t *)(p + 2);
+                SWOS_DBG("[cglm-dump]   slot[%d] @%+lld stride=%u "
+                                "hdr=%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X"
+                                "  fx0=%02X %02X %02X %02X %02X %02X\n",
+                        (int)s, (long long)(p - teamSelectionKeyCache),
+                        (unsigned)stride,
+                        p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9],
+                        p[10], p[11], p[12], p[13], p[14], p[15]);
+                if (stride < 12 || stride > 256) {
+                    SWOS_DBG("[cglm-dump]   stride out of range, halting dump\n");
+                    break;
+                }
+                p += stride;
+            }
+            for (uint16_t i = 0; i < 14; i++) {
+                void *ce = gameListArray[i * 2];
+                void *ge = gameListArray[i * 2 + 1];
+                if (ce == 0 && ge == 0) continue;
+                long long ceOff = ce ? (long long)((uint8_t *)ce - teamSelectionKeyCache) : -1;
+                long long geOff = ge ? (long long)((uint8_t *)ge - teamSelectionKeyCache) : -1;
+                SWOS_DBG("[cglm-dump]   gameListArray[%u] contest=+%lld game=+%lld",
+                        (unsigned)i, ceOff, geOff);
+                if (ge) {
+                    uint8_t *g = (uint8_t *)ge;
+                    SWOS_DBG("  bytes=%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
+                            g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7], g[8], g[9], g[10], g[11]);
+                }
+                SWOS_DBG("\n");
+            }
+            SWOS_DBG_FLUSH();
+        }
+    }
+
     if (a6[5] != 0) {
-        /* Has teams — load them */
-        uint16_t topTeamIdx = *(uint16_t *)(a4 + 0x0C);
+        /* Has teams — load them. Team IDs in the fixture record are
+         * { countryByte, ordinalByte } pairs that the original asm
+         * reads as a big-endian uint16 via `move.w`. Use BE_READ_U16
+         * so the LE host produces the `(country<<8)|ordinal` value
+         * findTeamInCache / _VerifyTeamLoaded compare against. */
+        uint16_t topTeamIdx = BE_READ_U16(a4 + 0x0C);
+        /* [career-row] Per-call trace. Always-on diagnostic during
+         * bring-up — log every team verify with d0, listIndex,
+         * game offset, and resolved team ids. Lets us see which row
+         * triggers a verify panic without having to guess. */
+        {
+            extern uint8_t teamSelectionKeyCache[];
+            extern uint16_t teamSelectionKeyCache_ListIndex;
+            uint16_t botTeamIdxPreview = BE_READ_U16(a4 + 0x0E);
+            long long gameOff = (long long)((uint8_t *)a4 - teamSelectionKeyCache);
+            long long contestOff = (long long)((uint8_t *)a6 - teamSelectionKeyCache);
+            SWOS_DBG("[career-row] d0=%u listIdx=%u contest=+%lld game=+%lld "
+                            "numGames=%u top=0x%04X bot=0x%04X\n",
+                    (unsigned)d0, (unsigned)teamSelectionKeyCache_ListIndex,
+                    contestOff, gameOff, (unsigned)a6[5],
+                    (unsigned)topTeamIdx, (unsigned)botTeamIdxPreview);
+            SWOS_DBG_FLUSH();
+        }
         TeamFileEx *topTeamData = _VerifyTeamLoaded(topTeamIdx);
         careerGameTopTeamName = (char *)topTeamData->team.teamName;
 
-        uint16_t botTeamIdx = *(uint16_t *)(a4 + 0x0E);
+        uint16_t botTeamIdx = BE_READ_U16(a4 + 0x0E);
         TeamFileEx *botTeamData = _VerifyTeamLoaded(botTeamIdx);
         /* Check if bottom team is player-controlled (byte 4 == 1 → sne → 0, else -1) */
         uint16_t ctrl;
@@ -6339,9 +6606,24 @@ void _CareerGameListCommon(MenuEntry *item)
 
 pastTeamLoad:
     ;
-    /* Determine slot type and competition name */
+    /* Determine slot type and competition name.
+     *
+     * The Amiga code did `((uint8_t **)&currentCompetitionPtr)[slotType]`
+     * — relying on the four globals being adjacent 4-byte pointers in
+     * BSS / careerFileBufferBuf overlay. On 64-bit the array-index
+     * stride is 8 and reads land in the wrong slot (and the overlay
+     * offsets are still 4 B apart pending a wider careerFileBuffer
+     * format). Switch on slotType to fetch the right named pointer
+     * directly — pointer-width-correct on both targets. */
     uint16_t slotType = a6[0] & 0xFF;
-    uint8_t *compInfo = ((uint8_t **)&currentCompetitionPtr)[slotType]; /* a1 */
+    uint8_t *compInfo;
+    switch (slotType) {
+        case 0: compInfo = currentCompetitionPtr;     break;
+        case 1: compInfo = secondaryCompetitionPtr;   break;
+        case 2: compInfo = tertiaryCompetitionPtr;    break;
+        case 3: compInfo = quaternaryCompetitionPtr;  break;
+        default: compInfo = (uint8_t *)0;             break;
+    }
     uint16_t d5; /* color/stringFlags value */
     uint8_t *namePtr; /* competition name pointer */
 
@@ -6368,10 +6650,10 @@ pastTeamLoad:
         break;
     default:
         /* Unknown slot type — show dashes */
-        a5->fg = (uint32_t)aMinus;
+        a5->fg = (uintptr_t)aMinus;
         a5->isInvisible = 0;
         a5++; /* next entry */
-        a5->fg = (uint32_t)aMinus;
+        a5->fg = (uintptr_t)aMinus;
         a5->isInvisible = 0;
         a5++; /* next entry */
         d5 = 1;
@@ -6398,18 +6680,21 @@ pastTeamLoad:
             /* Get division/competition name string */
             uint8_t strTableOff = compInfo[5];
             if (strTableOff == 0) {
-                /* Use divStringTable[currentDivisionIndex]
-                 * namePtr == divStringTable base for league type */
                 namePtr = (uint8_t *)divStringTable[currentDivisionIndex];
             } else {
-                /* compInfo + 5 + strTableOff, then index by currentDivisionIndex*8 + 4 */
+                /* Embedded char *[] name table — 2 entries per
+                 * division (full name + abbreviation). Amiga stride
+                 * was divIdx * 8 (= 2 × 4-byte slots), reading the
+                 * second slot via base+4. On 64-bit each entry is 8
+                 * bytes, so use typed `char **` indexing with
+                 * `divIdx * 2 + 1` to get the abbreviation. Same fix
+                 * as in _SelectTeamsFinalMenu (teams.c). */
                 int16_t off = (int8_t)strTableOff;
-                uint8_t *base = compInfo + 5 + off;
-                uint16_t idx = currentDivisionIndex << 3;
-                namePtr = (uint8_t *)(*(uint32_t *)(base + 4 + idx));
+                char **nameTbl = (char **)(compInfo + 5 + off);
+                namePtr = (uint8_t *)nameTbl[currentDivisionIndex * 2 + 1];
             }
 
-            a5->fg = (uint32_t)namePtr;
+            a5->fg = (uintptr_t)namePtr;
             a5->isInvisible = 0;
             a5++; /* next entry */
 
@@ -6419,15 +6704,16 @@ pastTeamLoad:
             a5++; /* next entry */
         } else if (slotVal == 1) {
             /* --- Cup-style header (single line comp name + round info) --- */
-            /* Resolve competition name if strTableOff != 0 */
             uint8_t strTableOff = compInfo[5];
             if (strTableOff != 0) {
+                /* Typed `char **` access — slot 1 is the abbreviation
+                 * (full name + abbreviation pair per div). */
                 int16_t off = (int8_t)strTableOff;
-                uint8_t *base = compInfo + 5 + off;
-                namePtr = (uint8_t *)(*(uint32_t *)(base + 4));
+                char **nameTbl = (char **)(compInfo + 5 + off);
+                namePtr = (uint8_t *)nameTbl[1];
             }
 
-            a5->fg = (uint32_t)namePtr;
+            a5->fg = (uintptr_t)namePtr;
 
             /* Height check depends on whether a4 == a6 */
             if (a4 == a6) {
@@ -6496,15 +6782,14 @@ pastTeamLoad:
             }
         } else {
             /* --- Default (slotVal >= 2) header: same as cup but different path --- */
-            /* Resolve competition name if strTableOff != 0 */
             uint8_t strTableOff = compInfo[5];
             if (strTableOff != 0) {
                 int16_t off = (int8_t)strTableOff;
-                uint8_t *base = compInfo + 5 + off;
-                namePtr = (uint8_t *)(*(uint32_t *)(base + 4));
+                char **nameTbl = (char **)(compInfo + 5 + off);
+                namePtr = (uint8_t *)nameTbl[1];
             }
 
-            a5->fg = (uint32_t)namePtr;
+            a5->fg = (uintptr_t)namePtr;
 
             /* Height check */
             if (a4 == a6) {
@@ -6602,9 +6887,9 @@ afterHeader:
         uint8_t homeAway = a4[0x0A];
         if (homeAway != 0) {
             if (homeAway == 1) {
-                a5->fg = (uint32_t)aH; /* "(H)" */
+                a5->fg = (uintptr_t)aH; /* "(H)" */
             } else if (homeAway == 2) {
-                a5->fg = (uint32_t)aA_2; /* "(A)" */
+                a5->fg = (uintptr_t)aA_2; /* "(A)" */
             }
             /* asm: clr.w 4(a5) regardless of homeAway value (1, 2, or other) */
             a5->isInvisible = 0;
@@ -6619,8 +6904,8 @@ afterHeader:
     a5->dwHeight = 7;
 
     /* Check if this is the saved/active contest entry */
-    if ((uint32_t)a6 == savedContestEntryPtr &&
-        (uint32_t)a4 == savedContestRoundPtr) {
+    if ((uintptr_t)a6 == savedContestEntryPtr &&
+        (uintptr_t)a4 == savedContestRoundPtr) {
         a5->isInvisible = 0;
     } else {
         a5->isInvisible = 1;
@@ -6631,43 +6916,51 @@ afterHeader:
     /* Top team name (player-controlled team) */
     a5->y = d2;
     if (careerGameListTeamControl == 0)
-        a5->fg = (uint32_t)careerGameTopTeamName;
+        a5->fg = (uintptr_t)careerGameTopTeamName;
     else
-        a5->fg = (uint32_t)careerGameBottomTeamName;
+        a5->fg = (uintptr_t)careerGameBottomTeamName;
     a5->isInvisible = 0;
     a5++; /* next entry */
 
     /* Score entries — depends on whether match was played */
     if (a4[0x0B] != 0) {
-        /* Match played — show scores */
+        /* Match played — show scores.
+         *
+         * packedGoals at a4[0x10] is stored host-native (writer at
+         * career_status.c:3741). (packed>>8) is team1Score (fixture top
+         * team at +0x0C), (packed&0xFF) is team2Score (bottom at +0x0E).
+         * The previous code did byte access — a4[0x10] / a4[0x11] —
+         * which assumed BE byte order; on LE x86 that swapped the
+         * scores so the career fixture row showed the user team's
+         * score in the opponent column ("AC MILAN 4-1 LAZIO" when
+         * reality was LAZIO 4-1 AC MILAN). */
+        uint16_t packedScore = *(uint16_t *)&a4[0x10];
+        int8_t team1Score = (int8_t)(packedScore >> 8);
+        int8_t team2Score = (int8_t)(packedScore & 0xFF);
+
         /* Top score — write as uint16_t to match asm move.w to offset $26 */
         a5->y = d2;
         {
-            int8_t topScore;
-            if (careerGameListTeamControl == 0)
-                topScore = (int8_t)a4[0x10];
-            else
-                topScore = (int8_t)a4[0x11];
-            *(uint16_t *)&a5->fg = (uint16_t)(int16_t)topScore;
+            /* careerGameListTeamControl==0 means top fixture team is user
+             * (player-controlled). The display puts the user team first, so
+             * topScore should be the user's score. */
+            int8_t topScore = (careerGameListTeamControl == 0) ? team1Score : team2Score;
+            a5->fgWord = (uint16_t)(int16_t)topScore;
         }
         a5->isInvisible = 0;
         a5++; /* next entry */
 
         /* Dash separator */
         a5->y = d2;
-        a5->fg = (uint32_t)aMinus;
+        a5->fg = (uintptr_t)aMinus;
         a5->isInvisible = 0;
         a5++; /* next entry */
 
         /* Bottom score — write as uint16_t to match asm move.w to offset $26 */
         a5->y = d2;
         {
-            int8_t botScore;
-            if (careerGameListTeamControl == 0)
-                botScore = (int8_t)a4[0x11];
-            else
-                botScore = (int8_t)a4[0x10];
-            *(uint16_t *)&a5->fg = (uint16_t)(int16_t)botScore;
+            int8_t botScore = (careerGameListTeamControl == 0) ? team2Score : team1Score;
+            a5->fgWord = (uint16_t)(int16_t)botScore;
         }
         a5->isInvisible = 0;
         a5++; /* next entry */
@@ -6678,7 +6971,7 @@ afterHeader:
         a5++; /* top score hidden */
 
         a5->y = d2;
-        a5->fg = (uint32_t)aV;
+        a5->fg = (uintptr_t)aV;
         a5->isInvisible = 0;
         a5++; /* "V" separator */
 
@@ -6690,9 +6983,9 @@ afterHeader:
     /* Bottom team name (opponent) */
     a5->y = d2;
     if (careerGameListTeamControl == 0)
-        a5->fg = (uint32_t)careerGameBottomTeamName;
+        a5->fg = (uintptr_t)careerGameBottomTeamName;
     else
-        a5->fg = (uint32_t)careerGameTopTeamName;
+        a5->fg = (uintptr_t)careerGameTopTeamName;
     a5->isInvisible = 0;
     a5++; /* next entry */
 
@@ -6715,7 +7008,7 @@ calcColumnMarker:
     {
         uint8_t numRounds = a6[5];
         if (numRounds != 0) {
-            int16_t diff16 = (int16_t)((uint32_t)a4 - (uint32_t)a6);
+            int16_t diff16 = (int16_t)((uintptr_t)a4 - (uintptr_t)a6);
             uint32_t dividend = (uint32_t)(int32_t)diff16;
             uint16_t gameIndex = (uint16_t)(dividend / 12) + 1;
             if ((uint8_t)gameIndex != numRounds)

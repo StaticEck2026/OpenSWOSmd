@@ -20,6 +20,8 @@
  */
 
 #include "rnc.h"
+#include "swos_types.h"  /* uintptr_t — used to test odd-alignment of
+                          * intermediate decode pointers below */
 
 /* ---- Externs ---- */
 extern volatile uint16_t panicReasonCode;
@@ -239,9 +241,24 @@ static uint32_t v1DecodeBlock(uint8_t *src, uint8_t *dst)
     packSize = v1ReadU32(&hdr);       /* hdr now at src+12, but unused further */
     a4 = a3 + packSize;
 
-    /* ---- Overlap handling ---- */
-    /* asm: clr.w -(sp)  → push 0 word (savedCount) */
-    if (dst < a4) {
+    /* ---- Overlap handling ----
+     *
+     * The Amiga original was designed for in-place decompression: src
+     * and dst share one buffer (the file is loaded over itself and
+     * expands in place), so a `dst < a4` check picks the case where
+     * the unpacked output will collide with the still-needed compressed
+     * input and the compressed tail must be relocated above the output
+     * region first.
+     *
+     * Our SDL `_LoadFileEx` always decompresses cross-buffer
+     * (`s_rnc_scratch` → caller's dest). `dst < a4` then just compares
+     * unrelated addresses — on 32-bit Linux the BSS layout incidentally
+     * makes it false, on Cygwin64 it goes true and the relocation
+     * scribbles compressed bytes into unrelated globals, then the
+     * decode reads garbage tables. Guard with a genuine
+     * (dst..dst+unpackSize) vs (src..a4) overlap check so the
+     * relocation only runs when there's a real conflict. */
+    if (dst < a4 && a6 > src) {
         uint8_t leeway = *(a3 - 2);  /* asm: move.b -2(a3),d0 */
         uint8_t *endWithLeeway = a6 + leeway;
 
@@ -251,8 +268,8 @@ static uint32_t v1DecodeBlock(uint8_t *src, uint8_t *dst)
             uint8_t *relDst = endWithLeeway;
 
             /* Align to even */
-            if ((uint32_t)srcEnd & 1) { srcEnd++; relDst++; }
-            if ((uint32_t)relDst & 1) { relDst++; }
+            if ((uintptr_t)srcEnd & 1) { srcEnd++; relDst++; }
+            if ((uintptr_t)relDst & 1) { relDst++; }
 
             /* Save bytes that will be overwritten (between a6 and relDst) */
             {
@@ -438,7 +455,9 @@ main_entry:                          /* loc_106C7E */
      * In our model, v2Bit handles refill transparently, so we just proceed
      * to match decode. */
 
-match_start:                         /* loc_106C8A */
+    /* `match_start:` (loc_106C8A in asm) — left as a comment-only
+     * waypoint; the C structuring fell through naturally and no goto
+     * targets this label. */
     d0 = 2;
     d1 = 0;
     c = v2Bit(&bs);

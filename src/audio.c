@@ -4,7 +4,31 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "audio.h"
+#include "endian_helpers.h"
 #include "display.h"
+
+#ifdef SWOS_SDL_BUILD
+/* RJP1 SDL backend (defined in audio_sdl.c). */
+extern int  AudioSDL_StartSong(const uint8_t *song_data, int song_size,
+                               const uint8_t *ins_data,  int ins_size,
+                               int subsong);
+extern int  AudioSDL_LoadSfxBank(const uint8_t *song_data, int song_size,
+                                 const uint8_t *ins_data,  int ins_size);
+extern void AudioSDL_StopSong(void);
+extern void AudioSDL_SetMasterVolume(int vol_0_64);
+
+/* Buffer capacities — must match the array sizes in src/swos_globals.c.
+ * The RJP1 loader only uses these to bounds-check the .sng layout. */
+#define MENU_SONG_DATA_BYTES  (8  * 1024)
+#define MENU_INS_BANK_BYTES   (64 * 1024)
+/* SFX bank: sfx.sng is small (~2.3 KB) but sfx.in1 is sample-heavy.
+ * sfxSongData is sized 8 KB; poolplyrDatBuffer is 0x14000 = 80 KB
+ * (see swos_amiga_data_stubs.c for the size rationale — sfx.in1 is
+ * 71.5 KB and the original 0xCBE8 / 52 KB allocation overflowed into
+ * imageCmdWorkBuf, clobbering chars sprites). */
+#define SFX_SONG_DATA_BYTES   (8  * 1024)
+#define SFX_INS_BANK_BYTES    (0x14000)
+#endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint16_t audioBankLoaded;
@@ -20,6 +44,7 @@ extern uint8_t aSoundSfxSng[];
 extern uint8_t aSoundSfxIn1[];
 extern uint8_t aSoundSfxIn2[];
 extern volatile uint16_t currentGameTick;
+extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 
 /* Audio system data (PC-relative in SWOS2.s code section) */
 extern AudioState audioState;
@@ -50,7 +75,7 @@ static void ensureChannelPtrs(void)
  * ================================================================ */
 static uint8_t *accessRelocate(uint8_t *ptr)
 {
-    return (uint8_t *)(((uint32_t)ptr + (uint32_t)audioState.bankSectionPtrs[5]) & 0x00FFFFFFu);
+    return (uint8_t *)(((uintptr_t)ptr + (uintptr_t)audioState.bankSectionPtrs[5]) & 0x00FFFFFFu);
 }
 
 /* ================================================================
@@ -100,10 +125,41 @@ void _AudioSetChannelVolume(uint16_t channelOrAll, uint16_t volume)
         audioState.channelVolume[1] = vol;
         audioState.channelVolume[2] = vol;
         audioState.channelVolume[3] = vol;
+#ifdef SWOS_SDL_BUILD
+        AudioSDL_SetMasterVolume(vol);
+        /* Also push the per-channel attenuation to the RJP1 player so a
+         * previous single-channel fade-out (e.g. the crowd-chant code
+         * writing channel 2 to 0) doesn't survive into the next match.
+         * On Amiga, _AudioSetChannelVolume(0xFFFF, 0x40) wrote AUD0VOL..
+         * AUD3VOL hardware registers — clobbering whatever fade state
+         * each channel was in. The SDL backend keeps per-channel
+         * attenuation in software (RJP1_SetChannelAttenuation) and we
+         * have to mirror the hardware-register semantics by hand:
+         * without this, restart-after-match plays out of the left side
+         * only because channel 2 (right-panned) stayed at 0 from the
+         * previous match's chant fade-out. */
+        {
+            extern void AudioSDL_SetChannelVolume(int channel, int vol_0_64);
+            AudioSDL_SetChannelVolume(0, vol);
+            AudioSDL_SetChannelVolume(1, vol);
+            AudioSDL_SetChannelVolume(2, vol);
+            AudioSDL_SetChannelVolume(3, vol);
+        }
+#endif
     }
     else
     {
         audioState.channelVolume[channelOrAll & 3] = vol;
+#ifdef SWOS_SDL_BUILD
+        /* Without this the per-channel volume only updated the
+         * Amiga-side state byte and never reached the SDL audio
+         * engine — so e.g. the chant fade-out path (which sets
+         * channel-2 volume to 0 over 128 frames) silently did
+         * nothing and SFX_CROWD_CHANT_2 looped forever at full
+         * volume because its wave had repeat_len > 0. */
+        extern void AudioSDL_SetChannelVolume(int channel, int vol_0_64);
+        AudioSDL_SetChannelVolume(channelOrAll & 3, vol);
+#endif
     }
 }
 
@@ -166,6 +222,51 @@ void _ClearAudioChannelStruct(AudioChannel *chan)
 __attribute__((used, externally_visible))
 void _InitAudioState(uint8_t *bankBase, uint8_t *songPtr)
 {
+#ifdef SWOS_SDL_BUILD
+    /* The real init parses the bank header byte-for-byte, but the whole
+     * bank layout is 68k big-endian. Until we add proper byte-swap
+     * support across audio.c / audio_irq.c, just zero the state and
+     * bail so the loader-intro music path doesn't crash. Menu music
+     * stays silent on SDL for now. */
+    (void)bankBase;
+    (void)songPtr;
+    /* Clear audio state so later ISR tick doesn't see garbage. */
+    {
+        uint8_t *p = (uint8_t *)&audioState;
+        for (unsigned i = 0; i < sizeof(audioState); ++i) p[i] = 0;
+    }
+    audioState.masterVolume = 0;
+    audioState.modeFlags    = 0;
+
+    /* Even though we don't parse the bank, the IRQ ticks will run and
+     * may dispatch to channels later (e.g. after _AudioSetMode flips
+     * the enable bytes). hwRegBase must point at valid storage or the
+     * AUDx writes inside loadAUDxPtrLenIfReloadNeeded* SIGSEGV. The
+     * AUDxLC_ADDR macros resolve to (custom + 0xA0/B0/C0/D0) which is
+     * already-allocated s_custom_storage on the SDL host. */
+    ensureChannelPtrs();
+
+    clearAudioChannelStruct(&audioChannel0);
+    audioChannel0.hwRegBase = AUD0LC_ADDR;
+    audioChannel0.pvDmaBit = 1;
+    audioChannel0.svDmaBit = 1;
+
+    clearAudioChannelStruct(&audioChannel1);
+    audioChannel1.hwRegBase = AUD1LC_ADDR;
+    audioChannel1.pvDmaBit = 2;
+    audioChannel1.svDmaBit = 2;
+
+    clearAudioChannelStruct(&audioChannel2);
+    audioChannel2.hwRegBase = AUD2LC_ADDR;
+    audioChannel2.pvDmaBit = 4;
+    audioChannel2.svDmaBit = 4;
+
+    clearAudioChannelStruct(&audioChannel3);
+    audioChannel3.hwRegBase = AUD3LC_ADDR;
+    audioChannel3.pvDmaBit = 8;
+    audioChannel3.svDmaBit = 8;
+    return;
+#else
     uint8_t *src;
     int16_t i;
     uint8_t *descriptors;
@@ -176,11 +277,15 @@ void _InitAudioState(uint8_t *bankBase, uint8_t *songPtr)
     audioState.songPtr = songPtr + 4;
 
     /* Parse bank header: skip 8-byte header, then 7 sections
-     * each prefixed by a 4-byte size field */
+     * each prefixed by a 4-byte size field. The bank format is
+     * native big-endian from the Amiga disk, so on little-endian
+     * hosts we must assemble the size byte-by-byte. */
     src = bankBase + 8;
     for (i = 0; i < 7; i++)
     {
-        uint32_t sectionSize = *(uint32_t *)src;
+        /* Bank section-size word is big-endian; BE_READ_U32 is a no-op
+         * on Amiga BE host, byte-swaps on x86 LE. */
+        uint32_t sectionSize = BE_READ_U32(src);
         src += 4;
         audioState.bankSectionPtrs[i] = src;
         src += sectionSize;
@@ -259,6 +364,7 @@ void _InitAudioState(uint8_t *bankBase, uint8_t *songPtr)
     audioChannel3.hwRegBase = AUD3LC_ADDR;
     audioChannel3.pvDmaBit = 8;
     audioChannel3.svDmaBit = 8;
+#endif /* !SWOS_SDL_BUILD */
 }
 
 /* ================================================================
@@ -321,15 +427,15 @@ void _AudioChannelNoteOnOff(uint16_t channel, uint16_t noteId)
 
     /* First byte of note data is the wave index */
     waveIdx = *noteData++;
-    chan->pvNoteScript = (uint32_t)noteData;
+    chan->pvNoteScript = (uintptr_t)noteData;
 
     /* Look up wave data from bank section 4, relocate with section 6 */
     waveTable = audioState.bankSectionPtrs[4];  /* offset 0x14 from state */
     waveOffset = (uint32_t)waveIdx * 4;
     waveData = *(uint8_t **)(waveTable + waveOffset);
-    waveData = (uint8_t *)((uint32_t)waveData + (uint32_t)audioState.bankSectionPtrs[6]);
+    waveData = (uint8_t *)((uintptr_t)waveData + (uintptr_t)audioState.bankSectionPtrs[6]);
 
-    chan->pvWaveData = (uint32_t)waveData;
+    chan->pvWaveData = (uintptr_t)waveData;
     chan->pvStepPeriod = 6;
     chan->pvScriptTimer = 1;
     chan->pvPeriodCounter = 1;
@@ -346,6 +452,15 @@ void _AudioChannelNoteOnOff(uint16_t channel, uint16_t noteId)
 __attribute__((used, externally_visible))
 void _AudioApplyPresetToChannels(uint16_t presetId)
 {
+#ifdef SWOS_SDL_BUILD
+    /* Walk the preset table just like the Amiga byte-poking engine:
+     * one 4-byte preset record = one noteId per channel; each non-zero
+     * noteId fires a sample on its channel after a song_data[3]+[5]
+     * indirection. AudioSDL_TriggerSfxPreset does the whole walk. */
+    extern void AudioSDL_TriggerSfxPreset(int preset_id);
+    AudioSDL_TriggerSfxPreset((int)(presetId & 0x3F));   /* 6-bit preset id, see Amiga &= 0x3F */
+    return;
+#else
     uint8_t *presetTable;
     uint8_t *preset;
     uint16_t noteId;
@@ -375,6 +490,7 @@ void _AudioApplyPresetToChannels(uint16_t presetId)
     noteId = preset[3];
     if (noteId != 0)
         _AudioChannelNoteOnOff(3, noteId);
+#endif /* !SWOS_SDL_BUILD */
 }
 
 /* ================================================================
@@ -388,6 +504,14 @@ void _AudioApplyPresetToChannels(uint16_t presetId)
 __attribute__((used, externally_visible))
 void _AudioChannelQueueNextWaveIfEnabled(uint16_t channel, uint16_t waveId)
 {
+#ifdef SWOS_SDL_BUILD
+    /* Mirror Amiga: bankSectionPtrs[4]+[6] indirection on waveId.
+     * Without this, kicks come out as whistles and vice-versa.
+     * AudioSDL_TriggerSfxByWaveId does the lookup + trigger. */
+    extern void AudioSDL_TriggerSfxByWaveId(int channel, int wave_id);
+    AudioSDL_TriggerSfxByWaveId((int)(channel & 3), (int)waveId);
+    return;
+#else
     AudioChannel *chan;
     uint8_t *waveTable;
     uint32_t waveOffset;
@@ -414,6 +538,7 @@ void _AudioChannelQueueNextWaveIfEnabled(uint16_t channel, uint16_t waveId)
     chan->svStepPeriod = 6;
     chan->svScriptTimer = 1;
     chan->svPeriodCounter = 1;
+#endif /* !SWOS_SDL_BUILD */
 }
 
 /* ================================================================
@@ -429,18 +554,14 @@ void _AudioBeepAllShort(void)
 
     for (vol = 0x40; vol >= 0; vol--)
     {
-        uint16_t tick;
         int16_t i;
 
         _AudioSetChannelVolume(0xFFFF, (uint16_t)vol);
 
-        for (i = 1; i >= 0; i--)
-        {
-            tick = currentGameTick;
-            while (currentGameTick == tick)
-            {
-                /* spin */
-            }
+        /* 2 vblanks per step. _WaitForVSync (vs. raw spin on currentGameTick)
+         * keeps AudioSDL_Tick fed during the fade so the queue doesn't drain. */
+        for (i = 1; i >= 0; i--) {
+            _WaitForVSync();
         }
     }
 
@@ -471,9 +592,40 @@ void _TryPlayMusic(void)
     uint16_t vol;
     uint16_t tick;
 
+    /* Don't kick off music if the user just hit the X button. Without
+     * this gate, pressing X mid-match causes the menu unwind to call
+     * _CycleMenuMusic → _TryPlayMusic, starting the menu song just
+     * before the process exits — audible as a brief musical blip. */
+    extern uint16_t g_quitToDos;
+    if (g_quitToDos != 0)
+        return;
+
     if (audioActive != 0)
         return;
 
+#ifdef SWOS_SDL_BUILD
+    /* On SDL the RJP1 player produces samples directly into the SDL
+     * audio callback. Load (once) and start subsong 1, then fade in via
+     * the master-volume ramp. */
+    if (audioBankLoaded == 0) {
+        if (AudioSDL_StartSong(menuSongData, MENU_SONG_DATA_BYTES,
+                               menuInsBank,  MENU_INS_BANK_BYTES, 1) != 0) {
+            /* Load failed — keep audio silent but mark "loaded" so we
+             * don't hammer the loader every vblank. */
+        }
+        audioBankLoaded = 1;
+    }
+
+    _AudioSetChannelVolume(0xFFFF, 0);
+    audioActive = 1;
+
+    for (vol = 0; vol <= 0x22; vol += 2) {
+        _AudioSetChannelVolume(0xFFFF, vol);
+        _WaitForVSync();
+    }
+    _AudioSetChannelVolume(0xFFFF, 0x23);
+    return;
+#else
     if (audioBankLoaded == 0)
     {
         _StopAllAudioChannels();
@@ -488,15 +640,11 @@ void _TryPlayMusic(void)
     for (vol = 0; vol <= 0x22; vol += 2)
     {
         _AudioSetChannelVolume(0xFFFF, vol);
-
-        tick = currentGameTick;
-        while (currentGameTick == tick)
-        {
-            /* spin */
-        }
+        _WaitForVSync();
     }
 
     _AudioSetChannelVolume(0xFFFF, 0x23);
+#endif
 }
 
 /* ================================================================
@@ -530,10 +678,57 @@ retry:
     audioBankLoaded = 0;
     if (_PlaySong(aSoundSfxSng, sfxSongData) != 0)
         goto retry;
+#ifndef SWOS_SDL_BUILD
+    /* Amiga path: SFX.IN1 / SFX.IN2 are loaded into poolplyrDatBuffer
+     * and sfxInsBank2 (which are BSS-adjacent on Amiga, forming the
+     * single contiguous instrument blob RJP1 expects). On SDL we
+     * load both into s_sfx_combined_ins below — and we MUST NOT load
+     * SFX.IN1 into poolplyrDatBuffer here, because that buffer is
+     * also used as the destination for `data/poolplyr.dat` (the
+     * foreign-player pool). Loading SFX over it corrupts the pool
+     * and the next foreign-market visit walks SFX bytes interpreted
+     * as PoolPlayer records, eventually SIGSEGV'ing in
+     * _FindPoolplyrDatPlayer past the buffer end. */
     if (_PlaySong(aSoundSfxIn1, poolplyrDatBuffer) != 0)
         goto retry;
     if (_PlaySong(aSoundSfxIn2, sfxInsBank2) != 0)
         goto retry;
+#endif
+
+#ifdef SWOS_SDL_BUILD
+    /* The original Amiga relies on `poolplyrDatBuffer` (= SFX.IN1) and
+     * `sfxInsBank2` (= SFX.IN2) being adjacent in BSS — RJP1
+     * instrument records carry 32-bit byte offsets that index into
+     * the combined IN1+IN2 blob (see rjp1player main.cpp:215, which
+     * concatenates them on load). Our SDL linker places IN1 and IN2
+     * in different translation units, so they're scattered across
+     * BSS and offsets that should reach into IN2 land in unrelated
+     * memory — producing the intermittent "clicking loop" the user
+     * heard on chants like 0x3E whose sample lives past IN1's end.
+     *
+     * Fix: rebuild a contiguous IN1+IN2 blob and hand THAT to the
+     * RJP1 player. We use _LoadFileEx (rather than _PlaySong) because
+     * it returns the file size, which we need to know where IN2
+     * starts. Sized 256 KB to comfortably hold both banks
+     * (71500 + 81068 = 152568 bytes today, with headroom). */
+    extern int16_t _LoadFileEx(uint8_t *, uint8_t *, uint32_t *);
+    static uint8_t s_sfx_combined_ins[256 * 1024];
+    uint32_t in1_size = 0, in2_size = 0;
+    if (_LoadFileEx(aSoundSfxIn1, s_sfx_combined_ins, &in1_size) != 0)
+        goto retry;
+    if (in1_size + 1 >= sizeof(s_sfx_combined_ins))
+        goto retry;   /* impossible with sized files, but defensive */
+    if (_LoadFileEx(aSoundSfxIn2, s_sfx_combined_ins + in1_size, &in2_size) != 0)
+        goto retry;
+
+    /* Hand the combined bank to the RJP1 player so AudioSDL_TriggerSfx
+     * (called from _AudioApplyPresetToChannels /
+     * _AudioChannelQueueNextWaveIfEnabled) has samples to fire. The
+     * Amiga byte-poking engine in audio_irq.c is stubbed on SDL —
+     * this is what makes in-match SFX audible. */
+    AudioSDL_LoadSfxBank(sfxSongData, SFX_SONG_DATA_BYTES,
+                         s_sfx_combined_ins, in1_size + in2_size);
+#endif
 }
 
 /* ================================================================
@@ -569,18 +764,17 @@ void _StopMusic(void)
 
         _AudioSetChannelVolume(0xFFFF, (uint16_t)vol);
 
-        for (i = 1; i >= 0; i--)
-        {
-            uint16_t tick = currentGameTick;
-            while (currentGameTick == tick)
-            {
-                /* spin */
-            }
+        for (i = 1; i >= 0; i--) {
+            _WaitForVSync();
         }
     }
 
     _AudioSetChannelVolume(0xFFFF, 0);
     audioActive = 0;
+#ifdef SWOS_SDL_BUILD
+    AudioSDL_StopSong();
+    audioBankLoaded = 0;   /* next _TryPlayMusic will re-load the song */
+#endif
 }
 
 /* ================================================================

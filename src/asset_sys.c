@@ -16,6 +16,7 @@
 #include "asset_loader.h"
 #include "string_utils.h"
 #include "display.h"
+#include "swos_types.h"  /* uintptr_t */
 
 /* ---- External globals (from SWOS2.s data) ---- */
 extern uint8_t diskImageContext;
@@ -29,17 +30,20 @@ extern void _InstallAndInitLoaderBootstrap(void);
  * These were PC-relative data in SWOS2.s. Now C globals.
  * Some are exported because other C code reads them.
  */
-static uint32_t assetBasePtr;
-static uint32_t assetAltBasePtr;
-static uint32_t assetSource0;
-static uint32_t assetSource1;
-static uint32_t assetSource2;
-static uint32_t assetSource3;
+/* All slots that hold a real pointer (loaderBase, source path strings,
+ * source vectors). Amiga 32-bit fits in uint32_t; on 64-bit the
+ * pointer needs uintptr_t so the value round-trips correctly. */
+static uintptr_t assetBasePtr;
+static uintptr_t assetAltBasePtr;
+static uintptr_t assetSource0;
+static uintptr_t assetSource1;
+static uintptr_t assetSource2;
+static uintptr_t assetSource3;
 
 /* Exported globals — referenced by asset_loader.c, file_io.c, loader_bootstrap.c */
 uint16_t assetCurrentIndex;
 uint16_t assetCurrentSourceSlot;
-uint32_t assetSourceVec[4];
+uintptr_t assetSourceVec[4];
 uint16_t assetIndexStartBytes;  /* treated as 4-byte block in asm: 2 x uint16_t */
 uint16_t assetParamBlock;
 
@@ -58,7 +62,7 @@ static const uint8_t kGrafsDisk2Raw[] = GRAFS "disk2.raw";
 static void assetSysPrepCopyParams(const uint8_t *filename)
 {
     uint8_t *dst;
-    uint32_t srcAddr;
+    uintptr_t srcAddr;
 
     srcAddr = assetSourceVec[assetCurrentSourceSlot];
     dst = assetFilename;
@@ -83,13 +87,13 @@ static int16_t assetSys_InitContext(uint8_t *loaderBase, const uint8_t *disk0,
 {
     uint16_t i;
 
-    assetBasePtr = (uint32_t)loaderBase;
-    assetAltBasePtr = (uint32_t)(loaderBase + 0x4D00);
+    assetBasePtr = (uintptr_t)loaderBase;
+    assetAltBasePtr = (uintptr_t)(loaderBase + 0x4D00);
 
-    assetSource0 = (uint32_t)disk0;
-    assetSource1 = (uint32_t)disk1;
-    assetSource2 = (uint32_t)disk2;
-    assetSource3 = (uint32_t)disk3;
+    assetSource0 = (uintptr_t)disk0;
+    assetSource1 = (uintptr_t)disk1;
+    assetSource2 = (uintptr_t)disk2;
+    assetSource3 = (uintptr_t)disk3;
 
     /* In HDD mode, no floppy drives — sourceVec stays NULL */
     for (i = 0; i < 4; i++)
@@ -110,7 +114,8 @@ static int16_t assetSys_InitContext(uint8_t *loaderBase, const uint8_t *disk0,
 static int32_t assetSys_InitSource0(const uint8_t *filename, uint8_t *dest)
 {
     assetSysPrepCopyParams(filename);
-    return (int32_t)_RobNorthenLoader_C(0, 0, assetFilename, dest);
+    int32_t r = (int32_t)_RobNorthenLoader_C(0, 0, assetFilename, dest);
+    return r;
 }
 
 /* ================================================================
@@ -268,7 +273,11 @@ static int32_t assetSys_Op5ThenMaybe6(const uint8_t *sourceDesc)
     if (result != 0)
     {
         /* Op 5 returned non-zero — do op 6 with it */
-        _RobNorthenLoader_C(6, 0, (uint8_t *)(uint32_t)result, (uint8_t *)0);
+        /* Asm path: op-5 returned a 32-bit address; op-6 takes it as a
+         * pointer. Double-cast preserves the zero-extended 32-bit value
+         * on 64-bit (matching the Amiga behaviour where pointer == 32-bit
+         * uint). Only used by asset-loader paths that are dead on SDL. */
+        _RobNorthenLoader_C(6, 0, (uint8_t *)(uintptr_t)(uint32_t)result, (uint8_t *)0);
         return 0;
     }
     return 1;
@@ -376,6 +385,5 @@ void _AssetSys_InitDiskImageSources(void)
     assetSys_InitContext(&diskImageContext,
                          kSwos4Dk1, kSwos4Dk2,
                          kGrafsDisk2Raw, kSwos4Dku);
-
     _InstallAndInitLoaderBootstrap();
 }

@@ -27,33 +27,21 @@ extern int16_t _AssetSvcLoaderOp3(void);
  * values are hardcoded so the XOR check always passes:
  *   $CFD1EFE7 xor $CFD1F9CF = $1628  ✓
  * ================================================================ */
-__attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
+__attribute__((used, externally_visible))
 void _InstallAndInitLoaderBootstrap(void)
 {
-    uint8_t *src;
-    uint8_t *dst;
-    int16_t i;
 
-    /* Poll until asset service is idle (returns 0) */
-    while (_AssetSvcLoaderOp() != 0)
-    {
-        /* spin */
-    }
-
-    /* Copy 2226-byte bootstrap blob to currentMenu */
-    src = LoaderBootstrapBlobPI;
-    dst = currentMenu;
-    for (i = 2225; i >= 0; i--)
-    {
-        *dst++ = *src++;
-    }
-
-    /* Original code: read assetIndexStartBytes byte 0, ext.w, clear d1
-     * then jsr (currentMenu).l — COMMENTED OUT in disassembly */
-
-    /* Set magic cookie and verify */
-    irqCookieObfuscated = 0;
-    irqCookieObfuscated = 0xCFD1EFE7u;
+    /* Body removed: the original Amiga blob is anti-tamper bootstrap
+     * code that was COMMENTED OUT in the disassembly (the `jsr
+     * (currentMenu).l` is disabled). The only side effect of the rest
+     * is setting `irqCookieObfuscated` to a magic value the menu code
+     * XOR-checks; with that check stubbed out elsewhere this whole
+     * function is dead. Skip and avoid spending startup time on a
+     * 2226-byte copy + an asset-svc poll that might never return. */
+    
+    irqCookieObfuscated = 0xCFD1EFE7u;  /* still set the cookie so any
+                                          remaining XOR-check that we
+                                          haven't reached yet passes */
 
     /* XOR check: $CFD1EFE7 ^ $CFD1F9CF = $1628 — always passes */
     /* Original: if result != $1628, branch to crash location.

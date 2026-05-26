@@ -17,6 +17,7 @@
  */
 
 #include "play_match_menu.h"
+#include "endian_helpers.h"
 #include "menu_system.h"
 #include "game_types.h"
 
@@ -52,9 +53,9 @@ extern uint8_t playerPositions[];
 extern uint8_t currentMatchPlayers[];
 extern uint8_t playerPositionsArray[];
 extern uint8_t oldPlayerPositionsArray[];
-extern uint32_t teamTacticsTable[];
-extern uint32_t positionsTable[];
-extern uint32_t countriesTable[];
+extern void *teamTacticsTable[];
+extern void *positionsTable[];
+extern void *countriesTable[];
 
 /* Globals defined in play match menu data section of SWOS2.s */
 extern uint16_t showingCpuTeams;
@@ -68,14 +69,14 @@ extern uint16_t viewingOpponentTeam;
 extern uint16_t is_A_team;
 extern int16_t  selectedPlayerPosition;
 extern int16_t  selectedPlayerTacticsPosition;
-extern uint32_t pmSelectedPlayerEntry;
+extern uintptr_t pmSelectedPlayerEntry;
 extern uint16_t playMatchControlFlags;
 extern uint16_t playerNumThatStarted;
 extern int16_t  playMatchExcludeFlags;
 extern uint16_t playMatchButtonVisibilityState;
 extern uint16_t careerTeamCoachOnly;
 extern uint16_t isFirstPlayerChoosingTeam;
-extern uint32_t currentSelectedPlayerIndexPtr;
+extern uintptr_t currentSelectedPlayerIndexPtr;
 extern uint16_t currentTeamSelectedPlayerPosition;
 extern uint16_t selTeamSelectedPlayerPosition;
 extern uint16_t team1SelectedPlayerIndex;
@@ -95,10 +96,10 @@ extern uint8_t aViewBTeam[];
 extern uint8_t aCoach_1[];
 extern uint8_t aPlayer_1[];
 extern uint8_t fundsBuffer[];
-extern uint32_t playerPositionsStringTable[];
+extern void *playerPositionsStringTable[];
 extern uint8_t teamAName[];
 extern uint8_t teamBName[];
-extern uint32_t sidePitchSurnamePositionsTable[];
+extern void *sidePitchSurnamePositionsTable[];
 extern int16_t playMatchRedrawList[];
 extern int16_t togglePlayerCoachRedrawItemList[];
 
@@ -143,8 +144,6 @@ extern void _TrainingMatch_ApplyUseMatchTeamAndSwapSubs(void);
 /* ---- Helper: menu entry from byte offset ---- */
 
 /* Helper: access bg as the high 16 bits (big-endian BACKANDFRAMECOLOR) */
-static inline uint16_t bgColor(MenuEntry *e) { return getBgColorWord(e); }
-static inline void setBgColor(MenuEntry *e, uint16_t v) { setBgColorWord(e, v); }
 
 /* ================================================================
  * GetPlayerPosition  (SWOS2.s line 79648)
@@ -179,7 +178,7 @@ void _SetCurrentSelectedPlayerIndexPointer(void) {
     uint16_t *a1 = &team2SelectedPlayerIndex;
     if (!isFirstPlayerChoosingTeam) { uint16_t *t = a0; a0 = a1; a1 = t; }
     if (viewingOpponentTeam)        { uint16_t *t = a0; a0 = a1; a1 = t; }
-    currentSelectedPlayerIndexPtr = (uint32_t)a0;
+    currentSelectedPlayerIndexPtr = (uintptr_t)a0;
 }
 
 /* ================================================================ */
@@ -190,7 +189,7 @@ void _UpdateCheckMarkSprite(void) {
     if (viewingOpponentTeam) return;
     e->stringFlags &= ~(1u << 13);
     if (oldPlayerSkill == newPlayerSkill) return;
-    *(uint16_t *)&e->fg = (oldPlayerSkill > newPlayerSkill) ? SPR_CHECK_BIG : SPR_NOT_CHECK_BIG;
+    e->fgWord = (oldPlayerSkill > newPlayerSkill) ? SPR_CHECK_BIG : SPR_NOT_CHECK_BIG;
     e->stringFlags |= (1u << 13);
     e->isInvisible = 0;
 }
@@ -218,21 +217,21 @@ void _SavePositionsAndUpdateLittleCheckmark(void) {
 __attribute__((used, externally_visible))
 void _SetGameStartButtonText(void) {
     MenuEntry *e = &menuEntries[9];
-    setBgColor(e, (bgColor(e) & 0xFFF0) | YELLOW_GREEN_BLACK_14);
-    e->fg = (uint32_t)aViewResult;
+    e->bgColor = (e->bgColor & 0xFFF0) | YELLOW_GREEN_BLACK_14;
+    e->fg = (uintptr_t)aViewResult;
     if (!squadChangesAllowed) return;
 
     TeamFileEx *t1 = playMatchTeam1Ptr;
     TeamFileEx *t2 = playMatchTeam2Ptr;
     if (t1->team.teamControls == TEAM_COMPUTER &&
         t2->team.teamControls == TEAM_COMPUTER) {
-        e->fg = (uint32_t)aViewMatch;
+        e->fg = (uintptr_t)aViewMatch;
     } else {
-        e->fg = (uint32_t)aPlayCoachMatch;
+        e->fg = (uintptr_t)aPlayCoachMatch;
         if (t1->team.teamControls != TEAM_PLAYER_COACH)
-            e->fg = (uint32_t)aCoachMatch;
+            e->fg = (uintptr_t)aCoachMatch;
     }
-    setBgColor(e, (bgColor(e) & 0xFFF0) | RED_10);
+    e->bgColor = (e->bgColor & 0xFFF0) | RED_10;
 }
 
 /* ================================================================ */
@@ -286,9 +285,9 @@ void _ShowOrHidePlayMatchButton(void) {
         MenuEntry *vb = &menuEntries[7];
         vb->stringFlags &= ~(1u << 13);
         if (trainingGame) {
-            vb->fg = (uint32_t)aViewATeam;
+            vb->fg = (uintptr_t)aViewATeam;
             if (!is_A_team)
-                vb->fg = (uint32_t)aViewBTeam;
+                vb->fg = (uintptr_t)aViewBTeam;
         }
     }
 
@@ -451,13 +450,13 @@ void _SetUpTacticsButtons(void) {
     MenuEntry *e = &menuEntries[38];
     int16_t i;
     for (i = 0; i < 18; i++, e++) {
-        uint16_t c = bgColor(e) & 0xFFF0;
+        uint16_t c = e->bgColor & 0xFFF0;
         if (viewingOpponentTeam || showingCpuTeams) {
             c |= (i == curTact) ? PINK_TO_BROWN_1 : PINK_TO_BROWN_9;
         } else {
             c |= (i == curTact) ? ORANGE_TO_BROWN_5 : ORANGE_TO_BROWN_4;
         }
-        setBgColor(e, c);
+        e->bgColor = c;
         e->isDisabled = (showingCpuTeams || viewingOpponentTeam) ? 1 : 0;
     }
 }
@@ -474,7 +473,7 @@ void _SetPlayerSurnamesOnSidePitch(void) {
     int8_t fIdx = (int8_t)tac->ballOutOfPlayTactics;
     int16_t *pos = (int16_t *)sidePitchSurnamePositionsTable[fIdx];
 
-    uint16_t tNum = *(uint16_t *)&team->team.countryNumber;
+    uint16_t tNum = PACK_BE_U16(team->team.countryNumber, team->team.teamOrdinal);
     int16_t i;
     for (i = 0; i <= 10; i++, entry++) {
         entry->x = *pos++ + 196;
@@ -498,16 +497,16 @@ void _SetVariableButtons(void) {
     _ShowUseMatchTeamIfTraining();
 
     MenuEntry *vb = &menuEntries[7];
-    vb->fg = (uint32_t)aViewOppo;
-    if (viewingOpponentTeam) vb->fg = (uint32_t)aViewTeam;
-    if (showingCpuTeams) { vb->fg = (uint32_t)aViewOtherTeam; vb->dwWidth = 93; }
+    vb->fg = (uintptr_t)aViewOppo;
+    if (viewingOpponentTeam) vb->fg = (uintptr_t)aViewTeam;
+    if (showingCpuTeams) { vb->fg = (uintptr_t)aViewOtherTeam; vb->dwWidth = 93; }
 
     vb->stringFlags &= ~(1u << 13);
 
     if (trainingGame) {
-        vb->fg = (uint32_t)aViewATeam;
+        vb->fg = (uintptr_t)aViewATeam;
         if (!is_A_team) {
-            vb->fg = (uint32_t)aViewBTeam;
+            vb->fg = (uintptr_t)aViewBTeam;
             uint16_t ns = _GetNumberOfSubstitutes((uint8_t *)&currentTeam, 1);
             if (ns != 1)
                 vb->stringFlags |= (1u << 13);
@@ -541,7 +540,7 @@ void _SetVariableButtons(void) {
         menuEntries[3].y = 204;
         menuEntries[4].y = 204;
         menuEntries[6].isInvisible = 1;
-        setBgColor(&menuEntries[1], (bgColor(&menuEntries[1]) & 0xFFF0) | ORANGE_TO_BROWN_12);
+        menuEntries[1].bgColor = (menuEntries[1].bgColor & 0xFFF0) | ORANGE_TO_BROWN_12;
 
         curTeam = playMatchTeam2Ptr;
         menuEntries[10].isInvisible = 1;
@@ -569,13 +568,13 @@ void _SetVariableButtons(void) {
             menuEntries[3].isInvisible = 0;
         }
 
-        cb->fg = (uint32_t)aCoach_1;
+        cb->fg = (uintptr_t)aCoach_1;
         if (t1->team.teamControls == TEAM_PLAYER_COACH)
-            cb->fg = (uint32_t)aPlayer_1;
+            cb->fg = (uintptr_t)aPlayer_1;
 
-        setBgColor(cb, (bgColor(cb) & 0xFFF0) | BRIGHT_BLUE_TO_BLUE_13);
+        cb->bgColor = (cb->bgColor & 0xFFF0) | BRIGHT_BLUE_TO_BLUE_13;
         if (t1->team.teamControls == TEAM_PLAYER_COACH)
-            setBgColor(cb, (bgColor(cb) & 0xFFF0) | BLUE_TO_PURPLE_11);
+            cb->bgColor = (cb->bgColor & 0xFFF0) | BLUE_TO_PURPLE_11;
 
         if (!squadChangesAllowed) {
             menuEntries[3].isInvisible = 0;
@@ -597,14 +596,14 @@ void _SetVariableButtons(void) {
 
         /* Edit tactics button */
         MenuEntry *eb = &menuEntries[1];
-        setBgColor(eb, (bgColor(eb) & 0xFFF0) | BLUE_TO_PURPLE_11);
+        eb->bgColor = (eb->bgColor & 0xFFF0) | BLUE_TO_PURPLE_11;
         if (t1->team.teamControls != TEAM_PLAYER_COACH) {
-            setBgColor(eb, (bgColor(eb) & 0xFFF0) | BRIGHT_BLUE_TO_BLUE_13);
+            eb->bgColor = (eb->bgColor & 0xFFF0) | BRIGHT_BLUE_TO_BLUE_13;
             if (t1->team.teamControls != TEAM_COACH)
-                setBgColor(eb, (bgColor(eb) & 0xFFF0) | ORANGE_TO_BROWN_12);
+                eb->bgColor = (eb->bgColor & 0xFFF0) | ORANGE_TO_BROWN_12;
         }
         if (trainingGame && t1->team.teamControls == TEAM_COMPUTER)
-            setBgColor(eb, (bgColor(eb) & 0xFFF0) | BRIGHT_BLUE_TO_BLUE_13);
+            eb->bgColor = (eb->bgColor & 0xFFF0) | BRIGHT_BLUE_TO_BLUE_13;
 
         menuEntries[10].isInvisible = 0;
         if (showingCpuTeams) menuEntries[10].isInvisible = 1;
@@ -631,17 +630,17 @@ void _SetVariableButtons(void) {
         if (trainingGame && !is_A_team) {
             /* B team: show team B name */
             if (playMatchTeam1Ptr == &careerTeam)
-                nm->fg = (uint32_t)teamBName;
+                nm->fg = (uintptr_t)teamBName;
             else
-                nm->fg = (uint32_t)teamAName;
+                nm->fg = (uintptr_t)teamAName;
         } else {
             TeamFileEx *tm = playMatchTeam1Ptr;
             if (viewingOpponentTeam) tm = playMatchTeam2Ptr;
-            nm->fg = (uint32_t)tm->team.teamName;
+            nm->fg = (uintptr_t)tm->team.teamName;
             if (trainingGame) {
-                nm->fg = (uint32_t)teamAName;
+                nm->fg = (uintptr_t)teamAName;
                 if (playMatchTeam1Ptr != &careerTeam)
-                    nm->fg = (uint32_t)teamBName;
+                    nm->fg = (uintptr_t)teamBName;
             }
         }
     }
@@ -649,7 +648,7 @@ void _SetVariableButtons(void) {
     {
         TeamFileEx *tm = playMatchTeam1Ptr;
         if (viewingOpponentTeam) tm = playMatchTeam2Ptr;
-        menuEntries[4].fg = (uint32_t)tm->team.coachName;
+        menuEntries[4].fg = (uintptr_t)tm->team.coachName;
     }
 }
 
@@ -664,7 +663,7 @@ void _PlayMatchMenuReinit(void) {
         if (selTeamNumber == 0xFFFF) {
             np = 16;
         } else {
-            if (*(uint16_t *)&playMatchTeam1Ptr->team.countryNumber == selTeamNumber)
+            if (PACK_BE_U16(playMatchTeam1Ptr->team.countryNumber, playMatchTeam1Ptr->team.teamOrdinal) == selTeamNumber)
                 np = careerNumPlayers;
             else
                 np = 16;
@@ -779,7 +778,7 @@ void _OnSwapPlayer(MenuEntry *a5) {
         selectedPlayerTacticsPosition = d6;
         {
             MenuEntry *old = (MenuEntry *)pmSelectedPlayerEntry;
-            pmSelectedPlayerEntry = (uint32_t)a5;
+            pmSelectedPlayerEntry = (uintptr_t)a5;
             if (old) { _CallDrawMenuItem(old); }
         }
         _CallDrawMenuItem(a5);
@@ -828,7 +827,7 @@ void _PlayMatchMenuSwapPlayers(TeamFileEx *team, int16_t d3, int16_t d4) {
          * Asm calls GetPlayerAtIndex(teamNum, d3/d4) which translates
          * through playerPositions/currentMatchPlayers/playerNumbers,
          * then uses the translated file indices to index playerPositionsArray. */
-        uint16_t tNum = *(uint16_t *)&team->team.countryNumber;
+        uint16_t tNum = PACK_BE_U16(team->team.countryNumber, team->team.teamOrdinal);
         uint8_t *p1 = _GetPlayerAtIndex(tNum, (uint16_t)d3);
         uint16_t fileIdx1 = _cGetPlayerAtIndexFileIdx;
         uint8_t *p2 = _GetPlayerAtIndex(tNum, (uint16_t)d4);
@@ -881,7 +880,7 @@ int16_t _HandleSquadSwapSelectionToggle(int16_t d6) {
         tNum = selTeamNumber;
         selPos = &selTeamSelectedPlayerPosition;
     } else {
-        tNum = *(uint16_t *)&playMatchTeam1Ptr->team.countryNumber;
+        tNum = PACK_BE_U16(playMatchTeam1Ptr->team.countryNumber, playMatchTeam1Ptr->team.teamOrdinal);
         selPos = (uint16_t *)currentSelectedPlayerIndexPtr;
     }
 
@@ -1106,30 +1105,30 @@ void _DrawPlayerEntries(MenuEntry *a5) {
     if (d7 == 16) {
         d5 = 1;
         d7 = d7 - 5 + maxSubstitutesEntries;
-        setBgColor(bgE, (bgColor(bgE) & 0xFFF0) | BLUE_TO_BLACK_8);
-        setBgColor(numE, (bgColor(numE) & 0xFFF0) | BLUE_TO_BLACK_8);
+        bgE->bgColor = (bgE->bgColor & 0xFFF0) | BLUE_TO_BLACK_8;
+        numE->bgColor = (numE->bgColor & 0xFFF0) | BLUE_TO_BLACK_8;
     } else if (d7 < 11) {
         if (!showingCpuTeams && !viewingOpponentTeam) {
             uint16_t c = (d7 == 0) ? YELLOW_GREEN_BLACK_14 : BRIGHT_BLUE_TO_BLUE_13;
-            setBgColor(bgE, (bgColor(bgE) & 0xFFF0) | c);
-            setBgColor(numE, (bgColor(numE) & 0xFFF0) | c);
+            bgE->bgColor = (bgE->bgColor & 0xFFF0) | c;
+            numE->bgColor = (numE->bgColor & 0xFFF0) | c;
         } else {
-            setBgColor(bgE, (bgColor(bgE) & 0xFFF0) | RED_10);
-            setBgColor(numE, (bgColor(numE) & 0xFFF0) | RED_10);
+            bgE->bgColor = (bgE->bgColor & 0xFFF0) | RED_10;
+            numE->bgColor = (numE->bgColor & 0xFFF0) | RED_10;
         }
     } else {
         /* >= 11: substitute */
         if (!viewingOpponentTeam && !showingCpuTeams) {
             if (d7 == 11 && maxSubstitutesEntries > 5) {
-                setBgColor(bgE, (bgColor(bgE) & 0xFFF0) | YELLOW_GREEN_BLACK_14);
-                setBgColor(numE, (bgColor(numE) & 0xFFF0) | YELLOW_GREEN_BLACK_14);
+                bgE->bgColor = (bgE->bgColor & 0xFFF0) | YELLOW_GREEN_BLACK_14;
+                numE->bgColor = (numE->bgColor & 0xFFF0) | YELLOW_GREEN_BLACK_14;
             } else {
-                setBgColor(bgE, (bgColor(bgE) & 0xFFF0) | BLUE_TO_PURPLE_11);
-                setBgColor(numE, (bgColor(numE) & 0xFFF0) | BLUE_TO_PURPLE_11);
+                bgE->bgColor = (bgE->bgColor & 0xFFF0) | BLUE_TO_PURPLE_11;
+                numE->bgColor = (numE->bgColor & 0xFFF0) | BLUE_TO_PURPLE_11;
             }
         } else {
-            setBgColor(bgE, (bgColor(bgE) & 0xFFF0) | ORANGE_TO_BROWN_12);
-            setBgColor(numE, (bgColor(numE) & 0xFFF0) | ORANGE_TO_BROWN_12);
+            bgE->bgColor = (bgE->bgColor & 0xFFF0) | ORANGE_TO_BROWN_12;
+            numE->bgColor = (numE->bgColor & 0xFFF0) | ORANGE_TO_BROWN_12;
         }
     }
 
@@ -1144,15 +1143,15 @@ void _DrawPlayerEntries(MenuEntry *a5) {
     /* Injured check */
     if (!viewingOpponentTeam) {
         if (_IsPlayerInjured((PlayerFile *)player, playMatchExcludeFlags)) {
-            setBgColor(bgE, (bgColor(bgE) & 0xFFF0) | RED_10);
-            setBgColor(numE, (bgColor(numE) & 0xFFF0) | RED_10);
+            bgE->bgColor = (bgE->bgColor & 0xFFF0) | RED_10;
+            numE->bgColor = (numE->bgColor & 0xFFF0) | RED_10;
         }
     }
 
     /* Selected player highlight */
     if (!viewingOpponentTeam && d1 == selectedPlayerPosition) {
-        setBgColor(bgE, (bgColor(bgE) & 0xFFF0) | ORANGE_TO_BROWN_6);
-        setBgColor(numE, (bgColor(numE) & 0xFFF0) | ORANGE_TO_BROWN_6);
+        bgE->bgColor = (bgE->bgColor & 0xFFF0) | ORANGE_TO_BROWN_6;
+        numE->bgColor = (numE->bgColor & 0xFFF0) | ORANGE_TO_BROWN_6;
     }
 
     bgE->y = a5->y;
@@ -1164,8 +1163,8 @@ void _DrawPlayerEntries(MenuEntry *a5) {
     if (!viewingOpponentTeam && d4 < 11) {
         uint8_t cur = playerPositionsArray[d1];
         uint8_t old = oldPlayerPositionsArray[d1];
-        if (cur < old) *(uint16_t *)&bgE->fg = SPR_NOT_CHECK_SMALL;
-        else if (cur > old) *(uint16_t *)&bgE->fg = SPR_CHECK_SMALL;
+        if (cur < old) bgE->fgWord = SPR_NOT_CHECK_SMALL;
+        else if (cur > old) bgE->fgWord = SPR_CHECK_SMALL;
     }
 
     /* Checkmark entry sync */
@@ -1183,8 +1182,8 @@ void _DrawPlayerEntries(MenuEntry *a5) {
         if (selIdx == d1) {
             MenuEntry *ck = &menuEntries[37];
             ck->y = bgE->y;
-            setBgColor(ck, bgColor(bgE));
-            *(uint16_t *)&ck->fg = *(uint16_t *)&bgE->fg;
+            ck->bgColor = bgE->bgColor;
+            ck->fgWord = bgE->fgWord;
         }
     }
 
@@ -1193,7 +1192,7 @@ void _DrawPlayerEntries(MenuEntry *a5) {
     PlayerFile *playerPf = (PlayerFile *)(player + 76);
     shE->isInvisible = 1;
     if (!d5) {
-        *(uint16_t *)&shE->fg = (uint16_t)(uint8_t)playerPf->shirtNumber;
+        shE->fgWord = (uint16_t)(uint8_t)playerPf->shirtNumber;
         shE->isInvisible = 0;
     }
     shE->y = a5->y;
@@ -1201,7 +1200,7 @@ void _DrawPlayerEntries(MenuEntry *a5) {
     /* Surname entry (entry 33 = numE) */
     {
         uint8_t *surname = _ExtractSurname((uint8_t *)playerPf->playerName, 0x800D);
-        numE->fg = (uint32_t)surname;
+        numE->fg = (uintptr_t)surname;
         numE->y = a5->y;
     }
 
@@ -1209,7 +1208,7 @@ void _DrawPlayerEntries(MenuEntry *a5) {
     MenuEntry *posE = numE + 1;
     {
         uint16_t posField = (playerPf->positionAndFace & 0xE0) >> 3;
-        posE->fg = playerPositionsStringTable[posField >> 2];
+        posE->fg = (uintptr_t)playerPositionsStringTable[posField >> 2];
         posE->y = a5->y;
     }
 
@@ -1228,7 +1227,7 @@ void _DrawPlayerEntries(MenuEntry *a5) {
             _InitPlayerValueDisplayStruct(player, (uint8_t *)valE);
         } else {
             _FormatPlayerValueOrStatusText(player, fundsBuffer);
-            valE->fg = (uint32_t)fundsBuffer;
+            valE->fg = (uintptr_t)fundsBuffer;
         }
     }
 
@@ -1265,10 +1264,10 @@ void _DrawPlayerEntries(MenuEntry *a5) {
  *   rotating by amounts from the bit-rotation table
  * - Pick the top 3 skill values and output their corresponding letters
  * ================================================================ */
-extern uint32_t topSkillLettersEven[];  /* 7 pointers to letter strings */
-extern uint32_t topSkillLettersOdd[];
-extern uint32_t topSkillBitRotEven[];   /* 7 pointers to byte arrays */
-extern uint32_t topSkillBitRotOdd[];
+extern void *topSkillLettersEven[];  /* 7 pointers to letter strings */
+extern void *topSkillLettersOdd[];
+extern void *topSkillBitRotEven[];   /* 7 pointers to byte arrays */
+extern void *topSkillBitRotOdd[];
 
 __attribute__((used, externally_visible))
 void _FormTopSkillsString(uint8_t *dst, PlayerFile *playerFile)
@@ -1303,8 +1302,16 @@ void _FormTopSkillsString(uint8_t *dst, PlayerFile *playerFile)
     }
 
     /* Get PASSING longword (4 skills packed: passing, shootingHeading,
-     * tacklingBallControl, speedFinishing) and shift left 4 */
-    uint32_t d7 = *(uint32_t *)&pf->passing;
+     * tacklingBallControl, speedFinishing) and shift left 4.
+     *
+     * The Amiga asm did `move.l (a0)+,d7` which on m68k BE reads the
+     * bytes as (passing<<24)|(shootingHeading<<16)|(tacklingBallControl
+     * <<8)|speedFinishing. A native `*(uint32_t *)` on our LE host
+     * reverses the byte order, so the subsequent rot+mask extracts the
+     * wrong skill nibbles — giving wrong top-skill letters ("VHF" in
+     * place of "STP" etc.) and breaking the star count the same way.
+     * Use BE_READ_U32 so both builds see the same packed layout. */
+    uint32_t d7 = BE_READ_U32(&pf->passing);
     d7 <<= 4;
 
     /* Find top 3 skill values. Each skill is extracted as 3 bits after

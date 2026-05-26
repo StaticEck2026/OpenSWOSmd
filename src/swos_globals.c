@@ -1,0 +1,1136 @@
+/*
+ * swos_globals.c -- Storage for data symbols that originally lived in
+ * SWOS2.s (the Amiga assembly data section).
+ *
+ * On the Amiga build these were defined by `dc.b / dc.w / dc.l / ds.b`
+ * directives in the assembler file. When we moved everything to pure C
+ * we left the *_data.c modules (competition_data, palette_data, ...) as
+ * the C-data variants, but there is still a long tail of BSS-style
+ * scratch buffers and flags that the assembly defined.
+ *
+ * This file defines those symbols as zero-initialised globals. Adding a
+ * new entry here is the go-to fix for an "undefined reference to X" link
+ * error.
+ */
+
+#include "swos_platform.h"
+#include "swos_sections.h"   /* SWOS_CHIP_BSS — chip-RAM placement for DMA */
+#include "display.h"
+#include "game_types.h"
+#include "menu_system.h"     /* MENU_HEADER_SIZE — used by menuEntries alias */
+
+#include "swos_types.h"
+
+/* ---- Input state shared with input_sdl.c --------------------------- */
+uint8_t  keyState[128];
+uint16_t joy0Dat;
+uint16_t joy1Dat;
+/* CIAA PRA bit 7 = fire button (active low). 0xFF = idle (no buttons). */
+uint8_t  ciaa_pra = 0xFF;
+
+/* ---- nextEntryDirectionOffsets ----
+ * Maps menu cursor direction (0=Up, 2=Right, 4=Down, 6=Left, after
+ * dirIdx>>1) to the byte offset of the corresponding navigation field
+ * inside MenuEntry, measured from offset +8 (leftEntry). The packed
+ * MenuEntry layout is:
+ *   +8  leftEntry   +9  rightEntry   +10 upEntry   +11 downEntry
+ * so the deltas relative to +8 are 0/1/2/3 for left/right/up/down.
+ * _MenuProc indexes this with dir>>1, so the array order is
+ * Up/Right/Down/Left -> 2/1/3/0. */
+uint16_t nextEntryDirectionOffsets[4] = { 2, 1, 3, 0 };
+
+/* ---- Framebuffer / bitplane storage -------------------------------- *
+ * On the real hardware the Amiga kept the bitplanes in chip RAM, with
+ * the copper pointing at them via bplXpt. We allocate fixed-size
+ * buffers that match FRONTBUFFER_SIZE_TOTAL_BYTES. */
+
+/* Size of one bitplane scanline = PLANE_STRIDE (44). There are
+ * FRONTBUFFER_TOTAL_LINES (273) scanlines, for a grand total of
+ * PLANE_STRIDE * FRONTBUFFER_TOTAL_LINES = 12012 bytes per plane. */
+#define BITPLANE_BYTES (PLANE_STRIDE * FRONTBUFFER_TOTAL_LINES)
+
+/* "Front" set (visible this frame) + "alt" set (drawn into).
+ * On Amiga: must live in CHIP RAM because the copper/bitplane DMA can
+ * only fetch from chip memory. SWOS_CHIP_BSS routes these into the
+ * .BSSInChip.MEMF_CHIP section the linker maps to chip RAM. On SDL the
+ * attribute is a no-op (regular BSS). */
+SWOS_CHIP_BSS uint8_t bitPlane0Base[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane1Base[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane2Base[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane3Base[BITPLANE_BYTES];
+#ifdef AGA
+SWOS_CHIP_BSS uint8_t bitPlane4Base[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane5Base[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane6Base[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane7Base[BITPLANE_BYTES];
+#endif
+SWOS_CHIP_BSS uint8_t bitPlane0BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane1BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane2BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane3BaseAlt[BITPLANE_BYTES];
+#ifdef AGA
+SWOS_CHIP_BSS uint8_t bitPlane4BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane5BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane6BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t bitPlane7BaseAlt[BITPLANE_BYTES];
+#endif
+
+/* Bitplane base "pointers" — the Amiga sets these to the address of
+ * each bitplane for the copper. On the host we store raw addresses. */
+volatile uint32_t bitPlane0BasePtr;
+volatile uint32_t bitPlane1BasePtr;
+volatile uint32_t bitPlane2BasePtr;
+volatile uint32_t bitPlane3BasePtr;
+#ifdef AGA
+volatile uint32_t bitPlane4BasePtr;
+volatile uint32_t bitPlane5BasePtr;
+volatile uint32_t bitPlane6BasePtr;
+volatile uint32_t bitPlane7BasePtr;
+#endif
+
+/* "Frontbuffer" arrays. Layout depends on build:
+ *   Amiga: bitplane-interleaved (NUM_PLANES planes per scanline).
+ *   SDL  : 8bpp chunky, 1 byte per pixel = palette index. */
+/* Frontbuffers also need chip RAM on Amiga — copper-list BPLPT entries
+ * point at these for the main display area. */
+SWOS_CHIP_BSS uint8_t frontbufferBase[FRONTBUFFER_SIZE_TOTAL_BYTES];
+SWOS_CHIP_BSS uint8_t frontbufferBaseAlt[FRONTBUFFER_SIZE_TOTAL_BYTES];
+SWOS_CHIP_BSS uint8_t frontbufferMaskBuffer[FRONTBUFFER_SIZE_TOTAL_BYTES];
+/* These store live pointers to frontbuffer memory. On 32-bit they
+ * are word-sized for layout compatibility with the Amiga port (where
+ * the asm reads them as long words). On 64-bit they must be wide
+ * enough to hold a real heap/BSS pointer — uintptr_t keeps both
+ * targets working without retyping every consumer. */
+volatile uintptr_t frontbufferBasePtr;
+volatile uintptr_t frontbufferBaseAltPtr;
+
+#ifdef SWOS_SDL_BUILD
+/* SDL-only scratch buffer used by `_ProcessImageCommandStream` and
+ * `_LoadOverlayToFrontbuffer` to receive raw RNC-decompressed bitplane
+ * file loads. The Amiga build wrote bitplane data directly into
+ * `frontbufferMaskBuffer`, but we now keep that buffer in chunky 8bpp
+ * format (matching the frontbuffer), so we need a separate area for the
+ * raw bitplane data the loader produces. 128 KB covers the largest
+ * single-asset load (HERO.INS at ~286 KB is split, the largest single
+ * grafs file is well under 128 KB). */
+uint8_t rawAssetLoadBuffer[128 * 1024];
+#endif
+
+/* Copper list (OCS 320 bytes / AGA 1316 bytes). Must be in chip RAM
+ * because the copper hardware fetches from it via DMA. */
+SWOS_CHIP_BSS uint8_t  copperListBuffer[COPPERLIST_SIZE_BYTES];
+SWOS_CHIP_BSS uint32_t copperZeroLong;
+
+/* ---- menuPalette: 16-entry OCS palette referenced by SWOS.c (AGA path)
+ * and Platform_PreArmIsrGlobals. The Amiga build had this in SWOS2.s
+ * inside an IFEQ/ELSE block -- the 256-entry AGA variant first, then an
+ * OCS 16-entry fallback. We want the OCS values here; the earlier copy
+ * took the first 16 AGA entries by mistake (which is why the menu bg
+ * came out grey -- indices 1/7/8/9 were pure greys in the AGA table and
+ * the menubg image pixel values are tuned to map to the OCS blues). */
+uint16_t menuPalette[16] = {
+    0x0001, 0x0AAB, 0x0FFF, 0x0102, 0x0621, 0x0A40, 0x0F71, 0x0667,
+    0x0204, 0x0445, 0x0F00, 0x000F, 0x0702, 0x088F, 0x0380, 0x0FF0
+};
+
+/* ---- Title color tables: 16 RGB triplets (48 bytes) each.
+ * `_BuildPaletteFromColors` compresses each triplet into a 12-bit Amiga
+ * colour word and writes into titleLogoPalette / titleScreenPalette /
+ * titleTextPalette. Originally defined in SWOS2.s. */
+uint8_t kTitleLogoColors[48] = {
+    0x00,0x00,0x22, 0xAA,0x00,0x00, 0xFF,0xBB,0x00, 0x33,0x33,0x33,
+    0x44,0x33,0xAA, 0x00,0x88,0x00, 0xCC,0xCC,0xCC, 0x88,0x88,0x88,
+    0x55,0x55,0x55, 0xFF,0xFF,0x99, 0xDD,0xDD,0x88, 0xBB,0xBB,0x77,
+    0x99,0x99,0x66, 0x77,0x77,0x44, 0x55,0x55,0x33, 0x33,0x33,0x22
+};
+uint8_t kTitleScreenColors[48] = {
+    0x00,0x00,0x23, 0x00,0x00,0x00, 0x23,0x23,0x23, 0x47,0x47,0x47,
+    0x77,0x77,0x77, 0x9B,0x9B,0x9B, 0xCF,0xCF,0xCF, 0xEF,0xEF,0xEF,
+    0x00,0x33,0xAB, 0x00,0x8B,0xCF, 0xEF,0xCF,0x33, 0x8B,0x00,0x00,
+    0xAB,0x00,0x00, 0xDF,0x00,0x00, 0x00,0x67,0x00, 0xFF,0xFF,0xFF
+};
+uint8_t kTitleTextColors[48] = {
+    0x00,0x00,0x22, 0xFF,0x00,0x44, 0xFF,0x00,0x44, 0x00,0x00,0x44,
+    0xFF,0x00,0x44, 0xFF,0x00,0x44, 0xFF,0x00,0x44, 0xFF,0x00,0x44,
+    0x00,0x00,0x66, 0xFF,0xFF,0x99, 0xDD,0xDD,0x88, 0xBB,0xBB,0x77,
+    0x99,0x99,0x66, 0x77,0x77,0x44, 0x55,0x55,0x33, 0x33,0x33,0x22
+};
+
+/* ---- introMenuImageScript: transcribed from Data.c with the
+ * embedded filename-pointer halves replaced by zero placeholders.
+ * The IDA exporter emitted the Amiga runtime address of
+ * `aGrafsCharsetRa` as two magic integers (`16, 6594`); those bytes
+ * are overwritten at startup by `_SwosSDL_InitImageScripts()` below
+ * with the low/high halves of the real host symbol.
+ *
+ * The remaining 340 integer words are plain data (sprite coords,
+ * widths, heights) and don't need any relocation. */
+extern const char aGrafsCharsetRa[];
+extern const char aGrafsMenusRaw[];
+extern const char aGrafsMenus2Raw[];
+
+uint16_t introMenuImageScript[343] = {
+    0x7000, 0, 0,            /* filename ptr halves filled at init */
+#include "intro_menu_image_script_cmds.inc"
+};
+
+/* ---- menuBGImageCmdStream: transcribed from Data.c with the two
+ * embedded filename-pointer halves replaced by zero placeholders.
+ * The script loads grafs/menus.raw, extracts a batch of sprites,
+ * then loads grafs/menus2.raw and extracts the rest. Pointer slots:
+ *   [1..2]    -> &aGrafsMenusRaw   (first  0x7000 opcode at index 0)
+ *   [393..394]-> &aGrafsMenus2Raw  (second 0x7000 opcode at index 392)
+ * Both slots are written by _SwosSDL_InitImageScripts() below. */
+uint16_t menuBGImageCmdStream[406] = {
+#include "menu_bg_image_script_cmds.inc"
+};
+
+extern uint16_t menuColorAndTextScript[];  /* defined below */
+extern const char aGrafsCjcgrafsR[];
+extern const char aGrafsCjcteamgR[];
+extern const char aGrafsCjcbitsRa[];
+extern const char aGrafsSoccerSRa[];
+extern const char aGrafsCjcbenchR[];
+extern uintptr_t team1Filename;
+extern uintptr_t team2Filename;
+
+#include "swos_types.h"
+
+/* image_cmd.c interprets 0x7000/0x8000 file-load opcodes by reading a
+ * pointer from the script stream at the current cursor — but the
+ * stream stores pointers as two uint16 halves (32 bits total). On
+ * 32-bit hosts that works directly; on 64-bit it truncates the high
+ * 32 bits of the address and the load handler hands garbage to RNC,
+ * which overruns and trips a cygwin/libc assert in memcpy.
+ *
+ * Fix: keep the on-stream layout (two uint16 halves) the same on
+ * both targets, but on 64-bit treat the stored value as an INDEX
+ * into the side table below rather than as a raw pointer. Init code
+ * here populates the side table and writes the index back into the
+ * stream slot; image_cmd.c reads the slot, looks up the table on
+ * 64-bit, dereferences directly on 32-bit. Bitness-conditional via
+ * UINTPTR_MAX so the 32-bit code path is unchanged. */
+const void *imageScriptPtrTable[32];
+
+static uint16_t s_imageScriptPtrCount = 0;
+static uint32_t image_script_register_ptr(const void *p)
+{
+    /* 32-bit: encode pointer directly (low/high halves). */
+    /* 64-bit: register in side table, return the slot index. */
+#if UINTPTR_MAX == 0xFFFFFFFFu
+    return (uint32_t)(uintptr_t)p;
+#else
+    if (s_imageScriptPtrCount >= sizeof(imageScriptPtrTable) /
+                                 sizeof(imageScriptPtrTable[0])) {
+        /* Out of slots — bump the table size in the header. */
+        return 0xFFFFFFFFu;
+    }
+    imageScriptPtrTable[s_imageScriptPtrCount] = p;
+    return (uint32_t)s_imageScriptPtrCount++;
+#endif
+}
+
+static void image_script_emit_ptr(uint16_t *stream, uint32_t off, const void *p)
+{
+    uint32_t enc = image_script_register_ptr(p);
+    stream[off    ] = (uint16_t)enc;
+    stream[off + 1] = (uint16_t)(enc >> 16);
+}
+
+void _SwosSDL_InitImageScripts(void)
+{
+    /* Reset the side-table cursor on each init call (only matters on
+     * 64-bit; the 32-bit path doesn't touch the table). */
+    s_imageScriptPtrCount = 0;
+
+    image_script_emit_ptr(introMenuImageScript,    1, aGrafsCharsetRa);
+    image_script_emit_ptr(menuBGImageCmdStream,    1, aGrafsMenusRaw);
+    image_script_emit_ptr(menuBGImageCmdStream,  393, aGrafsMenus2Raw);
+
+    /* menuColorAndTextScript pointer slots. The .inc file lists the
+     * word offsets as comments. */
+    struct { uint32_t off; const void *val; } mcts[] = {
+        {    1, aGrafsCjcgrafsR },
+        {  406, &team1Filename  },
+        { 1877, &team2Filename  },
+        { 3419, aGrafsCjcteamgR },
+        { 4548, aGrafsCjcbitsRa },
+        { 4695, aGrafsSoccerSRa },
+        { 4890, aGrafsCjcbenchR },
+    };
+    for (size_t i = 0; i < sizeof(mcts) / sizeof(mcts[0]); i++) {
+        image_script_emit_ptr(menuColorAndTextScript, mcts[i].off, mcts[i].val);
+    }
+}
+
+/* menuColorAndTextScript — 5166-word image-command script run from
+ * _ConvertColorsAndTextSprites at match setup. Loads grafs/cjcgrafs.raw
+ * and extracts ~300 reserve-player / score-digit / team-name sprite
+ * slots into spriteGraphics[0x71..0xE2]. 7 slots are absolute
+ * pointers (dc.l) that need to be patched at init with the address
+ * of the host-side C symbol (filename string or team1Filename /
+ * team2Filename globals). Body transcribed from SWOS2.s line 32848;
+ * pointer slot indices are noted in the .inc. */
+extern const char aGrafsCjcgrafsR[];
+extern const char aGrafsCjcteamgR[];
+extern const char aGrafsCjcbitsRa[];
+extern const char aGrafsSoccerSRa[];
+extern const char aGrafsCjcbenchR[];
+extern uintptr_t team1Filename;
+extern uintptr_t team2Filename;
+uint16_t menuColorAndTextScript[5166] = {
+#include "menu_color_text_script_cmds.inc"
+};
+
+/* ---- currentMenu + menuEntries: adjacent-in-memory pair.
+ * On Amiga, SWOS2.s laid these out as:
+ *   currentMenu:  ds.b $16         ; 22-byte Menu header
+ *   menuEntries:  ds.b $14000      ; 80 KiB of MenuEntry[100]
+ * immediately consecutive in BSS. The menu unpacker (_UnpackMenu)
+ * writes the Menu header into `dest` (currentMenu) and then entries
+ * starting at dest+22 -- which on Amiga lands inside menuEntries.
+ * Our SDL build placed symbols wherever the linker liked, so the
+ * unpacker's dest+22 writes fell OUTSIDE menuEntries and _DrawMenu
+ * read zeros/garbage.
+ *
+ * Fix: one backing buffer declared in a dedicated named section;
+ * `currentMenu` starts at the base, `menuEntries` at +22. The extra
+ * 8 KiB of head room absorbs the loader-bootstrap's 2226-byte
+ * boundary-spill copy into currentMenu.
+ *
+ * The `used,aligned(4)` attributes keep the buffer + guarantee the
+ * linker doesn't merge it. The inline asm at the bottom emits the
+ * `menuEntries` symbol at offset +22 within the same storage. */
+__attribute__((used, aligned(4)))
+uint8_t currentMenu[8 * 1024 + 80 * 1024];
+/* The alias offset must match MENU_HEADER_SIZE — 22 on 32-bit, 38 on
+ * 64-bit (Menu has 4 pointer fields). Stringify the literal so the
+ * .equ inline asm picks up the correct value for the build. */
+#define _MENU_HDR_STR_HELPER(x) #x
+#define _MENU_HDR_STR(x) _MENU_HDR_STR_HELPER(x)
+__asm__(".globl " _ASM_PFX "menuEntries\n"
+        ".equ   " _ASM_PFX "menuEntries, " _ASM_PFX "currentMenu + "
+        _MENU_HDR_STR(MENU_HEADER_SIZE) "\n");
+
+/* ---- Stadium-menu little-player sprite-copy block --------------------
+ * The stadium menu (pre-match lineup screen) draws one mini-player
+ * sprite per squad slot with MENU_CMD_SPRITE_COPY opcodes whose fg
+ * points at `stadiumMenuLittlePlayer`. The SPRITE_COPY handler then
+ * reads a 36-byte contiguous struct starting there:
+ *
+ *   +0..+1   src sprite index (stadiumMenuLittlePlayer — written at
+ *            runtime by _StadiumPlayerSpritesBeforeDraw)
+ *   +2..+3   dst sprite index (littlePlayerSpriteGeneric = 0x00D6 / 214)
+ *   +4..+35  littlePlayersColorTable (16 × uint16_t palette indices)
+ *
+ * On the Amiga these three symbols were consecutive in BSS and the
+ * Amiga C port's Data.c reproduced that by placing the three globals
+ * directly adjacent (SWOS2.s line ~116128 onward). The SDL build had
+ * them in three separate translation units at linker-determined
+ * addresses, so SPRITE_COPY read `dst` and the colour table from
+ * random adjacent globals — the bench mini-player came out as an
+ * uninitialised sprite index (often 0 → an empty `□` or similar
+ * placeholder glyph). This backing buffer restores the Amiga layout
+ * with asm symbol aliases, matching the `currentMenu`/`menuEntries`
+ * pattern above. */
+__attribute__((used, aligned(2)))
+uint8_t stadiumMenuLittlePlayerBackingBuf[36] = {
+    /* +0  stadiumMenuLittlePlayer (uint16 LE) = 0 */
+    0x00, 0x00,
+    /* +2  littlePlayerSpriteGeneric (uint16 LE) = 0x00D6 */
+    0xD6, 0x00,
+    /* +4..+35 littlePlayersColorTable (uint16_t[16] LE, identity 0..15) */
+    0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00,
+    0x04, 0x00, 0x05, 0x00, 0x06, 0x00, 0x07, 0x00,
+    0x08, 0x00, 0x09, 0x00, 0x0A, 0x00, 0x0B, 0x00,
+    0x0C, 0x00, 0x0D, 0x00, 0x0E, 0x00, 0x0F, 0x00,
+};
+__asm__(".globl " _ASM_PFX "stadiumMenuLittlePlayer\n"
+        ".equ   " _ASM_PFX "stadiumMenuLittlePlayer, " _ASM_PFX "stadiumMenuLittlePlayerBackingBuf\n"
+        ".globl " _ASM_PFX "littlePlayerSpriteGeneric\n"
+        ".equ   " _ASM_PFX "littlePlayerSpriteGeneric, " _ASM_PFX "stadiumMenuLittlePlayerBackingBuf + 2\n"
+        ".globl " _ASM_PFX "littlePlayersColorTable\n"
+        ".equ   " _ASM_PFX "littlePlayersColorTable, " _ASM_PFX "stadiumMenuLittlePlayerBackingBuf + 4\n");
+
+/* ---- Transfer-offer ordinals (must be adjacent) --------------------
+ *
+ * SWOS2.s line 96267..96280 defines these 7 uint16 globals back-to-back:
+ *
+ *   +0  teamOffering
+ *   +2  offerPrimaryPlayerOrdinal
+ *   +4  numExtraPlayersWanted
+ *   +6  offerSwapPlayerOrdinal
+ *   +8  offerExtraPlayerOrdinal
+ *   +A  offerAmount
+ *   +C  offerNegotiationStep1Amount
+ *
+ * `offerAfterDrawCommonShared` (transfer_market.c) walks the four
+ * player-ordinal slots as a contiguous int16_t array starting at
+ * `&offerPrimaryPlayerOrdinal`, indexing 0..3 to fetch
+ * primary / numExtra / swap / extra in turn. On Amiga that's the
+ * literal BSS layout. On SDL these were 5 separate definitions in
+ * swos_amiga_data_imports.c at linker-determined addresses — the
+ * walk read garbage for indices 1..3, so the MAKE OFFER menu drew
+ * stale "extra players to buy" and "swap players" rows even though
+ * `_ShowPlayerOfferMenuForPlayer` had explicitly set those globals
+ * to -1. Restore the Amiga layout via .equ aliases. */
+__attribute__((used, aligned(2)))
+uint8_t offerOrdinalsBackingBuf[14] = {0};
+__asm__(".globl " _ASM_PFX "teamOffering\n"
+        ".equ   " _ASM_PFX "teamOffering, "                _ASM_PFX "offerOrdinalsBackingBuf\n"
+        ".globl " _ASM_PFX "offerPrimaryPlayerOrdinal\n"
+        ".equ   " _ASM_PFX "offerPrimaryPlayerOrdinal, "   _ASM_PFX "offerOrdinalsBackingBuf + 2\n"
+        ".globl " _ASM_PFX "numExtraPlayersWanted\n"
+        ".equ   " _ASM_PFX "numExtraPlayersWanted, "       _ASM_PFX "offerOrdinalsBackingBuf + 4\n"
+        ".globl " _ASM_PFX "offerSwapPlayerOrdinal\n"
+        ".equ   " _ASM_PFX "offerSwapPlayerOrdinal, "      _ASM_PFX "offerOrdinalsBackingBuf + 6\n"
+        ".globl " _ASM_PFX "offerExtraPlayerOrdinal\n"
+        ".equ   " _ASM_PFX "offerExtraPlayerOrdinal, "     _ASM_PFX "offerOrdinalsBackingBuf + 8\n"
+        ".globl " _ASM_PFX "offerAmount\n"
+        ".equ   " _ASM_PFX "offerAmount, "                 _ASM_PFX "offerOrdinalsBackingBuf + 10\n"
+        ".globl " _ASM_PFX "offerNegotiationStep1Amount\n"
+        ".equ   " _ASM_PFX "offerNegotiationStep1Amount, " _ASM_PFX "offerOrdinalsBackingBuf + 12\n");
+
+/* ---- Goalkeeper face / skin tables (must be adjacent) -------------
+ *
+ * SWOS2.s line 16482..16493 lays these 6 globals back-to-back as 10
+ * bytes of BSS, and _DetermineGoalieFaces relies on the adjacency:
+ *
+ *   +0..+2 team1GoalieFaceToPosition[3]
+ *   +3..+5 team2GoalieFaceToPosition[3]
+ *   +6     team1GoalieFaces           (team 1 main GK face)
+ *   +7     team2GoalieFaces           (team 1 RESERVE GK face — name
+ *                                      is misleading; this is the byte
+ *                                      written via team1GoalieFaces[1])
+ *   +8     team2GoalieSkinType        (team 2 main GK face)
+ *   +9     team2ReserveGoalieSkinType (= team2GoalieSkinType[1])
+ *
+ * `_DetermineGoalieFaces` writes through `gkFaceIndices` at indices
+ * [0] (main) and [1] (reserve). On Amiga the [1] write lands on the
+ * adjacent named global. On SDL the symbols were declared as
+ * separate scalar uint8_t (single byte each) so the [1] writes
+ * overran into whatever the linker placed next, AND the reserve-GK
+ * face lookup at team1GoalieFaces[1] / team2GoalieSkinType[1]
+ * returned garbage — making the in-match goalkeeper render with a
+ * random skin colour that didn't match the squad-screen face.
+ *
+ * Restore the layout via .equ aliases. Same pattern as
+ * stadiumMenuLittlePlayerBackingBuf and offerOrdinalsBackingBuf. */
+__attribute__((used, aligned(2)))
+uint8_t goalieFacesBackingBuf[10] = {0};
+__asm__(".globl " _ASM_PFX "team1GoalieFaceToPosition\n"
+        ".equ   " _ASM_PFX "team1GoalieFaceToPosition, "  _ASM_PFX "goalieFacesBackingBuf\n"
+        ".globl " _ASM_PFX "team2GoalieFaceToPosition\n"
+        ".equ   " _ASM_PFX "team2GoalieFaceToPosition, "  _ASM_PFX "goalieFacesBackingBuf + 3\n"
+        ".globl " _ASM_PFX "team1GoalieFaces\n"
+        ".equ   " _ASM_PFX "team1GoalieFaces, "           _ASM_PFX "goalieFacesBackingBuf + 6\n"
+        ".globl " _ASM_PFX "team2GoalieFaces\n"
+        ".equ   " _ASM_PFX "team2GoalieFaces, "           _ASM_PFX "goalieFacesBackingBuf + 7\n"
+        ".globl " _ASM_PFX "team2GoalieSkinType\n"
+        ".equ   " _ASM_PFX "team2GoalieSkinType, "        _ASM_PFX "goalieFacesBackingBuf + 8\n"
+        ".globl " _ASM_PFX "team2ReserveGoalieSkinType\n"
+        ".equ   " _ASM_PFX "team2ReserveGoalieSkinType, " _ASM_PFX "goalieFacesBackingBuf + 9\n");
+
+/* ---- Edit-teams kit-editor sprite-copy blocks -----------------------
+ * Six MENU_CMD_SPRITE_COPY blocks that preview the primary/secondary
+ * shirt/shorts/socks in the kit editor. Each is a 36-byte struct:
+ *
+ *   +0..+1   src sprite index   (editTeamsXxx[0])
+ *   +2..+3   dst sprite index   (editTeamsXxx[1])
+ *   +4..+35  16 × uint16 palette table (editTeamsXxxColTable)
+ *
+ * On Amiga the 12 labels (`editTeamsXxx` + `editTeamsXxxColTable`)
+ * sat directly adjacent in BSS, so SPRITE_COPY read both through a
+ * single `editTeamsXxx` pointer. On SDL they were in separate TUs so
+ * the colour table read from whichever unrelated global the linker
+ * placed next — the editor's sprite preview drew with a random colour
+ * remap. Same pattern + fix as `stadiumMenuLittlePlayerBackingBuf`.
+ *
+ * Sprite indices from Sprites enum (SWOS2.h:2472+):
+ *   SPR_BIG_SHIRT=190, SPR_BIG_SHORTS=191, SPR_BIG_SOCKS=192,
+ *   SPR_EDIT_TEAMS_PRIMARY_SHIRT=193, SPR_EDIT_TEAMS_SHORTS=194,
+ *   SPR_EDIT_TEAMS_SOCKS=195, SPR_EDIT_TEAMS_SECONDARY_SHIRT=196,
+ *   SPR_EDIT_TEAMS_SHORTS_SECONDARY=197,
+ *   SPR_EDIT_TEAMS_SECONDARY_SOCKS=198.
+ *
+ * Colour tables are stored as native-LE uint16 (Data.c declared them
+ * uint8[32] with byte-pairs {0,N} that on Amiga BE read back as int16
+ * = N — the int8[2N]-vs-int16[N] endian trap; storing the final int16
+ * values directly so both BE and LE see the same palette remap). */
+
+#define EDIT_TEAMS_BUF(SRC, DST, ...) {                       \
+    (uint8_t)((SRC) & 0xFF), (uint8_t)((SRC) >> 8),           \
+    (uint8_t)((DST) & 0xFF), (uint8_t)((DST) >> 8),           \
+    __VA_ARGS__                                               \
+}
+
+/* Shared colour-table LE byte patterns. Shirt tables have index 1 in
+ * slot 1, zeros in slots 2, 10, 11, 14 (special-case palette holes
+ * for the kit sprite). Shorts/Socks tables are identity 0..15 with
+ * slot 11 punched out. These match Data.c:editTeams*ColTable. */
+#define COL_SHIRT \
+    0,0, 1,0, 0,0, 3,0, 4,0, 5,0, 6,0, 7,0, \
+    8,0, 9,0, 0,0, 0,0, 12,0, 13,0, 0,0, 15,0
+#define COL_SHORTS \
+    0,0, 1,0, 2,0, 3,0, 4,0, 5,0, 6,0, 7,0, \
+    8,0, 9,0, 10,0, 0,0, 12,0, 13,0, 14,0, 15,0
+
+__attribute__((used, aligned(2)))
+uint8_t editTeamsPrimaryShirtsSpriteCopyBuf[36]   = EDIT_TEAMS_BUF(190, 193, COL_SHIRT);
+
+__attribute__((used, aligned(2)))
+uint8_t editTeamsShortsSpriteCopyBuf[36]          = EDIT_TEAMS_BUF(191, 194, COL_SHORTS);
+
+__attribute__((used, aligned(2)))
+uint8_t editTeamsSocksSpriteCopyBuf[36]           = EDIT_TEAMS_BUF(192, 195, COL_SHORTS);
+
+__attribute__((used, aligned(2)))
+uint8_t editTeamsSecondaryShirtSpriteCopyBuf[36]  = EDIT_TEAMS_BUF(190, 196, COL_SHIRT);
+
+__attribute__((used, aligned(2)))
+uint8_t editTeamsSecondaryShortsSpriteCopyBuf[36] = EDIT_TEAMS_BUF(191, 197, COL_SHORTS);
+
+__attribute__((used, aligned(2)))
+uint8_t editTeamsSecondarySocksSpriteCopyBuf[36]  = EDIT_TEAMS_BUF(192, 198, COL_SHORTS);
+
+#undef EDIT_TEAMS_BUF
+#undef COL_SHIRT
+#undef COL_SHORTS
+
+__asm__(".globl " _ASM_PFX "editTeamsPrimaryShirts\n"
+        ".equ   " _ASM_PFX "editTeamsPrimaryShirts, " _ASM_PFX "editTeamsPrimaryShirtsSpriteCopyBuf\n"
+        ".globl " _ASM_PFX "editTeamsPrimaryShirtColTable\n"
+        ".equ   " _ASM_PFX "editTeamsPrimaryShirtColTable, " _ASM_PFX "editTeamsPrimaryShirtsSpriteCopyBuf + 4\n"
+        ".globl " _ASM_PFX "editTeamsShorts\n"
+        ".equ   " _ASM_PFX "editTeamsShorts, " _ASM_PFX "editTeamsShortsSpriteCopyBuf\n"
+        ".globl " _ASM_PFX "editTeamsShortsColTable\n"
+        ".equ   " _ASM_PFX "editTeamsShortsColTable, " _ASM_PFX "editTeamsShortsSpriteCopyBuf + 4\n"
+        ".globl " _ASM_PFX "editTeamsSocks\n"
+        ".equ   " _ASM_PFX "editTeamsSocks, " _ASM_PFX "editTeamsSocksSpriteCopyBuf\n"
+        ".globl " _ASM_PFX "editTeamsSocksColTable\n"
+        ".equ   " _ASM_PFX "editTeamsSocksColTable, " _ASM_PFX "editTeamsSocksSpriteCopyBuf + 4\n"
+        ".globl " _ASM_PFX "editTeamsSecondaryShirt\n"
+        ".equ   " _ASM_PFX "editTeamsSecondaryShirt, " _ASM_PFX "editTeamsSecondaryShirtSpriteCopyBuf\n"
+        ".globl " _ASM_PFX "editTeamsSecondaryShirtColTable\n"
+        ".equ   " _ASM_PFX "editTeamsSecondaryShirtColTable, " _ASM_PFX "editTeamsSecondaryShirtSpriteCopyBuf + 4\n"
+        ".globl " _ASM_PFX "editTeamsSecondaryShorts\n"
+        ".equ   " _ASM_PFX "editTeamsSecondaryShorts, " _ASM_PFX "editTeamsSecondaryShortsSpriteCopyBuf\n"
+        ".globl " _ASM_PFX "editTeamsSecondaryShortsColTable\n"
+        ".equ   " _ASM_PFX "editTeamsSecondaryShortsColTable, " _ASM_PFX "editTeamsSecondaryShortsSpriteCopyBuf + 4\n"
+        ".globl " _ASM_PFX "editTeamsSecondarySocks\n"
+        ".equ   " _ASM_PFX "editTeamsSecondarySocks, " _ASM_PFX "editTeamsSecondarySocksSpriteCopyBuf\n"
+        ".globl " _ASM_PFX "editTeamsSecondarySocksColTable\n"
+        ".equ   " _ASM_PFX "editTeamsSecondarySocksColTable, " _ASM_PFX "editTeamsSecondarySocksSpriteCopyBuf + 4\n");
+
+/* ---- selTeamsPtr buffer + adjacent aliases ---------------------------
+ * SWOS2.s reserves a single ~45 KB contiguous BSS region starting at
+ * `selTeamsPtr` (line 128686), with seven adjacent labels that the game
+ * treats as offsets into the same buffer:
+ *
+ *   +0       selTeamsPtr               (ds.b 4 — nominally a TeamFile*,
+ *                                        but asm code writes 684-byte
+ *                                        TeamFileEx records starting
+ *                                        here, so the "pointer" label
+ *                                        is actually the buffer base)
+ *   +4       selTeamIsComputerFlag     (1 byte — CPU-team flag)
+ *   +5       selTeamNameBase           (1 byte — first char of team name)
+ *   +6       (19 bytes unnamed)        — rest of team name / gap
+ *   +25      selTeamImportField        (1 byte — offset 0x19 in team entry)
+ *   +26      (4 bytes unnamed)
+ *   +30      selTeamSocksColor         (1 byte — socks colour in team entry)
+ *   +31      (29 bytes unnamed)
+ *   +60      selTeamPlayerIndices      (0x51C = 1308 bytes — squad order)
+ *   +1368    editTeamsBuffer           (0xAB02 = 43778 bytes — edit-teams
+ *                                        workspace: holds teamFileBuffer
+ *                                        copy for import, plus competition
+ *                                        slots addressed as selTeamsPtr-
+ *                                        relative in career_teams.c:1660)
+ *   +45146   (end — editTeamsSaveVarsArea is a separate standalone buffer)
+ *
+ * C code declares `extern uint8_t selTeamsPtr;` and uses
+ * `&selTeamsPtr + N*684` for byte arithmetic into the buffer, plus
+ * `(uint8_t*)&selTeamsPtr + offset` for dynamic offsets (see e.g.
+ * career_teams.c:1660 which stores selTeamsPtr-relative offsets in
+ * competition slot fields). Previously selTeamsPtr was defined as
+ * `TeamFile *selTeamsPtr` (a 4-byte pointer), so `_AddTeamToBuffer`
+ * writing 684 bytes to `&selTeamsPtr` stomped whatever global the
+ * linker had placed next — corrupting state and hanging the menu
+ * after the first team was selected in "CHOOSE TEAMS FOR FRIENDLY".
+ *
+ * Same pattern + fix as `currentMenu`/`menuEntries`, `stadiumMenuLittlePlayerBackingBuf`,
+ * and the edit-teams sprite-copy blocks above. */
+/* selTeamsPtr / selTeamIsComputerFlag / selTeamNameBase / selTeamImportField /
+ * selTeamSocksColor / selTeamPlayerIndices / editTeamsBuffer:
+ * moved into swos_globals_career_overlay.c at careerFileBufferBuf + 98478
+ * onwards. On Amiga these labels sit immediately after numSelectedTeams in
+ * the same BSS run, so writing &careerFileBuffer for the full save size
+ * captures the team-data array automatically. The old standalone
+ * selTeamsBackingBuf left bytes 98478..120365 of the save file as zeros. */
+
+/* ---- Highlight file buffer + scene ring buffer (one BSS run)
+ *
+ * On Amiga these are 10 adjacent BSS labels (SWOS2.s line 3034..3056):
+ *   hilFileBuffer:         $7FC bytes  (2044 — sig + 2 teams)
+ *   hilGameName:           $64 bytes   (100)
+ *   hilGameRound:          $64 bytes   (100)
+ *   hilNumGoals:           $2 bytes
+ *   hilTeam1Goals:         $2 bytes
+ *   hilTeam2Goals:         $2 bytes
+ *   hilPitchNumber:        $2 bytes
+ *   hilMaxSubstitutes:     $2 bytes
+ *   hilStartOfGoalsBuffer: $4A38 bytes (19000 — one "goal" scene slot)
+ *   inGameHilBuffer:       $29BF8 bytes (171000 — 9 additional slots)
+ *
+ * Total = 2254 + 19000 + 171000 = 192254 bytes (= K_HIL_FILE_MAXSZ).
+ *
+ * `_LoadHilFile` calls `_LoadFileEx(hilFileBuffer, …)` which writes the
+ * entire HIL file starting at `hilFileBuffer`. The first 8 bytes are the
+ * magic-sig and max-size, the next 2036 are the two teams, the next 200
+ * are gameName+gameRound, the next 10 bytes are the per-match header
+ * (numGoals/team1Goals/team2Goals/pitchNumber/maxSubstitutes), and the
+ * remaining bytes are the goal scenes. The Amiga build relies on these
+ * being one contiguous BSS run — separate stubs leave hilNumGoals at
+ * zero after load, disabling the VIEW HIGHLIGHTS entry.
+ *
+ * The highlight system also addresses hilStartOfGoalsBuffer/inGameHilBuffer
+ * as one combined pool:
+ *   _SaveHighlightScene writes 19000-byte scenes at
+ *     `hilStartOfGoalsBuffer + N * 19000` for N in 0..HIL_MAX_SCENES-1, and
+ *   game_loop.c:1003 sets goalBasePtr to the same offset for replay. */
+#define HIL_BACKING_BUF_SIZE 192254
+__attribute__((used, aligned(4)))
+uint8_t hilBackingBuf[HIL_BACKING_BUF_SIZE];
+__asm__(".globl " _ASM_PFX "hilFileBuffer\n"
+        ".equ   " _ASM_PFX "hilFileBuffer, " _ASM_PFX "hilBackingBuf\n"
+        ".globl " _ASM_PFX "hilGameName\n"
+        ".equ   " _ASM_PFX "hilGameName, " _ASM_PFX "hilBackingBuf + 2044\n"
+        ".globl " _ASM_PFX "hilGameRound\n"
+        ".equ   " _ASM_PFX "hilGameRound, " _ASM_PFX "hilBackingBuf + 2144\n"
+        ".globl " _ASM_PFX "hilNumGoals\n"
+        ".equ   " _ASM_PFX "hilNumGoals, " _ASM_PFX "hilBackingBuf + 2244\n"
+        ".globl " _ASM_PFX "hilTeam1Goals\n"
+        ".equ   " _ASM_PFX "hilTeam1Goals, " _ASM_PFX "hilBackingBuf + 2246\n"
+        ".globl " _ASM_PFX "hilTeam2Goals\n"
+        ".equ   " _ASM_PFX "hilTeam2Goals, " _ASM_PFX "hilBackingBuf + 2248\n"
+        ".globl " _ASM_PFX "hilPitchNumber\n"
+        ".equ   " _ASM_PFX "hilPitchNumber, " _ASM_PFX "hilBackingBuf + 2250\n"
+        ".globl " _ASM_PFX "hilMaxSubstitutes\n"
+        ".equ   " _ASM_PFX "hilMaxSubstitutes, " _ASM_PFX "hilBackingBuf + 2252\n"
+        ".globl " _ASM_PFX "hilStartOfGoalsBuffer\n"
+        ".equ   " _ASM_PFX "hilStartOfGoalsBuffer, " _ASM_PFX "hilBackingBuf + 2254\n"
+        ".globl " _ASM_PFX "inGameHilBuffer\n"
+        ".equ   " _ASM_PFX "inGameHilBuffer, " _ASM_PFX "hilBackingBuf + 2254 + 0x4A38\n");
+#undef HIL_BACKING_BUF_SIZE
+
+/* ---- Audio buffers: sized to hold the real Amiga sound files.
+ *
+ * On the Amiga, these symbols were just labels into a big contiguous BSS
+ * region; the songs/banks overran into adjacent BSS which happened to be
+ * unused. On SDL each symbol must be its own correctly-sized buffer so
+ * the loads don't stomp unrelated globals (we hit this when loading
+ * menu.ins zeroed out menuImageStreamBaseEnd). Sizes include headroom.
+ *
+ *   sound/menu.sng = 1471 bytes
+ *   sound/menu.ins = 43826 bytes
+ *   sound/sfx.sng  = 4281 bytes
+ *   sound/sfx.in2  = 81068 bytes
+ *
+ * Note: sound/sfx.in1 (71500 bytes) loads into poolplyrDatBuffer
+ * (52200 bytes) — which overruns by ~19 KB. Fix when sfx path lights up. */
+uint8_t menuSongData[8  * 1024];
+uint8_t menuInsBank [64 * 1024];
+uint8_t sfxSongData [8  * 1024];
+uint8_t sfxInsBank2 [128 * 1024];
+
+/* ---- Menu font tables (small + big) --------------------------------
+ * Each CharTable is a 238-byte struct: header (unk1, charHeight, unk2,
+ * charSpacing, spaceWidth, spriteIndexOffset) + 224-byte ASCII→sprite
+ * conversion table. _DrawMenuTextCentered reads charHeight/spaceWidth
+ * and indexes into spriteGraphicsPtr via `conversionTable[c] +
+ * spriteIndexOffset`. Values transcribed verbatim from the Amiga C
+ * port's Data.c (smallCharsTable / bigCharsTable). The 2-entry
+ * `charTables` pointer table below is what menu_system.c actually
+ * reads to pick the small/big font. */
+typedef struct CharTable {
+    uint16_t unk1;
+    uint16_t charHeight;
+    uint32_t unk2;
+    uint16_t charSpacing;
+    uint16_t spaceWidth;
+    uint16_t spriteIndexOffset;
+    uint8_t  conversionTable[224];
+} CharTable;
+
+/* Per the Amiga SWOS2.s smallCharsTable / bigCharsTable: only these
+ * indices are non-zero, all others 0:
+ *   5=51, 7-9=1-3, 10=45, 11=50, 12-15=4-7, 16-25=8-17, 26=49, 27=52,
+ *   31=48, 33-47=18-32, 48-58=33-43, 96=47 ('£' = 0x9C), 110=53,
+ *   121=55, 122=54, 124=46, 127=56, 223=44 (cursor)
+ * The table is 224 bytes (16 cols × 14 rows). */
+CharTable smallCharsTable = {
+    6, 6, 327685, 0, 3, 0,
+    { 0, 0, 0, 0, 0, 51, 0, 1, 2, 3, 45, 50, 4, 5, 6, 7,             /*  0- 15 */
+      8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 49, 52, 0, 0, 0, 48,     /* 16- 31 */
+      0, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, /* 32- 47 */
+      33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 0, 0, 0, 0, 0,     /* 48- 63 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                /* 64- 79 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                /* 80- 95 */
+      47, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 53, 0,              /* 96-111 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 55, 54, 0, 46, 0, 0, 56,            /*112-127 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                /*128-143 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                /*144-159 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                /*160-175 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                /*176-191 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                /*192-207 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 44 }              /*208-223 */
+};
+
+CharTable bigCharsTable = {
+    8, 8, 458759, 0, 4, 57,
+    { 0, 0, 0, 0, 0, 51, 0, 1, 2, 3, 45, 50, 4, 5, 6, 7,             /*  0- 15 */
+      8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 49, 52, 0, 0, 0, 48,     /* 16- 31 */
+      0, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, /* 32- 47 */
+      33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 0, 0, 0, 0, 0,     /* 48- 63 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                /* 64- 79 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                /* 80- 95 */
+      47, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 53, 0,              /* 96-111 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 55, 54, 0, 46, 0, 0, 56,            /*112-127 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                /*128-143 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                /*144-159 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                /*160-175 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                /*176-191 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                /*192-207 */
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 44 }              /*208-223 */
+};
+
+/* 2-entry pointer table read by _DrawMenuItem etc:
+ *   charTables[0] = &smallCharsTable
+ *   charTables[1] = &bigCharsTable
+ * Index is derived from the menu entry's stringFlags (see menu_system.c). */
+void *charTables[2] = {
+    &smallCharsTable,
+    &bigCharsTable
+};
+
+/* ---- outerFrameColorsTable: 16 background-colour pairs (top-left,
+ * bottom-right) used by `_DrawMenuItemOuterFrame` to give each menu
+ * button a beveled edge. Transcribed from Amiga Data.c. */
+uint8_t outerFrameColorsTable[32] = {
+    1, 9, 1, 9, 1, 9, 1, 9, 5, 9, 6, 4, 2, 4, 1, 9,
+    1, 9, 1, 3, 6, 9, 13, 8, 10, 8, 1, 9, 1, 9, 1, 9
+};
+
+/* ---- kColorTableShine: 8-entry palette cycle used by
+ * `_DrawSelectedMenuItemFrame` to draw the animated shine on the
+ * currently-selected menu entry. Indexed by `(menuCursorFrame & 14) >> 1`.
+ * Transcribed from Amiga Data.c. */
+uint16_t kColorTableShine[8] = { 2, 2, 1, 1, 7, 7, 1, 1 };
+
+/* ---- Friendly-game STRING_TABLE entries -----------------------------
+ * The friendly menu's pitch-type/season cycler stores its choices in a
+ * compact table format read by _DrawMenuItem (ENTRY_STRING_TABLE branch):
+ *   +0: pointer to the index variable (uint16 read from this address)
+ *   +4: uint16 base value subtracted from the index
+ *   +6: array of N string pointers, indexed by (idx - base)
+ *
+ * Original Amiga had these in SWOS2.s. The stub generator replaced them
+ * with 4 KiB zero-filled buffers, which segfaults at the very first deref
+ * (`*(uint16_t *)indexPtr` with indexPtr = 0). Transcribed verbatim from
+ * SWOS2.s lines 77666–77696. */
+extern char pitchTypeOrSeason[];
+extern char friendlyPitchType[];
+extern char friendlySeason[];
+extern const char aPitchType[], aSeason_1[];
+extern const char aRandom[], aFrozen[], aMuddy[], aWet[],
+                  aSoft[], aNormal[], aDry[], aHard[];
+extern const char aJan[], aFeb[], aMar[], aApr[], aMay[], aJun[],
+                  aJul[], aAug[], aSep[], aOct[], aNov[], aDec[];
+
+struct __attribute__((packed)) {
+    void    *indexPtr;
+    uint16_t base;
+    void    *strs[2];
+} pitchTypeOrSeasonTable = {
+    pitchTypeOrSeason, 0, { (void *)aPitchType, (void *)aSeason_1 }
+};
+
+struct __attribute__((packed)) {
+    void    *indexPtr;
+    uint16_t base;
+    void    *strs[8];
+} friendlyPitchTypeTable = {
+    friendlyPitchType, (uint16_t)-1,
+    { (void *)aRandom, (void *)aFrozen, (void *)aMuddy, (void *)aWet,
+      (void *)aSoft,   (void *)aNormal, (void *)aDry,   (void *)aHard }
+};
+
+struct __attribute__((packed)) {
+    void    *indexPtr;
+    uint16_t base;
+    void    *strs[12];
+} friendly_season_table = {
+    friendlySeason, 0,
+    { (void *)aJan, (void *)aFeb, (void *)aMar, (void *)aApr,
+      (void *)aMay, (void *)aJun, (void *)aJul, (void *)aAug,
+      (void *)aSep, (void *)aOct, (void *)aNov, (void *)aDec }
+};
+
+/* ---- bureaucracyMenuItems ----
+ * Redraw list passed to _DrawMenuItemsWaitForVSync from _Bureaucracy
+ * (called after each team selection). The function reads int16 entry
+ * ordinals terminated by a NEGATIVE value. Without the real terminator
+ * the 4 KiB zero stub iterates 2048 times redrawing entry 0 (the menu
+ * header), producing a multi-second flicker before returning, and the
+ * real targets — 58 (numTeamsPrompt), 57, 55 — never get refreshed,
+ * so "SELECT N MORE TEAMS" never updates after a selection.
+ * Transcribed from SWOS2.s line 65223. */
+int16_t bureaucracyMenuItems[5] = { 58, 57, 55, 0, -1 };
+
+/* ---- Other _DrawMenuItemsWaitForVSync redraw lists.
+ * Same pattern as bureaucracyMenuItems: int16 ordinals terminated by a
+ * negative value, called from various menu callbacks. Stubs of zeros
+ * cause the draw loop to walk 2048 entries redrawing entry 0.
+ * Transcribed from SWOS2.s. */
+int16_t editTacticsRotateRedrawList[3]      = { 10, 27, -1 };
+int16_t filterMenuRedrawList[3]             = {  4,  6, -1 };
+int16_t playMatchRedrawList[3]              = { 12, 29, -1 };
+int16_t togglePlayerCoachRedrawItemList[4]  = {  9,  1,  6, -1 };
+/* This one is dc.l in SWOS2.s — pairs of int16 packed as little-endian
+ * within each long word: $004D004C,$004AFFFF reads (BE 68k load) as
+ * 0x004D, 0x004C, 0x004A, 0xFFFF i.e. ordinals 77, 76, 74, terminator. */
+int16_t chooseTeamsFriendly_changeTeamsPromptDrawList[4] = { 77, 76, 74, -1 };
+
+/* ---- savedRandState / savedRandStatePtr ----
+ * SWOS2.s line 21645 defines a uint8[15] save-stack buffer and a
+ * pointer into it that's pre-initialised to the buffer's address.
+ * _SaveRand2State / _RestoreRand2State push/pop 3 bytes at a time.
+ * Without this definition the linker resolves savedRandState to 0,
+ * the pointer ends up NULL, and `*ptr++ = seed2` in _SaveRand2State
+ * segfaults on the first match-start push. */
+uint8_t savedRandState[15];
+uint8_t *savedRandStatePtr = savedRandState;
+
+/* Camera position as FixedPoint unions (16.16 fixed-point) — matches the
+ * Amiga m68k layout where `cameraX` was a 4-byte dc.l accessed via both
+ * int16 (integer half) and int32 (full FP) views of the same storage.
+ * FixedPoint.s.i is the integer part, FixedPoint.s.frac the fractional,
+ * and FixedPoint.raw the full 32-bit value. The union overlay in
+ * game_types.h handles the LE/BE byte-order swap so each half lives at
+ * the expected memory offset on both hosts. */
+FixedPoint cameraX = {0};
+FixedPoint cameraY = {0};
+
+/* ---- kGoalieSkill[0..7]Table + kGoalieSkillTables ----
+ * 8 GoalieSkill lookup tables (30 int16 fields each). Indexed at
+ * runtime by the goalkeeper's skill rating via kGoalieSkillTables[].
+ * Without these _UpdatePlayers dereferences a NULL shotChanceTable.
+ * Transcribed from SWOS2.s lines 28755–29017. */
+int16_t kGoalieSkill7Table[30] = { 0x0063, 0x0580, 0x00E2, 0x0400, 0x0100, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0001, 0x0002, 0x0003, 0x0009, 0x0006, 0x0001, 0x000C, 0x0004, 0x0009, 0x0006, 0x0001, 0x000C };
+int16_t kGoalieSkill6Table[30] = { 0x0001, 0x0580, 0x00E2, 0x0400, 0x0100, 0x0000, 0x0000, 0x0000, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0002, 0x0003, 0x0004, 0x0008, 0x0006, 0x0002, 0x000B, 0x0005, 0x0008, 0x0006, 0x0002, 0x000B };
+int16_t kGoalieSkill5Table[30] = { 0x0002, 0x04DC, 0x00B4, 0x03E0, 0x00F0, 0x0000, 0x0001, 0x0001, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0003, 0x0004, 0x0005, 0x0007, 0x0006, 0x0003, 0x000A, 0x0006, 0x0007, 0x0006, 0x0003, 0x000A };
+int16_t kGoalieSkill4Table[30] = { 0x0003, 0x0438, 0x0086, 0x03C0, 0x00E0, 0x0000, 0x0001, 0x0002, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0004, 0x0005, 0x0006, 0x0006, 0x0006, 0x0004, 0x0009, 0x0007, 0x0006, 0x0006, 0x0004, 0x0009 };
+int16_t kGoalieSkill3Table[30] = { 0x0004, 0x0394, 0x0058, 0x03A0, 0x00D0, 0x0001, 0x0002, 0x0003, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0005, 0x0006, 0x0007, 0x0006, 0x0005, 0x0005, 0x0008, 0x0008, 0x0005, 0x0006, 0x0005, 0x0008 };
+int16_t kGoalieSkill2Table[30] = { 0x0005, 0x02F0, 0x002A, 0x0380, 0x00C0, 0x0002, 0x0003, 0x0004, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0006, 0x0007, 0x0007, 0x0005, 0x0005, 0x0006, 0x0007, 0x0009, 0x0004, 0x0006, 0x0006, 0x0007 };
+int16_t kGoalieSkill1Table[30] = { 0x0006, 0x024C, -4,     0x0360, 0x00B0, 0x0003, 0x0004, 0x0005, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0007, 0x0007, 0x0007, 0x0004, 0x0005, 0x0007, 0x0006, 0x000A, 0x0003, 0x0006, 0x0007, 0x0006 };
+int16_t kGoalieSkill0Table[30] = { 0x0007, 0x01A8, -50,    0x0340, 0x00A0, 0x0004, 0x0005, 0x0006, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0003, 0x0005, 0x0008, 0x0005, 0x000B, 0x0002, 0x0006, 0x0008, 0x0005 };
+/* ---- pitchDatBuffer + pitchChunkyBuffer ----
+ * Amiga pitch files pack 2310 tile-pointer offsets followed by
+ * bitplane tile data. The Amiga build's original 9240-byte buffer
+ * relied on BSS adjacency to currentMenu for the tile overflow;
+ * on SDL we size the buffer to hold the largest decompressed pitch
+ * file (~48 KB; 64 KB gives headroom). After load, we decode each
+ * 128-byte 4-plane tile into a 256-byte 8bpp chunky tile in
+ * pitchChunkyBuffer (indexed by pointer slot) and rewrite the
+ * pointer table entries to point to the chunky data. Renderers
+ * then read 16×16 chunky bytes per tile via the same pointer
+ * table the Amiga code already uses. */
+#define PITCH_POINTER_COUNT 2310
+#define PITCH_CHUNKY_TILE_BYTES 256   /* 16 px * 16 rows * 1 byte/px */
+uint8_t pitchDatBuffer[64 * 1024];
+uint8_t pitchChunkyBuffer[PITCH_POINTER_COUNT * PITCH_CHUNKY_TILE_BYTES];
+
+void *kGoalieSkillTables[8] = {
+    kGoalieSkill0Table,
+    kGoalieSkill1Table,
+    kGoalieSkill2Table,
+    kGoalieSkill3Table,
+    kGoalieSkill4Table,
+    kGoalieSkill5Table,
+    kGoalieSkill6Table,
+    kGoalieSkill7Table,
+};
+
+/* ---- diyFileBufferCopy / diyCompetitionStart / competitionFileBuffer ----
+ * `_SaveDIYTournament` does a word-copy of 1449 entries (2898 bytes) from
+ * `competitionFileBuffer` into `diyFileBufferCopy`. The auto-extractor
+ * sized them as a 2-byte stub and a 1508-byte DIYCompetitionEx, so the
+ * copy overflowed and stomped `magicValue` (which sits ~0xC08 past
+ * diyFileBufferCopy on our linker layout — on Amiga BSS it was a real
+ * adjacent global, here it's just whatever .o the linker placed next).
+ *
+ * Use 4096-byte backing buffers so word-copies up to ~4 KB are safe, and
+ * expose the named symbols via .equ so existing
+ *   `extern DIYCompetitionEx diyFileBufferCopy;` / `.base.field`
+ * accesses keep working unchanged. */
+/* primaryQualifiedTeamGrids / tertiary / euroCupTitleHolderGrid /
+ * cupWinnersCupTitleHolderGrid / uefaCupTitleHolderGrid sit
+ * consecutively in Amiga BSS (SWOS2.s lines 2534-2555):
+ *
+ *   primaryQualifiedTeamGrids: ds.b $1AB8  (10 × 684 = 10 grid slots)
+ *   BSS_00_695C:               ds.b $558   (2 unnamed grid slots)
+ *   tertiaryQualifiedTeamGrid: ds.b $2AC   (1 grid slot)
+ *   euroCupTitleHolderGrid:    ds.b $2AC
+ *   cupWinnersCupTitleHolderGrid: ds.b $2AC
+ *   uefaCupTitleHolderGrid:    ds.b $2AC
+ *
+ * qualifyTeamsForUefaCup walks `a5` forward through these slots and
+ * relies on `a5 == euroCupTitleHolderGrid` as the wrap-to-primary[1]
+ * boundary. On SDL the linker scattered the grids (primary in one
+ * BSS region, the four title-holder/tertiary grids in another at
+ * 0x2C0-byte stride), so the walker stepped past tertiary into
+ * unrelated globals (diyCompetitionStartBuf etc.), read garbage as
+ * team ids, and tripped _Career_AppendTeamToTmdTeamPool's 0x3443
+ * panic. Pack the whole region into one buffer matching the Amiga
+ * BSS run and expose each slot via inline-asm .equ alias. */
+__attribute__((used, aligned(4))) uint8_t qualifiedTeamGridsBlock[0x2AC0];
+__asm__(".globl " _ASM_PFX "primaryQualifiedTeamGrids\n"
+        ".equ   " _ASM_PFX "primaryQualifiedTeamGrids, " _ASM_PFX "qualifiedTeamGridsBlock\n");
+/* offset 0x2010 = 0x1AB8 + 0x558 (10 primary slots + 2 unnamed slots) */
+__asm__(".globl " _ASM_PFX "tertiaryQualifiedTeamGrid\n"
+        ".equ   " _ASM_PFX "tertiaryQualifiedTeamGrid, " _ASM_PFX "qualifiedTeamGridsBlock + 0x2010\n");
+/* offset 0x22BC = 0x2010 + 0x2AC */
+__asm__(".globl " _ASM_PFX "euroCupTitleHolderGrid\n"
+        ".equ   " _ASM_PFX "euroCupTitleHolderGrid, " _ASM_PFX "qualifiedTeamGridsBlock + 0x22BC\n");
+/* offset 0x2568 = 0x22BC + 0x2AC */
+__asm__(".globl " _ASM_PFX "cupWinnersCupTitleHolderGrid\n"
+        ".equ   " _ASM_PFX "cupWinnersCupTitleHolderGrid, " _ASM_PFX "qualifiedTeamGridsBlock + 0x2568\n");
+/* offset 0x2814 = 0x2568 + 0x2AC */
+__asm__(".globl " _ASM_PFX "uefaCupTitleHolderGrid\n"
+        ".equ   " _ASM_PFX "uefaCupTitleHolderGrid, " _ASM_PFX "qualifiedTeamGridsBlock + 0x2814\n");
+
+/* gameRound: on Amiga the 1-byte gameRound label is followed by an
+ * unnamed 99-byte BSS region (BSS_00_CD54 in SWOS2.s) that the
+ * round-name string buffer extends into. _StringCopy(roundStr, &gameRound)
+ * in PlayDIYLeagueMatchAndCacheResult writes "FIRST ROUND" / "QUARTER FINAL"
+ * etc., overrunning the 1-byte typed definition and stomping magicValue
+ * (which sits adjacent on SDL). highlight.c also iterates 40 bytes
+ * between gameRound and hilGameRound. Provide a 100-byte buffer to
+ * match the Amiga round-string capacity. */
+__attribute__((used, aligned(4))) uint8_t gameRoundBuf[100];
+__asm__(".globl " _ASM_PFX "gameRound\n"
+        ".equ   " _ASM_PFX "gameRound, " _ASM_PFX "gameRoundBuf\n");
+
+/* diyFileBufferCopy + diyCompetitionStart share one BSS run on Amiga:
+ *
+ *   2830 diyFileBufferCopy:    ds.b $60     ; +0x000
+ *   2833 BSS_00_2DB6A:         ds.b $3A     ; +0x060
+ *   2836 diyTournamentTeamIds: ds.b $386    ; +0x09A
+ *   2840 diyCompetitionStart:  ds.b $60     ; +0x420
+ *   2842 diyMinSubstitutes ... diyTeamShuffleOrder ... audioInstrumentBank
+ *        — the "extended" diyCompetitionStart region runs to +0x420 + 0x734
+ *
+ * The 1450-word (2900-byte = 0xB54) DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer
+ * copy, which the tournament-preset save flow uses, deliberately covers
+ * BOTH buffers because they're contiguous: writes to diyCompetitionStart
+ * + 0x2B4 (league standings) land at diyFileBufferCopy + 0x6D4, and that
+ * offset is within the 0xB54-byte copy.
+ *
+ * If we keep diyFileBufferCopyBuf and diyCompetitionStartBuf as TWO
+ * standalone arrays, the standings live in a region the Copy never
+ * touches — the saved .PRE file ends up with zeros where the Group A
+ * standings should be (Colombia 1W lost on save → loads as fresh
+ * competition). Mirror the Amiga BSS adjacency by aliasing
+ * diyCompetitionStartBuf to diyFileBufferCopyBuf + 0x420; one big
+ * backing buffer holds both, the existing aliases (diyLeagueTeamIds at
+ * +0x12E, diyCupTeamIds at +0x24E, etc.) all resolve through, and
+ * Copy's reach naturally includes the standings region.
+ *
+ * Sizing: 0x420 (diyFileBufferCopy region) + 0x734 (diyCompetitionStart
+ * extended region) = 0xB54 minimum. Round up to 0x2000 (8192) for
+ * defensive headroom — the 1450-word copy reaches 0xB54 anyway. */
+__attribute__((used, aligned(4))) uint8_t diyFileBufferCopyBuf[8192];
+__asm__(".globl " _ASM_PFX "diyFileBufferCopy\n"
+        ".equ   " _ASM_PFX "diyFileBufferCopy, " _ASM_PFX "diyFileBufferCopyBuf\n");
+
+/* diyTournamentTeamIds: Amiga `diyFileBufferCopy + 0x9A`.
+ * _PresetCompetitionMenu writes selected team IDs via the named global
+ * (_CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyTournamentTeamIds))
+ * while _DIY_LoadCurrentCompetitionSlot reads them as
+ * (uint16_t *)(diyFileBufferCopy + 0x9A) when copying into the runtime
+ * teamShuffleOrder. */
+__asm__(".globl " _ASM_PFX "diyTournamentTeamIds\n"
+        ".equ   " _ASM_PFX "diyTournamentTeamIds, " _ASM_PFX "diyFileBufferCopyBuf + 0x9A\n");
+
+/* diyCompetitionStartBuf is now an alias into diyFileBufferCopyBuf, NOT
+ * a separate array. All the `.equ ... diyCompetitionStartBuf + N` aliases
+ * below resolve through to diyFileBufferCopyBuf + 0x420 + N, matching
+ * the Amiga BSS layout and ensuring league standings (at +0x2B4 within
+ * the diyCompetitionStart region) end up at diyFileBufferCopyBuf +
+ * 0x6D4 — inside the save-time Copy's reach. */
+__asm__(".globl " _ASM_PFX "diyCompetitionStartBuf\n"
+        ".equ   " _ASM_PFX "diyCompetitionStartBuf, " _ASM_PFX "diyFileBufferCopyBuf + 0x420\n");
+__asm__(".globl " _ASM_PFX "diyCompetitionStart\n"
+        ".equ   " _ASM_PFX "diyCompetitionStart, " _ASM_PFX "diyCompetitionStartBuf\n");
+
+/* diyTournamentCompetition: the designDiyTournamentMenu's title text
+ * pointer was hardcoded in the Amiga binary to `dc.l $2DAD4`, which is
+ * `diyFileBufferCopy + 4` — i.e. the competitionName field of the
+ * already-populated tournament file buffer. The IDA disassembler split
+ * the first 28 bytes of diyFileBufferCopy into a phantom
+ * `BSS_00_2DAD0` label because no asm path accesses that prefix
+ * directly, so the auto-extractor never resolved $2DAD4 to a named
+ * struct field. The SDL port worked around this by giving
+ * `diyTournamentCompetition` its own DIYCompetitionEx allocation —
+ * but nothing ever writes to that struct, so the View Competitions >
+ * European Cup > Competition Info title rendered blank instead of
+ * "EUROPEAN CHAMPIONS CUP". Alias it onto diyFileBufferCopyBuf so the
+ * cup-data copy that already lands in diyFileBufferCopy is visible to
+ * the menu via diyTournamentCompetition.base.competitionName. */
+__asm__(".globl " _ASM_PFX "diyTournamentCompetition\n"
+        ".equ   " _ASM_PFX "diyTournamentCompetition, " _ASM_PFX "diyFileBufferCopyBuf\n");
+
+/* competitionFileBuffer: overlays careerFileBufferBuf at offset 93308.
+ * Aliased in swos_globals_career_overlay.c. The 4 KB standalone backing
+ * buffer that used to live here meant DIY/preset writes never reached
+ * the career save body — and `_LoadPresetFile` would load a 4 KB file
+ * into a buffer that overflows past everything else. The overlay puts
+ * it back inside the 256 KB careerFileBufferBuf at the right offset. */
+
+/* Named diy* sub-aliases overlay typed struct fields inside
+ * diyCompetitionStart (typed as DIYCompetitionEx). The original Amiga
+ * offsets (0x6E / 0xEE / 0x12E / 0x24E / ...) assumed
+ * sizeof(DIYCompetition::base) == 0x60. On 64-bit hosts the base grows
+ * to 0x68 (namePtr widens from 4 → 8 + tail alignment), so every alias
+ * past the base end must shift by +8 to land on the same bytes the
+ * typed-struct readers see. Until Phase 3 retires these aliases by
+ * replacing call sites with direct struct field access, encode the
+ * shift here so 32-bit Amiga and 64-bit SDL builds stay in sync. */
+#define DIY_STR_(x) #x
+#define DIY_STR(x)  DIY_STR_(x)
+#if __SIZEOF_POINTER__ == 8
+#  define DIY_POST_BASE_SHIFT 8
+#else
+#  define DIY_POST_BASE_SHIFT 0
+#endif
+
+/* diyLeagueTeamIds: aliases DIYCompetitionEx::matchData.league.leagueTeamIds. */
+__asm__(".globl " _ASM_PFX "diyLeagueTeamIds\n"
+        ".equ   " _ASM_PFX "diyLeagueTeamIds, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x12E + DIY_POST_BASE_SHIFT) "\n");
+
+/* diyCupTeamIds: aliases DIYCompetitionEx::matchData.cup.cupTeamIds (same
+ * union memory, cup interpretation). */
+__asm__(".globl " _ASM_PFX "diyCupTeamIds\n"
+        ".equ   " _ASM_PFX "diyCupTeamIds, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x24E + DIY_POST_BASE_SHIFT) "\n");
+
+/* diyTeamEntryOffsetsByIndex (matchData.league.teamEntryOffsets) and
+ * diyTeamShuffleIndices (matchData.league.shuffleAndPad). */
+__asm__(".globl " _ASM_PFX "diyTeamEntryOffsetsByIndex\n"
+        ".equ   " _ASM_PFX "diyTeamEntryOffsetsByIndex, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x6E + DIY_POST_BASE_SHIFT) "\n"
+        ".globl " _ASM_PFX "diyTeamShuffleIndices\n"
+        ".equ   " _ASM_PFX "diyTeamShuffleIndices, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0xEE + DIY_POST_BASE_SHIFT) "\n");
+
+/* The named diy* uint16 globals at offsets 0x60..0x68 and 0x1BE..0x1C4
+ * also overlap diyCompetitionStart per the SWOS2.s BSS layout. Without
+ * these aliases, writes via the struct view (e.g.
+ * `comp->leagueCurrentSlot = 1`) and reads via the global name (e.g.
+ * `careerSlotProcessingInProgress = diyLeagueCurrentSlot`) hit
+ * different memory — the auto-play loop never observes the phase
+ * boundary and runs forever. */
+__asm__(".globl " _ASM_PFX "diyMinSubstitutes\n"
+        ".equ   " _ASM_PFX "diyMinSubstitutes, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x60 + DIY_POST_BASE_SHIFT) "\n"
+        ".globl " _ASM_PFX "diyPointsForAWin\n"
+        ".equ   " _ASM_PFX "diyPointsForAWin, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x62 + DIY_POST_BASE_SHIFT) "\n"
+        ".globl " _ASM_PFX "diyLeagueMinSubstitutes\n"
+        ".equ   " _ASM_PFX "diyLeagueMinSubstitutes, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x64 + DIY_POST_BASE_SHIFT) "\n"
+        ".globl " _ASM_PFX "diyLeagueMaxSubstitutes\n"
+        ".equ   " _ASM_PFX "diyLeagueMaxSubstitutes, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x66 + DIY_POST_BASE_SHIFT) "\n"
+        ".globl " _ASM_PFX "diyHasGroups\n"
+        ".equ   " _ASM_PFX "diyHasGroups, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x68 + DIY_POST_BASE_SHIFT) "\n"
+        ".globl " _ASM_PFX "diyMatchesPlayedCount\n"
+        ".equ   " _ASM_PFX "diyMatchesPlayedCount, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x1BE + DIY_POST_BASE_SHIFT) "\n"
+        ".globl " _ASM_PFX "diyLeagueCurrentSlot\n"
+        ".equ   " _ASM_PFX "diyLeagueCurrentSlot, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x1C0 + DIY_POST_BASE_SHIFT) "\n"
+        ".globl " _ASM_PFX "diyLeagueMatchProgress\n"
+        ".equ   " _ASM_PFX "diyLeagueMatchProgress, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x1C2 + DIY_POST_BASE_SHIFT) "\n"
+        ".globl " _ASM_PFX "diyLeagueTotalMatches\n"
+        ".equ   " _ASM_PFX "diyLeagueTotalMatches, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x1C4 + DIY_POST_BASE_SHIFT) "\n"
+        ".globl " _ASM_PFX "diyCompetitionFormat\n"
+        ".equ   " _ASM_PFX "diyCompetitionFormat, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x14A + DIY_POST_BASE_SHIFT) "\n"
+        ".globl " _ASM_PFX "diyRoundFormat\n"
+        ".equ   " _ASM_PFX "diyRoundFormat, " _ASM_PFX "diyCompetitionStartBuf + "
+        DIY_STR(0x14C + DIY_POST_BASE_SHIFT) "\n");
+
+/* diyPresetNameOfCompetition: aliased in swos_globals_career_overlay.c
+ * at careerFileBufferBuf + 93312 (== competitionFileBuffer + 4 in the
+ * Amiga overlay). The standalone alias here was redundant with the
+ * generated overlay block. */
+
+/* careerFileBufferBuf + the entire ~98 KB careerFileBuffer overlay
+ * (careerFileBuffer through numSelectedTeams, plus all 332 named
+ * globals in between) is now defined in swos_globals_career_overlay.c.
+ *
+ * The buffer must live in the same TU as the .equ aliases or the
+ * assembler emits no symbol for them: `.equ alias, undefined+offset`
+ * stays a relocatable expression that never lands in the .o symbol
+ * table (gcc/binutils — verified with `nm`). */
+
+/* numberOfFiles + foundFilenamesBuffer: contiguous BSS run on Amiga.
+ * AssetSys_ResolveAssetList receives &numberOfFiles as the destination
+ * pointer (passed via _CAssetSys_Dispatch from _FindFilesExtensionPresent),
+ * writes the file count at offset 0..1, and packs 32-byte entries
+ * starting at offset 0 (so entry 0's name field at offset 4 lands at
+ * &numberOfFiles + 4 = foundFilenamesBuffer + 0, entry 1 name at
+ * foundFilenamesBuffer + 32, etc.). _GetFilenameAndExtension then
+ * iterates `foundFilenamesBuffer` with a 32-byte stride and scans
+ * each slot for the '.' that starts the file extension. The Amiga
+ * sized this run as numberOfFiles(2) + 2 pad + foundFilenamesBuffer($77E)
+ * = 0x782 bytes total. */
+__attribute__((used, aligned(4))) uint8_t numberOfFilesBuf[0x782];
+__asm__(".globl " _ASM_PFX "numberOfFiles\n"
+        ".equ   " _ASM_PFX "numberOfFiles, " _ASM_PFX "numberOfFilesBuf\n"
+        ".globl " _ASM_PFX "foundFilenamesBuffer\n"
+        ".equ   " _ASM_PFX "foundFilenamesBuffer, " _ASM_PFX "numberOfFilesBuf + 4\n");
+
+/* careerTeam: aliased in swos_globals_career_overlay.c to
+ * careerFileBufferBuf + 56190. On Amiga it lives inside the career
+ * save run as a 1292-byte (TeamFile 76 + 32 × PlayerFile 38) region.
+ * `teamInit(&careerTeam, 31)` reaches index 31 — the C TeamFileEx
+ * struct only declares 16 players, but the extended player slots are
+ * accessed via pointer arithmetic the compiler doesn't bounds-check. */
+
+/* Slot 1/2/3/4 competition context buffers: aliased in
+ * swos_globals_career_overlay.c into careerFileBufferBuf at
+ *   competitionContext           +63340
+ *   tertiaryCompetitionContext   +66240
+ *   diyCompetitionContext        +67332
+ *   euroCupsCompetitionContext   +68424
+ * On Amiga each label sits inside the career save run; the contexts
+ * span up to ~2900 bytes (type=2+), and the next named global doesn't
+ * appear until ~2900 bytes later — so the 4 KB standalone buffers we
+ * used before were just emulating the Amiga BSS spacing. The overlay
+ * now puts them back inside careerFileBufferBuf, which both restores
+ * save round-trips and matches the original adjacency. */
+
+/* teamSelectionKeyCache / teamSelectionKeyCacheEnd: aliased in
+ * swos_globals_career_overlay.c to careerFileBufferBuf + 73292 and
+ * + 93306 — the same offsets the Amiga BSS used. The 20014-byte gap
+ * between the two labels is the working area for variable-length
+ * cache entries (typically 34 × 22..118 bytes). On Amiga that gap
+ * also contained `careerForeignMarketPlayers` (offset 75162) — the
+ * original code reused the same memory because the cache and the
+ * market list operate at different times. The overlay restores that
+ * adjacency: both labels now share the careerFileBuffer save region. */

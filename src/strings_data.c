@@ -645,4 +645,104 @@ const char aOg[] = "****(OG)";
 const char aPen[] = "****(PEN)";
 const char aPen_0[] = "****(PEN),";
 
+/* ======================================================================
+ * countriesTable[262] — country-code → length-prefixed name string.
+ *
+ * Each entry points to a string starting with a leading 0 byte, then the
+ * country name, NUL, the nationality adjective, NUL (e.g. aAlbania =
+ * "\0ALBANIA\0ALBANIAN"). _GetCountryName does `entry + 1` to skip the
+ * leading byte, so the consumer sees a normal C string at "ALBANIA".
+ *
+ * Without this, _GetCountryName reads countriesTable[d0]=NULL, computes
+ * (NULL + 1) = 0x1, stores it in curCountryStr, and the next consumer
+ * (_GetStringLength etc.) segfaults dereferencing 0x1.
+ *
+ * Layout transcribed verbatim from SWOS2.s lines 117594–117857. */
+#include "swos_types.h"
+void *countriesTable[262] = {
+    [0]   = (void *)aAlbania,
+    [1]   = (void *)aAustria,
+    [2]   = (void *)aBelgium,
+    [3]   = (void *)aBulgaria,
+    [4]   = (void *)aCroatia,
+    [5]   = (void *)aCyprus,
+    [6]   = (void *)aCzechRepublic,
+    [7]   = (void *)aDenmark,
+    [8]   = (void *)aEngland,
+    [9]   = (void *)aEngland_0,
+    [10]  = (void *)aEstonia,
+    [11]  = (void *)aFaroeIslands,
+    [12]  = (void *)aFinland,
+    [13]  = (void *)aFrance,
+    [14]  = (void *)aGermany,
+    [15]  = (void *)aGreece,
+    [16]  = (void *)aHungary,
+    [17]  = (void *)aIceland,
+    [18]  = (void *)aRepublicIreland,
+    [19]  = (void *)aIsrael,
+    [20]  = (void *)aItaly,
+    [21]  = (void *)aLatvia,
+    [22]  = (void *)aLithuania,
+    [23]  = (void *)aLuxembourg,
+    [24]  = (void *)aMalta,
+    [25]  = (void *)aHolland,
+    [26]  = (void *)aNorthernIreland,
+    [27]  = (void *)aNorway,
+    [28]  = (void *)aPoland,
+    [29]  = (void *)aPortugal,
+    [30]  = (void *)aRomania,
+    [31]  = (void *)aRussia,
+    [32]  = (void *)aSanMarino,
+    [33]  = (void *)aScotland,
+    [34]  = (void *)aSlovenia,
+    [35]  = (void *)aSpain,
+    [36]  = (void *)aSweden,
+    [37]  = (void *)aSwitzerland,
+    [38]  = (void *)aTurkey,
+    [39]  = (void *)aUkraine,
+    [40]  = (void *)aWales,
+    [41]  = (void *)aYugoslavia,
+    [42]  = (void *)aAlgeria,
+    [43]  = (void *)aArgentina,
+    [44]  = (void *)aAustralia,
+    [45]  = (void *)aBolivia,
+    [46]  = (void *)aBrazil,
+    [48]  = (void *)aChile,
+    [49]  = (void *)aColombia,
+    [50]  = (void *)aEcuador,
+    [51]  = (void *)aElSalvadore,
+    [55]  = (void *)aJapan,
+    [60]  = (void *)aMexico,
+    [62]  = (void *)aNewZealand,
+    [64]  = (void *)aParaguay,
+    [65]  = (void *)aPeru,
+    [66]  = (void *)aSurinam,
+    [67]  = (void *)aTaiwan,
+    [69]  = (void *)aSouthAfrica,
+    [71]  = (void *)aUruguay,
+    [72]  = (void *)aCustom,
+    [73]  = (void *)aUSA,
+    [75]  = (void *)aIndia,
+    [76]  = (void *)aBelarus,
+    [77]  = (void *)aVenezuela,
+    [78]  = (void *)aSlovakia,
+    [79]  = (void *)aGhana,
+    [80]  = (void *)aEurope,
+    [81]  = (void *)aAfrica,
+    [82]  = (void *)aSouthAmerica,
+    [83]  = (void *)aNorthAmerica,
+    [84]  = (void *)aAsia,
+    [85]  = (void *)aOceania,
+    [100] = (void *)aEditedCustoms,
+    [252] = (void *)aWorldCupQualification,
+    [253] = (void *)aEuropeanChampionship,
+    [254] = (void *)aWorld_1,
+    [256] = (void *)aEuropean_0,
+    [257] = (void *)aNorthAmerican_0,
+    [258] = (void *)aSouthAmerican_0,
+    [259] = (void *)aAsian_0,
+    [260] = (void *)aOceanian_0,
+    [261] = (void *)aAfrican_0,
+};
+
 #endif /* STRINGS_DATA_C */

@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "transfer_market.h"
+#include "endian_helpers.h"
 #include "game_types.h"
 #include "menu_system.h"
 #include "menus.h"
@@ -11,6 +12,7 @@
 #include "career_teams.h"
 #include "input_text.h"
 #include "teams.h"
+#include "auto_skip_debug.h"
 
 /* Offset from _GetPlayer() return value to actual PlayerFile data */
 #define PF_OFF              76  /* sizeof(TeamFile) */
@@ -270,7 +272,14 @@ int16_t _IsPlayerInCareerContest(uint16_t teamNumber, uint16_t playerOrdinal)
 
     entry = homeMarketPlayers;
     for (i = 0; i < numHomeMarketPlayers; i++) {
-        if (*(uint16_t *)entry == teamNumber && entry[2] == (uint8_t)playerOrdinal)
+        /* Each entry stores [countryByte, ordinalByte, playerOrdByte, _].
+         * Read as PACK_BE_U16 so the resulting uint16 has country in
+         * the high byte (matching findTeamInCache's PACK_BE_U16 lookup
+         * convention) — a raw `*(uint16_t *)entry` would byte-swap on
+         * LE and the comparison against PACK_BE_U16-formatted
+         * teamNumber would never match. */
+        if (PACK_BE_U16(entry[0], entry[1]) == teamNumber &&
+            entry[2] == (uint8_t)playerOrdinal)
             return (int16_t)i;                      /* found at index i */
         entry += MARKET_ENTRY_SIZE;
     }
@@ -299,7 +308,12 @@ uint16_t _AddPlayerToCareerContest(uint16_t teamNumber, uint16_t playerOrdinal)
 
     offset = (uint32_t)numHomeMarketPlayers * MARKET_ENTRY_SIZE;
     entry = homeMarketPlayers + offset;
-    *(uint16_t *)entry = teamNumber;                /* move.w d0,(a1) */
+    /* teamNumber is in PACK_BE_U16 format (country << 8 | ordinal).
+     * Write byte-wise so byte[0]=country, byte[1]=ordinal, matching
+     * the file format — a `*(uint16_t *)entry = teamNumber` on LE
+     * would byte-swap and put ordinal at byte[0]. */
+    entry[0] = (uint8_t)(teamNumber >> 8);          /* country */
+    entry[1] = (uint8_t)teamNumber;                  /* ordinal */
     entry[2] = (uint8_t)playerOrdinal;              /* move.b d1,2(a1) */
     numHomeMarketPlayers++;                          /* addq.w #1 → clears Z */
 
@@ -359,7 +373,9 @@ int16_t _FindForeignMarketPlayer(uint16_t teamId, uint16_t playerOrdinal)
 
     entry = foreignMarketPlayers;
     for (i = 0; i < numForeignMarketPlayers; i++) {
-        if (*(uint16_t *)entry == teamId && entry[2] == (uint8_t)playerOrdinal)
+        /* PACK_BE_U16 read — see _IsPlayerInCareerContest comment. */
+        if (PACK_BE_U16(entry[0], entry[1]) == teamId &&
+            entry[2] == (uint8_t)playerOrdinal)
             return (int16_t)i;                      /* found at index i */
         entry += MARKET_ENTRY_SIZE;
     }
@@ -388,7 +404,9 @@ uint16_t _AddForeignMarketPlayer(uint16_t teamId, uint16_t playerOrdinal)
 
     offset = (uint32_t)numForeignMarketPlayers * MARKET_ENTRY_SIZE;
     entry = foreignMarketPlayers + offset;
-    *(uint16_t *)entry = teamId;                    /* move.w d0,(a1) */
+    /* Byte-wise PACK_BE_U16 write — see _AddPlayerToCareerContest. */
+    entry[0] = (uint8_t)(teamId >> 8);              /* country */
+    entry[1] = (uint8_t)teamId;                      /* ordinal */
     entry[2] = (uint8_t)playerOrdinal;              /* move.b d1,2(a1) */
     numForeignMarketPlayers++;
 
@@ -587,14 +605,37 @@ void _LoadPoolplyrDat(void)
 __attribute__((used, externally_visible))
 PoolPlayer *_FindPoolplyrDatPlayer(uint16_t teamId, uint16_t playerOrdinal)
 {
-    PoolPlayer *entry = poolPlayerStrideRef;
-
-    for (;;) {
-        entry++;                                /* lea 58(a0),a0 (advance first) */
-        if (entry->teamId == teamId &&
+    /* The original Amiga starts iteration at `poolPlayerStrideRef`
+     * (a 1-byte BSS marker) and does `entry++` (= +58) before the
+     * first comparison, so the first entry visited is at
+     * `poolPlayerStrideRef + 58`. The Amiga BSS layout pins
+     * poolPlayerStrideRef EXACTLY 58 bytes before poolplyrDatBuffer
+     * — making the +58 land precisely at poolplyrDatBuffer[0]. On
+     * SDL each symbol lives in its own .o; the two are NOT 58 bytes
+     * apart, so the Amiga trick reads from arbitrary unrelated BSS
+     * (or, in the user's session, walks off into unmapped memory
+     * and SIGSEGVs).
+     *
+     * Iterate from poolplyrDatBuffer directly. Bounded at
+     * POOLPLAYER_COUNT (the .dat decompresses to exactly 900
+     * 58-byte records) so a not-found lookup returns NULL instead
+     * of walking off the end. Callers handle NULL by skipping /
+     * disabling the row. */
+    PoolPlayer *entry = poolplyrDatBuffer;
+    for (int i = 0; i < POOLPLAYER_COUNT; i++) {
+        /* poolplyr.dat stores teamId as the BE byte pair
+         * [country, ordinal]. On BE Amiga `entry->teamId` reads as
+         * country<<8|ordinal = PACK_BE_U16; on LE x86 the same field
+         * read byte-swaps to ordinal<<8|country and the comparison
+         * against the PACK_BE_U16-formatted `teamId` parameter never
+         * matches. Convert through BE16_TO_HOST so the compare sees
+         * the same format on both endians. */
+        if (BE16_TO_HOST(entry->teamId) == teamId &&
             entry->playerOrdinal == (int8_t)playerOrdinal)
             return entry;
+        entry++;
     }
+    return (PoolPlayer *)0;
 }
 
 /* ================================================================
@@ -639,10 +680,17 @@ retry:
     teamIdx = (uint16_t)((uint32_t)teamIdx * sizeof(TeamFileEx));
     teamEntry = &selTeamsPtr + teamIdx;
 
-    /* Must be same country but different team */
+    /* Must be same country but different team. teamEntry points at
+     * a TeamFile so byte[0]=country, byte[1]=ordinal. Read teamNum
+     * as PACK_BE_U16 (country << 8 | ordinal) so it's comparable to
+     * selTeamNumber and survives findTeamInCache lookup later. The
+     * raw `*(uint16_t *)` read on LE would byte-swap and produce a
+     * format mismatch — both with the selTeamNumber check here AND
+     * with downstream consumers via _AddPlayerToCareerContest →
+     * homeMarketPlayers → _PlayerMarketBuildVisiblePlayerList. */
     if (*teamEntry != homeCountry)                          /* cmp.b (a0),d3 */
         goto retry;
-    teamNum = *(uint16_t *)teamEntry;                       /* move.w (a0),d1 */
+    teamNum = PACK_BE_U16(teamEntry[0], teamEntry[1]);
     if (teamNum == selTeamNumber)                            /* cmp.w (selTeamNumber).l,d1 */
         goto retry;
 
@@ -748,11 +796,20 @@ retry:
     poolIdx = (uint16_t)((uint32_t)rand * POOLPLAYER_COUNT >> 16);  /* mulu #900; lsr.l #8; lsr.l #8 */
     poolEntry = &poolplyrDatBuffer[poolIdx];
 
-    /* Must be different country */
+    /* Must be different country. Byte access at offset 0 is endian-
+     * safe (the file format stores [country, ordinal] bytes). */
     if (*(uint8_t *)&poolEntry->teamId == homeCountry)      /* cmp.b (a0),d3 */
         goto retry;
 
-    teamId = poolEntry->teamId;
+    /* Convert poolEntry->teamId (file-format native = byte-swapped on
+     * LE) into PACK_BE_U16 format (country << 8 | ordinal) to match
+     * the format the foreign-market write/find helpers now expect.
+     * Without this conversion, passing the LE-native value
+     * downstream would put the wrong bytes into foreignMarketPlayers
+     * and the next _PlayerMarketBuildVisiblePlayerList →
+     * _FindPoolplyrDatPlayer would walk the pool buffer forever and
+     * SIGSEGV (which is exactly what the user hit). */
+    teamId = BE16_TO_HOST(poolEntry->teamId);
     playerOrd = (uint8_t)poolEntry->playerOrdinal;
 
     /* If attempts remain (price filtering), check price range */
@@ -841,7 +898,7 @@ restart:
             {
                 uint16_t pickIdx = (uint16_t)(((uint32_t)rand * numHomeMarketPlayers) >> 8);
                 uint8_t *entry = homeMarketPlayers + (uint32_t)pickIdx * MARKET_ENTRY_SIZE;
-                uint16_t teamNum = *(uint16_t *)entry;
+                uint16_t teamNum = PACK_BE_U16(entry[0], entry[1]);
                 uint8_t playerOrd = entry[2];
                 _RemovePlayerFromCareerContest(teamNum, playerOrd);
             }
@@ -899,7 +956,7 @@ restart:
             {
                 uint16_t pickIdx = (uint16_t)(((uint32_t)rand * numForeignMarketPlayers) >> 8);
                 uint8_t *entry = foreignMarketPlayers + (uint32_t)pickIdx * MARKET_ENTRY_SIZE;
-                uint16_t teamId = *(uint16_t *)entry;
+                uint16_t teamId = PACK_BE_U16(entry[0], entry[1]);
                 uint8_t playerOrd = entry[2];
                 _RemoveForeignMarketPlayer(teamId, playerOrd);
             }
@@ -926,23 +983,38 @@ restart:
 __attribute__((used, externally_visible))
 int16_t _FindTeamIdInDiyTeamsList(uint16_t *teamIdPtr)
 {
-    uint16_t *list;
+    uint8_t *list;
     int16_t count;
     uint16_t target;
 
     if (competitionFileBuffer == 1)
-        list = diyTeamIdListType1;
+        list = (uint8_t *)diyTeamIdListType1;
     else if (competitionFileBuffer == 2)
-        list = diyTeamIdListType2;
+        list = (uint8_t *)diyTeamIdListType2;
     else
-        list = diyTeamIdListType0;
+        list = (uint8_t *)diyTeamIdListType0;
 
     count = (int16_t)(numDiyTeams - 1);
-    target = *teamIdPtr;
+    /* Both sides read via BE_READ_U16 so they normalise to the same
+     * (country<<8)|ord encoding on every host.
+     *
+     * The diy team-id lists store bytes in Amiga BE byte-pair order
+     * — `[country, ordinal]` per entry — same as eurocup team lists
+     * (see appendTeamToList in career_eurocups.c). teamIdPtr points
+     * at a TeamFile's leading {country, ordinal} byte pair (also BE).
+     *
+     * d95b76a fixed the target side (BE_READ_U16) but kept the list
+     * read as host-native `*list`, which on LE decodes [country, ord]
+     * as (ord<<8)|country — opposite endian, no match. That left
+     * TOP GOAL SCORERS empty in career mode because every non-career
+     * team's _FindTeamIdInDiyTeamsList returned "not found" and
+     * AddTeamScorersToHighestScorersTable skipped it. */
+    target = BE_READ_U16((uint8_t *)teamIdPtr);
 
     for (; count >= 0; count--) {
-        if (*list++ == target)
+        if (BE_READ_U16(list) == target)
             return 0;  /* found */
+        list += 2;
     }
     return 1;  /* not found */
 }
@@ -968,7 +1040,8 @@ int16_t _IsOfferTeamPlayerPairUnique(uint16_t teamId, uint16_t playerIdx)
 
     entry = transferOfferTable;
     for (i = count - 1; i >= 0; i--) {
-        if (*(uint16_t *)entry == teamId) {
+        /* PACK_BE_U16 read — entry layout matches market entries. */
+        if (PACK_BE_U16(entry[0], entry[1]) == teamId) {
             if (entry[2] == pidx)
                 return 0;  /* duplicate */
             if (entry[3] == pidx)
@@ -994,7 +1067,7 @@ __attribute__((used, externally_visible))
 int16_t _IsTeamEligibleForOfferByRefSkill(TeamFileEx *team, uint16_t refSkill)
 {
     TeamFileEx *tfx = team;
-    uint16_t teamNum = *(uint16_t *)&tfx->team.countryNumber;
+    uint16_t teamNum = PACK_BE_U16(tfx->team.countryNumber, tfx->team.teamOrdinal);
     uint16_t flags;
     int16_t i;
     uint8_t ref = (uint8_t)refSkill;
@@ -1411,20 +1484,21 @@ static void applyForeignMarketPlayersToTeams(uint16_t count)
     for (i = 0; i < count; i++) {
         uint8_t entryHi = *(uint8_t *)&entry->teamId;
         uint8_t entryLo = *((uint8_t *)&entry->teamId + 1);
-        uint8_t *team = &selTeamsPtr;
+        TeamFileEx *team = (TeamFileEx *)&selTeamsPtr;
         uint16_t t;
 
         for (t = 0; t < numSelectedTeams; t++) {
-            if (team[0] == entryHi && team[1] == entryLo) {
+            if (team->team.countryNumber == entryHi &&
+                team->team.teamOrdinal  == entryLo) {
                 uint8_t playerOrd = (uint8_t)entry->playerOrdinal;
-                volatile uint16_t *dst = (volatile uint16_t *)&((TeamFileEx *)team)->players[playerOrd];
+                volatile uint16_t *dst = (volatile uint16_t *)&team->players[playerOrd];
                 uint16_t *src = (uint16_t *)&entry->player;
                 uint16_t j;
                 for (j = 0; j < 19; j++)
                     dst[j] = src[j];
                 break;
             }
-            team += sizeof(TeamFileEx);
+            team++;
         }
         entry++;
     }
@@ -1485,22 +1559,23 @@ void _DIY_AdvanceFixtureIndex(uint16_t lo, uint16_t hi)
         if (phase >= (uint8_t)lo && phase <= (uint8_t)hi) {
             uint8_t entryHi = *(uint8_t *)&entry->teamId;       /* team number high byte */
             uint8_t entryLo = *((uint8_t *)&entry->teamId + 1); /* team number low byte */
-            uint8_t *team = &selTeamsPtr;
+            TeamFileEx *team = (TeamFileEx *)&selTeamsPtr;
             uint16_t t;
 
             for (t = 0; t < numSelectedTeams; t++) {
-                if (team[0] == entryHi && team[1] == entryLo) {
+                if (team->team.countryNumber == entryHi &&
+                    team->team.teamOrdinal  == entryLo) {
                     /* Found matching team — copy player data */
                     int8_t playerOrd = entry->playerOrdinal;
                     int16_t ord = (int16_t)playerOrd;
-                    volatile uint16_t *dst = (volatile uint16_t *)&((TeamFileEx *)team)->players[(uint16_t)ord];
+                    volatile uint16_t *dst = (volatile uint16_t *)&team->players[(uint16_t)ord];
                     uint16_t *src = (uint16_t *)&entry->player;
                     uint16_t j;
                     for (j = 0; j < 19; j++)
                         dst[j] = src[j];
                     break;
                 }
-                team += sizeof(TeamFileEx);
+                team++;
             }
         }
         entry++;
@@ -1721,20 +1796,20 @@ void _UpdatePlayerOfferMenuIndicators(void)
 
     /* Entry 8 (0x1C0/56): toggle +/- based on numExtraPlayersWanted sign */
     MenuEntry *entry8 = &menuEntries[8];
-    entry8->fg = (uint32_t)aPlus;
+    entry8->fg = (uintptr_t)aPlus;
     if (numExtraPlayersWanted >= 0) {
-        entry8->fg = (uint32_t)aMinus;
+        entry8->fg = (uintptr_t)aMinus;
     }
 
     /* Entries 10,11 (0x230/56, 0x268/56): toggle +/- based on swap/extra player state */
     MenuEntry *entry10 = &menuEntries[10];
     MenuEntry *entry11 = &menuEntries[11];
-    entry10->fg = (uint32_t)aPlus;
-    entry11->fg = (uint32_t)aPlus;
+    entry10->fg = (uintptr_t)aPlus;
+    entry11->fg = (uintptr_t)aPlus;
     if (offerSwapPlayerOrdinal >= 0) {
-        entry10->fg = (uint32_t)aMinus;
+        entry10->fg = (uintptr_t)aMinus;
         if (offerExtraPlayerOrdinal >= 0) {
-            entry11->fg = (uint32_t)aMinus;
+            entry11->fg = (uintptr_t)aMinus;
         }
     }
 
@@ -1805,25 +1880,63 @@ void _GenerateRandomTransferOffers(void)
     uint16_t idx = startIdx;
     int16_t count = careerNumPlayers - 1;
 
+    SWOS_AUTOSKIP_LOG("[bug2] GenerateRandomTransferOffers ENTER: careerNumPlayers=%u "
+                      "numOffers=%u numPlayersOnTransferMarket=%u startIdx=%u",
+                      (unsigned)careerNumPlayers, (unsigned)numOffers,
+                      (unsigned)numPlayersOnTransferMarket, (unsigned)startIdx);
+    /* Show what player ordinals the user has listed */
+    for (uint16_t k = 0; k < numPlayersOnTransferMarket; k++) {
+        SWOS_AUTOSKIP_LOG("[bug2]   playersOnTransferMarket[%u] = %u",
+                          (unsigned)k, (unsigned)playersOnTransferMarket[k]);
+    }
+
+    int boostedFound = 0;
+    int offersCreated = 0;
     while (count >= 0) {
-        if (numOffers == 5)
+        if (numOffers == 5) {
+            SWOS_AUTOSKIP_LOG("[bug2]   numOffers reached 5, stopping");
             return;
+        }
 
         uint8_t *player = _GetPlayerAtIndex(selTeamNumber, idx);
         PlayerFile *pf = (PlayerFile *)(player + PF_OFF);
+        uint16_t fileIdx = _cGetPlayerAtIndexFileIdx;
         /* Check bit 1 of positionAndFace — skip if on transfer list */
         if (!(pf->positionAndFace & 0x02)) {
             /* Skip players with sold (0x9B) or transferred (0x9A) status */
             if ((uint8_t)pf->someFlag != 0x9B && (uint8_t)pf->someFlag != 0x9A) {
                 uint16_t threshold = 1;
+                int onMarket = 0;
                 /* _cGetPlayerAtIndexFileIdx holds the file index from last GetPlayerAtIndex call */
-                if (_FindPlayerOnTransferMarket(_cGetPlayerAtIndexFileIdx) == 0) {
+                if (_FindPlayerOnTransferMarket(fileIdx) == 0) {
                     threshold = 11;
+                    onMarket = 1;
+                    boostedFound++;
                 }
                 uint16_t roll = _Rand2();
                 if (roll < threshold) {
-                    _CreateRandomTransferOfferForPlayer(_cGetPlayerAtIndexFileIdx);
+                    SWOS_AUTOSKIP_LOG("[bug2]   idx=%u fileIdx=%u onMarket=%d roll=%u th=%u -> CREATE OFFER",
+                                      (unsigned)idx, (unsigned)fileIdx, onMarket,
+                                      (unsigned)roll, (unsigned)threshold);
+                    _CreateRandomTransferOfferForPlayer(fileIdx);
+                    offersCreated++;
+                } else if (onMarket) {
+                    /* Only log misses for players who were boosted, otherwise log
+                     * floods every match with all 16 players' default 1/256 rolls. */
+                    SWOS_AUTOSKIP_LOG("[bug2]   idx=%u fileIdx=%u onMarket=1 roll=%u th=11 -> miss",
+                                      (unsigned)idx, (unsigned)fileIdx, (unsigned)roll);
                 }
+            } else {
+                if (_FindPlayerOnTransferMarket(fileIdx) == 0) {
+                    SWOS_AUTOSKIP_LOG("[bug2]   idx=%u fileIdx=%u onMarket=1 SKIPPED someFlag=0x%02X",
+                                      (unsigned)idx, (unsigned)fileIdx, (unsigned)(uint8_t)pf->someFlag);
+                }
+            }
+        } else {
+            if (_FindPlayerOnTransferMarket(fileIdx) == 0) {
+                SWOS_AUTOSKIP_LOG("[bug2]   idx=%u fileIdx=%u onMarket=1 SKIPPED positionAndFace bit1 set (0x%02X)",
+                                  (unsigned)idx, (unsigned)fileIdx,
+                                  (unsigned)pf->positionAndFace);
             }
         }
 
@@ -1832,6 +1945,8 @@ void _GenerateRandomTransferOffers(void)
             idx = 0;
         count--;
     }
+    SWOS_AUTOSKIP_LOG("[bug2] GenerateRandomTransferOffers EXIT: boostedFound=%d offersCreated=%d numOffers=%u",
+                      boostedFound, offersCreated, (unsigned)numOffers);
 }
 
 /* ---- Chunk 146: UpdateAndExpireTransferOffers ---- */
@@ -1886,9 +2001,9 @@ extern uint8_t *buyOtherPlayersTitlePtr;
 __attribute__((used, externally_visible))
 void _BuyOtherPlayersFinish(void)
 {
-    menuEntries[0].fg = (uint32_t)buyOtherPlayersTitlePtr;
+    menuEntries[0].fg = (uintptr_t)buyOtherPlayersTitlePtr;
     uint8_t *teamName = buyOtherPlayersTeamPtr->team.teamName;
-    menuEntries[1].fg = (uint32_t)teamName;
+    menuEntries[1].fg = (uintptr_t)teamName;
 }
 
 /* BuyOtherPlayersInit: get team pointer from teamOffering, store it, then finish */
@@ -2049,11 +2164,11 @@ void _EnableDisableOffers(void)
     }
 
     if (numOffers == 0) {
-        entry->fg = (uint32_t)aNoOffers;
+        entry->fg = (uintptr_t)aNoOffers;
         entry->isDisabled = 1;
-        uint16_t color = *(uint16_t *)&entry->bg;
+        uint16_t color = entry->bgColor;
         color = (color & 0xFFF0) + PINK_TO_BROWN_9;
-        *(uint16_t *)&entry->bg = color;
+        entry->bgColor = color;
     }
 }
 
@@ -2185,7 +2300,7 @@ void _TransferMarketCommon(void *entryPtr)
  * ================================================================ */
 
 extern uint8_t  fundsBuffer[];
-extern uint32_t playerPositionsStringTable[];
+extern void *playerPositionsStringTable[];
 extern uint8_t  shortCountryNames[];
 extern uint16_t isNationalSelector;
 extern uint16_t viewFutureTeamModeFlag;
@@ -2235,9 +2350,9 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
 
     /* Entry 0: Style/color row header */
     {
-        uint16_t color = *(uint16_t *)&a0->bg;
+        uint16_t color = a0->bgColor;
         color = (color & 0xFFF0) | style;
-        *(uint16_t *)&a0->bg = color;
+        a0->bgColor = color;
     }
     a0->y = y;
     a0->isInvisible = 0;
@@ -2246,7 +2361,7 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
     /* Entry 1: Player number */
     a0->y = y;
     a0->isInvisible = 1;
-    *(uint16_t *)&a0->fg = (uint16_t)idx;  /* ENTRY_NUMBER: write high word */
+    a0->fgWord = (uint16_t)idx;  /* ENTRY_NUMBER: write high word */
     if (idx >= 0)
         a0->isInvisible = 0;
     a0++;
@@ -2280,7 +2395,7 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
         }
         uint16_t extractParam = 0x0D + maxNameLen;
         uint8_t *nameResult = _ExtractSurname((uint8_t *)pf->playerName, extractParam);
-        a0->fg = (uint32_t)nameResult;
+        a0->fg = (uintptr_t)nameResult;
         a0->y = y;
         a0->isInvisible = 0;
         a0++;
@@ -2304,7 +2419,7 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
     /* Entry 5: Position */
     {
         uint16_t posIdx = (pf->positionAndFace & 0xE0) >> 3;
-        a0->fg = playerPositionsStringTable[posIdx / 4];
+        a0->fg = (uintptr_t)playerPositionsStringTable[posIdx / 4];
     }
     a0->y = y;
     a0->isInvisible = 0;
@@ -2353,7 +2468,7 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
         _InitPlayerValueDisplayStruct(player, (uint8_t *)a0);
     } else {
         _FormatPlayerValueOrStatusText(player, fundsBuffer);
-        a0->fg = (uint32_t)fundsBuffer;
+        a0->fg = (uintptr_t)fundsBuffer;
     }
     a0->y = y;
     a0->isInvisible = 0;
@@ -2456,7 +2571,7 @@ __attribute__((used, externally_visible))
 void _ShowPlayerOfferMenuForPlayer(uint16_t teamNumber, uint16_t playerOrdinal)
 {
     TeamFileEx *teamPtr = _GetTeamPointer(teamNumber);
-    teamOffering = *(uint16_t *)&teamPtr->team.countryNumber;
+    teamOffering = PACK_BE_U16(teamPtr->team.countryNumber, teamPtr->team.teamOrdinal);
     offerPrimaryPlayerOrdinal = playerOrdinal;
     numExtraPlayersWanted = (int16_t)-1;
     offerSwapPlayerOrdinal = (int16_t)-1;
@@ -2475,7 +2590,17 @@ void _ShowPlayerOfferMenuForPlayer(uint16_t teamNumber, uint16_t playerOrdinal)
     _ShowMenu(playerOffersMenu);
 }
 
-/* ShowPlayerMarketInit (Chunk 163) */
+/* ShowPlayerMarketInit (Chunk 163)
+ *
+ * In SWOS2.s line 102649 this function ends with `bra.w *+4` — a
+ * branch to PC+4 that falls through to the very next instruction,
+ * which is the start of ShowPlayerMarket. So the init resets the
+ * filter state AND THEN runs the title/balance-setup code in
+ * ShowPlayerMarket. Without the explicit fall-through call, our
+ * SDL port returned after the init and showPlayerMarketMenu's
+ * title (entry 0) and balance buffer (entry 1) never got
+ * populated — entry 1's STDMENUTEXT placeholder buffer leaked
+ * through to the screen. */
 __attribute__((used, externally_visible))
 void _ShowPlayerMarketInit(void)
 {
@@ -2486,6 +2611,7 @@ void _ShowPlayerMarketInit(void)
     playerMarketTotalMatchCount = 0;
     playerMarketVisibleItemCount = 0;
     playerMarketListScrollOffset = 0;
+    _ShowPlayerMarket();   /* SWOS2.s `bra.w *+4` fall-through */
 }
 
 /* PlayerMarketUpdateFilterMenuEntryState (Chunk 163)
@@ -2496,11 +2622,11 @@ void _PlayerMarketUpdateFilterMenuEntryState(void)
     MenuEntry *entry = &menuEntries[6]; /* 0x150/56 = 6 */
     if (playerMarketFilterPosition != 0) {
         /* Active: bright blue, enabled */
-        setBgColorIdx(entry, 13); /* BRIGHT_BLUE_TO_BLUE_13 */
+        entry->bgColor = (entry->bgColor & 0xFFF0) | 13; /* BRIGHT_BLUE_TO_BLUE_13 */
         entry->isDisabled = 0;
     } else {
         /* Inactive: pink/brown, disabled */
-        setBgColorIdx(entry, 9); /* PINK_TO_BROWN_9 */
+        entry->bgColor = (entry->bgColor & 0xFFF0) | 9; /* PINK_TO_BROWN_9 */
         entry->isDisabled = 1;
     }
 }
@@ -2515,7 +2641,7 @@ void _ShowPlayerMarket(void)
     else
         title = aPlayersOnForei;
 
-    menuEntries[0].fg = (uint32_t)title;
+    menuEntries[0].fg = (uintptr_t)title;
     uint8_t *balanceBuf = (uint8_t *)menuEntries[1].fg;
     _GetBankBalance(balanceBuf);
     _PlayerMarketUpdateFilterMenuEntryState();
@@ -2526,7 +2652,7 @@ void _ShowPlayerMarket(void)
 /* =============================================================== */
 
 extern int16_t filterMenuRedrawList[];
-extern uint32_t playerMarketVisibleItems[];
+extern uintptr_t playerMarketVisibleItems[];
 static void showSquadWithTransferMarketMask(void);
 
 /* Helper: update filter entry states and redraw filter entries (was loc_14506E) */
@@ -2600,7 +2726,7 @@ void _PlayerMarketItemOnSelect(MenuEntry *entry)
 
     /* Get the visible item pointer */
     uint8_t *item = (uint8_t *)playerMarketVisibleItems[relIdx];
-    uint16_t teamNum = *(uint16_t *)item;
+    uint16_t teamNum = PACK_BE_U16(item[0], item[1]);
     int16_t playerOrd = (int8_t)item[2];
 
     _ShowPlayerOfferMenuForPlayer(teamNum, (uint16_t)playerOrd);
@@ -2635,18 +2761,26 @@ void _PlayerMarketItemBeforeDraw(MenuEntry *entry)
 
         if (showDomesticPlayerMarket) {
             /* Domestic player */
-            uint16_t teamNum = *(uint16_t *)item;
+            uint16_t teamNum = PACK_BE_U16(item[0], item[1]);
             TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
             extra = (uint8_t *)teamData->team.teamName; /* team name area */
             uint8_t ordinal = item[2];
             player = (uint8_t *)teamData + (uint16_t)ordinal * 0x26;
         } else {
             /* Foreign player */
-            uint16_t teamNum = *(uint16_t *)item;
+            uint16_t teamNum = PACK_BE_U16(item[0], item[1]);
             uint8_t playerOrd = item[2];
             PoolPlayer *pp = _FindPoolplyrDatPlayer(teamNum, playerOrd);
-            extra = (uint8_t *)pp + 3; /* name area */
-            player = (uint8_t *)pp - 0x38;
+            if (pp) {
+                extra = (uint8_t *)pp + 3; /* name area */
+                player = (uint8_t *)pp - 0x38;
+            } else {
+                /* Stale market entry — pool entry no longer exists
+                 * (legacy bad-saved data). Disable this row rather
+                 * than dereference NULL. */
+                entry->isDisabled = 1;
+                player = 0;
+            }
         }
     }
 
@@ -2668,9 +2802,9 @@ void _PlayerMarketUpdateMoreListLabel(void)
     MenuEntry *entry = &menuEntries[7]; /* 0x188/56 = 7 */
     uint16_t offset = playerMarketListScrollOffset + 10;
     if (offset < total)
-        entry->fg = (uint32_t)aMore;
+        entry->fg = (uintptr_t)aMore;
     else
-        entry->fg = (uint32_t)aList;
+        entry->fg = (uintptr_t)aList;
 }
 
 /* PlayerMarketResetListState (Chunk 163) */
@@ -3182,8 +3316,8 @@ done:
 extern int16_t  teamWillingToSellOrExchange;
 extern uint8_t  managerSexBuffer[];
 extern uint8_t  managerSurnameBuffer[];
-extern uint32_t sellExchangeStrings[];
-extern uint32_t sellExchangeResponseStrings[];
+extern void *sellExchangeStrings[];
+extern char    *sellExchangeResponseStrings[];  /* native-width pointer table; storage is char *[12] in swos_data_typed_stubs.c */
 extern uint8_t  aDearAB[];
 extern uint8_t  aInADealWithAFo[];
 extern uint8_t  aUnlessTheOffer[];
@@ -3207,8 +3341,6 @@ extern void _PrintFormatted(const uint8_t *fmt, uint8_t *out,
 extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
 extern void _Int2Pounds(uint32_t pounds, uint8_t *dst);
 extern uint16_t _GetStringLength(const uint8_t *str);
-
-#define TEAMFILE_TEAMNAME_OFFSET 5
 
 /* TransferPlayerInit (Chunk 166) — init for playerTransferMenu */
 __attribute__((used, externally_visible))
@@ -3234,17 +3366,20 @@ void _TransferPlayerInit(void *entryPtr)
                     0, 0, 0, 0, 0, 0, 0,
                     managerSexBuffer, managerSurnameBuffer, 0);
 
-    /* Select appropriate sell/exchange string from table */
-    uint32_t *strPair = sellExchangeStrings;
+    /* Select appropriate sell/exchange string from table. The table is
+     * `void *[4]` (native pointer width), so walk as `void **` — was
+     * `uint32_t *` which read half-pointers on 64-bit and warned at the
+     * (uint8_t *)<u32> cast below. */
+    void **strPair = sellExchangeStrings;
     if (teamWillingToSellOrExchange != 0)
-        strPair += 2;  /* advance by 8 bytes = 2 longs */
+        strPair += 2;
     if (offerSwapPlayerOrdinal >= 0)
-        strPair += 1;  /* advance by 4 bytes = 1 long */
+        strPair += 1;
 
     /* Get offering team name and format into entry 2 */
     TeamFileEx *teamPtr = _GetTeamPointer(teamOffering);
     uint8_t *teamName = (uint8_t *)teamPtr->team.teamName;
-    _PrintFormatted((const uint8_t *)(uint32_t)*strPair,
+    _PrintFormatted((const uint8_t *)*strPair,
                     (uint8_t *)menuEntries[2].fg,
                     0, 0, 0, 0, 0, 0, 0,
                     teamName, 0, 0);
@@ -3274,16 +3409,18 @@ void _TransferPlayerInit(void *entryPtr)
                         0, 0, 0, 0, 0, 0, 0,
                         fundsBuffer, 0, 0);
     } else {
-        /* Non-negative: use response string lookup table */
-        uint32_t *respPair = sellExchangeResponseStrings + (twse * 2);
-        if (*respPair != 0) {
+        /* Non-negative: use response string lookup table.
+         * Walk as `char **` (native width); was `uint32_t *` which
+         * read half-pointers on 64-bit. */
+        char **respPair = sellExchangeResponseStrings + (twse * 2);
+        if (respPair[0] != 0) {
             menuEntries[4].isInvisible = 0;
-            _StringCopy((const uint8_t *)(uint32_t)*respPair,
+            _StringCopy((const uint8_t *)respPair[0],
                         (uint8_t *)menuEntries[4].fg);
         }
-        if (*(respPair + 1) != 0) {
+        if (respPair[1] != 0) {
             menuEntries[5].isInvisible = 0;
-            _StringCopy((const uint8_t *)(uint32_t)*(respPair + 1),
+            _StringCopy((const uint8_t *)respPair[1],
                         (uint8_t *)menuEntries[5].fg);
         }
     }
@@ -3388,17 +3525,27 @@ void _ThirdPartyOfferMenuInit(void *entryPtr)
     if (offerExtraPlayerOrdinal >= 0)
         menuEntries[7].isInvisible = 0;
 
-    /* Handle offerStatus < 0 (negative): withdrawn offer — hide most entries */
+    /* Handle offerStatus < 0 (negative): withdrawn offer — hide most entries.
+     *
+     * The Amiga asm (SWOS2.s:99942+, the offerStatus-negative branch)
+     * also hides entries 10, 11, 12 — ACCEPT OFFER, ASK FOR MORE,
+     * REJECT OFFER. Without that, the user can still see and click
+     * those three action buttons even though the offer has been
+     * withdrawn, instead of being left with only EXIT as the Amiga
+     * intended. */
     if ((int16_t)offerStatus < 0) {
         menuEntries[4].isInvisible = 1;
-        menuEntries[8].isInvisible = 1;
-        menuEntries[17].isInvisible = 1;
-        menuEntries[18].isInvisible = 1;
         menuEntries[6].isInvisible = 1;
         menuEntries[7].isInvisible = 1;
-        menuEntries[13].isInvisible = 1;
+        menuEntries[8].isInvisible = 1;
         menuEntries[9].isInvisible = 1;
-        menuEntries[14].isInvisible = 0;
+        menuEntries[10].isInvisible = 1; /* ACCEPT OFFER */
+        menuEntries[11].isInvisible = 1; /* ASK FOR MORE */
+        menuEntries[12].isInvisible = 1; /* REJECT OFFER */
+        menuEntries[13].isInvisible = 1;
+        menuEntries[17].isInvisible = 1;
+        menuEntries[18].isInvisible = 1;
+        menuEntries[14].isInvisible = 0; /* EXIT */
         _SetCurrentEntry(14);
     }
 
@@ -3416,18 +3563,18 @@ void _ThirdPartyOfferMenuInit(void *entryPtr)
  * ================================================================ */
 
 /* Format string pointer globals (BSS in asm — 12 pointers) */
-extern uint32_t offerFmtSinglePlayer;
-extern uint32_t offerFmtTwoPlayers;
-extern uint32_t exchangeFmtSinglePlayer;
-extern uint32_t exchangeFmtTwoPlayers;
-extern uint32_t offerFmtLine1a;
-extern uint32_t offerFmtLine2a;
-extern uint32_t offerFmtLine1b;
-extern uint32_t offerFmtLine2b;
-extern uint32_t exchangeFmtLine1a;
-extern uint32_t exchangeFmtLine2a;
-extern uint32_t exchangeFmtLine1b;
-extern uint32_t exchangeFmtLine2b;
+extern uintptr_t offerFmtSinglePlayer;
+extern uintptr_t offerFmtTwoPlayers;
+extern uintptr_t exchangeFmtSinglePlayer;
+extern uintptr_t exchangeFmtTwoPlayers;
+extern uintptr_t offerFmtLine1a;
+extern uintptr_t offerFmtLine2a;
+extern uintptr_t offerFmtLine1b;
+extern uintptr_t offerFmtLine2b;
+extern uintptr_t exchangeFmtLine1a;
+extern uintptr_t exchangeFmtLine2a;
+extern uintptr_t exchangeFmtLine1b;
+extern uintptr_t exchangeFmtLine2b;
 
 /* Format string labels */
 extern uint8_t aAOfferForB[];
@@ -3501,8 +3648,8 @@ void _OffersAfterDrawCommon(void *entryPtr)
     menuEntries[10].y = a5->y + 7;
     menuEntries[10].isInvisible = 1;
 
-    /* Store offer index+1 in entry 10's fg field (ENTRY_NUMBER: write high word) */
-    *(uint16_t *)((uint8_t *)&menuEntries[10] + 38) = (uint16_t)(d7 + 1);
+    /* ENTRY_NUMBER: store offer index+1 in entry 10's fg-word. */
+    menuEntries[10].fgWord = (uint16_t)(d7 + 1);
 
     /* Mark current entry as disabled */
     a5->isDisabled = 1;
@@ -3537,48 +3684,48 @@ void _OffersAfterDrawCommon(void *entryPtr)
     menuEntries[7].y = a5->y;
 
     /* Set up format string pointers: default (normal offer) */
-    offerFmtSinglePlayer   = (uint32_t)aAOfferForB;
-    offerFmtTwoPlayers     = (uint32_t)aAOfferForBAndC;
-    exchangeFmtSinglePlayer = (uint32_t)aAExchangeOffer;
-    exchangeFmtTwoPlayers   = (uint32_t)aAExchangeOffer_0;
-    offerFmtLine1a          = (uint32_t)aAOfferFor;
-    offerFmtLine2a          = (uint32_t)aB;
-    offerFmtLine1b          = (uint32_t)aAOfferFor_0;
-    offerFmtLine2b          = (uint32_t)aBAndC;
-    exchangeFmtLine1a       = (uint32_t)aAExchangeOffer_1;
-    exchangeFmtLine2a       = (uint32_t)aB_0;
-    exchangeFmtLine1b       = (uint32_t)aAExchangeOffer_2;
-    exchangeFmtLine2b       = (uint32_t)aBAndC_0;
+    offerFmtSinglePlayer   = (uintptr_t)aAOfferForB;
+    offerFmtTwoPlayers     = (uintptr_t)aAOfferForBAndC;
+    exchangeFmtSinglePlayer = (uintptr_t)aAExchangeOffer;
+    exchangeFmtTwoPlayers   = (uintptr_t)aAExchangeOffer_0;
+    offerFmtLine1a          = (uintptr_t)aAOfferFor;
+    offerFmtLine2a          = (uintptr_t)aB;
+    offerFmtLine1b          = (uintptr_t)aAOfferFor_0;
+    offerFmtLine2b          = (uintptr_t)aBAndC;
+    exchangeFmtLine1a       = (uintptr_t)aAExchangeOffer_1;
+    exchangeFmtLine2a       = (uintptr_t)aB_0;
+    exchangeFmtLine1b       = (uintptr_t)aAExchangeOffer_2;
+    exchangeFmtLine2b       = (uintptr_t)aBAndC_0;
 
     /* Check for "further improved" (offer word at offset 10 == 0xFFFF) */
     if (*(uint16_t *)(offer + 10) == 0xFFFF) {
-        offerFmtSinglePlayer   = (uint32_t)aAFurtherImprov;
-        offerFmtTwoPlayers     = (uint32_t)aAFurtherImprov_0;
-        exchangeFmtSinglePlayer = (uint32_t)aAFurtherImprov_1;
-        exchangeFmtTwoPlayers   = (uint32_t)aAFurtherImprov_2;
-        offerFmtLine1a          = (uint32_t)aAFurtherImprov_3;
-        offerFmtLine2a          = (uint32_t)aB_3;
-        offerFmtLine1b          = (uint32_t)aAFurtherImprov_4;
-        offerFmtLine2b          = (uint32_t)aBAndC_3;
-        exchangeFmtLine1a       = (uint32_t)aAFurtherImprov_5;
-        exchangeFmtLine2a       = (uint32_t)aOfferForB;
-        exchangeFmtLine1b       = (uint32_t)aAFurtherImprov_6;
-        exchangeFmtLine2b       = (uint32_t)aBAndC_4;
+        offerFmtSinglePlayer   = (uintptr_t)aAFurtherImprov;
+        offerFmtTwoPlayers     = (uintptr_t)aAFurtherImprov_0;
+        exchangeFmtSinglePlayer = (uintptr_t)aAFurtherImprov_1;
+        exchangeFmtTwoPlayers   = (uintptr_t)aAFurtherImprov_2;
+        offerFmtLine1a          = (uintptr_t)aAFurtherImprov_3;
+        offerFmtLine2a          = (uintptr_t)aB_3;
+        offerFmtLine1b          = (uintptr_t)aAFurtherImprov_4;
+        offerFmtLine2b          = (uintptr_t)aBAndC_3;
+        exchangeFmtLine1a       = (uintptr_t)aAFurtherImprov_5;
+        exchangeFmtLine2a       = (uintptr_t)aOfferForB;
+        exchangeFmtLine1b       = (uintptr_t)aAFurtherImprov_6;
+        exchangeFmtLine2b       = (uintptr_t)aBAndC_4;
     }
     /* Check for "improved" (offer[8] == 0xFFFF) */
     else if (*(uint16_t *)(offer + 8) == 0xFFFF) {
-        offerFmtSinglePlayer   = (uint32_t)aAImprovedOffer;
-        offerFmtTwoPlayers     = (uint32_t)aAImprovedOffer_0;
-        exchangeFmtSinglePlayer = (uint32_t)aAImprovedExcha;
-        exchangeFmtTwoPlayers   = (uint32_t)aAImprovedExcha_0;
-        offerFmtLine1a          = (uint32_t)aAImprovedOffer_1;
-        offerFmtLine2a          = (uint32_t)aB_1;
-        offerFmtLine1b          = (uint32_t)aAImprovedOffer_2;
-        offerFmtLine2b          = (uint32_t)aBAndC_1;
-        exchangeFmtLine1a       = (uint32_t)aAImprovedExcha_1;
-        exchangeFmtLine2a       = (uint32_t)aB_2;
-        exchangeFmtLine1b       = (uint32_t)aAImprovedExcha_2;
-        exchangeFmtLine2b       = (uint32_t)aBAndC_2;
+        offerFmtSinglePlayer   = (uintptr_t)aAImprovedOffer;
+        offerFmtTwoPlayers     = (uintptr_t)aAImprovedOffer_0;
+        exchangeFmtSinglePlayer = (uintptr_t)aAImprovedExcha;
+        exchangeFmtTwoPlayers   = (uintptr_t)aAImprovedExcha_0;
+        offerFmtLine1a          = (uintptr_t)aAImprovedOffer_1;
+        offerFmtLine2a          = (uintptr_t)aB_1;
+        offerFmtLine1b          = (uintptr_t)aAImprovedOffer_2;
+        offerFmtLine2b          = (uintptr_t)aBAndC_1;
+        exchangeFmtLine1a       = (uintptr_t)aAImprovedExcha_1;
+        exchangeFmtLine2a       = (uintptr_t)aB_2;
+        exchangeFmtLine1b       = (uintptr_t)aAImprovedExcha_2;
+        exchangeFmtLine2b       = (uintptr_t)aBAndC_2;
     }
 
     /* Get team name pointer (offset 5 from team data = teamName field) */
@@ -4095,39 +4242,46 @@ void _Career_RemovePlayerAndAddAsTrialist(uint16_t sourceTeam, uint16_t playerOr
  * ================================================================ */
 static uint8_t *pickRandomTeamRecordAvoidingTeam(uint16_t avoidTeamWord, uint8_t avoidTeamByte)
 {
-    uint8_t *result;
+    TeamFileEx *result;
     uint16_t retries = 100;
 
     while (1) {
-        /* Try TMD file first if non-empty */
+        /* Try TMD file first if non-empty.
+         *
+         * PACK_BE_U16 of the (countryNumber, teamOrdinal) byte pair
+         * produces the Amiga BE-packed id on either host so the
+         * word-level avoid check matches. Reading host-native would
+         * give (ordinal<<8)|country on LE and never match. */
         if (careerFileBuffer != 0) {
             uint16_t r = _Rand2();
             uint32_t idx = (uint32_t)r * (uint32_t)careerFileBuffer;
             idx >>= 8;
-            idx *= 0x2AC;
-            result = &tmdFileBuffer + idx;
+            result = (TeamFileEx *)&tmdFileBuffer + idx;
 
-            if (*(uint16_t *)result != avoidTeamWord) {
-                if (*result != avoidTeamByte)
-                    return result;
+            uint16_t candTeamId = PACK_BE_U16(result->team.countryNumber,
+                                              result->team.teamOrdinal);
+            if (candTeamId != avoidTeamWord) {
+                if (result->team.countryNumber != avoidTeamByte)
+                    return (uint8_t *)result;
             }
             if (retries == 0)
-                return result;
+                return (uint8_t *)result;
         }
 
-        /* Try selected teams */
+        /* Try selected teams — same byte-pair fix as above. */
         uint16_t r = _Rand2();
         uint32_t idx = (uint32_t)r * (uint32_t)numSelectedTeams;
         idx >>= 8;
-        idx *= 0x2AC;
-        result = &selTeamsPtr + idx;
+        result = (TeamFileEx *)&selTeamsPtr + idx;
 
-        if (*(uint16_t *)result != avoidTeamWord) {
-            if (*result != avoidTeamByte)
-                return result;
+        uint16_t candTeamId2 = PACK_BE_U16(result->team.countryNumber,
+                                           result->team.teamOrdinal);
+        if (candTeamId2 != avoidTeamWord) {
+            if (result->team.countryNumber != avoidTeamByte)
+                return (uint8_t *)result;
         }
         if (retries == 0)
-            return result;
+            return (uint8_t *)result;
 
         retries--;
     }
@@ -4162,6 +4316,39 @@ restart:;
     posFlags = tpf->positionAndFace & 0x18; /* position flags bits 3-4 */
     uint8_t *name = (uint8_t *)tpf->playerName;
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+    /* [bug11] Capture the SOURCE player chosen for the trialist name's
+     * initial. The "*. SURNAME" symptom requires this player's name to
+     * literally start with "*. ". Log the first 8 bytes plus the team
+     * id so we can correlate against tmdFileBuffer / selTeamsPtr to
+     * find where the asterisk-prefixed names are coming from. */
+    SWOS_AUTOSKIP_LOG("[bug11] trialistSrc1: team=%p teamId=0x%04X playerIdx=%u "
+                      "playerName=%02X %02X %02X %02X %02X %02X %02X %02X (\"%c%c%c%c%c%c\")",
+                      (void *)team,
+                      (unsigned)((team[0] << 8) | team[1]),
+                      (unsigned)(playerIdx / 0x26),
+                      (unsigned)(uint8_t)name[0], (unsigned)(uint8_t)name[1],
+                      (unsigned)(uint8_t)name[2], (unsigned)(uint8_t)name[3],
+                      (unsigned)(uint8_t)name[4], (unsigned)(uint8_t)name[5],
+                      (unsigned)(uint8_t)name[6], (unsigned)(uint8_t)name[7],
+                      name[0] >= 0x20 && name[0] < 0x7F ? (char)name[0] : '?',
+                      name[1] >= 0x20 && name[1] < 0x7F ? (char)name[1] : '?',
+                      name[2] >= 0x20 && name[2] < 0x7F ? (char)name[2] : '?',
+                      name[3] >= 0x20 && name[3] < 0x7F ? (char)name[3] : '?',
+                      name[4] >= 0x20 && name[4] < 0x7F ? (char)name[4] : '?',
+                      name[5] >= 0x20 && name[5] < 0x7F ? (char)name[5] : '?');
+#endif
+
+    /* Skip source players whose name starts with '*' — that's the
+     * "*ERR* " marker left by _Career_RemovePlayerFromSelectedTeamRoster
+     * on a freshly-removed slot (teams.c:1348, matches Amiga
+     * SWOS2.s:97253). Without this guard the trialist generator copies
+     * "*ERR*" into trialistNameBuffer and the new trialist's playerName
+     * becomes "*ERR* SURNAME", which then propagates further on the next
+     * cycle when this trialist's slot is sampled as a source. */
+    if (*name == '*')
+        goto restart;
+
     /* Copy characters from name to trialistNameBuffer */
     while (*name != 0) {
         if (*name == ' ')
@@ -4181,6 +4368,12 @@ restart:;
         nationality = (uint8_t)tpf->nationality;
         posFlags = tpf->positionAndFace & 0x18;
         name = (uint8_t *)tpf->playerName;
+
+        /* Same '*ERR* ' marker guard as the first-source pick above —
+         * skip a "*X" source so the trialist doesn't pick up the last
+         * word "ERR*" as its surname. */
+        if (*name == '*')
+            goto restart;
 
         /* Find end of name string */
         uint8_t *nameEnd = name;
@@ -4750,7 +4943,7 @@ void _BuyOtherForeignPlayer(void)
 
 extern uint8_t *positionGroupTable[];   /* 4 pointers to position group byte arrays (0xFF terminated) */
 extern uint8_t  playerRatingFilterThresholds[];  /* 17-byte lookup: filter index → min rating */
-extern uint32_t playerMarketVisibleItems[];      /* up to 10 pointers to market entries */
+extern uintptr_t playerMarketVisibleItems[];      /* up to 10 pointers to market entries */
 
 /* PlayerMarketPlayerMatchesFilters — filter predicate for player market.
  * blockPtr uses the "block pointer" convention: blockPtr + 0x4C = PlayerFile start.
@@ -4848,7 +5041,7 @@ void _PlayerMarketBuildVisiblePlayerList(void)
     playerMarketTotalMatchCount = 0;
     playerMarketVisibleItemCount = 0;
 
-    uint32_t *visPtr = playerMarketVisibleItems;
+    uintptr_t *visPtr = playerMarketVisibleItems;
 
     if (showDomesticPlayerMarket != 0) {
         /* ---- Domestic market path ---- */
@@ -4858,7 +5051,14 @@ void _PlayerMarketBuildVisiblePlayerList(void)
             return;
         uint16_t i = count;
         do {
-            uint16_t teamNum = *(uint16_t *)a1;
+            /* a1 points at a homeMarketPlayers entry: byte[0]=country,
+             * byte[1]=ordinal, byte[2]=playerOrd. Read teamNum as
+             * PACK_BE_U16 so it matches the format _VerifyTeamLoaded /
+             * findTeamInCache use to look up team entries — a raw
+             * `*(uint16_t *)a1` on LE would byte-swap the country and
+             * ordinal, producing a teamNum that's never in the cache
+             * and panicking. */
+            uint16_t teamNum = PACK_BE_U16(a1[0], a1[1]);
             TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
             uint16_t ordinal = (uint16_t)(uint8_t)a1[2];
             uint8_t *blockPtr = (uint8_t *)teamData + (uint32_t)ordinal * 38;  /* mulu #$26 */
@@ -4869,7 +5069,7 @@ void _PlayerMarketBuildVisiblePlayerList(void)
                 uint16_t scrollOff = playerMarketListScrollOffset;
                 if (scrollOff < playerMarketTotalMatchCount &&
                     scrollOff + 10 >= playerMarketTotalMatchCount) {
-                    *visPtr++ = (uint32_t)a1;
+                    *visPtr++ = (uintptr_t)a1;
                     playerMarketVisibleItemCount++;
                 }
             }
@@ -4884,9 +5084,19 @@ void _PlayerMarketBuildVisiblePlayerList(void)
             return;
         uint16_t i = count;
         do {
-            uint16_t teamId = *(uint16_t *)a1;
+            /* PACK_BE_U16 read — see earlier comment in domestic loop. */
+            uint16_t teamId = PACK_BE_U16(a1[0], a1[1]);
             uint8_t ordinal = a1[2];
             PoolPlayer *pool = _FindPoolplyrDatPlayer(teamId, (uint16_t)ordinal);
+            if (!pool) {
+                /* Stale foreignMarketPlayers entry whose team isn't
+                 * in the loaded pool (legacy bad-saved data — see
+                 * _FindPoolplyrDatPlayer). Skip it instead of
+                 * dereferencing NULL in the filter check. */
+                a1 += 4;
+                i--;
+                continue;
+            }
             uint8_t *blockPtr = (uint8_t *)pool - 0x38;   /* lea -$38(a0),a0 */
             if (playerMarketPlayerMatchesFilters(blockPtr, ratingThreshold,
                                                   countryRange, positionList,
@@ -4895,7 +5105,7 @@ void _PlayerMarketBuildVisiblePlayerList(void)
                 uint16_t scrollOff = playerMarketListScrollOffset;
                 if (scrollOff < playerMarketTotalMatchCount &&
                     scrollOff + 10 >= playerMarketTotalMatchCount) {
-                    *visPtr++ = (uint32_t)a1;
+                    *visPtr++ = (uintptr_t)a1;
                     playerMarketVisibleItemCount++;
                 }
             }
@@ -4952,8 +5162,11 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
     uint8_t *playerEntry = _GetPlayer(selTeamNumber, playerOrdinal);
     PlayerFile *pfEntry = (PlayerFile *)(playerEntry + PF_OFF);
     uint16_t refSkill = (uint8_t)pfEntry->price;
-    if (_IsPlayerInjured((PlayerFile *)playerEntry, -1) != 0)
+    if (_IsPlayerInjured((PlayerFile *)playerEntry, -1) != 0) {
+        SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: BAILED — injured",
+                          (unsigned)playerOrdinal);
         return;
+    }
 
     /* Get position mask */
     uint16_t posMask = (uint16_t)pfEntry->positionAndFace & 0xE0;
@@ -4971,8 +5184,14 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
         teamsBase = a0;
         uint16_t d5 = 0;
         uint16_t d4 = 0;
+        /* selTeamNumber MSB is the country (BE-packed: country<<8 | ordinal).
+         * Amiga m68k `move.b selTeamNumber.l,d0` reads the MSB, so the byte
+         * being compared against a0tf->countryNumber is the country. On LE
+         * x86 *(uint8_t *)&selTeamNumber would read the *ordinal* instead
+         * and the home-market scan would almost never match, leaving
+         * teamCount=0 and the function bailing at "no eligible buyer". */
+        uint8_t selTeamByte = (uint8_t)(selTeamNumber >> 8);
         while (d4 < numSelectedTeams) {
-            uint8_t selTeamByte = *(uint8_t *)((uint32_t)&selTeamNumber);
             if (selTeamByte == *a0) {
                 if (_IsTeamEligibleForOfferByRefSkill((TeamFileEx *)a0, refSkill) == 0) {
                     offerCandidateTeamIndexBuffer[d5] = (uint8_t)d4;
@@ -4991,8 +5210,13 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
         uint16_t d5 = 0;
         uint16_t d4 = 0;
         uint16_t numCareerTeams = careerFileBuffer;
+        /* MSB of selTeamNumber = country byte (see same fix in home-market
+         * branch above). The foreign path wants country != candidate, so the
+         * pre-fix LE byte read mostly accepted anything (ordinal byte rarely
+         * coincides with another country code) and the foreign offer rate
+         * was only "broken into mostly working", but it's still wrong. */
+        uint8_t selTeamByte = (uint8_t)(selTeamNumber >> 8);
         while (d4 < numCareerTeams) {
-            uint8_t selTeamByte = *(uint8_t *)((uint32_t)&selTeamNumber);
             if (selTeamByte != *a0) {
                 if (_IsTeamEligibleForOfferByRefSkill((TeamFileEx *)a0, refSkill) == 0) {
                     offerCandidateTeamIndexBuffer[d5] = (uint8_t)d4;
@@ -5005,8 +5229,15 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
         teamCount = d5;
     }
 
-    if (teamCount == 0)
+    if (teamCount == 0) {
+        SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: BAILED — no eligible buyer team "
+                          "(numSelectedTeams=%u refSkill=%u home/foreign rnd=%u)",
+                          (unsigned)playerOrdinal,
+                          (unsigned)numSelectedTeams,
+                          (unsigned)refSkill,
+                          (unsigned)rnd);
         return;
+    }
 
     /* Pick a random team from candidates */
     rnd = _Rand2();
@@ -5014,10 +5245,19 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
     uint8_t teamIdx = offerCandidateTeamIndexBuffer[idx];
     uint8_t *teamBlock = teamsBase + (uint32_t)teamIdx * 0x2AC;
 
-    /* Check uniqueness */
-    uint16_t offTeamId = *(uint16_t *)teamBlock;
-    if (_IsOfferTeamPlayerPairUnique(offTeamId, offerPrimaryPlayerOrdinal) == 0)
+    /* Check uniqueness. teamBlock[0..1] = {countryNumber, teamOrdinal}
+     * byte pair. teamOffering / _IsOfferTeamPlayerPairUnique expect a
+     * BE-packed team id, so read via PACK_BE_U16 — *(uint16_t *)teamBlock
+     * gives the swapped (ordinal<<8|country) value on LE and the
+     * downstream offer record is then stored with the wrong country
+     * byte at offset 0. */
+    uint16_t offTeamId = PACK_BE_U16(teamBlock[0], teamBlock[1]);
+    if (_IsOfferTeamPlayerPairUnique(offTeamId, offerPrimaryPlayerOrdinal) == 0) {
+        SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: BAILED — duplicate offer "
+                          "(team=0x%04X already has offer)",
+                          (unsigned)playerOrdinal, (unsigned)offTeamId);
         return;
+    }
 
     teamOffering = offTeamId;
     offerExtraPositionMask = 0xFFFF;
@@ -5158,8 +5398,13 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
             rosterDelta++;  /* gaining extra swap player */
     }
     int16_t newTotal = rosterDelta + (int16_t)careerNumPlayers;
-    if (newTotal > 30)
+    if (newTotal > 30) {
+        SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: BAILED — roster overflow "
+                          "(newTotal=%d careerNumPlayers=%u)",
+                          (unsigned)playerOrdinal,
+                          (int)newTotal, (unsigned)careerNumPlayers);
         return;
+    }
 
     /* Write offer to table */
     uint16_t offerIdx = numOffers;
@@ -5179,6 +5424,10 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
     entry[13] = 0;
 
     numOffers++;
+    SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: STORED — team=0x%04X amount=%u numOffers=%u",
+                      (unsigned)offerPrimaryPlayerOrdinal,
+                      (unsigned)teamOffering, (unsigned)offerAmount,
+                      (unsigned)numOffers);
 }
 
 /* ================================================================
@@ -5306,9 +5555,13 @@ int16_t _EvaluateTransferOfferNegotiation(void)
     /* Determine selling team's asking price (d5) */
     uint16_t askingPrice;
 
-    /* Check if offering team is from a different division than career team */
+    /* Check if offering team is from a different division than career team.
+     * Both sides need the country byte (MSB). Pre-fix the right-hand side
+     * read LE byte[0] = ordinal, so the cross-division check fired for
+     * any team whose country byte differed from the user's ordinal — i.e.
+     * almost every offer routed through the "different division" branch. */
     uint16_t offTeamHigh = teamOffering >> 8;
-    uint8_t selTeamByte = *(uint8_t *)((uint32_t)&selTeamNumber);
+    uint8_t selTeamByte = (uint8_t)(selTeamNumber >> 8);
     if (offTeamHigh != selTeamByte) {
         /* Different division — check average player price */
         uint16_t avgPrice = _GetAveragePlayerPrice(&careerTeam);

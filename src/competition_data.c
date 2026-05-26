@@ -10,6 +10,8 @@
  * declarations or a shared header when this file joins the build.
  */
 #include "game_types.h"
+#include "swos_types.h"
+#include "swos_platform.h"  /* _ASM_PFX */
 
 /* ======================================================================
  * Forward declarations — strings defined in assembly/Data.c
@@ -537,38 +539,81 @@ CompetitionLeague_3_6 newZealandLeague = {
  * Complex leagues with playoffs
  * ====================================================================== */
 
-CompetitionLeague_4_8_2_24 englishLeagues = {
-    { { 46, 0, 8, 56, 32, 33, 0, 0, 0 }, 4, 2, 3, 51 },
-    { { 20, 0, 0, 3, 0, 0 }, { 24, 2, 4, 4, 0, 46 }, { 24, 3, 4, 4, 0, 120 }, { 24, 3, 4, 0, 0, -62 } }, 0,
-    { aPremierLeague, aPremier, aDivisionOne, aDivisionOne, aDivisionTwo, aDivisionTwo, aDivisionThree, aDivisionThree },
-    { (char *)&div1Playoffs, (char *)&englishLeagues1 },
-    { 0, 0, 0, 3, 0, 1, 0, 2, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+/* On Amiga, englishLeagues / englishLeagues1 / englishLeagues2 /
+ * englishLeagues3 sit consecutively in BSS (102 + 80 + 80 + 48 bytes).
+ * processDiyLeagueQualificationEntry walks past the end of the
+ * englishLeagues struct using the per-division qualification offset
+ * stored in `divisions[i].unk1`, expecting to land inside englishLeagues1
+ * or englishLeagues2 (whose `playoffs` field at offset +48 supplies the
+ * actual qualification competition pointer). On SDL the linker scatters
+ * the four structs to different addresses, so the past-the-end read
+ * lands in unrelated memory and qualComp = garbage → SIGSEGV.
+ *
+ * Force the Amiga layout by embedding all four into one packed
+ * composite struct and exposing each via a global alias to a fixed
+ * offset within the composite. The .equ aliases keep the existing
+ * `englishLeagues` / `englishLeagues1` / etc. extern decls working
+ * unchanged. */
+typedef struct __attribute__((packed)) {
+    CompetitionLeague_4_8_2_24 _main;
+    Leagues_4_2_24             _div1;
+    Leagues_4_2_24             _div2;
+    Leagues_4                  _div3;
+} EnglishLeaguesBlock;
+
+#define ENGLISH_BLOCK_OFFSET_MAIN  0
+#define ENGLISH_BLOCK_OFFSET_DIV1  (sizeof(CompetitionLeague_4_8_2_24))
+#define ENGLISH_BLOCK_OFFSET_DIV2  (ENGLISH_BLOCK_OFFSET_DIV1 + sizeof(Leagues_4_2_24))
+#define ENGLISH_BLOCK_OFFSET_DIV3  (ENGLISH_BLOCK_OFFSET_DIV2 + sizeof(Leagues_4_2_24))
+
+extern CompetitionLeague_4_8_2_24 englishLeagues;
+extern Leagues_4_2_24 englishLeagues1;
+extern Leagues_4_2_24 englishLeagues2;
+extern Leagues_4 englishLeagues3;
+
+EnglishLeaguesBlock englishLeaguesBlock = {
+    ._main = {
+        { { 46, 0, 8, 56, 32, 33, 0, 0, 0 }, 4, 2, 3, 51 },
+        { { 20, 0, 0, 3, 0, 0 }, { 24, 2, 4, 4, 0, 46 }, { 24, 3, 4, 4, 0, 120 }, { 24, 3, 4, 0, 0, -62 } }, 0,
+        { aPremierLeague, aPremier, aDivisionOne, aDivisionOne, aDivisionTwo, aDivisionTwo, aDivisionThree, aDivisionThree },
+        { (char *)&div1Playoffs, (char *)&englishLeagues1 },
+        { 0, 0, 0, 3, 0, 1, 0, 2, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    },
+    ._div1 = {
+        { (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 0 },
+          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 3 },
+          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 1 },
+          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 2 } },
+        &div2Playoffs, (Leagues_4 *)&englishLeagues2,
+        { 0, 4, 0, 7, 0, 5, 0, 6, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    },
+    ._div2 = {
+        { (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 0 },
+          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 3 },
+          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 1 },
+          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 2 } },
+        &div3Playoffs, &englishLeagues3,
+        { 0, 8, 0, 11, 0, 9, 0, 10, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    },
+    ._div3 = {
+        (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 0 },
+        (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 3 },
+        (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 1 },
+        (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 2 }
+    }
 };
 
-Leagues_4_2_24 englishLeagues1 = {
-    { (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 0 },
-      (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 3 },
-      (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 1 },
-      (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 2 } },
-    &div2Playoffs, (Leagues_4 *)&englishLeagues2,
-    { 0, 4, 0, 7, 0, 5, 0, 6, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
-};
-
-Leagues_4_2_24 englishLeagues2 = {
-    { (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 0 },
-      (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 3 },
-      (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 1 },
-      (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 2 } },
-    &div3Playoffs, &englishLeagues3,
-    { 0, 8, 0, 11, 0, 9, 0, 10, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
-};
-
-Leagues_4 englishLeagues3 = {
-    (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 0 },
-    (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 3 },
-    (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 1 },
-    (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 2 }
-};
+__asm__(".globl " _ASM_PFX "englishLeagues\n"
+        ".equ   " _ASM_PFX "englishLeagues, " _ASM_PFX "englishLeaguesBlock\n");
+/* offset 102 = sizeof(CompetitionLeague_4_8_2_24) */
+__asm__(".globl " _ASM_PFX "englishLeagues1\n"
+        ".equ   " _ASM_PFX "englishLeagues1, " _ASM_PFX "englishLeaguesBlock + 102\n");
+/* offset 182 = 102 + 80 */
+__asm__(".globl " _ASM_PFX "englishLeagues2\n"
+        ".equ   " _ASM_PFX "englishLeagues2, " _ASM_PFX "englishLeaguesBlock + 182\n");
+/* offset 262 = 102 + 80 + 80 */
+__asm__(".globl " _ASM_PFX "englishLeagues3\n"
+        ".equ   " _ASM_PFX "englishLeagues3, " _ASM_PFX "englishLeaguesBlock + 262\n");
 
 Playoffs_8 div1Playoffs = { { 47, 1, 8, -128, -124, 11, 0, 17, 1, 0, 4, 1, 51, 1, -108, 20 }, { aDiv1Playoffs, aPlayoffs }, { 0 } };
 Playoffs_8 div2Playoffs = { { 48, 1, 8, -128, -124, 11, 0, 17, 1, 0, 4, 1, 51, 1, -108, 20 }, { aDiv2Playoffs, aPlayoffs }, { 0 } };
@@ -706,46 +751,82 @@ CompetitionCup_4_2 japaneseEmperorsCup = { { { -97, 1, 55, 88, 0, 13, 0, 0, 0 },
  * Competition "Copy" variables (used at runtime for career/season)
  * ====================================================================== */
 
-CompetitionCup2_4_2_32 euroCupCopy;
-CompetitionCup_6_2_64 cupWinnersCupCopy;
-CompetitionCup_6_2_64 uefaCupCopy;
-CompetitionCup_6_2_8 invitationTournamentCopy;
-CompetitionCup_6_2_8 tourCopy;
-CompetitionCup_6_2_12 friendlyCopy;
-CompetitionCup2_4_2_32 europeanChampionships2Copy;
-CompetitionCup_6_2_12 ecQualifyingGroup1Copy;
-CompetitionCup_6_2_12 ecQualifyingGroup2Copy;
-CompetitionCup_6_2_12 ecQualifyingGroup3Copy;
-CompetitionCup_6_2_12 ecQualifyingGroup4Copy;
-CompetitionCup_6_2_12 ecQualifyingGroup5Copy;
-CompetitionCup_6_2_12 ecQualifyingGroup6Copy;
-CompetitionCup_6_2_12 ecQualifyingGroup7Copy;
-CompetitionCup_6_2_8 ecQualifyingGroup8Copy;
-CompetitionCup2_4_2_24 copaAmericaCopy;
-CompetitionCup2_6_2 africanNationsCupCopy;
-CompetitionCup2_4_2 northAmericanCupCopy;
-CompetitionCup2_6_2 asianCupCopy;
-CompetitionCup_6_2 oceaniaCupCopy;
-CompetitionCup2_6_2_64 worldCup2Copy;
-CompetitionCup_6_2_12 worldCupQualifyingGroup1Copy;
-CompetitionCup_6_2_12 worldCupQualifyingGroup2Copy;
-CompetitionCup_6_2_12 worldCupQualifyingGroup3Copy;
-CompetitionCup_6_2_12 worldCupQualifyingGroup4Copy;
-CompetitionCup_6_2_12 worldCupQualifyingGroup5Copy;
-CompetitionCup_6_2_12 worldCupQualifyingGroup6Copy;
-CompetitionCup_6_2_12 worldCupQualifyingGroup7Copy;
-CompetitionCup_6_2_12 worldCupQualifyingGroup8Copy;
-CompetitionCup2_6_2_24 northAmericaWorldCupQualificationCopy;
-CompetitionCup2_6_2_16 southAmericaWorldCupQualificationCopy;
-CompetitionCup2_6_2_64 africaWorldCupQualificationCopy;
-CompetitionCup2_6_2_60 asiaWorldCupQualificationCopy;
-CompetitionCup_6_2_8 oceaniaWorldCupQualificationCopy;
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): euroCupCopy */
+extern CompetitionCup2_4_2_32 euroCupCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): cupWinnersCupCopy */
+extern CompetitionCup_6_2_64 cupWinnersCupCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): uefaCupCopy */
+extern CompetitionCup_6_2_64 uefaCupCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): invitationTournamentCopy */
+extern CompetitionCup_6_2_8 invitationTournamentCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): tourCopy */
+extern CompetitionCup_6_2_8 tourCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): friendlyCopy */
+extern CompetitionCup_6_2_12 friendlyCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): europeanChampionships2Copy */
+extern CompetitionCup2_4_2_32 europeanChampionships2Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup1Copy */
+extern CompetitionCup_6_2_12 ecQualifyingGroup1Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup2Copy */
+extern CompetitionCup_6_2_12 ecQualifyingGroup2Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup3Copy */
+extern CompetitionCup_6_2_12 ecQualifyingGroup3Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup4Copy */
+extern CompetitionCup_6_2_12 ecQualifyingGroup4Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup5Copy */
+extern CompetitionCup_6_2_12 ecQualifyingGroup5Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup6Copy */
+extern CompetitionCup_6_2_12 ecQualifyingGroup6Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup7Copy */
+extern CompetitionCup_6_2_12 ecQualifyingGroup7Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup8Copy */
+extern CompetitionCup_6_2_8 ecQualifyingGroup8Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): copaAmericaCopy */
+extern CompetitionCup2_4_2_24 copaAmericaCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): africanNationsCupCopy */
+extern CompetitionCup2_6_2 africanNationsCupCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): northAmericanCupCopy */
+extern CompetitionCup2_4_2 northAmericanCupCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): asianCupCopy */
+extern CompetitionCup2_6_2 asianCupCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): oceaniaCupCopy */
+extern CompetitionCup_6_2 oceaniaCupCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCup2Copy */
+extern CompetitionCup2_6_2_64 worldCup2Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup1Copy */
+extern CompetitionCup_6_2_12 worldCupQualifyingGroup1Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup2Copy */
+extern CompetitionCup_6_2_12 worldCupQualifyingGroup2Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup3Copy */
+extern CompetitionCup_6_2_12 worldCupQualifyingGroup3Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup4Copy */
+extern CompetitionCup_6_2_12 worldCupQualifyingGroup4Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup5Copy */
+extern CompetitionCup_6_2_12 worldCupQualifyingGroup5Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup6Copy */
+extern CompetitionCup_6_2_12 worldCupQualifyingGroup6Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup7Copy */
+extern CompetitionCup_6_2_12 worldCupQualifyingGroup7Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup8Copy */
+extern CompetitionCup_6_2_12 worldCupQualifyingGroup8Copy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): northAmericaWorldCupQualificationCopy */
+extern CompetitionCup2_6_2_24 northAmericaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): southAmericaWorldCupQualificationCopy */
+extern CompetitionCup2_6_2_16 southAmericaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): africaWorldCupQualificationCopy */
+extern CompetitionCup2_6_2_64 africaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): asiaWorldCupQualificationCopy */
+extern CompetitionCup2_6_2_60 asiaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
+/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): oceaniaWorldCupQualificationCopy */
+extern CompetitionCup_6_2_8 oceaniaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
 
 /* ======================================================================
  * Career Contests
  * ====================================================================== */
 
-CompetitionCareer careerContests[34] = {
+/* 34 real entries + a 0xFFFFFFFF sentinel as the loop terminator
+ * (matches `dc.l -1` after the last entry in SWOS2.s:118137). */
+CompetitionCareer careerContests[35] = {
     { (CompetitionCup *)&euroCup, (CompetitionCup *)&euroCupCopy, 0x4E },
     { (CompetitionCup *)&cupWinnersCup, (CompetitionCup *)&cupWinnersCupCopy, 0x5C },
     { (CompetitionCup *)&uefaCup, (CompetitionCup *)&uefaCupCopy, 0x5C },
@@ -780,6 +861,7 @@ CompetitionCareer careerContests[34] = {
     { (CompetitionCup *)&africaWorldCupQualification, (CompetitionCup *)&africaWorldCupQualificationCopy, 0x70 },
     { (CompetitionCup *)&asiaWorldCupQualification, (CompetitionCup *)&asiaWorldCupQualificationCopy, 0x6C },
     { (CompetitionCup *)&oceaniaWorldCupQualification, (CompetitionCup *)&oceaniaWorldCupQualificationCopy, 0x24 },
+    { (CompetitionCup *)0xFFFFFFFFu, (CompetitionCup *)0, 0 },  /* sentinel */
 };
 
 /* ======================================================================
@@ -1010,10 +1092,47 @@ uint8_t euroCupQualSeedListReduced6[6]  = { 2, 13, 29, 30, 31, 41 };
 uint8_t euroCupQualSeedListReduced11[11] = { 1, 3, 6, 7, 15, 25, 28, 33, 36, 37, 38 };
 uint8_t euroCupQualSeedListReduced22[23] = { 16, 12, 0, 17, 5, 27, 26, 24, 18, 23, 4, 10, 11, 19, 21, 22, 32, 34, 39, 40, 76, 78, 0 };
 
-uint8_t euroCupQualSeedBucket15[15] = { 14, 14, 14, 14, 20, 20, 20, 20, 35, 35, 35, 35, 8, 8, 8 };
-uint8_t euroCupQualSeedBucket18[18] = { 2, 2, 2, 13, 13, 13, 29, 29, 29, 30, 30, 30, 31, 31, 31, 41, 41, 41 };
-uint8_t euroCupQualSeedBucket22[22] = { 1, 1, 3, 3, 6, 6, 7, 7, 15, 15, 25, 25, 28, 28, 33, 33, 36, 36, 37, 37, 38, 38 };
-uint8_t euroCupQualSeedBucket22Full[23] = { 16, 12, 0, 17, 5, 27, 26, 24, 18, 23, 4, 10, 11, 19, 21, 22, 32, 34, 39, 40, 76, 78, 255 };
+/* Pack all four buckets into one contiguous block. The bucket-walk in
+ * Career_PrepareEuropeanCupQualificationState scans
+ * `euroCupQualGroupSeedBuckets_15_18_22[0].ptr` (= bucket15) byte-by-byte
+ * looking for the user's country code, terminating only at the 0xFF
+ * sentinel at the end of bucket22Full. On Amiga the four buckets sit
+ * consecutively in BSS (15+18+22+23 = 78 bytes ending in 0xFF), so the
+ * scan walks the full set. On SDL the linker scattered them — bucket15
+ * actually came LAST in memory layout — so the scan walked off the end
+ * of bucket15 into unrelated globals, hitting some random 0xFF and
+ * miscounting the user's country occurrences. Result: for non-European
+ * careers like Ghana the replacement loop accidentally wrote one
+ * Ghana-coded entry into uefaCupEligibleCompetitionIds, no European
+ * country ever consumed it, UEFA Cup ended up 1 short of 32, and
+ * Career_AdvanceToNextSeason_UpdateCompetitions's careerFileBuffer ==
+ * 0x50 invariant tripped panic 0x8999. Pack into one struct and expose
+ * each via .equ alias. */
+typedef struct __attribute__((packed)) {
+    uint8_t bucket15[15];
+    uint8_t bucket18[18];
+    uint8_t bucket22[22];
+    uint8_t bucket22Full[23];
+} EuroCupQualSeedBucketBlock;
+
+EuroCupQualSeedBucketBlock euroCupQualSeedBucketBlock = {
+    .bucket15     = { 14, 14, 14, 14, 20, 20, 20, 20, 35, 35, 35, 35, 8, 8, 8 },
+    .bucket18     = { 2, 2, 2, 13, 13, 13, 29, 29, 29, 30, 30, 30, 31, 31, 31, 41, 41, 41 },
+    .bucket22     = { 1, 1, 3, 3, 6, 6, 7, 7, 15, 15, 25, 25, 28, 28, 33, 33, 36, 36, 37, 37, 38, 38 },
+    .bucket22Full = { 16, 12, 0, 17, 5, 27, 26, 24, 18, 23, 4, 10, 11, 19, 21, 22, 32, 34, 39, 40, 76, 78, 255 }
+};
+
+__asm__(".globl " _ASM_PFX "euroCupQualSeedBucket15\n"
+        ".equ   " _ASM_PFX "euroCupQualSeedBucket15, " _ASM_PFX "euroCupQualSeedBucketBlock\n");
+/* offset 15 */
+__asm__(".globl " _ASM_PFX "euroCupQualSeedBucket18\n"
+        ".equ   " _ASM_PFX "euroCupQualSeedBucket18, " _ASM_PFX "euroCupQualSeedBucketBlock + 15\n");
+/* offset 33 = 15 + 18 */
+__asm__(".globl " _ASM_PFX "euroCupQualSeedBucket22\n"
+        ".equ   " _ASM_PFX "euroCupQualSeedBucket22, " _ASM_PFX "euroCupQualSeedBucketBlock + 33\n");
+/* offset 55 = 15 + 18 + 22 */
+__asm__(".globl " _ASM_PFX "euroCupQualSeedBucket22Full\n"
+        ".equ   " _ASM_PFX "euroCupQualSeedBucket22Full, " _ASM_PFX "euroCupQualSeedBucketBlock + 55\n");
 
 /* ======================================================================
  * Cup Pick Tables (per-region competition selection for career)
@@ -1089,6 +1208,98 @@ char *tourStringTable[6] = { aEuropeanTour, aAfricanTour, aSouthAmericanT, aNort
 /* Career region weights */
 uint8_t careerRegionPickWeightsTable[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4 };
 uint8_t careerRegionPickWeightsTable2[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4 };
+
+/* ======================================================================
+ * competitionsTable[256] — country-code → country competition list.
+ *
+ * Indexed by team-file country byte (CN_*). Most slots are zero (no
+ * country at that index). The special entries are 72 (customsTable for
+ * ORIGINAL_CUSTOM_TEAMS), 100 (customsTable for EDITED_CUSTOM_TEAMS),
+ * 80–85 (region tables), 252–254 (qualifying-group / world tables).
+ *
+ * Without this, _SelectTeamsFinalMenu reads competitionsTable[254]=0 for
+ * the CLUB_TEAMS path, panics with code 0x8632, and falls into
+ * _PanicHaltLoop → _FadeOutToBlack → spin forever waiting for both
+ * players' fire buttons (looks like a black screen on SDL). Layout
+ * transcribed verbatim from SWOS2.s lines 124186–124443. */
+void *competitionsTable[256] = {
+    [0]  = albaniaTable,
+    [1]  = austriaTable,
+    [2]  = belgiumTable,
+    [3]  = bulgariaTable,
+    [4]  = croatiaTable,
+    [5]  = cyprusTable,
+    [6]  = czechRepublicTable,
+    [7]  = denmarkTable,
+    [8]  = englandTable,
+    [10] = estoniaTable,
+    [11] = faroeIslandsTable,
+    [12] = finlandTable,
+    [13] = franceTable,
+    [14] = germanyTable,
+    [15] = greeceTable,
+    [16] = hungaryTable,
+    [17] = icelandTable,
+    [18] = republicIrelandTable,
+    [19] = israelTable,
+    [20] = italyTable,
+    [21] = latviaTable,
+    [22] = lithuaniaTable,
+    [23] = luxembourgTable,
+    [24] = maltaTable,
+    [25] = hollandTable,
+    [26] = northernIrelandTable,
+    [27] = norwayTable,
+    [28] = polandTable,
+    [29] = portugalTable,
+    [30] = romaniaTable,
+    [31] = russiaTable,
+    [32] = sanMarinoTable,
+    [33] = scotlandTable,
+    [34] = sloveniaTable,
+    [35] = spainTable,
+    [36] = swedenTable,
+    [37] = switzerlandTable,
+    [38] = turkeyTable,
+    [39] = ukraineTable,
+    [40] = walesTable,
+    [41] = yugoslaviaTable,
+    [42] = algeriaTable,
+    [43] = argentinaTable,
+    [44] = australiaTable,
+    [45] = boliviaTable,
+    [46] = brasilTable,
+    [48] = chileTable,
+    [49] = colombiaTable,
+    [50] = ecuadorTable,
+    [51] = elSalvadorTable,
+    [55] = japanTable,
+    [60] = mexicoTable,
+    [62] = newZealandTable,
+    [64] = paraguayTable,
+    [65] = peruTable,
+    [66] = surinamTable,
+    [67] = taiwanTable,
+    [69] = southAfricaTable,
+    [71] = uruguayTable,
+    [72] = &customsTable,
+    [73] = usaTable,
+    [75] = indiaTable,
+    [76] = belarusTable,
+    [77] = venezuelaTable,
+    [78] = slovakiaTable,
+    [79] = ghanaTable,
+    [80] = &europeTable,
+    [81] = &africaTable,
+    [82] = &southAmericaTable,
+    [83] = &northAmericaTable,
+    [84] = &asiaTable,
+    [85] = &oceaniaTable,
+    [100] = &customsTable,
+    [252] = &worldCupQualifyingGroups,
+    [253] = &ecQualifyingGroups,
+    [254] = &worldTable,
+};
 
 /* ======================================================================
  * DIY Cup Choice Variables (zero-init)

@@ -7,7 +7,7 @@
 #define SWOS_ASM_H
 
 typedef unsigned short uint16_t;
-typedef unsigned long uint32_t;
+typedef unsigned int uint32_t;
 
 extern void _startShim(void);
 extern void _start(void);

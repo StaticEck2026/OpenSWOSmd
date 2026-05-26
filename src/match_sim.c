@@ -19,7 +19,9 @@
 
 #include "match_sim.h"
 #include "game_types.h"
+#include "diy_competition.h"
 #include "deterministic.h"
+#include "auto_skip_debug.h"
 
 /* Team control type constants (matching play_match_menu.h) */
 #ifndef TEAM_COMPUTER
@@ -57,27 +59,27 @@ extern uint8_t    newRandomSeedCopy;
 extern uint8_t    viewRandomPhase;
 extern uint8_t    seasonPlaying;
 extern uint8_t    kRandomTable[];
-extern uint32_t   teamTacticsTable[];
-extern uint32_t   positionsTable[];
+extern void *teamTacticsTable[];
+extern void *positionsTable[];
 extern uint16_t   oldPlayerSkill;
 extern uint8_t    playerPositionsArray[];
 
 /* Data tables in asm for this module */
 extern uint8_t    simGoalsByStrengthDiffTable[];
 extern uint8_t    simHighGoalFallbackValues[];
-extern uint32_t   simGoalProbByTacticPtrs[];
-extern uint32_t   simExtraGoalProbByTacticPtrs[];
+extern void *simGoalProbByTacticPtrs[];
+extern void *simExtraGoalProbByTacticPtrs[];
 extern uint8_t    simGoalsByIndexDiffTable[];
 extern uint8_t    simExtraGoalThresholdsA[];
 extern uint8_t    simExtraGoalThresholdsB[];
 extern uint8_t    simGoalScorerPairTable[];
-extern uint32_t   goalScorerDistributionByBallOutTactic[];
+extern void *goalScorerDistributionByBallOutTactic[];
 extern uint8_t    kUserTeamOffsetBiasLUT[];
 extern uint8_t    kTeamViewOffsetBaseLUT[];
 extern uint8_t    availablePickCountByGoalsInTable[];
 extern uint8_t    preferredTacticsSlotsByRole[];
 extern uint8_t    candidatePlayersByGoalsInTable[];
-extern uint32_t   playersPositionsByTactics[];
+extern void *playersPositionsByTactics[];
 extern uint8_t    playerStatusBucketThresholds[];
 
 /* Extern globals/functions for Chunk 106 */
@@ -157,7 +159,7 @@ static uint32_t  team1AvailableMask;
 static uint32_t  team2AvailableMask;
 static uint16_t  team1AvailableCount;
 static uint16_t  team2AvailableCount;
-static uint32_t  currentGoalScorerDistPtr;
+static uintptr_t currentGoalScorerDistPtr;  /* holds a pointer into goalScorerDistributionByBallOutTactic[]; retyped uintptr_t for 64-bit. */
 static uint16_t  oldPlayerSkillDivisor;
 
 /* Externally-visible state (defined in asm, referenced by other asm modules) */
@@ -265,15 +267,15 @@ static void AssignSimulatedGoalsToScorers(TeamFileEx *team, uint8_t *remapTable,
 
     /* Get tactic index -> ball-out-of-play tactics -> position list */
     int16_t tacticIdx = (int8_t)team->team.tactics;
-    TeamTactics *tactics = (TeamTactics *)(uint32_t)teamTacticsTable[tacticIdx];
+    TeamTactics *tactics = (TeamTactics *)teamTacticsTable[tacticIdx];
     int16_t ballOutTacticIdx = (int8_t)tactics->ballOutOfPlayTactics;
-    uint8_t *positions = (uint8_t *)(uint32_t)positionsTable[ballOutTacticIdx];
+    uint8_t *positions = (uint8_t *)positionsTable[ballOutTacticIdx];
 
     /* Get goal scorer distribution pointer */
-    currentGoalScorerDistPtr = goalScorerDistributionByBallOutTactic[ballOutTacticIdx];
+    currentGoalScorerDistPtr = (uintptr_t)goalScorerDistributionByBallOutTactic[ballOutTacticIdx];
 
     for (; d5 >= 0; d5--) {
-        uint8_t *distTable = (uint8_t *)(uint32_t)currentGoalScorerDistPtr;
+        uint8_t *distTable = (uint8_t *)currentGoalScorerDistPtr;
         uint16_t d0 = _Rand2();
 
         /* Special case: if d0 >= 0xF8, it's an own goal */
@@ -337,6 +339,13 @@ static void AssignSimulatedGoalsToScorers(TeamFileEx *team, uint8_t *remapTable,
 static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTable) {
     if (trainingGame) return;
     if (team->team.teamControls == 1) return;
+#ifdef SWOS_TEST_NO_INJURIES_CARDS
+    /* Beta-test mode: never assign post-match injuries / cards so the
+     * tester can VIEW RESULT through a season without substitution
+     * prompts. */
+    (void)remapTable;
+    return;
+#endif
 
     /* Get number of available players */
     uint32_t result = _GetNumberOfAvailablePlayers((uint8_t *)team, -1, 0);
@@ -495,10 +504,21 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
 /* ================================================================
  * InitPlayerRemapTableForTeam
  * Assigns random status buckets to players based on match factors.
+ * The status bucket lives in cardsInjuries bits 5-7; _IsPlayerInjured
+ * returns "injured" for any bucket above the minor (0x20) tier, so this
+ * function is a second source of post-match unavailability that the
+ * substitution / VIEW RESULT prompt treats the same as a real injury.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _InitPlayerRemapTableForTeam(TeamFileEx *team, uint8_t *remapTable) {
     if (team->team.teamControls == 1) return;
+#ifdef SWOS_TEST_NO_INJURIES_CARDS
+    /* Beta-test mode: never assign post-match status buckets so the
+     * tester can VIEW RESULT through a season without IsPlayerInjured
+     * flagging anyone unavailable. */
+    (void)remapTable;
+    return;
+#endif
 
     uint32_t result = _GetNumberOfAvailablePlayers((uint8_t *)team, -1, 0);
     uint16_t availCount = (uint16_t)(result >> 16); /* d6 */
@@ -683,7 +703,7 @@ static void BuildAvailablePlayersRemapAndMask(TeamFileEx *team, uint8_t *remapTa
 
         /* Map through tactics to get position index */
         uint8_t tacticIdx = team->team.tactics;
-        uint8_t *tacticPositions = (uint8_t *)(uint32_t)playersPositionsByTactics[(int8_t)tacticIdx];
+        uint8_t *tacticPositions = (uint8_t *)playersPositionsByTactics[(int8_t)tacticIdx];
         uint8_t posIdx = tacticPositions[slotIdx];
         uint8_t targetPlayer = playerNums[posIdx];
 
@@ -695,7 +715,7 @@ static void BuildAvailablePlayersRemapAndMask(TeamFileEx *team, uint8_t *remapTa
 
             /* Re-read tactics mapping */
             tacticIdx = team->team.tactics;
-            tacticPositions = (uint8_t *)(uint32_t)playersPositionsByTactics[(int8_t)tacticIdx];
+            tacticPositions = (uint8_t *)playersPositionsByTactics[(int8_t)tacticIdx];
             posIdx = tacticPositions[slotIdx];
             targetPlayer = playerNums[posIdx];
 
@@ -927,7 +947,7 @@ void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
     /* d1 is now extended to int16_t */
 
     /* Look up additional goals from tactic-based probability */
-    uint8_t *tacticGoalProbs = (uint8_t *)(uint32_t)simGoalProbByTacticPtrs[d1];
+    uint8_t *tacticGoalProbs = (uint8_t *)simGoalProbByTacticPtrs[d1];
     r = _Rand2();
     int16_t d2 = 0;
 
@@ -943,7 +963,7 @@ void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
                     r -= tp[3]; d2++;
 
                     /* Exceeded 4 thresholds: use extra table */
-                    uint8_t *extraProbs = (uint8_t *)(uint32_t)simExtraGoalProbByTacticPtrs[d1];
+                    uint8_t *extraProbs = (uint8_t *)simExtraGoalProbByTacticPtrs[d1];
                     r = _Rand2();
                     d2 = 3;
                     if (r >= extraProbs[0]) {
@@ -978,6 +998,34 @@ void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
     /* Return the simulated goals from first phase */
     *outTeam1Goals = team1SimulatedGoalsOut;
     *outTeam2Goals = team2SimulatedGoalsOut;
+
+    /* Rate-limit [bug3] log: a season-end auto-advance simulates tens of
+     * thousands of matches, and unrestricted fprintf here turns the
+     * season transition into a multi-minute log-writer crawl. First 200
+     * lines is enough to diagnose Bug 3 (VIEW RESULT underperforms) for
+     * a single match the user actually clicks; the season-end auto-sim
+     * doesn't need to flood the log with every fixture for 65 leagues. */
+#ifdef SWOS_DEBUG_AUTOSKIP
+    static int s_bug3_log_count = 0;
+    if (s_bug3_log_count < 200) {
+        s_bug3_log_count++;
+        SWOS_AUTOSKIP_LOG("[bug3] CalcViewResult: team1='%.16s' tactics=%d ctrl=%d "
+                          "team2='%.16s' tactics=%d ctrl=%d "
+                          "team1ViewBaseIdx=%d team2ViewBaseIdx=%d "
+                          "team1OffX=%d team1OffY=%d team2OffX=%d team2OffY=%d "
+                          "RESULT %u-%u",
+                          (const char *)team1->team.teamName,
+                          (int)(int8_t)team1->team.tactics,
+                          (int)team1->team.teamControls,
+                          (const char *)team2->team.teamName,
+                          (int)(int8_t)team2->team.tactics,
+                          (int)team2->team.teamControls,
+                          (int)team1ViewBaseIndex, (int)team2ViewBaseIndex,
+                          (int)team1ViewOffsetX, (int)team1ViewOffsetY,
+                          (int)team2ViewOffsetX, (int)team2ViewOffsetY,
+                          (unsigned)*outTeam1Goals, (unsigned)*outTeam2Goals);
+    }
+#endif
 }
 
 /* ================================================================
@@ -1704,8 +1752,10 @@ int16_t _CalcTeamPriceRankPercentOffset(DIYCompetition *comp, TeamFile *team)
     if (comp->competitionType != 0)
         return 0;
 
-    /* Check minimum number of entries at ctx+0x2B8 (beyond DIYCompetition struct) */
-    uint16_t numEntries = *(uint16_t *)((uint8_t *)comp + 0x2B8);
+    /* Check minimum number of entries: row[0].gamesPlayed
+     * (DIYTeamStats[0] starts at parent +0x2B4, gamesPlayed at +0x2B8). */
+    DIYTeamStats *row0 = (DIYTeamStats *)((uint8_t *)comp + DIY_STANDINGS_OFFSET);
+    uint16_t numEntries = row0->gamesPlayed;
     if (team->teamControls == TEAM_COMPUTER) {
         /* Cup: need at least 3 entries */
         if (numEntries < 3)
@@ -1756,8 +1806,8 @@ extern uint8_t quadrantCoordinatesToBallQuadrant[]; /* 240 bytes: coordinate->qu
 extern uint8_t quadrantDistanceFactor[];     /* 35×35 distance factor matrix */
 extern uint8_t skillValuePonders[];          /* 8 bytes: skill value multipliers */
 extern uint8_t plPricesIncreaseTable[];      /* 50 bytes: price increase lookup */
-extern uint32_t teamTacticsTable[];          /* 19 pointers to tactics data */
-extern uint32_t plPositions;                 /* pointer storage for current tactics base */
+extern void *teamTacticsTable[];          /* 19 pointers to tactics data */
+extern uintptr_t plPositions;                 /* tactics-data base pointer; retyped uintptr_t for 64-bit. See project_uint32_pointer_storage_trap.md. */
 extern uint16_t totalSkillsFactorSum;        /* accumulator for skill factor sum */
 extern uint16_t numPlayersAtQuadrant;        /* count of players sharing a quadrant */
 extern uint8_t currentMatchPlayers[];
@@ -1808,7 +1858,7 @@ int16_t _GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t pla
     /* Get tactics table for this team */
     int16_t tacticsIdx = (int8_t)tf->tactics;
     uint8_t *tacticsData = (uint8_t *)teamTacticsTable[tacticsIdx] + 9;
-    plPositions = (uint32_t)tacticsData;
+    plPositions = (uintptr_t)tacticsData;
 
     /* Player's position data in tactics table (0-based from playerNumber) */
     uint16_t plNum0 = playerNumber - 1;

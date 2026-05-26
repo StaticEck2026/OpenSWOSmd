@@ -4,12 +4,13 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "interrupts.h"
+#include "game_types.h"
 #include "display.h"
 #include "deterministic.h"
 
 /* ---- Hardware register addresses (interrupt-specific, not in display.h) ---- */
 #define INTREQR_OFF     0x1E    /* Interrupt Request read (offset from CUSTOM) */
-#define INTREQ_ADDR     0x00DFF09Cu
+/* INTREQ_ADDR comes from display.h. */
 #define BPLCON0_OFF     0x100   /* Bitplane control 0 (offset from CUSTOM) */
 
 #define CIAA_ICR_ADDR   0x00BFED01u
@@ -48,8 +49,8 @@ extern volatile uint16_t audioActive;
 extern volatile uint16_t debugMode;
 extern volatile uint16_t showingUserStats;
 extern volatile uint16_t paused;
-extern int16_t cameraX;
-extern int16_t cameraY;
+extern FixedPoint cameraX;
+extern FixedPoint cameraY;
 
 /* ---- External C functions called from Int3TimerHandler ---- */
 extern void _UpdatePlanePtrsAndBlitParams(void);
@@ -100,16 +101,18 @@ void _InitHardwareAtFrameStart(void)
 __attribute__((used, externally_visible))
 void _SetupInterrupts(void)
 {
-    volatile uint32_t *vectors = (volatile uint32_t *)S_VBR;
+    /* S_VBR is the m68k Vector Base Register — dead address on SDL.
+     * Widen through uintptr_t to silence Wint-to-pointer-cast on 64-bit. */
+    volatile uint32_t *vectors = (volatile uint32_t *)(uintptr_t)S_VBR;
 
     /* Save old Level 3 handler to Level 1 slot */
     vectors[LEVEL_1_VEC / 4] = vectors[LEVEL_3_VEC / 4];
 
     /* Install Int3Handler at Level 3 */
-    vectors[LEVEL_3_VEC / 4] = (uint32_t)Int3Handler;
+    vectors[LEVEL_3_VEC / 4] = (uintptr_t)Int3Handler;
 
     /* Install Int5Handler at Level 5 */
-    vectors[LEVEL_5_VEC / 4] = (uint32_t)Int5Handler;
+    vectors[LEVEL_5_VEC / 4] = (uintptr_t)Int5Handler;
 
     /* Enable: SET(15) + Master(14) + RBF(11) + VERTB(5) + SOFTINT(2)
      * Binary: 1100 1000 0010 0100 = 0xC824 */
@@ -191,6 +194,7 @@ ack:
 __attribute__((used, externally_visible))
 void _Int3TimerHandler(void)
 {
+    custom->intreq = 0x0070;
     if (waitingInterrupt != 0)
     {
         uint16_t delta = (uint16_t)(currentGameTick - lastVBlankServiceTick);
@@ -199,21 +203,17 @@ void _Int3TimerHandler(void)
             lastVBlankServiceTick = currentGameTick;
             _UpdatePlanePtrsAndBlitParams();
 
-            /* Read camera position (high word of 32-bit fixed-point on big-endian) */
-            int16_t camX = cameraX;
-            int16_t camY = cameraY;
+            int16_t camX = cameraX.s.i;
+            int16_t camY = cameraY.s.i;
 
             _SwapBuffersAndCameraViewState();
             _SetCameraCoordinates(camX, camY);
 
             waitingInterrupt = 0;
             didSwapThisFrame = 1;
-            /* ASM: bra.w *+4 falls through to isr_common_housekeeping
-             * (does NOT skip housekeeping on swap frames) */
         }
     }
 
-    /* isr_common_housekeeping — runs EVERY VBlank, including swap frames */
     _FadeOutTick();
     _FadeInTick();
 
@@ -250,7 +250,9 @@ void _Int3TimerHandler(void)
         }
     }
 
-clear_and_return:
-    /* Clear software initiated interrupt */
+    /* Clear software initiated interrupt. The asm reached this via
+     * `clear_and_return:` from several early-return paths; the C
+     * version structures the early-return as nested-if so the label
+     * is no longer needed. */
     custom->intreq = 0x0004;
 }

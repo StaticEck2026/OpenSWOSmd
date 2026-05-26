@@ -3,6 +3,264 @@
  * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
+
+/* ============================================================
+ * SDL build: POSIX/stdio implementation of the same RobNorthenLoader
+ * dispatch surface the Amiga code below provides. The rest of the C
+ * code calls `_RobNorthenLoader_C` and a few stubs (`_KBHook`,
+ * `_FixSnoopBug`, etc.) — those keep their signatures so linking is
+ * unchanged.
+ * ============================================================ */
+#ifdef SWOS_SDL_BUILD
+
+#include "resload.h"
+#include "display.h"
+#include "rnc_magic.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <errno.h>
+#include <unistd.h>
+
+#ifdef _WIN32
+#include <direct.h>          /* _mkdir on MinGW/MSVC */
+#define swos_mkdir(path)  _mkdir(path)
+#else
+#define swos_mkdir(path)  mkdir((path), 0755)
+#endif
+
+extern void _RncDecompressV1(uint8_t *src, uint8_t *dst);
+extern void _RncDecompressV2(uint8_t *src, uint8_t *dst);
+
+/* ---- Globals shared with the rest of the C code -------------------- */
+uint32_t size;
+uint32_t _rnl_d1_return;
+uint8_t _keyexit = 0x46;
+
+/* ---- Path resolver ------------------------------------------------- */
+static const char *known_save_exts[] = {
+    ".DIY", ".PRE", ".SEA", ".CAR", ".TAC", ".HIL", ".EDT", NULL
+};
+
+static int has_save_ext(const char *name)
+{
+    size_t len = strlen(name);
+    if (len < 4) return 0;
+    const char *tail = name + len - 4;
+    for (const char **e = known_save_exts; *e; ++e)
+        if (strcasecmp(*e, tail) == 0) return 1;
+    return 0;
+}
+
+static void resolve_path(const uint8_t *amiga_name, char *out, size_t out_sz)
+{
+    const char *src = (const char *)amiga_name;
+    const char *colon = strchr(src, ':');
+    if (colon) src = colon + 1;
+
+    if (has_save_ext(src)) {
+        snprintf(out, out_sz, "save/%s", src);
+    } else {
+        snprintf(out, out_sz, "%s", src);
+    }
+}
+
+/* ---- Low-level file ops ------------------------------------------- */
+static FILE *open_case_insensitive(const char *path, const char *mode)
+{
+    FILE *f = fopen(path, mode);
+    if (f) return f;
+
+    char dir[512];
+    snprintf(dir, sizeof(dir), "%s", path);
+    char *slash = strrchr(dir, '/');
+    if (!slash) return NULL;
+    *slash = 0;
+    const char *base = slash + 1;
+
+    DIR *d = opendir(dir);
+    if (!d) return NULL;
+    struct dirent *de;
+    char alt[1024];
+    while ((de = readdir(d)) != NULL) {
+        if (strcasecmp(de->d_name, base) == 0) {
+            snprintf(alt, sizeof(alt), "%s/%s", dir, de->d_name);
+            closedir(d);
+            return fopen(alt, mode);
+        }
+    }
+    closedir(d);
+    return NULL;
+}
+
+static uint32_t fs_get_size(const char *path)
+{
+    FILE *f = open_case_insensitive(path, "rb");
+    if (!f) return 0;
+    fseek(f, 0, SEEK_END);
+    long n = ftell(f);
+    fclose(f);
+    return n > 0 ? (uint32_t)n : 0;
+}
+
+static uint32_t fs_load(const char *path, uint8_t *dest)
+{
+    FILE *f = open_case_insensitive(path, "rb");
+    if (!f) return 0;
+    fseek(f, 0, SEEK_END);
+    long n = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (n <= 0) { fclose(f); return 0; }
+    size_t got = fread(dest, 1, (size_t)n, f);
+    fclose(f);
+    return (uint32_t)got;
+}
+
+static uint32_t fs_save(const char *path, const uint8_t *src, uint32_t n)
+{
+    char buf[512];
+    snprintf(buf, sizeof(buf), "%s", path);
+    char *slash = strrchr(buf, '/');
+    if (slash) {
+        *slash = 0;
+        swos_mkdir(buf);
+    }
+
+    FILE *f = fopen(path, "wb");
+    if (!f) return 0;
+    size_t put = fwrite(src, 1, n, f);
+    fclose(f);
+    return (uint32_t)put;
+}
+
+static uint32_t fs_delete(const char *path)
+{
+    return (remove(path) == 0) ? 1 : 0;
+}
+
+static uint32_t fs_listdir(const char *dirpath, uint8_t *out, uint32_t out_sz)
+{
+    DIR *d = opendir(dirpath);
+    if (!d) {
+        fprintf(stderr, "[fs_listdir] opendir(%s) failed: errno=%d (%s)\n",
+                dirpath, errno, strerror(errno));
+        return 0;
+    }
+
+    struct dirent *de;
+    uint8_t *p = out;
+    uint8_t *end = out + out_sz - 2;
+    uint32_t n = 0;
+
+    while ((errno = 0, de = readdir(d)) != NULL) {
+        if (de->d_name[0] == '.') continue;
+        size_t len = strlen(de->d_name);
+        if (p + len + 1 >= end) break;
+        memcpy(p, de->d_name, len + 1);
+        p += len + 1;
+        ++n;
+    }
+    *p = 0;
+    closedir(d);
+    return n;
+}
+
+/* ---- RobNorthenLoader command handlers ---------------------------- */
+static uint8_t s_listdir_buf[2048];
+
+static uint32_t rob_load(uint8_t *name, uint8_t *dest)
+{
+    char path[512];
+    resolve_path(name, path, sizeof(path));
+    uint32_t got = fs_load(path, dest);
+    size = got;
+    _rnl_d1_return = got;
+    return got ? 0 : 1;
+}
+
+static uint32_t rob_save(uint8_t *name, uint8_t *src, uint32_t fileSize)
+{
+    char path[512];
+    resolve_path(name, path, sizeof(path));
+    uint32_t put = fs_save(path, src, fileSize);
+    size = put;
+    _rnl_d1_return = put;
+    return put ? 0 : 1;
+}
+
+static uint32_t rob_delete(uint8_t *name)
+{
+    char path[512];
+    resolve_path(name, path, sizeof(path));
+    fs_delete(path);
+    _rnl_d1_return = 0;
+    return 0;
+}
+
+static uint32_t rob_get_file_size(uint8_t *name)
+{
+    char path[512];
+    resolve_path(name, path, sizeof(path));
+    uint32_t n = fs_get_size(path);
+    size = n;
+    _rnl_d1_return = n;
+    return n;
+}
+
+static uint32_t rob_list_directory(uint8_t *name, uint8_t *callerBuf)
+{
+    (void)name;
+    uint32_t count = fs_listdir("save", s_listdir_buf, sizeof(s_listdir_buf));
+    if (count == 0) {
+        _rnl_d1_return = 0;
+        size = 0;
+        return 0;
+    }
+
+    uint8_t *src = s_listdir_buf;
+    uint8_t *dst = callerBuf;
+    for (uint32_t i = 0; i < count; ++i) {
+        size_t len = strlen((char *)src);
+        memset(dst, 0, 0x20);
+        dst[0] = 0;
+        if (len > 0x1B) len = 0x1B;
+        dst[1] = (uint8_t)len;
+        memcpy(dst + 2, src, len);
+        dst[2 + len] = 0;
+        src += strlen((char *)src) + 1;
+        dst += 0x20;
+    }
+
+    *(uint16_t *)&size = (uint16_t)count;
+    _rnl_d1_return = count;
+    return 0;
+}
+
+uint32_t _RobNorthenLoader_C(uint32_t cmd, uint32_t arg1, uint8_t *name, uint8_t *buf)
+{
+    switch (cmd) {
+    case 0: return rob_load(name, buf);
+    case 1: return rob_save(name, buf, arg1);
+    case 2: return rob_delete(name);
+    case 3: return rob_list_directory(name, buf);
+    case 4: _rnl_d1_return = 0; return 0;
+    case 5: return rob_get_file_size(name);
+    case 6: return 0;
+    default: return 0;
+    }
+}
+
+/* ---- Hardware-side helpers (no-ops on SDL) ------------------------ */
+void _CloseDosLibrary(void) {}
+void _FixSnoopBug(void)     {}
+void _FixMemoryRoutine(void) {}
+uint8_t _KBHook(void) { return 0; }
+
+#else  /* !SWOS_SDL_BUILD — Amiga path below */
+
 /*
  * resload.c — C port of Resload.s
  *
@@ -691,6 +949,18 @@ uint8_t *_AllocMemAny(uint32_t sz)
     return (uint8_t *)os_AllocMem(sz, MEMF_PUBLIC);
 }
 
+/* ================================================================
+ * FreeMemAny — C-callable wrapper for Exec FreeMem. Pair with
+ * _AllocMemAny: the caller must remember the size that was passed
+ * to AllocMem (Exec doesn't track block sizes). swos_io.c stores
+ * the size in a 4-byte header at the front of each block.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void _FreeMemAny(void *addr, uint32_t sz)
+{
+    os_FreeMem(addr, sz);
+}
+
 
 /* ================================================================
  * ExitToDos — restore hardware, close libs, reply WB msg
@@ -1221,3 +1491,5 @@ uint8_t _KBHook(void)
 
     return raw;
 }
+
+#endif  /* !SWOS_SDL_BUILD */

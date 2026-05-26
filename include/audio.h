@@ -9,22 +9,65 @@
 typedef signed char int8_t;
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
-typedef unsigned long uint32_t;
+typedef unsigned int uint32_t;
 typedef short int16_t;
-typedef long int32_t;
+typedef int int32_t;
 
-/* ---- Amiga hardware addresses ---- */
+/* ---- Amiga hardware addresses ----
+ * CUSTOM_BASE may already be redefined by swos_platform.h to route
+ * pokes into the SDL host's stub struct. */
+#ifndef CUSTOM_BASE
 #define CUSTOM_BASE     0x00DFF000u
+#endif
 #define DMACON_OFF      0x96        /* DMA control register (write) */
 #define AUD0VOL_OFF     0xA8        /* Audio channel 0 volume */
 #define AUD1VOL_OFF     0xB8        /* Audio channel 1 volume */
 #define AUD2VOL_OFF     0xC8        /* Audio channel 2 volume */
 #define AUD3VOL_OFF     0xD8        /* Audio channel 3 volume */
 
-#define AUD0LC_ADDR     0x00DFF0A0u
-#define AUD1LC_ADDR     0x00DFF0B0u
-#define AUD2LC_ADDR     0x00DFF0C0u
-#define AUD3LC_ADDR     0x00DFF0D0u
+#define AUD0LC_ADDR     (CUSTOM_BASE + 0x0A0u)
+#define AUD1LC_ADDR     (CUSTOM_BASE + 0x0B0u)
+#define AUD2LC_ADDR     (CUSTOM_BASE + 0x0C0u)
+#define AUD3LC_ADDR     (CUSTOM_BASE + 0x0D0u)
+
+/* ---- VariantDescriptor (32 bytes) ----
+ * One entry in the bank's instrument table at bankSectionPtrs[0]; each
+ * entry is `variantId << 5` bytes from the table base. Same shape as
+ * the RJP1 sample-list record (see SFX.md / rjp1_player.h):
+ *   +0..0x0B   3 LFO/sample data pointers
+ *   +0x0C      signed 16-bit offset into bankSectionPtrs[1] (envelope data)
+ *   +0x0E      volume scale
+ *   +0x10      "initial play" sample offset (first-time, before loop kicks in)
+ *   +0x12      initial length (DMA AUDxLEN word count for the first play)
+ *   +0x14      loop offset (the steady-state DMA AUDxLC after first cycle)
+ *   +0x16      loop length
+ *   +0x18      pitch LFO loop start
+ *   +0x1A      pitch LFO total length (word count; doubled when stored)
+ *   +0x1C      volume LFO loop start
+ *   +0x1E      volume LFO total length (word count; doubled when stored)
+ *
+ * The C field names follow the original SWOS audio code's `pvSample*`
+ * convention even though it conflicts with the cleaner RJP1 naming —
+ * tracked under "audio field rename" follow-up. */
+#pragma pack(push, 2)
+typedef struct {
+    uint32_t sampleBasePtr;     /* +0x00 */
+    uint32_t pitchLfoPtr;       /* +0x04 */
+    uint32_t volLfoPtr;         /* +0x08 */
+    int16_t  envDataOffset;     /* +0x0C — signed, into bankSectionPtrs[1] */
+    uint16_t volScale;          /* +0x0E */
+    uint16_t firstSampleOffset; /* +0x10 — initial-play offset (one-shot) */
+    uint16_t firstSampleLength; /* +0x12 — initial-play length */
+    uint16_t loopSampleOffset;  /* +0x14 — loop offset (steady-state) */
+    uint16_t loopSampleLength;  /* +0x16 — loop length */
+    uint16_t pitchLfoLoop;      /* +0x18 */
+    uint16_t pitchLfoLen;       /* +0x1A — word count (caller doubles) */
+    uint16_t volLfoLoop;        /* +0x1C */
+    uint16_t volLfoLen;         /* +0x1E — word count (caller doubles) */
+} VariantDescriptor;
+#pragma pack(pop)
+
+typedef char _variantdesc_size_check[(sizeof(VariantDescriptor) == 32) ? 1 : -1];
 
 /* ---- AudioState structure (46 bytes, matches SWOS2.s layout) ----
  * Uses pragma pack(2) instead of __attribute__((packed)) so GCC

@@ -17,7 +17,7 @@ extern uint16_t goalScored;
 extern uint16_t runSlower;
 extern uint16_t lastTeamScoredNumber;
 extern Sprite  *lastPlayerScored;
-extern uint32_t currentScorer;
+extern uintptr_t currentScorer;
 extern TeamGame        topTeamInGame;
 extern TeamGame        bottomTeamInGame;
 extern TeamGeneralInfo topTeamData;
@@ -109,7 +109,7 @@ _GoalScored(int16_t scoringTeam, Sprite *scorerSprite)
     runSlower = 1;
     lastTeamScoredNumber = (uint16_t)scoringTeam;
     lastPlayerScored = scorerSprite;
-    currentScorer = (uint32_t)scorerSprite;
+    currentScorer = (uintptr_t)scorerSprite;
 
     /* ---- find in-game team matching scorer's side ---- */
     inGameTeam = &topTeamInGame;
@@ -118,13 +118,13 @@ _GoalScored(int16_t scoringTeam, Sprite *scorerSprite)
 
     /* ---- find team general info matching the in-game team ---- */
     a2 = (TeamGame *)topTeamData.inGameTeamPtr;
-    if ((uint32_t)inGameTeam != (uint32_t)topTeamData.inGameTeamPtr)
+    if ((uintptr_t)inGameTeam != (uintptr_t)topTeamData.inGameTeamPtr)
         a2 = (TeamGame *)bottomTeamData.inGameTeamPtr;
 
     /* a2 should be the TeamGame that matches the scorer's side;
      * lastTeamScored stores the TeamGeneralInfo pointer for the scoring team.
      * ASM uses inGameTeamPtr comparison (not teamNumber) to handle teamPlayingUp swap. */
-    if ((uint32_t)inGameTeam == (uint32_t)topTeamData.inGameTeamPtr)
+    if ((uintptr_t)inGameTeam == (uintptr_t)topTeamData.inGameTeamPtr)
         lastTeamScored = &topTeamData;
     else
         lastTeamScored = &bottomTeamData;
@@ -407,7 +407,7 @@ team_ptrs_done:
                 lastImageIdx = (uint16_t)(scorerSprites + 7)->imageIndex;
 
                 /* shift imageIndex and widths one position right, from [6] down to a5 */
-                while ((uint32_t)shiftSrc > (uint32_t)a5) {
+                while ((uintptr_t)shiftSrc > (uintptr_t)a5) {
                     (shiftSrc + 1)->imageIndex = shiftSrc->imageIndex;
                     widthSrc[1] = widthSrc[0];
                     shiftSrc--;

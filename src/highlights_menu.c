@@ -16,13 +16,18 @@
 #include "file_io.h"
 #include "menus.h"
 #include "highlights_menu.h"
+#include "endian_helpers.h"
 
 /* ---- Menu entries (defined in asm) ---- */
 extern MenuEntry menuEntries[];
 
 /* ---- Globals (defined in asm) ---- */
 extern uint16_t hilNumGoals;
-extern uint32_t extension;
+extern uint16_t hilTeam1Goals;
+extern uint16_t hilTeam2Goals;
+extern uint16_t hilPitchNumber;
+extern uint16_t hilMaxSubstitutes;
+extern uintptr_t extension;
 extern uint8_t selectedFilename[];
 extern uint8_t hilFileBuffer[];
 extern uint32_t kHilFileSig;
@@ -53,27 +58,27 @@ void _HighlightsMenuCommon(void)
     if (hilNumGoals == 0) {
         /* No goals — disable entries 1 and 3 */
         menuEntries[1].isDisabled = 1;
-        uint16_t color1 = *(uint16_t *)&menuEntries[1].bg;
+        uint16_t color1 = menuEntries[1].bgColor;
         color1 = (color1 & 0xFFF0) + PINK_TO_BROWN_9;
-        *(uint16_t *)&menuEntries[1].bg = color1;
+        menuEntries[1].bgColor = color1;
 
         menuEntries[3].isDisabled = 1;
-        uint16_t color3 = *(uint16_t *)&menuEntries[3].bg;
+        uint16_t color3 = menuEntries[3].bgColor;
         color3 = (color3 & 0xFFF0) + PINK_TO_BROWN_9;
-        *(uint16_t *)&menuEntries[3].bg = color3;
+        menuEntries[3].bgColor = color3;
 
         _SetCurrentEntry(2);
     } else {
         /* Goals exist — enable entries 1 and 3 */
         menuEntries[1].isDisabled = 0;
-        uint16_t color1 = *(uint16_t *)&menuEntries[1].bg;
+        uint16_t color1 = menuEntries[1].bgColor;
         color1 = (color1 & 0xFFF0) + YELLOW_GREEN_BLACK_14;
-        *(uint16_t *)&menuEntries[1].bg = color1;
+        menuEntries[1].bgColor = color1;
 
         menuEntries[3].isDisabled = 0;
-        uint16_t color3 = *(uint16_t *)&menuEntries[3].bg;
+        uint16_t color3 = menuEntries[3].bgColor;
         color3 = (color3 & 0xFFF0) + YELLOW_GREEN_BLACK_14;
-        *(uint16_t *)&menuEntries[3].bg = color3;
+        menuEntries[3].bgColor = color3;
     }
 }
 
@@ -137,11 +142,17 @@ void _LoadHighlightsMenu(void)
     if (_LoadHilFile(selectedFilename) != 0)
         goto cleanup;
 
-    if (*(uint32_t *)hilFileBuffer != kHilFileSig) {
+    /* HIL file header is big-endian (Amiga m68k); BE_READ_U32 is a no-op
+     * on the Amiga build and a byteswap on x86. */
+    if (BE_READ_U32(hilFileBuffer) != kHilFileSig) {
         _ShowErrorMenu(aCannotPlayOldV);
         hilNumGoals = 0;
         goto cleanup;
     }
+
+    /* BE→host swap for the 5 u16 header fields now lives inside
+     * _LoadHilFile's legacy load branch so the JSON load path can
+     * skip it. Both source formats converge on host-native here. */
 
     _StringCopy(selectedFilename, hilFilename);
 
@@ -188,7 +199,7 @@ extern uint16_t menuMusic;
 extern uint16_t deadVarAlways0;
 extern volatile uint16_t menuStatus;
 extern volatile uint16_t exitMenu;
-extern uint32_t currentMenuPtr;
+extern uintptr_t currentMenuPtr;
 extern uint8_t  currentMenu[];
 
 extern void _CopyTeamsAndHeader(void);
@@ -212,8 +223,8 @@ extern uint8_t stadiumMenu[];
 static void viewAndRestoreMenu(void (*viewFunc)(void))
 {
     Menu *menu = (Menu *)currentMenu;
-    uint32_t savedSelectedEntry = menu->selectedEntry;
-    uint32_t savedMenuPtr = currentMenuPtr;
+    MenuEntry *savedSelectedEntry = menu->selectedEntry;
+    uintptr_t savedMenuPtr = currentMenuPtr;
 
     viewFunc();
 

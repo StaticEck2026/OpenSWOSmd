@@ -38,7 +38,7 @@ extern uint16_t autoReplays;
 extern volatile uint16_t saveHighlightScene;
 extern uint16_t userRequestedReplay;
 extern uint16_t instantReplayFlag;
-extern uint32_t currentScorer;
+extern uintptr_t currentScorer;
 extern uint16_t foulXCoordinate;
 extern uint16_t foulYCoordinate;
 extern uint16_t cameraDirection;
@@ -65,8 +65,16 @@ extern TeamGeneralInfo bottomTeamData;
 extern Sprite          ballSprite;
 extern Sprite          goalie1Sprite;
 extern Sprite          goalie2Sprite;
-extern Sprite         *team1SpritesTable[];
-extern Sprite         *team2SpritesTable[];
+#ifdef SWOS_SDL_BUILD
+extern Sprite         *teamSpritesTable[];
+#else
+/* On Amiga the unified `teamSpritesTable` doesn't exist — the BSS
+ * carries team1 and team2 as separate adjacent arrays. SDL aliases
+ * both into one 22-entry slice via sprite_data.c, but on Amiga we
+ * just dispatch by index. */
+extern Sprite         *team1SpritesTable[11];
+extern Sprite         *team2SpritesTable[11];
+#endif
 
 extern uint8_t  pl1Fire;
 extern uint8_t  pl2Fire;
@@ -74,14 +82,14 @@ extern uint8_t  pl2Fire;
 /* CheckIfBallOutOfPlay globals */
 extern uint16_t playRefereeWhistle;
 extern Sprite  *lastPlayerPlayed;
-extern uint32_t lastKeeperPlayed;
+extern Sprite *lastKeeperPlayed;
 extern uint16_t statsTeam1Goals;
 extern uint16_t statsTeam2Goals;
 extern uint16_t statsTeam1GoalsCopy2;
 extern uint16_t statsTeam2GoalsCopy2;
 extern uint16_t teamNumThatScored;
-extern uint32_t teamScoredDataPtr;
-extern uint32_t teamScoredGamePtr;
+extern TeamGeneralInfo *teamScoredDataPtr;
+extern TeamGame *teamScoredGamePtr;
 extern uint16_t goalCounter;
 extern uint16_t patternsGoalCounter;
 extern uint16_t goalOut;
@@ -340,12 +348,13 @@ static void __attribute__((noinline)) handleBreakCameraMode(TeamGeneralInfo *a6)
             break;
         if (injuriesForever != 0)
             break;
-        /* Original asm iterated 22 entries starting from team1SpritesTable,
-         * relying on team2SpritesTable being contiguous in memory.
-         * With -fdata-sections, the tables are in separate sections and
-         * no longer adjacent. Iterate both tables explicitly. */
         for (i = 0; i < 22; i++) {
-            a1 = (i < 11) ? team1SpritesTable[i] : team2SpritesTable[i - 11];
+#ifdef SWOS_SDL_BUILD
+            a1 = teamSpritesTable[i];
+#else
+            a1 = (i < 11) ? team1SpritesTable[i]
+                          : team2SpritesTable[i - 11];
+#endif
             if (gameState != ST_PLAYERS_TO_INITIAL_POSITIONS &&
                 gameState != ST_PENALTY &&
                 gameState != ST_PENALTIES) {
@@ -521,7 +530,7 @@ static void __attribute__((noinline)) handleGoalScored(TeamGeneralInfo *teamData
     a0 = lastPlayerPlayed;
     if (lastKeeperPlayed != 0) {
         if (a0 == &goalie1Sprite || a0 == &goalie2Sprite)
-            a0 = (Sprite *)(uint32_t)lastKeeperPlayed;
+            a0 = lastKeeperPlayed;
     }
     statsTeam1GoalsCopy2 = statsTeam1Goals;
     statsTeam2GoalsCopy2 = statsTeam2Goals;
@@ -530,8 +539,8 @@ static void __attribute__((noinline)) handleGoalScored(TeamGeneralInfo *teamData
     teamNumThatScored = teamNum;
 
     /* finalize_goal_replay_side */
-    teamScoredDataPtr = (uint32_t)teamData;
-    teamScoredGamePtr = (uint32_t)teamData->inGameTeamPtr;
+    teamScoredDataPtr = teamData;
+    teamScoredGamePtr = teamData->inGameTeamPtr;
 
     {
         TeamGeneralInfo *opTeam = teamData->opponentsTeam;

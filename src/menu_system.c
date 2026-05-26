@@ -19,10 +19,38 @@ typedef void (*VoidFunc)(void);
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t currentMenu[];
 extern MenuEntry menuEntries[];
-extern uint32_t currentMenuPtr;
+extern uintptr_t currentMenuPtr;
 extern volatile uint16_t menuStatus;
 extern uint16_t menuFade;
 extern volatile uint16_t exitMenu;
+extern volatile uint16_t seasonUpdateInProgress;
+
+#include "swos_types.h"
+#include "auto_skip_debug.h"
+#include "input.h"  /* pauseSkipRequested -- SPACE / second controller button */
+#include <string.h>  /* memcpy in _UnpackMenu — Amiga string.h is partial,
+                      * include early so the prototype is in scope before
+                      * the first call site. */
+
+/* Season-update menu hold: on Amiga, the slow CPU + blitter naturally
+ * stretched each cup/league result menu render to ~0.5-1 s. On x86 the
+ * controlMask=0xFFFF auto-fire dispatches in the first MenuProc iteration,
+ * so the season-transition chain visually skips in milliseconds. Hold each
+ * menu for SEASON_UPDATE_MENU_HOLD_FRAMES iterations (50 Hz pacing) so the
+ * user can read each result like on the original.
+ *
+ * Counter resets in _ActivateMenu (per-menu boundary); _MenuProc gates the
+ * auto-fire dispatch behind it when seasonUpdateInProgress is set. Only
+ * applies to controlMask==0xFFFF entries — every other dispatch path
+ * (normal fire-only, navigation, etc.) is unaffected. */
+#define SEASON_UPDATE_MENU_HOLD_FRAMES 50
+static uint16_t s_seasonUpdateHoldCounter;
+
+/* SDL-only: latched once SPACE / second controller button is pressed
+ * during a season update, so the user can press once and let go — the
+ * skip persists across every remaining menu in the chain. Auto-clears
+ * when seasonUpdateInProgress drops back to 0. */
+static uint16_t s_seasonSkipLatched;
 extern uint16_t menuCursorFrame;
 extern uint16_t menuTextBlinkCounter;
 extern uint16_t controlMask;
@@ -39,7 +67,7 @@ extern uint16_t nextEntryDirectionOffsets[];
 extern uint32_t magicValue;
 extern uint16_t panicReasonCode;
 extern uint32_t irqCookieObfuscated;
-extern uint32_t errorMessagePtr;
+extern char *errorMessagePtr;
 extern uint16_t forceDrawTransparentMenuItems;
 
 /* _MenuCheckControls globals */
@@ -83,13 +111,59 @@ extern uint32_t menuDataOffset;
 extern uint16_t deadVar03;
 extern uint8_t *spriteGraphicsPtr;
 
+/* Platform quit flag: set by Platform_RequestQuit on SDL_QUIT / ESC /
+ * X button click. _ShowMenu loops check it to break out of nested menus. */
+extern uint16_t g_quitToDos;
+
+#ifdef SWOS_DEBUG_AUTOSKIP
+/* Map a packed-menu pointer to a human name for the autoskip log. */
+extern uint8_t diyCupMenu[], diyLeagueTournamentMenu[], chairmanMemosMenu[];
+extern uint8_t careerMenu[], contestMenu[], careerOverMenu[], continueMenu[];
+extern uint8_t continueAbortMenu[], chooseTeamsMenu[], selectFilesMenu[];
+extern uint8_t designDiyCupMenu[], designDiyLeagueMenu[], clubBusinessMenu[];
+extern uint8_t topGoalScorersMenu[], competitionTopGoalScorersMenu[];
+extern uint8_t squadMenu[], competitionStatsMenu[], viewCompetitionsMenu[];
+extern uint8_t managementRecordMenu[];
+extern uint8_t offersMenu[];
+extern uint8_t swosMainMenu[];
+extern uint8_t gotJobOfferMenu[];
+static const char *swos_autoskip_menu_name(const void *p)
+{
+    if (p == diyCupMenu) return "diyCupMenu";
+    if (p == diyLeagueTournamentMenu) return "diyLeagueTournamentMenu";
+    if (p == chairmanMemosMenu) return "chairmanMemosMenu";
+    if (p == careerMenu) return "careerMenu";
+    if (p == contestMenu) return "contestMenu";
+    if (p == careerOverMenu) return "careerOverMenu";
+    if (p == continueMenu) return "continueMenu";
+    if (p == continueAbortMenu) return "continueAbortMenu";
+    if (p == chooseTeamsMenu) return "chooseTeamsMenu";
+    if (p == selectFilesMenu) return "selectFilesMenu";
+    if (p == designDiyCupMenu) return "designDiyCupMenu";
+    if (p == designDiyLeagueMenu) return "designDiyLeagueMenu";
+    if (p == clubBusinessMenu) return "clubBusinessMenu";
+    if (p == topGoalScorersMenu) return "topGoalScorersMenu";
+    if (p == competitionTopGoalScorersMenu) return "competitionTopGoalScorersMenu";
+    if (p == squadMenu) return "squadMenu";
+    if (p == competitionStatsMenu) return "competitionStatsMenu";
+    if (p == viewCompetitionsMenu) return "viewCompetitionsMenu";
+    if (p == managementRecordMenu) return "managementRecordMenu";
+    if (p == offersMenu) return "offersMenu";
+    if (p == swosMainMenu) return "swosMainMenu";
+    if (p == gotJobOfferMenu) return "gotJobOfferMenu";
+    return "unknown";
+}
+#else
+static inline const char *swos_autoskip_menu_name(const void *p) { (void)p; return ""; }
+#endif
+
 /* GetKey globals */
 extern volatile uint16_t keyCount;
 extern volatile uint8_t keyBuffer[];
 extern uint8_t keycodeLut[];
 
 /* BlitterCopyOverlayToScreen globals */
-extern volatile uint32_t frontbufferBasePtr;
+extern volatile uintptr_t frontbufferBasePtr;
 extern uint8_t frontbufferBase[];
 extern uint8_t frontbufferBaseAlt[];
 extern uint8_t frontbufferMaskBuffer[];
@@ -98,7 +172,7 @@ extern uint8_t frontbufferMaskBuffer[];
 extern uint8_t outerFrameColorsTable[];
 
 /* DrawMenuItem data */
-extern uint32_t charTables[];
+extern void *charTables[];
 extern uint8_t numbersBuffer[];
 extern uint32_t smallCharsTable[];
 
@@ -138,6 +212,8 @@ MenuEntry *_CalcMenuEntryAddress(uint16_t ordinal)
 __attribute__((used, externally_visible))
 void _SetExitMenuFlag(void)
 {
+    SWOS_AUTOSKIP_LOG("SetExitMenuFlag: caller=%p exitMenu now 1",
+                      __builtin_return_address(0));
     exitMenu = 1;
 }
 
@@ -149,7 +225,11 @@ void _SetCurrentEntry(uint16_t index)
 {
     MenuEntry *entry = _CalcMenuEntryAddress(index);
     Menu *menu = (Menu *)currentMenu;
-    menu->selectedEntry = (uint32_t)entry;
+    menu->selectedEntry = entry;
+    SWOS_AUTOSKIP_LOG("SetCurrentEntry(%u) caller=%p ctrlMask=0x%04x onSelect=%p",
+                      (unsigned)index, __builtin_return_address(0),
+                      (unsigned)entry->controlMask,
+                      (void *)(uintptr_t)entry->onSelect);
 }
 
 /* ================================================================
@@ -234,6 +314,38 @@ read_next_key:
 /* ================================================================
  * BlitterCopyOverlayToScreen — hardware blitter copy
  * ================================================================ */
+#ifdef SWOS_SDL_BUILD
+/* SDL build: the Amiga blitter is a no-op (writes go to a stub
+ * Custom chip struct), so the original asm-style routine below would
+ * silently do nothing. Replace with a plain memcpy of the full
+ * interleaved frontbuffer. The source-select logic mirrors the asm:
+ * if `frontbufferBasePtr` is currently the primary buffer, the source
+ * is the alt buffer; otherwise source = primary. Either way we copy
+ * onto whatever `frontbufferBasePtr` currently points at. */
+#include <string.h>
+__attribute__((used, externally_visible))
+void _BlitterCopyOverlayToScreen(void)
+{
+    /* Called at the end of _DrawMenu (and at the end of _LoadFileEx).
+     * By that point _WaitForVSync has already swapped buffers, so
+     * `frontbufferBasePtr` points at the POST-swap buffer (the one the
+     * SDL renderer will now read from), while the OTHER buffer still
+     * holds the freshly-drawn menu. We propagate the drawing forward
+     * so the newly-active buffer shows the same content on the next
+     * render tick. Full-frame copy matches the Amiga
+     * BLTSIZE_OVERLAY_TO_SCREEN variant used inside LoadFile; the
+     * BLTSIZE_OVERLAY_PANEL (30-row) variant Amiga-DrawMenu uses
+     * works there because the bitplane pointers still point at the
+     * just-drawn buffer post-swap -- on our SDL renderer that
+     * isn't true, so we need the full sync. */
+    uint8_t *src = (frontbufferBasePtr != (uintptr_t)frontbufferBaseAlt)
+                       ? frontbufferBaseAlt
+                       : frontbufferBase;
+    uint8_t *dst = (uint8_t *)frontbufferBasePtr;
+    if (src && dst && src != dst)
+        memcpy(dst, src, FRONTBUFFER_SIZE_TOTAL_BYTES);
+}
+#else
 __attribute__((used, externally_visible))
 void _BlitterCopyOverlayToScreen(void)
 {
@@ -257,9 +369,9 @@ void _BlitterCopyOverlayToScreen(void)
     custom->bltcon0 = BLTCON0_USEA_USED_LF_F0;
 
     /* Select source: if frontbuffer is Alt, use Base; else use Alt */
-    srcAddr = (uint32_t)frontbufferBase;
-    if (frontbufferBasePtr != (uint32_t)frontbufferBaseAlt)
-        srcAddr = (uint32_t)frontbufferBaseAlt;
+    srcAddr = (uintptr_t)frontbufferBase;
+    if (frontbufferBasePtr != (uintptr_t)frontbufferBaseAlt)
+        srcAddr = (uintptr_t)frontbufferBaseAlt;
 
 #ifdef AGA
     /* AGA: per-plane blit with interleaved stride */
@@ -313,6 +425,7 @@ void _BlitterCopyOverlayToScreen(void)
     custom->bltsize = 0x16;
 #endif
 }
+#endif /* SWOS_SDL_BUILD */
 
 /* ================================================================
  * DrawMenuItemBackground — fills rectangle via FillRectangle
@@ -422,12 +535,35 @@ void _DrawBackAllItems(uint16_t maxItems, MenuEntry *firstEntry)
 __attribute__((used, externally_visible))
 void _CallDrawMenuItem(MenuEntry *entry)
 {
+#ifdef SWOS_SDL_BUILD
+    /* The Amiga "double-flush" pattern (draw, vsync, draw, vsync) is
+     * how the original code keeps both buffers in sync after a partial
+     * redraw — each draw goes to one buffer; the swap inside vsync
+     * makes the OTHER buffer the new drawing target, so a second draw
+     * lands in it too.
+     *
+     * On SDL each `_WaitForVSync` is a visible frame present. Doing
+     * the double-flush emits TWO present cycles per partial redraw,
+     * and a transition like _PlayMatchChangeTactics chains 5+ of
+     * these — every present shows slightly different intermediate
+     * state and the user sees flicker.
+     *
+     * Same end-state, fewer visible frames: draw once, vsync (which
+     * presents the new state), then memcpy the displayed buffer to
+     * the now-drawing-target buffer so both are in sync. No second
+     * present required. */
+    _DrawMenuBackWithCheck(entry);
+    _DrawMenuItem(entry);
+    _WaitForVSync();
+    _BlitterCopyOverlayToScreen();
+#else
     _DrawMenuBackWithCheck(entry);
     _DrawMenuItem(entry);
     _WaitForVSync();
     _DrawMenuBackWithCheck(entry);
     _DrawMenuItem(entry);
     _WaitForVSync();
+#endif
 }
 
 /* ================================================================
@@ -451,7 +587,7 @@ void _DrawMenuItem(MenuEntry *entry)
 
     /* Call beforeDraw callback — a5 = entry in original asm */
     if (entry->beforeDraw != 0) {
-        _CallMenuOnSelect((void *)entry->beforeDraw, (void *)entry);
+        _CallMenuOnSelect((void *)entry->beforeDraw, entry);
         if (entry->isInvisible)
             return;
     }
@@ -469,7 +605,7 @@ void _DrawMenuItem(MenuEntry *entry)
             uint16_t y = entry->y;
             uint16_t w = entry->dwWidth;
             uint16_t h = entry->dwHeight;
-            uint16_t bgColor = *(uint16_t *)((uint8_t *)entry + 30) & 0xF;
+            uint16_t bgColor = entry->bgColor & 0xF;
 
             if (bgColor == 0) {
                 if (forceDrawTransparentMenuItems) {
@@ -487,18 +623,20 @@ void _DrawMenuItem(MenuEntry *entry)
 
                 /* Inner frame if high nibble is non-zero */
                 {
-                    uint16_t frameColor = (*(uint16_t *)((uint8_t *)entry + 30) & 0xF0) >> 4;
+                    uint16_t frameColor = (entry->bgColor & 0xF0) >> 4;
                     if (frameColor != 0) {
                         _DrawMenuItemInnerFrame(frameColor, x + 1, y + 1, w - 2, h - 2);
                     }
                 }
             }
         } else if (bg == ENTRY_SPRITE1) {
-            uint16_t sprIdx = *(uint16_t *)((uint8_t *)entry + 30);
+            uint16_t sprIdx = entry->bgColor;
             _DrawSprite16Pixels(sprIdx, entry->x, entry->y);
         } else if (bg == ENTRY_FUNC1) {
-            /* Original asm passes x in d1, y in d2 as register params */
-            _CallMenuFuncWithXY((void *)(*(uint32_t *)((uint8_t *)entry + 30)), entry->x, entry->y);
+            /* Original asm passes x in d1, y in d2 as register params.
+             * The unpacker stored the function pointer as a 32-bit value
+             * in the bg slot; reading the field directly is portable. */
+            _CallMenuFuncWithXY((void *)entry->bg, entry->x, entry->y);
         } else {
             panicReasonCode = 0x1209;
             _PanicHaltLoop();
@@ -513,27 +651,68 @@ void _DrawMenuItem(MenuEntry *entry)
         goto post_draw_callback;
 
     if (content == ENTRY_STRING) {
-        if (entry->fg == 0)
+        /* 0xFFFFFFFF is the sentinel set by MENU_CMD_TEXT_NO_PTR (opcode
+         * 22). Original flow: the game runtime stores the real pointer
+         * (e.g. the selected team's name for the START button) before
+         * drawing; until something overwrites the sentinel we must not
+         * dereference it. */
+        if (entry->fg == 0 || entry->fg == 0xFFFFFFFF)
             goto post_draw_callback;
+        /* [drawmenu-fg] Diagnostic for 64-bit fg corruption — the
+         * Cygwin64 image lives at ~0x100000000; any fg with upper 32
+         * bits != 1 is corrupt and would SIGSEGV in _DrawMenuText. */
+#if UINTPTR_MAX > 0xFFFFFFFFu
+        {
+            uintptr_t fgRaw = entry->fg;
+            uint32_t fgHigh = (uint32_t)((uint64_t)fgRaw >> 32);
+            if (fgHigh != 1 && fgHigh != 0) {
+                Menu *m = (Menu *)currentMenu;
+                MenuEntry *base = (MenuEntry *)((uint8_t *)m + MENU_HEADER_SIZE);
+                long entryIdx = (long)((uint8_t *)entry - (uint8_t *)base) / (long)sizeof(MenuEntry);
+                SWOS_DBG("[drawmenu-fg] CORRUPT entry=%p idx=%ld ordinal=%u "
+                                "content=%u fg=0x%016llx high=0x%x low=0x%x "
+                                "stringFlags=0x%04x x=%u y=%u\n",
+                        (void *)entry, entryIdx, (unsigned)entry->ordinal,
+                        (unsigned)entry->content, (unsigned long long)fgRaw,
+                        (unsigned)fgHigh, (unsigned)(uint32_t)fgRaw,
+                        (unsigned)entry->stringFlags,
+                        (unsigned)entry->x, (unsigned)entry->y);
+                SWOS_DBG_FLUSH();
+                /* Skip the draw rather than crash so we can see what
+                 * happens NEXT in the menu. */
+                goto post_draw_callback;
+            }
+        }
+#endif
         textPtr = (uint8_t *)entry->fg;
         goto fg_text_common;
     }
 
     if (content == ENTRY_SPRITE2) {
-        sprIdx = *(uint16_t *)((uint8_t *)entry + 38);
+        sprIdx = entry->fgWord;
         goto fg_sprite_draw;
     }
 
     if (content == ENTRY_STRING_TABLE) {
-        uint8_t *tablePtr = (uint8_t *)entry->fg;
-        uint32_t indexPtr = *(uint32_t *)tablePtr;
-        uint16_t idx = *(uint16_t *)indexPtr;
-        uint16_t base = *(uint16_t *)(tablePtr + 4);
-        uint32_t strAddr;
+        /* Layout: { void *indexPtr; uint16_t base; void *entries[N]; }
+         * (packed). On 32-bit indexPtr at 0, base at 4, entries at 6.
+         * On 64-bit indexPtr at 0 (8 bytes), base at 8, entries at 10.
+         * Use sizeof() of the header so the offsets stay correct on
+         * both targets. The auto-generated tables in
+         * swos_amiga_ptr_imports.c declare matching packed struct
+         * types — see e.g. diyPitchTypeOrSeasonStrTable. */
+        struct __attribute__((packed)) MenuStringTableHeader {
+            void    *indexPtr;
+            uint16_t base;
+        };
+        struct MenuStringTableHeader *hdr =
+            (struct MenuStringTableHeader *)entry->fg;
+        uint16_t idx = *(uint16_t *)hdr->indexPtr;
+        uint16_t base = hdr->base;
+        void **entries = (void **)((uint8_t *)hdr + sizeof(*hdr));
 
         idx -= base;
-        strAddr = *(uint32_t *)(tablePtr + 6 + (uint32_t)idx * 4);
-        textPtr = (uint8_t *)strAddr;
+        textPtr = (uint8_t *)entries[idx];
         goto fg_text_common;
     }
 
@@ -585,7 +764,7 @@ void _DrawMenuItem(MenuEntry *entry)
     }
 
     if (content == ENTRY_NUMBER) {
-        _Int2Ascii(*(uint16_t *)((uint8_t *)entry + 38), numbersBuffer);
+        _Int2Ascii(entry->fgWord, numbersBuffer);
         textPtr = numbersBuffer;
         goto fg_text_common;
     }
@@ -615,17 +794,24 @@ void _DrawMenuItem(MenuEntry *entry)
 
 fg_sprite_draw:
     {
-        uint8_t *sprGfx = spriteGraphicsPtr;
-        uint8_t *sprEntry;
-        uint16_t sprPixW, sprNLines;
+        SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
+        SpriteGraphics *sprEntry;
         uint16_t cx, cy;
 
-        sprEntry = *(uint8_t **)(sprGfx + (uint32_t)sprIdx * 4);
-        sprPixW = *(uint16_t *)(sprEntry + SPRITEGRAPHICS_PIXWIDTH);
-        sprNLines = *(uint16_t *)(sprEntry + SPRITEGRAPHICS_NLINES);
-
-        cx = (entry->dwWidth >> 1) + entry->x - (sprPixW >> 1);
-        cy = (entry->dwHeight >> 1) + entry->y - (sprNLines >> 1);
+#ifdef SWOS_SDL_BUILD
+        /* The sprite graphics table (`spriteGraphics`) is populated
+         * from menus.raw etc. during the Amiga bootstrap; we haven't
+         * wired up that pipeline, so the table is a zero-filled stub.
+         * Skip the sprite draw rather than dereferencing a null
+         * entry pointer. */
+        if (!sprGfxTable) goto post_draw_callback;
+        sprEntry = sprGfxTable[sprIdx];
+        if (!sprEntry) goto post_draw_callback;
+#else
+        sprEntry = sprGfxTable[sprIdx];
+#endif
+        cx = (entry->dwWidth >> 1) + entry->x - ((uint16_t)sprEntry->pixWidth >> 1);
+        cy = (entry->dwHeight >> 1) + entry->y - ((uint16_t)sprEntry->nlines >> 1);
 
         _DrawSprite16Pixels(sprIdx, cx, cy);
         goto post_draw_callback;
@@ -636,6 +822,9 @@ fg_text_common:
     flags = entry->stringFlags;
     flagsMask = (flags & STR_FLAGS_MASK) >> 2;
     charTable = (uint8_t *)charTables[flagsMask / 4];
+#ifdef SWOS_SDL_BUILD
+    if (!charTable) goto post_draw_callback;
+#endif
     charHeight = *(uint16_t *)(charTable + CHARTABLE_CHARHEIGHT);
     entryHeight = entry->dwHeight;
 
@@ -680,7 +869,7 @@ fg_text_common:
 
 post_draw_callback:
     if (entry->afterDrawCb != 0) {
-        _CallMenuOnSelect((void *)entry->afterDrawCb, (void *)entry);
+        _CallMenuOnSelect((void *)entry->afterDrawCb, entry);
     }
 }
 
@@ -713,6 +902,20 @@ static void initMenuEntry(MenuEntry *tmpl)
     tmpl->afterDrawCb = 0;
 }
 
+/* Read a native pointer-width value from the packed stream and advance
+ * the cursor. On 32-bit reads 4 bytes (matching the Amiga layout); on
+ * 64-bit reads 8 (matching the C `void *` slot in MenuCmd_OnSelect,
+ * MenuCmd_TextPtr, etc.). Returning uintptr_t lets the caller assign
+ * directly to MenuEntry.bg/fg (uintptr_t) or cast to a function-pointer
+ * field. */
+static inline uintptr_t unpackReadPtr(uint8_t **pp)
+{
+    uintptr_t v;
+    __builtin_memcpy(&v, *pp, sizeof(v));
+    *pp += sizeof(v);
+    return v;
+}
+
 /* ================================================================
  * UnpackMenu — unpack packed menu data into MenuEntry array
  *
@@ -736,11 +939,32 @@ void _UnpackMenu(uint8_t *packed, uint8_t *dest)
     menuY = 0;
     initMenuEntry(tmpl);
 
-    /* Copy menu header (16 bytes: onInit, afterDraw, onDraw, selectedEntry) */
-    *(uint32_t *)a1 = *(uint32_t *)a0; a0 += 4;
-    *(uint32_t *)(a1 + 4) = *(uint32_t *)a0; a0 += 4;
-    *(uint32_t *)(a1 + 8) = *(uint32_t *)a0; a0 += 4;
-    *(uint32_t *)(a1 + 12) = *(uint32_t *)a0; a0 += 4;
+    /* Copy menu header.
+     *
+     * Source layout (MenuHeader): 3 void* + 1 uint32_t defaultEntry.
+     * Dest layout   (Menu)      : 3 fn-ptr + 1 MenuEntry* selectedEntry
+     *                              + uint16_t numEntries + uint32_t endOfMenuPtr.
+     *
+     * On 32-bit the pointer slots are 4 bytes; on 64-bit they grow to 8.
+     * The 4th source field is a uint32_t ordinal that ActivateMenu later
+     * resolves to a real MenuEntry* via _CalcMenuEntryAddress, so we copy
+     * just the 4 ordinal bytes into the low half of selectedEntry. Use
+     * field-typed access so the pointer width round-trips for both
+     * targets without a per-bitness branch. */
+    {
+        struct __attribute__((packed)) PackedHdr {
+            void    *onInitPtr;
+            void    *onReturnPtr;
+            void    *onDrawPtr;
+            uint32_t defaultEntry;
+        } *srcHdr = (struct PackedHdr *)a0;
+        Menu *dstMenu = (Menu *)a1;
+        dstMenu->onInit        = (MenuVoidFn)srcHdr->onInitPtr;
+        dstMenu->afterDraw     = (MenuVoidFn)srcHdr->onReturnPtr;
+        dstMenu->onDraw        = (MenuVoidFn)srcHdr->onDrawPtr;
+        dstMenu->selectedEntry = (MenuEntry *)(uintptr_t)srcHdr->defaultEntry;
+        a0 += sizeof(*srcHdr);
+    }
 
     a1 += MENU_HEADER_SIZE;
 
@@ -858,37 +1082,34 @@ convert_menu_switch:
 
     case 3: /* func1 (background function) */
         curEntry->background = ENTRY_FUNC1;
-        curEntry->bg = *(uint32_t *)a0; a0 += 4;
+        curEntry->bg = unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 4: /* entry_frame (background color + frame) */
         curEntry->background = ENTRY_FRAME_AND_BACK_COLOR;
-        *(uint16_t *)((uint8_t *)curEntry + 30) = *(uint16_t *)a0; a0 += 2;
-        *(uint16_t *)((uint8_t *)curEntry + 32) = 0;
+        curEntry->bg = (uintptr_t)*(uint16_t *)a0; a0 += 2;
         goto convert_menu_switch;
 
     case 5: /* sprite1 (background sprite) */
         curEntry->background = ENTRY_SPRITE1;
-        *(uint16_t *)((uint8_t *)curEntry + 30) = *(uint16_t *)a0; a0 += 2;
-        *(uint16_t *)((uint8_t *)curEntry + 32) = 0;
+        curEntry->bg = (uintptr_t)*(uint16_t *)a0; a0 += 2;
         goto convert_menu_switch;
 
     case 6: /* invalid_type */
         curEntry->background = 4;
-        *(uint16_t *)((uint8_t *)curEntry + 30) = *(uint16_t *)a0; a0 += 2;
-        *(uint16_t *)((uint8_t *)curEntry + 32) = 0;
+        curEntry->bg = (uintptr_t)*(uint16_t *)a0; a0 += 2;
         goto convert_menu_switch;
 
     case 7: /* func2 (foreground function) */
         curEntry->content = ENTRY_FUNC2;
         curEntry->stringFlags = 0;
-        curEntry->fg = *(uint32_t *)a0; a0 += 4;
+        curEntry->fg = unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 8: /* string_entry */
         curEntry->content = ENTRY_STRING;
         curEntry->stringFlags = *(uint16_t *)a0; a0 += 2;
-        curEntry->fg = *(uint32_t *)a0; a0 += 4;
+        curEntry->fg = unpackReadPtr(&a0);
         /* Check if fg is a valid pointer (>= 256) or NULL */
         if (curEntry->fg != 0 && curEntry->fg < 256) {
             curEntry->fg = 0xFFFFFFFF;
@@ -898,45 +1119,43 @@ convert_menu_switch:
     case 9: /* sprite2 (foreground sprite) */
         curEntry->content = ENTRY_SPRITE2;
         curEntry->stringFlags = 0;
-        *(uint16_t *)((uint8_t *)curEntry + 38) = *(uint16_t *)a0; a0 += 2;
-        *(uint16_t *)((uint8_t *)curEntry + 40) = 0;
+        curEntry->fg = (uintptr_t)*(uint16_t *)a0; a0 += 2;
         goto convert_menu_switch;
 
     case 10: /* string_table */
         curEntry->content = ENTRY_STRING_TABLE;
         curEntry->stringFlags = *(uint16_t *)a0; a0 += 2;
-        curEntry->fg = *(uint32_t *)a0; a0 += 4;
+        curEntry->fg = unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 11: /* multiLine_text */
         curEntry->content = ENTRY_MULTI_LINE_TEXT;
         curEntry->stringFlags = *(uint16_t *)a0; a0 += 2;
-        curEntry->fg = *(uint32_t *)a0; a0 += 4;
+        curEntry->fg = unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 12: /* number */
         curEntry->content = ENTRY_NUMBER;
         curEntry->stringFlags = *(uint16_t *)a0; a0 += 2;
-        *(uint16_t *)((uint8_t *)curEntry + 38) = *(uint16_t *)a0; a0 += 2;
-        *(uint16_t *)((uint8_t *)curEntry + 40) = 0;
+        curEntry->fg = (uintptr_t)*(uint16_t *)a0; a0 += 2;
         goto convert_menu_switch;
 
     case 13: /* on_select_fire_only */
         curEntry->controlMask = 0x20;
-        curEntry->onSelect = *(uint32_t *)a0; a0 += 4;
+        curEntry->onSelect = (MenuEntryFn)unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 14: /* on_select */
         curEntry->controlMask = *(uint16_t *)a0; a0 += 2;
-        curEntry->onSelect = *(uint32_t *)a0; a0 += 4;
+        curEntry->onSelect = (MenuEntryFn)unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 15: /* before_draw_func */
-        curEntry->beforeDraw = *(uint32_t *)a0; a0 += 4;
+        curEntry->beforeDraw = (MenuEntryFn)unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 16: /* after_draw_func */
-        curEntry->afterDrawCb = *(uint32_t *)a0; a0 += 4;
+        curEntry->afterDrawCb = (MenuEntryFn)unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 17: /* left_skip */
@@ -962,7 +1181,7 @@ convert_menu_switch:
     case 21: /* sprite_copy */
         curEntry->content = ENTRY_SPRITE_COPY;
         curEntry->stringFlags = 0;
-        curEntry->fg = *(uint32_t *)a0; a0 += 4;
+        curEntry->fg = unpackReadPtr(&a0);
         goto convert_menu_switch;
 
     case 22: /* string_entry2 (deferred text — marker for dynamic string) */
@@ -994,19 +1213,25 @@ finish_menu:
         for (i = (int16_t)entryCount - 1; i >= 0; i--) {
             if (entryIter->content == ENTRY_STRING && entryIter->fg == 0xFFFFFFFF) {
                 /* Allocate buffer space for dynamic menu text */
-                entryIter->fg = (uint32_t)a1;
-                /* Write "STDMENUTEXT\0" marker */
-                *(uint32_t *)a1 = 0x5354444D; /* 'STDM' */
-                *(uint32_t *)(a1 + 4) = 0x454E5554; /* 'ENUT' */
-                *(uint32_t *)(a1 + 8) = 0x45585400; /* 'EXT\0' */
+                entryIter->fg = (uintptr_t)a1;
+                /* Write "STDMENUTEXT\0" marker. Original asm used four
+                 * `move.l #'STDM',(a0)+` etc. — m68k char literals pack
+                 * BE so the bytes landed [S,T,D,M,E,N,U,T,E,X,T,0] in
+                 * memory. A naive 32-bit hex constant on LE host
+                 * byte-swaps to "MDTSTUNEEXT" — exactly what we saw in
+                 * the career menu's competition slots when the entry
+                 * fg was still the 0xFFFFFFFF deferred sentinel. Use
+                 * memcpy so the bytes hit memory in the intended order
+                 * on both endians. */
+                memcpy(a1, "STDMENUTEXT", 12);
                 a1 += 0x46;
             }
             entryIter = (MenuEntry *)((uint8_t *)entryIter + MENUENTRY_STRIDE);
         }
 
-        menu->endOfMenuPtr = (uint32_t)a1;
-        menuFreeSpace = (uint32_t)diyLeagueScratchBuffer - (uint32_t)a1;
-        menuDataOffset = (uint32_t)a1 - (uint32_t)currentMenu;
+        menu->endOfMenuPtr = (uintptr_t)a1;
+        menuFreeSpace = (uintptr_t)diyLeagueScratchBuffer - (uintptr_t)a1;
+        menuDataOffset = (uintptr_t)a1 - (uintptr_t)currentMenu;
 
         /* Anti-tamper check */
         {
@@ -1036,7 +1261,7 @@ __attribute__((used, externally_visible, noinline))
 void _DrawSelectedMenuItemFrame(void)
 {
     Menu *menu = (Menu *)currentMenu;
-    MenuEntry *sel = (MenuEntry *)menu->selectedEntry;
+    MenuEntry *sel = menu->selectedEntry;
     uint16_t w, h, color;
 
     if (sel == (MenuEntry *)0)
@@ -1060,7 +1285,7 @@ void _DrawMenu(void)
     Menu *menu = (Menu *)currentMenu;
     MenuEntry *entry;
     int16_t i, count;
-    uint32_t onDrawPtr;
+    MenuVoidFn onDrawPtr;
 
     menuStatus = 0;
     menuTextBlinkCounter = 0;
@@ -1286,15 +1511,31 @@ void _MenuProc(void)
 {
     Menu *menu;
     MenuEntry *selectedEntry;
-    uint32_t onSelectPtr;
+    MenuEntryFn onSelectPtr;
     uint16_t d7;
     int16_t dir;
+
+#ifdef SWOS_SDL_BUILD
+    /* If Platform_RequestQuit flagged a quit from the SDL event pump,
+     * longjmp back to _FrontEndMainLoop now — short-circuits the entire
+     * nested menu state machine so we don't flicker between submenus
+     * as they each return and re-activate on the way out. */
+    extern void Platform_CheckQuitRequest(void);
+    Platform_CheckQuitRequest();
+#endif
+
+    /* Drop the season-end skip latch the moment the chain ends, so the
+     * next chain (e.g. start of the next season-end review) gets the
+     * full per-screen dwell unless the user presses SPACE / button 2
+     * again. */
+    if (seasonUpdateInProgress == 0)
+        s_seasonSkipLatched = 0;
 
     _ReadTimerDelta();
 
     if (magicValue != 0x12345678) {
         panicReasonCode = 0x9999;
-        errorMessagePtr = (uint32_t)aStackOverflow;
+        errorMessagePtr = (char *)aStackOverflow;
         _PanicHaltLoop();
         return;
     }
@@ -1321,7 +1562,7 @@ void _MenuProc(void)
     _MenuCheckControls();
 
     menu = (Menu *)currentMenu;
-    selectedEntry = (MenuEntry *)menu->selectedEntry;
+    selectedEntry = menu->selectedEntry;
     controlMask = 0;
 
     onSelectPtr = selectedEntry->onSelect;
@@ -1347,17 +1588,57 @@ void _MenuProc(void)
         }
     }
 
+    {
+        int ord = swos_autoskip_entry_ordinal((void *)selectedEntry, menuEntries);
+        SWOS_AUTOSKIP_LOG("MenuProc: dispatch entry=%d ctrlMask=0x%04x d7=0x%04x onSelect=%p "
+                          "(short-circuit=%s)",
+                          ord,
+                          (unsigned)selectedEntry->controlMask,
+                          (unsigned)d7,
+                          (void *)(uintptr_t)onSelectPtr,
+                          selectedEntry->controlMask == 0xFFFF ? "yes" : "no");
+    }
+
     if (selectedEntry->controlMask != 0xFFFF) {
         d7 &= selectedEntry->controlMask;
-        if (d7 == 0)
+        if (d7 == 0) {
+            SWOS_AUTOSKIP_LOG("MenuProc: skipping onSelect (d7 & mask == 0)");
             goto no_event_or_done;
+        }
+    } else if (seasonUpdateInProgress != 0) {
+        /* Hold the menu visible for ~1 s so the user can read each
+         * cup/league result during a season transition. Without this the
+         * controlMask=0xFFFF entry fires on iteration 1 and the chain
+         * flashes by in milliseconds — see Amiga visual reference.
+         *
+         * SDL-only: pauseSkipRequested (SPACE key / second controller
+         * button) latches s_seasonSkipLatched, draining the hold counter
+         * for THIS menu AND every remaining menu in the chain. The latch
+         * clears the next time seasonUpdateInProgress drops to 0 (see
+         * top of MenuProc), so a single press skips the whole sequence
+         * without the user having to hold the button. */
+#ifdef SWOS_SDL_BUILD
+        if (pauseSkipRequested)
+            s_seasonSkipLatched = 1;
+#endif
+        if (s_seasonSkipLatched) {
+            s_seasonUpdateHoldCounter = SEASON_UPDATE_MENU_HOLD_FRAMES;
+        } else if (s_seasonUpdateHoldCounter < SEASON_UPDATE_MENU_HOLD_FRAMES) {
+            s_seasonUpdateHoldCounter++;
+            SWOS_AUTOSKIP_LOG("MenuProc: holding (counter=%u/%u)",
+                              (unsigned)s_seasonUpdateHoldCounter,
+                              (unsigned)SEASON_UPDATE_MENU_HOLD_FRAMES);
+            goto no_event_or_done;
+        }
     }
 
     controlMask = d7;
+    SWOS_AUTOSKIP_LOG("MenuProc: -> _CallMenuOnSelect (exitMenu before=%u)", (unsigned)exitMenu);
     /* Original asm MenuProc kept a5 = selectedEntry when calling onSelect.
        Many callbacks (SelectTeamsCommon, SelectLeaguesCommon etc.) read a5
        to get the entry's ordinal and string pointer. */
     _CallMenuOnSelect((void *)onSelectPtr, (void *)selectedEntry);
+    SWOS_AUTOSKIP_LOG("MenuProc: <- _CallMenuOnSelect (exitMenu after=%u)", (unsigned)exitMenu);
 
 no_event_or_done:
     if (fire != 0)
@@ -1381,7 +1662,7 @@ no_event_or_done:
             MenuEntry *cand = _CalcMenuEntryAddress((uint16_t)(uint8_t)navOrd);
 
             if (cand->isDisabled == 0 && cand->isInvisible == 0) {
-                menu->selectedEntry = (uint32_t)cand;
+                menu->selectedEntry = cand;
                 if (selectedEntry->background == NO_BACKGROUND)
                     _DrawMenu();
                 else
@@ -1411,19 +1692,22 @@ __attribute__((used, externally_visible, noinline))
 void _ActivateMenu(uint8_t *packedMenu)
 {
     Menu *menu;
-    uint32_t selEntry;
-    uint32_t onInitPtr;
+    uintptr_t selEntryVal;
+    MenuVoidFn onInitPtr;
 
-    currentMenuPtr = (uint32_t)packedMenu;
+    currentMenuPtr = (uintptr_t)packedMenu;
+    s_seasonUpdateHoldCounter = 0;
 
     _UnpackMenu(packedMenu, currentMenu);
 
     menu = (Menu *)currentMenu;
-    selEntry = menu->selectedEntry;
+    /* The unpacker may write either an ordinal (0..65535) or a real
+     * pointer into this slot; resolve ordinals via _CalcMenuEntryAddress
+     * before any consumer reads it as a MenuEntry *. */
+    selEntryVal = (uintptr_t)menu->selectedEntry;
 
-    if (selEntry <= 0xFFFF) {
-        MenuEntry *resolved = _CalcMenuEntryAddress((uint16_t)selEntry);
-        menu->selectedEntry = (uint32_t)resolved;
+    if (selEntryVal <= 0xFFFF) {
+        menu->selectedEntry = _CalcMenuEntryAddress((uint16_t)selEntryVal);
     }
 
     onInitPtr = menu->onInit;
@@ -1442,25 +1726,62 @@ void _ActivateMenu(uint8_t *packedMenu)
 __attribute__((used, externally_visible))
 void _ShowMenu(uint8_t *packedMenu)
 {
+    /* If a quit was already requested, skip rendering this menu entirely
+     * and propagate exitMenu = 1 to any outer ShowMenu still on the
+     * stack. Without this, a click on the SDL window's X (or any path
+     * that sets g_quitToDos) only exits the innermost menu — the outer
+     * loop then re-enters its own MenuProc and the user sees every
+     * pending menu in the nested chain flash by one at a time before
+     * the program actually exits. The same cascade is also visible on
+     * the season-transition path where multiple cup result menus
+     * stack up. */
+    if (g_quitToDos) {
+        SWOS_AUTOSKIP_LOG("ShowMenu: SKIPPED packedMenu=%p (%s) — g_quitToDos set",
+                          packedMenu, swos_autoskip_menu_name(packedMenu));
+        exitMenu = 1;
+        return;
+    }
+
     Menu *menu = (Menu *)currentMenu;
     /* volatile as safety: _CallMenuCallback saves/restores all regs around asm
        callbacks, but keep volatile in case any callback path is missed. */
-    volatile uint32_t oldSelectedEntry = menu->selectedEntry;
-    volatile uint32_t oldPackedMenu = currentMenuPtr;
+    /* Save+restore as MenuEntry * (the new struct field type). */
+    MenuEntry * volatile oldSelectedEntry = menu->selectedEntry;
+    volatile uintptr_t oldPackedMenu = currentMenuPtr;
 
     menuStatus = 0;
     exitMenu = 0;
 
+    SWOS_AUTOSKIP_LOG("ShowMenu: ENTER packedMenu=%p (%s)", packedMenu,
+                      swos_autoskip_menu_name(packedMenu));
     _ActivateMenu(packedMenu);
+    SWOS_AUTOSKIP_LOG("ShowMenu: post-Activate exitMenu=%u", (unsigned)exitMenu);
 
     if (exitMenu == 0) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+        unsigned proc_iters = 0;
+#endif
         do {
             _MenuProc();
+#ifdef SWOS_DEBUG_AUTOSKIP
+            proc_iters++;
+            if (proc_iters <= 3 || proc_iters == 50 || proc_iters == 200 || proc_iters % 1000 == 0) {
+                Menu *m = (Menu *)currentMenu;
+                int ord = swos_autoskip_entry_ordinal((void *)m->selectedEntry, menuEntries);
+                SWOS_AUTOSKIP_LOG("  proc iter=%u exitMenu=%u sel=%d fire=%u shortFire=%u",
+                                  proc_iters, (unsigned)exitMenu, ord,
+                                  (unsigned)fire, (unsigned)shortFire);
+            }
+#endif
         } while (exitMenu == 0);
     }
+    SWOS_AUTOSKIP_LOG("ShowMenu: loop exited exitMenu=%u", (unsigned)exitMenu);
 
     menuStatus = 1;
-    exitMenu = 0;
+    /* Don't clear exitMenu if quit propagation is in flight — leave it
+     * set so the outer ShowMenu's `while (exitMenu == 0)` exits too. */
+    if (!g_quitToDos)
+        exitMenu = 0;
 
     _RestorePreviousMenu(oldSelectedEntry, (uint8_t *)oldPackedMenu);
 }
@@ -1469,12 +1790,12 @@ void _ShowMenu(uint8_t *packedMenu)
  * RestorePreviousMenu
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _RestorePreviousMenu(uint32_t oldSelectedEntry, uint8_t *oldPackedMenu)
+void _RestorePreviousMenu(MenuEntry *oldSelectedEntry, uint8_t *oldPackedMenu)
 {
     Menu *menu;
-    uint32_t afterDrawPtr;
+    MenuVoidFn afterDrawPtr;
 
-    currentMenuPtr = (uint32_t)oldPackedMenu;
+    currentMenuPtr = (uintptr_t)oldPackedMenu;
     _UnpackMenu(oldPackedMenu, currentMenu);
 
     menu = (Menu *)currentMenu;
@@ -1500,7 +1821,7 @@ void _RestorePreviousMenu(uint32_t oldSelectedEntry, uint8_t *oldPackedMenu)
 __attribute__((used, externally_visible))
 void _BlitMaskedRectAltToFront(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
-    extern volatile uint32_t frontbufferBaseAltPtr;
+    extern volatile uintptr_t frontbufferBaseAltPtr;
     _RectRowMaskedApplyScreenOffset(x, y, w, h, (uint8_t *)frontbufferBaseAltPtr, (uint8_t *)frontbufferBasePtr);
 }
 
@@ -1579,10 +1900,19 @@ void _DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry)
 __attribute__((used, externally_visible))
 void _DrawMenuItemsWaitForVSync(const int16_t *list)
 {
+#ifdef SWOS_SDL_BUILD
+    /* See _CallDrawMenuItem comment — collapse the Amiga double-flush
+     * to single vsync + memcpy sync on SDL so we present once instead
+     * of twice per partial redraw. */
+    _DrawMenuItemsFromList(list);
+    _WaitForVSync();
+    _BlitterCopyOverlayToScreen();
+#else
     _DrawMenuItemsFromList(list);
     _WaitForVSync();
     _DrawMenuItemsFromList(list);
     _WaitForVSync();
+#endif
 }
 
 /* ================================================================
@@ -1596,10 +1926,17 @@ void _DrawMenuItemsWaitForVSync(const int16_t *list)
 __attribute__((used, externally_visible))
 void _CallDrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry)
 {
+#ifdef SWOS_SDL_BUILD
+    /* See _CallDrawMenuItem comment — collapse double-flush. */
+    _DrawMultipleItems(maxItems, firstEntry);
+    _WaitForVSync();
+    _BlitterCopyOverlayToScreen();
+#else
     _DrawMultipleItems(maxItems, firstEntry);
     _WaitForVSync();
     _DrawMultipleItems(maxItems, firstEntry);
     _WaitForVSync();
+#endif
 }
 
 /* ================================================================

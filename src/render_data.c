@@ -37,8 +37,10 @@ uint8_t   dstRowAdvanceBytes[56] = {
 uint8_t   hexLongStringBuffer[10] = { 0 };  /* 8 hex digits + null + pad */
 uint8_t   hexWordStringBuffer[6]  = { 0 };  /* 4 hex digits + null + pad */
 
-/* --- Little-player sprite generic value (SWOS2.s:14147) --- */
-uint16_t  littlePlayerSpriteGeneric = 0x00D6;  /* 214 decimal */
+/* littlePlayerSpriteGeneric must be adjacent to stadiumMenuLittlePlayer
+ * and littlePlayersColorTable in memory (MENU_CMD_SPRITE_COPY reads a
+ * single contiguous 36-byte struct). Moved to the shared backing
+ * buffer in swos_globals.c with asm aliases. */
 
 /* --- Scorer padding (SWOS2.s:4632-4645) — 194 zero bytes after team2Scorers --- */
 uint8_t   scorer_padding[194] = { 0 };

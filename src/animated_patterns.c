@@ -16,6 +16,7 @@
  * ResetAnimatedPatterns forces all animated tiles back to static.
  */
 
+#include "swos_types.h"
 #include "animated_patterns.h"
 #include "game_types.h"
 #include "display.h"
@@ -29,23 +30,52 @@ extern uint16_t goalCounter;
 extern uint16_t patternsGoalCounter;
 extern uint16_t showFansCounter;
 extern uint16_t animPatternsIndex;
-extern uint16_t cameraX;
-extern uint16_t cameraY;
+extern FixedPoint cameraX;
+extern FixedPoint cameraY;
 extern uint16_t gameStatePl;
 extern uint16_t gameState;
 extern uint16_t fansSidesSwapped;
 extern uint16_t panicReasonCode;
 extern int16_t  animatedPatterns[];
 extern TeamGeneralInfo *lastTeamPlayedBeforeBreak;
-extern uint32_t teamScoredGamePtr;
+extern TeamGame *teamScoredGamePtr;
 extern TeamGame topTeamInGame;
 extern TeamGame bottomTeamInGame;
 extern uint8_t  *spriteGraphicsPtr;
 extern uint8_t  pitchDatBuffer[];
-extern volatile uint32_t frontbufferBasePtr;
+extern volatile uintptr_t frontbufferBasePtr;
 extern uint8_t  frontbufferMaskBuffer[];
 extern uint8_t  currentMenu[];
-extern uint8_t  animPatternsRandomTable[];
+#ifdef SWOS_SDL_BUILD
+extern uint8_t  pitchChunkyBuffer[];
+/* On SDL the pitch tile pointers live in pitchChunkyBuffer with 256-byte
+ * stride per tile (vs Amiga's 128-byte bitplane stride in currentMenu).
+ * Pitch.c arranges chunky tiles to be indexed by the *original* Amiga
+ * tile index (offset / 128), so the same `(entry - base) / stride` math
+ * still recovers the tile-pair index used by the static/animated swap. */
+#define ANIM_TILE_BASE        ((uintptr_t)pitchChunkyBuffer)
+#define ANIM_TILE_SIZE        256u
+#define ANIM_TILE_SIZE_SHIFT  8
+#define ANIM_MAX_TILE_OFFSET  (MAX_FAN_TILE_INDEX * ANIM_TILE_SIZE)
+#else
+#define ANIM_TILE_BASE        ((uint32_t)currentMenu)
+#define ANIM_TILE_SIZE        TILE_SIZE
+#define ANIM_TILE_SIZE_SHIFT  TILE_SIZE_SHIFT
+#define ANIM_MAX_TILE_OFFSET  MAX_FAN_TILE_OFFSET
+#endif
+/* animPatternsRandomTable: 64-byte permutation table (entries 0..62
+ * plus a trailing 0) that `_DrawAnimatedPatterns` walks to pick pitch
+ * tile indices for the per-frame fan animations. The table is shuffled
+ * in-place by `swapTwoRandomIndicesFromAnimPatternsTable`. Transcribed
+ * from the Amiga C port's Data.c:2221 — with a zero stub, every pick
+ * was index 0 so the same tile "animated" forever and the rest never
+ * moved. */
+uint8_t animPatternsRandomTable[64] = {
+     0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
+    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+    32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+    48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62,  0
+};
 extern uint16_t patternStatic;
 extern uint16_t otherTeamScored;
 
@@ -86,24 +116,48 @@ static void drawPatternFromIndex(uint16_t patternIndex)
 {
     int16_t pixelX, pixelY;
     int16_t screenX, screenY;
-    uint32_t *sprGfx;
-    uint32_t *tileEntries;
-    uint32_t spriteAddr;
 
     /* decompose patternIndex into row,col in a 42-column grid */
     pixelY = (int16_t)(patternIndex / 42) * 16;     /* row * 16 */
     pixelX = (int16_t)(patternIndex % 42) * 16;     /* col * 16 */
 
-    /* load sprite 137 graphics pointer and set its tile data */
-    sprGfx = (uint32_t *)(void *)spriteGraphicsPtr;
-    spriteAddr = sprGfx[137];
-
-    tileEntries = (uint32_t *)(void *)pitchDatBuffer;
-    *(uint32_t *)spriteAddr = tileEntries[patternIndex];
+    /* Sprite 137 is the animated-fan placeholder: overwrite its
+     * sprData each call with the current pitch-tile pointer, then draw
+     * it at the cell's screen-space coordinates.
+     *
+     * Original code went through `(uint32_t *)spriteGraphicsPtr` and
+     * `(uint32_t *)pitchDatBuffer` — both 4-byte-slot views. On 64-bit
+     * the table slots are 8 bytes, so sprGfx[137] returned half a
+     * SpriteGraphics pointer (zero-extended to an unmapped low-32
+     * address) and the write through it segfaulted. Use the typed
+     * pointer table for the sprite header, and the matching side table
+     * for the chunky tile pointer (populated by _FixupAndColorPitchFile
+     * Step 1b, see pitch.c). */
+#ifdef SWOS_SDL_BUILD
+    {
+        /* s_pitchFullPtrs is the pitch.c side table that holds the
+         * full-width chunky-tile pointer per slot — populated in
+         * _FixupAndColorPitchFile Step 1b. The 4-byte slots in
+         * pitchDatBuffer can't round-trip a 64-bit address. */
+        extern uint8_t *s_pitchFullPtrs[];
+        SpriteGraphics *spr = ((SpriteGraphics **)spriteGraphicsPtr)[137];
+        if (spr && patternIndex < 2310) {
+            uint8_t *tile = s_pitchFullPtrs[patternIndex];
+            if (tile) spr->sprData = tile;
+        }
+    }
+#else
+    {
+        uint32_t *sprGfx     = (uint32_t *)(void *)spriteGraphicsPtr;
+        uint32_t *tileEntries = (uint32_t *)(void *)pitchDatBuffer;
+        uint32_t spriteAddr   = sprGfx[137];
+        *(uint32_t *)spriteAddr = tileEntries[patternIndex];
+    }
+#endif
 
     /* compute screen-relative coordinates */
-    screenX = pixelX - (int16_t)cameraX;
-    screenY = pixelY - (int16_t)cameraY;
+    screenX = pixelX - (int16_t)cameraX.s.i;
+    screenY = pixelY - (int16_t)cameraY.s.i;
 
     /* bounds check */
     if (screenX >= 336 || screenY >= SCREEN_HEIGHT)
@@ -114,10 +168,12 @@ static void drawPatternFromIndex(uint16_t patternIndex)
     /* draw to frontbuffer */
     _DrawSprite16Pixels(137, screenX, screenY);
 
-    /* draw to mask buffer (swap frontbuffer ptr temporarily) */
+    /* draw to mask buffer (swap frontbuffer ptr temporarily). The
+     * pointer slot is uintptr_t on both targets — save/restore at
+     * native width so we don't truncate the swap. */
     {
-        uint32_t savedFbPtr = frontbufferBasePtr;
-        frontbufferBasePtr = (uint32_t)frontbufferMaskBuffer;
+        uintptr_t savedFbPtr = frontbufferBasePtr;
+        frontbufferBasePtr = (uintptr_t)frontbufferMaskBuffer;
         _DrawSprite16Pixels(137, screenX, screenY);
         frontbufferBasePtr = savedFbPtr;
     }
@@ -135,13 +191,30 @@ static void drawPatternFromIndex(uint16_t patternIndex)
 static void resetAnimatedPatterns(uint32_t *a0, int16_t count)
 {
     int16_t i;
-    uint32_t baseAddr = (uint32_t)currentMenu;
+    uint32_t baseAddr = ANIM_TILE_BASE;
+#ifdef SWOS_SDL_BUILD
+    extern uint8_t *s_pitchFullPtrs[];
+    extern uint8_t pitchChunkyBuffer[];
+    uint32_t *pitchBase = (uint32_t *)(void *)pitchDatBuffer;
+#endif
 
     for (i = count; i >= 0; i--) {
         uint32_t d0 = *a0 - baseAddr;
-        if (d0 != 0 && d0 <= MAX_FAN_TILE_OFFSET && !(d0 & TILE_SIZE)) {
-            /* animated variant (even tile index) → subtract TILE_SIZE → static */
-            *a0 -= TILE_SIZE;
+        if (d0 != 0 && d0 <= ANIM_MAX_TILE_OFFSET && !(d0 & ANIM_TILE_SIZE)) {
+            /* animated variant (even tile index) → subtract one tile → static */
+            *a0 -= ANIM_TILE_SIZE;
+#ifdef SWOS_SDL_BUILD
+            /* Mirror the toggle into s_pitchFullPtrs — see comment in
+             * _DrawAnimatedPatterns. The slot index is the byte offset
+             * of `a0` from the pitchDatBuffer base divided by 4. */
+            {
+                ptrdiff_t slotIdx = a0 - pitchBase;
+                uint32_t newTileIdx = (d0 - ANIM_TILE_SIZE) >> ANIM_TILE_SIZE_SHIFT;
+                if (slotIdx >= 0 && slotIdx < 2310 && newTileIdx < 2310) {
+                    s_pitchFullPtrs[slotIdx] = pitchChunkyBuffer + (size_t)newTileIdx * 256;
+                }
+            }
+#endif
         }
         a0++;
     }
@@ -188,7 +261,8 @@ _DrawAnimatedPatterns(void)
     int16_t d6;       /* max patterns to update */
     uint16_t d0;      /* animate flag (0 = de-animate, non-zero = animate) */
     int16_t d7;       /* loop counter */
-    uint32_t baseAddr = (uint32_t)currentMenu;
+    uint32_t baseAddr = ANIM_TILE_BASE;
+    (void)baseAddr;
 
     /* ---- state 0: replayState == 0 → no game ---- */
     if (replayState == 0) {
@@ -233,8 +307,8 @@ _DrawAnimatedPatterns(void)
             goto ball_out_of_play;
 
         {
-            uint32_t scoredTeamPtr = teamScoredGamePtr;
-            if ((int16_t)cameraY > 440) {
+            TeamGame *scoredTeamPtr = teamScoredGamePtr;
+            if ((int16_t)cameraY.s.i > 440) {
                 /* bottom of pitch */
                 if (fansSidesSwapped != 0)
                     goto check_top_team;
@@ -244,11 +318,11 @@ _DrawAnimatedPatterns(void)
                 if (fansSidesSwapped != 0)
                     goto check_bottom_team;
             check_top_team:
-                if (scoredTeamPtr == (uint32_t)&topTeamInGame)
+                if (scoredTeamPtr == &topTeamInGame)
                     goto check_cheers_phase;
                 goto other_team_scored_be_still;
             check_bottom_team:
-                if (scoredTeamPtr == (uint32_t)&bottomTeamInGame)
+                if (scoredTeamPtr == &bottomTeamInGame)
                     goto check_cheers_phase;
                 goto other_team_scored_be_still;
             }
@@ -278,9 +352,18 @@ _DrawAnimatedPatterns(void)
         case 6: goto game_hasnt_started;
         case 7: goto game_in_progress;
         default:
+#ifdef SWOS_SDL_BUILD
+            /* At match start the replay buffer hasn't been populated yet,
+             * so the state word read from it may be garbage in (1..7).
+             * Rather than panicking, treat unknown states as "no pattern
+             * update" — matches the animPatternsState==0 early-return. */
+            animPatternsState = 0;
+            return;
+#else
             panicReasonCode = 0x5665;
             _PanicHaltLoop();
             return;
+#endif
         }
     }
 
@@ -370,7 +453,7 @@ pattern_loop:
                 animPatternsIndex = 0;
 
             /* check camera Y to determine which fan section */
-            if ((int16_t)cameraY < 64) {
+            if ((int16_t)cameraY.s.i < 64) {
                 /* top of pitch: sprite range 21..83 */
                 swapTwoRandomIndicesFromAnimPatternsTable();
                 randomVal = (int8_t)animPatternsRandomTable[animPatternsIndex];
@@ -380,7 +463,7 @@ pattern_loop:
                     d4 = 0;
 
                 spriteIdx = randomVal + 21;
-            } else if ((int16_t)cameraY >= 544) {
+            } else if ((int16_t)cameraY.s.i >= 544) {
                 /* bottom of pitch: sprite range 1071..1133 */
                 swapTwoRandomIndicesFromAnimPatternsTable();
                 randomVal = (int8_t)animPatternsRandomTable[animPatternsIndex];
@@ -393,21 +476,21 @@ pattern_loop:
             /* decompose spriteIdx into row/col and compute pitchDatBuffer index */
             row = spriteIdx / 21;
             col = spriteIdx % 21;
-            pitchIdx = row * 42 + col + ((int16_t)cameraX >> 4);
+            pitchIdx = row * 42 + col + ((int16_t)cameraX.s.i >> 4);
             d3 = pitchIdx;
 
             /* bounds check: &pitchDatBuffer[pitchIdx*4] must be in [pitchDatBuffer, currentMenu) */
             tileEntryPtr = ((uint32_t *)(void *)pitchDatBuffer) + pitchIdx;
-            if ((uint32_t)tileEntryPtr < (uint32_t)pitchDatBuffer ||
-                (uint32_t)tileEntryPtr >= (uint32_t)currentMenu) {
+            if ((uintptr_t)tileEntryPtr < (uintptr_t)pitchDatBuffer ||
+                (uintptr_t)tileEntryPtr >= (uintptr_t)currentMenu) {
                 panicReasonCode = 0x2772;
                 _PanicHaltLoop();
             }
 
             /* read tile entry and check if it's an animated tile */
             tileVal = *tileEntryPtr;
-            tileOffset = (int32_t)(tileVal - (uint32_t)currentMenu);
-            tileIndex = (int32_t)((uint32_t)tileOffset >> TILE_SIZE_SHIFT);
+            tileOffset = (int32_t)(tileVal - ANIM_TILE_BASE);
+            tileIndex = (int32_t)((uint32_t)tileOffset >> ANIM_TILE_SIZE_SHIFT);
 
             if (tileIndex == 0 || tileIndex > MAX_FAN_TILE_INDEX)
                 continue;
@@ -428,7 +511,25 @@ pattern_loop:
                 }
 
                 animatedPatterns[7 - d7] = d3;
-                *tileEntryPtr = (uint32_t)currentMenu + ((uint32_t)newIndex << TILE_SIZE_SHIFT);
+                *tileEntryPtr = ANIM_TILE_BASE + ((uint32_t)newIndex << ANIM_TILE_SIZE_SHIFT);
+#ifdef SWOS_SDL_BUILD
+                /* On SDL `drawPatternFromIndex` renders from
+                 * `s_pitchFullPtrs[d3]` (the 64-bit pitch.c side table)
+                 * because the 4-byte pitchDatBuffer slots can't hold a
+                 * full 64-bit pointer. The toggle above only updates
+                 * pitchDatBuffer's truncated slot, so without the
+                 * matching side-table update the next draw keeps
+                 * rendering the *previous* tile variant — fan animation
+                 * appears frozen. Mirror the toggle into the side
+                 * table so reader and writer stay in sync. */
+                {
+                    extern uint8_t *s_pitchFullPtrs[];
+                    extern uint8_t pitchChunkyBuffer[];
+                    if (d3 >= 0 && d3 < 2310) {
+                        s_pitchFullPtrs[d3] = pitchChunkyBuffer + (size_t)newIndex * 256;
+                    }
+                }
+#endif
             }
         }
 

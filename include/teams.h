@@ -86,7 +86,7 @@ void _PushLastSelectedTeam(void);
 void _GetSelectedTeamsStackTop(void);
 void _MarkSelectedTeamsStackLocation(void);
 void _IsContestContinentalCup(void);
-uint16_t _IsClubTeamsContest(uint32_t contest);
+uint16_t _IsClubTeamsContest(uintptr_t contest);
 void _SetTeamsTypeForSelectedContest(void);
 
 /* ---- SelectTeamsFinalMenu ---- */

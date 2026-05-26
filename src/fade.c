@@ -6,17 +6,53 @@
 #include "fade.h"
 #include "display.h"
 
+#ifdef SWOS_SDL_BUILD
+#include "platform_sdl.h"
+#include <SDL.h>
+#endif
+
+/* COPPER_WRITE_W: write a 16-bit value into the copper list buffer.
+ * On Amiga m68k, GCC decomposes plain `*(volatile uint16_t *)addr = val`
+ * into byte-level move.b pairs which corrupts copper-list word slots
+ * (the copper expects atomic word reads). Force a real move.w instruction
+ * via inline asm. On the SDL host the copper list is a regular RAM buffer
+ * so a plain store is fine. */
+#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+#define COPPER_WRITE_W(addr, val) \
+    __asm__ volatile ("move.w %0,(%1)" : : "d"((uint16_t)(val)), "a"((volatile uint16_t *)(addr)) : "memory")
+#else
+#define COPPER_WRITE_W(addr, val) (*(volatile uint16_t *)(addr) = (uint16_t)(val))
+#endif
+
 typedef unsigned char uint8_t;
-typedef unsigned long uint32_t;
+typedef unsigned int uint32_t;
 typedef short int16_t;
+
+#ifdef SWOS_SDL_BUILD
+/* Helper: yield CPU briefly while driving the Amiga Level-3 ISR. The
+ * fade-in / fade-out spin loops below wait for fadeState to flip,
+ * which is updated by _FadeInTick / _FadeOutTick inside the ISR. On
+ * WSL2 the SDL_Timer thread that normally runs the ISR can be starved
+ * by main-thread spinning, so we run the ISR ourselves (throttled to
+ * 50 Hz) and SDL_Delay to yield CPU. */
+static inline void fade_wait_one_isr_tick(void)
+{
+    _RunInt3HandlerThrottled();
+    SDL_Delay(2);
+}
+#define FADE_SPIN_BODY() fade_wait_one_isr_tick()
+#else
+#define FADE_SPIN_BODY() ((void)0)
+#endif
 
 extern volatile uint16_t fadeState;
 extern volatile uint16_t fadeCommand;
 extern volatile uint16_t fadeInitFlag;
+extern uint16_t g_quitToDos;
 extern uint16_t loaderModeFlag;
 extern uint16_t paletteIndex;
 extern uint8_t copperListBuffer[];
-extern uint32_t paletteTable[];   /* array of 7 pointers to uint16_t[16] palettes */
+extern void *paletteTable[];   /* array of 7 pointers to uint16_t[16] palettes */
 
 /* FadeOutToBlack (SWOS2.s line 6781)
  *
@@ -32,7 +68,8 @@ void _FadeOutToBlack(void)
     {
         while (fadeState == 0)
         {
-            /* spin — wait for fade-in to finish */
+            if (g_quitToDos) return;
+            FADE_SPIN_BODY();
         }
     }
 
@@ -44,7 +81,8 @@ void _FadeOutToBlack(void)
 
     while (fadeState != 0)
     {
-        /* spin — wait for fade-out to complete */
+        if (g_quitToDos) return;
+        FADE_SPIN_BODY();
     }
 }
 
@@ -62,7 +100,8 @@ void _FadeIn(void)
     {
         while (fadeState != 0)
         {
-            /* spin — wait for current fade-out to complete */
+            if (g_quitToDos) return;
+            FADE_SPIN_BODY();
         }
         _FadeOutToBlack();
     }
@@ -75,7 +114,8 @@ void _FadeIn(void)
 
     while (fadeState == 0)
     {
-        /* spin — wait for fade-in to complete */
+        if (g_quitToDos) return;
+        FADE_SPIN_BODY();
     }
 }
 
@@ -171,7 +211,7 @@ void _ApplyFadeStep(uint16_t fadeLevel)
                     if (blue < 2)
                         color = (color & 0x0FF0) | 2;
                 }
-                *dst = color;
+                COPPER_WRITE_W(dst, color);
                 dst += 2; /* stride 4 bytes */
             }
         }
@@ -187,8 +227,8 @@ void _ApplyFadeStep(uint16_t fadeLevel)
         {
             uint16_t color = *palette++;
             color = (color >> shift) & mask;
-            *palA = color;
-            *palB = color;
+            COPPER_WRITE_W(palA, color);
+            COPPER_WRITE_W(palB, color);
             palA += 2;  /* stride 4 bytes */
             palB += 2;
         }
@@ -206,8 +246,8 @@ void _ApplyFadeStep(uint16_t fadeLevel)
             {
                 color = (color & 0x0FF0) | 2;
             }
-            *palA = color;
-            *palB = color;
+            COPPER_WRITE_W(palA, color);
+            COPPER_WRITE_W(palB, color);
             palA += 2;
             palB += 2;
         }

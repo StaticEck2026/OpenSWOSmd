@@ -46,7 +46,7 @@ static void setNextPlayerFrame(Sprite *s)
     s->frameIndex += 1;
     s->cycleFramesTimer = s->frameDelay;
 
-    int16_t *frameTable = (int16_t *)s->frameIndicesTable;
+    int16_t *frameTable = s->frameIndicesTable;
 
     for (;;) {
         int16_t idx = s->frameIndex;
@@ -256,7 +256,7 @@ void _SetPlayerAnimationTable(AnimTable *animTable, Sprite *s)
 
     s->frameDelay = animTable->frameDelay;
 
-    uint32_t frameIndicesPtr = (uint32_t)animTable->animFrames[slotOffset >> 2];
+    int16_t *frameIndicesPtr = animTable->animFrames[slotOffset >> 2];
     s->frameIndicesTable = frameIndicesPtr;
 
     if (frameIndicesPtr == 0) {
@@ -286,7 +286,7 @@ void _SetPlayerAnimationTableAndPictureIndex(AnimTable *animTable, Sprite *s)
 
     s->frameDelay = animTable->frameDelay;
 
-    uint32_t frameIndicesPtr = (uint32_t)animTable->animFrames[slotOffset >> 2];
+    int16_t *frameIndicesPtr = animTable->animFrames[slotOffset >> 2];
     s->frameIndicesTable = frameIndicesPtr;
 
     if (frameIndicesPtr == 0) {

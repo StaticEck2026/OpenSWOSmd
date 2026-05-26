@@ -6,10 +6,12 @@
 #include "blitter.h"
 #include "text_render.h"
 #include "display.h"
+#include "swos_types.h"
+#include <string.h>
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t *spriteGraphicsPtr;
-extern volatile uint32_t frontbufferBasePtr;
+extern volatile uintptr_t frontbufferBasePtr;
 extern uint16_t cameraXMod320;
 extern uint16_t cameraYMod320;
 extern volatile uint16_t panicReasonCode;
@@ -99,8 +101,8 @@ static void blitterSpanCore(uint8_t *plane, uint16_t xBit, uint16_t width,
         custom->bltalwm = d7;
         d7 = ~d7;
         custom->bltbdat = d7;
-        custom->bltapt = (uint32_t)plane;
-        custom->bltdpt = (uint32_t)plane;
+        custom->bltapt = (uintptr_t)plane;
+        custom->bltdpt = (uintptr_t)plane;
         custom->bltamod = FB_BLT_MOD_AFTER_1_WORD;
         custom->bltdmod = FB_BLT_MOD_AFTER_1_WORD;
         custom->bltcon0 = d5;
@@ -122,7 +124,7 @@ static void blitterSpanCore(uint8_t *plane, uint16_t xBit, uint16_t width,
         uint16_t mod = ROW_STRIDE_BYTES - d0 * 2;
 
         waitBlit();
-        custom->bltdpt = (uint32_t)plane;
+        custom->bltdpt = (uintptr_t)plane;
         custom->bltdmod = mod;
         custom->bltcon0 = d6;
         custom->bltcon1 = 0;
@@ -145,8 +147,8 @@ static void blitterSpanCore(uint8_t *plane, uint16_t xBit, uint16_t width,
             custom->bltalwm = d7;
             d7 = ~d7;
             custom->bltbdat = d7;
-            custom->bltapt = (uint32_t)plane;
-            custom->bltdpt = (uint32_t)plane;
+            custom->bltapt = (uintptr_t)plane;
+            custom->bltdpt = (uintptr_t)plane;
             custom->bltamod = FB_BLT_MOD_AFTER_1_WORD;
             custom->bltdmod = FB_BLT_MOD_AFTER_1_WORD;
             custom->bltcon0 = d5;
@@ -240,6 +242,26 @@ static void blitterSpan4Planes(uint16_t x, uint16_t y, uint16_t width,
  *   d0 = x, d1 = y, d2 = width, d3 = height, d4 = color
  *   a0 = frontbufferBasePtr (loaded internally)
  * ================================================================ */
+#ifdef SWOS_SDL_BUILD
+/* SDL build: write to the chunky 8bpp frontbuffer. 1 byte per pixel =
+ * palette index. Row stride = SCREEN_WIDTH. */
+static void fillRectChunky(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h,
+                           uint16_t color, uint8_t *buf)
+{
+    uint8_t pixel = (uint8_t)color;
+    for (uint16_t dy = 0; dy < h; dy++) {
+        uint16_t yy = (uint16_t)(y0 + dy);
+        if (yy >= SCREEN_HEIGHT) continue;
+        uint8_t *row = buf + (uint32_t)yy * FRONTBUFFER_ROW_STRIDE_BYTES;
+        for (uint16_t dx = 0; dx < w; dx++) {
+            uint16_t xx = (uint16_t)(x0 + dx);
+            if (xx >= SCREEN_WIDTH) continue;
+            row[xx] = pixel;
+        }
+    }
+}
+#endif
+
 __attribute__((used, externally_visible))
 void _FillRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color)
 {
@@ -247,13 +269,28 @@ void _FillRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t col
     uint16_t wrapRows;
     int16_t overflow;
 
+#ifndef SWOS_SDL_BUILD
+    /* Amiga: hardware-scroll wrap offsets are part of how the display
+     * pans its bitplane base pointer — coordinates need to be shifted
+     * by the current wrap offset to land in the right physical row.
+     * On SDL we redraw the whole frontbuffer each frame and dstX/dstY
+     * are already in final screen coords, so adding the wrap offsets
+     * misaligns rectangles relative to text/sprites (whose blits
+     * already skip these offsets — see blitChunkySprite and
+     * blitGlyphBitplanes). Without this guard, in-match menu rows
+     * (substitutes panel, formation menu, bench overlays) had their
+     * coloured backgrounds shifted ~7 pixels lower than the text
+     * inside them. */
     x += cameraXMod320;
     y += cameraYMod320;
 
     if (y >= SCREEN_HEIGHT)
         y -= SCREEN_HEIGHT;
+#endif
 
-    /* Check for vertical wrap */
+    /* Check for vertical wrap (still needed on SDL when a caller asks
+     * for a rectangle that straddles the bottom edge — rare, but the
+     * wrap math is harmless when y starts in-range). */
     wrapRows = 0;
     overflow = (int16_t)(y + h - SCREEN_HEIGHT);
     if (overflow > 0) {
@@ -261,6 +298,13 @@ void _FillRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t col
         h -= wrapRows;
     }
 
+#ifdef SWOS_SDL_BUILD
+    if (buf) {
+        fillRectChunky(x, y, w, h, color, buf);
+        if (wrapRows != 0)
+            fillRectChunky(x, 0, w, wrapRows, color, buf);
+    }
+#else
     /* Blit first span */
     blitterSpan4Planes(x, y, w, h, color, buf);
 
@@ -268,6 +312,7 @@ void _FillRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t col
     if (wrapRows != 0) {
         blitterSpan4Planes(x, 0, w, wrapRows, color, buf);
     }
+#endif
 }
 
 
@@ -285,6 +330,31 @@ void _FillRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t col
 static void blitterRectRowMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
                                  uint8_t *mask, uint8_t *buf)
 {
+#ifdef SWOS_SDL_BUILD
+    /* SDL chunky path: plain rectangle copy from mask → dst. The Amiga
+     * version below programs the chip blitter with a USEA+USEB+USED
+     * masked minterm, which on SDL is a no-op (writes hit the stub
+     * Custom struct). Without this, `_DrawMenuItemBackgroundMasked`
+     * never actually clears anything, and menu-entry text redraws
+     * (e.g. "SELECT 2 MORE TEAMS" → "SELECT 1 MORE TEAM") end up
+     * OR'd on top of each other.
+     *
+     * Each source byte is a palette index; index 0 = transparent on
+     * sprite blits but for the menu "clear from clean panel" we want
+     * to OVERWRITE unconditionally so stale text pixels disappear. */
+    if (mask && buf) {
+        for (uint16_t dy = 0; dy < h; dy++) {
+            uint16_t yy = (uint16_t)(y + dy);
+            if (yy >= SCREEN_HEIGHT) continue;
+            const uint8_t *srcRow = mask + (uint32_t)yy * FRONTBUFFER_ROW_STRIDE_BYTES;
+            uint8_t       *dstRow = buf  + (uint32_t)yy * FRONTBUFFER_ROW_STRIDE_BYTES;
+            uint16_t       copyW  = w;
+            if ((uint32_t)x + copyW > SCREEN_WIDTH) copyW = (uint16_t)(SCREEN_WIDTH - x);
+            memcpy(dstRow + x, srcRow + x, copyW);
+        }
+    }
+    return;
+#else
     uint16_t wordStart, wordEnd, wordSpan;
     uint16_t fwm, lwm;
     uint16_t mod;
@@ -338,6 +408,7 @@ static void blitterRectRowMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
         uint16_t blitsize = (h << 6) | wordSpan;
         custom->bltsize = blitsize;
     }
+#endif
 }
 
 
@@ -350,8 +421,19 @@ __attribute__((used, externally_visible))
 void _RectRowMaskedApplyScreenOffset(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
                                      uint8_t *mask, uint8_t *buf)
 {
+#ifdef SWOS_SDL_BUILD
+    /* Do NOT add cameraX/YMod320 on SDL — those are Amiga hardware-scroll
+     * wrap offsets for the panning bitplane base pointer, and every other
+     * SDL render path (blitChunkySprite, blitStringToFrontBuffer,
+     * _DrawChunkyPitch) writes at raw screen coordinates. If we add the
+     * offsets here, the "clear from mask" rectangle lands at a different
+     * screen location than the text that the draw routine is about to
+     * write, so the old entry pixels (e.g. "SELECT 2 MORE TEAMS") stay
+     * visible underneath the new text ("SELECT 1 MORE TEAM"). */
+#else
     x += cameraXMod320;
     y += cameraYMod320;
+#endif
     blitterRectRowMasked(x, y, w, h, mask, buf);
 }
 
@@ -366,6 +448,14 @@ void _RectRowMaskedApplyScreenOffset(uint16_t x, uint16_t y, uint16_t w, uint16_
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void _BlitSpritePlanar_Word(uint16_t spriteIndex)
 {
+#ifdef SWOS_SDL_BUILD
+    /* 8bpp chunky sprites have implicit transparency (pixel == 0), so
+     * there is no separate mask buffer to build. This function is a
+     * no-op on SDL — called at the end of _Text2Sprite to finalize
+     * the Amiga linked-planes mask, which doesn't exist here. */
+    (void)spriteIndex;
+    return;
+#else
     uint8_t *base = spriteGraphicsPtr;
     SpriteGraphics *hdr;
     uint16_t type;
@@ -376,10 +466,10 @@ void _BlitSpritePlanar_Word(uint16_t spriteIndex)
     int32_t advance;
     int16_t row, col;
 
-    hdr = *(SpriteGraphics **)(base + (uint32_t)(spriteIndex << 2));
+    hdr = ((SpriteGraphics **)spriteGraphicsPtr)[spriteIndex];
     type = hdr->type;
-    srcData = (uint8_t *)hdr->sprData;
-    dstMask = (uint8_t *)hdr->maskPtr;
+    srcData = hdr->sprData;
+    dstMask = hdr->maskPtr;
     nlines = (uint16_t)hdr->nlines;
     wquads = (uint16_t)hdr->wquads;
 
@@ -455,6 +545,7 @@ void _BlitSpritePlanar_Word(uint16_t spriteIndex)
             }
         }
     }
+#endif /* !SWOS_SDL_BUILD for _BlitSpritePlanar_Word */
 }
 
 
@@ -467,6 +558,13 @@ void _BlitSpritePlanar_Word(uint16_t spriteIndex)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void _BlitSpritePlanar_Word_StridedDest(uint16_t spriteIndex)
 {
+#ifdef SWOS_SDL_BUILD
+    /* 8bpp chunky sprites have implicit transparency (pixel == 0) so
+     * no separate mask buffer exists; same rationale as the sibling
+     * _BlitSpritePlanar_Word. Amiga path kept for the #else branch. */
+    (void)spriteIndex;
+    return;
+#else
     uint8_t *base = spriteGraphicsPtr;
     SpriteGraphics *hdr;
     uint16_t type;
@@ -476,10 +574,10 @@ void _BlitSpritePlanar_Word_StridedDest(uint16_t spriteIndex)
     int32_t srcAdvance, dstAdvance;
     int16_t row;
 
-    hdr = *(SpriteGraphics **)(base + (uint32_t)(spriteIndex << 2));
+    hdr = ((SpriteGraphics **)spriteGraphicsPtr)[spriteIndex];
     type = hdr->type;
-    srcData = (uint8_t *)hdr->sprData;
-    dstMask = (uint8_t *)hdr->maskPtr;
+    srcData = hdr->sprData;
+    dstMask = hdr->maskPtr;
     nlines = (uint16_t)hdr->nlines;
 
     stride2 = (uint16_t)hdr->wquads * 2;
@@ -510,6 +608,7 @@ void _BlitSpritePlanar_Word_StridedDest(uint16_t spriteIndex)
             dstMask += srcAdvance;
         }
     }
+#endif /* !SWOS_SDL_BUILD */
 }
 
 
@@ -522,6 +621,11 @@ void _BlitSpritePlanar_Word_StridedDest(uint16_t spriteIndex)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void _BlitSpritePlanar_Long_StridedDest(uint16_t spriteIndex)
 {
+#ifdef SWOS_SDL_BUILD
+    /* See sibling _BlitSpritePlanar_Word — no separate mask on 8bpp. */
+    (void)spriteIndex;
+    return;
+#else
     uint8_t *base = spriteGraphicsPtr;
     SpriteGraphics *hdr;
     uint16_t type;
@@ -531,10 +635,10 @@ void _BlitSpritePlanar_Long_StridedDest(uint16_t spriteIndex)
     int32_t srcAdvance, dstAdvance;
     int16_t row;
 
-    hdr = *(SpriteGraphics **)(base + (uint32_t)(spriteIndex << 2));
+    hdr = ((SpriteGraphics **)spriteGraphicsPtr)[spriteIndex];
     type = hdr->type;
-    srcData = (uint8_t *)hdr->sprData;
-    dstMask = (uint8_t *)hdr->maskPtr;
+    srcData = hdr->sprData;
+    dstMask = hdr->maskPtr;
     nlines = (uint16_t)hdr->nlines;
 
     stride2 = (uint16_t)hdr->wquads * 2;
@@ -565,6 +669,7 @@ void _BlitSpritePlanar_Long_StridedDest(uint16_t spriteIndex)
             dstMask += srcAdvance;
         }
     }
+#endif /* !SWOS_SDL_BUILD */
 }
 
 
@@ -582,6 +687,90 @@ void _BlitSpritePlanar_Long_StridedDest(uint16_t spriteIndex)
  *   planeMask      - 4-bit mask: which planes get the glyph color
  *   dstSpriteIndex - destination sprite index
  * ================================================================ */
+#ifdef SWOS_SDL_BUILD
+/* Chunky 8bpp rewrite of _BlitGlyphToSpriteBitmap. The Amiga version
+ * programs the blitter with bltcon0/bltcon1/bltsize to stamp a 1-bit
+ * glyph mask into the 4 bitplanes of a destination sprite, setting
+ * pixels to the color encoded by `planeMask`. On our 8bpp pipeline,
+ * every sprite — both glyph and destination — is a flat byte array
+ * where each byte is a palette index (0 = transparent). Rewriting as
+ * a straight per-pixel copy: wherever the glyph pixel is non-zero,
+ * write `planeMask` (the 0..15 color value) into the destination
+ * sprite at (xOff+x, yOff+y).
+ *
+ * This replaces the entire Amiga blitter setup; the `custom->blt*`
+ * writes in the #else branch write into a dummy struct on SDL and
+ * never actually move pixels, which is why name labels / stars came
+ * out as the initial checkerboard fill. */
+__attribute__((used, externally_visible))
+void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
+                              uint16_t planeMask, uint16_t dstSpriteIndex)
+{
+    SpriteGraphics **table = (SpriteGraphics **)(uintptr_t)spriteGraphicsPtr;
+    SpriteGraphics *srcHdr = table[glyphIndex];
+    SpriteGraphics *dstHdr = table[dstSpriteIndex];
+    {
+        extern int g_debug_sprite_load;
+        if (g_debug_sprite_load) {
+            SWOS_DBG("[blit] glyph=0x%03X -> dst=0x%03X @(%u,%u) pm=%u srcHdr=%p dstHdr=%p\n",
+                    glyphIndex, dstSpriteIndex, xOff, yOff, planeMask,
+                    (void*)srcHdr, (void*)dstHdr);
+        }
+    }
+    if (!srcHdr || !dstHdr) return;
+
+    const uint8_t *src = srcHdr->sprData;
+    uint8_t       *dst = (uint8_t       *)(uintptr_t)dstHdr->sprData;
+    if (!src || !dst) return;
+
+    int16_t srcW   = srcHdr->pixWidth;  /* actual width, may not be 16-aligned */
+    int16_t srcH   = srcHdr->nlines;
+    int16_t srcPitch = srcHdr->wquads * 16;
+    int16_t dstPitch = dstHdr->wquads * 16;
+    int16_t dstH   = dstHdr->nlines;
+    int16_t dstW   = dstHdr->wquads * 16;  /* stored pitch; pixWidth may clip */
+
+    /* Body/shadow remap — mirrors `blitGlyphBitplanes` in text_render.c.
+     * Glyph fonts encode the text body in palette bit 1 (colour 2) and the
+     * drop-shadow in bit NUM_PLANES-1 (colour 8 for OCS). planeMask selects
+     * the body colour; the shadow must land on bit NUM_PLANES-1 regardless
+     * so the shadow pixel reads a different palette entry (typically black)
+     * than the body. Previously this function wrote `planeMask` to every
+     * non-zero source pixel, so body and shadow both mapped to the same
+     * colour — visible as text without a drop-shadow (or "the shadow is
+     * the same white as the text" on team-name sprites). */
+    uint16_t color = (uint16_t)(planeMask & 0xFF);
+    uint8_t shadowMask = (uint8_t)(1u << (NUM_PLANES - 1));
+
+    for (int16_t y = 0; y < srcH; y++) {
+        int16_t dy = (int16_t)(yOff + y);
+        if (dy < 0 || dy >= dstH) continue;
+        const uint8_t *srcRow = src + (size_t)y * srcPitch;
+        uint8_t       *dstRow = dst + (size_t)dy * dstPitch;
+        for (int16_t x = 0; x < srcW; x++) {
+            int16_t dx = (int16_t)(xOff + x);
+            if (dx < 0 || dx >= dstW) continue;
+
+            uint8_t s = srcRow[x];
+            uint8_t bodyBit   = (uint8_t)((s >> 1) & 1u);
+            uint8_t shadowBit = (uint8_t)((s >> (NUM_PLANES - 1)) & 1u);
+            if (bodyBit == 0 && shadowBit == 0)
+                continue;
+
+            uint8_t out = 0;
+            for (uint16_t p = 0; p < NUM_PLANES - 1; p++) {
+                if ((color >> p) & 1u) out |= (uint8_t)(bodyBit << p);
+            }
+            if (color & shadowMask)
+                out |= shadowMask;
+            else
+                out |= (uint8_t)(shadowBit ? shadowMask : 0);
+
+            if (out) dstRow[dx] = out;
+        }
+    }
+}
+#else
 __attribute__((used, externally_visible))
 void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
                               uint16_t planeMask, uint16_t dstSpriteIndex)
@@ -604,7 +793,7 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     int16_t i;
 
     /* Look up source glyph header */
-    srcHdr = *(SpriteGraphics **)(base + (uint32_t)(glyphIndex << 2));
+    srcHdr = ((SpriteGraphics **)spriteGraphicsPtr)[glyphIndex];
 
     /* Validate: type must be 0 (separate planes) */
     if (srcHdr->type != 0) {
@@ -613,14 +802,14 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     }
 
     /* Look up destination sprite header */
-    dstHdr = *(SpriteGraphics **)(base + (uint32_t)(dstSpriteIndex << 2));
+    dstHdr = ((SpriteGraphics **)spriteGraphicsPtr)[dstSpriteIndex];
 
     /* Destination row stride in bytes (per plane) */
     dstRowBytes = (uint16_t)dstHdr->wquads * 2;
     dstRowAdv = (int32_t)dstRowBytes;
 
     /* Destination data pointer */
-    dstBase = (uint8_t *)dstHdr->sprData;
+    dstBase = dstHdr->sprData;
 
     /* Glyph height */
     glyphHeight = (uint16_t)srcHdr->nlines;
@@ -655,7 +844,7 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     custom->bltcon1 = bltconShift;
 
     /* Validate mask pointer exists */
-    maskPtr = (uint8_t *)srcHdr->maskPtr;
+    maskPtr = srcHdr->maskPtr;
     if (maskPtr == 0) {
         panicReasonCode = 0x1567;
         _PanicHaltLoop();
@@ -693,7 +882,7 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     custom->bltdmod = dstMod;
 
     /* Glyph data: advance to plane 1, and compute last plane pointer */
-    glyphData = (uint8_t *)srcHdr->sprData;      /* sprData (plane 0 start) */
+    glyphData = srcHdr->sprData;      /* sprData (plane 0 start) */
     glyphData += (int32_t)srcStride2;            /* advance to plane 1 */
     glyphPlane3 = glyphData + (int32_t)srcStride2 * (NUM_PLANES - 2);  /* last plane */
 
@@ -757,6 +946,7 @@ void _BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     custom->bltsize = blitsize;
     }
 }
+#endif /* !SWOS_SDL_BUILD for _BlitGlyphToSpriteBitmap */
 
 
 /* ================================================================
@@ -781,7 +971,7 @@ uint16_t _Text2Sprite(uint16_t xOff, uint16_t yOff, uint16_t dstSpriteIndex,
                       uint8_t *text, uint8_t *charsTable, uint16_t planeMask,
                       uint16_t *outTotalWidth)
 {
-    uint8_t *base = spriteGraphicsPtr;
+    SpriteGraphics **table = (SpriteGraphics **)spriteGraphicsPtr;
     SpriteGraphics *dstHdr;
     uint16_t textWidth;
     uint16_t spriteIndexOffset;
@@ -794,8 +984,19 @@ uint16_t _Text2Sprite(uint16_t xOff, uint16_t yOff, uint16_t dstSpriteIndex,
     textWidth = _GetTextWidth(text, charsTable);
     textWidth += xOff;
 
-    /* Check if text fits in destination sprite */
-    dstHdr = *(SpriteGraphics **)(base + (uint32_t)(dstSpriteIndex << 2));
+    /* Check if text fits in destination sprite.
+     * Amiga: `*(SpriteGraphics**)(base + idx*4)`. On 64-bit each slot
+     * in spriteGraphicsPtr is 8 bytes; index as a typed pointer table
+     * so the stride is correct on both targets. */
+    dstHdr = table[dstSpriteIndex];
+    {
+        extern int g_debug_sprite_load;
+        if (g_debug_sprite_load) {
+            SWOS_DBG("[text] dstIdx=0x%03X text='%.16s' width=%u dstPixW=%d dstHdr=%p\n",
+                    dstSpriteIndex, (const char *)text, textWidth,
+                    dstHdr ? dstHdr->pixWidth : -1, (void*)dstHdr);
+        }
+    }
     if (textWidth > (uint16_t)dstHdr->pixWidth)
         return 1;  /* error: text wider than sprite */
 
@@ -820,7 +1021,7 @@ uint16_t _Text2Sprite(uint16_t xOff, uint16_t yOff, uint16_t dstSpriteIndex,
             glyphIdx = (uint16_t)convTable[ch - ' '] + spriteIndexOffset;
 
             /* Get glyph pixel width */
-            glyphHdr = *(SpriteGraphics **)(base + (uint32_t)(glyphIdx << 2));
+            glyphHdr = ((SpriteGraphics **)spriteGraphicsPtr)[glyphIdx];
             glyphWidth = (uint16_t)glyphHdr->pixWidth;
             nextX = xOff + glyphWidth + charSpacing;
 

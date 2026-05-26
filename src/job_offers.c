@@ -11,6 +11,7 @@
  */
 
 #include "job_offers.h"
+#include "endian_helpers.h"
 #include "game_types.h"
 #include "menu_system.h"
 #include "random.h"
@@ -78,7 +79,7 @@ extern int16_t  jobOfferOrdinal;
 extern int16_t  oldJobOfferOrdinal;
 extern uint16_t selectedOldJobOfferOrdinal;
 extern uint16_t teamNoOfferingJob;
-extern uint32_t teamOfferingJobPtr;
+extern uintptr_t teamOfferingJobPtr;
 extern int32_t  jobOfferFunds;
 extern uint16_t viewFutureTeamModeFlag;
 
@@ -114,7 +115,7 @@ extern uint8_t managerSexBuffer[];
 extern uint8_t managerSurnameBuffer[];
 extern uint8_t aViewTeam[];
 
-extern uint32_t competitionsTable[];
+extern void *competitionsTable[];
 extern uint8_t seasonInformationsArray[];
 extern uint16_t currentSeasonShowing;
 
@@ -139,8 +140,6 @@ extern void _Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel);
 /* Helper: menu entry from byte offset */
 
 /* Helper: access bg as the high 16 bits (big-endian BACKANDFRAMECOLOR) */
-static inline uint16_t bgColor(MenuEntry *e) { return getBgColorWord(e); }
-static inline void setBgColor(MenuEntry *e, uint16_t v) { setBgColorWord(e, v); }
 
 /* Helper: GetCurrentSeasonPointer */
 static inline uint8_t *getCurrentSeasonPointer(void) {
@@ -449,15 +448,15 @@ void _GotJobOfferFinish(void) {
     if (youreSacked) {
         if ((uint16_t)(numNewJobOffers + numJobOffers) == 1) {
             MenuEntry *exitEntry = &menuEntries[8];
-            exitEntry->fg = (uint32_t)aRetire;
-            setBgColor(exitEntry, (bgColor(exitEntry) & 0xFFF0) | 10); /* RED_10 */
+            exitEntry->fg = (uintptr_t)aRetire;
+            exitEntry->bgColor = (exitEntry->bgColor & 0xFFF0) | 10; /* RED_10 */
         }
     }
 
     /* International job offer adjustments */
     if (jobOfferFunds == -1) {
         MenuEntry *e0 = &menuEntries[0];
-        e0->fg = (uint32_t)aInternationalJ;
+        e0->fg = (uintptr_t)aInternationalJ;
         e0->x -= 30;
         e0->dwWidth += 60;
         menuEntries[8].x += 65;
@@ -482,11 +481,11 @@ void _GotJobOfferFinish(void) {
     if (!jobOffersFromRetired) {
         MenuEntry *acceptBtn = &menuEntries[13];
         acceptBtn->isDisabled = 1;
-        setBgColor(acceptBtn, (bgColor(acceptBtn) & 0xFFF0) | 9); /* PINK_TO_BROWN_9 */
+        acceptBtn->bgColor = (acceptBtn->bgColor & 0xFFF0) | 9; /* PINK_TO_BROWN_9 */
     }
 
     /* Set up team pointer and format strings */
-    teamOfferingJobPtr = (uint32_t)_GetTeamPointer(teamNoOfferingJob);
+    teamOfferingJobPtr = (uintptr_t)_GetTeamPointer(teamNoOfferingJob);
 
     /* Format "DEAR %a %b" with manager sex and surname */
     {
@@ -544,7 +543,7 @@ void _GotJobOfferFinish(void) {
 
 acceptedJobPath:
     /* loc_14A5D0: team already accepted */
-    menuEntries[0].fg = (uint32_t)aNewJob;
+    menuEntries[0].fg = (uintptr_t)aNewJob;
     {
         int16_t newY = menuEntries[3].y + 10;
         menuEntries[4].y = newY;
@@ -553,7 +552,7 @@ acceptedJobPath:
     menuEntries[13].isInvisible = 1;
     menuEntries[8].isInvisible = 1;
 
-    teamOfferingJobPtr = (uint32_t)_GetTeamPointer(teamNoOfferAccepted);
+    teamOfferingJobPtr = (uintptr_t)_GetTeamPointer(teamNoOfferAccepted);
 
     {
         uint8_t *out = (uint8_t *)menuEntries[1].fg;
@@ -676,11 +675,14 @@ void _ViewFutureTeamLeague(void) {
     TeamFile *teamPtr = (TeamFile *)teamOfferingJobPtr;
     int16_t d7 = (int8_t)teamPtr->league;
     uint8_t countryIdx = teamPtr->countryNumber;
-    uint32_t *compTable = (uint32_t *)competitionsTable;
+    /* competitionsTable is `void *[]` (native-width pointers).
+     * Walk as `void **` so each slot is sizeof(void*), not 4. The
+     * legacy `uint32_t *` cast read half a pointer on 64-bit. */
+    void **compTable = competitionsTable;
     uint8_t *compEntry = (uint8_t *)compTable[countryIdx];
-    uint8_t *comp = (uint8_t *)(*(uint32_t *)compEntry);
+    uint8_t *comp = *(uint8_t **)compEntry;
 
-    highlightedLeagueTeamId = *(uint16_t *)teamPtr;
+    highlightedLeagueTeamId = BE_READ_U16(teamPtr);
     _Career_ViewOrEditCompetitionSlot(comp, (uint16_t)d7);
     highlightedLeagueTeamId = 0xFFFF;
     _GotJobOfferFinish();
@@ -749,7 +751,13 @@ void _JobOffersFinish(void)
     _JobOffers_UpdateMenuEntryLayout();
 }
 
-/* JobOffersCommon — handle clicking on a new job offer entry (SWOS2.s line 81281) */
+/* JobOffersCommon — handle clicking on a new job offer entry (SWOS2.s line 81281).
+ * Asm flow: ACCEPT or no-offers-left → SetExitMenuFlag (close the JOB
+ * OFFERS menu); otherwise SetCurrentEntry(0xC). Our previous translation
+ * only set the exit flag on the ACCEPT branch and silently fell through
+ * for "all offers rejected, list now empty" — leaving the JOB OFFERS
+ * menu open with disabled (but still selectable) blank rows that
+ * re-fired _JobOffersCommon on the stale newJobOffers[0] entry. */
 __attribute__((used, externally_visible))
 void _JobOffersCommon(MenuEntry *entry)
 {
@@ -767,9 +775,11 @@ void _JobOffersCommon(MenuEntry *entry)
         _SetCurrentEntry(0xC);
         return;
     }
+    _SetExitMenuFlag();
 }
 
-/* OldJobOffersCommon — handle clicking on an old job offer entry (SWOS2.s line 81305) */
+/* OldJobOffersCommon — handle clicking on an old job offer entry (SWOS2.s line 81305).
+ * Mirror exit semantics of JobOffersCommon — see comment above. */
 __attribute__((used, externally_visible))
 void _OldJobOffersCommon(MenuEntry *entry)
 {
@@ -787,6 +797,7 @@ void _OldJobOffersCommon(MenuEntry *entry)
         _SetCurrentEntry(0xC);
         return;
     }
+    _SetExitMenuFlag();
 }
 
 /* JobOffersExit — remove expired offers and exit menu (SWOS2.s line 81328) */
@@ -876,7 +887,7 @@ void _JobOffers_DrawOldOfferLine(void *entryPtr)
     MenuEntry *a3 = &menuEntries[15];
     uint16_t d3 = a3->stringFlags & 0xFFF0;
     a3->y = a5->y;
-    *(uint16_t *)&a3->fg = (uint16_t)(d7 + 1);  /* ENTRY_NUMBER: write high word */
+    a3->fgWord = (uint16_t)(d7 + 1);  /* ENTRY_NUMBER: write high word */
 
     /* Entry 16 (a4): set stringFlags base, y, get dest buffer */
     MenuEntry *a4 = &menuEntries[16];
@@ -944,7 +955,7 @@ void _JobOffersAfterDrawCommon(void *entryPtr)
     uint16_t d3 = a3->stringFlags & 0xFFF0;
     a3->y = a5->y;
     uint16_t numVal = (uint16_t)d7 + 1;
-    *(uint16_t *)&a3->fg = numVal;  /* ENTRY_NUMBER: write high word */
+    a3->fgWord = numVal;  /* ENTRY_NUMBER: write high word */
 
     /* Entry 14 (a4): set stringFlags base, y, get dest buffer */
     MenuEntry *a4 = &menuEntries[14];
@@ -1147,12 +1158,17 @@ searchDomestic:
             if (a0tf->league == 4)
                 continue;
 
-            /* Must be same division */
-            if (*(uint8_t *)((uint32_t)&selTeamNumber) != a0tf->countryNumber)
+            /* Must be same division (country). selTeamNumber MSB = country.
+             * Pre-fix `*(uint8_t *)&selTeamNumber` read LE byte[0] = ordinal,
+             * which rarely matched any team's country byte — so the 99-try
+             * home-country job-offer search effectively never found a
+             * candidate, and offers only ever showed up via the
+             * `searchForeign` fallback that triggers when youreSacked. */
+            if ((uint8_t)(selTeamNumber >> 8) != a0tf->countryNumber)
                 continue;
 
             /* Asm: move.w (a0),d3 — reads packed team number at offset 0 */
-            uint16_t teamId = *(uint16_t *)&a0tf->countryNumber;
+            uint16_t teamId = PACK_BE_U16(a0tf->countryNumber, a0tf->teamOrdinal);
             if (teamId == selTeam)
                 continue;
 
@@ -1201,11 +1217,16 @@ searchForeign:
             TeamFile *a0tf = (TeamFile *)a0;
             if (a0tf->league == 4)
                 continue;
-            if (*(uint8_t *)((uint32_t)&selTeamNumber) == a0tf->countryNumber)
+            /* Foreign job-offer search — skip teams from the user's own
+             * country. MSB of selTeamNumber is the country byte; the LE
+             * byte-read pre-fix used the ordinal, so the skip rarely
+             * fired and same-country teams accidentally counted as
+             * foreign candidates. */
+            if ((uint8_t)(selTeamNumber >> 8) == a0tf->countryNumber)
                 continue;
 
             /* Asm: move.w (a0),d3 — reads packed team number at offset 0 */
-            uint16_t teamId = *(uint16_t *)&a0tf->countryNumber;
+            uint16_t teamId = PACK_BE_U16(a0tf->countryNumber, a0tf->teamOrdinal);
             if (teamId == selTeam)
                 continue;
 
@@ -1232,10 +1253,12 @@ searchNational:
                 uint16_t rnd = _Rand();
                 uint32_t idx32 = (uint32_t)rnd * (uint32_t)nat_teams_rand_limit1;
                 uint16_t idx = (uint16_t)(idx32 >> 8);
-                uint8_t *entry = nationalTeams + (uint32_t)idx * 6;
+                NationalTeamRecord *rec = (NationalTeamRecord *)nationalTeams + (uint32_t)idx;
 
-                uint16_t teamId = *(uint16_t *)entry;
-                uint16_t skill = *(uint16_t *)(entry + 4);
+                /* teamId is compared against selTeamNumber (BE-packed)
+                 * below — compose the same form via PACK_BE_U16. */
+                uint16_t teamId = PACK_BE_U16(rec->countryNumber, rec->teamOrdinal);
+                uint16_t skill = rec->skillOrPrice;
 
                 if (skill < repLow || skill > repHigh)
                     continue;
@@ -1244,7 +1267,7 @@ searchNational:
                 if (teamId == lastNationalityCall)
                     continue;
 
-                if (_IsTeamCodeOkForNationalSelector(entry[0]) == 0)
+                if (_IsTeamCodeOkForNationalSelector(rec->countryNumber) == 0)
                     continue;
                 if (_IsNewJobOffer(teamId) == 0)
                     continue;
@@ -1284,7 +1307,7 @@ searchSacked:
                 continue;
 
             /* Asm: move.w (a0),d3 — reads packed team number at offset 0 */
-            uint16_t teamId = *(uint16_t *)&a0tf2->countryNumber;
+            uint16_t teamId = PACK_BE_U16(a0tf2->countryNumber, a0tf2->teamOrdinal);
 
             uint16_t avgPrice = _GetAveragePlayerPrice((TeamFileEx *)a0);
             if (avgPrice < repLow || avgPrice > repHigh)

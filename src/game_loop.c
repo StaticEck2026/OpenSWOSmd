@@ -57,8 +57,8 @@ extern uint16_t extraTimeState;
 extern uint16_t penaltiesState;
 extern uint16_t writeOnly01;
 extern uint32_t gameTime;
-extern uint16_t cameraX;
-extern uint16_t cameraY;
+extern FixedPoint cameraX;
+extern FixedPoint cameraY;
 extern volatile int16_t waitingInterrupt;
 extern uint32_t irqCookieObfuscated;
 extern uint16_t g_quitToDos;
@@ -80,11 +80,11 @@ extern uint16_t team1TotalGoals;
 extern uint16_t team2TotalGoals;
 extern uint16_t pl1Tactics;
 extern uint16_t pl2Tactics;
-extern uint32_t playersPositionsByTactics[18];
+extern void *playersPositionsByTactics[18];
 
 extern uint16_t hilSceneNumber;
 extern volatile uint16_t numScenesInHilFile;
-extern uint32_t hilStartOfGoalsBuffer;
+extern uint8_t hilStartOfGoalsBuffer[];
 extern uint8_t *goalBasePtr;
 extern uint8_t *currentHilPtr;
 extern uint8_t *nextGoalPtr;
@@ -173,17 +173,66 @@ static void waitVBlankSync(uint32_t xorMagic, uint32_t expected)
         (void)expected;
     }
 
+#ifdef SWOS_SDL_BUILD
+    /* The game loop draws the full frame, then enters waitVBlankSync.
+     * On Amiga this spun on `waitingInterrupt` until the VBlank ISR
+     * cleared it after a buffer-swap. On SDL we run that swap inline
+     * (matching `_WaitForVSync` in game_utils.c) and hand control to
+     * Platform_VBlank, which blits the just-finished frontbuffer to
+     * the SDL texture + paces to 50 Hz. Without this, the game-loop
+     * branch of `waitVBlankSync` never called Platform_VBlank — the
+     * SDL timer thread was the only path that presented frames and it
+     * read the frontbuffer mid-draw, tearing sprites every frame. */
+    {
+        extern void _SwapBuffersAndCameraViewState(void);
+        extern void _SetCameraCoordinates(int16_t x, int16_t y);
+        extern int Platform_VBlank(void);
+        int16_t cx = cameraX.s.i;
+        int16_t cy = cameraY.s.i;
+        _SwapBuffersAndCameraViewState();
+        _SetCameraCoordinates(cx, cy);
+        Platform_VBlank();
+    }
+#else
     waitingInterrupt = 1;
     while (waitingInterrupt != 0) {}
+#endif
 }
 
-/* ---- Pause spin-wait: waits 1 tick (dbf d1 with d1=0 → 1 iteration) ---- */
+/* ---- Pause spin-wait: waits 1 tick (dbf d1 with d1=0 → 1 iteration) ----
+ *
+ * Original Amiga: busy-spin on `currentTick`. The Amiga's VBlank ISR
+ * advances currentTick AND services keyboard input natively, so a
+ * busy spin works.
+ *
+ * On SDL the `currentTick` advance happens on the SDL_Timer thread
+ * but keyboard events are dispatched only when something pumps the
+ * SDL event queue. The timer thread CAN do a full event pump when
+ * the main thread looks idle (>60ms since last render) but on
+ * Linux some setups schedule the busy main thread aggressively
+ * enough that the timer thread can starve, locking us in the pause
+ * loop forever (Linux tester report: "pause hangs, can't unpause").
+ *
+ * Replace the busy spin with Platform_VBlank() — it does the
+ * 50 Hz pacing via SDL_Delay (which yields to the OS), pumps SDL
+ * events on the main thread (so keypresses reliably reach
+ * keyBuffer), and runs the throttled ISR housekeeping. The
+ * Platform_VBlank path also re-renders the same frontbuffer so
+ * the paused frame stays on screen. */
+#ifdef SWOS_SDL_BUILD
+extern int Platform_VBlank(void);
+#endif
+
 static void pauseSpinWaitOneTick(void)
 {
+#ifdef SWOS_SDL_BUILD
+    Platform_VBlank();
+#else
     uint16_t d0;
     /* dbf d1 with d1=0 means 1 iteration */
     d0 = currentTick;
     while (currentTick == d0) {}
+#endif
 }
 
 /* ====================================================================
@@ -264,24 +313,30 @@ _MainKeysCheck(uint16_t key)
         return;
     }
 
-    /* 0x10 — request bottom team substitutions */
+    /* 0x10 (Amiga 'Q') — request bottom team substitutions */
     if (key == 0x10) {
         if (replayState != 0)
             return;
         if (bottomTeamData.playerNumber == 0 &&
             bottomTeamData.playerCoachNumber == 0)
             return;
+#ifdef SWOS_DEBUG_AUTOSKIP
+        SWOS_DBG("[bench] HOTKEY 0x10 (Q) -> bench2Called\n");
+#endif
         bench2Called = 1;
         return;
     }
 
-    /* 0x11 — request top team substitutions */
+    /* 0x11 (Amiga 'W') — request top team substitutions */
     if (key == 0x11) {
         if (replayState != 0)
             return;
         if (topTeamData.playerNumber == 0 &&
             topTeamData.playerCoachNumber == 0)
             return;
+#ifdef SWOS_DEBUG_AUTOSKIP
+        SWOS_DBG("[bench] HOTKEY 0x11 (W) -> bench1Called\n");
+#endif
         bench1Called = 1;
         return;
     }
@@ -625,7 +680,7 @@ vblank_return_dispatch:
     /* Run gameplay update */
     _MoveCamera();
     _ScrollToCurrent();
-    _SaveCoordinatesForHighlights((int16_t)0xFFFF, cameraX, cameraY);
+    _SaveCoordinatesForHighlights((int16_t)0xFFFF, cameraX.s.i, cameraY.s.i);
     _PlayEnqueuedSamples();
     _UpdateTime();
     /* nullsub_8 — no-op */
@@ -768,7 +823,15 @@ _ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
     _UpdatePlanePtrsAndBlitParams();
     _ReadTimerDelta();
 
-    /* Wait for no key pressed */
+    /* Drain the keyBuffer — original Amiga waits here while the user
+     * holds the fire button they just pressed (keyboard ISR pushes
+     * auto-repeats so currentKey stays non-zero). On Amiga this also
+     * gave the stadium "VS" screen its visible duration. On SDL the
+     * actual VS-duration wait happens just upstream in
+     * _InitGameSaveTeams' "wait for fire release" loop (which is
+     * properly pumped via _WaitForVSync there), so by the time we
+     * reach this drain the user has already released and the buffer
+     * is empty. Drain anyway to match Amiga semantics. */
     do {
         _GetKey();
     } while (currentKey != 0);
@@ -977,10 +1040,15 @@ advance_to_next_highlight:
 
     {
         uint32_t offset = (uint32_t)hilSceneNumber * 19000u;
-        uint32_t baseAddr = hilStartOfGoalsBuffer + offset;
-        goalBasePtr = (uint8_t *)baseAddr;
-        currentHilPtr = (uint8_t *)(baseAddr - 4);
-        nextGoalPtr = (uint8_t *)(baseAddr + 19000u);
+        /* `hilStartOfGoalsBuffer + offset` is a pointer (8 bytes on 64-bit).
+         * Storing into uint32_t truncated the upper 32 bits, then the
+         * `(uint8_t *)baseAddr` re-cast produced a half-pointer that
+         * SIGSEGVed in _HandleInstantReplayStateSwitch's `*p & 0x80`.
+         * Carry the value as a real pointer instead. */
+        uint8_t *baseAddr = hilStartOfGoalsBuffer + offset;
+        goalBasePtr = baseAddr;
+        currentHilPtr = baseAddr - 4;
+        nextGoalPtr = baseAddr + 19000u;
     }
     _HandleInstantReplayStateSwitch();
 

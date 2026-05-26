@@ -6,26 +6,31 @@
 #ifndef MENU_SYSTEM_H
 #define MENU_SYSTEM_H
 
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned long uint32_t;
-typedef signed char int8_t;
-typedef short int16_t;
-typedef long int32_t;
+#include "swos_types.h"  /* uintptr_t for MenuEntry.bg / .fg dual-use slots */
+
+/* Forward decl so callback typedefs below can take MenuEntry *. */
+typedef struct MenuEntry MenuEntry;
+
+/* Function-pointer typedefs for menu callbacks. */
+typedef void (*MenuVoidFn)(void);              /* Menu.onInit / afterDraw / onDraw */
+typedef void (*MenuEntryFn)(MenuEntry *entry); /* MenuEntry.onSelect / beforeDraw / afterDrawCb */
 
 /* ---- Menu struct (22 bytes) ---- */
-/* Packed to match 68k memory layout exactly */
+/* Packed to match 68k memory layout exactly. On 32-bit the function
+ * pointer + struct pointer slots are 4 bytes each, preserving the
+ * size_check. On 64-bit they grow to 8 bytes — Phase 5 / 6 retypes
+ * the size_check accordingly. */
 typedef struct __attribute__((packed)) {
-    uint32_t onInit;        /* 0: function pointer (or 0) */
-    uint32_t afterDraw;     /* 4: function pointer (or 0) */
-    uint32_t onDraw;        /* 8: function pointer (or 0) */
-    uint32_t selectedEntry; /* 12: pointer to selected MenuEntry */
-    uint16_t numEntries;    /* 16 */
-    uint32_t endOfMenuPtr;  /* 18 */
+    MenuVoidFn   onInit;       /* 0: function pointer (or NULL) */
+    MenuVoidFn   afterDraw;    /* 4: function pointer (or NULL) */
+    MenuVoidFn   onDraw;       /* 8: function pointer (or NULL) */
+    MenuEntry   *selectedEntry;/* 12: pointer to selected MenuEntry */
+    uint16_t     numEntries;   /* 16 */
+    uint32_t     endOfMenuPtr; /* 18 — still uint32_t (raw addr in template) */
 } Menu;
 
 /* ---- MenuEntry struct (56 bytes) ---- */
-typedef struct __attribute__((packed)) {
+struct __attribute__((packed)) MenuEntry {
     uint16_t alreadyDrawn;   /* 0 */
     uint16_t ordinal;        /* 2 */
     uint16_t isInvisible;    /* 4 */
@@ -47,39 +52,72 @@ typedef struct __attribute__((packed)) {
     uint16_t dwWidth;        /* 24 */
     uint16_t dwHeight;       /* 26 */
     uint16_t background;     /* 28 */
-    uint32_t bg;             /* 30 */
-    uint16_t content;        /* 34 */
-    uint16_t stringFlags;    /* 36 */
-    uint32_t fg;             /* 38 */
-    uint32_t onSelect;       /* 42 */
-    uint16_t controlMask;    /* 46 */
-    uint32_t beforeDraw;     /* 48 */
-    uint32_t afterDrawCb;    /* 52 */
-} MenuEntry;
+    /* bg/fg are dual-use slots driven by `background` / `content` tags:
+     *   - ENTRY_FUNC1 / ENTRY_FUNC2          → function pointer (`bg`/`fg`)
+     *   - ENTRY_STRING / ENTRY_STRING_TABLE
+     *     / ENTRY_MULTI_LINE_TEXT            → string pointer (`bg`/`fg`)
+     *   - ENTRY_SPRITE1 / ENTRY_SPRITE2
+     *     / ENTRY_SPRITE_COPY                → sprite ptr (`bg`/`fg`) OR
+     *                                          sprite index (`bgWord`/`fgWord`)
+     *   - ENTRY_FRAME_AND_BACK_COLOR         → color word (`bgColor`)
+     *   - ENTRY_NUMBER                       → integer (`fgWord` / `fgNumber`)
+     *
+     * Anonymous union — the pointer alias (`bg`/`fg`, uintptr_t) and the
+     * first-word alias (`bgColor`/`bgWord` and `fgWord`/`fgNumber`,
+     * uint16_t) refer to the SAME bytes. On 32-bit Amiga BE those bytes
+     * are the high 16 bits of the uintptr_t; on x86 LE 64-bit they're
+     * the low 16 bits. Either way the renderer and the writer agree
+     * because both touch the slot's first 2 bytes in memory order. This
+     * replaces the historical `(uint8_t *)e + 38` byte arithmetic. */
+    union {
+        uintptr_t bg;        /* 30: pointer / function-ptr / string ptr */
+        uint16_t  bgColor;   /* first 2 bytes: color word for ENTRY_FRAME_AND_BACK_COLOR */
+        uint16_t  bgWord;    /* alias of bgColor for sprite-index / number reads */
+    };
+    uint16_t content;        /* 34 (32-bit) / 38 (64-bit, bg grows to 8B) */
+    uint16_t stringFlags;    /* 36 / 40 */
+    union {
+        uintptr_t fg;        /* 38 / 42: pointer / function-ptr / string ptr */
+        uint16_t  fgWord;    /* first 2 bytes: integer payload */
+        uint16_t  fgNumber;  /* alias of fgWord — clearer name at ENTRY_NUMBER sites */
+        uint16_t  fgSpriteIdx; /* alias of fgWord — clearer at ENTRY_SPRITE2 sites */
+    };
+    MenuEntryFn onSelect;    /* 42 / 46: function pointer (or NULL) */
+    uint16_t controlMask;    /* 46 / 54 */
+    MenuEntryFn beforeDraw;  /* 48 / 56: function pointer (or NULL) */
+    MenuEntryFn afterDrawCb; /* 52 / 64: function pointer (or NULL) */
+};
 
-/* Helpers to access the upper 16 bits of MenuEntry.bg without taking address
- * of a packed member (avoids -Waddress-of-packed-member warnings).
- * On 68k big-endian, (uint16_t *)&e->bg points to the upper 16 bits. */
-static inline uint16_t getBgColorWord(MenuEntry *e) {
-    return (uint16_t)(e->bg >> 16);
-}
-static inline void setBgColorWord(MenuEntry *e, uint16_t v) {
-    e->bg = ((uint32_t)v << 16) | (e->bg & 0xFFFF);
-}
-/* Set only the low nibble (color index) of the bg color word */
-static inline void setBgColorIdx(MenuEntry *e, uint16_t colorIdx) {
-    uint16_t w = (uint16_t)(e->bg >> 16);
-    w = (w & 0xFFF0) | colorIdx;
-    e->bg = ((uint32_t)w << 16) | (e->bg & 0xFFFF);
-}
+/* Direct field access via the union aliases above — no helper layer.
+ * Read/write the bg/fg first-word as `e->bgColor` / `e->fgWord`, and
+ * read/write the full pointer payload as `e->bg` / `e->fg`. */
 
 /* Compile-time size checks */
+/* Menu has 4 pointer fields (onInit, afterDraw, onDraw, selectedEntry);
+ * +16 on 64-bit. endOfMenuPtr is still uint32_t (raw offset in
+ * template), so it doesn't contribute.
+ * MenuEntry has 5 pointer-width fields (bg, fg uintptr_t + onSelect,
+ * beforeDraw, afterDrawCb fn-ptrs); +20 on 64-bit. */
+#if UINTPTR_MAX == 0xFFFFFFFFu
 typedef char _menu_size_check[(sizeof(Menu) == 22) ? 1 : -1];
 typedef char _menuentry_size_check[(sizeof(MenuEntry) == 56) ? 1 : -1];
+#else
+typedef char _menu_size_check[(sizeof(Menu) == 38) ? 1 : -1];
+typedef char _menuentry_size_check[(sizeof(MenuEntry) == 76) ? 1 : -1];
+#endif
 
-/* ---- Constants ---- */
+/* ---- Constants ----
+ * Bitness-conditional because Menu has 4 pointer fields and MenuEntry has
+ * 5 pointer-width fields (uintptr_t bg/fg + 3 fn-ptrs); both struct sizes
+ * grow on 64-bit (+16 / +20). The `menuEntries` link-time alias in
+ * swos_globals.c uses the same offset and must stay in sync. */
+#if UINTPTR_MAX == 0xFFFFFFFFu
 #define MENU_HEADER_SIZE   22
 #define MENUENTRY_STRIDE   56
+#else
+#define MENU_HEADER_SIZE   38
+#define MENUENTRY_STRIDE   76
+#endif
 #define NO_BACKGROUND      0
 #define NO_FOREGROUND      0
 
@@ -121,7 +159,7 @@ extern void _CallMenuFuncWithXY(void *funcPtr, uint16_t x, uint16_t y);
 void _MenuProc(void);
 void _ActivateMenu(uint8_t *packedMenu);
 void _ShowMenu(uint8_t *packedMenu);
-void _RestorePreviousMenu(uint32_t oldSelectedEntry, uint8_t *oldPackedMenu);
+void _RestorePreviousMenu(MenuEntry *oldSelectedEntry, uint8_t *oldPackedMenu);
 void _DrawMenu(void);
 void _MenuCheckControls(void);
 void _DrawSelectedMenuItemFrame(void);

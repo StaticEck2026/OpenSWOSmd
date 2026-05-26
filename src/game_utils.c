@@ -4,10 +4,11 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "game_utils.h"
+#include "game_types.h"
 #include "deterministic.h"
 
-extern uint32_t assetLoaderCacheFlag;
-extern uint32_t assetLoaderWorkPtr;
+extern uintptr_t assetLoaderCacheFlag;
+extern uintptr_t assetLoaderWorkPtr;
 extern volatile int16_t waitingInterrupt;
 extern uint16_t useIndividualPlayerSkinColor;
 extern uint8_t goalBase[];
@@ -27,14 +28,41 @@ void _AssetLoaderResetState(void)
     assetLoaderWorkPtr = 0;
 }
 
+#ifdef SWOS_SDL_BUILD
+extern FixedPoint cameraX;
+extern FixedPoint cameraY;
+extern void _SwapBuffersAndCameraViewState(void);
+extern void _SetCameraCoordinates(int16_t x, int16_t y);
+extern int Platform_VBlank(void);
+#endif
+
 __attribute__((used, externally_visible))
 void _WaitForVSync(void)
 {
+#ifdef SWOS_SDL_BUILD
+    /* On the Amiga, _WaitForVSync was a busy spin on `waitingInterrupt`
+     * which the Level-3 ISR cleared after running the buffer-swap +
+     * camera-restore sequence. On the SDL host we run the buffer swap
+     * inline on the same (main) thread, then hand control to
+     * Platform_VBlank which pumps SDL events, blits the just-finished
+     * bitplane frame to the SDL window, and paces to ~50 Hz.
+     *
+     * The SDL_Timer thread still runs `_Int3TimerHandler`, but the
+     * branch that swaps buffers gates on `waitingInterrupt`, which we
+     * never set here -- so the timer thread skips the swap and only
+     * does fade ticks / audio / currentGameTick. */
+    int16_t cx = cameraX.s.i;
+    int16_t cy = cameraY.s.i;
+    _SwapBuffersAndCameraViewState();
+    _SetCameraCoordinates(cx, cy);
+    Platform_VBlank();
+#else
     waitingInterrupt = 1;
     while (waitingInterrupt != 0)
     {
         /* spin — cleared by VBlank ISR */
     }
+#endif
 }
 
 __attribute__((used, externally_visible))
@@ -42,7 +70,16 @@ void _InitSkinAndDefaultPointers(void)
 {
     useIndividualPlayerSkinColor = 1;
     goalBasePtr = goalBase;
-    nextGoalPtr = (uint8_t *)&nextGoal;
+    /* On Amiga, `nextGoal` was the label immediately following the 19000-byte
+     * `goalBase` buffer, so &nextGoal == goalBase+19000 was the natural
+     * "end-of-buffer" sentinel for highlight pointer wrapping. On SDL the
+     * linker places `nextGoal` anywhere in BSS, so the wrap test
+     * `if (a1 == nextGoalPtr)` in _SaveCoordinatesForHighlights never matches
+     * and `currentHilPtr` walks past goalBase's end, stomping adjacent
+     * globals (e.g. renderStackBase) and producing bogus sprite pointers.
+     * Match _HandleInstantReplayStateSwitch (game_loop.c:1005) which uses
+     * baseAddr+19000 explicitly. */
+    nextGoalPtr = goalBase + 19000;
     spriteGraphicsPtr = spriteGraphics;
 }
 

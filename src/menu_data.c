@@ -9,6 +9,7 @@ extern void _SetExitMenuFlag(void);
 extern void _TopGoalScorersMenu_0(void);
 extern void _SetupDIYCompetitionStatsMenu(void);
 extern DIYCompetitionEx diyCompetitionStart;
+extern DIYCompetitionEx diyTournamentCompetition;
 
 /* ---- Stub functions (trivial wrappers removed from SWOS2.s) ---- */
 void _GlobalRetn(void) { }
@@ -2802,12 +2803,12 @@ Menu_DesignDiyTournament designDiyTournamentMenu = {
     { 0, 0, 304, 15 },
     { MENU_CMD_INVISIBLE },
     { MENU_CMD_COLORS, 0x17 },
-    { MENU_CMD_TEXT_PTR, 0x0, (int8_t*)0x2DAD4 },
+    { MENU_CMD_TEXT_PTR, 0x0, (int8_t*)diyTournamentCompetition.base.competitionName },
     MENU_CMD_END,
     { 0, 17, 304, 15 },
     { MENU_CMD_NAV, -1, -1, -1, 4 },
     { MENU_CMD_COLORS, 0x1D },
-    { MENU_CMD_TEXT_PTR, 0x0, (int8_t*)0x2DAD4 },
+    { MENU_CMD_TEXT_PTR, 0x0, (int8_t*)diyTournamentCompetition.base.competitionName },
     { MENU_CMD_ONSELECT_FIRE, _DesignDIYTournamentOnSelect2 },
     MENU_CMD_END,
     MENU_MARK_BYTE_COORDS,
@@ -9776,3 +9777,111 @@ Menu_Highlights highlightsMenu = {
     },
     MENU_MARK_END_MENU,
 };
+
+/* ---- diskMenu (SAVE DISK FILING) — SWOS2.s line 94175 ----------------
+ * Hand-defined here because the auto-extractor mis-classified diskMenu
+ * as a uint32_t scalar (= the SWOS2.s file offset 1312736) instead of a
+ * packed-menu blob. The previous stub was 4 bytes; _UnpackMenu walked
+ * off the end and SIGSEGV'd. */
+extern void _DiskMenuRet(void);
+extern void _FormatSaveDiskMenu(void);
+extern void _DeleteFileMenu(void);
+extern void _ExitDisk(void);
+extern char aSaveDiskFiling[];
+extern char aFormatSaveDisk[];
+extern char aDeleteFile[];
+extern char aExit[];
+
+#pragma pack(push, 1)
+struct {
+    MenuHeader hdr;
+    MenuMark   markByteCoords;
+    MenuEntry_Byte_Colors_TextPtr               entry0;  /* SAVE DISK FILING title */
+    MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect  entry1;  /* FORMAT SAVE DISK */
+    MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect  entry2;  /* DELETE FILE */
+    MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect  entry3;  /* EXIT */
+    MenuMark   markEndMenu;
+} diskMenu = {
+    { _DiskMenuRet, _DiskMenuRet, 0, 3 },
+    MENU_MARK_BYTE_COORDS,
+    { { 0x5C, 0x00,  0x78, 0x0F },
+      { MENU_CMD_COLORS, 0x17 },
+      { MENU_CMD_TEXT_PTR, 0x0, aSaveDiskFiling },
+      MENU_CMD_END },
+    { { 0x52, 0x3C, -116, 0x0F },
+      { MENU_CMD_NAV, -1, -1, -1, 2 },
+      { MENU_CMD_COLORS, 0xE },
+      { MENU_CMD_TEXT_PTR, 0x0, aFormatSaveDisk },
+      { MENU_CMD_ONSELECT_FIRE, _FormatSaveDiskMenu },
+      MENU_CMD_END },
+    { { 0x52, 0x50, -116, 0x0F },
+      { MENU_CMD_NAV, -1, -1, 1, 3 },
+      { MENU_CMD_COLORS, 0xE },
+      { MENU_CMD_TEXT_PTR, 0x0, aDeleteFile },
+      { MENU_CMD_ONSELECT_FIRE, _DeleteFileMenu },
+      MENU_CMD_END },
+    { { 0x66, -71,  0x64, 0x0F },
+      { MENU_CMD_NAV, -1, -1, 2, -1 },
+      { MENU_CMD_COLORS, 0xC },
+      { MENU_CMD_TEXT_PTR, 0x0, aExit },
+      { MENU_CMD_ONSELECT_FIRE, _ExitDisk },
+      MENU_CMD_END },
+    MENU_MARK_END_MENU,
+};
+#pragma pack(pop)
+
+/* ---- diyCompetitionMenu (DIY COMPETITION) — SWOS2.s line 76567 -------
+ * Same auto-extractor bug as diskMenu — was emitted as `uint32_t = 0`. */
+extern void _SelectDiyLeagueMenu(void);
+extern void _SelectDiyCupMenu(void);
+extern void _SelectDiyTournamentMenu(void);
+extern void _SelectDiyExitMenu(void);
+extern char aSelectDiyCompe[];
+extern char aLeague[];
+extern char aCup[];
+extern char aTournament[];
+
+#pragma pack(push, 1)
+struct {
+    MenuHeader hdr;
+    MenuMark   markByteCoords;
+    MenuEntry_Byte_Colors_TextPtr               entry0;  /* SELECT DIY COMPETITION TYPE title */
+    MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect  entry1;  /* LEAGUE */
+    MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect  entry2;  /* CUP */
+    MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect  entry3;  /* TOURNAMENT */
+    MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect  entry4;  /* EXIT */
+    MenuMark   markEndMenu;
+} diyCompetitionMenu = {
+    { 0, 0, 0, 1 },
+    MENU_MARK_BYTE_COORDS,
+    { { 0x3E, 0x00, -76,  0x0F },
+      { MENU_CMD_COLORS, 0x17 },
+      { MENU_CMD_TEXT_PTR, 0x0, aSelectDiyCompe },
+      MENU_CMD_END },
+    { { 0x5C, 0x28, 0x78, 0x0F },
+      { MENU_CMD_NAV, -1, -1, -1, 2 },
+      { MENU_CMD_COLORS, 0xE },
+      { MENU_CMD_TEXT_PTR, 0x0, aLeague },
+      { MENU_CMD_ONSELECT_FIRE, _SelectDiyLeagueMenu },
+      MENU_CMD_END },
+    { { 0x5C, 0x41, 0x78, 0x0F },
+      { MENU_CMD_NAV, -1, -1, 1, 3 },
+      { MENU_CMD_COLORS, 0xE },
+      { MENU_CMD_TEXT_PTR, 0x0, aCup },
+      { MENU_CMD_ONSELECT_FIRE, _SelectDiyCupMenu },
+      MENU_CMD_END },
+    { { 0x5C, 0x5A, 0x78, 0x0F },
+      { MENU_CMD_NAV, -1, -1, 2, 4 },
+      { MENU_CMD_COLORS, 0xE },
+      { MENU_CMD_TEXT_PTR, 0x0, aTournament },
+      { MENU_CMD_ONSELECT_FIRE, _SelectDiyTournamentMenu },
+      MENU_CMD_END },
+    { { 0x66, -71,  0x64, 0x0F },
+      { MENU_CMD_NAV, -1, -1, 3, -1 },
+      { MENU_CMD_COLORS, 0xC },
+      { MENU_CMD_TEXT_PTR, 0x0, aExit },
+      { MENU_CMD_ONSELECT_FIRE, _SelectDiyExitMenu },
+      MENU_CMD_END },
+    MENU_MARK_END_MENU,
+};
+#pragma pack(pop)

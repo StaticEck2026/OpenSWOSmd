@@ -4,6 +4,9 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "display.h"
+#include "game_types.h"
+#include "swos_types.h"
+#include <string.h>
 
 /* Custom chip base pointer — set once, used by all HW register access */
 volatile struct Custom *custom = (volatile struct Custom *)0xDFF000;
@@ -14,8 +17,8 @@ volatile struct Custom *custom = (volatile struct Custom *)0xDFF000;
 extern uint8_t frontbufferBase[];
 extern uint8_t frontbufferBaseAlt[];
 extern uint8_t frontbufferMaskBuffer[];
-extern volatile uint32_t frontbufferBasePtr;
-extern volatile uint32_t frontbufferBaseAltPtr;
+extern volatile uintptr_t frontbufferBasePtr;
+extern volatile uintptr_t frontbufferBaseAltPtr;
 
 /* Bitplane bases (BSSInChip, 0x384 bytes each) */
 extern uint8_t bitPlane0Base[];
@@ -58,11 +61,11 @@ extern uint32_t copperZeroLong;
 /* Sprite blit queue sentinels (4 bytes each: 2-byte sentinel + padding/queue) */
 extern uint32_t kSpriteBlitQueueSentinel_A;
 extern uint32_t kSpriteBlitQueueSentinel_B;
-extern volatile uint32_t spriteBlitQueue;
+extern volatile uintptr_t spriteBlitQueue;
 
 /* Camera state */
-extern int16_t cameraX;          /* dc.l but word-accessed (big-endian high word) */
-extern int16_t cameraY;          /* dc.l but word-accessed (big-endian high word) */
+extern FixedPoint cameraX;          /* dc.l but word-accessed (big-endian high word) */
+extern FixedPoint cameraY;          /* dc.l but word-accessed (big-endian high word) */
 extern uint16_t cameraXMod320;
 extern uint16_t cameraYMod320;
 extern int16_t oldCameraX;
@@ -106,16 +109,28 @@ static void copper_write_ptr(uint8_t *entry, uint32_t ptr)
 {
     uint16_t hi = (uint16_t)(ptr >> 16);
     uint16_t lo = (uint16_t)(ptr);
+#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+    /* Amiga: force real move.w instructions — GCC's volatile uint16_t store
+     * can decompose into byte-level move.b pairs which corrupt the live
+     * copper list. */
     __asm__ volatile ("move.w %0,2(%1)" : : "d"(hi), "a"(entry) : "memory");
     __asm__ volatile ("move.w %0,6(%1)" : : "d"(lo), "a"(entry) : "memory");
+#else
+    /* SDL host: copper list is just a buffer in main RAM, plain stores fine. */
+    *(volatile uint16_t *)(entry + 2) = hi;
+    *(volatile uint16_t *)(entry + 6) = lo;
+#endif
 }
 
 /* Helper: write a 16-bit word to a copper list buffer address.
- * Forces a move.w instruction — GCC's volatile uint16_t store
- * decomposes into byte-level move.b pairs. */
+ * Forces a move.w instruction on Amiga; plain store on SDL host. */
 static void copper_write_word(uint8_t *addr, uint16_t val)
 {
+#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
     __asm__ volatile ("move.w %0,(%1)" : : "d"(val), "a"(addr) : "memory");
+#else
+    *(volatile uint16_t *)addr = val;
+#endif
 }
 
 /* ================================================================
@@ -280,8 +295,8 @@ void _InitDisplayAndCopper(void)
     int16_t i;
 
     /* Set frontbuffer base pointers */
-    frontbufferBasePtr = (uint32_t)frontbufferBase;
-    frontbufferBaseAltPtr = (uint32_t)frontbufferBaseAlt;
+    frontbufferBasePtr = (uintptr_t)frontbufferBase;
+    frontbufferBaseAltPtr = (uintptr_t)frontbufferBaseAlt;
 
     /* Initialize sprite blit queue sentinels */
     kSpriteBlitQueueSentinel_A = 0xFFFFFFFFu;
@@ -319,7 +334,7 @@ void _InitDisplayAndCopper(void)
     /* Write copperZeroLong pointer into first 8 sprite pointer entries */
     {
         uint8_t *entry = copperListBuffer + COP_SPR_B0_OFF;
-        uint32_t ptr = (uint32_t)&copperZeroLong;
+        uint32_t ptr = (uintptr_t)&copperZeroLong;
         for (i = 7; i >= 0; i--)
         {
             copper_write_ptr(entry, ptr);
@@ -366,10 +381,10 @@ void _InitDisplayAndCopper(void)
     }
 
     /* Set bitplane base pointers */
-    bitPlane0BasePtr = (uint32_t)bitPlane0Base;
-    bitPlane1BasePtr = (uint32_t)bitPlane1Base;
-    bitPlane2BasePtr = (uint32_t)bitPlane2Base;
-    bitPlane3BasePtr = (uint32_t)bitPlane3Base;
+    bitPlane0BasePtr = (uintptr_t)bitPlane0Base;
+    bitPlane1BasePtr = (uintptr_t)bitPlane1Base;
+    bitPlane2BasePtr = (uintptr_t)bitPlane2Base;
+    bitPlane3BasePtr = (uintptr_t)bitPlane3Base;
 #ifdef AGA
     bitPlane4BasePtr = (uint32_t)bitPlane4Base;
     bitPlane5BasePtr = (uint32_t)bitPlane5Base;
@@ -393,7 +408,7 @@ void _InitDisplayAndCopper(void)
     _UpdatePlanePtrsAndBlitParams();
 
     /* Install copper list */
-    custom->cop1lc = (uint32_t)copperListBuffer;
+    custom->cop1lc = (uintptr_t)copperListBuffer;
 
     /* Strobe copper to start — original asm does: move.w (COPJMP1).l,d0
      * This is a pure read strobe; any access triggers copper PC reload. */
@@ -483,7 +498,7 @@ void _UpdatePlanePtrsAndBlitParams(void)
         /* Select base address */
         if (usePlaneOffsetFlag != 0)
         {
-            baseOffset += (uint32_t)frontbufferMaskBuffer;
+            baseOffset += (uintptr_t)frontbufferMaskBuffer;
         }
         else if (useAltBaseFlag != 0)
         {
@@ -503,7 +518,7 @@ void _UpdatePlanePtrsAndBlitParams(void)
         /* Compute alt offset for second table */
         if (usePlaneOffsetFlag != 0)
         {
-            altOffset = (uint32_t)d1 + (uint32_t)frontbufferMaskBuffer;
+            altOffset = (uintptr_t)d1 + (uintptr_t)frontbufferMaskBuffer;
         }
         else
         {
@@ -547,13 +562,13 @@ void _UpdatePlanePtrsAndBlitParams(void)
 __attribute__((used, externally_visible))
 void _SwapBuffersAndCameraViewState(void)
 {
-    if (frontbufferBasePtr == (uint32_t)frontbufferBase)
+    if (frontbufferBasePtr == (uintptr_t)frontbufferBase)
     {
         /* Currently using primary → swap to alt */
-        bitPlane0BasePtr = (uint32_t)bitPlane0BaseAlt;
-        bitPlane1BasePtr = (uint32_t)bitPlane1BaseAlt;
-        bitPlane2BasePtr = (uint32_t)bitPlane2BaseAlt;
-        bitPlane3BasePtr = (uint32_t)bitPlane3BaseAlt;
+        bitPlane0BasePtr = (uintptr_t)bitPlane0BaseAlt;
+        bitPlane1BasePtr = (uintptr_t)bitPlane1BaseAlt;
+        bitPlane2BasePtr = (uintptr_t)bitPlane2BaseAlt;
+        bitPlane3BasePtr = (uintptr_t)bitPlane3BaseAlt;
 #ifdef AGA
         bitPlane4BasePtr = (uint32_t)bitPlane4BaseAlt;
         bitPlane5BasePtr = (uint32_t)bitPlane5BaseAlt;
@@ -572,33 +587,33 @@ void _SwapBuffersAndCameraViewState(void)
         *(volatile uint32_t *)bitPlane7BaseAlt = copperZeroLong;
 #endif
 
-        frontbufferBasePtr = (uint32_t)frontbufferBaseAlt;
-        frontbufferBaseAltPtr = (uint32_t)frontbufferBase;
-        spriteBlitQueue = (uint32_t)&kSpriteBlitQueueSentinel_B;
+        frontbufferBasePtr = (uintptr_t)frontbufferBaseAlt;
+        frontbufferBaseAltPtr = (uintptr_t)frontbufferBase;
+        spriteBlitQueue = (uintptr_t)&kSpriteBlitQueueSentinel_B;
 
         /* Save current camera state to slot 0 */
         dstXByteOffsetSaved0 = cameraXMod320;
         dstYStartLinesSaved0 = cameraYMod320;
         oldCameraXSaved0 = oldCameraX;
         oldCameraYSaved0 = oldCameraY;
-        cameraXSaved0 = cameraX;
-        cameraYSaved0 = cameraY;
+        cameraXSaved0 = cameraX.s.i;
+        cameraYSaved0 = cameraY.s.i;
 
         /* Restore camera state from slot 1 */
         cameraXMod320 = dstXByteOffsetSaved1;
         cameraYMod320 = dstYStartLinesSaved1;
         oldCameraX = oldCameraXSaved1;
         oldCameraY = oldCameraYSaved1;
-        cameraX = cameraXSaved1;
-        cameraY = cameraYSaved1;
+        cameraX.s.i = cameraXSaved1;
+        cameraY.s.i = cameraYSaved1;
     }
     else
     {
         /* Currently using alt → swap to primary */
-        bitPlane0BasePtr = (uint32_t)bitPlane0Base;
-        bitPlane1BasePtr = (uint32_t)bitPlane1Base;
-        bitPlane2BasePtr = (uint32_t)bitPlane2Base;
-        bitPlane3BasePtr = (uint32_t)bitPlane3Base;
+        bitPlane0BasePtr = (uintptr_t)bitPlane0Base;
+        bitPlane1BasePtr = (uintptr_t)bitPlane1Base;
+        bitPlane2BasePtr = (uintptr_t)bitPlane2Base;
+        bitPlane3BasePtr = (uintptr_t)bitPlane3Base;
 #ifdef AGA
         bitPlane4BasePtr = (uint32_t)bitPlane4Base;
         bitPlane5BasePtr = (uint32_t)bitPlane5Base;
@@ -617,51 +632,51 @@ void _SwapBuffersAndCameraViewState(void)
         *(volatile uint32_t *)bitPlane7Base = copperZeroLong;
 #endif
 
-        frontbufferBasePtr = (uint32_t)frontbufferBase;
-        frontbufferBaseAltPtr = (uint32_t)frontbufferBaseAlt;
-        spriteBlitQueue = (uint32_t)&kSpriteBlitQueueSentinel_A;
+        frontbufferBasePtr = (uintptr_t)frontbufferBase;
+        frontbufferBaseAltPtr = (uintptr_t)frontbufferBaseAlt;
+        spriteBlitQueue = (uintptr_t)&kSpriteBlitQueueSentinel_A;
 
         /* Save current camera state to slot 1 */
         dstXByteOffsetSaved1 = cameraXMod320;
         dstYStartLinesSaved1 = cameraYMod320;
         oldCameraXSaved1 = oldCameraX;
         oldCameraYSaved1 = oldCameraY;
-        cameraXSaved1 = cameraX;
-        cameraYSaved1 = cameraY;
+        cameraXSaved1 = cameraX.s.i;
+        cameraYSaved1 = cameraY.s.i;
 
         /* Restore camera state from slot 0 */
         cameraXMod320 = dstXByteOffsetSaved0;
         cameraYMod320 = dstYStartLinesSaved0;
         oldCameraX = oldCameraXSaved0;
         oldCameraY = oldCameraYSaved0;
-        cameraX = cameraXSaved0;
-        cameraY = cameraYSaved0;
+        cameraX.s.i = cameraXSaved0;
+        cameraY.s.i = cameraYSaved0;
     }
 }
 
 /* ================================================================
  * SetCameraCoordinates  (SWOS2.s line 6158)
  *
- * Iteratively moves cameraX/cameraXMod320 toward targetX and
- * cameraY/cameraYMod320 toward targetY, one pixel per iteration,
+ * Iteratively moves cameraX.s.i/cameraXMod320 toward targetX and
+ * cameraY.s.i/cameraYMod320 toward targetY, one pixel per iteration,
  * with wrapping at 352/272.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _SetCameraCoordinates(int16_t targetX, int16_t targetY)
 {
     /* Move X toward target */
-    while (cameraX != targetX)
+    while (cameraX.s.i != targetX)
     {
-        if (cameraX < targetX)
+        if (cameraX.s.i < targetX)
         {
-            cameraX += 1;
+            cameraX.s.i += 1;
             cameraXMod320 += 1;
             if (cameraXMod320 == 352)
                 cameraXMod320 = 0;
         }
         else
         {
-            cameraX -= 1;
+            cameraX.s.i -= 1;
             cameraXMod320 -= 1;
             if ((int16_t)cameraXMod320 < 0)
                 cameraXMod320 = 351;
@@ -669,23 +684,28 @@ void _SetCameraCoordinates(int16_t targetX, int16_t targetY)
     }
 
     /* Move Y toward target */
-    while (cameraY != targetY)
+    while (cameraY.s.i != targetY)
     {
-        if (cameraY < targetY)
+        if (cameraY.s.i < targetY)
         {
-            cameraY += 1;
+            cameraY.s.i += 1;
             cameraYMod320 += 1;
             if (cameraYMod320 == 272)
                 cameraYMod320 = 0;
         }
         else
         {
-            cameraY -= 1;
+            cameraY.s.i -= 1;
             cameraYMod320 -= 1;
             if ((int16_t)cameraYMod320 < 0)
                 cameraYMod320 = 271;
         }
     }
+
+    /* FixedPoint union handles the integer/FP sync implicitly: writing
+     * cameraX.s.i updates the high word of the shared storage, so
+     * cameraX.raw (the int32 view) stays consistent without any manual
+     * sync. This replaces the earlier split-variable hack. */
 }
 
 /* ================================================================
@@ -710,6 +730,51 @@ void _DoubleBufferSwapSequence(void)
  *
  * Copies frontbufferMaskBuffer to frontbuffer via blitter A→D copy.
  * ================================================================ */
+#ifdef SWOS_SDL_BUILD
+#include <string.h>
+__attribute__((used, externally_visible))
+void _BlitterCopyPanelToScreen2(void)
+{
+    /* Paint the menu BG into BOTH buffers, not just the drawing target.
+     *
+     * Long-standing flicker bug (since the C port — present on both the
+     * Amiga C port and this SDL port): on some menu transitions and
+     * within-menu redraws (e.g. play-match → result, lineup formation
+     * change), the user briefly sees the OLD menu's content showing
+     * under the new menu's entries for 1–2 frames. Two screenshots
+     * confirmed: mid-transition shows new top + bottom strips with the
+     * old menu's middle visible, and a formation change momentarily
+     * loses the tactic grid entirely.
+     *
+     * Mechanism: _DrawMenu paints panel BG into the drawing target
+     * (basePtr), draws entries on top, then _WaitForVSync swaps. The
+     * just-drawn buffer becomes displayed. _BlitterCopyOverlayToScreen
+     * copies the displayed frame back to the new drawing target so both
+     * stay in sync — but until that copy runs, the OTHER buffer still
+     * holds whatever the previous menu painted. Any draw path or async
+     * present that touches the other buffer in this brief window
+     * (timer-thread render, DrawSelectedMenuItemFrame, partial
+     * _CallDrawMenuItem on either side of a swap) shows the stale
+     * content.
+     *
+     * The original Amiga code relied on hardware bitplane-pointer
+     * swap semantics that made the same flow atomic; the C port
+     * doesn't get that for free. The cheapest defensive fix is to
+     * paint the BG into BOTH buffers up front — neither side can show
+     * old content because both are now the same clean BG.
+     *
+     * Cost: one extra full-frame memcpy on every menu draw (~91 KB).
+     * Negligible at 50 Hz. */
+    /* (frontbufferMaskBuffer is a static array, so its address is always
+     * non-null — historical NULL guard removed.) */
+    uint8_t *dst = (uint8_t *)frontbufferBasePtr;
+    if (dst)
+        memcpy(dst, frontbufferMaskBuffer, FRONTBUFFER_SIZE_TOTAL_BYTES);
+    uint8_t *altDst = (uint8_t *)frontbufferBaseAltPtr;
+    if (altDst && altDst != dst)
+        memcpy(altDst, frontbufferMaskBuffer, FRONTBUFFER_SIZE_TOTAL_BYTES);
+}
+#else
 __attribute__((used, externally_visible))
 void _BlitterCopyPanelToScreen2(void)
 {
@@ -779,6 +844,7 @@ void _BlitterCopyPanelToScreen2(void)
     custom->bltsize = 0x0016u;
 #endif
 }
+#endif /* SWOS_SDL_BUILD */
 
 /* ================================================================
  * ProcessSpriteBlitQueue  (SWOS2.s line 5522)
@@ -848,6 +914,16 @@ void _ProcessSpriteBlitQueue(void)
  * Same as BlitterCopyPanelToScreen2 but uses CUSTOM base register
  * style (identical logic).
  * ================================================================ */
+#ifdef SWOS_SDL_BUILD
+__attribute__((used, externally_visible))
+void _BlitterCopyPanelToScreen(void)
+{
+    uint8_t *dst = (uint8_t *)frontbufferBasePtr;
+    /* (frontbufferMaskBuffer is a static array, address always non-null.) */
+    if (dst)
+        memcpy(dst, frontbufferMaskBuffer, FRONTBUFFER_SIZE_TOTAL_BYTES);
+}
+#else
 __attribute__((used, externally_visible))
 void _BlitterCopyPanelToScreen(void)
 {
@@ -906,6 +982,7 @@ void _BlitterCopyPanelToScreen(void)
     custom->bltsize = 0x0016u;
 #endif
 }
+#endif /* SWOS_SDL_BUILD */
 
 /* ================================================================
  * HWSprite_LoadFromSpriteGraphics  (SWOS2.s line 6619)
@@ -919,6 +996,19 @@ void _BlitterCopyPanelToScreen(void)
 __attribute__((used, externally_visible))
 void _HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
 {
+#ifdef SWOS_SDL_BUILD
+    /* Chunky rewrite: zero the sprite's pixel buffer so subsequent
+     * _BlitGlyphToSpriteBitmap calls stamp onto a clean background.
+     * The Amiga version programs bltdpt + D-only fill; our sprite
+     * data is a flat 8bpp byte array of `wquads * 16 * nlines` bytes. */
+    SpriteGraphics **table = (SpriteGraphics **)(uintptr_t)spriteGraphicsPtr;
+    SpriteGraphics *spr = table[spriteIndex];
+    if (!spr) return;
+    uint8_t *data = spr->sprData;
+    if (!data) return;
+    size_t bytes = (size_t)spr->wquads * 16 * (size_t)spr->nlines;
+    memset(data, 0, bytes);
+#else
     uint32_t *gfxTable = (uint32_t *)spriteGraphicsPtr;
     uint8_t *sprEntry;
     uint32_t destPtr;
@@ -951,6 +1041,7 @@ void _HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
     stride = *(uint16_t *)(sprEntry + 14); /* TILE_STRIDE offset */
     blitSize = (uint16_t)((height << (NUM_PLANES_SHIFT + 6)) | stride);
     custom->bltsize = blitSize;
+#endif
 }
 
 /* ================================================================
@@ -1026,20 +1117,29 @@ void _WriteCopperPalette(const uint16_t *palette)
  * ================================================================ */
 extern uint16_t gamePalette[];
 extern uint16_t pitchNumberAndType;
-extern uint32_t pitchPalettePtrs[];
+extern const uint16_t *pitchPalettePtrs[];
 extern uint8_t paletteIndices[];
 
 __attribute__((used, externally_visible))
 void _WriteCopperPitchPalette(void)
 {
-    uint16_t pitchIdx = pitchNumberAndType;
+    /* pitchNumberAndType packs pitch *number* in the high byte and pitch
+     * *type* in the low byte. The palette lookup uses only the type, so
+     * mask to 0xFF — matches asm `andi.w #$FF,d1` at SWOS2.s line 15938.
+     * Without the mask, any non-zero pitch number makes the uint16 > 6
+     * and the clamp below silently substitutes the default "normal"
+     * (type 4) palette — symptom: HIL replays after a CAREER session
+     * show normal grass even when the saved HIL specified a different
+     * pitch type. Fresh boot worked only because pitch number happened
+     * to be 0 then. */
+    uint16_t pitchIdx = pitchNumberAndType & 0xFF;
     const uint16_t *pitchPal;
     int16_t i;
 
     if (pitchIdx > 6)
         pitchIdx = 4; /* default to "normal" if out of range */
 
-    pitchPal = (const uint16_t *)pitchPalettePtrs[pitchIdx];
+    pitchPal = pitchPalettePtrs[pitchIdx];
 
     /* Apply 9 entries into gamePalette */
     for (i = 0; i < 9; i++)

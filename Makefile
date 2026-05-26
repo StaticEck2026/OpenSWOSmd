@@ -8,15 +8,15 @@ ifdef OS
 endif
 
 # Data module flags: set to 1 to use C data, 0 to use ASM data
-COMPETITION_DATA_C ?= 0
-TACTICS_DATA_C     ?= 0
-FIXTURE_DATA_C     ?= 0
-SIMULATION_DATA_C  ?= 0
-PLAYER_DATA_C      ?= 0
-RENDER_DATA_C      ?= 0
-PALETTE_DATA_C     ?= 0
-STRINGS_DATA_C     ?= 0
-GENERAL_DATA_C     ?= 0
+COMPETITION_DATA_C ?= 1   # worldCup, copaAmerica, cupPick*, careerContests, etc.
+TACTICS_DATA_C     ?= 1   # positions*, sidePitchPositions*, tacticPosMap*, teamTactics*
+FIXTURE_DATA_C     ?= 1   # fixtureSchedule2..24Teams
+SIMULATION_DATA_C  ?= 1   # sim*Thresh, goalScorerDist*, quadrant*, skill*
+PLAYER_DATA_C      ?= 1   # playerCardChances*, playerPositions*
+RENDER_DATA_C      ?= 1   # opponentCoachFrames, ourCoachFrames
+PALETTE_DATA_C     ?= 1   # frozenPalette/muddyPalette/etc.
+STRINGS_DATA_C     ?= 1   # 244 aXxxx strings
+GENERAL_DATA_C     ?= 1   # countriesTable, kTeamColorsTable, etc.
 
 DATA_FLAGS = -DCOMPETITION_DATA_C=$(COMPETITION_DATA_C) -DTACTICS_DATA_C=$(TACTICS_DATA_C) -DFIXTURE_DATA_C=$(FIXTURE_DATA_C) -DSIMULATION_DATA_C=$(SIMULATION_DATA_C) -DPLAYER_DATA_C=$(PLAYER_DATA_C) -DRENDER_DATA_C=$(RENDER_DATA_C) -DPALETTE_DATA_C=$(PALETTE_DATA_C) -DSTRINGS_DATA_C=$(STRINGS_DATA_C) -DGENERAL_DATA_C=$(GENERAL_DATA_C)
 
@@ -28,7 +28,7 @@ c_sources := $(filter-out support/gcc8_c_support.c main.c,$(wildcard *.c) $(wild
 c_objects := $(addprefix obj/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
 s_sources := support/gcc8_a_support.s
 s_objects := $(addprefix obj/,$(patsubst %.s,%.o,$(notdir $(s_sources))))
-swos_asm_sources := asm/swos2_unit.s asm/resload_unit.s
+swos_asm_sources := asm/resload_unit.s
 swos_asm_objects := $(addprefix obj/,$(patsubst %.s,%.o,$(notdir $(swos_asm_sources))))
 vasm_sources := $(wildcard *.asm) $(wildcard $(addsuffix *.asm, $(subdirs)))
 vasm_objects := $(addprefix obj/, $(patsubst %.asm,%.o,$(notdir $(vasm_sources))))
@@ -50,7 +50,14 @@ else
 	SDKDIR = $(abspath $(dir $(shell which $(CC)))../m68k-amiga-elf/sys-include)
 endif
 
-CCFLAGS   = -g -MP -MMD -m68020 -Ofast -nostdlib -Wextra -Wno-unused-function -Wno-volatile-register-var -Wno-stringop-overflow -fomit-frame-pointer -fno-tree-loop-distribution -fno-strict-aliasing -flto -fwhole-program -fno-exceptions -ffunction-sections -fdata-sections -Iinclude $(DATA_FLAGS)
+CCFLAGS   = -g -MP -MMD -m68020 -Ofast -nostdlib -Wextra -Wno-unused-function -Wno-volatile-register-var -Wno-stringop-overflow -fomit-frame-pointer -fno-tree-loop-distribution -fno-strict-aliasing -fno-exceptions -fno-optimize-sibling-calls -ffunction-sections -fdata-sections -Iinclude $(DATA_FLAGS)
+
+# DUMP_ASM=1 → save preprocessed .i and assembly .s next to each .o.
+# Slight build slowdown; output lands in obj/ alongside .o files.
+DUMP_ASM ?= 1
+ifeq ($(DUMP_ASM),1)
+CCFLAGS   += -save-temps=obj -fverbose-asm
+endif
 CPPFLAGS  = $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS   = -mcpu=68020 -g --register-prefix-optional -I$(SDKDIR)
 LDFLAGS   = -Wl,--emit-relocs,--no-check-sections,-e,main,-Map=$(OUT).map,-T,$(LDSCRIPT)
@@ -100,6 +107,17 @@ else
 	@mkdir -p out
 endif
 	@$(CC) $(CCFLAGS) -fverbose-asm -S -o out/SWOS.c.s $(CURDIR)/src/SWOS.c
+
+# Emit .s assembly for every C source into obj/, using whatever flags
+# the regular build would use for that translation unit. Pure inspection
+# target; doesn't touch .o files or relink the binary.
+c_asm_outputs := $(addprefix obj/,$(patsubst %.c,%.s,$(notdir $(c_sources))))
+dump-asm: $(c_asm_outputs)
+	$(info Done dumping assembly to obj/*.s)
+
+$(c_asm_outputs) : obj/%.s : %.c
+	$(info Asm-only $<)
+	@$(CC) $(if $(filter obj/diy_competition.s,$@),$(CCFLAGS_O2),$(if $(filter obj/game_timers.s obj/update_players.s obj/sprite_data.s obj/menu_data.s obj/competition_data.s obj/tactics_data.s obj/fixture_data.s obj/simulation_data.s obj/player_data.s obj/render_data.s obj/palette_data.s obj/strings_data.s obj/general_data.s,$@),$(CCFLAGS_NOLTO),$(CCFLAGS))) -fverbose-asm -S -o $@ $(CURDIR)/$<
 
 -include $(objects:.o=.d)
 

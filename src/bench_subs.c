@@ -29,10 +29,13 @@
 #include "player_anim.h"
 #include "player_sprites.h"
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+#endif
+
 /* ---- external asm globals ---- */
 extern uint16_t inSubstitutesMenu;
-extern uint32_t benchTeam;          /* pointer stored as uint32_t */
-extern uint32_t benchTeamGame;      /* pointer stored as uint32_t */
+extern uintptr_t benchTeam;          /* Competition*-shaped pointer; retyped uintptr_t for 64-bit. See project_uint32_pointer_storage_trap.md. */
+extern uintptr_t benchTeamGame;      /* TeamGame*-shaped pointer; retyped uintptr_t for 64-bit. */
 extern uint16_t subsTeamsSwapped;
 extern uint16_t subsDirection;
 extern uint8_t  subsFire;
@@ -104,8 +107,8 @@ extern uint16_t team1MostFrequentFace;
 extern uint16_t team2MostFrequentFace;
 extern uint16_t maxSubsPerTeam;
 extern uint16_t gameMaxSubstitutes;
-extern uint32_t substitutedPlSprite;  /* pointer stored as uint32_t */
-extern uint32_t teamThatSubstitutes;  /* pointer stored as uint32_t */
+extern Sprite *substitutedPlSprite;  /* Storage is `Sprite *` (swos_amiga_data_imports.c:283); stale uint32_t extern truncated pointer writes/reads on 64-bit. */
+extern uintptr_t teamThatSubstitutes;  /* TeamGeneralInfo*-shaped pointer; retyped uintptr_t for 64-bit. */
 extern uint16_t substitutedPlX;
 extern uint16_t substitutedPlY;
 extern uint16_t substitutedPlDestX;
@@ -128,19 +131,13 @@ extern TeamGame bottomTeamInGame;
 extern uint8_t  plOrdinalsTable[];
 extern uint8_t  plNamesLengthTableCopy[];
 extern uint16_t ingameTeamPlayerOffsets[];
-extern uint32_t positionsTable[];
+extern void *positionsTable[];
 extern AnimTable playerNormalStandingAnimTable;
 
 /* ---- Game state constants (ST_GAME_IN_PROGRESS, ST_KEEPER_HOLDS_BALL,
  *   ST_STARTING_GAME, ST_GAME_ENDED, ST_STOPPED all from game_types.h) ---- */
 
-/* ---- Position constants ---- */
-#define POS_RIGHT_BACK          1
-#define POS_LEFT_BACK           2
-#define POS_DEFENDER            3
-#define POS_RIGHT_WING          4
-#define POS_LEFT_WING           5
-#define POS_MIDFIELDER          6
+/* Position constants (POS_*) come from game_types.h. */
 
 /* ---- Sprite constants ---- */
 #define SPR_SELECT_SUBSTITUTE_ARROW 1170
@@ -168,8 +165,8 @@ static inline PlayerInfo *piFromOffset(TeamGame *tg, uint16_t off)
 }
 
 /* ---- external data ---- */
-extern uint16_t cameraX;
-extern uint16_t cameraY;
+extern FixedPoint cameraX;
+extern FixedPoint cameraY;
 extern uint16_t initialSubsState;
 extern uint16_t drawTrainingTopHalfOfTheBench;
 extern uint16_t currentGameTick;
@@ -184,9 +181,9 @@ extern uint16_t subsMenuHighlightColor;
 extern uint16_t subsMenuEntryFrameColor;
 extern uint8_t  playerNumberString[];
 extern uint16_t playerFacesTable[];
-extern uint32_t playerPositionsStringTable[];
-extern uint32_t tacticsStringTable[];
-extern uint32_t teamTacticsTable[];
+extern void *playerPositionsStringTable[];
+extern void *tacticsStringTable[];
+extern void *teamTacticsTable[];
 extern uint8_t  aFormation[];
 
 /* ---- external functions ---- */
@@ -425,14 +422,40 @@ activate_bench:
         int16_t d1, d2;
         TeamGame *a0;
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+        /* Diagnostic: capture what triggered bench so we can tell
+         * the difference between a real double-tap, the keyboard
+         * 0x10/0x11 hotkey path, and a phantom direction cycle from
+         * an input-pipeline bug. */
+        extern uint16_t bench1Called, bench2Called;
+        extern uint16_t subsPrevPl1Direction, subsPl1TapCount;
+        extern uint16_t subsPrevPl2Direction, subsPl2TapCount;
+        extern uint16_t pl1BenchTimeoutCounter, pl2BenchTimeoutCounter;
+        extern uint16_t gameState, gameStatePl;
+        SWOS_DBG(
+                "[bench] ACTIVATE team=%s gameState=%u gameStatePl=%u "
+                "bench1Called=%u bench2Called=%u "
+                "pl1{prev=0x%04X tapCount=%u timeout=%u} "
+                "pl2{prev=0x%04X tapCount=%u timeout=%u} "
+                "subsDir=0x%04X playerNumber=%u\n",
+                (a6 == &topTeamData) ? "TOP" : "BOTTOM",
+                (unsigned)gameState, (unsigned)gameStatePl,
+                (unsigned)bench1Called, (unsigned)bench2Called,
+                (unsigned)subsPrevPl1Direction, (unsigned)subsPl1TapCount,
+                (unsigned)pl1BenchTimeoutCounter,
+                (unsigned)subsPrevPl2Direction, (unsigned)subsPl2TapCount,
+                (unsigned)pl2BenchTimeoutCounter,
+                (unsigned)subsDirection, (unsigned)a6->playerNumber);
+#endif
+
         bench1Called = 0;
         bench2Called = 0;
-        benchTeam = (uint32_t)a6;
+        benchTeam = (uintptr_t)a6;
         a0 = topTeamPtr;
         if ((uint16_t)a6->teamNumber == 2)
             a0 = bottomTeamPtr;
 
-        benchTeamGame = (uint32_t)a0;
+        benchTeamGame = (uintptr_t)a0;
         plToBeSubstitutedPos = 0xFFFF;
         subsState = 0;
         benchPlayerIndex = 0;
@@ -710,12 +733,12 @@ static void trainingSwapBenchTeams(void)
 
     a6 = (TeamGeneralInfo *)benchTeam;
     a6 = a6->opponentsTeam;
-    benchTeam = (uint32_t)a6;
+    benchTeam = (uintptr_t)a6;
 
     a0 = topTeamPtr;
     if ((uint16_t)a6->teamNumber == 2)
         a0 = bottomTeamPtr;
-    benchTeamGame = (uint32_t)a0;
+    benchTeamGame = (uintptr_t)a0;
 }
 
 /* ================================================================
@@ -867,10 +890,10 @@ static void selectPlayerToSubstituteMenuHandler(void)
         Sprite **sprTable;
         Sprite *sprPtr;
 
-        teamThatSubstitutes = (uint32_t)a0;
+        teamThatSubstitutes = (uintptr_t)a0;
         sprTable = a0->spritesTable;
         sprPtr = sprTable[plToBeSubstitutedPos];
-        substitutedPlSprite = (uint32_t)sprPtr;
+        substitutedPlSprite = sprPtr;
 
         sprPtr->cards = 0;
         substitutedPlX = (uint16_t)sprPtr->x.s.i;
@@ -907,7 +930,7 @@ static void checkForThrowInAndGoalkeepersBall(void)
 static void __attribute__((optimize("no-tree-loop-distribute-patterns")))
 substitutePlayer(void)
 {
-    Sprite *sprPtr = (Sprite *)substitutedPlSprite;
+    Sprite *sprPtr = substitutedPlSprite;
     int16_t d7, d6;
     TeamGame *a0;
     uint16_t off7, off6;
@@ -1365,7 +1388,7 @@ static void swapPlayerNameData(int16_t enterIndex, int16_t leaveIndex)
     uint8_t *lenTable = plNamesLengthTableCopy;
     uint8_t tmp;
 
-    if ((uint32_t)benchTeamGame != (uint32_t)&topTeamInGame) {
+    if ((uintptr_t)benchTeamGame != (uintptr_t)&topTeamInGame) {
         ordTable += 16;
         lenTable += 16;
     }
@@ -1431,7 +1454,7 @@ _DrawBenchAndSubsMenu(void)
 
     d0 = benchXLimit;
     d0 += 8;
-    if (d0 > cameraX)
+    if (d0 > cameraX.s.i)
         goto draw_bench;
 
     leavingSubsMenu = 0;
@@ -1440,7 +1463,7 @@ _DrawBenchAndSubsMenu(void)
 draw_bench:
     d0 = benchXLimit;
     d0 += 8;
-    if (d0 <= cameraX)
+    if (d0 <= cameraX.s.i)
         return;
 
     initialSubsState = subsState;
@@ -1515,7 +1538,7 @@ static void drawOpponentsBench(void)
     d2 = opponentBenchY;
 
     a0 = &topTeamInGame;
-    if (benchTeamGame != (uint32_t)&bottomTeamInGame)
+    if (benchTeamGame != (uintptr_t)&bottomTeamInGame)
         a0 = &bottomTeamInGame;
 
     a1 = (TeamGeneralInfo *)benchTeam;
@@ -1752,7 +1775,7 @@ skip_formation_entry:
     /* draw title box - shadow */
     {
         uint16_t saved_d2 = d2;
-        uint16_t bx = subsMenuX - cameraX + 43;
+        uint16_t bx = subsMenuX - cameraX.s.i + 43;
         _FillRectangle(bx, d2, 41, 33, 8);
         _FillRectangle(bx - 2, d2 - 2, 41, 33, subsMenuBackgroundColor);
         _FillRectangle(bx - 1, d2 - 1, 39, 31, subsMenuHighlightColor);
@@ -1816,7 +1839,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
     int16_t d7 = selectedIndex;
 
     /* draw shadow rectangle */
-    x0 = subsMenuX - cameraX;
+    x0 = subsMenuX - cameraX.s.i;
     _FillRectangle(x0, y, 126, 11, 8);
 
     /* draw frame rectangle */
@@ -1827,7 +1850,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
 
     /* "FORMATION" entry (d7 == -1 in state 4) */
     if (subsState == 4 && d7 == -1) {
-        uint16_t cx = subsMenuX - cameraX + 63;
+        uint16_t cx = subsMenuX - cameraX.s.i + 63;
         y += 1;
         _DrawMenuTextCentered(cx, y, 2, aFormation, charsTable);
         y -= 1;
@@ -1846,7 +1869,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
         if (useIndividualPlayerSkinColor != 0) {
             uint16_t faceIdx = (uint16_t)(int16_t)(int8_t)pi->face;
             uint16_t faceSpr = playerFacesTable[faceIdx];
-            uint16_t fx = subsMenuX - cameraX;
+            uint16_t fx = subsMenuX - cameraX.s.i;
 
             /* check if this player is marked — blink face sprite */
             {
@@ -1867,7 +1890,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
         Sprite **sprites = bt->spritesTable;
         Sprite *spr = sprites[(uint16_t)d7];
         if (spr->injuryLevel == (int16_t)0xFFFE) {
-            uint16_t ix = subsMenuX - cameraX;
+            uint16_t ix = subsMenuX - cameraX.s.i;
             if (useIndividualPlayerSkinColor != 0)
                 ix += 9;
             _DrawSprite16Pixels(SPR_RED_CROSS_INJURY, ix, y);
@@ -1877,7 +1900,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
 
     /* draw shirt number */
     {
-        uint16_t nx = subsMenuX - cameraX + 4;
+        uint16_t nx = subsMenuX - cameraX.s.i + 4;
         if (useIndividualPlayerSkinColor != 0)
             nx += 9;
 
@@ -1913,7 +1936,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
             }
             y -= 1;
             {
-                uint16_t cx = subsMenuX - cameraX;
+                uint16_t cx = subsMenuX - cameraX.s.i;
                 if (useIndividualPlayerSkinColor != 0)
                     cx += 9;
                 _DrawSprite16Pixels(cardSpr, cx, y);
@@ -1926,7 +1949,7 @@ draw_name:
     /* draw player short name */
     {
         PlayerInfo *pi = piFromOffset(teamGame, d6);
-        uint16_t nameX = subsMenuX - cameraX + 9;
+        uint16_t nameX = subsMenuX - cameraX.s.i + 9;
         if (useIndividualPlayerSkinColor != 0)
             nameX += 9;
         _DrawMenuText(nameX, y, 2, (uint8_t *)pi->shortName, charsTable);
@@ -1936,7 +1959,7 @@ draw_name:
     {
         PlayerInfo *pi = piFromOffset(teamGame, d6);
         uint8_t *posStr = (uint8_t *)playerPositionsStringTable[(uint16_t)(int16_t)(int8_t)pi->position];
-        uint16_t posX = subsMenuX - cameraX + 116;
+        uint16_t posX = subsMenuX - cameraX.s.i + 116;
         _DrawMenuTextCentered(posX, y, 2, posStr, charsTable);
     }
     y -= 1;
@@ -1957,7 +1980,7 @@ draw_name:
         }
     draw_injury:
         {
-            uint16_t ix = subsMenuX - cameraX + 101;
+            uint16_t ix = subsMenuX - cameraX.s.i + 101;
             _DrawSprite16Pixels(SPR_RED_CROSS_INJURY, ix, y);
         }
     }
@@ -2018,7 +2041,7 @@ static void drawFormationMenu(void)
     /* draw title box */
     {
         uint16_t saved_d2 = d2;
-        uint16_t bx = formationMenuX - cameraX + 10;
+        uint16_t bx = formationMenuX - cameraX.s.i + 10;
         _FillRectangle(bx, d2, 41, 33, 8);
         _FillRectangle(bx - 2, d2 - 2, 41, 33, subsMenuBackgroundColor);
         _FillRectangle(bx - 1, d2 - 1, 39, 31, subsMenuHighlightColor);
@@ -2056,7 +2079,7 @@ static void drawFormationMenuEntry(uint8_t *charsTable, uint16_t y, uint16_t ent
     uint8_t *textStr;
 
     /* draw shadow */
-    x0 = formationMenuX - cameraX;
+    x0 = formationMenuX - cameraX.s.i;
     _FillRectangle(x0, y, 60, 11, 8);
 
     /* draw frame */
@@ -2074,7 +2097,7 @@ static void drawFormationMenuEntry(uint8_t *charsTable, uint16_t y, uint16_t ent
 
     /* draw centered text */
     {
-        uint16_t tx = formationMenuX - cameraX + 30;
+        uint16_t tx = formationMenuX - cameraX.s.i + 30;
         _DrawMenuTextCentered(tx, y, 2, textStr, charsTable);
     }
 }
@@ -2307,7 +2330,7 @@ void _SwapPlayerNameData(uint16_t enterIndex, uint16_t leaveIndex)
     uint8_t *ordinals = (uint8_t *)&plOrdinalsTable;
     uint8_t *nameLens = (uint8_t *)&plNamesLengthTableCopy;
 
-    if (benchTeamGame != (uint32_t)&topTeamInGame) {
+    if (benchTeamGame != (uintptr_t)&topTeamInGame) {
         ordinals += 16;
         nameLens += 16;
     }
@@ -2347,13 +2370,13 @@ void _TrainingSwapBenchTeams(void)
     /* Switch to opponent team */
     TeamGeneralInfo *team = (TeamGeneralInfo *)benchTeam;
     team = team->opponentsTeam;
-    benchTeam = (uint32_t)team;
+    benchTeam = (uintptr_t)team;
 
     /* Set benchTeamGame based on team number */
     TeamGame *gamePtr = topTeamPtr;
     if (team->teamNumber == 2)
         gamePtr = bottomTeamPtr;
-    benchTeamGame = (uint32_t)gamePtr;
+    benchTeamGame = (uintptr_t)gamePtr;
 }
 
 /* ---- LeaveSubsMenu  (SWOS2.s line 9787) ----
@@ -2664,7 +2687,7 @@ void _SelectPlayerToSubstituteMenuHandler(void)
     teamThatSubstitutes = benchTeam;
     Sprite **table = team->spritesTable;
     Sprite *sprite = table[pos];
-    substitutedPlSprite = (uint32_t)sprite;
+    substitutedPlSprite = sprite;
     sprite->cards = 0;
     substitutedPlX = sprite->x.s.i;
     substitutedPlY = sprite->y.s.i;
@@ -2687,7 +2710,7 @@ void _SelectPlayerToSubstituteMenuHandler(void)
 __attribute__((used, externally_visible))
 void _SubstitutePlayer(void)
 {
-    Sprite *sprite = (Sprite *)substitutedPlSprite;
+    Sprite *sprite = substitutedPlSprite;
     sprite->injuryLevel = 0;
     sprite->sentAway = 0;
 
@@ -2862,7 +2885,7 @@ void _BenchMenuHandleControls(void)
     }
 
     /* subsState == 0: bench idle — check if bench was dismissed */
-    if (benchTeam == (uint32_t)&topTeamData) {
+    if (benchTeam == (uintptr_t)&topTeamData) {
         if (bench1Called != 0) { _LeaveSubsMenu(); return; }
     } else {
         if (bench2Called != 0) { _LeaveSubsMenu(); return; }

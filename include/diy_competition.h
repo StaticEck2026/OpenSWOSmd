@@ -7,6 +7,40 @@
 #pragma once
 #include "game_types.h"
 
+/* --- Helpers that replace the historical `comp + 0xN` byte arithmetic.
+ *
+ * On 64-bit builds the embedded DIYCompetition base grows from 0x60 to
+ * 0x68 (one pointer field + tail alignment), so every Amiga byte
+ * literal (`+0x2B4`, `+0xEE`, etc.) is wrong by 8 bytes. Express the
+ * accesses via the typed struct fields instead — `offsetof` /
+ * field-address forms adjust automatically with the struct layout.
+ *
+ * `diy_standings_row(comp, idx)` returns the DIYTeamStats row for team
+ * `idx` (0..63) in the per-competition standings table. The standings
+ * table overlays the cup-team-ids region, starting at uint16-index 51
+ * of `cupTeamIds[]` (same bytes as Amiga `diyCompetitionStart + 0x2B4`
+ * because cupTeamIds itself is at +0x24E and 0x2B4 - 0x24E = 102 =
+ * 51 * sizeof(uint16_t)). The standings extend 64 * 18 = 1152 bytes
+ * past that, intentionally overflowing into the adjacent audio-bank
+ * BSS — see `project_diycomp_league_table_overlay`. */
+static inline DIYTeamStats *diy_standings_row(DIYCompetitionEx *comp, int idx) {
+    return (DIYTeamStats *)((uint8_t *)&comp->cupTeamIds[51]) + idx;
+}
+static inline DIYTeamStats *diy_standings_row_from_raw(uint8_t *compRaw, int idx) {
+    return diy_standings_row((DIYCompetitionEx *)compRaw, idx);
+}
+
+/* Byte offset from a DIYCompetitionEx base to its standings table.
+ * Used by call sites that already hold a `comp_base + grid_idx*18`
+ * pointer ("team position pointer") and just need to add this offset
+ * to reach the corresponding standings row. Derived from the struct
+ * layout (cupTeamIds at its offset, +51*2 bytes into cupTeamIds) so
+ * it adjusts automatically for 64-bit struct growth — replaces the
+ * hardcoded `+ 0x2B4` byte literal that's wrong by 8 on 64-bit. */
+#include "swos_types.h"
+#define DIY_STANDINGS_OFFSET \
+    (offsetof(DIYCompetitionEx, cupTeamIds) + 51 * sizeof(uint16_t))
+
 /* --- National team competition check (Chunk 151) --- */
 uint16_t _IsNationalTeamCompetitionOrQualification(uint32_t key);
 
@@ -96,7 +130,9 @@ void _DIY_BuildQualifiedTeamListFromDiyFileBuffer(uint16_t count, uint8_t *out);
 void _DIY_SyncCompetitionTeamGridOrBuildBracket(void);
 
 /* --- Competition Team Index & Promotion/Relegation --- */
-void _DIY_CopyCompetitionTeamIndexTable(uint8_t *dst);
+/* Returns advanced cursor; caller chains across per-division calls so
+ * promotion lists accumulate rather than overwrite. See definition. */
+uint8_t *_DIY_CopyCompetitionTeamIndexTable(uint8_t *dst);
 void _DIY_ApplyPromotionRelegationWeightsToScratch(const uint8_t *weights);
 void _DIY_UpdatePromotionRelegationScratchCounts(void);
 

@@ -18,7 +18,7 @@
 
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
-typedef unsigned long uint32_t;
+typedef unsigned int uint32_t;
 typedef short int16_t;
 
 #define SWOS_CHIPMEMSIZE 0x00200000u
@@ -66,34 +66,51 @@ extern uint8_t *_AllocMemAny(uint32_t size);
 SWOS_CHIP_BSS volatile uint32_t g_swos_chip_bss_anchor;
 SWOS_FAST_BSS volatile uint32_t g_swos_fast_bss_anchor;
 
-static void set_vector(uint32_t vbr, uint32_t offset, void (*handler)(void))
+/* m68k exception-vector table installer. Dead code on SDL (no real
+ * VBR), but kept for the Amiga port. uintptr_t so the cast to
+ * `volatile uint32_t *` doesn't widen a 32-bit literal on 64-bit. */
+static void set_vector(uintptr_t vbr, uintptr_t offset, void (*handler)(void))
 {
     volatile uint32_t *vector = (volatile uint32_t *)(vbr + offset);
-    *vector = (uint32_t)handler;
+    *vector = (uintptr_t)handler;
 }
 
-__attribute__((used, externally_visible)) void _start(void)
+/* Renamed from `_start` to avoid colliding with the hosted libc CRT
+ * entry point (`_start` is the runtime entry on Linux/glibc). The SDL
+ * shim never calls this directly -- it goes straight to _mainC. The
+ * Amiga assembly (swos2_unit.s) still does `jsr _start`, so expose
+ * the same body under both names on that build. */
+#if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+__attribute__((alias("_swos_c_start"), used, externally_visible))
+void _start(void);
+#endif
+__attribute__((used, externally_visible)) void _swos_c_start(void)
 {
     _SafeStart();
     _LoadDosLibrary();
     _DetachOSDisplay();
     _InitHardwareAtFrameStart();
 
-    uint32_t bank_bitmap_ptr = (uint32_t)&loaderBankBitmap;
-    uint32_t bank_bitmap_end = (uint32_t)&chipRamBitmapEnd;
-    do
-    {
-        *(volatile uint16_t *)bank_bitmap_ptr = 0x0000u;
-        bank_bitmap_ptr += 2u;
-    } while (bank_bitmap_ptr != bank_bitmap_end);
-
-    uint32_t pitch_ptr = (uint32_t)&pitchDatBuffer;
-    uint32_t menu_ptr = (uint32_t)&currentMenu;
-    do
-    {
-        *(volatile uint16_t *)pitch_ptr = 0x0000u;
-        pitch_ptr += 2u;
-    } while (pitch_ptr != menu_ptr);
+    /* These two zero-fill loops walk between pairs of SWOS2.s BSS
+     * labels that were originally guaranteed adjacent — the first
+     * scrubs the chip-RAM bank-bitmap metadata from `loaderBankBitmap`
+     * to `chipRamBitmapEnd`; the second clears the pitch tile-pattern
+     * region from `pitchDatBuffer` to `currentMenu`. With the data
+     * migrated to discrete C globals neither pair is contiguous, so
+     * the loops walk the full 32-bit address space and hang. Both are
+     * redundant under the m68k-amiga-elf CRT (it zero-fills BSS at
+     * startup); SDL also doesn't enter `_swos_c_start` so it never
+     * ran them either. Skip until we restore the original adjacency
+     * via a shared backing buffer + .equ aliases (the same pattern
+     * used by `careerFileBufferBuf`).
+     *
+     * uintptr_t locals so the global addresses don't truncate on
+     * 64-bit before being cast back to volatile uint16_t* for the
+     * byte-by-byte zero-fill (kept for when this comes back). */
+    (void)&loaderBankBitmap;
+    (void)&chipRamBitmapEnd;
+    (void)&pitchDatBuffer;
+    (void)&currentMenu;
 
     magicValue = SWOS_MAGIC_VALUE;
     /* Bank scan disabled: assetLoaderBank0Base is in BSS (relocated),
@@ -165,8 +182,8 @@ extern uint16_t bootTemp6;
 
 extern uint16_t introMenuImageScript[];
 extern uint8_t imageCmdWorkBuf[];
-extern uint32_t imageStreamCursor;
-extern uint32_t menuImageStreamBaseEnd;
+extern uint8_t *imageStreamCursor;
+extern uint8_t *menuImageStreamBaseEnd;
 
 extern uint16_t g_quitToDos;
 
@@ -177,12 +194,16 @@ extern void _ProcessImageCommandStream(const uint16_t *cmdBuf, uint8_t *workBuf)
 extern void _MenuProc(void);
 extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
 
-/* delay_ticks: reset game tick counter, busy-wait until target reached */
+/* delay_ticks: reset game tick counter, wait N vblanks via _WaitForVSync.
+ * Original Amiga was a busy spin on currentGameTick; on SDL that starves
+ * the timer thread on WSL2 and hangs indefinitely. */
+extern void _WaitForVSync(void);
+
 static void delay_ticks(uint16_t ticks)
 {
     currentGameTick = 0;
     while (currentGameTick < ticks)
-        ;
+        _WaitForVSync();
 }
 
 /* ================================================================
@@ -203,6 +224,7 @@ void _mainC(void)
     _InitSkinAndDefaultPointers();
 
     /* ---- Phase 2: Build palettes ---- */
+    
 #ifdef AGA
     {
         extern uint16_t menuPalette[];
@@ -215,6 +237,7 @@ void _mainC(void)
 #endif
 
     /* ---- Phase 3: Boot temps ---- */
+
     bootTemp0 = 1;
     bootTemp1 = 0;
     bootTemp2 = 0;
@@ -244,6 +267,7 @@ void _mainC(void)
     _FadeIn();
 
     /* ---- Phase 6: Poll loader op3 with 50Hz delays ---- */
+    
     do
     {
         delay_ticks(FPS_50HZ);
@@ -253,6 +277,7 @@ void _mainC(void)
     _FadeOutToBlack();
 
     /* ---- Phase 7: Poll loader op2 ---- */
+    
     if (_AssetSvcLoaderOp2() != 0)
     {
         _BlitterCopyPanelToScreen2();
@@ -269,10 +294,19 @@ void _mainC(void)
     }
 
     /* ---- Phase 8: Build intro menu assets ---- */
+    
+#ifdef SWOS_SDL_BUILD
+    /* Fill in the runtime filename-pointer slots in any image scripts
+     * we pulled from Data.c (the IDA exporter emitted those slots as
+     * magic integers rather than symbolic pointer references). */
+    extern void _SwosSDL_InitImageScripts(void);
+    _SwosSDL_InitImageScripts();
+#endif
     _ProcessImageCommandStream(introMenuImageScript, imageCmdWorkBuf);
     /* Force this write through to memory — LTO must not eliminate it.
      * menuImageStreamBaseEnd is read later by _ConvertColorsAndTextSprites. */
-    *(volatile uint32_t *)&menuImageStreamBaseEnd = *(volatile uint32_t *)&imageStreamCursor;
+    *(uint8_t * volatile *)&menuImageStreamBaseEnd =
+        *(uint8_t * volatile *)&imageStreamCursor;
     _AssetPrecacheMenuPack();
     assetLoaderAltPathReady = 1;
     hilNumGoals = 0;

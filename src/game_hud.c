@@ -23,7 +23,7 @@ extern uint16_t currentGameTick;
 extern uint16_t trainingGame;
 extern uint16_t currentPlayerIndicatorPosition;
 extern uint16_t resultTimer;
-extern uint32_t currentScorer;
+extern uintptr_t currentScorer;
 extern TeamGeneralInfo *lastTeamScored;
 extern Sprite  *lastPlayerBeforeGoalkeeper;
 extern Sprite  *lastPlayerPlayed;
@@ -33,8 +33,8 @@ extern Sprite  *bookedPlayer;
 extern TeamGeneralInfo *lastTeamBooked;
 extern uint16_t nobodysBallTimer;
 extern uint16_t nobodysBallLastFrame;
-extern uint16_t cameraX;
-extern uint16_t cameraY;
+extern FixedPoint cameraX;
+extern FixedPoint cameraY;
 extern uint8_t plNamesLengthTableCopy[];
 extern uint8_t plOrdinalsTable[];
 extern uint16_t gameStatePl;
@@ -263,8 +263,8 @@ position_name:
 
     d2 = (int16_t)(int8_t)(uint8_t)d2;     /* sign-extend from byte */
     spr->imageIndex = d1;
-    spr->x.s.i      = (int16_t)cameraX;
-    spr->y.s.i      = (int16_t)cameraY + 8000;
+    spr->x.s.i      = (int16_t)cameraX.s.i;
+    spr->y.s.i      = (int16_t)cameraY.s.i + 8000;
     spr->z.s.i      = 8000;
 
     switch (currentPlayerIndicatorPosition) {

@@ -4,12 +4,13 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "game_init.h"
+#include "endian_helpers.h"
 #include "game_types.h"
 #include "play_match_menu.h"
 #include "string_utils.h"
 
 /* ---- External globals (in SWOS2.s code/BSS sections) ---- */
-extern uint32_t currentScorer;
+extern uintptr_t currentScorer;
 extern Sprite  *lastPlayerBeforeGoalkeeper;
 extern uint16_t goalScored;
 extern uint16_t runSlower;
@@ -256,7 +257,39 @@ void _InitGameSaveTeams(TeamGame *leftTeam, TeamGame *rightTeam)
     _FixupAndColorPitchFile();
     _ConvertColorsAndTextSprites(leftTeam, rightTeam);
 
-    /* Wait for both fire buttons released */
+    /* Wait for both fire buttons released.
+     *
+     * On Amiga _Player1StatusProc / _Player2StatusProc read hardware
+     * joystick registers (JOY1DAT, CIAA_PRA) directly — the controller
+     * updates them in real time so this tight spin sees fire release as
+     * soon as the user lets go.
+     *
+     * On SDL joy1Dat / ciaa_pra are software globals updated by
+     * InputSDL_PostFrame inside Platform_VBlank. Without
+     * _WaitForVSync inside the spin, no event pump runs and the fire
+     * bits never clear — the program hangs here whenever the user is
+     * still holding fire (e.g. they pressed VIEW HIGHLIGHTS and held
+     * the key for any noticeable time). Tester reproducer: hold
+     * right-Ctrl after clicking VIEW HIGHLIGHTS on Windows.
+     *
+     * Fix: drive _WaitForVSync each iteration on SDL so PostFrame runs
+     * and the fire state can update. The hold doubles as the
+     * stadium-screen visible duration the original Amiga gets for
+     * free from the same release-wait. */
+#ifdef SWOS_SDL_BUILD
+    {
+        extern void _WaitForVSync(void);
+        for (;;) {
+            _WaitForVSync();
+            _Player1StatusProc();
+            if (pl1Fire)
+                continue;
+            _Player2StatusProc();
+            if (!pl2Fire)
+                break;
+        }
+    }
+#else
     for (;;) {
         _Player1StatusProc();
         if (pl1Fire)
@@ -265,6 +298,7 @@ void _InitGameSaveTeams(TeamGame *leftTeam, TeamGame *rightTeam)
         if (!pl2Fire)
             break;
     }
+#endif
 
     _FadeOutToBlack();
     paletteIndex = 2;
@@ -297,7 +331,7 @@ void _UpdatePlayerInjuries(TeamGame *tg, TeamFileEx *teamFileBase)
 
         /* Get the player in the team file.
          * _GetPlayer returns a base pointer; PlayerFile starts sizeof(TeamFile) bytes in. */
-        uint16_t teamNum = ((uint16_t)teamFileBase->team.countryNumber << 8) | teamFileBase->team.teamOrdinal;
+        uint16_t teamNum = PACK_BE_U16(teamFileBase->team.countryNumber, teamFileBase->team.teamOrdinal);
         uint8_t *playerBase = _GetPlayer(teamNum, (uint16_t)(int8_t)pi->playerIndex);
         PlayerFile *pf = (PlayerFile *)(playerBase + sizeof(TeamFile));
 
@@ -329,7 +363,7 @@ void _AccumulateMatchGoalsIntoTeamFile(TeamGame *tg, TeamFileEx *teamFileBase,
         if (goals == 0)
             continue;
 
-        uint16_t teamNum = ((uint16_t)teamFileBase->team.countryNumber << 8) | teamFileBase->team.teamOrdinal;
+        uint16_t teamNum = PACK_BE_U16(teamFileBase->team.countryNumber, teamFileBase->team.teamOrdinal);
         uint8_t *playerBase = _GetPlayer(teamNum, (uint16_t)(int8_t)pi->playerIndex);
         PlayerFile *pf = (PlayerFile *)(playerBase + sizeof(TeamFile));
         pf->goalStats[statOffset] += (uint8_t)goals;
@@ -465,7 +499,7 @@ void _ApplyPlayerStatusAfterSim(TeamGame *tg, TeamFileEx *teamFileBase)
         if (pi->numYellowCards == 0)  /* cards field */
             continue;
 
-        uint16_t teamNum = ((uint16_t)teamFileBase->team.countryNumber << 8) | teamFileBase->team.teamOrdinal;
+        uint16_t teamNum = PACK_BE_U16(teamFileBase->team.countryNumber, teamFileBase->team.teamOrdinal);
         uint8_t *playerBase = _GetPlayer(teamNum, (uint16_t)(int8_t)pi->playerIndex);
 
         uint8_t cardVal = (uint8_t)pi->numYellowCards;
@@ -520,7 +554,7 @@ void _UpdateCareerPlayerStatsAfterMatch(TeamGame *tg, TeamFileEx *teamFileBase)
         if (pi->halfPlayed != 2)  /* didn't play full match */
             continue;
 
-        uint16_t teamNum = ((uint16_t)teamFileBase->team.countryNumber << 8) | teamFileBase->team.teamOrdinal;
+        uint16_t teamNum = PACK_BE_U16(teamFileBase->team.countryNumber, teamFileBase->team.teamOrdinal);
         uint8_t *playerBase = _GetPlayer(teamNum, (uint16_t)(int8_t)pi->playerIndex);
         _Career_UpdateSinglePlayerPostMatchStats(playerBase);
     }
@@ -871,6 +905,7 @@ extern uint16_t deadVarAlways0;
 extern uint16_t gameLength;
 extern uint16_t gameLengthInGame;
 extern volatile uint16_t currentGameTick;
+extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 extern uint8_t  stadiumMenu[];
 
 /* C function declarations for called routines */
@@ -1001,13 +1036,15 @@ void _InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
     /* Show stadium menu */
     _ShowMenu(stadiumMenu);
 
-    /* Wait 150 frames (~3 seconds at 50Hz) */
+    /* Wait 150 frames (~3 seconds at 50Hz). Original was a busy spin on
+     * currentGameTick; on SDL that starves the timer thread on WSL2 and
+     * the wait can hang indefinitely (caught by user with SIGINT). Use
+     * _WaitForVSync so the main thread yields each frame and pumps
+     * events / audio. */
     {
         int16_t i;
         for (i = 0x95; i >= 0; i--) {
-            d0 = currentGameTick;
-            while (currentGameTick == d0)
-                ;
+            _WaitForVSync();
         }
     }
 

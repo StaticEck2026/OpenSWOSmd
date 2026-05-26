@@ -14,6 +14,7 @@
 #include "career_status.h"
 #include "career_teams.h"
 #include "diy_competition.h"
+#include "endian_helpers.h"
 #include "game_types.h"
 #include "job_offers.h"
 #include "panic.h"
@@ -47,7 +48,7 @@ extern uint8_t euroCupQualGroupSeedLists_4_6_11[];
 extern uint8_t euroCupQualGroupSeedListsReduced_4_6_11[];
 extern uint8_t euroCupQualGroupSeedBuckets_15_18_22[];
 
-extern uint32_t countriesTable[];
+extern void *countriesTable[];
 
 extern uint8_t euroCupEligibleCompetitionIds[];
 extern uint8_t cupWinnersCupEligibleCompetitionIds[];
@@ -87,7 +88,7 @@ void _Career_FillRandomTeamListExcludingSelected(uint16_t excludeCount,
         /* Read group pointer (4 bytes) */
         uint8_t *groupPtr = *(uint8_t **)table;
         table += 4;
-        if ((uint32_t)groupPtr == 0xFFFFFFFF)
+        if (groupPtr == (uint8_t *)(uintptr_t)-1)
             break;
 
         /* Read group size and copy count (2 words each) */
@@ -402,10 +403,10 @@ extern uint8_t competitionContext[];
 extern uint8_t tertiaryCompetitionContext[];
 extern uint8_t euroCupsCompetitionContext[];
 
-extern uint32_t currentCompetitionPtr;
-extern uint32_t secondaryCompetitionPtr;
-extern uint32_t tertiaryCompetitionPtr;
-extern uint32_t quaternaryCompetitionPtr;
+extern uint8_t *currentCompetitionPtr;
+extern uint8_t *secondaryCompetitionPtr;
+extern uint8_t *tertiaryCompetitionPtr;
+extern uint8_t *quaternaryCompetitionPtr;
 
 extern uint16_t wonWorldCup;
 extern uint16_t wonContinentalCup;
@@ -439,8 +440,8 @@ static void adjustWeightsForCompetition(uint8_t *compPtr, uint16_t *weightAccum,
         return;
     }
     /* World Cup qualifiers (range check): weight 4 */
-    if ((uint32_t)compPtr >= (uint32_t)worldCupQualifyingGroup1Copy &&
-        (uint32_t)compPtr <= (uint32_t)oceaniaWorldCupQualificationCopy) {
+    if ((uintptr_t)compPtr >= (uintptr_t)worldCupQualifyingGroup1Copy &&
+        (uintptr_t)compPtr <= (uintptr_t)oceaniaWorldCupQualificationCopy) {
         *weightedCategory *= 4;
         *weightAccum += 4;
         return;
@@ -526,11 +527,24 @@ void _SeasonFinished_ComputeSeasonReview(void)
         }
     }
 
-    /* Weighted average with rounding: (d6 + d5/2) / d5 */
-    d6 += (d5 >> 1);
-    /* ext.l d6; divu.w d5,d6 — sign-extend d6 word to long, unsigned divide */
-    uint32_t d6_32 = (uint32_t)(int32_t)(int16_t)d6;
-    d6 = (uint16_t)(d6_32 / (uint32_t)d5);
+    /* Weighted average with rounding: (d6 + d5/2) / d5.
+     * Asm `divu.w d5,d6` on a zero divisor triggers a m68k trap #5;
+     * the Amiga default handler resumes seamlessly with d6 unchanged
+     * (in our path d6 is also 0 because no comp contributed a
+     * category, so the implicit result is 0). On x86 the same divide
+     * raises SIGFPE — guard it. Reached on national-selector mode
+     * when neither the primary nor secondary comp's team list
+     * contains selTeamNumber (e.g. first FINISH SEASON for GERMANY
+     * managing only national selector with no qualified-team match
+     * yet — Playaveli's repro). */
+    if (d5 != 0) {
+        d6 += (d5 >> 1);
+        /* ext.l d6; divu.w d5,d6 — sign-extend d6 word to long, unsigned divide */
+        uint32_t d6_32 = (uint32_t)(int32_t)(int16_t)d6;
+        d6 = (uint16_t)(d6_32 / (uint32_t)d5);
+    } else {
+        d6 = 0;
+    }
 
     /* Bonus: World Cup win → best rating; Continental Cup win → -2 */
     if (wonWorldCup != 0) {
@@ -671,10 +685,10 @@ void _BeginContractNegotiationSequence(DIYCompetitionEx *comp, TeamFileEx *team)
 
 /* ---- Chunk 182: Competition Season Processing ---- */
 
-extern uint32_t secondaryCompetitionPtr;
-extern uint32_t tertiaryCompetitionPtr;
+extern uint8_t *secondaryCompetitionPtr;
+extern uint8_t *tertiaryCompetitionPtr;
 
-extern uint32_t competitionsTable[];
+extern void *competitionsTable[];
 extern uint16_t cachedTertiaryQualifiedTeamId;
 extern uint16_t panicReasonCode;
 extern uint8_t currentCompetitionId;
@@ -688,12 +702,12 @@ static void processPrimaryCompetitionForNextSeason(uint8_t *competition);
 __attribute__((used, externally_visible))
 void _Career_ProcessSecondaryCompetitionForNextSeason(uint8_t *competition)
 {
-    if (competition[1] != 1) {
+    if (((Competition *)competition)->type != 1) {
         panicReasonCode = 0x3003;
         _PanicHaltLoop();
         return;
     }
-    if ((uint32_t)competition == secondaryCompetitionPtr) {
+    if (competition == secondaryCompetitionPtr) {
         _RestoreSelectedTeams();
         _Career_CopyCompetitionContextToOrFromActive();
         _ShowDIYCupMenuWithParams(1, 1, 0);
@@ -710,12 +724,12 @@ void _Career_ProcessSecondaryCompetitionForNextSeason(uint8_t *competition)
 __attribute__((used, externally_visible))
 void _Career_ProcessTertiaryCompetitionForNextSeason(uint8_t *competition)
 {
-    if (competition[1] != 1) {
+    if (((Competition *)competition)->type != 1) {
         panicReasonCode = 0x3003;
         _PanicHaltLoop();
         return;
     }
-    if ((uint32_t)competition == tertiaryCompetitionPtr) {
+    if (competition == tertiaryCompetitionPtr) {
         _RestoreSelectedTeams();
         _Career_CopyTertiaryCompetitionContextToOrFromActive();
         _ShowDIYCupMenuWithParams(1, 1, 0);
@@ -736,18 +750,20 @@ void _Career_ProcessCompetitionForNextSeason(uint16_t compId)
     currentCompetitionId = (uint8_t)compId;
     cachedTertiaryQualifiedTeamId = 0xFFFF;
 
-    uint32_t *tableEntry = (uint32_t *)competitionsTable[compId & 0xFF];
+    /* Walk competitionsTable[idx]'s sub-table as void** so each slot is
+     * native pointer-width. Was uint32_t* — read half-pointers on 64-bit. */
+    void **tableEntry = (void **)competitionsTable[compId & 0xFF];
 
     /* Entry layout: [0]=primary ptr, [1]=skip, [2]=secondary ptr, [3]=tertiary ptr */
     uint8_t *primary = (uint8_t *)tableEntry[0];
     processPrimaryCompetitionForNextSeason(primary);
 
     uint8_t *secondary = (uint8_t *)tableEntry[2];
-    if ((uint32_t)secondary != 0xFFFFFFFF) {
+    if (secondary != (uint8_t *)(uintptr_t)-1) {
         _Career_ProcessSecondaryCompetitionForNextSeason(secondary);
 
         uint8_t *tertiary = (uint8_t *)tableEntry[3];
-        if ((uint32_t)tertiary != 0xFFFFFFFF) {
+        if (tertiary != (uint8_t *)(uintptr_t)-1) {
             _Career_ProcessTertiaryCompetitionForNextSeason(tertiary);
         }
     }
@@ -775,6 +791,7 @@ extern uint16_t natTeamsRandLimit2;
 extern uint8_t nationalTeams[];
 extern uint32_t careerCupPickList[];
 extern TeamFileEx careerTeam;
+extern uint8_t teamSortBuffer[];
 
 /* Competition qualification copies */
 extern uint8_t worldCupQualifyingGroup8Copy[];
@@ -828,8 +845,17 @@ extern uint32_t cupPickEuropeNoCupFriendly[];
 extern uint32_t cupPickEuropeNoCupFriendlyAlt[];
 extern uint32_t cupPickListEuropeInviteTournamentFriendlyAlt[];
 
-extern uint32_t ecQualifyingGroupsTable[];
-extern uint32_t worldCupQualifyingGroupsTable[];
+/* Real storage is `CompetitionCup *[8]` in competition_data.c:1175.
+ * Same trap shape as worldCupQualifyingGroupsTable below — see
+ * comment there. Use `void *[]` so the stride is native pointer-width. */
+extern void    *ecQualifyingGroupsTable[];
+/* Real storage is `CompetitionCup *[8]` in competition_data.c:1191
+ * — native pointer-width table. The legacy extern said `uint32_t[]`
+ * (Amiga 32-bit pointer slot) which read half a pointer on 64-bit
+ * at every `(uint8_t *)tbl[i]` consumer site. Declared as
+ * `void *[]` here to avoid pulling in competition_data.h's other
+ * typedefs (some clash with locals in this file). */
+extern void    *worldCupQualifyingGroupsTable[];
 extern uint32_t tourStringTable[];
 
 /* Forward declarations */
@@ -848,18 +874,20 @@ static uint16_t pickRandomNationalTeamId(uint16_t minPrice, uint16_t maxPrice,
         uint16_t r = _Rand();
         uint32_t idx = (uint32_t)r * natTeamsRandLimit2;
         idx >>= 8;
-        uint8_t *entry = nationalTeams + (uint16_t)(idx * 6);
-        uint16_t teamId = *(uint16_t *)entry;
+        NationalTeamRecord *rec = (NationalTeamRecord *)nationalTeams + (uint16_t)idx;
+        /* teamId is compared against selTeamNumber (BE-packed), so
+         * compose the same form via PACK_BE_U16 on either host. */
+        uint16_t teamId = PACK_BE_U16(rec->countryNumber, rec->teamOrdinal);
 
         if (regionFilter != 0) {
-            if ((uint8_t)(teamId >> 8) != regionFilter)
+            if (rec->countryNumber != regionFilter)
                 continue;
         }
         if (teamId == selTeamNumber)
             continue;
 
         if (retries >= 0) {
-            uint16_t price = *(uint16_t *)(entry + 4);
+            uint16_t price = rec->skillOrPrice;
             if (price < minPrice || price > maxPrice) {
                 retries--;
                 continue;
@@ -869,10 +897,16 @@ static uint16_t pickRandomNationalTeamId(uint16_t minPrice, uint16_t maxPrice,
         if (countSoFar == 0)
             return teamId;
 
+        /* currentList holds BE-packed team ids (setupFriendlyCupTeams /
+         * setupInvitationTournamentTeams / setupTourCupTeams now use
+         * BE_WRITE_U16 to match the dc.b storage). Read the same way
+         * so the host-native teamId compares equal to the matching
+         * entry on both endians. */
         int16_t dup = 0;
         uint16_t *p = currentList;
         for (uint16_t i = countSoFar; i > 0; i--) {
-            if (*p++ == teamId) { dup = 1; break; }
+            if (BE_READ_U16(p) == teamId) { dup = 1; break; }
+            p++;
         }
         if (!dup)
             return teamId;
@@ -889,6 +923,11 @@ static void fillWorldCupQualifyingGroupTeams(uint8_t regionCode, uint8_t *group,
                                               uint16_t **teamListPtr)
 {
     _Career_SortTeamFilePtrsByAvgPlayerPrice(regionCode);
+    /* Sort leaves a6=teamSortBuffer in the asm; re-point our explicit
+     * teamListPtr at the same buffer the sort just populated so the
+     * `*(*teamListPtr)++` reads walk the sorted team ids for this
+     * region. See setCupPickList_Europe for the full rationale. */
+    *teamListPtr = (uint16_t *)teamSortBuffer;
     uint8_t *origGroup = group;
     uint8_t compType = group[1];
     int16_t teamCount;
@@ -910,7 +949,7 @@ static void fillWorldCupQualifyingGroupTeams(uint8_t regionCode, uint8_t *group,
     if (selTeamNumber != worldCupHostTeam &&
         selTeamNumber != worldCupQualifyingTeam &&
         (uint8_t)(selTeamNumber >> 8) == regionCode) {
-        careerCupPickList[0] = (uint32_t)origGroup;
+        careerCupPickList[0] = (uintptr_t)origGroup;
         firstTeam = selTeamNumber;
     } else {
         do {
@@ -920,7 +959,15 @@ static void fillWorldCupQualifyingGroupTeams(uint8_t regionCode, uint8_t *group,
                  firstTeam == worldCupQualifyingTeam);
     }
 
-    *teamSlots++ = firstTeam;
+    /* Slot writes use BE byte order to match the static-init `dc.b
+     * country,ordinal` competition data — downstream
+     * _AppendTeamsToSelectionFromTmdOrTeamFile reads each slot with
+     * BE_READ_U16, so host-native writes on LE produced byte-swapped
+     * ids (Playaveli's GERMANY.CAR repro: VerifyTeamLoaded(0x0350)
+     * panic after the new sort fix had stored the correct 0x5003 in
+     * teamSortBuffer). asm `move.w` writes BE on m68k; mirror with
+     * BE_WRITE_U16 so both endians match the dc.b layout. */
+    BE_WRITE_U16(teamSlots, firstTeam); teamSlots++;
     for (int16_t i = teamCount - 1; i > 0; i--) {
         uint16_t teamId;
         do {
@@ -928,7 +975,7 @@ static void fillWorldCupQualifyingGroupTeams(uint8_t regionCode, uint8_t *group,
         } while (teamId == selTeamNumber ||
                  teamId == worldCupHostTeam ||
                  teamId == worldCupQualifyingTeam);
-        *teamSlots++ = teamId;
+        BE_WRITE_U16(teamSlots, teamId); teamSlots++;
     }
 }
 
@@ -955,6 +1002,10 @@ static void setupWorldCupQualifyingGroups(uint16_t **teamListPtr)
     worldCupQualifyingGroup8Copy[0xD] = (uint8_t)d5;
 
     _Career_SortTeamFilePtrsByAvgPlayerPrice(0x50);
+    /* Sort leaves a6=teamSortBuffer in the asm — see comment in
+     * fillWorldCupQualifyingGroupTeams. Re-point teamListPtr at the
+     * just-populated buffer. */
+    *teamListPtr = (uint16_t *)teamSortBuffer;
     uint16_t randOff = _Rand2() & 0x1C;
     uint8_t *selectedGroup = (uint8_t *)worldCupQualifyingGroupsTable[randOff >> 2];
     int16_t slotsRemaining = 0x30 - 6 + d5;
@@ -972,7 +1023,7 @@ static void setupWorldCupQualifyingGroups(uint16_t **teamListPtr)
                 selTeamNumber != worldCupHostTeam &&
                 selTeamNumber != worldCupQualifyingTeam &&
                 (uint8_t)(selTeamNumber >> 8) == 0x50) {
-                careerCupPickList[0] = (uint32_t)group;
+                careerCupPickList[0] = (uintptr_t)group;
                 teamId = selTeamNumber;
             } else {
                 if (group == worldCupQualifyingGroup8Copy && colOffset >= d5)
@@ -988,7 +1039,8 @@ static void setupWorldCupQualifyingGroups(uint16_t **teamListPtr)
                 } while (teamId == selTeamNumber);
             }
 
-            *slot = teamId;
+            /* BE write — see fillWorldCupQualifyingGroupTeams comment. */
+            BE_WRITE_U16(slot, teamId);
             if (--slotsRemaining == 0)
                 goto wc_groups_done;
         }
@@ -1096,6 +1148,14 @@ static void setCupPickList_Europe(uint16_t **teamListPtr)
         return;
 
     _Career_SortTeamFilePtrsByAvgPlayerPrice(0x50);
+    /* Asm "register-return" pattern: Career_SortTeamFilePtrsByAvgPlayerPrice's
+     * final instruction is `lea (teamSortBuffer).l,a6` and its movem doesn't
+     * restore a6, so the sort intentionally leaks a6 = teamSortBuffer to the
+     * caller. Career_SetCupPickList_Europe's group-fill loop then reads
+     * `(a6)+` to consume the just-sorted team id list. Our C translation
+     * threaded a teamListPtr through but the outer caller passes NULL — fix
+     * by pointing it at teamSortBuffer here, after the sort populates it. */
+    *teamListPtr = (uint16_t *)teamSortBuffer;
     uint16_t randIdx = (uint16_t)((uint32_t)_Rand2() * 7 >> 8);
     uint8_t *selectedGroup = (uint8_t *)ecQualifyingGroupsTable[randIdx];
     int16_t slotsRemaining = 0x2E; /* 46 */
@@ -1111,7 +1171,7 @@ static void setCupPickList_Europe(uint16_t **teamListPtr)
             int readFromList = 1;
             if (colOffset == 0 && group == selectedGroup) {
                 if (selTeamNumber != euroChampionshipQualTeam) {
-                    careerCupPickList[0] = (uint32_t)group;
+                    careerCupPickList[0] = (uintptr_t)group;
                     teamId = selTeamNumber;
                     readFromList = 0;
                 }
@@ -1131,7 +1191,8 @@ static void setCupPickList_Europe(uint16_t **teamListPtr)
                 } while (teamId == selTeamNumber);
             }
 
-            *slot = teamId;
+            /* BE write — see fillWorldCupQualifyingGroupTeams comment. */
+            BE_WRITE_U16(slot, teamId);
             if (--slotsRemaining == 0)
                 return;
         }
@@ -1148,17 +1209,21 @@ static void setupFriendlyCupTeams(void)
     uint16_t maxPrice = (uint16_t)((uint32_t)avgPrice * 125 / 100);
 
     uint8_t *comp = friendlyCopy;
-    int16_t teamCount = (int8_t)comp[0xD];
-    uint8_t hdrSize = comp[7];
+    int16_t teamCount = (int8_t)((CompetitionCup *)comp)->firstRoundNo;
+    uint8_t hdrSize = (uint8_t)((Competition *)comp)->unk3;
     uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF));
     uint16_t *listBase = teamList;
 
-    *teamList++ = selTeamNumber;
+    /* BE writes so the slot bytes match the static-init dc.b layout
+     * (downstream _AppendTeamsToSelectionFromTmdOrTeamFile reads with
+     * BE_READ_U16). pickRandomNationalTeamId's dup-check also reads
+     * via BE_READ_U16. */
+    BE_WRITE_U16(teamList, selTeamNumber); teamList++;
     uint16_t countSoFar = 1;
 
     for (int16_t i = teamCount - 2; i >= 0; i--) {
         uint16_t teamId = pickRandomNationalTeamId(minPrice, maxPrice, 0, listBase, countSoFar);
-        *teamList++ = teamId;
+        BE_WRITE_U16(teamList, teamId); teamList++;
         countSoFar++;
     }
 }
@@ -1172,17 +1237,18 @@ static void setupInvitationTournamentTeams(void)
     uint16_t maxPrice = (uint16_t)((uint32_t)avgPrice * 125 / 100);
 
     uint8_t *comp = invitationTournamentCopy;
-    int16_t teamCount = (int8_t)comp[0xD];
-    uint8_t hdrSize = comp[7];
+    int16_t teamCount = (int8_t)((CompetitionCup *)comp)->firstRoundNo;
+    uint8_t hdrSize = (uint8_t)((Competition *)comp)->unk3;
     uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF));
     uint16_t *listBase = teamList;
 
-    *teamList++ = selTeamNumber;
+    /* BE writes — see setupFriendlyCupTeams comment. */
+    BE_WRITE_U16(teamList, selTeamNumber); teamList++;
     uint16_t countSoFar = 1;
 
     for (int16_t i = teamCount - 2; i >= 0; i--) {
         uint16_t teamId = pickRandomNationalTeamId(minPrice, maxPrice, 0, listBase, countSoFar);
-        *teamList++ = teamId;
+        BE_WRITE_U16(teamList, teamId); teamList++;
         countSoFar++;
     }
 }
@@ -1203,12 +1269,13 @@ static void setupTourCupTeams(void)
     uint16_t *teamList = (uint16_t *)(tour + 7 + (hdrSize & 0xFF));
     uint16_t *listBase = teamList;
 
-    *teamList++ = selTeamNumber;
+    /* BE writes — see setupFriendlyCupTeams comment. */
+    BE_WRITE_U16(teamList, selTeamNumber); teamList++;
     uint16_t countSoFar = 1;
 
     for (int16_t i = teamCount - 2; i >= 0; i--) {
         uint16_t teamId = pickRandomNationalTeamId(0, 0x31, regionCode, listBase, countSoFar);
-        *teamList++ = teamId;
+        BE_WRITE_U16(teamList, teamId); teamList++;
         countSoFar++;
     }
 }
@@ -1278,7 +1345,7 @@ extern uint8_t careerCompetitionIdRemapTable[];
 extern uint16_t diyQualifiedTeamIndices[];
 extern uint16_t currentDivisionIndex;
 extern uint16_t youreSacked;
-extern uint32_t diyCompetitionPtr;
+extern uint8_t *diyCompetitionPtr;
 extern uint8_t diyCompetitionContext[];
 
 /* ---- Career_ProcessDiyLeagueQualificationEntry ----
@@ -1295,9 +1362,10 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         return;
 
     /* Check if this is the last division OR if the offset matches the next
-     * division's offset + 6. If neither, skip processing. */
+     * division's offset + 6. If neither, skip processing. Byte 9 of a
+     * CompetitionLeague is divisionsCount. */
     uint16_t nextDiv = index + 1;
-    if ((uint8_t)nextDiv != competition[9]) {
+    if ((uint8_t)nextDiv != (uint8_t)((CompetitionLeague *)competition)->divisionsCount) {
         uint8_t d1 = a2[0x18] + 6;
         if (d0 == d1)
             return;
@@ -1312,7 +1380,7 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
     /* Skip 4-byte gap */
     a2 += 4;
 
-    if (!youreSacked && (uint32_t)qualComp == diyCompetitionPtr) {
+    if (!youreSacked && qualComp == diyCompetitionPtr) {
         /* Player's competition — interactive processing */
         int8_t teamCount = *(int8_t *)(qualComp + 0xA);
         a2 += (int16_t)teamCount * 2;
@@ -1341,10 +1409,38 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         int8_t count = *(int8_t *)(qualComp + 0xA);
         int16_t cnt = (int16_t)count - 1;
 
+        /* The qualification index pairs in the source struct (e.g.
+         * englishLeagues.unk3) are byte-array literals authored as BE
+         * uint16 pairs ({ 0, 0, 0, 3, 0, 1, ... } means qIdx values
+         * 0, 3, 1, ...). The asm reads them via `move.w (a2)+,d0`
+         * which is BE on m68k; on SDL the same memory accessed as
+         * native uint16 byte-swaps the value (3 → 0x0300), indexing
+         * way past the end of diyQualifiedTeamIndices and grabbing
+         * garbage team IDs. Use BE_READ_U16 to recover the intended
+         * qIdx on both platforms.
+         *
+         * The team-id WRITE into the qualComp's qualification grid
+         * (e.g. div1Playoffs.unk2) needs to be BE too: the downstream
+         * _AppendTeamsToSelectionFromTmdOrTeamFile reads the grid
+         * with BE_READ_U16(&teamIds[k]) because the static competition
+         * data (europeanChampionships etc.) stores team IDs as BE
+         * `{country, ordinal}` byte pairs. A naive host-order write
+         * here gives 0x0844 (England team 68) → memory [0x44,0x08] →
+         * BE_READ_U16 = 0x4408 → extNum = 68 → tries to load
+         * data/team.068 (gap country, file doesn't exist) → infinite
+         * retry loop in _LoadFileEx. Match the BE wire format by
+         * writing the team id as BE bytes. */
         for (int16_t i = cnt; i >= 0; i--) {
-            uint16_t qIdx = *(uint16_t *)a2;
+            uint16_t qIdx = BE_READ_U16(a2);
             a2 += 2;
-            *(uint16_t *)teamData = diyQualifiedTeamIndices[qIdx];
+            /* diyQualifiedTeamIndices is populated by
+             * _DIY_CopyCompetitionTeamIndexTable from comp+0x1AE
+             * (_bss_2E0AE), which `_DIY_RecordLeagueFixtureResultAndAdvance
+             * Progress`'s promotion-output loop populates byte-for-byte
+             * from leagueTeamIds — BE-packed per 4e5f378. Use BE_READ_U16
+             * to recover the correct id from the array. */
+            uint16_t teamId = BE_READ_U16(&diyQualifiedTeamIndices[qIdx]);
+            BE_WRITE_U16(teamData, teamId);
             teamData += 2;
         }
 
@@ -1363,11 +1459,11 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
  * Handles league (type 0) and cup (type 2) competitions differently. */
 static void processPrimaryCompetitionForNextSeason(uint8_t *competition)
 {
-    uint8_t compType = competition[1];
+    int8_t compType = ((Competition *)competition)->type;
 
     if (compType == 2) {
         /* Cup competition */
-        if ((uint32_t)competition == currentCompetitionPtr) {
+        if (competition == currentCompetitionPtr) {
             _RestoreSelectedTeams();
             _Career_CopyCompetitionFileBufferToOrFromActive();
             _DIY_EditCompetitionSlot(1, 1, 0);
@@ -1387,12 +1483,25 @@ static void processPrimaryCompetitionForNextSeason(uint8_t *competition)
         return;
     }
 
-    /* League competition — loop through all divisions */
-    uint8_t numDivisions = competition[9];
+    /* League competition — loop through all divisions.
+     *
+     * `qualCursor` mirrors the asm's a3 register: set ONCE before the
+     * loop, advanced inside DIY_CopyCompetitionTeamIndexTable on each
+     * iteration. This way each division's promotion list APPENDS to
+     * diyQualifiedTeamIndices rather than overwriting from base, so
+     * the per-division qualification entries below see the cumulative
+     * list (matches Career_ProcessPrimaryCompetitionForNextSeason at
+     * SWOS2.s line 57992 / loc_12BDC8). Resetting to base each call
+     * caused only the last division's data to be visible — and the
+     * qualification-loop's _Career_AutoAdvanceCupCompetitionFromRecord
+     * picked teams from the wrong division, putting promotion weights
+     * into wrong scratch slots and tripping the 0x5555 validate panic. */
+    uint8_t numDivisions = (uint8_t)((CompetitionLeague *)competition)->divisionsCount;
     uint16_t d7;
+    uint8_t *qualCursor = (uint8_t *)diyQualifiedTeamIndices;
 
     for (d7 = 0; d7 < numDivisions; d7++) {
-        if ((uint32_t)competition == currentCompetitionPtr &&
+        if (competition == currentCompetitionPtr &&
             d7 == currentDivisionIndex) {
             /* Player's current division — interactive */
             _RestoreSelectedTeams();
@@ -1408,7 +1517,7 @@ static void processPrimaryCompetitionForNextSeason(uint8_t *competition)
                 _DIY_CachePrimaryQualifiedTeamsGrid();
         }
         _DIY_UpdatePromotionRelegationScratchCounts();
-        _DIY_CopyCompetitionTeamIndexTable((uint8_t *)diyQualifiedTeamIndices);
+        qualCursor = _DIY_CopyCompetitionTeamIndexTable(qualCursor);
     }
 
     /* Process qualification entries for all divisions */

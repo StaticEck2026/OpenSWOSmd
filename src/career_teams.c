@@ -11,9 +11,12 @@
  */
 
 #include "career_teams.h"
+#include "endian_helpers.h"
 #include "game_types.h"
+#include "auto_skip_debug.h"
 #include "panic.h"
 #include "teams.h"
+
 #include "diy_competition.h"
 #include "file_io.h"
 
@@ -35,7 +38,7 @@ extern uint16_t panicReasonCode;
 extern uint16_t careerFileBuffer;     /* count of teams in TMD pool */
 extern uint8_t tmdFileBuffer;         /* start of TMD team pool data (array of TeamFileEx records) */
 extern uint8_t teamFileBuffer;        /* team file buffer: first word is count, then records */
-extern uint8_t teamSortBuffer[];      /* 256-byte temp buffer for sorting */
+extern uintptr_t teamSortBuffer[];      /* 64-entry pointer/ID temp buffer for sorting; sized for 64-bit pointers. */
 extern uint8_t lastLoadedExtNumber;
 extern uint8_t teamIdSelectionProcessedFlags[]; /* 64-byte flags buffer */
 extern uint16_t diyLeagueTeamIds[];
@@ -75,9 +78,14 @@ static int16_t findTeamInCache(uint16_t teamNum, TeamFileEx **teamOut, uint16_t 
         return 0;
     }
 
-    /* Check careerTeam (when auto-advance in progress or matches selTeamNumber) */
+    /* Check careerTeam (when auto-advance in progress or matches selTeamNumber).
+     * careerTeam.team's first two bytes are the {countryNumber, teamOrdinal}
+     * byte pair from the loaded TMD record. teamNum is BE-packed
+     * (country<<8 | ordinal) like selTeamNumber, so use PACK_BE_U16 — a raw
+     * *(uint16_t *)& would read the bytes swapped on LE and never match. */
     if (careerAutoAdvanceInProgress) {
-        if (teamNum == *(uint16_t *)&careerTeam) {
+        if (teamNum == PACK_BE_U16(careerTeam.team.countryNumber,
+                                   careerTeam.team.teamOrdinal)) {
             *teamOut = &careerTeam;
             *indexOut = 0;
             return 0;
@@ -96,7 +104,7 @@ static int16_t findTeamInCache(uint16_t teamNum, TeamFileEx **teamOut, uint16_t 
 
     TeamFileEx *ptr = (TeamFileEx *)&selTeamsPtr;
     for (uint16_t i = 0; i < count; i++) {
-        if (*(uint16_t *)&ptr->team.countryNumber == teamNum) {
+        if (PACK_BE_U16(ptr->team.countryNumber, ptr->team.teamOrdinal) == teamNum) {
             *teamOut = ptr;
             *indexOut = i;
             return 0;
@@ -118,6 +126,34 @@ TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum)
     TeamFileEx *team;
     uint16_t idx;
     if (findTeamInCache(teamNum, &team, &idx) != 0) {
+        /* Always dump context on panic — we're crashing anyway and the
+         * cache contents tell us whether the caller trusted a stale
+         * teamNum or whether numSelectedTeams is wrong. */
+        extern uint8_t selTeamsPtr;
+        extern uint16_t numSelectedTeams;
+        extern uint16_t selTeamNumber;
+        extern uint16_t diyTournamentTeamIds[];
+        SWOS_DBG(
+                "[verify] _VerifyTeamLoaded(0x%04X) FAIL: country=0x%02X team=0x%02X "
+                "selTeamNumber=0x%04X numSelectedTeams=%u\n",
+                (unsigned)teamNum,
+                (unsigned)((teamNum >> 8) & 0xFF), (unsigned)(teamNum & 0xFF),
+                (unsigned)selTeamNumber, (unsigned)numSelectedTeams);
+        TeamFileEx *firstFew = (TeamFileEx *)&selTeamsPtr;
+        unsigned dumpN = numSelectedTeams;
+        if (dumpN > 16) dumpN = 16;
+        for (unsigned i = 0; i < dumpN; i++) {
+            SWOS_DBG(
+                    "[verify]   selTeamsPtr[%u] country=0x%02X ordinal=0x%02X\n",
+                    i,
+                    (unsigned)firstFew[i].team.countryNumber,
+                    (unsigned)firstFew[i].team.teamOrdinal);
+        }
+        SWOS_DBG("[verify] diyTournamentTeamIds[0..15] =");
+        for (unsigned i = 0; i < 16; i++)
+            SWOS_DBG(" %04X", (unsigned)diyTournamentTeamIds[i]);
+        SWOS_DBG("\n");
+        SWOS_DBG_FLUSH();
         _PanicHaltLoop();
     }
     return team;
@@ -154,7 +190,7 @@ TeamFileEx *_GetTeamPointer(uint16_t teamId)
      * first word of each record. */
     _LoadTeamFile((uint16_t)(teamId >> 8));
     TeamFileEx *ptr = (TeamFileEx *)((uint8_t *)(&teamFileBuffer) + 2);  /* skip 2-byte count header */
-    while (*(uint16_t *)&ptr->team.countryNumber != teamId)
+    while (PACK_BE_U16(ptr->team.countryNumber, ptr->team.teamOrdinal) != teamId)
         ptr++;
 
     /* Apply foreign market player patches */
@@ -172,10 +208,26 @@ TeamFileEx *_GetTeamPointer(uint16_t teamId)
 __attribute__((used, externally_visible))
 void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest)
 {
+    /* Each TeamFileEx in the selTeamsPtr buffer starts with (countryNumber,
+     * teamOrdinal) as two adjacent bytes. The Amiga m68k `move.w (a0)` read
+     * those as a single big-endian word, so the team id is
+     * `(countryNumber << 8) | teamOrdinal`. A naive `*(uint16_t *)src` on a
+     * little-endian SDL host swaps the bytes — an Italian team
+     * (countryNumber=0x0E, teamOrdinal=0x2C, real id 0x0E2C / 3628) reads
+     * back as 0x2C0E (11278) and _VerifyTeamLoaded panics on the bogus id.
+     * Use PACK_BE_U16 so both builds produce the BE-flavour id every other
+     * site (findTeamInCache / _VerifyTeamLoaded etc.) compares against. */
     volatile uint8_t *src = (volatile uint8_t *)&selTeamsPtr;
-    volatile uint16_t *dst = (volatile uint16_t *)dest;
+    uint8_t *dst = dest;
     for (int16_t i = (int16_t)(count - 1); i >= 0; i--) {
-        *dst++ = *(volatile uint16_t *)src;
+        /* Asm `move.w (a0),(a1)+` preserves the BE `{country, ordinal}`
+         * byte pair to dst on m68k. Use BE_WRITE_U16 so dst ends up
+         * with the same in-memory layout on LE — matching the
+         * BE-packed convention the diyLeagueTeamIds / diyCupTeamIds /
+         * diyTournamentTeamIds arrays use and that
+         * _DIY_ComputeAverageTeamStrengthTier consumes via BE_READ_U16. */
+        BE_WRITE_U16(dst, PACK_BE_U16(src[0], src[1]));
+        dst += 2;
         src += sizeof(TeamFileEx);
     }
 }
@@ -255,7 +307,7 @@ uint8_t *_TeamSelectionKeyCache_InsertSpaceSorted(uint16_t key, uint16_t inserti
     }
 
     /* Walked all entries without finding insert point — check bounds */
-    if ((uint32_t)ptr > (uint32_t)teamSelectionKeyCacheEnd)
+    if ((uintptr_t)ptr > (uintptr_t)teamSelectionKeyCacheEnd)
         goto panic;
     return ptr;
 
@@ -271,11 +323,11 @@ found_insert_point:
 
         /* Check if shifted data would overflow */
         uint8_t *newEnd = endPtr + insertionBytes;
-        if ((uint32_t)newEnd > (uint32_t)teamSelectionKeyCacheEnd)
+        if ((uintptr_t)newEnd > (uintptr_t)teamSelectionKeyCacheEnd)
             goto panic;
 
         /* Shift data upward by insertionBytes (from end to start, word-at-a-time) */
-        uint32_t shiftBytes = (uint32_t)endPtr - (uint32_t)ptr;
+        uint32_t shiftBytes = (uintptr_t)endPtr - (uintptr_t)ptr;
         uint16_t numWords = (uint16_t)(shiftBytes >> 1) - 1;
         {
             volatile uint16_t *src = (volatile uint16_t *)endPtr;
@@ -310,11 +362,15 @@ int16_t _SearchTeamInTmdFile(uint16_t teamNo)
     if (count == 0)
         return 1;
 
-    uint8_t *ptr = &tmdFileBuffer;
+    TeamFileEx *ptr = (TeamFileEx *)&tmdFileBuffer;
+    /* teamNo is the Amiga BE-packed `(country<<8)|ordinal`. Compose
+     * the same value from the per-record byte pair via PACK_BE_U16
+     * so the comparison matches on either host. */
     for (uint16_t i = 0; i < count; i++) {
-        if (*(uint16_t *)ptr == teamNo)
+        if (PACK_BE_U16(ptr->team.countryNumber,
+                        ptr->team.teamOrdinal) == teamNo)
             return 0;  /* found */
-        ptr += sizeof(TeamFileEx);
+        ptr++;
     }
     return 1;  /* not found */
 }
@@ -332,13 +388,16 @@ void _Career_RemoveTeamFromTmdTeamPool(uint16_t teamNo)
     if (count == 0)
         return;
 
-    uint8_t *ptr = &tmdFileBuffer;
+    TeamFileEx *ptr = (TeamFileEx *)&tmdFileBuffer;
+    /* See note in _SearchTeamInTmdFile — same BE-packed teamNo vs
+     * adjacent {country, ordinal} bytes. */
     for (uint16_t i = 0; i < count; i++) {
-        if (*(uint16_t *)ptr == teamNo) {
+        if (PACK_BE_U16(ptr->team.countryNumber,
+                        ptr->team.teamOrdinal) == teamNo) {
             /* Found — shift remaining entries left */
             uint16_t remaining = count - 1 - i;
             if (remaining > 0) {
-                volatile uint16_t *src = (volatile uint16_t *)(ptr + sizeof(TeamFileEx));
+                volatile uint16_t *src = (volatile uint16_t *)&ptr[1];
                 volatile uint16_t *dst = (volatile uint16_t *)ptr;
                 uint32_t words = (uint32_t)remaining * (sizeof(TeamFileEx) / 2);
                 for (uint32_t w = 0; w < words; w++) {
@@ -348,7 +407,7 @@ void _Career_RemoveTeamFromTmdTeamPool(uint16_t teamNo)
             careerFileBuffer--;
             return;
         }
-        ptr += sizeof(TeamFileEx);
+        ptr++;
     }
 }
 
@@ -363,7 +422,7 @@ __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patte
 void _Career_AppendTeamToTmdTeamPool(TeamFileEx *team)
 {
     /* Verify team is not already in pool */
-    uint16_t teamNo = *(uint16_t *)&team->team.countryNumber;
+    uint16_t teamNo = PACK_BE_U16(team->team.countryNumber, team->team.teamOrdinal);
     if (_SearchTeamInTmdFile(teamNo) == 0) {
         /* Already in pool — panic */
         panicReasonCode = 0x3443;
@@ -372,7 +431,7 @@ void _Career_AppendTeamToTmdTeamPool(TeamFileEx *team)
 
     /* Append at end of pool */
     uint16_t count = careerFileBuffer;
-    uint8_t *dest = &tmdFileBuffer + (uint32_t)count * sizeof(TeamFileEx);
+    TeamFileEx *dest = (TeamFileEx *)&tmdFileBuffer + count;
     volatile uint16_t *src = (volatile uint16_t *)team;
     volatile uint16_t *dst = (volatile uint16_t *)dest;
     for (int16_t i = 0x155; i >= 0; i--) {
@@ -421,22 +480,27 @@ static TeamFileEx *findTeamInTmdBuffer(uint16_t teamId)
     TeamFileEx *ptr = (TeamFileEx *)&tmdFileBuffer;
     uint16_t count = careerFileBuffer;
     for (uint16_t i = 0; i < count; i++) {
-        if (*(uint16_t *)&ptr->team.countryNumber == teamId)
+        if (PACK_BE_U16(ptr->team.countryNumber, ptr->team.teamOrdinal) == teamId)
             return ptr;
         ptr++;
     }
     return (TeamFileEx *)0;
 }
 
-/* Find team record in team file buffer by team ID */
+/* Find team record in team file buffer by team ID. Each record's first
+ * two bytes are {countryNumber, teamOrdinal}; comparing as a raw uint16
+ * on LE byte-swaps relative to the BE-format teamId every other caller
+ * passes in. Use BE_READ_U16 so the comparison sees the Amiga packed
+ * value (country<<8 | ordinal). */
 static uint8_t *findTeamInTeamFileBuffer(uint16_t teamId)
 {
-    uint8_t *ptr = &teamFileBuffer + 2;
+    TeamFileEx *ptr = (TeamFileEx *)(&teamFileBuffer + 2);
     uint16_t count = *(uint16_t *)&teamFileBuffer;
     for (uint16_t i = 0; i < count; i++) {
-        if (*(uint16_t *)ptr == teamId)
-            return ptr;
-        ptr += sizeof(TeamFileEx);
+        if (PACK_BE_U16(ptr->team.countryNumber,
+                        ptr->team.teamOrdinal) == teamId)
+            return (uint8_t *)ptr;
+        ptr++;
     }
     return (uint8_t *)0;
 }
@@ -468,27 +532,27 @@ void _Career_SortTeamFilePtrsByAvgPlayerPrice(uint16_t extNumber)
     _LoadTeamFile(extNumber);
 
     uint16_t count = *(uint16_t *)&teamFileBuffer;
-    uint8_t *team = &teamFileBuffer + 2;
-    uint32_t *sortBuf = (uint32_t *)teamSortBuffer;
+    TeamFileEx *team = (TeamFileEx *)(&teamFileBuffer + 2);
+    uintptr_t *sortBuf = teamSortBuffer;
 
     /* Build pointer array */
     uint16_t i;
     for (i = 0; i < count; i++) {
-        sortBuf[i] = (uint32_t)team;
-        team += sizeof(TeamFileEx);
+        sortBuf[i] = (uintptr_t)team;
+        team++;
     }
 
     /* Bubble sort by average player price (descending: highest first) */
     int16_t pass;
     for (pass = (int16_t)(count - 2); pass >= 0; pass--) {
-        uint32_t *p = sortBuf;
+        uintptr_t *p = sortBuf;
         int16_t j;
         for (j = pass; j >= 0; j--) {
             uint16_t price1 = _GetAveragePlayerPrice((TeamFileEx *)p[0]);
             uint16_t price2 = _GetAveragePlayerPrice((TeamFileEx *)p[1]);
             if (price1 < price2) {
                 /* bcc.s: branch if carry clear = price1 >= price2 (unsigned) */
-                uint32_t tmp = p[0];
+                uintptr_t tmp = p[0];
                 p[0] = p[1];
                 p[1] = tmp;
             }
@@ -497,10 +561,10 @@ void _Career_SortTeamFilePtrsByAvgPlayerPrice(uint16_t extNumber)
     }
 
     /* Random shuffle: ~25% chance to swap adjacent pairs */
-    uint32_t *p2 = sortBuf;
+    uintptr_t *p2 = sortBuf;
     for (pass = (int16_t)(count - 2); pass >= 0; pass--) {
         if ((_Rand2() & 3) == 0) {
-            uint32_t tmp = p2[0];
+            uintptr_t tmp = p2[0];
             p2[0] = p2[1];
             p2[1] = tmp;
         }
@@ -510,10 +574,19 @@ void _Career_SortTeamFilePtrsByAvgPlayerPrice(uint16_t extNumber)
     /* Copy sorted team IDs back to start of teamSortBuffer.
      * The asm uses a6 (teamSortBuffer) as both source (pointer array) and dest (ID array).
      * The pointers are 4 bytes each; IDs are 2 bytes. Since we write IDs sequentially and
-     * read pointers sequentially, and 2 < 4, the writes don't corrupt unread pointers. */
+     * read pointers sequentially, and 2 < 4, the writes don't corrupt unread pointers.
+     *
+     * Each TeamFileEx's leading 2 bytes are the BE-packed team id
+     * `{countryByte, ordinalByte}` (offsets 0/1 of TeamFile). Asm
+     * `move.w (a1),(a6)+` reads that as a single uint16 on m68k BE.
+     * Host-native `*(uint16_t *)` on x86 LE flips the bytes — Playaveli's
+     * GERMANY.CAR EC-qualifying-year repro then crashed in
+     * VerifyTeamLoaded(0x1150) because the European national-team
+     * 0x5011 came out byte-swapped here. Use BE_READ_U16 so the in-memory
+     * uint16 we store is the packed-id form downstream code expects. */
     uint16_t *idBuf = (uint16_t *)teamSortBuffer;
     for (i = 0; i < count; i++) {
-        idBuf[i] = *(uint16_t *)((uint8_t *)sortBuf[i]);
+        idBuf[i] = BE_READ_U16((uint8_t *)sortBuf[i]);
     }
 }
 
@@ -542,15 +615,15 @@ void _LoadSomeEuroCup(uint8_t *whichCup)
 
     /* Calculate destination offset past existing teams */
     uint16_t existingCount = careerFileBuffer;
-    uint8_t *dest = &tmdFileBuffer + (uint32_t)existingCount * sizeof(TeamFileEx);
+    TeamFileEx *dest = (TeamFileEx *)&tmdFileBuffer + existingCount;
 
     uint32_t fileSize = 0;
-    _LoadFileEx(filename, dest, &fileSize);
+    _LoadFileEx(filename, (uint8_t *)dest, &fileSize);
 
     uint16_t loadedCount = (uint16_t)(fileSize / sizeof(TeamFileEx));
     careerFileBuffer += loadedCount;
 
-    _SetTeamGlobalNumbers(loadedCount, dest);
+    _SetTeamGlobalNumbers(loadedCount, (uint8_t *)dest);
 }
 
 /* ================================================================
@@ -569,77 +642,138 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
 {
     uint8_t *flags = teamIdSelectionProcessedFlags;
 
-    /* Phase 1: Pre-scan — mark teams already loaded in cache.
-     * Asm uses FindTeamInCache (not SearchTeamInTmdFile!) to check
-     * currentTeam, careerTeam, and selTeamsPtr. Teams in TMD but not
-     * yet in the cache must NOT be marked, or they'll be skipped and
-     * never added to selTeamsPtr, causing VerifyTeamLoaded to panic. */
+    /* The teamIds array passed in points at packed `{country, ordinal}`
+     * byte pairs from the static competition data (e.g.
+     * europeanChampionships.unk1). On Amiga BE, dereferencing as uint16_t
+     * gives `(country << 8) | ordinal` — the value the rest of the team
+     * lookup code expects (matches `PACK_BE_U16(countryNumber,
+     * teamOrdinal)` in findTeamInCache, the byte order in the team file
+     * record at offset 0..1, etc.). On x86 LE the raw uint16_t read
+     * comes out byte-swapped, so `teamId >> 8` returns the ordinal
+     * instead of the country, _LoadTeamFile loads the wrong (or panics
+     * on a missing) file, findTeamInTeamFileBuffer never matches, and
+     * the for(;;) loop spins forever — exactly the EUROPEAN
+     * CHAMPIONSHIPS infinite-loop symptom. Decode each entry once via
+     * BE_READ_U16 into a local LE-native buffer and use that throughout. */
+    uint16_t teamIdsLE[64];   /* SWOS competitions never exceed 64 teams */
+    if (count > 64) count = 64;
+    for (uint16_t k = 0; k < count; k++)
+        teamIdsLE[k] = BE_READ_U16(&teamIds[k]);
+
+#ifdef SWOS_DEBUG_AUTOSKIP
+    SWOS_DBG("[append] count=%u, requested teamIds:\n", (unsigned)count);
+    for (uint16_t k = 0; k < count; k++) {
+        SWOS_DBG("[append]   in[%2u] = 0x%04X (country=%u ordinal=%u)\n",
+                (unsigned)k, (unsigned)teamIdsLE[k],
+                (unsigned)((teamIdsLE[k] >> 8) & 0xFF),
+                (unsigned)(teamIdsLE[k] & 0xFF));
+    }
+#endif
+
+    /* Phase 1: Pre-scan — mark teams already loaded in cache. */
     uint16_t i;
     TeamFileEx *tmpTeam;
     uint16_t tmpIdx;
     for (i = 0; i < count; i++) {
         flags[i] = 0;
-        if (findTeamInCache(teamIds[i], &tmpTeam, &tmpIdx) == 0)
-            flags[i] = 1;  /* already in cache — mark as processed */
+        if (findTeamInCache(teamIdsLE[i], &tmpTeam, &tmpIdx) == 0)
+            flags[i] = 1;
     }
 
     /* Phase 2: Process remaining teams */
-    uint8_t *selDst = &selTeamsPtr + (uint32_t)numSelectedTeams * sizeof(TeamFileEx);
+    TeamFileEx *selDst = (TeamFileEx *)&selTeamsPtr + numSelectedTeams;
 
     for (;;) {
-        /* Find next unprocessed team (flags[i] == 0) */
         int16_t foundIdx = -1;
         for (i = 0; i < count; i++) {
-            if (flags[i] == 0) {
-                foundIdx = (int16_t)i;
-                break;
-            }
+            if (flags[i] == 0) { foundIdx = (int16_t)i; break; }
         }
         if (foundIdx < 0)
-            break;  /* all processed → done */
+            break;
 
-        uint16_t teamId = teamIds[foundIdx];
+        uint16_t teamId = teamIdsLE[foundIdx];
 
-        /* Try to find in TMD file buffer */
         TeamFileEx *tmdTeam = findTeamInTmdBuffer(teamId);
         if (tmdTeam) {
-            /* Found in TMD — copy to selection */
-            copyTeamRecord(selDst, (uint8_t *)tmdTeam);
-            ((TeamFileEx *)selDst)->team.teamControls = 1;
+            copyTeamRecord((uint8_t *)selDst, (uint8_t *)tmdTeam);
+            selDst->team.teamControls = 1;
             flags[foundIdx] = 1;
             numSelectedTeams++;
-            selDst += sizeof(TeamFileEx);
-            continue;  /* restart scan for more TMD-cached teams */
+            selDst++;
+            continue;
         }
 
-        /* Not in TMD — load team file for this team's ext number */
         uint16_t extNum = teamId >> 8;
         _LoadTeamFile(extNum);
         uint8_t loadedExt = lastLoadedExtNumber;
 
-        /* Scan ALL unprocessed teams sharing this ext number */
-        for (i = 0; i < count; i++) {
-            if (flags[i] != 0)
-                continue;
-            if ((uint8_t)(teamIds[i] >> 8) != loadedExt)
-                continue;
+#ifdef SWOS_DEBUG_AUTOSKIP
+        SWOS_DBG("[append] loaded TEAM.%03u (ext=%u) for teamId=0x%04X\n",
+                (unsigned)loadedExt, (unsigned)loadedExt, (unsigned)teamId);
+#endif
 
-            /* Search for this team in the loaded team file */
-            uint8_t *tfTeam = findTeamInTeamFileBuffer(teamIds[i]);
+        for (i = 0; i < count; i++) {
+            if (flags[i] != 0) continue;
+            if ((uint8_t)(teamIdsLE[i] >> 8) != loadedExt) continue;
+
+            uint8_t *tfTeam = findTeamInTeamFileBuffer(teamIdsLE[i]);
+#ifdef SWOS_DEBUG_AUTOSKIP
             if (tfTeam) {
-                copyTeamRecord(selDst, tfTeam);
-                ((TeamFileEx *)selDst)->team.teamControls = 1;
+                SWOS_DBG("[append]   resolved 0x%04X -> '%.16s'\n",
+                        (unsigned)teamIdsLE[i],
+                        (const char *)((TeamFileEx *)tfTeam)->team.teamName);
+            }
+#endif
+            if (!tfTeam) {
+                /* Always log misses — silent drops are how we got the
+                 * "9 of 16 teams loaded" panic for the eurocup advance.
+                 * Include the file's team count and first/last ordinals
+                 * so we can tell whether the team is genuinely absent
+                 * (out-of-range ordinal written by qualifier) or whether
+                 * the file lookup is bogus. */
+                uint16_t tfCount = *(uint16_t *)&teamFileBuffer;
+                TeamFileEx *tfFirst = (TeamFileEx *)(&teamFileBuffer + 2);
+                TeamFileEx *tfLast = (tfCount > 0) ? &tfFirst[tfCount - 1] : tfFirst;
+                SWOS_DBG(
+                        "[append]   NO MATCH for 0x%04X in TEAM.%03u "
+                        "(file has %u teams; first=0x%02X%02X last=0x%02X%02X)\n",
+                        (unsigned)teamIdsLE[i], (unsigned)loadedExt,
+                        (unsigned)tfCount,
+                        (unsigned)tfFirst->team.countryNumber,
+                        (unsigned)tfFirst->team.teamOrdinal,
+                        (unsigned)tfLast->team.countryNumber,
+                        (unsigned)tfLast->team.teamOrdinal);
+                SWOS_DBG_FLUSH();
+            }
+            if (tfTeam) {
+                copyTeamRecord((uint8_t *)selDst, tfTeam);
+                selDst->team.teamControls = 1;
                 flags[i] = 1;
                 numSelectedTeams++;
-                selDst += sizeof(TeamFileEx);
+                selDst++;
+            } else {
+                /* CRITICAL: leaving flags[i]=0 when the lookup failed
+                 * makes the outer for(;;) re-pick this same team next
+                 * iteration → infinite loop. Mark it processed so we
+                 * skip it instead of hanging. The team won't appear in
+                 * the resulting selection, which is what the SDL build
+                 * would otherwise show as "wrong/missing teams" in the
+                 * preset WC menu. */
+                flags[i] = 1;
             }
         }
-        /* Loop back to process remaining unprocessed teams */
     }
 
-    /* Phase 3: Copy all team IDs to output buffer */
+    /* Phase 3: Copy resolved team IDs to the output. The output arrays
+     * (diyLeagueTeamIds / diyCupTeamIds / diyTournamentTeamIds) hold
+     * BE-packed `{country, ordinal}` byte pairs — the same convention
+     * the static dc.b competition data uses and that downstream code
+     * like _DIY_ComputeAverageTeamStrengthTier reads via BE_READ_U16
+     * to match m68k `move.w` semantics. Write BE bytes so both endians
+     * land at the same in-memory layout the asm produces. */
     for (i = 0; i < count; i++) {
-        *out++ = teamIds[i];
+        BE_WRITE_U16(out, teamIdsLE[i]);
+        out++;
     }
 }
 
@@ -659,37 +793,49 @@ static void fillLeagueTeamSelectionFromFile(uint16_t extNumber, uint16_t leagueF
 {
     _LoadTeamFile(extNumber);
 
-    uint8_t *tfBase = &teamFileBuffer + 2;
+    TeamFileEx *tfBase = (TeamFileEx *)(&teamFileBuffer + 2);
     uint16_t tfCount = *(uint16_t *)&teamFileBuffer;
 
     /* Verify expected count matches actual */
     uint16_t actualCount = 0;
-    uint8_t *p = tfBase;
     uint16_t j;
     for (j = 0; j < tfCount; j++) {
-        if (((TeamFileEx *)p)->team.league == (uint8_t)leagueFilter)
+        if (tfBase[j].team.league == (uint8_t)leagueFilter)
             actualCount++;
-        p += sizeof(TeamFileEx);
     }
     if ((int16_t)actualCount != expectedCount) {
+        /* [verify-fill] -O2 makes gdb's `expectedCount=...` value
+         * unreliable; print the real values plus what fed them. */
+        SWOS_DBG("[verify-fill] panic 0x8885: extNumber=%u leagueFilter=%u "
+                        "expectedCount=%d actualCount=%u tfCount=%u\n",
+                (unsigned)extNumber, (unsigned)leagueFilter,
+                (int)expectedCount, (unsigned)actualCount, (unsigned)tfCount);
+        SWOS_DBG_FLUSH();
         panicReasonCode = 0x8885;
         _PanicHaltLoop();
     }
 
-    /* Fill selection with matching teams */
-    uint8_t *selDst = &selTeamsPtr + (uint32_t)numSelectedTeams * sizeof(TeamFileEx);
+    /* Fill selection with matching teams. The output array
+     * (diyLeagueTeamIds) uses the BE-packed byte-pair convention from
+     * 4e5f378 — consumers read via BE_READ_U16. Use PACK_BE_U16 to
+     * produce the same `(country << 8) | ordinal` value that
+     * findTeamInCache / isTeamInCache compare against, and
+     * BE_WRITE_U16 to store. */
+    TeamFileEx *selDst = (TeamFileEx *)&selTeamsPtr + numSelectedTeams;
     uint16_t *idOut = diyLeagueTeamIds;
-    p = tfBase;
     for (j = 0; j < tfCount; j++) {
-        if (((TeamFileEx *)p)->team.league == (uint8_t)leagueFilter) {
-            uint16_t teamId = *(uint16_t *)p;
-            *idOut++ = teamId;
+        TeamFileEx *src = &tfBase[j];
+        if (src->team.league == (uint8_t)leagueFilter) {
+            uint16_t teamId = PACK_BE_U16(src->team.countryNumber,
+                                          src->team.teamOrdinal);
+            BE_WRITE_U16(idOut, teamId);
+            idOut++;
             if (isTeamInCache(teamId) != 0) {
                 /* Not in cache — add to selection */
-                selDst = appendTeamToSelection(selDst, p);
+                selDst = (TeamFileEx *)appendTeamToSelection(
+                    (uint8_t *)selDst, (const uint8_t *)src);
             }
         }
-        p += sizeof(TeamFileEx);
     }
 }
 
@@ -709,7 +855,7 @@ static void fillLeagueTeamSelectionFromFile(uint16_t extNumber, uint16_t leagueF
 static void tryAddRandomTeamByRegion_Cup(uint16_t **pIdOut, uint8_t **pSelOut,
                                           uint16_t *pRemaining, uint16_t filter)
 {
-    uint8_t *tfBase = &teamFileBuffer + 2;
+    TeamFileEx *tfBase = (TeamFileEx *)(&teamFileBuffer + 2);
     uint16_t tfCount = *(uint16_t *)&teamFileBuffer;
 
     if (*pRemaining == 0)
@@ -717,24 +863,27 @@ static void tryAddRandomTeamByRegion_Cup(uint16_t **pIdOut, uint8_t **pSelOut,
 
     uint16_t rnd = _Rand2();
     uint16_t idx = (uint16_t)(((uint32_t)rnd * tfCount) >> 8);
-    uint8_t *team = tfBase + (uint32_t)idx * sizeof(TeamFileEx);
+    TeamFileEx *team = &tfBase[idx];
 
-    if (((TeamFileEx *)team)->team.league != (uint8_t)filter)
+    if (team->team.league != (uint8_t)filter)
         return;
 
-    uint16_t teamId = *(uint16_t *)team;
+    uint16_t teamId = PACK_BE_U16(team->team.countryNumber,
+                                  team->team.teamOrdinal);
     uint32_t result = _Career_IsTeamIdNotInListOrReturnSentinel(teamId, *pIdOut);
     if ((result & 0x10000) == 0)
         return;  /* already in list */
 
-    *(*pIdOut)++ = teamId;
+    /* BE-write convention (4e5f378). */
+    BE_WRITE_U16(*pIdOut, teamId);
+    (*pIdOut)++;
     (*pRemaining)--;
 
     if (isTeamInCache(teamId) == 0)
         return;  /* not in selection cache → just added ID */
 
     /* Copy team record to selection buffer */
-    *pSelOut = appendTeamToSelection(*pSelOut, team);
+    *pSelOut = appendTeamToSelection(*pSelOut, (const uint8_t *)team);
 }
 
 /* ================================================================
@@ -755,11 +904,14 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
 
     _LoadTeamFile(extNumber);
 
-    uint8_t *selDst = &selTeamsPtr + (uint32_t)numSelectedTeams * sizeof(TeamFileEx);
+    /* selDst stays uint8_t * here because tryAddRandomTeamByRegion_Cup
+     * takes a uint8_t ** in/out parameter and reassigns it across calls. */
+    uint8_t *selDst = (uint8_t *)((TeamFileEx *)&selTeamsPtr + numSelectedTeams);
 
+    /* BE-write convention for diyCupTeamIds (4e5f378). */
     /* If not career loaded and gameType==4, add selected team first */
     if (careerLoadedFlag == 0 && gameType == 4) {
-        *idOut++ = selTeamNumber;
+        BE_WRITE_U16(idOut, selTeamNumber); idOut++;
         remaining--;
         if (remaining == 0)
             return;
@@ -769,18 +921,20 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
     if (gameType == 3) {
         uint16_t numSel = numSelectedTeams;
         if (numSel != 0) {
+            TeamFileEx *selBase = (TeamFileEx *)&selTeamsPtr;
             int16_t tries;
             for (tries = 0x3E8; tries >= 0; tries--) {
                 uint16_t rnd = _Rand2();
                 uint16_t idx = (uint16_t)(((uint32_t)rnd * numSel) >> 8);
-                uint8_t *selTeam = &selTeamsPtr + (uint32_t)idx * sizeof(TeamFileEx);
-                if (((TeamFileEx *)selTeam)->team.teamControls == 1)
+                TeamFileEx *selTeam = &selBase[idx];
+                if (selTeam->team.teamControls == 1)
                     continue;  /* skip user-controlled teams */
-                uint16_t teamId = *(uint16_t *)selTeam;
+                uint16_t teamId = PACK_BE_U16(selTeam->team.countryNumber,
+                                              selTeam->team.teamOrdinal);
                 uint32_t sentinel = _Career_IsTeamIdNotInListOrReturnSentinel(teamId, idOut);
                 if ((sentinel & 0x10000) == 0)
                     continue;  /* already in list */
-                *idOut++ = teamId;
+                BE_WRITE_U16(idOut, teamId); idOut++;
                 remaining--;
                 if (remaining == 0)
                     return;
@@ -792,18 +946,19 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
     if (initialCount > 0x20) {
         uint16_t numSel = numSelectedTeams;
         if (numSel != 0) {
-            uint8_t *selTeam = &selTeamsPtr;
+            TeamFileEx *selTeam = (TeamFileEx *)&selTeamsPtr;
             uint16_t k;
             for (k = 0; k < numSel; k++) {
-                uint16_t teamId = *(uint16_t *)selTeam;
+                uint16_t teamId = PACK_BE_U16(selTeam->team.countryNumber,
+                                              selTeam->team.teamOrdinal);
                 uint32_t sentinel = _Career_IsTeamIdNotInListOrReturnSentinel(teamId, idOut);
                 if ((sentinel & 0x10000) != 0) {
-                    *idOut++ = teamId;
+                    BE_WRITE_U16(idOut, teamId); idOut++;
                     remaining--;
                     if (remaining == 0)
                         return;
                 }
-                selTeam += sizeof(TeamFileEx);
+                selTeam++;
             }
         }
     }
@@ -859,11 +1014,12 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
 
     _LoadTeamFile(extNumber);
 
-    uint8_t *selDst = &selTeamsPtr + (uint32_t)numSelectedTeams * sizeof(TeamFileEx);
+    TeamFileEx *selDst = (TeamFileEx *)&selTeamsPtr + numSelectedTeams;
 
+    /* BE-write convention for diyTournamentTeamIds (4e5f378). */
     /* If not career loaded and gameType==4, add selected team first */
     if (careerLoadedFlag == 0 && gameType == 4) {
-        *idOut++ = selTeamNumber;
+        BE_WRITE_U16(idOut, selTeamNumber); idOut++;
         remaining--;
         if (remaining == 0)
             return;
@@ -873,18 +1029,20 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
     if (gameType == 3) {
         uint16_t numSel = numSelectedTeams;
         if (numSel != 0) {
+            TeamFileEx *selBase = (TeamFileEx *)&selTeamsPtr;
             int16_t tries;
             for (tries = 0x3E8; tries >= 0; tries--) {
                 uint16_t rnd = _Rand2();
                 uint16_t idx = (uint16_t)(((uint32_t)rnd * numSel) >> 8);
-                uint8_t *selTeam = &selTeamsPtr + (uint32_t)idx * sizeof(TeamFileEx);
-                if (((TeamFileEx *)selTeam)->team.teamControls == 1)
+                TeamFileEx *selTeam = &selBase[idx];
+                if (selTeam->team.teamControls == 1)
                     continue;
-                uint16_t teamId = *(uint16_t *)selTeam;
+                uint16_t teamId = PACK_BE_U16(selTeam->team.countryNumber,
+                                              selTeam->team.teamOrdinal);
                 uint32_t sentinel = _Career_IsTeamIdNotInListOrReturnSentinel2(teamId, idOut);
                 if ((sentinel & 0x10000) == 0)
                     continue;
-                *idOut++ = teamId;
+                BE_WRITE_U16(idOut, teamId); idOut++;
                 remaining--;
                 if (remaining == 0)
                     return;
@@ -895,7 +1053,7 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
     /* Weighted random region picking using inline version */
     {
         uint8_t *weights = careerRegionPickWeightsTable2;
-        uint8_t *tfBase = &teamFileBuffer + 2;
+        TeamFileEx *tfBase = (TeamFileEx *)(&teamFileBuffer + 2);
         uint16_t tfCount = *(uint16_t *)&teamFileBuffer;
 
         while (remaining > 0) {
@@ -904,23 +1062,25 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
 
             uint16_t rnd2 = _Rand2();
             uint16_t idx = (uint16_t)(((uint32_t)rnd2 * tfCount) >> 8);
-            uint8_t *team = tfBase + (uint32_t)idx * sizeof(TeamFileEx);
+            TeamFileEx *team = &tfBase[idx];
 
-            if (((TeamFileEx *)team)->team.league != region)
+            if (team->team.league != region)
                 continue;
 
-            uint16_t teamId = *(uint16_t *)team;
+            uint16_t teamId = PACK_BE_U16(team->team.countryNumber,
+                                          team->team.teamOrdinal);
             uint32_t sentinel = _Career_IsTeamIdNotInListOrReturnSentinel2(teamId, idOut);
             if ((sentinel & 0x10000) == 0)
                 continue;
 
-            *idOut++ = teamId;
+            BE_WRITE_U16(idOut, teamId); idOut++;
             remaining--;
 
             if (isTeamInCache(teamId) == 0)
                 continue;  /* not in cache */
 
-            selDst = appendTeamToSelection(selDst, team);
+            selDst = (TeamFileEx *)appendTeamToSelection(
+                (uint8_t *)selDst, (const uint8_t *)team);
         }
     }
 }
@@ -981,6 +1141,16 @@ void _Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *spec, uint1
         uint16_t entryOff = idx * 6;
         int16_t expectedCount = (int16_t)(int8_t)spec[13 + entryOff];
         uint16_t extNumber = spec[2];
+        /* [verify-fill] Trace the values that feed fillLeagueTeamSelectionFromFile. */
+        SWOS_DBG("[verify-fill] InitFromTableEntrySpec(spec=%p, idx=%u): "
+                        "spec[1]=%u spec[2]=%u spec[7]=%u spec[13]=%u "
+                        "entryOff=%u spec[13+entryOff]=%u expectedCount=%d\n",
+                (void *)spec, (unsigned)idx,
+                (unsigned)spec[1], (unsigned)spec[2], (unsigned)spec[7],
+                (unsigned)spec[13],
+                (unsigned)entryOff, (unsigned)spec[13 + entryOff],
+                (int)expectedCount);
+        SWOS_DBG_FLUSH();
         fillLeagueTeamSelectionFromFile(extNumber, idx /* = league filter */, expectedCount);
     }
 }
@@ -1111,6 +1281,23 @@ void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src)
         for (int16_t i = 0x5A9; i >= 0; i--)
             *d++ = *s++;
     }
+
+#ifdef SWOS_DEBUG_AUTOSKIP
+    {
+        DIYCompetitionEx *bex = &diyCompetitionStart;
+        SWOS_AUTOSKIP_LOG("[bug20-load] LoadSlotState src=%p type=%u "
+                          "compId=0x%04X minSubstitutes=%u playEachTeam=%u "
+                          "leagueMatchProgress=%u leagueCurrentSlot=%u "
+                          "totalMatchesPerSectionLive=%d",
+                          (void *)src, (unsigned)type,
+                          (unsigned)*(uint16_t *)&bex->base.compId,
+                          (unsigned)bex->minSubstitutes,
+                          (unsigned)bex->base.playEachTeam,
+                          (unsigned)bex->leagueMatchProgress,
+                          (unsigned)bex->leagueCurrentSlot,
+                          (int)bex->matchData.league.totalMatchesPerSectionLive);
+    }
+#endif
 }
 
 /* ================================================================
@@ -1200,8 +1387,24 @@ uint8_t *_TeamSelectionKeyCache_GetListPtr(uint16_t listIndex)
     uint16_t idx = listIndex & 0xFF;
     if (idx == 0)
         return ptr;
-    for (int16_t i = (int16_t)(idx - 1); i >= 0; i--)
-        ptr += *(uint16_t *)(ptr + 2);
+    for (int16_t i = (int16_t)(idx - 1); i >= 0; i--) {
+        /* Stride bounds check — same defence as
+         * _BuildGameListArrayFromTeamSelectionKeyCache. The career-mode
+         * writer overflows the 22-byte slot and stomps slot[N+1]'s stride
+         * field with team-ID bytes (`0E 0A` on the player's team), which
+         * reads as 0x0A0E=2574 on LE. Walking via that stride lands deep
+         * in the overlaid careerForeignMarketPlayers region and the next
+         * read picks up real foreign-player records as a fake cache
+         * header. On Amiga BE the corrupted bytes read as 0x0E0A=3594
+         * which happens to land on zero bytes. Clamp to legitimate slot
+         * sizes (10..256) and freeze the walker at the last sane entry —
+         * same approach as the builder walker fix. See
+         * docs/OVERLAPPED_DATA.md entry #8. */
+        uint16_t stride = *(uint16_t *)(ptr + 2);
+        if (stride < 10 || stride > 256)
+            return ptr;
+        ptr += stride;
+    }
     return ptr;
 }
 
@@ -1263,6 +1466,30 @@ uint8_t *_TeamSelectionKeyCache_GetCurrentSelectedElementPtr(void)
 }
 
 /* ================================================================
+ * _TeamSelectionKeyCache_GetCurrentMatchSlot — typed wrapper for the
+ * post-Phase-1F struct-named match-slot access.
+ *
+ * The asm helper above returns `entry + diff*12`, which is 10 bytes
+ * before the actual match slot start (writes happen at +0x0B). This
+ * wrapper returns the properly-aligned slot pointer so callers can
+ * use `slot->matchFlags / packedGoals / aggregate / penaltyScore`
+ * instead of raw `elem[0x0B / 0x10 / 0x12 / 0x14]` byte arithmetic.
+ *
+ * Returns NULL when the current entry has no remaining matches.
+ * ================================================================ */
+TeamSelectionKeyCacheMatchSlot *_TeamSelectionKeyCache_GetCurrentMatchSlot(void)
+{
+    TeamSelectionKeyCacheEntry *entry =
+        (TeamSelectionKeyCacheEntry *)(teamSelectionKeyCache + teamSelectionKeyCacheOffset);
+    if (entry->remainingElements < 0)
+        return (TeamSelectionKeyCacheMatchSlot *)0;
+    uint8_t diff = (uint8_t)entry->totalElements - (uint8_t)entry->remainingElements;
+    return (TeamSelectionKeyCacheMatchSlot *)((uint8_t *)entry +
+                                              sizeof(TeamSelectionKeyCacheEntry) +
+                                              (uint32_t)diff * 12);
+}
+
+/* ================================================================
  * _Career_UpdateCareerFinishedFlag  (SWOS2.s line 36148)
  *
  * Checks if all remaining key cache entries have been processed.
@@ -1277,24 +1504,25 @@ void _Career_UpdateCareerFinishedFlag(void)
         return;
     }
 
-    uint8_t *ptr = _TeamSelectionKeyCache_GetCurrentListPtr();
-    if (ptr[6] != 0) {
+    TeamSelectionKeyCacheEntry *entry =
+        (TeamSelectionKeyCacheEntry *)_TeamSelectionKeyCache_GetCurrentListPtr();
+    if (entry->remainingElements != 0) {
         careerFinished = 0;
         return;
     }
 
     /* Walk from current entry to end of cache */
-    ptr = _TeamSelectionKeyCache_GetCurrentListPtr();
+    entry = (TeamSelectionKeyCacheEntry *)_TeamSelectionKeyCache_GetCurrentListPtr();
     uint16_t idx = teamSelectionKeyCacheIndex;
 
     for (;;) {
-        if (ptr[4] == 0) {
-            if (ptr[6] != 0) {
+        if (entry->phaseFlag == 0) {
+            if (entry->remainingElements != 0) {
                 careerFinished = 0;
                 return;
             }
         }
-        ptr += *(uint16_t *)(ptr + 2);
+        entry = (TeamSelectionKeyCacheEntry *)((uint8_t *)entry + entry->entryStride);
         idx++;
         if (idx == teamSelectionKeyCacheCount)
             break;
@@ -1331,15 +1559,32 @@ void _Career_AdvanceToNextTeamSelectionKeyCacheEntry(void)
     for (;;) {
         d0++;
         if (d0 == teamSelectionKeyCacheCount) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+            SWOS_AUTOSKIP_LOG("[bug3-league] AdvanceToNext: END-OF-CACHE — setting seasonFinished=1 "
+                              "careerFinished=1 keyCacheCount=%u",
+                              (unsigned)teamSelectionKeyCacheCount);
+#endif
             seasonFinished = 1;
             careerFinished = 1;
             _Career_FillCurrentSeasonInfo();
             return;
         }
-        ptr += *(uint16_t *)(ptr + 2);
+        /* Stride bounds check — see _TeamSelectionKeyCache_GetListPtr for
+         * the full story (career-mode 22-byte slot overflow corrupts the
+         * stride field). If we'd step outside the legitimate slot-size
+         * range, treat the season as finished early rather than walking
+         * into the careerForeignMarketPlayers overlay. */
+        uint16_t stride = *(uint16_t *)(ptr + 2);
+        if (stride < 10 || stride > 256) {
+            seasonFinished = 1;
+            careerFinished = 1;
+            _Career_FillCurrentSeasonInfo();
+            return;
+        }
+        ptr += stride;
         if (ptr[4] == 0) {
             teamSelectionKeyCacheIndex = d0;
-            teamSelectionKeyCacheOffset = (uint16_t)((uint32_t)ptr - (uint32_t)teamSelectionKeyCache);
+            teamSelectionKeyCacheOffset = (uint16_t)((uintptr_t)ptr - (uintptr_t)teamSelectionKeyCache);
             return;
         }
     }
@@ -1447,9 +1692,12 @@ void _Career_ProcessCurrentCompetitionSlotAfterMatch(void)
         /* Type 0: league */
         _Career_AutoPlayOrSimulateLeagueFixtureLoop();
         _Career_StoreCompetitionSlotStateToBuffer(slotPtr);
-        if (*(uint16_t *)(slotPtr + 0x2C) != 0)
+        /* slotPtr+0x2C = compId/slotId word (DIYCompetition.compId field) */
+        if (*(uint16_t *)&((DIYCompetition *)slotPtr)->compId != 0)
             return;
-        if (*(uint16_t *)(slotPtr + 0x60) != 0)
+        /* slotPtr+0x60 = first byte of competition's extended (DIYCompetitionEx)
+         * region = minSubstitutes */
+        if (((DIYCompetitionEx *)slotPtr)->minSubstitutes != 0)
             return;
         _DIY_RebuildCompetitionAndTeamSelectionCaches();
     }
@@ -1477,9 +1725,60 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
 
     _Career_LoadCompetitionSlotStateFromBuffer(slotPtr);
 
+    /* Slot type is stored as a native uint16 word — same byte order
+     * that _Career_LoadCompetitionSlotStateFromBuffer / _Career_StoreCompetitionSlotStateToBuffer
+     * read/write. Using BE_READ_U16 here mis-routes cup slots to the
+     * league menu on LE hosts, which then crashes sorting an
+     * uninitialized league table. */
     uint16_t type = *(uint16_t *)slotPtr;
+
+    /* [bug23-dispatch] Diagnostic for the View-Result-on-semi-final
+     * crash: log the slot type the dispatch sees + the cache entry
+     * + currentCompetitionPtr's first byte so we can see why a
+     * World Cup knockout is routing to the LEAGUE branch. */
+    {
+        extern uint8_t *currentCompetitionPtr;
+        const uint8_t *cp = (const uint8_t *)(uintptr_t)currentCompetitionPtr;
+        SWOS_DBG("[bug23-dispatch] slotIdx=%d slotPtr=%p type=%u "
+                        "(branch=%s) entry[0..9]=%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X "
+                        "currentCompetitionPtr=%p comp[0..3]=%02X %02X %02X %02X\n",
+                (int)slotIdx, (void *)slotPtr, (unsigned)type,
+                type == 1 ? "CUP" : (type == 2 ? "HYBRID" : "LEAGUE"),
+                entry[0], entry[1], entry[2], entry[3], entry[4],
+                entry[5], entry[6], entry[7], entry[8], entry[9],
+                (void *)cp,
+                cp ? cp[0] : 0, cp ? cp[1] : 0, cp ? cp[2] : 0, cp ? cp[3] : 0);
+    }
     if (type == 1) {
         /* Cup */
+        /* Auto-simulate CPU-only fixtures BEFORE the menu draws so that
+         * currentMatchIndex points at the career team's fixture when the
+         * cup menu first opens. Otherwise _DIY_CompareCurrentMatchTeamCategories
+         * sees a CPU-vs-CPU pair (both teamControls=1), returns 1, and
+         * _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection takes the
+         * VIEW branch — landing the cursor on aViewResult instead of aMatch.
+         *
+         * Gate on entry[6] (count of human-team fixtures in this round).
+         * AutoSimulateCupMatchesUntilHumanTeam exits only when a human-
+         * controlled team appears in the next fixture — if the player has
+         * been eliminated from this cup, *no* future fixture has a human
+         * team and the loop runs forever (cup result display freeze on
+         * NEXT MATCH at end of season). When entry[6] == 0 there is no
+         * player fixture to scroll the cursor onto anyway, so skipping
+         * the deviation costs nothing; the asm's ProcessAfterMatch path
+         * (via AutoPlayCupMatchAndAdvanceLoop) handles the elimination
+         * round correctly because UpdateStatsAfterMatch sets
+         * careerSlotProcessingInProgress = roundComplete after every
+         * match, including CPU-only ones, giving that loop a real exit.
+         *
+         * The original asm runs auto-sim only after the menu (in
+         * Career_ProcessCurrentCompetitionSlotForMatch, reached only when
+         * entry[6] > 0). Gating here matches that condition. */
+        TeamSelectionKeyCacheEntry *cacheEntry =
+            (TeamSelectionKeyCacheEntry *)_TeamSelectionKeyCache_GetCurrentListPtr();
+        if (cacheEntry->remainingElements != 0) {
+            _Career_AutoSimulateCupMatchesUntilHumanTeam();
+        }
         _ShowDIYCupMenuWithParams(1, 0, d2);
         if (diyCompetitionStart.base.roundComplete != 0)
             _DIY_UpdateCompetitionProgress();
@@ -1502,11 +1801,11 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
     }
 
     /* Rebuild caches if competition is done (type==0, no round/phase left) */
-    if (*(uint16_t *)(slotPtr + 0x2C) != 0)
+    if (*(uint16_t *)&((DIYCompetition *)slotPtr)->compId != 0)
         return;
     if (*(uint16_t *)slotPtr != 0)
         return;
-    if (*(uint16_t *)(slotPtr + 0x60) != 0)
+    if (((DIYCompetitionEx *)slotPtr)->minSubstitutes != 0)
         return;
     _DIY_RebuildCompetitionAndTeamSelectionCaches();
 }
@@ -1605,8 +1904,9 @@ void _Career_NextMatch(void)
     int16_t slotIdx = (int16_t)(int8_t)entry[0];
     uint8_t *slotPtr = careerCompetitionSlotPtrTable[slotIdx];
 
-    /* If type==0 (league) and word at 0x68 != 0, use PlayMatchMenuLoop */
-    if (*(uint16_t *)slotPtr == 0 && *(uint16_t *)(slotPtr + 0x68) != 0) {
+    /* If type==0 (league) and league.hasGroupsDiy != 0, use PlayMatchMenuLoop */
+    if (*(uint16_t *)slotPtr == 0 &&
+        ((DIYCompetitionEx *)slotPtr)->matchData.league.hasGroupsDiy != 0) {
         _Career_PlayMatchMenuLoop();
         return;
     }
@@ -1655,12 +1955,12 @@ void _Career_AutoSimulateLeagueFixturesUntilHumanTeam(void)
         uint8_t *comp1 = fixtureTeam1CompPtr;
         uint8_t *comp2 = fixtureTeam2CompPtr;
 
-        /* Check team1: offset 0x2B4 is team pointer, selTeamsPtr-relative */
-        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + *(uint32_t *)(comp1 + 0x2B4));
+        /* Check team1: DIYTeamStats teamSelOffset (+0x2B4) is selTeamsPtr-relative */
+        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + ((DIYTeamStats *)(comp1 + DIY_STANDINGS_OFFSET))->teamSelOffset);
         if (team1->teamControls != 1) return;  /* human team found */
 
         /* Check team2 */
-        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + *(uint32_t *)(comp2 + 0x2B4));
+        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + ((DIYTeamStats *)(comp2 + DIY_STANDINGS_OFFSET))->teamSelOffset);
         if (team2->teamControls != 1) return;  /* human team found */
 
         /* Both AI: simulate */
@@ -1680,13 +1980,24 @@ static void getCurrentMatchTeamSlots(uint8_t **slot1Out, uint8_t **slot2Out)
     uint8_t *base = (uint8_t *)&diyCompetitionStart;
     uint16_t matchIdx = diyCompetitionStart.matchData.cup.currentMatchIndex;
     uint16_t off = matchIdx * 2;
-    uint8_t *cupTeamGrid = base + 0x2CE;  /* cup bracket grid, distinct from teamGrid at 0x510 */
+    uint8_t *cupTeamGrid = diyCompetitionStart.teamGridPairings;
 
     int8_t t1 = (int8_t)cupTeamGrid[off];
     *slot1Out = base + (int16_t)t1 * 4;
 
     int8_t t2 = (int8_t)cupTeamGrid[off + 1];
     *slot2Out = base + (int16_t)t2 * 4;
+}
+
+/* Like getCurrentMatchTeamSlots, but returns clean slot indices for use
+ * with bracketScratch.teamOffsetTable[] instead of the asm-style "fake"
+ * pointers `base + slotIdx*4`. */
+static void getCurrentMatchTeamSlotIndices(int16_t *slot1Idx, int16_t *slot2Idx)
+{
+    uint16_t matchIdx = diyCompetitionStart.matchData.cup.currentMatchIndex;
+    uint8_t *grid = diyCompetitionStart.teamGridPairings;
+    *slot1Idx = (int16_t)(int8_t)grid[matchIdx * 2];
+    *slot2Idx = (int16_t)(int8_t)grid[matchIdx * 2 + 1];
 }
 
 /* ================================================================
@@ -1699,19 +2010,54 @@ static void getCurrentMatchTeamSlots(uint8_t **slot1Out, uint8_t **slot2Out)
 __attribute__((used, externally_visible))
 void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
 {
+#ifdef SWOS_DEBUG_AUTOSKIP
+    int iter = 0;
+    DIYCompetitionEx *bex0 = &diyCompetitionStart;
+    SWOS_AUTOSKIP_LOG("[bug4-cup] AutoSimUntilHuman ENTER compId=0x%04X "
+                      "roundIdx=%d/%d matchIdx=%d/%d roundComplete=%d "
+                      "competitionFinished=%d",
+                      (unsigned)*(uint16_t *)&bex0->base.compId,
+                      (int)bex0->base.currentRoundIndex, (int)bex0->base.numRounds,
+                      (int)bex0->matchData.cup.currentMatchIndex,
+                      (int)bex0->base.totalMatchesInRound,
+                      (int)bex0->base.roundComplete,
+                      (int)bex0->base.competitionFinished);
+#endif
     for (;;) {
-        uint8_t *slot1, *slot2;
-        getCurrentMatchTeamSlots(&slot1, &slot2);
+        int16_t slot1Idx, slot2Idx;
+        getCurrentMatchTeamSlotIndices(&slot1Idx, &slot2Idx);
 
-        /* Check team1: offset 0x344 is team pointer, selTeamsPtr-relative */
-        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + *(uint32_t *)(slot1 + 0x344));
-        if (team1->teamControls != 1) return;  /* human team found */
+        /* Read team pointer from bracketScratch.teamOffsetTable[slotIdx] */
+        DIYCompetitionEx *baseEx = &diyCompetitionStart;
+        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + baseEx->bracketScratch.teamOffsetTable[slot1Idx]);
+        if (team1->teamControls != 1) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+            SWOS_AUTOSKIP_LOG("[bug4-cup] AutoSimUntilHuman EXIT (team1 human/coach) "
+                              "iter=%d slot1=%d team1Ctrl=%d", iter,
+                              (int)slot1Idx, (int)team1->teamControls);
+#endif
+            return;
+        }
 
-        /* Check team2 */
-        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + *(uint32_t *)(slot2 + 0x344));
-        if (team2->teamControls != 1) return;  /* human team found */
+        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + baseEx->bracketScratch.teamOffsetTable[slot2Idx]);
+        if (team2->teamControls != 1) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+            SWOS_AUTOSKIP_LOG("[bug4-cup] AutoSimUntilHuman EXIT (team2 human/coach) "
+                              "iter=%d slot2=%d team2Ctrl=%d", iter,
+                              (int)slot2Idx, (int)team2->teamControls);
+#endif
+            return;
+        }
 
         /* Both AI: simulate */
+#ifdef SWOS_DEBUG_AUTOSKIP
+        iter++;
+        if (iter > 200) {
+            SWOS_AUTOSKIP_LOG("[bug4-cup] AutoSimUntilHuman EMERGENCY BAIL iter>%d — "
+                              "infinite loop suspected, returning to avoid hang", iter);
+            return;
+        }
+#endif
         _DIY_PlayCupMatchAndAdvance(0, 0);
     }
 }
@@ -1728,9 +2074,9 @@ void _Career_AutoSimulatePendingMatchUntilHumanTeam(void)
     DIYCompetition *bufComp = (DIYCompetition *)diyFileBufferCopy;
     uint8_t *buf = diyFileBufferCopy;
     uint16_t slotIdx = bufComp->roundComplete;
-    uint8_t *slot = buf + (uint32_t)slotIdx * 0x76;
+    DIYTournamentSlot *slot = (DIYTournamentSlot *)(buf + (uint32_t)slotIdx * 0x76 + 0x15A);
 
-    if (*(uint16_t *)(slot + 0x15E) != 0)
+    if (slot->isLeagueFormat != 0)
         _Career_AutoSimulateLeagueFixturesUntilHumanTeam();
     else
         _Career_AutoSimulateCupMatchesUntilHumanTeam();
@@ -1748,7 +2094,7 @@ __attribute__((used, externally_visible))
 void _Career_AutoPlayOrSimulateLeagueFixtureLoop(void)
 {
     for (;;) {
-        uint16_t field1C0 = *(uint16_t *)((uint8_t *)&diyCompetitionStart + 0x1C0);  /* extended buffer field */
+        uint16_t field1C0 = diyCompetitionStart.leagueCurrentSlot;
         if (field1C0 != 0 && careerSlotProcessingInProgress != 0)
             return;
         _DIY_PlayOrSimulateLeagueFixture(0, 0);
@@ -1765,12 +2111,40 @@ void _Career_AutoPlayOrSimulateLeagueFixtureLoop(void)
 __attribute__((used, externally_visible))
 void _Career_AutoPlayCupMatchAndAdvanceLoop(void)
 {
+#ifdef SWOS_DEBUG_AUTOSKIP
+    int iter = 0;
+    DIYCompetitionEx *bex0 = &diyCompetitionStart;
+    SWOS_AUTOSKIP_LOG("[bug4-cup] AutoPlayCupLoop ENTER compId=0x%04X "
+                      "roundIdx=%d/%d matchIdx=%d/%d roundComplete=%d "
+                      "competitionFinished=%d careerSlotProcessingInProgress=%d",
+                      (unsigned)*(uint16_t *)&bex0->base.compId,
+                      (int)bex0->base.currentRoundIndex, (int)bex0->base.numRounds,
+                      (int)bex0->matchData.cup.currentMatchIndex,
+                      (int)bex0->base.totalMatchesInRound,
+                      (int)bex0->base.roundComplete,
+                      (int)bex0->base.competitionFinished,
+                      (int)careerSlotProcessingInProgress);
+#endif
     for (;;) {
         uint16_t field54 = (uint16_t)diyCompetitionStart.base.roundComplete;
         if (field54 != 0 && careerSlotProcessingInProgress != 0) {
+#ifdef SWOS_DEBUG_AUTOSKIP
+            SWOS_AUTOSKIP_LOG("[bug4-cup] AutoPlayCupLoop EXIT (round complete + processing) "
+                              "iter=%d", iter);
+#endif
             _DIY_UpdateCompetitionProgress();
             return;
         }
+#ifdef SWOS_DEBUG_AUTOSKIP
+        iter++;
+        if (iter > 200) {
+            SWOS_AUTOSKIP_LOG("[bug4-cup] AutoPlayCupLoop EMERGENCY BAIL iter>%d — "
+                              "infinite loop suspected; roundComplete=%d "
+                              "careerSlotProcessingInProgress=%d",
+                              iter, (int)field54, (int)careerSlotProcessingInProgress);
+            return;
+        }
+#endif
         _DIY_PlayCupMatchAndAdvance(0, 0);
     }
 }
@@ -1790,11 +2164,11 @@ void _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot(void)
     DIYCompetition *bufComp = (DIYCompetition *)diyFileBufferCopy;
     uint8_t *buf = diyFileBufferCopy;
     uint16_t slotIdx = bufComp->roundComplete;
-    uint8_t *slot = buf + (uint32_t)slotIdx * 0x76;
+    DIYTournamentSlot *slot = (DIYTournamentSlot *)(buf + (uint32_t)slotIdx * 0x76 + 0x15A);
 
     DIYCompetition *comp = &diyCompetitionStart.base;
 
-    if (*(uint16_t *)(slot + 0x15E) != 0) {
+    if (slot->isLeagueFormat != 0) {
         /* League type slot */
         _Career_AutoPlayOrSimulateLeagueFixtureLoop();
 
@@ -1846,16 +2220,17 @@ void _DIY_AdvanceToNextCompetitionSlot(void)
 
     if ((uint16_t)(currentSlot + 1) == maxSlots) {
         /* Reached max slots: mark competition finished */
-        *(uint16_t *)(buf + 2) = 2;                     /* DIY_COMPETITION_FIELD_2 */
+        bufComp->isActive = 2;
         bufComp->currentRoundIndex = 1;
         return;
     }
 
     /* Determine slot type */
     uint8_t *slot = buf + (uint32_t)currentSlot * 0x76;
+    DIYTournamentSlot *slotRec = (DIYTournamentSlot *)(slot + 0x15A);
     uint8_t *comp = (uint8_t *)&diyCompetitionStart;
 
-    if (*(uint16_t *)(slot + 0x15E) != 0) {
+    if (slotRec->isLeagueFormat != 0) {
         /* League type: build seeded bracket */
         _DIY_BuildSeededBracketAndUpdateScores(buf, slot, comp, comp);
     } else {
@@ -2002,9 +2377,9 @@ void _Career_UpdateRemovePlayersMenuEntry(void)
             count++;
     }
 
-    menuEntries[6].fg = (uint32_t)aRemovePlayer;   /* singular */
+    menuEntries[6].fg = (uintptr_t)aRemovePlayer;   /* singular */
     if (count != 1) {
-        menuEntries[6].fg = (uint32_t)aRemovePlayers;  /* plural */
+        menuEntries[6].fg = (uintptr_t)aRemovePlayers;  /* plural */
     }
 }
 
@@ -2017,9 +2392,6 @@ void _Career_UpdateRemovePlayersMenuEntry(void)
  * Loads the team file, scans for matching team number in the
  * teamFileBuffer, returns the league byte from that team record.
  * ================================================================ */
-#define TEAMFILE_LEAGUE 25
-#define TEAMFILE_RECORD_SIZE 684
-
 __attribute__((used, externally_visible))
 int16_t _GetTeamLeague(uint16_t teamNumber)
 {
@@ -2030,12 +2402,14 @@ int16_t _GetTeamLeague(uint16_t teamNumber)
     skipLeagueNumbers = 0;
     teamsLoaded = 0;
 
-    /* Scan teamFileBuffer+2 for matching team number */
-    uint8_t *p = &teamFileBuffer + 2;
-    while (*(uint16_t *)p != teamNumber)
-        p += TEAMFILE_RECORD_SIZE;
+    /* Scan teamFileBuffer+2 for matching team number. teamNumber is
+     * the Amiga BE-packed `(country << 8) | ordinal` form, so build
+     * the same value from the per-record byte pair. */
+    TeamFileEx *p = (TeamFileEx *)(&teamFileBuffer + 2);
+    while (PACK_BE_U16(p->team.countryNumber, p->team.teamOrdinal) != teamNumber)
+        p++;
 
-    return (int8_t)p[TEAMFILE_LEAGUE];
+    return (int8_t)p->team.league;
 }
 
 /* ================================================================
@@ -2063,10 +2437,13 @@ void _Career_CopyUnavailablePlayerToCareerTeamSlot(uint8_t *srcPlayer, uint8_t *
     uint8_t *namesDst = careerUnavailablePlayerNames + (uint16_t)(dstSlotIndex * 17);
     _StringCopy(srcName, namesDst);
 
-    /* Store team number and player index in lookup table (4-byte entries) */
-    uint16_t offset = (uint16_t)(dstSlotIndex << 2);
-    *(uint16_t *)(careerUnavailablePlayerLookupTable + offset) = srcTeamNumber;
-    *(uint16_t *)(careerUnavailablePlayerLookupTable + offset + 2) = srcPlayerIndex;
+    /* Store team number and player index in lookup table. Each slot is
+     * 4 bytes: { uint16 teamNumber, uint16 playerIndex }. */
+    {
+        uint16_t *uplBase = (uint16_t *)careerUnavailablePlayerLookupTable;
+        uplBase[dstSlotIndex * 2 + 0] = srcTeamNumber;
+        uplBase[dstSlotIndex * 2 + 1] = srcPlayerIndex;
+    }
 
     /* Save shirtNumber before overwriting with player data copy */
     PlayerFile *dstPf = (PlayerFile *)(dstTeam + 76);  /* PlayerFile at TeamFileEx offset 0x4C */
@@ -2135,10 +2512,11 @@ void _Career_RemoveInternationalPlayersByMask(uint32_t removeMask)
 {
     uint8_t *slot = (uint8_t *)&careerTeam;
 
+    uint16_t *uplBase = (uint16_t *)careerUnavailablePlayerLookupTable;
     for (uint16_t i = 0; i < 20; i++) {
         if (removeMask & (1 << i)) {
-            /* Clear lookup table entry (word at offset i*4) */
-            *(uint16_t *)(careerUnavailablePlayerLookupTable + (uint16_t)(i << 2)) = 0xFFFF;
+            /* Clear lookup table entry's teamNumber slot. */
+            uplBase[i * 2] = 0xFFFF;
 
             /* Find position of this player slot in currentMatchPlayers */
             uint16_t pos = _GetPlayerPositionFromCurrent(i);
@@ -2197,12 +2575,13 @@ void _Career_InitInternationalSquadAndLookupTablesForNewSeason(TeamFileEx *teamP
 {
     (void)teamPtr;  /* dead parameter in original asm */
 
-    uint8_t *squadSlots = careerDefaultInternationalSquadSlotsTable;
-    uint16_t squadSlotIdx = 0;
+    uint8_t  *squadSlots = careerDefaultInternationalSquadSlotsTable;
+    uint16_t *uplBase    = (uint16_t *)careerUnavailablePlayerLookupTable;
+    uint16_t  squadSlotIdx = 0;
 
     for (uint16_t i = 0; i < 20; i++) {
-        /* Clear lookup table entry (word at offset i*4) */
-        *(uint16_t *)(careerUnavailablePlayerLookupTable + i * 4) = 0xFFFF;
+        /* Clear lookup table entry's teamNumber slot. */
+        uplBase[i * 2] = 0xFFFF;
 
         /* Set currentMatchPlayers[i] = i */
         currentMatchPlayers[i] = (uint8_t)i;
@@ -2239,7 +2618,7 @@ void _Career_InitInternationalSquadAndLookupTablesForNewSeason(TeamFileEx *teamP
  * ================================================================ */
 
 /* Forward declarations for functions called from Career_SetCurrentCompetitionSlot */
-extern uint32_t currentCompetitionPtr;
+extern uint8_t *currentCompetitionPtr;
 extern uint8_t *careerCompetitionSlotPtrTable[];
 extern uint16_t isNationalSelector;
 extern uint16_t teamSelectionKeyCacheOffset;
@@ -2306,11 +2685,13 @@ static uint8_t *addCupEntry(uint8_t **srcPtr, uint16_t teamSlot, uint16_t roundI
     out[1] = *src;
     (*srcPtr)++;
 
-    /* GetCupRoundStringIndex: d0=round, d1=base[0x15E], d2=total, d3=base[0x162], d4=opt */
+    /* GetCupRoundStringIndex: d0=round, d1=slot.isLeagueFormat, d2=total,
+     * d3=slot.numTeams, d4=opt. base+0x15A = current slot record. */
+    DIYTournamentSlot *slotRec = (DIYTournamentSlot *)(base + 0x15A);
     uint16_t cupRoundIdx = _GetCupRoundStringIndex(roundIdx,
-                                                    *(uint16_t *)(base + 0x15E),
+                                                    slotRec->isLeagueFormat,
                                                     total,
-                                                    *(uint16_t *)(base + 0x162),
+                                                    slotRec->numTeams,
                                                     opt);
     out[9] = (uint8_t)cupRoundIdx;
     out[7] = (uint8_t)roundIdx;
@@ -2341,7 +2722,7 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
 
     if (type == 0) {
         /* League type */
-        uint8_t *base = blk;
+        DIYCompetitionEx *baseEx = (DIYCompetitionEx *)blk;
         uint16_t slotLen;
 
         if (gameType == 4) {
@@ -2354,9 +2735,10 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
             slotLen = slotLen * 0xC + 0xA;
         }
 
-        uint8_t *src = base + 0x1CE;
-        uint16_t count = *(uint16_t *)(base + 0x1C4);
-        uint16_t teamSlot = *(uint16_t *)(base + 0x2C);
+        /* +0x1CE = leagueSectionState.phaseStartMonths (per-round month bytes) */
+        uint8_t *src = baseEx->leagueSectionState.phaseStartMonths;
+        uint16_t count = baseEx->leagueTotalMatches;
+        uint16_t teamSlot = *(uint16_t *)&baseEx->base.compId;  /* slot/team index */
         int16_t i = (int16_t)count - 1;
 
         while (i >= 0) {
@@ -2377,10 +2759,11 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
 
     if (type == 1) {
         /* Cup type (single competition) */
+        DIYCompetitionEx *baseEx = (DIYCompetitionEx *)blk;
         uint8_t *base = blk;         /* a6: constant base for AddNextRoundCupEntry */
-        uint8_t *roundPtr = blk;     /* a3: per-round pointer, advances by 2 */
-        uint16_t teamId = *(uint16_t *)(base + 0x2C);  /* slot/team index */
-        uint8_t *src = base + 0x338;
+        uint16_t teamId = *(uint16_t *)&baseEx->base.compId;  /* slot/team index */
+        /* +0x338 = bracketScratch.progTable */
+        uint8_t *src = baseEx->bracketScratch.progTable;
         uint16_t numRounds = comp->numRounds;
         uint16_t teamsPerRound = comp->numTeams;
         uint16_t roundIdx = 0;
@@ -2400,7 +2783,9 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
 
             uint8_t *out = addNextRoundCupEntry(&src, roundIdx, numRounds, teamId, slotLen, base);
 
-            if (*(uint16_t *)(roundPtr + 0x66) == 2) {
+            /* roundPtr+0x66 advances by 2 each iteration → cup roundLegs[roundIdx]
+             * roundPtr+0x7E with stride 2 → cup roundPenalties[roundIdx] */
+            if (baseEx->matchData.cup.roundLegs[roundIdx] == 2) {
                 /* Two-leg match */
                 out[8] = 1;
                 out += *(uint16_t *)(out + 2);
@@ -2411,7 +2796,7 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
                 /* Single leg */
                 out[8] = 0;
                 out += *(uint16_t *)(out + 2);
-                if (*(uint16_t *)(roundPtr + 0x7E) == 1) {
+                if (baseEx->matchData.cup.roundPenalties[roundIdx] == 1) {
                     /* No replay match */
                 } else {
                     /* Replay match */
@@ -2422,7 +2807,6 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
                 }
             }
 
-            roundPtr += 2;  /* lea 2(a3),a3 — advance per-round pointer */
             roundIdx++;
             teamsPerRound = halved;  /* teamsPerRound halves each round */
         }
@@ -2432,39 +2816,43 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
     /* Type 2+ — multi-slot competition */
     {
         uint8_t *base = blk;
-        uint16_t opt = *(uint16_t *)(base + 0x15A);   /* d4: opt param for GetCupRoundStringIndex */
-        uint16_t teamSlot = *(uint16_t *)(base + 0x2C); /* d2: team slot index */
+        DIYCompetitionEx *baseEx = (DIYCompetitionEx *)blk;
+        /* +0x15A = first slot's _pad_00 word (used as opt for GetCupRoundStringIndex) */
+        DIYTournamentSlot *firstSlot = (DIYTournamentSlot *)(base + 0x15A);
+        uint16_t opt = *(uint16_t *)firstSlot->_pad_00;
+        uint16_t teamSlot = *(uint16_t *)&baseEx->base.compId;
         uint8_t *out = teamSelectionKeyCache;
         uint16_t numSlots = comp->totalMatchesInRound;
         uint16_t slotIdx = 0;
 
         while (slotIdx != numSlots) {
             uint16_t slotLen;
+            DIYTournamentSlot *slotRec = (DIYTournamentSlot *)(base + 0x15A);
 
             if (gameType == 4) {
                 slotLen = 0x16;
             } else {
-                slotLen = *(uint16_t *)(base + 0x162);
+                slotLen = slotRec->numTeams;
                 slotLen >>= 1;
                 if (slotLen > 0x18)
                     slotLen = 0x18;
                 slotLen = slotLen * 0xC + 0xA;
             }
 
-            uint8_t *src = base + 0x176;
+            uint8_t *src = slotRec->progressionTable;
 
-            if (*(uint16_t *)(base + 0x15E) == 0) {
+            if (slotRec->isLeagueFormat == 0) {
                 /* Cup sub-slot */
                 out = addCupEntry(&src, teamSlot, slotIdx, numSlots, slotLen, base, opt);
 
-                if (*(uint16_t *)(base + 0x16E) == 2) {
+                if (slotRec->formatFlag16E == 2) {
                     /* Two-leg */
                     out[8] = 1;
                     out = addCupEntry(&src, teamSlot, slotIdx, numSlots, slotLen, base, opt);
                     out[8] = 2;
                 } else {
                     out[8] = 0;
-                    if (*(uint16_t *)(base + 0x172) != 1) {
+                    if (slotRec->formatFlag172 != 1) {
                         /* Has replay */
                         out = addCupEntry(&src, teamSlot, slotIdx, numSlots, slotLen, base, opt);
                         out[8] = 3;
@@ -2473,7 +2861,7 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
                 }
             } else {
                 /* League sub-slot */
-                uint16_t leagueRounds = *(uint16_t *)(base + 0x174);
+                uint16_t leagueRounds = slotRec->matchesPerSlot;
                 int16_t j = (int16_t)leagueRounds - 1;
                 while (j >= 0) {
                     out = addCupEntry(&src, teamSlot, slotIdx, numSlots, slotLen, base, opt);

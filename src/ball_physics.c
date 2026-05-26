@@ -16,8 +16,13 @@ extern TeamGeneralInfo bottomTeamData;  /* TeamGeneralInfo */
 extern Sprite goalie1Sprite;            /* 110-byte sprite */
 extern Sprite goalie2Sprite;            /* 110-byte sprite */
 
-extern uint32_t ballStaticFrameIndices;  /* address used as pointer */
-extern uint32_t ballMovingFrameIndices;  /* address used as pointer */
+/* Storage is uint16_t [N] in swos_amiga_data_imports.c, but the
+ * frame-table walker reads the entries as int16_t (the -1 terminator
+ * needs sign semantics). Re-declared here with the matching type so
+ * `(int16_t *)ballMovingFrameIndices` decays the array to a pointer
+ * correctly rather than going through `&scalar` indirection. */
+extern int16_t ballStaticFrameIndices[];
+extern int16_t ballMovingFrameIndices[];
 
 extern int16_t  kBallGroundConstant;
 extern int16_t  kBallAirConstant;
@@ -34,7 +39,7 @@ extern uint16_t hideBall;
 extern uint16_t gameState;
 extern uint16_t gameStatePl;
 extern uint16_t substituteInProgress;
-extern uint32_t teamThatSubstitutes;     /* pointer stored as uint32_t */
+extern uintptr_t teamThatSubstitutes;     /* TeamGeneralInfo*-shaped pointer; retyped uintptr_t for 64-bit. */
 extern TeamGeneralInfo *lastTeamPlayedBeforeBreak; /* pointer to team */
 
 extern int16_t  foulXCoordinate;
@@ -510,14 +515,14 @@ _UpdateBall(void)
     /* ---- Select frame table (static vs moving) ---- */
     if (ball->deltaX.raw != 0 || ball->deltaY.raw != 0) {
         /* ball is moving */
-        if (ball->frameIndicesTable != (uint32_t)&ballMovingFrameIndices) {
-            ball->frameIndicesTable = (uint32_t)&ballMovingFrameIndices;
+        if (ball->frameIndicesTable != ballMovingFrameIndices) {
+            ball->frameIndicesTable = ballMovingFrameIndices;
             ball->frameIndex = (int16_t)0;
         }
     } else {
         /* ball is stationary */
-        if (ball->frameIndicesTable != (uint32_t)&ballStaticFrameIndices) {
-            ball->frameIndicesTable = (uint32_t)&ballStaticFrameIndices;
+        if (ball->frameIndicesTable != ballStaticFrameIndices) {
+            ball->frameIndicesTable = ballStaticFrameIndices;
             ball->frameIndex = (int16_t)0;
         }
     }
@@ -542,7 +547,7 @@ _UpdateBall(void)
 
 extract_frame:
     {
-        int16_t *table = (int16_t *)ball->frameIndicesTable;
+        int16_t *table = ball->frameIndicesTable;
         int16_t fi = ball->frameIndex;
         int16_t frame = table[fi];
         if (frame >= 0) {

@@ -5,10 +5,14 @@
  */
 #include "text_render.h"
 #include "display.h"
+#ifdef SWOS_SDL_BUILD
+#include <stdint.h>
+#include <stddef.h>
+#endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t *spriteGraphicsPtr;
-extern volatile uint32_t frontbufferBasePtr;
+extern volatile uintptr_t frontbufferBasePtr;
 extern uint16_t cameraXMod320;
 extern uint16_t cameraYMod320;
 extern volatile uint16_t panicReasonCode;
@@ -35,9 +39,91 @@ static inline __attribute__((always_inline)) void waitBlit(void)
  *
  * d0=sprIdx  d1=x  d2=y  d3=planeMask
  * ================================================================ */
+#ifdef SWOS_SDL_BUILD
+/* SDL build: render a glyph from chunky 8bpp sprite data to the chunky
+ * 8bpp frontbuffer. Sprite data layout (built by `blitDispatch`):
+ *   - 1 byte per pixel = palette index (0..NUM_COLOURS-1)
+ *   - row stride = wquads * 16 bytes
+ *   - palette index 0 = transparent
+ *
+ * Body/shadow remap: glyph fonts encode the body in palette index bit 1
+ * (= colour 2) and the shadow in bit (NUM_PLANES-1) (= colour 8 for OCS).
+ * The Amiga renderer used the `color` parameter to override the body
+ * colour while preserving the shadow. We do the same:
+ *   bodyBit   = (src >> 1) & 1
+ *   shadowBit = (src >> (NUM_PLANES-1)) & 1
+ *   For each output palette bit p:
+ *     if p == NUM_PLANES-1: bit = (color>>p)&1 ? 1 : shadowBit
+ *     else                : bit = (color>>p)&1 ? bodyBit : 0
+ *
+ * Pixels with both bodyBit and shadowBit clear are transparent. */
+static void blitGlyphBitplanes(uint16_t sprIdx, int16_t dstX, int16_t dstY,
+                               uint16_t color)
+{
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
+    SpriteGraphics *spr = sprGfxTable[sprIdx];
+    if (!spr) return;
+
+    const uint8_t *data = (const uint8_t *)(uintptr_t)spr->sprData;
+    uint8_t *dstBase = (uint8_t *)(uintptr_t)frontbufferBasePtr;
+    if (!data || !dstBase) return;
+
+    int16_t glyphW = spr->pixWidth;
+    int16_t glyphH = spr->nlines;
+    int16_t pitch  = spr->wquads * 16;       /* chunky row stride */
+
+    for (int16_t py = 0; py < glyphH; py++) {
+        int16_t dy = dstY + py;
+        if (dy < 0 || dy >= SCREEN_HEIGHT) continue;
+
+        const uint8_t *srcRow = data + (size_t)py * pitch;
+        uint8_t       *dstRow = dstBase + (size_t)dy * FRONTBUFFER_ROW_STRIDE_BYTES;
+
+        for (int16_t px = 0; px < glyphW; px++) {
+            int16_t dx = dstX + px;
+            if (dx < 0 || dx >= SCREEN_WIDTH) continue;
+
+            uint8_t src = srcRow[px];
+            uint8_t bodyBit   = (uint8_t)((src >> 1) & 1u);
+            uint8_t shadowBit = (uint8_t)((src >> (NUM_PLANES - 1)) & 1u);
+            if (bodyBit == 0 && shadowBit == 0) continue;
+
+            uint8_t out = 0;
+            for (uint16_t p = 0; p < NUM_PLANES - 1; p++) {
+                if ((color >> p) & 1u) out |= (uint8_t)(bodyBit << p);
+            }
+            if ((color >> (NUM_PLANES - 1)) & 1u)
+                out |= (uint8_t)(1u << (NUM_PLANES - 1));
+            else
+                out |= (uint8_t)(shadowBit << (NUM_PLANES - 1));
+
+            if (out) dstRow[dx] = out;
+        }
+    }
+}
+
+#endif
+
+#ifdef SWOS_SDL_BUILD
 static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint16_t planeMask)
 {
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)(uint32_t)spriteGraphicsPtr;
+    /* planeMask is the color value here (DrawMenuText passes `color`).
+     *
+     * Do NOT apply cameraXMod320/cameraYMod320 on SDL. Those are Amiga
+     * hardware-scroll wrap offsets used when the chip display pans its
+     * bitplane base pointer — correct on Amiga but wrong for our chunky
+     * frontbuffer that we redraw top-down each frame (same reasoning as
+     * blitChunkySprite in sprites.c). When the in-game camera leaves
+     * those offsets non-zero and we land in a menu, the text Y would
+     * wrap through SCREEN_HEIGHT and multiple glyphs land on overlapping
+     * rows — producing "SSEEIECTS MORE TEAMS" in place of
+     * "SELECT 2 MORE TEAMS" on the post-match team-select screen. */
+    blitGlyphBitplanes(sprIdx, x, y, planeMask);
+}
+#else
+static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint16_t planeMask)
+{
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
 
     /* Look up glyph sprite header */
     SpriteGraphics *spr = sprGfxTable[sprIdx];
@@ -48,7 +134,7 @@ static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint1
         _PanicHaltLoop();
     }
 
-    uint8_t *dstBase = (uint8_t *)(uint32_t)frontbufferBasePtr;
+    uint8_t *dstBase = (uint8_t *)frontbufferBasePtr;
     uint16_t glyphHeight = (uint16_t)spr->nlines;
 
     /* Apply camera offset */
@@ -120,8 +206,8 @@ static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint1
     custom->bltdmod = dstMod;
 
     /* Source data pointers */
-    uint32_t maskPtr   = spr->maskPtr;
-    uint32_t dataBase  = spr->sprData;
+    uint32_t maskPtr   = (uint32_t)spr->maskPtr;
+    uint32_t dataBase  = (uint32_t)spr->sprData;
     uint32_t plane1Ptr = dataBase + srcStrideBytes;          /* skip plane 0 */
     uint32_t planeLastPtr = plane1Ptr + (uint32_t)srcStrideBytes * (NUM_PLANES - 2);  /* last plane */
 
@@ -201,6 +287,7 @@ restart_blit_span:
         goto restart_blit_span;
     }
 }
+#endif /* !SWOS_SDL_BUILD */
 
 /* ================================================================
  * GetTextWidth
@@ -215,11 +302,17 @@ uint16_t _GetTextWidth(uint8_t *text, uint8_t *charsTable)
     uint16_t charSpacing = (uint16_t)ct->charSpacing;
     uint8_t *convTable = (uint8_t *)(ct + 1);
     uint16_t spaceWidth = (uint16_t)ct->spaceWidth;
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)(uint32_t)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
 
     uint16_t width = 0;
     uint8_t ch;
 
+    /* TEMP diagnostic — narrow to the player-name path: smallCharsTable
+     * (sprIdxOff=0), text starting with a digit, and only print the
+     * first 8 unique strings. The match-init makePlayerNameSprite
+     * calls produce bogus widths even though identical lookups via
+     * the frontend menus return sane values, which suggests sprite
+     * slots that hold glyphs get reloaded between phases. */
     while ((ch = *text++) != 0) {
         if (ch == ' ') {
             width += spaceWidth;
@@ -250,7 +343,7 @@ uint16_t _DrawMenuText(uint16_t x, uint16_t y, uint16_t color,
     uint16_t charSpacing = (uint16_t)ct->charSpacing;
     uint8_t *convTable = (uint8_t *)(ct + 1);
     uint16_t spaceWidth = (uint16_t)ct->spaceWidth;
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)(uint32_t)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
 
     int16_t curX = (int16_t)x;
     int16_t nextX = curX;

@@ -1063,8 +1063,10 @@ not_in_penalty:
             if (player->imageIndex < 0)
                 goto finalize;
             {
-                SpriteGraphics *sg = (SpriteGraphics *)((uint8_t *)spriteGraphicsPtr + (player->imageIndex << 2));
-                sg = *(SpriteGraphics **)sg;
+                /* Amiga: base + idx*4 = byte offset for 4-byte slot.
+                 * On 64-bit each slot is 8 bytes, so index as a typed
+                 * pointer table instead. */
+                SpriteGraphics *sg = ((SpriteGraphics **)spriteGraphicsPtr)[player->imageIndex];
                 int16_t pw = sg->pixWidth;
                 int16_t px = player->x.s.i;
                 if (player->deltaX.raw < 0) {
