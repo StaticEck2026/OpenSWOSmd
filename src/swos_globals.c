@@ -321,11 +321,11 @@ uint16_t menuColorAndTextScript[5166] = {
  * .equ alias = ext_carrier + offset is silently dropped there). */
 __asm__(
 #if defined(__APPLE__)
-    ".pushsection __DATA,__bss\n"
+    ".section __DATA,__bss\n"
 #elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-    ".pushsection .bss\n"
+    ".section .bss\n"
 #else
-    ".pushsection .bss,\"aw\",%nobits\n"
+    ".section .bss,\"aw\",%nobits\n"
 #endif
     ".p2align 2\n"
     ".globl " _ASM_PFX "currentMenu\n"
@@ -334,7 +334,7 @@ __asm__(
     ".globl " _ASM_PFX "menuEntries\n"
     _ASM_PFX "menuEntries:\n"
     ".skip " _MENU_HDR_STR((8 * 1024 + 80 * 1024) - MENU_HEADER_SIZE) "\n"
-    ".popsection\n"
+    ".text\n"
 );
 
 /* ---- Stadium-menu little-player sprite-copy block --------------------
@@ -676,11 +676,11 @@ __asm__(".globl " _ASM_PFX "editTeamsPrimaryShirts\n"
  *   +21254 inGameHilBuffer        (= 2254 + 0x4A38) */
 __asm__(
 #if defined(__APPLE__)
-    ".pushsection __DATA,__bss\n"
+    ".section __DATA,__bss\n"
 #elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-    ".pushsection .bss\n"
+    ".section .bss\n"
 #else
-    ".pushsection .bss,\"aw\",%nobits\n"
+    ".section .bss,\"aw\",%nobits\n"
 #endif
     ".p2align 2\n"
     ".globl " _ASM_PFX "hilBackingBuf\n"
@@ -715,7 +715,7 @@ __asm__(
     ".globl " _ASM_PFX "inGameHilBuffer\n"
     _ASM_PFX "inGameHilBuffer:\n"
     ".skip 171000\n"              /* 192254 - 21254 */
-    ".popsection\n"
+    ".text\n"
 );
 #undef HIL_BACKING_BUF_SIZE
 
@@ -1020,11 +1020,11 @@ void *kGoalieSkillTables[8] = {
  * BSS run and expose each slot via inline-asm .equ alias. */
 __asm__(
 #if defined(__APPLE__)
-    ".pushsection __DATA,__bss\n"
+    ".section __DATA,__bss\n"
 #elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-    ".pushsection .bss\n"
+    ".section .bss\n"
 #else
-    ".pushsection .bss,\"aw\",%nobits\n"
+    ".section .bss,\"aw\",%nobits\n"
 #endif
     ".p2align 2\n"
     ".globl " _ASM_PFX "qualifiedTeamGridsBlock\n"
@@ -1044,7 +1044,7 @@ __asm__(
     ".globl " _ASM_PFX "uefaCupTitleHolderGrid\n"
     _ASM_PFX "uefaCupTitleHolderGrid:\n"
     ".skip 684\n"
-    ".popsection\n"
+    ".text\n"
 );
 
 
@@ -1058,11 +1058,11 @@ __asm__(
  * match the Amiga round-string capacity. */
 __asm__(
 #if defined(__APPLE__)
-    ".pushsection __DATA,__bss\n"
+    ".section __DATA,__bss\n"
 #elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-    ".pushsection .bss\n"
+    ".section .bss\n"
 #else
-    ".pushsection .bss,\"aw\",%nobits\n"
+    ".section .bss,\"aw\",%nobits\n"
 #endif
     ".p2align 2\n"
     ".globl " _ASM_PFX "gameRoundBuf\n"
@@ -1070,7 +1070,7 @@ __asm__(
     ".globl " _ASM_PFX "gameRound\n"
     _ASM_PFX "gameRound:\n"
     ".skip 100\n"
-    ".popsection\n"
+    ".text\n"
 );
 
 
@@ -1104,11 +1104,11 @@ __asm__(
  * defensive headroom — the 1450-word copy reaches 0xB54 anyway. */
 __asm__(
 #if defined(__APPLE__)
-    ".pushsection __DATA,__bss\n"
+    ".section __DATA,__bss\n"
 #elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-    ".pushsection .bss\n"
+    ".section .bss\n"
 #else
-    ".pushsection .bss,\"aw\",%nobits\n"
+    ".section .bss,\"aw\",%nobits\n"
 #endif
     ".p2align 2\n"
     ".globl " _ASM_PFX "diyFileBufferCopyBuf\n"
@@ -1122,7 +1122,7 @@ __asm__(
     ".globl " _ASM_PFX "diyCompetitionStartBuf\n"
     _ASM_PFX "diyCompetitionStartBuf:\n"
     ".skip 7136\n"
-    ".popsection\n"
+    ".text\n"
 );
 
 __asm__(".globl " _ASM_PFX "diyCompetitionStart\n"
@@ -1257,11 +1257,11 @@ __asm__(".globl " _ASM_PFX "diyMinSubstitutes\n"
  * = 0x782 bytes total. */
 __asm__(
 #if defined(__APPLE__)
-    ".pushsection __DATA,__bss\n"
+    ".section __DATA,__bss\n"
 #elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-    ".pushsection .bss\n"
+    ".section .bss\n"
 #else
-    ".pushsection .bss,\"aw\",%nobits\n"
+    ".section .bss,\"aw\",%nobits\n"
 #endif
     ".p2align 2\n"
     ".globl " _ASM_PFX "numberOfFilesBuf\n"
@@ -1272,7 +1272,7 @@ __asm__(
     ".globl " _ASM_PFX "foundFilenamesBuffer\n"
     _ASM_PFX "foundFilenamesBuffer:\n"
     ".skip 1918\n"
-    ".popsection\n"
+    ".text\n"
 );
 
 

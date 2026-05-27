@@ -42,13 +42,13 @@
  * entirely. */
 __asm__(
 #if defined(__APPLE__)
-    ".pushsection __DATA,__bss\n"
+    ".section __DATA,__bss\n"
 #elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
     /* m68k-amiga-elf native BSS section directive. */
-    ".pushsection .bss\n"
+    ".section .bss\n"
 #else
     /* generic ELF (Linux x86, etc). */
-    ".pushsection .bss,\"aw\",%nobits\n"
+    ".section .bss,\"aw\",%nobits\n"
 #endif
     ".p2align 2\n"
     ".globl " _ASM_PFX "careerFileBufferBuf\n"
@@ -965,5 +965,5 @@ __asm__(
     ".globl " _ASM_PFX "chipRamBitmapEnd\n"
     _ASM_PFX "chipRamBitmapEnd:\n"
     ".skip 95250\n"
-    ".popsection\n"
+    ".text\n"
 );
