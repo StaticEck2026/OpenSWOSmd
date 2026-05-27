@@ -50,11 +50,26 @@ else
 # Default: native compiler (gcc on Linux/MinGW/Cygwin, clang on macOS).
 ifeq ($(shell uname -s),Darwin)
 CC := cc
-# Homebrew installs SDL2 under /opt/homebrew (arm64) or /usr/local
-# (intel). brew --prefix returns the right one. If pkg-config exists
-# in PATH it will already pick the right .pc up; fall back to
-# sdl2-config below if not.
+# SDL2 search order on macOS:
+#   1. SDL2.framework in /Library/Frameworks, ~/Library/Frameworks,
+#      /opt/homebrew/Frameworks, or /usr/local/Frameworks. Preferred
+#      because the official libsdl.org build ships as a universal
+#      binary — needed for `make macos-universal`.
+#   2. Homebrew's SDL2 via pkg-config (single-arch only).
+SDL2_MACOS_FW :=
+ifneq (,$(wildcard /Library/Frameworks/SDL2.framework))
+SDL2_MACOS_FW := /Library/Frameworks
+else ifneq (,$(wildcard $(HOME)/Library/Frameworks/SDL2.framework))
+SDL2_MACOS_FW := $(HOME)/Library/Frameworks
+else ifneq (,$(wildcard /opt/homebrew/Frameworks/SDL2.framework))
+SDL2_MACOS_FW := /opt/homebrew/Frameworks
+else ifneq (,$(wildcard /usr/local/Frameworks/SDL2.framework))
+SDL2_MACOS_FW := /usr/local/Frameworks
+endif
+ifndef SDL2_MACOS_FW
+# Homebrew SDL2 lives under /opt/homebrew (arm64) or /usr/local (intel).
 PKGCONF := PKG_CONFIG_PATH=$(shell brew --prefix sdl2 2>/dev/null)/lib/pkgconfig pkg-config
+endif
 else
 CC := gcc
 endif
@@ -119,8 +134,20 @@ endif
 # ---- Helpers ----
 PKGCONF ?= pkg-config
 
+ifdef SDL2_MACOS_FW
+# macOS framework: header search via -F + Headers/, link via -framework SDL2.
+# The -rpath entries let the binary find SDL2.framework at runtime when
+# either bundled inside the .app (Contents/Frameworks/) or installed
+# system-wide under /Library/Frameworks/ or ~/Library/Frameworks/.
+SDL2_CFLAGS := -F $(SDL2_MACOS_FW) -I $(SDL2_MACOS_FW)/SDL2.framework/Headers
+SDL2_LIBS   := -F $(SDL2_MACOS_FW) -framework SDL2 \
+               -Wl,-rpath,@executable_path/../Frameworks \
+               -Wl,-rpath,/Library/Frameworks \
+               -Wl,-rpath,$(HOME)/Library/Frameworks
+else
 SDL2_CFLAGS := $(shell $(PKGCONF) --cflags sdl2 2>/dev/null || sdl2-config --cflags 2>/dev/null)
 SDL2_LIBS   := $(shell $(PKGCONF) --libs sdl2 2>/dev/null || sdl2-config --libs 2>/dev/null)
+endif
 
 # ---- Build flags ----
 # -m32 keeps pointers and `long` at 32 bits so the Amiga struct layouts
@@ -148,8 +175,20 @@ else ifdef ARM
 ARCHFLAGS := -march=armv7-a -mfpu=neon -mfloat-abi=hard
 else ifeq ($(UNAME_S),Darwin)
 # Modern macOS is 64-bit (arm64 or x86_64). No -m32. The static
-# size_check[] asserts will fail until Phase 5 / 6 (same as ARM64).
-ARCHFLAGS :=
+# size_check[] asserts are gated on UINTPTR_MAX (see game_types.h) and
+# already pick the 64-bit struct sizes.
+#
+# MACOS_ARCH: target architecture. Defaults to the host arch (so a plain
+# `make` on an M-series Mac produces arm64, on Intel produces x86_64).
+# Set explicitly to build a single non-host slice (used by macos-universal
+# below). Accepted values match clang's -arch flag: arm64 or x86_64.
+#
+# MACOS_MIN: minimum deployment target. 12.0 = Monterey — the oldest macOS
+# we currently care about. Lowering this further is fine if SDL2 still
+# supports it (libsdl.org's prebuilt framework currently targets 10.11).
+MACOS_ARCH ?= $(shell uname -m)
+MACOS_MIN  ?= 12.0
+ARCHFLAGS := -arch $(MACOS_ARCH) -mmacosx-version-min=$(MACOS_MIN)
 else ifeq ($(GCC_MACHINE),x86_64-w64-mingw32)
 ARCHFLAGS :=
 else ifneq (,$(findstring CYGWIN,$(UNAME_S)))
@@ -247,7 +286,7 @@ LDFLAGS := $(ARCHFLAGS)
 LDLIBS  := $(SDL2_LIBS) -lm
 
 # ---- Targets ----
-.PHONY: all clean debug
+.PHONY: all clean debug macos-universal
 all: $(TARGET)
 
 debug:
@@ -272,3 +311,43 @@ SWOS.res.o: SWOS.rc SWOS.ico
 
 clean:
 	rm -f $(TARGET) $(OBJECTS) SWOS.res.o
+
+# ---- macOS universal binary (x86_64 + arm64) ---------------------- *
+# Builds two slices via recursive make, lipos them into a single
+# bin/SWOS.macos that runs on both Apple Silicon and Intel Macs.
+#
+# Requires SDL2.framework (universal) under one of:
+#   /Library/Frameworks/  ~/Library/Frameworks/
+#   /opt/homebrew/Frameworks/  /usr/local/Frameworks/
+# (the official libsdl.org dmg installs into /Library/Frameworks/).
+#
+# Minimum deployment target defaults to macOS 12 (Monterey); override
+# with `make macos-universal MACOS_MIN=11.0` etc. if needed.
+#
+# Each recursive build runs `make clean` first because the source-tree
+# .o files don't carry per-arch tags — sharing them across arches would
+# pick up the wrong ELF/Mach-O slice on the second pass.
+.PHONY: macos-universal
+macos-universal:
+	@test "$$(uname -s)" = Darwin || { \
+	    echo "macos-universal: must run on macOS (got $$(uname -s))" >&2; \
+	    exit 1; }
+	@test -n "$(SDL2_MACOS_FW)" || { \
+	    echo "SDL2.framework not found in any standard location." >&2; \
+	    echo "Install from https://github.com/libsdl-org/SDL/releases" >&2; \
+	    echo "(SDL2-2.x.x.dmg) and drop SDL2.framework into" >&2; \
+	    echo "/Library/Frameworks/. See docs/MACOS_BUILD.md." >&2; \
+	    exit 1; }
+	@echo "==> [macos-universal] Building x86_64 slice"
+	$(MAKE) clean
+	$(MAKE) MACOS_ARCH=x86_64
+	mv $(BINDIR)/SWOS.macos $(BINDIR)/SWOS.macos.x86_64
+	@echo "==> [macos-universal] Building arm64 slice"
+	$(MAKE) clean
+	$(MAKE) MACOS_ARCH=arm64
+	mv $(BINDIR)/SWOS.macos $(BINDIR)/SWOS.macos.arm64
+	@echo "==> [macos-universal] Combining slices via lipo"
+	lipo -create -output $(BINDIR)/SWOS.macos \
+	     $(BINDIR)/SWOS.macos.x86_64 $(BINDIR)/SWOS.macos.arm64
+	@lipo -info $(BINDIR)/SWOS.macos
+	@echo "==> Universal binary: $(BINDIR)/SWOS.macos"
