@@ -281,10 +281,18 @@ void _FixupAndColorPitchFile(void)
      * The Amiga code aliased the in-buffer 32-bit slot table as two
      * fan-group pointers (group A at slot 0, group B at slot
      * FAN_PTR_TABLE_OFFSET/4 = 21). On 64-bit the slot's truncated
-     * pointer can't be dereferenced, so resolve to the full-width
-     * pointers via the side table populated in Step 1b. */
+     * pointer can't be dereferenced, so the SDL path resolves to the
+     * full-width pointers via the side table populated in Step 1b.
+     * On Amiga, s_pitchFullPtrs is NOT populated (Step 1b is gated
+     * out) — use the in-buffer slot table directly, matching the
+     * original asm. */
+#ifdef SWOS_SDL_BUILD
     uint8_t **fanGroupA = &s_pitchFullPtrs[0];
     uint8_t **fanGroupB = &s_pitchFullPtrs[FAN_PTR_TABLE_OFFSET / 4];
+#else
+    uint8_t **fanGroupA = (uint8_t **)pitchDatBuffer;
+    uint8_t **fanGroupB = (uint8_t **)(pitchDatBuffer + FAN_PTR_TABLE_OFFSET);
+#endif
 
     fansSidesSwapped = 0;
     /* If topTeamInGame's team name first byte is odd, swap groups */
