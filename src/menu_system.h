@@ -20,7 +20,7 @@ typedef void (*MenuEntryFn)(MenuEntry *entry); /* MenuEntry.onSelect / beforeDra
  * pointer + struct pointer slots are 4 bytes each, preserving the
  * size_check. On 64-bit they grow to 8 bytes — Phase 5 / 6 retypes
  * the size_check accordingly. */
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     MenuVoidFn   onInit;       /* 0: function pointer (or NULL) */
     MenuVoidFn   afterDraw;    /* 4: function pointer (or NULL) */
     MenuVoidFn   onDraw;       /* 8: function pointer (or NULL) */
@@ -30,7 +30,7 @@ typedef struct SWOS_PACKED {
 } Menu;
 
 /* ---- MenuEntry struct (56 bytes) ---- */
-struct SWOS_PACKED MenuEntry {
+struct __attribute__((packed)) MenuEntry {
     uint16_t alreadyDrawn;   /* 0 */
     uint16_t ordinal;        /* 2 */
     uint16_t isInvisible;    /* 4 */
@@ -106,19 +106,11 @@ struct SWOS_PACKED MenuEntry {
  * MenuEntry has 5 pointer-width fields (bg, fg uintptr_t + onSelect,
  * beforeDraw, afterDrawCb fn-ptrs); +20 on 64-bit. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
-#ifndef __APPLE__
 typedef char _menu_size_check[(sizeof(Menu) == 22) ? 1 : -1];
-#endif
-#ifndef __APPLE__
 typedef char _menuentry_size_check[(sizeof(MenuEntry) == 56) ? 1 : -1];
-#endif
 #else
-#ifndef __APPLE__
 typedef char _menu_size_check[(sizeof(Menu) == 38) ? 1 : -1];
-#endif
-#ifndef __APPLE__
 typedef char _menuentry_size_check[(sizeof(MenuEntry) == 76) ? 1 : -1];
-#endif
 #endif
 
 /* ---- Constants ----
@@ -126,24 +118,7 @@ typedef char _menuentry_size_check[(sizeof(MenuEntry) == 76) ? 1 : -1];
  * 5 pointer-width fields (uintptr_t bg/fg + 3 fn-ptrs); both struct sizes
  * grow on 64-bit (+16 / +20). The `menuEntries` link-time alias in
  * swos_globals.c uses the same offset and must stay in sync. */
-#if defined(__APPLE__)
-/* Apple targets disable SWOS_PACKED — the compiler naturally aligns
- * pointer fields (so ld64 can emit pointer relocations). That changes
- * sizeof(Menu) / sizeof(MenuEntry) vs the packed sizes. Computed
- * by hand for the unpacked 64-bit layout (32-bit Apple builds are
- * not a target):
- *   Menu      = 4*8 (pointers) + 2 (numEntries) + 2 pad + 4 (endOfMenuPtr) = 40
- *   MenuEntry = same field set as packed but with natural alignment for
- *               the embedded uintptr_t bg/fg unions and the 3 function
- *               pointers. Walk: 0..29 (30B of u16/i8), align→32, bg union
- *               (8B), content u16, stringFlags u16, align→48, fg union
- *               (8B), align→56, onSelect (8B), controlMask u16, align→72,
- *               beforeDraw (8B), afterDrawCb (8B) = 88 bytes.
- * MENU_HEADER_SIZE must be a numeric literal because swos_globals.c
- * stringifies it into the menuEntries-alias inline asm. */
-#define MENU_HEADER_SIZE   40
-#define MENUENTRY_STRIDE   88
-#elif UINTPTR_MAX == 0xFFFFFFFFu
+#if UINTPTR_MAX == 0xFFFFFFFFu
 #define MENU_HEADER_SIZE   22
 #define MENUENTRY_STRIDE   56
 #else

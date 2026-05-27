@@ -627,7 +627,7 @@ extern const char aNormal[], aDry[], aHard[];
     (void *)aNov, (void *)aDec
 
 extern char diyPitchTypeOrSeason_1[];
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[2];
 } diyPitchTypeOrSeasonStrTable = {
     diyPitchTypeOrSeason_1, 0,
@@ -636,7 +636,7 @@ struct SWOS_PACKED {
 
 /* diyLeaguePitchTypeStrTable: index var is `diyCompetitionStart + 0x36`,
  * base = -1 (so index 0 → entries[1] = "FROZEN" while index -1 → "RANDOM"). */
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[8];
 } diyLeaguePitchTypeStrTable = {
     (diyCompetitionStart + 0x36), (uint16_t)-1,
@@ -648,14 +648,14 @@ struct SWOS_PACKED {
     }
 };
 
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[12];
 } diyLeagueMonthsStrTable = {
     diyLeagueStartingMonth, 0,
     { MONTHS }
 };
 
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[12];
 } diyLeagueEndingMonthStrTable = {
     diyLeagueEndingMonth, 0,
@@ -679,7 +679,7 @@ extern const char aSoft[], aNormal[], aDry[], aHard[];
 
 /* diyCupPitchTypeStringTable: indexPtr = `diyCompetitionStart + 0x36`
  * = `&diyCompetitionStart.base.pitchType`; base = -1; 8 entries. */
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[8];
 } diyCupPitchTypeStringTable = {
     (diyCompetitionStart + 0x36), (uint16_t)-1,
@@ -689,7 +689,7 @@ struct SWOS_PACKED {
 /* diyCupAwayGoalsStringTable: indexPtr = `diyCompetitionStart + 0x5E`
  * (which our struct names `playEachTeam` — Amiga reuses that field
  * for AWAY-GOALS-MODE in cup configurations); base = 0; 3 entries. */
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[3];
 } diyCupAwayGoalsStringTable = {
     (diyCompetitionStart + 0x5E), 0,
@@ -701,7 +701,7 @@ struct SWOS_PACKED {
 };
 
 /* diyPitchTypeStringTable: indexPtr = `diyFileBufferCopy + 0x36`. */
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[8];
 } diyPitchTypeStringTable = {
     (diyFileBufferCopy + 0x36), (uint16_t)-1,
@@ -755,26 +755,26 @@ extern const char aPitchType[], aSeason_1[];
     (void *)aNoPenalties, (void *)aPenalties, \
     (void *)aPensIfReplay
 
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[2];
 } diyCupPitchTypeOrSeasonStringTable = {
     diyCupPitchTypeOrSeasonSelection, 0,
     { (void *)aPitchType, (void *)aSeason_1 }
 };
 
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[12];
 } diyCupStartMonthStringTable = {
     diyCupStartMonthIndex, 0, { MONTHS }
 };
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[12];
 } diyCupEndMonthStringTable = {
     diyCupEndMonthIndex, 0, { MONTHS }
 };
 
 #define DEFINE_LEGS(N) \
-struct SWOS_PACKED { \
+struct __attribute__((packed)) { \
     void    *indexPtr; uint16_t base; void    *entries[3]; \
 } diyCupLegsStringTable##N = { diyCupLegsChoice##N, 0, { LEGS_3 } }
 DEFINE_LEGS(0); DEFINE_LEGS(1); DEFINE_LEGS(2);
@@ -782,7 +782,7 @@ DEFINE_LEGS(3); DEFINE_LEGS(4); DEFINE_LEGS(5);
 #undef DEFINE_LEGS
 
 #define DEFINE_ET(N) \
-struct SWOS_PACKED { \
+struct __attribute__((packed)) { \
     void    *indexPtr; uint16_t base; void    *entries[3]; \
 } diyCupExtraTimeStringTable##N = { diyCupExtraTimeChoice##N, 0, { EXTRATIME_3 } }
 DEFINE_ET(0); DEFINE_ET(1); DEFINE_ET(2);
@@ -790,7 +790,7 @@ DEFINE_ET(3); DEFINE_ET(4); DEFINE_ET(5);
 #undef DEFINE_ET
 
 #define DEFINE_PEN(N) \
-struct SWOS_PACKED { \
+struct __attribute__((packed)) { \
     void    *indexPtr; uint16_t base; void    *entries[3]; \
 } diyCupPenaltiesStringTable##N = { diyCupPenaltiesChoice##N, 0, { PENALTIES_3 } }
 DEFINE_PEN(0); DEFINE_PEN(1); DEFINE_PEN(2);
@@ -812,7 +812,7 @@ extern const char a3Mins[], a5Mins[], a7Mins[], a10Mins[];
 extern const char aOff[], aOn[];
 
 #define ON_OFF_TABLE(NAME, VAR) \
-struct SWOS_PACKED { \
+struct __attribute__((packed)) { \
     void    *indexPtr; uint16_t base; void    *entries[2]; \
 } NAME = { \
     (VAR), 0, \
@@ -821,7 +821,7 @@ struct SWOS_PACKED { \
 
 /* pitchType menu: base = -2 so index -2 → "SEASONAL", -1 → "RANDOM",
  * 0..6 → FROZEN..HARD (matches SWOS2.s line 73164). */
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[9];
 } pitchTypeStrTable = {
     pitchType, (uint16_t)-2,
@@ -834,7 +834,7 @@ struct SWOS_PACKED {
     }
 };
 
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[4];
 } gameLengthStrTable = {
     gameLength, 0,
@@ -883,24 +883,24 @@ extern const char aPlayEachTeamX1[], aPlayEachTeamX2[], aPlayEachTeamX3[], aPlay
     (void *)aPlayEachTeamX1, (void *)aPlayEachTeamX2, \
     (void *)aPlayEachTeamX3, (void *)aPlayEachTeamX4
 
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[2];
 } diyPitchSeasonStrTab = {
     diyTournamentUseSeasonalPitchEffective, 0,
     { (void *)aPitchType, (void *)aSeason_1 }
 };
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[12];
 } diyStartMonthStrTab = {
     diyTournamentStartMonthPage, 0, { MONTHS }
 };
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[12];
 } diyEndMonthStrTab = {
     diyTournamentEndMonthPage, 0, { MONTHS }
 };
 /* diyAwayGoalsStrTab: indexPtr = diyFileBufferCopy + 0x4A. */
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[3];
 } diyAwayGoalsStrTab = {
     (diyFileBufferCopy + 0x4A), 0,
@@ -918,21 +918,21 @@ struct SWOS_PACKED {
 #define STAGE_PTR(N, OFF)  ((uint8_t *)diyTournamentStages + (N) * 0xA + (OFF))
 
 #define DEFINE_LEGS(N) \
-struct SWOS_PACKED { void    *indexPtr; uint16_t base; void    *entries[3]; } \
+struct __attribute__((packed)) { void    *indexPtr; uint16_t base; void    *entries[3]; } \
 diyStage##N##LegsStrTab = { STAGE_PTR((N) - 1, 0), 0, { LEGS_3 } }
 DEFINE_LEGS(1); DEFINE_LEGS(2); DEFINE_LEGS(3);
 DEFINE_LEGS(4); DEFINE_LEGS(5); DEFINE_LEGS(6);
 #undef DEFINE_LEGS
 
 #define DEFINE_ET(N) \
-struct SWOS_PACKED { void    *indexPtr; uint16_t base; void    *entries[3]; } \
+struct __attribute__((packed)) { void    *indexPtr; uint16_t base; void    *entries[3]; } \
 diyStage##N##ExtraTimeStrTab = { STAGE_PTR((N) - 1, 2), 0, { EXTRATIME_3 } }
 DEFINE_ET(1); DEFINE_ET(2); DEFINE_ET(3);
 DEFINE_ET(4); DEFINE_ET(5); DEFINE_ET(6);
 #undef DEFINE_ET
 
 #define DEFINE_PEN(N) \
-struct SWOS_PACKED { void    *indexPtr; uint16_t base; void    *entries[3]; } \
+struct __attribute__((packed)) { void    *indexPtr; uint16_t base; void    *entries[3]; } \
 diyStage##N##PenaltiesStrTab = { STAGE_PTR((N) - 1, 4), 0, { PENALTIES_3 } }
 DEFINE_PEN(1); DEFINE_PEN(2); DEFINE_PEN(3);
 DEFINE_PEN(4); DEFINE_PEN(5); DEFINE_PEN(6);
@@ -940,7 +940,7 @@ DEFINE_PEN(4); DEFINE_PEN(5); DEFINE_PEN(6);
 
 /* PtsForWin: indexPtr at stage offset +6, base = 2 (index 2 → "2 PTS"). */
 #define DEFINE_PTS(N) \
-struct SWOS_PACKED { void    *indexPtr; uint16_t base; void    *entries[2]; } \
+struct __attribute__((packed)) { void    *indexPtr; uint16_t base; void    *entries[2]; } \
 diyStage##N##PtsForWinStrTab = { STAGE_PTR((N) - 1, 6), 2, { PTS_2 } }
 DEFINE_PTS(1); DEFINE_PTS(2); DEFINE_PTS(3);
 DEFINE_PTS(4); DEFINE_PTS(5); DEFINE_PTS(6);
@@ -948,7 +948,7 @@ DEFINE_PTS(4); DEFINE_PTS(5); DEFINE_PTS(6);
 
 /* PlayCount: indexPtr at stage offset +8, base = 1, 4 entries. */
 #define DEFINE_PLAY(N) \
-struct SWOS_PACKED { void    *indexPtr; uint16_t base; void    *entries[4]; } \
+struct __attribute__((packed)) { void    *indexPtr; uint16_t base; void    *entries[4]; } \
 diyStage##N##PlayCountStrTab = { STAGE_PTR((N) - 1, 8), 1, { PLAYCOUNT_4 } }
 DEFINE_PLAY(1); DEFINE_PLAY(2); DEFINE_PLAY(3);
 DEFINE_PLAY(4); DEFINE_PLAY(5); DEFINE_PLAY(6);
@@ -1005,7 +1005,7 @@ void *tacticPosMapPtrs[18] = {
  * packed, otherwise the menu reads past the indexPtr into adjacent
  * globals when picking a string. */
 extern const char aCoach_0[], aPlayerCoach_0[];
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[2];
 } offsetCoachOrPlayer = {
     coachOrPlayer, 0,
@@ -1050,7 +1050,7 @@ extern const char aBallControl[], aSpeed[], aFinishing[];
 extern const char aEuropean[], aNorthAmerican[], aSouthAmerican[];
 extern const char aAfrican[], aAsian[], aOceanian[];
 
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[5];
 } positionFilterStringTable = {
     playerMarketFilterPosition, (uint16_t)-1,
@@ -1063,7 +1063,7 @@ struct SWOS_PACKED {
     }
 };
 
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[8];
 } skillFilterStringTable = {
     playerMarketFilterAgeGroup, (uint16_t)-1,
@@ -1079,7 +1079,7 @@ struct SWOS_PACKED {
     }
 };
 
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[7];
 } countryFilterStringTable = {
     playerMarketFilterCountry, 0,
@@ -1201,7 +1201,7 @@ void *clubMessagesTable[76] = {
  * (flipOnOff already extern'd above as char[]; just take its address.) */
 extern const char aFlipOff[], aFlipOn[];
 extern char aUSER_A[], aUSER_B[], aUSER_C[];
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[5];
 } flipStrTable = {
     flipOnOff, 0,
@@ -1316,7 +1316,7 @@ void *nationalTeamCompetitionsAndQualifications1[39] = {
  * walking off the end. Reconstruct the table as a packed C struct array
  * with terminator. Host-order writes work directly because the function
  * uses host uint16_t / uint32_t reads. */
-typedef struct SWOS_PACKED SeedListGroupEntry {
+typedef struct __attribute__((packed)) SeedListGroupEntry {
     void    *ptr;
     uint16_t size;
     uint16_t count;

@@ -7,7 +7,7 @@
  *
  * Adapted from data/SWOS2_IDA.h (IDA Pro export).
  * All IDA annotations stripped, types mapped to stdint-style typedefs.
- * Packing via SWOS_PACKED_ALIGN(2) to match 68k memory layout.
+ * Packing via __attribute__((packed, aligned(2))) to match 68k memory layout.
  */
 #ifndef GAME_TYPES_H
 #define GAME_TYPES_H
@@ -45,16 +45,12 @@ typedef union {
     } s;
 } FixedPoint;
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _fixedpoint_size_check[(sizeof(FixedPoint) == 4) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * Sprite — 110 bytes, pack(2)
  * ================================================================== */
-struct SWOS_PACKED_ALIGN(2) Sprite {
+struct __attribute__((packed, aligned(2))) Sprite {
     int16_t    teamNumber;          /* 0 */
     int16_t    playerOrdinal;       /* 2 */
     int16_t    frameOffset;         /* 4 */
@@ -105,17 +101,9 @@ struct SWOS_PACKED_ALIGN(2) Sprite {
 /* Sprite has 2 pointer fields (animationTable, frameIndicesTable);
  * each grows from 4→8 bytes on 64-bit. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _sprite_size_check[(sizeof(Sprite) == 110) ? 1 : -1];
-#endif
-#endif
 #else
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _sprite_size_check[(sizeof(Sprite) == 118) ? 1 : -1];
-#endif
-#endif
 #endif
 
 #define SPRITE_SIZE 110
@@ -124,22 +112,22 @@ typedef char _sprite_size_check[(sizeof(Sprite) == 118) ? 1 : -1];
  * AnimTable — animation frame table variants
  * Standard has 32 frame pointers, variants have fewer.
  * ================================================================== */
-struct SWOS_PACKED_ALIGN(2) AnimTable {
+struct __attribute__((packed, aligned(2))) AnimTable {
     int16_t  frameDelay;
     int16_t *animFrames[32];
 };
 
-typedef struct SWOS_PACKED_ALIGN(2) {
+typedef struct __attribute__((packed, aligned(2))) {
     int16_t  frameDelay;
     int16_t *animFrames[20];
 } AnimTable_20;
 
-typedef struct SWOS_PACKED_ALIGN(2) {
+typedef struct __attribute__((packed, aligned(2))) {
     int16_t  frameDelay;
     int16_t *animFrames[12];
 } AnimTable_12;
 
-typedef struct SWOS_PACKED_ALIGN(2) {
+typedef struct __attribute__((packed, aligned(2))) {
     int16_t  frameDelay;
     int16_t *animFrames[8];
 } AnimTable_8;
@@ -152,53 +140,21 @@ typedef struct SWOS_PACKED_ALIGN(2) {
  *   AnimTable_12 : N=12 → 2 + 12*4 = 50  / 2 + 12*8 = 98
  *   AnimTable_8  : N=8  → 2 +  8*4 = 34  / 2 +  8*8 = 66 */
 #if UINTPTR_MAX == 0xFFFFFFFFu
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _animtable_size_check[(sizeof(AnimTable) == 130) ? 1 : -1];
-#endif
-#endif
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _animtable20_size_check[(sizeof(AnimTable_20) == 82) ? 1 : -1];
-#endif
-#endif
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _animtable12_size_check[(sizeof(AnimTable_12) == 50) ? 1 : -1];
-#endif
-#endif
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _animtable8_size_check[(sizeof(AnimTable_8) == 34) ? 1 : -1];
-#endif
-#endif
 #else
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _animtable_size_check[(sizeof(AnimTable) == 258) ? 1 : -1];
-#endif
-#endif
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _animtable20_size_check[(sizeof(AnimTable_20) == 162) ? 1 : -1];
-#endif
-#endif
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _animtable12_size_check[(sizeof(AnimTable_12) == 98) ? 1 : -1];
-#endif
-#endif
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _animtable8_size_check[(sizeof(AnimTable_8) == 66) ? 1 : -1];
-#endif
-#endif
 #endif
 
 /* ==================================================================
  * TeamGeneralInfo — 144 bytes, pack(1)
  * ================================================================== */
-struct SWOS_PACKED_ALIGN(2) TeamGeneralInfo {
+struct __attribute__((packed, aligned(2))) TeamGeneralInfo {
     TeamGeneralInfo   *opponentsTeam;              /* 0 */
     int16_t            playerNumber;               /* 4 */
     int16_t            playerCoachNumber;           /* 6 */
@@ -276,17 +232,9 @@ struct SWOS_PACKED_ALIGN(2) TeamGeneralInfo {
  * passToPlayerPtr, lastHeadingTacklingPlayer, passingKickingPlayer);
  * +36 bytes on 64-bit. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _tgi_size_check[(sizeof(TeamGeneralInfo) == 144) ? 1 : -1];
-#endif
-#endif
 #else
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _tgi_size_check[(sizeof(TeamGeneralInfo) == 180) ? 1 : -1];
-#endif
-#endif
 #endif
 
 /* ==================================================================
@@ -320,11 +268,7 @@ struct PlayerInfo {
     int8_t  fullName[23];       /* 38 */
 };
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _playerinfo_size_check[(sizeof(PlayerInfo) == 61) ? 1 : -1];
-#endif
-#endif
 
 #define PLAYERINFO_SIZE 61
 
@@ -350,11 +294,7 @@ struct TeamGame {
     PlayerInfo players[16];     /* 42 */
 };
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _teamgame_size_check[(sizeof(TeamGame) == 1018) ? 1 : -1];
-#endif
-#endif
 
 #define TEAMGAME_SIZE 1018
 #define TEAMGAME_PLAYERS_OFFSET 42  /* byte offset of players[] within TeamGame */
@@ -372,11 +312,7 @@ struct TeamStatisticsData {
     int16_t onTarget;           /* 12 */
 };
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _teamstats_size_check[(sizeof(TeamStatisticsData) == 14) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * GoalieSkill — 60 bytes
@@ -399,11 +335,7 @@ struct GoalieSkill {
     int16_t field_3A;           /* 58 */
 };
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _goalieskill_size_check[(sizeof(GoalieSkill) == 60) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * SpriteGraphics — 24 bytes
@@ -423,17 +355,9 @@ struct SpriteGraphics {
 
 /* SpriteGraphics has 2 pointer fields (sprData, maskPtr); +8 on 64-bit. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _spritegfx_size_check[(sizeof(SpriteGraphics) == 24) ? 1 : -1];
-#endif
-#endif
 #else
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _spritegfx_size_check[(sizeof(SpriteGraphics) == 32) ? 1 : -1];
-#endif
-#endif
 #endif
 
 #define SPRITEGRAPHICS_SIZE 24
@@ -450,11 +374,7 @@ typedef struct {
     /* conversion table uint8_t[] follows at offset 14 */
 } CharsTableHeader;
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _charstblhdr_size_check[(sizeof(CharsTableHeader) == 14) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * Player state constants (from PlayerStates enum in IDA)
@@ -518,7 +438,7 @@ typedef char _charstblhdr_size_check[(sizeof(CharsTableHeader) == 14) ? 1 : -1];
  * TeamFile — on-disk team data format (header portion, 76 bytes)
  * Full entry is 684 bytes including player data that follows.
  * ================================================================== */
-struct SWOS_PACKED_ALIGN(2) TeamFile {
+struct __attribute__((packed, aligned(2))) TeamFile {
     uint8_t  countryNumber;      /* 0 */
     uint8_t  teamOrdinal;        /* 1 */
     int16_t  globalTeamNumber;   /* 2 */
@@ -544,11 +464,7 @@ struct SWOS_PACKED_ALIGN(2) TeamFile {
     /* player data follows at offset 76 */
 };
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _teamfile_size_check[(sizeof(struct TeamFile) == 76) ? 1 : -1];
-#endif
-#endif
 
 typedef struct TeamFile TeamFile;
 
@@ -562,11 +478,7 @@ struct GoalInfo {
     int8_t  time[4];            /* 2: four ASCII digit bytes */
 };
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _goalinfo_size_check[(sizeof(GoalInfo) == 6) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * ScorerInfo — 66 bytes, 8 slots per team (528 bytes total)
@@ -578,11 +490,7 @@ struct ScorerInfo {
     GoalInfo goals[10];         /* 6: goal records (10 * 6 = 60 bytes) */
 };
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _scorerinfo_size_check[(sizeof(ScorerInfo) == 66) ? 1 : -1];
-#endif
-#endif
 
 #define SCORERINFO_SIZE 66
 
@@ -594,7 +502,7 @@ typedef char _scorerinfo_size_check[(sizeof(ScorerInfo) == 66) ? 1 : -1];
 /* ==================================================================
  * PlayerFile — 38 bytes per player within a team file
  * ================================================================== */
-typedef struct SWOS_PACKED_ALIGN(2) PlayerFile {
+typedef struct __attribute__((packed, aligned(2))) PlayerFile {
     int8_t   nationality;          /* 0 */
     int8_t   field_1;              /* 1 */
     int8_t   shirtNumber;          /* 2 */
@@ -611,11 +519,7 @@ typedef struct SWOS_PACKED_ALIGN(2) PlayerFile {
     int8_t   someFlag;             /* 37 */
 } PlayerFile;
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _playerfile_size_check[(sizeof(PlayerFile) == 38) ? 1 : -1];
-#endif
-#endif
 
 #define PLAYERFILE_SIZE 38
 
@@ -623,16 +527,12 @@ typedef char _playerfile_size_check[(sizeof(PlayerFile) == 38) ? 1 : -1];
  * TeamFileEx — TeamFile header (76 bytes) + 16 PlayerFile entries
  * Total: 684 bytes. Used for careerTeam, currentTeam, etc.
  * ================================================================== */
-typedef struct SWOS_PACKED_ALIGN(2) TeamFileEx {
+typedef struct __attribute__((packed, aligned(2))) TeamFileEx {
     TeamFile   team;               /* 0-75  (76 bytes) */
     PlayerFile players[16];        /* 76-683 (608 bytes) */
 } TeamFileEx;
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _teamfileex_size_check[(sizeof(TeamFileEx) == 684) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * DIYCompetition — 96 bytes (0x60), base competition descriptor.
@@ -688,17 +588,9 @@ typedef struct DIYCompetition {
  * alignment matches the largest member = pointer = 8 bytes on 64-bit)
  * → +8 total. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x60) ? 1 : -1];
-#endif
-#endif
 #else
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x68) ? 1 : -1];
-#endif
-#endif
 #endif
 
 /* ==================================================================
@@ -710,7 +602,7 @@ typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x68) ? 1 : -
  * the 0x5C8-byte struct, into audioInstrumentBank's address range.
  * Intentional shared-memory overlay; see DIYCOMPETITIONEX_AUDIT.md.
  * ================================================================== */
-typedef struct SWOS_PACKED_ALIGN(2) DIYTeamStats {
+typedef struct __attribute__((packed, aligned(2))) DIYTeamStats {
     int32_t  teamSelOffset;         /* 0x00: byte offset from selTeamsPtr to team record (NOT a pointer despite the historical "Ptr" name). Signed: careerTeam lives BELOW selTeamsPtr in BSS, so its offset is negative and must sign-extend on 64-bit when added back to &selTeamsPtr. */
     uint16_t gamesPlayed;           /* 0x04 */
     uint16_t wins;                  /* 0x06 */
@@ -722,11 +614,7 @@ typedef struct SWOS_PACKED_ALIGN(2) DIYTeamStats {
 } DIYTeamStats;
 
 typedef DIYTeamStats DIYLeagueTableRow;
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _diyteamstats_size_check[(sizeof(DIYTeamStats) == 18) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * DIYTournamentSlot — 118 bytes (0x76)
@@ -745,7 +633,7 @@ typedef char _diyteamstats_size_check[(sizeof(DIYTeamStats) == 18) ? 1 : -1];
  *
  * See DIYCOMPETITIONEX_AUDIT.md for the per-field investigation.
  * ================================================================== */
-typedef struct SWOS_PACKED_ALIGN(2) DIYTournamentSlot {
+typedef struct __attribute__((packed, aligned(2))) DIYTournamentSlot {
     uint8_t  _pad_00[2];            /* 0x00 (slot+0x15A): cleared to 0 in init, purpose unknown */
     uint16_t doubleCount;           /* 0x02 (slot+0x15C): cup-bracket doubled count flag */
     uint16_t isLeagueFormat;        /* 0x04 (slot+0x15E): nonzero=league/grouped, 0=cup */
@@ -763,18 +651,14 @@ typedef struct SWOS_PACKED_ALIGN(2) DIYTournamentSlot {
     uint8_t  progressionTable[90];  /* 0x1C (slot+0x176): month bytes — fills to 118 (0x76) */
 } DIYTournamentSlot;
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _diyslot_size_check[(sizeof(DIYTournamentSlot) == 0x76) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * DIYCompetitionEx_CupView — 0xEA bytes (matchData cup interpretation)
  * Region at parent 0x64..0x14D when the competition is a cup
  * (competitionType == 1 or compId in {1, 2, 4}).
  * ================================================================== */
-typedef struct SWOS_PACKED_ALIGN(2) DIYCompetitionEx_CupView {
+typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx_CupView {
     uint16_t currentMatchIndex;         /* 0x00 (parent 0x64) */
     uint16_t roundLegs[6];              /* 0x02 (parent 0x66): cup roundLegs[0..5] */
     uint16_t roundExtraTime[6];         /* 0x0E (parent 0x72): cup roundExtraTime[0..5] */
@@ -787,18 +671,14 @@ typedef struct SWOS_PACKED_ALIGN(2) DIYCompetitionEx_CupView {
     uint16_t roundFormat;               /* 0xE8 (parent 0x14C): aliases diyRoundFormat */
 } DIYCompetitionEx_CupView;
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _diycupview_size_check[(sizeof(DIYCompetitionEx_CupView) == 0xEA) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * DIYCompetitionEx_LeagueView — 0xEA bytes
  * League competition interpretation of the match data region (0x64-0x14E).
  * Used when competitionType == 0 (league) or compId == 0.
  * ================================================================== */
-typedef struct SWOS_PACKED_ALIGN(2) DIYCompetitionEx_LeagueView {
+typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx_LeagueView {
     uint16_t leagueMinSubstitutes;      /* 0x00 (parent 0x64) */
     uint16_t leagueMaxSubstitutes;      /* 0x02 (parent 0x66) */
     uint16_t hasGroupsDiy;              /* 0x04 (parent 0x68) */
@@ -812,28 +692,20 @@ typedef struct SWOS_PACKED_ALIGN(2) DIYCompetitionEx_LeagueView {
     uint16_t roundFormat;               /* 0xE8 (parent 0x14C): aliases diyRoundFormat */
 } DIYCompetitionEx_LeagueView;
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _diyleagueview_size_check[(sizeof(DIYCompetitionEx_LeagueView) == 0xEA) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * DIYCompetitionEx_MatchData — 0xEA bytes (union)
  * Region at offset 0x64 within DIYCompetitionEx.
  * Same memory interpreted differently for cup vs league competitions.
  * ================================================================== */
-typedef union SWOS_PACKED_ALIGN(2) DIYCompetitionEx_MatchData {
+typedef union __attribute__((packed, aligned(2))) DIYCompetitionEx_MatchData {
     DIYCompetitionEx_CupView cup;
     DIYCompetitionEx_LeagueView league;
     uint8_t raw[0xEA];
 } DIYCompetitionEx_MatchData;
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _diymatchdata_size_check[(sizeof(DIYCompetitionEx_MatchData) == 0xEA) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * DIYCompetitionEx_LeagueSectionState — 136 bytes (0x88)
@@ -841,7 +713,7 @@ typedef char _diymatchdata_size_check[(sizeof(DIYCompetitionEx_MatchData) == 0xE
  * phase-start-month table used by the league progression path in
  * _DIY_RecomputeCompetitionDerivedFields and friends.
  * ================================================================== */
-typedef struct SWOS_PACKED_ALIGN(2) DIYCompetitionEx_LeagueSectionState {
+typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx_LeagueSectionState {
     uint16_t halfGroupCount;            /* 0x00 (parent 0x1C6) */
     uint16_t matchesPerHalf;            /* 0x02 (parent 0x1C8) */
     uint16_t halfGroupsCounter;         /* 0x04 (parent 0x1CA): == matchesPerHalf triggers boundary */
@@ -849,10 +721,8 @@ typedef struct SWOS_PACKED_ALIGN(2) DIYCompetitionEx_LeagueSectionState {
     uint8_t  phaseStartMonths[128];     /* 0x08 (parent 0x1CE..0x24D): viewRandomPhase[phaseIdx] source */
 } DIYCompetitionEx_LeagueSectionState;
 
-#ifndef __APPLE__
 typedef char _diysecstate_size_check[
     (sizeof(DIYCompetitionEx_LeagueSectionState) == 0x88) ? 1 : -1];
-#endif
 
 /* ==================================================================
  * DIYCompetitionEx — 0x5C8 bytes (1480), the extended runtime DIY
@@ -877,7 +747,7 @@ typedef char _diysecstate_size_check[
  * diyTournamentTeamIds is reached via raw pointer arithmetic, not
  * through this struct.
  * ================================================================== */
-typedef struct SWOS_PACKED_ALIGN(2) DIYCompetitionEx {
+typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx {
     DIYCompetition base;                /* 0x00..0x5F: competition header */
 
     /* --- 0x60..0x63: SWOS2.s named diyMinSubstitutes / diyPointsForAWin --- */
@@ -917,7 +787,7 @@ typedef struct SWOS_PACKED_ALIGN(2) DIYCompetitionEx {
      * `bracketScratch.<field>`. */
     union {
         uint8_t teamShuffleOrder[698];                   /* 0x30E */
-        struct SWOS_PACKED_ALIGN(2) {
+        struct __attribute__((packed, aligned(2))) {
             uint8_t  shuffleHead[0x20];                  /* 0x30E..0x32D: raw shuffle bytes */
             uint16_t secondLegCounter;                    /* 0x32E */
             uint16_t groupSectionFlag;                    /* 0x330 */
@@ -935,17 +805,9 @@ typedef struct SWOS_PACKED_ALIGN(2) DIYCompetitionEx {
  * +4 on 64-bit via that. The DIYCompetitionEx_* view variants are
  * pointer-free. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5C8) ? 1 : -1];
-#endif
-#endif
 #else
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5D0) ? 1 : -1];
-#endif
-#endif
 #endif
 
 /* ==================================================================
@@ -958,7 +820,7 @@ typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5D0) ? 
  * as bare string values via emit_str_pool_field, re-interned into
  * the string pool on load.
  * ================================================================== */
-typedef struct SWOS_PACKED_ALIGN(2) SeasonInformations {
+typedef struct __attribute__((packed, aligned(2))) SeasonInformations {
     uint16_t clubNo;                  /* 0x00 */
     int8_t   clubName[18];            /* 0x02 */
     uint16_t trophyFlags;             /* 0x14 */
@@ -992,35 +854,23 @@ typedef struct SWOS_PACKED_ALIGN(2) SeasonInformations {
 /* SeasonInformations has 4 pointer fields (leagueStrPtr, strPtr1/2/3);
  * +16 on 64-bit. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _seasoninformations_size_check[(sizeof(SeasonInformations) == 106) ? 1 : -1];
-#endif
-#endif
 #else
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _seasoninformations_size_check[(sizeof(SeasonInformations) == 122) ? 1 : -1];
-#endif
-#endif
 #endif
 
 /* ==================================================================
  * JobOffer — 26 bytes, pack(2)
  * Queue entry for career mode job offers.
  * ================================================================== */
-typedef struct SWOS_PACKED_ALIGN(2) JobOffer {
+typedef struct __attribute__((packed, aligned(2))) JobOffer {
     uint16_t teamNo;               /* 0 */
     int8_t   teamName[18];         /* 2: 0xFF = unset */
     uint32_t amountOffered;        /* 20 */
     uint16_t unkn;                 /* 24 */
 } JobOffer;
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _joboffer_size_check[(sizeof(JobOffer) == 26) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * NationalTeamRecord — 6 bytes, pack(1)
@@ -1035,7 +885,7 @@ typedef char _joboffer_size_check[(sizeof(JobOffer) == 26) ? 1 : -1];
  * searchNational. Keep that behaviour unchanged here; if it turns out
  * to be a latent endian bug, fix it separately and document.
  * ================================================================== */
-typedef struct SWOS_PACKED NationalTeamRecord {
+typedef struct __attribute__((packed)) NationalTeamRecord {
     uint8_t  countryNumber;      /* 0 */
     uint8_t  teamOrdinal;        /* 1 */
     uint8_t  nationalityCode;    /* 2 */
@@ -1043,11 +893,7 @@ typedef struct SWOS_PACKED NationalTeamRecord {
     uint16_t skillOrPrice;        /* 4..5 — host-native, see note above */
 } NationalTeamRecord;
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _nationalteamrecord_size_check[(sizeof(NationalTeamRecord) == 6) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * TeamSelectionKeyCache — variable-length entry stream in
@@ -1069,7 +915,7 @@ typedef char _nationalteamrecord_size_check[(sizeof(NationalTeamRecord) == 6) ? 
  * (GetCurrentSelectedElementPtr), and slot-build reads at
  * diy_competition.c:2776+ (compId/roundIdx lookup).
  * ================================================================== */
-typedef struct SWOS_PACKED TeamSelectionKeyCacheMatchSlot {
+typedef struct __attribute__((packed)) TeamSelectionKeyCacheMatchSlot {
     uint8_t  pairType;          /* +0  (elem[0x0A]) — 0/1/2 fixture type */
     uint8_t  matchFlags;        /* +1  (elem[0x0B]) — written post-match */
     uint16_t teamId1;           /* +2  (elem[0x0C]) — host-native */
@@ -1079,13 +925,9 @@ typedef struct SWOS_PACKED TeamSelectionKeyCacheMatchSlot {
     uint16_t penaltyScore;      /* +10 (elem[0x14]) */
 } TeamSelectionKeyCacheMatchSlot;
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _tskc_slot_size_check[(sizeof(TeamSelectionKeyCacheMatchSlot) == 12) ? 1 : -1];
-#endif
-#endif
 
-typedef struct SWOS_PACKED TeamSelectionKeyCacheEntry {
+typedef struct __attribute__((packed)) TeamSelectionKeyCacheEntry {
     uint8_t  compId;            /* +0 — competition id (matched in lookup) */
     uint8_t  sortKey;           /* +1 — InsertSpaceSorted insertion key */
     uint16_t entryStride;       /* +2 — host-native; = 10 + numTeams*12 */
@@ -1103,11 +945,7 @@ typedef struct SWOS_PACKED TeamSelectionKeyCacheEntry {
     /* +10..: TeamSelectionKeyCacheMatchSlot slots[totalElements] */
 } TeamSelectionKeyCacheEntry;
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _tskc_entry_size_check[(sizeof(TeamSelectionKeyCacheEntry) == 10) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * MarketPlayer — 42 bytes, pack(1)
@@ -1120,11 +958,7 @@ typedef struct MarketPlayer {
     PlayerFile player;             /* 4 (38 bytes) */
 } MarketPlayer;
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _marketplayer_size_check[(sizeof(MarketPlayer) == 42) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * PoolPlayer — 58 bytes, pack(1)
@@ -1137,11 +971,7 @@ typedef struct PoolPlayer {
     PlayerFile player;             /* 20 (38 bytes) */
 } PoolPlayer;
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _poolplayer_size_check[(sizeof(PoolPlayer) == 58) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * PlayerPositions — 35 bytes, pack(1)
@@ -1151,11 +981,7 @@ typedef struct PlayerPositions {
     uint8_t positions[5][7];       /* packed x/y nibbles */
 } PlayerPositions;
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _playerpositions_size_check[(sizeof(PlayerPositions) == 35) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * TeamTactics — 370 bytes, pack(1)
@@ -1169,11 +995,7 @@ typedef struct TeamTactics {
     uint8_t          ballOutOfPlayTactics; /* 369: redirect tactic index */
 } TeamTactics;
 
-#ifndef __APPLE__
-#ifndef __APPLE__
 typedef char _teamtactics_size_check[(sizeof(TeamTactics) == 370) ? 1 : -1];
-#endif
-#endif
 
 /* ==================================================================
  * CountryNumbers — country identifier constants
@@ -1275,7 +1097,7 @@ typedef uint8_t TacticsSlotIndex;
  * TacticsPosition — maps 11 player slots for a formation
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     TacticsSlotIndex index[11];
 } TacticsPosition;
 
@@ -1320,7 +1142,7 @@ typedef struct SWOS_PACKED {
  * Competition — 9 bytes, base competition descriptor
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     int8_t compNumber;
     int8_t type;
     int8_t teamNumber;
@@ -1336,7 +1158,7 @@ typedef struct SWOS_PACKED {
  * CompetitionLeague — 13 bytes, league competition header
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     Competition comp;
     int8_t divisionsCount;
     int8_t rounds;
@@ -1348,7 +1170,7 @@ typedef struct SWOS_PACKED {
  * Division — 6 bytes, division descriptor within a league
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     int8_t teams;
     int8_t promoted;
     int8_t promotedPo;
@@ -1361,7 +1183,7 @@ typedef struct SWOS_PACKED {
  * CompetitionCup — 14 bytes, cup competition header
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     Competition comp;
     int8_t unk1;
     int8_t teams;
@@ -1374,7 +1196,7 @@ typedef struct SWOS_PACKED {
  * Round — 3 bytes, round descriptor for CompetitionCup2
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     int8_t teamCount;
     int8_t groupCount;
     int8_t teamGroupCount;
@@ -1384,7 +1206,7 @@ typedef struct SWOS_PACKED {
  * CompetitionCup2 — 34 bytes, cup competition with group rounds
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     Competition comp;
     int8_t unk1;
     int8_t unk2;
@@ -1400,25 +1222,25 @@ typedef struct SWOS_PACKED {
  * CompetitionLeague variants (with Division arrays)
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionLeague comp;
     Division divisions[1];
     int8_t unk1;
 } CompetitionLeague_1;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionLeague comp;
     Division divisions[2];
     int8_t unk1;
 } CompetitionLeague_2;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionLeague comp;
     Division divisions[3];
     int8_t unk1;
 } CompetitionLeague_3;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionLeague comp;
     Division divisions[4];
     int8_t unk1;
@@ -1428,17 +1250,17 @@ typedef struct SWOS_PACKED {
  * CompetitionCup variants (with rounds arrays)
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup comp;
     int8_t rounds[4];
 } CompetitionCup_4;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup comp;
     int8_t rounds[6];
 } CompetitionCup_6;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup comp;
     int8_t rounds[10];
 } CompetitionCup_10;
@@ -1447,12 +1269,12 @@ typedef struct SWOS_PACKED {
  * CompetitionCup2 variants (with roundSettings)
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup2 compCup;
     int8_t roundSettings[4];
 } CompetitionCup2_4;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup2 compCup;
     int8_t roundSettings[6];
 } CompetitionCup2_6;
@@ -1461,13 +1283,13 @@ typedef struct SWOS_PACKED {
  * CompetitionCup with text pointers
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup comp;
     int8_t rounds[6];
     char *text[2];
 } CompetitionCup_6_2;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup comp;
     int8_t rounds[4];
     char *text[2];
@@ -1477,21 +1299,21 @@ typedef struct SWOS_PACKED {
  * CompetitionCup with text + trailing data
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup comp;
     int8_t rounds[6];
     char *text[2];
     int8_t unk1[8];
 } CompetitionCup_6_2_8;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup comp;
     int8_t rounds[6];
     char *text[2];
     int8_t unk1[12];
 } CompetitionCup_6_2_12;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup comp;
     int8_t rounds[6];
     char *text[2];
@@ -1502,53 +1324,53 @@ typedef struct SWOS_PACKED {
  * CompetitionCup2 with text pointers variants
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup2_4 compCup;
     char *text[2];
 } CompetitionCup2_4_2;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup2_6 compCup;
     char *text[2];
 } CompetitionCup2_6_2;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup2_4 compCup;
     char *text[2];
     int8_t unk1[24];
 } CompetitionCup2_4_2_24;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup2_4 compCup;
     char *text[2];
     int8_t unk1[32];
 } CompetitionCup2_4_2_32;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup2_6 compCup;
     char *text[2];
     int8_t unk1[16];
 } CompetitionCup2_6_2_16;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup2_6 compCup;
     char *text[2];
     int8_t unk1[24];
 } CompetitionCup2_6_2_24;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup2_6 compCup;
     char *text[2];
     int8_t unk1[48];
 } CompetitionCup2_6_2_48;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup2_6 compCup;
     char *text[2];
     int8_t unk1[60];
 } CompetitionCup2_6_2_60;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup2_6 compCup;
     char *text[2];
     int8_t unk1[64];
@@ -1558,28 +1380,28 @@ typedef struct SWOS_PACKED {
  * CompetitionLeague with text pointers variants
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionLeague comp;
     Division divisions[3];
     int8_t unk1;
     char *text[6];
 } CompetitionLeague_3_6;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionLeague comp;
     Division divisions[2];
     int8_t unk1;
     char *text[4];
 } CompetitionLeague_2_4;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionLeague comp;
     Division divisions[4];
     int8_t unk1;
     char *text[8];
 } CompetitionLeague_4_8;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionLeague comp;
     Division divisions[4];
     int8_t unk1;
@@ -1587,7 +1409,7 @@ typedef struct SWOS_PACKED {
     int8_t unk2[24];
 } CompetitionLeague_4_10_24;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionLeague comp;
     Division divisions[2];
     int8_t unk1;
@@ -1595,7 +1417,7 @@ typedef struct SWOS_PACKED {
     int8_t unk2[24];
 } CompetitionLeague_2_2_24;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionLeague comp;
     Division divisions[4];
     int8_t unk1;
@@ -1603,7 +1425,7 @@ typedef struct SWOS_PACKED {
     int8_t unk2[8];
 } CompetitionLeague_4_2_8;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionLeague comp;
     Division divisions[2];
     int8_t unk1;
@@ -1612,7 +1434,7 @@ typedef struct SWOS_PACKED {
     int8_t unk3[24];
 } CompetitionLeague_2_4_2_24;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionLeague comp;
     Division divisions[2];
     int8_t unk1;
@@ -1620,7 +1442,7 @@ typedef struct SWOS_PACKED {
     int8_t unk3[8];
 } CompetitionLeague_2_2_8;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionLeague comp;
     Division divisions[4];
     int8_t unk1;
@@ -1633,19 +1455,19 @@ typedef struct SWOS_PACKED {
  * Playoff and Leagues helper structs
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     int8_t unk1[16];
     char *text[2];
     int8_t unk2[8];
 } Playoffs_8;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     int8_t unk1[16];
     char *text[2];
     int8_t unk2[4];
 } Playoffs_4;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionLeague *text1;
     int8_t unk1[8];
     CompetitionLeague *text2;
@@ -1656,14 +1478,14 @@ typedef struct SWOS_PACKED {
     int8_t unk4[8];
 } Leagues_4;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     Leagues_4 leagues;
     Playoffs_8 *playoffs;
     Leagues_4 *leagues2;
     int8_t unk2[24];
 } Leagues_4_2_24;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionLeague *compLeague1;
     int8_t unk1[8];
     CompetitionLeague *compLeague2;
@@ -1674,7 +1496,7 @@ typedef struct SWOS_PACKED {
  * CompetitionCareer — career competition entry
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup *competition;
     CompetitionCup *competitionCopy;
     uint16_t length;
@@ -1684,31 +1506,31 @@ typedef struct SWOS_PACKED {
  * Qualifying group structs
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup *compCup[3];
 } QualifyingGroup_3;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup *compCup[9];
     CountryNumbers countries[2];
 } QualifyingGroup_9_2;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup *compCup[2];
     CountryNumbers countries[8];
 } QualifyingGroup_2_8;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup *compCup[6];
     CountryNumbers countries[44];
 } QualifyingGroup_6_44;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup *compCup[3];
     CountryNumbers countries[4];
 } QualifyingGroup_3_4;
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     CompetitionCup *compCup[3];
     CountryNumbers countries[12];
 } QualifyingGroup_3_12;
@@ -1717,7 +1539,7 @@ typedef struct SWOS_PACKED {
  * DIYStage — DIY competition stage descriptor
  * ================================================================== */
 
-typedef struct SWOS_PACKED {
+typedef struct __attribute__((packed)) {
     uint16_t legs;
     uint16_t extraTime;
     uint16_t penalties;

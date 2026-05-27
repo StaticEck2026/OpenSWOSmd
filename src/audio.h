@@ -49,7 +49,7 @@ typedef int int32_t;
  * The C field names follow the original SWOS audio code's `pvSample*`
  * convention even though it conflicts with the cleaner RJP1 naming —
  * tracked under "audio field rename" follow-up. */
-SWOS_PACK_PUSH2
+#pragma pack(push, 2)
 typedef struct {
     uint32_t sampleBasePtr;     /* +0x00 */
     uint32_t pitchLfoPtr;       /* +0x04 */
@@ -65,18 +65,16 @@ typedef struct {
     uint16_t volLfoLoop;        /* +0x1C */
     uint16_t volLfoLen;         /* +0x1E — word count (caller doubles) */
 } VariantDescriptor;
-SWOS_PACK_POP
+#pragma pack(pop)
 
-#ifndef __APPLE__
 typedef char _variantdesc_size_check[(sizeof(VariantDescriptor) == 32) ? 1 : -1];
-#endif
 
 /* ---- AudioState structure (46 bytes, matches SWOS2.s layout) ----
- * Uses pragma pack(2) instead of SWOS_PACKED so GCC
+ * Uses pragma pack(2) instead of __attribute__((packed)) so GCC
  * generates word-sized loads/stores instead of byte-by-byte access.
  * All fields are already at 2-byte-aligned offsets in the original
  * asm layout, so pack(2) produces the identical memory layout. */
-SWOS_PACK_PUSH2
+#pragma pack(push, 2)
 typedef struct {
     uint8_t *songPtr;              /* +0x00 */
     uint8_t *bankSectionPtrs[7];   /* +0x04..+0x1F */
@@ -90,19 +88,19 @@ typedef struct {
     uint8_t  channelChangeFlags;   /* +0x2C */
     uint8_t  currentChannelIdx;    /* +0x2D */
 } AudioState;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* ---- AudioChannel structure (176 bytes / 0xB0, matches SWOS2.s layout) ----
  *
  * Each channel has a primary voice (PV, "beep") and a secondary voice (SV, "mod").
  * The PV and SV share the same hardware register base (hwRegBase).
  *
- * Uses pragma pack(2) instead of SWOS_PACKED so GCC
+ * Uses pragma pack(2) instead of __attribute__((packed)) so GCC
  * generates word-sized loads/stores instead of byte-by-byte access.
  * All uint32_t fields are at 2-byte-aligned offsets (not always
  * 4-byte-aligned), so pack(2) preserves the identical memory layout
  * while allowing GCC to use move.w pairs instead of 4x move.b. */
-SWOS_PACK_PUSH2
+#pragma pack(push, 2)
 typedef struct {
     /* ---- Shared ---- */
     uint32_t hwRegBase;          /* 0x00: AUDxLC hardware address */
@@ -188,13 +186,11 @@ typedef struct {
     uint8_t  svVariantId;        /* 0xAE: current variant ID */
     uint8_t  _padAF;             /* 0xAF */
 } AudioChannel;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 #define AUDIO_CHANNEL_SIZE  0xB0
 
-#ifndef __APPLE__
 typedef char _audiochannel_size_check[(sizeof(AudioChannel) == AUDIO_CHANNEL_SIZE) ? 1 : -1];
-#endif
 
 /* ---- Previously ported functions ---- */
 void _InitMenuMusic(void);

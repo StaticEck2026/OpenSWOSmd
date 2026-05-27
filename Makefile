@@ -283,6 +283,20 @@ CFLAGS  := $(ARCHFLAGS) -O2 -g -std=gnu11 -fno-strict-aliasing -fno-builtin \
 #                              wider write; we know the real backing is much
 #                              larger.
 LDFLAGS := $(ARCHFLAGS)
+
+# macOS: switch to Apple's classic linker (-ld_classic). Modern ld64
+# (Xcode 15+) is strict about pointer-relocation alignment and rejects
+# packed-struct atoms whose internal pointer fields aren't 8-byte
+# aligned — emits errors like "pointer not aligned in _euroCup+0x2E".
+# The classic linker behaves like every other linker and accepts the
+# misaligned relocations, which is fine at runtime: ARM64 (and x86_64)
+# scalar loads cope with misaligned pointers correctly. This keeps the
+# struct layout identical across all 64-bit targets (Linux aarch64
+# already builds + runs with the same packed structs).
+ifeq ($(UNAME_S),Darwin)
+LDFLAGS += -Wl,-ld_classic
+endif
+
 LDLIBS  := $(SDL2_LIBS) -lm
 
 # ---- Targets ----

@@ -113,44 +113,44 @@ typedef uint16_t MenuColorFlags;
 typedef uint16_t MenuStringFlags;
 
 /* 135 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCmd_Colors
 {
   uint16_t type;
   MenuColorFlags flags;
 } MenuCmd_Colors;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 136 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCmd_TextPtr
 {
   uint16_t type;
   MenuStringFlags strFlags;
   char *textPtr;
 } MenuCmd_TextPtr;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 137 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCmd_TextNoPtr
 {
   uint16_t type;
   MenuStringFlags strFlags;
 } MenuCmd_TextNoPtr;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 138 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCmd_OnSelect
 {
   uint16_t type;
   void *funcPtr;
 } MenuCmd_OnSelect;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 139 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCmd_Nav
 {
   uint16_t type;
@@ -159,20 +159,20 @@ typedef struct MenuCmd_Nav
   int8_t up;
   int8_t down;
 } MenuCmd_Nav;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 140 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCmd_Skip2
 {
   uint16_t type;
   int8_t arg0;
   int8_t arg1;
 } MenuCmd_Skip2;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 141 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCoords16
 {
   int16_t x;
@@ -180,10 +180,10 @@ typedef struct MenuCoords16
   int16_t w;
   int16_t h;
 } MenuCoords16;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 142 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCoords8
 {
   int8_t x;
@@ -191,10 +191,10 @@ typedef struct MenuCoords8
   int8_t w;
   int8_t h;
 } MenuCoords8;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 143 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuHeader
 {
   void *onInitPtr;
@@ -202,40 +202,40 @@ typedef struct MenuHeader
   void *onDrawPtr;
   uint32_t defaultEntry;
 } MenuHeader;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 145 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Byte_ColorsOnly
 {
   MenuCoords8 rc;
   MenuCmd_Colors colors;
   uint16_t end;
 } MenuEntry_Byte_ColorsOnly;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 146 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Byte_TextPtrOnly
 {
   MenuCoords8 rc;
   MenuCmd_TextPtr text;
   uint16_t end;
 } MenuEntry_Byte_TextPtrOnly;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 148 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Byte_NavOnly
 {
   MenuCoords8 rc;
   MenuCmd_Nav nav;
   uint16_t end;
 } MenuEntry_Byte_NavOnly;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 149 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Byte_Nav_Skip
 {
   MenuCoords8 rc;
@@ -243,10 +243,10 @@ typedef struct MenuEntry_Byte_Nav_Skip
   MenuCmd_Skip2 skip;
   uint16_t end;
 } MenuEntry_Byte_Nav_Skip;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 151 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect
 {
   MenuCoords8 rc;
@@ -256,38 +256,38 @@ typedef struct MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect
   MenuCmd_OnSelect onSelect;
   uint16_t end;
 } MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 155 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuMark_StartMenu
 {
   uint16_t mark;
   int16_t menuX;
   int16_t menuY;
 } MenuMark_StartMenu;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 157 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCmd_Invisible
 {
   uint16_t type;
 } MenuCmd_Invisible;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 158 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCmd_Number
 {
   uint16_t type;
   MenuStringFlags strFlags;
   int16_t value;
 } MenuCmd_Number;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 162 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Byte_Colors_TextPtr
 {
   MenuCoords8 rc;
@@ -295,20 +295,20 @@ typedef struct MenuEntry_Byte_Colors_TextPtr
   MenuCmd_TextPtr text;
   uint16_t end;
 } MenuEntry_Byte_Colors_TextPtr;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 167 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCmd_StringTable
 {
   uint16_t type;
   MenuStringFlags strFlags;
   void *tablePtr;
 } MenuCmd_StringTable;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 168 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Byte_Nav_Colors_StringTable_OnSelect
 {
   MenuCoords8 rc;
@@ -318,38 +318,38 @@ typedef struct MenuEntry_Byte_Nav_Colors_StringTable_OnSelect
   MenuCmd_OnSelect onSelect;
   uint16_t end;
 } MenuEntry_Byte_Nav_Colors_StringTable_OnSelect;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 170 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCmd_SpriteFg
 {
   uint16_t type;
   int16_t spriteId;
 } MenuCmd_SpriteFg;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 171 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCmd_InputFunc
 {
   uint16_t type;
   uint16_t ctrlMask;
   void *funcPtr;
 } MenuCmd_InputFunc;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 172 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCmd_BeforeDraw
 {
   uint16_t type;
   void *funcPtr;
 } MenuCmd_BeforeDraw;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 176 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Byte_Colors_Number
 {
   MenuCoords8 rc;
@@ -357,20 +357,20 @@ typedef struct MenuEntry_Byte_Colors_Number
   MenuCmd_Number number;
   uint16_t end;
 } MenuEntry_Byte_Colors_Number;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 177 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Byte_NumberOnly
 {
   MenuCoords8 rc;
   MenuCmd_Number number;
   uint16_t end;
 } MenuEntry_Byte_NumberOnly;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 179 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Byte_Colors_TextPtr_BeforeDraw
 {
   MenuCoords8 rc;
@@ -379,10 +379,10 @@ typedef struct MenuEntry_Byte_Colors_TextPtr_BeforeDraw
   MenuCmd_BeforeDraw beforeDraw;
   uint16_t end;
 } MenuEntry_Byte_Colors_TextPtr_BeforeDraw;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 180 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Byte_Invisible_Colors_TextPtr
 {
   MenuCoords8 rc;
@@ -391,10 +391,10 @@ typedef struct MenuEntry_Byte_Invisible_Colors_TextPtr
   MenuCmd_TextPtr text;
   uint16_t end;
 } MenuEntry_Byte_Invisible_Colors_TextPtr;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 186 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_DesignDIYCup_OptionRow
 {
   MenuEntry_Byte_Colors_TextPtr descText;
@@ -403,20 +403,20 @@ typedef struct Menu_DesignDIYCup_OptionRow
   MenuEntry_Byte_Nav_Colors_StringTable_OnSelect extraTime;
   MenuEntry_Byte_Nav_Colors_StringTable_OnSelect penalties;
 } Menu_DesignDIYCup_OptionRow;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 188 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Byte_TextNoPtrOnly
 {
   MenuCoords8 rc;
   MenuCmd_TextNoPtr text;
   uint16_t end;
 } MenuEntry_Byte_TextNoPtrOnly;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 189 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_DIYCup_StatsBlock
 {
   MenuMark_StartMenu menuStart;
@@ -426,40 +426,40 @@ typedef struct Menu_DIYCup_StatsBlock
   MenuEntry_Byte_NumberOnly entry6;
   MenuEntry_Byte_TextNoPtrOnly entry7;
 } Menu_DIYCup_StatsBlock;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 194 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Byte_SpriteFgOnly
 {
   MenuCoords8 rc;
   MenuCmd_SpriteFg sprite;
   uint16_t end;
 } MenuEntry_Byte_SpriteFgOnly;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 197 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Wide_NavOnly
 {
   MenuCoords16 rc;
   MenuCmd_Nav nav;
   uint16_t end;
 } MenuEntry_Wide_NavOnly;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 199 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Wide_TextNoPtrOnly
 {
   MenuCoords16 rc;
   MenuCmd_TextNoPtr text;
   uint16_t end;
 } MenuEntry_Wide_TextNoPtrOnly;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 205 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Byte_Invisible_NavOnly
 {
   MenuCoords8 rc;
@@ -467,30 +467,30 @@ typedef struct MenuEntry_Byte_Invisible_NavOnly
   MenuCmd_Nav nav;
   uint16_t end;
 } MenuEntry_Byte_Invisible_NavOnly;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 210 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Wide_NumberOnly
 {
   MenuCoords16 rc;
   MenuCmd_Number number;
   uint16_t end;
 } MenuEntry_Wide_NumberOnly;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 212 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Wide_MultilineText
 {
   MenuCoords16 rc;
   MenuCmd_TextPtr text;
   uint16_t end;
 } MenuEntry_Wide_MultilineText;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 214 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Byte_Nav_TextPtr
 {
   MenuCoords8 rc;
@@ -498,104 +498,104 @@ typedef struct MenuEntry_Byte_Nav_TextPtr
   MenuCmd_TextPtr text;
   uint16_t end;
 } MenuEntry_Byte_Nav_TextPtr;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 239 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Byte_Nav
 {
   MenuCoords8 rc;
   MenuCmd_Nav nav;
   uint16_t end;
 } MenuEntry_Byte_Nav;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 240 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Wide_CoordsOnly
 {
   MenuCoords16 rc;
   uint16_t end;
 } MenuEntry_Wide_CoordsOnly;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 241 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Byte_CoordsOnly
 {
   MenuCoords8 rc;
   uint16_t end;
 } MenuEntry_Byte_CoordsOnly;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 242 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Wide_TextPtrOnly
 {
   MenuCoords16 rc;
   MenuCmd_TextPtr text;
   uint16_t end;
 } MenuEntry_Wide_TextPtrOnly;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 243 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Wide_ColorsOnly
 {
   MenuCoords16 rc;
   MenuCmd_Colors colors;
   uint16_t end;
 } MenuEntry_Wide_ColorsOnly;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 244 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCmd_AfterDraw
 {
   uint16_t type;
   void *funcPtr;
 } MenuCmd_AfterDraw;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 245 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCmd_SpriteCopy
 {
   uint16_t type;
   void *sprPtr;
 } MenuCmd_SpriteCopy;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 246 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCmd_FgFunc
 {
   uint16_t type;
   void *funcPtr;
 } MenuCmd_FgFunc;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 247 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuCmd_BgFunc
 {
   uint16_t type;
   void *funcPtr;
 } MenuCmd_BgFunc;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 248 */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct MenuEntry_Wide_SpriteCopyOnly
 {
   MenuCoords16 rc;
   MenuCmd_SpriteCopy spriteCopy;
   uint16_t end;
 } MenuEntry_Wide_SpriteCopyOnly;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 156 - Menu 1: chooseTeamsFriendlyMenu (0x3CA = 970 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_ChooseTeamsFriendly
 {
   MenuHeader hdr;
@@ -641,10 +641,10 @@ typedef struct Menu_ChooseTeamsFriendly
   MenuCommand entry58_end;
   MenuMark markEndMenu;
 } Menu_ChooseTeamsFriendly;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 161 - Menu 2: chooseTeamsFriendlyMenu2 (0x4E4 = 1252 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_ChooseTeamsFriendly2
 {
   MenuHeader hdr;
@@ -695,10 +695,10 @@ typedef struct Menu_ChooseTeamsFriendly2
   MenuCommand entry77_end;
   MenuMark markEndMenu;
 } Menu_ChooseTeamsFriendly2;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 169 - Menu 3: designDiyLeagueMenu (0x25E = 606 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_DesignDIYLeague
 {
   MenuHeader hdr;
@@ -765,10 +765,10 @@ typedef struct Menu_DesignDIYLeague
   MenuCommand entry23_end;
   MenuMark markEndMenu;
 } Menu_DesignDIYLeague;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 197 - Stage block for DesignDiyTournament with TextNoPtr status line (300 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_DesignDiyTournament_StageBlockA
 {
   MenuMark_StartMenu startMenu;
@@ -800,10 +800,10 @@ typedef struct Menu_DesignDiyTournament_StageBlockA
   MenuCommand spacer_end;
   MenuEntry_Byte_Nav_Colors_StringTable_OnSelect optLast;
 } Menu_DesignDiyTournament_StageBlockA;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 197b - Stage block for DesignDiyTournament with TextPtr status line (304 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_DesignDiyTournament_StageBlockB
 {
   MenuMark_StartMenu startMenu;
@@ -835,10 +835,10 @@ typedef struct Menu_DesignDiyTournament_StageBlockB
   MenuCommand spacer_end;
   MenuEntry_Byte_Nav_Colors_StringTable_OnSelect optLast;
 } Menu_DesignDiyTournament_StageBlockB;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 198 - Menu 8: designDiyTournamentMenu (0x920 = 2336 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_DesignDiyTournament
 {
   MenuHeader hdr;
@@ -889,10 +889,10 @@ typedef struct Menu_DesignDiyTournament
   MenuCommand entry92_end;
   MenuMark markEndMenu;
 } Menu_DesignDiyTournament;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 183 - Menu 4: DIYLeagueTournamentMenu (0x3D8 = 984 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_DIYLeagueTournament
 {
   MenuHeader hdr;
@@ -968,10 +968,10 @@ typedef struct Menu_DIYLeagueTournament
   MenuCommand entry42_end;
   MenuMark markEndMenu;
 } Menu_DIYLeagueTournament;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 187 - Menu 5: designDiyCupMenu (0x524 = 1316 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_DesignDIYCup
 {
   MenuHeader hdr;
@@ -1029,10 +1029,10 @@ typedef struct Menu_DesignDIYCup
   MenuCommand entry51_end;
   MenuMark markEndMenu;
 } Menu_DesignDIYCup;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 190 - Menu 6: DIYCupMenu (0x422 = 1058 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_DIYCup
 {
   MenuHeader hdr;
@@ -1091,10 +1091,10 @@ typedef struct Menu_DIYCup
   MenuCommand entry66_end;
   MenuMark markEndMenu;
 } Menu_DIYCup;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 193 - Menu 7: optionsMenu (0x182 = 386 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_Options
 {
   MenuHeader hdr;
@@ -1126,10 +1126,10 @@ typedef struct Menu_Options
   MenuCommand versionText_end;
   MenuMark markEndMenu;
 } Menu_Options;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 199 - Menu 9: friendlyGameMenu (0x12E = 302 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_FriendlyGame
 {
   MenuHeader hdr;
@@ -1162,10 +1162,10 @@ typedef struct Menu_FriendlyGame
   MenuCommand entry10_end;
   MenuMark markEndMenu;
 } Menu_FriendlyGame;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 200 - Menu 14: competitionStatsMenu (0x9E = 158 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_CompetitionStats
 {
   MenuHeader hdr;
@@ -1177,10 +1177,10 @@ typedef struct Menu_CompetitionStats
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry4;
   MenuMark markEndMenu;
 } Menu_CompetitionStats;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 201 - Menu 15: careerOverMenu (0xE4 = 228 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_CareerOver
 {
   MenuHeader hdr;
@@ -1208,10 +1208,10 @@ typedef struct Menu_CareerOver
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry8;
   MenuMark markEndMenu;
 } Menu_CareerOver;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 201 - Menu 15: careerMenu (0x14C = 332 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_Career
 {
   MenuHeader hdr;
@@ -1241,10 +1241,10 @@ typedef struct Menu_Career
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry11;
   MenuMark markEndMenu;
 } Menu_Career;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 202 - Menu 16: viewCompetitionsMenu (0xF8 = 248 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_ViewCompetitions
 {
   MenuHeader hdr;
@@ -1259,10 +1259,10 @@ typedef struct Menu_ViewCompetitions
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry7;
   MenuMark markEndMenu;
 } Menu_ViewCompetitions;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 203 - Menu 23: continueMenu (0x42 = 66 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_Continue
 {
   MenuHeader hdr;
@@ -1278,10 +1278,10 @@ typedef struct Menu_Continue
   MenuCommand entry1_end;
   MenuMark markEndMenu;
 } Menu_Continue;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 204 - Menu 24: continueAbortMenu (0x74 = 116 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_ContinueAbort
 {
   MenuHeader hdr;
@@ -1295,10 +1295,10 @@ typedef struct Menu_ContinueAbort
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry3;
   MenuMark markEndMenu;
 } Menu_ContinueAbort;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 205 - Menu 25: SWOS_MainMenu (0x1B6 = 438 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_SWOSMainMenu
 {
   MenuHeader hdr;
@@ -1329,10 +1329,10 @@ typedef struct Menu_SWOSMainMenu
   MenuMark_StartMenu menu3Start;
   MenuMark markEndMenu;
 } Menu_SWOSMainMenu;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 206 - Menu 21: chooseTeamsMenu (0xBE = 190 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_ChooseTeams
 {
   MenuHeader hdr;
@@ -1349,10 +1349,10 @@ typedef struct Menu_ChooseTeams
   MenuCommand entry5_end;
   MenuMark markEndMenu;
 } Menu_ChooseTeams;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 207 - Menu 26: offersMenu (0xF4 = 244 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_Offers
 {
   MenuHeader hdr;
@@ -1378,10 +1378,10 @@ typedef struct Menu_Offers
   MenuEntry_Byte_NumberOnly entry10;
   MenuMark markEndMenu;
 } Menu_Offers;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 208 - Menu 33: buyPlayerMenu (0xE4 = 228 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_BuyPlayer
 {
   MenuHeader hdr;
@@ -1396,10 +1396,10 @@ typedef struct Menu_BuyPlayer
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry7;
   MenuMark markEndMenu;
 } Menu_BuyPlayer;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 209 - Menu 36: nationalTeamAddPlayerMenu (0x80 = 128 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_NationalTeamAddPlayer
 {
   MenuHeader hdr;
@@ -1410,10 +1410,10 @@ typedef struct Menu_NationalTeamAddPlayer
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry3;
   MenuMark markEndMenu;
 } Menu_NationalTeamAddPlayer;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 210 - Menu 40: chairmanMemosMenu (0x92 = 146 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_ChairmanMemos
 {
   MenuHeader hdr;
@@ -1436,10 +1436,10 @@ typedef struct Menu_ChairmanMemos
   MenuCommand entry6_end;
   MenuMark markEndMenu;
 } Menu_ChairmanMemos;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 211 - Menu 46: highlightsMenu (0x9E = 158 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_Highlights
 {
   MenuHeader hdr;
@@ -1451,10 +1451,10 @@ typedef struct Menu_Highlights
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry4;
   MenuMark markEndMenu;
 } Menu_Highlights;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 212 - Menu 42: chooseTacticsMenu (0xF8 = 248 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_ChooseTactics
 {
   MenuHeader hdr;
@@ -1469,10 +1469,10 @@ typedef struct Menu_ChooseTactics
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry7;
   MenuMark markEndMenu;
 } Menu_ChooseTactics;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 213 - Menu 41: clubBusinessMenu (0x156 = 342 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_ClubBusiness
 {
   MenuHeader hdr;
@@ -1528,10 +1528,10 @@ typedef struct Menu_ClubBusiness
   MenuCommand entry21_end;
   MenuMark markEndMenu;
 } Menu_ClubBusiness;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 214 - Menu 39: gotJobOfferMenu (0x140 = 320 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_GotJobOffer
 {
   MenuHeader hdr;
@@ -1548,10 +1548,10 @@ typedef struct Menu_GotJobOffer
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry13;
   MenuMark markEndMenu;
 } Menu_GotJobOffer;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 215 - Menu 38: jobOffersMenu (0x180 = 384 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_JobOffers
 {
   MenuHeader hdr;
@@ -1592,10 +1592,10 @@ typedef struct Menu_JobOffers
   MenuEntry_Wide_TextNoPtrOnly entry16;
   MenuMark markEndMenu;
 } Menu_JobOffers;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 216 - Menu 27: playerTransferMenu (0x1CE = 462 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_PlayerTransfer
 {
   MenuHeader hdr;
@@ -1643,10 +1643,10 @@ typedef struct Menu_PlayerTransfer
   MenuEntry_Wide_TextPtrOnly entry28;
   MenuMark markEndMenu;
 } Menu_PlayerTransfer;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 217 - Menu 34: transferMarketMenu (0x1FC = 508 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_TransferMarket
 {
   MenuHeader hdr;
@@ -1689,10 +1689,10 @@ typedef struct Menu_TransferMarket
   MenuCommand entry25_end;
   MenuMark markEndMenu;
 } Menu_TransferMarket;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 218 - Menu 18: managementRecordMenu (0x150 = 336 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_ManagementRecord
 {
   MenuHeader hdr;
@@ -1734,10 +1734,10 @@ typedef struct Menu_ManagementRecord
   MenuEntry_Byte_SpriteFgOnly entries17_20[4];
   MenuMark markEndMenu;
 } Menu_ManagementRecord;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 219 - Menu 30: viewSquadMenu (0x276 = 630 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_ViewSquad
 {
   MenuHeader hdr;
@@ -1796,10 +1796,10 @@ typedef struct Menu_ViewSquad
   MenuCommand entry34_end;
   MenuMark markEndMenu;
 } Menu_ViewSquad;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 220 - Menu 31: buyOtherPlayersMenu (0x210 = 528 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_BuyOtherPlayers
 {
   MenuHeader hdr;
@@ -1836,10 +1836,10 @@ typedef struct Menu_BuyOtherPlayers
   MenuCommand entry30_end;
   MenuMark markEndMenu;
 } Menu_BuyOtherPlayers;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 221 - Menu 32: showPlayerMarketMenu (0x256 = 598 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_ShowPlayerMarket
 {
   MenuHeader hdr;
@@ -1889,10 +1889,10 @@ typedef struct Menu_ShowPlayerMarket
   MenuCommand entry31_end;
   MenuMark markEndMenu;
 } Menu_ShowPlayerMarket;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 222 - Menu 12: topGoalScorersMenu (0x1A6 = 422 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_TopGoalScorers
 {
   MenuHeader hdr;
@@ -1923,10 +1923,10 @@ typedef struct Menu_TopGoalScorers
   MenuEntry_Wide_NumberOnly entries24_26[3];
   MenuMark markEndMenu;
 } Menu_TopGoalScorers;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 223 - Menu 28: thirdPartyOfferMenu (0x220 = 544 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_ThirdPartyOffer
 {
   MenuHeader hdr;
@@ -1980,10 +1980,10 @@ typedef struct Menu_ThirdPartyOffer
   MenuEntry_Wide_TextPtrOnly entry30;
   MenuMark markEndMenu;
 } Menu_ThirdPartyOffer;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 224 - Menu 29: playerOffersMenu (0x20E = 526 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_PlayerOffers
 {
   MenuHeader hdr;
@@ -2025,10 +2025,10 @@ typedef struct Menu_PlayerOffers
   MenuEntry_Wide_TextPtrOnly entry29;
   MenuMark markEndMenu;
 } Menu_PlayerOffers;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 225 - Menu 44: importTacticsMenu (0x1EA = 490 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_ImportTactics
 {
   MenuHeader hdr;
@@ -2047,10 +2047,10 @@ typedef struct Menu_ImportTactics
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry20;
   MenuMark markEndMenu;
 } Menu_ImportTactics;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 226 - Menu 10: editTeamsMenu (0x676 = 1654 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_EditTeams
 {
   MenuHeader hdr;
@@ -2276,10 +2276,10 @@ typedef struct Menu_EditTeams
   MenuEntry_Byte_SpriteFgOnly entries58_60[3];
   MenuMark markEndMenu;
 } Menu_EditTeams;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 227 - Menu 11: competitionTopGoalScorersMenu (0x2EE = 750 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_CompetitionTopGoalScorers
 {
   MenuHeader hdr;
@@ -2328,10 +2328,10 @@ typedef struct Menu_CompetitionTopGoalScorers
   MenuEntry_Byte_NumberOnly entry62;
   MenuMark markEndMenu;
 } Menu_CompetitionTopGoalScorers;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 228 - Menu 13: squadMenu (0x3EC = 1004 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_Squad
 {
   MenuHeader hdr;
@@ -2436,10 +2436,10 @@ typedef struct Menu_Squad
   MenuEntry_Wide_NumberOnly entries62_63[2];
   MenuMark markEndMenu;
 } Menu_Squad;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 229 - Menu 17: contestMenu (0x32C = 812 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_Contest
 {
   MenuHeader hdr;
@@ -2574,10 +2574,10 @@ typedef struct Menu_Contest
   MenuEntry_Byte_TextNoPtrOnly entry43;
   MenuMark markEndMenu;
 } Menu_Contest;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 230 - Menu 19: selectTeamsForTacticsMenu (0x434 = 1076 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_SelectTeamsForTactics
 {
   MenuHeader hdr;
@@ -2598,10 +2598,10 @@ typedef struct Menu_SelectTeamsForTactics
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry67;
   MenuMark markEndMenu;
 } Menu_SelectTeamsForTactics;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 231 - Menu 20: selectTeamsMenu (0x5A4 = 1444 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_SelectTeams
 {
   MenuHeader hdr;
@@ -2831,10 +2831,10 @@ typedef struct Menu_SelectTeams
   MenuCommand entry90_end;
   MenuMark markEndMenu;
 } Menu_SelectTeams;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 232 - Menu 22: selectFilesMenu (0x35E = 862 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_SelectFiles
 {
   MenuHeader hdr;
@@ -2993,10 +2993,10 @@ typedef struct Menu_SelectFiles
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry50;
   MenuMark markEndMenu;
 } Menu_SelectFiles;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 233 - Menu 35: selectNationalTeamMenu (0x2C8 = 712 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_SelectNationalTeam
 {
   MenuHeader hdr;
@@ -3060,10 +3060,10 @@ typedef struct Menu_SelectNationalTeam
   MenuEntry_Wide_TextPtrOnly entry38;
   MenuMark markEndMenu;
 } Menu_SelectNationalTeam;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 234 - Menu 37: playMatchMenu (0x4BC = 1212 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_PlayMatch
 {
   MenuHeader hdr;
@@ -3243,10 +3243,10 @@ typedef struct Menu_PlayMatch
   MenuEntry_Byte_TextNoPtrOnly entries57_67[11];
   MenuMark markEndMenu;
 } Menu_PlayMatch;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 235 - Menu 43: editTacticsMenu (0x31C = 796 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_EditTactics
 {
   MenuHeader hdr;
@@ -3322,10 +3322,10 @@ typedef struct Menu_EditTactics
   MenuMark_StartMenu menu1Start4;
   MenuMark markEndMenu;
 } Menu_EditTactics;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 /* 236 - Menu 45: stadiumMenu (0x366 = 870 bytes) */
-SWOS_PACK_PUSH1
+#pragma pack(push, 1)
 typedef struct Menu_Stadium
 {
   MenuHeader hdr;
@@ -3426,7 +3426,7 @@ typedef struct Menu_Stadium
   MenuEntry_Byte_CoordsOnly entry59;
   MenuMark markEndMenu;
 } Menu_Stadium;
-SWOS_PACK_POP
+#pragma pack(pop)
 
 extern Menu_ChooseTeamsFriendly chooseTeamsFriendlyMenu;
 extern Menu_ChooseTeamsFriendly2 chooseTeamsFriendlyMenu2;

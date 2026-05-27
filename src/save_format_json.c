@@ -2475,7 +2475,7 @@ extern uint8_t  hilGameRound[];
  * this file. Note: signature/max_size/TeamGame kit fields are BE on
  * disk; numGoals + neighbours are host-native at our save dispatch
  * point (the legacy BE swap dance hasn't run yet). */
-typedef struct SWOS_PACKED HilFileHeader {
+typedef struct __attribute__((packed)) HilFileHeader {
     uint32_t  signature;          /* +0   BE on disk */
     uint32_t  max_size;           /* +4   BE on disk */
     TeamGame  top_team;           /* +8   1018 bytes (BE int16 header) */
@@ -2489,9 +2489,7 @@ typedef struct SWOS_PACKED HilFileHeader {
     uint16_t  max_substitutes;    /* +2252 */
 } HilFileHeader;
 
-#ifndef __APPLE__
 typedef char _hilheader_size_check[(sizeof(HilFileHeader) == 2254) ? 1 : -1];
-#endif
 
 #define HIL_HEADER_SIZE  ((uint32_t)sizeof(HilFileHeader))
 #define HIL_SCENE_SIZE   19000u

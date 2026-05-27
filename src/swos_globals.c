@@ -872,7 +872,7 @@ extern const char aRandom[], aFrozen[], aMuddy[], aWet[],
 extern const char aJan[], aFeb[], aMar[], aApr[], aMay[], aJun[],
                   aJul[], aAug[], aSep[], aOct[], aNov[], aDec[];
 
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr;
     uint16_t base;
     void    *strs[2];
@@ -880,7 +880,7 @@ struct SWOS_PACKED {
     pitchTypeOrSeason, 0, { (void *)aPitchType, (void *)aSeason_1 }
 };
 
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr;
     uint16_t base;
     void    *strs[8];
@@ -890,7 +890,7 @@ struct SWOS_PACKED {
       (void *)aSoft,   (void *)aNormal, (void *)aDry,   (void *)aHard }
 };
 
-struct SWOS_PACKED {
+struct __attribute__((packed)) {
     void    *indexPtr;
     uint16_t base;
     void    *strs[12];
