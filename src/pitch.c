@@ -165,15 +165,25 @@ void _FixupAndColorPitchFile(void)
      * a native uint32 load would byte-swap the value (offset 0x80
      * becomes 0x80000000), so read each entry via BE_READ_U32. */
     pitchPtrs = (uint32_t *)pitchDatBuffer;
-    for (i = PITCH_POINTER_COUNT - 1; i >= 0; i--)
+    /* Count UP, not down. The backward loop made GCC use
+     * `pitchDatBuffer - 4` (a negative-addend symbol reference) as the
+     * loop terminator. On the m68k-amiga-elf toolchain that produces a
+     * mis-relocated immediate (the loader applies a delta that's off
+     * by 0x200), and the loop ends early — leaving slots 0..127 still
+     * holding their raw file offsets and the renderer dereferences
+     * them as pointers into low memory. Iterating forward terminates
+     * at `pitchDatBuffer + PITCH_POINTER_COUNT*4` (positive addend),
+     * which gets relocated correctly. */
+    for (int32_t k = 0; k < (int32_t)PITCH_POINTER_COUNT; k++)
     {
 #ifdef SWOS_SDL_BUILD
-        uint32_t offsetBE = BE_READ_U32((const uint8_t *)&pitchPtrs[i]);
-        pitchPtrs[i] = offsetBE + baseAddr;
+        uint32_t offsetBE = BE_READ_U32((const uint8_t *)&pitchPtrs[k]);
+        pitchPtrs[k] = offsetBE + baseAddr;
 #else
-        pitchPtrs[i] += baseAddr;
+        pitchPtrs[k] += baseAddr;
 #endif
     }
+    (void)i;
 
 #ifdef SWOS_SDL_BUILD
     /* Step 1b (SDL only): decode each 128-byte 4-bitplane tile to a
