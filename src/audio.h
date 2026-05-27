@@ -49,7 +49,7 @@ typedef int int32_t;
  * The C field names follow the original SWOS audio code's `pvSample*`
  * convention even though it conflicts with the cleaner RJP1 naming —
  * tracked under "audio field rename" follow-up. */
-#pragma pack(push, 2)
+SWOS_PACK_PUSH2
 typedef struct {
     uint32_t sampleBasePtr;     /* +0x00 */
     uint32_t pitchLfoPtr;       /* +0x04 */
@@ -65,7 +65,7 @@ typedef struct {
     uint16_t volLfoLoop;        /* +0x1C */
     uint16_t volLfoLen;         /* +0x1E — word count (caller doubles) */
 } VariantDescriptor;
-#pragma pack(pop)
+SWOS_PACK_POP
 
 #ifndef __APPLE__
 typedef char _variantdesc_size_check[(sizeof(VariantDescriptor) == 32) ? 1 : -1];
@@ -76,7 +76,7 @@ typedef char _variantdesc_size_check[(sizeof(VariantDescriptor) == 32) ? 1 : -1]
  * generates word-sized loads/stores instead of byte-by-byte access.
  * All fields are already at 2-byte-aligned offsets in the original
  * asm layout, so pack(2) produces the identical memory layout. */
-#pragma pack(push, 2)
+SWOS_PACK_PUSH2
 typedef struct {
     uint8_t *songPtr;              /* +0x00 */
     uint8_t *bankSectionPtrs[7];   /* +0x04..+0x1F */
@@ -90,7 +90,7 @@ typedef struct {
     uint8_t  channelChangeFlags;   /* +0x2C */
     uint8_t  currentChannelIdx;    /* +0x2D */
 } AudioState;
-#pragma pack(pop)
+SWOS_PACK_POP
 
 /* ---- AudioChannel structure (176 bytes / 0xB0, matches SWOS2.s layout) ----
  *
@@ -102,7 +102,7 @@ typedef struct {
  * All uint32_t fields are at 2-byte-aligned offsets (not always
  * 4-byte-aligned), so pack(2) preserves the identical memory layout
  * while allowing GCC to use move.w pairs instead of 4x move.b. */
-#pragma pack(push, 2)
+SWOS_PACK_PUSH2
 typedef struct {
     /* ---- Shared ---- */
     uint32_t hwRegBase;          /* 0x00: AUDxLC hardware address */
@@ -188,7 +188,7 @@ typedef struct {
     uint8_t  svVariantId;        /* 0xAE: current variant ID */
     uint8_t  _padAF;             /* 0xAF */
 } AudioChannel;
-#pragma pack(pop)
+SWOS_PACK_POP
 
 #define AUDIO_CHANNEL_SIZE  0xB0
 

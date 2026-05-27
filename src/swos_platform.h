@@ -64,9 +64,18 @@
 #if defined(__APPLE__)
 #define SWOS_PACKED
 #define SWOS_PACKED_ALIGN(n)
+/* Same reasoning for `#pragma pack(push, N)` blocks (used in menu_data.h /
+ * audio.h to box-pack the menu/variant descriptor layouts) — disabled on
+ * Apple so pointer fields get natural alignment for ld64 relocations. */
+#define SWOS_PACK_PUSH1
+#define SWOS_PACK_PUSH2
+#define SWOS_PACK_POP
 #else
 #define SWOS_PACKED              __attribute__((packed))
 #define SWOS_PACKED_ALIGN(n)     __attribute__((packed, aligned(n)))
+#define SWOS_PACK_PUSH1          _Pragma("pack(push, 1)")
+#define SWOS_PACK_PUSH2          _Pragma("pack(push, 2)")
+#define SWOS_PACK_POP            _Pragma("pack(pop)")
 #endif
 
 /* Disable all audio output. The SDL audio device is never opened, the

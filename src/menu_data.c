@@ -9792,7 +9792,7 @@ extern char aFormatSaveDisk[];
 extern char aDeleteFile[];
 extern char aExit[];
 
-#pragma pack(push, 1)
+SWOS_PACK_PUSH1
 struct {
     MenuHeader hdr;
     MenuMark   markByteCoords;
@@ -9828,7 +9828,7 @@ struct {
       MENU_CMD_END },
     MENU_MARK_END_MENU,
 };
-#pragma pack(pop)
+SWOS_PACK_POP
 
 /* ---- diyCompetitionMenu (DIY COMPETITION) — SWOS2.s line 76567 -------
  * Same auto-extractor bug as diskMenu — was emitted as `uint32_t = 0`. */
@@ -9841,7 +9841,7 @@ extern char aLeague[];
 extern char aCup[];
 extern char aTournament[];
 
-#pragma pack(push, 1)
+SWOS_PACK_PUSH1
 struct {
     MenuHeader hdr;
     MenuMark   markByteCoords;
@@ -9884,4 +9884,4 @@ struct {
       MENU_CMD_END },
     MENU_MARK_END_MENU,
 };
-#pragma pack(pop)
+SWOS_PACK_POP
