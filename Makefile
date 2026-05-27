@@ -183,11 +183,12 @@ else ifeq ($(UNAME_S),Darwin)
 # Set explicitly to build a single non-host slice (used by macos-universal
 # below). Accepted values match clang's -arch flag: arm64 or x86_64.
 #
-# MACOS_MIN: minimum deployment target. 12.0 = Monterey — the oldest macOS
-# we currently care about. Lowering this further is fine if SDL2 still
-# supports it (libsdl.org's prebuilt framework currently targets 10.11).
+# MACOS_MIN: minimum deployment target. 11.0 = Big Sur — the oldest macOS
+# that supports Apple Silicon natively and that libsdl.org's prebuilt
+# SDL2.framework still loads on. Override with MACOS_MIN=12.0 etc. if
+# you only need to target newer systems.
 MACOS_ARCH ?= $(shell uname -m)
-MACOS_MIN  ?= 12.0
+MACOS_MIN  ?= 11.0
 ARCHFLAGS := -arch $(MACOS_ARCH) -mmacosx-version-min=$(MACOS_MIN)
 else ifeq ($(GCC_MACHINE),x86_64-w64-mingw32)
 ARCHFLAGS :=

@@ -5,7 +5,7 @@ The SDL port builds on macOS as a native Mach-O binary, either:
 - **Single-arch** for your current Mac (Apple Silicon → `arm64`, Intel → `x86_64`), or
 - **Universal binary** (`x86_64 + arm64`) that runs on both Apple Silicon and Intel.
 
-Both paths target a **macOS 12 (Monterey)** minimum by default, so a
+Both paths target a **macOS 11 (Big Sur)** minimum by default, so a
 universal build produced on a 2025-era Mac will still run on a 2021 M1
 or a late-Intel iMac on Monterey.
 
@@ -117,12 +117,12 @@ around.
 
 ## Tweaking the deployment target
 
-The default minimum is **macOS 12 (Monterey)** because that's the
+The default minimum is **macOS 11 (Big Sur)** because that's the
 oldest macOS we currently care about. Override per-invocation:
 
 ```bash
 make macos-universal MACOS_MIN=13.0      # Ventura+
-make macos-universal MACOS_MIN=11.0      # Big Sur+ (latest SDL2 still supports it)
+make macos-universal MACOS_MIN=10.13      # Big Sur+ (latest SDL2 still supports it)
 ```
 
 Going below ~10.13 is not recommended — newer SDL2 builds may not
@@ -205,5 +205,5 @@ otool -L bin/SWOS.macos | head -5
 # and the system libs (libSystem, libc++, etc.)
 
 vtool -show-build bin/SWOS.macos | grep minos
-# minos 12.0  ← the deployment target you built with
+# minos 11.0  ← the deployment target you built with
 ```
