@@ -311,16 +311,31 @@ uint16_t menuColorAndTextScript[5166] = {
  * The `used,aligned(4)` attributes keep the buffer + guarantee the
  * linker doesn't merge it. The inline asm at the bottom emits the
  * `menuEntries` symbol at offset +22 within the same storage. */
-__attribute__((used, aligned(4)))
-uint8_t currentMenu[8 * 1024 + 80 * 1024];
 /* The alias offset must match MENU_HEADER_SIZE — 22 on 32-bit, 38 on
  * 64-bit (Menu has 4 pointer fields). Stringify the literal so the
- * .equ inline asm picks up the correct value for the build. */
+ * inline asm picks up the correct value for the build. */
 #define _MENU_HDR_STR_HELPER(x) #x
 #define _MENU_HDR_STR(x) _MENU_HDR_STR_HELPER(x)
-__asm__(".globl " _ASM_PFX "menuEntries\n"
-        ".equ   " _ASM_PFX "menuEntries, " _ASM_PFX "currentMenu + "
-        _MENU_HDR_STR(MENU_HEADER_SIZE) "\n");
+/* Emit storage + labels via inline asm rather than a C array so the
+ * menuEntries alias becomes a real BSS label (resolvable on Mach-O —
+ * .equ alias = ext_carrier + offset is silently dropped there). */
+__asm__(
+#if defined(__APPLE__)
+    ".pushsection __DATA,__bss\n"
+#elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+    ".pushsection .bss\n"
+#else
+    ".pushsection .bss,\"aw\",%nobits\n"
+#endif
+    ".p2align 2\n"
+    ".globl " _ASM_PFX "currentMenu\n"
+    _ASM_PFX "currentMenu:\n"
+    ".skip " _MENU_HDR_STR(MENU_HEADER_SIZE) "\n"
+    ".globl " _ASM_PFX "menuEntries\n"
+    _ASM_PFX "menuEntries:\n"
+    ".skip " _MENU_HDR_STR((8 * 1024 + 80 * 1024) - MENU_HEADER_SIZE) "\n"
+    ".popsection\n"
+);
 
 /* ---- Stadium-menu little-player sprite-copy block --------------------
  * The stadium menu (pre-match lineup screen) draws one mini-player
@@ -646,28 +661,62 @@ __asm__(".globl " _ASM_PFX "editTeamsPrimaryShirts\n"
  *     `hilStartOfGoalsBuffer + N * 19000` for N in 0..HIL_MAX_SCENES-1, and
  *   game_loop.c:1003 sets goalBasePtr to the same offset for replay. */
 #define HIL_BACKING_BUF_SIZE 192254
-__attribute__((used, aligned(4)))
-uint8_t hilBackingBuf[HIL_BACKING_BUF_SIZE];
-__asm__(".globl " _ASM_PFX "hilFileBuffer\n"
-        ".equ   " _ASM_PFX "hilFileBuffer, " _ASM_PFX "hilBackingBuf\n"
-        ".globl " _ASM_PFX "hilGameName\n"
-        ".equ   " _ASM_PFX "hilGameName, " _ASM_PFX "hilBackingBuf + 2044\n"
-        ".globl " _ASM_PFX "hilGameRound\n"
-        ".equ   " _ASM_PFX "hilGameRound, " _ASM_PFX "hilBackingBuf + 2144\n"
-        ".globl " _ASM_PFX "hilNumGoals\n"
-        ".equ   " _ASM_PFX "hilNumGoals, " _ASM_PFX "hilBackingBuf + 2244\n"
-        ".globl " _ASM_PFX "hilTeam1Goals\n"
-        ".equ   " _ASM_PFX "hilTeam1Goals, " _ASM_PFX "hilBackingBuf + 2246\n"
-        ".globl " _ASM_PFX "hilTeam2Goals\n"
-        ".equ   " _ASM_PFX "hilTeam2Goals, " _ASM_PFX "hilBackingBuf + 2248\n"
-        ".globl " _ASM_PFX "hilPitchNumber\n"
-        ".equ   " _ASM_PFX "hilPitchNumber, " _ASM_PFX "hilBackingBuf + 2250\n"
-        ".globl " _ASM_PFX "hilMaxSubstitutes\n"
-        ".equ   " _ASM_PFX "hilMaxSubstitutes, " _ASM_PFX "hilBackingBuf + 2252\n"
-        ".globl " _ASM_PFX "hilStartOfGoalsBuffer\n"
-        ".equ   " _ASM_PFX "hilStartOfGoalsBuffer, " _ASM_PFX "hilBackingBuf + 2254\n"
-        ".globl " _ASM_PFX "inGameHilBuffer\n"
-        ".equ   " _ASM_PFX "inGameHilBuffer, " _ASM_PFX "hilBackingBuf + 2254 + 0x4A38\n");
+/* Emit storage + labels via inline asm so each alias is a real BSS
+ * label (Mach-O can't resolve .equ alias = ext_BSS_carrier + offset).
+ * Layout (matches the Amiga BSS run):
+ *   +0     hilFileBuffer        (alias of hilBackingBuf)
+ *   +2044  hilGameName
+ *   +2144  hilGameRound
+ *   +2244  hilNumGoals
+ *   +2246  hilTeam1Goals
+ *   +2248  hilTeam2Goals
+ *   +2250  hilPitchNumber
+ *   +2252  hilMaxSubstitutes
+ *   +2254  hilStartOfGoalsBuffer
+ *   +21254 inGameHilBuffer        (= 2254 + 0x4A38) */
+__asm__(
+#if defined(__APPLE__)
+    ".pushsection __DATA,__bss\n"
+#elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+    ".pushsection .bss\n"
+#else
+    ".pushsection .bss,\"aw\",%nobits\n"
+#endif
+    ".p2align 2\n"
+    ".globl " _ASM_PFX "hilBackingBuf\n"
+    _ASM_PFX "hilBackingBuf:\n"
+    ".globl " _ASM_PFX "hilFileBuffer\n"
+    _ASM_PFX "hilFileBuffer:\n"
+    ".skip 2044\n"
+    ".globl " _ASM_PFX "hilGameName\n"
+    _ASM_PFX "hilGameName:\n"
+    ".skip 100\n"
+    ".globl " _ASM_PFX "hilGameRound\n"
+    _ASM_PFX "hilGameRound:\n"
+    ".skip 100\n"
+    ".globl " _ASM_PFX "hilNumGoals\n"
+    _ASM_PFX "hilNumGoals:\n"
+    ".skip 2\n"
+    ".globl " _ASM_PFX "hilTeam1Goals\n"
+    _ASM_PFX "hilTeam1Goals:\n"
+    ".skip 2\n"
+    ".globl " _ASM_PFX "hilTeam2Goals\n"
+    _ASM_PFX "hilTeam2Goals:\n"
+    ".skip 2\n"
+    ".globl " _ASM_PFX "hilPitchNumber\n"
+    _ASM_PFX "hilPitchNumber:\n"
+    ".skip 2\n"
+    ".globl " _ASM_PFX "hilMaxSubstitutes\n"
+    _ASM_PFX "hilMaxSubstitutes:\n"
+    ".skip 2\n"
+    ".globl " _ASM_PFX "hilStartOfGoalsBuffer\n"
+    _ASM_PFX "hilStartOfGoalsBuffer:\n"
+    ".skip 19000\n"               /* 0x4A38 */
+    ".globl " _ASM_PFX "inGameHilBuffer\n"
+    _ASM_PFX "inGameHilBuffer:\n"
+    ".skip 171000\n"              /* 192254 - 21254 */
+    ".popsection\n"
+);
 #undef HIL_BACKING_BUF_SIZE
 
 /* ---- Audio buffers: sized to hold the real Amiga sound files.
