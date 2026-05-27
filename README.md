@@ -345,7 +345,8 @@ the long version):
 - **Sensible Software** — original SWOS (1994).
 - **Ben Baker** ([github.com/benbaker76](https://github.com/benbaker76)) —
   reverse-engineered the SWOS Amiga 68k assembly that this C port is built
-  from, and author of the Amiga C port (`SWOS_C`).
+  from, and author of the Amiga C port (`SWOS_C`) and the SDL C port
+  (`SWOS_C_SDL`).
 - **Zlatko Karakaš** ([github.com/zlatkok](https://github.com/zlatkok/)) —
   reverse-engineered the original DOS version.
 - **Richard Joseph** — RJP1 audio engine.
