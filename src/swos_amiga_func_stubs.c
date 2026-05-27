@@ -28,7 +28,9 @@ void _DetachOSDisplay(void)  {}
  * via `rte`, not `rts`. The original SWOS2.s wrappers were pure asm
  * (`movem.l d0-d7/a0-a6,-(sp)` ... `movem.l (sp)+,...` / `rte`); GCC's
  * `__attribute__((interrupt))` is supposed to emit the same thing but
- * the alert we saw on first enable says it doesn't quite. Use naked
+ * the alert we saw on first enable says it doesn't quite (F-line trap
+ * F227 on boot — interrupt-attribute body returns via `rts`, popping
+ * an `rte`-style frame, which lands the PC on garbage). Use naked
  * inline asm so the prologue/epilogue are exactly the m68k ABI. */
 #if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
 extern void _Int2KeyboardHandler(void);  /* worker in interrupts.c */

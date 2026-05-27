@@ -343,17 +343,20 @@ __asm__(".globl " _ASM_PFX "menuEntries\n"
  * placeholder glyph). This backing buffer restores the Amiga layout
  * with asm symbol aliases, matching the `currentMenu`/`menuEntries`
  * pattern above. */
+/* Typed as uint16_t[] so the compiler stores each element in NATIVE
+ * byte order. The previous byte-array init hardcoded little-endian
+ * bytes (0xD6,0x00) which worked on SDL/x86 but read as 0xD600 on
+ * Amiga BE — _ConvertSpriteColors then dereferenced sprite #54784,
+ * found garbage wquads > 0x14, and panic'd 0x982 on entering the
+ * friendly-match stadium menu. */
 __attribute__((used, aligned(2)))
-uint8_t stadiumMenuLittlePlayerBackingBuf[36] = {
-    /* +0  stadiumMenuLittlePlayer (uint16 LE) = 0 */
-    0x00, 0x00,
-    /* +2  littlePlayerSpriteGeneric (uint16 LE) = 0x00D6 */
-    0xD6, 0x00,
-    /* +4..+35 littlePlayersColorTable (uint16_t[16] LE, identity 0..15) */
-    0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00,
-    0x04, 0x00, 0x05, 0x00, 0x06, 0x00, 0x07, 0x00,
-    0x08, 0x00, 0x09, 0x00, 0x0A, 0x00, 0x0B, 0x00,
-    0x0C, 0x00, 0x0D, 0x00, 0x0E, 0x00, 0x0F, 0x00,
+uint16_t stadiumMenuLittlePlayerBackingBuf[18] = {
+    /* +0  stadiumMenuLittlePlayer */
+    0x0000,
+    /* +2  littlePlayerSpriteGeneric */
+    0x00D6,
+    /* +4..+35 littlePlayersColorTable (identity 0..15) */
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
 };
 __asm__(".globl " _ASM_PFX "stadiumMenuLittlePlayer\n"
         ".equ   " _ASM_PFX "stadiumMenuLittlePlayer, " _ASM_PFX "stadiumMenuLittlePlayerBackingBuf\n"
@@ -440,6 +443,33 @@ __asm__(".globl " _ASM_PFX "team1GoalieFaceToPosition\n"
         ".equ   " _ASM_PFX "team2GoalieSkinType, "        _ASM_PFX "goalieFacesBackingBuf + 8\n"
         ".globl " _ASM_PFX "team2ReserveGoalieSkinType\n"
         ".equ   " _ASM_PFX "team2ReserveGoalieSkinType, " _ASM_PFX "goalieFacesBackingBuf + 9\n");
+
+/* ---- Sprite blit queues (each = sentinel + 3000-byte buffer) ----
+ *
+ * SWOS2.s lines 2790-2796:
+ *   kSpriteBlitQueueSentinel_A:  ds.b $2      ; sentinel marker
+ *   BSS_00_2CED4:                ds.b $BB6    ; 3000-byte queue buffer A
+ *   kSpriteBlitQueueSentinel_B:  ds.b $2
+ *   BSS_00_2DA8C:                ds.b $BB6    ; 3000-byte queue buffer B
+ *
+ * Shared between SDL and Amiga because `_DrawSprite_entry2` (in
+ * sprites.c) is compiled for both targets and does a 4-byte
+ * `*(uint32_t *)savedQueue = BLT_BLITQ_END;` against what was a
+ * 2-byte uint16 — that overflow silently corrupted whatever
+ * follows the sentinel symbol on SDL too. On Amiga the sprite-write
+ * paths additionally fill the queue with 12-byte entries; without
+ * the 3000-byte buffer those entries overflow into bootTemp0 /
+ * bottomTeamInGame, _ProcessSpriteBlitQueue reads garbage as srcPtr
+ * and faults. */
+#define SPRITE_BLIT_QUEUE_BYTES   (2 + 0xBB6)
+__attribute__((used, aligned(4)))
+uint8_t spriteBlitQueueA_backing[SPRITE_BLIT_QUEUE_BYTES] = {0};
+__attribute__((used, aligned(4)))
+uint8_t spriteBlitQueueB_backing[SPRITE_BLIT_QUEUE_BYTES] = {0};
+__asm__(".globl " _ASM_PFX "kSpriteBlitQueueSentinel_A\n"
+        ".equ   " _ASM_PFX "kSpriteBlitQueueSentinel_A, " _ASM_PFX "spriteBlitQueueA_backing\n"
+        ".globl " _ASM_PFX "kSpriteBlitQueueSentinel_B\n"
+        ".equ   " _ASM_PFX "kSpriteBlitQueueSentinel_B, " _ASM_PFX "spriteBlitQueueB_backing\n");
 
 /* ---- Edit-teams kit-editor sprite-copy blocks -----------------------
  * Six MENU_CMD_SPRITE_COPY blocks that preview the primary/secondary

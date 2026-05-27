@@ -116,8 +116,13 @@ uint16_t bootTemp3;
 uint16_t bootTemp4;
 uint16_t bootTemp5;
 uint16_t bootTemp6;
-uint16_t kSpriteBlitQueueSentinel_A;
-uint16_t kSpriteBlitQueueSentinel_B;
+/* kSpriteBlitQueueSentinel_A / _B: backing storage moved to
+ * swos_globals.c (3000-byte queue buffer per sentinel, matching
+ * SWOS2.s lines 2790-2796). Shared between targets — SDL also
+ * calls _DrawSprite_entry2 which does `*(uint32_t *)savedQueue =
+ * BLT_BLITQ_END;` (a 4-byte write to what was a 2-byte uint16_t),
+ * silently overflowing into adjacent globals before the backing
+ * buffer was added. */
 uint16_t ballSpeed;
 uint16_t ballSpeedAfterSave;
 uint16_t gateReceiptsFactor;

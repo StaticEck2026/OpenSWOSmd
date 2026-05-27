@@ -149,15 +149,13 @@ void _FixupAndColorPitchFile(void)
 {
     uint32_t *pitchPtrs;
     int16_t i;
-#ifdef SWOS_SDL_BUILD
-    /* SDL: the entire pitch file is loaded into pitchDatBuffer. The
-     * pointer-table entries are byte offsets from the start of the
-     * tile-data region, which begins right after the 9240-byte
-     * pointer table. */
+    /* Pitch-file pointer-table entries are byte offsets from the start
+     * of the tile-data region, which begins right after the 9240-byte
+     * pointer table. The original Amiga used `currentMenu` here because
+     * it aliased the same RAM block as pitchDatBuffer; our C build keeps
+     * them separate, so we must compute the tile-data base from the
+     * actual pitch buffer for both targets. */
     uint32_t baseAddr = (uint32_t)(uintptr_t)(pitchDatBuffer + PITCH_POINTER_COUNT * 4);
-#else
-    uint32_t baseAddr = (uint32_t)currentMenu;
-#endif
     TeamGame *teamData;
     uint16_t kitPrimary, kitSecondary, kitTertiary;
 
@@ -167,15 +165,25 @@ void _FixupAndColorPitchFile(void)
      * a native uint32 load would byte-swap the value (offset 0x80
      * becomes 0x80000000), so read each entry via BE_READ_U32. */
     pitchPtrs = (uint32_t *)pitchDatBuffer;
-    for (i = PITCH_POINTER_COUNT - 1; i >= 0; i--)
+    /* Count UP, not down. The backward loop made GCC use
+     * `pitchDatBuffer - 4` (a negative-addend symbol reference) as the
+     * loop terminator. On the m68k-amiga-elf toolchain that produces a
+     * mis-relocated immediate (the loader applies a delta that's off
+     * by 0x200), and the loop ends early — leaving slots 0..127 still
+     * holding their raw file offsets and the renderer dereferences
+     * them as pointers into low memory. Iterating forward terminates
+     * at `pitchDatBuffer + PITCH_POINTER_COUNT*4` (positive addend),
+     * which gets relocated correctly. */
+    for (int32_t k = 0; k < (int32_t)PITCH_POINTER_COUNT; k++)
     {
 #ifdef SWOS_SDL_BUILD
-        uint32_t offsetBE = BE_READ_U32((const uint8_t *)&pitchPtrs[i]);
-        pitchPtrs[i] = offsetBE + baseAddr;
+        uint32_t offsetBE = BE_READ_U32((const uint8_t *)&pitchPtrs[k]);
+        pitchPtrs[k] = offsetBE + baseAddr;
 #else
-        pitchPtrs[i] += baseAddr;
+        pitchPtrs[k] += baseAddr;
 #endif
     }
+    (void)i;
 
 #ifdef SWOS_SDL_BUILD
     /* Step 1b (SDL only): decode each 128-byte 4-bitplane tile to a
@@ -281,10 +289,18 @@ void _FixupAndColorPitchFile(void)
      * The Amiga code aliased the in-buffer 32-bit slot table as two
      * fan-group pointers (group A at slot 0, group B at slot
      * FAN_PTR_TABLE_OFFSET/4 = 21). On 64-bit the slot's truncated
-     * pointer can't be dereferenced, so resolve to the full-width
-     * pointers via the side table populated in Step 1b. */
+     * pointer can't be dereferenced, so the SDL path resolves to the
+     * full-width pointers via the side table populated in Step 1b.
+     * On Amiga, s_pitchFullPtrs is NOT populated (Step 1b is gated
+     * out) — use the in-buffer slot table directly, matching the
+     * original asm. */
+#ifdef SWOS_SDL_BUILD
     uint8_t **fanGroupA = &s_pitchFullPtrs[0];
     uint8_t **fanGroupB = &s_pitchFullPtrs[FAN_PTR_TABLE_OFFSET / 4];
+#else
+    uint8_t **fanGroupA = (uint8_t **)pitchDatBuffer;
+    uint8_t **fanGroupB = (uint8_t **)(pitchDatBuffer + FAN_PTR_TABLE_OFFSET);
+#endif
 
     fansSidesSwapped = 0;
     /* If topTeamInGame's team name first byte is odd, swap groups */

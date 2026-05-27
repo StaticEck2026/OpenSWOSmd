@@ -94,8 +94,16 @@ void _SaveRand2State(void)
     *ptr++ = randXorKey2;
     savedRandStatePtr = ptr;
 
-    /* Original asm: cmpa.l #kRandomTable,a0 / bcs.s (skip panic) */
-    if ((uint32_t)ptr >= (uint32_t)kRandomTable)
+    /* Original asm: cmpa.l #kRandomTable,a0 / bcs.s — relied on
+     * savedRandState[15] sitting immediately before kRandomTable in
+     * BSS, so `ptr >= kRandomTable` meant the 15-byte stack was full.
+     * In our C builds the two arrays are in different sections at
+     * linker-determined addresses (savedRandState in .bss above
+     * kRandomTable in .data on the Amiga port), so the address
+     * comparison was always true and panicked on the first push.
+     * Test the real overflow condition: ptr past savedRandState[15]. */
+    extern uint8_t savedRandState[];
+    if (ptr >= savedRandState + sizeof(uint8_t[15]))
     {
         panicReasonCode = 0x9793;
         _PanicHaltLoop();
