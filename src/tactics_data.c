@@ -9,6 +9,7 @@
  * TacticsPosition and enums are in data/game_types.h (to be merged later).
  */
 #include "tactics_data.h"
+#include "swos_sections.h"  /* SWOS_CHIP_BSS */
 
 #if TACTICS_DATA_C
 
