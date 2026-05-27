@@ -444,6 +444,33 @@ __asm__(".globl " _ASM_PFX "team1GoalieFaceToPosition\n"
         ".globl " _ASM_PFX "team2ReserveGoalieSkinType\n"
         ".equ   " _ASM_PFX "team2ReserveGoalieSkinType, " _ASM_PFX "goalieFacesBackingBuf + 9\n");
 
+/* ---- Sprite blit queues (each = sentinel + 3000-byte buffer) ----
+ *
+ * SWOS2.s lines 2790-2796:
+ *   kSpriteBlitQueueSentinel_A:  ds.b $2      ; sentinel marker
+ *   BSS_00_2CED4:                ds.b $BB6    ; 3000-byte queue buffer A
+ *   kSpriteBlitQueueSentinel_B:  ds.b $2
+ *   BSS_00_2DA8C:                ds.b $BB6    ; 3000-byte queue buffer B
+ *
+ * Shared between SDL and Amiga because `_DrawSprite_entry2` (in
+ * sprites.c) is compiled for both targets and does a 4-byte
+ * `*(uint32_t *)savedQueue = BLT_BLITQ_END;` against what was a
+ * 2-byte uint16 — that overflow silently corrupted whatever
+ * follows the sentinel symbol on SDL too. On Amiga the sprite-write
+ * paths additionally fill the queue with 12-byte entries; without
+ * the 3000-byte buffer those entries overflow into bootTemp0 /
+ * bottomTeamInGame, _ProcessSpriteBlitQueue reads garbage as srcPtr
+ * and faults. */
+#define SPRITE_BLIT_QUEUE_BYTES   (2 + 0xBB6)
+__attribute__((used, aligned(4)))
+uint8_t spriteBlitQueueA_backing[SPRITE_BLIT_QUEUE_BYTES] = {0};
+__attribute__((used, aligned(4)))
+uint8_t spriteBlitQueueB_backing[SPRITE_BLIT_QUEUE_BYTES] = {0};
+__asm__(".globl " _ASM_PFX "kSpriteBlitQueueSentinel_A\n"
+        ".equ   " _ASM_PFX "kSpriteBlitQueueSentinel_A, " _ASM_PFX "spriteBlitQueueA_backing\n"
+        ".globl " _ASM_PFX "kSpriteBlitQueueSentinel_B\n"
+        ".equ   " _ASM_PFX "kSpriteBlitQueueSentinel_B, " _ASM_PFX "spriteBlitQueueB_backing\n");
+
 /* ---- Edit-teams kit-editor sprite-copy blocks -----------------------
  * Six MENU_CMD_SPRITE_COPY blocks that preview the primary/secondary
  * shirt/shorts/socks in the kit editor. Each is a 36-byte struct:

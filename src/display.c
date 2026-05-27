@@ -615,6 +615,13 @@ void _SwapBuffersAndCameraViewState(void)
         frontbufferBasePtr = (uintptr_t)frontbufferBaseAlt;
         frontbufferBaseAltPtr = (uintptr_t)frontbufferBase;
         spriteBlitQueue = (uintptr_t)&kSpriteBlitQueueSentinel_B;
+        /* DO NOT write 0xFFFFFFFF at the queue head here. The cursor
+         * reset above is intentional — the previous frame's
+         * _DrawSprites calls left valid undraw entries between
+         * &kSpriteBlitQueueSentinel_B and the cursor's pre-reset
+         * value, and the next frame's _ProcessSpriteBlitQueue is
+         * supposed to walk through them. Clearing the head here
+         * defeats that, and sprites smear because no undraw runs. */
 
         /* Save current camera state to slot 0 */
         dstXByteOffsetSaved0 = cameraXMod320;
@@ -660,6 +667,8 @@ void _SwapBuffersAndCameraViewState(void)
         frontbufferBasePtr = (uintptr_t)frontbufferBase;
         frontbufferBaseAltPtr = (uintptr_t)frontbufferBaseAlt;
         spriteBlitQueue = (uintptr_t)&kSpriteBlitQueueSentinel_A;
+        /* Cursor reset only — do NOT clear the head sentinel here. See
+         * comment in the alt-buffer branch above. */
 
         /* Save current camera state to slot 1 */
         dstXByteOffsetSaved1 = cameraXMod320;
