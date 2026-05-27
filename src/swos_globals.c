@@ -325,7 +325,7 @@ __asm__(
 #elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
     ".section .bss\n"
 #else
-    ".section .bss,\"aw\",%nobits\n"
+    ".section .bss\n"
 #endif
     ".p2align 2\n"
     ".globl " _ASM_PFX "currentMenu\n"
@@ -680,7 +680,7 @@ __asm__(
 #elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
     ".section .bss\n"
 #else
-    ".section .bss,\"aw\",%nobits\n"
+    ".section .bss\n"
 #endif
     ".p2align 2\n"
     ".globl " _ASM_PFX "hilBackingBuf\n"
@@ -1024,7 +1024,7 @@ __asm__(
 #elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
     ".section .bss\n"
 #else
-    ".section .bss,\"aw\",%nobits\n"
+    ".section .bss\n"
 #endif
     ".p2align 2\n"
     ".globl " _ASM_PFX "qualifiedTeamGridsBlock\n"
@@ -1062,7 +1062,7 @@ __asm__(
 #elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
     ".section .bss\n"
 #else
-    ".section .bss,\"aw\",%nobits\n"
+    ".section .bss\n"
 #endif
     ".p2align 2\n"
     ".globl " _ASM_PFX "gameRoundBuf\n"
@@ -1108,7 +1108,7 @@ __asm__(
 #elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
     ".section .bss\n"
 #else
-    ".section .bss,\"aw\",%nobits\n"
+    ".section .bss\n"
 #endif
     ".p2align 2\n"
     ".globl " _ASM_PFX "diyFileBufferCopyBuf\n"
@@ -1261,7 +1261,7 @@ __asm__(
 #elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
     ".section .bss\n"
 #else
-    ".section .bss,\"aw\",%nobits\n"
+    ".section .bss\n"
 #endif
     ".p2align 2\n"
     ".globl " _ASM_PFX "numberOfFilesBuf\n"

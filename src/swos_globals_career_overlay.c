@@ -48,7 +48,7 @@ __asm__(
     ".section .bss\n"
 #else
     /* generic ELF (Linux x86, etc). */
-    ".section .bss,\"aw\",%nobits\n"
+    ".section .bss\n"
 #endif
     ".p2align 2\n"
     ".globl " _ASM_PFX "careerFileBufferBuf\n"
