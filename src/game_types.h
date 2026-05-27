@@ -46,7 +46,9 @@ typedef union {
 } FixedPoint;
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _fixedpoint_size_check[(sizeof(FixedPoint) == 4) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
@@ -104,11 +106,15 @@ struct SWOS_PACKED_ALIGN(2) Sprite {
  * each grows from 4→8 bytes on 64-bit. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _sprite_size_check[(sizeof(Sprite) == 110) ? 1 : -1];
+#endif
 #endif
 #else
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _sprite_size_check[(sizeof(Sprite) == 118) ? 1 : -1];
+#endif
 #endif
 #endif
 
@@ -147,29 +153,45 @@ typedef struct SWOS_PACKED_ALIGN(2) {
  *   AnimTable_8  : N=8  → 2 +  8*4 = 34  / 2 +  8*8 = 66 */
 #if UINTPTR_MAX == 0xFFFFFFFFu
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _animtable_size_check[(sizeof(AnimTable) == 130) ? 1 : -1];
 #endif
+#endif
+#ifndef __APPLE__
 #ifndef __APPLE__
 typedef char _animtable20_size_check[(sizeof(AnimTable_20) == 82) ? 1 : -1];
 #endif
+#endif
+#ifndef __APPLE__
 #ifndef __APPLE__
 typedef char _animtable12_size_check[(sizeof(AnimTable_12) == 50) ? 1 : -1];
 #endif
+#endif
+#ifndef __APPLE__
 #ifndef __APPLE__
 typedef char _animtable8_size_check[(sizeof(AnimTable_8) == 34) ? 1 : -1];
 #endif
+#endif
 #else
+#ifndef __APPLE__
 #ifndef __APPLE__
 typedef char _animtable_size_check[(sizeof(AnimTable) == 258) ? 1 : -1];
 #endif
+#endif
+#ifndef __APPLE__
 #ifndef __APPLE__
 typedef char _animtable20_size_check[(sizeof(AnimTable_20) == 162) ? 1 : -1];
 #endif
+#endif
+#ifndef __APPLE__
 #ifndef __APPLE__
 typedef char _animtable12_size_check[(sizeof(AnimTable_12) == 98) ? 1 : -1];
 #endif
+#endif
+#ifndef __APPLE__
 #ifndef __APPLE__
 typedef char _animtable8_size_check[(sizeof(AnimTable_8) == 66) ? 1 : -1];
+#endif
 #endif
 #endif
 
@@ -255,11 +277,15 @@ struct SWOS_PACKED_ALIGN(2) TeamGeneralInfo {
  * +36 bytes on 64-bit. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _tgi_size_check[(sizeof(TeamGeneralInfo) == 144) ? 1 : -1];
+#endif
 #endif
 #else
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _tgi_size_check[(sizeof(TeamGeneralInfo) == 180) ? 1 : -1];
+#endif
 #endif
 #endif
 
@@ -295,7 +321,9 @@ struct PlayerInfo {
 };
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _playerinfo_size_check[(sizeof(PlayerInfo) == 61) ? 1 : -1];
+#endif
 #endif
 
 #define PLAYERINFO_SIZE 61
@@ -323,7 +351,9 @@ struct TeamGame {
 };
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _teamgame_size_check[(sizeof(TeamGame) == 1018) ? 1 : -1];
+#endif
 #endif
 
 #define TEAMGAME_SIZE 1018
@@ -343,7 +373,9 @@ struct TeamStatisticsData {
 };
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _teamstats_size_check[(sizeof(TeamStatisticsData) == 14) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
@@ -368,7 +400,9 @@ struct GoalieSkill {
 };
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _goalieskill_size_check[(sizeof(GoalieSkill) == 60) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
@@ -390,11 +424,15 @@ struct SpriteGraphics {
 /* SpriteGraphics has 2 pointer fields (sprData, maskPtr); +8 on 64-bit. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _spritegfx_size_check[(sizeof(SpriteGraphics) == 24) ? 1 : -1];
+#endif
 #endif
 #else
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _spritegfx_size_check[(sizeof(SpriteGraphics) == 32) ? 1 : -1];
+#endif
 #endif
 #endif
 
@@ -413,7 +451,9 @@ typedef struct {
 } CharsTableHeader;
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _charstblhdr_size_check[(sizeof(CharsTableHeader) == 14) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
@@ -505,7 +545,9 @@ struct SWOS_PACKED_ALIGN(2) TeamFile {
 };
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _teamfile_size_check[(sizeof(struct TeamFile) == 76) ? 1 : -1];
+#endif
 #endif
 
 typedef struct TeamFile TeamFile;
@@ -521,7 +563,9 @@ struct GoalInfo {
 };
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _goalinfo_size_check[(sizeof(GoalInfo) == 6) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
@@ -535,7 +579,9 @@ struct ScorerInfo {
 };
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _scorerinfo_size_check[(sizeof(ScorerInfo) == 66) ? 1 : -1];
+#endif
 #endif
 
 #define SCORERINFO_SIZE 66
@@ -566,7 +612,9 @@ typedef struct SWOS_PACKED_ALIGN(2) PlayerFile {
 } PlayerFile;
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _playerfile_size_check[(sizeof(PlayerFile) == 38) ? 1 : -1];
+#endif
 #endif
 
 #define PLAYERFILE_SIZE 38
@@ -581,7 +629,9 @@ typedef struct SWOS_PACKED_ALIGN(2) TeamFileEx {
 } TeamFileEx;
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _teamfileex_size_check[(sizeof(TeamFileEx) == 684) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
@@ -639,11 +689,15 @@ typedef struct DIYCompetition {
  * → +8 total. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x60) ? 1 : -1];
+#endif
 #endif
 #else
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x68) ? 1 : -1];
+#endif
 #endif
 #endif
 
@@ -669,7 +723,9 @@ typedef struct SWOS_PACKED_ALIGN(2) DIYTeamStats {
 
 typedef DIYTeamStats DIYLeagueTableRow;
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _diyteamstats_size_check[(sizeof(DIYTeamStats) == 18) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
@@ -708,7 +764,9 @@ typedef struct SWOS_PACKED_ALIGN(2) DIYTournamentSlot {
 } DIYTournamentSlot;
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _diyslot_size_check[(sizeof(DIYTournamentSlot) == 0x76) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
@@ -730,7 +788,9 @@ typedef struct SWOS_PACKED_ALIGN(2) DIYCompetitionEx_CupView {
 } DIYCompetitionEx_CupView;
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _diycupview_size_check[(sizeof(DIYCompetitionEx_CupView) == 0xEA) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
@@ -753,7 +813,9 @@ typedef struct SWOS_PACKED_ALIGN(2) DIYCompetitionEx_LeagueView {
 } DIYCompetitionEx_LeagueView;
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _diyleagueview_size_check[(sizeof(DIYCompetitionEx_LeagueView) == 0xEA) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
@@ -768,7 +830,9 @@ typedef union SWOS_PACKED_ALIGN(2) DIYCompetitionEx_MatchData {
 } DIYCompetitionEx_MatchData;
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _diymatchdata_size_check[(sizeof(DIYCompetitionEx_MatchData) == 0xEA) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
@@ -787,8 +851,8 @@ typedef struct SWOS_PACKED_ALIGN(2) DIYCompetitionEx_LeagueSectionState {
 
 #ifndef __APPLE__
 typedef char _diysecstate_size_check[
-#endif
     (sizeof(DIYCompetitionEx_LeagueSectionState) == 0x88) ? 1 : -1];
+#endif
 
 /* ==================================================================
  * DIYCompetitionEx — 0x5C8 bytes (1480), the extended runtime DIY
@@ -872,11 +936,15 @@ typedef struct SWOS_PACKED_ALIGN(2) DIYCompetitionEx {
  * pointer-free. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5C8) ? 1 : -1];
+#endif
 #endif
 #else
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5D0) ? 1 : -1];
+#endif
 #endif
 #endif
 
@@ -925,11 +993,15 @@ typedef struct SWOS_PACKED_ALIGN(2) SeasonInformations {
  * +16 on 64-bit. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _seasoninformations_size_check[(sizeof(SeasonInformations) == 106) ? 1 : -1];
+#endif
 #endif
 #else
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _seasoninformations_size_check[(sizeof(SeasonInformations) == 122) ? 1 : -1];
+#endif
 #endif
 #endif
 
@@ -945,7 +1017,9 @@ typedef struct SWOS_PACKED_ALIGN(2) JobOffer {
 } JobOffer;
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _joboffer_size_check[(sizeof(JobOffer) == 26) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
@@ -970,7 +1044,9 @@ typedef struct SWOS_PACKED NationalTeamRecord {
 } NationalTeamRecord;
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _nationalteamrecord_size_check[(sizeof(NationalTeamRecord) == 6) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
@@ -1004,7 +1080,9 @@ typedef struct SWOS_PACKED TeamSelectionKeyCacheMatchSlot {
 } TeamSelectionKeyCacheMatchSlot;
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _tskc_slot_size_check[(sizeof(TeamSelectionKeyCacheMatchSlot) == 12) ? 1 : -1];
+#endif
 #endif
 
 typedef struct SWOS_PACKED TeamSelectionKeyCacheEntry {
@@ -1026,7 +1104,9 @@ typedef struct SWOS_PACKED TeamSelectionKeyCacheEntry {
 } TeamSelectionKeyCacheEntry;
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _tskc_entry_size_check[(sizeof(TeamSelectionKeyCacheEntry) == 10) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
@@ -1041,7 +1121,9 @@ typedef struct MarketPlayer {
 } MarketPlayer;
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _marketplayer_size_check[(sizeof(MarketPlayer) == 42) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
@@ -1056,7 +1138,9 @@ typedef struct PoolPlayer {
 } PoolPlayer;
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _poolplayer_size_check[(sizeof(PoolPlayer) == 58) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
@@ -1068,7 +1152,9 @@ typedef struct PlayerPositions {
 } PlayerPositions;
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _playerpositions_size_check[(sizeof(PlayerPositions) == 35) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
@@ -1084,7 +1170,9 @@ typedef struct TeamTactics {
 } TeamTactics;
 
 #ifndef __APPLE__
+#ifndef __APPLE__
 typedef char _teamtactics_size_check[(sizeof(TeamTactics) == 370) ? 1 : -1];
+#endif
 #endif
 
 /* ==================================================================
