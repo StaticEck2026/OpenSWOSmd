@@ -3827,7 +3827,10 @@ extern uint16_t trainingGame;
 extern uint16_t careerFileBuffer;          /* count of teams in TMD pool */
 extern uint8_t  tmdFileBuffer;             /* start of TMD team pool */
 extern uint8_t  trialistNameBuffer[];      /* 23-byte trialist name buffer */
-extern uint8_t  trialistNameBufTerminator; /* sentinel byte */
+/* trialistNameBufTerminator was a SWOS2.s 1-byte BSS label sitting at
+ * `trialistNameBuffer + 22`. Reference the buffer end directly instead
+ * of relying on adjacency — see swos_data_typed_stubs.c comment. */
+#define TRIALIST_NAME_BUF_END (&trialistNameBuffer[22])
 extern uint8_t  trialistSkillDistribution[];   /* 20 bytes cumulative prob weights */
 extern uint8_t  trialistSkillTemplates[];  /* 512 bytes packed skill nibbles */
 extern uint8_t  trialistSkillBitMasks[];   /* 32 bytes skill bit masks per position */
@@ -4354,7 +4357,7 @@ restart:;
         if (*name == ' ')
             goto handleSpace;
         *nameDst++ = *name++;
-        if (nameDst >= &trialistNameBufTerminator)
+        if (nameDst >= TRIALIST_NAME_BUF_END)
             goto restart;
         continue;
 
@@ -4395,7 +4398,7 @@ restart:;
         /* Copy from last word to end */
         while (*scan != 0) {
             *nameDst++ = *scan++;
-            if (nameDst >= &trialistNameBufTerminator)
+            if (nameDst >= TRIALIST_NAME_BUF_END)
                 goto restart;
         }
         break;
