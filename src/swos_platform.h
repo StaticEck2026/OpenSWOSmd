@@ -42,6 +42,33 @@
 #define _SWOS_ASM_STR(x)  _SWOS_ASM_STR1(x)
 #define _ASM_PFX          _SWOS_ASM_STR(__USER_LABEL_PREFIX__)
 
+/* SWOS_PACKED — gated packed-struct attribute.
+ *
+ * Most SWOS structs faithfully mirror Amiga's 2-byte struct alignment
+ * via `__attribute__((packed))`. That works fine for ELF (Linux,
+ * Amiga m68k) on every architecture we test, but Mach-O's static
+ * linker (ld64) on arm64 / x86_64 rejects packed structs that put
+ * pointer fields at non-8-byte-aligned offsets — it can't emit the
+ * relocation. Building the macOS universal binary fails with errors
+ * like "pointer not aligned in '_euroCup'+0x2E".
+ *
+ * To unblock macOS, expand SWOS_PACKED to nothing on Apple targets;
+ * the compiler then pads to natural alignment, which costs a few
+ * bytes per struct but resolves all the pointer-alignment failures.
+ * On Amiga / Linux it keeps the original packed layout — those
+ * targets continue to assume Amiga-compatible struct sizes.
+ *
+ * Static size-check asserts that pin specific struct sizes (e.g.
+ * Sprite, SpriteGraphics) are gated on __APPLE__ in addition to the
+ * existing UINTPTR_MAX bitness check.  */
+#if defined(__APPLE__)
+#define SWOS_PACKED
+#define SWOS_PACKED_ALIGN(n)
+#else
+#define SWOS_PACKED              __attribute__((packed))
+#define SWOS_PACKED_ALIGN(n)     __attribute__((packed, aligned(n)))
+#endif
+
 /* Disable all audio output. The SDL audio device is never opened, the
  * RJP1 player is never loaded, and every AudioSDL_* trigger is a no-op.
  * Useful for isolating audio-related issues during testing. */

@@ -721,7 +721,7 @@ void _DrawMenuItem(MenuEntry *entry)
          * both targets. The auto-generated tables in
          * swos_amiga_ptr_imports.c declare matching packed struct
          * types — see e.g. diyPitchTypeOrSeasonStrTable. */
-        struct __attribute__((packed)) MenuStringTableHeader {
+        struct SWOS_PACKED MenuStringTableHeader {
             void    *indexPtr;
             uint16_t base;
         };
@@ -972,7 +972,7 @@ void _UnpackMenu(uint8_t *packed, uint8_t *dest)
      * field-typed access so the pointer width round-trips for both
      * targets without a per-bitness branch. */
     {
-        struct __attribute__((packed)) PackedHdr {
+        struct SWOS_PACKED PackedHdr {
             void    *onInitPtr;
             void    *onReturnPtr;
             void    *onDrawPtr;

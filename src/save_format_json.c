@@ -2475,7 +2475,7 @@ extern uint8_t  hilGameRound[];
  * this file. Note: signature/max_size/TeamGame kit fields are BE on
  * disk; numGoals + neighbours are host-native at our save dispatch
  * point (the legacy BE swap dance hasn't run yet). */
-typedef struct __attribute__((packed)) HilFileHeader {
+typedef struct SWOS_PACKED HilFileHeader {
     uint32_t  signature;          /* +0   BE on disk */
     uint32_t  max_size;           /* +4   BE on disk */
     TeamGame  top_team;           /* +8   1018 bytes (BE int16 header) */

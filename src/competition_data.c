@@ -554,7 +554,7 @@ CompetitionLeague_3_6 newZealandLeague = {
  * offset within the composite. The .equ aliases keep the existing
  * `englishLeagues` / `englishLeagues1` / etc. extern decls working
  * unchanged. */
-typedef struct __attribute__((packed)) {
+typedef struct SWOS_PACKED {
     CompetitionLeague_4_8_2_24 _main;
     Leagues_4_2_24             _div1;
     Leagues_4_2_24             _div2;
@@ -1108,7 +1108,7 @@ uint8_t euroCupQualSeedListReduced22[23] = { 16, 12, 0, 17, 5, 27, 26, 24, 18, 2
  * Career_AdvanceToNextSeason_UpdateCompetitions's careerFileBuffer ==
  * 0x50 invariant tripped panic 0x8999. Pack into one struct and expose
  * each via .equ alias. */
-typedef struct __attribute__((packed)) {
+typedef struct SWOS_PACKED {
     uint8_t bucket15[15];
     uint8_t bucket18[18];
     uint8_t bucket22[22];

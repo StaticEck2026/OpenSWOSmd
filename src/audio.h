@@ -67,10 +67,12 @@ typedef struct {
 } VariantDescriptor;
 #pragma pack(pop)
 
+#ifndef __APPLE__
 typedef char _variantdesc_size_check[(sizeof(VariantDescriptor) == 32) ? 1 : -1];
+#endif
 
 /* ---- AudioState structure (46 bytes, matches SWOS2.s layout) ----
- * Uses pragma pack(2) instead of __attribute__((packed)) so GCC
+ * Uses pragma pack(2) instead of SWOS_PACKED so GCC
  * generates word-sized loads/stores instead of byte-by-byte access.
  * All fields are already at 2-byte-aligned offsets in the original
  * asm layout, so pack(2) produces the identical memory layout. */
@@ -95,7 +97,7 @@ typedef struct {
  * Each channel has a primary voice (PV, "beep") and a secondary voice (SV, "mod").
  * The PV and SV share the same hardware register base (hwRegBase).
  *
- * Uses pragma pack(2) instead of __attribute__((packed)) so GCC
+ * Uses pragma pack(2) instead of SWOS_PACKED so GCC
  * generates word-sized loads/stores instead of byte-by-byte access.
  * All uint32_t fields are at 2-byte-aligned offsets (not always
  * 4-byte-aligned), so pack(2) preserves the identical memory layout
@@ -190,7 +192,9 @@ typedef struct {
 
 #define AUDIO_CHANNEL_SIZE  0xB0
 
+#ifndef __APPLE__
 typedef char _audiochannel_size_check[(sizeof(AudioChannel) == AUDIO_CHANNEL_SIZE) ? 1 : -1];
+#endif
 
 /* ---- Previously ported functions ---- */
 void _InitMenuMusic(void);

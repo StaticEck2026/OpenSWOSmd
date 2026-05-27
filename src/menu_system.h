@@ -20,7 +20,7 @@ typedef void (*MenuEntryFn)(MenuEntry *entry); /* MenuEntry.onSelect / beforeDra
  * pointer + struct pointer slots are 4 bytes each, preserving the
  * size_check. On 64-bit they grow to 8 bytes — Phase 5 / 6 retypes
  * the size_check accordingly. */
-typedef struct __attribute__((packed)) {
+typedef struct SWOS_PACKED {
     MenuVoidFn   onInit;       /* 0: function pointer (or NULL) */
     MenuVoidFn   afterDraw;    /* 4: function pointer (or NULL) */
     MenuVoidFn   onDraw;       /* 8: function pointer (or NULL) */
@@ -30,7 +30,7 @@ typedef struct __attribute__((packed)) {
 } Menu;
 
 /* ---- MenuEntry struct (56 bytes) ---- */
-struct __attribute__((packed)) MenuEntry {
+struct SWOS_PACKED MenuEntry {
     uint16_t alreadyDrawn;   /* 0 */
     uint16_t ordinal;        /* 2 */
     uint16_t isInvisible;    /* 4 */
