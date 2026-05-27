@@ -1414,22 +1414,15 @@ SWOS_CHIP_BSS char imageCmdWorkBuf[0x200000];
 /* pmMenuNumPlayers: real data in swos_amiga_data_imports.c */
 /* pmSelectedPlayerEntry: real data in swos_amiga_data_imports.c */
 /* poolPlayerStrideRef: typed definition in swos_data_typed_stubs.c */
-/* poolplyrDatBuffer: file-load destination for `sound/sfx.in1` (the
- * sound-effects instrument bank 1). The Amiga `ds.b $CBE8` (52,200 bytes)
- * is undersized — sfx.in1 is 71,500 bytes on disk. On Amiga the overflow
- * happened to spill into ~6 KB of unused BSS padding (`BSS_00_75D30`)
- * plus whatever followed. On SDL the linker placed `imageCmdWorkBuf`
- * just 24 bytes after this buffer, so the overflow wrote directly into
- * the small-char glyph sprites loaded by `introMenuImageScript` — every
- * substitutes-menu text rendered as blank because slot 9..43 headers
- * were stomped (verified via per-slot SpriteGraphics dump showing
- * `pw=2 h=6 wq=1` flip to garbage immediately after `_LoadSfxResources`).
- *
- * Size to comfortably hold sfx.in1 with headroom for any future asset
- * tweak. The asset-loader writes exactly file-size bytes, so 0x14000
- * (80 KB) gives ~8.5 KB of safety margin past the current 71,500-byte
- * file. Back-port to the Amiga C port: same fix, same reason. */
-char poolplyrDatBuffer[0x14000];
+/* poolplyrDatBuffer: backing storage moved to swos_globals.c —
+ * `sfxInsBankBacking` is a single CHIP-RAM buffer aliased as both
+ * `poolplyrDatBuffer` (offset 0) and `sfxInsBank2` (offset 71500), so
+ * SFX.IN1 + SFX.IN2 form one contiguous instrument blob that the RJP1
+ * player's 32-bit offsets can index across. The Amiga Paula audio DMA
+ * also requires sample data live in CHIP RAM (this declaration was
+ * .bss/FAST RAM, unreachable by audio DMA). `poolplyr.dat` is
+ * 52200 bytes — smaller than IN1 — so it overlays the front of the
+ * combined buffer cleanly when SFX isn't loaded. */
 /* poolplyrLoaded: typed definition in swos_data_typed_stubs.c */
 /* positionFilterStringTable: real data in swos_amiga_ptr_imports.c */
 /* positionGroupTable: real data in swos_amiga_ptr_imports.c */

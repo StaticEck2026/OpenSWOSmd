@@ -680,7 +680,36 @@ __asm__(".globl " _ASM_PFX "hilFileBuffer\n"
 uint8_t menuSongData[8  * 1024];
 SWOS_CHIP_BSS uint8_t menuInsBank [64 * 1024];
 uint8_t sfxSongData [8  * 1024];
-SWOS_CHIP_BSS uint8_t sfxInsBank2 [128 * 1024];
+
+/* ---- SFX instrument bank (IN1 + IN2 contiguous in CHIP RAM) ----
+ *
+ * The Amiga Paula audio DMA can only fetch sample data from CHIP RAM,
+ * AND the RJP1 player treats sound/sfx.in1 + sound/sfx.in2 as a single
+ * contiguous instrument blob — each instrument record carries a 32-bit
+ * offset relative to the START of IN1, and offsets above IN1's size
+ * are expected to land inside IN2. SWOS2.s satisfies both: it places
+ * `poolplyrDatBuffer` (which holds IN1 once SFX is loaded) and
+ * `sfxInsBank2` exactly 71500 bytes apart in `BSSInChip`.
+ *
+ * Our previous build had `poolplyrDatBuffer` in plain .bss (FAST RAM,
+ * unreachable by Paula DMA) AND non-adjacent to `sfxInsBank2`, so SFX
+ * either played silence or the wrong samples (the user described it as
+ * "SFX not playing correctly").
+ *
+ * Single CHIP_BSS backing buffer with .equ aliases, sized to hold both
+ * banks contiguously (71500 + 81068 = 152568 bytes today, round to
+ * 192 KB for headroom). poolplyrDatBuffer also serves as the
+ * destination for `data/poolplyr.dat` (52200 bytes) — that's smaller
+ * than IN1 and lives at the same offset so it overlays cleanly when
+ * SFX isn't loaded (the original SWOS overlay behaviour, tracked by
+ * `audioBankLoaded`). */
+#define SFX_BANK_BACKING_BYTES   (192 * 1024)
+#define SFX_BANK_IN2_OFFSET      71500u
+SWOS_CHIP_BSS uint8_t sfxInsBankBacking[SFX_BANK_BACKING_BYTES];
+__asm__(".globl " _ASM_PFX "poolplyrDatBuffer\n"
+        ".equ   " _ASM_PFX "poolplyrDatBuffer, " _ASM_PFX "sfxInsBankBacking\n"
+        ".globl " _ASM_PFX "sfxInsBank2\n"
+        ".equ   " _ASM_PFX "sfxInsBank2, "      _ASM_PFX "sfxInsBankBacking + 71500\n");
 
 /* ---- Menu font tables (small + big) --------------------------------
  * Each CharTable is a 238-byte struct: header (unk1, charHeight, unk2,
