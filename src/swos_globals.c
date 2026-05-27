@@ -343,17 +343,20 @@ __asm__(".globl " _ASM_PFX "menuEntries\n"
  * placeholder glyph). This backing buffer restores the Amiga layout
  * with asm symbol aliases, matching the `currentMenu`/`menuEntries`
  * pattern above. */
+/* Typed as uint16_t[] so the compiler stores each element in NATIVE
+ * byte order. The previous byte-array init hardcoded little-endian
+ * bytes (0xD6,0x00) which worked on SDL/x86 but read as 0xD600 on
+ * Amiga BE — _ConvertSpriteColors then dereferenced sprite #54784,
+ * found garbage wquads > 0x14, and panic'd 0x982 on entering the
+ * friendly-match stadium menu. */
 __attribute__((used, aligned(2)))
-uint8_t stadiumMenuLittlePlayerBackingBuf[36] = {
-    /* +0  stadiumMenuLittlePlayer (uint16 LE) = 0 */
-    0x00, 0x00,
-    /* +2  littlePlayerSpriteGeneric (uint16 LE) = 0x00D6 */
-    0xD6, 0x00,
-    /* +4..+35 littlePlayersColorTable (uint16_t[16] LE, identity 0..15) */
-    0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00,
-    0x04, 0x00, 0x05, 0x00, 0x06, 0x00, 0x07, 0x00,
-    0x08, 0x00, 0x09, 0x00, 0x0A, 0x00, 0x0B, 0x00,
-    0x0C, 0x00, 0x0D, 0x00, 0x0E, 0x00, 0x0F, 0x00,
+uint16_t stadiumMenuLittlePlayerBackingBuf[18] = {
+    /* +0  stadiumMenuLittlePlayer */
+    0x0000,
+    /* +2  littlePlayerSpriteGeneric */
+    0x00D6,
+    /* +4..+35 littlePlayersColorTable (identity 0..15) */
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
 };
 __asm__(".globl " _ASM_PFX "stadiumMenuLittlePlayer\n"
         ".equ   " _ASM_PFX "stadiumMenuLittlePlayer, " _ASM_PFX "stadiumMenuLittlePlayerBackingBuf\n"
