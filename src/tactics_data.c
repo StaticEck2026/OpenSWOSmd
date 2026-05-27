@@ -9,6 +9,7 @@
  * TacticsPosition and enums are in data/game_types.h (to be merged later).
  */
 #include "tactics_data.h"
+#include "swos_sections.h"  /* SWOS_CHIP_BSS */
 
 #if TACTICS_DATA_C
 
@@ -17,24 +18,24 @@
  * These must reside in Chip RAM (BSSInChip section).
  * ====================================================================== */
 
-TacticsPosition tacticsPosition442 __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TacticsPosition tacticsPosition541 __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TacticsPosition tacticsPosition451 __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TacticsPosition tacticsPosition532 __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TacticsPosition tacticsPosition352 __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TacticsPosition tacticsPosition433 __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TacticsPosition tacticsPosition424 __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TacticsPosition tacticsPosition343 __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TacticsPosition tacticsPositionSweep __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TacticsPosition tacticsPosition523 __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TacticsPosition tacticsPositionAttack __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TacticsPosition tacticsPositionDefend __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TacticsPosition tacticsPositionUSERA __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TacticsPosition tacticsPositionUSERB __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TacticsPosition tacticsPositionUSERC __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TacticsPosition tacticsPositionUSERD __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TacticsPosition tacticsPositionUSERE __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TacticsPosition tacticsPositionUSERF __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
+TacticsPosition tacticsPosition442 SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TacticsPosition tacticsPosition541 SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TacticsPosition tacticsPosition451 SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TacticsPosition tacticsPosition532 SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TacticsPosition tacticsPosition352 SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TacticsPosition tacticsPosition433 SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TacticsPosition tacticsPosition424 SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TacticsPosition tacticsPosition343 SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TacticsPosition tacticsPositionSweep SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TacticsPosition tacticsPosition523 SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TacticsPosition tacticsPositionAttack SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TacticsPosition tacticsPositionDefend SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TacticsPosition tacticsPositionUSERA SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TacticsPosition tacticsPositionUSERB SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TacticsPosition tacticsPositionUSERC SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TacticsPosition tacticsPositionUSERD SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TacticsPosition tacticsPositionUSERE SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TacticsPosition tacticsPositionUSERF SWOS_CHIP_BSS __attribute__((used, externally_visible));
 
 /* Pointer table for all 18 formation position mappings */
 TacticsPosition *playersPositionsByTactics[18] = {
@@ -50,8 +51,8 @@ TacticsPosition *playersPositionsByTactics[18] = {
  * Working copies for tactics editor (BSS)
  * ====================================================================== */
 
-TeamTactics editTacticsCurrentTactics __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-TeamTactics savedCurrentTactics __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
+TeamTactics editTacticsCurrentTactics SWOS_CHIP_BSS __attribute__((used, externally_visible));
+TeamTactics savedCurrentTactics SWOS_CHIP_BSS __attribute__((used, externally_visible));
 
 /* ======================================================================
  * Built-in TeamTactics formation definitions
@@ -117,9 +118,9 @@ int8_t quadrantCoordinatesToBallQuadrant[240] = { 0, 0, 0, 5, 5, 10, 10, 15, 15,
  * Misc tactics-related variables
  * ====================================================================== */
 
-uint8_t importTacticsFilename[14] __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-uint8_t playerPositionsArray[32] __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
-uint8_t oldPlayerPositionsArray[32] __attribute__((used, externally_visible, section("BSSInChip.MEMF_CHIP")));
+uint8_t importTacticsFilename[14] SWOS_CHIP_BSS __attribute__((used, externally_visible));
+uint8_t playerPositionsArray[32] SWOS_CHIP_BSS __attribute__((used, externally_visible));
+uint8_t oldPlayerPositionsArray[32] SWOS_CHIP_BSS __attribute__((used, externally_visible));
 
 uint16_t ourCoachFrames[16] = { 2, 1, 0, 2, 0, 1, 0, 1, 2, 2, 1, 1, 0, 2, 1, 0 };
 uint16_t opponentCoachFrames[16] = { 2, 1, 2, 2, 1, 2, 0, 1, 2, 0, 1, 1, 1, 0, 1, 2 };
