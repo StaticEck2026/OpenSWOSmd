@@ -49,16 +49,26 @@ extern uint8_t  currentMenu[];
 #ifdef SWOS_SDL_BUILD
 extern uint8_t  pitchChunkyBuffer[];
 /* On SDL the pitch tile pointers live in pitchChunkyBuffer with 256-byte
- * stride per tile (vs Amiga's 128-byte bitplane stride in currentMenu).
- * Pitch.c arranges chunky tiles to be indexed by the *original* Amiga
- * tile index (offset / 128), so the same `(entry - base) / stride` math
- * still recovers the tile-pair index used by the static/animated swap. */
+ * stride per tile (vs Amiga's 128-byte bitplane stride). Pitch.c arranges
+ * chunky tiles to be indexed by the *original* Amiga tile index
+ * (offset / 128), so the same `(entry - base) / stride` math still
+ * recovers the tile-pair index used by the static/animated swap. */
 #define ANIM_TILE_BASE        ((uintptr_t)pitchChunkyBuffer)
 #define ANIM_TILE_SIZE        256u
 #define ANIM_TILE_SIZE_SHIFT  8
 #define ANIM_MAX_TILE_OFFSET  (MAX_FAN_TILE_INDEX * ANIM_TILE_SIZE)
 #else
-#define ANIM_TILE_BASE        ((uint32_t)currentMenu)
+/* The original Amiga aliased `pitchDatBuffer` and `currentMenu` to the
+ * same RAM block, so SWOS2.s could relocate each pitch slot by adding
+ * `currentMenu` and the tile-data region happened to start exactly at
+ * `currentMenu + PITCH_POINTER_COUNT*4` (= 9240). Our C build keeps the
+ * two buffers separate, and the pitch.c relocation pass uses
+ * `pitchDatBuffer + PITCH_POINTER_COUNT*4` as the slot base. The fan-
+ * animation toggle here must use the SAME base, otherwise
+ * `*a0 - base` is a random non-offset value, the static/animated
+ * check fails, and the crowd never animates. */
+#define ANIM_PITCH_POINTER_COUNT 2310u
+#define ANIM_TILE_BASE        ((uint32_t)(uintptr_t)(pitchDatBuffer + ANIM_PITCH_POINTER_COUNT * 4))
 #define ANIM_TILE_SIZE        TILE_SIZE
 #define ANIM_TILE_SIZE_SHIFT  TILE_SIZE_SHIFT
 #define ANIM_MAX_TILE_OFFSET  MAX_FAN_TILE_OFFSET
