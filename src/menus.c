@@ -148,45 +148,25 @@ extern void _LoadOverlayToFrontbuffer(const uint8_t *path);
  * Scans through strings from aResigned up to stringDataEnd,
  * replacing '*' characters with a null terminator.
  *
- * On Amiga the strings between those two labels were one contiguous
- * block of `dc.b` data, and the original block contained no '*'
- * characters — so the routine is effectively a no-op on Amiga. On
- * the SDL build `aResigned` and `stringDataEnd` are unrelated C
- * symbols with arbitrary memory (globals, including `bigCharsTable`)
- * between them; the walk would treat that memory as strings and
- * corrupt any byte whose value is 0x2A. `bigCharsTable[14+57]` is 42
- * (the 'Y' glyph sprite index) which is exactly 0x2A, so the walk
- * would zero it and 'Y' would fall through to the invalid-glyph
- * placeholder.
+ * In the original Amiga binary the strings between those two labels
+ * were one contiguous block of `dc.b` data with no '*' chars, so the
+ * routine was a runtime no-op. In our C builds (both SDL and the
+ * back-ported Amiga ELF), `aResigned` and `stringDataEnd` are
+ * unrelated C symbols at linker-determined addresses with arbitrary
+ * other globals between them — the walk corrupts every byte equal
+ * to 0x2A inside that range.
+ *
+ * SDL was already gated. On Amiga the corruption manifested as
+ * `playerPositionsStringTable[0..7]` losing its high 16 bits
+ * (entries 0..7's runtime addresses had byte-1 = 0x2A, which is
+ * exactly where the walk hit), so position/skill text never rendered
+ * on the play-match squad screen. Same fix: no-op for any C build.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _ZeroOutStars(void)
 {
-#ifdef SWOS_SDL_BUILD
-    /* No-op on SDL — see comment above. */
+    /* No-op for all C builds — see comment above. */
     return;
-#else
-    uint8_t *p = aResigned;
-    uint8_t *end = stringDataEnd;
-
-    for (;;) {
-        /* Scan string: look for '*' or end of string */
-        while (*p != 0) {
-            if (*p == '*') {
-                *p = 0;    /* replace '*' with null */
-                p++;
-                break;     /* skip to end-of-string scan */
-            }
-            p++;
-        }
-        /* Skip rest of string past null terminator */
-        while (*p != 0)
-            p++;
-        p++;
-        if (p == end)
-            return;
-    }
-#endif
 }
 
 /* ================================================================
