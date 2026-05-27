@@ -343,14 +343,10 @@ the long version):
 ## Credits
 
 - **Sensible Software** — original SWOS (1994).
-- **Tomasoft** — `SWOS_PC` (the DOS port and disassembly), invaluable as a
-  reference for the C port.
+- **Ben Baker** ([github.com/benbaker76](https://github.com/benbaker76)) —
+  reverse-engineered the SWOS Amiga 68k assembly that this C port is built
+  from, and author of the Amiga C port (`SWOS_C`).
+- **Zlatko Karakaš** ([github.com/zlatkok](https://github.com/zlatkok/)) —
+  reverse-engineered the original DOS version.
 - **Richard Joseph** — RJP1 audio engine.
 - **gabomdq** & contributors — SDL_GameControllerDB.
-
-## Licence
-
-The port code in `src/` is licensed under the same terms as the
-SWOS-disassembly references it derives from. The original SWOS data files
-are **not** included and remain Sensible Software's copyright — bring your
-own.
