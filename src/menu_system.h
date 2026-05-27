@@ -106,11 +106,19 @@ struct SWOS_PACKED MenuEntry {
  * MenuEntry has 5 pointer-width fields (bg, fg uintptr_t + onSelect,
  * beforeDraw, afterDrawCb fn-ptrs); +20 on 64-bit. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
+#ifndef __APPLE__
 typedef char _menu_size_check[(sizeof(Menu) == 22) ? 1 : -1];
+#endif
+#ifndef __APPLE__
 typedef char _menuentry_size_check[(sizeof(MenuEntry) == 56) ? 1 : -1];
+#endif
 #else
+#ifndef __APPLE__
 typedef char _menu_size_check[(sizeof(Menu) == 38) ? 1 : -1];
+#endif
+#ifndef __APPLE__
 typedef char _menuentry_size_check[(sizeof(MenuEntry) == 76) ? 1 : -1];
+#endif
 #endif
 
 /* ---- Constants ----

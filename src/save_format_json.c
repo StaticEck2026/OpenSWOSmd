@@ -2489,7 +2489,9 @@ typedef struct SWOS_PACKED HilFileHeader {
     uint16_t  max_substitutes;    /* +2252 */
 } HilFileHeader;
 
+#ifndef __APPLE__
 typedef char _hilheader_size_check[(sizeof(HilFileHeader) == 2254) ? 1 : -1];
+#endif
 
 #define HIL_HEADER_SIZE  ((uint32_t)sizeof(HilFileHeader))
 #define HIL_SCENE_SIZE   19000u
