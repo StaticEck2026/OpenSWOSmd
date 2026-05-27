@@ -149,15 +149,13 @@ void _FixupAndColorPitchFile(void)
 {
     uint32_t *pitchPtrs;
     int16_t i;
-#ifdef SWOS_SDL_BUILD
-    /* SDL: the entire pitch file is loaded into pitchDatBuffer. The
-     * pointer-table entries are byte offsets from the start of the
-     * tile-data region, which begins right after the 9240-byte
-     * pointer table. */
+    /* Pitch-file pointer-table entries are byte offsets from the start
+     * of the tile-data region, which begins right after the 9240-byte
+     * pointer table. The original Amiga used `currentMenu` here because
+     * it aliased the same RAM block as pitchDatBuffer; our C build keeps
+     * them separate, so we must compute the tile-data base from the
+     * actual pitch buffer for both targets. */
     uint32_t baseAddr = (uint32_t)(uintptr_t)(pitchDatBuffer + PITCH_POINTER_COUNT * 4);
-#else
-    uint32_t baseAddr = (uint32_t)currentMenu;
-#endif
     TeamGame *teamData;
     uint16_t kitPrimary, kitSecondary, kitTertiary;
 
