@@ -969,21 +969,35 @@ void *kGoalieSkillTables[8] = {
  * team ids, and tripped _Career_AppendTeamToTmdTeamPool's 0x3443
  * panic. Pack the whole region into one buffer matching the Amiga
  * BSS run and expose each slot via inline-asm .equ alias. */
-__attribute__((used, aligned(4))) uint8_t qualifiedTeamGridsBlock[0x2AC0];
-__asm__(".globl " _ASM_PFX "primaryQualifiedTeamGrids\n"
-        ".equ   " _ASM_PFX "primaryQualifiedTeamGrids, " _ASM_PFX "qualifiedTeamGridsBlock\n");
-/* offset 0x2010 = 0x1AB8 + 0x558 (10 primary slots + 2 unnamed slots) */
-__asm__(".globl " _ASM_PFX "tertiaryQualifiedTeamGrid\n"
-        ".equ   " _ASM_PFX "tertiaryQualifiedTeamGrid, " _ASM_PFX "qualifiedTeamGridsBlock + 0x2010\n");
-/* offset 0x22BC = 0x2010 + 0x2AC */
-__asm__(".globl " _ASM_PFX "euroCupTitleHolderGrid\n"
-        ".equ   " _ASM_PFX "euroCupTitleHolderGrid, " _ASM_PFX "qualifiedTeamGridsBlock + 0x22BC\n");
-/* offset 0x2568 = 0x22BC + 0x2AC */
-__asm__(".globl " _ASM_PFX "cupWinnersCupTitleHolderGrid\n"
-        ".equ   " _ASM_PFX "cupWinnersCupTitleHolderGrid, " _ASM_PFX "qualifiedTeamGridsBlock + 0x2568\n");
-/* offset 0x2814 = 0x2568 + 0x2AC */
-__asm__(".globl " _ASM_PFX "uefaCupTitleHolderGrid\n"
-        ".equ   " _ASM_PFX "uefaCupTitleHolderGrid, " _ASM_PFX "qualifiedTeamGridsBlock + 0x2814\n");
+__asm__(
+#if defined(__APPLE__)
+    ".pushsection __DATA,__bss\n"
+#elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+    ".pushsection .bss\n"
+#else
+    ".pushsection .bss,\"aw\",%nobits\n"
+#endif
+    ".p2align 2\n"
+    ".globl " _ASM_PFX "qualifiedTeamGridsBlock\n"
+    _ASM_PFX "qualifiedTeamGridsBlock:\n"
+    ".globl " _ASM_PFX "primaryQualifiedTeamGrids\n"
+    _ASM_PFX "primaryQualifiedTeamGrids:\n"
+    ".skip 8208\n"
+    ".globl " _ASM_PFX "tertiaryQualifiedTeamGrid\n"
+    _ASM_PFX "tertiaryQualifiedTeamGrid:\n"
+    ".skip 684\n"
+    ".globl " _ASM_PFX "euroCupTitleHolderGrid\n"
+    _ASM_PFX "euroCupTitleHolderGrid:\n"
+    ".skip 684\n"
+    ".globl " _ASM_PFX "cupWinnersCupTitleHolderGrid\n"
+    _ASM_PFX "cupWinnersCupTitleHolderGrid:\n"
+    ".skip 684\n"
+    ".globl " _ASM_PFX "uefaCupTitleHolderGrid\n"
+    _ASM_PFX "uefaCupTitleHolderGrid:\n"
+    ".skip 684\n"
+    ".popsection\n"
+);
+
 
 /* gameRound: on Amiga the 1-byte gameRound label is followed by an
  * unnamed 99-byte BSS region (BSS_00_CD54 in SWOS2.s) that the
@@ -993,9 +1007,23 @@ __asm__(".globl " _ASM_PFX "uefaCupTitleHolderGrid\n"
  * (which sits adjacent on SDL). highlight.c also iterates 40 bytes
  * between gameRound and hilGameRound. Provide a 100-byte buffer to
  * match the Amiga round-string capacity. */
-__attribute__((used, aligned(4))) uint8_t gameRoundBuf[100];
-__asm__(".globl " _ASM_PFX "gameRound\n"
-        ".equ   " _ASM_PFX "gameRound, " _ASM_PFX "gameRoundBuf\n");
+__asm__(
+#if defined(__APPLE__)
+    ".pushsection __DATA,__bss\n"
+#elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+    ".pushsection .bss\n"
+#else
+    ".pushsection .bss,\"aw\",%nobits\n"
+#endif
+    ".p2align 2\n"
+    ".globl " _ASM_PFX "gameRoundBuf\n"
+    _ASM_PFX "gameRoundBuf:\n"
+    ".globl " _ASM_PFX "gameRound\n"
+    _ASM_PFX "gameRound:\n"
+    ".skip 100\n"
+    ".popsection\n"
+);
+
 
 /* diyFileBufferCopy + diyCompetitionStart share one BSS run on Amiga:
  *
@@ -1025,27 +1053,29 @@ __asm__(".globl " _ASM_PFX "gameRound\n"
  * Sizing: 0x420 (diyFileBufferCopy region) + 0x734 (diyCompetitionStart
  * extended region) = 0xB54 minimum. Round up to 0x2000 (8192) for
  * defensive headroom — the 1450-word copy reaches 0xB54 anyway. */
-__attribute__((used, aligned(4))) uint8_t diyFileBufferCopyBuf[8192];
-__asm__(".globl " _ASM_PFX "diyFileBufferCopy\n"
-        ".equ   " _ASM_PFX "diyFileBufferCopy, " _ASM_PFX "diyFileBufferCopyBuf\n");
+__asm__(
+#if defined(__APPLE__)
+    ".pushsection __DATA,__bss\n"
+#elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+    ".pushsection .bss\n"
+#else
+    ".pushsection .bss,\"aw\",%nobits\n"
+#endif
+    ".p2align 2\n"
+    ".globl " _ASM_PFX "diyFileBufferCopyBuf\n"
+    _ASM_PFX "diyFileBufferCopyBuf:\n"
+    ".globl " _ASM_PFX "diyFileBufferCopy\n"
+    _ASM_PFX "diyFileBufferCopy:\n"
+    ".skip 154\n"
+    ".globl " _ASM_PFX "diyTournamentTeamIds\n"
+    _ASM_PFX "diyTournamentTeamIds:\n"
+    ".skip 902\n"
+    ".globl " _ASM_PFX "diyCompetitionStartBuf\n"
+    _ASM_PFX "diyCompetitionStartBuf:\n"
+    ".skip 7136\n"
+    ".popsection\n"
+);
 
-/* diyTournamentTeamIds: Amiga `diyFileBufferCopy + 0x9A`.
- * _PresetCompetitionMenu writes selected team IDs via the named global
- * (_CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyTournamentTeamIds))
- * while _DIY_LoadCurrentCompetitionSlot reads them as
- * (uint16_t *)(diyFileBufferCopy + 0x9A) when copying into the runtime
- * teamShuffleOrder. */
-__asm__(".globl " _ASM_PFX "diyTournamentTeamIds\n"
-        ".equ   " _ASM_PFX "diyTournamentTeamIds, " _ASM_PFX "diyFileBufferCopyBuf + 0x9A\n");
-
-/* diyCompetitionStartBuf is now an alias into diyFileBufferCopyBuf, NOT
- * a separate array. All the `.equ ... diyCompetitionStartBuf + N` aliases
- * below resolve through to diyFileBufferCopyBuf + 0x420 + N, matching
- * the Amiga BSS layout and ensuring league standings (at +0x2B4 within
- * the diyCompetitionStart region) end up at diyFileBufferCopyBuf +
- * 0x6D4 — inside the save-time Copy's reach. */
-__asm__(".globl " _ASM_PFX "diyCompetitionStartBuf\n"
-        ".equ   " _ASM_PFX "diyCompetitionStartBuf, " _ASM_PFX "diyFileBufferCopyBuf + 0x420\n");
 __asm__(".globl " _ASM_PFX "diyCompetitionStart\n"
         ".equ   " _ASM_PFX "diyCompetitionStart, " _ASM_PFX "diyCompetitionStartBuf\n");
 
@@ -1176,11 +1206,26 @@ __asm__(".globl " _ASM_PFX "diyMinSubstitutes\n"
  * each slot for the '.' that starts the file extension. The Amiga
  * sized this run as numberOfFiles(2) + 2 pad + foundFilenamesBuffer($77E)
  * = 0x782 bytes total. */
-__attribute__((used, aligned(4))) uint8_t numberOfFilesBuf[0x782];
-__asm__(".globl " _ASM_PFX "numberOfFiles\n"
-        ".equ   " _ASM_PFX "numberOfFiles, " _ASM_PFX "numberOfFilesBuf\n"
-        ".globl " _ASM_PFX "foundFilenamesBuffer\n"
-        ".equ   " _ASM_PFX "foundFilenamesBuffer, " _ASM_PFX "numberOfFilesBuf + 4\n");
+__asm__(
+#if defined(__APPLE__)
+    ".pushsection __DATA,__bss\n"
+#elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
+    ".pushsection .bss\n"
+#else
+    ".pushsection .bss,\"aw\",%nobits\n"
+#endif
+    ".p2align 2\n"
+    ".globl " _ASM_PFX "numberOfFilesBuf\n"
+    _ASM_PFX "numberOfFilesBuf:\n"
+    ".globl " _ASM_PFX "numberOfFiles\n"
+    _ASM_PFX "numberOfFiles:\n"
+    ".skip 4\n"
+    ".globl " _ASM_PFX "foundFilenamesBuffer\n"
+    _ASM_PFX "foundFilenamesBuffer:\n"
+    ".skip 1918\n"
+    ".popsection\n"
+);
+
 
 /* careerTeam: aliased in swos_globals_career_overlay.c to
  * careerFileBufferBuf + 56190. On Amiga it lives inside the career
