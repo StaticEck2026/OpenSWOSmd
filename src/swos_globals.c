@@ -471,6 +471,14 @@ __asm__(".globl " _ASM_PFX "kSpriteBlitQueueSentinel_A\n"
         ".globl " _ASM_PFX "kSpriteBlitQueueSentinel_B\n"
         ".equ   " _ASM_PFX "kSpriteBlitQueueSentinel_B, " _ASM_PFX "spriteBlitQueueB_backing\n");
 
+/* trialistNameBufTerminator overflow check: handled directly in
+ * transfer_market.c via `&trialistNameBuffer[22]`. The `.equ`
+ * cross-translation-unit alias trick we use for stadiumMenuLittlePlayer
+ * etc. doesn't work here because trialistNameBuffer lives in a
+ * different .o (swos_data_bulk_imports.o) — m68k-amiga-elf's assembler
+ * can't resolve `.equ X, Y+22` when Y is external. The fix is local
+ * to the bounds-check site instead. */
+
 /* ---- Edit-teams kit-editor sprite-copy blocks -----------------------
  * Six MENU_CMD_SPRITE_COPY blocks that preview the primary/secondary
  * shirt/shorts/socks in the kit editor. Each is a 36-byte struct:

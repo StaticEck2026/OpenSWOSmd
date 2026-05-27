@@ -277,7 +277,14 @@ uint8_t nationalityOrdinal  = 0;
  * mis-classified it as a scalar with the SWOS2.s file offset (1312736)
  * as its value, so any _ShowMenu(diskMenu) crashed in _UnpackMenu
  * when it walked off the end of the 4-byte allocation. */
-uint8_t trialistNameBufTerminator  = 0;
+/* trialistNameBufTerminator: in SWOS2.s this was a 1-byte BSS label
+ * placed immediately AFTER `trialistNameBuffer[22]`, used by
+ * pickRandomTrialistOriginValue's overflow check `nameDst >=
+ * &trialistNameBufTerminator`. Our C build had it as a standalone
+ * uint8_t at a linker-determined address that landed BELOW the buffer,
+ * so the check fired on the very first character write and the
+ * function spun forever via `goto restart` (career init froze after
+ * the chairman's memo). Alias it at trialistNameBuffer+22 instead. */
 uint32_t loaderBankBitmap;
 uint32_t loaderParam;
 uint32_t loaderMemTop;
