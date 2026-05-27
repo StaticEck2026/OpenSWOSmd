@@ -126,7 +126,24 @@ typedef char _menuentry_size_check[(sizeof(MenuEntry) == 76) ? 1 : -1];
  * 5 pointer-width fields (uintptr_t bg/fg + 3 fn-ptrs); both struct sizes
  * grow on 64-bit (+16 / +20). The `menuEntries` link-time alias in
  * swos_globals.c uses the same offset and must stay in sync. */
-#if UINTPTR_MAX == 0xFFFFFFFFu
+#if defined(__APPLE__)
+/* Apple targets disable SWOS_PACKED — the compiler naturally aligns
+ * pointer fields (so ld64 can emit pointer relocations). That changes
+ * sizeof(Menu) / sizeof(MenuEntry) vs the packed sizes. Computed
+ * by hand for the unpacked 64-bit layout (32-bit Apple builds are
+ * not a target):
+ *   Menu      = 4*8 (pointers) + 2 (numEntries) + 2 pad + 4 (endOfMenuPtr) = 40
+ *   MenuEntry = same field set as packed but with natural alignment for
+ *               the embedded uintptr_t bg/fg unions and the 3 function
+ *               pointers. Walk: 0..29 (30B of u16/i8), align→32, bg union
+ *               (8B), content u16, stringFlags u16, align→48, fg union
+ *               (8B), align→56, onSelect (8B), controlMask u16, align→72,
+ *               beforeDraw (8B), afterDrawCb (8B) = 88 bytes.
+ * MENU_HEADER_SIZE must be a numeric literal because swos_globals.c
+ * stringifies it into the menuEntries-alias inline asm. */
+#define MENU_HEADER_SIZE   40
+#define MENUENTRY_STRIDE   88
+#elif UINTPTR_MAX == 0xFFFFFFFFu
 #define MENU_HEADER_SIZE   22
 #define MENUENTRY_STRIDE   56
 #else
