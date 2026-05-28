@@ -79,6 +79,7 @@ target architecture. Pass an arch flag for cross builds.
 | Target                                 | Command                | Output                |
 |----------------------------------------|------------------------|-----------------------|
 | Linux x86 (default, 32-bit)            | `make`                 | `bin/SWOS`            |
+| Linux x86_64 (64-bit)                  | `make X86_64=1`        | `bin/SWOS.x86_64`     |
 | Linux ARM64 (aarch64) — Pi 4/5 etc.    | `make ARM64=1`         | `bin/SWOS.aarch64`    |
 | Linux ARM32 (armhf, armv7-a + NEON)    | `make ARM=1`           | `bin/SWOS.armhf`      |
 | Windows                                | `make` on MSYS2/Cygwin | `bin/SWOS.exe`        |
@@ -107,6 +108,19 @@ sudo pacman -S lib32-sdl2
 ```
 make
 ./bin/SWOS
+```
+
+### Linux x86_64 (64-bit)
+
+Same code path, no `-m32`. The 64-bit struct sizes are picked up via
+the bitness-conditional `size_check[]` asserts (same as macOS / aarch64).
+Needs the 64-bit SDL2 (`libsdl2-dev` on Debian / Ubuntu, not the
+`:i386` cross-arch one).
+
+```
+sudo apt install libsdl2-dev
+make X86_64=1
+./bin/SWOS.x86_64
 ```
 
 ### Linux ARM64 (Raspberry Pi 4 / 5, aarch64 server, etc.)

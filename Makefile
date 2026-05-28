@@ -98,6 +98,12 @@ else ifdef ARM
 # Pi) also get the .armhf suffix — `file bin/SWOS.armhf` confirms the
 # ELF arch either way.
 TARGET_NAME := SWOS.armhf
+else ifdef X86_64
+# Linux x86_64 explicit build (drops the default -m32 so the binary
+# is 64-bit LP64 — matches what the macOS / aarch64 / cygwin64
+# targets already produce). The size_check[] asserts are gated on
+# UINTPTR_MAX so they pick up the 64-bit struct sizes correctly.
+TARGET_NAME := SWOS.x86_64
 else ifeq ($(UNAME_S),Darwin)
 TARGET_NAME := SWOS.macos
 else
@@ -199,6 +205,11 @@ else ifneq (,$(findstring CYGWIN,$(UNAME_S)))
 # bitness-conditional asserts the same way aarch64 does). Testers
 # wanting a 32-bit Windows binary should use MSYS2 MINGW32 instead.
 ARCHFLAGS :=
+else ifdef X86_64
+# Explicit 64-bit Linux x86 build. Drop -m32 and pass -m64 so the
+# binary is LP64. Same code path as cygwin64 / aarch64 / macOS for
+# the bitness-conditional size_check asserts.
+ARCHFLAGS := -m64
 else
 ARCHFLAGS := -m32
 endif
