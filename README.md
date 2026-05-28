@@ -73,51 +73,79 @@ bin/
 
 ## Building
 
-### Linux
+The Makefile auto-detects the host and produces a binary named per the
+target architecture. Pass an arch flag for cross builds.
 
-You need a 32-bit SDL2 build. The codebase is compiled with `-m32` so the
-Amiga `long`/pointer struct sizes survive on a 64-bit host (this is one of
-the things step 3 of the roadmap will eventually undo).
+| Target                                 | Command                | Output                |
+|----------------------------------------|------------------------|-----------------------|
+| Linux x86 (default, 32-bit)            | `make`                 | `bin/SWOS`            |
+| Linux ARM64 (aarch64) — Pi 4/5 etc.    | `make ARM64=1`         | `bin/SWOS.aarch64`    |
+| Linux ARM32 (armhf, armv7-a + NEON)    | `make ARM=1`           | `bin/SWOS.armhf`      |
+| Windows                                | `make` on MSYS2/Cygwin | `bin/SWOS.exe`        |
+| macOS (native, single-arch)            | `make`                 | `bin/SWOS.macos`      |
+| macOS universal binary (x86_64 + arm64)| `make macos-universal` | `bin/SWOS.macos`      |
+
+Common flags:
+- `make clean` first if you've switched between archs in the same checkout.
+- `make SWOS_DEBUG=1` adds the diagnostic-logging build (autoskip / sfx).
+- `make -j4` (or higher) parallelises the compile.
+
+### Linux x86 (32-bit, default)
+
+Default target. Compiles with `-m32` so the Amiga `long`/pointer struct
+sizes match the original 68k layout on a 64-bit host. Needs the 32-bit
+SDL2 + multilib gcc:
 
 ```
-arch linux:
+# Debian / Ubuntu
+sudo apt install gcc-multilib libsdl2-2.0-0:i386 libsdl2-dev:i386
+
+# Arch
 sudo pacman -S lib32-sdl2
-debian/ubuntu:
-sudo apt install libsdl2-2.0-0:i386
 ```
-
-You'll also need 32-bit gcc + headers (`gcc-multilib` on Debian/Ubuntu;
-already present in stock Arch).
-
-Build:
 
 ```
 make
 ./bin/SWOS
 ```
 
-### Windows
+### Linux ARM64 (Raspberry Pi 4 / 5, aarch64 server, etc.)
 
-Build with MSYS2 / MinGW32 (gcc 32-bit), Cygwin 32-bit, or cross-compile from
-Linux with `i686-w64-mingw32-gcc`. The Makefile auto-detects the toolchain
-and emits `bin/SWOS.exe`.
+```
+# Native on the Pi (Raspberry Pi OS 64-bit)
+sudo apt install build-essential libsdl2-dev
+make ARM64=1
+./bin/SWOS.aarch64
+```
 
-For Windows users we ship the SDL2 DLLs alongside the executable so no
-external SDL2 install is needed — just unzip and run `SWOS.exe`.
+Cross-building from an x86_64 host is a bit more involved — enable the
+foreign architecture and install both the cross-compiler and arm64 SDL2:
 
-### WSL2
+```
+sudo dpkg --add-architecture arm64
+sudo apt update
+sudo apt install gcc-aarch64-linux-gnu libsdl2-dev:arm64
 
-Works under WSL2 with WSLg or an X server. Audio uses queue mode (not
-callback) because WSL2 + PulseAudio has very uneven scheduling on the SDL
-audio callback thread; the queue path is paced from the main game loop and
-is stable.
+make ARM64=1
+```
 
-### ARM 32-bit (Raspberry Pi etc.)
+The Makefile picks `aarch64-linux-gnu-gcc` and reads SDL2 from the
+matching pkgconfig directory. ARM64 is LP64 — no `-m32`.
 
-Cross-build to armhf from an x86_64 Debian/Ubuntu host. First enable
-the foreign architecture and update the package index — Ubuntu's
-default sources for `amd64` don't include armhf packages, so you
-also need to point `apt` at `ports.ubuntu.com`:
+### Linux ARM32 (armhf, Raspberry Pi 2 / 3, or Pi 4/5 in 32-bit mode)
+
+Native on the Pi:
+
+```
+sudo apt install build-essential libsdl2-dev
+make ARM=1
+./bin/SWOS.armhf
+```
+
+Cross-build from an x86_64 Debian/Ubuntu host needs the armhf foreign
+arch enabled. Ubuntu's default sources don't carry armhf packages, so
+you also have to point apt at `ports.ubuntu.com` (Debian users: skip,
+`deb.debian.org` has all archs):
 
 ```
 sudo dpkg --add-architecture armhf
@@ -125,14 +153,10 @@ sudo dpkg --add-architecture armhf
 # Restrict your existing amd64 sources so apt doesn't try ports for them.
 sudo sed -i -E 's,^(deb )(http),\1[arch=amd64] \2,' /etc/apt/sources.list
 
-# Add armhf sources pointing at ports.ubuntu.com (which actually carries
-# arm packages). You need ALL FOUR pockets — main universe + -updates +
-# -security + -backports — otherwise apt finds the old base-pocket
-# libc6:armhf and refuses to install libsdl2-dev:armhf because of
-# version mismatches across the dependency chain.
-# Replace 'jammy' with your Ubuntu codename (`lsb_release -cs` to check;
-# jammy = 22.04, noble = 24.04). Debian users: skip these steps —
-# deb.debian.org carries all release architectures by default.
+# Add armhf sources. You need ALL FOUR pockets — main universe +
+# -updates + -security + -backports — otherwise libsdl2-dev:armhf
+# pulls in an old libc6:armhf and refuses to install. Replace 'jammy'
+# with your Ubuntu codename (`lsb_release -cs`; jammy = 22.04, noble = 24.04).
 CODENAME=$(lsb_release -cs)
 sudo tee /etc/apt/sources.list.d/ports-armhf.list <<EOF
 deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ $CODENAME main universe
@@ -147,19 +171,47 @@ sudo apt install gcc-arm-linux-gnueabihf libsdl2-dev:armhf
 make ARM=1
 ```
 
-The Makefile picks `arm-linux-gnueabihf-gcc` and runs the host
-`pkg-config` with `PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig`
-so it returns the armhf SDL2 paths instead of the amd64 ones. Builds
-for `armv7-a` with NEON (covers Pi 2 / 3 / 4 / 5 in 32-bit mode), and
-skips the `-m32` flag because armhf is already a 32-bit ABI. Override
-with `make ARM=1 CC=...` if your distro uses a different cross-compiler
-prefix. Pass `SWOS_DEBUG=1` alongside to get the diagnostic loggers
-compiled in.
+Compiles for `armv7-a` with NEON (covers Pi 2 / 3 / 4 / 5 in 32-bit
+mode). armhf is already ILP32 so no `-m32`. Override the toolchain
+prefix with `make ARM=1 CC=...` if your distro uses a different one.
 
-Building **on the Pi natively** is simpler — install the regular
-`build-essential libsdl2-dev` packages and run `make ARM=1`. The
-ARM=1 flag still picks the right `-march=armv7-a -mfpu=neon` flags
-and skips `-m32`, but uses the native gcc.
+### Windows
+
+Build with MSYS2 / MinGW32 (gcc 32-bit), Cygwin 32-bit, or cross-compile
+from Linux with `i686-w64-mingw32-gcc`. The Makefile auto-detects the
+toolchain and emits `bin/SWOS.exe`.
+
+For end users we ship the SDL2 DLL alongside the executable so no
+external SDL2 install is needed — just unzip and run `SWOS.exe`.
+
+### WSL2
+
+The default `make` builds a Linux x86 binary that runs under WSL2 with
+WSLg (or an X server). Audio uses queue mode (not callback) because
+WSL2 + PulseAudio has uneven scheduling on the SDL audio callback
+thread; the queue path is paced from the main game loop and is stable.
+
+### macOS
+
+Builds a Mach-O binary using clang / `cc`. Supports both Intel
+(`x86_64`) and Apple Silicon (`arm64`) natively, and can produce a
+universal binary that runs on both. Default deployment target is
+macOS 11 (Big Sur).
+
+```
+# Single-arch native build
+brew install sdl2 pkg-config
+make
+./bin/SWOS.macos
+
+# Universal binary (x86_64 + arm64)
+# Requires SDL2.framework from libsdl.org (universal, drop into /Library/Frameworks/)
+make macos-universal
+```
+
+Full details — SDL2 framework setup, deployment-target overrides,
+.app bundle layout, troubleshooting — are in
+[`docs/MACOS_BUILD.md`](docs/MACOS_BUILD.md).
 
 ## Running
 
