@@ -85,6 +85,7 @@ target architecture. Pass an arch flag for cross builds.
 | Windows                                | `make` on MSYS2/Cygwin | `bin/SWOS.exe`        |
 | macOS (native, single-arch)            | `make`                 | `bin/SWOS.macos`      |
 | macOS universal binary (x86_64 + arm64)| `make macos-universal` | `bin/SWOS.macos`      |
+| macOS `.app` bundle (data + SDL2 inside)| `make macos-app`       | `bin/SWOS.app`        |
 
 Common flags:
 - `make clean` first if you've switched between archs in the same checkout.

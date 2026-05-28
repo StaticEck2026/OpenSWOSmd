@@ -143,29 +143,50 @@ The binary expects to find game data (`data/`, `grafs/`, `grafs_aga/`,
 
 ### As an .app bundle (optional, for sharing)
 
-To distribute, wrap the binary in a minimal `.app` bundle so users get
-a normal Finder icon and double-click behaviour:
+```
+make macos-app
+```
+
+Builds the universal binary first, then assembles `bin/SWOS.app`:
 
 ```
 SWOS.app/
 └── Contents/
-    ├── Info.plist
+    ├── Info.plist                   # bundle metadata (CFBundleName, version, min-OS, …)
+    ├── PkgInfo                      # "APPL????" legacy marker
     ├── MacOS/
-    │   └── SWOS                 # the universal binary
+    │   ├── SWOS                     # the universal binary
+    │   ├── data/                    # game assets (copied from bin/data/)
+    │   ├── grafs/
+    │   ├── grafs_aga/
+    │   ├── sound/
+    │   └── save/                    # whatever you have in bin/save/ at build time
     ├── Frameworks/
-    │   └── SDL2.framework       # bundled (so user doesn't need to install)
+    │   └── SDL2.framework           # bundled (so user doesn't need to install)
     └── Resources/
-        ├── data/                # game assets
-        ├── grafs/
-        ├── grafs_aga/
-        └── sound/
+        └── SWOS.icns                # optional, picked up if present in repo root
 ```
 
-The Makefile links with `-rpath @executable_path/../Frameworks` so a
-bundled `SDL2.framework` is picked up automatically when present.
+The binary's `-rpath @executable_path/../Frameworks` means a bundled
+`SDL2.framework` at `Contents/Frameworks/` resolves automatically — end
+users don't need to install SDL2 themselves.
 
-(There's no `make app-bundle` target yet — wrap it by hand or with a
-short shell script when you're ready to ship.)
+Run it via `open bin/SWOS.app` (or just double-click in Finder).
+
+**Gatekeeper note**: the bundle is unsigned. Running it on the same
+Mac that built it is fine; copied to another Mac, macOS may refuse
+to launch ("developer cannot be verified"). Two options:
+
+```bash
+# Ad-hoc sign — lets right-click → Open work on any Mac
+codesign --force --deep --sign - bin/SWOS.app
+
+# Wrap in a .dmg for distribution
+hdiutil create -fs HFS+ -srcfolder bin/SWOS.app -volname SWOS bin/SWOS.dmg
+```
+
+Proper Developer-ID signing + notarisation needs a paid Apple Developer
+account and `xcrun notarytool` — out of scope for this doc.
 
 ---
 

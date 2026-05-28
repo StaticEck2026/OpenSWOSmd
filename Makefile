@@ -312,7 +312,7 @@ endif
 LDLIBS  := $(SDL2_LIBS) -lm
 
 # ---- Targets ----
-.PHONY: all clean debug macos-universal
+.PHONY: all clean debug macos-universal macos-app
 all: $(TARGET)
 
 debug:
@@ -377,3 +377,85 @@ macos-universal:
 	     $(BINDIR)/SWOS.macos.x86_64 $(BINDIR)/SWOS.macos.arm64
 	@lipo -info $(BINDIR)/SWOS.macos
 	@echo "==> Universal binary: $(BINDIR)/SWOS.macos"
+
+# ---- macOS .app bundle ------------------------------------------- *
+# Builds (or reuses) the universal binary, then assembles a complete
+# bin/SWOS.app drag-installable bundle that includes:
+#   - the universal SWOS binary at Contents/MacOS/SWOS
+#   - the game data dirs (data/ grafs/ grafs_aga/ sound/ save/)
+#     beside the binary, where the SWOS chdir-to-own-dir startup
+#     finds them
+#   - SDL2.framework bundled in Contents/Frameworks/ so end users
+#     don't need to install SDL2 themselves (the binary's -rpath
+#     already points at @executable_path/../Frameworks)
+#   - a minimal Info.plist + PkgInfo
+#   - an optional SWOS.icns icon if one is present in the checkout
+#
+# The bundle is unsigned by default — local double-click works, but
+# Gatekeeper will warn on first launch when copied to another Mac.
+# `codesign --force --deep --sign - bin/SWOS.app` adds an ad-hoc
+# signature that lets right-click → Open work without warnings.
+
+# Info.plist content as a multi-line variable (exported so the recipe
+# can echo it via $$INFO_PLIST_CONTENT without escaping quotes).
+define INFO_PLIST_CONTENT
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>               <string>SWOS</string>
+    <key>CFBundleDisplayName</key>        <string>SWOS</string>
+    <key>CFBundleIdentifier</key>         <string>com.benbaker.swos</string>
+    <key>CFBundleVersion</key>            <string>1.0</string>
+    <key>CFBundleShortVersionString</key> <string>1.0</string>
+    <key>CFBundlePackageType</key>        <string>APPL</string>
+    <key>CFBundleSignature</key>          <string>????</string>
+    <key>CFBundleExecutable</key>         <string>SWOS</string>
+    <key>CFBundleIconFile</key>           <string>SWOS</string>
+    <key>LSMinimumSystemVersion</key>     <string>$(MACOS_MIN)</string>
+    <key>LSApplicationCategoryType</key>  <string>public.app-category.sports-games</string>
+    <key>NSHighResolutionCapable</key>    <true/>
+</dict>
+</plist>
+endef
+export INFO_PLIST_CONTENT
+
+macos-app: macos-universal
+	@test "$$(uname -s)" = Darwin || { \
+	    echo "macos-app: must run on macOS (got $$(uname -s))" >&2; \
+	    exit 1; }
+	@echo "==> [macos-app] Assembling $(BINDIR)/SWOS.app"
+	@APP=$(BINDIR)/SWOS.app; \
+	  rm -rf $$APP; \
+	  mkdir -p $$APP/Contents/MacOS \
+	           $$APP/Contents/Frameworks \
+	           $$APP/Contents/Resources; \
+	  echo "    binary: Contents/MacOS/SWOS"; \
+	  cp $(BINDIR)/SWOS.macos $$APP/Contents/MacOS/SWOS; \
+	  chmod +x $$APP/Contents/MacOS/SWOS; \
+	  if [ -d "$(SDL2_MACOS_FW)/SDL2.framework" ]; then \
+	    echo "    bundling SDL2.framework from $(SDL2_MACOS_FW)"; \
+	    cp -R "$(SDL2_MACOS_FW)/SDL2.framework" $$APP/Contents/Frameworks/; \
+	  else \
+	    echo "    WARNING: SDL2.framework not found — user will need to install it system-wide" >&2; \
+	  fi; \
+	  for d in data grafs grafs_aga sound save; do \
+	    if [ -d "$(BINDIR)/$$d" ]; then \
+	      echo "    copying $$d/"; \
+	      cp -R "$(BINDIR)/$$d" $$APP/Contents/MacOS/; \
+	    fi; \
+	  done; \
+	  if   [ -f SWOS.icns ];           then cp SWOS.icns           $$APP/Contents/Resources/; \
+	  elif [ -f $(BINDIR)/SWOS.icns ]; then cp $(BINDIR)/SWOS.icns $$APP/Contents/Resources/; \
+	  else echo "    (no SWOS.icns — Finder will use the default app icon)"; fi; \
+	  printf 'APPL????' > $$APP/Contents/PkgInfo; \
+	  echo "$$INFO_PLIST_CONTENT" > $$APP/Contents/Info.plist; \
+	  xattr -cr $$APP 2>/dev/null || true; \
+	  echo ""; \
+	  echo "==> bin/SWOS.app ready"; \
+	  echo "    archs: $$(lipo -info $$APP/Contents/MacOS/SWOS 2>/dev/null | sed 's/^.*: //')"; \
+	  echo "    size:  $$(du -sh $$APP | cut -f1)"; \
+	  echo ""; \
+	  echo "    Run:        open $$APP"; \
+	  echo "    Ad-hoc sign: codesign --force --deep --sign - $$APP"; \
+	  echo "    Distribute: hdiutil create -fs HFS+ -srcfolder $$APP -volname SWOS $(BINDIR)/SWOS.dmg"
