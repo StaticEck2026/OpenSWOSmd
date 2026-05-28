@@ -489,10 +489,20 @@ pattern_loop:
             pitchIdx = row * 42 + col + ((int16_t)cameraX.s.i >> 4);
             d3 = pitchIdx;
 
-            /* bounds check: &pitchDatBuffer[pitchIdx*4] must be in [pitchDatBuffer, currentMenu) */
+            /* bounds check: tileEntryPtr must be within the 9240-byte
+             * pitch pointer table. The original asm used `currentMenu`
+             * as the upper bound because Amiga BSS placed currentMenu
+             * exactly at pitchDatBuffer+9240. On the C builds (SDL +
+             * Amiga ports) the two symbols are independent BSS atoms
+             * with linker-determined addresses, so check directly
+             * against pitchDatBuffer + 9240 (= 2310 pointer-table
+             * slots * 4 bytes each). Caught on aarch64 where the
+             * linker happens to place currentMenu *before*
+             * pitchDatBuffer, making the original check fail
+             * unconditionally. */
             tileEntryPtr = ((uint32_t *)(void *)pitchDatBuffer) + pitchIdx;
             if ((uintptr_t)tileEntryPtr < (uintptr_t)pitchDatBuffer ||
-                (uintptr_t)tileEntryPtr >= (uintptr_t)currentMenu) {
+                (uintptr_t)tileEntryPtr >= (uintptr_t)pitchDatBuffer + 2310u * 4) {
                 panicReasonCode = 0x2772;
                 _PanicHaltLoop();
             }

@@ -1604,7 +1604,20 @@ SWOS_CHIP_BSS char imageCmdWorkBuf[0x200000];
 /* spaceReplayTimer: real data in swos_amiga_data_imports.c */
 /* spinBigS: real data in swos_amiga_data_imports.c */
 /* spriteBlitQueue: typed definition in swos_data_typed_stubs.c */
-SWOS_CHIP_BSS char spriteGraphics[0x1310];
+/* spriteGraphicsPtr is a SpriteGraphics ** pointer table — the unpacker
+ * at image_cmd.c:117 writes one pointer per sprite index. Original
+ * Amiga: 0x1310 bytes = 1220 entries on 32-bit (4 B/ptr). On 64-bit
+ * (aarch64 / x86_64 / macOS) pointers are 8 B, so the same 4880-byte
+ * buffer only fits 610 entries — but the game writes indices up to
+ * 0x428 (1064). Writes past 610 overflow into the next BSS symbol,
+ * corrupting whatever's adjacent (caught on Raspberry Pi 5 aarch64 as
+ * the menu glyph pointers being stomped → "missing fonts on the main
+ * menu"). Size by pointer count so both builds get 1220 entries. */
+#if UINTPTR_MAX == 0xFFFFFFFFu
+SWOS_CHIP_BSS char spriteGraphics[0x1310];           /* 1220 × 4 B = 4880 */
+#else
+SWOS_CHIP_BSS char spriteGraphics[0x1310 * 2];       /* 1220 × 8 B = 9760 */
+#endif
 /* spriteGraphicsPtr: real data in swos_amiga_data_imports.c */
 /* squadChangesAllowed: real data in swos_amiga_data_imports.c */
 /* squadDisplayCount: real data in swos_amiga_data_imports.c */
