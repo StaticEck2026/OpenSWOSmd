@@ -157,6 +157,19 @@ extern Playoffs_8 div1Playoffs;
 extern Playoffs_8 div2Playoffs;
 extern Playoffs_8 div3Playoffs;
 
+/* EnglishLeaguesBlock: composite of the four English league structs into one
+ * BSS run so the .equ aliases above resolve at consistent byte offsets. On
+ * 64-bit the .equ offsets (102/182/262) become stale because pointer-bearing
+ * substructs widen — typed access via the block fields below avoids that. */
+typedef struct __attribute__((packed)) {
+    CompetitionLeague_4_8_2_24 _main;
+    Leagues_4_2_24             _div1;
+    Leagues_4_2_24             _div2;
+    Leagues_4                  _div3;
+} EnglishLeaguesBlock;
+
+extern EnglishLeaguesBlock englishLeaguesBlock;
+
 extern CompetitionLeague_2_2_24 dutchLeague;
 extern Leagues_4 dutchLeagues1;
 extern Playoffs_8 dutchPlayoffs;
@@ -276,7 +289,7 @@ extern CompetitionCup_6_2_8 oceaniaWorldCupQualificationCopy;
  * Career Contests
  * ====================================================================== */
 
-extern CompetitionCareer careerContests[34];
+extern CompetitionCareer careerContests[35];
 
 /* ======================================================================
  * Master Competition Pointer Arrays

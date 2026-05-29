@@ -12,6 +12,7 @@
 #include "game_types.h"
 #include "swos_types.h"
 #include "swos_platform.h"  /* _ASM_PFX */
+#include "competition_data.h"
 
 /* ======================================================================
  * Forward declarations — strings defined in assembly/Data.c
@@ -554,22 +555,12 @@ CompetitionLeague_3_6 newZealandLeague = {
  * offset within the composite. The .equ aliases keep the existing
  * `englishLeagues` / `englishLeagues1` / etc. extern decls working
  * unchanged. */
-typedef struct __attribute__((packed)) {
-    CompetitionLeague_4_8_2_24 _main;
-    Leagues_4_2_24             _div1;
-    Leagues_4_2_24             _div2;
-    Leagues_4                  _div3;
-} EnglishLeaguesBlock;
+/* EnglishLeaguesBlock typedef + extern decls live in competition_data.h. */
 
 #define ENGLISH_BLOCK_OFFSET_MAIN  0
 #define ENGLISH_BLOCK_OFFSET_DIV1  (sizeof(CompetitionLeague_4_8_2_24))
 #define ENGLISH_BLOCK_OFFSET_DIV2  (ENGLISH_BLOCK_OFFSET_DIV1 + sizeof(Leagues_4_2_24))
 #define ENGLISH_BLOCK_OFFSET_DIV3  (ENGLISH_BLOCK_OFFSET_DIV2 + sizeof(Leagues_4_2_24))
-
-extern CompetitionLeague_4_8_2_24 englishLeagues;
-extern Leagues_4_2_24 englishLeagues1;
-extern Leagues_4_2_24 englishLeagues2;
-extern Leagues_4 englishLeagues3;
 
 EnglishLeaguesBlock englishLeaguesBlock = {
     ._main = {
@@ -827,40 +818,46 @@ extern CompetitionCup_6_2_8 oceaniaWorldCupQualificationCopy;  /* aliased into c
 /* 34 real entries + a 0xFFFFFFFF sentinel as the loop terminator
  * (matches `dc.l -1` after the last entry in SWOS2.s:118137). */
 CompetitionCareer careerContests[35] = {
-    { (CompetitionCup *)&euroCup, (CompetitionCup *)&euroCupCopy, 0x4E },
-    { (CompetitionCup *)&cupWinnersCup, (CompetitionCup *)&cupWinnersCupCopy, 0x5C },
-    { (CompetitionCup *)&uefaCup, (CompetitionCup *)&uefaCupCopy, 0x5C },
-    { (CompetitionCup *)&invitationTournament, (CompetitionCup *)&invitationTournamentCopy, 0x24 },
-    { (CompetitionCup *)&tour, (CompetitionCup *)&tourCopy, 0x24 },
-    { (CompetitionCup *)&friendly, (CompetitionCup *)&friendlyCopy, 0x28 },
-    { (CompetitionCup *)&europeanChampionships2, (CompetitionCup *)&europeanChampionships2Copy, 0x4E },
-    { (CompetitionCup *)&ecQualifyingGroup1, (CompetitionCup *)&ecQualifyingGroup1Copy, 0x28 },
-    { (CompetitionCup *)&ecQualifyingGroup2, (CompetitionCup *)&ecQualifyingGroup2Copy, 0x28 },
-    { (CompetitionCup *)&ecQualifyingGroup3, (CompetitionCup *)&ecQualifyingGroup3Copy, 0x28 },
-    { (CompetitionCup *)&ecQualifyingGroup4, (CompetitionCup *)&ecQualifyingGroup4Copy, 0x28 },
-    { (CompetitionCup *)&ecQualifyingGroup5, (CompetitionCup *)&ecQualifyingGroup5Copy, 0x28 },
-    { (CompetitionCup *)&ecQualifyingGroup6, (CompetitionCup *)&ecQualifyingGroup6Copy, 0x28 },
-    { (CompetitionCup *)&ecQualifyingGroup7, (CompetitionCup *)&ecQualifyingGroup7Copy, 0x28 },
-    { (CompetitionCup *)&ecQualifyingGroup8, (CompetitionCup *)&ecQualifyingGroup8Copy, 0x24 },
-    { (CompetitionCup *)&copaAmerica, (CompetitionCup *)&copaAmericaCopy, 0x46 },
-    { (CompetitionCup *)&africanNationsCup, (CompetitionCup *)&africanNationsCupCopy, 0x30 },
-    { (CompetitionCup *)&northAmericanCup, (CompetitionCup *)&northAmericanCupCopy, 0x2E },
-    { (CompetitionCup *)&asianCup, (CompetitionCup *)&asianCupCopy, 0x30 },
-    { (CompetitionCup *)&oceaniaCup, (CompetitionCup *)&oceaniaCupCopy, 0x1C },
-    { (CompetitionCup *)&worldCup2, (CompetitionCup *)&worldCup2Copy, 0x70 },
-    { (CompetitionCup *)&worldCupQualifyingGroup1, (CompetitionCup *)&worldCupQualifyingGroup1Copy, 0x28 },
-    { (CompetitionCup *)&worldCupQualifyingGroup2, (CompetitionCup *)&worldCupQualifyingGroup2Copy, 0x28 },
-    { (CompetitionCup *)&worldCupQualifyingGroup3, (CompetitionCup *)&worldCupQualifyingGroup3Copy, 0x28 },
-    { (CompetitionCup *)&worldCupQualifyingGroup4, (CompetitionCup *)&worldCupQualifyingGroup4Copy, 0x28 },
-    { (CompetitionCup *)&worldCupQualifyingGroup5, (CompetitionCup *)&worldCupQualifyingGroup5Copy, 0x28 },
-    { (CompetitionCup *)&worldCupQualifyingGroup6, (CompetitionCup *)&worldCupQualifyingGroup6Copy, 0x28 },
-    { (CompetitionCup *)&worldCupQualifyingGroup7, (CompetitionCup *)&worldCupQualifyingGroup7Copy, 0x28 },
-    { (CompetitionCup *)&worldCupQualifyingGroup8, (CompetitionCup *)&worldCupQualifyingGroup8Copy, 0x28 },
-    { (CompetitionCup *)&northAmericaWorldCupQualification, (CompetitionCup *)&northAmericaWorldCupQualificationCopy, 0x48 },
-    { (CompetitionCup *)&southAmericaWorldCupQualification, (CompetitionCup *)&southAmericaWorldCupQualificationCopy, 0x40 },
-    { (CompetitionCup *)&africaWorldCupQualification, (CompetitionCup *)&africaWorldCupQualificationCopy, 0x70 },
-    { (CompetitionCup *)&asiaWorldCupQualification, (CompetitionCup *)&asiaWorldCupQualificationCopy, 0x6C },
-    { (CompetitionCup *)&oceaniaWorldCupQualification, (CompetitionCup *)&oceaniaWorldCupQualificationCopy, 0x24 },
+    /* Length must use sizeof on the source variable so the copy stays in
+     * sync with the struct's actual layout. Every CompetitionCup*_2_N type
+     * has a `char *text[2]` pair that grows from 8 to 16 bytes on 64-bit,
+     * making the struct 8 bytes larger — a hardcoded byte literal here
+     * truncates the trailing team list and causes auto-advance to spin
+     * forever loading bogus team IDs (data/team.255 etc.). */
+    { (CompetitionCup *)&euroCup, (CompetitionCup *)&euroCupCopy, sizeof(euroCup) },
+    { (CompetitionCup *)&cupWinnersCup, (CompetitionCup *)&cupWinnersCupCopy, sizeof(cupWinnersCup) },
+    { (CompetitionCup *)&uefaCup, (CompetitionCup *)&uefaCupCopy, sizeof(uefaCup) },
+    { (CompetitionCup *)&invitationTournament, (CompetitionCup *)&invitationTournamentCopy, sizeof(invitationTournament) },
+    { (CompetitionCup *)&tour, (CompetitionCup *)&tourCopy, sizeof(tour) },
+    { (CompetitionCup *)&friendly, (CompetitionCup *)&friendlyCopy, sizeof(friendly) },
+    { (CompetitionCup *)&europeanChampionships2, (CompetitionCup *)&europeanChampionships2Copy, sizeof(europeanChampionships2) },
+    { (CompetitionCup *)&ecQualifyingGroup1, (CompetitionCup *)&ecQualifyingGroup1Copy, sizeof(ecQualifyingGroup1) },
+    { (CompetitionCup *)&ecQualifyingGroup2, (CompetitionCup *)&ecQualifyingGroup2Copy, sizeof(ecQualifyingGroup2) },
+    { (CompetitionCup *)&ecQualifyingGroup3, (CompetitionCup *)&ecQualifyingGroup3Copy, sizeof(ecQualifyingGroup3) },
+    { (CompetitionCup *)&ecQualifyingGroup4, (CompetitionCup *)&ecQualifyingGroup4Copy, sizeof(ecQualifyingGroup4) },
+    { (CompetitionCup *)&ecQualifyingGroup5, (CompetitionCup *)&ecQualifyingGroup5Copy, sizeof(ecQualifyingGroup5) },
+    { (CompetitionCup *)&ecQualifyingGroup6, (CompetitionCup *)&ecQualifyingGroup6Copy, sizeof(ecQualifyingGroup6) },
+    { (CompetitionCup *)&ecQualifyingGroup7, (CompetitionCup *)&ecQualifyingGroup7Copy, sizeof(ecQualifyingGroup7) },
+    { (CompetitionCup *)&ecQualifyingGroup8, (CompetitionCup *)&ecQualifyingGroup8Copy, sizeof(ecQualifyingGroup8) },
+    { (CompetitionCup *)&copaAmerica, (CompetitionCup *)&copaAmericaCopy, sizeof(copaAmerica) },
+    { (CompetitionCup *)&africanNationsCup, (CompetitionCup *)&africanNationsCupCopy, sizeof(africanNationsCup) },
+    { (CompetitionCup *)&northAmericanCup, (CompetitionCup *)&northAmericanCupCopy, sizeof(northAmericanCup) },
+    { (CompetitionCup *)&asianCup, (CompetitionCup *)&asianCupCopy, sizeof(asianCup) },
+    { (CompetitionCup *)&oceaniaCup, (CompetitionCup *)&oceaniaCupCopy, sizeof(oceaniaCup) },
+    { (CompetitionCup *)&worldCup2, (CompetitionCup *)&worldCup2Copy, sizeof(worldCup2) },
+    { (CompetitionCup *)&worldCupQualifyingGroup1, (CompetitionCup *)&worldCupQualifyingGroup1Copy, sizeof(worldCupQualifyingGroup1) },
+    { (CompetitionCup *)&worldCupQualifyingGroup2, (CompetitionCup *)&worldCupQualifyingGroup2Copy, sizeof(worldCupQualifyingGroup2) },
+    { (CompetitionCup *)&worldCupQualifyingGroup3, (CompetitionCup *)&worldCupQualifyingGroup3Copy, sizeof(worldCupQualifyingGroup3) },
+    { (CompetitionCup *)&worldCupQualifyingGroup4, (CompetitionCup *)&worldCupQualifyingGroup4Copy, sizeof(worldCupQualifyingGroup4) },
+    { (CompetitionCup *)&worldCupQualifyingGroup5, (CompetitionCup *)&worldCupQualifyingGroup5Copy, sizeof(worldCupQualifyingGroup5) },
+    { (CompetitionCup *)&worldCupQualifyingGroup6, (CompetitionCup *)&worldCupQualifyingGroup6Copy, sizeof(worldCupQualifyingGroup6) },
+    { (CompetitionCup *)&worldCupQualifyingGroup7, (CompetitionCup *)&worldCupQualifyingGroup7Copy, sizeof(worldCupQualifyingGroup7) },
+    { (CompetitionCup *)&worldCupQualifyingGroup8, (CompetitionCup *)&worldCupQualifyingGroup8Copy, sizeof(worldCupQualifyingGroup8) },
+    { (CompetitionCup *)&northAmericaWorldCupQualification, (CompetitionCup *)&northAmericaWorldCupQualificationCopy, sizeof(northAmericaWorldCupQualification) },
+    { (CompetitionCup *)&southAmericaWorldCupQualification, (CompetitionCup *)&southAmericaWorldCupQualificationCopy, sizeof(southAmericaWorldCupQualification) },
+    { (CompetitionCup *)&africaWorldCupQualification, (CompetitionCup *)&africaWorldCupQualificationCopy, sizeof(africaWorldCupQualification) },
+    { (CompetitionCup *)&asiaWorldCupQualification, (CompetitionCup *)&asiaWorldCupQualificationCopy, sizeof(asiaWorldCupQualification) },
+    { (CompetitionCup *)&oceaniaWorldCupQualification, (CompetitionCup *)&oceaniaWorldCupQualificationCopy, sizeof(oceaniaWorldCupQualification) },
     { (CompetitionCup *)0xFFFFFFFFu, (CompetitionCup *)0, 0 },  /* sentinel */
 };
 

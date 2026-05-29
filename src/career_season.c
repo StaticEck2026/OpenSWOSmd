@@ -84,18 +84,28 @@ void _Career_FillRandomTeamListExcludingSelected(uint16_t excludeCount,
     int16_t d7 = (int16_t)excludeCount;
     uint8_t *out = compIds;
 
+    /* Iterate as the typed struct so the per-entry stride matches the
+     * pointer width on both targets. The original code advanced `table`
+     * by hardcoded 4+2+2=8 bytes per iteration, which is correct on
+     * 32-bit Amiga but skips 4 bytes per entry on 64-bit (where the
+     * pointer field is 8 bytes wide, making each entry 12 bytes total).
+     * That misalignment SIGSEGV'd inside the seed-list copy when
+     * advancing from EUROCUP qualification setup at season transition.
+     * Struct mirrors the definition in swos_amiga_ptr_imports.c. */
+    typedef struct __attribute__((packed)) {
+        void    *ptr;
+        uint16_t size;
+        uint16_t count;
+    } SeedListEntryLocal;
+    SeedListEntryLocal *e = (SeedListEntryLocal *)table;
     for (;;) {
-        /* Read group pointer (4 bytes) */
-        uint8_t *groupPtr = *(uint8_t **)table;
-        table += 4;
+        uint8_t *groupPtr = (uint8_t *)e->ptr;
         if (groupPtr == (uint8_t *)(uintptr_t)-1)
             break;
 
-        /* Read group size and copy count (2 words each) */
-        uint16_t groupSize = *(uint16_t *)table;
-        table += 2;
-        uint16_t copyCount = *(uint16_t *)table;
-        table += 2;
+        uint16_t groupSize = e->size;
+        uint16_t copyCount = e->count;
+        e++;
 
         /* Fisher-Yates shuffle if groupSize != copyCount */
         if (groupSize != copyCount) {
@@ -1348,11 +1358,59 @@ extern uint16_t youreSacked;
 extern uint8_t *diyCompetitionPtr;
 extern uint8_t diyCompetitionContext[];
 
+/* Local copy of EnglishLeaguesBlock typedef (keeping competition_data.h out
+ * of this TU per the design notes — career_season.c uses opaque pointer
+ * forward decls for several competition tables). The block layout and
+ * `englishLeaguesBlock` extern must match competition_data.[ch] exactly. */
+typedef struct __attribute__((packed)) {
+    CompetitionLeague_4_8_2_24 _main;
+    Leagues_4_2_24             _div1;
+    Leagues_4_2_24             _div2;
+    Leagues_4                  _div3;
+} EnglishLeaguesBlock;
+
+extern EnglishLeaguesBlock englishLeaguesBlock;
+extern Playoffs_8 div1Playoffs;
+extern Playoffs_8 div2Playoffs;
+extern Playoffs_8 div3Playoffs;
+
 /* ---- Career_ProcessDiyLeagueQualificationEntry ----
  * (SWOS2.s line 31903)
  * Processes a single DIY league qualification entry during season transition.
  * index d7 selects which division qualification entry to process.
  * competition a4 is the competition record. */
+/* Refactored from asm-style byte walking to typed struct access (May 2026).
+ *
+ * SWOS2.s Career_ProcessDiyLeagueQualificationEntry (line 58055) walks the
+ * country's leagues block via byte offsets stored in `divisions[i].unk1` to
+ * find a `Playoffs_8 *` qualification competition and a qIdx pair list. The
+ * walk assumed the 32-bit Amiga struct layout. On 64-bit several involved
+ * structs grow because of pointer-field widening:
+ *   - CompetitionLeague_4_8_2_24: text[8]+unk2[2] grow → 102 → 142 bytes
+ *   - Leagues_4_2_24: Leagues_4+playoffs+leagues2 grow → 80 → 104 bytes
+ *   - Playoffs_8: text[2] grows → 32 → 40 bytes
+ *
+ * The static `divisions[i].unk1` byte hints were authored for 32-bit, so the
+ * walk `competition + i*6 + 0x12 + unk1` lands inside text[8] (a string
+ * pointer) instead of unk2[0] on 64-bit, returning garbage as qualComp.
+ *
+ * In practice only the English block (EnglishLeaguesBlock) ever exercises
+ * this walk — its divisions[1..3].unk1 are non-zero (46, 120, 194) while
+ * every other country has all-zero division.unk1 and exits at the early
+ * `if (d0 == 0) return;` test. The typed dispatch below is English-specific.
+ *
+ * For each English division, by static data analysis:
+ *   index=1: walk lands at englishLeagues.unk2[0] = &div1Playoffs;
+ *            qIdx pairs live in englishLeagues.unk3[].
+ *   index=2: walk lands at englishLeagues1.playoffs = &div2Playoffs;
+ *            qIdx pairs in englishLeagues1.unk2[].
+ *   index=3: walk lands at englishLeagues2.playoffs = &div3Playoffs;
+ *            qIdx pairs in englishLeagues2.unk2[].
+ *
+ * teamData = qualComp + 7 + qualComp[7] in the asm; for all three Playoffs_8
+ * statics qualComp->unk1[7] = 17 (Amiga byte offset to unk2[0]). On 64-bit
+ * Playoffs_8.unk2 sits 8 bytes later (text[2] grew). Using typed
+ * `&qualComp->unk2[0]` resolves correctly on both targets. */
 static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competition)
 {
     uint8_t *a2 = competition + index * 6;
@@ -1361,9 +1419,10 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
     if (d0 == 0)
         return;
 
-    /* Check if this is the last division OR if the offset matches the next
-     * division's offset + 6. If neither, skip processing. Byte 9 of a
-     * CompetitionLeague is divisionsCount. */
+    /* Last-division-same-offset gate (matches asm `cmp 9(a4),d1` and the
+     * `addq.b #6,d1; cmp.b d1,d0` test). Byte 9 of CompetitionLeague is
+     * divisionsCount. Both bytes here are within the original Amiga
+     * struct's head (offsets < 0x28), so no namePtr shift applies. */
     uint16_t nextDiv = index + 1;
     if ((uint8_t)nextDiv != (uint8_t)((CompetitionLeague *)competition)->divisionsCount) {
         uint8_t d1 = a2[0x18] + 6;
@@ -1371,82 +1430,88 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
             return;
     }
 
-    /* Advance past qualification header */
-    a2 = a2 + 0x12 + d0;
+    /* Typed dispatch (see header comment for derivation). The walk via
+     * `divisions[i].unk1` is replaced with direct struct-member access. */
+    if (competition != (uint8_t *)&englishLeaguesBlock._main) {
+        /* Non-English country reached the walk despite divisions[i].unk1
+         * being expected zero — unexpected. Bail safely rather than
+         * re-introduce the broken byte walk. */
+        return;
+    }
 
-    /* Read competition pointer from qualification data */
-    uint8_t *qualComp = *(uint8_t **)a2;
-    a2 += 4;
-    /* Skip 4-byte gap */
-    a2 += 4;
+    Playoffs_8 *qualComp;
+    uint8_t   *teamIdxList;
+    switch (index) {
+    case 1:
+        qualComp    = (Playoffs_8 *)englishLeaguesBlock._main.unk2[0]; /* &div1Playoffs */
+        teamIdxList = (uint8_t *)englishLeaguesBlock._main.unk3;
+        break;
+    case 2:
+        qualComp    = englishLeaguesBlock._div1.playoffs;              /* &div2Playoffs */
+        teamIdxList = (uint8_t *)englishLeaguesBlock._div1.unk2;
+        break;
+    case 3:
+        qualComp    = englishLeaguesBlock._div2.playoffs;              /* &div3Playoffs */
+        teamIdxList = (uint8_t *)englishLeaguesBlock._div2.unk2;
+        break;
+    default:
+        return; /* Premier (index=0) returned via early-exit. */
+    }
 
-    if (!youreSacked && qualComp == diyCompetitionPtr) {
-        /* Player's competition — interactive processing */
-        int8_t teamCount = *(int8_t *)(qualComp + 0xA);
-        a2 += (int16_t)teamCount * 2;
+    int8_t count = (int8_t)qualComp->unk1[10];
+
+    if (!youreSacked && (uint8_t *)qualComp == diyCompetitionPtr) {
+        /* Player's competition — interactive processing. Advance the
+         * teamIdxList past the consumed qIdx pairs (asm `lea (a2,d0.w),a2`
+         * with d0 = count*2) so DIY_ApplyPromotionRelegationWeights sees
+         * the post-list region. */
+        teamIdxList += (int16_t)count * 2;
 
         _RestoreSelectedTeams();
         _Career_LoadCompetitionSlotStateFromBuffer(diyCompetitionContext);
         _ShowDIYCupMenuWithParams(1, 1, 0);
-        _DIY_ApplyPromotionRelegationWeightsToScratch(a2);
+        _DIY_ApplyPromotionRelegationWeightsToScratch(teamIdxList);
         _SaveSelectedTeams();
     } else {
-        /* Not player's competition — auto-fill teams from qualification indices */
+        /* Not player's competition — auto-fill teams from qualification indices. */
         uint16_t savedSelTeam = selTeamNumber;
-        uint8_t savedCtrl = careerTeam.team.teamControls;
+        uint8_t  savedCtrl    = careerTeam.team.teamControls;
 
         selTeamNumber = 0xFFFF;
         careerTeam.team.teamControls = 1;
 
-        uint8_t nameOff = qualComp[7];
-        if (nameOff == 0) {
+        /* Sanity check matching the asm `beq.w loc_12BCD0` — Playoffs_8
+         * statics all have unk1[7]=17, so 0 should never appear. */
+        if (qualComp->unk1[7] == 0) {
             panicReasonCode = 0x3003;
             _PanicHaltLoop();
             return;
         }
-        uint8_t *teamData = qualComp + 7 + nameOff;
 
-        int8_t count = *(int8_t *)(qualComp + 0xA);
+        /* teamData lands at qualComp->unk2[0] on both targets via typed
+         * access (replaces the asm's `lea 7(a1,d0.w),a0` byte walk where
+         * d0 = qualComp->unk1[7] = 17). On 32-bit byte 7+17=24 = unk2[0];
+         * on 64-bit the same logical position is byte 32 because text[2]
+         * widened. Typed lookup picks the right byte on each target. */
+        uint8_t *teamData = (uint8_t *)&qualComp->unk2[0];
+
         int16_t cnt = (int16_t)count - 1;
 
-        /* The qualification index pairs in the source struct (e.g.
-         * englishLeagues.unk3) are byte-array literals authored as BE
-         * uint16 pairs ({ 0, 0, 0, 3, 0, 1, ... } means qIdx values
-         * 0, 3, 1, ...). The asm reads them via `move.w (a2)+,d0`
-         * which is BE on m68k; on SDL the same memory accessed as
-         * native uint16 byte-swaps the value (3 → 0x0300), indexing
-         * way past the end of diyQualifiedTeamIndices and grabbing
-         * garbage team IDs. Use BE_READ_U16 to recover the intended
-         * qIdx on both platforms.
-         *
-         * The team-id WRITE into the qualComp's qualification grid
-         * (e.g. div1Playoffs.unk2) needs to be BE too: the downstream
-         * _AppendTeamsToSelectionFromTmdOrTeamFile reads the grid
-         * with BE_READ_U16(&teamIds[k]) because the static competition
-         * data (europeanChampionships etc.) stores team IDs as BE
-         * `{country, ordinal}` byte pairs. A naive host-order write
-         * here gives 0x0844 (England team 68) → memory [0x44,0x08] →
-         * BE_READ_U16 = 0x4408 → extNum = 68 → tries to load
-         * data/team.068 (gap country, file doesn't exist) → infinite
-         * retry loop in _LoadFileEx. Match the BE wire format by
-         * writing the team id as BE bytes. */
+        /* qIdx pair stream is BE on m68k (`move.w (a2)+,d0`) — keep
+         * BE_READ_U16 to recover the value on LE hosts. diyQualifiedTeamIndices
+         * is BE-packed (4e5f378) and the destination unk2 is also read by
+         * downstream code with BE_READ_U16 — write BE to match. */
         for (int16_t i = cnt; i >= 0; i--) {
-            uint16_t qIdx = BE_READ_U16(a2);
-            a2 += 2;
-            /* diyQualifiedTeamIndices is populated by
-             * _DIY_CopyCompetitionTeamIndexTable from comp+0x1AE
-             * (_bss_2E0AE), which `_DIY_RecordLeagueFixtureResultAndAdvance
-             * Progress`'s promotion-output loop populates byte-for-byte
-             * from leagueTeamIds — BE-packed per 4e5f378. Use BE_READ_U16
-             * to recover the correct id from the array. */
+            uint16_t qIdx = BE_READ_U16(teamIdxList);
+            teamIdxList += 2;
             uint16_t teamId = BE_READ_U16(&diyQualifiedTeamIndices[qIdx]);
             BE_WRITE_U16(teamData, teamId);
             teamData += 2;
         }
 
-        /* Auto-advance this competition via cup competition path */
-        _Career_AutoAdvanceCupCompetitionFromRecord(qualComp);
-        _DIY_ApplyPromotionRelegationWeightsToScratch(a2);
+        /* Auto-advance this competition via cup competition path. */
+        _Career_AutoAdvanceCupCompetitionFromRecord((uint8_t *)qualComp);
+        _DIY_ApplyPromotionRelegationWeightsToScratch(teamIdxList);
 
         careerTeam.team.teamControls = savedCtrl;
         selTeamNumber = savedSelTeam;
