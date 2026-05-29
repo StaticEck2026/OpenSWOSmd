@@ -509,6 +509,12 @@ __asm__(
     ".globl " _ASM_PFX "seasonInformationsArray\n"
     _ASM_PFX "seasonInformationsArray:\n"
     ".skip 2120\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    /* SeasonInformations has 4 pointer fields → grows from 106 to 122 bytes
+     * per row on 64-bit; reserve 20 * 16 = 320 extra bytes so the array
+     * holds 20 rows of the full struct size. */
+    ".skip 320\n"
+#endif
     ".globl " _ASM_PFX "lastFinancialWeekIndex\n"
     _ASM_PFX "lastFinancialWeekIndex:\n"
     ".skip 2\n"
@@ -665,105 +671,216 @@ __asm__(
     ".globl " _ASM_PFX "euroCupCopy\n"
     _ASM_PFX "euroCupCopy:\n"
     ".skip 78\n"
+    /* Every CompetitionCup*_2_N type grows by 8 bytes on 64-bit (its
+     * `char *text[2]` field widens from 8 to 16 bytes). The byte-copy
+     * in _InitCareer that fills each *Copy buffer uses sizeof on the
+     * source variable, so on 64-bit it writes 8 more bytes than the
+     * authored .skip values reserve. Insert a conditional 8-byte pad
+     * after every *Copy slot on 64-bit so the trailing team list
+     * doesn't spill into the next symbol. Mirror change: the
+     * `careerContests` table in competition_data.c uses sizeof on the
+     * source variable, not a hardcoded literal. */
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "cupWinnersCupCopy\n"
     _ASM_PFX "cupWinnersCupCopy:\n"
     ".skip 92\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "uefaCupCopy\n"
     _ASM_PFX "uefaCupCopy:\n"
     ".skip 92\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "invitationTournamentCopy\n"
     _ASM_PFX "invitationTournamentCopy:\n"
     ".skip 36\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "tourCopy\n"
     _ASM_PFX "tourCopy:\n"
     ".skip 36\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "friendlyCopy\n"
     _ASM_PFX "friendlyCopy:\n"
     ".skip 40\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "europeanChampionships2Copy\n"
     _ASM_PFX "europeanChampionships2Copy:\n"
     ".skip 78\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "ecQualifyingGroup1Copy\n"
     _ASM_PFX "ecQualifyingGroup1Copy:\n"
     ".skip 40\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "ecQualifyingGroup2Copy\n"
     _ASM_PFX "ecQualifyingGroup2Copy:\n"
     ".skip 40\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "ecQualifyingGroup3Copy\n"
     _ASM_PFX "ecQualifyingGroup3Copy:\n"
     ".skip 40\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "ecQualifyingGroup4Copy\n"
     _ASM_PFX "ecQualifyingGroup4Copy:\n"
     ".skip 40\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "ecQualifyingGroup5Copy\n"
     _ASM_PFX "ecQualifyingGroup5Copy:\n"
     ".skip 40\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "ecQualifyingGroup6Copy\n"
     _ASM_PFX "ecQualifyingGroup6Copy:\n"
     ".skip 40\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "ecQualifyingGroup7Copy\n"
     _ASM_PFX "ecQualifyingGroup7Copy:\n"
     ".skip 40\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "ecQualifyingGroup8Copy\n"
     _ASM_PFX "ecQualifyingGroup8Copy:\n"
     ".skip 36\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "copaAmericaCopy\n"
     _ASM_PFX "copaAmericaCopy:\n"
     ".skip 70\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "africanNationsCupCopy\n"
     _ASM_PFX "africanNationsCupCopy:\n"
     ".skip 48\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "northAmericanCupCopy\n"
     _ASM_PFX "northAmericanCupCopy:\n"
     ".skip 46\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "asianCupCopy\n"
     _ASM_PFX "asianCupCopy:\n"
     ".skip 48\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "oceaniaCupCopy\n"
     _ASM_PFX "oceaniaCupCopy:\n"
     ".skip 28\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "worldCup2Copy\n"
     _ASM_PFX "worldCup2Copy:\n"
     ".skip 112\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "worldCupQualifyingGroup1Copy\n"
     _ASM_PFX "worldCupQualifyingGroup1Copy:\n"
     ".skip 40\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "worldCupQualifyingGroup2Copy\n"
     _ASM_PFX "worldCupQualifyingGroup2Copy:\n"
     ".skip 40\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "worldCupQualifyingGroup3Copy\n"
     _ASM_PFX "worldCupQualifyingGroup3Copy:\n"
     ".skip 40\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "worldCupQualifyingGroup4Copy\n"
     _ASM_PFX "worldCupQualifyingGroup4Copy:\n"
     ".skip 40\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "worldCupQualifyingGroup5Copy\n"
     _ASM_PFX "worldCupQualifyingGroup5Copy:\n"
     ".skip 40\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "worldCupQualifyingGroup6Copy\n"
     _ASM_PFX "worldCupQualifyingGroup6Copy:\n"
     ".skip 40\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "worldCupQualifyingGroup7Copy\n"
     _ASM_PFX "worldCupQualifyingGroup7Copy:\n"
     ".skip 40\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "worldCupQualifyingGroup8Copy\n"
     _ASM_PFX "worldCupQualifyingGroup8Copy:\n"
     ".skip 40\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "northAmericaWorldCupQualificationCopy\n"
     _ASM_PFX "northAmericaWorldCupQualificationCopy:\n"
     ".skip 72\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "southAmericaWorldCupQualificationCopy\n"
     _ASM_PFX "southAmericaWorldCupQualificationCopy:\n"
     ".skip 64\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "africaWorldCupQualificationCopy\n"
     _ASM_PFX "africaWorldCupQualificationCopy:\n"
     ".skip 112\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "asiaWorldCupQualificationCopy\n"
     _ASM_PFX "asiaWorldCupQualificationCopy:\n"
     ".skip 108\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "oceaniaWorldCupQualificationCopy\n"
     _ASM_PFX "oceaniaWorldCupQualificationCopy:\n"
     ".skip 36\n"
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 8\n"
+#endif
     ".globl " _ASM_PFX "teamSelectionKeyCacheIndex\n"
     _ASM_PFX "teamSelectionKeyCacheIndex:\n"
     ".skip 2\n"
@@ -797,6 +914,17 @@ __asm__(
     ".globl " _ASM_PFX "diyPresetNameOfCompetition\n"
     _ASM_PFX "diyPresetNameOfCompetition:\n"
     ".skip 44\n"
+    /* 64-bit pad: DIYCompetition.namePtr grew 4 -> 8 bytes, shifting all
+     * fields after it by +4. The overlay's named globals after this point
+     * were positioned for the 32-bit Amiga struct, so on 64-bit we add a
+     * 4-byte gap here to re-align them with the grown DIYCompetition layout.
+     * Without this gap, ((DIYCompetition *)&competitionFileBuffer)->
+     * substitutesCount (at struct offset 0x40) overlapped primaryCompSlotStateB,
+     * which _InitCareer writes 2 to — silently giving substitutesCount=2
+     * for every league/cup on 64-bit. */
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 4\n"
+#endif
     ".globl " _ASM_PFX "majorTrophyBonusValue\n"
     _ASM_PFX "majorTrophyBonusValue:\n"
     ".skip 2\n"

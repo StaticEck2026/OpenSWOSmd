@@ -693,8 +693,26 @@ void _InitDIYTournament(void)
         slot++;
     }
 
-    /* Initialize 64 team indices (0..63) — offset 58+0x20 = 0x5A from base = numRounds field */
-    uint8_t *indices = (uint8_t *)&a2->numRounds;
+    /* Initialize 64 team indices (0..63) starting at byte 0x5A of
+     * diyFileBufferCopy. This region runs to byte 0x9A (= the start of
+     * diyTournamentTeamIds in the overlay), so the 64-byte sequence
+     * fills exactly the gap between DIYCompetition and the team-IDs
+     * symbol.
+     *
+     * On 32-bit Amiga the original code addressed this region via
+     * `&a2->numRounds` because DIYCompetition.numRounds happened to sit
+     * at struct offset 0x5A. On 64-bit DIYCompetition.namePtr grew
+     * from 4 to 8 bytes, shifting numRounds to struct offset 0x5E, so
+     * the same expression overflows the buffer by 4 bytes and stomps
+     * the first 4 bytes of diyTournamentTeamIds with values 60-63.
+     * That manifested as a panic when CAREER > VIEW WORLD > EUROPE >
+     * EUROPEAN CHAMPIONS CUP tried to verify the corrupted teamIds.
+     *
+     * The shuffle-indices region is a fixed byte position in the
+     * overlay buffer — independent of where the struct's numRounds
+     * field lives — so address it by the documented byte offset
+     * rather than via the (now-misaligned) struct field. */
+    uint8_t *indices = a2raw + 0x5A;
     for (int16_t i = 0; i <= 0x3F; i++) {
         indices[i] = (uint8_t)i;
     }
@@ -6441,15 +6459,18 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
             }
 
             /* Match result string.
-             * ASM loads: d4 = goals (0xCA = cupRoundResults+0x40), d5 = aggregate (0x14E = BSS_00_2E0AE),
-             * d6 = penalty (0x1CE = inside leagueSectionState). All three are score halves of the cup
-             * bracket result region. BuildMatchResultString expects: d4=leg2(goals), d5=leg1(agg), d6=pens(penalty). */
+             * ASM loads: d4 = goals (0xCA = cupRoundResults+0x40), d5 = aggregate (0x14E = _bss_2E0AE),
+             * d6 = penalty (0x1CE = leagueSectionState.phaseStartMonths). All three are score halves of
+             * the cup bracket result region. BuildMatchResultString expects: d4=leg2(goals), d5=leg1(agg),
+             * d6=pens(penalty). Typed field access keeps the 64-bit struct shift correct (was
+             * `a4 + 0x14E` / `+ 0x1CE` previously, which underflow 4 bytes on 64-bit due to
+             * DIYCompetition.namePtr growth). */
             {
                 uint16_t *goalsPtr = (uint16_t *)&diyCompetitionStart.matchData.cup.cupRoundResults[0x40];
                 uint16_t goals = goalsPtr[d4 / 2];
-                uint16_t *aggPtr = (uint16_t *)(a4 + 0x14E);
+                uint16_t *aggPtr = (uint16_t *)diyCompetitionStart._bss_2E0AE;
                 uint16_t agg = aggPtr[d4 / 2];
-                uint16_t *penPtr = (uint16_t *)(a4 + 0x1CE);
+                uint16_t *penPtr = (uint16_t *)diyCompetitionStart.leagueSectionState.phaseStartMonths;
                 uint16_t pen = penPtr[d4 / 2];
                 uint8_t flags = *a5;
 
@@ -9542,8 +9563,16 @@ cup_entry:
 
 cup_search:
     {
-        uint16_t *cupTeamIds = (uint16_t *)(raw + 590);
-        int8_t *cupIndexTable = (int8_t *)(raw + 718);
+        /* cupTeamIds and teamGridPairings are typed members of
+         * DIYCompetitionEx (at struct offsets 0x24E / 0x2CE on 32-bit,
+         * shifted to 0x252 / 0x2D2 on 64-bit due to namePtr growth).
+         * The original `raw + 590` / `raw + 718` hardcoded offsets
+         * pointed 4 bytes before the intended field on 64-bit, so cup
+         * lookups never matched and the function fell through to the
+         * not-found panic at end-of-season chairman opinion. Same fix
+         * as career_eurocups.c::copyTitleHolderGrid. */
+        uint16_t *cupTeamIds = compEx->cupTeamIds;
+        int8_t *cupIndexTable = (int8_t *)compEx->teamGridPairings;
         int16_t d1 = -1;
         uint16_t rem = numTeams;
         while (rem-- > 0) {
@@ -9587,8 +9616,18 @@ tournament_entry:
         /* sne: set high byte to 0xFF if exitFlag != 0 */
         diyCompHasGroupStage = (comp->currentRoundIndex != 0) ? 0xFF00 : 0;
 
-        uint16_t *tournTeamIds = (uint16_t *)(raw + 154);  /* extended buffer: team ID table */
-        int8_t *tournIndexTable = (int8_t *)&comp->numRounds;  /* 0x5A: byte array starting at numRounds, used as raw team index buffer */
+        /* SWOS2.s FindTeamInDIY (line 61903) tournament path:
+         *   lea $9A(a6),a0   ; tournTeamIds at raw byte 0x9A of comp
+         *   lea $5A(a6),a1   ; tournIndexTable at raw byte 0x5A of comp
+         * For DIY_TOURNAMENT comps, comp is diyFileBufferCopy or an
+         * overlay alias of it. The writer _InitDIYTournament writes the
+         * 64-byte shuffle index table at `a2raw + 0x5A` (raw byte
+         * offset). On 64-bit, `&comp->numRounds` evaluates to
+         * `comp + 0x5E` (struct field shifted by namePtr growth) — 4
+         * bytes past the actual data position. Use the raw byte
+         * offset to match both the asm semantic and the writer. */
+        uint16_t *tournTeamIds = (uint16_t *)(raw + 0x9A);
+        int8_t *tournIndexTable = (int8_t *)(raw + 0x5A);
         int16_t d1 = -1;
         uint16_t rem = numTeams;
         while (rem-- > 0) {
@@ -9706,13 +9745,18 @@ void _InitializeNewSeason_BuildTeamBudgetRankTable(void)
         teamIdArray = compEx->cupTeamIds;
         indexTable  = (int8_t *)compEx->teamGridPairings;
     } else {                    /* DIY_TOURNAMENT */
-        /* +154 is into a sibling buffer (diyFileBufferCopy +0x9A, the
-         * diyTournamentTeamIds region), not into competitionFileBuffer.
-         * Keep the raw offset for the tournament path until that buffer
-         * gets its own typed accessor; tournaments are not exercised
-         * by the club-team new-career path. */
-        teamIdArray = (uint16_t *)(raw + 154);
-        indexTable = (int8_t *)&comp->numRounds;  /* 0x5A: byte array */
+        /* SWOS2.s InitializeNewSeason_BuildTeamBudgetRankTable
+         * (line 62128) tournament branch:
+         *   lea $9A(a6),a5  ; teamIds at raw byte 0x9A
+         *   lea $5A(a6),a4  ; indexTable at raw byte 0x5A
+         * Same conventions as FindTeamInDIY tournament path: the
+         * writer (_InitDIYTournament) parks the shuffle indices at
+         * raw byte 0x5A of diyFileBufferCopy, and the team IDs live
+         * at raw byte 0x9A (= diyTournamentTeamIds in the overlay).
+         * `&comp->numRounds` shifts to byte 0x5E on 64-bit and would
+         * miss the data; use raw byte offsets to stay correct. */
+        teamIdArray = (uint16_t *)(raw + 0x9A);
+        indexTable = (int8_t *)(raw + 0x5A);
     }
 
     for (uint16_t i = 0; i < numTeams; i++) {
@@ -11112,10 +11156,14 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
         _DIY_SortLeagueTableByStandings();
 
         DIYCompetitionEx *compEx = &diyCompetitionStart;
-        uint8_t *a5 = (uint8_t *)compEx;
         DIYCompetition *a5s = &compEx->base;
         uint16_t *standingsLookup = compEx->matchData.league.leagueTeamIds;
-        uint16_t *promRelOutput = (uint16_t *)(a5 + 0x1AE);   /* extended buffer: promotions/relegations output */
+        /* Promotions/relegations output buffer: byte offset 0x60 into
+         * _bss_2E0AE (parent struct offset 0x1AE on 32-bit, 0x1B2 on
+         * 64-bit due to namePtr growth). Typed field access keeps the
+         * 64-bit shift correct — was `a5 + 0x1AE` previously, which
+         * underflowed 4 bytes on 64-bit. */
+        uint16_t *promRelOutput = (uint16_t *)(compEx->_bss_2E0AE + 0x60);
         int16_t *rankings = (int16_t *)compEx->matchData.league.teamEntryOffsets;
 
         /* Determine winner */

@@ -331,16 +331,15 @@ void _DIY_CacheSecondaryQualifiedTeamsGrid(void)
     /* asm: lea (primaryQualifiedTeamGrids+0x180C),a1 — slot 9 (0x2AC * 9 = 0x180C) */
     uint8_t *dst = primaryQualifiedTeamGrids + 0x180C;
     uint16_t *cachedIds = cachedSecondaryQualifiedTeamIds;
-    uint8_t *compRaw = (uint8_t *)&diyCompetitionStart;
-    uint8_t *grid = compRaw + 0x2CE;
-    uint16_t *teamIdsTable = (uint16_t *)(compRaw + 0x24E);
+    /* See copyTitleHolderGrid below for why these go through typed
+     * struct access instead of `compRaw + 0xNN` byte offsets. */
+    uint8_t *grid = diyCompetitionStart.teamGridPairings;
 
     for (int16_t i = 2; i >= 0; i--) {
         int8_t gridByte = (int8_t)*grid++;
         int16_t idx = gridByte;
-        idx <<= 1;
-        /* cupTeamIds (compRaw+0x24E) BE-packed — see copyTitleHolderGrid. */
-        uint16_t teamNum = BE_READ_U16((uint8_t *)teamIdsTable + idx);
+        /* cupTeamIds is BE-packed `{country, ordinal}` byte pairs. */
+        uint16_t teamNum = BE_READ_U16((uint8_t *)diyCompetitionStart.cupTeamIds + (idx << 1));
         *cachedIds++ = teamNum;
         TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
         copyTeamGridWords((uint8_t *)teamData, dst, 0x155);
@@ -352,13 +351,12 @@ __attribute__((used, externally_visible))
 void _DIY_CacheTertiaryQualifiedTeamGrid(void)
 {
     _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
-    uint8_t *compRaw = (uint8_t *)&diyCompetitionStart;
-    int8_t gridByte = (int8_t)*(compRaw + 0x2CE);
+    /* See copyTitleHolderGrid below — typed access avoids the +4
+     * struct-field shift bug that hit copyTitleHolderGrid on 64-bit. */
+    int8_t gridByte = (int8_t)diyCompetitionStart.teamGridPairings[0];
     int16_t idx = gridByte;
-    idx <<= 1;
-    uint16_t *teamIdsTable = (uint16_t *)(compRaw + 0x24E);
-    /* cupTeamIds (compRaw+0x24E) BE-packed — see copyTitleHolderGrid. */
-    uint16_t teamNum = BE_READ_U16((uint8_t *)teamIdsTable + idx);
+    /* cupTeamIds is BE-packed `{country, ordinal}` byte pairs. */
+    uint16_t teamNum = BE_READ_U16((uint8_t *)diyCompetitionStart.cupTeamIds + (idx << 1));
     cachedTertiaryQualifiedTeamId = teamNum;
     TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
     copyTeamGridWords((uint8_t *)teamData, tertiaryQualifiedTeamGrid, 0x155);
@@ -368,21 +366,25 @@ void _DIY_CacheTertiaryQualifiedTeamGrid(void)
  * Group D: Title holder grid copy
  * ================================================================ */
 
-/* copyTitleHolderGrid — shared helper for the three title holder copy functions */
+/* copyTitleHolderGrid — shared helper for the three title holder copy functions.
+ *
+ * Both `cupTeamIds[64]` and `teamGridPairings[64]` are named members of
+ * DIYCompetitionEx, originally documented at struct offsets 0x24E / 0x2CE
+ * on 32-bit Amiga. The parent DIYCompetition grew by 4 bytes on 64-bit
+ * (namePtr 4→8), shifting both fields to 0x252 / 0x2D2 — so the original
+ * hardcoded byte-offset reads `compRaw + 0x24E` / `+ 0x2CE` walked into
+ * the wrong field on 64-bit, producing garbage teamNum values that
+ * panic'd inside _VerifyTeamLoaded. Use typed field access instead. */
 static void copyTitleHolderGrid(uint16_t *titleHolderTeamId, uint8_t *titleHolderGrid)
 {
     _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
-    uint8_t *compRaw = (uint8_t *)&diyCompetitionStart;
-    int8_t gridByte = (int8_t)*(compRaw + 0x2CE);
+    int8_t gridByte = (int8_t)diyCompetitionStart.teamGridPairings[0];
     int16_t idx = gridByte;
-    idx <<= 1;
-    uint16_t *teamIdsTable = (uint16_t *)(compRaw + 0x24E);
-    /* compRaw+0x24E is diyCompetitionStart.cupTeamIds — BE-packed
-     * `{country, ordinal}` byte pairs per the 4e5f378 convention.
-     * Read with BE_READ_U16 so titleHolderTeamId holds the packed
-     * value the rest of the code (qualifyTeamForCupWinnersCup /
-     * qualifyTeamsForUefaCup comparisons, _VerifyTeamLoaded) expects. */
-    uint16_t teamNum = BE_READ_U16((uint8_t *)teamIdsTable + idx);
+    /* cupTeamIds is BE-packed `{country, ordinal}` byte pairs per the
+     * 4e5f378 convention; read with BE_READ_U16 so titleHolderTeamId
+     * holds the packed value the rest of the code expects. The byte
+     * offset within the array is `gridByte << 1` (each entry is 2 bytes). */
+    uint16_t teamNum = BE_READ_U16((uint8_t *)diyCompetitionStart.cupTeamIds + (idx << 1));
     *titleHolderTeamId = teamNum;
     TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
     copyTeamGridWords((uint8_t *)teamData, titleHolderGrid, 0x155);

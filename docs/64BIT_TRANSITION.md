@@ -126,6 +126,35 @@ Until the overlay is retired, mark every hardcoded offset constant
 in `swos_globals_career_overlay.c` with a `TODO: derive from struct`
 comment so we can audit them later.
 
+#### Concrete bite — `substitutesCount=2` invisible-suspension bug (May 2026)
+
+`competitionFileBuffer` lives in this overlay and is cast to
+`DIYCompetition *` at multiple read sites. On 32-bit the cast worked
+because the struct's field offsets matched the overlay's named-globals
+positions. On 64-bit `DIYCompetition.namePtr` grew 4 → 8 bytes,
+shifting `substitutesCount` from struct offset `0x3C` → `0x40`. The
+overlay's named globals stayed put, so
+`((DIYCompetition *)&competitionFileBuffer)->substitutesCount` started
+reading the byte that `primaryCompSlotStateB` was sitting on — which
+`_InitCareer` unconditionally sets to `2`. Every league/cup match
+silently got `substitutesCount = 2`, which `_PlayDIYLeague…` passed as
+`playMatchExcludeFlags`, which `_IsPlayerInjured` interprets as "skip
+the cards check" — so a player with 1+ red cards never tripped the
+suspension lockout and `VIEW RESULT` stayed enabled. The squad rows
+also stayed blue (no red-bg highlight) because they call the same
+predicate.
+
+Stopgap fix: a `#if UINTPTR_MAX != 0xFFFFFFFFu` 4-byte `.skip` after
+`diyPresetNameOfCompetition` in `swos_globals_career_overlay.c`,
+re-aligning the named globals with the grown struct on 64-bit only.
+This is the interim before the broader audit replaces hardcoded
+offsets with `offsetof()` expressions — see
+`memory/project_career_overlay_nameptr_gap.md` and
+`memory/project_raw_offset_64bit_shift_trap.md`. Any new struct field
+that grows on 64-bit (another pointer added before a referenced field)
+will hit the same class of bug at a different overlay byte until the
+overlay is retired entirely.
+
 ### 4. Adjacent-globals reads need to die
 
 A handful of routines read past the end of one BSS symbol into the

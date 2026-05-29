@@ -302,6 +302,20 @@ struct-level unions — they're separate-symbol reads where the
 consumer treats the symbols as one contiguous record. Phase 3 of
 the 64-bit transition retires this pattern.
 
+A particularly subtle variant lives in the `careerFileBuffer`
+overlay: `competitionFileBuffer` is a 2-byte named global, but the
+code casts `&competitionFileBuffer` to `DIYCompetition *` and reads
+struct fields from it. The struct's fields-by-byte-position only
+match the overlay's named globals on **32-bit Amiga** layout —
+when `DIYCompetition.namePtr` grew 4 → 8 bytes on 64-bit, the
+struct's `substitutesCount` slid off its original named global onto
+a different one (`primaryCompSlotStateB`) whose value was unrelated
+and happened to be `2`. See `docs/64BIT_TRANSITION.md` §3
+"Concrete bite" and `memory/project_career_overlay_nameptr_gap.md`
+for the bug write-up and the conditional `.skip 4` workaround. The
+permanent fix is the broader 64-bit overlay alignment in
+`64BIT_TRANSITION.md` Phase 4.
+
 ## Reference structs (IDA-reversed)
 
 When the port's struct definition doesn't match the IDA reference,
