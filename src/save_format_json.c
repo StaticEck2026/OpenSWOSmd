@@ -1132,12 +1132,27 @@ static const FieldDesc s_career_scalars[] = {
      * problem — see CLAUDE.md). Promoting these to structured DIY
      * fields with sym-encoded inner pointers is future work; for now
      * preserve byte fidelity as flat scalars. */
-    /* Inline literal — primary slot lives at careerFileBuffer + 93308
-     * (no standalone symbol), so the FA macro's `&sym` form doesn't
-     * apply. Covers DIYCompetition header bytes 2..153; bytes 0..1 are
-     * the primary_slot_type scalar at the top of this table, and
-     * bytes 154..2899 are covered by diy_team_id_list_type_2/0/1. */
-    { "primary_comp_block", (void *)((uint8_t *)&careerFileBuffer + 93308), 154, FLD_BYTES },
+    /* Primary slot data lives AT &competitionFileBuffer (the overlay
+     * aliases it there — see swos_globals.c:1148). Earlier code used a
+     * literal offset `&careerFileBuffer + 93308` because of an obsolete
+     * "no standalone symbol" assumption; that's wrong on 64-bit because
+     * the careerFileBuffer overlay grew by 4 + 320 bytes (namePtr gap
+     * + seasonInformations stride pad), so the literal lands 624 bytes
+     * *before* competitionFileBuffer and the active competition was
+     * never being saved. Use the symbol directly.
+     *
+     * Size covers DIYCompetition header bytes 2..end. On 32-bit that's
+     * 154 bytes; on 64-bit the namePtr field widens 4→8 bytes inside
+     * the header so the span grows to 158. Bytes 0..1 are the
+     * primary_slot_type scalar at the top of this table, and the
+     * trailing team-id lists are covered by diy_team_id_list_type_2/0/1. */
+    { "primary_comp_block", (void *)&competitionFileBuffer,
+#if UINTPTR_MAX == 0xFFFFFFFFu
+        154,
+#else
+        158,
+#endif
+        FLD_BYTES },
     FA("competition_context",         competitionContext,         2900, FLD_BYTES),
     FA("tertiary_competition_context",tertiaryCompetitionContext, 1092, FLD_BYTES),
     FA("diy_competition_context",     diyCompetitionContext,      1092, FLD_BYTES),
@@ -1161,11 +1176,19 @@ static const FieldDesc s_career_scalars[] = {
     FA("team_tactics_user_f",         teamTacticsUSERF,            370, FLD_BYTES),
 
     /* *Copy competition record region. Spans euroCupCopy through
-     * oceaniaWorldCupQualificationCopy (1832 B, 34 records). Each
-     * record's text[2] pointer pair is restored from its template by
-     * restore_comp_copy_text_ptrs_from_template — saved bytes don't
-     * need to carry those pointers. */
-    FA("comp_copy_region",            euroCupCopy,                1832, FLD_BYTES),
+     * oceaniaWorldCupQualificationCopy + its trailing pad (34 records).
+     * Each record's text[2] pointer pair is restored from its template
+     * by restore_comp_copy_text_ptrs_from_template — saved bytes don't
+     * need to carry those pointers. On 64-bit each record gets a +8
+     * conditional pad in the overlay (text[2] pointer-widening), so
+     * the region is 34 × 8 = 272 bytes bigger. */
+    FA("comp_copy_region",            euroCupCopy,
+#if UINTPTR_MAX == 0xFFFFFFFFu
+        1832,
+#else
+        2104,
+#endif
+        FLD_BYTES),
 
     /* Small unstructured tables — internal layout not yet modelled. */
     FA("career_unavailable_player_lookup_table",
