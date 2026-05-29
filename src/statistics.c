@@ -1300,13 +1300,18 @@ extern void _DrawMenu(void);
 /* ================================================================
  * GetCurrentSeasonPointer  (SWOS2.s line 58420)
  *
- * Returns pointer to current season info (106 bytes each).
+ * Returns pointer to current season info. Stride is sizeof so the
+ * 64-bit pointer-field growth in SeasonInformations (106 → 122) is
+ * picked up automatically — readers and writers must agree on stride
+ * or row N writes land in row N+ε for the reader (caused MANAGEMENT
+ * RECORD garbage-pointer SIGSEGV when sizeof-typed readers raced the
+ * 106-byte-stride writer).
  * ================================================================ */
 __attribute__((used, externally_visible))
 uint8_t *_GetCurrentSeasonPointer(void)
 {
     uint16_t idx = currentSeasonShowing;
-    uint32_t off = (uint32_t)idx * 106;
+    uint32_t off = (uint32_t)idx * (uint32_t)sizeof(SeasonInformations);
     return seasonInformationsArray + off;
 }
 

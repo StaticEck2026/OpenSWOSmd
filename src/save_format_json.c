@@ -186,7 +186,7 @@ static void string_pool_reset(void)
     s_string_pool_used = 0;
 }
 
-static uint32_t string_pool_intern(const char *s)
+static uintptr_t string_pool_intern(const char *s)
 {
     uint32_t len = (uint32_t)strlen(s);
     if (s_string_pool_used + len + 1 > STRING_POOL_SIZE)
@@ -194,7 +194,7 @@ static uint32_t string_pool_intern(const char *s)
     char *dst = &s_string_pool[s_string_pool_used];
     memcpy(dst, s, (size_t)len + 1);
     s_string_pool_used += len + 1;
-    return (uint32_t)(uintptr_t)dst;
+    return (uintptr_t)dst;
 }
 
 /* Emit a pointer-to-string field as a bare JSON string. Used for
@@ -207,13 +207,13 @@ static uint32_t string_pool_intern(const char *s)
  * leaves the slot at 0 in that case so consumers (statistics.c:1930)
  * still short-circuit on NULL. */
 static void emit_str_pool_field(mjson_print_fn_t fn, void *fnd,
-                                const char *key, uint32_t val)
+                                const char *key, const uint8_t *val)
 {
-    if (val == 0u) {
+    if (val == NULL) {
         mjson_printf(fn, fnd, "%Q:%Q", key, "");
         return;
     }
-    const char *s = (const char *)(uintptr_t)val;
+    const char *s = (const char *)val;
     size_t n = 0;
     while (n < 128u && s[n] != '\0') n++;
     if (n == 0 || n >= 128u) {
@@ -225,15 +225,15 @@ static void emit_str_pool_field(mjson_print_fn_t fn, void *fnd,
 
 /* Read a bare JSON string field, intern into the string pool, store
  * the resulting pool address into *out. Empty / missing string leaves
- * *out at 0. */
+ * *out at NULL. */
 static void load_str_pool_field(const char *buf, int buflen,
-                                const char *path, uint32_t *out)
+                                const char *path, uint8_t **out)
 {
-    *out = 0;
+    *out = NULL;
     char tmp[128] = {0};
     int got = mjson_get_string(buf, buflen, path, tmp, sizeof(tmp));
     if (got <= 0 || tmp[0] == '\0') return;
-    *out = string_pool_intern(tmp);
+    *out = (uint8_t *)string_pool_intern(tmp);
 }
 
 /* ---------- format constants ---------- */
@@ -372,46 +372,48 @@ static void load_string_field(const char *buf, int buflen, const char *path,
     memcpy(dst, tmp, n);
 }
 
-/* Write season_informations as a JSON array of 20 entries. */
+/* Write season_informations as a JSON array of 20 entries.
+ *
+ * Walks the in-memory array via the typed SeasonInformations struct so
+ * field offsets stay consistent across 32-bit (row size 106) and 64-bit
+ * (row size 122). The on-disk JSON keys are semantic and identical on
+ * both targets — a save written on one target loads cleanly on the
+ * other. */
 static void emit_season_informations(mjson_print_fn_t fn, void *fnd)
 {
+    const SeasonInformations *arr =
+        (const SeasonInformations *)seasonInformationsArray;
     mjson_printf(fn, fnd, "%Q:[", "season_informations");
     for (uint32_t i = 0; i < SAVE_SI_ENTRY_COUNT; i++) {
-        const uint8_t *e = seasonInformationsArray + i * SAVE_SI_ENTRY_SIZE;
+        const SeasonInformations *e = &arr[i];
 
         if (i > 0) mjson_printf(fn, fnd, "%s", ",");
         mjson_printf(fn, fnd, "%s", "{");
 
-        /* Scalars. Multi-byte fields are read as the host stored them
-         * (game writes are host-native on numSelectedTeams etc.). */
-        mjson_printf(fn, fnd, "%Q:%u,",
-                     "club_no", (unsigned)*(uint16_t *)(e + SAVE_SI_CLUBNO));
-        emit_string_field(fn, fnd, "club_name", e + SAVE_SI_CLUBNAME, 18);
+        mjson_printf(fn, fnd, "%Q:%u,", "club_no", (unsigned)e->clubNo);
+        emit_string_field(fn, fnd, "club_name",
+                          (const uint8_t *)e->clubName, sizeof(e->clubName));
         mjson_printf(fn, fnd, ",%Q:%u,",
-                     "trophy_flags",
-                     (unsigned)*(uint16_t *)(e + SAVE_SI_TROPHYFLAGS));
+                     "trophy_flags", (unsigned)e->trophyFlags);
 
-        /* Four per-season comp-name strings. In-memory slots are still
-         * typed `uint32_t *`; on disk they're bare JSON strings whose
-         * content gets re-interned into the string pool at load time. */
-        emit_str_pool_field(fn, fnd, "league_str",
-                            *(uint32_t *)(e + SAVE_SI_LEAGUESTRPTR));
+        /* Four per-season comp-name strings. */
+        emit_str_pool_field(fn, fnd, "league_str", e->leagueStrPtr);
         mjson_printf(fn, fnd, "%s", ",");
-        emit_str_pool_field(fn, fnd, "str_1",
-                            *(uint32_t *)(e + SAVE_SI_STRPTR1));
+        emit_str_pool_field(fn, fnd, "str_1", e->strPtr1);
         mjson_printf(fn, fnd, "%s", ",");
-        emit_str_pool_field(fn, fnd, "str_2",
-                            *(uint32_t *)(e + SAVE_SI_STRPTR2));
+        emit_str_pool_field(fn, fnd, "str_2", e->strPtr2);
         mjson_printf(fn, fnd, "%s", ",");
-        emit_str_pool_field(fn, fnd, "str_3",
-                            *(uint32_t *)(e + SAVE_SI_STRPTR3));
+        emit_str_pool_field(fn, fnd, "str_3", e->strPtr3);
 
         mjson_printf(fn, fnd, ",%Q:%u,",
-                     "best_scorer_goals",
-                     (unsigned)*(uint16_t *)(e + SAVE_SI_BESTSCORERNUMGOALS));
-        emit_string_field(fn, fnd, "best_scorer_name", e + SAVE_SI_BESTSCORERNAME, 23);
+                     "best_scorer_goals", (unsigned)e->bestScorerNumGoals);
+        emit_string_field(fn, fnd, "best_scorer_name",
+                          (const uint8_t *)e->bestScorerName,
+                          sizeof(e->bestScorerName));
         mjson_printf(fn, fnd, "%s", ",");
-        emit_string_field(fn, fnd, "second_scorer_name", e + SAVE_SI_2NDSCORERNAME, 23);
+        emit_string_field(fn, fnd, "second_scorer_name",
+                          (const uint8_t *)e->secondScorerName,
+                          sizeof(e->secondScorerName));
 
         mjson_printf(fn, fnd,
             ",%Q:%d,%Q:%d,%Q:%d,%Q:%d,"
@@ -420,26 +422,24 @@ static void emit_season_informations(mjson_print_fn_t fn, void *fnd)
             "%Q:%u,%Q:%u,%Q:%u,"
             "%Q:%u,%Q:%u,%Q:%u,"
             "%Q:%u,%Q:%d}",
-            "comp_1_result", (int)(int8_t)e[SAVE_SI_COMP1RESULT],
-            "comp_2_result", (int)(int8_t)e[SAVE_SI_COMP2RESULT],
-            "comp_3_result", (int)(int8_t)e[SAVE_SI_COMP3RESULT],
-            "comp_4_result", (int)(int8_t)e[SAVE_SI_COMP4RESULT],
-            "total_goals_scored",
-                (unsigned)*(uint16_t *)(e + SAVE_SI_TOTALGOALSSCORED),
-            "total_goals_taken",
-                (unsigned)*(uint16_t *)(e + SAVE_SI_TOTALGOALSTAKEN),
-            "total_games",   (unsigned)e[SAVE_SI_TOTALGAMES],
-            "total_wins",    (unsigned)e[SAVE_SI_TOTALWINS],
-            "total_drawn",   (unsigned)e[SAVE_SI_TOTALDRAWN],
-            "total_lost",    (unsigned)e[SAVE_SI_TOTALLOST],
-            "friendly_wins",  (unsigned)e[SAVE_SI_FRIENDLYWINS],
-            "friendly_draws", (unsigned)e[SAVE_SI_FRIENDLYDRAWS],
-            "friendly_lost",  (unsigned)e[SAVE_SI_FRIENDLYLOST],
-            "tour_wins",   (unsigned)e[SAVE_SI_TOURWINS],
-            "tour_draws",  (unsigned)e[SAVE_SI_TOURDRAWS],
-            "tour_lost",   (unsigned)e[SAVE_SI_TOURLOST],
-            "tournament_status", (unsigned)e[SAVE_SI_TOURNAMENTSTATUS],
-            "manager_status", (int)(int8_t)e[SAVE_SI_MANAGERSTATUS]);
+            "comp_1_result", (int)e->comp1Result,
+            "comp_2_result", (int)e->comp2Result,
+            "comp_3_result", (int)e->comp3Result,
+            "comp_4_result", (int)e->comp4Result,
+            "total_goals_scored", (unsigned)e->totalGoalsScored,
+            "total_goals_taken",  (unsigned)e->totalGoalsTaken,
+            "total_games",   (unsigned)e->totalGames,
+            "total_wins",    (unsigned)e->totalWins,
+            "total_drawn",   (unsigned)e->totalDrawn,
+            "total_lost",    (unsigned)e->totalLost,
+            "friendly_wins",  (unsigned)e->friendlyWins,
+            "friendly_draws", (unsigned)e->friendlyDraws,
+            "friendly_lost",  (unsigned)e->friendlyLost,
+            "tour_wins",   (unsigned)e->tourWins,
+            "tour_draws",  (unsigned)e->tourDraws,
+            "tour_lost",   (unsigned)e->tourLost,
+            "tournament_status", (unsigned)e->tournamentStatus,
+            "manager_status", (int)e->managerStatus);
     }
     mjson_printf(fn, fnd, "%s", "]");
 }
@@ -464,6 +464,7 @@ static void load_season_informations(const char *buf, int buflen)
     /* Walk the array via mjson_next so each iteration is O(1) in
      * array position. Indexed "$[i]" finds re-walk from the start
      * each time → O(n²) over the whole array. */
+    SeasonInformations *si_arr = (SeasonInformations *)seasonInformationsArray;
     long num = 0.0;
     int pos = 0, koff, klen, voff, vlen, vt;
     uint32_t i = 0;
@@ -474,64 +475,67 @@ static void load_season_informations(const char *buf, int buflen)
         const char *e_slice = arr + voff;
         int e_slen = vlen;
 
-        uint8_t *e = seasonInformationsArray + i * SAVE_SI_ENTRY_SIZE;
+        SeasonInformations *e = &si_arr[i];
         i++;
 
         if (mjson_get_long(e_slice, e_slen, "$.club_no", &num) <= 0)
             continue;
-        *(uint16_t *)(e + SAVE_SI_CLUBNO) = (uint16_t)num;
+        e->clubNo = (uint16_t)num;
 
         load_string_field(e_slice, e_slen, "$.club_name",
-                          e + SAVE_SI_CLUBNAME, 18);
+                          (uint8_t *)e->clubName, sizeof(e->clubName));
 
         if (mjson_get_long(e_slice, e_slen, "$.trophy_flags", &num) > 0)
-            *(uint16_t *)(e + SAVE_SI_TROPHYFLAGS) = (uint16_t)num;
+            e->trophyFlags = (uint16_t)num;
 
-        load_str_pool_field(e_slice, e_slen, "$.league_str",
-                            (uint32_t *)(e + SAVE_SI_LEAGUESTRPTR));
-        load_str_pool_field(e_slice, e_slen, "$.str_1",
-                            (uint32_t *)(e + SAVE_SI_STRPTR1));
-        load_str_pool_field(e_slice, e_slen, "$.str_2",
-                            (uint32_t *)(e + SAVE_SI_STRPTR2));
-        load_str_pool_field(e_slice, e_slen, "$.str_3",
-                            (uint32_t *)(e + SAVE_SI_STRPTR3));
+        load_str_pool_field(e_slice, e_slen, "$.league_str", &e->leagueStrPtr);
+        load_str_pool_field(e_slice, e_slen, "$.str_1",      &e->strPtr1);
+        load_str_pool_field(e_slice, e_slen, "$.str_2",      &e->strPtr2);
+        load_str_pool_field(e_slice, e_slen, "$.str_3",      &e->strPtr3);
 
         if (mjson_get_long(e_slice, e_slen, "$.best_scorer_goals", &num) > 0)
-            *(uint16_t *)(e + SAVE_SI_BESTSCORERNUMGOALS) = (uint16_t)num;
+            e->bestScorerNumGoals = (uint16_t)num;
 
         load_string_field(e_slice, e_slen, "$.best_scorer_name",
-                          e + SAVE_SI_BESTSCORERNAME, 23);
+                          (uint8_t *)e->bestScorerName,
+                          sizeof(e->bestScorerName));
         load_string_field(e_slice, e_slen, "$.second_scorer_name",
-                          e + SAVE_SI_2NDSCORERNAME, 23);
+                          (uint8_t *)e->secondScorerName,
+                          sizeof(e->secondScorerName));
 
-#define LOAD_BYTE(key, dst_off) do { \
+#define LOAD_S8(key, dst) do { \
             if (mjson_get_long(e_slice, e_slen, "$." key, &num) > 0) \
-                e[dst_off] = (uint8_t)(int8_t)(int)num; \
+                (dst) = (int8_t)num; \
         } while (0)
-#define LOAD_U16(key, dst_off) do { \
+#define LOAD_U8(key, dst) do { \
             if (mjson_get_long(e_slice, e_slen, "$." key, &num) > 0) \
-                *(uint16_t *)(e + dst_off) = (uint16_t)num; \
+                (dst) = (uint8_t)num; \
+        } while (0)
+#define LOAD_U16(key, dst) do { \
+            if (mjson_get_long(e_slice, e_slen, "$." key, &num) > 0) \
+                (dst) = (uint16_t)num; \
         } while (0)
 
-        LOAD_BYTE("comp_1_result",      SAVE_SI_COMP1RESULT);
-        LOAD_BYTE("comp_2_result",      SAVE_SI_COMP2RESULT);
-        LOAD_BYTE("comp_3_result",      SAVE_SI_COMP3RESULT);
-        LOAD_BYTE("comp_4_result",      SAVE_SI_COMP4RESULT);
-        LOAD_U16 ("total_goals_scored", SAVE_SI_TOTALGOALSSCORED);
-        LOAD_U16 ("total_goals_taken",  SAVE_SI_TOTALGOALSTAKEN);
-        LOAD_BYTE("total_games",        SAVE_SI_TOTALGAMES);
-        LOAD_BYTE("total_wins",         SAVE_SI_TOTALWINS);
-        LOAD_BYTE("total_drawn",        SAVE_SI_TOTALDRAWN);
-        LOAD_BYTE("total_lost",         SAVE_SI_TOTALLOST);
-        LOAD_BYTE("friendly_wins",      SAVE_SI_FRIENDLYWINS);
-        LOAD_BYTE("friendly_draws",     SAVE_SI_FRIENDLYDRAWS);
-        LOAD_BYTE("friendly_lost",      SAVE_SI_FRIENDLYLOST);
-        LOAD_BYTE("tour_wins",          SAVE_SI_TOURWINS);
-        LOAD_BYTE("tour_draws",         SAVE_SI_TOURDRAWS);
-        LOAD_BYTE("tour_lost",          SAVE_SI_TOURLOST);
-        LOAD_BYTE("tournament_status",  SAVE_SI_TOURNAMENTSTATUS);
-        LOAD_BYTE("manager_status",     SAVE_SI_MANAGERSTATUS);
-#undef LOAD_BYTE
+        LOAD_S8 ("comp_1_result",      e->comp1Result);
+        LOAD_S8 ("comp_2_result",      e->comp2Result);
+        LOAD_S8 ("comp_3_result",      e->comp3Result);
+        LOAD_S8 ("comp_4_result",      e->comp4Result);
+        LOAD_U16("total_goals_scored", e->totalGoalsScored);
+        LOAD_U16("total_goals_taken",  e->totalGoalsTaken);
+        LOAD_U8 ("total_games",        e->totalGames);
+        LOAD_U8 ("total_wins",         e->totalWins);
+        LOAD_U8 ("total_drawn",        e->totalDrawn);
+        LOAD_U8 ("total_lost",         e->totalLost);
+        LOAD_U8 ("friendly_wins",      e->friendlyWins);
+        LOAD_U8 ("friendly_draws",     e->friendlyDraws);
+        LOAD_U8 ("friendly_lost",      e->friendlyLost);
+        LOAD_U8 ("tour_wins",          e->tourWins);
+        LOAD_U8 ("tour_draws",         e->tourDraws);
+        LOAD_U8 ("tour_lost",          e->tourLost);
+        LOAD_U8 ("tournament_status",  e->tournamentStatus);
+        LOAD_S8 ("manager_status",     e->managerStatus);
+#undef LOAD_S8
+#undef LOAD_U8
 #undef LOAD_U16
     }
 }

@@ -1131,8 +1131,14 @@ void _Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *spec, uint1
 {
     uint8_t teamIdsOffset = spec[7];
     if (teamIdsOffset != 0) {
-        /* Team IDs embedded in spec at offset 7 + teamIdsOffset */
-        uint16_t idsOff = teamIdsOffset;
+        /* Team IDs embedded in spec at offset 7 + teamIdsOffset.
+         * Every CompetitionCup*_2_N struct has a `char *text[2]` pair
+         * sitting between the cup descriptor and the embedded `unk1[]`
+         * team list. On 64-bit those two pointers grow from 4 to 8 bytes
+         * each, pushing `unk1` 8 bytes later. The data tables store the
+         * 32-bit Amiga offset in spec[7]; derive the host-side delta from
+         * sizeof so we don't bake another raw offset. */
+        uint16_t idsOff = teamIdsOffset + 2u * (sizeof(char *) - sizeof(uint32_t));
         int16_t count = (int16_t)(int8_t)spec[13];  /* signed ext.w */
         uint16_t *teamIds = (uint16_t *)(spec + 7 + idsOff);
         _AppendTeamsToSelectionFromTmdOrTeamFile(diyLeagueTeamIds, teamIds, (uint16_t)count);
@@ -1169,7 +1175,8 @@ void _Career_InitCompetitionTeamSelectionFromTableHeaderSpec(uint8_t *spec)
 {
     uint8_t teamIdsOffset = spec[7];
     if (teamIdsOffset != 0) {
-        uint16_t idsOff = teamIdsOffset;
+        /* See TableEntrySpec above for the +text[2]-growth delta rationale. */
+        uint16_t idsOff = teamIdsOffset + 2u * (sizeof(char *) - sizeof(uint32_t));
         uint16_t count = spec[10];  /* andi.w #$FF,d7 — unsigned byte */
         uint16_t *teamIds = (uint16_t *)(spec + 7 + idsOff);
         _AppendTeamsToSelectionFromTmdOrTeamFile(diyCupTeamIds, teamIds, count);
@@ -1192,7 +1199,8 @@ void _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(uint8_t *spec)
 {
     uint8_t teamIdsOffset = spec[7];
     if (teamIdsOffset != 0) {
-        uint16_t idsOff = teamIdsOffset;
+        /* See TableEntrySpec above for the +text[2]-growth delta rationale. */
+        uint16_t idsOff = teamIdsOffset + 2u * (sizeof(char *) - sizeof(uint32_t));
         uint16_t count = spec[15];  /* andi.w #$FF,d7 — unsigned byte */
         uint16_t *teamIds = (uint16_t *)(spec + 7 + idsOff);
         _AppendTeamsToSelectionFromTmdOrTeamFile(diyTournamentTeamIds, teamIds, count);

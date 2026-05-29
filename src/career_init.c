@@ -772,8 +772,14 @@ void _ContinueCareerNextSeason(void)
 __attribute__((used, externally_visible))
 uint16_t _Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t euroCupIndex)
 {
-    /* Get start of team list: base + 7 + base[7] */
+    /* Get start of team list: base + 7 + base[7]. The stored offset at
+     * cupCopy[7] is the 32-bit Amiga byte distance from cupCopy+7 to
+     * unk1[]. On 64-bit the struct's `char *text[2]` field widens 8→16
+     * bytes, shifting unk1[] by +8 — see the AltTableHeader reader in
+     * career_teams.c for the same compensation. */
     uint8_t numEntries = cupCopy[7];
+    uint16_t numEntriesAdj = (uint16_t)numEntries +
+                             2u * (sizeof(char *) - sizeof(uint32_t));
     /* The team list is the static competition's unk1[] array of packed
      * (country, ordinal) byte pairs in Amiga big-endian order. Read
      * each entry via BE_READ_U16 — a raw `*(uint16_t *)` on SDL LE
@@ -784,7 +790,7 @@ uint16_t _Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t 
      * Juventus career has no Champions League fixtures even though
      * the static euroCup unk1[] explicitly contains (20, 22) =
      * Italy/Juventus. */
-    const uint8_t *teamList = (const uint8_t *)(cupCopy + 7 + numEntries);
+    const uint8_t *teamList = (const uint8_t *)(cupCopy + 7 + numEntriesAdj);
 
     /* Get number of teams based on competition type (byte at offset 1) */
     uint8_t compType = cupCopy[1];

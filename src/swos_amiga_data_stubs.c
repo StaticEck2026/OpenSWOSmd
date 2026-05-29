@@ -1610,9 +1610,10 @@ SWOS_CHIP_BSS char imageCmdWorkBuf[0x200000];
  * (aarch64 / x86_64 / macOS) pointers are 8 B, so the same 4880-byte
  * buffer only fits 610 entries — but the game writes indices up to
  * 0x428 (1064). Writes past 610 overflow into the next BSS symbol,
- * corrupting whatever's adjacent (caught on Raspberry Pi 5 aarch64 as
- * the menu glyph pointers being stomped → "missing fonts on the main
- * menu"). Size by pointer count so both builds get 1220 entries. */
+ * corrupting whatever's adjacent (in our case the glyph pointers used
+ * by the menu font on aarch64 — caught by the user reporting "missing
+ * fonts on the main menu" on Raspberry Pi 5). Size by pointer count so
+ * both builds get 1220 entries. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
 SWOS_CHIP_BSS char spriteGraphics[0x1310];           /* 1220 × 4 B = 4880 */
 #else
