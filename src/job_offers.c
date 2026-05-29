@@ -119,9 +119,9 @@ extern void *competitionsTable[];
 extern uint8_t seasonInformationsArray[];
 extern uint16_t currentSeasonShowing;
 
-/* Season info offsets */
-#define SEASONINFO_MANAGERSTATUS  105
-#define SEASONINFO_SIZE           106
+/* Season info row stride uses sizeof so 64-bit pointer-field growth in
+ * SeasonInformations (106 → 122 bytes) is picked up automatically.
+ * Field reads go through typed struct access to avoid the same drift. */
 
 /* ---- C-ported function externs ---- */
 extern void _SetExitMenuFlag(void);
@@ -143,7 +143,8 @@ extern void _Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel);
 
 /* Helper: GetCurrentSeasonPointer */
 static inline uint8_t *getCurrentSeasonPointer(void) {
-    return seasonInformationsArray + (uint16_t)currentSeasonShowing * SEASONINFO_SIZE;
+    return seasonInformationsArray +
+           (uint16_t)currentSeasonShowing * (uint32_t)sizeof(SeasonInformations);
 }
 
 
@@ -627,9 +628,9 @@ void _AcceptJobOffer(void) {
     numJobOffers = 0;
 
     /* GetCurrentSeasonPointer + check manager status */
-    uint8_t *season = getCurrentSeasonPointer();
-    if ((int8_t)season[SEASONINFO_MANAGERSTATUS] >= 0) {
-        season[SEASONINFO_MANAGERSTATUS] = 1;
+    SeasonInformations *season = (SeasonInformations *)getCurrentSeasonPointer();
+    if (season->managerStatus >= 0) {
+        season->managerStatus = 1;
     }
     _SetExitMenuFlag();
 }
