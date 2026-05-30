@@ -268,6 +268,14 @@ ifdef SWOS_SAVE_FORMAT_JSON_PROFILE
 DEBUG_FLAGS += -DSWOS_SAVE_FORMAT_JSON_PROFILE=1
 endif
 
+# Legacy-dispatch toggle: build with `make SWOS_SAVE_LEGACY_DISPATCH=1` to
+# select the per-field path-lookup loop (slow but the established
+# baseline). Default OFF — the new walk-once dispatch is faster.
+# Keep around for comparison testing when investigating verify deltas.
+ifdef SWOS_SAVE_LEGACY_DISPATCH
+DEBUG_FLAGS += -DSWOS_SAVE_LEGACY_DISPATCH=1
+endif
+
 CFLAGS  := $(ARCHFLAGS) -O2 -g -std=gnu11 -fno-strict-aliasing -fno-builtin \
            -D_FILE_OFFSET_BITS=64 $(DEBUG_FLAGS) \
            -Wall -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable \
