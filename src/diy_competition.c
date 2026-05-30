@@ -7666,27 +7666,6 @@ void _DesignDIYLeagueChooseTeams(void)
 }
 
 extern volatile uint16_t shortFire; /* for debug logging */
-
-/* Season-update skip request: mirrors the menu-hold skip latch in
- * menu_system.c (_MenuProc) so the pre-show "wait for CONTINUE fire to
- * release" debounce loops below can be short-circuited too. Without this,
- * those loops spin ~1-2s waiting for the auto-fired fire to clear and the
- * SPACE/button-2 skip has no effect on the league/cup result screens.
- * SDL uses the continuous pauseSkipRequested flag; the Amiga uses keyIn
- * (raw SPACE scancode 0x40, held by the keyboard ISR from press to
- * release) or the second fire button (pl2Fire = CIAA_PRA bit 6). */
-static int _SeasonSkipRequested(void)
-{
-#ifdef SWOS_SDL_BUILD
-    extern volatile uint16_t pauseSkipRequested;
-    return pauseSkipRequested != 0;
-#else
-    extern volatile uint8_t keyIn;
-    extern uint8_t pl2Fire;
-    return keyIn == 0x40 || pl2Fire != 0;
-#endif
-}
-
 /* ShowDIYCupMenuWithParams — store params, show cup menu (SWOS2.s line 43290) */
 __attribute__((used, externally_visible))
 void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2)
@@ -7725,7 +7704,7 @@ void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2)
                                   debounce_iters, (unsigned)fire, (unsigned)shortFire);
             }
 #endif
-        } while (fire != 0 && !_SeasonSkipRequested());
+        } while (fire != 0);
         SWOS_AUTOSKIP_LOG("ShowDIYCupMenuWithParams: debounce exited fire=%u", (unsigned)fire);
     }
 
@@ -9508,7 +9487,7 @@ void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t fo
                                   debounce_iters, (unsigned)fire, (unsigned)shortFire);
             }
 #endif
-        } while (fire != 0 && !_SeasonSkipRequested());
+        } while (fire != 0);
         SWOS_AUTOSKIP_LOG("ShowDiyLeaguesTournamentMenu: debounce exited fire=%u", (unsigned)fire);
     }
 
