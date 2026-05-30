@@ -1699,33 +1699,138 @@ static void emit_player_file_body(mjson_print_fn_t fn, void *fnd,
     mjson_printf(fn, fnd, "%s", "}");
 }
 
+/* ---------- Walk-once dispatch for struct-relative fields ----------
+ *
+ * Same idea as load_scalar_table's hash-dispatch but for fields whose
+ * addresses are computed as `base_ptr + offset` instead of being
+ * absolute. Used for the team/player loaders called many times per
+ * career load (32 selected teams × 16 players each, plus tmd_teams
+ * which can be 80+). Walks each JSON object once via mjson_next and
+ * looks up each key in a small per-struct table via linear search —
+ * tables are short (~13 entries) so a hash index isn't worth the
+ * cache pressure. */
+typedef struct {
+    const char *name;
+    uint16_t    offset;
+    uint16_t    size;     /* for STR / BYTES; ignored for scalars */
+    FieldType   type;
+} StructFieldDesc;
+
+static void load_struct_object(const char *slice, int slen, uint8_t *base,
+                               const StructFieldDesc *table)
+{
+    char tmp[64];
+    int pos = 0, koff, klen, voff, vlen, vt;
+    while ((pos = mjson_next(slice, slen, pos,
+                             &koff, &klen, &voff, &vlen, &vt)) != 0) {
+        if (klen < 2) continue;
+        const char *k = slice + koff + 1;
+        int         kl = klen - 2;
+        const char *vs = slice + voff;
+        int         vl = vlen;
+
+        const StructFieldDesc *f = NULL;
+        for (const StructFieldDesc *e = table; e->name; e++) {
+            if (k[0] == e->name[0] &&
+                kl == (int)strlen(e->name) &&
+                memcmp(e->name, k, (size_t)kl) == 0) {
+                f = e;
+                break;
+            }
+        }
+        if (!f) continue;
+
+        uint8_t *p = base + f->offset;
+        switch (f->type) {
+        case FLD_U8: case FLD_S8:
+            if (vt == MJSON_TOK_NUMBER)
+                *p = (uint8_t)parse_long_slice(vs, vl);
+            break;
+        case FLD_U16: case FLD_S16:
+            if (vt == MJSON_TOK_NUMBER) {
+                uint16_t v = (uint16_t)parse_long_slice(vs, vl);
+                memcpy(p, &v, sizeof(v));
+            }
+            break;
+        case FLD_U32: case FLD_S32:
+            if (vt == MJSON_TOK_NUMBER) {
+                uint32_t v = (uint32_t)parse_long_slice(vs, vl);
+                memcpy(p, &v, sizeof(v));
+            }
+            break;
+        case FLD_STR:
+            memset(p, 0, f->size);
+            if (vt == MJSON_TOK_STRING) {
+                if (mjson_get_string(vs, vl, "$", tmp, (int)sizeof(tmp)) > 0) {
+                    uint32_t n = (uint32_t)strlen(tmp);
+                    if (n > f->size) n = f->size;
+                    memcpy(p, tmp, n);
+                }
+            }
+            break;
+        case FLD_BYTES:
+            if (vt == MJSON_TOK_ARRAY) {
+                int koff2, klen2, voff2, vlen2, vt2;
+                uint32_t i = 0;
+                int off2 = 0;
+                while (i < f->size &&
+                       (off2 = mjson_next(vs, vl, off2,
+                                          &koff2, &klen2,
+                                          &voff2, &vlen2, &vt2)) != 0) {
+                    if (vt2 == MJSON_TOK_NUMBER)
+                        p[i] = (uint8_t)parse_long_slice(vs + voff2, vlen2);
+                    i++;
+                }
+            }
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+/* PlayerFile field table — keys must match emit_player_file_body. */
+static const StructFieldDesc s_player_fields[] = {
+    { "nationality",          offsetof(PlayerFile, nationality),         0, FLD_U8 },
+    { "field_1",              offsetof(PlayerFile, field_1),             0, FLD_U8 },
+    { "shirt_number",         offsetof(PlayerFile, shirtNumber),         0, FLD_U8 },
+    { "player_name",          offsetof(PlayerFile, playerName),         22, FLD_STR },
+    { "field_19",             offsetof(PlayerFile, field_19),            0, FLD_U8 },
+    { "position_and_face",    offsetof(PlayerFile, positionAndFace),     0, FLD_U8 },
+    { "cards_injuries",       offsetof(PlayerFile, cardsInjuries),       0, FLD_U8 },
+    { "passing",              offsetof(PlayerFile, passing),             0, FLD_U8 },
+    { "shooting_heading",     offsetof(PlayerFile, shootingHeading),     0, FLD_U8 },
+    { "tackling_ball_control",offsetof(PlayerFile, tacklingBallControl), 0, FLD_U8 },
+    { "speed_finishing",      offsetof(PlayerFile, speedFinishing),      0, FLD_U8 },
+    { "price",                offsetof(PlayerFile, price),               0, FLD_U8 },
+    { "goal_stats",           offsetof(PlayerFile, goalStats),           4, FLD_BYTES },
+    { "some_flag",            offsetof(PlayerFile, someFlag),            0, FLD_U8 },
+    { NULL, 0, 0, FLD_END }
+};
+
+/* TeamFile header field table — keys must match emit_team_file_ex_body
+ * inner "team" object. */
+static const StructFieldDesc s_team_file_fields[] = {
+    { "country_number",     offsetof(TeamFile, countryNumber),     0, FLD_U8 },
+    { "team_ordinal",       offsetof(TeamFile, teamOrdinal),       0, FLD_U8 },
+    { "global_team_number", offsetof(TeamFile, globalTeamNumber),  0, FLD_S16 },
+    { "team_controls",      offsetof(TeamFile, teamControls),      0, FLD_U8 },
+    { "team_name",          offsetof(TeamFile, teamName),         17, FLD_STR },
+    { "writes_zero_here",   offsetof(TeamFile, writesZeroHere),    0, FLD_U8 },
+    { "and_with_0xfe",      offsetof(TeamFile, andWith0xFE),       0, FLD_U8 },
+    { "tactics",            offsetof(TeamFile, tactics),           0, FLD_U8 },
+    { "league",             offsetof(TeamFile, league),            0, FLD_U8 },
+    { "kit_colors",         offsetof(TeamFile, prShirtType),      10, FLD_BYTES },
+    { "coach_name",         offsetof(TeamFile, coachName),        23, FLD_STR },
+    { "some_flag",          offsetof(TeamFile, someFlag),          0, FLD_U8 },
+    { "player_numbers",     offsetof(TeamFile, playerNumbers),    16, FLD_BYTES },
+    { NULL, 0, 0, FLD_END }
+};
+
 /* Load a PlayerFile from a JSON object slice. Mirror of emit_player_file_body. */
 static void load_player_file_body(const char *buf, int buflen, uint8_t *p)
 {
-#define LOAD_PU8(field, jsonkey) \
-        load_u8_at(buf, buflen, "$." jsonkey, p, offsetof(PlayerFile, field))
-#define LOAD_PSTR(field, jsonkey, maxlen) \
-        load_str_at(buf, buflen, "$." jsonkey, p, offsetof(PlayerFile, field), maxlen)
-#define LOAD_PBYTES(field, jsonkey, len) \
-        load_bytes_at(buf, buflen, "$." jsonkey, p, offsetof(PlayerFile, field), len)
-
-    LOAD_PU8(nationality,         "nationality");
-    LOAD_PU8(field_1,             "field_1");
-    LOAD_PU8(shirtNumber,         "shirt_number");
-    LOAD_PSTR(playerName,         "player_name", 22);
-    LOAD_PU8(field_19,            "field_19");
-    LOAD_PU8(positionAndFace,     "position_and_face");
-    LOAD_PU8(cardsInjuries,       "cards_injuries");
-    LOAD_PU8(passing,             "passing");
-    LOAD_PU8(shootingHeading,     "shooting_heading");
-    LOAD_PU8(tacklingBallControl, "tackling_ball_control");
-    LOAD_PU8(speedFinishing,      "speed_finishing");
-    LOAD_PU8(price,               "price");
-    LOAD_PBYTES(goalStats,        "goal_stats", 4);
-    LOAD_PU8(someFlag,            "some_flag");
-#undef LOAD_PU8
-#undef LOAD_PSTR
-#undef LOAD_PBYTES
+    load_struct_object(buf, buflen, p, s_player_fields);
 }
 
 /* Emit a single MarketPlayer (42 B = 4 B header + PlayerFile) as a
@@ -1841,61 +1946,39 @@ static void load_team_file_ex_slice(const char *buf, int buflen,
                                     uint8_t *base)
 {
     uint8_t *team = base + offsetof(TeamFileEx, team);
-    char path[64];
 
-#define LOAD_U8(field, jsonkey) do { \
-        load_u8_at(buf, buflen, "$.team." jsonkey, \
-                   team, offsetof(TeamFile, field)); \
-    } while (0)
-#define LOAD_S16(field, jsonkey) do { \
-        load_s16_at(buf, buflen, "$.team." jsonkey, \
-                    team, offsetof(TeamFile, field)); \
-    } while (0)
-#define LOAD_STR(field, jsonkey, maxlen) do { \
-        load_str_at(buf, buflen, "$.team." jsonkey, \
-                    team, offsetof(TeamFile, field), maxlen); \
-    } while (0)
-#define LOAD_BYTES(field, jsonkey, len) do { \
-        load_bytes_at(buf, buflen, "$.team." jsonkey, \
-                      team, offsetof(TeamFile, field), len); \
-    } while (0)
-
-    LOAD_U8 (countryNumber,    "country_number");
-    LOAD_U8 (teamOrdinal,      "team_ordinal");
-    LOAD_S16(globalTeamNumber, "global_team_number");
-    LOAD_U8 (teamControls,     "team_controls");
-    LOAD_STR(teamName,         "team_name", 17);
-    LOAD_U8 (writesZeroHere,   "writes_zero_here");
-    LOAD_U8 (andWith0xFE,      "and_with_0xfe");
-    LOAD_U8 (tactics,          "tactics");
-    LOAD_U8 (league,           "league");
-    LOAD_BYTES(prShirtType,    "kit_colors", 10);
-    LOAD_STR(coachName,        "coach_name", 23);
-    LOAD_U8 (someFlag,         "some_flag");
-    LOAD_BYTES(playerNumbers,  "player_numbers", 16);
-#undef LOAD_U8
-#undef LOAD_S16
-#undef LOAD_STR
-#undef LOAD_BYTES
-
-    /* Per-player: iterate the players array via mjson_next so each
-     * step is O(1) in array position; field lookups within each
-     * player run against its ~250-byte slice instead of ~3 KB. */
-    const char *players_arr = NULL; int players_arr_len = 0;
-    if (mjson_find(buf, buflen, "$.players",
-                   &players_arr, &players_arr_len) != MJSON_TOK_ARRAY)
-        return;
-
+    /* Walk the outer { "team": {...}, "players": [...] } object once
+     * via mjson_next. Each top-level key is dispatched directly to a
+     * single sub-walker — replaces the per-field mjson_get_long calls
+     * that each scanned the full outer slice. The two top-level keys
+     * are short so a 2-way string compare is fastest. */
     int pos = 0, koff, klen, voff, vlen, vt;
-    int i = 0;
-    while (i < 16 &&
-           (pos = mjson_next(players_arr, players_arr_len, pos,
+    while ((pos = mjson_next(buf, buflen, pos,
                              &koff, &klen, &voff, &vlen, &vt)) != 0) {
-        if (vt != MJSON_TOK_OBJECT) { i++; continue; }
-        uint8_t *p = base + offsetof(TeamFileEx, players)
-                          + (size_t)i * sizeof(PlayerFile);
-        load_player_file_body(players_arr + voff, vlen, p);
-        i++;
+        if (klen < 2) continue;
+        const char *k = buf + koff + 1;
+        int         kl = klen - 2;
+        const char *vs = buf + voff;
+        int         vl = vlen;
+
+        if (kl == 4 && vt == MJSON_TOK_OBJECT &&
+            memcmp(k, "team", 4) == 0) {
+            load_struct_object(vs, vl, team, s_team_file_fields);
+        } else if (kl == 7 && vt == MJSON_TOK_ARRAY &&
+                   memcmp(k, "players", 7) == 0) {
+            int pos2 = 0, koff2, klen2, voff2, vlen2, vt2;
+            int i = 0;
+            while (i < 16 &&
+                   (pos2 = mjson_next(vs, vl, pos2,
+                                      &koff2, &klen2,
+                                      &voff2, &vlen2, &vt2)) != 0) {
+                if (vt2 != MJSON_TOK_OBJECT) { i++; continue; }
+                uint8_t *p = base + offsetof(TeamFileEx, players)
+                                  + (size_t)i * sizeof(PlayerFile);
+                load_player_file_body(vs + voff2, vlen2, p);
+                i++;
+            }
+        }
     }
 }
 
