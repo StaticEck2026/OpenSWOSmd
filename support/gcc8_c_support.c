@@ -72,7 +72,7 @@ void* memcpy(void *dest, const void *src, unsigned long len) {
 	return dest;
 }
 
-__attribute__((optimize("no-tree-loop-distribute-patterns"))) 
+__attribute__((optimize("no-tree-loop-distribute-patterns")))
 void* memmove(void *dest, const void *src, unsigned long len) {
 	char *d = dest;
 	const char *s = src;
@@ -86,6 +86,19 @@ void* memmove(void *dest, const void *src, unsigned long len) {
 			*lastd-- = *lasts--;
 	}
 	return dest;
+}
+
+__attribute__((optimize("no-tree-loop-distribute-patterns")))
+int memcmp(const void *a, const void *b, unsigned long len) {
+	const unsigned char *pa = (const unsigned char *)a;
+	const unsigned char *pb = (const unsigned char *)b;
+	while (len--) {
+		if (*pa != *pb)
+			return (int)*pa - (int)*pb;
+		pa++;
+		pb++;
+	}
+	return 0;
 }
 
 // vbcc

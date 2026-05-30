@@ -97,7 +97,12 @@ typedef unsigned long long uint64_t;
  * so fprintf(stderr, ...) doesn't compile. SWOS_DBG / SWOS_DBG_FLUSH
  * expand to a real fprintf on hosted SDL builds and to a no-op on
  * Amiga — match the endian_helpers.h pattern of "host-side fix that
- * compiles to nothing on Amiga". */
+ * compiles to nothing on Amiga".
+ *
+ * (KPrintF was tried as an Amiga path but lives in gcc8_c_support.c
+ * which the Amiga Makefile filters out, so referencing it breaks the
+ * link. For per-call diagnostic output on Amiga, write to a fixed
+ * global buffer and inspect via WinUAE memory dump instead.) */
 #if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
 #define SWOS_DBG(...)         ((void)0)
 #define SWOS_DBG_FLUSH()      ((void)0)

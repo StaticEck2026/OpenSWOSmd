@@ -628,8 +628,11 @@ uint16_t team2SelectedPlayerIndex;
  * `_Career_StoreCompetitionSlotStateToBuffer(slotState)` writes up to
  * 1844 bytes here for slot 1. Size accordingly to avoid stomping
  * neighboring globals (most visibly careerNumPlayers). */
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): secondaryCompStringOffset */
-// uint32_t secondaryCompStringOffset;
+/* secondaryCompStringOffset: defined standalone below (~line 846) as a
+ * native-width pointer, NOT in the overlay. On Amiga it aliased
+ * competitionContext+0x28 (the slot-1 comp namePtr); we split it out as a
+ * pointer-to-disk field handled symbolically at save time. See the
+ * primary/secondary/tertiary/quaternary block near line 845. */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): minorTrophyBonusValue */
 // uint8_t minorTrophyBonusValue;
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): secondaryCompWinnerTeam */
@@ -643,8 +646,10 @@ uint16_t team2SelectedPlayerIndex;
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): secondaryCompFinished */
 // uint16_t secondaryCompFinished;
 /* tertiaryCompetitionContext: backing storage in swos_globals.c. */
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): tertiaryCompStringOffset */
-// uint32_t tertiaryCompStringOffset;
+/* tertiaryCompStringOffset: defined standalone below (~line 847) as a
+ * native-width pointer, NOT in the overlay (on Amiga aliased
+ * tertiaryCompetitionContext+0x28). Pointer-to-disk field, saved
+ * symbolically. */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): leagueTitleBonusValue */
 // uint8_t leagueTitleBonusValue;
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): tertiaryCompWinnerTeam */
@@ -664,8 +669,10 @@ uint16_t team2SelectedPlayerIndex;
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): diyCompSlotStateC */
 // uint16_t diyCompSlotStateC;
 /* euroCupsCompetitionContext: backing storage in swos_globals.c. */
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): quaternaryCompStringOffset */
-// uint32_t quaternaryCompStringOffset;
+/* quaternaryCompStringOffset: defined standalone below (~line 848) as a
+ * native-width pointer, NOT in the overlay (on Amiga aliased
+ * euroCupsCompetitionContext+0x28). Pointer-to-disk field, saved
+ * symbolically. */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): majorTrophyOrCupBonusValue */
 // uint8_t majorTrophyOrCupBonusValue;
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): quaternaryCompWinnerTeam */
@@ -696,8 +703,14 @@ uint16_t team2SelectedPlayerIndex;
 // uint8_t careerJobOfferPhaseBias;
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): competitionOver */
 // uint16_t competitionOver;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): primaryCompStringOffset */
-// uint32_t primaryCompStringOffset;
+/* primaryCompStringOffset: defined standalone below (~line 845) as a
+ * native-width pointer, NOT in the overlay. On Amiga (SWOS2.s) this label
+ * IS competitionFileBuffer+0x28 — the same bytes as DIYCompetition.namePtr
+ * — and Career_SetCurrentCompetitionSlot writes the comp name pointer
+ * there. We split it out as a pointer-to-disk field saved symbolically;
+ * career_init reads the buffer namePtr directly for SeasonInformations
+ * (see career_init.c ~line 1059). The standalone global is now vestigial
+ * (only zeroed + pointer-translated). */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): majorTrophyBonusValue */
 // uint8_t majorTrophyBonusValue;
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): numDiyTeams */

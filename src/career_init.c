@@ -829,8 +829,10 @@ found:
         /* Set slot 3 for this euro cup (d0=3, d1=euroCupIndex, d2=0) */
         _Career_SetCurrentCompetitionSlot(cupCopy, 3, 0, 0);
 
+        /* quaternaryCompStringOffset == euroCupsCompetitionContext+0x28
+         * namePtr on Amiga (slot 3). */
         ((SeasonInformations *)_GetCurrentSeasonPointer())->strPtr3 =
-            quaternaryCompStringOffset;
+            ((DIYCompetition *)careerCompetitionSlotPtrTable[3])->namePtr;
 
         /* Restore quaternary slot state */
         quaternaryCompSlotStateC = savedC;
@@ -1056,8 +1058,13 @@ void _InitializeNewSeason(void)
         compTablePtr++;
         _Career_SetCurrentCompetitionSlot(comp, 0, currentDivisionIndex, 0);
 
+        /* SWOS2.s reads (primaryCompStringOffset), which on Amiga IS
+         * competitionFileBuffer+0x28 = the comp namePtr that
+         * _Career_SetCurrentCompetitionSlot just wrote. Our standalone
+         * primaryCompStringOffset global is never populated (only zeroed),
+         * so read the slot-0 buffer's namePtr directly. */
         ((SeasonInformations *)_GetCurrentSeasonPointer())->leagueStrPtr =
-            primaryCompStringOffset;
+            ((DIYCompetition *)careerCompetitionSlotPtrTable[0])->namePtr;
 
         primaryCompSlotStateC = savedC;
         primaryCompSlotStateB = savedB;
@@ -1078,8 +1085,10 @@ void _InitializeNewSeason(void)
         compTablePtr++;
         _Career_SetCurrentCompetitionSlot(comp, 1, 0, 0);
 
+        /* secondaryCompStringOffset == competitionContext+0x28 namePtr on
+         * Amiga (slot 1); read the buffer namePtr directly. */
         ((SeasonInformations *)_GetCurrentSeasonPointer())->strPtr1 =
-            secondaryCompStringOffset;
+            ((DIYCompetition *)careerCompetitionSlotPtrTable[1])->namePtr;
 
         secondaryCompSlotStateC = savedC;
         secondaryCompSlotStateB = savedB;
@@ -1094,8 +1103,10 @@ void _InitializeNewSeason(void)
             comp = (uint8_t *)*compTablePtr;
             _Career_SetCurrentCompetitionSlot(comp, 2, 0, 0);
 
+            /* tertiaryCompStringOffset == tertiaryCompetitionContext+0x28
+             * namePtr on Amiga (slot 2). */
             ((SeasonInformations *)_GetCurrentSeasonPointer())->strPtr2 =
-                tertiaryCompStringOffset;
+                ((DIYCompetition *)careerCompetitionSlotPtrTable[2])->namePtr;
 
             tertiaryCompSlotStateC = savedC2;
             tertiaryCompSlotStateB = savedB2;

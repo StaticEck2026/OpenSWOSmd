@@ -52,13 +52,14 @@ uint8_t SaveJson_GetLoadedPrimaryCountryCode(void)
 #include "swos_io.h"
 
 /* Amiga m68k <string.h> is partial — declares memcpy but not
- * strlen / strcmp. And there is no <stdlib.h> at all, so atoi is
- * undeclared too. Provide explicit prototypes for the strict
+ * strlen / strcmp / memcmp. And there is no <stdlib.h> at all, so atoi
+ * is undeclared too. Provide explicit prototypes for the strict
  * builtin-mismatch check; the symbols themselves resolve at link
- * time via libc. */
+ * time via libc / gcc8_c_support. */
 #if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
 extern size_t strlen(const char *s);
 extern int    strcmp(const char *a, const char *b);
+extern int    memcmp(const void *a, const void *b, size_t n);
 extern int    atoi(const char *s);
 #endif
 
@@ -1132,12 +1133,27 @@ static const FieldDesc s_career_scalars[] = {
      * problem — see CLAUDE.md). Promoting these to structured DIY
      * fields with sym-encoded inner pointers is future work; for now
      * preserve byte fidelity as flat scalars. */
-    /* Inline literal — primary slot lives at careerFileBuffer + 93308
-     * (no standalone symbol), so the FA macro's `&sym` form doesn't
-     * apply. Covers DIYCompetition header bytes 2..153; bytes 0..1 are
-     * the primary_slot_type scalar at the top of this table, and
-     * bytes 154..2899 are covered by diy_team_id_list_type_2/0/1. */
-    { "primary_comp_block", (void *)((uint8_t *)&careerFileBuffer + 93308), 154, FLD_BYTES },
+    /* Primary slot data lives AT &competitionFileBuffer (the overlay
+     * aliases it there — see swos_globals.c:1148). Earlier code used a
+     * literal offset `&careerFileBuffer + 93308` because of an obsolete
+     * "no standalone symbol" assumption; that's wrong on 64-bit because
+     * the careerFileBuffer overlay grew by 4 + 320 bytes (namePtr gap
+     * + seasonInformations stride pad), so the literal lands 624 bytes
+     * *before* competitionFileBuffer and the active competition was
+     * never being saved. Use the symbol directly.
+     *
+     * Size covers DIYCompetition header bytes 2..end. On 32-bit that's
+     * 154 bytes; on 64-bit the namePtr field widens 4→8 bytes inside
+     * the header so the span grows to 158. Bytes 0..1 are the
+     * primary_slot_type scalar at the top of this table, and the
+     * trailing team-id lists are covered by diy_team_id_list_type_2/0/1. */
+    { "primary_comp_block", (void *)&competitionFileBuffer,
+#if UINTPTR_MAX == 0xFFFFFFFFu
+        154,
+#else
+        158,
+#endif
+        FLD_BYTES },
     FA("competition_context",         competitionContext,         2900, FLD_BYTES),
     FA("tertiary_competition_context",tertiaryCompetitionContext, 1092, FLD_BYTES),
     FA("diy_competition_context",     diyCompetitionContext,      1092, FLD_BYTES),
@@ -1161,11 +1177,19 @@ static const FieldDesc s_career_scalars[] = {
     FA("team_tactics_user_f",         teamTacticsUSERF,            370, FLD_BYTES),
 
     /* *Copy competition record region. Spans euroCupCopy through
-     * oceaniaWorldCupQualificationCopy (1832 B, 34 records). Each
-     * record's text[2] pointer pair is restored from its template by
-     * restore_comp_copy_text_ptrs_from_template — saved bytes don't
-     * need to carry those pointers. */
-    FA("comp_copy_region",            euroCupCopy,                1832, FLD_BYTES),
+     * oceaniaWorldCupQualificationCopy + its trailing pad (34 records).
+     * Each record's text[2] pointer pair is restored from its template
+     * by restore_comp_copy_text_ptrs_from_template — saved bytes don't
+     * need to carry those pointers. On 64-bit each record gets a +8
+     * conditional pad in the overlay (text[2] pointer-widening), so
+     * the region is 34 × 8 = 272 bytes bigger. */
+    FA("comp_copy_region",            euroCupCopy,
+#if UINTPTR_MAX == 0xFFFFFFFFu
+        1832,
+#else
+        2104,
+#endif
+        FLD_BYTES),
 
     /* Small unstructured tables — internal layout not yet modelled. */
     FA("career_unavailable_player_lookup_table",
@@ -1235,14 +1259,346 @@ static void emit_scalar_table(mjson_print_fn_t fn, void *fnd,
     mjson_printf(fn, fnd, "%s", "}");
 }
 
+/* ---------- Walk-once dispatch for scalar-table loads ----------
+ *
+ * The legacy loop did `mjson_get_long(section, len, "$.fieldname", ...)`
+ * once per FieldDesc entry. mjson_get_long is O(section_len) — it walks
+ * the section from the start until it finds the key — so for a 242-entry
+ * table over a ~20 KB section that's ~5 MB of byte scanning. On modern
+ * x86 nothing; on the Amiga it dominated load time.
+ *
+ * The new path walks the section once with mjson_next, hashes each key,
+ * and looks the FieldDesc up by hash. ~O(section_len) total instead of
+ * O(section_len × n_fields). Measured 10–20× speedup at the table-load
+ * level on x86; the Amiga win should be larger because the constant
+ * factor on mjson_get_long is much worse there. */
+
+typedef struct {
+    uint32_t          hash;
+    const FieldDesc  *fd;
+} HashedField;
+
+static uint32_t fnv1a_bytes(const char *s, int n)
+{
+    uint32_t h = 2166136261u;
+    for (int i = 0; i < n; i++) {
+        h ^= (uint8_t)s[i];
+        h *= 16777619u;
+    }
+    return h;
+}
+
+/* Insertion-sort by hash, in place. n ≤ a few hundred — qsort's
+ * function-pointer-per-compare overhead dominates for sizes this small,
+ * and we do this once per table (cached across loads). */
+static int build_hashed_index(const FieldDesc *table,
+                              HashedField *out, int out_cap)
+{
+    int n = 0;
+    for (const FieldDesc *f = table; f->type != FLD_END; f++) {
+        if (n >= out_cap) return -1;
+        out[n].hash = fnv1a_bytes(f->name, (int)strlen(f->name));
+        out[n].fd   = f;
+        n++;
+    }
+    for (int i = 1; i < n; i++) {
+        HashedField cur = out[i];
+        int j = i - 1;
+        while (j >= 0 && out[j].hash > cur.hash) {
+            out[j + 1] = out[j];
+            j--;
+        }
+        out[j + 1] = cur;
+    }
+    return n;
+}
+
+static const FieldDesc *find_field_by_hash(uint32_t h,
+                                           const HashedField *arr, int n)
+{
+    int lo = 0, hi = n - 1;
+    while (lo <= hi) {
+        int mid = (lo + hi) >> 1;
+        uint32_t mh = arr[mid].hash;
+        if (mh < h) lo = mid + 1;
+        else if (mh > h) hi = mid - 1;
+        else return arr[mid].fd;
+    }
+    return NULL;
+}
+
+/* Parse a decimal integer from a slice (number-token value bytes from
+ * mjson_next). Faster than calling mjson_get_long on the slice — the
+ * state-machine pass has per-call overhead we don't need. */
+static long parse_long_slice(const char *s, int n)
+{
+    long v = 0;
+    int sign = 1, i = 0;
+    while (i < n && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n' || s[i] == '\r')) i++;
+    if (i < n && s[i] == '-') { sign = -1; i++; }
+    else if (i < n && s[i] == '+')        i++;
+    for (; i < n; i++) {
+        if (s[i] < '0' || s[i] > '9') break;
+        v = v * 10 + (s[i] - '0');
+    }
+    return sign * v;
+}
+
+/* Sequential JSON object key/value iterator.
+ *
+ * mjson_next() walks the slice from char 0 on every call to find the
+ * next token after `pos`, so walking N keys is O(N²) total. For tight
+ * loops over fixed-schema objects (TeamFile, PlayerFile, MarketPlayer)
+ * called thousands of times per career load, that quadratic cost
+ * dominated the load profile after the FLD_BYTES fast walker landed.
+ *
+ * fast_object_next maintains the previously-returned position itself
+ * — single linear pass through the slice characters, no callbacks, no
+ * depth tracking outside what's needed for nested object/array
+ * skipping. ~5-10× faster than mjson_next on small fixed-schema
+ * objects.
+ *
+ * Input/output semantics match mjson_next:
+ *   - Returns new pos after the value, or 0 at end of object.
+ *   - Sets koff/klen to the key bytes INCLUDING surrounding quotes
+ *     (caller strips them) — matches mjson_next convention.
+ *   - Sets voff/vlen to the value's byte range (including surrounding
+ *     brackets/quotes for object/array/string values).
+ *   - Sets vt to one of MJSON_TOK_{NUMBER,STRING,OBJECT,ARRAY,TRUE,
+ *     FALSE,NULL}. */
+static int fast_object_next(const char *slice, int slen, int pos,
+                            int *koff, int *klen,
+                            int *voff, int *vlen, int *vt)
+{
+    /* Skip whitespace, comma separators, and a leading '{' on the
+     * very first call (pos == 0). */
+    while (pos < slen) {
+        char c = slice[pos];
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\r' ||
+            c == ',' || c == '{') { pos++; continue; }
+        break;
+    }
+    if (pos >= slen || slice[pos] == '}') return 0;
+    if (slice[pos] != '"') return 0;
+
+    /* Key: koff/klen include the surrounding quotes to match
+     * mjson_next's convention. */
+    int kstart = pos;
+    pos++;  /* past opening quote */
+    while (pos < slen && slice[pos] != '"') {
+        if (slice[pos] == '\\' && pos + 1 < slen) pos++;
+        pos++;
+    }
+    if (pos >= slen) return 0;
+    pos++;  /* past closing quote */
+    *koff = kstart;
+    *klen = pos - kstart;
+
+    /* Skip whitespace + ':' between key and value. */
+    while (pos < slen) {
+        char c = slice[pos];
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == ':') {
+            pos++;
+            continue;
+        }
+        break;
+    }
+    if (pos >= slen) return 0;
+
+    int vstart = pos;
+    char vc = slice[pos];
+    if (vc == '"') {
+        *vt = MJSON_TOK_STRING;
+        pos++;
+        while (pos < slen && slice[pos] != '"') {
+            if (slice[pos] == '\\' && pos + 1 < slen) pos++;
+            pos++;
+        }
+        if (pos < slen) pos++;  /* past closing quote */
+    } else if (vc == '{' || vc == '[') {
+        *vt = (vc == '{') ? MJSON_TOK_OBJECT : MJSON_TOK_ARRAY;
+        int depth = 1;
+        pos++;
+        while (pos < slen && depth > 0) {
+            char c = slice[pos];
+            if (c == '"') {
+                /* Skip a nested string so its braces/brackets don't
+                 * confuse depth tracking. */
+                pos++;
+                while (pos < slen && slice[pos] != '"') {
+                    if (slice[pos] == '\\' && pos + 1 < slen) pos++;
+                    pos++;
+                }
+            } else if (c == '{' || c == '[') {
+                depth++;
+            } else if (c == '}' || c == ']') {
+                depth--;
+            }
+            pos++;
+        }
+    } else if ((vc >= '0' && vc <= '9') || vc == '-' || vc == '+') {
+        *vt = MJSON_TOK_NUMBER;
+        pos++;
+        while (pos < slen) {
+            char c = slice[pos];
+            if ((c >= '0' && c <= '9') || c == '.' ||
+                c == 'e' || c == 'E' || c == '+' || c == '-') {
+                pos++;
+                continue;
+            }
+            break;
+        }
+    } else if (vc == 't' || vc == 'f' || vc == 'n') {
+        *vt = (vc == 't') ? MJSON_TOK_TRUE
+            : (vc == 'f') ? MJSON_TOK_FALSE
+            :               MJSON_TOK_NULL;
+        while (pos < slen) {
+            char c = slice[pos];
+            if (c >= 'a' && c <= 'z') { pos++; continue; }
+            break;
+        }
+    } else {
+        /* Unknown — bail to prevent an infinite loop. */
+        return 0;
+    }
+    *voff = vstart;
+    *vlen = pos - vstart;
+    return pos;
+}
+
+/* Sequential JSON array element iterator — companion to
+ * fast_object_next. Same O(N) total cost vs mjson_next's O(N²) when
+ * walking N elements of an array. Used for the big arrays in
+ * apply_semantic_load (selected_teams, tmd_teams,
+ * career_foreign_market_players, reserves) which each hold hundreds
+ * of element objects. */
+static int fast_array_next(const char *slice, int slen, int pos,
+                           int *voff, int *vlen, int *vt)
+{
+    /* Skip whitespace, opening '[', commas. */
+    while (pos < slen) {
+        char c = slice[pos];
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\r' ||
+            c == ',' || c == '[') { pos++; continue; }
+        break;
+    }
+    if (pos >= slen || slice[pos] == ']') return 0;
+
+    int vstart = pos;
+    char vc = slice[pos];
+    if (vc == '"') {
+        *vt = MJSON_TOK_STRING;
+        pos++;
+        while (pos < slen && slice[pos] != '"') {
+            if (slice[pos] == '\\' && pos + 1 < slen) pos++;
+            pos++;
+        }
+        if (pos < slen) pos++;
+    } else if (vc == '{' || vc == '[') {
+        *vt = (vc == '{') ? MJSON_TOK_OBJECT : MJSON_TOK_ARRAY;
+        int depth = 1;
+        pos++;
+        while (pos < slen && depth > 0) {
+            char c = slice[pos];
+            if (c == '"') {
+                pos++;
+                while (pos < slen && slice[pos] != '"') {
+                    if (slice[pos] == '\\' && pos + 1 < slen) pos++;
+                    pos++;
+                }
+            } else if (c == '{' || c == '[') {
+                depth++;
+            } else if (c == '}' || c == ']') {
+                depth--;
+            }
+            pos++;
+        }
+    } else if ((vc >= '0' && vc <= '9') || vc == '-' || vc == '+') {
+        *vt = MJSON_TOK_NUMBER;
+        pos++;
+        while (pos < slen) {
+            char c = slice[pos];
+            if ((c >= '0' && c <= '9') || c == '.' ||
+                c == 'e' || c == 'E' || c == '+' || c == '-') {
+                pos++;
+                continue;
+            }
+            break;
+        }
+    } else if (vc == 't' || vc == 'f' || vc == 'n') {
+        *vt = (vc == 't') ? MJSON_TOK_TRUE
+            : (vc == 'f') ? MJSON_TOK_FALSE
+            :               MJSON_TOK_NULL;
+        while (pos < slen) {
+            char c = slice[pos];
+            if (c >= 'a' && c <= 'z') { pos++; continue; }
+            break;
+        }
+    } else {
+        return 0;
+    }
+    *voff = vstart;
+    *vlen = pos - vstart;
+    return pos;
+}
+
+/* Parse a `[N,N,N,...]` JSON array of unsigned bytes (0-255) directly
+ * into a destination buffer. Replaces the mjson_next-per-element loop
+ * which is O(N²) per array because each mjson_next call walks the
+ * whole array from the start to find the next element. This walker is
+ * O(N) total — single linear pass over the slice characters, picking
+ * out integers between commas. On the career_scalars FLD_BYTES regions
+ * (10+ KB of byte arrays totalling ~20K elements) this drops the inner
+ * load cost from ~200 ms to sub-millisecond on x86. */
+static void parse_byte_array_slice(const char *slice, int slen,
+                                   uint8_t *dst, uint32_t max_count)
+{
+    const char *p   = slice;
+    const char *end = slice + slen;
+    uint32_t    i   = 0;
+
+    /* Skip the opening '['. */
+    while (p < end && *p != '[') p++;
+    if (p < end) p++;
+
+    while (p < end && i < max_count) {
+        /* Skip whitespace + comma separators. */
+        while (p < end) {
+            char c = *p;
+            if (c == ' ' || c == ',' || c == '\t' ||
+                c == '\n' || c == '\r') { p++; continue; }
+            break;
+        }
+        if (p >= end || *p == ']') break;
+
+        /* Parse one unsigned decimal integer. Values are emitted via
+         * `%u` from emit_scalar_table's FLD_BYTES branch so they're
+         * always 0-255 with no sign and no fractional part. */
+        long v = 0;
+        if (*p == '-') {
+            /* Defensive — values are unsigned but the parser shouldn't
+             * trip on stray minus signs. */
+            p++;
+            while (p < end && *p >= '0' && *p <= '9') {
+                v = v * 10 + (*p - '0');
+                p++;
+            }
+            v = -v;
+        } else {
+            while (p < end && *p >= '0' && *p <= '9') {
+                v = v * 10 + (*p - '0');
+                p++;
+            }
+        }
+        dst[i++] = (uint8_t)v;
+    }
+}
+
 static void load_scalar_table(const char *buf, int buflen,
                               const char *section_key,
                               const FieldDesc *table)
 {
-    /* Resolve the section's object slice ONCE — subsequent
-     * mjson_get_* calls then scan ~5 KB instead of the entire
-     * .CAR JSON (hundreds of KB). For a 200-entry table this is
-     * roughly a 100× speedup. */
+    /* Resolve the section's object slice ONCE. */
     char section_path[80];
     swos_io_snprintf(section_path, sizeof(section_path), "$.%s", section_key);
     const char *section = NULL;
@@ -1251,10 +1607,91 @@ static void load_scalar_table(const char *buf, int buflen,
                    &section, &section_len) != MJSON_TOK_OBJECT)
         return;
 
+    /* Hashed-index cache — currently we have one FieldDesc table
+     * (s_career_scalars, 242 entries). A single-slot cache keyed by
+     * the table pointer is enough; if/when more tables are added the
+     * cache can grow to a small array. */
+    static HashedField        s_hashed_index[300];
+    static const FieldDesc   *s_indexed_table = NULL;
+    static int                s_indexed_count = 0;
+    if (s_indexed_table != table) {
+        s_indexed_count = build_hashed_index(table, s_hashed_index,
+                                             (int)(sizeof(s_hashed_index) /
+                                                   sizeof(s_hashed_index[0])));
+        if (s_indexed_count < 0) return;  /* table outgrew cache */
+        s_indexed_table = table;
+    }
+
+#if MJSON_ENABLE_NEXT && !defined(SWOS_SAVE_LEGACY_DISPATCH)
+    /* Walk every key/value pair in the section once, dispatch via hash
+     * lookup into the FieldDesc index. Unknown keys are silently
+     * skipped; absent FieldDesc entries leave their target unchanged
+     * (which matches the legacy loop's `if (mjson_get_*) ...` early-out
+     * semantics). */
+    char tmp[64];
+    int pos = 0, koff, klen, voff, vlen, vt;
+    while ((pos = mjson_next(section, section_len, pos,
+                             &koff, &klen, &voff, &vlen, &vt)) != 0) {
+        /* koff..koff+klen wraps the key in double quotes — strip them
+         * for the hash. */
+        if (klen < 2) continue;
+        const char *key  = section + koff + 1;
+        int         keyl = klen - 2;
+        uint32_t    h    = fnv1a_bytes(key, keyl);
+        const FieldDesc *f = find_field_by_hash(h, s_hashed_index, s_indexed_count);
+        if (!f) continue;
+        /* Hash collision guard: verify the name actually matches. */
+        if ((int)strlen(f->name) != keyl ||
+            memcmp(f->name, key, (size_t)keyl) != 0) continue;
+
+        uint8_t   *p  = (uint8_t *)f->addr;
+        const char *vs = section + voff;
+        int         vl = vlen;
+
+        switch (f->type) {
+        case FLD_U8: case FLD_S8:
+            if (vt == MJSON_TOK_NUMBER)
+                *p = (uint8_t)parse_long_slice(vs, vl);
+            break;
+        case FLD_U16: case FLD_S16:
+            if (vt == MJSON_TOK_NUMBER)
+                *(uint16_t *)p = (uint16_t)parse_long_slice(vs, vl);
+            break;
+        case FLD_U32: case FLD_S32:
+            if (vt == MJSON_TOK_NUMBER)
+                *(uint32_t *)p = (uint32_t)parse_long_slice(vs, vl);
+            break;
+        case FLD_STR:
+            memset(p, 0, f->size);
+            if (vt == MJSON_TOK_STRING) {
+                /* Use mjson_get_string on the value slice to handle
+                 * any backslash escapes correctly. The slice is tiny
+                 * (≤64 bytes typically) so this is cheap. */
+                if (mjson_get_string(vs, vl, "$", tmp, (int)sizeof(tmp)) > 0) {
+                    uint32_t n = (uint32_t)strlen(tmp);
+                    if (n > f->size) n = f->size;
+                    memcpy(p, tmp, n);
+                }
+            }
+            break;
+        case FLD_BYTES:
+            if (vt == MJSON_TOK_ARRAY)
+                parse_byte_array_slice(vs, vl, p, f->size);
+            break;
+        default:
+            break;
+        }
+    }
+#else
+    /* Legacy per-field path-lookup loop. Each mjson_get_long is
+     * O(section_len) — for the 242-entry s_career_scalars over a
+     * ~20 KB section that's ~5 MB of byte scanning per load. The new
+     * walk-once dispatch above is ~10-20× faster. This path is kept
+     * as a comparison baseline (build with SWOS_SAVE_LEGACY_DISPATCH=1)
+     * and as a fallback for builds without MJSON_ENABLE_NEXT. */
     char path[80];
     char tmp[64];
-    long num = 0.0;
-
+    long num = 0;
     for (const FieldDesc *f = table; f->type != FLD_END; f++) {
         swos_io_snprintf(path, sizeof(path), "$.%s", f->name);
         uint8_t *p = (uint8_t *)f->addr;
@@ -1275,14 +1712,11 @@ static void load_scalar_table(const char *buf, int buflen,
             memset(p, 0, f->size);
             if (mjson_get_string(section, section_len, path, tmp, sizeof(tmp)) > 0) {
                 uint32_t n = (uint32_t)strlen(tmp);
-                /* Fields can fill all `f->size` bytes — see comment
-                 * in load_str_at. Don't reserve a NUL slot. */
                 if (n > f->size) n = f->size;
                 memcpy(p, tmp, n);
             }
             break;
         case FLD_BYTES: {
-            /* Iterate the JSON array via mjson_next when available. */
 #if MJSON_ENABLE_NEXT
             const char *arr = NULL;
             int arr_len = 0;
@@ -1311,6 +1745,7 @@ static void load_scalar_table(const char *buf, int buflen,
             break;
         }
     }
+#endif
 }
 
 /* ---------- TeamFileEx semantic encoder/decoder ----------
@@ -1503,33 +1938,127 @@ static void emit_player_file_body(mjson_print_fn_t fn, void *fnd,
     mjson_printf(fn, fnd, "%s", "}");
 }
 
+/* ---------- Walk-once dispatch for struct-relative fields ----------
+ *
+ * Same idea as load_scalar_table's hash-dispatch but for fields whose
+ * addresses are computed as `base_ptr + offset` instead of being
+ * absolute. Used for the team/player loaders called many times per
+ * career load (32 selected teams × 16 players each, plus tmd_teams
+ * which can be 80+). Walks each JSON object once via mjson_next and
+ * looks up each key in a small per-struct table via linear search —
+ * tables are short (~13 entries) so a hash index isn't worth the
+ * cache pressure. */
+typedef struct {
+    const char *name;
+    uint16_t    offset;
+    uint16_t    size;     /* for STR / BYTES; ignored for scalars */
+    FieldType   type;
+} StructFieldDesc;
+
+static void load_struct_object(const char *slice, int slen, uint8_t *base,
+                               const StructFieldDesc *table)
+{
+    char tmp[64];
+    int pos = 0, koff, klen, voff, vlen, vt;
+    while ((pos = fast_object_next(slice, slen, pos,
+                                   &koff, &klen, &voff, &vlen, &vt)) != 0) {
+        if (klen < 2) continue;
+        const char *k = slice + koff + 1;
+        int         kl = klen - 2;
+        const char *vs = slice + voff;
+        int         vl = vlen;
+
+        const StructFieldDesc *f = NULL;
+        for (const StructFieldDesc *e = table; e->name; e++) {
+            if (k[0] == e->name[0] &&
+                kl == (int)strlen(e->name) &&
+                memcmp(e->name, k, (size_t)kl) == 0) {
+                f = e;
+                break;
+            }
+        }
+        if (!f) continue;
+
+        uint8_t *p = base + f->offset;
+        switch (f->type) {
+        case FLD_U8: case FLD_S8:
+            if (vt == MJSON_TOK_NUMBER)
+                *p = (uint8_t)parse_long_slice(vs, vl);
+            break;
+        case FLD_U16: case FLD_S16:
+            if (vt == MJSON_TOK_NUMBER) {
+                uint16_t v = (uint16_t)parse_long_slice(vs, vl);
+                memcpy(p, &v, sizeof(v));
+            }
+            break;
+        case FLD_U32: case FLD_S32:
+            if (vt == MJSON_TOK_NUMBER) {
+                uint32_t v = (uint32_t)parse_long_slice(vs, vl);
+                memcpy(p, &v, sizeof(v));
+            }
+            break;
+        case FLD_STR:
+            memset(p, 0, f->size);
+            if (vt == MJSON_TOK_STRING) {
+                if (mjson_get_string(vs, vl, "$", tmp, (int)sizeof(tmp)) > 0) {
+                    uint32_t n = (uint32_t)strlen(tmp);
+                    if (n > f->size) n = f->size;
+                    memcpy(p, tmp, n);
+                }
+            }
+            break;
+        case FLD_BYTES:
+            if (vt == MJSON_TOK_ARRAY)
+                parse_byte_array_slice(vs, vl, p, f->size);
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+/* PlayerFile field table — keys must match emit_player_file_body. */
+static const StructFieldDesc s_player_fields[] = {
+    { "nationality",          offsetof(PlayerFile, nationality),         0, FLD_U8 },
+    { "field_1",              offsetof(PlayerFile, field_1),             0, FLD_U8 },
+    { "shirt_number",         offsetof(PlayerFile, shirtNumber),         0, FLD_U8 },
+    { "player_name",          offsetof(PlayerFile, playerName),         22, FLD_STR },
+    { "field_19",             offsetof(PlayerFile, field_19),            0, FLD_U8 },
+    { "position_and_face",    offsetof(PlayerFile, positionAndFace),     0, FLD_U8 },
+    { "cards_injuries",       offsetof(PlayerFile, cardsInjuries),       0, FLD_U8 },
+    { "passing",              offsetof(PlayerFile, passing),             0, FLD_U8 },
+    { "shooting_heading",     offsetof(PlayerFile, shootingHeading),     0, FLD_U8 },
+    { "tackling_ball_control",offsetof(PlayerFile, tacklingBallControl), 0, FLD_U8 },
+    { "speed_finishing",      offsetof(PlayerFile, speedFinishing),      0, FLD_U8 },
+    { "price",                offsetof(PlayerFile, price),               0, FLD_U8 },
+    { "goal_stats",           offsetof(PlayerFile, goalStats),           4, FLD_BYTES },
+    { "some_flag",            offsetof(PlayerFile, someFlag),            0, FLD_U8 },
+    { NULL, 0, 0, FLD_END }
+};
+
+/* TeamFile header field table — keys must match emit_team_file_ex_body
+ * inner "team" object. */
+static const StructFieldDesc s_team_file_fields[] = {
+    { "country_number",     offsetof(TeamFile, countryNumber),     0, FLD_U8 },
+    { "team_ordinal",       offsetof(TeamFile, teamOrdinal),       0, FLD_U8 },
+    { "global_team_number", offsetof(TeamFile, globalTeamNumber),  0, FLD_S16 },
+    { "team_controls",      offsetof(TeamFile, teamControls),      0, FLD_U8 },
+    { "team_name",          offsetof(TeamFile, teamName),         17, FLD_STR },
+    { "writes_zero_here",   offsetof(TeamFile, writesZeroHere),    0, FLD_U8 },
+    { "and_with_0xfe",      offsetof(TeamFile, andWith0xFE),       0, FLD_U8 },
+    { "tactics",            offsetof(TeamFile, tactics),           0, FLD_U8 },
+    { "league",             offsetof(TeamFile, league),            0, FLD_U8 },
+    { "kit_colors",         offsetof(TeamFile, prShirtType),      10, FLD_BYTES },
+    { "coach_name",         offsetof(TeamFile, coachName),        23, FLD_STR },
+    { "some_flag",          offsetof(TeamFile, someFlag),          0, FLD_U8 },
+    { "player_numbers",     offsetof(TeamFile, playerNumbers),    16, FLD_BYTES },
+    { NULL, 0, 0, FLD_END }
+};
+
 /* Load a PlayerFile from a JSON object slice. Mirror of emit_player_file_body. */
 static void load_player_file_body(const char *buf, int buflen, uint8_t *p)
 {
-#define LOAD_PU8(field, jsonkey) \
-        load_u8_at(buf, buflen, "$." jsonkey, p, offsetof(PlayerFile, field))
-#define LOAD_PSTR(field, jsonkey, maxlen) \
-        load_str_at(buf, buflen, "$." jsonkey, p, offsetof(PlayerFile, field), maxlen)
-#define LOAD_PBYTES(field, jsonkey, len) \
-        load_bytes_at(buf, buflen, "$." jsonkey, p, offsetof(PlayerFile, field), len)
-
-    LOAD_PU8(nationality,         "nationality");
-    LOAD_PU8(field_1,             "field_1");
-    LOAD_PU8(shirtNumber,         "shirt_number");
-    LOAD_PSTR(playerName,         "player_name", 22);
-    LOAD_PU8(field_19,            "field_19");
-    LOAD_PU8(positionAndFace,     "position_and_face");
-    LOAD_PU8(cardsInjuries,       "cards_injuries");
-    LOAD_PU8(passing,             "passing");
-    LOAD_PU8(shootingHeading,     "shooting_heading");
-    LOAD_PU8(tacklingBallControl, "tackling_ball_control");
-    LOAD_PU8(speedFinishing,      "speed_finishing");
-    LOAD_PU8(price,               "price");
-    LOAD_PBYTES(goalStats,        "goal_stats", 4);
-    LOAD_PU8(someFlag,            "some_flag");
-#undef LOAD_PU8
-#undef LOAD_PSTR
-#undef LOAD_PBYTES
+    load_struct_object(buf, buflen, p, s_player_fields);
 }
 
 /* Emit a single MarketPlayer (42 B = 4 B header + PlayerFile) as a
@@ -1549,16 +2078,39 @@ static void emit_market_player_body(mjson_print_fn_t fn, void *fnd,
 }
 
 /* Load a MarketPlayer from a JSON object slice. Mirror of
- * emit_market_player_body. */
+ * emit_market_player_body. Called 432 times per career load — the
+ * per-field path-lookup version dominated apply_semantic_load at
+ * ~38 ms / load. Walk-once dispatch over the four outer keys plus
+ * delegation to load_player_file_body for the nested player object. */
 static void load_market_player_body(const char *buf, int buflen, uint8_t *base)
 {
-    load_s16_at(buf, buflen, "$.team_id",      base, offsetof(MarketPlayer, teamId));
-    load_u8_at (buf, buflen, "$.player_ordinal",base, offsetof(MarketPlayer, playerOrdinal));
-    load_u8_at (buf, buflen, "$.padding",      base, offsetof(MarketPlayer, padding));
+    int pos = 0, koff, klen, voff, vlen, vt;
+    while ((pos = fast_object_next(buf, buflen, pos,
+                                   &koff, &klen, &voff, &vlen, &vt)) != 0) {
+        if (klen < 2) continue;
+        const char *k  = buf + koff + 1;
+        int         kl = klen - 2;
+        const char *vs = buf + voff;
+        int         vl = vlen;
 
-    const char *ps = NULL; int psl = 0;
-    if (mjson_find(buf, buflen, "$.player", &ps, &psl) == MJSON_TOK_OBJECT)
-        load_player_file_body(ps, psl, base + offsetof(MarketPlayer, player));
+        if (kl == 7 && vt == MJSON_TOK_NUMBER &&
+            memcmp(k, "team_id", 7) == 0) {
+            int16_t v = (int16_t)parse_long_slice(vs, vl);
+            memcpy(base + offsetof(MarketPlayer, teamId), &v, sizeof(v));
+        } else if (kl == 14 && vt == MJSON_TOK_NUMBER &&
+                   memcmp(k, "player_ordinal", 14) == 0) {
+            base[offsetof(MarketPlayer, playerOrdinal)] =
+                (uint8_t)parse_long_slice(vs, vl);
+        } else if (kl == 7 && vt == MJSON_TOK_NUMBER &&
+                   memcmp(k, "padding", 7) == 0) {
+            base[offsetof(MarketPlayer, padding)] =
+                (uint8_t)parse_long_slice(vs, vl);
+        } else if (kl == 6 && vt == MJSON_TOK_OBJECT &&
+                   memcmp(k, "player", 6) == 0) {
+            load_player_file_body(vs, vl,
+                                  base + offsetof(MarketPlayer, player));
+        }
+    }
 }
 
 static void emit_team_file_ex_body(mjson_print_fn_t fn, void *fnd,
@@ -1645,61 +2197,38 @@ static void load_team_file_ex_slice(const char *buf, int buflen,
                                     uint8_t *base)
 {
     uint8_t *team = base + offsetof(TeamFileEx, team);
-    char path[64];
 
-#define LOAD_U8(field, jsonkey) do { \
-        load_u8_at(buf, buflen, "$.team." jsonkey, \
-                   team, offsetof(TeamFile, field)); \
-    } while (0)
-#define LOAD_S16(field, jsonkey) do { \
-        load_s16_at(buf, buflen, "$.team." jsonkey, \
-                    team, offsetof(TeamFile, field)); \
-    } while (0)
-#define LOAD_STR(field, jsonkey, maxlen) do { \
-        load_str_at(buf, buflen, "$.team." jsonkey, \
-                    team, offsetof(TeamFile, field), maxlen); \
-    } while (0)
-#define LOAD_BYTES(field, jsonkey, len) do { \
-        load_bytes_at(buf, buflen, "$.team." jsonkey, \
-                      team, offsetof(TeamFile, field), len); \
-    } while (0)
-
-    LOAD_U8 (countryNumber,    "country_number");
-    LOAD_U8 (teamOrdinal,      "team_ordinal");
-    LOAD_S16(globalTeamNumber, "global_team_number");
-    LOAD_U8 (teamControls,     "team_controls");
-    LOAD_STR(teamName,         "team_name", 17);
-    LOAD_U8 (writesZeroHere,   "writes_zero_here");
-    LOAD_U8 (andWith0xFE,      "and_with_0xfe");
-    LOAD_U8 (tactics,          "tactics");
-    LOAD_U8 (league,           "league");
-    LOAD_BYTES(prShirtType,    "kit_colors", 10);
-    LOAD_STR(coachName,        "coach_name", 23);
-    LOAD_U8 (someFlag,         "some_flag");
-    LOAD_BYTES(playerNumbers,  "player_numbers", 16);
-#undef LOAD_U8
-#undef LOAD_S16
-#undef LOAD_STR
-#undef LOAD_BYTES
-
-    /* Per-player: iterate the players array via mjson_next so each
-     * step is O(1) in array position; field lookups within each
-     * player run against its ~250-byte slice instead of ~3 KB. */
-    const char *players_arr = NULL; int players_arr_len = 0;
-    if (mjson_find(buf, buflen, "$.players",
-                   &players_arr, &players_arr_len) != MJSON_TOK_ARRAY)
-        return;
-
+    /* Walk the outer { "team": {...}, "players": [...] } object once
+     * via mjson_next. Each top-level key is dispatched directly to a
+     * single sub-walker — replaces the per-field mjson_get_long calls
+     * that each scanned the full outer slice. The two top-level keys
+     * are short so a 2-way string compare is fastest. */
     int pos = 0, koff, klen, voff, vlen, vt;
-    int i = 0;
-    while (i < 16 &&
-           (pos = mjson_next(players_arr, players_arr_len, pos,
-                             &koff, &klen, &voff, &vlen, &vt)) != 0) {
-        if (vt != MJSON_TOK_OBJECT) { i++; continue; }
-        uint8_t *p = base + offsetof(TeamFileEx, players)
-                          + (size_t)i * sizeof(PlayerFile);
-        load_player_file_body(players_arr + voff, vlen, p);
-        i++;
+    while ((pos = fast_object_next(buf, buflen, pos,
+                                   &koff, &klen, &voff, &vlen, &vt)) != 0) {
+        if (klen < 2) continue;
+        const char *k = buf + koff + 1;
+        int         kl = klen - 2;
+        const char *vs = buf + voff;
+        int         vl = vlen;
+
+        if (kl == 4 && vt == MJSON_TOK_OBJECT &&
+            memcmp(k, "team", 4) == 0) {
+            load_struct_object(vs, vl, team, s_team_file_fields);
+        } else if (kl == 7 && vt == MJSON_TOK_ARRAY &&
+                   memcmp(k, "players", 7) == 0) {
+            int pos2 = 0, voff2, vlen2, vt2;
+            int i = 0;
+            while (i < 16 &&
+                   (pos2 = fast_array_next(vs, vl, pos2,
+                                           &voff2, &vlen2, &vt2)) != 0) {
+                if (vt2 != MJSON_TOK_OBJECT) { i++; continue; }
+                uint8_t *p = base + offsetof(TeamFileEx, players)
+                                  + (size_t)i * sizeof(PlayerFile);
+                load_player_file_body(vs + voff2, vlen2, p);
+                i++;
+            }
+        }
     }
 }
 
@@ -1960,7 +2489,9 @@ static void apply_semantic_load(const char *src, int src_size)
      * byte-level mismatches. */
     string_pool_reset();
 
+    PROF_START(season_info);
     load_season_informations(src, src_size);
+    PROF_END(season_info, "career-load");
     /* Top-level pointer fields were removed from the save format —
      * _RebuildPointersAfterLoad() re-derives them after this returns.
      * For the rebuild's selTeamNumber==0xFFFF (season-mode) path, parse
@@ -1980,48 +2511,53 @@ static void apply_semantic_load(const char *src, int src_size)
      * not in the save. Apply them from each careerContests src
      * template after the blob load has put stale bytes into dest. */
     restore_comp_copy_text_ptrs_from_template();
+    PROF_START(scalars);
     load_scalar_table(src, src_size, "career_scalars", s_career_scalars);
+    PROF_END(scalars, "career-load");
 
+    PROF_START(team_ce);
     load_team_file_ex(src, src_size, "$.career_team",  &careerTeam);
     load_team_file_ex(src, src_size, "$.current_team", &currentTeam);
+    PROF_END(team_ce, "career-load");
 
     /* numSelectedTeams comes through career_scalars
      * (num_selected_teams_inner aliases &numSelectedTeams). Now use
      * it to size the selected_teams loop. Slice the array once so
      * per-team lookups scan a single team's ~3 KB slice instead of
      * the full file each time. */
+    PROF_START(selected_teams);
     const char *teams_arr = NULL;
     int teams_arr_len = 0;
     if (mjson_find(src, src_size, "$.selected_teams",
                    &teams_arr, &teams_arr_len) == MJSON_TOK_ARRAY) {
-        /* Iterate via mjson_next instead of "$[i]" indexed finds
-         * — same speedup pattern as load_scene. */
-        int pos = 0, koff, klen, voff, vlen, vt;
+        int pos = 0, voff, vlen, vt;
         uint16_t i = 0;
         while (i < numSelectedTeams &&
-               (pos = mjson_next(teams_arr, teams_arr_len, pos,
-                                 &koff, &klen, &voff, &vlen, &vt)) != 0) {
+               (pos = fast_array_next(teams_arr, teams_arr_len, pos,
+                                      &voff, &vlen, &vt)) != 0) {
             if (vt != MJSON_TOK_OBJECT) { i++; continue; }
             load_team_file_ex_slice(teams_arr + voff, vlen,
                                     (uint8_t *)((TeamFileEx *)&selTeamsPtr + i));
             i++;
         }
     }
+    PROF_END(selected_teams, "career-load");
 
     /* TMD team pool — count from tmd_team_count scalar (already applied
      * by load_scalar_table above). Empty trailing slots stay zero from
      * the careerFileBufferBuf memset earlier in SaveJson_LoadCareer. */
+    PROF_START(tmd_teams);
     {
         const char *tmd_arr = NULL;
         int tmd_arr_len = 0;
         if (mjson_find(src, src_size, "$.tmd_teams",
                        &tmd_arr, &tmd_arr_len) == MJSON_TOK_ARRAY) {
             uint16_t tmd_count = *(uint16_t *)&careerFileBuffer;
-            int pos = 0, koff, klen, voff, vlen, vt;
+            int pos = 0, voff, vlen, vt;
             uint16_t i = 0;
             while (i < tmd_count &&
-                   (pos = mjson_next(tmd_arr, tmd_arr_len, pos,
-                                     &koff, &klen, &voff, &vlen, &vt)) != 0) {
+                   (pos = fast_array_next(tmd_arr, tmd_arr_len, pos,
+                                          &voff, &vlen, &vt)) != 0) {
                 if (vt != MJSON_TOK_OBJECT) { i++; continue; }
                 load_team_file_ex_slice(tmd_arr + voff, vlen,
                                         (uint8_t *)((TeamFileEx *)tmdFileBuffer + i));
@@ -2029,18 +2565,20 @@ static void apply_semantic_load(const char *src, int src_size)
             }
         }
     }
+    PROF_END(tmd_teams, "career-load");
 
     /* Foreign-market player pool — fixed-size MarketPlayer[432]. */
+    PROF_START(market_players);
     {
         const char *mp_arr = NULL;
         int mp_arr_len = 0;
         if (mjson_find(src, src_size, "$.career_foreign_market_players",
                        &mp_arr, &mp_arr_len) == MJSON_TOK_ARRAY) {
-            int pos = 0, koff, klen, voff, vlen, vt;
+            int pos = 0, voff, vlen, vt;
             uint32_t i = 0;
             while (i < 432 &&
-                   (pos = mjson_next(mp_arr, mp_arr_len, pos,
-                                     &koff, &klen, &voff, &vlen, &vt)) != 0) {
+                   (pos = fast_array_next(mp_arr, mp_arr_len, pos,
+                                          &voff, &vlen, &vt)) != 0) {
                 if (vt != MJSON_TOK_OBJECT) { i++; continue; }
                 load_market_player_body(mp_arr + voff, vlen,
                                         careerForeignMarketPlayers + i * sizeof(MarketPlayer));
@@ -2048,8 +2586,10 @@ static void apply_semantic_load(const char *src, int src_size)
             }
         }
     }
+    PROF_END(market_players, "career-load");
 
     /* Career / current team reserve players — 16 × PlayerFile each. */
+    PROF_START(reserves);
     {
         const char *paths[2] = { "$.career_team_reserves", "$.current_team_reserves" };
         uint8_t *bases[2] = { (uint8_t *)&careerTeam  + 684,
@@ -2058,11 +2598,11 @@ static void apply_semantic_load(const char *src, int src_size)
             const char *arr = NULL; int arr_len = 0;
             if (mjson_find(src, src_size, paths[t], &arr, &arr_len) != MJSON_TOK_ARRAY)
                 continue;
-            int pos = 0, koff, klen, voff, vlen, vt;
+            int pos = 0, voff, vlen, vt;
             int i = 0;
             while (i < 16 &&
-                   (pos = mjson_next(arr, arr_len, pos,
-                                     &koff, &klen, &voff, &vlen, &vt)) != 0) {
+                   (pos = fast_array_next(arr, arr_len, pos,
+                                          &voff, &vlen, &vt)) != 0) {
                 if (vt != MJSON_TOK_OBJECT) { i++; continue; }
                 load_player_file_body(arr + voff, vlen,
                                       bases[t] + (size_t)i * sizeof(PlayerFile));
@@ -2070,6 +2610,7 @@ static void apply_semantic_load(const char *src, int src_size)
             }
         }
     }
+    PROF_END(reserves, "career-load");
 }
 
 int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
@@ -2081,10 +2622,19 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
      * fresh from disk into a heap allocation sized to the file. */
     (void)src_unused; (void)src_size_unused;
 
+    PROF_START(total);
+
+    PROF_START(read_file);
     uint8_t *src = NULL;
     uint32_t src_size = 0;
     if (read_save_file_heap(filename, &src, &src_size) != 0)
         return 1;
+    PROF_END(read_file, "career-load");
+#ifdef SWOS_SAVE_FORMAT_JSON_PROFILE
+    SWOS_DBG("[json-prof-career-load] file_size: %u bytes\n",
+             (unsigned)src_size);
+    SWOS_DBG_FLUSH();
+#endif
 
     /* Verify schema_version. */
     long version = 0;
@@ -2124,6 +2674,7 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
      * so we go through careerFileBufferBuf for the memset — the
      * compiler sees the full 256 KB destination and fortify_source
      * doesn't trip. */
+    PROF_START(memset_buf);
     uint32_t want = career_data_size();
 #ifdef SWOS_SDL_BUILD
     /* SDL: careerFileBuffer is a 1-byte stub for symbol-only purposes
@@ -2140,8 +2691,11 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
      * the memset destination. */
     memset(&careerFileBuffer, 0, want);
 #endif
+    PROF_END(memset_buf, "career-load");
 
+    PROF_START(apply_semantic);
     apply_semantic_load((const char *)src, (int)src_size);
+    PROF_END(apply_semantic, "career-load");
 
     /* Re-derive all pointer fields and distribute the loaded primary
      * slot's bytes into diyCompetitionStart / diyFileBufferCopy. The
@@ -2153,10 +2707,13 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
      * applied by apply_semantic_load above), so step 2 of the rebuild
      * dispatches to the correct (league/cup/hybrid) branch when it
      * reads slotPtr[0..1]. */
+    PROF_START(rebuild_ptrs);
     extern void _RebuildPointersAfterLoad(void);
     _RebuildPointersAfterLoad();
+    PROF_END(rebuild_ptrs, "career-load");
 
     swos_io_free(src);
+    PROF_END(total, "career-load");
     return 0;
 }
 
