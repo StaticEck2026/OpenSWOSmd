@@ -9705,49 +9705,43 @@ tournament_entry:
 not_found:
     if (isNationalSelector != 0)
         return 0xFFFF;
-    /* Dump comp header + first team-list bytes so we can see whether the
-     * panic is a true miss (selTeamNumber not in the comp) or a corrupted
-     * load (team list bytes wrong / pointers stale). Cheap one-shot
-     * before the panic — we're about to die anyway. */
+    /* Snapshot the comp header + team-list region into a fixed global
+     * before the panic. SWOS_DBG is a no-op on Amiga (no stdio), so for
+     * cross-target diagnostics we stash the bytes in a named global the
+     * user can inspect via WinUAE memory dump (look up symbol
+     * `panic6006Snapshot` in the .elf / map) or via SDL gdb. */
     {
-        uint8_t *raw_dbg = (uint8_t *)comp;
+        extern uint8_t panic6006Snapshot[];
+        extern uint16_t panic6006TeamNo;
+        extern uint16_t panic6006NumTeams;
+        const uint8_t *raw_dbg = (const uint8_t *)comp;
+        panic6006TeamNo   = teamNo;
+        panic6006NumTeams = numTeams;
+        /* 0..63: bytes 0..63 of comp (DIYCompetition header start)
+         * 64..127: bytes 154..217 of comp (team-list area on 32-bit) */
+        for (int i = 0; i < 64; i++) panic6006Snapshot[i]      = raw_dbg[i];
+        for (int i = 0; i < 64; i++) panic6006Snapshot[64 + i] = raw_dbg[154 + i];
         SWOS_DBG("[panic-6006] teamNo=%u numTeams=%u type=%u\n",
                  (unsigned)teamNo, (unsigned)numTeams,
                  (unsigned)*(uint16_t *)raw_dbg);
-        SWOS_DBG("[panic-6006] comp[0..31]: "
-                 "%02X %02X %02X %02X %02X %02X %02X %02X "
-                 "%02X %02X %02X %02X %02X %02X %02X %02X "
-                 "%02X %02X %02X %02X %02X %02X %02X %02X "
-                 "%02X %02X %02X %02X %02X %02X %02X %02X\n",
-                 raw_dbg[0],  raw_dbg[1],  raw_dbg[2],  raw_dbg[3],
-                 raw_dbg[4],  raw_dbg[5],  raw_dbg[6],  raw_dbg[7],
-                 raw_dbg[8],  raw_dbg[9],  raw_dbg[10], raw_dbg[11],
-                 raw_dbg[12], raw_dbg[13], raw_dbg[14], raw_dbg[15],
-                 raw_dbg[16], raw_dbg[17], raw_dbg[18], raw_dbg[19],
-                 raw_dbg[20], raw_dbg[21], raw_dbg[22], raw_dbg[23],
-                 raw_dbg[24], raw_dbg[25], raw_dbg[26], raw_dbg[27],
-                 raw_dbg[28], raw_dbg[29], raw_dbg[30], raw_dbg[31]);
-        /* Team-list area on 32-bit lives at offsets 154 (cup/league) and
-         * 0x9A (= 154) for tournament team IDs — dump 32 bytes there. */
-        SWOS_DBG("[panic-6006] comp[154..185]: "
-                 "%02X %02X %02X %02X %02X %02X %02X %02X "
-                 "%02X %02X %02X %02X %02X %02X %02X %02X "
-                 "%02X %02X %02X %02X %02X %02X %02X %02X "
-                 "%02X %02X %02X %02X %02X %02X %02X %02X\n",
-                 raw_dbg[154], raw_dbg[155], raw_dbg[156], raw_dbg[157],
-                 raw_dbg[158], raw_dbg[159], raw_dbg[160], raw_dbg[161],
-                 raw_dbg[162], raw_dbg[163], raw_dbg[164], raw_dbg[165],
-                 raw_dbg[166], raw_dbg[167], raw_dbg[168], raw_dbg[169],
-                 raw_dbg[170], raw_dbg[171], raw_dbg[172], raw_dbg[173],
-                 raw_dbg[174], raw_dbg[175], raw_dbg[176], raw_dbg[177],
-                 raw_dbg[178], raw_dbg[179], raw_dbg[180], raw_dbg[181],
-                 raw_dbg[182], raw_dbg[183], raw_dbg[184], raw_dbg[185]);
         SWOS_DBG_FLUSH();
     }
     panicReasonCode = 0x6006;
     _PanicHaltLoop();
     /* not reached */
 }
+
+/* Diagnostic snapshot globals — populated in _FindTeamInDIY's not_found
+ * branch just before the panic, so the user can inspect them via memory
+ * dump (WinUAE) or SDL gdb to see what state the DIY competition buffer
+ * was in. Layout:
+ *   panic6006Snapshot[0..63]    = comp[0..63]   (DIYCompetition header)
+ *   panic6006Snapshot[64..127]  = comp[154..217](team-list area, 32-bit)
+ *   panic6006TeamNo             = selTeamNumber the lookup was for
+ *   panic6006NumTeams           = comp->numTeams at lookup time */
+uint8_t  panic6006Snapshot[128];
+uint16_t panic6006TeamNo;
+uint16_t panic6006NumTeams;
 
 /* ================================================================
  * InitializeNewSeason_BuildTeamBudgetRankTable  (SWOS2.s line 35655)

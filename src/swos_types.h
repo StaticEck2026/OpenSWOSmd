@@ -93,18 +93,18 @@ typedef unsigned long long uint64_t;
 #include <stddef.h>
 #endif
 
-/* Cross-toolchain debug print. Amiga m68k toolchain has no <stdio.h>
- * so fprintf(stderr, ...) doesn't compile; route SWOS_DBG to KPrintF
- * (defined in support/gcc8_c_support.c) which goes to WinUAE's debug
- * log via the UAE debug hook at 0xf0ff60, or RawDoFmt → KPutCharX as
- * the AmigaOS fallback. On hosted SDL builds it stays as fprintf to
- * stderr (captured in SWOS.log via `run 2> SWOS.log`).
+/* Cross-toolchain debug print. Amiga m68k toolchain has no <stdio.h>,
+ * so fprintf(stderr, ...) doesn't compile. SWOS_DBG / SWOS_DBG_FLUSH
+ * expand to a real fprintf on hosted SDL builds and to a no-op on
+ * Amiga — match the endian_helpers.h pattern of "host-side fix that
+ * compiles to nothing on Amiga".
  *
- * Match the endian_helpers.h pattern of "host-specific path that
- * resolves to the right primitive on each target." */
+ * (KPrintF was tried as an Amiga path but lives in gcc8_c_support.c
+ * which the Amiga Makefile filters out, so referencing it breaks the
+ * link. For per-call diagnostic output on Amiga, write to a fixed
+ * global buffer and inspect via WinUAE memory dump instead.) */
 #if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-extern void KPrintF(const char *fmt, ...);
-#define SWOS_DBG(...)         KPrintF(__VA_ARGS__)
+#define SWOS_DBG(...)         ((void)0)
 #define SWOS_DBG_FLUSH()      ((void)0)
 #else
 #include <stdio.h>
