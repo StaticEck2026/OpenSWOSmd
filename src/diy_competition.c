@@ -9705,43 +9705,10 @@ tournament_entry:
 not_found:
     if (isNationalSelector != 0)
         return 0xFFFF;
-    /* Snapshot the comp header + team-list region into a fixed global
-     * before the panic. SWOS_DBG is a no-op on Amiga (no stdio), so for
-     * cross-target diagnostics we stash the bytes in a named global the
-     * user can inspect via WinUAE memory dump (look up symbol
-     * `panic6006Snapshot` in the .elf / map) or via SDL gdb. */
-    {
-        extern uint8_t panic6006Snapshot[];
-        extern uint16_t panic6006TeamNo;
-        extern uint16_t panic6006NumTeams;
-        const uint8_t *raw_dbg = (const uint8_t *)comp;
-        panic6006TeamNo   = teamNo;
-        panic6006NumTeams = numTeams;
-        /* 0..63: bytes 0..63 of comp (DIYCompetition header start)
-         * 64..127: bytes 154..217 of comp (team-list area on 32-bit) */
-        for (int i = 0; i < 64; i++) panic6006Snapshot[i]      = raw_dbg[i];
-        for (int i = 0; i < 64; i++) panic6006Snapshot[64 + i] = raw_dbg[154 + i];
-        SWOS_DBG("[panic-6006] teamNo=%u numTeams=%u type=%u\n",
-                 (unsigned)teamNo, (unsigned)numTeams,
-                 (unsigned)*(uint16_t *)raw_dbg);
-        SWOS_DBG_FLUSH();
-    }
     panicReasonCode = 0x6006;
     _PanicHaltLoop();
     /* not reached */
 }
-
-/* Diagnostic snapshot globals — populated in _FindTeamInDIY's not_found
- * branch just before the panic, so the user can inspect them via memory
- * dump (WinUAE) or SDL gdb to see what state the DIY competition buffer
- * was in. Layout:
- *   panic6006Snapshot[0..63]    = comp[0..63]   (DIYCompetition header)
- *   panic6006Snapshot[64..127]  = comp[154..217](team-list area, 32-bit)
- *   panic6006TeamNo             = selTeamNumber the lookup was for
- *   panic6006NumTeams           = comp->numTeams at lookup time */
-uint8_t  panic6006Snapshot[128];
-uint16_t panic6006TeamNo;
-uint16_t panic6006NumTeams;
 
 /* ================================================================
  * InitializeNewSeason_BuildTeamBudgetRankTable  (SWOS2.s line 35655)
