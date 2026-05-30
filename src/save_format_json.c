@@ -1344,6 +1344,256 @@ static long parse_long_slice(const char *s, int n)
     return sign * v;
 }
 
+/* Sequential JSON object key/value iterator.
+ *
+ * mjson_next() walks the slice from char 0 on every call to find the
+ * next token after `pos`, so walking N keys is O(N²) total. For tight
+ * loops over fixed-schema objects (TeamFile, PlayerFile, MarketPlayer)
+ * called thousands of times per career load, that quadratic cost
+ * dominated the load profile after the FLD_BYTES fast walker landed.
+ *
+ * fast_object_next maintains the previously-returned position itself
+ * — single linear pass through the slice characters, no callbacks, no
+ * depth tracking outside what's needed for nested object/array
+ * skipping. ~5-10× faster than mjson_next on small fixed-schema
+ * objects.
+ *
+ * Input/output semantics match mjson_next:
+ *   - Returns new pos after the value, or 0 at end of object.
+ *   - Sets koff/klen to the key bytes INCLUDING surrounding quotes
+ *     (caller strips them) — matches mjson_next convention.
+ *   - Sets voff/vlen to the value's byte range (including surrounding
+ *     brackets/quotes for object/array/string values).
+ *   - Sets vt to one of MJSON_TOK_{NUMBER,STRING,OBJECT,ARRAY,TRUE,
+ *     FALSE,NULL}. */
+static int fast_object_next(const char *slice, int slen, int pos,
+                            int *koff, int *klen,
+                            int *voff, int *vlen, int *vt)
+{
+    /* Skip whitespace, comma separators, and a leading '{' on the
+     * very first call (pos == 0). */
+    while (pos < slen) {
+        char c = slice[pos];
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\r' ||
+            c == ',' || c == '{') { pos++; continue; }
+        break;
+    }
+    if (pos >= slen || slice[pos] == '}') return 0;
+    if (slice[pos] != '"') return 0;
+
+    /* Key: koff/klen include the surrounding quotes to match
+     * mjson_next's convention. */
+    int kstart = pos;
+    pos++;  /* past opening quote */
+    while (pos < slen && slice[pos] != '"') {
+        if (slice[pos] == '\\' && pos + 1 < slen) pos++;
+        pos++;
+    }
+    if (pos >= slen) return 0;
+    pos++;  /* past closing quote */
+    *koff = kstart;
+    *klen = pos - kstart;
+
+    /* Skip whitespace + ':' between key and value. */
+    while (pos < slen) {
+        char c = slice[pos];
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == ':') {
+            pos++;
+            continue;
+        }
+        break;
+    }
+    if (pos >= slen) return 0;
+
+    int vstart = pos;
+    char vc = slice[pos];
+    if (vc == '"') {
+        *vt = MJSON_TOK_STRING;
+        pos++;
+        while (pos < slen && slice[pos] != '"') {
+            if (slice[pos] == '\\' && pos + 1 < slen) pos++;
+            pos++;
+        }
+        if (pos < slen) pos++;  /* past closing quote */
+    } else if (vc == '{' || vc == '[') {
+        *vt = (vc == '{') ? MJSON_TOK_OBJECT : MJSON_TOK_ARRAY;
+        int depth = 1;
+        pos++;
+        while (pos < slen && depth > 0) {
+            char c = slice[pos];
+            if (c == '"') {
+                /* Skip a nested string so its braces/brackets don't
+                 * confuse depth tracking. */
+                pos++;
+                while (pos < slen && slice[pos] != '"') {
+                    if (slice[pos] == '\\' && pos + 1 < slen) pos++;
+                    pos++;
+                }
+            } else if (c == '{' || c == '[') {
+                depth++;
+            } else if (c == '}' || c == ']') {
+                depth--;
+            }
+            pos++;
+        }
+    } else if ((vc >= '0' && vc <= '9') || vc == '-' || vc == '+') {
+        *vt = MJSON_TOK_NUMBER;
+        pos++;
+        while (pos < slen) {
+            char c = slice[pos];
+            if ((c >= '0' && c <= '9') || c == '.' ||
+                c == 'e' || c == 'E' || c == '+' || c == '-') {
+                pos++;
+                continue;
+            }
+            break;
+        }
+    } else if (vc == 't' || vc == 'f' || vc == 'n') {
+        *vt = (vc == 't') ? MJSON_TOK_TRUE
+            : (vc == 'f') ? MJSON_TOK_FALSE
+            :               MJSON_TOK_NULL;
+        while (pos < slen) {
+            char c = slice[pos];
+            if (c >= 'a' && c <= 'z') { pos++; continue; }
+            break;
+        }
+    } else {
+        /* Unknown — bail to prevent an infinite loop. */
+        return 0;
+    }
+    *voff = vstart;
+    *vlen = pos - vstart;
+    return pos;
+}
+
+/* Sequential JSON array element iterator — companion to
+ * fast_object_next. Same O(N) total cost vs mjson_next's O(N²) when
+ * walking N elements of an array. Used for the big arrays in
+ * apply_semantic_load (selected_teams, tmd_teams,
+ * career_foreign_market_players, reserves) which each hold hundreds
+ * of element objects. */
+static int fast_array_next(const char *slice, int slen, int pos,
+                           int *voff, int *vlen, int *vt)
+{
+    /* Skip whitespace, opening '[', commas. */
+    while (pos < slen) {
+        char c = slice[pos];
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\r' ||
+            c == ',' || c == '[') { pos++; continue; }
+        break;
+    }
+    if (pos >= slen || slice[pos] == ']') return 0;
+
+    int vstart = pos;
+    char vc = slice[pos];
+    if (vc == '"') {
+        *vt = MJSON_TOK_STRING;
+        pos++;
+        while (pos < slen && slice[pos] != '"') {
+            if (slice[pos] == '\\' && pos + 1 < slen) pos++;
+            pos++;
+        }
+        if (pos < slen) pos++;
+    } else if (vc == '{' || vc == '[') {
+        *vt = (vc == '{') ? MJSON_TOK_OBJECT : MJSON_TOK_ARRAY;
+        int depth = 1;
+        pos++;
+        while (pos < slen && depth > 0) {
+            char c = slice[pos];
+            if (c == '"') {
+                pos++;
+                while (pos < slen && slice[pos] != '"') {
+                    if (slice[pos] == '\\' && pos + 1 < slen) pos++;
+                    pos++;
+                }
+            } else if (c == '{' || c == '[') {
+                depth++;
+            } else if (c == '}' || c == ']') {
+                depth--;
+            }
+            pos++;
+        }
+    } else if ((vc >= '0' && vc <= '9') || vc == '-' || vc == '+') {
+        *vt = MJSON_TOK_NUMBER;
+        pos++;
+        while (pos < slen) {
+            char c = slice[pos];
+            if ((c >= '0' && c <= '9') || c == '.' ||
+                c == 'e' || c == 'E' || c == '+' || c == '-') {
+                pos++;
+                continue;
+            }
+            break;
+        }
+    } else if (vc == 't' || vc == 'f' || vc == 'n') {
+        *vt = (vc == 't') ? MJSON_TOK_TRUE
+            : (vc == 'f') ? MJSON_TOK_FALSE
+            :               MJSON_TOK_NULL;
+        while (pos < slen) {
+            char c = slice[pos];
+            if (c >= 'a' && c <= 'z') { pos++; continue; }
+            break;
+        }
+    } else {
+        return 0;
+    }
+    *voff = vstart;
+    *vlen = pos - vstart;
+    return pos;
+}
+
+/* Parse a `[N,N,N,...]` JSON array of unsigned bytes (0-255) directly
+ * into a destination buffer. Replaces the mjson_next-per-element loop
+ * which is O(N²) per array because each mjson_next call walks the
+ * whole array from the start to find the next element. This walker is
+ * O(N) total — single linear pass over the slice characters, picking
+ * out integers between commas. On the career_scalars FLD_BYTES regions
+ * (10+ KB of byte arrays totalling ~20K elements) this drops the inner
+ * load cost from ~200 ms to sub-millisecond on x86. */
+static void parse_byte_array_slice(const char *slice, int slen,
+                                   uint8_t *dst, uint32_t max_count)
+{
+    const char *p   = slice;
+    const char *end = slice + slen;
+    uint32_t    i   = 0;
+
+    /* Skip the opening '['. */
+    while (p < end && *p != '[') p++;
+    if (p < end) p++;
+
+    while (p < end && i < max_count) {
+        /* Skip whitespace + comma separators. */
+        while (p < end) {
+            char c = *p;
+            if (c == ' ' || c == ',' || c == '\t' ||
+                c == '\n' || c == '\r') { p++; continue; }
+            break;
+        }
+        if (p >= end || *p == ']') break;
+
+        /* Parse one unsigned decimal integer. Values are emitted via
+         * `%u` from emit_scalar_table's FLD_BYTES branch so they're
+         * always 0-255 with no sign and no fractional part. */
+        long v = 0;
+        if (*p == '-') {
+            /* Defensive — values are unsigned but the parser shouldn't
+             * trip on stray minus signs. */
+            p++;
+            while (p < end && *p >= '0' && *p <= '9') {
+                v = v * 10 + (*p - '0');
+                p++;
+            }
+            v = -v;
+        } else {
+            while (p < end && *p >= '0' && *p <= '9') {
+                v = v * 10 + (*p - '0');
+                p++;
+            }
+        }
+        dst[i++] = (uint8_t)v;
+    }
+}
+
 static void load_scalar_table(const char *buf, int buflen,
                               const char *section_key,
                               const FieldDesc *table)
@@ -1425,19 +1675,8 @@ static void load_scalar_table(const char *buf, int buflen,
             }
             break;
         case FLD_BYTES:
-            if (vt == MJSON_TOK_ARRAY) {
-                int koff2, klen2, voff2, vlen2, vt2;
-                uint32_t i = 0;
-                int off2 = 0;
-                while (i < f->size &&
-                       (off2 = mjson_next(vs, vl, off2,
-                                          &koff2, &klen2,
-                                          &voff2, &vlen2, &vt2)) != 0) {
-                    if (vt2 == MJSON_TOK_NUMBER)
-                        p[i] = (uint8_t)parse_long_slice(vs + voff2, vlen2);
-                    i++;
-                }
-            }
+            if (vt == MJSON_TOK_ARRAY)
+                parse_byte_array_slice(vs, vl, p, f->size);
             break;
         default:
             break;
@@ -1721,8 +1960,8 @@ static void load_struct_object(const char *slice, int slen, uint8_t *base,
 {
     char tmp[64];
     int pos = 0, koff, klen, voff, vlen, vt;
-    while ((pos = mjson_next(slice, slen, pos,
-                             &koff, &klen, &voff, &vlen, &vt)) != 0) {
+    while ((pos = fast_object_next(slice, slen, pos,
+                                   &koff, &klen, &voff, &vlen, &vt)) != 0) {
         if (klen < 2) continue;
         const char *k = slice + koff + 1;
         int         kl = klen - 2;
@@ -1769,19 +2008,8 @@ static void load_struct_object(const char *slice, int slen, uint8_t *base,
             }
             break;
         case FLD_BYTES:
-            if (vt == MJSON_TOK_ARRAY) {
-                int koff2, klen2, voff2, vlen2, vt2;
-                uint32_t i = 0;
-                int off2 = 0;
-                while (i < f->size &&
-                       (off2 = mjson_next(vs, vl, off2,
-                                          &koff2, &klen2,
-                                          &voff2, &vlen2, &vt2)) != 0) {
-                    if (vt2 == MJSON_TOK_NUMBER)
-                        p[i] = (uint8_t)parse_long_slice(vs + voff2, vlen2);
-                    i++;
-                }
-            }
+            if (vt == MJSON_TOK_ARRAY)
+                parse_byte_array_slice(vs, vl, p, f->size);
             break;
         default:
             break;
@@ -1850,16 +2078,39 @@ static void emit_market_player_body(mjson_print_fn_t fn, void *fnd,
 }
 
 /* Load a MarketPlayer from a JSON object slice. Mirror of
- * emit_market_player_body. */
+ * emit_market_player_body. Called 432 times per career load — the
+ * per-field path-lookup version dominated apply_semantic_load at
+ * ~38 ms / load. Walk-once dispatch over the four outer keys plus
+ * delegation to load_player_file_body for the nested player object. */
 static void load_market_player_body(const char *buf, int buflen, uint8_t *base)
 {
-    load_s16_at(buf, buflen, "$.team_id",      base, offsetof(MarketPlayer, teamId));
-    load_u8_at (buf, buflen, "$.player_ordinal",base, offsetof(MarketPlayer, playerOrdinal));
-    load_u8_at (buf, buflen, "$.padding",      base, offsetof(MarketPlayer, padding));
+    int pos = 0, koff, klen, voff, vlen, vt;
+    while ((pos = fast_object_next(buf, buflen, pos,
+                                   &koff, &klen, &voff, &vlen, &vt)) != 0) {
+        if (klen < 2) continue;
+        const char *k  = buf + koff + 1;
+        int         kl = klen - 2;
+        const char *vs = buf + voff;
+        int         vl = vlen;
 
-    const char *ps = NULL; int psl = 0;
-    if (mjson_find(buf, buflen, "$.player", &ps, &psl) == MJSON_TOK_OBJECT)
-        load_player_file_body(ps, psl, base + offsetof(MarketPlayer, player));
+        if (kl == 7 && vt == MJSON_TOK_NUMBER &&
+            memcmp(k, "team_id", 7) == 0) {
+            int16_t v = (int16_t)parse_long_slice(vs, vl);
+            memcpy(base + offsetof(MarketPlayer, teamId), &v, sizeof(v));
+        } else if (kl == 14 && vt == MJSON_TOK_NUMBER &&
+                   memcmp(k, "player_ordinal", 14) == 0) {
+            base[offsetof(MarketPlayer, playerOrdinal)] =
+                (uint8_t)parse_long_slice(vs, vl);
+        } else if (kl == 7 && vt == MJSON_TOK_NUMBER &&
+                   memcmp(k, "padding", 7) == 0) {
+            base[offsetof(MarketPlayer, padding)] =
+                (uint8_t)parse_long_slice(vs, vl);
+        } else if (kl == 6 && vt == MJSON_TOK_OBJECT &&
+                   memcmp(k, "player", 6) == 0) {
+            load_player_file_body(vs, vl,
+                                  base + offsetof(MarketPlayer, player));
+        }
+    }
 }
 
 static void emit_team_file_ex_body(mjson_print_fn_t fn, void *fnd,
@@ -1953,8 +2204,8 @@ static void load_team_file_ex_slice(const char *buf, int buflen,
      * that each scanned the full outer slice. The two top-level keys
      * are short so a 2-way string compare is fastest. */
     int pos = 0, koff, klen, voff, vlen, vt;
-    while ((pos = mjson_next(buf, buflen, pos,
-                             &koff, &klen, &voff, &vlen, &vt)) != 0) {
+    while ((pos = fast_object_next(buf, buflen, pos,
+                                   &koff, &klen, &voff, &vlen, &vt)) != 0) {
         if (klen < 2) continue;
         const char *k = buf + koff + 1;
         int         kl = klen - 2;
@@ -1966,12 +2217,11 @@ static void load_team_file_ex_slice(const char *buf, int buflen,
             load_struct_object(vs, vl, team, s_team_file_fields);
         } else if (kl == 7 && vt == MJSON_TOK_ARRAY &&
                    memcmp(k, "players", 7) == 0) {
-            int pos2 = 0, koff2, klen2, voff2, vlen2, vt2;
+            int pos2 = 0, voff2, vlen2, vt2;
             int i = 0;
             while (i < 16 &&
-                   (pos2 = mjson_next(vs, vl, pos2,
-                                      &koff2, &klen2,
-                                      &voff2, &vlen2, &vt2)) != 0) {
+                   (pos2 = fast_array_next(vs, vl, pos2,
+                                           &voff2, &vlen2, &vt2)) != 0) {
                 if (vt2 != MJSON_TOK_OBJECT) { i++; continue; }
                 uint8_t *p = base + offsetof(TeamFileEx, players)
                                   + (size_t)i * sizeof(PlayerFile);
@@ -2280,13 +2530,11 @@ static void apply_semantic_load(const char *src, int src_size)
     int teams_arr_len = 0;
     if (mjson_find(src, src_size, "$.selected_teams",
                    &teams_arr, &teams_arr_len) == MJSON_TOK_ARRAY) {
-        /* Iterate via mjson_next instead of "$[i]" indexed finds
-         * — same speedup pattern as load_scene. */
-        int pos = 0, koff, klen, voff, vlen, vt;
+        int pos = 0, voff, vlen, vt;
         uint16_t i = 0;
         while (i < numSelectedTeams &&
-               (pos = mjson_next(teams_arr, teams_arr_len, pos,
-                                 &koff, &klen, &voff, &vlen, &vt)) != 0) {
+               (pos = fast_array_next(teams_arr, teams_arr_len, pos,
+                                      &voff, &vlen, &vt)) != 0) {
             if (vt != MJSON_TOK_OBJECT) { i++; continue; }
             load_team_file_ex_slice(teams_arr + voff, vlen,
                                     (uint8_t *)((TeamFileEx *)&selTeamsPtr + i));
@@ -2305,11 +2553,11 @@ static void apply_semantic_load(const char *src, int src_size)
         if (mjson_find(src, src_size, "$.tmd_teams",
                        &tmd_arr, &tmd_arr_len) == MJSON_TOK_ARRAY) {
             uint16_t tmd_count = *(uint16_t *)&careerFileBuffer;
-            int pos = 0, koff, klen, voff, vlen, vt;
+            int pos = 0, voff, vlen, vt;
             uint16_t i = 0;
             while (i < tmd_count &&
-                   (pos = mjson_next(tmd_arr, tmd_arr_len, pos,
-                                     &koff, &klen, &voff, &vlen, &vt)) != 0) {
+                   (pos = fast_array_next(tmd_arr, tmd_arr_len, pos,
+                                          &voff, &vlen, &vt)) != 0) {
                 if (vt != MJSON_TOK_OBJECT) { i++; continue; }
                 load_team_file_ex_slice(tmd_arr + voff, vlen,
                                         (uint8_t *)((TeamFileEx *)tmdFileBuffer + i));
@@ -2326,11 +2574,11 @@ static void apply_semantic_load(const char *src, int src_size)
         int mp_arr_len = 0;
         if (mjson_find(src, src_size, "$.career_foreign_market_players",
                        &mp_arr, &mp_arr_len) == MJSON_TOK_ARRAY) {
-            int pos = 0, koff, klen, voff, vlen, vt;
+            int pos = 0, voff, vlen, vt;
             uint32_t i = 0;
             while (i < 432 &&
-                   (pos = mjson_next(mp_arr, mp_arr_len, pos,
-                                     &koff, &klen, &voff, &vlen, &vt)) != 0) {
+                   (pos = fast_array_next(mp_arr, mp_arr_len, pos,
+                                          &voff, &vlen, &vt)) != 0) {
                 if (vt != MJSON_TOK_OBJECT) { i++; continue; }
                 load_market_player_body(mp_arr + voff, vlen,
                                         careerForeignMarketPlayers + i * sizeof(MarketPlayer));
@@ -2350,11 +2598,11 @@ static void apply_semantic_load(const char *src, int src_size)
             const char *arr = NULL; int arr_len = 0;
             if (mjson_find(src, src_size, paths[t], &arr, &arr_len) != MJSON_TOK_ARRAY)
                 continue;
-            int pos = 0, koff, klen, voff, vlen, vt;
+            int pos = 0, voff, vlen, vt;
             int i = 0;
             while (i < 16 &&
-                   (pos = mjson_next(arr, arr_len, pos,
-                                     &koff, &klen, &voff, &vlen, &vt)) != 0) {
+                   (pos = fast_array_next(arr, arr_len, pos,
+                                          &voff, &vlen, &vt)) != 0) {
                 if (vt != MJSON_TOK_OBJECT) { i++; continue; }
                 load_player_file_body(arr + voff, vlen,
                                       bases[t] + (size_t)i * sizeof(PlayerFile));
