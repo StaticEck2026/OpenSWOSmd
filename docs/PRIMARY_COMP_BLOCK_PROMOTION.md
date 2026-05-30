@@ -24,6 +24,10 @@ host-dependent (`namePtr` is 4 vs 8 bytes).
   "diagnosis details — keep for context".
 - The temporary `panic6006Snapshot` diagnostic + the
   `SWOS_DBG → KPrintF` Amiga routing experiment have been reverted.
+- **Field-discovery audit is complete (2026-05-30)**, grounded in the
+  SWOS2.s BSS layout (source of truth). See "Audit results" below for
+  the authoritative field table and five documentation/overlay mistakes
+  that were corrected.
 
 ## The job
 
@@ -56,83 +60,205 @@ accessor) and loaded the same way — so on each target the bytes land
 at that target's correct struct-relative offset. Cross-target loads
 work because no shared byte position is assumed.
 
-## Audit needed before code is written
+> **Superseded by the audit:** these three "views" are the **same
+> bytes** under different names, not three independent regions (see
+> Audit results → "the two name schemes are the SAME bytes"). The
+> grouping above is fine as cosmetic JSON structure, but each byte must
+> be emitted exactly once. The recommended emission keys off the
+> `DIYCompetition` struct accessor — see "Implementation plan" below.
 
-This is **field discovery** — write no code yet. The goal is a
-comprehensive list of every byte position in `competitionFileBuffer +
-0..+153` that the runtime reads or writes, what name(s) it's read
-under, and what semantic type it carries.
+## Audit results (2026-05-30) — SWOS2.s authoritative
 
-### Step 1 — Enumerate named globals in the region
+Field discovery is **done**. The authoritative source is the SWOS2.s
+BSS section (`C:\Projects\AI\SWOS\SWOS_C\data\SWOS2.s`, label
+`competitionFileBuffer:` at line 129264). That `ds.b` run is reproduced
+below verbatim and cross-referenced against the `DIYCompetition` /
+`DIYCompetitionEx` struct views and every runtime read/write found in
+`src/`.
 
-The overlay defines the named globals inline in
-`src/swos_globals_career_overlay.c`. From the existing read at
-`competitionFileBuffer` (line 908+) walk down through
-`leagueWarningsEnabled` (line 961). Note specifically:
+### Authoritative SWOS2.s BSS layout (competitionFileBuffer run)
 
-- Every `.globl`/label inside the run, with its `.skip` size
-- The conditional 4-byte 64-bit pad after `diyPresetNameOfCompetition`
-  (re-aligns post-namePtr globals so they match the grown struct)
-- The trailing 58-byte `.skip` after `leagueWarningsEnabled` — almost
-  certainly hides multiple unnamed fields the runtime reads
+```
+competitionFileBuffer        ds.b $2     ; 0x00  competitionType
+competitionOver              ds.b $2     ; 0x02  isActive / "1 = Over"
+diyPresetNameOfCompetition   ds.b $24    ; 0x04  competitionName[36]  (NOTE: 0x24 = 36, not 44)
+primaryCompStringOffset      ds.b $4     ; 0x28  *** the name pointer (== struct namePtr) ***
+BSS_01_16E0B4                ds.b $4     ; 0x2C  compId, slotId, field_2E, viewRandomPhase
+majorTrophyBonusValue        ds.b $1     ; 0x30  avgSkill (BYTE — read via move.b)
+BSS_01_16E0B6                ds.b $1     ; 0x31  strengthTier
+numDiyTeams                  ds.b $2     ; 0x32  numTeams
+BSS_01_16E0BE                ds.b $6     ; 0x34  pitchTypeOrSeason, pitchType, startMonth, endMonth
+primaryCompWinnerTeam        ds.b $2     ; 0x3A  resultCode
+primaryCompSquadViewParam    ds.b $2     ; 0x3C  substitutesCount
+primaryCompSlotStateA        ds.b $2     ; 0x3E  slotStateA
+primaryCompSlotStateB        ds.b $2     ; 0x40  slotStateB
+primaryCompSlotStateC        ds.b $2     ; 0x42  slotStateC
+BSS_01_16E0D8                ds.b $10    ; 0x44  matchStarted, careerTeamInvolved, hasGroups,
+                                         ;       menuState, roundIterator, numTeamsInStage,
+                                         ;       matchPairsPerRound, totalMatchesInRound
+diyTeamMinDivisionIndex      ds.b $2     ; 0x54  roundComplete
+diyTeamMaxDivisionOffset     ds.b $2     ; 0x56  competitionFinished
+leaguePromotionCount         ds.b $2     ; 0x58  currentRoundIndex
+leagueRelegationCount        ds.b $2     ; 0x5A  numRounds
+BSS_01_16E0E4                ds.b $4     ; 0x5C  subRoundCounter, playEachTeam
+leagueWarningsEnabled        ds.b $2     ; 0x60  minSubstitutes (DIYCompetitionEx)
+BSS_01_16E11E                ds.b $38    ; 0x62  pointsForAWin (0x62) + matchData head (0x64..)
+diyTeamIdListType2           ds.b $94    ; 0x9A  end of the competition-header region
+```
 
-### Step 2 — Enumerate DIYCompetition struct field reads
+**Key insight — the two "name schemes" are the SAME bytes.** Every
+named global in this run (`primaryCompWinnerTeam`, `primaryCompSlotState*`,
+`leaguePromotionCount`, `leagueWarningsEnabled`, …) is just an alias for
+a `DIYCompetition`/`DIYCompetitionEx` struct field at the same offset.
+`competitionFileBuffer` is cast to `(DIYCompetitionEx *)` all over the
+codebase (career_status.c:1730/2008/2582, menus.c:6366,
+diy_competition.c:9733; menus.c:6359 even comments "competitionFileBuffer
+mirrors diyCompetitionStart's struct view"). The named global is the name
+used when the buffer holds the *primary career slot*; the struct field is
+the name used when it's the *active competition* — one physical byte,
+two code paths.
 
-The runtime casts `competitionFileBuffer` to `DIYCompetition *` in
-many call sites. Find every such read/write across the codebase.
-`_FindTeamInDIY` is the obvious starting point but `_InitDIYTournament`,
-`_DIY_CacheSelectedTeamPointers`, the chairman / season-end paths, and
-the diy_competition / career_status / career_season / career_init / 
-career_eurocups suite all participate.
+### Authoritative field table
 
-Useful greps:
-- `(DIYCompetition *)&competitionFileBuffer`
-- `(DIYCompetition *)competitionFileBuffer`
-- `compEx->` and `comp->` field references in `diy_competition.c`
+| 32-bit off | 64-bit off | SWOS2.s label | DIYCompetition(Ex) field | type | save handling |
+|---|---|---|---|---|---|
+| 0x00 | 0x00 | competitionFileBuffer | base.competitionType | int16 | `primary_slot_type` (already FX) |
+| 0x02 | 0x02 | competitionOver | base.isActive | int16 | scalar |
+| 0x04 | 0x04 | diyPresetNameOfCompetition | base.competitionName[36] | char[36] | string / bytes |
+| 0x28 | 0x28 | **primaryCompStringOffset** | base.namePtr | ptr (4→8) | **SYMBOLIC** (see below) |
+| 0x2C | 0x30 | BSS_01_16E0B4 | compId/slotId/field_2E/viewRandomPhase | 4×uint8 | scalars |
+| 0x30 | 0x34 | majorTrophyBonusValue | base.avgSkill | **uint8** (move.b) | scalar |
+| 0x31 | 0x35 | BSS_01_16E0B6 | base.strengthTier | uint8 | scalar |
+| 0x32 | 0x36 | numDiyTeams | base.numTeams | int16 | scalar ← **the bug we hit** |
+| 0x34 | 0x38 | BSS_01_16E0BE | pitchTypeOrSeason/pitchType/startMonth/endMonth | int16+2×int8 | scalars |
+| 0x3A | 0x3E | primaryCompWinnerTeam | base.resultCode | int16 | scalar |
+| 0x3C | 0x40 | primaryCompSquadViewParam | base.substitutesCount | int16 | scalar |
+| 0x3E | 0x42 | primaryCompSlotStateA | base.slotStateA | int16 | scalar |
+| 0x40 | 0x44 | primaryCompSlotStateB | base.slotStateB | int16 | scalar |
+| 0x42 | 0x46 | primaryCompSlotStateC | base.slotStateC | int16 | scalar |
+| 0x44 | 0x48 | BSS_01_16E0D8 (16B) | matchStarted…totalMatchesInRound (8×int16) | int16[8] | scalars |
+| 0x54 | 0x58 | diyTeamMinDivisionIndex | base.roundComplete | int16 | scalar |
+| 0x56 | 0x5A | diyTeamMaxDivisionOffset | base.competitionFinished | int16 | scalar |
+| 0x58 | 0x5C | leaguePromotionCount | base.currentRoundIndex | int16 | scalar |
+| 0x5A | 0x5E | leagueRelegationCount | base.numRounds | int16 | scalar |
+| 0x5C | 0x60 | BSS_01_16E0E4 | subRoundCounter/playEachTeam | 2×int16 | scalars |
+| 0x60 | 0x64 | leagueWarningsEnabled | Ex.minSubstitutes | uint16 | scalar |
+| 0x62 | 0x66 | BSS_01_16E11E (56B) | Ex.pointsForAWin + matchData head | bytes | pointer-free blob |
+| 0x9A | 0xA2 | diyTeamIdListType2 | (matchData tail) | — | saved separately |
 
-`DIYCompetition`'s struct definition lives in `include/game_types.h`
-(synced from `src/game_types.h`). Note pointer fields (`namePtr` and
-similar) which can't be saved as raw bytes — they need symbolic save
-+ lookup-table restore on load.
+64-bit offsets for everything at/after `BSS_01_16E0B4` are +4 because
+`namePtr` widens 4→8 (the overlay's `#if UINTPTR_MAX` `.skip 4` pad).
+The matchData region (`0x62`+) is **pointer-free and target-identical
+internally** — only `namePtr` shifts.
 
-### Step 3 — Enumerate "tail" reads (offsets 96..153)
+### Corrections applied to this doc / overlay (mistakes found)
 
-The 58-byte `.skip` after `leagueWarningsEnabled` is the highest-risk
-area. Grep for any code that reads `competitionFileBuffer + N` or
-`comp + N` for N in 96..153. Any unnamed sub-field found here needs
-to be added either as a new overlay-named global or as a typed struct
-field (and saved semantically).
+1. **`diyPresetNameOfCompetition` is 36 bytes (`$24`), not 44.** Our
+   overlay (`swos_globals_career_overlay.c:914-916`) uses `.skip 44`,
+   silently merging `diyPresetNameOfCompetition(36)` +
+   `primaryCompStringOffset(4)` + `BSS_01_16E0B4(4)` into one label. The
+   *byte total is correct* (and the 64-bit pad lands right), so this is a
+   naming defect, not a layout bug — but it hides `primaryCompStringOffset`.
+2. **`namePtr` == SWOS2.s `primaryCompStringOffset` — split is
+   intentional, but the read sites were buggy.** In SWOS2.s this is one
+   field at `comp+0x28`, copied into `SeasonInformations.leagueStrPtr`
+   (SWOS2.s:61199). Our port deliberately split the four `*CompStringOffset`
+   labels out of the overlay into standalone native-width pointers
+   (`swos_data_typed_stubs.c:845-848`) so they can be saved symbolically
+   (pointer-to-disk handling) — the stale "MOVED to overlay" comments that
+   suggested otherwise have been corrected. **The real defect** (found and
+   fixed 2026-05-30): `career_init.c` populated
+   `SeasonInformations.leagueStrPtr`/`strPtr1/2/3` from those standalone
+   globals, which are *only ever written `= 0`* — so the season-recap
+   competition-name lines (`statistics.c:2184-2190`) rendered blank. The
+   fix reads the buffer `namePtr` directly
+   (`((DIYCompetition *)careerCompetitionSlotPtrTable[slot])->namePtr`),
+   mirroring SWOS2.s. The standalone `*CompStringOffset` globals are now
+   vestigial.
+3. **`majorTrophyBonusValue` is a byte (`$1`), not int16.** SWOS2.s reads
+   it with `move.b` (lines 50243/50263/50270/50347/50411). The draft
+   table above previously guessed int16.
+4. **The "3-object split" in the original plan double-names one
+   partition.** `primary_slot_state` and `primary_league_config` fields
+   ARE `DIYCompetition` struct fields (resultCode, substitutesCount,
+   slotStateA/B/C, roundComplete, competitionFinished, currentRoundIndex,
+   numRounds, minSubstitutes). They are disjoint *by offset* so a 3-object
+   split is viable as a partition, but each byte must be emitted **once** —
+   do not emit both `primary_competition.numTeams` and a separate
+   `numDiyTeams`; they are the same field.
+5. **`primary_comp_block` over-runs by 2 bytes.** `diyTeamIdListType2`
+   starts at `0x9A` = 154. The current blob is 154 bytes from offset 2 →
+   `[2,156)`, overlapping `diy_team_id_list_type_2`'s first 2 bytes
+   (which is separately saved). Clean sizes are **152 / 156**, not
+   154 / 158. Benign today (same bytes, load order resolves) but flag it.
 
-### Step 4 — Build the field table
+### namePtr symbolic-save constraints (Step 4 follow-up)
 
-Output of the audit is a table:
+`namePtr` is assigned in `diy_competition.c:8869` from one of:
+- `divisionStringTable[d7]` (static table) when `compHdr->unk1 == 0`
+- `*(uint8_t **)(table + 5 + nameOffset + (d7<<3))` (custom template)
+- `aCup_0` / `aLeague_1` defaults (diy_competition.c:8919/9062)
 
-| Byte offset (32-bit) | Byte offset (64-bit) | Name / accessor | Type | Notes |
-|---|---|---|---|---|
-| 0 | 0 | `primary_slot_type` (already FX) | int16 | covered |
-| 2 | 2 | (`competitionOver` or struct field) | int16 | check |
-| 4 | 4 | `competitionName` | char[36] | overlaps `diyPresetNameOfCompetition` |
-| 40 | 40 | `namePtr` | uint8_t * | save as string identity |
-| 48 | 52 | `majorTrophyBonusValue` | int16 | |
-| 50 | 54 | `numTeams` | uint16 | the bug we just hit |
-| ... | ... | ... | ... | ... |
+and the *same string is also copied into* `competitionName[36]` at +4
+(`_StringCopy(nameSource, a1)`). Two constraints on symbolic save:
 
-Mark anything ambiguous so we can disambiguate before promoting.
+- **Pointer-identity comparison.** `namePtr` is compared `== aFriendly`
+  (diy_competition.c:2930/2943) and similar (3223/3229). Re-pointing it to
+  a string-pool copy on load would break those identity checks if they
+  run on a loaded primary-slot competition. Prefer restoring to the
+  *original* static-table address (table+index identity) rather than a
+  pooled duplicate — i.e. save a table-id + index, not just the bytes.
+- **Feeds SeasonInformations.** `primaryCompStringOffset`(=namePtr) is
+  copied into `SeasonInformations.leagueStrPtr` (career_init.c:1059;
+  SWOS2.s:61199). The four `*CompStringOffset` globals are already
+  zeroed-on-load and re-derived (`_Rebuild_CompStringOffsets`,
+  career_init.c:1492) — so namePtr's symbolic restore should slot into
+  that same re-derivation path rather than a parallel mechanism.
 
-## Implementation plan (after audit lands)
+The existing symbolic patterns to reuse: `emit_str_pool_field` /
+`load_str_pool_field` (save_format_json.c, used by `SeasonInformations`
+comp-name pointers) and `restore_comp_copy_text_ptrs_from_template`
+(for `*Copy` text pointers). namePtr most closely matches the
+template-restore pattern given the identity-comparison constraint.
 
-1. Add the three new top-level JSON objects (`primary_competition`,
-   `primary_slot_state`, `primary_league_config`) emitted by name.
-2. Keep `primary_comp_block` (byte blob) in parallel **during
+## Implementation plan (audit complete — recommended approach)
+
+The audit changed the recommended shape. Because the named globals and
+the `DIYCompetition` fields are **the same bytes** (see Audit results),
+the cleanest cross-target-safe promotion is to emit the region via the
+`DIYCompetition` struct (numbers auto-land at each host's offset), with
+two carve-outs: the `namePtr` pointer and the pointer-free matchData
+tail. The 3-object JSON grouping is still fine *cosmetically* — but it
+must be a single partition emitted once, not three overlapping views.
+
+1. ~~Resolve the `primaryCompStringOffset` vs `namePtr` storage
+   question.~~ **Done (2026-05-30):** intentional split; the buggy
+   `leagueStrPtr` population was fixed to read the buffer `namePtr`
+   directly. See mistake #2 above.
+2. Replace `primary_comp_block` with field emission keyed to the
+   `DIYCompetition` struct accessor on `&competitionFileBuffer`:
+   - `competition_name` — `competitionName[36]` (byte-stable at 0x04).
+   - `name_ptr` — symbolic; restore to the original static-table
+     address (table-id + index) to preserve the `== aFriendly` identity
+     comparisons, *not* a string-pool duplicate (see constraints above).
+   - everything from `compId` onward — emit by struct accessor so each
+     scalar lands at the host's actual offset, OR as one pointer-free
+     blob anchored *after* namePtr (matchData head inclusive). Either is
+     cross-target-safe; the per-field form is more legible.
+3. Trim the blob to **152 / 156** bytes (mistake #5) — or drop the blob
+   entirely once the typed fields cover the span.
+4. Keep `primary_comp_block` (byte blob) in parallel **during
    transition**. Verify mode (`SWOS_SAVE_FORMAT_JSON_VERIFY=1`)
-   confirms typed path produces identical bytes to byte path.
-3. Once verify is clean across a representative save set, delete the
+   confirms the typed path produces identical bytes to the byte path.
+5. Once verify is clean across a representative save set, delete the
    byte blob.
-4. Handle `namePtr` symbolically via the existing string-pool /
-   competition-name-table pattern (the same approach
-   `SeasonInformations` uses for its 4 comp-name pointers, and the
-   same approach `restore_comp_copy_text_ptrs_from_template` uses for
-   *Copy template pointers).
+
+Optional but recommended cleanup: give the overlay
+(`swos_globals_career_overlay.c`) the real SWOS2.s sub-labels
+(`primaryCompStringOffset`, the `BSS_01_*` runs) instead of the merged
+`.skip 44` / `.skip 8` / `.skip 18` / `.skip 58` lumps, so the named
+globals match SWOS2.s one-for-one. This is a naming refactor only (byte
+layout is already correct) and removes the ambiguity behind mistake #1.
 
 ## Referenced existing docs
 
