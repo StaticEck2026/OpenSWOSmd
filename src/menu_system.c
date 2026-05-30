@@ -1623,6 +1623,14 @@ void _MenuProc(void)
 #ifdef SWOS_SDL_BUILD
         if (pauseSkipRequested)
             s_seasonSkipLatched = 1;
+#else
+        /* Amiga: pauseSkipRequested is SDL-only, so latch the skip from
+         * the inputs the Amiga path already populates — SPACE (raw key
+         * 0x40, read into currentKey by _MenuCheckControls) or the second
+         * fire button (pl2Fire = CIAA_PRA bit 6). Mirrors the SDL
+         * "SPACE / 2nd button" behaviour without new input plumbing. */
+        if (currentKey == 0x40 || pl2Fire != 0)
+            s_seasonSkipLatched = 1;
 #endif
         if (s_seasonSkipLatched) {
             s_seasonUpdateHoldCounter = SEASON_UPDATE_MENU_HOLD_FRAMES;
