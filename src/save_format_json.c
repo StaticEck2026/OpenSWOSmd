@@ -2239,7 +2239,9 @@ static void apply_semantic_load(const char *src, int src_size)
      * byte-level mismatches. */
     string_pool_reset();
 
+    PROF_START(season_info);
     load_season_informations(src, src_size);
+    PROF_END(season_info, "career-load");
     /* Top-level pointer fields were removed from the save format —
      * _RebuildPointersAfterLoad() re-derives them after this returns.
      * For the rebuild's selTeamNumber==0xFFFF (season-mode) path, parse
@@ -2259,16 +2261,21 @@ static void apply_semantic_load(const char *src, int src_size)
      * not in the save. Apply them from each careerContests src
      * template after the blob load has put stale bytes into dest. */
     restore_comp_copy_text_ptrs_from_template();
+    PROF_START(scalars);
     load_scalar_table(src, src_size, "career_scalars", s_career_scalars);
+    PROF_END(scalars, "career-load");
 
+    PROF_START(team_ce);
     load_team_file_ex(src, src_size, "$.career_team",  &careerTeam);
     load_team_file_ex(src, src_size, "$.current_team", &currentTeam);
+    PROF_END(team_ce, "career-load");
 
     /* numSelectedTeams comes through career_scalars
      * (num_selected_teams_inner aliases &numSelectedTeams). Now use
      * it to size the selected_teams loop. Slice the array once so
      * per-team lookups scan a single team's ~3 KB slice instead of
      * the full file each time. */
+    PROF_START(selected_teams);
     const char *teams_arr = NULL;
     int teams_arr_len = 0;
     if (mjson_find(src, src_size, "$.selected_teams",
@@ -2286,10 +2293,12 @@ static void apply_semantic_load(const char *src, int src_size)
             i++;
         }
     }
+    PROF_END(selected_teams, "career-load");
 
     /* TMD team pool — count from tmd_team_count scalar (already applied
      * by load_scalar_table above). Empty trailing slots stay zero from
      * the careerFileBufferBuf memset earlier in SaveJson_LoadCareer. */
+    PROF_START(tmd_teams);
     {
         const char *tmd_arr = NULL;
         int tmd_arr_len = 0;
@@ -2308,8 +2317,10 @@ static void apply_semantic_load(const char *src, int src_size)
             }
         }
     }
+    PROF_END(tmd_teams, "career-load");
 
     /* Foreign-market player pool — fixed-size MarketPlayer[432]. */
+    PROF_START(market_players);
     {
         const char *mp_arr = NULL;
         int mp_arr_len = 0;
@@ -2327,8 +2338,10 @@ static void apply_semantic_load(const char *src, int src_size)
             }
         }
     }
+    PROF_END(market_players, "career-load");
 
     /* Career / current team reserve players — 16 × PlayerFile each. */
+    PROF_START(reserves);
     {
         const char *paths[2] = { "$.career_team_reserves", "$.current_team_reserves" };
         uint8_t *bases[2] = { (uint8_t *)&careerTeam  + 684,
@@ -2349,6 +2362,7 @@ static void apply_semantic_load(const char *src, int src_size)
             }
         }
     }
+    PROF_END(reserves, "career-load");
 }
 
 int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
@@ -2360,10 +2374,19 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
      * fresh from disk into a heap allocation sized to the file. */
     (void)src_unused; (void)src_size_unused;
 
+    PROF_START(total);
+
+    PROF_START(read_file);
     uint8_t *src = NULL;
     uint32_t src_size = 0;
     if (read_save_file_heap(filename, &src, &src_size) != 0)
         return 1;
+    PROF_END(read_file, "career-load");
+#ifdef SWOS_SAVE_FORMAT_JSON_PROFILE
+    SWOS_DBG("[json-prof-career-load] file_size: %u bytes\n",
+             (unsigned)src_size);
+    SWOS_DBG_FLUSH();
+#endif
 
     /* Verify schema_version. */
     long version = 0;
@@ -2403,6 +2426,7 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
      * so we go through careerFileBufferBuf for the memset — the
      * compiler sees the full 256 KB destination and fortify_source
      * doesn't trip. */
+    PROF_START(memset_buf);
     uint32_t want = career_data_size();
 #ifdef SWOS_SDL_BUILD
     /* SDL: careerFileBuffer is a 1-byte stub for symbol-only purposes
@@ -2419,8 +2443,11 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
      * the memset destination. */
     memset(&careerFileBuffer, 0, want);
 #endif
+    PROF_END(memset_buf, "career-load");
 
+    PROF_START(apply_semantic);
     apply_semantic_load((const char *)src, (int)src_size);
+    PROF_END(apply_semantic, "career-load");
 
     /* Re-derive all pointer fields and distribute the loaded primary
      * slot's bytes into diyCompetitionStart / diyFileBufferCopy. The
@@ -2432,10 +2459,13 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
      * applied by apply_semantic_load above), so step 2 of the rebuild
      * dispatches to the correct (league/cup/hybrid) branch when it
      * reads slotPtr[0..1]. */
+    PROF_START(rebuild_ptrs);
     extern void _RebuildPointersAfterLoad(void);
     _RebuildPointersAfterLoad();
+    PROF_END(rebuild_ptrs, "career-load");
 
     swos_io_free(src);
+    PROF_END(total, "career-load");
     return 0;
 }
 
