@@ -97,6 +97,7 @@ extern uint16_t forceDrawTransparentMenuItems;
 
 /* _MenuCheckControls globals */
 extern volatile uint16_t currentKey;
+extern volatile uint8_t  keyIn;   /* raw scancode from the keyboard ISR (Amiga) */
 extern uint16_t lastFrameTicks;
 extern int16_t fireCounter;
 extern uint16_t player1ClearFlag;
@@ -1624,14 +1625,15 @@ void _MenuProc(void)
         if (pauseSkipRequested)
             s_seasonSkipLatched = 1;
 #else
-        /* Amiga: pauseSkipRequested is SDL-only, so latch the skip from
-         * the inputs the Amiga path already populates — SPACE or the
-         * second fire button (pl2Fire = CIAA_PRA bit 6). NB: _GetKey
-         * translates the raw SPACE scancode (0x40) through keycodeLut
-         * before storing currentKey, so SPACE arrives as ASCII 0x20, not
-         * the raw 0x40. Mirrors the SDL "SPACE / 2nd button" behaviour
-         * without new input plumbing. */
-        if (currentKey == 0x20 || pl2Fire != 0)
+        /* Amiga: pauseSkipRequested is SDL-only. Latch the skip from a
+         * CONTINUOUS held-state so it persists across every recap segment
+         * the way SDL's held SPACE does. Use keyIn (the raw SPACE scancode
+         * 0x40), which the keyboard ISR holds from press until release —
+         * NOT currentKey, which _GetKey consumes to a one-shot, so it was
+         * only seen on the odd frame and left some segments un-skipped
+         * ("half working"). Also accept the second fire button
+         * (pl2Fire = CIAA_PRA bit 6). */
+        if (keyIn == 0x40 || pl2Fire != 0)
             s_seasonSkipLatched = 1;
 #endif
         if (s_seasonSkipLatched) {
