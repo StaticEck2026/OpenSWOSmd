@@ -52,13 +52,14 @@ uint8_t SaveJson_GetLoadedPrimaryCountryCode(void)
 #include "swos_io.h"
 
 /* Amiga m68k <string.h> is partial — declares memcpy but not
- * strlen / strcmp. And there is no <stdlib.h> at all, so atoi is
- * undeclared too. Provide explicit prototypes for the strict
+ * strlen / strcmp / memcmp. And there is no <stdlib.h> at all, so atoi
+ * is undeclared too. Provide explicit prototypes for the strict
  * builtin-mismatch check; the symbols themselves resolve at link
- * time via libc. */
+ * time via libc / gcc8_c_support. */
 #if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
 extern size_t strlen(const char *s);
 extern int    strcmp(const char *a, const char *b);
+extern int    memcmp(const void *a, const void *b, size_t n);
 extern int    atoi(const char *s);
 #endif
 
