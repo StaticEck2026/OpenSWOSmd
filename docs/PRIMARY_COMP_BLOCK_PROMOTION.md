@@ -8,12 +8,38 @@ straight as JSON byte arrays — which means cross-target saves are
 broken, because the DIYCompetition struct field offsets are
 host-dependent (`namePtr` is 4 vs 8 bytes).
 
+## Status
+
+- **Cross-target scalar fix LANDED (2026-05-31).** The single
+  `primary_comp_block` byte blob in `s_career_scalars[]`
+  (`src/save_format_json.c`) was split at the `namePtr` boundary into
+  four entries — `primary_competition_over` (scalar),
+  `primary_competition_name` (string), `primary_name_ptr` (raw bytes,
+  host-width), and `primary_comp_tail` (a **110-byte pointer-free blob
+  anchored AFTER namePtr**, identical length on both hosts). Each piece
+  now lands at its host's actual struct offset on load, so the
+  `numTeams`/0x6006 class of cross-target bug is gone. Compile-time
+  `typedef char[...]` invariants assert the tail anchor + length on both
+  arches (`offsetof(compId)+110 == 154/158`, namePtr at 0x28, tail
+  contiguous with namePtr). Builds clean `-m32` and `-m64`.
+- **`namePtr` is intentionally still saved as raw bytes** (the
+  `primary_name_ptr` entry) — same pointer-to-disk behaviour as the old
+  blob (works same-binary, stale cross-rebuild). Making it symbolic is
+  the remaining follow-up; see the strengthened constraints below.
+- **No `opaque_data` fallback exists** (the format is fully semantic —
+  `save_format_json.c:4/15`), so `primary_comp_block` was the *sole*
+  carrier of the competition header. **Old JSON saves are now
+  incompatible**: the retired `primary_comp_block` key is ignored on
+  load and the new keys are absent, so the competition header loads as
+  all-zero. Regenerate test saves.
+
 ## Where we are right now
 
 - Same-target round-trip works on both targets (Amiga 32-bit, SDL
   64-bit). Verified end-to-end on Amiga via fresh new-career → save →
   load → CONTINUE CAREER (2026-05-30).
-- Cross-target round-trip is broken. Concrete bite:
+- Cross-target round-trip was broken before the 2026-05-31 split.
+  Concrete bite:
   `DIYCompetition.numTeams` is at struct offset 50 on 32-bit and offset
   54 on 64-bit. A 64-bit SDL save writes `[54, 0]` at byte-array index
   50 (the SDL byte that happens to live there); a 32-bit Amiga load
@@ -200,7 +226,7 @@ internally** — only `namePtr` shifts.
 - `aCup_0` / `aLeague_1` defaults (diy_competition.c:8919/9062)
 
 and the *same string is also copied into* `competitionName[36]` at +4
-(`_StringCopy(nameSource, a1)`). Two constraints on symbolic save:
+(`_StringCopy(nameSource, a1)`). Three constraints on symbolic save:
 
 - **Pointer-identity comparison.** `namePtr` is compared `== aFriendly`
   (diy_competition.c:2930/2943) and similar (3223/3229). Re-pointing it to
@@ -208,6 +234,19 @@ and the *same string is also copied into* `competitionName[36]` at +4
   run on a loaded primary-slot competition. Prefer restoring to the
   *original* static-table address (table+index identity) rather than a
   pooled duplicate — i.e. save a table-id + index, not just the bytes.
+- **Address-RANGE comparison (found 2026-05-31, not in the original
+  audit).** `career_status.c:3774/3786/3798` tests
+  `namePtr >= &aEuropeanTour && namePtr <= &aOceaniaTour` to decide
+  whether the active league is a "Tour" competition (drives
+  `boardConfidenceMod7/8/9`). This is reached via
+  `diyCompetitionStart.base.namePtr`, which is populated FROM the primary
+  slot buffer by `_Career_LoadCompetitionSlotStateFromBuffer` (Step 2 of
+  `_RebuildPointersAfterLoad`). A string-pool restore would fall outside
+  the `aEuropeanTour..aOceaniaTour` static range and silently misclassify
+  tour competitions. **This definitively rules out the string-pool
+  approach** and confirms the table-id+index restore is required — the
+  restored pointer must land back inside the original static-string
+  address range, not a copy.
 - **Feeds SeasonInformations.** `primaryCompStringOffset`(=namePtr) is
   copied into `SeasonInformations.leagueStrPtr` (career_init.c:1059;
   SWOS2.s:61199). The four `*CompStringOffset` globals are already
@@ -235,23 +274,32 @@ must be a single partition emitted once, not three overlapping views.
    question.~~ **Done (2026-05-30):** intentional split; the buggy
    `leagueStrPtr` population was fixed to read the buffer `namePtr`
    directly. See mistake #2 above.
-2. Replace `primary_comp_block` with field emission keyed to the
-   `DIYCompetition` struct accessor on `&competitionFileBuffer`:
-   - `competition_name` — `competitionName[36]` (byte-stable at 0x04).
-   - `name_ptr` — symbolic; restore to the original static-table
-     address (table-id + index) to preserve the `== aFriendly` identity
-     comparisons, *not* a string-pool duplicate (see constraints above).
-   - everything from `compId` onward — emit by struct accessor so each
-     scalar lands at the host's actual offset, OR as one pointer-free
-     blob anchored *after* namePtr (matchData head inclusive). Either is
-     cross-target-safe; the per-field form is more legible.
-3. Trim the blob to **152 / 156** bytes (mistake #5) — or drop the blob
-   entirely once the typed fields cover the span.
-4. Keep `primary_comp_block` (byte blob) in parallel **during
-   transition**. Verify mode (`SWOS_SAVE_FORMAT_JSON_VERIFY=1`)
-   confirms the typed path produces identical bytes to the byte path.
-5. Once verify is clean across a representative save set, delete the
-   byte blob.
+2. ~~Replace `primary_comp_block` with field emission split at the
+   namePtr boundary.~~ **Done (2026-05-31):** `competition_over`
+   (scalar), `competition_name` (string), `primary_name_ptr` (raw bytes,
+   host-width — namePtr unchanged for now), `primary_comp_tail`
+   (pointer-free blob, **anchored after namePtr** via
+   `offsetof(DIYCompetition, compId)`, 110 bytes on both hosts). Chose
+   the "one pointer-free blob anchored after namePtr" variant for the
+   tail — the per-field-scalar form was equivalent but more entries; the
+   anchored blob is cross-target-safe with no `#if` size and the
+   compile-time invariants guard it.
+3. ~~Trim / drop the blob.~~ **Done (2026-05-31):** the
+   `primary_comp_block` blob is **deleted** (not kept in parallel —
+   see below). The four entries cover exactly `[0x00 .. headerEnd)`.
+4. ~~Keep the blob in parallel during transition.~~ **Skipped
+   deliberately:** keeping the raw blob in parallel would conflict with
+   any future symbolic-namePtr emission (both targeting the same bytes,
+   load-order-dependent). Verification is via
+   `SWOS_SAVE_FORMAT_JSON_VERIFY=1` directly: zero-region-reload-diff on
+   the live state. Same-binary mismatch count should be UNCHANGED from
+   before the split (the same bytes are saved/loaded, just under 4 keys),
+   i.e. only the pre-existing ~14 expected mismatches.
+5. **REMAINING — make `namePtr` symbolic** (table-id + index restore;
+   string-pool ruled out by the range-check constraint above). This is
+   the only part of the cross-target story still using raw pointer bytes.
+   Until then `primary_name_ptr` is stale across rebuilds, exactly as the
+   old blob was — a pre-existing condition, not a new regression.
 
 Optional but recommended cleanup: give the overlay
 (`swos_globals_career_overlay.c`) the real SWOS2.s sub-labels

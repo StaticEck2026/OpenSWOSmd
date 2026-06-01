@@ -590,6 +590,20 @@ __asm__(
     ".globl " _ASM_PFX "secondaryCompetitionName\n"
     _ASM_PFX "secondaryCompetitionName:\n"
     ".skip 44\n"
+    /* 64-bit namePtr pad — same as the primary slot's first pad. The
+     * secondaryCompetitionName .skip 44 includes the 32-bit (4-byte)
+     * namePtr at struct 0x28; on 64-bit namePtr is 8 bytes, so the named
+     * globals after it (minorTrophyBonusValue=avgSkill, secondaryComp
+     * WinnerTeam=resultCode, secondaryCompSlotStateA/B/C, secondaryComp
+     * Finished) sit 4 bytes BEFORE their DIYCompetition struct fields
+     * without this gap. That mismatch made the comp_slots serializer (which
+     * reads via the struct) capture a wrong byte for slotStateA on 64-bit
+     * (observed: secondary_comp_slot_state_a = 0x0E04, a team id) → garbage
+     * on the Amiga. Context slots need only THIS pad (no named Ex-region
+     * globals, unlike the primary's diyTeamIdListType*). */
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 4\n"
+#endif
     ".globl " _ASM_PFX "minorTrophyBonusValue\n"
     _ASM_PFX "minorTrophyBonusValue:\n"
     ".skip 10\n"
@@ -614,6 +628,10 @@ __asm__(
     ".globl " _ASM_PFX "tertiaryCompetitionName\n"
     _ASM_PFX "tertiaryCompetitionName:\n"
     ".skip 44\n"
+    /* 64-bit namePtr pad — see secondaryCompetitionName above. */
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 4\n"
+#endif
     ".globl " _ASM_PFX "leagueTitleBonusValue\n"
     _ASM_PFX "leagueTitleBonusValue:\n"
     ".skip 10\n"
@@ -635,6 +653,13 @@ __asm__(
     ".globl " _ASM_PFX "diyCompetitionContext\n"
     _ASM_PFX "diyCompetitionContext:\n"
     ".skip 62\n"
+    /* 64-bit namePtr pad — see secondaryCompetitionName above. The .skip 62
+     * spans diyCompetitionContext's header through the 32-bit namePtr+fields
+     * up to slotStateA (struct 0x3E); +4 realigns slotStateA to 0x42 on
+     * 64-bit. */
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 4\n"
+#endif
     ".globl " _ASM_PFX "diyCompSlotStateA\n"
     _ASM_PFX "diyCompSlotStateA:\n"
     ".skip 2\n"
@@ -650,6 +675,10 @@ __asm__(
     ".globl " _ASM_PFX "quaternaryCompetitionName\n"
     _ASM_PFX "quaternaryCompetitionName:\n"
     ".skip 44\n"
+    /* 64-bit namePtr pad — see secondaryCompetitionName above. */
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 4\n"
+#endif
     ".globl " _ASM_PFX "majorTrophyOrCupBonusValue\n"
     _ASM_PFX "majorTrophyOrCupBonusValue:\n"
     ".skip 10\n"
@@ -958,6 +987,22 @@ __asm__(
     ".globl " _ASM_PFX "leagueRelegationCount\n"
     _ASM_PFX "leagueRelegationCount:\n"
     ".skip 6\n"
+    /* 64-bit pad #2: DIYCompetition is 0x60 on 32-bit but 0x68 on 64-bit
+     * — namePtr widening accounts for +4 (handled by the earlier pad after
+     * diyPresetNameOfCompetition), but the struct ALSO gets a +4 trailing
+     * alignment pad after playEachTeam (its largest member, namePtr, forces
+     * 8-byte struct alignment → size rounds up to 0x68). The named globals
+     * from here on (leagueWarningsEnabled = DIYCompetitionEx.minSubstitutes,
+     * then diyTeamIdListType2/0/1 = matchData/leagueTeamIds/cupTeamIds, …)
+     * alias the DIYCompetitionEx struct view, so without this second +4 gap
+     * they sit 4 bytes BEFORE their struct fields on 64-bit. That mis-
+     * positions every struct-read of leagueTeamIds/cupTeamIds (panic 0x...
+     * in _VerifyTeamLoaded from _GetMoreExpensiveTeamsCount) and the
+     * transfer_market.c reads of diyTeamIdListType0/1/2. The earlier pad
+     * fixed the header; this one fixes the matchData-and-beyond region. */
+#if UINTPTR_MAX != 0xFFFFFFFFu
+    ".skip 4\n"
+#endif
     ".globl " _ASM_PFX "leagueWarningsEnabled\n"
     _ASM_PFX "leagueWarningsEnabled:\n"
     ".skip 58\n"
