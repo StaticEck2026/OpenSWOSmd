@@ -239,7 +239,38 @@ static void load_str_pool_field(const char *buf, int buflen,
 
 /* ---------- format constants ---------- */
 
-#define SAVE_JSON_SCHEMA_VERSION 1
+/* On-disk JSON save schema version. Written into every save
+ * ("schema_version") and verified on load — a mismatch makes the load
+ * cleanly fail (returns error, no crash / no silent mis-decode) rather
+ * than feeding a stale-layout save into the game.
+ *
+ * BUMP THIS on EVERY change to the on-disk format: a new/removed/renamed
+ * field, a field's encoding changing (e.g. FLD_BYTES -> FLD_U16/U32_ARRAY),
+ * a region's size/layout shifting, etc. The whole point is that an old
+ * save can never be loaded by a newer binary that would misread it.
+ *
+ * History:
+ *   1 — initial structured JSON format.
+ *   2 — cross-target (64-bit SDL <-> 32-bit BE Amiga) rework: typed
+ *       competition-slot serializer (comp_slots), FLD_U16_ARRAY /
+ *       FLD_U32_ARRAY endian-neutral arrays (weekly_wage_by_player_index,
+ *       board_confidence_*, removed_player_stat_accum, comp header runs),
+ *       comp_copy template reconstruction, cup team_offset_table symbolic
+ *       encoding, context-slot overlay pads. Saves from v1 are rejected.
+ *   3 — cup fixes: teamSelectionKeyCache stride re-lay (cache_strides) +
+ *       game-record score fields packedGoals/aggregate/penaltyScore
+ *       endian-neutral (cache_scores, fixes the swapped VFL BOCHUM 1-0/0-1
+ *       score), cup team_grid_pairings moved into comp_slot (struct-
+ *       anchored, fixes the +8 cross-target offset shift / "TEAM v TEAM"
+ *       bracket) + cup knockout score arrays (cup_score_tab/agg/pen,
+ *       struct-anchored endian-neutral int16, fixes scrambled bracket
+ *       scores) + the WHOLE matchData union (matchdata_raw, struct-anchored
+ *       0xEA byte blob — fixes the +8 cross-target layout shift for every
+ *       matchData field at once: cup played-flags, scores, leagueTeamIds,
+ *       teamEntryOffsets, round info; cup_score_* layers endian-neutral
+ *       scores on top). Saves from v2 are rejected.
+ */
+#define SAVE_JSON_SCHEMA_VERSION 3
 
 #define KIND_CAREER     "career"
 #define KIND_PRESET     "preset"
@@ -1304,10 +1335,19 @@ static const FieldDesc s_career_scalars[] = {
     FA("euro_cups_competition_context",euroCupsCompetitionContext, 2904, FLD_BYTES),
 #endif
 
-    /* Team selection key cache — per-slot list of 10-byte cache entries.
-     * Layout per entry is reverse-engineered from access patterns in
-     * career_status.c / career_teams.c; structured promotion is future
-     * work. */
+    /* Team selection key cache — a list of teamSelectionKeyCacheCount
+     * variable-length entries. Each entry header: out[0]=teamSlot,
+     * out[1]=sortKey, out[2..3]=stride/slotLen (uint16, HOST-NATIVE),
+     * out[4..6]=flags, then numGames 12-byte game records whose team-id
+     * fields (+0x0C/+0x0E) are BE byte-pairs (BE_WRITE/READ_U16, endian-
+     * stable). The ONLY host-native multi-byte field anywhere in the cache
+     * is the +2 stride (verified by auditing every *(uint16_t*) cache
+     * access). So the byte blob round-trips cross-target EXCEPT the strides
+     * byte-swap → the walker's `stride<10||stride>256` bounds check rejects
+     * the swapped value → it bails after one entry (observed: only one
+     * fixture on the Amiga from a 64-bit cup save). The blob still carries
+     * everything correctly; cache_strides (below) re-lays the strides
+     * host-native on load. See fixup_cache_strides_on_load. */
     FA("team_selection_key_cache",    teamSelectionKeyCache,      1870, FLD_BYTES),
 
     /* Six user-saved tactic slots (teamTacticsUSERA..F). Same 370-byte
@@ -2610,6 +2650,129 @@ static void load_comp_copy_region(const char *buf, int buflen)
     }
 }
 
+/* ---------- teamSelectionKeyCache host-native fixup ----------
+ *
+ * The cache (raw FLD_BYTES blob) has host-native multi-byte fields that
+ * byte-swap cross-target. Two kinds, both fixed here by emitting their
+ * VALUES as endian-neutral decimals (walking the entry list) and re-laying
+ * them host-native on load:
+ *   1. Each entry's +2 uint16 stride. Swapping breaks the entry walk —
+ *      the runtime walker's stride<10||>256 bounds check rejects the
+ *      swapped value and bails after one entry (one-fixture-on-Amiga bug).
+ *   2. Each game-record's score fields: packedGoals(+6) / aggregate(+8) /
+ *      penaltyScore(+10), host-native u16s. Swapping flips home/away
+ *      scores (VFL BOCHUM 1-0 shown as 0-1 — live-gdb-confirmed). The
+ *      12-byte game records start at entry+0x0A; numGames is entry[5].
+ * Team-ids in the records (+0x0C/+0x0E) are BE byte-pairs (BE_WRITE/READ_U16)
+ * → endian-stable, NOT fixed here.
+ *
+ * cache_strides[] holds one stride per entry; cache_scores[] holds 3
+ * decimals (packed,agg,pen) per game record, flattened in walk order.
+ * Both walks use the LIVE/just-restored strides + numGames; bounds-guarded
+ * (stride [10,256], stay within TSKC_SIZE) so corrupt data can't overrun. */
+extern uint16_t teamSelectionKeyCacheCount;
+#define TSKC_SIZE 1870u
+#define TSKC_GAMEREC_OFF 0x0A      /* game records start here within an entry */
+
+static void emit_cache_strides(mjson_print_fn_t fn, void *fnd)
+{
+    uint8_t *base = teamSelectionKeyCache;
+    int count = (int)(int16_t)teamSelectionKeyCacheCount;
+
+    /* Pass 1: strides (one per entry). */
+    mjson_printf(fn, fnd, "%Q:[", "cache_strides");
+    uint32_t off = 0;
+    for (int i = 0; i < count; i++) {
+        if (off + 4 > TSKC_SIZE) break;
+        uint16_t stride = *(uint16_t *)(base + off + 2);
+        if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+        mjson_printf(fn, fnd, "%u", (unsigned)stride);
+        if (stride < 10 || stride > 256) break;
+        off += stride;
+    }
+    mjson_printf(fn, fnd, "%s", "]");
+
+    /* Pass 2: per-game-record score fields (packed,agg,pen) in walk order. */
+    mjson_printf(fn, fnd, ",%Q:[", "cache_scores");
+    off = 0;
+    int first = 1;
+    for (int i = 0; i < count; i++) {
+        if (off + 6 > TSKC_SIZE) break;
+        uint16_t stride = *(uint16_t *)(base + off + 2);
+        if (stride < 10 || stride > 256) break;
+        int numGames = base[off + 5];
+        for (int g = 0; g < numGames; g++) {
+            uint32_t rec = off + TSKC_GAMEREC_OFF + (uint32_t)g * 12u;
+            if (rec + 11 >= TSKC_SIZE) break;
+            uint16_t packed = *(uint16_t *)(base + rec + 6);
+            uint16_t agg    = *(uint16_t *)(base + rec + 8);
+            uint16_t pen    = *(uint16_t *)(base + rec + 10);
+            if (!first) mjson_printf(fn, fnd, "%s", ",");
+            first = 0;
+            mjson_printf(fn, fnd, "%u,%u,%u",
+                         (unsigned)packed, (unsigned)agg, (unsigned)pen);
+        }
+        off += stride;
+    }
+    mjson_printf(fn, fnd, "%s", "]");
+}
+
+static void fixup_cache_strides_on_load(const char *buf, int buflen)
+{
+    uint8_t *base = teamSelectionKeyCache;
+
+    /* Pass 1: re-lay strides host-native (must come first — the score
+     * walk needs correct strides + numGames). */
+    const char *arr = NULL; int alen = 0;
+    if (mjson_find(buf, buflen, "$.cache_strides", &arr, &alen) != MJSON_TOK_ARRAY)
+        return;                          /* pre-v2 save: leave blob as-is */
+    {
+        int pos = 0, voff, vlen, vt;
+        uint32_t off = 0;
+        while ((pos = fast_array_next(arr, alen, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_NUMBER) break;
+            if (off + 4 > TSKC_SIZE) break;
+            uint16_t stride = (uint16_t)parse_long_slice(arr + voff, vlen);
+            *(uint16_t *)(base + off + 2) = stride;
+            if (stride < 10 || stride > 256) break;
+            off += stride;
+        }
+    }
+
+    /* Pass 2: re-lay game-record score fields host-native, same walk order
+     * as emit. cache_scores is flat (3 decimals per record). */
+    const char *sarr = NULL; int salen = 0;
+    if (mjson_find(buf, buflen, "$.cache_scores", &sarr, &salen) != MJSON_TOK_ARRAY)
+        return;                          /* pre-v3 save: scores stay as blob */
+    {
+        int count = (int)(int16_t)teamSelectionKeyCacheCount;
+        int pos = 0, voff, vlen, vt;
+        uint32_t off = 0;
+        for (int i = 0; i < count; i++) {
+            if (off + 6 > TSKC_SIZE) break;
+            uint16_t stride = *(uint16_t *)(base + off + 2);
+            if (stride < 10 || stride > 256) break;
+            int numGames = base[off + 5];
+            for (int g = 0; g < numGames; g++) {
+                uint32_t rec = off + TSKC_GAMEREC_OFF + (uint32_t)g * 12u;
+                if (rec + 11 >= TSKC_SIZE) break;
+                long packed = 0, agg = 0, pen = 0;
+                if ((pos = fast_array_next(sarr, salen, pos, &voff, &vlen, &vt)) == 0) goto done;
+                packed = parse_long_slice(sarr + voff, vlen);
+                if ((pos = fast_array_next(sarr, salen, pos, &voff, &vlen, &vt)) == 0) goto done;
+                agg = parse_long_slice(sarr + voff, vlen);
+                if ((pos = fast_array_next(sarr, salen, pos, &voff, &vlen, &vt)) == 0) goto done;
+                pen = parse_long_slice(sarr + voff, vlen);
+                *(uint16_t *)(base + rec + 6)  = (uint16_t)packed;
+                *(uint16_t *)(base + rec + 8)  = (uint16_t)agg;
+                *(uint16_t *)(base + rec + 10) = (uint16_t)pen;
+            }
+            off += stride;
+        }
+    done:;
+    }
+}
+
 /* ---------- Cross-target competition-buffer override ----------
  *
  * The competition working buffer (competitionFileBuffer = a stored copy
@@ -2808,6 +2971,30 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
         mjson_printf(fn, fnd, "%s", "]");
     }
 
+    /* matchData union (0xEA bytes) — struct-anchored byte blob. This is the
+     * WHOLE 0x64.. region whose struct offset shifts +8 cross-target (0x64
+     * on 32-bit, 0x6C on 64-bit, from the earlier namePtr widening). The raw
+     * competition_context blob writes it at the SAVING host's offset, so a
+     * cross-target load reads every matchData field 8 bytes off — the
+     * cup-bracket "played" flags (cupRoundResults[0..0x3F]), the knockout
+     * scores (cupRoundResults[0x40]), leagueTeamIds, teamEntryOffsets, round
+     * info, etc. all misplaced (live-confirmed: same CUP.CAR shows different
+     * cup scores + played/unplayed flags on 64-bit vs 32-bit). Emitting the
+     * whole union struct-anchored fixes the LAYOUT for every field at once.
+     * Pointer-free + identical 0xEA size on both targets, so a flat byte
+     * copy is layout-correct. (Byte-order of the host-native u16 score
+     * fields inside is handled separately, endian-neutral, by
+     * cup_score_tab/agg/pen below — that layer sits on top of this one.) */
+    {
+        const uint8_t *md = (const uint8_t *)&s->matchData;
+        mjson_printf(fn, fnd, ",%Q:[", "matchdata_raw");
+        for (uint32_t i = 0; i < (uint32_t)sizeof(s->matchData); i++) {
+            if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+            mjson_printf(fn, fnd, "%u", (unsigned)md[i]);
+        }
+        mjson_printf(fn, fnd, "%s", "]");
+    }
+
     /* LEAGUE teamEntryOffsets — standings-sorted positions (value/18 =
      * team index), host-native uint16, DYNAMIC (rewritten by
      * _DIY_SortLeagueTableByStandings). Declared [14] but uses numTeams
@@ -2827,6 +3014,81 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
             mjson_printf(fn, fnd, "%u", (unsigned)eo[i]);
         }
         mjson_printf(fn, fnd, "%s", "]");
+    }
+
+    /* CUP bracketScratch.teamOffsetTable[64] — int32 byte-offsets from
+     * selTeamsPtr to each bracket team (read as `&selTeamsPtr + off` in
+     * career_teams.c:2040/2050, diy_competition.c:2903/6282). Raw FLD_BYTES
+     * byte-swapped each int32 cross-target → garbage team pointer → panic
+     * the moment a cup match auto-sims. Layout-DEPENDENT (a BSS distance),
+     * so even byte-correct it wouldn't be valid on a different build —
+     * emit SYMBOLICALLY as team indices (off/684, careerTeam=-1), the same
+     * encoding as the league standings teamSelOffset. Indexed by grid slot
+     * (0..63, sparse) so emit the full 64-entry table verbatim; unused
+     * slots stay 0 → identity 0, harmless (never read for absent teams).
+     * League view doesn't use this field. */
+    if (b->competitionType == 1) {
+        const int32_t *ot = s->bracketScratch.teamOffsetTable;
+        mjson_printf(fn, fnd, ",%Q:[", "team_offset_table");
+        for (int i = 0; i < 64; i++) {
+            if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+            mjson_printf(fn, fnd, "%d",
+                         (int)diy_teamseloffset_to_identity(ot[i]));
+        }
+        mjson_printf(fn, fnd, "%s", "]");
+
+        /* CUP teamGridPairings[64] — uint8 grid-slot indices; the cup
+         * bracket reads slot1/slot2 = teamGridPairings[currentMatchIndex*2
+         * .. +1] then names via teamOffsetTable[slotN]. Byte-safe content,
+         * BUT its struct offset shifts +8 cross-target (0x2CE on 32-bit,
+         * 0x2D6 on 64-bit — the namePtr widening earlier in DIYCompetitionEx).
+         * The raw competition_context blob is a flat copy at 64-bit offsets,
+         * so a 32-bit load read teamGridPairings 8 bytes early → 8 leading
+         * zeros → slot1=slot2=0 → "TEAM v TEAM" (live-gdb-confirmed: the
+         * DUSSELDORF-v-DUSSELDORF cup bracket). Emit struct-anchored here so
+         * offsetof places it right on each host. */
+        const uint8_t *gp = s->teamGridPairings;
+        mjson_printf(fn, fnd, ",%Q:[", "team_grid_pairings");
+        for (int i = 0; i < 64; i++) {
+            if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+            mjson_printf(fn, fnd, "%u", (unsigned)gp[i]);
+        }
+        mjson_printf(fn, fnd, "%s", "]");
+
+        /* CUP knockout score arrays — three parallel int16 arrays indexed
+         * by match (diy_competition.c:2515-2517), HOST-NATIVE so they
+         * byte-swap cross-target (live-confirmed: bracket scores scrambled,
+         * HANSA 1-2 shown as 2-3). Emit endian-neutral as int16 decimals:
+         *   scoreTab1   = cupRoundResults[0x40]  (knockout score)
+         *   aggregate   = _bss_2E0AE[0]          (2nd-leg aggregate)
+         *   penalty     = phaseStartMonths[0]    (penalty score)
+         * 18 entries each (scoreTab1's window cupRoundResults[0x40..0x64]
+         * = 36 bytes = 18 words; round match count <= 18). The surrounding
+         * byte regions ride the raw blob unchanged; only these int16 score
+         * sub-arrays need endian-neutral re-lay. */
+        {
+            const int16_t *st = (const int16_t *)&s->matchData.cup.cupRoundResults[0x40];
+            const int16_t *ag = (const int16_t *)&s->_bss_2E0AE[0];
+            const int16_t *pn = (const int16_t *)&s->leagueSectionState.phaseStartMonths[0];
+            mjson_printf(fn, fnd, ",%Q:[", "cup_score_tab");
+            for (int i = 0; i < 18; i++) {
+                if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+                mjson_printf(fn, fnd, "%d", (int)st[i]);
+            }
+            mjson_printf(fn, fnd, "%s", "]");
+            mjson_printf(fn, fnd, ",%Q:[", "cup_score_agg");
+            for (int i = 0; i < 18; i++) {
+                if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+                mjson_printf(fn, fnd, "%d", (int)ag[i]);
+            }
+            mjson_printf(fn, fnd, "%s", "]");
+            mjson_printf(fn, fnd, ",%Q:[", "cup_score_pen");
+            for (int i = 0; i < 18; i++) {
+                if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+                mjson_printf(fn, fnd, "%d", (int)pn[i]);
+            }
+            mjson_printf(fn, fnd, "%s", "]");
+        }
     }
 
     mjson_printf(fn, fnd, "%s", "}");
@@ -2917,6 +3179,17 @@ static void load_comp_slot(const char *parent, int plen,
         }
     }
 
+    /* matchData union — struct-anchored byte blob (fixes the +8 cross-target
+     * layout shift for the whole 0xEA region; see emit). Loaded BEFORE the
+     * endian-neutral cup_score_* / teamEntryOffsets fixups below so those
+     * layer their host-native values on top. */
+    {
+        const char *mr = NULL; int mrl = 0;
+        if (mjson_find(o, olen, "$.matchdata_raw", &mr, &mrl) == MJSON_TOK_ARRAY)
+            parse_byte_array_slice(mr, mrl, (uint8_t *)&s->matchData,
+                                   (uint32_t)sizeof(s->matchData));
+    }
+
     /* LEAGUE teamEntryOffsets — host-native uint16 words, numTeams of them
      * (see emit). parse_u16_array_slice writes host-native (endian-neutral
      * on disk). Caps at numTeams*2 bytes so it can't overrun. */
@@ -2930,6 +3203,49 @@ static void load_comp_slot(const char *parent, int plen,
                     == MJSON_TOK_ARRAY)
                 parse_u16_array_slice(arr, alen,
                     (uint8_t *)s->matchData.league.teamEntryOffsets, elen);
+        }
+    }
+
+    /* CUP teamOffsetTable[64] — symbolic team indices → restore to live
+     * selTeamsPtr byte-offsets (see emit). Walk the 64-element array; each
+     * decimal is a team index (or -1 careerTeam sentinel) converted back
+     * via diy_identity_to_teamseloffset. */
+    if (b->competitionType == 1) {
+        const char *arr = NULL; int alen = 0;
+        if (mjson_find(o, olen, "$.team_offset_table", &arr, &alen)
+                == MJSON_TOK_ARRAY) {
+            int pos = 0, voff, vlen, vt, i = 0;
+            while (i < 64 &&
+                   (pos = fast_array_next(arr, alen, pos,
+                                          &voff, &vlen, &vt)) != 0) {
+                if (vt == MJSON_TOK_NUMBER) {
+                    int32_t id = (int32_t)parse_long_slice(arr + voff, vlen);
+                    s->bracketScratch.teamOffsetTable[i] =
+                        diy_identity_to_teamseloffset(id);
+                }
+                i++;
+            }
+        }
+
+        /* CUP teamGridPairings[64] — uint8, struct-anchored (corrects the
+         * +8 cross-target offset shift; see emit). Walk up to 64 bytes. */
+        const char *garr = NULL; int galen = 0;
+        if (mjson_find(o, olen, "$.team_grid_pairings", &garr, &galen)
+                == MJSON_TOK_ARRAY)
+            parse_byte_array_slice(garr, galen, s->teamGridPairings, 64);
+
+        /* CUP knockout score arrays — endian-neutral int16, struct-anchored
+         * (see emit). parse_u16_array_slice writes host-native; 18 words =
+         * 36 bytes each. */
+        struct { const char *key; uint8_t *dst; } sc[3] = {
+            { "$.cup_score_tab", (uint8_t *)&s->matchData.cup.cupRoundResults[0x40] },
+            { "$.cup_score_agg", (uint8_t *)&s->_bss_2E0AE[0] },
+            { "$.cup_score_pen", (uint8_t *)&s->leagueSectionState.phaseStartMonths[0] },
+        };
+        for (int k = 0; k < 3; k++) {
+            const char *sa = NULL; int sl = 0;
+            if (mjson_find(o, olen, sc[k].key, &sa, &sl) == MJSON_TOK_ARRAY)
+                parse_u16_array_slice(sa, sl, sc[k].dst, 36);
         }
     }
 }
@@ -3116,6 +3432,11 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
                    (const DIYCompetitionEx *)euroCupsCompetitionContext);
     mjson_printf(json_out_emit, &out, "%s", "}");
 
+    /* teamSelectionKeyCache stride list (endian-neutral) — paired with the
+     * raw cache blob; re-lays the host-native +2 strides on load. */
+    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+    emit_cache_strides(json_out_emit, &out);
+
     /* Two top-level TeamFileEx records (careerTeam, currentTeam) and
      * the variable-length selTeamsPtr array following
      * numSelectedTeams in the save. */
@@ -3271,6 +3592,12 @@ static void apply_semantic_load(const char *src, int src_size)
     PROF_START(scalars);
     load_scalar_table(src, src_size, "career_scalars", s_career_scalars);
     PROF_END(scalars, "career-load");
+
+    /* Re-lay teamSelectionKeyCache strides host-native AFTER the cache blob
+     * + its count loaded (both via load_scalar_table). Fixes the +2 uint16
+     * stride byte-swap that otherwise breaks the entry walk cross-target
+     * (one-fixture-on-Amiga bug). See fixup_cache_strides_on_load. */
+    fixup_cache_strides_on_load(src, src_size);
 
     /* Apply the cross-target competition-buffer override AFTER the raw
      * blobs have populated competitionFileBuffer — it corrects the
