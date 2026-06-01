@@ -121,6 +121,29 @@ If the daemon fails to attach, the log says so. Common causes:
 |---|---|---|
 | `Connection refused` | FS-UAE not running, or its debugger port closed after a previous gdb detach | restart FS-UAE — the stub is **one-shot per session** |
 | daemon stays alive but `info program` hangs | gdb is at a malformed state from a prior `call` that triggered an inferior fault | restart both daemon AND FS-UAE |
+| **daemon exits instantly, empty log, no `/tmp/swos_gdb.sock`** | (FIXED 2026-06 — was an argparse `dest` collision: the `daemon` subcommand's `--mode` overwrote the chosen subcommand, so `daemon_main` never ran. The subparser dest is now `cmd_name`.) If you see this again, run the daemon **in the foreground** to see the traceback: `python3 gdb_proxy.py daemon --mode amiga --host 127.0.0.1` | — |
+
+### CRITICAL startup discipline (the one-shot port)
+
+FS-UAE's `--remote_debugger` port is **one-shot per emulator session**.
+Every gdb client connect→disconnect burns it. So:
+
+1. Start FS-UAE **once**. Confirm `ss -ltn | grep :2345` shows LISTEN.
+2. Start the daemon **once**, correctly, the first time. Do NOT do a
+   throwaway foreground `timeout N python3 …daemon…` "just to test" — that
+   connects and disconnects, **killing the port**, and the real daemon
+   then can't attach. (This wasted a full session once.)
+3. The daemon must stay **resident**. When launched as a background task,
+   confirm `/tmp/swos_gdb.sock` exists and `gdb_proxy.py ping` returns
+   `pong` before doing anything else. If the socket never appears, the
+   daemon died — check the log / run it foreground, do NOT relaunch
+   blindly (each attempt may burn the port).
+4. If the port gets burned (daemon log shows attach failure, or
+   `info program` says "not being run" with packet errors), there is no
+   recovery except a **full restart**: `pkill -9 -x fs-uae`, confirm
+   gone, relaunch FS-UAE, then the daemon. The `--remote_debugger_trigger
+   =:SWOS2` makes FS-UAE pause when the SWOS2 binary launches, so launch
+   the game from the Amiga Workbench AFTER the daemon is attached.
 
 ---
 

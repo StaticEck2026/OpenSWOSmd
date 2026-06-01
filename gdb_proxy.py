@@ -296,7 +296,12 @@ def main():
         description="Proxy for m68k-amiga-elf-gdb against FS-UAE remote debugger.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    sub = ap.add_subparsers(dest="mode", required=True)
+    # NOTE: the subcommand dest is "cmd_name" (NOT "mode") because the
+    # `daemon` subcommand has its own `--mode amiga|sdl` option. Using
+    # dest="mode" here collided with that, so argparse overwrote the
+    # chosen subcommand ("daemon") with the --mode value ("amiga"), and
+    # daemon_main() was never dispatched — the daemon exited instantly.
+    sub = ap.add_subparsers(dest="cmd_name", required=True)
 
     d = sub.add_parser("daemon", help="Start the proxy (foreground).")
     d.add_argument("--mode", choices=("amiga", "sdl"), default="amiga",
@@ -324,20 +329,20 @@ def main():
 
     args = ap.parse_args()
 
-    if args.mode == "daemon":
+    if args.cmd_name == "daemon":
         daemon_main(args)
-    elif args.mode == "cmd":
+    elif args.cmd_name == "cmd":
         req = f"CMD TIMEOUT={args.timeout}\t{args.command}"
         sys.stdout.write(send_request(req, timeout=args.timeout + 5))
         sys.stdout.flush()
-    elif args.mode == "poll":
+    elif args.cmd_name == "poll":
         sys.stdout.write(send_request(f"POLL {args.seconds}",
                                       timeout=float(args.seconds) + 5))
         sys.stdout.flush()
-    elif args.mode == "raw":
+    elif args.cmd_name == "raw":
         sys.stdout.write(send_request(f"RAW {args.data}"))
         sys.stdout.flush()
-    elif args.mode == "stop":
+    elif args.cmd_name == "stop":
         if not os.path.exists(SOCK_PATH):
             print("not running")
             return
@@ -345,7 +350,7 @@ def main():
             print(send_request("SHUTDOWN", timeout=5))
         except Exception as e:
             print(f"[error] {e}")
-    elif args.mode == "status":
+    elif args.cmd_name == "status":
         if not os.path.exists(SOCK_PATH):
             print("not running (socket missing)")
             return
@@ -353,7 +358,7 @@ def main():
             print(send_request("PING", timeout=2))
         except Exception as e:
             print(f"socket present but no response: {e}")
-    elif args.mode == "ping":
+    elif args.cmd_name == "ping":
         print(send_request("PING", timeout=2))
 
 

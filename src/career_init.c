@@ -1521,6 +1521,44 @@ void _RebuildPointersAfterLoad(void)
     careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContext;
     careerCompetitionSlotPtrTable[4] = (uint8_t *)&diyCompetitionContext;
 
+    /* Step 1b: re-derive each slot buffer's DIYCompetition.namePtr (+0x28).
+     *
+     * namePtr is a pointer-to-disk field: at save time it holds the
+     * SAVING binary's absolute address of the division/cup name string
+     * (e.g. divisionStringTable[d7], assigned in _InitDIYLeagueFromRecord
+     * diy_competition.c:8869 / _InitDIYCupFromRecord:8924). The JSON save
+     * stores it as raw bytes (primary_name_ptr), so after a cross-target
+     * load it's a foreign address — on the Amiga a 64-bit-SDL value like
+     * 0x1_004A70B8 truncates to a ~garbage 32-bit pointer. It then flows
+     * into SeasonInformations.leagueStrPtr (line ~1067 below) and is
+     * dereferenced by the season-recap renderer (statistics.c:2184,
+     * _StringCopy/RenderCompLine), which walks it to a NUL — off a wild
+     * address that smashes the stack (observed: wild PC + "SWOS2" string
+     * bytes on the stack walking past the comp buffer).
+     *
+     * Re-point it at the slot's OWN competitionName[36] buffer (+0x04),
+     * which the same init code already filled with the full display name
+     * ("GERMAN 1. LIGA"). That's valid, cross-target-stable memory in the
+     * just-loaded buffer, so the recap renders and nothing derefs a
+     * foreign address.
+     *
+     * LIMITATION (deferred): the original namePtr was the *bare* division
+     * name ("1. LIGA") and is also tested by IDENTITY (== aFriendly,
+     * diy_competition.c:2930/3223) and by ADDRESS RANGE (aEuropeanTour..
+     * aOceaniaTour, career_status.c:3774) to classify friendlies/tours.
+     * Pointing at competitionName loses those — fine for ordinary
+     * league/cup (not a friendly, not a tour, and the recap shows the
+     * country-prefixed name), but a friendly/tour career would
+     * mis-classify. The full fix is a SYMBOLIC save (table-id + division
+     * index, restored to the original static-string address) so identity
+     * and range survive; see project_primary_comp_block_handoff. This
+     * repoint unblocks the common case without that larger change. */
+    for (int _slot = 0; _slot < 5; _slot++) {
+        DIYCompetition *c = (DIYCompetition *)careerCompetitionSlotPtrTable[_slot];
+        if (c != NULL && c->namePtr != NULL)
+            c->namePtr = (uint8_t *)c->competitionName;
+    }
+
     /* Step 2: repopulate diyCompetitionStart (the runtime working
      * struct outside the careerFileBuffer overlay) from the primary
      * slot's saved bytes. Without this, the upcoming-match list
