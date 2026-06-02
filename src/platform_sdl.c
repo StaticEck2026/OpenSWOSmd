@@ -19,6 +19,23 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Window-title arch suffix so you can tell builds apart at a glance while
+ * cross-target testing (e.g. "SWOS (x86 64-bit)" vs "SWOS (x86 32-bit)"). */
+#if   defined(__x86_64__)
+#  define SWOS_ARCH_STR "x86 64-bit"
+#elif defined(__i386__)
+#  define SWOS_ARCH_STR "x86 32-bit"
+#elif defined(__aarch64__)
+#  define SWOS_ARCH_STR "ARM 64-bit"
+#elif defined(__arm__)
+#  define SWOS_ARCH_STR "ARM 32-bit"
+#elif defined(__SIZEOF_POINTER__) && (__SIZEOF_POINTER__ == 8)
+#  define SWOS_ARCH_STR "64-bit"
+#else
+#  define SWOS_ARCH_STR "32-bit"
+#endif
+#define SWOS_WINDOW_TITLE "SWOS (" SWOS_ARCH_STR ")"
+
 /* ---- Forward decls from audio_sdl.c / input_sdl.c ----------------- */
 int  AudioSDL_Init(int mono);
 void AudioSDL_Shutdown(void);
@@ -240,7 +257,7 @@ int Platform_Init(const PlatformInitOptions *opts)
     }
 
     s_window = SDL_CreateWindow(
-        "SWOS",
+        SWOS_WINDOW_TITLE,
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         PLATFORM_SCREEN_W * win_scale, PLATFORM_SCREEN_H * win_scale,
         wflags);
