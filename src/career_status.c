@@ -200,7 +200,7 @@ extern uint16_t   euroChampionshipQualTeam;
 extern uint16_t   ballSpeed;
 extern volatile uint16_t   currentGameTick;
 extern uint8_t    lastFinancialWeekIndex;
-extern uint8_t    diyFileBufferCopy[];
+extern DIYTournamentState diyFileBufferCopy;
 
 /* Winner teams */
 extern uint16_t   primaryCompWinnerTeam;
@@ -1124,7 +1124,7 @@ league_match:
         int16_t isDiy = comp->base.hasGroups;  /* 0x48 */
         if (isDiy != 0) {
             /* DIY league: check group state via file buffer stride */
-            uint16_t groupIdxField = (uint16_t)((DIYCompetition *)diyFileBufferCopy)->roundComplete;
+            uint16_t groupIdxField = (uint16_t)diyFileBufferCopy.header.roundComplete;
             DIYTournamentSlot *slot = (DIYTournamentSlot *)((uint8_t *)comp + groupIdxField * 0x76 + 0x15A);
             if (slot->isLeagueFormat != 0)
                 goto compute_receipts;
@@ -1240,8 +1240,8 @@ diy_comp_match:
              * Also the second currentRound read used a0=cupMatchReceiptsMultiplierTable
              * but should have been diyFileBufferCopy->roundComplete (offset $54).
              */
-            uint16_t totalRoundsField = (uint16_t)((DIYCompetition *)diyFileBufferCopy)->totalMatchesInRound;
-            uint16_t curRoundField = (uint16_t)((DIYCompetition *)diyFileBufferCopy)->roundComplete;
+            uint16_t totalRoundsField = (uint16_t)diyFileBufferCopy.header.totalMatchesInRound;
+            uint16_t curRoundField = (uint16_t)diyFileBufferCopy.header.roundComplete;
             int16_t roundIndex = (int16_t)(totalRoundsField - 1 - curRoundField);
             d7 = (uint16_t)((uint32_t)(d7 * cupMatchReceiptsMultiplierTable[roundIndex]) / 100);
 
@@ -4182,7 +4182,7 @@ void _Career_AutoAdvanceCompetitionSlots(void)
 {
 restart:
     ;
-    uint8_t *bufCopy = diyFileBufferCopy;
+    uint8_t *bufCopy = (uint8_t *)&diyFileBufferCopy;
     DIYCompetition *bufCopyBase = (DIYCompetition *)bufCopy;
     uint16_t slotIndex = (uint16_t)bufCopyBase->roundComplete;
     DIYTournamentSlot *slotRec = (DIYTournamentSlot *)(bufCopy + (uint32_t)slotIndex * 0x76 + 0x15A);
@@ -4224,7 +4224,6 @@ extern uint8_t *careerCompetitionSlotPtrTable[];
 extern volatile uint16_t isNationalSelector;
 extern uint16_t diyCupTeamIds[];
 extern uint16_t diyLeagueTeamIds[];
-extern uint16_t diyTournamentTeamIds[];
 extern void _Career_ApplyForeignMarketPlayersToSelectedTeams(void);
 extern void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest);
 extern void _InitCompetitionFromRecord(uint16_t index, uint8_t *record);
@@ -4343,7 +4342,7 @@ validated:
         } else if (compType == 1) {
             teamIdList = diyCupTeamIds;
         } else {
-            teamIdList = diyTournamentTeamIds;
+            teamIdList = diyFileBufferCopy.teamIds;
         }
         _CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)teamIdList);
     } else {
@@ -4361,7 +4360,7 @@ init_competition:
 
     /* Store slot index to both diyFileBufferCopy and diyCompetitionStart.
      * +0x2C = compId/slotId word in DIYCompetition base. */
-    *(uint16_t *)&((DIYCompetition *)diyFileBufferCopy)->compId = slot;
+    *(uint16_t *)&diyFileBufferCopy.header.compId = slot;
     *(uint16_t *)&diyCompetitionStart.base.compId = slot;  /* writes compId+slotId as word */
 
     /* Write comp type to slot state header (sign-extended from int8). */

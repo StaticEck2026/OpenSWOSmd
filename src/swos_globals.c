@@ -1102,23 +1102,41 @@ __asm__(
  * Sizing: 0x420 (diyFileBufferCopy region) + 0x734 (diyCompetitionStart
  * extended region) = 0xB54 minimum. Round up to 0x2000 (8192) for
  * defensive headroom — the 1450-word copy reaches 0xB54 anyway. */
+/* ---------------------------------------------------------------------
+ * STEP-3 UNTANGLE: diyFileBufferCopy is now a typed struct
+ * (DIYTournamentState, game_types.h) instead of the legacy raw-offset
+ * overlay. The old layout placed the 64-byte team-index list at byte
+ * 0x5A, deliberately overlapping the DIYCompetition header tail
+ * (numRounds/subRound/playEach on Amiga). On 64-bit the namePtr widening
+ * (4->8) grew DIYCompetition by +4 and slid the *used* header fields
+ * competitionFinished (->0x5A) and currentRoundIndex (->0x5C) on top of
+ * the list, so a routine header reset zeroed team entries [0..3] (panic
+ * 0x8034, ROMANIA x5, inflated PL column). As a named struct field
+ * (`teamIndexOrder`, placed by the compiler AFTER the header) the list
+ * can no longer be reached by a header write on any target.
+ *
+ * The former companions are now struct fields, not separate symbols:
+ *   diyTournamentTeamIds  -> diyFileBufferCopy.teamIds
+ *   diyTournamentCompetition -> diyFileBufferCopy.header (title alias)
+ *
+ * diyCompetitionStart is its OWN standalone buffer now (the old
+ * diyFileBufferCopyBuf + 0x420 adjacency is retired): the four
+ * tournament <-> competitionFileBuffer copies field-map explicitly, and
+ * _FindTeamInDIY reaches the current-stage record by symbol, so no
+ * contiguity is required. Its league standings table still extends past
+ * sizeof(DIYCompetitionEx) into the aliased sub-regions below
+ * (clearLeagueTableStats writes to +0x734), so the backing buffer stays
+ * oversized.
+ * --------------------------------------------------------------------- */
+DIYTournamentState diyFileBufferCopy;
+
 __asm__(
 #if defined(__APPLE__)
     ".section __DATA,__bss\n"
-#elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-    ".section .bss\n"
 #else
     ".section .bss\n"
 #endif
     ".p2align 2\n"
-    ".globl " _ASM_PFX "diyFileBufferCopyBuf\n"
-    _ASM_PFX "diyFileBufferCopyBuf:\n"
-    ".globl " _ASM_PFX "diyFileBufferCopy\n"
-    _ASM_PFX "diyFileBufferCopy:\n"
-    ".skip 154\n"
-    ".globl " _ASM_PFX "diyTournamentTeamIds\n"
-    _ASM_PFX "diyTournamentTeamIds:\n"
-    ".skip 902\n"
     ".globl " _ASM_PFX "diyCompetitionStartBuf\n"
     _ASM_PFX "diyCompetitionStartBuf:\n"
     ".skip 7136\n"
@@ -1127,23 +1145,6 @@ __asm__(
 
 __asm__(".globl " _ASM_PFX "diyCompetitionStart\n"
         ".equ   " _ASM_PFX "diyCompetitionStart, " _ASM_PFX "diyCompetitionStartBuf\n");
-
-/* diyTournamentCompetition: the designDiyTournamentMenu's title text
- * pointer was hardcoded in the Amiga binary to `dc.l $2DAD4`, which is
- * `diyFileBufferCopy + 4` — i.e. the competitionName field of the
- * already-populated tournament file buffer. The IDA disassembler split
- * the first 28 bytes of diyFileBufferCopy into a phantom
- * `BSS_00_2DAD0` label because no asm path accesses that prefix
- * directly, so the auto-extractor never resolved $2DAD4 to a named
- * struct field. The SDL port worked around this by giving
- * `diyTournamentCompetition` its own DIYCompetitionEx allocation —
- * but nothing ever writes to that struct, so the View Competitions >
- * European Cup > Competition Info title rendered blank instead of
- * "EUROPEAN CHAMPIONS CUP". Alias it onto diyFileBufferCopyBuf so the
- * cup-data copy that already lands in diyFileBufferCopy is visible to
- * the menu via diyTournamentCompetition.base.competitionName. */
-__asm__(".globl " _ASM_PFX "diyTournamentCompetition\n"
-        ".equ   " _ASM_PFX "diyTournamentCompetition, " _ASM_PFX "diyFileBufferCopyBuf\n");
 
 /* competitionFileBuffer: overlays careerFileBufferBuf at offset 93308.
  * Aliased in swos_globals_career_overlay.c. The 4 KB standalone backing

@@ -9,7 +9,7 @@ extern void _SetExitMenuFlag(void);
 extern void _TopGoalScorersMenu_0(void);
 extern void _SetupDIYCompetitionStatsMenu(void);
 extern DIYCompetitionEx diyCompetitionStart;
-extern DIYCompetitionEx diyTournamentCompetition;
+extern DIYTournamentState diyFileBufferCopy;  /* header field was the diyTournamentCompetition symbol */
 
 /* ---- Stub functions (trivial wrappers removed from SWOS2.s) ---- */
 void _GlobalRetn(void) { }
@@ -2803,12 +2803,12 @@ Menu_DesignDiyTournament designDiyTournamentMenu = {
     { 0, 0, 304, 15 },
     { MENU_CMD_INVISIBLE },
     { MENU_CMD_COLORS, 0x17 },
-    { MENU_CMD_TEXT_PTR, 0x0, (int8_t*)diyTournamentCompetition.base.competitionName },
+    { MENU_CMD_TEXT_PTR, 0x0, (int8_t*)diyFileBufferCopy.header.competitionName },
     MENU_CMD_END,
     { 0, 17, 304, 15 },
     { MENU_CMD_NAV, -1, -1, -1, 4 },
     { MENU_CMD_COLORS, 0x1D },
-    { MENU_CMD_TEXT_PTR, 0x0, (int8_t*)diyTournamentCompetition.base.competitionName },
+    { MENU_CMD_TEXT_PTR, 0x0, (int8_t*)diyFileBufferCopy.header.competitionName },
     { MENU_CMD_ONSELECT_FIRE, _DesignDIYTournamentOnSelect2 },
     MENU_CMD_END,
     MENU_MARK_BYTE_COORDS,

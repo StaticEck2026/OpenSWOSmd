@@ -90,7 +90,7 @@ extern uint8_t  seasonInformationsArray[];
 /* Externs for the other save buffers — used by future sub-files but
  * referenced here so the linker keeps the symbols available. */
 extern uint8_t  competitionFileBuffer;
-extern uint8_t  diyFileBufferCopy[];
+extern DIYTournamentState diyFileBufferCopy;
 
 /* file_io.c writer helper. */
 extern int16_t _WriteFile(uint8_t *filename, uint8_t *src, uint32_t size);
@@ -4202,7 +4202,15 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
     const uint8_t *hi = (const uint8_t *)&numSelectedTeams +
                         sizeof(numSelectedTeams);
     uint32_t want = (uint32_t)(hi - lo);
-    memset((void *)lo, 0, want);
+    /* competitionFileBuffer is a 1-byte symbol stub on the SDL build
+     * (aliased into the careerFileBuffer overlay), so the real preset
+     * region spans `want` bytes, not 1. Launder the destination address
+     * through a volatile so _FORTIFY_SOURCE's __memset_chk doesn't
+     * size-check against the 1-byte stub and abort (the career load path
+     * dodges this by zeroing careerFileBufferBuf directly). Pre-existing;
+     * first reachable now that tournament presets can be saved. */
+    volatile uintptr_t dst = (uintptr_t)lo;
+    memset((void *)dst, 0, want);
 
     /* Reset string pool — see comment in apply_semantic_load. */
     string_pool_reset();

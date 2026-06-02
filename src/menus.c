@@ -3394,7 +3394,7 @@ extern uint8_t  selectedFilename[];
 extern uintptr_t extension;
 extern uint16_t diyLeagueTeamIds[];
 extern uint16_t diyCupTeamIds[];
-extern uint16_t diyTournamentTeamIds[];
+extern DIYTournamentState diyFileBufferCopy;  /* teamIds field was the diyTournamentTeamIds symbol */
 extern uint8_t  saveFileTitle[];
 
 /* DIYCompetitionMenu — DIY competition type selection (SWOS2.s line 68119) */
@@ -3467,7 +3467,7 @@ void _PresetCompetitionMenu(void)
         _CommonMenuExit();
     } else {
         /* Tournament */
-        _CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyTournamentTeamIds);
+        _CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyFileBufferCopy.teamIds);
         _InitDIYLeagueFromRecord((uint8_t *)selectedContest);
         _InitTeams();
         _DIY_EditCompetitionSlot(0, 0, 0);
@@ -6376,7 +6376,7 @@ void _SquadMenu(void)
     } else {
         /* Tournament: team-id list is at parent +0x9A.
          * diyFileBufferCopy stores team IDs at that offset
-         * (diyTournamentTeamIds alias). For DIYCompetitionEx in the
+         * (diyFileBufferCopy.teamIds field). For DIYCompetitionEx in the
          * SDL build the matching typed access lands at parent +0x9A
          * inside the matchData region — interpret via raw bytes with
          * the 64-bit shift compensation. */

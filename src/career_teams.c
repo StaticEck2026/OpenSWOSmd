@@ -43,7 +43,7 @@ extern uint8_t lastLoadedExtNumber;
 extern uint8_t teamIdSelectionProcessedFlags[]; /* 64-byte flags buffer */
 extern uint16_t diyLeagueTeamIds[];
 extern uint16_t diyCupTeamIds[];
-extern uint16_t diyTournamentTeamIds[];
+extern DIYTournamentState diyFileBufferCopy;  /* tournament working buffer (teamIds field was diyTournamentTeamIds) */
 extern uint16_t careerLoadedFlag;
 extern uint16_t teamsLoaded;
 extern uint16_t skipLeagueNumbers;
@@ -132,7 +132,6 @@ TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum)
         extern uint8_t selTeamsPtr;
         extern uint16_t numSelectedTeams;
         extern uint16_t selTeamNumber;
-        extern uint16_t diyTournamentTeamIds[];
         SWOS_DBG(
                 "[verify] _VerifyTeamLoaded(0x%04X) FAIL: country=0x%02X team=0x%02X "
                 "selTeamNumber=0x%04X numSelectedTeams=%u\n",
@@ -149,9 +148,9 @@ TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum)
                     (unsigned)firstFew[i].team.countryNumber,
                     (unsigned)firstFew[i].team.teamOrdinal);
         }
-        SWOS_DBG("[verify] diyTournamentTeamIds[0..15] =");
+        SWOS_DBG("[verify] diyFileBufferCopy.teamIds[0..15] =");
         for (unsigned i = 0; i < 16; i++)
-            SWOS_DBG(" %04X", (unsigned)diyTournamentTeamIds[i]);
+            SWOS_DBG(" %04X", (unsigned)diyFileBufferCopy.teamIds[i]);
         SWOS_DBG("\n");
         SWOS_DBG_FLUSH();
         _PanicHaltLoop();
@@ -224,7 +223,7 @@ void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest)
          * byte pair to dst on m68k. Use BE_WRITE_U16 so dst ends up
          * with the same in-memory layout on LE — matching the
          * BE-packed convention the diyLeagueTeamIds / diyCupTeamIds /
-         * diyTournamentTeamIds arrays use and that
+         * diyFileBufferCopy.teamIds arrays use and that
          * _DIY_ComputeAverageTeamStrengthTier consumes via BE_READ_U16. */
         BE_WRITE_U16(dst, PACK_BE_U16(src[0], src[1]));
         dst += 2;
@@ -765,7 +764,7 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
     }
 
     /* Phase 3: Copy resolved team IDs to the output. The output arrays
-     * (diyLeagueTeamIds / diyCupTeamIds / diyTournamentTeamIds) hold
+     * (diyLeagueTeamIds / diyCupTeamIds / diyFileBufferCopy.teamIds) hold
      * BE-packed `{country, ordinal}` byte pairs — the same convention
      * the static dc.b competition data uses and that downstream code
      * like _DIY_ComputeAverageTeamStrengthTier reads via BE_READ_U16
@@ -1000,7 +999,7 @@ weighted_pick:
 /* ================================================================
  * Career_FillTournamentTeamSelectionFromFile  (SWOS2.s loc_1517C2)
  *
- * Same as cup version but uses diyTournamentTeamIds,
+ * Same as cup version but uses diyFileBufferCopy.teamIds,
  * Career_IsTeamIdNotInListOrReturnSentinel2, and
  * careerRegionPickWeightsTable2.
  *
@@ -1010,13 +1009,13 @@ weighted_pick:
 static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
 {
     int16_t remaining = teamCount;
-    uint16_t *idOut = diyTournamentTeamIds;
+    uint16_t *idOut = diyFileBufferCopy.teamIds;
 
     _LoadTeamFile(extNumber);
 
     TeamFileEx *selDst = (TeamFileEx *)&selTeamsPtr + numSelectedTeams;
 
-    /* BE-write convention for diyTournamentTeamIds (4e5f378). */
+    /* BE-write convention for diyFileBufferCopy.teamIds (4e5f378). */
     /* If not career loaded and gameType==4, add selected team first */
     if (careerLoadedFlag == 0 && gameType == 4) {
         BE_WRITE_U16(idOut, selTeamNumber); idOut++;
@@ -1203,7 +1202,7 @@ void _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(uint8_t *spec)
         uint16_t idsOff = teamIdsOffset + 2u * (sizeof(char *) - sizeof(uint32_t));
         uint16_t count = spec[15];  /* andi.w #$FF,d7 — unsigned byte */
         uint16_t *teamIds = (uint16_t *)(spec + 7 + idsOff);
-        _AppendTeamsToSelectionFromTmdOrTeamFile(diyTournamentTeamIds, teamIds, count);
+        _AppendTeamsToSelectionFromTmdOrTeamFile(diyFileBufferCopy.teamIds, teamIds, count);
     } else {
         uint16_t extNumber = spec[2];
         int16_t teamCount = (int16_t)(int8_t)spec[15];  /* ext.w d1 — signed */
@@ -1247,7 +1246,7 @@ extern uint8_t competitionContext[];
 extern uint8_t tertiaryCompetitionContext[];
 extern uint8_t euroCupsCompetitionContext[];
 extern DIYCompetitionEx diyCompetitionStart;
-extern uint8_t diyFileBufferCopy[];
+extern DIYTournamentState diyFileBufferCopy;
 extern uint16_t teamSelectionKeyCacheOffset;
 extern uint16_t teamSelectionKeyCacheIndex;
 extern uint16_t seasonFinished;
@@ -1285,7 +1284,7 @@ void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src)
         for (int16_t i = 0x221; i >= 0; i--)
             *d++ = *s++;
     } else {
-        volatile uint16_t *d = (volatile uint16_t *)diyFileBufferCopy;
+        volatile uint16_t *d = (volatile uint16_t *)&diyFileBufferCopy;
         for (int16_t i = 0x5A9; i >= 0; i--)
             *d++ = *s++;
     }
@@ -1334,7 +1333,7 @@ void _Career_StoreCompetitionSlotStateToBuffer(uint8_t *dst)
         for (int16_t i = 0x221; i >= 0; i--)
             *d++ = *s++;
     } else {
-        volatile uint16_t *s = (volatile uint16_t *)diyFileBufferCopy;
+        volatile uint16_t *s = (volatile uint16_t *)&diyFileBufferCopy;
         for (int16_t i = 0x5A9; i >= 0; i--)
             *d++ = *s++;
     }
@@ -1793,7 +1792,7 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
     } else if (type == 2) {
         /* Hybrid */
         _DIY_EditCompetitionSlot(1, 0, d2);
-        if (((DIYCompetition *)diyFileBufferCopy)->competitionFinished != 0)
+        if (diyFileBufferCopy.header.competitionFinished != 0)
             _DIY_AdvanceToNextCompetitionSlot();
     } else {
         /* League */
@@ -2079,8 +2078,8 @@ void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
 __attribute__((used, externally_visible))
 void _Career_AutoSimulatePendingMatchUntilHumanTeam(void)
 {
-    DIYCompetition *bufComp = (DIYCompetition *)diyFileBufferCopy;
-    uint8_t *buf = diyFileBufferCopy;
+    DIYCompetition *bufComp = &diyFileBufferCopy.header;
+    uint8_t *buf = (uint8_t *)&diyFileBufferCopy;
     uint16_t slotIdx = bufComp->roundComplete;
     DIYTournamentSlot *slot = (DIYTournamentSlot *)(buf + (uint32_t)slotIdx * 0x76 + 0x15A);
 
@@ -2169,8 +2168,8 @@ void _Career_AutoPlayCupMatchAndAdvanceLoop(void)
 __attribute__((used, externally_visible))
 void _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot(void)
 {
-    DIYCompetition *bufComp = (DIYCompetition *)diyFileBufferCopy;
-    uint8_t *buf = diyFileBufferCopy;
+    DIYCompetition *bufComp = &diyFileBufferCopy.header;
+    uint8_t *buf = (uint8_t *)&diyFileBufferCopy;
     uint16_t slotIdx = bufComp->roundComplete;
     DIYTournamentSlot *slot = (DIYTournamentSlot *)(buf + (uint32_t)slotIdx * 0x76 + 0x15A);
 
@@ -2216,8 +2215,8 @@ void _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot(void)
 __attribute__((used, externally_visible))
 void _DIY_AdvanceToNextCompetitionSlot(void)
 {
-    uint8_t *buf = diyFileBufferCopy;
-    DIYCompetition *bufComp = (DIYCompetition *)buf;
+    uint8_t *buf = (uint8_t *)&diyFileBufferCopy;
+    DIYCompetition *bufComp = &diyFileBufferCopy.header;
 
     /* Already at end? */
     if (bufComp->currentRoundIndex != 0)
@@ -2631,7 +2630,7 @@ extern uint8_t *careerCompetitionSlotPtrTable[];
 extern uint16_t isNationalSelector;
 extern uint16_t teamSelectionKeyCacheOffset;
 extern uint16_t teamSelectionKeyCacheIndex;
-extern uint8_t diyFileBufferCopy[];
+extern DIYTournamentState diyFileBufferCopy;
 extern DIYCompetitionEx diyCompetitionStart;
 extern void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
 extern void _Career_StoreCompetitionSlotStateToBuffer(uint8_t *dst);
