@@ -654,6 +654,58 @@ typedef struct __attribute__((packed, aligned(2))) DIYTournamentSlot {
 typedef char _diyslot_size_check[(sizeof(DIYTournamentSlot) == 0x76) ? 1 : -1];
 
 /* ==================================================================
+ * DIYTournamentState — typed view of the `diyFileBufferCopy` tournament
+ * working buffer. Replaces the raw-offset overlay that the Amiga used.
+ *
+ * On the Amiga (and the legacy SDL layout) this buffer was addressed by
+ * literal byte offsets: header at 0x00, a 64-byte team-index/seed list at
+ * 0x5A (deliberately overlapping the header's numRounds/subRound/playEach
+ * tail), team-ids at 0x9A, group-map at 0x11A, six slots at 0x15A. That
+ * overlap is exactly what broke on 64-bit: the `namePtr` widening (4->8)
+ * grew DIYCompetition by +4, sliding the *used* header fields
+ * competitionFinished (->0x5A) and currentRoundIndex (->0x5C) on top of
+ * the team list, so a routine header reset zeroed team entries [0..3]
+ * (ROMANIA x5, inflated PL column, panic 0x8034 on round advance).
+ *
+ * Modelling the buffer as a real struct removes the overlap by
+ * construction: `teamIndexOrder` is now a named field the compiler places
+ * AFTER the header, so no header write can ever land on it, on any target.
+ * The other regions (teamIds/groupMap/slots) become named fields too, so
+ * no code addresses this buffer by raw offset anymore.
+ *
+ * NB the legacy `competitionFileBuffer` tournament backup keeps the old
+ * raw-offset layout (it lives in the careerFileBuffer overlay); the
+ * _SaveDIYTournament / _RestoreDIYTournament copies field-map between the
+ * two (see diy_competition.c). diyCompetitionStart (the current-stage
+ * DIYCompetitionEx) is a separate allocation reached by symbol, not by the
+ * old `+0x420` adjacency.
+ * ================================================================== */
+typedef struct DIYTournamentState {
+    DIYCompetition    header;             /* 0x00: competition descriptor */
+    /* Pad from the end of the header to 0x9A. This region (0x5A..0x99) was
+     * the team-index list's old home, deliberately overlapping the header
+     * tail — the source of the 64-bit collision. The list is relocated to
+     * `teamIndexOrder` (past the slots) so nothing lives on the header tail
+     * anymore. The pad sizes itself per arch (sizeof(DIYCompetition) is
+     * 0x60 on 32-bit, 0x68 on 64-bit) so teamIds/groupMap/slots keep their
+     * HISTORICAL byte offsets — every access to them converts to a named
+     * field with identical behaviour, and the slot-passing convention
+     * (`slot + 0x15A`) and the competitionFileBuffer field-map copies stay
+     * correct. Only `teamIndexOrder` actually moves. */
+    uint8_t           _reserved_5A[0x9A - sizeof(DIYCompetition)];
+    uint16_t          teamIds[64];        /* 0x9A: BE-packed {country,ordinal} ids (was diyTournamentTeamIds) */
+    uint8_t           groupMap[64];       /* 0x11A: team-index -> group letter */
+    DIYTournamentSlot slots[6];           /* 0x15A: the six tournament-stage slot records (stride 0x76) */
+    uint8_t           teamIndexOrder[64]; /* 0x41E: seed/shuffle order — RELOCATED off the header (was 0x5A) */
+} DIYTournamentState;
+
+/* Pin the historical offsets on both arches so the layout can't silently
+ * drift (the cfb copies and slot-passing depend on these). */
+typedef char _diytourn_teamids_off_check[(offsetof(DIYTournamentState, teamIds)  == 0x9A)  ? 1 : -1];
+typedef char _diytourn_grpmap_off_check [(offsetof(DIYTournamentState, groupMap) == 0x11A) ? 1 : -1];
+typedef char _diytourn_slots_off_check  [(offsetof(DIYTournamentState, slots)    == 0x15A) ? 1 : -1];
+
+/* ==================================================================
  * DIYCompetitionEx_CupView — 0xEA bytes (matchData cup interpretation)
  * Region at parent 0x64..0x14D when the competition is a cup
  * (competitionType == 1 or compId in {1, 2, 4}).

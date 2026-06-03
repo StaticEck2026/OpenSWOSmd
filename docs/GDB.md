@@ -54,7 +54,45 @@ provides `$DISPLAY` automatically — no Xserver setup needed.
 
 ---
 
-## Run + attach: typical session
+## Run + attach: the reliable one-command path (use this)
+
+```bash
+bash /mnt/c/Projects/AI/SWOS/SWOS_C/amiga_gdb.sh up
+```
+
+`amiga_gdb.sh up` does the whole dance deterministically and prints `OK`
+(or `FAIL`) at the end:
+
+1. tears down any stale FS-UAE / gdb / daemon,
+2. launches FS-UAE,
+3. waits for the `Breakpoint 20 triggered` SWOS2-entry line in the log,
+   then settles,
+4. starts the `gdb_proxy.py` daemon,
+5. **health-checks** the attach (target stopped at SIGTRAP, PC == the
+   SWOS2 entry `0x219b10`), and
+6. if the attach came up DEGRADED (`not being run` / no registers — the
+   FS-UAE stub's racy one-shot port), does a **full restart and retries**
+   (up to `ATTACH_RETRIES=4`). A degraded attach is the historical
+   flakiness; auto-restart is the only real recovery for the one-shot port.
+
+Then drive gdb as usual and check the live verdict any time:
+
+```bash
+python3 /mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py cmd "info registers"
+python3 /mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py health    # OK / DEGRADED
+bash    /mnt/c/Projects/AI/SWOS/SWOS_C/amiga_gdb.sh status     # HEALTHY / DEGRADED / DOWN
+bash    /mnt/c/Projects/AI/SWOS/SWOS_C/amiga_gdb.sh down       # tear everything down
+```
+
+The daemon also prints its attach verdict to `/tmp/swos_gdb_daemon.log`
+(`[daemon] attach health: OK|DEGRADED (...)`), so a bad attach is never
+silent. Tunables are env vars (see the top of `amiga_gdb.sh`):
+`ATTACH_RETRIES`, `BOOT_TIMEOUT`, `SETTLE`, `PORT`, `ENTRY_PC`.
+
+The manual steps below are the underlying mechanism (kept for reference /
+debugging the orchestrator itself).
+
+## Run + attach: manual session (reference)
 
 The order matters: **FS-UAE must be running and listening on its
 debugger port before the proxy daemon starts.**

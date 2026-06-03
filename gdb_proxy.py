@@ -45,6 +45,7 @@ Defaults:
 
 import argparse
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -87,17 +88,58 @@ class GdbDaemon:
         self.buf = bytearray()
         self.reader = threading.Thread(target=self._reader_loop, daemon=True)
         self.reader.start()
+        self.mode = mode
+        self.attach_ok = True
+        self.attach_detail = "sdl" if mode == "sdl" else "pending"
         # Wait for initial gdb prompt.
         self._wait_for_prompt(timeout=5.0)
         # Drop the banner; subsequent `cmd` calls return clean responses.
         self._drain()
         if mode == "amiga":
+            # Robustness: give the FS-UAE stub generous packet timeouts so a
+            # slow handshake right after the SWOS2 entry trigger doesn't
+            # half-fail into a degraded ("not being run") connection. These
+            # are best-effort — ignore prompts that don't come.
+            for opt in ("set tcp connect-timeout 20",
+                        "set remotetimeout 20"):
+                self._send_raw(opt + "\n")
+                self._wait_for_prompt(timeout=3.0)
+                self._drain()
             # Attach to FS-UAE's stub.
             self._send_raw(f"target remote {host}:{port}\n")
-            self._wait_for_prompt(timeout=10.0)
+            self._wait_for_prompt(timeout=15.0)
             self._drain()
+            # Self-verify so a degraded attach is VISIBLE (logged) rather than
+            # silently accepted. The one-shot port means recovery is a full
+            # FS-UAE restart — see amiga_gdb.sh, which reads this verdict.
+            self.attach_ok, self.attach_detail = self._amiga_health()
+            print(f"[daemon] attach health: "
+                  f"{'OK' if self.attach_ok else 'DEGRADED'} "
+                  f"({self.attach_detail})", file=sys.stderr)
         # In SDL mode we just leave gdb at its prompt; the caller issues
         # `run`/`start` to launch the inferior.
+
+    def _amiga_health(self):
+        """Probe whether the Amiga target is cleanly stopped. Returns
+        (ok, detail). Healthy == target reports a stop (SIGTRAP) AND a
+        readable non-zero PC. Degraded == 'not being run' / no registers /
+        a hung connection (commands time out)."""
+        self._drain()  # clear any pending async/banner output
+        self._send_raw("info program\n")
+        got = self._wait_for_prompt(timeout=6.0)
+        ip = self._drain().decode("utf-8", errors="replace")
+        if not got:
+            return False, "info program hung (dead/booting connection)"
+        self._send_raw("print/x $pc\n")
+        self._wait_for_prompt(timeout=5.0)
+        pcout = self._drain().decode("utf-8", errors="replace")
+        m = re.search(r"0x[0-9a-fA-F]+", pcout)
+        pc = m.group(0) if m else None
+        if "not being run" in ip or not ("stopped" in ip or "SIGTRAP" in ip):
+            return False, "target not cleanly stopped"
+        if pc is None or pc.lower() == "0x0":
+            return False, "no readable PC"
+        return True, f"stopped PC={pc}"
 
     # ---- I/O helpers --------------------------------------------------
 
@@ -252,6 +294,12 @@ def daemon_main(args):
                     break
                 elif req == "PING":
                     out = "pong"
+                elif req == "HEALTH":
+                    if d.mode == "amiga":
+                        ok, detail = d._amiga_health()
+                        out = ("OK " if ok else "DEGRADED ") + detail
+                    else:
+                        out = "OK sdl"
                 else:
                     out = f"[unknown request] {req!r}"
 
@@ -326,6 +374,7 @@ def main():
     sub.add_parser("stop", help="Shut the daemon down.")
     sub.add_parser("status", help="Check whether the daemon is reachable.")
     sub.add_parser("ping", help="Round-trip test.")
+    sub.add_parser("health", help="Amiga attach health verdict (OK/DEGRADED).")
 
     args = ap.parse_args()
 
@@ -360,6 +409,14 @@ def main():
             print(f"socket present but no response: {e}")
     elif args.cmd_name == "ping":
         print(send_request("PING", timeout=2))
+    elif args.cmd_name == "health":
+        if not os.path.exists(SOCK_PATH):
+            print("DOWN (socket missing)")
+            return
+        try:
+            print(send_request("HEALTH", timeout=20))
+        except Exception as e:
+            print(f"DEGRADED (no response: {e})")
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@
  * ported and stay as zero stubs in swos_amiga_data_stubs.c.
  */
 #include "swos_types.h"
+#include "game_types.h"   /* DIYTournamentState (diyFileBufferCopy typed struct) */
 
 /* topSkillLettersEven/Odd — pointer tables that use base+offset syntax
  * in SWOS2.s (e.g. `dc.l aTspvhcfstpvhcf+$7`). The master string
@@ -665,7 +666,7 @@ struct __attribute__((packed)) {
 /* DIY CUP / Tournament — same auto-extractor truncation as the
  * other StringTable structs, recovered from SWOS2.s lines 70279,
  * 70320, 75328. */
-extern uint8_t diyFileBufferCopy[];
+extern DIYTournamentState diyFileBufferCopy;
 extern const char aAfter90Mins[], aAfterExtraTime[];
 extern const char aOff[];
 extern const char aRandom[], aFrozen[], aMuddy[], aWet[];
@@ -704,7 +705,7 @@ struct __attribute__((packed)) {
 struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[8];
 } diyPitchTypeStringTable = {
-    (diyFileBufferCopy + 0x36), (uint16_t)-1,
+    ((void *)&diyFileBufferCopy.header.pitchType), (uint16_t)-1,
     { PITCH_8 }
 };
 
@@ -903,7 +904,7 @@ struct __attribute__((packed)) {
 struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[3];
 } diyAwayGoalsStrTab = {
-    (diyFileBufferCopy + 0x4A), 0,
+    ((void *)&diyFileBufferCopy.header.menuState), 0,
     {
         (void *)aOff,
         (void *)aAfter90Mins,

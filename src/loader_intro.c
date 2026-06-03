@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "swos_types.h"
+#include "game_types.h"   /* DIYTournamentState (diyFileBufferCopy doubles as the 4KB hero-song staging buffer) */
 #include "loader_intro.h"
 #include "fade.h"
 #include "display.h"
@@ -37,10 +38,15 @@ extern volatile uint16_t audioActive;
 extern uint16_t fireResetFlag;
 extern volatile uint16_t keyCount;
 extern volatile uint16_t currentKey;
-extern uint8_t diyFileBufferCopy[];
 extern uint8_t audioInstrumentBank[];
 extern uint8_t aSoundHeroSng[];
 extern uint8_t aSoundHeroIns[];
+
+/* Dedicated 4 KB staging buffer for hero.sng. This used to borrow
+ * diyFileBufferCopy (an 8 KB raw BSS buffer at the time). After the step-3
+ * untangle diyFileBufferCopy is a ~1 KB typed DIYTournamentState struct, so
+ * staging a 4 KB file there would overrun it — hero.sng gets its own buffer. */
+static uint8_t heroSongBuffer[4 * 1024];
 
 /* ---- External asm functions (C-callable bridges in swos2_unit.s) ---- */
 /* _Player1StatusProc declared in input.h */
@@ -70,7 +76,7 @@ static void loaderIntroEnsureMenuMusicPlaying(void)
          * (the full mix with vocals). Subsong 1 has the singing channel
          * sequence byte zeroed, so passing 1 here was the cause of the
          * "music plays but no singing" symptom. */
-        if (AudioSDL_StartSong(diyFileBufferCopy, HERO_SONG_BUFFER_BYTES,
+        if (AudioSDL_StartSong(heroSongBuffer, HERO_SONG_BUFFER_BYTES,
                                audioInstrumentBank, HERO_INS_BANK_BYTES, 0) != 0) {
             /* Load failed — keep audio silent but mark "loaded" so we
              * don't hammer the player every vblank. */
@@ -92,7 +98,7 @@ static void loaderIntroEnsureMenuMusicPlaying(void)
     if (audioBankLoaded == 0)
     {
         _StopAllAudioChannels();
-        _InitAudioState(diyFileBufferCopy, audioInstrumentBank);
+        _InitAudioState(heroSongBuffer, audioInstrumentBank);
         audioBankLoaded = 1;
     }
     _AudioApplyPresetToChannels(0);
@@ -143,7 +149,7 @@ static void loaderIntroLoadHeroAudioBank(void)
 {
 retry:
     audioBankLoaded = 0;
-    if (_AssetEnsureReadyWithRetry(aSoundHeroSng, diyFileBufferCopy) != 0)
+    if (_AssetEnsureReadyWithRetry(aSoundHeroSng, heroSongBuffer) != 0)
         goto retry;
     if (_LoadRNCToBufferNoBlit(aSoundHeroIns, audioInstrumentBank) != 0)
         goto retry;

@@ -133,10 +133,11 @@ uint16_t goalkeeperDiveAttemptCount;
 /* diyFileBufferCopy / diyCompetitionStart / competitionFileBuffer:
  * backing storage moved to swos_globals.c, sized big enough for the
  * 2900-byte word-copy in _SaveDIYTournament (was clobbering magicValue
- * when only 1508 bytes were allocated). The named symbols are .equ
- * aliases pointing at the backing buffers so all the
- *   `extern DIYCompetitionEx diyFileBufferCopy;` / `.base.field`
- * struct-style access still works unchanged. */
+ * when only 1508 bytes were allocated). diyFileBufferCopy is now the
+ * typed `DIYTournamentState` struct (header / teamIds / groupMap / slots
+ * / teamIndexOrder fields) defined in swos_globals.c, so all access is
+ *   `extern DIYTournamentState diyFileBufferCopy;` / `.header.field`
+ * named-field access — no more raw-offset overlay. */
 /* diyMinSubstitutes / diyPointsForAWin / diyLeagueMinSubstitutes /
  * diyLeagueMaxSubstitutes / diyHasGroups / diyLeagueCurrentSlot /
  * diyLeagueMatchProgress / diyLeagueTotalMatches: aliased onto
@@ -266,9 +267,10 @@ uint8_t currentCompetitionId  = 0;
  * legs(0), extraTime(2), penalties(4), ptsForWin(6), playCount(8). */
 DIYStage diyTournamentStages[6];
 
-/* diyTournamentCompetition: aliased to diyFileBufferCopyBuf in
- * swos_globals.c (must live in the same TU as the diyFileBufferCopyBuf
- * definition for .equ to resolve). See the comment there for the full
+/* diyTournamentCompetition: REMOVED — folded into the typed
+ * `DIYTournamentState diyFileBufferCopy` struct in swos_globals.c. What
+ * used to be `diyTournamentCompetition.base.field` is now
+ * `diyFileBufferCopy.header.field`. See swos_globals.c for the full
  * BSS_00_2DAD0 disassembler-split story. */
 /* diyCompetitionMenu: real packed-menu blob in menu_data.c (same
  * auto-extractor mis-classification as diskMenu). */
