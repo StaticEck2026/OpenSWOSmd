@@ -4171,18 +4171,34 @@ static void load_scalar_table_range(const char *buf, int buflen,
 extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
 
 /* A type-2 tournament's CURRENT stage is a group (league) or a knockout
- * (cup). The stage's own DIYCompetition.competitionType header is UNRELIABLE
- * for this — it reads 0 for both (live-gdb confirmed: an R16 knockout stage
- * still had competitionType==0). The reliable discriminator is the current
- * slot's isLeagueFormat in the tournament master (nonzero = league/group,
- * 0 = cup/knockout), indexed by the stage's currentRoundIndex. Defaults to
- * league (the standings path) if the round index is out of range. */
+ * (cup). The reliable discriminator is the current slot's isLeagueFormat in
+ * the tournament master (nonzero = league/group, 0 = cup/knockout) — but it
+ * must be indexed by the ACTIVE STAGE INDEX, which the game keeps in the
+ * master header's `roundComplete` (0x54). That is exactly how the game itself
+ * selects the stage in _DIY_LoadCurrentCompetitionSlot:
+ *     slotIdx = diyFileBufferCopy.header.roundComplete;  // 0x54
+ *     s = slots[slotIdx];  if (s->isLeagueFormat) {league} else {cup}
+ *
+ * The earlier version indexed slots[] with the STAGE's own currentRoundIndex
+ * (0x58) — a WITHIN-stage round counter, not the stage index. That collides at
+ * the group<->knockout boundary: a cup stage before its first round has
+ * currentRoundIndex==0 -> slots[0]==group -> misread as league (dumped the cup
+ * bracketScratch as garbage standings), and a group on matchday 2 has
+ * currentRoundIndex==1 -> slots[1]==cup -> misread as cup. It only worked for
+ * an R16 save taken *after* a knockout round, where the counter coincidentally
+ * equalled the stage index (=1). roundComplete is the clean stage index in both
+ * the save buffer (decode: master round_complete=1 for an R16) and on load
+ * (it round-trips in the master "comp_slot" via emit/load_comp_slot), so this
+ * is valid on both sides. Defaults to league if out of range. The `stage` arg
+ * is kept for call-site symmetry but the decision is master-driven. */
 static int diy_stage_is_league(const DIYCompetitionEx *stage)
 {
-    int16_t r = stage->base.currentRoundIndex;
+    (void)stage;
+    const DIYTournamentState *master =
+        (const DIYTournamentState *)&competitionFileBuffer;
+    int16_t r = master->header.roundComplete;   /* 0x54: active stage index */
     if (r < 0 || r >= 6) return 1;
-    return ((const DIYTournamentState *)&competitionFileBuffer)
-               ->slots[r].isLeagueFormat != 0;
+    return master->slots[r].isLeagueFormat != 0;
 }
 
 /* Shared write body for preset / DIY — they share competitionFileBuffer

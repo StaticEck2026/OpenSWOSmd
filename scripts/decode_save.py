@@ -105,6 +105,58 @@ def print_slot(label, slot):
             print(f"          {i}  {vals}{mark}")
 
 
+def print_stage(doc):
+    """For a type-2 (.PRE/.DIY) save, print the current-STAGE slot and the
+    phase-specific payload that resolves group names / knockout scores.
+
+    The stage is the second DIYCompetitionEx (cfb+0x420): a league during the
+    group phase (emits `stage_standings`), a cup during the knockout (emits
+    `stage_score_tab/agg/pen`). The phase is keyed off WHICH payload was
+    emitted, not the stage header type (which reads 0 for both)."""
+    st = doc.get("comp_slot_stage")
+    if not isinstance(st, dict):
+        return
+    has_standings = isinstance(doc.get("stage_standings"), list)
+    has_scores = any(isinstance(doc.get(k), list) for k in
+                     ("stage_score_tab", "stage_score_agg", "stage_score_pen"))
+    phase = ("GROUP (league)" if has_standings else
+             "KNOCKOUT (cup)" if has_scores else "?? (no stage payload)")
+    print(f"  [comp_slot_stage] type={st.get('type')} "
+          f"num_teams={st.get('num_teams')} "
+          f"team_entry_offsets={len(st.get('team_entry_offsets', []) or [])} "
+          f"team_offset_table={len(st.get('team_offset_table', []) or [])}  "
+          f"=> PHASE: {phase}")
+
+    if has_standings:
+        rows = doc["stage_standings"]
+        # Heuristic garbage flag: a clean group row has small counts; a
+        # byte-swapped/overlay-corrupt row shows huge values (e.g. 768 = swap 3).
+        def garbage(r):
+            return any(int(r.get(f, 0)) > 200 for f in
+                       ("gp", "w", "d", "l", "gf", "ga", "pts"))
+        bad = [i for i, r in enumerate(rows) if isinstance(r, dict) and garbage(r)]
+        print(f"        stage_standings: {len(rows)} rows"
+              + (f"   !!! {len(bad)} look like garbage: rows {bad}" if bad
+                 else "   (all stats in sane range)"))
+        print("          row  gp   w   d   l  gf  ga pts")
+        for i, r in enumerate(rows):
+            if not isinstance(r, dict):
+                continue
+            mark = "  <<< GARBAGE" if i in bad else ""
+            print("          %3d %3d %3d %3d %3d %3d %3d %3d%s" % (
+                i, r.get("gp", 0), r.get("w", 0), r.get("d", 0),
+                r.get("l", 0), r.get("gf", 0), r.get("ga", 0),
+                r.get("pts", 0), mark))
+    elif has_scores:
+        for k in ("stage_score_tab", "stage_score_agg", "stage_score_pen"):
+            arr = doc.get(k)
+            if isinstance(arr, list):
+                # Packed home/away byte pair per entry; show non-zero only.
+                nz = [(i, v >> 8, v & 0xFF) for i, v in enumerate(arr) if v]
+                pretty = " ".join(f"{i}:{h}-{a}" for i, h, a in nz) or "(all 0)"
+                print(f"        {k}: {pretty}")
+
+
 def summarise(path):
     doc = load(path)
     print(f"\n=== {path} ===")
@@ -119,6 +171,7 @@ def summarise(path):
     type2 = [lbl for lbl, s in slots if s.get("type") == 2]
     for label, slot in slots:
         print_slot(label, slot)
+    print_stage(doc)
     if type2:
         print(f"  => TYPE-2 tournament present in: {', '.join(type2)}")
     else:
