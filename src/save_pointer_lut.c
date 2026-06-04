@@ -109,7 +109,8 @@ extern uint8_t  *primaryCompStringOffset;
 extern uint8_t  *secondaryCompStringOffset;
 extern uint8_t  *tertiaryCompStringOffset;
 extern uint8_t  *quaternaryCompStringOffset;
-extern uint32_t  careerCupPickList;       /* 5-entry array via spill */
+/* careerCupPickList moved to a standalone void *[5] (re-derived on load) —
+ * no longer translated here; see _TranslateAmigaAddressesAfterLoad. */
 extern uint32_t *diyCompetitionTablePtr;
 extern CompetitionCareer careerContests[];
 extern uint16_t  numSelectedTeams;
@@ -127,7 +128,7 @@ extern uint16_t  numSelectedTeams;
  * Per-field strategy:
  *   - top-level competition pointers: in-place translate.
  *   - careerCompetitionSlotPtrTable[5]: in-place translate.
- *   - careerCupPickList[5]: in-place translate (nat-selector cups).
+ *   - careerCupPickList[5]: NOT translated (standalone, re-derived on load).
  *   - *CompStringOffset (4 fields): in-place translate.
  *   - diyCompetitionTablePtr: in-place translate.
  *   - cup-record `nameSource` ptrs inside *Copy slots: walk via
@@ -152,16 +153,12 @@ void _TranslateAmigaAddressesAfterLoad(void)
         translate_one((uint32_t *)&careerCompetitionSlotPtrTable[i]);
     }
 
-    /* careerCupPickList is a 5-entry array of comp pointers (the
-     * declared global is a single uint32_t followed by a contiguous
-     * spill region — same Amiga BSS adjacency we preserve via the
-     * overlay). */
-    {
-        uint32_t *pickList = &careerCupPickList;
-        for (int i = 0; i < 5; i++) {
-            translate_one(&pickList[i]);
-        }
-    }
+    /* careerCupPickList is NOT translated here: it is now a standalone
+     * `void *[5]` (moved out of the careerFileBuffer overlay) holding host
+     * competition pointers, and is re-derived from non-pointer state by
+     * _RebuildPointersAfterLoad. Legacy Amiga-pointer translation of it is
+     * both unnecessary (re-derived) and type-mismatched (pointer-sized now,
+     * not uint32). */
 
     /* String-table offsets — saved as raw pointers on Amiga. */
     translate_one((uint32_t *)&primaryCompStringOffset);

@@ -1265,10 +1265,23 @@ extern void _Career_FillCurrentSeasonInfo(void);
  * Copies competition state from a buffer to the active area.
  * Type 0: 922 words (0x39A) to diyCompetitionStart
  * Type 1: 546 words (0x222) to diyCompetitionStart
- * Type 2+: 1450 words (0x5AA) to diyFileBufferCopy
+ * Type 2+: tournament — field-map the slot into diyFileBufferCopy (master)
+ *          + diyCompetitionStart (current-stage standings). The original
+ *          SWOS2.s did a flat 1450-word (0x5AA) copy into diyFileBufferCopy
+ *          because the master and the current-stage buffer were contiguous
+ *          (diyCompetitionStart == diyFileBufferCopy + 0x420). The step-3
+ *          untangle (cf8cedd) made diyFileBufferCopy a typed struct
+ *          (teamIndexOrder @0x41E) and diyCompetitionStart a standalone
+ *          buffer, so a flat copy now both MISALIGNS the differing layouts
+ *          and overruns the master struct into pitchChunkyBuffer. Use the
+ *          same field-map the preset path uses (_DIY_CfbBufToTournament),
+ *          parameterised by the slot base.
  *
  * in: src = pointer to competition buffer (a0 in asm)
  * ================================================================ */
+extern void _DIY_CfbBufToTournament(const uint8_t *cfb);
+extern void _DIY_TournamentToCfbBuf(uint8_t *cfb);
+
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src)
 {
@@ -1284,9 +1297,7 @@ void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src)
         for (int16_t i = 0x221; i >= 0; i--)
             *d++ = *s++;
     } else {
-        volatile uint16_t *d = (volatile uint16_t *)&diyFileBufferCopy;
-        for (int16_t i = 0x5A9; i >= 0; i--)
-            *d++ = *s++;
+        _DIY_CfbBufToTournament(src);
     }
 
 #ifdef SWOS_DEBUG_AUTOSKIP
@@ -1314,7 +1325,10 @@ void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src)
  * Type determined by the first word of the buffer.
  * Type 0: 922 words from diyCompetitionStart
  * Type 1: 546 words from diyCompetitionStart
- * Type 2+: 1450 words from diyFileBufferCopy
+ * Type 2+: tournament — field-map diyFileBufferCopy (master) +
+ *          diyCompetitionStart (current-stage standings) INTO the slot via
+ *          _DIY_TournamentToCfbBuf. See the load counterpart above for why a
+ *          flat 1450-word copy no longer works post-untangle.
  *
  * in: dst = pointer to competition buffer (a0 in asm)
  * ================================================================ */
@@ -1333,9 +1347,7 @@ void _Career_StoreCompetitionSlotStateToBuffer(uint8_t *dst)
         for (int16_t i = 0x221; i >= 0; i--)
             *d++ = *s++;
     } else {
-        volatile uint16_t *s = (volatile uint16_t *)&diyFileBufferCopy;
-        for (int16_t i = 0x5A9; i >= 0; i--)
-            *d++ = *s++;
+        _DIY_TournamentToCfbBuf(dst);
     }
 }
 
