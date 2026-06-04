@@ -44,9 +44,10 @@ extern uint16_t offerExpiryIterationsRemaining;
 extern uint16_t removedOfferPlayersFromSelectedTeamCount;
 extern uint16_t removedOfferPlayersFromOtherTeamsCount;
 
-/* careerCupPickList: first element of a 5-pointer array in BSS
- * (spills into adjacent BSS_01_164B4A for remaining 4 entries) */
-extern uint32_t careerCupPickList;
+/* careerCupPickList: 5-entry array of COMPETITION POINTERS (national-coach
+ * cup pick list). Pointer-sized entries — was extern'd uint32_t (truncating
+ * the 64-bit pointers); now a standalone void *[5] (see swos_data_typed_stubs.c). */
+extern void *careerCupPickList[];
 extern uint8_t invitationTournamentCopy[];
 extern uint8_t tourCopy[];
 
@@ -143,13 +144,13 @@ void _Career_InitSeasonTransferMarketState(void)
 __attribute__((used, externally_visible))
 void _Career_RandomizeInvitationTournamentCup(void)
 {
-    uint32_t *pickList = &careerCupPickList;
+    void **pickList = careerCupPickList;
     int16_t i;
 
     for (i = 4; i >= 0; i--) {
-        if (pickList[i] == (uintptr_t)invitationTournamentCopy) {
+        if (pickList[i] == (void *)invitationTournamentCopy) {
             if (_Rand() & 1)
-                pickList[i] = (uintptr_t)tourCopy;
+                pickList[i] = (void *)tourCopy;
         }
     }
 }

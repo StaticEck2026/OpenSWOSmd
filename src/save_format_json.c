@@ -687,7 +687,7 @@ extern int32_t  totalTeamValue;
 extern uint8_t  weeklyWageByPlayerIndex[];
 extern uint8_t  playerFormModifiers[];
 extern uint16_t sensisoftPlcSponsorshipFactor;
-extern int32_t  additionalInvestments;
+extern uint16_t additionalInvestments;
 extern uint16_t teamValueDivisor;
 extern uint16_t expectedLeagueRankIndex;
 extern uint16_t boardConfidenceHistory0;
@@ -722,14 +722,14 @@ extern uint16_t wageScalingDivisor;
 extern uint16_t teamNoOfferAccepted;
 extern int32_t  teamFundsAccepted;
 extern uint16_t isNationalSelector;
-extern uint16_t someTeamFlags;
+extern uint8_t  someTeamFlags;
 extern uint16_t lastNationalityCall;
 extern uint8_t  nationalTeamNationality;
 extern uint8_t  nationalTeamFileId;
 extern uint16_t sameNationalCallFlag;
 extern uint16_t sackedReputationScore;
 extern uint16_t nationalSelectorReputationPoints;
-extern uint16_t nationalTeamFileCode;
+extern uint8_t  nationalTeamFileCode;
 extern uint16_t seasonReview;
 extern uint16_t worldCupHostTeam;
 extern uint16_t worldCupQualifyingTeam;
@@ -745,7 +745,7 @@ extern uint16_t mrOrMs;
 extern uint8_t  managerSexBuffer[];
 extern uint8_t  managerNameBuffer[];
 extern uint8_t  managerSurnameBuffer[];
-extern uint16_t plNationality;
+extern uint8_t  plNationality;
 extern uint16_t winCupBonusCount;
 extern uint16_t minorTrophyBonusCount;
 extern uint16_t majorTrophyBonusCount;
@@ -781,7 +781,7 @@ extern uint16_t transferMarketRandOffset2;
 extern uint16_t transferMarketPhase;
 extern uint16_t careerNumPlayers;
 extern uint16_t selTeamSelectedPlayerPosition;
-extern uint16_t lastFinancialWeekIndex;
+extern uint8_t  lastFinancialWeekIndex;
 extern uint16_t numPlayers;
 extern uint16_t currentTeamNumber;
 extern uint16_t currentTeamSelectedPlayerPosition;
@@ -1009,7 +1009,7 @@ static const FieldDesc s_career_scalars[] = {
     FA("weekly_wage_by_player_index",     weeklyWageByPlayerIndex, 128,FLD_U32_ARRAY),
     FA("player_form_modifiers",           playerFormModifiers,     32, FLD_BYTES),
     FX("sensisoft_plc_sponsorship_factor",sensisoftPlcSponsorshipFactor,FLD_U16),
-    FX("additional_investments",          additionalInvestments,       FLD_S32),
+    FX("additional_investments",          additionalInvestments,       FLD_U16),
     FX("team_value_divisor",              teamValueDivisor,            FLD_U16),
     FX("expected_league_rank_index",      expectedLeagueRankIndex,     FLD_U16),
     /* int16_t[4] in game code — endian-neutral 16-bit decimals, not bytes. */
@@ -1046,14 +1046,14 @@ static const FieldDesc s_career_scalars[] = {
     FX("team_no_offer_accepted",          teamNoOfferAccepted,         FLD_U16),
     FX("team_funds_accepted",             teamFundsAccepted,           FLD_S32),
     FX("is_national_selector",            isNationalSelector,          FLD_U16),
-    FX("some_team_flags",                 someTeamFlags,               FLD_U16),
+    FX("some_team_flags",                 someTeamFlags,               FLD_U8 ),
     FX("last_nationality_call",           lastNationalityCall,         FLD_U16),
     FX("national_team_nationality",       nationalTeamNationality,     FLD_U8 ),
     FX("national_team_file_id",           nationalTeamFileId,          FLD_U8 ),
     FX("same_national_call_flag",         sameNationalCallFlag,        FLD_U16),
     FX("sacked_reputation_score",         sackedReputationScore,       FLD_U16),
     FX("national_selector_reputation_points",nationalSelectorReputationPoints,FLD_U16),
-    FX("national_team_file_code",         nationalTeamFileCode,        FLD_U16),
+    FX("national_team_file_code",         nationalTeamFileCode,        FLD_U8 ),
     FX("season_review",                   seasonReview,                FLD_U16),
     FX("world_cup_host_team",             worldCupHostTeam,            FLD_U16),
     FX("world_cup_qualifying_team",       worldCupQualifyingTeam,      FLD_U16),
@@ -1069,7 +1069,7 @@ static const FieldDesc s_career_scalars[] = {
     FA("manager_sex_buffer",              managerSexBuffer, 4,         FLD_STR ),
     FA("manager_name_buffer",             managerNameBuffer, 9,        FLD_STR ),
     FA("manager_surname_buffer",          managerSurnameBuffer, 13,    FLD_STR ),
-    FX("pl_nationality",                  plNationality,               FLD_U16),
+    FX("pl_nationality",                  plNationality,               FLD_U8 ),
     FX("win_cup_bonus_count",             winCupBonusCount,            FLD_U16),
     FX("minor_trophy_bonus_count",        minorTrophyBonusCount,       FLD_U16),
     FX("major_trophy_bonus_count",        majorTrophyBonusCount,       FLD_U16),
@@ -1105,7 +1105,7 @@ static const FieldDesc s_career_scalars[] = {
     FX("transfer_market_phase",           transferMarketPhase,         FLD_U16),
     FX("career_num_players",              careerNumPlayers,            FLD_U16),
     FX("sel_team_selected_player_position",selTeamSelectedPlayerPosition,FLD_U16),
-    FX("last_financial_week_index",       lastFinancialWeekIndex,      FLD_U16),
+    FX("last_financial_week_index",       lastFinancialWeekIndex,      FLD_U8 ),
     FX("num_players",                     numPlayers,                  FLD_U16),
     FX("current_team_number",             currentTeamNumber,           FLD_U16),
     FX("current_team_selected_player_position",currentTeamSelectedPlayerPosition,FLD_U16),
@@ -3440,6 +3440,15 @@ static void load_competition_overrides(const char *buf, int buflen)
 
 /* ---------- .CAR writer ---------- */
 
+/* Forward decl — defined later (with the preset .PRE path). The career path
+ * reuses it to detect whether a type-2 tournament's active stage is a league
+ * (group phase) or a cup (knockout), reading the master's roundComplete. */
+static int diy_stage_is_league(const DIYCompetitionEx *stage);
+
+/* _VerifyTeamLoaded is extern'd further down (preset path); the career load
+ * path's cup teamOffsetTable rebuild needs it earlier, so declare it here. */
+extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
+
 int16_t SaveJson_WriteCareer(uint8_t *filename)
 {
     uint32_t data_size = career_data_size();
@@ -3534,6 +3543,58 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     emit_comp_slot(json_out_emit, &out, "euro",
                    (const DIYCompetitionEx *)euroCupsCompetitionContext);
     mjson_printf(json_out_emit, &out, "%s", "}");
+
+    /* TYPE-2 tournament current-STAGE (cross-target) — mirrors the preset
+     * write_competition_buf path. When the primary slot is a tournament
+     * (national-team WORLD CUP / EUROPEAN CHAMPIONSHIPS), the active stage
+     * (group league / knockout cup) lives at competitionFileBuffer + 0x420.
+     * The master is serialized typed by comp_slots above, but the stage rides
+     * the raw blob and byte-swaps on a 64-bit->Amiga load. Emit it typed +
+     * endian-neutral: comp_slot_stage (struct-anchored header + per-type
+     * fields) + the group standings stats (league) or the three knockout
+     * score arrays (cup). On load these are re-laid and the cup teamOffsetTable
+     * is rebuilt careerTeam-aware via _VerifyTeamLoaded (SaveJson_LoadCareer),
+     * so a managed national team (careerTeam, negative selTeamsPtr offset)
+     * resolves correctly cross-target. */
+    if (((const DIYCompetitionEx *)&competitionFileBuffer)
+            ->base.competitionType == 2) {
+        const DIYCompetitionEx *stage = (const DIYCompetitionEx *)
+            ((const uint8_t *)&competitionFileBuffer + 0x420u);
+        mjson_printf(json_out_emit, &out, ",\n  ");
+        emit_comp_slot(json_out_emit, &out, "comp_slot_stage", stage);
+        if (diy_stage_is_league(stage)) {
+            uint16_t nrows = numDiyTeams; if (nrows > 64) nrows = 64;
+            mjson_printf(json_out_emit, &out, ",\n  %Q:[", "stage_standings");
+            for (uint16_t i = 0; i < nrows; i++) {
+                DIYTeamStats *r = diy_ovr_row((DIYCompetitionEx *)stage, i);
+                if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
+                mjson_printf(json_out_emit, &out,
+                    "{%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u}",
+                    "gp",  (unsigned)r->gamesPlayed,
+                    "w",   (unsigned)r->wins,
+                    "d",   (unsigned)r->draws,
+                    "l",   (unsigned)r->losses,
+                    "gf",  (unsigned)r->goalsFor,
+                    "ga",  (unsigned)r->goalsAgainst,
+                    "pts", (unsigned)r->points);
+            }
+            mjson_printf(json_out_emit, &out, "%s", "]");
+        } else {
+            const uint16_t *st = (const uint16_t *)&stage->matchData.cup.cupRoundResults[0x40];
+            const uint16_t *ag = (const uint16_t *)&stage->_bss_2E0AE[0];
+            const uint16_t *pn = (const uint16_t *)&stage->leagueSectionState.phaseStartMonths[0];
+            const char *keys[3] = { "stage_score_tab", "stage_score_agg", "stage_score_pen" };
+            const uint16_t *arrs[3] = { st, ag, pn };
+            for (int a = 0; a < 3; a++) {
+                mjson_printf(json_out_emit, &out, ",\n  %Q:[", keys[a]);
+                for (int i = 0; i < 18; i++) {
+                    if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
+                    mjson_printf(json_out_emit, &out, "%u", (unsigned)arrs[a][i]);
+                }
+                mjson_printf(json_out_emit, &out, "%s", "]");
+            }
+        }
+    }
 
     /* teamSelectionKeyCache stride list (endian-neutral) — paired with the
      * raw cache blob; re-lays the host-native +2 strides on load. */
@@ -3732,6 +3793,73 @@ static void apply_semantic_load(const char *src, int src_size)
         }
     }
 
+    /* TYPE-2 tournament current-STAGE restore (cross-target) — mirrors the
+     * preset load_competition_buf. Re-lay the stage at competitionFileBuffer
+     * + 0x420 typed/endian-neutral over the raw blob BEFORE
+     * _RebuildPointersAfterLoad copies it into diyCompetitionStart. League:
+     * stats + i*684 teamSelOffset; cup: the three knockout score arrays. The
+     * cup teamOffsetTable is rebuilt careerTeam-aware below, after the
+     * selected_teams load (it needs selTeamsPtr). Absent in pre-fix saves ->
+     * mjson_find misses -> no-op, blob bytes stand. */
+    if (((const DIYCompetitionEx *)&competitionFileBuffer)
+            ->base.competitionType == 2) {
+        DIYCompetitionEx *stage = (DIYCompetitionEx *)
+            ((uint8_t *)&competitionFileBuffer + 0x420u);
+        load_comp_slot(src, src_size, "comp_slot_stage", stage);
+        if (diy_stage_is_league(stage)) {
+            const char *rows = NULL; int rows_len = 0;
+            if (mjson_find(src, src_size, "$.stage_standings", &rows, &rows_len)
+                    == MJSON_TOK_ARRAY) {
+                int pos = 0, voff, vlen, vt; uint16_t i = 0;
+                while (i < numDiyTeams && i < 64 &&
+                       (pos = fast_array_next(rows, rows_len, pos,
+                                              &voff, &vlen, &vt)) != 0) {
+                    if (vt != MJSON_TOK_OBJECT) { i++; continue; }
+                    const char *e = rows + voff; int el = vlen;
+                    long gp = 0, w = 0, d = 0, l = 0, gf = 0, ga = 0, pts = 0;
+                    mjson_get_long(e, el, "$.gp",  &gp);
+                    mjson_get_long(e, el, "$.w",   &w);
+                    mjson_get_long(e, el, "$.d",   &d);
+                    mjson_get_long(e, el, "$.l",   &l);
+                    mjson_get_long(e, el, "$.gf",  &gf);
+                    mjson_get_long(e, el, "$.ga",  &ga);
+                    mjson_get_long(e, el, "$.pts", &pts);
+                    DIYTeamStats *r = diy_ovr_row(stage, i);
+                    r->teamSelOffset = (int32_t)i * 684; /* = i*sizeof(TeamFileEx) */
+                    r->gamesPlayed  = (uint16_t)gp;
+                    r->wins         = (uint16_t)w;
+                    r->draws        = (uint16_t)d;
+                    r->losses       = (uint16_t)l;
+                    r->goalsFor     = (uint16_t)gf;
+                    r->goalsAgainst = (uint16_t)ga;
+                    r->points       = (uint16_t)pts;
+                    i++;
+                }
+            }
+        } else {
+            uint16_t *dsts[3] = {
+                (uint16_t *)&stage->matchData.cup.cupRoundResults[0x40],
+                (uint16_t *)&stage->_bss_2E0AE[0],
+                (uint16_t *)&stage->leagueSectionState.phaseStartMonths[0],
+            };
+            const char *keys[3] = { "$.stage_score_tab", "$.stage_score_agg",
+                                    "$.stage_score_pen" };
+            for (int a = 0; a < 3; a++) {
+                const char *arr = NULL; int alen = 0;
+                if (mjson_find(src, src_size, keys[a], &arr, &alen) != MJSON_TOK_ARRAY)
+                    continue;
+                int pos = 0, voff, vlen, vt, i = 0;
+                while (i < 18 &&
+                       (pos = fast_array_next(arr, alen, pos,
+                                              &voff, &vlen, &vt)) != 0) {
+                    if (vt == MJSON_TOK_NUMBER)
+                        dsts[a][i] = (uint16_t)parse_long_slice(arr + voff, vlen);
+                    i++;
+                }
+            }
+        }
+    }
+
     PROF_START(team_ce);
     load_team_file_ex(src, src_size, "$.career_team",  &careerTeam);
     load_team_file_ex(src, src_size, "$.current_team", &currentTeam);
@@ -3759,6 +3887,31 @@ static void apply_semantic_load(const char *src, int src_size)
         }
     }
     PROF_END(selected_teams, "career-load");
+
+    /* TYPE-2 tournament KNOCKOUT teamOffsetTable rebuild (cross-target) —
+     * mirrors the preset path. teamOffsetTable[k] is a derived selTeamsPtr
+     * byte-offset cache that byte-swaps + is layout-dependent cross-target;
+     * rebuild it from cupTeamIds via _VerifyTeamLoaded now that selTeamsPtr
+     * (selected_teams), careerTeam and selTeamNumber are all loaded. For a
+     * managed national team (careerTeam) findTeamInCache returns &careerTeam,
+     * giving the correct NEGATIVE offset — so the R16 bracket names resolve
+     * correctly cross-target. League stages skip this (standings rebuilt
+     * earlier). Runs before _RebuildPointersAfterLoad copies the stage. */
+    if (((const DIYCompetitionEx *)&competitionFileBuffer)
+            ->base.competitionType == 2) {
+        DIYCompetitionEx *stage = (DIYCompetitionEx *)
+            ((uint8_t *)&competitionFileBuffer + 0x420u);
+        if (!diy_stage_is_league(stage)) {
+            uint16_t n = numDiyTeams; if (n > 51) n = 51;
+            for (uint16_t k = 0; k < n; k++) {
+                uint16_t teamNum = BE_READ_U16(&stage->cupTeamIds[k]);
+                if (teamNum == 0) continue;
+                TeamFileEx *tp = _VerifyTeamLoaded(teamNum);
+                stage->bracketScratch.teamOffsetTable[k] =
+                    (int32_t)((uint8_t *)tp - &selTeamsPtr);
+            }
+        }
+    }
 
     /* TMD team pool — count from tmd_team_count scalar (already applied
      * by load_scalar_table above). Empty trailing slots stay zero from

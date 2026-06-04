@@ -799,7 +799,13 @@ extern uint16_t worldCupQualifyingTeam;
 extern uint16_t euroChampionshipQualTeam;
 extern uint16_t natTeamsRandLimit2;
 extern uint8_t nationalTeams[];
-extern uint32_t careerCupPickList[];
+/* careerCupPickList: a 5-entry array of COMPETITION POINTERS (not uint32) —
+ * holds the national-coach cup-pick-list comp records (copied from the
+ * cupPick* tables, which competition_data.c defines as CompetitionCup *[5]).
+ * Was extern'd uint32_t[] here, which truncated the 64-bit pointers and made
+ * _Rebuild_CompetitionSlotPointers (reads it as void**) deref garbage. Now a
+ * pointer array; see the standalone definition in swos_data_typed_stubs.c. */
+extern void *careerCupPickList[];
 extern TeamFileEx careerTeam;
 extern uint8_t teamSortBuffer[];
 
@@ -811,49 +817,49 @@ extern uint8_t africaWorldCupQualificationCopy[];
 extern uint8_t asiaWorldCupQualificationCopy[];
 
 /* Cup pick list data arrays (stay in asm, contain relocatable pointers) */
-extern uint32_t cupPickOceaniaWorldCupFriendly[];
-extern uint32_t cupPickOceaniaWorldCupInvite[];
-extern uint32_t cupPickOceaniaOceaniaCupFinalist[];
-extern uint32_t cupPickOceaniaOceaniaCupNonFinalist[];
-extern uint32_t cupPickOceaniaOceaniaCupFriendly[];
-extern uint32_t cupPickOceaniaInviteFriendly[];
+extern void *cupPickOceaniaWorldCupFriendly[];
+extern void *cupPickOceaniaWorldCupInvite[];
+extern void *cupPickOceaniaOceaniaCupFinalist[];
+extern void *cupPickOceaniaOceaniaCupNonFinalist[];
+extern void *cupPickOceaniaOceaniaCupFriendly[];
+extern void *cupPickOceaniaInviteFriendly[];
 
-extern uint32_t cupPickNAmericaWorldCupFriendly[];
-extern uint32_t cupPickNAmericaWorldCupInvite[];
-extern uint32_t cupPickNAmericaNaCupFinalist[];
-extern uint32_t cupPickNAmericaNaCupNonFinalist[];
-extern uint32_t cupPickNAmericaNaCupFriendly[];
-extern uint32_t cupPickNAmericaInviteFriendly[];
+extern void *cupPickNAmericaWorldCupFriendly[];
+extern void *cupPickNAmericaWorldCupInvite[];
+extern void *cupPickNAmericaNaCupFinalist[];
+extern void *cupPickNAmericaNaCupNonFinalist[];
+extern void *cupPickNAmericaNaCupFriendly[];
+extern void *cupPickNAmericaInviteFriendly[];
 
-extern uint32_t cupPickAsiaWorldCupFriendly[];
-extern uint32_t cupPickAsiaWorldCupInvite[];
-extern uint32_t cupPickAsiaAsianCupFinalist[];
-extern uint32_t cupPickAsiaAsianCupNonFinalist[];
-extern uint32_t cupPickAsiaAsianCupFriendly[];
-extern uint32_t cupPickAsiaInviteFriendly[];
+extern void *cupPickAsiaWorldCupFriendly[];
+extern void *cupPickAsiaWorldCupInvite[];
+extern void *cupPickAsiaAsianCupFinalist[];
+extern void *cupPickAsiaAsianCupNonFinalist[];
+extern void *cupPickAsiaAsianCupFriendly[];
+extern void *cupPickAsiaInviteFriendly[];
 
-extern uint32_t cupPickAfricaWorldCupFriendly[];
-extern uint32_t cupPickAfricaWorldCupInvite[];
-extern uint32_t cupPickAfricaAfricanCupFinalist[];
-extern uint32_t cupPickAfricaAfricanCupNonFinalist[];
-extern uint32_t cupPickAfricaAfricanCupFriendly[];
-extern uint32_t cupPickAfricaInviteFriendly[];
+extern void *cupPickAfricaWorldCupFriendly[];
+extern void *cupPickAfricaWorldCupInvite[];
+extern void *cupPickAfricaAfricanCupFinalist[];
+extern void *cupPickAfricaAfricanCupNonFinalist[];
+extern void *cupPickAfricaAfricanCupFriendly[];
+extern void *cupPickAfricaInviteFriendly[];
 
-extern uint32_t cupPickSAmericaWorldCupFriendly[];
-extern uint32_t cupPickSAmericaWorldCupInvite[];
-extern uint32_t cupPickSAmericaCopaAmericaFinalist[];
-extern uint32_t cupPickSAmericaCopaAmericaNonFinalist[];
-extern uint32_t cupPickSAmericaCopaAmericaFriendly[];
-extern uint32_t cupPickSAmericaInviteFriendly[];
+extern void *cupPickSAmericaWorldCupFriendly[];
+extern void *cupPickSAmericaWorldCupInvite[];
+extern void *cupPickSAmericaCopaAmericaFinalist[];
+extern void *cupPickSAmericaCopaAmericaNonFinalist[];
+extern void *cupPickSAmericaCopaAmericaFriendly[];
+extern void *cupPickSAmericaInviteFriendly[];
 
-extern uint32_t cupPickListEuropeWorldCupFriendly[];
-extern uint32_t cupPickLisEuropeWorldCupInviteFriendly[];
-extern uint32_t cupPickLisEuropeEuroChampsFriendly[];
-extern uint32_t cupPickListEuropeEuroChampsInviteFriendly[];
-extern uint32_t cupPickListEuropeInviteTournamentFriendly[];
-extern uint32_t cupPickEuropeNoCupFriendly[];
-extern uint32_t cupPickEuropeNoCupFriendlyAlt[];
-extern uint32_t cupPickListEuropeInviteTournamentFriendlyAlt[];
+extern void *cupPickListEuropeWorldCupFriendly[];
+extern void *cupPickLisEuropeWorldCupInviteFriendly[];
+extern void *cupPickLisEuropeEuroChampsFriendly[];
+extern void *cupPickListEuropeEuroChampsInviteFriendly[];
+extern void *cupPickListEuropeInviteTournamentFriendly[];
+extern void *cupPickEuropeNoCupFriendly[];
+extern void *cupPickEuropeNoCupFriendlyAlt[];
+extern void *cupPickListEuropeInviteTournamentFriendlyAlt[];
 
 /* Real storage is `CompetitionCup *[8]` in competition_data.c:1175.
  * Same trap shape as worldCupQualifyingGroupsTable below — see
@@ -959,7 +965,7 @@ static void fillWorldCupQualifyingGroupTeams(uint8_t regionCode, uint8_t *group,
     if (selTeamNumber != worldCupHostTeam &&
         selTeamNumber != worldCupQualifyingTeam &&
         (uint8_t)(selTeamNumber >> 8) == regionCode) {
-        careerCupPickList[0] = (uintptr_t)origGroup;
+        careerCupPickList[0] = (void *)origGroup;
         firstTeam = selTeamNumber;
     } else {
         do {
@@ -1033,7 +1039,7 @@ static void setupWorldCupQualifyingGroups(uint16_t **teamListPtr)
                 selTeamNumber != worldCupHostTeam &&
                 selTeamNumber != worldCupQualifyingTeam &&
                 (uint8_t)(selTeamNumber >> 8) == 0x50) {
-                careerCupPickList[0] = (uintptr_t)group;
+                careerCupPickList[0] = (void *)group;
                 teamId = selTeamNumber;
             } else {
                 if (group == worldCupQualifyingGroup8Copy && colOffset >= d5)
@@ -1082,12 +1088,12 @@ wc_groups_done:
 /* ---- setCupPickListCommon (helper for 5 simple regional functions) ----
  * Implements the identical cup pick list selection logic used by Oceania,
  * NorthAmerica, Asia, Africa, and SouthAmerica. */
-static void setCupPickListCommon(uint32_t *worldCupFriendly, uint32_t *worldCupInvite,
-                                  uint32_t *cupFinalist, uint32_t *cupNonFinalist,
-                                  uint32_t *cupFriendly, uint32_t *inviteFriendly,
+static void setCupPickListCommon(void **worldCupFriendly, void **worldCupInvite,
+                                  void **cupFinalist, void **cupNonFinalist,
+                                  void **cupFriendly, void **inviteFriendly,
                                   uint16_t **teamListPtr)
 {
-    uint32_t *src = worldCupFriendly;
+    void **src = worldCupFriendly;
     if (someTeamFlags & 0x80) {
         if (qualifyingStage1PendingFlag0 == 0)
             src = worldCupInvite;
@@ -1121,7 +1127,7 @@ static void setCupPickListCommon(uint32_t *worldCupFriendly, uint32_t *worldCupI
  * Europe has a different flag structure and includes EC group filling. */
 static void setCupPickList_Europe(uint16_t **teamListPtr)
 {
-    uint32_t *src;
+    void **src;
     if (someTeamFlags & 0x80) {
         src = cupPickListEuropeWorldCupFriendly;
         if (qualifyingStage1PendingFlag0 == 0)
@@ -1181,7 +1187,7 @@ static void setCupPickList_Europe(uint16_t **teamListPtr)
             int readFromList = 1;
             if (colOffset == 0 && group == selectedGroup) {
                 if (selTeamNumber != euroChampionshipQualTeam) {
-                    careerCupPickList[0] = (uintptr_t)group;
+                    careerCupPickList[0] = (void *)group;
                     teamId = selTeamNumber;
                     readFromList = 0;
                 }

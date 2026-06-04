@@ -317,8 +317,13 @@ __asm__(
     ".globl " _ASM_PFX "seasonReview\n"
     _ASM_PFX "seasonReview:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "careerCupPickList\n"
-    _ASM_PFX "careerCupPickList:\n"
+    /* careerCupPickList MOVED OUT of this overlay to a standalone
+     * `void *careerCupPickList[5]` (swos_data_typed_stubs.c). It is a 5-entry
+     * array of 64-bit competition pointers that does not fit the legacy
+     * 20-byte (5 x 4-byte) slot here, and it is re-derived on load
+     * (_RebuildPointersAfterLoad), not saved — so it need not live inside
+     * careerFileBuffer. Keep the 20-byte gap so worldCupHostTeam and every
+     * following overlay global stay at their existing offsets (no cascade). */
     ".skip 20\n"
     ".globl " _ASM_PFX "worldCupHostTeam\n"
     _ASM_PFX "worldCupHostTeam:\n"

@@ -1049,9 +1049,14 @@ static void copyWords(volatile uint16_t *dst, const volatile uint16_t *src, int1
 #define DIY_CFB_STANDINGS_OFF  0x420u  /* legacy diyCompetitionStart-adjacent offset in cfb */
 #define DIY_CFB_STANDINGS_LEN  0x734u  /* current-stage record + league standings */
 
-static void diy_cfb_to_tournament(void)
+/* Field-map a legacy-layout competition buffer (`c`, the cfb byte layout
+ * used by competitionFileBuffer AND every careerCompetitionSlotPtrTable
+ * context slot) INTO the typed DIYTournamentState master + the standalone
+ * current-stage buffer. `c` is parameterised so the career store/load can
+ * reuse this for any slot, not just competitionFileBuffer (the two layouts
+ * differ post-untangle, so a flat word-copy can't substitute). */
+static void diy_cfb_to_tournament_buf(const uint8_t *c)
 {
-    const uint8_t *c = competitionFileBuffer;
     DIYTournamentState *t = &diyFileBufferCopy;
     memcpy(&t->header,        c,                        sizeof(DIYCompetition));
     memcpy(t->teamIndexOrder, c + DIY_CFB_TEAMLIST_OFF, sizeof(t->teamIndexOrder));
@@ -1062,9 +1067,8 @@ static void diy_cfb_to_tournament(void)
            c + DIY_CFB_STANDINGS_OFF, DIY_CFB_STANDINGS_LEN);
 }
 
-static void diy_tournament_to_cfb(void)
+static void diy_tournament_to_cfb_buf(uint8_t *c)
 {
-    uint8_t *c = competitionFileBuffer;
     const DIYTournamentState *t = &diyFileBufferCopy;
     memcpy(c,                        &t->header,        sizeof(DIYCompetition));
     memcpy(c + DIY_CFB_TEAMLIST_OFF, t->teamIndexOrder, sizeof(t->teamIndexOrder));
@@ -1074,6 +1078,21 @@ static void diy_tournament_to_cfb(void)
     memcpy(c + DIY_CFB_STANDINGS_OFF,
            diyCompetitionStartBuf, DIY_CFB_STANDINGS_LEN);
 }
+
+static void diy_cfb_to_tournament(void) { diy_cfb_to_tournament_buf(competitionFileBuffer); }
+static void diy_tournament_to_cfb(void) { diy_tournament_to_cfb_buf(competitionFileBuffer); }
+
+/* Exported buffer-parameterised entry points for the career slot store/load
+ * (career_teams.c). A type-2 tournament slot can live in competitionFileBuffer
+ * OR any *Context buffer, so the career path must field-map an arbitrary slot
+ * base — it can no longer flat-copy diyFileBufferCopy verbatim because the
+ * typed master (teamIndexOrder @0x41E) and the cfb byte layout (@0x5A,
+ * stage standings @0x420) diverged in the step-3 untangle. */
+__attribute__((used, externally_visible))
+void _DIY_CfbBufToTournament(const uint8_t *cfb) { diy_cfb_to_tournament_buf(cfb); }
+
+__attribute__((used, externally_visible))
+void _DIY_TournamentToCfbBuf(uint8_t *cfb) { diy_tournament_to_cfb_buf(cfb); }
 
 /* SaveDIYTournament / DIY_CopyCompetitionFileBufferToDiyFileBufferCopy
  * (SWOS2.s 32343 / 32365): competitionFileBuffer -> diyFileBufferCopy. */
@@ -9031,7 +9050,19 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
         const uint8_t *seedTable = (const uint8_t *)(a5 + 7 + seedOff);
         uint8_t *a3 = ((DIYTournamentState *)a6)->teamIndexOrder;
         int16_t count = (int8_t)a5[0xF] - 1;
-        uint16_t numTeams16 = (uint16_t)a6s->numTeams;  /* 0x32 */
+        /* Find-loop bound: search ONLY the teams just loaded into
+         * diyFileBufferCopy.teamIds — the record's team count (a5[0xF] ==
+         * count + 1), NOT a6s->numTeams. At this point numTeams still holds
+         * _InitDIYTournament's generic init-table default (diyTournamentInit-
+         * Table[1] == 24); the real count isn't written until ~40 lines below.
+         * With the 24 bound the loop reads past the loaded teams into stale
+         * teamIds slots [count..23]; on a season-end auto-advance those carry
+         * a previous competition's ids, so a stale entry can falsely match a
+         * seed and return an out-of-range index (e.g. 16 for a 16-team euro
+         * cup). That index gets swapped into teamIndexOrder and later panics
+         * _VerifyTeamLoaded(0) in _DIY_CacheSelectedTeamPointers. (The original
+         * relied on those slots being zero so no false match occurred.) */
+        uint16_t numTeams16 = (uint16_t)(count + 1);  /* = a5[0xF], loaded team count */
 
         for (int16_t i = count; i >= 0; i--) {
             uint16_t seedId = BE_READ_U16(seedTable);

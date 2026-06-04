@@ -171,14 +171,18 @@ int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
         /* Direct dispatch if assetCurrentIndex == 4 */
         if (assetCurrentIndex == 4) {
             result = _CAssetSys_DispatchGetSize(ASSET_OP_INIT_SOURCE0, 0, filename, dest, &fileSize);
-#ifdef SWOS_SDL_BUILD
-            /* The original Amiga asset loader stripped RNC headers as
-             * part of the disk pipeline, so the early-exit branch
-             * received pre-decompressed bytes. Our `rob_load` returns
-             * raw bytes (because _LoadRNCToBufferNoBlit also calls
-             * the same dispatch and expects to see the magic). So
-             * here, after a successful direct dispatch, we sniff the
-             * RNC header and decompress in-place if present. */
+            /* The original Amiga asm disk pipeline stripped RNC headers
+             * here, but the C asset dispatch returns RAW bytes on BOTH
+             * targets: SDL `rob_load` and the Amiga C port's dispatch
+             * alike (the older assumption that the Amiga pipeline
+             * pre-decompresses only held for the asm build). So after a
+             * successful direct dispatch, sniff the RNC header and
+             * decompress in-place if present. The magic check makes this
+             * a no-op for already-raw data, so it is safe on both ports.
+             * Without it the Amiga build loaded e.g. team.080 still
+             * RNC-compressed -> garbage 16-bit team count (0x524E="RN")
+             * -> count^2 bubble sort ran away (national-coach WC load
+             * hung in setupWorldCupQualifyingGroups). Not SDL-gated. */
             if (result == 0 && fileSize >= 18 &&
                 dest[0] == 'R' && dest[1] == 'N' && dest[2] == 'C' &&
                 (dest[3] == 0x01 || dest[3] == 0x02)) {
@@ -186,12 +190,18 @@ int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
                 if (fileSize <= sizeof(s_rnc_scratch)) {
                     /* RNC header offset 4 = unpacked size (big-endian). */
                     uint32_t unpacked = BE_READ_U32(dest + 4);
-                    memcpy(s_rnc_scratch, dest, fileSize);
+                    /* Manual byte copy (no memcpy: freestanding Amiga
+                     * build has no <string.h> here; matches the raw-data
+                     * copy path below). */
+                    uint32_t k;
+                    for (k = 0; k < fileSize; k++)
+                        s_rnc_scratch[k] = dest[k];
                     if (dest[3] == 0x01) _RncDecompressV1(s_rnc_scratch, dest);
                     else                  _RncDecompressV2(s_rnc_scratch, dest);
                     fileSize = unpacked;
                 }
             }
+#ifdef SWOS_SDL_BUILD
             /* The Amiga `_BlitterCopyOverlayToScreen` would have copied
              * the alt → primary buffer for us in the staging path. The
              * early-exit branch skipped that on Amiga because the asset

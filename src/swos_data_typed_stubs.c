@@ -478,8 +478,12 @@ uint16_t team2SelectedPlayerIndex;
 // uint8_t nationalTeamFileCode;
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): seasonReview */
 // uint16_t seasonReview;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): careerCupPickList */
-// uint32_t careerCupPickList;
+/* careerCupPickList: 5-entry array of national-coach cup-pick-list COMPETITION
+ * POINTERS. Standalone (NOT in the careerFileBuffer overlay): it holds
+ * pointer-sized entries (8 bytes on 64-bit) that don't fit the legacy 20-byte
+ * overlay slot, and it's re-derived on load (_RebuildPointersAfterLoad), not
+ * saved. The overlay keeps a 20-byte reserved gap where it used to live. */
+void *careerCupPickList[5];
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupHostTeam */
 // uint16_t worldCupHostTeam;
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingTeam */
