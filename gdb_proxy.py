@@ -112,15 +112,17 @@ class GdbDaemon:
             # Self-verify so a degraded attach is VISIBLE (logged) rather than
             # silently accepted. The one-shot port means recovery is a full
             # FS-UAE restart — see amiga_gdb.sh, which reads this verdict.
-            self.attach_ok, self.attach_detail = self._amiga_health()
+            self.attach_ok, self.attach_detail = self._target_health()
             print(f"[daemon] attach health: "
                   f"{'OK' if self.attach_ok else 'DEGRADED'} "
                   f"({self.attach_detail})", file=sys.stderr)
         # In SDL mode we just leave gdb at its prompt; the caller issues
         # `run`/`start` to launch the inferior.
 
-    def _amiga_health(self):
-        """Probe whether the Amiga target is cleanly stopped. Returns
+    def _target_health(self):
+        """Probe whether the target is cleanly stopped (mode-generic — works
+        for the Amiga FS-UAE remote and the sdl native inferior alike).
+        Returns
         (ok, detail). Healthy == target reports a stop (SIGTRAP) AND a
         readable non-zero PC. Degraded == 'not being run' / no registers /
         a hung connection (commands time out)."""
@@ -295,11 +297,11 @@ def daemon_main(args):
                 elif req == "PING":
                     out = "pong"
                 elif req == "HEALTH":
-                    if d.mode == "amiga":
-                        ok, detail = d._amiga_health()
-                        out = ("OK " if ok else "DEGRADED ") + detail
-                    else:
-                        out = "OK sdl"
+                    # _target_health is mode-generic (plain `info program` +
+                    # `print/x $pc`), so it returns a real stopped/running
+                    # verdict for the sdl native target too, not just amiga.
+                    ok, detail = d._target_health()
+                    out = ("OK " if ok else "DEGRADED ") + detail
                 else:
                     out = f"[unknown request] {req!r}"
 
@@ -339,6 +341,45 @@ def send_request(req, timeout=30.0):
     return out.decode("utf-8", errors="replace")
 
 
+def watch_loop(args):
+    """Generic stop-notifier. Polls the daemon's HEALTH verdict and writes one
+    line to stdout on each transition INTO a cleanly-stopped state (a
+    breakpoint, panic, signal, or the initial entry pause). Mode-agnostic: it
+    relies only on HEALTH, which now reports stopped/running for both the amiga
+    FS-UAE remote and the sdl native inferior. Pipe it into any notifier so a
+    human never has to hand-poll or announce 'I loaded it'. Runs until killed
+    (or until the first stop with --once). HEALTH is non-draining, so the gdb
+    output buffer stays intact for a follow-up `cmd`/`poll`."""
+    prev = None
+    while True:
+        if not os.path.exists(SOCK_PATH):
+            verdict = "DOWN (socket missing)"
+        else:
+            try:
+                verdict = send_request("HEALTH", timeout=args.timeout).strip()
+            except Exception as e:
+                verdict = f"DEGRADED (no response: {e})"
+        cur = "stopped" if verdict.startswith("OK stopped") else "other"
+        if cur == "stopped" and prev != "stopped":
+            loc = ""
+            if not args.no_frame:
+                try:
+                    fr = send_request("CMD TIMEOUT=5\tframe 0", timeout=10)
+                    fm = re.search(r"#0\s+(?:0x[0-9a-fA-F]+ in )?(\w+)", fr)
+                    lm = re.search(r"\bat .*?([\w.]+:\d+)", fr)
+                    bits = [m.group(1) for m in (fm, lm) if m]
+                    if bits:
+                        loc = " | " + " ".join(bits)
+                except Exception:
+                    pass
+            sys.stdout.write(f"{args.label}{verdict}{loc}\n")
+            sys.stdout.flush()
+            if args.once:
+                return
+        prev = cur
+        time.sleep(args.interval)
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="Proxy for m68k-amiga-elf-gdb against FS-UAE remote debugger.",
@@ -374,7 +415,22 @@ def main():
     sub.add_parser("stop", help="Shut the daemon down.")
     sub.add_parser("status", help="Check whether the daemon is reachable.")
     sub.add_parser("ping", help="Round-trip test.")
-    sub.add_parser("health", help="Amiga attach health verdict (OK/DEGRADED).")
+    sub.add_parser("health", help="Attach health verdict (OK/DEGRADED).")
+
+    w = sub.add_parser("watch", help="Emit a line on each running->stopped "
+                       "transition (breakpoint / panic / signal / entry pause). "
+                       "Generic across amiga & sdl. Pipe into any notifier; "
+                       "Ctrl-C or kill to stop.")
+    w.add_argument("--interval", type=float, default=3.0,
+                   help="Poll interval in seconds (default 3.0)")
+    w.add_argument("--timeout", type=float, default=20.0,
+                   help="Per-HEALTH-probe timeout in seconds (default 20.0)")
+    w.add_argument("--label", default="STOP ",
+                   help="Prefix for each emitted line (default 'STOP ')")
+    w.add_argument("--once", action="store_true",
+                   help="Exit after the first stop is reported")
+    w.add_argument("--no-frame", action="store_true",
+                   help="Skip the frame-0 location lookup on each stop")
 
     args = ap.parse_args()
 
@@ -417,6 +473,8 @@ def main():
             print(send_request("HEALTH", timeout=20))
         except Exception as e:
             print(f"DEGRADED (no response: {e})")
+    elif args.cmd_name == "watch":
+        watch_loop(args)
 
 
 if __name__ == "__main__":

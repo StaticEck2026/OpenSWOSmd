@@ -89,6 +89,24 @@ The daemon also prints its attach verdict to `/tmp/swos_gdb_daemon.log`
 silent. Tunables are env vars (see the top of `amiga_gdb.sh`):
 `ATTACH_RETRIES`, `BOOT_TIMEOUT`, `SETTLE`, `PORT`, `ENTRY_PC`.
 
+### Stop notifications (hands-free `watch`)
+
+`gdb_proxy.py watch` emits one line every time the target transitions into a
+clean stop — a breakpoint, panic, signal, or the initial entry pause — so you
+never have to hand-poll `health` or be told "I loaded the file". It's
+mode-generic (the amiga FS-UAE remote and the sdl native inferior both report
+stopped/running now) and non-draining, so the gdb output buffer stays intact
+for a follow-up `cmd`/`poll`. Pipe it into any notifier:
+
+```bash
+# one line per stop, with function + file:line (Ctrl-C / kill to stop):
+python3 /mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py watch
+#   STOP OK stopped PC=0x259ebc | setCupPickList_Europe career_season.c:1148
+
+python3 .../gdb_proxy.py watch --once                  # exit after first stop
+python3 .../gdb_proxy.py watch --interval 1 --no-frame # faster, PC only
+```
+
 The manual steps below are the underlying mechanism (kept for reference /
 debugging the orchestrator itself).
 
