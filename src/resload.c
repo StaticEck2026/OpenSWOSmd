@@ -16,7 +16,6 @@
 #include "resload.h"
 #include "display.h"
 #include "rnc_magic.h"
-#include "endian_helpers.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -294,8 +293,9 @@ uint8_t _KBHook(void) { return 0; }
 #define DOS_FIB        2u
 #define ACCESS_READ    (-2)
 
-#define RNC_TYPE1_MAGIC 0x524E4301u
-#define RNC_TYPE2_MAGIC 0x524E4302u
+/* RNC signature constants come from rnc_magic.h (RNC_MAGIC_V1/V2) — they are
+ * host-conditional so a direct *(uint32_t*) load compares correctly on both
+ * LE and the BE Amiga. (The old local RNC_TYPE*_MAGIC literals were BE-only.) */
 
 /* ---- GfxBase struct offsets ---- */
 #define GFX_ACTIVIEW   0x22u
@@ -1101,17 +1101,20 @@ static uint32_t resload_loadfiledec(uint8_t *name, uint8_t *dest, uint32_t *outE
         return 0;
     }
 
-    /* Check for RNC magic and decompress. RNC headers are big-endian: the
-     * RNC_TYPE*_MAGIC macros are BE values and the size at +4 is a BE u32, so
-     * read both via BE_READ_U32 (no-op on the BE Amiga, correct on LE). */
-    uint32_t magic = BE_READ_U32(tempBuf);
+    /* Check for RNC magic and decompress. rnc_magic.h's RNC_MAGIC_V1/V2 are
+     * host-conditional, matching a direct host-native *(uint32_t*) load on
+     * both LE and the BE Amiga (the old BE-only literals failed the compare on
+     * LE). The size at +4 is a BE field, left host-native: correct on the BE
+     * Amiga, and this resload path is unused on the LE SDL build (file_io.c
+     * handles RNC there). */
+    uint32_t magic = *(uint32_t *)tempBuf;
     uint32_t decompSize;
 
-    if (magic == RNC_TYPE2_MAGIC) {
-        decompSize = BE_READ_U32(tempBuf + 4);
+    if (magic == RNC_MAGIC_V2) {
+        decompSize = *(uint32_t *)(tempBuf + 4);
         _RncDecompressV2(tempBuf, dest);
-    } else if (magic == RNC_TYPE1_MAGIC) {
-        decompSize = BE_READ_U32(tempBuf + 4);
+    } else if (magic == RNC_MAGIC_V1) {
+        decompSize = *(uint32_t *)(tempBuf + 4);
         _RncDecompressV1(tempBuf, dest);
     } else {
         /* Raw copy */
