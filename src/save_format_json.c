@@ -1189,7 +1189,9 @@ static const FieldDesc s_career_scalars[] = {
     FA("removed_player_stat_accum",       removedPlayerStatAccum, 2,   FLD_U16_ARRAY),
     FA("career_unavailable_player_list",  careerUnavailablePlayerList, 16, FLD_BYTES),
     FA("current_match_players",           currentMatchPlayers, 32,     FLD_BYTES),
-    FA("season_squad_team_numbers",       seasonSquadTeamNumbers, 48,  FLD_BYTES),
+    /* uint16[24] packed team ids — endian-neutral words (was FLD_BYTES, which
+     * byte-swapped these host-native uint16s on an LE<->BE cross-target load). */
+    FA("season_squad_team_numbers",       seasonSquadTeamNumbers, 48,  FLD_U16_ARRAY),
     FA("player_positions",                playerPositions, 32,         FLD_BYTES),
     FA("training_match_saved_players",    trainingMatchSavedPlayers, 32, FLD_BYTES),
     FA("training_match_saved_shirt_nums", trainingMatchSavedShirtNums, 32, FLD_BYTES),
@@ -1201,12 +1203,15 @@ static const FieldDesc s_career_scalars[] = {
     FA("team_budget_rank_table",          teamBudgetRankTable, 128,    FLD_BYTES),
     FA("players_on_transfer_market",      playersOnTransferMarket, 10, FLD_BYTES),
 
-    /* Market player slot tables — byte arrays of compact records. */
+    /* Market player slot tables — byte arrays of compact records. The
+     * team-id fields are explicit BE byte pairs (id>>8 / id), so they are
+     * endian-stable as raw bytes — safe as FLD_BYTES. */
     FA("foreign_market_players",          foreignMarketPlayers, 60,    FLD_BYTES),
     FA("home_market_players",             homeMarketPlayers, 100,      FLD_BYTES),
-    FA("transfer_offer_table",            transferOfferTable, 70,      FLD_BYTES),
-    FA("new_job_offers",                  newJobOffers, 130,           FLD_BYTES),
-    FA("job_offers",                      jobOffers, 130,              FLD_BYTES),
+    /* transfer_offer_table / job_offers / new_job_offers were FLD_BYTES but
+     * hold host-native multi-byte fields (uint16/uint32) that byte-swap on a
+     * cross-target load. They are now emitted as typed arrays-of-objects in
+     * write_career / load_career (s_transfer_offer_fields / s_job_offer_fields). */
 
     /* Per-globalTeamNumber league offset (signed). Indexed by team's
      * globalTeamNumber, read in teams.c:setLeagueNumbers and
@@ -2038,6 +2043,20 @@ static void emit_s16_at(mjson_print_fn_t fn, void *fnd,
     mjson_printf(fn, fnd, "%Q:%d", key, (int)*(int16_t *)(base + off));
 }
 
+static void emit_u16_at(mjson_print_fn_t fn, void *fnd,
+                        const char *key, const uint8_t *base, size_t off)
+{
+    uint16_t v; memcpy(&v, base + off, sizeof(v));   /* memcpy: packed-array elements may be unaligned */
+    mjson_printf(fn, fnd, "%Q:%u", key, (unsigned)v);
+}
+
+static void emit_u32_at(mjson_print_fn_t fn, void *fnd,
+                        const char *key, const uint8_t *base, size_t off)
+{
+    uint32_t v; memcpy(&v, base + off, sizeof(v));
+    mjson_printf(fn, fnd, "%Q:%lu", key, (unsigned long)v);
+}
+
 static void emit_bytes_at(mjson_print_fn_t fn, void *fnd,
                           const char *key, const uint8_t *base,
                           size_t off, size_t len)
@@ -2225,6 +2244,33 @@ static void load_struct_object(const char *slice, int slen, uint8_t *base,
     }
 }
 
+/* Generic table-driven emitter — mirror of load_struct_object. Emits a JSON
+ * object { "field":value, ... } for every entry in `table`, using the typed
+ * emit helpers so multi-byte fields cross-target safely (decimal numbers are
+ * host-order-independent). Every table entry must use a handled type. */
+static void emit_struct_object(mjson_print_fn_t fn, void *fnd,
+                               const uint8_t *base, const StructFieldDesc *table)
+{
+    mjson_printf(fn, fnd, "%s", "{");
+    int first = 1;
+    for (const StructFieldDesc *f = table; f->name; f++) {
+        if (!first) mjson_printf(fn, fnd, "%s", ",");
+        first = 0;
+        switch (f->type) {
+        case FLD_U8:    emit_u8_at   (fn, fnd, f->name, base, f->offset); break;
+        case FLD_S8:    emit_s8_at   (fn, fnd, f->name, base, f->offset); break;
+        case FLD_U16:   emit_u16_at  (fn, fnd, f->name, base, f->offset); break;
+        case FLD_S16:   emit_s16_at  (fn, fnd, f->name, base, f->offset); break;
+        case FLD_U32:
+        case FLD_S32:   emit_u32_at  (fn, fnd, f->name, base, f->offset); break;
+        case FLD_STR:   emit_str_at  (fn, fnd, f->name, base, f->offset, f->size); break;
+        case FLD_BYTES: emit_bytes_at(fn, fnd, f->name, base, f->offset, f->size); break;
+        default:        mjson_printf(fn, fnd, "%Q:0", f->name); break;
+        }
+    }
+    mjson_printf(fn, fnd, "%s", "}");
+}
+
 /* PlayerFile field table — keys must match emit_player_file_body. */
 static const StructFieldDesc s_player_fields[] = {
     { "nationality",          offsetof(PlayerFile, nationality),         0, FLD_U8 },
@@ -2260,6 +2306,43 @@ static const StructFieldDesc s_team_file_fields[] = {
     { "coach_name",         offsetof(TeamFile, coachName),        23, FLD_STR },
     { "some_flag",          offsetof(TeamFile, someFlag),          0, FLD_U8 },
     { "player_numbers",     offsetof(TeamFile, playerNumbers),    16, FLD_BYTES },
+    { NULL, 0, 0, FLD_END }
+};
+
+/* TransferOfferEntry field table (transferOfferTable[5]). Promoted from a raw
+ * 70-byte FLD_BYTES blob so its host-native uint16/int16 fields round-trip
+ * across the LE-SDL <-> BE-Amiga boundary (the int8 ordinals must stay per-byte,
+ * which is why a flat FLD_U16_ARRAY can't be used).
+ *
+ * Unlike the comp-slot / diy-standings overrides (which keep the FLD_BYTES blob
+ * and add a PARTIAL typed override because only some fields are sensitive), these
+ * field tables give FULL byte coverage, so the blob is removed entirely rather
+ * than overridden — no redundant raw bytes. Trade-off: legacy saves don't carry
+ * the typed keys, so these fields load empty from an old .CAR (regenerate). */
+static const StructFieldDesc s_transfer_offer_fields[] = {
+    { "team_offering",        offsetof(TransferOfferEntry, teamOffering),           0, FLD_U16 },
+    { "primary_player",       offsetof(TransferOfferEntry, primaryPlayerOrdinal),   0, FLD_S8  },
+    { "second_player",        offsetof(TransferOfferEntry, secondPlayerOrdinal),    0, FLD_S8  },
+    { "swap_player",          offsetof(TransferOfferEntry, swapPlayerOrdinal),      0, FLD_S8  },
+    { "extra_player",         offsetof(TransferOfferEntry, extraPlayerOrdinal),     0, FLD_S8  },
+    { "offer_amount",         offsetof(TransferOfferEntry, offerAmount),            0, FLD_U16 },
+    { "negotiation_step1",    offsetof(TransferOfferEntry, negotiationStep1Amount), 0, FLD_S16 },
+    { "negotiation_step2",    offsetof(TransferOfferEntry, negotiationStep2Amount), 0, FLD_S16 },
+    { "lifespan",             offsetof(TransferOfferEntry, lifespan),               0, FLD_U8  },
+    { "seen_flag",            offsetof(TransferOfferEntry, seenFlag),               0, FLD_U8  },
+    { NULL, 0, 0, FLD_END }
+};
+
+/* JobOffer field table (jobOffers[5] / newJobOffers[5]). Promoted from raw
+ * 130-byte FLD_BYTES blobs — teamNo (u16), amountOffered (u32) and unkn (u16)
+ * are host-native and byte-swapped cross-target as raw bytes. */
+static const StructFieldDesc s_job_offer_fields[] = {
+    { "team_no",        offsetof(JobOffer, teamNo),        0, FLD_U16   },
+    /* teamName uses 0xFF = unset (not a NUL-terminated string), so keep it as
+     * raw bytes — endian-safe and byte-exact, unlike FLD_STR. */
+    { "team_name",      offsetof(JobOffer, teamName),     18, FLD_BYTES },
+    { "amount_offered", offsetof(JobOffer, amountOffered), 0, FLD_U32   },
+    { "unkn",           offsetof(JobOffer, unkn),          0, FLD_U16   },
     { NULL, 0, 0, FLD_END }
 };
 
@@ -3574,6 +3657,33 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
         mjson_printf(json_out_emit, &out, "%s", "]");
     }
 
+    /* Transfer-offer + job-offer tables — fixed-size arrays of typed objects
+     * (cross-target-safe; replaces the host-native FLD_BYTES blobs). */
+    {
+        mjson_printf(json_out_emit, &out, ",\n  %Q:[", "transfer_offer_table");
+        for (uint32_t i = 0; i < 5; i++) {
+            if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
+            emit_struct_object(json_out_emit, &out,
+                               transferOfferTable + i * sizeof(TransferOfferEntry),
+                               s_transfer_offer_fields);
+        }
+        mjson_printf(json_out_emit, &out, "%s", "]");
+
+        const struct { const char *key; const uint8_t *base; } jobTabs[2] = {
+            { "new_job_offers", newJobOffers }, { "job_offers", jobOffers },
+        };
+        for (int t = 0; t < 2; t++) {
+            mjson_printf(json_out_emit, &out, ",\n  %Q:[", jobTabs[t].key);
+            for (uint32_t i = 0; i < 5; i++) {
+                if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
+                emit_struct_object(json_out_emit, &out,
+                                   jobTabs[t].base + i * sizeof(JobOffer),
+                                   s_job_offer_fields);
+            }
+            mjson_printf(json_out_emit, &out, "%s", "]");
+        }
+    }
+
     /* Career / current team reserve players — 16 × PlayerFile each,
      * extending the 16-player roster in career_team / current_team
      * to the on-disk 32-player slot. */
@@ -3887,6 +3997,31 @@ static void apply_semantic_load(const char *src, int src_size)
         }
     }
     PROF_END(market_players, "career-load");
+
+    /* Transfer-offer + job-offer tables — typed arrays-of-objects (mirror of
+     * the write side). Each table is a fixed 5 records. */
+    {
+        const struct { const char *path; uint8_t *base; size_t stride;
+                       const StructFieldDesc *table; } offerTabs[3] = {
+            { "$.transfer_offer_table", transferOfferTable, sizeof(TransferOfferEntry), s_transfer_offer_fields },
+            { "$.new_job_offers",       newJobOffers,        sizeof(JobOffer),           s_job_offer_fields },
+            { "$.job_offers",           jobOffers,           sizeof(JobOffer),           s_job_offer_fields },
+        };
+        for (int t = 0; t < 3; t++) {
+            const char *arr = NULL; int arr_len = 0;
+            if (mjson_find(src, src_size, offerTabs[t].path, &arr, &arr_len) != MJSON_TOK_ARRAY)
+                continue;
+            int pos = 0, voff, vlen, vt;
+            uint32_t i = 0;
+            while (i < 5 && (pos = fast_array_next(arr, arr_len, pos, &voff, &vlen, &vt)) != 0) {
+                if (vt != MJSON_TOK_OBJECT) { i++; continue; }
+                load_struct_object(arr + voff, vlen,
+                                   offerTabs[t].base + i * offerTabs[t].stride,
+                                   offerTabs[t].table);
+                i++;
+            }
+        }
+    }
 
     /* Career / current team reserve players — 16 × PlayerFile each. */
     PROF_START(reserves);
