@@ -954,6 +954,33 @@ typedef struct __attribute__((packed, aligned(2))) JobOffer {
 typedef char _joboffer_size_check[(sizeof(JobOffer) == 26) ? 1 : -1];
 
 /* ==================================================================
+ * TransferOfferEntry — 14 bytes, pack(1)
+ * One slot of transferOfferTable[5] (career third-party transfer offers).
+ * Pointer-free → identical layout on 32/64-bit; the save format stores
+ * the whole table as an opaque 70-byte blob (transfer_offer_table), so
+ * this typed view does not change the on-disk format.
+ *
+ *   wanted*  = players the offering team wants from you
+ *   offered* = players they put up in a swap (>=0) or none (<0)
+ * negotiationStep1/2Amount double as the haggling progress sentinels
+ * 0xFFFF/0xFFFE (see _OffersCommon status decode).
+ * ================================================================== */
+typedef struct __attribute__((packed)) TransferOfferEntry {
+    uint16_t teamOffering;            /* 0x00: offering team id (host-native, compared to teamNumber) */
+    int8_t   primaryPlayerOrdinal;    /* 0x02: first wanted player */
+    int8_t   secondPlayerOrdinal;     /* 0x03: second wanted player; <0 = single-player offer */
+    int8_t   swapPlayerOrdinal;       /* 0x04: offered swap player; <0 = none */
+    int8_t   extraPlayerOrdinal;      /* 0x05: offered extra player; <0 = none */
+    uint16_t offerAmount;             /* 0x06 */
+    int16_t  negotiationStep1Amount;  /* 0x08: first improved-offer amount; 0xFFFF/0xFFFE sentinel */
+    int16_t  negotiationStep2Amount;  /* 0x0A: second improved-offer amount; 0xFFFF sentinel */
+    uint8_t  lifespan;                /* 0x0C: expiry counter, decremented per turn */
+    uint8_t  seenFlag;                /* 0x0D: 0 = empty/active slot, 1 = seen */
+} TransferOfferEntry;
+
+typedef char _transferofferentry_size_check[(sizeof(TransferOfferEntry) == 14) ? 1 : -1];
+
+/* ==================================================================
  * NationalTeamRecord — 6 bytes, pack(1)
  * Entry in nationalTeams[]. Indexed by ordinal × 6.
  *
@@ -1016,11 +1043,12 @@ typedef struct __attribute__((packed)) TeamSelectionKeyCacheEntry {
     uint8_t  totalElements;     /* +5 — count of match slots */
     int8_t   remainingElements; /* +6 — slots left to play (< 0 means none) */
     uint8_t  roundIdx;          /* +7 — cup round index (cup mode) */
-    uint8_t  legFlag;           /* +8 — 1/2/3 leg/format variant; never
-                                 *      written via cacheEntry[8]= in the
-                                 *      ported C; initialised somewhere in
-                                 *      the cache-build chain that we
-                                 *      haven't fully mapped. Reads at
+    uint8_t  legFlag;           /* +8 — leg/format variant: 0 single-leg,
+                                 *      1/2 = first/second leg of a two-leg tie,
+                                 *      3 = replay. Written by the cup-bracket
+                                 *      builder _TeamSelectionKeyCache_BuildFromCompetitionBlock
+                                 *      (career_teams.c: `out[8] = N` after each
+                                 *      addNextRoundCupEntry). Read at
                                  *      diy_competition.c:2804+. */
     uint8_t  cupRoundStringIdx; /* +9 — cup round string index */
     /* +10..: TeamSelectionKeyCacheMatchSlot slots[totalElements] */
