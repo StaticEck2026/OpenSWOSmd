@@ -2847,7 +2847,7 @@ void _BuildGameListArrayFromTeamSelectionKeyCache(void)
          * sign of a stomped stride field. Treat it as the end of the cache
          * so the walker behaves the same as Amiga's "fell off into zeros"
          * accidental-safety-net behaviour. */
-        uint16_t stride = *(uint16_t *)(listEntry + 2);
+        uint16_t stride = ((TeamSelectionKeyCacheEntry *)listEntry)->entryStride;
         if (stride < 10 || stride > 256) {
             while (remaining > 0) {
                 *out++ = 0;
@@ -6492,7 +6492,7 @@ void _CareerGameListCommon(MenuEntry *item)
                     (void *)teamSelectionKeyCache);
             uint8_t *p = teamSelectionKeyCache;
             for (int s = 0; s < cacheCountS && s < 40; s++) {
-                uint16_t stride = *(uint16_t *)(p + 2);
+                uint16_t stride = ((TeamSelectionKeyCacheEntry *)p)->entryStride;
                 SWOS_DBG("[cglm-dump]   slot[%d] @%+lld stride=%u "
                                 "hdr=%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X"
                                 "  fx0=%02X %02X %02X %02X %02X %02X\n",
@@ -6563,12 +6563,14 @@ void _CareerGameListCommon(MenuEntry *item)
         careerGameListTeamControl = ctrl;
         careerGameBottomTeamName = (char *)botTeamData->team.teamName;
 
-        /* Check if match has been played (byte 0x0B != 0) */
-        if (a4[0x0B] != 0) {
-            uint16_t resultFlags = (uint16_t)a4[0x0B];
-            uint16_t leg2Scores = *(uint16_t *)(a4 + 0x10);
-            uint16_t leg1Scores = *(uint16_t *)(a4 + 0x12);
-            uint16_t penScores  = *(uint16_t *)(a4 + 0x14);
+        /* Check if match has been played (matchFlags != 0). a4 is the cache
+         * entry base; the first match slot starts at +0x0A. */
+        TeamSelectionKeyCacheMatchSlot *matchSlot = (TeamSelectionKeyCacheMatchSlot *)(a4 + 0x0A);
+        if (matchSlot->matchFlags != 0) {
+            uint16_t resultFlags = (uint16_t)matchSlot->matchFlags;
+            uint16_t leg2Scores = matchSlot->packedGoals;
+            uint16_t leg1Scores = matchSlot->aggregate;
+            uint16_t penScores  = matchSlot->penaltyScore;
             uint8_t *resultStr = _BuildMatchResultString(
                 1, leg2Scores, leg1Scores, penScores,
                 (uint8_t *)careerGameTopTeamName,    /* teamA (a1) */
@@ -6903,7 +6905,8 @@ afterHeader:
     a5++; /* next entry */
 
     /* Score entries — depends on whether match was played */
-    if (a4[0x0B] != 0) {
+    TeamSelectionKeyCacheMatchSlot *matchSlot = (TeamSelectionKeyCacheMatchSlot *)(a4 + 0x0A);
+    if (matchSlot->matchFlags != 0) {
         /* Match played — show scores.
          *
          * packedGoals at a4[0x10] is stored host-native (writer at
@@ -6914,7 +6917,7 @@ afterHeader:
          * scores so the career fixture row showed the user team's
          * score in the opponent column ("AC MILAN 4-1 LAZIO" when
          * reality was LAZIO 4-1 AC MILAN). */
-        uint16_t packedScore = *(uint16_t *)&a4[0x10];
+        uint16_t packedScore = matchSlot->packedGoals;
         int8_t team1Score = (int8_t)(packedScore >> 8);
         int8_t team2Score = (int8_t)(packedScore & 0xFF);
 

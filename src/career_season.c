@@ -485,7 +485,7 @@ static int16_t computeCategoryForCompetition(uint8_t *comp)
         return -1;
 
     uint16_t rank = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)comp);
-    uint16_t numTeams = *(uint16_t *)(comp + 50);
+    uint16_t numTeams = (uint16_t)((DIYCompetition *)comp)->numTeams;  /* 0x32; typed access auto-corrects the 64-bit namePtr shift */
 
     /* ratio = (rank - position) * 100 / numTeams (signed) */
     int32_t product = (int32_t)(int16_t)((int16_t)rank - position) * 100;
@@ -605,7 +605,7 @@ void _ShowChairmanOpinionAboutTheSeason(void)
     uint8_t *comp = competitionFileBuffer;
     int16_t position = (int16_t)_FindTeamInDIY(selTeamNumber, (DIYCompetition *)comp);
     uint16_t rank = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)comp);
-    uint16_t numTeams = *(uint16_t *)(comp + 50);
+    uint16_t numTeams = (uint16_t)((DIYCompetition *)comp)->numTeams;  /* 0x32; typed access auto-corrects the 64-bit namePtr shift */
 
     int32_t product = (int32_t)(int16_t)((int16_t)rank - position) * 100;
     int16_t ratio = (int16_t)(product / (int16_t)numTeams);

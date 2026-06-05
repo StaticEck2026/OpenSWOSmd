@@ -1148,8 +1148,8 @@ void _InitializeNewSeason(void)
         uint8_t lastKey = 0;
         int16_t count = teamSelectionKeyCacheCount - 1;
         for (int16_t i = count; i >= 0; i--) {
-            lastKey = cachePtr[1];
-            uint16_t stride = *(uint16_t *)(cachePtr + 2);
+            lastKey = ((TeamSelectionKeyCacheEntry *)cachePtr)->sortKey;
+            uint16_t stride = ((TeamSelectionKeyCacheEntry *)cachePtr)->entryStride;
             cachePtr += stride;
         }
         uint16_t d0 = (uint16_t)(lastKey - careerJobOfferPhaseBias) & 0xFF;
