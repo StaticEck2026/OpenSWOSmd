@@ -1042,57 +1042,46 @@ static void copyWords(volatile uint16_t *dst, const volatile uint16_t *src, int1
  * _DIY_LoadCurrentCompetitionSlot / unused for tournaments, so they self-
  * heal; teamIndexOrder (a real field past the header) always survives.
  * ================================================================ */
-#define DIY_CFB_TEAMLIST_OFF   0x5Au   /* legacy team-index list offset in cfb */
-#define DIY_CFB_TEAMIDS_OFF    0x9Au   /* legacy diyTournamentTeamIds offset in cfb */
-#define DIY_CFB_GROUPMAP_OFF   0x11Au  /* legacy group-map offset in cfb */
-#define DIY_CFB_SLOTS_OFF      0x15Au  /* legacy slot-array offset in cfb */
-#define DIY_CFB_STANDINGS_OFF  0x420u  /* legacy diyCompetitionStart-adjacent offset in cfb */
 #define DIY_CFB_STANDINGS_LEN  0x734u  /* current-stage record + league standings */
 
-/* Field-map a legacy-layout competition buffer (`c`, the cfb byte layout
- * used by competitionFileBuffer AND every careerCompetitionSlotPtrTable
- * context slot) INTO the typed DIYTournamentState master + the standalone
- * current-stage buffer. `c` is parameterised so the career store/load can
- * reuse this for any slot, not just competitionFileBuffer (the two layouts
- * differ post-untangle, so a flat word-copy can't substitute). */
-static void diy_cfb_to_tournament_buf(const uint8_t *c)
+/* --- cfb<->tournament copy ---
+ * Post-untangle EVERY career competition slot — competitionFileBuffer (slot 0,
+ * = primaryCompetitionBuf) AND the four *Context slots — is a standalone
+ * CompetitionSlotBuffer, so this is a single flat struct copy: the
+ * DIYTournamentState (header tail incl. currentRoundIndex intact — teamIndexOrder
+ * at its real 0x41E, no 0x5A overlay) plus the stage snapshot. No magic offsets,
+ * no header collision → type-2 tournaments (WC primary, euro-cup quaternary) keep
+ * currentRoundIndex and the per-stage cache fills. The legacy raw-offset field-
+ * map (0x5A/0x9A/0x11A/0x15A/0x420) retired with the careerFileBuffer overlay it
+ * served. */
+static void diy_cfb_to_tournament_clean(const uint8_t *c)
 {
-    DIYTournamentState *t = &diyFileBufferCopy;
-    memcpy(&t->header,        c,                        sizeof(DIYCompetition));
-    memcpy(t->teamIndexOrder, c + DIY_CFB_TEAMLIST_OFF, sizeof(t->teamIndexOrder));
-    memcpy(t->teamIds,        c + DIY_CFB_TEAMIDS_OFF,  sizeof(t->teamIds));
-    memcpy(t->groupMap,       c + DIY_CFB_GROUPMAP_OFF, sizeof(t->groupMap));
-    memcpy(t->slots,          c + DIY_CFB_SLOTS_OFF,    sizeof(t->slots));
-    memcpy(diyCompetitionStartBuf,
-           c + DIY_CFB_STANDINGS_OFF, DIY_CFB_STANDINGS_LEN);
+    const CompetitionSlotBuffer *s = (const CompetitionSlotBuffer *)c;
+    memcpy(&diyFileBufferCopy, &s->tourn, sizeof(DIYTournamentState));
+    memcpy(diyCompetitionStartBuf, s->stageSnapshot, DIY_CFB_STANDINGS_LEN);
 }
 
-static void diy_tournament_to_cfb_buf(uint8_t *c)
+static void diy_tournament_to_cfb_clean(uint8_t *c)
 {
-    const DIYTournamentState *t = &diyFileBufferCopy;
-    memcpy(c,                        &t->header,        sizeof(DIYCompetition));
-    memcpy(c + DIY_CFB_TEAMLIST_OFF, t->teamIndexOrder, sizeof(t->teamIndexOrder));
-    memcpy(c + DIY_CFB_TEAMIDS_OFF,  t->teamIds,        sizeof(t->teamIds));
-    memcpy(c + DIY_CFB_GROUPMAP_OFF, t->groupMap,       sizeof(t->groupMap));
-    memcpy(c + DIY_CFB_SLOTS_OFF,    t->slots,          sizeof(t->slots));
-    memcpy(c + DIY_CFB_STANDINGS_OFF,
-           diyCompetitionStartBuf, DIY_CFB_STANDINGS_LEN);
+    CompetitionSlotBuffer *s = (CompetitionSlotBuffer *)c;
+    memcpy(&s->tourn, &diyFileBufferCopy, sizeof(DIYTournamentState));
+    memcpy(s->stageSnapshot, diyCompetitionStartBuf, DIY_CFB_STANDINGS_LEN);
 }
 
-static void diy_cfb_to_tournament(void) { diy_cfb_to_tournament_buf(competitionFileBuffer); }
-static void diy_tournament_to_cfb(void) { diy_tournament_to_cfb_buf(competitionFileBuffer); }
+/* slot 0 (competitionFileBuffer = primaryCompetitionBuf) and the four *Context
+ * slots are all CompetitionSlotBuffers — one flat copy serves every slot. */
+static void diy_cfb_to_tournament(void) { diy_cfb_to_tournament_clean(competitionFileBuffer); }
+static void diy_tournament_to_cfb(void) { diy_tournament_to_cfb_clean(competitionFileBuffer); }
 
 /* Exported buffer-parameterised entry points for the career slot store/load
  * (career_teams.c). A type-2 tournament slot can live in competitionFileBuffer
- * OR any *Context buffer, so the career path must field-map an arbitrary slot
- * base — it can no longer flat-copy diyFileBufferCopy verbatim because the
- * typed master (teamIndexOrder @0x41E) and the cfb byte layout (@0x5A,
- * stage standings @0x420) diverged in the step-3 untangle. */
+ * OR any *Context buffer; all are CompetitionSlotBuffers now, so one flat copy
+ * serves every slot base. */
 __attribute__((used, externally_visible))
-void _DIY_CfbBufToTournament(const uint8_t *cfb) { diy_cfb_to_tournament_buf(cfb); }
+void _DIY_CfbBufToTournament(const uint8_t *cfb) { diy_cfb_to_tournament_clean(cfb); }
 
 __attribute__((used, externally_visible))
-void _DIY_TournamentToCfbBuf(uint8_t *cfb) { diy_tournament_to_cfb_buf(cfb); }
+void _DIY_TournamentToCfbBuf(uint8_t *cfb) { diy_tournament_to_cfb_clean(cfb); }
 
 /* SaveDIYTournament / DIY_CopyCompetitionFileBufferToDiyFileBufferCopy
  * (SWOS2.s 32343 / 32365): competitionFileBuffer -> diyFileBufferCopy. */
@@ -9046,8 +9035,16 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
          * because those are selTeamsPtr[0..3] from batched file load,
          * instead of unk1[0..3] which is Colombia/Romania/Switzerland/
          * Trinidad-Tobago). Decode each entry once via BE_READ_U16 so
-         * the comparison sees the right value on both hosts. */
-        const uint8_t *seedTable = (const uint8_t *)(a5 + 7 + seedOff);
+         * the comparison sees the right value on both hosts.
+         *
+         * +text[2]-growth delta: seedOff (= unk3) is the 32-bit Amiga byte
+         * distance from a5+7 to unk1[]; every preset competition reaching
+         * this seed-reorder (unk4 != 0 → all are CompetitionCup/Cup2 static
+         * templates with a `char *text[2]` pair) has unk1[] pushed +8 on
+         * 64-bit. Must match the writers (career_season.c euro-cup list /
+         * career_eurocups.c) and readers (career_teams.c, career_init.c). */
+        const uint8_t *seedTable = (const uint8_t *)(a5 + 7 + seedOff
+                          + 2u * (sizeof(char *) - sizeof(uint32_t)));
         uint8_t *a3 = ((DIYTournamentState *)a6)->teamIndexOrder;
         int16_t count = (int8_t)a5[0xF] - 1;
         /* Find-loop bound: search ONLY the teams just loaded into
@@ -9701,8 +9698,26 @@ tournament_entry:
                          * diyCompetitionStart sat 0x420 after diyFileBufferCopy
                          * in one BSS run; they are now separate buffers, so step
                          * to it by symbol. */
-                        raw = (uint8_t *)&diyCompetitionStart;
+                        /* BUG-D FIX (layer 2): switch to the QUERIED context's own
+                         * current-stage image — the legacy `raw += 0x420` read
+                         * comp+0x420 (the context's embedded stage). Post-untangle,
+                         * each *Context / slot-0 CompetitionSlotBuffer carries its
+                         * stage in `stageSnapshot`; only the master working buffer
+                         * diyFileBufferCopy has its live stage in the SEPARATE
+                         * diyCompetitionStart global. Phase A wrongly used
+                         * diyCompetitionStart for ALL, so a *Context query read
+                         * whatever competition was last loaded (e.g. the player's
+                         * league at season-end chairman time) instead of the euro
+                         * cup's stage → finalist not found → 0x6006. (layer 1: also
+                         * repoint compEx, which the original group-switch left at the
+                         * stale master — the asm uses one base reg a6, the C split it
+                         * into comp/raw AND compEx.) */
+                        if ((uint8_t *)comp == (uint8_t *)&diyFileBufferCopy)
+                            raw = (uint8_t *)&diyCompetitionStart;
+                        else
+                            raw = (uint8_t *)comp + offsetof(CompetitionSlotBuffer, stageSnapshot);
                         comp = (DIYCompetition *)raw;
+                        compEx = (DIYCompetitionEx *)raw;
                         numTeams = (uint16_t)comp->numTeams;
                         if (stageSlot->isLeagueFormat == 0)
                             goto cup_search;

@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "swos_types.h"
+#include "game_types.h"   /* CompetitionSlotBuffer (Phase B raw-save size) */
 #include "file_io.h"
 #include "display.h"
 #include "menus.h"
@@ -574,8 +575,13 @@ int16_t _SavePresetCompetitionFile(uint8_t *filename)
 
     _SaveCompetitionFile();
 
-    fileSize = (uint32_t)((uint8_t *)&numSelectedTeams - (uint8_t *)&competitionFileBuffer)
-             + (uint32_t)numDiyTeams * 684 + 2;
+    /* Phase B: competitionFileBuffer is now a standalone CompetitionSlotBuffer
+     * (no longer contiguous with numSelectedTeams), so the legacy span calc is
+     * gone. This RAW path only runs when the JSON writer above fails
+     * (SWOS_SAVE_FORMAT_JSON returns first), and the DIY team append no longer
+     * sits contiguously after the buffer — raw .PRE/.DIY is a legacy fallback.
+     * Dump just the competition buffer. */
+    fileSize = (uint32_t)sizeof(CompetitionSlotBuffer);
 
     result = _WriteFile(filename, (uint8_t *)&competitionFileBuffer, fileSize);
     if (result != 0) {
@@ -653,8 +659,13 @@ int16_t _SaveDIYFile(uint8_t *filename)
 
     _SaveCompetitionFile();
 
-    fileSize = (uint32_t)((uint8_t *)&numSelectedTeams - (uint8_t *)&competitionFileBuffer)
-             + (uint32_t)numDiyTeams * 684 + 2;
+    /* Phase B: competitionFileBuffer is now a standalone CompetitionSlotBuffer
+     * (no longer contiguous with numSelectedTeams), so the legacy span calc is
+     * gone. This RAW path only runs when the JSON writer above fails
+     * (SWOS_SAVE_FORMAT_JSON returns first), and the DIY team append no longer
+     * sits contiguously after the buffer — raw .PRE/.DIY is a legacy fallback.
+     * Dump just the competition buffer. */
+    fileSize = (uint32_t)sizeof(CompetitionSlotBuffer);
 
     result = _WriteFile(filename, (uint8_t *)&competitionFileBuffer, fileSize);
     if (result != 0) {

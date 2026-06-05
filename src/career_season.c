@@ -187,7 +187,16 @@ void _Career_PrepareEuropeanCupQualificationState(void)
     /* --- European Cup --- */
     {
         uint8_t *base = euroCupCopy;
-        uint8_t offset = base[7];
+        /* base[7] is the 32-bit Amiga byte distance from base+7 to the
+         * embedded unk1[] qualified-team list. Every cup *Copy struct has a
+         * `char *text[2]` pair between the descriptor and unk1[]; on 64-bit
+         * those two pointers widen 8->16 bytes, pushing unk1[] +8. Without
+         * this delta the list pointer lands inside text[1], the qualified
+         * teams overwrite the name pointer, and _DrawMenuText later
+         * dereferences team-id bytes as a string (SIGSEGV). Same
+         * compensation as _Career_SelectEuroCupSlotIfTeamParticipates
+         * (career_init.c) and the AltTableHeader readers (career_teams.c). */
+        uint16_t offset = base[7] + 2u * (sizeof(char *) - sizeof(uint32_t));
         uint8_t *teamList = &base[7 + offset];
         euroCupTeamListPtr = teamList;
         euroCupTeamListWritePtr = teamList;
@@ -208,7 +217,8 @@ void _Career_PrepareEuropeanCupQualificationState(void)
     /* --- Cup Winners' Cup --- */
     {
         uint8_t *base = cupWinnersCupCopy;
-        uint8_t offset = base[7];
+        /* +text[2]-growth delta — see European Cup block above. */
+        uint16_t offset = base[7] + 2u * (sizeof(char *) - sizeof(uint32_t));
         uint8_t *teamList = &base[7 + offset];
         cupWinnersCupTeamListPtr = teamList;
         cupWinnersCupTeamListWritePtr = teamList;
@@ -229,7 +239,8 @@ void _Career_PrepareEuropeanCupQualificationState(void)
     /* --- UEFA Cup --- */
     {
         uint8_t *base = uefaCupCopy;
-        uint8_t offset = base[7];
+        /* +text[2]-growth delta — see European Cup block above. */
+        uint16_t offset = base[7] + 2u * (sizeof(char *) - sizeof(uint32_t));
         uint8_t *teamList = &base[7 + offset];
         uefaCupTeamListPtr = teamList;
         uefaCupTeamListWritePtr = teamList;
@@ -872,7 +883,10 @@ extern void    *ecQualifyingGroupsTable[];
  * `void *[]` here to avoid pulling in competition_data.h's other
  * typedefs (some clash with locals in this file). */
 extern void    *worldCupQualifyingGroupsTable[];
-extern uint32_t tourStringTable[];
+/* Real storage is `char *tourStringTable[6]` (competition_data.c). Declaring
+ * it uint32_t here truncated each entry to 4 bytes on 64-bit (wrong stride
+ * AND a truncated pointer value), corrupting the runtime tour-name store. */
+extern char    *tourStringTable[];
 
 /* Forward declarations */
 static void setupWorldCupQualifyingGroups(uint16_t **teamListPtr);
@@ -959,7 +973,12 @@ static void fillWorldCupQualifyingGroupTeams(uint8_t regionCode, uint8_t *group,
     }
 
     uint8_t hdrSize = group[7];
-    uint16_t *teamSlots = (uint16_t *)(group + 7 + (hdrSize & 0xFF));
+    /* +text[2]-growth delta — the embedded unk1[] team list sits 8 bytes
+     * later on 64-bit (cup struct's char *text[2] widens 8->16). Without it
+     * the writes land in text[1] and stomp the comp name pointer. Matches
+     * the readers in career_teams.c / career_init.c. */
+    uint16_t *teamSlots = (uint16_t *)(group + 7 + (hdrSize & 0xFF)
+                          + 2u * (sizeof(char *) - sizeof(uint32_t)));
 
     uint16_t firstTeam;
     if (selTeamNumber != worldCupHostTeam &&
@@ -1032,7 +1051,9 @@ static void setupWorldCupQualifyingGroups(uint16_t **teamListPtr)
         for (int16_t g = 0; g < 8; g++) {
             uint8_t *group = (uint8_t *)worldCupQualifyingGroupsTable[g];
             uint8_t hdrSize = group[7];
-            uint16_t *slot = (uint16_t *)(group + 7 + (hdrSize & 0xFF) + colOffset);
+            /* +text[2]-growth delta — see fillWorldCupQualifyingGroupTeams. */
+            uint16_t *slot = (uint16_t *)(group + 7 + (hdrSize & 0xFF)
+                            + 2u * (sizeof(char *) - sizeof(uint32_t)) + colOffset);
 
             uint16_t teamId;
             if (colOffset == 0 && group == selectedGroup &&
@@ -1181,7 +1202,9 @@ static void setCupPickList_Europe(uint16_t **teamListPtr)
         for (int16_t g = 0; g < 8; g++) {
             uint8_t *group = (uint8_t *)ecQualifyingGroupsTable[g];
             uint8_t hdrSize = group[7];
-            uint16_t *slot = (uint16_t *)(group + 7 + (hdrSize & 0xFF) + colOffset);
+            /* +text[2]-growth delta — see fillWorldCupQualifyingGroupTeams. */
+            uint16_t *slot = (uint16_t *)(group + 7 + (hdrSize & 0xFF)
+                            + 2u * (sizeof(char *) - sizeof(uint32_t)) + colOffset);
 
             uint16_t teamId;
             int readFromList = 1;
@@ -1227,7 +1250,9 @@ static void setupFriendlyCupTeams(void)
     uint8_t *comp = friendlyCopy;
     int16_t teamCount = (int8_t)((CompetitionCup *)comp)->firstRoundNo;
     uint8_t hdrSize = (uint8_t)((Competition *)comp)->unk3;
-    uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF));
+    /* +text[2]-growth delta — see fillWorldCupQualifyingGroupTeams. */
+    uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF)
+                        + 2u * (sizeof(char *) - sizeof(uint32_t)));
     uint16_t *listBase = teamList;
 
     /* BE writes so the slot bytes match the static-init dc.b layout
@@ -1255,7 +1280,9 @@ static void setupInvitationTournamentTeams(void)
     uint8_t *comp = invitationTournamentCopy;
     int16_t teamCount = (int8_t)((CompetitionCup *)comp)->firstRoundNo;
     uint8_t hdrSize = (uint8_t)((Competition *)comp)->unk3;
-    uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF));
+    /* +text[2]-growth delta — see fillWorldCupQualifyingGroupTeams. */
+    uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF)
+                        + 2u * (sizeof(char *) - sizeof(uint32_t)));
     uint16_t *listBase = teamList;
 
     /* BE writes — see setupFriendlyCupTeams comment. */
@@ -1278,11 +1305,15 @@ static void setupTourCupTeams(void)
 
     uint8_t *tour = tourCopy;
     int8_t nameOff = (int8_t)tour[5];
-    *(uint32_t *)(tour + 5 + nameOff) = tourStringTable[randRegion];
+    /* tour+5+nameOff targets text[0] (name-table start, doesn't shift), but
+     * the slot is a full char* — write all 8 bytes on 64-bit, not 4. */
+    *(char **)(tour + 5 + nameOff) = tourStringTable[randRegion];
 
     int16_t teamCount = (int8_t)tour[0xD];
     uint8_t hdrSize = tour[7];
-    uint16_t *teamList = (uint16_t *)(tour + 7 + (hdrSize & 0xFF));
+    /* +text[2]-growth delta — see fillWorldCupQualifyingGroupTeams. */
+    uint16_t *teamList = (uint16_t *)(tour + 7 + (hdrSize & 0xFF)
+                        + 2u * (sizeof(char *) - sizeof(uint32_t)));
     uint16_t *listBase = teamList;
 
     /* BE writes — see setupFriendlyCupTeams comment. */

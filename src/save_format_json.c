@@ -1234,106 +1234,35 @@ static const FieldDesc s_career_scalars[] = {
      * problem — see CLAUDE.md). Promoting these to structured DIY
      * fields with sym-encoded inner pointers is future work; for now
      * preserve byte fidelity as flat scalars. */
-    /* Primary slot competition header — lives AT &competitionFileBuffer
-     * (the overlay aliases it there). This used to be a single
-     * 154/158-byte `primary_comp_block` byte blob, which is NOT
-     * cross-target safe for TWO reasons (caught when a 64-bit save panicked
-     * _FindTeamInDIY on a 32-bit Amiga load — numTeams byte-swapped to
-     * 4608 → runaway loop → panic 0x6006):
-     *   1. ENDIANNESS — the header's uint16 fields (numTeams,
-     *      slotStateA/B/C, matchData round info, …) are stored host-native.
-     *      x86 LE bytes [18,0] read as BE 4608 on the Amiga. Raw bytes
-     *      carry the writer's byte order; decimal JSON numbers don't.
-     *   2. STRUCT PADDING — DIYCompetition is 0x60 on 32-bit, 0x68 on
-     *      64-bit: namePtr widens +4 AND the struct gets +4 trailing pad
-     *      (8-byte alignment) after playEachTeam, so the DIYCompetitionEx
-     *      fields (minSubstitutes/pointsForAWin/matchData) sit 4 bytes
-     *      later relative to compId on 64-bit. A flat copy mis-slots them.
-     *
-     * Fix: split the header into pieces, each emitted at its actual struct
-     * offset (offsetof → lands at the host's real position) with the run's
-     * true element type — bytes for u8/s8 fields, FLD_U16_ARRAY (endian-
-     * neutral decimal) for the uint16 fields:
-     *   competitionType (0x00)     → primary_slot_type (scalar, above)
-     *   isActive        (0x02)     → primary_competition_over (scalar)
-     *   competitionName (0x04, 36) → primary_competition_name (string)
-     *   namePtr         (0x28)     → primary_name_ptr (raw bytes, host
-     *                                width). Still a stale absolute pointer
-     *                                (pointer-to-disk) — same behaviour as
-     *                                the old blob; a symbolic restore is a
-     *                                separate follow-up (must restore to the
-     *                                ORIGINAL static-table address, not a
-     *                                string-pool copy, because namePtr is
-     *                                checked both by identity == aFriendly
-     *                                AND by the aEuropeanTour..aOceaniaTour
-     *                                address-range test in career_status.c).
-     *   compId .. matchData head   → runs A..G below.
-     * The 64-bit trailing-pad bytes fall between runs D and E and are
-     * simply not emitted (always 0). */
-    FX("primary_competition_over",        competitionOver,              FLD_U16),
-    FA("primary_competition_name",        diyPresetNameOfCompetition, 36, FLD_STR),
-    { "primary_name_ptr",
-      (void *)((uint8_t *)&competitionFileBuffer + offsetof(DIYCompetition, namePtr)),
-      (uint32_t)sizeof(void *), FLD_BYTES },
-    /* Run A — compId, slotId, field_2E, viewRandomPhase, avgSkill,
-     * strengthTier: 6 u8 bytes. Byte-safe (single bytes don't swap). */
-    { "primary_comp_ids",
-      (void *)((uint8_t *)&competitionFileBuffer + offsetof(DIYCompetition, compId)),
-      6, FLD_BYTES },
-    /* Run B — numTeams, pitchTypeOrSeason, pitchType: 3× int16. */
-    { "primary_comp_dims",
-      (void *)((uint8_t *)&competitionFileBuffer + offsetof(DIYCompetition, numTeams)),
-      6, FLD_U16_ARRAY },
-    /* Run C — startMonth, endMonth: 2 int8. Byte-safe. */
-    { "primary_comp_months",
-      (void *)((uint8_t *)&competitionFileBuffer + offsetof(DIYCompetition, startMonth)),
-      2, FLD_BYTES },
-    /* Run D — resultCode..playEachTeam: 19 contiguous int16 fields. This is
-     * the run carrying numTeams-class state (slotState*, round counters). */
-    { "primary_comp_state",
-      (void *)((uint8_t *)&competitionFileBuffer + offsetof(DIYCompetition, resultCode)),
-      38, FLD_U16_ARRAY },
-    /* Run E — DIYCompetitionEx.minSubstitutes, pointsForAWin: 2× uint16.
-     * Anchored at the Ex offset so the 64-bit +4 trailing pad before it is
-     * skipped automatically. */
-    { "primary_comp_ex",
-      (void *)((uint8_t *)&competitionFileBuffer + offsetof(DIYCompetitionEx, minSubstitutes)),
-      4, FLD_U16_ARRAY },
-    /* Run F — matchData head, uint16 portion (0x26 bytes = 19 words). Both
-     * the cup and league union views are uint16 across this leading span. */
-    { "primary_comp_matchdata_words",
-      (void *)((uint8_t *)&competitionFileBuffer + offsetof(DIYCompetitionEx, matchData)),
-      38, FLD_U16_ARRAY },
-    /* Run G — matchData byte remainder up to diyTeamIdListType2: the head of
-     * cupRoundResults[] (uint8, byte-safe). 16 bytes on BOTH targets:
-     * the overlay now carries a SECOND +4 pad (before leagueWarningsEnabled,
-     * swos_globals_career_overlay.c) compensating the DIYCompetition 64-bit
-     * trailing-alignment pad, so diyTeamIdListType2 sits at the struct-
-     * correct offset (0x9A on 32-bit, 0xA2 on 64-bit) and the
-     * matchData→diyTeamIdListType2 window is a uniform 54 bytes
-     * (= run F 38 + this 16) on both. No more per-target #if and no more
-     * cup-results straddle. */
-    { "primary_comp_matchdata_bytes",
-      (void *)((uint8_t *)&competitionFileBuffer + offsetof(DIYCompetitionEx, matchData) + 0x26),
-      16, FLD_BYTES },
-    /* Context-slot raw blobs. Sizes track the per-slot overlay region,
-     * which grew +4 on 64-bit when the namePtr pad was added to each
-     * context slot's header (see swos_globals_career_overlay.c). Without
-     * the conditional size the blob under-covers the slot tail by 4 bytes
-     * on 64-bit. These blobs are being superseded by the comp_slots typed
-     * serializer (which overrides the header on load); kept in parallel
-     * during transition for the matchData/scratch tail not yet typed. */
-#if UINTPTR_MAX == 0xFFFFFFFFu
-    FA("competition_context",         competitionContext,         2900, FLD_BYTES),
-    FA("tertiary_competition_context",tertiaryCompetitionContext, 1092, FLD_BYTES),
-    FA("diy_competition_context",     diyCompetitionContext,      1092, FLD_BYTES),
-    FA("euro_cups_competition_context",euroCupsCompetitionContext, 2900, FLD_BYTES),
-#else
-    FA("competition_context",         competitionContext,         2904, FLD_BYTES),
-    FA("tertiary_competition_context",tertiaryCompetitionContext, 1096, FLD_BYTES),
-    FA("diy_competition_context",     diyCompetitionContext,      1096, FLD_BYTES),
-    FA("euro_cups_competition_context",euroCupsCompetitionContext, 2904, FLD_BYTES),
-#endif
+    /* Primary slot (competitionFileBuffer = primaryCompetitionBuf) — Phase B.
+     * Slot 0 is now a standalone CompetitionSlotBuffer, IDENTICAL to the four
+     * *Context slots below, so it serializes the same way: ONE full-buffer raw
+     * blob here (carries the same-arch tail — tournament teamIds/teamIndexOrder/
+     * slots + stageSnapshot that used to ride the careerFileBuffer region dump,
+     * now a hole) PLUS the typed emit_comp_slot("primary") cross-target override
+     * (header + per-type team-ids + matchData, endian-neutral) and the
+     * comp_slot_stage stage serializer (both already emitted in write_career).
+     * The old granular primary_comp_* runs (a hand-split header for cross-target
+     * safety) are superseded by emit_comp_slot, which corrects every cross-
+     * target-sensitive field on load AFTER this blob. namePtr rides the blob
+     * (stale absolute pointer) and is re-derived by _RebuildPointersAfterLoad. */
+    FA("primary_competition_context",     competitionFileBuffer,       sizeof(CompetitionSlotBuffer), FLD_BYTES),
+    /* Context-slot raw blobs — UNTANGLE step A4. The 4 *Context slots are now
+     * standalone typed CompetitionSlotBuffer { DIYTournamentState tourn;
+     * uint8_t stageSnapshot[0x734]; } (swos_competition_slots.c), no longer
+     * packed/aliased in the careerFileBuffer overlay. The blob must therefore
+     * cover the whole buffer — sizeof(CompetitionSlotBuffer) = 0xB92 = 2962 B
+     * on BOTH arches (the _reserved_5A pad fixes DIYTournamentState at 0x45E
+     * either way, so no per-target size split). The old per-overlay sizes
+     * (2900/1092) truncated the new layout: tertiary/diy at 1092 didn't even
+     * reach the relocated teamIndexOrder@0x41E or the stageSnapshot@0x45E, so
+     * those slots lost their seed order + standings across save/load. The
+     * comp_slots typed serializer still overrides the cross-target-sensitive
+     * header on load; this blob carries the (same-arch) tail. */
+    FA("competition_context",          competitionContext,          sizeof(CompetitionSlotBuffer), FLD_BYTES),
+    FA("tertiary_competition_context", tertiaryCompetitionContext,  sizeof(CompetitionSlotBuffer), FLD_BYTES),
+    FA("diy_competition_context",      diyCompetitionContext,       sizeof(CompetitionSlotBuffer), FLD_BYTES),
+    FA("euro_cups_competition_context",euroCupsCompetitionContext,  sizeof(CompetitionSlotBuffer), FLD_BYTES),
 
     /* Team selection key cache — a list of teamSelectionKeyCacheCount
      * variable-length entries. Each entry header: out[0]=teamSlot,
@@ -3547,7 +3476,8 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     /* TYPE-2 tournament current-STAGE (cross-target) — mirrors the preset
      * write_competition_buf path. When the primary slot is a tournament
      * (national-team WORLD CUP / EUROPEAN CHAMPIONSHIPS), the active stage
-     * (group league / knockout cup) lives at competitionFileBuffer + 0x420.
+     * (group league / knockout cup) lives at competitionFileBuffer's
+     * stageSnapshot (Phase B; was the legacy +0x420 overlay).
      * The master is serialized typed by comp_slots above, but the stage rides
      * the raw blob and byte-swaps on a 64-bit->Amiga load. Emit it typed +
      * endian-neutral: comp_slot_stage (struct-anchored header + per-type
@@ -3559,7 +3489,7 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     if (((const DIYCompetitionEx *)&competitionFileBuffer)
             ->base.competitionType == 2) {
         const DIYCompetitionEx *stage = (const DIYCompetitionEx *)
-            ((const uint8_t *)&competitionFileBuffer + 0x420u);
+            ((const uint8_t *)&competitionFileBuffer + offsetof(CompetitionSlotBuffer, stageSnapshot));
         mjson_printf(json_out_emit, &out, ",\n  ");
         emit_comp_slot(json_out_emit, &out, "comp_slot_stage", stage);
         if (diy_stage_is_league(stage)) {
@@ -3804,7 +3734,7 @@ static void apply_semantic_load(const char *src, int src_size)
     if (((const DIYCompetitionEx *)&competitionFileBuffer)
             ->base.competitionType == 2) {
         DIYCompetitionEx *stage = (DIYCompetitionEx *)
-            ((uint8_t *)&competitionFileBuffer + 0x420u);
+            ((uint8_t *)&competitionFileBuffer + offsetof(CompetitionSlotBuffer, stageSnapshot));
         load_comp_slot(src, src_size, "comp_slot_stage", stage);
         if (diy_stage_is_league(stage)) {
             const char *rows = NULL; int rows_len = 0;
@@ -3900,7 +3830,7 @@ static void apply_semantic_load(const char *src, int src_size)
     if (((const DIYCompetitionEx *)&competitionFileBuffer)
             ->base.competitionType == 2) {
         DIYCompetitionEx *stage = (DIYCompetitionEx *)
-            ((uint8_t *)&competitionFileBuffer + 0x420u);
+            ((uint8_t *)&competitionFileBuffer + offsetof(CompetitionSlotBuffer, stageSnapshot));
         if (!diy_stage_is_league(stage)) {
             uint16_t n = numDiyTeams; if (n > 51) n = 51;
             for (uint16_t k = 0; k < n; k++) {
@@ -4399,8 +4329,8 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
     /* TYPE-2 tournament current-STAGE slot. A WORLD CUP / EUROPEAN
      * CHAMPIONSHIP keeps a *second* DIYCompetitionEx for the stage in
      * progress — a league during the group phase, a cup during the
-     * knockout — embedded at competitionFileBuffer + 0x420
-     * (DIY_CFB_STANDINGS_OFF; diy_competition.c's diy_*_to_* keep it in
+     * knockout — embedded at competitionFileBuffer's stageSnapshot (Phase B;
+     * was the legacy +0x420 overlay; diy_competition.c's diy_*_to_* keep it in
      * sync with diyCompetitionStart). The primary "comp_slot" above is the
      * tournament MASTER (DIYTournamentState: team-id pool + slot records),
      * NOT this stage, so the stage rode the raw comp_scalars blob and
@@ -4417,7 +4347,7 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
     if (((const DIYCompetitionEx *)&competitionFileBuffer)
             ->base.competitionType == 2) {
         const DIYCompetitionEx *stage = (const DIYCompetitionEx *)
-            ((const uint8_t *)&competitionFileBuffer + 0x420u);
+            ((const uint8_t *)&competitionFileBuffer + offsetof(CompetitionSlotBuffer, stageSnapshot));
         mjson_printf(json_out_emit, &out, ",\n  ");
         emit_comp_slot(json_out_emit, &out, "comp_slot_stage", stage);
 
@@ -4585,7 +4515,7 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
     if (((const DIYCompetitionEx *)&competitionFileBuffer)
             ->base.competitionType == 2) {
         DIYCompetitionEx *stage = (DIYCompetitionEx *)
-            ((uint8_t *)&competitionFileBuffer + 0x420u);
+            ((uint8_t *)&competitionFileBuffer + offsetof(CompetitionSlotBuffer, stageSnapshot));
         load_comp_slot((const char *)src, (int)src_size, "comp_slot_stage",
                        stage);
 
@@ -4688,7 +4618,7 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
     if (((const DIYCompetitionEx *)&competitionFileBuffer)
             ->base.competitionType == 2) {
         DIYCompetitionEx *stage = (DIYCompetitionEx *)
-            ((uint8_t *)&competitionFileBuffer + 0x420u);
+            ((uint8_t *)&competitionFileBuffer + offsetof(CompetitionSlotBuffer, stageSnapshot));
         if (!diy_stage_is_league(stage)) {
             uint16_t n = numDiyTeams; if (n > 51) n = 51;
             for (uint16_t k = 0; k < n; k++) {

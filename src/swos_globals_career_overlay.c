@@ -589,11 +589,7 @@ __asm__(
     ".globl " _ASM_PFX "seasonSquadTeamNumbers\n"
     _ASM_PFX "seasonSquadTeamNumbers:\n"
     ".skip 68\n"
-    ".globl " _ASM_PFX "competitionContext\n"
-    _ASM_PFX "competitionContext:\n"
     ".skip 4\n"
-    ".globl " _ASM_PFX "secondaryCompetitionName\n"
-    _ASM_PFX "secondaryCompetitionName:\n"
     ".skip 44\n"
     /* 64-bit namePtr pad — same as the primary slot's first pad. The
      * secondaryCompetitionName .skip 44 includes the 32-bit (4-byte)
@@ -609,54 +605,24 @@ __asm__(
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 4\n"
 #endif
-    ".globl " _ASM_PFX "minorTrophyBonusValue\n"
-    _ASM_PFX "minorTrophyBonusValue:\n"
     ".skip 10\n"
-    ".globl " _ASM_PFX "secondaryCompWinnerTeam\n"
-    _ASM_PFX "secondaryCompWinnerTeam:\n"
     ".skip 4\n"
-    ".globl " _ASM_PFX "secondaryCompSlotStateA\n"
-    _ASM_PFX "secondaryCompSlotStateA:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "secondaryCompSlotStateB\n"
-    _ASM_PFX "secondaryCompSlotStateB:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "secondaryCompSlotStateC\n"
-    _ASM_PFX "secondaryCompSlotStateC:\n"
     ".skip 10\n"
-    ".globl " _ASM_PFX "secondaryCompFinished\n"
-    _ASM_PFX "secondaryCompFinished:\n"
     ".skip 2824\n"
-    ".globl " _ASM_PFX "tertiaryCompetitionContext\n"
-    _ASM_PFX "tertiaryCompetitionContext:\n"
     ".skip 4\n"
-    ".globl " _ASM_PFX "tertiaryCompetitionName\n"
-    _ASM_PFX "tertiaryCompetitionName:\n"
     ".skip 44\n"
     /* 64-bit namePtr pad — see secondaryCompetitionName above. */
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 4\n"
 #endif
-    ".globl " _ASM_PFX "leagueTitleBonusValue\n"
-    _ASM_PFX "leagueTitleBonusValue:\n"
     ".skip 10\n"
-    ".globl " _ASM_PFX "tertiaryCompWinnerTeam\n"
-    _ASM_PFX "tertiaryCompWinnerTeam:\n"
     ".skip 4\n"
-    ".globl " _ASM_PFX "tertiaryCompSlotStateA\n"
-    _ASM_PFX "tertiaryCompSlotStateA:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "tertiaryCompSlotStateB\n"
-    _ASM_PFX "tertiaryCompSlotStateB:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "tertiaryCompSlotStateC\n"
-    _ASM_PFX "tertiaryCompSlotStateC:\n"
     ".skip 10\n"
-    ".globl " _ASM_PFX "tertiaryCompFinished\n"
-    _ASM_PFX "tertiaryCompFinished:\n"
     ".skip 1016\n"
-    ".globl " _ASM_PFX "diyCompetitionContext\n"
-    _ASM_PFX "diyCompetitionContext:\n"
     ".skip 62\n"
     /* 64-bit namePtr pad — see secondaryCompetitionName above. The .skip 62
      * spans diyCompetitionContext's header through the 32-bit namePtr+fields
@@ -665,39 +631,19 @@ __asm__(
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 4\n"
 #endif
-    ".globl " _ASM_PFX "diyCompSlotStateA\n"
-    _ASM_PFX "diyCompSlotStateA:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "diyCompSlotStateB\n"
-    _ASM_PFX "diyCompSlotStateB:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "diyCompSlotStateC\n"
-    _ASM_PFX "diyCompSlotStateC:\n"
     ".skip 1026\n"
-    ".globl " _ASM_PFX "euroCupsCompetitionContext\n"
-    _ASM_PFX "euroCupsCompetitionContext:\n"
     ".skip 4\n"
-    ".globl " _ASM_PFX "quaternaryCompetitionName\n"
-    _ASM_PFX "quaternaryCompetitionName:\n"
     ".skip 44\n"
     /* 64-bit namePtr pad — see secondaryCompetitionName above. */
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 4\n"
 #endif
-    ".globl " _ASM_PFX "majorTrophyOrCupBonusValue\n"
-    _ASM_PFX "majorTrophyOrCupBonusValue:\n"
     ".skip 10\n"
-    ".globl " _ASM_PFX "quaternaryCompWinnerTeam\n"
-    _ASM_PFX "quaternaryCompWinnerTeam:\n"
     ".skip 4\n"
-    ".globl " _ASM_PFX "quaternaryCompSlotStateA\n"
-    _ASM_PFX "quaternaryCompSlotStateA:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "quaternaryCompSlotStateB\n"
-    _ASM_PFX "quaternaryCompSlotStateB:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "quaternaryCompSlotStateC\n"
-    _ASM_PFX "quaternaryCompSlotStateC:\n"
     ".skip 2834\n"
     ".globl " _ASM_PFX "teamBudgetRankTable\n"
     _ASM_PFX "teamBudgetRankTable:\n"
@@ -939,87 +885,26 @@ __asm__(
     ".globl " _ASM_PFX "teamSelectionKeyCacheEnd\n"
     _ASM_PFX "teamSelectionKeyCacheEnd:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "competitionFileBuffer\n"
-    _ASM_PFX "competitionFileBuffer:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "competitionOver\n"
-    _ASM_PFX "competitionOver:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "diyPresetNameOfCompetition\n"
-    _ASM_PFX "diyPresetNameOfCompetition:\n"
-    ".skip 44\n"
-    /* 64-bit pad: DIYCompetition.namePtr grew 4 -> 8 bytes, shifting all
-     * fields after it by +4. The overlay's named globals after this point
-     * were positioned for the 32-bit Amiga struct, so on 64-bit we add a
-     * 4-byte gap here to re-align them with the grown DIYCompetition layout.
-     * Without this gap, ((DIYCompetition *)&competitionFileBuffer)->
-     * substitutesCount (at struct offset 0x40) overlapped primaryCompSlotStateB,
-     * which _InitCareer writes 2 to — silently giving substitutesCount=2
-     * for every league/cup on 64-bit. */
+    /* ---- Phase B: slot-0 competition run pulled out to primaryCompetitionBuf ----
+     * The old ~20-label run here (competitionFileBuffer, competitionOver,
+     * diyPresetNameOfCompetition, majorTrophyBonusValue, numDiyTeams,
+     * primaryComp*, diyTeamMin/MaxDivision*, leaguePromotion/RelegationCount,
+     * leagueWarningsEnabled, diyTeamIdListType2/0/1) collectively formed the
+     * slot-0 DIYCompetitionEx/DIYTournamentState union with teamIndexOrder
+     * overlaying the header tail at 0x5A and the stage standings at 0x420 — the
+     * same 64-bit currentRoundIndex@0x5C collision the *Context slots had. It is
+     * now a standalone CompetitionSlotBuffer `primaryCompetitionBuf`, with the 18
+     * named globals re-based onto it via .equ in swos_competition_slots.c.
+     *
+     * Reserve the run's HISTORICAL size here (0xB54 = 2900 bytes, + the two +4
+     * namePtr pads = 8 bytes on 64-bit) so every later label (viewRandomPhase…)
+     * keeps its absolute careerFileBufferBuf offset — no cascade. This is now
+     * dead space in the overlay; the .CAR/JSON save emits slot 0 from
+     * primaryCompetitionBuf as a typed comp_slot (see save_format_json.c). */
+    ".skip 2900\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 4\n"
-#endif
-    ".globl " _ASM_PFX "majorTrophyBonusValue\n"
-    _ASM_PFX "majorTrophyBonusValue:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "numDiyTeams\n"
-    _ASM_PFX "numDiyTeams:\n"
     ".skip 8\n"
-    ".globl " _ASM_PFX "primaryCompWinnerTeam\n"
-    _ASM_PFX "primaryCompWinnerTeam:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "primaryCompSquadViewParam\n"
-    _ASM_PFX "primaryCompSquadViewParam:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "primaryCompSlotStateA\n"
-    _ASM_PFX "primaryCompSlotStateA:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "primaryCompSlotStateB\n"
-    _ASM_PFX "primaryCompSlotStateB:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "primaryCompSlotStateC\n"
-    _ASM_PFX "primaryCompSlotStateC:\n"
-    ".skip 18\n"
-    ".globl " _ASM_PFX "diyTeamMinDivisionIndex\n"
-    _ASM_PFX "diyTeamMinDivisionIndex:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "diyTeamMaxDivisionOffset\n"
-    _ASM_PFX "diyTeamMaxDivisionOffset:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "leaguePromotionCount\n"
-    _ASM_PFX "leaguePromotionCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "leagueRelegationCount\n"
-    _ASM_PFX "leagueRelegationCount:\n"
-    ".skip 6\n"
-    /* 64-bit pad #2: DIYCompetition is 0x60 on 32-bit but 0x68 on 64-bit
-     * — namePtr widening accounts for +4 (handled by the earlier pad after
-     * diyPresetNameOfCompetition), but the struct ALSO gets a +4 trailing
-     * alignment pad after playEachTeam (its largest member, namePtr, forces
-     * 8-byte struct alignment → size rounds up to 0x68). The named globals
-     * from here on (leagueWarningsEnabled = DIYCompetitionEx.minSubstitutes,
-     * then diyTeamIdListType2/0/1 = matchData/leagueTeamIds/cupTeamIds, …)
-     * alias the DIYCompetitionEx struct view, so without this second +4 gap
-     * they sit 4 bytes BEFORE their struct fields on 64-bit. That mis-
-     * positions every struct-read of leagueTeamIds/cupTeamIds (panic 0x...
-     * in _VerifyTeamLoaded from _GetMoreExpensiveTeamsCount) and the
-     * transfer_market.c reads of diyTeamIdListType0/1/2. The earlier pad
-     * fixed the header; this one fixes the matchData-and-beyond region. */
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 4\n"
 #endif
-    ".globl " _ASM_PFX "leagueWarningsEnabled\n"
-    _ASM_PFX "leagueWarningsEnabled:\n"
-    ".skip 58\n"
-    ".globl " _ASM_PFX "diyTeamIdListType2\n"
-    _ASM_PFX "diyTeamIdListType2:\n"
-    ".skip 148\n"
-    ".globl " _ASM_PFX "diyTeamIdListType0\n"
-    _ASM_PFX "diyTeamIdListType0:\n"
-    ".skip 288\n"
-    ".globl " _ASM_PFX "diyTeamIdListType1\n"
-    _ASM_PFX "diyTeamIdListType1:\n"
-    ".skip 2310\n"
     ".globl " _ASM_PFX "viewRandomPhase\n"
     _ASM_PFX "viewRandomPhase:\n"
     ".skip 1\n"

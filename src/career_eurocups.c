@@ -15,6 +15,7 @@
 #include "career_status.h"
 #include "career_teams.h"
 #include "panic.h"
+#include "auto_skip_debug.h"  /* TEMP: SWOS_AUTOSKIP_LOG for euro-cup draw trace */
 
 /* ---- ASM externs (globals defined in assembly) ---- */
 extern DIYCompetitionEx diyCompetitionStart;
@@ -386,6 +387,13 @@ static void copyTitleHolderGrid(uint16_t *titleHolderTeamId, uint8_t *titleHolde
      * offset within the array is `gridByte << 1` (each entry is 2 bytes). */
     uint16_t teamNum = BE_READ_U16((uint8_t *)diyCompetitionStart.cupTeamIds + (idx << 1));
     *titleHolderTeamId = teamNum;
+    /* TEMP (euro-cup title-holder bring-up — REMOVE after fix): the cup
+     * winner that becomes next season's title holder. A non-European id here
+     * means the auto-advanced cup had wrong teams. */
+    SWOS_AUTOSKIP_LOG("[eurocup-title] gridByte=%d -> titleHolderTeamId=0x%04X "
+                      "(country=%u ordinal=%u)",
+                      (int)idx, (unsigned)teamNum,
+                      (unsigned)((teamNum >> 8) & 0xFF), (unsigned)(teamNum & 0xFF));
     TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
     copyTeamGridWords((uint8_t *)teamData, titleHolderGrid, 0x155);
 }
@@ -505,6 +513,22 @@ static void drawRandomTeamFromPoolAndCopyGrid(uint16_t titleHolder,
      * the function works in. */
     uint8_t *listBytes = (uint8_t *)teamList;
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+    /* TEMP (euro-cup draw bring-up — REMOVE after fix): dump the title-holder
+     * grid team + the qualified-team list so we can see whether a non-European
+     * (e.g. NEW ZEALAND) team is in the list / grid and from which offset. */
+    {
+        TeamFileEx *g = (TeamFileEx *)dstGrid;
+        SWOS_AUTOSKIP_LOG("[eurocup-draw] ENTER titleHolder=0x%04X count=%u listPtr=%p "
+                          "grid.team={c=0x%02X o=0x%02X}",
+                          (unsigned)titleHolder, (unsigned)count, (void *)teamList,
+                          (unsigned)g->team.countryNumber, (unsigned)g->team.teamOrdinal);
+        for (uint16_t k = 0; k < count && k < 40; k++)
+            SWOS_AUTOSKIP_LOG("[eurocup-draw]   list[%u]=0x%04X", (unsigned)k,
+                              (unsigned)BE_READ_U16(&listBytes[k * 2]));
+    }
+#endif
+
     uint16_t randIdx;
     uint16_t selectedTeam;
     uint8_t selectedCountry;
@@ -532,6 +556,9 @@ static void drawRandomTeamFromPoolAndCopyGrid(uint16_t titleHolder,
      * Write the title holder back as BE bytes to match the list's encoding. */
     uint16_t removedTeam = BE_READ_U16(&listBytes[randIdx * 2]);
     BE_WRITE_U16(&listBytes[randIdx * 2], titleHolder);
+
+    SWOS_AUTOSKIP_LOG("[eurocup-draw] randIdx=%u removedTeam=0x%04X -> swap titleHolder in, "
+                      "append titleHolder grid to pool", (unsigned)randIdx, (unsigned)removedTeam);
 
     uint16_t savedCareerFile = careerFileBuffer;
     _Career_RemoveTeamFromTmdTeamPool(removedTeam);
@@ -623,7 +650,14 @@ void _Career_UpdateEuropeanChampionshipCompetitions(void)
         return;
 
     uint8_t *a5 = europeanChampionships2Copy;
-    uint8_t offset = (uint8_t)((Competition *)a5)->unk3;
+    /* unk3 is the 32-bit Amiga byte distance from a5+7 to the embedded
+     * unk1[] qualifier list. The cup *Copy struct has a `char *text[2]`
+     * pair before unk1[]; on 64-bit those pointers widen 8->16 bytes,
+     * pushing unk1[] +8. Without this delta the qualifier writes land in
+     * text[1], corrupting the comp name pointer (SIGSEGV when the season
+     * list is drawn). Matches the team-selection reader in career_teams.c. */
+    uint16_t offset = (uint8_t)((Competition *)a5)->unk3 +
+                      2u * (sizeof(char *) - sizeof(uint32_t));
     a5 = a5 + 7 + offset;
     /* Asm `move.w euroChampionshipQualTeam,(a5)+` writes BE on m68k.
      * Use BE_WRITE_U16 so the destination byte order matches the rest
@@ -694,7 +728,11 @@ void _Career_UpdateWorldCupCompetitions(void)
         return;
 
     uint8_t *a5 = worldCup2Copy;
-    uint8_t offset = (uint8_t)((Competition *)a5)->unk3;
+    /* +text[2]-growth delta — see _Career_UpdateEuropeanChampionshipCompetitions
+     * above. Keeps the qualifier writes in unk1[] (not text[1]) on 64-bit and
+     * matching the AltTableHeader reader / Amiga byte layout. */
+    uint16_t offset = (uint8_t)((Competition *)a5)->unk3 +
+                      2u * (sizeof(char *) - sizeof(uint32_t));
     a5 = a5 + 7 + offset;
     /* BE write — matches the eurochampionship variant above and the
      * BE-packed convention for *.unk1 team-id lists (4e5f378). */
