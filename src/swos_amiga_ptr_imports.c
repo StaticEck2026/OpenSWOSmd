@@ -635,12 +635,14 @@ struct __attribute__((packed)) {
     { (void *)aPitchType, (void *)aSeason_1 }
 };
 
-/* diyLeaguePitchTypeStrTable: index var is `diyCompetitionStart + 0x36`,
+/* diyLeaguePitchTypeStrTable: index var is `diyCompetitionStart.base.pitchType`
+ * (asm `diyCompetitionStart + 0x36`; the raw 32-bit offset read numTeams on
+ * 64-bit, giving an out-of-bounds entries[] read — typed field is arch-safe).
  * base = -1 (so index 0 → entries[1] = "FROZEN" while index -1 → "RANDOM"). */
 struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[8];
 } diyLeaguePitchTypeStrTable = {
-    (diyCompetitionStart + 0x36), (uint16_t)-1,
+    (void *)&((DIYCompetitionEx *)diyCompetitionStart)->base.pitchType, (uint16_t)-1,
     {
         (void *)aRandom, (void *)aFrozen,
         (void *)aMuddy,  (void *)aWet,
@@ -683,7 +685,7 @@ extern const char aSoft[], aNormal[], aDry[], aHard[];
 struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[8];
 } diyCupPitchTypeStringTable = {
-    (diyCompetitionStart + 0x36), (uint16_t)-1,
+    (void *)&((DIYCompetitionEx *)diyCompetitionStart)->base.pitchType, (uint16_t)-1,
     { PITCH_8 }
 };
 
@@ -693,7 +695,7 @@ struct __attribute__((packed)) {
 struct __attribute__((packed)) {
     void    *indexPtr; uint16_t base; void    *entries[3];
 } diyCupAwayGoalsStringTable = {
-    (diyCompetitionStart + 0x5E), 0,
+    (void *)&((DIYCompetitionEx *)diyCompetitionStart)->base.playEachTeam, 0,
     {
         (void *)aOff,
         (void *)aAfter90Mins,

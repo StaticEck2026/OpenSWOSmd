@@ -3367,9 +3367,7 @@ void _DIY_RebuildCompetitionAndTeamSelectionCaches(void)
         return;
 
     uint32_t *tablePtr = diyCompetitionTablePtr;
-    uint16_t *scratchList = (uint16_t *)((uint8_t *)&diyCompetitionStart + 0x2CE);  /* extended */
-    /* Actually, competitionTeamIdScratchList4 is a separate small buffer.
-     * Let's use its address from asm data label. */
+    /* competitionTeamIdScratchList4 is a separate small scratch buffer (asm data label). */
     extern uint16_t competitionTeamIdScratchList4[];
     uint16_t *a5 = competitionTeamIdScratchList4;
 
@@ -4883,12 +4881,12 @@ static uint16_t getCupRoundWordOffset(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _DesignDIYCup_UpdateStartEndMonthIndices(void)
 {
-    uint8_t d0 = ((uint8_t *)&diyCompetitionStart)[56];  /* STARTMONTH */
+    uint8_t d0 = (uint8_t)diyCompetitionStart.base.startMonth;  /* DIYCOMPETITION_STARTMONTH (0x38) */
     if (d0 >= 96)
         d0 -= 96;
     diyCupStartMonthIndex = (uint16_t)d0 / 8;
 
-    d0 = ((uint8_t *)&diyCompetitionStart)[57];  /* ENDMONTH */
+    d0 = (uint8_t)diyCompetitionStart.base.endMonth;  /* DIYCOMPETITION_ENDMONTH (0x39) */
     if (d0 >= 0x60)
         d0 -= 0x60;
     diyCupEndMonthIndex = (uint16_t)d0 / 8;
@@ -5131,8 +5129,11 @@ void _DesignDIYCupOnSelect20(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _DesignDIYCupOnSelect21(MenuEntry *entry)
 {
-    uint16_t wordOff = getCupRoundWordOffset(entry);
-    uint16_t *field = (uint16_t *)((uint8_t *)&diyCompetitionStart + 0x72 + wordOff);
+    uint16_t round = getCupRoundWordOffset(entry) >> 1;
+    /* asm: $72(a0,d1.w), a0=diyCompetitionStart, d1=round*2 -> parent 0x72 =
+     * matchData.cup.roundExtraTime[round] (DIY-cup design "qualifiers per round").
+     * Typed access auto-corrects the 64-bit namePtr-growth shift. */
+    uint16_t *field = &diyCompetitionStart.matchData.cup.roundExtraTime[round];
     *field += 1;
     if (*field == 3)
         *field = 0;
@@ -5144,8 +5145,11 @@ void _DesignDIYCupOnSelect21(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _DesignDIYCupOnSelect22(MenuEntry *entry)
 {
-    uint16_t wordOff = getCupRoundWordOffset(entry);
-    uint16_t *field = (uint16_t *)((uint8_t *)&diyCompetitionStart + 0x7E + wordOff);
+    uint16_t round = getCupRoundWordOffset(entry) >> 1;
+    /* asm: $7E(a0,d1.w), a0=diyCompetitionStart, d1=round*2 -> parent 0x7E =
+     * matchData.cup.roundPenalties[round] (DIY-cup design "byes per round").
+     * Typed access auto-corrects the 64-bit namePtr-growth shift. */
+    uint16_t *field = &diyCompetitionStart.matchData.cup.roundPenalties[round];
     *field += 1;
     if (*field == 3)
         *field = 0;
@@ -5187,12 +5191,12 @@ static DIYTournamentSlot *getTournamentSlotRecord(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _DesignDIYTournament_UpdateMonthPageIndices(void)
 {
-    uint8_t d0 = ((uint8_t *)&diyFileBufferCopy)[56];  /* STARTMONTH */
+    uint8_t d0 = (uint8_t)diyFileBufferCopy.header.startMonth;  /* DIYCOMPETITION_STARTMONTH (0x38) */
     if (d0 >= 0x60)
         d0 -= 0x60;
     diyTournamentStartMonthPage = (uint16_t)d0 / 8;
 
-    d0 = ((uint8_t *)&diyFileBufferCopy)[57];  /* ENDMONTH */
+    d0 = (uint8_t)diyFileBufferCopy.header.endMonth;  /* DIYCOMPETITION_ENDMONTH (0x39) */
     if (d0 >= 0x60)
         d0 -= 0x60;
     diyTournamentEndMonthPage = (uint16_t)d0 / 8;
@@ -5333,7 +5337,7 @@ void _DesignDIYTournamentOnSelect3(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _DesignDIYTournamentOnSelect4(MenuEntry *entry)
 {
-    uint16_t *pt = (uint16_t *)((uint8_t *)&diyFileBufferCopy + 54);
+    uint16_t *pt = (uint16_t *)&diyFileBufferCopy.header.pitchType;  /* DIYCOMPETITION_PITCHTYPE (0x36) */
     *pt += 1;
     if (*pt == 7)
         *pt = 0xFFFF;
@@ -5344,7 +5348,7 @@ void _DesignDIYTournamentOnSelect4(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _DesignDIYTournamentOnSelect5(MenuEntry *entry)
 {
-    uint8_t *monthByte = &((uint8_t *)&diyFileBufferCopy)[56];
+    uint8_t *monthByte = (uint8_t *)&diyFileBufferCopy.header.startMonth;  /* DIYCOMPETITION_STARTMONTH (0x38) */
     *monthByte += 8;
     uint8_t val = *monthByte;
     if (val == 0x60) {
@@ -5359,7 +5363,7 @@ void _DesignDIYTournamentOnSelect5(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _DesignDIYTournamentOnSelect7(MenuEntry *entry)
 {
-    uint8_t *monthByte = &((uint8_t *)&diyFileBufferCopy)[57];
+    uint8_t *monthByte = (uint8_t *)&diyFileBufferCopy.header.endMonth;  /* DIYCOMPETITION_ENDMONTH (0x39) */
     *monthByte += 8;
     uint8_t val = *monthByte;
     if (val == 0x60) {
@@ -5402,8 +5406,8 @@ void _DesignDIYTournamentOnSelect11(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _DesignDIYTournamentOnSelect13(MenuEntry *entry)
 {
-    uint16_t *field14 = (uint16_t *)((uint8_t *)&diyFileBufferCopy + 78);
-    uint16_t *field12 = (uint16_t *)((uint8_t *)&diyFileBufferCopy + 76);
+    uint16_t *field14 = (uint16_t *)&diyFileBufferCopy.header.numTeamsInStage;  /* DIYCOMPETITION_NUMTEAMSINSTAGE (0x4E) */
+    uint16_t *field12 = (uint16_t *)&diyFileBufferCopy.header.roundIterator;     /* DIYCOMPETITION_ROUNDITERATOR (0x4C) */
     *field14 += 1;
     if (*field14 > 5) {
         *field14 = 0;
@@ -5689,7 +5693,7 @@ void _DIYTournament_RecalculateNumStages(void)
     while (d0 < 6) {
         if (slot->divisionFactor == 1)
             break;
-        slot = (DIYTournamentSlot *)((uint8_t *)slot + 0x76);
+        slot += 1;   /* next tournament slot (sizeof == stride 0x76, both arches) */
         d0++;
     }
     diyFileBufferCopy.header.totalMatchesInRound = (int16_t)d0;
@@ -5742,7 +5746,7 @@ void _DesignDIYTournamentOnDraw(void)
                 break;
             }
         }
-        slot = (DIYTournamentSlot *)((uint8_t *)slot + 0x76);
+        slot += 1;   /* next tournament slot (sizeof == stride 0x76, both arches) */
     }
 
     if (!found3rdPlayoff) {
@@ -5979,7 +5983,7 @@ after_qual_text: ;
         }
 
         /* Advance to next stage block */
-        slot = (DIYTournamentSlot *)((uint8_t *)slot + 0x76);
+        slot += 1;   /* next tournament slot (sizeof == stride 0x76, both arches) */
         continue;
 
 fill_remaining_hidden:
@@ -7525,13 +7529,13 @@ __attribute__((used, externally_visible))
 void _DIYLeagueSetVariousFields(void)
 {
     /* Start month: byte at offset 56, wrap at 96, divide by 8 */
-    uint8_t startVal = ((uint8_t *)&diyCompetitionStart)[56];
+    uint8_t startVal = (uint8_t)diyCompetitionStart.base.startMonth;  /* DIYCOMPETITION_STARTMONTH (0x38) */
     if (startVal >= 96)
         startVal -= 96;
     diyLeagueStartingMonth = (uint16_t)startVal / 8;
 
     /* End month: byte at offset 57 */
-    uint8_t endVal = ((uint8_t *)&diyCompetitionStart)[57];
+    uint8_t endVal = (uint8_t)diyCompetitionStart.base.endMonth;  /* DIYCOMPETITION_ENDMONTH (0x39) */
     if (endVal >= 96)
         endVal -= 96;
     diyLeagueEndingMonth = (uint16_t)endVal / 8;
@@ -9183,7 +9187,7 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
         slot->initConst170  = (flags >> 4) & 3;
         slot->formatFlag172 = (flags >> 2) & 3;
 
-        slot = (DIYTournamentSlot *)((uint8_t *)slot + 0x76);
+        slot += 1;   /* next tournament slot (sizeof == stride 0x76, both arches) */
     }
 
     /* Post-loop check: if totalRounds == 6, skip */
@@ -9749,7 +9753,7 @@ tournament_entry:
                     DIYTournamentSlot *spSlot = ((DIYTournamentState *)raw)->slots;
                     uint16_t stageThreshold;
                     do {
-                        spSlot = (DIYTournamentSlot *)((uint8_t *)spSlot + 0x76);
+                        spSlot += 1;   /* next tournament slot (sizeof == stride 0x76) */
                         stageThreshold = spSlot->numTeams;
                     } while (pos < stageThreshold);
 
