@@ -706,6 +706,35 @@ typedef char _diytourn_grpmap_off_check [(offsetof(DIYTournamentState, groupMap)
 typedef char _diytourn_slots_off_check  [(offsetof(DIYTournamentState, slots)    == 0x15A) ? 1 : -1];
 
 /* ==================================================================
+ * CompetitionSlotBuffer — the UNTANGLED career competition-slot buffer.
+ *
+ * Replaces the legacy careerFileBuffer-overlay slot regions
+ * (competitionFileBuffer / competition/tertiary/euroCups/diyCompetition-
+ * Context) — tightly-packed, `.equ`-aliased byte blobs where teamIndexOrder
+ * had to overlay the DIYCompetition header tail at raw 0x5A (which the
+ * 64-bit namePtr growth slid `currentRoundIndex`@0x5C into, corrupting it
+ * and skipping the euro-cup cache fill). Here every field has its own home:
+ *
+ *   - `tourn` IS a DIYTournamentState, so teamIndexOrder lives at its proper
+ *     0x41E — no header overlap, `currentRoundIndex` survives.
+ *   - `stageSnapshot` is the current-stage diyCompetitionStart image that the
+ *     legacy layout stashed at cfb +0x420 (and which spilled into adjacent
+ *     overlay globals by design). Now a real trailing field.
+ *
+ * The DIYCompetition header fields the old aliases pointed at
+ * (competitionName@0x04, resultCode/winner@0x3A, slotStateA/B/C@0x3E.., the
+ * avgSkill/bonus byte@0x30) keep their header offsets, so those aliases just
+ * re-base onto `tourn.header` with identical semantics.
+ * ================================================================== */
+typedef struct __attribute__((packed, aligned(2))) CompetitionSlotBuffer {
+    DIYTournamentState tourn;              /* 0x000: header + teamIds + groupMap + slots + teamIndexOrder */
+    uint8_t            stageSnapshot[0x734]; /* current-stage diyCompetitionStart image (was cfb +0x420) */
+} CompetitionSlotBuffer;
+
+typedef char _compslotbuf_tourn_off_check    [(offsetof(CompetitionSlotBuffer, tourn) == 0) ? 1 : -1];
+typedef char _compslotbuf_snapshot_off_check [(offsetof(CompetitionSlotBuffer, stageSnapshot) == sizeof(DIYTournamentState)) ? 1 : -1];
+
+/* ==================================================================
  * DIYCompetitionEx_CupView — 0xEA bytes (matchData cup interpretation)
  * Region at parent 0x64..0x14D when the competition is a cup
  * (competitionType == 1 or compId in {1, 2, 4}).

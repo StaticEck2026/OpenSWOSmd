@@ -1452,38 +1452,39 @@ static void _Rebuild_CompetitionSlotPointers(void)
         }
     }
 
-    /* Slot 3 (quaternary, euro cups) — re-derive from the saved
-     * `euroCupSlotIndex` scalar (0 = euroCup, 1 = cupWinnersCup,
-     * 2 = uefaCup). Mirrors the assignment in
-     * `_Career_SelectEuroCupSlotIfTeamParticipates` (career_init.c
-     * line 812) which sets euroCupSlotIndex alongside
-     * `_Career_SetCurrentCompetitionSlot(cupCopy, 3, 0, 0)`.
+    /* Slot 3 (quaternary, euro cups) — re-derive from the SAVED euro-cup
+     * slot CONTEXT, not from quaternaryCompetitionPtr.
      *
-     * IMPORTANT: euroCupSlotIndex is only *written* when a cup is
-     * selected. If the team didn't qualify for any euro cup, the
-     * variable retains its stale previous value (often 0). Trusting
-     * it unconditionally would set quaternaryCompetitionPtr to
-     * &euroCupCopy in that case, and downstream code (e.g.
-     * _ShowChairmanOpinionAboutTheSeason → _FindTeamInDIY at
-     * career_season.c:617) would panic because the team isn't
-     * actually in any euro cup slot. So we only derive when the
-     * SAVED quaternaryCompetitionPtr was non-zero — that's the
-     * authoritative "slot 3 was active" signal from the saving
-     * binary, which the LUT translation pass leaves alone for
-     * SDL-built saves (Linux/Windows pointer values fall outside
-     * the Amiga range, so translate_one is a no-op). */
-    if (quaternaryCompetitionPtr == 0) {
-        /* Slot was inactive in the saved state — leave it inactive. */
-    } else if (euroCupSlotIndex == 0) {
-        quaternaryCompetitionPtr = euroCupCopy;
-    } else if (euroCupSlotIndex == 1) {
-        quaternaryCompetitionPtr = cupWinnersCupCopy;
-    } else if (euroCupSlotIndex == 2) {
-        quaternaryCompetitionPtr = uefaCupCopy;
-    } else {
-        /* Active slot but out-of-range index (shouldn't happen) —
-         * NULL it rather than dereference garbage. */
-        quaternaryCompetitionPtr = 0;
+     * The JSON save format no longer stores quaternaryCompetitionPtr (it is
+     * a pointer-to-disk field). The previous gate `quaternaryCompetitionPtr
+     * != 0` therefore read the stale pre-load value — 0 on a fresh-start
+     * load — and left an ACTIVE euro-cup slot inactive. The careerMenu then
+     * draws the slot-3 schedule entry, _CareerGameListCommon sets
+     * compInfo = quaternaryCompetitionPtr = NULL, and `compInfo[5]` SIGSEGVs
+     * (Playaveli's CLAUDE.CAR repro, in _CareerGameListCommon menus.c:6687).
+     *
+     * Reliable saved signal: the slot-3 context (euroCupsCompetitionContext)
+     * is persisted and restored on load. Its competitionType (+0x00) and
+     * isActive (+0x02) are 2/1 for an active European Cup (type-2 group
+     * tournament) and 1/1 for the Cup Winners'/UEFA cup (type-1); an
+     * inactive slot reads back all-zero. euroCupSlotIndex (also saved)
+     * selects which of the three cups; we then VALIDATE that the saved
+     * context's type agrees with that cup, so a stale euroCupSlotIndex (it
+     * is only written on qualification) or a stale context can't activate a
+     * mismatched slot — the original _FindTeamInDIY-panic concern. */
+    {
+        uint8_t *euroCup3 = 0;
+        if (euroCupSlotIndex == 0)      euroCup3 = euroCupCopy;        /* type 2 */
+        else if (euroCupSlotIndex == 1) euroCup3 = cupWinnersCupCopy;  /* type 1 */
+        else if (euroCupSlotIndex == 2) euroCup3 = uefaCupCopy;        /* type 1 */
+
+        DIYCompetition *q3 = (DIYCompetition *)careerCompetitionSlotPtrTable[3];
+        if (euroCup3 != 0 && q3->isActive != 0 &&
+            q3->competitionType == ((Competition *)euroCup3)->type) {
+            quaternaryCompetitionPtr = euroCup3;
+        } else {
+            quaternaryCompetitionPtr = 0;  /* slot 3 inactive this season */
+        }
     }
 }
 
