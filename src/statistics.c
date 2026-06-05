@@ -2347,7 +2347,10 @@ void _FillManagementRecordInfo(void)
     d5 = 36; /* override — fixed Y for trophy row */
 
     /* --- Trophy Y positions (entries 17-20) --- */
-    if (*(uint16_t *)(si + SI_TROPHYFLAGS) != 0)
+    /* asm: tst.w SEASONINFORMATIONS_TROPHYFLAGS(a6) — must read the struct
+     * field, not `si + SI_TROPHYFLAGS` (that scales by sizeof(SeasonInformations)
+     * and reads ~2.4 KB out of bounds, leaving the trophy row Y stale). */
+    if (si->trophyFlags != 0)
     {
         menuEntries[17].y = d5;
         menuEntries[18].y = d5;
