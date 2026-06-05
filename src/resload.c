@@ -293,9 +293,6 @@ uint8_t _KBHook(void) { return 0; }
 #define DOS_FIB        2u
 #define ACCESS_READ    (-2)
 
-#define RNC_TYPE1_MAGIC 0x524E4301u
-#define RNC_TYPE2_MAGIC 0x524E4302u
-
 /* ---- GfxBase struct offsets ---- */
 #define GFX_ACTIVIEW   0x22u
 #define GFX_COPINIT    0x26u
@@ -1100,14 +1097,19 @@ static uint32_t resload_loadfiledec(uint8_t *name, uint8_t *dest, uint32_t *outE
         return 0;
     }
 
-    /* Check for RNC magic and decompress */
-    uint32_t magic = *(uint32_t *)tempBuf;
+    /* Check for RNC magic and decompress. The RNC signature is the 4 bytes
+     * 'R','N','C',version — compare per-byte so detection is endian-independent
+     * with no magic-constant / header dependency (matches the byte-based check
+     * in file_io.c). The unpacked size at +4 is a BE field, read host-native
+     * here: correct on the BE Amiga, and this resload path is unused on the LE
+     * SDL build (file_io.c is the live RNC path there). */
+    int isRnc = (tempBuf[0] == 'R' && tempBuf[1] == 'N' && tempBuf[2] == 'C');
     uint32_t decompSize;
 
-    if (magic == RNC_TYPE2_MAGIC) {
+    if (isRnc && tempBuf[3] == 0x02) {
         decompSize = *(uint32_t *)(tempBuf + 4);
         _RncDecompressV2(tempBuf, dest);
-    } else if (magic == RNC_TYPE1_MAGIC) {
+    } else if (isRnc && tempBuf[3] == 0x01) {
         decompSize = *(uint32_t *)(tempBuf + 4);
         _RncDecompressV1(tempBuf, dest);
     } else {
