@@ -143,22 +143,16 @@ __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patte
 void _RemoveTransferOfferAtIndex(uint16_t offerIndex)
 {
     int32_t remaining;
-    uint8_t *dst;
-    int32_t i, j;
+    int32_t i;
 
     remaining = (int16_t)((int16_t)numOffers - (int16_t)offerIndex - 2);  /* sub.w d0,d1; subq.w #2,d1 */
 
     if (remaining >= 0) {
-        /* Point to the offer entry to remove */
-        dst = transferOfferTable + (uint16_t)((uint32_t)offerIndex * OFFER_ENTRY_SIZE);
-
-        /* Shift subsequent entries left */
-        for (i = remaining; i >= 0; i--) {                     /* dbf d1,outer */
-            for (j = OFFER_ENTRY_SIZE - 1; j >= 0; j--) {     /* dbf d0,inner: move.w #$D,d0 */
-                *dst = *(dst + OFFER_ENTRY_SIZE);              /* move.b $E(a0),(a0)+ */
-                dst++;
-            }
-        }
+        TransferOfferEntry *table = (TransferOfferEntry *)transferOfferTable;
+        /* Shift subsequent entries down one slot (overwrites entry offerIndex).
+         * asm walked this byte-by-byte; one struct copy per slot is equivalent. */
+        for (i = 0; i <= remaining; i++)
+            table[offerIndex + i] = table[offerIndex + i + 1];
     }
 
     numOffers--;                                                /* subq.w #1,(numOffers) */
@@ -183,7 +177,7 @@ void _PrunePlayerOffersAgainstRosterLimits(void)
 {
     uint16_t swapSlots, poolSlots;
     uint16_t idx;
-    uint8_t *offer;
+    TransferOfferEntry *offer;
 
     /* Phase 1: Check swap slot and pool slot limits */
 restart_phase1:
@@ -198,27 +192,27 @@ restart_phase1:
 
     poolSlots = _GetRemainingTransferPoolSlots();
     idx = 0;
-    offer = transferOfferTable;
+    offer = (TransferOfferEntry *)transferOfferTable;
 
     while (idx != numOffers) {
-        /* Check if offer byte 3 is non-negative (player being offered) */
-        if ((int8_t)offer[3] >= 0) {
+        /* second wanted player non-negative (a player being offered in swap) */
+        if (offer->secondPlayerOrdinal >= 0) {
             if (swapSlots == 1)                     /* only 1 swap slot left → remove */
                 goto remove_phase1;
         }
 
-        /* Check if offer byte 4 is non-negative (secondary player) */
-        if ((int8_t)offer[4] >= 0) {
+        /* swap player non-negative (secondary player) */
+        if (offer->swapPlayerOrdinal >= 0) {
             if (poolSlots == 0)                     /* no pool slots → remove */
                 goto remove_phase1;
             if (poolSlots < 2) {                    /* only 1 pool slot */
-                if ((int8_t)offer[5] >= 0)          /* and byte 5 also non-negative → remove */
+                if (offer->extraPlayerOrdinal >= 0) /* and extra player also present → remove */
                     goto remove_phase1;
             }
         }
 
         /* Keep this offer, advance */
-        offer += OFFER_ENTRY_SIZE;
+        offer++;
         idx++;
         continue;
 
@@ -237,16 +231,16 @@ restart_phase2:
         return;
 
     idx = 0;
-    offer = transferOfferTable;
+    offer = (TransferOfferEntry *)transferOfferTable;
 
     while (idx != numOffers) {
-        /* Remove offers where byte 5 >= 0 (buying) AND byte 3 < 0 (not selling) */
-        if ((int8_t)offer[5] >= 0 && (int8_t)offer[3] < 0) {
+        /* Remove offers that buy (extra player present) but don't sell (no second wanted) */
+        if (offer->extraPlayerOrdinal >= 0 && offer->secondPlayerOrdinal < 0) {
             _RemoveTransferOfferAtIndex(idx);
             goto restart_phase2;
         }
 
-        offer += OFFER_ENTRY_SIZE;
+        offer++;
         idx++;
     }
 }
@@ -481,35 +475,37 @@ void _RemovePlayerFromTransferOffers(uint16_t teamNumber, uint16_t playerOrdinal
 {
     uint8_t ord = (uint8_t)playerOrdinal;
     uint16_t idx;
-    uint8_t *offer;
+    TransferOfferEntry *offer;
 
 restart:
     if (numOffers == 0)
         return;
 
     idx = 0;
-    offer = transferOfferTable;
+    offer = (TransferOfferEntry *)transferOfferTable;
 
     while (idx != numOffers) {
         /* Check if this is an offer from selTeamNumber */
         if (teamNumber == selTeamNumber) {
-            /* Check bytes 2 and 3 (offered players) */
-            if (offer[2] == ord || offer[3] == ord) {
+            /* Check the two wanted players (raw byte compare) */
+            if ((uint8_t)offer->primaryPlayerOrdinal == ord ||
+                (uint8_t)offer->secondPlayerOrdinal == ord) {
                 _RemoveTransferOfferAtIndex(idx);
                 goto restart;
             }
         }
 
-        /* Check if offer is TO this team (offer[0..1] = teamNumber word) */
-        if (*(uint16_t *)offer == teamNumber) {
-            /* Check bytes 4 and 5 (counter-offer/swap players) */
-            if (offer[4] == ord || offer[5] == ord) {
+        /* Check if offer is TO this team */
+        if (offer->teamOffering == teamNumber) {
+            /* Check the two offered (counter/swap) players */
+            if ((uint8_t)offer->swapPlayerOrdinal == ord ||
+                (uint8_t)offer->extraPlayerOrdinal == ord) {
                 _RemoveTransferOfferAtIndex(idx);
                 goto restart;
             }
         }
 
-        offer += OFFER_ENTRY_SIZE;
+        offer++;
         idx++;
     }
 }
@@ -1031,23 +1027,28 @@ __attribute__((used, externally_visible))
 int16_t _IsOfferTeamPlayerPairUnique(uint16_t teamId, uint16_t playerIdx)
 {
     int16_t count = (int16_t)numOffers;
-    uint8_t *entry;
+    TransferOfferEntry *entry;
     int16_t i;
     uint8_t pidx = (uint8_t)playerIdx;
 
     if (count == 0)
         return 1;  /* no offers → unique */
 
-    entry = transferOfferTable;
+    entry = (TransferOfferEntry *)transferOfferTable;
     for (i = count - 1; i >= 0; i--) {
-        /* PACK_BE_U16 read — entry layout matches market entries. */
-        if (PACK_BE_U16(entry[0], entry[1]) == teamId) {
-            if (entry[2] == pidx)
+        /* asm: cmp.w (a1),d0 — host-native WORD compare of the team id.
+         * The offer builder writes teamOffering host-native (whole word), so
+         * this must NOT be a PACK_BE byte-pair read (unlike the market tables,
+         * which the builder deliberately writes in BE byte order). A PACK_BE
+         * read here byte-swaps on LE, so the dedup never matched and the game
+         * could generate duplicate (team, player) offers. */
+        if (entry->teamOffering == teamId) {
+            if ((uint8_t)entry->primaryPlayerOrdinal == pidx)
                 return 0;  /* duplicate */
-            if (entry[3] == pidx)
+            if ((uint8_t)entry->secondPlayerOrdinal == pidx)
                 return 0;  /* duplicate */
         }
-        entry += OFFER_ENTRY_SIZE;
+        entry++;
     }
     return 1;  /* unique */
 }
@@ -1347,17 +1348,17 @@ __attribute__((used, externally_visible))
 int16_t _CheckForTransferOffers(void)
 {
     uint16_t count = numOffers;
-    uint8_t *p;
+    TransferOfferEntry *p;
     uint16_t i;
 
     if (count == 0)
         return 1;
 
-    p = transferOfferTable;
+    p = (TransferOfferEntry *)transferOfferTable;
     for (i = 0; i < count; i++) {
-        if (p[13] == 0)
-            return 0;   /* found an active offer (expired flag at byte 13) */
-        p += OFFER_ENTRY_SIZE;
+        if (p->seenFlag == 0)
+            return 0;   /* found an active offer (seen flag at byte 0x0D) */
+        p++;
     }
     return 1;   /* no active offers */
 }
@@ -1959,16 +1960,16 @@ void _UpdateAndExpireTransferOffers(void)
         return;
 
     if (numOffers != 0) {
-        uint8_t *entry = transferOfferTable;
+        TransferOfferEntry *entry = (TransferOfferEntry *)transferOfferTable;
         uint16_t i = 0;
 
         while (i < numOffers) {
-            entry[12]--;  /* decrement expiry counter at offset $C */
-            if (entry[12] == 0) {
+            entry->lifespan--;  /* decrement expiry counter (0x0C) */
+            if (entry->lifespan == 0) {
                 _RemoveTransferOfferAtIndex(i);
                 /* Don't advance — entry shifted down */
             } else {
-                entry += OFFER_ENTRY_SIZE;
+                entry++;
                 i++;
             }
         }
@@ -3015,19 +3016,19 @@ void _OffersCommon(void *entryPtr)
 
 restart:;
     /* Index into transferOfferTable: each entry is 14 bytes */
-    uint8_t *offerEntry = &transferOfferTable[(uint16_t)d7 * OFFER_ENTRY_SIZE];
+    TransferOfferEntry *offerEntry = &((TransferOfferEntry *)transferOfferTable)[(uint16_t)d7];
 
-    /* Determine offer status from the offer entry fields at offsets 8 and 10 */
+    /* Determine offer status from the negotiation-step sentinels */
     uint16_t status = 3;
-    if (*(int16_t *)(offerEntry + 8) == (int16_t)0xFFFE) {
+    if (offerEntry->negotiationStep1Amount == (int16_t)0xFFFE) {
         /* status stays 3 */
     } else {
         status = 2;
-        if (*(int16_t *)(offerEntry + 10) == (int16_t)0xFFFF) {
+        if (offerEntry->negotiationStep2Amount == (int16_t)0xFFFF) {
             /* status stays 2 */
         } else {
             status = 1;
-            if (*(int16_t *)(offerEntry + 8) == (int16_t)0xFFFF) {
+            if (offerEntry->negotiationStep1Amount == (int16_t)0xFFFF) {
                 /* status stays 1 */
             } else {
                 status = 0;
@@ -3036,21 +3037,21 @@ restart:;
     }
 
     offerStatus = status;
-    teamOffering = *(uint16_t *)(offerEntry + 0);
-    offerAmount = *(uint16_t *)(offerEntry + 6);
+    teamOffering = offerEntry->teamOffering;
+    offerAmount = offerEntry->offerAmount;
 
-    /* Extract signed byte fields and sign-extend to word */
-    offerPrimaryPlayerOrdinal = (uint16_t)(int16_t)(int8_t)offerEntry[2];
-    numExtraPlayersWanted = (int16_t)(int8_t)offerEntry[3];
-    offerSwapPlayerOrdinal = (int16_t)(int8_t)offerEntry[4];
-    offerExtraPlayerOrdinal = (int16_t)(int8_t)offerEntry[5];
+    /* Sign-extend the ordinal bytes to word */
+    offerPrimaryPlayerOrdinal = (uint16_t)(int16_t)offerEntry->primaryPlayerOrdinal;
+    numExtraPlayersWanted = (int16_t)offerEntry->secondPlayerOrdinal;
+    offerSwapPlayerOrdinal = (int16_t)offerEntry->swapPlayerOrdinal;
+    offerExtraPlayerOrdinal = (int16_t)offerEntry->extraPlayerOrdinal;
 
     _ShowMenu(thirdPartyOfferMenu);
 
     uint16_t result = thirdPartyOfferResult;
     if (result == 0) {
         /* Consider: mark this offer as "seen" */
-        offerEntry[13] = 1;
+        offerEntry->seenFlag = 1;
         return;
     }
     if (result == 1) {
@@ -3068,20 +3069,20 @@ restart:;
 
     /* result == 3: Ask for more */
     /* Check if offer can be improved */
-    if (*(int16_t *)(offerEntry + 8) != 0) {
-        if (*(int16_t *)(offerEntry + 8) == (int16_t)0xFFFF) {
+    if (offerEntry->negotiationStep1Amount != 0) {
+        if (offerEntry->negotiationStep1Amount == (int16_t)0xFFFF) {
             /* First counter exhausted, try second */
-            if (*(int16_t *)(offerEntry + 10) != 0 &&
-                *(int16_t *)(offerEntry + 10) != (int16_t)0xFFFF) {
-                *(uint16_t *)(offerEntry + 6) = *(uint16_t *)(offerEntry + 10);
-                *(int16_t *)(offerEntry + 10) = (int16_t)0xFFFF;
+            if (offerEntry->negotiationStep2Amount != 0 &&
+                offerEntry->negotiationStep2Amount != (int16_t)0xFFFF) {
+                offerEntry->offerAmount = (uint16_t)offerEntry->negotiationStep2Amount;
+                offerEntry->negotiationStep2Amount = (int16_t)0xFFFF;
                 goto restart;
             }
             /* Fall through to random reject/withdraw */
         } else {
             /* Use first counter amount */
-            *(uint16_t *)(offerEntry + 6) = *(uint16_t *)(offerEntry + 8);
-            *(int16_t *)(offerEntry + 8) = (int16_t)0xFFFF;
+            offerEntry->offerAmount = (uint16_t)offerEntry->negotiationStep1Amount;
+            offerEntry->negotiationStep1Amount = (int16_t)0xFFFF;
             goto restart;
         }
     }
@@ -3091,7 +3092,7 @@ restart:;
         uint16_t r = _Rand2();
         if (r & 1) {
             /* Refuse to further improve */
-            *(int16_t *)(offerEntry + 8) = (int16_t)0xFFFE;
+            offerEntry->negotiationStep1Amount = (int16_t)0xFFFE;
             goto restart;
         }
     }
@@ -3659,7 +3660,7 @@ void _OffersAfterDrawCommon(void *entryPtr)
         goto drawAndReturn;
 
     /* Point to the offer in transferOfferTable */
-    uint8_t *offer = transferOfferTable + (uint16_t)d7 * OFFER_ENTRY_SIZE;
+    TransferOfferEntry *offer = &((TransferOfferEntry *)transferOfferTable)[(uint16_t)d7];
 
     a5->isDisabled = 0;
     menuEntries[7].isInvisible = 0;
@@ -3667,9 +3668,9 @@ void _OffersAfterDrawCommon(void *entryPtr)
     menuEntries[9].isInvisible = 0;
     menuEntries[10].isInvisible = 0;
 
-    /* Set color based on offer expired flag (byte 13) */
+    /* Set color based on offer seen flag (byte 0x0D) */
     uint16_t colorBits = 0;
-    if (offer[13] != 0)
+    if (offer->seenFlag != 0)
         colorBits = 6;
 
     /* Apply color to stringFlags of entries 7-10 (low 4 bits) */
@@ -3697,8 +3698,8 @@ void _OffersAfterDrawCommon(void *entryPtr)
     exchangeFmtLine1b       = (uintptr_t)aAExchangeOffer_2;
     exchangeFmtLine2b       = (uintptr_t)aBAndC_0;
 
-    /* Check for "further improved" (offer word at offset 10 == 0xFFFF) */
-    if (*(uint16_t *)(offer + 10) == 0xFFFF) {
+    /* Check for "further improved" (negotiationStep2Amount == 0xFFFF) */
+    if (offer->negotiationStep2Amount == (int16_t)0xFFFF) {
         offerFmtSinglePlayer   = (uintptr_t)aAFurtherImprov;
         offerFmtTwoPlayers     = (uintptr_t)aAFurtherImprov_0;
         exchangeFmtSinglePlayer = (uintptr_t)aAFurtherImprov_1;
@@ -3712,8 +3713,8 @@ void _OffersAfterDrawCommon(void *entryPtr)
         exchangeFmtLine1b       = (uintptr_t)aAFurtherImprov_6;
         exchangeFmtLine2b       = (uintptr_t)aBAndC_4;
     }
-    /* Check for "improved" (offer[8] == 0xFFFF) */
-    else if (*(uint16_t *)(offer + 8) == 0xFFFF) {
+    /* Check for "improved" (negotiationStep1Amount == 0xFFFF) */
+    else if (offer->negotiationStep1Amount == (int16_t)0xFFFF) {
         offerFmtSinglePlayer   = (uintptr_t)aAImprovedOffer;
         offerFmtTwoPlayers     = (uintptr_t)aAImprovedOffer_0;
         exchangeFmtSinglePlayer = (uintptr_t)aAImprovedExcha;
@@ -3729,7 +3730,7 @@ void _OffersAfterDrawCommon(void *entryPtr)
     }
 
     /* Get team name pointer (offset 5 from team data = teamName field) */
-    TeamFileEx *teamPtr = _GetTeamPointer(*(uint16_t *)offer);
+    TeamFileEx *teamPtr = _GetTeamPointer(offer->teamOffering);
     uint8_t *teamName = (uint8_t *)teamPtr->team.teamName;
 
     /* Determine format string and player names based on offer type */
@@ -3737,26 +3738,26 @@ void _OffersAfterDrawCommon(void *entryPtr)
     uint8_t *playerNameA;
     uint8_t *playerNameB = 0;
 
-    if ((int8_t)offer[3] < 0) {
-        /* Single player (offer[3] < 0) */
+    if (offer->secondPlayerOrdinal < 0) {
+        /* Single player */
         fmtStr = (uint8_t *)offerFmtSinglePlayer;
-        if ((int8_t)offer[4] >= 0)
+        if (offer->swapPlayerOrdinal >= 0)
             fmtStr = (uint8_t *)exchangeFmtSinglePlayer;
 
-        uint8_t *p = _GetPlayer(selTeamNumber, (uint16_t)(int8_t)offer[2]);
+        uint8_t *p = _GetPlayer(selTeamNumber, (uint16_t)offer->primaryPlayerOrdinal);
         PlayerFile *namePf = (PlayerFile *)(p + PF_OFF);
         playerNameA = (uint8_t *)namePf->playerName;
     } else {
-        /* Two players (offer[3] >= 0) */
+        /* Two players */
         fmtStr = (uint8_t *)offerFmtTwoPlayers;
-        if ((int8_t)offer[4] >= 0)
+        if (offer->swapPlayerOrdinal >= 0)
             fmtStr = (uint8_t *)exchangeFmtTwoPlayers;
 
-        uint8_t *p1 = _GetPlayer(selTeamNumber, (uint16_t)(int8_t)offer[2]);
+        uint8_t *p1 = _GetPlayer(selTeamNumber, (uint16_t)offer->primaryPlayerOrdinal);
         PlayerFile *namePf1 = (PlayerFile *)(p1 + PF_OFF);
         playerNameA = (uint8_t *)namePf1->playerName;
 
-        uint8_t *p2 = _GetPlayer(selTeamNumber, (uint16_t)(int8_t)offer[3]);
+        uint8_t *p2 = _GetPlayer(selTeamNumber, (uint16_t)offer->secondPlayerOrdinal);
         PlayerFile *namePf2 = (PlayerFile *)(p2 + PF_OFF);
         playerNameB = (uint8_t *)namePf2->playerName;
     }
@@ -5411,20 +5412,20 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
 
     /* Write offer to table */
     uint16_t offerIdx = numOffers;
-    uint8_t *entry = transferOfferTable + (uint32_t)offerIdx * OFFER_ENTRY_SIZE;
-    *(uint16_t *)(entry + 6) = offerAmount;
-    *(uint16_t *)(entry + 8) = offerNegotiationStep1Amount;
-    *(uint16_t *)(entry + 10) = offerNegotiationStep2Amount;
-    *(uint16_t *)(entry + 0) = teamOffering;
-    entry[2] = (uint8_t)offerPrimaryPlayerOrdinal;
-    entry[3] = (uint8_t)numExtraPlayersWanted;
-    entry[4] = (uint8_t)offerSwapPlayerOrdinal;
-    entry[5] = (uint8_t)offerExtraPlayerOrdinal;
+    TransferOfferEntry *entry = &((TransferOfferEntry *)transferOfferTable)[offerIdx];
+    entry->offerAmount            = offerAmount;
+    entry->negotiationStep1Amount = (int16_t)offerNegotiationStep1Amount;
+    entry->negotiationStep2Amount = (int16_t)offerNegotiationStep2Amount;
+    entry->teamOffering           = teamOffering;
+    entry->primaryPlayerOrdinal   = (int8_t)offerPrimaryPlayerOrdinal;
+    entry->secondPlayerOrdinal    = (int8_t)numExtraPlayersWanted;
+    entry->swapPlayerOrdinal      = (int8_t)offerSwapPlayerOrdinal;
+    entry->extraPlayerOrdinal     = (int8_t)offerExtraPlayerOrdinal;
 
     /* Random lifespan from table */
     rnd = _Rand2();
-    entry[12] = offerLifespanTable[rnd & 0xF];
-    entry[13] = 0;
+    entry->lifespan = offerLifespanTable[rnd & 0xF];
+    entry->seenFlag = 0;
 
     numOffers++;
     SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: STORED — team=0x%04X amount=%u numOffers=%u",
