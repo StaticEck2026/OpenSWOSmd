@@ -60,7 +60,7 @@ SRC_FILES=(
     goal_scored.c highlights_menu.c interrupts.c job_offers.c
     loader_intro.c match_sim.c menu_system.c menus.c
     pitch.c play_match_menu.c player_anim.c referee.c rnc.c
-    sprites.c statistics.c text_render.c
+    color_sprites.c player_sprites.c sprites.c statistics.c text_render.c
     strings_data.c teams.c transfer_market.c update_players.c
     competition_data.c tactics_data.c fixture_data.c
     simulation_data.c player_data.c render_data.c palette_data.c
