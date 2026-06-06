@@ -225,7 +225,7 @@ void _DIY_ShuffleTeams(uint8_t *diy, uint8_t *slot)
     /* slot-record accessor: the threaded `slot` byte pointer equals
      * bufbase + slotIdx*0x76, and slots[] sits at struct offset 0x15A by
      * design, so `slot + 0x15A` is &diyFileBufferCopy.slots[slotIdx]. */
-    DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + 0x15A);
+    DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + offsetof(DIYTournamentState, slots));
     uint8_t *teamIndices = ((DIYTournamentState *)diy)->teamIndexOrder;
     uint16_t count = s->numTeams;
     int16_t i = (int16_t)count - 1;
@@ -249,7 +249,7 @@ void _DIY_ShuffleTeams(uint8_t *diy, uint8_t *slot)
 __attribute__((used, externally_visible))
 void _DIY_SortAndShuffleTeamsByValue(uint8_t *diy, uint8_t *slot)
 {
-    DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + 0x15A);
+    DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + offsetof(DIYTournamentState, slots));
     DIYTournamentState *t = (DIYTournamentState *)diy;
     uint16_t *teamIds = t->teamIds;
     uint8_t *teamIndices = t->teamIndexOrder;
@@ -1509,7 +1509,7 @@ void _DIY_RecountMissingTeamsInTeamGrid(void)
         uint8_t *slot = (uint8_t *)&diyFileBufferCopy;
         uint16_t slotIdx = (uint16_t)diyFileBufferCopy.header.roundComplete;
         slot += (uint32_t)slotIdx * 0x76;
-        DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + 0x15A);
+        DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + offsetof(DIYTournamentState, slots));
 
         if (s->doubleCount != 0) {
             /* Slot has doubled-count flag set */
@@ -2062,7 +2062,7 @@ void _DIY_SyncCompetitionTeamGridOrBuildBracket(void)
     uint8_t *a2 = (uint8_t *)&diyFileBufferCopy;
     uint16_t offset = (uint16_t)diyFileBufferCopy.header.roundComplete;
     uint8_t *a3 = a2 + (uint32_t)offset * 0x76;
-    DIYTournamentSlot *a3Slot = (DIYTournamentSlot *)(a3 + 0x15A);
+    DIYTournamentSlot *a3Slot = (DIYTournamentSlot *)(a3 + offsetof(DIYTournamentState, slots));
     uint8_t *a4 = (uint8_t *)&diyCompetitionStart.base;
     uint8_t *a5 = (uint8_t *)&diyCompetitionStart.base;
 
@@ -2391,7 +2391,7 @@ restart_loop:
     /* a3 = bufCopy + bufCopy[0x54] * 0x76 (current slot base) */
     uint16_t slotIdx = (uint16_t)bufCopy->roundComplete;
     uint8_t *slot = bufCopyRaw + (uint16_t)(slotIdx * 0x76);
-    DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + 0x15A);
+    DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + offsetof(DIYTournamentState, slots));
 
     /* Propagate tournament-identity fields from bufCopy (where
      * _InitDIYLeagueFromRecord wrote them) to comp before showing the
@@ -2672,7 +2672,7 @@ void _DIY_UpdateCompetitionProgress(void)
         /* Tournament slot for current round (if any) */
         uint16_t slotIdx = (uint16_t)diyFileBufferCopy.header.roundComplete;
         DIYTournamentSlot *cur_s = (DIYTournamentSlot *)
-            ((uint8_t *)&diyFileBufferCopy + (uint32_t)slotIdx * 118 + 0x15A);
+            ((uint8_t *)&diyFileBufferCopy + (uint32_t)slotIdx * 118 + offsetof(DIYTournamentState, slots));
         DIYTournamentSlot *nxt_s = cur_s + 1;
         SWOS_DBG("[bug23-cup] BEFORE: round=%d mppr=%u grid[0..7]="
                         "%02X %02X %02X %02X %02X %02X %02X %02X "
@@ -3029,7 +3029,7 @@ void _DIY_PostLoadCompetitionDispatch(void)
         return;
 
     uint16_t currentRound = fbCopy->roundComplete;
-    DIYTournamentSlot *slot = (DIYTournamentSlot *)((uint8_t *)&diyFileBufferCopy + (uint16_t)(currentRound * 0x76) + 0x15A);
+    DIYTournamentSlot *slot = (DIYTournamentSlot *)((uint8_t *)&diyFileBufferCopy + (uint16_t)(currentRound * 0x76) + offsetof(DIYTournamentState, slots));
 
     if (slot->isLeagueFormat == 0) {
         /* Cup path */
@@ -3082,7 +3082,7 @@ void _DIY_UpdateCompetitionProgressOrAdvanceSlot(uint8_t *blk)
             return;
         uint16_t pitchType2 = (uint16_t)fbCopyS->roundComplete;
         uint8_t *slot = fbCopy + (uint16_t)(pitchType2 * 0x76);
-        DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + 0x15A);
+        DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + offsetof(DIYTournamentState, slots));
         if (s->isLeagueFormat == 0) {
             /* Cup path */
             _DIY_RecordCupBracketProgress();
@@ -3608,7 +3608,7 @@ void _DIY_AdjustWorldCupBracketScores(uint8_t *diy, uint8_t *slot, uint8_t *comp
 {
     DIYCompetition *diyS = (DIYCompetition *)diy;
     DIYCompetition *compS = (DIYCompetition *)comp;
-    DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + 0x15A);
+    DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + offsetof(DIYTournamentState, slots));
 
     if (diyS->roundComplete != 0)
         return;
@@ -3685,7 +3685,7 @@ void _DIY_BuildSeededBracketAndUpdateScores(uint8_t *diy, uint8_t *slot,
     DIYCompetition *diyS = (DIYCompetition *)diy;
     DIYCompetitionEx *compEx = (DIYCompetitionEx *)comp;
     DIYCompetition *compS = &compEx->base;
-    DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + 0x15A);
+    DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + offsetof(DIYTournamentState, slots));
 
     /* Check if world cup competition */
     uint8_t compNum = diyS->field_2E;
@@ -3831,7 +3831,7 @@ void _DIY_CopyTeamGridFromCompToDIY(uint8_t *diy, uint8_t *slot,
     (void)comp5;
     DIYCompetition *diyS = (DIYCompetition *)diy;
     DIYCompetition *compS = (DIYCompetition *)comp;
-    DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + 0x15A);
+    DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + offsetof(DIYTournamentState, slots));
 
     uint16_t legs = s->divisionFactor;
     uint16_t field58 = (uint16_t)diyS->currentRoundIndex;
@@ -3890,7 +3890,7 @@ void _DIY_BuildTeamGridAndIndexMaps(uint8_t *diy, uint8_t *slot,
 {
     (void)comp4;
     DIYCompetition *diyS = (DIYCompetition *)diy;
-    DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + 0x15A);
+    DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + offsetof(DIYTournamentState, slots));
 
     uint8_t compNum = diyS->field_2E;
 
@@ -4034,7 +4034,7 @@ void _DIY_ShuffleTeamsAndBuildCompTeamList(uint8_t *diy, uint8_t *slot,
 {
     (void)comp5;
     DIYCompetition *diyS = (DIYCompetition *)diy;
-    DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + 0x15A);
+    DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + offsetof(DIYTournamentState, slots));
 
     uint8_t compNum = diyS->field_2E;
 
@@ -4152,7 +4152,7 @@ void _DIY_LoadCurrentCompetitionSlot(void)
     uint8_t *a3 = a2;
     uint16_t slotIdx = (uint16_t)a2s->roundComplete;  /* 0x54 */
     a3 += (uint32_t)slotIdx * 118;
-    DIYTournamentSlot *s = (DIYTournamentSlot *)(a3 + 0x15A);
+    DIYTournamentSlot *s = (DIYTournamentSlot *)(a3 + offsetof(DIYTournamentState, slots));
 #ifdef SWOS_DEBUG_AUTOSKIP
     SWOS_AUTOSKIP_LOG("LoadSlot: ENTER slotIdx=%u isLeagueFormat=%u numTeams=%u groups=%u teamsPerGroup=%u "
                       "compType(buf)=%d numTeams(buf)=%d compId(buf)=%u",
@@ -5184,7 +5184,7 @@ static uint8_t *getTournamentStageBlock(MenuEntry *entry)
  * +0x15A, so this just composes the two helpers. */
 static DIYTournamentSlot *getTournamentSlotRecord(MenuEntry *entry)
 {
-    return (DIYTournamentSlot *)(getTournamentStageBlock(entry) + 0x15A);
+    return (DIYTournamentSlot *)(getTournamentStageBlock(entry) + offsetof(DIYTournamentState, slots));
 }
 
 /* DesignDIYTournament_UpdateMonthPageIndices — compute month page indices (SWOS2.s line 49585) */
@@ -6082,7 +6082,7 @@ __attribute__((used, externally_visible))
 void _DesignDIYTournamentOnSelect23(MenuEntry *entry)
 {
     uint8_t *stageBlock = getTournamentStageBlock(entry);
-    DIYTournamentSlot *slot = (DIYTournamentSlot *)(stageBlock + 0x15A);
+    DIYTournamentSlot *slot = (DIYTournamentSlot *)(stageBlock + offsetof(DIYTournamentState, slots));
     slot->formatFlag16E ^= 3;
     _DesignDIYTournamentOnDraw();
     _DesignDIYTournament_RedrawStageItemsFromBlock(stageBlock, 1);
@@ -6096,7 +6096,7 @@ void _DesignDIYTournamentOnSelect20(MenuEntry *entry)
 {
     _DesignDIYTournament_CacheStageSelection(entry);
     uint8_t *a3 = diyTournamentSelectedStagePtr;
-    DIYTournamentSlot *slot = (DIYTournamentSlot *)(a3 + 0x15A);
+    DIYTournamentSlot *slot = (DIYTournamentSlot *)(a3 + offsetof(DIYTournamentState, slots));
 
     uint16_t d1 = slot->groups;
     uint16_t d2 = slot->teamsPerGroup;
@@ -6124,8 +6124,8 @@ void _DesignDIYTournament_AdjustStageQualifiers(MenuEntry *entry)
     uint16_t d7 = diyTournamentSelectedStageIndex1Based;
     uint8_t *a3 = diyTournamentSelectedStagePtr;
     uint8_t *a2 = a3 - 0x76; /* previous stage */
-    DIYTournamentSlot *slotA3 = (DIYTournamentSlot *)(a3 + 0x15A);
-    DIYTournamentSlot *slotA2 = (DIYTournamentSlot *)(a2 + 0x15A);
+    DIYTournamentSlot *slotA3 = (DIYTournamentSlot *)(a3 + offsetof(DIYTournamentState, slots));
+    DIYTournamentSlot *slotA2 = (DIYTournamentSlot *)(a2 + offsetof(DIYTournamentState, slots));
 
     if (d7 == 1) {
         /* First stage: adjust numTeams at a3+0x32 */
@@ -9691,7 +9691,7 @@ tournament_entry:
                 uint16_t stageConfig = (uint16_t)comp->roundComplete;
                 uint16_t stageOffset = stageConfig * 118;
                 uint8_t *stagePtr = raw + stageOffset;
-                DIYTournamentSlot *stageSlot = (DIYTournamentSlot *)(stagePtr + 0x15A);
+                DIYTournamentSlot *stageSlot = (DIYTournamentSlot *)(stagePtr + offsetof(DIYTournamentState, slots));
 
                 if (comp->currentRoundIndex != 0) {
                     /* Has group stage */
