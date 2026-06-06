@@ -103,10 +103,17 @@ extern void    _ShowFsErrorByCode(uint16_t code);
  * round-trips bit-exactly for that save type. */
 typedef int16_t (*VerifyReloadFn)(uint8_t *filename);
 
+/* Optional per-region predicate: return non-zero for byte offsets that are
+ * EXPECTED to differ across a round-trip and must not count as mismatches —
+ * i.e. pointer-to-disk fields that are serialized symbolically (the content
+ * round-trips, the raw pointer value cannot). NULL = compare every byte. */
+typedef int (*VerifyIgnoreFn)(uint32_t offset);
+
 static void verify_roundtrip_region(const char *label,
                                     uint8_t *region, uint32_t size,
                                     VerifyReloadFn reload,
-                                    uint8_t *filename)
+                                    uint8_t *filename,
+                                    VerifyIgnoreFn ignore)
 {
     uint8_t *snap = (uint8_t *)swos_io_alloc(size);
     if (!snap) return;
@@ -119,6 +126,7 @@ static void verify_roundtrip_region(const char *label,
     size_t first = (size_t)-1;
     for (uint32_t i = 0; i < size; i++) {
         if (region[i] != snap[i]) {
+            if (ignore && ignore(i)) continue;   /* expected-symbolic byte */
             if (mismatches < 20) {
                 if (first == (size_t)-1) first = i;
                 SWOS_DBG(
@@ -129,9 +137,12 @@ static void verify_roundtrip_region(const char *label,
             mismatches++;
         }
     }
-    SWOS_DBG(
-            "[json-verify-%s] %zu mismatches across %u bytes (first at +%zu)\n",
-            label, mismatches, (unsigned)size, first);
+    if (mismatches == 0)
+        SWOS_DBG("[json-verify-%s] 0 mismatches across %u bytes\n",
+                 label, (unsigned)size);
+    else
+        SWOS_DBG("[json-verify-%s] %zu mismatches across %u bytes (first at +%zu)\n",
+                 label, mismatches, (unsigned)size, first);
 
     memcpy(region, snap, size);
     swos_io_free(snap);
@@ -370,6 +381,32 @@ static int json_out_emit(const char *chunk, int chunk_len, void *ud)
 #define SAVE_SI_TOURLOST         103u
 #define SAVE_SI_TOURNAMENTSTATUS 104u
 #define SAVE_SI_MANAGERSTATUS    105u
+
+#ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
+/* VERIFY exemption for the career region. The 4 SeasonInformations comp-name
+ * pointers (leagueStrPtr / strPtr1/2/3) are pointer-to-disk: serialized as the
+ * string CONTENT (re-interned into the string pool on load), so the raw pointer
+ * bytes never equal the live canonical address — the content round-trips, the
+ * address cannot. Exempt exactly those field bytes from the byte-diff; every
+ * other byte of the career buffer still verifies bit-exactly. Offsets are taken
+ * via offsetof/sizeof so this is correct on both 32- and 64-bit layouts. */
+static int career_verify_ignore(uint32_t off)
+{
+    const uint8_t *si  = seasonInformationsArray;
+    const uint8_t *cfb = &careerFileBuffer;
+    if (si < cfb) return 0;
+    uint32_t base   = (uint32_t)(size_t)(si - cfb);
+    if (off < base) return 0;
+    uint32_t rel    = off - base;
+    uint32_t stride = (uint32_t)sizeof(SeasonInformations);
+    if (rel >= stride * SAVE_SI_ENTRY_COUNT) return 0;
+    uint32_t in_entry = rel % stride;
+    uint32_t lo = (uint32_t)offsetof(SeasonInformations, leagueStrPtr);
+    uint32_t hi = (uint32_t)offsetof(SeasonInformations, strPtr3)
+                + (uint32_t)sizeof(uint8_t *);
+    return (in_entry >= lo && in_entry < hi);
+}
+#endif
 
 /* The previous {sym}/{str}/{raw} discriminator wrapper used for
  * pointer-typed fields has been retired — all top-level pointer
@@ -3719,7 +3756,8 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
 #ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
     verify_roundtrip_region("career",
                             (uint8_t *)&careerFileBuffer, data_size,
-                            verify_reload_career, filename);
+                            verify_reload_career, filename,
+                            career_verify_ignore);
 #endif
 
     return 0;
@@ -4576,7 +4614,7 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
                               ? verify_reload_diy
                               : verify_reload_preset;
         verify_roundtrip_region(kind, (uint8_t *)lo,
-                                (uint32_t)(hi - lo), fn, filename);
+                                (uint32_t)(hi - lo), fn, filename, NULL);
     }
 #endif
 
@@ -5352,7 +5390,7 @@ int16_t SaveJson_WriteHighlights(uint8_t *filename)
 #ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
     verify_roundtrip_region("highlights",
                             hilFileBuffer, data_size,
-                            verify_reload_highlights, filename);
+                            verify_reload_highlights, filename, NULL);
 #endif
 
     return 0;
