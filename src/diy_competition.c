@@ -2671,8 +2671,7 @@ void _DIY_UpdateCompetitionProgress(void)
         uint16_t mppr = (uint16_t)a0s->matchPairsPerRound;
         /* Tournament slot for current round (if any) */
         uint16_t slotIdx = (uint16_t)diyFileBufferCopy.header.roundComplete;
-        DIYTournamentSlot *cur_s = (DIYTournamentSlot *)
-            ((uint8_t *)&diyFileBufferCopy + (uint32_t)slotIdx * 118 + offsetof(DIYTournamentState, slots));
+        DIYTournamentSlot *cur_s = &diyFileBufferCopy.slots[slotIdx];
         DIYTournamentSlot *nxt_s = cur_s + 1;
         SWOS_DBG("[bug23-cup] BEFORE: round=%d mppr=%u grid[0..7]="
                         "%02X %02X %02X %02X %02X %02X %02X %02X "
@@ -3029,7 +3028,7 @@ void _DIY_PostLoadCompetitionDispatch(void)
         return;
 
     uint16_t currentRound = fbCopy->roundComplete;
-    DIYTournamentSlot *slot = (DIYTournamentSlot *)((uint8_t *)&diyFileBufferCopy + (uint16_t)(currentRound * 0x76) + offsetof(DIYTournamentState, slots));
+    DIYTournamentSlot *slot = &diyFileBufferCopy.slots[currentRound];
 
     if (slot->isLeagueFormat == 0) {
         /* Cup path */
