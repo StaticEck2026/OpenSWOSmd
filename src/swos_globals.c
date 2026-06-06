@@ -419,45 +419,18 @@ __asm__(".globl " _ASM_PFX "teamOffering\n"
         ".globl " _ASM_PFX "offerNegotiationStep1Amount\n"
         ".equ   " _ASM_PFX "offerNegotiationStep1Amount, " _ASM_PFX "offerOrdinalsBackingBuf + 12\n");
 
-/* ---- Goalkeeper face / skin tables (must be adjacent) -------------
+/* ---- Goalkeeper face / skin state --------------------------------
  *
- * SWOS2.s line 16482..16493 lays these 6 globals back-to-back as 10
- * bytes of BSS, and _DetermineGoalieFaces relies on the adjacency:
- *
- *   +0..+2 team1GoalieFaceToPosition[3]
- *   +3..+5 team2GoalieFaceToPosition[3]
- *   +6     team1GoalieFaces           (team 1 main GK face)
- *   +7     team2GoalieFaces           (team 1 RESERVE GK face — name
- *                                      is misleading; this is the byte
- *                                      written via team1GoalieFaces[1])
- *   +8     team2GoalieSkinType        (team 2 main GK face)
- *   +9     team2ReserveGoalieSkinType (= team2GoalieSkinType[1])
- *
- * `_DetermineGoalieFaces` writes through `gkFaceIndices` at indices
- * [0] (main) and [1] (reserve). On Amiga the [1] write lands on the
- * adjacent named global. On SDL the symbols were declared as
- * separate scalar uint8_t (single byte each) so the [1] writes
- * overran into whatever the linker placed next, AND the reserve-GK
- * face lookup at team1GoalieFaces[1] / team2GoalieSkinType[1]
- * returned garbage — making the in-match goalkeeper render with a
- * random skin colour that didn't match the squad-screen face.
- *
- * Restore the layout via .equ aliases. Same pattern as
- * stadiumMenuLittlePlayerBackingBuf and offerOrdinalsBackingBuf. */
+ * Untangled (roadmap step 3) from the goalieFacesBackingBuf 6-symbol
+ * .equ adjacency overlay into a typed GoalieFaceState (game_types.h).
+ * The two old "team2*"-labelled bytes (+7 reserve-of-team1, +9
+ * reserve-of-team2) had no real code consumers — they were only ever
+ * reached via team1Faces[1] / team2Faces[1] — so they fold into the
+ * 2-byte face arrays and the misleading labels disappear. Layout is
+ * pinned byte-identical to the old backing buffer by the offsetof
+ * static asserts on the struct. */
 __attribute__((used, aligned(2)))
-uint8_t goalieFacesBackingBuf[10] = {0};
-__asm__(".globl " _ASM_PFX "team1GoalieFaceToPosition\n"
-        ".equ   " _ASM_PFX "team1GoalieFaceToPosition, "  _ASM_PFX "goalieFacesBackingBuf\n"
-        ".globl " _ASM_PFX "team2GoalieFaceToPosition\n"
-        ".equ   " _ASM_PFX "team2GoalieFaceToPosition, "  _ASM_PFX "goalieFacesBackingBuf + 3\n"
-        ".globl " _ASM_PFX "team1GoalieFaces\n"
-        ".equ   " _ASM_PFX "team1GoalieFaces, "           _ASM_PFX "goalieFacesBackingBuf + 6\n"
-        ".globl " _ASM_PFX "team2GoalieFaces\n"
-        ".equ   " _ASM_PFX "team2GoalieFaces, "           _ASM_PFX "goalieFacesBackingBuf + 7\n"
-        ".globl " _ASM_PFX "team2GoalieSkinType\n"
-        ".equ   " _ASM_PFX "team2GoalieSkinType, "        _ASM_PFX "goalieFacesBackingBuf + 8\n"
-        ".globl " _ASM_PFX "team2ReserveGoalieSkinType\n"
-        ".equ   " _ASM_PFX "team2ReserveGoalieSkinType, " _ASM_PFX "goalieFacesBackingBuf + 9\n");
+GoalieFaceState goalieFaces = {0};
 
 /* ---- Sprite blit queues (each = sentinel + 3000-byte buffer) ----
  *

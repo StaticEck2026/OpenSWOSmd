@@ -44,10 +44,7 @@ extern uint16_t team1MostFrequentFace;
 extern uint16_t team2MostFrequentFace;
 extern uint8_t facesFrequency[];
 extern void *skinAndHairColorConversionTable[];
-extern uint8_t team1GoalieFaceToPosition[];
-extern uint8_t team2GoalieFaceToPosition[];
-extern uint8_t team1GoalieFaces[];      /* [0]=team1 main GK face, [1]=team1 reserve GK face (=team2GoalieFaces label) */
-extern uint8_t team2GoalieSkinType[];   /* [0]=team2 main GK face, [1]=team2 reserve GK face (=team2ReserveGoalieSkinType label) */
+extern GoalieFaceState goalieFaces;     /* GK face/skin state (was 4+2 adjacency-aliased globals) */
 
 /* ---- Helper: convert a range of sprites with a color table ---- */
 static void convertSpriteRange(uint16_t start, uint16_t end, uint16_t *colorTable)
@@ -170,8 +167,8 @@ void _ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
     convertSpriteRange(1208, 1220, colorTableReserves);
 
     /* --- Determine goalkeeper faces for both teams --- */
-    _DetermineGoalieFaces(team1, team1GoalieFaceToPosition, team1GoalieFaces);
-    _DetermineGoalieFaces(team2, team2GoalieFaceToPosition, team2GoalieSkinType);
+    _DetermineGoalieFaces(team1, goalieFaces.team1FaceToPosition, goalieFaces.team1Faces);
+    _DetermineGoalieFaces(team2, goalieFaces.team2FaceToPosition, goalieFaces.team2Faces);
 
     /* --- Team color tables: skin/hair from face frequency --- */
     if (useIndividualPlayerSkinColor == 0) {
@@ -212,7 +209,7 @@ void _ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
     }
 
     /* Team 1 goalkeeper: convert sprites 833-890.
-     * team1GoalieFaces[0] == 0xFF means _DetermineGoalieFaces didn't assign
+     * goalieFaces.team1Faces[0] == 0xFF means _DetermineGoalieFaces didn't assign
      * a face slot. Mirroring the reserve-GK guard below, skip the conversion
      * — otherwise _ConvertColorTableToSkinColor sign-extends 0xFF to -1 and
      * indexes the 3-entry skinAndHairColorConversionTable[] out-of-bounds,
@@ -220,7 +217,7 @@ void _ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
      * unrelated globals (we hit `bigCharsTable + 64`, which silently broke
      * the 'R' and 'S' glyph lookups). */
     if (useIndividualPlayerSkinColor != 0) {
-        int8_t face = (int8_t)team1GoalieFaces[0];
+        int8_t face = (int8_t)goalieFaces.team1Faces[0];
         if (face >= 0)
             _ConvertColorTableToSkinColor((uint16_t)(uint8_t)face, team1PlayersColorTable);
     }
@@ -228,9 +225,9 @@ void _ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
 
     /* Team 1 goalkeeper reserve: sprites 891-948
      * Only converted when useIndividualPlayerSkinColor != 0 AND face >= 0.
-     * Note: team2GoalieFaces is actually team1's reserve GK face (adjacent byte). */
+     * Note: this is team 1's reserve GK face (team1Faces[1]). */
     if (useIndividualPlayerSkinColor != 0) {
-        int8_t face2 = (int8_t)team1GoalieFaces[1];
+        int8_t face2 = (int8_t)goalieFaces.team1Faces[1];
         if (face2 >= 0) {
             _ConvertColorTableToSkinColor((uint16_t)(uint8_t)face2, team1PlayersColorTable);
             convertSpriteRange(891, 949, team1PlayersColorTable);
@@ -270,7 +267,7 @@ void _ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
     /* Team 2 goalkeeper: convert sprites 949-1006.
      * Same 0xFF-sentinel guard as team 1's main goalkeeper above. */
     if (useIndividualPlayerSkinColor != 0) {
-        int8_t face = (int8_t)team2GoalieSkinType[0];
+        int8_t face = (int8_t)goalieFaces.team2Faces[0];
         if (face >= 0)
             _ConvertColorTableToSkinColor((uint16_t)(uint8_t)face, team2PlayersColorTable);
     }
@@ -279,7 +276,7 @@ void _ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
     /* Team 2 goalkeeper reserve: sprites 1007-1064
      * Only converted when useIndividualPlayerSkinColor != 0 AND face >= 0. */
     if (useIndividualPlayerSkinColor != 0) {
-        int8_t reserveFace = (int8_t)team2GoalieSkinType[1];
+        int8_t reserveFace = (int8_t)goalieFaces.team2Faces[1];
         if (reserveFace >= 0) {
             _ConvertColorTableToSkinColor((uint16_t)(uint8_t)reserveFace, team2PlayersColorTable);
             convertSpriteRange(1007, 1065, team2PlayersColorTable);
