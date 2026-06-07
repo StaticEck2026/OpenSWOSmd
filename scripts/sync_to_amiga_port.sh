@@ -76,6 +76,7 @@ SRC_FILES=(
     player_positioning.c tackle_foul.c training_match.c frontend.c
     fade.c input.c input_text.c loader_bootstrap.c math68k.c panic.c
     random.c string_utils.c team_control.c tactics_menu.c
+    game_state.c camera.c move_camera.c scroll_blit.c highlight.c
     intro_menu_image_script_cmds.inc
     menu_bg_image_script_cmds.inc
     menu_color_text_script_cmds.inc
