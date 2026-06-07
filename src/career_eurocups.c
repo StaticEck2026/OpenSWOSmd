@@ -11,9 +11,11 @@
 #include "career_eurocups.h"
 #include "game_types.h"
 #include "diy_competition.h"
+#include "endian_helpers.h"
 #include "career_status.h"
 #include "career_teams.h"
 #include "panic.h"
+#include "auto_skip_debug.h"  /* TEMP: SWOS_AUTOSKIP_LOG for euro-cup draw trace */
 
 /* ---- ASM externs (globals defined in assembly) ---- */
 extern DIYCompetitionEx diyCompetitionStart;
@@ -46,7 +48,7 @@ extern uint8_t *euroCupTeamListWritePtr;
 extern uint8_t *cupWinnersCupTeamListWritePtr;
 extern uint8_t *uefaCupTeamListWritePtr;
 
-extern uint32_t countriesTable[];
+extern void *countriesTable[];
 extern uint16_t selTeamNumber;
 
 /* C-to-asm bridges */
@@ -62,24 +64,44 @@ extern void _DIY_SortLeagueTableByStandings(void);
  * ================================================================ */
 
 /* isTeamInList — checks if team number is in a word list.
- * Asm: loc_12B1F4. Returns 1 if found, 0 if not. */
+ * Asm: loc_12B1F4. Returns 1 if found, 0 if not.
+ *
+ * The list stores team IDs as BE byte pairs (matching Amiga `move.w`
+ * semantics and the static `unk1[]` seed format) so the same bytes
+ * survive a careerFileBuffer save/load round-trip on either endian
+ * host. `team` is a host-native value `(country<<8)|ordinal` produced
+ * by BE_READ_U16, so each list slot must also be decoded with
+ * BE_READ_U16 before comparison. A naive `list[i] == team` compares
+ * (ordinal<<8|country) on x86 against (country<<8|ordinal), which
+ * never matches and lets duplicates slip through, eventually tripping
+ * the 0x3443 TMD-pool panic when the same team is appended twice. */
 static int16_t isTeamInList(uint16_t team, uint8_t *listPtr, uint16_t count)
 {
-    uint16_t *list = (uint16_t *)listPtr;
     for (uint16_t i = 0; i < count; i++) {
-        if (list[i] == team)
+        if (BE_READ_U16(&listPtr[i * 2]) == team)
             return 1;
     }
     return 0;
 }
 
 /* appendTeamToList — appends team number to a word list and adds to TMD pool.
- * Asm: loc_12B20A. teamGrid points to the team grid data (first word = team number). */
+ * Asm: loc_12B20A. teamGrid points to the team grid data (first word = team number).
+ *
+ * teamGrid[0..1] are the team's `{country, ordinal}` byte pair in
+ * Amiga BE order. Preserve that byte order in the list — i.e. write
+ * teamGrid[0] then teamGrid[1] — so the list ends up as a sequence of
+ * BE byte pairs matching the static `unk1[]` seed format. The Amiga's
+ * `move.w (a5),(a2)+` does exactly this on a BE host; on x86 we have
+ * to do it explicitly because a host-native uint16 store would write
+ * the bytes in LE order, and downstream consumers (the spec reader's
+ * BE_READ_U16, isTeamInList, drawRandomTeamFromPoolAndCopyGrid, and
+ * the careerFileBuffer save/load round-trip) all expect BE bytes. */
 static void appendTeamToList(uint8_t *teamGrid, uint8_t **writePtrAddr, uint16_t *count)
 {
-    uint16_t *writePos = (uint16_t *)(*writePtrAddr);
-    *writePos = *(uint16_t *)teamGrid;
-    *writePtrAddr = (uint8_t *)(writePos + 1);
+    uint8_t *writePos = *writePtrAddr;
+    writePos[0] = teamGrid[0];
+    writePos[1] = teamGrid[1];
+    *writePtrAddr = writePos + 2;
     (*count)++;
     _Career_AppendTeamToTmdTeamPool((TeamFileEx *)teamGrid);
 }
@@ -164,14 +186,24 @@ static void qualifyTeamForEuroCup(void)
     if (!tryConsumeCompetitionIdFromList(euroCupEligibleCompetitionIds))
         return;
     uint8_t *a5 = primaryQualifiedTeamGrids;
-    uint16_t team = *(uint16_t *)a5;
+    /* See note on BE_READ_U16 in qualifyTeamForCupWinnersCup. */
+    uint16_t team = BE_READ_U16(a5);
     clearEuropeanCupTitleHolderIfMatchTeam(team);
     appendTeamToEuroCupList(a5);
 }
 
 /* qualifyTeamForCupWinnersCup — if competition is eligible, find a non-primary,
  * non-Euro-Cup-holder team from the grid for the Cup Winners' Cup.
- * Asm: Career_QualifyTeamForCupWinnersCup_IfEligibleCompetition */
+ * Asm: Career_QualifyTeamForCupWinnersCup_IfEligibleCompetition.
+ *
+ * Team identity is read from the grid record's first two bytes
+ * (countryNumber, teamOrdinal). On Amiga BE `move.w (a5)` produced
+ * `(country<<8)|ordinal` — the same BE-packed form used by
+ * cachedPrimaryQualifiedTeamIds and euroCupTitleHolderTeamId. On LE
+ * x86 a raw `*(uint16_t *)a5` byte-swaps it, the duplicate-detection
+ * never matches, and the function picks a slot that's already in the
+ * TMD pool from Euro Cup processing — tripping
+ * _Career_AppendTeamToTmdTeamPool's 0x3443 panic. Use BE_READ_U16. */
 static void qualifyTeamForCupWinnersCup(void)
 {
     if (!tryConsumeCompetitionIdFromList(cupWinnersCupEligibleCompetitionIds))
@@ -182,14 +214,14 @@ static void qualifyTeamForCupWinnersCup(void)
     uint8_t *a5 = primaryQualifiedTeamGrids + (8 * sizeof(TeamFileEx));
     for (;;) {
         a5 += sizeof(TeamFileEx);
-        uint16_t team = *(uint16_t *)a5;
+        uint16_t team = BE_READ_U16(a5);
         if (team == cachedPrimaryQualifiedTeamIds[0])
             continue;
         if (team == euroCupTitleHolderTeamId)
             continue;
         break;
     }
-    uint16_t team = *(uint16_t *)a5;
+    uint16_t team = BE_READ_U16(a5);
     clearEuropeanCupTitleHolderIfMatchTeam(team);
     appendTeamToCupWinnersCupList(a5);
 }
@@ -213,7 +245,8 @@ static void qualifyTeamsForUefaCup(void)
             if (a5 == euroCupTitleHolderGrid) {
                 a5 = primaryQualifiedTeamGrids + sizeof(TeamFileEx); /* wrap to slot 1 */
             }
-            uint16_t team = *(uint16_t *)a5;
+            /* See note on BE_READ_U16 in qualifyTeamForCupWinnersCup. */
+            uint16_t team = BE_READ_U16(a5);
             if (team == cachedPrimaryQualifiedTeamIds[0])
                 continue;
             if (team == cachedSecondaryQualifiedTeamIds[0])
@@ -228,7 +261,7 @@ static void qualifyTeamsForUefaCup(void)
                 continue;
             break;
         }
-        uint16_t team = *(uint16_t *)a5;
+        uint16_t team = BE_READ_U16(a5);
         clearEuropeanCupTitleHolderIfMatchTeam(team);
         appendTeamToUefaCupList(a5);
     }
@@ -283,7 +316,8 @@ void _DIY_CachePrimaryQualifiedTeamsGrid(void)
         /* ext.l d0 then divu.w #$12,d0: sign-extend to 32-bit then unsigned div by 18 */
         uint16_t slotIdx = (uint16_t)((uint32_t)(int32_t)posIdx / 18);
         slotIdx <<= 1;
-        uint16_t teamNum = *(uint16_t *)((uint8_t *)teamIdsTable + slotIdx);
+        /* leagueTeamIds is BE-packed per 4e5f378. */
+        uint16_t teamNum = BE_READ_U16((uint8_t *)teamIdsTable + slotIdx);
         *cachedIds++ = teamNum;
         TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
         copyTeamGridWords((uint8_t *)teamData, dst, 0x155);
@@ -298,15 +332,15 @@ void _DIY_CacheSecondaryQualifiedTeamsGrid(void)
     /* asm: lea (primaryQualifiedTeamGrids+0x180C),a1 — slot 9 (0x2AC * 9 = 0x180C) */
     uint8_t *dst = primaryQualifiedTeamGrids + 0x180C;
     uint16_t *cachedIds = cachedSecondaryQualifiedTeamIds;
-    uint8_t *compRaw = (uint8_t *)&diyCompetitionStart;
-    uint8_t *grid = compRaw + 0x2CE;
-    uint16_t *teamIdsTable = (uint16_t *)(compRaw + 0x24E);
+    /* See copyTitleHolderGrid below for why these go through typed
+     * struct access instead of `compRaw + 0xNN` byte offsets. */
+    uint8_t *grid = diyCompetitionStart.teamGridPairings;
 
     for (int16_t i = 2; i >= 0; i--) {
         int8_t gridByte = (int8_t)*grid++;
         int16_t idx = gridByte;
-        idx <<= 1;
-        uint16_t teamNum = *(uint16_t *)((uint8_t *)teamIdsTable + idx);
+        /* cupTeamIds is BE-packed `{country, ordinal}` byte pairs. */
+        uint16_t teamNum = BE_READ_U16((uint8_t *)diyCompetitionStart.cupTeamIds + (idx << 1));
         *cachedIds++ = teamNum;
         TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
         copyTeamGridWords((uint8_t *)teamData, dst, 0x155);
@@ -318,12 +352,12 @@ __attribute__((used, externally_visible))
 void _DIY_CacheTertiaryQualifiedTeamGrid(void)
 {
     _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
-    uint8_t *compRaw = (uint8_t *)&diyCompetitionStart;
-    int8_t gridByte = (int8_t)*(compRaw + 0x2CE);
+    /* See copyTitleHolderGrid below — typed access avoids the +4
+     * struct-field shift bug that hit copyTitleHolderGrid on 64-bit. */
+    int8_t gridByte = (int8_t)diyCompetitionStart.teamGridPairings[0];
     int16_t idx = gridByte;
-    idx <<= 1;
-    uint16_t *teamIdsTable = (uint16_t *)(compRaw + 0x24E);
-    uint16_t teamNum = *(uint16_t *)((uint8_t *)teamIdsTable + idx);
+    /* cupTeamIds is BE-packed `{country, ordinal}` byte pairs. */
+    uint16_t teamNum = BE_READ_U16((uint8_t *)diyCompetitionStart.cupTeamIds + (idx << 1));
     cachedTertiaryQualifiedTeamId = teamNum;
     TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
     copyTeamGridWords((uint8_t *)teamData, tertiaryQualifiedTeamGrid, 0x155);
@@ -333,17 +367,33 @@ void _DIY_CacheTertiaryQualifiedTeamGrid(void)
  * Group D: Title holder grid copy
  * ================================================================ */
 
-/* copyTitleHolderGrid — shared helper for the three title holder copy functions */
+/* copyTitleHolderGrid — shared helper for the three title holder copy functions.
+ *
+ * Both `cupTeamIds[64]` and `teamGridPairings[64]` are named members of
+ * DIYCompetitionEx, originally documented at struct offsets 0x24E / 0x2CE
+ * on 32-bit Amiga. The parent DIYCompetition grew by 4 bytes on 64-bit
+ * (namePtr 4→8), shifting both fields to 0x252 / 0x2D2 — so the original
+ * hardcoded byte-offset reads `compRaw + 0x24E` / `+ 0x2CE` walked into
+ * the wrong field on 64-bit, producing garbage teamNum values that
+ * panic'd inside _VerifyTeamLoaded. Use typed field access instead. */
 static void copyTitleHolderGrid(uint16_t *titleHolderTeamId, uint8_t *titleHolderGrid)
 {
     _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
-    uint8_t *compRaw = (uint8_t *)&diyCompetitionStart;
-    int8_t gridByte = (int8_t)*(compRaw + 0x2CE);
+    int8_t gridByte = (int8_t)diyCompetitionStart.teamGridPairings[0];
     int16_t idx = gridByte;
-    idx <<= 1;
-    uint16_t *teamIdsTable = (uint16_t *)(compRaw + 0x24E);
-    uint16_t teamNum = *(uint16_t *)((uint8_t *)teamIdsTable + idx);
+    /* cupTeamIds is BE-packed `{country, ordinal}` byte pairs per the
+     * 4e5f378 convention; read with BE_READ_U16 so titleHolderTeamId
+     * holds the packed value the rest of the code expects. The byte
+     * offset within the array is `gridByte << 1` (each entry is 2 bytes). */
+    uint16_t teamNum = BE_READ_U16((uint8_t *)diyCompetitionStart.cupTeamIds + (idx << 1));
     *titleHolderTeamId = teamNum;
+    /* TEMP (euro-cup title-holder bring-up — REMOVE after fix): the cup
+     * winner that becomes next season's title holder. A non-European id here
+     * means the auto-advanced cup had wrong teams. */
+    SWOS_AUTOSKIP_LOG("[eurocup-title] gridByte=%d -> titleHolderTeamId=0x%04X "
+                      "(country=%u ordinal=%u)",
+                      (int)idx, (unsigned)teamNum,
+                      (unsigned)((teamNum >> 8) & 0xFF), (unsigned)(teamNum & 0xFF));
     TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
     copyTeamGridWords((uint8_t *)teamData, titleHolderGrid, 0x155);
 }
@@ -371,7 +421,7 @@ void _Career_CopyUefaCupTeamGridAndTitleHolder(void)
 extern uint8_t euroCupCopy[];
 extern uint8_t cupWinnersCupCopy[];
 extern uint8_t uefaCupCopy[];
-extern uint32_t quaternaryCompetitionPtr;
+extern uint8_t *quaternaryCompetitionPtr;
 
 extern void _SaveSelectedTeams(void);
 extern void _RestoreSelectedTeams(void);
@@ -385,7 +435,7 @@ __attribute__((used, externally_visible))
 void _Career_UpdateEuroCupCompetitionSlot(void)
 {
     uint8_t *a4 = euroCupCopy;
-    if ((uint32_t)a4 == quaternaryCompetitionPtr) {
+    if (a4 == quaternaryCompetitionPtr) {
         _RestoreSelectedTeams();
         _Career_CopyEuroCupsCompetitionContextToOrFromActive();
         _DIY_EditCompetitionSlot(1, 1, 0);
@@ -403,7 +453,7 @@ __attribute__((used, externally_visible))
 void _Career_UpdateCupWinnersCupCompetitionSlot(void)
 {
     uint8_t *a4 = cupWinnersCupCopy;
-    if ((uint32_t)a4 == quaternaryCompetitionPtr) {
+    if (a4 == quaternaryCompetitionPtr) {
         _RestoreSelectedTeams();
         _Career_CopyEuroCupsCompetitionContextToOrFromActive();
         _ShowDIYCupMenuWithParams(1, 1, 0);
@@ -421,7 +471,7 @@ __attribute__((used, externally_visible))
 void _Career_UpdateUefaCupCompetitionSlot(void)
 {
     uint8_t *a4 = uefaCupCopy;
-    if ((uint32_t)a4 == quaternaryCompetitionPtr) {
+    if (a4 == quaternaryCompetitionPtr) {
         _RestoreSelectedTeams();
         _Career_CopyEuroCupsCompetitionContextToOrFromActive();
         _ShowDIYCupMenuWithParams(1, 1, 0);
@@ -458,6 +508,26 @@ static void drawRandomTeamFromPoolAndCopyGrid(uint16_t titleHolder,
         return;
 
     uint8_t titleHolderCountry = (uint8_t)(titleHolder >> 8);
+    /* teamList stores BE byte pairs (see appendTeamToList). Read each slot
+     * with BE_READ_U16 to get the (country<<8)|ordinal value the rest of
+     * the function works in. */
+    uint8_t *listBytes = (uint8_t *)teamList;
+
+#ifdef SWOS_DEBUG_AUTOSKIP
+    /* TEMP (euro-cup draw bring-up — REMOVE after fix): dump the title-holder
+     * grid team + the qualified-team list so we can see whether a non-European
+     * (e.g. NEW ZEALAND) team is in the list / grid and from which offset. */
+    {
+        TeamFileEx *g = (TeamFileEx *)dstGrid;
+        SWOS_AUTOSKIP_LOG("[eurocup-draw] ENTER titleHolder=0x%04X count=%u listPtr=%p "
+                          "grid.team={c=0x%02X o=0x%02X}",
+                          (unsigned)titleHolder, (unsigned)count, (void *)teamList,
+                          (unsigned)g->team.countryNumber, (unsigned)g->team.teamOrdinal);
+        for (uint16_t k = 0; k < count && k < 40; k++)
+            SWOS_AUTOSKIP_LOG("[eurocup-draw]   list[%u]=0x%04X", (unsigned)k,
+                              (unsigned)BE_READ_U16(&listBytes[k * 2]));
+    }
+#endif
 
     uint16_t randIdx;
     uint16_t selectedTeam;
@@ -466,7 +536,7 @@ static void drawRandomTeamFromPoolAndCopyGrid(uint16_t titleHolder,
     for (;;) {
         randIdx = _Rand2();
         randIdx = (uint16_t)((uint32_t)randIdx * count >> 8);
-        selectedTeam = teamList[randIdx];
+        selectedTeam = BE_READ_U16(&listBytes[randIdx * 2]);
         selectedCountry = (uint8_t)(selectedTeam >> 8);
 
         if (selectedCountry == titleHolderCountry)
@@ -482,9 +552,13 @@ static void drawRandomTeamFromPoolAndCopyGrid(uint16_t titleHolder,
         break;
     }
 
-    /* Swap: put title holder in the selected slot, take the selected team out */
-    uint16_t removedTeam = teamList[randIdx];
-    teamList[randIdx] = titleHolder;
+    /* Swap: put title holder in the selected slot, take the selected team out.
+     * Write the title holder back as BE bytes to match the list's encoding. */
+    uint16_t removedTeam = BE_READ_U16(&listBytes[randIdx * 2]);
+    BE_WRITE_U16(&listBytes[randIdx * 2], titleHolder);
+
+    SWOS_AUTOSKIP_LOG("[eurocup-draw] randIdx=%u removedTeam=0x%04X -> swap titleHolder in, "
+                      "append titleHolder grid to pool", (unsigned)randIdx, (unsigned)removedTeam);
 
     uint16_t savedCareerFile = careerFileBuffer;
     _Career_RemoveTeamFromTmdTeamPool(removedTeam);
@@ -515,7 +589,7 @@ void _Career_DrawEuropeanCupTeamsAndCopyGrids(void)
 
 /* ---- Chunk 184: European Championship + World Cup Competition Updates ---- */
 
-extern uint32_t currentCompetitionPtr;
+extern uint8_t *currentCompetitionPtr;
 extern uint8_t someTeamFlags;
 extern uint16_t euroChampionshipQualTeam;
 extern uint8_t europeanChampionships2Copy[];
@@ -556,7 +630,7 @@ extern void _Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record,
  * If active competition, edit interactively; else auto-advance. */
 static void updateECSlot(uint8_t *competition, uint16_t count, uint8_t *out)
 {
-    if ((uint32_t)competition == currentCompetitionPtr) {
+    if (competition == currentCompetitionPtr) {
         _RestoreSelectedTeams();
         _Career_CopyCompetitionFileBufferToOrFromActive();
         _ShowDiyLeaguesTournamentMenu(1, 1, 0);
@@ -576,20 +650,35 @@ void _Career_UpdateEuropeanChampionshipCompetitions(void)
         return;
 
     uint8_t *a5 = europeanChampionships2Copy;
-    uint8_t offset = a5[7];
+    /* unk3 is the 32-bit Amiga byte distance from a5+7 to the embedded
+     * unk1[] qualifier list. The cup *Copy struct has a `char *text[2]`
+     * pair before unk1[]; on 64-bit those pointers widen 8->16 bytes,
+     * pushing unk1[] +8. Without this delta the qualifier writes land in
+     * text[1], corrupting the comp name pointer (SIGSEGV when the season
+     * list is drawn). Matches the team-selection reader in career_teams.c. */
+    uint16_t offset = (uint8_t)((Competition *)a5)->unk3 +
+                      2u * (sizeof(char *) - sizeof(uint32_t));
     a5 = a5 + 7 + offset;
-    *(uint16_t *)a5 = euroChampionshipQualTeam;
+    /* Asm `move.w euroChampionshipQualTeam,(a5)+` writes BE on m68k.
+     * Use BE_WRITE_U16 so the destination byte order matches the rest
+     * of europeanChampionships2Copy.unk1 (BE-packed `{country, ordinal}`
+     * per the 4e5f378 convention). */
+    BE_WRITE_U16(a5, euroChampionshipQualTeam);
     a5 += 2;
 
-    /* a5 is preserved across slot calls (asm bridge saves/restores a2-a6).
-     * All groups write qualified team IDs to the same output position. */
-    updateECSlot(ecQualifyingGroup1Copy, 2, a5);
-    updateECSlot(ecQualifyingGroup2Copy, 2, a5);
-    updateECSlot(ecQualifyingGroup3Copy, 2, a5);
-    updateECSlot(ecQualifyingGroup4Copy, 2, a5);
-    updateECSlot(ecQualifyingGroup5Copy, 2, a5);
-    updateECSlot(ecQualifyingGroup6Copy, 2, a5);
-    updateECSlot(ecQualifyingGroup7Copy, 2, a5);
+    /* Asm uses `(a5)+` inside DIY_BuildQualifiedTeamListFromSortedTable_EC,
+     * advancing a5 by `count * 2` bytes across each slot call. The m68k
+     * register is shared between caller and callee; in C we have to
+     * advance the caller's pointer explicitly after each call. Without
+     * this, all 8 group calls overwrite the same first slots and entries
+     * past index 2 stay stale. */
+    updateECSlot(ecQualifyingGroup1Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(ecQualifyingGroup2Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(ecQualifyingGroup3Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(ecQualifyingGroup4Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(ecQualifyingGroup5Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(ecQualifyingGroup6Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(ecQualifyingGroup7Copy, 2, a5); a5 += 2 * 2;
     updateECSlot(ecQualifyingGroup8Copy, 1, a5);
 }
 
@@ -597,14 +686,15 @@ void _Career_UpdateEuropeanChampionshipCompetitions(void)
  * More complex: handles type 0 (league), type 2 (cup), and error cases. */
 static void updateWCSlot(uint8_t *competition, uint16_t count, uint8_t *out)
 {
-    if ((uint32_t)competition == currentCompetitionPtr) {
+    int8_t compType = ((Competition *)competition)->type;
+    if (competition == currentCompetitionPtr) {
         _RestoreSelectedTeams();
-        if (competition[1] == 2) {
+        if (compType == 2) {
             _Career_CopyCompetitionFileBufferToOrFromActive();
             _DIY_EditCompetitionSlot(1, 1, 0);
             _DIY_BuildQualifiedTeamListFromDiyFileBuffer(count, out);
             _SaveSelectedTeams();
-        } else if (competition[1] == 0) {
+        } else if (compType == 0) {
             _Career_CopyCompetitionFileBufferToOrFromActive();
             _ShowDiyLeaguesTournamentMenu(1, 1, 0);
             _DIY_BuildQualifiedTeamListFromSortedTable(count, out);
@@ -614,10 +704,10 @@ static void updateWCSlot(uint8_t *competition, uint16_t count, uint8_t *out)
             _PanicHaltLoop();
         }
     } else {
-        if (competition[1] == 2) {
+        if (compType == 2) {
             _Career_AutoAdvanceLeagueCompetitionFromRecord(competition);
             _DIY_BuildQualifiedTeamListFromDiyFileBuffer(count, out);
-        } else if (competition[1] == 0) {
+        } else if (compType == 0) {
             _Career_AutoAdvanceInternationalCompetitionFixtures(competition, 0);
             _DIY_BuildQualifiedTeamListFromSortedTable(count, out);
         } else {
@@ -638,23 +728,33 @@ void _Career_UpdateWorldCupCompetitions(void)
         return;
 
     uint8_t *a5 = worldCup2Copy;
-    uint8_t offset = a5[7];
+    /* +text[2]-growth delta — see _Career_UpdateEuropeanChampionshipCompetitions
+     * above. Keeps the qualifier writes in unk1[] (not text[1]) on 64-bit and
+     * matching the AltTableHeader reader / Amiga byte layout. */
+    uint16_t offset = (uint8_t)((Competition *)a5)->unk3 +
+                      2u * (sizeof(char *) - sizeof(uint32_t));
     a5 = a5 + 7 + offset;
-    *(uint16_t *)a5 = worldCupHostTeam;
+    /* BE write — matches the eurochampionship variant above and the
+     * BE-packed convention for *.unk1 team-id lists (4e5f378). */
+    BE_WRITE_U16(a5, worldCupHostTeam);
     a5 += 2;
 
-    /* a5 is preserved across slot calls (asm bridge saves/restores a2-a6) */
-    updateWCSlot(worldCupQualifyingGroup1Copy, 2, a5);
-    updateWCSlot(worldCupQualifyingGroup2Copy, 2, a5);
-    updateWCSlot(worldCupQualifyingGroup3Copy, 2, a5);
-    updateWCSlot(worldCupQualifyingGroup4Copy, 2, a5);
-    updateWCSlot(worldCupQualifyingGroup5Copy, 2, a5);
-    updateWCSlot(worldCupQualifyingGroup6Copy, 2, a5);
-    updateWCSlot(worldCupQualifyingGroup7Copy, 2, a5);
-    updateWCSlot(worldCupQualifyingGroup8Copy, 2, a5);
-    updateWCSlot(northAmericaWorldCupQualificationCopy, 3, a5);
-    updateWCSlot(southAmericaWorldCupQualificationCopy, 4, a5);
-    updateWCSlot(africaWorldCupQualificationCopy, 5, a5);
-    updateWCSlot(asiaWorldCupQualificationCopy, 2, a5);
+    /* a5 is shared across slot calls in the m68k version because the
+     * post-increment writes happen via the register inside
+     * DIY_BuildQualifiedTeamListFromSortedTable_WC / FromDiyFileBuffer.
+     * Advance the C pointer by `count * 2` bytes after each call so all
+     * 13 group qualifiers land in distinct slots of worldCup2Copy.unk1. */
+    updateWCSlot(worldCupQualifyingGroup1Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(worldCupQualifyingGroup2Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(worldCupQualifyingGroup3Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(worldCupQualifyingGroup4Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(worldCupQualifyingGroup5Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(worldCupQualifyingGroup6Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(worldCupQualifyingGroup7Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(worldCupQualifyingGroup8Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(northAmericaWorldCupQualificationCopy, 3, a5); a5 += 3 * 2;
+    updateWCSlot(southAmericaWorldCupQualificationCopy, 4, a5); a5 += 4 * 2;
+    updateWCSlot(africaWorldCupQualificationCopy, 5, a5); a5 += 5 * 2;
+    updateWCSlot(asiaWorldCupQualificationCopy, 2, a5); a5 += 2 * 2;
     updateWCSlot(oceaniaWorldCupQualificationCopy, 1, a5);
 }
