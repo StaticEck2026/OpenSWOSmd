@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "sprite_data.h"
+#include "swos_platform.h"  /* _ASM_PFX for the teamSpritesTable .equ aliases (SDL force-includes this; the Amiga build does not) */
 
 int16_t jumpHeaderTeam1UpFrames[12]
     = { -5, 303, -5, 311, -5, 319, -5, 311, -5, 303, 227, -101 };
@@ -996,15 +997,45 @@ Sprite team2Player11Sprite = { 2, 11, 0, (AnimTable *)-1, -1, 0xFF, 0, 0, 0, 0, 
     5, 1, 0, { 0 }, { 0 }, { 0 }, 0, 0, { 0 }, { 0 }, { 0 }, 0, 0,
     { 0x0, 0x0, 0x0, 0x0, 0x0, 0x1 }, 1, -1, 0, 0, 0, 0, 0, 1, 0, 0, 0, -1, 0,
     0, 0, 0, 0, 0, 0, 0 };
-Sprite* team1SpritesTable[11] = { &goalie1Sprite, &team1Player2Sprite,
-    &team1Player3Sprite, &team1Player4Sprite, &team1Player5Sprite,
-    &team1Player6Sprite, &team1Player7Sprite, &team1Player8Sprite,
-    &team1Player9Sprite, &team1Player10Sprite, &team1Player11Sprite };
-Sprite* team2SpritesTable[11] = { &goalie2Sprite, &team2Player2Sprite,
-    &team2Player3Sprite, &team2Player4Sprite, &team2Player5Sprite,
-    &team2Player6Sprite, &team2Player7Sprite, &team2Player8Sprite,
-    &team2Player9Sprite, &team2Player10Sprite, &team2Player11Sprite };
-Sprite* allSpritesArray[79] = { &ballShadowSprite, &ballSprite, &goal1TopSprite,
+/* teamSpritesTable: 101 sprite pointers covering team1SpritesTable[11],
+ * team2SpritesTable[11], and allSpritesArray[79] in that exact order.
+ *
+ * On Amiga BSS these were three adjacent `dc.l` blocks (SWOS2.s line
+ * 42863 / 42877 / 42891). Bench/subs draw code reads
+ * `spritesTable[d7]` for d7 = 11..15 (the substitute about to enter
+ * the game) which is OOB for the 11-entry team table — Amiga code
+ * relied on the next BSS table being right after. We mirror that
+ * adjacency by overlaying all three names onto one initialized array:
+ *
+ *   team1SpritesTable = teamSpritesTable + 0     [11 entries]
+ *   team2SpritesTable = teamSpritesTable + 44    [11 entries]
+ *   allSpritesArray   = teamSpritesTable + 88    [79 entries]
+ *
+ * With this layout:
+ *   team1SpritesTable[11..21] reads team2SpritesTable[0..10]
+ *   team2SpritesTable[11..15] reads allSpritesArray[0..4]
+ *
+ * exactly as the Amiga did. `spr->injuryLevel == 0xFFFE` checks on
+ * those OOB slots return false (the sprites pointed at aren't
+ * "permanently injured"), so no UI affordance changes — just no
+ * SIGSEGV.
+ *
+ * The `.equ` aliases must live in the same TU as the array definition
+ * or GAS won't emit a global symbol for them (same gotcha as
+ * careerFileBufferBuf — see swos_globals_career_overlay.c). */
+Sprite* teamSpritesTable[101] = {
+    /* [0..10]  — team1SpritesTable */
+    &goalie1Sprite, &team1Player2Sprite, &team1Player3Sprite,
+    &team1Player4Sprite, &team1Player5Sprite, &team1Player6Sprite,
+    &team1Player7Sprite, &team1Player8Sprite, &team1Player9Sprite,
+    &team1Player10Sprite, &team1Player11Sprite,
+    /* [11..21] — team2SpritesTable */
+    &goalie2Sprite, &team2Player2Sprite, &team2Player3Sprite,
+    &team2Player4Sprite, &team2Player5Sprite, &team2Player6Sprite,
+    &team2Player7Sprite, &team2Player8Sprite, &team2Player9Sprite,
+    &team2Player10Sprite, &team2Player11Sprite,
+    /* [22..100] — allSpritesArray */
+    &ballShadowSprite, &ballSprite, &goal1TopSprite,
     &goal2BottomSprite, &goalie1Sprite, &team1Player2Sprite,
     &team1Player3Sprite, &team1Player4Sprite, &team1Player5Sprite,
     &team1Player6Sprite, &team1Player7Sprite, &team1Player8Sprite,
@@ -1036,4 +1067,25 @@ Sprite* allSpritesArray[79] = { &ballShadowSprite, &ballSprite, &goal1TopSprite,
     &advertInGameSprites[0x1], &advertInGameSprites[0x2],
     &advertInGameSprites[0x3], &advertInGameSprites[0x4],
     &advertInGameSprites[0x5], &advertInGameSprites[0x6],
-    &advertInGameSprites[0x7], (Sprite*)-1 };
+    &advertInGameSprites[0x7], (Sprite*)-1,
+};
+/* Byte offsets for the aliases: 11 slots and 22 slots in. Stringify
+ * sizeof(void*) into the .equ literals so the alias points at the
+ * right slot on both 32-bit (4 B → 44/88) and 64-bit (8 B → 88/176). */
+#define _SPR_TBL_STR_HELPER(x) #x
+#define _SPR_TBL_STR(x) _SPR_TBL_STR_HELPER(x)
+#if UINTPTR_MAX == 0xFFFFFFFFu
+  #define SPR_TEAM2_OFF_STR  "44"
+  #define SPR_ALLSPR_OFF_STR "88"
+#else
+  #define SPR_TEAM2_OFF_STR  "88"
+  #define SPR_ALLSPR_OFF_STR "176"
+#endif
+__asm__(".globl " _ASM_PFX "team1SpritesTable\n"
+        ".equ   " _ASM_PFX "team1SpritesTable, " _ASM_PFX "teamSpritesTable\n"
+        ".globl " _ASM_PFX "team2SpritesTable\n"
+        ".equ   " _ASM_PFX "team2SpritesTable, " _ASM_PFX "teamSpritesTable + "
+        SPR_TEAM2_OFF_STR "\n"
+        ".globl " _ASM_PFX "allSpritesArray\n"
+        ".equ   " _ASM_PFX "allSpritesArray,   " _ASM_PFX "teamSpritesTable + "
+        SPR_ALLSPR_OFF_STR "\n");
