@@ -981,6 +981,31 @@ typedef struct __attribute__((packed)) TransferOfferEntry {
 typedef char _transferofferentry_size_check[(sizeof(TransferOfferEntry) == 14) ? 1 : -1];
 
 /* ==================================================================
+ * GoalieFaceState — 10 bytes. Untangled from the goalieFacesBackingBuf
+ * adjacency overlay (SWOS2.s 16482..16493 laid 6 separately-named
+ * globals back-to-back; the SDL port .equ-aliased them into one BSS
+ * run). _DetermineGoalieFaces writes each team's main GK face at [0]
+ * and the reserve face at [1] of a 2-byte face array. On Amiga the [1]
+ * write landed on the *next* named global (the misleadingly-named
+ * team2GoalieFaces / team2ReserveGoalieSkinType labels, which had no
+ * real code consumers); here it is an in-bounds array element, so the
+ * overrun and the misleading labels are both gone.
+ * ================================================================== */
+typedef struct GoalieFaceState {
+    uint8_t team1FaceToPosition[3];  /* 0x00: per-position GK face index, team 1 */
+    uint8_t team2FaceToPosition[3];  /* 0x03: per-position GK face index, team 2 */
+    uint8_t team1Faces[2];           /* 0x06: [0]=main GK face, [1]=reserve GK face */
+    uint8_t team2Faces[2];           /* 0x08: [0]=main GK face, [1]=reserve GK face */
+} GoalieFaceState;
+
+/* Pin the layout to the old goalieFacesBackingBuf byte offsets so the
+ * conversion is provably byte-identical on every target. */
+typedef char _goaliefacestate_size_check   [(sizeof(GoalieFaceState)              == 10) ? 1 : -1];
+typedef char _goaliefacestate_t2pos_check  [(offsetof(GoalieFaceState, team2FaceToPosition) == 3) ? 1 : -1];
+typedef char _goaliefacestate_t1faces_check[(offsetof(GoalieFaceState, team1Faces)          == 6) ? 1 : -1];
+typedef char _goaliefacestate_t2faces_check[(offsetof(GoalieFaceState, team2Faces)          == 8) ? 1 : -1];
+
+/* ==================================================================
  * NationalTeamRecord — 6 bytes, pack(1)
  * Entry in nationalTeams[]. Indexed by ordinal × 6.
  *

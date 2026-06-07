@@ -16,9 +16,8 @@
 /* ---- External globals (in SWOS2.s / data section) ---- */
 extern uint8_t surnameBuf[];
 extern uint8_t facesFrequency[];
-extern uint32_t skinAndHairColorConversionTable[];
-extern uint8_t team1GoalieFaceToPosition[];
-extern uint8_t team2GoalieFaceToPosition[];
+extern void *skinAndHairColorConversionTable[];
+extern GoalieFaceState goalieFaces;     /* GK face/skin state (was adjacency-aliased globals) */
 extern uint16_t useIndividualPlayerSkinColor;
 extern TeamGame *topTeamPtr;
 extern TeamGame *bottomTeamPtr;
@@ -296,7 +295,7 @@ void _InitializePlayerSpriteFrameIndices(void)
             int16_t face = (int16_t)topTeamPtr->players[idx].face;
             if (d1 == 10) {
                 /* Goalkeeper: use face-to-position lookup */
-                face = (int16_t)(int8_t)team1GoalieFaceToPosition[face];
+                face = (int16_t)(int8_t)goalieFaces.team1FaceToPosition[face];
                 if (face == -1)
                     face = 0;
                 face = face * 0x3A;
@@ -311,7 +310,7 @@ void _InitializePlayerSpriteFrameIndices(void)
         if (useIndividualPlayerSkinColor != 0) {
             int16_t face = (int16_t)bottomTeamPtr->players[idx].face;
             if (d1 == 10) {
-                face = (int16_t)(int8_t)team2GoalieFaceToPosition[face];
+                face = (int16_t)(int8_t)goalieFaces.team2FaceToPosition[face];
                 if (face == -1)
                     face = 0;
                 face = face * 0x3A;

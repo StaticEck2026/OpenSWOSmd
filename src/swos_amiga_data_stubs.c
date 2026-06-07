@@ -1688,8 +1688,8 @@ SWOS_CHIP_BSS char spriteGraphics[0x1310 * 2];       /* 1220 × 8 B = 9760 */
 /* team1Computer: real data in swos_amiga_data_imports.c */
 /* team1Filename: real data in swos_amiga_data_imports.c */
 /* team1GoalCounterByPlayer: real data in swos_data_bulk_imports.c */
-/* team1GoalieFaceToPosition: real data in swos_data_bulk_imports.c */
-/* team1GoalieFaces: typed definition in swos_data_typed_stubs.c */
+/* team1GoalieFaceToPosition: now goalieFaces.team1FaceToPosition (GoalieFaceState, swos_globals.c) */
+/* team1GoalieFaces: now goalieFaces.team1Faces (GoalieFaceState, swos_globals.c) */
 /* team1GoalkeeperReplaced: real data in swos_amiga_data_imports.c */
 /* team1GoalsDigit1: real data in swos_amiga_data_imports.c */
 /* team1GoalsDigit2: real data in swos_amiga_data_imports.c */
@@ -1710,8 +1710,8 @@ SWOS_CHIP_BSS char spriteGraphics[0x1310 * 2];       /* 1220 × 8 B = 9760 */
 /* team2Computer: real data in swos_amiga_data_imports.c */
 /* team2Filename: real data in swos_amiga_data_imports.c */
 /* team2GoalCounterByPlayer: real data in swos_data_bulk_imports.c */
-/* team2GoalieFaceToPosition: real data in swos_data_bulk_imports.c */
-/* team2GoalieSkinType: typed definition in swos_data_typed_stubs.c */
+/* team2GoalieFaceToPosition: now goalieFaces.team2FaceToPosition (GoalieFaceState, swos_globals.c) */
+/* team2GoalieSkinType: now goalieFaces.team2Faces (GoalieFaceState, swos_globals.c) */
 /* team2GoalkeeperReplaced: real data in swos_amiga_data_imports.c */
 /* team2GoalsDigit1: real data in swos_amiga_data_imports.c */
 /* team2GoalsDigit2: real data in swos_amiga_data_imports.c */
