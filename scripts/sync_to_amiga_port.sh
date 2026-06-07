@@ -72,6 +72,10 @@ SRC_FILES=(
     swos_data_bulk_imports.c swos_data_typed_stubs.c
     swos_amiga_data_stubs.c swos_amiga_strings.c
     swos_amiga_func_stubs.c platform_amiga_stubs.c
+    ai.c ball_possession.c goalkeeper.c headers.c match_setup.c
+    player_positioning.c tackle_foul.c training_match.c frontend.c
+    fade.c input.c input_text.c loader_bootstrap.c math68k.c panic.c
+    random.c string_utils.c team_control.c tactics_menu.c
     intro_menu_image_script_cmds.inc
     menu_bg_image_script_cmds.inc
     menu_color_text_script_cmds.inc
