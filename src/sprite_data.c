@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "sprite_data.h"
+#include "swos_platform.h"  /* _ASM_PFX for the teamSpritesTable .equ aliases (SDL force-includes this; the Amiga build does not) */
 
 int16_t jumpHeaderTeam1UpFrames[12]
     = { -5, 303, -5, 311, -5, 319, -5, 311, -5, 303, 227, -101 };
