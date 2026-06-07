@@ -4,11 +4,12 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "camera.h"
+#include "game_types.h"
 #include "scroll_blit.h"
 
 /* ---- External globals ---- */
-extern int16_t  cameraX;
-extern int16_t  cameraY;
+extern FixedPoint cameraX;
+extern FixedPoint cameraY;
 extern uint16_t cameraXMod320;
 extern uint16_t cameraYMod320;
 extern uint16_t cameraCoordinatesValid;
@@ -26,19 +27,28 @@ __attribute__((used, externally_visible))
 void _ScrollToCurrent(void)
 {
     cameraCoordinatesValid = 1;
+#ifdef SWOS_SDL_BUILD
+    /* SDL: incremental scroll blits are no-ops (see scroll_blit.c).
+     * Instead, redraw the whole visible pitch from the chunky tile
+     * bank each call — matches swos-port-c's whole-screen chunky
+     * pitch redraw shape. */
+    extern void _DrawChunkyPitch(void);
+    _DrawChunkyPitch();
+#else
     _ScrollXUpdateColumnsAndBlit();
     _ScrollYUpdateRowsAndBlit();
+#endif
 }
 
 /* ================================================================
  * MoveView  (SWOS2.s line 5576)
  *
- * Iteratively moves cameraX toward newScreenX (one pixel per step,
+ * Iteratively moves cameraX.s.i toward newScreenX (one pixel per step,
  * with wrap), calling ScrollToCurrent each step. Once X matches,
- * does the same for cameraY toward newScreenY.
+ * does the same for cameraY.s.i toward newScreenY.
  *
- * 68k semantics: each increment/decrement adjusts both cameraX and
- * cameraXMod320 (wrapping at 352), and cameraY/cameraYMod320
+ * 68k semantics: each increment/decrement adjusts both cameraX.s.i and
+ * cameraXMod320 (wrapping at 352), and cameraY.s.i/cameraYMod320
  * (wrapping at 272).
  * ================================================================ */
 __attribute__((used, externally_visible))
@@ -51,17 +61,17 @@ void _MoveView(int16_t newScreenX, int16_t newScreenY)
      * blitted — critical for replay camera panning. */
     for (;;) {
         _ScrollToCurrent();
-        if (cameraX == newScreenX)
+        if (cameraX.s.i == newScreenX)
             break;
-        if (cameraX < newScreenX) {
+        if (cameraX.s.i < newScreenX) {
             /* Move right */
-            cameraX += 1;
+            cameraX.s.i += 1;
             cameraXMod320 += 1;
             if (cameraXMod320 == 352)
                 cameraXMod320 = 0;
         } else {
             /* Move left */
-            cameraX -= 1;
+            cameraX.s.i -= 1;
             cameraXMod320 -= 1;
             if ((int16_t)cameraXMod320 < 0)
                 cameraXMod320 = 351;
@@ -71,17 +81,17 @@ void _MoveView(int16_t newScreenX, int16_t newScreenY)
     /* ---- Phase 2: move Y ---- */
     for (;;) {
         _ScrollToCurrent();
-        if (cameraY == newScreenY)
+        if (cameraY.s.i == newScreenY)
             break;
-        if (cameraY < newScreenY) {
+        if (cameraY.s.i < newScreenY) {
             /* Move down */
-            cameraY += 1;
+            cameraY.s.i += 1;
             cameraYMod320 += 1;
             if (cameraYMod320 == 272)
                 cameraYMod320 = 0;
         } else {
             /* Move up */
-            cameraY -= 1;
+            cameraY.s.i -= 1;
             cameraYMod320 -= 1;
             if ((int16_t)cameraYMod320 < 0)
                 cameraYMod320 = 271;
@@ -93,7 +103,7 @@ void _MoveView(int16_t newScreenX, int16_t newScreenY)
  * InitCameraMoveView  (SWOS2.s line 5557)
  *
  * Initializes camera by scrolling to two known positions (targetX,272)
- * and (cameraX,0), then calls MoveView to reach the actual target.
+ * and (cameraX.s.i,0), then calls MoveView to reach the actual target.
  *
  * Register semantics from asm:
  *   D1 = target X (passed by caller)
@@ -106,10 +116,10 @@ void _InitCameraMoveView(int16_t targetX, int16_t targetY)
     _SetCameraCoordinates(targetX, 272);
     _ScrollToCurrent();
 
-    /* Second pass: set camera to (cameraX, 0), scroll */
-    _SetCameraCoordinates(cameraX, 0);
+    /* Second pass: set camera to (cameraX.s.i, 0), scroll */
+    _SetCameraCoordinates(cameraX.s.i, 0);
     _ScrollToCurrent();
 
-    /* Final: iteratively move to (cameraX, targetY) */
-    _MoveView(cameraX, targetY);
+    /* Final: iteratively move to (cameraX.s.i, targetY) */
+    _MoveView(cameraX.s.i, targetY);
 }

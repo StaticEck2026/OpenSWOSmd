@@ -12,6 +12,7 @@
 #include "game_types.h"
 #include "deterministic.h"
 #include "panic.h"
+#include "endian_helpers.h"
 
 /* ---- Sprite constants ---- */
 #define SPR_REPLAY_FRAME_00  1095
@@ -56,10 +57,10 @@ extern uint8_t *currentHilPtr;
 extern uint8_t *currentGoalPtr;
 extern volatile uint16_t goIntoHighlightsLoop;
 extern uint16_t hilSceneNumber;
-extern uint32_t savedCurrentHilPtr;
-extern uint32_t savedCurrentGoalPtr;
-extern uint32_t savedGoalBasePtr;
-extern uint32_t savedNextGoalPtr;
+extern uintptr_t savedCurrentHilPtr;
+extern uintptr_t savedCurrentGoalPtr;
+extern uintptr_t savedGoalBasePtr;
+extern uintptr_t savedNextGoalPtr;
 extern uint8_t  hilStartOfGoalsBuffer[];
 extern uint8_t  inGameHilBuffer[];
 extern uint16_t throwInDeadVar;
@@ -67,8 +68,8 @@ extern uint16_t team1TotalGoals;
 extern uint16_t team2TotalGoals;
 extern uint16_t animPatternsState;
 extern uint16_t replayState;
-extern int16_t  cameraX;
-extern int16_t  cameraY;
+extern FixedPoint cameraX;
+extern FixedPoint cameraY;
 extern int16_t  savedCameraX;
 extern int16_t  savedCameraY;
 extern uint16_t hilLeftTeamGoals;
@@ -228,6 +229,22 @@ void _CopyTeamsAndHeader(void)
         ((uint8_t *)&topTeamInGame)[i] = src[i];
     }
 
+    /* The TeamGame header has 11 int16 fields at offsets 0..21 (kit
+     * colours + markedPlayer). They're stored big-endian on disk to
+     * match Amiga m68k; byteswap to host order so prShirtType etc.
+     * index correctly into the little-player sprite table when the
+     * stadium menu draws. The remaining 996 bytes are byte-sized
+     * (teamName + per-player fields) and don't need swapping.
+     * BE16_TO_HOST is a no-op on the Amiga BE build. */
+    {
+        int16_t *topHdr = (int16_t *)&topTeamInGame;
+        int16_t *botHdr = (int16_t *)&bottomTeamInGame;
+        for (i = 0; i < 11; i++) {
+            topHdr[i] = BE16_TO_HOST((uint16_t)topHdr[i]);
+            botHdr[i] = BE16_TO_HOST((uint16_t)botHdr[i]);
+        }
+    }
+
     /* Copy game name and round */
     for (i = 0; i < 40; i++) {
         gameName[i] = hilGameName[i];
@@ -241,13 +258,27 @@ void _CopyTeamsAndHeader(void)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void _SetHilFileHeader(void)
 {
-    *(uint32_t *)hilFileBuffer = K_HIL_FILE_SIG;
-    *(uint32_t *)&hilFileBuffer[4] = K_HIL_FILE_MAXSZ;
+    /* HIL header is big-endian on disk to match Amiga m68k. BE_WRITE_U32
+     * is a no-op on Amiga BE host, byteswap on x86 LE — so saves from the
+     * SDL build are now Amiga-compatible. */
+    BE_WRITE_U32(hilFileBuffer, K_HIL_FILE_SIG);
+    BE_WRITE_U32(&hilFileBuffer[4], K_HIL_FILE_MAXSZ);
 
-    /* Pack team data into hil file buffer at offset 8 */
+    /* Pack team data into hil file buffer at offset 8. The first 22 bytes
+     * of each TeamGame are 11 int16 kit/marker fields — byteswap host→BE
+     * as we copy so the on-disk format matches Amiga m68k. The remaining
+     * 996 bytes are byte-sized and copy verbatim. */
     uint8_t *dst = &hilFileBuffer[8];
     uint16_t i;
-    for (i = 0; i < 1018; i++) {
+    {
+        int16_t *topHdr = (int16_t *)&topTeamInGame;
+        int16_t *botHdr = (int16_t *)&bottomTeamInGame;
+        for (i = 0; i < 11; i++) {
+            ((uint16_t *)dst)[i]            = HOST_TO_BE16((uint16_t)topHdr[i]);
+            ((uint16_t *)(dst + 1018))[i]   = HOST_TO_BE16((uint16_t)botHdr[i]);
+        }
+    }
+    for (i = 22; i < 1018; i++) {
         dst[1018 + i] = ((uint8_t *)&bottomTeamInGame)[i];
         dst[i] = ((uint8_t *)&topTeamInGame)[i];
     }
@@ -276,10 +307,10 @@ void _SaveHighlightsPointers(void)
         return;
 
     normalReplayRunning = 1;
-    savedGoalBasePtr = (uint32_t)goalBasePtr;
-    savedNextGoalPtr = (uint32_t)nextGoalPtr;
-    savedCurrentHilPtr = (uint32_t)currentHilPtr;
-    savedCurrentGoalPtr = (uint32_t)currentGoalPtr;
+    savedGoalBasePtr = (uintptr_t)goalBasePtr;
+    savedNextGoalPtr = (uintptr_t)nextGoalPtr;
+    savedCurrentHilPtr = (uintptr_t)currentHilPtr;
+    savedCurrentGoalPtr = (uintptr_t)currentGoalPtr;
     goIntoHighlightsLoop = 1;
     hilSceneNumber = 0xFFFF;
 }
@@ -381,14 +412,17 @@ void _SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint
     uint8_t *a1 = currentHilPtr;
 
     if (spriteIndexOrMarker >= 0) {
-        /* Pack sprite data: (index << 20) | (x << 10) | y, with bit 31 clear */
+        /* Pack sprite data: (index << 20) | (x << 10) | y, with bit 31 clear.
+         * Stored big-endian so the high byte (which holds bit 31, the
+         * frame-marker discriminator vs sprite-data) lands at offset 0
+         * regardless of host endianness — matching the Amiga byte layout. */
         uint32_t packed = (uint32_t)(uint16_t)spriteIndexOrMarker;
         packed <<= 10;
         packed |= (x & 0x3FF);
         packed <<= 10;
         packed |= (y & 0x3FF);
         packed &= ~(1u << 31);  /* bclr #31 */
-        *(uint32_t *)a1 = packed;
+        BE_WRITE_U32(a1, packed);
         a1 += 4;
         if (a1 == nextGoalPtr)
             a1 = goalBasePtr;
@@ -397,33 +431,40 @@ void _SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint
     }
 
     if ((uint16_t)spriteIndexOrMarker == 0xFFFE) {
-        /* End-of-segment marker: write -1 */
-        *(uint32_t *)a1 = 0xFFFFFFFF;
+        /* End-of-segment marker: write -1 (byte pattern is identical
+         * either endian, but BE_WRITE_U32 keeps the policy consistent). */
+        BE_WRITE_U32(a1, 0xFFFFFFFFu);
         return;
     }
 
-    /* Frame-start marker (d0 < 0, not -2): write camera coords with bit 15 set in x */
-    *(uint16_t *)a1 = x | 0x8000;
-    *(uint16_t *)(a1 + 2) = y;
+    /* Frame-start marker (d0 < 0, not -2): write camera coords with bit 31
+     * (= bit 15 of high uint16 = marker) set. Two BE_WRITE_U16 calls match
+     * the original Amiga byte format exactly — on Amiga m68k the BE_WRITE
+     * macros are no-ops so this is identical to the prior asm-to-C port,
+     * and on x86 LE the byte-swap puts the 0x80 marker byte at offset 0
+     * where _HandleInstantReplayStateSwitch's `*p & 0x80` scan and
+     * _DrawReplayFrame's BE-uint32 bit-31 test both detect it. */
+    BE_WRITE_U16(a1,     (uint16_t)x | 0x8000u);
+    BE_WRITE_U16(a1 + 2, (uint16_t)y);
     a1 += 4;
     a1 = wrapHilPtr(a1);
     currentHilPtr = a1;
 
-    /* Write team goals */
-    *(uint16_t *)a1 = team1TotalGoals;
-    *(uint16_t *)(a1 + 2) = team2TotalGoals;
+    /* Write team goals (BE for cross-build .HIL file interchange) */
+    BE_WRITE_U16(a1,     team1TotalGoals);
+    BE_WRITE_U16(a1 + 2, team2TotalGoals);
     a1 += 4;
     a1 = wrapHilPtr(a1);
 
     /* Write animated patterns state (duplicated in both words) */
-    *(uint16_t *)a1 = animPatternsState;
-    *(uint16_t *)(a1 + 2) = animPatternsState;
+    BE_WRITE_U16(a1,     animPatternsState);
+    BE_WRITE_U16(a1 + 2, animPatternsState);
     a1 += 4;
     a1 = wrapHilPtr(a1);
     currentHilPtr = a1;
 
     /* Write end-of-frame marker */
-    *(uint32_t *)a1 = 0xFFFFFFFF;
+    BE_WRITE_U32(a1, 0xFFFFFFFFu);
 }
 
 /* ============================================================
@@ -444,11 +485,13 @@ void _DrawReplayFrame(void)
     if (replayState == 1) {
         /* STATE 1 → 2: Initialize replay */
         replayState = 2;
-        savedCameraX = cameraX;
-        savedCameraY = cameraY;
+        savedCameraX = cameraX.s.i;
+        savedCameraY = cameraY.s.i;
 
-        /* Read first frame data (without advancing a0) for camera init */
-        uint32_t val = *(uint32_t *)a0;
+        /* Read first frame data (without advancing a0) for camera init.
+         * Buffer is stored big-endian — BE_READ_U32 is a no-op on Amiga
+         * and a byte-swap on x86 LE. */
+        uint32_t val = BE_READ_U32(a0);
         val &= ~(1u << 31);  /* bclr #31 */
 
         _ResetAnimatedPatternsForBothTeams();
@@ -457,7 +500,7 @@ void _DrawReplayFrame(void)
     }
 
     /* loc_10C434: read entry */
-    d0 = *(uint32_t *)a0;
+    d0 = BE_READ_U32(a0);
     a0 += 4;
     if (!(d0 & (1u << 31)))
         goto sprite_decode;
@@ -468,23 +511,23 @@ void _DrawReplayFrame(void)
     _MoveView((int16_t)(d0 >> 16), (int16_t)(d0 & 0xFFFF));
 
     /* Read team goals */
-    hilLeftTeamGoals = *(uint16_t *)a0;
-    hilRightTeamGoals = *(uint16_t *)(a0 + 2);
+    hilLeftTeamGoals = BE_READ_U16(a0);
+    hilRightTeamGoals = BE_READ_U16(a0 + 2);
     a0 += 4;
     a0 = wrapPointerFwd(a0);
 
     /* Read animated patterns state (stored as two identical words) */
-    animPatternsState = *(uint16_t *)a0;
-    animPatternsState = *(uint16_t *)(a0 + 2);
+    animPatternsState = BE_READ_U16(a0);
+    animPatternsState = BE_READ_U16(a0 + 2);
     a0 += 4;
     a0 = wrapPointerFwd(a0);
 
     _DrawAnimatedPatterns();
 
     /* Read next entry after frame marker */
-    d0 = *(uint32_t *)a0;
+    d0 = BE_READ_U32(a0);
     a0 += 4;
-    if (d0 == 0xFFFFFFFF)
+    if (d0 == 0xFFFFFFFFu)
         goto end_replay;
     goto check_next;
 
@@ -503,9 +546,9 @@ sprite_decode:
     }
 
     /* Read next entry after sprite */
-    d0 = *(uint32_t *)a0;
+    d0 = BE_READ_U32(a0);
     a0 += 4;
-    if (d0 == 0xFFFFFFFF)
+    if (d0 == 0xFFFFFFFFu)
         goto end_replay;
     /* fall through to check_next */
 
@@ -569,8 +612,22 @@ after_decode:
         _DarkenRectangle(SPR_BIG_0_ALT + units, bx, by);
     }
 
-    /* State 3 timing: wait 2 game ticks when not paused */
+    /* State 3 timing: stretch each replay frame across 2 extra ticks
+     * (≈ half-speed slomo). On Amiga the busy-spin on `currentGameTick`
+     * was harmless because the VBlank ISR ticked it AND drove audio
+     * pre-emptively. On SDL the tick is advanced by the SDL_Timer
+     * thread, but audio production runs on the *main* thread inside
+     * Platform_VBlank → AudioSDL_Tick. A pure busy-spin on the main
+     * thread starves the audio queue for 40 ms per replay frame,
+     * which is exactly the stutter testers hear during R-then-R
+     * slomo. Use Platform_VBlank instead so we both pace at 50 Hz AND
+     * keep AudioSDL_Tick firing on every wait iteration. */
     if (replayState == 3 && paused == 0) {
+#ifdef SWOS_SDL_BUILD
+        extern int Platform_VBlank(void);
+        Platform_VBlank();
+        Platform_VBlank();
+#else
         uint16_t i;
         for (i = 0; i < 2; i++) {
             volatile uint16_t *tickPtr = &currentGameTick;
@@ -578,6 +635,7 @@ after_decode:
             while (*tickPtr == tick)
                 ;  /* busy-wait for next tick */
         }
+#endif
     }
 }
 
@@ -600,7 +658,12 @@ __attribute__((used, externally_visible))
 void _HandleInstantReplayStateSwitch(void)
 {
     if (replayState == 0) {
-        /* Search for frame-start marker in ring buffer */
+        /* Search for frame-start marker in ring buffer.
+         * Entries are stored big-endian (see frame-marker write in
+         * _SaveCoordinatesForHighlights), so the high byte of the uint32
+         * — which carries bit 31 — sits at byte offset 0 regardless of
+         * host endian. `*p & 0x80` therefore detects the marker on both
+         * BE (Amiga) and LE (SDL) hosts. */
         uint32_t count = 0;
         uint8_t *p = currentHilPtr;
 

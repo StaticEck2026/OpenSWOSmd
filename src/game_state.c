@@ -4,6 +4,8 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "game_state.h"
+#include "game_types.h"
+#include "endian_helpers.h"
 
 /* ---- External globals ---- */
 extern uint16_t isGoalAttempt;
@@ -64,8 +66,8 @@ extern uint16_t team1NameLength;
 extern uint16_t dontShowScorers;
 extern uint16_t secondLeg;
 
-extern int16_t  cameraX;
-extern int16_t  cameraY;
+extern FixedPoint cameraX;
+extern FixedPoint cameraY;
 extern uint16_t lastFrameTicks;
 extern uint16_t gameState;
 
@@ -542,49 +544,49 @@ position_sprites:
         d7 = (int16_t)0xFFF2;
 
     /* --- Position team1NameSprite --- */
-    team1NameSprite.x.s.i = cameraX + 136 - (int16_t)team1NameLength;
-    team1NameSprite.y.s.i = cameraY + 246 + d7 + 10000;
+    team1NameSprite.x.s.i = cameraX.s.i + 136 - (int16_t)team1NameLength;
+    team1NameSprite.y.s.i = cameraY.s.i + 246 + d7 + 10000;
     team1NameSprite.z.s.i = 10000;
 
     /* d0 = base row Y for grid sprites */
     d0 = team1NameSprite.y.s.i - 1015;
 
     /* Grid upper row */
-    gridUpperRowLeftSprite.x.s.i = cameraX;
+    gridUpperRowLeftSprite.x.s.i = cameraX.s.i;
     gridUpperRowLeftSprite.y.s.i = d0;
     gridUpperRowLeftSprite.z.s.i = 9000;
-    gridUpperRowRightSprite.x.s.i = cameraX + 168;
+    gridUpperRowRightSprite.x.s.i = cameraX.s.i + 168;
     gridUpperRowRightSprite.y.s.i = d0;
     gridUpperRowRightSprite.z.s.i = 9000;
 
     d0 += 32;
 
     /* Grid middle row */
-    gridMiddleRowLeftSprite.x.s.i = cameraX;
+    gridMiddleRowLeftSprite.x.s.i = cameraX.s.i;
     gridMiddleRowLeftSprite.y.s.i = d0;
     gridMiddleRowLeftSprite.z.s.i = 9000;
-    gridMiddleRowRightSprite.x.s.i = cameraX + 168;
+    gridMiddleRowRightSprite.x.s.i = cameraX.s.i + 168;
     gridMiddleRowRightSprite.y.s.i = d0;
     gridMiddleRowRightSprite.z.s.i = 9000;
 
     d0 += 32;
 
     /* Grid bottom row */
-    gridBottomRowLeftSprite.x.s.i = cameraX;
+    gridBottomRowLeftSprite.x.s.i = cameraX.s.i;
     gridBottomRowLeftSprite.y.s.i = d0;
     gridBottomRowLeftSprite.z.s.i = 9000;
-    gridBottomRowRightSprite.x.s.i = cameraX + 168;
+    gridBottomRowRightSprite.x.s.i = cameraX.s.i + 168;
     gridBottomRowRightSprite.y.s.i = d0;
     gridBottomRowRightSprite.z.s.i = 9000;
 
     /* --- Position team2NameSprite --- */
-    team2NameSprite.x.s.i = cameraX + 200;
+    team2NameSprite.x.s.i = cameraX.s.i + 200;
     team2NameSprite.y.s.i = team1NameSprite.y.s.i;
     team2NameSprite.z.s.i = 10000;
 
     /* --- Team 1 goals digit 2 (units) --- */
-    team1GoalsDigit2Sprite.x.s.i = cameraX + 151;
-    team1GoalsDigit2Sprite.y.s.i = cameraY + 241 + d7 + 10000;
+    team1GoalsDigit2Sprite.x.s.i = cameraX.s.i + 151;
+    team1GoalsDigit2Sprite.y.s.i = cameraY.s.i + 241 + d7 + 10000;
     team1GoalsDigit2Sprite.z.s.i = 10000;
     team1GoalsDigit2Sprite.imageIndex = SPR_BIG_0 + team1GoalsDigit2;
 
@@ -604,10 +606,10 @@ position_sprites:
         d2 = (int16_t)((uint32_t)(uint16_t)d1 / 10u);
         d1 = (int16_t)((uint32_t)(uint16_t)d1 % 10u);
 
-        team1TotalGoalsDigit2Sprite.x.s.i = cameraX + 158;
+        team1TotalGoalsDigit2Sprite.x.s.i = cameraX.s.i + 158;
         if (d1 == 1)
             team1TotalGoalsDigit2Sprite.x.s.i += 4;
-        team1TotalGoalsDigit2Sprite.y.s.i = cameraY + 263 + d7 + 10002;
+        team1TotalGoalsDigit2Sprite.y.s.i = cameraY.s.i + 263 + d7 + 10002;
         team1TotalGoalsDigit2Sprite.z.s.i = 10002;
         team1TotalGoalsDigit2Sprite.imageIndex = SPR_SMALL_ZERO + (uint16_t)d1;
 
@@ -623,8 +625,8 @@ position_sprites:
     }
 
     /* --- Team 2 goals digit 2 (units) --- */
-    team2GoalsDigit2Sprite.x.s.i = cameraX + 173;
-    team2GoalsDigit2Sprite.y.s.i = cameraY + 241 + d7 + 10000;
+    team2GoalsDigit2Sprite.x.s.i = cameraX.s.i + 173;
+    team2GoalsDigit2Sprite.y.s.i = cameraY.s.i + 241 + d7 + 10000;
     team2GoalsDigit2Sprite.z.s.i = 10000;
     team2GoalsDigit2Sprite.imageIndex = SPR_SCROLL_ARROW_UP + team2GoalsDigit2;
 
@@ -645,8 +647,8 @@ position_sprites:
         d2 = (int16_t)((uint32_t)(uint16_t)d1 / 10u);
         d1 = (int16_t)((uint32_t)(uint16_t)d1 % 10u);
 
-        team2TotalGoalsDigit2Sprite.x.s.i = cameraX + 171;
-        team2TotalGoalsDigit2Sprite.y.s.i = cameraY + 263 + d7 + 10002;
+        team2TotalGoalsDigit2Sprite.x.s.i = cameraX.s.i + 171;
+        team2TotalGoalsDigit2Sprite.y.s.i = cameraY.s.i + 263 + d7 + 10002;
         team2TotalGoalsDigit2Sprite.z.s.i = 10002;
         team2TotalGoalsDigit2Sprite.imageIndex = SPR_SMALL_ZERO + (uint16_t)d1;
 
@@ -666,8 +668,8 @@ position_sprites:
     }
 
     /* --- Dash sprite --- */
-    dashSprite.x.s.i = cameraX + 165;
-    dashSprite.y.s.i = cameraY + 249 + d7 + 10000;
+    dashSprite.x.s.i = cameraX.s.i + 165;
+    dashSprite.y.s.i = cameraY.s.i + 249 + d7 + 10000;
     dashSprite.z.s.i = 10000;
 
     /* --- Team 1 scorer sprites --- */
@@ -679,8 +681,8 @@ position_sprites:
         {
             if (*widths == 0)
                 break;
-            spr->x.s.i = cameraX + 136 - (int16_t)*(widths);
-            spr->y.s.i = cameraY + d1 + 10000;
+            spr->x.s.i = cameraX.s.i + 136 - (int16_t)*(widths);
+            spr->y.s.i = cameraY.s.i + d1 + 10000;
             spr->z.s.i = 10000;
             d1 += 7;
             widths++;
@@ -697,8 +699,8 @@ position_sprites:
         {
             if (*widths == 0)
                 break;
-            spr->x.s.i = cameraX + 200;
-            spr->y.s.i = cameraY + d1 + 10000;
+            spr->x.s.i = cameraX.s.i + 200;
+            spr->y.s.i = cameraY.s.i + d1 + 10000;
             spr->z.s.i = 10000;
             d1 += 7;
             widths++;
@@ -708,7 +710,7 @@ position_sprites:
 
     /* --- Position halftime/fulltime result banners --- */
     d0 = gridUpperRowLeftSprite.y.s.i + 990;
-    resultOnHalftimeSprite.x.s.i = cameraX + 168;
+    resultOnHalftimeSprite.x.s.i = cameraX.s.i + 168;
     resultOnHalftimeSprite.y.s.i = d0;
     resultOnHalftimeSprite.z.s.i = 10000;
     resultAfterTheGameSprite.x.s.i = resultOnHalftimeSprite.x.s.i;
@@ -786,16 +788,21 @@ void _UpdateTime(void)
 
     /* --- check_game_end --- */
 check_game_end:
-    /* Minute 1: mark half-start */
-    if (gameTime == 0x00000001)
+    /* Minute 1: mark half-start.
+     * gameTime is written byte-by-byte via the GAMETIME_* macros (m68k BCD
+     * layout: byte[1]=hundreds, byte[2]=tens, byte[3]=ones), but compared
+     * here as a uint32_t. The constants below are in the m68k BE form
+     * (e.g. 0x900 = minute 90); HOST_TO_BE32 swaps them on LE so the
+     * uint32_t comparison sees the correct byte pattern. */
+    if (gameTime == HOST_TO_BE32(0x00000001))
         _BumpPlayersLastPlayedHalfAtHalfStart();
 
     /* Minute 46: mark second-half start */
-    if (gameTime == 0x00000406)
+    if (gameTime == HOST_TO_BE32(0x00000406))
         _BumpPlayersLastPlayedHalfAtHalfStart();
 
     /* Minute 45: half-time */
-    if (gameTime == 0x00000405)
+    if (gameTime == HOST_TO_BE32(0x00000405))
     {
         if ((int16_t)gameSeconds >= 0)
             goto last_cycle;
@@ -807,7 +814,7 @@ check_game_end:
     }
 
     /* Minute 90: full-time */
-    if (gameTime == 0x00000900)
+    if (gameTime == HOST_TO_BE32(0x00000900))
     {
         if ((int16_t)gameSeconds >= 0)
             goto last_cycle;
@@ -859,7 +866,7 @@ check_game_end:
     }
 
     /* Minute 105: end of first extra time */
-    if (gameTime == 0x00010005)
+    if (gameTime == HOST_TO_BE32(0x00010005))
     {
         if ((int16_t)gameSeconds >= 0)
             goto last_cycle;
@@ -870,7 +877,7 @@ check_game_end:
     }
 
     /* Minute 120: end of second extra time */
-    if (gameTime == 0x00010200)
+    if (gameTime == HOST_TO_BE32(0x00010200))
     {
         if ((int16_t)gameSeconds >= 0)
             goto last_cycle;
@@ -1015,8 +1022,8 @@ not_end_of_second_extra:
 set_time_sprite_x:
     {
         /* Position time sprite relative to camera */
-        currentTimeSprite.x.s.i = cameraX + 0x14;
-        currentTimeSprite.y.s.i = cameraY + 0x2721;
+        currentTimeSprite.x.s.i = cameraX.s.i + 0x14;
+        currentTimeSprite.y.s.i = cameraY.s.i + 0x2721;
 
         /* If player indicator is at position 4, shift time down by 8 */
         if (currentPlayerIndicatorPosition == 4)

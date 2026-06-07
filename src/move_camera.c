@@ -7,16 +7,13 @@
 #include "game_types.h"
 #include "display.h"
 
-/* ================================================================
- * cameraX/cameraY are 32-bit fixed-point values in memory (dc.l).
- * High word = integer position, low word = sub-pixel fraction.
- * Other files declare them as int16_t (reads only the integer part
- * on big-endian 68k). MoveCamera needs the full 32-bit value for
- * fractional accumulation, so we use __asm__ aliases to avoid LTO
- * type mismatch warnings with the int16_t declarations elsewhere.
- * ================================================================ */
-extern int32_t cameraXFP __asm__("cameraX");
-extern int32_t cameraYFP __asm__("cameraY");
+/* cameraX / cameraY are FixedPoint unions (see game_types.h).
+ *   cameraX.raw     = full 32-bit 16.16 fixed-point value
+ *   cameraX.s.i     = integer part (high word; same storage on both LE and BE)
+ *   cameraX.s.frac  = fractional part (low word)
+ * _MoveCamera accumulates via .raw; position consumers use .s.i. */
+extern FixedPoint cameraX;
+extern FixedPoint cameraY;
 extern uint16_t cameraCoordinatesValid;
 
 /* ---- External globals ---- */
@@ -127,7 +124,7 @@ void _MoveCamera(void)
     if (inSubstitutesMenu != 0) {
         boundsMargin = 37;
         {
-            int16_t camY = (int16_t)(cameraYFP >> 16);
+            int16_t camY = (int16_t)(cameraY.raw >> 16);
             if (camY >= 303 && camY <= 323) {
                 /* Camera is near the right Y range */
                 boundsMargin = 37;
@@ -326,8 +323,8 @@ offset_and_clamp_to_view:
 
     /* ---- Compute fixed-point delta from current camera position ---- */
     {
-        int16_t cameraIntX = (int16_t)(cameraXFP >> 16);
-        int16_t cameraIntY = (int16_t)(cameraYFP >> 16);
+        int16_t cameraIntX = (int16_t)(cameraX.raw >> 16);
+        int16_t cameraIntY = (int16_t)(cameraY.raw >> 16);
         int16_t dx = targetX - cameraIntX;
         int16_t dy = targetY - cameraIntY;
 
@@ -358,14 +355,19 @@ offset_and_clamp_to_view:
             fixedDy = -MAX_CAMERA_MOVEMENT;
 
         /* Add to current fixed-point camera position */
-        int32_t newXFixed = fixedDx + cameraXFP;
-        int32_t newYFixed = fixedDy + cameraYFP;
+        int32_t newXFixed = fixedDx + cameraX.raw;
+        int32_t newYFixed = fixedDy + cameraY.raw;
 
         /* Write fractional part only (low 16 bits of fixed-point result).
-         * On big-endian 68k, cameraXFP high word = integer, low word = fraction.
+         * On big-endian 68k, cameraX.raw high word = integer, low word = fraction.
          * We update only the fraction here; SetCameraCoordinates handles integer. */
-        cameraXFP = (cameraXFP & (int32_t)0xFFFF0000L) | ((uint32_t)newXFixed & 0xFFFF);
-        cameraYFP = (cameraYFP & (int32_t)0xFFFF0000L) | ((uint32_t)newYFixed & 0xFFFF);
+        /* Keep only the fractional half (low 16 bits) for accumulation.
+         * The integer part gets written by _SetCameraCoordinates below.
+         * With FixedPoint union this is a direct field write — on BE it
+         * targets the low word of the uint32, on LE it targets the low
+         * two bytes of the struct, both of which ARE the frac field. */
+        cameraX.s.frac = (uint16_t)newXFixed;
+        cameraY.s.frac = (uint16_t)newYFixed;
 
         /* Extract integer part (swap d1/d2 in asm) */
         int16_t newIntX = (int16_t)(newXFixed >> 16);
