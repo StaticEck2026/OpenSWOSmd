@@ -84,6 +84,8 @@ uint16_t _GetRandomWord(void)
  * randXorKey2) onto the savedRandState stack-style buffer.
  * Panics if the buffer overflows into kRandomTable.
  * ================================================================ */
+extern uint8_t savedRandState[];
+
 __attribute__((used, externally_visible))
 void _SaveRand2State(void)
 {
@@ -94,16 +96,12 @@ void _SaveRand2State(void)
     *ptr++ = randXorKey2;
     savedRandStatePtr = ptr;
 
-    /* Original asm: cmpa.l #kRandomTable,a0 / bcs.s — relied on
-     * savedRandState[15] sitting immediately before kRandomTable in
-     * BSS, so `ptr >= kRandomTable` meant the 15-byte stack was full.
-     * In our C builds the two arrays are in different sections at
-     * linker-determined addresses (savedRandState in .bss above
-     * kRandomTable in .data on the Amiga port), so the address
-     * comparison was always true and panicked on the first push.
-     * Test the real overflow condition: ptr past savedRandState[15]. */
-    extern uint8_t savedRandState[];
-    if (ptr >= savedRandState + sizeof(uint8_t[15]))
+    /* Original asm compared against kRandomTable because on the Amiga
+     * savedRandState and kRandomTable are adjacent in the BSS — walking
+     * past the 15-byte save buffer would land in the RNG table and the
+     * check catches it. On SDL they're in unrelated linker locations,
+     * so compare against the explicit end of savedRandState. */
+    if (ptr >= savedRandState + 15)
     {
         panicReasonCode = 0x9793;
         _PanicHaltLoop();

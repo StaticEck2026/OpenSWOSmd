@@ -62,7 +62,7 @@ extern uint16_t gameRandValue;
 extern uint16_t paletteIndex;
 extern volatile uint16_t playHighlightFlag;
 extern uint8_t  gamePalette[];
-extern uint32_t paletteTable[];
+extern void *paletteTable[];
 extern uint16_t pitchBallSpeedFactor;
 extern uint16_t ballSpeedBounceFactor;
 extern uint16_t ballBounceFactor;
@@ -112,9 +112,9 @@ extern uint16_t animPatternsIndex;
 extern uint16_t patternsGoalCounter;
 
 /* Data tables (in SWOS2.s code section, PC-relative) */
-extern uint32_t playerCardChancesPerGameLength[];
+extern void *playerCardChancesPerGameLength[];
 extern int16_t  gameLenSecondsTable[];
-extern uint32_t pitchPalettePtrs[];
+extern const uint16_t *pitchPalettePtrs[];
 extern int16_t  kPitchBallSpeedInfluence[];
 extern int16_t  kBallSpeedBounceFactorTable[];
 extern int16_t  kBallBounceFactorTable[];
@@ -796,13 +796,13 @@ apply_palette_and_pitch:
         uint16_t pitchIdx = pitchNumberAndType & 0xFF;
 
         /* paletteTable[2] = &gamePalette (offset 8 in paletteTable is index 2) */
-        paletteTable[2] = (uint32_t)gamePalette;
+        paletteTable[2] = gamePalette;
 
 #ifdef AGA
         {
             /* AGA: apply 9 pitch entries via paletteIndices, write full 256-color palette to copper */
             extern uint8_t paletteIndices[];
-            const uint16_t *palPtr = (const uint16_t *)pitchPalettePtrs[pitchIdx];
+            const uint16_t *palPtr = pitchPalettePtrs[pitchIdx];
             int16_t pi;
             for (pi = 0; pi < 9; pi++)
             {

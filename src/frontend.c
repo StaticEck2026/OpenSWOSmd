@@ -7,6 +7,10 @@
 #include "game_utils.h"
 #include "audio.h"
 #include "menus.h"
+#include "display.h"
+#ifdef SWOS_SDL_BUILD
+#include <string.h>
+#endif
 
 /* FrontEndMainLoop */
 extern uint16_t g_quitToDos;
@@ -19,16 +23,53 @@ extern uint16_t menuFade;
 extern uint8_t frontbufferMaskBuffer[];
 extern volatile uint16_t currentGameTick;
 extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
+#ifdef SWOS_SDL_BUILD
+extern uint8_t rawAssetLoadBuffer[];
+#endif
 
 /* ================================================================
  * LoadOverlayToFrontbuffer  (SWOS2.s line 42675)
  *
  * Loads a raw image file into the frontbuffer mask buffer.
+ *
+ * Amiga: loads the bitplane-format file straight into
+ *   `frontbufferMaskBuffer`, which stays in bitplane form.
+ * SDL:   stages the bitplane file into `rawAssetLoadBuffer`, then
+ *   decodes the first SCREEN_HEIGHT scanlines into the chunky 8bpp
+ *   `frontbufferMaskBuffer`. Subsequent draw/blit code reads the
+ *   mask buffer expecting chunky palette indices.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _LoadOverlayToFrontbuffer(const uint8_t *path)
 {
+#ifdef SWOS_SDL_BUILD
+    _LoadFileEx((uint8_t *)path, rawAssetLoadBuffer, (uint32_t *)0);
+
+    /* Decode NUM_PLANES-plane interleaved bitplane data → 8bpp chunky.
+     * Full-screen overlay images (MENUBG.RAW = 47872 bytes) are stored
+     * at the *frontbuffer* stride: PLANE_STRIDE bytes per plane row,
+     * NUM_PLANES planes per scanline = ROW_STRIDE_BYTES total. We
+     * decode SCREEN_WIDTH pixels (the visible portion of PLANE_STRIDE*8
+     * = 352 source bits). Sprite-source images use a smaller stride and
+     * go through `blitDispatch`, not this path. */
+    memset(frontbufferMaskBuffer, 0, FRONTBUFFER_SIZE_TOTAL_BYTES);
+    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+        const uint8_t *rowSrc = rawAssetLoadBuffer + (size_t)y * ROW_STRIDE_BYTES;
+        uint8_t       *rowDst = frontbufferMaskBuffer + (size_t)y * FRONTBUFFER_ROW_STRIDE_BYTES;
+        for (int px = 0; px < SCREEN_WIDTH; px++) {
+            int bit = 7 - (px & 7);
+            int byte = px >> 3;
+            uint8_t idx = 0;
+            for (int p = 0; p < NUM_PLANES; p++) {
+                uint8_t planeByte = rowSrc[p * PLANE_STRIDE + byte];
+                idx |= (uint8_t)(((planeByte >> bit) & 1u) << p);
+            }
+            rowDst[px] = idx;
+        }
+    }
+#else
     _LoadFileEx((uint8_t *)path, frontbufferMaskBuffer, (uint32_t *)0);
+#endif
 }
 
 /* ================================================================

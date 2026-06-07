@@ -10,6 +10,7 @@
  */
 
 #include "training_match.h"
+#include "endian_helpers.h"
 #include "game_types.h"
 #include "panic.h"
 #include "career_status.h"
@@ -482,9 +483,9 @@ extern uint8_t playerPositions[];
 extern uint16_t numPlayers;
 extern uint8_t teamAName[];
 extern uint8_t teamBName[];
-extern uint32_t teamTacticsTable[];
-extern uint32_t tacticPosMapPtrs[];
-extern uint32_t trainingPosOrderTables[];
+extern void *teamTacticsTable[];
+extern void *tacticPosMapPtrs[];
+extern void *trainingPosOrderTables[];
 extern uint16_t pitchTypeOrSeason;
 extern uint16_t friendlyPitchType;
 extern uint16_t friendlySeason;
@@ -563,7 +564,7 @@ void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
     teamEx->team.teamOrdinal = 0x99;
     teamEx->team.teamControls = 1;
     /* Asm: move.w (a6),(currentTeamNumber) — reads first word = packed (countryNumber<<8 | teamOrdinal) */
-    currentTeamNumber = *(uint16_t *)&teamEx->team.countryNumber;
+    currentTeamNumber = PACK_BE_U16(teamEx->team.countryNumber, teamEx->team.teamOrdinal);
 
     /* Look up tactics and position map */
     int16_t tacticsIdx = (int8_t)teamEx->team.tactics;

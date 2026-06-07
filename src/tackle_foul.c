@@ -290,6 +290,12 @@ _TryBookingThePlayer(Sprite *player, TeamGeneralInfo *team)
     uint16_t offset;
     TeamStatisticsData *stats;
 
+#ifdef SWOS_TEST_NO_INJURIES_CARDS
+    (void)player; (void)team; (void)pi; (void)cards;
+    (void)ordinal; (void)offset; (void)stats;
+    return 1;  /* Beta-test mode: never book — eligibility=no */
+#endif
+
     if (plgD3Param != 0) {
         /* Highlight mode */
         if (team->playerNumber == 0 &&
@@ -379,6 +385,12 @@ _TrySendingOffThePlayer(Sprite *player, TeamGeneralInfo *team)
     int16_t ordinal;
     uint16_t offset;
     TeamStatisticsData *stats;
+
+#ifdef SWOS_TEST_NO_INJURIES_CARDS
+    (void)player; (void)team; (void)pi; (void)cards;
+    (void)ordinal; (void)offset; (void)stats;
+    return 1;  /* Beta-test mode: never send off — eligibility=no */
+#endif
 
     /* Need at least one human controller */
     if (team->playerNumber == 0 &&

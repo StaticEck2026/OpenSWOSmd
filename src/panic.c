@@ -5,6 +5,9 @@
  */
 #include "panic.h"
 #include "text_render.h"
+#ifdef SWOS_SDL_BUILD
+#include <stdio.h>  /* stderr panic log + gdb trap below — SDL host only; the m68k toolchain is freestanding (no stdio.h) */
+#endif
 
 typedef signed short int16_t;
 
@@ -71,6 +74,16 @@ static uint8_t *panicLookupMessagePtr(uint16_t code)
 __attribute__((used, externally_visible, noreturn))
 void _PanicHaltLoop(void)
 {
+#ifdef SWOS_SDL_BUILD
+    /* SDL-only debug aid: log the panic reason and trap so gdb catches it.
+     * The Amiga build is freestanding (no stdio) and wants the original
+     * fade-and-spin-with-hex-code behaviour below, so this is gated out. */
+    fprintf(stderr, "[PANIC] reasonCode=0x%04X (game halted, screen will fade to black)\n",
+            panicReasonCode);
+    fflush(stderr);
+    __builtin_trap();
+#endif
+
     /* Convert panic code to hex string → panicOutBuf equivalent */
     uint8_t *hexStr = panicLookupMessagePtr(panicReasonCode);
 

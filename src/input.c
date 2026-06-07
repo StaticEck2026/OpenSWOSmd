@@ -5,10 +5,22 @@
  */
 #include "input.h"
 
-/* ---- Hardware register definitions ---- */
+/* ---- Hardware register definitions ----
+ * On the Amiga these point at the live Paula joystick + CIAA fire-button
+ * registers. On the SDL build we redirect them to software state that
+ * input_sdl.c writes once per SDL_PollEvent pass. */
+#ifdef SWOS_SDL_BUILD
+extern uint16_t joy0Dat;
+extern uint16_t joy1Dat;
+extern uint8_t  ciaa_pra;
+#define HW_JOY0DAT  joy0Dat
+#define HW_JOY1DAT  joy1Dat
+#define HW_CIAA_PRA ciaa_pra
+#else
 #define HW_JOY0DAT  (*(volatile uint16_t *)0x00DFF00A)
 #define HW_JOY1DAT  (*(volatile uint16_t *)0x00DFF00C)
 #define HW_CIAA_PRA (*(volatile uint8_t  *)0x00BFE001)
+#endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t pl1Right;
