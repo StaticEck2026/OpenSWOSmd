@@ -13,7 +13,7 @@
  * Ported from SWOS2.s lines 5504-5884.
  */
 
-#include <stdint.h>
+#include "swos_types.h"   /* uint*_t/uintptr_t — platform-aware; never <stdint.h> directly (m68k toolchain's chains to a missing libc stdint.h) */
 #include "scroll_blit.h"
 #include "game_types.h"
 #include "display.h"
