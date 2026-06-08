@@ -95,39 +95,21 @@ __asm__(
     ".globl " _ASM_PFX "clubBusinessActive\n"
     _ASM_PFX "clubBusinessActive:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "newBalance\n"
-    _ASM_PFX "newBalance:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "old_balance\n"
-    _ASM_PFX "old_balance:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "playerPurchases\n"
-    _ASM_PFX "playerPurchases:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "playerSales\n"
-    _ASM_PFX "playerSales:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "generalRunningCosts\n"
-    _ASM_PFX "generalRunningCosts:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "playerWagesBill\n"
-    _ASM_PFX "playerWagesBill:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "gateReceipts\n"
-    _ASM_PFX "gateReceipts:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "startingBalance\n"
-    _ASM_PFX "startingBalance:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "startingBalanceCopy\n"
-    _ASM_PFX "startingBalanceCopy:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "competitionBonuses\n"
-    _ASM_PFX "competitionBonuses:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "sensisoftPlcSponsorship\n"
-    _ASM_PFX "sensisoftPlcSponsorship:\n"
-    ".skip 4\n"
+    /* ---- Pilot 1: 11 x int32 club-finance totals pulled out to careerFinances ----
+     * newBalance, old_balance, playerPurchases, playerSales, generalRunningCosts,
+     * playerWagesBill, gateReceipts, startingBalance, startingBalanceCopy,
+     * competitionBonuses, sensisoftPlcSponsorship — 44 contiguous bytes, the
+     * club-finances summary — now live in a standalone typed `CareerFinances`
+     * (career_finances.c), with the 11 legacy names re-emitted there as real
+     * labels so every reader and the save FX(...) descriptors (addressed by
+     * &symbol) keep working unchanged.
+     *
+     * Reserve the run's historical 44 bytes here so every later overlay label
+     * keeps its absolute careerFileBufferBuf offset — no cascade. numSelectedTeams
+     * stays put, so career_data_size() and the on-disk save layout are unchanged;
+     * this is now dead space in the overlay (it stays zero in both the live image
+     * and the reload, so SWOS_SAVE_FORMAT_JSON_VERIFY remains 0). */
+    ".skip 44\n"
     ".globl " _ASM_PFX "financeTotalsNeedResetFlag\n"
     _ASM_PFX "financeTotalsNeedResetFlag:\n"
     ".skip 6\n"

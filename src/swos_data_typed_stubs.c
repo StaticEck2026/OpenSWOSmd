@@ -332,27 +332,27 @@ uint16_t team2SelectedPlayerIndex;
 // uint16_t careerTeamLostMatch;
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): clubBusinessActive */
 // uint16_t clubBusinessActive;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): newBalance */
+/* MOVED to careerFinances struct (see career_finances.c): newBalance */
 // uint32_t newBalance;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): old_balance */
+/* MOVED to careerFinances struct (see career_finances.c): old_balance */
 // uint32_t old_balance;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): playerPurchases */
+/* MOVED to careerFinances struct (see career_finances.c): playerPurchases */
 // uint32_t playerPurchases;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): playerSales */
+/* MOVED to careerFinances struct (see career_finances.c): playerSales */
 // uint32_t playerSales;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): generalRunningCosts */
+/* MOVED to careerFinances struct (see career_finances.c): generalRunningCosts */
 // uint32_t generalRunningCosts;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): playerWagesBill */
+/* MOVED to careerFinances struct (see career_finances.c): playerWagesBill */
 // uint32_t playerWagesBill;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): gateReceipts */
+/* MOVED to careerFinances struct (see career_finances.c): gateReceipts */
 // uint32_t gateReceipts;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): startingBalance */
+/* MOVED to careerFinances struct (see career_finances.c): startingBalance */
 // uint32_t startingBalance;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): startingBalanceCopy */
+/* MOVED to careerFinances struct (see career_finances.c): startingBalanceCopy */
 // uint32_t startingBalanceCopy;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): competitionBonuses */
+/* MOVED to careerFinances struct (see career_finances.c): competitionBonuses */
 // uint32_t competitionBonuses;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): sensisoftPlcSponsorship */
+/* MOVED to careerFinances struct (see career_finances.c): sensisoftPlcSponsorship */
 // uint32_t sensisoftPlcSponsorship;
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): financeTotalsNeedResetFlag */
 // uint16_t financeTotalsNeedResetFlag;
