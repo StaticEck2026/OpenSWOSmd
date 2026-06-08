@@ -363,6 +363,13 @@ uint16_t _PlayDIYCupFixtureAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
 uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode);
 uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t selector);
 
+/* --- DIY team-selection resolvers (step-4 phase 2) ---
+ * Resolve a DIY team-selection value (DIYTeamStats.teamSelOffset /
+ * bracketScratch.teamOffsetTable[]) to the team record / team-name address.
+ * See docs/CAREERTEAM_STEP4_REWORK.md. */
+uint8_t *diy_resolve_team(int32_t teamSel);
+uint8_t *diy_resolve_team_name(int32_t teamSel);
+
 /* --- Match Result Processing (Chunk 190) --- */
 void _ProcessDIYLeagueMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileEx *team2,
     uint16_t *outGoals1, uint16_t *outGoals2, uint16_t *outFlags);

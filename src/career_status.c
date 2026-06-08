@@ -3267,16 +3267,15 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
              * dispatched correctly, this guard naturally limits itself
              * to leagues where the standings rows actually exist.
              *
-             * Each row is 18 bytes; teamSelOffset at offset 0 is a SIGNED
-             * byte-offset into selTeamsPtr. Positive offsets index
-             * forward through the selected-teams array (numSelectedTeams
-             * * 684, typically < 50 KB); negative offsets are legitimate
-             * too — careerTeam lives BELOW selTeamsPtr in memory, so its
-             * standings row stores a negative offset (e.g. -42288 =
-             * 0xFFFF5AD0 when read as uint32). Use a sign-aware range
-             * that catches the 17 MB-class corruption that motivated
-             * the validator but accepts plausible careerTeam offsets up
-             * to ~1 MB backward. */
+             * Each row is 18 bytes; teamSelOffset at offset 0 is now a team
+             * IDENTITY (step-4 phase 3): -1 == careerTeam, >= 0 == selTeamsPtr
+             * index (0..numTeams-1). The legacy byte-offset range below
+             * [maxNegative, maxPositive] still bounds it correctly — every valid
+             * identity (-1 and small positives) sits well inside it — and still
+             * catches the MB-class garbage that motivated the validator (a cup
+             * comp's standings overlay read as sequential grid indices). Left as
+             * the wide legacy range to keep this a pure corruption guard; it
+             * could be tightened to [-1, numTeams) now that the field is an id. */
             const int32_t maxPositive = 64 * 684;
             const int32_t maxNegative = -1 * 1024 * 1024;
             uint8_t *rowsBase = (uint8_t *)&diyCompetitionStart + DIY_STANDINGS_OFFSET;

@@ -1975,11 +1975,11 @@ void _Career_AutoSimulateLeagueFixturesUntilHumanTeam(void)
         uint8_t *comp2 = fixtureTeam2CompPtr;
 
         /* Check team1: DIYTeamStats teamSelOffset (+0x2B4) is selTeamsPtr-relative */
-        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + ((DIYTeamStats *)(comp1 + DIY_STANDINGS_OFFSET))->teamSelOffset);
+        TeamFile *team1 = (TeamFile *)diy_resolve_team(((DIYTeamStats *)(comp1 + DIY_STANDINGS_OFFSET))->teamSelOffset);
         if (team1->teamControls != 1) return;  /* human team found */
 
         /* Check team2 */
-        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + ((DIYTeamStats *)(comp2 + DIY_STANDINGS_OFFSET))->teamSelOffset);
+        TeamFile *team2 = (TeamFile *)diy_resolve_team(((DIYTeamStats *)(comp2 + DIY_STANDINGS_OFFSET))->teamSelOffset);
         if (team2->teamControls != 1) return;  /* human team found */
 
         /* Both AI: simulate */
@@ -2048,7 +2048,7 @@ void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
 
         /* Read team pointer from bracketScratch.teamOffsetTable[slotIdx] */
         DIYCompetitionEx *baseEx = &diyCompetitionStart;
-        TeamFile *team1 = (TeamFile *)(&selTeamsPtr + baseEx->bracketScratch.teamOffsetTable[slot1Idx]);
+        TeamFile *team1 = (TeamFile *)diy_resolve_team(baseEx->bracketScratch.teamOffsetTable[slot1Idx]);
         if (team1->teamControls != 1) {
 #ifdef SWOS_DEBUG_AUTOSKIP
             SWOS_AUTOSKIP_LOG("[bug4-cup] AutoSimUntilHuman EXIT (team1 human/coach) "
@@ -2058,7 +2058,7 @@ void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
             return;
         }
 
-        TeamFile *team2 = (TeamFile *)(&selTeamsPtr + baseEx->bracketScratch.teamOffsetTable[slot2Idx]);
+        TeamFile *team2 = (TeamFile *)diy_resolve_team(baseEx->bracketScratch.teamOffsetTable[slot2Idx]);
         if (team2->teamControls != 1) {
 #ifdef SWOS_DEBUG_AUTOSKIP
             SWOS_AUTOSKIP_LOG("[bug4-cup] AutoSimUntilHuman EXIT (team2 human/coach) "

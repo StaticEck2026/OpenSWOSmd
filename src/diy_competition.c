@@ -56,6 +56,39 @@ extern uint8_t viewRandomPhase;
 extern uint16_t numSelectedTeams;
 extern uint8_t quadrantDistanceFactor[];
 
+/* ---- DIY team-selection identity helpers (step-4 phase 3) ----
+ * A DIY team-selection value (stored in DIYTeamStats.teamSelOffset and
+ * bracketScratch.teamOffsetTable[]) is now a stable team IDENTITY, not a raw
+ * byte offset: -1 == careerTeam, >= 0 == the team's index into the selTeamsPtr
+ * array. diy_resolve_team / diy_resolve_team_name turn an identity into the team
+ * record / team-name address; diy_team_to_identity is the inverse used at the
+ * store sites. careerTeam is reached by a branch, NOT by `&selTeamsPtr +
+ * (large negative)`, so it no longer has to live adjacent below selTeamsPtr and
+ * can be extracted from the overlay (phase 4). The JSON save was already
+ * identity-based (see save_format_json.c), so this is save-format-neutral; only
+ * the in-memory representation changed. See docs/CAREERTEAM_STEP4_REWORK.md. */
+uint8_t *diy_resolve_team(int32_t teamSel)
+{
+    if (teamSel < 0)                                          /* -1 = careerTeam */
+        return (uint8_t *)&careerTeam;
+    return (uint8_t *)((TeamFileEx *)&selTeamsPtr + teamSel); /* selTeamsPtr + index*684 */
+}
+uint8_t *diy_resolve_team_name(int32_t teamSel)
+{
+    /* the team-name field sits at the same offset within every team record;
+     * selTeamNameBase - selTeamsPtr is that offset, valid for careerTeam too. */
+    return diy_resolve_team(teamSel) + (&selTeamNameBase - &selTeamsPtr);
+}
+/* Inverse: team record pointer -> identity (the value stored in the standings
+ * row / cup-bracket slot). careerTeam -> -1; a selected team -> its array index. */
+static int32_t diy_team_to_identity(const uint8_t *teamPtr)
+{
+    if (teamPtr == (const uint8_t *)&careerTeam)
+        return -1;
+    /* selected team: positive difference (above selTeamsPtr), 684-aligned */
+    return (int32_t)((teamPtr - (const uint8_t *)&selTeamsPtr) / (int32_t)sizeof(TeamFileEx));
+}
+
 /* ASM string constants */
 extern uint8_t aDiyTournament[];  /* "DIY TOURNAMENT" */
 extern uint8_t aDiyLeague[];      /* "DIY LEAGUE" */
@@ -517,11 +550,11 @@ void _DIY_CacheSelectedTeamPointers(void)
         uint16_t teamNum = BE_READ_U16(&teamIds[(uint16_t)(int16_t)idx]);
         TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
 
-        /* Store relative pointer: teamPtr - &selTeamsPtr (asm: suba.l #selTeamsPtr,a0).
-         * Standings table overlays cupTeamIds — use the typed helper
-         * instead of the Amiga byte offsets (entry + 0x2B4). */
+        /* Store the team IDENTITY (step-4 phase 3): -1 for careerTeam, else the
+         * selTeamsPtr array index. Standings table overlays cupTeamIds — use the
+         * typed helper instead of the Amiga byte offsets (entry + 0x2B4). */
         uint16_t entryIdx = (uint16_t)(int16_t)idx;
-        int32_t off = (int32_t)((uint8_t *)teamPtr - &selTeamsPtr);
+        int32_t off = diy_team_to_identity((uint8_t *)teamPtr);
 #ifdef SWOS_DEBUG_AUTOSKIP
         SWOS_AUTOSKIP_LOG("[bug8w] CacheTeamPtrs i=%d idx=%d entryIdx=%u teamNum=0x%04X "
                           "teamPtr=%p selTeamsPtr=%p off=%d numTeams=%u",
@@ -577,8 +610,8 @@ void _DIY_SortLeagueTableByStandings(void)
 
                 /* Goals scored equal — alphabetical comparison */
                 {
-                    uint8_t *nameA = &selTeamNameBase + rowA->teamSelOffset;
-                    uint8_t *nameB = &selTeamNameBase + rowB->teamSelOffset;
+                    uint8_t *nameA = diy_resolve_team_name(rowA->teamSelOffset);
+                    uint8_t *nameB = diy_resolve_team_name(rowB->teamSelOffset);
                     for (;;) {
                         uint8_t cA = *nameA++;
                         if (cA == 0) goto no_swap;
@@ -1574,11 +1607,11 @@ void _DIY_BuildTeamSelectionPointerCache(void)
         int16_t gridIdx = (int8_t)*gridPtr++;   /* ext.w d6: sign-extend */
         uint16_t teamNum = BE_READ_U16(&teamIds[gridIdx]);
         TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
-        /* Signed offset — teamPtr may be `&careerTeam`, which lives BELOW
-         * selTeamsPtr in BSS, so the difference is negative. Storing as
-         * uint32_t and adding back on read zero-extends on 64-bit and
-         * lands ~4 GB above selTeamsPtr (unmapped). */
-        int32_t relOff = (int32_t)((uint8_t *)teamPtr - &selTeamsPtr);
+        /* Store the team IDENTITY (step-4 phase 3): -1 for careerTeam, else the
+         * selTeamsPtr array index. Replaces the old signed byte offset — careerTeam
+         * is now resolved by a branch, not `&selTeamsPtr + (negative)`, so it need
+         * not live below selTeamsPtr. */
+        int32_t relOff = diy_team_to_identity((uint8_t *)teamPtr);
         comp->bracketScratch.teamOffsetTable[(uint16_t)gridIdx] = relOff;
     }
 
@@ -1836,8 +1869,8 @@ static void getCurrentFixtureTeamPtrs(uint8_t **team1Out, uint8_t **team2Out)
         int32_t selOff2 = (int32_t)r2->teamSelOffset;
         uint16_t t1Id = 0, t2Id = 0;
         uint8_t t1Ctrl = 0xFF, t2Ctrl = 0xFF;
-        uint8_t *sel1Ptr = (uint8_t *)&selTeamsPtr + selOff1;
-        uint8_t *sel2Ptr = (uint8_t *)&selTeamsPtr + selOff2;
+        uint8_t *sel1Ptr = diy_resolve_team(selOff1);
+        uint8_t *sel2Ptr = diy_resolve_team(selOff2);
         const int32_t maxPositive = 64 * 684;
         const int32_t maxNegative = -1 * 1024 * 1024;
         int selOk1 = (selOff1 >= maxNegative && selOff1 <= maxPositive);
@@ -1970,8 +2003,8 @@ uint16_t _DIY_GetCurrentFixtureTeamClass(void)
     getCurrentFixtureTeamPtrs(&team1, &team2);
 
     /* Follow pointer at DIYTeamStats teamSelOffset (+0x2B4) + selTeamsPtr base */
-    uint8_t *sel1 = &selTeamsPtr + ((DIYTeamStats *)(team1 + DIY_STANDINGS_OFFSET))->teamSelOffset;
-    uint8_t *sel2 = &selTeamsPtr + ((DIYTeamStats *)(team2 + DIY_STANDINGS_OFFSET))->teamSelOffset;
+    uint8_t *sel1 = diy_resolve_team(((DIYTeamStats *)(team1 + DIY_STANDINGS_OFFSET))->teamSelOffset);
+    uint8_t *sel2 = diy_resolve_team(((DIYTeamStats *)(team2 + DIY_STANDINGS_OFFSET))->teamSelOffset);
 
     int16_t class1 = (int8_t)sel1[4];
     int16_t class2 = (int8_t)sel2[4];
@@ -2215,7 +2248,7 @@ void _DIY_UpdatePromotionRelegationScratchCounts(void)
          * signed so 64-bit pointer arithmetic sign-extends correctly
          * (see SetupCurrentFixtureTeamNames for the bug story). */
         int32_t selOff = ((DIYTeamStats *)(entry + DIY_STANDINGS_OFFSET))->teamSelOffset;
-            TeamFileEx *team = (TeamFileEx *)(&selTeamsPtr + selOff);
+            TeamFileEx *team = (TeamFileEx *)diy_resolve_team(selOff);
             /* "countryNum" name predates the audit — the slot at byte 2
              * is TeamFile.globalTeamNumber, used as a scratch index. */
             uint16_t globalNo = (uint16_t)team->team.globalTeamNumber;
@@ -2241,7 +2274,7 @@ void _DIY_UpdatePromotionRelegationScratchCounts(void)
          * signed so 64-bit pointer arithmetic sign-extends correctly
          * (see SetupCurrentFixtureTeamNames for the bug story). */
         int32_t selOff = ((DIYTeamStats *)(entry + DIY_STANDINGS_OFFSET))->teamSelOffset;
-        TeamFileEx *team = (TeamFileEx *)(&selTeamsPtr + selOff);
+        TeamFileEx *team = (TeamFileEx *)diy_resolve_team(selOff);
         uint16_t globalNo = (uint16_t)team->team.globalTeamNumber;
         scratch[globalNo]++;
         if (team == &careerTeam) {
@@ -2927,11 +2960,11 @@ process_fixtures:
     for (int16_t i = 0; i < numTeams; i++) {
         /* Read two team indices from grid */
         int8_t idx1 = (int8_t)*teamGrid++;
-        uint8_t *team1 = &selTeamsPtr + comp->bracketScratch.teamOffsetTable[(int16_t)idx1];
+        uint8_t *team1 = diy_resolve_team(comp->bracketScratch.teamOffsetTable[(int16_t)idx1]);
         uint16_t teamId1 = *(uint16_t *)team1;
 
         int8_t idx2 = (int8_t)*teamGrid++;
-        uint8_t *team2 = &selTeamsPtr + comp->bracketScratch.teamOffsetTable[(int16_t)idx2];
+        uint8_t *team2 = diy_resolve_team(comp->bracketScratch.teamOffsetTable[(int16_t)idx2]);
         uint16_t teamId2 = *(uint16_t *)team2;
 
         /* If d7 > 0 (second pass), swap teams */
@@ -3191,8 +3224,8 @@ process_next:
     _DIY_AdvanceLeagueProgressAfterMatch(team1Comp, team2Comp);
 
     /* Get selected team pointers from DIYTeamStats teamSelOffset (+0x2B4) */
-    uint8_t *sel1 = &selTeamsPtr + ((DIYTeamStats *)(team1Comp + DIY_STANDINGS_OFFSET))->teamSelOffset;
-    uint8_t *sel2 = &selTeamsPtr + ((DIYTeamStats *)(team2Comp + DIY_STANDINGS_OFFSET))->teamSelOffset;
+    uint8_t *sel1 = diy_resolve_team(((DIYTeamStats *)(team1Comp + DIY_STANDINGS_OFFSET))->teamSelOffset);
+    uint8_t *sel2 = diy_resolve_team(((DIYTeamStats *)(team2Comp + DIY_STANDINGS_OFFSET))->teamSelOffset);
 
     /* [bug20-fixture] Always-on per-iteration trace. First-N limited. */
     {
@@ -6310,7 +6343,7 @@ extern void _GoGetTeamsForPlay(uint8_t *gameTypeStr, uint8_t *playWhatStr,
 static uint8_t *getTeamNameFromIndex(int8_t idx, uint8_t *comp)
 {
     DIYCompetitionEx *compEx = (DIYCompetitionEx *)comp;
-    return &selTeamNameBase + compEx->bracketScratch.teamOffsetTable[(uint16_t)(int16_t)idx];
+    return diy_resolve_team_name(compEx->bracketScratch.teamOffsetTable[(uint16_t)(int16_t)idx]);
 }
 
 /* Helper: advance menu entry pointer and set isInvisible = 1 */
@@ -6760,13 +6793,13 @@ void _DesignDIYCup_UpdateCurrentMatchTeamEntryStrings(void)
      * `&selTeamNameBase + offset` rationale (Amiga shorthand truncates
      * the pointer on 64-bit). */
     e->isInvisible = 0;
-    uint8_t *teamName1 = &selTeamNameBase + baseEx->bracketScratch.teamOffsetTable[(int16_t)slot1];
+    uint8_t *teamName1 = diy_resolve_team_name(baseEx->bracketScratch.teamOffsetTable[(int16_t)slot1]);
     e->fg = (uintptr_t)teamName1;
     e++;
 
     /* Entry 13: team 2 name, visible */
     e->isInvisible = 0;
-    uint8_t *teamName2 = &selTeamNameBase + baseEx->bracketScratch.teamOffsetTable[(int16_t)slot2];
+    uint8_t *teamName2 = diy_resolve_team_name(baseEx->bracketScratch.teamOffsetTable[(int16_t)slot2]);
     e->fg = (uintptr_t)teamName2;
     e++;
 
@@ -7348,7 +7381,7 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
          * the pointer on 64-bit; full-width pointer arithmetic via
          * `&selTeamsPtr + offset` sign-extends the offset and reaches the
          * right team record whether it lives above or below selTeamsPtr. */
-        TeamFileEx *teamPtr = (TeamFileEx *)(&selTeamsPtr + a4row->teamSelOffset);
+        TeamFileEx *teamPtr = (TeamFileEx *)diy_resolve_team(a4row->teamSelOffset);
 
         /* DEBUG: validate team name bytes are printable ASCII. If
          * corruption detected, flash color and halt so the debugger
@@ -8596,14 +8629,14 @@ void _DIYLeagueTournament_SetupCurrentFixtureTeamNames(void)
      * correctly. */
     {
         int32_t nameOff = ((DIYTeamStats *)(team1 + DIY_STANDINGS_OFFSET))->teamSelOffset;
-        e->fg = (uintptr_t)(&selTeamNameBase + nameOff);
+        e->fg = (uintptr_t)diy_resolve_team_name(nameOff);
     }
 
     e++;  /* entry 13 */
     e->isInvisible = 0;
     {
         int32_t nameOff = ((DIYTeamStats *)(team2 + DIY_STANDINGS_OFFSET))->teamSelOffset;
-        e->fg = (uintptr_t)(&selTeamNameBase + nameOff);
+        e->fg = (uintptr_t)diy_resolve_team_name(nameOff);
     }
 
     e++;  /* entry 14 — invisible */
@@ -10344,8 +10377,8 @@ uint16_t _DIY_CompareCurrentMatchTeamCategories(void) {
 
     /* Load team pointer from bracketScratch.teamOffsetTable[slotIdx] (selTeamsPtr-relative) */
     DIYCompetitionEx *baseEx = &diyCompetitionStart;
-    TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + baseEx->bracketScratch.teamOffsetTable[slot1Idx]);
-    TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + baseEx->bracketScratch.teamOffsetTable[slot2Idx]);
+    TeamFileEx *team1 = (TeamFileEx *)diy_resolve_team(baseEx->bracketScratch.teamOffsetTable[slot1Idx]);
+    TeamFileEx *team2 = (TeamFileEx *)diy_resolve_team(baseEx->bracketScratch.teamOffsetTable[slot2Idx]);
 
     int16_t ctrl1 = (int16_t)(int8_t)team1->team.teamControls;
     int16_t ctrl2 = (int16_t)(int8_t)team2->team.teamControls;
@@ -10771,8 +10804,8 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
     getCurrentMatchTeamSlotIndices(&slot1Idx, &slot2Idx);
 
     DIYCompetitionEx *baseExForSlot = &diyCompetitionStart;
-    TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + baseExForSlot->bracketScratch.teamOffsetTable[slot1Idx]);
-    TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + baseExForSlot->bracketScratch.teamOffsetTable[slot2Idx]);
+    TeamFileEx *team1 = (TeamFileEx *)diy_resolve_team(baseExForSlot->bracketScratch.teamOffsetTable[slot1Idx]);
+    TeamFileEx *team2 = (TeamFileEx *)diy_resolve_team(baseExForSlot->bracketScratch.teamOffsetTable[slot2Idx]);
 
     /* Route match based on mode */
     if (mode == 0) {
@@ -11027,8 +11060,8 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
      * (careerTeam lives below selTeamsPtr in memory). */
     int32_t teamSelOff1 = (int32_t)((DIYTeamStats *)(compPtr1 + DIY_STANDINGS_OFFSET))->teamSelOffset;
     int32_t teamSelOff2 = (int32_t)((DIYTeamStats *)(compPtr2 + DIY_STANDINGS_OFFSET))->teamSelOffset;
-    TeamFileEx *team1 = (TeamFileEx *)(&selTeamsPtr + teamSelOff1);
-    TeamFileEx *team2 = (TeamFileEx *)(&selTeamsPtr + teamSelOff2);
+    TeamFileEx *team1 = (TeamFileEx *)diy_resolve_team(teamSelOff1);
+    TeamFileEx *team2 = (TeamFileEx *)diy_resolve_team(teamSelOff2);
 
     /* [bug23-fix] Log fixture details when both sides resolve to the
      * same TeamFileEx — that's how the qualifier auto-play loop got
