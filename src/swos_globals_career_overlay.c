@@ -254,12 +254,12 @@ __asm__(
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 320\n"
 #endif
-    ".globl " _ASM_PFX "lastFinancialWeekIndex\n"
-    _ASM_PFX "lastFinancialWeekIndex:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "diyLeagueSeasonStateTable\n"
-    _ASM_PFX "diyLeagueSeasonStateTable:\n"
-    ".skip 2000\n"
+    /* ---- Region B5: lastFinancialWeekIndex + diyLeagueSeasonStateTable pulled
+     * out to career_diy_league_state.c ---- lastFinancialWeekIndex(1)+pad(1) +
+     * diyLeagueSeasonStateTable(2000) = 2002 B. Real labels there; readers +
+     * save FX/FA unchanged. Reserve 2002 bytes so currentTeam and every later
+     * label keep their offsets (no cascade). */
+    ".skip 2002\n"
     ".globl " _ASM_PFX "currentTeam\n"
     _ASM_PFX "currentTeam:\n"
     ".skip 1292\n"
