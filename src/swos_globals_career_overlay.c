@@ -81,87 +81,30 @@ __asm__(
      * this is now dead space in the overlay (it stays zero in both the live image
      * and the reload, so SWOS_SAVE_FORMAT_JSON_VERIFY remains 0). */
     ".skip 44\n"
-    ".globl " _ASM_PFX "financeTotalsNeedResetFlag\n"
-    _ASM_PFX "financeTotalsNeedResetFlag:\n"
-    ".skip 6\n"
-    ".globl " _ASM_PFX "weeklyRunningCosts\n"
-    _ASM_PFX "weeklyRunningCosts:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "weeklyPlayerWages\n"
-    _ASM_PFX "weeklyPlayerWages:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "totalTeamValue\n"
-    _ASM_PFX "totalTeamValue:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "weeklyWageByPlayerIndex\n"
-    _ASM_PFX "weeklyWageByPlayerIndex:\n"
-    ".skip 128\n"
-    ".globl " _ASM_PFX "playerFormModifiers\n"
-    _ASM_PFX "playerFormModifiers:\n"
-    ".skip 32\n"
-    ".globl " _ASM_PFX "sensisoftPlcSponsorshipFactor\n"
-    _ASM_PFX "sensisoftPlcSponsorshipFactor:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "additionalInvestments\n"
-    _ASM_PFX "additionalInvestments:\n"
-    ".skip 6\n"
-    ".globl " _ASM_PFX "teamValueDivisor\n"
-    _ASM_PFX "teamValueDivisor:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "expectedLeagueRankIndex\n"
-    _ASM_PFX "expectedLeagueRankIndex:\n"
-    ".skip 2\n"
+    /* ---- Region A1: finance-tail pulled out to careerFinanceTail
+     * (career_finance_tail.c) ---- financeTotalsNeedResetFlag(2)+hole(4),
+     * weeklyRunningCosts(4), weeklyPlayerWages(4), totalTeamValue(4),
+     * weeklyWageByPlayerIndex(128), playerFormModifiers(32),
+     * sensisoftPlcSponsorshipFactor(2), additionalInvestments(2)+hole(4),
+     * teamValueDivisor(2), expectedLeagueRankIndex(2) = 190 B. Real labels
+     * there; readers + save FX(...)/FA(...) unchanged. Reserve 190 bytes here
+     * so every later overlay label keeps its offset (no cascade); hole stays
+     * zero so VERIFY remains 0. */
+    ".skip 190\n"
     /* ---- Pilot 5 (run 1 of 2): board-confidence history/score/previous pulled
      * out to boardConfidenceState (career_board_confidence.c) ---- 6 x uint16 =
      * 12 B. Combined with run 2 (mods/values) into one struct; this run's 12
      * bytes are reserved here so the globals after it keep their offsets (no
      * cascade). Real labels there; readers + save FX(...) unchanged. */
     ".skip 12\n"
-    ".globl " _ASM_PFX "playWinCupAnimation\n"
-    _ASM_PFX "playWinCupAnimation:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "minorTrophyBonusActive\n"
-    _ASM_PFX "minorTrophyBonusActive:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "leagueTitleBonusActive\n"
-    _ASM_PFX "leagueTitleBonusActive:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "majorTrophyBonusActive\n"
-    _ASM_PFX "majorTrophyBonusActive:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "cupBonus1Active\n"
-    _ASM_PFX "cupBonus1Active:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "cupBonus2Active\n"
-    _ASM_PFX "cupBonus2Active:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "wonWorldCup\n"
-    _ASM_PFX "wonWorldCup:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "wonContinentalCup\n"
-    _ASM_PFX "wonContinentalCup:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "wonInvitationTournament\n"
-    _ASM_PFX "wonInvitationTournament:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "qualifyingStage1PendingFlag0\n"
-    _ASM_PFX "qualifyingStage1PendingFlag0:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "qualifyingStage1PendingFlag1\n"
-    _ASM_PFX "qualifyingStage1PendingFlag1:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "qualifyingStage2PendingFlag0\n"
-    _ASM_PFX "qualifyingStage2PendingFlag0:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "qualifyingStage2PendingFlag1\n"
-    _ASM_PFX "qualifyingStage2PendingFlag1:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "isCareer\n"
-    _ASM_PFX "isCareer:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "careerMatchSimulatedFlag\n"
-    _ASM_PFX "careerMatchSimulatedFlag:\n"
-    ".skip 2\n"
+    /* ---- Region A2: bonus/trophy + qualifying flags pulled out to
+     * careerTrophyFlags (career_trophy_flags.c) ---- playWinCupAnimation,
+     * minor/league/major TrophyBonusActive, cupBonus1/2Active, won World/
+     * Continental/Invitation, qualifyingStage1/2PendingFlag0/1, isCareer,
+     * careerMatchSimulatedFlag = 15 x uint16 = 30 B. Real labels there; readers
+     * + save FX(...) unchanged. Reserve 30 bytes here (no cascade); hole stays
+     * zero so VERIFY remains 0. */
+    ".skip 30\n"
     /* ---- Pilot 2: 6 x uint16 season match-record counters pulled out to
      * careerSeasonRecord ---- gamesPlayed, numWins, numDrawn, numLost,
      * goalsScored, goalsTaken — 12 contiguous bytes — now live in a standalone
@@ -177,48 +120,15 @@ __asm__(
      * boardConfidenceState (career_board_confidence.c) ---- mod0-3, value0-1,
      * mod4-9 = 12 x uint16 = 24 B, reserved here (no cascade). See run 1 above. */
     ".skip 24\n"
-    ".globl " _ASM_PFX "contractNegotiationActive\n"
-    _ASM_PFX "contractNegotiationActive:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "wageScalingDivisor\n"
-    _ASM_PFX "wageScalingDivisor:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "teamNoOfferAccepted\n"
-    _ASM_PFX "teamNoOfferAccepted:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "teamFundsAccepted\n"
-    _ASM_PFX "teamFundsAccepted:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "isNationalSelector\n"
-    _ASM_PFX "isNationalSelector:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "someTeamFlags\n"
-    _ASM_PFX "someTeamFlags:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "lastNationalityCall\n"
-    _ASM_PFX "lastNationalityCall:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "nationalTeamNationality\n"
-    _ASM_PFX "nationalTeamNationality:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "nationalTeamFileId\n"
-    _ASM_PFX "nationalTeamFileId:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "sameNationalCallFlag\n"
-    _ASM_PFX "sameNationalCallFlag:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "sackedReputationScore\n"
-    _ASM_PFX "sackedReputationScore:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "nationalSelectorReputationPoints\n"
-    _ASM_PFX "nationalSelectorReputationPoints:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "nationalTeamFileCode\n"
-    _ASM_PFX "nationalTeamFileCode:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "seasonReview\n"
-    _ASM_PFX "seasonReview:\n"
-    ".skip 2\n"
+    /* ---- Region A3: contract-negotiation / national-selector state pulled out
+     * to careerSelectorState (career_selector_state.c) ----
+     * contractNegotiationActive, wageScalingDivisor, teamNoOfferAccepted,
+     * teamFundsAccepted(int32), isNationalSelector, someTeamFlags(u8)+hole(1),
+     * lastNationalityCall, nationalTeamNationality(u8), nationalTeamFileId(u8),
+     * sameNationalCallFlag, sackedReputationScore, nationalSelectorReputationPoints,
+     * nationalTeamFileCode(u8)+hole(1), seasonReview = 28 B. Real labels there;
+     * readers + save FX(...) unchanged. Reserve 28 bytes (no cascade). */
+    ".skip 28\n"
     /* careerCupPickList MOVED OUT of this overlay to a standalone
      * `void *careerCupPickList[5]` (swos_data_typed_stubs.c). It is a 5-entry
      * array of 64-bit competition pointers that does not fit the legacy
@@ -227,78 +137,29 @@ __asm__(
      * careerFileBuffer. Keep the 20-byte gap so worldCupHostTeam and every
      * following overlay global stay at their existing offsets (no cascade). */
     ".skip 20\n"
-    ".globl " _ASM_PFX "worldCupHostTeam\n"
-    _ASM_PFX "worldCupHostTeam:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "worldCupQualifyingTeam\n"
-    _ASM_PFX "worldCupQualifyingTeam:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "euroChampionshipQualTeam\n"
-    _ASM_PFX "euroChampionshipQualTeam:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "selTeamNumber\n"
-    _ASM_PFX "selTeamNumber:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "coachOrPlayer\n"
-    _ASM_PFX "coachOrPlayer:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "careerTeamLeague\n"
-    _ASM_PFX "careerTeamLeague:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "currentDivisionIndex\n"
-    _ASM_PFX "currentDivisionIndex:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "leagueFirstRoundNumber\n"
-    _ASM_PFX "leagueFirstRoundNumber:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "playPromotedAnimation\n"
-    _ASM_PFX "playPromotedAnimation:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "playRelegatedAnimation\n"
-    _ASM_PFX "playRelegatedAnimation:\n"
-    ".skip 2\n"
+    /* ---- Region A4: career-setup pulled out to careerSetup (career_setup.c) ----
+     * worldCupHostTeam, worldCupQualifyingTeam, euroChampionshipQualTeam,
+     * selTeamNumber, coachOrPlayer, careerTeamLeague, currentDivisionIndex,
+     * leagueFirstRoundNumber, playPromotedAnimation, playRelegatedAnimation =
+     * 10 x uint16 = 20 B. Real labels there; readers + save FX(...) unchanged.
+     * Reserve 20 bytes (no cascade). */
+    ".skip 20\n"
     /* ---- Pilot 4: manager-identity block pulled out to managerIdentity
      * (career_manager_identity.c) ---- mrOrMs(2) + managerSexBuffer(4) +
      * managerNameBuffer(9) + managerSurnameBuffer(13) + plNationality(2) = 30 B.
      * Real labels there; readers + save FX(...) unchanged. Reserve 30 bytes (no
      * cascade). */
     ".skip 30\n"
-    ".globl " _ASM_PFX "winCupBonusCount\n"
-    _ASM_PFX "winCupBonusCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "minorTrophyBonusCount\n"
-    _ASM_PFX "minorTrophyBonusCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "majorTrophyBonusCount\n"
-    _ASM_PFX "majorTrophyBonusCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "careerReputationPoints\n"
-    _ASM_PFX "careerReputationPoints:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "removedOfferPlayersFromSelectedTeamCount\n"
-    _ASM_PFX "removedOfferPlayersFromSelectedTeamCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "removedOfferPlayersFromOtherTeamsCount\n"
-    _ASM_PFX "removedOfferPlayersFromOtherTeamsCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "homeMarketUpdateBacklog\n"
-    _ASM_PFX "homeMarketUpdateBacklog:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "foreignMarketUpdateBacklog\n"
-    _ASM_PFX "foreignMarketUpdateBacklog:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "offerExpiryIterationsRemaining\n"
-    _ASM_PFX "offerExpiryIterationsRemaining:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "numForeignMarketPlayers\n"
-    _ASM_PFX "numForeignMarketPlayers:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "numHomeMarketPlayers\n"
-    _ASM_PFX "numHomeMarketPlayers:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "numOffers\n"
-    _ASM_PFX "numOffers:\n"
-    ".skip 2\n"
+    /* ---- Region A5 (run 1 of 2): season/market counters pulled out to
+     * careerSeasonCounters (career_counters.c) ---- winCupBonusCount,
+     * minor/majorTrophyBonusCount, careerReputationPoints(int16),
+     * removedOfferPlayersFrom{Selected,Other}*Count, {home,foreign}MarketUpdateBacklog,
+     * offerExpiryIterationsRemaining, num{Foreign,Home}MarketPlayers, numOffers =
+     * 12 x uint16 = 24 B. The market arrays that follow (foreignMarketPlayers /
+     * homeMarketPlayers / transferOfferTable) STAY in the overlay; run 2
+     * (careerTransferCounters) is carved separately below. Reserve 24 bytes (no
+     * cascade); real labels there, readers + save FX(...) unchanged. */
+    ".skip 24\n"
     ".globl " _ASM_PFX "foreignMarketPlayers\n"
     _ASM_PFX "foreignMarketPlayers:\n"
     ".skip 60\n"
@@ -308,30 +169,13 @@ __asm__(
     ".globl " _ASM_PFX "transferOfferTable\n"
     _ASM_PFX "transferOfferTable:\n"
     ".skip 70\n"
-    ".globl " _ASM_PFX "careerSeasonsCompleted\n"
-    _ASM_PFX "careerSeasonsCompleted:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "numForeignMarketPlayers2\n"
-    _ASM_PFX "numForeignMarketPlayers2:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "pendingForeignPlayerCount\n"
-    _ASM_PFX "pendingForeignPlayerCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "seasonTransferQuota\n"
-    _ASM_PFX "seasonTransferQuota:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "transferPoolSlotLimit\n"
-    _ASM_PFX "transferPoolSlotLimit:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "offerSwapSlotLimit\n"
-    _ASM_PFX "offerSwapSlotLimit:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "transferPoolSlotsUsed\n"
-    _ASM_PFX "transferPoolSlotsUsed:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "offerSwapSlotsUsed\n"
-    _ASM_PFX "offerSwapSlotsUsed:\n"
-    ".skip 2\n"
+    /* ---- Region A5 (run 2 of 2): transfer-pool / offer-swap counters pulled out
+     * to careerTransferCounters (career_counters.c) ---- careerSeasonsCompleted,
+     * numForeignMarketPlayers2, pendingForeignPlayerCount, seasonTransferQuota,
+     * transferPoolSlotLimit, offerSwapSlotLimit, transferPoolSlotsUsed,
+     * offerSwapSlotsUsed = 8 x uint16 = 16 B. Real labels there; readers + save
+     * FX(...) unchanged. Reserve 16 bytes (no cascade). */
+    ".skip 16\n"
     ".globl " _ASM_PFX "numNewJobOffers\n"
     _ASM_PFX "numNewJobOffers:\n"
     ".skip 2\n"
@@ -798,78 +642,17 @@ __asm__(
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"
 #endif
-    ".globl " _ASM_PFX "viewRandomPhase\n"
-    _ASM_PFX "viewRandomPhase:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "seasonPlaying\n"
-    _ASM_PFX "seasonPlaying:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "inFriendlyMenu\n"
-    _ASM_PFX "inFriendlyMenu:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "isNationalTeam\n"
-    _ASM_PFX "isNationalTeam:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "gameType\n"
-    _ASM_PFX "gameType:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "contestStarted\n"
-    _ASM_PFX "contestStarted:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "careerLoadedFlag\n"
-    _ASM_PFX "careerLoadedFlag:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "teamTacticsUSERA\n"
-    _ASM_PFX "teamTacticsUSERA:\n"
-    ".skip 370\n"
-    ".globl " _ASM_PFX "teamTacticsUSERB\n"
-    _ASM_PFX "teamTacticsUSERB:\n"
-    ".skip 370\n"
-    ".globl " _ASM_PFX "teamTacticsUSERC\n"
-    _ASM_PFX "teamTacticsUSERC:\n"
-    ".skip 370\n"
-    ".globl " _ASM_PFX "teamTacticsUSERD\n"
-    _ASM_PFX "teamTacticsUSERD:\n"
-    ".skip 370\n"
-    ".globl " _ASM_PFX "teamTacticsUSERE\n"
-    _ASM_PFX "teamTacticsUSERE:\n"
-    ".skip 370\n"
-    ".globl " _ASM_PFX "teamTacticsUSERF\n"
-    _ASM_PFX "teamTacticsUSERF:\n"
-    ".skip 370\n"
-    ".globl " _ASM_PFX "gameLength\n"
-    _ASM_PFX "gameLength:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "autoReplays\n"
-    _ASM_PFX "autoReplays:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "menuMusic\n"
-    _ASM_PFX "menuMusic:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "autoSaveHighlights\n"
-    _ASM_PFX "autoSaveHighlights:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "allPlayerTeamsEqual\n"
-    _ASM_PFX "allPlayerTeamsEqual:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "pitchType\n"
-    _ASM_PFX "pitchType:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "seed2\n"
-    _ASM_PFX "seed2:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "randXorIndex2\n"
-    _ASM_PFX "randXorIndex2:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "randXorKey2\n"
-    _ASM_PFX "randXorKey2:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "newRandomSeedCopy\n"
-    _ASM_PFX "newRandomSeedCopy:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "randomSeed\n"
-    _ASM_PFX "randomSeed:\n"
-    ".skip 2\n"
+    /* ---- Region A6: settings/options tail pulled out to careerSettings
+     * (career_settings.c) ---- viewRandomPhase(1), seasonPlaying(1),
+     * inFriendlyMenu, isNationalTeam, gameType, contestStarted, careerLoadedFlag,
+     * teamTacticsUSERA..F (370 each = 2220), gameLength, autoReplays, menuMusic,
+     * autoSaveHighlights, allPlayerTeamsEqual, pitchType, seed2(1), randXorIndex2(1),
+     * randXorKey2(1), newRandomSeedCopy(1), randomSeed = 2250 B. Real labels there;
+     * readers (incl. _SaveOptions/_RestoreOptions gameLength..pitchType block walk,
+     * kept contiguous) + save FX(...)/FA(team_tactics_user_*) unchanged. Reserve
+     * 2250 bytes here so saveFileVersion/numSelectedTeams keep their offsets (no
+     * cascade); hole stays zero so VERIFY remains 0. */
+    ".skip 2250\n"
     ".globl " _ASM_PFX "saveFileVersion\n"
     _ASM_PFX "saveFileVersion:\n"
     ".skip 2\n"

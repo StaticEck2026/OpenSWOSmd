@@ -68,8 +68,10 @@ SRC_FILES=(
     mjson.c save_format_json.c save_pointer_lut.c swos_io.c
     resload.c
     swos_globals.c swos_globals_career_overlay.c swos_competition_slots.c
-    career_finances.c career_season_record.c
+    career_finances.c career_season_record.c career_finance_tail.c
     career_status_flags.c career_manager_identity.c career_board_confidence.c
+    career_trophy_flags.c career_selector_state.c career_setup.c
+    career_counters.c career_settings.c
     swos_amiga_data_imports.c swos_amiga_ptr_imports.c
     swos_data_bulk_imports.c swos_data_typed_stubs.c
     swos_amiga_data_stubs.c swos_amiga_strings.c
