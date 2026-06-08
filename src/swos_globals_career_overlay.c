@@ -276,18 +276,15 @@ __asm__(
      * career_index_tables.c ---- 162 B. Real label there; readers + save FA(...)
      * unchanged. */
     ".skip 162\n"
-    ".globl " _ASM_PFX "seasonFinished\n"
-    _ASM_PFX "seasonFinished:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "careerFinished\n"
-    _ASM_PFX "careerFinished:\n"
-    ".skip 22\n"
-    ".globl " _ASM_PFX "euroCupSlotIndex\n"
-    _ASM_PFX "euroCupSlotIndex:\n"
-    ".skip 6\n"
-    ".globl " _ASM_PFX "seasonNumberOfSquads\n"
-    _ASM_PFX "seasonNumberOfSquads:\n"
-    ".skip 2\n"
+    /* ---- Region B6: season/career-state scalars pulled out to careerSeasonState
+     * (career_season_state.c) ---- seasonFinished, careerFinished, euroCupSlotIndex,
+     * seasonNumberOfSquads = 4 x uint16 (8 B of real data). The historical 32-byte
+     * run also held the 6 competition pointer-to-disk fields (currentCompetitionPtr..
+     * diyCompetitionTablePtr), now SEPARATE standalone re-derived symbols, so their
+     * 24 bytes here are dead. Reserve the full 32-byte run as a hole so the
+     * comp-slot region after it keeps its offset (no cascade). Real labels there;
+     * readers + save FX(...) unchanged. */
+    ".skip 32\n"
     /* ---- Region B2c: seasonSquadTeamNumbers pulled out to career_index_tables.c
      * ---- 48 B of squad team numbers + the 20-byte dead tail that once held
      * careerCompetitionSlotPtrTable (now a separate standalone symbol) = the
