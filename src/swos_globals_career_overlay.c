@@ -160,15 +160,12 @@ __asm__(
      * (careerTransferCounters) is carved separately below. Reserve 24 bytes (no
      * cascade); real labels there, readers + save FX(...) unchanged. */
     ".skip 24\n"
-    ".globl " _ASM_PFX "foreignMarketPlayers\n"
-    _ASM_PFX "foreignMarketPlayers:\n"
-    ".skip 60\n"
-    ".globl " _ASM_PFX "homeMarketPlayers\n"
-    _ASM_PFX "homeMarketPlayers:\n"
-    ".skip 100\n"
-    ".globl " _ASM_PFX "transferOfferTable\n"
-    _ASM_PFX "transferOfferTable:\n"
-    ".skip 70\n"
+    /* ---- Region B7 (run 1 of 2): transfer-market slot tables pulled out to
+     * career_transfer_market.c ---- foreignMarketPlayers(60), homeMarketPlayers(100),
+     * transferOfferTable(70) = 230 B. Real labels there; readers + save FA/typed
+     * serializers unchanged. Reserve 230 bytes (no cascade). The A5b transfer-
+     * counters hole follows, then run 2 below. */
+    ".skip 230\n"
     /* ---- Region A5 (run 2 of 2): transfer-pool / offer-swap counters pulled out
      * to careerTransferCounters (career_counters.c) ---- careerSeasonsCompleted,
      * numForeignMarketPlayers2, pendingForeignPlayerCount, seasonTransferQuota,
@@ -176,54 +173,15 @@ __asm__(
      * offerSwapSlotsUsed = 8 x uint16 = 16 B. Real labels there; readers + save
      * FX(...) unchanged. Reserve 16 bytes (no cascade). */
     ".skip 16\n"
-    ".globl " _ASM_PFX "numNewJobOffers\n"
-    _ASM_PFX "numNewJobOffers:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "newJobOffers\n"
-    _ASM_PFX "newJobOffers:\n"
-    ".skip 130\n"
-    ".globl " _ASM_PFX "numJobOffers\n"
-    _ASM_PFX "numJobOffers:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "jobOffers\n"
-    _ASM_PFX "jobOffers:\n"
-    ".skip 130\n"
-    ".globl " _ASM_PFX "timeToNegotiate\n"
-    _ASM_PFX "timeToNegotiate:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "numPlayersOnTransferMarket\n"
-    _ASM_PFX "numPlayersOnTransferMarket:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "playersOnTransferMarket\n"
-    _ASM_PFX "playersOnTransferMarket:\n"
-    ".skip 10\n"
-    ".globl " _ASM_PFX "lastOfferPrimaryPlayerOrdinal\n"
-    _ASM_PFX "lastOfferPrimaryPlayerOrdinal:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "lastOfferExtraPlayersWanted\n"
-    _ASM_PFX "lastOfferExtraPlayersWanted:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "lastOfferSwapPlayerOrdinal\n"
-    _ASM_PFX "lastOfferSwapPlayerOrdinal:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "lastOfferExtraPlayerOrdinal\n"
-    _ASM_PFX "lastOfferExtraPlayerOrdinal:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "offerNegotiationAttemptCount\n"
-    _ASM_PFX "offerNegotiationAttemptCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "transferMarketRandOffset0\n"
-    _ASM_PFX "transferMarketRandOffset0:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "transferMarketRandOffset1\n"
-    _ASM_PFX "transferMarketRandOffset1:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "transferMarketRandOffset2\n"
-    _ASM_PFX "transferMarketRandOffset2:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "transferMarketPhase\n"
-    _ASM_PFX "transferMarketPhase:\n"
-    ".skip 2\n"
+    /* ---- Region B7 (run 2 of 2): job-offer queues + on-market bitset + offer
+     * negotiation scalars pulled out to career_transfer_market.c ----
+     * numNewJobOffers, newJobOffers(130), numJobOffers, jobOffers(130),
+     * timeToNegotiate, numPlayersOnTransferMarket, playersOnTransferMarket(10),
+     * lastOffer{Primary,Swap,Extra}*Ordinal / ExtraPlayersWanted,
+     * offerNegotiationAttemptCount, transferMarketRandOffset0..2,
+     * transferMarketPhase = 296 B. Real labels there; readers + save (FX scalars
+     * + typed job-offer serializers) unchanged. Reserve 296 bytes (no cascade). */
+    ".skip 296\n"
     /* ---- Region B1: unavailable-players trio + currentMatchPlayers pulled out
      * to careerUnavailablePlayers + currentMatchPlayers (career_unavailable_players.c)
      * ---- careerUnavailablePlayerList(16), careerUnavailablePlayerLookupTable(80),
