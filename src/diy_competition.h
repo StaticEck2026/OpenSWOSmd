@@ -369,6 +369,7 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
  * See docs/CAREERTEAM_STEP4_REWORK.md. */
 uint8_t *diy_resolve_team(int32_t teamSel);
 uint8_t *diy_resolve_team_name(int32_t teamSel);
+int32_t  diy_team_to_identity(const uint8_t *teamPtr);
 
 /* --- Match Result Processing (Chunk 190) --- */
 void _ProcessDIYLeagueMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileEx *team2,
