@@ -85,6 +85,10 @@ extern int    atoi(const char *s);
 extern uint8_t  careerFileBuffer;
 extern uint16_t numSelectedTeams;
 extern uint8_t  selTeamsPtr;
+/* step-4 phase 3: standings/bracket team-selection fields hold a team IDENTITY
+ * (-1 == careerTeam, >= 0 == selTeamsPtr index), not a byte offset. The load
+ * reconstruction below must store the identity, via this helper (diy_competition.c). */
+extern int32_t  diy_team_to_identity(const uint8_t *teamPtr);
 extern uint8_t  seasonInformationsArray[];
 
 /* Externs for the other save buffers — used by future sub-files but
@@ -3978,7 +3982,7 @@ static void apply_semantic_load(const char *src, int src_size)
                     mjson_get_long(e, el, "$.ga",  &ga);
                     mjson_get_long(e, el, "$.pts", &pts);
                     DIYTeamStats *r = diy_ovr_row(stage, i);
-                    r->teamSelOffset = (int32_t)i * 684; /* = i*sizeof(TeamFileEx) */
+                    r->teamSelOffset = (int32_t)i; /* identity = selTeamsPtr team index i (step-4 phase 3) */
                     r->gamesPlayed  = (uint16_t)gp;
                     r->wins         = (uint16_t)w;
                     r->draws        = (uint16_t)d;
@@ -4076,7 +4080,7 @@ static void apply_semantic_load(const char *src, int src_size)
                 if (teamNum == 0) continue;
                 TeamFileEx *tp = _VerifyTeamLoaded(teamNum);
                 stage->bracketScratch.teamOffsetTable[k] =
-                    (int32_t)((uint8_t *)tp - &selTeamsPtr);
+                    diy_team_to_identity((uint8_t *)tp);  /* identity: -1 careerTeam / index */
             }
         }
     }
@@ -4618,15 +4622,16 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
 
         /* GROUP-phase stage standings. The 64-row DIYTeamStats table at the
          * stage's +0x2B4 holds each tournament team's group results. Its
-         * int32 teamSelOffset is a DERIVED pointer cache: row i always
-         * resolves to selTeamsPtr team i (teamSelOffset = i * sizeof
-         * TeamFileEx = i*684), built by _DIY_CacheSelectedTeamPointers. We do
+         * int32 teamSelOffset is a DERIVED team IDENTITY (step-4 phase 3): row i
+         * always resolves to selTeamsPtr team i, so the identity is simply i,
+         * built by _DIY_CacheSelectedTeamPointers. We do
          * NOT serialize it (it byte-swaps on LE<->BE, AND the row region
          * overlays the cup bracketScratch so it's corrupted on the saving
          * host too — gdb showed scattered garbage rows). Instead serialize
          * ONLY the non-derivable stats endian-neutral and RECONSTRUCT
-         * teamSelOffset = i*684 on load (which fixes the group team NAMES that
-         * resolve via teamEntryOffsets->row->teamSelOffset->team). Indexed by
+         * teamSelOffset = i (the identity) on load (which fixes the group team
+         * NAMES that resolve via teamEntryOffsets->row->teamSelOffset->team via
+         * diy_resolve_team). Indexed by
          * selTeamsPtr team index 0..numDiyTeams-1 so every group's table +
          * the re-sort on group switch are correct cross-target. Gated to
          * LEAGUE/group stages (slot isLeagueFormat != 0): the standings table
@@ -4787,8 +4792,8 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
                            ((const DIYCompetitionEx *)&competitionFileBuffer)->base.numTeams);
 
         /* Rebuild the GROUP-phase standings (see write_competition_buf):
-         * RECONSTRUCT each row's derived teamSelOffset = i*684 (row i =
-         * selTeamsPtr team i — the cache _DIY_CacheSelectedTeamPointers
+         * RECONSTRUCT each row's derived teamSelOffset = i (the team identity;
+         * row i = selTeamsPtr team i — the cache _DIY_CacheSelectedTeamPointers
          * builds) and restore the endian-neutral stats. LEAGUE/group stages
          * only — a KNOCKOUT stage's same bytes are the cup bracket, rebuilt
          * separately after the diy_teams load below (see the cup
@@ -4813,7 +4818,7 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
                     mjson_get_long(e, el, "$.ga",  &ga);
                     mjson_get_long(e, el, "$.pts", &pts);
                     DIYTeamStats *r = diy_ovr_row(stage, i);
-                    r->teamSelOffset = (int32_t)i * 684; /* = i*sizeof(TeamFileEx) */
+                    r->teamSelOffset = (int32_t)i; /* identity = selTeamsPtr team index i (step-4 phase 3) */
                     r->gamesPlayed  = (uint16_t)gp;
                     r->wins         = (uint16_t)w;
                     r->draws        = (uint16_t)d;
@@ -4893,7 +4898,7 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
                 if (teamNum == 0) continue;
                 TeamFileEx *tp = _VerifyTeamLoaded(teamNum);
                 stage->bracketScratch.teamOffsetTable[k] =
-                    (int32_t)((uint8_t *)tp - &selTeamsPtr);
+                    diy_team_to_identity((uint8_t *)tp);  /* identity: -1 careerTeam / index */
             }
         }
     }

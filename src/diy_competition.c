@@ -80,8 +80,10 @@ uint8_t *diy_resolve_team_name(int32_t teamSel)
     return diy_resolve_team(teamSel) + (&selTeamNameBase - &selTeamsPtr);
 }
 /* Inverse: team record pointer -> identity (the value stored in the standings
- * row / cup-bracket slot). careerTeam -> -1; a selected team -> its array index. */
-static int32_t diy_team_to_identity(const uint8_t *teamPtr)
+ * row / cup-bracket slot). careerTeam -> -1; a selected team -> its array index.
+ * Also used by the save LOAD reconstruction (save_format_json.c) when it rebuilds
+ * standings/brackets from _VerifyTeamLoaded pointers. */
+int32_t diy_team_to_identity(const uint8_t *teamPtr)
 {
     if (teamPtr == (const uint8_t *)&careerTeam)
         return -1;
