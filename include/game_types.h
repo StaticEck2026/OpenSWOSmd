@@ -501,22 +501,53 @@ typedef char _scorerinfo_size_check[(sizeof(ScorerInfo) == 66) ? 1 : -1];
 
 /* ==================================================================
  * PlayerFile — 38 bytes per player within a team file
+ *
+ * Field names mirror the canonical SWOS2.s PLAYERFILE_* equates exactly
+ * (PLAYERFILE_FIELD_1 = 1, PLAYERFILE_FIELD_19 = 25, PLAYERFILE_SOMEFLAG = 37,
+ * PLAYERFILE_GOALSTATS = 33 size 4). The comments below add the byte
+ * interpretations from the SWOS HEX editing guide (BLISZKA) and the
+ * known nibble-packing; the original reverse-engineering left field_1 /
+ * field_19 / someFlag without semantic names because their function was
+ * never pinned down, so we keep those canonical names rather than assert
+ * an unverified meaning (see the field_1 note — our own code contradicts
+ * the guide's guess there).
  * ================================================================== */
 typedef struct __attribute__((packed, aligned(2))) PlayerFile {
-    int8_t   nationality;          /* 0 */
+    int8_t   nationality;          /* 0: nationality code */
+    /* 1: PLAYERFILE_FIELD_1 — purpose unconfirmed. The HEX guide labels this
+     * "player skill / invisible ability points", but our code does NOT use it
+     * that way: match_sim.c (_UpdatePlayerPositionAndReturnRole) caches a
+     * computed position here, and career_status.c reads it as a form-delta.
+     * Left as the canonical SWOS2.s name; do not rename to the guide's guess. */
     int8_t   field_1;              /* 1 */
-    int8_t   shirtNumber;          /* 2 */
-    int8_t   playerName[22];       /* 3-24 */
-    int8_t   field_19;             /* 25 */
-    uint8_t  positionAndFace;      /* 26 */
-    uint8_t  cardsInjuries;        /* 27 */
-    int8_t   passing;              /* 28 */
-    int8_t   shootingHeading;      /* 29 */
-    int8_t   tacklingBallControl;  /* 30 */
-    int8_t   speedFinishing;       /* 31 */
-    int8_t   price;                /* 32 */
-    uint8_t  goalStats[4];         /* 33-36 */
-    int8_t   someFlag;             /* 37 */
+    int8_t   shirtNumber;          /* 2: shirt / squad number */
+    int8_t   playerName[22];       /* 3-24: first + last name, 00-terminated */
+    int8_t   field_19;             /* 25: PLAYERFILE_FIELD_19 — null spacer after the name */
+    uint8_t  positionAndFace;      /* 26: position (00=GK,20=RB,40=LB,60=CD,80=RW,
+                                    *     a0=LW,c0=MF,e0=ST) + skin/hair in the low
+                                    *     bits (00=dark hair,08=blonde,10=dark skin) */
+    uint8_t  cardsInjuries;        /* 27: injury condition + card discipline flags */
+    int8_t   passing;              /* 28: high nibble 0 / low nibble = passing */
+    int8_t   shootingHeading;      /* 29: hi nibble = shooting / lo = heading */
+    int8_t   tacklingBallControl;  /* 30: hi nibble = tackling / lo = ball control */
+    int8_t   speedFinishing;       /* 31: hi nibble = speed / lo = finishing */
+    int8_t   price;                /* 32: base market price ID (lookup into the .exe
+                                    *     price table; valid range 0x00-0x31) */
+    /* 33-36: PLAYERFILE_GOALSTATS — per-competition goals-scored counters. Kept as
+     * goalStats[] so the canonical indexed access still works (goalStats[d7],
+     * indexed by competition slot, as in game_init.c / match_sim.c); the named
+     * members document each index per the HEX guide. */
+    union {
+        uint8_t goalStats[4];      /* 33-36 (indexed by competition slot) */
+        struct {
+            uint8_t leagueGoals;       /* 33: domestic league */
+            uint8_t domesticCupGoals;  /* 34: domestic cup */
+            uint8_t leagueCupGoals;    /* 35: league cup */
+            uint8_t euroCupGoals;      /* 36: european / continental cup */
+        };
+    };
+    int8_t   someFlag;             /* 37: PLAYERFILE_SOMEFLAG — HEX guide: "current
+                                    *     active form indicator" (semantics unconfirmed) */
 } PlayerFile;
 
 typedef char _playerfile_size_check[(sizeof(PlayerFile) == 38) ? 1 : -1];
