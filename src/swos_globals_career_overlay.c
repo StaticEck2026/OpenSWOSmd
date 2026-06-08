@@ -192,15 +192,13 @@ __asm__(
     ".globl " _ASM_PFX "careerTeam\n"
     _ASM_PFX "careerTeam:\n"
     ".skip 1292\n"
-    ".globl " _ASM_PFX "careerNumPlayers\n"
-    _ASM_PFX "careerNumPlayers:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "selTeamSelectedPlayerPosition\n"
-    _ASM_PFX "selTeamSelectedPlayerPosition:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "removedPlayerStatAccum\n"
-    _ASM_PFX "removedPlayerStatAccum:\n"
-    ".skip 2\n"
+    /* ---- step-4 phase 1: careerTeam scalar tail pulled out to
+     * career_team_scalars.c ---- careerNumPlayers, selTeamSelectedPlayerPosition,
+     * removedPlayerStatAccum = 6 B. Unblocked by decoupling careerNumPlayers from
+     * careerTeam's range-bound (now CAREER_TEAM_BUF_SIZE). Real labels there;
+     * readers + save FX/FA unchanged. Reserve 6 bytes (no cascade). careerTeam
+     * itself stays until phases 3-4 (see docs/CAREERTEAM_STEP4_REWORK.md). */
+    ".skip 6\n"
     /* ---- Region B4: seasonInformationsArray[20] pulled out to career_season_info.c
      * ---- SeasonInformations[20] = 2120 B (32-bit) / 2440 B (64-bit, +320 for the
      * 4 comp-name pointer fields per row). Real label there; readers + the save's

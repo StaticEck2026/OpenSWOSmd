@@ -561,12 +561,15 @@ uint16_t _GetPlayerRandomNum(PlayerFile *playerFile)
 __attribute__((used, externally_visible))
 uint16_t _GetDisplayedPlayerValue(uint8_t *ptr)
 {
-    /* Check if ptr is within the currentTeam buffer [currentTeam, playerPositions) */
-    if (ptr >= currentTeam && ptr < playerPositions)
+    /* Check if ptr is within the currentTeam buffer (TeamFileEx + 16 reserves).
+     * Bound on the buffer's own size, not the next BSS symbol: playerPositions
+     * was lifted out of the overlay (career_match_state.c), so it is no longer
+     * &currentTeam + 1292. See docs/CAREERTEAM_STEP4_REWORK.md. */
+    if (ptr >= currentTeam && ptr < currentTeam + CAREER_TEAM_BUF_SIZE)
         goto normal_path;
 
-    /* Check if ptr is within the careerTeam buffer [careerTeam, careerNumPlayers) */
-    if (ptr >= (uint8_t *)&careerTeam && ptr < careerNumPlayers)
+    /* Check if ptr is within the careerTeam buffer (TeamFileEx + 16 reserves). */
+    if (ptr >= (uint8_t *)&careerTeam && ptr < (uint8_t *)&careerTeam + CAREER_TEAM_BUF_SIZE)
         goto normal_path;
 
     /* --- Random/career path (ptr not in currentTeam or careerTeam) --- */

@@ -5077,7 +5077,7 @@ void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, PlayerFile *playerFile, ui
             }
         }
     injury_0:
-        if ((uint8_t *)playerFile >= (uint8_t *)&careerTeam && (uint8_t *)playerFile < (uint8_t *)&careerNumPlayers) {
+        if ((uint8_t *)playerFile >= (uint8_t *)&careerTeam && (uint8_t *)playerFile < (uint8_t *)&careerTeam + CAREER_TEAM_BUF_SIZE) {
             if (_ShouldApplyRandomPlayerStatusAfterSim() == 0) {
                 sprite = 0x98;
                 goto write_fg_bg_0;
@@ -5119,7 +5119,7 @@ void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, PlayerFile *playerFile, ui
         }
     }
 injury_1:
-    if ((uint8_t *)playerFile >= (uint8_t *)&careerTeam && (uint8_t *)playerFile < (uint8_t *)&careerNumPlayers) {
+    if ((uint8_t *)playerFile >= (uint8_t *)&careerTeam && (uint8_t *)playerFile < (uint8_t *)&careerTeam + CAREER_TEAM_BUF_SIZE) {
         if (_ShouldApplyRandomPlayerStatusAfterSim() == 0) {
             sprite = 0x98;
             goto write_fg_bg_1;
