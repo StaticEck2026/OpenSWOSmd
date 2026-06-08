@@ -261,48 +261,15 @@ __asm__(
     ".globl " _ASM_PFX "currentTeam\n"
     _ASM_PFX "currentTeam:\n"
     ".skip 1292\n"
-    ".globl " _ASM_PFX "playerPositions\n"
-    _ASM_PFX "playerPositions:\n"
-    ".skip 32\n"
-    ".globl " _ASM_PFX "numPlayers\n"
-    _ASM_PFX "numPlayers:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "currentTeamNumber\n"
-    _ASM_PFX "currentTeamNumber:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "currentTeamSelectedPlayerPosition\n"
-    _ASM_PFX "currentTeamSelectedPlayerPosition:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "trainingMatchSavedPlayerPos\n"
-    _ASM_PFX "trainingMatchSavedPlayerPos:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "trainingMatchSavedPlayers\n"
-    _ASM_PFX "trainingMatchSavedPlayers:\n"
-    ".skip 32\n"
-    ".globl " _ASM_PFX "trainingMatchSavedShirtNums\n"
-    _ASM_PFX "trainingMatchSavedShirtNums:\n"
-    ".skip 32\n"
-    ".globl " _ASM_PFX "trainingMatchSavedTactics\n"
-    _ASM_PFX "trainingMatchSavedTactics:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "lastMatchSavedPlayerPos\n"
-    _ASM_PFX "lastMatchSavedPlayerPos:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "lastMatchSavedCoachOrPlayer\n"
-    _ASM_PFX "lastMatchSavedCoachOrPlayer:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "lastMatchPlayers\n"
-    _ASM_PFX "lastMatchPlayers:\n"
-    ".skip 32\n"
-    ".globl " _ASM_PFX "lastMatchSavedShirtNums\n"
-    _ASM_PFX "lastMatchSavedShirtNums:\n"
-    ".skip 32\n"
-    ".globl " _ASM_PFX "currentTactics\n"
-    _ASM_PFX "currentTactics:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "lastMatchSavedTeamControls\n"
-    _ASM_PFX "lastMatchSavedTeamControls:\n"
-    ".skip 1\n"
+    /* ---- Region B3: match squad state pulled out to careerMatchState
+     * (career_match_state.c) ---- playerPositions(32), numPlayers,
+     * currentTeamNumber, currentTeamSelectedPlayerPosition, trainingMatchSavedPlayerPos,
+     * trainingMatchSavedPlayers(32), trainingMatchSavedShirtNums(32),
+     * trainingMatchSavedTactics(1)+pad(1), lastMatchSavedPlayerPos,
+     * lastMatchSavedCoachOrPlayer, lastMatchPlayers(32), lastMatchSavedShirtNums(32),
+     * currentTactics(1), lastMatchSavedTeamControls(1) = 176 B. Real labels there;
+     * readers + save FX(...)/FA(...) unchanged. Reserve 176 bytes (no cascade). */
+    ".skip 176\n"
     /* ---- Region B2b: careerLastMatchIndexByCompetitionSlot pulled out to
      * career_index_tables.c ---- 162 B. Real label there; readers + save FA(...)
      * unchanged. */
