@@ -69,6 +69,7 @@ SRC_FILES=(
     resload.c
     swos_globals.c swos_globals_career_overlay.c swos_competition_slots.c
     career_finances.c career_season_record.c
+    career_status_flags.c career_manager_identity.c career_board_confidence.c
     swos_amiga_data_imports.c swos_amiga_ptr_imports.c
     swos_data_bulk_imports.c swos_data_typed_stubs.c
     swos_amiga_data_stubs.c swos_amiga_strings.c
