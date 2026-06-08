@@ -3939,6 +3939,7 @@ static void apply_semantic_load(const char *src, int src_size)
      * (one-fixture-on-Amiga bug). See fixup_cache_strides_on_load. */
     fixup_cache_strides_on_load(src, src_size);
 
+    PROF_START(comp_slots);
     /* Apply the cross-target competition-buffer override AFTER the raw
      * blobs have populated competitionFileBuffer — it corrects the
      * struct-correct positions (league standings) that the blobs place
@@ -4049,6 +4050,7 @@ static void apply_semantic_load(const char *src, int src_size)
                    (DIYCompetitionEx *)diyCompetitionContext);
     load_ctx_stage((const char *)src, (int)src_size, "euro_comp_slot_stage",
                    (DIYCompetitionEx *)euroCupsCompetitionContext);
+    PROF_END(comp_slots, "career-load");
 
     PROF_START(team_ce);
     load_team_file_ex(src, src_size, "$.career_team",  &careerTeam);
