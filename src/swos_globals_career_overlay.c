@@ -243,13 +243,15 @@ __asm__(
     ".globl " _ASM_PFX "removedPlayerStatAccum\n"
     _ASM_PFX "removedPlayerStatAccum:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "seasonInformationsArray\n"
-    _ASM_PFX "seasonInformationsArray:\n"
+    /* ---- Region B4: seasonInformationsArray[20] pulled out to career_season_info.c
+     * ---- SeasonInformations[20] = 2120 B (32-bit) / 2440 B (64-bit, +320 for the
+     * 4 comp-name pointer fields per row). Real label there; readers + the save's
+     * season-info encoder unchanged. Reserve the conditional run as a hole so
+     * lastFinancialWeekIndex and every later label keep their offsets (no cascade);
+     * hole stays zero so VERIFY remains 0 (career_verify_ignore retired — the
+     * exempted seasonInfo pointer slots now live outside the VERIFY region). */
     ".skip 2120\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
-    /* SeasonInformations has 4 pointer fields → grows from 106 to 122 bytes
-     * per row on 64-bit; reserve 20 * 16 = 320 extra bytes so the array
-     * holds 20 rows of the full struct size. */
     ".skip 320\n"
 #endif
     ".globl " _ASM_PFX "lastFinancialWeekIndex\n"
