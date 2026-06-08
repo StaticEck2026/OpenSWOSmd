@@ -3498,6 +3498,92 @@ static int diy_stage_is_league(const DIYCompetitionEx *stage);
  * path's cup teamOffsetTable rebuild needs it earlier, so declare it here. */
 extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
 
+/* ---------- TYPE-2 *Context slot current-STAGE (cross-target) ----------
+ *
+ * The primary slot's type-2 tournament gets its active-stage image
+ * (competitionFileBuffer's stageSnapshot) serialized through the typed
+ * comp_slot serializer ("comp_slot_stage", in SaveJson_Write/LoadCareer), so the
+ * stage's cupTeamIds@0x24E / teamGridPairings@0x2CE land at the right offset on
+ * each target. The four career *Context slots (secondary/tertiary/diy/euro) did
+ * NOT get this — their stageSnapshot rode only the raw competition_context
+ * FLD_BYTES blob, which is byte-exact same-target but mis-positions every field
+ * past the widened namePtr SDL-64 -> Amiga-32. Result: a SDL-saved euro-cup
+ * (quaternary type-2) career panics in copyTitleHolderGrid on the 32-bit Amiga
+ * (garbage teamNum from a mis-placed cupTeamIds; see
+ * project_eurocup_context_crosstarget_gap).
+ *
+ * These helpers give each type-2 *Context slot the same typed stage treatment.
+ * emit_comp_slot / load_comp_slot are fully slot-based (no primary hardcoding),
+ * so a cup stage round-trips cupTeamIds/teamGridPairings/scores/teamOffsetTable
+ * cross-target — exactly what copyTitleHolderGrid reads. (League group-stage
+ * standings stats, like the primary's stage_standings, are a deliberate
+ * follow-up: the master-driven diy_stage_is_league reads &competitionFileBuffer,
+ * so it can't be reused per-context as-is.) Non-type-2 slots and pre-fix saves
+ * are a no-op (the load mjson_find just misses → blob bytes stand). */
+/* A type-2 tournament STAGE's cupTeamIds holds the FULL bracket — the MASTER
+ * tournament's team list (master order), indexed by teamGridPairings — NOT a
+ * stage-numTeams list. emit_comp_slot's `team_ids` uses the stage header's
+ * numTeams (the current ROUND size, e.g. 2 for a final), so it covers only
+ * cupTeamIds[0..stageNumTeams-1]. _FindTeamInDIY's cup_search reads
+ * cupTeamIds[teamGridPairings[d1]] where teamGridPairings are master indices
+ * (e.g. 10/14), so the un-covered entries fell back to the cross-target-broken
+ * blob → team not found → chairman panic 0x6006 (live-confirmed on Amiga: AC
+ * Milan 0x1400 is master teamIds[14], but stage cupTeamIds[14] was blob-garbage
+ * 0x2609). See project_eurocup_context_crosstarget_gap. Emit/restore the stage's
+ * cupTeamIds with the MASTER team count so every bracket-referenced entry
+ * round-trips. cupTeamIds is BE byte pairs (content endian-safe); the field is
+ * struct-anchored so it lands at the right offset on each target. Cap below the
+ * standings overlay at cupTeamIds[51]. */
+static void emit_stage_cupfull(mjson_print_fn_t fn, void *fnd, const char *stageKey,
+                               const DIYCompetitionEx *stage, int masterN)
+{
+    if (masterN < 0) masterN = 0; else if (masterN > 51) masterN = 51;
+    char fk[56];
+    swos_io_snprintf(fk, sizeof(fk), "%s_cupfull", stageKey);
+    const uint8_t *ct = (const uint8_t *)stage->cupTeamIds;
+    mjson_printf(fn, fnd, ",%Q:[", fk);
+    for (int i = 0; i < masterN * 2; i++) {
+        if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+        mjson_printf(fn, fnd, "%u", (unsigned)ct[i]);
+    }
+    mjson_printf(fn, fnd, "%s", "]");
+}
+
+static void load_stage_cupfull(const char *src, int src_size, const char *stageKey,
+                               DIYCompetitionEx *stage, int masterN)
+{
+    if (masterN < 0) masterN = 0; else if (masterN > 51) masterN = 51;
+    char fk[56];
+    swos_io_snprintf(fk, sizeof(fk), "$.%s_cupfull", stageKey);
+    const char *arr = NULL; int alen = 0;
+    if (mjson_find(src, src_size, fk, &arr, &alen) == MJSON_TOK_ARRAY)
+        parse_byte_array_slice(arr, alen, (uint8_t *)stage->cupTeamIds,
+                               (uint32_t)masterN * 2u);
+}
+
+static void emit_ctx_stage(mjson_print_fn_t fn, void *fnd, const char *key,
+                           const DIYCompetitionEx *slot)
+{
+    if (slot->base.competitionType != 2)
+        return;
+    const DIYCompetitionEx *stage = (const DIYCompetitionEx *)
+        ((const uint8_t *)slot + offsetof(CompetitionSlotBuffer, stageSnapshot));
+    mjson_printf(fn, fnd, "%s", ",\n  ");
+    emit_comp_slot(fn, fnd, key, stage);
+    emit_stage_cupfull(fn, fnd, key, stage, slot->base.numTeams);
+}
+
+static void load_ctx_stage(const char *src, int src_size, const char *key,
+                           DIYCompetitionEx *slot)
+{
+    if (slot->base.competitionType != 2)
+        return;
+    DIYCompetitionEx *stage = (DIYCompetitionEx *)
+        ((uint8_t *)slot + offsetof(CompetitionSlotBuffer, stageSnapshot));
+    load_comp_slot(src, src_size, key, stage);
+    load_stage_cupfull(src, src_size, key, stage, slot->base.numTeams);
+}
+
 int16_t SaveJson_WriteCareer(uint8_t *filename)
 {
     uint32_t data_size = career_data_size();
@@ -3645,6 +3731,18 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
             }
         }
     }
+
+    /* TYPE-2 *Context slots' current stage — cross-target fix (see emit_ctx_stage).
+     * Each emits "<slot>_comp_slot_stage" only if that slot is a type-2
+     * tournament; no-op otherwise (no dangling comma). */
+    emit_ctx_stage(json_out_emit, &out, "secondary_comp_slot_stage",
+                   (const DIYCompetitionEx *)competitionContext);
+    emit_ctx_stage(json_out_emit, &out, "tertiary_comp_slot_stage",
+                   (const DIYCompetitionEx *)tertiaryCompetitionContext);
+    emit_ctx_stage(json_out_emit, &out, "diy_comp_slot_stage",
+                   (const DIYCompetitionEx *)diyCompetitionContext);
+    emit_ctx_stage(json_out_emit, &out, "euro_comp_slot_stage",
+                   (const DIYCompetitionEx *)euroCupsCompetitionContext);
 
     /* teamSelectionKeyCache stride list (endian-neutral) — paired with the
      * raw cache blob; re-lays the host-native +2 strides on load. */
@@ -3937,6 +4035,20 @@ static void apply_semantic_load(const char *src, int src_size)
             }
         }
     }
+
+    /* TYPE-2 *Context slots' current stage — cross-target fix (see load_ctx_stage).
+     * Mirrors the primary comp_slot_stage load above. Slot competitionType is
+     * already loaded (comp_slots block) and the raw blob already applied, so the
+     * typed stage overwrites the mis-positioned blob bytes. No-op for non-type-2
+     * slots and pre-fix saves. */
+    load_ctx_stage((const char *)src, (int)src_size, "secondary_comp_slot_stage",
+                   (DIYCompetitionEx *)competitionContext);
+    load_ctx_stage((const char *)src, (int)src_size, "tertiary_comp_slot_stage",
+                   (DIYCompetitionEx *)tertiaryCompetitionContext);
+    load_ctx_stage((const char *)src, (int)src_size, "diy_comp_slot_stage",
+                   (DIYCompetitionEx *)diyCompetitionContext);
+    load_ctx_stage((const char *)src, (int)src_size, "euro_comp_slot_stage",
+                   (DIYCompetitionEx *)euroCupsCompetitionContext);
 
     PROF_START(team_ce);
     load_team_file_ex(src, src_size, "$.career_team",  &careerTeam);
