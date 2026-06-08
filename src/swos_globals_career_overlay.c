@@ -189,8 +189,11 @@ __asm__(
      * labels there; readers + save FA(...) unchanged. Reserve 468 bytes (no
      * cascade). */
     ".skip 468\n"
-    ".globl " _ASM_PFX "careerTeam\n"
-    _ASM_PFX "careerTeam:\n"
+    /* ---- step-4 phase 4: careerTeam pulled out to career_team_buffers.c ----
+     * 1292 B (TeamFileEx + 16 reserves). Safe now that phases 1-3 removed its
+     * range-bound and selTeamsPtr-offset adjacencies (functionally verified on
+     * SDL + Amiga). Real label there; readers + save unchanged. Reserve 1292 B
+     * (no cascade). */
     ".skip 1292\n"
     /* ---- step-4 phase 1: careerTeam scalar tail pulled out to
      * career_team_scalars.c ---- careerNumPlayers, selTeamSelectedPlayerPosition,
@@ -216,8 +219,9 @@ __asm__(
      * save FX/FA unchanged. Reserve 2002 bytes so currentTeam and every later
      * label keep their offsets (no cascade). */
     ".skip 2002\n"
-    ".globl " _ASM_PFX "currentTeam\n"
-    _ASM_PFX "currentTeam:\n"
+    /* ---- step-4 phase 4: currentTeam pulled out to career_team_buffers.c ----
+     * 1292 B (TeamFileEx + 16 reserves). Real label there; readers + save
+     * unchanged. Reserve 1292 B (no cascade). */
     ".skip 1292\n"
     /* ---- Region B3: match squad state pulled out to careerMatchState
      * (career_match_state.c) ---- playerPositions(32), numPlayers,
