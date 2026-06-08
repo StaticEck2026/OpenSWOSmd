@@ -382,31 +382,11 @@ static int json_out_emit(const char *chunk, int chunk_len, void *ud)
 #define SAVE_SI_TOURNAMENTSTATUS 104u
 #define SAVE_SI_MANAGERSTATUS    105u
 
-#ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
-/* VERIFY exemption for the career region. The 4 SeasonInformations comp-name
- * pointers (leagueStrPtr / strPtr1/2/3) are pointer-to-disk: serialized as the
- * string CONTENT (re-interned into the string pool on load), so the raw pointer
- * bytes never equal the live canonical address — the content round-trips, the
- * address cannot. Exempt exactly those field bytes from the byte-diff; every
- * other byte of the career buffer still verifies bit-exactly. Offsets are taken
- * via offsetof/sizeof so this is correct on both 32- and 64-bit layouts. */
-static int career_verify_ignore(uint32_t off)
-{
-    const uint8_t *si  = seasonInformationsArray;
-    const uint8_t *cfb = &careerFileBuffer;
-    if (si < cfb) return 0;
-    uint32_t base   = (uint32_t)(size_t)(si - cfb);
-    if (off < base) return 0;
-    uint32_t rel    = off - base;
-    uint32_t stride = (uint32_t)sizeof(SeasonInformations);
-    if (rel >= stride * SAVE_SI_ENTRY_COUNT) return 0;
-    uint32_t in_entry = rel % stride;
-    uint32_t lo = (uint32_t)offsetof(SeasonInformations, leagueStrPtr);
-    uint32_t hi = (uint32_t)offsetof(SeasonInformations, strPtr3)
-                + (uint32_t)sizeof(uint8_t *);
-    return (in_entry >= lo && in_entry < hi);
-}
-#endif
+/* career_verify_ignore RETIRED (UNTANGLE B4): it exempted only the 4
+ * seasonInformations comp-name pointer-to-disk slots from the career byte-diff.
+ * seasonInformationsArray now lives outside the [careerFileBuffer,
+ * numSelectedTeams) VERIFY region (career_season_info.c), so those bytes are no
+ * longer diffed and no exemption is needed — the verify call passes NULL. */
 
 /* The previous {sym}/{str}/{raw} discriminator wrapper used for
  * pointer-typed fields has been retired — all top-level pointer
@@ -3854,10 +3834,14 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     }
 
 #ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
+    /* No ignore predicate: the only bytes that ever needed exempting were the 4
+     * seasonInformations comp-name pointer slots, and seasonInformationsArray now
+     * lives OUTSIDE this [careerFileBuffer, numSelectedTeams) region
+     * (career_season_info.c), so every byte here verifies bit-exactly. */
     verify_roundtrip_region("career",
                             (uint8_t *)&careerFileBuffer, data_size,
                             verify_reload_career, filename,
-                            career_verify_ignore);
+                            NULL);
 #endif
 
     return 0;

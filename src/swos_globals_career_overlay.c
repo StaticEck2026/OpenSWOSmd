@@ -160,15 +160,12 @@ __asm__(
      * (careerTransferCounters) is carved separately below. Reserve 24 bytes (no
      * cascade); real labels there, readers + save FX(...) unchanged. */
     ".skip 24\n"
-    ".globl " _ASM_PFX "foreignMarketPlayers\n"
-    _ASM_PFX "foreignMarketPlayers:\n"
-    ".skip 60\n"
-    ".globl " _ASM_PFX "homeMarketPlayers\n"
-    _ASM_PFX "homeMarketPlayers:\n"
-    ".skip 100\n"
-    ".globl " _ASM_PFX "transferOfferTable\n"
-    _ASM_PFX "transferOfferTable:\n"
-    ".skip 70\n"
+    /* ---- Region B7 (run 1 of 2): transfer-market slot tables pulled out to
+     * career_transfer_market.c ---- foreignMarketPlayers(60), homeMarketPlayers(100),
+     * transferOfferTable(70) = 230 B. Real labels there; readers + save FA/typed
+     * serializers unchanged. Reserve 230 bytes (no cascade). The A5b transfer-
+     * counters hole follows, then run 2 below. */
+    ".skip 230\n"
     /* ---- Region A5 (run 2 of 2): transfer-pool / offer-swap counters pulled out
      * to careerTransferCounters (career_counters.c) ---- careerSeasonsCompleted,
      * numForeignMarketPlayers2, pendingForeignPlayerCount, seasonTransferQuota,
@@ -176,54 +173,15 @@ __asm__(
      * offerSwapSlotsUsed = 8 x uint16 = 16 B. Real labels there; readers + save
      * FX(...) unchanged. Reserve 16 bytes (no cascade). */
     ".skip 16\n"
-    ".globl " _ASM_PFX "numNewJobOffers\n"
-    _ASM_PFX "numNewJobOffers:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "newJobOffers\n"
-    _ASM_PFX "newJobOffers:\n"
-    ".skip 130\n"
-    ".globl " _ASM_PFX "numJobOffers\n"
-    _ASM_PFX "numJobOffers:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "jobOffers\n"
-    _ASM_PFX "jobOffers:\n"
-    ".skip 130\n"
-    ".globl " _ASM_PFX "timeToNegotiate\n"
-    _ASM_PFX "timeToNegotiate:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "numPlayersOnTransferMarket\n"
-    _ASM_PFX "numPlayersOnTransferMarket:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "playersOnTransferMarket\n"
-    _ASM_PFX "playersOnTransferMarket:\n"
-    ".skip 10\n"
-    ".globl " _ASM_PFX "lastOfferPrimaryPlayerOrdinal\n"
-    _ASM_PFX "lastOfferPrimaryPlayerOrdinal:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "lastOfferExtraPlayersWanted\n"
-    _ASM_PFX "lastOfferExtraPlayersWanted:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "lastOfferSwapPlayerOrdinal\n"
-    _ASM_PFX "lastOfferSwapPlayerOrdinal:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "lastOfferExtraPlayerOrdinal\n"
-    _ASM_PFX "lastOfferExtraPlayerOrdinal:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "offerNegotiationAttemptCount\n"
-    _ASM_PFX "offerNegotiationAttemptCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "transferMarketRandOffset0\n"
-    _ASM_PFX "transferMarketRandOffset0:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "transferMarketRandOffset1\n"
-    _ASM_PFX "transferMarketRandOffset1:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "transferMarketRandOffset2\n"
-    _ASM_PFX "transferMarketRandOffset2:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "transferMarketPhase\n"
-    _ASM_PFX "transferMarketPhase:\n"
-    ".skip 2\n"
+    /* ---- Region B7 (run 2 of 2): job-offer queues + on-market bitset + offer
+     * negotiation scalars pulled out to career_transfer_market.c ----
+     * numNewJobOffers, newJobOffers(130), numJobOffers, jobOffers(130),
+     * timeToNegotiate, numPlayersOnTransferMarket, playersOnTransferMarket(10),
+     * lastOffer{Primary,Swap,Extra}*Ordinal / ExtraPlayersWanted,
+     * offerNegotiationAttemptCount, transferMarketRandOffset0..2,
+     * transferMarketPhase = 296 B. Real labels there; readers + save (FX scalars
+     * + typed job-offer serializers) unchanged. Reserve 296 bytes (no cascade). */
+    ".skip 296\n"
     /* ---- Region B1: unavailable-players trio + currentMatchPlayers pulled out
      * to careerUnavailablePlayers + currentMatchPlayers (career_unavailable_players.c)
      * ---- careerUnavailablePlayerList(16), careerUnavailablePlayerLookupTable(80),
@@ -243,21 +201,23 @@ __asm__(
     ".globl " _ASM_PFX "removedPlayerStatAccum\n"
     _ASM_PFX "removedPlayerStatAccum:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "seasonInformationsArray\n"
-    _ASM_PFX "seasonInformationsArray:\n"
+    /* ---- Region B4: seasonInformationsArray[20] pulled out to career_season_info.c
+     * ---- SeasonInformations[20] = 2120 B (32-bit) / 2440 B (64-bit, +320 for the
+     * 4 comp-name pointer fields per row). Real label there; readers + the save's
+     * season-info encoder unchanged. Reserve the conditional run as a hole so
+     * lastFinancialWeekIndex and every later label keep their offsets (no cascade);
+     * hole stays zero so VERIFY remains 0 (career_verify_ignore retired — the
+     * exempted seasonInfo pointer slots now live outside the VERIFY region). */
     ".skip 2120\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
-    /* SeasonInformations has 4 pointer fields → grows from 106 to 122 bytes
-     * per row on 64-bit; reserve 20 * 16 = 320 extra bytes so the array
-     * holds 20 rows of the full struct size. */
     ".skip 320\n"
 #endif
-    ".globl " _ASM_PFX "lastFinancialWeekIndex\n"
-    _ASM_PFX "lastFinancialWeekIndex:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "diyLeagueSeasonStateTable\n"
-    _ASM_PFX "diyLeagueSeasonStateTable:\n"
-    ".skip 2000\n"
+    /* ---- Region B5: lastFinancialWeekIndex + diyLeagueSeasonStateTable pulled
+     * out to career_diy_league_state.c ---- lastFinancialWeekIndex(1)+pad(1) +
+     * diyLeagueSeasonStateTable(2000) = 2002 B. Real labels there; readers +
+     * save FX/FA unchanged. Reserve 2002 bytes so currentTeam and every later
+     * label keep their offsets (no cascade). */
+    ".skip 2002\n"
     ".globl " _ASM_PFX "currentTeam\n"
     _ASM_PFX "currentTeam:\n"
     ".skip 1292\n"
@@ -274,18 +234,15 @@ __asm__(
      * career_index_tables.c ---- 162 B. Real label there; readers + save FA(...)
      * unchanged. */
     ".skip 162\n"
-    ".globl " _ASM_PFX "seasonFinished\n"
-    _ASM_PFX "seasonFinished:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "careerFinished\n"
-    _ASM_PFX "careerFinished:\n"
-    ".skip 22\n"
-    ".globl " _ASM_PFX "euroCupSlotIndex\n"
-    _ASM_PFX "euroCupSlotIndex:\n"
-    ".skip 6\n"
-    ".globl " _ASM_PFX "seasonNumberOfSquads\n"
-    _ASM_PFX "seasonNumberOfSquads:\n"
-    ".skip 2\n"
+    /* ---- Region B6: season/career-state scalars pulled out to careerSeasonState
+     * (career_season_state.c) ---- seasonFinished, careerFinished, euroCupSlotIndex,
+     * seasonNumberOfSquads = 4 x uint16 (8 B of real data). The historical 32-byte
+     * run also held the 6 competition pointer-to-disk fields (currentCompetitionPtr..
+     * diyCompetitionTablePtr), now SEPARATE standalone re-derived symbols, so their
+     * 24 bytes here are dead. Reserve the full 32-byte run as a hole so the
+     * comp-slot region after it keeps its offset (no cascade). Real labels there;
+     * readers + save FX(...) unchanged. */
+    ".skip 32\n"
     /* ---- Region B2c: seasonSquadTeamNumbers pulled out to career_index_tables.c
      * ---- 48 B of squad team numbers + the 20-byte dead tail that once held
      * careerCompetitionSlotPtrTable (now a separate standalone symbol) = the
