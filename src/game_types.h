@@ -643,7 +643,7 @@ typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x68) ? 1 : -
  * Intentional shared-memory overlay; see DIYCOMPETITIONEX_AUDIT.md.
  * ================================================================== */
 typedef struct __attribute__((packed, aligned(2))) DIYTeamStats {
-    int32_t  teamSelOffset;         /* 0x00: byte offset from selTeamsPtr to team record (NOT a pointer despite the historical "Ptr" name). Signed: careerTeam lives BELOW selTeamsPtr in BSS, so its offset is negative and must sign-extend on 64-bit when added back to &selTeamsPtr. */
+    int32_t  teamSelOffset;         /* 0x00: team IDENTITY (step-4 phase 3), NOT a byte offset despite the legacy name. -1 == careerTeam; >= 0 == the team's index into the selTeamsPtr array. Resolve via diy_resolve_team()/diy_resolve_team_name(); set via diy_team_to_identity() (diy_competition.c). Was a signed selTeamsPtr-relative byte offset before phase 3. */
     uint16_t gamesPlayed;           /* 0x04 */
     uint16_t wins;                  /* 0x06 */
     uint16_t draws;                 /* 0x08 */

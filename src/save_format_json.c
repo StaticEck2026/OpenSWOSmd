@@ -2858,28 +2858,16 @@ static inline DIYTeamStats *diy_ovr_row(DIYCompetitionEx *comp, int idx)
     return (DIYTeamStats *)((uint8_t *)&comp->cupTeamIds[51]) + idx;
 }
 
-/* Map a live teamSelOffset to a portable identity: >=0 → team index
- * (off/684); the careerTeam's negative off → -1 sentinel; any other
- * negative (shouldn't occur) → emit the raw off so we at least round-trip
- * same-target. Returned as int32 stored in JSON decimal (endian-neutral). */
-static int32_t diy_teamseloffset_to_identity(int32_t off)
-{
-    if (off >= 0)
-        return off / 684;               /* regular selTeamsPtr team index */
-    int32_t careerOff = (int32_t)((uint8_t *)&careerTeam - &selTeamsPtr);
-    if (off == careerOff)
-        return -1;                      /* careerTeam sentinel */
-    return off;                          /* unknown negative — preserve raw */
-}
-
-static int32_t diy_identity_to_teamseloffset(int32_t id)
-{
-    if (id == -1)
-        return (int32_t)((uint8_t *)&careerTeam - &selTeamsPtr);
-    if (id >= 0)
-        return id * 684;
-    return id;                           /* preserved raw negative */
-}
+/* teamSelOffset / teamOffsetTable now hold a stable team IDENTITY at runtime
+ * (-1 == careerTeam, >= 0 == selTeamsPtr index) as of step-4 phase 3 — the
+ * identity conversion moved into diy_team_to_identity / diy_resolve_team
+ * (diy_competition.c). The JSON format was already identity-based, so these
+ * save-seam converters are now pass-throughs; they no longer reference
+ * careerTeam's address, which is what lets careerTeam leave the overlay.
+ * (Kept as named functions so the emit/load call sites are unchanged, and so
+ * loading a pre-phase-3 save still works — its JSON already stored identities.) */
+static int32_t diy_teamseloffset_to_identity(int32_t v) { return v; }
+static int32_t diy_identity_to_teamseloffset(int32_t v) { return v; }
 
 /* ---------- Unified typed competition-slot serializer ----------
  *

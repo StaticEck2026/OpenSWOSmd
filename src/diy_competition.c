@@ -56,18 +56,38 @@ extern uint8_t viewRandomPhase;
 extern uint16_t numSelectedTeams;
 extern uint8_t quadrantDistanceFactor[];
 
-/* ---- DIY team-selection resolvers (step-4 phase 2) ----
- * Central place that turns a DIY team-selection value into the team record /
- * team-name address. `teamSel` is CURRENTLY the signed byte offset stored in
- * DIYTeamStats.teamSelOffset and bracketScratch.teamOffsetTable[]: >= 0 indexes a
- * selected team (index*684 from selTeamsPtr); careerTeam's is negative (it sits
- * below selTeamsPtr in BSS). Phase 2 is a behaviour-preserving indirection — every
- * recovery site now routes through here. Phase 3 will change `teamSel` to a stable
- * team IDENTITY and replace the arithmetic below with an identity lookup, so
- * careerTeam no longer has to live adjacent below selTeamsPtr (then it can be
- * extracted from the overlay). See docs/CAREERTEAM_STEP4_REWORK.md. */
-uint8_t *diy_resolve_team(int32_t teamSel)      { return &selTeamsPtr + teamSel; }
-uint8_t *diy_resolve_team_name(int32_t teamSel) { return &selTeamNameBase + teamSel; }
+/* ---- DIY team-selection identity helpers (step-4 phase 3) ----
+ * A DIY team-selection value (stored in DIYTeamStats.teamSelOffset and
+ * bracketScratch.teamOffsetTable[]) is now a stable team IDENTITY, not a raw
+ * byte offset: -1 == careerTeam, >= 0 == the team's index into the selTeamsPtr
+ * array. diy_resolve_team / diy_resolve_team_name turn an identity into the team
+ * record / team-name address; diy_team_to_identity is the inverse used at the
+ * store sites. careerTeam is reached by a branch, NOT by `&selTeamsPtr +
+ * (large negative)`, so it no longer has to live adjacent below selTeamsPtr and
+ * can be extracted from the overlay (phase 4). The JSON save was already
+ * identity-based (see save_format_json.c), so this is save-format-neutral; only
+ * the in-memory representation changed. See docs/CAREERTEAM_STEP4_REWORK.md. */
+uint8_t *diy_resolve_team(int32_t teamSel)
+{
+    if (teamSel < 0)                                          /* -1 = careerTeam */
+        return (uint8_t *)&careerTeam;
+    return (uint8_t *)((TeamFileEx *)&selTeamsPtr + teamSel); /* selTeamsPtr + index*684 */
+}
+uint8_t *diy_resolve_team_name(int32_t teamSel)
+{
+    /* the team-name field sits at the same offset within every team record;
+     * selTeamNameBase - selTeamsPtr is that offset, valid for careerTeam too. */
+    return diy_resolve_team(teamSel) + (&selTeamNameBase - &selTeamsPtr);
+}
+/* Inverse: team record pointer -> identity (the value stored in the standings
+ * row / cup-bracket slot). careerTeam -> -1; a selected team -> its array index. */
+static int32_t diy_team_to_identity(const uint8_t *teamPtr)
+{
+    if (teamPtr == (const uint8_t *)&careerTeam)
+        return -1;
+    /* selected team: positive difference (above selTeamsPtr), 684-aligned */
+    return (int32_t)((teamPtr - (const uint8_t *)&selTeamsPtr) / (int32_t)sizeof(TeamFileEx));
+}
 
 /* ASM string constants */
 extern uint8_t aDiyTournament[];  /* "DIY TOURNAMENT" */
@@ -530,11 +550,11 @@ void _DIY_CacheSelectedTeamPointers(void)
         uint16_t teamNum = BE_READ_U16(&teamIds[(uint16_t)(int16_t)idx]);
         TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
 
-        /* Store relative pointer: teamPtr - &selTeamsPtr (asm: suba.l #selTeamsPtr,a0).
-         * Standings table overlays cupTeamIds — use the typed helper
-         * instead of the Amiga byte offsets (entry + 0x2B4). */
+        /* Store the team IDENTITY (step-4 phase 3): -1 for careerTeam, else the
+         * selTeamsPtr array index. Standings table overlays cupTeamIds — use the
+         * typed helper instead of the Amiga byte offsets (entry + 0x2B4). */
         uint16_t entryIdx = (uint16_t)(int16_t)idx;
-        int32_t off = (int32_t)((uint8_t *)teamPtr - &selTeamsPtr);
+        int32_t off = diy_team_to_identity((uint8_t *)teamPtr);
 #ifdef SWOS_DEBUG_AUTOSKIP
         SWOS_AUTOSKIP_LOG("[bug8w] CacheTeamPtrs i=%d idx=%d entryIdx=%u teamNum=0x%04X "
                           "teamPtr=%p selTeamsPtr=%p off=%d numTeams=%u",
@@ -1587,11 +1607,11 @@ void _DIY_BuildTeamSelectionPointerCache(void)
         int16_t gridIdx = (int8_t)*gridPtr++;   /* ext.w d6: sign-extend */
         uint16_t teamNum = BE_READ_U16(&teamIds[gridIdx]);
         TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
-        /* Signed offset — teamPtr may be `&careerTeam`, which lives BELOW
-         * selTeamsPtr in BSS, so the difference is negative. Storing as
-         * uint32_t and adding back on read zero-extends on 64-bit and
-         * lands ~4 GB above selTeamsPtr (unmapped). */
-        int32_t relOff = (int32_t)((uint8_t *)teamPtr - &selTeamsPtr);
+        /* Store the team IDENTITY (step-4 phase 3): -1 for careerTeam, else the
+         * selTeamsPtr array index. Replaces the old signed byte offset — careerTeam
+         * is now resolved by a branch, not `&selTeamsPtr + (negative)`, so it need
+         * not live below selTeamsPtr. */
+        int32_t relOff = diy_team_to_identity((uint8_t *)teamPtr);
         comp->bracketScratch.teamOffsetTable[(uint16_t)gridIdx] = relOff;
     }
 
