@@ -224,18 +224,13 @@ __asm__(
     ".globl " _ASM_PFX "transferMarketPhase\n"
     _ASM_PFX "transferMarketPhase:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "careerUnavailablePlayerList\n"
-    _ASM_PFX "careerUnavailablePlayerList:\n"
-    ".skip 16\n"
-    ".globl " _ASM_PFX "careerUnavailablePlayerLookupTable\n"
-    _ASM_PFX "careerUnavailablePlayerLookupTable:\n"
-    ".skip 80\n"
-    ".globl " _ASM_PFX "careerUnavailablePlayerNames\n"
-    _ASM_PFX "careerUnavailablePlayerNames:\n"
-    ".skip 340\n"
-    ".globl " _ASM_PFX "currentMatchPlayers\n"
-    _ASM_PFX "currentMatchPlayers:\n"
-    ".skip 32\n"
+    /* ---- Region B1: unavailable-players trio + currentMatchPlayers pulled out
+     * to careerUnavailablePlayers + currentMatchPlayers (career_unavailable_players.c)
+     * ---- careerUnavailablePlayerList(16), careerUnavailablePlayerLookupTable(80),
+     * careerUnavailablePlayerNames(340), currentMatchPlayers(32) = 468 B. Real
+     * labels there; readers + save FA(...) unchanged. Reserve 468 bytes (no
+     * cascade). */
+    ".skip 468\n"
     ".globl " _ASM_PFX "careerTeam\n"
     _ASM_PFX "careerTeam:\n"
     ".skip 1292\n"
@@ -308,8 +303,9 @@ __asm__(
     ".globl " _ASM_PFX "lastMatchSavedTeamControls\n"
     _ASM_PFX "lastMatchSavedTeamControls:\n"
     ".skip 1\n"
-    ".globl " _ASM_PFX "careerLastMatchIndexByCompetitionSlot\n"
-    _ASM_PFX "careerLastMatchIndexByCompetitionSlot:\n"
+    /* ---- Region B2b: careerLastMatchIndexByCompetitionSlot pulled out to
+     * career_index_tables.c ---- 162 B. Real label there; readers + save FA(...)
+     * unchanged. */
     ".skip 162\n"
     ".globl " _ASM_PFX "seasonFinished\n"
     _ASM_PFX "seasonFinished:\n"
@@ -323,8 +319,12 @@ __asm__(
     ".globl " _ASM_PFX "seasonNumberOfSquads\n"
     _ASM_PFX "seasonNumberOfSquads:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "seasonSquadTeamNumbers\n"
-    _ASM_PFX "seasonSquadTeamNumbers:\n"
+    /* ---- Region B2c: seasonSquadTeamNumbers pulled out to career_index_tables.c
+     * ---- 48 B of squad team numbers + the 20-byte dead tail that once held
+     * careerCompetitionSlotPtrTable (now a separate standalone symbol) = the
+     * historical 68-byte run, reserved here as a hole (no cascade). The .skip 4 /
+     * .skip 44 that follow remain the (already-holed) secondary-competition slot
+     * region. Real label there; readers + save FA(...) unchanged. */
     ".skip 68\n"
     ".skip 4\n"
     ".skip 44\n"
@@ -382,8 +382,8 @@ __asm__(
     ".skip 2\n"
     ".skip 2\n"
     ".skip 2834\n"
-    ".globl " _ASM_PFX "teamBudgetRankTable\n"
-    _ASM_PFX "teamBudgetRankTable:\n"
+    /* ---- Region B2a: teamBudgetRankTable pulled out to career_index_tables.c
+     * ---- 128 B. Real label there; readers + save FA(...) unchanged. */
     ".skip 128\n"
     ".globl " _ASM_PFX "euroCupCopy\n"
     _ASM_PFX "euroCupCopy:\n"

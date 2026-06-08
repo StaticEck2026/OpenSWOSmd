@@ -72,6 +72,7 @@ SRC_FILES=(
     career_status_flags.c career_manager_identity.c career_board_confidence.c
     career_trophy_flags.c career_selector_state.c career_setup.c
     career_counters.c career_settings.c
+    career_unavailable_players.c career_index_tables.c
     swos_amiga_data_imports.c swos_amiga_ptr_imports.c
     swos_data_bulk_imports.c swos_data_typed_stubs.c
     swos_amiga_data_stubs.c swos_amiga_strings.c
