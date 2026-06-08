@@ -68,7 +68,7 @@ SRC_FILES=(
     mjson.c save_format_json.c save_pointer_lut.c swos_io.c
     resload.c
     swos_globals.c swos_globals_career_overlay.c swos_competition_slots.c
-    career_finances.c
+    career_finances.c career_season_record.c
     swos_amiga_data_imports.c swos_amiga_ptr_imports.c
     swos_data_bulk_imports.c swos_data_typed_stubs.c
     swos_amiga_data_stubs.c swos_amiga_strings.c
