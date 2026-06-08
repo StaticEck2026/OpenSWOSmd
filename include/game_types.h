@@ -565,6 +565,15 @@ typedef struct __attribute__((packed, aligned(2))) TeamFileEx {
 
 typedef char _teamfileex_size_check[(sizeof(TeamFileEx) == 684) ? 1 : -1];
 
+/* The careerTeam and currentTeam buffers are each a TeamFileEx (16 active
+ * players) immediately followed by 16 reserve PlayerFile entries = 1292 bytes.
+ * Use this for "is this player pointer inside the career/current team buffer?"
+ * range checks (e.g. _GetDisplayedPlayerValue) instead of bounding on the next
+ * BSS symbol — the latter is a fragile adjacency that breaks once those
+ * neighbours (playerPositions, careerNumPlayers) are lifted out of the overlay.
+ * See docs/CAREERTEAM_STEP4_REWORK.md. */
+#define CAREER_TEAM_BUF_SIZE (sizeof(TeamFileEx) + 16 * sizeof(PlayerFile))
+
 /* ==================================================================
  * DIYCompetition — 96 bytes (0x60), base competition descriptor.
  * Used for diyFileBufferCopy and as the first 0x60 bytes of
