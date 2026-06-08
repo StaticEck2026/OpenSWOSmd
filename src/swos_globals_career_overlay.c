@@ -203,24 +203,17 @@ __asm__(
     ".globl " _ASM_PFX "careerMatchSimulatedFlag\n"
     _ASM_PFX "careerMatchSimulatedFlag:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "gamesPlayed\n"
-    _ASM_PFX "gamesPlayed:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "numWins\n"
-    _ASM_PFX "numWins:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "numDrawn\n"
-    _ASM_PFX "numDrawn:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "numLost\n"
-    _ASM_PFX "numLost:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "goalsScored\n"
-    _ASM_PFX "goalsScored:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "goalsTaken\n"
-    _ASM_PFX "goalsTaken:\n"
-    ".skip 2\n"
+    /* ---- Pilot 2: 6 x uint16 season match-record counters pulled out to
+     * careerSeasonRecord ---- gamesPlayed, numWins, numDrawn, numLost,
+     * goalsScored, goalsTaken — 12 contiguous bytes — now live in a standalone
+     * typed `CareerSeasonRecord` (career_season_record.c), with the 6 legacy
+     * names re-emitted there as real labels so every reader and the save FX(...)
+     * descriptors (addressed by &symbol) keep working unchanged. Reserve the
+     * run's historical 12 bytes here so every later overlay label keeps its
+     * absolute careerFileBufferBuf offset — no cascade. This is now dead space
+     * in the overlay (stays zero in both the live image and the reload, so
+     * SWOS_SAVE_FORMAT_JSON_VERIFY remains 0). */
+    ".skip 12\n"
     ".globl " _ASM_PFX "boardConfidenceMod0\n"
     _ASM_PFX "boardConfidenceMod0:\n"
     ".skip 2\n"

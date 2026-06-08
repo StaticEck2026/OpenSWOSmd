@@ -412,17 +412,17 @@ uint16_t team2SelectedPlayerIndex;
 // uint16_t isCareer;
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): careerMatchSimulatedFlag */
 // uint16_t careerMatchSimulatedFlag;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): gamesPlayed */
+/* MOVED to careerSeasonRecord struct (see career_season_record.c): gamesPlayed */
 // uint16_t gamesPlayed;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): numWins */
+/* MOVED to careerSeasonRecord struct (see career_season_record.c): numWins */
 // uint16_t numWins;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): numDrawn */
+/* MOVED to careerSeasonRecord struct (see career_season_record.c): numDrawn */
 // uint16_t numDrawn;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): numLost */
+/* MOVED to careerSeasonRecord struct (see career_season_record.c): numLost */
 // uint16_t numLost;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): goalsScored */
+/* MOVED to careerSeasonRecord struct (see career_season_record.c): goalsScored */
 // uint16_t goalsScored;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): goalsTaken */
+/* MOVED to careerSeasonRecord struct (see career_season_record.c): goalsTaken */
 // uint16_t goalsTaken;
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): boardConfidenceMod0 */
 // uint16_t boardConfidenceMod0;

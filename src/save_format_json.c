@@ -3698,6 +3698,8 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
             ((const uint8_t *)&competitionFileBuffer + offsetof(CompetitionSlotBuffer, stageSnapshot));
         mjson_printf(json_out_emit, &out, ",\n  ");
         emit_comp_slot(json_out_emit, &out, "comp_slot_stage", stage);
+        emit_stage_cupfull(json_out_emit, &out, "comp_slot_stage", stage,
+                           ((const DIYCompetitionEx *)&competitionFileBuffer)->base.numTeams);
         if (diy_stage_is_league(stage)) {
             uint16_t nrows = numDiyTeams; if (nrows > 64) nrows = 64;
             mjson_printf(json_out_emit, &out, ",\n  %Q:[", "stage_standings");
@@ -3939,6 +3941,7 @@ static void apply_semantic_load(const char *src, int src_size)
      * (one-fixture-on-Amiga bug). See fixup_cache_strides_on_load. */
     fixup_cache_strides_on_load(src, src_size);
 
+    PROF_START(comp_slots);
     /* Apply the cross-target competition-buffer override AFTER the raw
      * blobs have populated competitionFileBuffer — it corrects the
      * struct-correct positions (league standings) that the blobs place
@@ -3982,6 +3985,8 @@ static void apply_semantic_load(const char *src, int src_size)
         DIYCompetitionEx *stage = (DIYCompetitionEx *)
             ((uint8_t *)&competitionFileBuffer + offsetof(CompetitionSlotBuffer, stageSnapshot));
         load_comp_slot(src, src_size, "comp_slot_stage", stage);
+        load_stage_cupfull(src, src_size, "comp_slot_stage", stage,
+                           ((const DIYCompetitionEx *)&competitionFileBuffer)->base.numTeams);
         if (diy_stage_is_league(stage)) {
             const char *rows = NULL; int rows_len = 0;
             if (mjson_find(src, src_size, "$.stage_standings", &rows, &rows_len)
@@ -4049,6 +4054,7 @@ static void apply_semantic_load(const char *src, int src_size)
                    (DIYCompetitionEx *)diyCompetitionContext);
     load_ctx_stage((const char *)src, (int)src_size, "euro_comp_slot_stage",
                    (DIYCompetitionEx *)euroCupsCompetitionContext);
+    PROF_END(comp_slots, "career-load");
 
     PROF_START(team_ce);
     load_team_file_ex(src, src_size, "$.career_team",  &careerTeam);
@@ -4635,6 +4641,8 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
             ((const uint8_t *)&competitionFileBuffer + offsetof(CompetitionSlotBuffer, stageSnapshot));
         mjson_printf(json_out_emit, &out, ",\n  ");
         emit_comp_slot(json_out_emit, &out, "comp_slot_stage", stage);
+        emit_stage_cupfull(json_out_emit, &out, "comp_slot_stage", stage,
+                           ((const DIYCompetitionEx *)&competitionFileBuffer)->base.numTeams);
 
         /* GROUP-phase stage standings. The 64-row DIYTeamStats table at the
          * stage's +0x2B4 holds each tournament team's group results. Its
@@ -4803,6 +4811,8 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
             ((uint8_t *)&competitionFileBuffer + offsetof(CompetitionSlotBuffer, stageSnapshot));
         load_comp_slot((const char *)src, (int)src_size, "comp_slot_stage",
                        stage);
+        load_stage_cupfull((const char *)src, (int)src_size, "comp_slot_stage", stage,
+                           ((const DIYCompetitionEx *)&competitionFileBuffer)->base.numTeams);
 
         /* Rebuild the GROUP-phase standings (see write_competition_buf):
          * RECONSTRUCT each row's derived teamSelOffset = i*684 (row i =
