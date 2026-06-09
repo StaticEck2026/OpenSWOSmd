@@ -2955,6 +2955,18 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
         "min_subs",  (unsigned)s->minSubstitutes,
         "points_for_win",(unsigned)s->pointsForAWin);
 
+    /* compId(0x2C)/slotId(0x2D) is a HOST-NATIVE uint16 word, not two
+     * independent bytes: the game writes it whole (*(uint16_t*)&compId = 0/1/2/
+     * slot, diy_competition.c:447/692/1242, career_status.c:4283/4363) and
+     * reads it whole (*(uint16_t*)&compId, career_status.c:1100). The separate
+     * comp_id/slot_id bytes above capture the SAVING host's byte decomposition,
+     * which rebuilds the WRONG word cross-endian (LE save slot=1 → compId=1,
+     * slotId=0 → BE reads (1<<8)=256 → compType ∉ {0..4} →
+     * _UpdateCareerFinancesAfterMatch panic 0x9200). Emit the logical word
+     * endian-neutral; load_comp_slot restores it as a word AFTER the bytes. */
+    mjson_printf(fn, fnd, ",%Q:%u", "comp_slot_word",
+                 (unsigned)*(const uint16_t *)&b->compId);
+
     /* competitionName[36] — char string. */
     mjson_printf(fn, fnd, "%s", ",");
     emit_string_field(fn, fnd, "name",
@@ -3085,6 +3097,32 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
                          (unsigned)s->leagueSectionState.phaseStartMonths[i]);
         }
         mjson_printf(fn, fnd, "%s", "]");
+
+        /* matchData.league host-native uint16 SCALARS (parent 0x64,0x66,0x68,
+         * 0x6A,0x6C). Like teamEntryOffsets they ride the matchData byte blob,
+         * which struct-anchors the OFFSET but keeps the saving host's BYTE ORDER
+         * — so each byte-swaps on a LE->BE cross-target load (leagueMaxSubstitutes
+         * 5 -> 0x0500=1280 -> maxSubstitutesEntries garbage -> the career
+         * play-match PLAY / VIEW RESULT button hidden; live-confirmed via gdb).
+         * Emit endian-neutral; re-lay on load over the blob.
+         *
+         * DO NOT add competitionFormat(0x14A)/roundFormat(0x14C) here: for an
+         * N>14-team league the leagueTeamIds[14] array OVERFLOWS its declared
+         * [14] bound and entries 14/15 land at EXACTLY 0x14A/0x14C — i.e. those
+         * two "fields" ARE leagueTeamIds[14]/[15], which are endian-stable BE
+         * pairs handled by team_ids. Serializing them as host-native uint16
+         * byte-swapped the team-id bytes (leagueTeamIds[14] 0x142a -> 0x2a14)
+         * -> _VerifyTeamLoaded panic in _GetMoreExpensiveTeamsCount (gdb-confirmed
+         * on an 18-team league). leagueTeamIds(0x12E) = team_ids (BE pairs);
+         * teamEntryOffsets handled above; cupRoundResults/shuffleAndPad are byte
+         * arrays. See project_compslot_matchdata_uint16_crosstarget. */
+        mjson_printf(fn, fnd,
+            ",%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u",
+            "league_min_substitutes",          (unsigned)s->matchData.league.leagueMinSubstitutes,
+            "league_max_substitutes",          (unsigned)s->matchData.league.leagueMaxSubstitutes,
+            "league_has_groups_diy",           (unsigned)s->matchData.league.hasGroupsDiy,
+            "league_matches_per_section",      (unsigned)s->matchData.league.totalMatchesPerSection,
+            "league_matches_per_section_live", (unsigned)s->matchData.league.totalMatchesPerSectionLive);
     }
 
     /* CUP bracketScratch.teamOffsetTable[64] — int32 byte-offsets from
@@ -3241,6 +3279,13 @@ static void load_comp_slot(const char *parent, int plen,
     LD8("comp_id", b->compId);
     LD8("slot_id", b->slotId);
     LD8("field_2e", b->field_2E);
+    /* compId/slotId is a host-native word (see emit_comp_slot). The bytes
+     * above are the saving host's decomposition — wrong cross-endian. Override
+     * with the logical word so it round-trips on BE. New-save key; absent in
+     * old saves (then the bytes stand, same-target-correct). MUST run after the
+     * two LD8s since it overwrites both bytes. */
+    if (mjson_get_long(o, olen, "$.comp_slot_word", &v) > 0)
+        *(uint16_t *)&b->compId = (uint16_t)v;
     LD8("view_phase", b->viewRandomPhase);
     LD8("avg_skill", b->avgSkill);
     LD8("str_tier", b->strengthTier);
@@ -3343,6 +3388,19 @@ static void load_comp_slot(const char *parent, int plen,
         const char *arr = NULL; int alen = 0;
         if (mjson_find(o, olen, "$.phase_start_months", &arr, &alen) == MJSON_TOK_ARRAY)
             parse_byte_array_slice(arr, alen, s->leagueSectionState.phaseStartMonths, 128);
+        /* matchData.league host-native uint16 scalars — re-lay over the blob
+         * (see emit). Old saves lacking these keys keep the (cross-target-broken)
+         * blob values. */
+        if (mjson_get_long(o, olen, "$.league_min_substitutes", &v) > 0)          s->matchData.league.leagueMinSubstitutes = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.league_max_substitutes", &v) > 0)          s->matchData.league.leagueMaxSubstitutes = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.league_has_groups_diy", &v) > 0)           s->matchData.league.hasGroupsDiy = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.league_matches_per_section", &v) > 0)      s->matchData.league.totalMatchesPerSection = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.league_matches_per_section_live", &v) > 0) s->matchData.league.totalMatchesPerSectionLive = (uint16_t)v;
+        /* NOT competition_format/round_format: they alias leagueTeamIds[14]/[15]
+         * for N>14-team leagues (BE pairs handled by team_ids) — loading them as
+         * host-native uint16 byte-swapped the team id -> _VerifyTeamLoaded panic.
+         * Ignoring any legacy key here lets the blob/team_ids BE-pair bytes stand,
+         * which also un-corrupts saves written by the buggy interim build. */
     }
 
     /* CUP teamOffsetTable[64] — symbolic team indices → restore to live
