@@ -820,6 +820,7 @@ extern uint16_t teamSelectionKeyCacheOffset;
 extern uint16_t teamSelectionKeyCacheCount;
 extern uint16_t careerSlotProcessingInProgress;
 extern uint16_t teamSelectionKeyCacheEnd;
+extern uint8_t  careerJobOfferPhaseBias;     /* promoted from cache-blob byte 1 */
 extern uint16_t competitionOver;
 extern uint8_t  diyPresetNameOfCompetition[];
 extern uint16_t majorTrophyBonusValue;
@@ -1144,6 +1145,10 @@ static const FieldDesc s_career_scalars[] = {
     FX("team_selection_key_cache_count",  teamSelectionKeyCacheCount,  FLD_U16),
     FX("career_slot_processing_in_progress",careerSlotProcessingInProgress,FLD_U16),
     FX("team_selection_key_cache_end",    teamSelectionKeyCacheEnd,    FLD_U16),
+    /* Promoted out of the cache blob (was teamSelectionKeyCache byte 1, the
+     * Amiga cache/phase-bias overlap). Old saves lack this key -> loads as 0,
+     * re-derived in _InitCareer. See project_keycache_cluster_design. */
+    FX("career_job_offer_phase_bias",     careerJobOfferPhaseBias,     FLD_U8 ),
     FX("competition_over",                competitionOver,             FLD_U16),
     FA("diy_preset_name_of_competition",  diyPresetNameOfCompetition, 36, FLD_STR),
     FX("major_trophy_bonus_value",        majorTrophyBonusValue,       FLD_U16),
