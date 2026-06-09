@@ -1270,12 +1270,14 @@ __asm__(
  * now puts them back inside careerFileBufferBuf, which both restores
  * save round-trips and matches the original adjacency. */
 
-/* teamSelectionKeyCache / teamSelectionKeyCacheEnd: aliased in
- * swos_globals_career_overlay.c to careerFileBufferBuf + 73292 and
- * + 93306 — the same offsets the Amiga BSS used. The 20014-byte gap
- * between the two labels is the working area for variable-length
- * cache entries (typically 34 × 22..118 bytes). On Amiga that gap
- * also contained `careerForeignMarketPlayers` (offset 75162) — the
- * original code reused the same memory because the cache and the
- * market list operate at different times. The overlay restores that
- * adjacency: both labels now share the careerFileBuffer save region. */
+/* teamSelectionKeyCache cluster: EXTRACTED from the careerFileBuffer overlay
+ * (Tier 2 untangle). On Amiga these labels sat at careerFileBufferBuf + 73292..
+ * +93306 with a 20014-byte gap that the cache shared with
+ * `careerForeignMarketPlayers` (offset 75162) — memory reuse that let a
+ * career-mode cache overflow stomp player data. They now live in their own
+ * files: the cache + cursors + end marker in career_key_cache.c (dedicated
+ * 20014-byte buffer = the original InsertSpaceSorted bound span), and the
+ * market pool in career_foreign_market.c (MarketPlayer[432]) — no shared
+ * memory. The overlay keeps a 20024-byte .skip hole so later labels don't
+ * cascade. careerJobOfferPhaseBias (was cache byte 1) is now a standalone
+ * scalar. See docs/KEYCACHE_CLUSTER_REWORK.md / project_keycache_cluster_design. */

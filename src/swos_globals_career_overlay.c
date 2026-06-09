@@ -323,30 +323,22 @@ __asm__(
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 272\n"   /* 34 * 8: text[2] 64-bit growth, matching the per-record pads */
 #endif
-    ".globl " _ASM_PFX "teamSelectionKeyCacheIndex\n"
-    _ASM_PFX "teamSelectionKeyCacheIndex:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "teamSelectionKeyCacheOffset\n"
-    _ASM_PFX "teamSelectionKeyCacheOffset:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "teamSelectionKeyCacheCount\n"
-    _ASM_PFX "teamSelectionKeyCacheCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "careerSlotProcessingInProgress\n"
-    _ASM_PFX "careerSlotProcessingInProgress:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "teamSelectionKeyCache\n"
-    _ASM_PFX "teamSelectionKeyCache:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "careerJobOfferPhaseBias\n"
-    _ASM_PFX "careerJobOfferPhaseBias:\n"
-    ".skip 1869\n"
-    ".globl " _ASM_PFX "careerForeignMarketPlayers\n"
-    _ASM_PFX "careerForeignMarketPlayers:\n"
-    ".skip 18144\n"
-    ".globl " _ASM_PFX "teamSelectionKeyCacheEnd\n"
-    _ASM_PFX "teamSelectionKeyCacheEnd:\n"
-    ".skip 2\n"
+    /* ---- teamSelectionKeyCache cluster pulled out to career_key_cache.c +
+     * career_foreign_market.c (Tier 2 untangle) ----
+     * Was one overlapping 20024-byte BSS run: teamSelectionKeyCacheIndex/Offset/
+     * Count + careerSlotProcessingInProgress (2 each = 8), the cache body
+     * (teamSelectionKeyCache 1 + careerJobOfferPhaseBias 1 + 1868 = 1870),
+     * careerForeignMarketPlayers (18144), teamSelectionKeyCacheEnd (2). The cache
+     * overlapped careerForeignMarketPlayers (its InsertSpaceSorted bound is
+     * &teamSelectionKeyCacheEnd, 20014 B downstream), so an overflow could stomp
+     * player data. Now the cache has its OWN dedicated 20014-B buffer
+     * (career_key_cache.c, same bound span) and the foreign-market pool its own
+     * MarketPlayer[432] (career_foreign_market.c) — no shared memory.
+     * careerJobOfferPhaseBias promoted to a standalone scalar. Every symbol is
+     * &symbol-addressed in the save, so the relocation is byte-neutral. Reserve
+     * the historical 20024 bytes here so every later label
+     * (competitionFileBuffer..numSelectedTeams) keeps its offset — no cascade. */
+    ".skip 20024\n"
     /* ---- Phase B: slot-0 competition run pulled out to primaryCompetitionBuf ----
      * The old ~20-label run here (competitionFileBuffer, competitionOver,
      * diyPresetNameOfCompetition, majorTrophyBonusValue, numDiyTeams,
