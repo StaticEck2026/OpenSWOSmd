@@ -3099,24 +3099,30 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
         mjson_printf(fn, fnd, "%s", "]");
 
         /* matchData.league host-native uint16 SCALARS (parent 0x64,0x66,0x68,
-         * 0x6A,0x6C,0x14A,0x14C). Like teamEntryOffsets they ride the matchData
-         * byte blob, which struct-anchors the OFFSET but keeps the saving host's
-         * BYTE ORDER — so each byte-swaps on a LE->BE cross-target load
-         * (leagueMaxSubstitutes 5 -> 0x0500=1280 -> maxSubstitutesEntries
-         * garbage -> the career play-match PLAY / VIEW RESULT button hidden;
-         * live-confirmed on the Amiga via gdb). Emit endian-neutral; re-lay on
-         * load over the blob. leagueTeamIds(0x12E) is team_ids (BE pairs);
-         * teamEntryOffsets is handled above; cupRoundResults/shuffleAndPad are
-         * byte arrays. See project_compslot_matchdata_uint16_crosstarget. */
+         * 0x6A,0x6C). Like teamEntryOffsets they ride the matchData byte blob,
+         * which struct-anchors the OFFSET but keeps the saving host's BYTE ORDER
+         * — so each byte-swaps on a LE->BE cross-target load (leagueMaxSubstitutes
+         * 5 -> 0x0500=1280 -> maxSubstitutesEntries garbage -> the career
+         * play-match PLAY / VIEW RESULT button hidden; live-confirmed via gdb).
+         * Emit endian-neutral; re-lay on load over the blob.
+         *
+         * DO NOT add competitionFormat(0x14A)/roundFormat(0x14C) here: for an
+         * N>14-team league the leagueTeamIds[14] array OVERFLOWS its declared
+         * [14] bound and entries 14/15 land at EXACTLY 0x14A/0x14C — i.e. those
+         * two "fields" ARE leagueTeamIds[14]/[15], which are endian-stable BE
+         * pairs handled by team_ids. Serializing them as host-native uint16
+         * byte-swapped the team-id bytes (leagueTeamIds[14] 0x142a -> 0x2a14)
+         * -> _VerifyTeamLoaded panic in _GetMoreExpensiveTeamsCount (gdb-confirmed
+         * on an 18-team league). leagueTeamIds(0x12E) = team_ids (BE pairs);
+         * teamEntryOffsets handled above; cupRoundResults/shuffleAndPad are byte
+         * arrays. See project_compslot_matchdata_uint16_crosstarget. */
         mjson_printf(fn, fnd,
-            ",%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u",
+            ",%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u",
             "league_min_substitutes",          (unsigned)s->matchData.league.leagueMinSubstitutes,
             "league_max_substitutes",          (unsigned)s->matchData.league.leagueMaxSubstitutes,
             "league_has_groups_diy",           (unsigned)s->matchData.league.hasGroupsDiy,
             "league_matches_per_section",      (unsigned)s->matchData.league.totalMatchesPerSection,
-            "league_matches_per_section_live", (unsigned)s->matchData.league.totalMatchesPerSectionLive,
-            "league_competition_format",       (unsigned)s->matchData.league.competitionFormat,
-            "league_round_format",             (unsigned)s->matchData.league.roundFormat);
+            "league_matches_per_section_live", (unsigned)s->matchData.league.totalMatchesPerSectionLive);
     }
 
     /* CUP bracketScratch.teamOffsetTable[64] — int32 byte-offsets from
@@ -3390,8 +3396,11 @@ static void load_comp_slot(const char *parent, int plen,
         if (mjson_get_long(o, olen, "$.league_has_groups_diy", &v) > 0)           s->matchData.league.hasGroupsDiy = (uint16_t)v;
         if (mjson_get_long(o, olen, "$.league_matches_per_section", &v) > 0)      s->matchData.league.totalMatchesPerSection = (uint16_t)v;
         if (mjson_get_long(o, olen, "$.league_matches_per_section_live", &v) > 0) s->matchData.league.totalMatchesPerSectionLive = (uint16_t)v;
-        if (mjson_get_long(o, olen, "$.league_competition_format", &v) > 0)       s->matchData.league.competitionFormat = (uint16_t)v;
-        if (mjson_get_long(o, olen, "$.league_round_format", &v) > 0)             s->matchData.league.roundFormat = (uint16_t)v;
+        /* NOT competition_format/round_format: they alias leagueTeamIds[14]/[15]
+         * for N>14-team leagues (BE pairs handled by team_ids) — loading them as
+         * host-native uint16 byte-swapped the team id -> _VerifyTeamLoaded panic.
+         * Ignoring any legacy key here lets the blob/team_ids BE-pair bytes stand,
+         * which also un-corrupts saves written by the buggy interim build. */
     }
 
     /* CUP teamOffsetTable[64] — symbolic team indices → restore to live
