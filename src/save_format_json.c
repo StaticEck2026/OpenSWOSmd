@@ -3053,40 +3053,6 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
         mjson_printf(fn, fnd, "%s", "]");
     }
 
-    /* LEAGUE progress run — DIYCompetitionEx 0x1BE..0x24D. NOT covered by the
-     * scalar header above (which stops at min_subs/points_for_win) nor by the
-     * matchData blob (0x64..0x14D), so it rode the raw 64-bit-layout
-     * competition_context blob: a 32-bit BE load read it 8 bytes shifted (the
-     * DIYCompetition namePtr +8 growth) → garbage sectionMatchesProgress →
-     * getCurrentFixtureTeamPtrs picked the wrong fixture → both teams classed
-     * computer → PLAY MATCH hidden (live-confirmed: SDL=3, Amiga=8793). Emit
-     * endian-neutral so it survives cross-target. League only: type-1 cup uses
-     * phaseStartMonths as cup_score_pen, and type-2 tournament reuses this
-     * region as slot data (tournament_slots). See
-     * project_compslot_league_progress_crosstarget. */
-    if (b->competitionType == 0) {
-        mjson_printf(fn, fnd,
-            ",%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u",
-            "matches_played_count",        (unsigned)s->matchesPlayedCount,
-            "league_current_slot",         (unsigned)s->leagueCurrentSlot,
-            "league_match_progress",       (unsigned)s->leagueMatchProgress,
-            "league_total_matches",        (unsigned)s->leagueTotalMatches,
-            "section_half_group_count",    (unsigned)s->leagueSectionState.halfGroupCount,
-            "section_matches_per_half",    (unsigned)s->leagueSectionState.matchesPerHalf,
-            "section_half_groups_counter", (unsigned)s->leagueSectionState.halfGroupsCounter,
-            "section_matches_progress",    (unsigned)s->leagueSectionState.sectionMatchesProgress);
-        /* phaseStartMonths[128] — per-round month sort keys (cache builder).
-         * Byte content is endian-neutral; only its struct offset shifts
-         * cross-target, so struct-anchor it here. */
-        mjson_printf(fn, fnd, ",%Q:[", "phase_start_months");
-        for (int i = 0; i < 128; i++) {
-            if (i > 0) mjson_printf(fn, fnd, "%s", ",");
-            mjson_printf(fn, fnd, "%u",
-                         (unsigned)s->leagueSectionState.phaseStartMonths[i]);
-        }
-        mjson_printf(fn, fnd, "%s", "]");
-    }
-
     /* CUP bracketScratch.teamOffsetTable[64] — int32 byte-offsets from
      * selTeamsPtr to each bracket team (read as `&selTeamsPtr + off` in
      * career_teams.c:2040/2050, diy_competition.c:2903/6282). Raw FLD_BYTES
@@ -3326,23 +3292,6 @@ static void load_comp_slot(const char *parent, int plen,
                 parse_u16_array_slice(arr, alen,
                     (uint8_t *)s->matchData.league.teamEntryOffsets, elen);
         }
-    }
-
-    /* LEAGUE progress run (0x1BE..0x24D) — endian-neutral re-lay over the raw
-     * blob's cross-target-shifted bytes; see emit. Old saves lacking these
-     * keys leave the prior (blob/recomputed) values, defaulting to 0. */
-    if (b->competitionType == 0) {
-        if (mjson_get_long(o, olen, "$.matches_played_count", &v) > 0)        s->matchesPlayedCount = (uint16_t)v;
-        if (mjson_get_long(o, olen, "$.league_current_slot", &v) > 0)         s->leagueCurrentSlot = (uint16_t)v;
-        if (mjson_get_long(o, olen, "$.league_match_progress", &v) > 0)       s->leagueMatchProgress = (uint16_t)v;
-        if (mjson_get_long(o, olen, "$.league_total_matches", &v) > 0)        s->leagueTotalMatches = (uint16_t)v;
-        if (mjson_get_long(o, olen, "$.section_half_group_count", &v) > 0)    s->leagueSectionState.halfGroupCount = (uint16_t)v;
-        if (mjson_get_long(o, olen, "$.section_matches_per_half", &v) > 0)    s->leagueSectionState.matchesPerHalf = (uint16_t)v;
-        if (mjson_get_long(o, olen, "$.section_half_groups_counter", &v) > 0) s->leagueSectionState.halfGroupsCounter = (uint16_t)v;
-        if (mjson_get_long(o, olen, "$.section_matches_progress", &v) > 0)    s->leagueSectionState.sectionMatchesProgress = (uint16_t)v;
-        const char *arr = NULL; int alen = 0;
-        if (mjson_find(o, olen, "$.phase_start_months", &arr, &alen) == MJSON_TOK_ARRAY)
-            parse_byte_array_slice(arr, alen, s->leagueSectionState.phaseStartMonths, 128);
     }
 
     /* CUP teamOffsetTable[64] — symbolic team indices → restore to live
