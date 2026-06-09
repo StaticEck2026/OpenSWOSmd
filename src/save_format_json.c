@@ -2955,6 +2955,18 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
         "min_subs",  (unsigned)s->minSubstitutes,
         "points_for_win",(unsigned)s->pointsForAWin);
 
+    /* compId(0x2C)/slotId(0x2D) is a HOST-NATIVE uint16 word, not two
+     * independent bytes: the game writes it whole (*(uint16_t*)&compId = 0/1/2/
+     * slot, diy_competition.c:447/692/1242, career_status.c:4283/4363) and
+     * reads it whole (*(uint16_t*)&compId, career_status.c:1100). The separate
+     * comp_id/slot_id bytes above capture the SAVING host's byte decomposition,
+     * which rebuilds the WRONG word cross-endian (LE save slot=1 → compId=1,
+     * slotId=0 → BE reads (1<<8)=256 → compType ∉ {0..4} →
+     * _UpdateCareerFinancesAfterMatch panic 0x9200). Emit the logical word
+     * endian-neutral; load_comp_slot restores it as a word AFTER the bytes. */
+    mjson_printf(fn, fnd, ",%Q:%u", "comp_slot_word",
+                 (unsigned)*(const uint16_t *)&b->compId);
+
     /* competitionName[36] — char string. */
     mjson_printf(fn, fnd, "%s", ",");
     emit_string_field(fn, fnd, "name",
@@ -3241,6 +3253,13 @@ static void load_comp_slot(const char *parent, int plen,
     LD8("comp_id", b->compId);
     LD8("slot_id", b->slotId);
     LD8("field_2e", b->field_2E);
+    /* compId/slotId is a host-native word (see emit_comp_slot). The bytes
+     * above are the saving host's decomposition — wrong cross-endian. Override
+     * with the logical word so it round-trips on BE. New-save key; absent in
+     * old saves (then the bytes stand, same-target-correct). MUST run after the
+     * two LD8s since it overwrites both bytes. */
+    if (mjson_get_long(o, olen, "$.comp_slot_word", &v) > 0)
+        *(uint16_t *)&b->compId = (uint16_t)v;
     LD8("view_phase", b->viewRandomPhase);
     LD8("avg_skill", b->avgSkill);
     LD8("str_tier", b->strengthTier);
