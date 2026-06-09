@@ -158,6 +158,11 @@ static int s_kbd_up, s_kbd_down, s_kbd_left, s_kbd_right, s_kbd_fire;
  * early. Independent of fire so it doesn't interfere with menu select. */
 static int s_kbd_skip;
 volatile uint16_t pauseSkipRequested;
+/* Set during the season-end / catch-up transition (_Career_AdvanceToNextSeason_
+ * UpdateCompetitions). While set there is no live interactive match on screen —
+ * used to let SPACE drive the season-skip even though gameState can be left
+ * lingering in the match-state range (21..31) after the player's last match. */
+extern uint16_t seasonUpdateInProgress;
 
 /* Up to two game controllers, mapped to players 1 and 2 respectively.
  * Pad 0 is shared with the keyboard for player 1; pad 1 drives player 2
@@ -349,8 +354,15 @@ void InputSDL_HandleEvent(const SDL_Event *e)
              * via the same MenuCheckControls path the menus do.
              *
              * gameState in [ST_STARTING_GAME .. ST_PENALTIES] means
-             * a match is on screen — see game_types.h. */
-            if (!(gameState >= 21 /*ST_STARTING_GAME*/ &&
+             * a match is on screen — see game_types.h. EXCEPT: gameState
+             * is never reset after a match, so it lingers at a post-match
+             * value (ST_RESULT_AFTER_THE_GAME=26 / ST_GAME_ENDED=30, both
+             * in 21..31) while the career runs the season-end / catch-up
+             * playback. That playback is exactly when the user wants to
+             * press SPACE to skip — and there is no live match then — so
+             * `seasonUpdateInProgress` overrides the gameState gate. */
+            if (seasonUpdateInProgress != 0 ||
+                !(gameState >= 21 /*ST_STARTING_GAME*/ &&
                   gameState <= 31 /*ST_PENALTIES*/)) {
                 s_kbd_skip = 1;
             }
