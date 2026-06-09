@@ -422,6 +422,7 @@ extern uint8_t euroCupCopy[];
 extern uint8_t cupWinnersCupCopy[];
 extern uint8_t uefaCupCopy[];
 extern uint8_t *quaternaryCompetitionPtr;
+extern volatile uint16_t isNationalSelector;
 
 extern void _SaveSelectedTeams(void);
 extern void _RestoreSelectedTeams(void);
@@ -435,7 +436,23 @@ __attribute__((used, externally_visible))
 void _Career_UpdateEuroCupCompetitionSlot(void)
 {
     uint8_t *a4 = euroCupCopy;
-    if (a4 == quaternaryCompetitionPtr) {
+    /* The interactive (IF) branch is for when the player *manages* this club
+     * euro cup as their quaternary competition: RestoreSelectedTeams pulls the
+     * cup's club teams from the shared backup, and the title-holder VerifyTeamLoaded
+     * finds the winner among them. A NATIONAL coach is never a club-euro-cup
+     * participant, so that branch is invalid for them — yet after a club->national
+     * career transition `quaternaryCompetitionPtr` is still the STALE euroCupCopy
+     * from the previous club season (the per-season comp pointers are re-derived
+     * only LATER in _Career_AdvanceToNextSeason_UpdateCompetitions, after these
+     * euro-cup updates). With isNationalSelector set, RestoreSelectedTeams then
+     * loads the *national* squad backup, so _VerifyTeamLoaded(clubTitleHolder)
+     * panics 0x8888 (see project_eurocup_national_backup_clobber). Force the
+     * auto-advance (ELSE) branch for national coaches: it is self-contained —
+     * _Career_AutoAdvanceLeagueCompetitionFromRecord loads the euro cup's own
+     * club teams into selTeamsPtr, so the title-holder verify resolves correctly.
+     * This routes through the path that loads the required teams; it is not a
+     * panic guard. */
+    if (a4 == quaternaryCompetitionPtr && !isNationalSelector) {
         _RestoreSelectedTeams();
         _Career_CopyEuroCupsCompetitionContextToOrFromActive();
         _DIY_EditCompetitionSlot(1, 1, 0);
@@ -453,7 +470,9 @@ __attribute__((used, externally_visible))
 void _Career_UpdateCupWinnersCupCompetitionSlot(void)
 {
     uint8_t *a4 = cupWinnersCupCopy;
-    if (a4 == quaternaryCompetitionPtr) {
+    /* National coaches take the self-loading auto-advance branch — see the
+     * stale-quaternaryCompetitionPtr explanation in _Career_UpdateEuroCupCompetitionSlot. */
+    if (a4 == quaternaryCompetitionPtr && !isNationalSelector) {
         _RestoreSelectedTeams();
         _Career_CopyEuroCupsCompetitionContextToOrFromActive();
         _ShowDIYCupMenuWithParams(1, 1, 0);
@@ -471,7 +490,9 @@ __attribute__((used, externally_visible))
 void _Career_UpdateUefaCupCompetitionSlot(void)
 {
     uint8_t *a4 = uefaCupCopy;
-    if (a4 == quaternaryCompetitionPtr) {
+    /* National coaches take the self-loading auto-advance branch — see the
+     * stale-quaternaryCompetitionPtr explanation in _Career_UpdateEuroCupCompetitionSlot. */
+    if (a4 == quaternaryCompetitionPtr && !isNationalSelector) {
         _RestoreSelectedTeams();
         _Career_CopyEuroCupsCompetitionContextToOrFromActive();
         _ShowDIYCupMenuWithParams(1, 1, 0);
