@@ -204,6 +204,36 @@ class GdbDaemon:
             time.sleep(0.05)
         return self._drain().decode("utf-8", errors="replace")
 
+    def wait_stop(self, timeout=300.0):
+        """Block until the inferior STOPS — a breakpoint, watchpoint, temporary
+        breakpoint, or signal shows up in gdb's output — then return everything
+        captured. Purpose-built for "continue, then wait for the breakpoint to
+        fire": returns the instant a stop signature appears, rather than waiting
+        for inactivity (poll) or polling `info program` (which HANGS while an
+        all-stop target is running — the reason `watch` never surfaced the hit).
+        A SIGINT to the gdb process also stops the target ("received signal"),
+        so this returns then too. On timeout returns whatever was captured plus
+        a [WAITSTOP timeout] marker. Server-serial: blocks the daemon for its
+        duration (intended — you're waiting on one breakpoint)."""
+        stop_re = re.compile(
+            r"Breakpoint \d+,|Temporary breakpoint \d+,|"
+            r"received signal|Watchpoint \d+|hit Hardware watchpoint")
+        end = time.time() + timeout
+        captured = ""
+        while time.time() < end:
+            chunk = self._drain().decode("utf-8", errors="replace")
+            if chunk:
+                captured += chunk
+                if stop_re.search(captured):
+                    # Let the trailing frame line + "(gdb) " prompt arrive so a
+                    # follow-up `cmd` doesn't race a half-written prompt.
+                    time.sleep(0.25)
+                    captured += self._drain().decode("utf-8", errors="replace")
+                    return captured
+                continue
+            time.sleep(0.1)
+        return captured + f"\n[WAITSTOP timeout after {timeout:.0f}s — target still running]"
+
     def raw(self, payload):
         self._send_raw(payload)
         return "[sent]"
@@ -288,6 +318,12 @@ def daemon_main(args):
                     except ValueError:
                         t = 0.5
                     out = d.poll(timeout=t)
+                elif req.startswith("WAITSTOP "):
+                    try:
+                        t = float(req[len("WAITSTOP "):].strip())
+                    except ValueError:
+                        t = 300.0
+                    out = d.wait_stop(timeout=t)
                 elif req.startswith("RAW "):
                     out = d.raw(req[4:])
                 elif req == "SHUTDOWN":
@@ -409,6 +445,13 @@ def main():
     p = sub.add_parser("poll", help="Return buffered output without sending a command.")
     p.add_argument("seconds", nargs="?", default="0.5")
 
+    ws = sub.add_parser("waitstop",
+                        help="Block until the target STOPS (breakpoint / watchpoint / "
+                             "signal), then print the stop info. Use right after "
+                             "`cmd continue` to be alerted the moment a breakpoint "
+                             "fires — no polling, no info-program hang.")
+    ws.add_argument("seconds", nargs="?", default="300")
+
     r = sub.add_parser("raw", help="Send raw bytes to gdb stdin (no newline added).")
     r.add_argument("data", help="Raw payload (use $'\\x03' from bash to send Ctrl-C)")
 
@@ -443,6 +486,10 @@ def main():
     elif args.cmd_name == "poll":
         sys.stdout.write(send_request(f"POLL {args.seconds}",
                                       timeout=float(args.seconds) + 5))
+        sys.stdout.flush()
+    elif args.cmd_name == "waitstop":
+        sys.stdout.write(send_request(f"WAITSTOP {args.seconds}",
+                                      timeout=float(args.seconds) + 10))
         sys.stdout.flush()
     elif args.cmd_name == "raw":
         sys.stdout.write(send_request(f"RAW {args.data}"))

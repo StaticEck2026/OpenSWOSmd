@@ -236,16 +236,38 @@ gdb_proxy.py cmd "continue"              # resume target (returns immediately)
 ### Wait for a halt (after `continue`)
 
 `continue` returns immediately because gdb's prompt doesn't come
-back until the target stops. To wait for a stop and capture the
-halt info, poll:
+back until the target stops. To **block until the target stops and
+be alerted the moment a breakpoint fires**, use `waitstop`:
+
+```bash
+gdb_proxy.py cmd "continue"     # returns immediately (target running)
+gdb_proxy.py waitstop 300       # BLOCKS until a breakpoint/watchpoint/signal
+                                # hits, then prints the stop info. 300s cap.
+```
+
+`waitstop` watches gdb's async output for a stop signature
+(`Breakpoint N,` / `received signal` / `Watchpoint N`) and returns
+the instant one appears — no polling, no `info program` hang. This
+is the reliable "set breakpoint → continue → get notified when it
+hits" path. A `kill -INT` on the gdb process (interrupt) also makes
+it return (the target stops with SIGINT). On timeout it returns a
+`[WAITSTOP timeout]` marker (target still running).
+
+NOTE: `waitstop` blocks the single-socket daemon for its duration —
+that's intended (you're waiting on one breakpoint). Don't fire other
+`cmd`/`poll` calls in parallel; they queue until it returns.
+
+`poll` is the older inactivity-based variant — returns whatever's
+buffered once output quiets (~300 ms). Prefer `waitstop` for
+breakpoints; use `poll` only to scrape already-buffered output:
 
 ```bash
 gdb_proxy.py poll 10        # wait up to ~10 s for output to settle, then return all of it
 ```
 
-`poll` returns whatever's buffered after activity quiets. If the
-target hits a breakpoint / watchpoint during the wait, the halt
-info appears in the response.
+(`watch` polls HEALTH/`info program`, which HANGS while an all-stop
+target is running, so it can miss a hit — `waitstop` supersedes it
+for breakpoint waiting.)
 
 ### Interrupt a running target
 
