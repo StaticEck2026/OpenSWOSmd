@@ -3097,6 +3097,26 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
                          (unsigned)s->leagueSectionState.phaseStartMonths[i]);
         }
         mjson_printf(fn, fnd, "%s", "]");
+
+        /* matchData.league host-native uint16 SCALARS (parent 0x64,0x66,0x68,
+         * 0x6A,0x6C,0x14A,0x14C). Like teamEntryOffsets they ride the matchData
+         * byte blob, which struct-anchors the OFFSET but keeps the saving host's
+         * BYTE ORDER — so each byte-swaps on a LE->BE cross-target load
+         * (leagueMaxSubstitutes 5 -> 0x0500=1280 -> maxSubstitutesEntries
+         * garbage -> the career play-match PLAY / VIEW RESULT button hidden;
+         * live-confirmed on the Amiga via gdb). Emit endian-neutral; re-lay on
+         * load over the blob. leagueTeamIds(0x12E) is team_ids (BE pairs);
+         * teamEntryOffsets is handled above; cupRoundResults/shuffleAndPad are
+         * byte arrays. See project_compslot_matchdata_uint16_crosstarget. */
+        mjson_printf(fn, fnd,
+            ",%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u",
+            "league_min_substitutes",          (unsigned)s->matchData.league.leagueMinSubstitutes,
+            "league_max_substitutes",          (unsigned)s->matchData.league.leagueMaxSubstitutes,
+            "league_has_groups_diy",           (unsigned)s->matchData.league.hasGroupsDiy,
+            "league_matches_per_section",      (unsigned)s->matchData.league.totalMatchesPerSection,
+            "league_matches_per_section_live", (unsigned)s->matchData.league.totalMatchesPerSectionLive,
+            "league_competition_format",       (unsigned)s->matchData.league.competitionFormat,
+            "league_round_format",             (unsigned)s->matchData.league.roundFormat);
     }
 
     /* CUP bracketScratch.teamOffsetTable[64] — int32 byte-offsets from
@@ -3362,6 +3382,16 @@ static void load_comp_slot(const char *parent, int plen,
         const char *arr = NULL; int alen = 0;
         if (mjson_find(o, olen, "$.phase_start_months", &arr, &alen) == MJSON_TOK_ARRAY)
             parse_byte_array_slice(arr, alen, s->leagueSectionState.phaseStartMonths, 128);
+        /* matchData.league host-native uint16 scalars — re-lay over the blob
+         * (see emit). Old saves lacking these keys keep the (cross-target-broken)
+         * blob values. */
+        if (mjson_get_long(o, olen, "$.league_min_substitutes", &v) > 0)          s->matchData.league.leagueMinSubstitutes = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.league_max_substitutes", &v) > 0)          s->matchData.league.leagueMaxSubstitutes = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.league_has_groups_diy", &v) > 0)           s->matchData.league.hasGroupsDiy = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.league_matches_per_section", &v) > 0)      s->matchData.league.totalMatchesPerSection = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.league_matches_per_section_live", &v) > 0) s->matchData.league.totalMatchesPerSectionLive = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.league_competition_format", &v) > 0)       s->matchData.league.competitionFormat = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.league_round_format", &v) > 0)             s->matchData.league.roundFormat = (uint16_t)v;
     }
 
     /* CUP teamOffsetTable[64] — symbolic team indices → restore to live
