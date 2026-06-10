@@ -91,22 +91,18 @@ down() {
 
 # ---- launch FS-UAE (detached) --------------------------------------------
 launch_fsuae() {
-    # Pipe FS-UAE's output through grep to DROP the WSLg GLib spam
-    # ("g_async_queue_push_front_unlocked: assertion 'item != NULL' failed",
-    # ~25 lines/sec). That spam is NON-FATAL — a newer system GLib (from the
-    # libs needed to run FS-UAE under WSL) now logs a CRITICAL on a NULL queue
-    # push the old bartman FS-UAE has always done harmlessly; FS-UAE keeps
-    # running and exits cleanly. But unfiltered it bloats $FSUAE_LOG into MBs
-    # and slows the trigger grep. The bash -c wrapper keeps fs-uae as a real
-    # child process (pgrep -x fs-uae and the port-pattern pkill still match it).
-    # A direct, un-scripted run can silence the terminal the same way:
-    #   LD_LIBRARY_PATH=. ./fs-uae ... 2>&1 | grep -v g_async_queue_push_front
-    # --clipboard_sharing=0 just drops the (separate, unrelated) clipboard-sync
-    # path; it is NOT what fixes the spam. The real cure is a newer FS-UAE build
-    # that matches modern GLib (must still carry bartman's --remote_debugger).
+    # Launch FS-UAE DIRECTLY — exactly like the VSCode bartman extension spawns
+    # it (which is reliable). Do NOT pipe it through `grep` to filter spam: the
+    # spam-fixed FS-UAE rebuild no longer emits the g_async_queue / SKIPPED FRAME
+    # flood, so the filter is dead weight — and piping a GUI emulator through a
+    # `bash -c '... | grep'` wrapper is the cause of the intermittent "FS-UAE
+    # exited before the trigger (crash?)" launches (grep exits / the pipe breaks
+    # -> FS-UAE gets SIGPIPE on its next write -> dies). Output goes straight to
+    # $FSUAE_LOG (small now). --clipboard_sharing=0 drops the WSLg clipboard-sync
+    # path (unrelated to spam, but harmless to keep off). pgrep -x fs-uae and the
+    # port-pattern pkill in down() match the direct process.
     ( cd "$FSUAE_DIR" && \
       setsid env LD_LIBRARY_PATH=. nohup \
-        bash -c '"$@" 2>&1 | grep --line-buffered -v "g_async_queue_push_front_unlocked"' _ \
         "$FSUAE_BIN" \
         --amiga_model=a1200 --automatic_input_grab=0 \
         --hard_drive_0="$DH0" --hard_drive_1="$DH1" \
@@ -122,19 +118,16 @@ launch_fsuae() {
 wait_for_trigger() {
     local end=$(( SECONDS + BOOT_TIMEOUT ))
     while (( SECONDS < end )); do
-        # The "trigger fired, stub paused at :SWOS2 entry, port open, ready for
-        # gdb" marker in FS-UAE's own logfile (FSUAE_NATIVE_LOG) DIFFERS by build:
-        #   - old stderr build:      "Breakpoint 20 triggered" (in FSUAE_LOG)
-        #   - remote_debugger_barto: "GDBSERVER: Waiting for connection..."
-        #   - spam-fixed rebuild:    "GDBSERVER: listen() succeeded on ..." — the
-        #     "Waiting for connection..." printf was dropped together with the
-        #     stderr-spam printfs (same rebuild that removed the SKIPPED FRAME /
-        #     g_async_queue spam), so listen()-succeeded — emitted when the :SWOS2
-        #     trigger opens port 2345 — is the reliable ready marker now.
-        # Match ANY of them so the script works across all three builds. The
-        # native log is cleared at the top of each attempt (see launch_fsuae),
-        # so a match is always the current session's trigger, not a stale one.
-        if grep -q 'Breakpoint 20 triggered' "$FSUAE_LOG" 2>/dev/null \
+        # READINESS = the gdb stub is LISTENING on port 2345. The :SWOS2 trigger
+        # opens that port and pauses the target at entry, waiting for gdb. The
+        # LISTEN socket is the PRIMARY, build-independent signal — robust to the
+        # GDBSERVER log-string churn that kept breaking this (the spam-fix rebuild
+        # silently dropped "Waiting for connection..."; "listen() succeeded"
+        # replaced it). The native-log greps stay as a secondary cross-build
+        # confirmation. (down() clears the native log each attempt, so a log
+        # match is always the current session's, never a stale one.)
+        if ss -ltn 2>/dev/null | grep -q ":${PORT} " \
+           || grep -q 'Breakpoint 20 triggered' "$FSUAE_LOG" 2>/dev/null \
            || grep -qE 'GDBSERVER: (Waiting for connection|listen\(\) succeeded)' "$FSUAE_NATIVE_LOG" 2>/dev/null; then
             return 0
         fi
@@ -154,10 +147,25 @@ wait_for_trigger() {
 start_daemon() {
     setsid nohup python3 "$GDB_PROXY" daemon --mode amiga --host 127.0.0.1 \
         > "$DAEMON_LOG" 2>&1 < /dev/null & disown
-    local end=$(( SECONDS + 15 ))
+    # The daemon spawns gdb and runs `target remote` with a 90s connect/remote
+    # timeout — gdb TCP-connects to FS-UAE's already-listening port early, then
+    # blocks for the handshake until the :SWOS2 trigger fires (when SWOS2
+    # launches, up to tens of seconds into a cold boot; see gdb_proxy.py). Only
+    # THEN does the daemon create $SOCK. So wait long enough to cover a full cold
+    # boot + the handshake (~100s worst case). Fail FAST, though, if FS-UAE dies
+    # on boot — no point sitting out the timeout when there's nothing to attach.
+    local end=$(( SECONDS + 110 ))
+    local fsuae_seen=0
     while (( SECONDS < end )); do
         if [ -S "$SOCK" ] && python3 "$GDB_PROXY" ping 2>/dev/null | grep -qi pong; then
             return 0
+        fi
+        # Once we've seen FS-UAE running, a later disappearance == boot crash.
+        if pgrep -x fs-uae >/dev/null 2>&1; then
+            fsuae_seen=1
+        elif (( fsuae_seen )); then
+            log "  FS-UAE exited during boot (crash) — bailing to retry"
+            return 1
         fi
         sleep 1
     done
@@ -185,16 +193,18 @@ attach_once() {
     down
     log "launching FS-UAE..."
     launch_fsuae
-    log "waiting for SWOS2 entry trigger (<= ${BOOT_TIMEOUT}s)..."
-    if ! wait_for_trigger; then
-        log "  trigger never appeared in $FSUAE_LOG"
-        return 1
-    fi
-    log "  trigger hit; settling ${SETTLE}s..."
-    sleep "$SETTLE"
-    log "starting gdb daemon..."
+    # Connect IMMEDIATELY, exactly like the VSCode bartman extension: spawn
+    # FS-UAE, then gdb `target remote` — gdb auto-retries the TCP connect
+    # (connect-timeout 20s, set in gdb_proxy.py) and grabs the stub the instant
+    # FS-UAE opens port 2345 at the :SWOS2 trigger. NO log-scraping, NO settle:
+    # the old "wait for a GDBSERVER log string, then sleep ${SETTLE}s" connected
+    # LATE, leaving a window where FS-UAE ran past entry to the menu (DEGRADED) —
+    # and depended on log strings that changed between FS-UAE builds.
+    # start_daemon waits out a full cold boot and fails FAST if FS-UAE crashes
+    # on boot, so the retry kicks in promptly instead of sitting out the connect.
+    log "starting gdb daemon (immediate, auto-retry connect)..."
     if ! start_daemon; then
-        log "  daemon never came up (no pong)"
+        log "  attach did not come up (FS-UAE boot crash, or stub never opened)"
         return 1
     fi
     log "health check..."

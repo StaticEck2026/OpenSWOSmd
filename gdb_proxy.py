@@ -96,18 +96,29 @@ class GdbDaemon:
         # Drop the banner; subsequent `cmd` calls return clean responses.
         self._drain()
         if mode == "amiga":
-            # Robustness: give the FS-UAE stub generous packet timeouts so a
-            # slow handshake right after the SWOS2 entry trigger doesn't
-            # half-fail into a degraded ("not being run") connection. These
-            # are best-effort — ignore prompts that don't come.
-            for opt in ("set tcp connect-timeout 20",
-                        "set remotetimeout 20"):
+            # CRITICAL timing — confirmed against barto_gdbserver.cpp: FS-UAE's
+            # gdb stub opens the LISTEN port at STARTUP, but only accept()s and
+            # handshakes when the :SWOS2 trigger fires (when SWOS2 actually
+            # launches — several to tens of seconds into a cold boot). gdb
+            # TCP-connects early (like VSCode's immediate `target remote`) and
+            # then BLOCKS on the handshake response until that trigger. So the
+            # connect/remote timeouts MUST exceed the worst-case boot->trigger
+            # time, or a slow cold boot makes gdb give up FIRST -> the attach
+            # half-fails into a DEGRADED ("not being run") state (this was the
+            # intermittent ~1-in-3 failure: fast boot ~5s = OK, slow boot >20s =
+            # DEGRADED with the old 20s timeouts). 90s covers even a slow WSLg
+            # cold boot; a genuine no-trigger hang is caught much sooner by
+            # amiga_gdb.sh's FS-UAE-liveness fail-fast.
+            for opt in ("set tcp connect-timeout 90",
+                        "set remotetimeout 90"):
                 self._send_raw(opt + "\n")
                 self._wait_for_prompt(timeout=3.0)
                 self._drain()
-            # Attach to FS-UAE's stub.
+            # Attach. Connects immediately (VSCode-style); the handshake (and the
+            # stop at the SWOS2 entry) completes when the :SWOS2 trigger fires.
+            # Wait must exceed the 90s remote/connect timeout above.
             self._send_raw(f"target remote {host}:{port}\n")
-            self._wait_for_prompt(timeout=15.0)
+            self._wait_for_prompt(timeout=95.0)
             self._drain()
             # Self-verify so a degraded attach is VISIBLE (logged) rather than
             # silently accepted. The one-shot port means recovery is a full

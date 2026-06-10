@@ -29,16 +29,32 @@ attaches/launches appropriately, and listens on a Unix socket.
 
 ## Build the Amiga ELF
 
-From WSL inside the project root:
+From WSL inside the project root. The m68k toolchain (`m68k-amiga-elf-gcc`,
+`-as`, and `elf2hunk`) ships with the bartman VS Code extension and is **not
+on PATH** by default — add it:
 
 ```bash
 cd /mnt/c/Projects/AI/SWOS/SWOS_C
+TCDIR=/mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/linux
+export PATH="$TCDIR/opt/bin:$TCDIR:$PATH"   # opt/bin = gcc/as, $TCDIR = elf2hunk
+
+rm -f obj/*.d   # see note below — required when the last build was on Windows
 make            # produces uae/dh0/data/SWOS2 (hunk) + SWOS2.elf (gdb)
 ```
 
 `SWOS2.elf` is what gdb loads for symbols. The hunk-format `SWOS2`
 binary is what FS-UAE actually runs (the build emits both from one
 ELF via `elf2hunk`).
+
+**Why `rm obj/*.d`:** the auto-generated dependency files embed the *absolute
+path of the build host*. A prior **Windows** build writes `C:/...` (gcc) and
+`C:\...` (asm, backslashes) into `obj/*.d`; WSL `make` then dies with
+`obj/X.d:1: *** target pattern contains no '%'` (the `C:` colon looks like a
+rule separator). Deleting the `.d` files sidesteps it — the `.o` files stay, so
+make falls back to **mtime-based incremental** (only changed `.c`/`.s` recompile)
+and regenerates `.d` with this host's paths. Don't try to `sed` the paths: the
+asm `.d` uses backslashes that collide with make's line-continuation `\`.
+(A Windows build self-heals the same way next time it runs.)
 
 ---
 
@@ -61,19 +77,30 @@ bash /mnt/c/Projects/AI/SWOS/SWOS_C/amiga_gdb.sh up
 ```
 
 `amiga_gdb.sh up` does the whole dance deterministically and prints `OK`
-(or `FAIL`) at the end:
+(or `FAIL`) at the end. As of 2026-06-10 it's reliable: **4/4 cold boots
+HEALTHY, ~6s each, attempt 1** (was intermittently DEGRADED). The flow now
+mirrors how the VSCode bartman extension attaches:
 
 1. tears down any stale FS-UAE / gdb / daemon,
-2. launches FS-UAE,
-3. waits for the `Breakpoint 20 triggered` SWOS2-entry line in the log,
-   then settles,
-4. starts the `gdb_proxy.py` daemon,
-5. **health-checks** the attach (target stopped at SIGTRAP, PC == the
-   SWOS2 entry `0x219b10`), and
-6. if the attach came up DEGRADED (`not being run` / no registers — the
-   FS-UAE stub's racy one-shot port), does a **full restart and retries**
-   (up to `ATTACH_RETRIES=4`). A degraded attach is the historical
-   flakiness; auto-restart is the only real recovery for the one-shot port.
+2. launches FS-UAE **directly** (no `grep` pipe — that pipe caused SIGPIPE
+   early-exits; VSCode spawns it directly too),
+3. starts the `gdb_proxy.py` daemon **immediately** — no log-scraping, no
+   settle. gdb's `target remote` (with a 90s connect/remote timeout) grabs
+   the stub the instant it's ready, exactly like VSCode's `target remote
+   localhost:2345` right after spawn,
+4. **health-checks** the attach (target stopped at SIGTRAP, PC == the SWOS2
+   entry `0x219b10`),
+5. if DEGRADED, does a full restart and retries (up to `ATTACH_RETRIES=4`),
+   and fails FAST if FS-UAE crashes on boot.
+
+**Why the 90s timeout matters (the old flakiness, root-caused against
+`barto_gdbserver.cpp`):** the stub opens the LISTEN port at *startup* but only
+`accept()`s + handshakes when the `:SWOS2` trigger fires (when SWOS2 actually
+launches — several to tens of seconds into a cold boot). gdb TCP-connects early
+and BLOCKS on the handshake until that trigger. The old 20s `remotetimeout` was
+sometimes shorter than a slow boot's time-to-SWOS2, so gdb gave up first →
+DEGRADED. 90s outwaits any boot. No FS-UAE change needed. (The old
+`wait_for_trigger` log-scrape + `SETTLE` are retired; those env vars are inert.)
 
 Then drive gdb as usual and check the live verdict any time:
 
@@ -362,6 +389,35 @@ pkill -f "fs-uae --amiga"                                     # closes FS-UAE
   the *Windows* FS-UAE binary (it binds to Windows loopback, which
   WSL2 can't see). Use the bundled Linux FS-UAE binary instead, as
   documented above.
+- **`up` fails every attempt: "trigger never appeared in /tmp/fs-uae.log"**
+  (4 retries → FAIL), and gdb "suddenly takes forever / never worked
+  before." The FS-UAE build's GDBSERVER log strings changed.
+  `wait_for_trigger` keys on a string in the **native** log
+  (`$HOME/FS-UAE/Cache/Logs/fs-uae.log.txt`) to know the `:SWOS2` trigger
+  fired. The spam-fix rebuild (remote_debugger_barto, the one that removed
+  the `g_async_queue` / `SKIPPED FRAME` stderr spam) **dropped the
+  `GDBSERVER: Waiting for connection...` printf**; it now emits
+  `GDBSERVER: listen() succeeded on 127.0.0.1:2345` instead. `amiga_gdb.sh`
+  matches both now (fixed 2026-06-09). If a future rebuild changes it again,
+  `grep GDBSERVER "$HOME/FS-UAE/Cache/Logs/fs-uae.log.txt"` to see the actual
+  ready marker and add it to `wait_for_trigger`.
+- **"DEGRADED" while the target is RUNNING is NORMAL, not broken.**
+  `amiga_gdb.sh status` / `gdb_proxy.py health` probe with `info program`,
+  which **hangs while an all-stop target runs** → reported as DEGRADED. Do
+  NOT interpret it as a dead session and start rebooting. After `cmd
+  continue`, use `waitstop` (or `watch`) and fire **no** other
+  `cmd`/`status`/`health`/`poll` until it returns — concurrent commands wedge
+  the single socket (this caused a long thrash once). Only query when stopped.
+- **Teardown:** `amiga_gdb.sh down`. NEVER `pkill -f gdb_proxy` — the pattern
+  matches the `pkill` command's own line and kills its shell (empty exit 1).
+  Use a `[g]db_proxy` / `[f]s-uae` bracket pattern if you must pgrep/pkill.
+- **Building the Amiga ELF under WSL: `obj/*.d:1: target pattern contains no
+  '%'`.** The dependency files carry Windows paths (`obj/X.o: C:/Projects/...`)
+  from a prior Windows build; the `C:` colon breaks GNU make. Rewrite the drive
+  prefix (`sed -i 's#C:/#/mnt/c/#g' obj/*.d`) — they're regenerable artifacts,
+  and the build stays incremental. Toolchain lives at
+  `.../bartmanabyss.amiga-debug-*/bin/linux/{opt/bin,}` (gcc/as + elf2hunk);
+  put both on PATH. `make` outputs straight to `uae/dh0/data/SWOS2{,.elf}`.
 
 ---
 
