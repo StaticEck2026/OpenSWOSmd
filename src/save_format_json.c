@@ -3199,25 +3199,39 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
             mjson_printf(fn, fnd, "%s", "]");
         }
 
-        /* CUP per-round config arrays — roundLegs/roundExtraTime/roundPenalties[6]
-         * (parent 0x66/0x72/0x7E). Host-native uint16 DESIGN data the game reads
-         * during cup setup/matches: roundLegs is the source roundFormat is derived
-         * from (roundFormat = roundLegs[currentRoundIndex]); extraTime/penalties
-         * gate match flow. They ride the matchData byte blob, so each byte-swaps on
-         * a LE->BE cross-target load (roundLegs 2 -> 0x0200 -> roundFormat derives
-         * to 512 -> fails the ==2 two-leg test -> round collapses to single-leg).
-         * Emit endian-neutral; re-lay over the blob on load. Verified live on the
-         * Amiga 2026-06-10 via TEST.DIY (SDL-LE save -> BE load read roundLegs=2,
-         * not 512). (Unlike the LEAGUE view the cup team list is cupTeamIds@0x24E,
-         * so leagueTeamIds[14]/[15] never overflow into this region.)
+        /* CUP round-config + bracket-state uint16s, plus the per-round config
+         * arrays (roundLegs/roundExtraTime/roundPenalties[6] @ parent 0x66/0x72/
+         * 0x7E). All ride the matchData/context byte blob, so each byte-swaps on a
+         * LE->BE cross-target load (roundLegs 2 -> 0x0200 -> roundFormat derives to
+         * 512 -> the ==2 two-leg test fails -> round collapses to single-leg;
+         * verified live on the Amiga 2026-06-10 via TEST.DIY: SDL-LE save -> BE
+         * load read roundLegs=2, not 512). Emit endian-neutral; re-lay on load.
+         * (Cup team list is cupTeamIds@0x24E, so leagueTeamIds[14]/[15] never
+         * overflow into 0x14A/0x14C here — unlike the LEAGUE view.)
          *
-         * NOT serialized — reset to 0 or re-derived from the arrays at cup-round
-         * setup, so persisting them is redundant (confirmed: saved 1/30/7 read back
-         * as 0 on the live Amiga): currentMatchIndex (diy_competition.c reset at
-         * 1268/2757/...), competitionFormat (1673/2772/...), roundFormat (derived
-         * 1677/2760/4453), secondLegCounter/groupSectionFlag/matchCount/curMonthIdx
-         * (reset 1687-1690/4465-4466), totalMatches (derived 782 from numRounds/
-         * roundLegs). See project_compslot_cup_uint16_crosstarget. */
+         * Of these, only roundLegs/roundExtraTime/roundPenalties genuinely PERSIST;
+         * the 8 scalars (currentMatchIndex, competitionFormat, roundFormat,
+         * secondLegCounter, groupSectionFlag, matchCount, totalMatches,
+         * curMonthIdx) are RESET/RE-DERIVED at cup setup (diy_competition.c:
+         * competitionFormat/counters 1673/1687-1690, roundFormat<-roundLegs 1677,
+         * totalMatches<-numTeams 1755 via _DIY_RecomputeCompetitionDerivedFields,
+         * which runs on load) so today they round-trip as 0/derived regardless.
+         * We KEEP serializing them as a safety margin while the JSON save migration
+         * (roadmap step 4) is incomplete: should a field stop being recomputed, or
+         * be read before setup, the saved value is already correct cross-target.
+         * Revisit (consider trimming) once the JSON format is the sole source of
+         * truth. (Trim cf5ad7e reverted on this basis 2026-06-10.) See
+         * project_compslot_cup_uint16_crosstarget. */
+        mjson_printf(fn, fnd,
+            ",%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u",
+            "cup_current_match_index", (unsigned)s->matchData.cup.currentMatchIndex,
+            "cup_competition_format",  (unsigned)s->matchData.cup.competitionFormat,
+            "cup_round_format",        (unsigned)s->matchData.cup.roundFormat,
+            "cup_second_leg_counter",  (unsigned)s->bracketScratch.secondLegCounter,
+            "cup_group_section_flag",  (unsigned)s->bracketScratch.groupSectionFlag,
+            "cup_match_count",         (unsigned)s->bracketScratch.matchCount,
+            "cup_total_matches",       (unsigned)s->bracketScratch.totalMatches,
+            "cup_cur_month_idx",       (unsigned)s->bracketScratch.curMonthIdx);
         mjson_printf(fn, fnd, ",%Q:[", "cup_round_legs");
         for (int i = 0; i < 6; i++) {
             if (i > 0) mjson_printf(fn, fnd, "%s", ",");
@@ -3483,14 +3497,20 @@ static void load_comp_slot(const char *parent, int plen,
                 parse_u16_array_slice(sa, sl, sc[k].dst, 36);
         }
 
-        /* CUP per-round config arrays — endian-neutral re-lay over the blob (see
-         * emit). Old saves lacking these keys keep the (cross-target-broken) blob
-         * values. parse_u16_array_slice writes host-native; cap 12 bytes = 6 words.
-         * Only the 3 design arrays are restored; the round-config/bracket scalars
-         * (currentMatchIndex, competitionFormat, roundFormat, secondLegCounter,
-         * groupSectionFlag, matchCount, totalMatches, curMonthIdx) are reset or
-         * re-derived from these arrays at cup setup, so they are neither emitted
-         * nor restored. */
+        /* CUP round-config + bracket-state uint16s + per-round config arrays —
+         * endian-neutral re-lay over the blob (see emit). The 8 scalars are
+         * recomputed at cup setup, so they are belt-and-suspenders kept during the
+         * JSON migration; the 3 arrays are the genuine persisted design data. Old
+         * saves lacking these keys keep the blob values. parse_u16_array_slice
+         * writes host-native; cap 12 bytes = 6 words. */
+        if (mjson_get_long(o, olen, "$.cup_current_match_index", &v) > 0) s->matchData.cup.currentMatchIndex = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.cup_competition_format", &v) > 0)  s->matchData.cup.competitionFormat  = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.cup_round_format", &v) > 0)        s->matchData.cup.roundFormat        = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.cup_second_leg_counter", &v) > 0)  s->bracketScratch.secondLegCounter  = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.cup_group_section_flag", &v) > 0)  s->bracketScratch.groupSectionFlag  = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.cup_match_count", &v) > 0)         s->bracketScratch.matchCount        = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.cup_total_matches", &v) > 0)       s->bracketScratch.totalMatches      = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.cup_cur_month_idx", &v) > 0)       s->bracketScratch.curMonthIdx       = (uint16_t)v;
         {
             const char *ra = NULL; int ral = 0;
             if (mjson_find(o, olen, "$.cup_round_legs", &ra, &ral) == MJSON_TOK_ARRAY)
