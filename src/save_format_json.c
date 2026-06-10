@@ -3198,6 +3198,54 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
             }
             mjson_printf(fn, fnd, "%s", "]");
         }
+
+        /* CUP host-native uint16 round-config + bracket state. The round-
+         * config scalars (currentMatchIndex@0x64, competitionFormat@0x14A,
+         * roundFormat@0x14C) and the roundLegs/roundExtraTime/roundPenalties[6]
+         * arrays (0x66/0x72/0x7E) ride the matchData byte blob; the bracket
+         * counters (secondLegCounter@0x32E, groupSectionFlag@0x330,
+         * matchCount@0x332, totalMatches@0x334, curMonthIdx@0x336) ride the raw
+         * context blob. All are host-native uint16 read with exact 0/1/2
+         * comparisons in the cup match/bracket path and are NOT recomputed on
+         * load, so each byte-swaps on a LE->BE cross-target load: roundFormat
+         * 2 -> 0x0200 fails the ==2 two-leg test (round collapses to single-
+         * leg), roundLegs/roundExtraTime/roundPenalties 1 -> 0x0100 disable
+         * two-leg/extra-time/penalties, a swapped currentMatchIndex/curMonthIdx
+         * indexes the wrong fixture/month, a swapped groupSectionFlag mis-
+         * selects the group second-leg branch. Emit endian-neutral; re-lay over
+         * the blob on load. (Unlike the LEAGUE view, 0x14A/0x14C are genuinely
+         * competitionFormat/roundFormat here: a cup's team list is cupTeamIds
+         * @0x24E, so leagueTeamIds[14]/[15] never overflow into them — the
+         * league-aliasing caveat does NOT apply.) See
+         * project_compslot_cup_uint16_crosstarget. */
+        mjson_printf(fn, fnd,
+            ",%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u",
+            "cup_current_match_index", (unsigned)s->matchData.cup.currentMatchIndex,
+            "cup_competition_format",  (unsigned)s->matchData.cup.competitionFormat,
+            "cup_round_format",        (unsigned)s->matchData.cup.roundFormat,
+            "cup_second_leg_counter",  (unsigned)s->bracketScratch.secondLegCounter,
+            "cup_group_section_flag",  (unsigned)s->bracketScratch.groupSectionFlag,
+            "cup_match_count",         (unsigned)s->bracketScratch.matchCount,
+            "cup_total_matches",       (unsigned)s->bracketScratch.totalMatches,
+            "cup_cur_month_idx",       (unsigned)s->bracketScratch.curMonthIdx);
+        mjson_printf(fn, fnd, ",%Q:[", "cup_round_legs");
+        for (int i = 0; i < 6; i++) {
+            if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+            mjson_printf(fn, fnd, "%u", (unsigned)s->matchData.cup.roundLegs[i]);
+        }
+        mjson_printf(fn, fnd, "%s", "]");
+        mjson_printf(fn, fnd, ",%Q:[", "cup_round_extra_time");
+        for (int i = 0; i < 6; i++) {
+            if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+            mjson_printf(fn, fnd, "%u", (unsigned)s->matchData.cup.roundExtraTime[i]);
+        }
+        mjson_printf(fn, fnd, "%s", "]");
+        mjson_printf(fn, fnd, ",%Q:[", "cup_round_penalties");
+        for (int i = 0; i < 6; i++) {
+            if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+            mjson_printf(fn, fnd, "%u", (unsigned)s->matchData.cup.roundPenalties[i]);
+        }
+        mjson_printf(fn, fnd, "%s", "]");
     }
 
     /* TOURNAMENT (type 2) slot records — the 6-element DIYTournamentSlot
@@ -3443,6 +3491,31 @@ static void load_comp_slot(const char *parent, int plen,
             const char *sa = NULL; int sl = 0;
             if (mjson_find(o, olen, sc[k].key, &sa, &sl) == MJSON_TOK_ARRAY)
                 parse_u16_array_slice(sa, sl, sc[k].dst, 36);
+        }
+
+        /* CUP host-native uint16 round-config + bracket state — endian-neutral
+         * re-lay over the blob (see emit). Old saves lacking these keys keep
+         * the (cross-target-broken) blob values. Scalars first, then the three
+         * 6-entry uint16 arrays (parse_u16_array_slice writes host-native; cap
+         * 12 bytes = 6 words). NOT competition_format/round_format for LEAGUE —
+         * that exclusion is in the type-0 block above; here (cup) they are
+         * genuine fields, not leagueTeamIds overflow. */
+        if (mjson_get_long(o, olen, "$.cup_current_match_index", &v) > 0) s->matchData.cup.currentMatchIndex = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.cup_competition_format", &v) > 0)  s->matchData.cup.competitionFormat  = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.cup_round_format", &v) > 0)        s->matchData.cup.roundFormat        = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.cup_second_leg_counter", &v) > 0)  s->bracketScratch.secondLegCounter  = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.cup_group_section_flag", &v) > 0)  s->bracketScratch.groupSectionFlag  = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.cup_match_count", &v) > 0)         s->bracketScratch.matchCount        = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.cup_total_matches", &v) > 0)       s->bracketScratch.totalMatches      = (uint16_t)v;
+        if (mjson_get_long(o, olen, "$.cup_cur_month_idx", &v) > 0)       s->bracketScratch.curMonthIdx       = (uint16_t)v;
+        {
+            const char *ra = NULL; int ral = 0;
+            if (mjson_find(o, olen, "$.cup_round_legs", &ra, &ral) == MJSON_TOK_ARRAY)
+                parse_u16_array_slice(ra, ral, (uint8_t *)s->matchData.cup.roundLegs, 12);
+            if (mjson_find(o, olen, "$.cup_round_extra_time", &ra, &ral) == MJSON_TOK_ARRAY)
+                parse_u16_array_slice(ra, ral, (uint8_t *)s->matchData.cup.roundExtraTime, 12);
+            if (mjson_find(o, olen, "$.cup_round_penalties", &ra, &ral) == MJSON_TOK_ARRAY)
+                parse_u16_array_slice(ra, ral, (uint8_t *)s->matchData.cup.roundPenalties, 12);
         }
     }
 
@@ -4416,6 +4489,21 @@ static int field_in_range(const FieldDesc *f,
     return p >= lo && p < hi;
 }
 
+/* Byte footprint of a FieldDesc's target: the type width for scalars, the
+ * declared `size` for string/bytes/array fields. Used to zero exactly the
+ * save-covered fields before a load (see load_competition_buf). */
+static uint32_t field_byte_size(const FieldDesc *f)
+{
+    switch (f->type) {
+    case FLD_U8:  case FLD_S8:        return 1;
+    case FLD_U16: case FLD_S16:       return 2;
+    case FLD_U32: case FLD_S32:       return 4;
+    case FLD_STR: case FLD_BYTES:
+    case FLD_U16_ARRAY: case FLD_U32_ARRAY: return f->size;
+    default:                          return 0;
+    }
+}
+
 
 static void emit_scalar_table_range(mjson_print_fn_t fn, void *fnd,
                                     const char *section_key,
@@ -4857,16 +4945,32 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
     const uint8_t *lo = &competitionFileBuffer;
     const uint8_t *hi = (const uint8_t *)&numSelectedTeams +
                         sizeof(numSelectedTeams);
-    uint32_t want = (uint32_t)(hi - lo);
-    /* competitionFileBuffer is a 1-byte symbol stub on the SDL build
-     * (aliased into the careerFileBuffer overlay), so the real preset
-     * region spans `want` bytes, not 1. Launder the destination address
-     * through a volatile so _FORTIFY_SOURCE's __memset_chk doesn't
-     * size-check against the 1-byte stub and abort (the career load path
-     * dodges this by zeroing careerFileBufferBuf directly). Pre-existing;
-     * first reachable now that tournament presets can be saved. */
-    volatile uintptr_t dst = (uintptr_t)lo;
-    memset((void *)dst, 0, want);
+    /* Zero the destination FIELD-BY-FIELD, NOT with one memset over
+     * [lo, hi). On the SDL build competitionFileBuffer was un-tangled into a
+     * STANDALONE CompetitionSlotBuffer (0x51a000), 1.7 MB BELOW the
+     * careerFileBuffer overlay (0x6ca144) — so &competitionFileBuffer (lo)
+     * and &numSelectedTeams (hi) no longer bracket a contiguous region. A
+     * single `memset(lo, 0, hi-lo)` scythes the ~1.7 MB linker gap between
+     * them, zeroing unrelated globals that the linker happened to place
+     * there (spriteBlitQueue, menuEntries, sprite tables, ...). That left
+     * spriteBlitQueue == 0 -> *(uint32_t*)0 = BLT_BLITQ_END -> SIGSEGV in the
+     * next menu sprite draw on any DIY/preset reload (live-confirmed via gdb:
+     * spriteBlitQueue 0x0, backing buffers intact).
+     *
+     * Zeroing each in-range s_career_scalars field by its own (addr, size)
+     * clears EXACTLY what the load restores and never touches the gap. Since
+     * opaque_data is retired, every save-relevant byte is covered by a typed
+     * field/blob, so unmodeled interstitial padding doesn't matter. Correct
+     * cross-target: on the Amiga the in-range fields are contiguous, so this
+     * covers the same set the old single memset did; on SDL it skips the gap.
+     * (The competitionFileBuffer slot itself is the primary_competition_context
+     * FLD_BYTES blob — zeroed whole here.) See
+     * project_diy_preset_load_memset_gap. */
+    for (const FieldDesc *f = s_career_scalars; f->type != FLD_END; f++) {
+        if (!field_in_range(f, lo, hi)) continue;
+        uint32_t sz = field_byte_size(f);
+        if (sz) memset(f->addr, 0, sz);
+    }
 
     /* Reset string pool — see comment in apply_semantic_load. */
     string_pool_reset();
@@ -4988,6 +5092,19 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
         }
     }
 
+    /* numSelectedTeams: restore by SEMANTIC VALUE, not via the address-range
+     * comp_scalars table. For a standalone .DIY/.PRE the selected teams ARE the
+     * diy teams, so numSelectedTeams == numDiyTeams by construction. The saved
+     * num_selected_teams_inner DOES carry 16, but load_scalar_table_range only
+     * applies fields whose runtime address falls in [&competitionFileBuffer,
+     * &numSelectedTeams) — and on the 32-bit Amiga those two symbols sort in the
+     * OPPOSITE order vs the 64-bit SDL build, so that range is empty and the
+     * field was silently dropped (-> 0 -> findTeamInCache bails -> cup
+     * _VerifyTeamLoaded panic). Setting it from numDiyTeams is target-independent
+     * and address-free. (The address-range field selection itself is being
+     * removed — see the save-format rule in CLAUDE.md / docs.) */
+    numSelectedTeams = numDiyTeams;
+
     /* TYPE-2 tournament KNOCKOUT stage: rebuild the cup bracket
      * teamOffsetTable from cupTeamIds. teamOffsetTable[k] is a DERIVED
      * pointer cache (= the selTeamsPtr byte-offset of cupTeamIds[k]'s team,
@@ -5017,6 +5134,15 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
         }
     }
 
+    /* NB: do NOT call _RebuildPointersAfterLoad() here. It is the CAREER
+     * post-load fixup (re-derives currentCompetitionPtr et al. from
+     * competitionsTable + selTeamNumber) and is wrong for a standalone
+     * DIY/preset — a correctly-routed .DIY/.PRE goes to the DIY menu
+     * (diyLeagueTournamentMenu / _ShowDIYCupMenuWithParams), which reads only
+     * diyCompetitionStart/competitionFileBuffer and is set up by _StartContest's
+     * own DIY path. The earlier crash was a SYMPTOM of mis-routing to the career
+     * contestMenu because gameType wasn't restored; the real fix is setting
+     * gameType in _LoadDIYFile/_LoadPresetFile. See project_diy_preset_load_gametype. */
     swos_io_free(src);
     return 0;
 }
