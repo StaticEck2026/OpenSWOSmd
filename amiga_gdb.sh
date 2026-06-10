@@ -122,11 +122,20 @@ launch_fsuae() {
 wait_for_trigger() {
     local end=$(( SECONDS + BOOT_TIMEOUT ))
     while (( SECONDS < end )); do
-        # Old build: "Breakpoint 20 triggered" on stderr (FSUAE_LOG).
-        # remote_debugger_barto build: "GDBSERVER: Waiting for connection..." in
-        # FS-UAE's own logfile (FSUAE_NATIVE_LOG) when the :SWOS2 trigger fires.
+        # The "trigger fired, stub paused at :SWOS2 entry, port open, ready for
+        # gdb" marker in FS-UAE's own logfile (FSUAE_NATIVE_LOG) DIFFERS by build:
+        #   - old stderr build:      "Breakpoint 20 triggered" (in FSUAE_LOG)
+        #   - remote_debugger_barto: "GDBSERVER: Waiting for connection..."
+        #   - spam-fixed rebuild:    "GDBSERVER: listen() succeeded on ..." — the
+        #     "Waiting for connection..." printf was dropped together with the
+        #     stderr-spam printfs (same rebuild that removed the SKIPPED FRAME /
+        #     g_async_queue spam), so listen()-succeeded — emitted when the :SWOS2
+        #     trigger opens port 2345 — is the reliable ready marker now.
+        # Match ANY of them so the script works across all three builds. The
+        # native log is cleared at the top of each attempt (see launch_fsuae),
+        # so a match is always the current session's trigger, not a stale one.
         if grep -q 'Breakpoint 20 triggered' "$FSUAE_LOG" 2>/dev/null \
-           || grep -q 'GDBSERVER: Waiting for connection' "$FSUAE_NATIVE_LOG" 2>/dev/null; then
+           || grep -qE 'GDBSERVER: (Waiting for connection|listen\(\) succeeded)' "$FSUAE_NATIVE_LOG" 2>/dev/null; then
             return 0
         fi
         # Fail-fast: if FS-UAE has died (e.g. the WSLg clipboard GLib crash),
