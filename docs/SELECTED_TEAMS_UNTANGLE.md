@@ -1,0 +1,139 @@
+# Selected-teams cluster untangle (careerFileBuffer overlay, tail)
+
+**Status: DESIGN — not yet implemented.** Reviewed-before-code pass, same
+discipline as `docs/CAREERTEAM_STEP4_REWORK.md`.
+
+## Goal
+
+Promote the raw `selTeamsPtr` byte region + its five alias labels into a typed
+`TeamFileEx selectedTeams[]` array with named-field access, removing the last
+substantive raw/adjacency cluster from the `careerFileBuffer` overlay (roadmap
+step 3). The on-disk save is already typed for this region, so this is an
+**in-memory-only** change — save-format-neutral.
+
+## Current overlay layout (verified)
+
+In `src/swos_globals_career_overlay.c`, immediately after `numSelectedTeams`,
+the Amiga `ds.b` run (offsets from `&selTeamsPtr`):
+
+| label | offset | reserved | what it really is |
+|---|---|---|---|
+| `selTeamsPtr` | +0 | 4 | base of inline `TeamFileEx[]` (NOT a pointer) |
+| `selTeamIsComputerFlag` | +4 | 1 | `selectedTeams[0].team.teamControls` |
+| `selTeamNameBase` | +5 | 20 | `selectedTeams[0].team.teamName[17]` |
+| `selTeamImportField` | +25 | 5 | `selectedTeams[0].team.league` |
+| `selTeamSocksColor` | +30 | 30 | `selectedTeams[0].team.prSocksColor` |
+| `selTeamPlayerIndices` | +60 | 1308 | `selectedTeams[0].team.playerNumbers[16]` |
+| `editTeamsBuffer` | +1368 | 43778 | edit-teams workspace (overlaps `selectedTeams[2..]`) |
+| `editTeamsSaveVarsArea` | +45146 | 23254 | edit-teams save scratch |
+
+## Verified mechanism
+
+- **`selTeamsPtr` is the array base, not a pointer.** `extern uint8_t
+  selTeamsPtr;` and team `i` is `(TeamFileEx *)&selTeamsPtr + i` (684-byte
+  stride) — `diy_competition.c:74`. It used to be `TeamFile *selTeamsPtr` (a real
+  4-byte pointer); a 684-byte write to `&selTeamsPtr` stomped the next global and
+  hung the friendly-team menu, so it was redefined as a backing-buffer base
+  (`swos_globals.c:590`), exactly like `currentMenu`/`menuEntries`.
+- **The five `selTeam*` labels are aliases into record [0]** at the `TeamFile`
+  offsets in the table above. Code derives the per-record field offset as
+  `(&selTeamX - &selTeamsPtr)`, valid for every record incl. `careerTeam`
+  (`diy_competition.c:80`). `selTeamImportField` is a misnomer — it's the
+  `league` byte (offset 25), saved/restored during team import in
+  `edit_tactics.c`.
+- **`numSelectedTeams`** (uint16) bounds the array. Max count TBC — see Open
+  questions; the legacy save size is `numSelectedTeams * 684 + 2`.
+- **`editTeamsBuffer` overlaps the array.** Only `1368 B = exactly 2 × 684` sit
+  between `selTeamsPtr` and `editTeamsBuffer`, so `selectedTeams[0..1]` live in
+  the named region and `selectedTeams[2..N-1]` live inside `editTeamsBuffer`'s
+  space. Career-play (selected teams) and edit-teams use this memory in
+  different modes — an intentional union (cf. the league-table / audio-bank
+  overlay, `project_diycomp_league_table_overlay`).
+- **Save is already typed.** `emit_team_file_ex_body` / `load_team_file_ex_slice`
+  serialize a `selected_teams` JSON array of `TeamFileEx` and load each into
+  `(TeamFileEx *)&selTeamsPtr + i` (`save_format_json.c` ~2433/2513/3925). `teamSel`
+  is already a stable identity (careerTeam=-1, else array index), not a raw
+  offset (`careerTeam` step 4). So retyping the in-memory region changes no
+  bytes on disk.
+
+## Proposed design
+
+Introduce a typed carrier and re-point the labels at it, keeping the
+`editTeamsBuffer` union intact.
+
+```c
+/* selected_teams.c (new) — career-mode selected-team records.
+ * Shares its backing with editTeamsBuffer (different game modes), so the
+ * carrier is sized to the LARGER edit-teams view, and selectedTeams[] is the
+ * typed view over its head. Do NOT split the union (overlapped-data rule). */
+#define MAX_SELECTED_TEAMS 32   /* career_teams.c:262 caps numSelectedTeams<=32;
+                                 * SAVE_SIZE 0x5582 = 2 + 32*684 confirms it */
+
+union SelectedTeamsArea {
+    TeamFileEx selectedTeams[MAX_SELECTED_TEAMS];  /* career view (head) */
+    uint8_t    editTeamsBuffer[43778];             /* edit-teams view */
+};
+```
+
+- `selTeamsPtr` → real label at `&selectedTeams[0]`.
+- `selTeamIsComputerFlag/NameBase/ImportField/SocksColor/PlayerIndices` → real
+  labels at the corresponding `selectedTeams[0].team.<field>` offsets (so
+  `(&selTeamX - &selTeamsPtr)` keeps yielding the right per-record offset).
+- `editTeamsBuffer` → the union's byte view (`+0` of the union, i.e. the same
+  base; note: on Amiga `editTeamsBuffer` started at `+1368`, so the union base
+  is `selTeamsPtr`, and `editTeamsBuffer` is `(uint8_t*)&selectedTeams[2]` —
+  **confirm this is acceptable vs. keeping `editTeamsBuffer` at its exact legacy
+  offset**; see Open questions).
+- `editTeamsSaveVarsArea` stays as-is (after the union).
+
+The overlay reserves the run's bytes with `.skip` (no cascade), matching the
+pilot/region recipe; the typed carrier lives in the new file with the legacy
+names re-emitted as real labels so every reader and the save `FX(...)`/`FA(...)`
+descriptors keep working unchanged.
+
+## Phased plan (mirrors careerTeam step 4)
+
+1. **Decouple / scalar tail** — confirm no reader does raw `&selTeamsPtr + N`
+   arithmetic that assumes adjacency to `editTeamsBuffer` beyond the union
+   (grep `selTeamsPtr`, `editTeamsBuffer`). Resolve the offset question below.
+2. **Introduce the typed carrier** (`selectedTeams[]` + alias labels) behind the
+   existing offsets; overlay reserves bytes. Build all 3 Linux arches.
+3. **Convert raw access sites** to `selectedTeams[i].team.<field>` /
+   `selectedTeams[i]` where it clarifies (optional, incremental — the `.equ`/
+   real-label aliases keep raw sites working meanwhile).
+4. **Verify**: `SWOS_SAVE_FORMAT_JSON_VERIFY=1` round-trip = 0 mismatches;
+   load an existing career `.CAR`; cross-target save round-trip (SDL→Amiga).
+
+## Open questions (resolve before/at phase 1)
+
+1. **Max `numSelectedTeams`** — RESOLVED: **32**. `career_teams.c:262`
+   (`_RestoreSelTeamsPtr`) panics if `numSelectedTeams > 32`, and the backup
+   `SAVE_SIZE 0x5582 = 21890 = numSelectedTeams(2) + 32 * 684`. So the carrier
+   head is exactly `TeamFileEx selectedTeams[32]` (21888 B). Note: that backup
+   (`career_teams.c` `savedTeamsBackupBuffer[0x5582]`) raw-memcpy's
+   `numSelectedTeams`+array as one contiguous block — a raw-access site that
+   relies on `selTeamsPtr` immediately following `numSelectedTeams`; the retype
+   keeps that adjacency, so it stays valid.
+2. **`editTeamsBuffer` base offset** — legacy `editTeamsBuffer` = `selTeamsPtr +
+   1368` (= `&selectedTeams[2]`). Is anything sensitive to its *exact* address,
+   or only to it being a ≥43778-byte scratch region that shares memory with the
+   tail of `selectedTeams`? If the latter, the union as drawn is fine; if the
+   former, keep `editTeamsBuffer` anchored at `+1368` and treat `selectedTeams`
+   as the head that runs into it.
+3. **Is the union load-bearing?** Does any live code write via one view and read
+   via the other (true union dependency), or are career-play and edit-teams
+   strictly disjoint in time? If strictly disjoint and `editTeamsBuffer` is not
+   saved, a *later* step could split them entirely — but per the overlapped-data
+   rule we keep the union for now.
+
+## Save-format impact
+
+None. `selected_teams` is already a typed JSON array and `teamSel` is already an
+identity. This is purely the in-memory representation (roadmap step 3). No
+`.CAR`/`.PRE`/`.DIY` re-save required.
+
+## Related
+
+- `docs/CAREERTEAM_STEP4_REWORK.md` (the precedent + the identity decoupling that
+  unblocks this), `docs/OVERLAPPED_DATA.md`, memory `project_career_buffer_overlay`,
+  `project_overlapped_data_regions`, `project_signed_teamseloffset_64bit_trap`.
