@@ -257,19 +257,22 @@ gdb_proxy.py cmd "break file.c:NNN"      # bp on line
 gdb_proxy.py cmd "watch *(unsigned char *)0xADDR"
 gdb_proxy.py cmd "info watchpoints"
 gdb_proxy.py cmd "disable 1"             # turn off bp 1
-gdb_proxy.py cmd "continue"              # resume target (returns immediately)
+gdb_proxy.py cmd "continue" --timeout 2  # resume; returns ~2s later (target left running)
 ```
 
 ### Wait for a halt (after `continue`)
 
-`continue` returns immediately because gdb's prompt doesn't come
-back until the target stops. To **block until the target stops and
-be alerted the moment a breakpoint fires**, use `waitstop`:
+A `cmd "continue"` does **not** return immediately — gdb's prompt
+never comes back while the target runs, so the `cmd` blocks for its
+whole timeout (default 10s) and then returns a `[TIMEOUT ...]` marker
+followed by `Continuing.`. That marker is **expected, not an error**:
+it just means the target is now running. Pass a short `--timeout` so
+you get control back quickly, then `waitstop` to block until it stops:
 
 ```bash
-gdb_proxy.py cmd "continue"     # returns immediately (target running)
-gdb_proxy.py waitstop 300       # BLOCKS until a breakpoint/watchpoint/signal
-                                # hits, then prints the stop info. 300s cap.
+gdb_proxy.py cmd "continue" --timeout 2  # sends continue, returns ~2s later (running)
+gdb_proxy.py waitstop 300                 # BLOCKS until a breakpoint/watchpoint/signal
+                                          # hits, then prints the stop info. 300s cap.
 ```
 
 `waitstop` watches gdb's async output for a stop signature
@@ -298,16 +301,50 @@ for breakpoint waiting.)
 
 ### Interrupt a running target
 
-`Ctrl-C` to gdb stops the target. The proxy can't send a raw
-control character through its socket request format reliably, so
-the workaround is `SIGINT` on the gdb process:
+`Ctrl-C` to gdb stops the target, but the proxy **cannot** deliver it
+through the socket. `gdb_proxy.py raw $'\x03'` *looks* like it works —
+it prints `[sent]` — but the byte never reaches gdb's controlling TTY,
+so **the target keeps running** and a following `poll` returns nothing.
+**Do not trust `raw $'\x03'` to interrupt** (confirmed 2026-06-10; the
+`[sent]` is a false positive).
+
+The reliable interrupt is `SIGINT` to the gdb process, then `waitstop`:
 
 ```bash
-GDB_PID=$(pgrep -f m68k-amiga-elf-gdb | head -1)
-kill -INT $GDB_PID
-sleep 1
-gdb_proxy.py poll 2         # collect the "Program received signal SIGTRAP" line
+pkill -INT -f '[m]68k-amiga-elf-gdb'   # bracket [m] so pkill can't match its own line
+gdb_proxy.py waitstop 8                 # catches the stop (prefer over `poll`)
 ```
+
+The halt reports as `Program received signal SIGTRAP, Trace/breakpoint
+trap` (not SIGINT) at wherever the target was — usually the
+`_WaitForVSync` idle loop when sitting in a menu. `pkill -INT` (pattern
+form) beats `pgrep -f m68k-amiga-elf-gdb | head -1; kill -INT $PID`
+because you don't capture a PID — but you MUST use the `[m]` bracket, or
+pkill matches its own argv and the SIGINT misses gdb.
+
+### Read state after a manual in-game action (no breakpoint)
+
+To inspect a global the game wrote in response to something *you* did in
+the emulator (load a save, enter a menu) — no breakpoint needed, because
+the data is static once written:
+
+```bash
+gdb_proxy.py cmd "continue" --timeout 2     # let the game run
+#  ... drive the emulator by hand: load the file / open the menu ...
+pkill -INT -f '[m]68k-amiga-elf-gdb'        # interrupt at the idle loop
+gdb_proxy.py waitstop 8
+gdb_proxy.py cmd "p someGlobal.field"       # read it (symbolic if the .elf has the type)
+gdb_proxy.py cmd "p ((SomeType *)0xADDR)->field"   # or cast a raw address
+gdb_proxy.py cmd "continue" --timeout 2     # resume so the emulator stays live
+```
+
+gdb knows the full struct types from `SWOS2.elf`, so prefer symbolic
+access (`p diyCompetitionStart.matchData.cup.roundFormat`) over hand-
+computed offsets. A literal-address cast (`(DIYCompetitionEx *)0x565ac4`)
+is the fallback when the symbol is typed as something narrower (e.g.
+`competitionFileBuffer` is declared `uint16_t`); `set $c = (T *)&sym`
+convenience-variable casts sometimes fail with "not a structure pointer"
+— use the literal-address cast inline instead.
 
 ---
 
