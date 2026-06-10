@@ -129,6 +129,39 @@ Use:
 
 Do **not** write `*(uint16_t *)&foo.byteField`, `((uint16_t)hi << 8) | lo`, or hand-rolled byte arithmetic for endian-sensitive reads — use the macros so the intent is greppable and the Amiga build stays compatible.
 
+### Save/load is typed JSON of NAMED fields — no addresses, no ranges, no raw dumps
+
+The save/load format (`src/save_format_json.c`) serializes **named fields** to
+JSON. This is the same cleanup as untangling the Amiga's overlapped /
+adjacency-packed data (roadmap step 3): the on-disk format must be **decoupled
+from the runtime memory layout** so a save survives rebuilds, 32↔64-bit, and
+LE↔BE. The Amiga's memory-saving tricks (overlaid globals, "this label is the
+next label's label", region dumps) are what made SWOS hard to reverse-engineer
+— they must NOT leak into the save format.
+
+Save/load must **never**:
+
+- **Decide what to save/restore by a runtime ADDRESS RANGE.** Testing a field's
+  runtime address against a `[&symA, &symB)` pointer span — e.g.
+  `field_in_range(f, &competitionFileBuffer, &numSelectedTeams)` — is
+  forbidden. Symbol addresses are build/target-specific: a range that is valid
+  on the 64-bit SDL build is **empty or inverted** on the 32-bit Amiga when the
+  two symbols' relative order flips. (Real bug, 2026-06-09: on the Amiga
+  `&competitionFileBuffer` (0x565a94) sorts *above* `&numSelectedTeams`
+  (0x33cb00), so the `.DIY` comp-scalars range was empty, `numSelectedTeams`
+  never restored → 0 → cup `_VerifyTeamLoaded` panic.) Select fields to
+  serialize by **explicit name/key**, never by address span — and never do
+  "fuzzy"/approximate pointer comparisons either.
+- **Emit raw binary memory dumps** of a struct/overlay region (a `FLD_BYTES` of
+  a whole buffer). Promote each region to typed, named fields.
+- **Emit or compare pointers / pseudo-pointer (address-derived) values.** Save a
+  semantic identity (competition id, team index, string-pool key) and
+  re-derive the pointer on load.
+
+If you find yourself comparing `&globalA` to `&globalB`, gating on whether an
+address falls in a span, or copying a region by address span — stop. That is
+the exact fragility this format exists to remove.
+
 ### NULL-deref crashes are a symptom, not a bug
 
 When ported asm code SIGSEGVs on a pointer field (`team->inGameTeamPtr`, `team->spritesTable`, a SpriteGraphics slot, etc.), **do not add a `if (!ptr) return;` guard and move on**. The guard masks a real problem:

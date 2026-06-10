@@ -519,6 +519,17 @@ int16_t _LoadPresetFile(uint8_t *filename)
 
     _SaveOptions();
 
+    /* Route a loaded preset to the preset menu, not the career contestMenu.
+     * gameType lives at 0x12cece — BELOW every save region — so NO save type
+     * persists it (a fresh preset/DIY sets it via _InitCareerVariables); the
+     * load path never did, so _StartContest read a stale career/season gameType
+     * and mis-routed -> _CareerGameListCommon SIGSEGV on null
+     * careerCompetitionSlotPtrTable / currentCompetitionPtr. Only caller
+     * (_LoadOldCompetitionMenu) resets gameType=0 on our failure return, so
+     * setting it up-front is safe. See project_diy_preset_load_gametype. */
+    extern uint16_t gameType;
+    gameType = 2; /* GAME_TYPE_PRESET_COMPETITION (menus.c:2216) */
+
     if (SaveJson_FileIsJson(filename) == 1) {
         int16_t jr = SaveJson_LoadPreset(filename, NULL, 0);
         if (jr != 0) {
@@ -605,6 +616,11 @@ int16_t _LoadDIYFile(uint8_t *filename)
     int16_t result;
 
     _SaveOptions();
+
+    /* Route a loaded DIY competition to the DIY menu, not the career
+     * contestMenu — see the gameType note in _LoadPresetFile. */
+    extern uint16_t gameType;
+    gameType = 1; /* GAME_TYPE_DIY_COMPETITION (menus.c:2215) */
 
     if (SaveJson_FileIsJson(filename) == 1) {
         int16_t jr = SaveJson_LoadDIY(filename, NULL, 0);
