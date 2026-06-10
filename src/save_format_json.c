@@ -3220,7 +3220,8 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
          * (roadmap step 4) is incomplete: should a field stop being recomputed, or
          * be read before setup, the saved value is already correct cross-target.
          * Revisit (consider trimming) once the JSON format is the sole source of
-         * truth. (Trim cf5ad7e reverted on this basis 2026-06-10.) See
+         * truth — tracked in docs/SAVE_FORMAT_TRIM_CANDIDATES.md. (Trim cf5ad7e
+         * reverted on this basis 2026-06-10.) See
          * project_compslot_cup_uint16_crosstarget. */
         mjson_printf(fn, fnd,
             ",%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u",
