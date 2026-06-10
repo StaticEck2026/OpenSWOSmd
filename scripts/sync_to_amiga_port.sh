@@ -11,7 +11,11 @@
 #
 # Usage:
 #   scripts/sync_to_amiga_port.sh             # interactive prompt + copy
-#   scripts/sync_to_amiga_port.sh --dry-run   # show plan, copy nothing
+#   scripts/sync_to_amiga_port.sh --dry-run   # show plan (content-diffed), copy nothing
+#   scripts/sync_to_amiga_port.sh --check      # report in-sync / out-of-sync via a
+#                                             # CONTENT diff; copies nothing; exits
+#                                             # 0 if every file matches, 1 if not
+#                                             # (--status is an alias)
 #   scripts/sync_to_amiga_port.sh --apply     # copy without prompting
 #   scripts/sync_to_amiga_port.sh --dest /alt/path  # override destination
 #   scripts/sync_to_amiga_port.sh --saves     # ALSO copy bin/save/* save
@@ -37,7 +41,7 @@ set -euo pipefail
 SDL_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AMIGA_ROOT_DEFAULT="/mnt/c/Projects/AI/SWOS/SWOS_C"
 AMIGA_ROOT="$AMIGA_ROOT_DEFAULT"
-MODE="prompt"   # prompt | apply | dry-run
+MODE="prompt"   # prompt | apply | dry-run | check
 FORCE=0
 SYNC_SAVES=0    # also copy bin/save/* into the Amiga UAE save dir
 SAVES_ONLY=0    # copy ONLY saves; skip the src/include sync
@@ -104,6 +108,7 @@ HDR_FILES=(
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --dry-run) MODE="dry-run"; shift ;;
+        --check|--status) MODE="check"; shift ;;
         --apply)   MODE="apply";   shift ;;
         --force)   FORCE=1;        shift ;;
         --dest)    AMIGA_ROOT="$2"; shift 2 ;;
@@ -175,8 +180,10 @@ fi
 [[ -d "$AMIGA_ROOT/include" ]]      || { echo "missing $AMIGA_ROOT/include — set --dest" >&2; exit 1; }
 
 # Clobber protection: if Amiga port has uncommitted src/ or include/
-# changes, refuse unless --force.
-if [[ "$FORCE" -eq 0 && -d "$AMIGA_ROOT/.git" ]]; then
+# changes, refuse unless --force. Only matters for modes that WRITE — the
+# read-only --dry-run / --check never overwrite, so they skip this.
+if [[ "$MODE" != "dry-run" && "$MODE" != "check" \
+      && "$FORCE" -eq 0 && -d "$AMIGA_ROOT/.git" ]]; then
     dirty=$(cd "$AMIGA_ROOT" && git status --porcelain src/ include/ 2>/dev/null | head -1)
     if [[ -n "$dirty" ]]; then
         echo "ERROR: Amiga port has uncommitted changes in src/ or include/:" >&2
@@ -187,8 +194,9 @@ if [[ "$FORCE" -eq 0 && -d "$AMIGA_ROOT/.git" ]]; then
 fi
 
 # ---- Classify files ----
-new_src=()    # exists in SDL, missing in Amiga
-mod_src=()    # exists in both
+new_src=()      # exists in SDL, missing in Amiga
+diff_src=()     # exists in both, content DIFFERS (out of sync)
+same_src=()     # exists in both, content IDENTICAL (already in sync)
 missing_src=()  # in list but missing in SDL (shouldn't happen)
 
 for f in "${SRC_FILES[@]}"; do
@@ -196,28 +204,65 @@ for f in "${SRC_FILES[@]}"; do
         missing_src+=("$f")
     elif [[ ! -f "$AMIGA_ROOT/src/$f" ]]; then
         new_src+=("$f")
+    elif cmp -s "$SDL_ROOT/src/$f" "$AMIGA_ROOT/src/$f"; then
+        same_src+=("$f")
     else
-        mod_src+=("$f")
+        diff_src+=("$f")
     fi
 done
 
-new_hdr=(); mod_hdr=(); missing_hdr=()
+new_hdr=(); diff_hdr=(); same_hdr=(); missing_hdr=()
 for f in "${HDR_FILES[@]}"; do
     if [[ ! -f "$SDL_ROOT/src/$f" ]]; then
         missing_hdr+=("$f")
     elif [[ ! -f "$AMIGA_ROOT/include/$f" ]]; then
         new_hdr+=("$f")
+    elif cmp -s "$SDL_ROOT/src/$f" "$AMIGA_ROOT/include/$f"; then
+        same_hdr+=("$f")
     else
-        mod_hdr+=("$f")
+        diff_hdr+=("$f")
     fi
 done
+
+# ---- Check mode: content-diff status report; exit 0 iff fully in sync ----
+if [[ "$MODE" == "check" ]]; then
+    echo "Sync status (SDL -> Amiga, by content):"
+    echo "  source: $SDL_ROOT"
+    echo "  dest:   $AMIGA_ROOT"
+    echo "  src/    ${#diff_src[@]} differ, ${#same_src[@]} in sync, ${#new_src[@]} SDL-only"
+    echo "  include/${#diff_hdr[@]} differ, ${#same_hdr[@]} in sync, ${#new_hdr[@]} SDL-only"
+    for f in "${diff_src[@]}"; do
+        n=$(diff "$SDL_ROOT/src/$f" "$AMIGA_ROOT/src/$f" | grep -cE '^[<>]' || true)
+        echo "    DIFFER   src/$f  (~$n line(s))"
+    done
+    for f in "${diff_hdr[@]}"; do
+        n=$(diff "$SDL_ROOT/src/$f" "$AMIGA_ROOT/include/$f" | grep -cE '^[<>]' || true)
+        echo "    DIFFER   include/$f  (~$n line(s))"
+    done
+    [[ ${#new_src[@]} -gt 0 ]] && printf '    SDL-ONLY src/%s\n' "${new_src[@]}"
+    [[ ${#new_hdr[@]} -gt 0 ]] && printf '    SDL-ONLY include/%s\n' "${new_hdr[@]}"
+    if [[ ${#missing_src[@]} -gt 0 || ${#missing_hdr[@]} -gt 0 ]]; then
+        echo "  WARNING: listed but missing from SDL (cannot sync):"
+        [[ ${#missing_src[@]} -gt 0 ]] && printf '    src/%s\n' "${missing_src[@]}"
+        [[ ${#missing_hdr[@]} -gt 0 ]] && printf '    include/%s\n' "${missing_hdr[@]}"
+    fi
+    out_of_sync=$(( ${#diff_src[@]} + ${#diff_hdr[@]} + ${#new_src[@]} + ${#new_hdr[@]} ))
+    if [[ "$out_of_sync" -eq 0 ]]; then
+        echo "Verdict: IN SYNC - all ${#same_src[@]} src + ${#same_hdr[@]} include file(s) identical."
+        exit 0
+    fi
+    echo "Verdict: OUT OF SYNC - ${#diff_src[@]} src + ${#diff_hdr[@]} include differ, $(( ${#new_src[@]} + ${#new_hdr[@]} )) SDL-only. Run --apply to sync (or 'git diff' on the Amiga side for detail)."
+    exit 1
+fi
 
 # ---- Plan summary ----
 echo "Sync plan:"
 echo "  source: $SDL_ROOT"
 echo "  dest:   $AMIGA_ROOT"
-echo "  src/    ${#mod_src[@]} overwrite, ${#new_src[@]} new"
-echo "  include/${#mod_hdr[@]} overwrite, ${#new_hdr[@]} new"
+echo "  src/    ${#diff_src[@]} changed, ${#same_src[@]} in sync (skip), ${#new_src[@]} new"
+echo "  include/${#diff_hdr[@]} changed, ${#same_hdr[@]} in sync (skip), ${#new_hdr[@]} new"
+[[ ${#diff_src[@]} -gt 0 ]] && printf '    CHANGED src: %s\n' "${diff_src[@]}"
+[[ ${#diff_hdr[@]} -gt 0 ]] && printf '    CHANGED include: %s\n' "${diff_hdr[@]}"
 [[ ${#new_src[@]} -gt 0 ]] && printf '    NEW src: %s\n' "${new_src[@]}"
 [[ ${#new_hdr[@]} -gt 0 ]] && printf '    NEW include: %s\n' "${new_hdr[@]}"
 if [[ ${#missing_src[@]} -gt 0 || ${#missing_hdr[@]} -gt 0 ]]; then
@@ -229,7 +274,7 @@ fi
 
 if [[ "$MODE" == "dry-run" ]]; then
     [[ "$SYNC_SAVES" -eq 1 ]] && copy_saves
-    echo "Dry-run: no files written. Pass --apply to copy."
+    echo "Dry-run: no files written. In-sync files are skipped; --apply would copy ${#diff_src[@]} changed + ${#new_src[@]} new src and ${#diff_hdr[@]} changed + ${#new_hdr[@]} new include."
     exit 0
 fi
 
@@ -238,18 +283,18 @@ if [[ "$MODE" == "prompt" ]]; then
     case "$ans" in [Yy]*) ;; *) echo "aborted"; exit 0 ;; esac
 fi
 
-# ---- Copy ----
+# ---- Copy (only files that differ or are new; in-sync files are skipped) ----
 copied=0
-for f in "${mod_src[@]}" "${new_src[@]}"; do
+for f in "${diff_src[@]}" "${new_src[@]}"; do
     cp "$SDL_ROOT/src/$f" "$AMIGA_ROOT/src/$f"
     copied=$((copied + 1))
 done
-for f in "${mod_hdr[@]}" "${new_hdr[@]}"; do
+for f in "${diff_hdr[@]}" "${new_hdr[@]}"; do
     cp "$SDL_ROOT/src/$f" "$AMIGA_ROOT/include/$f"
     copied=$((copied + 1))
 done
 
-echo "Done. Copied $copied files."
+echo "Done. Copied $copied file(s); skipped $(( ${#same_src[@]} + ${#same_hdr[@]} )) already in sync."
 
 # Save files (opt-in via --saves / --saves-dest).
 if [[ "$SYNC_SAVES" -eq 1 ]]; then
