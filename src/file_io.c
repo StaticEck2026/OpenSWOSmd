@@ -61,9 +61,7 @@ extern uint8_t aDiskFull[];
 extern uint8_t aCannotFormatGa[];
 extern uint8_t aDiskError[];
 extern uint8_t aCompetitionFil[];
-extern uint8_t aCompetitionFil_0[];
 extern uint8_t aFileSavedByDif[];
-extern uint8_t aFileSavedOnDif[];
 
 /* String constants (in SWOS2.s data section) */
 extern uint8_t aContinue[];          /* "CONTINUE" */
@@ -372,39 +370,6 @@ void _SaveCompetitionFile(void)
 }
 
 /* ================================================================
- * LoadCompetitionFile  (SWOS2.s line 121183)
- *
- * Validates the save file header: checks version, magic bytes,
- * and amiga type. Shows appropriate error if validation fails.
- *
- * Returns: 0 = valid, 1 = invalid (with error shown)
- * ================================================================ */
-__attribute__((used, externally_visible))
-int16_t _LoadCompetitionFile(void)
-{
-    uint32_t *magic = (uint32_t *)aCj0611143807;
-
-    if (saveFileVersion == 0x500) {
-        _ShowErrorMenu(aCompetitionFil_0); /* "COMPETITION FILE EXPECTS NON-AGA AMIGA" */
-        return 1;
-    }
-
-    if (saveFileMagic1 != magic[0] ||
-        saveFileMagic2 != magic[1] ||
-        saveFileMagic3 != magic[2]) {
-        _ShowErrorMenu(aFileSavedByDif); /* "FILE SAVED BY DIFFERENT S.W.O.S. VERSION" */
-        return 1;
-    }
-
-    if (saveFileAmigaType != 0x100000) {
-        _ShowErrorMenu(aFileSavedOnDif); /* "FILE SAVED ON DIFFERENT AMIGA MEMORY TYPE" */
-        return 1;
-    }
-
-    return 0;
-}
-
-/* ================================================================
  * LoadCareerFile  (SWOS2.s line 121220)
  *
  * Loads a career file: saves current options, loads file into
@@ -413,9 +378,6 @@ int16_t _LoadCompetitionFile(void)
  *
  * Returns: 0 = success, 1 = error
  * ================================================================ */
-extern void _RebuildPointersAfterLoad(void);
-extern void _TranslateAmigaAddressesAfterLoad(void);
-
 #include "save_format_json.h"
 
 __attribute__((used, externally_visible))
@@ -427,9 +389,8 @@ int16_t _LoadCareerFile(uint8_t *filename)
      * retired (2026-06-10): after the careerFileBuffer overlay untangle it would
      * load the extracted fields into dead .skip holes -> broken career, and the
      * writer is already JSON-only (_SaveCareerFile). A non-JSON .CAR/.SEA is now
-     * unsupported (graceful error). The JSON load path runs its own
-     * _TranslateAmigaAddressesAfterLoad / _RebuildPointersAfterLoad inside
-     * SaveJson_LoadCareer, so the pointer fixups still happen. See docs/
+     * unsupported (graceful error). The JSON load path runs its own pointer
+     * fixups (_RebuildPointersAfterLoad inside SaveJson_LoadCareer). See docs/
      * SAVE_DATA.md "Format migration / read-support policy". */
     if (SaveJson_FileIsJson(filename) != 1 ||
         SaveJson_LoadCareer(filename, NULL, 0) != 0) {
