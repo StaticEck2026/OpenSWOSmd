@@ -761,6 +761,43 @@ void _ContinueCareerNextSeason(void)
 }
 
 /* ================================================================
+ * Career_TeamInEuroCup
+ *
+ * Returns 1 if selTeamNumber is in cupCopy's static team list (the player's
+ * club plays this euro cup), else 0. Shared by the season-init enrolment
+ * (_Career_SelectEuroCupSlotIfTeamParticipates) and the load-time slot-3
+ * re-derivation (_RebuildPointersAfterLoad) so both agree on participation —
+ * see the load-fixup site for why a divergence panics 0x6006.
+ * ================================================================ */
+static int _Career_TeamInEuroCup(uint8_t *cupCopy)
+{
+    /* team list = cupCopy + 7 + cupCopy[7], with the 64-bit text[2] widening
+     * compensation (the static competition's unk1[] is packed BE (country,
+     * ordinal) byte pairs; read via BE_READ_U16 to match selTeamNumber, which
+     * is PACK_BE_U16(country, ordinal) everywhere). */
+    uint8_t numEntries = cupCopy[7];
+    uint16_t numEntriesAdj = (uint16_t)numEntries +
+                             2u * (sizeof(char *) - sizeof(uint32_t));
+    const uint8_t *teamList = (const uint8_t *)(cupCopy + 7 + numEntriesAdj);
+
+    /* number of teams depends on competition type (byte at offset 1) */
+    uint8_t compType = cupCopy[1];
+    int16_t numTeams;
+    if (compType == 1)      numTeams = (int8_t)cupCopy[0xA];
+    else if (compType == 2) numTeams = (int8_t)cupCopy[0xF];
+    else                    numTeams = (int8_t)cupCopy[0xD];
+
+    uint16_t target = selTeamNumber;
+    for (int16_t i = (int16_t)(numTeams - 1); i >= 0; i--) {
+        uint16_t entry = BE_READ_U16(teamList);
+        teamList += 2;
+        if (entry == target)
+            return 1;   /* participating */
+    }
+    return 0;           /* not in this cup */
+}
+
+/* ================================================================
  * Career_SelectEuroCupSlotIfTeamParticipates  (SWOS2.s line 32087)
  *
  * Check if selTeamNumber is in the euro cup's team list.
@@ -773,54 +810,15 @@ void _ContinueCareerNextSeason(void)
 __attribute__((used, externally_visible))
 uint16_t _Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t euroCupIndex)
 {
-    /* Get start of team list: base + 7 + base[7]. The stored offset at
-     * cupCopy[7] is the 32-bit Amiga byte distance from cupCopy+7 to
-     * unk1[]. On 64-bit the struct's `char *text[2]` field widens 8→16
-     * bytes, shifting unk1[] by +8 — see the AltTableHeader reader in
-     * career_teams.c for the same compensation. */
-    uint8_t numEntries = cupCopy[7];
-    uint16_t numEntriesAdj = (uint16_t)numEntries +
-                             2u * (sizeof(char *) - sizeof(uint32_t));
-    /* The team list is the static competition's unk1[] array of packed
-     * (country, ordinal) byte pairs in Amiga big-endian order. Read
-     * each entry via BE_READ_U16 — a raw `*(uint16_t *)` on SDL LE
-     * byte-swaps each value relative to selTeamNumber (which is stored
-     * as PACK_BE_U16(country, ordinal) everywhere else), the
-     * comparison below never matches, and the user's career is
-     * silently NOT enrolled in the cup they qualified for. Symptom:
-     * Juventus career has no Champions League fixtures even though
-     * the static euroCup unk1[] explicitly contains (20, 22) =
-     * Italy/Juventus. */
-    const uint8_t *teamList = (const uint8_t *)(cupCopy + 7 + numEntriesAdj);
-
-    /* Get number of teams based on competition type (byte at offset 1) */
-    uint8_t compType = cupCopy[1];
-    int16_t numTeams;
-    if (compType == 1) {
-        numTeams = (int8_t)cupCopy[0xA];
-    } else if (compType == 2) {
-        numTeams = (int8_t)cupCopy[0xF];
-    } else {
-        numTeams = (int8_t)cupCopy[0xD];
-    }
-
-    /* Search for selTeamNumber in team list */
-    uint16_t target = selTeamNumber;
-    numTeams--;
-    for (int16_t i = numTeams; i >= 0; i--) {
-        uint16_t entry = BE_READ_U16(teamList);
-        teamList += 2;
-        if (entry == target)
-            goto found;
-    }
-    return 1;  /* not found */
-
-found:
+    /* Participation test (shared with the load-time slot-3 re-derivation in
+     * _RebuildPointersAfterLoad). */
+    if (!_Career_TeamInEuroCup(cupCopy))
+        return 1;  /* not participating */
     {
 #ifdef SWOS_DEBUG_AUTOSKIP
         SWOS_AUTOSKIP_LOG("[eurocup] team 0x%04X qualifies euroCupIndex=%u (cupCopy=%p) "
                           "-> activating slot 3",
-                          (unsigned)target, (unsigned)euroCupIndex, (void *)cupCopy);
+                          (unsigned)selTeamNumber, (unsigned)euroCupIndex, (void *)cupCopy);
 #endif
         /* Save quaternary slot state */
         uint16_t savedA = quaternaryCompSlotStateA;
@@ -1479,8 +1477,22 @@ static void _Rebuild_CompetitionSlotPointers(void)
         else if (euroCupSlotIndex == 2) euroCup3 = uefaCupCopy;        /* type 1 */
 
         DIYCompetition *q3 = (DIYCompetition *)careerCompetitionSlotPtrTable[3];
+        /* Participation gate: euroCupSlotIndex is only written on qualification
+         * (_Career_SelectEuroCupSlotIfTeamParticipates) and is SAVED, so it can
+         * be stale from a prior season when the club DID qualify. The euro cup
+         * is contested every season by the qualifying clubs, so its slot-3
+         * context can be active + type-matching while the player's club is NOT
+         * in it. Without the participation check the fixup re-activates slot 3
+         * for a non-participant, and ShowChairmanOpinionAboutTheSeason then
+         * calls _FindTeamInDIY(selTeamNumber, euroCupsCompetitionContext) which
+         * hard-panics 0x6006 for a club coach (team not found). Mirror the
+         * season-init enrolment: only activate if the club is actually in the
+         * cup's team list. (gdb-confirmed 2026-06-10: club 5141 in SERIE A, euro
+         * slot held EUROPEAN CHAMPIONS CUP whose Italian entrant is 5142, stale
+         * euroCupSlotIndex=0.) */
         if (euroCup3 != 0 && q3->isActive != 0 &&
-            q3->competitionType == ((Competition *)euroCup3)->type) {
+            q3->competitionType == ((Competition *)euroCup3)->type &&
+            _Career_TeamInEuroCup(euroCup3)) {
             quaternaryCompetitionPtr = euroCup3;
         } else {
             quaternaryCompetitionPtr = 0;  /* slot 3 inactive this season */
