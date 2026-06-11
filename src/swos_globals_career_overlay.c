@@ -388,30 +388,17 @@ __asm__(
     ".globl " _ASM_PFX "numSelectedTeams\n"
     _ASM_PFX "numSelectedTeams:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "selTeamsPtr\n"
-    _ASM_PFX "selTeamsPtr:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "selTeamIsComputerFlag\n"
-    _ASM_PFX "selTeamIsComputerFlag:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "selTeamNameBase\n"
-    _ASM_PFX "selTeamNameBase:\n"
-    ".skip 20\n"
-    ".globl " _ASM_PFX "selTeamImportField\n"
-    _ASM_PFX "selTeamImportField:\n"
-    ".skip 5\n"
-    ".globl " _ASM_PFX "selTeamSocksColor\n"
-    _ASM_PFX "selTeamSocksColor:\n"
-    ".skip 30\n"
-    ".globl " _ASM_PFX "selTeamPlayerIndices\n"
-    _ASM_PFX "selTeamPlayerIndices:\n"
-    ".skip 1308\n"
-    ".globl " _ASM_PFX "editTeamsBuffer\n"
-    _ASM_PFX "editTeamsBuffer:\n"
-    ".skip 43778\n"
-    ".globl " _ASM_PFX "editTeamsSaveVarsArea\n"
-    _ASM_PFX "editTeamsSaveVarsArea:\n"
-    ".skip 23254\n"
+    /* ---- selected-teams cluster + edit-teams union pulled out to
+     * selected_teams.c (UNTANGLE step 3) ---- selTeamsPtr (TeamFileEx[] base) +
+     * selTeam* aliases + editTeamsBuffer + editTeamsSaveVarsArea = one 68400-byte
+     * load-bearing union: the 32-team array (21888 B) overruns past selTeamsPtr
+     * into editTeamsBuffer for teams 2..31, and comp slots store selTeamsPtr-
+     * relative offsets reaching there (swos_globals.c:583). Real labels now live
+     * in selected_teams.c; reserve the run's 68400 bytes (= 4+1+20+5+30+1308+
+     * 43778+23254) here so saveGameLength and every later label keep their offsets
+     * (no cascade). Legacy .CAR raw-load drops these rosters into this hole
+     * (accepted; JSON is the format). See docs/SELECTED_TEAMS_UNTANGLE.md. */
+    ".skip 68400\n"
     ".globl " _ASM_PFX "saveGameLength\n"
     _ASM_PFX "saveGameLength:\n"
     ".skip 12\n"

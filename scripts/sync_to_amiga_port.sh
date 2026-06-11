@@ -80,6 +80,7 @@ SRC_FILES=(
     career_comp_copies.c career_season_info.c career_diy_league_state.c
     career_season_state.c career_transfer_market.c career_team_scalars.c
     career_team_buffers.c career_key_cache.c career_foreign_market.c
+    selected_teams.c
     swos_amiga_data_imports.c swos_amiga_ptr_imports.c
     swos_data_bulk_imports.c swos_data_typed_stubs.c
     swos_amiga_data_stubs.c swos_amiga_strings.c
