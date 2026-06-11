@@ -39,20 +39,6 @@ extern uint16_t hilMaxSubstitutes;
 extern uint8_t editTacticsCurrentTactics[370]; /* TeamTactics — must match edit_tactics.c */
 extern uint8_t hilFileBuffer[];
 
-/* Save file header fields (all within careerFileBuffer/competitionFileBuffer region) */
-extern uint16_t saveFileVersion;
-extern uint32_t saveFileMagic1;
-extern uint32_t saveFileMagic2;
-extern uint32_t saveFileMagic3;
-extern uint32_t saveFileAmigaType;
-extern uint8_t aCj0611143807[];   /* "CJ0611143807" magic string */
-
-/* File buffers and sizes */
-extern uint16_t careerFileBuffer;
-extern uint8_t competitionFileBuffer[];
-extern uint16_t numSelectedTeams;
-extern uint16_t numDiyTeams;
-
 /* Error strings (all in SWOS2.s data section) */
 extern uint8_t aDiskWriteProte[];
 extern uint8_t aNoDiskInDrive[];
@@ -352,24 +338,6 @@ void _ShowFsErrorByCode(uint16_t errCode)
 }
 
 /* ================================================================
- * SaveCompetitionFile  (SWOS2.s line 121173)
- *
- * Sets the save file header fields: amiga type, magic bytes,
- * and version number.
- * ================================================================ */
-__attribute__((used, externally_visible))
-void _SaveCompetitionFile(void)
-{
-    uint32_t *magic = (uint32_t *)aCj0611143807;
-
-    saveFileAmigaType = 0x100000;
-    saveFileMagic1 = magic[0];
-    saveFileMagic2 = magic[1];
-    saveFileMagic3 = magic[2];
-    saveFileVersion = 0x1200;
-}
-
-/* ================================================================
  * LoadCareerFile  (SWOS2.s line 121220)
  *
  * Loads a career file: saves current options, loads file into
@@ -406,11 +374,7 @@ int16_t _LoadCareerFile(uint8_t *filename)
 /* ================================================================
  * SaveCareerFile  (SWOS2.s line 121244)
  *
- * Saves the career file: sets competition header, computes file
- * size based on numSelectedTeams, writes to disk.
- *
- * File size = (&numSelectedTeams - &careerFileBuffer) +
- *             numSelectedTeams * 684 + 2
+ * Saves the career file. JSON-only (see body).
  *
  * Returns: 0 = success, 1 = error (after showing error menu)
  * ================================================================ */
@@ -476,43 +440,20 @@ int16_t _LoadPresetFile(uint8_t *filename)
 /* ================================================================
  * SavePresetCompetitionFile  (SWOS2.s line 121296)
  *
- * Saves preset/competition file from competitionFileBuffer.
- * Uses numDiyTeams for size computation.
- *
- * File size = (&numSelectedTeams - &competitionFileBuffer) +
- *             numDiyTeams * 684 + 2
+ * Saves a preset/competition file. JSON-only (see body).
  *
  * Returns: 0 = success, 1 = error
  * ================================================================ */
 __attribute__((used, externally_visible))
 int16_t _SavePresetCompetitionFile(uint8_t *filename)
 {
-    uint32_t fileSize;
-    int16_t result;
-
-#ifdef SWOS_SAVE_FORMAT_JSON
-    {
-        int16_t jr = SaveJson_WritePreset(filename);
-        if (jr == 0) return 0;
-    }
-#endif
-
-    _SaveCompetitionFile();
-
-    /* Phase B: competitionFileBuffer is now a standalone CompetitionSlotBuffer
-     * (no longer contiguous with numSelectedTeams), so the legacy span calc is
-     * gone. This RAW path only runs when the JSON writer above fails
-     * (SWOS_SAVE_FORMAT_JSON returns first), and the DIY team append no longer
-     * sits contiguously after the buffer — raw .PRE/.DIY is a legacy fallback.
-     * Dump just the competition buffer. */
-    fileSize = (uint32_t)sizeof(CompetitionSlotBuffer);
-
-    result = _WriteFile(filename, (uint8_t *)&competitionFileBuffer, fileSize);
-    if (result != 0) {
-        _ShowFsErrorByCode((uint16_t)result);
-        return 1;
-    }
-    return 0;
+    /* JSON is the only preset write format (mirrors _SaveCareerFile). The
+     * legacy raw _WriteFile of sizeof(CompetitionSlotBuffer) was a raw memory
+     * dump of a struct region — the exact "no raw memory dumps" violation the
+     * JSON format exists to remove — and its reader is already retired
+     * (_LoadPresetFile is JSON-only). SaveJson_WritePreset surfaces _WriteFile
+     * errors via _ShowFsErrorByCode internally, so we just propagate its 0/1. */
+    return SaveJson_WritePreset(filename);
 }
 
 /* ================================================================
@@ -557,40 +498,21 @@ int16_t _LoadDIYFile(uint8_t *filename)
 /* ================================================================
  * SaveDIYFile  (SWOS2.s line 121344)
  *
- * Saves a DIY competition file from competitionFileBuffer.
- * Identical logic to SavePresetCompetitionFile.
+ * Saves a DIY competition file. JSON-only (identical to
+ * SavePresetCompetitionFile, just a different file_kind).
  *
  * Returns: 0 = success, 1 = error
  * ================================================================ */
 __attribute__((used, externally_visible))
 int16_t _SaveDIYFile(uint8_t *filename)
 {
-    uint32_t fileSize;
-    int16_t result;
-
-#ifdef SWOS_SAVE_FORMAT_JSON
-    {
-        int16_t jr = SaveJson_WriteDIY(filename);
-        if (jr == 0) return 0;
-    }
-#endif
-
-    _SaveCompetitionFile();
-
-    /* Phase B: competitionFileBuffer is now a standalone CompetitionSlotBuffer
-     * (no longer contiguous with numSelectedTeams), so the legacy span calc is
-     * gone. This RAW path only runs when the JSON writer above fails
-     * (SWOS_SAVE_FORMAT_JSON returns first), and the DIY team append no longer
-     * sits contiguously after the buffer — raw .PRE/.DIY is a legacy fallback.
-     * Dump just the competition buffer. */
-    fileSize = (uint32_t)sizeof(CompetitionSlotBuffer);
-
-    result = _WriteFile(filename, (uint8_t *)&competitionFileBuffer, fileSize);
-    if (result != 0) {
-        _ShowFsErrorByCode((uint16_t)result);
-        return 1;
-    }
-    return 0;
+    /* JSON is the only DIY write format (mirrors _SaveCareerFile). The legacy
+     * raw _WriteFile of sizeof(CompetitionSlotBuffer) was a raw memory dump of a
+     * struct region — the exact "no raw memory dumps" violation the JSON format
+     * exists to remove — and its reader is already retired (_LoadDIYFile is
+     * JSON-only). SaveJson_WriteDIY surfaces _WriteFile errors via
+     * _ShowFsErrorByCode internally, so we just propagate its 0/1. */
+    return SaveJson_WriteDIY(filename);
 }
 
 /* ================================================================

@@ -17,8 +17,6 @@ typedef short int16_t;
 int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
 int16_t _WriteFile(uint8_t *filename, uint8_t *src, uint32_t size);
 void _ShowFsErrorByCode(uint16_t errCode);
-void _SaveCompetitionFile(void);
-int16_t _LoadCompetitionFile(void);
 int16_t _LoadCareerFile(uint8_t *filename);
 int16_t _SaveCareerFile(uint8_t *filename);
 int16_t _LoadPresetFile(uint8_t *filename);
