@@ -36,10 +36,14 @@ it during the "retire legacy reads" cleanup.**
 **JSON-migrated — legacy raw-dump READ retired.** `.CAR` / `.SEA` (career),
 `.PRE` (preset), `.DIY` — these were the big `careerFileBuffer` /
 `competitionFileBuffer` overlay dumps. The writer is JSON-only (`SaveJson_*`);
-the legacy raw-memory-dump *reader* is dead after the overlay untangle (it loads
-extracted fields into `.skip` holes → broken career) and is being replaced with
-a graceful "unsupported format" error. A non-JSON career/preset/DIY file no
-longer loads — accepted (all current saves are JSON).
+the legacy raw-memory-dump *reader* is dead after the overlay untangle (it loaded
+extracted fields into `.skip` holes / overflowed the now-standalone
+`competitionFileBuffer` → broken state). All three entry points
+(`_LoadCareerFile`, `_LoadPresetFile`, `_LoadDIYFile`) are now JSON-only and emit
+a graceful "unsupported format" error otherwise. A non-JSON career/preset/DIY
+file no longer loads — accepted (all current saves are JSON). The now-unreferenced
+`_LoadCompetitionFile` (legacy header verifier) and `_TranslateAmigaAddresses-`
+`AfterLoad` (legacy Amiga-pointer LUT) are dead-code-removal follow-ups.
 
 **KEEP binary read/write — DO NOT retire.** `.TAC` (tactics), `.HIL`
 (highlights), `.EDT` (edited teams / `CUSTOMS.EDT`), and `.CFG` (options) are
