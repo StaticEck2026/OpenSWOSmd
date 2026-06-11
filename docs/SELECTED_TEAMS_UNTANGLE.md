@@ -91,6 +91,51 @@ pilot/region recipe; the typed carrier lives in the new file with the legacy
 names re-emitted as real labels so every reader and the save `FX(...)`/`FA(...)`
 descriptors keep working unchanged.
 
+## Constraints discovered (post-design recon)
+
+Two things assume `selectedTeams` sits **contiguously after `numSelectedTeams`**
+inside `careerFileBufferBuf`:
+
+1. **`_Save/_RestoreSelectedTeams`** (`career_teams.c:247/260`) stream one
+   `0x5582`-byte block from `&numSelectedTeams` (= `numSelectedTeams` +
+   `selectedTeams[32]`). **Decouplable** into two independent runs
+   (count + array) with no behaviour change — same bytes.
+2. **Legacy `.CAR` reader** (`_LoadCareerFile`, `file_io.c:446`): for a
+   non-JSON save it does `_LoadFileEx(filename, &careerFileBuffer, …)` — a raw
+   contiguous load. The team rosters land at `&selTeamsPtr` *because* it's
+   adjacent to `numSelectedTeams`. **Not decouplable without a load-side fixup.**
+   (The JSON writer is retired; the JSON reader path — `SaveJson_LoadCareer` —
+   is typed and unaffected.)
+
+Note: prior extractions (careerFinances, careerTeam, …) already relocated
+fields out of `careerFileBufferBuf`, so a legacy `.CAR` load is **already lossy**
+for those fields (their old bytes land in `.skip` holes; the relocated symbols
+stay zero). Legacy `.CAR` is a best-effort read path; JSON is the format. So
+relocating `selectedTeams` *continues* that trajectory — but `selectedTeams` is
+the most critical payload (team rosters), so degrading it = a legacy `.CAR` load
+that produces a teamless/crashing career.
+
+Access sites (blast radius) are all `(TeamFileEx *)&selTeamsPtr` casts already —
+`career_init.c` (378/390/1274), `career_teams.c` (105/141/683/823/908/1016),
+`edit_tactics.c` (601/2378/2385/2412), `diy_competition.c` (74/80). So the data
+is *already accessed as typed `TeamFileEx`*; the only raw-blob aspect is the
+`uint8_t selTeamsPtr` backing.
+
+## Decision needed: relocate vs in-place typed view
+
+- **In-place typed view** — add `TeamFileEx *const selectedTeams = (TeamFileEx
+  *)&selTeamsPtr;` + convert the casts to `selectedTeams[i].team.<field>`. Keeps
+  the backing in `careerFileBufferBuf` → preserves legacy `.CAR` load and both
+  adjacency readers. Low risk, build-safe. BUT low value: the casts already give
+  typed access; this is mostly cosmetic — the backing stays a byte region.
+- **Relocate** (careerTeam-style) — `selectedTeams[32]`+`editTeamsBuffer` union
+  becomes a real typed symbol; `.skip` in the overlay. Genuine step-3 win, but
+  needs the `_Save/_Restore` decouple AND accepts (or fixes up) the legacy `.CAR`
+  rost­er loss. Bigger, can't build-verify locally.
+- **Relocate + legacy-`.CAR` fixup** — relocate, and in `_LoadCareerFile`'s
+  legacy branch copy the `numSelectedTeams*684` team block from the hole into the
+  relocated array. Preserves compat; most work.
+
 ## Phased plan (mirrors careerTeam step 4)
 
 1. **Decouple / scalar tail** — confirm no reader does raw `&selTeamsPtr + N`
