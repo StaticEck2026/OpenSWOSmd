@@ -22,7 +22,35 @@ the same code compiles for the Amiga port.
 | `.DIY` | `competitionFileBuffer` (overlay at +93308) | `_SaveDIYFile` | `_LoadDIYFile` | DIY competition save (same layout as preset) |
 | `.TAC` | `editTacticsCurrentTactics` | `_WriteTacticsFile` | `_ReadTacticsFile` | Single 370-byte tactics record |
 | `.HIL` | `hilFileBuffer` | `_DoSaveHighlights` | `_LoadHilFile` | Match highlights ring — header + N goal frames |
+| `.EDT` | `teamFileBuffer` | `_WriteFile(aCustomsEdt)` (edit_tactics.c) | `_LoadFileEx(aCustomsEdt)` (teams.c) | Edited teams (`CUSTOMS.EDT`) — count word + N TeamFile records, **BE** (byte-swapped to host on load) |
 | `.CFG` (options) | small fixed buffer | `_SaveOptions` | `_LoadOptions` | Player options (game length, music, etc.) |
+
+---
+
+## Format migration / read-support policy
+
+Two classes of save format, handled differently as we move to the structured
+(JSON) format (roadmap step 4). **This split is load-bearing — do not collapse
+it during the "retire legacy reads" cleanup.**
+
+**JSON-migrated — legacy raw-dump READ retired.** `.CAR` / `.SEA` (career),
+`.PRE` (preset), `.DIY` — these were the big `careerFileBuffer` /
+`competitionFileBuffer` overlay dumps. The writer is JSON-only (`SaveJson_*`);
+the legacy raw-memory-dump *reader* is dead after the overlay untangle (it loads
+extracted fields into `.skip` holes → broken career) and is being replaced with
+a graceful "unsupported format" error. A non-JSON career/preset/DIY file no
+longer loads — accepted (all current saves are JSON).
+
+**KEEP binary read/write — DO NOT retire.** `.TAC` (tactics), `.HIL`
+(highlights), `.EDT` (edited teams / `CUSTOMS.EDT`), and `.CFG` (options) are
+small, fixed-layout binary records that the user/game exchanges as **binary**
+(`.EDT` is also shared with the wider SWOS community / the original game, so its
+on-disk BE layout is an interop format, not just our save). Their binary
+`_Read*`/`_Load*`/`_LoadFileEx` path **must be maintained** — these files are
+still authored and consumed in binary form. A JSON variant may exist alongside
+(`SaveJson_LoadTactics` / `SaveJson_LoadHighlights` auto-detect by header), but
+the binary read path is NOT legacy and must not be removed. Do not fold
+`.TAC`/`.HIL`/`.EDT`/`.CFG` into the career/preset/DIY legacy-read retirement.
 
 ---
 

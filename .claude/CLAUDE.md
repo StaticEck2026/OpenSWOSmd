@@ -162,6 +162,16 @@ If you find yourself comparing `&globalA` to `&globalB`, gating on whether an
 address falls in a span, or copying a region by address span — stop. That is
 the exact fragility this format exists to remove.
 
+**KEEP binary READ support for `.TAC`, `.HIL`, `.EDT`, and `.CFG`.** The JSON
+migration applies to the big overlay-dump saves (`.CAR`/`.SEA`/`.PRE`/`.DIY`) —
+there the legacy raw-dump *reader* is dead post-untangle and is being retired.
+But the small fixed-layout binary records (`.TAC` tactics, `.HIL` highlights,
+`.EDT` edited teams / `CUSTOMS.EDT`, `.CFG` options) are still authored/consumed
+as binary (`.EDT` is a SWOS-community interop format too); their
+`_Read*`/`_Load*`/`_LoadFileEx` paths are NOT legacy and must be maintained.
+Don't fold them into a "retire legacy reads" cleanup. See `docs/SAVE_DATA.md`
+"Format migration / read-support policy".
+
 ### NULL-deref crashes are a symptom, not a bug
 
 When ported asm code SIGSEGVs on a pointer field (`team->inGameTeamPtr`, `team->spritesTable`, a SpriteGraphics slot, etc.), **do not add a `if (!ptr) return;` guard and move on**. The guard masks a real problem:
