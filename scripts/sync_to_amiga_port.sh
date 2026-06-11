@@ -69,7 +69,7 @@ SRC_FILES=(
     competition_data.c tactics_data.c fixture_data.c
     simulation_data.c player_data.c render_data.c palette_data.c
     general_data.c menu_data.c team_colors.c sprite_data.c
-    mjson.c save_format_json.c save_pointer_lut.c swos_io.c
+    mjson.c save_format_json.c swos_io.c
     resload.c
     swos_globals.c swos_globals_career_overlay.c swos_competition_slots.c
     career_finances.c career_season_record.c career_finance_tail.c

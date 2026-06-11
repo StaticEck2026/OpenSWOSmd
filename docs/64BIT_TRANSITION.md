@@ -288,11 +288,12 @@ Since SWOS2.s is no longer the source of truth:
 
 - **`save_pointer_lut.c`** — the Amiga address translation table.
   Used by the legacy `.CAR` loader to remap Amiga pointer values
-  into current-build pointer values. If the legacy `.CAR` reader
-  goes away, this whole file goes away.
+  into current-build pointer values. **DELETED 2026-06-11**: the
+  legacy raw readers it served are all retired (JSON-only), so the
+  whole file went away.
 - **`generated/amiga_address_map.c`** — same dependency. The address
   map was generated from the original m68k binary's symbol table.
-  Once we stop honouring those addresses, we stop needing the map.
+  **DELETED 2026-06-11** alongside `save_pointer_lut.c`.
 - **`src/swos_amiga_data_imports.c` / `swos_amiga_data_stubs.c` /
   `swos_amiga_func_stubs.c` / `swos_amiga_ptr_imports.c`** — the
   scaffolding that bridged the partial C port to the rest of the
@@ -452,8 +453,8 @@ Once 64-bit SDL is stable:
 
 - Drop the legacy raw `.CAR` reader (32-bit-only image) or mark it
   with a clear `#if UINTPTR_MAX == 0xFFFFFFFFu` guard.
-- Drop `save_pointer_lut.c` and `generated/amiga_address_map.c`
-  (consumed only by the legacy reader).
+- ~~Drop `save_pointer_lut.c` and `generated/amiga_address_map.c`
+  (consumed only by the legacy reader).~~ **DONE 2026-06-11.**
 - Fold `swos_amiga_data_stubs.c` / `swos_amiga_func_stubs.c` /
   `swos_amiga_ptr_imports.c` content into normal modules
   (`swos_globals.c` / `competition_data.c` / per-feature files).

@@ -41,9 +41,11 @@ extracted fields into `.skip` holes / overflowed the now-standalone
 `competitionFileBuffer` → broken state). All three entry points
 (`_LoadCareerFile`, `_LoadPresetFile`, `_LoadDIYFile`) are now JSON-only and emit
 a graceful "unsupported format" error otherwise. A non-JSON career/preset/DIY
-file no longer loads — accepted (all current saves are JSON). The now-unreferenced
-`_LoadCompetitionFile` (legacy header verifier) and `_TranslateAmigaAddresses-`
-`AfterLoad` (legacy Amiga-pointer LUT) are dead-code-removal follow-ups.
+file no longer loads — accepted (all current saves are JSON). The then-unreferenced
+`_LoadCompetitionFile` (legacy header verifier) and `_TranslateAmigaAddressesAfterLoad`
+(legacy Amiga-pointer LUT, with its whole `save_pointer_lut.c` module +
+`generated/amiga_address_map.c`) were removed 2026-06-11 — see "Cross-build pointer
+LUT … RETIRED" below.
 
 **KEEP binary read/write — DO NOT retire.** `.TAC` (tactics), `.HIL`
 (highlights), `.EDT` (edited teams / `CUSTOMS.EDT`), and `.CFG` (options) are
@@ -322,7 +324,19 @@ holding `gameLength`, `autoReplays`, `menuMusic`, `autoSaveHighlights`,
 
 ---
 
-## Cross-build pointer LUT (Amiga-canonical save format)
+## Cross-build pointer LUT (Amiga-canonical save format) — RETIRED 2026-06-11
+
+> **RETIRED — superseded by the JSON format and DELETED.** This
+> address-translation LUT was an interim design that was never adopted as
+> the primary path. The JSON save format (`save_format_json.c`) serializes
+> pointer fields as semantic identities (competition id, string-pool key,
+> team index) and re-derives the runtime pointer on load via
+> `_RebuildPointersAfterLoad` — no address translation needed. So
+> `src/save_pointer_lut.c`, `src/generated/amiga_address_map.c`, and the
+> dead `_TranslateAmigaAddressesAfterLoad` entrypoint were removed on
+> 2026-06-11. `tools/extract_amiga_addresses.py` /
+> `tools/needed_lut_symbols.txt` remain only as orphaned reference. The
+> design notes below are kept for historical context.
 
 Until we move to the structured save format, every save file on disk is
 **canonically Amiga-addressed** — every pointer in a `.CAR` / `.SEA` /

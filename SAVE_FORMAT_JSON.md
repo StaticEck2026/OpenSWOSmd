@@ -169,9 +169,11 @@ phase) covers comp-name string pointers that the LUT doesn't index.
       `_SavePresetCompetitionFile`, `_LoadPresetFile`,
       `_SaveDIYFile`, `_LoadDIYFile`, `_DoSaveHighlights`,
       `_LoadHilFile`, `_ReadTacticsFile`, `_WriteTacticsFile`
-- [ ] Delete `src/save_pointer_lut.c`
-- [ ] Decide whether `src/generated/amiga_address_map.c` still has a
-      role (Amiga ↔ SDL save sharing? cross-port testing?)
+- [x] Delete `src/save_pointer_lut.c` (done 2026-06-11 — the legacy
+      raw readers that used it are all retired)
+- [x] Decide whether `src/generated/amiga_address_map.c` still has a
+      role — no; deleted 2026-06-11. JSON re-derives pointers from
+      semantic identities, so no address LUT is needed.
 - [ ] Delete the cross-build pointer-fixup parts of
       `_RebuildPointersAfterLoad`
 
