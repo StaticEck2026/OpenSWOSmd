@@ -1290,14 +1290,19 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
 /* ================================================================
  * _RebuildPointersAfterLoad  (no asm equivalent — new code)
  *
- * The .CAR save format is a raw memory dump of the careerFileBuffer
- * overlay region (see SAVE_DATA.md). Several fields in that region
- * are typed as absolute pointers — they were valid when the save was
- * written but reference addresses that don't exist in any subsequent
- * binary build (or any other machine). After `_LoadCareerFile`
- * reads the raw bytes back into careerFileBuffer, this function
- * walks every known pointer field and re-derives it from a stable
- * identity (current run's buffer address, competition ID, etc.).
+ * Several fields in the careerFileBuffer overlay region (see SAVE_DATA.md)
+ * are typed as absolute pointers — valid when the save was written but
+ * meaningless in any subsequent binary build (or any other machine). The
+ * JSON save format never stores these as raw addresses; it serializes a
+ * stable IDENTITY instead (competition ID, buffer index, string-pool key).
+ * After `SaveJson_LoadCareer` restores the typed fields, this function
+ * re-derives every pointer field from its identity (current run's buffer
+ * address, competition ID, etc.).
+ *
+ * This is now the ONLY pointer fixup. The legacy Amiga-absolute-address
+ * translation LUT (`_TranslateAmigaAddressesAfterLoad` /
+ * `save_pointer_lut.c` / `generated/amiga_address_map.c`) was deleted once
+ * the raw-dump readers were retired — JSON identities make it unnecessary.
  *
  * Fields handled (see SAVE_DATA.md "Pointer-field summary for .CAR"):
  *
