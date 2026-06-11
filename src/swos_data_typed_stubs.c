@@ -775,11 +775,17 @@ void *careerCupPickList[5];
 // uint8_t newRandomSeedCopy;
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): randomSeed */
 // uint16_t randomSeed;
-/* saveFileVersion / saveFileMagic1..3: aliased to fixed offsets
- * within careerFileBuffer in swos_globals.c. The Amiga writes them
- * as named globals during _SaveCompetitionFile and reads them after
- * _LoadFileEx populates careerFileBuffer; both paths require the
- * globals to live INSIDE the file buffer at the right offset. */
+/* Save-file header — UNTANGLE 2026-06-10: lifted out of the careerFileBuffer
+ * overlay into standalone typed defs (the overlay reserves the bytes via .skip).
+ * The save format is typed JSON now (saveFileVersion/AmigaType are FX-saved by
+ * &symbol; saveFileMagic1..3 are set/verified in file_io.c at write/read time,
+ * individually — not a block), so these no longer need to live inside the dumped
+ * file buffer. */
+uint16_t saveFileVersion;
+uint32_t saveFileMagic1;
+uint32_t saveFileMagic2;
+uint32_t saveFileMagic3;
+uint32_t saveFileAmigaType;
 /* numSelectedTeams: aliased to careerFileBuffer + 98476 in
  * swos_globals.c. _SaveCareerFile computes the on-disk file size as
  * `(&numSelectedTeams - &careerFileBuffer) + numSelectedTeams*684 + 2`,
@@ -787,12 +793,15 @@ void *careerCupPickList[5];
  * the Amiga's fixed offset within the career-file buffer. _LoadFileEx
  * then loads that count back into the same byte. */
 /* selTeamNameBase: alias into selTeamsBackingBuf + 5 (see swos_globals.c) */
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): saveGameLength */
-// uint16_t saveGameLength;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): irqCookieObfuscated */
-// uint32_t irqCookieObfuscated;
-/* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): chipRamBitmapEnd */
-// uint8_t chipRamBitmapEnd;
+/* Trailing misc — UNTANGLE 2026-06-10: lifted out of the careerFileBuffer
+ * overlay into standalone typed defs (overlay reserves the bytes via .skip).
+ * All sit AFTER numSelectedTeams, outside the saved dump region. saveGameLength
+ * is a 6x uint16 save/restore scratch (menus.c) declared uint8_t[] by consumers;
+ * chipRamBitmapEnd is a clear-region end marker whose clear loop is disabled
+ * (SWOS.c:94), referenced only as &chipRamBitmapEnd. */
+uint8_t  saveGameLength[12];
+uint32_t irqCookieObfuscated;
+uint16_t chipRamBitmapEnd;
 SWOS_CHIP_BSS Sprite * sortedSprites[78];
 /* ---- Chairman sell/exchange response string tables ----
  *

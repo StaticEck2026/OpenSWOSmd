@@ -370,21 +370,12 @@ __asm__(
      * 2250 bytes here so saveFileVersion/numSelectedTeams keep their offsets (no
      * cascade); hole stays zero so VERIFY remains 0. */
     ".skip 2250\n"
-    ".globl " _ASM_PFX "saveFileVersion\n"
-    _ASM_PFX "saveFileVersion:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "saveFileMagic1\n"
-    _ASM_PFX "saveFileMagic1:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "saveFileMagic2\n"
-    _ASM_PFX "saveFileMagic2:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "saveFileMagic3\n"
-    _ASM_PFX "saveFileMagic3:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "saveFileAmigaType\n"
-    _ASM_PFX "saveFileAmigaType:\n"
-    ".skip 4\n"
+    /* ---- save-file header (saveFileVersion u16 + saveFileMagic1-3 u32 +
+     * saveFileAmigaType u32 = 18 B) pulled out to swos_data_typed_stubs.c
+     * (UNTANGLE step 3). Reserve 18 bytes so numSelectedTeams keeps its offset
+     * (no cascade). Save-format-neutral: version/amigaType are FX-saved by
+     * &symbol; the magics are file_io.c write/verify scratch. */
+    ".skip 18\n"
     ".globl " _ASM_PFX "numSelectedTeams\n"
     _ASM_PFX "numSelectedTeams:\n"
     ".skip 2\n"
@@ -399,14 +390,13 @@ __asm__(
      * (no cascade). Legacy .CAR raw-load drops these rosters into this hole
      * (accepted; JSON is the format). See docs/SELECTED_TEAMS_UNTANGLE.md. */
     ".skip 68400\n"
-    ".globl " _ASM_PFX "saveGameLength\n"
-    _ASM_PFX "saveGameLength:\n"
-    ".skip 12\n"
-    ".globl " _ASM_PFX "irqCookieObfuscated\n"
-    _ASM_PFX "irqCookieObfuscated:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "chipRamBitmapEnd\n"
-    _ASM_PFX "chipRamBitmapEnd:\n"
-    ".skip 95250\n"
+    /* ---- trailing misc (saveGameLength 12, irqCookieObfuscated 4,
+     * chipRamBitmapEnd u16 + 95248 headroom = 95266 B) pulled out to
+     * swos_data_typed_stubs.c (UNTANGLE step 3). These sit AFTER numSelectedTeams
+     * (outside the saved dump region). Reserve the run's 95266 bytes so
+     * careerFileBufferBuf keeps its size — the tail is .CAR/.CMP load headroom
+     * (see top of file). chipRamBitmapEnd's clear loop is disabled (SWOS.c:94),
+     * so its relocation is safe. */
+    ".skip 95266\n"
     ".text\n"
 );
