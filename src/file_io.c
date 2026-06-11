@@ -421,60 +421,23 @@ extern void _TranslateAmigaAddressesAfterLoad(void);
 __attribute__((used, externally_visible))
 int16_t _LoadCareerFile(uint8_t *filename)
 {
-    int16_t result;
-    uint32_t fileSize = 0;
-
     _SaveOptions();
 
-    /* Probe format BEFORE the full load — JSON saves can be several
-     * hundred KB (base64 expansion + key text), exceeding the
-     * destination buffer that _LoadFileEx would write into. The
-     * probe is a 16-byte stdio peek; SaveJson_LoadCareer then
-     * re-opens the file via stdio into a heap buffer it manages. */
-    if (SaveJson_FileIsJson(filename) == 1) {
-        int16_t jr = SaveJson_LoadCareer(filename, NULL, 0);
-        if (jr != 0) {
-            _ShowErrorMenu(aFileSavedByDif);
-            _RestoreOptions();
-            _InitUserTactics();
-            return 1;
-        }
-        _CycleMenuMusic();
-        return 0;
-    }
-
-    result = _LoadFileEx(filename, (uint8_t *)&careerFileBuffer, &fileSize);
-    if (result != 0) {
-        _ShowFsErrorByCode((uint16_t)result);
+    /* JSON is the only career format. The legacy raw-memory-dump reader was
+     * retired (2026-06-10): after the careerFileBuffer overlay untangle it would
+     * load the extracted fields into dead .skip holes -> broken career, and the
+     * writer is already JSON-only (_SaveCareerFile). A non-JSON .CAR/.SEA is now
+     * unsupported (graceful error). The JSON load path runs its own
+     * _TranslateAmigaAddressesAfterLoad / _RebuildPointersAfterLoad inside
+     * SaveJson_LoadCareer, so the pointer fixups still happen. See docs/
+     * SAVE_DATA.md "Format migration / read-support policy". */
+    if (SaveJson_FileIsJson(filename) != 1 ||
+        SaveJson_LoadCareer(filename, NULL, 0) != 0) {
+        _ShowErrorMenu(aFileSavedByDif);
         _RestoreOptions();
         _InitUserTactics();
         return 1;
     }
-
-    if (_LoadCompetitionFile() != 0) {
-        _RestoreOptions();
-        _InitUserTactics();
-        return 1;
-    }
-
-    /* Pointer-fixup runs in two passes. See SAVE_DATA.md
-     * "Cross-build pointer LUT".
-     *
-     * Pass 1 — Amiga LUT translation. Rewrites every saved pointer
-     * field whose value falls in the original-Amiga address range
-     * [0x00100000, 0x00200000) to the current build's address of the
-     * same symbol. Saves written by the original Amiga binary (or by
-     * pre-LUT SDL builds whose addresses happened to overlap) get
-     * remapped; saves with current-build addresses (typical SDL→SDL
-     * round-trip) pass through untouched.
-     *
-     * Pass 2 — Field-specific re-derivation. Catches pointers the LUT
-     * doesn't know how to translate (cup-record nameSource fallbacks,
-     * BSS region anchors that should always point at the current
-     * build's per-slot buffers, runtime DIY workspace, etc.). */
-    _TranslateAmigaAddressesAfterLoad();
-    _RebuildPointersAfterLoad();
-
     _CycleMenuMusic();
     return 0;
 }
