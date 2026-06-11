@@ -99,7 +99,7 @@ SRC_FILES=(
 HDR_FILES=(
     swos_types.h
     diy_competition.h menu_system.h teams.h game_types.h
-    mjson.h save_format_json.h
+    mjson.h save_format_json.h file_io.h
     rnc_magic.h endian_helpers.h auto_skip_debug.h
     swos_io.h audio.h input.h swos_platform.h swos_sections.h
     competition_data.h
