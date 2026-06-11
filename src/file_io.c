@@ -478,8 +478,6 @@ int16_t _SaveCareerFile(uint8_t *filename)
 __attribute__((used, externally_visible))
 int16_t _LoadPresetFile(uint8_t *filename)
 {
-    int16_t result;
-
     _SaveOptions();
 
     /* Route a loaded preset to the preset menu, not the career contestMenu.
@@ -493,32 +491,23 @@ int16_t _LoadPresetFile(uint8_t *filename)
     extern uint16_t gameType;
     gameType = 2; /* GAME_TYPE_PRESET_COMPETITION (menus.c:2216) */
 
-    if (SaveJson_FileIsJson(filename) == 1) {
-        int16_t jr = SaveJson_LoadPreset(filename, NULL, 0);
-        if (jr != 0) {
-            _ShowErrorMenu(aFileSavedByDif);
-            _RestoreOptions();
-            _InitUserTactics();
-            return 1;
-        }
-        _CycleMenuMusic();
-        return 0;
-    }
-
-    result = _LoadFileEx(filename, (uint8_t *)&competitionFileBuffer, (uint32_t *)0);
-    if (result != 0) {
-        _ShowFsErrorByCode((uint16_t)result);
+    /* JSON is the only preset format. The legacy raw read loaded a whole
+     * careerFileBuffer-overlay-region .PRE dump into the now-standalone
+     * competitionFileBuffer (a fixed-size CompetitionSlotBuffer) — post-untangle
+     * that overflows the buffer and the typed slots no longer line up, exactly
+     * like the retired career raw read (f1a5146). JSON-only; a non-JSON .PRE is
+     * unsupported (graceful error). SaveJson_LoadPreset restores the typed
+     * competition slot and re-derives the tournament/cup identities itself; it
+     * deliberately does NOT run the career _RebuildPointersAfterLoad (a routed
+     * .PRE goes to the DIY/preset menu, not the career contestMenu). See
+     * docs/SAVE_DATA.md "Format migration / read-support policy". */
+    if (SaveJson_FileIsJson(filename) != 1 ||
+        SaveJson_LoadPreset(filename, NULL, 0) != 0) {
+        _ShowErrorMenu(aFileSavedByDif);
         _RestoreOptions();
         _InitUserTactics();
         return 1;
     }
-
-    if (_LoadCompetitionFile() != 0) {
-        _RestoreOptions();
-        _InitUserTactics();
-        return 1;
-    }
-
     _CycleMenuMusic();
     return 0;
 }
@@ -576,8 +565,6 @@ int16_t _SavePresetCompetitionFile(uint8_t *filename)
 __attribute__((used, externally_visible))
 int16_t _LoadDIYFile(uint8_t *filename)
 {
-    int16_t result;
-
     _SaveOptions();
 
     /* Route a loaded DIY competition to the DIY menu, not the career
@@ -585,32 +572,23 @@ int16_t _LoadDIYFile(uint8_t *filename)
     extern uint16_t gameType;
     gameType = 1; /* GAME_TYPE_DIY_COMPETITION (menus.c:2215) */
 
-    if (SaveJson_FileIsJson(filename) == 1) {
-        int16_t jr = SaveJson_LoadDIY(filename, NULL, 0);
-        if (jr != 0) {
-            _ShowErrorMenu(aFileSavedByDif);
-            _RestoreOptions();
-            _InitUserTactics();
-            return 1;
-        }
-        _CycleMenuMusic();
-        return 0;
-    }
-
-    result = _LoadFileEx(filename, (uint8_t *)&competitionFileBuffer, (uint32_t *)0);
-    if (result != 0) {
-        _ShowFsErrorByCode((uint16_t)result);
+    /* JSON is the only DIY format. The legacy raw read loaded a whole
+     * careerFileBuffer-overlay-region .DIY dump into the now-standalone
+     * competitionFileBuffer (a fixed-size CompetitionSlotBuffer) — post-untangle
+     * that overflows the buffer and the typed slots no longer line up, exactly
+     * like the retired career raw read (f1a5146). JSON-only; a non-JSON .DIY is
+     * unsupported (graceful error). SaveJson_LoadDIY restores the typed
+     * competition slot and re-derives the tournament/cup identities itself; it
+     * deliberately does NOT run the career _RebuildPointersAfterLoad (a routed
+     * .DIY goes to the DIY menu, not the career contestMenu). See
+     * docs/SAVE_DATA.md "Format migration / read-support policy". */
+    if (SaveJson_FileIsJson(filename) != 1 ||
+        SaveJson_LoadDIY(filename, NULL, 0) != 0) {
+        _ShowErrorMenu(aFileSavedByDif);
         _RestoreOptions();
         _InitUserTactics();
         return 1;
     }
-
-    if (_LoadCompetitionFile() != 0) {
-        _RestoreOptions();
-        _InitUserTactics();
-        return 1;
-    }
-
     _CycleMenuMusic();
     return 0;
 }

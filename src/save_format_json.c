@@ -4909,15 +4909,28 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
 
 #ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
     {
-        const uint8_t *lo = &competitionFileBuffer;
-        const uint8_t *hi = (const uint8_t *)&numSelectedTeams +
-                            sizeof(numSelectedTeams) +
-                            (uint32_t)numDiyTeams * 684u;
         VerifyReloadFn fn = (strcmp(kind, KIND_DIY) == 0)
                               ? verify_reload_diy
                               : verify_reload_preset;
-        verify_roundtrip_region(kind, (uint8_t *)lo,
-                                (uint32_t)(hi - lo), fn, filename, NULL);
+        /* Verify EXACTLY the standalone CompetitionSlotBuffer — the payload
+         * load_competition_buf restores. Same-target the primary_competition_
+         * context whole-buffer blob (s_career_scalars) round-trips every byte
+         * verbatim; comp_slot is a cross-target override re-writing identical
+         * values on top, so this diffs to 0.
+         *
+         * Do NOT revive the legacy [&competitionFileBuffer, &numSelectedTeams +
+         * numDiyTeams*684) span: the competition-slots untangle (2026-06-04)
+         * made competitionFileBuffer a STANDALONE buffer ~1.7 MB BELOW
+         * numSelectedTeams, so that span is the forbidden address-range pattern
+         * over a linker GAP of unrelated globals. memset-ing the gap both
+         * zeroed the reload's own dependencies (numDiyTeams et al., which then
+         * mis-drove the restore) and diffed ~112k unrelated bytes as false
+         * mismatches. The diy-teams append (selTeamsPtr) is no longer
+         * contiguous after the buffer — it round-trips via "$.diy_teams" and is
+         * not part of this region. See project_diy_preset_load_memset_gap. */
+        verify_roundtrip_region(kind, (uint8_t *)&competitionFileBuffer,
+                                (uint32_t)sizeof(CompetitionSlotBuffer),
+                                fn, filename, NULL);
     }
 #endif
 
