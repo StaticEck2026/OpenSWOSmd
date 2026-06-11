@@ -243,12 +243,20 @@ void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest)
  * ================================================================ */
 static uint8_t savedTeamsBackupBuffer[SAVE_SIZE];
 
+/* numSelectedTeams (2 B) and the selectedTeams[32] array (SAVE_SIZE-2 =
+ * 32*684 = 21888 B at &selTeamsPtr) are backed up / restored as TWO independent
+ * runs, so neither relies on the array sitting immediately after numSelectedTeams
+ * in BSS. The array is being lifted out of the careerFileBuffer overlay into a
+ * typed carrier (see docs/SELECTED_TEAMS_UNTANGLE.md); decoupling here is
+ * byte-for-byte identical to the old single 0x5582 copy from &numSelectedTeams
+ * while the two are still adjacent, and stays correct once the array moves. */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void _SaveSelectedTeams(void)
 {
-    volatile uint16_t *src = (volatile uint16_t *)&numSelectedTeams;
     volatile uint16_t *dst = (volatile uint16_t *)savedTeamsBackupBuffer;
-    uint32_t remaining = SAVE_SIZE;
+    *dst++ = numSelectedTeams;                              /* count -> backup[0] */
+    volatile uint16_t *src = (volatile uint16_t *)&selTeamsPtr;
+    uint32_t remaining = SAVE_SIZE - 2;                    /* 21888 = 32 * 684 */
     while (remaining) {
         *dst++ = *src++;
         remaining -= 2;
@@ -263,8 +271,9 @@ void _RestoreSelectedTeams(void)
         _PanicHaltLoop();
     }
     volatile uint16_t *src = (volatile uint16_t *)savedTeamsBackupBuffer;
-    volatile uint16_t *dst = (volatile uint16_t *)&numSelectedTeams;
-    uint32_t remaining = SAVE_SIZE;
+    numSelectedTeams = *src++;                              /* count from backup[0] */
+    volatile uint16_t *dst = (volatile uint16_t *)&selTeamsPtr;
+    uint32_t remaining = SAVE_SIZE - 2;
     while (remaining) {
         *dst++ = *src++;
         remaining -= 2;
