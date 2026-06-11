@@ -56,8 +56,10 @@ __asm__(
     ".globl " _ASM_PFX "careerFileBuffer\n"
     _ASM_PFX "careerFileBuffer:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "tmdFileBuffer\n"
-    _ASM_PFX "tmdFileBuffer:\n"
+    /* tmdFileBuffer (TMD team pool, TeamFileEx[80] = 54720 B) pulled out to
+     * career_team_buffers.c (UNTANGLE step 3). Reserve 54720 bytes so every
+     * later overlay label keeps its offset (no cascade). Save-format-neutral:
+     * saved as the typed tmd_teams JSON array (same path as selectedTeams). */
     ".skip 54720\n"
     /* ---- Pilot 3: 12 x uint16 career-status flags pulled out to
      * careerStatusFlags (currentSeasonShowing..clubBusinessActive, 24 B) ----

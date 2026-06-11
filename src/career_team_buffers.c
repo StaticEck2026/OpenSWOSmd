@@ -4,9 +4,11 @@
  */
 /* career_team_buffers.c — UNTANGLE step 3 / step-4 phase 4 (overlay retirement).
  *
- * The player's club team (careerTeam) and the in-memory working team (currentTeam)
- * lifted out of the careerFileBuffer overlay into standalone storage — the LAST
- * two big residents of the career region. Each is a TeamFileEx (16 active
+ * The player's club team (careerTeam), the in-memory working team (currentTeam),
+ * and the TMD team pool (tmdFileBuffer, TeamFileEx[80], added 2026-06-10)
+ * lifted out of the careerFileBuffer overlay into standalone storage. After
+ * tmdFileBuffer the overlay is down to just its carrier + the careerFileBuffer
+ * head + numSelectedTeams. careerTeam/currentTeam are each a TeamFileEx (16 active
  * players) followed by 16 reserve PlayerFile entries = 1292 bytes
  * (CAREER_TEAM_BUF_SIZE). Real labels (not .equ) so every reader + the save
  * (emit_player_file_body at &careerTeam / &careerTeam+684 and the currentTeam
@@ -50,5 +52,14 @@ __asm__(
     ".globl " _ASM_PFX "currentTeam\n"
     _ASM_PFX "currentTeam:\n"
     ".skip 1292\n"
+    /* tmdFileBuffer — the TMD team pool: TeamFileEx[80] (80*684 = 54720 B),
+     * lifted out of the careerFileBuffer overlay (UNTANGLE step 3, 2026-06-10).
+     * Addressed as (TeamFileEx *)&tmdFileBuffer + i; saved as the typed
+     * `tmd_teams` JSON array (same emit_team_file_ex_body path as selectedTeams),
+     * so this is save-format-neutral. Raw-byte label so the typed-but-undersized
+     * externs (extern uint8_t tmdFileBuffer / tmdFileBuffer[]) resolve. */
+    ".globl " _ASM_PFX "tmdFileBuffer\n"
+    _ASM_PFX "tmdFileBuffer:\n"
+    ".skip 54720\n"
     ".text\n"
 );
