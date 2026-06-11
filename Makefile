@@ -240,11 +240,17 @@ endif
 
 # Save-file format toggle. Default ON — new saves are written as JSON
 # via mjson (see src/save_format_json.c) and load auto-detects format
-# from the file header so existing raw-dump saves keep working too.
-# Opt out with `make SWOS_SAVE_FORMAT_JSON=0` to force the legacy
-# raw-memory-dump format the original Amiga SWOS used (only useful for
-# A/B testing the legacy path before we delete it). Cleanup: once JSON
-# is proven for all save types we delete the legacy paths and the toggle.
+# from the file header.
+#
+# The big overlay-dump saves (.CAR/.SEA/.PRE/.DIY) are now JSON-only on
+# BOTH read and write regardless of this flag — their legacy raw-memory-
+# dump readers AND writers have been deleted (roadmap step 4 complete).
+# The flag now only governs the WRITE format of the small fixed-layout
+# records that KEEP binary support (.HIL/.TAC): ON (default) writes them
+# JSON-first; =0 writes them in the original binary layout. Their binary
+# READ path is compiled either way (load auto-detects), so .HIL/.TAC/.EDT/
+# .CFG interop is preserved. See docs/SAVE_DATA.md "Format migration /
+# read-support policy".
 ifneq ($(SWOS_SAVE_FORMAT_JSON),0)
 DEBUG_FLAGS += -DSWOS_SAVE_FORMAT_JSON=1
 endif

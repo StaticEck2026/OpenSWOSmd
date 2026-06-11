@@ -163,8 +163,11 @@ phase) covers comp-name string pointers that the LUT doesn't index.
       across 370 bytes`.
 
 ### Cleanup (post-migration)
-- [ ] Default `SWOS_SAVE_FORMAT_JSON=1` after one release cycle of
-      dual-format support
+- [x] Default `SWOS_SAVE_FORMAT_JSON=1` — already the Makefile default
+      (`ifneq ($(SWOS_SAVE_FORMAT_JSON),0)`). With the big-save legacy raw
+      paths deleted, the flag now only governs `.HIL`/`.TAC` *write* format
+      (binary read is always compiled); see the refreshed Makefile comment.
+      Not removing the toggle — it's the `.HIL`/`.TAC` binary-write opt-out.
 - [x] Delete legacy bodies of the big overlay-dump saves —
       `_SaveCareerFile`/`_LoadCareerFile` (f1a5146),
       `_LoadPresetFile`/`_LoadDIYFile` (081c843),
@@ -178,8 +181,12 @@ phase) covers comp-name string pointers that the LUT doesn't index.
 - [x] Decide whether `src/generated/amiga_address_map.c` still has a
       role — no; deleted 2026-06-11. JSON re-derives pointers from
       semantic identities, so no address LUT is needed.
-- [ ] Delete the cross-build pointer-fixup parts of
-      `_RebuildPointersAfterLoad`
+- [x] Delete the cross-build pointer-fixup parts of
+      `_RebuildPointersAfterLoad` — done by removing `save_pointer_lut.c` /
+      `_TranslateAmigaAddressesAfterLoad` (903df34). `_RebuildPointersAfterLoad`
+      itself is the KEEP path: it re-derives every pointer from a stable JSON
+      IDENTITY (competition ID, buffer index), never an Amiga absolute address,
+      so there were no legacy-fixup branches left inside it to remove.
 
 ## Open design decisions
 
