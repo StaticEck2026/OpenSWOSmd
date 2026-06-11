@@ -165,11 +165,31 @@ is *already accessed as typed `TeamFileEx`*; the only raw-blob aspect is the
    tail of `selectedTeams`? If the latter, the union as drawn is fine; if the
    former, keep `editTeamsBuffer` anchored at `+1368` and treat `selectedTeams`
    as the head that runs into it.
-3. **Is the union load-bearing?** Does any live code write via one view and read
-   via the other (true union dependency), or are career-play and edit-teams
-   strictly disjoint in time? If strictly disjoint and `editTeamsBuffer` is not
-   saved, a *later* step could split them entirely — but per the overlapped-data
-   rule we keep the union for now.
+3. **Is the union load-bearing?** RESOLVED: **yes.** `swos_globals.c:583`:
+   `career_teams.c:1660` stores `selTeamsPtr`-relative offsets in competition-slot
+   fields that reach into `editTeamsBuffer`'s space (the array overruns into it for
+   teams 2..31). So `selectedTeams`, `editTeamsBuffer`, and the contiguous
+   `editTeamsSaveVarsArea` must relocate **as one 68400-byte block** (= 4+1+20+5+30
+   +1308+43778+23254) to keep those offsets valid. All three are `&symbol`-addressed
+   only and not saved (`save_format_json.c:2558` dropped them), so a contiguous
+   relocation is clean — but `editTeamsBuffer`'s *position* has a history of
+   adjacency surprises (`swos_amiga_data_stubs.c:917`, imageCmdWorkBuf overflow);
+   that overflow is now contained (imageCmdWorkBuf is self-sized 2 MB), so moving
+   the block is safe.
+
+## Phase-2 implementation shape (resolved)
+
+New file `selected_teams.c` — one `__asm__` `.bss` block (careerTeam pattern),
+real labels at the exact offsets, total 68400 B:
+`selectedTeams`+`selTeamsPtr` (same base, +0) · `selTeamIsComputerFlag` +4 ·
+`selTeamNameBase` +5 · `selTeamImportField` +25 · `selTeamSocksColor` +30 ·
+`selTeamPlayerIndices` +60 · `editTeamsBuffer` +1368 · `editTeamsSaveVarsArea`
++45146. The overlay replaces the eight label defs with one `.skip 68400` (no
+cascade — `saveGameLength` et al. keep their offsets). Add `selected_teams.c` to
+the Makefile object list and to `sync_to_amiga_port.sh` SRC_FILES. `selectedTeams`
+is added as a typed `extern TeamFileEx selectedTeams[]` alias at the base so new
+code can use named-field access; existing `(TeamFileEx *)&selTeamsPtr` casts keep
+working (Phase 3 converts them incrementally).
 
 ## Save-format impact
 
