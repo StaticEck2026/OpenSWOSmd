@@ -165,10 +165,14 @@ phase) covers comp-name string pointers that the LUT doesn't index.
 ### Cleanup (post-migration)
 - [ ] Default `SWOS_SAVE_FORMAT_JSON=1` after one release cycle of
       dual-format support
-- [ ] Delete legacy bodies of `_SaveCareerFile`, `_LoadCareerFile`,
-      `_SavePresetCompetitionFile`, `_LoadPresetFile`,
-      `_SaveDIYFile`, `_LoadDIYFile`, `_DoSaveHighlights`,
-      `_LoadHilFile`, `_ReadTacticsFile`, `_WriteTacticsFile`
+- [x] Delete legacy bodies of the big overlay-dump saves —
+      `_SaveCareerFile`/`_LoadCareerFile` (f1a5146),
+      `_LoadPresetFile`/`_LoadDIYFile` (081c843),
+      `_SavePresetCompetitionFile`/`_SaveDIYFile` (this change, JSON-only);
+      `_SaveCompetitionFile` + the save-header magic externs went with them.
+      **NOT** `_DoSaveHighlights`/`_LoadHilFile`/`_ReadTacticsFile`/
+      `_WriteTacticsFile` — `.HIL`/`.TAC` KEEP binary read/write per the
+      read-support policy (docs/SAVE_DATA.md).
 - [x] Delete `src/save_pointer_lut.c` (done 2026-06-11 — the legacy
       raw readers that used it are all retired)
 - [x] Decide whether `src/generated/amiga_address_map.c` still has a
