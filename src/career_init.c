@@ -18,6 +18,9 @@
 #include "string_utils.h"
 #include "panic.h"
 #include "auto_skip_debug.h"
+#ifdef SWOS_INJECT_WC
+#include <stdio.h>   /* fprintf — SWOS_INJECT_WC debug log only */
+#endif
 
 /* ---- External globals (all in SWOS2.s BSS) ---- */
 extern uint16_t numPlayersOnTransferMarket;
@@ -1022,6 +1025,24 @@ void _InitializeNewSeason(void)
         int16_t regionOffset = (int16_t)(int8_t)regionIdx - 80;
         uint8_t *flagsArray = (uint8_t *)regionTable[regionOffset];
         someTeamFlags = flagsArray[currentSeasonShowing];
+
+#ifdef SWOS_INJECT_WC
+        /* DEBUG (SWOS_INJECT_WC, opt-in via `make SWOS_INJECT_WC=1`): force a
+         * World Cup year for this national-team career, bypassing the natural
+         * 4-year cycle, so the national-coach WC path runs every season — used
+         * to reproduce the season-transition 0x8888 backup-clobber
+         * (project_eurocup_national_backup_clobber). 0x80 selects the WC-year
+         * branch in _Career_SetCupPickList_ForSelectedRegion (called below);
+         * qualifyingStage1PendingFlag0 = 0 picks the *invited/finals* pick list
+         * (the actual WC tournament) rather than WC-qualifier friendlies — 0x80
+         * alone would leave the team in friendlies with no WC. Flip the flag to
+         * 1 if you want the qualifier path instead. National teams only (here). */
+        someTeamFlags = 0x80;
+        qualifyingStage1PendingFlag0 = 0;
+        fprintf(stderr, "[SWOS_INJECT_WC] forcing World Cup for national team "
+                "0x%04X (season %u)\n",
+                (unsigned)selTeamNumber, (unsigned)currentSeasonShowing);
+#endif
 
         /* Get nationality and team file */
         uint32_t natResult = _GetNationalityAndTeamFile(selTeamNumber);

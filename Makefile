@@ -238,6 +238,17 @@ ifdef SWOS_TEST_NO_INJURIES_CARDS
 DEBUG_FLAGS += -DSWOS_TEST_NO_INJURIES_CARDS=1
 endif
 
+# Debug: force a World Cup for a national-team career, bypassing the natural
+# 4-year competition cycle, so the national-coach WC path can be reproduced on
+# demand (e.g. the season-transition 0x8888 backup-clobber in
+# _VerifyTeamLoaded). Off by default; enable with `make SWOS_INJECT_WC=1`.
+# Only affects national-team career selection (country code 80..85), and is
+# compile-time only so production builds never ship with it on. See the inject
+# site in src/career_init.c (_InitializeNewSeason).
+ifdef SWOS_INJECT_WC
+DEBUG_FLAGS += -DSWOS_INJECT_WC=1
+endif
+
 # Save-file format toggle. Default ON — new saves are written as JSON
 # via mjson (see src/save_format_json.c) and load auto-detects format
 # from the file header.
