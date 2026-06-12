@@ -788,8 +788,8 @@ typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx_CupView {
     uint8_t  _shuffleIndicesAlias[2];   /* 0x8A (parent 0xEE): aliases diyTeamShuffleIndices */
     uint8_t  _bss_2E01E[62];            /* 0x8C (parent 0xF0): BSS_00_2E01E (purpose unclear) */
     uint16_t leagueTeamIdsAlias[14];    /* 0xCA (parent 0x12E): aliases diyLeagueTeamIds */
-    uint16_t competitionFormat;         /* 0xE6 (parent 0x14A): aliases diyCompetitionFormat */
-    uint16_t roundFormat;               /* 0xE8 (parent 0x14C): aliases diyRoundFormat */
+    uint16_t competitionFormat;         /* 0xE6 (parent 0x14A): was SWOS2.s diyCompetitionFormat (global alias removed) */
+    uint16_t roundFormat;               /* 0xE8 (parent 0x14C): was SWOS2.s diyRoundFormat (global alias removed) */
 } DIYCompetitionEx_CupView;
 
 typedef char _diycupview_size_check[(sizeof(DIYCompetitionEx_CupView) == 0xEA) ? 1 : -1];
@@ -809,8 +809,8 @@ typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx_LeagueView {
     uint8_t  cupRoundResults[100];      /* 0x26 (parent 0x8A): same memory as cup view */
     uint8_t  shuffleAndPad[64];         /* 0x8A (parent 0xEE): diyTeamShuffleIndices(2) + BSS_00_2E01E(62) */
     uint16_t leagueTeamIds[14];         /* 0xCA (parent 0x12E): aliases diyLeagueTeamIds */
-    uint16_t competitionFormat;         /* 0xE6 (parent 0x14A): aliases diyCompetitionFormat */
-    uint16_t roundFormat;               /* 0xE8 (parent 0x14C): aliases diyRoundFormat */
+    uint16_t competitionFormat;         /* 0xE6 (parent 0x14A): was SWOS2.s diyCompetitionFormat (global alias removed) */
+    uint16_t roundFormat;               /* 0xE8 (parent 0x14C): was SWOS2.s diyRoundFormat (global alias removed) */
 } DIYCompetitionEx_LeagueView;
 
 typedef char _diyleagueview_size_check[(sizeof(DIYCompetitionEx_LeagueView) == 0xEA) ? 1 : -1];
@@ -886,7 +886,7 @@ typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx {
 
     /* --- 0x1BE..0x1C5: SWOS2.s named diy{MatchesPlayed,LeagueCurrentSlot,
      *                                   LeagueMatchProgress,LeagueTotalMatches} --- */
-    uint16_t matchesPlayedCount;        /* 0x1BE: diyMatchesPlayedCount */
+    uint16_t matchesPlayedCount;        /* 0x1BE: was SWOS2.s diyMatchesPlayedCount (global alias removed) */
     uint16_t leagueCurrentSlot;         /* 0x1C0: diyLeagueCurrentSlot (also section-progression flag) */
     uint16_t leagueMatchProgress;       /* 0x1C2: diyLeagueMatchProgress (also phase index) */
     uint16_t leagueTotalMatches;        /* 0x1C4: diyLeagueTotalMatches (also matchesPerSeason) */

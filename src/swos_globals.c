@@ -1112,9 +1112,8 @@ __asm__(".globl " _ASM_PFX "diyMinSubstitutes\n"
         ".globl " _ASM_PFX "diyHasGroups\n"
         ".equ   " _ASM_PFX "diyHasGroups, " _ASM_PFX "diyCompetitionStartBuf + "
         DIY_STR(0x68 + DIY_POST_BASE_SHIFT) "\n"
-        ".globl " _ASM_PFX "diyMatchesPlayedCount\n"
-        ".equ   " _ASM_PFX "diyMatchesPlayedCount, " _ASM_PFX "diyCompetitionStartBuf + "
-        DIY_STR(0x1BE + DIY_POST_BASE_SHIFT) "\n"
+        /* diyMatchesPlayedCount alias removed — unused; code uses the typed
+         * field diyCompetitionStart.matchesPlayedCount (@0x1BE). */
         ".globl " _ASM_PFX "diyLeagueCurrentSlot\n"
         ".equ   " _ASM_PFX "diyLeagueCurrentSlot, " _ASM_PFX "diyCompetitionStartBuf + "
         DIY_STR(0x1C0 + DIY_POST_BASE_SHIFT) "\n"
@@ -1123,13 +1122,10 @@ __asm__(".globl " _ASM_PFX "diyMinSubstitutes\n"
         DIY_STR(0x1C2 + DIY_POST_BASE_SHIFT) "\n"
         ".globl " _ASM_PFX "diyLeagueTotalMatches\n"
         ".equ   " _ASM_PFX "diyLeagueTotalMatches, " _ASM_PFX "diyCompetitionStartBuf + "
-        DIY_STR(0x1C4 + DIY_POST_BASE_SHIFT) "\n"
-        ".globl " _ASM_PFX "diyCompetitionFormat\n"
-        ".equ   " _ASM_PFX "diyCompetitionFormat, " _ASM_PFX "diyCompetitionStartBuf + "
-        DIY_STR(0x14A + DIY_POST_BASE_SHIFT) "\n"
-        ".globl " _ASM_PFX "diyRoundFormat\n"
-        ".equ   " _ASM_PFX "diyRoundFormat, " _ASM_PFX "diyCompetitionStartBuf + "
-        DIY_STR(0x14C + DIY_POST_BASE_SHIFT) "\n");
+        DIY_STR(0x1C4 + DIY_POST_BASE_SHIFT) "\n");
+/* diyCompetitionFormat (@0x14A) / diyRoundFormat (@0x14C) aliases removed —
+ * unused; code uses the typed fields diyCompetitionStart.matchData.league.
+ * competitionFormat / roundFormat (which alias leagueTeamIds[14]/[15]). */
 
 /* diyPresetNameOfCompetition: aliased in swos_globals_career_overlay.c
  * at careerFileBufferBuf + 93312 (== competitionFileBuffer + 4 in the
