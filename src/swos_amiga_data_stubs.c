@@ -1192,7 +1192,7 @@ SWOS_CHIP_BSS char imageCmdWorkBuf[0x200000];
 /* numDiyResults: real data in swos_amiga_data_imports.c */
 /* numDiyTeams: typed definition in swos_data_typed_stubs.c */
 /* numDrawn: typed definition in swos_data_typed_stubs.c */
-/* numExtraPlayersWanted: real data in swos_amiga_data_imports.c */
+/* numExtraPlayersWanted: now a field of OfferOrdinals offerOrdinals in swos_globals.c */
 /* numForeignMarketPlayers: typed definition in swos_data_typed_stubs.c */
 /* numForeignMarketPlayers2: typed definition in swos_data_typed_stubs.c */
 /* numHomeMarketPlayers: typed definition in swos_data_typed_stubs.c */
@@ -1221,10 +1221,10 @@ SWOS_CHIP_BSS char imageCmdWorkBuf[0x200000];
 /* numberOfFiles: typed definition in swos_data_typed_stubs.c */
 /* numberOfLeagues: real data in swos_amiga_data_imports.c */
 /* numbersBuffer: real data in swos_data_bulk_imports.c */
-/* offerAmount: real data in swos_amiga_data_imports.c */
+/* offerAmount: now a field of OfferOrdinals offerOrdinals in swos_globals.c */
 /* offerCandidateTeamIndexBuffer: real data in swos_data_bulk_imports.c */
 /* offerExpiryIterationsRemaining: typed definition in swos_data_typed_stubs.c */
-/* offerExtraPlayerOrdinal: real data in swos_amiga_data_imports.c */
+/* offerExtraPlayerOrdinal: now a field of OfferOrdinals offerOrdinals in swos_globals.c */
 /* offerExtraPositionMask: real data in swos_amiga_data_imports.c */
 /* offerFmtLine1a: real data in swos_amiga_data_imports.c */
 /* offerFmtLine1b: real data in swos_amiga_data_imports.c */
@@ -1234,13 +1234,13 @@ SWOS_CHIP_BSS char imageCmdWorkBuf[0x200000];
 /* offerFmtTwoPlayers: real data in swos_amiga_data_imports.c */
 /* offerLifespanTable: real data in swos_data_bulk_imports.c */
 /* offerNegotiationAttemptCount: typed definition in swos_data_typed_stubs.c */
-/* offerNegotiationStep1Amount: real data in swos_amiga_data_imports.c */
+/* offerNegotiationStep1Amount: now a field of OfferOrdinals offerOrdinals in swos_globals.c */
 /* offerNegotiationStep2Amount: real data in swos_amiga_data_imports.c */
-/* offerPrimaryPlayerOrdinal: real data in swos_amiga_data_imports.c */
+/* offerPrimaryPlayerOrdinal: now a field of OfferOrdinals offerOrdinals in swos_globals.c */
 /* offerPrimaryPositionMask: real data in swos_amiga_data_imports.c */
 /* offerSearchRetryCount: typed definition in swos_data_typed_stubs.c */
 /* offerStatus: real data in swos_amiga_data_imports.c */
-/* offerSwapPlayerOrdinal: real data in swos_amiga_data_imports.c */
+/* offerSwapPlayerOrdinal: now a field of OfferOrdinals offerOrdinals in swos_globals.c */
 /* offerSwapSlotLimit: typed definition in swos_data_typed_stubs.c */
 /* offerSwapSlotsUsed: typed definition in swos_data_typed_stubs.c */
 /* offerSwapValueBaseSum: real data in swos_amiga_data_imports.c */
@@ -1749,7 +1749,7 @@ char teamFileBuffer[0xFA0E];
 /* teamNoOfferingJob: real data in swos_amiga_data_imports.c */
 /* teamNumThatScored: real data in swos_amiga_data_imports.c */
 /* teamNumbersIndices: real data in swos_data_bulk_imports.c */
-/* teamOffering: real data in swos_amiga_data_imports.c */
+/* teamOffering: now a field of OfferOrdinals offerOrdinals in swos_globals.c */
 /* teamOfferingJobPtr: real data in swos_amiga_data_imports.c */
 /* teamPlOfs24Table: real data in swos_amiga_data_imports.c */
 /* teamPlayingUp: real data in swos_amiga_data_imports.c */
