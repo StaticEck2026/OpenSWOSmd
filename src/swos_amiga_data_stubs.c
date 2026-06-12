@@ -629,15 +629,15 @@ SWOS_CHIP_BSS char audioInstrumentBank[512 * 1024];
 /* diyFixtureViewMode: real data in swos_amiga_data_imports.c */
 /* diyFoundTeamIndex: real data in swos_amiga_data_imports.c */
 /* diyGroupPatternLookup: real data in swos_data_bulk_imports.c */
-/* diyHasGroups: typed definition in swos_data_typed_stubs.c */
+/* diyHasGroups: now typed diyCompetitionStart.matchData.league.hasGroupsDiy */
 /* diyInitFocusOverride: real data in swos_amiga_data_imports.c */
-/* diyLeagueCurrentSlot: typed definition in swos_data_typed_stubs.c */
+/* diyLeagueCurrentSlot: now typed diyCompetitionStart.leagueCurrentSlot */
 /* diyLeagueEndingMonth: real data in swos_amiga_data_imports.c */
 /* diyLeagueEndingMonthStrTable: real data in swos_amiga_ptr_imports.c */
 /* diyLeagueLookOnly: real data in swos_amiga_data_imports.c */
-/* diyLeagueMatchProgress: typed definition in swos_data_typed_stubs.c */
-/* diyLeagueMaxSubstitutes: typed definition in swos_data_typed_stubs.c */
-/* diyLeagueMinSubstitutes: typed definition in swos_data_typed_stubs.c */
+/* diyLeagueMatchProgress: now typed diyCompetitionStart.leagueMatchProgress */
+/* diyLeagueMaxSubstitutes: now typed diyCompetitionStart.matchData.league.leagueMaxSubstitutes */
+/* diyLeagueMinSubstitutes: now typed diyCompetitionStart.matchData.league.leagueMinSubstitutes */
 /* diyLeagueMonthsStrTable: real data in swos_amiga_ptr_imports.c */
 /* diyLeaguePitchTypeStrTable: typed definition in swos_data_typed_stubs.c */
 /* diyLeagueScratchBuffer: real data in swos_data_bulk_imports.c */
@@ -646,7 +646,7 @@ SWOS_CHIP_BSS char audioInstrumentBank[512 * 1024];
 /* diyLeagueStartingMonth: real data in swos_amiga_data_imports.c */
 /* diyLeagueTeamIds: real data in swos_data_bulk_imports.c */
 /* diyLeagueTeamShuffleMap: real data in swos_data_bulk_imports.c */
-/* diyLeagueTotalMatches: typed definition in swos_data_typed_stubs.c */
+/* diyLeagueTotalMatches: now typed diyCompetitionStart.leagueTotalMatches */
 /* diyLeagueTournament_fixtureRowHeight: real data in swos_amiga_data_imports.c */
 /* diyLeagueTournament_fixtureRowYStep: real data in swos_amiga_data_imports.c */
 /* diyLeagueTournament_viewOptionsAvailable: real data in swos_amiga_data_imports.c */

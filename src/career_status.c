@@ -3688,8 +3688,6 @@ extern uint16_t numDrawn;
 extern uint16_t numLost;
 extern uint16_t goalsScored;
 extern uint16_t goalsTaken;
-extern uint16_t diyHasGroups;
-extern uint16_t diyLeagueCurrentSlot;
 extern uint16_t careerSlotProcessingInProgress;
 extern uint32_t aEuropeanTour;  /* string label — used as address boundary */
 extern uint32_t aOceaniaTour;   /* string label — used as address boundary */
@@ -3772,7 +3770,7 @@ void _Career_UpdateStatsAfterMatch(TeamFileEx *team1, TeamFileEx *team2, uint16_
             uint8_t *tourPtr = diyCompetitionStart.base.namePtr;
             if (tourPtr >= (uint8_t *)&aEuropeanTour && tourPtr <= (uint8_t *)&aOceaniaTour) {
                 boardConfidenceMod7++;
-            } else if (diyHasGroups) {
+            } else if (diyCompetitionStart.matchData.league.hasGroupsDiy) {
                 boardConfidenceMod4++;
             }
         }
@@ -3784,7 +3782,7 @@ void _Career_UpdateStatsAfterMatch(TeamFileEx *team1, TeamFileEx *team2, uint16_
             uint8_t *tourPtr = diyCompetitionStart.base.namePtr;
             if (tourPtr >= (uint8_t *)&aEuropeanTour && tourPtr <= (uint8_t *)&aOceaniaTour) {
                 boardConfidenceMod9++;
-            } else if (diyHasGroups) {
+            } else if (diyCompetitionStart.matchData.league.hasGroupsDiy) {
                 boardConfidenceMod6++;
             }
         }
@@ -3796,7 +3794,7 @@ void _Career_UpdateStatsAfterMatch(TeamFileEx *team1, TeamFileEx *team2, uint16_
             uint8_t *tourPtr = diyCompetitionStart.base.namePtr;
             if (tourPtr >= (uint8_t *)&aEuropeanTour && tourPtr <= (uint8_t *)&aOceaniaTour) {
                 boardConfidenceMod8++;
-            } else if (diyHasGroups) {
+            } else if (diyCompetitionStart.matchData.league.hasGroupsDiy) {
                 boardConfidenceMod5++;
             }
         }
@@ -3826,7 +3824,7 @@ skipStats:
 
     /* Set career slot processing variable */
     if (compType == 0) {
-        careerSlotProcessingInProgress = diyLeagueCurrentSlot;
+        careerSlotProcessingInProgress = diyCompetitionStart.leagueCurrentSlot;
     } else {
         careerSlotProcessingInProgress = (uint16_t)diyCompetitionStart.base.roundComplete;
     }
