@@ -23,11 +23,9 @@ uint8_t shirtColorTable[10] = { 1, 2, 3, 6, 10, 11, 12, 13, 14, 15 };
  * so LE callers get the same 10 effective entries. Data.c:1892. */
 uint16_t kTeamColorsTable[10] = { 1, 2, 3, 6, 10, 11, 12, 13, 14, 15 };
 
-/* littlePlayersColorTable must be adjacent to stadiumMenuLittlePlayer
- * and littlePlayerSpriteGeneric (MENU_CMD_SPRITE_COPY reads them as a
- * single contiguous 36-byte struct at &stadiumMenuLittlePlayer). The
- * real storage lives in swos_globals.c with asm symbol aliases so the
- * Amiga memory layout is preserved. */
+/* The little-player colour table is now the .colTable field of the
+ * EditTeamsSpriteCopy `stadiumMenuLittlePlayerSpriteCopy` struct in
+ * swos_globals.c (was the littlePlayersColorTable .equ alias at +4). */
 
 /* kitsSimilarityLookupTable: 3-byte entries {shirt1-type, shirt2-type,
  * similarity-factor} terminated with 0xFF. Data.c:2078. */

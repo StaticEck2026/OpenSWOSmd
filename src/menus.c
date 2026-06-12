@@ -642,8 +642,7 @@ extern uint16_t bottomTeamPlayerNo;
 extern uint16_t trainingGame;
 extern uint16_t gameMaxSubstitutes;
 extern uint8_t aGrafsMenubg2Ra[];     /* "grafs/menubg2.raw" */
-extern uint16_t stadiumMenuLittlePlayer;
-extern uint16_t littlePlayersColorTable[];
+extern EditTeamsSpriteCopy stadiumMenuLittlePlayerSpriteCopy;
 extern uint16_t littlePlayersSpriteTable[];
 
 /* Color constants */
@@ -769,14 +768,14 @@ void _StadiumPlayerSpritesBeforeDraw(TeamGame *team, uint16_t playerIndex)
 {
     if (playerIndex == 0) {
         /* Goalie */
-        stadiumMenuLittlePlayer = SPR_LITTLE_PLAYER_GOALIE;
-        littlePlayersColorTable[11] = 11;
-        littlePlayersColorTable[10] = 10;
-        littlePlayersColorTable[14] = (uint16_t)team->prShortsCol;
-        littlePlayersColorTable[15] = (uint16_t)team->prSocksCol;
+        stadiumMenuLittlePlayerSpriteCopy.srcSprite =SPR_LITTLE_PLAYER_GOALIE;
+        stadiumMenuLittlePlayerSpriteCopy.colTable[11] = 11;
+        stadiumMenuLittlePlayerSpriteCopy.colTable[10] = 10;
+        stadiumMenuLittlePlayerSpriteCopy.colTable[14] = (uint16_t)team->prShortsCol;
+        stadiumMenuLittlePlayerSpriteCopy.colTable[15] = (uint16_t)team->prSocksCol;
     } else {
         /* Outfield player */
-        stadiumMenuLittlePlayer = littlePlayersSpriteTable[team->prShirtType];
+        stadiumMenuLittlePlayerSpriteCopy.srcSprite =littlePlayersSpriteTable[team->prShirtType];
         uint16_t col1 = (uint16_t)team->prShirtCol;
         uint16_t col2 = (uint16_t)team->prStripesCol;
         if (team->prShirtType == SHIRT_VERTICAL_STRIPES) {
@@ -784,15 +783,15 @@ void _StadiumPlayerSpritesBeforeDraw(TeamGame *team, uint16_t playerIndex)
             col1 = col2;
             col2 = tmp;
         }
-        littlePlayersColorTable[11] = col1;
-        littlePlayersColorTable[10] = col2;
-        littlePlayersColorTable[14] = (uint16_t)team->prShortsCol;
-        littlePlayersColorTable[15] = (uint16_t)team->prSocksCol;
+        stadiumMenuLittlePlayerSpriteCopy.colTable[11] = col1;
+        stadiumMenuLittlePlayerSpriteCopy.colTable[10] = col2;
+        stadiumMenuLittlePlayerSpriteCopy.colTable[14] = (uint16_t)team->prShortsCol;
+        stadiumMenuLittlePlayerSpriteCopy.colTable[15] = (uint16_t)team->prSocksCol;
     }
 
     /* Set skin color from player's face2 field */
     int16_t skinColor = (int8_t)team->players[playerIndex].face2;
-    _FillSkinColorConversionTable((uint16_t)skinColor, littlePlayersColorTable);
+    _FillSkinColorConversionTable((uint16_t)skinColor, stadiumMenuLittlePlayerSpriteCopy.colTable);
 }
 
 /* ================================================================

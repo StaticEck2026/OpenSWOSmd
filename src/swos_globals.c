@@ -358,27 +358,17 @@ __asm__(
  * placeholder glyph). This backing buffer restores the Amiga layout
  * with asm symbol aliases, matching the `currentMenu`/`menuEntries`
  * pattern above. */
-/* Typed as uint16_t[] so the compiler stores each element in NATIVE
- * byte order. The previous byte-array init hardcoded little-endian
- * bytes (0xD6,0x00) which worked on SDL/x86 but read as 0xD600 on
- * Amiga BE — _ConvertSpriteColors then dereferenced sprite #54784,
- * found garbage wquads > 0x14, and panic'd 0x982 on entering the
- * friendly-match stadium menu. */
+/* UNTANGLED (.equ -> struct): same 36-byte MENU_CMD_SPRITE_COPY descriptor as the
+ * editTeams kit previews (EditTeamsSpriteCopy), replacing the uint16_t[18] backing
+ * buffer + `.equ stadiumMenuLittlePlayer / littlePlayerSpriteGeneric /
+ * littlePlayersColorTable` adjacency aliases. Already host-native (the old
+ * byte-array init's LE bytes panic'd 0x982 on the BE Amiga — fixed earlier by the
+ * uint16[] typing, preserved here). srcSprite (+0) is set at runtime; dstSprite
+ * (+2) = 0xD6 (was littlePlayerSpriteGeneric); colTable identity 0..15. */
 __attribute__((used, aligned(2)))
-uint16_t stadiumMenuLittlePlayerBackingBuf[18] = {
-    /* +0  stadiumMenuLittlePlayer */
-    0x0000,
-    /* +2  littlePlayerSpriteGeneric */
-    0x00D6,
-    /* +4..+35 littlePlayersColorTable (identity 0..15) */
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+EditTeamsSpriteCopy stadiumMenuLittlePlayerSpriteCopy = {
+    0x0000, 0x00D6, { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
 };
-__asm__(".globl " _ASM_PFX "stadiumMenuLittlePlayer\n"
-        ".equ   " _ASM_PFX "stadiumMenuLittlePlayer, " _ASM_PFX "stadiumMenuLittlePlayerBackingBuf\n"
-        ".globl " _ASM_PFX "littlePlayerSpriteGeneric\n"
-        ".equ   " _ASM_PFX "littlePlayerSpriteGeneric, " _ASM_PFX "stadiumMenuLittlePlayerBackingBuf + 2\n"
-        ".globl " _ASM_PFX "littlePlayersColorTable\n"
-        ".equ   " _ASM_PFX "littlePlayersColorTable, " _ASM_PFX "stadiumMenuLittlePlayerBackingBuf + 4\n");
 
 /* ---- Transfer-offer ordinals (must be adjacent) --------------------
  *
