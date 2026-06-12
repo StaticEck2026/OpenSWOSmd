@@ -489,74 +489,31 @@ __asm__(".globl " _ASM_PFX "kSpriteBlitQueueSentinel_A\n"
  *   SPR_EDIT_TEAMS_SHORTS_SECONDARY=197,
  *   SPR_EDIT_TEAMS_SECONDARY_SOCKS=198.
  *
- * Colour tables are stored as native-LE uint16 (Data.c declared them
- * uint8[32] with byte-pairs {0,N} that on Amiga BE read back as int16
- * = N — the int8[2N]-vs-int16[N] endian trap; storing the final int16
- * values directly so both BE and LE see the same palette remap). */
+ * UNTANGLED (.equ -> struct, 2026-06-11): each descriptor is now an
+ * EditTeamsSpriteCopy (game_types.h) with HOST-NATIVE uint16 fields,
+ * replacing the uint8_t[36] + EDIT_TEAMS_BUF LE-byte macro + the
+ * `.equ editTeams* / editTeams*ColTable` aliases. The old macro wrote
+ * explicit LE bytes (head `(SRC)&0xFF` first; colTable `N,0`), which the
+ * MENU_CMD_SPRITE_COPY host-native `*(uint16_t*)` read byte-swaps on the BE
+ * Amiga (vs SWOS2.s `dc.w` head + `dc.b` {0,N} BE-word colTable) — a latent
+ * BE/Amiga bug. Native uint16 is correct on BOTH targets; this is what the
+ * prior "store the final int16 values directly" note intended but the
+ * LE-byte macro never delivered. Sprite ids: SPR_BIG_{SHIRT,SHORTS,SOCKS}=
+ * 190/191/192, SPR_EDIT_TEAMS_*=193..198. Colour tables = identity 0..15 with
+ * palette holes punched to 0 (shirt: slots 2,10,11,14; shorts/socks: 11). */
 
-#define EDIT_TEAMS_BUF(SRC, DST, ...) {                       \
-    (uint8_t)((SRC) & 0xFF), (uint8_t)((SRC) >> 8),           \
-    (uint8_t)((DST) & 0xFF), (uint8_t)((DST) >> 8),           \
-    __VA_ARGS__                                               \
-}
+#define COL_SHIRT  { 0, 1, 0, 3, 4, 5, 6, 7, 8, 9, 0, 0, 12, 13, 0, 15 }
+#define COL_SHORTS { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 12, 13, 14, 15 }
 
-/* Shared colour-table LE byte patterns. Shirt tables have index 1 in
- * slot 1, zeros in slots 2, 10, 11, 14 (special-case palette holes
- * for the kit sprite). Shorts/Socks tables are identity 0..15 with
- * slot 11 punched out. These match Data.c:editTeams*ColTable. */
-#define COL_SHIRT \
-    0,0, 1,0, 0,0, 3,0, 4,0, 5,0, 6,0, 7,0, \
-    8,0, 9,0, 0,0, 0,0, 12,0, 13,0, 0,0, 15,0
-#define COL_SHORTS \
-    0,0, 1,0, 2,0, 3,0, 4,0, 5,0, 6,0, 7,0, \
-    8,0, 9,0, 10,0, 0,0, 12,0, 13,0, 14,0, 15,0
+__attribute__((used, aligned(2))) EditTeamsSpriteCopy editTeamsPrimaryShirts   = { 190, 193, COL_SHIRT };
+__attribute__((used, aligned(2))) EditTeamsSpriteCopy editTeamsShorts          = { 191, 194, COL_SHORTS };
+__attribute__((used, aligned(2))) EditTeamsSpriteCopy editTeamsSocks           = { 192, 195, COL_SHORTS };
+__attribute__((used, aligned(2))) EditTeamsSpriteCopy editTeamsSecondaryShirt  = { 190, 196, COL_SHIRT };
+__attribute__((used, aligned(2))) EditTeamsSpriteCopy editTeamsSecondaryShorts = { 191, 197, COL_SHORTS };
+__attribute__((used, aligned(2))) EditTeamsSpriteCopy editTeamsSecondarySocks  = { 192, 198, COL_SHORTS };
 
-__attribute__((used, aligned(2)))
-uint8_t editTeamsPrimaryShirtsSpriteCopyBuf[36]   = EDIT_TEAMS_BUF(190, 193, COL_SHIRT);
-
-__attribute__((used, aligned(2)))
-uint8_t editTeamsShortsSpriteCopyBuf[36]          = EDIT_TEAMS_BUF(191, 194, COL_SHORTS);
-
-__attribute__((used, aligned(2)))
-uint8_t editTeamsSocksSpriteCopyBuf[36]           = EDIT_TEAMS_BUF(192, 195, COL_SHORTS);
-
-__attribute__((used, aligned(2)))
-uint8_t editTeamsSecondaryShirtSpriteCopyBuf[36]  = EDIT_TEAMS_BUF(190, 196, COL_SHIRT);
-
-__attribute__((used, aligned(2)))
-uint8_t editTeamsSecondaryShortsSpriteCopyBuf[36] = EDIT_TEAMS_BUF(191, 197, COL_SHORTS);
-
-__attribute__((used, aligned(2)))
-uint8_t editTeamsSecondarySocksSpriteCopyBuf[36]  = EDIT_TEAMS_BUF(192, 198, COL_SHORTS);
-
-#undef EDIT_TEAMS_BUF
 #undef COL_SHIRT
 #undef COL_SHORTS
-
-__asm__(".globl " _ASM_PFX "editTeamsPrimaryShirts\n"
-        ".equ   " _ASM_PFX "editTeamsPrimaryShirts, " _ASM_PFX "editTeamsPrimaryShirtsSpriteCopyBuf\n"
-        ".globl " _ASM_PFX "editTeamsPrimaryShirtColTable\n"
-        ".equ   " _ASM_PFX "editTeamsPrimaryShirtColTable, " _ASM_PFX "editTeamsPrimaryShirtsSpriteCopyBuf + 4\n"
-        ".globl " _ASM_PFX "editTeamsShorts\n"
-        ".equ   " _ASM_PFX "editTeamsShorts, " _ASM_PFX "editTeamsShortsSpriteCopyBuf\n"
-        ".globl " _ASM_PFX "editTeamsShortsColTable\n"
-        ".equ   " _ASM_PFX "editTeamsShortsColTable, " _ASM_PFX "editTeamsShortsSpriteCopyBuf + 4\n"
-        ".globl " _ASM_PFX "editTeamsSocks\n"
-        ".equ   " _ASM_PFX "editTeamsSocks, " _ASM_PFX "editTeamsSocksSpriteCopyBuf\n"
-        ".globl " _ASM_PFX "editTeamsSocksColTable\n"
-        ".equ   " _ASM_PFX "editTeamsSocksColTable, " _ASM_PFX "editTeamsSocksSpriteCopyBuf + 4\n"
-        ".globl " _ASM_PFX "editTeamsSecondaryShirt\n"
-        ".equ   " _ASM_PFX "editTeamsSecondaryShirt, " _ASM_PFX "editTeamsSecondaryShirtSpriteCopyBuf\n"
-        ".globl " _ASM_PFX "editTeamsSecondaryShirtColTable\n"
-        ".equ   " _ASM_PFX "editTeamsSecondaryShirtColTable, " _ASM_PFX "editTeamsSecondaryShirtSpriteCopyBuf + 4\n"
-        ".globl " _ASM_PFX "editTeamsSecondaryShorts\n"
-        ".equ   " _ASM_PFX "editTeamsSecondaryShorts, " _ASM_PFX "editTeamsSecondaryShortsSpriteCopyBuf\n"
-        ".globl " _ASM_PFX "editTeamsSecondaryShortsColTable\n"
-        ".equ   " _ASM_PFX "editTeamsSecondaryShortsColTable, " _ASM_PFX "editTeamsSecondaryShortsSpriteCopyBuf + 4\n"
-        ".globl " _ASM_PFX "editTeamsSecondarySocks\n"
-        ".equ   " _ASM_PFX "editTeamsSecondarySocks, " _ASM_PFX "editTeamsSecondarySocksSpriteCopyBuf\n"
-        ".globl " _ASM_PFX "editTeamsSecondarySocksColTable\n"
-        ".equ   " _ASM_PFX "editTeamsSecondarySocksColTable, " _ASM_PFX "editTeamsSecondarySocksSpriteCopyBuf + 4\n");
 
 /* ---- selTeamsPtr buffer + adjacent aliases ---------------------------
  * SWOS2.s reserves a single ~45 KB contiguous BSS region starting at

@@ -1130,6 +1130,22 @@ typedef struct __attribute__((packed)) TeamSelectionKeyCacheEntry {
 typedef char _tskc_entry_size_check[(sizeof(TeamSelectionKeyCacheEntry) == 10) ? 1 : -1];
 
 /* ==================================================================
+ * EditTeamsSpriteCopy — MENU_CMD_SPRITE_COPY descriptor for the
+ * edit-teams kit-colour preview. Was a uint8_t[36] built by the
+ * EDIT_TEAMS_BUF LE-byte macro + `.equ editTeams* / editTeams*ColTable`
+ * aliases (swos_globals.c). HOST-NATIVE uint16 fields so the handler's
+ * `*(uint16_t*)` read (menu_system.c:774) is correct on BOTH LE and BE —
+ * the old LE-byte init byte-swapped on the BE Amiga (vs SWOS2.s `dc.w`
+ * head + `dc.b` {0,N} BE-word colTable). See project_edit_teams_buf_endian_bug.
+ * ================================================================== */
+typedef struct __attribute__((packed, aligned(2))) EditTeamsSpriteCopy {
+    uint16_t srcSprite;     /* +0: source sprite  (dc.w SPR_BIG_*) */
+    uint16_t dstSprite;     /* +2: dest sprite    (dc.w SPR_EDIT_TEAMS_*) */
+    uint16_t colTable[16];  /* +4: palette-remap colour table */
+} EditTeamsSpriteCopy;
+typedef char _editteams_sc_size_check[(sizeof(EditTeamsSpriteCopy) == 36) ? 1 : -1];
+
+/* ==================================================================
  * MarketPlayer — 42 bytes, pack(1)
  * Career foreign market player entry.
  * ================================================================== */
