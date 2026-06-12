@@ -41,9 +41,11 @@ extern uint8_t teamFileBuffer;        /* team file buffer: first word is count, 
 extern uintptr_t teamSortBuffer[];      /* 64-entry pointer/ID temp buffer for sorting; sized for 64-bit pointers. */
 extern uint8_t lastLoadedExtNumber;
 extern uint8_t teamIdSelectionProcessedFlags[]; /* 64-byte flags buffer */
-extern uint16_t diyLeagueTeamIds[];
-extern uint16_t diyCupTeamIds[];
 extern DIYTournamentState diyFileBufferCopy;  /* tournament working buffer (teamIds field was diyTournamentTeamIds) */
+/* diyLeagueTeamIds/diyCupTeamIds aliases retired -> typed diyCompetitionStart
+ * field access; file-scope extern here covers the early functions (the other
+ * decls at ~1255/2652 are after these uses). */
+extern DIYCompetitionEx diyCompetitionStart;
 extern uint16_t careerLoadedFlag;
 extern uint16_t teamsLoaded;
 extern uint16_t skipLeagueNumbers;
@@ -222,7 +224,7 @@ void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest)
         /* Asm `move.w (a0),(a1)+` preserves the BE `{country, ordinal}`
          * byte pair to dst on m68k. Use BE_WRITE_U16 so dst ends up
          * with the same in-memory layout on LE — matching the
-         * BE-packed convention the diyLeagueTeamIds / diyCupTeamIds /
+         * BE-packed convention the diyCompetitionStart.matchData.league.leagueTeamIds / diyCompetitionStart.cupTeamIds /
          * diyFileBufferCopy.teamIds arrays use and that
          * _DIY_ComputeAverageTeamStrengthTier consumes via BE_READ_U16. */
         BE_WRITE_U16(dst, PACK_BE_U16(src[0], src[1]));
@@ -773,7 +775,7 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
     }
 
     /* Phase 3: Copy resolved team IDs to the output. The output arrays
-     * (diyLeagueTeamIds / diyCupTeamIds / diyFileBufferCopy.teamIds) hold
+     * (diyCompetitionStart.matchData.league.leagueTeamIds / diyCompetitionStart.cupTeamIds / diyFileBufferCopy.teamIds) hold
      * BE-packed `{country, ordinal}` byte pairs — the same convention
      * the static dc.b competition data uses and that downstream code
      * like _DIY_ComputeAverageTeamStrengthTier reads via BE_READ_U16
@@ -789,7 +791,7 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
  * Career_FillLeagueTeamSelectionFromFile  (SWOS2.s loc_15158E)
  *
  * Inline helper for Career_InitCompetitionTeamSelectionFromTableEntrySpec
- * when spec[7] == 0. Loads a team file and fills diyLeagueTeamIds
+ * when spec[7] == 0. Loads a team file and fills diyCompetitionStart.matchData.league.leagueTeamIds
  * with teams matching the specified league/division.
  *
  * in: extNumber     = team file ext number (d0 in asm)
@@ -824,13 +826,13 @@ static void fillLeagueTeamSelectionFromFile(uint16_t extNumber, uint16_t leagueF
     }
 
     /* Fill selection with matching teams. The output array
-     * (diyLeagueTeamIds) uses the BE-packed byte-pair convention from
+     * (diyCompetitionStart.matchData.league.leagueTeamIds) uses the BE-packed byte-pair convention from
      * 4e5f378 — consumers read via BE_READ_U16. Use PACK_BE_U16 to
      * produce the same `(country << 8) | ordinal` value that
      * findTeamInCache / isTeamInCache compare against, and
      * BE_WRITE_U16 to store. */
     TeamFileEx *selDst = (TeamFileEx *)&selTeamsPtr + numSelectedTeams;
-    uint16_t *idOut = diyLeagueTeamIds;
+    uint16_t *idOut = diyCompetitionStart.matchData.league.leagueTeamIds;
     for (j = 0; j < tfCount; j++) {
         TeamFileEx *src = &tfBase[j];
         if (src->team.league == (uint8_t)leagueFilter) {
@@ -898,7 +900,7 @@ static void tryAddRandomTeamByRegion_Cup(uint16_t **pIdOut, uint8_t **pSelOut,
  * Career_FillCupTeamSelectionFromFile  (SWOS2.s loc_151628)
  *
  * Inline helper for Career_InitCompetitionTeamSelectionFromTableHeaderSpec
- * when spec[7] == 0. Fills diyCupTeamIds with teams for a cup
+ * when spec[7] == 0. Fills diyCompetitionStart.cupTeamIds with teams for a cup
  * competition by random selection + region weighting.
  *
  * in: extNumber = team file ext number (d0 in asm, byte from spec[2])
@@ -908,7 +910,7 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
 {
     int16_t remaining = teamCount;
     uint16_t initialCount = (uint16_t)teamCount;
-    uint16_t *idOut = diyCupTeamIds;
+    uint16_t *idOut = diyCompetitionStart.cupTeamIds;
 
     _LoadTeamFile(extNumber);
 
@@ -916,7 +918,7 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
      * takes a uint8_t ** in/out parameter and reassigns it across calls. */
     uint8_t *selDst = (uint8_t *)((TeamFileEx *)&selTeamsPtr + numSelectedTeams);
 
-    /* BE-write convention for diyCupTeamIds (4e5f378). */
+    /* BE-write convention for diyCompetitionStart.cupTeamIds (4e5f378). */
     /* If not career loaded and gameType==4, add selected team first */
     if (careerLoadedFlag == 0 && gameType == 4) {
         BE_WRITE_U16(idOut, selTeamNumber); idOut++;
@@ -1149,7 +1151,7 @@ void _Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *spec, uint1
         uint16_t idsOff = teamIdsOffset + 2u * (sizeof(char *) - sizeof(uint32_t));
         int16_t count = (int16_t)(int8_t)spec[13];  /* signed ext.w */
         uint16_t *teamIds = (uint16_t *)(spec + 7 + idsOff);
-        _AppendTeamsToSelectionFromTmdOrTeamFile(diyLeagueTeamIds, teamIds, (uint16_t)count);
+        _AppendTeamsToSelectionFromTmdOrTeamFile(diyCompetitionStart.matchData.league.leagueTeamIds, teamIds, (uint16_t)count);
     } else {
         /* Load by league from team file */
         uint16_t entryOff = idx * 6;
@@ -1187,7 +1189,7 @@ void _Career_InitCompetitionTeamSelectionFromTableHeaderSpec(uint8_t *spec)
         uint16_t idsOff = teamIdsOffset + 2u * (sizeof(char *) - sizeof(uint32_t));
         uint16_t count = spec[10];  /* andi.w #$FF,d7 — unsigned byte */
         uint16_t *teamIds = (uint16_t *)(spec + 7 + idsOff);
-        _AppendTeamsToSelectionFromTmdOrTeamFile(diyCupTeamIds, teamIds, count);
+        _AppendTeamsToSelectionFromTmdOrTeamFile(diyCompetitionStart.cupTeamIds, teamIds, count);
     } else {
         uint16_t extNumber = spec[2];
         int16_t teamCount = (int16_t)(int8_t)spec[10];  /* ext.w d1 — signed */

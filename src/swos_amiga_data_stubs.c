@@ -623,7 +623,7 @@ SWOS_CHIP_BSS char audioInstrumentBank[512 * 1024];
 /* diyCupSelectTeams: real data in swos_amiga_data_imports.c */
 /* diyCupStartMonthIndex: real data in swos_amiga_data_imports.c */
 /* diyCupStartMonthStringTable: real data in swos_amiga_ptr_imports.c */
-/* diyCupTeamIds: real data in swos_data_bulk_imports.c */
+/* diyCupTeamIds: now typed diyCompetitionStart.cupTeamIds */
 /* diyEndMonthStrTab: real data in swos_amiga_ptr_imports.c */
 /* diyFileBufferCopy: typed definition in swos_data_typed_stubs.c */
 /* diyFixtureViewMode: real data in swos_amiga_data_imports.c */
@@ -699,13 +699,13 @@ SWOS_CHIP_BSS char audioInstrumentBank[512 * 1024];
 /* diyStage6PtsForWinStrTab: typed definition in swos_data_typed_stubs.c */
 /* diyStartMonthStrTab: real data in swos_amiga_ptr_imports.c */
 /* diyStatsName: real data in swos_amiga_data_imports.c */
-/* diyTeamEntryOffsetsByIndex: typed definition in swos_data_typed_stubs.c */
+/* diyTeamEntryOffsetsByIndex: now typed diyCompetitionStart.matchData.league.teamEntryOffsets */
 /* diyTeamIdListType0: real data in swos_data_bulk_imports.c */
 /* diyTeamIdListType1: real data in swos_data_bulk_imports.c */
 /* diyTeamIdListType2: real data in swos_data_bulk_imports.c */
 /* diyTeamMaxDivisionOffset: typed definition in swos_data_typed_stubs.c */
 /* diyTeamMinDivisionIndex: typed definition in swos_data_typed_stubs.c */
-/* diyTeamShuffleIndices: typed definition in swos_data_typed_stubs.c */
+/* diyTeamShuffleIndices: now typed diyCompetitionStart.matchData.league.shuffleAndPad */
 /* diyTeamShuffleScratch: real data in swos_data_bulk_imports.c */
 /* diyTeamsBufferPtr: real data in swos_amiga_data_imports.c */
 /* diyTournamentEndMonthPage: real data in swos_amiga_data_imports.c */

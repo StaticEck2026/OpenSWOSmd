@@ -1053,42 +1053,15 @@ __asm__(".globl " _ASM_PFX "diyCompetitionStart\n"
  * into a buffer that overflows past everything else. The overlay puts
  * it back inside the 256 KB careerFileBufferBuf at the right offset. */
 
-/* Named diy* sub-aliases overlay typed struct fields inside
- * diyCompetitionStart (typed as DIYCompetitionEx). The original Amiga
- * offsets (0x6E / 0xEE / 0x12E / 0x24E / ...) assumed
- * sizeof(DIYCompetition::base) == 0x60. On 64-bit hosts the base grows
- * to 0x68 (namePtr widens from 4 → 8 + tail alignment), so every alias
- * past the base end must shift by +8 to land on the same bytes the
- * typed-struct readers see. Until Phase 3 retires these aliases by
- * replacing call sites with direct struct field access, encode the
- * shift here so 32-bit Amiga and 64-bit SDL builds stay in sync. */
-#define DIY_STR_(x) #x
-#define DIY_STR(x)  DIY_STR_(x)
-#if __SIZEOF_POINTER__ == 8
-#  define DIY_POST_BASE_SHIFT 8
-#else
-#  define DIY_POST_BASE_SHIFT 0
-#endif
-
-/* diyLeagueTeamIds: aliases DIYCompetitionEx::matchData.league.leagueTeamIds. */
-__asm__(".globl " _ASM_PFX "diyLeagueTeamIds\n"
-        ".equ   " _ASM_PFX "diyLeagueTeamIds, " _ASM_PFX "diyCompetitionStartBuf + "
-        DIY_STR(0x12E + DIY_POST_BASE_SHIFT) "\n");
-
-/* diyCupTeamIds: aliases DIYCompetitionEx::matchData.cup.cupTeamIds (same
- * union memory, cup interpretation). */
-__asm__(".globl " _ASM_PFX "diyCupTeamIds\n"
-        ".equ   " _ASM_PFX "diyCupTeamIds, " _ASM_PFX "diyCompetitionStartBuf + "
-        DIY_STR(0x24E + DIY_POST_BASE_SHIFT) "\n");
-
-/* diyTeamEntryOffsetsByIndex (matchData.league.teamEntryOffsets) and
- * diyTeamShuffleIndices (matchData.league.shuffleAndPad). */
-__asm__(".globl " _ASM_PFX "diyTeamEntryOffsetsByIndex\n"
-        ".equ   " _ASM_PFX "diyTeamEntryOffsetsByIndex, " _ASM_PFX "diyCompetitionStartBuf + "
-        DIY_STR(0x6E + DIY_POST_BASE_SHIFT) "\n"
-        ".globl " _ASM_PFX "diyTeamShuffleIndices\n"
-        ".equ   " _ASM_PFX "diyTeamShuffleIndices, " _ASM_PFX "diyCompetitionStartBuf + "
-        DIY_STR(0xEE + DIY_POST_BASE_SHIFT) "\n");
+/* The diy* overlay aliases — both the scalars (above) and the four ARRAY
+ * aliases that used to live here — are ALL retired. Every consumer now uses
+ * typed DIYCompetitionEx field access (game_types.h), which lands on the
+ * same bytes natively on 32- and 64-bit, so the .equ aliases and the
+ * DIY_POST_BASE_SHIFT namePtr-growth offset machinery they needed are gone:
+ *   diyLeagueTeamIds           @0x12E -> diyCompetitionStart.matchData.league.leagueTeamIds
+ *   diyTeamEntryOffsetsByIndex @0x6E  -> diyCompetitionStart.matchData.league.teamEntryOffsets
+ *   diyTeamShuffleIndices      @0xEE  -> diyCompetitionStart.matchData.league.shuffleAndPad
+ *   diyCupTeamIds              @0x24E -> diyCompetitionStart.cupTeamIds (top-level field) */
 
 /* The diy* SCALAR overlay aliases at parent offsets 0x60..0x68 and
  * 0x1BE..0x1C4 are GONE — all converted to typed diyCompetitionStart

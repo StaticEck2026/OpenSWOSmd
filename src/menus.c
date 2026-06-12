@@ -3391,9 +3391,10 @@ extern uint8_t  aNotACompetitio[];
 extern uint8_t  competitionFilename[];
 extern uint8_t  selectedFilename[];
 extern uintptr_t extension;
-extern uint16_t diyLeagueTeamIds[];
-extern uint16_t diyCupTeamIds[];
 extern DIYTournamentState diyFileBufferCopy;  /* teamIds field was the diyTournamentTeamIds symbol */
+/* diyLeagueTeamIds/diyCupTeamIds aliases retired -> typed diyCompetitionStart
+ * field access (other extern is at ~6240, after these uses). */
+extern DIYCompetitionEx diyCompetitionStart;
 extern uint8_t  saveFileTitle[];
 
 /* DIYCompetitionMenu — DIY competition type selection (SWOS2.s line 68119) */
@@ -3450,7 +3451,7 @@ void _PresetCompetitionMenu(void)
 
     if (compType == 0) {
         /* League */
-        _CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyLeagueTeamIds);
+        _CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyCompetitionStart.matchData.league.leagueTeamIds);
         _InitDIYCompetitionFromTableEntry(contestLeagueNumber, (uint8_t *)selectedContest);
         _InitTeams();
         _ShowDiyLeaguesTournamentMenu(0, 0, 0);
@@ -3458,7 +3459,7 @@ void _PresetCompetitionMenu(void)
         _CommonMenuExit();
     } else if (compType == 1) {
         /* Cup */
-        _CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyCupTeamIds);
+        _CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)diyCompetitionStart.cupTeamIds);
         _InitDIYCupFromRecord((uint8_t *)selectedContest);
         _InitTeams();
         _ShowDIYCupMenuWithParams(0, 0, 0);
