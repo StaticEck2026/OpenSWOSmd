@@ -41,8 +41,6 @@ extern DIYCompetitionEx diyCompetitionStart;
  * the current-stage copies below address it as the byte array to move the
  * full 0x734-byte region without a (false) fortify overread/overflow. */
 extern uint8_t diyCompetitionStartBuf[];
-extern uint8_t diyTeamShuffleIndices[];
-extern uint16_t diyTeamEntryOffsetsByIndex[];
 extern uint8_t selTeamsPtr;
 extern uint8_t selTeamNameBase;
 extern uint16_t selTeamNumber;
@@ -116,7 +114,6 @@ extern uint8_t tertiaryCompetitionContext[];
 extern uint8_t euroCupsCompetitionContext[];
 
 /* ASM globals for cup bracket */
-extern uint16_t diyCupTeamIds[];
 
 /* ---- C bridges to asm functions ---- */
 extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
@@ -163,7 +160,6 @@ extern uint8_t europeanChampionships[];
 extern uint8_t europeanChampionships2[];
 extern uint8_t euroChampFixtureData[];
 extern const uint8_t *fixtureSchedulePtrTable[];
-extern uint16_t diyLeagueTeamIds[];
 
 /* ---- Local data table for InitDIYTournament ---- */
 static const uint16_t diyTournamentInitTable[20] = {
@@ -351,7 +347,7 @@ __attribute__((used, externally_visible))
 void _DIY_ShuffleLeagueTeamOrder(void)
 {
     DIYCompetitionEx *comp = &diyCompetitionStart;
-    uint8_t *shuffleIdx = diyTeamShuffleIndices;
+    uint8_t *shuffleIdx = diyCompetitionStart.matchData.league.shuffleAndPad;
     uint16_t *teamOffsets = comp->matchData.league.teamEntryOffsets;
     uint16_t count = (uint16_t)comp->base.numTeams;
 
@@ -419,8 +415,8 @@ static void clearLeagueTableStats(uint8_t *base)
 /* Helper: initialize team shuffle indices and entry offsets */
 static void initTeamShuffleAndOffsets(void)
 {
-    uint8_t *shuffleIdx = diyTeamShuffleIndices;
-    uint16_t *entryOffsets = diyTeamEntryOffsetsByIndex;
+    uint8_t *shuffleIdx = diyCompetitionStart.matchData.league.shuffleAndPad;
+    uint16_t *entryOffsets = diyCompetitionStart.matchData.league.teamEntryOffsets;
     uint8_t idx = 0;
     uint16_t offset = 0;
     for (int16_t i = 0x3F; i >= 0; i--) {
@@ -1702,7 +1698,7 @@ void _DIY_InitCupBracketState(void)
 
     /* Compute average team strength tier */
     uint16_t numTeams = (uint16_t)(&diyCompetitionStart.base)->numTeams;
-    uint32_t result = _DIY_ComputeAverageTeamStrengthTier(numTeams, (uint8_t *)diyCupTeamIds);
+    uint32_t result = _DIY_ComputeAverageTeamStrengthTier(numTeams, (uint8_t *)diyCompetitionStart.cupTeamIds);
     (&diyCompetitionStart.base)->avgSkill = (uint8_t)(result >> 16);
     (&diyCompetitionStart.base)->strengthTier = (uint8_t)(result & 0xFF);
 }
@@ -1762,7 +1758,7 @@ void _DIY_RecomputeCompetitionDerivedFields(void)
     _DIY_RecomputeCompetitionDerivedProgressionTable();
 
     uint16_t teamCount = (uint16_t)comp->base.numTeams;
-    uint32_t result = _DIY_ComputeAverageTeamStrengthTier(teamCount, (uint8_t *)diyLeagueTeamIds);
+    uint32_t result = _DIY_ComputeAverageTeamStrengthTier(teamCount, (uint8_t *)diyCompetitionStart.matchData.league.leagueTeamIds);
     comp->base.avgSkill = (uint8_t)(result >> 16);
     comp->base.strengthTier = (uint8_t)(result & 0xFF);
 }
@@ -2185,7 +2181,7 @@ void _DIY_ApplyPromotionRelegationWeightsToScratch(const uint8_t *weights)
 
         if (weight != 0) {
             /* Look up team ID from cup team IDs (BE-packed per 4e5f378). */
-            uint16_t teamId = BE_READ_U16(&diyCupTeamIds[idx]);
+            uint16_t teamId = BE_READ_U16(&diyCompetitionStart.cupTeamIds[idx]);
             /* VerifyTeamLoaded returns the team pointer */
             TeamFileEx *team = _VerifyTeamLoaded(teamId);
             /* Add weight to scratch at country number index */
@@ -2286,16 +2282,16 @@ void _DIY_UpdatePromotionRelegationScratchCounts(void)
 /* ================================================================
  * Career_IsTeamIdNotInListOrReturnSentinel  (SWOS2.s line 98111)
  *
- * Searches diyCupTeamIds for teamId up to endPtr. If found, returns
+ * Searches diyCompetitionStart.cupTeamIds for teamId up to endPtr. If found, returns
  * the team ID (low 16 bits). If not found, returns teamId | 0x10000
  * (bit 16 set as sentinel). Asm stub uses btst #16 to set Z flag.
  * ================================================================ */
 __attribute__((used, externally_visible))
 uint32_t _Career_IsTeamIdNotInListOrReturnSentinel(uint16_t teamId, uint16_t *endPtr)
 {
-    uint16_t *ptr = diyCupTeamIds;
+    uint16_t *ptr = diyCompetitionStart.cupTeamIds;
     while (ptr != endPtr) {
-        /* diyCupTeamIds stores BE-packed byte pairs (4e5f378). */
+        /* diyCompetitionStart.cupTeamIds stores BE-packed byte pairs (4e5f378). */
         if (BE_READ_U16(ptr) == teamId)
             return (uint32_t)teamId;  /* found */
         ptr++;
@@ -6648,7 +6644,7 @@ void _DesignDIYCupOnSelect48(void)
     }
 
     _InitCareerVariables(1);
-    _CopySelectedTeamNumbers(numTeams, (uint8_t *)diyCupTeamIds);
+    _CopySelectedTeamNumbers(numTeams, (uint8_t *)diyCompetitionStart.cupTeamIds);
     _DIY_InitCupBracketState();
     _DIY_ShuffleTeamGridPairs();
     _InitTeams();
@@ -7715,7 +7711,7 @@ void _DesignDIYLeagueChooseTeams(void)
     }
 
     _InitCareerVariables(1);
-    _CopySelectedTeamNumbers(numTeams, (uint8_t *)diyLeagueTeamIds);
+    _CopySelectedTeamNumbers(numTeams, (uint8_t *)diyCompetitionStart.matchData.league.leagueTeamIds);
     _DIY_RecomputeCompetitionDerivedFields();
     _DIY_ShuffleLeagueTeamOrder();
     _InitTeams();
@@ -8346,7 +8342,7 @@ extern TeamFileEx *diyRightTeamPtr;
 extern uint16_t diyLeftTeamResult;
 extern uint16_t diyRightTeamResult;
 extern uint16_t numDiyResults;
-/* diyLeagueTeamIds already declared above as uint16_t[] */
+/* diyLeagueTeamIds is now diyCompetitionStart.matchData.league.leagueTeamIds */
 extern uint16_t diyInitFocusOverride;
 
 extern uint8_t aPlayMatch[];       /* "PLAY MATCH" */
@@ -8455,7 +8451,7 @@ void _DIYLeagueTournament_UpdateViewOptionsAvailability(void)
     if (gameType != 4)
         return;
 
-    uint8_t teamIdByte = diyLeagueTeamIds[0];
+    uint8_t teamIdByte = diyCompetitionStart.matchData.league.leagueTeamIds[0];
     if (teamIdByte >= 0x50 && teamIdByte <= 0x55) {
         /* Group stage range ('P'..'U') → view available */
         diyLeagueTournament_viewOptionsAvailable = 1;

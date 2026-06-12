@@ -3251,7 +3251,7 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
         } else if (compType == 0) {
             /* Standings-row validation only applies to LEAGUE comps
              * (type=0). For cup (type=1) and hybrid (type=2) comps,
-             * `diyCompetitionStart+0x2B4` overlays diyCupTeamIds /
+             * `diyCompetitionStart+0x2B4` overlays diyCompetitionStart.cupTeamIds /
              * diyTeamGridPairings / diyTeamShuffleOrder / audioInstrumentBank
              * — see project memory `diycomp_league_table_overlay`. Reading
              * the first 4 bytes of that region as an int32 "teamSelOffset"
@@ -4219,8 +4219,6 @@ restart:
 
 extern uint8_t *careerCompetitionSlotPtrTable[];
 extern volatile uint16_t isNationalSelector;
-extern uint16_t diyCupTeamIds[];
-extern uint16_t diyLeagueTeamIds[];
 extern void _Career_ApplyForeignMarketPlayersToSelectedTeams(void);
 extern void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest);
 extern void _InitCompetitionFromRecord(uint16_t index, uint8_t *record);
@@ -4238,7 +4236,7 @@ extern void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk);
  * 1) Stores comp pointer in currentCompetitionPtr[slot]
  * 2) Loads slot state from buffer, writes slot index to state
  * 3) Validates comp type byte against slot index (panics on mismatch)
- * 4) For slot 4 (DIY): fills diyCupTeamIds with career team id
+ * 4) For slot 4 (DIY): fills diyCompetitionStart.cupTeamIds with career team id
  * 5) For other slots with hasSelectedTeams: copies team selections
  * 6) For other slots without: dispatches team selection + foreign market
  * 7) Initializes competition from record, stores state, builds key cache
@@ -4316,7 +4314,7 @@ panic_mismatch:
     _PanicHaltLoop();
 
 validated:
-    /* Slot 4 special case: fill diyCupTeamIds with career team id */
+    /* Slot 4 special case: fill diyCompetitionStart.cupTeamIds with career team id */
     if (slot == 4) {
         uint16_t teamId = PACK_BE_U16(careerTeam.team.countryNumber, careerTeam.team.teamOrdinal);
         /* Slot 4 is validated as compType==1 (cup) above, so comp is a
@@ -4324,7 +4322,7 @@ validated:
         int16_t count = (int16_t)((const CompetitionCup *)comp)->teams;
         int16_t i = count - 1;
         while (i >= 0) {
-            diyCupTeamIds[i] = teamId;
+            diyCompetitionStart.cupTeamIds[i] = teamId;
             i--;
         }
         goto init_competition;
@@ -4335,9 +4333,9 @@ validated:
         /* Copy team numbers from selection to appropriate team ID list */
         uint16_t *teamIdList;
         if (compType == 0) {
-            teamIdList = diyLeagueTeamIds;
+            teamIdList = diyCompetitionStart.matchData.league.leagueTeamIds;
         } else if (compType == 1) {
-            teamIdList = diyCupTeamIds;
+            teamIdList = diyCompetitionStart.cupTeamIds;
         } else {
             teamIdList = diyFileBufferCopy.teamIds;
         }
