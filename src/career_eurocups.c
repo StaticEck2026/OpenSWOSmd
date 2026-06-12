@@ -664,7 +664,7 @@ void _Career_UpdateEuropeanChampionshipCompetitions(void)
      * pushing unk1[] +8. Without this delta the qualifier writes land in
      * text[1], corrupting the comp name pointer (SIGSEGV when the season
      * list is drawn). Matches the team-selection reader in career_teams.c. */
-    uint16_t offset = (uint8_t)((Competition *)a5)->unk3 +
+    uint16_t offset = (uint8_t)((Competition *)a5)->teamListOffset +
                       2u * (sizeof(char *) - sizeof(uint32_t));
     a5 = a5 + 7 + offset;
     /* Asm `move.w euroChampionshipQualTeam,(a5)+` writes BE on m68k.
@@ -739,7 +739,7 @@ void _Career_UpdateWorldCupCompetitions(void)
     /* +text[2]-growth delta — see _Career_UpdateEuropeanChampionshipCompetitions
      * above. Keeps the qualifier writes in unk1[] (not text[1]) on 64-bit and
      * matching the AltTableHeader reader / Amiga byte layout. */
-    uint16_t offset = (uint8_t)((Competition *)a5)->unk3 +
+    uint16_t offset = (uint8_t)((Competition *)a5)->teamListOffset +
                       2u * (sizeof(char *) - sizeof(uint32_t));
     a5 = a5 + 7 + offset;
     /* BE write — matches the eurochampionship variant above and the

@@ -700,7 +700,7 @@ void _InitCareer(uint16_t teamNo)
          (uintptr_t)e->competition != 0xFFFFFFFFu; e++) {
         volatile uint8_t *src = (volatile uint8_t *)e->competition;
         volatile uint8_t *dst = (volatile uint8_t *)e->competitionCopy;
-        uint16_t count = e->length;
+        uint16_t count = e->templateSize;
         for (int16_t i = count - 1; i >= 0; i--)
             *dst++ = *src++;
     }
@@ -1236,7 +1236,7 @@ __attribute__((used, externally_visible))
 void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
 {
     retired = 0;
-    uint8_t compTableIdx = (uint8_t)((Competition *)src)->teamNumber;
+    uint8_t compTableIdx = (uint8_t)((Competition *)src)->countryIndex;
     currentDivisionIndex = divisionIndex;
 
     /* Initialize competition slot pointer table */
@@ -1391,7 +1391,7 @@ static void _Rebuild_CupRecordNameSourcePointers(void)
          (uintptr_t)e->competition != 0xFFFFFFFFu; e++) {
         uint8_t *src  = (uint8_t *)e->competition;
         uint8_t *dest = (uint8_t *)e->competitionCopy;
-        int8_t nameOffset = ((Competition *)src)->unk1;
+        int8_t nameOffset = ((Competition *)src)->nameTableOffset;
         if (nameOffset != 0) {
             memcpy(dest + 5 + nameOffset,
                    src  + 5 + nameOffset,

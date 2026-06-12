@@ -8810,7 +8810,7 @@ static void checkEuropeanCupsAndClear3C(uint8_t *record, uint8_t *comp)
 static uint8_t *prependCountryNameIfClub(uint8_t *record, uint8_t *dst)
 {
     if (_IsNationalTeamCompetitionOrQualification((uintptr_t)record) != 0) {
-        uint16_t countryIdx = (uint8_t)((Competition *)record)->teamNumber;
+        uint16_t countryIdx = (uint8_t)((Competition *)record)->countryIndex;
         uint8_t *countryEntry = (uint8_t *)countriesTable[countryIdx];
         if (countryEntry == 0)
             return dst;
@@ -8911,7 +8911,7 @@ void _InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table)
 
     /* Division/competition name */
     uint8_t *nameSource;
-    int8_t nameOffset = compHdr->unk1;
+    int8_t nameOffset = compHdr->nameTableOffset;
     if (nameOffset == 0) {
         nameSource = (uint8_t *)divisionStringTable[d7];
     } else {
@@ -8928,7 +8928,7 @@ void _InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table)
         typeVal = 1;
     a6s->playEachTeam = (int16_t)typeVal;  /* 0x5E */
 
-    uint16_t c = (uint8_t)league->subsReserves;
+    uint16_t c = (uint8_t)league->subsAndMaxSubs;
     ((DIYCompetitionEx *)a6)->matchData.league.leagueMinSubstitutes = (c & 0xF0) >> 4;
     ((DIYCompetitionEx *)a6)->matchData.league.leagueMaxSubstitutes = c & 0x0F;
 
@@ -8955,7 +8955,7 @@ void _InitDIYCupFromRecord(uint8_t *cupRec)
     checkEuropeanCupsAndClear3C(cupRec, a6);
 
     a6s->field_2E        = (uint8_t)compHdr->compNumber;  /* 0x2E */
-    a6s->subRoundCounter = (int8_t)cup->firstRoundNo;     /* 0x5C */
+    a6s->subRoundCounter = (int8_t)cup->roundStringBase;  /* 0x5C */
     a6s->startMonth      = compHdr->beginMonth;           /* 0x38 */
     a6s->endMonth        = compHdr->endMonth;             /* 0x39 */
 
@@ -8969,7 +8969,7 @@ void _InitDIYCupFromRecord(uint8_t *cupRec)
 
     /* Cup name */
     uint8_t *nameSource = (uint8_t *)aCup_0; /* "CUP" default */
-    int8_t nameOffset = compHdr->unk1;
+    int8_t nameOffset = compHdr->nameTableOffset;
     if (nameOffset != 0) {
         nameSource = *(uint8_t **)(cupRec + 5 + nameOffset);
     }
@@ -8978,7 +8978,7 @@ void _InitDIYCupFromRecord(uint8_t *cupRec)
 
     a6s->playEachTeam = (int8_t)cup->awayGoalsMode;  /* 0x5E */
 
-    uint16_t c = (uint8_t)cup->subsReserves;
+    uint16_t c = (uint8_t)cup->subsAndPointsForWin;
     ((DIYCompetitionEx *)a6)->minSubstitutes = (c & 0xF0) >> 4;
     ((DIYCompetitionEx *)a6)->pointsForAWin = c & 0x0F;
 
@@ -9008,16 +9008,16 @@ void _InitDIYCupFromRecord(uint8_t *cupRec)
 
     _DIY_InitCupBracketState();
 
-    /* Third-place match — byte 9 = CompetitionCup.unk1 holds the
+    /* Third-place match — byte 9 = CompetitionCup.numRoundsOverride holds the
      * third-place team count. */
-    if (cup->unk1 != 0) {
-        int16_t val = cup->unk1;
+    if (cup->numRoundsOverride != 0) {
+        int16_t val = cup->numRoundsOverride;
         DIYCompetition *diyStartS = &diyCompetitionStart.base;
         diyStartS->numRounds = val;  /* 0x5A (= 0x3A + 0x20) */
     }
 
-    /* Competition.unk4 == 0 → shuffle. */
-    if (compHdr->unk4 == 0)
+    /* Competition.seedReorderFlag == 0 → shuffle. */
+    if (compHdr->seedReorderFlag == 0)
         _DIY_ShuffleTeamGridPairs();
 }
 
@@ -9037,10 +9037,10 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
     a6s->field_2E = (uint8_t)compHdr->compNumber;  /* 0x2E */
     a6s->matchPairsPerRound = 0;        /* 0x50 */
 
-    if (compHdr->unk4 != 0) {
+    if (compHdr->seedReorderFlag != 0) {
         a6s->matchPairsPerRound = 1;  /* 0x50 */
 
-        int8_t seedOff = compHdr->unk3;
+        int8_t seedOff = compHdr->teamListOffset;
         if (seedOff == 0) {
             panicReasonCode = 0x5295;
             _PanicHaltLoop();
@@ -9132,7 +9132,7 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
 
     /* League name */
     uint8_t *nameSource = (uint8_t *)aLeague_1; /* "LEAGUE" default */
-    int8_t nameOffset = compHdr->unk1;
+    int8_t nameOffset = compHdr->nameTableOffset;
     if (nameOffset != 0) {
         nameSource = *(uint8_t **)(a5 + 5 + nameOffset);
     }
