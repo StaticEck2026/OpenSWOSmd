@@ -1069,23 +1069,17 @@ Sprite* teamSpritesTable[101] = {
     &advertInGameSprites[0x5], &advertInGameSprites[0x6],
     &advertInGameSprites[0x7], (Sprite*)-1,
 };
-/* Byte offsets for the aliases: 11 slots and 22 slots in. Stringify
- * sizeof(void*) into the .equ literals so the alias points at the
- * right slot on both 32-bit (4 B → 44/88) and 64-bit (8 B → 88/176). */
-#define _SPR_TBL_STR_HELPER(x) #x
-#define _SPR_TBL_STR(x) _SPR_TBL_STR_HELPER(x)
-#if UINTPTR_MAX == 0xFFFFFFFFu
-  #define SPR_TEAM2_OFF_STR  "44"
-  #define SPR_ALLSPR_OFF_STR "88"
-#else
-  #define SPR_TEAM2_OFF_STR  "88"
-  #define SPR_ALLSPR_OFF_STR "176"
-#endif
-__asm__(".globl " _ASM_PFX "team1SpritesTable\n"
-        ".equ   " _ASM_PFX "team1SpritesTable, " _ASM_PFX "teamSpritesTable\n"
-        ".globl " _ASM_PFX "team2SpritesTable\n"
-        ".equ   " _ASM_PFX "team2SpritesTable, " _ASM_PFX "teamSpritesTable + "
-        SPR_TEAM2_OFF_STR "\n"
-        ".globl " _ASM_PFX "allSpritesArray\n"
-        ".equ   " _ASM_PFX "allSpritesArray,   " _ASM_PFX "teamSpritesTable + "
-        SPR_ALLSPR_OFF_STR "\n");
+/* UNTANGLED (.equ -> real pointer globals): team1/team2/allSprites are
+ * views into the one contiguous teamSpritesTable[101] — team2 at slot 11,
+ * allSprites at slot 22 (the old aliases used 44/88 B = 11/22 * sizeof(void*),
+ * now expressed as plain array indices so they're 64-bit-correct without the
+ * UINTPTR_MAX literal-offset macros). They are real `Sprite **` pointers, not
+ * .equ symbols. The intentional OOB cross-reads still resolve because all
+ * three index the same flat array: team1[11..21] = team2[0..10],
+ * team2[11..15] = allSprites[0..4]. Consumers use `tableName[i]` and
+ * pointer-decay assignment unchanged; only their extern decls become
+ * `Sprite **` (matching these definitions — an array-form extern over a
+ * pointer object would misread, so all are updated). */
+Sprite **team1SpritesTable = &teamSpritesTable[0];
+Sprite **team2SpritesTable = &teamSpritesTable[11];
+Sprite **allSpritesArray   = &teamSpritesTable[22];

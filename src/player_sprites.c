@@ -21,8 +21,8 @@ extern GoalieFaceState goalieFaces;     /* GK face/skin state (was adjacency-ali
 extern uint16_t useIndividualPlayerSkinColor;
 extern TeamGame *topTeamPtr;
 extern TeamGame *bottomTeamPtr;
-extern Sprite *team1SpritesTable[];
-extern Sprite *team2SpritesTable[];
+extern Sprite **team1SpritesTable;
+extern Sprite **team2SpritesTable;
 extern uint8_t plNamesLengthTable[];
 extern uint8_t numberBuffer[];
 extern uint8_t smallCharsTable[];

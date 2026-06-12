@@ -203,8 +203,8 @@ extern Sprite team2Player2Sprite;
 extern uint16_t currentGameTick;
 extern TeamGame topTeamInGame;
 extern TeamGame bottomTeamInGame;
-extern Sprite *team1SpritesTable[];
-extern Sprite *team2SpritesTable[];
+extern Sprite **team1SpritesTable;
+extern Sprite **team2SpritesTable;
 extern TeamGeneralInfo topTeamData;
 extern TeamGeneralInfo bottomTeamData;
 #define LEVEL_2_VEC 0x68

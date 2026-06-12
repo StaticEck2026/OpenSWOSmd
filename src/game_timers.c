@@ -72,8 +72,8 @@ extern Sprite         *teamSpritesTable[];
  * carries team1 and team2 as separate adjacent arrays. SDL aliases
  * both into one 22-entry slice via sprite_data.c, but on Amiga we
  * just dispatch by index. */
-extern Sprite         *team1SpritesTable[11];
-extern Sprite         *team2SpritesTable[11];
+extern Sprite **team1SpritesTable;
+extern Sprite **team2SpritesTable;
 #endif
 
 extern uint8_t  pl1Fire;

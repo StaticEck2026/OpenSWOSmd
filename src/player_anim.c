@@ -13,8 +13,8 @@
 /* ST_GAME_IN_PROGRESS defined in game_types.h */
 
 /* ---- External globals ---- */
-extern Sprite           *team1SpritesTable[11];
-extern Sprite           *team2SpritesTable[11];
+extern Sprite **team1SpritesTable;
+extern Sprite **team2SpritesTable;
 extern uint16_t          goalScored;
 extern uint16_t          lastTeamScoredNumber;
 extern Sprite           *lastPlayerScored;
