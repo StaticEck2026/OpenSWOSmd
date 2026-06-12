@@ -1398,7 +1398,8 @@ typedef struct __attribute__((packed)) {
 typedef struct __attribute__((packed)) {
     int8_t compNumber;
     int8_t type;
-    int8_t countryIndex;     /* was teamNumber: index into countriesTable (0xFF = none) */
+    int8_t teamNumber;       /* TEAM.XXX team-file selector: country/region number for
+                              * nationals; 0xFF (255) = .TMD / special team file */
     int8_t beginMonth;       /* season start month, encoded ×8 (monthIdx = value/8) */
     int8_t endMonth;         /* season end month, ×8 (wraps +0x60 if < beginMonth) */
     int8_t nameTableOffset;  /* was unk1: text[] name table at base+5+this (0 = default) */

@@ -8810,7 +8810,7 @@ static void checkEuropeanCupsAndClear3C(uint8_t *record, uint8_t *comp)
 static uint8_t *prependCountryNameIfClub(uint8_t *record, uint8_t *dst)
 {
     if (_IsNationalTeamCompetitionOrQualification((uintptr_t)record) != 0) {
-        uint16_t countryIdx = (uint8_t)((Competition *)record)->countryIndex;
+        uint16_t countryIdx = (uint8_t)((Competition *)record)->teamNumber;
         uint8_t *countryEntry = (uint8_t *)countriesTable[countryIdx];
         if (countryEntry == 0)
             return dst;

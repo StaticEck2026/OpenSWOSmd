@@ -3790,7 +3790,7 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     {
         uint8_t pcc = 0xFF;
         if (currentCompetitionPtr) {
-            pcc = (uint8_t)((Competition *)currentCompetitionPtr)->countryIndex;
+            pcc = (uint8_t)((Competition *)currentCompetitionPtr)->teamNumber;
         }
         mjson_printf(json_out_emit, &out,
                      "%Q:%d,\n  ",

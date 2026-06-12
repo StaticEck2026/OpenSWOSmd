@@ -1236,7 +1236,7 @@ __attribute__((used, externally_visible))
 void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
 {
     retired = 0;
-    uint8_t compTableIdx = (uint8_t)((Competition *)src)->countryIndex;
+    uint8_t compTableIdx = (uint8_t)((Competition *)src)->teamNumber;
     currentDivisionIndex = divisionIndex;
 
     /* Initialize competition slot pointer table */

@@ -56,7 +56,7 @@ typedef struct { int8_t compNumber, type, teamNumber, beginMonth, endMonth,
 |---|---|---|---|---|---|---|
 | compNumber | 0 | 1 | db | *(keep)* | High | Competition id; copied to runtime `field_2E` (`diy_competition.c:9037/8867/8957`). |
 | type | 1 | 1 | db | *(keep)* | High | Kind discriminator: **0=league, 1=cup, 2=group-tournament (Cup2)** (`diy_competition.c:9227` dispatch). ⚠️ See §9 — two *other* code paths use a different numeric mapping; reconcile before making an enum. |
-| teamNumber | 2 | 1 | db | `countryIndex` | High | Index into `countriesTable` (0xFF = none); prepends country name (`diy_competition.c:8813`, `save_format_json.c:3793`). "teamNumber" is misleading — it's a country. |
+| teamNumber | 2 | 1 | db | *(keep)* | High | **TEAM.XXX team-file selector.** Country/region number for national leagues & qualifiers (e.g. `frenchLeague`=13=`CN_FRANCE`→`TEAM.013`; WC-qual groups use region codes 80–85); **`0xFF` (255) = load from `.TMD` / special team file** (all the international cups). For national competitions it doubles as the `countriesTable` display-name index (`diy_competition.c:8813`, gated by `_IsNationalTeamCompetitionOrQualification`). NOTE: an earlier draft suggested `countryIndex` — rejected, because 255 isn't a country and 80–85 are regions; the team-file framing is the superset. |
 | beginMonth | 3 | 1 | db | *(keep)* | High | Season **start** month, encoded **×8** (monthIdx = value/8; full range 0..0x60 = 12 months). Decoded `/8` and wrapped `+0x60` in scheduling (`diy_competition.c:779–826/9938`; SWOS2.s:67864). Not unknown — already correct, see note below. |
 | endMonth | 4 | 1 | db | *(keep)* | High | Season **end** month, same ×8 encoding; `if (endMonth < beginMonth) endMonth += 0x60`. |
 | **unk1** | 5 | 1 | db | **`nameTableOffset`** | High | Self-describing offset to `text[]` (see §0). 0 ⇒ default string table. |
@@ -266,7 +266,7 @@ No `unkX` fields; all named (`legs`, `extraTime`, `penalties`, `playCount`, `pts
 | 2 | cup variant trailing `unk1[N]` | → **`teamSeedList[N]`** | BE `{country, ordinal}` draw pairs. |
 | 2 | `CompetitionCareer.length` | → **`templateSize`** | `sizeof(variant)` for the template copy. |
 | 3 | `CompetitionCup.unk1` | → **`numRoundsOverride`** | Overrides runtime `numRounds` (third-place count). |
-| 3 | `Competition.teamNumber` | → **`countryIndex`** | It's a country index, not a team. |
+| — | `Competition.teamNumber` | **keep as-is** | TEAM.XXX team-file selector (country/region for nationals, 255 = .TMD/special). An earlier `countryIndex` suggestion was rejected — 255 isn't a country. |
 | 3 | `CompetitionCup.firstRoundNo` | → **`roundStringBase`** (cautiously) | Misnomer; round-string base + friendly participant count. |
 | 3 | `*.subsReserves` | → **`subsAndMaxSubs`** (league) / **`subsAndPointsForWin`** (cup) | Different nibble packing per type. |
 | 4 | `Playoffs_*.unk1[16]` | → **`playoffHeader[16]`** (break out `qualTeamCount`@10, `toUnk2Offset`@7) | Structured, not opaque. |
