@@ -149,10 +149,8 @@ extern CompetitionLeague_3_6 newZealandLeague;
  * Complex leagues with playoffs
  * ====================================================================== */
 
-extern CompetitionLeague_4_8_2_24 englishLeagues;
-extern Leagues_4_2_24 englishLeagues1;
-extern Leagues_4_2_24 englishLeagues2;
-extern Leagues_4 englishLeagues3;
+/* englishLeagues / englishLeagues1..3: untangled into EnglishLeaguesBlock
+ * fields (._main/._div1/._div2/._div3) — see below + competition_data.c. */
 extern Playoffs_8 div1Playoffs;
 extern Playoffs_8 div2Playoffs;
 extern Playoffs_8 div3Playoffs;
