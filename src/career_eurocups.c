@@ -429,6 +429,19 @@ extern void _RestoreSelectedTeams(void);
 extern void _DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC);
 extern void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
 
+/* SWOS_DISABLE_NATCOACH_EUROCUP_FIX (debug/repro, opt-in via
+ * `make SWOS_DISABLE_NATCOACH_EUROCUP_FIX=1`): revert the 8db5de4 national-coach
+ * gate in the three euro-cup-slot updates so the stale-quaternaryCompetitionPtr
+ * 0x8888 panic can be A/B-reproduced. When defined, national coaches take the
+ * interactive branch again (the pre-fix bug). Pair with SWOS_INJECT_WC + a
+ * club-in-a-euro-cup save (load -> accept national offer -> season transition).
+ * Never define in production. See project_eurocup_national_backup_clobber. */
+#ifdef SWOS_DISABLE_NATCOACH_EUROCUP_FIX
+#define SWOS_NATCOACH_EUROCUP_GUARD 1            /* pre-8db5de4: drop the gate */
+#else
+#define SWOS_NATCOACH_EUROCUP_GUARD (!isNationalSelector)
+#endif
+
 /* Career_UpdateEuroCupCompetitionSlot (SWOS2.s line 31764)
  * If euroCupCopy is the active quaternary competition, edit it interactively;
  * otherwise auto-advance it as a league competition and copy the grid. */
@@ -452,7 +465,7 @@ void _Career_UpdateEuroCupCompetitionSlot(void)
      * club teams into selTeamsPtr, so the title-holder verify resolves correctly.
      * This routes through the path that loads the required teams; it is not a
      * panic guard. */
-    if (a4 == quaternaryCompetitionPtr && !isNationalSelector) {
+    if (a4 == quaternaryCompetitionPtr && SWOS_NATCOACH_EUROCUP_GUARD) {
         _RestoreSelectedTeams();
         _Career_CopyEuroCupsCompetitionContextToOrFromActive();
         _DIY_EditCompetitionSlot(1, 1, 0);
@@ -472,7 +485,7 @@ void _Career_UpdateCupWinnersCupCompetitionSlot(void)
     uint8_t *a4 = cupWinnersCupCopy;
     /* National coaches take the self-loading auto-advance branch — see the
      * stale-quaternaryCompetitionPtr explanation in _Career_UpdateEuroCupCompetitionSlot. */
-    if (a4 == quaternaryCompetitionPtr && !isNationalSelector) {
+    if (a4 == quaternaryCompetitionPtr && SWOS_NATCOACH_EUROCUP_GUARD) {
         _RestoreSelectedTeams();
         _Career_CopyEuroCupsCompetitionContextToOrFromActive();
         _ShowDIYCupMenuWithParams(1, 1, 0);
@@ -492,7 +505,7 @@ void _Career_UpdateUefaCupCompetitionSlot(void)
     uint8_t *a4 = uefaCupCopy;
     /* National coaches take the self-loading auto-advance branch — see the
      * stale-quaternaryCompetitionPtr explanation in _Career_UpdateEuroCupCompetitionSlot. */
-    if (a4 == quaternaryCompetitionPtr && !isNationalSelector) {
+    if (a4 == quaternaryCompetitionPtr && SWOS_NATCOACH_EUROCUP_GUARD) {
         _RestoreSelectedTeams();
         _Career_CopyEuroCupsCompetitionContextToOrFromActive();
         _ShowDIYCupMenuWithParams(1, 1, 0);

@@ -249,6 +249,17 @@ ifdef SWOS_INJECT_WC
 DEBUG_FLAGS += -DSWOS_INJECT_WC=1
 endif
 
+# Debug A/B: revert the 8db5de4 national-coach euro-cup gate so the
+# stale-quaternaryCompetitionPtr 0x8888 season-transition panic can be
+# reproduced. Off by default (fix active). Enable with
+# `make SWOS_DISABLE_NATCOACH_EUROCUP_FIX=1` to confirm the crash, then rebuild
+# without it to confirm the fix prevents it. Pair with SWOS_INJECT_WC + a
+# club-in-a-euro-cup save (load -> accept national offer -> transition). See the
+# guard in src/career_eurocups.c.
+ifdef SWOS_DISABLE_NATCOACH_EUROCUP_FIX
+DEBUG_FLAGS += -DSWOS_DISABLE_NATCOACH_EUROCUP_FIX=1
+endif
+
 # Save-file format toggle. Default ON — new saves are written as JSON
 # via mjson (see src/save_format_json.c) and load auto-detects format
 # from the file header.
