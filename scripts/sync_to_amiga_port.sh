@@ -102,7 +102,7 @@ HDR_FILES=(
     mjson.h save_format_json.h file_io.h
     rnc_magic.h endian_helpers.h auto_skip_debug.h
     swos_io.h audio.h input.h swos_platform.h swos_sections.h
-    competition_data.h
+    competition_data.h sprite_data.h
 )
 
 # ---- Arg parsing ----

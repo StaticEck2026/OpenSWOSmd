@@ -42,7 +42,7 @@
 extern uint8_t *spriteGraphicsPtr;
 extern volatile uint16_t panicReasonCode;
 
-extern Sprite *allSpritesArray[];      /* Null-terminated ((Sprite *)-1) pointer array */
+extern Sprite **allSpritesArray;      /* Null-terminated ((Sprite *)-1) pointer array */
 extern Sprite *sortedSprites[];        /* 78 entries max */
 extern uint16_t numSpritesToRender;
 

@@ -81,7 +81,7 @@ extern int16_t      breakState;
 #include "deterministic.h"
 extern volatile uint16_t panicReasonCode;
 extern void _PanicHaltLoop(void);
-extern Sprite *team2SpritesTable[];
+extern Sprite **team2SpritesTable;
 /* Trap: detect when t2p6 destX > 600 — encode line number in panic code */
 #define T2P6_DESTX_TRAP(lineid) do { \
     if (frameCount > 400 && player == team2SpritesTable[6] && player->destX > 600) { \
