@@ -145,8 +145,7 @@ extern const char aDataUefacupTmd[];
 
 /* Forward declarations for variables used before definition */
 extern Playoffs_8 div1Playoffs, div2Playoffs, div3Playoffs;
-extern Leagues_4_2_24 englishLeagues1, englishLeagues2;
-extern Leagues_4 englishLeagues3;
+/* englishLeagues1/2/3 forward decls removed — access via englishLeaguesBlock._divN */
 extern Playoffs_8 dutchPlayoffs;
 extern Leagues_4 dutchLeagues1;
 extern Leagues_2 scottishLeague1;
@@ -540,71 +539,57 @@ CompetitionLeague_3_6 newZealandLeague = {
  * Complex leagues with playoffs
  * ====================================================================== */
 
-/* On Amiga, englishLeagues / englishLeagues1 / englishLeagues2 /
- * englishLeagues3 sit consecutively in BSS (102 + 80 + 80 + 48 bytes).
- * processDiyLeagueQualificationEntry walks past the end of the
- * englishLeagues struct using the per-division qualification offset
- * stored in `divisions[i].unk1`, expecting to land inside englishLeagues1
- * or englishLeagues2 (whose `playoffs` field at offset +48 supplies the
- * actual qualification competition pointer). On SDL the linker scatters
- * the four structs to different addresses, so the past-the-end read
- * lands in unrelated memory and qualComp = garbage → SIGSEGV.
+/* On Amiga, the four English-league structs sit consecutively in BSS
+ * (_main 102 + _div1 80 + _div2 80 + _div3 48 bytes).
+ * processDiyLeagueQualificationEntry walks past the end of _main using
+ * the per-division qualification offset in `divisions[i].unk1`,
+ * expecting to land inside _div1 or _div2 (whose `playoffs` field at
+ * +48 supplies the qualification competition pointer). Four separate
+ * linker-scattered globals broke that walk → qualComp garbage → SIGSEGV.
  *
- * Force the Amiga layout by embedding all four into one packed
- * composite struct and exposing each via a global alias to a fixed
- * offset within the composite. The .equ aliases keep the existing
- * `englishLeagues` / `englishLeagues1` / etc. extern decls working
- * unchanged. */
-/* EnglishLeaguesBlock typedef + extern decls live in competition_data.h. */
-
-#define ENGLISH_BLOCK_OFFSET_MAIN  0
-#define ENGLISH_BLOCK_OFFSET_DIV1  (sizeof(CompetitionLeague_4_8_2_24))
-#define ENGLISH_BLOCK_OFFSET_DIV2  (ENGLISH_BLOCK_OFFSET_DIV1 + sizeof(Leagues_4_2_24))
-#define ENGLISH_BLOCK_OFFSET_DIV3  (ENGLISH_BLOCK_OFFSET_DIV2 + sizeof(Leagues_4_2_24))
-
+ * UNTANGLED (.equ -> typed field access): all four are fields of one
+ * packed EnglishLeaguesBlock (typedef + extern in competition_data.h).
+ * The old `.equ englishLeaguesN, englishLeaguesBlock + <literal>` aliases
+ * used 32-bit byte offsets (102/182/262) — but _main/_div1/_div2 carry
+ * pointers that widen on 64-bit, so on the SDL build those literal
+ * offsets no longer landed on the right sub-struct (e.g. block+102 fell
+ * inside _main's widened tail, not _div1). Cross-references now go
+ * through the named fields (._main/._div1/._div2/._div3): address-
+ * identical on 32-bit (Amiga byte-for-byte) and correct on 64-bit. */
 EnglishLeaguesBlock englishLeaguesBlock = {
     ._main = {
         { { 46, 0, 8, 56, 32, 33, 0, 0, 0 }, 4, 2, 3, 51 },
         { { 20, 0, 0, 3, 0, 0 }, { 24, 2, 4, 4, 0, 46 }, { 24, 3, 4, 4, 0, 120 }, { 24, 3, 4, 0, 0, -62 } }, 0,
         { aPremierLeague, aPremier, aDivisionOne, aDivisionOne, aDivisionTwo, aDivisionTwo, aDivisionThree, aDivisionThree },
-        { (char *)&div1Playoffs, (char *)&englishLeagues1 },
+        { (char *)&div1Playoffs, (char *)&englishLeaguesBlock._div1 },
         { 0, 0, 0, 3, 0, 1, 0, 2, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
     },
     ._div1 = {
-        { (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 0 },
-          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 3 },
-          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 1 },
-          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 1, 0, 0, 0, 2 } },
-        &div2Playoffs, (Leagues_4 *)&englishLeagues2,
+        { (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 1, 0, 0, 0, 0 },
+          (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 1, 0, 0, 0, 3 },
+          (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 1, 0, 0, 0, 1 },
+          (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 1, 0, 0, 0, 2 } },
+        &div2Playoffs, (Leagues_4 *)&englishLeaguesBlock._div2,
         { 0, 4, 0, 7, 0, 5, 0, 6, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
     },
     ._div2 = {
-        { (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 0 },
-          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 3 },
-          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 1 },
-          (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 2, 0, 0, 0, 2 } },
-        &div3Playoffs, &englishLeagues3,
+        { (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 2, 0, 0, 0, 0 },
+          (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 2, 0, 0, 0, 3 },
+          (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 2, 0, 0, 0, 1 },
+          (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 2, 0, 0, 0, 2 } },
+        &div3Playoffs, &englishLeaguesBlock._div3,
         { 0, 8, 0, 11, 0, 9, 0, 10, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
     },
     ._div3 = {
-        (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 0 },
-        (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 3 },
-        (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 1 },
-        (CompetitionLeague *)&englishLeagues, { 0, 0, 0, 3, 0, 0, 0, 2 }
+        (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 3, 0, 0, 0, 0 },
+        (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 3, 0, 0, 0, 3 },
+        (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 3, 0, 0, 0, 1 },
+        (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 3, 0, 0, 0, 2 }
     }
 };
 
-__asm__(".globl " _ASM_PFX "englishLeagues\n"
-        ".equ   " _ASM_PFX "englishLeagues, " _ASM_PFX "englishLeaguesBlock\n");
-/* offset 102 = sizeof(CompetitionLeague_4_8_2_24) */
-__asm__(".globl " _ASM_PFX "englishLeagues1\n"
-        ".equ   " _ASM_PFX "englishLeagues1, " _ASM_PFX "englishLeaguesBlock + 102\n");
-/* offset 182 = 102 + 80 */
-__asm__(".globl " _ASM_PFX "englishLeagues2\n"
-        ".equ   " _ASM_PFX "englishLeagues2, " _ASM_PFX "englishLeaguesBlock + 182\n");
-/* offset 262 = 102 + 80 + 80 */
-__asm__(".globl " _ASM_PFX "englishLeagues3\n"
-        ".equ   " _ASM_PFX "englishLeagues3, " _ASM_PFX "englishLeaguesBlock + 262\n");
+/* (the englishLeagues / englishLeagues1..3 .equ aliases are gone — all
+ * access is via englishLeaguesBlock._main/._div1/._div2/._div3 now) */
 
 Playoffs_8 div1Playoffs = { { 47, 1, 8, -128, -124, 11, 0, 17, 1, 0, 4, 1, 51, 1, -108, 20 }, { aDiv1Playoffs, aPlayoffs }, { 0 } };
 Playoffs_8 div2Playoffs = { { 48, 1, 8, -128, -124, 11, 0, 17, 1, 0, 4, 1, 51, 1, -108, 20 }, { aDiv2Playoffs, aPlayoffs }, { 0 } };
@@ -979,7 +964,7 @@ Competition *croatiaTable[4]         = { (Competition *)&croatianLeague, (Compet
 Competition *cyprusTable[4]          = { (Competition *)&cypriotLeague, (Competition *)-2, (Competition *)&cypriotCup, (Competition *)-1 };
 Competition *czechRepublicTable[4]   = { (Competition *)&czechLeague, (Competition *)-2, (Competition *)&czechCup, (Competition *)-1 };
 Competition *denmarkTable[4]         = { (Competition *)&danishLeague, (Competition *)-2, (Competition *)&danishCup, (Competition *)-1 };
-Competition *englandTable[5]         = { (Competition *)&englishLeagues, (Competition *)-2, (Competition *)&englishCup, (Competition *)&englishLeagueCup, (Competition *)-1 };
+Competition *englandTable[5]         = { (Competition *)&englishLeaguesBlock._main, (Competition *)-2, (Competition *)&englishCup, (Competition *)&englishLeagueCup, (Competition *)-1 };
 Competition *estoniaTable[4]         = { (Competition *)&estonianLeague, (Competition *)-2, (Competition *)&estonianCup, (Competition *)-1 };
 Competition *faroeIslandsTable[4]    = { (Competition *)&faroeIslesLeague, (Competition *)-2, (Competition *)&faroeIslesCup, (Competition *)-1 };
 Competition *finlandTable[4]         = { (Competition *)&finnishLeague, (Competition *)-2, (Competition *)&finnishCup, (Competition *)-1 };

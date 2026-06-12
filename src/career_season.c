@@ -1437,12 +1437,12 @@ extern Playoffs_8 div3Playoffs;
  * `if (d0 == 0) return;` test. The typed dispatch below is English-specific.
  *
  * For each English division, by static data analysis:
- *   index=1: walk lands at englishLeagues.unk2[0] = &div1Playoffs;
- *            qIdx pairs live in englishLeagues.unk3[].
- *   index=2: walk lands at englishLeagues1.playoffs = &div2Playoffs;
- *            qIdx pairs in englishLeagues1.unk2[].
- *   index=3: walk lands at englishLeagues2.playoffs = &div3Playoffs;
- *            qIdx pairs in englishLeagues2.unk2[].
+ *   index=1: walk lands at englishLeaguesBlock._main.unk2[0] = &div1Playoffs;
+ *            qIdx pairs live in englishLeaguesBlock._main.unk3[].
+ *   index=2: walk lands at englishLeaguesBlock._div1.playoffs = &div2Playoffs;
+ *            qIdx pairs in englishLeaguesBlock._div1.unk2[].
+ *   index=3: walk lands at englishLeaguesBlock._div2.playoffs = &div3Playoffs;
+ *            qIdx pairs in englishLeaguesBlock._div2.unk2[].
  *
  * teamData = qualComp + 7 + qualComp[7] in the asm; for all three Playoffs_8
  * statics qualComp->unk1[7] = 17 (Amiga byte offset to unk2[0]). On 64-bit
