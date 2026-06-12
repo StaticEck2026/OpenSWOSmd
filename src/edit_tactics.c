@@ -2361,12 +2361,14 @@ extern uint16_t saveCustomTeams;
 extern uint16_t teamIsImported;
 extern uint16_t controlMask;
 extern uint16_t kTeamColorsTable[];      /* 10 word entries */
-extern uint16_t editTeamsPrimaryShirtColTable[];   /* 16 word color table */
-extern uint16_t editTeamsShortsColTable[];          /* 16 word color table + at +0x16 */
-extern uint16_t editTeamsSocksColTable[];           /* 16 word color table + at +0x16 */
-extern uint16_t editTeamsSecondaryShirtColTable[];  /* 16 word color table */
-extern uint16_t editTeamsSecondaryShortsColTable[]; /* 16 word color table + at +0x16 */
-extern uint16_t editTeamsSecondarySocksColTable[];  /* 16 word color table + at +0x16 */
+/* edit-teams kit sprite-copy descriptors; .colTable[16] is the palette remap
+ * (was the editTeams*ColTable .equ aliases at descriptor +4). */
+extern EditTeamsSpriteCopy editTeamsPrimaryShirts;
+extern EditTeamsSpriteCopy editTeamsShorts;
+extern EditTeamsSpriteCopy editTeamsSocks;
+extern EditTeamsSpriteCopy editTeamsSecondaryShirt;
+extern EditTeamsSpriteCopy editTeamsSecondaryShorts;
+extern EditTeamsSpriteCopy editTeamsSecondarySocks;
 extern uint16_t shirtTypesTable[];       /* 4 entries of 8 words each (4 shirt types) */
 extern uint16_t shirtsIndexTable[];      /* 8 word entries (byte offsets into color table) */
 extern void *playerPositionsStringTable[];       /* 8 string pointers */
@@ -2383,7 +2385,7 @@ static PlayerFile *EditTeamsGetPlayerFileC(MenuEntry *entry)
 static void PrimaryKitColorConversionC(void)
 {
     TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
-    uint16_t *colTable = editTeamsPrimaryShirtColTable;
+    uint16_t *colTable = editTeamsPrimaryShirts.colTable;
     uint16_t stripesCol = kTeamColorsTable[tf->prStripesColor];
     uint16_t basicCol = kTeamColorsTable[tf->prBasicColor];
     uint16_t *types = &shirtTypesTable[tf->prShirtType * 8];
@@ -2399,18 +2401,18 @@ static void PrimaryKitColorConversionC(void)
 
     /* Shorts */
     uint16_t shortsCol = kTeamColorsTable[tf->prShortsColor];
-    editTeamsShortsColTable[11] = shortsCol;   /* word at +0x16 */
+    editTeamsShorts.colTable[11] = shortsCol;   /* slot 11 */
 
     /* Socks */
     uint16_t socksCol = kTeamColorsTable[tf->prSocksColor];
-    editTeamsSocksColTable[11] = socksCol;   /* word at +0x16 */
+    editTeamsSocks.colTable[11] = socksCol;   /* slot 11 */
 }
 
 /* SecondaryKitColorConversion — build secondary shirt/shorts/socks color tables */
 static void SecondaryKitColorConversionC(void)
 {
     TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
-    uint16_t *colTable = editTeamsSecondaryShirtColTable;
+    uint16_t *colTable = editTeamsSecondaryShirt.colTable;
     uint16_t stripesCol = kTeamColorsTable[tf->secStripesColor];
     uint16_t basicCol = kTeamColorsTable[tf->secBasicColor];
     uint16_t *types = &shirtTypesTable[tf->secShirtType * 8];
@@ -2426,11 +2428,11 @@ static void SecondaryKitColorConversionC(void)
 
     /* Shorts */
     uint16_t shortsCol = kTeamColorsTable[tf->secShortsColor];
-    editTeamsSecondaryShortsColTable[11] = shortsCol;   /* word at +0x16 */
+    editTeamsSecondaryShorts.colTable[11] = shortsCol;   /* slot 11 */
 
     /* Socks */
     uint16_t socksCol = kTeamColorsTable[tf->secSocksColor];
-    editTeamsSecondarySocksColTable[11] = socksCol;   /* word at +0x16 */
+    editTeamsSecondarySocks.colTable[11] = socksCol;   /* slot 11 */
 }
 
 /* MarkFirstKitShirt — highlight selected primary shirt type in menu */

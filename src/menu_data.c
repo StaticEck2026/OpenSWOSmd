@@ -680,12 +680,12 @@ extern char teamTacticsUSERE[];
 extern char teamTacticsUSERF[];
 
 /* ---- External data (uint8_t type) ---- */
-extern uint8_t editTeamsPrimaryShirts[];
-extern uint8_t editTeamsSecondaryShirt[];
-extern uint8_t editTeamsSecondaryShorts[];
-extern uint8_t editTeamsSecondarySocks[];
-extern uint8_t editTeamsShorts[];
-extern uint8_t editTeamsSocks[];
+extern EditTeamsSpriteCopy editTeamsPrimaryShirts;
+extern EditTeamsSpriteCopy editTeamsSecondaryShirt;
+extern EditTeamsSpriteCopy editTeamsSecondaryShorts;
+extern EditTeamsSpriteCopy editTeamsSecondarySocks;
+extern EditTeamsSpriteCopy editTeamsShorts;
+extern EditTeamsSpriteCopy editTeamsSocks;
 
 Menu_ChooseTeamsFriendly chooseTeamsFriendlyMenu = {
     { _ChooseTeamsFriendlyInitFinish, _ChooseTeamsFriendlyInitFinish, 0, 23 },
@@ -3482,19 +3482,19 @@ Menu_EditTeams editTeamsMenu = {
     },
     { 0, 7, 46, 33 },
     { MENU_CMD_COLORS, 0x9 },
-    { MENU_CMD_SPRITE_COPY, editTeamsPrimaryShirts },
+    { MENU_CMD_SPRITE_COPY, &editTeamsPrimaryShirts },
     { MENU_CMD_NAV, 41, 13, 0, 6 },
     { MENU_CMD_INPUT_FUNC, 0x3C1, _EditTeamsChangeShirtsPrimary },
     MENU_CMD_END,
     { 0, 40, 46, 19 },
     { MENU_CMD_COLORS, 0x9 },
-    { MENU_CMD_SPRITE_COPY, editTeamsShorts },
+    { MENU_CMD_SPRITE_COPY, &editTeamsShorts },
     { MENU_CMD_NAV, 43, 14, 5, 7 },
     { MENU_CMD_INPUT_FUNC, 0x3C1, _EditTeamsChangeShortsPrimary },
     MENU_CMD_END,
     { 0, 59, 46, 19 },
     { MENU_CMD_COLORS, 0x9 },
-    { MENU_CMD_SPRITE_COPY, editTeamsSocks },
+    { MENU_CMD_SPRITE_COPY, &editTeamsSocks },
     { MENU_CMD_NAV, 45, 15, 6, 9 },
     { MENU_CMD_INPUT_FUNC, 0x3C1, _EditTeamsChangeSocksPrimary },
     MENU_CMD_END,
@@ -3506,19 +3506,19 @@ Menu_EditTeams editTeamsMenu = {
     },
     { 0, 7, 46, 33 },
     { MENU_CMD_COLORS, 0x9 },
-    { MENU_CMD_SPRITE_COPY, editTeamsSecondaryShirt },
+    { MENU_CMD_SPRITE_COPY, &editTeamsSecondaryShirt },
     { MENU_CMD_NAV, 49, 17, 7, 10 },
     { MENU_CMD_INPUT_FUNC, 0x3C1, _EditTeamsChangeShirtsSecondary },
     MENU_CMD_END,
     { 0, 40, 46, 19 },
     { MENU_CMD_COLORS, 0x9 },
-    { MENU_CMD_SPRITE_COPY, editTeamsSecondaryShorts },
+    { MENU_CMD_SPRITE_COPY, &editTeamsSecondaryShorts },
     { MENU_CMD_NAV, 51, 18, 9, 11 },
     { MENU_CMD_INPUT_FUNC, 0x3C1, _EditTeamsChangeShortsSecondary },
     MENU_CMD_END,
     { 0, 59, 46, 19 },
     { MENU_CMD_COLORS, 0x9 },
-    { MENU_CMD_SPRITE_COPY, editTeamsSecondarySocks },
+    { MENU_CMD_SPRITE_COPY, &editTeamsSecondarySocks },
     { MENU_CMD_NAV, 53, 19, 10, 22 },
     { MENU_CMD_INPUT_FUNC, 0x3C1, _EditTeamsChangeSocksSecondary },
     MENU_CMD_END,
