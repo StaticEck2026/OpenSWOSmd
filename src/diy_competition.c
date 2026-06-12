@@ -158,7 +158,6 @@ extern uint16_t teamSelectionKeyCacheCount;
 extern uint16_t diyHasGroups;
 extern uint8_t aFriendly[];  /* string "FRIENDLY" */
 extern uint8_t worldCup[];
-extern uint8_t diyPointsForAWin[];
 
 /* ---- Fixture data ---- */
 extern uint8_t europeanChampionships[];
@@ -4602,7 +4601,6 @@ extern uint8_t designDiyCupMenu[];
 extern uint16_t diyTournamentLookOnly;
 extern uint16_t diyTournamentSelectTeams;
 extern uint8_t designDiyTournamentMenu[];
-extern uint16_t diyMinSubstitutes;
 extern uint8_t aSelect0Teams[];   /* "SELECT %0 TEAMS" */
 
 extern void _PrintFormatted(const uint8_t *fmt, uint8_t *out,
@@ -4679,8 +4677,8 @@ void _DesignDIYCupOK(void)
 __attribute__((used, externally_visible))
 void _DesignDIYCup_UpdateMinSubstitutesAndPointsStrings(void)
 {
-    _Int2Ascii(diyMinSubstitutes, (uint8_t *)menuEntries[13].fg);
-    _Int2Ascii(*(uint16_t *)diyPointsForAWin, (uint8_t *)menuEntries[15].fg);
+    _Int2Ascii(diyCompetitionStart.minSubstitutes, (uint8_t *)menuEntries[13].fg);
+    _Int2Ascii(diyCompetitionStart.pointsForAWin, (uint8_t *)menuEntries[15].fg);
 }
 
 /* DesignDIYCup_UpdateSelectTeamsPrompt — format "SELECT N TEAMS" for cup (SWOS2.s line 45065) */
@@ -4844,7 +4842,7 @@ void _DesignDIYLeagueChangePlayEachTeam(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _DesignDIYLeagueChangeNumPointsForWin(MenuEntry *entry)
 {
-    uint16_t *pts = (uint16_t *)diyPointsForAWin;
+    uint16_t *pts = &diyCompetitionStart.pointsForAWin;
     *pts ^= 1;
     entry->fgWord = *pts;
     _CallDrawMenuItem(entry);
@@ -5119,12 +5117,12 @@ void _DesignDIYCupOnSelect11(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _DesignDIYCupOnSelect13(MenuEntry *entry)
 {
-    uint16_t points = *(uint16_t *)diyPointsForAWin;
+    uint16_t points = diyCompetitionStart.pointsForAWin;
     if (points == 0)
         return;
-    diyMinSubstitutes += 1;
-    if (diyMinSubstitutes > points)
-        diyMinSubstitutes = 1;
+    diyCompetitionStart.minSubstitutes += 1;
+    if (diyCompetitionStart.minSubstitutes > points)
+        diyCompetitionStart.minSubstitutes = 1;
     _DesignDIYCup_UpdateMinSubstitutesAndPointsStrings();
     _CallDrawMenuItem(entry);
 }
@@ -5133,14 +5131,14 @@ void _DesignDIYCupOnSelect13(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _DesignDIYCupOnSelect15(MenuEntry *entry)
 {
-    uint16_t *pts = (uint16_t *)diyPointsForAWin;
+    uint16_t *pts = &diyCompetitionStart.pointsForAWin;
     *pts += 1;
     if (*pts > 5) {
         *pts = 0;
-        diyMinSubstitutes = 0;
+        diyCompetitionStart.minSubstitutes = 0;
     }
     if (*pts == 1)
-        diyMinSubstitutes = 1;
+        diyCompetitionStart.minSubstitutes = 1;
     _DesignDIYCup_UpdateMinSubstitutesAndPointsStrings();
     _CallDrawMenuItem(entry);
     _CallDrawMenuItem(&menuEntries[13]);  /* also redraw min substitutes entry */
@@ -7579,7 +7577,7 @@ void _DIYLeagueSetVariousFields(void)
     _SetPlayEachTeamString(&menuEntries[14]);
 
     /* Entry 15: points for a win */
-    menuEntries[15].fgWord = *(uint16_t *)diyPointsForAWin;
+    menuEntries[15].fgWord = diyCompetitionStart.pointsForAWin;
 
     _ConvertMinMaxSubstitutesNumbers();
 }
@@ -8345,7 +8343,6 @@ extern uint16_t diyAllMatchesPlayed;
 extern uint16_t diyFixtureViewMode;
 extern uint16_t diyTournamentViewOnly;
 extern uint16_t diyLeagueTournament_viewOptionsAvailable;
-extern uint16_t diyMinSubstitutes;
 extern volatile uint16_t seasonUpdateInProgress;
 extern TeamFileEx *diyLeftTeamPtr;
 extern TeamFileEx *diyRightTeamPtr;
@@ -8705,14 +8702,14 @@ void _DIYLeagueTournamentInit(void)
                       (unsigned)diyTournamentType,
                       (unsigned)diyTournamentViewOnly,
                       (unsigned)diyInitFocusOverride,
-                      (unsigned)diyMinSubstitutes,
+                      (unsigned)diyCompetitionStart.minSubstitutes,
                       (unsigned)(&diyCompetitionStart.base)->hasGroups);
 
     currentDiyLine = 0;
     diyAllMatchesPlayed = 0;
     _DIYLeagueTournament_UpdateViewOptionsAvailability();
 
-    if (diyMinSubstitutes == 0) {
+    if (diyCompetitionStart.minSubstitutes == 0) {
         /* Check hasGroups (field_3A+$E = 0x48) */
         if ((&diyCompetitionStart.base)->hasGroups == 0) {
             diyAllMatchesPlayed = 1;
@@ -10521,9 +10518,9 @@ uint16_t _PlayDIYLeagueMatchAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
 __attribute__((used, externally_visible))
 uint16_t _PlayDIYCupFixtureAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
                                            int16_t allowSquadChanges, int16_t mode) {
-    /* d1 = diyPointsForAWin (word), d2 = substitutesCount → SetupPlayers */
+    /* d1 = diyCompetitionStart.pointsForAWin (word), d2 = substitutesCount → SetupPlayers */
     DIYCompetition *diyStart = &diyCompetitionStart.base;
-    _SetupPlayers(team1, team2, *(int16_t *)diyPointsForAWin,
+    _SetupPlayers(team1, team2, (int16_t)diyCompetitionStart.pointsForAWin,
                   diyStart->substitutesCount, allowSquadChanges, mode);  /* 0x3C */
 
     if (exitGameFlag != 0)
@@ -10639,7 +10636,7 @@ uint16_t _PlayDIYCupFixtureAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
     /* === Path A: first leg (a5_66 > 1, replayField == 0, field14A == 0) === */
     {
         _InitializeInGameTeamsAndStartGame(0,
-            (int16_t)diyMinSubstitutes, *(int16_t *)diyPointsForAWin,
+            (int16_t)diyCompetitionStart.minSubstitutes, (int16_t)diyCompetitionStart.pointsForAWin,
             diyStart->substitutesCount, d7val,  /* 0x3C */
             (TeamFile *)team1, (TeamFile *)team2);
         if (gameCanceled != 0)
@@ -10677,7 +10674,7 @@ path_B: /* === Second leg === */
 
         /* Play the match */
         _InitializeInGameTeamsAndStartGame(0,
-            (int16_t)diyMinSubstitutes, *(int16_t *)diyPointsForAWin,
+            (int16_t)diyCompetitionStart.minSubstitutes, (int16_t)diyCompetitionStart.pointsForAWin,
             diyStart->substitutesCount, d7val,  /* 0x3C */
             (TeamFile *)team1, (TeamFile *)team2);
         if (gameCanceled != 0)
@@ -10718,7 +10715,7 @@ path_C: /* === Auto-play/sim path === */
 
         /* Play the match */
         _InitializeInGameTeamsAndStartGame(randomizePitch,
-            (int16_t)diyMinSubstitutes, *(int16_t *)diyPointsForAWin,
+            (int16_t)diyCompetitionStart.minSubstitutes, (int16_t)diyCompetitionStart.pointsForAWin,
             diyStart->substitutesCount, d7val,  /* 0x3C */
             (TeamFile *)team1, (TeamFile *)team2);
         if (gameCanceled != 0)
@@ -10834,7 +10831,7 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
              * in selTeamsPtr from a previous interactive load would otherwise stall
              * Career_PostMatchUpdate's auto-advance on a playMatchMenu for a cup
              * the user isn't even participating in. */
-            _SetupPlayers(team1, team2, *(int16_t *)diyPointsForAWin,
+            _SetupPlayers(team1, team2, (int16_t)diyCompetitionStart.pointsForAWin,
                           baseS->substitutesCount, 0, 0);  /* 0x3C */
             if (exitGameFlag != 0)
                 return 1;
@@ -11256,8 +11253,8 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
     r2->goalsFor     += d2;
     r2->goalsAgainst += d1;
 
-    /* Sort standings and process promotions/relegations if diyMinSubstitutes == 0 */
-    if (diyMinSubstitutes == 0) {
+    /* Sort standings and process promotions/relegations if diyCompetitionStart.minSubstitutes == 0 */
+    if (diyCompetitionStart.minSubstitutes == 0) {
         _DIY_SortLeagueTableByStandings();
 
         DIYCompetitionEx *compEx = &diyCompetitionStart;
