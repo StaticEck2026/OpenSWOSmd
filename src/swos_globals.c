@@ -370,44 +370,24 @@ EditTeamsSpriteCopy stadiumMenuLittlePlayerSpriteCopy = {
     0x0000, 0x00D6, { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
 };
 
-/* ---- Transfer-offer ordinals (must be adjacent) --------------------
+/* ---- Transfer-offer ordinals ---------------------------------------
  *
- * SWOS2.s line 96267..96280 defines these 7 uint16 globals back-to-back:
+ * UNTANGLED (.equ -> struct): SWOS2.s 96267..96280 laid 7 `dc.w` globals
+ * back-to-back (teamOffering, offerPrimaryPlayerOrdinal, numExtraPlayers-
+ * Wanted, offerSwapPlayerOrdinal, offerExtraPlayerOrdinal, offerAmount,
+ * offerNegotiationStep1Amount). The SDL port previously merged them into
+ * a uint8_t[14] backing buffer with `.equ` aliases because
+ * `offerAfterDrawCommonShared` walks the four player-ordinal slots as a
+ * contiguous int16_t array from `&offerPrimaryPlayerOrdinal[0..3]` (which
+ * read garbage when they were 7 separate linker-placed globals).
  *
- *   +0  teamOffering
- *   +2  offerPrimaryPlayerOrdinal
- *   +4  numExtraPlayersWanted
- *   +6  offerSwapPlayerOrdinal
- *   +8  offerExtraPlayerOrdinal
- *   +A  offerAmount
- *   +C  offerNegotiationStep1Amount
- *
- * `offerAfterDrawCommonShared` (transfer_market.c) walks the four
- * player-ordinal slots as a contiguous int16_t array starting at
- * `&offerPrimaryPlayerOrdinal`, indexing 0..3 to fetch
- * primary / numExtra / swap / extra in turn. On Amiga that's the
- * literal BSS layout. On SDL these were 5 separate definitions in
- * swos_amiga_data_imports.c at linker-determined addresses — the
- * walk read garbage for indices 1..3, so the MAKE OFFER menu drew
- * stale "extra players to buy" and "swap players" rows even though
- * `_ShowPlayerOfferMenuForPlayer` had explicitly set those globals
- * to -1. Restore the Amiga layout via .equ aliases. */
+ * Now a typed OfferOrdinals (game_types.h): host-native uint16/int16
+ * (the original `dc.w`), byte-identical on SDL/LE and Amiga/BE. The four
+ * ordinal slots stay contiguous so the walk still works — see the struct
+ * comment. transfer_market.c is the sole consumer (transient menu state,
+ * not serialized). */
 __attribute__((used, aligned(2)))
-uint8_t offerOrdinalsBackingBuf[14] = {0};
-__asm__(".globl " _ASM_PFX "teamOffering\n"
-        ".equ   " _ASM_PFX "teamOffering, "                _ASM_PFX "offerOrdinalsBackingBuf\n"
-        ".globl " _ASM_PFX "offerPrimaryPlayerOrdinal\n"
-        ".equ   " _ASM_PFX "offerPrimaryPlayerOrdinal, "   _ASM_PFX "offerOrdinalsBackingBuf + 2\n"
-        ".globl " _ASM_PFX "numExtraPlayersWanted\n"
-        ".equ   " _ASM_PFX "numExtraPlayersWanted, "       _ASM_PFX "offerOrdinalsBackingBuf + 4\n"
-        ".globl " _ASM_PFX "offerSwapPlayerOrdinal\n"
-        ".equ   " _ASM_PFX "offerSwapPlayerOrdinal, "      _ASM_PFX "offerOrdinalsBackingBuf + 6\n"
-        ".globl " _ASM_PFX "offerExtraPlayerOrdinal\n"
-        ".equ   " _ASM_PFX "offerExtraPlayerOrdinal, "     _ASM_PFX "offerOrdinalsBackingBuf + 8\n"
-        ".globl " _ASM_PFX "offerAmount\n"
-        ".equ   " _ASM_PFX "offerAmount, "                 _ASM_PFX "offerOrdinalsBackingBuf + 10\n"
-        ".globl " _ASM_PFX "offerNegotiationStep1Amount\n"
-        ".equ   " _ASM_PFX "offerNegotiationStep1Amount, " _ASM_PFX "offerOrdinalsBackingBuf + 12\n");
+OfferOrdinals offerOrdinals = {0};
 
 /* ---- Goalkeeper face / skin state --------------------------------
  *

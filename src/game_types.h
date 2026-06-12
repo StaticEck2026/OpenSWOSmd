@@ -1054,6 +1054,41 @@ typedef char _goaliefacestate_t1faces_check[(offsetof(GoalieFaceState, team1Face
 typedef char _goaliefacestate_t2faces_check[(offsetof(GoalieFaceState, team2Faces)          == 8) ? 1 : -1];
 
 /* ==================================================================
+ * OfferOrdinals — 14 bytes. Untangled (roadmap step 3) from the
+ * offerOrdinalsBackingBuf adjacency overlay (SWOS2.s 96267..96280 laid
+ * 7 separately-named `dc.w` globals back-to-back; the SDL port .equ-
+ * aliased them into one BSS run). These hold the in-progress transfer
+ * offer's parameters — transient menu state, NOT serialized (the saved
+ * data is the TransferOfferEntry array, which has its own fields).
+ *
+ * All seven are host-native uint16/int16 (the original `dc.w`, so there
+ * is no BE byte-pair concern on either target — the struct is byte-
+ * identical on SDL/LE and Amiga/BE).
+ *
+ * The four player-ordinal slots (offerPrimaryPlayerOrdinal,
+ * numExtraPlayersWanted, offerSwapPlayerOrdinal, offerExtraPlayerOrdinal)
+ * MUST stay contiguous in this order: offerAfterDrawCommonShared
+ * (transfer_market.c) walks them as
+ * `(int16_t *)&offerOrdinals.offerPrimaryPlayerOrdinal` indexing [0..3]
+ * to fetch primary / numExtra / swap / extra in turn.
+ * ================================================================== */
+typedef struct __attribute__((packed, aligned(2))) OfferOrdinals {
+    uint16_t teamOffering;                /* 0x00: team id that wants to buy our player */
+    uint16_t offerPrimaryPlayerOrdinal;   /* 0x02: the player they want */
+    int16_t  numExtraPlayersWanted;       /* 0x04: extra players wanted (>=0) / -1 sentinel */
+    int16_t  offerSwapPlayerOrdinal;      /* 0x06: swap player ordinal / -1 */
+    int16_t  offerExtraPlayerOrdinal;     /* 0x08: extra player ordinal / -1 */
+    uint16_t offerAmount;                 /* 0x0A: amount offered (units of 1000) */
+    uint16_t offerNegotiationStep1Amount; /* 0x0C: first negotiation counter-offer */
+} OfferOrdinals;
+
+/* Pin the layout to the old offerOrdinalsBackingBuf byte offsets. */
+typedef char _offerordinals_size_check [(sizeof(OfferOrdinals)                              == 14) ? 1 : -1];
+typedef char _offerordinals_prim_check [(offsetof(OfferOrdinals, offerPrimaryPlayerOrdinal) ==  2) ? 1 : -1];
+typedef char _offerordinals_extra_check[(offsetof(OfferOrdinals, offerExtraPlayerOrdinal)   ==  8) ? 1 : -1];
+typedef char _offerordinals_amt_check  [(offsetof(OfferOrdinals, offerAmount)               == 10) ? 1 : -1];
+
+/* ==================================================================
  * NationalTeamRecord — 6 bytes, pack(1)
  * Entry in nationalTeams[]. Indexed by ordinal × 6.
  *
