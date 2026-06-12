@@ -1088,33 +1088,21 @@ uint8_t euroCupQualSeedListReduced22[23] = { 16, 12, 0, 17, 5, 27, 26, 24, 18, 2
  * Ghana-coded entry into uefaCupEligibleCompetitionIds, no European
  * country ever consumed it, UEFA Cup ended up 1 short of 32, and
  * Career_AdvanceToNextSeason_UpdateCompetitions's careerFileBuffer ==
- * 0x50 invariant tripped panic 0x8999. Pack into one struct and expose
- * each via .equ alias. */
-typedef struct __attribute__((packed)) {
-    uint8_t bucket15[15];
-    uint8_t bucket18[18];
-    uint8_t bucket22[22];
-    uint8_t bucket22Full[23];
-} EuroCupQualSeedBucketBlock;
-
+ * 0x50 invariant tripped panic 0x8999. Pack into one struct; consumers
+ * use the named bucket15/18/22/22Full fields.
+ *
+ * UNTANGLED (.equ -> typed field): the EuroCupQualSeedBucketBlock typedef
+ * + extern live in game_types.h (shared by competition_data.c and the
+ * consumer table in swos_amiga_ptr_imports.c). The old
+ * `.equ euroCupQualSeedBucketN, ...block + <literal>` aliases are gone —
+ * all uint8 buckets so the literal offsets (15/33/55) were already
+ * 64-bit-safe, but typed field access removes the .equ entirely. */
 EuroCupQualSeedBucketBlock euroCupQualSeedBucketBlock = {
     .bucket15     = { 14, 14, 14, 14, 20, 20, 20, 20, 35, 35, 35, 35, 8, 8, 8 },
     .bucket18     = { 2, 2, 2, 13, 13, 13, 29, 29, 29, 30, 30, 30, 31, 31, 31, 41, 41, 41 },
     .bucket22     = { 1, 1, 3, 3, 6, 6, 7, 7, 15, 15, 25, 25, 28, 28, 33, 33, 36, 36, 37, 37, 38, 38 },
     .bucket22Full = { 16, 12, 0, 17, 5, 27, 26, 24, 18, 23, 4, 10, 11, 19, 21, 22, 32, 34, 39, 40, 76, 78, 255 }
 };
-
-__asm__(".globl " _ASM_PFX "euroCupQualSeedBucket15\n"
-        ".equ   " _ASM_PFX "euroCupQualSeedBucket15, " _ASM_PFX "euroCupQualSeedBucketBlock\n");
-/* offset 15 */
-__asm__(".globl " _ASM_PFX "euroCupQualSeedBucket18\n"
-        ".equ   " _ASM_PFX "euroCupQualSeedBucket18, " _ASM_PFX "euroCupQualSeedBucketBlock + 15\n");
-/* offset 33 = 15 + 18 */
-__asm__(".globl " _ASM_PFX "euroCupQualSeedBucket22\n"
-        ".equ   " _ASM_PFX "euroCupQualSeedBucket22, " _ASM_PFX "euroCupQualSeedBucketBlock + 33\n");
-/* offset 55 = 15 + 18 + 22 */
-__asm__(".globl " _ASM_PFX "euroCupQualSeedBucket22Full\n"
-        ".equ   " _ASM_PFX "euroCupQualSeedBucket22Full, " _ASM_PFX "euroCupQualSeedBucketBlock + 55\n");
 
 /* ======================================================================
  * Cup Pick Tables (per-region competition selection for career)

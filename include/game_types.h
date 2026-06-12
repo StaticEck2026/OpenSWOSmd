@@ -1089,6 +1089,26 @@ typedef char _offerordinals_extra_check[(offsetof(OfferOrdinals, offerExtraPlaye
 typedef char _offerordinals_amt_check  [(offsetof(OfferOrdinals, offerAmount)               == 10) ? 1 : -1];
 
 /* ==================================================================
+ * EuroCupQualSeedBucketBlock — 78 bytes. The four euro-cup qualification
+ * seed buckets packed into one struct so they stay contiguous: a UEFA Cup
+ * pre-scan walks all four end-to-end up to the 0xFF sentinel in
+ * bucket22Full (Career_FillRandomTeamListExcludingSelected). Was four
+ * separate globals + `.equ` aliases (euroCupQualSeedBucket15/18/22/22Full);
+ * promoted to named fields. All uint8 -> byte-identical on 32/64-bit.
+ * Defined in competition_data.c; the consumer table lives in
+ * swos_amiga_ptr_imports.c (which can't include competition_data.h), so
+ * the typedef lives here in the shared header both files already include.
+ * ================================================================== */
+typedef struct __attribute__((packed)) EuroCupQualSeedBucketBlock {
+    uint8_t bucket15[15];
+    uint8_t bucket18[18];
+    uint8_t bucket22[22];
+    uint8_t bucket22Full[23];
+} EuroCupQualSeedBucketBlock;
+typedef char _eurocupseedbucket_size_check[(sizeof(EuroCupQualSeedBucketBlock) == 78) ? 1 : -1];
+extern EuroCupQualSeedBucketBlock euroCupQualSeedBucketBlock;
+
+/* ==================================================================
  * NationalTeamRecord — 6 bytes, pack(1)
  * Entry in nationalTeams[]. Indexed by ordinal × 6.
  *

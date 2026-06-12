@@ -159,7 +159,7 @@ void _Career_FillRandomTeamListExcludingSelected(uint16_t excludeCount,
  *
  * UEFA Cup has a special pre-scan: counts how many times the selected
  * team's country index appears across all seed bucket data (contiguous
- * from euroCupQualSeedBucket15 through euroCupQualSeedBucket22Full,
+ * from euroCupQualSeedBucketBlock.bucket15 through .bucket22Full,
  * terminated by 0xFF).
  *
  * Temporarily overrides selTeamNumber from teamNoOfferAccepted if a
@@ -247,7 +247,7 @@ void _Career_PrepareEuropeanCupQualificationState(void)
         uefaCupQualifiedTeamCount = 0;
 
         /* Special count: scan ALL seed bucket data (contiguous from first bucket
-         * through euroCupQualSeedBucket22Full which ends with 0xFF) to count how
+         * through euroCupQualSeedBucketBlock.bucket22Full which ends with 0xFF) to count how
          * many times the selected team's country index appears.
          * Asm: movea.l (euroCupQualGroupSeedBuckets_15_18_22).l,a0 — loads first
          * entry's pointer (to start of contiguous bucket data). */
