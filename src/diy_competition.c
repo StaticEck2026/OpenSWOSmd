@@ -155,7 +155,6 @@ extern uint16_t diyCompSlotStateB;
 extern uint16_t diyCompSlotStateC;
 extern uint8_t teamSelectionKeyCache[];
 extern uint16_t teamSelectionKeyCacheCount;
-extern uint16_t diyHasGroups;
 extern uint8_t aFriendly[];  /* string "FRIENDLY" */
 extern uint8_t worldCup[];
 
@@ -4742,8 +4741,6 @@ void _DesignDIYTournament_UpdateSelectTeamsPrompt(void)
 
 extern uint16_t diyLeagueStartingMonth;
 extern uint16_t diyLeagueEndingMonth;
-extern uint16_t diyLeagueMinSubstitutes;
-extern uint16_t diyLeagueMaxSubstitutes;
 extern uint8_t  aX0[];             /* "X %0" */
 /* DesignDIYLeagueFinish now ported — call C version directly */
 
@@ -4853,20 +4850,20 @@ __attribute__((used, externally_visible))
 void _ConvertMinMaxSubstitutesNumbers(void)
 {
     uint8_t *minStr = (uint8_t *)menuEntries[16].fg;
-    _Int2Ascii(diyLeagueMinSubstitutes, minStr);
+    _Int2Ascii(diyCompetitionStart.matchData.league.leagueMinSubstitutes, minStr);
     uint8_t *maxStr = (uint8_t *)menuEntries[17].fg;
-    _Int2Ascii(diyLeagueMaxSubstitutes, maxStr);
+    _Int2Ascii(diyCompetitionStart.matchData.league.leagueMaxSubstitutes, maxStr);
 }
 
 /* DesignDIYLeagueChangeMinSubstitutes — cycle min subs 1..max (SWOS2.s line 41651) */
 __attribute__((used, externally_visible))
 void _DesignDIYLeagueChangeMinSubstitutes(MenuEntry *entry)
 {
-    if (diyLeagueMaxSubstitutes == 0)
+    if (diyCompetitionStart.matchData.league.leagueMaxSubstitutes == 0)
         return;
-    diyLeagueMinSubstitutes += 1;
-    if (diyLeagueMinSubstitutes > diyLeagueMaxSubstitutes)
-        diyLeagueMinSubstitutes = 1;
+    diyCompetitionStart.matchData.league.leagueMinSubstitutes += 1;
+    if (diyCompetitionStart.matchData.league.leagueMinSubstitutes > diyCompetitionStart.matchData.league.leagueMaxSubstitutes)
+        diyCompetitionStart.matchData.league.leagueMinSubstitutes = 1;
     _ConvertMinMaxSubstitutesNumbers();
     _CallDrawMenuItem(entry);
 }
@@ -4875,13 +4872,13 @@ void _DesignDIYLeagueChangeMinSubstitutes(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _DesignDIYLeagueChangeMaxSubstitutes(MenuEntry *entry)
 {
-    diyLeagueMaxSubstitutes += 1;
-    if (diyLeagueMaxSubstitutes > 5) {
-        diyLeagueMaxSubstitutes = 0;
-        diyLeagueMinSubstitutes = 0;
+    diyCompetitionStart.matchData.league.leagueMaxSubstitutes += 1;
+    if (diyCompetitionStart.matchData.league.leagueMaxSubstitutes > 5) {
+        diyCompetitionStart.matchData.league.leagueMaxSubstitutes = 0;
+        diyCompetitionStart.matchData.league.leagueMinSubstitutes = 0;
     }
-    if (diyLeagueMaxSubstitutes == 1)
-        diyLeagueMinSubstitutes = 1;
+    if (diyCompetitionStart.matchData.league.leagueMaxSubstitutes == 1)
+        diyCompetitionStart.matchData.league.leagueMinSubstitutes = 1;
     _ConvertMinMaxSubstitutesNumbers();
     _CallDrawMenuItem(entry);
     _CallDrawMenuItem(&menuEntries[16]);  /* also redraw min substitutes entry */
@@ -6846,7 +6843,7 @@ int16_t _DesignDIYCup_UpdateMatchListScrollAndRebuildStrings(void)
     if (diyCupMenuArg0Copy != 0) {
         uint16_t totalMatches = *(uint16_t *)&diyCompetitionStart.base.totalMatchesInRound; /* DIY_COMPETITION_FIELD_3A+$18 */
         if (totalMatches > 6) {
-            d0 = diyLeagueMinSubstitutes;
+            d0 = diyCompetitionStart.matchData.league.leagueMinSubstitutes;
             if (diyCupMenuArg0Copy != 1) {
                 d0 -= 1;
                 if ((int16_t)d0 < 0) {
@@ -7275,8 +7272,8 @@ void _DIYLeagueTournamentOnRestore(void)
         }
     }
 
-    /* If diyHasGroups, adjust some entries */
-    if (diyHasGroups != 0) {
+    /* If diyCompetitionStart.matchData.league.hasGroupsDiy, adjust some entries */
+    if (diyCompetitionStart.matchData.league.hasGroupsDiy != 0) {
         {
             MenuEntry *a0 = &menuEntries[11];
             int16_t d0;
@@ -7335,7 +7332,7 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
         int16_t d0;
         for (d0 = 6; d0 >= 0; d0--) {
             a0->isInvisible = 0;
-            if (diyHasGroups)
+            if (diyCompetitionStart.matchData.league.hasGroupsDiy)
                 a0->isInvisible = 1;
             a0->y = d2;
             a0++;
@@ -8350,8 +8347,6 @@ extern uint16_t diyLeftTeamResult;
 extern uint16_t diyRightTeamResult;
 extern uint16_t numDiyResults;
 /* diyLeagueTeamIds already declared above as uint16_t[] */
-extern uint16_t diyLeagueTotalMatches;
-extern uint16_t diyLeagueMatchProgress;
 extern uint16_t diyInitFocusOverride;
 
 extern uint8_t aPlayMatch[];       /* "PLAY MATCH" */
@@ -8468,8 +8463,8 @@ void _DIYLeagueTournament_UpdateViewOptionsAvailability(void)
     }
 
     /* Check if 75% of matches played */
-    uint16_t threshold = (uint16_t)((uint16_t)(diyLeagueTotalMatches * 3) >> 2);
-    if (diyLeagueMatchProgress >= threshold) {
+    uint16_t threshold = (uint16_t)((uint16_t)(diyCompetitionStart.leagueTotalMatches * 3) >> 2);
+    if (diyCompetitionStart.leagueMatchProgress >= threshold) {
         diyLeagueTournament_viewOptionsAvailable = 1;
     }
 }
@@ -9247,7 +9242,6 @@ void _InitCompetitionFromRecord(uint16_t index, uint8_t *record)
  * ================================================================ */
 
 extern uint16_t diyTournamentType;
-extern uint16_t diyHasGroups;
 extern uint16_t careerLoadedFlag;
 extern uint16_t fireResetFlag;
 extern uint16_t highlightedLeagueTeamId;
@@ -9365,7 +9359,7 @@ void _DIYLeagueTournamentMatchCommon(uint16_t action)
 
     uint16_t setAllPlayed = 0;
 
-    if (diyHasGroups != 0) {
+    if (diyCompetitionStart.matchData.league.hasGroupsDiy != 0) {
         /* With groups: move separator entry x to 0x97 */
         menuEntries[10].x = 0x97;  /* entry at $230/56 = 10 */
         setAllPlayed = 1;
@@ -10441,8 +10435,8 @@ uint16_t _PlayDIYLeagueMatchAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
                                             int16_t allowSquadChanges, int16_t mode) {
     DIYCompetition *diy = &diyCompetitionStart.base;
 
-    /* Call SetupPlayers: d1=diyLeagueMaxSubstitutes, d2=substitutesCount */
-    _SetupPlayers(team1, team2, (int16_t)diyLeagueMaxSubstitutes,
+    /* Call SetupPlayers: d1=diyCompetitionStart.matchData.league.leagueMaxSubstitutes, d2=substitutesCount */
+    _SetupPlayers(team1, team2, (int16_t)diyCompetitionStart.matchData.league.leagueMaxSubstitutes,
                   diy->substitutesCount, allowSquadChanges, mode);
 
     if (exitGameFlag != 0)
@@ -10490,7 +10484,7 @@ uint16_t _PlayDIYLeagueMatchAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
     int16_t d0val = (diy->playEachTeam == 1) ? 0xFF : 0;
 
     _InitializeInGameTeamsAndStartGame(d0val,
-        (int16_t)diyLeagueMinSubstitutes, (int16_t)diyLeagueMaxSubstitutes,
+        (int16_t)diyCompetitionStart.matchData.league.leagueMinSubstitutes, (int16_t)diyCompetitionStart.matchData.league.leagueMaxSubstitutes,
         diy->substitutesCount, d7val,
         (TeamFile *)team1, (TeamFile *)team2);
 
@@ -11177,7 +11171,7 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
             seasonUpdateInProgress == 0 &&
             careerAutoAdvanceInProgress == 0) {
             /* At least one human/coach team — show SetupPlayers */
-            _SetupPlayers(team1, team2, (int16_t)diyLeagueMaxSubstitutes,
+            _SetupPlayers(team1, team2, (int16_t)diyCompetitionStart.matchData.league.leagueMaxSubstitutes,
                           baseS->substitutesCount, 0, 0);  /* 0x3C */
             if (exitGameFlag != 0)
                 return 1;

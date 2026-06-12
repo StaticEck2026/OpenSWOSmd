@@ -1090,39 +1090,26 @@ __asm__(".globl " _ASM_PFX "diyTeamEntryOffsetsByIndex\n"
         ".equ   " _ASM_PFX "diyTeamShuffleIndices, " _ASM_PFX "diyCompetitionStartBuf + "
         DIY_STR(0xEE + DIY_POST_BASE_SHIFT) "\n");
 
-/* The named diy* uint16 globals at offsets 0x60..0x68 and 0x1BE..0x1C4
- * also overlap diyCompetitionStart per the SWOS2.s BSS layout. Without
- * these aliases, writes via the struct view (e.g.
- * `comp->leagueCurrentSlot = 1`) and reads via the global name (e.g.
- * `careerSlotProcessingInProgress = diyLeagueCurrentSlot`) hit
- * different memory — the auto-play loop never observes the phase
- * boundary and runs forever. */
-/* diyMinSubstitutes (@0x60) / diyPointsForAWin (@0x62) aliases removed —
- * converted to typed diyCompetitionStart.minSubstitutes / .pointsForAWin
- * (diy_competition.c, career_teams.c). */
-__asm__(".globl " _ASM_PFX "diyLeagueMinSubstitutes\n"
-        ".equ   " _ASM_PFX "diyLeagueMinSubstitutes, " _ASM_PFX "diyCompetitionStartBuf + "
-        DIY_STR(0x64 + DIY_POST_BASE_SHIFT) "\n"
-        ".globl " _ASM_PFX "diyLeagueMaxSubstitutes\n"
-        ".equ   " _ASM_PFX "diyLeagueMaxSubstitutes, " _ASM_PFX "diyCompetitionStartBuf + "
-        DIY_STR(0x66 + DIY_POST_BASE_SHIFT) "\n"
-        ".globl " _ASM_PFX "diyHasGroups\n"
-        ".equ   " _ASM_PFX "diyHasGroups, " _ASM_PFX "diyCompetitionStartBuf + "
-        DIY_STR(0x68 + DIY_POST_BASE_SHIFT) "\n"
-        /* diyMatchesPlayedCount alias removed — unused; code uses the typed
-         * field diyCompetitionStart.matchesPlayedCount (@0x1BE). */
-        ".globl " _ASM_PFX "diyLeagueCurrentSlot\n"
-        ".equ   " _ASM_PFX "diyLeagueCurrentSlot, " _ASM_PFX "diyCompetitionStartBuf + "
-        DIY_STR(0x1C0 + DIY_POST_BASE_SHIFT) "\n"
-        ".globl " _ASM_PFX "diyLeagueMatchProgress\n"
-        ".equ   " _ASM_PFX "diyLeagueMatchProgress, " _ASM_PFX "diyCompetitionStartBuf + "
-        DIY_STR(0x1C2 + DIY_POST_BASE_SHIFT) "\n"
-        ".globl " _ASM_PFX "diyLeagueTotalMatches\n"
-        ".equ   " _ASM_PFX "diyLeagueTotalMatches, " _ASM_PFX "diyCompetitionStartBuf + "
-        DIY_STR(0x1C4 + DIY_POST_BASE_SHIFT) "\n");
-/* diyCompetitionFormat (@0x14A) / diyRoundFormat (@0x14C) aliases removed —
- * unused; code uses the typed fields diyCompetitionStart.matchData.league.
- * competitionFormat / roundFormat (which alias leagueTeamIds[14]/[15]). */
+/* The diy* SCALAR overlay aliases at parent offsets 0x60..0x68 and
+ * 0x1BE..0x1C4 are GONE — all converted to typed diyCompetitionStart
+ * field access (DIYCompetitionEx, game_types.h):
+ *   0x60  diyMinSubstitutes       -> .minSubstitutes
+ *   0x62  diyPointsForAWin        -> .pointsForAWin
+ *   0x64  diyLeagueMinSubstitutes -> .matchData.league.leagueMinSubstitutes
+ *   0x66  diyLeagueMaxSubstitutes -> .matchData.league.leagueMaxSubstitutes
+ *   0x68  diyHasGroups            -> .matchData.league.hasGroupsDiy
+ *   0x1C0 diyLeagueCurrentSlot    -> .leagueCurrentSlot
+ *   0x1C2 diyLeagueMatchProgress  -> .leagueMatchProgress
+ *   0x1C4 diyLeagueTotalMatches   -> .leagueTotalMatches
+ * (diyMatchesPlayedCount@0x1BE / diyCompetitionFormat@0x14A /
+ * diyRoundFormat@0x14C were dead — dropped earlier.)
+ *
+ * Field access IS the same memory the writers already used (e.g.
+ * comp->matchData.league.leagueMinSubstitutes), so the reader/writer now
+ * share one lvalue — the auto-play-loop phase-boundary inconsistency the old
+ * comment warned about is gone by construction. The diy* ARRAY aliases
+ * (diyLeagueTeamIds / diyCupTeamIds / diyTeamEntryOffsetsByIndex /
+ * diyTeamShuffleIndices) remain above, pending their own conversion. */
 
 /* diyPresetNameOfCompetition: aliased in swos_globals_career_overlay.c
  * at careerFileBufferBuf + 93312 (== competitionFileBuffer + 4 in the
