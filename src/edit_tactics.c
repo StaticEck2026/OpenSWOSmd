@@ -2399,11 +2399,11 @@ static void PrimaryKitColorConversionC(void)
 
     /* Shorts */
     uint16_t shortsCol = kTeamColorsTable[tf->prShortsColor];
-    ((uint16_t *)((uint8_t *)editTeamsShortsColTable + 0x16))[0] = shortsCol;
+    editTeamsShortsColTable[11] = shortsCol;   /* word at +0x16 */
 
     /* Socks */
     uint16_t socksCol = kTeamColorsTable[tf->prSocksColor];
-    ((uint16_t *)((uint8_t *)editTeamsSocksColTable + 0x16))[0] = socksCol;
+    editTeamsSocksColTable[11] = socksCol;   /* word at +0x16 */
 }
 
 /* SecondaryKitColorConversion — build secondary shirt/shorts/socks color tables */
@@ -2426,11 +2426,11 @@ static void SecondaryKitColorConversionC(void)
 
     /* Shorts */
     uint16_t shortsCol = kTeamColorsTable[tf->secShortsColor];
-    ((uint16_t *)((uint8_t *)editTeamsSecondaryShortsColTable + 0x16))[0] = shortsCol;
+    editTeamsSecondaryShortsColTable[11] = shortsCol;   /* word at +0x16 */
 
     /* Socks */
     uint16_t socksCol = kTeamColorsTable[tf->secSocksColor];
-    ((uint16_t *)((uint8_t *)editTeamsSecondarySocksColTable + 0x16))[0] = socksCol;
+    editTeamsSecondarySocksColTable[11] = socksCol;   /* word at +0x16 */
 }
 
 /* MarkFirstKitShirt — highlight selected primary shirt type in menu */

@@ -2140,7 +2140,7 @@ uint8_t *_DIY_CopyCompetitionTeamIndexTable(uint8_t *dst)
      * growth in DIYCompetition base doesn't shift the read. See
      * project_raw_offset_64bit_shift_trap.md. */
     DIYCompetitionEx *_compEx_idx_table = &diyCompetitionStart;
-    uint16_t *src = (uint16_t *)(_compEx_idx_table->_bss_2E0AE + 0x60);  /* extended */
+    uint16_t *src = _compEx_idx_table->qualifiedTeamsByDivision;  /* was _bss_2E0AE + 0x60 */
     uint16_t *d = (uint16_t *)dst;
     for (int16_t i = (int16_t)(count - 1); i >= 0; i--) {
         *d++ = *src++;
@@ -2576,7 +2576,7 @@ void _DIY_ReorderTeamsBySelectionFlags(void)
      *   penaltyBuf    (parent +0x1CE): leagueSectionState.phaseStartMonths (penalty score)
      */
     int16_t *scoreTab1    = (int16_t *)&comp->matchData.cup.cupRoundResults[0x40];
-    int16_t *aggregateBuf = (int16_t *)&comp->_bss_2E0AE[0];
+    int16_t *aggregateBuf = (int16_t *)comp->cupAggregateScores;
     int16_t *penaltyBuf   = (int16_t *)&comp->leagueSectionState.phaseStartMonths[0];
     int16_t d1 = 0;
     int16_t d2 = 0;
@@ -2789,10 +2789,9 @@ two_leg_path:
 
     {
         /* a1: scoreTab1 (parent +0xCA = cupRoundResults+0x40 score region)
-         * a2: BSS_00_2E0AE — second-leg score buffer, kept raw pending naming */
+         * a2: cup 2nd-leg aggregate-score buffer (was BSS_00_2E0AE / _bss_2E0AE) */
         uint8_t *scores  = (uint8_t *)&comp->matchData.cup.cupRoundResults[0x40];
-        /* parent +0x14E = _bss_2E0AE start; use typed field. */
-        uint8_t *scores2 = comp->_bss_2E0AE;
+        uint8_t *scores2 = (uint8_t *)comp->cupAggregateScores;
         uint8_t *grid    = comp->teamGridPairings;
         uint8_t *flags   = comp->matchData.cup.cupRoundResults;
         int16_t count    = a0s->totalMatchesInRound - 1;
@@ -2915,12 +2914,12 @@ outer_loop:
     int16_t cacheCount = teamSelectionKeyCacheCount - 1;
 
     while (cacheCount >= 0) {
-        if (cacheEntry[0] == compId) {
-            if (cacheEntry[7] == (uint8_t)roundIdx)
+        if (((TeamSelectionKeyCacheEntry *)cacheEntry)->compId == compId) {
+            if (((TeamSelectionKeyCacheEntry *)cacheEntry)->roundIdx == (uint8_t)roundIdx)
                 goto found_entry;
         }
         /* Advance by stride at offset 2 */
-        cacheEntry += *(uint16_t *)(cacheEntry + 2);
+        cacheEntry += ((TeamSelectionKeyCacheEntry *)cacheEntry)->entryStride;
         cacheCount--;
     }
     /* Not found — panic */
@@ -2932,29 +2931,29 @@ found_entry:
     ;
     /* Check d7 state for second pass */
     if (d7 != 0) {
-        if (cacheEntry[8] != 2)
+        if (((TeamSelectionKeyCacheEntry *)cacheEntry)->legFlag != 2)
             goto try_next;
         goto process_fixtures;
     }
 
     /* First pass checks */
-    if (cacheEntry[8] == 1)
+    if (((TeamSelectionKeyCacheEntry *)cacheEntry)->legFlag == 1)
         goto process_fixtures;
 
     if (comp->bracketScratch.groupSectionFlag == 0) {
-        if (cacheEntry[8] == 3)
+        if (((TeamSelectionKeyCacheEntry *)cacheEntry)->legFlag == 3)
             goto try_next;
     } else {
-        if (cacheEntry[8] != 3)
+        if (((TeamSelectionKeyCacheEntry *)cacheEntry)->legFlag != 3)
             goto try_next;
-        cacheEntry[4] = 0;
+        ((TeamSelectionKeyCacheEntry *)cacheEntry)->phaseFlag = 0;
     }
 
 process_fixtures:
     ;
     uint8_t *a5 = cacheEntry;  /* result write pointer */
-    cacheEntry[5] = 0;
-    cacheEntry[6] = 0;
+    ((TeamSelectionKeyCacheEntry *)cacheEntry)->totalElements = 0;
+    ((TeamSelectionKeyCacheEntry *)cacheEntry)->remainingElements = 0;
 
     uint8_t *teamGrid = comp->teamGridPairings;  /* a1 points here */
     int16_t numTeams = a2s->totalMatchesInRound;
@@ -2970,7 +2969,7 @@ process_fixtures:
         uint16_t teamId2 = *(uint16_t *)team2;
 
         /* If d7 > 0 (second pass), swap teams */
-        if (cacheEntry[8] == 2) {
+        if (((TeamSelectionKeyCacheEntry *)cacheEntry)->legFlag == 2) {
             uint16_t tmp16 = teamId1;
             teamId1 = teamId2;
             teamId2 = tmp16;
@@ -3011,8 +3010,8 @@ process_fixtures:
             }
         }
 
-        cacheEntry[5]++;
-        cacheEntry[6]++;
+        ((TeamSelectionKeyCacheEntry *)cacheEntry)->totalElements++;
+        ((TeamSelectionKeyCacheEntry *)cacheEntry)->remainingElements++;
         a5[0x0B] = 0;
         *(uint16_t *)(a5 + 0x0C) = teamId1;  /* asm: move.w (a3),$C(a5) = first team */
         *(uint16_t *)(a5 + 0x0E) = teamId2;  /* asm: move.w (a0),$E(a5) = second team */
@@ -3023,24 +3022,24 @@ next_fixture:
     }
 
     /* Check if any fixtures recorded */
-    if (cacheEntry[5] == 0) {
+    if (((TeamSelectionKeyCacheEntry *)cacheEntry)->totalElements == 0) {
         if (a2s->roundIterator != 0) {
-            cacheEntry[6] = 0xFF;
+            ((TeamSelectionKeyCacheEntry *)cacheEntry)->remainingElements = 0xFF;
         }
     }
 
     d7 = 1;
-    if (cacheEntry[8] == 1)
+    if (((TeamSelectionKeyCacheEntry *)cacheEntry)->legFlag == 1)
         goto outer_loop;
 
     return;
 
 try_next:
-    cacheEntry += *(uint16_t *)(cacheEntry + 2);
+    cacheEntry += ((TeamSelectionKeyCacheEntry *)cacheEntry)->entryStride;
     cacheCount--;
     if (cacheCount >= 0) {
-        if (cacheEntry[0] == compId) {
-            if (cacheEntry[7] == (uint8_t)roundIdx)
+        if (((TeamSelectionKeyCacheEntry *)cacheEntry)->compId == compId) {
+            if (((TeamSelectionKeyCacheEntry *)cacheEntry)->roundIdx == (uint8_t)roundIdx)
                 goto found_entry;
         }
         goto try_next;
@@ -3199,11 +3198,12 @@ void _DIY_RecordLeagueFixtureResultAndAdvanceProgress(void)
     uint8_t compId = (uint8_t)*(uint16_t *)&a6s->compId;
 
     while (cacheCount >= 0) {
-        if (cache[0] == compId) {
-            if (a6s->hasGroups == 0 || cache[7] == (uint8_t)curRound)
+        TeamSelectionKeyCacheEntry *e = (TeamSelectionKeyCacheEntry *)cache;
+        if (e->compId == compId) {
+            if (a6s->hasGroups == 0 || e->roundIdx == (uint8_t)curRound)
                 goto found;
         }
-        cache += *(uint16_t *)(cache + 2);
+        cache += e->entryStride;
         cacheCount--;
     }
     panicReasonCode = 0x7777;
@@ -3295,8 +3295,8 @@ process_next:
         }
     }
 
-    cache[5]++;
-    cache[6]++;
+    ((TeamSelectionKeyCacheEntry *)cache)->totalElements++;
+    ((TeamSelectionKeyCacheEntry *)cache)->remainingElements++;
     resultPtr[0x0B] = 0;
     /* Asm: `move.w (a1),$C(a3)` / `move.w (a2),$E(a3)` — reads each
      * team's leading `{country, ordinal}` bytes as a single BE uint16
@@ -3329,21 +3329,21 @@ check_continue:
          * advanced ONE entry and exited silently on miss, which broke
          * multi-round processing for hasGroups (Champions Cup group
          * stage): after round 0's cache entries were exhausted, the
-         * walker stopped at round 1's first entry (cache[7]!=curRound)
+         * walker stopped at round 1's first entry (roundIdx != curRound)
          * and exited, leaving rounds 2+ unprocessed. Tester report:
          * only the first CL group match showed on the career main
          * screen — schedule "jumps from the match before to the match
          * after" because rounds 2-6 had team IDs zero. Loop until match
          * found or cache exhausted, matching the asm. */
         for (;;) {
-            cache += *(uint16_t *)(cache + 2);
+            cache += ((TeamSelectionKeyCacheEntry *)cache)->entryStride;
             cacheCount--;
             if (cacheCount < 0)
                 return;  /* Asm panics here; in our path the wider career
                           * flow continues, so exit silently. */
-            if (cache[0] != compId)
+            if (((TeamSelectionKeyCacheEntry *)cache)->compId != compId)
                 continue;
-            if (a6s->hasGroups != 0 && cache[7] != (uint8_t)curRound)
+            if (a6s->hasGroups != 0 && ((TeamSelectionKeyCacheEntry *)cache)->roundIdx != (uint8_t)curRound)
                 continue;
             resultPtr = cache;
             goto process_next;
@@ -3428,13 +3428,11 @@ void _DIY_RebuildCompetitionAndTeamSelectionCaches(void)
              * competition+0x1AE + idx*2 */
             uint32_t idx = *(uint32_t *)((uint8_t *)tablePtr - 4);  /* re-read d0 */
             (void)idx;
-            /* +0x1AE is inside _bss_2E0AE in DIYCompetitionEx (BSS_00_2E0AE
-             * region holds an array of qualified team IDs in
-             * competitionFileBuffer's view). divIndex indexes a uint16
-             * array starting at offset 0x1AE - 0x14E = 0x60 inside
-             * the _bss_2E0AE block. */
+            /* qualifiedTeamsByDivision (Amiga BSS_00_2E0AE +0x60, parent 0x1AE):
+             * the per-division qualified-team-id array in competitionFileBuffer's
+             * DIYCompetitionEx view. */
             DIYCompetitionEx *destEx = (DIYCompetitionEx *)competitionFileBuffer;
-            uint16_t teamId = *(uint16_t *)&destEx->_bss_2E0AE[0x60 + (uint16_t)divIndex * 2];
+            uint16_t teamId = destEx->qualifiedTeamsByDivision[divIndex];
             *a5++ = teamId;
         } else {
             /* Not current — auto-advance international fixtures */
@@ -3444,8 +3442,8 @@ void _DIY_RebuildCompetitionAndTeamSelectionCaches(void)
             _RestoreSelectedTeams();
             internationalAutoAdvanceFlag = 0;
 
-            /* Copy from diyCompetitionStart's _bss_2E0AE qualified-teams array */
-            uint16_t teamId = *(uint16_t *)&diyCompetitionStart._bss_2E0AE[0x60 + (uint16_t)divIndex * 2];
+            /* Copy from diyCompetitionStart's qualifiedTeamsByDivision array */
+            uint16_t teamId = diyCompetitionStart.qualifiedTeamsByDivision[divIndex];
             *a5++ = teamId;
         }
     }
@@ -6534,7 +6532,7 @@ void _DesignDIYCup_BuildMatchListEntryStrings(void)
             {
                 uint16_t *goalsPtr = (uint16_t *)&diyCompetitionStart.matchData.cup.cupRoundResults[0x40];
                 uint16_t goals = goalsPtr[d4 / 2];
-                uint16_t *aggPtr = (uint16_t *)diyCompetitionStart._bss_2E0AE;
+                uint16_t *aggPtr = diyCompetitionStart.cupAggregateScores;
                 uint16_t agg = aggPtr[d4 / 2];
                 uint16_t *penPtr = (uint16_t *)diyCompetitionStart.leagueSectionState.phaseStartMonths;
                 uint16_t pen = penPtr[d4 / 2];
@@ -10670,7 +10668,7 @@ path_B: /* === Second leg === */
          * matching read in _DIY_PlayCupMatchAndAdvance for why a
          * byte-pair load gives swapped scores on LE x86. */
         uint16_t matchIdx = compEx->matchData.cup.currentMatchIndex;
-        uint16_t packedLeg1 = ((uint16_t *)compEx->_bss_2E0AE)[matchIdx];
+        uint16_t packedLeg1 = compEx->cupAggregateScores[matchIdx];
         team1GoalsFirstLeg = (packedLeg1 >> 8) & 0xFF;
         team2GoalsFirstLeg = packedLeg1 & 0xFF;
 
@@ -10870,7 +10868,7 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
     DIYCompetitionEx *baseEx = (DIYCompetitionEx *)base;
     if (baseEx->matchData.cup.competitionFormat != 0) {
         uint16_t mIdx = baseEx->matchData.cup.currentMatchIndex;
-        uint16_t packed = ((uint16_t *)baseEx->_bss_2E0AE)[mIdx];
+        uint16_t packed = baseEx->cupAggregateScores[mIdx];
         firstLeg1 = (packed >> 8) & 0xFF;
         firstLeg2 = packed & 0xFF;
     }
@@ -10902,7 +10900,7 @@ uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
     /* If competitionFormat == 0, store aggregate at +0x14E (BSS_00_2E0AE)
      * + matchIndex*2 — second-leg aggregate score buffer. */
     if (a3Ex->matchData.cup.competitionFormat == 0) {
-        *(uint16_t *)&a3Ex->_bss_2E0AE[mIdx2] = packedAggregate;
+        a3Ex->cupAggregateScores[matchIdx] = packedAggregate;
     }
 
     /* Store penalty at +0x1CE + matchIndex*2 — uses
@@ -11270,7 +11268,7 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
          * 64-bit due to namePtr growth). Typed field access keeps the
          * 64-bit shift correct — was `a5 + 0x1AE` previously, which
          * underflowed 4 bytes on 64-bit. */
-        uint16_t *promRelOutput = (uint16_t *)(compEx->_bss_2E0AE + 0x60);
+        uint16_t *promRelOutput = compEx->qualifiedTeamsByDivision;
         int16_t *rankings = (int16_t *)compEx->matchData.league.teamEntryOffsets;
 
         /* Determine winner */

@@ -878,8 +878,11 @@ typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx {
     /* --- 0x64..0x14D: cup/league shared region (aliased view) --- */
     DIYCompetitionEx_MatchData matchData;
 
-    /* --- 0x14E..0x1BD: BSS_00_2E0AE (112 bytes, purpose unclear; sparse uses) --- */
-    uint8_t _bss_2E0AE[112];            /* 0x14E */
+    /* --- 0x14E..0x1BD: BSS_00_2E0AE (112 bytes) — two sequential sub-regions
+     *     named by use (cup mode vs league mode never overlap). Same 112 bytes,
+     *     layout byte-identical to the old uint8_t[112] blob. --- */
+    uint16_t cupAggregateScores[48];        /* 0x14E: cup two-leg 2nd-leg aggregate, packed goals by matchIdx (save uses [0..17]) */
+    uint16_t qualifiedTeamsByDivision[8];   /* 0x1AE: league promotion/relegation qualified team ids, by divIndex (was _bss_2E0AE+0x60) */
 
     /* --- 0x1BE..0x1C5: SWOS2.s named diy{MatchesPlayed,LeagueCurrentSlot,
      *                                   LeagueMatchProgress,LeagueTotalMatches} --- */
@@ -930,6 +933,11 @@ typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5C8) ? 
 #else
 typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5D0) ? 1 : -1];
 #endif
+/* Boundary of the former _bss_2E0AE blob: qualifiedTeamsByDivision must follow
+ * the 96-byte cupAggregateScores exactly (target-independent relative check). */
+typedef char _diycompex_2e0ae_split_check[
+    (offsetof(DIYCompetitionEx, qualifiedTeamsByDivision) ==
+     offsetof(DIYCompetitionEx, cupAggregateScores) + 96) ? 1 : -1];
 
 /* ==================================================================
  * SeasonInformations — 106 bytes per row, pack(2)

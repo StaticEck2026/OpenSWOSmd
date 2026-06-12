@@ -3177,7 +3177,7 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
          * sub-arrays need endian-neutral re-lay. */
         {
             const int16_t *st = (const int16_t *)&s->matchData.cup.cupRoundResults[0x40];
-            const int16_t *ag = (const int16_t *)&s->_bss_2E0AE[0];
+            const int16_t *ag = (const int16_t *)s->cupAggregateScores;
             const int16_t *pn = (const int16_t *)&s->leagueSectionState.phaseStartMonths[0];
             mjson_printf(fn, fnd, ",%Q:[", "cup_score_tab");
             for (int i = 0; i < 18; i++) {
@@ -3489,7 +3489,7 @@ static void load_comp_slot(const char *parent, int plen,
          * 36 bytes each. */
         struct { const char *key; uint8_t *dst; } sc[3] = {
             { "$.cup_score_tab", (uint8_t *)&s->matchData.cup.cupRoundResults[0x40] },
-            { "$.cup_score_agg", (uint8_t *)&s->_bss_2E0AE[0] },
+            { "$.cup_score_agg", (uint8_t *)s->cupAggregateScores },
             { "$.cup_score_pen", (uint8_t *)&s->leagueSectionState.phaseStartMonths[0] },
         };
         for (int k = 0; k < 3; k++) {
@@ -3882,7 +3882,7 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
             mjson_printf(json_out_emit, &out, "%s", "]");
         } else {
             const uint16_t *st = (const uint16_t *)&stage->matchData.cup.cupRoundResults[0x40];
-            const uint16_t *ag = (const uint16_t *)&stage->_bss_2E0AE[0];
+            const uint16_t *ag = stage->cupAggregateScores;
             const uint16_t *pn = (const uint16_t *)&stage->leagueSectionState.phaseStartMonths[0];
             const char *keys[3] = { "stage_score_tab", "stage_score_agg", "stage_score_pen" };
             const uint16_t *arrs[3] = { st, ag, pn };
@@ -4187,7 +4187,7 @@ static void apply_semantic_load(const char *src, int src_size)
         } else {
             uint16_t *dsts[3] = {
                 (uint16_t *)&stage->matchData.cup.cupRoundResults[0x40],
-                (uint16_t *)&stage->_bss_2E0AE[0],
+                stage->cupAggregateScores,
                 (uint16_t *)&stage->leagueSectionState.phaseStartMonths[0],
             };
             const char *keys[3] = { "$.stage_score_tab", "$.stage_score_agg",
@@ -4871,7 +4871,7 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
              * entries each (max matches per round). teamOffsetTable +
              * cupTeamIds/teamGridPairings are handled separately. */
             const uint16_t *st = (const uint16_t *)&stage->matchData.cup.cupRoundResults[0x40];
-            const uint16_t *ag = (const uint16_t *)&stage->_bss_2E0AE[0];
+            const uint16_t *ag = stage->cupAggregateScores;
             const uint16_t *pn = (const uint16_t *)&stage->leagueSectionState.phaseStartMonths[0];
             const char *keys[3] = { "stage_score_tab", "stage_score_agg", "stage_score_pen" };
             const uint16_t *arrs[3] = { st, ag, pn };
@@ -5070,7 +5070,7 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
              * JSON, fixing the home/away score swap cross-target. */
             uint16_t *dsts[3] = {
                 (uint16_t *)&stage->matchData.cup.cupRoundResults[0x40],
-                (uint16_t *)&stage->_bss_2E0AE[0],
+                stage->cupAggregateScores,
                 (uint16_t *)&stage->leagueSectionState.phaseStartMonths[0],
             };
             const char *keys[3] = { "$.stage_score_tab", "$.stage_score_agg",
