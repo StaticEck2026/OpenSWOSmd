@@ -37,10 +37,10 @@ uint8_t   dstRowAdvanceBytes[56] = {
 uint8_t   hexLongStringBuffer[10] = { 0 };  /* 8 hex digits + null + pad */
 uint8_t   hexWordStringBuffer[6]  = { 0 };  /* 4 hex digits + null + pad */
 
-/* littlePlayerSpriteGeneric must be adjacent to stadiumMenuLittlePlayer
- * and littlePlayersColorTable in memory (MENU_CMD_SPRITE_COPY reads a
- * single contiguous 36-byte struct). Moved to the shared backing
- * buffer in swos_globals.c with asm aliases. */
+/* The little-player MENU_CMD_SPRITE_COPY descriptor (was stadiumMenuLittlePlayer
+ * + littlePlayerSpriteGeneric + littlePlayersColorTable adjacency aliases) is now
+ * the EditTeamsSpriteCopy `stadiumMenuLittlePlayerSpriteCopy` struct in
+ * swos_globals.c — no more adjacency requirement. */
 
 /* --- Scorer padding (SWOS2.s:4632-4645) — 194 zero bytes after team2Scorers --- */
 uint8_t   scorer_padding[194] = { 0 };
