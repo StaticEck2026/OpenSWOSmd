@@ -652,14 +652,14 @@ SWOS_CHIP_BSS char audioInstrumentBank[512 * 1024];
 /* diyLeagueTournament_viewOptionsAvailable: real data in swos_amiga_data_imports.c */
 /* diyLeftTeamPtr: real data in swos_amiga_data_imports.c */
 /* diyLeftTeamResult: real data in swos_amiga_data_imports.c */
-/* diyMinSubstitutes: typed definition in swos_data_typed_stubs.c */
+/* diyMinSubstitutes: now typed diyCompetitionStart.minSubstitutes */
 /* diyNameOfCompetitionPtr: real data in swos_amiga_data_imports.c */
 /* diyNumberOfTeams: real data in swos_amiga_data_imports.c */
 /* diyPitchSeasonStrTab: real data in swos_amiga_ptr_imports.c */
 /* diyPitchTypeOrSeasonStrTable: real data in swos_amiga_ptr_imports.c */
 /* diyPitchTypeOrSeason_1: real data in swos_amiga_data_imports.c */
 /* diyPitchTypeStringTable: typed definition in swos_data_typed_stubs.c */
-/* diyPointsForAWin: typed definition in swos_data_typed_stubs.c */
+/* diyPointsForAWin: now typed diyCompetitionStart.pointsForAWin */
 /* diyPresetNameOfCompetition: real data in swos_data_bulk_imports.c */
 /* diyQualifiedTeamIndices: real data in swos_amiga_data_imports.c */
 /* diyRightTeamPtr: real data in swos_amiga_data_imports.c */

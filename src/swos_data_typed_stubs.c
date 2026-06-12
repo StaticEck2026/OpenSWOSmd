@@ -138,13 +138,15 @@ uint16_t goalkeeperDiveAttemptCount;
  * / teamIndexOrder fields) defined in swos_globals.c, so all access is
  *   `extern DIYTournamentState diyFileBufferCopy;` / `.header.field`
  * named-field access — no more raw-offset overlay. */
-/* diyMinSubstitutes / diyPointsForAWin / diyLeagueMinSubstitutes /
- * diyLeagueMaxSubstitutes / diyHasGroups / diyLeagueCurrentSlot /
- * diyLeagueMatchProgress / diyLeagueTotalMatches: aliased onto
- * diyCompetitionStartBuf at the right offsets in swos_globals.c per the
- * SWOS2.s BSS layout. Standalone definitions removed because the asm
- * code reads/writes the same memory through both the named global and
- * `diyCompetitionStart + offset`. See the alias block in
+/* diyMinSubstitutes / diyPointsForAWin: now typed diyCompetitionStart.
+ * minSubstitutes / .pointsForAWin (converted away from the .equ alias).
+ *
+ * diyLeagueMinSubstitutes / diyLeagueMaxSubstitutes / diyHasGroups /
+ * diyLeagueCurrentSlot / diyLeagueMatchProgress / diyLeagueTotalMatches:
+ * still aliased onto diyCompetitionStartBuf at the right offsets in
+ * swos_globals.c per the SWOS2.s BSS layout. Standalone definitions
+ * removed because the asm code reads/writes the same memory through both
+ * the named global and `diyCompetitionStart + offset`. See the alias block in
  * swos_globals.c. */
 /* tempTeamBuffer: must be sized as TeamFileEx (684 bytes), not TeamFile (76).
  * _Career_BuildForeignMarketPoolFromSelectedTeam in transfer_market.c copies

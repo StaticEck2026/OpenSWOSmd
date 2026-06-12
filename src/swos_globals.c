@@ -1097,13 +1097,10 @@ __asm__(".globl " _ASM_PFX "diyTeamEntryOffsetsByIndex\n"
  * `careerSlotProcessingInProgress = diyLeagueCurrentSlot`) hit
  * different memory — the auto-play loop never observes the phase
  * boundary and runs forever. */
-__asm__(".globl " _ASM_PFX "diyMinSubstitutes\n"
-        ".equ   " _ASM_PFX "diyMinSubstitutes, " _ASM_PFX "diyCompetitionStartBuf + "
-        DIY_STR(0x60 + DIY_POST_BASE_SHIFT) "\n"
-        ".globl " _ASM_PFX "diyPointsForAWin\n"
-        ".equ   " _ASM_PFX "diyPointsForAWin, " _ASM_PFX "diyCompetitionStartBuf + "
-        DIY_STR(0x62 + DIY_POST_BASE_SHIFT) "\n"
-        ".globl " _ASM_PFX "diyLeagueMinSubstitutes\n"
+/* diyMinSubstitutes (@0x60) / diyPointsForAWin (@0x62) aliases removed —
+ * converted to typed diyCompetitionStart.minSubstitutes / .pointsForAWin
+ * (diy_competition.c, career_teams.c). */
+__asm__(".globl " _ASM_PFX "diyLeagueMinSubstitutes\n"
         ".equ   " _ASM_PFX "diyLeagueMinSubstitutes, " _ASM_PFX "diyCompetitionStartBuf + "
         DIY_STR(0x64 + DIY_POST_BASE_SHIFT) "\n"
         ".globl " _ASM_PFX "diyLeagueMaxSubstitutes\n"

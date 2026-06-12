@@ -1641,7 +1641,6 @@ extern void _DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t 
 extern uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t selector);
 extern uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode);
 extern void _DIY_LoadCurrentCompetitionSlot(void);
-extern uint16_t diyMinSubstitutes;
 
 /* C functions for bracket/team grid (called from DIY_AdvanceToNextCompetitionSlot) */
 extern void _DIY_BuildSeededBracketAndUpdateScores(uint8_t *a2, uint8_t *a3,
@@ -2205,8 +2204,8 @@ void _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot(void)
         bufComp->careerTeamInvolved = comp->careerTeamInvolved;
         bufComp->resultCode     = comp->resultCode;
 
-        /* Advance if diyMinSubstitutes == 0 */
-        if (diyMinSubstitutes == 0)
+        /* Advance if diyCompetitionStart.minSubstitutes == 0 */
+        if (diyCompetitionStart.minSubstitutes == 0)
             _DIY_AdvanceToNextCompetitionSlot();
     } else {
         /* Cup type slot */
