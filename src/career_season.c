@@ -1248,8 +1248,8 @@ static void setupFriendlyCupTeams(void)
     uint16_t maxPrice = (uint16_t)((uint32_t)avgPrice * 125 / 100);
 
     uint8_t *comp = friendlyCopy;
-    int16_t teamCount = (int8_t)((CompetitionCup *)comp)->firstRoundNo;
-    uint8_t hdrSize = (uint8_t)((Competition *)comp)->unk3;
+    int16_t teamCount = (int8_t)((CompetitionCup *)comp)->roundStringBase;
+    uint8_t hdrSize = (uint8_t)((Competition *)comp)->teamListOffset;
     /* +text[2]-growth delta — see fillWorldCupQualifyingGroupTeams. */
     uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF)
                         + 2u * (sizeof(char *) - sizeof(uint32_t)));
@@ -1278,8 +1278,8 @@ static void setupInvitationTournamentTeams(void)
     uint16_t maxPrice = (uint16_t)((uint32_t)avgPrice * 125 / 100);
 
     uint8_t *comp = invitationTournamentCopy;
-    int16_t teamCount = (int8_t)((CompetitionCup *)comp)->firstRoundNo;
-    uint8_t hdrSize = (uint8_t)((Competition *)comp)->unk3;
+    int16_t teamCount = (int8_t)((CompetitionCup *)comp)->roundStringBase;
+    uint8_t hdrSize = (uint8_t)((Competition *)comp)->teamListOffset;
     /* +text[2]-growth delta — see fillWorldCupQualifyingGroupTeams. */
     uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF)
                         + 2u * (sizeof(char *) - sizeof(uint32_t)));
@@ -1445,9 +1445,9 @@ extern Playoffs_8 div3Playoffs;
  *            qIdx pairs in englishLeaguesBlock._div2.unk2[].
  *
  * teamData = qualComp + 7 + qualComp[7] in the asm; for all three Playoffs_8
- * statics qualComp->unk1[7] = 17 (Amiga byte offset to unk2[0]). On 64-bit
- * Playoffs_8.unk2 sits 8 bytes later (text[2] grew). Using typed
- * `&qualComp->unk2[0]` resolves correctly on both targets. */
+ * statics qualComp->playoffHeader[7] = 17 (Amiga byte offset to qualifiedTeamIds[0]).
+ * On 64-bit Playoffs_8.qualifiedTeamIds sits 8 bytes later (text[2] grew). Using
+ * typed `&qualComp->qualifiedTeamIds[0]` resolves correctly on both targets. */
 static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competition)
 {
     uint8_t *a2 = competition + index * 6;
@@ -1495,7 +1495,7 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         return; /* Premier (index=0) returned via early-exit. */
     }
 
-    int8_t count = (int8_t)qualComp->unk1[10];
+    int8_t count = (int8_t)qualComp->playoffHeader[10];
 
     if (!youreSacked && (uint8_t *)qualComp == diyCompetitionPtr) {
         /* Player's competition — interactive processing. Advance the
@@ -1518,19 +1518,19 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         careerTeam.team.teamControls = 1;
 
         /* Sanity check matching the asm `beq.w loc_12BCD0` — Playoffs_8
-         * statics all have unk1[7]=17, so 0 should never appear. */
-        if (qualComp->unk1[7] == 0) {
+         * statics all have playoffHeader[7]=17, so 0 should never appear. */
+        if (qualComp->playoffHeader[7] == 0) {
             panicReasonCode = 0x3003;
             _PanicHaltLoop();
             return;
         }
 
-        /* teamData lands at qualComp->unk2[0] on both targets via typed
-         * access (replaces the asm's `lea 7(a1,d0.w),a0` byte walk where
-         * d0 = qualComp->unk1[7] = 17). On 32-bit byte 7+17=24 = unk2[0];
-         * on 64-bit the same logical position is byte 32 because text[2]
-         * widened. Typed lookup picks the right byte on each target. */
-        uint8_t *teamData = (uint8_t *)&qualComp->unk2[0];
+        /* teamData lands at qualComp->qualifiedTeamIds[0] on both targets via
+         * typed access (replaces the asm's `lea 7(a1,d0.w),a0` byte walk where
+         * d0 = qualComp->playoffHeader[7] = 17). On 32-bit byte 7+17=24 =
+         * qualifiedTeamIds[0]; on 64-bit the same logical position is byte 32
+         * because text[2] widened. Typed lookup picks the right byte on each. */
+        uint8_t *teamData = (uint8_t *)&qualComp->qualifiedTeamIds[0];
 
         int16_t cnt = (int16_t)count - 1;
 

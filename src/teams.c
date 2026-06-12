@@ -3086,7 +3086,7 @@ skip_continental_check:
          * pointer-width-correct on both targets. */
         divIdx = 0;
 loc_E246:
-        nameOff = compHdr->unk1;
+        nameOff = compHdr->nameTableOffset;
         if (nameOff == 0) {
             /* Use divisionStringTable */
             namePtr = (uint8_t *)divisionStringTable[divIdx];
@@ -3106,7 +3106,7 @@ loc_E246:
         goto loc_E086;
     } else if (compType == 1) {
         /* Cup — single name pointer at +5+off16 (1 entry, char *). */
-        nameOff = compHdr->unk1;
+        nameOff = compHdr->nameTableOffset;
         if (nameOff == 0) {
             namePtr = (uint8_t *)aCup_0;
         } else {
@@ -3120,7 +3120,7 @@ loc_E246:
         goto loc_E086;
     } else if (compType == 2) {
         /* Tournament — same as Cup */
-        nameOff = compHdr->unk1;
+        nameOff = compHdr->nameTableOffset;
         if (nameOff == 0) {
             namePtr = (uint8_t *)aLeague_1;
         } else {

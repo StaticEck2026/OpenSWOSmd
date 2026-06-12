@@ -1398,13 +1398,14 @@ typedef struct __attribute__((packed)) {
 typedef struct __attribute__((packed)) {
     int8_t compNumber;
     int8_t type;
-    int8_t teamNumber;
-    int8_t beginMonth;
-    int8_t endMonth;
-    int8_t unk1;
-    int8_t unk2;
-    int8_t unk3;
-    int8_t unk4;
+    int8_t teamNumber;       /* TEAM.XXX team-file selector: country/region number for
+                              * nationals; 0xFF (255) = .TMD / special team file */
+    int8_t beginMonth;       /* season start month, encoded ×8 (monthIdx = value/8) */
+    int8_t endMonth;         /* season end month, ×8 (wraps +0x60 if < beginMonth) */
+    int8_t nameTableOffset;  /* was unk1: text[] name table at base+5+this (0 = default) */
+    int8_t unk2;             /* unconfirmed — no known read, likely padding (left as unk) */
+    int8_t teamListOffset;   /* was unk3: team-seed list at base+7+this (0 = none) */
+    int8_t seedReorderFlag;  /* was unk4: 0 = shuffle bracket, nonzero = preset seed order */
 } Competition;
 
 /* ==================================================================
@@ -1416,7 +1417,7 @@ typedef struct __attribute__((packed)) {
     int8_t divisionsCount;
     int8_t rounds;
     int8_t pointsForWin;
-    int8_t subsReserves;
+    int8_t subsAndMaxSubs;   /* was subsReserves: hi nibble = min subs, lo = MAX subs */
 } CompetitionLeague;
 
 /* ==================================================================
@@ -1438,11 +1439,11 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
     Competition comp;
-    int8_t unk1;
+    int8_t numRoundsOverride;   /* was unk1: nonzero overrides runtime numRounds (third-place count) */
     int8_t teams;
     int8_t awayGoalsMode;
-    int8_t subsReserves;
-    int8_t firstRoundNo;
+    int8_t subsAndPointsForWin; /* was subsReserves: hi nibble = min subs, lo = points-for-win */
+    int8_t roundStringBase;     /* was firstRoundNo: cup round-string base (also friendly participant count) */
 } CompetitionCup;
 
 /* ==================================================================
@@ -1465,8 +1466,8 @@ typedef struct __attribute__((packed)) {
     int8_t unk2;
     int8_t unk3;
     int8_t awayGoalsMode;
-    int8_t subsReserves;
-    int8_t firstRoundNo;
+    int8_t subsAndPointsForWin; /* was subsReserves: hi nibble = min subs, lo = points-for-win */
+    int8_t roundStringBase;     /* was firstRoundNo: round-string base / rounds[0] source */
     Round rounds[6];
     int8_t unk4;
 } CompetitionCup2;
@@ -1500,36 +1501,36 @@ typedef struct __attribute__((packed)) {
 } CompetitionLeague_4;
 
 /* ==================================================================
- * CompetitionCup variants (with rounds arrays)
+ * CompetitionCup variants (with per-round rule-flag arrays)
  * ================================================================== */
 
 typedef struct __attribute__((packed)) {
     CompetitionCup comp;
-    int8_t rounds[4];
+    int8_t roundRuleFlags[4];
 } CompetitionCup_4;
 
 typedef struct __attribute__((packed)) {
     CompetitionCup comp;
-    int8_t rounds[6];
+    int8_t roundRuleFlags[6];
 } CompetitionCup_6;
 
 typedef struct __attribute__((packed)) {
     CompetitionCup comp;
-    int8_t rounds[10];
+    int8_t roundRuleFlags[10];
 } CompetitionCup_10;
 
 /* ==================================================================
- * CompetitionCup2 variants (with roundSettings)
+ * CompetitionCup2 variants (with per-round rule-flag arrays)
  * ================================================================== */
 
 typedef struct __attribute__((packed)) {
     CompetitionCup2 compCup;
-    int8_t roundSettings[4];
+    int8_t roundRuleFlags[4];
 } CompetitionCup2_4;
 
 typedef struct __attribute__((packed)) {
     CompetitionCup2 compCup;
-    int8_t roundSettings[6];
+    int8_t roundRuleFlags[6];
 } CompetitionCup2_6;
 
 /* ==================================================================
@@ -1538,13 +1539,13 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
     CompetitionCup comp;
-    int8_t rounds[6];
+    int8_t roundRuleFlags[6];
     char *text[2];
 } CompetitionCup_6_2;
 
 typedef struct __attribute__((packed)) {
     CompetitionCup comp;
-    int8_t rounds[4];
+    int8_t roundRuleFlags[4];
     char *text[2];
 } CompetitionCup_4_2;
 
@@ -1554,23 +1555,23 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
     CompetitionCup comp;
-    int8_t rounds[6];
+    int8_t roundRuleFlags[6];
     char *text[2];
-    int8_t unk1[8];
+    int8_t teamSeedList[8];
 } CompetitionCup_6_2_8;
 
 typedef struct __attribute__((packed)) {
     CompetitionCup comp;
-    int8_t rounds[6];
+    int8_t roundRuleFlags[6];
     char *text[2];
-    int8_t unk1[12];
+    int8_t teamSeedList[12];
 } CompetitionCup_6_2_12;
 
 typedef struct __attribute__((packed)) {
     CompetitionCup comp;
-    int8_t rounds[6];
+    int8_t roundRuleFlags[6];
     char *text[2];
-    int8_t unk1[64];
+    int8_t teamSeedList[64];
 } CompetitionCup_6_2_64;
 
 /* ==================================================================
@@ -1590,43 +1591,43 @@ typedef struct __attribute__((packed)) {
 typedef struct __attribute__((packed)) {
     CompetitionCup2_4 compCup;
     char *text[2];
-    int8_t unk1[24];
+    int8_t teamSeedList[24];
 } CompetitionCup2_4_2_24;
 
 typedef struct __attribute__((packed)) {
     CompetitionCup2_4 compCup;
     char *text[2];
-    int8_t unk1[32];
+    int8_t teamSeedList[32];
 } CompetitionCup2_4_2_32;
 
 typedef struct __attribute__((packed)) {
     CompetitionCup2_6 compCup;
     char *text[2];
-    int8_t unk1[16];
+    int8_t teamSeedList[16];
 } CompetitionCup2_6_2_16;
 
 typedef struct __attribute__((packed)) {
     CompetitionCup2_6 compCup;
     char *text[2];
-    int8_t unk1[24];
+    int8_t teamSeedList[24];
 } CompetitionCup2_6_2_24;
 
 typedef struct __attribute__((packed)) {
     CompetitionCup2_6 compCup;
     char *text[2];
-    int8_t unk1[48];
+    int8_t teamSeedList[48];
 } CompetitionCup2_6_2_48;
 
 typedef struct __attribute__((packed)) {
     CompetitionCup2_6 compCup;
     char *text[2];
-    int8_t unk1[60];
+    int8_t teamSeedList[60];
 } CompetitionCup2_6_2_60;
 
 typedef struct __attribute__((packed)) {
     CompetitionCup2_6 compCup;
     char *text[2];
-    int8_t unk1[64];
+    int8_t teamSeedList[64];
 } CompetitionCup2_6_2_64;
 
 /* ==================================================================
@@ -1709,15 +1710,15 @@ typedef struct __attribute__((packed)) {
  * ================================================================== */
 
 typedef struct __attribute__((packed)) {
-    int8_t unk1[16];
+    int8_t playoffHeader[16];   /* was unk1: structured (byte 7=offset-to-ids, byte 10=qual count) */
     char *text[2];
-    int8_t unk2[8];
+    int8_t qualifiedTeamIds[8]; /* was unk2: BE-packed qualified team-id output buffer */
 } Playoffs_8;
 
 typedef struct __attribute__((packed)) {
-    int8_t unk1[16];
+    int8_t playoffHeader[16];   /* was unk1: structured (byte 7=offset-to-ids, byte 10=qual count) */
     char *text[2];
-    int8_t unk2[4];
+    int8_t qualifiedTeamIds[4]; /* was unk2: BE-packed qualified team-id output buffer */
 } Playoffs_4;
 
 typedef struct __attribute__((packed)) {
@@ -1752,7 +1753,7 @@ typedef struct __attribute__((packed)) {
 typedef struct __attribute__((packed)) {
     CompetitionCup *competition;
     CompetitionCup *competitionCopy;
-    uint16_t length;
+    uint16_t templateSize;   /* was length: sizeof(template) for the template→Copy memcpy */
 } CompetitionCareer;
 
 /* ==================================================================

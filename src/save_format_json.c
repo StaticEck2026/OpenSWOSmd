@@ -2656,7 +2656,7 @@ static void reconstruct_comp_copy_region_from_templates(void)
          (uintptr_t)e->competition != 0xFFFFFFFFu; e++) {
         const uint8_t *src = (const uint8_t *)e->competition;
         uint8_t       *dst = (uint8_t *)e->competitionCopy;
-        uint16_t       n   = e->length;          /* sizeof(template), per-target */
+        uint16_t       n   = e->templateSize;     /* sizeof(template), per-target */
         memcpy(dst, src, n);
     }
 }
