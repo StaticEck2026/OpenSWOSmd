@@ -1021,6 +1021,28 @@ void _Career_MaybeGenerateJobOffer(void)
     if (currentSeasonShowing == 0x13)
         return;
 
+#ifdef SWOS_INJECT_WC
+    /* DEBUG (SWOS_INJECT_WC): force the national-team job OFFER so the WC can be
+     * reached without grinding reputation. The normal national path below only
+     * fires after a random-phase gate (returns most seasons), board confidence
+     * >= 0xC8, and RNG — which is why a club career can run for years without
+     * ever being offered the national side ("pick your WC team" never appears).
+     * Reuse the SAME validity checks as the real checkNational path so the offer
+     * is well-formed; only the confidence/RNG/phase gates are bypassed. Fires
+     * while still a club manager; once you ACCEPT it, selTeamNumber becomes that
+     * national team and _InitializeNewSeason's SWOS_INJECT_WC override makes it
+     * play the World Cup. _IsNew/_IsOldJobOffer prevent re-offering, so this adds
+     * the offer once per opening rather than flooding. */
+    if (isNationalSelector == 0 &&
+        lastNationalityCall != 0xFFFF &&
+        _IsNewJobOffer(lastNationalityCall) != 0 &&
+        _IsOldJobOffer(lastNationalityCall) != 0 &&
+        _IsTeamCodeOkForNationalSelector((uint16_t)(lastNationalityCall >> 8)) != 0) {
+        _AddJobOffer(lastNationalityCall, (uint32_t)-1);
+        return;
+    }
+#endif
+
     if (careerJobOfferMode == 1)
         goto searchDomestic;
     if (careerJobOfferMode == 2)
