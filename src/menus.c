@@ -6374,13 +6374,11 @@ void _SquadMenu(void)
     } else if (compType == 1) {
         teamList = cfbEx->cupTeamIds;                       /* parent +0x24E */
     } else {
-        /* Tournament: team-id list is at parent +0x9A.
-         * diyFileBufferCopy stores team IDs at that offset
-         * (diyFileBufferCopy.teamIds field). For DIYCompetitionEx in the
-         * SDL build the matching typed access lands at parent +0x9A
-         * inside the matchData region — interpret via raw bytes with
-         * the 64-bit shift compensation. */
-        teamList = (uint16_t *)((uint8_t *)cfb + 0x9A);
+        /* Tournament: team-id list is DIYTournamentState.teamIds (parent +0x9A).
+         * competitionFileBuffer's tournament view keeps teamIds at byte 0x9A on
+         * both 32- and 64-bit (the DIYTournamentState header pad self-adjusts),
+         * so the typed access is correct cross-target. */
+        teamList = ((DIYTournamentState *)cfb)->teamIds;
     }
 
     if (numT > 64) numT = 0;  /* safety clamp — should never trigger now */
