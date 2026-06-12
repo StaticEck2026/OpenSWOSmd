@@ -2677,19 +2677,20 @@ static uint8_t *addNextRoundCupEntry(uint8_t **srcPtr, uint16_t idx, uint16_t to
     uint8_t *src = *srcPtr;
     uint8_t key = *src;
     uint8_t *out = _TeamSelectionKeyCache_InsertSpaceSorted(key, slotLen);
+    TeamSelectionKeyCacheEntry *e = (TeamSelectionKeyCacheEntry *)out;
     teamSelectionKeyCacheCount++;
-    out[1] = *src;
+    e->sortKey = *src;
     (*srcPtr)++;
 
     /* GetNextCupRoundStringIndex(idx, total, subRoundCounter) */
     uint16_t cupRoundIdx = _GetNextCupRoundStringIndex(idx, total, ((DIYCompetition *)base)->subRoundCounter);
-    out[9] = (uint8_t)cupRoundIdx;
-    out[7] = (uint8_t)idx;
-    out[0] = (uint8_t)teamId;
-    ((TeamSelectionKeyCacheEntry *)out)->entryStride = slotLen;
-    out[4] = 0;
-    out[5] = 0;
-    out[6] = 0;
+    e->cupRoundStringIdx = (uint8_t)cupRoundIdx;
+    e->roundIdx          = (uint8_t)idx;
+    e->compId            = (uint8_t)teamId;
+    e->entryStride       = slotLen;
+    e->phaseFlag         = 0;
+    e->totalElements     = 0;
+    e->remainingElements = 0;
 
     return out;
 }
@@ -2709,8 +2710,9 @@ static uint8_t *addCupEntry(uint8_t **srcPtr, uint16_t teamSlot, uint16_t roundI
     uint8_t *src = *srcPtr;
     uint8_t key = *src;
     uint8_t *out = _TeamSelectionKeyCache_InsertSpaceSorted(key, slotLen);
+    TeamSelectionKeyCacheEntry *e = (TeamSelectionKeyCacheEntry *)out;
     teamSelectionKeyCacheCount++;
-    out[1] = *src;
+    e->sortKey = *src;
     (*srcPtr)++;
 
     /* GetCupRoundStringIndex: d0=round, d1=slot.isLeagueFormat, d2=total,
@@ -2721,13 +2723,13 @@ static uint8_t *addCupEntry(uint8_t **srcPtr, uint16_t teamSlot, uint16_t roundI
                                                     total,
                                                     slotRec->numTeams,
                                                     opt);
-    out[9] = (uint8_t)cupRoundIdx;
-    out[7] = (uint8_t)roundIdx;
-    out[0] = (uint8_t)teamSlot;
-    ((TeamSelectionKeyCacheEntry *)out)->entryStride = slotLen;
-    out[4] = 0;
-    out[5] = 0;
-    out[6] = 0;
+    e->cupRoundStringIdx = (uint8_t)cupRoundIdx;
+    e->roundIdx          = (uint8_t)roundIdx;
+    e->compId            = (uint8_t)teamSlot;
+    e->entryStride       = slotLen;
+    e->phaseFlag         = 0;
+    e->totalElements     = 0;
+    e->remainingElements = 0;
 
     return out;
 }
@@ -2772,14 +2774,15 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
         while (i >= 0) {
             uint8_t key = *src;
             uint8_t *out = _TeamSelectionKeyCache_InsertSpaceSorted(key, slotLen);
+            TeamSelectionKeyCacheEntry *e = (TeamSelectionKeyCacheEntry *)out;
             teamSelectionKeyCacheCount++;
-            out[1] = *src++;
-            out[0] = (uint8_t)teamSlot;
-            ((TeamSelectionKeyCacheEntry *)out)->entryStride = slotLen;
-            out[4] = 0;
-            out[5] = 0;
-            out[6] = 0;
-            out += ((TeamSelectionKeyCacheEntry *)out)->entryStride;  /* adda.w 2(a4),a4 */
+            e->sortKey = *src++;
+            e->compId = (uint8_t)teamSlot;
+            e->entryStride = slotLen;
+            e->phaseFlag = 0;
+            e->totalElements = 0;
+            e->remainingElements = 0;
+            out += e->entryStride;  /* adda.w 2(a4),a4 */
             i--;
         }
         return;
@@ -2810,28 +2813,31 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
             }
 
             uint8_t *out = addNextRoundCupEntry(&src, roundIdx, numRounds, teamId, slotLen, base);
+            TeamSelectionKeyCacheEntry *e = (TeamSelectionKeyCacheEntry *)out;
 
             /* roundPtr+0x66 advances by 2 each iteration → cup roundLegs[roundIdx]
              * roundPtr+0x7E with stride 2 → cup roundPenalties[roundIdx] */
             if (baseEx->matchData.cup.roundLegs[roundIdx] == 2) {
                 /* Two-leg match */
-                out[8] = 1;
-                out += ((TeamSelectionKeyCacheEntry *)out)->entryStride;
+                e->legFlag = 1;
+                out += e->entryStride;
                 out = addNextRoundCupEntry(&src, roundIdx, numRounds, teamId, slotLen, base);
-                out[8] = 2;
-                out += ((TeamSelectionKeyCacheEntry *)out)->entryStride;
+                e = (TeamSelectionKeyCacheEntry *)out;
+                e->legFlag = 2;
+                out += e->entryStride;
             } else {
                 /* Single leg */
-                out[8] = 0;
-                out += ((TeamSelectionKeyCacheEntry *)out)->entryStride;
+                e->legFlag = 0;
+                out += e->entryStride;
                 if (baseEx->matchData.cup.roundPenalties[roundIdx] == 1) {
                     /* No replay match */
                 } else {
                     /* Replay match */
                     out = addNextRoundCupEntry(&src, roundIdx, numRounds, teamId, slotLen, base);
-                    out[8] = 3;
-                    out[4] = 1;
-                    out += ((TeamSelectionKeyCacheEntry *)out)->entryStride;
+                    e = (TeamSelectionKeyCacheEntry *)out;
+                    e->legFlag = 3;
+                    e->phaseFlag = 1;
+                    out += e->entryStride;
                 }
             }
 
@@ -2850,6 +2856,7 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
         uint16_t opt = *(uint16_t *)firstSlot->_pad_00;
         uint16_t teamSlot = *(uint16_t *)&baseEx->base.compId;
         uint8_t *out = teamSelectionKeyCache;
+        TeamSelectionKeyCacheEntry *e;
         uint16_t numSlots = comp->totalMatchesInRound;
         uint16_t slotIdx = 0;
 
@@ -2872,19 +2879,22 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
             if (slotRec->isLeagueFormat == 0) {
                 /* Cup sub-slot */
                 out = addCupEntry(&src, teamSlot, slotIdx, numSlots, slotLen, base, opt);
+                e = (TeamSelectionKeyCacheEntry *)out;
 
                 if (slotRec->formatFlag16E == 2) {
                     /* Two-leg */
-                    out[8] = 1;
+                    e->legFlag = 1;
                     out = addCupEntry(&src, teamSlot, slotIdx, numSlots, slotLen, base, opt);
-                    out[8] = 2;
+                    e = (TeamSelectionKeyCacheEntry *)out;
+                    e->legFlag = 2;
                 } else {
-                    out[8] = 0;
+                    e->legFlag = 0;
                     if (slotRec->formatFlag172 != 1) {
                         /* Has replay */
                         out = addCupEntry(&src, teamSlot, slotIdx, numSlots, slotLen, base, opt);
-                        out[8] = 3;
-                        out[4] = 1;
+                        e = (TeamSelectionKeyCacheEntry *)out;
+                        e->legFlag = 3;
+                        e->phaseFlag = 1;
                     }
                 }
             } else {
@@ -2893,8 +2903,9 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
                 int16_t j = (int16_t)leagueRounds - 1;
                 while (j >= 0) {
                     out = addCupEntry(&src, teamSlot, slotIdx, numSlots, slotLen, base, opt);
-                    out[8] = 0;
-                    out += ((TeamSelectionKeyCacheEntry *)out)->entryStride;
+                    e = (TeamSelectionKeyCacheEntry *)out;
+                    e->legFlag = 0;
+                    out += e->entryStride;
                     j--;
                 }
             }

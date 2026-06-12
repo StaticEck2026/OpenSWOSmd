@@ -2914,12 +2914,12 @@ outer_loop:
     int16_t cacheCount = teamSelectionKeyCacheCount - 1;
 
     while (cacheCount >= 0) {
-        if (cacheEntry[0] == compId) {
-            if (cacheEntry[7] == (uint8_t)roundIdx)
+        if (((TeamSelectionKeyCacheEntry *)cacheEntry)->compId == compId) {
+            if (((TeamSelectionKeyCacheEntry *)cacheEntry)->roundIdx == (uint8_t)roundIdx)
                 goto found_entry;
         }
         /* Advance by stride at offset 2 */
-        cacheEntry += *(uint16_t *)(cacheEntry + 2);
+        cacheEntry += ((TeamSelectionKeyCacheEntry *)cacheEntry)->entryStride;
         cacheCount--;
     }
     /* Not found — panic */
@@ -2931,29 +2931,29 @@ found_entry:
     ;
     /* Check d7 state for second pass */
     if (d7 != 0) {
-        if (cacheEntry[8] != 2)
+        if (((TeamSelectionKeyCacheEntry *)cacheEntry)->legFlag != 2)
             goto try_next;
         goto process_fixtures;
     }
 
     /* First pass checks */
-    if (cacheEntry[8] == 1)
+    if (((TeamSelectionKeyCacheEntry *)cacheEntry)->legFlag == 1)
         goto process_fixtures;
 
     if (comp->bracketScratch.groupSectionFlag == 0) {
-        if (cacheEntry[8] == 3)
+        if (((TeamSelectionKeyCacheEntry *)cacheEntry)->legFlag == 3)
             goto try_next;
     } else {
-        if (cacheEntry[8] != 3)
+        if (((TeamSelectionKeyCacheEntry *)cacheEntry)->legFlag != 3)
             goto try_next;
-        cacheEntry[4] = 0;
+        ((TeamSelectionKeyCacheEntry *)cacheEntry)->phaseFlag = 0;
     }
 
 process_fixtures:
     ;
     uint8_t *a5 = cacheEntry;  /* result write pointer */
-    cacheEntry[5] = 0;
-    cacheEntry[6] = 0;
+    ((TeamSelectionKeyCacheEntry *)cacheEntry)->totalElements = 0;
+    ((TeamSelectionKeyCacheEntry *)cacheEntry)->remainingElements = 0;
 
     uint8_t *teamGrid = comp->teamGridPairings;  /* a1 points here */
     int16_t numTeams = a2s->totalMatchesInRound;
@@ -2969,7 +2969,7 @@ process_fixtures:
         uint16_t teamId2 = *(uint16_t *)team2;
 
         /* If d7 > 0 (second pass), swap teams */
-        if (cacheEntry[8] == 2) {
+        if (((TeamSelectionKeyCacheEntry *)cacheEntry)->legFlag == 2) {
             uint16_t tmp16 = teamId1;
             teamId1 = teamId2;
             teamId2 = tmp16;
@@ -3010,8 +3010,8 @@ process_fixtures:
             }
         }
 
-        cacheEntry[5]++;
-        cacheEntry[6]++;
+        ((TeamSelectionKeyCacheEntry *)cacheEntry)->totalElements++;
+        ((TeamSelectionKeyCacheEntry *)cacheEntry)->remainingElements++;
         a5[0x0B] = 0;
         *(uint16_t *)(a5 + 0x0C) = teamId1;  /* asm: move.w (a3),$C(a5) = first team */
         *(uint16_t *)(a5 + 0x0E) = teamId2;  /* asm: move.w (a0),$E(a5) = second team */
@@ -3022,24 +3022,24 @@ next_fixture:
     }
 
     /* Check if any fixtures recorded */
-    if (cacheEntry[5] == 0) {
+    if (((TeamSelectionKeyCacheEntry *)cacheEntry)->totalElements == 0) {
         if (a2s->roundIterator != 0) {
-            cacheEntry[6] = 0xFF;
+            ((TeamSelectionKeyCacheEntry *)cacheEntry)->remainingElements = 0xFF;
         }
     }
 
     d7 = 1;
-    if (cacheEntry[8] == 1)
+    if (((TeamSelectionKeyCacheEntry *)cacheEntry)->legFlag == 1)
         goto outer_loop;
 
     return;
 
 try_next:
-    cacheEntry += *(uint16_t *)(cacheEntry + 2);
+    cacheEntry += ((TeamSelectionKeyCacheEntry *)cacheEntry)->entryStride;
     cacheCount--;
     if (cacheCount >= 0) {
-        if (cacheEntry[0] == compId) {
-            if (cacheEntry[7] == (uint8_t)roundIdx)
+        if (((TeamSelectionKeyCacheEntry *)cacheEntry)->compId == compId) {
+            if (((TeamSelectionKeyCacheEntry *)cacheEntry)->roundIdx == (uint8_t)roundIdx)
                 goto found_entry;
         }
         goto try_next;
@@ -3198,11 +3198,12 @@ void _DIY_RecordLeagueFixtureResultAndAdvanceProgress(void)
     uint8_t compId = (uint8_t)*(uint16_t *)&a6s->compId;
 
     while (cacheCount >= 0) {
-        if (cache[0] == compId) {
-            if (a6s->hasGroups == 0 || cache[7] == (uint8_t)curRound)
+        TeamSelectionKeyCacheEntry *e = (TeamSelectionKeyCacheEntry *)cache;
+        if (e->compId == compId) {
+            if (a6s->hasGroups == 0 || e->roundIdx == (uint8_t)curRound)
                 goto found;
         }
-        cache += *(uint16_t *)(cache + 2);
+        cache += e->entryStride;
         cacheCount--;
     }
     panicReasonCode = 0x7777;
@@ -3294,8 +3295,8 @@ process_next:
         }
     }
 
-    cache[5]++;
-    cache[6]++;
+    ((TeamSelectionKeyCacheEntry *)cache)->totalElements++;
+    ((TeamSelectionKeyCacheEntry *)cache)->remainingElements++;
     resultPtr[0x0B] = 0;
     /* Asm: `move.w (a1),$C(a3)` / `move.w (a2),$E(a3)` — reads each
      * team's leading `{country, ordinal}` bytes as a single BE uint16
@@ -3328,21 +3329,21 @@ check_continue:
          * advanced ONE entry and exited silently on miss, which broke
          * multi-round processing for hasGroups (Champions Cup group
          * stage): after round 0's cache entries were exhausted, the
-         * walker stopped at round 1's first entry (cache[7]!=curRound)
+         * walker stopped at round 1's first entry (roundIdx != curRound)
          * and exited, leaving rounds 2+ unprocessed. Tester report:
          * only the first CL group match showed on the career main
          * screen — schedule "jumps from the match before to the match
          * after" because rounds 2-6 had team IDs zero. Loop until match
          * found or cache exhausted, matching the asm. */
         for (;;) {
-            cache += *(uint16_t *)(cache + 2);
+            cache += ((TeamSelectionKeyCacheEntry *)cache)->entryStride;
             cacheCount--;
             if (cacheCount < 0)
                 return;  /* Asm panics here; in our path the wider career
                           * flow continues, so exit silently. */
-            if (cache[0] != compId)
+            if (((TeamSelectionKeyCacheEntry *)cache)->compId != compId)
                 continue;
-            if (a6s->hasGroups != 0 && cache[7] != (uint8_t)curRound)
+            if (a6s->hasGroups != 0 && ((TeamSelectionKeyCacheEntry *)cache)->roundIdx != (uint8_t)curRound)
                 continue;
             resultPtr = cache;
             goto process_next;
