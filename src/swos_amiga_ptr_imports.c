@@ -304,10 +304,8 @@ extern char ecQualifyingGroup6Copy[];
 extern char ecQualifyingGroup7Copy[];
 extern char ecQualifyingGroup8Copy[];
 extern char euroCupCopy[];
-extern char euroCupQualSeedBucket15[];
-extern char euroCupQualSeedBucket18[];
-extern char euroCupQualSeedBucket22[];
-extern char euroCupQualSeedBucket22Full[];
+/* euroCupQualSeedBucket15/18/22/22Full: now euroCupQualSeedBucketBlock.bucketN
+ * (EuroCupQualSeedBucketBlock in game_types.h, included above). */
 extern char euroCupQualSeedList4[];
 extern char euroCupQualSeedList6[];
 extern char euroCupQualSeedList11[];
@@ -1342,10 +1340,10 @@ SeedListGroupEntry euroCupQualGroupSeedListsReduced_4_6_11[5] = {
 };
 
 SeedListGroupEntry euroCupQualGroupSeedBuckets_15_18_22[5] = {
-    { euroCupQualSeedBucket15,     15, 10 },
-    { euroCupQualSeedBucket18,     18, 10 },
-    { euroCupQualSeedBucket22,     22, 8  },
-    { euroCupQualSeedBucket22Full, 22, 4  },
+    { euroCupQualSeedBucketBlock.bucket15,     15, 10 },
+    { euroCupQualSeedBucketBlock.bucket18,     18, 10 },
+    { euroCupQualSeedBucketBlock.bucket22,     22, 8  },
+    { euroCupQualSeedBucketBlock.bucket22Full, 22, 4  },
     { (void *)(uintptr_t)-1, 0, 0 },
 };
 void *positionsTable[18] = {

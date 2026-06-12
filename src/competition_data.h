@@ -411,10 +411,9 @@ extern uint8_t euroCupQualSeedListReduced4[4];
 extern uint8_t euroCupQualSeedListReduced6[6];
 extern uint8_t euroCupQualSeedListReduced11[11];
 extern uint8_t euroCupQualSeedListReduced22[23];
-extern uint8_t euroCupQualSeedBucket15[15];
-extern uint8_t euroCupQualSeedBucket18[18];
-extern uint8_t euroCupQualSeedBucket22[22];
-extern uint8_t euroCupQualSeedBucket22Full[23];
+/* euroCupQualSeedBucket15/18/22/22Full: untangled into EuroCupQualSeedBucketBlock
+ * fields (.bucket15/.bucket18/.bucket22/.bucket22Full) — typedef in game_types.h,
+ * definition in competition_data.c. */
 
 /* ======================================================================
  * Cup Pick Tables (per-region competition selection for career)
