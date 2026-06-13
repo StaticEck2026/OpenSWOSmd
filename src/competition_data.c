@@ -159,10 +159,10 @@ extern Playoffs uruguayanPlayoffs;
  * Major International Cups
  * ====================================================================== */
 
-CompetitionCup2_4_2_32 euroCup = {
-    { { { 0, 2, -1, 64, 32, 33, 0, 39, 1 }, 1, 1, 2, 3, 53, 4,
-        { { 16, 4, 4 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 0, 0 }, { 0, 0, 0 } }, 0 },
-      { 0, -108, -108, 20 } },
+CompetitionCup2 euroCup = {
+    { { 0, 2, -1, 64, 32, CUP2_NAME_TABLE_OFFSET, 0, CUP2_TEAMLIST_TABLE_OFFSET, 1 }, 1, 1, 2, 3, 53, 4,
+      { { 16, 4, 4 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 0, 0 }, { 0, 0, 0 } }, 0 },
+    { 0, -108, -108, 20 },
     { aEuropeanChampi_1, aEuropeanCup },
     { 13, 1, 25, 0, 37, 5, 33, 33, 35, 6, 30, 18, 14, 4, 28, 23,
       1, 5, 38, 9, 20, 22, 8, 20, 36, 8, 27, 11, 20, 0, 29, 12 }
@@ -192,18 +192,18 @@ CompetitionCup uefaCup = {
  * World Cup
  * ====================================================================== */
 
-CompetitionCup2_6_2_64 worldCup2 = {
-    { { { 3, 2, -1, -120, -112, 35, 0, 41, 0 }, 1, 0, 1, 3, 53, 6,
-        { { 32, 8, 4 }, { 16, 0, 16 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, -1, 2 }, { 2, 0, 2 } }, 1 },
-      { 0, 20, 20, 20, 20, 20 } },
+CompetitionCup2 worldCup2 = {
+    { { 3, 2, -1, -120, -112, 35, 0, 41, 0 }, 1, 0, 1, 3, 53, 6,
+      { { 32, 8, 4 }, { 16, 0, 16 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, -1, 2 }, { 2, 0, 2 } }, 1 },
+    { 0, 20, 20, 20, 20, 20 },
     { aWorldCup, aWorldCup_0 },
     { 0 }
 };
 
-CompetitionCup2_6_2_48 worldCup = {
-    { { { 4, 2, -1, -120, -112, 35, 0, 41, 1 }, 0, 0, 1, 3, 53, 6,
-        { { 24, 6, 4 }, { 16, 0, 16 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, -1, 2 }, { 2, 0, 2 } }, 1 },
-      { 0, 20, 20, 20, 20, 20 } },
+CompetitionCup2 worldCup = {
+    { { 4, 2, -1, -120, -112, 35, 0, 41, 1 }, 0, 0, 1, 3, 53, 6,
+      { { 24, 6, 4 }, { 16, 0, 16 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, -1, 2 }, { 2, 0, 2 } }, 1 },
+    { 0, 20, 20, 20, 20, 20 },
     { aWorldCup, aWorldCup_0 },
     { 80, 36, 82, 4, 83, 13, 80, 44, 82, 2, 80, 37, 81, 6, 80, 43,
       80, 17, 82, 1, 80, 42, 84, 24, 82, 0, 80, 18, 81, 22, 80, 6,
@@ -258,31 +258,31 @@ CompetitionCup worldCupQualifyingGroup8 = {
  * World Cup Regional Qualifications
  * ====================================================================== */
 
-CompetitionCup2_6_2_24 northAmericaWorldCupQualification = {
-    { { { 13, 2, 83, 72, 16, 35, 0, 41, 0 }, 1, 0, 2, 3, 53, 2,
-        { { 12, 0, 12 }, { 6, 1, 6 }, { 3, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
-      { -108, 20, 20, 20, 20, 20 } },
+CompetitionCup2 northAmericaWorldCupQualification = {
+    { { 13, 2, 83, 72, 16, 35, 0, 41, 0 }, 1, 0, 2, 3, 53, 2,
+      { { 12, 0, 12 }, { 6, 1, 6 }, { 3, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
+    { -108, 20, 20, 20, 20, 20 },
     { aWorldCupQualif_1, aWCQualifier_0 }, { 0 }
 };
 
-CompetitionCup2_6_2_16 southAmericaWorldCupQualification = {
-    { { { 14, 2, 82, 72, 16, 35, 0, 41, 0 }, 1, 0, 2, 3, 53, 1,
-        { { 8, 1, 8 }, { 4, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
-      { 20, 20, 20, 20, 20, 20 } },
+CompetitionCup2 southAmericaWorldCupQualification = {
+    { { 14, 2, 82, 72, 16, 35, 0, 41, 0 }, 1, 0, 2, 3, 53, 1,
+      { { 8, 1, 8 }, { 4, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
+    { 20, 20, 20, 20, 20, 20 },
     { aWorldCupQualif_1, aWCQualifier_0 }, { 0 }
 };
 
-CompetitionCup2_6_2_64 africaWorldCupQualification = {
-    { { { 15, 2, 81, 72, 16, 35, 0, 41, 0 }, 1, 0, 2, 3, 53, 3,
-        { { 32, 0, 32 }, { 16, 0, 16 }, { 8, 1, 8 }, { 5, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
-      { -108, -108, 20, 20, 20, 20 } },
+CompetitionCup2 africaWorldCupQualification = {
+    { { 15, 2, 81, 72, 16, 35, 0, 41, 0 }, 1, 0, 2, 3, 53, 3,
+      { { 32, 0, 32 }, { 16, 0, 16 }, { 8, 1, 8 }, { 5, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
+    { -108, -108, 20, 20, 20, 20 },
     { aWorldCupQualif_1, aWCQualifier_0 }, { 0 }
 };
 
-CompetitionCup2_6_2_60 asiaWorldCupQualification = {
-    { { { 16, 2, 84, 72, 16, 35, 0, 41, 0 }, 1, 0, 2, 3, 53, 3,
-        { { 24, 0, 24 }, { 12, 0, 12 }, { 6, 1, 6 }, { 2, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
-      { -108, -108, 20, 20, 20, 20 } },
+CompetitionCup2 asiaWorldCupQualification = {
+    { { 16, 2, 84, 72, 16, 35, 0, 41, 0 }, 1, 0, 2, 3, 53, 3,
+      { { 24, 0, 24 }, { 12, 0, 12 }, { 6, 1, 6 }, { 2, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
+    { -108, -108, 20, 20, 20, 20 },
     { aWorldCupQualif_1, aWCQualifier_0 }, { 0 }
 };
 
@@ -314,17 +314,17 @@ CompetitionCup friendly = {
  * European Championships
  * ====================================================================== */
 
-CompetitionCup2_4_2_32 europeanChampionships2 = {
-    { { { 21, 2, 80, -120, -120, 33, 0, 39, 0 }, 1, 0, 1, 3, 53, 4,
-        { { 16, 4, 4 }, { 8, 0, 0 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
-      { 0, 20, 20, 20 } },
+CompetitionCup2 europeanChampionships2 = {
+    { { 21, 2, 80, -120, -120, CUP2_NAME_TABLE_OFFSET, 0, CUP2_TEAMLIST_TABLE_OFFSET, 0 }, 1, 0, 1, 3, 53, 4,
+      { { 16, 4, 4 }, { 8, 0, 0 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
+    { 0, 20, 20, 20 },
     { aEuropeanChampi_0, aECFinals }, { 0 }
 };
 
-CompetitionCup2_4_2_32 europeanChampionships = {
-    { { { 22, 2, 80, -120, -120, 33, 0, 39, 1 }, 1, 0, 1, 3, 53, 4,
-        { { 16, 4, 4 }, { 8, 0, 0 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
-      { 0, 20, 20, 20 } },
+CompetitionCup2 europeanChampionships = {
+    { { 22, 2, 80, -120, -120, CUP2_NAME_TABLE_OFFSET, 0, CUP2_TEAMLIST_TABLE_OFFSET, 1 }, 1, 0, 1, 3, 53, 4,
+      { { 16, 4, 4 }, { 8, 0, 0 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
+    { 0, 20, 20, 20 },
     { aEuropeanChampi_0, aECFinals },
     { 80, 11, 80, 44, 80, 19, 80, 39, 80, 42, 80, 6, 80, 36, 80, 15,
       80, 17, 80, 9, 80, 23, 80, 37, 80, 10, 80, 34, 80, 45, 80, 7 }
@@ -378,32 +378,32 @@ CompetitionCup ecQualifyingGroup8 = {
  * Continental Cups
  * ====================================================================== */
 
-CompetitionCup2_4_2_24 copaAmerica = {
-    { { { 31, 2, 82, -120, -112, 33, 0, 39, 0 }, 1, 0, 1, 3, 53, 4,
-        { { 12, 3, 4 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
-      { 0, 4, 4, 4 } },
+CompetitionCup2 copaAmerica = {
+    { { 31, 2, 82, -120, -112, CUP2_NAME_TABLE_OFFSET, 0, CUP2_TEAMLIST_TABLE_OFFSET, 0 }, 1, 0, 1, 3, 53, 4,
+      { { 12, 3, 4 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
+    { 0, 4, 4, 4 },
     { aCopaAmerica, aCopaAmerica_0 },
     { 83, 8, 83, 13, 82, 8, 82, 9, 82, 0, 82, 1, 82, 2, 82, 3, 82, 4, 82, 5, 82, 6, 82, 7 }
 };
 
-CompetitionCup2_6_2 africanNationsCup = {
-    { { { 32, 2, 81, -120, -112, 35, 0, 0, 0 }, 1, 0, 1, 3, 53, 5,
-        { { 32, 8, 4 }, { 16, 0, 16 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 1, 1 } }, 1 },
-      { 0, 20, 20, 20, 20, 0 } },
+CompetitionCup2 africanNationsCup = {
+    { { 32, 2, 81, -120, -112, 35, 0, 0, 0 }, 1, 0, 1, 3, 53, 5,
+      { { 32, 8, 4 }, { 16, 0, 16 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 1, 1 } }, 1 },
+    { 0, 20, 20, 20, 20, 0 },
     { aAfricanNations, aAfricanCup }
 };
 
-CompetitionCup2_4_2 northAmericanCup = {
-    { { { 33, 2, 83, -120, -112, 33, 0, 0, 0 }, 1, 0, 1, 3, 53, 4,
-        { { 12, 3, 4 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
-      { 0, 20, 20, 20 } },
+CompetitionCup2 northAmericanCup = {
+    { { 33, 2, 83, -120, -112, CUP2_NAME_TABLE_OFFSET, 0, 0, 0 }, 1, 0, 1, 3, 53, 4,
+      { { 12, 3, 4 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
+    { 0, 20, 20, 20 },
     { aNorthAmericanC, aNAmericanCup }
 };
 
-CompetitionCup2_6_2 asianCup = {
-    { { { 34, 2, 84, -120, -112, 35, 0, 0, 0 }, 1, 0, 1, 3, 53, 5,
-        { { 30, 5, 6 }, { 16, 0, 16 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 1, 1 } }, 1 },
-      { 0, 20, 20, 20, 20, 0 } },
+CompetitionCup2 asianCup = {
+    { { 34, 2, 84, -120, -112, 35, 0, 0, 0 }, 1, 0, 1, 3, 53, 5,
+      { { 30, 5, 6 }, { 16, 0, 16 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 1, 1 } }, 1 },
+    { 0, 20, 20, 20, 20, 0 },
     { aAsianCup, aAsianCup_0 }
 };
 
@@ -731,7 +731,7 @@ CompetitionCup japaneseEmperorsCup = { { { -97, 1, 55, 88, 0, CUP_NAME_TABLE_OFF
  * ====================================================================== */
 
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): euroCupCopy */
-extern CompetitionCup2_4_2_32 euroCupCopy;  /* aliased into careerFileBufferBuf */
+extern CompetitionCup2 euroCupCopy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): cupWinnersCupCopy */
 extern CompetitionCup cupWinnersCupCopy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): uefaCupCopy */
@@ -743,7 +743,7 @@ extern CompetitionCup tourCopy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): friendlyCopy */
 extern CompetitionCup friendlyCopy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): europeanChampionships2Copy */
-extern CompetitionCup2_4_2_32 europeanChampionships2Copy;  /* aliased into careerFileBufferBuf */
+extern CompetitionCup2 europeanChampionships2Copy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup1Copy */
 extern CompetitionCup ecQualifyingGroup1Copy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup2Copy */
@@ -761,17 +761,17 @@ extern CompetitionCup ecQualifyingGroup7Copy;  /* aliased into careerFileBufferB
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): ecQualifyingGroup8Copy */
 extern CompetitionCup ecQualifyingGroup8Copy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): copaAmericaCopy */
-extern CompetitionCup2_4_2_24 copaAmericaCopy;  /* aliased into careerFileBufferBuf */
+extern CompetitionCup2 copaAmericaCopy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): africanNationsCupCopy */
-extern CompetitionCup2_6_2 africanNationsCupCopy;  /* aliased into careerFileBufferBuf */
+extern CompetitionCup2 africanNationsCupCopy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): northAmericanCupCopy */
-extern CompetitionCup2_4_2 northAmericanCupCopy;  /* aliased into careerFileBufferBuf */
+extern CompetitionCup2 northAmericanCupCopy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): asianCupCopy */
-extern CompetitionCup2_6_2 asianCupCopy;  /* aliased into careerFileBufferBuf */
+extern CompetitionCup2 asianCupCopy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): oceaniaCupCopy */
 extern CompetitionCup oceaniaCupCopy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCup2Copy */
-extern CompetitionCup2_6_2_64 worldCup2Copy;  /* aliased into careerFileBufferBuf */
+extern CompetitionCup2 worldCup2Copy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup1Copy */
 extern CompetitionCup worldCupQualifyingGroup1Copy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup2Copy */
@@ -789,13 +789,13 @@ extern CompetitionCup worldCupQualifyingGroup7Copy;  /* aliased into careerFileB
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingGroup8Copy */
 extern CompetitionCup worldCupQualifyingGroup8Copy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): northAmericaWorldCupQualificationCopy */
-extern CompetitionCup2_6_2_24 northAmericaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
+extern CompetitionCup2 northAmericaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): southAmericaWorldCupQualificationCopy */
-extern CompetitionCup2_6_2_16 southAmericaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
+extern CompetitionCup2 southAmericaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): africaWorldCupQualificationCopy */
-extern CompetitionCup2_6_2_64 africaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
+extern CompetitionCup2 africaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): asiaWorldCupQualificationCopy */
-extern CompetitionCup2_6_2_60 asiaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
+extern CompetitionCup2 asiaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): oceaniaWorldCupQualificationCopy */
 extern CompetitionCup oceaniaWorldCupQualificationCopy;  /* aliased into careerFileBufferBuf */
 

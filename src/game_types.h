@@ -1461,7 +1461,9 @@ typedef struct __attribute__((packed)) {
 } Round;
 
 /* ==================================================================
- * CompetitionCup2 — 34 bytes, cup competition with group rounds
+ * CompCupHeader2 — 34 bytes, type-2 group-tournament header (embedded as
+ * CompetitionCup2.header after the consolidation). Was named `CompetitionCup2`;
+ * that name now belongs to the merged record below.
  * ================================================================== */
 
 typedef struct __attribute__((packed)) {
@@ -1474,7 +1476,7 @@ typedef struct __attribute__((packed)) {
     int8_t roundStringBase;     /* was firstRoundNo: round-string base / rounds[0] source */
     Round rounds[6];
     int8_t unk4;
-} CompetitionCup2;
+} CompCupHeader2;
 
 /* ==================================================================
  * CompetitionLeague — merged record (consolidation, docs/STRUCT_CONSOLIDATE.md
@@ -1537,74 +1539,33 @@ _Static_assert(CUP_NAME_TABLE_OFFSET == 15 && CUP_TEAMLIST_TABLE_OFFSET == 21,
                "merged CompetitionCup offsets must match the historical _6_2* values");
 
 /* ==================================================================
- * CompetitionCup2 variants (with per-round rule-flag arrays)
+ * CompetitionCup2 — merged record (consolidation, docs/STRUCT_CONSOLIDATE.md §4).
+ * Collapses all 11 CompetitionCup2_* variants into one — the old _6_2_64 layout,
+ * the largest: CompCupHeader2 header + per-round rule flags + tournament name
+ * strings + the embedded team-seed draw list. roundRuleFlags is sized [6] (the
+ * max used; the header's Round[6] already fixes the per-stage count), so name[]
+ * and teamSeedList[] keep the SAME offsets the _6_2* tournaments already used
+ * (nameTableOffset=35, teamListOffset=41) — those initializers carry over
+ * unchanged. Only the five _4_2* tournaments, whose text[]/teamSeedList[] sat
+ * after roundRuleFlags[4], need their offset bytes bumped (33->35 / 39->41).
  * ================================================================== */
 
 typedef struct __attribute__((packed)) {
-    CompetitionCup2 compCup;
-    int8_t roundRuleFlags[4];
-} CompetitionCup2_4;
+    CompCupHeader2 header;         /* 34 B (was the CompetitionCup2 header struct) */
+    int8_t   roundRuleFlags[6];    /* per-round legs/ET/pen flag bytes */
+    char    *name[2];              /* tournament name strings (was text[2]) */
+    int8_t   teamSeedList[64];     /* embedded BE {country,ordinal} draw pairs */
+} CompetitionCup2;
 
-typedef struct __attribute__((packed)) {
-    CompetitionCup2 compCup;
-    int8_t roundRuleFlags[6];
-} CompetitionCup2_6;
-
-/* ==================================================================
- * CompetitionCup2 with text pointers variants
- * ================================================================== */
-
-typedef struct __attribute__((packed)) {
-    CompetitionCup2_4 compCup;
-    char *text[2];
-} CompetitionCup2_4_2;
-
-typedef struct __attribute__((packed)) {
-    CompetitionCup2_6 compCup;
-    char *text[2];
-} CompetitionCup2_6_2;
-
-typedef struct __attribute__((packed)) {
-    CompetitionCup2_4 compCup;
-    char *text[2];
-    int8_t teamSeedList[24];
-} CompetitionCup2_4_2_24;
-
-typedef struct __attribute__((packed)) {
-    CompetitionCup2_4 compCup;
-    char *text[2];
-    int8_t teamSeedList[32];
-} CompetitionCup2_4_2_32;
-
-typedef struct __attribute__((packed)) {
-    CompetitionCup2_6 compCup;
-    char *text[2];
-    int8_t teamSeedList[16];
-} CompetitionCup2_6_2_16;
-
-typedef struct __attribute__((packed)) {
-    CompetitionCup2_6 compCup;
-    char *text[2];
-    int8_t teamSeedList[24];
-} CompetitionCup2_6_2_24;
-
-typedef struct __attribute__((packed)) {
-    CompetitionCup2_6 compCup;
-    char *text[2];
-    int8_t teamSeedList[48];
-} CompetitionCup2_6_2_48;
-
-typedef struct __attribute__((packed)) {
-    CompetitionCup2_6 compCup;
-    char *text[2];
-    int8_t teamSeedList[60];
-} CompetitionCup2_6_2_60;
-
-typedef struct __attribute__((packed)) {
-    CompetitionCup2_6 compCup;
-    char *text[2];
-    int8_t teamSeedList[64];
-} CompetitionCup2_6_2_64;
+/* Self-offset bytes for the merged layout (Competition byte 5 / byte 7). Both are
+ * layout-derived constants; the *_TEAMLIST one subtracts the 64-bit name[2]
+ * pointer-growth delta so the STORED byte is identical on 32/64-bit (consumers
+ * re-add that delta), matching the historical _6_2* values 35 / 41. */
+#define CUP2_NAME_TABLE_OFFSET     ((int8_t)(offsetof(CompetitionCup2, name) - 5))
+#define CUP2_TEAMLIST_TABLE_OFFSET ((int8_t)(offsetof(CompetitionCup2, teamSeedList) - 7 \
+                                    - 2 * (int)(sizeof(char *) - sizeof(uint32_t))))
+_Static_assert(CUP2_NAME_TABLE_OFFSET == 35 && CUP2_TEAMLIST_TABLE_OFFSET == 41,
+               "merged CompetitionCup2 offsets must match the historical _6_2* values");
 
 /* ==================================================================
  * Playoff and Leagues helper structs
