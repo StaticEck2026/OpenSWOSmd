@@ -1401,9 +1401,9 @@ extern uint8_t diyCompetitionContext[];
  * `englishLeaguesBlock` extern must match competition_data.[ch] exactly. */
 typedef struct __attribute__((packed)) {
     CompetitionLeague _main;   /* merged record (was CompetitionLeague_4_8_2_24) */
-    Leagues_4_2_24    _div1;
-    Leagues_4_2_24    _div2;
-    Leagues_4         _div3;
+    Leagues           _div1;   /* merged Leagues (was Leagues_4_2_24) */
+    Leagues           _div2;
+    Leagues           _div3;   /* was Leagues_4; trailing playoffs/nextGroup/qIdx zero */
 } EnglishLeaguesBlock;
 
 extern EnglishLeaguesBlock englishLeaguesBlock;
@@ -1440,9 +1440,9 @@ extern Playoffs div3Playoffs;
  *   index=1: walk lands at englishLeaguesBlock._main.unk2[0] = &div1Playoffs;
  *            qIdx pairs live in englishLeaguesBlock._main.unk3[].
  *   index=2: walk lands at englishLeaguesBlock._div1.playoffs = &div2Playoffs;
- *            qIdx pairs in englishLeaguesBlock._div1.unk2[].
+ *            qIdx pairs in englishLeaguesBlock._div1.qualifierIndexPairs[].
  *   index=3: walk lands at englishLeaguesBlock._div2.playoffs = &div3Playoffs;
- *            qIdx pairs in englishLeaguesBlock._div2.unk2[].
+ *            qIdx pairs in englishLeaguesBlock._div2.qualifierIndexPairs[].
  *
  * teamData = qualComp + 7 + qualComp[7] in the asm; for all three Playoffs
  * statics qualComp->playoffHeader[7] = 17 (Amiga byte offset to qualifiedTeamIds[0]).
@@ -1485,11 +1485,11 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         break;
     case 2:
         qualComp    = englishLeaguesBlock._div1.playoffs;              /* &div2Playoffs */
-        teamIdxList = (uint8_t *)englishLeaguesBlock._div1.unk2;
+        teamIdxList = (uint8_t *)englishLeaguesBlock._div1.qualifierIndexPairs;
         break;
     case 3:
         qualComp    = englishLeaguesBlock._div2.playoffs;              /* &div3Playoffs */
-        teamIdxList = (uint8_t *)englishLeaguesBlock._div2.unk2;
+        teamIdxList = (uint8_t *)englishLeaguesBlock._div2.qualifierIndexPairs;
         break;
     default:
         return; /* Premier (index=0) returned via early-exit. */

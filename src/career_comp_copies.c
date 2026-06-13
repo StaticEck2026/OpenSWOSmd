@@ -26,7 +26,7 @@
  * Each record carries a `text[2]` pointer pair, so its size grows by 8 bytes on
  * 64-bit (32-bit pointers -> 64-bit). The per-record reservation therefore keeps
  * the same conditional +8 pad the overlay used; the typed externs in
- * competition_data.c (CompetitionCup2_4_2_32 euroCupCopy, etc.) resolve to these
+ * competition_data.c (CompetitionCup2 euroCupCopy, etc.) resolve to these
  * raw-byte labels, exactly as they did when the storage lived in the overlay.
  * Emitted via __asm__ real labels (matching the overlay's own style) so no
  * competition-type header include is needed here (see
@@ -49,7 +49,7 @@ __asm__(
     _ASM_PFX "careerCompCopies:\n"
     ".globl " _ASM_PFX "euroCupCopy\n"
     _ASM_PFX "euroCupCopy:\n"
-    ".skip 78\n"
+    ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
@@ -85,7 +85,7 @@ __asm__(
 #endif
     ".globl " _ASM_PFX "europeanChampionships2Copy\n"
     _ASM_PFX "europeanChampionships2Copy:\n"
-    ".skip 78\n"
+    ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
@@ -139,25 +139,25 @@ __asm__(
 #endif
     ".globl " _ASM_PFX "copaAmericaCopy\n"
     _ASM_PFX "copaAmericaCopy:\n"
-    ".skip 70\n"
+    ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "africanNationsCupCopy\n"
     _ASM_PFX "africanNationsCupCopy:\n"
-    ".skip 48\n"
+    ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "northAmericanCupCopy\n"
     _ASM_PFX "northAmericanCupCopy:\n"
-    ".skip 46\n"
+    ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "asianCupCopy\n"
     _ASM_PFX "asianCupCopy:\n"
-    ".skip 48\n"
+    ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
@@ -223,13 +223,13 @@ __asm__(
 #endif
     ".globl " _ASM_PFX "northAmericaWorldCupQualificationCopy\n"
     _ASM_PFX "northAmericaWorldCupQualificationCopy:\n"
-    ".skip 72\n"
+    ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "southAmericaWorldCupQualificationCopy\n"
     _ASM_PFX "southAmericaWorldCupQualificationCopy:\n"
-    ".skip 64\n"
+    ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
@@ -241,7 +241,7 @@ __asm__(
 #endif
     ".globl " _ASM_PFX "asiaWorldCupQualificationCopy\n"
     _ASM_PFX "asiaWorldCupQualificationCopy:\n"
-    ".skip 108\n"
+    ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
