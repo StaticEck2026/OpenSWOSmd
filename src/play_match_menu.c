@@ -848,9 +848,19 @@ void _PlayMatchMenuSwapPlayers(TeamFileEx *team, int16_t d3, int16_t d4) {
      * using d3/d4 (slot positions) */
     {
         uint8_t *pn;
+        uint16_t tNum = PACK_BE_U16(team->team.countryNumber, team->team.teamOrdinal);
         if (team == &currentTeam) {
             pn = (uint8_t *)playerPositions;
-        } else if (gameType == GAME_TYPE_CAREER && team == &careerTeam) {
+        } else if (gameType == GAME_TYPE_CAREER && (team == &careerTeam || tNum == selTeamNumber)) {
+            /* The player's matchday lineup lives in currentMatchPlayers. In a CUP,
+             * playMatchTeam1Ptr is a selTeams COPY (not &careerTeam) whose team
+             * number still equals selTeamNumber. The asm's pointer-only test
+             * (`==&careerTeam`) only works because the Amiga's playMatchTeam1Ptr IS
+             * &careerTeam; on SDL the cup uses a copy, so that test fails and the
+             * secondary swap edits team->playerNumbers instead — the lineup never
+             * changes and a carded substitution silently fails. Key on
+             * selTeamNumber to match the PRIMARY swap's _GetPlayerAtIndex
+             * (teams.c:924), so both halves of the swap agree. */
             pn = (uint8_t *)currentMatchPlayers;
         } else {
             pn = team->team.playerNumbers;

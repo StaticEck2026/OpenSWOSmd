@@ -132,7 +132,10 @@ extern int16_t      cameraSnapToPlayerCount;
 extern int16_t      gameNotInProgressCounterWriteOnly;
 
 /* Constant data in asm */
-extern int16_t      kGoalkeeperSpeedWhenGameStopped;
+/* Defined here because the SDL port never imported it from Data.c:604 (=1024);
+ * at -O2 the single use was dead-code-eliminated so the missing definition went
+ * unnoticed, but -O0 keeps the reference and fails to link without it. */
+int16_t             kGoalkeeperSpeedWhenGameStopped = 1024;
 extern int16_t      kGoalkeeperGameSpeed;
 extern int16_t      kGoalkeeperBurstSpeed;
 extern int16_t      kGoalkeeperMoveToBallSpeed;
