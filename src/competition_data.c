@@ -144,16 +144,16 @@ extern const char aDataUefacupTmd[];
 #if COMPETITION_DATA_C
 
 /* Forward declarations for variables used before definition */
-extern Playoffs_8 div1Playoffs, div2Playoffs, div3Playoffs;
+extern Playoffs div1Playoffs, div2Playoffs, div3Playoffs;
 /* englishLeagues1/2/3 forward decls removed — access via englishLeaguesBlock._divN */
-extern Playoffs_8 dutchPlayoffs;
+extern Playoffs dutchPlayoffs;
 extern Leagues_4 dutchLeagues1;
 extern Leagues_2 scottishLeague1;
-extern Playoffs_4 scottishPlayoffs;
+extern Playoffs scottishPlayoffs;
 extern Leagues_4 spanishLeague1;
-extern Playoffs_8 spanishPlayoffs;
+extern Playoffs spanishPlayoffs;
 extern Leagues_2 uruguayanLeague1;
-extern Playoffs_4 uruguayanPlayoffs;
+extern Playoffs uruguayanPlayoffs;
 
 /* ======================================================================
  * Major International Cups
@@ -416,8 +416,8 @@ CompetitionCup_6_2 oceaniaCup = {
  * Customs League
  * ====================================================================== */
 
-CompetitionLeague_3_6 customsLeague = {
-    { { 36, 0, 72, 64, 32, 27, 0, 0, 0 }, 3, 2, 3, 53 },
+CompetitionLeague customsLeague = {
+    { { 36, 0, 72, 64, 32, LEAGUE_NAME_TABLE_OFFSET, 0, 0, 0 }, 3, 2, 3, 53 },
     { { 20, 0, 0, 0, 0, 0 }, { 22, 0, 0, 0, 0, 0 }, { 22, 0, 0, 0, 0, 0 } },
     0, { aDivision1, aDivision1, aDivision2, aDivision2, aDivision3, aDivision3 }
 };
@@ -426,111 +426,111 @@ CompetitionLeague_3_6 customsLeague = {
  * National Leagues (1-division)
  * ====================================================================== */
 
-CompetitionLeague_1 albanianLeague    = { { { 37, 0, 0, 64, 32, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 austrianLeague    = { { { 38, 0, 1, 56, 40, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 belarussiaLleague = { { { 39, 0, 76, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 69 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 belgianLeague     = { { { 40, 0, 2, 56, 32, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 18, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 bulgarianLeague   = { { { 41, 0, 3, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 croatianLeague    = { { { 42, 0, 4, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 cypriotLeague     = { { { 43, 0, 5, 64, 32, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 14, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 czechLeague       = { { { 44, 0, 6, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 danishLeague      = { { { 45, 0, 7, 56, 40, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 estonianLeague    = { { { 50, 0, 10, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 faroeIslesLeague  = { { { 51, 0, 11, 24, 64, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 finnishLeague     = { { { 52, 0, 12, 24, 72, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 greekLeague       = { { { 55, 0, 15, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 18, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 hungarianLeague   = { { { 58, 0, 16, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 icelandicLeague   = { { { 59, 0, 17, 32, 64, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 israeliLeague     = { { { 60, 0, 19, 64, 32, 0, 0, 0, 0 }, 1, 3, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 latvianLeague     = { { { 62, 0, 21, 32, 64, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 lithuanianLeague  = { { { 63, 0, 22, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 luxembourgLeague  = { { { 64, 0, 23, 56, 40, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 malteseLeague     = { { { 65, 0, 24, 64, 24, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 northernIrishLeague = { { { 66, 0, 26, 64, 24, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 norwegianLeague   = { { { 67, 0, 27, 24, 72, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 14, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 polishLeague      = { { { 68, 0, 28, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 18, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 portugeseLeague   = { { { 69, 0, 29, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 18, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 irishLeague       = { { { 70, 0, 18, 56, 24, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 romanianLeague    = { { { 71, 0, 30, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 18, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 russianLeague     = { { { 72, 0, 31, 16, 80, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 18, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 sanMarinoLeague   = { { { 73, 0, 32, 72, 32, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 slovakianLeague   = { { { 76, 0, 78, 56, 40, 0, 0, 0, 0 }, 1, 2, 2, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 slovenianLeague   = { { { 77, 0, 34, 56, 40, 0, 0, 0, 0 }, 1, 2, 2, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 swedishLeague     = { { { 80, 0, 36, 24, 72, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 14, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 swissLeague       = { { { 81, 0, 37, 48, 40, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 turkishLeague     = { { { 82, 0, 38, 56, 32, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 18, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 ukrainianLeague   = { { { 83, 0, 39, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 18, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 welshLeague       = { { { 84, 0, 40, 56, 32, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 20, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 yugoslavianLeague = { { { 85, 0, 41, 64, 40, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague albanianLeague    = { { { 37, 0, 0, 64, 32, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague austrianLeague    = { { { 38, 0, 1, 56, 40, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague belarussiaLleague = { { { 39, 0, 76, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 69 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague belgianLeague     = { { { 40, 0, 2, 56, 32, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 18, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague bulgarianLeague   = { { { 41, 0, 3, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague croatianLeague    = { { { 42, 0, 4, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague cypriotLeague     = { { { 43, 0, 5, 64, 32, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 14, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague czechLeague       = { { { 44, 0, 6, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague danishLeague      = { { { 45, 0, 7, 56, 40, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague estonianLeague    = { { { 50, 0, 10, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague faroeIslesLeague  = { { { 51, 0, 11, 24, 64, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague finnishLeague     = { { { 52, 0, 12, 24, 72, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague greekLeague       = { { { 55, 0, 15, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 18, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague hungarianLeague   = { { { 58, 0, 16, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague icelandicLeague   = { { { 59, 0, 17, 32, 64, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague israeliLeague     = { { { 60, 0, 19, 64, 32, 0, 0, 0, 0 }, 1, 3, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague latvianLeague     = { { { 62, 0, 21, 32, 64, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague lithuanianLeague  = { { { 63, 0, 22, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague luxembourgLeague  = { { { 64, 0, 23, 56, 40, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague malteseLeague     = { { { 65, 0, 24, 64, 24, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague northernIrishLeague = { { { 66, 0, 26, 64, 24, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague norwegianLeague   = { { { 67, 0, 27, 24, 72, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 14, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague polishLeague      = { { { 68, 0, 28, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 18, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague portugeseLeague   = { { { 69, 0, 29, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 18, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague irishLeague       = { { { 70, 0, 18, 56, 24, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague romanianLeague    = { { { 71, 0, 30, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 18, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague russianLeague     = { { { 72, 0, 31, 16, 80, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 18, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague sanMarinoLeague   = { { { 73, 0, 32, 72, 32, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague slovakianLeague   = { { { 76, 0, 78, 56, 40, 0, 0, 0, 0 }, 1, 2, 2, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague slovenianLeague   = { { { 77, 0, 34, 56, 40, 0, 0, 0, 0 }, 1, 2, 2, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague swedishLeague     = { { { 80, 0, 36, 24, 72, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 14, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague swissLeague       = { { { 81, 0, 37, 48, 40, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague turkishLeague     = { { { 82, 0, 38, 56, 32, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 18, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague ukrainianLeague   = { { { 83, 0, 39, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 18, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague welshLeague       = { { { 84, 0, 40, 56, 32, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 20, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague yugoslavianLeague = { { { 85, 0, 41, 64, 40, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
 
 /* Non-European 1-division leagues */
-CompetitionLeague_1 algerianLeague    = { { { 86, 0, 42, 64, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 bolivianLeague    = { { { 89, 0, 45, 32, 88, 0, 0, 0, 0 }, 1, 2, 2, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 brasilianLeague   = { { { 90, 0, 46, 0, 40, 0, 0, 0, 0 }, 1, 2, 2, 53 }, { { 24, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 chileanLeague     = { { { 91, 0, 48, 24, 88, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 colombianLeague   = { { { 92, 0, 49, 24, 88, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 ecuadorLeague     = { { { 93, 0, 50, 24, 88, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 indianLeague      = { { { 95, 0, 75, 0, 24, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 6, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 paraguayanLeague  = { { { 99, 0, 64, 64, 32, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 peruvianLeague    = { { { 100, 0, 65, 24, 88, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 southAfricanLeague = { { { 101, 0, 69, 0, 80, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 surinamLeague     = { { { 102, 0, 66, 24, 72, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 taiwaneseLeague   = { { { 103, 0, 67, 64, 32, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 americanLeague    = { { { 106, 0, 73, 24, 72, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 venezuelanLeague  = { { { 107, 0, 77, 24, 88, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 22, 0, 0, 0, 0, 0 } }, 0 };
-CompetitionLeague_1 ghanaLeague       = { { { 108, 0, 79, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 8, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague algerianLeague    = { { { 86, 0, 42, 64, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague bolivianLeague    = { { { 89, 0, 45, 32, 88, 0, 0, 0, 0 }, 1, 2, 2, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague brasilianLeague   = { { { 90, 0, 46, 0, 40, 0, 0, 0, 0 }, 1, 2, 2, 53 }, { { 24, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague chileanLeague     = { { { 91, 0, 48, 24, 88, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague colombianLeague   = { { { 92, 0, 49, 24, 88, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague ecuadorLeague     = { { { 93, 0, 50, 24, 88, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague indianLeague      = { { { 95, 0, 75, 0, 24, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 6, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague paraguayanLeague  = { { { 99, 0, 64, 64, 32, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague peruvianLeague    = { { { 100, 0, 65, 24, 88, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague southAfricanLeague = { { { 101, 0, 69, 0, 80, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 16, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague surinamLeague     = { { { 102, 0, 66, 24, 72, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague taiwaneseLeague   = { { { 103, 0, 67, 64, 32, 0, 0, 0, 0 }, 1, 4, 3, 53 }, { { 12, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague americanLeague    = { { { 106, 0, 73, 24, 72, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 10, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague venezuelanLeague  = { { { 107, 0, 77, 24, 88, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 22, 0, 0, 0, 0, 0 } }, 0 };
+CompetitionLeague ghanaLeague       = { { { 108, 0, 79, 56, 40, 0, 0, 0, 0 }, 1, 2, 3, 53 }, { { 8, 0, 0, 0, 0, 0 } }, 0 };
 
 /* ======================================================================
  * Multi-division leagues
  * ====================================================================== */
 
-CompetitionLeague_2_4 frenchLeague = {
-    { { 53, 0, 13, 56, 40, 21, 0, 0, 0 }, 2, 2, 3, 53 },
+CompetitionLeague frenchLeague = {
+    { { 53, 0, 13, 56, 40, LEAGUE_NAME_TABLE_OFFSET, 0, 0, 0 }, 2, 2, 3, 53 },
     { { 20, 0, 0, 3, 0, 0 }, { 22, 3, 0, 0, 0, 0 } }, 0,
     { aPremiereDivisi, aPremiere, aDeuxiemeDivisi, aDeuxieme }
 };
 
-CompetitionLeague_2_4 germanLeague = {
-    { { 54, 0, 14, 56, 40, 21, 0, 0, 0 }, 2, 2, 3, 53 },
+CompetitionLeague germanLeague = {
+    { { 54, 0, 14, 56, 40, LEAGUE_NAME_TABLE_OFFSET, 0, 0, 0 }, 2, 2, 3, 53 },
     { { 18, 0, 0, 3, 0, 0 }, { 18, 3, 0, 0, 0, 0 } }, 0,
     { a1Liga, a1Liga, a2Liga, a2Liga }
 };
 
-CompetitionLeague_2_4 italianLeague = {
-    { { 61, 0, 20, 64, 32, 21, 0, 0, 0 }, 2, 2, 3, 53 },
+CompetitionLeague italianLeague = {
+    { { 61, 0, 20, 64, 32, LEAGUE_NAME_TABLE_OFFSET, 0, 0, 0 }, 2, 2, 3, 53 },
     { { 18, 0, 0, 4, 0, 0 }, { 20, 4, 0, 0, 0, 0 } }, 0,
     { aSerieA, aSerieA, aSerieB, aSerieB }
 };
 
-CompetitionLeague_2_4 japaneseLeague = {
-    { { 96, 0, 55, 16, 80, 21, 0, 0, 0 }, 2, 2, 3, 53 },
+CompetitionLeague japaneseLeague = {
+    { { 96, 0, 55, 16, 80, LEAGUE_NAME_TABLE_OFFSET, 0, 0, 0 }, 2, 2, 3, 53 },
     { { 14, 0, 0, 0, 0, 0 }, { 14, 0, 0, 0, 0, 0 } }, 0,
     { aJLeague, aJLeague_0, aLeague_2, aLeague_3 }
 };
 
-CompetitionLeague_2 argentinianLeague = {
+CompetitionLeague argentinianLeague = {
     { { 87, 0, 43, 64, 32, 0, 0, 0, 0 }, 2, 2, 3, 53 },
     { { 20, 0, 0, 2, 0, 0 }, { 20, 2, 0, 0, 0, 0 } }, 0
 };
 
-CompetitionLeague_2 mexicanLeague = {
+CompetitionLeague mexicanLeague = {
     { { 97, 0, 60, 56, 32, 0, 0, 0, 0 }, 2, 2, 3, 53 },
     { { 20, 0, 0, 2, 0, 0 }, { 20, 2, 0, 0, 0, 0 } }, 0
 };
 
-CompetitionLeague_4 elSalvadorLeague = {
+CompetitionLeague elSalvadorLeague = {
     { { 94, 0, 51, 56, 32, 0, 0, 0, 0 }, 4, 2, 3, 53 },
     { { 10, 0, 0, 1, 0, 0 }, { 12, 1, 0, 1, 0, 0 }, { 12, 1, 0, 1, 0, 0 }, { 12, 1, 0, 0, 0, 0 } }, 0
 };
 
-CompetitionLeague_4_8 australianLeague = {
-    { { 88, 0, 44, 16, 80, 33, 0, 0, 0 }, 4, 2, 3, 53 },
+CompetitionLeague australianLeague = {
+    { { 88, 0, 44, 16, 80, LEAGUE_NAME_TABLE_OFFSET, 0, 0, 0 }, 4, 2, 3, 53 },
     { { 12, 0, 0, 0, 0, 0 }, { 12, 0, 0, 0, 0, 0 }, { 14, 0, 0, 0, 0, 0 }, { 12, 0, 0, 0, 0, 0 } }, 0,
     { a1stDivision, a1stDivision, aSouthDivision, aSouthDivision_0, aNswDivision, aNsw, aQueenslandDivi, aQueensland }
 };
 
-CompetitionLeague_3_6 newZealandLeague = {
-    { { 98, 0, 62, 16, 72, 27, 0, 0, 0 }, 3, 2, 3, 53 },
+CompetitionLeague newZealandLeague = {
+    { { 98, 0, 62, 16, 72, LEAGUE_NAME_TABLE_OFFSET, 0, 0, 0 }, 3, 2, 3, 53 },
     { { 10, 0, 0, 0, 0, 0 }, { 10, 0, 0, 0, 0, 0 }, { 10, 0, 0, 0, 0, 0 } }, 0,
     { aNorthernRegion, aNorthern, aCentralRegion, aCentral, aSouthernRegion, aSouthern }
 };
@@ -558,7 +558,7 @@ CompetitionLeague_3_6 newZealandLeague = {
  * identical on 32-bit (Amiga byte-for-byte) and correct on 64-bit. */
 EnglishLeaguesBlock englishLeaguesBlock = {
     ._main = {
-        { { 46, 0, 8, 56, 32, 33, 0, 0, 0 }, 4, 2, 3, 51 },
+        { { 46, 0, 8, 56, 32, LEAGUE_NAME_TABLE_OFFSET, 0, 0, 0 }, 4, 2, 3, 51 },
         { { 20, 0, 0, 3, 0, 0 }, { 24, 2, 4, 4, 0, 46 }, { 24, 3, 4, 4, 0, 120 }, { 24, 3, 4, 0, 0, -62 } }, 0,
         { aPremierLeague, aPremier, aDivisionOne, aDivisionOne, aDivisionTwo, aDivisionTwo, aDivisionThree, aDivisionThree },
         { (char *)&div1Playoffs, (char *)&englishLeaguesBlock._div1 },
@@ -591,16 +591,17 @@ EnglishLeaguesBlock englishLeaguesBlock = {
 /* (the englishLeagues / englishLeagues1..3 .equ aliases are gone — all
  * access is via englishLeaguesBlock._main/._div1/._div2/._div3 now) */
 
-Playoffs_8 div1Playoffs = { { 47, 1, 8, -128, -124, 11, 0, 17, 1, 0, 4, 1, 51, 1, -108, 20 }, { aDiv1Playoffs, aPlayoffs }, { 0 } };
-Playoffs_8 div2Playoffs = { { 48, 1, 8, -128, -124, 11, 0, 17, 1, 0, 4, 1, 51, 1, -108, 20 }, { aDiv2Playoffs, aPlayoffs }, { 0 } };
-Playoffs_8 div3Playoffs = { { 49, 1, 8, -128, -124, 11, 0, 17, 1, 0, 4, 1, 51, 1, -108, 20 }, { aDiv3Playoffs, aPlayoffs }, { 0 } };
+Playoffs div1Playoffs = { { 47, 1, 8, -128, -124, 11, 0, 17, 1, 0, 4, 1, 51, 1, -108, 20 }, { aDiv1Playoffs, aPlayoffs }, { 0 } };
+Playoffs div2Playoffs = { { 48, 1, 8, -128, -124, 11, 0, 17, 1, 0, 4, 1, 51, 1, -108, 20 }, { aDiv2Playoffs, aPlayoffs }, { 0 } };
+Playoffs div3Playoffs = { { 49, 1, 8, -128, -124, 11, 0, 17, 1, 0, 4, 1, 51, 1, -108, 20 }, { aDiv3Playoffs, aPlayoffs }, { 0 } };
 
 /* Dutch league */
-CompetitionLeague_2_2_24 dutchLeague = {
+CompetitionLeague dutchLeague = {
     { { 56, 0, 25, 56, 32, 0, 0, 0, 0 }, 2, 2, 3, 53 },
     { { 18, 0, 0, 1, 2, 8 }, { 18, 1, 2, 0, 0, 2 } }, 0,
-    { (char *)&dutchPlayoffs, (char *)&dutchLeagues1 },
-    { 0, 0, 0, 3, 0, 1, 0, 2, 0, -1, 0, -1, 0, -1, 0, -1, 1, 0, 1, 0, 1, 0, 1, 0 }
+    { 0 },   /* name[10]: dutch uses default division names (nameTableOffset=0) */
+    { (char *)&dutchPlayoffs, (char *)&dutchLeagues1 },   /* playoffLinkPtrs */
+    { 0, 0, 0, 3, 0, 1, 0, 2, 0, -1, 0, -1, 0, -1, 0, -1, 1, 0, 1, 0, 1, 0, 1, 0 }   /* promotionLinkData */
 };
 
 Leagues_4 dutchLeagues1 = {
@@ -610,14 +611,15 @@ Leagues_4 dutchLeagues1 = {
     (CompetitionLeague *)&dutchLeague, { 0, 0, 0, 1, 0, 0, 0, 0 }
 };
 
-Playoffs_8 dutchPlayoffs = { { 57, 1, 25, -128, -128, 11, 0, 17, 1, 1, 4, 1, 53, 1, -108, -108 }, { aPlayoffs, aPlayoffs }, { 0 } };
+Playoffs dutchPlayoffs = { { 57, 1, 25, -128, -128, 11, 0, 17, 1, 1, 4, 1, 53, 1, -108, -108 }, { aPlayoffs, aPlayoffs }, { 0 } };
 
 /* Scottish league */
-CompetitionLeague_4_2_8 scottishLeague = {
+CompetitionLeague scottishLeague = {
     { { 74, 0, 33, 56, 32, 0, 0, 0, 0 }, 4, 4, 3, 51 },
     { { 10, 0, 0, 1, 1, 20 }, { 10, 1, 1, 2, 0, 14 }, { 10, 2, 0, 2, 0, 0 }, { 10, 2, 0, 0, 0, 0 } }, 0,
-    { (char *)&scottishPlayoffs, (char *)&scottishLeague1 },
-    { 0, 0, 0, 1, 0, -1, 1, 0 }
+    { 0 },   /* name[10]: scottish uses default division names (nameTableOffset=0) */
+    { (char *)&scottishPlayoffs, (char *)&scottishLeague1 },   /* playoffLinkPtrs */
+    { 0, 0, 0, 1, 0, -1, 1, 0 }   /* promotionLinkData (first 8 of 24) */
 };
 
 Leagues_2 scottishLeague1 = {
@@ -625,11 +627,11 @@ Leagues_2 scottishLeague1 = {
     (CompetitionLeague *)&scottishLeague, { 0, 0, 0, 1, 0, 0, 0, 0 }
 };
 
-Playoffs_4 scottishPlayoffs = { { 75, 1, 33, -128, -128, 11, 0, 17, 1, 0, 2, 1, 51, 1, 20, 0 }, { aPlayoffs, aPlayoffs }, { 0 } };
+Playoffs scottishPlayoffs = { { 75, 1, 33, -128, -128, 11, 0, 17, 1, 0, 2, 1, 51, 1, 20, 0 }, { aPlayoffs, aPlayoffs }, { 0 } };
 
 /* Spanish league */
-CompetitionLeague_2_4_2_24 spanishLeague = {
-    { { 78, 0, 35, 64, 40, 21, 0, 0, 0 }, 2, 2, 3, 53 },
+CompetitionLeague spanishLeague = {
+    { { 78, 0, 35, 64, 40, LEAGUE_NAME_TABLE_OFFSET, 0, 0, 0 }, 2, 2, 3, 53 },
     { { 22, 0, 0, 2, 2, 24 }, { 20, 2, 2, 0, 0, 18 } }, 0,
     { aPrimeraDivisio, aPrimera, aSegundaDivisio, aSegunda },
     { (char *)&spanishPlayoffs, (char *)&spanishLeague1 },
@@ -643,14 +645,15 @@ Leagues_4 spanishLeague1 = {
     (CompetitionLeague *)&spanishLeague, { 0, 0, 0, 1, 0, 0, 0, 0 }
 };
 
-Playoffs_8 spanishPlayoffs = { { 79, 1, 35, -120, -120, 11, 0, 17, 1, 1, 4, 1, 53, 1, -108, -108 }, { aPlayoffs, aPlayoffs }, { 0 } };
+Playoffs spanishPlayoffs = { { 79, 1, 35, -120, -120, 11, 0, 17, 1, 1, 4, 1, 53, 1, -108, -108 }, { aPlayoffs, aPlayoffs }, { 0 } };
 
 /* Uruguayan league */
-CompetitionLeague_2_2_8 uruguayanLeague = {
+CompetitionLeague uruguayanLeague = {
     { { 104, 0, 71, 24, 88, 0, 0, 0, 0 }, 2, 2, 3, 53 },
     { { 12, 0, 0, 1, 1, 8 }, { 14, 1, 1, 0, 0, 2 } }, 0,
-    { (char *)&uruguayanPlayoffs, (char *)&uruguayanLeague1 },
-    { 0, 0, 0, 1, 0, -1, 1, 0 }
+    { 0 },   /* name[10]: uruguayan uses default division names (nameTableOffset=0) */
+    { (char *)&uruguayanPlayoffs, (char *)&uruguayanLeague1 },   /* playoffLinkPtrs */
+    { 0, 0, 0, 1, 0, -1, 1, 0 }   /* promotionLinkData (first 8 of 24) */
 };
 
 Leagues_2 uruguayanLeague1 = {
@@ -658,7 +661,7 @@ Leagues_2 uruguayanLeague1 = {
     (CompetitionLeague *)&uruguayanLeague, { 0, 0, 0, 1, 0, 0, 0, 0 }
 };
 
-Playoffs_4 uruguayanPlayoffs = { { 105, 1, 71, 88, 88, 11, 0, 17, 1, 0, 2, 1, 53, 1, -108, 0 }, { aPlayoffs, aPlayoffs }, { 0 } };
+Playoffs uruguayanPlayoffs = { { 105, 1, 71, 88, 88, 11, 0, 17, 1, 0, 2, 1, 53, 1, -108, 0 }, { aPlayoffs, aPlayoffs }, { 0 } };
 
 /* ======================================================================
  * National Cups
@@ -886,7 +889,7 @@ CompetitionCup *continentalCups[7] = {
  * Qualifying Groups and Region Tables
  * ====================================================================== */
 
-QualifyingGroup_9_2 worldCupQualifyingGroups = {
+QualifyingGroup worldCupQualifyingGroups = {
     { (CompetitionCup *)&worldCupQualifyingGroup1, (CompetitionCup *)&worldCupQualifyingGroup2,
       (CompetitionCup *)&worldCupQualifyingGroup3, (CompetitionCup *)&worldCupQualifyingGroup4,
       (CompetitionCup *)&worldCupQualifyingGroup5, (CompetitionCup *)&worldCupQualifyingGroup6,
@@ -895,7 +898,7 @@ QualifyingGroup_9_2 worldCupQualifyingGroups = {
     { 0xFF, CN_ALBANIA }
 };
 
-QualifyingGroup_9_2 ecQualifyingGroups = {
+QualifyingGroup ecQualifyingGroups = {
     { (CompetitionCup *)&ecQualifyingGroup1, (CompetitionCup *)&ecQualifyingGroup2,
       (CompetitionCup *)&ecQualifyingGroup3, (CompetitionCup *)&ecQualifyingGroup4,
       (CompetitionCup *)&ecQualifyingGroup5, (CompetitionCup *)&ecQualifyingGroup6,
@@ -904,14 +907,14 @@ QualifyingGroup_9_2 ecQualifyingGroups = {
     { 0xFF, CN_ALBANIA }
 };
 
-QualifyingGroup_3 customsTable = { { (CompetitionCup *)&customsLeague, (CompetitionCup *)-2, (CompetitionCup *)-1 } };
+QualifyingGroup customsTable = { { (CompetitionCup *)&customsLeague, (CompetitionCup *)-2, (CompetitionCup *)-1 } };
 
-QualifyingGroup_2_8 worldTable = {
+QualifyingGroup worldTable = {
     { (CompetitionCup *)&worldCup, (CompetitionCup *)-1 },
     { CN_EUROPE, CN_NORTH_AMERICA, CN_SOUTH_AMERICA, CN_AFRICA, CN_ASIA, CN_OCEANIA, 0xFF, CN_ALBANIA }
 };
 
-QualifyingGroup_6_44 europeTable = {
+QualifyingGroup europeTable = {
     { (CompetitionCup *)0xFC, (CompetitionCup *)&europeanChampionships,
       (CompetitionCup *)&euroCup, (CompetitionCup *)&cupWinnersCup,
       (CompetitionCup *)&uefaCup, (CompetitionCup *)-1 },
@@ -925,28 +928,28 @@ QualifyingGroup_6_44 europeTable = {
       CN_UKRAINE, CN_WALES, CN_YUGOSLAVIA, 0xFF }
 };
 
-QualifyingGroup_3_4 africaTable = {
+QualifyingGroup africaTable = {
     { (CompetitionCup *)&africaWorldCupQualification, (CompetitionCup *)&africanNationsCup, (CompetitionCup *)-1 },
     { CN_ALGERIA, CN_GHANA, CN_SOUTH_AFRICA, 0xFF }
 };
 
-QualifyingGroup_3_12 southAmericaTable = {
+QualifyingGroup southAmericaTable = {
     { (CompetitionCup *)&southAmericaWorldCupQualification, (CompetitionCup *)&copaAmerica, (CompetitionCup *)-1 },
     { CN_ARGENTINA, CN_BOLIVIA, CN_BRAZIL, CN_CHILE, CN_COLOMBIA, CN_ECUADOR,
       CN_PARAGUAY, CN_PERU, CN_SURINAM, CN_URUGUAY, CN_VENEZUELA, 0xFF }
 };
 
-QualifyingGroup_3_4 northAmericaTable = {
+QualifyingGroup northAmericaTable = {
     { (CompetitionCup *)&northAmericaWorldCupQualification, (CompetitionCup *)&northAmericanCup, (CompetitionCup *)-1 },
     { CN_EL_SALVADOR, CN_MEXICO, CN_USA, 0xFF }
 };
 
-QualifyingGroup_3_4 asiaTable = {
+QualifyingGroup asiaTable = {
     { (CompetitionCup *)&asiaWorldCupQualification, (CompetitionCup *)&asianCup, (CompetitionCup *)-1 },
     { CN_INDIA, CN_JAPAN, CN_TAIWAN, 0xFF }
 };
 
-QualifyingGroup_3_4 oceaniaTable = {
+QualifyingGroup oceaniaTable = {
     { (CompetitionCup *)&oceaniaWorldCupQualification, (CompetitionCup *)&oceaniaCup, (CompetitionCup *)-1 },
     { CN_AUSTRALIA, CN_NEW_ZEALAND, 0xFF, CN_ALBANIA }
 };

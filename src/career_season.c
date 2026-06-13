@@ -1400,16 +1400,16 @@ extern uint8_t diyCompetitionContext[];
  * forward decls for several competition tables). The block layout and
  * `englishLeaguesBlock` extern must match competition_data.[ch] exactly. */
 typedef struct __attribute__((packed)) {
-    CompetitionLeague_4_8_2_24 _main;
-    Leagues_4_2_24             _div1;
-    Leagues_4_2_24             _div2;
-    Leagues_4                  _div3;
+    CompetitionLeague _main;   /* merged record (was CompetitionLeague_4_8_2_24) */
+    Leagues_4_2_24    _div1;
+    Leagues_4_2_24    _div2;
+    Leagues_4         _div3;
 } EnglishLeaguesBlock;
 
 extern EnglishLeaguesBlock englishLeaguesBlock;
-extern Playoffs_8 div1Playoffs;
-extern Playoffs_8 div2Playoffs;
-extern Playoffs_8 div3Playoffs;
+extern Playoffs div1Playoffs;
+extern Playoffs div2Playoffs;
+extern Playoffs div3Playoffs;
 
 /* ---- Career_ProcessDiyLeagueQualificationEntry ----
  * (SWOS2.s line 31903)
@@ -1420,12 +1420,12 @@ extern Playoffs_8 div3Playoffs;
  *
  * SWOS2.s Career_ProcessDiyLeagueQualificationEntry (line 58055) walks the
  * country's leagues block via byte offsets stored in `divisions[i].unk1` to
- * find a `Playoffs_8 *` qualification competition and a qIdx pair list. The
+ * find a `Playoffs *` qualification competition and a qIdx pair list. The
  * walk assumed the 32-bit Amiga struct layout. On 64-bit several involved
  * structs grow because of pointer-field widening:
  *   - CompetitionLeague_4_8_2_24: text[8]+unk2[2] grow → 102 → 142 bytes
  *   - Leagues_4_2_24: Leagues_4+playoffs+leagues2 grow → 80 → 104 bytes
- *   - Playoffs_8: text[2] grows → 32 → 40 bytes
+ *   - Playoffs: text[2] grows → 32 → 40 bytes
  *
  * The static `divisions[i].unk1` byte hints were authored for 32-bit, so the
  * walk `competition + i*6 + 0x12 + unk1` lands inside text[8] (a string
@@ -1444,9 +1444,9 @@ extern Playoffs_8 div3Playoffs;
  *   index=3: walk lands at englishLeaguesBlock._div2.playoffs = &div3Playoffs;
  *            qIdx pairs in englishLeaguesBlock._div2.unk2[].
  *
- * teamData = qualComp + 7 + qualComp[7] in the asm; for all three Playoffs_8
+ * teamData = qualComp + 7 + qualComp[7] in the asm; for all three Playoffs
  * statics qualComp->playoffHeader[7] = 17 (Amiga byte offset to qualifiedTeamIds[0]).
- * On 64-bit Playoffs_8.qualifiedTeamIds sits 8 bytes later (text[2] grew). Using
+ * On 64-bit Playoffs.qualifiedTeamIds sits 8 bytes later (text[2] grew). Using
  * typed `&qualComp->qualifiedTeamIds[0]` resolves correctly on both targets. */
 static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competition)
 {
@@ -1461,7 +1461,7 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
      * divisionsCount. Both bytes here are within the original Amiga
      * struct's head (offsets < 0x28), so no namePtr shift applies. */
     uint16_t nextDiv = index + 1;
-    if ((uint8_t)nextDiv != (uint8_t)((CompetitionLeague *)competition)->divisionsCount) {
+    if ((uint8_t)nextDiv != (uint8_t)((CompLeagueHeader *)competition)->divisionsCount) {
         uint8_t d1 = a2[0x18] + 6;
         if (d0 == d1)
             return;
@@ -1476,12 +1476,12 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         return;
     }
 
-    Playoffs_8 *qualComp;
+    Playoffs *qualComp;
     uint8_t   *teamIdxList;
     switch (index) {
     case 1:
-        qualComp    = (Playoffs_8 *)englishLeaguesBlock._main.unk2[0]; /* &div1Playoffs */
-        teamIdxList = (uint8_t *)englishLeaguesBlock._main.unk3;
+        qualComp    = (Playoffs *)englishLeaguesBlock._main.playoffLinkPtrs[0]; /* &div1Playoffs */
+        teamIdxList = (uint8_t *)englishLeaguesBlock._main.promotionLinkData;
         break;
     case 2:
         qualComp    = englishLeaguesBlock._div1.playoffs;              /* &div2Playoffs */
@@ -1517,7 +1517,7 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         selTeamNumber = 0xFFFF;
         careerTeam.team.teamControls = 1;
 
-        /* Sanity check matching the asm `beq.w loc_12BCD0` — Playoffs_8
+        /* Sanity check matching the asm `beq.w loc_12BCD0` — Playoffs
          * statics all have playoffHeader[7]=17, so 0 should never appear. */
         if (qualComp->playoffHeader[7] == 0) {
             panicReasonCode = 0x3003;
@@ -1598,7 +1598,7 @@ static void processPrimaryCompetitionForNextSeason(uint8_t *competition)
      * qualification-loop's _Career_AutoAdvanceCupCompetitionFromRecord
      * picked teams from the wrong division, putting promotion weights
      * into wrong scratch slots and tripping the 0x5555 validate panic. */
-    uint8_t numDivisions = (uint8_t)((CompetitionLeague *)competition)->divisionsCount;
+    uint8_t numDivisions = (uint8_t)((CompLeagueHeader *)competition)->divisionsCount;
     uint16_t d7;
     uint8_t *qualCursor = (uint8_t *)diyQualifiedTeamIndices;
 

@@ -8854,7 +8854,7 @@ void _InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table)
     }
 
     Competition       *compHdr = (Competition *)table;
-    CompetitionLeague *league  = (CompetitionLeague *)table;
+    CompLeagueHeader *league  = (CompLeagueHeader *)table;
     uint16_t d7 = idx;
 
     _DIY_InitCompetitionDefaults();

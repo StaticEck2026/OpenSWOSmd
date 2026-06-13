@@ -3072,7 +3072,7 @@ skip_continental_check:
     /* loc_13E21E: competition entry (>= 256) */
     {
         Competition       *compHdr = (Competition *)compEntry;
-        CompetitionLeague *league  = (CompetitionLeague *)compEntry;
+        CompLeagueHeader *league  = (CompLeagueHeader *)compEntry;
         compType = compHdr->type;
     if (compType == 0) {
         /* League: enumerate divisions.
@@ -3146,7 +3146,14 @@ loc_E2D0:
     cnCount = 0;
 
     if (d7 == 254 || (d7 >= CN_EUROPE && d7 <= CN_OCEANIA)) {
-        /* loc_13E2F4: enumerate countries from continent byte list */
+        /* loc_13E2F4: enumerate countries from the QualifyingGroup's countries[]
+         * list. After consolidation countries[] lives at a FIXED struct offset
+         * (compCup[] is padded to max in the merged QualifyingGroup), so repoint
+         * a5 to it. The compCup[] walk above left a5 just past the -1 terminator,
+         * which now lands on compCup padding (reads as country 0 = ALBANIA). a5
+         * stays pointed at countries[] so the `a5[index]` country lookups in the
+         * selection handling below are correct too. See STRUCT_CONSOLIDATE.md §4d. */
+        a5 = (void **)((QualifyingGroup *)compListAddr)->countries;
         cPtr = (uint8_t *)a5;
         for (;;) {
             cByte = *cPtr++;
