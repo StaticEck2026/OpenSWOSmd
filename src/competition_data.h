@@ -71,79 +71,79 @@ extern CompetitionCup_6_2 oceaniaCup;
  * Customs League
  * ====================================================================== */
 
-extern CompetitionLeague_3_6 customsLeague;
+extern CompetitionLeague customsLeague;
 
 /* ======================================================================
  * National Leagues (1-division)
  * ====================================================================== */
 
-extern CompetitionLeague_1 albanianLeague;
-extern CompetitionLeague_1 austrianLeague;
-extern CompetitionLeague_1 belarussiaLleague;
-extern CompetitionLeague_1 belgianLeague;
-extern CompetitionLeague_1 bulgarianLeague;
-extern CompetitionLeague_1 croatianLeague;
-extern CompetitionLeague_1 cypriotLeague;
-extern CompetitionLeague_1 czechLeague;
-extern CompetitionLeague_1 danishLeague;
-extern CompetitionLeague_1 estonianLeague;
-extern CompetitionLeague_1 faroeIslesLeague;
-extern CompetitionLeague_1 finnishLeague;
-extern CompetitionLeague_1 greekLeague;
-extern CompetitionLeague_1 hungarianLeague;
-extern CompetitionLeague_1 icelandicLeague;
-extern CompetitionLeague_1 israeliLeague;
-extern CompetitionLeague_1 latvianLeague;
-extern CompetitionLeague_1 lithuanianLeague;
-extern CompetitionLeague_1 luxembourgLeague;
-extern CompetitionLeague_1 malteseLeague;
-extern CompetitionLeague_1 northernIrishLeague;
-extern CompetitionLeague_1 norwegianLeague;
-extern CompetitionLeague_1 polishLeague;
-extern CompetitionLeague_1 portugeseLeague;
-extern CompetitionLeague_1 irishLeague;
-extern CompetitionLeague_1 romanianLeague;
-extern CompetitionLeague_1 russianLeague;
-extern CompetitionLeague_1 sanMarinoLeague;
-extern CompetitionLeague_1 slovakianLeague;
-extern CompetitionLeague_1 slovenianLeague;
-extern CompetitionLeague_1 swedishLeague;
-extern CompetitionLeague_1 swissLeague;
-extern CompetitionLeague_1 turkishLeague;
-extern CompetitionLeague_1 ukrainianLeague;
-extern CompetitionLeague_1 welshLeague;
-extern CompetitionLeague_1 yugoslavianLeague;
+extern CompetitionLeague albanianLeague;
+extern CompetitionLeague austrianLeague;
+extern CompetitionLeague belarussiaLleague;
+extern CompetitionLeague belgianLeague;
+extern CompetitionLeague bulgarianLeague;
+extern CompetitionLeague croatianLeague;
+extern CompetitionLeague cypriotLeague;
+extern CompetitionLeague czechLeague;
+extern CompetitionLeague danishLeague;
+extern CompetitionLeague estonianLeague;
+extern CompetitionLeague faroeIslesLeague;
+extern CompetitionLeague finnishLeague;
+extern CompetitionLeague greekLeague;
+extern CompetitionLeague hungarianLeague;
+extern CompetitionLeague icelandicLeague;
+extern CompetitionLeague israeliLeague;
+extern CompetitionLeague latvianLeague;
+extern CompetitionLeague lithuanianLeague;
+extern CompetitionLeague luxembourgLeague;
+extern CompetitionLeague malteseLeague;
+extern CompetitionLeague northernIrishLeague;
+extern CompetitionLeague norwegianLeague;
+extern CompetitionLeague polishLeague;
+extern CompetitionLeague portugeseLeague;
+extern CompetitionLeague irishLeague;
+extern CompetitionLeague romanianLeague;
+extern CompetitionLeague russianLeague;
+extern CompetitionLeague sanMarinoLeague;
+extern CompetitionLeague slovakianLeague;
+extern CompetitionLeague slovenianLeague;
+extern CompetitionLeague swedishLeague;
+extern CompetitionLeague swissLeague;
+extern CompetitionLeague turkishLeague;
+extern CompetitionLeague ukrainianLeague;
+extern CompetitionLeague welshLeague;
+extern CompetitionLeague yugoslavianLeague;
 
 /* Non-European 1-division leagues */
-extern CompetitionLeague_1 algerianLeague;
-extern CompetitionLeague_1 bolivianLeague;
-extern CompetitionLeague_1 brasilianLeague;
-extern CompetitionLeague_1 chileanLeague;
-extern CompetitionLeague_1 colombianLeague;
-extern CompetitionLeague_1 ecuadorLeague;
-extern CompetitionLeague_1 indianLeague;
-extern CompetitionLeague_1 paraguayanLeague;
-extern CompetitionLeague_1 peruvianLeague;
-extern CompetitionLeague_1 southAfricanLeague;
-extern CompetitionLeague_1 surinamLeague;
-extern CompetitionLeague_1 taiwaneseLeague;
-extern CompetitionLeague_1 americanLeague;
-extern CompetitionLeague_1 venezuelanLeague;
-extern CompetitionLeague_1 ghanaLeague;
+extern CompetitionLeague algerianLeague;
+extern CompetitionLeague bolivianLeague;
+extern CompetitionLeague brasilianLeague;
+extern CompetitionLeague chileanLeague;
+extern CompetitionLeague colombianLeague;
+extern CompetitionLeague ecuadorLeague;
+extern CompetitionLeague indianLeague;
+extern CompetitionLeague paraguayanLeague;
+extern CompetitionLeague peruvianLeague;
+extern CompetitionLeague southAfricanLeague;
+extern CompetitionLeague surinamLeague;
+extern CompetitionLeague taiwaneseLeague;
+extern CompetitionLeague americanLeague;
+extern CompetitionLeague venezuelanLeague;
+extern CompetitionLeague ghanaLeague;
 
 /* ======================================================================
  * Multi-division leagues
  * ====================================================================== */
 
-extern CompetitionLeague_2_4 frenchLeague;
-extern CompetitionLeague_2_4 germanLeague;
-extern CompetitionLeague_2_4 italianLeague;
-extern CompetitionLeague_2_4 japaneseLeague;
-extern CompetitionLeague_2 argentinianLeague;
-extern CompetitionLeague_2 mexicanLeague;
-extern CompetitionLeague_4 elSalvadorLeague;
-extern CompetitionLeague_4_8 australianLeague;
-extern CompetitionLeague_3_6 newZealandLeague;
+extern CompetitionLeague frenchLeague;
+extern CompetitionLeague germanLeague;
+extern CompetitionLeague italianLeague;
+extern CompetitionLeague japaneseLeague;
+extern CompetitionLeague argentinianLeague;
+extern CompetitionLeague mexicanLeague;
+extern CompetitionLeague elSalvadorLeague;
+extern CompetitionLeague australianLeague;
+extern CompetitionLeague newZealandLeague;
 
 /* ======================================================================
  * Complex leagues with playoffs
@@ -151,16 +151,16 @@ extern CompetitionLeague_3_6 newZealandLeague;
 
 /* englishLeagues / englishLeagues1..3: untangled into EnglishLeaguesBlock
  * fields (._main/._div1/._div2/._div3) — see below + competition_data.c. */
-extern Playoffs_8 div1Playoffs;
-extern Playoffs_8 div2Playoffs;
-extern Playoffs_8 div3Playoffs;
+extern Playoffs div1Playoffs;
+extern Playoffs div2Playoffs;
+extern Playoffs div3Playoffs;
 
 /* EnglishLeaguesBlock: composite of the four English league structs into one
  * BSS run so the .equ aliases above resolve at consistent byte offsets. On
  * 64-bit the .equ offsets (102/182/262) become stale because pointer-bearing
  * substructs widen — typed access via the block fields below avoids that. */
 typedef struct __attribute__((packed)) {
-    CompetitionLeague_4_8_2_24 _main;
+    CompetitionLeague _main;
     Leagues_4_2_24             _div1;
     Leagues_4_2_24             _div2;
     Leagues_4                  _div3;
@@ -168,21 +168,21 @@ typedef struct __attribute__((packed)) {
 
 extern EnglishLeaguesBlock englishLeaguesBlock;
 
-extern CompetitionLeague_2_2_24 dutchLeague;
+extern CompetitionLeague dutchLeague;
 extern Leagues_4 dutchLeagues1;
-extern Playoffs_8 dutchPlayoffs;
+extern Playoffs dutchPlayoffs;
 
-extern CompetitionLeague_4_2_8 scottishLeague;
+extern CompetitionLeague scottishLeague;
 extern Leagues_2 scottishLeague1;
-extern Playoffs_4 scottishPlayoffs;
+extern Playoffs scottishPlayoffs;
 
-extern CompetitionLeague_2_4_2_24 spanishLeague;
+extern CompetitionLeague spanishLeague;
 extern Leagues_4 spanishLeague1;
-extern Playoffs_8 spanishPlayoffs;
+extern Playoffs spanishPlayoffs;
 
-extern CompetitionLeague_2_2_8 uruguayanLeague;
+extern CompetitionLeague uruguayanLeague;
 extern Leagues_2 uruguayanLeague1;
-extern Playoffs_4 uruguayanPlayoffs;
+extern Playoffs uruguayanPlayoffs;
 
 /* ======================================================================
  * National Cups
@@ -300,16 +300,16 @@ extern CompetitionCup *continentalCups[7];
  * Qualifying Groups and Region Tables
  * ====================================================================== */
 
-extern QualifyingGroup_9_2 worldCupQualifyingGroups;
-extern QualifyingGroup_9_2 ecQualifyingGroups;
-extern QualifyingGroup_3 customsTable;
-extern QualifyingGroup_2_8 worldTable;
-extern QualifyingGroup_6_44 europeTable;
-extern QualifyingGroup_3_4 africaTable;
-extern QualifyingGroup_3_12 southAmericaTable;
-extern QualifyingGroup_3_4 northAmericaTable;
-extern QualifyingGroup_3_4 asiaTable;
-extern QualifyingGroup_3_4 oceaniaTable;
+extern QualifyingGroup worldCupQualifyingGroups;
+extern QualifyingGroup ecQualifyingGroups;
+extern QualifyingGroup customsTable;
+extern QualifyingGroup worldTable;
+extern QualifyingGroup europeTable;
+extern QualifyingGroup africaTable;
+extern QualifyingGroup southAmericaTable;
+extern QualifyingGroup northAmericaTable;
+extern QualifyingGroup asiaTable;
+extern QualifyingGroup oceaniaTable;
 
 /* ======================================================================
  * Country Competition Tables

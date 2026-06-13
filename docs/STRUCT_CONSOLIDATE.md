@@ -94,7 +94,7 @@ Layout: `CompetitionLeague` header → `Division divisions[D]` → `unk1`(db) �
 | `Playoffs_8` / `Playoffs_4` | 2 | trailing `unk2[8]` vs `[4]` (qualified-team id buffer) |
 | `Leagues_4` / `Leagues_2` | 2 | 4 vs 2 `{CompetitionLeague*, linkParams[8]}` records |
 | `Leagues_4_2_24` | 1 | `Leagues_4` + playoffs ptr + next-group ptr + `unk2[24]` |
-| `QualifyingGroup_3/_9_2/_2_8/_6_44/_3_4/_3_12` | 6 | `compCup[N]` count + `countries[M]` count |
+| `QualifyingGroup_3/_9_2/_2_8/_6_44/_3_4/_3_12` | 6 | array lengths only: `compCup[N]` (`-1`-terminated, N=2..9) + `countries[M]` (`0xFF`-terminated, M=0..44) |
 
 ---
 
@@ -137,7 +137,8 @@ They are referenced through **arrays of pointers**, terminated by a sentinel:
 | `nationalTeamCompetitionsAndQualifications[39]` | `0xFFFFFFFF` | SWOS2.s:118034, walker `IsNationalTeamCompetitionOrQualification` 52120 |
 | `continentalCups[7]` | `0xFFFFFFFF` | SWOS2.s:118044 |
 | `careerContests[35]` | `0xFFFFFFFF` triple | SWOS2.s:61015 (`cmpa.l #$FFFFFFFF,a0; beq`) |
-| country tables (`englandTable[5]`, …) | fixed array length | `competition_data.c:932–996` |
+| country tables (`englandTable[5]`…) + `QualifyingGroup.compCup[]` | **`-1` (0xFFFFFFFF)-terminated**; `-2`/`0xFC` are *in-band* markers (playoff separator / custom-teams), still inside the walk | `competition_data.c:907–996` (e.g. `republicIrelandTable[4] = {&irishLeague,-2,&irishCup,-1}`) |
+| `QualifyingGroup.countries[]` | **`0xFF`-terminated** | `worldTable.countries = {…regions…, 0xFF, …}` (`competition_data.c:909`) |
 
 `careerContests` is the one place a *length* is used: each `{template, copy,
 length}` triple copies `length` bytes template→`*Copy` (`career_init.c:703`,
@@ -154,8 +155,11 @@ the template and `*Copy` storage grow together* (see §5).
 
 ### 2c. Verdict
 
-**All three families can be consolidated into single max-sized structs.** No
-sentinel terminates a record's tail (the tails are count/offset-driven), and no
+**Every variant family — cup, cup2, league, `Playoffs`, `Leagues`,
+`QualifyingGroup` — can be consolidated into a single max-sized struct.** No
+sentinel terminates a `Competition`-header record's tail (those tails are
+count/offset-driven); the pointer-holding families (`QualifyingGroup`, country
+tables) ARE sentinel-terminated (`-1`/`0xFF`), which padding preserves; and no
 code steps record-to-record by a fixed size. The consolidation cost is entirely
 in regenerating the *stored layout metadata* — the two offset bytes, the
 `careerContests` lengths, and the BSS `.skip` reservations — not in rewriting
@@ -190,56 +194,178 @@ the consolidation purely additive (pad + relocate), not a separation problem.
 Group within type families (the mixed pointer arrays cast everything to a common
 base and dispatch on `Competition.type`, so the headers must stay compatible).
 
+**Naming scheme.** The *clean* names `CompetitionCup` / `CompetitionCup2` /
+`CompetitionLeague` are reused for the **merged record** (the thing the data
+instances and pointer arrays actually are). The existing fixed-size *header*
+structs that currently own those names are renamed with a `…Header` suffix:
+
+| Current name (header struct) | Renamed to | Becomes the embedded `header` field of |
+|---|---|---|
+| `CompetitionCup` (14 B) | **`CompCupHeader`** | the new `CompetitionCup` record |
+| `CompetitionCup2` (34 B, incl `Round[6]`) | **`CompCupHeader2`** | the new `CompetitionCup2` record |
+| `CompetitionLeague` (13 B) | **`CompLeagueHeader`** | the new `CompetitionLeague` record |
+
+`Competition` (the shared 9-byte base) keeps its name — it stays the polymorphic
+cast target for the type-erased pointer arrays, and each `…Header` still embeds it
+as its first member. No `…Rec` suffix anywhere.
+
 ```c
 /* One struct per type family. Arrays sized to the observed maximum; unused
  * tail bytes left zero. Field names per STRUCT_FIELDS_UNK.md. */
 
 #define COMP_MAX_ROUNDS      10   /* CompetitionCup_10 */
-#define COMP_MAX_NAMES        6   /* CompetitionLeague_3_6 text[6]; cups use [2] */
+#define COMP_MAX_NAMES       10   /* CompetitionLeague_4_10_24 text[10] is the max; cups use [2] */
 #define COMP_MAX_SEED_TEAMS  32   /* uefaCup/cupWinnersCup/worldCup2: 64 bytes */
 
 /* type == 1 : knockout cups (merges CompetitionCup_4/_6/_10/_4_2/_6_2/_6_2_8/_12/_64) */
 typedef struct __attribute__((packed)) {
-    CompetitionCup header;                       /* 14 B (Competition + cup fields) */
+    CompCupHeader header;                        /* 14 B (was CompetitionCup): Competition + cup fields */
     uint8_t  roundRuleFlags[COMP_MAX_ROUNDS];    /* per-round legs/ET/pen bits */
     char    *name[2];                            /* was text[2] */
     uint16_t teamSeedList[COMP_MAX_SEED_TEAMS];  /* BE {country,ordinal} pairs */
-} CompetitionCupRec;
+} CompetitionCup;
 
 /* type == 2 : group tournaments (merges all CompetitionCup2_*) */
 typedef struct __attribute__((packed)) {
-    CompetitionCup2 header;                      /* 34 B incl Round[6] */
+    CompCupHeader2 header;                        /* 34 B (was CompetitionCup2), incl Round[6] */
     uint8_t  roundRuleFlags[COMP_MAX_ROUNDS];
     char    *name[2];
     uint16_t teamSeedList[COMP_MAX_SEED_TEAMS];
-} CompetitionCup2Rec;
+} CompetitionCup2;
 
-/* type == 0 : leagues (merges CompetitionLeague_1.._4 and the _N_M variants) */
+/* type == 0 : leagues (merges ALL 13 CompetitionLeague_* variants:
+ * _1.._4, _3_6, _2_4, _4_8, _4_10_24, _2_2_24, _4_2_8, _2_2_8,
+ * _2_4_2_24, _4_8_2_24). The trailing region differs per variant only in
+ * array length (text[2..10], unk2/unk3 link bytes, the char* unk2[2]
+ * playoff pointers); all become fixed max-sized fields here. */
 typedef struct __attribute__((packed)) {
-    CompetitionLeague header;                    /* 13 B */
+    CompLeagueHeader header;                      /* 13 B (was CompetitionLeague) */
     Division divisions[4];                        /* divisionsCount says how many used */
     uint8_t  reserved1;                           /* the old per-variant `unk1` byte */
-    char    *name[COMP_MAX_NAMES];                /* full+abbrev per division */
-    char    *playoffLinkPtrs[2];                  /* was the char* unk2[2] in _*_2_* */
-    uint8_t  promotionLinkData[24];               /* was unk2[24]/unk3[24] */
-} CompetitionLeagueRec;
+    char    *name[COMP_MAX_NAMES];                /* full+abbrev per division (max 10, _4_10_24) */
+    char    *playoffLinkPtrs[2];                  /* was the char* unk2[2] in _*_2_* (→ Playoffs/Leagues) */
+    uint8_t  promotionLinkData[24];               /* was the unk2[24]/unk3[24]/unk2[8] qualifier-index bytes */
+} CompetitionLeague;
 ```
 
-`Playoffs_8`/`_4` → one `Playoffs` with `qualifiedTeamIds[8]`. `Leagues_2`/`_4`
-→ one `Leagues` with 4 `{CompetitionLeagueRec*, linkParams[8]}` records +
-`divisionsCount`-style used count. `QualifyingGroup_*` → one with `compCup[9]`
-and `countries[44]` plus explicit `numGroups`/`numCountries`.
+The remaining three families (`Playoffs`, `Leagues`, `QualifyingGroup`) are
+covered in full below — they are NOT part of the `Competition`-header type
+families above (they hold *pointers to* competitions, not competition headers),
+so each gets its own merged struct.
 
 > **Design note — keep the polymorphic accessor working.** Because the mixed
 > pointer arrays (`continentalCups`, `nationalTeamCompetitionsAndQualifications`,
 > the country tables) store records *type-erased* as `Competition*`/`CompetitionCup*`,
-> a type-known `offsetof(CompetitionCupRec, name)` is NOT usable at the
+> a type-known `offsetof(CompetitionCup, name)` is NOT usable at the
 > polymorphic read sites (they don't know whether the pointer is a cup, a cup2 or
 > a league — those have `name[]` at different offsets). **The self-describing
 > `nameTableOffset`/`teamListOffset` bytes are exactly what makes the polymorphic
 > access work, so KEEP them** (renamed) and recompute their stored values for the
 > new fixed layout. Use the typed `name[]`/`teamSeedList[]` fields only at sites
 > where the concrete type is known.
+
+### 4b. `Playoffs_8` / `Playoffs_4` → one `Playoffs`
+
+Both variants are identical except the trailing qualified-team buffer
+(`unk2[8]` vs `[4]`). Merge to the larger:
+
+```c
+typedef struct __attribute__((packed)) {
+    uint8_t playoffHeader[16];   /* structured: [7]=offset-to-ids (=17), [10]=qual-team count */
+    char   *name[2];             /* was text[2] */
+    uint8_t qualifiedTeamIds[8]; /* was unk2[N]: BE-packed qualified team ids (max 8) */
+} Playoffs;
+```
+
+- **Iteration / end-of-sequence:** the qualified-team list length is the
+  **explicit count `playoffHeader[10]`** (`div1Playoffs.playoffHeader[10]=4`),
+  and the buffer is located via the **self-offset byte `playoffHeader[7]`=17**
+  (`teamData = base + 7 + base[7]`) — exactly the same self-describing-offset
+  mechanism as the cup team list. No sentinel, no fixed stride.
+- **Consolidation impact:** padding `qualifiedTeamIds` 4→8 is safe (count-driven);
+  but because it's reached via `playoffHeader[7]`, that stored `17` must be
+  recomputed if the `name[2]` pointers ever move (they don't here, since
+  `playoffHeader` and `name` keep their offsets). Access sites:
+  `career_season.c:1498` (`[10]` count), `:1522` (`[7]` offset), `:1533`
+  (`&qualifiedTeamIds[0]`). Already typed — see `STRUCT_FIELDS_UNK.md` §8a.
+
+### 4c. `Leagues_4` / `Leagues_2` / `Leagues_4_2_24` → one `Leagues`
+
+These are inline arrays of `{CompetitionLeague *, uint8 linkParams[8]}` records
+(promotion/playoff link tables): `Leagues_4` = 4 records, `Leagues_2` = 2,
+`Leagues_4_2_24` = a `Leagues_4` + a `Playoffs_8 *` + a `Leagues_4 *` + a
+24-byte qualifier-index list.
+
+```c
+typedef struct __attribute__((packed)) {
+    CompetitionLeague *league;
+    uint8_t            linkParams[8];   /* promotion/relegation link config */
+} LeagueRec;
+
+typedef struct Leagues {
+    uint8_t       numLeagues;           /* NEW explicit count (was implied by the variant: 4 or 2) */
+    LeagueRec records[4];           /* max = Leagues_4 */
+    Playoffs     *playoffs;             /* Leagues_4_2_24 only (NULL otherwise) */
+    struct Leagues *nextGroup;          /* Leagues_4_2_24 'leagues2' (NULL otherwise) */
+    uint8_t       qualifierIndexPairs[24]; /* Leagues_4_2_24 unk2[24] (zeroed otherwise) */
+} Leagues;
+```
+
+- **Iteration / end-of-sequence — NEEDS VERIFICATION (medium confidence).** The
+  record data shows **no inter-record sentinel** (the `CompetitionLeague *` is a
+  real pointer in every slot, e.g. `dutchLeagues1` = 4×`&dutchLeague`,
+  `competition_data.c:606`). So the record count is either **fixed per variant**
+  (4 vs 2, baked into the consumer) or driven by an **external count** (e.g. the
+  parent league's `divisionsCount`). The SDL port reaches these only through the
+  `englishLeaguesBlock._div1/_div2/_div3` typed fields (`career_season.c:1488`),
+  not by a discoverable walk loop — confirm the walk count against `SWOS2.s`
+  before merging `Leagues_2` into a 4-record struct.
+- **Consolidation recommendation:** add the **explicit `numLeagues` count** shown
+  above so the merged struct is unambiguous regardless of how the original walked
+  it. This is the one family where I'd add a count rather than rely on the
+  existing mechanism (§6).
+
+### 4d. `QualifyingGroup_*` (6 variants) → one `QualifyingGroup`
+
+The six variants differ only in the two array lengths: `compCup[N]` (the region's
+competitions) and `countries[M]` (the region's countries). Merge to the maxima
+(`compCup[9]` from `_9_2`, `countries[44]` from `_6_44`):
+
+```c
+typedef struct __attribute__((packed)) {
+    CompetitionCup *compCup[9];        /* -1 (0xFFFFFFFF)-terminated; -2 / 0xFC = in-band markers */
+    CountryNumbers  countries[44];     /* 0xFF-terminated */
+} QualifyingGroup;
+```
+
+- **Iteration / end-of-sequence — SENTINEL, both arrays (high confidence, from the
+  data).** `compCup[]` is walked until a **`-1` (0xFFFFFFFF)** entry, with
+  **`-2` and `0xFC`** appearing as *in-band* special markers (playoff separator /
+  custom-teams), e.g. `customsTable.compCup = {&customsLeague, -2, -1}`,
+  `europeTable.compCup = {0xFC, &europeanChampionships, &euroCup, &cupWinnersCup,
+  &uefaCup, -1}` (`competition_data.c:907/914`). `countries[]` is walked until
+  **`0xFF`**, e.g. `worldTable.countries = {CN_EUROPE,…,CN_OCEANIA, 0xFF, …}`.
+  This is the **same `-1`-terminated pattern as the country tables**
+  (`republicIrelandTable[4] = {&irishLeague, -2, &irishCup, -1}`) and the
+  `continentalCups`/`nationalTeamCompetitionsAndQualifications` pointer arrays.
+- **Consolidation impact — this risk MATERIALIZED and is now fixed.** Because
+  `countries[]` follows `compCup[]` directly in each variant, padding `compCup`
+  from e.g. `[2]` (`worldTable`) to `[9]` **moves `countries[]` later**. This is
+  safe **iff** the consumer reaches `countries[]` by the struct field rather than
+  "the bytes immediately after the `compCup` `-1` terminator". The one consumer
+  that does the latter — the region/world country-selection list in
+  `teams.c` (`SELECT TEAM TO MANAGE`) — was NOT found by a `.countries` grep
+  because it reads via a raw `a5` cursor left pointing just past the `-1`. After
+  the merge it landed on `compCup` padding (zeros → country 0 = ALBANIA), so every
+  country rendered "ALBANIA" while the real `countries[]` (the sub-regions) showed
+  correctly further down. **Fixed** (`teams.c` loc_13E2F4): repoint `a5` to
+  `((QualifyingGroup *)compListAddr)->countries` for the `d7==254 || 80..85` case,
+  which corrects both the name display and the `a5[index]` selection lookups.
+  *Lesson: a save-diff doesn't exercise selection screens — grep for raw-cursor
+  reads (`a5`/pointer-after-terminator), not just `.countries`, and runtime-check
+  the actual menu.*
+- **No `text[]`/`teamListOffset` indirection here** — `QualifyingGroup` has no
+  `Competition` header, so the two self-describing offset bytes don't apply.
 
 ---
 
@@ -346,14 +472,22 @@ You asked whether to add explicit `count` entries instead of sentinels. Findings
     per type — this also removes the `firstRoundNo`-is-also-a-count ambiguity
     (`STRUCT_FIELDS_UNK.md` §4).
 - **The cross-record sentinels** (`0xFFFFFFFF` on `careerContests`,
-  `continentalCups`, `nationalTeamCompetitionsAndQualifications`) **can optionally
-  be replaced by explicit element counts.** Low priority and orthogonal to the
-  struct merge — the sentinels are not fragile (they don't depend on record
-  layout). Do this only as a separate readability pass if desired.
+  `continentalCups`, `nationalTeamCompetitionsAndQualifications`, the country
+  tables, and **`QualifyingGroup.compCup[]`**; **`0xFF` on
+  `QualifyingGroup.countries[]`**) **can optionally be replaced by explicit
+  element counts.** Low priority and orthogonal to the struct merge — the
+  sentinels are not fragile (they don't depend on record layout), and the
+  `-2`/`0xFC` in-band markers must be preserved either way. Do this only as a
+  separate readability pass if desired.
+- **`Leagues` is the exception — DO add a count.** Its `{league*, linkParams[8]}`
+  records have *no* sentinel and the per-variant count (4 vs 2) is implicit, so
+  the merged `Leagues` should carry an explicit `numLeagues` (§4c) rather than
+  rely on a walk whose terminator condition isn't in the data.
 
-**Net recommendation:** keep the existing count/offset mechanism; add two small
-explicit counts (`numRounds`, `numSeedTeams`) to the merged cup structs to retire
-the runtime derivation; leave the pointer-array sentinels as-is for now.
+**Net recommendation:** keep the existing count/offset mechanism; add small
+explicit counts where derivation is implicit — `numRounds`/`numSeedTeams` on the
+merged cup structs and `numLeagues` on `Leagues`; leave the pointer-array /
+`countries[]` sentinels as-is for now.
 
 ---
 
@@ -370,11 +504,14 @@ heads-up note in CLAUDE.md / memory).
 2. **`Playoffs_8`/`_4` → `Playoffs`** — smallest, only `qualifiedTeamIds[8]`
    grows; few consumers (`career_season.c:1498–1547`).
 3. **`Leagues_*` / `QualifyingGroup_*`** — pointer-bearing but few access sites.
-4. **`CompetitionLeague_*` → `CompetitionLeagueRec`** — `divisions[4]` + `name[6]`
-   + link arrays; touches `teams.c`, `career_season.c`, `diy_competition.c`,
-   `englishLeaguesBlock`.
-5. **`CompetitionCup_* → CompetitionCupRec`** and **`CompetitionCup2_* →
-   CompetitionCup2Rec`** last — the largest blast radius (`career_comp_copies.c`
+   First **confirm against `SWOS2.s`**: the `Leagues` record-walk count (§4c) and
+   the `QualifyingGroup.countries[]` access mode (§4d) — both are the only
+   medium-confidence items in this plan.
+4. **`CompetitionLeague_*` → `CompetitionLeague`** — `divisions[4]` + `name[10]`
+   (max, `_4_10_24`) + link arrays; touches `teams.c`, `career_season.c`,
+   `diy_competition.c`, `englishLeaguesBlock`.
+5. **`CompetitionCup_* → CompetitionCup`** and **`CompetitionCup2_* →
+   CompetitionCup2`** last — the largest blast radius (`career_comp_copies.c`
    `.skip` regeneration, `careerContests`, the seed-list writers, the
    pointer-range checks). Do cup and cup2 in separate commits.
 
@@ -400,8 +537,8 @@ both *defined as* `sizeof(variant)` and regenerated automatically/by recompute,
 not hand-stepped.
 
 **Suggested changes:**
-1. Merge into **5 structs** (`CompetitionCupRec`, `CompetitionCup2Rec`,
-   `CompetitionLeagueRec`, `Playoffs`, `Leagues`) + a unified `QualifyingGroup`,
+1. Merge into **5 structs** (`CompetitionCup`, `CompetitionCup2`,
+   `CompetitionLeague`, `Playoffs`, `Leagues`) + a unified `QualifyingGroup`,
    arrays at max size, unused tail left zero.
 2. **Keep the self-describing `nameTableOffset`/`teamListOffset` bytes** (renamed)
    — they are what lets the polymorphic, type-erased accessors work — and
@@ -410,8 +547,12 @@ not hand-stepped.
    `swos_globals_career_overlay.c` to the new `sizeof`s, in the same commit as the
    type change (this is the highest-risk break).
 4. Add explicit **`numRounds` / `numSeedTeams`** counts to the merged cup structs
-   to retire the runtime length derivation; keep existing counts otherwise; leave
-   the cross-record `0xFFFFFFFF` pointer-array sentinels for a later, separate pass.
+   and **`numLeagues`** to `Leagues` (its records have no sentinel, §4c) to retire
+   implicit/derived lengths; keep existing counts otherwise; leave the
+   cross-record `0xFFFFFFFF` / `0xFF` sentinels for a later, separate pass.
+6. **Verify two medium-confidence items against `SWOS2.s` first** (§4c/§4d): the
+   `Leagues` record-walk count, and whether `QualifyingGroup.countries[]` is
+   reached by struct field vs. immediately after the `compCup[]` `-1` terminator.
 5. **Migrate one family per commit**, smallest first (Playoffs → Leagues/Quals →
    League → Cup → Cup2), with `VERIFY=0` + cross-target + fresh `TEST.CAR` each.
 
@@ -425,3 +566,67 @@ not hand-stepped.
 - The save format is already template-reconstructed, so the merge needs only the
   header bytes kept ahead of the arrays and `careerContests[].length` kept in sync
   — no new serializer work.
+
+---
+
+## 9. Appendix — the `AnimTable` variant family (same per-size pattern, SAFE; one inert overlap noted)
+
+`AnimTable` / `AnimTable_20` / `AnimTable_12` / `AnimTable_8` (`game_types.h`)
+differ only in `int16_t *animFrames[N]` (N = 32 / 20 / 12 / 8) — the same IDA
+"one struct per instance size" pattern as the competition family. Instances live
+in `src/sprite_data.c`; SWOS2.s defines them contiguously at lines 34716–35762.
+
+### 9a. Table-struct consolidation → one 32-entry `AnimTable`: **SAFE**
+
+- **`animFrames[slot]` is INDEXED, not sentinel-walked.** The slot is a direction
+  index `slot = (teamIdx + gkAdj)*8 + direction`, range **0..31** (`computeAnimSlot`,
+  `player_anim.c:236`); the referee path is direction-only, range **0..7**
+  (`InitRefereeAnimationTable`, SWOS2.s:15212). A **zero entry is a TRAP, not an
+  overflow gateway**: `_SetPlayerAnimationTable` panics `0x000E` on a NULL
+  `animFrames[slot]` (`player_anim.c:262`), the referee path panics `0x1112`.
+- **Max reachable slot per table:** 32-entry player/GK tables
+  (`playerRunningAnimTable`, `playerNormalStandingAnimTable`, all `goalie*` tables)
+  use 0..31; outfield-only tables (tackling, tackled, throw-in, cards, headers)
+  use 0..15; referee tables (`AnimTable_8`/`_12`) use 0..7. **No table is indexed
+  past its size on a reachable path, and none reads into the adjacent table.**
+- **Verdict:** merge all variants into one 32-entry `AnimTable`, zero-filling the
+  high slots. This is safe and *strictly improves* the safety contract — a stray
+  index now hits a zero and panics (`0x000E`/`0x1112`) instead of reading a
+  neighbouring global's bytes. Before merging, grep the C tree for
+  `sizeof(AnimTable_8/_12/_20)` or any loop bound derived from it (none expected).
+- **`plTacklingAnimTable_2` (`AnimTable_20`) is DEAD** — referenced nowhere in
+  SWOS2.s or the port; a redundant duplicate of `plTacklingAnimTable[0..15]`
+  (SWOS2.s 35004, only its own definition). **Drop it** during the merge.
+
+### 9b. ⚠️ Special note — frame-sequence *embedding* (the overlap to watch for): REAL but INERT here
+
+Each `animFrames[i]` points to an `int16_t` frame **sequence** walked by control
+codes (`-999`=reset to 0, `-101`=hold, `<=-100`=relative jump, `-1..-99`=set
+delay, `>=0`=show that picture). These sequences are where SWOS *does* pack data
+adjacently and let one label span several logical sequences:
+
+`team2TackledDownLeftFrames` is declared `[26]` (`sprite_data.c:248`,
+SWOS2.s:34264) but is logically only `{596, -999}` — the trailing **24 words are
+8 embedded `{-50, frameN, -999}` sub-sequences** ("team1 standing-recovery") that
+the assembler placed contiguously and IDA folded under the one label.
+
+**This was investigated specifically and is INERT — no copy needed:**
+- The **only** reference to `team2TackledDownLeftFrames` is `animFrames[13]` of
+  `playerTackledAnimTable`, pointing at the **whole label (offset 0)**
+  (SWOS2.s:35044). There is **no `label+N` / `&label[N]` reference** to the
+  embedded sub-sequences anywhere in SWOS2.s **or** `src/`.
+- The walk **cannot reach** them: at index 1 the `-999` resets to index 0, so the
+  sequence oscillates on frame `596` forever — indices ≥2 are unreachable.
+- ⇒ `team2TackledDownLeftFrames` behaves identically to a 2-word `{596, -999}`;
+  the 24-word tail is dead filler the C port carries verbatim (harmless). The
+  struct merge does not touch the sequences at all.
+
+**Safeguard rule (generalised — the pattern that *would* require a copy).** This
+embedding is the one place the "label spans multiple sequences" overlap shows up,
+so before **trimming** any oversized frame-sequence array to its logical length
+(e.g. `team2TackledDownLeftFrames[26] → [2]`), grep **both** SWOS2.s and `src/`
+for a pointer into its middle (`label+N`, `&label[N]`, `(int16_t*)label + N`). If
+one exists, that embedded sub-sequence is **live and shared** — repoint the
+consumer to a standalone copy (or keep the block intact) **before** trimming.
+Here none exists, so even trimming would be safe; but the AnimTable *struct* merge
+requires no sequence changes regardless.

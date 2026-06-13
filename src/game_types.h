@@ -1409,7 +1409,9 @@ typedef struct __attribute__((packed)) {
 } Competition;
 
 /* ==================================================================
- * CompetitionLeague — 13 bytes, league competition header
+ * CompLeagueHeader — 13 bytes, league competition header (embedded as
+ * CompetitionLeague.header after the consolidation). Was named
+ * `CompetitionLeague`; that name now belongs to the merged record below.
  * ================================================================== */
 
 typedef struct __attribute__((packed)) {
@@ -1418,7 +1420,7 @@ typedef struct __attribute__((packed)) {
     int8_t rounds;
     int8_t pointsForWin;
     int8_t subsAndMaxSubs;   /* was subsReserves: hi nibble = min subs, lo = MAX subs */
-} CompetitionLeague;
+} CompLeagueHeader;
 
 /* ==================================================================
  * Division — 6 bytes, division descriptor within a league
@@ -1473,32 +1475,36 @@ typedef struct __attribute__((packed)) {
 } CompetitionCup2;
 
 /* ==================================================================
- * CompetitionLeague variants (with Division arrays)
+ * CompetitionLeague — merged record (consolidation, docs/STRUCT_CONSOLIDATE.md
+ * §4). Collapses all 13 CompetitionLeague_* variants into one: the
+ * CompLeagueHeader header + divisions[4] (divisionsCount says how many used) +
+ * the per-variant trailing byte + the division name table + the playoff link
+ * pointers + the 24-byte qualifier/promotion link data. Arrays are sized to the
+ * observed maxima; unused tail entries are zero.
+ *
+ * Field order matches the old variant layout (header, divisions, byte, name,
+ * playoff ptrs, link data), so most instance initializers carry over unchanged
+ * (C zero-fills the widened arrays). Only the nameTableOffset byte changes (the
+ * name table moved to a fixed offset — see LEAGUE_NAME_TABLE_OFFSET) and the few
+ * variants whose trailing arrays sat before the playoff pointers need reordering.
  * ================================================================== */
 
 typedef struct __attribute__((packed)) {
-    CompetitionLeague comp;
-    Division divisions[1];
-    int8_t unk1;
-} CompetitionLeague_1;
+    CompLeagueHeader header;              /* 13 B (was the CompetitionLeague header struct) */
+    Division         divisions[4];         /* divisionsCount says how many used */
+    uint8_t          reserved1;            /* was the per-variant trailing `unk1` byte */
+    char            *name[10];             /* division name strings (was text[N], N<=10) */
+    char            *playoffLinkPtrs[2];   /* was the char* unk2[2] in _*_2_* variants (→ Playoffs/Leagues) */
+    uint8_t          promotionLinkData[24];/* was the int8 unk2[24]/unk3[24]/unk2[8] qualifier-index bytes */
+} CompetitionLeague;
 
-typedef struct __attribute__((packed)) {
-    CompetitionLeague comp;
-    Division divisions[2];
-    int8_t unk1;
-} CompetitionLeague_2;
-
-typedef struct __attribute__((packed)) {
-    CompetitionLeague comp;
-    Division divisions[3];
-    int8_t unk1;
-} CompetitionLeague_3;
-
-typedef struct __attribute__((packed)) {
-    CompetitionLeague comp;
-    Division divisions[4];
-    int8_t unk1;
-} CompetitionLeague_4;
+/* nameTableOffset (Competition byte 5) for a NAMED merged league: name[] now sits
+ * at a fixed offset, so the byte is one constant derived from the real layout
+ * (offsetof) instead of a per-variant value. Unnamed leagues keep 0. */
+#define LEAGUE_NAME_TABLE_OFFSET ((int8_t)(offsetof(CompetitionLeague, name) - 5))
+_Static_assert(offsetof(CompetitionLeague, name) - 5 > 0 &&
+               offsetof(CompetitionLeague, name) - 5 < 128,
+               "league nameTableOffset must be a positive int8");
 
 /* ==================================================================
  * CompetitionCup variants (with per-round rule-flag arrays)
@@ -1631,95 +1637,19 @@ typedef struct __attribute__((packed)) {
 } CompetitionCup2_6_2_64;
 
 /* ==================================================================
- * CompetitionLeague with text pointers variants
- * ================================================================== */
-
-typedef struct __attribute__((packed)) {
-    CompetitionLeague comp;
-    Division divisions[3];
-    int8_t unk1;
-    char *text[6];
-} CompetitionLeague_3_6;
-
-typedef struct __attribute__((packed)) {
-    CompetitionLeague comp;
-    Division divisions[2];
-    int8_t unk1;
-    char *text[4];
-} CompetitionLeague_2_4;
-
-typedef struct __attribute__((packed)) {
-    CompetitionLeague comp;
-    Division divisions[4];
-    int8_t unk1;
-    char *text[8];
-} CompetitionLeague_4_8;
-
-typedef struct __attribute__((packed)) {
-    CompetitionLeague comp;
-    Division divisions[4];
-    int8_t unk1;
-    char *text[10];
-    int8_t unk2[24];
-} CompetitionLeague_4_10_24;
-
-typedef struct __attribute__((packed)) {
-    CompetitionLeague comp;
-    Division divisions[2];
-    int8_t unk1;
-    char *text[2];
-    int8_t unk2[24];
-} CompetitionLeague_2_2_24;
-
-typedef struct __attribute__((packed)) {
-    CompetitionLeague comp;
-    Division divisions[4];
-    int8_t unk1;
-    char *text[2];
-    int8_t unk2[8];
-} CompetitionLeague_4_2_8;
-
-typedef struct __attribute__((packed)) {
-    CompetitionLeague comp;
-    Division divisions[2];
-    int8_t unk1;
-    char *text[4];
-    char *unk2[2];
-    int8_t unk3[24];
-} CompetitionLeague_2_4_2_24;
-
-typedef struct __attribute__((packed)) {
-    CompetitionLeague comp;
-    Division divisions[2];
-    int8_t unk1;
-    char *unk2[2];
-    int8_t unk3[8];
-} CompetitionLeague_2_2_8;
-
-typedef struct __attribute__((packed)) {
-    CompetitionLeague comp;
-    Division divisions[4];
-    int8_t unk1;
-    char *text[8];
-    char *unk2[2];
-    int8_t unk3[24];
-} CompetitionLeague_4_8_2_24;
-
-/* ==================================================================
  * Playoff and Leagues helper structs
  * ================================================================== */
 
+/* Playoffs — merged Playoffs_8/_4 (consolidation step, see docs/STRUCT_CONSOLIDATE.md
+ * §4b). qualifiedTeamIds sized to the max (8); the former Playoffs_4 instances
+ * (scottish/uruguayan) leave the last 4 entries unused. The qualified-team list
+ * length is the explicit count in playoffHeader[10]; the list is located via the
+ * self-offset byte playoffHeader[7] (= 17), so the trailing growth is layout-safe. */
 typedef struct __attribute__((packed)) {
-    int8_t playoffHeader[16];   /* was unk1: structured (byte 7=offset-to-ids, byte 10=qual count) */
-    char *text[2];
-    int8_t qualifiedTeamIds[8]; /* was unk2: BE-packed qualified team-id output buffer */
-} Playoffs_8;
-
-typedef struct __attribute__((packed)) {
-    int8_t playoffHeader[16];   /* was unk1: structured (byte 7=offset-to-ids, byte 10=qual count) */
-    char *text[2];
-    int8_t qualifiedTeamIds[4]; /* was unk2: BE-packed qualified team-id output buffer */
-} Playoffs_4;
+    int8_t  playoffHeader[16];   /* was unk1: structured (byte 7=offset-to-ids, byte 10=qual count) */
+    char   *name[2];             /* playoff name strings (was text[2]) */
+    int8_t  qualifiedTeamIds[8]; /* was unk2: BE-packed qualified team-id output buffer */
+} Playoffs;
 
 typedef struct __attribute__((packed)) {
     CompetitionLeague *text1;
@@ -1734,7 +1664,7 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
     Leagues_4 leagues;
-    Playoffs_8 *playoffs;
+    Playoffs *playoffs;
     Leagues_4 *leagues2;
     int8_t unk2[24];
 } Leagues_4_2_24;
@@ -1757,37 +1687,21 @@ typedef struct __attribute__((packed)) {
 } CompetitionCareer;
 
 /* ==================================================================
- * Qualifying group structs
+ * QualifyingGroup — merged QualifyingGroup_3/_9_2/_2_8/_6_44/_3_4/_3_12
+ * (consolidation, docs/STRUCT_CONSOLIDATE.md §4d). Arrays sized to the observed
+ * maxima (compCup 9, countries 44). compCup[] is -1 (0xFFFFFFFF)-terminated with
+ * -2/0xFC in-band markers; countries[] is 0xFF-terminated. Padded slots are zero.
+ *
+ * compCup holds a MIXED cup/cup2 list (e.g. europeTable carries
+ * &europeanChampionships, a CompetitionCup2) — it is retyped to the polymorphic
+ * Competition* base in the CompetitionCup family step; kept as CompetitionCup*
+ * here to match the current header type.
  * ================================================================== */
 
 typedef struct __attribute__((packed)) {
-    CompetitionCup *compCup[3];
-} QualifyingGroup_3;
-
-typedef struct __attribute__((packed)) {
-    CompetitionCup *compCup[9];
-    CountryNumbers countries[2];
-} QualifyingGroup_9_2;
-
-typedef struct __attribute__((packed)) {
-    CompetitionCup *compCup[2];
-    CountryNumbers countries[8];
-} QualifyingGroup_2_8;
-
-typedef struct __attribute__((packed)) {
-    CompetitionCup *compCup[6];
-    CountryNumbers countries[44];
-} QualifyingGroup_6_44;
-
-typedef struct __attribute__((packed)) {
-    CompetitionCup *compCup[3];
-    CountryNumbers countries[4];
-} QualifyingGroup_3_4;
-
-typedef struct __attribute__((packed)) {
-    CompetitionCup *compCup[3];
-    CountryNumbers countries[12];
-} QualifyingGroup_3_12;
+    CompetitionCup *compCup[9];     /* region competitions; -1-terminated */
+    CountryNumbers  countries[44];  /* region countries; 0xFF-terminated */
+} QualifyingGroup;
 
 /* ==================================================================
  * DIYStage — DIY competition stage descriptor
