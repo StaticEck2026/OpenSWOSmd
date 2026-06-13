@@ -8940,7 +8940,7 @@ __attribute__((used, externally_visible))
 void _InitDIYCupFromRecord(uint8_t *cupRec)
 {
     Competition    *compHdr = (Competition *)cupRec;
-    CompetitionCup *cup     = (CompetitionCup *)cupRec;
+    CompCupHeader *cup     = (CompCupHeader *)cupRec;
 
     if (cup->teams & 1) {
         panicReasonCode = 0x1313;

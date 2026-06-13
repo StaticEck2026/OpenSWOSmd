@@ -1248,7 +1248,7 @@ static void setupFriendlyCupTeams(void)
     uint16_t maxPrice = (uint16_t)((uint32_t)avgPrice * 125 / 100);
 
     uint8_t *comp = friendlyCopy;
-    int16_t teamCount = (int8_t)((CompetitionCup *)comp)->roundStringBase;
+    int16_t teamCount = (int8_t)((CompCupHeader *)comp)->roundStringBase;
     uint8_t hdrSize = (uint8_t)((Competition *)comp)->teamListOffset;
     /* +text[2]-growth delta — see fillWorldCupQualifyingGroupTeams. */
     uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF)
@@ -1278,7 +1278,7 @@ static void setupInvitationTournamentTeams(void)
     uint16_t maxPrice = (uint16_t)((uint32_t)avgPrice * 125 / 100);
 
     uint8_t *comp = invitationTournamentCopy;
-    int16_t teamCount = (int8_t)((CompetitionCup *)comp)->roundStringBase;
+    int16_t teamCount = (int8_t)((CompCupHeader *)comp)->roundStringBase;
     uint8_t hdrSize = (uint8_t)((Competition *)comp)->teamListOffset;
     /* +text[2]-growth delta — see fillWorldCupQualifyingGroupTeams. */
     uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF)
