@@ -1292,6 +1292,7 @@ extern void _Career_FillCurrentSeasonInfo(void);
  * ================================================================ */
 extern void _DIY_CfbBufToTournament(const uint8_t *cfb);
 extern void _DIY_TournamentToCfbBuf(uint8_t *cfb);
+extern void _DIY_BuildTeamSelectionPointerCache(void);
 
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src)
@@ -1505,15 +1506,28 @@ uint8_t *_TeamSelectionKeyCache_GetCurrentSelectedElementPtr(void)
  * use `slot->matchFlags / packedGoals / aggregate / penaltyScore`
  * instead of raw `elem[0x0B / 0x10 / 0x12 / 0x14]` byte arithmetic.
  *
- * Returns NULL when the current entry has no remaining matches.
+ * Always returns a valid pointer (matches the asm — never NULL); when
+ * remainingElements is 0 or negative the slot resolves to entry+sizeof, as the
+ * original does, instead of faulting.
  * ================================================================ */
 TeamSelectionKeyCacheMatchSlot *_TeamSelectionKeyCache_GetCurrentMatchSlot(void)
 {
     TeamSelectionKeyCacheEntry *entry =
         (TeamSelectionKeyCacheEntry *)(teamSelectionKeyCache + teamSelectionKeyCacheOffset);
+    /* Match the asm GetCurrentSelectedElementPtr (SWOS2.s:60723): its `bmi`
+     * branch returns a1 = entry (diff folded to 0) when remainingElements is
+     * negative — a valid pointer, NEVER null. The SDL port added a `return NULL`
+     * here, which the sole caller (_Career_UpdateStatsAfterMatch) dereferences
+     * unguarded → an SDL-only SIGSEGV on a two-leg cup tie whose VIEW-RESULT
+     * replays drive remainingElements past 0 (the Amiga survives the same path).
+     * This is a C-vs-asm divergence fix, not a panic patch-out. NOTE: the deeper
+     * two-leg over-decrement (cursor not advancing to the leg-2 entry) is a
+     * separate item still to be root-caused; this restores parity with the asm. */
+    uint8_t diff;
     if (entry->remainingElements < 0)
-        return (TeamSelectionKeyCacheMatchSlot *)0;
-    uint8_t diff = (uint8_t)entry->totalElements - (uint8_t)entry->remainingElements;
+        diff = 0;
+    else
+        diff = (uint8_t)entry->totalElements - (uint8_t)entry->remainingElements;
     return (TeamSelectionKeyCacheMatchSlot *)((uint8_t *)entry +
                                               sizeof(TeamSelectionKeyCacheEntry) +
                                               (uint32_t)diff * 12);
@@ -1780,6 +1794,22 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
     }
     if (type == 1) {
         /* Cup */
+        /* The flat slot load above restored bracketScratch.teamOffsetTable,
+         * which caches selTeams *indices* (step-4 rework: was BE byte offsets
+         * on the Amiga). Those indices stay valid on the Amiga (selTeams is a
+         * fixed-address BSS array with stable contents) but go stale on SDL
+         * because the careerFileBuffer overlay repopulates selTeams between
+         * store and load — typically slots 62/63 end up pointing at
+         * selTeams[0] (the player's frozen copy) instead of the real team,
+         * dragging the player into the wrong fixture (locked VIEW RESULT /
+         * squadChangesAllowed=0) and desyncing the keycache that
+         * _DIY_RecordCupBracketProgress walks below (panic 0x6666). cupTeamIds
+         * was restored consistent with the current selTeams, so re-derive the
+         * index cache. Done HERE (the player-facing cup menu, run once per
+         * open) rather than inside _Career_LoadCompetitionSlotStateFromBuffer,
+         * which is also called from the auto-sim/auto-play loops where selTeams
+         * may not match the loaded competition and a rebuild would spin. */
+        _DIY_BuildTeamSelectionPointerCache();
         /* Auto-simulate CPU-only fixtures BEFORE the menu draws so that
          * currentMatchIndex points at the career team's fixture when the
          * cup menu first opens. Otherwise _DIY_CompareCurrentMatchTeamCategories

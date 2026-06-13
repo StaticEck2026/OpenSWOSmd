@@ -3805,7 +3805,20 @@ skipStats:
      * ASM: a1 is overwritten by GetCurrentSelectedElementPtr (returns in a1).
      * The base cache entry (a0) gets its counter decremented,
      * while the selected element (a1) receives match result data. */
-    if (team1->team.teamControls != 1 || team2->team.teamControls != 1) {
+    /* Only the genuine SELECTED-team fixture consumes a keycache slot. During cup
+     * auto-advance the code sets selTeamNumber=0xFFFF and the player's other legs
+     * are auto-played through a STALE selTeams copy of careerTeam that carries
+     * teamControls=2 (the Amiga loads those cup slots as teamControls=COMPUTER, so
+     * the whole block below is skipped there). On SDL the copy's ctl=2 let every
+     * auto-played leg over-decrement the cursor entry past 0 -> stray match-score
+     * writes smashed an entryStride -> _DIY_RecordCupBracketProgress panic 0x6666.
+     * Gate on selTeamNumber: the player's number during interactive play, 0xFFFF
+     * during auto-advance. This reproduces the Amiga's net keycache effect
+     * regardless of the copy's wrong teamControls. (See panic_0x6666 analysis.) */
+    uint16_t t1num = PACK_BE_U16(team1->team.countryNumber, team1->team.teamOrdinal);
+    uint16_t t2num = PACK_BE_U16(team2->team.countryNumber, team2->team.teamOrdinal);
+    if ((team1->team.teamControls != 1 || team2->team.teamControls != 1) &&
+        (t1num == selTeamNumber || t2num == selTeamNumber)) {
         /* Asm calls GetCurrentSelectedElementPtr FIRST, THEN decrements
          * remainingElements. Order matters: the slot pointer depends on
          * (totalElements - remainingElements) * 12. */

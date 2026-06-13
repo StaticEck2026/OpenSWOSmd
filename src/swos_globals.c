@@ -319,11 +319,24 @@ uint16_t menuColorAndTextScript[5166] = {
 /* Emit storage + labels via inline asm rather than a C array so the
  * menuEntries alias becomes a real BSS label (resolvable on Mach-O —
  * .equ alias = ext_carrier + offset is silently dropped there). */
+/* Leave the assembler in .data (NOT .text) at the end of this block. GCC tracks
+ * the "current section" lazily and emits a section directive only when it thinks
+ * the section changed; the opaque file-scope asm switches the section behind its
+ * back. A trailing `.text` desynced the two: GCC then emitted the next
+ * initialized global (stadiumMenuLittlePlayerSpriteCopy, just below) believing it
+ * was in .data and emitting no directive, but the assembler was still in .text —
+ * so that global landed in read-only .text and any runtime write to it SIGSEGV'd
+ * (the stadium pre-match little-player sprite-copy crash). Ending in `.data`
+ * matches the initialized global that follows.
+ *
+ * NOTE: must use plain `.section`/`.data` here, NOT `.pushsection`/`.popsection`
+ * or `.previous` — the Cygwin/Windows COFF/PE assembler backend doesn't implement
+ * those section-stack pseudo-ops (it errors "unknown pseudo-op"). The zero-init
+ * globals further down (offerOrdinals, goalieFaces) emit their own .bss/.comm
+ * directive and resync regardless. */
 __asm__(
 #if defined(__APPLE__)
     ".section __DATA,__bss\n"
-#elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-    ".section .bss\n"
 #else
     ".section .bss\n"
 #endif
@@ -334,7 +347,7 @@ __asm__(
     ".globl " _ASM_PFX "menuEntries\n"
     _ASM_PFX "menuEntries:\n"
     ".skip " _MENU_HDR_STR((8 * 1024 + 80 * 1024) - MENU_HEADER_SIZE) "\n"
-    ".text\n"
+    ".data\n"
 );
 
 /* ---- Stadium-menu little-player sprite-copy block --------------------
@@ -401,6 +414,16 @@ OfferOrdinals offerOrdinals = {0};
  * static asserts on the struct. */
 __attribute__((used, aligned(2)))
 GoalieFaceState goalieFaces = {0};
+
+/* ---- Memory boundary marker -----------------------------------------
+ * Amiga BSS boundary symbol. _ShowLoaderIntroSequence does a vestigial
+ * `if ((uintptr_t)&memBoundaryMarker > 0x100000u) { }` layout sanity check
+ * (empty body — a no-op on both ports). At -O2 the dead check is eliminated
+ * and the symbol is never referenced, but at -O0 the `&memBoundaryMarker`
+ * reference survives and the link fails undefined unless the symbol exists.
+ * Define it so the build links at any optimization level. */
+__attribute__((used))
+uint32_t memBoundaryMarker;
 
 /* ---- Sprite blit queues (each = sentinel + 3000-byte buffer) ----
  *
