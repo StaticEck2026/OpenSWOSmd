@@ -67,19 +67,19 @@ __asm__(
 #endif
     ".globl " _ASM_PFX "invitationTournamentCopy\n"
     _ASM_PFX "invitationTournamentCopy:\n"
-    ".skip 36\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "tourCopy\n"
     _ASM_PFX "tourCopy:\n"
-    ".skip 36\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "friendlyCopy\n"
     _ASM_PFX "friendlyCopy:\n"
-    ".skip 40\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
@@ -91,49 +91,49 @@ __asm__(
 #endif
     ".globl " _ASM_PFX "ecQualifyingGroup1Copy\n"
     _ASM_PFX "ecQualifyingGroup1Copy:\n"
-    ".skip 40\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "ecQualifyingGroup2Copy\n"
     _ASM_PFX "ecQualifyingGroup2Copy:\n"
-    ".skip 40\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "ecQualifyingGroup3Copy\n"
     _ASM_PFX "ecQualifyingGroup3Copy:\n"
-    ".skip 40\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "ecQualifyingGroup4Copy\n"
     _ASM_PFX "ecQualifyingGroup4Copy:\n"
-    ".skip 40\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "ecQualifyingGroup5Copy\n"
     _ASM_PFX "ecQualifyingGroup5Copy:\n"
-    ".skip 40\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "ecQualifyingGroup6Copy\n"
     _ASM_PFX "ecQualifyingGroup6Copy:\n"
-    ".skip 40\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "ecQualifyingGroup7Copy\n"
     _ASM_PFX "ecQualifyingGroup7Copy:\n"
-    ".skip 40\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "ecQualifyingGroup8Copy\n"
     _ASM_PFX "ecQualifyingGroup8Copy:\n"
-    ".skip 36\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
@@ -163,7 +163,7 @@ __asm__(
 #endif
     ".globl " _ASM_PFX "oceaniaCupCopy\n"
     _ASM_PFX "oceaniaCupCopy:\n"
-    ".skip 28\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
@@ -175,49 +175,49 @@ __asm__(
 #endif
     ".globl " _ASM_PFX "worldCupQualifyingGroup1Copy\n"
     _ASM_PFX "worldCupQualifyingGroup1Copy:\n"
-    ".skip 40\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "worldCupQualifyingGroup2Copy\n"
     _ASM_PFX "worldCupQualifyingGroup2Copy:\n"
-    ".skip 40\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "worldCupQualifyingGroup3Copy\n"
     _ASM_PFX "worldCupQualifyingGroup3Copy:\n"
-    ".skip 40\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "worldCupQualifyingGroup4Copy\n"
     _ASM_PFX "worldCupQualifyingGroup4Copy:\n"
-    ".skip 40\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "worldCupQualifyingGroup5Copy\n"
     _ASM_PFX "worldCupQualifyingGroup5Copy:\n"
-    ".skip 40\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "worldCupQualifyingGroup6Copy\n"
     _ASM_PFX "worldCupQualifyingGroup6Copy:\n"
-    ".skip 40\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "worldCupQualifyingGroup7Copy\n"
     _ASM_PFX "worldCupQualifyingGroup7Copy:\n"
-    ".skip 40\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
     ".globl " _ASM_PFX "worldCupQualifyingGroup8Copy\n"
     _ASM_PFX "worldCupQualifyingGroup8Copy:\n"
-    ".skip 40\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
@@ -247,7 +247,7 @@ __asm__(
 #endif
     ".globl " _ASM_PFX "oceaniaWorldCupQualificationCopy\n"
     _ASM_PFX "oceaniaWorldCupQualificationCopy:\n"
-    ".skip 36\n"
+    ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif

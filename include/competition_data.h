@@ -11,34 +11,34 @@
  * ====================================================================== */
 
 extern CompetitionCup2_4_2_32 euroCup;
-extern CompetitionCup_6_2_64 cupWinnersCup;
-extern CompetitionCup_6_2_64 uefaCup;
+extern CompetitionCup cupWinnersCup;
+extern CompetitionCup uefaCup;
 
 /* World Cup */
 extern CompetitionCup2_6_2_64 worldCup2;
 extern CompetitionCup2_6_2_48 worldCup;
 
 /* World Cup Qualifying Groups */
-extern CompetitionCup_6_2_12 worldCupQualifyingGroup1;
-extern CompetitionCup_6_2_12 worldCupQualifyingGroup2;
-extern CompetitionCup_6_2_12 worldCupQualifyingGroup3;
-extern CompetitionCup_6_2_12 worldCupQualifyingGroup4;
-extern CompetitionCup_6_2_12 worldCupQualifyingGroup5;
-extern CompetitionCup_6_2_12 worldCupQualifyingGroup6;
-extern CompetitionCup_6_2_12 worldCupQualifyingGroup7;
-extern CompetitionCup_6_2_12 worldCupQualifyingGroup8;
+extern CompetitionCup worldCupQualifyingGroup1;
+extern CompetitionCup worldCupQualifyingGroup2;
+extern CompetitionCup worldCupQualifyingGroup3;
+extern CompetitionCup worldCupQualifyingGroup4;
+extern CompetitionCup worldCupQualifyingGroup5;
+extern CompetitionCup worldCupQualifyingGroup6;
+extern CompetitionCup worldCupQualifyingGroup7;
+extern CompetitionCup worldCupQualifyingGroup8;
 
 /* World Cup Regional Qualifications */
 extern CompetitionCup2_6_2_24 northAmericaWorldCupQualification;
 extern CompetitionCup2_6_2_16 southAmericaWorldCupQualification;
 extern CompetitionCup2_6_2_64 africaWorldCupQualification;
 extern CompetitionCup2_6_2_60 asiaWorldCupQualification;
-extern CompetitionCup_6_2_8 oceaniaWorldCupQualification;
+extern CompetitionCup oceaniaWorldCupQualification;
 
 /* Invitation / Tour / Friendly */
-extern CompetitionCup_6_2_8 invitationTournament;
-extern CompetitionCup_6_2_8 tour;
-extern CompetitionCup_6_2_12 friendly;
+extern CompetitionCup invitationTournament;
+extern CompetitionCup tour;
+extern CompetitionCup friendly;
 
 /* ======================================================================
  * European Championships
@@ -48,14 +48,14 @@ extern CompetitionCup2_4_2_32 europeanChampionships2;
 extern CompetitionCup2_4_2_32 europeanChampionships;
 
 /* EC Qualifying Groups */
-extern CompetitionCup_6_2_12 ecQualifyingGroup1;
-extern CompetitionCup_6_2_12 ecQualifyingGroup2;
-extern CompetitionCup_6_2_12 ecQualifyingGroup3;
-extern CompetitionCup_6_2_12 ecQualifyingGroup4;
-extern CompetitionCup_6_2_12 ecQualifyingGroup5;
-extern CompetitionCup_6_2_12 ecQualifyingGroup6;
-extern CompetitionCup_6_2_12 ecQualifyingGroup7;
-extern CompetitionCup_6_2_8 ecQualifyingGroup8;
+extern CompetitionCup ecQualifyingGroup1;
+extern CompetitionCup ecQualifyingGroup2;
+extern CompetitionCup ecQualifyingGroup3;
+extern CompetitionCup ecQualifyingGroup4;
+extern CompetitionCup ecQualifyingGroup5;
+extern CompetitionCup ecQualifyingGroup6;
+extern CompetitionCup ecQualifyingGroup7;
+extern CompetitionCup ecQualifyingGroup8;
 
 /* ======================================================================
  * Continental Cups
@@ -65,7 +65,7 @@ extern CompetitionCup2_4_2_24 copaAmerica;
 extern CompetitionCup2_6_2 africanNationsCup;
 extern CompetitionCup2_4_2 northAmericanCup;
 extern CompetitionCup2_6_2 asianCup;
-extern CompetitionCup_6_2 oceaniaCup;
+extern CompetitionCup oceaniaCup;
 
 /* ======================================================================
  * Customs League
@@ -188,100 +188,100 @@ extern Playoffs uruguayanPlayoffs;
  * National Cups
  * ====================================================================== */
 
-extern CompetitionCup_4 albanianCup;
-extern CompetitionCup_4 austrianCup;
-extern CompetitionCup_4 belarusianCup;
-extern CompetitionCup_4 belgianCup;
-extern CompetitionCup_4 bulgarianCup;
-extern CompetitionCup_4 croatianCup;
-extern CompetitionCup_4 cypriotCup;
-extern CompetitionCup_4 czechCup;
-extern CompetitionCup_4 danishCup;
-extern CompetitionCup_4 estonianCup;
-extern CompetitionCup_4 faroeIslesCup;
-extern CompetitionCup_4 finnishCup;
-extern CompetitionCup_4 greekCup;
-extern CompetitionCup_4 hungarianCup;
-extern CompetitionCup_4 icelandicCup;
-extern CompetitionCup_4 irishCup;
-extern CompetitionCup_4 israeliCup;
-extern CompetitionCup_4 latvianCup;
-extern CompetitionCup_4 lithuanianCup;
-extern CompetitionCup_4 luxembourgCup;
-extern CompetitionCup_4 malteseCup;
-extern CompetitionCup_4 northernIrishCup;
-extern CompetitionCup_4 norwegianCup;
-extern CompetitionCup_4 polishCup;
-extern CompetitionCup_4 portugeseCup;
-extern CompetitionCup_4 romanianCup;
-extern CompetitionCup_4 russianCup;
-extern CompetitionCup_4 sanMarinoCup;
-extern CompetitionCup_4 slovakianCup;
-extern CompetitionCup_4 slovenianCup;
-extern CompetitionCup_4 swedishCup;
-extern CompetitionCup_4 swissCup;
-extern CompetitionCup_4 turkishCup;
-extern CompetitionCup_4 ukrainianCup;
-extern CompetitionCup_4 welshCup;
-extern CompetitionCup_4 yugoslavianCup;
-extern CompetitionCup_4 algerianCup;
-extern CompetitionCup_4 southAfricanCup;
-extern CompetitionCup_4 taiwaneseCup;
+extern CompetitionCup albanianCup;
+extern CompetitionCup austrianCup;
+extern CompetitionCup belarusianCup;
+extern CompetitionCup belgianCup;
+extern CompetitionCup bulgarianCup;
+extern CompetitionCup croatianCup;
+extern CompetitionCup cypriotCup;
+extern CompetitionCup czechCup;
+extern CompetitionCup danishCup;
+extern CompetitionCup estonianCup;
+extern CompetitionCup faroeIslesCup;
+extern CompetitionCup finnishCup;
+extern CompetitionCup greekCup;
+extern CompetitionCup hungarianCup;
+extern CompetitionCup icelandicCup;
+extern CompetitionCup irishCup;
+extern CompetitionCup israeliCup;
+extern CompetitionCup latvianCup;
+extern CompetitionCup lithuanianCup;
+extern CompetitionCup luxembourgCup;
+extern CompetitionCup malteseCup;
+extern CompetitionCup northernIrishCup;
+extern CompetitionCup norwegianCup;
+extern CompetitionCup polishCup;
+extern CompetitionCup portugeseCup;
+extern CompetitionCup romanianCup;
+extern CompetitionCup russianCup;
+extern CompetitionCup sanMarinoCup;
+extern CompetitionCup slovakianCup;
+extern CompetitionCup slovenianCup;
+extern CompetitionCup swedishCup;
+extern CompetitionCup swissCup;
+extern CompetitionCup turkishCup;
+extern CompetitionCup ukrainianCup;
+extern CompetitionCup welshCup;
+extern CompetitionCup yugoslavianCup;
+extern CompetitionCup algerianCup;
+extern CompetitionCup southAfricanCup;
+extern CompetitionCup taiwaneseCup;
 
 /* Cups with names */
-extern CompetitionCup_6_2 englishCup;
-extern CompetitionCup_6_2 englishLeagueCup;
-extern CompetitionCup_6_2 englishCup_1;
-extern CompetitionCup_6_2 englishLeagueCup_1;
-extern CompetitionCup_6_2 frenchCup;
-extern CompetitionCup_6_2 germanCup;
-extern CompetitionCup_6_2 italianCup;
-extern CompetitionCup_6_2 scottishCup;
-extern CompetitionCup_6_2 scottishLeagueCup;
-extern CompetitionCup_6_2 spanishCup;
-extern CompetitionCup_6 dutchCup;
-extern CompetitionCup_6 australianCup;
-extern CompetitionCup_4_2 japaneseCup;
-extern CompetitionCup_4_2 japaneseEmperorsCup;
+extern CompetitionCup englishCup;
+extern CompetitionCup englishLeagueCup;
+extern CompetitionCup englishCup_1;
+extern CompetitionCup englishLeagueCup_1;
+extern CompetitionCup frenchCup;
+extern CompetitionCup germanCup;
+extern CompetitionCup italianCup;
+extern CompetitionCup scottishCup;
+extern CompetitionCup scottishLeagueCup;
+extern CompetitionCup spanishCup;
+extern CompetitionCup dutchCup;
+extern CompetitionCup australianCup;
+extern CompetitionCup japaneseCup;
+extern CompetitionCup japaneseEmperorsCup;
 
 /* ======================================================================
  * Competition "Copy" variables (BSS, used at runtime for career/season)
  * ====================================================================== */
 
 extern CompetitionCup2_4_2_32 euroCupCopy;
-extern CompetitionCup_6_2_64 cupWinnersCupCopy;
-extern CompetitionCup_6_2_64 uefaCupCopy;
-extern CompetitionCup_6_2_8 invitationTournamentCopy;
-extern CompetitionCup_6_2_8 tourCopy;
-extern CompetitionCup_6_2_12 friendlyCopy;
+extern CompetitionCup cupWinnersCupCopy;
+extern CompetitionCup uefaCupCopy;
+extern CompetitionCup invitationTournamentCopy;
+extern CompetitionCup tourCopy;
+extern CompetitionCup friendlyCopy;
 extern CompetitionCup2_4_2_32 europeanChampionships2Copy;
-extern CompetitionCup_6_2_12 ecQualifyingGroup1Copy;
-extern CompetitionCup_6_2_12 ecQualifyingGroup2Copy;
-extern CompetitionCup_6_2_12 ecQualifyingGroup3Copy;
-extern CompetitionCup_6_2_12 ecQualifyingGroup4Copy;
-extern CompetitionCup_6_2_12 ecQualifyingGroup5Copy;
-extern CompetitionCup_6_2_12 ecQualifyingGroup6Copy;
-extern CompetitionCup_6_2_12 ecQualifyingGroup7Copy;
-extern CompetitionCup_6_2_8 ecQualifyingGroup8Copy;
+extern CompetitionCup ecQualifyingGroup1Copy;
+extern CompetitionCup ecQualifyingGroup2Copy;
+extern CompetitionCup ecQualifyingGroup3Copy;
+extern CompetitionCup ecQualifyingGroup4Copy;
+extern CompetitionCup ecQualifyingGroup5Copy;
+extern CompetitionCup ecQualifyingGroup6Copy;
+extern CompetitionCup ecQualifyingGroup7Copy;
+extern CompetitionCup ecQualifyingGroup8Copy;
 extern CompetitionCup2_4_2_24 copaAmericaCopy;
 extern CompetitionCup2_6_2 africanNationsCupCopy;
 extern CompetitionCup2_4_2 northAmericanCupCopy;
 extern CompetitionCup2_6_2 asianCupCopy;
-extern CompetitionCup_6_2 oceaniaCupCopy;
+extern CompetitionCup oceaniaCupCopy;
 extern CompetitionCup2_6_2_64 worldCup2Copy;
-extern CompetitionCup_6_2_12 worldCupQualifyingGroup1Copy;
-extern CompetitionCup_6_2_12 worldCupQualifyingGroup2Copy;
-extern CompetitionCup_6_2_12 worldCupQualifyingGroup3Copy;
-extern CompetitionCup_6_2_12 worldCupQualifyingGroup4Copy;
-extern CompetitionCup_6_2_12 worldCupQualifyingGroup5Copy;
-extern CompetitionCup_6_2_12 worldCupQualifyingGroup6Copy;
-extern CompetitionCup_6_2_12 worldCupQualifyingGroup7Copy;
-extern CompetitionCup_6_2_12 worldCupQualifyingGroup8Copy;
+extern CompetitionCup worldCupQualifyingGroup1Copy;
+extern CompetitionCup worldCupQualifyingGroup2Copy;
+extern CompetitionCup worldCupQualifyingGroup3Copy;
+extern CompetitionCup worldCupQualifyingGroup4Copy;
+extern CompetitionCup worldCupQualifyingGroup5Copy;
+extern CompetitionCup worldCupQualifyingGroup6Copy;
+extern CompetitionCup worldCupQualifyingGroup7Copy;
+extern CompetitionCup worldCupQualifyingGroup8Copy;
 extern CompetitionCup2_6_2_24 northAmericaWorldCupQualificationCopy;
 extern CompetitionCup2_6_2_16 southAmericaWorldCupQualificationCopy;
 extern CompetitionCup2_6_2_64 africaWorldCupQualificationCopy;
 extern CompetitionCup2_6_2_60 asiaWorldCupQualificationCopy;
-extern CompetitionCup_6_2_8 oceaniaWorldCupQualificationCopy;
+extern CompetitionCup oceaniaWorldCupQualificationCopy;
 
 /* ======================================================================
  * Career Contests

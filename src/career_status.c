@@ -4319,7 +4319,7 @@ validated:
         uint16_t teamId = PACK_BE_U16(careerTeam.team.countryNumber, careerTeam.team.teamOrdinal);
         /* Slot 4 is validated as compType==1 (cup) above, so comp is a
          * CompetitionCup — byte 0xA = CompetitionCup.teams. */
-        int16_t count = (int16_t)((const CompetitionCup *)comp)->teams;
+        int16_t count = (int16_t)((const CompCupHeader *)comp)->teams;
         int16_t i = count - 1;
         while (i >= 0) {
             diyCompetitionStart.cupTeamIds[i] = teamId;
