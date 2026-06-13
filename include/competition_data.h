@@ -294,7 +294,7 @@ extern CompetitionCareer careerContests[35];
  * ====================================================================== */
 
 extern Competition *nationalTeamCompetitionsAndQualifications[39];
-extern CompetitionCup *continentalCups[7];
+extern Competition *continentalCups[7];
 
 /* ======================================================================
  * Qualifying Groups and Region Tables
@@ -419,51 +419,51 @@ extern uint8_t euroCupQualSeedListReduced22[23];
  * Cup Pick Tables (per-region competition selection for career)
  * ====================================================================== */
 
-extern CompetitionCup *cupPickOceaniaInviteFriendly[5];
-extern CompetitionCup *cupPickOceaniaOceaniaCupFriendly[5];
-extern CompetitionCup *cupPickOceaniaWorldCupFriendly[5];
-extern CompetitionCup *cupPickOceaniaWorldCupInvite[5];
-extern CompetitionCup *cupPickOceaniaOceaniaCupNonFinalist[5];
-extern CompetitionCup *cupPickOceaniaOceaniaCupFinalist[5];
+extern Competition *cupPickOceaniaInviteFriendly[5];
+extern Competition *cupPickOceaniaOceaniaCupFriendly[5];
+extern Competition *cupPickOceaniaWorldCupFriendly[5];
+extern Competition *cupPickOceaniaWorldCupInvite[5];
+extern Competition *cupPickOceaniaOceaniaCupNonFinalist[5];
+extern Competition *cupPickOceaniaOceaniaCupFinalist[5];
 
-extern CompetitionCup *cupPickNAmericaInviteFriendly[5];
-extern CompetitionCup *cupPickNAmericaNaCupFriendly[5];
-extern CompetitionCup *cupPickNAmericaWorldCupFriendly[5];
-extern CompetitionCup *cupPickNAmericaWorldCupInvite[5];
-extern CompetitionCup *cupPickNAmericaNaCupNonFinalist[5];
-extern CompetitionCup *cupPickNAmericaNaCupFinalist[5];
+extern Competition *cupPickNAmericaInviteFriendly[5];
+extern Competition *cupPickNAmericaNaCupFriendly[5];
+extern Competition *cupPickNAmericaWorldCupFriendly[5];
+extern Competition *cupPickNAmericaWorldCupInvite[5];
+extern Competition *cupPickNAmericaNaCupNonFinalist[5];
+extern Competition *cupPickNAmericaNaCupFinalist[5];
 
-extern CompetitionCup *cupPickAsiaInviteFriendly[5];
-extern CompetitionCup *cupPickAsiaAsianCupFriendly[5];
-extern CompetitionCup *cupPickAsiaWorldCupFriendly[5];
-extern CompetitionCup *cupPickAsiaWorldCupInvite[5];
-extern CompetitionCup *cupPickAsiaAsianCupNonFinalist[5];
-extern CompetitionCup *cupPickAsiaAsianCupFinalist[5];
+extern Competition *cupPickAsiaInviteFriendly[5];
+extern Competition *cupPickAsiaAsianCupFriendly[5];
+extern Competition *cupPickAsiaWorldCupFriendly[5];
+extern Competition *cupPickAsiaWorldCupInvite[5];
+extern Competition *cupPickAsiaAsianCupNonFinalist[5];
+extern Competition *cupPickAsiaAsianCupFinalist[5];
 
-extern CompetitionCup *cupPickAfricaInviteFriendly[5];
-extern CompetitionCup *cupPickAfricaAfricanCupFriendly[5];
-extern CompetitionCup *cupPickAfricaWorldCupFriendly[5];
-extern CompetitionCup *cupPickAfricaWorldCupInvite[5];
-extern CompetitionCup *cupPickAfricaAfricanCupNonFinalist[5];
-extern CompetitionCup *cupPickAfricaAfricanCupFinalist[5];
+extern Competition *cupPickAfricaInviteFriendly[5];
+extern Competition *cupPickAfricaAfricanCupFriendly[5];
+extern Competition *cupPickAfricaWorldCupFriendly[5];
+extern Competition *cupPickAfricaWorldCupInvite[5];
+extern Competition *cupPickAfricaAfricanCupNonFinalist[5];
+extern Competition *cupPickAfricaAfricanCupFinalist[5];
 
-extern CompetitionCup *cupPickSAmericaInviteFriendly[5];
-extern CompetitionCup *cupPickSAmericaCopaAmericaFriendly[5];
-extern CompetitionCup *cupPickSAmericaWorldCupFriendly[5];
-extern CompetitionCup *cupPickSAmericaWorldCupInvite[5];
-extern CompetitionCup *cupPickSAmericaCopaAmericaNonFinalist[5];
-extern CompetitionCup *cupPickSAmericaCopaAmericaFinalist[5];
+extern Competition *cupPickSAmericaInviteFriendly[5];
+extern Competition *cupPickSAmericaCopaAmericaFriendly[5];
+extern Competition *cupPickSAmericaWorldCupFriendly[5];
+extern Competition *cupPickSAmericaWorldCupInvite[5];
+extern Competition *cupPickSAmericaCopaAmericaNonFinalist[5];
+extern Competition *cupPickSAmericaCopaAmericaFinalist[5];
 
-extern CompetitionCup *ecQualifyingGroupsTable[8];
-extern CompetitionCup *cupPickEuropeNoCupFriendly[5];
-extern CompetitionCup *cupPickListEuropeInviteTournamentFriendly[5];
-extern CompetitionCup *cupPickLisEuropeEuroChampsFriendly[5];
-extern CompetitionCup *cupPickListEuropeEuroChampsInviteFriendly[5];
-extern CompetitionCup *cupPickListEuropeWorldCupFriendly[5];
-extern CompetitionCup *cupPickLisEuropeWorldCupInviteFriendly[5];
-extern CompetitionCup *cupPickEuropeNoCupFriendlyAlt[5];
-extern CompetitionCup *cupPickListEuropeInviteTournamentFriendlyAlt[5];
-extern CompetitionCup *worldCupQualifyingGroupsTable[8];
+extern Competition *ecQualifyingGroupsTable[8];
+extern Competition *cupPickEuropeNoCupFriendly[5];
+extern Competition *cupPickListEuropeInviteTournamentFriendly[5];
+extern Competition *cupPickLisEuropeEuroChampsFriendly[5];
+extern Competition *cupPickListEuropeEuroChampsInviteFriendly[5];
+extern Competition *cupPickListEuropeWorldCupFriendly[5];
+extern Competition *cupPickLisEuropeWorldCupInviteFriendly[5];
+extern Competition *cupPickEuropeNoCupFriendlyAlt[5];
+extern Competition *cupPickListEuropeInviteTournamentFriendlyAlt[5];
+extern Competition *worldCupQualifyingGroupsTable[8];
 
 /* Tour string table */
 extern char *tourStringTable[6];

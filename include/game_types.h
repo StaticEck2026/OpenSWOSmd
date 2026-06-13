@@ -1651,8 +1651,8 @@ typedef struct __attribute__((packed)) {
  * ================================================================== */
 
 typedef struct __attribute__((packed)) {
-    CompetitionCup *competition;
-    CompetitionCup *competitionCopy;
+    Competition *competition;
+    Competition *competitionCopy;
     uint16_t templateSize;   /* was length: sizeof(template) for the template→Copy memcpy */
 } CompetitionCareer;
 
@@ -1669,7 +1669,7 @@ typedef struct __attribute__((packed)) {
  * ================================================================== */
 
 typedef struct __attribute__((packed)) {
-    CompetitionCup *compCup[9];     /* region competitions; -1-terminated */
+    Competition *compCup[9];     /* region competitions; -1-terminated */
     CountryNumbers  countries[44];  /* region countries; 0xFF-terminated */
 } QualifyingGroup;
 

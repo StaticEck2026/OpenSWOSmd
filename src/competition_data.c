@@ -812,41 +812,41 @@ CompetitionCareer careerContests[35] = {
      * making the struct 8 bytes larger — a hardcoded byte literal here
      * truncates the trailing team list and causes auto-advance to spin
      * forever loading bogus team IDs (data/team.255 etc.). */
-    { (CompetitionCup *)&euroCup, (CompetitionCup *)&euroCupCopy, sizeof(euroCup) },
-    { (CompetitionCup *)&cupWinnersCup, (CompetitionCup *)&cupWinnersCupCopy, sizeof(cupWinnersCup) },
-    { (CompetitionCup *)&uefaCup, (CompetitionCup *)&uefaCupCopy, sizeof(uefaCup) },
-    { (CompetitionCup *)&invitationTournament, (CompetitionCup *)&invitationTournamentCopy, sizeof(invitationTournament) },
-    { (CompetitionCup *)&tour, (CompetitionCup *)&tourCopy, sizeof(tour) },
-    { (CompetitionCup *)&friendly, (CompetitionCup *)&friendlyCopy, sizeof(friendly) },
-    { (CompetitionCup *)&europeanChampionships2, (CompetitionCup *)&europeanChampionships2Copy, sizeof(europeanChampionships2) },
-    { (CompetitionCup *)&ecQualifyingGroup1, (CompetitionCup *)&ecQualifyingGroup1Copy, sizeof(ecQualifyingGroup1) },
-    { (CompetitionCup *)&ecQualifyingGroup2, (CompetitionCup *)&ecQualifyingGroup2Copy, sizeof(ecQualifyingGroup2) },
-    { (CompetitionCup *)&ecQualifyingGroup3, (CompetitionCup *)&ecQualifyingGroup3Copy, sizeof(ecQualifyingGroup3) },
-    { (CompetitionCup *)&ecQualifyingGroup4, (CompetitionCup *)&ecQualifyingGroup4Copy, sizeof(ecQualifyingGroup4) },
-    { (CompetitionCup *)&ecQualifyingGroup5, (CompetitionCup *)&ecQualifyingGroup5Copy, sizeof(ecQualifyingGroup5) },
-    { (CompetitionCup *)&ecQualifyingGroup6, (CompetitionCup *)&ecQualifyingGroup6Copy, sizeof(ecQualifyingGroup6) },
-    { (CompetitionCup *)&ecQualifyingGroup7, (CompetitionCup *)&ecQualifyingGroup7Copy, sizeof(ecQualifyingGroup7) },
-    { (CompetitionCup *)&ecQualifyingGroup8, (CompetitionCup *)&ecQualifyingGroup8Copy, sizeof(ecQualifyingGroup8) },
-    { (CompetitionCup *)&copaAmerica, (CompetitionCup *)&copaAmericaCopy, sizeof(copaAmerica) },
-    { (CompetitionCup *)&africanNationsCup, (CompetitionCup *)&africanNationsCupCopy, sizeof(africanNationsCup) },
-    { (CompetitionCup *)&northAmericanCup, (CompetitionCup *)&northAmericanCupCopy, sizeof(northAmericanCup) },
-    { (CompetitionCup *)&asianCup, (CompetitionCup *)&asianCupCopy, sizeof(asianCup) },
-    { (CompetitionCup *)&oceaniaCup, (CompetitionCup *)&oceaniaCupCopy, sizeof(oceaniaCup) },
-    { (CompetitionCup *)&worldCup2, (CompetitionCup *)&worldCup2Copy, sizeof(worldCup2) },
-    { (CompetitionCup *)&worldCupQualifyingGroup1, (CompetitionCup *)&worldCupQualifyingGroup1Copy, sizeof(worldCupQualifyingGroup1) },
-    { (CompetitionCup *)&worldCupQualifyingGroup2, (CompetitionCup *)&worldCupQualifyingGroup2Copy, sizeof(worldCupQualifyingGroup2) },
-    { (CompetitionCup *)&worldCupQualifyingGroup3, (CompetitionCup *)&worldCupQualifyingGroup3Copy, sizeof(worldCupQualifyingGroup3) },
-    { (CompetitionCup *)&worldCupQualifyingGroup4, (CompetitionCup *)&worldCupQualifyingGroup4Copy, sizeof(worldCupQualifyingGroup4) },
-    { (CompetitionCup *)&worldCupQualifyingGroup5, (CompetitionCup *)&worldCupQualifyingGroup5Copy, sizeof(worldCupQualifyingGroup5) },
-    { (CompetitionCup *)&worldCupQualifyingGroup6, (CompetitionCup *)&worldCupQualifyingGroup6Copy, sizeof(worldCupQualifyingGroup6) },
-    { (CompetitionCup *)&worldCupQualifyingGroup7, (CompetitionCup *)&worldCupQualifyingGroup7Copy, sizeof(worldCupQualifyingGroup7) },
-    { (CompetitionCup *)&worldCupQualifyingGroup8, (CompetitionCup *)&worldCupQualifyingGroup8Copy, sizeof(worldCupQualifyingGroup8) },
-    { (CompetitionCup *)&northAmericaWorldCupQualification, (CompetitionCup *)&northAmericaWorldCupQualificationCopy, sizeof(northAmericaWorldCupQualification) },
-    { (CompetitionCup *)&southAmericaWorldCupQualification, (CompetitionCup *)&southAmericaWorldCupQualificationCopy, sizeof(southAmericaWorldCupQualification) },
-    { (CompetitionCup *)&africaWorldCupQualification, (CompetitionCup *)&africaWorldCupQualificationCopy, sizeof(africaWorldCupQualification) },
-    { (CompetitionCup *)&asiaWorldCupQualification, (CompetitionCup *)&asiaWorldCupQualificationCopy, sizeof(asiaWorldCupQualification) },
-    { (CompetitionCup *)&oceaniaWorldCupQualification, (CompetitionCup *)&oceaniaWorldCupQualificationCopy, sizeof(oceaniaWorldCupQualification) },
-    { (CompetitionCup *)0xFFFFFFFFu, (CompetitionCup *)0, 0 },  /* sentinel */
+    { (Competition *)&euroCup, (Competition *)&euroCupCopy, sizeof(euroCup) },
+    { (Competition *)&cupWinnersCup, (Competition *)&cupWinnersCupCopy, sizeof(cupWinnersCup) },
+    { (Competition *)&uefaCup, (Competition *)&uefaCupCopy, sizeof(uefaCup) },
+    { (Competition *)&invitationTournament, (Competition *)&invitationTournamentCopy, sizeof(invitationTournament) },
+    { (Competition *)&tour, (Competition *)&tourCopy, sizeof(tour) },
+    { (Competition *)&friendly, (Competition *)&friendlyCopy, sizeof(friendly) },
+    { (Competition *)&europeanChampionships2, (Competition *)&europeanChampionships2Copy, sizeof(europeanChampionships2) },
+    { (Competition *)&ecQualifyingGroup1, (Competition *)&ecQualifyingGroup1Copy, sizeof(ecQualifyingGroup1) },
+    { (Competition *)&ecQualifyingGroup2, (Competition *)&ecQualifyingGroup2Copy, sizeof(ecQualifyingGroup2) },
+    { (Competition *)&ecQualifyingGroup3, (Competition *)&ecQualifyingGroup3Copy, sizeof(ecQualifyingGroup3) },
+    { (Competition *)&ecQualifyingGroup4, (Competition *)&ecQualifyingGroup4Copy, sizeof(ecQualifyingGroup4) },
+    { (Competition *)&ecQualifyingGroup5, (Competition *)&ecQualifyingGroup5Copy, sizeof(ecQualifyingGroup5) },
+    { (Competition *)&ecQualifyingGroup6, (Competition *)&ecQualifyingGroup6Copy, sizeof(ecQualifyingGroup6) },
+    { (Competition *)&ecQualifyingGroup7, (Competition *)&ecQualifyingGroup7Copy, sizeof(ecQualifyingGroup7) },
+    { (Competition *)&ecQualifyingGroup8, (Competition *)&ecQualifyingGroup8Copy, sizeof(ecQualifyingGroup8) },
+    { (Competition *)&copaAmerica, (Competition *)&copaAmericaCopy, sizeof(copaAmerica) },
+    { (Competition *)&africanNationsCup, (Competition *)&africanNationsCupCopy, sizeof(africanNationsCup) },
+    { (Competition *)&northAmericanCup, (Competition *)&northAmericanCupCopy, sizeof(northAmericanCup) },
+    { (Competition *)&asianCup, (Competition *)&asianCupCopy, sizeof(asianCup) },
+    { (Competition *)&oceaniaCup, (Competition *)&oceaniaCupCopy, sizeof(oceaniaCup) },
+    { (Competition *)&worldCup2, (Competition *)&worldCup2Copy, sizeof(worldCup2) },
+    { (Competition *)&worldCupQualifyingGroup1, (Competition *)&worldCupQualifyingGroup1Copy, sizeof(worldCupQualifyingGroup1) },
+    { (Competition *)&worldCupQualifyingGroup2, (Competition *)&worldCupQualifyingGroup2Copy, sizeof(worldCupQualifyingGroup2) },
+    { (Competition *)&worldCupQualifyingGroup3, (Competition *)&worldCupQualifyingGroup3Copy, sizeof(worldCupQualifyingGroup3) },
+    { (Competition *)&worldCupQualifyingGroup4, (Competition *)&worldCupQualifyingGroup4Copy, sizeof(worldCupQualifyingGroup4) },
+    { (Competition *)&worldCupQualifyingGroup5, (Competition *)&worldCupQualifyingGroup5Copy, sizeof(worldCupQualifyingGroup5) },
+    { (Competition *)&worldCupQualifyingGroup6, (Competition *)&worldCupQualifyingGroup6Copy, sizeof(worldCupQualifyingGroup6) },
+    { (Competition *)&worldCupQualifyingGroup7, (Competition *)&worldCupQualifyingGroup7Copy, sizeof(worldCupQualifyingGroup7) },
+    { (Competition *)&worldCupQualifyingGroup8, (Competition *)&worldCupQualifyingGroup8Copy, sizeof(worldCupQualifyingGroup8) },
+    { (Competition *)&northAmericaWorldCupQualification, (Competition *)&northAmericaWorldCupQualificationCopy, sizeof(northAmericaWorldCupQualification) },
+    { (Competition *)&southAmericaWorldCupQualification, (Competition *)&southAmericaWorldCupQualificationCopy, sizeof(southAmericaWorldCupQualification) },
+    { (Competition *)&africaWorldCupQualification, (Competition *)&africaWorldCupQualificationCopy, sizeof(africaWorldCupQualification) },
+    { (Competition *)&asiaWorldCupQualification, (Competition *)&asiaWorldCupQualificationCopy, sizeof(asiaWorldCupQualification) },
+    { (Competition *)&oceaniaWorldCupQualification, (Competition *)&oceaniaWorldCupQualificationCopy, sizeof(oceaniaWorldCupQualification) },
+    { (Competition *)0xFFFFFFFFu, (Competition *)0, 0 },  /* sentinel */
 };
 
 /* ======================================================================
@@ -879,10 +879,10 @@ Competition *nationalTeamCompetitionsAndQualifications[39] = {
     (Competition *)-1
 };
 
-CompetitionCup *continentalCups[7] = {
-    (CompetitionCup *)&europeanChampionships, (CompetitionCup *)&copaAmerica,
-    (CompetitionCup *)&northAmericanCup, (CompetitionCup *)&africanNationsCup,
-    (CompetitionCup *)&asianCup, (CompetitionCup *)&oceaniaCup, (CompetitionCup *)-1
+Competition *continentalCups[7] = {
+    (Competition *)&europeanChampionships, (Competition *)&copaAmerica,
+    (Competition *)&northAmericanCup, (Competition *)&africanNationsCup,
+    (Competition *)&asianCup, (Competition *)&oceaniaCup, (Competition *)-1
 };
 
 /* ======================================================================
@@ -890,34 +890,34 @@ CompetitionCup *continentalCups[7] = {
  * ====================================================================== */
 
 QualifyingGroup worldCupQualifyingGroups = {
-    { (CompetitionCup *)&worldCupQualifyingGroup1, (CompetitionCup *)&worldCupQualifyingGroup2,
-      (CompetitionCup *)&worldCupQualifyingGroup3, (CompetitionCup *)&worldCupQualifyingGroup4,
-      (CompetitionCup *)&worldCupQualifyingGroup5, (CompetitionCup *)&worldCupQualifyingGroup6,
-      (CompetitionCup *)&worldCupQualifyingGroup7, (CompetitionCup *)&worldCupQualifyingGroup8,
-      (CompetitionCup *)-1 },
+    { (Competition *)&worldCupQualifyingGroup1, (Competition *)&worldCupQualifyingGroup2,
+      (Competition *)&worldCupQualifyingGroup3, (Competition *)&worldCupQualifyingGroup4,
+      (Competition *)&worldCupQualifyingGroup5, (Competition *)&worldCupQualifyingGroup6,
+      (Competition *)&worldCupQualifyingGroup7, (Competition *)&worldCupQualifyingGroup8,
+      (Competition *)-1 },
     { 0xFF, CN_ALBANIA }
 };
 
 QualifyingGroup ecQualifyingGroups = {
-    { (CompetitionCup *)&ecQualifyingGroup1, (CompetitionCup *)&ecQualifyingGroup2,
-      (CompetitionCup *)&ecQualifyingGroup3, (CompetitionCup *)&ecQualifyingGroup4,
-      (CompetitionCup *)&ecQualifyingGroup5, (CompetitionCup *)&ecQualifyingGroup6,
-      (CompetitionCup *)&ecQualifyingGroup7, (CompetitionCup *)&ecQualifyingGroup8,
-      (CompetitionCup *)-1 },
+    { (Competition *)&ecQualifyingGroup1, (Competition *)&ecQualifyingGroup2,
+      (Competition *)&ecQualifyingGroup3, (Competition *)&ecQualifyingGroup4,
+      (Competition *)&ecQualifyingGroup5, (Competition *)&ecQualifyingGroup6,
+      (Competition *)&ecQualifyingGroup7, (Competition *)&ecQualifyingGroup8,
+      (Competition *)-1 },
     { 0xFF, CN_ALBANIA }
 };
 
-QualifyingGroup customsTable = { { (CompetitionCup *)&customsLeague, (CompetitionCup *)-2, (CompetitionCup *)-1 } };
+QualifyingGroup customsTable = { { (Competition *)&customsLeague, (Competition *)-2, (Competition *)-1 } };
 
 QualifyingGroup worldTable = {
-    { (CompetitionCup *)&worldCup, (CompetitionCup *)-1 },
+    { (Competition *)&worldCup, (Competition *)-1 },
     { CN_EUROPE, CN_NORTH_AMERICA, CN_SOUTH_AMERICA, CN_AFRICA, CN_ASIA, CN_OCEANIA, 0xFF, CN_ALBANIA }
 };
 
 QualifyingGroup europeTable = {
-    { (CompetitionCup *)0xFC, (CompetitionCup *)&europeanChampionships,
-      (CompetitionCup *)&euroCup, (CompetitionCup *)&cupWinnersCup,
-      (CompetitionCup *)&uefaCup, (CompetitionCup *)-1 },
+    { (Competition *)0xFC, (Competition *)&europeanChampionships,
+      (Competition *)&euroCup, (Competition *)&cupWinnersCup,
+      (Competition *)&uefaCup, (Competition *)-1 },
     { CN_ALBANIA, CN_AUSTRIA, CN_BELARUS, CN_BELGIUM, CN_BULGARIA, CN_CROATIA,
       CN_CYPRUS, CN_CZECH_REPUBLIC, CN_DENMARK, CN_ENGLAND, CN_ESTONIA, CN_FAROE_ISLANDS,
       CN_FINLAND, CN_FRANCE, CN_GERMANY, CN_GREECE, CN_HOLLAND, CN_HUNGARY,
@@ -929,28 +929,28 @@ QualifyingGroup europeTable = {
 };
 
 QualifyingGroup africaTable = {
-    { (CompetitionCup *)&africaWorldCupQualification, (CompetitionCup *)&africanNationsCup, (CompetitionCup *)-1 },
+    { (Competition *)&africaWorldCupQualification, (Competition *)&africanNationsCup, (Competition *)-1 },
     { CN_ALGERIA, CN_GHANA, CN_SOUTH_AFRICA, 0xFF }
 };
 
 QualifyingGroup southAmericaTable = {
-    { (CompetitionCup *)&southAmericaWorldCupQualification, (CompetitionCup *)&copaAmerica, (CompetitionCup *)-1 },
+    { (Competition *)&southAmericaWorldCupQualification, (Competition *)&copaAmerica, (Competition *)-1 },
     { CN_ARGENTINA, CN_BOLIVIA, CN_BRAZIL, CN_CHILE, CN_COLOMBIA, CN_ECUADOR,
       CN_PARAGUAY, CN_PERU, CN_SURINAM, CN_URUGUAY, CN_VENEZUELA, 0xFF }
 };
 
 QualifyingGroup northAmericaTable = {
-    { (CompetitionCup *)&northAmericaWorldCupQualification, (CompetitionCup *)&northAmericanCup, (CompetitionCup *)-1 },
+    { (Competition *)&northAmericaWorldCupQualification, (Competition *)&northAmericanCup, (Competition *)-1 },
     { CN_EL_SALVADOR, CN_MEXICO, CN_USA, 0xFF }
 };
 
 QualifyingGroup asiaTable = {
-    { (CompetitionCup *)&asiaWorldCupQualification, (CompetitionCup *)&asianCup, (CompetitionCup *)-1 },
+    { (Competition *)&asiaWorldCupQualification, (Competition *)&asianCup, (Competition *)-1 },
     { CN_INDIA, CN_JAPAN, CN_TAIWAN, 0xFF }
 };
 
 QualifyingGroup oceaniaTable = {
-    { (CompetitionCup *)&oceaniaWorldCupQualification, (CompetitionCup *)&oceaniaCup, (CompetitionCup *)-1 },
+    { (Competition *)&oceaniaWorldCupQualification, (Competition *)&oceaniaCup, (Competition *)-1 },
     { CN_AUSTRALIA, CN_NEW_ZEALAND, 0xFF, CN_ALBANIA }
 };
 
@@ -1111,62 +1111,62 @@ EuroCupQualSeedBucketBlock euroCupQualSeedBucketBlock = {
  * Cup Pick Tables (per-region competition selection for career)
  * ====================================================================== */
 
-CompetitionCup *cupPickOceaniaInviteFriendly[5] = { (CompetitionCup *)&invitationTournamentCopy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickOceaniaOceaniaCupFriendly[5] = { (CompetitionCup *)&oceaniaCupCopy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickOceaniaWorldCupFriendly[5] = { (CompetitionCup *)&worldCup2Copy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickOceaniaWorldCupInvite[5] = { (CompetitionCup *)&worldCup2Copy, (CompetitionCup *)-2, (CompetitionCup *)&invitationTournamentCopy, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1 };
-CompetitionCup *cupPickOceaniaOceaniaCupNonFinalist[5] = { 0, (CompetitionCup *)-2, (CompetitionCup *)&oceaniaCupCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickOceaniaOceaniaCupFinalist[5] = { (CompetitionCup *)&oceaniaCupCopy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
+Competition *cupPickOceaniaInviteFriendly[5] = { (Competition *)&invitationTournamentCopy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickOceaniaOceaniaCupFriendly[5] = { (Competition *)&oceaniaCupCopy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickOceaniaWorldCupFriendly[5] = { (Competition *)&worldCup2Copy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickOceaniaWorldCupInvite[5] = { (Competition *)&worldCup2Copy, (Competition *)-2, (Competition *)&invitationTournamentCopy, (Competition *)&friendlyCopy, (Competition *)-1 };
+Competition *cupPickOceaniaOceaniaCupNonFinalist[5] = { 0, (Competition *)-2, (Competition *)&oceaniaCupCopy, (Competition *)-1, 0 };
+Competition *cupPickOceaniaOceaniaCupFinalist[5] = { (Competition *)&oceaniaCupCopy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
 
-CompetitionCup *cupPickNAmericaInviteFriendly[5] = { (CompetitionCup *)&invitationTournamentCopy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickNAmericaNaCupFriendly[5] = { (CompetitionCup *)&northAmericanCupCopy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickNAmericaWorldCupFriendly[5] = { (CompetitionCup *)&worldCup2Copy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickNAmericaWorldCupInvite[5] = { (CompetitionCup *)&worldCup2Copy, (CompetitionCup *)-2, (CompetitionCup *)&invitationTournamentCopy, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1 };
-CompetitionCup *cupPickNAmericaNaCupNonFinalist[5] = { 0, (CompetitionCup *)-2, (CompetitionCup *)&northAmericanCupCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickNAmericaNaCupFinalist[5] = { (CompetitionCup *)&northAmericanCupCopy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
+Competition *cupPickNAmericaInviteFriendly[5] = { (Competition *)&invitationTournamentCopy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickNAmericaNaCupFriendly[5] = { (Competition *)&northAmericanCupCopy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickNAmericaWorldCupFriendly[5] = { (Competition *)&worldCup2Copy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickNAmericaWorldCupInvite[5] = { (Competition *)&worldCup2Copy, (Competition *)-2, (Competition *)&invitationTournamentCopy, (Competition *)&friendlyCopy, (Competition *)-1 };
+Competition *cupPickNAmericaNaCupNonFinalist[5] = { 0, (Competition *)-2, (Competition *)&northAmericanCupCopy, (Competition *)-1, 0 };
+Competition *cupPickNAmericaNaCupFinalist[5] = { (Competition *)&northAmericanCupCopy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
 
-CompetitionCup *cupPickAsiaInviteFriendly[5] = { (CompetitionCup *)&invitationTournamentCopy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickAsiaAsianCupFriendly[5] = { (CompetitionCup *)&asianCupCopy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickAsiaWorldCupFriendly[5] = { (CompetitionCup *)&worldCup2Copy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickAsiaWorldCupInvite[5] = { (CompetitionCup *)&worldCup2Copy, (CompetitionCup *)-2, (CompetitionCup *)&invitationTournamentCopy, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1 };
-CompetitionCup *cupPickAsiaAsianCupNonFinalist[5] = { 0, (CompetitionCup *)-2, (CompetitionCup *)&asianCupCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickAsiaAsianCupFinalist[5] = { (CompetitionCup *)&asianCupCopy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
+Competition *cupPickAsiaInviteFriendly[5] = { (Competition *)&invitationTournamentCopy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickAsiaAsianCupFriendly[5] = { (Competition *)&asianCupCopy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickAsiaWorldCupFriendly[5] = { (Competition *)&worldCup2Copy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickAsiaWorldCupInvite[5] = { (Competition *)&worldCup2Copy, (Competition *)-2, (Competition *)&invitationTournamentCopy, (Competition *)&friendlyCopy, (Competition *)-1 };
+Competition *cupPickAsiaAsianCupNonFinalist[5] = { 0, (Competition *)-2, (Competition *)&asianCupCopy, (Competition *)-1, 0 };
+Competition *cupPickAsiaAsianCupFinalist[5] = { (Competition *)&asianCupCopy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
 
-CompetitionCup *cupPickAfricaInviteFriendly[5] = { (CompetitionCup *)&invitationTournamentCopy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickAfricaAfricanCupFriendly[5] = { (CompetitionCup *)&africanNationsCupCopy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickAfricaWorldCupFriendly[5] = { (CompetitionCup *)&worldCup2Copy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickAfricaWorldCupInvite[5] = { (CompetitionCup *)&worldCup2Copy, (CompetitionCup *)-2, (CompetitionCup *)&invitationTournamentCopy, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1 };
-CompetitionCup *cupPickAfricaAfricanCupNonFinalist[5] = { 0, (CompetitionCup *)-2, (CompetitionCup *)&africanNationsCupCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickAfricaAfricanCupFinalist[5] = { (CompetitionCup *)&africanNationsCupCopy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
+Competition *cupPickAfricaInviteFriendly[5] = { (Competition *)&invitationTournamentCopy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickAfricaAfricanCupFriendly[5] = { (Competition *)&africanNationsCupCopy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickAfricaWorldCupFriendly[5] = { (Competition *)&worldCup2Copy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickAfricaWorldCupInvite[5] = { (Competition *)&worldCup2Copy, (Competition *)-2, (Competition *)&invitationTournamentCopy, (Competition *)&friendlyCopy, (Competition *)-1 };
+Competition *cupPickAfricaAfricanCupNonFinalist[5] = { 0, (Competition *)-2, (Competition *)&africanNationsCupCopy, (Competition *)-1, 0 };
+Competition *cupPickAfricaAfricanCupFinalist[5] = { (Competition *)&africanNationsCupCopy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
 
-CompetitionCup *cupPickSAmericaInviteFriendly[5] = { (CompetitionCup *)&invitationTournamentCopy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickSAmericaCopaAmericaFriendly[5] = { (CompetitionCup *)&copaAmericaCopy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickSAmericaWorldCupFriendly[5] = { (CompetitionCup *)&worldCup2Copy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickSAmericaWorldCupInvite[5] = { (CompetitionCup *)&worldCup2Copy, (CompetitionCup *)-2, (CompetitionCup *)&invitationTournamentCopy, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1 };
-CompetitionCup *cupPickSAmericaCopaAmericaNonFinalist[5] = { 0, (CompetitionCup *)-2, (CompetitionCup *)&copaAmericaCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickSAmericaCopaAmericaFinalist[5] = { (CompetitionCup *)&copaAmericaCopy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
+Competition *cupPickSAmericaInviteFriendly[5] = { (Competition *)&invitationTournamentCopy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickSAmericaCopaAmericaFriendly[5] = { (Competition *)&copaAmericaCopy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickSAmericaWorldCupFriendly[5] = { (Competition *)&worldCup2Copy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickSAmericaWorldCupInvite[5] = { (Competition *)&worldCup2Copy, (Competition *)-2, (Competition *)&invitationTournamentCopy, (Competition *)&friendlyCopy, (Competition *)-1 };
+Competition *cupPickSAmericaCopaAmericaNonFinalist[5] = { 0, (Competition *)-2, (Competition *)&copaAmericaCopy, (Competition *)-1, 0 };
+Competition *cupPickSAmericaCopaAmericaFinalist[5] = { (Competition *)&copaAmericaCopy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
 
-CompetitionCup *ecQualifyingGroupsTable[8] = {
-    (CompetitionCup *)&ecQualifyingGroup1Copy, (CompetitionCup *)&ecQualifyingGroup2Copy,
-    (CompetitionCup *)&ecQualifyingGroup3Copy, (CompetitionCup *)&ecQualifyingGroup4Copy,
-    (CompetitionCup *)&ecQualifyingGroup5Copy, (CompetitionCup *)&ecQualifyingGroup6Copy,
-    (CompetitionCup *)&ecQualifyingGroup7Copy, (CompetitionCup *)&ecQualifyingGroup8Copy
+Competition *ecQualifyingGroupsTable[8] = {
+    (Competition *)&ecQualifyingGroup1Copy, (Competition *)&ecQualifyingGroup2Copy,
+    (Competition *)&ecQualifyingGroup3Copy, (Competition *)&ecQualifyingGroup4Copy,
+    (Competition *)&ecQualifyingGroup5Copy, (Competition *)&ecQualifyingGroup6Copy,
+    (Competition *)&ecQualifyingGroup7Copy, (Competition *)&ecQualifyingGroup8Copy
 };
 
-CompetitionCup *cupPickEuropeNoCupFriendly[5] = { 0, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickListEuropeInviteTournamentFriendly[5] = { (CompetitionCup *)&invitationTournamentCopy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickLisEuropeEuroChampsFriendly[5] = { (CompetitionCup *)&europeanChampionships2Copy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickListEuropeEuroChampsInviteFriendly[5] = { (CompetitionCup *)&europeanChampionships2Copy, (CompetitionCup *)-2, (CompetitionCup *)&invitationTournamentCopy, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1 };
-CompetitionCup *cupPickListEuropeWorldCupFriendly[5] = { (CompetitionCup *)&worldCup2Copy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickLisEuropeWorldCupInviteFriendly[5] = { (CompetitionCup *)&worldCup2Copy, (CompetitionCup *)-2, (CompetitionCup *)&invitationTournamentCopy, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1 };
-CompetitionCup *cupPickEuropeNoCupFriendlyAlt[5] = { 0, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
-CompetitionCup *cupPickListEuropeInviteTournamentFriendlyAlt[5] = { (CompetitionCup *)&invitationTournamentCopy, (CompetitionCup *)-2, (CompetitionCup *)&friendlyCopy, (CompetitionCup *)-1, 0 };
+Competition *cupPickEuropeNoCupFriendly[5] = { 0, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickListEuropeInviteTournamentFriendly[5] = { (Competition *)&invitationTournamentCopy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickLisEuropeEuroChampsFriendly[5] = { (Competition *)&europeanChampionships2Copy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickListEuropeEuroChampsInviteFriendly[5] = { (Competition *)&europeanChampionships2Copy, (Competition *)-2, (Competition *)&invitationTournamentCopy, (Competition *)&friendlyCopy, (Competition *)-1 };
+Competition *cupPickListEuropeWorldCupFriendly[5] = { (Competition *)&worldCup2Copy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickLisEuropeWorldCupInviteFriendly[5] = { (Competition *)&worldCup2Copy, (Competition *)-2, (Competition *)&invitationTournamentCopy, (Competition *)&friendlyCopy, (Competition *)-1 };
+Competition *cupPickEuropeNoCupFriendlyAlt[5] = { 0, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
+Competition *cupPickListEuropeInviteTournamentFriendlyAlt[5] = { (Competition *)&invitationTournamentCopy, (Competition *)-2, (Competition *)&friendlyCopy, (Competition *)-1, 0 };
 
-CompetitionCup *worldCupQualifyingGroupsTable[8] = {
-    (CompetitionCup *)&worldCupQualifyingGroup1Copy, (CompetitionCup *)&worldCupQualifyingGroup2Copy,
-    (CompetitionCup *)&worldCupQualifyingGroup3Copy, (CompetitionCup *)&worldCupQualifyingGroup4Copy,
-    (CompetitionCup *)&worldCupQualifyingGroup5Copy, (CompetitionCup *)&worldCupQualifyingGroup6Copy,
-    (CompetitionCup *)&worldCupQualifyingGroup7Copy, (CompetitionCup *)&worldCupQualifyingGroup8Copy
+Competition *worldCupQualifyingGroupsTable[8] = {
+    (Competition *)&worldCupQualifyingGroup1Copy, (Competition *)&worldCupQualifyingGroup2Copy,
+    (Competition *)&worldCupQualifyingGroup3Copy, (Competition *)&worldCupQualifyingGroup4Copy,
+    (Competition *)&worldCupQualifyingGroup5Copy, (Competition *)&worldCupQualifyingGroup6Copy,
+    (Competition *)&worldCupQualifyingGroup7Copy, (Competition *)&worldCupQualifyingGroup8Copy
 };
 
 /* Tour string table */
