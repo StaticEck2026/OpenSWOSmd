@@ -147,12 +147,12 @@ extern const char aDataUefacupTmd[];
 extern Playoffs div1Playoffs, div2Playoffs, div3Playoffs;
 /* englishLeagues1/2/3 forward decls removed — access via englishLeaguesBlock._divN */
 extern Playoffs dutchPlayoffs;
-extern Leagues_4 dutchLeagues1;
-extern Leagues_2 scottishLeague1;
+extern Leagues dutchLeagues1;
+extern Leagues scottishLeague1;
 extern Playoffs scottishPlayoffs;
-extern Leagues_4 spanishLeague1;
+extern Leagues spanishLeague1;
 extern Playoffs spanishPlayoffs;
-extern Leagues_2 uruguayanLeague1;
+extern Leagues uruguayanLeague1;
 extern Playoffs uruguayanPlayoffs;
 
 /* ======================================================================
@@ -540,7 +540,10 @@ CompetitionLeague newZealandLeague = {
  * ====================================================================== */
 
 /* On Amiga, the four English-league structs sit consecutively in BSS
- * (_main 102 + _div1 80 + _div2 80 + _div3 48 bytes).
+ * (_main 102 + _div1 80 + _div2 80 + _div3 80 bytes after the Leagues merge —
+ * _div3 was 48 as a bare Leagues_4, now carries the zeroed playoffs/nextGroup/
+ * qualifierIndexPairs tail like the others; it is the block's last member so the
+ * growth only extends the block).
  * processDiyLeagueQualificationEntry walks past the end of _main using
  * the per-division qualification offset in `divisions[i].unk1`,
  * expecting to land inside _div1 or _div2 (whose `playoffs` field at
@@ -565,18 +568,18 @@ EnglishLeaguesBlock englishLeaguesBlock = {
         { 0, 0, 0, 3, 0, 1, 0, 2, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
     },
     ._div1 = {
-        { (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 1, 0, 0, 0, 0 },
-          (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 1, 0, 0, 0, 3 },
-          (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 1, 0, 0, 0, 1 },
-          (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 1, 0, 0, 0, 2 } },
-        &div2Playoffs, (Leagues_4 *)&englishLeaguesBlock._div2,
+        (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 1, 0, 0, 0, 0 },
+        (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 1, 0, 0, 0, 3 },
+        (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 1, 0, 0, 0, 1 },
+        (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 1, 0, 0, 0, 2 },
+        &div2Playoffs, (Leagues *)&englishLeaguesBlock._div2,
         { 0, 4, 0, 7, 0, 5, 0, 6, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
     },
     ._div2 = {
-        { (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 2, 0, 0, 0, 0 },
-          (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 2, 0, 0, 0, 3 },
-          (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 2, 0, 0, 0, 1 },
-          (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 2, 0, 0, 0, 2 } },
+        (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 2, 0, 0, 0, 0 },
+        (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 2, 0, 0, 0, 3 },
+        (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 2, 0, 0, 0, 1 },
+        (CompetitionLeague *)&englishLeaguesBlock._main, { 0, 0, 0, 2, 0, 0, 0, 2 },
         &div3Playoffs, &englishLeaguesBlock._div3,
         { 0, 8, 0, 11, 0, 9, 0, 10, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
     },
@@ -604,7 +607,7 @@ CompetitionLeague dutchLeague = {
     { 0, 0, 0, 3, 0, 1, 0, 2, 0, -1, 0, -1, 0, -1, 0, -1, 1, 0, 1, 0, 1, 0, 1, 0 }   /* promotionLinkData */
 };
 
-Leagues_4 dutchLeagues1 = {
+Leagues dutchLeagues1 = {
     (CompetitionLeague *)&dutchLeague, { 0 },
     (CompetitionLeague *)&dutchLeague, { 0, 0, 0, 1, 0, 0, 0, 1 },
     (CompetitionLeague *)&dutchLeague, { 0, 0, 0, 0, 0, 0, 0, 1 },
@@ -622,7 +625,7 @@ CompetitionLeague scottishLeague = {
     { 0, 0, 0, 1, 0, -1, 1, 0 }   /* promotionLinkData (first 8 of 24) */
 };
 
-Leagues_2 scottishLeague1 = {
+Leagues scottishLeague1 = {
     (CompetitionLeague *)&scottishLeague, { 0 },
     (CompetitionLeague *)&scottishLeague, { 0, 0, 0, 1, 0, 0, 0, 0 }
 };
@@ -638,7 +641,7 @@ CompetitionLeague spanishLeague = {
     { 0, 0, 0, 3, 0, 1, 0, 2, 0, -1, 0, -1, 0, -1, 0, -1, 1, 0, 1, 0, 1, 0, 1, 0 }
 };
 
-Leagues_4 spanishLeague1 = {
+Leagues spanishLeague1 = {
     (CompetitionLeague *)&spanishLeague, { 0 },
     (CompetitionLeague *)&spanishLeague, { 0, 0, 0, 1, 0, 0, 0, 1 },
     (CompetitionLeague *)&spanishLeague, { 0, 0, 0, 0, 0, 0, 0, 1 },
@@ -656,7 +659,7 @@ CompetitionLeague uruguayanLeague = {
     { 0, 0, 0, 1, 0, -1, 1, 0 }   /* promotionLinkData (first 8 of 24) */
 };
 
-Leagues_2 uruguayanLeague1 = {
+Leagues uruguayanLeague1 = {
     (CompetitionLeague *)&uruguayanLeague, { 0 },
     (CompetitionLeague *)&uruguayanLeague, { 0, 0, 0, 1, 0, 0, 0, 0 }
 };

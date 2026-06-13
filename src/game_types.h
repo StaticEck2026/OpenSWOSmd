@@ -1582,30 +1582,34 @@ typedef struct __attribute__((packed)) {
     int8_t  qualifiedTeamIds[8]; /* was unk2: BE-packed qualified team-id output buffer */
 } Playoffs;
 
-typedef struct __attribute__((packed)) {
-    CompetitionLeague *text1;
-    int8_t unk1[8];
-    CompetitionLeague *text2;
-    int8_t unk2[8];
-    CompetitionLeague *text3;
-    int8_t unk3[8];
-    CompetitionLeague *text4;
-    int8_t unk4[8];
-} Leagues_4;
-
-typedef struct __attribute__((packed)) {
-    Leagues_4 leagues;
-    Playoffs *playoffs;
-    Leagues_4 *leagues2;
-    int8_t unk2[24];
-} Leagues_4_2_24;
-
-typedef struct __attribute__((packed)) {
-    CompetitionLeague *compLeague1;
-    int8_t unk1[8];
-    CompetitionLeague *compLeague2;
-    int8_t unk2[8];
-} Leagues_2;
+/* Leagues — merged Leagues_4 / Leagues_2 / Leagues_4_2_24 (consolidation,
+ * docs/STRUCT_CONSOLIDATE.md §4c). The layout mirrors the largest variant
+ * (Leagues_4_2_24) exactly — four {league*, linkParams[8]} promotion-link
+ * records followed by the playoff/next-group pointers and the qualifier-index
+ * tail — so the englishLeaguesBlock._div1/._div2 instances (which were
+ * Leagues_4_2_24) stay byte-identical and their typed .playoffs /
+ * .qualifierIndexPairs reads are unchanged. The plain Leagues_4 (dutch/spanish/
+ * _div3) and Leagues_2 (scottish/uruguay) instances leave the trailing
+ * playoffs/nextGroup/qualifierIndexPairs (and, for _2, records 3-4) zero.
+ *
+ * NO numLeagues count is added: neither C port walks the records (only the
+ * typed .playoffs/.qualifierIndexPairs/.playoffLinkPtrs reads in
+ * career_season.c ever consume a Leagues block — verified against SWOS2.s), so
+ * a count would be dead data that only shifts the layout. The 4-vs-2 record
+ * distinction is informational, captured by leaving the unused records zero. */
+typedef struct Leagues {
+    CompetitionLeague *league1;
+    int8_t             linkParams1[8];   /* promotion/relegation link config */
+    CompetitionLeague *league2;
+    int8_t             linkParams2[8];
+    CompetitionLeague *league3;
+    int8_t             linkParams3[8];
+    CompetitionLeague *league4;
+    int8_t             linkParams4[8];
+    Playoffs          *playoffs;             /* Leagues_4_2_24 only (NULL otherwise) */
+    struct Leagues    *nextGroup;            /* was leagues2 (NULL otherwise) */
+    int8_t             qualifierIndexPairs[24]; /* was unk2[24] (zero otherwise) */
+} Leagues;
 
 /* ==================================================================
  * CompetitionCareer — career competition entry

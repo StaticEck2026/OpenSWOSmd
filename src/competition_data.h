@@ -161,27 +161,27 @@ extern Playoffs div3Playoffs;
  * substructs widen — typed access via the block fields below avoids that. */
 typedef struct __attribute__((packed)) {
     CompetitionLeague _main;
-    Leagues_4_2_24             _div1;
-    Leagues_4_2_24             _div2;
-    Leagues_4                  _div3;
+    Leagues           _div1;   /* was Leagues_4_2_24 (uses playoffs/nextGroup/qualifierIndexPairs) */
+    Leagues           _div2;   /* was Leagues_4_2_24 */
+    Leagues           _div3;   /* was Leagues_4 (trailing fields zero) */
 } EnglishLeaguesBlock;
 
 extern EnglishLeaguesBlock englishLeaguesBlock;
 
 extern CompetitionLeague dutchLeague;
-extern Leagues_4 dutchLeagues1;
+extern Leagues dutchLeagues1;
 extern Playoffs dutchPlayoffs;
 
 extern CompetitionLeague scottishLeague;
-extern Leagues_2 scottishLeague1;
+extern Leagues scottishLeague1;
 extern Playoffs scottishPlayoffs;
 
 extern CompetitionLeague spanishLeague;
-extern Leagues_4 spanishLeague1;
+extern Leagues spanishLeague1;
 extern Playoffs spanishPlayoffs;
 
 extern CompetitionLeague uruguayanLeague;
-extern Leagues_2 uruguayanLeague1;
+extern Leagues uruguayanLeague1;
 extern Playoffs uruguayanPlayoffs;
 
 /* ======================================================================
