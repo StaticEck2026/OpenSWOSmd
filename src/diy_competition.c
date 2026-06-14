@@ -7806,6 +7806,22 @@ void _DIYCupFinish(void)
 {
     uint16_t off74 = *(uint16_t *)&diyCompetitionStart.base.menuState; /* FIELD_3A+$10 */
 
+    /* INTERIM (overlay band-aid): the cup result / match-list strings below
+     * resolve team NAMES via diyCompetitionStart.bracketScratch.teamOffsetTable,
+     * which the league-standings overlay can clobber (slots 62/63 -> garbage),
+     * e.g. when a secondary cup is finished during next-season processing
+     * (_Career_ProcessSecondaryCompetitionForNextSeason). A garbage slot makes
+     * diy_resolve_team_name return a wild pointer -> _StringCopy SIGSEGV. The
+     * grid + cupTeamIds are intact, so re-derive the table from them. Removed by
+     * the bracketScratch/standings overlay untangle (step 3,
+     * docs/TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md). roundIterator (0x4C, overloaded)
+     * is saved/restored so only teamOffsetTable changes. */
+    {
+        int16_t savedRoundIter = diyCompetitionStart.base.roundIterator;
+        _DIY_BuildTeamSelectionPointerCache();
+        diyCompetitionStart.base.roundIterator = savedRoundIter;
+    }
+
     if (off74 == 6 || diyCupMenuArg0Copy == 0) {
         _DesignDIYCup_HideCurrentMatchTeamEntries();
     } else if ((int16_t)diyCupMenuArg0Copy < 0) {
