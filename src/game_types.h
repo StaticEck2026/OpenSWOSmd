@@ -966,6 +966,18 @@ typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0xA48) ? 
 #else
 typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0xA50) ? 1 : -1];
 #endif
+
+/* Word count for a "through teamOffsetTable" cup-state copy of the DIYCompetitionEx
+ * image — used by the comp-slot store/load (career_teams.c) and the
+ * competitionFileBuffer<->diyCompetitionStart copies (diy_competition.c). offsetof
+ * is the END of bracketScratch.teamOffsetTable (scratchTail starts immediately
+ * after). MUST be offsetof-derived, NOT the historical hardcoded 0x222: on 64-bit
+ * DIYCompetition's namePtr grew (+8), pushing teamOffsetTable[62] (0x444) and
+ * [63] (0x448) PAST the old 0x444-byte (0x222-word) boundary, so a hardcoded copy
+ * dropped them — those cup slots then resolved to selTeams[0] (the player) and
+ * double-booked a fixture into a phantom PLAY MATCH menu. Yields 0x222 on 32-bit
+ * (Amiga/ARM, unchanged) and 0x226 on 64-bit. */
+#define DIY_CUP_COPY_WORDS  ((int16_t)(offsetof(DIYCompetitionEx, bracketScratch.scratchTail) / 2))
 /* stageSnapshot must hold the full DIYCompetitionEx image (incl. the relocated
  * standings). Lock the two together so a future struct change can't silently
  * truncate the per-slot stage snapshot or the tournament field-map copy. */

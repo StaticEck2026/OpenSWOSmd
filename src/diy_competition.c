@@ -1143,7 +1143,7 @@ __attribute__((used, externally_visible))
 void _DIY_CopyCompetitionFileBufferToCompetitionStart(void)
 {
     copyWords((volatile uint16_t *)&diyCompetitionStart,
-              (const volatile uint16_t *)competitionFileBuffer, 0x221);
+              (const volatile uint16_t *)competitionFileBuffer, (int16_t)(DIY_CUP_COPY_WORDS - 1));
 }
 
 /* ================================================================
@@ -1154,7 +1154,7 @@ __attribute__((used, externally_visible))
 void _DIY_CopyCompetitionStartToCompetitionFileBuffer(void)
 {
     copyWords((volatile uint16_t *)competitionFileBuffer,
-              (const volatile uint16_t *)&diyCompetitionStart, 0x221);
+              (const volatile uint16_t *)&diyCompetitionStart, (int16_t)(DIY_CUP_COPY_WORDS - 1));
 }
 
 /* ================================================================
@@ -1165,7 +1165,7 @@ __attribute__((used, externally_visible))
 void _DIY_CopyCompetitionFileBufferToCompetitionStart_Alt(void)
 {
     copyWords((volatile uint16_t *)&diyCompetitionStart,
-              (const volatile uint16_t *)competitionFileBuffer, 0x221);
+              (const volatile uint16_t *)competitionFileBuffer, (int16_t)(DIY_CUP_COPY_WORDS - 1));
 }
 
 /* ================================================================
@@ -1176,7 +1176,7 @@ __attribute__((used, externally_visible))
 void _DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt(void)
 {
     copyWords((volatile uint16_t *)competitionFileBuffer,
-              (const volatile uint16_t *)&diyCompetitionStart, 0x221);
+              (const volatile uint16_t *)&diyCompetitionStart, (int16_t)(DIY_CUP_COPY_WORDS - 1));
 }
 
 /* ================================================================
