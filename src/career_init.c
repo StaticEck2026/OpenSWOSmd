@@ -852,24 +852,64 @@ uint16_t _Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t 
  * If the primary competition is a league (type 0), check if it has
  * a linked DIY competition and set up slot 4 for it.
  * ================================================================ */
+/* Local copy of EnglishLeaguesBlock typedef (keeping competition_data.h out of
+ * this TU, matching career_season.c). Layout must match competition_data.[ch];
+ * CompetitionLeague / Leagues / Playoffs / Division come from game_types.h. */
+typedef struct __attribute__((packed)) {
+    CompetitionLeague _main;
+    Leagues           _div1;
+    Leagues           _div2;
+    Leagues           _div3;
+} EnglishLeaguesBlock;
+extern EnglishLeaguesBlock englishLeaguesBlock;
+
 __attribute__((used, externally_visible))
 void _DIY_SelectCompetitionSlot4FromCurrentDivision(void)
 {
     uint8_t *comp = (uint8_t *)currentCompetitionPtr;
-    if (((Competition *)comp)->type != 0)
+    if (((Competition *)comp)->type != 0)   /* type at offset 1; 0 == league */
         return;
 
-    uint16_t offset = currentDivisionIndex * 6;
-    uint8_t *entry = comp + offset;
-    uint8_t diyOffset = entry[0x12];
-    if (diyOffset == 0)
+    /* The original asm followed divisions[currentDivisionIndex].unk1 as a
+     * SELF-RELATIVE byte offset (from that byte) to a {diyComp,
+     * diyCompetitionTablePtr} pointer pair. That offset was baked for the Amiga
+     * name[8] / 4-byte-pointer layout, where it pointed at the per-division
+     * playoff link pair. The struct consolidation widened name[] to [10] and
+     * 64-bit grew the pointers, so the byte walk now lands on name[] (e.g.
+     * aDivisionTwo) -> garbage diyComp -> slot-4 type-check panic 0x4459.
+     * Resolve via the typed fields instead — the SAME per-division playoff
+     * links career_season.c uses. unk1 == 0 => no link (e.g. Premier, div 0).
+     *
+     * Pairs verified against the Amiga 4-byte offsets + live pointers:
+     *   div 1: _main.playoffLinkPtrs[0]/[1] = {&div1Playoffs, &_div1}
+     *   div 2: _div1.playoffs/nextGroup     = {&div2Playoffs, &_div2}
+     *   div 3: _div2.playoffs/nextGroup     = {&div3Playoffs, &_div3} */
+    CompetitionLeague *league = (CompetitionLeague *)comp;
+    if (league->divisions[(uint16_t)currentDivisionIndex].unk1 == 0)
         return;
+    if (comp != (uint8_t *)&englishLeaguesBlock._main)
+        return;  /* only the English leagues carry these per-division links */
 
-    /* Follow the DIY link */
-    uint8_t *diyEntry = entry + 0x12 + diyOffset;
-    uint8_t *diyComp = *(uint8_t **)diyEntry;
-    diyCompetitionTablePtr = *(uint32_t **)(diyEntry + 4);
+    uint8_t *diyComp;
+    void    *diyTable;
+    switch ((uint16_t)currentDivisionIndex) {
+    case 1:
+        diyComp  = (uint8_t *)englishLeaguesBlock._main.playoffLinkPtrs[0];
+        diyTable = englishLeaguesBlock._main.playoffLinkPtrs[1];
+        break;
+    case 2:
+        diyComp  = (uint8_t *)englishLeaguesBlock._div1.playoffs;
+        diyTable = englishLeaguesBlock._div1.nextGroup;
+        break;
+    case 3:
+        diyComp  = (uint8_t *)englishLeaguesBlock._div2.playoffs;
+        diyTable = englishLeaguesBlock._div2.nextGroup;
+        break;
+    default:
+        return;
+    }
 
+    diyCompetitionTablePtr = (uint32_t *)diyTable;
     _Career_SetCurrentCompetitionSlot(diyComp, 4, 0, 0);
 }
 
