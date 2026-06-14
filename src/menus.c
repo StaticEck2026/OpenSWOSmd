@@ -6597,11 +6597,18 @@ pastTeamLoad:
      * directly — pointer-width-correct on both targets. */
     uint16_t slotType = a6[0] & 0xFF;
     uint8_t *compInfo;
+    /* slot 4 = the playoffs/diy competition (diyCompetitionPtr). The Amiga
+     * `(&currentCompetitionPtr)[slotType]` indexed all FIVE adjacent pointers;
+     * this switch was missing case 4, so a playoff entry (slotType 4, handled by
+     * the second switch below as aPlayoffs) fell through to default=NULL and
+     * crashed on compInfo[5] when a playoff slot is shown in the game list. */
+    extern uint8_t *diyCompetitionPtr;
     switch (slotType) {
         case 0: compInfo = currentCompetitionPtr;     break;
         case 1: compInfo = secondaryCompetitionPtr;   break;
         case 2: compInfo = tertiaryCompetitionPtr;    break;
         case 3: compInfo = quaternaryCompetitionPtr;  break;
+        case 4: compInfo = diyCompetitionPtr;         break;
         default: compInfo = (uint8_t *)0;             break;
     }
     uint16_t d5; /* color/stringFlags value */
