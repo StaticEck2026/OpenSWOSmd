@@ -1274,8 +1274,15 @@ extern void _Career_FillCurrentSeasonInfo(void);
  * _Career_LoadCompetitionSlotStateFromBuffer  (SWOS2.s line 36092)
  *
  * Copies competition state from a buffer to the active area.
- * Type 0: 922 words (0x39A) to diyCompetitionStart
- * Type 1: 546 words (0x222) to diyCompetitionStart
+ * Type 0: sizeof(DIYCompetitionEx)/2 words to diyCompetitionStart — the
+ *         whole league image through the relocated leagueStandings tail
+ *         (was a hardcoded 0x39A words = the old standings-end 0x734, before
+ *         the standings untangle moved them off the cup scratch).
+ * Type 1: DIY_CUP_COPY_WORDS to diyCompetitionStart (cup: through teamOffsetTable;
+ *         0x222 words on 32-bit, 0x226 on 64-bit). NOT a hardcoded 0x222: cups have
+ *         no league standings, but the 64-bit namePtr growth still shifts
+ *         teamOffsetTable's tail (slots 62/63) past the old boundary, so the length
+ *         must be offsetof-derived or those slots are dropped on store/load.
  * Type 2+: tournament — field-map the slot into diyFileBufferCopy (master)
  *          + diyCompetitionStart (current-stage standings). The original
  *          SWOS2.s did a flat 1450-word (0x5AA) copy into diyFileBufferCopy
@@ -1302,11 +1309,16 @@ void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src)
 
     if (type == 0) {
         volatile uint16_t *d = (volatile uint16_t *)&diyCompetitionStart;
-        for (int16_t i = 0x399; i >= 0; i--)
+        for (int16_t i = (int16_t)(sizeof(DIYCompetitionEx) / 2 - 1); i >= 0; i--)
             *d++ = *s++;
     } else if (type == 1) {
         volatile uint16_t *d = (volatile uint16_t *)&diyCompetitionStart;
-        for (int16_t i = 0x221; i >= 0; i--)
+        /* Length offsetof-derived to copy through the END of teamOffsetTable on
+         * both targets (0x222 words on 32-bit, 0x226 on 64-bit). The old hardcoded
+         * 0x222 dropped teamOffsetTable[62]/[63] on 64-bit (now at 0x444/0x448, past
+         * the 0x444-byte copy), leaving them 0 -> cup slots resolved to the player.
+         * See the matching store loop above for the full root-cause note. */
+        for (int16_t i = (int16_t)(DIY_CUP_COPY_WORDS - 1); i >= 0; i--)
             *d++ = *s++;
     } else {
         _DIY_CfbBufToTournament(src);
@@ -1335,7 +1347,8 @@ void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src)
  *
  * Copies competition state from the active area to a buffer.
  * Type determined by the first word of the buffer.
- * Type 0: 922 words from diyCompetitionStart
+ * Type 0: sizeof(DIYCompetitionEx)/2 words from diyCompetitionStart (whole
+ *         league image incl. relocated leagueStandings; was 0x39A words)
  * Type 1: 546 words from diyCompetitionStart
  * Type 2+: tournament — field-map diyFileBufferCopy (master) +
  *          diyCompetitionStart (current-stage standings) INTO the slot via
@@ -1352,11 +1365,20 @@ void _Career_StoreCompetitionSlotStateToBuffer(uint8_t *dst)
 
     if (type == 0) {
         volatile uint16_t *s = (volatile uint16_t *)&diyCompetitionStart;
-        for (int16_t i = 0x399; i >= 0; i--)
+        for (int16_t i = (int16_t)(sizeof(DIYCompetitionEx) / 2 - 1); i >= 0; i--)
             *d++ = *s++;
     } else if (type == 1) {
         volatile uint16_t *s = (volatile uint16_t *)&diyCompetitionStart;
-        for (int16_t i = 0x221; i >= 0; i--)
+        /* Cup copy spans offset 0 through the END of bracketScratch.teamOffsetTable
+         * (scratchTail begins immediately after it). Derive the length from offsetof
+         * so the 64-bit namePtr growth is tracked: the hardcoded 0x222 words was the
+         * 32-bit "through teamOffsetTable" size, but on 64-bit DIYCompetition grew (+8)
+         * and pushed teamOffsetTable[62] (0x444) and [63] (0x448) PAST the 0x444-byte
+         * copy, so store dropped them and load left the destination's stale 0 ->
+         * those cup slots resolved to selTeams[0] (the player) -> double-booked cup
+         * fixture -> phantom PLAY MATCH menu. offsetof yields 0x222 words on 32-bit
+         * (Amiga/ARM, unchanged) and 0x226 on 64-bit. */
+        for (int16_t i = (int16_t)(DIY_CUP_COPY_WORDS - 1); i >= 0; i--)
             *d++ = *s++;
     } else {
         _DIY_TournamentToCfbBuf(dst);

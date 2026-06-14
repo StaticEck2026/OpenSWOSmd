@@ -635,12 +635,19 @@ typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x68) ? 1 : -
 
 /* ==================================================================
  * DIYTeamStats / DIYLeagueTableRow — 18 bytes
- * Per-team league standings entry written by clearLeagueTableStats
- * starting at diyCompetitionStart + 0x2B4. Each row is one teamSelOffset
- * (NOT cleared by the loop) plus 7 stats fields cleared per row.
- * 64 rows total; the table extends to offset 0x734 — past the end of
- * the 0x5C8-byte struct, into audioInstrumentBank's address range.
- * Intentional shared-memory overlay; see DIYCOMPETITIONEX_AUDIT.md.
+ * Per-team league standings entry written by clearLeagueTableStats.
+ * Each row is one teamSelOffset (NOT cleared by the loop) plus 7 stats
+ * fields cleared per row. 64 rows total = the `leagueStandings[64]`
+ * field of DIYCompetitionEx.
+ *
+ * UNTANGLE (roadmap step 3): this table used to OVERLAY cupTeamIds[51]
+ * (diyCompetitionStart + 0x2B4), so writing standings for a league
+ * (sub-)slot zeroed the cup (sub-)slot's teamGridPairings /
+ * bracketScratch.teamOffsetTable — the type-2 hybrid clobber that forced
+ * the teamOffsetTable rebuilds. It is now a real trailing field placed
+ * AFTER bracketScratch (offset 0x5C8 / 0x5D0 on 64-bit), so the cup
+ * scratch and the league standings no longer share bytes. See
+ * docs/TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md.
  * ================================================================== */
 typedef struct __attribute__((packed, aligned(2))) DIYTeamStats {
     int32_t  teamSelOffset;         /* 0x00: team IDENTITY (step-4 phase 3), NOT a byte offset despite the legacy name. -1 == careerTeam; >= 0 == the team's index into the selTeamsPtr array. Resolve via diy_resolve_team()/diy_resolve_team_name(); set via diy_team_to_identity() (diy_competition.c). Was a signed selTeamsPtr-relative byte offset before phase 3. */
@@ -759,16 +766,30 @@ typedef char _diytourn_slots_off_check  [(offsetof(DIYTournamentState, slots)   
  *     0x41E — no header overlap, `currentRoundIndex` survives.
  *   - `stageSnapshot` is the current-stage diyCompetitionStart image that the
  *     legacy layout stashed at cfb +0x420 (and which spilled into adjacent
- *     overlay globals by design). Now a real trailing field.
+ *     overlay globals by design). Now a real trailing field. It must hold the
+ *     WHOLE DIYCompetitionEx image including the relocated leagueStandings
+ *     tail, so it is sized DIY_STAGE_SNAPSHOT_LEN == sizeof(DIYCompetitionEx)
+ *     (locked by a static assert after the DIYCompetitionEx definition).
  *
  * The DIYCompetition header fields the old aliases pointed at
  * (competitionName@0x04, resultCode/winner@0x3A, slotStateA/B/C@0x3E.., the
  * avgSkill/bonus byte@0x30) keep their header offsets, so those aliases just
  * re-base onto `tourn.header` with identical semantics.
  * ================================================================== */
+/* Full diyCompetitionStart image length, through the relocated leagueStandings
+ * tail (the standings untangle moved them from the 0x2B4 cupTeamIds[51] overlay
+ * to a trailing field). CompetitionSlotBuffer is defined before DIYCompetitionEx
+ * so we can't use sizeof() here directly; the post-DIYCompetitionEx static
+ * assert keeps this in lockstep with sizeof(DIYCompetitionEx). Was 0x734 (the
+ * old standings-end, when standings overlaid the cup scratch). */
+#if UINTPTR_MAX == 0xFFFFFFFFu
+#define DIY_STAGE_SNAPSHOT_LEN  0xA48u   /* 32-bit: 0x5C8 struct + 0x480 standings */
+#else
+#define DIY_STAGE_SNAPSHOT_LEN  0xA50u   /* 64-bit: 0x5D0 struct + 0x480 standings */
+#endif
 typedef struct __attribute__((packed, aligned(2))) CompetitionSlotBuffer {
     DIYTournamentState tourn;              /* 0x000: header + teamIds + groupMap + slots + teamIndexOrder */
-    uint8_t            stageSnapshot[0x734]; /* current-stage diyCompetitionStart image (was cfb +0x420) */
+    uint8_t            stageSnapshot[DIY_STAGE_SNAPSHOT_LEN]; /* current-stage diyCompetitionStart image (was cfb +0x420), incl. relocated leagueStandings */
 } CompetitionSlotBuffer;
 
 typedef char _compslotbuf_tourn_off_check    [(offsetof(CompetitionSlotBuffer, tourn) == 0) ? 1 : -1];
@@ -846,19 +867,22 @@ typedef char _diysecstate_size_check[
     (sizeof(DIYCompetitionEx_LeagueSectionState) == 0x88) ? 1 : -1];
 
 /* ==================================================================
- * DIYCompetitionEx — 0x5C8 bytes (1480), the extended runtime DIY
- * competition record at &diyCompetitionStart.
+ * DIYCompetitionEx — 0xA48 bytes (32-bit) / 0xA50 (64-bit), the extended
+ * runtime DIY competition record at &diyCompetitionStart.
  *
  * Layout matches the SWOS2.s `ds.b` walk starting at line 2840
- * (diyCompetitionStart). The backing buffer (`diyCompetitionStartBuf`)
- * is 4096 bytes; this struct is a typed view of the first 0x5C8 bytes.
+ * (diyCompetitionStart) for the first 0x5C8 bytes; the backing buffer
+ * (`diyCompetitionStartBuf`) is 7136 bytes.
  *
- * NB: the league standings table written by clearLeagueTableStats
- * extends 1152 bytes from offset 0x2B4 to offset 0x734 — past the end
- * of this struct, into audioInstrumentBank's address range. That is
- * intentional shared-memory overlay (audio bank not loaded during DIY
- * init) and is not represented as a struct field; it is reached only
- * via the raw `clearLeagueTableStats` byte arithmetic.
+ * UNTANGLE (roadmap step 3): the league standings table written by
+ * clearLeagueTableStats used to OVERLAY cupTeamIds[51] (offset 0x2B4),
+ * extending 1152 bytes to 0x734 over teamGridPairings and the whole
+ * bracketScratch (incl. teamOffsetTable). For a type-2 hybrid that ran
+ * both a league and a cup (sub-)slot in one block, the league standings
+ * write zeroed the cup scratch — the clobber that forced the
+ * teamOffsetTable rebuilds. The standings are now the explicit trailing
+ * `leagueStandings[64]` field (offset 0x5C8 / 0x5D0), clear of the cup
+ * scratch. See docs/TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md.
  *
  * `diyFileBufferCopy` is a SEPARATE buffer that shares only the first
  * 0x60 bytes of layout (DIYCompetition base). Its post-base region has
@@ -923,16 +947,42 @@ typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx {
             uint8_t  scratchTail[0x184];                  /* 0x444..0x5C7: bracket scratch tail */
         } bracketScratch;
     };
+
+    /* --- 0x5C8 (0x5D0 on 64-bit): league standings, RELOCATED here from the
+     *     old cupTeamIds[51] overlay (offset 0x2B4) by the step-3 untangle.
+     *     64 × 18-byte DIYTeamStats rows written by clearLeagueTableStats.
+     *     Now a real field, so a league (sub-)slot's standings write no longer
+     *     clobbers a cup (sub-)slot's teamGridPairings / teamOffsetTable.
+     *     Reached via DIY_STANDINGS_OFFSET / diy_standings_row (offsetof-based,
+     *     so the 32/64-bit struct growth tracks automatically). --- */
+    DIYTeamStats leagueStandings[64];   /* 0x5C8 / 0x5D0 .. +0x480 */
 } DIYCompetitionEx;
 
 /* DIYCompetitionEx embeds DIYCompetition (which has 1 pointer);
  * +4 on 64-bit via that. The DIYCompetitionEx_* view variants are
- * pointer-free. */
+ * pointer-free. The trailing leagueStandings[64] adds 0x480 (1152). */
 #if UINTPTR_MAX == 0xFFFFFFFFu
-typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5C8) ? 1 : -1];
+typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0xA48) ? 1 : -1];
 #else
-typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0x5D0) ? 1 : -1];
+typedef char _diycompetitionex_size_check[(sizeof(DIYCompetitionEx) == 0xA50) ? 1 : -1];
 #endif
+
+/* Word count for a "through teamOffsetTable" cup-state copy of the DIYCompetitionEx
+ * image — used by the comp-slot store/load (career_teams.c) and the
+ * competitionFileBuffer<->diyCompetitionStart copies (diy_competition.c). offsetof
+ * is the END of bracketScratch.teamOffsetTable (scratchTail starts immediately
+ * after). MUST be offsetof-derived, NOT the historical hardcoded 0x222: on 64-bit
+ * DIYCompetition's namePtr grew (+8), pushing teamOffsetTable[62] (0x444) and
+ * [63] (0x448) PAST the old 0x444-byte (0x222-word) boundary, so a hardcoded copy
+ * dropped them — those cup slots then resolved to selTeams[0] (the player) and
+ * double-booked a fixture into a phantom PLAY MATCH menu. Yields 0x222 on 32-bit
+ * (Amiga/ARM, unchanged) and 0x226 on 64-bit. */
+#define DIY_CUP_COPY_WORDS  ((int16_t)(offsetof(DIYCompetitionEx, bracketScratch.scratchTail) / 2))
+/* stageSnapshot must hold the full DIYCompetitionEx image (incl. the relocated
+ * standings). Lock the two together so a future struct change can't silently
+ * truncate the per-slot stage snapshot or the tournament field-map copy. */
+typedef char _diystagesnapshot_len_check[
+    (DIY_STAGE_SNAPSHOT_LEN == sizeof(DIYCompetitionEx)) ? 1 : -1];
 /* Boundary of the former _bss_2E0AE blob: qualifiedTeamsByDivision must follow
  * the 96-byte cupAggregateScores exactly (target-independent relative check). */
 typedef char _diycompex_2e0ae_split_check[

@@ -29,17 +29,19 @@
 #define DIY_CUP                         1
 
 /* ---- ASM externs (globals defined in assembly) ---- */
-/* diyCompetitionStart remains a byte-array-backed DIYCompetitionEx (it's
- * 0x5C8 bytes; standings extend past that). diyFileBufferCopy is now the
- * typed tournament struct (step-3 untangle) — its former companion symbols
- * diyTournamentTeamIds / diyTournamentCompetition are now the named fields
- * diyFileBufferCopy.teamIds / diyFileBufferCopy.header. */
+/* diyCompetitionStart is a byte-array-backed DIYCompetitionEx. Post-untangle
+ * the league standings are the trailing leagueStandings[64] field, so the
+ * struct now spans the whole live image (0xA48 / 0xA50 on 64-bit) with no
+ * overlay past its end. diyFileBufferCopy is the typed tournament struct
+ * (step-3 untangle) — its former companion symbols diyTournamentTeamIds /
+ * diyTournamentCompetition are now the named fields diyFileBufferCopy.teamIds
+ * / diyFileBufferCopy.header. */
 extern DIYTournamentState diyFileBufferCopy;
 extern DIYCompetitionEx diyCompetitionStart;
 /* The standalone backing buffer behind diyCompetitionStart (7136 B). The
- * league standings table extends past sizeof(DIYCompetitionEx) into it, so
- * the current-stage copies below address it as the byte array to move the
- * full 0x734-byte region without a (false) fortify overread/overflow. */
+ * current-stage copies below address it as a byte array (DIY_CFB_STANDINGS_LEN
+ * == sizeof(DIYCompetitionEx)) to move the full image without a (false)
+ * fortify overread/overflow. */
 extern uint8_t diyCompetitionStartBuf[];
 extern uint8_t selTeamsPtr;
 extern uint8_t selTeamNameBase;
@@ -392,11 +394,11 @@ uint16_t _DIY_CountUnselectedTeams(void)
 }
 
 /* Helper: clear league table stats for 64 entries.
- * Iterates DIYTeamStats rows starting at base+0x2B4; teamSelOffset (the
- * 4-byte head of each row) is intentionally NOT cleared — only the 7
- * stats words. The 64-row × 18-byte span runs from 0x2B4 to 0x734
- * (the end of audioInstrumentBank's address range — intentional
- * shared-memory overlay; see DIYCOMPETITIONEX_AUDIT.md). */
+ * Iterates DIYTeamStats rows in the relocated leagueStandings[64] field
+ * (base + DIY_STANDINGS_OFFSET); teamSelOffset (the 4-byte head of each row)
+ * is intentionally NOT cleared — only the 7 stats words. Post-untangle this
+ * no longer overlays the cup scratch, so clearing a league slot's standings
+ * can't zero a cup slot's teamGridPairings / teamOffsetTable. */
 static void clearLeagueTableStats(uint8_t *base)
 {
     DIYTeamStats *row = (DIYTeamStats *)(base + DIY_STANDINGS_OFFSET);
@@ -1071,7 +1073,12 @@ static void copyWords(volatile uint16_t *dst, const volatile uint16_t *src, int1
  * _DIY_LoadCurrentCompetitionSlot / unused for tournaments, so they self-
  * heal; teamIndexOrder (a real field past the header) always survives.
  * ================================================================ */
-#define DIY_CFB_STANDINGS_LEN  0x734u  /* current-stage record + league standings */
+/* Full current-stage diyCompetitionStart image: header through the relocated
+ * leagueStandings tail. sizeof() tracks the 32/64-bit struct growth AND the
+ * standings untangle (was a hardcoded 0x734 = the old standings-end when they
+ * overlaid the cup scratch). stageSnapshot is locked to the same size by a
+ * static assert (game_types.h). */
+#define DIY_CFB_STANDINGS_LEN  (sizeof(DIYCompetitionEx))
 
 /* --- cfb<->tournament copy ---
  * Post-untangle EVERY career competition slot — competitionFileBuffer (slot 0,
@@ -1136,7 +1143,7 @@ __attribute__((used, externally_visible))
 void _DIY_CopyCompetitionFileBufferToCompetitionStart(void)
 {
     copyWords((volatile uint16_t *)&diyCompetitionStart,
-              (const volatile uint16_t *)competitionFileBuffer, 0x221);
+              (const volatile uint16_t *)competitionFileBuffer, (int16_t)(DIY_CUP_COPY_WORDS - 1));
 }
 
 /* ================================================================
@@ -1147,7 +1154,7 @@ __attribute__((used, externally_visible))
 void _DIY_CopyCompetitionStartToCompetitionFileBuffer(void)
 {
     copyWords((volatile uint16_t *)competitionFileBuffer,
-              (const volatile uint16_t *)&diyCompetitionStart, 0x221);
+              (const volatile uint16_t *)&diyCompetitionStart, (int16_t)(DIY_CUP_COPY_WORDS - 1));
 }
 
 /* ================================================================
@@ -1158,7 +1165,7 @@ __attribute__((used, externally_visible))
 void _DIY_CopyCompetitionFileBufferToCompetitionStart_Alt(void)
 {
     copyWords((volatile uint16_t *)&diyCompetitionStart,
-              (const volatile uint16_t *)competitionFileBuffer, 0x221);
+              (const volatile uint16_t *)competitionFileBuffer, (int16_t)(DIY_CUP_COPY_WORDS - 1));
 }
 
 /* ================================================================
@@ -1169,7 +1176,7 @@ __attribute__((used, externally_visible))
 void _DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt(void)
 {
     copyWords((volatile uint16_t *)competitionFileBuffer,
-              (const volatile uint16_t *)&diyCompetitionStart, 0x221);
+              (const volatile uint16_t *)&diyCompetitionStart, (int16_t)(DIY_CUP_COPY_WORDS - 1));
 }
 
 /* ================================================================
@@ -1180,40 +1187,47 @@ __attribute__((used, externally_visible))
 void _SaveDIYLeague(void)
 {
     copyWords((volatile uint16_t *)&diyCompetitionStart,
-              (const volatile uint16_t *)competitionFileBuffer, 921);
+              (const volatile uint16_t *)competitionFileBuffer,
+              (int16_t)(sizeof(DIYCompetitionEx) / 2 - 1));
 }
 
 /* ================================================================
  * RestoreDIYLeague  (SWOS2.s line 33312)
- * Copies 922 words from diyCompetitionStart to competitionFileBuffer.
+ * Copies the whole league image (sizeof(DIYCompetitionEx)/2 words, incl. the
+ * relocated leagueStandings; was 922 words) diyCompetitionStart -> cfb.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _RestoreDIYLeague(void)
 {
     copyWords((volatile uint16_t *)competitionFileBuffer,
-              (const volatile uint16_t *)&diyCompetitionStart, 921);
+              (const volatile uint16_t *)&diyCompetitionStart,
+              (int16_t)(sizeof(DIYCompetitionEx) / 2 - 1));
 }
 
 /* ================================================================
  * DIY_SaveCompetitionFileBufferToDIYCompetition  (SWOS2.s line 33323)
- * Copies 922 words (0x39A) from competitionFileBuffer to diyCompetitionStart.
+ * Copies the whole league image (sizeof(DIYCompetitionEx)/2 words, incl. the
+ * relocated leagueStandings; was 922 words) cfb -> diyCompetitionStart.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _DIY_SaveCompetitionFileBufferToDIYCompetition(void)
 {
     copyWords((volatile uint16_t *)&diyCompetitionStart,
-              (const volatile uint16_t *)competitionFileBuffer, 0x399);
+              (const volatile uint16_t *)competitionFileBuffer,
+              (int16_t)(sizeof(DIYCompetitionEx) / 2 - 1));
 }
 
 /* ================================================================
  * DIY_RestoreCompetitionFileBufferFromDIYCompetition  (SWOS2.s line 33334)
- * Copies 922 words from diyCompetitionStart to competitionFileBuffer.
+ * Copies the whole league image (sizeof(DIYCompetitionEx)/2 words, incl. the
+ * relocated leagueStandings; was 922 words) diyCompetitionStart -> cfb.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _DIY_RestoreCompetitionFileBufferFromDIYCompetition(void)
 {
     copyWords((volatile uint16_t *)competitionFileBuffer,
-              (const volatile uint16_t *)&diyCompetitionStart, 0x399);
+              (const volatile uint16_t *)&diyCompetitionStart,
+              (int16_t)(sizeof(DIYCompetitionEx) / 2 - 1));
 }
 
 /* ================================================================
@@ -7805,6 +7819,22 @@ __attribute__((used, externally_visible))
 void _DIYCupFinish(void)
 {
     uint16_t off74 = *(uint16_t *)&diyCompetitionStart.base.menuState; /* FIELD_3A+$10 */
+
+    /* INTERIM (overlay band-aid): the cup result / match-list strings below
+     * resolve team NAMES via diyCompetitionStart.bracketScratch.teamOffsetTable,
+     * which the league-standings overlay can clobber (slots 62/63 -> garbage),
+     * e.g. when a secondary cup is finished during next-season processing
+     * (_Career_ProcessSecondaryCompetitionForNextSeason). A garbage slot makes
+     * diy_resolve_team_name return a wild pointer -> _StringCopy SIGSEGV. The
+     * grid + cupTeamIds are intact, so re-derive the table from them. Removed by
+     * the bracketScratch/standings overlay untangle (step 3,
+     * docs/TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md). roundIterator (0x4C, overloaded)
+     * is saved/restored so only teamOffsetTable changes. */
+    {
+        int16_t savedRoundIter = diyCompetitionStart.base.roundIterator;
+        _DIY_BuildTeamSelectionPointerCache();
+        diyCompetitionStart.base.roundIterator = savedRoundIter;
+    }
 
     if (off74 == 6 || diyCupMenuArg0Copy == 0) {
         _DesignDIYCup_HideCurrentMatchTeamEntries();

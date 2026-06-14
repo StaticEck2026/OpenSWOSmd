@@ -4335,7 +4335,14 @@ validated:
         int16_t count = (int16_t)((const CompCupHeader *)comp)->teams;
         int16_t i = count - 1;
         while (i >= 0) {
-            diyCompetitionStart.cupTeamIds[i] = teamId;
+            /* cupTeamIds is BE-packed {country, ordinal} (4e5f378 convention);
+             * every reader uses BE_READ_U16 (e.g. _DIY_BuildTeamSelectionPointerCache).
+             * The Amiga `move.w d0,(a0)+` stored a big-endian word; a host-native
+             * `cupTeamIds[i] = teamId` on an LE host stores the bytes swapped, so
+             * the BE read came back byte-swapped (careerTeam 0x084d -> 0x4d08) and
+             * _VerifyTeamLoaded panicked while building the slot-4 (playoff) cup
+             * bracket during season transition. Store BE to match every reader. */
+            BE_WRITE_U16(&diyCompetitionStart.cupTeamIds[i], teamId);
             i--;
         }
         goto init_competition;

@@ -16,15 +16,15 @@
  * field-address forms adjust automatically with the struct layout.
  *
  * `diy_standings_row(comp, idx)` returns the DIYTeamStats row for team
- * `idx` (0..63) in the per-competition standings table. The standings
- * table overlays the cup-team-ids region, starting at uint16-index 51
- * of `cupTeamIds[]` (same bytes as Amiga `diyCompetitionStart + 0x2B4`
- * because cupTeamIds itself is at +0x24E and 0x2B4 - 0x24E = 102 =
- * 51 * sizeof(uint16_t)). The standings extend 64 * 18 = 1152 bytes
- * past that, intentionally overflowing into the adjacent audio-bank
- * BSS — see `project_diycomp_league_table_overlay`. */
+ * `idx` (0..63) in the per-competition standings table. UNTANGLE (roadmap
+ * step 3): the standings used to overlay `cupTeamIds[51]` (Amiga
+ * `diyCompetitionStart + 0x2B4`), which let a league (sub-)slot's
+ * standings write zero a cup (sub-)slot's teamGridPairings /
+ * teamOffsetTable. They are now the explicit trailing `leagueStandings[64]`
+ * field, clear of the cup scratch — see
+ * docs/TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md. */
 static inline DIYTeamStats *diy_standings_row(DIYCompetitionEx *comp, int idx) {
-    return (DIYTeamStats *)((uint8_t *)&comp->cupTeamIds[51]) + idx;
+    return &comp->leagueStandings[idx];
 }
 static inline DIYTeamStats *diy_standings_row_from_raw(uint8_t *compRaw, int idx) {
     return diy_standings_row((DIYCompetitionEx *)compRaw, idx);
@@ -33,13 +33,12 @@ static inline DIYTeamStats *diy_standings_row_from_raw(uint8_t *compRaw, int idx
 /* Byte offset from a DIYCompetitionEx base to its standings table.
  * Used by call sites that already hold a `comp_base + grid_idx*18`
  * pointer ("team position pointer") and just need to add this offset
- * to reach the corresponding standings row. Derived from the struct
- * layout (cupTeamIds at its offset, +51*2 bytes into cupTeamIds) so
- * it adjusts automatically for 64-bit struct growth — replaces the
- * hardcoded `+ 0x2B4` byte literal that's wrong by 8 on 64-bit. */
+ * to reach the corresponding standings row. Now the offset of the
+ * relocated `leagueStandings` field (was `cupTeamIds + 51*2` while the
+ * standings overlaid the cup scratch); still offsetof-derived so it
+ * adjusts automatically for the 32/64-bit struct growth. */
 #include "swos_types.h"
-#define DIY_STANDINGS_OFFSET \
-    (offsetof(DIYCompetitionEx, cupTeamIds) + 51 * sizeof(uint16_t))
+#define DIY_STANDINGS_OFFSET  (offsetof(DIYCompetitionEx, leagueStandings))
 
 /* --- National team competition check (Chunk 151) --- */
 uint16_t _IsNationalTeamCompetitionOrQualification(uint32_t key);
