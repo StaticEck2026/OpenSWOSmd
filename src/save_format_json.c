@@ -1280,11 +1280,12 @@ static const FieldDesc s_career_scalars[] = {
     FA("primary_competition_context",     competitionFileBuffer,       sizeof(CompetitionSlotBuffer), FLD_BYTES),
     /* Context-slot raw blobs — UNTANGLE step A4. The 4 *Context slots are now
      * standalone typed CompetitionSlotBuffer { DIYTournamentState tourn;
-     * uint8_t stageSnapshot[0x734]; } (swos_competition_slots.c), no longer
-     * packed/aliased in the careerFileBuffer overlay. The blob must therefore
-     * cover the whole buffer — sizeof(CompetitionSlotBuffer) = 0xB92 = 2962 B
-     * on BOTH arches (the _reserved_5A pad fixes DIYTournamentState at 0x45E
-     * either way, so no per-target size split). The old per-overlay sizes
+     * uint8_t stageSnapshot[DIY_STAGE_SNAPSHOT_LEN]; } (swos_competition_slots.c),
+     * no longer packed/aliased in the careerFileBuffer overlay. The blob must
+     * therefore cover the whole buffer — sizeof(CompetitionSlotBuffer) tracks
+     * the struct (grew when the leagueStandings untangle enlarged stageSnapshot
+     * from 0x734 to sizeof(DIYCompetitionEx); ~0xEAE now). The _reserved_5A pad
+     * fixes DIYTournamentState at 0x45E on both arches. The old per-overlay sizes
      * (2900/1092) truncated the new layout: tertiary/diy at 1092 didn't even
      * reach the relocated teamIndexOrder@0x41E or the stageSnapshot@0x45E, so
      * those slots lost their seed order + standings across save/load. The
@@ -2859,12 +2860,13 @@ static void fixup_cache_strides_on_load(const char *buf, int buflen)
 #define DIY_OVR_LEAGUE_ROWS 64
 
 /* Local copy of diy_competition.h's diy_standings_row (not included here
- * to avoid that header's wider include graph). The standings table
- * overlays cupTeamIds starting at uint16-index 51 — see diy_competition.h.
- * offsetof-based, so it auto-adjusts for the 64-bit struct growth. */
+ * to avoid that header's wider include graph). The standings are now the
+ * relocated `leagueStandings[64]` field (step-3 untangle moved them off the
+ * cupTeamIds[51] overlay) — see diy_competition.h. Field access, so it
+ * auto-adjusts for the 32/64-bit struct growth. */
 static inline DIYTeamStats *diy_ovr_row(DIYCompetitionEx *comp, int idx)
 {
-    return (DIYTeamStats *)((uint8_t *)&comp->cupTeamIds[51]) + idx;
+    return &comp->leagueStandings[idx];
 }
 
 /* teamSelOffset / teamOffsetTable now hold a stable team IDENTITY at runtime

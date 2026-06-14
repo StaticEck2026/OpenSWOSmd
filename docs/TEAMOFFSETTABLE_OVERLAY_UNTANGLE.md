@@ -1,7 +1,18 @@
 # bracketScratch / league-standings overlay untangle (roadmap step 3)
 
-Status: **PLAN — execute in a dedicated session.** The working tree keeps the
-rebuild band-aids; the game is playable. This doc is the executable plan.
+Status: **STAGE 1 LANDED (2026-06-13).** The league standings are now the real
+trailing `DIYCompetitionEx.leagueStandings[64]` field (offset 0x5C8 / 0x5D0),
+clear of the cup scratch — they no longer overlay `cupTeamIds[51]`. Builds pass
+on all 3 arch widths (x86_64 / AArch64 0xA50, ARM 0xA48; size_check +
+`_diystagesnapshot_len_check` static asserts validate the layout per target) and
+the game boots clean. **The rebuild band-aids are STILL in place as a safety net
+(Stages 3-5 pending).** Save format changed (slot blob grew) → old `.CAR/.SEA/
+.PRE/.DIY` saves are incompatible; play fresh careers.
+
+Remaining: Stage 2 (save round-trip + cross-target verify), Stage 3 (remove the
+teamOffsetTable rebuilds one at a time, re-instrument the 62/63 clobber check),
+Stage 4 (re-apply the stable-team-id representation), Stage 5 (back-port to the
+Amiga C port). See §5 below.
 
 ## 1. Root cause (precise)
 
@@ -101,10 +112,19 @@ With the standings no longer clobbering the cup scratch:
 
 Do these as separate commits, each verified before the next:
 
-1. **Relocate standings** (macro + slot copy + buffers). Build all 3 arches.
-   Test: fresh English career through a full season incl. a hybrid (euro) cup,
-   no panic. Re-instrument the 62/63 check to confirm `teamOffsetTable` is no
-   longer clobbered (with the rebuilds STILL in place as a safety net).
+1. **Relocate standings** (macro + slot copy + buffers). ✅ DONE 2026-06-13.
+   Promoted to the named `leagueStandings[64]` field instead of relocating the
+   offset constant — `DIY_STANDINGS_OFFSET`/`diy_standings_row`/`diy_ovr_row`
+   are offsetof/field-derived so all ~30 accessors moved automatically. Length
+   dependents tied to `sizeof(DIYCompetitionEx)`: the type-0 store/load loops,
+   the four full-league `copyWords` (Save/RestoreDIYLeague +
+   _DIY_Save/RestoreCompetitionFileBufferFromDIYCompetition), `DIY_CFB_STANDINGS_LEN`,
+   and `stageSnapshot[]` (`DIY_STAGE_SNAPSHOT_LEN`, locked == sizeof by static
+   assert). The `0x221` cup copies stay (cups have no standings). Builds + boot
+   verified. **Runtime TODO (tester):** fresh English career through a full
+   season incl. a hybrid (euro) cup, no panic; ideally re-instrument the 62/63
+   check to confirm `teamOffsetTable` is no longer clobbered (rebuilds still in
+   place as a safety net).
 2. **Save-format migration**: confirm a save round-trips with the new layout;
    cross-target SDL↔Amiga. Old saves incompatible — tell the user.
 3. **Remove the rebuilds** one at a time, re-testing the hybrid each time.
