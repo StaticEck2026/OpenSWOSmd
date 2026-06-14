@@ -4387,5 +4387,19 @@ init_competition:
 
     /* Reload state and update competition progress */
     _Career_LoadCompetitionSlotStateFromBuffer(slotState);
+    if (compType == 1) {
+        /* The cup slot load restores bracketScratch.teamOffsetTable, which
+         * caches selTeams INDICES that go stale on SDL (bracketScratch is
+         * overlay-shared with the league sim). The advance below fills the
+         * season teamSelectionKeyCache via that table; a stale slot then
+         * resolves to the wrong/duplicate team, so two fixtures land in one
+         * 1-game keycache entry -> walker stride desync -> _VerifyTeamLoaded
+         * garbage-id panic in the career game list (_CareerGameListCommon).
+         * cupTeamIds matches the current selTeams here (just initialised for
+         * this slot), so re-derive the index cache. Same root + fix as
+         * _Career_OpenCompetitionSlotMenuAndApplyChanges (career_teams.c). */
+        extern void _DIY_BuildTeamSelectionPointerCache(void);
+        _DIY_BuildTeamSelectionPointerCache();
+    }
     _DIY_UpdateCompetitionProgressOrAdvanceSlot(slotState);
 }
