@@ -2118,6 +2118,22 @@ void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
         }
 #endif
         _DIY_PlayCupMatchAndAdvance(0, 0);
+
+        /* The asm loop exits ONLY when a human/coach team appears in the next
+         * fixture. On SDL the career team can be absent from the round this loop
+         * is scanning — the bracket grid and the fixture keycache can disagree
+         * about which round holds the player's match, and draw->replay cups
+         * (roundPenalties==2) leave matches unresolved so the round never clears
+         * normally — so no human is ever found and the loop re-sims the same
+         * round forever (cup freeze). _DIY_PlayCupMatchAndAdvance sets
+         * roundComplete (and wraps currentMatchIndex to 0) once every fixture in
+         * the round has been simulated; return on that so the caller
+         * (_Career_OpenCompetitionSlotMenuAndApplyChanges) runs the round-advance
+         * / replay setup and the cup actually progresses to the player's round
+         * (or finishes). In the normal case the human team is found mid-round and
+         * we return above before roundComplete is set, so this never fires. */
+        if (diyCompetitionStart.base.roundComplete != 0)
+            return;
     }
 }
 
