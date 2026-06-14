@@ -2876,6 +2876,37 @@ void _DIY_RecordCupBracketProgress(void)
 {
     int16_t d7 = 0;
 
+    /* Re-derive bracketScratch.teamOffsetTable from cupTeamIds before filling
+     * the keycache. teamOffsetTable caches selTeams *indices*, which go stale
+     * on SDL whenever the careerFileBuffer overlay repopulates/reorders
+     * selTeams between a cup slot store and load — slots 62/63 then resolve to
+     * selTeams[0] (the player's frozen copy), dragging the player into TWO
+     * grid pairs. A career cup keycache entry is sized for exactly one fixture
+     * (stride 0x16), so two recorded fixtures overflow the entry and smash the
+     * next entry's stride -> walker desync -> panic 0x6666 (and the milder
+     * "VIEW RESULT locked / squadChangesAllowed=0" mis-placement).
+     *
+     * The same rebuild already runs at the player-facing cup menu
+     * (_Career_OpenCompetitionSlotMenuAndApplyChanges) and the season keycache
+     * build (career_status.c), but BOTH are gated compType==1 and run too
+     * early: the auto-sim loop advances the bracket to the next round AFTER
+     * that rebuild (draw->replay cups, roundPenalties==2), and the type==2
+     * HYBRID path (_DIY_UpdateCompetitionProgressOrAdvanceSlot) is never
+     * covered at all. Doing it here — the single choke point every cup fill
+     * passes through, always in a loaded-cup context where selTeams matches
+     * cupTeamIds — closes both gaps. Idempotent with the earlier calls.
+     *
+     * Save/restore roundIterator (0x4C) around the call: that field is
+     * overloaded (non-national count / hasGroups / totalMatchesInRound across
+     * contexts) and Part 2 of the rebuild recomputes it, but the fill below
+     * reads it. We want only the teamOffsetTable correction, so leave the
+     * overloaded field exactly as the caller left it. */
+    {
+        int16_t savedRoundIter = diyCompetitionStart.base.roundIterator;
+        _DIY_BuildTeamSelectionPointerCache();
+        diyCompetitionStart.base.roundIterator = savedRoundIter;
+    }
+
 outer_loop:
     ;
     DIYCompetitionEx *comp = &diyCompetitionStart;
