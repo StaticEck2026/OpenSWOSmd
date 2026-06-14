@@ -1,81 +1,129 @@
-# teamOffsetTable / bracketScratch overlay untangle (roadmap step 3)
+# bracketScratch / league-standings overlay untangle (roadmap step 3)
 
-Status: **DESIGN / SCOPED** — 2026-06-13. The working code keeps the rebuild
-band-aids (see commit `3ac95cf`). This doc captures the root cause and the proper
-fix so it can be executed deliberately.
+Status: **PLAN — execute in a dedicated session.** The working tree keeps the
+rebuild band-aids; the game is playable. This doc is the executable plan.
 
-## Symptom chain (what the rebuilds compensate for)
+## 1. Root cause (precise)
 
-`bracketScratch.teamOffsetTable[64]` (cup grid-slot → team identity) is part of
-the cup scratch region that is **overlay-shared** with the DIY league standings
-table (and `cupTeamIds` / `teamGridPairings` / `teamShuffleOrder` /
-`audioInstrumentBank`). See `clearLeagueTableStats` writing 64×18-byte rows from
-`diyCompetitionStart+0x2B4 .. +0x734`, which overlaps `teamOffsetTable` at
-`bracketScratch+0x344`.
+Within each `DIYCompetitionEx` block (`game_types.h`, the typed view of
+`diyCompetitionStart` / each competition-slot buffer), the league standings
+physically overlap the cup scratch:
 
-In a career, league and cup competitions are processed across slots in the same
-season. Processing a **league** slot writes standings into that overlapped region,
-**zeroing the cup's `teamOffsetTable` bracket slots** — in practice the tail
-slots **62/63** come back as `0`. (Confirmed live: `teamOffsetTable[0..61]` valid
-ids/`-1`, `[62]=[63]=0`, while `cupTeamIds[62]=0x0857`, `[63]=0x0839` are valid
-teams.)
+| Region                         | Offset span      |
+|--------------------------------|------------------|
+| `cupTeamIds[64]`               | 0x24E .. 0x2CD   |
+| `teamGridPairings[64]`         | 0x2CE .. 0x30D   |
+| `teamShuffleOrder`/`bracketScratch` (incl `teamOffsetTable[64]`@0x344) | 0x30E .. 0x5C7 |
+| **league standings** (`clearLeagueTableStats`, 64×18B) | **0x2B4 .. 0x733** |
 
-The cup consumers then read those `0` slots:
-- `_DIY_RecordCupBracketProgress` (keycache fill) → the original **panic 0x6666**
-  (player duplicated into two fixtures, 22-byte entry overflow).
-- `_Career_AutoSimulateCupMatchesUntilHumanTeam` (before-match auto-sim).
-- `_DIY_PlayCupMatchAndAdvance` via `_Career_ProcessCurrentCompetitionSlotAfterMatch`
-  (after-match auto-play).
-- `_DIY_CompareCurrentMatchTeamCategories`, menu name draws, etc.
+The standings span overlaps the `cupTeamIds` tail (idx 51–63), **all** of
+`teamGridPairings`, and **all** of `bracketScratch`. This is the Amiga's
+"a competition is *either* a cup or a league, so reuse the bytes" trick.
 
-The current code rebuilds `teamOffsetTable` (`_DIY_BuildTeamSelectionPointerCache`,
-re-derives from `cupTeamIds`) at each consumer entry: `career_teams.c:1812` (menu),
-`career_status.c:4402` (season, gated `compType==1`), and the fill choke point
-(`3ac95cf`). These are **overlay-clobber compensation**, not pure staleness fixes.
+**Where it bites: hybrid (type-2) competitions** have *both* cup and league
+sub-slots in one block. Processing a **league sub-slot** writes standings that
+**zero the cup sub-slot's `teamGridPairings` and `teamOffsetTable`** (slots
+62/63 observed as 0; run-2's overflow was `compId=2`). The current rebuilds
+(`_DIY_BuildTeamSelectionPointerCache` at `career_teams.c:1812`,
+`career_status.c:4402`, the fill choke point `3ac95cf`, and the auto-sim path)
+re-derive `teamOffsetTable` from `cupTeamIds` to paper over the clobber.
 
-## Why the "stable team-id" representation alone is NOT enough
+## 2. Why the obvious fix (move the cup scratch) is the WRONG cut
 
-Attempted 2026-06-13 (reverted): change `teamOffsetTable`/`teamSelOffset` from a
-selTeams **index** to the team's stable **id** (`PACK_BE_U16(country,ordinal)`),
-resolved via `_VerifyTeamLoaded`; keep `-1` for careerTeam.
+`cupTeamIds@0x24E` and `teamGridPairings@0x2CE` are read via **raw byte
+offsets** in many places — `career_eurocups.c:376`, `diy_competition.c:3924 /
+4166 / 4347 / 8220`, `menus.c:6375`, `swos_data_bulk_imports.c:58` — and the
+**save format hard-codes `cupTeamIds@0x24E` / `teamGridPairings@0x2CE`**
+(`save_format_json.c:2826, 3209, 3669`). Moving them is a wide, fragile blast
+radius.
 
-- This *does* fix the orthogonal **index-reorder staleness** (careerFileBuffer
-  overlay reorders selTeams between slot store/load) and makes the JSON save
-  robust (no volatile indices on disk).
-- BUT the strict id-resolver **panics on a clobbered `0` slot** where the old
-  `&selTeamsPtr + index` arithmetic silently returned `selTeams[0]`. Because the
-  clobbering is pervasive, this turned into whack-a-mole panics across every
-  consumer. The id change is only viable **after** the overlay clobbering is gone.
+## 3. Recommended cut: relocate the STANDINGS, not the cup scratch
 
-Keep the reverted diff in mind for re-application post-untangle (core change was
-~2 functions in `diy_competition.c` + 2 raw-index writes in `save_format_json.c`).
+The standings are reached **only** through the `DIY_STANDINGS_OFFSET` macro
+(~28 sites, all `base + DIY_STANDINGS_OFFSET`). Change that one constant from
+`0x2B4` to a region **past** the cup scratch (struct ends at 0x5C8; the backing
+buffer is 4096B), e.g. `0x5C8` (or 16-byte aligned `0x5D0`). Then:
 
-## The proper fix
+- standings occupy `0x5C8 .. 0xA48` — clear of `cupTeamIds` / `teamGridPairings`
+  / `bracketScratch`, so a hybrid's league sub-slot can no longer clobber the
+  cup sub-slot;
+- all ~28 standings accessors move automatically (they use the macro);
+- the cup scratch and its raw offsets / save-format offsets are **untouched**;
+- the standings still overlap `audioInstrumentBank`'s range (past the struct) —
+  that overlap is harmless (audio not loaded during DIY) and is preserved.
 
-Give the cup scratch (`teamOffsetTable`, and as needed `cupTeamIds` /
-`teamGridPairings` / `teamShuffleOrder`) its **own backing storage**, separate
-from the league standings overlay, so league processing can no longer clobber it.
-Then:
-- the 3 rebuild calls (+ the auto-sim one that had to be added) can be **removed**;
-- `teamOffsetTable` is built once at cup init and stays valid all season;
-- the stable team-id representation can be re-applied cleanly.
+### Affected sites (recommended cut)
 
-### Constraint / caveat
+1. **`DIY_STANDINGS_OFFSET`** definition (grep for it — single `#define`).
+   Change `0x2B4` → new offset. Update the struct doc-comment in
+   `game_types.h:856`.
+2. **Slot store/load copy size** — `_Career_StoreCompetitionSlotStateToBuffer` /
+   `_Career_LoadCompetitionSlotStateFromBuffer` (`career_teams.c:1298/1348`).
+   The copy must now span `0x00 .. (newStandingsOffset + 1152)`; today it is
+   ~1844B (0x734). Verify the per-slot copy lengths (1844/1092/2900) and the
+   slot buffer sizes (`competitionFileBuffer`, `competitionContext`,
+   `tertiaryCompetitionContext`, `euroCupsCompetitionContext`) are ≥ the new end
+   (~0xA48). Enlarge buffers if needed.
+3. **Save format** — standings rows are emitted via `DIY_STANDINGS_OFFSET` /
+   `diy_standings_row` (`diy_competition.c:562`, `save_format_json.c` standings
+   loop). Confirm they follow the macro (auto-move). The comp-slot blob copy
+   bounds in `save_format_json.c` may key off the old 0x2B4/0x734 span — audit
+   and update. **This changes the on-disk slot-blob layout → old saves break;
+   flag to the user (regenerate test saves).**
+4. **`clearLeagueTableStats`** (`diy_competition.c:400`) — uses the macro; verify.
+
+### Alternative cut (if standings can't be cleanly moved)
+
+Move `bracketScratch` + `teamGridPairings` to the 0x734+ slack (keep
+`cupTeamIds` since its raw offset is load-bearing in the save). Higher risk:
+`teamGridPairings@0x2CE` raw accessors must all move too.
+
+## 4. After the untangle (the payoff)
+
+With the standings no longer clobbering the cup scratch:
+
+1. **Remove the rebuild band-aids**: the choke-point rebuild in
+   `_DIY_RecordCupBracketProgress` (revert `3ac95cf`), the auto-sim-path rebuild,
+   and the gated ones at `career_teams.c:1812` / `career_status.c:4402`. Verify
+   `teamOffsetTable` stays valid through hybrid league→cup transitions with NO
+   rebuild (re-instrument the 62/63 check).
+2. **Re-apply the stable-team-id representation** (reverted 2026-06-13): make
+   `teamOffsetTable`/`teamSelOffset` store `PACK_BE_U16(country,ordinal)` (−1 =
+   careerTeam) resolved via `_VerifyTeamLoaded`, instead of a volatile selTeams
+   index. Core change is ~2 functions in `diy_competition.c`
+   (`diy_resolve_team`, `diy_team_to_identity`) + 2 raw-index writes in
+   `save_format_json.c` (the `teamSelOffset = (int32_t)i` sites). This was only
+   blocked by the overlay clobber (strict resolver panicked on clobbered 0
+   slots); once the clobber is gone it lands cleanly and removes the index
+   staleness + makes saves cross-target robust.
+
+## 5. Staged execution + test gates
+
+Do these as separate commits, each verified before the next:
+
+1. **Relocate standings** (macro + slot copy + buffers). Build all 3 arches.
+   Test: fresh English career through a full season incl. a hybrid (euro) cup,
+   no panic. Re-instrument the 62/63 check to confirm `teamOffsetTable` is no
+   longer clobbered (with the rebuilds STILL in place as a safety net).
+2. **Save-format migration**: confirm a save round-trips with the new layout;
+   cross-target SDL↔Amiga. Old saves incompatible — tell the user.
+3. **Remove the rebuilds** one at a time, re-testing the hybrid each time.
+4. **Re-apply stable-id**; full season + cross-target save test.
+5. **Back-port** every step to the Amiga C port (the overlay + macro exist
+   there too; the Amiga hybrid hits the same clobber). User commits the Amiga
+   side manually.
+
+## 6. Constraint
 
 Current guidance (memory: *"Overlapped data regions — do NOT separate during
-64-bit transition"*) deliberately preserves these overlays. This untangle is a
-**deliberate exception** for one runtime-scratch region (NOT a saved-data overlay).
-Validate that nothing relies on the cup/league scratch aliasing, and cross-target
-test saves (SDL ↔ Amiga) since `cupTeamIds`/standings serialization touches the
-same region. Back-port to the Amiga C port.
+64-bit transition"*) preserves these overlays. This is a **deliberate
+exception** for one runtime-scratch collision that causes real bugs. The
+standings-relocation cut keeps the per-competition block a single contiguous
+unit (just larger), so it stays compatible with the slot-buffer / save-as-unit
+model — it only changes one offset constant and the copy/buffer sizes.
 
-## Separate, unrelated open bug (do not conflate)
+## 7. Separate, unrelated bug (already FIXED — do not conflate)
 
-Season-transition **panic 0x4459** in `_Career_SetCurrentCompetitionSlot` (slot 4,
-DIVISION TWO): `_DIY_SelectCompetitionSlot4FromCurrentDivision`
-(`career_init.c:856`) walks `englishLeaguesBlock` with raw Amiga byte offsets
-(`divisions[divIndex].unk1` as a self-relative offset to a `{diyComp,
-diyCompetitionTablePtr}` pointer pair). On 64-bit the `name[10]`/`playoffLinkPtrs[2]`
-pointer arrays grew 4→8 bytes, so the offset lands on `name[4]` (= `aDivisionTwo`)
-instead of the DIY comp. Fix = typed `EnglishLeaguesBlock` field access (see the
-model in `career_season.c:1472+`). Asm ref: SWOS2.s line 59313.
+Season-transition panic **0x4459** in `_DIY_SelectCompetitionSlot4FromCurrentDivision`
+— FIXED 2026-06-13 (`5b89386`): typed `englishLeaguesBlock` walk replacing the
+self-relative byte offset. Kept here only as a pointer; not part of this plan.
