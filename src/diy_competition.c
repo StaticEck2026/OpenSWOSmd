@@ -112,7 +112,7 @@ extern uint8_t diyLeagueSeasonStateTable[];
 extern volatile uint8_t diyLeagueScratchBuffer[];
 extern uint8_t competitionFileBuffer[];
 extern uint8_t competitionContext[];
-extern uint8_t tertiaryCompetitionContext[];
+extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern uint8_t euroCupsCompetitionContext[];
 
 /* ASM globals for cup bracket */
@@ -4630,7 +4630,7 @@ void _OpenDiyPreset1(void)
 __attribute__((used, externally_visible))
 void _OpenDiyPreset2(void)
 {
-    _ShowDiyCompetitionForSource(tertiaryCompetitionContext);
+    _ShowDiyCompetitionForSource((uint8_t *)&tertiaryCompetitionContextBuf);
 }
 
 /* OpenDiyPreset3 — open DIY from euroCupsCompetitionContext (SWOS2.s line 59173) */
