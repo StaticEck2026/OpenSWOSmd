@@ -655,6 +655,16 @@ _Static_assert(offsetof(DIYCompetition, maxDivisionOffset) == 0x56 + (sizeof(voi
 _Static_assert(offsetof(DIYCompetition, promotionCount)    == 0x58 + (sizeof(void *) - 4), "promotionCount@0x58");
 _Static_assert(offsetof(DIYCompetition, relegationCount)   == 0x5A + (sizeof(void *) - 4), "relegationCount@0x5A");
 
+/* Slot-4 (diy) untangle, Part A S2: the clean fields the SLOT_ALIAS names
+ * diyCompetitionContext (@0, VALUE = competitionType) and diyCompSlotStateA/B/C
+ * (@0x3E/40/42) pointed at. Pinned so a wrong typed consumer path is caught at
+ * compile time on both targets (CFB_NP = sizeof(void*)-4 tracks the namePtr@0x28
+ * growth for the slot-state fields; competitionType@0 sits before it). */
+_Static_assert(offsetof(DIYCompetition, competitionType) == 0x00,                        "competitionType@0x00");
+_Static_assert(offsetof(DIYCompetition, slotStateA)      == 0x3E + (sizeof(void *) - 4), "slotStateA@0x3E");
+_Static_assert(offsetof(DIYCompetition, slotStateB)      == 0x40 + (sizeof(void *) - 4), "slotStateB@0x40");
+_Static_assert(offsetof(DIYCompetition, slotStateC)      == 0x42 + (sizeof(void *) - 4), "slotStateC@0x42");
+
 /* ==================================================================
  * DIYTeamStats / DIYLeagueTableRow — 18 bytes
  * Per-team league standings entry written by clearLeagueTableStats.
