@@ -87,15 +87,11 @@ __asm__(
     SLOT_ALIAS(diyTeamIdListType0,        primaryCompetitionBuf, 0x12E + 2*CFB_NP)
     SLOT_ALIAS(diyTeamIdListType1,        primaryCompetitionBuf, 0x24E + 2*CFB_NP)
 
-    /* ---- slot 1: secondary (competitionContext) ---- */
-    SLOT_ALIAS(competitionContext,        competitionContextBuf, 0)
-    SLOT_ALIAS(secondaryCompetitionName,  competitionContextBuf, 0x04)
-    SLOT_ALIAS(minorTrophyBonusValue,     competitionContextBuf, 0x30 + CFB_NP)
-    SLOT_ALIAS(secondaryCompWinnerTeam,   competitionContextBuf, 0x3A + CFB_NP)
-    SLOT_ALIAS(secondaryCompSlotStateA,   competitionContextBuf, 0x3E + CFB_NP)
-    SLOT_ALIAS(secondaryCompSlotStateB,   competitionContextBuf, 0x40 + CFB_NP)
-    SLOT_ALIAS(secondaryCompSlotStateC,   competitionContextBuf, 0x42 + CFB_NP)
-    SLOT_ALIAS(secondaryCompFinished,     competitionContextBuf, 0x4C + CFB_NP)
+    /* ---- slot 1: secondary ---- MIGRATED (untangle Part A, S4): consumers now use
+     * the typed competitionContextBuf.tourn.header.{competitionType,competitionName,
+     * trophyBonusValue,winnerTeam,slotStateA/B/C,compFinished} directly; the
+     * competitionContext / secondaryCompetitionName / minorTrophyBonusValue /
+     * secondaryCompWinnerTeam / secondaryCompSlotStateA-C / secondaryCompFinished aliases are retired. */
 
     /* ---- slot 2: tertiary ---- MIGRATED (untangle Part A, S3): consumers now use
      * the typed tertiaryCompetitionContextBuf.tourn.header.{competitionType,competitionName,

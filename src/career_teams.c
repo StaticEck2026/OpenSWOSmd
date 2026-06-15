@@ -1253,7 +1253,7 @@ void _Career_InitCompetitionTeamSelection_Dispatch(uint8_t *spec, uint16_t idx)
 
 /* --- Additional ASM externs for Chunk 92 --- */
 extern uint8_t competitionFileBuffer[];
-extern uint8_t competitionContext[];
+extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern uint8_t euroCupsCompetitionContext[];
 extern DIYCompetitionEx diyCompetitionStart;
@@ -1403,7 +1403,7 @@ void _Career_CopyCompetitionFileBufferToOrFromActive(void)
 __attribute__((used, externally_visible))
 void _Career_CopyCompetitionContextToOrFromActive(void)
 {
-    _Career_LoadCompetitionSlotStateFromBuffer(competitionContext);
+    _Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&competitionContextBuf);
 }
 
 /* ================================================================

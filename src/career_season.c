@@ -420,7 +420,7 @@ check_self:
  * ================================================================ */
 
 extern uint8_t competitionFileBuffer[];
-extern uint8_t competitionContext[];
+extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern uint8_t euroCupsCompetitionContext[];
 
@@ -540,7 +540,7 @@ void _SeasonFinished_ComputeSeasonReview(void)
 
     /* Secondary competition (if exists) */
     if (secondaryCompetitionPtr != 0) {
-        cat = computeCategoryForCompetition(competitionContext);
+        cat = computeCategoryForCompetition((uint8_t *)&competitionContextBuf);
         if (cat >= 0) {
             uint16_t ucat = (uint16_t)cat;
             adjustWeightsForCompetition((uint8_t *)secondaryCompetitionPtr, &d5, &ucat);
@@ -634,7 +634,7 @@ void _ShowChairmanOpinionAboutTheSeason(void)
 
     /* Secondary competition: top-2 finish → -2 */
     if (secondaryCompetitionPtr != 0) {
-        int16_t pos2 = (int16_t)_FindTeamInDIY(selTeamNumber, (DIYCompetition *)competitionContext);
+        int16_t pos2 = (int16_t)_FindTeamInDIY(selTeamNumber, (DIYCompetition *)&competitionContextBuf);
         if ((uint16_t)pos2 < 2)
             d7 -= 2;
     }

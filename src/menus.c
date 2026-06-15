@@ -4401,7 +4401,7 @@ extern uint8_t *secondaryCompetitionPtr;
 extern uint8_t *tertiaryCompetitionPtr;
 extern uint8_t *quaternaryCompetitionPtr;
 extern uint8_t  diyPresetNameOfCompetition[];
-extern uint8_t  secondaryCompetitionName[];
+extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern uint8_t  quaternaryCompetitionName[];
 extern uint8_t  plNationality;
@@ -4463,7 +4463,7 @@ void _ViewCompetitionsOnReturn(void)
 {
     /* Set text pointers for competition name entries */
     menuEntries[1].fg = (uintptr_t)diyPresetNameOfCompetition;
-    menuEntries[2].fg = (uintptr_t)secondaryCompetitionName;
+    menuEntries[2].fg = (uintptr_t)competitionContextBuf.tourn.header.competitionName;
     menuEntries[3].fg = (uintptr_t)tertiaryCompetitionContextBuf.tourn.header.competitionName;
     menuEntries[4].fg = (uintptr_t)quaternaryCompetitionName;
 

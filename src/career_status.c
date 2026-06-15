@@ -148,7 +148,7 @@ extern uint8_t *currentCompetitionPtr;
 extern uint8_t *secondaryCompetitionPtr;
 extern uint8_t *tertiaryCompetitionPtr;
 extern uint8_t *quaternaryCompetitionPtr;
-extern uint8_t    competitionContext[];
+extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern uint8_t    euroCupsCompetitionContext[];
 extern uint8_t    competitionFileBuffer[];
@@ -181,7 +181,7 @@ extern uint8_t    oceaniaWorldCupQualificationCopy[];
 extern uint16_t   currentDivisionIndex;
 extern uint16_t   seasonReview;
 extern uint16_t   seasonFinished;
-extern uint16_t   secondaryCompFinished;
+/* secondaryCompFinished migrated to competitionContextBuf.tourn.header.compFinished (slot-1 untangle, S4) */
 /* tertiaryCompFinished migrated to tertiaryCompetitionContextBuf.tourn.header.compFinished (slot-2 untangle, S3) */
 extern uint16_t   leaguePromotionCount;
 extern uint16_t   leagueRelegationCount;
@@ -204,7 +204,7 @@ extern DIYTournamentState diyFileBufferCopy;
 
 /* Winner teams */
 extern uint16_t   primaryCompWinnerTeam;
-extern uint16_t   secondaryCompWinnerTeam;
+/* secondaryCompWinnerTeam migrated to competitionContextBuf.tourn.header.winnerTeam (slot-1 untangle, S4) */
 /* tertiaryCompWinnerTeam migrated to tertiaryCompetitionContextBuf.tourn.header.winnerTeam (slot-2 untangle, S3) */
 extern uint16_t   quaternaryCompWinnerTeam;
 extern uint16_t   euroCupSlotIndex;
@@ -222,7 +222,7 @@ extern uint16_t   winCupBonusCount;
 extern uint16_t   minorTrophyBonusCount;
 extern uint16_t   majorTrophyBonusCount;
 extern uint8_t    majorTrophyBonusValue;
-extern uint8_t    minorTrophyBonusValue;
+/* minorTrophyBonusValue migrated to competitionContextBuf.tourn.header.trophyBonusValue (slot-1 untangle, S4) */
 /* leagueTitleBonusValue migrated to tertiaryCompetitionContextBuf.tourn.header.trophyBonusValue (slot-2 untangle, S3) */
 extern uint8_t    majorTrophyOrCupBonusValue;
 
@@ -937,7 +937,7 @@ uint16_t _IsMajorInternationalTournament(uint8_t **outCtx) {
         secComp == (uintptr_t)oceaniaCupCopy ||
         secComp == (uintptr_t)invitationTournamentCopy ||
         secComp == (uintptr_t)tourCopy) {
-        *outCtx = competitionContext;
+        *outCtx = (uint8_t *)&competitionContextBuf;
         return 1;
     }
 
@@ -1318,7 +1318,7 @@ void _MaybeSackManagerAfterSeasonReview(void) {
 /* Helper: check if secondary/tertiary comps are finished (blocks escalation) */
 static uint16_t areActiveCompsFinished(void) {
     if (secondaryCompetitionPtr != 0) {
-        if (secondaryCompFinished != 0)
+        if (competitionContextBuf.tourn.header.compFinished != 0)
             return 1;
     }
     if (tertiaryCompetitionPtr != 0) {
@@ -1407,7 +1407,7 @@ performance_warning_active:
             if (careerTeamLostMatch != 0)
                 goto random_escalate;
             /* Check if secondary/tertiary comps block escalation */
-            if (secondaryCompetitionPtr != 0 && secondaryCompFinished != 0)
+            if (secondaryCompetitionPtr != 0 && competitionContextBuf.tourn.header.compFinished != 0)
                 goto random_escalate;
             if (tertiaryCompetitionPtr != 0 && tertiaryCompetitionContextBuf.tourn.header.compFinished != 0)
                 goto random_escalate;
@@ -1494,7 +1494,7 @@ done_performance:
                 goto issue_overdraft_last_warning;
             if (careerTeamLostMatch != 0)
                 goto issue_overdraft_last_warning;
-            if (secondaryCompetitionPtr != 0 && secondaryCompFinished != 0)
+            if (secondaryCompetitionPtr != 0 && competitionContextBuf.tourn.header.compFinished != 0)
                 goto issue_overdraft_last_warning;
             if (tertiaryCompetitionPtr != 0 && tertiaryCompetitionContextBuf.tourn.header.compFinished != 0)
                 goto issue_overdraft_last_warning;
@@ -1655,8 +1655,8 @@ void _InitializeCareerSeasonFinancials(void) {
     uint16_t d5 = getExpectedLeagueRankIndex(competitionFileBuffer, moreExpensiveCount);
 
     if (secondaryCompetitionPtr != 0) {
-        uint16_t mec2 = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)competitionContext);
-        d5 += getExpectedLeagueRankIndex(competitionContext, mec2);
+        uint16_t mec2 = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)&competitionContextBuf);
+        d5 += getExpectedLeagueRankIndex((uint8_t *)&competitionContextBuf, mec2);
     }
     if (tertiaryCompetitionPtr != 0) {
         uint16_t mec3 = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)&tertiaryCompetitionContextBuf);
@@ -1925,7 +1925,7 @@ check_secondary_winner:
 
     if (secondaryCompetitionPtr == 0)
         goto check_tertiary_winner;
-    if (selTeamNumber != secondaryCompWinnerTeam)
+    if (selTeamNumber != competitionContextBuf.tourn.header.winnerTeam)
         goto check_tertiary_winner;
     if (secondaryCompetitionPtr == (uint8_t *)friendlyCopy)
         goto check_tertiary_winner;
@@ -2053,7 +2053,7 @@ void _UpdateCareerReputationBonuses(void) {
             comp == (uintptr_t)oceaniaCupCopy) {
             bonusVal = (int8_t)majorTrophyBonusValue;
         } else {
-            bonusVal = (int8_t)minorTrophyBonusValue;
+            bonusVal = (int8_t)competitionContextBuf.tourn.header.trophyBonusValue;
         }
         addReputationFromBonusValueDiv4(bonusVal);
     }
@@ -2065,7 +2065,7 @@ void _UpdateCareerReputationBonuses(void) {
 
     if (minorTrophyBonusActive != 0) {
         minorTrophyBonusCount++;
-        addReputationFromBonusValueDiv4((int8_t)minorTrophyBonusValue);
+        addReputationFromBonusValueDiv4((int8_t)competitionContextBuf.tourn.header.trophyBonusValue);
     }
 
     if (leagueTitleBonusActive != 0)
@@ -2120,7 +2120,7 @@ void _InitializeStartingBalanceForNewSeason(void) {
 
     /* Minor trophy bonus */
     if (minorTrophyBonusActive != 0) {
-        int16_t bonusVal = (int16_t)(int8_t)minorTrophyBonusValue;
+        int16_t bonusVal = (int16_t)(int8_t)competitionContextBuf.tourn.header.trophyBonusValue;
         startingBalance += (int32_t)((uint32_t)(uint16_t)bonusVal * 0xCED0);
     }
 
@@ -3197,7 +3197,7 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
     /* Find the matching competition context buffer */
     uint8_t *ctx = competitionFileBuffer;
     if (compPtr != (uint8_t *)currentCompetitionPtr) {
-        ctx = competitionContext;
+        ctx = (uint8_t *)&competitionContextBuf;
         if (compPtr != (uint8_t *)secondaryCompetitionPtr) {
             ctx = (uint8_t *)&tertiaryCompetitionContextBuf;
             if (compPtr != (uint8_t *)tertiaryCompetitionPtr) {

@@ -857,13 +857,8 @@ extern uint16_t saveFileVersion;
 extern uint32_t saveFileAmigaType;
 /* numSelectedTeams already declared at file top. */
 
-extern uint8_t  secondaryCompetitionName[];
-extern uint16_t minorTrophyBonusValue;
-extern uint16_t secondaryCompWinnerTeam;
-extern uint16_t secondaryCompSlotStateA;
-extern uint16_t secondaryCompSlotStateB;
-extern uint16_t secondaryCompSlotStateC;
-extern uint16_t secondaryCompFinished;
+/* secondaryComp* (name/minorTrophyBonusValue/winnerTeam/slotStateA-C/finished) migrated to
+ * competitionContextBuf.tourn.header.* (slot-1 untangle, S4) */
 /* tertiaryComp* (name/leagueTitleBonusValue/winnerTeam/slotStateA-C/finished) migrated to
  * tertiaryCompetitionContextBuf.tourn.header.* (slot-2 untangle, S3) */
 /* diyCompSlotStateA/B/C migrated to diyCompetitionContextBuf.tourn.header.slotState* (slot-4 untangle, S2) */
@@ -895,7 +890,7 @@ extern uint8_t  jobOffers[];
 /* careerCompetitionSlotPtrTable entry buffers — declared further down
  * for the named-blob section but needed earlier for the per-slot type
  * scalars at the top of the s_career_scalars table. */
-extern uint8_t  competitionContext[];
+extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern uint8_t  euroCupsCompetitionContext[];
 extern CompetitionSlotBuffer diyCompetitionContextBuf;   /* slot-4 untangle (S2): typed buffer */
@@ -985,7 +980,7 @@ static const FieldDesc s_career_scalars[] = {
      * the pointer; an explicit field is authoritative and survives any
      * future struct reshuffles. */
     FX("primary_slot_type",               competitionFileBuffer,       FLD_S16),
-    FX("secondary_slot_type",             competitionContext,          FLD_S16),
+    FX("secondary_slot_type",             competitionContextBuf.tourn.header.competitionType, FLD_S16),
     FX("tertiary_slot_type",              tertiaryCompetitionContextBuf.tourn.header.competitionType, FLD_S16),
     FX("quaternary_slot_type",            euroCupsCompetitionContext,  FLD_S16),
     FX("diy_slot_type",                   diyCompetitionContextBuf.tourn.header.competitionType, FLD_S16),
@@ -1179,13 +1174,13 @@ static const FieldDesc s_career_scalars[] = {
     FX("num_selected_teams_inner",        numSelectedTeams,            FLD_U16),
 
     /* Comp context names + slot states (secondary/tertiary/quaternary). */
-    FA("secondary_competition_name",      secondaryCompetitionName, 36,FLD_STR),
-    FX("minor_trophy_bonus_value",        minorTrophyBonusValue,       FLD_U16),
-    FX("secondary_comp_winner_team",      secondaryCompWinnerTeam,     FLD_U16),
-    FX("secondary_comp_slot_state_a",     secondaryCompSlotStateA,     FLD_U16),
-    FX("secondary_comp_slot_state_b",     secondaryCompSlotStateB,     FLD_U16),
-    FX("secondary_comp_slot_state_c",     secondaryCompSlotStateC,     FLD_U16),
-    FX("secondary_comp_finished",         secondaryCompFinished,       FLD_U16),
+    FA("secondary_competition_name",      competitionContextBuf.tourn.header.competitionName, 36, FLD_STR),
+    FX("minor_trophy_bonus_value",        competitionContextBuf.tourn.header.trophyBonusValue, FLD_U16),
+    FX("secondary_comp_winner_team",      competitionContextBuf.tourn.header.winnerTeam, FLD_U16),
+    FX("secondary_comp_slot_state_a",     competitionContextBuf.tourn.header.slotStateA, FLD_U16),
+    FX("secondary_comp_slot_state_b",     competitionContextBuf.tourn.header.slotStateB, FLD_U16),
+    FX("secondary_comp_slot_state_c",     competitionContextBuf.tourn.header.slotStateC, FLD_U16),
+    FX("secondary_comp_finished",         competitionContextBuf.tourn.header.compFinished, FLD_U16),
     FA("tertiary_competition_name",       tertiaryCompetitionContextBuf.tourn.header.competitionName, 36, FLD_STR),
     FX("league_title_bonus_value",        tertiaryCompetitionContextBuf.tourn.header.trophyBonusValue, FLD_U16),
     FX("tertiary_comp_winner_team",       tertiaryCompetitionContextBuf.tourn.header.winnerTeam, FLD_U16),
@@ -1284,7 +1279,7 @@ static const FieldDesc s_career_scalars[] = {
      * those slots lost their seed order + standings across save/load. The
      * comp_slots typed serializer still overrides the cross-target-sensitive
      * header on load; this blob carries the (same-arch) tail. */
-    FA("competition_context",          competitionContext,          sizeof(CompetitionSlotBuffer), FLD_BYTES),
+    FA("competition_context",          competitionContextBuf,       sizeof(CompetitionSlotBuffer), FLD_BYTES),
     FA("tertiary_competition_context", tertiaryCompetitionContextBuf, sizeof(CompetitionSlotBuffer), FLD_BYTES),
     FA("diy_competition_context",      diyCompetitionContextBuf,    sizeof(CompetitionSlotBuffer), FLD_BYTES),
     FA("euro_cups_competition_context",euroCupsCompetitionContext,  sizeof(CompetitionSlotBuffer), FLD_BYTES),
@@ -2006,7 +2001,7 @@ extern uint8_t tmdFileBuffer[];                     /* +2,     54720 B */
 extern uint8_t careerUnavailablePlayerLookupTable[];/* +55738, 80 B  */
 extern uint8_t careerUnavailablePlayerNames[];      /* +55818, 340 B */
 extern uint8_t diyLeagueSeasonStateTable[];         /* +59610, 2000 B */
-extern uint8_t competitionContext[];                /* +63340, 2900 B */
+extern CompetitionSlotBuffer competitionContextBuf;         /* slot-1 untangle (S4): typed buffer (was +63340, 2900 B) */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;  /* slot-2 untangle (S3): typed buffer (was +66240, 1092 B) */
 extern CompetitionSlotBuffer diyCompetitionContextBuf;  /* slot-4 untangle (S2): typed buffer (was +67332, 1092 B) */
 extern uint8_t euroCupsCompetitionContext[];        /* +68424, 2900 B */
@@ -3825,7 +3820,7 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
                    (const DIYCompetitionEx *)&competitionFileBuffer);
     mjson_printf(json_out_emit, &out, "%s", ",");
     emit_comp_slot(json_out_emit, &out, "secondary",
-                   (const DIYCompetitionEx *)competitionContext);
+                   (const DIYCompetitionEx *)&competitionContextBuf);
     mjson_printf(json_out_emit, &out, "%s", ",");
     emit_comp_slot(json_out_emit, &out, "tertiary",
                    (const DIYCompetitionEx *)&tertiaryCompetitionContextBuf);
@@ -3896,7 +3891,7 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
      * Each emits "<slot>_comp_slot_stage" only if that slot is a type-2
      * tournament; no-op otherwise (no dangling comma). */
     emit_ctx_stage(json_out_emit, &out, "secondary_comp_slot_stage",
-                   (const DIYCompetitionEx *)competitionContext);
+                   (const DIYCompetitionEx *)&competitionContextBuf);
     emit_ctx_stage(json_out_emit, &out, "tertiary_comp_slot_stage",
                    (const DIYCompetitionEx *)&tertiaryCompetitionContextBuf);
     emit_ctx_stage(json_out_emit, &out, "diy_comp_slot_stage",
@@ -4124,7 +4119,7 @@ static void apply_semantic_load(const char *src, int src_size)
             load_comp_slot(cs, cslen, "primary",
                            (DIYCompetitionEx *)&competitionFileBuffer);
             load_comp_slot(cs, cslen, "secondary",
-                           (DIYCompetitionEx *)competitionContext);
+                           (DIYCompetitionEx *)&competitionContextBuf);
             load_comp_slot(cs, cslen, "tertiary",
                            (DIYCompetitionEx *)&tertiaryCompetitionContextBuf);
             load_comp_slot(cs, cslen, "diy",
@@ -4209,7 +4204,7 @@ static void apply_semantic_load(const char *src, int src_size)
      * typed stage overwrites the mis-positioned blob bytes. No-op for non-type-2
      * slots and pre-fix saves. */
     load_ctx_stage((const char *)src, (int)src_size, "secondary_comp_slot_stage",
-                   (DIYCompetitionEx *)competitionContext);
+                   (DIYCompetitionEx *)&competitionContextBuf);
     load_ctx_stage((const char *)src, (int)src_size, "tertiary_comp_slot_stage",
                    (DIYCompetitionEx *)&tertiaryCompetitionContextBuf);
     load_ctx_stage((const char *)src, (int)src_size, "diy_comp_slot_stage",
