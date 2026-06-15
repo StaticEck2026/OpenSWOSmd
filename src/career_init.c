@@ -495,9 +495,7 @@ extern uint8_t  uefaCup[];
  * 18 B so consumers iterate the typed array instead. */
 extern CompetitionCareer careerContests[];
 
-extern uint16_t primaryCompSlotStateA;
-extern uint16_t primaryCompSlotStateB;
-extern uint16_t primaryCompSlotStateC;
+/* primaryCompSlotStateA/B/C migrated to primaryCompetitionBuf.tourn.header.slotState* (slot-0 untangle, S6) */
 /* secondaryCompSlotStateA/B/C migrated to competitionContextBuf.tourn.header.slotState* (slot-1 untangle, S4) */
 /* tertiaryCompSlotStateA/B/C migrated to tertiaryCompetitionContextBuf.tourn.header.slotState* (slot-2 untangle, S3) */
 /* quaternaryCompSlotStateA/B/C migrated to euroCupsCompetitionContextBuf.tourn.header.slotState* (slot-3 untangle, S5) */
@@ -542,7 +540,7 @@ extern uint8_t *secondaryCompetitionPtr;
 extern uint8_t *tertiaryCompetitionPtr;
 extern uint8_t *quaternaryCompetitionPtr;
 extern uint8_t *diyCompetitionPtr;
-extern uint8_t competitionFileBuffer[];
+extern CompetitionSlotBuffer primaryCompetitionBuf;          /* slot-0 untangle (S6): typed buffer */
 extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern CompetitionSlotBuffer euroCupsCompetitionContextBuf;   /* slot-3 untangle (S5): typed buffer */
@@ -700,9 +698,9 @@ void _InitCareer(uint16_t teamNo)
     }
 
     teamsLoaded = 0;
-    primaryCompSlotStateA = 3;
-    primaryCompSlotStateB = 2;
-    primaryCompSlotStateC = 8;
+    primaryCompetitionBuf.tourn.header.slotStateA = 3;
+    primaryCompetitionBuf.tourn.header.slotStateB = 2;
+    primaryCompetitionBuf.tourn.header.slotStateC = 8;
     competitionContextBuf.tourn.header.slotStateA = 3;
     competitionContextBuf.tourn.header.slotStateB = 2;
     competitionContextBuf.tourn.header.slotStateC = 8;
@@ -1059,7 +1057,7 @@ void _InitializeNewSeason(void)
     }
 
     /* Initialize competition slot pointer table */
-    careerCompetitionSlotPtrTable[0] = (uint8_t *)&competitionFileBuffer;
+    careerCompetitionSlotPtrTable[0] = (uint8_t *)&primaryCompetitionBuf;
     careerCompetitionSlotPtrTable[1] = (uint8_t *)&competitionContextBuf;
     careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContextBuf;
     careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContextBuf;
@@ -1151,9 +1149,9 @@ void _InitializeNewSeason(void)
 
     /* Set up primary competition (slot 0) */
     {
-        uint16_t savedA = primaryCompSlotStateA;
-        uint16_t savedB = primaryCompSlotStateB;
-        uint16_t savedC = primaryCompSlotStateC;
+        uint16_t savedA = primaryCompetitionBuf.tourn.header.slotStateA;
+        uint16_t savedB = primaryCompetitionBuf.tourn.header.slotStateB;
+        uint16_t savedC = primaryCompetitionBuf.tourn.header.slotStateC;
 
         uint8_t *comp = (uint8_t *)*compTablePtr;
         compTablePtr++;
@@ -1167,9 +1165,9 @@ void _InitializeNewSeason(void)
         ((SeasonInformations *)_GetCurrentSeasonPointer())->leagueStrPtr =
             ((DIYCompetition *)careerCompetitionSlotPtrTable[0])->namePtr;
 
-        primaryCompSlotStateC = savedC;
-        primaryCompSlotStateB = savedB;
-        primaryCompSlotStateA = savedA;
+        primaryCompetitionBuf.tourn.header.slotStateC = savedC;
+        primaryCompetitionBuf.tourn.header.slotStateB = savedB;
+        primaryCompetitionBuf.tourn.header.slotStateA = savedA;
     }
 
     /* Skip the per-primary divisionIndex slot (one pointer-sized entry,
@@ -1321,7 +1319,7 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
     currentDivisionIndex = divisionIndex;
 
     /* Initialize competition slot pointer table */
-    careerCompetitionSlotPtrTable[0] = (uint8_t *)&competitionFileBuffer;
+    careerCompetitionSlotPtrTable[0] = (uint8_t *)&primaryCompetitionBuf;
     careerCompetitionSlotPtrTable[1] = (uint8_t *)&competitionContextBuf;
     careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContextBuf;
     careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContextBuf;
@@ -1647,7 +1645,7 @@ void _RebuildPointersAfterLoad(void)
      * lines as `_InitNewSeason` lines 1165-1169 — but this time after
      * load, so the saved (now stale) pointer values get replaced with
      * the current run's competition-buffer addresses. */
-    careerCompetitionSlotPtrTable[0] = (uint8_t *)&competitionFileBuffer;
+    careerCompetitionSlotPtrTable[0] = (uint8_t *)&primaryCompetitionBuf;
     careerCompetitionSlotPtrTable[1] = (uint8_t *)&competitionContextBuf;
     careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContextBuf;
     careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContextBuf;
@@ -1705,7 +1703,7 @@ void _RebuildPointersAfterLoad(void)
      * which calls _Career_LoadCompetitionSlotStateFromBuffer itself.
      * The Play Match / Next Match menus skip that helper, so we
      * have to populate diyCompetitionStart up-front at load time. */
-    _Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&competitionFileBuffer);
+    _Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&primaryCompetitionBuf);
 
     /* Step 3: walk careerContests and rewrite each *Copy record's
      * embedded nameSource pointer at (record + 5 + nameOffset).
@@ -1781,7 +1779,7 @@ void _Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel)
         comp = worldCup2Copy;
 
     /* Step 3: Find which slot owns this competition */
-    uint8_t *slotCtx = (uint8_t *)&competitionFileBuffer;
+    uint8_t *slotCtx = (uint8_t *)&primaryCompetitionBuf;
 
     if (comp == (uint8_t *)currentCompetitionPtr) {
         if (sel == currentDivisionIndex)

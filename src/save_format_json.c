@@ -92,8 +92,8 @@ extern int32_t  diy_team_to_identity(const uint8_t *teamPtr);
 extern uint8_t  seasonInformationsArray[];
 
 /* Externs for the other save buffers — used by future sub-files but
- * referenced here so the linker keeps the symbols available. */
-extern uint8_t  competitionFileBuffer;
+ * referenced here so the linker keeps the symbols available.
+ * (competitionFileBuffer retired → primaryCompetitionBuf, declared below; S6) */
 extern DIYTournamentState diyFileBufferCopy;
 
 /* file_io.c writer helper. */
@@ -821,20 +821,12 @@ extern uint16_t teamSelectionKeyCacheCount;
 extern uint16_t careerSlotProcessingInProgress;
 extern uint16_t teamSelectionKeyCacheEnd;
 extern uint8_t  careerJobOfferPhaseBias;     /* promoted from cache-blob byte 1 */
-extern uint16_t competitionOver;
-extern uint8_t  diyPresetNameOfCompetition[];
-extern uint16_t majorTrophyBonusValue;
-extern uint16_t numDiyTeams;
-extern uint16_t primaryCompWinnerTeam;
-extern uint16_t primaryCompSquadViewParam;
-extern uint16_t primaryCompSlotStateA;
-extern uint16_t primaryCompSlotStateB;
-extern uint16_t primaryCompSlotStateC;
-extern uint16_t diyTeamMinDivisionIndex;
-extern uint16_t diyTeamMaxDivisionOffset;
-extern uint16_t leaguePromotionCount;
-extern uint16_t leagueRelegationCount;
-extern uint16_t leagueWarningsEnabled;
+/* primaryComp* slot-0 scalars (competitionOver, diyPresetNameOfCompetition,
+ * majorTrophyBonusValue, numDiyTeams, primaryCompWinnerTeam, primaryCompSquadViewParam,
+ * primaryCompSlotStateA-C, diyTeamMinDivisionIndex, diyTeamMaxDivisionOffset,
+ * leaguePromotionCount, leagueRelegationCount, leagueWarningsEnabled) migrated to
+ * primaryCompetitionBuf.tourn.header.* (and .tourn.leagueWarningsEnabled) -- slot-0
+ * untangle, S6. Aliases retired. */
 extern uint8_t  viewRandomPhase;
 extern uint8_t  seasonPlaying;
 extern uint16_t inFriendlyMenu;
@@ -886,6 +878,7 @@ extern uint8_t  jobOffers[];
 /* careerCompetitionSlotPtrTable entry buffers — declared further down
  * for the named-blob section but needed earlier for the per-slot type
  * scalars at the top of the s_career_scalars table. */
+extern CompetitionSlotBuffer primaryCompetitionBuf;          /* slot-0 untangle (S6): typed buffer */
 extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern CompetitionSlotBuffer euroCupsCompetitionContextBuf;   /* slot-3 untangle (S5): typed buffer */
@@ -895,9 +888,7 @@ extern CompetitionSlotBuffer diyCompetitionContextBuf;   /* slot-4 untangle (S2)
  * declared further down for the per-region section but needed earlier
  * for static initialiser address resolution. */
 extern uint8_t  diyLeagueSeasonStateTable[];
-extern uint8_t  diyTeamIdListType0[];
-extern uint8_t  diyTeamIdListType1[];
-extern uint8_t  diyTeamIdListType2[];
+/* diyTeamIdListType0/1/2 reached via primaryCompetitionBuf casts now (S6). */
 extern uint8_t  careerUnavailablePlayerLookupTable[];
 extern uint8_t  careerUnavailablePlayerNames[];
 extern uint8_t  teamSelectionKeyCache[];
@@ -961,6 +952,16 @@ typedef char _primary_run_g_reaches_team_ids[
     (offsetof(DIYCompetitionEx, matchData) + 0x26 + 16 == 0xA2) ? 1 : -1];
 #endif
 
+/* SLOT_ALIAS untangle S6 (D-A1): pin the two cast-through BE team-id descriptor
+ * addresses to the retired aliases' offsets on BOTH arches, so a wrong typed path
+ * is caught at compile time (the old aliases were primaryCompetitionBuf + 0x12E /
+ * 0x24E + 2*CFB_NP; CFB_NP = sizeof(void*)-4). type2 (tourn.teamIds@0x9A) and
+ * leagueWarningsEnabled@sizeof(DIYCompetition) are already pinned in game_types.h. */
+_Static_assert(offsetof(DIYCompetitionEx, matchData.league.leagueTeamIds)
+               == 0x12E + 2 * (sizeof(void *) - 4), "S6 D-A1: diy_team_id_list_type_0 byte-identity");
+_Static_assert(offsetof(DIYCompetitionEx, cupTeamIds)
+               == 0x24E + 2 * (sizeof(void *) - 4), "S6 D-A1: diy_team_id_list_type_1 byte-identity");
+
 static const FieldDesc s_career_scalars[] = {
     /* tmd_team_count — uint16 at &careerFileBuffer + 0, holds the count
      * of populated TeamFileEx records in the TMD pool that follows at
@@ -975,7 +976,7 @@ static const FieldDesc s_career_scalars[] = {
      * (b20b070) which broke when the saved in-memory state disagreed with
      * the pointer; an explicit field is authoritative and survives any
      * future struct reshuffles. */
-    FX("primary_slot_type",               competitionFileBuffer,       FLD_S16),
+    FX("primary_slot_type",               primaryCompetitionBuf.tourn.header.competitionType, FLD_S16),
     FX("secondary_slot_type",             competitionContextBuf.tourn.header.competitionType, FLD_S16),
     FX("tertiary_slot_type",              tertiaryCompetitionContextBuf.tourn.header.competitionType, FLD_S16),
     FX("quaternary_slot_type",            euroCupsCompetitionContextBuf.tourn.header.competitionType, FLD_S16),
@@ -1133,20 +1134,25 @@ static const FieldDesc s_career_scalars[] = {
      * Amiga cache/phase-bias overlap). Old saves lack this key -> loads as 0,
      * re-derived in _InitCareer. See project_keycache_cluster_design. */
     FX("career_job_offer_phase_bias",     careerJobOfferPhaseBias,     FLD_U8 ),
-    FX("competition_over",                competitionOver,             FLD_U16),
-    FA("diy_preset_name_of_competition",  diyPresetNameOfCompetition, 36, FLD_STR),
-    FX("major_trophy_bonus_value",        majorTrophyBonusValue,       FLD_U16),
-    FX("num_diy_teams",                   numDiyTeams,                 FLD_U16),
-    FX("primary_comp_winner_team",        primaryCompWinnerTeam,       FLD_U16),
-    FX("primary_comp_squad_view_param",   primaryCompSquadViewParam,   FLD_U16),
-    FX("primary_comp_slot_state_a",       primaryCompSlotStateA,       FLD_U16),
-    FX("primary_comp_slot_state_b",       primaryCompSlotStateB,       FLD_U16),
-    FX("primary_comp_slot_state_c",       primaryCompSlotStateC,       FLD_U16),
-    FX("diy_team_min_division_index",     diyTeamMinDivisionIndex,     FLD_U16),
-    FX("diy_team_max_division_offset",    diyTeamMaxDivisionOffset,    FLD_U16),
-    FX("league_promotion_count",          leaguePromotionCount,        FLD_U16),
-    FX("league_relegation_count",         leagueRelegationCount,       FLD_U16),
-    FX("league_warnings_enabled",         leagueWarningsEnabled,       FLD_U16),
+    /* Slot-0 (primary) header scalars — SLOT_ALIAS untangle S6. Same addresses as
+     * the retired competitionOver/diyPresetNameOfCompetition/.../leagueRelegationCount
+     * aliases (typed primaryCompetitionBuf.tourn.header.* paths), so byte-identical.
+     * major_trophy_bonus_value keeps FLD_U16 over the .trophyBonusValue byte@0x30
+     * (reads 0x30-0x31, the legacy alias width — S4 precedent, do not "fix"). */
+    FX("competition_over",                primaryCompetitionBuf.tourn.header.competitionOver, FLD_U16),
+    FA("diy_preset_name_of_competition",  primaryCompetitionBuf.tourn.header.competitionName, 36, FLD_STR),
+    FX("major_trophy_bonus_value",        primaryCompetitionBuf.tourn.header.trophyBonusValue, FLD_U16),
+    FX("num_diy_teams",                   primaryCompetitionBuf.tourn.header.numTeams, FLD_U16),
+    FX("primary_comp_winner_team",        primaryCompetitionBuf.tourn.header.winnerTeam, FLD_U16),
+    FX("primary_comp_squad_view_param",   primaryCompetitionBuf.tourn.header.squadViewParam, FLD_U16),
+    FX("primary_comp_slot_state_a",       primaryCompetitionBuf.tourn.header.slotStateA, FLD_U16),
+    FX("primary_comp_slot_state_b",       primaryCompetitionBuf.tourn.header.slotStateB, FLD_U16),
+    FX("primary_comp_slot_state_c",       primaryCompetitionBuf.tourn.header.slotStateC, FLD_U16),
+    FX("diy_team_min_division_index",     primaryCompetitionBuf.tourn.header.minDivisionIndex, FLD_U16),
+    FX("diy_team_max_division_offset",    primaryCompetitionBuf.tourn.header.maxDivisionOffset, FLD_U16),
+    FX("league_promotion_count",          primaryCompetitionBuf.tourn.header.promotionCount, FLD_U16),
+    FX("league_relegation_count",         primaryCompetitionBuf.tourn.header.relegationCount, FLD_U16),
+    FX("league_warnings_enabled",         primaryCompetitionBuf.tourn.leagueWarningsEnabled, FLD_U16),
     FX("view_random_phase",               viewRandomPhase,             FLD_U8 ),
     FX("season_playing",                  seasonPlaying,               FLD_U8 ),
     FX("in_friendly_menu",                inFriendlyMenu,              FLD_U16),
@@ -1233,9 +1239,17 @@ static const FieldDesc s_career_scalars[] = {
      * is an array of BE byte-pairs [country, ordinal] — see
      * _FindTeamIdInDiyTeamsList in transfer_market.c. Saved as flat
      * bytes for round-trip fidelity. */
-    FA("diy_team_id_list_type_0",         diyTeamIdListType0,  288,    FLD_BYTES),
-    FA("diy_team_id_list_type_1",         diyTeamIdListType1,  2310,   FLD_BYTES),
-    FA("diy_team_id_list_type_2",         diyTeamIdListType2,  148,    FLD_BYTES),
+    /* SLOT_ALIAS untangle S6 (D-A1): the three legacy contiguous BE team-id views,
+     * rebased onto primaryCompetitionBuf via the same casts the consumers use
+     * (type0=matchData.league.leagueTeamIds@0x12E, type1=cupTeamIds@0x24E,
+     * type2=tourn.teamIds@0x9A). The 288/2310/148 spans INTENTIONALLY overrun
+     * their anchor fields into the following regions (these were flat overlapping
+     * views of teamIds/groupMap/slots/teamIndexOrder + stageSnapshot). FLD_BYTES =
+     * raw copy from the anchor address — byte-identical to the retired aliases
+     * (offsets verified; VERIFY=0 gate). */
+    FA("diy_team_id_list_type_0",         ((DIYCompetitionEx *)&primaryCompetitionBuf)->matchData.league.leagueTeamIds, 288, FLD_BYTES),
+    FA("diy_team_id_list_type_1",         ((DIYCompetitionEx *)&primaryCompetitionBuf)->cupTeamIds, 2310, FLD_BYTES),
+    FA("diy_team_id_list_type_2",         primaryCompetitionBuf.tourn.teamIds, 148, FLD_BYTES),
 
     /* Per-career-slot competition contexts. Each is a snapshot of
      * diyCompetitionStart / diyFileBufferCopy at the moment
@@ -1261,7 +1275,7 @@ static const FieldDesc s_career_scalars[] = {
      * safety) are superseded by emit_comp_slot, which corrects every cross-
      * target-sensitive field on load AFTER this blob. namePtr rides the blob
      * (stale absolute pointer) and is re-derived by _RebuildPointersAfterLoad. */
-    FA("primary_competition_context",     competitionFileBuffer,       sizeof(CompetitionSlotBuffer), FLD_BYTES),
+    FA("primary_competition_context",     primaryCompetitionBuf,       sizeof(CompetitionSlotBuffer), FLD_BYTES),
     /* Context-slot raw blobs — UNTANGLE step A4. The 4 *Context slots are now
      * standalone typed CompetitionSlotBuffer { DIYTournamentState tourn;
      * uint8_t stageSnapshot[DIY_STAGE_SNAPSHOT_LEN]; } (swos_competition_slots.c),
@@ -2003,9 +2017,7 @@ extern CompetitionSlotBuffer diyCompetitionContextBuf;  /* slot-4 untangle (S2):
 extern CompetitionSlotBuffer euroCupsCompetitionContextBuf; /* slot-3 untangle (S5): typed buffer (was +68424, 2900 B) */
 extern uint8_t teamSelectionKeyCache[];             /* +73292, ~1870 B */
 extern uint8_t careerForeignMarketPlayers[];        /* +75162, 18144 B */
-extern uint8_t diyTeamIdListType2[];                /* +93462, 148 B */
-extern uint8_t diyTeamIdListType0[];                /* +93610, 288 B */
-extern uint8_t diyTeamIdListType1[];                /* +93898, 2310 B */
+/* diyTeamIdListType2/0/1 reached via primaryCompetitionBuf casts now (S6). */
 extern uint8_t teamTacticsUSERA[];                  /* +96220, 370 B */
 extern uint8_t teamTacticsUSERB[];                  /* +96590, 370 B */
 extern uint8_t teamTacticsUSERC[];                  /* +96960, 370 B */
@@ -3557,7 +3569,7 @@ static void load_comp_slot(const char *parent, int plen,
  * so the loader can branch without guessing. */
 static void emit_competition_overrides(mjson_print_fn_t fn, void *fnd)
 {
-    DIYCompetitionEx *comp = (DIYCompetitionEx *)&competitionFileBuffer;
+    DIYCompetitionEx *comp = (DIYCompetitionEx *)&primaryCompetitionBuf;
     int16_t type = comp->base.competitionType;
 
     mjson_printf(fn, fnd, "%Q:{", "competition_overrides");
@@ -3607,7 +3619,7 @@ static void load_competition_overrides(const char *buf, int buflen)
                    &rows, &rows_len) != MJSON_TOK_ARRAY)
         return;
 
-    DIYCompetitionEx *comp = (DIYCompetitionEx *)&competitionFileBuffer;
+    DIYCompetitionEx *comp = (DIYCompetitionEx *)&primaryCompetitionBuf;
     int pos = 0, voff, vlen, vt, i = 0;
     while (i < DIY_OVR_LEAGUE_ROWS &&
            (pos = fast_array_next(rows, rows_len, pos, &voff, &vlen, &vt)) != 0) {
@@ -3642,6 +3654,7 @@ static void load_competition_overrides(const char *buf, int buflen)
  * reuses it to detect whether a type-2 tournament's active stage is a league
  * (group phase) or a cup (knockout), reading the master's roundComplete. */
 static int diy_stage_is_league(const DIYCompetitionEx *stage);
+static int diy_stage_is_league_master(const DIYTournamentState *master);
 
 /* _VerifyTeamLoaded is extern'd further down (preset path); the career load
  * path's cup teamOffsetTable rebuild needs it earlier, so declare it here. */
@@ -3666,7 +3679,7 @@ extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
  * so a cup stage round-trips cupTeamIds/teamGridPairings/scores/teamOffsetTable
  * cross-target — exactly what copyTitleHolderGrid reads. (League group-stage
  * standings stats, like the primary's stage_standings, are a deliberate
- * follow-up: the master-driven diy_stage_is_league reads &competitionFileBuffer,
+ * follow-up: the master-driven diy_stage_is_league reads &primaryCompetitionBuf,
  * so it can't be reused per-context as-is.) Non-type-2 slots and pre-fix saves
  * are a no-op (the load mjson_find just misses → blob bytes stand). */
 /* A type-2 tournament STAGE's cupTeamIds holds the FULL bracket — the MASTER
@@ -3720,6 +3733,37 @@ static void emit_ctx_stage(mjson_print_fn_t fn, void *fnd, const char *key,
     mjson_printf(fn, fnd, "%s", ",\n  ");
     emit_comp_slot(fn, fnd, key, stage);
     emit_stage_cupfull(fn, fnd, key, stage, slot->base.numTeams);
+    /* League/group active stage: standings rows. Mirrors the primary's
+     * stage_standings, but PER-CONTEXT and serialising teamSelOffset (the
+     * target-independent team identity: -1 careerTeam / selTeamsPtr index)
+     * explicitly. The primary can rebuild it as the row index i (a national
+     * tournament's teams sit in selTeamsPtr order); a euro CLUB cup's teams are a
+     * SUBSET of selectedTeams so the identity must round-trip. Without this the
+     * int32 teamSelOffset rode the raw stageSnapshot blob and byte-swapped on a
+     * 64-bit-LE save -> 32-bit-BE Amiga load, so every group team resolved to
+     * selectedTeams[0] (whole Champions-Cup group table showed the career team).
+     * All values are endian-neutral decimals. */
+    if (diy_stage_is_league_master((const DIYTournamentState *)slot)) {
+        uint16_t nrows = slot->base.numTeams; if (nrows > 64) nrows = 64;
+        char sk[64];
+        swos_io_snprintf(sk, sizeof(sk), "%s_standings", key);
+        mjson_printf(fn, fnd, ",\n  %Q:[", sk);
+        for (uint16_t i = 0; i < nrows; i++) {
+            DIYTeamStats *r = diy_ovr_row((DIYCompetitionEx *)stage, i);
+            if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+            mjson_printf(fn, fnd,
+                "{%Q:%d,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u}",
+                "so",  (int)r->teamSelOffset,
+                "gp",  (unsigned)r->gamesPlayed,
+                "w",   (unsigned)r->wins,
+                "d",   (unsigned)r->draws,
+                "l",   (unsigned)r->losses,
+                "gf",  (unsigned)r->goalsFor,
+                "ga",  (unsigned)r->goalsAgainst,
+                "pts", (unsigned)r->points);
+        }
+        mjson_printf(fn, fnd, "%s", "]");
+    }
 }
 
 static void load_ctx_stage(const char *src, int src_size, const char *key,
@@ -3731,6 +3775,44 @@ static void load_ctx_stage(const char *src, int src_size, const char *key,
         ((uint8_t *)slot + offsetof(CompetitionSlotBuffer, stageSnapshot));
     load_comp_slot(src, src_size, key, stage);
     load_stage_cupfull(src, src_size, key, stage, slot->base.numTeams);
+    /* League/group stage standings restore (see emit_ctx_stage): teamSelOffset
+     * (identity) + uint16 stats from typed decimals, overwriting the
+     * byte-swapped raw-blob bytes. Absent in pre-fix saves -> mjson_find misses
+     * -> no-op (blob bytes stand). */
+    if (diy_stage_is_league_master((const DIYTournamentState *)slot)) {
+        char sk[64];
+        swos_io_snprintf(sk, sizeof(sk), "$.%s_standings", key);
+        const char *rows = NULL; int rows_len = 0;
+        if (mjson_find(src, src_size, sk, &rows, &rows_len) == MJSON_TOK_ARRAY) {
+            uint16_t nrows = slot->base.numTeams; if (nrows > 64) nrows = 64;
+            int pos = 0, voff, vlen, vt; uint16_t i = 0;
+            while (i < nrows &&
+                   (pos = fast_array_next(rows, rows_len, pos,
+                                          &voff, &vlen, &vt)) != 0) {
+                if (vt != MJSON_TOK_OBJECT) { i++; continue; }
+                const char *e = rows + voff; int el = vlen;
+                long so = 0, gp = 0, w = 0, d = 0, l = 0, gf = 0, ga = 0, pts = 0;
+                mjson_get_long(e, el, "$.so",  &so);
+                mjson_get_long(e, el, "$.gp",  &gp);
+                mjson_get_long(e, el, "$.w",   &w);
+                mjson_get_long(e, el, "$.d",   &d);
+                mjson_get_long(e, el, "$.l",   &l);
+                mjson_get_long(e, el, "$.gf",  &gf);
+                mjson_get_long(e, el, "$.ga",  &ga);
+                mjson_get_long(e, el, "$.pts", &pts);
+                DIYTeamStats *r = diy_ovr_row(stage, i);
+                r->teamSelOffset = (int32_t)so;
+                r->gamesPlayed  = (uint16_t)gp;
+                r->wins         = (uint16_t)w;
+                r->draws        = (uint16_t)d;
+                r->losses       = (uint16_t)l;
+                r->goalsFor     = (uint16_t)gf;
+                r->goalsAgainst = (uint16_t)ga;
+                r->points       = (uint16_t)pts;
+                i++;
+            }
+        }
+    }
 }
 
 int16_t SaveJson_WriteCareer(uint8_t *filename)
@@ -3813,7 +3895,7 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     mjson_printf(json_out_emit, &out, "%Q:%d", "comp_slots_present", 1);
     mjson_printf(json_out_emit, &out, "%s", ",");
     emit_comp_slot(json_out_emit, &out, "primary",
-                   (const DIYCompetitionEx *)&competitionFileBuffer);
+                   (const DIYCompetitionEx *)&primaryCompetitionBuf);
     mjson_printf(json_out_emit, &out, "%s", ",");
     emit_comp_slot(json_out_emit, &out, "secondary",
                    (const DIYCompetitionEx *)&competitionContextBuf);
@@ -3841,16 +3923,16 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
      * is rebuilt careerTeam-aware via _VerifyTeamLoaded (SaveJson_LoadCareer),
      * so a managed national team (careerTeam, negative selTeamsPtr offset)
      * resolves correctly cross-target. */
-    if (((const DIYCompetitionEx *)&competitionFileBuffer)
+    if (((const DIYCompetitionEx *)&primaryCompetitionBuf)
             ->base.competitionType == 2) {
         const DIYCompetitionEx *stage = (const DIYCompetitionEx *)
-            ((const uint8_t *)&competitionFileBuffer + offsetof(CompetitionSlotBuffer, stageSnapshot));
+            ((const uint8_t *)&primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
         mjson_printf(json_out_emit, &out, ",\n  ");
         emit_comp_slot(json_out_emit, &out, "comp_slot_stage", stage);
         emit_stage_cupfull(json_out_emit, &out, "comp_slot_stage", stage,
-                           ((const DIYCompetitionEx *)&competitionFileBuffer)->base.numTeams);
+                           ((const DIYCompetitionEx *)&primaryCompetitionBuf)->base.numTeams);
         if (diy_stage_is_league(stage)) {
-            uint16_t nrows = numDiyTeams; if (nrows > 64) nrows = 64;
+            uint16_t nrows = primaryCompetitionBuf.tourn.header.numTeams; if (nrows > 64) nrows = 64;
             mjson_printf(json_out_emit, &out, ",\n  %Q:[", "stage_standings");
             for (uint16_t i = 0; i < nrows; i++) {
                 DIYTeamStats *r = diy_ovr_row((DIYCompetitionEx *)stage, i);
@@ -4113,7 +4195,7 @@ static void apply_semantic_load(const char *src, int src_size)
         if (mjson_find(src, src_size, "$.comp_slots", &cs, &cslen)
                 == MJSON_TOK_OBJECT) {
             load_comp_slot(cs, cslen, "primary",
-                           (DIYCompetitionEx *)&competitionFileBuffer);
+                           (DIYCompetitionEx *)&primaryCompetitionBuf);
             load_comp_slot(cs, cslen, "secondary",
                            (DIYCompetitionEx *)&competitionContextBuf);
             load_comp_slot(cs, cslen, "tertiary",
@@ -4133,19 +4215,19 @@ static void apply_semantic_load(const char *src, int src_size)
      * cup teamOffsetTable is rebuilt careerTeam-aware below, after the
      * selected_teams load (it needs selTeamsPtr). Absent in pre-fix saves ->
      * mjson_find misses -> no-op, blob bytes stand. */
-    if (((const DIYCompetitionEx *)&competitionFileBuffer)
+    if (((const DIYCompetitionEx *)&primaryCompetitionBuf)
             ->base.competitionType == 2) {
         DIYCompetitionEx *stage = (DIYCompetitionEx *)
-            ((uint8_t *)&competitionFileBuffer + offsetof(CompetitionSlotBuffer, stageSnapshot));
+            ((uint8_t *)&primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
         load_comp_slot(src, src_size, "comp_slot_stage", stage);
         load_stage_cupfull(src, src_size, "comp_slot_stage", stage,
-                           ((const DIYCompetitionEx *)&competitionFileBuffer)->base.numTeams);
+                           ((const DIYCompetitionEx *)&primaryCompetitionBuf)->base.numTeams);
         if (diy_stage_is_league(stage)) {
             const char *rows = NULL; int rows_len = 0;
             if (mjson_find(src, src_size, "$.stage_standings", &rows, &rows_len)
                     == MJSON_TOK_ARRAY) {
                 int pos = 0, voff, vlen, vt; uint16_t i = 0;
-                while (i < numDiyTeams && i < 64 &&
+                while (i < primaryCompetitionBuf.tourn.header.numTeams && i < 64 &&
                        (pos = fast_array_next(rows, rows_len, pos,
                                               &voff, &vlen, &vt)) != 0) {
                     if (vt != MJSON_TOK_OBJECT) { i++; continue; }
@@ -4246,12 +4328,12 @@ static void apply_semantic_load(const char *src, int src_size)
      * giving the correct NEGATIVE offset — so the R16 bracket names resolve
      * correctly cross-target. League stages skip this (standings rebuilt
      * earlier). Runs before _RebuildPointersAfterLoad copies the stage. */
-    if (((const DIYCompetitionEx *)&competitionFileBuffer)
+    if (((const DIYCompetitionEx *)&primaryCompetitionBuf)
             ->base.competitionType == 2) {
         DIYCompetitionEx *stage = (DIYCompetitionEx *)
-            ((uint8_t *)&competitionFileBuffer + offsetof(CompetitionSlotBuffer, stageSnapshot));
+            ((uint8_t *)&primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
         if (!diy_stage_is_league(stage)) {
-            uint16_t n = numDiyTeams; if (n > 51) n = 51;
+            uint16_t n = primaryCompetitionBuf.tourn.header.numTeams; if (n > 51) n = 51;
             for (uint16_t k = 0; k < n; k++) {
                 uint16_t teamNum = BE_READ_U16(&stage->cupTeamIds[k]);
                 if (teamNum == 0) continue;
@@ -4463,14 +4545,14 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
 
 /* ---------- .SEA / .PRE / .DIY (preset / DIY competition) ----------
  *
- * Cover the bytes [&competitionFileBuffer, &numSelectedTeams + 2)
- * plus `numDiyTeams * 684` trailing TeamFileEx records at
+ * Cover the bytes [&primaryCompetitionBuf, &numSelectedTeams + 2)
+ * plus `primaryCompetitionBuf.tourn.header.numTeams * 684` trailing TeamFileEx records at
  * &selTeamsPtr. Re-uses the careerFileBuffer scalar/blob tables
  * with an address range filter so we only emit entries that fall
  * inside the preset save region.
  */
 
-extern uint8_t  competitionFileBuffer;
+/* competitionFileBuffer retired → primaryCompetitionBuf (file-scope decl above; S6). */
 
 static int field_in_range(const FieldDesc *f,
                           const uint8_t *lo, const uint8_t *hi)
@@ -4733,21 +4815,32 @@ extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
  * (it round-trips in the master "comp_slot" via emit/load_comp_slot), so this
  * is valid on both sides. Defaults to league if out of range. The `stage` arg
  * is kept for call-site symmetry but the decision is master-driven. */
-static int diy_stage_is_league(const DIYCompetitionEx *stage)
+/* league-format detection for a tournament's ACTIVE stage, from its master's
+ * roundComplete (active stage index) -> slots[r].isLeagueFormat. Parameterised
+ * by the master so it works per-context (the euro/secondary/... slots' own
+ * tourn), not only the primary. isLeagueFormat is tested != 0 so the result is
+ * robust even if that uint16 rode the raw blob byte-swapped cross-target
+ * (1 <-> 0x100 are both nonzero); roundComplete for a group/first-round stage
+ * is 0 (byte-swap-safe). */
+static int diy_stage_is_league_master(const DIYTournamentState *master)
 {
-    (void)stage;
-    const DIYTournamentState *master =
-        (const DIYTournamentState *)&competitionFileBuffer;
     int16_t r = master->header.roundComplete;   /* 0x54: active stage index */
     if (r < 0 || r >= 6) return 1;
     return master->slots[r].isLeagueFormat != 0;
+}
+
+static int diy_stage_is_league(const DIYCompetitionEx *stage)
+{
+    (void)stage;
+    return diy_stage_is_league_master(
+        (const DIYTournamentState *)&primaryCompetitionBuf);
 }
 
 /* Shared write body for preset / DIY — they share competitionFileBuffer
  * layout, only the file_kind string differs. */
 static int16_t write_competition_buf(uint8_t *filename, const char *kind)
 {
-    const uint8_t *lo = &competitionFileBuffer;
+    const uint8_t *lo = (const uint8_t *)&primaryCompetitionBuf;
     const uint8_t *hi = (const uint8_t *)&numSelectedTeams +
                         sizeof(numSelectedTeams);  /* +2 for the count word */
     JsonOutBuf out = { NULL, 0, 0, 0 };
@@ -4759,7 +4852,7 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
         "{\n  %Q:%d,\n  %Q:%Q,\n  %Q:%u,\n  ",
         "schema_version", SAVE_JSON_SCHEMA_VERSION,
         "file_kind",      kind,
-        "num_diy_teams",  (unsigned)numDiyTeams);
+        "num_diy_teams",  (unsigned)primaryCompetitionBuf.tourn.header.numTeams);
 
     /* primaryCompStringOffset is intentionally NOT saved — it's a
      * stale absolute pointer into the strings table that the legacy
@@ -4783,7 +4876,7 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
      * proves identical same-target bytes), mirroring the career path. */
     mjson_printf(json_out_emit, &out, ",\n  ");
     emit_comp_slot(json_out_emit, &out, "comp_slot",
-                   (const DIYCompetitionEx *)&competitionFileBuffer);
+                   (const DIYCompetitionEx *)&primaryCompetitionBuf);
 
     /* TYPE-2 tournament current-STAGE slot. A WORLD CUP / EUROPEAN
      * CHAMPIONSHIP keeps a *second* DIYCompetitionEx for the stage in
@@ -4803,14 +4896,14 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
      * for either phase. Struct-anchored, so it also corrects the 64-bit
      * namePtr offset shift. Only tournaments carry this stage (a plain
      * league/cup preset IS the primary slot), so gate on the master type. */
-    if (((const DIYCompetitionEx *)&competitionFileBuffer)
+    if (((const DIYCompetitionEx *)&primaryCompetitionBuf)
             ->base.competitionType == 2) {
         const DIYCompetitionEx *stage = (const DIYCompetitionEx *)
-            ((const uint8_t *)&competitionFileBuffer + offsetof(CompetitionSlotBuffer, stageSnapshot));
+            ((const uint8_t *)&primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
         mjson_printf(json_out_emit, &out, ",\n  ");
         emit_comp_slot(json_out_emit, &out, "comp_slot_stage", stage);
         emit_stage_cupfull(json_out_emit, &out, "comp_slot_stage", stage,
-                           ((const DIYCompetitionEx *)&competitionFileBuffer)->base.numTeams);
+                           ((const DIYCompetitionEx *)&primaryCompetitionBuf)->base.numTeams);
 
         /* GROUP-phase stage standings. The 64-row DIYTeamStats table at the
          * stage's +0x2B4 holds each tournament team's group results. Its
@@ -4824,7 +4917,7 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
          * teamSelOffset = i (the identity) on load (which fixes the group team
          * NAMES that resolve via teamEntryOffsets->row->teamSelOffset->team via
          * diy_resolve_team). Indexed by
-         * selTeamsPtr team index 0..numDiyTeams-1 so every group's table +
+         * selTeamsPtr team index 0..primaryCompetitionBuf.tourn.header.numTeams-1 so every group's table +
          * the re-sort on group switch are correct cross-target. Gated to
          * LEAGUE/group stages (slot isLeagueFormat != 0): the standings table
          * physically overlaps the cup bracketScratch.teamOffsetTable, so for
@@ -4833,7 +4926,7 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
          * corrupt the bracket. competitionType is 0 for both, so route off
          * the slot type. */
         if (diy_stage_is_league(stage)) {
-            uint16_t nrows = numDiyTeams; if (nrows > 64) nrows = 64;
+            uint16_t nrows = primaryCompetitionBuf.tourn.header.numTeams; if (nrows > 64) nrows = 64;
             mjson_printf(json_out_emit, &out, ",\n  %Q:[", "stage_standings");
             for (uint16_t i = 0; i < nrows; i++) {
                 DIYTeamStats *r = diy_ovr_row((DIYCompetitionEx *)stage, i);
@@ -4872,10 +4965,10 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
         }
     }
 
-    /* DIY teams array — numDiyTeams TeamFileEx records at
+    /* DIY teams array — primaryCompetitionBuf.tourn.header.numTeams TeamFileEx records at
      * &selTeamsPtr. Same record layout as the career selected_teams. */
     mjson_printf(json_out_emit, &out, ",\n  %Q:[", "diy_teams");
-    for (uint16_t i = 0; i < numDiyTeams; i++) {
+    for (uint16_t i = 0; i < primaryCompetitionBuf.tourn.header.numTeams; i++) {
         if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
         emit_team_file_ex_body(json_out_emit, &out,
                                (uint8_t *)((TeamFileEx *)&selTeamsPtr + i));
@@ -4904,17 +4997,17 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
          * verbatim; comp_slot is a cross-target override re-writing identical
          * values on top, so this diffs to 0.
          *
-         * Do NOT revive the legacy [&competitionFileBuffer, &numSelectedTeams +
-         * numDiyTeams*684) span: the competition-slots untangle (2026-06-04)
+         * Do NOT revive the legacy [&primaryCompetitionBuf, &numSelectedTeams +
+         * primaryCompetitionBuf.tourn.header.numTeams*684) span: the competition-slots untangle (2026-06-04)
          * made competitionFileBuffer a STANDALONE buffer ~1.7 MB BELOW
          * numSelectedTeams, so that span is the forbidden address-range pattern
          * over a linker GAP of unrelated globals. memset-ing the gap both
-         * zeroed the reload's own dependencies (numDiyTeams et al., which then
+         * zeroed the reload's own dependencies (primaryCompetitionBuf.tourn.header.numTeams et al., which then
          * mis-drove the restore) and diffed ~112k unrelated bytes as false
          * mismatches. The diy-teams append (selTeamsPtr) is no longer
          * contiguous after the buffer — it round-trips via "$.diy_teams" and is
          * not part of this region. See project_diy_preset_load_memset_gap. */
-        verify_roundtrip_region(kind, (uint8_t *)&competitionFileBuffer,
+        verify_roundtrip_region(kind, (uint8_t *)&primaryCompetitionBuf,
                                 (uint32_t)sizeof(CompetitionSlotBuffer),
                                 fn, filename, NULL);
     }
@@ -4945,13 +5038,13 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
         return 1;
     }
 
-    const uint8_t *lo = &competitionFileBuffer;
+    const uint8_t *lo = (const uint8_t *)&primaryCompetitionBuf;
     const uint8_t *hi = (const uint8_t *)&numSelectedTeams +
                         sizeof(numSelectedTeams);
     /* Zero the destination FIELD-BY-FIELD, NOT with one memset over
      * [lo, hi). On the SDL build competitionFileBuffer was un-tangled into a
      * STANDALONE CompetitionSlotBuffer (0x51a000), 1.7 MB BELOW the
-     * careerFileBuffer overlay (0x6ca144) — so &competitionFileBuffer (lo)
+     * careerFileBuffer overlay (0x6ca144) — so &primaryCompetitionBuf (lo)
      * and &numSelectedTeams (hi) no longer bracket a contiguous region. A
      * single `memset(lo, 0, hi-lo)` scythes the ~1.7 MB linker gap between
      * them, zeroing unrelated globals that the linker happened to place
@@ -4994,7 +5087,7 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
      * Absent in pre-serializer .PRE/.DIY saves → load_comp_slot is a
      * no-op (mjson_find returns non-object), so older saves still load. */
     load_comp_slot((const char *)src, (int)src_size, "comp_slot",
-                   (DIYCompetitionEx *)&competitionFileBuffer);
+                   (DIYCompetitionEx *)&primaryCompetitionBuf);
 
     /* TYPE-2 tournament current-STAGE slot (see write_competition_buf). The
      * master load above sets competitionFileBuffer's type; if it's a
@@ -5003,14 +5096,14 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
      * copies cfb+0x420 -> diyCompetitionStart (so the corrected bytes are
      * what gets copied). Absent in pre-fix saves -> mjson_find misses ->
      * load_comp_slot is a no-op, blob bytes stand. */
-    if (((const DIYCompetitionEx *)&competitionFileBuffer)
+    if (((const DIYCompetitionEx *)&primaryCompetitionBuf)
             ->base.competitionType == 2) {
         DIYCompetitionEx *stage = (DIYCompetitionEx *)
-            ((uint8_t *)&competitionFileBuffer + offsetof(CompetitionSlotBuffer, stageSnapshot));
+            ((uint8_t *)&primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
         load_comp_slot((const char *)src, (int)src_size, "comp_slot_stage",
                        stage);
         load_stage_cupfull((const char *)src, (int)src_size, "comp_slot_stage", stage,
-                           ((const DIYCompetitionEx *)&competitionFileBuffer)->base.numTeams);
+                           ((const DIYCompetitionEx *)&primaryCompetitionBuf)->base.numTeams);
 
         /* Rebuild the GROUP-phase standings (see write_competition_buf):
          * RECONSTRUCT each row's derived teamSelOffset = i (the team identity;
@@ -5025,7 +5118,7 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
                            "$.stage_standings", &rows, &rows_len)
                     == MJSON_TOK_ARRAY) {
                 int pos = 0, voff, vlen, vt; uint16_t i = 0;
-                while (i < numDiyTeams && i < 64 &&
+                while (i < primaryCompetitionBuf.tourn.header.numTeams && i < 64 &&
                        (pos = fast_array_next(rows, rows_len, pos,
                                               &voff, &vlen, &vt)) != 0) {
                     if (vt != MJSON_TOK_OBJECT) { i++; continue; }
@@ -5085,7 +5178,7 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
                    &teams_arr, &teams_arr_len) == MJSON_TOK_ARRAY) {
         int pos = 0, koff, klen, voff, vlen, vt;
         uint16_t i = 0;
-        while (i < numDiyTeams &&
+        while (i < primaryCompetitionBuf.tourn.header.numTeams &&
                (pos = mjson_next(teams_arr, teams_arr_len, pos,
                                  &koff, &klen, &voff, &vlen, &vt)) != 0) {
             if (vt != MJSON_TOK_OBJECT) { i++; continue; }
@@ -5097,16 +5190,16 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
 
     /* numSelectedTeams: restore by SEMANTIC VALUE, not via the address-range
      * comp_scalars table. For a standalone .DIY/.PRE the selected teams ARE the
-     * diy teams, so numSelectedTeams == numDiyTeams by construction. The saved
+     * diy teams, so numSelectedTeams == primaryCompetitionBuf.tourn.header.numTeams by construction. The saved
      * num_selected_teams_inner DOES carry 16, but load_scalar_table_range only
-     * applies fields whose runtime address falls in [&competitionFileBuffer,
+     * applies fields whose runtime address falls in [&primaryCompetitionBuf,
      * &numSelectedTeams) — and on the 32-bit Amiga those two symbols sort in the
      * OPPOSITE order vs the 64-bit SDL build, so that range is empty and the
      * field was silently dropped (-> 0 -> findTeamInCache bails -> cup
-     * _VerifyTeamLoaded panic). Setting it from numDiyTeams is target-independent
+     * _VerifyTeamLoaded panic). Setting it from primaryCompetitionBuf.tourn.header.numTeams is target-independent
      * and address-free. (The address-range field selection itself is being
      * removed — see the save-format rule in CLAUDE.md / docs.) */
-    numSelectedTeams = numDiyTeams;
+    numSelectedTeams = primaryCompetitionBuf.tourn.header.numTeams;
 
     /* TYPE-2 tournament KNOCKOUT stage: rebuild the cup bracket
      * teamOffsetTable from cupTeamIds. teamOffsetTable[k] is a DERIVED
@@ -5118,15 +5211,15 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
      * &selTeamsPtr -> teamName). cupTeamIds (BE byte-pairs) + teamGridPairings
      * (bytes) ride the raw blob endian-safe, so resolve each team via
      * _VerifyTeamLoaded (the same lookup the cache builder uses) now that
-     * selTeamsPtr (diy_teams) is loaded. cupTeamIds[0..numDiyTeams-1] are the
+     * selTeamsPtr (diy_teams) is loaded. cupTeamIds[0..primaryCompetitionBuf.tourn.header.numTeams-1] are the
      * tournament teams (kept below the standings overlay at index 51).
      * LEAGUE/group stages skip this — their standings were rebuilt above. */
-    if (((const DIYCompetitionEx *)&competitionFileBuffer)
+    if (((const DIYCompetitionEx *)&primaryCompetitionBuf)
             ->base.competitionType == 2) {
         DIYCompetitionEx *stage = (DIYCompetitionEx *)
-            ((uint8_t *)&competitionFileBuffer + offsetof(CompetitionSlotBuffer, stageSnapshot));
+            ((uint8_t *)&primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
         if (!diy_stage_is_league(stage)) {
-            uint16_t n = numDiyTeams; if (n > 51) n = 51;
+            uint16_t n = primaryCompetitionBuf.tourn.header.numTeams; if (n > 51) n = 51;
             for (uint16_t k = 0; k < n; k++) {
                 uint16_t teamNum = BE_READ_U16(&stage->cupTeamIds[k]);
                 if (teamNum == 0) continue;

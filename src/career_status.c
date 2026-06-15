@@ -151,7 +151,7 @@ extern uint8_t *quaternaryCompetitionPtr;
 extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern CompetitionSlotBuffer euroCupsCompetitionContextBuf;   /* slot-3 untangle (S5): typed buffer */
-extern uint8_t    competitionFileBuffer[];
+extern CompetitionSlotBuffer primaryCompetitionBuf;           /* slot-0 untangle (S6): typed buffer */
 extern volatile uint16_t   seasonUpdateInProgress;
 extern uint16_t   teamsLoaded;
 extern uint16_t   numSelectedTeams;
@@ -183,13 +183,13 @@ extern uint16_t   seasonReview;
 extern uint16_t   seasonFinished;
 /* secondaryCompFinished migrated to competitionContextBuf.tourn.header.compFinished (slot-1 untangle, S4) */
 /* tertiaryCompFinished migrated to tertiaryCompetitionContextBuf.tourn.header.compFinished (slot-2 untangle, S3) */
-extern uint16_t   leaguePromotionCount;
-extern uint16_t   leagueRelegationCount;
-extern uint16_t   leagueWarningsEnabled;
+/* leaguePromotionCount migrated to primaryCompetitionBuf.tourn.header.promotionCount (slot-0 untangle, S6) */
+/* leagueRelegationCount migrated to primaryCompetitionBuf.tourn.header.relegationCount (slot-0 untangle, S6) */
+/* leagueWarningsEnabled migrated to primaryCompetitionBuf.tourn.leagueWarningsEnabled (slot-0 untangle, S6) */
 extern uint16_t   expectedLeagueRankIndex;
 extern uint16_t   diyFoundTeamIndex;
 extern uint16_t   diyCompHasGroupStage;
-extern uint16_t   numDiyTeams;
+/* numDiyTeams migrated to primaryCompetitionBuf.tourn.header.numTeams (slot-0 untangle, S6) */
 extern uint16_t   isCareer;
 extern int8_t     careerJobOfferPhaseBias;
 extern uint8_t    viewRandomPhase;
@@ -203,7 +203,7 @@ extern uint8_t    lastFinancialWeekIndex;
 extern DIYTournamentState diyFileBufferCopy;
 
 /* Winner teams */
-extern uint16_t   primaryCompWinnerTeam;
+/* primaryCompWinnerTeam migrated to primaryCompetitionBuf.tourn.header.winnerTeam (slot-0 untangle, S6) */
 /* secondaryCompWinnerTeam migrated to competitionContextBuf.tourn.header.winnerTeam (slot-1 untangle, S4) */
 /* tertiaryCompWinnerTeam migrated to tertiaryCompetitionContextBuf.tourn.header.winnerTeam (slot-2 untangle, S3) */
 /* quaternaryCompWinnerTeam migrated to euroCupsCompetitionContextBuf.tourn.header.winnerTeam (slot-3 untangle, S5) */
@@ -221,7 +221,7 @@ extern int16_t    careerReputationPoints;
 extern uint16_t   winCupBonusCount;
 extern uint16_t   minorTrophyBonusCount;
 extern uint16_t   majorTrophyBonusCount;
-extern uint8_t    majorTrophyBonusValue;
+/* majorTrophyBonusValue migrated to primaryCompetitionBuf.tourn.header.trophyBonusValue (slot-0 untangle, S6) */
 /* minorTrophyBonusValue migrated to competitionContextBuf.tourn.header.trophyBonusValue (slot-1 untangle, S4) */
 /* leagueTitleBonusValue migrated to tertiaryCompetitionContextBuf.tourn.header.trophyBonusValue (slot-2 untangle, S3) */
 /* majorTrophyOrCupBonusValue migrated to euroCupsCompetitionContextBuf.tourn.header.trophyBonusValue (slot-3 untangle, S5) */
@@ -923,7 +923,7 @@ uint16_t _IsMajorInternationalTournament(uint8_t **outCtx) {
         curComp == (uintptr_t)oceaniaCupCopy ||
         curComp == (uintptr_t)invitationTournamentCopy ||
         curComp == (uintptr_t)tourCopy) {
-        *outCtx = competitionFileBuffer;
+        *outCtx = (uint8_t *)&primaryCompetitionBuf;
         return 1;
     }
 
@@ -1341,7 +1341,7 @@ void _UpdateCareerChairmanWarningsAfterMatch(void) {
         performanceWarningCooldown--;
 
     /* Get team rank in DIY league */
-    uint16_t d7 = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)competitionFileBuffer);
+    uint16_t d7 = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
 
     /* Compute performance pressure factor */
     int16_t viewPhase = (int16_t)(int8_t)viewRandomPhase;
@@ -1353,14 +1353,14 @@ void _UpdateCareerChairmanWarningsAfterMatch(void) {
         goto skip_performance_warning;
 
     /* Check if league warnings are applicable */
-    if (*(int16_t *)competitionFileBuffer != 2) {
-        if (leagueWarningsEnabled == 0)
+    if (primaryCompetitionBuf.tourn.header.competitionType != 2) {
+        if (primaryCompetitionBuf.tourn.leagueWarningsEnabled == 0)
             goto skip_performance_warning;
         /* Check if team is in relegation zone */
-        uint16_t relegationBoundary = leaguePromotionCount + leagueRelegationCount;
+        uint16_t relegationBoundary = primaryCompetitionBuf.tourn.header.promotionCount + primaryCompetitionBuf.tourn.header.relegationCount;
         if (relegationBoundary == 0)
             relegationBoundary = 1;
-        uint16_t boundary = numDiyTeams - relegationBoundary;
+        uint16_t boundary = primaryCompetitionBuf.tourn.header.numTeams - relegationBoundary;
         if (d7 < boundary)
             goto check_expected_rank;
     }
@@ -1371,7 +1371,7 @@ check_expected_rank:
     {
         int16_t expRank = (int16_t)expectedLeagueRankIndex;
         int16_t rankDiff = expRank - (int16_t)d7;
-        int32_t pct = ((int32_t)rankDiff * 100) / (int32_t)(int16_t)numDiyTeams;
+        int32_t pct = ((int32_t)rankDiff * 100) / (int32_t)(int16_t)primaryCompetitionBuf.tourn.header.numTeams;
         if (pct > -25)
             goto clear_performance_warning;
     }
@@ -1464,8 +1464,8 @@ done_performance:
     }
 
     /* Check if league warnings are applicable */
-    if (*(int16_t *)competitionFileBuffer != 2) {
-        if (leagueWarningsEnabled == 0)
+    if (primaryCompetitionBuf.tourn.header.competitionType != 2) {
+        if (primaryCompetitionBuf.tourn.leagueWarningsEnabled == 0)
             return;
     }
 
@@ -1648,11 +1648,11 @@ static uint16_t getExpectedLeagueRankIndex(uint8_t *ctx, uint16_t moreExpensiveC
 __attribute__((used, externally_visible))
 void _InitializeCareerSeasonFinancials(void) {
     /* Get more expensive teams count and set expected rank */
-    uint16_t moreExpensiveCount = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)competitionFileBuffer);
+    uint16_t moreExpensiveCount = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
     expectedLeagueRankIndex = moreExpensiveCount;
 
     /* Calculate team value divisor from all active competitions */
-    uint16_t d5 = getExpectedLeagueRankIndex(competitionFileBuffer, moreExpensiveCount);
+    uint16_t d5 = getExpectedLeagueRankIndex((uint8_t *)&primaryCompetitionBuf, moreExpensiveCount);
 
     if (secondaryCompetitionPtr != 0) {
         uint16_t mec2 = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)&competitionContextBuf);
@@ -1725,9 +1725,9 @@ static int16_t calcBoardConfidenceDeltaPercent(void) {
     }
 
     /* Club manager: compute from league rank delta */
-    uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)competitionFileBuffer);
+    uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
     int16_t d0 = (int16_t)expectedLeagueRankIndex - (int16_t)teamRank;
-    int16_t numTeams = ((DIYCompetitionEx *)competitionFileBuffer)->base.numTeams;
+    int16_t numTeams = ((DIYCompetitionEx *)&primaryCompetitionBuf)->base.numTeams;
     d0 = (int16_t)(((int32_t)d0 * 100) / (int32_t)numTeams);
     return d0;
 }
@@ -1807,7 +1807,7 @@ void _UpdateBoardConfidenceModifiers(void) {
             goto check_ec_qualifying;
 
         /* In WC qualifying: find team rank and determine qualifying slots */
-        uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)competitionFileBuffer);
+        uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
         uintptr_t comp = (uintptr_t)currentCompetitionPtr;
         uint16_t qualSlots;
 
@@ -1856,7 +1856,7 @@ check_ec_qualifying:
             curComp > (uintptr_t)ecQualifyingGroup8Copy)
             goto check_winners;
 
-        uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)competitionFileBuffer);
+        uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
         uint16_t qualSlots;
         if (currentCompetitionPtr == (uint8_t *)ecQualifyingGroup8Copy)
             qualSlots = 1;
@@ -1889,7 +1889,7 @@ check_winners:
     playWinCupAnimation = 0;
 
     /* Check if we won the primary competition */
-    if (selTeamNumber != primaryCompWinnerTeam)
+    if (selTeamNumber != primaryCompetitionBuf.tourn.header.winnerTeam)
         goto check_secondary_winner;
     if (currentCompetitionPtr == (uint8_t *)friendlyCopy)
         goto check_secondary_winner;
@@ -2005,7 +2005,7 @@ void _UpdateCareerReputationBonuses(void) {
     }
 
     /* Club reputation from league rank */
-    DIYCompetitionEx *cfbEx = (DIYCompetitionEx *)competitionFileBuffer;
+    DIYCompetitionEx *cfbEx = (DIYCompetitionEx *)&primaryCompetitionBuf;
     if (cfbEx->base.competitionType != 2) {
         /* Not a pure cup — compute reputation from rank delta */
         uint16_t avgPrice = getTeamValueForGateReceipts(&careerTeam);
@@ -2039,7 +2039,7 @@ void _UpdateCareerReputationBonuses(void) {
 
     /* Trophy reputation bonuses */
     if (wonWorldCup != 0)
-        addReputationFromBonusValueDiv4((int8_t)majorTrophyBonusValue);
+        addReputationFromBonusValueDiv4((int8_t)primaryCompetitionBuf.tourn.header.trophyBonusValue);
 
     if (wonContinentalCup != 0) {
         /* Check if it's a major continental or minor */
@@ -2051,7 +2051,7 @@ void _UpdateCareerReputationBonuses(void) {
             comp == (uintptr_t)northAmericanCupCopy ||
             comp == (uintptr_t)asianCupCopy ||
             comp == (uintptr_t)oceaniaCupCopy) {
-            bonusVal = (int8_t)majorTrophyBonusValue;
+            bonusVal = (int8_t)primaryCompetitionBuf.tourn.header.trophyBonusValue;
         } else {
             bonusVal = (int8_t)competitionContextBuf.tourn.header.trophyBonusValue;
         }
@@ -2060,7 +2060,7 @@ void _UpdateCareerReputationBonuses(void) {
 
     if (playWinCupAnimation != 0) {
         winCupBonusCount++;
-        addReputationFromBonusValueDiv4((int8_t)majorTrophyBonusValue);
+        addReputationFromBonusValueDiv4((int8_t)primaryCompetitionBuf.tourn.header.trophyBonusValue);
     }
 
     if (minorTrophyBonusActive != 0) {
@@ -2086,9 +2086,9 @@ void _InitializeStartingBalanceForNewSeason(void) {
     uint16_t d2 = teamBase;
 
     /* Compute adjusted starting balance from expected rank */
-    uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)competitionFileBuffer);
+    uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
     int16_t rankDelta = (int16_t)expectedLeagueRankIndex - (int16_t)teamRank;
-    int16_t pct = (int16_t)(((int32_t)rankDelta * 100) / (int32_t)(int16_t)numDiyTeams);
+    int16_t pct = (int16_t)(((int32_t)rankDelta * 100) / (int32_t)(int16_t)primaryCompetitionBuf.tourn.header.numTeams);
     pct >>= 1;   /* asr.w #1 */
     pct += 100;   /* addi.w #$64 */
     uint16_t adjustedBase = (uint16_t)(((uint32_t)(uint16_t)pct * (uint32_t)d2) / 100);
@@ -2101,7 +2101,7 @@ void _InitializeStartingBalanceForNewSeason(void) {
 
     /* Cup win bonuses by division */
     if (playWinCupAnimation != 0) {
-        int16_t bonusVal = (int16_t)(int8_t)majorTrophyBonusValue;
+        int16_t bonusVal = (int16_t)(int8_t)primaryCompetitionBuf.tourn.header.trophyBonusValue;
         if (currentDivisionIndex == 0) {
             /* Division 0: add twice (once extra) */
             startingBalance += (int32_t)((uint32_t)(uint16_t)bonusVal * 0xEDC8);
@@ -2159,7 +2159,7 @@ void _InitializeStartingBalanceForNewSeason(void) {
         return;
 
     {
-        int16_t bonusVal = (int16_t)(int8_t)majorTrophyBonusValue;
+        int16_t bonusVal = (int16_t)(int8_t)primaryCompetitionBuf.tourn.header.trophyBonusValue;
         if (currentDivisionIndex == 0) {
             /* Cannot be promoted to division 0 — panic */
             panicReasonCode = 0x1782;
@@ -2375,7 +2375,7 @@ extern void _RemovePlayerFromTeam(uint16_t playerOrd);
 extern void _Career_ConvertPlayerToTrialistFromName(uint16_t teamNum, uint16_t playerIdx);
 extern void _TrainingMatch_SaveSelectedPlayerId(uint16_t value);
 
-extern uint8_t competitionFileBuffer[];
+/* competitionFileBuffer migrated to primaryCompetitionBuf (slot-0 untangle, S6); buffer extern declared above */
 
 
 /* ================================================================
@@ -2579,7 +2579,7 @@ uint8_t *_TrainingMatch_AddTrialPlayerAtPosition(uint16_t position)
     /* Determine insertion point in currentMatchPlayers */
     uint16_t insertOffset;
     {
-        DIYCompetitionEx *compBufEx = (DIYCompetitionEx *)competitionFileBuffer;
+        DIYCompetitionEx *compBufEx = (DIYCompetitionEx *)&primaryCompetitionBuf;
         if (compBufEx->base.competitionType == 2) {
             insertOffset = (uint16_t)compBufEx->base.numTeamsInStage;
         } else {
@@ -3032,7 +3032,7 @@ skipSponsorship:
     }
 
     if (stayingInOldClub) {
-        int16_t bonus = (int8_t)majorTrophyBonusValue;
+        int16_t bonus = (int8_t)primaryCompetitionBuf.tourn.header.trophyBonusValue;
         uint32_t d0;
 
         if (currentDivisionIndex == 0) {
@@ -3195,7 +3195,7 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
     careerAutoAdvanceInProgress = 1;
 
     /* Find the matching competition context buffer */
-    uint8_t *ctx = competitionFileBuffer;
+    uint8_t *ctx = (uint8_t *)&primaryCompetitionBuf;
     if (compPtr != (uint8_t *)currentCompetitionPtr) {
         ctx = (uint8_t *)&competitionContextBuf;
         if (compPtr != (uint8_t *)secondaryCompetitionPtr) {

@@ -773,7 +773,15 @@ typedef struct DIYTournamentState {
      * field with identical behaviour, and the slot-passing convention
      * (`slot + 0x15A`) and the competitionFileBuffer field-map copies stay
      * correct. Only `teamIndexOrder` actually moves. */
-    uint8_t           _reserved_5A[0x9A - sizeof(DIYCompetition)];
+    /* leagueWarningsEnabled (slot-0 SLOT_ALIAS untangle, S6 / decision D-W1):
+     * the league competition's flag, sitting at exactly sizeof(DIYCompetition)
+     * (0x60 on 32-bit, 0x68 on 64-bit) — the same byte the DIYCompetitionEx view
+     * calls minSubstitutes@0x60. Named here (leading member of the old
+     * _reserved_5A pad) so league consumers read `tourn.leagueWarningsEnabled`
+     * instead of the retired standalone `leagueWarningsEnabled` alias. Host-native
+     * u16 (not BE). The reserved pad shrinks by 2 so teamIds stays pinned @0x9A. */
+    uint16_t          leagueWarningsEnabled; /* == sizeof(DIYCompetition) */
+    uint8_t           _reserved_5C[0x9A - sizeof(DIYCompetition) - 2];
     uint16_t          teamIds[64];        /* 0x9A: BE-packed {country,ordinal} ids (was diyTournamentTeamIds) */
     uint8_t           groupMap[64];       /* 0x11A: team-index -> group letter */
     DIYTournamentSlot slots[6];           /* 0x15A: the six tournament-stage slot records (stride 0x76) */
@@ -782,6 +790,7 @@ typedef struct DIYTournamentState {
 
 /* Pin the historical offsets on both arches so the layout can't silently
  * drift (the cfb copies and slot-passing depend on these). */
+typedef char _diytourn_warn_off_check  [(offsetof(DIYTournamentState, leagueWarningsEnabled) == sizeof(DIYCompetition)) ? 1 : -1];
 typedef char _diytourn_teamids_off_check[(offsetof(DIYTournamentState, teamIds)  == 0x9A)  ? 1 : -1];
 typedef char _diytourn_grpmap_off_check [(offsetof(DIYTournamentState, groupMap) == 0x11A) ? 1 : -1];
 typedef char _diytourn_slots_off_check  [(offsetof(DIYTournamentState, slots)    == 0x15A) ? 1 : -1];

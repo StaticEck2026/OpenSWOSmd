@@ -338,6 +338,16 @@ gdb_proxy.py cmd "p ((SomeType *)0xADDR)->field"   # or cast a raw address
 gdb_proxy.py cmd "continue" --timeout 2     # resume so the emulator stays live
 ```
 
+**Input gotcha — mouse desync (`--automatic_input_grab=0`):** FS-UAE is launched
+WITHOUT host mouse capture (so the window doesn't trap your cursor). The
+side-effect: moving the mouse over / out of the FS-UAE window injects Amiga mouse
+events that desync SWOS's keyboard/joystick menu input — the selector freezes and
+you can't navigate. It looks like the game hung, but the game is fine; only the
+input is wedged. To drive by hand reliably: click ONCE into the window to give it
+focus, then use the KEYBOARD ONLY (arrow keys + Enter/fire) and don't move the
+mouse. If it's already wedged there's no in-emulator recovery — `amiga_gdb.sh
+restart` for a clean boot and re-do the steps.
+
 gdb knows the full struct types from `SWOS2.elf`, so prefer symbolic
 access (`p diyCompetitionStart.matchData.cup.roundFormat`) over hand-
 computed offsets. A literal-address cast (`(DIYCompetitionEx *)0x565ac4`)

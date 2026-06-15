@@ -51,7 +51,7 @@ extern uint16_t highlightedLeagueTeamId;
 extern uint16_t writeOnlyVar01;
 extern uint16_t coachOrPlayer;
 extern uint8_t plNationality;
-extern uint16_t competitionOver;
+extern CompetitionSlotBuffer primaryCompetitionBuf;          /* slot-0 untangle (S6): typed buffer (was competitionOver/diyPresetNameOfCompetition/competitionFileBuffer/primaryCompSquadViewParam/numDiyTeams) */
 extern uint16_t numSelectedTeams;
 extern uint16_t teamsLoaded;
 extern uint16_t poolplyrLoaded;
@@ -430,9 +430,9 @@ void _InitMainMenuStuff(void)
 
     /* Original asm clears competitionOver 3 times (likely a bug or
      * intended to clear 3 consecutive words, but label is the same) */
-    competitionOver = 0;
-    competitionOver = 0;
-    competitionOver = 0;
+    primaryCompetitionBuf.tourn.header.competitionOver = 0;
+    primaryCompetitionBuf.tourn.header.competitionOver = 0;
+    primaryCompetitionBuf.tourn.header.competitionOver = 0;
 
     numSelectedTeams = 0;
     teamsLoaded = 0;
@@ -2216,8 +2216,6 @@ void _ViewCompetitionsMenuRetired(void)
 #define GAME_TYPE_SEASON             3
 #define GAME_TYPE_CAREER             4
 
-extern uint16_t competitionOver;
-extern uint8_t diyPresetNameOfCompetition[];
 extern uint8_t aContinueA[];  /* "CONTINUE %a" */
 extern uint8_t aReplayA[];    /* "REPLAY %a" */
 extern uint8_t aSaveA[];      /* "SAVE %a" */
@@ -2238,14 +2236,14 @@ void _CommonMenuExit(void)
     uint8_t *fmtStr;
 
     if (gameType == GAME_TYPE_DIY_COMPETITION) {
-        nameStr = diyPresetNameOfCompetition;
-        if (competitionOver == 1)
+        nameStr = (uint8_t *)primaryCompetitionBuf.tourn.header.competitionName;
+        if (primaryCompetitionBuf.tourn.header.competitionOver == 1)
             fmtStr = aContinueA;
         else
             fmtStr = aReplayA;
     } else if (gameType == GAME_TYPE_PRESET_COMPETITION) {
-        nameStr = diyPresetNameOfCompetition;
-        if (competitionOver == 1)
+        nameStr = (uint8_t *)primaryCompetitionBuf.tourn.header.competitionName;
+        if (primaryCompetitionBuf.tourn.header.competitionOver == 1)
             fmtStr = aContinueA;
         else
             fmtStr = aReplayA;
@@ -2493,7 +2491,6 @@ extern uint16_t selTeamNumber;
 extern uint8_t  teamSelectionKeyCache[];
 extern uint16_t numOffers;
 extern volatile uint16_t currentMessage;
-extern uint16_t primaryCompSquadViewParam;
 extern uint16_t seasonSquadTeamNumbers[];
 extern uintptr_t selectedContest;
 extern uint16_t contestLeagueNumber;
@@ -2537,7 +2534,6 @@ extern TeamFileEx *_ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamN
 extern uint8_t aSelectSquadToV[];   /* "SELECT SQUAD TO VIEW" */
 extern uint16_t diyNumberOfTeams;
 extern uint8_t *diyTeamsBufferPtr;
-extern uint16_t numDiyTeams;
 extern void _ChooseCompetitionMenu(void);         /* asm stub → _ChooseCompetitionMenu */
 
 /* ScrollUpInGameList — decrement currentGame/listIndex with bounds (SWOS2.s line 60083) */
@@ -3379,7 +3375,6 @@ extern void _DIY_InitCupFromTeamGridAndValidateTeams(void);
 extern void _DIY_ResetCompetitionProgressAndShuffle(void);
 
 extern uint16_t diySelected;
-extern uint8_t  competitionFileBuffer[];
 extern uint8_t  diyCompetitionMenu[];
 extern uint8_t  careerMenu[];
 extern uint8_t  aDiyCompetition_0[];
@@ -3536,18 +3531,17 @@ void _StartContest(void)
     contestStarted = 0;
     uint16_t gt = gameType;
 #ifdef SWOS_DEBUG_AUTOSKIP
-    extern uint8_t competitionFileBuffer[];
     SWOS_AUTOSKIP_LOG("StartContest: ENTER gameType=%u competitionOver=%u cfb[0]=%u (compType)",
-                      (unsigned)gt, (unsigned)competitionOver,
-                      (unsigned)competitionFileBuffer[0]);
+                      (unsigned)gt, (unsigned)primaryCompetitionBuf.tourn.header.competitionOver,
+                      (unsigned)primaryCompetitionBuf.tourn.header.competitionType);
 #endif
 
     if (gt == GAME_TYPE_DIY_COMPETITION) {
-        if (competitionOver == 1)
+        if (primaryCompetitionBuf.tourn.header.competitionOver == 1)
             goto diy_over;      /* loc_140FDC */
         goto diy_not_over;      /* loc_1410E4 */
     } else if (gt == GAME_TYPE_PRESET_COMPETITION) {
-        if (competitionOver == 1)
+        if (primaryCompetitionBuf.tourn.header.competitionOver == 1)
             goto preset_over;   /* loc_141050 */
         goto preset_not_over;   /* loc_14117C */
     } else if (gt == GAME_TYPE_SEASON) {
@@ -3564,7 +3558,7 @@ void _StartContest(void)
 
 diy_over: /* loc_140FDC — DIY competition over */
     {
-        uint16_t ct = *(uint16_t *)competitionFileBuffer;
+        uint16_t ct = (uint16_t)primaryCompetitionBuf.tourn.header.competitionType;
         if (ct == 0) {
             /* League: loc_141030 */
             _SaveDIYLeague();
@@ -3599,7 +3593,7 @@ diy_over: /* loc_140FDC — DIY competition over */
 
 preset_over: /* loc_141050 — preset competition over */
     {
-        uint16_t ct = *(uint16_t *)competitionFileBuffer;
+        uint16_t ct = (uint16_t)primaryCompetitionBuf.tourn.header.competitionType;
         if (ct == 0) {
             /* League: loc_1410A0 */
             _DIY_SaveCompetitionFileBufferToDIYCompetition();
@@ -3632,7 +3626,7 @@ preset_over: /* loc_141050 — preset competition over */
 
 diy_not_over: /* loc_1410E4 — DIY not over yet */
     {
-        uint16_t ct = *(uint16_t *)competitionFileBuffer;
+        uint16_t ct = (uint16_t)primaryCompetitionBuf.tourn.header.competitionType;
         if (ct == 0) {
             /* League: loc_141150 */
             _SaveDIYLeague();
@@ -3665,7 +3659,7 @@ diy_not_over: /* loc_1410E4 — DIY not over yet */
 
 preset_not_over: /* loc_14117C — preset not over yet */
     {
-        uint16_t ct = *(uint16_t *)competitionFileBuffer;
+        uint16_t ct = (uint16_t)primaryCompetitionBuf.tourn.header.competitionType;
         if (ct == 0) {
             /* League: loc_1411E4 */
             _DIY_SaveCompetitionFileBufferToDIYCompetition();
@@ -3748,7 +3742,7 @@ void _SaveContest(void)
          * cases get the same fix for free since they're the same
          * "live state lives elsewhere" pattern. */
         if (gt == GAME_TYPE_DIY_COMPETITION || gt == GAME_TYPE_PRESET_COMPETITION) {
-            uint16_t ct = *(uint16_t *)competitionFileBuffer;
+            uint16_t ct = (uint16_t)primaryCompetitionBuf.tourn.header.competitionType;
             if (ct == 0)
                 _DIY_RestoreCompetitionFileBufferFromDIYCompetition();
             else if (ct == 1)
@@ -4400,7 +4394,6 @@ extern uint8_t  friendlyCopy[];
 extern uint8_t *secondaryCompetitionPtr;
 extern uint8_t *tertiaryCompetitionPtr;
 extern uint8_t *quaternaryCompetitionPtr;
-extern uint8_t  diyPresetNameOfCompetition[];
 extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern CompetitionSlotBuffer euroCupsCompetitionContextBuf;   /* slot-3 untangle (S5): typed buffer */
@@ -4462,7 +4455,7 @@ __attribute__((used, externally_visible))
 void _ViewCompetitionsOnReturn(void)
 {
     /* Set text pointers for competition name entries */
-    menuEntries[1].fg = (uintptr_t)diyPresetNameOfCompetition;
+    menuEntries[1].fg = (uintptr_t)primaryCompetitionBuf.tourn.header.competitionName;
     menuEntries[2].fg = (uintptr_t)competitionContextBuf.tourn.header.competitionName;
     menuEntries[3].fg = (uintptr_t)tertiaryCompetitionContextBuf.tourn.header.competitionName;
     menuEntries[4].fg = (uintptr_t)euroCupsCompetitionContextBuf.tourn.header.competitionName;
@@ -6333,7 +6326,7 @@ void _StatsViewSquads(void)
 __attribute__((used, externally_visible))
 void _SquadMenu(void)
 {
-    uint16_t rowMode = primaryCompSquadViewParam;
+    uint16_t rowMode = primaryCompetitionBuf.tourn.header.squadViewParam;
 
     if (gameType != GAME_TYPE_SEASON) {
         /* Non-season: load team directly */
@@ -6363,7 +6356,7 @@ void _SquadMenu(void)
      * offsets (+50 numTeams, +302/+590/+154 team lists) were reading
      * stale field bytes on 64-bit. Use typed fields instead.
      * See project_raw_offset_64bit_shift_trap.md. */
-    DIYCompetitionEx *cfbEx = (DIYCompetitionEx *)competitionFileBuffer;
+    DIYCompetitionEx *cfbEx = (DIYCompetitionEx *)&primaryCompetitionBuf;
     DIYCompetition   *cfb   = &cfbEx->base;
     uint16_t compType = (uint16_t)cfb->competitionType;
     uint16_t numT = (uint16_t)cfb->numTeams;

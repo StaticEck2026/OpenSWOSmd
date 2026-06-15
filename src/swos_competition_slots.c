@@ -47,66 +47,20 @@ CompetitionSlotBuffer tertiaryCompetitionContextBuf;  /* slot 2 (tertiary)  */
 CompetitionSlotBuffer euroCupsCompetitionContextBuf;  /* slot 3 (euro cups) */
 CompetitionSlotBuffer diyCompetitionContextBuf;       /* slot 4 (diy)       */
 
-/* Re-base the legacy slot globals onto the typed buffers. `CFB_NP` is the
- * 64-bit namePtr-growth shift (+4) applied to every DIYCompetition field
- * past namePtr@0x28 — competitionName@0x04 is before it, so unshifted. The
- * offsets match the historical overlay layout exactly (see the .skip
- * sequences this replaces in swos_globals_career_overlay.c). */
-#define SLOT_ALIAS(name, buf, off) \
-    ".globl " #name "\n" \
-    ".equ "   #name ", " #buf " + " #off "\n"
-
-__asm__(
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".set CFB_NP, 4\n"
-#else
-    ".set CFB_NP, 0\n"
-#endif
-    /* ---- slot 0: primary (competitionFileBuffer) ----
-     * The 18 named globals of the old careerFileBufferBuf run, re-based onto
-     * primaryCompetitionBuf at their historical cumulative offsets. competitionFile-
-     * Buffer/competitionOver/diyPresetNameOfCompetition sit at/below namePtr@0x28
-     * (no shift); everything from avgSkill@0x30 takes CFB_NP; the DIYCompetitionEx
-     * region from minSubstitutes (= sizeof(DIYCompetition)) on takes 2*CFB_NP. */
-    SLOT_ALIAS(competitionFileBuffer,     primaryCompetitionBuf, 0)
-    SLOT_ALIAS(competitionOver,           primaryCompetitionBuf, 0x02)
-    SLOT_ALIAS(diyPresetNameOfCompetition, primaryCompetitionBuf, 0x04)
-    SLOT_ALIAS(majorTrophyBonusValue,     primaryCompetitionBuf, 0x30 + CFB_NP)
-    SLOT_ALIAS(numDiyTeams,               primaryCompetitionBuf, 0x32 + CFB_NP)
-    SLOT_ALIAS(primaryCompWinnerTeam,     primaryCompetitionBuf, 0x3A + CFB_NP)
-    SLOT_ALIAS(primaryCompSquadViewParam, primaryCompetitionBuf, 0x3C + CFB_NP)
-    SLOT_ALIAS(primaryCompSlotStateA,     primaryCompetitionBuf, 0x3E + CFB_NP)
-    SLOT_ALIAS(primaryCompSlotStateB,     primaryCompetitionBuf, 0x40 + CFB_NP)
-    SLOT_ALIAS(primaryCompSlotStateC,     primaryCompetitionBuf, 0x42 + CFB_NP)
-    SLOT_ALIAS(diyTeamMinDivisionIndex,   primaryCompetitionBuf, 0x54 + CFB_NP)
-    SLOT_ALIAS(diyTeamMaxDivisionOffset,  primaryCompetitionBuf, 0x56 + CFB_NP)
-    SLOT_ALIAS(leaguePromotionCount,      primaryCompetitionBuf, 0x58 + CFB_NP)
-    SLOT_ALIAS(leagueRelegationCount,     primaryCompetitionBuf, 0x5A + CFB_NP)
-    SLOT_ALIAS(leagueWarningsEnabled,     primaryCompetitionBuf, 0x60 + 2*CFB_NP)
-    SLOT_ALIAS(diyTeamIdListType2,        primaryCompetitionBuf, 0x9A + 2*CFB_NP)
-    SLOT_ALIAS(diyTeamIdListType0,        primaryCompetitionBuf, 0x12E + 2*CFB_NP)
-    SLOT_ALIAS(diyTeamIdListType1,        primaryCompetitionBuf, 0x24E + 2*CFB_NP)
-
-    /* ---- slot 1: secondary ---- MIGRATED (untangle Part A, S4): consumers now use
-     * the typed competitionContextBuf.tourn.header.{competitionType,competitionName,
-     * trophyBonusValue,winnerTeam,slotStateA/B/C,compFinished} directly; the
-     * competitionContext / secondaryCompetitionName / minorTrophyBonusValue /
-     * secondaryCompWinnerTeam / secondaryCompSlotStateA-C / secondaryCompFinished aliases are retired. */
-
-    /* ---- slot 2: tertiary ---- MIGRATED (untangle Part A, S3): consumers now use
-     * the typed tertiaryCompetitionContextBuf.tourn.header.{competitionType,competitionName,
-     * trophyBonusValue,winnerTeam,slotStateA/B/C,compFinished} directly; the
-     * tertiaryCompetitionContext / tertiaryCompetitionName / leagueTitleBonusValue /
-     * tertiaryCompWinnerTeam / tertiaryCompSlotStateA-C / tertiaryCompFinished aliases are retired. */
-
-    /* ---- slot 3: euro cups ---- MIGRATED (untangle Part A, S5): consumers now use
-     * the typed euroCupsCompetitionContextBuf.tourn.header.{competitionType,competitionName,
-     * trophyBonusValue,winnerTeam,slotStateA/B/C} directly; the
-     * euroCupsCompetitionContext / quaternaryCompetitionName / majorTrophyOrCupBonusValue /
-     * quaternaryCompWinnerTeam / quaternaryCompSlotStateA-C aliases are retired.
-     * (Slot 3 has no compFinished@0x4C field.) */
-
-    /* ---- slot 4: diy ---- MIGRATED (untangle Part A, S2): consumers now use
-     * the typed diyCompetitionContextBuf.tourn.header.{competitionType,slotStateA/B/C}
-     * directly; the diyCompetitionContext / diyCompSlotStateA/B/C aliases are retired. */
-);
+/* The whole SLOT_ALIAS `.equ` family is RETIRED (untangle Part A complete, S1-S6).
+ * All 5 career competition slots are now accessed exclusively through their typed
+ * CompetitionSlotBuffer fields (.tourn.header.* / .tourn.* / DIYCompetitionEx and
+ * DIYTournamentState casts of &<buf>), across every consumer + the save
+ * descriptors. The legacy globals (competitionFileBuffer, competitionContext,
+ * tertiaryCompetitionContext, euroCupsCompetitionContext, diyCompetitionContext,
+ * and the per-slot competitionOver, *CompetitionName, *TrophyBonusValue, *CompWinnerTeam,
+ * *CompSlotStateA-C, *CompFinished, numDiyTeams, diyTeamMin/MaxDivision,
+ * league{Promotion,Relegation}Count, leagueWarningsEnabled, diyTeamIdListType0-2
+ * names) no longer exist as symbols.
+ *
+ * Per-slot history: S2 diy (slot 4), S3 tertiary (slot 2), S4 secondary (slot 1),
+ * S5 euro cups (slot 3), S6 primary (slot 0). Dual-use header offsets are modelled
+ * as D1 anonymous unions in DIYCompetition (game_types.h); slot-0's
+ * leagueWarningsEnabled@0x60 became a named DIYTournamentState field (D-W1); the
+ * three slot-0 BE team-id views (type0/1/2) map onto leagueTeamIds/cupTeamIds/teamIds
+ * via DIYCompetitionEx/DIYTournamentState casts (D-A1), BE access preserved. */
