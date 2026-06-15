@@ -428,6 +428,44 @@ extern void _RestoreSelectedTeams(void);
 extern void _DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC);
 extern void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
 
+extern uint16_t numSelectedTeams;
+extern void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds,
+                                                     uint16_t count);
+
+/* reloadEuroCupTeamSelectionFromRestoredField — loaded-career fix for the
+ * CUP-format euro slots (Cup Winners' Cup / UEFA Cup).
+ *
+ * The interactive cup update shows the cup menu, whose _DIYCupFinish ->
+ * _DIY_BuildTeamSelectionPointerCache validates EVERY cup team via
+ * _VerifyTeamLoaded, which only searches selTeamsPtr (+ current/career team).
+ * So selTeamsPtr must hold the cup's field.
+ *
+ * On a FRESH in-session career the cup's teams are already in selTeamsPtr
+ * (loaded when the cup was contested that season), so _RestoreSelectedTeams
+ * brings them back and the validation passes. On a LOADED career the load only
+ * establishes the CURRENT competition's selection (the player's league); the
+ * background euro-cup slot's team selection is never re-loaded, so selTeamsPtr
+ * holds league teams -> _VerifyTeamLoaded(<a cup team, e.g. 0x0E17>) panics
+ * (SIGILL) during the season-advance CWC/UEFA update (repro: DIV3-2.CAR, club
+ * in the Cup Winners' Cup).
+ *
+ * cupTeamIds round-trips through the slot serializer intact, so rebuild the
+ * selection from it. numSelectedTeams is reset first because the selTeamsPtr
+ * buffer holds only ~32 records (it cannot hold league+cup), and because the
+ * cup-only selection IS the fresh-career state -> idempotent on a fresh career
+ * (Phase-1 dedup re-finds the player's club via current/career team; the rest
+ * re-load from the same team files). Endian-neutral (cupTeamIds is BE-packed
+ * and the append helper reads/writes via BE_READ/BE_WRITE), so it back-ports to
+ * the Amiga build, which has the identical loaded-career gap. */
+static void reloadEuroCupTeamSelectionFromRestoredField(void)
+{
+    numSelectedTeams = 0;
+    _AppendTeamsToSelectionFromTmdOrTeamFile(
+        (uint16_t *)diyCompetitionStart.cupTeamIds,
+        (uint16_t *)diyCompetitionStart.cupTeamIds,
+        (uint16_t)diyCompetitionStart.base.numTeams);
+}
+
 /* Career_UpdateEuroCupCompetitionSlot (SWOS2.s line 31764)
  * If euroCupCopy is the active quaternary competition, edit it interactively;
  * otherwise auto-advance it as a league competition and copy the grid. */
@@ -464,8 +502,20 @@ void _Career_UpdateCupWinnersCupCompetitionSlot(void)
     if (a4 == quaternaryCompetitionPtr) {
         _RestoreSelectedTeams();
         _Career_CopyEuroCupsCompetitionContextToOrFromActive();
+        reloadEuroCupTeamSelectionFromRestoredField();
         _ShowDIYCupMenuWithParams(1, 1, 0);
         _Career_CopyCupWinnersCupTeamGridAndTitleHolder();
+        /* reloadEuroCupTeamSelectionFromRestoredField overwrote selTeamsPtr with
+         * the cup field (needed by the menu's cache build + the title-grid copy
+         * above), but it did NOT touch the shared savedTeamsBackupBuffer — which
+         * still holds the LEAGUE selection that _RestoreSelectedTeams loaded at
+         * entry. Restore it before _SaveSelectedTeams so the backup stays the
+         * league selection: the very next season-advance step
+         * (processPrimaryCompetitionForNextSeason -> _RestoreSelectedTeams ->
+         * _DIY_CachePrimaryQualifiedTeamsGrid) needs the player's league teams,
+         * and would otherwise _VerifyTeamLoaded-panic on a league team (0x0503).
+         * No-op on a fresh career (the backup already holds the league teams). */
+        _RestoreSelectedTeams();
         _SaveSelectedTeams();
     } else {
         _Career_AutoAdvanceCupCompetitionFromRecord(a4);
@@ -482,8 +532,14 @@ void _Career_UpdateUefaCupCompetitionSlot(void)
     if (a4 == quaternaryCompetitionPtr) {
         _RestoreSelectedTeams();
         _Career_CopyEuroCupsCompetitionContextToOrFromActive();
+        reloadEuroCupTeamSelectionFromRestoredField();
         _ShowDIYCupMenuWithParams(1, 1, 0);
         _Career_CopyUefaCupTeamGridAndTitleHolder();
+        /* Restore the league selection into selTeamsPtr before saving — see the
+         * Cup Winners' Cup update above for the full rationale (the reload left
+         * the cup field in selTeamsPtr; the shared backup still holds the league
+         * teams the next advance step needs). */
+        _RestoreSelectedTeams();
         _SaveSelectedTeams();
     } else {
         _Career_AutoAdvanceCupCompetitionFromRecord(a4);
