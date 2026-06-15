@@ -582,17 +582,24 @@ typedef char _teamfileex_size_check[(sizeof(TeamFileEx) == 684) ? 1 : -1];
  * Original IDA struct had opaque field_2[48] and field_3A[36];
  * sub-fields are broken out here based on actual access patterns.
  * ================================================================== */
+/* DUAL-USE FIELDS (untangle Part A, decision D1): several offsets carry a cup
+ * meaning (the field name) and a league/comp-slot meaning (the SLOT_ALIAS legacy
+ * name). They are the SAME bytes — modelled as anonymous unions so cup code reads
+ * the cup name and league/slot code reads the alias name, both self-documenting
+ * and byte-identical (mirrors how DIYCompetitionEx.matchData unions cup/league
+ * views). The standalone SLOT_ALIAS globals (swos_competition_slots.c) still exist
+ * and alias the same bytes; consumers migrate to these typed names per-slot. */
 typedef struct DIYCompetition {
     int16_t  competitionType;          /* 0x00 */
     /* --- field_2 sub-fields (48 bytes, 0x02-0x31) --- */
-    uint16_t isActive;                 /* 0x02: 0=inactive, 1=in use */
+    union { uint16_t isActive; uint16_t competitionOver; }; /* 0x02: in-use flag (cup) / "over" flag (slot alias) */
     int8_t   competitionName[36];      /* 0x04: competition name string buffer */
     uint8_t *namePtr;                  /* 0x28: ptr to competition name string */
     uint8_t  compId;                   /* 0x2C: competition ID byte */
     uint8_t  slotId;                   /* 0x2D: competition slot index for cache matching */
     uint8_t  field_2E;                 /* 0x2E: team configuration byte */
     uint8_t  viewRandomPhase;          /* 0x2F: current month/phase for scheduling */
-    uint8_t  avgSkill;                 /* 0x30: average team skill level */
+    union { uint8_t avgSkill; uint8_t trophyBonusValue; }; /* 0x30: avg skill (cup) / trophy bonus (slot alias *TrophyBonusValue) */
     uint8_t  strengthTier;             /* 0x31: strength bracket tier */
     /* --- end field_2 --- */
     int16_t  numTeams;                 /* 0x32 */
@@ -601,8 +608,8 @@ typedef struct DIYCompetition {
     int8_t   startMonth;               /* 0x38 */
     int8_t   endMonth;                 /* 0x39 */
     /* --- field_3A sub-fields (36 bytes, 0x3A-0x5D) --- */
-    int16_t  resultCode;               /* 0x3A: match/competition result code, init 0xFFFF */
-    int16_t  substitutesCount;         /* 0x3C: number of substitutes allowed */
+    union { int16_t resultCode; uint16_t winnerTeam; };    /* 0x3A: result code (cup) / winner-team id (slot alias *CompWinnerTeam) */
+    union { int16_t substitutesCount; uint16_t squadViewParam; }; /* 0x3C: sub count (cup) / squad-view param (slot alias primaryCompSquadViewParam) */
     int16_t  slotStateA;               /* 0x3E: competition slot state A / menu ordinal, init 3 */
     int16_t  slotStateB;               /* 0x40: competition slot state B, init 2 */
     int16_t  slotStateC;               /* 0x42: competition slot state C / menu ordinal, init 8 */
@@ -610,14 +617,14 @@ typedef struct DIYCompetition {
     int16_t  careerTeamInvolved;       /* 0x46: 1 when career team participates */
     int16_t  hasGroups;                /* 0x48: 0=no, 1=groups, 2=groups with final */
     int16_t  menuState;                /* 0x4A: cup menu state (0-6) */
-    int16_t  roundIterator;            /* 0x4C: round iteration counter */
+    union { int16_t roundIterator; uint16_t compFinished; }; /* 0x4C: round iter (cup) / finished flag (slot alias *CompFinished) */
     int16_t  numTeamsInStage;          /* 0x4E: teams in current stage */
     int16_t  matchPairsPerRound;       /* 0x50: match pairs per round (half teams) */
     int16_t  totalMatchesInRound;      /* 0x52: total matches/fixtures in round */
-    int16_t  roundComplete;            /* 0x54: 0=in progress, 1=round just completed */
-    int16_t  competitionFinished;      /* 0x56: 1 when competition is fully complete */
-    int16_t  currentRoundIndex;        /* 0x58: incremented after each completed round */
-    int16_t  numRounds;                /* 0x5A: total rounds in competition */
+    union { int16_t roundComplete; uint16_t minDivisionIndex; }; /* 0x54: round-complete (cup) / min-division index (slot alias diyTeamMinDivisionIndex) */
+    union { int16_t competitionFinished; uint16_t maxDivisionOffset; }; /* 0x56: comp-finished (cup) / max-division offset (slot alias diyTeamMaxDivisionOffset) */
+    union { int16_t currentRoundIndex; uint16_t promotionCount; }; /* 0x58: round idx (cup) / promotion count (slot alias leaguePromotionCount) */
+    union { int16_t numRounds; uint16_t relegationCount; }; /* 0x5A: num rounds (cup) / relegation count (slot alias leagueRelegationCount) */
     int16_t  subRoundCounter;          /* 0x5C: sub-round counter for multi-fixture rounds */
     /* --- end field_3A --- */
     int16_t  playEachTeam;             /* 0x5E */
@@ -632,6 +639,21 @@ typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x60) ? 1 : -
 #else
 typedef char _diycompetition_size_check[(sizeof(DIYCompetition) == 0x68) ? 1 : -1];
 #endif
+
+/* Pin every dual-use (D1 union) offset on BOTH targets so a future struct edit or
+ * a wrong consumer path is caught at compile time. (sizeof(void*) - 4) = CFB_NP
+ * (0 on 32-bit, 4 on 64-bit) tracks the namePtr@0x28 growth for fields past it;
+ * competitionOver@0x02 sits before namePtr so it never shifts. The cup-name
+ * sibling of each union shares the same offset by construction. */
+_Static_assert(offsetof(DIYCompetition, competitionOver)   == 0x02,                       "competitionOver@0x02");
+_Static_assert(offsetof(DIYCompetition, trophyBonusValue)  == 0x30 + (sizeof(void *) - 4), "trophyBonusValue@0x30");
+_Static_assert(offsetof(DIYCompetition, winnerTeam)        == 0x3A + (sizeof(void *) - 4), "winnerTeam@0x3A");
+_Static_assert(offsetof(DIYCompetition, squadViewParam)    == 0x3C + (sizeof(void *) - 4), "squadViewParam@0x3C");
+_Static_assert(offsetof(DIYCompetition, compFinished)      == 0x4C + (sizeof(void *) - 4), "compFinished@0x4C");
+_Static_assert(offsetof(DIYCompetition, minDivisionIndex)  == 0x54 + (sizeof(void *) - 4), "minDivisionIndex@0x54");
+_Static_assert(offsetof(DIYCompetition, maxDivisionOffset) == 0x56 + (sizeof(void *) - 4), "maxDivisionOffset@0x56");
+_Static_assert(offsetof(DIYCompetition, promotionCount)    == 0x58 + (sizeof(void *) - 4), "promotionCount@0x58");
+_Static_assert(offsetof(DIYCompetition, relegationCount)   == 0x5A + (sizeof(void *) - 4), "relegationCount@0x5A");
 
 /* ==================================================================
  * DIYTeamStats / DIYLeagueTableRow — 18 bytes
