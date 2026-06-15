@@ -1255,7 +1255,7 @@ void _Career_InitCompetitionTeamSelection_Dispatch(uint8_t *spec, uint16_t idx)
 extern uint8_t competitionFileBuffer[];
 extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
-extern uint8_t euroCupsCompetitionContext[];
+extern CompetitionSlotBuffer euroCupsCompetitionContextBuf;   /* slot-3 untangle (S5): typed buffer */
 extern DIYCompetitionEx diyCompetitionStart;
 extern DIYTournamentState diyFileBufferCopy;
 extern uint16_t teamSelectionKeyCacheOffset;
@@ -1421,7 +1421,7 @@ void _Career_CopyTertiaryCompetitionContextToOrFromActive(void)
 __attribute__((used, externally_visible))
 void _Career_CopyEuroCupsCompetitionContextToOrFromActive(void)
 {
-    _Career_LoadCompetitionSlotStateFromBuffer(euroCupsCompetitionContext);
+    _Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&euroCupsCompetitionContextBuf);
 }
 
 /* ================================================================

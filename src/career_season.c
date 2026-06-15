@@ -422,7 +422,7 @@ check_self:
 extern uint8_t competitionFileBuffer[];
 extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
-extern uint8_t euroCupsCompetitionContext[];
+extern CompetitionSlotBuffer euroCupsCompetitionContextBuf;   /* slot-3 untangle (S5): typed buffer */
 
 extern uint8_t *currentCompetitionPtr;
 extern uint8_t *secondaryCompetitionPtr;
@@ -648,7 +648,7 @@ void _ShowChairmanOpinionAboutTheSeason(void)
 
     /* Quaternary competition (Euro cups): top-2 finish → -3 */
     if (quaternaryCompetitionPtr != 0) {
-        int16_t pos4 = (int16_t)_FindTeamInDIY(selTeamNumber, (DIYCompetition *)euroCupsCompetitionContext);
+        int16_t pos4 = (int16_t)_FindTeamInDIY(selTeamNumber, (DIYCompetition *)&euroCupsCompetitionContextBuf);
         if ((uint16_t)pos4 < 2)
             d7 -= 3;
     }
