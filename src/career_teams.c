@@ -1942,6 +1942,24 @@ void _Career_PlayMatchMenuLoop(void)
             break;  /* found an active slot */
         _Career_ProcessCurrentCompetitionSlotAfterMatch();
         _Career_AdvanceToNextTeamSelectionKeyCacheEntry();
+        /* Season-end exit. _Career_AdvanceToNextTeamSelectionKeyCacheEntry sets
+         * seasonFinished ONLY when it runs off the end of the keycache (no entry
+         * left) — and at end-of-cache it does NOT update the cursor index
+         * (asm-identical), so _TeamSelectionKeyCache_GetCurrentListPtr keeps
+         * returning the same finished trailing entry (a cup/playoff round the
+         * player isn't in: phaseFlag==0, remaining==0xFF). With no seasonFinished
+         * check the loop re-processes that entry forever — the "career hang at a
+         * season transition" (task #7). Return so _PlayMatchMenu's seasonFinished
+         * gate runs _SeasonFinished() on the next interaction.
+         *
+         * This was previously deferred because a desync (the teamOffsetTable
+         * copy-truncation bug) could leave the player's real match unmarked, and
+         * a blind break would then silently skip it. That root cause is fixed and
+         * the keycache is now healthy — the player's matches are marked
+         * remaining>0 and broken on above; this fires ONLY at a genuine season
+         * end (verified live: 0 entries with remaining>0 when it triggers). */
+        if (seasonFinished != 0)
+            return;
         entry = _TeamSelectionKeyCache_GetCurrentListPtr();
     }
 
