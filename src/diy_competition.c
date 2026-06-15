@@ -3439,7 +3439,6 @@ void _DIY_RebuildCompetitionAndTeamSelectionCaches(void)
     if (diyCompetitionPtr == 0)
         return;
 
-    uint32_t *tablePtr = diyCompetitionTablePtr;
     /* competitionTeamIdScratchList4 is a separate small scratch buffer (asm data label). */
     extern uint16_t competitionTeamIdScratchList4[];
     uint16_t *a5 = competitionTeamIdScratchList4;
@@ -3448,43 +3447,59 @@ void _DIY_RebuildCompetitionAndTeamSelectionCaches(void)
     uint8_t *ctx = (uint8_t *)ctxS;
     int16_t count = ctxS->numTeams - 1;
 
-    for (int16_t i = count; i >= 0; i--) {
-        /* `tablePtr` walks {ptr, int} pairs at 4-byte stride. On 64-bit
-         * tablePtr[0] is a 32-bit value we need to interpret as a
-         * pointer — double-cast through uintptr_t to silence the
-         * Wint-to-pointer-cast warning while preserving the zero-
-         * extended low-32 address (matches the equality-compare against
-         * currentCompetitionPtr, which has the same source/encoding). */
-        uint8_t *compPtr = (uint8_t *)(uintptr_t)tablePtr[0];
-        uint32_t divIndex = tablePtr[1];
-        tablePtr += 2;
+    /* diyCompetitionTablePtr points at the promotion-link record array at
+     * the head of a `Leagues` struct (e.g. &englishLeaguesBlock._div1):
+     * each record is {CompetitionLeague *league; int8_t linkParams[8]}.
+     * The asm (DIY_RebuildCompetitionAndTeamSelectionCaches +
+     * Career_CopyCompetitionTeamByIndex) consumes THREE longs per record:
+     *   league           — POINTER width (movea.l (a6)+,a0): 4 B on Amiga,
+     *                       8 B on 64-bit. The old walk read it as a uint32,
+     *                       truncating the pointer on 64-bit -> the
+     *                       equality test missed -> the wrong (auto-advance)
+     *                       branch ran with a garbage compPtr (low half) and
+     *                       garbage divIndex (high half) -> SIGSEGV.
+     *   linkParams[0..3] BE -> divIndex (word-compared to currentDivisionIndex)
+     *   linkParams[4..7] BE -> teamLookupIdx: the index into
+     *                       qualifiedTeamsByDivision (the {0,3,1,2}
+     *                       diyShuffleOrder4Teams, NOT divIndex — the old
+     *                       code reused divIndex here, reading the same slot
+     *                       every iteration).
+     * Walk the real records at their natural stride (12 B / 16 B). */
+    typedef struct {
+        CompetitionLeague *league;
+        int8_t             linkParams[8];
+    } DIYLeagueLinkRecord;
+    _Static_assert(offsetof(Leagues, league2) == sizeof(DIYLeagueLinkRecord),
+                   "DIY league-link record stride must match Leagues promotion-link spacing");
+    DIYLeagueLinkRecord *rec = (DIYLeagueLinkRecord *)diyCompetitionTablePtr;
 
-        if (compPtr == currentCompetitionPtr &&
+    for (int16_t i = count; i >= 0; i--) {
+        CompetitionLeague *league = rec->league;
+        uint32_t divIndex      = BE_READ_U32(&rec->linkParams[0]);
+        uint32_t teamLookupIdx = BE_READ_U32(&rec->linkParams[4]);
+        rec++;
+
+        uint16_t teamId;
+        if ((uint8_t *)league == currentCompetitionPtr &&
             (uint16_t)divIndex == currentDivisionIndex) {
-            /* Current competition — copy from competitionFileBuffer */
-            /* Career_CopyCompetitionTeamByIndex inline:
-             * reads divIndex from tablePtr stream, looks up team ID at
-             * competition+0x1AE + idx*2 */
-            uint32_t idx = *(uint32_t *)((uint8_t *)tablePtr - 4);  /* re-read d0 */
-            (void)idx;
-            /* qualifiedTeamsByDivision (Amiga BSS_00_2E0AE +0x60, parent 0x1AE):
-             * the per-division qualified-team-id array in competitionFileBuffer's
-             * DIYCompetitionEx view. */
+            /* Current competition — team id from competitionFileBuffer's
+             * qualifiedTeamsByDivision[teamLookupIdx] (DIYCompetitionEx
+             * view of the Amiga comp+0x1AE array). */
             DIYCompetitionEx *destEx = (DIYCompetitionEx *)competitionFileBuffer;
-            uint16_t teamId = destEx->qualifiedTeamsByDivision[divIndex];
-            *a5++ = teamId;
+            teamId = destEx->qualifiedTeamsByDivision[teamLookupIdx];
         } else {
-            /* Not current — auto-advance international fixtures */
+            /* Not current — auto-advance international fixtures, then read
+             * from diyCompetitionStart's qualifiedTeamsByDivision. */
             internationalAutoAdvanceFlag = 1;
             _SaveSelectedTeams();
-            _Career_AutoAdvanceInternationalCompetitionFixtures(compPtr, (uint16_t)divIndex);
+            _Career_AutoAdvanceInternationalCompetitionFixtures((uint8_t *)league,
+                                                                (uint16_t)divIndex);
             _RestoreSelectedTeams();
             internationalAutoAdvanceFlag = 0;
 
-            /* Copy from diyCompetitionStart's qualifiedTeamsByDivision array */
-            uint16_t teamId = diyCompetitionStart.qualifiedTeamsByDivision[divIndex];
-            *a5++ = teamId;
+            teamId = diyCompetitionStart.qualifiedTeamsByDivision[teamLookupIdx];
         }
+        *a5++ = teamId;
     }
 
     /* Append teams to selection */
