@@ -666,7 +666,7 @@ extern uint8_t ecQualifyingGroup6Copy[];
 extern uint8_t ecQualifyingGroup7Copy[];
 extern uint8_t ecQualifyingGroup8Copy[];
 
-extern uint16_t primaryCompWinnerTeam;
+extern CompetitionSlotBuffer primaryCompetitionBuf;          /* slot-0 untangle (S6): typed buffer */
 extern uint16_t worldCupHostTeam;
 extern uint8_t worldCup2Copy[];
 extern uint8_t worldCupQualifyingGroup1Copy[];
@@ -786,7 +786,7 @@ __attribute__((used, externally_visible))
 void _Career_UpdateWorldCupCompetitions(void)
 {
     if (someTeamFlags & 0x80)
-        worldCupHostTeam = primaryCompWinnerTeam;
+        worldCupHostTeam = primaryCompetitionBuf.tourn.header.winnerTeam;
 
     if (!(someTeamFlags & 0x40))
         return;

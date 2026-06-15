@@ -419,7 +419,7 @@ check_self:
  *   ShowChairmanOpinionAboutTheSeason
  * ================================================================ */
 
-extern uint8_t competitionFileBuffer[];
+extern CompetitionSlotBuffer primaryCompetitionBuf;          /* slot-0 untangle (S6): typed buffer */
 extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern CompetitionSlotBuffer euroCupsCompetitionContextBuf;   /* slot-3 untangle (S5): typed buffer */
@@ -531,7 +531,7 @@ void _SeasonFinished_ComputeSeasonReview(void)
     uint16_t d6 = 0;  /* weighted score accumulator */
 
     /* Primary competition */
-    int16_t cat = computeCategoryForCompetition(competitionFileBuffer);
+    int16_t cat = computeCategoryForCompetition((uint8_t *)&primaryCompetitionBuf);
     if (cat >= 0) {
         uint16_t ucat = (uint16_t)cat;
         adjustWeightsForCompetition((uint8_t *)currentCompetitionPtr, &d5, &ucat);
@@ -602,7 +602,7 @@ void _ShowChairmanOpinionAboutTheSeason(void)
     }
 
     /* --- Compute category for primary competition (inline) --- */
-    uint8_t *comp = competitionFileBuffer;
+    uint8_t *comp = (uint8_t *)&primaryCompetitionBuf;
     int16_t position = (int16_t)_FindTeamInDIY(selTeamNumber, (DIYCompetition *)comp);
     uint16_t rank = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)comp);
     uint16_t numTeams = (uint16_t)((DIYCompetition *)comp)->numTeams;  /* 0x32; typed access auto-corrects the 64-bit namePtr shift */

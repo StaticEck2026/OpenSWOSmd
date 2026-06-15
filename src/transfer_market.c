@@ -64,11 +64,7 @@ extern uint16_t _GetRandomWord(void);
 extern uint32_t _GetLowestAndHighestPlayerPrice(void);
 
 /* ---- Additional externs for Chunk 74/75 ---- */
-extern uint16_t competitionFileBuffer;
-extern uint16_t diyTeamIdListType0[];
-extern uint16_t diyTeamIdListType1[];
-extern uint16_t diyTeamIdListType2[];
-extern uint16_t numDiyTeams;
+extern CompetitionSlotBuffer primaryCompetitionBuf;          /* slot-0 untangle (S6): typed buffer (was competitionFileBuffer + diyTeamIdListType0/1/2 + numDiyTeams) */
 /* In-progress transfer offer parameters — 7 host-native fields untangled
  * from the offerOrdinalsBackingBuf .equ overlay into a typed struct
  * (OfferOrdinals, game_types.h). All access below is offerOrdinals.<field>;
@@ -982,14 +978,17 @@ int16_t _FindTeamIdInDiyTeamsList(uint16_t *teamIdPtr)
     int16_t count;
     uint16_t target;
 
-    if (competitionFileBuffer == 1)
-        list = (uint8_t *)diyTeamIdListType1;
-    else if (competitionFileBuffer == 2)
-        list = (uint8_t *)diyTeamIdListType2;
+    /* slot-0 untangle (S6, D-A1): the three legacy diyTeamIdList* views are the
+     * cup/league/tournament team-id regions of primaryCompetitionBuf. Access stays
+     * BE_READ_U16 below — only the base symbol changes. */
+    if (primaryCompetitionBuf.tourn.header.competitionType == 1)
+        list = (uint8_t *)((DIYCompetitionEx *)&primaryCompetitionBuf)->cupTeamIds;            /* diyTeamIdListType1 @0x24E */
+    else if (primaryCompetitionBuf.tourn.header.competitionType == 2)
+        list = (uint8_t *)((DIYTournamentState *)&primaryCompetitionBuf)->teamIds;             /* diyTeamIdListType2 @0x9A */
     else
-        list = (uint8_t *)diyTeamIdListType0;
+        list = (uint8_t *)((DIYCompetitionEx *)&primaryCompetitionBuf)->matchData.league.leagueTeamIds; /* diyTeamIdListType0 @0x12E */
 
-    count = (int16_t)(numDiyTeams - 1);
+    count = (int16_t)(primaryCompetitionBuf.tourn.header.numTeams - 1);
     /* Both sides read via BE_READ_U16 so they normalise to the same
      * (country<<8)|ord encoding on every host.
      *
@@ -4199,10 +4198,13 @@ void _Career_RemovePlayerAndAddAsTrialist(uint16_t sourceTeam, uint16_t playerOr
 
     /* Determine insertion position in currentMatchPlayers:
        competitionFileBuffer[0] == 2 ? use offset 0x4E : offset 0x66 */
-    uint16_t *compBuf = (uint16_t *)&competitionFileBuffer;
+    /* TODO(S6 FLAG-3): raw unshifted offsets compBuf[0x4E/2]/[0x66/2] are a
+     * pre-existing 64-bit hazard (CFB_NP namePtr slide) — S6 only rebases the
+     * symbol to preserve current behaviour; fix the offsets in a separate commit. */
+    uint16_t *compBuf = (uint16_t *)&primaryCompetitionBuf;
     uint16_t insertPos;
     if (compBuf[0] == 2) {
-        insertPos = compBuf[0x4E / 2];  /* 0x4E = offset 78 from competitionFileBuffer start */
+        insertPos = compBuf[0x4E / 2];  /* 0x4E = offset 78 from slot-0 buffer start */
     } else {
         insertPos = compBuf[0x66 / 2];  /* 0x66 = offset 102 */
     }

@@ -44,16 +44,16 @@ extern uint16_t lastNationalityCall;
 extern int16_t  boardConfidenceScore;
 extern int16_t  sackedReputationScore;
 extern int16_t  nationalSelectorReputationPoints;
-extern uint8_t  majorTrophyBonusValue;
+/* majorTrophyBonusValue migrated to primaryCompetitionBuf.tourn.header.trophyBonusValue (slot-0 untangle, S6) */
 extern uint16_t isNationalSelector;
 extern uint16_t selTeamNumber;
 extern uint16_t numSelectedTeams;
 extern uint8_t  selTeamsPtr;
 extern uint16_t currentDivisionIndex;
-extern uint8_t competitionFileBuffer[];
-extern uint16_t numDiyTeams;
-extern uint16_t diyTeamMinDivisionIndex;
-extern uint16_t diyTeamMaxDivisionOffset;
+extern CompetitionSlotBuffer primaryCompetitionBuf;           /* slot-0 untangle (S6): typed buffer */
+/* numDiyTeams migrated to primaryCompetitionBuf.tourn.header.numTeams (slot-0 untangle, S6) */
+/* diyTeamMinDivisionIndex migrated to primaryCompetitionBuf.tourn.header.minDivisionIndex (slot-0 untangle, S6) */
+/* diyTeamMaxDivisionOffset migrated to primaryCompetitionBuf.tourn.header.maxDivisionOffset (slot-0 untangle, S6) */
 extern uint16_t nat_teams_rand_limit1;
 extern uint8_t  nationalTeams[];
 extern uint8_t  nationalTeamFileCode;
@@ -1112,14 +1112,14 @@ searchDomestic:
         repScore = (uint16_t)nationalSelectorReputationPoints;
     } else {
         /* Calculate from major trophy bonus and league position */
-        uint16_t mtb = (uint16_t)(uint8_t)majorTrophyBonusValue;
+        uint16_t mtb = (uint16_t)(uint8_t)primaryCompetitionBuf.tourn.header.trophyBonusValue;
         uint16_t low75 = (uint16_t)((uint16_t)(mtb * 0x4B) / 100);
         uint16_t high150 = (uint16_t)((uint16_t)(mtb * 0x96) / 100);
 
         /* Find team position in DIY table */
-        int16_t pos = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)&competitionFileBuffer);
+        int16_t pos = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
 
-        uint16_t posPct = (uint16_t)((uint16_t)((uint16_t)pos * 100) / (numDiyTeams - 1));
+        uint16_t posPct = (uint16_t)((uint16_t)((uint16_t)pos * 100) / (primaryCompetitionBuf.tourn.header.numTeams - 1));
         uint16_t invPct = 100 - posPct;
 
         uint16_t range = high150 - low75;
@@ -1212,8 +1212,8 @@ searchDomestic:
             }
 
             /* Same division — check league position */
-            _FindTeamInDIY(teamId, (DIYCompetition *)&competitionFileBuffer);
-            uint16_t minDiv = diyTeamMinDivisionIndex + diyTeamMaxDivisionOffset;
+            _FindTeamInDIY(teamId, (DIYCompetition *)&primaryCompetitionBuf);
+            uint16_t minDiv = primaryCompetitionBuf.tourn.header.minDivisionIndex + primaryCompetitionBuf.tourn.header.maxDivisionOffset;
             if ((uint16_t)divIdx < minDiv)
                 continue;
 

@@ -110,7 +110,7 @@ extern void _FlashColor0Delay(uint32_t loopCount, uint16_t color);
 extern void *cupRoundStringTable[];
 extern uint8_t diyLeagueSeasonStateTable[];
 extern volatile uint8_t diyLeagueScratchBuffer[];
-extern uint8_t competitionFileBuffer[];
+extern CompetitionSlotBuffer primaryCompetitionBuf;          /* slot-0 untangle (S6): typed buffer */
 extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern CompetitionSlotBuffer euroCupsCompetitionContextBuf;   /* slot-3 untangle (S5): typed buffer */
@@ -146,9 +146,7 @@ extern uint8_t *currentCompetitionPtr;
 extern uint16_t currentDivisionIndex;
 extern uint16_t internationalAutoAdvanceFlag;
 extern uint16_t competitionSlotUpdatedFlag;
-extern uint16_t primaryCompSlotStateA;
-extern uint16_t primaryCompSlotStateB;
-extern uint16_t primaryCompSlotStateC;
+/* primaryCompSlotStateA/B/C migrated to primaryCompetitionBuf.tourn.header.slotState* (slot-0 untangle, S6) */
 /* diyCompSlotStateA/B/C migrated to diyCompetitionContextBuf.tourn.header.slotState* (slot-4 untangle, S2) */
 extern uint8_t teamSelectionKeyCache[];
 extern uint16_t teamSelectionKeyCacheCount;
@@ -1104,8 +1102,8 @@ static void diy_tournament_to_cfb_clean(uint8_t *c)
 
 /* slot 0 (competitionFileBuffer = primaryCompetitionBuf) and the four *Context
  * slots are all CompetitionSlotBuffers — one flat copy serves every slot. */
-static void diy_cfb_to_tournament(void) { diy_cfb_to_tournament_clean(competitionFileBuffer); }
-static void diy_tournament_to_cfb(void) { diy_tournament_to_cfb_clean(competitionFileBuffer); }
+static void diy_cfb_to_tournament(void) { diy_cfb_to_tournament_clean((const uint8_t *)&primaryCompetitionBuf); }
+static void diy_tournament_to_cfb(void) { diy_tournament_to_cfb_clean((uint8_t *)&primaryCompetitionBuf); }
 
 /* Exported buffer-parameterised entry points for the career slot store/load
  * (career_teams.c). A type-2 tournament slot can live in competitionFileBuffer
@@ -1141,7 +1139,7 @@ __attribute__((used, externally_visible))
 void _DIY_CopyCompetitionFileBufferToCompetitionStart(void)
 {
     copyWords((volatile uint16_t *)&diyCompetitionStart,
-              (const volatile uint16_t *)competitionFileBuffer, (int16_t)(DIY_CUP_COPY_WORDS - 1));
+              (const volatile uint16_t *)&primaryCompetitionBuf, (int16_t)(DIY_CUP_COPY_WORDS - 1));
 }
 
 /* ================================================================
@@ -1151,7 +1149,7 @@ void _DIY_CopyCompetitionFileBufferToCompetitionStart(void)
 __attribute__((used, externally_visible))
 void _DIY_CopyCompetitionStartToCompetitionFileBuffer(void)
 {
-    copyWords((volatile uint16_t *)competitionFileBuffer,
+    copyWords((volatile uint16_t *)&primaryCompetitionBuf,
               (const volatile uint16_t *)&diyCompetitionStart, (int16_t)(DIY_CUP_COPY_WORDS - 1));
 }
 
@@ -1163,7 +1161,7 @@ __attribute__((used, externally_visible))
 void _DIY_CopyCompetitionFileBufferToCompetitionStart_Alt(void)
 {
     copyWords((volatile uint16_t *)&diyCompetitionStart,
-              (const volatile uint16_t *)competitionFileBuffer, (int16_t)(DIY_CUP_COPY_WORDS - 1));
+              (const volatile uint16_t *)&primaryCompetitionBuf, (int16_t)(DIY_CUP_COPY_WORDS - 1));
 }
 
 /* ================================================================
@@ -1173,7 +1171,7 @@ void _DIY_CopyCompetitionFileBufferToCompetitionStart_Alt(void)
 __attribute__((used, externally_visible))
 void _DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt(void)
 {
-    copyWords((volatile uint16_t *)competitionFileBuffer,
+    copyWords((volatile uint16_t *)&primaryCompetitionBuf,
               (const volatile uint16_t *)&diyCompetitionStart, (int16_t)(DIY_CUP_COPY_WORDS - 1));
 }
 
@@ -1185,7 +1183,7 @@ __attribute__((used, externally_visible))
 void _SaveDIYLeague(void)
 {
     copyWords((volatile uint16_t *)&diyCompetitionStart,
-              (const volatile uint16_t *)competitionFileBuffer,
+              (const volatile uint16_t *)&primaryCompetitionBuf,
               (int16_t)(sizeof(DIYCompetitionEx) / 2 - 1));
 }
 
@@ -1197,7 +1195,7 @@ void _SaveDIYLeague(void)
 __attribute__((used, externally_visible))
 void _RestoreDIYLeague(void)
 {
-    copyWords((volatile uint16_t *)competitionFileBuffer,
+    copyWords((volatile uint16_t *)&primaryCompetitionBuf,
               (const volatile uint16_t *)&diyCompetitionStart,
               (int16_t)(sizeof(DIYCompetitionEx) / 2 - 1));
 }
@@ -1211,7 +1209,7 @@ __attribute__((used, externally_visible))
 void _DIY_SaveCompetitionFileBufferToDIYCompetition(void)
 {
     copyWords((volatile uint16_t *)&diyCompetitionStart,
-              (const volatile uint16_t *)competitionFileBuffer,
+              (const volatile uint16_t *)&primaryCompetitionBuf,
               (int16_t)(sizeof(DIYCompetitionEx) / 2 - 1));
 }
 
@@ -1223,7 +1221,7 @@ void _DIY_SaveCompetitionFileBufferToDIYCompetition(void)
 __attribute__((used, externally_visible))
 void _DIY_RestoreCompetitionFileBufferFromDIYCompetition(void)
 {
-    copyWords((volatile uint16_t *)competitionFileBuffer,
+    copyWords((volatile uint16_t *)&primaryCompetitionBuf,
               (const volatile uint16_t *)&diyCompetitionStart,
               (int16_t)(sizeof(DIYCompetitionEx) / 2 - 1));
 }
@@ -2387,8 +2385,8 @@ void _DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC)
      * diverge after _SaveDIYTournament has run we know the 1450-word copy
      * is the bug. */
     {
-        extern uint8_t competitionFileBuffer[];
-        const uint8_t *cfb = competitionFileBuffer;
+        extern CompetitionSlotBuffer primaryCompetitionBuf;
+        const uint8_t *cfb = (const uint8_t *)&primaryCompetitionBuf;
         const uint8_t *dfb = (const uint8_t *)&diyFileBufferCopy;
         SWOS_AUTOSKIP_LOG("EditCompSlot: paramA=%u paramB=%u paramC=%u slotIdx(buf)=%u",
                           (unsigned)paramA, (unsigned)paramB, (unsigned)paramC,
@@ -3483,7 +3481,7 @@ void _DIY_RebuildCompetitionAndTeamSelectionCaches(void)
             /* Current competition — team id from competitionFileBuffer's
              * qualifiedTeamsByDivision[teamLookupIdx] (DIYCompetitionEx
              * view of the Amiga comp+0x1AE array). */
-            DIYCompetitionEx *destEx = (DIYCompetitionEx *)competitionFileBuffer;
+            DIYCompetitionEx *destEx = (DIYCompetitionEx *)&primaryCompetitionBuf;
             teamId = destEx->qualifiedTeamsByDivision[teamLookupIdx];
         } else {
             /* Not current — auto-advance international fixtures, then read
@@ -3518,9 +3516,9 @@ void _DIY_RebuildCompetitionAndTeamSelectionCaches(void)
 
     /* Set updated flag and copy state */
     competitionSlotUpdatedFlag = 1;
-    diyCompetitionContextBuf.tourn.header.slotStateA = primaryCompSlotStateA;
-    diyCompetitionContextBuf.tourn.header.slotStateB = primaryCompSlotStateB;
-    diyCompetitionContextBuf.tourn.header.slotStateC = primaryCompSlotStateC;
+    diyCompetitionContextBuf.tourn.header.slotStateA = primaryCompetitionBuf.tourn.header.slotStateA;
+    diyCompetitionContextBuf.tourn.header.slotStateB = primaryCompetitionBuf.tourn.header.slotStateB;
+    diyCompetitionContextBuf.tourn.header.slotStateC = primaryCompetitionBuf.tourn.header.slotStateC;
 }
 
 /* ================================================================
@@ -4616,7 +4614,7 @@ void _ShowDiyCompetitionForSource(uint8_t *header)
 __attribute__((used, externally_visible))
 void _OpenDiyFromFile(void)
 {
-    _ShowDiyCompetitionForSource(competitionFileBuffer);
+    _ShowDiyCompetitionForSource((uint8_t *)&primaryCompetitionBuf);
 }
 
 /* OpenDiyPreset1 — open DIY from competitionContext (SWOS2.s line 59161) */
@@ -9897,9 +9895,9 @@ extern uint8_t teamBudgetRankTable[];
 __attribute__((used, externally_visible))
 void _InitializeNewSeason_BuildTeamBudgetRankTable(void)
 {
-    DIYCompetitionEx *compEx = (DIYCompetitionEx *)competitionFileBuffer;
+    DIYCompetitionEx *compEx = (DIYCompetitionEx *)&primaryCompetitionBuf;
     DIYCompetition *comp = &compEx->base;
-    uint8_t *raw = competitionFileBuffer;
+    uint8_t *raw = (uint8_t *)&primaryCompetitionBuf;
     uint16_t numTeams = (uint16_t)comp->numTeams;
     uint16_t compType = (uint16_t)comp->competitionType;
     uint16_t *teamIdArray;

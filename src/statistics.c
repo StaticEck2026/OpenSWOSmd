@@ -937,13 +937,12 @@ void _TopGoalScorersMenu_0(void)
 {
 #ifdef SWOS_DEBUG_AUTOSKIP
     {
-        extern uint8_t  competitionFileBuffer[];
-        extern uint16_t numDiyTeams;
-        uint16_t compTypeWord = *(uint16_t *)competitionFileBuffer;
+        extern CompetitionSlotBuffer primaryCompetitionBuf;  /* slot-0 untangle (S6): block-local (file-scope decl is below this fn) */
+        uint16_t compTypeWord = (uint16_t)primaryCompetitionBuf.tourn.header.competitionType;
         SWOS_AUTOSKIP_LOG("[bug2-scorers] _TopGoalScorersMenu_0 ENTER statIdx=-1 "
                           "numSelectedTeams=%u numDiyTeams=%u gameType=%u "
                           "careerLoadedFlag=%u compTypeWord=0x%04X selTeamNumber=0x%04X",
-                          (unsigned)numSelectedTeams, (unsigned)numDiyTeams,
+                          (unsigned)numSelectedTeams, (unsigned)primaryCompetitionBuf.tourn.header.numTeams,
                           (unsigned)gameType, (unsigned)careerLoadedFlag,
                           (unsigned)compTypeWord, (unsigned)selTeamNumber);
     }
@@ -1474,7 +1473,7 @@ extern uint8_t *currentCompetitionPtr;
 extern uint8_t *secondaryCompetitionPtr;
 extern uint8_t *tertiaryCompetitionPtr;
 extern uint8_t *quaternaryCompetitionPtr;
-extern uint8_t competitionFileBuffer[];
+extern CompetitionSlotBuffer primaryCompetitionBuf;           /* slot-0 untangle (S6): typed buffer */
 extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern CompetitionSlotBuffer euroCupsCompetitionContextBuf;   /* slot-3 untangle (S5): typed buffer */
@@ -1748,12 +1747,12 @@ void _Career_FillCurrentSeasonInfo(void)
     /* Primary competition */
     {
         d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
-                                      (DIYCompetition *)&competitionFileBuffer);
+                                      (DIYCompetition *)&primaryCompetitionBuf);
         uint8_t *compDef = currentCompetitionPtr;
 
         if (d1 >= 0) {
             d1 = EncodeCompetitionPositionForSeasonInfo_impl(
-                d1, (uint8_t *)&competitionFileBuffer, compDef);
+                d1, (uint8_t *)&primaryCompetitionBuf, compDef);
             a5->comp1Result = (int8_t)d1;
 
             /* Check qualifying stage status */
