@@ -141,7 +141,7 @@ extern uint16_t gameType;
 extern uint16_t careerLoadedFlag;
 extern uint8_t *diyCompetitionPtr;
 extern uint32_t *diyCompetitionTablePtr;
-extern uint8_t diyCompetitionContext[];
+extern CompetitionSlotBuffer diyCompetitionContextBuf;   /* slot-4 untangle (S2): typed buffer */
 extern uint8_t *currentCompetitionPtr;
 extern uint16_t currentDivisionIndex;
 extern uint16_t internationalAutoAdvanceFlag;
@@ -149,9 +149,7 @@ extern uint16_t competitionSlotUpdatedFlag;
 extern uint16_t primaryCompSlotStateA;
 extern uint16_t primaryCompSlotStateB;
 extern uint16_t primaryCompSlotStateC;
-extern uint16_t diyCompSlotStateA;
-extern uint16_t diyCompSlotStateB;
-extern uint16_t diyCompSlotStateC;
+/* diyCompSlotStateA/B/C migrated to diyCompetitionContextBuf.tourn.header.slotState* (slot-4 untangle, S2) */
 extern uint8_t teamSelectionKeyCache[];
 extern uint16_t teamSelectionKeyCacheCount;
 extern uint8_t aFriendly[];  /* string "FRIENDLY" */
@@ -3429,7 +3427,7 @@ static void diy_ResetCompetitionStatsAndProgress(void)
 /* ================================================================
  * _DIY_RebuildCompetitionAndTeamSelectionCaches (SWOS2.s line 35046)
  *
- * Rebuilds competition team selection caches from diyCompetitionContext.
+ * Rebuilds competition team selection caches from diyCompetitionContextBuf.
  * For each competition entry, either copies from competitionFileBuffer
  * or auto-advances international fixtures. Then rebuilds key cache.
  * ================================================================ */
@@ -3443,7 +3441,7 @@ void _DIY_RebuildCompetitionAndTeamSelectionCaches(void)
     extern uint16_t competitionTeamIdScratchList4[];
     uint16_t *a5 = competitionTeamIdScratchList4;
 
-    DIYCompetition *ctxS = (DIYCompetition *)diyCompetitionContext;
+    DIYCompetition *ctxS = &diyCompetitionContextBuf.tourn.header;
     uint8_t *ctx = (uint8_t *)ctxS;
     int16_t count = ctxS->numTeams - 1;
 
@@ -3520,9 +3518,9 @@ void _DIY_RebuildCompetitionAndTeamSelectionCaches(void)
 
     /* Set updated flag and copy state */
     competitionSlotUpdatedFlag = 1;
-    diyCompSlotStateA = primaryCompSlotStateA;
-    diyCompSlotStateB = primaryCompSlotStateB;
-    diyCompSlotStateC = primaryCompSlotStateC;
+    diyCompetitionContextBuf.tourn.header.slotStateA = primaryCompSlotStateA;
+    diyCompetitionContextBuf.tourn.header.slotStateB = primaryCompSlotStateB;
+    diyCompetitionContextBuf.tourn.header.slotStateC = primaryCompSlotStateC;
 }
 
 /* ================================================================

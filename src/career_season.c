@@ -1393,7 +1393,7 @@ extern uint16_t diyQualifiedTeamIndices[];
 extern uint16_t currentDivisionIndex;
 extern uint16_t youreSacked;
 extern uint8_t *diyCompetitionPtr;
-extern uint8_t diyCompetitionContext[];
+extern CompetitionSlotBuffer diyCompetitionContextBuf;   /* slot-4 untangle (S2): typed buffer */
 
 /* Local copy of EnglishLeaguesBlock typedef (keeping competition_data.h out
  * of this TU per the design notes — career_season.c uses opaque pointer
@@ -1505,7 +1505,7 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         teamIdxList += (int16_t)count * 2;
 
         _RestoreSelectedTeams();
-        _Career_LoadCompetitionSlotStateFromBuffer(diyCompetitionContext);
+        _Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&diyCompetitionContextBuf);
         _ShowDIYCupMenuWithParams(1, 1, 0);
         _DIY_ApplyPromotionRelegationWeightsToScratch(teamIdxList);
         _SaveSelectedTeams();

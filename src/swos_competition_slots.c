@@ -116,9 +116,7 @@ __asm__(
     SLOT_ALIAS(quaternaryCompSlotStateB,   euroCupsCompetitionContextBuf, 0x40 + CFB_NP)
     SLOT_ALIAS(quaternaryCompSlotStateC,   euroCupsCompetitionContextBuf, 0x42 + CFB_NP)
 
-    /* ---- slot 4: diy (diyCompetitionContext) ---- */
-    SLOT_ALIAS(diyCompetitionContext,      diyCompetitionContextBuf, 0)
-    SLOT_ALIAS(diyCompSlotStateA,          diyCompetitionContextBuf, 0x3E + CFB_NP)
-    SLOT_ALIAS(diyCompSlotStateB,          diyCompetitionContextBuf, 0x40 + CFB_NP)
-    SLOT_ALIAS(diyCompSlotStateC,          diyCompetitionContextBuf, 0x42 + CFB_NP)
+    /* ---- slot 4: diy ---- MIGRATED (untangle Part A, S2): consumers now use
+     * the typed diyCompetitionContextBuf.tourn.header.{competitionType,slotStateA/B/C}
+     * directly; the diyCompetitionContext / diyCompSlotStateA/B/C aliases are retired. */
 );

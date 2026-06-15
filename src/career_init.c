@@ -552,7 +552,7 @@ extern uint8_t competitionFileBuffer[];
 extern uint32_t competitionContext;
 extern uint32_t tertiaryCompetitionContext;
 extern uint32_t euroCupsCompetitionContext;
-extern uint32_t diyCompetitionContext;
+extern CompetitionSlotBuffer diyCompetitionContextBuf;   /* slot-4 untangle (S2): typed buffer */
 extern uint8_t *careerCompetitionSlotPtrTable[];
 extern uint16_t teamSelectionKeyCacheCount;
 extern uint16_t teamSelectionKeyCacheIndex;
@@ -1022,7 +1022,7 @@ void _InitializeNewSeason(void)
     careerCompetitionSlotPtrTable[1] = (uint8_t *)&competitionContext;
     careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContext;
     careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContext;
-    careerCompetitionSlotPtrTable[4] = (uint8_t *)&diyCompetitionContext;
+    careerCompetitionSlotPtrTable[4] = (uint8_t *)&diyCompetitionContextBuf;
 
     /* Clear all competition pointers */
     currentCompetitionPtr = 0;
@@ -1284,7 +1284,7 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
     careerCompetitionSlotPtrTable[1] = (uint8_t *)&competitionContext;
     careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContext;
     careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContext;
-    careerCompetitionSlotPtrTable[4] = (uint8_t *)&diyCompetitionContext;
+    careerCompetitionSlotPtrTable[4] = (uint8_t *)&diyCompetitionContextBuf;
 
     currentCompetitionPtr = 0;
     secondaryCompetitionPtr = 0;
@@ -1370,8 +1370,8 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
  *   1. careerCompetitionSlotPtrTable[5]  — five competition slot bases.
  *      Re-derived from `&competitionFileBuffer / &competitionContext /
  *      &tertiaryCompetitionContext / &euroCupsCompetitionContext /
- *      &diyCompetitionContext` in the current build's BSS (now
- *      aliased into careerFileBufferBuf by the overlay).
+ *      &diyCompetitionContextBuf` in the current build's BSS (slots 0-3
+ *      still SLOT_ALIAS into their bufs; slot 4 is the typed buffer).
  *
  *   2. diyCompetitionStart — runtime DIY working buffer (separate 4 KB
  *      BSS, NOT inside the careerFileBuffer overlay). Repopulated
@@ -1599,7 +1599,7 @@ void _RebuildPointersAfterLoad(void)
     careerCompetitionSlotPtrTable[1] = (uint8_t *)&competitionContext;
     careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContext;
     careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContext;
-    careerCompetitionSlotPtrTable[4] = (uint8_t *)&diyCompetitionContext;
+    careerCompetitionSlotPtrTable[4] = (uint8_t *)&diyCompetitionContextBuf;
 
     /* Step 1b: re-derive each slot buffer's DIYCompetition.namePtr (+0x28).
      *
