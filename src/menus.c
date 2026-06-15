@@ -4403,7 +4403,7 @@ extern uint8_t *quaternaryCompetitionPtr;
 extern uint8_t  diyPresetNameOfCompetition[];
 extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
-extern uint8_t  quaternaryCompetitionName[];
+extern CompetitionSlotBuffer euroCupsCompetitionContextBuf;   /* slot-3 untangle (S5): typed buffer */
 extern uint8_t  plNationality;
 extern uint8_t  nationalityOrdinal;
 extern uint8_t  nationalityOrdinalsArray[];
@@ -4465,7 +4465,7 @@ void _ViewCompetitionsOnReturn(void)
     menuEntries[1].fg = (uintptr_t)diyPresetNameOfCompetition;
     menuEntries[2].fg = (uintptr_t)competitionContextBuf.tourn.header.competitionName;
     menuEntries[3].fg = (uintptr_t)tertiaryCompetitionContextBuf.tourn.header.competitionName;
-    menuEntries[4].fg = (uintptr_t)quaternaryCompetitionName;
+    menuEntries[4].fg = (uintptr_t)euroCupsCompetitionContextBuf.tourn.header.competitionName;
 
     /* If primary competition is tour/friendly, hide entry 1 and shift Y coords up */
     if (currentCompetitionPtr == (uint8_t *)tourCopy

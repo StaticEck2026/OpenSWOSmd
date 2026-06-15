@@ -1477,7 +1477,7 @@ extern uint8_t *quaternaryCompetitionPtr;
 extern uint8_t competitionFileBuffer[];
 extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
-extern uint32_t euroCupsCompetitionContext;
+extern CompetitionSlotBuffer euroCupsCompetitionContextBuf;   /* slot-3 untangle (S5): typed buffer */
 extern uint16_t qualifyingStage1PendingFlag0;
 extern uint16_t qualifyingStage1PendingFlag1;
 extern uint16_t qualifyingStage2PendingFlag0;
@@ -1800,10 +1800,10 @@ void _Career_FillCurrentSeasonInfo(void)
     /* Quaternary competition */
     if (a5->strPtr3 != 0) {
         d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
-                                      (DIYCompetition *)&euroCupsCompetitionContext);
+                                      (DIYCompetition *)&euroCupsCompetitionContextBuf);
         uint8_t *compDef = quaternaryCompetitionPtr;
         d1 = EncodeCompetitionPositionForSeasonInfo_impl(
-            d1, (uint8_t *)&euroCupsCompetitionContext, compDef);
+            d1, (uint8_t *)&euroCupsCompetitionContextBuf, compDef);
         a5->comp4Result = (int8_t)d1;
     }
 }

@@ -99,14 +99,12 @@ __asm__(
      * tertiaryCompetitionContext / tertiaryCompetitionName / leagueTitleBonusValue /
      * tertiaryCompWinnerTeam / tertiaryCompSlotStateA-C / tertiaryCompFinished aliases are retired. */
 
-    /* ---- slot 3: euro cups (euroCupsCompetitionContext) ---- */
-    SLOT_ALIAS(euroCupsCompetitionContext, euroCupsCompetitionContextBuf, 0)
-    SLOT_ALIAS(quaternaryCompetitionName,  euroCupsCompetitionContextBuf, 0x04)
-    SLOT_ALIAS(majorTrophyOrCupBonusValue, euroCupsCompetitionContextBuf, 0x30 + CFB_NP)
-    SLOT_ALIAS(quaternaryCompWinnerTeam,   euroCupsCompetitionContextBuf, 0x3A + CFB_NP)
-    SLOT_ALIAS(quaternaryCompSlotStateA,   euroCupsCompetitionContextBuf, 0x3E + CFB_NP)
-    SLOT_ALIAS(quaternaryCompSlotStateB,   euroCupsCompetitionContextBuf, 0x40 + CFB_NP)
-    SLOT_ALIAS(quaternaryCompSlotStateC,   euroCupsCompetitionContextBuf, 0x42 + CFB_NP)
+    /* ---- slot 3: euro cups ---- MIGRATED (untangle Part A, S5): consumers now use
+     * the typed euroCupsCompetitionContextBuf.tourn.header.{competitionType,competitionName,
+     * trophyBonusValue,winnerTeam,slotStateA/B/C} directly; the
+     * euroCupsCompetitionContext / quaternaryCompetitionName / majorTrophyOrCupBonusValue /
+     * quaternaryCompWinnerTeam / quaternaryCompSlotStateA-C aliases are retired.
+     * (Slot 3 has no compFinished@0x4C field.) */
 
     /* ---- slot 4: diy ---- MIGRATED (untangle Part A, S2): consumers now use
      * the typed diyCompetitionContextBuf.tourn.header.{competitionType,slotStateA/B/C}

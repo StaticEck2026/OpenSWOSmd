@@ -500,9 +500,7 @@ extern uint16_t primaryCompSlotStateB;
 extern uint16_t primaryCompSlotStateC;
 /* secondaryCompSlotStateA/B/C migrated to competitionContextBuf.tourn.header.slotState* (slot-1 untangle, S4) */
 /* tertiaryCompSlotStateA/B/C migrated to tertiaryCompetitionContextBuf.tourn.header.slotState* (slot-2 untangle, S3) */
-extern uint16_t quaternaryCompSlotStateA;
-extern uint16_t quaternaryCompSlotStateB;
-extern uint16_t quaternaryCompSlotStateC;
+/* quaternaryCompSlotStateA/B/C migrated to euroCupsCompetitionContextBuf.tourn.header.slotState* (slot-3 untangle, S5) */
 extern uint8_t  seasonPlaying;
 
 extern uint16_t poolplyrLoaded;
@@ -547,7 +545,7 @@ extern uint8_t *diyCompetitionPtr;
 extern uint8_t competitionFileBuffer[];
 extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
-extern uint32_t euroCupsCompetitionContext;
+extern CompetitionSlotBuffer euroCupsCompetitionContextBuf;   /* slot-3 untangle (S5): typed buffer */
 extern CompetitionSlotBuffer diyCompetitionContextBuf;   /* slot-4 untangle (S2): typed buffer */
 extern uint8_t *careerCompetitionSlotPtrTable[];
 extern uint16_t teamSelectionKeyCacheCount;
@@ -711,9 +709,9 @@ void _InitCareer(uint16_t teamNo)
     tertiaryCompetitionContextBuf.tourn.header.slotStateA = 3;
     tertiaryCompetitionContextBuf.tourn.header.slotStateB = 2;
     tertiaryCompetitionContextBuf.tourn.header.slotStateC = 8;
-    quaternaryCompSlotStateA = 3;
-    quaternaryCompSlotStateB = 2;
-    quaternaryCompSlotStateC = 8;
+    euroCupsCompetitionContextBuf.tourn.header.slotStateA = 3;
+    euroCupsCompetitionContextBuf.tourn.header.slotStateB = 2;
+    euroCupsCompetitionContextBuf.tourn.header.slotStateC = 8;
     currentSeasonShowing = 0xFFFF;
     seasonPlaying--;
     _InitializeNewSeason();
@@ -867,9 +865,9 @@ uint16_t _Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t 
                           (unsigned)selTeamNumber, (unsigned)euroCupIndex, (void *)cupCopy);
 #endif
         /* Save quaternary slot state */
-        uint16_t savedA = quaternaryCompSlotStateA;
-        uint16_t savedB = quaternaryCompSlotStateB;
-        uint16_t savedC = quaternaryCompSlotStateC;
+        uint16_t savedA = euroCupsCompetitionContextBuf.tourn.header.slotStateA;
+        uint16_t savedB = euroCupsCompetitionContextBuf.tourn.header.slotStateB;
+        uint16_t savedC = euroCupsCompetitionContextBuf.tourn.header.slotStateC;
 
         /* Set slot 3 for this euro cup (d0=3, d1=euroCupIndex, d2=0) */
         _Career_SetCurrentCompetitionSlot(cupCopy, 3, 0, 0);
@@ -880,9 +878,9 @@ uint16_t _Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t 
             ((DIYCompetition *)careerCompetitionSlotPtrTable[3])->namePtr;
 
         /* Restore quaternary slot state */
-        quaternaryCompSlotStateC = savedC;
-        quaternaryCompSlotStateB = savedB;
-        quaternaryCompSlotStateA = savedA;
+        euroCupsCompetitionContextBuf.tourn.header.slotStateC = savedC;
+        euroCupsCompetitionContextBuf.tourn.header.slotStateB = savedB;
+        euroCupsCompetitionContextBuf.tourn.header.slotStateA = savedA;
 
         euroCupSlotIndex = euroCupIndex;
         return 0;  /* participating */
@@ -1064,7 +1062,7 @@ void _InitializeNewSeason(void)
     careerCompetitionSlotPtrTable[0] = (uint8_t *)&competitionFileBuffer;
     careerCompetitionSlotPtrTable[1] = (uint8_t *)&competitionContextBuf;
     careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContextBuf;
-    careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContext;
+    careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContextBuf;
     careerCompetitionSlotPtrTable[4] = (uint8_t *)&diyCompetitionContextBuf;
 
     /* Clear all competition pointers */
@@ -1326,7 +1324,7 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
     careerCompetitionSlotPtrTable[0] = (uint8_t *)&competitionFileBuffer;
     careerCompetitionSlotPtrTable[1] = (uint8_t *)&competitionContextBuf;
     careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContextBuf;
-    careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContext;
+    careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContextBuf;
     careerCompetitionSlotPtrTable[4] = (uint8_t *)&diyCompetitionContextBuf;
 
     currentCompetitionPtr = 0;
@@ -1652,7 +1650,7 @@ void _RebuildPointersAfterLoad(void)
     careerCompetitionSlotPtrTable[0] = (uint8_t *)&competitionFileBuffer;
     careerCompetitionSlotPtrTable[1] = (uint8_t *)&competitionContextBuf;
     careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContextBuf;
-    careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContext;
+    careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContextBuf;
     careerCompetitionSlotPtrTable[4] = (uint8_t *)&diyCompetitionContextBuf;
 
     /* Step 1b: re-derive each slot buffer's DIYCompetition.namePtr (+0x28).
@@ -1798,7 +1796,7 @@ void _Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel)
     if (comp == (uint8_t *)tertiaryCompetitionPtr)
         goto found_slot;
 
-    slotCtx = (uint8_t *)&euroCupsCompetitionContext;
+    slotCtx = (uint8_t *)&euroCupsCompetitionContextBuf;
     if (comp == (uint8_t *)quaternaryCompetitionPtr)
         goto found_slot;
 
