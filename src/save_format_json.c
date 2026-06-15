@@ -4759,7 +4759,7 @@ static int diy_stage_is_league(const DIYCompetitionEx *stage)
  * layout, only the file_kind string differs. */
 static int16_t write_competition_buf(uint8_t *filename, const char *kind)
 {
-    const uint8_t *lo = &primaryCompetitionBuf;
+    const uint8_t *lo = (const uint8_t *)&primaryCompetitionBuf;
     const uint8_t *hi = (const uint8_t *)&numSelectedTeams +
                         sizeof(numSelectedTeams);  /* +2 for the count word */
     JsonOutBuf out = { NULL, 0, 0, 0 };
@@ -4957,7 +4957,7 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
         return 1;
     }
 
-    const uint8_t *lo = &primaryCompetitionBuf;
+    const uint8_t *lo = (const uint8_t *)&primaryCompetitionBuf;
     const uint8_t *hi = (const uint8_t *)&numSelectedTeams +
                         sizeof(numSelectedTeams);
     /* Zero the destination FIELD-BY-FIELD, NOT with one memset over
