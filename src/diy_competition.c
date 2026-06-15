@@ -111,7 +111,7 @@ extern void *cupRoundStringTable[];
 extern uint8_t diyLeagueSeasonStateTable[];
 extern volatile uint8_t diyLeagueScratchBuffer[];
 extern uint8_t competitionFileBuffer[];
-extern uint8_t competitionContext[];
+extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
 extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern uint8_t euroCupsCompetitionContext[];
 
@@ -4623,7 +4623,7 @@ void _OpenDiyFromFile(void)
 __attribute__((used, externally_visible))
 void _OpenDiyPreset1(void)
 {
-    _ShowDiyCompetitionForSource(competitionContext);
+    _ShowDiyCompetitionForSource((uint8_t *)&competitionContextBuf);
 }
 
 /* OpenDiyPreset2 — open DIY from tertiaryCompetitionContext (SWOS2.s line 59167) */
